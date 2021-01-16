@@ -35,7 +35,7 @@ import (
 	types2 "gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
-type BitcoinSignerCashSuite struct {
+type BitcoinCashSignerSuite struct {
 	client *Client
 	server *httptest.Server
 	bridge *thorclient.ThorchainBridge
@@ -43,9 +43,9 @@ type BitcoinSignerCashSuite struct {
 	m      *metrics.Metrics
 }
 
-var _ = Suite(&BitcoinSignerCashSuite{})
+var _ = Suite(&BitcoinCashSignerSuite{})
 
-func (s *BitcoinSignerCashSuite) SetUpTest(c *C) {
+func (s *BitcoinCashSignerSuite) SetUpTest(c *C) {
 	s.m = GetMetricForTest(c)
 	s.cfg = config.ChainConfiguration{
 		ChainID:     "BCH",
@@ -135,11 +135,11 @@ func (s *BitcoinSignerCashSuite) SetUpTest(c *C) {
 	c.Assert(s.client, NotNil)
 }
 
-func (s *BitcoinSignerCashSuite) TearDownTest(c *C) {
+func (s *BitcoinCashSignerSuite) TearDownTest(c *C) {
 	s.server.Close()
 }
 
-func (s *BitcoinSignerCashSuite) TestGetBCHPrivateKey(c *C) {
+func (s *BitcoinCashSignerSuite) TestGetBCHPrivateKey(c *C) {
 	input := "YjQwNGM1ZWM1ODExNmI1ZjBmZTEzNDY0YTkyZTQ2NjI2ZmM1ZGIxMzBlNDE4Y2JjZTk4ZGY4NmZmZTkzMTdjNQ=="
 	buf, err := base64.StdEncoding.DecodeString(input)
 	c.Assert(err, IsNil)
@@ -152,7 +152,7 @@ func (s *BitcoinSignerCashSuite) TestGetBCHPrivateKey(c *C) {
 	c.Assert(btcPrivateKey, NotNil)
 }
 
-func (s *BitcoinSignerCashSuite) TestGetChainCfg(c *C) {
+func (s *BitcoinCashSignerSuite) TestGetChainCfg(c *C) {
 	defer os.Setenv("NET", "testnet")
 	param := s.client.getChainCfg()
 	c.Assert(param, Equals, &chaincfg.TestNet3Params)
@@ -161,7 +161,7 @@ func (s *BitcoinSignerCashSuite) TestGetChainCfg(c *C) {
 	c.Assert(param, Equals, &chaincfg.MainNetParams)
 }
 
-func (s *BitcoinSignerCashSuite) TestSignTx(c *C) {
+func (s *BitcoinCashSignerSuite) TestSignTx(c *C) {
 	txOutItem := stypes.TxOutItem{
 		Chain:       common.BNBChain,
 		ToAddress:   types2.GetRandomBNBAddress(),
@@ -210,7 +210,7 @@ func (s *BitcoinSignerCashSuite) TestSignTx(c *C) {
 	c.Assert(result, IsNil)
 }
 
-func (s *BitcoinSignerCashSuite) TestSignTxHappyPathWithPrivateKey(c *C) {
+func (s *BitcoinCashSignerSuite) TestSignTxHappyPathWithPrivateKey(c *C) {
 	addr, err := types2.GetRandomPubKey().GetAddress(common.BCHChain)
 	c.Assert(err, IsNil)
 	txOutItem := stypes.TxOutItem{
@@ -249,7 +249,7 @@ func (s *BitcoinSignerCashSuite) TestSignTxHappyPathWithPrivateKey(c *C) {
 	c.Assert(buf, NotNil)
 }
 
-func (s *BitcoinSignerCashSuite) TestSignTxWithoutPredefinedMaxGas(c *C) {
+func (s *BitcoinCashSignerSuite) TestSignTxWithoutPredefinedMaxGas(c *C) {
 	addr, err := types2.GetRandomPubKey().GetAddress(common.BCHChain)
 	c.Assert(err, IsNil)
 	txOutItem := stypes.TxOutItem{
@@ -292,7 +292,7 @@ func (s *BitcoinSignerCashSuite) TestSignTxWithoutPredefinedMaxGas(c *C) {
 	c.Assert(buf, NotNil)
 }
 
-func (s *BitcoinSignerCashSuite) TestSignTxWithTSS(c *C) {
+func (s *BitcoinCashSignerSuite) TestSignTxWithTSS(c *C) {
 	pubkey, err := common.NewPubKey("tthorpub1addwnpepqwznsrgk2t5vn2cszr6ku6zned6tqxknugzw3vhdcjza284d7djp5rql6vn")
 	c.Assert(err, IsNil)
 	addr, err := pubkey.GetAddress(common.BCHChain)
@@ -325,7 +325,7 @@ func (s *BitcoinSignerCashSuite) TestSignTxWithTSS(c *C) {
 	c.Assert(buf, NotNil)
 }
 
-func (s *BitcoinSignerCashSuite) TestBroadcastTx(c *C) {
+func (s *BitcoinCashSignerSuite) TestBroadcastTx(c *C) {
 	txOutItem := stypes.TxOutItem{
 		Chain:       common.BNBChain,
 		ToAddress:   types2.GetRandomBNBAddress(),
@@ -348,7 +348,7 @@ func (s *BitcoinSignerCashSuite) TestBroadcastTx(c *C) {
 	c.Assert(err, IsNil)
 }
 
-func (s *BitcoinSignerCashSuite) TestIsSelfTransaction(c *C) {
+func (s *BitcoinCashSignerSuite) TestIsSelfTransaction(c *C) {
 	c.Check(s.client.isSelfTransaction("66d2d6b5eb564972c59e4797683a1225a02515a41119f0a8919381236b63e948"), Equals, false)
 	bm := NewBlockMeta("", 1024, "")
 	hash := "66d2d6b5eb564972c59e4797683a1225a02515a41119f0a8919381236b63e948"
@@ -357,7 +357,7 @@ func (s *BitcoinSignerCashSuite) TestIsSelfTransaction(c *C) {
 	c.Check(s.client.isSelfTransaction("66d2d6b5eb564972c59e4797683a1225a02515a41119f0a8919381236b63e948"), Equals, true)
 }
 
-func (s *BitcoinSignerCashSuite) TestEstimateTxSize(c *C) {
+func (s *BitcoinCashSignerSuite) TestEstimateTxSize(c *C) {
 	txOutItem := stypes.TxOutItem{
 		Chain:       common.BNBChain,
 		ToAddress:   types2.GetRandomBCHAddress(),
