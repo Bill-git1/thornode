@@ -656,7 +656,7 @@ func (s *BitcoinCashSuite) TestOnObservedTxIn(c *C) {
 func (s *BitcoinCashSuite) TestProcessReOrg(c *C) {
 	// can't get previous block meta should not error
 	var result btcjson.GetBlockVerboseTxResult
-	blockContent, err := ioutil.ReadFile("../../../../test/fixtures/btc/block.json")
+	blockContent, err := ioutil.ReadFile("../../../../test/fixtures/bch/block.json")
 	c.Assert(err, IsNil)
 	c.Assert(json.Unmarshal(blockContent, &result), IsNil)
 	// should not trigger re-org process
