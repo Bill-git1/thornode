@@ -45,7 +45,7 @@ func (vts *ValidatorMgrV1TestSuite) TestSetupValidatorNodes(c *C) {
 	// it should take both of the node as active
 	vMgr1 := newValidatorMgrV1(k, mgr.VaultMgr(), mgr.TxOutStore(), mgr.EventMgr())
 
-	c.Assert(vMgr1.BeginBlock(ctx, constAccessor), IsNil)
+	c.Assert(vMgr1.BeginBlock(ctx, constAccessor, nil), IsNil)
 	activeNodes, err := k.ListActiveNodeAccounts(ctx)
 	c.Assert(err, IsNil)
 	c.Assert(len(activeNodes) == 2, Equals, true)
@@ -57,7 +57,7 @@ func (vts *ValidatorMgrV1TestSuite) TestSetupValidatorNodes(c *C) {
 
 	// three active nodes and 1 ready nodes, it should take them all
 	vMgr2 := newValidatorMgrV1(k, mgr.VaultMgr(), mgr.TxOutStore(), mgr.EventMgr())
-	c.Assert(vMgr2.BeginBlock(ctx, constAccessor), IsNil)
+	c.Assert(vMgr2.BeginBlock(ctx, constAccessor, nil), IsNil)
 
 	activeNodes1, err := k.ListActiveNodeAccounts(ctx)
 	c.Assert(err, IsNil)
@@ -93,13 +93,13 @@ func (vts *ValidatorMgrV1TestSuite) TestRagnarokForChaosnet(c *C) {
 
 	// trigger ragnarok
 	ctx = ctx.WithBlockHeight(1024)
-	c.Assert(vMgr.BeginBlock(ctx, constAccessor), IsNil)
+	c.Assert(vMgr.BeginBlock(ctx, constAccessor, nil), IsNil)
 	vault := NewVault(common.BlockHeight(ctx), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BNBChain}.Strings(), []ChainContract{})
 	for _, item := range nodeAccounts {
 		vault.Membership = append(vault.Membership, item.PubKeySet.Secp256k1.String())
 	}
 	c.Assert(k.SetVault(ctx, vault), IsNil)
-	updates := vMgr.EndBlock(ctx, mgr, constAccessor, []string{})
+	updates := vMgr.EndBlock(ctx, mgr, constAccessor)
 	// ragnarok , no one leaves
 	c.Assert(updates, IsNil)
 	ragnarokHeight, err := k.GetRagnarokBlockHeight(ctx)
