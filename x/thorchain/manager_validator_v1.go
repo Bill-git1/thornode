@@ -17,10 +17,11 @@ import (
 
 // validatorMgrV1 is to manage a list of validators , and rotate them
 type validatorMgrV1 struct {
-	k          keeper.Keeper
-	vaultMgr   NetworkManager
-	txOutStore TxOutStore
-	eventMgr   EventManager
+	k                  keeper.Keeper
+	vaultMgr           NetworkManager
+	txOutStore         TxOutStore
+	eventMgr           EventManager
+	existingValidators []string
 }
 
 // newValidatorMgrV1 create a new instance of validatorMgrV1
@@ -34,7 +35,10 @@ func newValidatorMgrV1(k keeper.Keeper, vaultMgr NetworkManager, txOutStore TxOu
 }
 
 // BeginBlock when block begin
-func (vm *validatorMgrV1) BeginBlock(ctx cosmos.Context, constAccessor constants.ConstantValues) error {
+func (vm *validatorMgrV1) BeginBlock(ctx cosmos.Context, constAccessor constants.ConstantValues, existingValidators []string) error {
+	// TODO fix this when we prepare for chaosnet
+	// the following line is to make sure backward compatibility
+	vm.existingValidators = []string{}
 	height := common.BlockHeight(ctx)
 	if height == genesisBlockHeight {
 		if err := vm.setupValidatorNodes(ctx, height, constAccessor); err != nil {
@@ -210,7 +214,7 @@ func (vm *validatorMgrV1) splitNext(ctx cosmos.Context, nas NodeAccounts, asgard
 }
 
 // EndBlock when block commit
-func (vm *validatorMgrV1) EndBlock(ctx cosmos.Context, mgr Manager, constAccessor constants.ConstantValues, existingValidators []string) []abci.ValidatorUpdate {
+func (vm *validatorMgrV1) EndBlock(ctx cosmos.Context, mgr Manager, constAccessor constants.ConstantValues) []abci.ValidatorUpdate {
 	height := common.BlockHeight(ctx)
 	activeNodes, err := vm.k.ListActiveNodeAccounts(ctx)
 	if err != nil {
@@ -319,7 +323,7 @@ func (vm *validatorMgrV1) EndBlock(ctx cosmos.Context, mgr Manager, constAccesso
 		caddr := sdk.GetConsAddress(pk).String()
 		removedNodeKeys = append(removedNodeKeys, na.PubKeySet.Secp256k1)
 		found := false
-		for _, exist := range existingValidators {
+		for _, exist := range vm.existingValidators {
 			if exist == caddr {
 				validators = append(validators, abci.Ed25519ValidatorUpdate(pk.Bytes(), 0))
 				found = true
