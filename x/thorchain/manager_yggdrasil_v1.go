@@ -123,7 +123,7 @@ func (ymgr YggMgrV1) Fund(ctx cosmos.Context, mgr Manager, constAccessor constan
 	if !ygg.IsYggdrasil() {
 		return nil
 	}
-	pendingTxCount := ygg.LenPendingTxBlockHeights(common.BlockHeight(ctx), constAccessor)
+	pendingTxCount := ygg.LenPendingTxBlockHeights(common.BlockHeight(ctx), constAccessor.GetInt64Value(constants.SigningTransactionPeriod))
 	if pendingTxCount > 0 {
 		return fmt.Errorf("cannot send more yggdrasil funds while transactions are pending (%s: %d)", ygg.PubKey, pendingTxCount)
 	}
