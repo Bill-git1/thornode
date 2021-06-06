@@ -41,7 +41,7 @@ func (k *TestSwapKeeper) GetPool(ctx cosmos.Context, asset common.Asset) (types.
 		return types.Pool{
 			BalanceRune:  cosmos.NewUint(100).MulUint64(common.One),
 			BalanceAsset: cosmos.NewUint(100).MulUint64(common.One),
-			PoolUnits:    cosmos.NewUint(100).MulUint64(common.One),
+			LPUnits:      cosmos.NewUint(100).MulUint64(common.One),
 			SynthUnits:   cosmos.ZeroUint(),
 			Status:       PoolStaged,
 			Asset:        asset,
@@ -50,7 +50,7 @@ func (k *TestSwapKeeper) GetPool(ctx cosmos.Context, asset common.Asset) (types.
 		return types.Pool{
 			BalanceRune:  cosmos.NewUint(100).MulUint64(common.One),
 			BalanceAsset: cosmos.NewUint(100).MulUint64(common.One),
-			PoolUnits:    cosmos.NewUint(100).MulUint64(common.One),
+			LPUnits:      cosmos.NewUint(100).MulUint64(common.One),
 			SynthUnits:   cosmos.ZeroUint(),
 			Status:       PoolAvailable,
 			Asset:        asset,
@@ -390,7 +390,7 @@ func (s *SwapSuite) TestSynthSwap(c *C) {
 	pool.Asset = common.BNBAsset
 	pool.BalanceRune = cosmos.NewUint(1111 * common.One)
 	pool.BalanceAsset = cosmos.NewUint(34 * common.One)
-	pool.PoolUnits = pool.BalanceRune
+	pool.LPUnits = pool.BalanceRune
 	c.Assert(k.SetPool(ctx, pool), IsNil)
 
 	addr := GetRandomTHORAddress()
@@ -416,7 +416,7 @@ func (s *SwapSuite) TestSynthSwap(c *C) {
 	c.Assert(err, IsNil)
 	c.Check(pool.BalanceAsset.Uint64(), Equals, uint64(34*common.One))
 	c.Check(pool.BalanceRune.Uint64(), Equals, uint64(1161*common.One), Commentf("%d", pool.BalanceRune.Uint64()))
-	c.Check(pool.PoolUnits.Uint64(), Equals, uint64(113492334194), Commentf("%d", pool.PoolUnits.Uint64()))
+	c.Check(pool.LPUnits.Uint64(), Equals, uint64(113492334194), Commentf("%d", pool.LPUnits.Uint64()))
 	c.Check(pool.SynthUnits.Uint64(), Equals, uint64(2392334194), Commentf("%d", pool.SynthUnits.Uint64()))
 	coin := common.NewCoin(common.BNBAsset.GetSyntheticAsset(), amount)
 	c.Assert(k.MintToModule(ctx, ModuleName, coin), IsNil)
@@ -430,7 +430,7 @@ func (s *SwapSuite) TestSynthSwap(c *C) {
 	c.Assert(err, IsNil)
 	c.Check(pool.BalanceAsset.Uint64(), Equals, uint64(34*common.One))
 	c.Check(pool.BalanceRune.Uint64(), Equals, uint64(1211*common.One), Commentf("%d", pool.BalanceRune.Uint64()))
-	c.Check(pool.PoolUnits.Uint64(), Equals, uint64(115835280812), Commentf("%d", pool.PoolUnits.Uint64()))
+	c.Check(pool.LPUnits.Uint64(), Equals, uint64(115835280812), Commentf("%d", pool.LPUnits.Uint64()))
 	c.Check(pool.SynthUnits.Uint64(), Equals, uint64(4735280812), Commentf("%d", pool.SynthUnits.Uint64()))
 	coin = common.NewCoin(common.BNBAsset.GetSyntheticAsset(), amount)
 	c.Assert(k.MintToModule(ctx, ModuleName, coin), IsNil)
@@ -445,7 +445,7 @@ func (s *SwapSuite) TestSynthSwap(c *C) {
 	c.Assert(err, IsNil)
 	c.Check(pool.BalanceAsset.Uint64(), Equals, uint64(34*common.One))
 	c.Check(pool.BalanceRune.Uint64(), Equals, uint64(116104540185), Commentf("%d", pool.BalanceRune.Uint64()))
-	c.Check(pool.PoolUnits.Uint64(), Equals, uint64(113417779629), Commentf("%d", pool.PoolUnits.Uint64()))
+	c.Check(pool.LPUnits.Uint64(), Equals, uint64(113417779629), Commentf("%d", pool.LPUnits.Uint64()))
 	c.Check(pool.SynthUnits.Uint64(), Equals, uint64(2317779629), Commentf("%d", pool.SynthUnits.Uint64()))
 
 	// swap synth --> rune again
@@ -458,7 +458,7 @@ func (s *SwapSuite) TestSynthSwap(c *C) {
 	c.Assert(err, IsNil)
 	c.Check(pool.BalanceAsset.Uint64(), Equals, uint64(34*common.One))
 	c.Check(pool.BalanceRune.Uint64(), Equals, uint64(111504716364), Commentf("%d", pool.BalanceRune.Uint64()))
-	c.Check(pool.PoolUnits.Uint64(), Equals, uint64(111100000000), Commentf("%d", pool.PoolUnits.Uint64()))
+	c.Check(pool.LPUnits.Uint64(), Equals, uint64(111100000000), Commentf("%d", pool.LPUnits.Uint64()))
 	c.Check(pool.SynthUnits.Uint64(), Equals, uint64(0), Commentf("%d", pool.SynthUnits.Uint64()))
 
 	// swap BNB.BNB -> BNB/BNB (external asset directly to synth)
@@ -480,7 +480,7 @@ func (s *SwapSuite) TestSynthSwap(c *C) {
 	c.Assert(err, IsNil)
 	c.Check(pool.BalanceAsset.Uint64(), Equals, uint64(84*common.One))
 	c.Check(pool.BalanceRune.Uint64(), Equals, uint64(111504716364), Commentf("%d", pool.BalanceRune.Uint64()))
-	c.Check(pool.PoolUnits.Uint64(), Equals, uint64(124483645124), Commentf("%d", pool.PoolUnits.Uint64()))
+	c.Check(pool.LPUnits.Uint64(), Equals, uint64(124483645124), Commentf("%d", pool.LPUnits.Uint64()))
 	c.Check(pool.SynthUnits.Uint64(), Equals, uint64(13383645124), Commentf("%d", pool.SynthUnits.Uint64()))
 
 	// emit asset is not enough to pay for fee , then pool balance should be restored
@@ -499,7 +499,7 @@ func (s *SwapSuite) TestSynthSwap(c *C) {
 	btcPool.Asset = common.BTCAsset
 	btcPool.BalanceAsset = cosmos.NewUint(common.One)
 	btcPool.BalanceRune = cosmos.NewUint(common.One * 10)
-	btcPool.PoolUnits = cosmos.NewUint(100)
+	btcPool.LPUnits = cosmos.NewUint(100)
 	btcPool.SynthUnits = cosmos.ZeroUint()
 	c.Assert(k.SetPool(ctx, btcPool), IsNil)
 
@@ -510,6 +510,6 @@ func (s *SwapSuite) TestSynthSwap(c *C) {
 	c.Assert(err, IsNil)
 	c.Check(pool.BalanceAsset.Uint64(), Equals, uint64(common.One))
 	c.Check(pool.BalanceRune.Uint64(), Equals, uint64(10*common.One), Commentf("%d", pool.BalanceRune.Uint64()))
-	c.Check(pool.PoolUnits.Uint64(), Equals, uint64(100), Commentf("%d", pool.PoolUnits.Uint64()))
+	c.Check(pool.LPUnits.Uint64(), Equals, uint64(100), Commentf("%d", pool.LPUnits.Uint64()))
 	c.Check(pool.SynthUnits.Uint64(), Equals, uint64(0), Commentf("%d", pool.SynthUnits.Uint64()))
 }
