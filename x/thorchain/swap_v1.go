@@ -305,7 +305,7 @@ func (s *SwapperV1) swapOne(ctx cosmos.Context,
 			minusSynthUnits := common.GetShare(x, totalSynthSupply, pool.SynthUnits)
 			pool.BalanceRune = common.SafeSub(pool.BalanceRune, emitAssets)
 			pool.SynthUnits = common.SafeSub(pool.SynthUnits, minusSynthUnits)
-			pool.PoolUnits = common.SafeSub(pool.PoolUnits, minusSynthUnits)
+			pool.LPUnits = common.SafeSub(pool.LPUnits, minusSynthUnits)
 			swapEvt.SynthUnits = minusSynthUnits
 			// inbound synth asset can't be burned here , as the final swap might fail and in that case , it will need to refund customer
 			s.coinsToBurn = append(s.coinsToBurn, tx.Coins...)
@@ -313,11 +313,11 @@ func (s *SwapperV1) swapOne(ctx cosmos.Context,
 			// our source is assumed to be rune
 			// mint synth units so that LPs don't get access to the extra rune in the pool.
 			// the minting of the synths themselves is handled in the txout manager
-			newPoolUnits, synthUnits, err := calculatePoolUnitsV1(pool.PoolUnits, pool.BalanceRune, pool.BalanceAsset, x, cosmos.ZeroUint())
+			newPoolUnits, synthUnits, err := calculatePoolUnitsV1(pool.LPUnits, pool.BalanceRune, pool.BalanceAsset, x, cosmos.ZeroUint())
 			if err != nil {
 				return cosmos.ZeroUint(), evt, ErrInternal(err, "fail to calculate synth unit")
 			}
-			pool.PoolUnits = newPoolUnits
+			pool.LPUnits = newPoolUnits
 			pool.SynthUnits = pool.SynthUnits.Add(synthUnits)
 			pool.BalanceRune = pool.BalanceRune.Add(x)
 			swapEvt.SynthUnits = synthUnits

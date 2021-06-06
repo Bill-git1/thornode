@@ -29,7 +29,7 @@ func withdrawV49(ctx cosmos.Context, version semver.Version, msg MsgWithdrawLiqu
 
 	}
 
-	poolUnits := pool.PoolUnits
+	poolUnits := pool.LPUnits
 	poolRune := pool.BalanceRune
 	poolAsset := pool.BalanceAsset
 	fLiquidityProviderUnit := lp.Units
@@ -78,14 +78,14 @@ func withdrawV49(ctx cosmos.Context, version semver.Version, msg MsgWithdrawLiqu
 		protectionBasisPoints := calcImpLossProtectionAmtV1(ctx, lp.LastAddHeight, fullProtectionLine)
 		protectionRuneAmount = calcImpLossV47(lp, msg.BasisPoints, protectionBasisPoints, pool)
 		if !protectionRuneAmount.IsZero() {
-			newPoolUnits, extraUnits, err := calculatePoolUnitsV1(poolUnits, poolRune, poolAsset, protectionRuneAmount, cosmos.ZeroUint())
+			newLPUnits, extraUnits, err := calculatePoolUnitsV1(poolUnits, poolRune, poolAsset, protectionRuneAmount, cosmos.ZeroUint())
 			if err != nil {
 				return cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), err
 			}
 			ctx.Logger().Info("liquidity provider granted imp loss protection", "extra provider units", extraUnits, "extra rune", protectionRuneAmount)
 			poolRune = poolRune.Add(protectionRuneAmount)
 			fLiquidityProviderUnit = fLiquidityProviderUnit.Add(extraUnits)
-			poolUnits = newPoolUnits
+			poolUnits = newLPUnits
 		}
 	}
 
@@ -127,15 +127,15 @@ func withdrawV49(ctx cosmos.Context, version semver.Version, msg MsgWithdrawLiqu
 
 	ctx.Logger().Info("client withdraw", "RUNE", withdrawRune, "asset", withDrawAsset, "units left", unitAfter)
 	// update pool
-	pool.PoolUnits = common.SafeSub(poolUnits, fLiquidityProviderUnit).Add(unitAfter)
+	pool.LPUnits = common.SafeSub(poolUnits, fLiquidityProviderUnit).Add(unitAfter)
 	pool.BalanceRune = common.SafeSub(poolRune, withdrawRune)
 	pool.BalanceAsset = common.SafeSub(poolAsset, withDrawAsset)
 
-	ctx.Logger().Info("pool after withdraw", "pool unit", pool.PoolUnits, "balance RUNE", pool.BalanceRune, "balance asset", pool.BalanceAsset)
+	ctx.Logger().Info("pool after withdraw", "pool unit", pool.LPUnits, "balance RUNE", pool.BalanceRune, "balance asset", pool.BalanceAsset)
 
 	lp.LastWithdrawHeight = common.BlockHeight(ctx)
-	lp.RuneDepositValue = common.SafeSub(lp.RuneDepositValue, common.GetShare(common.SafeSub(lp.Units, unitAfter), pool.PoolUnits, pool.BalanceRune))
-	lp.AssetDepositValue = common.SafeSub(lp.AssetDepositValue, common.GetShare(common.SafeSub(lp.Units, unitAfter), pool.PoolUnits, pool.BalanceAsset))
+	lp.RuneDepositValue = common.SafeSub(lp.RuneDepositValue, common.GetShare(common.SafeSub(lp.Units, unitAfter), pool.LPUnits, pool.BalanceRune))
+	lp.AssetDepositValue = common.SafeSub(lp.AssetDepositValue, common.GetShare(common.SafeSub(lp.Units, unitAfter), pool.LPUnits, pool.BalanceAsset))
 	lp.Units = unitAfter
 
 	// Create a pool event if THORNode have no rune or assets
