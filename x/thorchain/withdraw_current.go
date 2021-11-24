@@ -11,9 +11,9 @@ import (
 	"gitlab.com/thorchain/thornode/constants"
 )
 
-// withdrawV75 all the asset
+// withdrawV76 all the asset
 // it returns runeAmt,assetAmount,protectionRuneAmt,units, lastWithdraw,err
-func withdrawV75(ctx cosmos.Context, version semver.Version, msg MsgWithdrawLiquidity, manager Manager) (cosmos.Uint, cosmos.Uint, cosmos.Uint, cosmos.Uint, cosmos.Uint, error) {
+func withdrawV76(ctx cosmos.Context, version semver.Version, msg MsgWithdrawLiquidity, manager Manager) (cosmos.Uint, cosmos.Uint, cosmos.Uint, cosmos.Uint, cosmos.Uint, error) {
 	if err := validateWithdrawV1(ctx, manager.Keeper(), msg); err != nil {
 		ctx.Logger().Error("msg withdraw fail validation", "error", err)
 		return cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), err
@@ -79,14 +79,19 @@ func withdrawV75(ctx cosmos.Context, version semver.Version, msg MsgWithdrawLiqu
 	if fullProtectionLine < 0 || err != nil {
 		fullProtectionLine = cv.GetInt64Value(constants.FullImpLossProtectionBlocks)
 	}
+	ilpPoolMimirKey := fmt.Sprintf("ilp-%s", pool.Asset)
+	ilpEnabled, err := manager.Keeper().GetMimir(ctx, ilpPoolMimirKey)
+	if err != nil {
+		ctx.Logger().Error("fail to get ILP mimir", "error", err, "key", ilpPoolMimirKey)
+	}
 	// only when Pool is in Available status will apply impermanent loss protection
-	if fullProtectionLine > 0 && pool.Status == PoolAvailable { // if protection line is zero, no imp loss protection is given
+	if fullProtectionLine > 0 && pool.Status == PoolAvailable && ilpEnabled > 0 { // if protection line is zero, no imp loss protection is given
 		lastAddHeight := lp.LastAddHeight
 		if lastAddHeight < pool.StatusSince {
 			lastAddHeight = pool.StatusSince
 		}
 		protectionBasisPoints := calcImpLossProtectionAmtV1(ctx, lastAddHeight, fullProtectionLine)
-		implProtectionRuneAmount, depositValue, redeemValue := calcImpLossV75(lp, msg.BasisPoints, protectionBasisPoints, pool)
+		implProtectionRuneAmount, depositValue, redeemValue := calcImpLossV76(lp, msg.BasisPoints, protectionBasisPoints, pool)
 		ctx.Logger().Info("imp loss calculation", "deposit value", depositValue, "redeem value", redeemValue, "protection", implProtectionRuneAmount)
 		if !implProtectionRuneAmount.IsZero() {
 			protectionRuneAmount = implProtectionRuneAmount
@@ -101,7 +106,7 @@ func withdrawV75(ctx cosmos.Context, version semver.Version, msg MsgWithdrawLiqu
 		}
 	}
 
-	withdrawRune, withDrawAsset, unitAfter, err := calculateWithdrawV75(pool.GetPoolUnits(), poolRune, poolAsset, originalLiquidityProviderUnits, extraUnits, msg.BasisPoints, assetToWithdraw)
+	withdrawRune, withDrawAsset, unitAfter, err := calculateWithdrawV76(pool.GetPoolUnits(), poolRune, poolAsset, originalLiquidityProviderUnits, extraUnits, msg.BasisPoints, assetToWithdraw)
 	if err != nil {
 		ctx.Logger().Error("fail to withdraw", "error", err)
 		return cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), errWithdrawFail
@@ -187,7 +192,7 @@ func withdrawV75(ctx cosmos.Context, version semver.Version, msg MsgWithdrawLiqu
 	return withdrawRune, withDrawAsset, protectionRuneAmount, common.SafeSub(originalLiquidityProviderUnits, unitAfter), gasAsset, nil
 }
 
-func calculateWithdrawV75(poolUnits, poolRune, poolAsset, lpUnits, extraUnits, withdrawBasisPoints cosmos.Uint, withdrawalAsset common.Asset) (cosmos.Uint, cosmos.Uint, cosmos.Uint, error) {
+func calculateWithdrawV76(poolUnits, poolRune, poolAsset, lpUnits, extraUnits, withdrawBasisPoints cosmos.Uint, withdrawalAsset common.Asset) (cosmos.Uint, cosmos.Uint, cosmos.Uint, error) {
 	if poolUnits.IsZero() {
 		return cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), errors.New("poolUnits can't be zero")
 	}
@@ -218,8 +223,8 @@ func calculateWithdrawV75(poolUnits, poolRune, poolAsset, lpUnits, extraUnits, w
 	return cosmos.ZeroUint(), calcAsymWithdrawalV1(unitsToClaim, poolUnits, poolAsset), unitAfter, nil
 }
 
-// calcImpLossV75 if there needs to add some imp loss protection, in rune
-func calcImpLossV75(lp LiquidityProvider, withdrawBasisPoints cosmos.Uint, protectionBasisPoints int64, pool Pool) (cosmos.Uint, cosmos.Uint, cosmos.Uint) {
+// calcImpLossV76 if there needs to add some imp loss protection, in rune
+func calcImpLossV76(lp LiquidityProvider, withdrawBasisPoints cosmos.Uint, protectionBasisPoints int64, pool Pool) (cosmos.Uint, cosmos.Uint, cosmos.Uint) {
 	/*
 		A0 = assetDepositValue; R0 = runeDepositValue;
 
