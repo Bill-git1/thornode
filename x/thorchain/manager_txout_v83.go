@@ -498,7 +498,7 @@ func (tos *TxOutStorageV83) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem) 
 		}
 	}
 	if !finalRuneFee.IsZero() {
-		if err := tos.keeper.AddFeeToReserve(ctx, finalRuneFee); err != nil {
+		if err := tos.keeper.AddPoolFeeToReserve(ctx, finalRuneFee); err != nil {
 			// Add to reserve
 			ctx.Logger().Error("fail to add fee to reserve", "error", err)
 		}
