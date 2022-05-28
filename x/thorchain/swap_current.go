@@ -11,21 +11,21 @@ import (
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 )
 
-type SwapperV81 struct {
+type SwapperV90 struct {
 	pools       Pools // caches pool state changes
 	poolsOrig   Pools // retains original pool state
 	coinsToBurn common.Coins
 }
 
-func newSwapperV81() *SwapperV81 {
-	return &SwapperV81{
+func newSwapperV90() *SwapperV90 {
+	return &SwapperV90{
 		pools:     make(Pools, 0),
 		poolsOrig: make(Pools, 0),
 	}
 }
 
 // validate if pools exist
-func (s *SwapperV81) validatePools(ctx cosmos.Context, keeper keeper.Keeper, assets ...common.Asset) error {
+func (s *SwapperV90) validatePools(ctx cosmos.Context, keeper keeper.Keeper, assets ...common.Asset) error {
 	for _, asset := range assets {
 		if !asset.IsRune() {
 			if !keeper.PoolExist(ctx, asset) {
@@ -45,7 +45,7 @@ func (s *SwapperV81) validatePools(ctx cosmos.Context, keeper keeper.Keeper, ass
 }
 
 // validateMessage is trying to validate the legitimacy of the incoming message and decide whether THORNode can handle it
-func (s *SwapperV81) validateMessage(tx common.Tx, target common.Asset, destination common.Address) error {
+func (s *SwapperV90) validateMessage(tx common.Tx, target common.Asset, destination common.Address) error {
 	if err := tx.Valid(); err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func (s *SwapperV81) validateMessage(tx common.Tx, target common.Asset, destinat
 	return nil
 }
 
-func (s *SwapperV81) swap(ctx cosmos.Context,
+func (s *SwapperV90) swap(ctx cosmos.Context,
 	keeper keeper.Keeper,
 	tx common.Tx,
 	target common.Asset,
@@ -209,7 +209,7 @@ func (s *SwapperV81) swap(ctx cosmos.Context,
 	return assetAmount, swapEvents, nil
 }
 
-func (s *SwapperV81) swapOne(ctx cosmos.Context,
+func (s *SwapperV90) swapOne(ctx cosmos.Context,
 	keeper keeper.Keeper, tx common.Tx,
 	target common.Asset,
 	destination common.Address,
@@ -266,9 +266,8 @@ func (s *SwapperV81) swapOne(ctx cosmos.Context,
 		if err != nil {
 			return cosmos.ZeroUint(), evt, ErrInternal(err, fmt.Sprintf("fail to get pool(%s)", asset))
 		}
-		ver := keeper.GetLowestActiveVersion(ctx)
 		synthSupply := keeper.GetTotalSupply(ctx, pool.Asset.GetSyntheticAsset())
-		pool.CalcUnits(ver, synthSupply)
+		pool.CalcUnits(keeper.GetVersion(), synthSupply)
 		s.poolsOrig = s.poolsOrig.Set(pool)
 	}
 
@@ -347,7 +346,7 @@ func (s *SwapperV81) swapOne(ctx cosmos.Context,
 
 // calculate the number of assets sent to the address (includes liquidity fee)
 // nolint
-func (s *SwapperV81) calcAssetEmission(X, x, Y cosmos.Uint) cosmos.Uint {
+func (s *SwapperV90) calcAssetEmission(X, x, Y cosmos.Uint) cosmos.Uint {
 	// ( x * X * Y ) / ( x + X )^2
 	numerator := x.Mul(X).Mul(Y)
 	denominator := x.Add(X).Mul(x.Add(X))
@@ -359,7 +358,7 @@ func (s *SwapperV81) calcAssetEmission(X, x, Y cosmos.Uint) cosmos.Uint {
 
 // calculateFee the fee of the swap
 // nolint
-func (s *SwapperV81) calcLiquidityFee(X, x, Y cosmos.Uint) cosmos.Uint {
+func (s *SwapperV90) calcLiquidityFee(X, x, Y cosmos.Uint) cosmos.Uint {
 	// ( x^2 *  Y ) / ( x + X )^2
 	numerator := x.Mul(x).Mul(Y)
 	denominator := x.Add(X).Mul(x.Add(X))
@@ -371,7 +370,7 @@ func (s *SwapperV81) calcLiquidityFee(X, x, Y cosmos.Uint) cosmos.Uint {
 
 // calcSwapSlip - calculate the swap slip, expressed in basis points (10000)
 // nolint
-func (s *SwapperV81) calcSwapSlip(Xi, xi cosmos.Uint) cosmos.Uint {
+func (s *SwapperV90) calcSwapSlip(Xi, xi cosmos.Uint) cosmos.Uint {
 	// Cast to DECs
 	xD := cosmos.NewDecFromBigInt(xi.BigInt())
 	XD := cosmos.NewDecFromBigInt(Xi.BigInt())
