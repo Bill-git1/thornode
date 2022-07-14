@@ -86,18 +86,18 @@ func (items swapItems) Sort() swapItems {
 	return sorted
 }
 
-// SwapQv58 is going to manage the swaps queue
-type SwapQv58 struct {
+// SwapQv94 is going to manage the swaps queue
+type SwapQv94 struct {
 	k keeper.Keeper
 }
 
-// newSwapQv58 create a new vault manager
-func newSwapQv58(k keeper.Keeper) *SwapQv58 {
-	return &SwapQv58{k: k}
+// newSwapQv94 create a new vault manager
+func newSwapQv94(k keeper.Keeper) *SwapQv94 {
+	return &SwapQv94{k: k}
 }
 
 // FetchQueue - grabs all swap queue items from the kvstore and returns them
-func (vm *SwapQv58) FetchQueue(ctx cosmos.Context) (swapItems, error) { // nolint
+func (vm *SwapQv94) FetchQueue(ctx cosmos.Context) (swapItems, error) { // nolint
 	items := make(swapItems, 0)
 	iterator := vm.k.GetSwapQueueIterator(ctx)
 	defer iterator.Close()
@@ -127,7 +127,7 @@ func (vm *SwapQv58) FetchQueue(ctx cosmos.Context) (swapItems, error) { // nolin
 }
 
 // EndBlock trigger the real swap to be processed
-func (vm *SwapQv58) EndBlock(ctx cosmos.Context, mgr Manager) error {
+func (vm *SwapQv94) EndBlock(ctx cosmos.Context, mgr Manager) error {
 	handler := NewInternalHandler(mgr)
 
 	minSwapsPerBlock, err := vm.k.GetMimir(ctx, constants.MinSwapsPerBlock.String())
@@ -138,13 +138,17 @@ func (vm *SwapQv58) EndBlock(ctx cosmos.Context, mgr Manager) error {
 	if maxSwapsPerBlock < 0 || err != nil {
 		maxSwapsPerBlock = mgr.GetConstants().GetInt64Value(constants.MaxSwapsPerBlock)
 	}
+	synthVirtualDepthMult, err := vm.k.GetMimir(ctx, constants.VirtualMultSynths.String())
+	if synthVirtualDepthMult < 1 || err != nil {
+		synthVirtualDepthMult = mgr.GetConstants().GetInt64Value(constants.VirtualMultSynths)
+	}
 
 	swaps, err := vm.FetchQueue(ctx)
 	if err != nil {
 		ctx.Logger().Error("fail to fetch swap queue from store", "error", err)
 		return err
 	}
-	swaps, err = vm.scoreMsgs(ctx, swaps)
+	swaps, err = vm.scoreMsgs(ctx, swaps, synthVirtualDepthMult)
 	if err != nil {
 		ctx.Logger().Error("fail to fetch swap items", "error", err)
 		// continue, don't exit, just do them out of order (instead of not at all)
@@ -166,7 +170,7 @@ func (vm *SwapQv58) EndBlock(ctx cosmos.Context, mgr Manager) error {
 }
 
 // getTodoNum - determine how many swaps to do.
-func (vm *SwapQv58) getTodoNum(queueLen, minSwapsPerBlock, maxSwapsPerBlock int64) int64 {
+func (vm *SwapQv94) getTodoNum(queueLen, minSwapsPerBlock, maxSwapsPerBlock int64) int64 {
 	// Do half the length of the queue. Unless...
 	//	1. The queue length is greater than maxSwapsPerBlock
 	//  2. The queue legnth is less than minSwapsPerBlock
@@ -182,8 +186,9 @@ func (vm *SwapQv58) getTodoNum(queueLen, minSwapsPerBlock, maxSwapsPerBlock int6
 
 // scoreMsgs - this takes a list of MsgSwap, and converts them to a scored
 // swapItem list
-func (vm *SwapQv58) scoreMsgs(ctx cosmos.Context, items swapItems) (swapItems, error) {
+func (vm *SwapQv94) scoreMsgs(ctx cosmos.Context, items swapItems, synthVirtualDepthMult int64) (swapItems, error) {
 	pools := make(map[common.Asset]Pool)
+
 	for i, item := range items {
 		// the asset customer send
 		sourceAsset := item.msg.Tx.Coins[0].Asset
@@ -213,7 +218,7 @@ func (vm *SwapQv58) scoreMsgs(ctx cosmos.Context, items swapItems) (swapItems, e
 		if pool.IsEmpty() || !pool.IsAvailable() || pool.BalanceRune.IsZero() || pool.BalanceAsset.IsZero() {
 			continue
 		}
-		vm.getLiquidityFeeAndSlip(pool, item.msg.Tx.Coins[0], &items[i])
+		vm.getLiquidityFeeAndSlip(ctx, pool, item.msg.Tx.Coins[0], &items[i], synthVirtualDepthMult)
 
 		if sourceAsset.IsRune() || targetAsset.IsRune() {
 			// single swap , stop here
@@ -226,14 +231,14 @@ func (vm *SwapQv58) scoreMsgs(ctx cosmos.Context, items swapItems) (swapItems, e
 		if pool.IsEmpty() || !pool.IsAvailable() || pool.BalanceRune.IsZero() || pool.BalanceAsset.IsZero() {
 			continue
 		}
-		vm.getLiquidityFeeAndSlip(pool, runeCoin, &items[i])
+		vm.getLiquidityFeeAndSlip(ctx, pool, runeCoin, &items[i], synthVirtualDepthMult)
 	}
 
 	return items, nil
 }
 
 // getLiquidityFeeAndSlip calculate liquidity fee and slip, fee is in RUNE
-func (vm *SwapQv58) getLiquidityFeeAndSlip(pool Pool, sourceCoin common.Coin, item *swapItem) {
+func (vm *SwapQv94) getLiquidityFeeAndSlip(ctx cosmos.Context, pool Pool, sourceCoin common.Coin, item *swapItem, synthVirtualDepthMult int64) {
 	// Get our X, x, Y values
 	var X, x, Y cosmos.Uint
 	x = sourceCoin.Amount
@@ -245,12 +250,22 @@ func (vm *SwapQv58) getLiquidityFeeAndSlip(pool Pool, sourceCoin common.Coin, it
 		X = pool.BalanceAsset
 	}
 
-	swapper := newSwapperV81()
-	fee := swapper.calcLiquidityFee(X, x, Y)
+	// give virtual pool depth if we're swapping with a synthetic asset
+	if sourceCoin.Asset.IsSyntheticAsset() {
+		X = X.MulUint64(uint64(synthVirtualDepthMult))
+		Y = Y.MulUint64(uint64(synthVirtualDepthMult))
+	}
+
+	swapper, err := GetSwapper(vm.k.GetVersion())
+	if err != nil {
+		ctx.Logger().Error("fail to fetch swapper", "error", err)
+		swapper = newSwapperV92()
+	}
+	fee := swapper.CalcLiquidityFee(X, x, Y)
 	if sourceCoin.Asset.IsRune() {
 		fee = pool.AssetValueInRune(fee)
 	}
-	slip := swapper.calcSwapSlip(X, x)
+	slip := swapper.CalcSwapSlip(X, x)
 	item.fee = item.fee.Add(fee)
 	item.slip = item.slip.Add(slip)
 }
