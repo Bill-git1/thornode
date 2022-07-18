@@ -37,7 +37,7 @@ func (gm *GasMgrV81) reset() {
 }
 
 // BeginBlock need to be called when a new block get created , update the internal EventGas to new one
-func (gm *GasMgrV81) BeginBlock() {
+func (gm *GasMgrV81) BeginBlock(mgr Manager) {
 	gm.reset()
 }
 
