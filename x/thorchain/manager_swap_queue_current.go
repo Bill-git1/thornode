@@ -86,18 +86,18 @@ func (items swapItems) Sort() swapItems {
 	return sorted
 }
 
-// SwapQv94 is going to manage the swaps queue
-type SwapQv94 struct {
+// SwapQv95 is going to manage the swaps queue
+type SwapQv95 struct {
 	k keeper.Keeper
 }
 
-// newSwapQv94 create a new vault manager
-func newSwapQv94(k keeper.Keeper) *SwapQv94 {
-	return &SwapQv94{k: k}
+// newSwapQv95 create a new vault manager
+func newSwapQv95(k keeper.Keeper) *SwapQv95 {
+	return &SwapQv95{k: k}
 }
 
 // FetchQueue - grabs all swap queue items from the kvstore and returns them
-func (vm *SwapQv94) FetchQueue(ctx cosmos.Context) (swapItems, error) { // nolint
+func (vm *SwapQv95) FetchQueue(ctx cosmos.Context) (swapItems, error) { // nolint
 	items := make(swapItems, 0)
 	iterator := vm.k.GetSwapQueueIterator(ctx)
 	defer iterator.Close()
@@ -127,7 +127,7 @@ func (vm *SwapQv94) FetchQueue(ctx cosmos.Context) (swapItems, error) { // nolin
 }
 
 // EndBlock trigger the real swap to be processed
-func (vm *SwapQv94) EndBlock(ctx cosmos.Context, mgr Manager) error {
+func (vm *SwapQv95) EndBlock(ctx cosmos.Context, mgr Manager) error {
 	handler := NewInternalHandler(mgr)
 
 	minSwapsPerBlock, err := vm.k.GetMimir(ctx, constants.MinSwapsPerBlock.String())
@@ -170,7 +170,7 @@ func (vm *SwapQv94) EndBlock(ctx cosmos.Context, mgr Manager) error {
 }
 
 // getTodoNum - determine how many swaps to do.
-func (vm *SwapQv94) getTodoNum(queueLen, minSwapsPerBlock, maxSwapsPerBlock int64) int64 {
+func (vm *SwapQv95) getTodoNum(queueLen, minSwapsPerBlock, maxSwapsPerBlock int64) int64 {
 	// Do half the length of the queue. Unless...
 	//	1. The queue length is greater than maxSwapsPerBlock
 	//  2. The queue legnth is less than minSwapsPerBlock
@@ -186,7 +186,7 @@ func (vm *SwapQv94) getTodoNum(queueLen, minSwapsPerBlock, maxSwapsPerBlock int6
 
 // scoreMsgs - this takes a list of MsgSwap, and converts them to a scored
 // swapItem list
-func (vm *SwapQv94) scoreMsgs(ctx cosmos.Context, items swapItems, synthVirtualDepthMult int64) (swapItems, error) {
+func (vm *SwapQv95) scoreMsgs(ctx cosmos.Context, items swapItems, synthVirtualDepthMult int64) (swapItems, error) {
 	pools := make(map[common.Asset]Pool)
 
 	for i, item := range items {
@@ -215,7 +215,11 @@ func (vm *SwapQv94) scoreMsgs(ctx cosmos.Context, items swapItems, synthVirtualD
 			nonRuneAsset = targetAsset
 		}
 		pool := pools[nonRuneAsset]
-		if pool.IsEmpty() || !pool.IsAvailable() || pool.BalanceRune.IsZero() || pool.BalanceAsset.IsZero() {
+		if pool.IsEmpty() || pool.BalanceRune.IsZero() || pool.BalanceAsset.IsZero() {
+			continue
+		}
+		// synths may be redeemed on unavailable pools, score them
+		if !pool.IsAvailable() && !sourceAsset.IsSyntheticAsset() {
 			continue
 		}
 		virtualDepthMult := int64(1)
@@ -246,7 +250,7 @@ func (vm *SwapQv94) scoreMsgs(ctx cosmos.Context, items swapItems, synthVirtualD
 }
 
 // getLiquidityFeeAndSlip calculate liquidity fee and slip, fee is in RUNE
-func (vm *SwapQv94) getLiquidityFeeAndSlip(ctx cosmos.Context, pool Pool, sourceCoin common.Coin, item *swapItem, virtualDepthMult int64) {
+func (vm *SwapQv95) getLiquidityFeeAndSlip(ctx cosmos.Context, pool Pool, sourceCoin common.Coin, item *swapItem, virtualDepthMult int64) {
 	// Get our X, x, Y values
 	var X, x, Y cosmos.Uint
 	x = sourceCoin.Amount
