@@ -13,11 +13,11 @@ import (
 	thorchaintypes "gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
-type SwapV95Suite struct{}
+type SwapV98Suite struct{}
 
-var _ = Suite(&SwapV95Suite{})
+var _ = Suite(&SwapV98Suite{})
 
-func (s *SwapV95Suite) SetUpSuite(c *C) {
+func (s *SwapV98Suite) SetUpSuite(c *C) {
 	err := os.Setenv("NET", "other")
 	c.Assert(err, IsNil)
 	SetupConfigForTest()
@@ -153,7 +153,7 @@ func (k *TestSwapKeeper) MintToModule(ctx cosmos.Context, module string, coin co
 	return nil
 }
 
-func (s *SwapV95Suite) TestSwap(c *C) {
+func (s *SwapV98Suite) TestSwap(c *C) {
 	poolStorage := &TestSwapKeeper{}
 	inputs := []struct {
 		name          string
@@ -367,7 +367,7 @@ func (s *SwapV95Suite) TestSwap(c *C) {
 		mgr.K = poolStorage
 		mgr.txOutStore = NewTxStoreDummy()
 
-		amount, evts, err := newSwapperV95().Swap(ctx, poolStorage, tx, item.target, item.destination, item.tradeTarget, "", "", nil, cosmos.NewUint(1000_000), 20_000, mgr)
+		amount, evts, err := newSwapperV98().Swap(ctx, poolStorage, tx, item.target, item.destination, item.tradeTarget, "", "", nil, cosmos.NewUint(1000_000), 20_000, mgr)
 		if item.expectedErr == nil {
 			c.Assert(err, IsNil)
 			c.Assert(evts, HasLen, item.events)
@@ -382,7 +382,7 @@ func (s *SwapV95Suite) TestSwap(c *C) {
 	}
 }
 
-func (s *SwapV95Suite) TestSynthSwap_RuneSynthRune(c *C) {
+func (s *SwapV98Suite) TestSynthSwap_RuneSynthRune(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	pool := NewPool()
 	pool.Asset = common.BNBAsset
@@ -448,7 +448,7 @@ func (s *SwapV95Suite) TestSynthSwap_RuneSynthRune(c *C) {
 		expectedRuneBalance := initialBalanceRune.Add(swapAmt).Sub(runeDisbursement)
 		expectedSynthSupply := swapResult.Sub(assetFee)
 
-		amount, _, err := newSwapperV95().Swap(ctx, mgr.Keeper(), tx, common.BNBAsset.GetSyntheticAsset(), addr, cosmos.ZeroUint(), "", "", nil, cosmos.NewUint(1000_000), 20_000, mgr)
+		amount, _, err := newSwapperV98().Swap(ctx, mgr.Keeper(), tx, common.BNBAsset.GetSyntheticAsset(), addr, cosmos.ZeroUint(), "", "", nil, cosmos.NewUint(1000_000), 20_000, mgr)
 		c.Assert(err, IsNil)
 		c.Check(amount.Uint64(), Equals, swapResult.Uint64(),
 			Commentf("Actual: %d Exp: %d", amount.Uint64(), swapResult.Uint64()))
@@ -515,7 +515,7 @@ func (s *SwapV95Suite) TestSynthSwap_RuneSynthRune(c *C) {
 		poolUnitsBefore2 := pool.GetPoolUnits().Mul(pool.GetPoolUnits())
 		luviBefore2 := pool.BalanceRune.Mul(pool.BalanceAsset).Quo(poolUnitsBefore2)
 
-		amount, _, err := newSwapperV95().Swap(ctx, mgr.Keeper(), tx, common.RuneAsset(), addr, cosmos.ZeroUint(), "", "", nil, cosmos.NewUint(1000_000), 20_000, mgr)
+		amount, _, err := newSwapperV98().Swap(ctx, mgr.Keeper(), tx, common.RuneAsset(), addr, cosmos.ZeroUint(), "", "", nil, cosmos.NewUint(1000_000), 20_000, mgr)
 		c.Assert(err, IsNil)
 		c.Check(amount.Uint64(), Equals, swapResult.Uint64(),
 			Commentf("Actual: %d Exp: %d", amount.Uint64(), swapResult.Uint64()))
@@ -543,7 +543,7 @@ func (s *SwapV95Suite) TestSynthSwap_RuneSynthRune(c *C) {
 	}
 }
 
-func (s *SwapV95Suite) TestSynthSwap_AssetSynth(c *C) {
+func (s *SwapV98Suite) TestSynthSwap_AssetSynth(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	pool := NewPool()
 	pool.Asset = common.BNBAsset
@@ -610,7 +610,7 @@ func (s *SwapV95Suite) TestSynthSwap_AssetSynth(c *C) {
 	poolUnitsBefore2 := pool.GetPoolUnits().Mul(pool.GetPoolUnits())
 	luviBefore2 := pool.BalanceRune.Mul(pool.BalanceAsset).Quo(poolUnitsBefore2)
 
-	amount, _, err := newSwapperV95().Swap(ctx, mgr.Keeper(), tx, common.BNBAsset.GetSyntheticAsset(), addr, cosmos.ZeroUint(), "", "", nil, cosmos.NewUint(1000_000), 20_000, mgr)
+	amount, _, err := newSwapperV98().Swap(ctx, mgr.Keeper(), tx, common.BNBAsset.GetSyntheticAsset(), addr, cosmos.ZeroUint(), "", "", nil, cosmos.NewUint(1000_000), 20_000, mgr)
 	c.Assert(err, IsNil)
 	c.Check(amount.Uint64(), Equals, swapResult2.Uint64(),
 		Commentf("Actual: %d Exp: %d", amount.Uint64(), swapResult2.Uint64()))
@@ -655,7 +655,7 @@ func (s *SwapV95Suite) TestSynthSwap_AssetSynth(c *C) {
 	btcPool.SynthUnits = cosmos.ZeroUint()
 	c.Assert(mgr.Keeper().SetPool(ctx, btcPool), IsNil)
 
-	amount, _, err = newSwapperV95().Swap(ctx, mgr.Keeper(), tx1, common.BTCAsset, addr, cosmos.ZeroUint(), "", "", nil, cosmos.NewUint(1000_000_000_000), 20_000, mgr)
+	amount, _, err = newSwapperV98().Swap(ctx, mgr.Keeper(), tx1, common.BTCAsset, addr, cosmos.ZeroUint(), "", "", nil, cosmos.NewUint(1000_000_000_000), 20_000, mgr)
 	c.Assert(err, NotNil)
 	c.Check(amount.IsZero(), Equals, true)
 	pool, err = mgr.Keeper().GetPool(ctx, common.BTCAsset)
