@@ -1,6 +1,7 @@
 package thorchain
 
 import (
+	"github.com/blang/semver"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/common"
@@ -48,8 +49,9 @@ func (GasManagerTestSuiteV94) TestGasManagerV93(c *C) {
 
 func (GasManagerTestSuiteV94) TestGetFee(c *C) {
 	ctx, mgr := setupManagerForTest(c)
+	mgr.currentVersion = semver.MustParse("1.94.0")
 	k := mgr.Keeper()
-	constAccessor := constants.GetConstantValues(GetCurrentVersion())
+	constAccessor := constants.GetConstantValues(mgr.currentVersion)
 	gasMgr := newGasMgrV94(constAccessor, k)
 	gasMgr.BeginBlock(mgr)
 	fee := gasMgr.GetFee(ctx, common.BNBChain, common.RuneAsset())
@@ -109,7 +111,7 @@ func (GasManagerTestSuiteV94) TestGetFee(c *C) {
 	k.SetMimir(ctx, constants.MinimumL1OutboundFeeUSD.String(), 1_0000_0000)
 
 	fee = gasMgr.GetFee(ctx, common.BTCChain, common.BTCAsset)
-	c.Assert(fee.Uint64(), Equals, uint64(20000000))
+	c.Assert(fee.Uint64(), Equals, uint64(20000000), Commentf("%d", fee.Uint64()))
 
 	// when network fee is higher than MinimumL1OutboundFeeUSD , then choose network fee
 	networkFee = NewNetworkFee(common.BTCChain, 1000, 50000)
