@@ -86,18 +86,18 @@ func (items swapItems) Sort() swapItems {
 	return sorted
 }
 
-// SwapQv95 is going to manage the swaps queue
-type SwapQv95 struct {
+// SwapQueueV103 is going to manage the swaps queue
+type SwapQueueV103 struct {
 	k keeper.Keeper
 }
 
-// newSwapQv95 create a new vault manager
-func newSwapQv95(k keeper.Keeper) *SwapQv95 {
-	return &SwapQv95{k: k}
+// newSwapQueueV103 create a new vault manager
+func newSwapQueueV103(k keeper.Keeper) *SwapQueueV103 {
+	return &SwapQueueV103{k: k}
 }
 
 // FetchQueue - grabs all swap queue items from the kvstore and returns them
-func (vm *SwapQv95) FetchQueue(ctx cosmos.Context) (swapItems, error) { // nolint
+func (vm *SwapQueueV103) FetchQueue(ctx cosmos.Context) (swapItems, error) { // nolint
 	items := make(swapItems, 0)
 	iterator := vm.k.GetSwapQueueIterator(ctx)
 	defer iterator.Close()
@@ -127,7 +127,7 @@ func (vm *SwapQv95) FetchQueue(ctx cosmos.Context) (swapItems, error) { // nolin
 }
 
 // EndBlock trigger the real swap to be processed
-func (vm *SwapQv95) EndBlock(ctx cosmos.Context, mgr Manager) error {
+func (vm *SwapQueueV103) EndBlock(ctx cosmos.Context, mgr Manager) error {
 	handler := NewInternalHandler(mgr)
 
 	minSwapsPerBlock, err := vm.k.GetMimir(ctx, constants.MinSwapsPerBlock.String())
@@ -160,7 +160,20 @@ func (vm *SwapQv95) EndBlock(ctx cosmos.Context, mgr Manager) error {
 		_, err := handler(ctx, &pick.msg)
 		if err != nil {
 			ctx.Logger().Error("fail to swap", "msg", pick.msg.Tx.String(), "error", err)
-			if newErr := refundTx(ctx, ObservedTx{Tx: pick.msg.Tx}, mgr, CodeSwapFail, err.Error(), ""); nil != newErr {
+
+			var refundErr error
+
+			// Get the full ObservedTx from the TxID, for the vault ObservedPubKey to first try to refund from.
+			voter, voterErr := mgr.Keeper().GetObservedTxInVoter(ctx, pick.msg.Tx.ID)
+			if voterErr == nil && !voter.Tx.IsEmpty() {
+				refundErr = refundTx(ctx, voter.Tx, mgr, CodeSwapFail, err.Error(), "")
+			} else {
+				// If the full ObservedTx could not be retrieved, proceed with just the MsgSwap's Tx (no ObservedPubKey).
+				ctx.Logger().Error("fail to get non-empty observed tx", "error", voterErr)
+				refundErr = refundTx(ctx, ObservedTx{Tx: pick.msg.Tx}, mgr, CodeSwapFail, err.Error(), "")
+			}
+
+			if nil != refundErr {
 				ctx.Logger().Error("fail to refund swap", "error", err)
 			}
 		}
@@ -170,7 +183,7 @@ func (vm *SwapQv95) EndBlock(ctx cosmos.Context, mgr Manager) error {
 }
 
 // getTodoNum - determine how many swaps to do.
-func (vm *SwapQv95) getTodoNum(queueLen, minSwapsPerBlock, maxSwapsPerBlock int64) int64 {
+func (vm *SwapQueueV103) getTodoNum(queueLen, minSwapsPerBlock, maxSwapsPerBlock int64) int64 {
 	// Do half the length of the queue. Unless...
 	//	1. The queue length is greater than maxSwapsPerBlock
 	//  2. The queue legnth is less than minSwapsPerBlock
@@ -186,7 +199,7 @@ func (vm *SwapQv95) getTodoNum(queueLen, minSwapsPerBlock, maxSwapsPerBlock int6
 
 // scoreMsgs - this takes a list of MsgSwap, and converts them to a scored
 // swapItem list
-func (vm *SwapQv95) scoreMsgs(ctx cosmos.Context, items swapItems, synthVirtualDepthMult int64) (swapItems, error) {
+func (vm *SwapQueueV103) scoreMsgs(ctx cosmos.Context, items swapItems, synthVirtualDepthMult int64) (swapItems, error) {
 	pools := make(map[common.Asset]Pool)
 
 	for i, item := range items {
@@ -250,7 +263,7 @@ func (vm *SwapQv95) scoreMsgs(ctx cosmos.Context, items swapItems, synthVirtualD
 }
 
 // getLiquidityFeeAndSlip calculate liquidity fee and slip, fee is in RUNE
-func (vm *SwapQv95) getLiquidityFeeAndSlip(ctx cosmos.Context, pool Pool, sourceCoin common.Coin, item *swapItem, virtualDepthMult int64) {
+func (vm *SwapQueueV103) getLiquidityFeeAndSlip(ctx cosmos.Context, pool Pool, sourceCoin common.Coin, item *swapItem, virtualDepthMult int64) {
 	// Get our X, x, Y values
 	var X, x, Y cosmos.Uint
 	x = sourceCoin.Amount
