@@ -313,3 +313,7 @@ func (gm *GasMgrV94) ProcessGas(ctx cosmos.Context, keeper keeper.Keeper) {
 		ctx.Logger().Error("fail to set network data", "error", err)
 	}
 }
+
+func (gm *GasMgrV94) CalcOutboundFeeMultiplier(ctx cosmos.Context, targetSurplusRune, gasSpentRune, gasWithheldRune, maxMultiplier, minMultiplier cosmos.Uint) cosmos.Uint {
+	return cosmos.ZeroUint()
+}
