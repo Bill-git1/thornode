@@ -13,7 +13,7 @@ type GasManagerTestSuiteV99 struct{}
 
 var _ = Suite(&GasManagerTestSuiteV99{})
 
-func (GasManagerTestSuiteV99) TestGasManagerV93(c *C) {
+func (GasManagerTestSuiteV99) TestGasManagerV99(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	k := mgr.K
 	constAccessor := constants.GetConstantValues(GetCurrentVersion())
