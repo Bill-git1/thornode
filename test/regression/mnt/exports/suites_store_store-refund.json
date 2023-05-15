@@ -284,7 +284,12 @@
         }
       ],
       "chain_contracts": [],
-      "last_chain_heights": [],
+      "last_chain_heights": [
+        {
+          "chain": "BTC",
+          "height": "788640"
+        }
+      ],
       "liquidity_providers": null,
       "loans": [],
       "mimirs": [],

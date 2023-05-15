@@ -1,5 +1,6 @@
-//go:build testnet || mocknet
+//go:build (testnet || mocknet) && !regtest
 // +build testnet mocknet
+// +build !regtest
 
 package thorchain
 
@@ -157,3 +158,5 @@ func migrateStoreV109(ctx cosmos.Context, mgr *Mgrs) {
 		ctx.Logger().Error("failed to migrate v109", "error", err)
 	}
 }
+
+func migrateStoreV110(ctx cosmos.Context, mgr *Mgrs) {}
