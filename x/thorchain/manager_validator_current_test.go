@@ -103,7 +103,6 @@ func (vts *ValidatorMgrVCURTestSuite) TestSetupValidatorNodes(c *C) {
 func (vts *ValidatorMgrVCURTestSuite) TestRagnarokForChaosnet(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	networkMgr := newValidatorMgrVCUR(mgr.Keeper(), mgr.NetworkMgr(), mgr.TxOutStore(), mgr.EventMgr())
-
 	mgr.Keeper().SetMimir(ctx, constants.DesiredValidatorSet.String(), 12)
 	mgr.Keeper().SetMimir(ctx, constants.ArtificialRagnarokBlockHeight.String(), 1024)
 	mgr.Keeper().SetMimir(ctx, constants.ChurnInterval.String(), 256)

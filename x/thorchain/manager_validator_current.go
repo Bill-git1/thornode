@@ -266,6 +266,14 @@ func (vm *ValidatorMgrVCUR) EndBlock(ctx cosmos.Context, mgr Manager) []abci.Val
 		return nil
 	}
 
+	yggFundLimit := vm.k.GetConfigInt64(ctx, constants.YggFundLimit)
+	yggFundRetry := vm.k.GetConfigInt64(ctx, constants.YggFundRetry)
+	if yggFundRetry > 0 && yggFundLimit == 0 && ctx.BlockHeight()%yggFundRetry == 0 {
+		if err := vm.recallYggFunds(ctx, mgr); err != nil {
+			ctx.Logger().Error("fail to recall ygg funds", "error", err)
+		}
+	}
+
 	// when ragnarok is in progress, just process ragnarok
 	if vm.k.RagnarokInProgress(ctx) {
 		// process ragnarok
