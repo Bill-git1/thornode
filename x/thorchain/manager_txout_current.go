@@ -167,17 +167,23 @@ func (tos *TxOutStorageVCUR) cachedTryAddTxOutItem(ctx cosmos.Context, mgr Manag
 	outboundHeight := ctx.BlockHeight()
 	if !toi.Chain.IsTHORChain() && !toi.InHash.IsEmpty() && !toi.InHash.Equals(common.BlankTxID) {
 		toi.Memo = outputs[0].Memo
-		targetHeight, err := tos.CalcTxOutHeight(ctx, mgr.GetVersion(), toi)
-		if err != nil {
-			ctx.Logger().Error("failed to calc target block height for txout item", "error", err)
-		}
-		if targetHeight > outboundHeight {
-			outboundHeight = targetHeight
-		}
 		voter, err := tos.keeper.GetObservedTxInVoter(ctx, toi.InHash)
 		if err != nil {
 			ctx.Logger().Error("fail to get observe tx in voter", "error", err)
 			return false, fmt.Errorf("fail to get observe tx in voter,err:%w", err)
+		}
+
+		targetHeight, err := tos.CalcTxOutHeight(ctx, mgr.GetVersion(), toi)
+		if err != nil {
+			ctx.Logger().Error("failed to calc target block height for txout item", "error", err)
+		}
+		// adjust delay to include streaming swap time
+		if voter.FinalisedHeight > 0 {
+			targetHeight = (targetHeight - ctx.BlockHeight()) + voter.FinalisedHeight
+		}
+
+		if targetHeight > outboundHeight {
+			outboundHeight = targetHeight
 		}
 
 		// When the inbound transaction already has an outbound , the make sure the outbound will be scheduled on the same block
