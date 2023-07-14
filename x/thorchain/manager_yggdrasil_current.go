@@ -11,8 +11,6 @@ import (
 	kvTypes "gitlab.com/thorchain/thornode/x/thorchain/keeper/types"
 )
 
-var mimirStopFundYggdrasil = `StopFundYggdrasil`
-
 // YggMgrVCUR is an implementation of YggManager
 type YggMgrVCUR struct {
 	keeper keeper.Keeper
@@ -35,8 +33,8 @@ func (ymgr YggMgrVCUR) Fund(ctx cosmos.Context, mgr Manager) error {
 	if ragnarokHeight > 0 {
 		return nil
 	}
-	stopFundYggdrasil, err := mgr.Keeper().GetMimir(ctx, mimirStopFundYggdrasil)
-	if err == nil && stopFundYggdrasil > 0 {
+	stopFundYggdrasil := mgr.Keeper().GetConfigInt64(ctx, constants.StopFundYggdrasil)
+	if stopFundYggdrasil > 0 {
 		ctx.Logger().Debug("mimir stop fund yggdrasil")
 		return nil
 	}

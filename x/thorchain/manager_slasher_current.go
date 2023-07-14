@@ -510,8 +510,8 @@ func (s *SlasherVCUR) SlashVault(ctx cosmos.Context, vaultPK common.PubKey, coin
 		pauseOnSlashThreshold := mgr.Keeper().GetConfigInt64(ctx, constants.PauseOnSlashThreshold)
 		if pauseOnSlashThreshold > 0 && totalRuneToSlash.GTE(cosmos.NewUint(uint64(pauseOnSlashThreshold))) {
 			// set mimirs to pause the chain and ygg funding
-			s.keeper.SetMimir(ctx, mimirStopFundYggdrasil, ctx.BlockHeight())
-			mimirEvent := NewEventSetMimir(strings.ToUpper(mimirStopFundYggdrasil), strconv.FormatInt(ctx.BlockHeight(), 10))
+			s.keeper.SetMimir(ctx, constants.StopFundYggdrasil.String(), ctx.BlockHeight())
+			mimirEvent := NewEventSetMimir(strings.ToUpper(constants.StopFundYggdrasil.String()), strconv.FormatInt(ctx.BlockHeight(), 10))
 			if err := mgr.EventMgr().EmitEvent(ctx, mimirEvent); err != nil {
 				ctx.Logger().Error("fail to emit set_mimir event", "error", err)
 			}
