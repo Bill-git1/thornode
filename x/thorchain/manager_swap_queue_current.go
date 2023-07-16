@@ -219,6 +219,16 @@ func (vm *SwapQueueVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 					vm.k.RemoveStreamingSwap(ctx, pick.msg.Tx.ID)
 					vm.k.RemoveSwapQueueItem(ctx, pick.msg.Tx.ID, pick.index)
 				}
+			} else {
+				// Should not refund a failed preferred asset swap, the RUNE is still in the AffiliateCollector module
+				affColAddress, err := mgr.Keeper().GetModuleAddress(AffiliateCollectorName)
+				if err != nil {
+					ctx.Logger().Error("failed to retrieve AffiliateCollector module address", "error", err)
+				}
+
+				if strings.HasPrefix(pick.msg.Tx.Memo, "THOR-PREFERRED-ASSET") && pick.msg.Tx.FromAddress.Equals(affColAddress) {
+					triggerRefund = false
+				}
 			}
 
 			if triggerRefund {
