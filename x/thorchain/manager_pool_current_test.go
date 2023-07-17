@@ -361,3 +361,83 @@ func (s *PoolMgrVCURSuite) TestRemoveLiquidityProviders(c *C) {
 	c.Assert(countLiquidityProviders(ctx, k, asset), Equals, 0,
 		Commentf("should have 0 lps after removing"))
 }
+
+func (s *PoolMgrVCURSuite) TestCommitPendingLiquidity(c *C) {
+	var err error
+	ctx, mgr := setupManagerForTest(c)
+
+	pendingLiquidityAgeLimit := mgr.Keeper().GetConfigInt64(ctx, constants.PendingLiquidityAgeLimit)
+	ctx = ctx.WithBlockHeight(pendingLiquidityAgeLimit + 10)
+
+	pm := newPoolMgrVCUR()
+
+	na := GetRandomValidatorNode(NodeActive)
+	c.Assert(mgr.Keeper().SetNodeAccount(ctx, na), IsNil)
+
+	asset := common.BTCAsset
+
+	pool := NewPool()
+	pool.Asset = asset
+	pool.BalanceRune = cosmos.NewUint(100_000)
+	pool.BalanceAsset = cosmos.NewUint(100_000)
+	pool.PendingInboundRune = cosmos.OneUint()
+	pool.PendingInboundAsset = cosmos.OneUint()
+	pool.LPUnits = cosmos.NewUint(1000)
+	c.Check(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	lp1 := LiquidityProvider{
+		Asset:         pool.Asset,
+		RuneAddress:   GetRandomRUNEAddress(),
+		AssetAddress:  GetRandomBTCAddress(),
+		PendingRune:   cosmos.NewUint(501),
+		Units:         cosmos.NewUint(300),
+		LastAddHeight: 1,
+	}
+	mgr.Keeper().SetLiquidityProvider(ctx, lp1)
+
+	lp2 := LiquidityProvider{
+		Asset:         pool.Asset,
+		RuneAddress:   GetRandomRUNEAddress(),
+		AssetAddress:  GetRandomBTCAddress(),
+		PendingAsset:  cosmos.NewUint(600),
+		Units:         cosmos.NewUint(500),
+		LastAddHeight: 1,
+	}
+	mgr.Keeper().SetLiquidityProvider(ctx, lp2)
+
+	lp3 := LiquidityProvider{
+		Asset:         pool.Asset,
+		RuneAddress:   GetRandomRUNEAddress(),
+		AssetAddress:  GetRandomBTCAddress(),
+		PendingAsset:  cosmos.NewUint(811),
+		Units:         cosmos.NewUint(200),
+		LastAddHeight: ctx.BlockHeight(),
+	}
+	mgr.Keeper().SetLiquidityProvider(ctx, lp3)
+
+	err = pm.commitPendingLiquidity(ctx, pool, mgr)
+	c.Assert(err, IsNil)
+
+	pool, err = mgr.Keeper().GetPool(ctx, pool.Asset)
+	c.Assert(err, IsNil)
+	c.Check(pool.BalanceRune.Uint64(), Equals, uint64(100_501), Commentf("%d", pool.BalanceRune.Uint64()))
+	c.Check(pool.BalanceAsset.Uint64(), Equals, uint64(100_600), Commentf("%d", pool.BalanceAsset.Uint64()))
+
+	lp, err := mgr.Keeper().GetLiquidityProvider(ctx, pool.Asset, lp1.GetAddress())
+	c.Assert(err, IsNil)
+	c.Check(lp.Units.Uint64(), Equals, uint64(302), Commentf("%d", lp.Units.Uint64()))
+	c.Check(lp.PendingRune.Uint64(), Equals, uint64(0), Commentf("%d", lp.PendingRune.Uint64()))
+	c.Check(lp.PendingAsset.Uint64(), Equals, uint64(0), Commentf("%d", lp.PendingAsset.Uint64()))
+
+	lp, err = mgr.Keeper().GetLiquidityProvider(ctx, pool.Asset, lp2.GetAddress())
+	c.Assert(err, IsNil)
+	c.Check(lp.Units.Uint64(), Equals, uint64(502), Commentf("%d", lp.Units.Uint64()))
+	c.Check(lp.PendingRune.Uint64(), Equals, uint64(0), Commentf("%d", lp.PendingRune.Uint64()))
+	c.Check(lp.PendingAsset.Uint64(), Equals, uint64(0), Commentf("%d", lp.PendingAsset.Uint64()))
+
+	lp, err = mgr.Keeper().GetLiquidityProvider(ctx, pool.Asset, lp3.GetAddress())
+	c.Assert(err, IsNil)
+	c.Check(lp.Units.Uint64(), Equals, uint64(200), Commentf("%d", lp.Units.Uint64()))
+	c.Check(lp.PendingRune.Uint64(), Equals, uint64(0), Commentf("%d", lp.PendingRune.Uint64()))
+	c.Check(lp.PendingAsset.Uint64(), Equals, uint64(811), Commentf("%d", lp.PendingAsset.Uint64()))
+}
