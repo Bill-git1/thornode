@@ -193,9 +193,9 @@ func (vm *SwapQueueVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 		swp := pick.msg.GetStreamingSwap()
 
 		triggerRefund := false
-		_, err := handler(ctx, &pick.msg)
-		if err != nil {
-			ctx.Logger().Error("fail to swap", "msg", pick.msg.Tx.String(), "error", err)
+		_, handleErr := handler(ctx, &pick.msg)
+		if handleErr != nil {
+			ctx.Logger().Error("fail to swap", "msg", pick.msg.Tx.String(), "error", handleErr)
 
 			var refundErr error
 			triggerRefund = !pick.msg.IsStreaming()
@@ -235,15 +235,15 @@ func (vm *SwapQueueVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 				// Get the full ObservedTx from the TxID, for the vault ObservedPubKey to first try to refund from.
 				voter, voterErr := mgr.Keeper().GetObservedTxInVoter(ctx, pick.msg.Tx.ID)
 				if voterErr == nil && !voter.Tx.IsEmpty() {
-					refundErr = refundTx(ctx, ObservedTx{Tx: pick.msg.Tx, ObservedPubKey: voter.Tx.ObservedPubKey}, mgr, CodeSwapFail, err.Error(), "")
+					refundErr = refundTx(ctx, ObservedTx{Tx: pick.msg.Tx, ObservedPubKey: voter.Tx.ObservedPubKey}, mgr, CodeSwapFail, handleErr.Error(), "")
 				} else {
 					// If the full ObservedTx could not be retrieved, proceed with just the MsgSwap's Tx (no ObservedPubKey).
 					ctx.Logger().Error("fail to get non-empty observed tx", "error", voterErr)
-					refundErr = refundTx(ctx, ObservedTx{Tx: pick.msg.Tx}, mgr, CodeSwapFail, err.Error(), "")
+					refundErr = refundTx(ctx, ObservedTx{Tx: pick.msg.Tx}, mgr, CodeSwapFail, handleErr.Error(), "")
 				}
 
-				if nil != refundErr {
-					ctx.Logger().Error("fail to refund swap", "error", err)
+				if refundErr != nil {
+					ctx.Logger().Error("fail to refund swap", "error", refundErr)
 				}
 			}
 		}
@@ -255,6 +255,10 @@ func (vm *SwapQueueVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 				return err
 			}
 			swp.Count += 1
+			if handleErr != nil {
+				swp.FailedSwaps = append(swp.FailedSwaps, swp.Count)
+				swp.FailedSwapReasons = append(swp.FailedSwapReasons, handleErr.Error())
+			}
 			swp.LastHeight = ctx.BlockHeight()
 			if !triggerRefund {
 				mgr.Keeper().SetStreamingSwap(ctx, swp)
