@@ -533,19 +533,19 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 					}
 
 					outputs[i].Coin.Amount = common.SafeSub(outputs[i].Coin.Amount, assetFee) // Deduct Asset fee
-					if outputs[i].Coin.Asset.IsSyntheticAsset() {
-						// burn the synth asset which used to pay for fee, that's only required when the synth is sending from asgard
-						if outputs[i].ModuleName == "" || outputs[i].ModuleName == AsgardName {
+					if outputs[i].Coin.Asset.IsNative() {
+						// burn the native asset which used to pay for fee, that's only required when sending from asgard
+						if outputs[i].GetModuleName() == AsgardName {
 							if err := tos.keeper.SendFromModuleToModule(ctx,
 								AsgardName,
 								ModuleName,
 								common.NewCoins(common.NewCoin(outputs[i].Coin.Asset, assetFee))); err != nil {
-								ctx.Logger().Error("fail to move synth asset fee from asgard to Module", "error", err)
+								ctx.Logger().Error("fail to move native asset fee from asgard to Module", "error", err)
 							} else {
 								if err := tos.keeper.BurnFromModule(ctx, ModuleName, common.NewCoin(outputs[i].Coin.Asset, assetFee)); err != nil {
-									ctx.Logger().Error("fail to burn synth asset", "error", err)
+									ctx.Logger().Error("fail to burn native asset", "error", err)
 								} else {
-									burnEvt := NewEventMintBurn(BurnSupplyType, outputs[i].Coin.Asset.Native(), assetFee, "burn_synth_fee")
+									burnEvt := NewEventMintBurn(BurnSupplyType, outputs[i].Coin.Asset.Native(), assetFee, "burn_native_fee")
 									if err := tos.eventMgr.EmitEvent(ctx, burnEvt); err != nil {
 										ctx.Logger().Error("fail to emit burn event", "error", err)
 									}
@@ -649,13 +649,29 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 		}
 	}
 	if !finalRuneFee.IsZero() {
-		if toi.ModuleName == BondName {
-			if err := tos.keeper.AddBondFeeToReserve(ctx, finalRuneFee); err != nil {
-				ctx.Logger().Error("fail to add bond fee to reserve", "error", err)
+		if toi.Coin.Asset.IsNativeRune() {
+			// If the source module is the Reserve, leave the fee in the Reserve without a transfer.
+			if toi.ModuleName != ReserveName {
+				sourceModule := toi.GetModuleName() // Ensure that non-"".
+				coin := common.NewCoin(common.RuneAsset(), finalRuneFee)
+				err := tos.keeper.SendFromModuleToModule(ctx, sourceModule, ReserveName, common.NewCoins(coin))
+				if err != nil {
+					ctx.Logger().Error("fail to send fee to reserve", "error", err, "module", sourceModule)
+				}
 			}
 		} else {
-			if err := tos.keeper.AddPoolFeeToReserve(ctx, finalRuneFee); err != nil {
-				ctx.Logger().Error("fail to add pool fee to reserve", "error", err)
+			// Layer 1 or Synth Asset is implicitly swapped in a pool
+			// whether in vault or burnt from another network module,
+			// but Derived Asset has no outbound fee taken
+			// so that the emitted amount passed to the loan handler
+			// and the amount transferred to the Lending module are the same.
+			// (If a fee were taken, then being for a Derived Asset pool
+			//  it would contribute to Lending breathing room
+			//  rather than affecting Pool Module RUNE.)
+			if !toi.Coin.Asset.IsDerivedAsset() {
+				if err := tos.keeper.AddPoolFeeToReserve(ctx, finalRuneFee); err != nil {
+					ctx.Logger().Error("fail to add pool fee to reserve", "error", err)
+				}
 			}
 		}
 	}
@@ -793,9 +809,7 @@ func (tos *TxOutStorageVCUR) nativeTxOut(ctx cosmos.Context, mgr Manager, toi Tx
 		return err
 	}
 
-	if toi.ModuleName == "" {
-		toi.ModuleName = AsgardName
-	}
+	toi.ModuleName = toi.GetModuleName() // Ensure that non-"".
 
 	// mint if we're sending from THORChain module
 	if toi.ModuleName == ModuleName {
