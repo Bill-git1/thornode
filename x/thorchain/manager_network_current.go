@@ -433,14 +433,14 @@ func (vm *NetworkMgrVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 				// signer, to successfully send these funds while respecting
 				// gas requirements (so it'll actually send slightly less)
 				amt := coin.Amount
-				if nth < migrationRounds { // migrate partial funds 4 times (migrationRounds is 5 in mainnet)
-					// each round of migration, we are increasing the amount 20%.
-					// Round 1 = 20%
-					// Round 2 = 40%
-					// Round 3 = 60%
-					// Round 4 = 80%
-					// Round 5 = 100%
-					amt = amt.MulUint64(uint64(nth)).QuoUint64(uint64(migrationRounds))
+				if nth < migrationRounds { // migrate partial funds prior to the final round
+					// each round of migration, about the same amount is sent.  For example, if 5 rounds:
+					// Round 1 = 1/5 ( 20% of current, 20% of start)
+					// Round 2 = 1/4 ( 25% of current, 20% of start)
+					// Round 3 = 1/3 ( 33% of current, 20% of start)
+					// Round 4 = 1/2 ( 50% of current, 20% of start)
+					// Round 5 = 1/1 (100% of current, 20% of start)
+					amt = amt.QuoUint64(uint64(1 + migrationRounds - nth)) // as nth < migrationRounds, the denominator is never zero
 				}
 				amt = cosmos.RoundToDecimal(amt, coin.Decimals)
 
