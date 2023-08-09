@@ -963,13 +963,7 @@ func queryBorrowers(ctx cosmos.Context, path []string, req abci.RequestQuery, mg
 		borrowers[i] = *borrower
 	}
 
-	var res []byte
-	res, err = json.MarshalIndent(borrowers, "", "	")
-	if err != nil {
-		ctx.Logger().Error("fail to marshal borrowers to json", "error", err)
-		return nil, fmt.Errorf("fail to marshal borrowers to json: %w", err)
-	}
-	return res, nil
+	return jsonify(ctx, borrowers)
 }
 
 // queryBorrower
@@ -1008,13 +1002,7 @@ func queryBorrower(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr
 		loan.LastRepayHeight,
 	)
 
-	var res []byte
-	res, err = json.MarshalIndent(borrower, "", "	")
-	if err != nil {
-		ctx.Logger().Error("fail to marshal borrower to json", "error", err)
-		return nil, fmt.Errorf("fail to marshal borrower to json: %w", err)
-	}
-	return res, nil
+	return jsonify(ctx, borrower)
 }
 
 // queryLiquidityProviders
@@ -1984,7 +1972,7 @@ func queryTssMetric(ctx cosmos.Context, path []string, req abci.RequestQuery, mg
 		KeygenMetrics: keygenMetrics,
 		KeysignMetric: keysignMetric,
 	}
-	return json.MarshalIndent(m, "", "	")
+	return jsonify(ctx, m)
 }
 
 func queryInvariants(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
