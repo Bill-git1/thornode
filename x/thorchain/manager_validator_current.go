@@ -1258,7 +1258,7 @@ func (vm *ValidatorMgrVCUR) findOldActor(ctx cosmos.Context) (NodeAccount, error
 	na.StatusSince = ctx.BlockHeight() // set the start status age to "now"
 	for _, n := range nas {
 		// Only mark an old actor not already marked for churn-out.
-		if na.LeaveScore > 0 {
+		if n.LeaveScore > 0 {
 			continue
 		}
 		if n.StatusSince < na.StatusSince {
@@ -1282,7 +1282,7 @@ func (vm *ValidatorMgrVCUR) findLowBondActor(ctx cosmos.Context) (NodeAccount, e
 		na = nas[0]
 		for _, n := range nas {
 			// Only mark a low bond actor not already marked for churn-out.
-			if na.LeaveScore > 0 {
+			if n.LeaveScore > 0 {
 				continue
 			}
 			if n.Bond.LT(bond) {
