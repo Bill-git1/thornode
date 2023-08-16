@@ -177,9 +177,9 @@ func (tos *TxOutStorageVCUR) cachedTryAddTxOutItem(ctx cosmos.Context, mgr Manag
 		if err != nil {
 			ctx.Logger().Error("failed to calc target block height for txout item", "error", err)
 		}
-		// adjust delay to include streaming swap time
-		if voter.FinalisedHeight > 0 {
-			targetHeight = (targetHeight - ctx.BlockHeight()) + voter.FinalisedHeight
+		// adjust delay to include streaming swap time since inbound consensus
+		if voter.Height > 0 {
+			targetHeight = (targetHeight - ctx.BlockHeight()) + voter.Height
 		}
 
 		if targetHeight > outboundHeight {
