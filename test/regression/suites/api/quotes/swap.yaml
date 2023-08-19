@@ -575,7 +575,7 @@ asserts:
   - .fees.total_bps == 1643
 ---
 ########################################################################################
-# quote and swap a streaming swap with specified quantity
+# quote and swap a streaming swap with specified quantity and tolerance
 ########################################################################################
 type: check
 description: check swap quote
@@ -587,8 +587,9 @@ params:
   destination: {{ addr_btc_fox }}
   streaming_interval: 10
   streaming_quantity: 10
+  tolerance_bps: 3500
 asserts:
-  - .memo == "=:BTC.BTC:{{ addr_btc_fox }}:0/10/10"
+  - .memo == "=:BTC.BTC:{{ addr_btc_fox }}:6420863/10/10"
   - .max_streaming_quantity == 19
   - .streaming_swap_blocks == 90
   - .streaming_swap_seconds == 540
