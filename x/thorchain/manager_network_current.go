@@ -837,6 +837,11 @@ func (vm *NetworkMgrVCUR) removePOLLiquidity(
 	lpRune := common.GetSafeShare(lp.Units, pool.GetPoolUnits(), pool.BalanceRune).MulUint64(2)
 	basisPts := common.GetSafeShare(runeAmt, lpRune, cosmos.NewUint(10_000))
 
+	// if the move is smaller than 1 basis point of the position, withdraw 1 basis point
+	if basisPts.IsZero() {
+		basisPts = cosmos.OneUint()
+	}
+
 	coins := common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.OneUint()))
 	tx := common.NewTx(common.BlankTxID, polAddress, asgardAddress, coins, nil, "THOR-POL-REMOVE")
 	msg := NewMsgWithdrawLiquidity(
