@@ -143,6 +143,10 @@ func (vm *SwapQueueVCUR) FetchQueue(ctx cosmos.Context) (swapItems, error) { // 
 				if (ctx.BlockHeight()-swp.LastHeight)%int64(swp.Interval) != 0 {
 					continue // skip
 				}
+				if vm.k.IsTradingHalt(ctx, &msg) {
+					// if trading/chain is halted, skip
+					continue // skip
+				}
 			}
 		}
 
