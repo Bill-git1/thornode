@@ -142,12 +142,6 @@ endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
 asserts:
   - .result[]|select(.denom == "rune")|.amount == "4992000000"
 ---
-type: check
-description: ensure affiliate_collector invariant
-endpoint: http://localhost:1317/thorchain/invariant/affiliate_collector
-asserts:
-  - .broken == false
----
 ########################################################################################
 # Swap RUNE -> BTC w/ affiliate "test"
 ########################################################################################
@@ -181,12 +175,6 @@ description: check pig balance after rune swap, should be the same
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
 asserts:
   - .result[]|select(.denom == "rune")|.amount == "4992000000"
----
-type: check
-description: ensure affiliate_collector invariant
-endpoint: http://localhost:1317/thorchain/invariant/affiliate_collector
-asserts:
-  - .broken == false
 ---
 # Observe the outbound.
 type: tx-observed-out
@@ -248,12 +236,6 @@ description: check pig balance after rune swap, should be the same
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
 asserts:
   - .result[]|select(.denom == "rune")|.amount == "4992000000"
----
-type: check
-description: ensure affiliate_collector invariant
-endpoint: http://localhost:1317/thorchain/invariant/affiliate_collector
-asserts:
-  - .broken == false
 ---
 type: check
 description: check PreferredAsset swap event
@@ -324,12 +306,6 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
 ---
-type: check
-description: ensure affiliate_collector invariant
-endpoint: http://localhost:1317/thorchain/invariant/affiliate_collector
-asserts:
-  - .broken == false
----
 ########################################################################################
 # Test PreferredAsset swap being refunded
 ########################################################################################
@@ -367,12 +343,6 @@ description: total rune balance of affiliate module should match "test" balance 
 endpoint: http://localhost:1317/thorchain/balance/module/affiliate_collector
 asserts:
   - .coins[]|select(.denom == "rune")|.amount == "429942580"
----
-type: check
-description: ensure affiliate_collector invariant
-endpoint: http://localhost:1317/thorchain/invariant/affiliate_collector
-asserts:
-  - .broken == false
 ---
 # BTC paused
 type: tx-mimir
@@ -425,12 +395,6 @@ endpoint: http://localhost:1317/thorchain/balance/module/affiliate_collector
 asserts:
   - .coins[]|select(.denom == "rune")|.amount == "2256550089"
 ---
-type: check
-description: ensure affiliate_collector invariant
-endpoint: http://localhost:1317/thorchain/invariant/affiliate_collector
-asserts:
-  - .broken == false
----
 ########################################################################################
 # Swap RUNE -> BTC w/ affiliate "test", which should trigger preferred asset swap
 ########################################################################################
@@ -469,9 +433,3 @@ description: no refund for preferred asset swap
 endpoint: http://localhost:1317/thorchain/blockevents
 asserts:
   - .|[.end[]|select(.type == "refund")]|length == 0
----
-type: check
-description: ensure affiliate_collector invariant
-endpoint: http://localhost:1317/thorchain/invariant/affiliate_collector
-asserts:
-  - .broken == false

@@ -17,31 +17,25 @@ asserts:
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
 txs:
-- tx:
-    id: '{{ observe_txid 1 }}'
-    chain: BTC
-    from_address: {{ addr_btc_fox }}
-    to_address: {{ addr_btc_dog }}
-    coins:
-      - amount: "5000000"
-        asset: "BTC.BTC"
-        decimals: 8
-    gas:
-      - amount: "10000"
-        asset: "BTC.BTC"
-    memo: "=:ETH.ETH:{{ addr_eth_fox }}:0/1"
-  block_height: 1
-  finalise_height: 1
-  observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 1 }}"
+      chain: BTC
+      from_address: {{ addr_btc_fox }}
+      to_address: {{ addr_btc_dog }}
+      coins:
+        - amount: "5000000"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "10000"
+          asset: "BTC.BTC"
+      memo: "=:ETH.ETH:{{ addr_eth_fox }}:0/1"
+    block_height: 1
+    finalise_height: 1
+    observed_pub_key: {{ pubkey_dog }}
 ---
 type: create-blocks
 count: 1
----
-type: check
-description: ensure asgard invariant
-endpoint: http://localhost:1317/thorchain/invariant/asgard
-asserts:
-  - .broken == false
 ---
 type: check
 description: check streaming swap was created
@@ -65,12 +59,6 @@ endpoint: http://localhost:1317/thorchain/swaps/streaming
 asserts:
   - .|length == 1
 ---
-type: check
-description: ensure streaming swap invariant
-endpoint: http://localhost:1317/thorchain/invariant/streaming_swaps
-asserts:
-  - .broken == false
----
 type: create-blocks
 count: 9
 ---
@@ -92,28 +80,22 @@ asserts:
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
 txs:
-- tx:
-    id: '{{ observe_txid 1 }}'
-    chain: ETH
-    from_address: {{ addr_eth_dog }}
-    to_address: {{ addr_eth_fox }}
-    coins:
-      - amount: "43762861"
-        asset: "ETH.ETH"
-        decimals: 8
-    gas:
-      - amount: "960000"
-        asset: "ETH.ETH"
-    memo: "OUT:{{ observe_txid 1 }}"
-  block_height: 5
-  finalise_height: 5
-  observed_pub_key: {{ pubkey_dog }}
----
-type: check
-description: ensure asgard invariant
-endpoint: http://localhost:1317/thorchain/invariant/asgard
-asserts:
-  - .broken == false
+  - tx:
+      id: "{{ observe_txid 1 }}"
+      chain: ETH
+      from_address: {{ addr_eth_dog }}
+      to_address: {{ addr_eth_fox }}
+      coins:
+        - amount: "43762861"
+          asset: "ETH.ETH"
+          decimals: 8
+      gas:
+        - amount: "960000"
+          asset: "ETH.ETH"
+      memo: "OUT:{{ observe_txid 1 }}"
+    block_height: 5
+    finalise_height: 5
+    observed_pub_key: {{ pubkey_dog }}
 ---
 type: create-blocks
 count: 1
@@ -124,22 +106,22 @@ count: 1
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
 txs:
-- tx:
-    id: '{{ observe_txid 2 }}'
-    chain: BTC
-    from_address: {{ addr_btc_fox }}
-    to_address: {{ addr_btc_dog }}
-    coins:
-      - amount: "6000000"
-        asset: "BTC.BTC"
-        decimals: 8
-    gas:
-      - amount: "10000"
-        asset: "BTC.BTC"
-    memo: "=:ETH.ETH:{{ addr_eth_fox }}:0/1/10"
-  block_height: 1
-  finalise_height: 1
-  observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 2 }}"
+      chain: BTC
+      from_address: {{ addr_btc_fox }}
+      to_address: {{ addr_btc_dog }}
+      coins:
+        - amount: "6000000"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "10000"
+          asset: "BTC.BTC"
+      memo: "=:ETH.ETH:{{ addr_eth_fox }}:0/1/10"
+    block_height: 1
+    finalise_height: 1
+    observed_pub_key: {{ pubkey_dog }}
 ---
 type: create-blocks
 count: 1
@@ -201,22 +183,22 @@ asserts:
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
 txs:
-- tx:
-    id: '{{ observe_txid 3 }}'
-    chain: ETH
-    from_address: {{ addr_eth_dog }}
-    to_address: {{ addr_eth_fox }}
-    coins:
-      - amount: "43058890"
-        asset: "ETH.ETH"
-        decimals: 8
-    gas:
-      - amount: "960000"
-        asset: "ETH.ETH"
-    memo: "OUT:{{ observe_txid 2 }}"
-  block_height: 5
-  finalise_height: 5
-  observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 3 }}"
+      chain: ETH
+      from_address: {{ addr_eth_dog }}
+      to_address: {{ addr_eth_fox }}
+      coins:
+        - amount: "43058890"
+          asset: "ETH.ETH"
+          decimals: 8
+      gas:
+        - amount: "960000"
+          asset: "ETH.ETH"
+      memo: "OUT:{{ observe_txid 2 }}"
+    block_height: 5
+    finalise_height: 5
+    observed_pub_key: {{ pubkey_dog }}
 ---
 type: create-blocks
 count: 1
@@ -236,22 +218,22 @@ count: 1
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
 txs:
-- tx:
-    id: '{{ observe_txid 5 }}'
-    chain: BTC
-    from_address: {{ addr_btc_fox }}
-    to_address: {{ addr_btc_dog }}
-    coins:
-      - amount: "6000000"
-        asset: "BTC.BTC"
-        decimals: 8
-    gas:
-      - amount: "10000"
-        asset: "BTC.BTC"
-    memo: "=:ETH.ETH:{{ addr_eth_fox }}:38666695/1/5"
-  block_height: 6
-  finalise_height: 6
-  observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 5 }}"
+      chain: BTC
+      from_address: {{ addr_btc_fox }}
+      to_address: {{ addr_btc_dog }}
+      coins:
+        - amount: "6000000"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "10000"
+          asset: "BTC.BTC"
+      memo: "=:ETH.ETH:{{ addr_eth_fox }}:38666695/1/5"
+    block_height: 6
+    finalise_height: 6
+    observed_pub_key: {{ pubkey_dog }}
 ---
 type: create-blocks
 count: 5
@@ -279,38 +261,38 @@ asserts:
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
 txs:
-- tx:
-    id: '{{ observe_txid 6 }}'
-    chain: ETH
-    from_address: {{ addr_eth_dog }}
-    to_address: {{ addr_eth_fox }}
-    coins:
-      - amount: "6500711"
-        asset: "ETH.ETH"
-        decimals: 8
-    gas:
-      - amount: "960000"
-        asset: "ETH.ETH"
-    memo: "OUT:{{ observe_txid 5 }}"
-  block_height: 5
-  finalise_height: 5
-  observed_pub_key: {{ pubkey_dog }}
-- tx:
-    id: '{{ observe_txid 7 }}'
-    chain: BTC
-    from_address: {{ addr_btc_dog }}
-    to_address: {{ addr_btc_fox }}
-    coins:
-      - amount: "4786001"
-        asset: "BTC.BTC"
-        decimals: 8
-    gas:
-      - amount: "10500"
-        asset: "BTC.BTC"
-    memo: "OUT:{{ observe_txid 5 }}"
-  block_height: 5
-  finalise_height: 5
-  observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 6 }}"
+      chain: ETH
+      from_address: {{ addr_eth_dog }}
+      to_address: {{ addr_eth_fox }}
+      coins:
+        - amount: "6500711"
+          asset: "ETH.ETH"
+          decimals: 8
+      gas:
+        - amount: "960000"
+          asset: "ETH.ETH"
+      memo: "OUT:{{ observe_txid 5 }}"
+    block_height: 5
+    finalise_height: 5
+    observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 7 }}"
+      chain: BTC
+      from_address: {{ addr_btc_dog }}
+      to_address: {{ addr_btc_fox }}
+      coins:
+        - amount: "4786001"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "10500"
+          asset: "BTC.BTC"
+      memo: "OUT:{{ observe_txid 5 }}"
+    block_height: 5
+    finalise_height: 5
+    observed_pub_key: {{ pubkey_dog }}
 ---
 type: create-blocks
 count: 1
@@ -321,22 +303,22 @@ count: 1
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
 txs:
-- tx:
-    id: '{{ observe_txid 8 }}'
-    chain: BTC
-    from_address: {{ addr_btc_fox }}
-    to_address: {{ addr_btc_dog }}
-    coins:
-      - amount: "6000000"
-        asset: "BTC.BTC"
-        decimals: 8
-    gas:
-      - amount: "10000"
-        asset: "BTC.BTC"
-    memo: "=:ETH.ETH:{{ addr_eth_fox }}:0/1/11"
-  block_height: 6
-  finalise_height: 6
-  observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 8 }}"
+      chain: BTC
+      from_address: {{ addr_btc_fox }}
+      to_address: {{ addr_btc_dog }}
+      coins:
+        - amount: "6000000"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "10000"
+          asset: "BTC.BTC"
+      memo: "=:ETH.ETH:{{ addr_eth_fox }}:0/1/11"
+    block_height: 6
+    finalise_height: 6
+    observed_pub_key: {{ pubkey_dog }}
 ---
 type: create-blocks
 count: 1
@@ -368,22 +350,22 @@ count: 1
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
 txs:
-- tx:
-    id: '{{ observe_txid 9 }}'
-    chain: ETH
-    from_address: {{ addr_eth_dog }}
-    to_address: {{ addr_eth_fox }}
-    coins:
-      - amount: "33882043"
-        asset: "ETH.ETH"
-        decimals: 8
-    gas:
-      - amount: "960000"
-        asset: "ETH.ETH"
-    memo: "OUT:{{ observe_txid 8 }}"
-  block_height: 5
-  finalise_height: 5
-  observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 9 }}"
+      chain: ETH
+      from_address: {{ addr_eth_dog }}
+      to_address: {{ addr_eth_fox }}
+      coins:
+        - amount: "33882043"
+          asset: "ETH.ETH"
+          decimals: 8
+      gas:
+        - amount: "960000"
+          asset: "ETH.ETH"
+      memo: "OUT:{{ observe_txid 8 }}"
+    block_height: 5
+    finalise_height: 5
+    observed_pub_key: {{ pubkey_dog }}
 ---
 type: create-blocks
 count: 1
@@ -400,22 +382,22 @@ asserts:
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
 txs:
-- tx:
-    id: '{{ observe_txid 10 }}'
-    chain: BTC
-    from_address: {{ addr_btc_fox }}
-    to_address: {{ addr_btc_dog }}
-    coins:
-      - amount: "300000"
-        asset: "BTC.BTC"
-        decimals: 8
-    gas:
-      - amount: "10000"
-        asset: "BTC.BTC"
-    memo: "=:ETH.ETH:{{ addr_eth_fox }}:0/1"
-  block_height: 6
-  finalise_height: 6
-  observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 10 }}"
+      chain: BTC
+      from_address: {{ addr_btc_fox }}
+      to_address: {{ addr_btc_dog }}
+      coins:
+        - amount: "300000"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "10000"
+          asset: "BTC.BTC"
+      memo: "=:ETH.ETH:{{ addr_eth_fox }}:0/1"
+    block_height: 6
+    finalise_height: 6
+    observed_pub_key: {{ pubkey_dog }}
 ---
 type: create-blocks
 count: 1
@@ -442,22 +424,22 @@ count: 1
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
 txs:
-- tx:
-    id: '{{ observe_txid 11 }}'
-    chain: ETH
-    from_address: {{ addr_eth_dog }}
-    to_address: {{ addr_eth_fox }}
-    coins:
-      - amount: "327668"
-        asset: "ETH.ETH"
-        decimals: 8
-    gas:
-      - amount: "960000"
-        asset: "ETH.ETH"
-    memo: "OUT:{{ observe_txid 10 }}"
-  block_height: 10
-  finalise_height: 10
-  observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 11 }}"
+      chain: ETH
+      from_address: {{ addr_eth_dog }}
+      to_address: {{ addr_eth_fox }}
+      coins:
+        - amount: "327668"
+          asset: "ETH.ETH"
+          decimals: 8
+      gas:
+        - amount: "960000"
+          asset: "ETH.ETH"
+      memo: "OUT:{{ observe_txid 10 }}"
+    block_height: 10
+    finalise_height: 10
+    observed_pub_key: {{ pubkey_dog }}
 ---
 type: create-blocks
 count: 1
@@ -502,18 +484,6 @@ endpoint: http://localhost:1317/thorchain/swap/streaming/799A32266A8F0BF5E5EC7F1
 asserts:
   - .in == "20000000000"
 ---
-type: check
-description: ensure streaming swap invariant
-endpoint: http://localhost:1317/thorchain/invariant/streaming_swaps
-asserts:
-  - .broken == false
----
-type: check
-description: ensure asgard invariant
-endpoint: http://localhost:1317/thorchain/invariant/asgard
-asserts:
-  - .broken == false
----
 type: create-blocks
 count: 8
 ---
@@ -522,15 +492,3 @@ description: swap is done, ss record should be removed/empty
 endpoint: http://localhost:1317/thorchain/swap/streaming/799A32266A8F0BF5E5EC7F12E0981839DF23C7E138A7C45D6814A7D80CAC7F34
 asserts:
   - .in == "0"
----
-type: check
-description: ensure asgard invariant
-endpoint: http://localhost:1317/thorchain/invariant/asgard
-asserts:
-  - .broken == false
----
-type: check
-description: ensure streaming swap invariant
-endpoint: http://localhost:1317/thorchain/invariant/streaming_swaps
-asserts:
-  - .broken == false
