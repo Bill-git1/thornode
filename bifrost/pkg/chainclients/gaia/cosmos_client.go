@@ -212,7 +212,7 @@ func (c *CosmosClient) GetChain() common.Chain {
 }
 
 func (c *CosmosClient) GetHeight() (int64, error) {
-	return c.blockScanner.FetchLastHeight()
+	return c.cosmosScanner.GetHeight()
 }
 
 // GetAddress return current signer address, it will be bech32 encoded address
