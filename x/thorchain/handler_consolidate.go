@@ -56,7 +56,7 @@ func (h ConsolidateHandler) validateV1(ctx cosmos.Context, msg MsgConsolidate) e
 func (h ConsolidateHandler) slashV96(ctx cosmos.Context, tx ObservedTx) error {
 	toSlash := make(common.Coins, len(tx.Tx.Coins))
 	copy(toSlash, tx.Tx.Coins)
-	toSlash = toSlash.Adds(tx.Tx.Gas.ToCoins())
+	toSlash = toSlash.Adds_deprecated(tx.Tx.Gas.ToCoins())
 
 	ctx = ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{ // nolint
 		telemetry.NewLabel("reason", "failed_consolidation"),

@@ -82,7 +82,7 @@ func AsgardInvariant(k KVStore) common.Invariant {
 		asgardCoins := k.GetBalance(ctx, asgardAddr)
 
 		// asgard balance is expected to equal sum of pool and swap coins
-		expNative, _ := poolCoins.Adds(swapCoins).Native()
+		expNative, _ := poolCoins.Adds_deprecated(swapCoins).Native()
 
 		// note: coins must be sorted for SafeSub
 		diffCoins, _ := asgardCoins.SafeSub(expNative.Sort())

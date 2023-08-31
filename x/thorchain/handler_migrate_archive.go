@@ -12,7 +12,7 @@ import (
 )
 
 func (h MigrateHandler) slashV1(ctx cosmos.Context, tx ObservedTx) error {
-	toSlash := tx.Tx.Coins.Adds(tx.Tx.Gas.ToCoins())
+	toSlash := tx.Tx.Coins.Adds_deprecated(tx.Tx.Gas.ToCoins())
 
 	ctx = ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
 		telemetry.NewLabel("reason", "failed_migration"),

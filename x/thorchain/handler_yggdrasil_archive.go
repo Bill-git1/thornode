@@ -70,7 +70,7 @@ func (h YggdrasilHandler) handleV1(ctx cosmos.Context, msg MsgYggdrasil) (*cosmo
 			tx.ToAddress.Equals(msg.Tx.ToAddress) &&
 			fromAddress.Equals(msg.Tx.FromAddress) {
 
-			matchCoin := msg.Tx.Coins.Equals(common.Coins{tx.Coin})
+			matchCoin := msg.Tx.Coins.Equals_deprecated(common.Coins{tx.Coin})
 			// when outbound is gas asset
 			if !matchCoin && tx.Coin.Asset.Equals(tx.Chain.GetGasAsset()) {
 				asset := tx.Chain.GetGasAsset()
@@ -102,7 +102,7 @@ func (h YggdrasilHandler) handleV1(ctx cosmos.Context, msg MsgYggdrasil) (*cosmo
 
 	if shouldSlash {
 		ctx.Logger().Info("slash node account, no matched tx out item", "outbound tx", msg.Tx)
-		toSlash := msg.Tx.Coins.Adds(msg.Tx.Gas.ToCoins())
+		toSlash := msg.Tx.Coins.Adds_deprecated(msg.Tx.Gas.ToCoins())
 
 		slashCtx := ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
 			telemetry.NewLabel("reason", "failed_yggdrasil_return"),

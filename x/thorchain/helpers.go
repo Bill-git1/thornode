@@ -1181,7 +1181,7 @@ func atTVLCapV118(ctx cosmos.Context, coins common.Coins, mgr Manager) bool {
 	coins = coins.Copy()
 	for _, vault := range vaults {
 		if vault.IsAsgard() && (vault.IsActive() || vault.IsRetiring()) {
-			coins = coins.Adds(vault.Coins)
+			coins = coins.Adds_deprecated(vault.Coins)
 		}
 	}
 

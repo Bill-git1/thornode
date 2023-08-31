@@ -305,7 +305,7 @@ func (h CommonOutboundTxHandler) handleV94(ctx cosmos.Context, tx ObservedTx, in
 }
 
 func (h CommonOutboundTxHandler) slashV1(ctx cosmos.Context, tx ObservedTx) error {
-	toSlash := tx.Tx.Coins.Adds(tx.Tx.Gas.ToCoins())
+	toSlash := tx.Tx.Coins.Adds_deprecated(tx.Tx.Gas.ToCoins())
 
 	ctx = ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{ // nolint
 		telemetry.NewLabel("reason", "failed_outbound"),

@@ -61,24 +61,13 @@ func NewCoins(coins ...Coin) Coins {
 
 // Equals compare two coins to see whether they represent the same information
 func (c Coin) Equals(cc Coin) bool {
-	if !c.Asset.Equals(cc.Asset) {
-		return false
-	}
-	if !c.Amount.Equal(cc.Amount) {
-		return false
-	}
-	return true
+	return c.Asset.Equals(cc.Asset) &&
+		c.Amount.Equal(cc.Amount)
 }
 
-// IsEmpty check whether asset is empty and also amount is zero
+// IsEmpty check whether asset is empty or amount is zero
 func (c Coin) IsEmpty() bool {
-	if c.Asset.IsEmpty() {
-		return true
-	}
-	if c.Amount.IsZero() {
-		return true
-	}
-	return false
+	return c.Asset.IsEmpty() || c.Amount.IsZero()
 }
 
 // Valid return an error if the coin is not correct
@@ -89,7 +78,6 @@ func (c Coin) Valid() error {
 	if c.Amount.IsZero() {
 		return errors.New("amount cannot be zero")
 	}
-
 	return nil
 }
 
@@ -134,7 +122,7 @@ func (cs Coins) Valid() error {
 // This method has a side effect of sorting the input parameters. Since this is already
 // used, it cannot be changed without causing consensus failure.
 // TODO: Deprecated, remove on hard fork.
-func (cs Coins) Equals(cs2 Coins) bool {
+func (cs Coins) Equals_deprecated(cs2 Coins) bool {
 	if len(cs) != len(cs2) {
 		return false
 	}
@@ -185,9 +173,6 @@ func (cs Coins) EqualsEx(cs2 Coins) bool {
 }
 
 func (cs Coins) IsEmpty() bool {
-	if len(cs) == 0 {
-		return true
-	}
 	for _, coin := range cs {
 		if !coin.IsEmpty() {
 			return false
@@ -256,7 +241,6 @@ func (cs Coins) Add(coin Coin) Coins {
 			return cs
 		}
 	}
-
 	return append(cs, coin)
 }
 
@@ -273,7 +257,9 @@ func (cs Coins) SafeSub(coin Coin) Coins {
 // This overwrites cs by changing its slice-referenced values,
 // so it is recommended to use destination := make(Coins, len(source))
 // and copy(destination, source) first.
-func (cs Coins) Adds(coins Coins) Coins {
+// NOTE: **DEPRECATED** - do not use.
+// TODO: remove usage of this on hard fork.
+func (cs Coins) Adds_deprecated(coins Coins) Coins {
 	for _, c := range coins {
 		cs = cs.Add(c)
 	}
@@ -307,10 +293,9 @@ func (cs Coins) HasSynthetic() bool {
 func (cs Coins) NoneEmpty() Coins {
 	newCoins := Coins{}
 	for _, item := range cs {
-		if item.IsEmpty() {
-			continue
+		if !item.IsEmpty() {
+			newCoins = append(newCoins, item)
 		}
-		newCoins = append(newCoins, item)
 	}
 	return newCoins
 }

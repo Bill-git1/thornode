@@ -45,7 +45,7 @@ func (s CoinSuite) TestAdds(c *C) {
 		NewCoin(BNBAsset, cosmos.NewUint(1000)),
 		NewCoin(BCHAsset, cosmos.NewUint(1000)),
 	}
-	newCoins := oldCoins.Adds(NewCoins(
+	newCoins := oldCoins.Adds_deprecated(NewCoins(
 		NewCoin(BNBAsset, cosmos.NewUint(1000)),
 		NewCoin(BTCAsset, cosmos.NewUint(1000)),
 	))
@@ -65,7 +65,7 @@ func (s CoinSuite) TestAdds(c *C) {
 
 	newerCoins := make(Coins, len(oldCoins))
 	copy(newerCoins, oldCoins)
-	newerCoins = newerCoins.Adds(NewCoins(
+	newerCoins = newerCoins.Adds_deprecated(NewCoins(
 		NewCoin(BNBAsset, cosmos.NewUint(4000)),
 	))
 	c.Check(newerCoins.GetCoin(BNBAsset).Amount.Uint64(), Equals, uint64(6000))

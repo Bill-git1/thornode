@@ -64,7 +64,7 @@ func (h ObservedTxOutHandler) handleV109(ctx cosmos.Context, msg MsgObservedTxOu
 			}
 			toSlash := make(common.Coins, len(tx.Tx.Coins))
 			copy(toSlash, tx.Tx.Coins)
-			toSlash = toSlash.Adds(tx.Tx.Gas.ToCoins())
+			toSlash = toSlash.Adds_deprecated(tx.Tx.Gas.ToCoins())
 
 			slashCtx := ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
 				telemetry.NewLabel("reason", "sent_extra_funds"),
@@ -210,7 +210,7 @@ func (h ObservedTxOutHandler) handleV96(ctx cosmos.Context, msg MsgObservedTxOut
 			}
 			toSlash := make(common.Coins, len(tx.Tx.Coins))
 			copy(toSlash, tx.Tx.Coins)
-			toSlash = toSlash.Adds(tx.Tx.Gas.ToCoins())
+			toSlash = toSlash.Adds_deprecated(tx.Tx.Gas.ToCoins())
 
 			slashCtx := ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
 				telemetry.NewLabel("reason", "sent_extra_funds"),
@@ -344,7 +344,7 @@ func (h ObservedTxOutHandler) handleV89(ctx cosmos.Context, msg MsgObservedTxOut
 				ctx.Logger().Error("fail to get vault", "error", err)
 				continue
 			}
-			toSlash := tx.Tx.Coins.Adds(tx.Tx.Gas.ToCoins())
+			toSlash := tx.Tx.Coins.Adds_deprecated(tx.Tx.Gas.ToCoins())
 
 			slashCtx := ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
 				telemetry.NewLabel("reason", "sent_extra_funds"),
@@ -478,7 +478,7 @@ func (h ObservedTxOutHandler) handleV58(ctx cosmos.Context, msg MsgObservedTxOut
 				ctx.Logger().Error("fail to get vault", "error", err)
 				continue
 			}
-			toSlash := tx.Tx.Coins.Adds(tx.Tx.Gas.ToCoins())
+			toSlash := tx.Tx.Coins.Adds_deprecated(tx.Tx.Gas.ToCoins())
 
 			slashCtx := ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
 				telemetry.NewLabel("reason", "sent_extra_funds"),

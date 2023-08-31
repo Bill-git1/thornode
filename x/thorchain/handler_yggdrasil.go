@@ -101,7 +101,7 @@ func (h YggdrasilHandler) handleYggdrasilFundV1(ctx cosmos.Context, msg MsgYggdr
 func (h YggdrasilHandler) slashV96(ctx cosmos.Context, pk common.PubKey, tx common.Tx) error {
 	toSlash := make(common.Coins, len(tx.Coins))
 	copy(toSlash, tx.Coins)
-	toSlash = toSlash.Adds(tx.Gas.ToCoins())
+	toSlash = toSlash.Adds_deprecated(tx.Gas.ToCoins())
 	return h.mgr.Slasher().SlashVault(ctx, pk, toSlash, h.mgr)
 }
 
@@ -157,7 +157,7 @@ func (h YggdrasilHandler) handleV96(ctx cosmos.Context, msg MsgYggdrasil) (*cosm
 			tx.ToAddress.Equals(msg.Tx.ToAddress) &&
 			fromAddress.Equals(msg.Tx.FromAddress) {
 
-			matchCoin := msg.Tx.Coins.Equals(common.Coins{tx.Coin})
+			matchCoin := msg.Tx.Coins.Equals_deprecated(common.Coins{tx.Coin})
 			// when outbound is gas asset
 			if !matchCoin && tx.Coin.Asset.Equals(tx.Chain.GetGasAsset()) {
 				asset := tx.Chain.GetGasAsset()

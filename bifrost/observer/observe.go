@@ -529,7 +529,7 @@ func (o *Observer) signAndSendToThorchain(txIn types.TxIn) error {
 // - Inbound amount must be greater than the Dust Threshold of the tx chain (see chain.DustThreshold())
 func (o *Observer) getSaversMemo(chain common.Chain, tx types.TxInItem) string {
 	// Savers txs should have one Coin input
-	if len(tx.Coins) > 1 || len(tx.Coins) == 0 {
+	if len(tx.Coins) != 1 {
 		return ""
 	}
 

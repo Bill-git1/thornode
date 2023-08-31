@@ -49,7 +49,7 @@ func (tx TxOutItem) Equals(tx2 TxOutItem) bool {
 	if !tx.ToAddress.Equals(tx2.ToAddress) {
 		return false
 	}
-	if !tx.Coins.Equals(tx2.Coins) {
+	if !tx.Coins.Equals_deprecated(tx2.Coins) {
 		return false
 	}
 	if !tx.InHash.Equals(tx2.InHash) {

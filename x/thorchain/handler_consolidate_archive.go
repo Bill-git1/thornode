@@ -11,7 +11,7 @@ import (
 )
 
 func (h ConsolidateHandler) slashV1(ctx cosmos.Context, tx ObservedTx) error {
-	toSlash := tx.Tx.Coins.Adds(tx.Tx.Gas.ToCoins())
+	toSlash := tx.Tx.Coins.Adds_deprecated(tx.Tx.Gas.ToCoins())
 
 	ctx = ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{ // nolint
 		telemetry.NewLabel("reason", "failed_consolidation"),

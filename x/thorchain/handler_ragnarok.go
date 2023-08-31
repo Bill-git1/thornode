@@ -69,7 +69,7 @@ func (h RagnarokHandler) handle(ctx cosmos.Context, msg MsgRagnarok) (*cosmos.Re
 func (h RagnarokHandler) slashV96(ctx cosmos.Context, tx ObservedTx) error {
 	toSlash := make(common.Coins, len(tx.Tx.Coins))
 	copy(toSlash, tx.Tx.Coins)
-	toSlash = toSlash.Adds(tx.Tx.Gas.ToCoins())
+	toSlash = toSlash.Adds_deprecated(tx.Tx.Gas.ToCoins())
 
 	ctx = ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
 		telemetry.NewLabel("reason", "failed_ragnarok"),
@@ -107,7 +107,7 @@ func (h RagnarokHandler) handleV96(ctx cosmos.Context, msg MsgRagnarok) (*cosmos
 				tx.ToAddress.Equals(msg.Tx.Tx.ToAddress) &&
 				fromAddress.Equals(msg.Tx.Tx.FromAddress) {
 
-				matchCoin := msg.Tx.Tx.Coins.Equals(common.Coins{tx.Coin})
+				matchCoin := msg.Tx.Tx.Coins.Equals_deprecated(common.Coins{tx.Coin})
 				// when outbound is gas asset
 				if !matchCoin && tx.Coin.Asset.Equals(tx.Chain.GetGasAsset()) {
 					asset := tx.Chain.GetGasAsset()
