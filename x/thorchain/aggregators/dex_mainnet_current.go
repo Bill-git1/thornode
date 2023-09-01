@@ -7,7 +7,7 @@ import (
 	"gitlab.com/thorchain/thornode/common"
 )
 
-func DexAggregatorsV120() []Aggregator {
+func DexAggregatorsV121() []Aggregator {
 	return []Aggregator{
 		// TSAggregatorPancakeSwap Ethereum V2
 		{common.ETHChain, `0x35CF22003c90126528fbe95b21bB3ADB2ca8c53D`, 400_000},
@@ -68,7 +68,7 @@ func DexAggregatorsV120() []Aggregator {
 		// LayerZero Executor BinanceSmartChain
 		{common.BSCChain, `0xe93685f3bBA03016F02bD1828BaDD6195988D950`, 800_000},
 		// TSLedgerAdapter
-		{common.ETHChain, `0xaD545d047E34862121695F8E37aeEB71324a9E78`, 500_000},
+		{common.ETHChain, `0xB81C7C2D2d078205D7FA515DDB2dEA3d896F4016`, 500_000},
 		// SquidRouter MultiCall Ethereum
 		{common.ETHChain, `0x4fd39C9E151e50580779bd04B1f7eCc310079fd3`, 800_000},
 		// TSAggregatorStargate Ethereum gen2 V2
