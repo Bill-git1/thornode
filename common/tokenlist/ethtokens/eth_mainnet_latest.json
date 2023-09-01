@@ -1,9 +1,25 @@
 {
   "name": "1inch",
   "timestamp": "2022-04-06T22:19:09+00:00",
-  "version": { "major": 145, "minor": 0, "patch": 0 },
-  "keywords": ["1inch", "default", "list"],
+  "version": {
+    "major": 145,
+    "minor": 0,
+    "patch": 0
+  },
+  "keywords": [
+    "1inch",
+    "default",
+    "list"
+  ],
   "tokens": [
+    {
+      "address": "0x9506d37f70eB4C3d79C398d326C871aBBf10521d",
+      "chainId": 1,
+      "name": "Media Licensing Token",
+      "symbol": "MLT",
+      "decimals": 18,
+      "logoURI": "https://etherscan.io/token/images/milcglobal_32.png"
+    },
     {
       "address": "0xf819d9Cb1c2A819Fd991781A822dE3ca8607c3C9",
       "chainId": 1,
