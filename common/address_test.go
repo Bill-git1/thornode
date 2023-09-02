@@ -313,6 +313,18 @@ func (s *AddressSuite) TestAddress(c *C) {
 	c.Check(addr.IsChain(DOGEChain), Equals, true)
 	c.Check(addr.GetNetwork(semver.MustParse("999.0.0"), BTCChain), Equals, MockNet)
 
+	// Taproot mainnet (bech32m)
+	addr, err = NewAddress("bc1pfy63nact82mfmts5jv87p2uayxqs29gf8070td7kzhwzx6zc9ruq9u7xy7")
+	c.Check(err, IsNil)
+	c.Check(addr.IsChain(BTCChain), Equals, true)
+	c.Check(addr.IsChain(LTCChain), Equals, false)
+	c.Check(addr.IsChain(ETHChain), Equals, false)
+	c.Check(addr.IsChain(BNBChain), Equals, false)
+	c.Check(addr.IsChain(THORChain), Equals, false)
+	c.Check(addr.IsChain(BCHChain), Equals, false)
+	c.Check(addr.IsChain(DOGEChain), Equals, false)
+	c.Check(addr.GetNetwork(semver.MustParse("999.0.0"), BTCChain), Equals, MainNet)
+
 	// segwit invalid hrp bech32 succeed but IsChain fails
 	addr, err = NewAddress("tc1qw508d6qejxtdg4y5r3zarvary0c5xw7kg3g4ty")
 	c.Check(err, IsNil)
