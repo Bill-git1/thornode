@@ -111,6 +111,7 @@ func NewClient(
 	// verify the chain is supported
 	supported := map[common.Chain]bool{
 		common.DOGEChain: true,
+		common.BCHChain:  true,
 	}
 	if !supported[cfg.ChainID] {
 		return nil, fmt.Errorf("unsupported utxo chain: %s", cfg.ChainID)
@@ -422,7 +423,15 @@ func (c *Client) FetchTxs(height, chainHeight int64) (types.TxIn, error) {
 
 	// report network fee and solvency if within flexibility blocks of tip
 	if chainHeight-height <= c.cfg.BlockScanner.ObservationFlexibilityBlocks {
-		if err := c.sendNetworkFeeFromBlock(block); err != nil {
+		switch c.cfg.ChainID {
+		case common.DOGEChain:
+			err = c.sendNetworkFeeFromBlock(block)
+		case common.BCHChain:
+			err = c.sendNetworkFee(height)
+		default:
+			c.log.Fatal().Msg("unsupported chain")
+		}
+		if err != nil {
 			c.log.Err(err).Msg("fail to send network fee")
 		}
 		if c.IsBlockScannerHealthy() {
@@ -614,13 +623,15 @@ func (c *Client) ConfirmationCountReady(txIn types.TxIn) bool {
 
 // ShouldReportSolvency returns true if solvency should be reported at the given height.
 func (c *Client) ShouldReportSolvency(height int64) bool {
-	if height-c.lastSolvencyCheckHeight < 1 {
+	if height-c.lastSolvencyCheckHeight <= 1 {
 		return false
 	}
 
 	switch c.cfg.ChainID {
 	case common.DOGEChain:
 		return height%10 == 0
+	case common.BCHChain:
+		return true
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 		return false

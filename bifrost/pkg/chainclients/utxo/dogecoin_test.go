@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"testing"
 	"time"
 
 	"github.com/btcsuite/btcd/btcjson"
@@ -30,13 +29,6 @@ import (
 	ttypes "gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
-const (
-	bob      = "bob"
-	password = "password"
-)
-
-func TestPackage(t *testing.T) { TestingT(t) }
-
 type DogecoinSuite struct {
 	client *Client
 	server *httptest.Server
@@ -47,24 +39,6 @@ type DogecoinSuite struct {
 }
 
 var _ = Suite(&DogecoinSuite{})
-
-var m *metrics.Metrics
-
-func GetMetricForTest(c *C) *metrics.Metrics {
-	if m == nil {
-		var err error
-		m, err = metrics.NewMetrics(config.BifrostMetricsConfiguration{
-			Enabled:      false,
-			ListenPort:   9000,
-			ReadTimeout:  time.Second,
-			WriteTimeout: time.Second,
-			Chains:       common.Chains{common.DOGEChain},
-		})
-		c.Assert(m, NotNil)
-		c.Assert(err, IsNil)
-	}
-	return m
-}
 
 func (s *DogecoinSuite) SetUpSuite(c *C) {
 	ttypes.SetupConfigForTest()
@@ -107,7 +81,7 @@ func init() {
 }
 
 func (s *DogecoinSuite) SetUpTest(c *C) {
-	s.m = GetMetricForTest(c)
+	s.m = GetMetricForTest(c, common.DOGEChain)
 	s.cfg = config.BifrostChainConfiguration{
 		ChainID:     "DOGE",
 		UserName:    bob,
@@ -219,17 +193,6 @@ func (s *DogecoinSuite) SetUpTest(c *C) {
 
 func (s *DogecoinSuite) TearDownTest(_ *C) {
 	s.server.Close()
-}
-
-func httpTestHandler(c *C, rw http.ResponseWriter, fixture string) {
-	content, err := os.ReadFile(fixture)
-	if err != nil {
-		c.Fatal(err)
-	}
-	rw.Header().Set("Content-Type", "application/json")
-	if _, err := rw.Write(content); err != nil {
-		c.Fatal(err)
-	}
 }
 
 func (s *DogecoinSuite) TestGetBlock(c *C) {

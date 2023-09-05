@@ -12,9 +12,11 @@ import (
 
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcutil"
+	bchtxscript "gitlab.com/thorchain/bifrost/bchd-txscript"
 	dogetxscript "gitlab.com/thorchain/bifrost/dogd-txscript"
 
 	btypes "gitlab.com/thorchain/thornode/bifrost/blockscanner/types"
+	"gitlab.com/thorchain/thornode/bifrost/metrics"
 	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/utxo"
 	"gitlab.com/thorchain/thornode/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/common"
@@ -221,6 +223,58 @@ func (c *Client) updateNetworkInfo() {
 	c.minRelayFeeSats = uint64(amt.ToUnit(btcutil.AmountSatoshi))
 }
 
+func (c *Client) sendNetworkFee(height int64) error {
+	// get block stats
+	var feeRate uint64
+	switch c.cfg.ChainID {
+	case common.BCHChain:
+		// BCH is a special case since the response uses floats
+		hash, err := c.rpc.GetBlockHash(height)
+		if err != nil {
+			return fmt.Errorf("fail to get block hash: %w", err)
+		}
+		type BlockStats struct {
+			AverageFeeRate float64 `json:"avgfeerate"`
+		}
+		var bs BlockStats
+		err = c.rpc.Call(&bs, "getblockstats", hash)
+		if err != nil {
+			return fmt.Errorf("fail to get block stats: %w", err)
+		}
+		feeRate = uint64(bs.AverageFeeRate * common.One)
+
+	default:
+		c.log.Fatal().Msg("unsupported chain")
+	}
+
+	if feeRate == 0 {
+		return nil
+	}
+
+	if c.cfg.UTXO.EstimatedAverageTxSize*feeRate < c.minRelayFeeSats {
+		feeRate = c.minRelayFeeSats / c.cfg.UTXO.EstimatedAverageTxSize
+		if feeRate*c.cfg.UTXO.EstimatedAverageTxSize < c.minRelayFeeSats {
+			feeRate++
+		}
+	}
+	if feeRate < 2 {
+		feeRate = 2
+	}
+
+	c.m.GetGauge(metrics.GasPrice(c.cfg.ChainID)).Set(float64(feeRate))
+	if c.lastFeeRate != feeRate {
+		c.m.GetCounter(metrics.GasPriceChange(c.cfg.ChainID)).Inc()
+	}
+
+	c.lastFeeRate = feeRate
+	txid, err := c.bridge.PostNetworkFee(height, c.cfg.ChainID, c.cfg.UTXO.EstimatedAverageTxSize, feeRate)
+	if err != nil {
+		return fmt.Errorf("fail to post network fee to thornode: %w", err)
+	}
+	c.log.Debug().Str("txid", txid.String()).Msg("send network fee to THORNode successfully")
+	return nil
+}
+
 // sendNetworkFeeFromBlock will send network fee to Thornode based on the block result,
 // for chains like Dogecoin which do not support the getblockstats RPC.
 func (c *Client) sendNetworkFeeFromBlock(blockResult *btcjson.GetBlockVerboseTxResult) error {
@@ -283,6 +337,12 @@ func (c *Client) getBlock(height int64) (*btcjson.GetBlockVerboseTxResult, error
 	switch c.cfg.ChainID {
 	case common.DOGEChain:
 		return c.getBlockWithoutVerbose(height)
+	case common.BCHChain:
+		hash, err := c.rpc.GetBlockHash(height)
+		if err != nil {
+			return &btcjson.GetBlockVerboseTxResult{}, err
+		}
+		return c.rpc.GetBlockVerboseTxs(hash)
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 		return nil, nil
@@ -396,6 +456,20 @@ func (c *Client) isValidUTXO(hexPubKey string) bool {
 		default:
 			return len(addresses) == 1 && requireSigs == 1
 		}
+	case common.BCHChain:
+		scriptType, addresses, requireSigs, err := bchtxscript.ExtractPkScriptAddrs(buf, c.getChainCfgBCH())
+		if err != nil {
+			c.log.Err(err).Msg("fail to extract pub key script")
+			return false
+		}
+		switch scriptType {
+		case bchtxscript.MultiSigTy:
+			return false
+
+		default:
+			return len(addresses) == 1 && requireSigs == 1
+		}
+
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 		return false
@@ -444,6 +518,12 @@ func (c *Client) getTxIn(tx *btcjson.TxRawResult, height int64, isMemPool bool) 
 		return types.TxInItem{}, fmt.Errorf("fail to get output from tx: %w", err)
 	}
 	toAddr := output.ScriptPubKey.Addresses[0]
+
+	// strip BCH address prefixes
+	if c.cfg.ChainID.Equals(common.BCHChain) {
+		toAddr = c.stripBCHAddress(toAddr)
+	}
+
 	if c.isAsgardAddress(toAddr) {
 		// only inbound UTXO need to be validated against multi-sig
 		if !c.isValidUTXO(output.ScriptPubKey.Hex) {
@@ -471,6 +551,15 @@ func (c *Client) getTxIn(tx *btcjson.TxRawResult, height int64, isMemPool bool) 
 		Memo: memo,
 		Gas:  gas,
 	}, nil
+}
+
+// stripBCHAddress removes prefix on bch addresses.
+func (c *Client) stripBCHAddress(addr string) string {
+	split := strings.Split(addr, ":")
+	if len(split) > 1 {
+		return split[1]
+	}
+	return split[0]
 }
 
 func (c *Client) extractTxs(block *btcjson.GetBlockVerboseTxResult) (types.TxIn, error) {
@@ -577,10 +666,14 @@ func (c *Client) getOutput(sender string, tx *btcjson.TxRawResult, consolidate b
 			return btcjson.Vout{}, fmt.Errorf("no vout address available")
 		}
 		if vout.Value > 0 {
-			if consolidate && vout.ScriptPubKey.Addresses[0] == sender {
+			address := vout.ScriptPubKey.Addresses[0]
+			if c.cfg.ChainID.Equals(common.BCHChain) {
+				address = c.stripBCHAddress(address)
+			}
+			if consolidate && address == sender {
 				return vout, nil
 			}
-			if !consolidate && vout.ScriptPubKey.Addresses[0] != sender {
+			if !consolidate && address != sender {
 				return vout, nil
 			}
 		}
@@ -601,7 +694,11 @@ func (c *Client) getSender(tx *btcjson.TxRawResult) (string, error) {
 	if len(vout.ScriptPubKey.Addresses) == 0 {
 		return "", fmt.Errorf("no address available in vout")
 	}
-	return vout.ScriptPubKey.Addresses[0], nil
+	address := vout.ScriptPubKey.Addresses[0]
+	if c.cfg.ChainID.Equals(common.BCHChain) {
+		address = c.stripBCHAddress(address)
+	}
+	return address, nil
 }
 
 // getMemo returns memo for a btc tx, using vout OP_RETURN
@@ -621,6 +718,8 @@ func (c *Client) getMemo(tx *btcjson.TxRawResult) (string, error) {
 		switch c.cfg.ChainID {
 		case common.DOGEChain:
 			asm, err = dogetxscript.DisasmString(buf)
+		case common.BCHChain:
+			asm, err = bchtxscript.DisasmString(buf)
 		default:
 			c.log.Fatal().Msg("unsupported chain")
 		}

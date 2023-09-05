@@ -171,6 +171,7 @@ services:
 
       # use new utxo client for doge
       BIFROST_CHAINS_DOGE_UTXO_CLIENT_V2: "true"
+      BIFROST_CHAINS_BCH_UTXO_CLIENT_V2: "true"
 
     ports:
       - 5040:5040

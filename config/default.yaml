@@ -237,6 +237,9 @@ bifrost:
         observation_flexibility_blocks: 3
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
+      utxo:
+        <<: *utxo
+        estimated_average_tx_size: 1500
 
 ########################################################################################
 # Thor

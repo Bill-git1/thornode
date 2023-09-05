@@ -12,6 +12,8 @@ import (
 	"github.com/btcsuite/btcutil"
 
 	"github.com/eager7/dogutil"
+	"github.com/gcash/bchutil"
+	bchtxscript "gitlab.com/thorchain/bifrost/bchd-txscript"
 	dogetxscript "gitlab.com/thorchain/bifrost/dogd-txscript"
 
 	stypes "gitlab.com/thorchain/thornode/bifrost/thorclient/types"
@@ -26,7 +28,6 @@ import (
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func (c *Client) getMaximumUtxosToSpend() int64 {
-	// TODO: Define this value in the constants package.
 	const mimirMaxUTXOsToSpend = `MaxUTXOsToSpend`
 	utxosToSpend, err := c.bridge.GetMimir(mimirMaxUTXOsToSpend)
 	if err != nil {
@@ -148,6 +149,12 @@ func (c *Client) getSourceScript(tx stypes.TxOutItem) ([]byte, error) {
 			return nil, fmt.Errorf("fail to decode source address(%s): %w", sourceAddr.String(), err)
 		}
 		return dogetxscript.PayToAddrScript(addr)
+	case common.BCHChain:
+		addr, err := bchutil.DecodeAddress(sourceAddr.String(), c.getChainCfgBCH())
+		if err != nil {
+			return nil, fmt.Errorf("fail to decode source address(%s): %w", sourceAddr.String(), err)
+		}
+		return bchtxscript.PayToAddrScript(addr)
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 		return nil, nil
@@ -239,6 +246,15 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 		if err != nil {
 			return nil, nil, fmt.Errorf("fail to get pay to address script: %w", err)
 		}
+	case common.BCHChain:
+		outputAddr, err := bchutil.DecodeAddress(tx.ToAddress.String(), c.getChainCfgBCH())
+		if err != nil {
+			return nil, nil, fmt.Errorf("fail to decode next address: %w", err)
+		}
+		buf, err = bchtxscript.PayToAddrScript(outputAddr)
+		if err != nil {
+			return nil, nil, fmt.Errorf("fail to get pay to address script: %w", err)
+		}
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 	}
@@ -316,6 +332,8 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 		switch c.cfg.ChainID {
 		case common.DOGEChain:
 			nullDataScript, err = dogetxscript.NullDataScript([]byte(tx.Memo))
+		case common.BCHChain:
+			nullDataScript, err = bchtxscript.NullDataScript([]byte(tx.Memo))
 		default:
 			c.log.Fatal().Msg("unsupported chain")
 		}

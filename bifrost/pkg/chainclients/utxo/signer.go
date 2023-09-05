@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 
+	bchwire "github.com/gcash/bchd/wire"
+	"github.com/gcash/bchutil"
 	"github.com/hashicorp/go-multierror"
 
 	"github.com/btcsuite/btcd/mempool"
@@ -36,6 +38,13 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 	// skip outbounds without coins
 	if tx.Coins.IsEmpty() {
 		return nil, nil, nil, nil
+	}
+
+	if c.cfg.ChainID.Equals(common.BCHChain) {
+		if !tx.ToAddress.IsValidBCHAddress() {
+			c.log.Error().Msgf("to address: %s is legacy not allowed ", tx.ToAddress)
+			return nil, nil, nil, nil
+		}
 	}
 
 	// skip outbounds that have been signed
@@ -68,6 +77,12 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 			return nil, nil, nil, fmt.Errorf("fail to decode next address: %w", err)
 		}
 		outputAddrStr = outputAddr.(dogutil.Address).String() // trunk-ignore(golangci-lint/forcetypeassert)
+	case common.BCHChain:
+		outputAddr, err = bchutil.DecodeAddress(tx.ToAddress.String(), c.getChainCfgBCH())
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("fail to decode next address: %w", err)
+		}
+		outputAddrStr = outputAddr.(bchutil.Address).String() // trunk-ignore(golangci-lint/forcetypeassert)
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 	}
@@ -78,7 +93,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 		return nil, nil, nil, nil
 	}
 	switch outputAddr.(type) {
-	case *dogutil.AddressPubKey:
+	case *dogutil.AddressPubKey, *bchutil.AddressPubKey:
 		c.log.Info().Msgf("address: %s is address pubkey type, should not be used", outputAddrStr)
 		return nil, nil, nil, nil
 	default: // keep lint happy
@@ -129,6 +144,8 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 	switch c.cfg.ChainID {
 	case common.DOGEChain:
 		stx = wireToDOGE(redeemTx)
+	case common.BCHChain:
+		stx = wireToBCH(redeemTx)
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 	}
@@ -148,6 +165,8 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 			case common.DOGEChain:
 				// trunk-ignore(golangci-lint/forcetypeassert)
 				err = c.signUTXODOGE(stx.(*dogewire.MsgTx), tx, amount, sourceScript, i, thorchainHeight)
+			case common.BCHChain:
+				err = c.signUTXOBCH(stx.(*bchwire.MsgTx), tx, amount, sourceScript, i, thorchainHeight)
 			default:
 				c.log.Fatal().Msg("unsupported chain")
 			}
@@ -168,7 +187,9 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 	// convert back to wire tx
 	switch c.cfg.ChainID {
 	case common.DOGEChain:
-		redeemTx = dogeToWire(stx.(*dogewire.MsgTx)) // trunk-ignore(golangci-lint/forcetypeassert)
+		redeemTx = dogeToWire(stx.(*dogewire.MsgTx))
+	case common.BCHChain:
+		redeemTx = bchToWire(stx.(*bchwire.MsgTx))
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 	}
@@ -247,7 +268,13 @@ func (c *Client) BroadcastTx(txOut stypes.TxOutItem, payload []byte) (string, er
 	}
 
 	// broadcast tx
-	txid, err := c.rpc.SendRawTransaction(redeemTx)
+	var txid string
+	switch c.cfg.ChainID {
+	case common.DOGEChain, common.BCHChain:
+		txid, err = c.rpc.SendRawTransaction(redeemTx, true)
+	default:
+		c.log.Fatal().Msg("unsupported chain")
+	}
 	if txid != "" {
 		bm.AddSelfTransaction(txid)
 	}
