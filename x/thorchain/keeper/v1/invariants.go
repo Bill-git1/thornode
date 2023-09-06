@@ -58,7 +58,7 @@ func AsgardInvariant(k KVStore) common.Invariant {
 			}
 
 			coin := swap.Tx.Coins[0]
-			if !coin.IsNative() {
+			if !coin.IsNative() && !swap.TargetAsset.IsNative() {
 				continue // only verifying native coins in this invariant
 			}
 
@@ -68,13 +68,22 @@ func AsgardInvariant(k KVStore) common.Invariant {
 				ctx.Logger().Error("error getting streaming swap", "error", err)
 				continue // should never happen
 			}
-			if !ss.In.IsZero() {
-				// adjust for stream swap amount, the amount In has been added
-				// to the pool but not deducted from the tx or module, so deduct
-				// that In amount from the tx coin
-				coin.Amount = coin.Amount.Sub(ss.In)
+
+			if coin.IsNative() {
+				if !ss.In.IsZero() {
+					// adjust for stream swap amount, the amount In has been added
+					// to the pool but not deducted from the tx or module, so deduct
+					// that In amount from the tx coin
+					coin.Amount = coin.Amount.Sub(ss.In)
+				}
+				swapCoins = swapCoins.Add(coin)
 			}
-			swapCoins = swapCoins.Add(coin)
+
+			// TODO: If non-RUNE native assets are minted in the swap rather than the outbound,
+			// change this IsNativeRune() to IsNative() .
+			if swap.TargetAsset.IsNativeRune() && !ss.Out.IsZero() {
+				swapCoins = swapCoins.Add(common.NewCoin(swap.TargetAsset, ss.Out))
+			}
 		}
 
 		// get asgard module balance
