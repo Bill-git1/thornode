@@ -52,6 +52,8 @@ func (h LoanOpenHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, 
 func (h LoanOpenHandler) validate(ctx cosmos.Context, msg MsgLoanOpen) error {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.121.0")):
+		return h.validateV121(ctx, msg)
 	case version.GTE(semver.MustParse("1.111.0")):
 		return h.validateV111(ctx, msg)
 	case version.GTE(semver.MustParse("1.108.0")):
@@ -63,7 +65,7 @@ func (h LoanOpenHandler) validate(ctx cosmos.Context, msg MsgLoanOpen) error {
 	}
 }
 
-func (h LoanOpenHandler) validateV111(ctx cosmos.Context, msg MsgLoanOpen) error {
+func (h LoanOpenHandler) validateV121(ctx cosmos.Context, msg MsgLoanOpen) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
@@ -71,6 +73,14 @@ func (h LoanOpenHandler) validateV111(ctx cosmos.Context, msg MsgLoanOpen) error
 	pauseLoans := fetchConfigInt64(ctx, h.mgr, constants.PauseLoans)
 	if pauseLoans > 0 {
 		return fmt.Errorf("loans are currently paused")
+	}
+
+	// Do not allow a network module as the target address.
+	targetAccAddr, err := msg.TargetAddress.AccAddress()
+	// A network module address would be resolvable,
+	// so if not resolvable it should not be a network module address.
+	if err == nil && IsModuleAccAddress(h.mgr.Keeper(), targetAccAddr) {
+		return fmt.Errorf("a network module cannot be the target address of a loan open memo")
 	}
 
 	// Circuit Breaker: check if we're hit the max supply

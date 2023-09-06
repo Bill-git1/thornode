@@ -45,6 +45,8 @@ func (h SwapHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, erro
 func (h SwapHandler) validate(ctx cosmos.Context, msg MsgSwap) error {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.121.0")):
+		return h.validateV121(ctx, msg)
 	case version.GTE(semver.MustParse("1.120.0")):
 		return h.validateV120(ctx, msg)
 	case version.GTE(semver.MustParse("1.117.0")):
@@ -72,9 +74,22 @@ func (h SwapHandler) validate(ctx cosmos.Context, msg MsgSwap) error {
 	}
 }
 
-func (h SwapHandler) validateV120(ctx cosmos.Context, msg MsgSwap) error {
+func (h SwapHandler) validateV121(ctx cosmos.Context, msg MsgSwap) error {
 	if err := msg.ValidateBasicV63(); err != nil {
 		return err
+	}
+
+	// For external-origin (here valid) memos, do not allow a network module as the final destination.
+	// If unable to parse the memo, here assume it to be internal.
+	memo, _ := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), msg.Tx.Memo)
+	mem, isSwapMemo := memo.(SwapMemo)
+	if isSwapMemo {
+		destAccAddr, err := mem.Destination.AccAddress()
+		// A network module address would be resolvable,
+		// so if not resolvable it should not be a network module address.
+		if err == nil && IsModuleAccAddress(h.mgr.Keeper(), destAccAddr) {
+			return fmt.Errorf("a network module cannot be the final destination of a swap memo")
+		}
 	}
 
 	target := msg.TargetAsset

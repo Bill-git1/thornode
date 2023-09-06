@@ -53,8 +53,11 @@
           "@type": "/cosmos.auth.v1beta1.BaseAccount",
           "account_number": "11",
           "address": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
-          "pub_key": null,
-          "sequence": "0"
+          "pub_key": {
+            "@type": "/cosmos.crypto.secp256k1.PubKey",
+            "key": "AunSIOo91O3IPUeYE63hVZ9WRELKpNuLe5Gy6Q3LwfdX"
+          },
+          "sequence": "1"
         },
         {
           "@type": "/cosmos.auth.v1beta1.ModuleAccount",
@@ -166,7 +169,7 @@
           "address": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
           "coins": [
             {
-              "amount": "2499996000000",
+              "amount": "2499994000000",
               "denom": "rune"
             }
           ]
@@ -175,7 +178,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35000004000000",
+              "amount": "35000006000000",
               "denom": "rune"
             }
           ]
@@ -376,5 +379,5 @@
     },
     "version": {}
   },
-  "initial_height": "5"
+  "initial_height": "6"
 }

@@ -564,3 +564,30 @@ endpoint: http://localhost:1317/cosmos/bank/v1beta1/supply
 asserts:
   - .supply[]|select(.denom=="btc/btc")|.amount|tonumber == 9061748
   - .supply|length == 3
+---
+########################################################################################
+# attempt swap to network module
+########################################################################################
+type: tx-deposit
+signer: {{ addr_thor_fox }}
+coins:
+  - amount: "100_00000000"
+    asset: "rune"
+memo: "=:BTC/BTC:{{ addr_module_lending }}"
+---
+type: create-blocks
+count: 1
+---
+type: check
+description: the lending module should contain no synths
+endpoint: http://localhost:1317/thorchain/balance/module/lending
+asserts:
+  - .|[.coins[]|select(.denom == "btc/btc")]|length == 0
+---
+type: check
+description: confirm that refunded
+endpoint: http://localhost:1317/thorchain/blockevents
+asserts:
+  - .|[.end[]|select(.type == "refund")]|length == 1
+  - .end[]|select(.type == "refund")|.from == "{{ addr_thor_fox }}"
+  - .end[]|select(.type == "refund")|.reason == "a network module cannot be the final destination of a swap memo"

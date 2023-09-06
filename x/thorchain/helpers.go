@@ -1336,3 +1336,22 @@ func triggerPreferredAssetSwapV120(ctx cosmos.Context, mgr Manager, affiliateAdd
 
 	return nil
 }
+
+func IsModuleAccAddress(keeper keeper.Keeper, accAddr cosmos.AccAddress) bool {
+	version := keeper.GetVersion()
+	switch {
+	case version.GTE(semver.MustParse("1.121.0")):
+		return IsModuleAccAddressV121(keeper, accAddr)
+	default:
+		return false
+	}
+}
+
+func IsModuleAccAddressV121(keeper keeper.Keeper, accAddr cosmos.AccAddress) bool {
+	return accAddr.Equals(keeper.GetModuleAccAddress(AsgardName)) ||
+		accAddr.Equals(keeper.GetModuleAccAddress(BondName)) ||
+		accAddr.Equals(keeper.GetModuleAccAddress(ReserveName)) ||
+		accAddr.Equals(keeper.GetModuleAccAddress(LendingName)) ||
+		accAddr.Equals(keeper.GetModuleAccAddress(AffiliateCollectorName)) ||
+		accAddr.Equals(keeper.GetModuleAccAddress(ModuleName))
+}
