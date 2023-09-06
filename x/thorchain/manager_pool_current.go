@@ -291,6 +291,11 @@ func (pm *PoolMgrVCUR) cleanupPendingLiquidity(ctx cosmos.Context, mgr Manager) 
 		return
 	}
 
+	pendingLiquidityAgeLimit := mgr.Keeper().GetConfigInt64(ctx, constants.PendingLiquidityAgeLimit)
+	if pendingLiquidityAgeLimit <= 0 {
+		return
+	}
+
 	var pools Pools
 	iterator := mgr.Keeper().GetPoolIterator(ctx)
 	defer iterator.Close()
@@ -321,28 +326,20 @@ func (pm *PoolMgrVCUR) cleanupPendingLiquidity(ctx cosmos.Context, mgr Manager) 
 		return
 	}
 
-	pendingLiquidityAgeLimit := mgr.Keeper().GetConfigInt64(ctx, constants.PendingLiquidityAgeLimit)
-	if pendingLiquidityAgeLimit <= 0 {
-		return
-	}
-
 	// process each pool within ageLimit evenly (in terms of blocks between
 	// each pool). For example, if ageLimit is 100 blocks, and we have 5 pools,
 	// we want to clean a pool every ~20 blocks, but each pool is only cleaned
 	// once every 100 blocks (just a different 100 blocks)
 	separator := pendingLiquidityAgeLimit / int64(len(pools))
+	if separator == 0 {
+		// If PendingLiquidityAgeLimit is smaller than the number of pools,
+		// still spread them out over the available blocks (and wrap around).
+		separator = 1
+	}
+	cleanupTarget := ctx.BlockHeight() % pendingLiquidityAgeLimit
 	for i, pool := range pools {
-		height := ctx.BlockHeight() % pendingLiquidityAgeLimit
-		cleanPoolHeight := separator * int64(i)
-		switch cleanPoolHeight {
-		case 0:
-			if height > 0 {
-				continue
-			}
-		default:
-			if height%cleanPoolHeight != 0 {
-				continue
-			}
+		if cleanupTarget != (separator*int64(i))%pendingLiquidityAgeLimit {
+			continue
 		}
 		if err := pm.commitPendingLiquidity(ctx, pool, mgr); err != nil {
 			ctx.Logger().Error("fail to clean pending liquidity", "pool", pool.Asset, "error", err)
