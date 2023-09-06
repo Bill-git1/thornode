@@ -1008,90 +1008,6 @@ func (vm *NetworkMgrVCUR) cleanupAsgardIndex(ctx cosmos.Context) error {
 	return nil
 }
 
-// manageChains - checks to see if we have any chains that we are ragnaroking,
-// and ragnaroks them
-func (vm *NetworkMgrVCUR) manageChains(ctx cosmos.Context, mgr Manager) error {
-	chains, err := vm.findChainsToRetire(ctx)
-	if err != nil {
-		return err
-	}
-
-	active, err := vm.k.GetAsgardVaultsByStatus(ctx, ActiveVault)
-	if err != nil {
-		return err
-	}
-	vault := active.SelectByMinCoin(common.RuneAsset())
-	if vault.IsEmpty() {
-		return fmt.Errorf("unable to determine asgard vault")
-	}
-
-	migrateInterval, err := vm.k.GetMimir(ctx, constants.FundMigrationInterval.String())
-	if migrateInterval < 0 || err != nil {
-		migrateInterval = mgr.GetConstants().GetInt64Value(constants.FundMigrationInterval)
-	}
-	nth := (ctx.BlockHeight()-vault.StatusSince)/migrateInterval + 1
-	if nth > 10 {
-		nth = 10
-	}
-
-	for _, chain := range chains {
-		// the first round to recall fund from yggdrasil
-		if nth == 1 {
-			if err := vm.RecallChainFunds(ctx, chain, mgr, common.PubKeys{}); err != nil {
-				return err
-			}
-		}
-
-		// only refund after the first nth. This gives yggs time to send funds
-		// back to asgard
-		if nth > 1 {
-			if err := vm.ragnarokChain(ctx, chain, nth, mgr); err != nil {
-				continue
-			}
-		}
-	}
-	return nil
-}
-
-// findChainsToRetire - evaluates the chains associated with active asgard
-// vaults vs retiring asgard vaults to detemine if any chains need to be
-// ragnarok'ed
-func (vm *NetworkMgrVCUR) findChainsToRetire(ctx cosmos.Context) (common.Chains, error) {
-	chains := make(common.Chains, 0)
-
-	active, err := vm.k.GetAsgardVaultsByStatus(ctx, ActiveVault)
-	if err != nil {
-		return chains, err
-	}
-	retiring, err := vm.k.GetAsgardVaultsByStatus(ctx, RetiringVault)
-	if err != nil {
-		return chains, err
-	}
-
-	// collect all chains for active vaults
-	activeChains := make(common.Chains, 0)
-	for _, v := range active {
-		activeChains = append(activeChains, v.GetChains()...)
-	}
-	activeChains = activeChains.Distinct()
-
-	// collect all chains for retiring vaults
-	retiringChains := make(common.Chains, 0)
-	for _, v := range retiring {
-		retiringChains = append(retiringChains, v.GetChains()...)
-	}
-	retiringChains = retiringChains.Distinct()
-
-	for _, chain := range retiringChains {
-		// skip chain if its in active and retiring
-		if activeChains.Has(chain) {
-			continue
-		}
-		chains = append(chains, chain)
-	}
-	return chains, nil
-}
-
 // RecallChainFunds - sends a message to bifrost nodes to send back all funds
 // associated with given chain
 func (vm *NetworkMgrVCUR) RecallChainFunds(ctx cosmos.Context, chain common.Chain, mgr Manager, excludeNodes common.PubKeys) error {
@@ -1153,40 +1069,6 @@ func (vm *NetworkMgrVCUR) RecallChainFunds(ctx cosmos.Context, chain common.Chai
 			if err := vm.txOutStore.UnSafeAddTxOutItem(ctx, mgr, txOutItem); err != nil {
 				return err
 			}
-		}
-	}
-
-	return nil
-}
-
-// ragnarokChain - ends a chain by withdrawing all liquidity providers of any pool that's
-// asset is on the given chain
-func (vm *NetworkMgrVCUR) ragnarokChain(ctx cosmos.Context, chain common.Chain, nth int64, mgr Manager) error {
-	nas, err := vm.k.ListActiveValidators(ctx)
-	if err != nil {
-		ctx.Logger().Error("can't get active nodes", "error", err)
-		return err
-	}
-	if chain.IsTHORChain() {
-		return fmt.Errorf("can't ragnarok THORChain")
-	}
-	if len(nas) == 0 {
-		return fmt.Errorf("can't find any active nodes")
-	}
-	na := nas[0]
-
-	pools, err := vm.k.GetPools(ctx)
-	if err != nil {
-		return err
-	}
-
-	// rangarok this chain
-	for _, pool := range pools {
-		if !pool.Asset.GetChain().Equals(chain) || pool.LPUnits.IsZero() {
-			continue
-		}
-		if err := vm.withdrawLiquidity(ctx, pool, na, mgr); err != nil {
-			ctx.Logger().Error("fail to ragnarok liquidity", "error", err)
 		}
 	}
 
