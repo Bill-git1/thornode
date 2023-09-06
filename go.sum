@@ -1546,8 +1546,8 @@ gitlab.com/thorchain/bifrost/txscript v0.0.0-20221115150551-993a3adacf25 h1:iF81
 gitlab.com/thorchain/bifrost/txscript v0.0.0-20221115150551-993a3adacf25/go.mod h1:/Nfggqg/zV7NKOaUX0HSl4afe2bZqeoWB99MsRbXK94=
 gitlab.com/thorchain/binance-sdk v1.2.3-0.20210117202539-d569b6b9ba5d h1:GGPSI9gU22zW75m1YO7ZEMFtVEI5NgyK4g17CIXFjqI=
 gitlab.com/thorchain/binance-sdk v1.2.3-0.20210117202539-d569b6b9ba5d/go.mod h1:SW01IZMpqlPNPdhHnn99qnJNvg8ll/agyyW7p85npwY=
-gitlab.com/thorchain/tss/go-tss v1.6.3 h1:WP3h6sbxe7dOkWvL9pivb2xJdHRBQgFb5H7u6AHebo0=
-gitlab.com/thorchain/tss/go-tss v1.6.3/go.mod h1:xkkkoRV/z4Mt5uQ34aMzCFdFS4Noy9UddiCT71KvJgY=
+gitlab.com/thorchain/tss/go-tss v1.6.4 h1:UQ7Hgthutdi3ZyHLKG1RECdZFfOJzayKd9/RjAbqM8I=
+gitlab.com/thorchain/tss/go-tss v1.6.4/go.mod h1:xkkkoRV/z4Mt5uQ34aMzCFdFS4Noy9UddiCT71KvJgY=
 gitlab.com/thorchain/tss/tss-lib v0.1.5 h1:L9MD+E3B4lJmadso69lTIP6s2Iks24fS7Ancs62LTZo=
 gitlab.com/thorchain/tss/tss-lib v0.1.5/go.mod h1:pEM3W/1inIzmdQn9IY9pA0MkG1bTGKhsSivxizeyyt4=
 go.etcd.io/bbolt v1.3.2/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
