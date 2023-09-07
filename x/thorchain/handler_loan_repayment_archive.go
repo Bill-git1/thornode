@@ -158,7 +158,7 @@ func (h LoanRepaymentHandler) repayV111(ctx cosmos.Context, msg MsgLoanRepayment
 		h.mgr.Keeper().SetLoan(ctx, loan)
 
 		// emit events and metrics
-		evt := NewEventLoanRepayment(cosmos.ZeroUint(), msg.Coin.Amount, msg.CollateralAsset, msg.Owner)
+		evt := NewEventLoanRepayment(cosmos.ZeroUint(), msg.Coin.Amount, msg.CollateralAsset, msg.Owner, msg.TxID)
 		if err := h.mgr.EventMgr().EmitEvent(ctx, evt); nil != err {
 			ctx.Logger().Error("fail to emit repayment open event", "error", err)
 		}
@@ -202,7 +202,7 @@ func (h LoanRepaymentHandler) repayV111(ctx cosmos.Context, msg MsgLoanRepayment
 	h.mgr.Keeper().SetTotalCollateral(ctx, msg.CollateralAsset, common.SafeSub(totalCollateral, redeem))
 
 	// emit events and metrics
-	evt := NewEventLoanRepayment(redeem, msg.Coin.Amount, msg.CollateralAsset, msg.Owner)
+	evt := NewEventLoanRepayment(redeem, msg.Coin.Amount, msg.CollateralAsset, msg.Owner, msg.TxID)
 	if err := h.mgr.EventMgr().EmitEvent(ctx, evt); nil != err {
 		ctx.Logger().Error("fail to emit loan repayment event", "error", err)
 	}
@@ -276,7 +276,7 @@ func (h LoanRepaymentHandler) repayV110(ctx cosmos.Context, msg MsgLoanRepayment
 	h.mgr.Keeper().SetTotalCollateral(ctx, msg.CollateralAsset, common.SafeSub(totalCollateral, redeem))
 
 	// emit events and metrics
-	evt := NewEventLoanRepayment(redeem, msg.Coin.Amount, msg.CollateralAsset, msg.Owner)
+	evt := NewEventLoanRepayment(redeem, msg.Coin.Amount, msg.CollateralAsset, msg.Owner, msg.TxID)
 	if err := h.mgr.EventMgr().EmitEvent(ctx, evt); nil != err {
 		ctx.Logger().Error("fail to emit loan open event", "error", err)
 	}
@@ -368,7 +368,7 @@ func (h LoanRepaymentHandler) repayV108(ctx cosmos.Context, msg MsgLoanRepayment
 	h.mgr.Keeper().SetTotalCollateral(ctx, msg.CollateralAsset, common.SafeSub(totalCollateral, redeem))
 
 	// emit events and metrics
-	evt := NewEventLoanRepayment(redeem, msg.Coin.Amount, msg.CollateralAsset, msg.Owner)
+	evt := NewEventLoanRepayment(redeem, msg.Coin.Amount, msg.CollateralAsset, msg.Owner, msg.TxID)
 	if err := h.mgr.EventMgr().EmitEvent(ctx, evt); nil != err {
 		ctx.Logger().Error("fail to emit loan open event", "error", err)
 	}
@@ -514,7 +514,7 @@ func (h LoanRepaymentHandler) repayV107(ctx cosmos.Context, msg MsgLoanRepayment
 	h.mgr.Keeper().SetTotalCollateral(ctx, msg.CollateralAsset, common.SafeSub(totalCollateral, redeem))
 
 	// emit events and metrics
-	evt := NewEventLoanRepayment(redeem, msg.Coin.Amount, msg.CollateralAsset, msg.Owner)
+	evt := NewEventLoanRepayment(redeem, msg.Coin.Amount, msg.CollateralAsset, msg.Owner, msg.TxID)
 	if err := h.mgr.EventMgr().EmitEvent(ctx, evt); nil != err {
 		ctx.Logger().Error("fail to emit loan open event", "error", err)
 	}

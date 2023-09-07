@@ -246,6 +246,7 @@ message EventLoanOpen {
   string debt_issued = 4 [(gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Uint", (gogoproto.nullable) = false];
   string owner = 5 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/common.Address"];
   common.Asset target_asset = 6 [(gogoproto.nullable) = false];
+  string tx_id = 7 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/common.TxID", (gogoproto.customname) = "TxID"];
 }
 
 message EventLoanRepayment {
@@ -253,6 +254,7 @@ message EventLoanRepayment {
   common.Asset collateral_asset = 2 [(gogoproto.nullable) = false];
   string debt_repaid = 3 [(gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Uint", (gogoproto.nullable) = false];
   string owner = 4 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/common.Address"];
+  string tx_id = 7 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/common.TxID", (gogoproto.customname) = "TxID"];
 }
 
 message EventTHORName {

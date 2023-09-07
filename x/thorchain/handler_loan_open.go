@@ -329,7 +329,7 @@ func (h LoanOpenHandler) openLoanV113(ctx cosmos.Context, msg MsgLoanOpen) error
 	h.mgr.Keeper().SetTotalCollateral(ctx, msg.CollateralAsset, totalCollateral.Add(msg.CollateralAmount))
 
 	// emit events and metrics
-	evt := NewEventLoanOpen(msg.CollateralAmount, cr, debt, msg.CollateralAsset, msg.TargetAsset, msg.Owner)
+	evt := NewEventLoanOpen(msg.CollateralAmount, cr, debt, msg.CollateralAsset, msg.TargetAsset, msg.Owner, msg.TxID)
 	if err := h.mgr.EventMgr().EmitEvent(ctx, evt); nil != err {
 		ctx.Logger().Error("fail to emit loan open event", "error", err)
 	}

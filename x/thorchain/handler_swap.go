@@ -419,7 +419,7 @@ func (h SwapHandler) handleV116(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result
 		ctx = ctx.WithValue(constants.CtxLoanTxID, msg.Tx.ID)
 
 		obTx := ObservedTx{Tx: msg.Tx}
-		msg, err := getMsgLoanOpenFromMemo(ctx, h.mgr.Keeper(), m, obTx, msg.Signer)
+		msg, err := getMsgLoanOpenFromMemo(ctx, h.mgr.Keeper(), m, obTx, msg.Signer, msg.Tx.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -439,7 +439,7 @@ func (h SwapHandler) handleV116(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result
 
 		ctx = ctx.WithValue(constants.CtxLoanTxID, msg.Tx.ID)
 
-		msg, err := getMsgLoanRepaymentFromMemo(m, msg.Tx.FromAddress, common.NewCoin(common.TOR, emit), msg.Signer)
+		msg, err := getMsgLoanRepaymentFromMemo(m, msg.Tx.FromAddress, common.NewCoin(common.TOR, emit), msg.Signer, msg.Tx.ID)
 		if err != nil {
 			return nil, err
 		}

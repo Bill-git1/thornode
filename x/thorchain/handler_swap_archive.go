@@ -744,7 +744,7 @@ func (h SwapHandler) handleV110(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result
 		ctx = ctx.WithValue(constants.CtxLoanTxID, msg.Tx.ID)
 
 		obTx := ObservedTx{Tx: msg.Tx}
-		msg, err := getMsgLoanOpenFromMemo(ctx, h.mgr.Keeper(), m, obTx, msg.Signer)
+		msg, err := getMsgLoanOpenFromMemo(ctx, h.mgr.Keeper(), m, obTx, msg.Signer, msg.Tx.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -764,7 +764,7 @@ func (h SwapHandler) handleV110(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result
 
 		ctx = ctx.WithValue(constants.CtxLoanTxID, msg.Tx.ID)
 
-		msg, err := getMsgLoanRepaymentFromMemo(m, msg.Tx.FromAddress, common.NewCoin(common.TOR, emit), msg.Signer)
+		msg, err := getMsgLoanRepaymentFromMemo(m, msg.Tx.FromAddress, common.NewCoin(common.TOR, emit), msg.Signer, msg.Tx.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -873,7 +873,7 @@ func (h SwapHandler) handleV108(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result
 		ctx = ctx.WithValue(constants.CtxLoanTxID, msg.Tx.ID)
 
 		obTx := ObservedTx{Tx: msg.Tx}
-		msg, err := getMsgLoanOpenFromMemo(ctx, h.mgr.Keeper(), m, obTx, msg.Signer)
+		msg, err := getMsgLoanOpenFromMemo(ctx, h.mgr.Keeper(), m, obTx, msg.Signer, msg.Tx.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -893,7 +893,7 @@ func (h SwapHandler) handleV108(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result
 
 		ctx = ctx.WithValue(constants.CtxLoanTxID, msg.Tx.ID)
 
-		msg, err := getMsgLoanRepaymentFromMemo(m, common.NoAddress, common.NewCoin(common.TOR, emit), msg.Signer)
+		msg, err := getMsgLoanRepaymentFromMemo(m, common.NoAddress, common.NewCoin(common.TOR, emit), msg.Signer, msg.Tx.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -1007,7 +1007,7 @@ func (h SwapHandler) handleV107(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result
 		ctx = ctx.WithValue(constants.CtxLoanTxID, txid)
 
 		obTx := ObservedTx{Tx: msg.Tx}
-		msg, err := getMsgLoanOpenFromMemo(ctx, h.mgr.Keeper(), m, obTx, msg.Signer)
+		msg, err := getMsgLoanOpenFromMemo(ctx, h.mgr.Keeper(), m, obTx, msg.Signer, msg.Tx.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -1032,7 +1032,7 @@ func (h SwapHandler) handleV107(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result
 		txid := common.TxID(msg.Tx.ID.String()).Reverse()
 		ctx = ctx.WithValue(constants.CtxLoanTxID, txid)
 
-		msg, err := getMsgLoanRepaymentFromMemo(m, common.NoAddress, common.NewCoin(common.TOR, emit), msg.Signer)
+		msg, err := getMsgLoanRepaymentFromMemo(m, common.NoAddress, common.NewCoin(common.TOR, emit), msg.Signer, msg.Tx.ID)
 		if err != nil {
 			return nil, err
 		}
