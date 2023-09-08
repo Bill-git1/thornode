@@ -627,3 +627,58 @@ func migrateStoreV117(ctx cosmos.Context, mgr *Mgrs) {
 	subBalance(ctx, mgr, 636462, "ETH.ETH", "thorpub1addwnpepqf654umpm7vzgmegae0k4yq0xe69kpvvp3w437hvy7rpyk3svxgtszw2tu9")
 	subBalance(ctx, mgr, 8640, "ETH.ETH", "thorpub1addwnpepqfx4cxtsthazf8609lhfcxxlu60er2t90utta66u2xz2xtdhpts9slmkc93")
 }
+
+func migrateStoreV121(ctx cosmos.Context, mgr *Mgrs) {
+	defer func() {
+		if err := recover(); err != nil {
+			ctx.Logger().Error("fail to migrate store to v121", "error", err)
+		}
+	}()
+
+	// For any in-progress streaming swaps to non-RUNE Native coins,
+	// mint the current Out amount to the Pool Module.
+	var coinsToMint common.Coins
+
+	iterator := mgr.Keeper().GetSwapQueueIterator(ctx)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		var msg MsgSwap
+		if err := mgr.Keeper().Cdc().Unmarshal(iterator.Value(), &msg); err != nil {
+			ctx.Logger().Error("fail to fetch swap msg from queue", "error", err)
+			continue
+		}
+
+		if !msg.IsStreaming() || !msg.TargetAsset.IsNative() || msg.TargetAsset.IsRune() {
+			continue
+		}
+
+		swp, err := mgr.Keeper().GetStreamingSwap(ctx, msg.Tx.ID)
+		if err != nil {
+			ctx.Logger().Error("fail to fetch streaming swap", "error", err)
+			continue
+		}
+
+		if !swp.Out.IsZero() {
+			mintCoin := common.NewCoin(msg.TargetAsset, swp.Out)
+			coinsToMint = coinsToMint.Add(mintCoin)
+		}
+	}
+
+	// The minted coins are for in-progress swaps, so keeping the "swap" in the event field and logs.
+	var coinsToTransfer common.Coins
+	for _, mintCoin := range coinsToMint {
+		if err := mgr.Keeper().MintToModule(ctx, ModuleName, mintCoin); err != nil {
+			ctx.Logger().Error("fail to mint coins during swap", "error", err)
+		} else {
+			mintEvt := NewEventMintBurn(MintSupplyType, mintCoin.Asset.Native(), mintCoin.Amount, "swap")
+			if err := mgr.EventMgr().EmitEvent(ctx, mintEvt); err != nil {
+				ctx.Logger().Error("fail to emit mint event", "error", err)
+			}
+			coinsToTransfer = coinsToTransfer.Add(mintCoin)
+		}
+	}
+
+	if err := mgr.Keeper().SendFromModuleToModule(ctx, ModuleName, AsgardName, coinsToTransfer); err != nil {
+		ctx.Logger().Error("fail to move coins during swap", "error", err)
+	}
+}

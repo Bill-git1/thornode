@@ -79,9 +79,7 @@ func AsgardInvariant(k KVStore) common.Invariant {
 				swapCoins = swapCoins.Add(coin)
 			}
 
-			// TODO: If non-RUNE native assets are minted in the swap rather than the outbound,
-			// change this IsNativeRune() to IsNative() .
-			if swap.TargetAsset.IsNativeRune() && !ss.Out.IsZero() {
+			if swap.TargetAsset.IsNative() && !ss.Out.IsZero() {
 				swapCoins = swapCoins.Add(common.NewCoin(swap.TargetAsset, ss.Out))
 			}
 		}

@@ -127,7 +127,12 @@ func (h SwapHandler) validateV121(ctx cosmos.Context, msg MsgSwap) error {
 			if err != nil {
 				return err
 			}
-			if !msg.Tx.FromAddress.Equals(acc) && !msg.Destination.Equals(acc) {
+			// Allow Derived Asset source swaps from the Lending Module
+			// and Derived Asset target swaps to the Lending Module,
+			// but do not for instance allow Derived Asset target swaps from the Lending Module
+			// to an address which is not the Lending Module.
+			if (!msg.Tx.FromAddress.Equals(acc) && msg.Tx.Coins[0].Asset.IsDerivedAsset()) ||
+				(!msg.Destination.Equals(acc) && target.IsDerivedAsset()) {
 				return errors.New("swapping to/from a derived asset is not allowed, except the lending protocol")
 			}
 		}

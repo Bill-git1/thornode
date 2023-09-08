@@ -97,6 +97,7 @@ func NewOperation(opMap map[string]any) Operation {
 
 	// create decoder supporting embedded structs and weakly typed input
 	dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		TagName:          "json",
 		WeaklyTypedInput: true,
 		ErrorUnused:      true,
 		Squash:           true,
@@ -354,9 +355,10 @@ func (op *OpCheck) Execute(out io.Writer, routine int, _ *os.Process, logs chan 
 ////////////////////////////////////////////////////////////////////////////////////////
 
 type OpCreateBlocks struct {
-	OpBase `yaml:",inline"`
-	Count  int  `json:"count"`
-	Exit   *int `json:"exit"`
+	OpBase         `yaml:",inline"`
+	Count          int  `json:"count"`
+	SkipInvariants bool `json:"skip_invariants"`
+	Exit           *int `json:"exit"`
 }
 
 func (op *OpCreateBlocks) Execute(out io.Writer, routine int, p *os.Process, logs chan string) error {
@@ -406,6 +408,9 @@ func (op *OpCreateBlocks) Execute(out io.Writer, routine int, p *os.Process, log
 	// avoid minor raciness after end block
 	time.Sleep(200 * time.Millisecond * getTimeFactor())
 
+	if op.SkipInvariants {
+		return nil
+	}
 	return checkInvariants(routine)
 }
 
