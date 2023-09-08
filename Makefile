@@ -61,6 +61,8 @@ BUILDTAG?=$(shell git rev-parse --abbrev-ref HEAD)
 
 # ------------------------------ Generate ------------------------------
 
+generate: go-generate openapi protob-docker
+
 go-generate:
 	@go generate ./...
 

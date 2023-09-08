@@ -43,11 +43,13 @@ generate:
   services:
     - docker:20.10.12-dind
   artifacts:
-    untracked: true
+    paths:
+      - test/smoke/thornode_proto
   before_script:
     - apk -U add bash curl findutils git go jq make protoc wget
   script:
     - PATH="$PATH:/root/go/bin" make go-generate protob-docker smoke-protob-docker openapi
+    - ./scripts/lint-generated.bash
 
 unit-tests:
   stage: test
