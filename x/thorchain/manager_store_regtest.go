@@ -130,7 +130,9 @@ func migrateStoreV121(ctx cosmos.Context, mgr *Mgrs) {
 		}
 	}
 
-	if err := mgr.Keeper().SendFromModuleToModule(ctx, ModuleName, AsgardName, coinsToTransfer); err != nil {
-		ctx.Logger().Error("fail to move coins during swap", "error", err)
+	if len(coinsToTransfer) > 0 {
+		if err := mgr.Keeper().SendFromModuleToModule(ctx, ModuleName, AsgardName, coinsToTransfer); err != nil {
+			ctx.Logger().Error("fail to move coins during swap", "error", err)
+		}
 	}
 }
