@@ -316,6 +316,17 @@ func (vm *NetworkMgrVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 		ctx.Logger().Error("fail to process POL liquidity", "error", err)
 	}
 
+	if err := vm.migrateFunds(ctx, mgr); err != nil {
+		ctx.Logger().Error("fail to migrate funds", "error", err)
+	}
+
+	if err := vm.checkPoolRagnarok(ctx, mgr); err != nil {
+		ctx.Logger().Error("fail to process pool ragnarok", "error", err)
+	}
+	return nil
+}
+
+func (vm *NetworkMgrVCUR) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 	migrateInterval, err := vm.k.GetMimir(ctx, constants.FundMigrationInterval.String())
 	if migrateInterval < 0 || err != nil {
 		migrateInterval = mgr.GetConstants().GetInt64Value(constants.FundMigrationInterval)
@@ -549,9 +560,6 @@ func (vm *NetworkMgrVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 				}
 			}
 		}
-	}
-	if err := vm.checkPoolRagnarok(ctx, mgr); err != nil {
-		ctx.Logger().Error("fail to process pool ragnarok", "error", err)
 	}
 	return nil
 }

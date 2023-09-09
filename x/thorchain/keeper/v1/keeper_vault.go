@@ -7,8 +7,16 @@ import (
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/constants"
 	kvTypes "gitlab.com/thorchain/thornode/x/thorchain/keeper/types"
 )
+
+type VaultSecurity struct {
+	Vault      Vault
+	TotalBond  cosmos.Uint
+	TotalValue cosmos.Uint
+	Diff       cosmos.Int
+}
 
 func (k KVStore) setVault(ctx cosmos.Context, key string, record Vault) {
 	store := ctx.KVStore(k.storeKey)
@@ -47,6 +55,34 @@ func (k KVStore) GetMostSecure(ctx cosmos.Context, vaults Vaults, signingTransPe
 	return vaults[len(vaults)-1]
 }
 
+// GetMostSecureStrict given list of vaults, find the most secure.
+// if the most secure vault's bond is less than securityBps * the vault's asset
+// value in rune, it is considered insecure and no vault is returned
+func (k KVStore) GetMostSecureStrict(ctx cosmos.Context, vaults Vaults, signingTransPeriod int64) Vault {
+	vaultSecurity := k.getSortedVaultSecurity(ctx, vaults, signingTransPeriod)
+	if len(vaults) == 0 {
+		return Vault{}
+	}
+
+	mostSecure := vaultSecurity[len(vaults)-1]
+	securityBps := k.GetConfigInt64(ctx, constants.MigrationVaultSecurityBps)
+
+	if securityBps > 0 {
+		bondNeeded := common.GetUncappedShare(
+			cosmos.NewUint(uint64(securityBps)),
+			cosmos.NewUint(10_000),
+			mostSecure.TotalValue,
+		)
+		if mostSecure.TotalBond.LT(bondNeeded) {
+			// vault does not meet security threshold
+			// this is the most secure, so no vaults are secure
+			return Vault{}
+		}
+	}
+
+	return mostSecure.Vault
+}
+
 // GetLeastSecure with given list of vaults, find the vault that is least secure
 func (k KVStore) GetLeastSecure(ctx cosmos.Context, vaults Vaults, signingTransPeriod int64) Vault {
 	vaults = k.SortBySecurity(ctx, vaults, signingTransPeriod)
@@ -64,11 +100,16 @@ func (k KVStore) SortBySecurity(ctx cosmos.Context, vaults Vaults, signingTransP
 		return vaults
 	}
 
-	type VaultSecurity struct {
-		Vault Vault
-		Diff  int64
+	vaultSecurity := k.getSortedVaultSecurity(ctx, vaults, signingTransPeriod)
+	final := make(Vaults, len(vaultSecurity))
+	for i, v := range vaultSecurity {
+		final[i] = v.Vault
 	}
 
+	return final
+}
+
+func (k KVStore) getSortedVaultSecurity(ctx cosmos.Context, vaults Vaults, signingTransPeriod int64) []VaultSecurity {
 	vaultSecurity := make([]VaultSecurity, len(vaults))
 
 	for i, vault := range vaults {
@@ -146,21 +187,27 @@ func (k KVStore) SortBySecurity(ctx cosmos.Context, vaults Vaults, signingTransP
 		}
 
 		if totalValue.GT(totalBond) {
+			diff := totalValue.Sub(totalBond).BigInt()
 			vaultSecurity[i] = VaultSecurity{
-				Vault: vault,
-				Diff:  -(int64(common.SafeSub(totalValue, totalBond).Uint64())),
+				Vault:      vault,
+				TotalBond:  totalBond,
+				TotalValue: totalValue,
+				Diff:       cosmos.NewIntFromBigInt(diff).MulRaw(-1),
 			}
 		} else {
+			diff := totalBond.Sub(totalValue).BigInt()
 			vaultSecurity[i] = VaultSecurity{
-				Vault: vault,
-				Diff:  int64(common.SafeSub(totalBond, totalValue).Uint64()),
+				Vault:      vault,
+				TotalBond:  totalBond,
+				TotalValue: totalValue,
+				Diff:       cosmos.NewIntFromBigInt(diff),
 			}
 		}
 	}
 
 	// sort by how far total bond and total value are from each other
 	sort.SliceStable(vaultSecurity, func(i, j int) bool {
-		return vaultSecurity[i].Diff < vaultSecurity[j].Diff
+		return vaultSecurity[i].Diff.LT(vaultSecurity[j].Diff)
 	})
 
 	final := make(Vaults, len(vaultSecurity))
@@ -168,7 +215,7 @@ func (k KVStore) SortBySecurity(ctx cosmos.Context, vaults Vaults, signingTransP
 		final[i] = v.Vault
 	}
 
-	return final
+	return vaultSecurity
 }
 
 // SetVault save the Vault object to store

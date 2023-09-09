@@ -172,11 +172,11 @@ func (*NetworkManagerVCURTestSuite) TestProcessGenesisSetup(c *C) {
 
 	helper.failGetRetiringAsgardVault = true
 	ctx = ctx.WithBlockHeight(1024)
-	c.Assert(networkMgr.EndBlock(ctx, mgr), NotNil)
+	c.Assert(networkMgr.migrateFunds(ctx, mgr), NotNil)
 	helper.failGetRetiringAsgardVault = false
 
 	helper.failGetActiveAsgardVault = true
-	c.Assert(networkMgr.EndBlock(ctx, mgr), NotNil)
+	c.Assert(networkMgr.migrateFunds(ctx, mgr), NotNil)
 	helper.failGetActiveAsgardVault = false
 }
 

@@ -124,6 +124,7 @@ const (
 	EnableUSDFees
 	PreferredAssetOutboundFeeMultiplier
 	FeeUSDRoundSignificantDigits
+	MigrationVaultSecurityBps
 )
 
 var nameToString = map[ConstantName]string{
@@ -241,6 +242,7 @@ var nameToString = map[ConstantName]string{
 	EnableUSDFees:                       "EnableUSDFees",
 	PreferredAssetOutboundFeeMultiplier: "PreferredAssetOutboundFeeMultiplier",
 	FeeUSDRoundSignificantDigits:        "FeeUSDRoundSignificantDigits",
+	MigrationVaultSecurityBps:           "MigrationVaultSecurityBps",
 }
 
 // String implement fmt.stringer
