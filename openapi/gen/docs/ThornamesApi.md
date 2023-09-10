@@ -10,7 +10,7 @@ Method | HTTP request | Description
 
 ## Thorname
 
-> []Thorname Thorname(ctx, name).Height(height).Execute()
+> Thorname Thorname(ctx, name).Height(height).Execute()
 
 
 
@@ -39,7 +39,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `ThornamesApi.Thorname``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `Thorname`: []Thorname
+    // response from `Thorname`: Thorname
     fmt.Fprintf(os.Stdout, "Response from `ThornamesApi.Thorname`: %v\n", resp)
 }
 ```
@@ -64,7 +64,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**[]Thorname**](Thorname.md)
+[**Thorname**](Thorname.md)
 
 ### Authorization
 

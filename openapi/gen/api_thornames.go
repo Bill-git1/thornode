@@ -36,7 +36,7 @@ func (r ApiThornameRequest) Height(height int64) ApiThornameRequest {
 	return r
 }
 
-func (r ApiThornameRequest) Execute() ([]Thorname, *http.Response, error) {
+func (r ApiThornameRequest) Execute() (*Thorname, *http.Response, error) {
 	return r.ApiService.ThornameExecute(r)
 }
 
@@ -58,13 +58,13 @@ func (a *ThornamesApiService) Thorname(ctx context.Context, name string) ApiThor
 }
 
 // Execute executes the request
-//  @return []Thorname
-func (a *ThornamesApiService) ThornameExecute(r ApiThornameRequest) ([]Thorname, *http.Response, error) {
+//  @return Thorname
+func (a *ThornamesApiService) ThornameExecute(r ApiThornameRequest) (*Thorname, *http.Response, error) {
 	var (
 		localVarHTTPMethod   = http.MethodGet
 		localVarPostBody     interface{}
 		formFiles            []formFile
-		localVarReturnValue  []Thorname
+		localVarReturnValue  *Thorname
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "ThornamesApiService.Thorname")

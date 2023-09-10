@@ -4362,9 +4362,7 @@ components:
           $ref: '#/components/schemas/KeysignMetrics'
       type: object
     ThornameResponse:
-      items:
-        $ref: '#/components/schemas/Thorname'
-      type: array
+      $ref: '#/components/schemas/Thorname'
     MimirResponse:
       additionalProperties:
         type: string
