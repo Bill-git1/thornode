@@ -4045,22 +4045,22 @@ components:
           type: string
         native_outbound_fee_rune:
           description: "the outbound transaction fee in rune, converted from the NativeOutboundFeeUSD\
-            \ mimir"
+            \ mimir (after USD fees are enabled)"
           example: "100000000"
           type: string
         native_tx_fee_rune:
           description: "the native transaction fee in rune, converted from the NativeTransactionFeeUSD\
-            \ mimir"
+            \ mimir (after USD fees are enabled)"
           example: "100000000"
           type: string
         tns_register_fee_rune:
           description: "the thorname register fee in rune, converted from the TNSRegisterFeeUSD\
-            \ mimir"
+            \ mimir (after USD fees are enabled)"
           example: "1000000000"
           type: string
         tns_fee_per_block_rune:
           description: "the thorname fee per block in rune, converted from the TNSFeePerBlockUSD\
-            \ mimir"
+            \ mimir (after USD fees are enabled)"
           example: "20"
           type: string
       required:

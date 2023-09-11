@@ -2613,19 +2613,19 @@ components:
         native_outbound_fee_rune:
           type: string
           example: "100000000"
-          description: the outbound transaction fee in rune, converted from the NativeOutboundFeeUSD mimir
+          description: the outbound transaction fee in rune, converted from the NativeOutboundFeeUSD mimir (after USD fees are enabled)
         native_tx_fee_rune:
           type: string
           example: "100000000"
-          description: the native transaction fee in rune, converted from the NativeTransactionFeeUSD mimir
+          description: the native transaction fee in rune, converted from the NativeTransactionFeeUSD mimir (after USD fees are enabled)
         tns_register_fee_rune:
           type: string
           example: "1000000000"
-          description: the thorname register fee in rune, converted from the TNSRegisterFeeUSD mimir
+          description: the thorname register fee in rune, converted from the TNSRegisterFeeUSD mimir (after USD fees are enabled)
         tns_fee_per_block_rune:
           type: string
           example: "20"
-          description: the thorname fee per block in rune, converted from the TNSFeePerBlockUSD mimir
+          description: the thorname fee per block in rune, converted from the TNSFeePerBlockUSD mimir (after USD fees are enabled)
 
     POLResponse:
       type: object

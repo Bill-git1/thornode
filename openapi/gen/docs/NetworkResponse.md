@@ -14,10 +14,10 @@ Name | Type | Description | Notes
 **GasSpentRune** | **string** | Sum of the gas the network has spent to send outbounds | 
 **GasWithheldRune** | **string** | Sum of the gas withheld from users to cover outbound gas | 
 **OutboundFeeMultiplier** | Pointer to **string** | Current outbound fee multiplier, in basis points | [optional] 
-**NativeOutboundFeeRune** | **string** | the outbound transaction fee in rune, converted from the NativeOutboundFeeUSD mimir | 
-**NativeTxFeeRune** | **string** | the native transaction fee in rune, converted from the NativeTransactionFeeUSD mimir | 
-**TnsRegisterFeeRune** | **string** | the thorname register fee in rune, converted from the TNSRegisterFeeUSD mimir | 
-**TnsFeePerBlockRune** | **string** | the thorname fee per block in rune, converted from the TNSFeePerBlockUSD mimir | 
+**NativeOutboundFeeRune** | **string** | the outbound transaction fee in rune, converted from the NativeOutboundFeeUSD mimir (after USD fees are enabled) | 
+**NativeTxFeeRune** | **string** | the native transaction fee in rune, converted from the NativeTransactionFeeUSD mimir (after USD fees are enabled) | 
+**TnsRegisterFeeRune** | **string** | the thorname register fee in rune, converted from the TNSRegisterFeeUSD mimir (after USD fees are enabled) | 
+**TnsFeePerBlockRune** | **string** | the thorname fee per block in rune, converted from the TNSFeePerBlockUSD mimir (after USD fees are enabled) | 
 
 ## Methods
 

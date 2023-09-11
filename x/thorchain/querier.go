@@ -530,13 +530,10 @@ func queryNetwork(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 		GasSpentRune:          cosmos.NewUint(data.OutboundGasSpentRune).String(),
 		GasWithheldRune:       cosmos.NewUint(data.OutboundGasWithheldRune).String(),
 		OutboundFeeMultiplier: wrapString(outboundFeeMultiplier.String()),
-
-		// TODO: These are temporarily hardcoded to the dollar value fees, for sanity check
-		// before enabling. Switch to the keeper fee methods after USD fees are live.
-		NativeTxFeeRune:       mgr.Keeper().DollarConfigInRune(ctx, constants.NativeTransactionFeeUSD).String(),
-		NativeOutboundFeeRune: mgr.Keeper().DollarConfigInRune(ctx, constants.NativeOutboundFeeUSD).String(),
-		TnsRegisterFeeRune:    mgr.Keeper().DollarConfigInRune(ctx, constants.TNSRegisterFeeUSD).String(),
-		TnsFeePerBlockRune:    mgr.Keeper().DollarConfigInRune(ctx, constants.TNSFeePerBlockUSD).String(),
+		NativeTxFeeRune:       mgr.Keeper().GetNativeTxFee(ctx).String(),
+		NativeOutboundFeeRune: mgr.Keeper().GetOutboundTxFee(ctx).String(),
+		TnsRegisterFeeRune:    mgr.Keeper().GetTHORNameRegisterFee(ctx).String(),
+		TnsFeePerBlockRune:    mgr.Keeper().GetTHORNamePerBlockFee(ctx).String(),
 	}
 
 	return jsonify(ctx, result)

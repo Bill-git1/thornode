@@ -37,13 +37,13 @@ type NetworkResponse struct {
 	GasWithheldRune string `json:"gas_withheld_rune"`
 	// Current outbound fee multiplier, in basis points
 	OutboundFeeMultiplier *string `json:"outbound_fee_multiplier,omitempty"`
-	// the outbound transaction fee in rune, converted from the NativeOutboundFeeUSD mimir
+	// the outbound transaction fee in rune, converted from the NativeOutboundFeeUSD mimir (after USD fees are enabled)
 	NativeOutboundFeeRune string `json:"native_outbound_fee_rune"`
-	// the native transaction fee in rune, converted from the NativeTransactionFeeUSD mimir
+	// the native transaction fee in rune, converted from the NativeTransactionFeeUSD mimir (after USD fees are enabled)
 	NativeTxFeeRune string `json:"native_tx_fee_rune"`
-	// the thorname register fee in rune, converted from the TNSRegisterFeeUSD mimir
+	// the thorname register fee in rune, converted from the TNSRegisterFeeUSD mimir (after USD fees are enabled)
 	TnsRegisterFeeRune string `json:"tns_register_fee_rune"`
-	// the thorname fee per block in rune, converted from the TNSFeePerBlockUSD mimir
+	// the thorname fee per block in rune, converted from the TNSFeePerBlockUSD mimir (after USD fees are enabled)
 	TnsFeePerBlockRune string `json:"tns_fee_per_block_rune"`
 }
 
