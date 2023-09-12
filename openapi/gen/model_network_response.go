@@ -45,13 +45,17 @@ type NetworkResponse struct {
 	TnsRegisterFeeRune string `json:"tns_register_fee_rune"`
 	// the thorname fee per block in rune, converted from the TNSFeePerBlockUSD mimir (after USD fees are enabled)
 	TnsFeePerBlockRune string `json:"tns_fee_per_block_rune"`
+	// the rune price in tor
+	RunePriceInTor string `json:"rune_price_in_tor"`
+	// the tor price in rune
+	TorPriceInRune string `json:"tor_price_in_rune"`
 }
 
 // NewNetworkResponse instantiates a new NetworkResponse object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewNetworkResponse(bondRewardRune string, burnedBep2Rune string, burnedErc20Rune string, totalBondUnits string, effectiveSecurityBond string, totalReserve string, vaultsMigrating bool, gasSpentRune string, gasWithheldRune string, nativeOutboundFeeRune string, nativeTxFeeRune string, tnsRegisterFeeRune string, tnsFeePerBlockRune string) *NetworkResponse {
+func NewNetworkResponse(bondRewardRune string, burnedBep2Rune string, burnedErc20Rune string, totalBondUnits string, effectiveSecurityBond string, totalReserve string, vaultsMigrating bool, gasSpentRune string, gasWithheldRune string, nativeOutboundFeeRune string, nativeTxFeeRune string, tnsRegisterFeeRune string, tnsFeePerBlockRune string, runePriceInTor string, torPriceInRune string) *NetworkResponse {
 	this := NetworkResponse{}
 	this.BondRewardRune = bondRewardRune
 	this.BurnedBep2Rune = burnedBep2Rune
@@ -66,6 +70,8 @@ func NewNetworkResponse(bondRewardRune string, burnedBep2Rune string, burnedErc2
 	this.NativeTxFeeRune = nativeTxFeeRune
 	this.TnsRegisterFeeRune = tnsRegisterFeeRune
 	this.TnsFeePerBlockRune = tnsFeePerBlockRune
+	this.RunePriceInTor = runePriceInTor
+	this.TorPriceInRune = torPriceInRune
 	return &this
 }
 
@@ -421,6 +427,54 @@ func (o *NetworkResponse) SetTnsFeePerBlockRune(v string) {
 	o.TnsFeePerBlockRune = v
 }
 
+// GetRunePriceInTor returns the RunePriceInTor field value
+func (o *NetworkResponse) GetRunePriceInTor() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.RunePriceInTor
+}
+
+// GetRunePriceInTorOk returns a tuple with the RunePriceInTor field value
+// and a boolean to check if the value has been set.
+func (o *NetworkResponse) GetRunePriceInTorOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.RunePriceInTor, true
+}
+
+// SetRunePriceInTor sets field value
+func (o *NetworkResponse) SetRunePriceInTor(v string) {
+	o.RunePriceInTor = v
+}
+
+// GetTorPriceInRune returns the TorPriceInRune field value
+func (o *NetworkResponse) GetTorPriceInRune() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.TorPriceInRune
+}
+
+// GetTorPriceInRuneOk returns a tuple with the TorPriceInRune field value
+// and a boolean to check if the value has been set.
+func (o *NetworkResponse) GetTorPriceInRuneOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.TorPriceInRune, true
+}
+
+// SetTorPriceInRune sets field value
+func (o *NetworkResponse) SetTorPriceInRune(v string) {
+	o.TorPriceInRune = v
+}
+
 func (o NetworkResponse) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
@@ -464,6 +518,12 @@ func (o NetworkResponse) MarshalJSON() ([]byte, error) {
 	}
 	if true {
 		toSerialize["tns_fee_per_block_rune"] = o.TnsFeePerBlockRune
+	}
+	if true {
+		toSerialize["rune_price_in_tor"] = o.RunePriceInTor
+	}
+	if true {
+		toSerialize["tor_price_in_rune"] = o.TorPriceInRune
 	}
 	return json.Marshal(toSerialize)
 }

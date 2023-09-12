@@ -3998,7 +3998,9 @@ components:
         burned_bep_2_rune: "674699077345087"
         tns_fee_per_block_rune: "20"
         gas_spent_rune: "1000000000"
+        rune_price_in_tor: "10"
         tns_register_fee_rune: "1000000000"
+        tor_price_in_rune: "10"
         burned_erc_20_rune: "66369401654835"
         vaults_migrating: false
       properties:
@@ -4063,6 +4065,14 @@ components:
             \ mimir (after USD fees are enabled)"
           example: "20"
           type: string
+        rune_price_in_tor:
+          description: the rune price in tor
+          example: "10"
+          type: string
+        tor_price_in_rune:
+          description: the tor price in rune
+          example: "10"
+          type: string
       required:
       - bond_reward_rune
       - burned_bep_2_rune
@@ -4072,8 +4082,10 @@ components:
       - gas_withheld_rune
       - native_outbound_fee_rune
       - native_tx_fee_rune
+      - rune_price_in_tor
       - tns_fee_per_block_rune
       - tns_register_fee_rune
+      - tor_price_in_rune
       - total_bond_units
       - total_reserve
       - vaults_migrating

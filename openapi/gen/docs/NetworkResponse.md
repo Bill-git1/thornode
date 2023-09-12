@@ -18,12 +18,14 @@ Name | Type | Description | Notes
 **NativeTxFeeRune** | **string** | the native transaction fee in rune, converted from the NativeTransactionFeeUSD mimir (after USD fees are enabled) | 
 **TnsRegisterFeeRune** | **string** | the thorname register fee in rune, converted from the TNSRegisterFeeUSD mimir (after USD fees are enabled) | 
 **TnsFeePerBlockRune** | **string** | the thorname fee per block in rune, converted from the TNSFeePerBlockUSD mimir (after USD fees are enabled) | 
+**RunePriceInTor** | **string** | the rune price in tor | 
+**TorPriceInRune** | **string** | the tor price in rune | 
 
 ## Methods
 
 ### NewNetworkResponse
 
-`func NewNetworkResponse(bondRewardRune string, burnedBep2Rune string, burnedErc20Rune string, totalBondUnits string, effectiveSecurityBond string, totalReserve string, vaultsMigrating bool, gasSpentRune string, gasWithheldRune string, nativeOutboundFeeRune string, nativeTxFeeRune string, tnsRegisterFeeRune string, tnsFeePerBlockRune string, ) *NetworkResponse`
+`func NewNetworkResponse(bondRewardRune string, burnedBep2Rune string, burnedErc20Rune string, totalBondUnits string, effectiveSecurityBond string, totalReserve string, vaultsMigrating bool, gasSpentRune string, gasWithheldRune string, nativeOutboundFeeRune string, nativeTxFeeRune string, tnsRegisterFeeRune string, tnsFeePerBlockRune string, runePriceInTor string, torPriceInRune string, ) *NetworkResponse`
 
 NewNetworkResponse instantiates a new NetworkResponse object
 This constructor will assign default values to properties that have it defined,
@@ -321,6 +323,46 @@ and a boolean to check if the value has been set.
 `func (o *NetworkResponse) SetTnsFeePerBlockRune(v string)`
 
 SetTnsFeePerBlockRune sets TnsFeePerBlockRune field to given value.
+
+
+### GetRunePriceInTor
+
+`func (o *NetworkResponse) GetRunePriceInTor() string`
+
+GetRunePriceInTor returns the RunePriceInTor field if non-nil, zero value otherwise.
+
+### GetRunePriceInTorOk
+
+`func (o *NetworkResponse) GetRunePriceInTorOk() (*string, bool)`
+
+GetRunePriceInTorOk returns a tuple with the RunePriceInTor field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetRunePriceInTor
+
+`func (o *NetworkResponse) SetRunePriceInTor(v string)`
+
+SetRunePriceInTor sets RunePriceInTor field to given value.
+
+
+### GetTorPriceInRune
+
+`func (o *NetworkResponse) GetTorPriceInRune() string`
+
+GetTorPriceInRune returns the TorPriceInRune field if non-nil, zero value otherwise.
+
+### GetTorPriceInRuneOk
+
+`func (o *NetworkResponse) GetTorPriceInRuneOk() (*string, bool)`
+
+GetTorPriceInRuneOk returns a tuple with the TorPriceInRune field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetTorPriceInRune
+
+`func (o *NetworkResponse) SetTorPriceInRune(v string)`
+
+SetTorPriceInRune sets TorPriceInRune field to given value.
 
 
 

@@ -534,6 +534,8 @@ func queryNetwork(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 		NativeOutboundFeeRune: mgr.Keeper().GetOutboundTxFee(ctx).String(),
 		TnsRegisterFeeRune:    mgr.Keeper().GetTHORNameRegisterFee(ctx).String(),
 		TnsFeePerBlockRune:    mgr.Keeper().GetTHORNamePerBlockFee(ctx).String(),
+		RunePriceInTor:        mgr.Keeper().DollarsPerRune(ctx).String(),
+		TorPriceInRune:        mgr.Keeper().RunePerDollar(ctx).String(),
 	}
 
 	return jsonify(ctx, result)

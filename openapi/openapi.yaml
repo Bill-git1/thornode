@@ -2569,6 +2569,8 @@ components:
         - native_tx_fee_rune
         - tns_register_fee_rune
         - tns_fee_per_block_rune
+        - rune_price_in_tor
+        - tor_price_in_rune
       properties:
         bond_reward_rune:
           type: string
@@ -2626,6 +2628,14 @@ components:
           type: string
           example: "20"
           description: the thorname fee per block in rune, converted from the TNSFeePerBlockUSD mimir (after USD fees are enabled)
+        rune_price_in_tor:
+          type: string
+          example: "10"
+          description: the rune price in tor
+        tor_price_in_rune:
+          type: string
+          example: "10"
+          description: the tor price in rune
 
     POLResponse:
       type: object
