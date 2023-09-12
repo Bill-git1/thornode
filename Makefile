@@ -114,6 +114,11 @@ tools:
 	go install -tags ${TAG} ./tools/generate
 	go install -tags ${TAG} ./tools/pubkey2address
 
+# ------------------------------ Gitlab CI ------------------------------
+
+gitlab-trigger-ci:
+	@./scripts/gitlab-trigger-ci.sh
+
 # ------------------------------ Housekeeping ------------------------------
 
 format:

@@ -1,7 +1,7 @@
 image: registry.gitlab.com/thorchain/thornode:builder-v4@sha256:a58b06a98485bcef78d7733cc6d66e8c62a306b1ec388a032469c592c5a71841
 
 workflow:
-  rules: &rules
+  rules:
     - if: $CI_MERGE_REQUEST_IID
     - if: $CI_COMMIT_TAG
     - if: $CI_COMMIT_REF_PROTECTED == "true"
@@ -18,11 +18,26 @@ variables:
   SAST_EXCLUDED_PATHS: spec, test, tests, tmp, .cache
 
 stages:
+  - fork
   - reset
   - generate
   - test
   - build
   - long-test
+
+fork:
+  stage: fork
+  rules:
+    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != "thorchain/thornode"
+      when: always
+  script:
+    - |
+      if ! curl -s https://gitlab.com/api/v4/projects/$CI_PROJECT_ID/pipelines?sha=$CI_COMMIT_SHA | jq -e '.[]|select(.status=="success")'; then
+        echo '1. Ensure the following passes locally: `make generate lint test smoke test-regression`'
+        echo '2. Have a contributor run `make gitlab-trigger-ci`.'
+        echo '3. Re-run this job.'
+        exit 1
+      fi
 
 reset-lint-cache:
   cache:
@@ -37,6 +52,11 @@ reset-lint-cache:
   allow_failure: true
 
 generate:
+  rules: &rules
+    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != "thorchain/thornode"
+      when: never
+    - if: $CI == "true"
+      when: always
   stage: generate
   cache: {}
   image: docker:20.10.12
@@ -52,9 +72,8 @@ generate:
     - ./scripts/lint-generated.bash
 
 unit-tests:
+  rules: *rules
   stage: test
-  except:
-    - schedules
   coverage: /total:\s+\(statements\)\s+(\d+.\d+\%)/
   before_script:
     - go get github.com/boumenot/gocover-cobertura
@@ -72,16 +91,22 @@ unit-tests:
       - coverage*
 
 lint:
+  rules:
+    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != "thorchain/thornode"
+      when: never
+    - if: $CI_COMMIT_BRANCH == "testnet"
+      when: never
+    - if: $CI_COMMIT_BRANCH == "stagenet"
+      when: never
+    - if: $CI_COMMIT_BRANCH == "mainnet"
+      when: never
+    - if: $CI == "true"
+      when: always
   stage: test
   cache:
     key: lint
     paths:
       - .cache
-  except:
-    - schedules
-    - testnet
-    - mainnet
-    - stagenet
   before_script:
     - rm -rf ~/.cache
     - mkdir -p .cache
@@ -95,13 +120,19 @@ lint:
     - mv ~/.cache .
 
 build-thornode:
+  rules:
+    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != "thorchain/thornode"
+      when: never
+    - if: $CI_COMMIT_BRANCH == "develop"
+      when: always
+    - if: $CI_COMMIT_BRANCH == "testnet"
+      when: always
+    - if: $CI_COMMIT_BRANCH == "stagenet"
+      when: always
+    - if: $CI_COMMIT_BRANCH == "mainnet"
+      when: always
   stage: build
   image: docker:20.10.12
-  only:
-    - develop # build mocknet image
-    - testnet
-    - mainnet
-    - stagenet
   services:
     - docker:20.10.12-dind
   before_script:
@@ -123,10 +154,13 @@ build-thornode:
     - BUILDTAG=mocknet BRANCH=mocknet make docker-gitlab-push
 
 build-smoke:
+  rules:
+    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != "thorchain/thornode"
+      when: never
+    - if: $CI_COMMIT_BRANCH == "develop"
+      when: always
   stage: build
   image: docker:20.10.12
-  only:
-    - develop
   services:
     - docker:20.10.12-dind
   before_script:
@@ -145,6 +179,7 @@ build-smoke:
     - make smoke-push-image
 
 smoke-test:
+  rules: *rules
   stage: long-test
   cache: {}
   image: docker:20.10.12
@@ -155,8 +190,6 @@ smoke-test:
     name: $CI_JOB_NAME-$CI_COMMIT_REF_NAME
     paths:
       - ./logs/
-  except:
-    - schedules
   environment:
     name: integration
   variables:
@@ -185,13 +218,12 @@ smoke-test:
       done
 
 test-regression:
+  rules: *rules
   stage: long-test
   cache: {}
   image: docker:20.10.12
   services:
     - docker:20.10.12-dind
-  except:
-    - schedules
   environment:
     name: integration
   variables:
