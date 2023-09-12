@@ -215,7 +215,7 @@ asserts:
   - .expected_collateralization_ratio|tonumber == 10000
   - .expected_debt_issued|tonumber == 490110000
   - .recommended_min_amount_in == "56000"
-  - .fees.slippage_bps|tonumber == 149
+  - .fees.slippage_bps|tonumber == 145
   - .fees.total_bps|tonumber == 188
   - .fees.outbound|tonumber == 2000000
   - .fees.liquidity|tonumber == 7291171
@@ -312,7 +312,7 @@ asserts:
   - .expected_debt_issued|tonumber == 485310000
   - .recommended_min_amount_in == "517152"
   - .fees.total_bps|tonumber == 2831
-  - .fees.slippage_bps|tonumber == 195
+  - .fees.slippage_bps|tonumber == 194
   - .fees.outbound|tonumber == 1280000
   - .fees.liquidity|tonumber == 94606
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
@@ -482,8 +482,8 @@ asserts:
   - .memo == "$-:BTC.BTC:{{ addr_btc_fox }}"
   - .expected_collateral_withdrawn|tonumber == 0
   - .expected_debt_repaid|tonumber == 495028435
-  - .fees.total_bps|tonumber == 50
-  - .fees.slippage_bps|tonumber == 50
+  - .fees.total_bps|tonumber == 49
+  - .fees.slippage_bps|tonumber == 49
   - .fees.outbound|not
   - .fees.liquidity|tonumber == 2525
   - .fees.total|tonumber == 2525
@@ -533,7 +533,7 @@ asserts:
   - .expected_collateral_withdrawn|tonumber == 989774
   - .expected_debt_repaid|tonumber == 4180145903
   - .fees.total_bps|tonumber == 4941
-  - .fees.slippage_bps|tonumber == 1118
+  - .fees.slippage_bps|tonumber == 922
   - .fees.outbound|tonumber == 14000
   - .fees.liquidity|tonumber == 448688
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)

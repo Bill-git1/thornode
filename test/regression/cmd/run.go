@@ -327,7 +327,7 @@ func run(out io.Writer, path string, routine int) error {
 
 		// restart thornode
 		localLog.Debug().Msg("Restarting thornode")
-		thornode = exec.Command("thornode", "start")
+		thornode = exec.Command("thornode", "--log_level", logLevel, "start")
 		thornode.Env = env
 		thornode.Stdout = os.Stdout
 		thornode.Stderr = os.Stderr

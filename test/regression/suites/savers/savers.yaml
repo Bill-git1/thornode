@@ -14,6 +14,22 @@ asserts:
 ########################################################################################
 # deposit btc
 ########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/quote/saver/deposit
+params:
+  asset: BTC.BTC
+  amount: 5000000
+asserts:
+  - .expected_amount_deposit|tonumber == 4759341
+  - .memo == "+:BTC/BTC"
+  - .inbound_address == "{{ addr_btc_dog }}"
+  - .recommended_min_amount_in == "10000"
+  - .fees.liquidity == "329539"
+  - .fees.outbound == "2100"
+  - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
+  - .fees.slippage_bps == 647
+  - .fees.total_bps == 651
+---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
 txs:
@@ -88,6 +104,22 @@ asserts:
 # check growth and withdraw 50%
 ########################################################################################
 type: check
+endpoint: http://localhost:1317/thorchain/quote/saver/withdraw
+params:
+  asset: BTC.BTC
+  address: {{ addr_btc_pig }}
+  withdraw_bps: 5000
+asserts:
+  - .expected_amount_out|tonumber == 2803914
+  - .memo == "-:BTC/BTC:5000"
+  - .inbound_address == "{{ addr_btc_dog }}"
+  - .fees.liquidity == "19842"
+  - .fees.outbound == "14000"
+  - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
+  - .fees.slippage_bps == 69
+  - .fees.total_bps == 118
+---
+type: check
 description: saver position should realize growth
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
@@ -158,6 +190,22 @@ asserts:
 ########################################################################################
 # check growth and withdraw remaining
 ########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/quote/saver/withdraw
+params:
+  asset: BTC.BTC
+  address: {{ addr_btc_pig }}
+  withdraw_bps: 10000
+asserts:
+  - .expected_amount_out|tonumber == 2803832
+  - .memo == "-:BTC/BTC:10000"
+  - .inbound_address == "{{ addr_btc_dog }}"
+  - .fees.liquidity == "19934"
+  - .fees.outbound == "14000"
+  - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
+  - .fees.slippage_bps == 70
+  - .fees.total_bps == 118
+---
 type: check
 description: saver position should realize growth
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers

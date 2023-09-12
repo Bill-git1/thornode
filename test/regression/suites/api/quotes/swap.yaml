@@ -105,7 +105,7 @@ asserts:
   - .fees.liquidity == "233342046"
   - .fees.outbound == "2000000"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
-  - .fees.slippage_bps == 481
+  - .fees.slippage_bps == 480
   - .fees.total_bps == 484
 ---
 type: tx-observed-in
@@ -154,7 +154,7 @@ asserts:
   - .fees.liquidity == "5542"
   - .fees.outbound == "2137"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
-  - .fees.slippage_bps == 52
+  - .fees.slippage_bps == 51
   - .fees.total_bps == 71
 ---
 type: tx-deposit
@@ -254,12 +254,12 @@ params:
 asserts:
   - .memo == "=:BTC.BTC:{{ addr_btc_fox }}:912514:{{ addr_thor_pig }}:500"
   - .expected_amount_out|tonumber == 980425
-  - .fees.affiliate == "52338"
+  - .fees.affiliate == "53363"
   - .fees.liquidity == "9692"
   - .fees.outbound == "14000"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)+(.fees.affiliate|tonumber)
-  - .fees.slippage_bps == 97
-  - .fees.total_bps == 710
+  - .fees.slippage_bps == 96
+  - .fees.total_bps == 719
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
@@ -344,12 +344,12 @@ params:
 asserts:
   - .memo == "=:BTC.BTC:{{ addr_btc_fox }}:895131:{{ addr_thor_pig }}:500"
   - .expected_amount_out|tonumber == 943729
-  - .fees.affiliate == "50406"
+  - .fees.affiliate == "52347"
   - .fees.liquidity == "18343"
   - .fees.outbound == "14000"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)+(.fees.affiliate|tonumber)
-  - .fees.slippage_bps == 188
-  - .fees.total_bps == 795
+  - .fees.slippage_bps == 187
+  - .fees.total_bps == 812
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -451,12 +451,12 @@ params:
 asserts:
   - .memo == "=:THOR.RUNE:{{ addr_thor_fox }}:838252262:xx:500"
   - .expected_amount_out|tonumber == 912114319
-  - .fees.affiliate == "48111279"
+  - .fees.affiliate == "49020600"
   - .fees.liquidity == "8598104"
   - .fees.outbound == "2000000"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)+(.fees.affiliate|tonumber)
   - .fees.slippage_bps == 93
-  - .fees.total_bps == 603
+  - .fees.total_bps == 612
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -530,7 +530,7 @@ asserts:
   - .fees.liquidity == "433225207"
   - .fees.outbound == "2000000"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
-  - .fees.slippage_bps == 467
+  - .fees.slippage_bps == 466
   - .fees.total_bps == 469
 ---
 ########################################################################################
@@ -549,12 +549,12 @@ asserts:
   - .memo == "=:BTC.BTC:{{ addr_btc_fox }}:0/10/0"
   - .max_streaming_quantity == 19
   - .streaming_swap_blocks == 180
-  - .fees.liquidity == "5223"
+  - .fees.liquidity == "99237"
   - .fees.outbound == "14000"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
   - .fees.slippage_bps == 101
-  - .fees.total_bps == 363
-  - .slippage_bps == 1636
+  - .fees.total_bps == 115
+  - .slippage_bps == 1629
   - .streaming_slippage_bps == 101
   - .streaming_swap_seconds == 1080
   - .total_swap_seconds == 1080
@@ -571,7 +571,7 @@ params:
 asserts:
   # same as last quote, just sanity check higher slippage without streaming
   - .fees.liquidity == "1366743"
-  - .fees.slippage_bps == 1636
+  - .fees.slippage_bps == 1629
   - .fees.total_bps == 1643
 ---
 ########################################################################################
@@ -593,12 +593,12 @@ asserts:
   - .max_streaming_quantity == 19
   - .streaming_swap_blocks == 90
   - .streaming_swap_seconds == 540
-  - .fees.liquidity == "18518"
+  - .fees.liquidity == "185180"
   - .fees.outbound == "14000"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
   - .fees.slippage_bps == 191
-  - .fees.total_bps == 330
-  - .slippage_bps == 1636
+  - .fees.total_bps == 205
+  - .slippage_bps == 1629
   - .streaming_slippage_bps == 191
   - .total_swap_seconds == 540
   - .expected_amount_out == "9492080"
@@ -606,3 +606,50 @@ asserts:
 # necessary to avoid race to hang on block creation
 type: create-blocks
 count: 1
+---
+########################################################################################
+# quote and swap a streaming swap with too large quantity
+########################################################################################
+type: check
+description: check swap quote
+endpoint: http://localhost:1317/thorchain/quote/swap
+params:
+  from_asset: ETH.ETH
+  to_asset: BTC.BTC
+  amount: 100000000
+  destination: {{ addr_btc_fox }}
+  streaming_interval: 10
+  streaming_quantity: 50
+asserts:
+  - .memo == "=:BTC.BTC:{{ addr_btc_fox }}:0/10/19" # auto adjusted down from 50
+  - .max_streaming_quantity == 19
+  - .streaming_swap_blocks == 180
+  - .streaming_swap_seconds == 1080
+  - .fees.liquidity == "99237"
+  - .fees.outbound == "14000"
+  - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
+  - .fees.slippage_bps == 101
+  - .fees.total_bps == 115
+  - .slippage_bps == 1629
+  - .streaming_slippage_bps == 101
+  - .total_swap_seconds == 1080
+  - .expected_amount_out == "9665246"
+---
+########################################################################################
+# quote and massive swap should have accurate slippage less than 100%
+########################################################################################
+type: check
+description: check swap quote
+endpoint: http://localhost:1317/thorchain/quote/swap
+params:
+  from_asset: ETH.ETH
+  to_asset: BTC.BTC
+  amount: 1000000000000
+  destination: {{ addr_btc_fox }}
+asserts:
+  - .fees.liquidity == "100553045"
+  - .fees.outbound == "14000"
+  - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
+  - .fees.slippage_bps == 9989
+  - .fees.total_bps == 9989
+  - .expected_amount_out == "88358"
