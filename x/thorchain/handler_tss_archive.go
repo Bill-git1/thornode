@@ -255,6 +255,48 @@ func MsgTssPoolHandleV117(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) (*co
 	return &cosmos.Result{}, nil
 }
 
+func MsgTssPoolValidateV114(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) error {
+	if err := msg.ValidateBasic(); err != nil {
+		return err
+	}
+	newMsg, err := NewMsgTssPool(msg.PubKeys, msg.PoolPubKey, nil, msg.KeygenType, msg.Height, msg.Blame, msg.Chains, msg.Signer, msg.KeygenTime)
+	if err != nil {
+		return fmt.Errorf("fail to recreate MsgTssPool,err: %w", err)
+	}
+	if msg.ID != newMsg.ID {
+		return cosmos.ErrUnknownRequest("invalid tss message")
+	}
+
+	churnRetryBlocks := mgr.GetConstants().GetInt64Value(constants.ChurnRetryInterval)
+	if msg.Height <= ctx.BlockHeight()-churnRetryBlocks {
+		return cosmos.ErrUnknownRequest("invalid keygen block")
+	}
+
+	keygenBlock, err := mgr.Keeper().GetKeygenBlock(ctx, msg.Height)
+	if err != nil {
+		return fmt.Errorf("fail to get keygen block from data store: %w", err)
+	}
+
+	for _, keygen := range keygenBlock.Keygens {
+		keyGenMembers := keygen.GetMembers()
+		if !msg.GetPubKeys().Equals(keyGenMembers) {
+			continue
+		}
+		// Make sure the keygen type are consistent
+		if msg.KeygenType != keygen.Type {
+			continue
+		}
+		for _, member := range keygen.GetMembers() {
+			addr, err := member.GetThorAddress()
+			if err == nil && addr.Equals(msg.Signer) {
+				return validateTssAuth(ctx, mgr.Keeper(), msg.Signer)
+			}
+		}
+	}
+
+	return cosmos.ErrUnauthorized("not authorized")
+}
+
 func MsgTssPoolHandleV93(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) (*cosmos.Result, error) {
 	ctx.Logger().Info("handler tss", "current version", mgr.GetVersion())
 	if !msg.Blame.IsEmpty() {

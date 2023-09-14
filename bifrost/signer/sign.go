@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cenkalti/backoff"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -348,36 +349,118 @@ func (s *Signer) processKeygen(ch <-chan ttypes.KeygenBlock) {
 			if !more {
 				return
 			}
-			s.logger.Info().Msgf("Received a keygen block %+v from the Thorchain", keygenBlock)
-			for _, keygenReq := range keygenBlock.Keygens {
-				keygenStart := time.Now()
-				pubKey, blame, err := s.tssKeygen.GenerateNewKey(keygenBlock.Height, keygenReq.GetMembers())
-				if !blame.IsEmpty() {
-					err := fmt.Errorf("reason: %s, nodes %+v", blame.FailReason, blame.BlameNodes)
-					s.logger.Error().Err(err).Msg("Blame")
-				}
-				keygenTime := time.Since(keygenStart).Milliseconds()
+			s.logger.Info().Interface("keygenBlock", keygenBlock).Msg("received a keygen block from thorchain")
+			s.processKeygenBlock(keygenBlock)
+		}
+	}
+}
 
-				if err != nil {
-					s.errCounter.WithLabelValues("fail_to_keygen_pubkey", "").Inc()
-					s.logger.Error().Err(err).Msg("fail to generate new pubkey")
-				}
-				if !pubKey.Secp256k1.IsEmpty() {
-					s.pubkeyMgr.AddPubKey(pubKey.Secp256k1, true)
-				}
+func (s *Signer) scheduleRetry(keygenBlock ttypes.KeygenBlock) bool {
+	churnRetryInterval, err := s.thorchainBridge.GetMimir(constants.ChurnRetryInterval.String())
+	if err != nil {
+		s.logger.Error().Err(err).Msg("fail to get churn retry mimir")
+		return false
+	}
+	if churnRetryInterval <= 0 {
+		churnRetryInterval = constants.NewConstantValue().GetInt64Value(constants.ChurnRetryInterval)
+	}
+	keygenRetryInterval, err := s.thorchainBridge.GetMimir(constants.KeygenRetryInterval.String())
+	if err != nil {
+		s.logger.Error().Err(err).Msg("fail to get keygen retries mimir")
+		return false
+	}
+	if keygenRetryInterval <= 0 {
+		return false
+	}
 
-				// Add pubkeys to pubkey manager for monitoring...
-				// each member might become a yggdrasil pool
-				for _, pk := range keygenReq.GetMembers() {
-					s.pubkeyMgr.AddPubKey(pk, false)
-				}
+	// sanity check the retry interval is at least 1.5x the timeout
+	retryIntervalDuration := time.Duration(keygenRetryInterval) * constants.ThorchainBlockTime
+	if retryIntervalDuration <= s.cfg.KeygenTimeout*3/2 {
+		s.logger.Error().
+			Stringer("retryInterval", retryIntervalDuration).
+			Stringer("keygenTimeout", s.cfg.KeygenTimeout).
+			Msg("retry interval too short")
+		return false
+	}
 
-				if err := s.sendKeygenToThorchain(keygenBlock.Height, pubKey.Secp256k1, blame, keygenReq.GetMembers(), keygenReq.Type, keygenTime); err != nil {
-					s.errCounter.WithLabelValues("fail_to_broadcast_keygen", "").Inc()
-					s.logger.Error().Err(err).Msg("fail to broadcast keygen")
-				}
+	height, err := s.thorchainBridge.GetBlockHeight()
+	if err != nil {
+		s.logger.Error().Err(err).Msg("fail to get last chain height")
+		return false
+	}
 
+	// target retry height is the next keygen retry interval over the keygen block height
+	targetRetryHeight := (keygenRetryInterval - ((height - keygenBlock.Height) % keygenRetryInterval)) + height
+
+	// skip trying close to churn retry
+	if targetRetryHeight > keygenBlock.Height+churnRetryInterval-keygenRetryInterval {
+		return false
+	}
+
+	go func() {
+		// every block, try to start processing again
+		for {
+			time.Sleep(constants.ThorchainBlockTime)
+			height, err := s.thorchainBridge.GetBlockHeight()
+			if err != nil {
+				s.logger.Error().Err(err).Msg("fail to get last chain height")
 			}
+			if height >= targetRetryHeight {
+				s.logger.Info().
+					Interface("keygenBlock", keygenBlock).
+					Int64("currentHeight", height).
+					Msg("retrying keygen")
+				s.processKeygenBlock(keygenBlock)
+				return
+			}
+		}
+	}()
+
+	s.logger.Info().
+		Interface("keygenBlock", keygenBlock).
+		Int64("retryHeight", targetRetryHeight).
+		Msg("scheduled keygen retry")
+
+	return true
+}
+
+func (s *Signer) processKeygenBlock(keygenBlock ttypes.KeygenBlock) {
+	s.logger.Info().Interface("keygenBlock", keygenBlock).Msg("processing keygen block")
+
+	// NOTE: in practice there is only one keygen in the keygen block
+	for _, keygenReq := range keygenBlock.Keygens {
+		keygenStart := time.Now()
+		pubKey, blame, err := s.tssKeygen.GenerateNewKey(keygenBlock.Height, keygenReq.GetMembers())
+		if !blame.IsEmpty() {
+			err := fmt.Errorf("reason: %s, nodes %+v", blame.FailReason, blame.BlameNodes)
+			s.logger.Error().Err(err).Msg("Blame")
+		}
+		keygenTime := time.Since(keygenStart).Milliseconds()
+
+		if err != nil {
+			s.errCounter.WithLabelValues("fail_to_keygen_pubkey", "").Inc()
+			s.logger.Error().Err(err).Msg("fail to generate new pubkey")
+		}
+
+		// re-enqueue the keygen block to retry if we failed to generate a key
+		if pubKey.Secp256k1.IsEmpty() {
+			if s.scheduleRetry(keygenBlock) {
+				return
+			}
+			s.logger.Error().Interface("keygenBlock", keygenBlock).Msg("done with keygen retries")
+		}
+
+		if err := s.sendKeygenToThorchain(keygenBlock.Height, pubKey.Secp256k1, blame, keygenReq.GetMembers(), keygenReq.Type, keygenTime); err != nil {
+			s.errCounter.WithLabelValues("fail_to_broadcast_keygen", "").Inc()
+			s.logger.Error().Err(err).Msg("fail to broadcast keygen")
+		}
+
+		// monitor the new pubkey and any new members
+		if !pubKey.Secp256k1.IsEmpty() {
+			s.pubkeyMgr.AddPubKey(pubKey.Secp256k1, true)
+		}
+		for _, pk := range keygenReq.GetMembers() {
+			s.pubkeyMgr.AddPubKey(pk, false)
 		}
 	}
 }
@@ -412,13 +495,18 @@ func (s *Signer) sendKeygenToThorchain(height int64, poolPk common.PubKey, blame
 	}
 	strHeight := strconv.FormatInt(height, 10)
 
-	txID, err := s.thorchainBridge.Broadcast(keygenMsg)
-	if err != nil {
-		s.errCounter.WithLabelValues("fail_to_send_to_thorchain", strHeight).Inc()
-		return fmt.Errorf("fail to send the tx to thorchain: %w", err)
-	}
-	s.logger.Info().Int64("block", height).Str("thorchain hash", txID.String()).Msg("sign and send to thorchain successfully")
-	return nil
+	bf := backoff.NewExponentialBackOff()
+	bf.MaxElapsedTime = constants.ThorchainBlockTime
+	return backoff.Retry(func() error {
+		txID, err := s.thorchainBridge.Broadcast(keygenMsg)
+		if err != nil {
+			s.logger.Warn().Err(err).Msg("fail to send keygen tx to thorchain")
+			s.errCounter.WithLabelValues("fail_to_send_to_thorchain", strHeight).Inc()
+			return fmt.Errorf("fail to send the tx to thorchain: %w", err)
+		}
+		s.logger.Info().Stringer("txid", txID).Int64("block", height).Msg("sent keygen tx to thorchain")
+		return nil
+	}, bf)
 }
 
 // signAndBroadcast will sign the tx and broadcast it to the corresponding chain. On

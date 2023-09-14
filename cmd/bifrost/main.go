@@ -33,6 +33,7 @@ import (
 	tcommon "gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/config"
+	"gitlab.com/thorchain/thornode/constants"
 )
 
 // THORNode define version / revision here , so THORNode could inject the version from CI pipeline if THORNode want to
@@ -120,6 +121,23 @@ func main() {
 		log.Fatal().Err(err).Msg("fail to get bootstrap peers")
 	}
 	tmPrivateKey := tcommon.CosmosPrivateKeyToTMPrivateKey(priKey)
+
+	consts := constants.NewConstantValue()
+	jailTimeKeygen := time.Duration(consts.GetInt64Value(constants.JailTimeKeygen)) * constants.ThorchainBlockTime
+	jailTimeKeysign := time.Duration(consts.GetInt64Value(constants.JailTimeKeysign)) * constants.ThorchainBlockTime
+	if cfg.Signer.KeygenTimeout >= jailTimeKeygen {
+		log.Fatal().
+			Stringer("keygenTimeout", cfg.Signer.KeygenTimeout).
+			Stringer("keygenJail", jailTimeKeygen).
+			Msg("keygen timeout must be shorter than jail time")
+	}
+	if cfg.Signer.KeysignTimeout >= jailTimeKeysign {
+		log.Fatal().
+			Stringer("keysignTimeout", cfg.Signer.KeysignTimeout).
+			Stringer("keysignJail", jailTimeKeysign).
+			Msg("keysign timeout must be shorter than jail time")
+	}
+
 	tssIns, err := tss.NewTss(
 		bootstrapPeers,
 		cfg.TSS.P2PPort,
@@ -128,10 +146,10 @@ func main() {
 		app.DefaultNodeHome(),
 		common.TssConfig{
 			EnableMonitor:   true,
-			KeyGenTimeout:   300 * time.Second, // must be shorter than constants.JailTimeKeygen
-			KeySignTimeout:  60 * time.Second,  // must be shorter than constants.JailTimeKeysign
-			PartyTimeout:    45 * time.Second,
-			PreParamTimeout: 5 * time.Minute,
+			KeyGenTimeout:   cfg.Signer.KeygenTimeout,
+			KeySignTimeout:  cfg.Signer.KeysignTimeout,
+			PartyTimeout:    cfg.Signer.PartyTimeout,
+			PreParamTimeout: cfg.Signer.PreParamTimeout,
 		},
 		getLocalPreParam(*tssPreParam),
 		cfg.TSS.ExternalIP,

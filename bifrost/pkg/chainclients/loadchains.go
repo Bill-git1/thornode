@@ -104,10 +104,10 @@ func LoadChains(thorKeys *thorclient.Keys,
 		chains[chain.ChainID] = client
 	}
 
-	// watch failed chains and restart bifrost if any succeed init
+	// watch failed chains minutely and restart bifrost if any succeed init
 	if len(failedChains) > 0 {
 		go func() {
-			tick := time.NewTicker(config.GetBifrost().BackOff.MaxInterval)
+			tick := time.NewTicker(time.Minute)
 			for range tick.C {
 				for _, chain := range failedChains {
 					ccfg := cfg[chain]

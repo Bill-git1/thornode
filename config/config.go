@@ -281,7 +281,6 @@ func InitBifrost() {
 				Msg("chain failed validation")
 		}
 		// set shared backoff override
-		chain.BackOff = config.Bifrost.BackOff
 		chains[chain.ChainID] = chain
 	}
 	config.Bifrost.Chains = chains
@@ -493,7 +492,6 @@ type Bifrost struct {
 	Metrics   BifrostMetricsConfiguration                `mapstructure:"metrics"`
 	Chains    map[common.Chain]BifrostChainConfiguration `mapstructure:"chains"`
 	TSS       BifrostTSSConfiguration                    `mapstructure:"tss"`
-	BackOff   BifrostBackOff                             `mapstructure:"back_off"`
 
 	ObserverLevelDB LevelDBOptions `mapstructure:"observer_leveldb"`
 }
@@ -542,6 +540,7 @@ type BifrostSignerConfiguration struct {
 	SignerDbPath    string                           `mapstructure:"signer_db_path"`
 	BlockScanner    BifrostBlockScannerConfiguration `mapstructure:"block_scanner"`
 	RetryInterval   time.Duration                    `mapstructure:"retry_interval"`
+
 	// RescheduleBufferBlocks is the number of blocks before reschedule we will stop
 	// attempting to sign and broadcast (for outbounds not in round 7 retry).
 	RescheduleBufferBlocks int64          `mapstructure:"reschedule_buffer_blocks"`
@@ -550,14 +549,13 @@ type BifrostSignerConfiguration struct {
 	// AutoObserve will automatically submit the observation for outbound transactions once
 	// they are signed - regardless of broadcast success.
 	AutoObserve bool `mapstructure:"auto_observe"`
-}
 
-type BifrostBackOff struct {
-	InitialInterval     time.Duration `mapstructure:"initial_interval"`
-	RandomizationFactor float64       `mapstructure:"randomization_factor"`
-	Multiplier          float64       `mapstructure:"multiplier"`
-	MaxInterval         time.Duration `mapstructure:"max_interval"`
-	MaxElapsedTime      time.Duration `mapstructure:"max_elapsed_time"`
+	// -------------------- tss timeouts --------------------
+
+	KeygenTimeout   time.Duration `mapstructure:"keygen_timeout"`
+	KeysignTimeout  time.Duration `mapstructure:"keysign_timeout"`
+	PartyTimeout    time.Duration `mapstructure:"party_timeout"`
+	PreParamTimeout time.Duration `mapstructure:"pre_param_timeout"`
 }
 
 type BifrostChainConfiguration struct {
@@ -576,7 +574,6 @@ type BifrostChainConfiguration struct {
 	Disabled            bool                             `mapstructure:"disabled"`
 	SolvencyBlocks      int64                            `mapstructure:"solvency_blocks"`
 	BlockScanner        BifrostBlockScannerConfiguration `mapstructure:"block_scanner"`
-	BackOff             BifrostBackOff                   `mapstructure:"back_off"`
 
 	// MemPoolTxIDCacheSize is the number of transaction ids to cache in memory. This
 	// prevents read on LevelDB which may hit disk for every transaction in the mempool in
@@ -704,7 +701,6 @@ type BifrostClientConfiguration struct {
 	ChainHomeFolder string       `mapstructure:"chain_home_folder"`
 	SignerName      string       `mapstructure:"signer_name"`
 	SignerPasswd    string
-	BackOff         BifrostBackOff `mapstructure:"back_off"`
 }
 
 type BifrostMetricsConfiguration struct {

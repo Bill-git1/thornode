@@ -25,6 +25,7 @@ func NewTssHandler(mgr Manager) BaseHandler[*MsgTssPool] {
 		mgr:    mgr,
 		logger: MsgTssPoolLogger,
 		validators: NewValidators[*MsgTssPool]().
+			Register("1.121.0", MsgTssPoolValidateV121).
 			Register("1.114.0", MsgTssPoolValidateV114).
 			Register("0.71.0", MsgTssPoolValidateV71),
 		handlers: NewHandlers[*MsgTssPool]().
@@ -40,7 +41,7 @@ func MsgTssPoolLogger(ctx cosmos.Context, msg *MsgTssPool) {
 	ctx.Logger().Info("handleMsgTssPool request", "ID:", msg.ID)
 }
 
-func MsgTssPoolValidateV114(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) error {
+func MsgTssPoolValidateV121(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
@@ -52,7 +53,7 @@ func MsgTssPoolValidateV114(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) er
 		return cosmos.ErrUnknownRequest("invalid tss message")
 	}
 
-	churnRetryBlocks := mgr.GetConstants().GetInt64Value(constants.ChurnRetryInterval)
+	churnRetryBlocks := mgr.Keeper().GetConfigInt64(ctx, constants.ChurnRetryInterval)
 	if msg.Height <= ctx.BlockHeight()-churnRetryBlocks {
 		return cosmos.ErrUnknownRequest("invalid keygen block")
 	}

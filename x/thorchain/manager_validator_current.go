@@ -50,7 +50,7 @@ func (vm *ValidatorMgrVCUR) BeginBlock(ctx cosmos.Context, mgr Manager, existing
 
 	lastChurnHeight := vm.getLastChurnHeight(ctx)
 	churnInterval := vm.k.GetConfigInt64(ctx, constants.ChurnInterval)
-	churnRetryInterval := vm.k.GetConstants().GetInt64Value(constants.ChurnRetryInterval)
+	churnRetryInterval := vm.k.GetConfigInt64(ctx, constants.ChurnRetryInterval)
 	onChurnTick := (ctx.BlockHeight()-lastChurnHeight-churnInterval)%churnRetryInterval == 0
 	if !onChurnTick {
 		return nil

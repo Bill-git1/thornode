@@ -107,6 +107,7 @@ func NewConstantValue() *ConstantVals {
 			PreferredAssetOutboundFeeMultiplier: 100,                // multiplier of the current preferred asset outbound fee, if rune balance > multiplier * outbound_fee, a preferred asset swap is triggered
 			FeeUSDRoundSignificantDigits:        2,                  // number of significant digits to round the RUNE value of USD denominated fees
 			MigrationVaultSecurityBps:           0,                  // vault bond must be greater than bps of funds value in rune to receive migrations
+			KeygenRetryInterval:                 0,                  // number of blocks to wait before retrying a keygen
 		},
 		boolValues: map[ConstantName]bool{
 			StrictBondLiquidityRatio: true,
