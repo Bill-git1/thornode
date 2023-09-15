@@ -196,7 +196,14 @@ func (vm *SwapQueueVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 				vm.k.RemoveStreamingSwap(ctx, pick.msg.Tx.ID)
 
 				tois := make([]TxOutItem, 0)
-				if !swp.Out.IsZero() {
+				memo, err := ParseMemoWithTHORNames(ctx, vm.k, pick.msg.Tx.Memo)
+				if err != nil {
+					return err
+				}
+				isSaversAdd := memo.IsType(TxAdd)
+
+				// If this is a savers add skip scheduling outbound
+				if !swp.Out.IsZero() && !isSaversAdd {
 					dexAgg := ""
 					if len(pick.msg.Aggregator) > 0 {
 						dexAgg, err = FetchDexAggregator(

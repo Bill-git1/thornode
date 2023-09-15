@@ -126,6 +126,7 @@ const (
 	FeeUSDRoundSignificantDigits
 	MigrationVaultSecurityBps
 	KeygenRetryInterval
+	SaversStreamingSwapsInterval
 )
 
 var nameToString = map[ConstantName]string{
@@ -245,6 +246,7 @@ var nameToString = map[ConstantName]string{
 	FeeUSDRoundSignificantDigits:        "FeeUSDRoundSignificantDigits",
 	MigrationVaultSecurityBps:           "MigrationVaultSecurityBps",
 	KeygenRetryInterval:                 "KeygenRetryInterval",
+	SaversStreamingSwapsInterval:        "SaversStreamingSwapsInterval",
 }
 
 // String implement fmt.stringer

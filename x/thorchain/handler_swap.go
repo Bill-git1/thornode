@@ -219,6 +219,8 @@ func (h SwapHandler) handle(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result, er
 	ctx.Logger().Info("receive MsgSwap", "request tx hash", msg.Tx.ID, "source asset", msg.Tx.Coins[0].Asset, "target asset", msg.TargetAsset, "signer", msg.Signer.String())
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.121.0")):
+		return h.handleV121(ctx, msg)
 	case version.GTE(semver.MustParse("1.116.0")):
 		return h.handleV116(ctx, msg)
 	case version.GTE(semver.MustParse("1.110.0")):
@@ -244,7 +246,7 @@ func (h SwapHandler) handle(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result, er
 	}
 }
 
-func (h SwapHandler) handleV116(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result, error) {
+func (h SwapHandler) handleV121(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result, error) {
 	// test that the network we are running matches the destination network
 	// Don't change msg.Destination here; this line was introduced to avoid people from swapping mainnet asset,
 	// but using testnet address.
@@ -285,6 +287,7 @@ func (h SwapHandler) handleV116(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result
 				return nil, err
 			}
 		}
+
 		// for first swap only, override interval and quantity (if needed)
 		if swp.Count == 0 {
 			// ensure interval is never larger than max length, override if so
@@ -368,8 +371,10 @@ func (h SwapHandler) handleV116(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result
 		swp.In = swp.In.Add(msg.Tx.Coins[0].Amount)
 		swp.Out = swp.Out.Add(emit)
 		h.mgr.Keeper().SetStreamingSwap(ctx, swp)
-		if !swp.IsDone() {
-			// exit early so we don't execute follow-on handlers mid streaming swap
+		if !swp.IsLastSwap() {
+			// exit early so we don't execute follow-on handlers mid streaming swap. if this
+			// is the last swap execute the follow-on handlers as swap count is incremented in
+			// the swap queue manager
 			return &cosmos.Result{}, nil
 		}
 		emit = swp.Out

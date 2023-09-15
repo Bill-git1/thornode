@@ -236,6 +236,8 @@ func (h AddLiquidityHandler) validateV119(ctx cosmos.Context, msg MsgAddLiquidit
 func (h AddLiquidityHandler) handle(ctx cosmos.Context, msg MsgAddLiquidity) error {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.121.0")):
+		return h.handleV121(ctx, msg)
 	case version.GTE(semver.MustParse("1.116.0")):
 		return h.handleV116(ctx, msg)
 	case version.GTE(semver.MustParse("1.107.0")):
@@ -253,10 +255,10 @@ func (h AddLiquidityHandler) handle(ctx cosmos.Context, msg MsgAddLiquidity) err
 	}
 }
 
-func (h AddLiquidityHandler) handleV116(ctx cosmos.Context, msg MsgAddLiquidity) (errResult error) {
+func (h AddLiquidityHandler) handleV121(ctx cosmos.Context, msg MsgAddLiquidity) (errResult error) {
 	// check if we need to swap before adding asset
 	if h.needsSwap(msg) {
-		return h.swapV93(ctx, msg)
+		return h.swap(ctx, msg)
 	}
 
 	pool, err := h.mgr.Keeper().GetPool(ctx, msg.Asset)
@@ -371,7 +373,17 @@ func (h AddLiquidityHandler) handleV116(ctx cosmos.Context, msg MsgAddLiquidity)
 	return nil
 }
 
-func (h AddLiquidityHandler) swapV93(ctx cosmos.Context, msg MsgAddLiquidity) error {
+func (h AddLiquidityHandler) swap(ctx cosmos.Context, msg MsgAddLiquidity) error {
+	version := h.mgr.GetVersion()
+	switch {
+	case version.GTE(semver.MustParse("1.121.0")):
+		return h.swapV121(ctx, msg)
+	default:
+		return h.swapV93(ctx, msg)
+	}
+}
+
+func (h AddLiquidityHandler) swapV121(ctx cosmos.Context, msg MsgAddLiquidity) error {
 	// ensure TxID does NOT have a collision with another swap, this could
 	// happen if the user submits two identical loan requests in the same
 	// block
@@ -385,7 +397,14 @@ func (h AddLiquidityHandler) swapV93(ctx cosmos.Context, msg MsgAddLiquidity) er
 	}
 	memo := fmt.Sprintf("+:%s::%s:%d", msg.Asset, msg.AffiliateAddress, msg.AffiliateBasisPoints.Uint64())
 	msg.Tx.Memo = memo
-	swapMsg := NewMsgSwap(msg.Tx, msg.Asset, common.NoopAddress, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 0, 0, msg.Signer)
+
+	// Get streaming swaps interval to use for native -> synth swap
+	ssInterval := h.mgr.Keeper().GetConfigInt64(ctx, constants.SaversStreamingSwapsInterval)
+	if ssInterval <= 0 {
+		ssInterval = 0
+	}
+
+	swapMsg := NewMsgSwap(msg.Tx, msg.Asset, common.NoopAddress, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 0, uint64(ssInterval), msg.Signer)
 
 	// sanity check swap msg
 	handler := NewSwapHandler(h.mgr)

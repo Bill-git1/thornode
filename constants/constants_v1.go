@@ -108,6 +108,7 @@ func NewConstantValue() *ConstantVals {
 			FeeUSDRoundSignificantDigits:        2,                  // number of significant digits to round the RUNE value of USD denominated fees
 			MigrationVaultSecurityBps:           0,                  // vault bond must be greater than bps of funds value in rune to receive migrations
 			KeygenRetryInterval:                 0,                  // number of blocks to wait before retrying a keygen
+			SaversStreamingSwapsInterval:        0,                  // For Savers deposits and withdraws, the streaming swaps interval to use for the Native <> Synth swap
 		},
 		boolValues: map[ConstantName]bool{
 			StrictBondLiquidityRatio: true,

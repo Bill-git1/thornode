@@ -3,6 +3,7 @@ package thorchain
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/armon/go-metrics"
 	"github.com/cosmos/cosmos-sdk/telemetry"
@@ -1095,6 +1096,124 @@ func (h AddLiquidityHandler) handleV107(ctx cosmos.Context, msg MsgAddLiquidity)
 	return nil
 }
 
+func (h AddLiquidityHandler) handleV116(ctx cosmos.Context, msg MsgAddLiquidity) (errResult error) {
+	// check if we need to swap before adding asset
+	if h.needsSwap(msg) {
+		return h.swapV93(ctx, msg)
+	}
+
+	pool, err := h.mgr.Keeper().GetPool(ctx, msg.Asset)
+	if err != nil {
+		return ErrInternal(err, "fail to get pool")
+	}
+
+	if pool.IsEmpty() {
+		ctx.Logger().Info("pool doesn't exist yet, creating a new one...", "symbol", msg.Asset.String(), "creator", msg.RuneAddress)
+
+		pool.Asset = msg.Asset
+
+		defaultPoolStatus := PoolAvailable.String()
+		// only set the pool to default pool status if not for gas asset on the chain
+		if !pool.Asset.Equals(pool.Asset.GetChain().GetGasAsset()) &&
+			!pool.Asset.IsVaultAsset() {
+			defaultPoolStatus = h.mgr.GetConstants().GetStringValue(constants.DefaultPoolStatus)
+		}
+		pool.Status = GetPoolStatus(defaultPoolStatus)
+
+		if err := h.mgr.Keeper().SetPool(ctx, pool); err != nil {
+			return ErrInternal(err, "fail to save pool to key value store")
+		}
+	}
+
+	// if the pool decimals hasn't been set, it will still be 0. If we have a
+	// pool asset coin, get the decimals from that transaction. This will only
+	// set the decimals once.
+	if pool.Decimals == 0 {
+		coin := msg.GetTx().Coins.GetCoin(pool.Asset)
+		if !coin.IsEmpty() {
+			if coin.Decimals > 0 {
+				pool.Decimals = coin.Decimals
+			}
+			ctx.Logger().Info("try update pool decimals", "asset", msg.Asset, "pool decimals", pool.Decimals)
+			if err := h.mgr.Keeper().SetPool(ctx, pool); err != nil {
+				return ErrInternal(err, "fail to save pool to key value store")
+			}
+		}
+	}
+
+	// figure out if we need to stage the funds and wait for a follow on
+	// transaction to commit all funds atomically. For pools of native assets
+	// only, stage is always false
+	stage := false
+	if !msg.Asset.IsVaultAsset() && !msg.Tx.ID.IsBlank() {
+		if !msg.AssetAddress.IsEmpty() && msg.AssetAmount.IsZero() {
+			stage = true
+		}
+		if !msg.RuneAddress.IsEmpty() && msg.RuneAmount.IsZero() {
+			stage = true
+		}
+	}
+
+	if msg.AffiliateBasisPoints.IsZero() {
+		return h.addLiquidity(
+			ctx,
+			msg.Asset,
+			msg.RuneAmount,
+			msg.AssetAmount,
+			msg.RuneAddress,
+			msg.AssetAddress,
+			msg.Tx.ID,
+			stage,
+			h.mgr.GetConstants())
+	}
+
+	// add liquidity has an affiliate fee, add liquidity for both the user and their affiliate
+	affiliateRune := common.GetSafeShare(msg.AffiliateBasisPoints, cosmos.NewUint(10000), msg.RuneAmount)
+	affiliateAsset := common.GetSafeShare(msg.AffiliateBasisPoints, cosmos.NewUint(10000), msg.AssetAmount)
+	userRune := common.SafeSub(msg.RuneAmount, affiliateRune)
+	userAsset := common.SafeSub(msg.AssetAmount, affiliateAsset)
+
+	err = h.addLiquidity(
+		ctx,
+		msg.Asset,
+		userRune,
+		userAsset,
+		msg.RuneAddress,
+		msg.AssetAddress,
+		msg.Tx.ID,
+		stage,
+		h.mgr.GetConstants(),
+	)
+	if err != nil {
+		return err
+	}
+
+	affiliateRuneAddress := common.NoAddress
+	affiliateAssetAddress := common.NoAddress
+	if msg.AffiliateAddress.IsChain(common.THORChain) {
+		affiliateRuneAddress = msg.AffiliateAddress
+	} else {
+		affiliateAssetAddress = msg.AffiliateAddress
+	}
+
+	err = h.addLiquidity(
+		ctx,
+		msg.Asset,
+		affiliateRune,
+		affiliateAsset,
+		affiliateRuneAddress,
+		affiliateAssetAddress,
+		msg.Tx.ID,
+		false,
+		h.mgr.GetConstants(),
+	)
+	if err != nil {
+		ctx.Logger().Error("fail to add liquidity for affiliate", "address", msg.AffiliateAddress, "error", err)
+		return err
+	}
+	return nil
+}
+
 func (h AddLiquidityHandler) handleV98(ctx cosmos.Context, msg MsgAddLiquidity) (errResult error) {
 	// check if we need to swap before adding asset
 	if h.needsSwap(msg) {
@@ -1506,6 +1625,35 @@ func (h AddLiquidityHandler) handleV63(ctx cosmos.Context, msg MsgAddLiquidity) 
 		// function first (TODO).
 		ctx.Logger().Error("fail to add liquidity for affiliate", "address", msg.AffiliateAddress, "error", err)
 	}
+	return nil
+}
+
+func (h AddLiquidityHandler) swapV93(ctx cosmos.Context, msg MsgAddLiquidity) error {
+	// ensure TxID does NOT have a collision with another swap, this could
+	// happen if the user submits two identical loan requests in the same
+	// block
+	if ok := h.mgr.Keeper().HasSwapQueueItem(ctx, msg.Tx.ID, 0); ok {
+		return fmt.Errorf("txn hash conflict")
+	}
+
+	// sanity check, ensure address or asset doesn't have separator within them
+	if strings.Contains(fmt.Sprintf("%s%s", msg.Asset, msg.AffiliateAddress), ":") {
+		return fmt.Errorf("illegal character")
+	}
+	memo := fmt.Sprintf("+:%s::%s:%d", msg.Asset, msg.AffiliateAddress, msg.AffiliateBasisPoints.Uint64())
+	msg.Tx.Memo = memo
+	swapMsg := NewMsgSwap(msg.Tx, msg.Asset, common.NoopAddress, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 0, 0, msg.Signer)
+
+	// sanity check swap msg
+	handler := NewSwapHandler(h.mgr)
+	if err := handler.validate(ctx, *swapMsg); err != nil {
+		return err
+	}
+	if err := h.mgr.Keeper().SetSwapQueueItem(ctx, *swapMsg, 0); err != nil {
+		ctx.Logger().Error("fail to add swap to queue", "error", err)
+		return err
+	}
+
 	return nil
 }
 
