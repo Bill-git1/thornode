@@ -128,9 +128,18 @@ func (p *parser) ParseSwapMemo() (SwapMemo, error) {
 	if p.keeper == nil {
 		return ParseSwapMemoV1(p.ctx, p.keeper, p.getAsset(1, true, common.EmptyAsset), p.parts)
 	}
+
+	// TODO: remove me on hard fork
+	var err error
+	if len(p.parts) > 1 {
+		_, err = common.NewAssetWithShortCodes(p.version, GetPart(p.parts, 1))
+	}
+
 	switch {
 	case p.version.GTE(semver.MustParse("1.116.0")):
 		return p.ParseSwapMemoV116()
+	case err != nil:
+		return SwapMemo{}, err // To resolve block 6130730 sync failure
 	case p.version.GTE(semver.MustParse("1.115.0")):
 		return ParseSwapMemoV115(p.ctx, p.keeper, p.getAsset(1, true, common.EmptyAsset), p.parts)
 	case p.version.GTE(semver.MustParse("1.112.0")):
