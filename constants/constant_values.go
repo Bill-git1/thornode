@@ -90,6 +90,7 @@ const (
 	StreamingSwapMaxLengthNative
 	MinCR
 	MaxCR
+	LoanStreamingSwapsInterval
 	PauseLoans
 	LoanRepaymentMaturity
 	LendingLever
@@ -234,6 +235,7 @@ var nameToString = map[ConstantName]string{
 	StreamingSwapMaxLengthNative:        "StreamingSwapMaxLengthNative",
 	MinCR:                               "MinCR",
 	MaxCR:                               "MaxCR",
+	LoanStreamingSwapsInterval:          "LoanStreamingSwapsInterval",
 	PauseLoans:                          "PauseLoans",
 	LoanRepaymentMaturity:               "LoanRepaymentMaturity",
 	LendingLever:                        "LendingLever",

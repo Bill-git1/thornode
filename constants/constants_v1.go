@@ -69,6 +69,7 @@ func NewConstantValue() *ConstantVals {
 			StreamingSwapMaxLengthNative:        14400 * 365,        // max number of blocks native streaming swaps can trade over
 			MinCR:                               10_000,             // Minimum collateralization ratio (basis pts)
 			MaxCR:                               60_000,             // Maximum collateralization ratio (basis pts)
+			LoanStreamingSwapsInterval:          0,                  // block interval between each streaming swap of opening or closing a loan
 			PauseLoans:                          1,                  // pause opening new loans and repaying loans
 			LoanRepaymentMaturity:               0,                  // number of blocks before loan has reached maturity and can be repaid
 			LendingLever:                        3333,               // This controls (in basis points) how much lending is allowed relative to rune supply

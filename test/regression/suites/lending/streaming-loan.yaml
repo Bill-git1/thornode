@@ -1,0 +1,205 @@
+{{ template "default-state.yaml" }}
+---
+{{ template "btc-eth-3usdx-pool-state.yaml" }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+description: eth, btc, and usdx pools should exist
+endpoint: http://localhost:1317/thorchain/pools
+asserts:
+  - .|length == 5
+# /pool/THOR.ETH can't be checked for .status == null
+# because of ERR cmd/run.go:275 > operation failed error="unexpected status code: 404"
+---
+########################################################################################
+# enable lending
+########################################################################################
+type: tx-mimir
+signer: {{ addr_thor_dog }}
+key: TorAnchor-ETH-USDX-0X9999999999999999999999999999999999999999
+value: 1
+---
+type: create-blocks
+count: 1
+---
+type: tx-mimir
+signer: {{ addr_thor_dog }}
+key: LoanStreamingSwapsInterval
+value: 1
+---
+type: create-blocks
+count: 1
+---
+type: tx-mimir
+signer: {{ addr_thor_dog }}
+key: DerivedDepthBasisPts
+value: 10000
+---
+type: create-blocks
+count: 1
+---
+########################################################################################
+# open loan btc -> rune
+########################################################################################
+type: tx-observed-in
+signer: {{ addr_thor_dog }}
+txs:
+  - tx:
+      id: "{{ observe_txid 1 }}"
+      chain: BTC
+      from_address: {{ addr_btc_fox }}
+      to_address: {{ addr_btc_dog }}
+      coins:
+        - amount: "1000000"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "10000"
+          asset: "BTC.BTC"
+      memo: "LOAN+:THOR.RUNE:{{ addr_thor_fox }}"
+    block_height: 1
+    finalise_height: 1
+    observed_pub_key: {{ pubkey_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+description: check streaming swap is in list
+endpoint: http://localhost:1317/thorchain/swaps/streaming
+asserts:
+  - .|length == 1
+---
+type: create-blocks
+count: 2
+---
+type: check
+description: check streaming swap is in list
+endpoint: http://localhost:1317/thorchain/swaps/streaming
+asserts:
+  - .|length == 0
+---
+type: check
+description: borrower should be recorded
+endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
+asserts:
+  - .|length == 1
+  - .[0]|.collateral_deposited == "989774"
+  - .[0]|.debt_issued == "970320000"
+  - .[0]|.collateral_withdrawn == "0"
+  - .[0]|.debt_repaid == "0"
+  - .[0]|.owner == "{{ addr_btc_fox }}"
+---
+type: check
+description: loan should exist in export state
+endpoint: http://localhost:1317/thorchain/export
+asserts:
+  - .loans|length == 1
+---
+########################################################################################
+# close loan
+########################################################################################
+type: tx-observed-in
+signer: {{ addr_thor_dog }}
+txs:
+  - tx:
+      id: "{{ observe_txid 6 }}"
+      chain: ETH
+      from_address: {{ addr_eth_fox }}
+      to_address: {{ addr_eth_dog }}
+      coins:
+        - amount: "10000000"
+          asset: "ETH.ETH"
+          decimals: 8
+      gas:
+        - amount: "960000"
+          asset: "ETH.ETH"
+      memo: "LOAN-:BTC.BTC:{{ addr_btc_fox }}"
+    block_height: 5
+    finalise_height: 5
+    observed_pub_key: {{ pubkey_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+description: check streaming swap is in list
+endpoint: http://localhost:1317/thorchain/swaps/streaming
+asserts:
+  - .|length == 1
+---
+type: create-blocks
+count: 3
+---
+type: check
+description: check streaming swap is in list
+endpoint: http://localhost:1317/thorchain/swaps/streaming
+asserts:
+  - .|length == 0
+---
+type: check
+description: borrower should be updated
+endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
+asserts:
+  - .|length == 1
+  - .[0]|.collateral_deposited == "989774"
+  - .[0]|.debt_issued == "970320000"
+  - .[0]|.owner == "{{ addr_btc_fox }}"
+  - .[0]|.collateral_withdrawn == "989774" # should now be fully repaid
+  - .[0]|.debt_repaid == "975565979" # over repaid
+---
+type: check
+description: btc outbound should be scheduled
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - .|length == 1
+  - .[0]|.in_hash == "{{ observe_txid 6 }}"
+---
+type: tx-observed-out
+signer: {{ addr_thor_dog }}
+txs:
+  - tx:
+      id: "{{ observe_txid 2 }}"
+      chain: BTC
+      from_address: {{ addr_btc_dog }}
+      to_address: {{ addr_btc_fox }}
+      coins:
+        - amount: "955213"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "10500"
+          asset: "BTC.BTC"
+      memo: "OUT:{{ observe_txid 6 }}"
+    block_height: 6
+    finalise_height: 6
+    observed_pub_key: {{ pubkey_dog }}
+---
+type: check
+description: borrower should be recorded
+endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
+asserts:
+  - .|length == 1
+  - .[0]|.collateral_deposited == "989774"
+  - .[0]|.debt_issued == "970320000"
+  - .[0]|.collateral_withdrawn == "989774"
+  - .[0]|.debt_repaid == "975565979"
+  - .[0]|.owner == "{{ addr_btc_fox }}"
+---
+type: create-blocks
+count: 1
+---
+type: check
+description: btc outbound should be observed
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - .|length == 0
+---
+type: check
+description: no derived btc should exist
+endpoint: http://localhost:1317/cosmos/bank/v1beta1/supply
+asserts:
+  - '[.supply[]|select(.denom == "thor.btc")]|length == 0'
+---

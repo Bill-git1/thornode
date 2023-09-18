@@ -203,11 +203,9 @@ func (s *HandlerLoanSuite) TestLoanOpenHandleToTOR(c *C) {
 
 	outs, err := mgr.txOutStore.GetOutboundItems(ctx)
 	c.Assert(err, IsNil)
-	c.Assert(outs, HasLen, 2, Commentf("Len %d", len(outs)))
-	c.Check(outs[0].Coin.Asset.String(), Equals, "THOR.BTC")
-	c.Check(outs[0].Coin.Amount.Uint64(), Equals, uint64(99761992), Commentf("%d", outs[0].Coin.Amount.Uint64()))
-	c.Check(outs[1].Coin.Asset.Equals(common.TOR), Equals, true)
-	c.Check(outs[1].Coin.Amount.Uint64(), Equals, uint64(1654721160000), Commentf("%d", outs[1].Coin.Amount.Uint64()))
+	c.Assert(outs, HasLen, 1, Commentf("Len %d", len(outs)))
+	c.Check(outs[0].Coin.Asset.Equals(common.TOR), Equals, true)
+	c.Check(outs[0].Coin.Amount.Uint64(), Equals, uint64(1654721160000), Commentf("%d", outs[0].Coin.Amount.Uint64()))
 
 	totalCollateral, err := mgr.Keeper().GetTotalCollateral(ctx, common.BTCAsset)
 	c.Assert(err, IsNil)

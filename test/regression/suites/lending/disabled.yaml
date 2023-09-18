@@ -364,7 +364,7 @@ txs:
       gas:
         - amount: "10000"
           asset: "BTC.BTC"
-      memo: "LOAN+:THOR.BTC:{{ addr_thor_fox }}"
+      memo: "LOAN+:THOR.BTC:{{ addr_thor_fox }}:1"
     block_height: 9
     finalise_height: 9
     observed_pub_key: {{ pubkey_dog }}

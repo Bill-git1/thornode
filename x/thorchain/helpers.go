@@ -163,6 +163,8 @@ func refundTxV117(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uin
 func getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsset common.Asset, swp StreamingSwap) (uint64, error) {
 	version := mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.121.0")):
+		return getMaxSwapQuantityV121(ctx, mgr, sourceAsset, targetAsset, swp)
 	case version.GTE(semver.MustParse("1.116.0")):
 		return getMaxSwapQuantityV116(ctx, mgr, sourceAsset, targetAsset, swp)
 	case version.GTE(semver.MustParse("1.115.0")):
@@ -172,7 +174,7 @@ func getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsse
 	}
 }
 
-func getMaxSwapQuantityV116(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsset common.Asset, swp StreamingSwap) (uint64, error) {
+func getMaxSwapQuantityV121(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsset common.Asset, swp StreamingSwap) (uint64, error) {
 	if swp.Interval == 0 {
 		return 0, nil
 	}
@@ -182,11 +184,6 @@ func getMaxSwapQuantityV116(ctx cosmos.Context, mgr Manager, sourceAsset, target
 	for _, asset := range []common.Asset{sourceAsset, targetAsset} {
 		if asset.IsNativeRune() {
 			continue
-		}
-		if asset.IsDerivedAsset() {
-			// TODO: support derived assets, current not a great way to
-			// convert derived asset --> layer1 asset well.
-			return 0, fmt.Errorf("derived assets are not currently supported by streaming swaps")
 		}
 
 		pool, err := mgr.Keeper().GetPool(ctx, asset.GetLayer1Asset())
@@ -263,6 +260,36 @@ func getMaxSwapQuantityV116(ctx cosmos.Context, mgr Manager, sourceAsset, target
 	// sanity check that max swap quantity is not zero
 	if maxSwapQuantity.IsZero() {
 		return 1, nil
+	}
+
+	// if swapping with a derived asset, reduce quantity relative to derived
+	// virtual pool depth. The equation for this as follows
+	dbps := cosmos.ZeroUint()
+	for _, asset := range []common.Asset{sourceAsset, targetAsset} {
+		if !asset.IsDerivedAsset() {
+			continue
+		}
+
+		// get the rune depth of the anchor pool(s)
+		runeDepth, _, _ := mgr.NetworkMgr().CalcAnchor(ctx, mgr, asset)
+		dpool, _ := mgr.Keeper().GetPool(ctx, asset) // get the derived asset pool
+		newDbps := common.GetUncappedShare(dpool.BalanceRune, runeDepth, cosmos.NewUint(constants.MaxBasisPts))
+		if dbps.IsZero() || newDbps.LT(dbps) {
+			dbps = newDbps
+		}
+	}
+	if !dbps.IsZero() {
+		// quantity = 1 / (1-dbps)
+		// But since we're dealing in basis points (to avoid float math)
+		// quantity = 10,000 / (10,000 - dbps)
+		maxBasisPoints := cosmos.NewUint(constants.MaxBasisPts)
+		diff := common.SafeSub(maxBasisPoints, dbps)
+		if !diff.IsZero() {
+			newQuantity := maxBasisPoints.Quo(diff)
+			if maxSwapQuantity.GT(newQuantity) {
+				return newQuantity.Uint64(), nil
+			}
+		}
 	}
 
 	return maxSwapQuantity.Uint64(), nil

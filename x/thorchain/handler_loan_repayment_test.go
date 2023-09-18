@@ -79,7 +79,7 @@ func (s *HandlerLoanRepaymentSuite) TestLoanRepaymentHandleWithTOR(c *C) {
 	coin := common.NewCoin(common.TOR, cosmos.NewUint(1000*common.One))
 	err := mgr.Keeper().MintToModule(ctx, ModuleName, coin)
 	c.Assert(err, IsNil)
-	err = mgr.Keeper().SendFromModuleToModule(ctx, ModuleName, LendingName, common.NewCoins(coin))
+	err = mgr.Keeper().SendFromModuleToModule(ctx, ModuleName, AsgardName, common.NewCoins(coin))
 	c.Assert(err, IsNil)
 
 	// mint derived btc to transfer later
@@ -100,7 +100,7 @@ func (s *HandlerLoanRepaymentSuite) TestLoanRepaymentHandleWithTOR(c *C) {
 	// happy path
 	txid, _ := common.NewTxID("29FC8D032CF17380AA1DC86F85A479CA9433E85887A9317C5D70D87EF56EAFAA")
 	msg := NewMsgLoanRepayment(owner, common.BTCAsset, cosmos.OneUint(), owner, common.NewCoin(common.TOR, cosmos.NewUint(10*common.One)), signer, txid)
-	c.Check(handler.handle(ctx.WithValue(constants.CtxLoanTxID, txid), *msg), IsNil)
+	c.Assert(handler.handle(ctx.WithValue(constants.CtxLoanTxID, txid), *msg), IsNil)
 
 	loan, err = mgr.Keeper().GetLoan(ctx, common.BTCAsset, owner)
 	c.Assert(err, IsNil)

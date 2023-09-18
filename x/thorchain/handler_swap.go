@@ -123,17 +123,8 @@ func (h SwapHandler) validateV121(ctx cosmos.Context, msg MsgSwap) error {
 		if h.mgr.Keeper().GetConfigInt64(ctx, constants.EnableDerivedAssets) == 0 {
 			// since derived assets are disabled, only the protocol can use
 			// them (specifically lending)
-			acc, err := h.mgr.Keeper().GetModuleAddress(LendingName)
-			if err != nil {
-				return err
-			}
-			// Allow Derived Asset source swaps from the Lending Module
-			// and Derived Asset target swaps to the Lending Module,
-			// but do not for instance allow Derived Asset target swaps from the Lending Module
-			// to an address which is not the Lending Module.
-			if (!msg.Tx.FromAddress.Equals(acc) && msg.Tx.Coins[0].Asset.IsDerivedAsset()) ||
-				(!msg.Destination.Equals(acc) && target.IsDerivedAsset()) {
-				return errors.New("swapping to/from a derived asset is not allowed, except the lending protocol")
+			if !msg.Tx.FromAddress.Equals(common.NoopAddress) && !msg.Tx.ToAddress.Equals(common.NoopAddress) && !msg.Destination.Equals(common.NoopAddress) {
+				return fmt.Errorf("swapping to/from a derived asset is not allowed, except for lending (%s or %s)", msg.Tx.FromAddress, msg.Destination)
 			}
 		}
 	}

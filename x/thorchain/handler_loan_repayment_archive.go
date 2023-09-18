@@ -116,6 +116,137 @@ func (h LoanRepaymentHandler) handleV110(ctx cosmos.Context, msg MsgLoanRepaymen
 	}
 }
 
+func (h LoanRepaymentHandler) repayV113(ctx cosmos.Context, msg MsgLoanRepayment) error {
+	// collect data
+	lendAddr, err := h.mgr.Keeper().GetModuleAddress(LendingName)
+	if err != nil {
+		ctx.Logger().Error("fail to get lending address", "error", err)
+		return err
+	}
+	asgardAddr, err := h.mgr.Keeper().GetModuleAddress(AsgardName)
+	if err != nil {
+		ctx.Logger().Error("fail to get asgard address", "error", err)
+		return err
+	}
+	loan, err := h.mgr.Keeper().GetLoan(ctx, msg.CollateralAsset, msg.Owner)
+	if err != nil {
+		ctx.Logger().Error("fail to get loan", "error", err)
+		return err
+	}
+	totalCollateral, err := h.mgr.Keeper().GetTotalCollateral(ctx, msg.CollateralAsset)
+	if err != nil {
+		return err
+	}
+
+	// update Loan record
+	loan.DebtRepaid = loan.DebtRepaid.Add(msg.Coin.Amount)
+	loan.LastRepayHeight = ctx.BlockHeight()
+
+	// burn TOR coins
+	if err := h.mgr.Keeper().SendFromModuleToModule(ctx, LendingName, ModuleName, common.NewCoins(msg.Coin)); err != nil {
+		ctx.Logger().Error("fail to move coins during loan repayment", "error", err)
+		return err
+	} else {
+		err := h.mgr.Keeper().BurnFromModule(ctx, ModuleName, msg.Coin)
+		if err != nil {
+			ctx.Logger().Error("fail to burn coins during loan repayment", "error", err)
+			return err
+		}
+		burnEvt := NewEventMintBurn(BurnSupplyType, msg.Coin.Asset.Native(), msg.Coin.Amount, "loan_repayment")
+		if err := h.mgr.EventMgr().EmitEvent(ctx, burnEvt); err != nil {
+			ctx.Logger().Error("fail to emit burn event", "error", err)
+		}
+	}
+
+	// loan must be fully repaid to return collateral
+	if !loan.Debt().IsZero() {
+		h.mgr.Keeper().SetLoan(ctx, loan)
+
+		// emit events and metrics
+		evt := NewEventLoanRepayment(cosmos.ZeroUint(), msg.Coin.Amount, msg.CollateralAsset, msg.Owner, msg.TxID)
+		if err := h.mgr.EventMgr().EmitEvent(ctx, evt); nil != err {
+			ctx.Logger().Error("fail to emit repayment open event", "error", err)
+		}
+
+		return nil
+	}
+
+	redeem := loan.Collateral()
+	// only return collateral when collateral is non-zero
+	if redeem.IsZero() {
+		return nil
+	}
+
+	loan.CollateralWithdrawn = loan.CollateralWithdrawn.Add(redeem)
+
+	txID, ok := ctx.Value(constants.CtxLoanTxID).(common.TxID)
+	if !ok {
+		return fmt.Errorf("fail to get txid")
+	}
+
+	coins := common.NewCoins(common.NewCoin(msg.CollateralAsset.GetDerivedAsset(), redeem))
+
+	// transfer derived asset from the lending to asgard before swap to L1 collateral
+	err = h.mgr.Keeper().SendFromModuleToModule(ctx, LendingName, AsgardName, coins)
+	if err != nil {
+		ctx.Logger().Error("fail to send from lending to asgard", "error", err)
+		return err
+	}
+
+	fakeGas := common.NewCoin(msg.Coin.Asset, cosmos.OneUint())
+	// As this is to be a swap from derived asset which has been sent to AsgardName, the ToAddress should be AsgardName's address.
+	tx := common.NewTx(txID, lendAddr, asgardAddr, coins, common.Gas{fakeGas}, "noop")
+	swapMsg := NewMsgSwap(tx, msg.CollateralAsset, msg.Owner, msg.MinOut, common.NoAddress, cosmos.ZeroUint(), "", "", nil, 0, 0, 0, msg.Signer)
+	handler := NewSwapHandler(h.mgr)
+	if _, err := handler.Run(ctx, swapMsg); err != nil {
+		ctx.Logger().Error("fail to make second swap when closing a loan", "error", err)
+		return err
+	}
+
+	// update kvstore
+	h.mgr.Keeper().SetLoan(ctx, loan)
+	h.mgr.Keeper().SetTotalCollateral(ctx, msg.CollateralAsset, common.SafeSub(totalCollateral, redeem))
+
+	// emit events and metrics
+	evt := NewEventLoanRepayment(redeem, msg.Coin.Amount, msg.CollateralAsset, msg.Owner, msg.TxID)
+	if err := h.mgr.EventMgr().EmitEvent(ctx, evt); nil != err {
+		ctx.Logger().Error("fail to emit loan repayment event", "error", err)
+	}
+	return nil
+}
+
+func (h LoanRepaymentHandler) swapV113(ctx cosmos.Context, msg MsgLoanRepayment) error {
+	lendAddr, err := h.mgr.Keeper().GetModuleAddress(LendingName)
+	if err != nil {
+		ctx.Logger().Error("fail to get lending address", "error", err)
+		return err
+	}
+
+	txID, ok := ctx.Value(constants.CtxLoanTxID).(common.TxID)
+	if !ok {
+		return fmt.Errorf("fail to get txid")
+	}
+
+	toAddress, ok := ctx.Value(constants.CtxLoanToAddress).(common.Address)
+	// An empty ToAddress fails Tx validation,
+	// and a querier quote or unit test has no provided ToAddress.
+	// As this only affects emitted swap event contents, do not return an error.
+	if !ok || toAddress.IsEmpty() {
+		toAddress = "no to address available"
+	}
+
+	memo := fmt.Sprintf("loan-:%s:%s:%s", msg.CollateralAsset, msg.Owner, msg.MinOut)
+	fakeGas := common.NewCoin(msg.Coin.Asset, cosmos.OneUint())
+	tx := common.NewTx(txID, msg.From, toAddress, common.NewCoins(msg.Coin), common.Gas{fakeGas}, memo)
+	swapMsg := NewMsgSwap(tx, common.TOR, lendAddr, cosmos.ZeroUint(), lendAddr, cosmos.ZeroUint(), "", "", nil, 0, 0, 0, msg.Signer)
+	if err := h.mgr.Keeper().SetSwapQueueItem(ctx, *swapMsg, 0); err != nil {
+		ctx.Logger().Error("fail to add swap to queue", "error", err)
+		return err
+	}
+
+	return nil
+}
+
 func (h LoanRepaymentHandler) repayV111(ctx cosmos.Context, msg MsgLoanRepayment) error {
 	// collect data
 	lendAddr, err := h.mgr.Keeper().GetModuleAddress(LendingName)
