@@ -5,13 +5,6 @@ import (
 	"strings"
 )
 
-const (
-	// BNBTicker BNB
-	BNBTicker = Ticker("BNB")
-	// RuneTicker RUNE
-	RuneTicker = Ticker("RUNE")
-)
-
 type (
 	// Ticker The trading 'symbol' or shortened name (typically in capital
 	// letters) that refer to a coin on a trading platform. For example: BNB
