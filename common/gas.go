@@ -71,15 +71,11 @@ func (g Gas) Valid() error {
 			return err
 		}
 	}
-
 	return nil
 }
 
 // IsEmpty return true as long as there is one coin in it that is not empty
 func (g Gas) IsEmpty() bool {
-	if len(g) == 0 {
-		return true
-	}
 	for _, coin := range g {
 		if !coin.IsEmpty() {
 			return false

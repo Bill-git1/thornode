@@ -7,15 +7,12 @@ import (
 )
 
 func GetMedianUint(vals []cosmos.Uint) cosmos.Uint {
-	switch len(vals) {
-	case 0:
+	if len(vals) == 0 {
 		return cosmos.ZeroUint()
-	case 1:
-		return vals[0]
 	}
 
 	sort.SliceStable(vals, func(i, j int) bool {
-		return vals[i].Uint64() < vals[j].Uint64()
+		return vals[i].LT(vals[j])
 	})
 
 	// calculate median
