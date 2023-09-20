@@ -15,7 +15,6 @@ import (
 	"gitlab.com/thorchain/thornode/bifrost/blockscanner"
 	"gitlab.com/thorchain/thornode/bifrost/db"
 	"gitlab.com/thorchain/thornode/bifrost/thorclient/types"
-	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/config"
 )
 
@@ -138,23 +137,10 @@ func (s *SignerStore) Get(key string) (item TxOutStoreItem, err error) {
 		return
 	}
 	buf, _ := s.db.Get([]byte(key), nil)
-	if len(s.passphrase) > 0 {
-		decrypted, err := common.Decrypt(buf, s.passphrase)
-		if err != nil {
-			s.logger.Debug().Err(err).Msg("fail to decrypt txout item")
-			// We fall through here and attempt json decoding.
-			// The decryption attempt can be removed when all
-			// bifrost leveldb's have been recreated after the
-			// encryption removal change was merged.
-		} else {
-			buf = decrypted
-		}
-	}
 	if err := json.Unmarshal(buf, &item); err != nil {
 		s.logger.Error().Err(err).Msg("fail to unmarshal to txout store item")
 		return item, err
 	}
-
 	return
 }
 
@@ -178,19 +164,6 @@ func (s *SignerStore) List() []TxOutStoreItem {
 		buf := iterator.Value()
 		if len(buf) == 0 {
 			continue
-		}
-
-		if len(s.passphrase) > 0 {
-			decrypted, err := common.Decrypt(buf, s.passphrase)
-			if err != nil {
-				s.logger.Debug().Err(err).Msg("fail to decrypt txout item")
-				// We fall through here and attempt json decoding.
-				// The decryption attempt can be removed when all
-				// bifrost leveldb's have been recreated after the
-				// encryption removal change was merged.
-			} else {
-				buf = decrypted
-			}
 		}
 
 		var item TxOutStoreItem
