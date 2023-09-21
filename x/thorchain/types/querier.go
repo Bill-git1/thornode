@@ -9,7 +9,6 @@ import (
 	"github.com/blang/semver"
 
 	"gitlab.com/thorchain/thornode/common"
-	gitlab_com_thorchain_thornode_common "gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	openapi "gitlab.com/thorchain/thornode/openapi/gen"
 )
@@ -75,39 +74,39 @@ type QueryKeysign struct {
 
 // QueryYggdrasilVaults query yggdrasil vault result
 type QueryYggdrasilVaults struct {
-	BlockHeight           int64                                       `json:"block_height,omitempty"`
-	PubKey                gitlab_com_thorchain_thornode_common.PubKey `json:"pub_key,omitempty"`
-	Coins                 gitlab_com_thorchain_thornode_common.Coins  `json:"coins"`
-	Type                  VaultType                                   `json:"type,omitempty"`
-	StatusSince           int64                                       `json:"status_since,omitempty"`
-	Membership            []string                                    `json:"membership,omitempty"`
-	Chains                []string                                    `json:"chains,omitempty"`
-	InboundTxCount        int64                                       `json:"inbound_tx_count,omitempty"`
-	OutboundTxCount       int64                                       `json:"outbound_tx_count,omitempty"`
-	PendingTxBlockHeights []int64                                     `json:"pending_tx_block_heights,omitempty"`
-	Routers               []ChainContract                             `json:"routers"`
-	Status                NodeStatus                                  `json:"status"`
-	Bond                  cosmos.Uint                                 `json:"bond"`
-	TotalValue            cosmos.Uint                                 `json:"total_value"`
-	Addresses             []QueryChainAddress                         `json:"addresses"`
+	BlockHeight           int64               `json:"block_height,omitempty"`
+	PubKey                common.PubKey       `json:"pub_key,omitempty"`
+	Coins                 common.Coins        `json:"coins"`
+	Type                  VaultType           `json:"type,omitempty"`
+	StatusSince           int64               `json:"status_since,omitempty"`
+	Membership            []string            `json:"membership,omitempty"`
+	Chains                []string            `json:"chains,omitempty"`
+	InboundTxCount        int64               `json:"inbound_tx_count,omitempty"`
+	OutboundTxCount       int64               `json:"outbound_tx_count,omitempty"`
+	PendingTxBlockHeights []int64             `json:"pending_tx_block_heights,omitempty"`
+	Routers               []ChainContract     `json:"routers"`
+	Status                NodeStatus          `json:"status"`
+	Bond                  cosmos.Uint         `json:"bond"`
+	TotalValue            cosmos.Uint         `json:"total_value"`
+	Addresses             []QueryChainAddress `json:"addresses"`
 }
 
 // QueryVaultResp used represent the informat return to client for query asgard
 type QueryVaultResp struct {
-	BlockHeight           int64                                       `json:"block_height,omitempty"`
-	PubKey                gitlab_com_thorchain_thornode_common.PubKey `json:"pub_key,omitempty"`
-	Coins                 gitlab_com_thorchain_thornode_common.Coins  `json:"coins"`
-	Type                  VaultType                                   `json:"type,omitempty"`
-	Status                VaultStatus                                 `json:"status"`
-	StatusSince           int64                                       `json:"status_since,omitempty"`
-	Membership            []string                                    `json:"membership,omitempty"`
-	Chains                []string                                    `json:"chains,omitempty"`
-	InboundTxCount        int64                                       `json:"inbound_tx_count,omitempty"`
-	OutboundTxCount       int64                                       `json:"outbound_tx_count,omitempty"`
-	PendingTxBlockHeights []int64                                     `json:"pending_tx_block_heights,omitempty"`
-	Routers               []ChainContract                             `json:"routers"`
-	Addresses             []QueryChainAddress                         `json:"addresses"`
-	Frozen                []string                                    `json:"frozen,omitempty"`
+	BlockHeight           int64               `json:"block_height,omitempty"`
+	PubKey                common.PubKey       `json:"pub_key,omitempty"`
+	Coins                 common.Coins        `json:"coins"`
+	Type                  VaultType           `json:"type,omitempty"`
+	Status                VaultStatus         `json:"status"`
+	StatusSince           int64               `json:"status_since,omitempty"`
+	Membership            []string            `json:"membership,omitempty"`
+	Chains                []string            `json:"chains,omitempty"`
+	InboundTxCount        int64               `json:"inbound_tx_count,omitempty"`
+	OutboundTxCount       int64               `json:"outbound_tx_count,omitempty"`
+	PendingTxBlockHeights []int64             `json:"pending_tx_block_heights,omitempty"`
+	Routers               []ChainContract     `json:"routers"`
+	Addresses             []QueryChainAddress `json:"addresses"`
+	Frozen                []string            `json:"frozen,omitempty"`
 }
 
 type QueryVersion struct {

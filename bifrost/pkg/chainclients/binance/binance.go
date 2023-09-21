@@ -19,7 +19,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"gitlab.com/thorchain/binance-sdk/common/types"
-	ctypes "gitlab.com/thorchain/binance-sdk/common/types"
 	ttypes "gitlab.com/thorchain/binance-sdk/types"
 	"gitlab.com/thorchain/binance-sdk/types/msg"
 	btx "gitlab.com/thorchain/binance-sdk/types/tx"
@@ -87,7 +86,7 @@ func NewBinance(thorKeys *thorclient.Keys, cfg config.BifrostChainConfiguration,
 	}
 	localKm := &keyManager{
 		privKey: priv,
-		addr:    ctypes.AccAddress(priv.PubKey().Address()),
+		addr:    types.AccAddress(priv.PubKey().Address()),
 		pubkey:  pk,
 	}
 

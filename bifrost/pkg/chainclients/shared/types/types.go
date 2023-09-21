@@ -4,7 +4,6 @@ import (
 	"math/big"
 
 	"gitlab.com/thorchain/thornode/bifrost/thorclient/types"
-	stypes "gitlab.com/thorchain/thornode/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/config"
 )
@@ -13,9 +12,9 @@ import (
 type ChainClient interface {
 	// Start starts the chain client with the given queues.
 	Start(
-		globalTxsQueue chan stypes.TxIn,
-		globalErrataQueue chan stypes.ErrataBlock,
-		globalSolvencyQueue chan stypes.Solvency,
+		globalTxsQueue chan types.TxIn,
+		globalErrataQueue chan types.ErrataBlock,
+		globalSolvencyQueue chan types.Solvency,
 	)
 
 	// Stop stops the chain client.
@@ -25,10 +24,10 @@ type ChainClient interface {
 	IsBlockScannerHealthy() bool
 
 	// SignTx returns the signed transaction.
-	SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *stypes.TxInItem, error)
+	SignTx(tx types.TxOutItem, height int64) ([]byte, []byte, *types.TxInItem, error)
 
 	// BroadcastTx broadcasts the transaction and returns the transaction hash.
-	BroadcastTx(_ stypes.TxOutItem, _ []byte) (string, error)
+	BroadcastTx(_ types.TxOutItem, _ []byte) (string, error)
 
 	// GetHeight returns the current height of the chain.
 	GetHeight() (int64, error)
@@ -52,10 +51,10 @@ type ChainClient interface {
 	OnObservedTxIn(txIn types.TxInItem, blockHeight int64)
 
 	// GetConfirmationCount returns the confirmation count for the given tx.
-	GetConfirmationCount(txIn stypes.TxIn) int64
+	GetConfirmationCount(txIn types.TxIn) int64
 
 	// ConfirmationCountReady returns true if the confirmation count is ready.
-	ConfirmationCountReady(txIn stypes.TxIn) bool
+	ConfirmationCountReady(txIn types.TxIn) bool
 }
 
 // SolvencyReporter reports the solvency of the chain at the given height.

@@ -18,6 +18,7 @@ linters:
     - unconvert
     - unused
     - varcheck
+  ERROR: []
 linters-settings:
   exhaustive:
     check-generated: false
@@ -29,6 +30,3 @@ linters-settings:
     rules:
       - name: exported
         disabled: true
-run:
-  skip-files:
-    - ".*\\.pb\\.go$"

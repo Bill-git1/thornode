@@ -33,7 +33,6 @@ import (
 	"gitlab.com/thorchain/thornode/bifrost/pubkeymanager"
 	"gitlab.com/thorchain/thornode/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/bifrost/thorclient/types"
-	stypes "gitlab.com/thorchain/thornode/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/bifrost/tss"
 	"gitlab.com/thorchain/thornode/cmd"
 	"gitlab.com/thorchain/thornode/common"
@@ -178,7 +177,7 @@ func (b *MockChainClient) IsBlockScannerHealthy() bool {
 	return true
 }
 
-func (b *MockChainClient) SignTx(tai stypes.TxOutItem, height int64) ([]byte, []byte, *stypes.TxInItem, error) {
+func (b *MockChainClient) SignTx(tai types.TxOutItem, height int64) ([]byte, []byte, *types.TxInItem, error) {
 	if b.ks == nil {
 		return nil, nil, nil, nil
 	}
@@ -225,7 +224,7 @@ func (b *MockChainClient) Churn(pubKey common.PubKey, height int64) error {
 	return nil
 }
 
-func (b *MockChainClient) BroadcastTx(_ stypes.TxOutItem, tx []byte) (string, error) {
+func (b *MockChainClient) BroadcastTx(_ types.TxOutItem, tx []byte) (string, error) {
 	b.broadcastCount += 1
 	if b.broadcastCount > b.broadcastFailCount {
 		return "", nil
@@ -252,15 +251,15 @@ func (b *MockChainClient) GetPubKey() crypto.PubKey {
 func (b *MockChainClient) OnObservedTxIn(txIn types.TxInItem, blockHeight int64) {
 }
 
-func (b *MockChainClient) Start(globalTxsQueue chan stypes.TxIn, globalErrataQueue chan stypes.ErrataBlock, globalSolvencyQueue chan stypes.Solvency) {
+func (b *MockChainClient) Start(globalTxsQueue chan types.TxIn, globalErrataQueue chan types.ErrataBlock, globalSolvencyQueue chan types.Solvency) {
 }
 
 func (b *MockChainClient) Stop() {}
-func (b *MockChainClient) ConfirmationCountReady(txIn stypes.TxIn) bool {
+func (b *MockChainClient) ConfirmationCountReady(txIn types.TxIn) bool {
 	return true
 }
 
-func (b *MockChainClient) GetConfirmationCount(txIn stypes.TxIn) int64 {
+func (b *MockChainClient) GetConfirmationCount(txIn types.TxIn) int64 {
 	return 0
 }
 
@@ -488,7 +487,7 @@ func (s *SignSuite) TestBroadcastRetry(c *C) {
 	sign.storage, err = NewSignerStore("", config.LevelDBOptions{}, "")
 	c.Assert(err, IsNil)
 	err = sign.storage.Set(TxOutStoreItem{
-		TxOutItem: stypes.TxOutItem{
+		TxOutItem: types.TxOutItem{
 			Chain:       common.BNBChain,
 			ToAddress:   "tbnb1yycn4mh6ffwpjf584t8lpp7c27ghu03gpvqkfj",
 			Memo:        msg,
@@ -568,7 +567,7 @@ func (s *SignSuite) TestRound7Retry(c *C) {
 	sign.storage, err = NewSignerStore("", config.LevelDBOptions{}, "")
 	c.Assert(err, IsNil)
 	err = sign.storage.Set(TxOutStoreItem{
-		TxOutItem: stypes.TxOutItem{
+		TxOutItem: types.TxOutItem{
 			Chain:       common.BNBChain,
 			ToAddress:   "tbnb1yycn4mh6ffwpjf584t8lpp7c27ghu03gpvqkfj",
 			Memo:        msg,
@@ -580,7 +579,7 @@ func (s *SignSuite) TestRound7Retry(c *C) {
 	})
 	c.Assert(err, IsNil)
 	err = sign.storage.Set(TxOutStoreItem{
-		TxOutItem: stypes.TxOutItem{
+		TxOutItem: types.TxOutItem{
 			Chain:       common.BNBChain,
 			ToAddress:   "tbnb145wcuncewfkuc4v6an0r9laswejygcul43c3wu",
 			Memo:        msg,
@@ -592,7 +591,7 @@ func (s *SignSuite) TestRound7Retry(c *C) {
 	})
 	c.Assert(err, IsNil)
 	err = sign.storage.Set(TxOutStoreItem{
-		TxOutItem: stypes.TxOutItem{
+		TxOutItem: types.TxOutItem{
 			Chain:       common.BNBChain,
 			ToAddress:   "tbnb1yxfyeda8pnlxlmx0z3cwx74w9xevspwdpzdxpj",
 			Memo:        msg,
@@ -606,7 +605,7 @@ func (s *SignSuite) TestRound7Retry(c *C) {
 
 	// this will be ignored entirely since the vault pubkey is different
 	err = sign.storage.Set(TxOutStoreItem{
-		TxOutItem: stypes.TxOutItem{
+		TxOutItem: types.TxOutItem{
 			Chain:       common.BNBChain,
 			ToAddress:   "tbnb145wcuncewfkuc4v6an0r9laswejygcul43c3wu",
 			Memo:        msg,
@@ -628,7 +627,7 @@ func (s *SignSuite) TestRound7Retry(c *C) {
 	cc2 := &MockChainClient{ks: ks2}
 	sign.chains[common.BTCChain] = cc2
 	tois2 := TxOutStoreItem{
-		TxOutItem: stypes.TxOutItem{
+		TxOutItem: types.TxOutItem{
 			Chain:       common.BTCChain,
 			ToAddress:   "tbtc1yycn4mh6ffwpjf584t8lpp7c27ghu03gpvqkfj",
 			VaultPubKey: vaultPubkey,

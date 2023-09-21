@@ -98,7 +98,7 @@ func (s *HealthServer) p2pStatus(w http.ResponseWriter, _ *http.Request) {
 	nodesByIP := map[string]types.QueryNodeAccount{}
 	thornode := config.GetBifrost().Thorchain.ChainHost
 	url := fmt.Sprintf("http://%s/thorchain/nodes", thornode)
-	// trunk-ignore(golangci-lint/gosec)
+	// trunk-ignore(golangci-lint/gosec): the request URL is variable, but comes from our local config.
 	resp, err := http.Get(url)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("fail to get thornode status")
