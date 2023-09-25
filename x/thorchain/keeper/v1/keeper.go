@@ -33,6 +33,8 @@ const (
 	prefixTotalLiquidityFee       types.DbPrefix = "total_liquidity_fee/"
 	prefixPoolLiquidityFee        types.DbPrefix = "pool_liquidity_fee/"
 	prefixPoolSwapSlip            types.DbPrefix = "pool_swap_slip/"
+	prefixPoolSwapSlipLong        types.DbPrefix = "pool_swap_slip_long/"
+	prefixPoolSwapSnapShot        types.DbPrefix = "pool_swap_slip_ss/"
 	prefixLiquidityProvider       types.DbPrefix = "lp/"
 	prefixLastChainHeight         types.DbPrefix = "last_chain_height/"
 	prefixLastSignedHeight        types.DbPrefix = "last_signed_height/"

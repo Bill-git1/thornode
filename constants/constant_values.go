@@ -31,6 +31,9 @@ const (
 	DerivedMinDepth
 	MaxAnchorSlip
 	MaxAnchorBlocks
+	DynamicMaxAnchorSlipBlocks
+	DynamicMaxAnchorTarget
+	DynamicMaxAnchorCalcInterval
 	ChurnInterval
 	ChurnRetryInterval
 	ValidatorsChangeWindow
@@ -154,6 +157,9 @@ var nameToString = map[ConstantName]string{
 	DerivedMinDepth:                     "DerivedMinDepth",
 	MaxAnchorSlip:                       "MaxAnchorSlip",
 	MaxAnchorBlocks:                     "MaxAnchorBlocks",
+	DynamicMaxAnchorSlipBlocks:          "DynamicMaxAnchorSlipBlocks",
+	DynamicMaxAnchorTarget:              "DynamicMaxAnchorTarget",
+	DynamicMaxAnchorCalcInterval:        "DynamicMaxAnchorCalcInterval",
 	ChurnInterval:                       "ChurnInterval",
 	ChurnRetryInterval:                  "ChurnRetryInterval",
 	ValidatorsChangeWindow:              "ValidatorsChangeWindow",

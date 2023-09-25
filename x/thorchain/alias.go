@@ -371,6 +371,7 @@ type (
 
 	// Proto
 	ProtoStrings = types.ProtoStrings
+	ProtoInt64   = types.ProtoInt64
 
 	LoanOpenMemo      = mem.LoanOpenMemo
 	LoanRepaymentMemo = mem.LoanRepaymentMemo

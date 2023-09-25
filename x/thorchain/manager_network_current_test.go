@@ -957,3 +957,34 @@ func (s *NetworkManagerVCURTestSuite) TestSpawnDerivedAssetsBasisPoints(c *C) {
 	c.Assert(usd.BalanceAsset.Uint64(), Equals, uint64(1851363360364602), Commentf("%d", usd.BalanceAsset.Uint64()))
 	c.Assert(usd.BalanceRune.Uint64(), Equals, uint64(374987118770738), Commentf("%d", usd.BalanceRune.Uint64()))
 }
+
+func (s *NetworkManagerVCURTestSuite) TestFetchMedianSlip(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	nmgr := newNetworkMgrVCUR(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
+	asset := common.BTCAsset
+
+	var slip int64
+	var err error
+	slip = nmgr.fetchMedianSlip(ctx, asset, mgr)
+	c.Check(slip, Equals, int64(0))
+
+	/////// setup slip history
+	ctx = ctx.WithBlockHeight(14400 * 14)
+	maxAnchorBlocks := mgr.Keeper().GetConfigInt64(ctx, constants.MaxAnchorBlocks)
+	dynamicMaxAnchorSlipBlocks := mgr.Keeper().GetConfigInt64(ctx, constants.DynamicMaxAnchorSlipBlocks)
+	for i := ctx.BlockHeight(); i > ctx.BlockHeight()-dynamicMaxAnchorSlipBlocks; i -= maxAnchorBlocks {
+		if i <= 0 {
+			break // dynamicMaxAnchorSlipBlocks > ctx.BlockHeight, end of chain history
+		}
+
+		mgr.Keeper().SetSwapSlipSnapShot(ctx, asset, i, i)
+	}
+	//////////////////////////
+
+	slip = nmgr.fetchMedianSlip(ctx, asset, mgr)
+	c.Check(slip, Equals, int64(100950))
+
+	slip, err = mgr.Keeper().GetLongRollup(ctx, asset)
+	c.Assert(err, IsNil)
+	c.Check(slip, Equals, int64(100950))
+}

@@ -27,6 +27,9 @@ func NewConstantValue() *ConstantVals {
 			DerivedMinDepth:                     100,                // in basis points, min derived pool depth
 			MaxAnchorSlip:                       1500,               // basis points of rune depth to trigger pausing a derived virtual pool
 			MaxAnchorBlocks:                     300,                // max blocks to accumulate swap slips in anchor pools
+			DynamicMaxAnchorSlipBlocks:          14400 * 14,         // number of blocks to sample in calculating the dynamic max anchor slip
+			DynamicMaxAnchorTarget:              0,                  // target depth of derived virtual pool (in basis points)
+			DynamicMaxAnchorCalcInterval:        14400,              // number of blocks to recalculate the dynamic max anchor
 			FundMigrationInterval:               360,                // number of blocks THORNode will attempt to move funds from a retiring vault to an active one
 			ChurnInterval:                       43200,              // How many blocks THORNode try to rotate validators
 			ChurnRetryInterval:                  720,                // How many blocks until we retry a churn (only if we haven't had a successful churn in ChurnInterval blocks

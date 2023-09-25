@@ -3,6 +3,8 @@ package thorchain
 import (
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/armon/go-metrics"
 	"github.com/cosmos/cosmos-sdk/telemetry"
@@ -208,6 +210,14 @@ func (vm *NetworkMgrVCUR) SpawnDerivedAsset(ctx cosmos.Context, asset common.Ass
 	maxAnchorSlip := mgr.Keeper().GetConfigInt64(ctx, constants.MaxAnchorSlip)
 	depthBasisPts := mgr.Keeper().GetConfigInt64(ctx, constants.DerivedDepthBasisPts)
 	minDepthPts := mgr.Keeper().GetConfigInt64(ctx, constants.DerivedMinDepth)
+	dynamicMaxAnchorTarget := mgr.Keeper().GetConfigInt64(ctx, constants.DynamicMaxAnchorTarget)
+
+	// dynamically calculate the maxAnchorSlip
+	medianSlip := vm.fetchMedianSlip(ctx, layer1Asset, mgr)
+	maxBps := int64(10_000)
+	if medianSlip > 0 && dynamicMaxAnchorTarget > 0 && dynamicMaxAnchorTarget < maxBps {
+		maxAnchorSlip = (medianSlip * maxBps) / (maxBps - dynamicMaxAnchorTarget)
+	}
 
 	derivedAsset := asset.GetDerivedAsset()
 	layer1Pool, err := mgr.Keeper().GetPool(ctx, layer1Asset)
@@ -297,11 +307,63 @@ func (vm *NetworkMgrVCUR) SpawnDerivedAsset(ctx cosmos.Context, asset common.Ass
 		derivedPool.BalanceRune = runeDepth
 	}
 
+	ctx.Logger().Info("SpawnDeserivedAsset",
+		"medianSlip", medianSlip,
+		"runeAmt", runeAmt,
+		"assetAmt", assetAmt,
+		"asset", derivedPool.Asset,
+		"anchorPrice", price,
+		"slippage", slippage)
+
 	if err := mgr.Keeper().SetPool(ctx, derivedPool); err != nil {
 		// Since unable to SetPool here, presumably unable to SetPool in suspendVirtualPool either.
 		ctx.Logger().Error("failed to set pool", "asset", derivedPool.Asset, "err", err)
 		return
 	}
+}
+
+func (vm *NetworkMgrVCUR) fetchMedianSlip(ctx cosmos.Context, asset common.Asset, mgr Manager) (slip int64) {
+	slip, err := mgr.Keeper().GetLongRollup(ctx, asset)
+	if err != nil {
+		ctx.Logger().Error("fail to get long rollup", "error", err)
+	}
+
+	dynamicMaxAnchorCalcInterval := mgr.Keeper().GetConfigInt64(ctx, constants.DynamicMaxAnchorCalcInterval)
+	if (dynamicMaxAnchorCalcInterval > 0 && ctx.BlockHeight()%dynamicMaxAnchorCalcInterval == 0) || slip <= 0 {
+		slip = vm.calculateMedianSlip(ctx, asset, mgr)
+		mgr.Keeper().SetLongRollup(ctx, asset, slip)
+	}
+
+	return slip
+}
+
+func (vm *NetworkMgrVCUR) calculateMedianSlip(ctx cosmos.Context, asset common.Asset, mgr Manager) int64 {
+	dynamicMaxAnchorSlipBlocks := mgr.Keeper().GetConfigInt64(ctx, constants.DynamicMaxAnchorSlipBlocks)
+
+	slips := make([]int64, 0)
+	iter := mgr.Keeper().GetSwapSlipSnapShotIterator(ctx, asset)
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		key := string(iter.Key())
+		parts := strings.Split(key, "/")
+		i, err := strconv.ParseInt(parts[len(parts)-1], 10, 64)
+		if err != nil || i < ctx.BlockHeight()-dynamicMaxAnchorSlipBlocks {
+			mgr.Keeper().DeleteKey(ctx, key)
+			continue
+		}
+
+		value := ProtoInt64{}
+		mgr.Keeper().Cdc().MustUnmarshal(iter.Value(), &value)
+		slip := value.GetValue()
+		if slip <= 0 {
+			mgr.Keeper().DeleteKey(ctx, key)
+			continue
+		}
+
+		slips = append(slips, slip)
+	}
+
+	return common.GetMedianInt64(slips)
 }
 
 // EndBlock move funds from retiring asgard vaults

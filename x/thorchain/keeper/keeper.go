@@ -205,8 +205,15 @@ type KeeperLiquidityFees interface {
 type KeeperSwapSlip interface {
 	AddToSwapSlip(ctx cosmos.Context, asset common.Asset, amt cosmos.Int) error
 	RollupSwapSlip(ctx cosmos.Context, blockCount int64, _ common.Asset) (cosmos.Int, error)
+	GetCurrentRollup(ctx cosmos.Context, asset common.Asset) (int64, error)
+	SetCurrentRollup(ctx cosmos.Context, asset common.Asset, val int64)
+	GetLongRollup(ctx cosmos.Context, asset common.Asset) (int64, error)
+	SetLongRollup(ctx cosmos.Context, asset common.Asset, slip int64)
 	GetPoolSwapSlip(ctx cosmos.Context, height int64, asset common.Asset) (cosmos.Int, error)
 	DeletePoolSwapSlip(ctx cosmos.Context, height int64, asset common.Asset)
+	GetSwapSlipSnapShot(ctx cosmos.Context, asset common.Asset, height int64) (int64, error)
+	SetSwapSlipSnapShot(ctx cosmos.Context, asset common.Asset, height, currRollup int64)
+	GetSwapSlipSnapShotIterator(ctx cosmos.Context, asset common.Asset) cosmos.Iterator
 }
 
 type KeeperVault interface {
