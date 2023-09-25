@@ -125,6 +125,9 @@ func (k *TestSwapHandleKeeper) GetTotalSupply(_ cosmos.Context, _ common.Asset) 
 }
 
 func (k *TestSwapHandleKeeper) GetMimir(ctx cosmos.Context, key string) (int64, error) {
+	if key == "MaxSynthPerPoolDepth" {
+		return 5000, nil
+	}
 	if key == "EnableDerivedAssets" {
 		if k.derivedAssets {
 			return 1, nil
@@ -242,6 +245,16 @@ func (s *HandlerSwapSuite) TestValidationWithStreamingSwap(c *C) {
 	err = handler.validate(ctx, *msg)
 	c.Assert(err, NotNil)
 	mgr.Keeper().SetMimir(ctx, "StreamingSwapPause", 0)
+
+	// check that validation fails due to synth cap
+	mgr.Keeper().SetMimir(ctx, "MaxSynthPerPoolDepth", 1)
+	// first swap should fail as it include the total value of the streaming swap
+	c.Assert(handler.validate(ctx, *msg), NotNil)
+	// second swap should NOT fail as the synth cap is ignored
+	swp := msg.GetStreamingSwap()
+	swp.Count = 3
+	mgr.Keeper().SetStreamingSwap(ctx, swp)
+	c.Assert(handler.validate(ctx, *msg), IsNil)
 }
 
 func (s *HandlerSwapSuite) TestHandle(c *C) {
