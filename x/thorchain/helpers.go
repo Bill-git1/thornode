@@ -1287,6 +1287,8 @@ func isActionsItemDangling(voter ObservedTxVoter, i int) bool {
 func triggerPreferredAssetSwap(ctx cosmos.Context, mgr Manager, affiliateAddress common.Address, txID common.TxID, tn THORName, affcol AffiliateFeeCollector, queueIndex int) error {
 	version := mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.121.0")):
+		return triggerPreferredAssetSwapV121(ctx, mgr, affiliateAddress, txID, tn, affcol, queueIndex)
 	case version.GTE(semver.MustParse("1.120.0")):
 		return triggerPreferredAssetSwapV120(ctx, mgr, affiliateAddress, txID, tn, affcol, queueIndex)
 	case version.GTE(semver.MustParse("1.116.0")):
@@ -1296,7 +1298,7 @@ func triggerPreferredAssetSwap(ctx cosmos.Context, mgr Manager, affiliateAddress
 	}
 }
 
-func triggerPreferredAssetSwapV120(ctx cosmos.Context, mgr Manager, affiliateAddress common.Address, txID common.TxID, tn THORName, affcol AffiliateFeeCollector, queueIndex int) error {
+func triggerPreferredAssetSwapV121(ctx cosmos.Context, mgr Manager, affiliateAddress common.Address, txID common.TxID, tn THORName, affcol AffiliateFeeCollector, queueIndex int) error {
 	// Check that the THORName has an address alias for the PreferredAsset, if not skip
 	// the swap
 	alias := tn.GetAlias(tn.PreferredAsset.GetChain())
@@ -1331,9 +1333,30 @@ func triggerPreferredAssetSwapV120(ctx cosmos.Context, mgr Manager, affiliateAdd
 
 	ctx.Logger().Debug("execute preferred asset swap", "thorname", tn.Name, "amt", affRune.String(), "dest", alias)
 
-	// 1. Swap RUNE to Preferred Asset
+	// Generate a unique ID for the preferred asset swap, which is a hash of the THORName,
+	// affCoin, and BlockHeight This is to prevent the network thinking it's an outbound
+	// of the swap that triggered it
+	str := fmt.Sprintf("%s|%s|%d", tn.GetName(), affCoin.String(), ctx.BlockHeight())
+	hash := fmt.Sprintf("%X", sha256.Sum256([]byte(str)))
+
+	ctx.Logger().Info("preferred asset swap hash", "hash", hash)
+
+	paTxID, err := common.NewTxID(hash)
+	if err != nil {
+		return err
+	}
+
+	existingVoter, err := mgr.Keeper().GetObservedTxInVoter(ctx, paTxID)
+	if err != nil {
+		return fmt.Errorf("fail to get existing voter: %w", err)
+	}
+	if len(existingVoter.Txs) > 0 {
+		return fmt.Errorf("preferred asset tx: %s already exists", str)
+	}
+
+	// Construct preferred asset swap tx
 	tx := common.NewTx(
-		txID,
+		paTxID,
 		affColAddress,
 		asgardAddress,
 		common.NewCoins(affCoin),
@@ -1354,6 +1377,14 @@ func triggerPreferredAssetSwapV120(ctx cosmos.Context, mgr Manager, affiliateAdd
 		0, 0,
 		tn.Owner,
 	)
+
+	// Construct preferred asset swap inbound tx voter
+	txIn := ObservedTx{Tx: tx}
+	txInVoter := NewObservedTxVoter(txIn.Tx.ID, []ObservedTx{txIn})
+	txInVoter.Height = ctx.BlockHeight()
+	txInVoter.FinalisedHeight = ctx.BlockHeight()
+	txInVoter.Tx = txIn
+	mgr.Keeper().SetObservedTxInVoter(ctx, txInVoter)
 
 	// Queue the preferred asset swap
 	if err := mgr.Keeper().SetSwapQueueItem(ctx, *preferredAssetSwap, queueIndex); err != nil {

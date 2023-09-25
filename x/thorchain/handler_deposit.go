@@ -336,7 +336,8 @@ func (h DepositHandler) updateAffiliateCollector(ctx cosmos.Context, coin common
 	// trigger the preferred asset swap
 	ofRune := h.mgr.GasMgr().GetFee(ctx, thorname.PreferredAsset.GetChain(), common.RuneNative)
 	multiplier := h.mgr.Keeper().GetConfigInt64(ctx, constants.PreferredAssetOutboundFeeMultiplier)
-	if affcol.RuneAmount.GT(ofRune.Mul(cosmos.NewUint(uint64(multiplier)))) {
+	threshold := ofRune.Mul(cosmos.NewUint(uint64(multiplier)))
+	if affcol.RuneAmount.GT(threshold) {
 		if err = triggerPreferredAssetSwap(ctx, h.mgr, msg.AffiliateAddress, msg.Tx.ID, *thorname, affcol, 1); err != nil {
 			ctx.Logger().Error("fail to swap to preferred asset", "thorname", thorname.Name, "err", err)
 		}

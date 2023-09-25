@@ -433,7 +433,8 @@ func (h ObservedTxInHandler) addSwapDirectV116(ctx cosmos.Context, msg MsgSwap) 
 			// so trigger the preferred asset swap
 			ofRune := h.mgr.GasMgr().GetFee(ctx, affThorname.PreferredAsset.GetChain(), common.RuneNative)
 			multiplier := h.mgr.Keeper().GetConfigInt64(ctx, constants.PreferredAssetOutboundFeeMultiplier)
-			if affcol.RuneAmount.GT(ofRune.Mul(cosmos.NewUint(uint64(multiplier)))) {
+			threshold := ofRune.Mul(cosmos.NewUint(uint64(multiplier)))
+			if affcol.RuneAmount.GT(threshold) {
 				if err = triggerPreferredAssetSwap(ctx, h.mgr, msg.AffiliateAddress, msg.Tx.ID, *affThorname, affcol, 2); err != nil {
 					ctx.Logger().Error("fail to swap to preferred asset", "thorname", affThorname.Name, "err", err)
 				}

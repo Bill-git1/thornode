@@ -1886,7 +1886,7 @@ func queryPendingOutbound(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 	if startHeight < 1 {
 		startHeight = 1
 	}
-	var result []TxOutItem
+	result := make([]QueryTxOutItem, 0)
 	for height := startHeight; height <= ctx.BlockHeight(); height++ {
 		txs, err := mgr.Keeper().GetTxOut(ctx, height)
 		if err != nil {
@@ -1895,7 +1895,7 @@ func queryPendingOutbound(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 		}
 		for _, tx := range txs.TxArray {
 			if tx.OutHash.IsEmpty() {
-				result = append(result, tx)
+				result = append(result, NewQueryTxOutItem(tx, height))
 			}
 		}
 	}

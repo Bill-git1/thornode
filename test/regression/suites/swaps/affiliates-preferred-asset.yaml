@@ -292,9 +292,9 @@ txs:
       gas:
         - amount: "10500"
           asset: "BTC.BTC"
-      memo: "OUT:{{ native_txid -2 }}"
-    block_height: 8
-    finalise_height: 8
+      memo: "OUT:CBCBD21376666C332813EDA127D0267F199DC015A96CD46E1B18A3724FC24A2D"
+    block_height: 9
+    finalise_height: 9
     observed_pub_key: {{ pubkey_dog }}
 ---
 type: create-blocks
