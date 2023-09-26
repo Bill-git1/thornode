@@ -307,7 +307,7 @@ func (vm *NetworkMgrVCUR) SpawnDerivedAsset(ctx cosmos.Context, asset common.Ass
 		derivedPool.BalanceRune = runeDepth
 	}
 
-	ctx.Logger().Info("SpawnDeserivedAsset",
+	ctx.Logger().Debug("SpawnDerivedAsset",
 		"medianSlip", medianSlip,
 		"runeAmt", runeAmt,
 		"assetAmt", assetAmt,
