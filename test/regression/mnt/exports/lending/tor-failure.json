@@ -66,15 +66,11 @@
           "sequence": "0"
         },
         {
-          "@type": "/cosmos.auth.v1beta1.ModuleAccount",
-          "base_account": {
-            "account_number": "11",
-            "address": "tthor1x0kgm82cnj0vtmzdvz4avk3e7sj427t0al8wky",
-            "pub_key": null,
-            "sequence": "0"
-          },
-          "name": "lending",
-          "permissions": []
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "11",
+          "address": "tthor1x0kgm82cnj0vtmzdvz4avk3e7sj427t0al8wky",
+          "pub_key": null,
+          "sequence": "0"
         },
         {
           "@type": "/cosmos.auth.v1beta1.ModuleAccount",

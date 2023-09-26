@@ -245,8 +245,10 @@ func (h LoanOpenHandler) openLoanV121(ctx cosmos.Context, msg MsgLoanOpen) error
 	}
 
 	// move derived asset collateral into lending module
+	// TODO: on hard fork, change lending module to an actual module (created as account)
+	lendingAcc := h.mgr.Keeper().GetModuleAccAddress(LendingName)
 	collateral := common.NewCoin(msg.CollateralAsset.GetDerivedAsset(), msg.CollateralAmount)
-	if err := h.mgr.Keeper().SendFromModuleToModule(ctx, AsgardName, LendingName, common.NewCoins(collateral)); err != nil {
+	if err := h.mgr.Keeper().SendFromModuleToAccount(ctx, AsgardName, lendingAcc, common.NewCoins(collateral)); err != nil {
 		return fmt.Errorf("fail to send collateral funds: %w", err)
 	}
 
