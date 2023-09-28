@@ -62,6 +62,7 @@ BUILDTAG?=$(shell git rev-parse --abbrev-ref HEAD)
 # ------------------------------ Generate ------------------------------
 
 generate: go-generate openapi protob-docker
+	@git ls-files openapi/gen | xargs sed -i '/^[- ]*API version.*$(shell cat version)/d;/APIClient.*$(shell cat version)/d'
 
 go-generate:
 	@go generate ./...
