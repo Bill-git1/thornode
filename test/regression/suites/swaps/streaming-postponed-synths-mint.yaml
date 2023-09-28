@@ -170,10 +170,10 @@ count: 1
 ---
 type: check
 description: check the withdraw amount
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .|[.tx[]|select(.type == "withdraw")]|length == 1
-  - .tx[]|select(.type == "withdraw")|.emit_rune == ("94_781_86625233" | gsub("_";"")) 
+  - .|[.txs[].result.events[]|select(.type == "withdraw")]|length == 1
+  - .txs[].result.events[]|select(.type == "withdraw")|.emit_rune == ("94_781_86625233" | gsub("_";""))
   # Under 2x the initial rune_redeem_value (noting the asymmetric withdrawal's swap fee),
   # of which the position's initial total value was 2x.
 ---
@@ -202,7 +202,7 @@ asserts:
   - .asset_redeem_value == ("47_75901598" | gsub("_";""))
   - .rune_redeem_value == ("45_351_74408535" | gsub("_";""))
   # Contrast with the initial redeem values of "50_00000000" and "50_000_00000000".
-  # <0.96x now, due to assymmetrical liquidity action swap fees 
+  # <0.96x now, due to assymmetrical liquidity action swap fees
   # (not checking luvi_growth_pct which has been reset by the withdraw and deposit).
 ---
 type: check

@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"gitlab.com/thorchain/thornode/common"
 	gitlab_com_thorchain_thornode_common "gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
+	openapi "gitlab.com/thorchain/thornode/openapi/gen"
 )
 
 // QueryResLastBlockHeights used to return the block height query
@@ -144,6 +146,37 @@ type QueryLiquidityProvider struct {
 	LuviDepositValue   cosmos.Uint    `json:"luvi_deposit_value"`
 	LuviRedeemValue    cosmos.Uint    `json:"luvi_redeem_value"`
 	LuviGrowthPct      cosmos.Dec     `json:"luvi_growth_pct"`
+}
+
+// QueryBlockTx overrides the openapi type with a custom Tx field for marshaling.
+type QueryBlockTx struct {
+	openapi.BlockTx
+	Tx json.RawMessage `json:"tx,omitempty"`
+}
+
+func (q QueryBlockTx) MarshalJSON() ([]byte, error) {
+	toSerialize := map[string]interface{}{}
+	toSerialize["hash"] = q.Hash
+	toSerialize["tx"] = q.Tx
+	toSerialize["result"] = q.Result
+	return json.Marshal(toSerialize)
+}
+
+// QueryBlockResponse overrides the openapi type with a custom Txs field for marshaling.
+type QueryBlockResponse struct {
+	openapi.BlockResponse
+	Txs []QueryBlockTx `json:"txs"`
+}
+
+// MarshalJSON custom marshalling to add the custom Tx field.
+func (q QueryBlockResponse) MarshalJSON() ([]byte, error) {
+	toSerialize := map[string]interface{}{}
+	toSerialize["id"] = q.Id
+	toSerialize["header"] = q.Header
+	toSerialize["begin_block_events"] = q.BeginBlockEvents
+	toSerialize["end_block_events"] = q.EndBlockEvents
+	toSerialize["txs"] = q.Txs
+	return json.Marshal(toSerialize)
 }
 
 // NewQueryLiquidityProvider creates a new QueryLiquidityProvider based on the given liquidity provider and pool

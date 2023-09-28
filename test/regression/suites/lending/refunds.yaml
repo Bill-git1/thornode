@@ -160,11 +160,11 @@ type: create-blocks
 count: 1
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - '[.tx[]|select(.type == "refund")]|length == 1'
-  - .tx[]|select(.type == "refund")|.from == "{{ addr_btc_fox }}"
-  - .tx[]|select(.type == "refund")|.reason|match("no availability .*, lending unavailable")
+  - '[.txs[]|.result.events[]|select(.type=="refund")]|length == 1'
+  - .txs[]|.result.events[]|select(.type=="refund")|.from == "{{ addr_btc_fox }}"
+  - .txs[]|.result.events[]|select(.type=="refund")|.reason|match("no availability .*, lending unavailable")
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
@@ -237,11 +237,11 @@ asserts:
   - .|length == 0
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - '[.end[]|select(.type == "refund")]|length == 1'
-  - .end[]|select(.type == "refund")|.from == "{{ addr_btc_fox }}"
-  - .end[]|select(.type == "refund")|.reason|startswith("fail swap, not enough fee; fail to refund (10100 BTC.BTC)")
-  - .|[.end[]|select(.type=="donate")]|length == 1
-  - .end[]|select(.type=="donate")|.memo == "loan+:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877:0::0:::0"
-  - .end[]|select(.type=="donate")|.coin == "10100 BTC.BTC" # Since added to the pool, the vault-pool invariant isn't broken
+  - '[.end_block_events[]|select(.type == "refund")]|length == 1'
+  - .end_block_events[]|select(.type == "refund")|.from == "{{ addr_btc_fox }}"
+  - .end_block_events[]|select(.type == "refund")|.reason|startswith("fail swap, not enough fee; fail to refund (10100 BTC.BTC)")
+  - .|[.end_block_events[]|select(.type=="donate")]|length == 1
+  - .end_block_events[]|select(.type=="donate")|.memo == "loan+:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877:0::0:::0"
+  - .end_block_events[]|select(.type=="donate")|.coin == "10100 BTC.BTC" # Since added to the pool, the vault-pool invariant isn't broken

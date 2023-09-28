@@ -1770,6 +1770,30 @@ paths:
           description: OK
       tags:
       - Invariants
+  /thorchain/block:
+    get:
+      description: Returns verbose details of the block.
+      operationId: block
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BlockResponse'
+          description: OK
+      tags:
+      - Block
 components:
   parameters:
     queryHeight:
@@ -3153,6 +3177,36 @@ components:
       - total
       - total_bps
       type: object
+    BlockTx:
+      example:
+        result:
+          code: 0
+          codespace: ibc
+          data: ""
+          log: not enough gas
+          gas_used: "100"
+          gas_wanted: "100"
+          events:
+          - key: events
+          - key: events
+          info: ""
+        tx:
+          key: ""
+        hash: 223BF64D4A01074DC523A80E76B9BBC786C791FB0A1893AC5B14866356FCFD6C
+      properties:
+        hash:
+          example: 223BF64D4A01074DC523A80E76B9BBC786C791FB0A1893AC5B14866356FCFD6C
+          type: string
+        tx:
+          additionalProperties: true
+          type: object
+        result:
+          $ref: '#/components/schemas/BlockTx_result'
+      required:
+      - hash
+      - result
+      - tx
+      type: object
     PoolResponse:
       $ref: '#/components/schemas/Pool'
     PoolsResponse:
@@ -4401,6 +4455,98 @@ components:
             $ref: '#/components/schemas/MimirVote'
           type: array
       type: object
+    BlockResponse:
+      example:
+        begin_block_events:
+        - key: begin_block_events
+        - key: begin_block_events
+        end_block_events:
+        - key: end_block_events
+        - key: end_block_events
+        header:
+          validators_hash: D658BFD100CA8025CFD3BECFE86194322731D387286FBD26E059115FD5F2BCA0
+          chain_id: cosmoshub-2
+          consensus_hash: 0F2908883A105C793B74495EB7D6DF2EEA479ED7FC9349206A65CB0F9987A0B8
+          proposer_address: D540AB022088612AC74B287D076DBFBC4A377A2E
+          next_validators_hash: D658BFD100CA8025CFD3BECFE86194322731D387286FBD26E059115FD5F2BCA0
+          version:
+            app: "0"
+            block: "10"
+          data_hash: 970886F99E77ED0D60DA8FCE0447C2676E59F2F77302B0C4AA10E1D02F18EF73
+          last_results_hash: ""
+          last_block_id:
+            parts:
+              total: 1
+              hash: 38D4B26B5B725C4F13571EFE022C030390E4C33C8CF6F88EDD142EA769642DBD
+            hash: 112BC173FD838FB68EB43476816CD7B4C6661B6884A9E357B417EE957E1CF8F7
+          evidence_hash: ""
+          app_hash: 223BF64D4A01074DC523A80E76B9BBC786C791FB0A1893AC5B14866356FCFD6C
+          time: 2019-04-22T17:01:51.701356223Z
+          height: 123
+          last_commit_hash: 21B9BC845AD2CB2C4193CDD17BFC506F1EBE5A7402E84AD96E64171287A34812
+        id:
+          parts:
+            total: 1
+            hash: 38D4B26B5B725C4F13571EFE022C030390E4C33C8CF6F88EDD142EA769642DBD
+          hash: 112BC173FD838FB68EB43476816CD7B4C6661B6884A9E357B417EE957E1CF8F7
+        txs:
+        - result:
+            code: 0
+            codespace: ibc
+            data: ""
+            log: not enough gas
+            gas_used: "100"
+            gas_wanted: "100"
+            events:
+            - key: events
+            - key: events
+            info: ""
+          tx:
+            key: ""
+          hash: 223BF64D4A01074DC523A80E76B9BBC786C791FB0A1893AC5B14866356FCFD6C
+        - result:
+            code: 0
+            codespace: ibc
+            data: ""
+            log: not enough gas
+            gas_used: "100"
+            gas_wanted: "100"
+            events:
+            - key: events
+            - key: events
+            info: ""
+          tx:
+            key: ""
+          hash: 223BF64D4A01074DC523A80E76B9BBC786C791FB0A1893AC5B14866356FCFD6C
+      properties:
+        id:
+          $ref: '#/components/schemas/BlockResponse_id'
+        header:
+          $ref: '#/components/schemas/BlockResponse_header'
+        begin_block_events:
+          items:
+            additionalProperties:
+              type: string
+            type: object
+          type: array
+        end_block_events:
+          items:
+            additionalProperties:
+              type: string
+            type: object
+          type: array
+        txs:
+          items:
+            $ref: '#/components/schemas/BlockTx'
+          nullable: true
+          type: array
+      required:
+      - begin_block_events
+      - end_block_events
+      - header
+      - id
+      - txs
+      type: object
     baseQuoteResponse:
       properties:
         inbound_address:
@@ -5203,6 +5349,49 @@ components:
           type: string
       title: NodeKeygenMetric
       type: object
+    BlockTx_result:
+      example:
+        code: 0
+        codespace: ibc
+        data: ""
+        log: not enough gas
+        gas_used: "100"
+        gas_wanted: "100"
+        events:
+        - key: events
+        - key: events
+        info: ""
+      properties:
+        code:
+          example: 0
+          format: int64
+          type: integer
+        data:
+          example: ""
+          type: string
+        log:
+          example: not enough gas
+          type: string
+        info:
+          example: ""
+          type: string
+        gas_wanted:
+          example: "100"
+          type: string
+        gas_used:
+          example: "100"
+          type: string
+        events:
+          items:
+            additionalProperties:
+              type: string
+            type: object
+          nullable: true
+          type: array
+        codespace:
+          example: ibc
+          type: string
+      type: object
     TxStagesResponse_inbound_observed:
       example:
         pre_confirmation_count: 80
@@ -5507,4 +5696,131 @@ components:
         signer:
           type: string
       title: MimirVote
+      type: object
+    BlockResponse_id_parts:
+      example:
+        total: 1
+        hash: 38D4B26B5B725C4F13571EFE022C030390E4C33C8CF6F88EDD142EA769642DBD
+      properties:
+        total:
+          example: 1
+          format: int64
+          type: integer
+        hash:
+          example: 38D4B26B5B725C4F13571EFE022C030390E4C33C8CF6F88EDD142EA769642DBD
+          type: string
+      required:
+      - hash
+      - total
+      type: object
+    BlockResponse_id:
+      example:
+        parts:
+          total: 1
+          hash: 38D4B26B5B725C4F13571EFE022C030390E4C33C8CF6F88EDD142EA769642DBD
+        hash: 112BC173FD838FB68EB43476816CD7B4C6661B6884A9E357B417EE957E1CF8F7
+      properties:
+        hash:
+          example: 112BC173FD838FB68EB43476816CD7B4C6661B6884A9E357B417EE957E1CF8F7
+          type: string
+        parts:
+          $ref: '#/components/schemas/BlockResponse_id_parts'
+      required:
+      - hash
+      - parts
+      type: object
+    BlockResponse_header_version:
+      example:
+        app: "0"
+        block: "10"
+      properties:
+        block:
+          example: "10"
+          type: string
+        app:
+          example: "0"
+          type: string
+      required:
+      - app
+      - block
+      type: object
+    BlockResponse_header:
+      example:
+        validators_hash: D658BFD100CA8025CFD3BECFE86194322731D387286FBD26E059115FD5F2BCA0
+        chain_id: cosmoshub-2
+        consensus_hash: 0F2908883A105C793B74495EB7D6DF2EEA479ED7FC9349206A65CB0F9987A0B8
+        proposer_address: D540AB022088612AC74B287D076DBFBC4A377A2E
+        next_validators_hash: D658BFD100CA8025CFD3BECFE86194322731D387286FBD26E059115FD5F2BCA0
+        version:
+          app: "0"
+          block: "10"
+        data_hash: 970886F99E77ED0D60DA8FCE0447C2676E59F2F77302B0C4AA10E1D02F18EF73
+        last_results_hash: ""
+        last_block_id:
+          parts:
+            total: 1
+            hash: 38D4B26B5B725C4F13571EFE022C030390E4C33C8CF6F88EDD142EA769642DBD
+          hash: 112BC173FD838FB68EB43476816CD7B4C6661B6884A9E357B417EE957E1CF8F7
+        evidence_hash: ""
+        app_hash: 223BF64D4A01074DC523A80E76B9BBC786C791FB0A1893AC5B14866356FCFD6C
+        time: 2019-04-22T17:01:51.701356223Z
+        height: 123
+        last_commit_hash: 21B9BC845AD2CB2C4193CDD17BFC506F1EBE5A7402E84AD96E64171287A34812
+      properties:
+        version:
+          $ref: '#/components/schemas/BlockResponse_header_version'
+        chain_id:
+          example: cosmoshub-2
+          type: string
+        height:
+          example: 123
+          format: int64
+          type: integer
+        time:
+          example: 2019-04-22T17:01:51.701356223Z
+          type: string
+        last_block_id:
+          $ref: '#/components/schemas/BlockResponse_id'
+        last_commit_hash:
+          example: 21B9BC845AD2CB2C4193CDD17BFC506F1EBE5A7402E84AD96E64171287A34812
+          type: string
+        data_hash:
+          example: 970886F99E77ED0D60DA8FCE0447C2676E59F2F77302B0C4AA10E1D02F18EF73
+          type: string
+        validators_hash:
+          example: D658BFD100CA8025CFD3BECFE86194322731D387286FBD26E059115FD5F2BCA0
+          type: string
+        next_validators_hash:
+          example: D658BFD100CA8025CFD3BECFE86194322731D387286FBD26E059115FD5F2BCA0
+          type: string
+        consensus_hash:
+          example: 0F2908883A105C793B74495EB7D6DF2EEA479ED7FC9349206A65CB0F9987A0B8
+          type: string
+        app_hash:
+          example: 223BF64D4A01074DC523A80E76B9BBC786C791FB0A1893AC5B14866356FCFD6C
+          type: string
+        last_results_hash:
+          example: ""
+          type: string
+        evidence_hash:
+          example: ""
+          type: string
+        proposer_address:
+          example: D540AB022088612AC74B287D076DBFBC4A377A2E
+          type: string
+      required:
+      - app_hash
+      - chain_id
+      - consensus_hash
+      - data_hash
+      - evidence_hash
+      - height
+      - last_block_id
+      - last_commit_hash
+      - last_results_hash
+      - next_validators_hash
+      - proposer_address
+      - time
+      - validators_hash
+      - version
       type: object

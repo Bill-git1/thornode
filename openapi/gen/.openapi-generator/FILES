@@ -2,6 +2,7 @@
 .travis.yml
 README.md
 api/openapi.yaml
+api_block.go
 api_borrowers.go
 api_health.go
 api_invariants.go
@@ -23,6 +24,14 @@ client.go
 configuration.go
 docs/BanResponse.md
 docs/BaseQuoteResponse.md
+docs/BlockApi.md
+docs/BlockResponse.md
+docs/BlockResponseHeader.md
+docs/BlockResponseHeaderVersion.md
+docs/BlockResponseId.md
+docs/BlockResponseIdParts.md
+docs/BlockTx.md
+docs/BlockTxResult.md
 docs/Borrower.md
 docs/BorrowersApi.md
 docs/ChainHeight.md
@@ -111,6 +120,13 @@ go.mod
 go.sum
 model_ban_response.go
 model_base_quote_response.go
+model_block_response.go
+model_block_response_header.go
+model_block_response_header_version.go
+model_block_response_id.go
+model_block_response_id_parts.go
+model_block_tx.go
+model_block_tx_result.go
 model_borrower.go
 model_chain_height.go
 model_coin.go

@@ -262,6 +262,14 @@ func Init() {
 	if err := viper.Unmarshal(&config); err != nil {
 		log.Fatal().Err(err).Msg("failed to unmarshal config")
 	}
+
+	// dynamically set rpc listen address
+	if config.Thornode.Tendermint.RPC.ListenAddress == "" {
+		config.Thornode.Tendermint.RPC.ListenAddress = fmt.Sprintf("tcp://0.0.0.0:%d", rpcPort)
+	}
+	if config.Thornode.Tendermint.P2P.ListenAddress == "" {
+		config.Thornode.Tendermint.P2P.ListenAddress = fmt.Sprintf("tcp://0.0.0.0:%d", p2pPort)
+	}
 }
 
 func InitBifrost() {
@@ -328,14 +336,6 @@ func InitThornode(ctx context.Context) {
 	// dynamically set seeds
 	seedAddrs, tmSeeds := thornodeSeeds()
 	config.Thornode.Tendermint.P2P.Seeds = strings.Join(tmSeeds, ",")
-
-	// dynamically set rpc listen address
-	if config.Thornode.Tendermint.RPC.ListenAddress == "" {
-		config.Thornode.Tendermint.RPC.ListenAddress = fmt.Sprintf("tcp://0.0.0.0:%d", rpcPort)
-	}
-	if config.Thornode.Tendermint.P2P.ListenAddress == "" {
-		config.Thornode.Tendermint.P2P.ListenAddress = fmt.Sprintf("tcp://0.0.0.0:%d", p2pPort)
-	}
 
 	// set the Tendermint external address
 	if os.Getenv("EXTERNAL_IP") != "" {

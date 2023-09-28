@@ -85,9 +85,9 @@ count: 1
 ---
 type: check
 description: there should be no set_mimir events
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .|[.tx[]?|select(.type == "set_mimir")]|length == 0
+  - .|[.txs[].result.events[]|select(.type == "set_mimir")]|length == 0
 ---
 type: tx-solvency
 signer: {{ addr_thor_dog }}
@@ -121,6 +121,6 @@ asserts:
 ---
 type: check
 description: there should be only one set_mimir event
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .|[.tx[]?|select(.type == "set_mimir")]|length == 1
+  - .|[.txs[].result.events[]|select(.type == "set_mimir")]|length == 1

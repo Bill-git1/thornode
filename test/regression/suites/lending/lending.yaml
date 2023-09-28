@@ -288,9 +288,9 @@ asserts:
 ---
 type: check
 description: should emit 5 mint_burn events
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .|[.end[]|select(.type == "mint_burn")]|length == 5
+  - .|[.end_block_events[]|select(.type == "mint_burn")]|length == 5
 ---
 ########################################################################################
 # open loan btc -> eth
@@ -380,9 +380,9 @@ txs:
 ---
 type: check
 description: should emit 5 mint_burn events
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .|[.end[]|select(.type == "mint_burn")]|length == 5
+  - .|[.end_block_events[]|select(.type == "mint_burn")]|length == 5
 ---
 type: create-blocks
 count: 1
@@ -601,9 +601,9 @@ txs:
 ---
 type: check
 description: should emit 5 mint_burn events
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .|[.end[]|select(.type == "mint_burn")]|length == 5
+  - .|[.end_block_events[]|select(.type == "mint_burn")]|length == 5
 ---
 type: create-blocks
 count: 1

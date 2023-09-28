@@ -586,8 +586,8 @@ asserts:
 ---
 type: check
 description: confirm that refunded
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .|[.end[]|select(.type == "refund")]|length == 1
-  - .end[]|select(.type == "refund")|.from == "{{ addr_thor_fox }}"
-  - .end[]|select(.type == "refund")|.reason == "a network module cannot be the final destination of a swap memo"
+  - .|[.end_block_events[]|select(.type == "refund")]|length == 1
+  - .end_block_events[]|select(.type == "refund")|.from == "{{ addr_thor_fox }}"
+  - .end_block_events[]|select(.type == "refund")|.reason == "a network module cannot be the final destination of a swap memo"

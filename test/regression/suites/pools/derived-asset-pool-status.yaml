@@ -53,12 +53,12 @@ asserts:
 ---
 type: check
 description: there should be one THOR.BTC Available pool event emitted
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .|[.begin[]|select(.type == "pool")]|length == 1
-  - .begin[]|select(.type == "pool")|.type == "pool"
-  - .begin[]|select(.type == "pool")|.pool == "THOR.BTC"
-  - .begin[]|select(.type == "pool")|.pool_status == "Available"
+  - .|[.begin_block_events[]|select(.type == "pool")]|length == 1
+  - .begin_block_events[]|select(.type == "pool")|.type == "pool"
+  - .begin_block_events[]|select(.type == "pool")|.pool == "THOR.BTC"
+  - .begin_block_events[]|select(.type == "pool")|.pool_status == "Available"
 ---
 type: create-blocks
 count: 1
@@ -75,9 +75,9 @@ asserts:
 ---
 type: check
 description: there should be no pool event emitted
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .|[.begin[]|select(.type == "pool")]|length == 0
+  - .|[.begin_block_events[]|select(.type == "pool")]|length == 0
 ---
 ########################################################################################
 # no longer allow THOR.BTC derived asset pool
@@ -102,9 +102,9 @@ asserts:
 ---
 type: check
 description: there should be no pool event emitted
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .|[.begin[]|select(.type == "pool")]|length == 0
+  - .|[.begin_block_events[]|select(.type == "pool")]|length == 0
 ---
 ########################################################################################
 # expect the THOR.BTC pool to be suspended and emit only one Suspended status event
@@ -127,12 +127,12 @@ asserts:
 ---
 type: check
 description: there should be one THOR.BTC Suspended pool event emitted
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .begin|length == 1
-  - .begin[0].type == "pool"
-  - .begin[0].pool == "THOR.BTC"
-  - .begin[0].pool_status == "Suspended"
+  - .begin_block_events|length == 1
+  - .begin_block_events[0].type == "pool"
+  - .begin_block_events[0].pool == "THOR.BTC"
+  - .begin_block_events[0].pool_status == "Suspended"
 ---
 type: create-blocks
 count: 1
@@ -145,9 +145,9 @@ asserts:
 ---
 type: check
 description: there should be no pool event emitted
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .begin|length == 0
+  - .begin_block_events|length == 0
 ---
 ########################################################################################
 # allow THOR.BTC derived asset pool again
@@ -168,9 +168,9 @@ asserts:
 ---
 type: check
 description: there should be no pool event emitted
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .begin|length == 0
+  - .begin_block_events|length == 0
 ---
 ########################################################################################
 # expect the THOR.BTC pool to exist and emit only one Available status event
@@ -190,12 +190,12 @@ asserts:
 ---
 type: check
 description: there should be one THOR.BTC Available pool event emitted
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .|[.begin[]|select(.type == "pool")]|length == 1
-  - .begin[]|select(.type == "pool")|.type == "pool"
-  - .begin[]|select(.type == "pool")|.pool == "THOR.BTC"
-  - .begin[]|select(.type == "pool")|.pool_status == "Available"
+  - .|[.begin_block_events[]|select(.type == "pool")]|length == 1
+  - .begin_block_events[]|select(.type == "pool")|.type == "pool"
+  - .begin_block_events[]|select(.type == "pool")|.pool == "THOR.BTC"
+  - .begin_block_events[]|select(.type == "pool")|.pool_status == "Available"
 ---
 type: create-blocks
 count: 1
@@ -212,6 +212,6 @@ asserts:
 ---
 type: check
 description: there should be no pool event emitted
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .|[.begin[]|select(.type == "pool")]|length == 0
+  - .|[.begin_block_events[]|select(.type == "pool")]|length == 0

@@ -89,10 +89,10 @@ var (
 	QueryQuoteLoanClose      = Query{Key: "quoteloanclose", EndpointTemplate: "/%s/quote/loan/close"}
 	QueryInvariants          = Query{Key: "invariants", EndpointTemplate: "/%s/invariants"}
 	QueryInvariant           = Query{Key: "invariant", EndpointTemplate: "/%s/invariant/{%s}"}
+	QueryBlock               = Query{Key: "block", EndpointTemplate: "/%s/block"}
 
 	// queries only available on regtest builds
-	QueryExport      = Query{Key: "export", EndpointTemplate: "/%s/export"}
-	QueryBlockEvents = Query{Key: "blockevents", EndpointTemplate: "/%s/blockevents"}
+	QueryExport = Query{Key: "export", EndpointTemplate: "/%s/export"}
 )
 
 // Queries all queries
@@ -153,6 +153,6 @@ var Queries = []Query{
 	QueryQuoteLoanClose,
 	QueryInvariants,
 	QueryInvariant,
+	QueryBlock,
 	QueryExport,
-	QueryBlockEvents,
 }

@@ -159,9 +159,9 @@ count: 1
 ---
 type: check
 description: withdraw should have ILP
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .tx[]|select(.imp_loss_protection)|.imp_loss_protection|tonumber == 1360244
+  - .txs[].result.events[]|select(.imp_loss_protection)|.imp_loss_protection|tonumber == 1360244
 ---
 ########################################################################################
 # verify ILP is paid with cutoff in the future
@@ -189,9 +189,9 @@ count: 1
 ---
 type: check
 description: withdraw should have ILP with cutoff in the future
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .tx[]|select(.imp_loss_protection)|.imp_loss_protection|tonumber == 2785127
+  - .txs[].result.events[]|select(.imp_loss_protection)|.imp_loss_protection|tonumber == 2785127
 ---
 ########################################################################################
 # verify ILP is not paid with cutoff in the past
@@ -219,6 +219,6 @@ count: 1
 ---
 type: check
 description: withdraw should have no ILP
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .tx[]|select(.imp_loss_protection)|.imp_loss_protection|tonumber == 0
+  - .txs[].result.events[]|select(.imp_loss_protection)|.imp_loss_protection|tonumber == 0

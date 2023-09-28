@@ -239,12 +239,12 @@ asserts:
 ---
 type: check
 description: check PreferredAsset swap event
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .|[.end[]|select(.type == "scheduled_outbound")]|length == 2
-  - .|[.end[]|select(.type == "scheduled_outbound")]|.[1].to_address == "{{ addr_btc_pig }}"
-  - .|[.end[]|select(.type == "scheduled_outbound")]|.[1].coin_amount == "1503986"
-  - .|[.end[]|select(.type == "scheduled_outbound")]|.[1].coin_asset == "BTC.BTC"
+  - .|[.end_block_events[]|select(.type == "scheduled_outbound")]|length == 2
+  - .|[.end_block_events[]|select(.type == "scheduled_outbound")]|.[1].to_address == "{{ addr_btc_pig }}"
+  - .|[.end_block_events[]|select(.type == "scheduled_outbound")]|.[1].coin_amount == "1503986"
+  - .|[.end_block_events[]|select(.type == "scheduled_outbound")]|.[1].coin_asset == "BTC.BTC"
 ---
 type: check
 description: two outbounds should be queued, the main swap and the preferred asset swap
@@ -430,6 +430,6 @@ asserts:
 ---
 type: check
 description: no refund for preferred asset swap
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .|[.end[]|select(.type == "refund")]|length == 0
+  - .|[.end_block_events[]|select(.type == "refund")]|length == 0

@@ -78,6 +78,7 @@ All URIs are relative to *http://localhost*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
+*BlockApi* | [**Block**](docs/BlockApi.md#block) | **Get** /thorchain/block | 
 *BorrowersApi* | [**Borrower**](docs/BorrowersApi.md#borrower) | **Get** /thorchain/pool/{asset}/borrower/{address} | 
 *BorrowersApi* | [**Borrowers**](docs/BorrowersApi.md#borrowers) | **Get** /thorchain/pool/{asset}/borrowers | 
 *HealthApi* | [**Ping**](docs/HealthApi.md#ping) | **Get** /thorchain/ping | 
@@ -138,6 +139,13 @@ Class | Method | HTTP request | Description
 
  - [BanResponse](docs/BanResponse.md)
  - [BaseQuoteResponse](docs/BaseQuoteResponse.md)
+ - [BlockResponse](docs/BlockResponse.md)
+ - [BlockResponseHeader](docs/BlockResponseHeader.md)
+ - [BlockResponseHeaderVersion](docs/BlockResponseHeaderVersion.md)
+ - [BlockResponseId](docs/BlockResponseId.md)
+ - [BlockResponseIdParts](docs/BlockResponseIdParts.md)
+ - [BlockTx](docs/BlockTx.md)
+ - [BlockTxResult](docs/BlockTxResult.md)
  - [Borrower](docs/Borrower.md)
  - [ChainHeight](docs/ChainHeight.md)
  - [Coin](docs/Coin.md)

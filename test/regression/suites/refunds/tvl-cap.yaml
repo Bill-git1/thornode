@@ -43,9 +43,9 @@ count: 1
 ---
 type: check
 description: outbound refund reason should be set
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .end[]|select(.type == "refund")|.reason == "add liquidity rune is more than bond"
+  - .end_block_events[]|select(.type == "refund")|.reason == "add liquidity rune is more than bond"
 ---
 type: check
 description: outbound should exist
