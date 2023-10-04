@@ -2638,6 +2638,10 @@ components:
       type: object
     ObservedTx:
       example:
+        signers:
+        - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+        - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+        keysign_ms: 10000
         tx:
           chain: BTC
           coins:
@@ -2658,63 +2662,25 @@ components:
           to_address: bcrt1qf3s7q037eancht7sg0aj995dht25rwrnqsf45e
           id: CF524818D42B63D25BBA0CCC4909F127CAA645C0F9CD07324F2824CC151A64C7
           from_address: bcrt1q0s4mg25tu6termrk8egltfyme4q7sg3h8kkydt
-        aggregator: 0x69800327b38A4CeF30367Dec3f64c2f2386f3848
-        observed_pub_key: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
-        external_confirmation_delay_height: 7581334
-        block_height: 7581334
-        aggregator_target_limit: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
-        signers:
-        - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
-        - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
-        keysign_ms: 10000
         aggregator_target: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
         out_hashes:
         - E17A0906E015F0C343691C18E475C8CB5F3F6C63F5BCDE0F3A341909763CC92B
         - E17A0906E015F0C343691C18E475C8CB5F3F6C63F5BCDE0F3A341909763CC92B
+        aggregator: 0x69800327b38A4CeF30367Dec3f64c2f2386f3848
+        observed_pub_key: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
         external_observed_height: 7581334
-        finalise_height: 7581334
+        external_confirmation_delay_height: 7581334
+        aggregator_target_limit: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
         status: done
       properties:
         tx:
           $ref: '#/components/schemas/Tx'
-        status:
-          enum:
-          - done
-          - incomplete
-          example: done
-          type: string
-        out_hashes:
-          items:
-            example: E17A0906E015F0C343691C18E475C8CB5F3F6C63F5BCDE0F3A341909763CC92B
-            type: string
-          type: array
-        block_height:
-          description: "same as external_observed_height, to be deprecated in favour\
-            \ of external_observed_height"
-          example: 7581334
-          format: int64
-          type: integer
-        external_observed_height:
-          description: "the block height on the external source chain when the transaction\
-            \ was observed, not provided if chain is THOR"
-          example: 7581334
-          format: int64
-          type: integer
-        signers:
-          items:
-            example: thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
-            type: string
-          type: array
         observed_pub_key:
           example: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
           type: string
-        keysign_ms:
-          example: 10000
-          format: int64
-          type: integer
-        finalise_height:
-          description: "same as external_confirmation_delay_height, to be deprecated\
-            \ in favour of external_confirmation_delay_height"
+        external_observed_height:
+          description: "the block height on the external source chain when the transaction\
+            \ was observed, not provided if chain is THOR"
           example: 7581334
           format: int64
           type: integer
@@ -2735,6 +2701,26 @@ components:
         aggregator_target_limit:
           description: the aggregator target asset limit provided to transferOutAndCall
           example: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
+          type: string
+        signers:
+          items:
+            example: thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+            type: string
+          type: array
+        keysign_ms:
+          example: 10000
+          format: int64
+          type: integer
+        out_hashes:
+          items:
+            example: E17A0906E015F0C343691C18E475C8CB5F3F6C63F5BCDE0F3A341909763CC92B
+            type: string
+          type: array
+        status:
+          enum:
+          - done
+          - incomplete
+          example: done
           type: string
       required:
       - tx
@@ -3240,6 +3226,10 @@ components:
     TxResponse:
       example:
         observed_tx:
+          signers:
+          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+          keysign_ms: 10000
           tx:
             chain: BTC
             coins:
@@ -3260,21 +3250,15 @@ components:
             to_address: bcrt1qf3s7q037eancht7sg0aj995dht25rwrnqsf45e
             id: CF524818D42B63D25BBA0CCC4909F127CAA645C0F9CD07324F2824CC151A64C7
             from_address: bcrt1q0s4mg25tu6termrk8egltfyme4q7sg3h8kkydt
-          aggregator: 0x69800327b38A4CeF30367Dec3f64c2f2386f3848
-          observed_pub_key: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
-          external_confirmation_delay_height: 7581334
-          block_height: 7581334
-          aggregator_target_limit: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
-          signers:
-          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
-          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
-          keysign_ms: 10000
           aggregator_target: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
           out_hashes:
           - E17A0906E015F0C343691C18E475C8CB5F3F6C63F5BCDE0F3A341909763CC92B
           - E17A0906E015F0C343691C18E475C8CB5F3F6C63F5BCDE0F3A341909763CC92B
+          aggregator: 0x69800327b38A4CeF30367Dec3f64c2f2386f3848
+          observed_pub_key: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
           external_observed_height: 7581334
-          finalise_height: 7581334
+          external_confirmation_delay_height: 7581334
+          aggregator_target_limit: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
           status: done
         keysign_metric:
           tx_id: tx_id
@@ -3310,6 +3294,10 @@ components:
     TxDetailsResponse:
       example:
         tx:
+          signers:
+          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+          keysign_ms: 10000
           tx:
             chain: BTC
             coins:
@@ -3330,21 +3318,15 @@ components:
             to_address: bcrt1qf3s7q037eancht7sg0aj995dht25rwrnqsf45e
             id: CF524818D42B63D25BBA0CCC4909F127CAA645C0F9CD07324F2824CC151A64C7
             from_address: bcrt1q0s4mg25tu6termrk8egltfyme4q7sg3h8kkydt
-          aggregator: 0x69800327b38A4CeF30367Dec3f64c2f2386f3848
-          observed_pub_key: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
-          external_confirmation_delay_height: 7581334
-          block_height: 7581334
-          aggregator_target_limit: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
-          signers:
-          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
-          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
-          keysign_ms: 10000
           aggregator_target: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
           out_hashes:
           - E17A0906E015F0C343691C18E475C8CB5F3F6C63F5BCDE0F3A341909763CC92B
           - E17A0906E015F0C343691C18E475C8CB5F3F6C63F5BCDE0F3A341909763CC92B
+          aggregator: 0x69800327b38A4CeF30367Dec3f64c2f2386f3848
+          observed_pub_key: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
           external_observed_height: 7581334
-          finalise_height: 7581334
+          external_confirmation_delay_height: 7581334
+          aggregator_target_limit: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
           status: done
         out_txs:
         - chain: BTC
@@ -3429,7 +3411,11 @@ components:
             asset: BTC.BTC
           height: 1234
         txs:
-        - tx:
+        - signers:
+          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+          keysign_ms: 10000
+          tx:
             chain: BTC
             coins:
             - amount: "100000"
@@ -3449,23 +3435,21 @@ components:
             to_address: bcrt1qf3s7q037eancht7sg0aj995dht25rwrnqsf45e
             id: CF524818D42B63D25BBA0CCC4909F127CAA645C0F9CD07324F2824CC151A64C7
             from_address: bcrt1q0s4mg25tu6termrk8egltfyme4q7sg3h8kkydt
-          aggregator: 0x69800327b38A4CeF30367Dec3f64c2f2386f3848
-          observed_pub_key: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
-          external_confirmation_delay_height: 7581334
-          block_height: 7581334
-          aggregator_target_limit: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
-          signers:
-          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
-          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
-          keysign_ms: 10000
           aggregator_target: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
           out_hashes:
           - E17A0906E015F0C343691C18E475C8CB5F3F6C63F5BCDE0F3A341909763CC92B
           - E17A0906E015F0C343691C18E475C8CB5F3F6C63F5BCDE0F3A341909763CC92B
+          aggregator: 0x69800327b38A4CeF30367Dec3f64c2f2386f3848
+          observed_pub_key: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
           external_observed_height: 7581334
-          finalise_height: 7581334
+          external_confirmation_delay_height: 7581334
+          aggregator_target_limit: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
           status: done
-        - tx:
+        - signers:
+          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+          keysign_ms: 10000
+          tx:
             chain: BTC
             coins:
             - amount: "100000"
@@ -3485,21 +3469,15 @@ components:
             to_address: bcrt1qf3s7q037eancht7sg0aj995dht25rwrnqsf45e
             id: CF524818D42B63D25BBA0CCC4909F127CAA645C0F9CD07324F2824CC151A64C7
             from_address: bcrt1q0s4mg25tu6termrk8egltfyme4q7sg3h8kkydt
-          aggregator: 0x69800327b38A4CeF30367Dec3f64c2f2386f3848
-          observed_pub_key: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
-          external_confirmation_delay_height: 7581334
-          block_height: 7581334
-          aggregator_target_limit: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
-          signers:
-          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
-          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
-          keysign_ms: 10000
           aggregator_target: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
           out_hashes:
           - E17A0906E015F0C343691C18E475C8CB5F3F6C63F5BCDE0F3A341909763CC92B
           - E17A0906E015F0C343691C18E475C8CB5F3F6C63F5BCDE0F3A341909763CC92B
+          aggregator: 0x69800327b38A4CeF30367Dec3f64c2f2386f3848
+          observed_pub_key: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
           external_observed_height: 7581334
-          finalise_height: 7581334
+          external_confirmation_delay_height: 7581334
+          aggregator_target_limit: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
           status: done
         finalised_height: 7581334
         reverted: false
@@ -3551,6 +3529,10 @@ components:
     TxSignersResponse:
       example:
         tx:
+          signers:
+          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+          keysign_ms: 10000
           tx:
             chain: BTC
             coins:
@@ -3571,21 +3553,15 @@ components:
             to_address: bcrt1qf3s7q037eancht7sg0aj995dht25rwrnqsf45e
             id: CF524818D42B63D25BBA0CCC4909F127CAA645C0F9CD07324F2824CC151A64C7
             from_address: bcrt1q0s4mg25tu6termrk8egltfyme4q7sg3h8kkydt
-          aggregator: 0x69800327b38A4CeF30367Dec3f64c2f2386f3848
-          observed_pub_key: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
-          external_confirmation_delay_height: 7581334
-          block_height: 7581334
-          aggregator_target_limit: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
-          signers:
-          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
-          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
-          keysign_ms: 10000
           aggregator_target: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
           out_hashes:
           - E17A0906E015F0C343691C18E475C8CB5F3F6C63F5BCDE0F3A341909763CC92B
           - E17A0906E015F0C343691C18E475C8CB5F3F6C63F5BCDE0F3A341909763CC92B
+          aggregator: 0x69800327b38A4CeF30367Dec3f64c2f2386f3848
+          observed_pub_key: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
           external_observed_height: 7581334
-          finalise_height: 7581334
+          external_confirmation_delay_height: 7581334
+          aggregator_target_limit: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
           status: done
         out_txs:
         - chain: BTC
@@ -3670,7 +3646,11 @@ components:
             asset: BTC.BTC
           height: 1234
         txs:
-        - tx:
+        - signers:
+          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+          keysign_ms: 10000
+          tx:
             chain: BTC
             coins:
             - amount: "100000"
@@ -3690,23 +3670,21 @@ components:
             to_address: bcrt1qf3s7q037eancht7sg0aj995dht25rwrnqsf45e
             id: CF524818D42B63D25BBA0CCC4909F127CAA645C0F9CD07324F2824CC151A64C7
             from_address: bcrt1q0s4mg25tu6termrk8egltfyme4q7sg3h8kkydt
-          aggregator: 0x69800327b38A4CeF30367Dec3f64c2f2386f3848
-          observed_pub_key: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
-          external_confirmation_delay_height: 7581334
-          block_height: 7581334
-          aggregator_target_limit: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
-          signers:
-          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
-          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
-          keysign_ms: 10000
           aggregator_target: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
           out_hashes:
           - E17A0906E015F0C343691C18E475C8CB5F3F6C63F5BCDE0F3A341909763CC92B
           - E17A0906E015F0C343691C18E475C8CB5F3F6C63F5BCDE0F3A341909763CC92B
+          aggregator: 0x69800327b38A4CeF30367Dec3f64c2f2386f3848
+          observed_pub_key: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
           external_observed_height: 7581334
-          finalise_height: 7581334
+          external_confirmation_delay_height: 7581334
+          aggregator_target_limit: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
           status: done
-        - tx:
+        - signers:
+          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+          keysign_ms: 10000
+          tx:
             chain: BTC
             coins:
             - amount: "100000"
@@ -3726,21 +3704,15 @@ components:
             to_address: bcrt1qf3s7q037eancht7sg0aj995dht25rwrnqsf45e
             id: CF524818D42B63D25BBA0CCC4909F127CAA645C0F9CD07324F2824CC151A64C7
             from_address: bcrt1q0s4mg25tu6termrk8egltfyme4q7sg3h8kkydt
-          aggregator: 0x69800327b38A4CeF30367Dec3f64c2f2386f3848
-          observed_pub_key: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
-          external_confirmation_delay_height: 7581334
-          block_height: 7581334
-          aggregator_target_limit: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
-          signers:
-          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
-          - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
-          keysign_ms: 10000
           aggregator_target: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
           out_hashes:
           - E17A0906E015F0C343691C18E475C8CB5F3F6C63F5BCDE0F3A341909763CC92B
           - E17A0906E015F0C343691C18E475C8CB5F3F6C63F5BCDE0F3A341909763CC92B
+          aggregator: 0x69800327b38A4CeF30367Dec3f64c2f2386f3848
+          observed_pub_key: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
           external_observed_height: 7581334
-          finalise_height: 7581334
+          external_confirmation_delay_height: 7581334
+          aggregator_target_limit: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
           status: done
         finalised_height: 7581334
         reverted: false

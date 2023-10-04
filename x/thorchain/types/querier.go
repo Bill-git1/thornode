@@ -262,36 +262,32 @@ func NewQueryNodeAccount(na NodeAccount) QueryNodeAccount {
 // QueryObservedTx holds all the information related to the ObservedTx
 type QueryObservedTx struct {
 	Tx                              common.Tx     `json:"tx"`
-	Status                          Status        `json:"status,omitempty"`
-	OutHashes                       []string      `json:"out_hashes,omitempty"`
-	BlockHeight                     int64         `json:"block_height,omitempty"`
-	ExternalObservedHeight          int64         `json:"external_observed_height,omitempty"`
-	Signers                         []string      `json:"signers,omitempty"`
 	ObservedPubKey                  common.PubKey `json:"observed_pub_key,omitempty"`
-	KeysignMs                       int64         `json:"keysign_ms,omitempty"`
-	FinaliseHeight                  int64         `json:"finalise_height,omitempty"`
+	ExternalObservedHeight          int64         `json:"external_observed_height,omitempty"`
 	ExternalConfirmationDelayHeight int64         `json:"external_confirmation_delay_height,omitempty"`
 	Aggregator                      string        `json:"aggregator,omitempty"`
 	AggregatorTarget                string        `json:"aggregator_target,omitempty"`
 	AggregatorTargetLimit           *cosmos.Uint  `json:"aggregator_target_limit,omitempty"`
+	Signers                         []string      `json:"signers,omitempty"`
+	KeysignMs                       int64         `json:"keysign_ms,omitempty"`
+	OutHashes                       []string      `json:"out_hashes,omitempty"`
+	Status                          Status        `json:"status,omitempty"`
 }
 
 // NewQueryObservedTx create a new QueryObservedTx based on the given ObservedTx parameters
 func NewQueryObservedTx(obTx ObservedTx) QueryObservedTx {
 	return QueryObservedTx{
 		Tx:                              obTx.Tx,
-		Status:                          obTx.Status,
-		OutHashes:                       obTx.OutHashes,
-		BlockHeight:                     obTx.BlockHeight,
-		ExternalObservedHeight:          obTx.BlockHeight,
-		Signers:                         obTx.Signers,
 		ObservedPubKey:                  obTx.ObservedPubKey,
-		KeysignMs:                       obTx.KeysignMs,
-		FinaliseHeight:                  obTx.FinaliseHeight,
+		ExternalObservedHeight:          obTx.BlockHeight,
 		ExternalConfirmationDelayHeight: obTx.FinaliseHeight,
 		Aggregator:                      obTx.Aggregator,
 		AggregatorTarget:                obTx.AggregatorTarget,
 		AggregatorTargetLimit:           obTx.AggregatorTargetLimit,
+		Signers:                         obTx.Signers,
+		KeysignMs:                       obTx.KeysignMs,
+		OutHashes:                       obTx.OutHashes,
+		Status:                          obTx.Status,
 	}
 }
 

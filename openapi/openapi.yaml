@@ -1805,42 +1805,14 @@ components:
       properties:
         tx:
           $ref: "#/components/schemas/Tx"
-        status:
+        observed_pub_key:
           type: string
-          enum: ["done", "incomplete"]
-          example: "done"
-        out_hashes:
-          type: array
-          items:
-            type: string
-            example: "E17A0906E015F0C343691C18E475C8CB5F3F6C63F5BCDE0F3A341909763CC92B"
-        block_height:
-          type: integer
-          format: int64
-          example: 7581334
-          description: same as external_observed_height, to be deprecated in favour of external_observed_height
+          example: "thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe"
         external_observed_height:
           type: integer
           format: int64
           example: 7581334
           description: the block height on the external source chain when the transaction was observed, not provided if chain is THOR
-        signers:
-          type: array
-          items:
-            type: string
-            example: "thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5"
-        observed_pub_key:
-          type: string
-          example: "thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe"
-        keysign_ms:
-          type: integer
-          format: int64
-          example: 10000
-        finalise_height:
-          type: integer
-          format: int64
-          example: 7581334
-          description: same as external_confirmation_delay_height, to be deprecated in favour of external_confirmation_delay_height
         external_confirmation_delay_height:
           type: integer
           format: int64
@@ -1858,6 +1830,24 @@ components:
           type: string
           description: the aggregator target asset limit provided to transferOutAndCall
           example: "0x0a44986b70527154e9F4290eC14e5f0D1C861822"
+        signers:
+          type: array
+          items:
+            type: string
+            example: "thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5"
+        keysign_ms:
+          type: integer
+          format: int64
+          example: 10000
+        out_hashes:
+          type: array
+          items:
+            type: string
+            example: "E17A0906E015F0C343691C18E475C8CB5F3F6C63F5BCDE0F3A341909763CC92B"
+        status:
+          type: string
+          enum: ["done", "incomplete"]
+          example: "done"
 
     MsgSwap:
       type: object

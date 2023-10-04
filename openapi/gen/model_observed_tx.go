@@ -17,17 +17,9 @@ import (
 // ObservedTx struct for ObservedTx
 type ObservedTx struct {
 	Tx Tx `json:"tx"`
-	Status *string `json:"status,omitempty"`
-	OutHashes []string `json:"out_hashes,omitempty"`
-	// same as external_observed_height, to be deprecated in favour of external_observed_height
-	BlockHeight *int64 `json:"block_height,omitempty"`
+	ObservedPubKey *string `json:"observed_pub_key,omitempty"`
 	// the block height on the external source chain when the transaction was observed, not provided if chain is THOR
 	ExternalObservedHeight *int64 `json:"external_observed_height,omitempty"`
-	Signers []string `json:"signers,omitempty"`
-	ObservedPubKey *string `json:"observed_pub_key,omitempty"`
-	KeysignMs *int64 `json:"keysign_ms,omitempty"`
-	// same as external_confirmation_delay_height, to be deprecated in favour of external_confirmation_delay_height
-	FinaliseHeight *int64 `json:"finalise_height,omitempty"`
 	// the block height on the external source chain when confirmation counting will be complete, not provided if chain is THOR
 	ExternalConfirmationDelayHeight *int64 `json:"external_confirmation_delay_height,omitempty"`
 	// the outbound aggregator to use, will also match a suffix
@@ -36,6 +28,10 @@ type ObservedTx struct {
 	AggregatorTarget *string `json:"aggregator_target,omitempty"`
 	// the aggregator target asset limit provided to transferOutAndCall
 	AggregatorTargetLimit *string `json:"aggregator_target_limit,omitempty"`
+	Signers []string `json:"signers,omitempty"`
+	KeysignMs *int64 `json:"keysign_ms,omitempty"`
+	OutHashes []string `json:"out_hashes,omitempty"`
+	Status *string `json:"status,omitempty"`
 }
 
 // NewObservedTx instantiates a new ObservedTx object
@@ -80,166 +76,6 @@ func (o *ObservedTx) SetTx(v Tx) {
 	o.Tx = v
 }
 
-// GetStatus returns the Status field value if set, zero value otherwise.
-func (o *ObservedTx) GetStatus() string {
-	if o == nil || o.Status == nil {
-		var ret string
-		return ret
-	}
-	return *o.Status
-}
-
-// GetStatusOk returns a tuple with the Status field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *ObservedTx) GetStatusOk() (*string, bool) {
-	if o == nil || o.Status == nil {
-		return nil, false
-	}
-	return o.Status, true
-}
-
-// HasStatus returns a boolean if a field has been set.
-func (o *ObservedTx) HasStatus() bool {
-	if o != nil && o.Status != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetStatus gets a reference to the given string and assigns it to the Status field.
-func (o *ObservedTx) SetStatus(v string) {
-	o.Status = &v
-}
-
-// GetOutHashes returns the OutHashes field value if set, zero value otherwise.
-func (o *ObservedTx) GetOutHashes() []string {
-	if o == nil || o.OutHashes == nil {
-		var ret []string
-		return ret
-	}
-	return o.OutHashes
-}
-
-// GetOutHashesOk returns a tuple with the OutHashes field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *ObservedTx) GetOutHashesOk() ([]string, bool) {
-	if o == nil || o.OutHashes == nil {
-		return nil, false
-	}
-	return o.OutHashes, true
-}
-
-// HasOutHashes returns a boolean if a field has been set.
-func (o *ObservedTx) HasOutHashes() bool {
-	if o != nil && o.OutHashes != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetOutHashes gets a reference to the given []string and assigns it to the OutHashes field.
-func (o *ObservedTx) SetOutHashes(v []string) {
-	o.OutHashes = v
-}
-
-// GetBlockHeight returns the BlockHeight field value if set, zero value otherwise.
-func (o *ObservedTx) GetBlockHeight() int64 {
-	if o == nil || o.BlockHeight == nil {
-		var ret int64
-		return ret
-	}
-	return *o.BlockHeight
-}
-
-// GetBlockHeightOk returns a tuple with the BlockHeight field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *ObservedTx) GetBlockHeightOk() (*int64, bool) {
-	if o == nil || o.BlockHeight == nil {
-		return nil, false
-	}
-	return o.BlockHeight, true
-}
-
-// HasBlockHeight returns a boolean if a field has been set.
-func (o *ObservedTx) HasBlockHeight() bool {
-	if o != nil && o.BlockHeight != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetBlockHeight gets a reference to the given int64 and assigns it to the BlockHeight field.
-func (o *ObservedTx) SetBlockHeight(v int64) {
-	o.BlockHeight = &v
-}
-
-// GetExternalObservedHeight returns the ExternalObservedHeight field value if set, zero value otherwise.
-func (o *ObservedTx) GetExternalObservedHeight() int64 {
-	if o == nil || o.ExternalObservedHeight == nil {
-		var ret int64
-		return ret
-	}
-	return *o.ExternalObservedHeight
-}
-
-// GetExternalObservedHeightOk returns a tuple with the ExternalObservedHeight field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *ObservedTx) GetExternalObservedHeightOk() (*int64, bool) {
-	if o == nil || o.ExternalObservedHeight == nil {
-		return nil, false
-	}
-	return o.ExternalObservedHeight, true
-}
-
-// HasExternalObservedHeight returns a boolean if a field has been set.
-func (o *ObservedTx) HasExternalObservedHeight() bool {
-	if o != nil && o.ExternalObservedHeight != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetExternalObservedHeight gets a reference to the given int64 and assigns it to the ExternalObservedHeight field.
-func (o *ObservedTx) SetExternalObservedHeight(v int64) {
-	o.ExternalObservedHeight = &v
-}
-
-// GetSigners returns the Signers field value if set, zero value otherwise.
-func (o *ObservedTx) GetSigners() []string {
-	if o == nil || o.Signers == nil {
-		var ret []string
-		return ret
-	}
-	return o.Signers
-}
-
-// GetSignersOk returns a tuple with the Signers field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *ObservedTx) GetSignersOk() ([]string, bool) {
-	if o == nil || o.Signers == nil {
-		return nil, false
-	}
-	return o.Signers, true
-}
-
-// HasSigners returns a boolean if a field has been set.
-func (o *ObservedTx) HasSigners() bool {
-	if o != nil && o.Signers != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetSigners gets a reference to the given []string and assigns it to the Signers field.
-func (o *ObservedTx) SetSigners(v []string) {
-	o.Signers = v
-}
-
 // GetObservedPubKey returns the ObservedPubKey field value if set, zero value otherwise.
 func (o *ObservedTx) GetObservedPubKey() string {
 	if o == nil || o.ObservedPubKey == nil {
@@ -272,68 +108,36 @@ func (o *ObservedTx) SetObservedPubKey(v string) {
 	o.ObservedPubKey = &v
 }
 
-// GetKeysignMs returns the KeysignMs field value if set, zero value otherwise.
-func (o *ObservedTx) GetKeysignMs() int64 {
-	if o == nil || o.KeysignMs == nil {
+// GetExternalObservedHeight returns the ExternalObservedHeight field value if set, zero value otherwise.
+func (o *ObservedTx) GetExternalObservedHeight() int64 {
+	if o == nil || o.ExternalObservedHeight == nil {
 		var ret int64
 		return ret
 	}
-	return *o.KeysignMs
+	return *o.ExternalObservedHeight
 }
 
-// GetKeysignMsOk returns a tuple with the KeysignMs field value if set, nil otherwise
+// GetExternalObservedHeightOk returns a tuple with the ExternalObservedHeight field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *ObservedTx) GetKeysignMsOk() (*int64, bool) {
-	if o == nil || o.KeysignMs == nil {
+func (o *ObservedTx) GetExternalObservedHeightOk() (*int64, bool) {
+	if o == nil || o.ExternalObservedHeight == nil {
 		return nil, false
 	}
-	return o.KeysignMs, true
+	return o.ExternalObservedHeight, true
 }
 
-// HasKeysignMs returns a boolean if a field has been set.
-func (o *ObservedTx) HasKeysignMs() bool {
-	if o != nil && o.KeysignMs != nil {
+// HasExternalObservedHeight returns a boolean if a field has been set.
+func (o *ObservedTx) HasExternalObservedHeight() bool {
+	if o != nil && o.ExternalObservedHeight != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetKeysignMs gets a reference to the given int64 and assigns it to the KeysignMs field.
-func (o *ObservedTx) SetKeysignMs(v int64) {
-	o.KeysignMs = &v
-}
-
-// GetFinaliseHeight returns the FinaliseHeight field value if set, zero value otherwise.
-func (o *ObservedTx) GetFinaliseHeight() int64 {
-	if o == nil || o.FinaliseHeight == nil {
-		var ret int64
-		return ret
-	}
-	return *o.FinaliseHeight
-}
-
-// GetFinaliseHeightOk returns a tuple with the FinaliseHeight field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *ObservedTx) GetFinaliseHeightOk() (*int64, bool) {
-	if o == nil || o.FinaliseHeight == nil {
-		return nil, false
-	}
-	return o.FinaliseHeight, true
-}
-
-// HasFinaliseHeight returns a boolean if a field has been set.
-func (o *ObservedTx) HasFinaliseHeight() bool {
-	if o != nil && o.FinaliseHeight != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetFinaliseHeight gets a reference to the given int64 and assigns it to the FinaliseHeight field.
-func (o *ObservedTx) SetFinaliseHeight(v int64) {
-	o.FinaliseHeight = &v
+// SetExternalObservedHeight gets a reference to the given int64 and assigns it to the ExternalObservedHeight field.
+func (o *ObservedTx) SetExternalObservedHeight(v int64) {
+	o.ExternalObservedHeight = &v
 }
 
 // GetExternalConfirmationDelayHeight returns the ExternalConfirmationDelayHeight field value if set, zero value otherwise.
@@ -464,34 +268,144 @@ func (o *ObservedTx) SetAggregatorTargetLimit(v string) {
 	o.AggregatorTargetLimit = &v
 }
 
+// GetSigners returns the Signers field value if set, zero value otherwise.
+func (o *ObservedTx) GetSigners() []string {
+	if o == nil || o.Signers == nil {
+		var ret []string
+		return ret
+	}
+	return o.Signers
+}
+
+// GetSignersOk returns a tuple with the Signers field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ObservedTx) GetSignersOk() ([]string, bool) {
+	if o == nil || o.Signers == nil {
+		return nil, false
+	}
+	return o.Signers, true
+}
+
+// HasSigners returns a boolean if a field has been set.
+func (o *ObservedTx) HasSigners() bool {
+	if o != nil && o.Signers != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetSigners gets a reference to the given []string and assigns it to the Signers field.
+func (o *ObservedTx) SetSigners(v []string) {
+	o.Signers = v
+}
+
+// GetKeysignMs returns the KeysignMs field value if set, zero value otherwise.
+func (o *ObservedTx) GetKeysignMs() int64 {
+	if o == nil || o.KeysignMs == nil {
+		var ret int64
+		return ret
+	}
+	return *o.KeysignMs
+}
+
+// GetKeysignMsOk returns a tuple with the KeysignMs field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ObservedTx) GetKeysignMsOk() (*int64, bool) {
+	if o == nil || o.KeysignMs == nil {
+		return nil, false
+	}
+	return o.KeysignMs, true
+}
+
+// HasKeysignMs returns a boolean if a field has been set.
+func (o *ObservedTx) HasKeysignMs() bool {
+	if o != nil && o.KeysignMs != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetKeysignMs gets a reference to the given int64 and assigns it to the KeysignMs field.
+func (o *ObservedTx) SetKeysignMs(v int64) {
+	o.KeysignMs = &v
+}
+
+// GetOutHashes returns the OutHashes field value if set, zero value otherwise.
+func (o *ObservedTx) GetOutHashes() []string {
+	if o == nil || o.OutHashes == nil {
+		var ret []string
+		return ret
+	}
+	return o.OutHashes
+}
+
+// GetOutHashesOk returns a tuple with the OutHashes field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ObservedTx) GetOutHashesOk() ([]string, bool) {
+	if o == nil || o.OutHashes == nil {
+		return nil, false
+	}
+	return o.OutHashes, true
+}
+
+// HasOutHashes returns a boolean if a field has been set.
+func (o *ObservedTx) HasOutHashes() bool {
+	if o != nil && o.OutHashes != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetOutHashes gets a reference to the given []string and assigns it to the OutHashes field.
+func (o *ObservedTx) SetOutHashes(v []string) {
+	o.OutHashes = v
+}
+
+// GetStatus returns the Status field value if set, zero value otherwise.
+func (o *ObservedTx) GetStatus() string {
+	if o == nil || o.Status == nil {
+		var ret string
+		return ret
+	}
+	return *o.Status
+}
+
+// GetStatusOk returns a tuple with the Status field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ObservedTx) GetStatusOk() (*string, bool) {
+	if o == nil || o.Status == nil {
+		return nil, false
+	}
+	return o.Status, true
+}
+
+// HasStatus returns a boolean if a field has been set.
+func (o *ObservedTx) HasStatus() bool {
+	if o != nil && o.Status != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetStatus gets a reference to the given string and assigns it to the Status field.
+func (o *ObservedTx) SetStatus(v string) {
+	o.Status = &v
+}
+
 func (o ObservedTx) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["tx"] = o.Tx
 	}
-	if o.Status != nil {
-		toSerialize["status"] = o.Status
-	}
-	if o.OutHashes != nil {
-		toSerialize["out_hashes"] = o.OutHashes
-	}
-	if o.BlockHeight != nil {
-		toSerialize["block_height"] = o.BlockHeight
-	}
-	if o.ExternalObservedHeight != nil {
-		toSerialize["external_observed_height"] = o.ExternalObservedHeight
-	}
-	if o.Signers != nil {
-		toSerialize["signers"] = o.Signers
-	}
 	if o.ObservedPubKey != nil {
 		toSerialize["observed_pub_key"] = o.ObservedPubKey
 	}
-	if o.KeysignMs != nil {
-		toSerialize["keysign_ms"] = o.KeysignMs
-	}
-	if o.FinaliseHeight != nil {
-		toSerialize["finalise_height"] = o.FinaliseHeight
+	if o.ExternalObservedHeight != nil {
+		toSerialize["external_observed_height"] = o.ExternalObservedHeight
 	}
 	if o.ExternalConfirmationDelayHeight != nil {
 		toSerialize["external_confirmation_delay_height"] = o.ExternalConfirmationDelayHeight
@@ -504,6 +418,18 @@ func (o ObservedTx) MarshalJSON() ([]byte, error) {
 	}
 	if o.AggregatorTargetLimit != nil {
 		toSerialize["aggregator_target_limit"] = o.AggregatorTargetLimit
+	}
+	if o.Signers != nil {
+		toSerialize["signers"] = o.Signers
+	}
+	if o.KeysignMs != nil {
+		toSerialize["keysign_ms"] = o.KeysignMs
+	}
+	if o.OutHashes != nil {
+		toSerialize["out_hashes"] = o.OutHashes
+	}
+	if o.Status != nil {
+		toSerialize["status"] = o.Status
 	}
 	return json.Marshal(toSerialize)
 }

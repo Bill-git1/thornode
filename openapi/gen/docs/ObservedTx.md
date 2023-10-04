@@ -5,18 +5,16 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Tx** | [**Tx**](Tx.md) |  | 
-**Status** | Pointer to **string** |  | [optional] 
-**OutHashes** | Pointer to **[]string** |  | [optional] 
-**BlockHeight** | Pointer to **int64** | same as external_observed_height, to be deprecated in favour of external_observed_height | [optional] 
-**ExternalObservedHeight** | Pointer to **int64** | the block height on the external source chain when the transaction was observed, not provided if chain is THOR | [optional] 
-**Signers** | Pointer to **[]string** |  | [optional] 
 **ObservedPubKey** | Pointer to **string** |  | [optional] 
-**KeysignMs** | Pointer to **int64** |  | [optional] 
-**FinaliseHeight** | Pointer to **int64** | same as external_confirmation_delay_height, to be deprecated in favour of external_confirmation_delay_height | [optional] 
+**ExternalObservedHeight** | Pointer to **int64** | the block height on the external source chain when the transaction was observed, not provided if chain is THOR | [optional] 
 **ExternalConfirmationDelayHeight** | Pointer to **int64** | the block height on the external source chain when confirmation counting will be complete, not provided if chain is THOR | [optional] 
 **Aggregator** | Pointer to **string** | the outbound aggregator to use, will also match a suffix | [optional] 
 **AggregatorTarget** | Pointer to **string** | the aggregator target asset provided to transferOutAndCall | [optional] 
 **AggregatorTargetLimit** | Pointer to **string** | the aggregator target asset limit provided to transferOutAndCall | [optional] 
+**Signers** | Pointer to **[]string** |  | [optional] 
+**KeysignMs** | Pointer to **int64** |  | [optional] 
+**OutHashes** | Pointer to **[]string** |  | [optional] 
+**Status** | Pointer to **string** |  | [optional] 
 
 ## Methods
 
@@ -57,131 +55,6 @@ and a boolean to check if the value has been set.
 SetTx sets Tx field to given value.
 
 
-### GetStatus
-
-`func (o *ObservedTx) GetStatus() string`
-
-GetStatus returns the Status field if non-nil, zero value otherwise.
-
-### GetStatusOk
-
-`func (o *ObservedTx) GetStatusOk() (*string, bool)`
-
-GetStatusOk returns a tuple with the Status field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetStatus
-
-`func (o *ObservedTx) SetStatus(v string)`
-
-SetStatus sets Status field to given value.
-
-### HasStatus
-
-`func (o *ObservedTx) HasStatus() bool`
-
-HasStatus returns a boolean if a field has been set.
-
-### GetOutHashes
-
-`func (o *ObservedTx) GetOutHashes() []string`
-
-GetOutHashes returns the OutHashes field if non-nil, zero value otherwise.
-
-### GetOutHashesOk
-
-`func (o *ObservedTx) GetOutHashesOk() (*[]string, bool)`
-
-GetOutHashesOk returns a tuple with the OutHashes field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetOutHashes
-
-`func (o *ObservedTx) SetOutHashes(v []string)`
-
-SetOutHashes sets OutHashes field to given value.
-
-### HasOutHashes
-
-`func (o *ObservedTx) HasOutHashes() bool`
-
-HasOutHashes returns a boolean if a field has been set.
-
-### GetBlockHeight
-
-`func (o *ObservedTx) GetBlockHeight() int64`
-
-GetBlockHeight returns the BlockHeight field if non-nil, zero value otherwise.
-
-### GetBlockHeightOk
-
-`func (o *ObservedTx) GetBlockHeightOk() (*int64, bool)`
-
-GetBlockHeightOk returns a tuple with the BlockHeight field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetBlockHeight
-
-`func (o *ObservedTx) SetBlockHeight(v int64)`
-
-SetBlockHeight sets BlockHeight field to given value.
-
-### HasBlockHeight
-
-`func (o *ObservedTx) HasBlockHeight() bool`
-
-HasBlockHeight returns a boolean if a field has been set.
-
-### GetExternalObservedHeight
-
-`func (o *ObservedTx) GetExternalObservedHeight() int64`
-
-GetExternalObservedHeight returns the ExternalObservedHeight field if non-nil, zero value otherwise.
-
-### GetExternalObservedHeightOk
-
-`func (o *ObservedTx) GetExternalObservedHeightOk() (*int64, bool)`
-
-GetExternalObservedHeightOk returns a tuple with the ExternalObservedHeight field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetExternalObservedHeight
-
-`func (o *ObservedTx) SetExternalObservedHeight(v int64)`
-
-SetExternalObservedHeight sets ExternalObservedHeight field to given value.
-
-### HasExternalObservedHeight
-
-`func (o *ObservedTx) HasExternalObservedHeight() bool`
-
-HasExternalObservedHeight returns a boolean if a field has been set.
-
-### GetSigners
-
-`func (o *ObservedTx) GetSigners() []string`
-
-GetSigners returns the Signers field if non-nil, zero value otherwise.
-
-### GetSignersOk
-
-`func (o *ObservedTx) GetSignersOk() (*[]string, bool)`
-
-GetSignersOk returns a tuple with the Signers field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetSigners
-
-`func (o *ObservedTx) SetSigners(v []string)`
-
-SetSigners sets Signers field to given value.
-
-### HasSigners
-
-`func (o *ObservedTx) HasSigners() bool`
-
-HasSigners returns a boolean if a field has been set.
-
 ### GetObservedPubKey
 
 `func (o *ObservedTx) GetObservedPubKey() string`
@@ -207,55 +80,30 @@ SetObservedPubKey sets ObservedPubKey field to given value.
 
 HasObservedPubKey returns a boolean if a field has been set.
 
-### GetKeysignMs
+### GetExternalObservedHeight
 
-`func (o *ObservedTx) GetKeysignMs() int64`
+`func (o *ObservedTx) GetExternalObservedHeight() int64`
 
-GetKeysignMs returns the KeysignMs field if non-nil, zero value otherwise.
+GetExternalObservedHeight returns the ExternalObservedHeight field if non-nil, zero value otherwise.
 
-### GetKeysignMsOk
+### GetExternalObservedHeightOk
 
-`func (o *ObservedTx) GetKeysignMsOk() (*int64, bool)`
+`func (o *ObservedTx) GetExternalObservedHeightOk() (*int64, bool)`
 
-GetKeysignMsOk returns a tuple with the KeysignMs field if it's non-nil, zero value otherwise
+GetExternalObservedHeightOk returns a tuple with the ExternalObservedHeight field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetKeysignMs
+### SetExternalObservedHeight
 
-`func (o *ObservedTx) SetKeysignMs(v int64)`
+`func (o *ObservedTx) SetExternalObservedHeight(v int64)`
 
-SetKeysignMs sets KeysignMs field to given value.
+SetExternalObservedHeight sets ExternalObservedHeight field to given value.
 
-### HasKeysignMs
+### HasExternalObservedHeight
 
-`func (o *ObservedTx) HasKeysignMs() bool`
+`func (o *ObservedTx) HasExternalObservedHeight() bool`
 
-HasKeysignMs returns a boolean if a field has been set.
-
-### GetFinaliseHeight
-
-`func (o *ObservedTx) GetFinaliseHeight() int64`
-
-GetFinaliseHeight returns the FinaliseHeight field if non-nil, zero value otherwise.
-
-### GetFinaliseHeightOk
-
-`func (o *ObservedTx) GetFinaliseHeightOk() (*int64, bool)`
-
-GetFinaliseHeightOk returns a tuple with the FinaliseHeight field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetFinaliseHeight
-
-`func (o *ObservedTx) SetFinaliseHeight(v int64)`
-
-SetFinaliseHeight sets FinaliseHeight field to given value.
-
-### HasFinaliseHeight
-
-`func (o *ObservedTx) HasFinaliseHeight() bool`
-
-HasFinaliseHeight returns a boolean if a field has been set.
+HasExternalObservedHeight returns a boolean if a field has been set.
 
 ### GetExternalConfirmationDelayHeight
 
@@ -356,6 +204,106 @@ SetAggregatorTargetLimit sets AggregatorTargetLimit field to given value.
 `func (o *ObservedTx) HasAggregatorTargetLimit() bool`
 
 HasAggregatorTargetLimit returns a boolean if a field has been set.
+
+### GetSigners
+
+`func (o *ObservedTx) GetSigners() []string`
+
+GetSigners returns the Signers field if non-nil, zero value otherwise.
+
+### GetSignersOk
+
+`func (o *ObservedTx) GetSignersOk() (*[]string, bool)`
+
+GetSignersOk returns a tuple with the Signers field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetSigners
+
+`func (o *ObservedTx) SetSigners(v []string)`
+
+SetSigners sets Signers field to given value.
+
+### HasSigners
+
+`func (o *ObservedTx) HasSigners() bool`
+
+HasSigners returns a boolean if a field has been set.
+
+### GetKeysignMs
+
+`func (o *ObservedTx) GetKeysignMs() int64`
+
+GetKeysignMs returns the KeysignMs field if non-nil, zero value otherwise.
+
+### GetKeysignMsOk
+
+`func (o *ObservedTx) GetKeysignMsOk() (*int64, bool)`
+
+GetKeysignMsOk returns a tuple with the KeysignMs field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetKeysignMs
+
+`func (o *ObservedTx) SetKeysignMs(v int64)`
+
+SetKeysignMs sets KeysignMs field to given value.
+
+### HasKeysignMs
+
+`func (o *ObservedTx) HasKeysignMs() bool`
+
+HasKeysignMs returns a boolean if a field has been set.
+
+### GetOutHashes
+
+`func (o *ObservedTx) GetOutHashes() []string`
+
+GetOutHashes returns the OutHashes field if non-nil, zero value otherwise.
+
+### GetOutHashesOk
+
+`func (o *ObservedTx) GetOutHashesOk() (*[]string, bool)`
+
+GetOutHashesOk returns a tuple with the OutHashes field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetOutHashes
+
+`func (o *ObservedTx) SetOutHashes(v []string)`
+
+SetOutHashes sets OutHashes field to given value.
+
+### HasOutHashes
+
+`func (o *ObservedTx) HasOutHashes() bool`
+
+HasOutHashes returns a boolean if a field has been set.
+
+### GetStatus
+
+`func (o *ObservedTx) GetStatus() string`
+
+GetStatus returns the Status field if non-nil, zero value otherwise.
+
+### GetStatusOk
+
+`func (o *ObservedTx) GetStatusOk() (*string, bool)`
+
+GetStatusOk returns a tuple with the Status field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetStatus
+
+`func (o *ObservedTx) SetStatus(v string)`
+
+SetStatus sets Status field to given value.
+
+### HasStatus
+
+`func (o *ObservedTx) HasStatus() bool`
+
+HasStatus returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
