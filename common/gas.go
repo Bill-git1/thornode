@@ -86,6 +86,7 @@ func (g Gas) IsEmpty() bool {
 
 // Add combines two gas objects into one, adding amounts where needed
 // or appending new coins.
+// **WARNING**: dangerous, returns self-reference and also self-modifies
 func (g Gas) Add(g2 Gas) Gas {
 	var newGasCoins Gas
 	for _, gc2 := range g2 {
@@ -102,19 +103,6 @@ func (g Gas) Add(g2 Gas) Gas {
 	}
 
 	return append(g, newGasCoins...)
-}
-
-// Sub subtract the given amount gas from existing gas object
-func (g Gas) Sub(g2 Gas) Gas {
-	for _, gc2 := range g2 {
-		for i, gc1 := range g {
-			if gc1.Asset.Equals(gc2.Asset) {
-				g[i].Amount = SafeSub(g[i].Amount, gc2.Amount)
-				break
-			}
-		}
-	}
-	return g
 }
 
 // Equals Check if two lists of coins are equal to each other. Order does not matter
