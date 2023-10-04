@@ -1331,19 +1331,6 @@ class ThorchainState:
             # the tx is split in 2 events and gas is handled only once
             in_tx = deepcopy(tx)
 
-            # generate first swap "fake" outbound event
-            out_tx = Transaction(
-                emit.asset.get_chain(),
-                tx.from_address,
-                tx.to_address,
-                [emit],
-                tx.memo,
-                id=Transaction.empty_id,
-            )
-            swap_events.append(
-                Event("outbound", [{"in_tx_id": in_tx.id}, *out_tx.get_attributes()])
-            )
-
             # generate event for SWAP transaction
             event = Event(
                 "swap",

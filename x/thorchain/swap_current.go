@@ -85,7 +85,6 @@ func (s *SwapperVCUR) Swap(ctx cosmos.Context,
 		}
 		tx.Coins = common.Coins{common.NewCoin(common.RuneAsset(), amt)}
 		tx.Gas = nil
-		swapEvt.OutTxs = common.NewTx(common.BlankTxID, tx.FromAddress, tx.ToAddress, tx.Coins, tx.Gas, tx.Memo)
 		swapEvents = append(swapEvents, swapEvt)
 	}
 	assetAmount, swapEvt, swapErr := s.swapOne(ctx, mgr, tx, target, destination, swapTarget, transactionFee, synthVirtualDepthMult)
@@ -121,12 +120,6 @@ func (s *SwapperVCUR) Swap(ctx cosmos.Context,
 		}
 		if err := mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
 			ctx.Logger().Error("fail to emit swap event", "error", err)
-		}
-		if !evt.OutTxs.IsEmpty() {
-			outboundEvt := NewEventOutbound(evt.InTx.ID, evt.OutTxs)
-			if err := mgr.EventMgr().EmitEvent(ctx, outboundEvt); err != nil {
-				ctx.Logger().Error("fail to emit an outbound event for double swap", "error", err)
-			}
 		}
 		if !evt.Pool.IsDerivedAsset() {
 			if err := keeper.AddToLiquidityFees(ctx, evt.Pool, evt.LiquidityFeeInRune); err != nil {
