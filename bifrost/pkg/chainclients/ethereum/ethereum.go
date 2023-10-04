@@ -594,7 +594,40 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		return nil, nonceBytes, nil, fmt.Errorf("fail to sign message: %w", err)
 	}
 
-	return rawTx, nil, nil, nil
+	// create the observation to be sent by the signer before broadcast
+	chainHeight, err := c.GetHeight()
+	if err != nil { // fall back to the scanner height, thornode voter does not use height
+		chainHeight = c.ethScanner.currentBlockHeight
+	}
+	coin := tx.Coins[0]
+	gas := common.MakeEVMGas(c.GetChain(), createdTx.GasPrice(), createdTx.Gas())
+
+	signedTx := &etypes.Transaction{}
+	if err := signedTx.UnmarshalJSON(rawTx); err != nil {
+		return nil, rawTx, nil, fmt.Errorf("fail to unmarshal signed tx: %w", err)
+	}
+
+	var txIn *stypes.TxInItem
+
+	if err == nil {
+		txIn = stypes.NewTxInItem(
+			chainHeight+1,
+			signedTx.Hash().Hex()[2:],
+			tx.Memo,
+			fromAddr.String(),
+			createdTx.To().String(),
+			common.NewCoins(
+				coin,
+			),
+			gas,
+			tx.VaultPubKey,
+			"",
+			"",
+			nil,
+		)
+	}
+
+	return rawTx, nil, txIn, nil
 }
 
 // sign is design to sign a given message with keysign party and keysign wrapper

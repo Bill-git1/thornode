@@ -631,6 +631,7 @@ func (c *EVMClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 	// the nonce is stored as the transaction checkpoint, if it is set deserialize it
 	// so we only retry with the same nonce to avoid double spend
 	var nonce uint64
+	var fromAddr common.Address
 	if tx.Checkpoint != nil {
 		if err := json.Unmarshal(tx.Checkpoint, &nonce); err != nil {
 			return nil, nil, nil, fmt.Errorf("fail to unmarshal checkpoint: %w", err)
@@ -638,7 +639,7 @@ func (c *EVMClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 	} else {
 		fromAddr, err := tx.VaultPubKey.GetAddress(c.cfg.ChainID)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("fail to get AVAX address for pub key(%s): %w", tx.VaultPubKey, err)
+			return nil, nil, nil, fmt.Errorf("fail to get %s address for pub key(%s): %w", c.GetChain().String(), tx.VaultPubKey, err)
 		}
 		nonce, err = c.evmScanner.GetNonce(fromAddr.String())
 		if err != nil {
@@ -663,7 +664,41 @@ func (c *EVMClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 		return nil, nonceBytes, nil, fmt.Errorf("fail to sign message: %w", err)
 	}
 
-	return rawTx, nil, nil, nil
+	// create the observation to be sent by the signer before broadcast
+	chainHeight, err := c.GetHeight()
+	if err != nil { // fall back to the scanner height, thornode voter does not use height
+		chainHeight = c.evmScanner.currentBlockHeight
+	}
+
+	coin := tx.Coins[0]
+	gas := common.MakeEVMGas(c.GetChain(), outboundTx.GasPrice(), outboundTx.Gas())
+
+	signedTx := &etypes.Transaction{}
+	if err := signedTx.UnmarshalJSON(rawTx); err != nil {
+		return nil, rawTx, nil, fmt.Errorf("fail to unmarshal signed tx: %w", err)
+	}
+
+	var txIn *stypes.TxInItem
+
+	if err == nil {
+		txIn = stypes.NewTxInItem(
+			chainHeight+1,
+			signedTx.Hash().Hex()[2:],
+			tx.Memo,
+			fromAddr.String(),
+			outboundTx.To().String(),
+			common.NewCoins(
+				coin,
+			),
+			gas,
+			tx.VaultPubKey,
+			"",
+			"",
+			nil,
+		)
+	}
+
+	return rawTx, nil, txIn, nil
 }
 
 // sign is design to sign a given message with keysign party and keysign wrapper
