@@ -136,3 +136,16 @@ func (g Gas) ToCoins() Coins {
 	}
 	return coins
 }
+
+// NoneEmpty returns a new Gas which ignores any coin which is empty
+// either Coin asset is empty or amount is empty
+func (g Gas) NoneEmpty() Gas {
+	newGas := Gas{}
+	for _, item := range g {
+		if item.IsEmpty() {
+			continue
+		}
+		newGas = append(newGas, item)
+	}
+	return newGas
+}

@@ -619,7 +619,8 @@ func (o *Observer) getThorchainTxIns(txIn types.TxIn) (stypes.ObservedTxs, error
 			height += txIn.ConfirmationRequired
 		}
 		tx := stypes.NewObservedTx(
-			common.NewTx(txID, sender, to, item.Coins.NoneEmpty(), item.Gas, item.Memo),
+			// Strip out any empty Coin from Coins and Gas, as even one empty Coin will make a MsgObservedTxIn for instance fail validation.
+			common.NewTx(txID, sender, to, item.Coins.NoneEmpty(), item.Gas.NoneEmpty(), item.Memo),
 			height,
 			item.ObservedVaultPubKey,
 			item.BlockHeight+txIn.ConfirmationRequired)
