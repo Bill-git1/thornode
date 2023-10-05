@@ -63,10 +63,16 @@ func AsgardInvariant(k KVStore) common.Invariant {
 			}
 
 			// adjust for streaming swaps
-			ss, err := k.GetStreamingSwap(ctx, swap.Tx.ID)
-			if err != nil {
-				ctx.Logger().Error("error getting streaming swap", "error", err)
-				continue // should never happen
+			ss := swap.GetStreamingSwap() // GetStreamingSwap() rather than var so In.IsZero() doesn't panic
+			// A non-streaming affiliate swap and streaming main swap could have the same TxID,
+			// so explicitly check IsStreaming to not double-count the main swap's In and Out amounts.
+			if swap.IsStreaming() {
+				var err error
+				ss, err = k.GetStreamingSwap(ctx, swap.Tx.ID)
+				if err != nil {
+					ctx.Logger().Error("error getting streaming swap", "error", err)
+					continue // should never happen
+				}
 			}
 
 			if coin.IsNative() {
