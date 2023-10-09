@@ -217,6 +217,10 @@ func (m MemoBase) GetAffiliateTHORName() *types.THORName { return nil }
 func ParseMemo(version semver.Version, memo string) (mem Memo, err error) {
 	defer func() {
 		if r := recover(); r != nil {
+			// TODO:  Remove conditional on hard fork, keeping the EmptyMemo setting.
+			if version.LT(semver.MustParse("1.116.0")) || version.GTE(semver.MustParse("1.122.0")) {
+				mem = EmptyMemo
+			}
 			err = fmt.Errorf("panicked parsing memo(%s), err: %s", memo, r)
 		}
 	}()
@@ -232,6 +236,11 @@ func ParseMemo(version semver.Version, memo string) (mem Memo, err error) {
 func ParseMemoWithTHORNames(ctx cosmos.Context, keeper keeper.Keeper, memo string) (mem Memo, err error) {
 	defer func() {
 		if r := recover(); r != nil {
+			// TODO:  Remove conditional on hard fork, keeping the EmptyMemo setting.
+			version := keeper.GetVersion()
+			if version.LT(semver.MustParse("1.116.0")) || version.GTE(semver.MustParse("1.122.0")) {
+				mem = EmptyMemo
+			}
 			err = fmt.Errorf("panicked parsing memo(%s), err: %s", memo, r)
 		}
 	}()
