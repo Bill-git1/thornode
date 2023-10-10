@@ -67,7 +67,10 @@ func (c *Client) unstuckAction() {
 		}
 		if err := c.unstuckTx(item.VaultPubKey, item.Hash); err != nil {
 			c.logger.Err(err).Msgf("fail to unstuck tx with hash:%s vaultPubKey:%s", item.Hash, item.VaultPubKey)
-			continue
+			// Break on error so that if a keysign fails from members getting out of sync
+			// (for multiple cancel transactions)
+			// all vault members will together next try to keysign the first item in the list.
+			break
 		}
 		// remove it
 		if err := c.ethScanner.blockMetaAccessor.RemoveSignedTxItem(item.Hash); err != nil {
