@@ -205,3 +205,5 @@ func migrateStoreV121(ctx cosmos.Context, mgr *Mgrs) {
 		}
 	}
 }
+
+func migrateStoreV122(ctx cosmos.Context, mgr *Mgrs) {}
