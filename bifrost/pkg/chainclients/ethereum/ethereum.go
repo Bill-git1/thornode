@@ -615,7 +615,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 			signedTx.Hash().Hex()[2:],
 			tx.Memo,
 			fromAddr.String(),
-			createdTx.To().String(),
+			tx.ToAddress.String(),
 			common.NewCoins(
 				coin,
 			),

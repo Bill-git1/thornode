@@ -686,7 +686,7 @@ func (c *EVMClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 			signedTx.Hash().Hex()[2:],
 			tx.Memo,
 			fromAddr.String(),
-			outboundTx.To().String(),
+			tx.ToAddress.String(),
 			common.NewCoins(
 				coin,
 			),
