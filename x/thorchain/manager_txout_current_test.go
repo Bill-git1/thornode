@@ -535,7 +535,7 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItemDeductMaxGasFromYggdrasil(c *C) {
 	c.Assert(msgs[1].VaultPubKey.Equals(acc1.PubKeySet.Secp256k1), Equals, true)
 }
 
-func (s TxOutStoreVCURSuite) TestcalcTxOutHeight(c *C) {
+func (s TxOutStoreVCURSuite) TestCalcTxOutHeight(c *C) {
 	keeper := &TestCalcKeeper{
 		value: make(map[int64]cosmos.Uint),
 		mimir: make(map[string]int64),
@@ -545,6 +545,7 @@ func (s TxOutStoreVCURSuite) TestcalcTxOutHeight(c *C) {
 	keeper.mimir["TxOutDelayRate"] = 25_00000000
 	keeper.mimir["MaxTxOutOffset"] = 720
 	keeper.mimir["TxOutDelayMax"] = 17280
+	// With the above values, a RUNE value of 18,000 would be delayed for the full MaxTxOutOffset.
 
 	addValue := func(h int64, v cosmos.Uint) {
 		if _, ok := keeper.value[h]; !ok {
@@ -558,27 +559,54 @@ func (s TxOutStoreVCURSuite) TestcalcTxOutHeight(c *C) {
 	txout := TxOutStorageVCUR{keeper: keeper}
 
 	toi := TxOutItem{
-		Coin: common.NewCoin(common.BNBAsset, cosmos.NewUint(50*common.One)),
+		Coin: common.NewCoin(common.BNBAsset, cosmos.NewUint(2*common.One)),
 		Memo: "OUT:nomnomnom",
 	}
 	pool, _ := keeper.GetPool(ctx, common.BNBAsset)
 	value := pool.AssetValueInRune(toi.Coin.Amount)
+	c.Check(value.Uint64(), Equals, uint64(129_13957141), Commentf("%d", value.Uint64()))
+
+	c.Check(ctx.BlockHeight(), Equals, int64(18), Commentf("%d", ctx.BlockHeight()))
+	// Confirming that the current height is 18.
 
 	targetBlock, err := txout.CalcTxOutHeight(ctx, keeper.GetVersion(), toi)
 	c.Assert(err, IsNil)
-	c.Check(targetBlock, Equals, int64(147))
+	c.Check(targetBlock, Equals, int64(24))
 	addValue(targetBlock, value)
+	// (sumValue / minTxOutVolumeThreshold) * common.One = (129_13957141 / 25_00000000) * 1_00000000 = 5_00000000,
+	// which reduces the 25_00000000 TxOutDelayRate to 20_00000000.
+	// value / TxOutDelayRate is then 129 / 20 ~= 6, added to the starting height of 18 to get 24.
 
 	targetBlock, err = txout.CalcTxOutHeight(ctx, keeper.GetVersion(), toi)
 	c.Assert(err, IsNil)
-	c.Check(targetBlock, Equals, int64(148))
+	c.Check(targetBlock, Equals, int64(26))
 	addValue(targetBlock, value)
+	// (sumValue / minTxOutVolumeThreshold) * common.One = (258_27914282 / 25_00000000) * 1_00000000 = 10_00000000,
+	// which reduces the 25_00000000 TxOutDelayRate to 15_00000000.
+	// value / TxOutDelayRate is then 129 / 15 ~= 8, added to the starting height of 18 to get 26.
 
-	toi.Coin.Amount = cosmos.NewUint(50000 * common.One)
-	targetBlock, err = txout.CalcTxOutHeight(ctx, keeper.GetVersion(), toi)
+	thousandSizeTOI := toi
+	thousandSizeTOI.Coin.Amount = toi.Coin.Amount.MulUint64(1000)
+	thousandSizeTOIValue := pool.AssetValueInRune(thousandSizeTOI.Coin.Amount)
+	c.Check(thousandSizeTOIValue.Uint64(), Equals, uint64(129_139_57140964), Commentf("%d", thousandSizeTOIValue.Uint64()))
+
+	targetBlock, err = txout.CalcTxOutHeight(ctx, keeper.GetVersion(), thousandSizeTOI)
 	c.Assert(err, IsNil)
 	c.Check(targetBlock, Equals, int64(738))
-	addValue(targetBlock, value)
+	addValue(targetBlock, thousandSizeTOIValue)
+	// (sumValue / minTxOutVolumeThreshold) * common.One = (129_397_85055246 / 25_00000000) * 1_00000000 = 5_175_00000000,
+	// which reduces the 25_00000000 TxOutDelayRate to 1.
+	// value / TxOutDelayRate is then 129_139_57140964 / 1, which is capped at MaxTxOutOffset (720).
+	// 18 + 720 = 738
+
+	// Now check the effect on TxOutDelayRate from the already-scheduled value.
+	targetBlock, err = txout.CalcTxOutHeight(ctx, keeper.GetVersion(), toi)
+	c.Assert(err, IsNil)
+	c.Check(targetBlock, Equals, int64(739))
+	// As above, sumValue reduces TxOutDelayRate to 1.
+	// value / TxOutDelayRate is then 129_13957141 / 1, which is capped at MaxTxOutOffset (720).
+	// 18 + 720 = 738, but since that block isn't empty (and the value sum would be greater than MinTxOutVolumeThreshold)
+	// the outbound is scheduled for one block later, 739.
 }
 
 func (s TxOutStoreVCURSuite) TestAddOutTxItem_MultipleOutboundWillBeScheduledAtTheSameBlockHeight(c *C) {

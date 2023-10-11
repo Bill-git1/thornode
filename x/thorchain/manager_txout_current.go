@@ -712,28 +712,20 @@ func (tos *TxOutStorageVCUR) CalcTxOutHeight(ctx cosmos.Context, version semver.
 		return ctx.BlockHeight(), nil
 	}
 
-	minTxOutVolumeThreshold, err := tos.keeper.GetMimir(ctx, constants.MinTxOutVolumeThreshold.String())
-	if minTxOutVolumeThreshold <= 0 || err != nil {
-		minTxOutVolumeThreshold = tos.constAccessor.GetInt64Value(constants.MinTxOutVolumeThreshold)
-	}
-	minVolumeThreshold := cosmos.NewUint(uint64(minTxOutVolumeThreshold))
-	txOutDelayRate, err := tos.keeper.GetMimir(ctx, constants.TxOutDelayRate.String())
-	if txOutDelayRate <= 0 || err != nil {
-		txOutDelayRate = tos.constAccessor.GetInt64Value(constants.TxOutDelayRate)
-	}
-	txOutDelayMax, err := tos.keeper.GetMimir(ctx, constants.TxOutDelayMax.String())
-	if txOutDelayMax <= 0 || err != nil {
-		txOutDelayMax = tos.constAccessor.GetInt64Value(constants.TxOutDelayMax)
-	}
-	maxTxOutOffset, err := tos.keeper.GetMimir(ctx, constants.MaxTxOutOffset.String())
-	if maxTxOutOffset <= 0 || err != nil {
-		maxTxOutOffset = tos.constAccessor.GetInt64Value(constants.MaxTxOutOffset)
-	}
+	minTxOutVolumeThreshold := tos.keeper.GetConfigInt64(ctx, constants.MinTxOutVolumeThreshold)
+	txOutDelayRate := tos.keeper.GetConfigInt64(ctx, constants.TxOutDelayRate)
+	txOutDelayMax := tos.keeper.GetConfigInt64(ctx, constants.TxOutDelayMax)
+	maxTxOutOffset := tos.keeper.GetConfigInt64(ctx, constants.MaxTxOutOffset)
 
-	// if volume threshold is zero
-	if minVolumeThreshold.IsZero() || txOutDelayRate == 0 {
+	// only delay if volume threshold and delay rate are positive
+	if minTxOutVolumeThreshold <= 0 || txOutDelayRate <= 0 || maxTxOutOffset <= 0 {
 		return ctx.BlockHeight(), nil
 	}
+
+	// convert to big ints for safer math
+	minVolumeThreshold := cosmos.NewUint(uint64(minTxOutVolumeThreshold))
+	delayRate := cosmos.NewUint(uint64(txOutDelayRate))
+	maxOffset := cosmos.NewUint(uint64(maxTxOutOffset))
 
 	// get txout item value in rune
 	runeValue := toi.Coin.Amount
@@ -761,24 +753,29 @@ func (tos *TxOutStorageVCUR) CalcTxOutHeight(ctx cosmos.Context, version semver.
 		}
 		sumValue = sumValue.Add(value)
 	}
+
 	// reduce delay rate relative to the total scheduled value. In high volume
 	// scenarios, this causes the network to send outbound transactions slower,
 	// giving the community & NOs time to analyze and react. In an attack
 	// scenario, the attacker is likely going to move as much value as possible
 	// (as we've seen in the past). The act of doing this will slow down their
 	// own transaction(s), reducing the attack's effectiveness.
-	txOutDelayRate -= int64(sumValue.Uint64()) / minTxOutVolumeThreshold
-	if txOutDelayRate < 1 {
-		txOutDelayRate = 1
+	// The common.One is because delayRate, sumValue, and minVolumeThreshold
+	// all have the same number of decimals (which cancel otherwise).
+	rateReduction := cosmos.NewUint(common.One).Mul(sumValue).Quo(minVolumeThreshold)
+	if rateReduction.GTE(delayRate) {
+		delayRate = cosmos.NewUint(1)
+	} else {
+		delayRate = delayRate.Sub(rateReduction)
 	}
 
-	// calculate the minimum number of blocks in the future the txn has to be
-	minBlocks := int64(runeValue.Uint64()) / txOutDelayRate
+	// calculate the minimum number of blocks in the future the txn has to be.
 	// min shouldn't be anything longer than the max txout offset
-	if minBlocks > maxTxOutOffset {
-		minBlocks = maxTxOutOffset
+	minBlocks := runeValue.Quo(delayRate)
+	if minBlocks.GT(maxOffset) {
+		minBlocks = maxOffset
 	}
-	targetBlock := ctx.BlockHeight() + minBlocks
+	targetBlock := ctx.BlockHeight() + int64(minBlocks.Uint64())
 
 	// find targetBlock that has space for new txout item.
 	count := int64(0)
@@ -959,14 +956,8 @@ func (tos *TxOutStorageVCUR) getPendingOutbounds(ctx cosmos.Context, asset commo
 	if startHeight < 1 {
 		startHeight = 1
 	}
-	txOutDelayMax, err := tos.keeper.GetMimir(ctx, constants.TxOutDelayMax.String())
-	if txOutDelayMax <= 0 || err != nil {
-		txOutDelayMax = tos.constAccessor.GetInt64Value(constants.TxOutDelayMax)
-	}
-	maxTxOutOffset, err := tos.keeper.GetMimir(ctx, constants.MaxTxOutOffset.String())
-	if maxTxOutOffset <= 0 || err != nil {
-		maxTxOutOffset = tos.constAccessor.GetInt64Value(constants.MaxTxOutOffset)
-	}
+	txOutDelayMax := tos.keeper.GetConfigInt64(ctx, constants.TxOutDelayMax)
+	maxTxOutOffset := tos.keeper.GetConfigInt64(ctx, constants.MaxTxOutOffset)
 	var outbounds []TxOutItem
 	for height := startHeight; height <= ctx.BlockHeight()+txOutDelayMax; height++ {
 		blockOut, err := tos.keeper.GetTxOut(ctx, height)
