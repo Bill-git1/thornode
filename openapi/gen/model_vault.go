@@ -20,7 +20,7 @@ type Vault struct {
 	PubKey *string `json:"pub_key,omitempty"`
 	Coins []Coin `json:"coins"`
 	Type *string `json:"type,omitempty"`
-	Status *string `json:"status,omitempty"`
+	Status string `json:"status"`
 	StatusSince *int64 `json:"status_since,omitempty"`
 	// the list of node public keys which are members of the vault
 	Membership []string `json:"membership,omitempty"`
@@ -37,9 +37,10 @@ type Vault struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewVault(coins []Coin, routers []VaultRouter, addresses []VaultAddress) *Vault {
+func NewVault(coins []Coin, status string, routers []VaultRouter, addresses []VaultAddress) *Vault {
 	this := Vault{}
 	this.Coins = coins
+	this.Status = status
 	this.Routers = routers
 	this.Addresses = addresses
 	return &this
@@ -173,36 +174,28 @@ func (o *Vault) SetType(v string) {
 	o.Type = &v
 }
 
-// GetStatus returns the Status field value if set, zero value otherwise.
+// GetStatus returns the Status field value
 func (o *Vault) GetStatus() string {
-	if o == nil || o.Status == nil {
+	if o == nil {
 		var ret string
 		return ret
 	}
-	return *o.Status
+
+	return o.Status
 }
 
-// GetStatusOk returns a tuple with the Status field value if set, nil otherwise
+// GetStatusOk returns a tuple with the Status field value
 // and a boolean to check if the value has been set.
 func (o *Vault) GetStatusOk() (*string, bool) {
-	if o == nil || o.Status == nil {
+	if o == nil {
 		return nil, false
 	}
-	return o.Status, true
+	return &o.Status, true
 }
 
-// HasStatus returns a boolean if a field has been set.
-func (o *Vault) HasStatus() bool {
-	if o != nil && o.Status != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetStatus gets a reference to the given string and assigns it to the Status field.
+// SetStatus sets field value
 func (o *Vault) SetStatus(v string) {
-	o.Status = &v
+	o.Status = v
 }
 
 // GetStatusSince returns the StatusSince field value if set, zero value otherwise.
@@ -491,7 +484,7 @@ func (o Vault) MarshalJSON() ([]byte, error) {
 	if o.Type != nil {
 		toSerialize["type"] = o.Type
 	}
-	if o.Status != nil {
+	if true {
 		toSerialize["status"] = o.Status
 	}
 	if o.StatusSince != nil {

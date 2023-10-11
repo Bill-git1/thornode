@@ -8,7 +8,7 @@ Name | Type | Description | Notes
 **PubKey** | Pointer to **string** |  | [optional] 
 **Coins** | [**[]Coin**](Coin.md) |  | 
 **Type** | Pointer to **string** |  | [optional] 
-**Status** | Pointer to **string** |  | [optional] 
+**Status** | **string** |  | 
 **StatusSince** | Pointer to **int64** |  | [optional] 
 **Membership** | Pointer to **[]string** | the list of node public keys which are members of the vault | [optional] 
 **Chains** | Pointer to **[]string** |  | [optional] 
@@ -23,7 +23,7 @@ Name | Type | Description | Notes
 
 ### NewVault
 
-`func NewVault(coins []Coin, routers []VaultRouter, addresses []VaultAddress, ) *Vault`
+`func NewVault(coins []Coin, status string, routers []VaultRouter, addresses []VaultAddress, ) *Vault`
 
 NewVault instantiates a new Vault object
 This constructor will assign default values to properties that have it defined,
@@ -152,11 +152,6 @@ and a boolean to check if the value has been set.
 
 SetStatus sets Status field to given value.
 
-### HasStatus
-
-`func (o *Vault) HasStatus() bool`
-
-HasStatus returns a boolean if a field has been set.
 
 ### GetStatusSince
 

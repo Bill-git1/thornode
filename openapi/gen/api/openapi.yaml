@@ -2376,6 +2376,7 @@ components:
       - addresses
       - coins
       - routers
+      - status
       type: object
     VaultRouter:
       example:

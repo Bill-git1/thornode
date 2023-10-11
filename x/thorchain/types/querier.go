@@ -98,7 +98,7 @@ type QueryVaultResp struct {
 	PubKey                gitlab_com_thorchain_thornode_common.PubKey `json:"pub_key,omitempty"`
 	Coins                 gitlab_com_thorchain_thornode_common.Coins  `json:"coins"`
 	Type                  VaultType                                   `json:"type,omitempty"`
-	Status                VaultStatus                                 `json:"status,omitempty"`
+	Status                VaultStatus                                 `json:"status"`
 	StatusSince           int64                                       `json:"status_since,omitempty"`
 	Membership            []string                                    `json:"membership,omitempty"`
 	Chains                []string                                    `json:"chains,omitempty"`

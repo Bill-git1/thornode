@@ -1554,6 +1554,7 @@ components:
       type: object
       required:
         - coins
+        - status
         - routers
         - addresses
       properties:
