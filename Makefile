@@ -114,6 +114,7 @@ install:
 tools:
 	go install -tags ${TAG} ./tools/generate
 	go install -tags ${TAG} ./tools/pubkey2address
+	go install -tags ${TAG} ./tools/p2p-check
 
 # ------------------------------ Gitlab CI ------------------------------
 
