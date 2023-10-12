@@ -309,16 +309,39 @@ func (b *thorchainBridge) GetObservationsStdTx(txIns stypes.ObservedTxs) ([]cosm
 		if err != nil {
 			return nil, err
 		}
+		vaultToAddress := tx.Tx.ToAddress.Equals(obAddr)
+		vaultFromAddress := tx.Tx.FromAddress.Equals(obAddr)
+		var inInboundArray, inOutboundArray bool
+		if vaultToAddress {
+			inInboundArray = inbound.Contains(tx)
+		}
+		if vaultFromAddress {
+			inOutboundArray = outbound.Contains(tx)
+		}
 		// for consolidate UTXO tx, both From & To address will be the asgard address
 		// thus here we need to make sure that one add to inbound , the other add to outbound
-		if tx.Tx.ToAddress.Equals(obAddr) && !inbound.Contains(tx) { // nolint
+		switch {
+		case !vaultToAddress && !vaultFromAddress:
+			// Neither ToAddress nor FromAddress matches obAddr, so drop it.
+			b.logger.Error().Msgf("chain (%s) tx (%s) observedaddress (%s) does not match its toaddress (%s) or fromaddress (%s)", tx.Tx.Chain, tx.Tx.ID, obAddr, tx.Tx.ToAddress, tx.Tx.FromAddress)
+		case vaultToAddress && !inInboundArray:
 			inbound = append(inbound, tx)
-		} else if tx.Tx.FromAddress.Equals(obAddr) && !outbound.Contains(tx) {
+		case vaultFromAddress && !inOutboundArray:
 			// for outbound transaction , there is no need to do confirmation counting
 			tx.FinaliseHeight = tx.BlockHeight
 			outbound = append(outbound, tx)
-		} else {
-			return nil, errors.New("could not determine if this tx as inbound or outbound")
+		case inInboundArray && inOutboundArray:
+			// It's already in both arrays, so drop it.
+			b.logger.Error().Msgf("vault-to-vault chain (%s) tx (%s) is already in both inbound and outbound arrays", tx.Tx.Chain, tx.Tx.ID)
+		case !vaultFromAddress && inInboundArray:
+			// It's already in its only (inbound) array, so drop it.
+			b.logger.Error().Msgf("observed tx in for chain (%s) tx (%s) is already in the inbound array", tx.Tx.Chain, tx.Tx.ID)
+		case !vaultToAddress && inOutboundArray:
+			// It's already in its only (outbound) array, so drop it.
+			b.logger.Error().Msgf("observed tx out for chain (%s) tx (%s) is already in the outbound array", tx.Tx.Chain, tx.Tx.ID)
+		default:
+			// This should never happen; rather than dropping it, return an error.
+			return nil, fmt.Errorf("could not determine if chain (%s) tx (%s) was inbound or outbound", tx.Tx.Chain, tx.Tx.ID)
 		}
 	}
 
