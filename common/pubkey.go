@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 
 	secp256k1 "github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -34,9 +35,12 @@ type (
 	PubKeys []PubKey
 )
 
-var EmptyPubKey PubKey
-
-var EmptyPubKeySet PubKeySet
+var (
+	EmptyPubKey            PubKey
+	EmptyPubKeySet         PubKeySet
+	pubkeyToAddressCache   = make(map[string]Address)
+	pubkeyToAddressCacheMu = &sync.Mutex{}
+)
 
 // NewPubKey create a new instance of PubKey
 // key is bech32 encoded string
@@ -100,10 +104,17 @@ func (pubKey PubKey) GetAddress(chain Chain) (Address, error) {
 	if pubKey.IsEmpty() {
 		return NoAddress, nil
 	}
-	chainNetwork := CurrentChainNetwork
-	if chain.IsEVM() {
-		return pubKey.EVMPubkeyToAddress()
+
+	// cache pubkey to address, since this is expensive with many vaults in pubkey manager
+	key := fmt.Sprintf("%s-%s", chain.String(), pubKey.String())
+	pubkeyToAddressCacheMu.Lock()
+	defer pubkeyToAddressCacheMu.Unlock()
+	if v, ok := pubkeyToAddressCache[key]; ok {
+		return v, nil
 	}
+
+	chainNetwork := CurrentChainNetwork
+	var addressString string
 	switch chain {
 	case BNBChain, TERRAChain, GAIAChain, THORChain:
 		pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeAccPub, string(pubKey))
@@ -114,7 +125,7 @@ func (pubKey PubKey) GetAddress(chain Chain) (Address, error) {
 		if err != nil {
 			return NoAddress, fmt.Errorf("fail to bech32 encode the address, err: %w", err)
 		}
-		return NewAddress(str)
+		addressString = str
 	case BTCChain:
 		pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeAccPub, string(pubKey))
 		if err != nil {
@@ -133,7 +144,7 @@ func (pubKey PubKey) GetAddress(chain Chain) (Address, error) {
 		if err != nil {
 			return NoAddress, fmt.Errorf("fail to bech32 encode the address, err: %w", err)
 		}
-		return NewAddress(addr.String())
+		addressString = addr.String()
 	case LTCChain:
 		pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeAccPub, string(pubKey))
 		if err != nil {
@@ -152,7 +163,7 @@ func (pubKey PubKey) GetAddress(chain Chain) (Address, error) {
 		if err != nil {
 			return NoAddress, fmt.Errorf("fail to bech32 encode the address, err: %w", err)
 		}
-		return NewAddress(addr.String())
+		addressString = addr.String()
 	case DOGEChain:
 		pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeAccPub, string(pubKey))
 		if err != nil {
@@ -171,7 +182,7 @@ func (pubKey PubKey) GetAddress(chain Chain) (Address, error) {
 		if err != nil {
 			return NoAddress, fmt.Errorf("fail to encode the address, err: %w", err)
 		}
-		return NewAddress(addr.String())
+		addressString = addr.String()
 	case BCHChain:
 		pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeAccPub, string(pubKey))
 		if err != nil {
@@ -190,10 +201,25 @@ func (pubKey PubKey) GetAddress(chain Chain) (Address, error) {
 		if err != nil {
 			return NoAddress, fmt.Errorf("fail to encode the address, err: %w", err)
 		}
-		return NewAddress(addr.String())
+		addressString = addr.String()
+	default:
+		// Only EVM chains remain.
+		if !chain.IsEVM() {
+			return NoAddress, nil
+		}
+		addr, err := pubKey.EVMPubkeyToAddress()
+		if err != nil {
+			return addr, err
+		}
+		addressString = addr.String()
 	}
 
-	return NoAddress, nil
+	address, err := NewAddress(addressString)
+	if err != nil {
+		return address, err
+	}
+	pubkeyToAddressCache[key] = address
+	return address, nil
 }
 
 func (pubKey PubKey) GetThorAddress() (cosmos.AccAddress, error) {

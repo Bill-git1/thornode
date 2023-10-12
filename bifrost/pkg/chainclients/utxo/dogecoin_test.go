@@ -76,6 +76,8 @@ func init() {
 	chainRPCs["getblockstats"] = loadFixture("../../../../test/fixtures/doge/blockstats.json")
 	chainRPCs["getrawtransaction-5b0876dcc027d2f0c671fc250460ee388df39697c3ff082007b6ddd9cb9a7513"] = loadFixture("../../../../test/fixtures/doge/tx-5b08.json")
 	chainRPCs["getrawtransaction-54ef2f4679fb90af42e8d963a5d85645d0fd86e5fe8ea4e69dbf2d444cb26528"] = loadFixture("../../../../test/fixtures/doge/tx-54ef.json")
+	chainRPCs["getrawtransaction-64ef2f4679fb90af42e8d963a5d85645d0fd86e5fe8ea4e69dbf2d444cb26528"] = loadFixture("../../../../test/fixtures/doge/tx-64ef.json")
+	chainRPCs["getrawtransaction-74ef2f4679fb90af42e8d963a5d85645d0fd86e5fe8ea4e69dbf2d444cb26528"] = loadFixture("../../../../test/fixtures/doge/tx-74ef.json")
 	chainRPCs["getrawtransaction-27de3e1865c098cd4fded71bae1e8236fd27ce5dce6e524a9ac5cd1a17b5c241"] = loadFixture("../../../../test/fixtures/doge/tx-c241.json")
 	chainRPCs["getrawtransaction"] = loadFixture("../../../../test/fixtures/doge/tx.json")
 }
@@ -179,6 +181,12 @@ func (s *DogecoinSuite) SetUpTest(c *C) {
 		} else if req.RequestURI == "/thorchain/mimir/key/MaxUTXOsToSpend" {
 			_, err := rw.Write([]byte(`-1`))
 			c.Assert(err, IsNil)
+		} else if req.RequestURI == "/thorchain/vaults/pubkeys" {
+			if common.CurrentChainNetwork == common.MainNet {
+				httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/vaults/pubKeys-Mainnet.json")
+			} else {
+				httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/vaults/pubKeys.json")
+			}
 		}
 	}))
 	var err error
@@ -207,18 +215,30 @@ func (s *DogecoinSuite) TestGetBlock(c *C) {
 		}
 	}
 	c.Assert(exist, Equals, true)
-	c.Assert(len(block.Tx), Equals, 4)
+	c.Assert(len(block.Tx), Equals, 6)
 }
 
 func (s *DogecoinSuite) TestFetchTxs(c *C) {
+	var vaultPubKey common.PubKey
+	var err error
+	if common.CurrentChainNetwork == common.MainNet {
+		vaultPubKey, err = common.NewPubKey("thorpub1addwnpepqwprh5vd0rrk78kd98qjruuazwvapnxft7f86w7hlf768whxytpn5quf2gs") // from PubKeys-Mainnet.json
+	} else {
+		vaultPubKey, err = common.NewPubKey("tthorpub1addwnpepqflvfv08t6qt95lmttd6wpf3ss8wx63e9vf6fvyuj2yy6nnyna576rfzjks") // from PubKeys.json
+	}
+	c.Assert(err, IsNil, Commentf(vaultPubKey.String()))
+	vaultAddress, err := vaultPubKey.GetAddress(s.client.GetChain())
+	c.Assert(err, IsNil)
+	vaultAddressString := vaultAddress.String()
+
 	txs, err := s.client.FetchTxs(0, 0)
 	c.Assert(err, IsNil)
 	c.Assert(txs.Chain, Equals, common.DOGEChain)
-	c.Assert(txs.Count, Equals, "1")
+	c.Assert(txs.Count, Equals, "1", Commentf(vaultAddressString))
 	c.Assert(txs.TxArray[0].BlockHeight, Equals, int64(1696761))
 	c.Assert(txs.TxArray[0].Tx, Equals, "54ef2f4679fb90af42e8d963a5d85645d0fd86e5fe8ea4e69dbf2d444cb26528")
 	c.Assert(txs.TxArray[0].Sender, Equals, "nfWiQeddE4zsYsDuYhvpgVC7y4gjr5RyqK")
-	c.Assert(txs.TxArray[0].To, Equals, "mv4rnyY3Su5gjcDNzbMLKBQkBicCtHUtFB")
+	c.Assert(txs.TxArray[0].To, Equals, vaultAddressString)
 	c.Assert(txs.TxArray[0].Coins.EqualsEx(common.Coins{common.NewCoin(common.DOGEAsset, cosmos.NewUint(407250300))}), Equals, true)
 	c.Assert(txs.TxArray[0].Gas.Equals(common.Gas{common.NewCoin(common.DOGEAsset, cosmos.NewUint(1108335500))}), Equals, true)
 	c.Assert(len(txs.TxArray), Equals, 1)
@@ -463,7 +483,7 @@ func (s *DogecoinSuite) TestIgnoreTx(c *C) {
 	ignored = s.client.ignoreTx(&tx, currentHeight)
 	c.Assert(ignored, Equals, true)
 
-	// invalid tx multiple vout[0].Addresses
+	// invalid tx > 10 vout with coins we only expect 10 max
 	tx = btcjson.TxRawResult{
 		Vin: []btcjson.Vin{
 			{
@@ -476,36 +496,71 @@ func (s *DogecoinSuite) TestIgnoreTx(c *C) {
 				Value: 0.1234565,
 				ScriptPubKey: btcjson.ScriptPubKeyResult{
 					Addresses: []string{
-						"tb1qkq7weysjn6ljc2ywmjmwp8ttcckg8yyxjdz5k6",
 						"bc1q0s4mg25tu6termrk8egltfyme4q7sg3h0e56p3",
 					},
 				},
 			},
 			{
+				Value: 0.1234565,
 				ScriptPubKey: btcjson.ScriptPubKeyResult{
-					Asm:  "OP_RETURN 74686f72636861696e3a636f6e736f6c6964617465",
-					Type: "nulldata",
+					Addresses: []string{
+						"tb1qkq7weysjn6ljc2ywmjmwp8ttcckg8yyxjdz5k6",
+					},
 				},
 			},
-		},
-	}
-	ignored = s.client.ignoreTx(&tx, currentHeight)
-	c.Assert(ignored, Equals, true)
-
-	// invalid tx > 2 vout with coins we only expect 2 max
-	tx = btcjson.TxRawResult{
-		Vin: []btcjson.Vin{
-			{
-				Txid: "24ed2d26fd5d4e0e8fa86633e40faf1bdfc8d1903b1cd02855286312d48818a2",
-				Vout: 0,
-			},
-		},
-		Vout: []btcjson.Vout{
 			{
 				Value: 0.1234565,
 				ScriptPubKey: btcjson.ScriptPubKeyResult{
 					Addresses: []string{
-						"bc1q0s4mg25tu6termrk8egltfyme4q7sg3h0e56p3",
+						"tb1qkq7weysjn6ljc2ywmjmwp8ttcckg8yyxjdz5k6",
+					},
+				},
+			},
+			{
+				Value: 0.1234565,
+				ScriptPubKey: btcjson.ScriptPubKeyResult{
+					Addresses: []string{
+						"tb1qkq7weysjn6ljc2ywmjmwp8ttcckg8yyxjdz5k6",
+					},
+				},
+			},
+			{
+				Value: 0.1234565,
+				ScriptPubKey: btcjson.ScriptPubKeyResult{
+					Addresses: []string{
+						"tb1qkq7weysjn6ljc2ywmjmwp8ttcckg8yyxjdz5k6",
+					},
+				},
+			},
+			{
+				Value: 0.1234565,
+				ScriptPubKey: btcjson.ScriptPubKeyResult{
+					Addresses: []string{
+						"tb1qkq7weysjn6ljc2ywmjmwp8ttcckg8yyxjdz5k6",
+					},
+				},
+			},
+			{
+				Value: 0.1234565,
+				ScriptPubKey: btcjson.ScriptPubKeyResult{
+					Addresses: []string{
+						"tb1qkq7weysjn6ljc2ywmjmwp8ttcckg8yyxjdz5k6",
+					},
+				},
+			},
+			{
+				Value: 0.1234565,
+				ScriptPubKey: btcjson.ScriptPubKeyResult{
+					Addresses: []string{
+						"tb1qkq7weysjn6ljc2ywmjmwp8ttcckg8yyxjdz5k6",
+					},
+				},
+			},
+			{
+				Value: 0.1234565,
+				ScriptPubKey: btcjson.ScriptPubKeyResult{
+					Addresses: []string{
+						"tb1qkq7weysjn6ljc2ywmjmwp8ttcckg8yyxjdz5k6",
 					},
 				},
 			},
@@ -1023,6 +1078,18 @@ func (s *DogecoinSuite) TestGetConfirmationCount(c *C) {
 }
 
 func (s *DogecoinSuite) TestGetOutput(c *C) {
+	var vaultPubKey common.PubKey
+	var err error
+	if common.CurrentChainNetwork == common.MainNet {
+		vaultPubKey, err = common.NewPubKey("thorpub1addwnpepqwprh5vd0rrk78kd98qjruuazwvapnxft7f86w7hlf768whxytpn5quf2gs") // from PubKeys-Mainnet.json
+	} else {
+		vaultPubKey, err = common.NewPubKey("tthorpub1addwnpepqflvfv08t6qt95lmttd6wpf3ss8wx63e9vf6fvyuj2yy6nnyna576rfzjks") // from PubKeys.json
+	}
+	c.Assert(err, IsNil, Commentf(vaultPubKey.String()))
+	vaultAddress, err := vaultPubKey.GetAddress(s.client.GetChain())
+	c.Assert(err, IsNil)
+	vaultAddressString := vaultAddress.String()
+
 	tx := btcjson.TxRawResult{
 		Vin: []btcjson.Vin{
 			{
@@ -1034,7 +1101,7 @@ func (s *DogecoinSuite) TestGetOutput(c *C) {
 			{
 				Value: 0.00195384,
 				ScriptPubKey: btcjson.ScriptPubKeyResult{
-					Addresses: []string{"tb1qkq7weysjn6ljc2ywmjmwp8ttcckg8yyxjdz5k6"},
+					Addresses: []string{vaultAddressString},
 				},
 			},
 			{
@@ -1051,8 +1118,8 @@ func (s *DogecoinSuite) TestGetOutput(c *C) {
 			},
 		},
 	}
-	out, err := s.client.getOutput("tb1qkq7weysjn6ljc2ywmjmwp8ttcckg8yyxjdz5k6", &tx, false)
-	c.Assert(err, IsNil)
+	out, err := s.client.getOutput(vaultAddressString, &tx, false)
+	c.Assert(err, IsNil, Commentf(vaultAddressString))
 	c.Assert(out.ScriptPubKey.Addresses[0], Equals, "tb1qj08ys4ct2hzzc2hcz6h2hgrvlmsjynaw43s835")
 	c.Assert(out.Value, Equals, 1.49655603)
 
@@ -1073,7 +1140,7 @@ func (s *DogecoinSuite) TestGetOutput(c *C) {
 			{
 				Value: 0.00195384,
 				ScriptPubKey: btcjson.ScriptPubKeyResult{
-					Addresses: []string{"tb1qkq7weysjn6ljc2ywmjmwp8ttcckg8yyxjdz5k6"},
+					Addresses: []string{vaultAddressString},
 				},
 			},
 			{
@@ -1084,7 +1151,7 @@ func (s *DogecoinSuite) TestGetOutput(c *C) {
 			},
 		},
 	}
-	out, err = s.client.getOutput("tb1qkq7weysjn6ljc2ywmjmwp8ttcckg8yyxjdz5k6", &tx, false)
+	out, err = s.client.getOutput(vaultAddressString, &tx, false)
 	c.Assert(err, IsNil)
 	c.Assert(out.ScriptPubKey.Addresses[0], Equals, "tb1qj08ys4ct2hzzc2hcz6h2hgrvlmsjynaw43s835")
 	c.Assert(out.Value, Equals, 1.49655603)
@@ -1100,7 +1167,7 @@ func (s *DogecoinSuite) TestGetOutput(c *C) {
 			{
 				Value: 0.00195384,
 				ScriptPubKey: btcjson.ScriptPubKeyResult{
-					Addresses: []string{"tb1qkq7weysjn6ljc2ywmjmwp8ttcckg8yyxjdz5k6"},
+					Addresses: []string{vaultAddressString},
 				},
 			},
 			{
@@ -1117,7 +1184,7 @@ func (s *DogecoinSuite) TestGetOutput(c *C) {
 			},
 		},
 	}
-	out, err = s.client.getOutput("tb1qkq7weysjn6ljc2ywmjmwp8ttcckg8yyxjdz5k6", &tx, false)
+	out, err = s.client.getOutput(vaultAddressString, &tx, false)
 	c.Assert(err, IsNil)
 	c.Assert(out.ScriptPubKey.Addresses[0], Equals, "tb1qj08ys4ct2hzzc2hcz6h2hgrvlmsjynaw43s835")
 	c.Assert(out.Value, Equals, 1.49655603)
@@ -1139,7 +1206,7 @@ func (s *DogecoinSuite) TestGetOutput(c *C) {
 			{
 				Value: 0.00195384,
 				ScriptPubKey: btcjson.ScriptPubKeyResult{
-					Addresses: []string{"tb1qkq7weysjn6ljc2ywmjmwp8ttcckg8yyxjdz5k6"},
+					Addresses: []string{vaultAddressString},
 				},
 			},
 			{
@@ -1150,7 +1217,7 @@ func (s *DogecoinSuite) TestGetOutput(c *C) {
 			},
 		},
 	}
-	out, err = s.client.getOutput("tb1qkq7weysjn6ljc2ywmjmwp8ttcckg8yyxjdz5k6", &tx, false)
+	out, err = s.client.getOutput(vaultAddressString, &tx, false)
 	c.Assert(err, IsNil)
 	c.Assert(out.ScriptPubKey.Addresses[0], Equals, "tb1qj08ys4ct2hzzc2hcz6h2hgrvlmsjynaw43s835")
 	c.Assert(out.Value, Equals, 1.49655603)
@@ -1166,13 +1233,13 @@ func (s *DogecoinSuite) TestGetOutput(c *C) {
 			{
 				Value: 1.49655603,
 				ScriptPubKey: btcjson.ScriptPubKeyResult{
-					Addresses: []string{"tb1qkq7weysjn6ljc2ywmjmwp8ttcckg8yyxjdz5k6"},
+					Addresses: []string{vaultAddressString},
 				},
 			},
 			{
 				Value: 0.00195384,
 				ScriptPubKey: btcjson.ScriptPubKeyResult{
-					Addresses: []string{"tb1qkq7weysjn6ljc2ywmjmwp8ttcckg8yyxjdz5k6"},
+					Addresses: []string{vaultAddressString},
 				},
 			},
 			{
@@ -1183,8 +1250,37 @@ func (s *DogecoinSuite) TestGetOutput(c *C) {
 			},
 		},
 	}
-	out, err = s.client.getOutput("tb1qkq7weysjn6ljc2ywmjmwp8ttcckg8yyxjdz5k6", &tx, true)
+	out, err = s.client.getOutput(vaultAddressString, &tx, true)
 	c.Assert(err, IsNil)
-	c.Assert(out.ScriptPubKey.Addresses[0], Equals, "tb1qkq7weysjn6ljc2ywmjmwp8ttcckg8yyxjdz5k6")
+	c.Assert(out.ScriptPubKey.Addresses[0], Equals, vaultAddressString)
 	c.Assert(out.Value, Equals, 1.49655603)
+
+	// invalid tx only multiple (positive-value) vout Addresses
+	tx = btcjson.TxRawResult{
+		Vin: []btcjson.Vin{
+			{
+				Txid: "5b0876dcc027d2f0c671fc250460ee388df39697c3ff082007b6ddd9cb9a7513",
+				Vout: 1,
+			},
+		},
+		Vout: []btcjson.Vout{
+			{
+				Value: 0.1234565,
+				ScriptPubKey: btcjson.ScriptPubKeyResult{
+					Addresses: []string{
+						"tb1qkq7weysjn6ljc2ywmjmwp8ttcckg8yyxjdz5k6",
+						"bc1q0s4mg25tu6termrk8egltfyme4q7sg3h0e56p3",
+					},
+				},
+			},
+			{
+				ScriptPubKey: btcjson.ScriptPubKeyResult{
+					Asm:  "OP_RETURN 74686f72636861696e3a636f6e736f6c6964617465",
+					Type: "nulldata",
+				},
+			},
+		},
+	}
+	out, err = s.client.getOutput(vaultAddressString, &tx, true)
+	c.Assert(err, NotNil)
 }
