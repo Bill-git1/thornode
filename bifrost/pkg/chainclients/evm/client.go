@@ -433,9 +433,9 @@ func (c *EVMClient) getOutboundTxData(txOutItem stypes.TxOutItem, memo mem.Memo,
 				return nil, hasRouterUpdated, nil, fmt.Errorf("fail to create data to call smart contract(transferOutAndCall): %w", err)
 			}
 		}
-	case mem.TxMigrate, mem.TxYggdrasilFund:
+	case mem.TxMigrate:
 		if txOutItem.Aggregator != "" || txOutItem.AggregatorTargetAsset != "" {
-			return nil, hasRouterUpdated, nil, fmt.Errorf("migration / yggdrasil+ can't use aggregator")
+			return nil, hasRouterUpdated, nil, fmt.Errorf("migration can't use aggregator")
 		}
 		if strings.EqualFold(tokenAddr, evm.NativeTokenAddr) {
 			data, err = c.vaultABI.Pack("transferOut", toAddr, ecommon.HexToAddress(tokenAddr), value, txOutItem.Memo)
@@ -451,33 +451,6 @@ func (c *EVMClient) getOutboundTxData(txOutItem stypes.TxOutItem, memo mem.Memo,
 			if err != nil {
 				return nil, hasRouterUpdated, nil, fmt.Errorf("fail to create data to call smart contract(transferAllowance): %w", err)
 			}
-		}
-	case mem.TxYggdrasilReturn:
-		if txOutItem.Aggregator != "" || txOutItem.AggregatorTargetAsset != "" {
-			return nil, hasRouterUpdated, nil, fmt.Errorf("yggdrasil- can't use aggregator")
-		}
-		newSmartContractAddr := c.getSmartContractByAddress(txOutItem.ToAddress)
-		if newSmartContractAddr.IsEmpty() {
-			return nil, hasRouterUpdated, nil, fmt.Errorf("fail to get new smart contract address")
-		}
-		hasRouterUpdated = !newSmartContractAddr.Equals(contractAddr)
-
-		var coins []evm.RouterCoin
-		for _, item := range txOutItem.Coins {
-			assetAddr := c.getTokenAddressFromAsset(item.Asset)
-			assetAmt := c.evmScanner.tokenManager.ConvertSigningAmount(item.Amount.BigInt(), assetAddr)
-			if strings.EqualFold(assetAddr, evm.NativeTokenAddr) {
-				evmValue = assetAmt
-				continue
-			}
-			coins = append(coins, evm.RouterCoin{
-				Asset:  ecommon.HexToAddress(assetAddr),
-				Amount: assetAmt,
-			})
-		}
-		data, err = c.vaultABI.Pack("returnVaultAssets", ecommon.HexToAddress(newSmartContractAddr.String()), toAddr, coins, txOutItem.Memo)
-		if err != nil {
-			return nil, hasRouterUpdated, nil, fmt.Errorf("fail to create data to call smart contract(transferVaultAssets): %w", err)
 		}
 	}
 	return data, hasRouterUpdated, evmValue, nil
@@ -505,7 +478,7 @@ func (c *EVMClient) buildOutboundTx(txOutItem stypes.TxOutItem, memo mem.Memo, n
 		return nil, fmt.Errorf("fail to get EVM address for pub key(%s): %w", txOutItem.VaultPubKey, err)
 	}
 
-	txData, hasRouterUpdated, evmValue, err := c.getOutboundTxData(txOutItem, memo, contractAddr)
+	txData, _, evmValue, err := c.getOutboundTxData(txOutItem, memo, contractAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get outbound tx data %w", err)
 	}
@@ -551,30 +524,17 @@ func (c *EVMClient) buildOutboundTx(txOutItem stypes.TxOutItem, memo mem.Memo, n
 		// adjust the gas price to reflect that , so not breach the MaxGas restriction
 		// This might cause the tx to delay
 		if totalGas.Cmp(gasOut) == 1 {
-			// for Yggdrasil return , the total gas will always larger than gasOut , as we don't specify MaxGas
-			if memo.GetType() == mem.TxYggdrasilReturn {
-				if hasRouterUpdated {
-					// when we are doing smart contract upgrade , we inflate the estimate gas by 1.5 , to give it more room with gas
-					estimatedGas = estimatedGas * 3 / 2
-					totalGas = big.NewInt(int64(estimatedGas) * gasRate.Int64())
-				}
-				// yggdrasil return fund
-				gap := totalGas.Sub(totalGas, gasOut)
-				c.logger.Info().Str("gas needed", gap.String()).Msg("yggdrasil returning funds")
-				evmValue = evmValue.Sub(evmValue, gap)
+			// At this point, if this is is to an aggregator (which should be white-listed), allow the maximum gas.
+			if txOutItem.Aggregator == "" {
+				gasRate = gasOut.Div(gasOut, big.NewInt(int64(estimatedGas)))
+				c.logger.Info().Msgf("based on estimated gas unit (%d) , total gas will be %s, which is more than %s, so adjust gas rate to %s", estimatedGas, totalGas.String(), gasOut.String(), gasRate.String())
 			} else {
-				// At this point, if this is is to an aggregator (which should be white-listed), allow the maximum gas.
-				if txOutItem.Aggregator == "" {
-					gasRate = gasOut.Div(gasOut, big.NewInt(int64(estimatedGas)))
-					c.logger.Info().Msgf("based on estimated gas unit (%d) , total gas will be %s, which is more than %s, so adjust gas rate to %s", estimatedGas, totalGas.String(), gasOut.String(), gasRate.String())
+				if estimatedGas > uint64(c.cfg.BlockScanner.MaxGasFee) {
+					// the estimated gas unit is more than the maximum , so bring down the gas rate
+					maxGasWei := big.NewInt(1).Mul(big.NewInt(c.cfg.BlockScanner.MaxGasFee), gasRate)
+					gasRate = big.NewInt(1).Div(maxGasWei, big.NewInt(int64(estimatedGas)))
 				} else {
-					if estimatedGas > uint64(c.cfg.BlockScanner.MaxGasFee) {
-						// the estimated gas unit is more than the maximum , so bring down the gas rate
-						maxGasWei := big.NewInt(1).Mul(big.NewInt(c.cfg.BlockScanner.MaxGasFee), gasRate)
-						gasRate = big.NewInt(1).Div(maxGasWei, big.NewInt(int64(estimatedGas)))
-					} else {
-						estimatedGas = uint64(c.cfg.BlockScanner.MaxGasFee) // pay the maximum
-					}
+					estimatedGas = uint64(c.cfg.BlockScanner.MaxGasFee) // pay the maximum
 				}
 			}
 		} else {

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math/big"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -285,20 +284,6 @@ func (c *CosmosClient) processOutboundTx(tx stypes.TxOutItem, thorchainHeight in
 
 	var coins ctypes.Coins
 	for _, coin := range tx.Coins {
-		// Handle yggdrasil return. Leave enough coin to pay for gas
-		if strings.HasPrefix(tx.Memo, "YGGDRASIL-:") {
-			if coin.Asset == c.cfg.ChainID.GetGasAsset() {
-				// CHANGEME: you may need to set aside for coins for Yggdrasil return if Thorchain
-				// will support a large # of assets (all returned in a single MsgSend).
-				// This subtractFee takes into account two assets being sent back. Test this thoroughly.
-				subtractFee := c.cosmosScanner.averageFee().Mul(ctypes.NewUint(3)).Quo(ctypes.NewUint(2))
-				if coin.Amount.LT(subtractFee) {
-					// not enough gas to pay for transaction
-					return &btypes.MsgSend{}, fmt.Errorf("not enough gas to pay for transaction, have %d want %d", coin.Amount.Uint64(), subtractFee.Uint64())
-				}
-				coin.Amount = coin.Amount.Sub(subtractFee)
-			}
-		}
 		// convert to cosmos coin
 		cosmosCoin, err := fromThorchainToCosmos(coin)
 		if err != nil {
@@ -396,16 +381,9 @@ func (c *CosmosClient) SignTx(tx stypes.TxOutItem, thorchainHeight int64) (signe
 	gasCoins := tx.MaxGas.ToCoins()
 	if len(gasCoins) != 1 {
 		// CHANGEME: same as above, you may need to tweak this depending on the chain / # of assets
-		if strings.HasPrefix(tx.Memo, "YGGDRASIL-:") {
-			gasCoins = append(gasCoins, common.NewCoin(
-				c.GetChain().GetGasAsset(),
-				c.cosmosScanner.averageFee().Mul(ctypes.NewUint(3)).Quo(ctypes.NewUint(2)),
-			))
-		} else {
-			err = errors.New("exactly one gas coin must be provided")
-			c.logger.Err(err).Interface("fee", gasCoins).Msg(err.Error())
-			return nil, nil, nil, err
-		}
+		err = errors.New("exactly one gas coin must be provided")
+		c.logger.Err(err).Interface("fee", gasCoins).Msg(err.Error())
+		return nil, nil, nil, err
 	}
 
 	if !gasCoins[0].Asset.Equals(c.GetChain().GetGasAsset()) {

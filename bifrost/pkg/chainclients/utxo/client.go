@@ -284,7 +284,7 @@ func (c *Client) GetAccount(pubkey common.PubKey, height *big.Int) (common.Accou
 			continue
 		}
 		if item.Confirmations == 0 {
-			// pending tx that is still in mempool, only count yggdrasil send to itself or from asgard
+			// pending tx in mempool, only count sends to self or from asgard
 			if !c.isSelfTransaction(item.TxID) && !c.isAsgardAddress(item.Address) {
 				continue
 			}

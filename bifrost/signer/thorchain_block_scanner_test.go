@@ -62,7 +62,7 @@ func (s *ThorchainBlockScanSuite) SetUpSuite(c *C) {
 			_, err := rw.Write([]byte(`{ "jsonrpc": "2.0", "id": "", "result": { "height": "1", "result": { "value": { "account_number": "0", "sequence": "0" } } } |`))
 			c.Assert(err, IsNil)
 		} else if strings.HasPrefix(req.RequestURI, "/thorchain/vaults/pubkeys") {
-			_, err := rw.Write([]byte(`{ "jsonrpc": "2.0", "id": "", "result": { "asgard": ["thorpub1addwnpepqfgfxharps79pqv8fv9ndqh90smw8c3slrtrssn58ryc5g3p9sx856x07yn"], "yggdrasil": ["tthorpub1addwnpepqdqvd4r84lq9m54m5kk9sf4k6kdgavvch723pcgadulxd6ey9u70k6zq8qe"] } }`))
+			_, err := rw.Write([]byte(`{ "jsonrpc": "2.0", "id": "", "result": { "asgard": ["thorpub1addwnpepqfgfxharps79pqv8fv9ndqh90smw8c3slrtrssn58ryc5g3p9sx856x07yn"] } }`))
 			c.Assert(err, IsNil)
 		} else if req.RequestURI == "/block" {
 			_, err := rw.Write([]byte(`{ "jsonrpc": "2.0", "id": "", "result": { "block": { "header": { "height": "1" } } } }`))

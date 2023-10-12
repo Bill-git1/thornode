@@ -65,7 +65,6 @@ func (c *Client) getUtxoToSpend(pubkey common.PubKey, total float64) ([]btcjson.
 	var result []btcjson.ListUnspentResult
 	var toSpend float64
 	minUTXOAmt := btcutil.Amount(c.cfg.ChainID.DustThreshold().Uint64()).ToBTC()
-	isYggdrasil := c.isYggdrasil(pubkey)       // yggdrasil spends utxos older than 10 blocks
 	utxosToSpend := c.getMaximumUtxosToSpend() // can be set by mimir
 
 	for _, item := range utxos {
@@ -83,12 +82,12 @@ func (c *Client) getUtxoToSpend(pubkey common.PubKey, total float64) ([]btcjson.
 		}
 
 		// skip utxos under the dust threshold for asgards, unless it is a self transaction
-		if item.Amount < minUTXOAmt && !isSelfTx && !isYggdrasil {
+		if item.Amount < minUTXOAmt && !isSelfTx {
 			continue
 		}
 
-		// include utxo for yggdrasils, self transactions, or has enough confirmations
-		if isYggdrasil || isSelfTx || item.Confirmations >= c.cfg.UTXO.MinUTXOConfirmations {
+		// include utxo for self transactions, or has enough confirmations
+		if isSelfTx || item.Confirmations >= c.cfg.UTXO.MinUTXOConfirmations {
 			result = append(result, item)
 			toSpend += item.Amount
 		}
@@ -175,11 +174,6 @@ func (c *Client) estimateTxSize(memo string, txes []btcjson.ListUnspentResult) i
 	// so we won't hit absurd hight fee issue
 	// overhead for NULL DATA - 9 , len(memo) is the size of memo
 	return int64(10 + 148*len(txes) + 34 + 9 + len([]byte(memo)))
-}
-
-// isYggdrasil - when the pubkey and node pubkey is the same that means it is signing from yggdrasil
-func (c *Client) isYggdrasil(key common.PubKey) bool {
-	return key.Equals(c.nodePubKey)
 }
 
 func (c *Client) getGasCoin(tx stypes.TxOutItem, vSize int64) common.Coin {
@@ -299,9 +293,9 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 		if err != nil {
 			return nil, nil, fmt.Errorf("fail to parse memo: %w", err)
 		}
-		if memo.GetType() == mem.TxYggdrasilReturn || memo.GetType() == mem.TxConsolidate {
+		if memo.GetType() == mem.TxConsolidate {
 			gap := gasAmtSats
-			c.log.Info().Msgf("yggdrasil return asset or consolidate tx, need gas: %d", gap)
+			c.log.Info().Msgf("consolidate tx, need gas: %d", gap)
 			coinToCustomer.Amount = common.SafeSub(coinToCustomer.Amount, cosmos.NewUint(gap))
 		}
 	}

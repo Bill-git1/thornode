@@ -498,7 +498,7 @@ func (b *thorchainBridge) getVaultPubkeys() ([]byte, error) {
 	return buf, nil
 }
 
-// GetPubKeys retrieve asgard vaults and yggdrasil vaults , and it's relevant smart contracts
+// GetPubKeys retrieve vault pub keys and their relevant smart contracts
 func (b *thorchainBridge) GetPubKeys() ([]PubKeyContractAddressPair, error) {
 	buf, err := b.getVaultPubkeys()
 	if err != nil {
@@ -509,7 +509,7 @@ func (b *thorchainBridge) GetPubKeys() ([]PubKeyContractAddressPair, error) {
 		return nil, fmt.Errorf("fail to unmarshal pubkeys: %w", err)
 	}
 	var addressPairs []PubKeyContractAddressPair
-	for _, v := range append(result.Asgard, append(result.Yggdrasil, result.Inactive...)...) {
+	for _, v := range append(result.Asgard, result.Inactive...) {
 		kp := PubKeyContractAddressPair{
 			PubKey:    v.PubKey,
 			Contracts: make(map[common.Chain]common.Address),

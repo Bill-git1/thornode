@@ -28,7 +28,6 @@ import (
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/config"
 	"gitlab.com/thorchain/thornode/constants"
-	"gitlab.com/thorchain/thornode/x/thorchain"
 	ttypes "gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
@@ -95,7 +94,7 @@ func NewSigner(cfg config.BifrostSignerConfiguration,
 
 	cfg.BlockScanner.ChainID = common.THORChain // hard code to thorchain
 
-	// Create pubkey manager and add our private key (Yggdrasil pubkey)
+	// Create pubkey manager and add our private key
 	thorchainBlockScanner, err := NewThorchainBlockScan(cfg.BlockScanner, storage, thorchainBridge, m, pubkeyMgr)
 	if err != nil {
 		return nil, fmt.Errorf("fail to create thorchain block scan: %w", err)
@@ -585,16 +584,6 @@ func (s *Signer) signAndBroadcast(item TxOutStoreItem) ([]byte, *types.TxInItem,
 		return nil, nil, fmt.Errorf("the block scanner for chain %s is unhealthy, not signing transactions due to it", chain.GetChain())
 	}
 
-	// Check if we're sending all funds back , given we don't have memo in txoutitem anymore, so it rely on the coins field to be empty
-	// In this scenario, we should chose the coins to send ourselves
-	if tx.Coins.IsEmpty() {
-		tx, err = s.handleYggReturn(height, tx)
-		if err != nil {
-			s.logger.Error().Err(err).Msg("failed to handle yggdrasil return")
-			return nil, nil, err
-		}
-	}
-
 	start := time.Now()
 	defer func() {
 		s.m.GetHistograms(metrics.SignAndBroadcastDuration(chain.GetChain())).Observe(time.Since(start).Seconds())
@@ -665,41 +654,6 @@ func (s *Signer) signAndBroadcast(item TxOutStoreItem) ([]byte, *types.TxInItem,
 	}
 
 	return nil, observation, nil
-}
-
-func (s *Signer) handleYggReturn(height int64, tx types.TxOutItem) (types.TxOutItem, error) {
-	chain, err := s.getChain(tx.Chain)
-	if err != nil {
-		s.logger.Error().Err(err).Msgf("not supported %s", tx.Chain.String())
-		return tx, err
-	}
-	isValid, _ := s.pubkeyMgr.IsValidPoolAddress(tx.ToAddress.String(), tx.Chain)
-	if !isValid {
-		errInvalidPool := fmt.Errorf("yggdrasil return should return to a valid pool address,%s is not valid", tx.ToAddress.String())
-		s.logger.Error().Err(errInvalidPool).Msg("invalid yggdrasil return address")
-		return tx, errInvalidPool
-	}
-	// it is important to set the memo field to `yggdrasil-` , thus chain client can use it to decide leave some gas coin behind to pay the fees
-	tx.Memo = thorchain.NewYggdrasilReturn(height).String()
-	acct, err := chain.GetAccount(tx.VaultPubKey, nil)
-	if err != nil {
-		return tx, fmt.Errorf("fail to get chain account info: %w", err)
-	}
-	tx.Coins = make(common.Coins, 0)
-	for _, coin := range acct.Coins {
-		asset, err := common.NewAsset(coin.Asset.String())
-		asset.Chain = tx.Chain
-		if err != nil {
-			return tx, fmt.Errorf("fail to parse asset: %w", err)
-		}
-		if coin.Amount.Uint64() > 0 {
-			amount := coin.Amount
-			tx.Coins = append(tx.Coins, common.NewCoin(asset, amount))
-		}
-	}
-	// Yggdrasil return should pay whatever gas is necessary
-	tx.MaxGas = common.Gas{}
-	return tx, nil
 }
 
 func (s *Signer) isTssKeysign(pubKey common.PubKey) bool {

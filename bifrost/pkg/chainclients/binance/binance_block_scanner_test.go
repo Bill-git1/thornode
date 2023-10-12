@@ -363,34 +363,6 @@ func (s *BlockScannerTestSuite) TestFromStdTx(c *C) {
 	c.Assert(item, NotNil)
 	c.Assert(item.Tx, Equals, txhash)
 
-	// register yggdrasil
-	stdTx, err = getStdTx(
-		"tbnb1yycn4mh6ffwpjf584t8lpp7c27ghu03gpvqkfj",
-		"tbnb1yxfyeda8pnlxlmx0z3cwx74w9xevspwdpzdxpj",
-		types.Coins{types.Coin{Denom: "BNB", Amount: 194765912}},
-		"yggdrasil+",
-	)
-	c.Assert(err, IsNil)
-	items, err = bs.fromStdTx("abcd", stdTx, 1)
-	c.Assert(err, IsNil)
-	c.Assert(items, HasLen, 1)
-	item = items[0]
-	c.Check(item.Memo, Equals, "yggdrasil+")
-
-	// un-register yggdrasil
-	stdTx, err = getStdTx(
-		"tbnb1yycn4mh6ffwpjf584t8lpp7c27ghu03gpvqkfj",
-		"tbnb1yxfyeda8pnlxlmx0z3cwx74w9xevspwdpzdxpj",
-		types.Coins{types.Coin{Denom: "BNB", Amount: 194765912}},
-		"yggdrasil-",
-	)
-	c.Assert(err, IsNil)
-	items, err = bs.fromStdTx("abcd", stdTx, 1)
-	c.Assert(err, IsNil)
-	c.Assert(items, HasLen, 1)
-	item = items[0]
-	c.Check(item.Memo, Equals, "yggdrasil-")
-
 	mStdTx, err := getMultiSendStdTx(
 		"tbnb1yycn4mh6ffwpjf584t8lpp7c27ghu03gpvqkfj",
 		"tbnb1yxfyeda8pnlxlmx0z3cwx74w9xevspwdpzdxpj",

@@ -401,7 +401,6 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 	dest := ecommon.HexToAddress(tx.ToAddress.String())
 	var data []byte
 
-	hasRouterUpdated := false
 	switch memo.GetType() {
 	case mem.TxOutbound, mem.TxRefund, mem.TxRagnarok:
 		if tx.Aggregator == "" {
@@ -439,9 +438,9 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 				return nil, nil, nil, fmt.Errorf("fail to create data to call smart contract(transferOutAndCall): %w", err)
 			}
 		}
-	case mem.TxMigrate, mem.TxYggdrasilFund:
+	case mem.TxMigrate:
 		if tx.Aggregator != "" || tx.AggregatorTargetAsset != "" {
-			return nil, nil, nil, fmt.Errorf("migration / yggdrasil+ can't use aggregator")
+			return nil, nil, nil, fmt.Errorf("migration can't use aggregator")
 		}
 		if IsETH(tokenAddr) {
 			data, err = c.vaultABI.Pack("transferOut", dest, ecommon.HexToAddress(tokenAddr), value, tx.Memo)
@@ -457,33 +456,6 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 			if err != nil {
 				return nil, nil, nil, fmt.Errorf("fail to create data to call smart contract(transferAllowance): %w", err)
 			}
-		}
-	case mem.TxYggdrasilReturn:
-		if tx.Aggregator != "" || tx.AggregatorTargetAsset != "" {
-			return nil, nil, nil, fmt.Errorf("yggdrasil- can't use aggregator")
-		}
-		newSmartContractAddr := c.getSmartContractByAddress(tx.ToAddress)
-		if newSmartContractAddr.IsEmpty() {
-			return nil, nil, nil, fmt.Errorf("fail to get new smart contract address")
-		}
-		hasRouterUpdated = !newSmartContractAddr.Equals(contractAddr)
-
-		var coins []RouterCoin
-		for _, item := range tx.Coins {
-			assetAddr := getTokenAddressFromAsset(item.Asset)
-			assetAmt := c.convertSigningAmount(item.Amount.BigInt(), assetAddr)
-			if IsETH(assetAddr) {
-				ethValue = assetAmt
-				continue
-			}
-			coins = append(coins, RouterCoin{
-				Asset:  ecommon.HexToAddress(assetAddr),
-				Amount: assetAmt,
-			})
-		}
-		data, err = c.vaultABI.Pack("returnVaultAssets", ecommon.HexToAddress(newSmartContractAddr.String()), dest, coins, tx.Memo)
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf("fail to create data to call smart contract(transferVaultAssets): %w", err)
 		}
 	}
 
@@ -558,21 +530,8 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 			// adjust the gas price to reflect that , so not breach the MaxGas restriction
 			// This might cause the tx to delay
 			if totalGas.Cmp(gasOut) == 1 {
-				// for Yggdrasil return , the total gas will always larger than gasOut , as we don't specify MaxGas
-				if memo.GetType() == mem.TxYggdrasilReturn {
-					if hasRouterUpdated {
-						// when we are doing smart contract upgrade , we inflate the estimate gas by 1.5 , to give it more room with gas
-						estimatedGas = estimatedGas * 3 / 2
-						totalGas = big.NewInt(int64(estimatedGas) * gasRate.Int64())
-					}
-					// yggdrasil return fund
-					gap := totalGas.Sub(totalGas, gasOut)
-					c.logger.Info().Msgf("yggdrasil return fund , gas need: %s", gap.String())
-					ethValue = ethValue.Sub(ethValue, gap)
-				} else {
-					gasRate = gasOut.Div(gasOut, big.NewInt(int64(estimatedGas)))
-					c.logger.Info().Msgf("based on estimated gas unit (%d) , total gas will be %s, which is more than %s, so adjust gas rate to %s", estimatedGas, totalGas.String(), gasOut.String(), gasRate.String())
-				}
+				gasRate = gasOut.Div(gasOut, big.NewInt(int64(estimatedGas)))
+				c.logger.Info().Msgf("based on estimated gas unit (%d) , total gas will be %s, which is more than %s, so adjust gas rate to %s", estimatedGas, totalGas.String(), gasOut.String(), gasRate.String())
 			} else {
 				// override estimate gas with the max
 				estimatedGas = big.NewInt(0).Div(gasOut, gasRate).Uint64()
@@ -809,11 +768,6 @@ func (c *Client) getTotalTransactionValue(txIn stypes.TxIn, excludeFrom []common
 			}
 		}
 		if fromAsgard {
-			continue
-		}
-		// if from address is yggdrasil , exclude the value from confirmation counting
-		ok, _ := c.pubkeyMgr.IsValidPoolAddress(item.Sender, common.ETHChain)
-		if ok {
 			continue
 		}
 		for _, coin := range item.Coins {

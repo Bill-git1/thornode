@@ -84,22 +84,6 @@ type RouterCoin struct {
 	Amount *big.Int
 }
 
-type routerVaultTransfer struct {
-	OldVault ecommon.Address
-	NewVault ecommon.Address
-	Coins    []RouterCoin
-	Memo     string
-}
-
-func (scp *SmartContractLogParser) parseVaultTransfer(log etypes.Log) (routerVaultTransfer, error) {
-	const vaultTransferEventName = "VaultTransfer"
-	event := routerVaultTransfer{}
-	if err := scp.unpackVaultLog(&event, vaultTransferEventName, log); err != nil {
-		return event, fmt.Errorf("fail to unpack event: %w", err)
-	}
-	return event, nil
-}
-
 func (scp *SmartContractLogParser) unpackVaultLog(out interface{}, event string, log etypes.Log) error {
 	if len(log.Topics) == 0 {
 		return errors.New("topics field in event log is empty")
@@ -232,7 +216,7 @@ func (scp *SmartContractLogParser) GetTxInItem(logs []*etypes.Log, txInItem *typ
 				scp.logger.Err(err).Str("memo", transferOutEvt.Memo).Msg("failed to parse transferOutEvent memo")
 				continue
 			}
-			if !m.IsOutbound() && !m.IsType(memo.TxMigrate) && !m.IsType(memo.TxYggdrasilFund) {
+			if !m.IsOutbound() && !m.IsType(memo.TxMigrate) {
 				scp.logger.Error().Str("memo", transferOutEvt.Memo).Msg("incorrect memo for transferOutEvent")
 				continue
 			}
@@ -280,7 +264,7 @@ func (scp *SmartContractLogParser) GetTxInItem(logs []*etypes.Log, txInItem *typ
 				scp.logger.Err(err).Str("memo", transferAllowanceEvt.Memo).Msg("failed to parse transferAllowanceEvt memo")
 				continue
 			}
-			if !(m.IsType(memo.TxMigrate) || m.IsType(memo.TxYggdrasilFund)) {
+			if !m.IsType(memo.TxMigrate) {
 				scp.logger.Error().Str("memo", transferAllowanceEvt.Memo).Msg("incorrect memo for transferAllowanceEvt")
 				continue
 			}
@@ -300,49 +284,8 @@ func (scp *SmartContractLogParser) GetTxInItem(logs []*etypes.Log, txInItem *typ
 			)
 			isVaultTransfer = false
 		case vaultTransferEvent:
-			transferEvent, err := scp.parseVaultTransfer(*item)
-			if err != nil {
-				scp.logger.Err(err).Msg("fail to parse vault transfer event")
-				continue
-			}
-			if len(txInItem.Sender) > 0 && !strings.EqualFold(txInItem.Sender, transferEvent.OldVault.String()) {
-				scp.logger.Error().Msg("vault transfer event , vault address is not the same as sender, ignore")
-				continue
-			}
-			if len(txInItem.To) > 0 && !strings.EqualFold(txInItem.To, transferEvent.NewVault.String()) {
-				scp.logger.Error().Msg("multiple vaultTransfer events , have different to addresses , ignore")
-				continue
-			}
-			if len(txInItem.Memo) > 0 && !strings.EqualFold(txInItem.Memo, transferEvent.Memo) {
-				scp.logger.Error().Msg("multiple events in the same transaction , have different memo , ignore")
-				continue
-			}
-			m, err := memo.ParseMemo(common.LatestVersion, transferEvent.Memo)
-			if err != nil {
-				scp.logger.Err(err).Str("memo", transferEvent.Memo).Msg("failed to parse vaultTransferEvent memo")
-				continue
-			}
-			if !m.IsType(memo.TxYggdrasilReturn) {
-				scp.logger.Error().Str("memo", transferEvent.Memo).Msg("memo is not yggdrasil return memo")
-				continue
-			}
-			txInItem.To = transferEvent.NewVault.String()
-			txInItem.Memo = transferEvent.Memo
-			var totalCoins common.Coins
-			for _, item := range transferEvent.Coins {
-				asset, err := scp.assetResolver(item.Asset.String())
-				if err != nil {
-					scp.logger.Err(err).Msg("fail to get asset from token address")
-					continue
-				}
-				if asset.IsEmpty() {
-					continue
-				}
-				decimals := scp.decimalResolver(item.Asset.String())
-				totalCoins = append(totalCoins, common.NewCoin(asset, scp.amtConverter(item.Asset.String(), item.Amount)).WithDecimals(decimals))
-			}
-			txInItem.Coins = totalCoins
-			isVaultTransfer = true
+			// TODO vault transfer events were only fired by ygg returns
+			continue
 		case transferOutAndCallEvent:
 			transferOutAndCall, err := scp.parseTransferOutAndCall(*item)
 			if err != nil {

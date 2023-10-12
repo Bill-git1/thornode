@@ -764,29 +764,8 @@ func (e *ETHScanner) getTxInFromSmartContract(tx *etypes.Transaction, receipt *e
 		e.vaultABI)
 	// txInItem will be changed in p.getTxInItem function, so if the function return an error
 	// txInItem should be abandoned
-	isVaultTransfer, err := p.getTxInItem(receipt.Logs, txInItem)
-	if err != nil {
+	if _, err := p.getTxInItem(receipt.Logs, txInItem); err != nil {
 		return nil, fmt.Errorf("fail to parse logs, err: %w", err)
-	}
-	if isVaultTransfer {
-		contractAddresses := e.pubkeyMgr.GetContracts(common.ETHChain)
-		isDirectlyToRouter := false
-		for _, item := range contractAddresses {
-			if strings.EqualFold(item.String(), tx.To().String()) {
-				isDirectlyToRouter = true
-				break
-			}
-		}
-		if isDirectlyToRouter {
-			// it is important to keep this part outside the above loop, as when we do router upgrade , which might generate multiple deposit event , along with tx that has eth value in it
-			ethValue := cosmos.NewUintFromBigInt(tx.Value())
-			if !ethValue.IsZero() {
-				ethValue = e.convertAmount(ethToken, tx.Value())
-				if txInItem.Coins.GetCoin(common.ETHAsset).IsEmpty() && !ethValue.IsZero() {
-					txInItem.Coins = append(txInItem.Coins, common.NewCoin(common.ETHAsset, ethValue))
-				}
-			}
-		}
 	}
 	e.logger.Info().Msgf("tx: %s, gas price: %s, gas used: %d,receipt status:%d", txInItem.Tx, tx.GasPrice().String(), receipt.GasUsed, receipt.Status)
 	// under no circumstance ETH gas price will be less than 1 Gwei , unless it is in dev environment
@@ -867,7 +846,7 @@ func (e *ETHScanner) fromTxToTxIn(tx *etypes.Transaction) (*stypes.TxInItem, err
 
 // getTxInFromFailedTransaction when a transaction failed due to out of gas, this method will check whether the transaction is an outbound
 // it fake a txInItem if the failed transaction is an outbound , and report it back to THORNode , thus the gas fee can be subsidised
-// need to know that this will also cause the yggdrasil / asgard that send out the outbound to be slashed 1.5x gas
+// need to know that this will also cause the vault that send out the outbound to be slashed 1.5x gas
 // it is for security purpose
 func (e *ETHScanner) getTxInFromFailedTransaction(tx *etypes.Transaction, receipt *etypes.Receipt) *stypes.TxInItem {
 	if receipt.Status == 1 {

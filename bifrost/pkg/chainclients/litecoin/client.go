@@ -295,7 +295,7 @@ func (c *Client) GetAccount(pkey common.PubKey, height *big.Int) (common.Account
 			continue
 		}
 		if item.Confirmations == 0 {
-			// pending tx that is still  in mempool, only count yggdrasil send to itself or from asgard
+			// pending tx in mempool, only count sends to self or from asgard
 			if !c.isSelfTransaction(item.TxID) && !c.isAsgardAddress(item.Address) {
 				continue
 			}
@@ -1188,7 +1188,7 @@ func (c *Client) ConfirmationCountReady(txIn types.TxIn) bool {
 // getVaultSignerLock , with consolidate UTXO process add into bifrost , there are two entry points for SignTx , one is from signer , signing the outbound tx
 // from state machine, the other one will be consolidate utxo process
 // this keep a lock per vault pubkey , the goal is each vault we only have one key sign in flight at a time, however different vault can do key sign in parallel
-// assume there are multiple asgards(A,B) , and local yggdrasil vault , when A is signing , B and local yggdrasil vault should be able to sign as well
+// assume there are multiple asgards(A,B), when A is signing, B should be able to sign as well
 // however if A already has a key sign in flight , bifrost should not kick off another key sign in parallel, otherwise we might double spend some UTXOs
 func (c *Client) getVaultSignerLock(vaultPubKey string) *sync.Mutex {
 	c.signerLock.Lock()

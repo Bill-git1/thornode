@@ -606,7 +606,7 @@ func (e *EVMScanner) getTxInFromSmartContract(tx *etypes.Transaction, receipt *e
 // getTxInFromFailedTransaction when a transaction failed due to out of gas, this method
 // will check whether the transaction is an outbound it fake a txInItem if the failed
 // transaction is an outbound , and report it back to thornode, thus the gas fee can be
-// subsidised need to know that this will also cause the yggdrasil / asgard that send
+// subsidised need to know that this will also cause the vault that send
 // out the outbound to be slashed 1.5x gas it is for security purpose
 func (e *EVMScanner) getTxInFromFailedTransaction(tx *etypes.Transaction, receipt *etypes.Receipt) *stypes.TxInItem {
 	if receipt.Status == 1 {

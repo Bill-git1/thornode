@@ -85,8 +85,7 @@ func (tx TxOutItem) Equals(tx2 TxOutItem) bool {
 // TxArrayItem used to represent the tx out item coming from THORChain, there is little difference between TxArrayItem
 // and TxOutItem defined above , only Coin <-> Coins field are different.
 // TxArrayItem from THORChain has Coin , which only have a single coin
-// TxOutItem used in bifrost need to support Coins , because when Yggdrasil return , it send all the coins back to asgard
-// using multisend
+// TxOutItem used in bifrost need to support Coins for multisend
 type TxArrayItem struct {
 	Chain                 common.Chain   `json:"chain,omitempty"`
 	ToAddress             common.Address `json:"to_address,omitempty"`

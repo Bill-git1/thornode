@@ -326,7 +326,7 @@ func (o *Observer) filterObservations(chain common.Chain, items []types.TxInItem
 		}
 		// check if the to address is a valid pool address
 		// for inbound message , if it is still in mempool , it will be ignored unless it is internal transaction
-		// internal tx means both from & to addresses belongs to the network. for example migrate/yggdrasil+
+		// internal tx means both from & to addresses belongs to the network. for example migrate/consolidate
 		if ok, cpi := o.pubkeyMgr.IsValidPoolAddress(txInItem.To, chain); ok && (!memPool || isInternal) {
 			txInItem.ObservedVaultPubKey = cpi.PubKey
 			txs = append(txs, txInItem)

@@ -3,7 +3,6 @@ package signer
 import (
 	"bytes"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"math/big"
 	"net/http"
@@ -324,7 +323,7 @@ func (s *SignSuite) SetUpSuite(c *C) {
 			_, err := rw.Write([]byte(`{ "jsonrpc": "2.0", "id": "", "result": { "height": "0", "result": { "value": { "account_number": "0", "sequence": "0" } } } }`))
 			c.Assert(err, IsNil)
 		} else if strings.HasPrefix(req.RequestURI, "/thorchain/vaults/pubkeys") {
-			_, err := rw.Write([]byte(`{ "jsonrpc": "2.0", "id": "", "result": { "asgard": ["tthorpub1addwnpepq2jgpsw2lalzuk7sgtmyakj7l6890f5cfpwjyfp8k4y4t7cw2vk8v2ch5uz"], "yggdrasil": ["tthorpub1addwnpepqdqvd4r84lq9m54m5kk9sf4k6kdgavvch723pcgadulxd6ey9u70k6zq8qe"] } }`))
+			_, err := rw.Write([]byte(`{ "jsonrpc": "2.0", "id": "", "result": { "asgard": ["tthorpub1addwnpepq2jgpsw2lalzuk7sgtmyakj7l6890f5cfpwjyfp8k4y4t7cw2vk8v2ch5uz"] } }`))
 			c.Assert(err, IsNil)
 		} else if strings.HasPrefix(req.RequestURI, "/thorchain/keysign") {
 			_, err := rw.Write([]byte(`{
@@ -402,76 +401,6 @@ func (s *SignSuite) TearDownSuite(c *C) {
 	if err := os.RemoveAll("signer/var"); err != nil {
 		c.Error(err)
 	}
-}
-
-func (s *SignSuite) TestHandleYggReturn_Success_FeeSingleton(c *C) {
-	sign := &Signer{
-		chains: map[common.Chain]chainclients.ChainClient{
-			common.BNBChain: &MockChainClient{
-				account: common.Account{
-					Coins: common.Coins{
-						common.NewCoin(common.BNBAsset, cosmos.NewUint(1000000)),
-					},
-				},
-			},
-		},
-		pubkeyMgr: pubkeymanager.NewMockPoolAddressValidator(),
-	}
-	input := `{ "chain": "BNB", "memo": "", "to": "tbnb1yycn4mh6ffwpjf584t8lpp7c27ghu03gpvqkfj", "coins": [] }`
-	var item stypes.TxOutItem
-	err := json.Unmarshal([]byte(input), &item)
-	c.Check(err, IsNil)
-
-	newItem, err := sign.handleYggReturn(12, item)
-	c.Assert(err, IsNil)
-	c.Check(newItem.Coins[0].Amount.Uint64(), Equals, uint64(1000000))
-}
-
-func (s *SignSuite) TestHandleYggReturn_Success_FeeMulti(c *C) {
-	sign := &Signer{
-		chains: map[common.Chain]chainclients.ChainClient{
-			common.BNBChain: &MockChainClient{
-				account: common.Account{
-					Coins: common.Coins{
-						common.NewCoin(common.BNBAsset, cosmos.NewUint(1000000)),
-						common.NewCoin(common.RuneAsset(), cosmos.NewUint(1000000)),
-					},
-				},
-			},
-		},
-		pubkeyMgr: pubkeymanager.NewMockPoolAddressValidator(),
-	}
-	input := `{ "chain": "BNB", "memo": "", "to": "tbnb1yycn4mh6ffwpjf584t8lpp7c27ghu03gpvqkfj", "coins": [] }`
-	var item stypes.TxOutItem
-	err := json.Unmarshal([]byte(input), &item)
-	c.Check(err, IsNil)
-
-	newItem, err := sign.handleYggReturn(22, item)
-	c.Assert(err, IsNil)
-	c.Check(newItem.Coins[0].Amount.Uint64(), Equals, uint64(1000000))
-}
-
-func (s *SignSuite) TestHandleYggReturn_Success_NotEnough(c *C) {
-	sign := &Signer{
-		chains: map[common.Chain]chainclients.ChainClient{
-			common.BNBChain: &MockChainClient{
-				account: common.Account{
-					Coins: common.Coins{
-						common.NewCoin(common.BNBAsset, cosmos.NewUint(0)),
-					},
-				},
-			},
-		},
-		pubkeyMgr: pubkeymanager.NewMockPoolAddressValidator(),
-	}
-	input := `{ "chain": "BNB", "memo": "", "to": "tbnb1yycn4mh6ffwpjf584t8lpp7c27ghu03gpvqkfj", "coins": [] }`
-	var item stypes.TxOutItem
-	err := json.Unmarshal([]byte(input), &item)
-	c.Check(err, IsNil)
-
-	newItem, err := sign.handleYggReturn(33, item)
-	c.Assert(err, IsNil)
-	c.Check(newItem.Coins, HasLen, 0)
 }
 
 func (s *SignSuite) TestProcess(c *C) {

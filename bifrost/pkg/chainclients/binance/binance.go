@@ -10,7 +10,6 @@ import (
 	"math/big"
 	"net/http"
 	"net/url"
-	"strings"
 	"sync"
 	"time"
 
@@ -39,7 +38,6 @@ import (
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/config"
-	"gitlab.com/thorchain/thornode/x/thorchain"
 )
 
 // Binance is a structure to sign and broadcast tx to binance chain used by signer mostly
@@ -313,11 +311,6 @@ func (b *Binance) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []
 	}
 	var gasCoin common.Coins
 
-	// for yggdrasil, need to left some coin to pay for fee, this logic is per chain, given different chain charge fees differently
-	if strings.EqualFold(tx.Memo, thorchain.NewYggdrasilReturn(thorchainHeight).String()) {
-		gas := b.getGasFee(uint64(len(tx.Coins)))
-		gasCoin = gas.ToCoins()
-	}
 	var coins types.Coins
 	for _, coin := range tx.Coins {
 		// deduct gas coin
