@@ -12,6 +12,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	cKeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"gitlab.com/thorchain/thornode/bifrost/metrics"
+	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/evm/types"
 	"gitlab.com/thorchain/thornode/bifrost/pubkeymanager"
 	"gitlab.com/thorchain/thornode/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/cmd"
@@ -177,12 +178,12 @@ func (s *UnstuckTestSuite) TestUnstuckProcess(c *C) {
 	txID1 := types2.GetRandomTxHash().String()
 	txID2 := types2.GetRandomTxHash().String()
 	// add some thing here
-	c.Assert(e.ethScanner.blockMetaAccessor.AddSignedTxItem(SignedTxItem{
+	c.Assert(e.ethScanner.blockMetaAccessor.AddSignedTxItem(types.SignedTxItem{
 		Hash:        txID1,
 		Height:      1022,
 		VaultPubKey: pubkey,
 	}), IsNil)
-	c.Assert(e.ethScanner.blockMetaAccessor.AddSignedTxItem(SignedTxItem{
+	c.Assert(e.ethScanner.blockMetaAccessor.AddSignedTxItem(types.SignedTxItem{
 		Hash:        txID2,
 		Height:      1024,
 		VaultPubKey: pubkey,
@@ -194,12 +195,12 @@ func (s *UnstuckTestSuite) TestUnstuckProcess(c *C) {
 	c.Assert(items, HasLen, 2)
 	c.Assert(e.ethScanner.blockMetaAccessor.RemoveSignedTxItem(txID1), IsNil)
 	c.Assert(e.ethScanner.blockMetaAccessor.RemoveSignedTxItem(txID2), IsNil)
-	c.Assert(e.ethScanner.blockMetaAccessor.AddSignedTxItem(SignedTxItem{
+	c.Assert(e.ethScanner.blockMetaAccessor.AddSignedTxItem(types.SignedTxItem{
 		Hash:        "0x88df016429689c079f3b2f6ad39fa052532c56795b733da78a91ebe6a713944b",
 		Height:      800,
 		VaultPubKey: pubkey,
 	}), IsNil)
-	c.Assert(e.ethScanner.blockMetaAccessor.AddSignedTxItem(SignedTxItem{
+	c.Assert(e.ethScanner.blockMetaAccessor.AddSignedTxItem(types.SignedTxItem{
 		Hash:        "0x96395fbdb39e33293999dc1a0a3b87c8a9e51185e177760d1482c2155bb35b87",
 		Height:      800,
 		VaultPubKey: pubkey,

@@ -23,6 +23,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/evm"
 	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/runners"
 	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/signercache"
 	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/utxo"
@@ -54,7 +55,7 @@ type Client struct {
 	cfg                     config.BifrostChainConfiguration
 	localPubKey             common.PubKey
 	client                  *ethclient.Client
-	kw                      *keySignWrapper
+	kw                      *evm.KeySignWrapper
 	ethScanner              *ETHScanner
 	bridge                  thorclient.ThorchainBridge
 	blockScanner            *blockscanner.BlockScanner
@@ -111,7 +112,7 @@ func NewClient(thorKeys *thorclient.Keys,
 	if poolMgr == nil {
 		return nil, errors.New("pool manager is nil")
 	}
-	ethPrivateKey, err := getETHPrivateKey(priv)
+	ethPrivateKey, err := evm.GetPrivateKey(priv)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +126,7 @@ func NewClient(thorKeys *thorclient.Keys,
 		return nil, err
 	}
 
-	keysignWrapper, err := newKeySignWrapper(ethPrivateKey, pk, tssKm, chainID)
+	keysignWrapper, err := evm.NewKeySignWrapper(ethPrivateKey, pk, tssKm, chainID, "ETH")
 	if err != nil {
 		return nil, fmt.Errorf("fail to create ETH key sign wrapper: %w", err)
 	}

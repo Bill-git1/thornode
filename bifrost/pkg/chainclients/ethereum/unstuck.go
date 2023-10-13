@@ -12,22 +12,12 @@ import (
 	"github.com/ethereum/go-ethereum/core/txpool"
 	etypes "github.com/ethereum/go-ethereum/core/types"
 
+	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/evm/types"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/constants"
 )
 
-type SignedTxItem struct {
-	Hash        string `json:"hash,omitempty"`
-	Height      int64  `json:"height,omitempty"`
-	VaultPubKey string `json:"vault_pub_key,omitempty"`
-}
-
 const TxWaitBlocks = 150
-
-// String implement fmt.Stringer
-func (st SignedTxItem) String() string {
-	return st.Hash
-}
 
 func (c *Client) unstuck() {
 	c.logger.Info().Msg("start ETH chain unstuck process")
@@ -142,7 +132,7 @@ func (c *Client) unstuckTx(vaultPubKey, hash string) error {
 
 // AddSignedTxItem add the transaction to key value store
 func (c *Client) AddSignedTxItem(hash string, height int64, vaultPubKey string) error {
-	return c.ethScanner.blockMetaAccessor.AddSignedTxItem(SignedTxItem{
+	return c.ethScanner.blockMetaAccessor.AddSignedTxItem(types.SignedTxItem{
 		Hash:        hash,
 		Height:      height,
 		VaultPubKey: vaultPubKey,
