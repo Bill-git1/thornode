@@ -31,7 +31,6 @@ const (
 	fromAssetParam            = "from_asset"
 	toAssetParam              = "to_asset"
 	assetParam                = "asset"
-	fromAddressParam          = "from_address"
 	addressParam              = "address"
 	loanOwnerParam            = "loan_owner"
 	withdrawBasisPointsParam  = "withdraw_bps"
@@ -208,7 +207,7 @@ func quoteSimulateSwap(ctx cosmos.Context, mgr *Mgrs, amount sdk.Uint, msg *MsgS
 
 	// if the generated memo is too long for the source chain send error
 	maxMemoLength := msg.Tx.Coins[0].Asset.Chain.MaxMemoLength()
-	if maxMemoLength > 0 && len(msg.Tx.Memo) > maxMemoLength {
+	if !msg.Tx.Coins[0].Asset.Synth && maxMemoLength > 0 && len(msg.Tx.Memo) > maxMemoLength {
 		return nil, sdk.ZeroUint(), sdk.ZeroUint(), fmt.Errorf("generated memo too long for source chain")
 	}
 
@@ -468,38 +467,15 @@ func queryQuoteSwap(ctx cosmos.Context, path []string, req abci.RequestQuery, mg
 
 	// if from asset is a synth, transfer asset to asgard module
 	if fromAsset.IsSyntheticAsset() {
-		if len(params[fromAddressParam]) == 0 {
-			return quoteErrorResponse(fmt.Errorf("missing required parameter %s", fromAddressParam))
-		}
-		fromAddress, err := quoteParseAddress(ctx, mgr, params[fromAddressParam][0], fromAsset.Chain)
+		// mint required coins to asgard so swap can be simulated
+		err = mgr.Keeper().MintToModule(ctx, ModuleName, common.NewCoin(fromAsset, amount))
 		if err != nil {
-			return quoteErrorResponse(fmt.Errorf("bad from address: %w", err))
+			return quoteErrorResponse(fmt.Errorf("failed to mint coins to module: %w", err))
 		}
 
-		fromAccAddress, err := fromAddress.AccAddress()
+		err = mgr.Keeper().SendFromModuleToModule(ctx, ModuleName, AsgardName, common.NewCoins(common.NewCoin(fromAsset, amount)))
 		if err != nil {
-			return quoteErrorResponse(fmt.Errorf("failed to get account address: %w", err))
-		}
-
-		synthCoins := cosmos.NewCoins(cosmos.NewCoin(string(fromAsset.Symbol), sdk.NewInt(int64(amount.Uint64()))))
-
-		// If from_address doesn't have enough synth balance just mint required coins to Asgard so swap can be simulated.
-		// Otherwise, just send synth coins to Asgard from from_address
-		if !mgr.Keeper().HasCoins(ctx, fromAccAddress, synthCoins) {
-			err = mgr.Keeper().MintToModule(ctx, ModuleName, common.NewCoin(fromAsset, amount))
-			if err != nil {
-				return quoteErrorResponse(fmt.Errorf("failed to mint coins to module: %w", err))
-			}
-
-			err = mgr.Keeper().SendFromModuleToModule(ctx, ModuleName, AsgardName, common.NewCoins(common.NewCoin(fromAsset, amount)))
-			if err != nil {
-				return quoteErrorResponse(fmt.Errorf("failed to send coins to asgard: %w", err))
-			}
-		} else {
-			err = mgr.Keeper().SendFromAccountToModule(ctx, fromAccAddress, AsgardName, common.NewCoins(common.NewCoin(fromAsset, amount)))
-			if err != nil {
-				return quoteErrorResponse(fmt.Errorf("failed to send from account to module: %w", err))
-			}
+			return quoteErrorResponse(fmt.Errorf("failed to send coins to asgard: %w", err))
 		}
 	}
 
@@ -594,7 +570,7 @@ func queryQuoteSwap(ctx cosmos.Context, path []string, req abci.RequestQuery, mg
 
 	// if from asset chain has memo length restrictions use a prefix
 	memoString := memo.String()
-	if fromAsset.Chain.MaxMemoLength() > 0 && len(memoString) > fromAsset.Chain.MaxMemoLength() {
+	if !fromAsset.Synth && fromAsset.Chain.MaxMemoLength() > 0 && len(memoString) > fromAsset.Chain.MaxMemoLength() {
 		if len(memo.ShortString()) < len(memoString) { // use short codes if available
 			memoString = memo.ShortString()
 		} else { // otherwise attempt to shorten

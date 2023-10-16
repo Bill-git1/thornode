@@ -331,6 +331,19 @@ asserts:
   - .error|test("memo too long")
 ---
 type: check
+description: should not error too long on synth utxo swap
+endpoint: http://localhost:1317/thorchain/quote/swap
+params:
+  from_asset: BTC/BTC
+  to_asset: ETH/ETH
+  amount: 5000000
+  tolerance_bps: 1000
+  affiliate: {{ addr_thor_pig }}
+  affiliate_bps: 1000
+asserts:
+  - .error|not
+---
+type: check
 description: check swap quote from eth to btc with valid tolerance and affiliate
 endpoint: http://localhost:1317/thorchain/quote/swap
 params:
@@ -520,6 +533,24 @@ endpoint: http://localhost:1317/thorchain/quote/swap
 params:
   from_asset: BTC/BTC
   from_address: {{ addr_thor_fox }}
+  to_asset: THOR.RUNE
+  amount: 10000000
+  destination: {{ addr_thor_fox }}
+asserts:
+  - .memo == "=:THOR.RUNE:{{ addr_thor_fox }}"
+  - .inbound_address == null
+  - .recommended_min_amount_in == "4110"
+  - .fees.liquidity == "433225207"
+  - .fees.outbound == "2000000"
+  - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
+  - .fees.slippage_bps == 466
+  - .fees.total_bps == 469
+---
+type: check
+description: quote should be returned when from_address not provided
+endpoint: http://localhost:1317/thorchain/quote/swap
+params:
+  from_asset: BTC/BTC
   to_asset: THOR.RUNE
   amount: 10000000
   destination: {{ addr_thor_fox }}

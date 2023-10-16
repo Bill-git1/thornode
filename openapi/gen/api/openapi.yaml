@@ -1412,15 +1412,6 @@ paths:
           format: int64
           type: integer
         style: form
-      - description: "the from address, required if the from asset is a synth"
-        explode: true
-        in: query
-        name: from_address
-        required: false
-        schema:
-          example: thor1zupk5lmc84r2dh738a9g3zscavannjy3nzplwt
-          type: string
-        style: form
       - description: the maximum basis points from the current feeless swap price
           to set the limit in the generated memo
         explode: true

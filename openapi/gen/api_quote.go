@@ -638,7 +638,6 @@ type ApiQuoteswapRequest struct {
 	destination *string
 	streamingInterval *int64
 	streamingQuantity *int64
-	fromAddress *string
 	toleranceBps *int64
 	affiliateBps *int64
 	affiliate *string
@@ -683,12 +682,6 @@ func (r ApiQuoteswapRequest) StreamingInterval(streamingInterval int64) ApiQuote
 // the quantity of swaps within a streaming swap
 func (r ApiQuoteswapRequest) StreamingQuantity(streamingQuantity int64) ApiQuoteswapRequest {
 	r.streamingQuantity = &streamingQuantity
-	return r
-}
-
-// the from address, required if the from asset is a synth
-func (r ApiQuoteswapRequest) FromAddress(fromAddress string) ApiQuoteswapRequest {
-	r.fromAddress = &fromAddress
 	return r
 }
 
@@ -770,9 +763,6 @@ func (a *QuoteApiService) QuoteswapExecute(r ApiQuoteswapRequest) (*QuoteSwapRes
 	}
 	if r.streamingQuantity != nil {
 		localVarQueryParams.Add("streaming_quantity", parameterToString(*r.streamingQuantity, ""))
-	}
-	if r.fromAddress != nil {
-		localVarQueryParams.Add("from_address", parameterToString(*r.fromAddress, ""))
 	}
 	if r.toleranceBps != nil {
 		localVarQueryParams.Add("tolerance_bps", parameterToString(*r.toleranceBps, ""))
