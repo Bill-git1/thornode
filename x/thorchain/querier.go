@@ -464,9 +464,7 @@ func queryVaultsPubkeys(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	// usually ChurnInterval is 43200, sometimes when the network has issues , we 10x this value ,
-	// so if the inactive vault is older than 500_000 blocks , should not be monitored
-	cutOffAge := ctx.BlockHeight() - 500000
+	cutOffAge := ctx.BlockHeight() - config.GetThornode().VaultPubkeysCutoffBlocks
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var vault Vault

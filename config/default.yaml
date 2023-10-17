@@ -240,6 +240,7 @@ bifrost:
 
 thor:
   node_relay_url: https://node-relay-bot.herokuapp.com
+  vault_pubkeys_cutoff_blocks: 1_000_000
 
   log_filter:
     modules:

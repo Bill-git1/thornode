@@ -384,6 +384,11 @@ type Thornode struct {
 	// NodeRelayURL is the URL of the node relay service.
 	NodeRelayURL string `mapstructure:"node_relay_url"`
 
+	// VaultPubkeysCutoffBlocks is the max age in blocks for inactive vaults to be
+	// included in the vaults pubkeys response. Vaults older than this age will not be
+	// observed by bifrost.
+	VaultPubkeysCutoffBlocks int64 `mapstructure:"vault_pubkeys_cutoff_blocks"`
+
 	// LogFilter will drop logs matching the modules and messages when not in debug level.
 	LogFilter struct {
 		// Modules is a list of modules to filter.
