@@ -2198,21 +2198,43 @@ func simulate(ctx cosmos.Context, mgr Manager, msg sdk.Msg) (sdk.Events, error) 
 
 	// reset the swap queue
 	iter := mgr.Keeper().GetSwapQueueIterator(ctx)
-	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		mgr.Keeper().DeleteKey(ctx, string(iter.Key()))
 	}
+	iter.Close()
 
-	// simulate the loan open
+	// simulate the handler
 	_, err = NewInternalHandler(mgr)(ctx, msg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to simulate loan: %w", err)
+		return nil, fmt.Errorf("failed to simulate handler: %w", err)
 	}
 
-	// simulate end block
-	err = mgr.SwapQ().EndBlock(ctx, mgr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to simulate end block: %w", err)
+	// simulate end block, loop it until the swap queue is empty
+	var count int64
+	for count < 1000 {
+		err = mgr.SwapQ().EndBlock(ctx.WithBlockHeight(ctx.BlockHeight()+count), mgr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to simulate end block: %w", err)
+		}
+
+		count += 1
+		queueEmpty := true
+		iter = mgr.Keeper().GetSwapQueueIterator(ctx)
+		for ; iter.Valid(); iter.Next() {
+			parts := strings.Split(string(iter.Key()), "/")
+			str := parts[len(parts)-1]
+			parts = strings.Split(str, "-")
+			txhash, _ := common.NewTxID(parts[0])
+			i, _ := strconv.Atoi(parts[1])
+			swapMsg, _ := mgr.Keeper().GetSwapQueueItem(ctx, txhash, i)
+
+			ctx.Logger().Info("swap", "key", iter.Key(), "swap", swapMsg)
+			queueEmpty = false
+		}
+		iter.Close()
+		if queueEmpty {
+			break
+		}
 	}
 
 	return em.Events(), nil

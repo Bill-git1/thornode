@@ -240,6 +240,9 @@ func (vm *SwapQueueVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 				}
 
 				for _, item := range tois {
+					if item.ToAddress.Equals(common.NoopAddress) {
+						continue
+					}
 					ok, err := mgr.TxOutStore().TryAddTxOutItem(ctx, mgr, item, cosmos.ZeroUint())
 					if err != nil {
 						return ErrInternal(err, "fail to add outbound tx")
