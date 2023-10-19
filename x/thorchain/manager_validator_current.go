@@ -1423,7 +1423,7 @@ func (vm *ValidatorMgrVCUR) markLowVersionValidators(ctx cosmos.Context) error {
 
 // Finds up to `maxNodesToFind` active validators with version lower than the most "popular" version
 func (vm *ValidatorMgrVCUR) findLowVersionValidators(ctx cosmos.Context, maxNodesToFind int64) (NodeAccounts, error) {
-	minimumVersion := vm.k.GetMinJoinVersion(ctx)
+	minimumVersion, _ := vm.k.GetMinJoinLast(ctx)
 	activeNodes, err := vm.k.ListValidatorsByStatus(ctx, NodeActive)
 	if err != nil {
 		return NodeAccounts{}, err
@@ -1536,7 +1536,7 @@ func (vm *ValidatorMgrVCUR) NodeAccountPreflightCheck(ctx cosmos.Context, na Nod
 		return NodeStandby, fmt.Errorf("node account does not have minimum bond requirement: %d/%d", na.Bond.Uint64(), minBond)
 	}
 
-	minVersion := vm.k.GetMinJoinVersion(ctx)
+	minVersion, _ := vm.k.GetMinJoinLast(ctx)
 	// Check version number is still supported
 	if na.GetVersion().LT(minVersion) {
 		return NodeStandby, fmt.Errorf("node account does not meet min version requirement: %s vs %s", na.Version, minVersion)

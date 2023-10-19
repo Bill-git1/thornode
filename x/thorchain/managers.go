@@ -483,8 +483,10 @@ func GetNetworkManager(version semver.Version, keeper keeper.Keeper, txOutStore 
 // GetValidatorManager create a new instance of Validator Manager
 func GetValidatorManager(version semver.Version, keeper keeper.Keeper, networkMgr NetworkManager, txOutStore TxOutStore, eventMgr EventManager) (ValidatorManager, error) {
 	switch {
-	case version.GTE(semver.MustParse("1.121.0")):
+	case version.GTE(semver.MustParse("1.123.0")):
 		return newValidatorMgrVCUR(keeper, networkMgr, txOutStore, eventMgr), nil
+	case version.GTE(semver.MustParse("1.121.0")):
+		return newValidatorMgrV121(keeper, networkMgr, txOutStore, eventMgr), nil
 	case version.GTE(semver.MustParse("1.119.0")):
 		return newValidatorMgrV119(keeper, networkMgr, txOutStore, eventMgr), nil
 	case version.GTE(semver.MustParse("1.117.0")):
