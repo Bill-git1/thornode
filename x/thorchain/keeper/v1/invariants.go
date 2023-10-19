@@ -280,18 +280,9 @@ func StreamingSwapsInvariant(k KVStore) common.Invariant {
 			streams = append(streams, stream)
 		}
 
-		// should be a 1:1 correlation
-		if len(swaps) != len(streams) {
-			broken = true
-			msg = append(msg, fmt.Sprintf(
-				"swap count %d not equal to stream count %d",
-				len(swaps),
-				len(streams)))
-		}
-
-		for _, swap := range swaps {
+		for _, stream := range streams {
 			found := false
-			for _, stream := range streams {
+			for _, swap := range swaps {
 				if !swap.Tx.ID.Equals(stream.TxID) {
 					continue
 				}
@@ -323,7 +314,7 @@ func StreamingSwapsInvariant(k KVStore) common.Invariant {
 			}
 			if !found {
 				broken = true
-				msg = append(msg, fmt.Sprintf("stream not found for swap: %s", swap.Tx.ID.String()))
+				msg = append(msg, fmt.Sprintf("swap not found for stream: %s", stream.TxID.String()))
 			}
 		}
 
