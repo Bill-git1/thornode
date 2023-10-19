@@ -4,7 +4,7 @@ info:
     email: devs@thorchain.org
   description: Thornode REST API.
   title: Thornode API
-  version: 1.122.0
+  version: 1.123.0
 servers:
 - url: /
 paths:

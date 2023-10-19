@@ -62,14 +62,18 @@ func (h ErrataTxHandler) validateV1(ctx cosmos.Context, msg MsgErrataTx) error {
 func (h ErrataTxHandler) handle(ctx cosmos.Context, msg MsgErrataTx) (*cosmos.Result, error) {
 	ctx.Logger().Info("handleMsgErrataTx request", "txid", msg.TxID.String())
 	version := h.mgr.GetVersion()
-	if version.GTE(semver.MustParse("0.58.0")) {
+	switch {
+	case version.GTE(semver.MustParse("1.123.0")):
+		return h.handleV123(ctx, msg)
+	case version.GTE(semver.MustParse("0.58.0")):
 		return h.handleV58(ctx, msg)
+	default:
+		ctx.Logger().Error(errInvalidVersion.Error())
+		return nil, errBadVersion
 	}
-	ctx.Logger().Error(errInvalidVersion.Error())
-	return nil, errBadVersion
 }
 
-func (h ErrataTxHandler) handleV58(ctx cosmos.Context, msg MsgErrataTx) (*cosmos.Result, error) {
+func (h ErrataTxHandler) handleV123(ctx cosmos.Context, msg MsgErrataTx) (*cosmos.Result, error) {
 	active, err := h.mgr.Keeper().ListActiveValidators(ctx)
 	if err != nil {
 		return nil, wrapError(ctx, err, "fail to get list of active node accounts")
@@ -80,7 +84,7 @@ func (h ErrataTxHandler) handleV58(ctx cosmos.Context, msg MsgErrataTx) (*cosmos
 		return nil, err
 	}
 	observeSlashPoints := h.mgr.GetConstants().GetInt64Value(constants.ObserveSlashPoints)
-	observeFlex := h.mgr.GetConstants().GetInt64Value(constants.ObservationDelayFlexibility)
+	observeFlex := h.mgr.Keeper().GetConfigInt64(ctx, constants.ObservationDelayFlexibility)
 
 	slashCtx := ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{ // nolint
 		telemetry.NewLabel("reason", "failed_observe_errata"),
