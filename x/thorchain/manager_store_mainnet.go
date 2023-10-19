@@ -904,3 +904,17 @@ func migrateStoreV122(ctx cosmos.Context, mgr *Mgrs) {
 	mainnetUnobservedTxsV122(ctx, mgr)
 	mainnetBondRefundsV122(ctx, mgr)
 }
+
+func migrateStoreV123(ctx cosmos.Context, mgr *Mgrs) {
+	defer func() {
+		if err := recover(); err != nil {
+			ctx.Logger().Error("fail to migrate store to v122", "error", err)
+		}
+	}()
+
+	// Reque streaming swap outbound that got swallowed by preferred asset swap
+	danglingInboundTxIDs := []common.TxID{
+		"15D60EDF026A662E5D8BF3A36A50EBF9C0BD7B169340F669C4816376FCF5605E",
+	}
+	requeueDanglingActionsV123(ctx, mgr, danglingInboundTxIDs)
+}
