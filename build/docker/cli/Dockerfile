@@ -5,10 +5,6 @@ FROM registry.gitlab.com/thorchain/devops/node-launcher:litecoin-daemon-0.18.1 a
 
 FROM golang:1.20.3 AS build
 
-RUN apt-get update && \
-  apt-get install --no-install-recommends -y protobuf-compiler=3.12.4-1 && \
-  rm -rf /var/lib/apt/lists/*
-
 # build geth since the image is alpine based
 RUN go install github.com/ethereum/go-ethereum/cmd/geth@v1.11.5
 
@@ -25,4 +21,4 @@ RUN go mod download
 COPY . .
 
 ARG TAG=mocknet
-RUN make protob install
+RUN make install
