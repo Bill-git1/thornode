@@ -2203,6 +2203,12 @@ func simulate(ctx cosmos.Context, mgr Manager, msg sdk.Msg) (sdk.Events, error) 
 	}
 	iter.Close()
 
+	// save pool state
+	pools, err := mgr.Keeper().GetPools(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get pools: %w", err)
+	}
+
 	// simulate the handler
 	_, err = NewInternalHandler(mgr)(ctx, msg)
 	if err != nil {
@@ -2217,19 +2223,16 @@ func simulate(ctx cosmos.Context, mgr Manager, msg sdk.Msg) (sdk.Events, error) 
 			return nil, fmt.Errorf("failed to simulate end block: %w", err)
 		}
 
+		for _, pool := range pools {
+			_ = mgr.Keeper().SetPool(ctx, pool)
+		}
+
 		count += 1
 		queueEmpty := true
 		iter = mgr.Keeper().GetSwapQueueIterator(ctx)
 		for ; iter.Valid(); iter.Next() {
-			parts := strings.Split(string(iter.Key()), "/")
-			str := parts[len(parts)-1]
-			parts = strings.Split(str, "-")
-			txhash, _ := common.NewTxID(parts[0])
-			i, _ := strconv.Atoi(parts[1])
-			swapMsg, _ := mgr.Keeper().GetSwapQueueItem(ctx, txhash, i)
-
-			ctx.Logger().Info("swap", "key", iter.Key(), "swap", swapMsg)
 			queueEmpty = false
+			break
 		}
 		iter.Close()
 		if queueEmpty {

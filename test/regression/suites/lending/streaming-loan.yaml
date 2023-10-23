@@ -55,15 +55,15 @@ params:
 asserts:
   - .memo == "$+:BTC.BTC:{{ addr_btc_fox }}"
   - .inbound_address == "{{ addr_btc_dog }}"
-  - .expected_amount_out|tonumber == 938604
-  - .expected_collateral_deposited|tonumber == 989954
+  - .expected_amount_out|tonumber == 928971
+  - .expected_collateral_deposited|tonumber == 989929
   - .expected_collateralization_ratio|tonumber == 10000
-  - .expected_debt_issued|tonumber == 970490000
+  - .expected_debt_issued|tonumber == 980120000
   - .recommended_min_amount_in == "56000"
-  - .fees.slippage_bps|tonumber == 286
-  - .fees.total_bps|tonumber == 428
+  - .fees.slippage_bps|tonumber == 292
+  - .fees.total_bps|tonumber == 436
   - .fees.outbound|tonumber == 14000
-  - .fees.liquidity|tonumber == 28052
+  - .fees.liquidity|tonumber == 28393
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
 ---
 type: check
