@@ -4,6 +4,8 @@
 package thorchain
 
 import (
+	"fmt"
+
 	ctypes "github.com/cosmos/cosmos-sdk/types"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
@@ -917,4 +919,26 @@ func migrateStoreV123(ctx cosmos.Context, mgr *Mgrs) {
 		"15D60EDF026A662E5D8BF3A36A50EBF9C0BD7B169340F669C4816376FCF5605E",
 	}
 	requeueDanglingActionsV123(ctx, mgr, danglingInboundTxIDs)
+
+	// Requeue dropped attempt to rescue funds sent to old vault
+	// Original tx: F9FA0745290D5EDB287F8641B390171B45BD84C7628A1A45DADB876F9359B4F8
+	// Sent to bc1qkrcd6cfhmur80lsc0dxj2h3cge6lytaxdy5rl9
+	// thorpub1addwnpepqdu0wrnvx63eqf6gf5qyfz2k95gj9c96hsgecdcfwawckvsgqy3ezh0rxwt
+	originalTxID := "F9FA0745290D5EDB287F8641B390171B45BD84C7628A1A45DADB876F9359B4F8"
+	droppedRescue := TxOutItem{
+		Chain:       common.BTCChain,
+		ToAddress:   common.Address("bc1q0vu0a7zpmgfrjuke7jeg5nlttfknsn2lee2qrx"),
+		VaultPubKey: common.PubKey("thorpub1addwnpepqdu0wrnvx63eqf6gf5qyfz2k95gj9c96hsgecdcfwawckvsgqy3ezh0rxwt"),
+		Coin:        common.NewCoin(common.BTCAsset, cosmos.NewUint(149896000)),
+		Memo:        fmt.Sprintf("REFUND:%s", originalTxID),
+		InHash:      common.TxID(originalTxID),
+		GasRate:     94,
+		MaxGas:      common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(94500))},
+	}
+
+	err := mgr.txOutStore.UnSafeAddTxOutItem(ctx, mgr, droppedRescue)
+	if err != nil {
+		ctx.Logger().Error("fail to requeue BTC rescue tx", "error", err)
+		return
+	}
 }
