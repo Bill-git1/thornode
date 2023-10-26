@@ -268,25 +268,27 @@ func (b *BlockScanner) scanBlocks() {
 	}
 }
 
-// FetchLastHeight retrieves the last height to start scanning blocks from on startup
-//  1. Check if we have a height specified in config AND
-//     its higher than the block scanner storage one, use that
-//  2. Get the last observed height from THORChain if available
-//  3. Use block scanner storage if > 0
-//  4. Fetch last height from the chain itself
+// FetchLastHeight determines the height to start scanning:
+//  1. Use the config start height if set.
+//  2. If last consensus inbound height (lastblock) is available:
+//     a) Use local scanner storage height if available, up to the max lag from lastblock.
+//     b) Otherwise, use lastblock.
+//  3. Otherwise, use local scanner storage height if available.
+//  4. Otherwise, use the last height from the chain itself.
 func (b *BlockScanner) FetchLastHeight() (int64, error) {
 	// get scanner storage height
 	currentPos, _ := b.scannerStorage.GetScanPos() // ignore error
 
-	// 1. if we've configured a starting height, use that
+	// 1. Use the config start height if set.
 	if b.cfg.StartBlockHeight > 0 {
 		return b.cfg.StartBlockHeight, nil
 	}
-	// 2. attempt to find the height from thorchain
+
 	// wait for thorchain to be caught up first
 	if err := b.thorchainBridge.WaitToCatchUp(); err != nil {
 		return 0, err
 	}
+
 	if b.thorchainBridge != nil {
 		var height int64
 		if b.cfg.ChainID.Equals(common.THORChain) {
@@ -295,16 +297,31 @@ func (b *BlockScanner) FetchLastHeight() (int64, error) {
 			height, _ = b.thorchainBridge.GetLastObservedInHeight(b.cfg.ChainID)
 		}
 		if height > 0 {
+
+			// 2.a) Use local scanner storage height if available, up to the max lag from lastblock.
+			if currentPos > 0 {
+				// calculate the max lag
+				maxLagBlocks := b.cfg.MaxResumeBlockLag.Milliseconds() / b.cfg.ChainID.ApproximateBlockMilliseconds()
+
+				// return the position up to the max block lag behind the consensus height
+				if height <= currentPos+maxLagBlocks {
+					return currentPos, nil
+				} else {
+					return height - maxLagBlocks, nil
+				}
+			}
+
+			// 2.b) Otherwise, use lastblock.
 			return height, nil
 		}
 	}
 
-	// 3. If we've already started scanning, begin where we left off
+	//  3. Otherwise, use local scanner storage height if available.
 	if currentPos > 0 {
 		return currentPos, nil
 	}
 
-	// 4. Start from latest height on the chain itself
+	//  4. Otherwise, use the last height from the chain itself.
 	return b.chainScanner.GetHeight()
 }
 
