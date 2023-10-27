@@ -223,7 +223,7 @@ func (s *Signer) processTransactions() {
 						SentUnFinalised:      false,
 						Finalised:            false,
 						ConfirmationRequired: 0,
-					})
+					}, chain.IsEVM()) // Instant EVM observations have wrong gas and need future correct observations
 				}
 
 				wg.Done()

@@ -121,11 +121,14 @@ func (o *Observer) Start() error {
 	return nil
 }
 
-// ObserveSigned is called when a tx is signed by the signer and returns an observation that should be immediately submitted. Observations passed to this method will be cached in memory and skipped if they are later observed in the mempool or block.
-func (o *Observer) ObserveSigned(txIn types.TxIn) {
-	// add all transaction ids to the signed tx out cache
-	for _, tx := range txIn.TxArray {
-		o.signedTxOutCache.Add(tx.Tx, nil)
+// ObserveSigned is called when a tx is signed by the signer and returns an observation that should be immediately submitted.
+// Observations passed to this method with 'allowFutureObservation' false will be cached in memory and skipped if they are later observed in the mempool or block.
+func (o *Observer) ObserveSigned(txIn types.TxIn, allowFutureObservation bool) {
+	if !allowFutureObservation {
+		// add all transaction ids to the signed tx out cache
+		for _, tx := range txIn.TxArray {
+			o.signedTxOutCache.Add(tx.Tx, nil)
+		}
 	}
 
 	o.globalTxsQueue <- txIn
