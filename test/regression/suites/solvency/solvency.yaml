@@ -40,13 +40,11 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: should be halted
 endpoint: http://localhost:1317/thorchain/mimir
 asserts:
 - .["SOLVENCYHALTBTCCHAIN"] == 3
 ---
 type: tx-solvency
-description: unauthorized fox reports solvency, should not make it on chain
 signer: {{ addr_thor_fox }}
 chain: "BTC"
 pub_key: {{ pubkey_fox }}
@@ -60,7 +58,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: fox's tx should not make it on chain, no seq num
 endpoint: http://localhost:1317/auth/accounts/{{ addr_thor_fox }}
 asserts:
   - .result.value.sequence|length == 0

@@ -96,7 +96,6 @@ value: 6000
 signer: {{ addr_thor_dog }}
 ---
 type: check
-description: check the wolf redeem values
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_provider/{{ addr_thor_wolf}}
 asserts:
   - .asset_redeem_value == ("50_00000000" | gsub("_";""))
@@ -104,7 +103,6 @@ asserts:
   - .luvi_growth_pct == "0.000000000000000000"
 ---
 type: check
-description: check the goat redeem values
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_provider/{{ addr_thor_goat }}
 asserts:
   - .asset_redeem_value == ("450_00000000" | gsub("_";""))
@@ -138,7 +136,6 @@ type: create-blocks
 count: 9
 ---
 type: check
-description: check the wolf redeem values
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_provider/{{ addr_thor_wolf }}
 asserts:
   - .asset_redeem_value == ("52_84860144" | gsub("_"; ""))
@@ -146,7 +143,6 @@ asserts:
   - .luvi_growth_pct == "0.027696182213006640"
 ---
 type: check
-description: check the goat redeem values
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_provider/{{ addr_thor_goat }}
 asserts:
   - .asset_redeem_value == ("475_63741299" | gsub("_"; ""))
@@ -169,7 +165,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: check the withdraw amount
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .|[.txs[].result.events[]|select(.type == "withdraw")]|length == 1
@@ -194,7 +189,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: check the wolf redeem values
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_provider/{{ addr_thor_wolf }}
 asserts:
   - .units == ("44_934_13608188" | gsub("_";""))
@@ -206,7 +200,6 @@ asserts:
   # (not checking luvi_growth_pct which has been reset by the withdraw and deposit).
 ---
 type: check
-description: check the goat redeem values
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_provider/{{ addr_thor_goat }}
 asserts:
   - .units == ("450_000_00000000" | gsub("_";"")) # Unchanged.

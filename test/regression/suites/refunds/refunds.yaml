@@ -6,7 +6,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: btc pool should exist
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .|length == 1
@@ -25,7 +24,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: should have lost gas and fee for failed swap
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
@@ -43,7 +41,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: should have lost gas and fee for failed swap
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
@@ -61,7 +58,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: should have lost gas and fee for failed swap
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
@@ -79,7 +75,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: should have lost gas and fee for failed swap
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
@@ -112,7 +107,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: refund outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -142,7 +136,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should have been observed
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
@@ -172,7 +165,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: refund outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -202,7 +194,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should have been observed
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
@@ -232,7 +223,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: refund outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -262,7 +252,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should have been observed
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
@@ -292,7 +281,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: refund outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -322,14 +310,12 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should have been observed
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
 ---
 ########################################################################################
 type: tx-deposit
-description: invalid memo for thorname doesn't cause asgard invariant break
 signer: {{ addr_thor_fox }}
 coins:
   - amount: "5000000000"

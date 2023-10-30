@@ -10,7 +10,6 @@ count: 1
 # deposit savers (non-streaming, quote only)
 ########################################################################################
 type: check
-description:  check saver deposit quote without streaming
 endpoint: http://localhost:1317/thorchain/quote/saver/deposit
 params:
   asset: BTC.BTC
@@ -41,7 +40,6 @@ count: 1
 # streaming savers deposit (quote)
 ########################################################################################
 type: check
-description: check saver deposit quote with streaming
 endpoint: http://localhost:1317/thorchain/quote/saver/deposit
 params:
   asset: BTC.BTC
@@ -84,7 +82,6 @@ type: create-blocks
 count: 21
 ---
 type: check
-description: saver record should exist
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
   - .|length == 1
@@ -94,7 +91,6 @@ asserts:
 # streaming savers withdraw (quote)
 ########################################################################################
 type: check
-description:  check saver withdraw quote with streaming
 endpoint: http://localhost:1317/thorchain/quote/saver/withdraw
 params:
   asset: BTC.BTC

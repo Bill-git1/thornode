@@ -6,7 +6,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: only btc.btc pool should exist
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .|length == 1
@@ -29,7 +28,6 @@ count: 1
 # so the THOR.BTC pool doesn't exist yet
 ########################################################################################
 type: check
-description: THOR.BTC pool shouldn't exist yet
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .|length == 1
@@ -42,7 +40,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: THOR.BTC pool should exist, status Available
 endpoint: http://localhost:1317/thorchain/export
 asserts:
   - .pools|length == 2
@@ -52,7 +49,6 @@ asserts:
   - .pools[1].status_since == 3
 ---
 type: check
-description: there should be one THOR.BTC Available pool event emitted
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .|[.begin_block_events[]|select(.type == "pool")]|length == 1
@@ -64,7 +60,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: THOR.BTC pool should have the same status_since
 endpoint: http://localhost:1317/thorchain/export
 asserts:
   - .pools|length == 2
@@ -74,7 +69,6 @@ asserts:
   - .pools[1].status_since == 3
 ---
 type: check
-description: there should be no pool event emitted
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .|[.begin_block_events[]|select(.type == "pool")]|length == 0
@@ -91,7 +85,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: THOR.BTC pool should still be unchanged by the end of this block
 endpoint: http://localhost:1317/thorchain/export
 asserts:
   - .pools|length == 2
@@ -101,7 +94,6 @@ asserts:
   - .pools[1].status_since == 3
 ---
 type: check
-description: there should be no pool event emitted
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .|[.begin_block_events[]|select(.type == "pool")]|length == 0
@@ -113,20 +105,17 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: THOR.BTC pool should exist, status Suspended
 endpoint: http://localhost:1317/thorchain/pool/THOR.BTC
 asserts:
   - .status == "Suspended"
 ---
 type: check
-description: The Suspended THOR.BTC pool isn't recorded in the exported Genesis state
 endpoint: http://localhost:1317/thorchain/export
 asserts:
   - .pools|length == 1
   - .pools[0].asset == "BTC.BTC"
 ---
 type: check
-description: there should be one THOR.BTC Suspended pool event emitted
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .begin_block_events|length == 1
@@ -138,13 +127,11 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: THOR.BTC pool should exist, status Suspended
 endpoint: http://localhost:1317/thorchain/pool/THOR.BTC
 asserts:
   - .status == "Suspended"
 ---
 type: check
-description: there should be no pool event emitted
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .begin_block_events|length == 0
@@ -161,13 +148,11 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: thor.btc pool should still be unchanged by the end of this block
 endpoint: http://localhost:1317/thorchain/pool/THOR.BTC
 asserts:
   - .status == "Suspended"
 ---
 type: check
-description: there should be no pool event emitted
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .begin_block_events|length == 0
@@ -179,7 +164,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: thor.btc pool should exist, etatus Available
 endpoint: http://localhost:1317/thorchain/export
 asserts:
   - .pools|length == 2
@@ -189,7 +173,6 @@ asserts:
   - .pools[1].status_since == 9
 ---
 type: check
-description: there should be one THOR.BTC Available pool event emitted
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .|[.begin_block_events[]|select(.type == "pool")]|length == 1
@@ -201,7 +184,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: thor.btc pool should exist, etatus Available
 endpoint: http://localhost:1317/thorchain/export
 asserts:
   - .pools|length == 2
@@ -211,7 +193,6 @@ asserts:
   - .pools[1].status_since == 9
 ---
 type: check
-description: there should be no pool event emitted
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .|[.begin_block_events[]|select(.type == "pool")]|length == 0

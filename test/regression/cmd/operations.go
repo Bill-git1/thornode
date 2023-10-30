@@ -142,7 +142,7 @@ func NewOperation(opMap map[string]any) Operation {
 		log.Fatal().Interface("op", opMap).Err(err).Msg("failed to decode operation")
 	}
 
-	// require check description and default status check to 200 if endpoint is set
+	// default status check to 200 if endpoint is set
 	if oc, ok := op.(*OpCheck); ok && oc.Endpoint != "" {
 		if oc.Status == 0 {
 			oc.Status = 200
@@ -221,12 +221,11 @@ func (op *OpState) Execute(_ io.Writer, routine int, _ *os.Process, _ chan strin
 ////////////////////////////////////////////////////////////////////////////////////////
 
 type OpCheck struct {
-	OpBase      `yaml:",inline"`
-	Description string            `json:"description"`
-	Endpoint    string            `json:"endpoint"`
-	Params      map[string]string `json:"params"`
-	Status      int               `json:"status"`
-	Asserts     []string          `json:"asserts"`
+	OpBase   `yaml:",inline"`
+	Endpoint string            `json:"endpoint"`
+	Params   map[string]string `json:"params"`
+	Status   int               `json:"status"`
+	Asserts  []string          `json:"asserts"`
 }
 
 func (op *OpCheck) Execute(out io.Writer, routine int, _ *os.Process, logs chan string) error {

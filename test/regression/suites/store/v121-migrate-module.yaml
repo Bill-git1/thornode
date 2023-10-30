@@ -26,13 +26,11 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: the version should currently be 1.120.0
 endpoint: http://localhost:1317/thorchain/version
 asserts:
   - .|.current == "1.120.0"
 ---
 type: check
-description: asgard module invariant should not be broken
 endpoint: http://localhost:1317/thorchain/invariant/asgard
 asserts:
   - .broken == false
@@ -52,7 +50,6 @@ count: 1
 skip_invariants: true
 ---
 type: check
-description: asgard module invariant should be broken
 endpoint: http://localhost:1317/thorchain/invariant/asgard
 asserts:
   - .broken == true
@@ -65,13 +62,11 @@ type: create-blocks
 count: 2  # need to produce two blocks for migration to take place
 ---
 type: check
-description: version should be updated
 endpoint: http://localhost:1317/thorchain/version
 asserts:
   - .|.current == "1.121.0"
 ---
 type: check
-description: asgard module invariant should be fixed
 endpoint: http://localhost:1317/thorchain/invariant/asgard
 asserts:
   - .broken == false

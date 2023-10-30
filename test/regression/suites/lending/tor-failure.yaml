@@ -73,7 +73,6 @@ asserts:
 # 1/3 of tor anchor pools depeg (no significant effect)
 ########################################################################################
 type: check
-description: quote before manipulation to compare expected
 endpoint: http://localhost:1317/thorchain/quote/loan/open
 params:
   from_asset: BTC.BTC
@@ -95,7 +94,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: quote after manipulation to compare expected
 endpoint: http://localhost:1317/thorchain/quote/loan/open
 params:
   from_asset: BTC.BTC
@@ -185,7 +183,6 @@ asserts:
 # 2/3 of tor anchor pools depeg
 ########################################################################################
 type: check
-description: quote before manipulation to compare expected
 endpoint: http://localhost:1317/thorchain/quote/loan/open
 params:
   from_asset: BTC.BTC
@@ -207,7 +204,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: quote after manipulation to compare expected
 endpoint: http://localhost:1317/thorchain/quote/loan/open
 params:
   from_asset: BTC.BTC
@@ -316,7 +312,6 @@ key: MaxAnchorBlocks
 value: 2
 ---
 type: check
-description: quote before manipulation to compare expected
 endpoint: http://localhost:1317/thorchain/quote/loan/open
 params:
   from_asset: BTC.BTC
@@ -331,7 +326,6 @@ type: create-blocks
 count: 3
 ---
 type: check
-description: quote after manipulation to compare expected
 endpoint: http://localhost:1317/thorchain/quote/loan/open
 params:
   from_asset: BTC.BTC

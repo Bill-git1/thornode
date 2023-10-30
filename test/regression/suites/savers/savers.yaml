@@ -6,7 +6,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: btc pool should exist
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .|length == 1
@@ -54,14 +53,12 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: saver record should exist
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
   - .|length == 1
   - .[0].asset_deposit_value|tonumber == 4759341
 ---
 type: check
-description: should have minted synth btc
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/supply
 asserts:
   - .supply|length == 3
@@ -94,7 +91,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: rune balance should have increased after swap
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
@@ -120,7 +116,6 @@ asserts:
   - .fees.total_bps == 118
 ---
 type: check
-description: saver position should realize growth
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
   - .|length == 1
@@ -152,7 +147,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -182,7 +176,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should have been observed
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
@@ -207,7 +200,6 @@ asserts:
   - .fees.total_bps == 118
 ---
 type: check
-description: saver position should realize growth
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
   - .|length == 1
@@ -239,7 +231,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -269,7 +260,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should have been observed
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
@@ -278,7 +268,6 @@ asserts:
 # turn on streaming swaps for savers adds (set interval to 1)
 ########################################################################################
 type: tx-mimir
-description: active dog sets mimir
 key: SaversStreamingSwapsInterval
 value: 1
 signer: {{ addr_thor_dog }}
@@ -287,7 +276,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: mimir should be set
 endpoint: http://localhost:1317/thorchain/mimir
 asserts:
   - .SAVERSSTREAMINGSWAPSINTERVAL == 1
@@ -316,7 +304,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: check streaming swap for deposit was created
 endpoint: http://localhost:1317/thorchain/swap/streaming/{{ observe_txid 7 }}
 asserts:
   - .deposit == "20000000"
@@ -333,7 +320,6 @@ count: 2
 # streaming swap should be 2/3 done
 ########################################################################################
 type: check
-description: check streaming swap progress
 endpoint: http://localhost:1317/thorchain/swap/streaming/{{ observe_txid 7 }}
 asserts:
   - .deposit == "20000000"
@@ -351,13 +337,11 @@ count: 3
 # streaming swap should be done + savers position added
 ########################################################################################
 type: check
-description: check streaming swap is done (removed from list)
 endpoint: http://localhost:1317/thorchain/swaps/streaming
 asserts:
   - .|length == 0
 ---
 type: check
-description: saver position should have been created
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
   - .|length == 1
@@ -391,7 +375,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: saver position should realize growth
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
   - .|length == 1
@@ -426,7 +409,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: check streaming swap for withdraw was created
 endpoint: http://localhost:1317/thorchain/swap/streaming/{{ observe_txid 9 }}
 asserts:
   - .deposit == "21162997"
@@ -442,7 +424,6 @@ count: 1
 # streaming swap should be (2/3) done
 ########################################################################################
 type: check
-description: check streaming swap progress
 endpoint: http://localhost:1317/thorchain/swap/streaming/{{ observe_txid 9 }}
 asserts:
   - .deposit == "21162997"
@@ -459,20 +440,17 @@ count: 1
 # streaming swap should be done + outbound scheduled + savers position removed
 ########################################################################################
 type: check
-description: check streaming swap is done (removed from list)
 endpoint: http://localhost:1317/thorchain/swaps/streaming
 asserts:
   - .|length == 0
 ---
 type: check
-description: outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ observe_txid 9 }}"
 ---
 type: check
-description: saver position should realize growth
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
   - .|length == 0
@@ -501,7 +479,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should have been observed
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
@@ -533,7 +510,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: check streaming swap for deposit was created
 endpoint: http://localhost:1317/thorchain/swap/streaming/{{ observe_txid 10 }}
 asserts:
   - .deposit == "20000000"
@@ -547,7 +523,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: check streaming swap progress
 endpoint: http://localhost:1317/thorchain/swap/streaming/{{ observe_txid 10 }}
 asserts:
   - .deposit == "20000000"
@@ -562,7 +537,6 @@ asserts:
 # pause swaps - streaming should pause
 ########################################################################################
 type: tx-mimir
-description: active dog sets mimir
 key: HaltTrading
 value: 1
 signer: {{ addr_thor_dog }}
@@ -571,7 +545,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: mimir should be set
 endpoint: http://localhost:1317/thorchain/mimir
 asserts:
   - .HALTTRADING == 1
@@ -580,7 +553,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: streaming swap should be unchanged around while trading paused
 endpoint: http://localhost:1317/thorchain/swap/streaming/{{ observe_txid 10 }}
 asserts:
   - .deposit == "20000000"
@@ -592,7 +564,6 @@ asserts:
   - .out == "13253226"
 ---
 type: tx-mimir
-description: active dog sets mimir
 key: HaltTrading
 value: 0
 signer: {{ addr_thor_dog }}
@@ -601,7 +572,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: mimir should be set
 endpoint: http://localhost:1317/thorchain/mimir
 asserts:
   - .HALTTRADING == 0
@@ -610,13 +580,11 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: check streaming swap is done (removed from list)
 endpoint: http://localhost:1317/thorchain/swaps/streaming
 asserts:
   - .|length == 0
 ---
 type: check
-description: saver position should have been created
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
   - .|length == 1
@@ -651,7 +619,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: check streaming swap is done (removed from list)
 endpoint: http://localhost:1317/thorchain/swaps/streaming
 asserts:
   - .|length == 0

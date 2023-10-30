@@ -14,7 +14,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: network fee for BTC should be updated
 endpoint: http://localhost:1317/thorchain/inbound_addresses
 asserts:
   - .|length == 10
@@ -23,7 +22,6 @@ asserts:
   - .[0].outbound_fee == "42"
 ---
 type: tx-network-fee
-description: unauthorized fox sends network fee, should not make it on chain
 signer: {{ addr_thor_fox }}
 block_height: 2
 chain: BTC
@@ -34,13 +32,11 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: fox's tx should not make it on chain, no seq num
 endpoint: http://localhost:1317/auth/accounts/{{ addr_thor_fox }}
 asserts:
   - .result.value.sequence|length == 0
 ---
 type: check
-description: network fee for BTC should not change
 endpoint: http://localhost:1317/thorchain/inbound_addresses
 asserts:
   - .|length == 10

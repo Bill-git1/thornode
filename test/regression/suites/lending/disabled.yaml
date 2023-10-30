@@ -631,7 +631,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: loan should not be repaid
 endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
 asserts:
   - .|length == 1
@@ -639,7 +638,6 @@ asserts:
   - .[0].collateral_withdrawn|tonumber == 0
 ---
 type: check
-description: fox account should only lose gas
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
@@ -681,7 +679,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: loan should be repaid
 endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
 asserts:
   - .|length == 1
@@ -743,7 +740,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: fox account should not have any THOR/BTC
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .|[.balances[]|select(.denom == "thor/btc")]|length == 0

@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"syscall"
 	"text/template"
@@ -20,6 +21,8 @@ import (
 )
 
 // trunk-ignore-all(golangci-lint/forcetypeassert)
+
+var reSetVar = regexp.MustCompile(`\$\{([A-Z0-9_]+)=([^}]+)\}`)
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // Run
@@ -119,10 +122,31 @@ func run(out io.Writer, path string, routine int) error {
 	}
 
 	// render the template
-	buf := &bytes.Buffer{}
-	err = tmpl.Execute(buf, nil)
+	tmplBuf := &bytes.Buffer{}
+	err = tmpl.Execute(tmplBuf, nil)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to render template")
+	}
+
+	// scan all lines in buffer for variable expansion
+	buf := &bytes.Buffer{}
+	scanner = bufio.NewScanner(tmplBuf)
+	vars := map[string]string{}
+	for i := 0; scanner.Scan(); i++ {
+		line := scanner.Text()
+		matches := reSetVar.FindAllStringSubmatch(line, -1)
+		for _, match := range matches {
+			vars[match[1]] = match[2]
+		}
+
+		// regex replace variables and set variables
+		for k, v := range vars {
+			re := regexp.MustCompile(`\$\{` + k + `(=([^}]+))?\}`)
+			line = re.ReplaceAllString(line, v)
+		}
+
+		// write line
+		buf.WriteString(line + "\n")
 	}
 
 	// all operations we will execute

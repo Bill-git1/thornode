@@ -6,7 +6,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: no gas spent or withheld yet
 endpoint: http://localhost:1317/thorchain/network
 asserts:
   - .gas_spent_rune == "0"
@@ -23,7 +22,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: gas should be withheld and updated
 endpoint: http://localhost:1317/thorchain/network
 asserts:
   - .gas_withheld_rune == "16784900"
@@ -52,13 +50,11 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should have been observed
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
 ---
 type: check
-description: gas should be spent and updated
 endpoint: http://localhost:1317/thorchain/network
 asserts:
   - .gas_spent_rune == "12582968"
@@ -88,14 +84,12 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: rune balance should have increased after swap
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
   - .balances[]|select(.denom == "rune")|.amount|tonumber == 2495385742829
 ---
 type: check
-description: for native THORChain outbounds, gas spent and withheld should not be updated
 endpoint: http://localhost:1317/thorchain/network
 asserts:
   - .gas_spent_rune == "12582968"

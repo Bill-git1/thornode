@@ -167,7 +167,6 @@ asserts:
 # open loan with rune over max supply should fail
 ########################################################################################
 type: tx-mimir
-description: set max supply to 50k RUNE
 key: MaxRuneSupply
 value: 50000000000000
 signer: {{ addr_thor_dog }}

@@ -6,7 +6,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: eth and btc pools should exist
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .|length == 2
@@ -15,7 +14,6 @@ asserts:
 # quote and swap rune to btc
 ########################################################################################
 type: check
-description: check swap quote
 endpoint: http://localhost:1317/thorchain/quote/swap
 params:
   from_asset: THOR.RUNE
@@ -44,14 +42,12 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: rune balance should decrease for swap
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
   - .balances[]|select(.denom == "rune")|.amount|tonumber == 2498998000000
 ---
 type: check
-description: outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -81,7 +77,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should have been observed
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
@@ -90,7 +85,6 @@ asserts:
 # quote and swap btc to rune
 ########################################################################################
 type: check
-description: check swap quote
 endpoint: http://localhost:1317/thorchain/quote/swap
 params:
   from_asset: BTC.BTC
@@ -132,7 +126,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: rune balance should increase after swap
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
@@ -142,7 +135,6 @@ asserts:
 # quote and swap rune to btc synth
 ########################################################################################
 type: check
-description: check swap quote
 endpoint: http://localhost:1317/thorchain/quote/swap
 params:
   from_asset: THOR.RUNE
@@ -168,7 +160,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: account should have spent rune and received synth btc
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 2
@@ -179,7 +170,6 @@ asserts:
 # quote and swap rune to btc synth with tolerance
 ########################################################################################
 type: check
-description: unsatisfied tolerance should return error
 endpoint: http://localhost:1317/thorchain/quote/swap
 params:
   from_asset: THOR.RUNE
@@ -190,7 +180,6 @@ asserts:
   - .error|length > 0
 ---
 type: check
-description: check swap quote with valid tolerance
 endpoint: http://localhost:1317/thorchain/quote/swap
 params:
   from_asset: THOR.RUNE
@@ -217,7 +206,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: account should have spent rune and received synth btc
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 2
@@ -228,7 +216,6 @@ asserts:
 # quote and swap rune to btc with tolerance and affiliate
 ########################################################################################
 type: check
-description: affiliate over max should return error
 endpoint: http://localhost:1317/thorchain/quote/swap
 params:
   from_asset: THOR.RUNE
@@ -241,7 +228,6 @@ asserts:
   - .error|test("more than 1000")
 ---
 type: check
-description: check swap quote with valid tolerance and affiliate
 endpoint: http://localhost:1317/thorchain/quote/swap
 params:
   from_asset: THOR.RUNE
@@ -272,7 +258,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -302,13 +287,11 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should have been observed
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
 ---
 type: check
-description: affiliate should have more rune after swap
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances|length == 1
@@ -318,7 +301,6 @@ asserts:
 # quote and swap eth to btc with tolerance and affiliate
 ########################################################################################
 type: check
-description: should not be able to swap btc to eth with long memo
 endpoint: http://localhost:1317/thorchain/quote/swap
 params:
   from_asset: BTC.BTC
@@ -331,7 +313,6 @@ asserts:
   - .error|test("memo too long")
 ---
 type: check
-description: should not error too long on synth utxo swap
 endpoint: http://localhost:1317/thorchain/quote/swap
 params:
   from_asset: BTC/BTC
@@ -344,7 +325,6 @@ asserts:
   - .error|not
 ---
 type: check
-description: check swap quote from eth to btc with valid tolerance and affiliate
 endpoint: http://localhost:1317/thorchain/quote/swap
 params:
   from_asset: ETH.ETH
@@ -388,7 +368,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -418,7 +397,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
@@ -444,14 +422,12 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: thorname "xx" should be registered
 endpoint: http://localhost:1317/thorchain/thorname/xx
 asserts:
   - .aliases[0].address == "{{ addr_thor_pig }}"
   - .owner == "{{ addr_thor_pig }}"
 ---
 type: check
-description: check swap quote from eth to rune with valid tolerance and thorname affiliate
 endpoint: http://localhost:1317/thorchain/quote/swap
 params:
   from_asset: ETH.ETH
@@ -492,7 +468,6 @@ txs:
     observed_pub_key: {{ pubkey_dog }}
 ---
 type: check
-description: establish balance before swap
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 2
@@ -500,7 +475,6 @@ asserts:
   - .balances[]|select(.denom == "rune")|.amount|tonumber == 2500509255703
 ---
 type: check
-description: establish affiliate balance before swap
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances|length == 1
@@ -510,7 +484,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: account should have more rune after swap
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 2
@@ -518,7 +491,6 @@ asserts:
   - .balances[]|select(.denom == "rune")|.amount|tonumber == 2501421370022
 ---
 type: check
-description: affiliate should have more rune after swap
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances|length == 1
@@ -528,7 +500,6 @@ asserts:
 # quote btc/btc to rune when from_address doesn't have enough btc/btc - quote should still be returned
 ########################################################################################
 type: check
-description: quote should be returned even with insufficient synth balance on from_address. inbound address should be empty for synth swaps
 endpoint: http://localhost:1317/thorchain/quote/swap
 params:
   from_asset: BTC/BTC
@@ -547,7 +518,6 @@ asserts:
   - .fees.total_bps == 469
 ---
 type: check
-description: quote should be returned when from_address not provided
 endpoint: http://localhost:1317/thorchain/quote/swap
 params:
   from_asset: BTC/BTC
@@ -568,7 +538,6 @@ asserts:
 # quote and swap a streaming swap
 ########################################################################################
 type: check
-description: check swap quote
 endpoint: http://localhost:1317/thorchain/quote/swap
 params:
   from_asset: ETH.ETH
@@ -592,7 +561,6 @@ asserts:
   - .expected_amount_out == "9665246"
 ---
 type: check
-description: check swap quote
 endpoint: http://localhost:1317/thorchain/quote/swap
 params:
   from_asset: ETH.ETH
@@ -609,7 +577,6 @@ asserts:
 # quote and swap a streaming swap with specified quantity and tolerance
 ########################################################################################
 type: check
-description: check swap quote
 endpoint: http://localhost:1317/thorchain/quote/swap
 params:
   from_asset: ETH.ETH
@@ -642,7 +609,6 @@ count: 1
 # quote and swap a streaming swap with too large quantity
 ########################################################################################
 type: check
-description: check swap quote
 endpoint: http://localhost:1317/thorchain/quote/swap
 params:
   from_asset: ETH.ETH
@@ -670,7 +636,6 @@ asserts:
 # quote and massive swap should have accurate slippage less than 100%
 ########################################################################################
 type: check
-description: check swap quote
 endpoint: http://localhost:1317/thorchain/quote/swap
 params:
   from_asset: ETH.ETH

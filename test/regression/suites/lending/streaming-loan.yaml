@@ -6,7 +6,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: eth, btc, and usdx pools should exist
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .|length == 5
@@ -44,7 +43,6 @@ count: 2
 # test quotes endpoint
 ########################################################################################
 type: check
-description: check loan open quote (streaming)
 endpoint: http://localhost:1317/thorchain/quote/loan/open
 params:
   from_asset: BTC.BTC
@@ -67,7 +65,6 @@ asserts:
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
 ---
 type: check
-description: check loan open quote (no streaming)
 endpoint: http://localhost:1317/thorchain/quote/loan/open
 params:
   from_asset: BTC.BTC
@@ -116,7 +113,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: check streaming swap is in list
 endpoint: http://localhost:1317/thorchain/swaps/streaming
 asserts:
   - .|length == 1
@@ -125,13 +121,11 @@ type: create-blocks
 count: 2
 ---
 type: check
-description: check streaming swap is in list
 endpoint: http://localhost:1317/thorchain/swaps/streaming
 asserts:
   - .|length == 0
 ---
 type: check
-description: borrower should be recorded
 endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
 asserts:
   - .|length == 1
@@ -142,7 +136,6 @@ asserts:
   - .[0]|.owner == "{{ addr_btc_fox }}"
 ---
 type: check
-description: loan should exist in export state
 endpoint: http://localhost:1317/thorchain/export
 asserts:
   - .loans|length == 1
@@ -174,7 +167,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: check streaming swap is in list
 endpoint: http://localhost:1317/thorchain/swaps/streaming
 asserts:
   - .|length == 1
@@ -183,13 +175,11 @@ type: create-blocks
 count: 3
 ---
 type: check
-description: check streaming swap is in list
 endpoint: http://localhost:1317/thorchain/swaps/streaming
 asserts:
   - .|length == 0
 ---
 type: check
-description: borrower should be updated
 endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
 asserts:
   - .|length == 1
@@ -200,7 +190,6 @@ asserts:
   - .[0]|.debt_repaid == "975565979" # over repaid
 ---
 type: check
-description: btc outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -227,7 +216,6 @@ txs:
     observed_pub_key: {{ pubkey_dog }}
 ---
 type: check
-description: borrower should be recorded
 endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
 asserts:
   - .|length == 1
@@ -241,13 +229,11 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: btc outbound should be observed
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
 ---
 type: check
-description: no derived btc should exist
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/supply
 asserts:
   - '[.supply[]|select(.denom == "thor.btc")]|length == 0'

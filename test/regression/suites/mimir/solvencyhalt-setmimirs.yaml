@@ -84,7 +84,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: there should be no set_mimir events
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .|[.txs[].result.events[]|select(.type == "set_mimir")]|length == 0
@@ -114,13 +113,11 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: BTC should be halted
 endpoint: http://localhost:1317/thorchain/mimir
 asserts:
   - .SOLVENCYHALTBTCCHAIN != 0
 ---
 type: check
-description: there should be only one set_mimir event
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .|[.txs[].result.events[]|select(.type == "set_mimir")]|length == 1

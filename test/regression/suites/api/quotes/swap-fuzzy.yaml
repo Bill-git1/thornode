@@ -6,7 +6,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: eth, btc, and usdx pools should exist
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .|length == 5

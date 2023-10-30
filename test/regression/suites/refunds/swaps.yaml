@@ -6,7 +6,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: eth and btc pools should exist
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .|length == 2
@@ -25,7 +24,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: should have lost gas and fee for failed swap
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
@@ -45,7 +43,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: should have lost gas and fee for failed swap
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
@@ -65,7 +62,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: should have lost gas and fee for failed swap
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
@@ -85,7 +81,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: should have lost gas and fee for failed swap
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
@@ -118,7 +113,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: refund outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -148,7 +142,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should have been observed
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
@@ -180,7 +173,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: refund outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -210,7 +202,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should have been observed
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
@@ -242,7 +233,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: refund outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -272,7 +262,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should have been observed
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
@@ -304,7 +293,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: refund outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -334,7 +322,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should have been observed
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
@@ -366,7 +353,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: refund outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -396,7 +382,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should have been observed
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
@@ -415,7 +400,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: fox account should have received btc synth
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 2
@@ -423,7 +407,6 @@ asserts:
   - .balances[]|select(.denom == "rune")|.amount|tonumber == 2489982000000
 ---
 type: check
-description: entire btc synth supply should be on fox account
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/supply
 asserts:
   - .supply[]|select(.denom=="btc/btc")|.amount|tonumber == 9070843
@@ -442,7 +425,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: should have lost gas and fee for failed swap, some synth should burn
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 2
@@ -450,7 +432,6 @@ asserts:
   - .balances[]|select(.denom == "rune")|.amount|tonumber == 2489980000000
 ---
 type: check
-description: entire btc synth supply should be on fox account
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/supply
 asserts:
   - .supply[]|select(.denom=="btc/btc")|.amount|tonumber == 9069024
@@ -469,7 +450,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: should have lost gas and fee for failed swap, some synth should burn
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 2
@@ -477,7 +457,6 @@ asserts:
   - .balances[]|select(.denom == "rune")|.amount|tonumber == 2489978000000
 ---
 type: check
-description: entire btc synth supply should be on fox account
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/supply
 asserts:
   - .supply[]|select(.denom=="btc/btc")|.amount|tonumber == 9067205
@@ -496,7 +475,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: should have lost gas and fee for failed swap, some synth should burn
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 2
@@ -504,7 +482,6 @@ asserts:
   - .balances[]|select(.denom == "rune")|.amount|tonumber == 2489976000000
 ---
 type: check
-description: entire btc synth supply should be on fox account and no eth synth created
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/supply
 asserts:
   - .supply[]|select(.denom=="btc/btc")|.amount|tonumber == 9065386
@@ -524,7 +501,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: should have lost gas and fee for failed swap, some synth should burn
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 2
@@ -532,7 +508,6 @@ asserts:
   - .balances[]|select(.denom == "rune")|.amount|tonumber == 2489974000000
 ---
 type: check
-description: entire btc synth supply should be on fox account
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/supply
 asserts:
   - .supply[]|select(.denom=="btc/btc")|.amount|tonumber == 9063567
@@ -551,7 +526,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: should have lost gas and fee for failed swap, some synth should burn
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 2
@@ -559,7 +533,6 @@ asserts:
   - .balances[]|select(.denom == "rune")|.amount|tonumber == 2489972000000
 ---
 type: check
-description: entire btc synth supply should be on fox account and no eth synth created
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/supply
 asserts:
   - .supply[]|select(.denom=="btc/btc")|.amount|tonumber == 9061748
@@ -579,13 +552,11 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: the lending module should contain no synths
 endpoint: http://localhost:1317/thorchain/balance/module/lending
 asserts:
   - .|[.coins[]|select(.denom == "btc/btc")]|length == 0
 ---
 type: check
-description: confirm that refunded
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .|[.end_block_events[]|select(.type == "refund")]|length == 1

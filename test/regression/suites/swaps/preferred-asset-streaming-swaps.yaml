@@ -7,7 +7,6 @@ count: 1
 ---
 # PreferredAssetOutboundFeeMultiplier -> 10
 type: tx-mimir
-description: active dog sets mimir
 key: PreferredAssetOutboundFeeMultiplier
 value: 10
 signer: {{ addr_thor_dog }}
@@ -16,7 +15,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: mimir should be set
 endpoint: http://localhost:1317/thorchain/mimir
 asserts:
   - .PREFERREDASSETOUTBOUNDFEEMULTIPLIER == 10
@@ -55,7 +53,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: thorname "test" should be registered with preferred asset
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
   - .aliases[0].address == "{{ addr_thor_pig }}"
@@ -74,7 +71,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: rune balance in thorname keeper should have increased for "test" after rune swap
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
   - .affiliate_collector_rune == "750000000"
@@ -104,7 +100,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: no outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
@@ -136,7 +131,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: rune balance in thorname keeper should have increased for "test" after btc swap
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
   - .affiliate_collector_rune == "1467114979"
@@ -169,7 +163,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: check streaming swap was created
 endpoint: http://localhost:1317/thorchain/swap/streaming/{{ observe_txid 3 }}
 asserts:
   - .deposit == "28500000"
@@ -184,7 +177,6 @@ asserts:
   - .failed_swap_reasons|length == 0
 ---
 type: check
-description: preferred asset outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -215,13 +207,11 @@ type: create-blocks
 count: 2
 ---
 type: check
-description: rune balance in thorname keeper for "test" should only be aff fee from the streaming swap
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
   - .affiliate_collector_rune == "145869646"
 ---
 type: check
-description: check streaming swap progress
 endpoint: http://localhost:1317/thorchain/swap/streaming/{{ observe_txid 3 }}
 asserts:
   - .deposit == "28500000"
@@ -239,13 +229,11 @@ type: create-blocks
 count: 3
 ---
 type: check
-description: check streaming swap is NOT in list
 endpoint: http://localhost:1317/thorchain/swaps/streaming
 asserts:
   - .|length == 0
 ---
 type: check
-description: outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -276,7 +264,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound queue should be cleared
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0

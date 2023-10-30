@@ -10,7 +10,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: btc pool should exist
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .|length == 1
@@ -42,13 +41,11 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound refund reason should be set
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .end_block_events[]|select(.type == "refund")|.reason == "add liquidity rune is more than bond"
 ---
 type: check
-description: outbound should exist
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1

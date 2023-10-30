@@ -32,7 +32,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -63,7 +62,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0

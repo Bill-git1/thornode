@@ -33,7 +33,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: thorname "test" should fail to register with non-existent preferred asset pool
 endpoint: http://localhost:1317/thorchain/thorname/test
 status: 404
 ---
@@ -51,7 +50,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: thorname "test" should be registered with preferred asset
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
   - .aliases[0].address == "{{ addr_thor_pig }}"
@@ -72,7 +70,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: thorname "test" should be registered with preferred asset
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
   - .aliases[0].address == "{{ addr_thor_pig }}"
@@ -84,13 +81,11 @@ asserts:
 # check aff collector + addr_thor_fox balance before swap
 ########################################################################################
 type: check
-description: rune balance in affiliate module should be 0
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
   - .affiliate_collector_rune == "0"
 ---
 type: check
-description: check pig balance before swap
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
 asserts:
   - .result[]|select(.denom == "rune")|.amount == "4992000000"
@@ -125,19 +120,16 @@ count: 1
 # check aff collector + addr_thor_pig balance after swap, balance should be same, aff module should increase
 ########################################################################################
 type: check
-description: rune balance in affiliate module should have increased for "test"
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
   - .affiliate_collector_rune == "225251844"
 ---
 type: check
-description: total rune balance of affiliate module should match "test" balance in thorname keeper
 endpoint: http://localhost:1317/thorchain/balance/module/affiliate_collector
 asserts:
   - .coins[]|select(.denom == "rune")|.amount == "225251844"
 ---
 type: check
-description: check pig balance after btc swap, should be the same
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
 asserts:
   - .result[]|select(.denom == "rune")|.amount == "4992000000"
@@ -159,19 +151,16 @@ count: 1
 # check aff collector + addr_thor_pig balance after swap, balance should be same, aff module should increase
 ########################################################################################
 type: check
-description: rune balance in thorname keeper should have increased for "test" after rune swap
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
   - .affiliate_collector_rune == "475251844"
 ---
 type: check
-description: total rune balance of affiliate module should match "test" balance in thorname keeper after rune swap
 endpoint: http://localhost:1317/thorchain/balance/module/affiliate_collector
 asserts:
   - .coins[]|select(.denom == "rune")|.amount == "475251844"
 ---
 type: check
-description: check pig balance after rune swap, should be the same
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
 asserts:
   - .result[]|select(.denom == "rune")|.amount == "4992000000"
@@ -201,7 +190,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: no outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
@@ -220,25 +208,21 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: rune balance in thorname keeper for "test" should be exactly 0 RUNE after preferred asset swap
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
   - .affiliate_collector_rune == "0"
 ---
 type: check
-description: affiliate collector module balance should be empty after preferred asset swap
 endpoint: http://localhost:1317/thorchain/balance/module/affiliate_collector
 asserts:
   - .coins|length == 0
 ---
 type: check
-description: check pig balance after rune swap, should be the same
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
 asserts:
   - .result[]|select(.denom == "rune")|.amount == "4992000000"
 ---
 type: check
-description: check PreferredAsset swap event
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .|[.end_block_events[]|select(.type == "scheduled_outbound")]|length == 2
@@ -247,7 +231,6 @@ asserts:
   - .|[.end_block_events[]|select(.type == "scheduled_outbound")]|.[1].coin_asset == "BTC.BTC"
 ---
 type: check
-description: two outbounds should be queued, the main swap and the preferred asset swap
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 2
@@ -301,7 +284,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound queue should be cleared
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
@@ -333,20 +315,17 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: rune balance in affiliate module should have increased for "test"
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
   - .affiliate_collector_rune == "429942580"
 ---
 type: check
-description: total rune balance of affiliate module should match "test" balance in thorname keeper
 endpoint: http://localhost:1317/thorchain/balance/module/affiliate_collector
 asserts:
   - .coins[]|select(.denom == "rune")|.amount == "429942580"
 ---
 # BTC paused
 type: tx-mimir
-description: active dog sets mimir
 key: HaltBTCTrading
 value: 1
 signer: {{ addr_thor_dog }}
@@ -355,7 +334,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: mimir should be set
 endpoint: http://localhost:1317/thorchain/mimir
 asserts:
   - .HALTBTCTRADING == 1
@@ -384,13 +362,11 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: rune balance in affiliate module should have increased for "test" after ETH swap
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
   - .affiliate_collector_rune == "2256550089"
 ---
 type: check
-description: total rune balance of affiliate module should match "test" balance in thorname keeper after ETH swap
 endpoint: http://localhost:1317/thorchain/balance/module/affiliate_collector
 asserts:
   - .coins[]|select(.denom == "rune")|.amount == "2256550089"
@@ -409,19 +385,16 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: rune balance in affiliate module should have increased (preferred asset swap should have failed)
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
   - .affiliate_collector_rune == "4756550089"
 ---
 type: check
-description: total rune balance of affiliate module should match "test" balance in thorname keeper
 endpoint: http://localhost:1317/thorchain/balance/module/affiliate_collector
 asserts:
   - .coins[]|select(.denom == "rune")|.amount == "4756550089"
 ---
 type: check
-description: should only have the main swap outbound
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -429,7 +402,6 @@ asserts:
   - .[0]|.to_address == "{{ addr_eth_cat }}"
 ---
 type: check
-description: no refund for preferred asset swap
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .|[.end_block_events[]|select(.type == "refund")]|length == 0
