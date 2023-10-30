@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"net/url"
 	"strconv"
 	"strings"
@@ -43,8 +44,9 @@ const (
 	intervalParam             = "streaming_interval"
 	quantityParam             = "streaming_quantity"
 
-	quoteWarning    = "Do not cache this response. Do not send funds after the expiry."
-	quoteExpiration = 15 * time.Minute
+	quoteWarning         = "Do not cache this response. Do not send funds after the expiry."
+	quoteExpiration      = 15 * time.Minute
+	ethBlockRewardAndFee = 3 * 1e18
 )
 
 var nullLogger = &log.TendermintLogWrapper{Logger: zerolog.New(io.Discard)}
@@ -147,6 +149,48 @@ func hasSuffixMatch(suffix string, values []string) bool {
 		}
 	}
 	return false
+}
+
+// quoteConvertAsset - converts amount to target asset using THORChain pools
+func quoteConvertAsset(ctx cosmos.Context, mgr *Mgrs, fromAsset common.Asset, amount sdk.Uint, toAsset common.Asset) (sdk.Uint, error) {
+	// no conversion necessary
+	if fromAsset.Equals(toAsset) {
+		return amount, nil
+	}
+
+	// convert to rune
+	if !fromAsset.IsRune() {
+		// get the fromPool for the from asset
+		fromPool, err := mgr.Keeper().GetPool(ctx, fromAsset.GetLayer1Asset())
+		if err != nil {
+			return sdk.ZeroUint(), fmt.Errorf("failed to get pool: %w", err)
+		}
+
+		// ensure pool exists
+		if fromPool.IsEmpty() {
+			return sdk.ZeroUint(), fmt.Errorf("pool does not exist")
+		}
+
+		amount = fromPool.AssetValueInRune(amount)
+	}
+
+	// convert to target asset
+	if !toAsset.IsRune() {
+
+		toPool, err := mgr.Keeper().GetPool(ctx, toAsset.GetLayer1Asset())
+		if err != nil {
+			return sdk.ZeroUint(), fmt.Errorf("failed to get pool: %w", err)
+		}
+
+		// ensure pool exists
+		if toPool.IsEmpty() {
+			return sdk.ZeroUint(), fmt.Errorf("pool does not exist")
+		}
+
+		amount = toPool.RuneValueInAsset(amount)
+	}
+
+	return amount, nil
 }
 
 func quoteReverseFuzzyAsset(ctx cosmos.Context, mgr *Mgrs, asset common.Asset) (common.Asset, error) {
@@ -307,7 +351,11 @@ func quoteSimulateSwap(ctx cosmos.Context, mgr *Mgrs, amount sdk.Uint, msg *MsgS
 	}, emitAmount, outboundFeeAmount, nil
 }
 
-func quoteInboundInfo(ctx cosmos.Context, mgr *Mgrs, amount sdk.Uint, chain common.Chain) (address, router common.Address, confirmations int64, err error) {
+func convertThorchainAmountToWei(amt *big.Int) *big.Int {
+	return big.NewInt(0).Mul(amt, big.NewInt(common.One*100))
+}
+
+func quoteInboundInfo(ctx cosmos.Context, mgr *Mgrs, amount sdk.Uint, chain common.Chain, asset common.Asset) (address, router common.Address, confirmations int64, err error) {
 	// If inbound chain is THORChain there is no inbound address
 	if chain.IsTHORChain() {
 		address = common.NoAddress
@@ -339,6 +387,20 @@ func quoteInboundInfo(ctx cosmos.Context, mgr *Mgrs, amount sdk.Uint, chain comm
 		if !amount.Mod(coinbase).IsZero() {
 			confirmations++
 		}
+	} else if chain.IsEVM() {
+		// copying logic from getBlockRequiredConfirmation of ethereum.go
+		// convert amount to ETH
+		gasAssetAmount, err := quoteConvertAsset(ctx, mgr, asset, amount, chain.GetGasAsset())
+		if err != nil {
+			return common.NoAddress, common.NoAddress, 0, fmt.Errorf("unable to convert asset: %w", err)
+		}
+		gasAssetAmountWei := convertThorchainAmountToWei(gasAssetAmount.BigInt())
+		blockReward := big.NewInt(ethBlockRewardAndFee)
+		confirm := cosmos.NewUintFromBigInt(gasAssetAmountWei).MulUint64(2).Quo(cosmos.NewUintFromBigInt(blockReward)).Uint64()
+		if confirm < 2 {
+			confirm = 2
+		}
+		confirmations = int64(confirm)
 	}
 
 	return address, router, confirmations, nil
@@ -378,24 +440,9 @@ func calculateMinSwapAmount(ctx cosmos.Context, mgr *Mgrs, fromAsset, toAsset co
 		return srcOutboundFee.Mul(cosmos.NewUint(2)), nil
 	}
 
-	srcPool, err := mgr.Keeper().GetPool(ctx, fromAsset.GetLayer1Asset())
+	destInSrcAsset, err := quoteConvertAsset(ctx, mgr, toAsset, destOutboundFee, fromAsset)
 	if err != nil {
-		return cosmos.ZeroUint(), fmt.Errorf("fail to get pool for asset %s", fromAsset)
-	}
-
-	destPool, err := mgr.Keeper().GetPool(ctx, toAsset.GetLayer1Asset())
-	if err != nil {
-		return cosmos.ZeroUint(), fmt.Errorf("fail to get pool for asset %s", toAsset)
-	}
-
-	// Convert destination chain outbound fee to input asset
-	destInSrcAsset := destOutboundFee
-	if !toAsset.IsNativeRune() {
-		destInSrcAsset = destPool.AssetValueInRune(destOutboundFee)
-	}
-
-	if !fromAsset.IsNativeRune() {
-		destInSrcAsset = srcPool.RuneValueInAsset(destInSrcAsset)
+		return cosmos.ZeroUint(), fmt.Errorf("fail to convert dest fee to src asset %w", err)
 	}
 
 	minSwapAmount := srcOutboundFee
@@ -519,38 +566,11 @@ func queryQuoteSwap(ctx cosmos.Context, path []string, req abci.RequestQuery, mg
 		}
 
 		// convert to a limit of target asset amount assuming zero fees and slip
-		feelessEmit := swapAmount
-
-		// When one asset is RUNE, no conversion is necessary,
-		// and empty fields would cause a divide-by-zero error; skip it.
-		if !fromAsset.IsRune() {
-			// get from asset pool
-			fromPool, err := mgr.Keeper().GetPool(ctx, fromAsset.GetLayer1Asset())
-			if err != nil {
-				return quoteErrorResponse(fmt.Errorf("failed to get pool: %w", err))
-			}
-
-			// ensure pool exists
-			if fromPool.IsEmpty() {
-				return quoteErrorResponse(fmt.Errorf("pool does not exist"))
-			}
-
-			feelessEmit = feelessEmit.Mul(fromPool.BalanceRune).Quo(fromPool.BalanceAsset)
+		feelessEmit, err := quoteConvertAsset(ctx, mgr, fromAsset, swapAmount, toAsset)
+		if err != nil {
+			return quoteErrorResponse(err)
 		}
-		if !toAsset.IsRune() {
-			// get to asset pool
-			toPool, err := mgr.Keeper().GetPool(ctx, toAsset.GetLayer1Asset())
-			if err != nil {
-				return quoteErrorResponse(fmt.Errorf("failed to get pool: %w", err))
-			}
 
-			// ensure pool exists
-			if toPool.IsEmpty() {
-				return quoteErrorResponse(fmt.Errorf("pool does not exist"))
-			}
-
-			feelessEmit = feelessEmit.Mul(toPool.BalanceAsset).Quo(toPool.BalanceRune)
-		}
 		limit = feelessEmit.MulUint64(10000 - toleranceBasisPoints.Uint64()).QuoUint64(10000)
 	}
 
@@ -674,7 +694,7 @@ func queryQuoteSwap(ctx cosmos.Context, path []string, req abci.RequestQuery, mg
 	res.StreamingSwapSeconds = wrapInt64(streamSwapBlocks * common.THORChain.ApproximateBlockMilliseconds() / 1000)
 
 	// estimate the inbound info
-	inboundAddress, routerAddress, inboundConfirmations, err := quoteInboundInfo(ctx, mgr, amount, fromAsset.GetChain())
+	inboundAddress, routerAddress, inboundConfirmations, err := quoteInboundInfo(ctx, mgr, amount, fromAsset.GetChain(), fromAsset)
 	if err != nil {
 		return quoteErrorResponse(err)
 	}
@@ -684,13 +704,18 @@ func queryQuoteSwap(ctx cosmos.Context, path []string, req abci.RequestQuery, mg
 		res.InboundConfirmationSeconds = wrapInt64(inboundConfirmations * msg.Tx.Chain.ApproximateBlockMilliseconds() / 1000)
 	}
 
-	// estimate the outbound info
-	outboundDelay, err := quoteOutboundInfo(ctx, mgr, common.Coin{Asset: toAsset, Amount: emitAmount})
-	if err != nil {
-		return quoteErrorResponse(err)
+	res.OutboundDelayBlocks = 0
+	res.OutboundDelaySeconds = 0
+	if !toAsset.Chain.IsTHORChain() {
+		// estimate the outbound info
+		outboundDelay, err := quoteOutboundInfo(ctx, mgr, common.Coin{Asset: toAsset, Amount: emitAmount})
+		if err != nil {
+			return quoteErrorResponse(err)
+		}
+		res.OutboundDelayBlocks = outboundDelay
+		res.OutboundDelaySeconds = outboundDelay * common.THORChain.ApproximateBlockMilliseconds() / 1000
 	}
-	res.OutboundDelayBlocks = outboundDelay
-	res.OutboundDelaySeconds = outboundDelay * common.THORChain.ApproximateBlockMilliseconds() / 1000
+
 	totalSeconds := res.OutboundDelaySeconds
 	if res.StreamingSwapSeconds != nil && res.OutboundDelaySeconds < *res.StreamingSwapSeconds {
 		totalSeconds = *res.StreamingSwapSeconds
@@ -815,7 +840,7 @@ func queryQuoteSaverDeposit(ctx cosmos.Context, path []string, req abci.RequestQ
 	}
 
 	// estimate the inbound info
-	inboundAddress, _, inboundConfirmations, err := quoteInboundInfo(ctx, mgr, amount, asset.GetLayer1Asset().Chain)
+	inboundAddress, _, inboundConfirmations, err := quoteInboundInfo(ctx, mgr, amount, asset.GetLayer1Asset().Chain, asset)
 	if err != nil {
 		return quoteErrorResponse(err)
 	}
@@ -929,7 +954,7 @@ func queryQuoteSaverWithdraw(ctx cosmos.Context, path []string, req abci.Request
 	}
 
 	// estimate the inbound info
-	inboundAddress, _, _, err := quoteInboundInfo(ctx, mgr, amount, asset.GetLayer1Asset().Chain)
+	inboundAddress, _, _, err := quoteInboundInfo(ctx, mgr, amount, asset.GetLayer1Asset().Chain, asset)
 	if err != nil {
 		return quoteErrorResponse(err)
 	}
@@ -1092,7 +1117,7 @@ func queryQuoteLoanOpen(ctx cosmos.Context, path []string, req abci.RequestQuery
 	}
 
 	// estimate the inbound info
-	inboundAddress, routerAddress, inboundConfirmations, err := quoteInboundInfo(ctx, mgr, amount, asset.Chain)
+	inboundAddress, routerAddress, inboundConfirmations, err := quoteInboundInfo(ctx, mgr, amount, asset.Chain, asset)
 	if err != nil {
 		return quoteErrorResponse(err)
 	}
@@ -1369,7 +1394,7 @@ func queryQuoteLoanClose(ctx cosmos.Context, path []string, req abci.RequestQuer
 	}
 
 	// estimate the inbound info
-	inboundAddress, routerAddress, inboundConfirmations, err := quoteInboundInfo(ctx, mgr, amount, asset.Chain)
+	inboundAddress, routerAddress, inboundConfirmations, err := quoteInboundInfo(ctx, mgr, amount, asset.Chain, asset)
 	if err != nil {
 		return quoteErrorResponse(err)
 	}

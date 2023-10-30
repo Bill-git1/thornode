@@ -588,7 +588,7 @@ asserts:
   - .slippage_bps == 1629
   - .streaming_slippage_bps == 101
   - .streaming_swap_seconds == 1080
-  - .total_swap_seconds == 1080
+  - .total_swap_seconds == 1104
   - .expected_amount_out == "9665246"
 ---
 type: check
@@ -620,7 +620,7 @@ params:
   streaming_quantity: 10
   tolerance_bps: 3500
 asserts:
-  - .memo == "=:BTC.BTC:{{ addr_btc_fox }}:6420863/10/10"
+  - .memo == "=:BTC.BTC:{{ addr_btc_fox }}:6420864/10/10"
   - .max_streaming_quantity == 19
   - .streaming_swap_blocks == 90
   - .streaming_swap_seconds == 540
@@ -631,7 +631,7 @@ asserts:
   - .fees.total_bps == 205
   - .slippage_bps == 1629
   - .streaming_slippage_bps == 191
-  - .total_swap_seconds == 540
+  - .total_swap_seconds == 564
   - .expected_amount_out == "9492080"
 ---
 # necessary to avoid race to hang on block creation
@@ -663,7 +663,7 @@ asserts:
   - .fees.total_bps == 115
   - .slippage_bps == 1629
   - .streaming_slippage_bps == 101
-  - .total_swap_seconds == 1080
+  - .total_swap_seconds == 1104
   - .expected_amount_out == "9665246"
 ---
 ########################################################################################
