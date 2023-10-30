@@ -57,6 +57,7 @@ const (
 	FailKeysignSlashPoints
 	LiquidityLockUpBlocks
 	ObserveSlashPoints
+	MissBlockSignSlashPoints
 	ObservationDelayFlexibility
 	StopFundYggdrasil
 	YggFundLimit
@@ -184,6 +185,7 @@ var nameToString = map[ConstantName]string{
 	FailKeysignSlashPoints:              "FailKeysignSlashPoints",
 	LiquidityLockUpBlocks:               "LiquidityLockUpBlocks",
 	ObserveSlashPoints:                  "ObserveSlashPoints",
+	MissBlockSignSlashPoints:            "MissBlockSignSlashPoints",
 	ObservationDelayFlexibility:         "ObservationDelayFlexibility",
 	StopFundYggdrasil:                   "StopFundYggdrasil",
 	YggFundLimit:                        "YggFundLimit",

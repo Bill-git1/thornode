@@ -9,7 +9,6 @@ import (
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/crypto"
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
@@ -125,7 +124,6 @@ type OrderBook interface {
 // Slasher define all the method to perform slash
 type Slasher interface {
 	BeginBlock(ctx cosmos.Context, req abci.RequestBeginBlock, constAccessor constants.ConstantValues)
-	HandleDoubleSign(ctx cosmos.Context, addr crypto.Address, infractionHeight int64, constAccessor constants.ConstantValues) error
 	LackObserving(ctx cosmos.Context, constAccessor constants.ConstantValues) error
 	LackSigning(ctx cosmos.Context, mgr Manager) error
 	SlashVault(ctx cosmos.Context, vaultPK common.PubKey, coins common.Coins, mgr Manager) error
@@ -597,8 +595,10 @@ func GetOrderBook(version semver.Version, keeper keeper.Keeper) (OrderBook, erro
 // GetSlasher return an implementation of Slasher
 func GetSlasher(version semver.Version, keeper keeper.Keeper, eventMgr EventManager) (Slasher, error) {
 	switch {
-	case version.GTE(semver.MustParse("1.116.0")):
+	case version.GTE(semver.MustParse("1.124.0")):
 		return newSlasherVCUR(keeper, eventMgr), nil
+	case version.GTE(semver.MustParse("1.116.0")):
+		return newSlasherV116(keeper, eventMgr), nil
 	case version.GTE(semver.MustParse("1.115.0")):
 		return newSlasherV115(keeper, eventMgr), nil
 	case version.GTE(semver.MustParse("1.112.0")):

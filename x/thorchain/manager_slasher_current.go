@@ -25,6 +25,11 @@ type SlasherVCUR struct {
 	eventMgr EventManager
 }
 
+type nodeAddressValidatorAddressPairVCUR struct {
+	nodeAddress      cosmos.AccAddress
+	validatorAddress crypto.Address
+}
+
 // newSlasherVCUR create a new instance of Slasher
 func newSlasherVCUR(keeper keeper.Keeper, eventMgr EventManager) *SlasherVCUR {
 	return &SlasherVCUR{keeper: keeper, eventMgr: eventMgr}
@@ -32,6 +37,7 @@ func newSlasherVCUR(keeper keeper.Keeper, eventMgr EventManager) *SlasherVCUR {
 
 // BeginBlock called when a new block get proposed to detect whether there are duplicate vote
 func (s *SlasherVCUR) BeginBlock(ctx cosmos.Context, req abci.RequestBeginBlock, constAccessor constants.ConstantValues) {
+	var doubleSignEvidence []abci.Evidence
 	// Iterate through any newly discovered evidence of infraction
 	// Slash any validators (and since-unbonded liquidity within the unbonding period)
 	// who contributed to valid infractions
@@ -43,11 +49,56 @@ func (s *SlasherVCUR) BeginBlock(ctx cosmos.Context, req abci.RequestBeginBlock,
 		}
 		switch evidence.Type {
 		case abci.EvidenceType_DUPLICATE_VOTE:
-			if err := s.HandleDoubleSign(ctx, evidence.Validator.Address, evidence.Height, constAccessor); err != nil {
-				ctx.Logger().Error("fail to slash for double signing a block", "error", err)
-			}
+			doubleSignEvidence = append(doubleSignEvidence, evidence)
 		default:
 			ctx.Logger().Error("ignored unknown evidence type", "type", evidence.Type)
+		}
+	}
+
+	// Identify validators which didn't sign the previous block
+	var missingSignAddresses []crypto.Address
+	for _, voteInfo := range req.LastCommitInfo.Votes {
+		if voteInfo.SignedLastBlock {
+			continue
+		}
+		missingSignAddresses = append(missingSignAddresses, voteInfo.Validator.Address)
+	}
+
+	// Do not continue if there is no action to take.
+	if len(doubleSignEvidence)+len(missingSignAddresses) == 0 {
+		return
+	}
+
+	// Derive Active node validator addresses once.
+	nas, err := s.keeper.ListActiveValidators(ctx)
+	if err != nil {
+		ctx.Logger().Error("fail to list active validators", "error", err)
+		return
+	}
+	var validatorAddresses []nodeAddressValidatorAddressPairVCUR
+	for _, na := range nas {
+		pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeConsPub, na.ValidatorConsPubKey)
+		if err != nil {
+			ctx.Logger().Error("fail to derive validator address", "error", err)
+			continue
+		}
+		var pair nodeAddressValidatorAddressPairVCUR
+		pair.nodeAddress = na.NodeAddress
+		pair.validatorAddress = pk.Address()
+		validatorAddresses = append(validatorAddresses, pair)
+	}
+
+	// Act on double signs.
+	for _, evidence := range doubleSignEvidence {
+		if err := s.HandleDoubleSign(ctx, evidence.Validator.Address, evidence.Height, constAccessor, validatorAddresses); err != nil {
+			ctx.Logger().Error("fail to slash for double signing a block", "error", err)
+		}
+	}
+
+	// Act on missing signs.
+	for _, missingSignAddress := range missingSignAddresses {
+		if err := s.HandleMissingSign(ctx, missingSignAddress, constAccessor, validatorAddresses); err != nil {
+			ctx.Logger().Error("fail to slash for missing signing a block", "error", err)
 		}
 	}
 }
@@ -55,60 +106,86 @@ func (s *SlasherVCUR) BeginBlock(ctx cosmos.Context, req abci.RequestBeginBlock,
 // HandleDoubleSign - slashes a validator for signing two blocks at the same
 // block height
 // https://blog.cosmos.network/consensus-compare-casper-vs-tendermint-6df154ad56ae
-func (s *SlasherVCUR) HandleDoubleSign(ctx cosmos.Context, addr crypto.Address, infractionHeight int64, constAccessor constants.ConstantValues) error {
+func (s *SlasherVCUR) HandleDoubleSign(ctx cosmos.Context, addr crypto.Address, infractionHeight int64, constAccessor constants.ConstantValues, validatorAddresses []nodeAddressValidatorAddressPairVCUR) error {
 	// check if we're recent enough to slash for this behavior
 	maxAge := constAccessor.GetInt64Value(constants.DoubleSignMaxAge)
 	if (ctx.BlockHeight() - infractionHeight) > maxAge {
 		ctx.Logger().Info("double sign detected but too old to be slashed", "infraction height", fmt.Sprintf("%d", infractionHeight), "address", addr.String())
 		return nil
 	}
-	nas, err := s.keeper.ListActiveValidators(ctx)
-	if err != nil {
-		return err
-	}
 
-	for _, na := range nas {
-		pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeConsPub, na.ValidatorConsPubKey)
+	for _, pair := range validatorAddresses {
+		if addr.String() != pair.validatorAddress.String() {
+			continue
+		}
+
+		na, err := s.keeper.GetNodeAccount(ctx, pair.nodeAddress)
 		if err != nil {
 			return err
 		}
 
-		if addr.String() == pk.Address().String() {
-			if na.Bond.IsZero() {
-				return fmt.Errorf("found account to slash for double signing, but did not have any bond to slash: %s", addr)
-			}
-			// take 5% of the minimum bond, and put it into the reserve
-			minBond, err := s.keeper.GetMimir(ctx, constants.MinimumBondInRune.String())
-			if minBond < 0 || err != nil {
-				minBond = constAccessor.GetInt64Value(constants.MinimumBondInRune)
-			}
-			slashAmount := cosmos.NewUint(uint64(minBond)).MulUint64(5).QuoUint64(100)
-			if slashAmount.GT(na.Bond) {
-				slashAmount = na.Bond
-			}
-
-			slashFloat, _ := new(big.Float).SetInt(slashAmount.BigInt()).Float32()
-			telemetry.IncrCounterWithLabels(
-				[]string{"thornode", "bond_slash"},
-				slashFloat,
-				[]metrics.Label{
-					telemetry.NewLabel("address", addr.String()),
-					telemetry.NewLabel("reason", "double_sign"),
-				},
-			)
-
-			na.Bond = common.SafeSub(na.Bond, slashAmount)
-			coin := common.NewCoin(common.RuneNative, slashAmount)
-			if err := s.keeper.SendFromModuleToModule(ctx, BondName, ReserveName, common.NewCoins(coin)); err != nil {
-				ctx.Logger().Error("fail to transfer funds from bond to reserve", "error", err)
-				return fmt.Errorf("fail to transfer funds from bond to reserve: %w", err)
-			}
-
-			return s.keeper.SetNodeAccount(ctx, na)
+		if na.Bond.IsZero() {
+			return fmt.Errorf("found account to slash for double signing, but did not have any bond to slash: %s", addr)
 		}
+		// take 5% of the minimum bond, and put it into the reserve
+		minBond, err := s.keeper.GetMimir(ctx, constants.MinimumBondInRune.String())
+		if minBond < 0 || err != nil {
+			minBond = constAccessor.GetInt64Value(constants.MinimumBondInRune)
+		}
+		slashAmount := cosmos.NewUint(uint64(minBond)).MulUint64(5).QuoUint64(100)
+		if slashAmount.GT(na.Bond) {
+			slashAmount = na.Bond
+		}
+
+		slashFloat, _ := new(big.Float).SetInt(slashAmount.BigInt()).Float32()
+		telemetry.IncrCounterWithLabels(
+			[]string{"thornode", "bond_slash"},
+			slashFloat,
+			[]metrics.Label{
+				telemetry.NewLabel("address", addr.String()),
+				telemetry.NewLabel("reason", "double_block_sign"),
+			},
+		)
+
+		na.Bond = common.SafeSub(na.Bond, slashAmount)
+		coin := common.NewCoin(common.RuneNative, slashAmount)
+		if err := s.keeper.SendFromModuleToModule(ctx, BondName, ReserveName, common.NewCoins(coin)); err != nil {
+			ctx.Logger().Error("fail to transfer funds from bond to reserve", "error", err)
+			return fmt.Errorf("fail to transfer funds from bond to reserve: %w", err)
+		}
+
+		return s.keeper.SetNodeAccount(ctx, na)
 	}
 
-	return fmt.Errorf("could not find node account with validator address: %s", addr)
+	return fmt.Errorf("could not find active node account with validator address: %s", addr)
+}
+
+// HandleMissingSign - slashes a validator for not signing a block
+func (s *SlasherVCUR) HandleMissingSign(ctx cosmos.Context, addr crypto.Address, constAccessor constants.ConstantValues, validatorAddresses []nodeAddressValidatorAddressPairVCUR) error {
+	missBlockSignSlashPoints := s.keeper.GetConfigInt64(ctx, constants.MissBlockSignSlashPoints)
+
+	for _, pair := range validatorAddresses {
+		if addr.String() != pair.validatorAddress.String() {
+			continue
+		}
+
+		na, err := s.keeper.GetNodeAccount(ctx, pair.nodeAddress)
+		if err != nil {
+			return err
+		}
+
+		slashCtx := ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
+			telemetry.NewLabel("address", na.NodeAddress.String()),
+			telemetry.NewLabel("reason", "miss_block_sign"),
+		}))
+		if err := s.keeper.IncNodeAccountSlashPoints(slashCtx, na.NodeAddress, missBlockSignSlashPoints); err != nil {
+			ctx.Logger().Error("fail to increase node account slash points", "error", err, "address", na.NodeAddress.String())
+		}
+
+		return s.keeper.SetNodeAccount(ctx, na)
+	}
+
+	return fmt.Errorf("could not find active node account with validator address: %s", addr)
 }
 
 // LackObserving Slash node accounts that didn't observe a single inbound txn

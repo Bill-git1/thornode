@@ -315,7 +315,12 @@ func (s *SlashingVCURSuite) TestDoubleSign(c *C) {
 
 	pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeConsPub, na.ValidatorConsPubKey)
 	c.Assert(err, IsNil)
-	err = slasher.HandleDoubleSign(ctx, pk.Address(), 0, constAccessor)
+
+	var pair nodeAddressValidatorAddressPairVCUR
+	pair.nodeAddress = na.NodeAddress
+	pair.validatorAddress = pk.Address()
+
+	err = slasher.HandleDoubleSign(ctx, pk.Address(), 0, constAccessor, []nodeAddressValidatorAddressPairVCUR{pair})
 	c.Assert(err, IsNil)
 
 	c.Check(keeper.na.Bond.Equal(cosmos.NewUint(9995000000)), Equals, true, Commentf("%d", keeper.na.Bond.Uint64()))

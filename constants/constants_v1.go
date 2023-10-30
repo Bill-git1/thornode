@@ -48,6 +48,7 @@ func NewConstantValue() *ConstantVals {
 			FailKeysignSlashPoints:              2,                  // slash for 2 blocks
 			LiquidityLockUpBlocks:               0,                  // the number of blocks LP can withdraw after their liquidity
 			ObserveSlashPoints:                  1,                  // the number of slashpoints for making an observation (redeems later if observation reaches consensus
+			MissBlockSignSlashPoints:            1,                  // slash points for not signing a block
 			ObservationDelayFlexibility:         10,                 // number of blocks of flexibility for a validator to get their slash points taken off for making an observation
 			YggFundLimit:                        50,                 // percentage of the amount of funds a ygg vault is allowed to have.
 			YggFundRetry:                        1000,               // number of blocks before retrying to fund a yggdrasil vault
