@@ -412,7 +412,7 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 			if err != nil {
 				ctx.Logger().Error("fail to get all active node accounts", "error", err)
 			}
-			ygg := make(Vaults, 0)
+			yggs := make(Vaults, 0)
 			if len(activeNodeAccounts) > 0 {
 				voter, err := tos.keeper.GetObservedTxInVoter(ctx, toi.InHash)
 				if err != nil {
@@ -422,45 +422,49 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 
 				// collect yggdrasil pools is going to get a list of yggdrasil
 				// vault that THORChain can used to send out fund
-				ygg, err = tos.collectYggdrasilPools(ctx, tx, toi.Chain.GetGasAsset())
+				yggs, err = tos.collectYggdrasilPools(ctx, tx, toi.Chain.GetGasAsset())
 				if err != nil {
 					return nil, cosmos.ZeroUint(), fmt.Errorf("fail to collect yggdrasil pool: %w", err)
 				}
-				for i := range ygg {
-					// deduct the value of any assigned pending outbounds
-					ygg[i] = tos.deductVaultPendingOutbounds(ygg[i], pendingOutbounds)
+
+				// All else being equal, prefer lower-security vaults for outbounds.
+				yggs = tos.keeper.SortBySecurity(ctx, yggs, signingTransactionPeriod)
+
+				for i := range yggs {
+					// having sorted by security, deduct the value of any assigned pending outbounds
+					yggs[i] = tos.deductVaultPendingOutbounds(yggs[i], pendingOutbounds)
 				}
 			}
-			// All else being equal, prefer lower-security vaults for outbounds.
-			yggs := tos.keeper.SortBySecurity(ctx, ygg, signingTransactionPeriod)
 			// //////////////////////////////////////////////////////////////
 
 			// ///////////// COLLECT ACTIVE ASGARD VAULTS ///////////////////
-			active, err := tos.keeper.GetAsgardVaultsByStatus(ctx, ActiveVault)
+			activeAsgards, err := tos.keeper.GetAsgardVaultsByStatus(ctx, ActiveVault)
 			if err != nil {
 				ctx.Logger().Error("fail to get active vaults", "error", err)
 			}
 
-			for i := range active {
-				// deduct the value of any assigned pending outbounds
-				active[i] = tos.deductVaultPendingOutbounds(active[i], pendingOutbounds)
-			}
 			// All else being equal, prefer lower-security vaults for outbounds.
-			activeAsgards := tos.keeper.SortBySecurity(ctx, active, signingTransactionPeriod)
+			activeAsgards = tos.keeper.SortBySecurity(ctx, activeAsgards, signingTransactionPeriod)
+
+			for i := range activeAsgards {
+				// having sorted by security, deduct the value of any assigned pending outbounds
+				activeAsgards[i] = tos.deductVaultPendingOutbounds(activeAsgards[i], pendingOutbounds)
+			}
 			// //////////////////////////////////////////////////////////////
 
 			// ///////////// COLLECT RETIRING ASGARD VAULTS /////////////////
-			retiring, err := tos.keeper.GetAsgardVaultsByStatus(ctx, RetiringVault)
+			retiringAsgards, err := tos.keeper.GetAsgardVaultsByStatus(ctx, RetiringVault)
 			if err != nil {
 				ctx.Logger().Error("fail to get retiring vaults", "error", err)
 			}
-			for i := range retiring {
-				// deduct the value of any assigned pending outbounds
-				retiring[i] = tos.deductVaultPendingOutbounds(retiring[i], pendingOutbounds)
-			}
-			// All else being equal, prefer lower-security vaults for outbounds.
-			retiringAsgards := tos.keeper.SortBySecurity(ctx, retiring, signingTransactionPeriod)
 
+			// All else being equal, prefer lower-security vaults for outbounds.
+			retiringAsgards = tos.keeper.SortBySecurity(ctx, retiringAsgards, signingTransactionPeriod)
+
+			for i := range retiringAsgards {
+				// having sorted by security, deduct the value of any assigned pending outbounds
+				retiringAsgards[i] = tos.deductVaultPendingOutbounds(retiringAsgards[i], pendingOutbounds)
+			}
 			// //////////////////////////////////////////////////////////////
 
 			// iterate over discovered vaults and find vaults to send funds from
@@ -948,11 +952,11 @@ func (tos *TxOutStorageVCUR) collectYggdrasilPools(ctx cosmos.Context, tx Observ
 	return vaults, nil
 }
 
-// getPendingOutbounds only deduct the delayed outbound , it doesn't need to consider already scheduled but not sent outbound
+// getPendingOutbounds deducts txouts in the outbound and scheduled outbound queues to leave only 'available' balances,
+// as the amounts of both types of txout items are yet to be deducted from the vault balances
 func (tos *TxOutStorageVCUR) getPendingOutbounds(ctx cosmos.Context, asset common.Asset) []TxOutItem {
-	// There is no need to go back SigningTransactionPeriod blocks to check pending outbound , as the logic is already in place
-	// in keeper_vault.go SortBySecurity
-	startHeight := ctx.BlockHeight()
+	signingPeriod := tos.constAccessor.GetInt64Value(constants.SigningTransactionPeriod)
+	startHeight := ctx.BlockHeight() - signingPeriod
 	if startHeight < 1 {
 		startHeight = 1
 	}
@@ -998,11 +1002,11 @@ func (tos *TxOutStorageVCUR) deductVaultPendingOutbounds(vault Vault, pendingOut
 		if !txOutItem.MaxGas.IsEmpty() {
 			gasCoin = txOutItem.MaxGas.ToCoins().GetCoin(txOutItem.Chain.GetGasAsset())
 		}
-		for i, yggCoin := range vault.Coins {
-			if yggCoin.Asset.Equals(txOutItem.Coin.Asset) {
+		for i := range vault.Coins {
+			if vault.Coins[i].Asset.Equals(txOutItem.Coin.Asset) {
 				vault.Coins[i].Amount = common.SafeSub(vault.Coins[i].Amount, txOutItem.Coin.Amount)
 			}
-			if yggCoin.Asset.Equals(gasCoin.Asset) {
+			if vault.Coins[i].Asset.Equals(gasCoin.Asset) {
 				vault.Coins[i].Amount = common.SafeSub(vault.Coins[i].Amount, gasCoin.Amount)
 			}
 		}
