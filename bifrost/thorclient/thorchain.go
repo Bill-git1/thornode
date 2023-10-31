@@ -70,13 +70,6 @@ type thorchainBridge struct {
 	seqNumber     uint64
 	httpClient    *retryablehttp.Client
 	broadcastLock *sync.RWMutex
-
-	lastBlockHeightCheck     time.Time
-	lastThorchainBlockHeight int64
-
-	pubKeyCheckLock        *sync.Mutex
-	lastPubKeysCheck       time.Time
-	lastPubKeyAddressPairs []byte
 }
 
 type ThorchainBridge interface {
@@ -114,6 +107,18 @@ type ThorchainBridge interface {
 	GetKeygenBlock(int64, string) (stypes.KeygenBlock, error)
 }
 
+// httpResponseCache used for caching HTTP responses for less frequent querying
+type httpResponseCache struct {
+	httpResponse        []byte
+	httpResponseChecked time.Time
+	httpResponseMu      *sync.Mutex
+}
+
+var (
+	httpResponseCaches   = make(map[string]*httpResponseCache) // String-to-pointer map for quicker lookup
+	httpResponseCachesMu = &sync.Mutex{}
+)
+
 // NewThorchainBridge create a new instance of ThorchainBridge
 func NewThorchainBridge(cfg config.BifrostClientConfiguration, m *metrics.Metrics, k *Keys) (ThorchainBridge, error) {
 	// main module logger
@@ -130,14 +135,13 @@ func NewThorchainBridge(cfg config.BifrostClientConfiguration, m *metrics.Metric
 	httpClient.Logger = nil
 
 	return &thorchainBridge{
-		logger:          logger,
-		cfg:             cfg,
-		keys:            k,
-		errCounter:      m.GetCounterVec(metrics.ThorchainClientError),
-		httpClient:      httpClient,
-		m:               m,
-		broadcastLock:   &sync.RWMutex{},
-		pubKeyCheckLock: &sync.Mutex{},
+		logger:        logger,
+		cfg:           cfg,
+		keys:          k,
+		errCounter:    m.GetCounterVec(metrics.ThorchainClientError),
+		httpClient:    httpClient,
+		m:             m,
+		broadcastLock: &sync.RWMutex{},
 	}, nil
 }
 
@@ -194,6 +198,26 @@ func (b *thorchainBridge) getWithPath(path string) ([]byte, int, error) {
 
 // get handle all the low level http GET calls using retryablehttp.ThorchainBridge
 func (b *thorchainBridge) get(url string) ([]byte, int, error) {
+	// To reduce querying time and chance of "429 Too Many Requests",
+	// do not query the same endpoint more than once per block time.
+	httpResponseCachesMu.Lock()
+	respCachePointer := httpResponseCaches[url]
+	if respCachePointer == nil {
+		// Since this is the first time using this endpoint, prepare a Mutex for it.
+		respCachePointer = &httpResponseCache{httpResponseMu: &sync.Mutex{}}
+		httpResponseCaches[url] = respCachePointer
+	}
+	httpResponseCachesMu.Unlock()
+
+	// So lengthy queries don't hold up short queries, use query-specific mutexes.
+	respCachePointer.httpResponseMu.Lock()
+	defer respCachePointer.httpResponseMu.Unlock()
+
+	// When the same endpoint has been checked within the span of a single block, return the cached response.
+	if time.Since(respCachePointer.httpResponseChecked) < constants.ThorchainBlockTime && respCachePointer.httpResponse != nil {
+		return respCachePointer.httpResponse, http.StatusOK, nil
+	}
+
 	resp, err := b.httpClient.Get(url)
 	if err != nil {
 		b.errCounter.WithLabelValues("fail_get_from_thorchain", "").Inc()
@@ -213,6 +237,11 @@ func (b *thorchainBridge) get(url string) ([]byte, int, error) {
 		b.errCounter.WithLabelValues("fail_read_thorchain_resp", "").Inc()
 		return nil, resp.StatusCode, fmt.Errorf("failed to read response body: %w", err)
 	}
+
+	// All being well with the response, save it to the cache.
+	respCachePointer.httpResponse = buf
+	respCachePointer.httpResponseChecked = time.Now()
+
 	return buf, resp.StatusCode, nil
 }
 
@@ -503,12 +532,6 @@ func (b *thorchainBridge) GetAsgards() (stypes.Vaults, error) {
 }
 
 func (b *thorchainBridge) getVaultPubkeys() ([]byte, error) {
-	b.pubKeyCheckLock.Lock()
-	defer b.pubKeyCheckLock.Unlock()
-	if time.Since(b.lastPubKeysCheck) < constants.ThorchainBlockTime && b.lastPubKeyAddressPairs != nil {
-		return b.lastPubKeyAddressPairs, nil
-	}
-
 	buf, s, err := b.getWithPath(PubKeysEndpoint)
 	if err != nil {
 		return nil, fmt.Errorf("fail to get asgard vaults: %w", err)
@@ -516,8 +539,6 @@ func (b *thorchainBridge) getVaultPubkeys() ([]byte, error) {
 	if s != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code %d", s)
 	}
-	b.lastPubKeyAddressPairs = buf
-	b.lastPubKeysCheck = time.Now()
 	return buf, nil
 }
 
