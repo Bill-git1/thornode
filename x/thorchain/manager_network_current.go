@@ -429,7 +429,7 @@ func (vm *NetworkMgrVCUR) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 
 	for _, vault := range retiring {
 		if !vault.HasFunds() {
-			vault.Status = InactiveVault
+			vault.UpdateStatus(InactiveVault, ctx.BlockHeight())
 			if err := vm.k.SetVault(ctx, vault); err != nil {
 				ctx.Logger().Error("fail to set vault to inactive", "error", err)
 			}
