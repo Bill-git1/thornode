@@ -130,6 +130,9 @@ func (tos *TxOutStorageVCUR) ClearOutboundItems(ctx cosmos.Context) {
 // including funds movements or fee events from prepareTxOutItem.
 // So, use CacheContext to only commit state changes when cachedTryAddTxOutItem doesn't return an error.
 func (tos *TxOutStorageVCUR) TryAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem, minOut cosmos.Uint) (bool, error) {
+	if toi.ToAddress.IsNoop() {
+		return true, nil
+	}
 	cacheCtx, commit := ctx.CacheContext()
 	success, err := tos.cachedTryAddTxOutItem(cacheCtx, mgr, toi, minOut)
 	if err == nil {
@@ -222,6 +225,9 @@ func (tos *TxOutStorageVCUR) cachedTryAddTxOutItem(ctx cosmos.Context, mgr Manag
 // UnSafeAddTxOutItem - blindly adds a tx out, skipping vault selection, transaction
 // fee deduction, etc
 func (tos *TxOutStorageVCUR) UnSafeAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem) error {
+	if toi.ToAddress.IsNoop() {
+		return nil
+	}
 	// BCH chain will convert legacy address to new format automatically , thus when observe it back can't be associated with the original inbound
 	// so here convert the legacy address to new format
 	if toi.Chain.Equals(common.BCHChain) {
