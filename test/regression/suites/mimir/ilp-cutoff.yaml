@@ -1,14 +1,5 @@
 {{ template "default-state.yaml" }}
 ---
-########################################################################################
-# emtpy reserve to avoid emissions that offset IL
-########################################################################################
-type: state
-genesis:
-  app_state:
-    thorchain:
-      reserve: "0"
----
 type: create-blocks
 count: 1
 ---

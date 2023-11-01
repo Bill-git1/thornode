@@ -39,18 +39,6 @@ fork:
         exit 1
       fi
 
-reset-lint-cache:
-  cache:
-    key: lint
-    paths:
-      - .cache
-  stage: reset
-  when: manual
-  script:
-    - find .cache -maxdepth 2 || true
-    - find .cache -mindepth 1 -delete
-  allow_failure: true
-
 generate:
   rules: &rules
     - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != "thorchain/thornode"
@@ -58,7 +46,6 @@ generate:
     - if: $CI == "true"
       when: on_success
   stage: generate
-  cache: {}
   image: docker:20.10.12
   services:
     - docker:20.10.12-dind
@@ -103,21 +90,10 @@ lint:
     - if: $CI == "true"
       when: on_success
   stage: test
-  cache:
-    key: lint
-    paths:
-      - .cache
   before_script:
-    - rm -rf ~/.cache
-    - mkdir -p .cache
-    - mv .cache ~/.cache
     - git fetch origin develop
   script:
     - make lint-ci
-  after_script:
-    - ./scripts/trunk cache prune
-    - rm -rf .cache
-    - mv ~/.cache .
 
 build-thornode:
   rules:
@@ -181,7 +157,6 @@ build-smoke:
 smoke-test:
   rules: *rules
   stage: long-test
-  cache: {}
   image: docker:20.10.12
   services:
     - docker:20.10.12-dind
@@ -220,7 +195,6 @@ smoke-test:
 test-regression:
   rules: *rules
   stage: long-test
-  cache: {}
   image: docker:20.10.12
   services:
     - docker:20.10.12-dind
