@@ -846,6 +846,7 @@ func (s *NetworkManagerVCURTestSuite) TestSpawnDerivedAssets(c *C) {
 	nmgr := newNetworkMgrVCUR(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
 
 	vault := GetRandomVault()
+	vault.Chains = append(vault.Chains, common.BSCChain.String())
 	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
 
 	mgr.Keeper().SetMimir(ctx, "DerivedDepthBasisPts", 10_000)
@@ -872,6 +873,18 @@ func (s *NetworkManagerVCURTestSuite) TestSpawnDerivedAssets(c *C) {
 	pool.BalanceAsset = cosmos.NewUint(2343330836117)
 	pool.Decimals = 8
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	bscBnb, err := common.NewAsset("BSC.BNB")
+	c.Assert(err, IsNil)
+
+	// should not have any affect on THOR.BNB
+	bscPool := NewPool()
+	bscPool.Asset = bscBnb
+	bscPool.Status = PoolAvailable
+	bscPool.BalanceRune = cosmos.NewUint(510119961610327)
+	bscPool.BalanceAsset = cosmos.NewUint(4343330836117)
+	bscPool.Decimals = 8
+	c.Assert(mgr.Keeper().SetPool(ctx, bscPool), IsNil)
 
 	// happy path
 	err = nmgr.spawnDerivedAssets(ctx, mgr)

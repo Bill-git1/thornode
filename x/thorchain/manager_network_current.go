@@ -179,7 +179,9 @@ func (vm *NetworkMgrVCUR) spawnDerivedAssets(ctx cosmos.Context, mgr Manager) er
 	// get assets to create derived pools
 	layer1Assets := []common.Asset{common.TOR}
 	for _, chain := range active[0].GetChains() {
-		if chain.IsTHORChain() {
+		// Skipping BSC chain to avoid THOR.BNB derived asset overwrite
+		// https://gitlab.com/thorchain/thornode/-/issues/1724
+		if chain.IsTHORChain() || chain.IsBSCChain() {
 			continue
 		}
 		layer1Assets = append(layer1Assets, chain.GetGasAsset())
