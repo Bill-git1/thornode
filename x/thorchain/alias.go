@@ -28,13 +28,12 @@ const (
 	MaxWithdrawBasisPoints = types.MaxWithdrawBasisPoints
 
 	// Vaults
-	AsgardVault    = types.VaultType_AsgardVault
-	YggdrasilVault = types.VaultType_YggdrasilVault
-	UnknownVault   = types.VaultType_UnknownVault
-	ActiveVault    = types.VaultStatus_ActiveVault
-	InactiveVault  = types.VaultStatus_InactiveVault
-	RetiringVault  = types.VaultStatus_RetiringVault
-	InitVault      = types.VaultStatus_InitVault
+	AsgardVault   = types.VaultType_AsgardVault
+	UnknownVault  = types.VaultType_UnknownVault
+	ActiveVault   = types.VaultStatus_ActiveVault
+	InactiveVault = types.VaultStatus_InactiveVault
+	RetiringVault = types.VaultStatus_RetiringVault
+	InitVault     = types.VaultStatus_InitVault
 
 	// Node status
 	NodeActive      = types.NodeStatus_Active
@@ -69,23 +68,21 @@ const (
 	BurnSupplyType = types.MintBurnSupplyType_burn
 
 	// Memos
-	TxSwap            = mem.TxSwap
-	TxLimitOrder      = mem.TxLimitOrder
-	TxAdd             = mem.TxAdd
-	TxBond            = mem.TxBond
-	TxYggdrasilFund   = mem.TxYggdrasilFund
-	TxYggdrasilReturn = mem.TxYggdrasilReturn
-	TxMigrate         = mem.TxMigrate
-	TxRagnarok        = mem.TxRagnarok
-	TxReserve         = mem.TxReserve
-	TxOutbound        = mem.TxOutbound
-	TxRefund          = mem.TxRefund
-	TxUnBond          = mem.TxUnbond
-	TxLeave           = mem.TxLeave
-	TxWithdraw        = mem.TxWithdraw
-	TxTHORName        = mem.TxTHORName
-	TxLoanOpen        = mem.TxLoanOpen
-	TxLoanRepayment   = mem.TxLoanRepayment
+	TxSwap          = mem.TxSwap
+	TxLimitOrder    = mem.TxLimitOrder
+	TxAdd           = mem.TxAdd
+	TxBond          = mem.TxBond
+	TxMigrate       = mem.TxMigrate
+	TxRagnarok      = mem.TxRagnarok
+	TxReserve       = mem.TxReserve
+	TxOutbound      = mem.TxOutbound
+	TxRefund        = mem.TxRefund
+	TxUnBond        = mem.TxUnbond
+	TxLeave         = mem.TxLeave
+	TxWithdraw      = mem.TxWithdraw
+	TxTHORName      = mem.TxTHORName
+	TxLoanOpen      = mem.TxLoanOpen
+	TxLoanRepayment = mem.TxLoanRepayment
 )
 
 var (
@@ -172,7 +169,6 @@ var (
 	NewNodeAccount                 = types.NewNodeAccount
 	NewVault                       = types.NewVault
 	NewReserveContributor          = types.NewReserveContributor
-	NewMsgYggdrasil                = types.NewMsgYggdrasil
 	NewMsgReserveContributor       = types.NewMsgReserveContributor
 	NewMsgBond                     = types.NewMsgBond
 	NewMsgUnBond                   = types.NewMsgUnBond
@@ -188,7 +184,6 @@ var (
 	NewStreamingSwap               = types.NewStreamingSwap
 	GetPoolStatus                  = types.GetPoolStatus
 	GetRandomVault                 = types.GetRandomVault
-	GetRandomYggVault              = types.GetRandomYggVault
 	GetRandomTx                    = types.GetRandomTx
 	GetRandomObservedTx            = types.GetRandomObservedTx
 	GetRandomTxOutItem             = types.GetRandomTxOutItem
@@ -223,8 +218,6 @@ var (
 	NewRefundMemo          = mem.NewRefundMemo
 	NewOutboundMemo        = mem.NewOutboundMemo
 	NewRagnarokMemo        = mem.NewRagnarokMemo
-	NewYggdrasilReturn     = mem.NewYggdrasilReturn
-	NewYggdrasilFund       = mem.NewYggdrasilFund
 	NewMigrateMemo         = mem.NewMigrateMemo
 
 	FetchDexAggregator         = aggregators.FetchDexAggregator
@@ -255,7 +248,6 @@ type (
 	MsgSetNodeKeys                 = types.MsgSetNodeKeys
 	MsgLeave                       = types.MsgLeave
 	MsgReserveContributor          = types.MsgReserveContributor
-	MsgYggdrasil                   = types.MsgYggdrasil
 	MsgObservedTxIn                = types.MsgObservedTxIn
 	MsgObservedTxOut               = types.MsgObservedTxOut
 	MsgTssPool                     = types.MsgTssPool
@@ -271,7 +263,6 @@ type (
 	QueryKeygenBlock               = types.QueryKeygenBlock
 	QueryResLastBlockHeights       = types.QueryResLastBlockHeights
 	QueryKeysign                   = types.QueryKeysign
-	QueryYggdrasilVaults           = types.QueryYggdrasilVaults
 	QueryVaultsPubKeys             = types.QueryVaultsPubKeys
 	QueryVaultPubKeyContract       = types.QueryVaultPubKeyContract
 	QueryNodeAccount               = types.QueryNodeAccount
@@ -362,8 +353,6 @@ type (
 	UnbondMemo            = mem.UnbondMemo
 	OutboundMemo          = mem.OutboundMemo
 	LeaveMemo             = mem.LeaveMemo
-	YggdrasilFundMemo     = mem.YggdrasilFundMemo
-	YggdrasilReturnMemo   = mem.YggdrasilReturnMemo
 	ReserveMemo           = mem.ReserveMemo
 	NoOpMemo              = mem.NoOpMemo
 	ConsolidateMemo       = mem.ConsolidateMemo

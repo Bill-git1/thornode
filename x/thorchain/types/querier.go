@@ -73,6 +73,7 @@ type QueryKeysign struct {
 }
 
 // QueryYggdrasilVaults query yggdrasil vault result
+// TODO remove on hard fork
 type QueryYggdrasilVaults struct {
 	BlockHeight           int64               `json:"block_height,omitempty"`
 	PubKey                common.PubKey       `json:"pub_key,omitempty"`
@@ -765,6 +766,6 @@ type QueryVaultPubKeyContract struct {
 // QueryVaultsPubKeys represent the result for query vaults pubkeys
 type QueryVaultsPubKeys struct {
 	Asgard    []QueryVaultPubKeyContract `json:"asgard"`
-	Yggdrasil []QueryVaultPubKeyContract `json:"yggdrasil"`
+	Yggdrasil []QueryVaultPubKeyContract `json:"yggdrasil"` // TODO remove on hard fork
 	Inactive  []QueryVaultPubKeyContract `json:"inactive"`
 }

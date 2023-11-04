@@ -61,7 +61,7 @@ var (
 	QueryPOL                 = Query{Key: "pol", EndpointTemplate: "/%s/pol"}
 	QueryBalanceModule       = Query{Key: "balancemodule", EndpointTemplate: "/%s/balance/module/{%s}"}
 	QueryVaultsAsgard        = Query{Key: "vaultsasgard", EndpointTemplate: "/%s/vaults/asgard"}
-	QueryVaultsYggdrasil     = Query{Key: "vaultsyggdrasil", EndpointTemplate: "/%s/vaults/yggdrasil"}
+	QueryVaultsYggdrasil     = Query{Key: "vaultsyggdrasil", EndpointTemplate: "/%s/vaults/yggdrasil"} // TODO remove on hard fork
 	QueryVault               = Query{Key: "vault", EndpointTemplate: "/%s/vault/{%s}"}
 	QueryVaultPubkeys        = Query{Key: "vaultpubkeys", EndpointTemplate: "/%s/vaults/pubkeys"}
 	QueryConstantValues      = Query{Key: "constants", EndpointTemplate: "/%s/constants"}
@@ -124,7 +124,7 @@ var Queries = []Query{
 	QueryPOL,
 	QueryBalanceModule,
 	QueryVaultsAsgard,
-	QueryVaultsYggdrasil,
+	QueryVaultsYggdrasil, // TODO remove on hard fork
 	QueryVaultPubkeys,
 	QueryVault,
 	QueryKeygensPubkey,

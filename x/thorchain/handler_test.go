@@ -545,33 +545,6 @@ func (HandlerSuite) TestMsgLeaveFromMemo(c *C) {
 	c.Check(msg.ValidateBasic(), IsNil)
 }
 
-func (HandlerSuite) TestYggdrasilMemo(c *C) {
-	w := getHandlerTestWrapper(c, 1, true, false)
-	addr := types.GetRandomBech32Addr()
-	txin := types.NewObservedTx(
-		common.Tx{
-			ID:          GetRandomTxHash(),
-			Chain:       common.BNBChain,
-			Coins:       common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(1))},
-			Memo:        "yggdrasil+:1024",
-			FromAddress: GetRandomBNBAddress(),
-			ToAddress:   GetRandomBNBAddress(),
-			Gas:         BNBGasFeeSingleton,
-		},
-		1024,
-		GetRandomPubKey(), 1024,
-	)
-
-	msg, err := processOneTxIn(w.ctx, GetCurrentVersion(), w.keeper, txin, addr)
-	c.Assert(err, IsNil)
-	c.Check(msg.ValidateBasic(), IsNil)
-
-	txin.Tx.Memo = "yggdrasil-:1024"
-	msg, err = processOneTxIn(w.ctx, GetCurrentVersion(), w.keeper, txin, addr)
-	c.Assert(err, IsNil)
-	c.Check(msg.ValidateBasic(), IsNil)
-}
-
 func (s *HandlerSuite) TestReserveContributor(c *C) {
 	w := getHandlerTestWrapper(c, 1, true, false)
 	addr := types.GetRandomBech32Addr()

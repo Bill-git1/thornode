@@ -39,8 +39,7 @@ func (tos *TxOutStorageVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 	// update the max gas for all outbounds in this block. This can be useful
 	// if an outbound transaction was scheduled into the future, and the gas
 	// for that blockchain changes in that time span. This avoids the need to
-	// reschedule the transaction to Asgard, as well as avoids slash point
-	// accural on ygg nodes.
+	// reschedule the transaction to Asgard.
 	txOut, err := tos.GetBlockOut(ctx)
 	if err != nil {
 		return err
@@ -335,7 +334,7 @@ func (tos *TxOutStorageVCUR) discoverOutbounds(ctx cosmos.Context, transactionFe
 
 // prepareTxOutItem will do some data validation which include the following
 // 1. Make sure it has a legitimate memo
-// 2. choose an appropriate vault(s) to send from (ygg first, active asgard, then retiring asgard)
+// 2. choose an appropriate vault(s) to send from (active asgard, then retiring asgard)
 // 3. deduct transaction fee, keep in mind, only take transaction fee when active nodes are  more then minimumBFT
 // return list of outbound transactions
 func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem) ([]TxOutItem, types.Uint, error) {
@@ -407,41 +406,6 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 			// List all pending outbounds for the asset, this will be used
 			// to deduct balances of vaults that have outstanding txs assigned
 			pendingOutbounds := tos.getPendingOutbounds(ctx, toi.Coin.Asset)
-			// ///////////// COLLECT YGGDRASIL VAULTS ///////////////////////////
-			// When deciding which Yggdrasil pool will send out our tx out, we
-			// should consider which ones observed the inbound request tx, as
-			// yggdrasil pools can go offline. Here THORNode get the voter record and
-			// only consider Yggdrasils where their observed saw the "correct"
-			// tx.
-
-			activeNodeAccounts, err := tos.keeper.ListActiveValidators(ctx)
-			if err != nil {
-				ctx.Logger().Error("fail to get all active node accounts", "error", err)
-			}
-			yggs := make(Vaults, 0)
-			if len(activeNodeAccounts) > 0 {
-				voter, err := tos.keeper.GetObservedTxInVoter(ctx, toi.InHash)
-				if err != nil {
-					return nil, cosmos.ZeroUint(), fmt.Errorf("fail to get observed tx voter: %w", err)
-				}
-				tx := voter.GetTx(activeNodeAccounts)
-
-				// collect yggdrasil pools is going to get a list of yggdrasil
-				// vault that THORChain can used to send out fund
-				yggs, err = tos.collectYggdrasilPools(ctx, tx, toi.Chain.GetGasAsset())
-				if err != nil {
-					return nil, cosmos.ZeroUint(), fmt.Errorf("fail to collect yggdrasil pool: %w", err)
-				}
-
-				// All else being equal, prefer lower-security vaults for outbounds.
-				yggs = tos.keeper.SortBySecurity(ctx, yggs, signingTransactionPeriod)
-
-				for i := range yggs {
-					// having sorted by security, deduct the value of any assigned pending outbounds
-					yggs[i] = tos.deductVaultPendingOutbounds(yggs[i], pendingOutbounds)
-				}
-			}
-			// //////////////////////////////////////////////////////////////
 
 			// ///////////// COLLECT ACTIVE ASGARD VAULTS ///////////////////
 			activeAsgards, err := tos.keeper.GetAsgardVaultsByStatus(ctx, ActiveVault)
@@ -475,9 +439,8 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 
 			// iterate over discovered vaults and find vaults to send funds from
 
-			// All else being equal, prefer Yggdrasils over Asgards (less TSS burden, if not deprecated)
-			// and active Asgards over retiring Asgards (less TSS burden during migrates).
-			outputs, remaining = tos.discoverOutbounds(ctx, transactionFeeAsset, maxGasAsset, toi, append(append(yggs, activeAsgards...), retiringAsgards...))
+			// All else being equal, choose active Asgards over retiring Asgards.
+			outputs, remaining = tos.discoverOutbounds(ctx, transactionFeeAsset, maxGasAsset, toi, append(activeAsgards, retiringAsgards...))
 
 			// Check we found enough funds to satisfy the request, error if we didn't
 			if !remaining.IsZero() {
@@ -516,7 +479,7 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 
 		// Deduct OutboundTransactionFee from TOI and add to Reserve
 		memo, err := ParseMemoWithTHORNames(ctx, tos.keeper, outputs[i].Memo)
-		if err == nil && !memo.IsType(TxYggdrasilFund) && !memo.IsType(TxYggdrasilReturn) && !memo.IsType(TxMigrate) && !memo.IsType(TxRagnarok) && !toi.ToAddress.Equals(lendAddr) {
+		if err == nil && !memo.IsType(TxMigrate) && !memo.IsType(TxRagnarok) && !toi.ToAddress.Equals(lendAddr) {
 			if outputs[i].Coin.Asset.IsRune() {
 				if outputs[i].Coin.Amount.LTE(transactionFeeRune) {
 					runeFee = outputs[i].Coin.Amount // Fee is the full amount
@@ -596,10 +559,7 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 			gasAmt := outputs[i].MaxGas.ToCoins().GetCoin(outputs[i].Coin.Asset).Amount
 			outputs[i].Coin.Amount = common.SafeSub(outputs[i].Coin.Amount, gasAmt)
 		}
-		// When we request Yggdrasil pool to return the fund, the coin field is actually empty
-		// Signer when it sees an tx out item with memo "yggdrasil-" it will query the account on relevant chain
-		// and coin field will be filled there, thus we have to let this one go
-		if outputs[i].Coin.IsEmpty() && !memo.IsType(TxYggdrasilReturn) {
+		if outputs[i].Coin.IsEmpty() {
 			ctx.Logger().Info("tx out item has zero coin", "tx_out", outputs[i].String())
 
 			// Need to determinate whether the outbound is triggered by a withdrawal request
@@ -903,59 +863,6 @@ func (tos *TxOutStorageVCUR) nativeTxOut(ctx cosmos.Context, mgr Manager, toi Tx
 	}
 
 	return nil
-}
-
-// collectYggdrasilPools is to get all the yggdrasil vaults , that THORChain can used to send out fund
-func (tos *TxOutStorageVCUR) collectYggdrasilPools(ctx cosmos.Context, tx ObservedTx, gasAsset common.Asset) (Vaults, error) {
-	// collect yggdrasil pools
-	var vaults Vaults
-	iterator := tos.keeper.GetVaultIterator(ctx)
-	defer func() {
-		if err := iterator.Close(); err != nil {
-			ctx.Logger().Error("fail to close vault iterator", "error", err)
-		}
-	}()
-	for ; iterator.Valid(); iterator.Next() {
-		var vault Vault
-		if err := tos.keeper.Cdc().Unmarshal(iterator.Value(), &vault); err != nil {
-			return nil, fmt.Errorf("fail to unmarshal vault: %w", err)
-		}
-		if !vault.IsYggdrasil() {
-			continue
-		}
-		// When trying to choose a ygg pool candidate to send out fund , let's
-		// make sure the ygg pool has gasAsset , for example, if it is
-		// on Binance chain , make sure ygg pool has BNB asset in it ,
-		// otherwise it won't be able to pay the transaction fee
-		if !vault.HasAsset(gasAsset) {
-			continue
-		}
-
-		// if THORNode are already sending assets from this ygg pool, deduct them.
-		addr, err := vault.PubKey.GetThorAddress()
-		if err != nil {
-			return nil, fmt.Errorf("fail to get thor address from pub key(%s):%w", vault.PubKey, err)
-		}
-
-		// if the ygg pool didn't observe the TxIn, and didn't sign the TxIn,
-		// THORNode is not going to choose them to send out fund , because they
-		// might offline
-		if !tx.HasSigned(addr) {
-			continue
-		}
-
-		jail, err := tos.keeper.GetNodeAccountJail(ctx, addr)
-		if err != nil {
-			return nil, fmt.Errorf("fail to get ygg jail:%w", err)
-		}
-		if jail.IsJailed(ctx) {
-			continue
-		}
-
-		vaults = append(vaults, vault)
-	}
-
-	return vaults, nil
 }
 
 // getPendingOutbounds deducts txouts in the outbound and scheduled outbound queues to leave only 'available' balances,

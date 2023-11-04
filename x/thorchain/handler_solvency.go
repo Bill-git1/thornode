@@ -283,11 +283,11 @@ func (h SolvencyHandler) deductVaultBlockPendingOutbound(vault Vault, block *TxO
 		if !txOutItem.MaxGas.IsEmpty() {
 			gasCoin = txOutItem.MaxGas.ToCoins().GetCoin(txOutItem.Chain.GetGasAsset())
 		}
-		for i, yggCoin := range vault.Coins {
-			if yggCoin.Asset.Equals(txOutItem.Coin.Asset) {
+		for i, vaultCoin := range vault.Coins {
+			if vaultCoin.Asset.Equals(txOutItem.Coin.Asset) {
 				vault.Coins[i].Amount = common.SafeSub(vault.Coins[i].Amount, txOutItem.Coin.Amount)
 			}
-			if yggCoin.Asset.Equals(gasCoin.Asset) {
+			if vaultCoin.Asset.Equals(gasCoin.Asset) {
 				vault.Coins[i].Amount = common.SafeSub(vault.Coins[i].Amount, gasCoin.Amount)
 			}
 		}

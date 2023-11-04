@@ -19,7 +19,7 @@ func (s *VaultSuite) TestVault(c *C) {
 	c.Check(vault.IsEmpty(), Equals, true)
 	c.Check(vault.Valid(), NotNil)
 
-	vault = NewVault(12, VaultStatus_ActiveVault, VaultType_YggdrasilVault, pk, common.Chains{common.BNBChain}.Strings(), []ChainContract{})
+	vault = NewVault(12, VaultStatus_ActiveVault, VaultType_AsgardVault, pk, common.Chains{common.BNBChain}.Strings(), []ChainContract{})
 	c.Check(vault.PubKey.Equals(pk), Equals, true)
 	c.Check(vault.HasFunds(), Equals, false)
 	c.Check(vault.IsEmpty(), Equals, false)
@@ -65,9 +65,7 @@ func (s *VaultSuite) TestVault(c *C) {
 	vault1 := NewVault(1024, VaultStatus_ActiveVault, VaultType_AsgardVault, pk, common.Chains{common.BNBChain, common.BTCChain, common.ETHChain}.Strings(), []ChainContract{})
 	vault1.Membership = append(vault.Membership, pk.String()) // nolint
 	c.Check(vault1.IsType(VaultType_AsgardVault), Equals, true)
-	c.Check(vault1.IsType(VaultType_YggdrasilVault), Equals, false)
 	c.Check(vault1.IsAsgard(), Equals, true)
-	c.Check(vault1.IsYggdrasil(), Equals, false)
 	c.Check(vault1.Contains(pk), Equals, true)
 	vault1.UpdateStatus(VaultStatus_RetiringVault, 10000)
 	c.Check(vault1.CoinLength(), Equals, 0)

@@ -1,3 +1,4 @@
+// TODO remove on hard fork
 syntax = "proto3";
 package types;
 

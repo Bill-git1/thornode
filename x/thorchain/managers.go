@@ -40,7 +40,7 @@ type Manager interface {
 	SwapQ() SwapQueue
 	OrderBookMgr() OrderBook
 	Slasher() Slasher
-	YggManager() YggManager
+	YggManager() YggManager // TODO remove on hard fork
 }
 
 // GasManager define all the methods required to manage gas
@@ -89,7 +89,7 @@ type ObserverManager interface {
 type ValidatorManager interface {
 	BeginBlock(ctx cosmos.Context, mgr Manager, existingValidators []string) error
 	EndBlock(ctx cosmos.Context, mgr Manager) []abci.ValidatorUpdate
-	RequestYggReturn(ctx cosmos.Context, node NodeAccount, mgr Manager) error
+	RequestYggReturn(ctx cosmos.Context, node NodeAccount, mgr Manager) error // TODO remove on hard fork
 	processRagnarok(ctx cosmos.Context, mgr Manager) error
 	NodeAccountPreflightCheck(ctx cosmos.Context, na NodeAccount, constAccessor constants.ConstantValues) (NodeStatus, error)
 }
@@ -132,6 +132,7 @@ type Slasher interface {
 }
 
 // YggManager define method to fund yggdrasil
+// TODO remove on hard fork
 type YggManager interface {
 	Fund(ctx cosmos.Context, mgr Manager) error
 }
@@ -171,7 +172,7 @@ type Mgrs struct {
 	swapQ          SwapQueue
 	orderBook      OrderBook
 	slasher        Slasher
-	yggManager     YggManager
+	yggManager     YggManager // TODO remove on hard fork
 
 	K             keeper.Keeper
 	cdc           codec.Codec
@@ -289,6 +290,7 @@ func (mgr *Mgrs) BeginBlock(ctx cosmos.Context) error {
 		return fmt.Errorf("fail to create swap queue: %w", err)
 	}
 
+	// TODO remove on hard fork
 	mgr.yggManager, err = GetYggManager(v, mgr.K)
 	if err != nil {
 		return fmt.Errorf("fail to create swap queue: %w", err)
@@ -330,6 +332,7 @@ func (mgr *Mgrs) OrderBookMgr() OrderBook { return mgr.orderBook }
 func (mgr *Mgrs) Slasher() Slasher { return mgr.slasher }
 
 // YggManager return an implementation of YggManager
+// TODO remove on hard fork
 func (mgr *Mgrs) YggManager() YggManager { return mgr.yggManager }
 
 // GetKeeper return Keeper
@@ -485,8 +488,10 @@ func GetNetworkManager(version semver.Version, keeper keeper.Keeper, txOutStore 
 // GetValidatorManager create a new instance of Validator Manager
 func GetValidatorManager(version semver.Version, keeper keeper.Keeper, networkMgr NetworkManager, txOutStore TxOutStore, eventMgr EventManager) (ValidatorManager, error) {
 	switch {
-	case version.GTE(semver.MustParse("1.123.0")):
+	case version.GTE(semver.MustParse("1.124.0")):
 		return newValidatorMgrVCUR(keeper, networkMgr, txOutStore, eventMgr), nil
+	case version.GTE(semver.MustParse("1.123.0")):
+		return newValidatorMgrV123(keeper, networkMgr, txOutStore, eventMgr), nil
 	case version.GTE(semver.MustParse("1.121.0")):
 		return newValidatorMgrV121(keeper, networkMgr, txOutStore, eventMgr), nil
 	case version.GTE(semver.MustParse("1.119.0")):
@@ -631,10 +636,11 @@ func GetSlasher(version semver.Version, keeper keeper.Keeper, eventMgr EventMana
 }
 
 // GetYggManager return an implementation of YggManager
+// TODO remove on hard fork
 func GetYggManager(version semver.Version, keeper keeper.Keeper) (YggManager, error) {
 	switch {
 	case version.GTE(semver.MustParse("1.116.0")):
-		return newYggMgrVCUR(keeper), nil
+		return newYggMgrV116(keeper), nil
 	case version.GTE(semver.MustParse("1.112.0")):
 		return newYggMgrV112(keeper), nil
 	case version.GTE(semver.MustParse("0.79.0")):

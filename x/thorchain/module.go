@@ -253,11 +253,14 @@ func (am AppModule) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) []abci.V
 
 	validators := am.mgr.ValidatorMgr().EndBlock(ctx, am.mgr)
 
-	// Fill up Yggdrasil vaults
-	// We do this AFTER validatorMgr.EndBlock, because we don't want to send
-	// funds to a yggdrasil vault that is being churned out this block.
-	if err := am.mgr.YggManager().Fund(ctx, am.mgr); err != nil {
-		ctx.Logger().Error("unable to fund yggdrasil", "error", err)
+	if am.mgr.GetVersion().LT(semver.MustParse("1.124.0")) {
+		// TODO remove on hard fork
+		// Fill up Yggdrasil vaults
+		// We do this AFTER validatorMgr.EndBlock, because we don't want to send
+		// funds to a yggdrasil vault that is being churned out this block.
+		if err := am.mgr.YggManager().Fund(ctx, am.mgr); err != nil {
+			ctx.Logger().Error("unable to fund yggdrasil", "error", err)
+		}
 	}
 
 	if err := am.mgr.TxOutStore().EndBlock(ctx, am.mgr); err != nil {

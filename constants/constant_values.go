@@ -23,7 +23,7 @@ const (
 	MaxAvailablePools
 	StagedPoolCost
 	PendingLiquidityAgeLimit
-	MinimumNodesForYggdrasil
+	MinimumNodesForYggdrasil // TODO remove on hard fork
 	MinimumNodesForBFT
 	DesiredValidatorSet
 	AsgardSize
@@ -59,9 +59,9 @@ const (
 	ObserveSlashPoints
 	MissBlockSignSlashPoints
 	ObservationDelayFlexibility
-	StopFundYggdrasil
-	YggFundLimit
-	YggFundRetry
+	StopFundYggdrasil // TODO remove on hard fork
+	YggFundLimit      // TODO remove on hard fork
+	YggFundRetry      // TODO remove on hard fork
 	JailTimeKeygen
 	JailTimeKeysign
 	NodePauseChainBlocks
@@ -101,7 +101,7 @@ const (
 	PermittedSolvencyGap
 	NodeOperatorFee
 	ValidatorMaxRewardRatio
-	PoolDepthForYggFundingMin
+	PoolDepthForYggFundingMin // TODO remove on hard fork
 	MaxNodeToChurnOutForLowVersion
 	ChurnOutForLowVersionBlocks
 	POLMaxNetworkDeposit
@@ -148,9 +148,9 @@ var nameToString = map[ConstantName]string{
 	MaxAvailablePools:                   "MaxAvailablePools",
 	StagedPoolCost:                      "StagedPoolCost",
 	PendingLiquidityAgeLimit:            "PendingLiquidityAgeLimit",
-	KillSwitchStart:                     "KillSwitchStart",    // TODO remove on hard fork
-	KillSwitchDuration:                  "KillSwitchDuration", // TODO remove on hard fork
-	MinimumNodesForYggdrasil:            "MinimumNodesForYggdrasil",
+	KillSwitchStart:                     "KillSwitchStart",          // TODO remove on hard fork
+	KillSwitchDuration:                  "KillSwitchDuration",       // TODO remove on hard fork
+	MinimumNodesForYggdrasil:            "MinimumNodesForYggdrasil", // TODO remove on hard fork
 	MinimumNodesForBFT:                  "MinimumNodesForBFT",
 	DesiredValidatorSet:                 "DesiredValidatorSet",
 	AsgardSize:                          "AsgardSize",
@@ -187,9 +187,9 @@ var nameToString = map[ConstantName]string{
 	ObserveSlashPoints:                  "ObserveSlashPoints",
 	MissBlockSignSlashPoints:            "MissBlockSignSlashPoints",
 	ObservationDelayFlexibility:         "ObservationDelayFlexibility",
-	StopFundYggdrasil:                   "StopFundYggdrasil",
-	YggFundLimit:                        "YggFundLimit",
-	YggFundRetry:                        "YggFundRetry",
+	StopFundYggdrasil:                   "StopFundYggdrasil", // TODO remove on hard fork
+	YggFundLimit:                        "YggFundLimit",      // TODO remove on hard fork
+	YggFundRetry:                        "YggFundRetry",      // TODO remove on hard fork
 	JailTimeKeygen:                      "JailTimeKeygen",
 	JailTimeKeysign:                     "JailTimeKeysign",
 	NodePauseChainBlocks:                "NodePauseChainBlocks",
@@ -220,7 +220,7 @@ var nameToString = map[ConstantName]string{
 	PermittedSolvencyGap:                "PermittedSolvencyGap",
 	ValidatorMaxRewardRatio:             "ValidatorMaxRewardRatio",
 	NodeOperatorFee:                     "NodeOperatorFee",
-	PoolDepthForYggFundingMin:           "PoolDepthForYggFundingMin",
+	PoolDepthForYggFundingMin:           "PoolDepthForYggFundingMin", // TODO remove on hard fork
 	MaxNodeToChurnOutForLowVersion:      "MaxNodeToChurnOutForLowVersion",
 	ChurnOutForLowVersionBlocks:         "ChurnOutForLowVersionBlocks",
 	SwapOutDexAggregationDisabled:       "SwapOutDexAggregationDisabled",

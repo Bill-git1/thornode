@@ -225,7 +225,10 @@ func (h ErrataTxHandler) handleV123(ctx cosmos.Context, msg MsgErrataTx) (*cosmo
 
 func (h ErrataTxHandler) processErrataOutboundTx(ctx cosmos.Context, msg MsgErrataTx) (*cosmos.Result, error) {
 	version := h.mgr.GetVersion()
-	if version.GTE(semver.MustParse("0.65.0")) {
+	switch {
+	case version.GTE(semver.MustParse("1.124.0")):
+		return h.processErrataOutboundTxV124(ctx, msg)
+	case version.GTE(semver.MustParse("0.65.0")):
 		return h.processErrataOutboundTxV65(ctx, msg)
 	}
 	return nil, errBadVersion
@@ -233,7 +236,7 @@ func (h ErrataTxHandler) processErrataOutboundTx(ctx cosmos.Context, msg MsgErra
 
 // processErrataOutboundTx when the network detect an outbound tx which previously had been sent out to customer , however it get re-org , and it doesn't
 // exist on the external chain anymore , then it will need to reschedule the tx
-func (h ErrataTxHandler) processErrataOutboundTxV65(ctx cosmos.Context, msg MsgErrataTx) (*cosmos.Result, error) {
+func (h ErrataTxHandler) processErrataOutboundTxV124(ctx cosmos.Context, msg MsgErrataTx) (*cosmos.Result, error) {
 	txOutVoter, err := h.mgr.Keeper().GetObservedTxOutVoter(ctx, msg.GetTxID())
 	if err != nil {
 		return nil, fmt.Errorf("fail to get observed tx out voter for tx (%s) : %w", msg.GetTxID(), err)
@@ -271,22 +274,6 @@ func (h ErrataTxHandler) processErrataOutboundTxV65(ctx cosmos.Context, msg MsgE
 			if v.Status == InactiveVault {
 				ctx.Logger().Info("Errata cause retired vault to be resurrect", "vault pub key", v.PubKey)
 				v.UpdateStatus(RetiringVault, ctx.BlockHeight())
-			}
-		}
-
-		if v.IsYggdrasil() {
-			node, err := h.mgr.Keeper().GetNodeAccountByPubKey(ctx, v.PubKey)
-			if err != nil {
-				return nil, fmt.Errorf("fail to get node account with pubkey: %s,err: %w", v.PubKey, err)
-			}
-			if !node.IsEmpty() && !node.Bond.IsZero() {
-				// as long as the node still has bond , we can just credit it back to it's yggdrasil vault.
-				// if the node request to leave , but has not refund it's bond yet , then they will be slashed,
-				// if the node stay in the network , then they can still hold the fund until they leave
-				// if the node already left , but only has little bond left , the slash logic will take it all , and then
-				// subsidise pool with reserve
-				v.AddFunds(tx.Coins)
-				compensate = false
 			}
 		}
 

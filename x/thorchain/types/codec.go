@@ -34,11 +34,9 @@ func RegisterCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&MsgSetVersion{}, "thorchain/MsgSetVersion", nil)
 	cdc.RegisterConcrete(&MsgSetNodeKeys{}, "thorchain/MsgSetNodeKeys", nil)
 	cdc.RegisterConcrete(&MsgSetIPAddress{}, "thorchain/MsgSetIPAddress", nil)
-	cdc.RegisterConcrete(&MsgYggdrasil{}, "thorchain/MsgYggdrasil", nil)
 	cdc.RegisterConcrete(&MsgReserveContributor{}, "thorchain/MsgReserveContributor", nil)
 	cdc.RegisterConcrete(&MsgErrataTx{}, "thorchain/MsgErrataTx", nil)
 	cdc.RegisterConcrete(&MsgBan{}, "thorchain/MsgBan", nil)
-	cdc.RegisterConcrete(&MsgSwitch{}, "thorchain/MsgSwitch", nil) // TODO remove on hard fork
 	cdc.RegisterConcrete(&MsgMimir{}, "thorchain/MsgMimir", nil)
 	cdc.RegisterConcrete(&MsgDeposit{}, "thorchain/MsgDeposit", nil)
 	cdc.RegisterConcrete(&MsgNetworkFee{}, "thorchain/MsgNetworkFee", nil)
@@ -49,6 +47,10 @@ func RegisterCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&MsgNodePauseChain{}, "thorchain/MsgNodePauseChain", nil)
 	cdc.RegisterConcrete(&MsgSolvency{}, "thorchain/MsgSolvency", nil)
 	cdc.RegisterConcrete(&MsgManageTHORName{}, "thorchain/MsgManageTHORName", nil)
+
+	// TODO remove on hard fork
+	cdc.RegisterConcrete(&MsgSwitch{}, "thorchain/MsgSwitch", nil)
+	cdc.RegisterConcrete(&MsgYggdrasil{}, "thorchain/MsgYggdrasil", nil)
 }
 
 // RegisterInterfaces register the types
@@ -69,11 +71,9 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	registry.RegisterImplementations((*cosmos.Msg)(nil), &MsgSetVersion{})
 	registry.RegisterImplementations((*cosmos.Msg)(nil), &MsgSetNodeKeys{})
 	registry.RegisterImplementations((*cosmos.Msg)(nil), &MsgSetIPAddress{})
-	registry.RegisterImplementations((*cosmos.Msg)(nil), &MsgYggdrasil{})
 	registry.RegisterImplementations((*cosmos.Msg)(nil), &MsgReserveContributor{})
 	registry.RegisterImplementations((*cosmos.Msg)(nil), &MsgErrataTx{})
 	registry.RegisterImplementations((*cosmos.Msg)(nil), &MsgBan{})
-	registry.RegisterImplementations((*cosmos.Msg)(nil), &MsgSwitch{}) // TODO remove on hard fork
 	registry.RegisterImplementations((*cosmos.Msg)(nil), &MsgMimir{})
 	registry.RegisterImplementations((*cosmos.Msg)(nil), &MsgDeposit{})
 	registry.RegisterImplementations((*cosmos.Msg)(nil), &MsgNetworkFee{})
@@ -84,4 +84,8 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	registry.RegisterImplementations((*cosmos.Msg)(nil), &MsgNodePauseChain{})
 	registry.RegisterImplementations((*cosmos.Msg)(nil), &MsgManageTHORName{})
 	registry.RegisterImplementations((*cosmos.Msg)(nil), &MsgSolvency{})
+
+	// TODO remove on hard fork
+	registry.RegisterImplementations((*cosmos.Msg)(nil), &MsgSwitch{})
+	registry.RegisterImplementations((*cosmos.Msg)(nil), &MsgYggdrasil{})
 }

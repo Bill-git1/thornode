@@ -181,8 +181,7 @@ func (h ObservedTxOutHandler) handleV112(ctx cosmos.Context, msg MsgObservedTxOu
 		}
 		ctx.Logger().Info("handleMsgObservedTxOut request", "Tx:", tx.String())
 
-		// if memo isn't valid or its an inbound memo, and its funds moving
-		// from a yggdrasil vault, slash the node
+		// if memo isn't valid or its an inbound memo, slash the vault
 		memo, _ := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), tx.Tx.Memo)
 		if memo.IsEmpty() || memo.IsInbound() {
 			vault, err := h.mgr.Keeper().GetVault(ctx, tx.ObservedPubKey)

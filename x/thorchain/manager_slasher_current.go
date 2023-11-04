@@ -19,7 +19,7 @@ import (
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
-// SlasherVCUR is v88 implementation of slasher
+// SlasherVCUR is V124 implementation of slasher
 type SlasherVCUR struct {
 	keeper   keeper.Keeper
 	eventMgr EventManager
@@ -297,10 +297,8 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 			// Slash node account for not sending funds
 			vault, err := s.keeper.GetVault(ctx, tx.VaultPubKey)
 			if err != nil {
-				// in some edge cases, when a txout item had been schedule to be send out by an yggdrasil vault
-				// however the node operator decide to quit by sending a leave command, which will result in the vault get removed
-				// if that happen , txout item should be scheduled to send out using asgard, thus when if fail to get vault , just
-				// log the error, and continue
+				// in some edge cases the vault may no longer exists, in which
+				// case log and continue with rescheduling
 				ctx.Logger().Error("Unable to get vault", "error", err, "vault pub key", tx.VaultPubKey.String())
 			}
 
@@ -327,31 +325,6 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 						ctx.Logger().Error("fail to emit security event", "error", err)
 					}
 					continue // skip this transaction
-				}
-			}
-
-			// slash if its a yggdrasil vault, and the chain isn't halted
-			if vault.IsYggdrasil() && !mgr.Keeper().IsChainHalted(ctx, tx.Chain) {
-				na, err := s.keeper.GetNodeAccountByPubKey(ctx, tx.VaultPubKey)
-				if err != nil {
-					ctx.Logger().Error("Unable to get node account", "error", err, "vault pub key", tx.VaultPubKey.String())
-					continue
-				}
-				slashPoints := signingTransPeriod * 2
-
-				slashCtx := ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
-					telemetry.NewLabel("reason", "not_signing"),
-				}))
-				if err := s.keeper.IncNodeAccountSlashPoints(slashCtx, na.NodeAddress, slashPoints); err != nil {
-					ctx.Logger().Error("fail to inc slash points", "error", err, "node addr", na.NodeAddress.String())
-				}
-				if err := mgr.EventMgr().EmitEvent(ctx, NewEventSlashPoint(na.NodeAddress, slashPoints, fmt.Sprintf("fail to sign out tx after %d blocks", signingTransPeriod))); err != nil {
-					ctx.Logger().Error("fail to emit slash point event")
-				}
-				releaseHeight := ctx.BlockHeight() + (signingTransPeriod * 2)
-				reason := "fail to send yggdrasil transaction"
-				if err := s.keeper.SetNodeAccountJail(ctx, na.NodeAddress, releaseHeight, reason); err != nil {
-					ctx.Logger().Error("fail to set node account jail", "node address", na.NodeAddress, "reason", reason, "error", err)
 				}
 			}
 
@@ -419,15 +392,6 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 					// vault becomes unavailable, the network will reschedule the
 					// transaction on a different asgard vault.
 					age := ctx.BlockHeight() - voter.FinalisedHeight
-					if vault.IsYggdrasil() {
-						// since the last attempt was a yggdrasil vault, lets
-						// artificially inflate the age to ensure that the first
-						// attempt is the largest asgard vault with funds
-						age -= signingTransPeriod
-						if age < 0 {
-							age = 0
-						}
-					}
 					rep := int(age / signingTransPeriod)
 					if vault.PubKey.Equals(available[rep%len(available)].PubKey) {
 						// looks like the new vault is going to be the same as the
@@ -521,7 +485,7 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 }
 
 // SlashVault thorchain keep monitoring the outbound tx from asgard pool
-// and yggdrasil pool, usually the txout is triggered by thorchain itself by
+// usually the txout is triggered by thorchain itself by
 // adding an item into the txout array, refer to TxOutItem for the detail, the
 // TxOutItem contains a specific coin and amount.  if somehow thorchain
 // discover signer send out fund more than the amount specified in TxOutItem,
@@ -586,16 +550,10 @@ func (s *SlasherVCUR) SlashVault(ctx cosmos.Context, vaultPK common.PubKey, coin
 		totalRuneSlashed := cosmos.ZeroUint()
 		pauseOnSlashThreshold := mgr.Keeper().GetConfigInt64(ctx, constants.PauseOnSlashThreshold)
 		if pauseOnSlashThreshold > 0 && totalRuneToSlash.GTE(cosmos.NewUint(uint64(pauseOnSlashThreshold))) {
-			// set mimirs to pause the chain and ygg funding
-			s.keeper.SetMimir(ctx, constants.StopFundYggdrasil.String(), ctx.BlockHeight())
-			mimirEvent := NewEventSetMimir(strings.ToUpper(constants.StopFundYggdrasil.String()), strconv.FormatInt(ctx.BlockHeight(), 10))
-			if err := mgr.EventMgr().EmitEvent(ctx, mimirEvent); err != nil {
-				ctx.Logger().Error("fail to emit set_mimir event", "error", err)
-			}
-
+			// set mimirs to pause the chain
 			key := fmt.Sprintf("Halt%sChain", coin.Asset.Chain)
 			s.keeper.SetMimir(ctx, key, ctx.BlockHeight())
-			mimirEvent = NewEventSetMimir(strings.ToUpper(key), strconv.FormatInt(ctx.BlockHeight(), 10))
+			mimirEvent := NewEventSetMimir(strings.ToUpper(key), strconv.FormatInt(ctx.BlockHeight(), 10))
 			if err := mgr.EventMgr().EmitEvent(ctx, mimirEvent); err != nil {
 				ctx.Logger().Error("fail to emit set_mimir event", "error", err)
 			}
@@ -677,43 +635,6 @@ func (s SlasherVCUR) slashAndUpdateNodeAccount(ctx cosmos.Context, na types.Node
 			telemetry.NewLabel("vault_status", vault.Status.String()),
 		),
 	)
-
-	// Ban the node account. Ensure we don't ban more than 1/3rd of any
-	// given active or retiring vault
-	if vault.IsYggdrasil() {
-		// TODO: temporally disabling banning for the theft of funds. This
-		// is to give the code time to prove itself reliable before the it
-		// starts booting nodes out of the system
-		toBan := false // TODO flip this to true
-		if na.Bond.IsZero() {
-			toBan = true
-		}
-		for _, vaultPk := range na.GetSignerMembership() {
-			vault, err := s.keeper.GetVault(ctx, vaultPk)
-			if err != nil {
-				ctx.Logger().Error("fail to get vault", "error", err)
-				continue
-			}
-			if !(vault.Status == ActiveVault || vault.Status == RetiringVault) {
-				continue
-			}
-			activeMembers := 0
-			for _, pk := range vault.GetMembership() {
-				member, _ := s.keeper.GetNodeAccountByPubKey(ctx, pk)
-				if member.Status == NodeActive {
-					activeMembers++
-				}
-			}
-			if !HasSuperMajority(activeMembers, len(vault.GetMembership())) {
-				toBan = false
-				break
-			}
-		}
-		if toBan {
-			na.ForcedToLeave = true
-			na.LeaveScore = 1 // Set Leave Score to 1, which means the nodes is bad
-		}
-	}
 
 	if err := s.keeper.SetNodeAccount(ctx, na); err != nil {
 		ctx.Logger().Error("fail to save node account for slash", "error", err)

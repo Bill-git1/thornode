@@ -229,20 +229,6 @@ func (*NetworkManagerVCURTestSuite) TestPayPoolRewards(c *C) {
 	c.Assert(networkMgr.payPoolRewards(ctx, []cosmos.Uint{cosmos.NewUint(100 * common.One)}, Pools{p}), NotNil)
 }
 
-func (*NetworkManagerVCURTestSuite) TestRecallChainFunds(c *C) {
-	ctx, mgr := setupManagerForTest(c)
-	helper := NewVaultGenesisSetupTestHelper(mgr.Keeper())
-	mgr.K = helper
-	networkMgr := newNetworkMgrVCUR(helper, mgr.TxOutStore(), mgr.EventMgr())
-	helper.failToListActiveAccounts = true
-	c.Assert(networkMgr.RecallChainFunds(ctx, common.BNBChain, mgr, common.PubKeys{}), NotNil)
-	helper.failToListActiveAccounts = false
-
-	helper.failGetActiveAsgardVault = true
-	c.Assert(networkMgr.RecallChainFunds(ctx, common.BNBChain, mgr, common.PubKeys{}), NotNil)
-	helper.failGetActiveAsgardVault = false
-}
-
 func (s *NetworkManagerVCURTestSuite) TestRecoverPoolDeficit(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	helper := NewVaultGenesisSetupTestHelper(mgr.Keeper())
@@ -386,13 +372,6 @@ func (s *NetworkManagerVCURTestSuite) TestRagnarokPool(c *C) {
 	c.Assert(k.SetVault(ctx, activeVault), IsNil)
 	retireVault := GetRandomVault()
 	retireVault.Chains = common.Chains{common.BNBChain, common.BTCChain}.Strings()
-	yggVault := GetRandomVault()
-	yggVault.PubKey = na.PubKeySet.Secp256k1
-	yggVault.Type = YggdrasilVault
-	yggVault.Coins = common.Coins{
-		common.NewCoin(common.BTCAsset, cosmos.NewUint(3*common.One)),
-	}
-	c.Assert(k.SetVault(ctx, yggVault), IsNil)
 	btcPool := NewPool()
 	btcPool.Asset = common.BTCAsset
 	btcPool.BalanceRune = cosmos.NewUint(1000 * common.One)
@@ -454,19 +433,17 @@ func (s *NetworkManagerVCURTestSuite) TestRagnarokPool(c *C) {
 
 	// happy path
 	networkMgr.k.SetMimir(ctx, "RAGNAROK-BTC-BTC", 1)
-	// first round , it should recall yggdrasil
+	// first round
 	err = networkMgr.checkPoolRagnarok(ctx, mgr)
 	c.Assert(err, IsNil)
 	items, _ := mgr.txOutStore.GetOutboundItems(ctx)
-	c.Assert(items, HasLen, 1)
-	c.Assert(items[0].Memo, Equals, "YGGDRASIL-:200")
+	c.Assert(items, HasLen, 0)
 
-	// second round, ragnarok
 	ctx = ctx.WithBlockHeight(interval * 6)
 	err = networkMgr.checkPoolRagnarok(ctx, mgr)
 	c.Assert(err, IsNil)
 	items, _ = mgr.txOutStore.GetOutboundItems(ctx)
-	c.Assert(items, HasLen, 3)
+	c.Assert(items, HasLen, 2, Commentf("%d", len(items)))
 
 	tempPool, err := k.GetPool(ctx, common.BTCAsset)
 	c.Assert(err, IsNil)

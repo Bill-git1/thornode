@@ -70,6 +70,8 @@ func (h ObservedTxInHandler) validateV1(ctx cosmos.Context, msg MsgObservedTxIn)
 func (h ObservedTxInHandler) handle(ctx cosmos.Context, msg MsgObservedTxIn) (*cosmos.Result, error) {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.124.0")):
+		return h.handleV124(ctx, msg)
 	case version.GTE(semver.MustParse("1.116.0")):
 		return h.handleV116(ctx, msg)
 	case version.GTE(semver.MustParse("1.113.0")):
@@ -153,7 +155,7 @@ func (h ObservedTxInHandler) preflightV123(ctx cosmos.Context, voter ObservedTxV
 	return voter, ok
 }
 
-func (h ObservedTxInHandler) handleV116(ctx cosmos.Context, msg MsgObservedTxIn) (*cosmos.Result, error) {
+func (h ObservedTxInHandler) handleV124(ctx cosmos.Context, msg MsgObservedTxIn) (*cosmos.Result, error) {
 	activeNodeAccounts, err := h.mgr.Keeper().ListActiveValidators(ctx)
 	if err != nil {
 		return nil, wrapError(ctx, err, "fail to get list of active node accounts")
@@ -211,23 +213,6 @@ func (h ObservedTxInHandler) handleV116(ctx cosmos.Context, msg MsgObservedTxIn)
 			vault.InboundTxCount++
 		}
 
-		memo, _ := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), tx.Tx.Memo) // ignore err
-		if vault.IsYggdrasil() && memo.IsType(TxYggdrasilFund) {
-			// only add the fund to yggdrasil vault when the memo is yggdrasil+
-			// no one should send fund to yggdrasil vault , if somehow scammer / airdrop send fund to yggdrasil vault
-			// those will be ignored
-			// also only asgard will send fund to yggdrasil , thus doesn't need to have confirmation counting
-			fromAsgard, err := h.isFromAsgard(ctx, tx)
-			if err != nil {
-				ctx.Logger().Error("fail to determinate whether fund is from asgard or not, let's assume it is not", "error", err)
-			}
-			// make sure only funds replenished from asgard will be added to vault
-			if !voter.UpdatedVault && fromAsgard {
-				vault.AddFunds(tx.Tx.Coins)
-				voter.UpdatedVault = true
-			}
-			vault.RemovePendingTxBlockHeights(memo.GetBlockHeight())
-		}
 		// save the changes in Tx Voter to key value store
 		h.mgr.Keeper().SetObservedTxInVoter(ctx, voter)
 		if err := h.mgr.Keeper().SetVault(ctx, vault); err != nil {
@@ -240,6 +225,7 @@ func (h ObservedTxInHandler) handleV116(ctx cosmos.Context, msg MsgObservedTxIn)
 			continue
 		}
 
+		memo, _ := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), tx.Tx.Memo) // ignore err
 		if memo.IsOutbound() || memo.IsInternal() {
 			// do not process outbound handlers here, or internal handlers
 			continue

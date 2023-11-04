@@ -568,13 +568,6 @@ func (*HandlerErrataTxSuite) TestProcessErrortaOutboundTx(c *C) {
 	result, err = handler.processErrataOutboundTx(ctx, *msg)
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
-	// yggdrasil vault
-	asgardVault.Type = YggdrasilVault
-
-	c.Assert(helper.Keeper.SetVault(ctx, asgardVault), IsNil)
-	result, err = handler.processErrataOutboundTx(ctx, *msg)
-	c.Assert(err, IsNil)
-	c.Assert(result, NotNil)
 
 	txInbound := common.NewTx(txInID, GetRandomLTCAddress(), GetRandomLTCAddress(),
 		common.Coins{

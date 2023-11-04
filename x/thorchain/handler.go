@@ -133,6 +133,8 @@ func NewInternalHandler(mgr Manager) cosmos.Handler {
 func getInternalHandlerMapping(mgr Manager) map[string]MsgHandler {
 	version := mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.124.0")):
+		return getInternalHandlerMappingV124(mgr)
 	case version.GTE(semver.MustParse("1.117.0")):
 		return getInternalHandlerMappingV117(mgr)
 	default:
@@ -140,11 +142,10 @@ func getInternalHandlerMapping(mgr Manager) map[string]MsgHandler {
 	}
 }
 
-func getInternalHandlerMappingV117(mgr Manager) map[string]MsgHandler {
+func getInternalHandlerMappingV124(mgr Manager) map[string]MsgHandler {
 	// New arch handlers
 	m := make(map[string]MsgHandler)
 	m[MsgOutboundTx{}.Type()] = NewOutboundTxHandler(mgr)
-	m[MsgYggdrasil{}.Type()] = NewYggdrasilHandler(mgr)
 	m[MsgSwap{}.Type()] = NewSwapHandler(mgr)
 	m[MsgReserveContributor{}.Type()] = NewReserveContributorHandler(mgr)
 	m[MsgBond{}.Type()] = NewBondHandler(mgr)
@@ -265,6 +266,8 @@ func getMsgManageTHORNameFromMemo(memo ManageTHORNameMemo, tx ObservedTx, signer
 
 func processOneTxIn(ctx cosmos.Context, version semver.Version, keeper keeper.Keeper, tx ObservedTx, signer cosmos.AccAddress) (cosmos.Msg, error) {
 	switch {
+	case version.GTE(semver.MustParse("1.124.0")):
+		return processOneTxInV124(ctx, keeper, tx, signer)
 	case version.GTE(semver.MustParse("1.120.0")):
 		return processOneTxInV120(ctx, keeper, tx, signer)
 	case version.GTE(semver.MustParse("1.117.0")):
@@ -277,7 +280,7 @@ func processOneTxIn(ctx cosmos.Context, version semver.Version, keeper keeper.Ke
 	return nil, errBadVersion
 }
 
-func processOneTxInV120(ctx cosmos.Context, keeper keeper.Keeper, tx ObservedTx, signer cosmos.AccAddress) (cosmos.Msg, error) {
+func processOneTxInV124(ctx cosmos.Context, keeper keeper.Keeper, tx ObservedTx, signer cosmos.AccAddress) (cosmos.Msg, error) {
 	memo, err := ParseMemoWithTHORNames(ctx, keeper, tx.Tx.Memo)
 	if err != nil {
 		ctx.Logger().Error("fail to parse memo", "error", err)
@@ -314,10 +317,6 @@ func processOneTxInV120(ctx cosmos.Context, keeper keeper.Keeper, tx ObservedTx,
 		newMsg, err = getMsgRagnarokFromMemo(m, tx, signer)
 	case LeaveMemo:
 		newMsg, err = getMsgLeaveFromMemo(m, tx, signer)
-	case YggdrasilFundMemo:
-		newMsg = NewMsgYggdrasil(tx.Tx, tx.ObservedPubKey, m.GetBlockHeight(), true, tx.Tx.Coins, signer)
-	case YggdrasilReturnMemo:
-		newMsg = NewMsgYggdrasil(tx.Tx, tx.ObservedPubKey, m.GetBlockHeight(), false, tx.Tx.Coins, signer)
 	case ReserveMemo:
 		res := NewReserveContributor(tx.Tx.FromAddress, tx.Tx.Coins.GetCoin(common.RuneAsset()).Amount)
 		newMsg = NewMsgReserveContributor(tx.Tx, res, signer)

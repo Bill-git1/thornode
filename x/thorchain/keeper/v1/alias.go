@@ -15,7 +15,7 @@ const (
 
 	// Vaults
 	AsgardVault    = types.VaultType_AsgardVault
-	YggdrasilVault = types.VaultType_YggdrasilVault
+	YggdrasilVault = types.VaultType_YggdrasilVault // TODO remove on hard fork
 	ActiveVault    = types.VaultStatus_ActiveVault
 	InitVault      = types.VaultStatus_InitVault
 	RetiringVault  = types.VaultStatus_RetiringVault

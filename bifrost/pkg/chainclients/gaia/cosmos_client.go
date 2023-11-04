@@ -380,7 +380,6 @@ func (c *CosmosClient) SignTx(tx stypes.TxOutItem, thorchainHeight int64) (signe
 
 	gasCoins := tx.MaxGas.ToCoins()
 	if len(gasCoins) != 1 {
-		// CHANGEME: same as above, you may need to tweak this depending on the chain / # of assets
 		err = errors.New("exactly one gas coin must be provided")
 		c.logger.Err(err).Interface("fee", gasCoins).Msg(err.Error())
 		return nil, nil, nil, err

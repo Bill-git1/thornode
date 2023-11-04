@@ -1080,71 +1080,9 @@ func (vm *NetworkMgrVCUR) cleanupAsgardIndex(ctx cosmos.Context) error {
 	return nil
 }
 
-// RecallChainFunds - sends a message to bifrost nodes to send back all funds
-// associated with given chain
-func (vm *NetworkMgrVCUR) RecallChainFunds(ctx cosmos.Context, chain common.Chain, mgr Manager, excludeNodes common.PubKeys) error {
-	allNodes, err := vm.k.ListValidatorsWithBond(ctx)
-	if err != nil {
-		return fmt.Errorf("fail to list all node accounts: %w", err)
-	}
-
-	active, err := vm.k.GetAsgardVaultsByStatus(ctx, ActiveVault)
-	if err != nil {
-		return err
-	}
-
-	signingTransactionPeriod := mgr.GetConstants().GetInt64Value(constants.SigningTransactionPeriod)
-	vault := vm.k.GetMostSecure(ctx, active, signingTransactionPeriod)
-	if vault.IsEmpty() {
-		return fmt.Errorf("unable to determine asgard vault")
-	}
-	toAddr, err := vault.PubKey.GetAddress(chain)
-	if err != nil {
-		return err
-	}
-
-	// get yggdrasil to return funds back to asgard
-	for _, node := range allNodes {
-		if excludeNodes.Contains(node.PubKeySet.Secp256k1) {
-			continue
-		}
-		if !vm.k.VaultExists(ctx, node.PubKeySet.Secp256k1) {
-			continue
-		}
-		ygg, err := vm.k.GetVault(ctx, node.PubKeySet.Secp256k1)
-		if err != nil {
-			ctx.Logger().Error("fail to get ygg vault", "error", err)
-			continue
-		}
-		if ygg.IsAsgard() {
-			continue
-		}
-
-		if !ygg.HasFundsForChain(chain) {
-			continue
-		}
-
-		if !toAddr.IsEmpty() {
-			txOutItem := TxOutItem{
-				Chain:       chain,
-				ToAddress:   toAddr,
-				InHash:      common.BlankTxID,
-				VaultPubKey: ygg.PubKey,
-				Coin:        common.NewCoin(common.RuneAsset(), cosmos.ZeroUint()),
-				Memo:        NewYggdrasilReturn(ctx.BlockHeight()).String(),
-				GasRate:     int64(mgr.GasMgr().GetGasRate(ctx, chain).Uint64()),
-			}
-			// yggdrasil- will not set coin field here, when signer see a
-			// TxOutItem that has memo "yggdrasil-" it will query the chain
-			// and find out all the remaining assets , and fill in the
-			// field
-			if err := vm.txOutStore.UnSafeAddTxOutItem(ctx, mgr, txOutItem); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
+// TODO remove on hard fork
+func (vm *NetworkMgrVCUR) RecallChainFunds(_ cosmos.Context, _ common.Chain, _ Manager, _ common.PubKeys) error {
+	return fmt.Errorf("dev error: RecallChainFunds is obsolete")
 }
 
 // withdrawLiquidity will process a batch of LP per iteration, the batch size is defined by constants.RagnarokProcessNumOfLPPerIteration
@@ -1617,7 +1555,7 @@ func (vm *NetworkMgrVCUR) ragnarokPool(ctx cosmos.Context, mgr Manager, p Pool) 
 	}
 	nth := (ctx.BlockHeight()-startBlockHeight)/mgr.GetConstants().GetInt64Value(constants.FundMigrationInterval) + 1
 
-	// set the pool status to stage , thus the network will not send asset to yggdrasil vault
+	// set the pool status to stage
 	if p.Status != PoolStaged {
 		p.Status = PoolStaged
 		if err := vm.k.SetPool(ctx, p); err != nil {
@@ -1630,10 +1568,10 @@ func (vm *NetworkMgrVCUR) ragnarokPool(ctx cosmos.Context, mgr Manager, p Pool) 
 
 	}
 
-	// first round , let's set the pool to stage , and recall yggdrasil fund
-	// staged pool will not fund yggdrasil again
+	// first round , let's set the pool to stage
 	if nth == 1 {
-		return vm.RecallChainFunds(ctx, p.Asset.GetChain(), mgr, common.PubKeys{})
+		// TODO used to be yggdrasil recall
+		return nil
 	}
 
 	nas, err := vm.k.ListActiveValidators(ctx)

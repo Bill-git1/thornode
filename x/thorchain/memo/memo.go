@@ -30,8 +30,8 @@ const (
 	TxBond
 	TxUnbond
 	TxLeave
-	TxYggdrasilFund
-	TxYggdrasilReturn
+	TxYggdrasilFund   // TODO remove on hard fork
+	TxYggdrasilReturn // TODO remove on hard fork
 	TxReserve
 	TxRefund
 	TxMigrate
@@ -61,13 +61,10 @@ var stringToTxTypeMap = map[string]TxType{
 	"bond":        TxBond,
 	"unbond":      TxUnbond,
 	"leave":       TxLeave,
-	"yggdrasil+":  TxYggdrasilFund,
-	"yggdrasil-":  TxYggdrasilReturn,
 	"reserve":     TxReserve,
 	"refund":      TxRefund,
 	"migrate":     TxMigrate,
 	"ragnarok":    TxRagnarok,
-	"switch":      TxSwitch, // TODO remove on hard fork
 	"noop":        TxNoOp,
 	"consolidate": TxConsolidate,
 	"name":        TxTHORName,
@@ -77,30 +74,37 @@ var stringToTxTypeMap = map[string]TxType{
 	"loan+":       TxLoanOpen,
 	"$-":          TxLoanRepayment,
 	"loan-":       TxLoanRepayment,
+
+	// TODO remove on hard fork
+	"switch":     TxSwitch,
+	"yggdrasil+": TxYggdrasilFund,
+	"yggdrasil-": TxYggdrasilReturn,
 }
 
 var txToStringMap = map[TxType]string{
-	TxAdd:             "add",
-	TxWithdraw:        "withdraw",
-	TxSwap:            "swap",
-	TxLimitOrder:      "limito",
-	TxOutbound:        "out",
-	TxRefund:          "refund",
-	TxDonate:          "donate",
-	TxBond:            "bond",
-	TxUnbond:          "unbond",
-	TxLeave:           "leave",
+	TxAdd:           "add",
+	TxWithdraw:      "withdraw",
+	TxSwap:          "swap",
+	TxLimitOrder:    "limito",
+	TxOutbound:      "out",
+	TxRefund:        "refund",
+	TxDonate:        "donate",
+	TxBond:          "bond",
+	TxUnbond:        "unbond",
+	TxLeave:         "leave",
+	TxReserve:       "reserve",
+	TxMigrate:       "migrate",
+	TxRagnarok:      "ragnarok",
+	TxNoOp:          "noop",
+	TxConsolidate:   "consolidate",
+	TxTHORName:      "thorname",
+	TxLoanOpen:      "$+",
+	TxLoanRepayment: "$-",
+
+	// TODO remove on hard fork
+	TxSwitch:          "switch",
 	TxYggdrasilFund:   "yggdrasil+",
 	TxYggdrasilReturn: "yggdrasil-",
-	TxReserve:         "reserve",
-	TxMigrate:         "migrate",
-	TxRagnarok:        "ragnarok",
-	TxSwitch:          "switch", // TODO remove on hard fork
-	TxNoOp:            "noop",
-	TxConsolidate:     "consolidate",
-	TxTHORName:        "thorname",
-	TxLoanOpen:        "$+",
-	TxLoanRepayment:   "$-",
 }
 
 // converts a string into a txType
@@ -115,9 +119,10 @@ func StringToTxType(s string) (TxType, error) {
 }
 
 func (tx TxType) IsInbound() bool {
-	// TODO remove TxSwitch on hard fork
 	switch tx {
-	case TxAdd, TxWithdraw, TxSwap, TxLimitOrder, TxDonate, TxBond, TxUnbond, TxLeave, TxSwitch, TxReserve, TxNoOp, TxTHORName, TxLoanOpen, TxLoanRepayment:
+	case TxAdd, TxWithdraw, TxSwap, TxLimitOrder, TxDonate, TxBond, TxUnbond, TxLeave, TxReserve, TxNoOp, TxTHORName, TxLoanOpen, TxLoanRepayment:
+		return true
+	case TxSwitch: // TODO remove on hard fork
 		return true
 	default:
 		return false
@@ -135,7 +140,9 @@ func (tx TxType) IsOutbound() bool {
 
 func (tx TxType) IsInternal() bool {
 	switch tx {
-	case TxYggdrasilFund, TxYggdrasilReturn, TxMigrate, TxConsolidate:
+	case TxMigrate, TxConsolidate:
+		return true
+	case TxYggdrasilFund, TxYggdrasilReturn: // TODO remove on hard fork
 		return true
 	default:
 		return false
@@ -145,8 +152,9 @@ func (tx TxType) IsInternal() bool {
 // HasOutbound whether the txtype might trigger outbound tx
 func (tx TxType) HasOutbound() bool {
 	switch tx {
-	// TODO remove TxSwitch on hard fork
-	case TxAdd, TxBond, TxDonate, TxYggdrasilReturn, TxReserve, TxMigrate, TxRagnarok, TxSwitch:
+	case TxAdd, TxBond, TxDonate, TxReserve, TxMigrate, TxRagnarok:
+		return false
+	case TxYggdrasilReturn, TxSwitch: // TODO remove on hard fork
 		return false
 	default:
 		return true
