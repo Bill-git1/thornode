@@ -194,6 +194,7 @@ bifrost:
         <<: *default-block-scanner
         chain_id: DOGE
         gas_price_resolution: 500_000 # sats
+        gas_cache_blocks: 10
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
       utxo:
@@ -219,8 +220,15 @@ bifrost:
         <<: *default-block-scanner
         chain_id: LTC
         observation_flexibility_blocks: 3
+        gas_cache_blocks: 10
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
+      utxo:
+        <<: *utxo
+        block_cache_count: 600
+        version: 21
+        max_sats_per_vbyte: 9765 # backwards compatible with 1e8/10/1024
+        estimated_average_tx_size: 250
     bch:
       <<: *default-chain
       chain_id: BCH
@@ -232,6 +240,9 @@ bifrost:
       scanner_leveldb: *default-leveldb
       utxo:
         <<: *utxo
+        block_cache_count: 144
+        version: 26
+        max_sats_per_vbyte: 9765 # backwards compatible with 1e8/10/1024
         estimated_average_tx_size: 1500
 
 ########################################################################################

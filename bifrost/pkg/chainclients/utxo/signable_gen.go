@@ -12,6 +12,7 @@ import (
   bchec "github.com/gcash/bchd/bchec"
   btcec "github.com/btcsuite/btcd/btcec"
   dogeec "github.com/eager7/dogd/btcec"
+  ltcec "github.com/ltcsuite/ltcd/btcec"
 
 	"gitlab.com/thorchain/thornode/bifrost/tss"
 	"gitlab.com/thorchain/thornode/common"
@@ -171,6 +172,58 @@ func (ts *tssSignableDOGE) GetPubKey() *dogeec.PublicKey {
 		return nil
 	}
 	newPubkey, err := dogeec.ParsePubKey(secpPubKey.Bytes(), dogeec.S256())
+	if err != nil {
+		ts.log.Err(err).Msg("fail to parse public key")
+		return nil
+	}
+	return newPubkey
+}
+
+type tssSignableLTC struct {
+	poolPubKey    common.PubKey
+	tssKeyManager tss.ThorchainKeyManager
+	log           zerolog.Logger
+}
+
+func newTssSignableLTC(poolPubKey common.PubKey, tssKeyManager tss.ThorchainKeyManager, log zerolog.Logger) *tssSignableLTC {
+	return &tssSignableLTC{
+		poolPubKey:    poolPubKey,
+		tssKeyManager: tssKeyManager,
+		log:           log,
+	}
+}
+func (ts *tssSignableLTC) Sign(payload []byte) (*ltcec.Signature, error) {
+	ts.log.Info().Msgf("msg to sign: %s", base64.StdEncoding.EncodeToString(payload))
+	result, _, err := ts.tssKeyManager.RemoteSign(payload, ts.poolPubKey.String())
+	if err != nil {
+		return nil, err
+	}
+	var sig ltcec.Signature
+	sig.R = new(big.Int).SetBytes(result[:32])
+	sig.S = new(big.Int).SetBytes(result[32:])
+
+	// verify the signature
+	if sig.Verify(payload, ts.GetPubKey()) {
+		ts.log.Info().Msg("we can verify the signature successfully")
+	} else {
+		ts.log.Info().Msg("the signature can't be verified")
+	}
+
+	return &sig, nil
+}
+
+func (ts *tssSignableLTC) GetPubKey() *ltcec.PublicKey {
+	cpk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeAccPub, ts.poolPubKey.String())
+	if err != nil {
+		ts.log.Err(err).Str("pubkey", ts.poolPubKey.String()).Msg("fail to get pubic key from the bech32 pool public key string")
+		return nil
+	}
+	secpPubKey, err := codec.ToTmPubKeyInterface(cpk)
+	if err != nil {
+		ts.log.Err(err).Msgf("%s is not a secp256 k1 public key", ts.poolPubKey)
+		return nil
+	}
+	newPubkey, err := ltcec.ParsePubKey(secpPubKey.Bytes(), ltcec.S256())
 	if err != nil {
 		ts.log.Err(err).Msg("fail to parse public key")
 		return nil

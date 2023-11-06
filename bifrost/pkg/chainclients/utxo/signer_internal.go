@@ -12,9 +12,13 @@ import (
 	"github.com/btcsuite/btcutil"
 
 	"github.com/eager7/dogutil"
+	dogetxscript "gitlab.com/thorchain/bifrost/dogd-txscript"
+
 	"github.com/gcash/bchutil"
 	bchtxscript "gitlab.com/thorchain/bifrost/bchd-txscript"
-	dogetxscript "gitlab.com/thorchain/bifrost/dogd-txscript"
+
+	"github.com/ltcsuite/ltcutil"
+	ltctxscript "gitlab.com/thorchain/bifrost/ltcd-txscript"
 
 	stypes "gitlab.com/thorchain/thornode/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/common"
@@ -154,6 +158,12 @@ func (c *Client) getSourceScript(tx stypes.TxOutItem) ([]byte, error) {
 			return nil, fmt.Errorf("fail to decode source address(%s): %w", sourceAddr.String(), err)
 		}
 		return bchtxscript.PayToAddrScript(addr)
+	case common.LTCChain:
+		addr, err := ltcutil.DecodeAddress(sourceAddr.String(), c.getChainCfgLTC())
+		if err != nil {
+			return nil, fmt.Errorf("fail to decode source address(%s): %w", sourceAddr.String(), err)
+		}
+		return ltctxscript.PayToAddrScript(addr)
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 		return nil, nil
@@ -164,16 +174,33 @@ func (c *Client) getSourceScript(tx stypes.TxOutItem) ([]byte, error) {
 // Build Transaction
 ////////////////////////////////////////////////////////////////////////////////////////
 
+// TODO: Cleanup magic numbers and/or improve comment specificity.
 // estimateTxSize will create a temporary MsgTx, and use it to estimate the final tx size
 // the value in the temporary MsgTx is not real
 // https://bitcoinops.org/en/tools/calc-size/
 func (c *Client) estimateTxSize(memo string, txes []btcjson.ListUnspentResult) int64 {
-	// overhead - 10
-	// Per input - 148
-	// Per output - 34 , we might have 1 / 2 output , depends on the circumstances , here we only count 1  output , would rather underestimate
-	// so we won't hit absurd hight fee issue
-	// overhead for NULL DATA - 9 , len(memo) is the size of memo
-	return int64(10 + 148*len(txes) + 34 + 9 + len([]byte(memo)))
+	switch c.cfg.ChainID {
+	case common.DOGEChain, common.BCHChain:
+		// overhead - 10
+		// Per input - 148
+		// Per output - 34 , we might have 1 / 2 output , depends on the circumstances , here we only count 1  output , would rather underestimate
+		// so we won't hit absurd hight fee issue
+		// overhead for NULL DATA - 9 , len(memo) is the size of memo
+		return int64(10 + 148*len(txes) + 34 + 9 + len([]byte(memo)))
+	case common.LTCChain:
+		// overhead - 10.75
+		// Per Input - 67.75
+		// Per output - 31 , we sometimes have 2 output , and sometimes only have 1 , it depends ,here we only count 1
+		// it is better to underestimate rather than over estimate
+		// 10.5 overhead for null data
+		// len(memo) is the size of memo put in null data
+		// these get us very close to the final vbytes.
+		// multiple by 100 , and then add, so don't need to deal with float
+		return int64((1075+6775*len(txes)+1050)/100) + int64(31+len([]byte(memo)))
+	default:
+		c.log.Fatal().Msg("unsupported chain")
+		return 0
+	}
 }
 
 func (c *Client) getGasCoin(tx stypes.TxOutItem, vSize int64) common.Coin {
@@ -246,6 +273,15 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 			return nil, nil, fmt.Errorf("fail to decode next address: %w", err)
 		}
 		buf, err = bchtxscript.PayToAddrScript(outputAddr)
+		if err != nil {
+			return nil, nil, fmt.Errorf("fail to get pay to address script: %w", err)
+		}
+	case common.LTCChain:
+		outputAddr, err := ltcutil.DecodeAddress(tx.ToAddress.String(), c.getChainCfgLTC())
+		if err != nil {
+			return nil, nil, fmt.Errorf("fail to decode next address: %w", err)
+		}
+		buf, err = ltctxscript.PayToAddrScript(outputAddr)
 		if err != nil {
 			return nil, nil, fmt.Errorf("fail to get pay to address script: %w", err)
 		}
@@ -328,6 +364,8 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 			nullDataScript, err = dogetxscript.NullDataScript([]byte(tx.Memo))
 		case common.BCHChain:
 			nullDataScript, err = bchtxscript.NullDataScript([]byte(tx.Memo))
+		case common.LTCChain:
+			nullDataScript, err = ltctxscript.NullDataScript([]byte(tx.Memo))
 		default:
 			c.log.Fatal().Msg("unsupported chain")
 		}

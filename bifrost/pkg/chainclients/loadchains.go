@@ -45,7 +45,7 @@ func LoadChains(thorKeys *thorclient.Keys,
 	loadChain := func(chain config.BifrostChainConfiguration) (ChainClient, error) {
 		if chain.UTXO.ClientV2 {
 			switch chain.ChainID {
-			case common.BCHChain, common.DOGEChain:
+			case common.BCHChain, common.DOGEChain, common.LTCChain:
 				return utxo.NewClient(thorKeys, chain, server, thorchainBridge, m)
 			}
 		}

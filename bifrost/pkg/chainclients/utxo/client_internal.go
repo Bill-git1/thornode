@@ -14,6 +14,7 @@ import (
 	"github.com/btcsuite/btcutil"
 	bchtxscript "gitlab.com/thorchain/bifrost/bchd-txscript"
 	dogetxscript "gitlab.com/thorchain/bifrost/dogd-txscript"
+	ltctxscript "gitlab.com/thorchain/bifrost/ltcd-txscript"
 
 	btypes "gitlab.com/thorchain/thornode/bifrost/blockscanner/types"
 	"gitlab.com/thorchain/thornode/bifrost/metrics"
@@ -243,6 +244,17 @@ func (c *Client) sendNetworkFee(height int64) error {
 		}
 		feeRate = uint64(bs.AverageFeeRate * common.One)
 
+	case common.LTCChain:
+		hash, err := c.rpc.GetBlockHash(height)
+		if err != nil {
+			return fmt.Errorf("fail to get block hash: %w", err)
+		}
+		bs, err := c.rpc.GetBlockStats(hash)
+		if err != nil {
+			return fmt.Errorf("fail to get block stats: %w", err)
+		}
+		feeRate = uint64(bs.AverageFeeRate)
+
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 	}
@@ -259,6 +271,19 @@ func (c *Client) sendNetworkFee(height int64) error {
 	}
 	if feeRate < 2 {
 		feeRate = 2
+	}
+
+	// if gas cache blocks are set, use the max gas over that window
+	if c.cfg.BlockScanner.GasCacheBlocks > 0 {
+		c.feeRateCache = append(c.feeRateCache, feeRate)
+		if len(c.feeRateCache) > c.cfg.BlockScanner.GasCacheBlocks {
+			c.feeRateCache = c.feeRateCache[len(c.feeRateCache)-c.cfg.BlockScanner.GasCacheBlocks:]
+		}
+		for _, rate := range c.feeRateCache {
+			if rate > feeRate {
+				feeRate = rate
+			}
+		}
 	}
 
 	c.m.GetGauge(metrics.GasPrice(c.cfg.ChainID)).Set(float64(feeRate))
@@ -337,7 +362,7 @@ func (c *Client) getBlock(height int64) (*btcjson.GetBlockVerboseTxResult, error
 	switch c.cfg.ChainID {
 	case common.DOGEChain:
 		return c.getBlockWithoutVerbose(height)
-	case common.BCHChain:
+	case common.BCHChain, common.LTCChain:
 		hash, err := c.rpc.GetBlockHash(height)
 		if err != nil {
 			return &btcjson.GetBlockVerboseTxResult{}, err
@@ -466,6 +491,19 @@ func (c *Client) isValidUTXO(hexPubKey string) bool {
 		case bchtxscript.MultiSigTy:
 			return false
 
+		default:
+			return len(addresses) == 1 && requireSigs == 1
+		}
+
+	case common.LTCChain:
+		scriptType, addresses, requireSigs, err := ltctxscript.ExtractPkScriptAddrs(buf, c.getChainCfgLTC())
+		if err != nil {
+			c.log.Err(err).Msg("fail to extract pub key script")
+			return false
+		}
+		switch scriptType {
+		case ltctxscript.MultiSigTy:
+			return false
 		default:
 			return len(addresses) == 1 && requireSigs == 1
 		}
@@ -715,6 +753,8 @@ func (c *Client) getMemo(tx *btcjson.TxRawResult) (string, error) {
 			asm, err = dogetxscript.DisasmString(buf)
 		case common.BCHChain:
 			asm, err = bchtxscript.DisasmString(buf)
+		case common.LTCChain:
+			asm, err = ltctxscript.DisasmString(buf)
 		default:
 			c.log.Fatal().Msg("unsupported chain")
 		}

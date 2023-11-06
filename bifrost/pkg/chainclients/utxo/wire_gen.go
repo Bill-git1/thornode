@@ -9,6 +9,8 @@ import (
   bchchainhash "github.com/gcash/bchd/chaincfg/chainhash"
   dogewire "github.com/eager7/dogd/wire"
   dogechainhash "github.com/eager7/dogd/chaincfg/chainhash"
+  ltcwire "github.com/ltcsuite/ltcd/wire"
+  ltcchainhash "github.com/ltcsuite/ltcd/chaincfg/chainhash"
 )
 
 func wireToBCH(tx *wire.MsgTx) *bchwire.MsgTx {
@@ -91,6 +93,60 @@ func wireToDOGE(tx *wire.MsgTx) *dogewire.MsgTx {
 }
 
 func dogeToWire(txc *dogewire.MsgTx) *wire.MsgTx {
+	tx := &wire.MsgTx{
+		Version:  txc.Version,
+		LockTime: txc.LockTime,
+	}
+	for _, rtx := range txc.TxIn {
+		txi := &wire.TxIn{
+			PreviousOutPoint: wire.OutPoint{
+				Hash:  chainhash.Hash(rtx.PreviousOutPoint.Hash),
+				Index: rtx.PreviousOutPoint.Index,
+			},
+			SignatureScript: rtx.SignatureScript,
+			Witness:         wire.TxWitness(rtx.Witness),
+			Sequence:        rtx.Sequence,
+		}
+		tx.TxIn = append(tx.TxIn, txi)
+	}
+	for _, stx := range txc.TxOut {
+		txo := &wire.TxOut{
+			Value:    stx.Value,
+			PkScript: stx.PkScript,
+		}
+		tx.TxOut = append(tx.TxOut, txo)
+	}
+	return tx
+}
+
+func wireToLTC(tx *wire.MsgTx) *ltcwire.MsgTx {
+	txc := &ltcwire.MsgTx{
+		Version:  tx.Version,
+		LockTime: tx.LockTime,
+	}
+	for _, rtx := range tx.TxIn {
+		txi := &ltcwire.TxIn{
+			PreviousOutPoint: ltcwire.OutPoint{
+				Hash:  ltcchainhash.Hash(rtx.PreviousOutPoint.Hash),
+				Index: rtx.PreviousOutPoint.Index,
+			},
+			SignatureScript: rtx.SignatureScript,
+			Witness:         ltcwire.TxWitness(rtx.Witness),
+			Sequence:        rtx.Sequence,
+		}
+		txc.TxIn = append(txc.TxIn, txi)
+	}
+	for _, stx := range tx.TxOut {
+		txo := &ltcwire.TxOut{
+			Value:    stx.Value,
+			PkScript: stx.PkScript,
+		}
+		txc.TxOut = append(txc.TxOut, txo)
+	}
+	return txc
+}
+
+func ltcToWire(txc *ltcwire.MsgTx) *wire.MsgTx {
 	tx := &wire.MsgTx{
 		Version:  txc.Version,
 		LockTime: txc.LockTime,
