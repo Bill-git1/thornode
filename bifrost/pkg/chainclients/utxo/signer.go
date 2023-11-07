@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"reflect"
 	"strings"
 	"sync"
 
@@ -106,7 +105,6 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 		c.log.Info().Msgf("address: %s is address pubkey type, should not be used", outputAddrStr)
 		return nil, nil, nil, nil
 	default: // keep lint happy
-		fmt.Println("type", reflect.TypeOf(outputAddr))
 	}
 
 	// load from checkpoint if it exists
