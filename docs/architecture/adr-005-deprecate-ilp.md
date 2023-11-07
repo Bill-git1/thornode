@@ -3,10 +3,38 @@
 ## Changelog
 
 - December 12, 2022: Initial commit
+- November 07, 2023: Amendment 1 commit
 
 ## Status
 
-Accepted
+Amended
+
+## Amendment 1, Nov 23: Permanently Sunset ILP
+
+As of Blockheight `13,333,333`, ILP is as follows:
+
+```text
+ETH.FOX 29,683
+BTC.BTC 22,984
+ETH.XRUNE 18,431
+ETH.TGT 1,914
+ETH.ETH 1,433
+ETH.UOS 814
+BNB.TWT 521
+ETH.DPI 262
+DOGE.DOGE 240
+BNB.BNB 199
+BNB.BUSD 100
+TOTAL: 76,793
+```
+
+Since ILP is effectively negligible to the vast amount of grandfathered users (who have had this protection available to them the entire time, but did not take it), the protocol should take the opportunity to permanently sunset ILP. LPs should be comfortable with the risks of LPing, which is offset by the higher yields due to synths. The protocol has introduced other features (Savers, Lending) which have their own risk spectrum, so removing one line of risk is a win for the protocol -- since it has to survive both bull and bear markets. Risk manangement is a crucial part of survivability.
+
+To affect this, nodes should vote by setting
+
+```text
+FULLIMPLOSSPROTECTIONBLOCKS 0
+```
 
 ## Context
 
