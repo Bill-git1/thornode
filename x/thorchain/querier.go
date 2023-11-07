@@ -493,9 +493,16 @@ func queryVaultsPubkeys(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 					Routers: vault.Routers,
 				})
 			case InactiveVault:
+				// skip inactive vaults that have never received an inbound
+				if vault.InboundTxCount == 0 {
+					continue
+				}
+
+				// skip inactive vaults older than the cutoff age
 				if vault.BlockHeight < cutOffAge {
 					continue
 				}
+
 				activeMembers, err := vault.GetMembers(active.GetNodeAddresses())
 				if err != nil {
 					ctx.Logger().Error("fail to get active members of vault", "error", err)

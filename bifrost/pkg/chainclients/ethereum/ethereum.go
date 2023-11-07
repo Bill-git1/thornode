@@ -44,7 +44,6 @@ import (
 )
 
 const (
-	maxAsgardAddresses   = 100
 	maxGasLimit          = 800000
 	ethBlockRewardAndFee = 3 * 1e18
 )
@@ -843,7 +842,7 @@ func (c *Client) getAsgardAddress() ([]common.Address, error) {
 	if time.Since(c.lastAsgard) < constants.ThorchainBlockTime && c.asgardAddresses != nil {
 		return c.asgardAddresses, nil
 	}
-	newAddresses, err := utxo.GetAsgardAddress(common.ETHChain, maxAsgardAddresses, c.bridge)
+	newAddresses, err := utxo.GetAsgardAddress(common.ETHChain, c.bridge)
 	if err != nil {
 		return nil, fmt.Errorf("fail to get asgards : %w", err)
 	}
