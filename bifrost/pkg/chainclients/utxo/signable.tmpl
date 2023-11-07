@@ -2,13 +2,14 @@ package utxo
 
 import (
 	"encoding/base64"
+  "fmt"
 	"math/big"
 
 	"github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/rs/zerolog"
 
   {{- range $chain, $pkg := . }}
-  {{ $chain }}ec "{{ $pkg }}/btcec"
+  {{ $chain }}ec "{{ $pkg }}"
   {{- end }}
 
 	"gitlab.com/thorchain/thornode/bifrost/tss"
@@ -32,7 +33,11 @@ func newTssSignable{{ ToUpper $chain }}(poolPubKey common.PubKey, tssKeyManager 
 	}
 }
 
+{{- if eq $chain "bch" }}
+func (ts *tssSignable{{ ToUpper $chain }}) SignECDSA(payload []byte) (*{{ $chain }}ec.Signature, error) {
+{{- else }}
 func (ts *tssSignable{{ ToUpper $chain }}) Sign(payload []byte) (*{{ $chain }}ec.Signature, error) {
+{{- end }}
 	ts.log.Info().Msgf("msg to sign: %s", base64.StdEncoding.EncodeToString(payload))
 	result, _, err := ts.tssKeyManager.RemoteSign(payload, ts.poolPubKey.String())
 	if err != nil {
@@ -51,6 +56,13 @@ func (ts *tssSignable{{ ToUpper $chain }}) Sign(payload []byte) (*{{ $chain }}ec
 
 	return &sig, nil
 }
+
+{{- if eq $chain "bch" }}
+// SignSchnorr signs the given payload using Schnorr
+func (ts *tssSignable{{ ToUpper $chain }}) SignSchnorr(payload []byte) (*{{ $chain }}ec.Signature, error) {
+	return nil, fmt.Errorf("schnorr signature not yet implemented in TSS")
+}
+{{- end }}
 
 func (ts *tssSignable{{ ToUpper $chain }}) GetPubKey() *{{ $chain }}ec.PublicKey {
 	cpk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeAccPub, ts.poolPubKey.String())

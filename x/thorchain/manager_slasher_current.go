@@ -19,10 +19,15 @@ import (
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
-// SlasherVCUR is v88 implementation of slasher
+// SlasherVCUR is V124 implementation of slasher
 type SlasherVCUR struct {
 	keeper   keeper.Keeper
 	eventMgr EventManager
+}
+
+type nodeAddressValidatorAddressPairVCUR struct {
+	nodeAddress      cosmos.AccAddress
+	validatorAddress crypto.Address
 }
 
 // newSlasherVCUR create a new instance of Slasher
@@ -32,6 +37,7 @@ func newSlasherVCUR(keeper keeper.Keeper, eventMgr EventManager) *SlasherVCUR {
 
 // BeginBlock called when a new block get proposed to detect whether there are duplicate vote
 func (s *SlasherVCUR) BeginBlock(ctx cosmos.Context, req abci.RequestBeginBlock, constAccessor constants.ConstantValues) {
+	var doubleSignEvidence []abci.Evidence
 	// Iterate through any newly discovered evidence of infraction
 	// Slash any validators (and since-unbonded liquidity within the unbonding period)
 	// who contributed to valid infractions
@@ -43,11 +49,56 @@ func (s *SlasherVCUR) BeginBlock(ctx cosmos.Context, req abci.RequestBeginBlock,
 		}
 		switch evidence.Type {
 		case abci.EvidenceType_DUPLICATE_VOTE:
-			if err := s.HandleDoubleSign(ctx, evidence.Validator.Address, evidence.Height, constAccessor); err != nil {
-				ctx.Logger().Error("fail to slash for double signing a block", "error", err)
-			}
+			doubleSignEvidence = append(doubleSignEvidence, evidence)
 		default:
 			ctx.Logger().Error("ignored unknown evidence type", "type", evidence.Type)
+		}
+	}
+
+	// Identify validators which didn't sign the previous block
+	var missingSignAddresses []crypto.Address
+	for _, voteInfo := range req.LastCommitInfo.Votes {
+		if voteInfo.SignedLastBlock {
+			continue
+		}
+		missingSignAddresses = append(missingSignAddresses, voteInfo.Validator.Address)
+	}
+
+	// Do not continue if there is no action to take.
+	if len(doubleSignEvidence)+len(missingSignAddresses) == 0 {
+		return
+	}
+
+	// Derive Active node validator addresses once.
+	nas, err := s.keeper.ListActiveValidators(ctx)
+	if err != nil {
+		ctx.Logger().Error("fail to list active validators", "error", err)
+		return
+	}
+	var validatorAddresses []nodeAddressValidatorAddressPairVCUR
+	for _, na := range nas {
+		pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeConsPub, na.ValidatorConsPubKey)
+		if err != nil {
+			ctx.Logger().Error("fail to derive validator address", "error", err)
+			continue
+		}
+		var pair nodeAddressValidatorAddressPairVCUR
+		pair.nodeAddress = na.NodeAddress
+		pair.validatorAddress = pk.Address()
+		validatorAddresses = append(validatorAddresses, pair)
+	}
+
+	// Act on double signs.
+	for _, evidence := range doubleSignEvidence {
+		if err := s.HandleDoubleSign(ctx, evidence.Validator.Address, evidence.Height, constAccessor, validatorAddresses); err != nil {
+			ctx.Logger().Error("fail to slash for double signing a block", "error", err)
+		}
+	}
+
+	// Act on missing signs.
+	for _, missingSignAddress := range missingSignAddresses {
+		if err := s.HandleMissingSign(ctx, missingSignAddress, constAccessor, validatorAddresses); err != nil {
+			ctx.Logger().Error("fail to slash for missing signing a block", "error", err)
 		}
 	}
 }
@@ -55,60 +106,86 @@ func (s *SlasherVCUR) BeginBlock(ctx cosmos.Context, req abci.RequestBeginBlock,
 // HandleDoubleSign - slashes a validator for signing two blocks at the same
 // block height
 // https://blog.cosmos.network/consensus-compare-casper-vs-tendermint-6df154ad56ae
-func (s *SlasherVCUR) HandleDoubleSign(ctx cosmos.Context, addr crypto.Address, infractionHeight int64, constAccessor constants.ConstantValues) error {
+func (s *SlasherVCUR) HandleDoubleSign(ctx cosmos.Context, addr crypto.Address, infractionHeight int64, constAccessor constants.ConstantValues, validatorAddresses []nodeAddressValidatorAddressPairVCUR) error {
 	// check if we're recent enough to slash for this behavior
 	maxAge := constAccessor.GetInt64Value(constants.DoubleSignMaxAge)
 	if (ctx.BlockHeight() - infractionHeight) > maxAge {
 		ctx.Logger().Info("double sign detected but too old to be slashed", "infraction height", fmt.Sprintf("%d", infractionHeight), "address", addr.String())
 		return nil
 	}
-	nas, err := s.keeper.ListActiveValidators(ctx)
-	if err != nil {
-		return err
-	}
 
-	for _, na := range nas {
-		pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeConsPub, na.ValidatorConsPubKey)
+	for _, pair := range validatorAddresses {
+		if addr.String() != pair.validatorAddress.String() {
+			continue
+		}
+
+		na, err := s.keeper.GetNodeAccount(ctx, pair.nodeAddress)
 		if err != nil {
 			return err
 		}
 
-		if addr.String() == pk.Address().String() {
-			if na.Bond.IsZero() {
-				return fmt.Errorf("found account to slash for double signing, but did not have any bond to slash: %s", addr)
-			}
-			// take 5% of the minimum bond, and put it into the reserve
-			minBond, err := s.keeper.GetMimir(ctx, constants.MinimumBondInRune.String())
-			if minBond < 0 || err != nil {
-				minBond = constAccessor.GetInt64Value(constants.MinimumBondInRune)
-			}
-			slashAmount := cosmos.NewUint(uint64(minBond)).MulUint64(5).QuoUint64(100)
-			if slashAmount.GT(na.Bond) {
-				slashAmount = na.Bond
-			}
-
-			slashFloat, _ := new(big.Float).SetInt(slashAmount.BigInt()).Float32()
-			telemetry.IncrCounterWithLabels(
-				[]string{"thornode", "bond_slash"},
-				slashFloat,
-				[]metrics.Label{
-					telemetry.NewLabel("address", addr.String()),
-					telemetry.NewLabel("reason", "double_sign"),
-				},
-			)
-
-			na.Bond = common.SafeSub(na.Bond, slashAmount)
-			coin := common.NewCoin(common.RuneNative, slashAmount)
-			if err := s.keeper.SendFromModuleToModule(ctx, BondName, ReserveName, common.NewCoins(coin)); err != nil {
-				ctx.Logger().Error("fail to transfer funds from bond to reserve", "error", err)
-				return fmt.Errorf("fail to transfer funds from bond to reserve: %w", err)
-			}
-
-			return s.keeper.SetNodeAccount(ctx, na)
+		if na.Bond.IsZero() {
+			return fmt.Errorf("found account to slash for double signing, but did not have any bond to slash: %s", addr)
 		}
+		// take 5% of the minimum bond, and put it into the reserve
+		minBond, err := s.keeper.GetMimir(ctx, constants.MinimumBondInRune.String())
+		if minBond < 0 || err != nil {
+			minBond = constAccessor.GetInt64Value(constants.MinimumBondInRune)
+		}
+		slashAmount := cosmos.NewUint(uint64(minBond)).MulUint64(5).QuoUint64(100)
+		if slashAmount.GT(na.Bond) {
+			slashAmount = na.Bond
+		}
+
+		slashFloat, _ := new(big.Float).SetInt(slashAmount.BigInt()).Float32()
+		telemetry.IncrCounterWithLabels(
+			[]string{"thornode", "bond_slash"},
+			slashFloat,
+			[]metrics.Label{
+				telemetry.NewLabel("address", addr.String()),
+				telemetry.NewLabel("reason", "double_block_sign"),
+			},
+		)
+
+		na.Bond = common.SafeSub(na.Bond, slashAmount)
+		coin := common.NewCoin(common.RuneNative, slashAmount)
+		if err := s.keeper.SendFromModuleToModule(ctx, BondName, ReserveName, common.NewCoins(coin)); err != nil {
+			ctx.Logger().Error("fail to transfer funds from bond to reserve", "error", err)
+			return fmt.Errorf("fail to transfer funds from bond to reserve: %w", err)
+		}
+
+		return s.keeper.SetNodeAccount(ctx, na)
 	}
 
-	return fmt.Errorf("could not find node account with validator address: %s", addr)
+	return fmt.Errorf("could not find active node account with validator address: %s", addr)
+}
+
+// HandleMissingSign - slashes a validator for not signing a block
+func (s *SlasherVCUR) HandleMissingSign(ctx cosmos.Context, addr crypto.Address, constAccessor constants.ConstantValues, validatorAddresses []nodeAddressValidatorAddressPairVCUR) error {
+	missBlockSignSlashPoints := s.keeper.GetConfigInt64(ctx, constants.MissBlockSignSlashPoints)
+
+	for _, pair := range validatorAddresses {
+		if addr.String() != pair.validatorAddress.String() {
+			continue
+		}
+
+		na, err := s.keeper.GetNodeAccount(ctx, pair.nodeAddress)
+		if err != nil {
+			return err
+		}
+
+		slashCtx := ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
+			telemetry.NewLabel("address", na.NodeAddress.String()),
+			telemetry.NewLabel("reason", "miss_block_sign"),
+		}))
+		if err := s.keeper.IncNodeAccountSlashPoints(slashCtx, na.NodeAddress, missBlockSignSlashPoints); err != nil {
+			ctx.Logger().Error("fail to increase node account slash points", "error", err, "address", na.NodeAddress.String())
+		}
+
+		return s.keeper.SetNodeAccount(ctx, na)
+	}
+
+	return fmt.Errorf("could not find active node account with validator address: %s", addr)
 }
 
 // LackObserving Slash node accounts that didn't observe a single inbound txn
@@ -220,10 +297,8 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 			// Slash node account for not sending funds
 			vault, err := s.keeper.GetVault(ctx, tx.VaultPubKey)
 			if err != nil {
-				// in some edge cases, when a txout item had been schedule to be send out by an yggdrasil vault
-				// however the node operator decide to quit by sending a leave command, which will result in the vault get removed
-				// if that happen , txout item should be scheduled to send out using asgard, thus when if fail to get vault , just
-				// log the error, and continue
+				// in some edge cases the vault may no longer exists, in which
+				// case log and continue with rescheduling
 				ctx.Logger().Error("Unable to get vault", "error", err, "vault pub key", tx.VaultPubKey.String())
 			}
 
@@ -250,31 +325,6 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 						ctx.Logger().Error("fail to emit security event", "error", err)
 					}
 					continue // skip this transaction
-				}
-			}
-
-			// slash if its a yggdrasil vault, and the chain isn't halted
-			if vault.IsYggdrasil() && !mgr.Keeper().IsChainHalted(ctx, tx.Chain) {
-				na, err := s.keeper.GetNodeAccountByPubKey(ctx, tx.VaultPubKey)
-				if err != nil {
-					ctx.Logger().Error("Unable to get node account", "error", err, "vault pub key", tx.VaultPubKey.String())
-					continue
-				}
-				slashPoints := signingTransPeriod * 2
-
-				slashCtx := ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
-					telemetry.NewLabel("reason", "not_signing"),
-				}))
-				if err := s.keeper.IncNodeAccountSlashPoints(slashCtx, na.NodeAddress, slashPoints); err != nil {
-					ctx.Logger().Error("fail to inc slash points", "error", err, "node addr", na.NodeAddress.String())
-				}
-				if err := mgr.EventMgr().EmitEvent(ctx, NewEventSlashPoint(na.NodeAddress, slashPoints, fmt.Sprintf("fail to sign out tx after %d blocks", signingTransPeriod))); err != nil {
-					ctx.Logger().Error("fail to emit slash point event")
-				}
-				releaseHeight := ctx.BlockHeight() + (signingTransPeriod * 2)
-				reason := "fail to send yggdrasil transaction"
-				if err := s.keeper.SetNodeAccountJail(ctx, na.NodeAddress, releaseHeight, reason); err != nil {
-					ctx.Logger().Error("fail to set node account jail", "node address", na.NodeAddress, "reason", reason, "error", err)
 				}
 			}
 
@@ -342,15 +392,6 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 					// vault becomes unavailable, the network will reschedule the
 					// transaction on a different asgard vault.
 					age := ctx.BlockHeight() - voter.FinalisedHeight
-					if vault.IsYggdrasil() {
-						// since the last attempt was a yggdrasil vault, lets
-						// artificially inflate the age to ensure that the first
-						// attempt is the largest asgard vault with funds
-						age -= signingTransPeriod
-						if age < 0 {
-							age = 0
-						}
-					}
 					rep := int(age / signingTransPeriod)
 					if vault.PubKey.Equals(available[rep%len(available)].PubKey) {
 						// looks like the new vault is going to be the same as the
@@ -444,7 +485,7 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 }
 
 // SlashVault thorchain keep monitoring the outbound tx from asgard pool
-// and yggdrasil pool, usually the txout is triggered by thorchain itself by
+// usually the txout is triggered by thorchain itself by
 // adding an item into the txout array, refer to TxOutItem for the detail, the
 // TxOutItem contains a specific coin and amount.  if somehow thorchain
 // discover signer send out fund more than the amount specified in TxOutItem,
@@ -509,16 +550,10 @@ func (s *SlasherVCUR) SlashVault(ctx cosmos.Context, vaultPK common.PubKey, coin
 		totalRuneSlashed := cosmos.ZeroUint()
 		pauseOnSlashThreshold := mgr.Keeper().GetConfigInt64(ctx, constants.PauseOnSlashThreshold)
 		if pauseOnSlashThreshold > 0 && totalRuneToSlash.GTE(cosmos.NewUint(uint64(pauseOnSlashThreshold))) {
-			// set mimirs to pause the chain and ygg funding
-			s.keeper.SetMimir(ctx, constants.StopFundYggdrasil.String(), ctx.BlockHeight())
-			mimirEvent := NewEventSetMimir(strings.ToUpper(constants.StopFundYggdrasil.String()), strconv.FormatInt(ctx.BlockHeight(), 10))
-			if err := mgr.EventMgr().EmitEvent(ctx, mimirEvent); err != nil {
-				ctx.Logger().Error("fail to emit set_mimir event", "error", err)
-			}
-
+			// set mimirs to pause the chain
 			key := fmt.Sprintf("Halt%sChain", coin.Asset.Chain)
 			s.keeper.SetMimir(ctx, key, ctx.BlockHeight())
-			mimirEvent = NewEventSetMimir(strings.ToUpper(key), strconv.FormatInt(ctx.BlockHeight(), 10))
+			mimirEvent := NewEventSetMimir(strings.ToUpper(key), strconv.FormatInt(ctx.BlockHeight(), 10))
 			if err := mgr.EventMgr().EmitEvent(ctx, mimirEvent); err != nil {
 				ctx.Logger().Error("fail to emit set_mimir event", "error", err)
 			}
@@ -600,43 +635,6 @@ func (s SlasherVCUR) slashAndUpdateNodeAccount(ctx cosmos.Context, na types.Node
 			telemetry.NewLabel("vault_status", vault.Status.String()),
 		),
 	)
-
-	// Ban the node account. Ensure we don't ban more than 1/3rd of any
-	// given active or retiring vault
-	if vault.IsYggdrasil() {
-		// TODO: temporally disabling banning for the theft of funds. This
-		// is to give the code time to prove itself reliable before the it
-		// starts booting nodes out of the system
-		toBan := false // TODO flip this to true
-		if na.Bond.IsZero() {
-			toBan = true
-		}
-		for _, vaultPk := range na.GetSignerMembership() {
-			vault, err := s.keeper.GetVault(ctx, vaultPk)
-			if err != nil {
-				ctx.Logger().Error("fail to get vault", "error", err)
-				continue
-			}
-			if !(vault.Status == ActiveVault || vault.Status == RetiringVault) {
-				continue
-			}
-			activeMembers := 0
-			for _, pk := range vault.GetMembership() {
-				member, _ := s.keeper.GetNodeAccountByPubKey(ctx, pk)
-				if member.Status == NodeActive {
-					activeMembers++
-				}
-			}
-			if !HasSuperMajority(activeMembers, len(vault.GetMembership())) {
-				toBan = false
-				break
-			}
-		}
-		if toBan {
-			na.ForcedToLeave = true
-			na.LeaveScore = 1 // Set Leave Score to 1, which means the nodes is bad
-		}
-	}
 
 	if err := s.keeper.SetNodeAccount(ctx, na); err != nil {
 		ctx.Logger().Error("fail to save node account for slash", "error", err)

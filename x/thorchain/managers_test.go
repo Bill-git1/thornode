@@ -54,9 +54,4 @@ func (ManagersTestSuite) TestManagers(c *C) {
 	c.Assert(slasher, IsNil)
 	c.Assert(err, NotNil)
 	c.Assert(errors.Is(err, errInvalidVersion), Equals, true)
-
-	yggMgr, err := GetYggManager(ver, mgr.Keeper())
-	c.Assert(yggMgr, IsNil)
-	c.Assert(err, NotNil)
-	c.Assert(errors.Is(err, errInvalidVersion), Equals, true)
 }

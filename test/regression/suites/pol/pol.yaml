@@ -6,7 +6,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: btc pool should exist
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .|length == 1
@@ -118,7 +117,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: move less than 1 basis point should floor at 1 basis point withdrawal
 endpoint: http://localhost:1317/thorchain/pol
 asserts:
   - .current_deposit|tonumber == 102610310221
@@ -134,7 +132,6 @@ type: create-blocks
 count: 2
 ---
 type: check
-description: large move should withdraw the remainder of the position
 endpoint: http://localhost:1317/thorchain/pol
 asserts:
   - .current_deposit|tonumber == 26302140331

@@ -205,8 +205,15 @@ type KeeperLiquidityFees interface {
 type KeeperSwapSlip interface {
 	AddToSwapSlip(ctx cosmos.Context, asset common.Asset, amt cosmos.Int) error
 	RollupSwapSlip(ctx cosmos.Context, blockCount int64, _ common.Asset) (cosmos.Int, error)
+	GetCurrentRollup(ctx cosmos.Context, asset common.Asset) (int64, error)
+	SetCurrentRollup(ctx cosmos.Context, asset common.Asset, val int64)
+	GetLongRollup(ctx cosmos.Context, asset common.Asset) (int64, error)
+	SetLongRollup(ctx cosmos.Context, asset common.Asset, slip int64)
 	GetPoolSwapSlip(ctx cosmos.Context, height int64, asset common.Asset) (cosmos.Int, error)
 	DeletePoolSwapSlip(ctx cosmos.Context, height int64, asset common.Asset)
+	GetSwapSlipSnapShot(ctx cosmos.Context, asset common.Asset, height int64) (int64, error)
+	SetSwapSlipSnapShot(ctx cosmos.Context, asset common.Asset, height, currRollup int64)
+	GetSwapSlipSnapShotIterator(ctx cosmos.Context, asset common.Asset) cosmos.Iterator
 }
 
 type KeeperVault interface {
@@ -219,6 +226,7 @@ type KeeperVault interface {
 	GetAsgardVaultsByStatus(_ cosmos.Context, _ VaultStatus) (Vaults, error)
 	GetLeastSecure(_ cosmos.Context, _ Vaults, _ int64) Vault
 	GetMostSecure(_ cosmos.Context, _ Vaults, _ int64) Vault
+	GetMostSecureStrict(_ cosmos.Context, _ Vaults, _ int64) Vault
 	SortBySecurity(_ cosmos.Context, _ Vaults, _ int64) Vaults
 	DeleteVault(ctx cosmos.Context, pk common.PubKey) error
 	RemoveFromAsgardIndex(ctx cosmos.Context, pubkey common.PubKey) error
@@ -371,6 +379,7 @@ type KeeperAnchors interface {
 	GetAnchors(ctx cosmos.Context, asset common.Asset) []common.Asset
 	AnchorMedian(ctx cosmos.Context, assets []common.Asset) cosmos.Uint
 	DollarsPerRune(ctx cosmos.Context) cosmos.Uint
+	RunePerDollar(ctx cosmos.Context) cosmos.Uint
 	DollarInRune(ctx cosmos.Context) cosmos.Uint // TODO: remove me on hard fork
 }
 

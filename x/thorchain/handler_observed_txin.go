@@ -70,6 +70,8 @@ func (h ObservedTxInHandler) validateV1(ctx cosmos.Context, msg MsgObservedTxIn)
 func (h ObservedTxInHandler) handle(ctx cosmos.Context, msg MsgObservedTxIn) (*cosmos.Result, error) {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.124.0")):
+		return h.handleV124(ctx, msg)
 	case version.GTE(semver.MustParse("1.116.0")):
 		return h.handleV116(ctx, msg)
 	case version.GTE(semver.MustParse("1.113.0")):
@@ -89,6 +91,8 @@ func (h ObservedTxInHandler) handle(ctx cosmos.Context, msg MsgObservedTxIn) (*c
 func (h ObservedTxInHandler) preflight(ctx cosmos.Context, voter ObservedTxVoter, nas NodeAccounts, tx ObservedTx, signer cosmos.AccAddress) (ObservedTxVoter, bool) {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.123.0")):
+		return h.preflightV123(ctx, voter, nas, tx, signer)
 	case version.GTE(semver.MustParse("1.119.0")):
 		return h.preflightV119(ctx, voter, nas, tx, signer)
 	case version.GTE(semver.MustParse("1.116.0")):
@@ -98,9 +102,9 @@ func (h ObservedTxInHandler) preflight(ctx cosmos.Context, voter ObservedTxVoter
 	}
 }
 
-func (h ObservedTxInHandler) preflightV119(ctx cosmos.Context, voter ObservedTxVoter, nas NodeAccounts, tx ObservedTx, signer cosmos.AccAddress) (ObservedTxVoter, bool) {
+func (h ObservedTxInHandler) preflightV123(ctx cosmos.Context, voter ObservedTxVoter, nas NodeAccounts, tx ObservedTx, signer cosmos.AccAddress) (ObservedTxVoter, bool) {
 	observeSlashPoints := h.mgr.GetConstants().GetInt64Value(constants.ObserveSlashPoints)
-	observeFlex := h.mgr.GetConstants().GetInt64Value(constants.ObservationDelayFlexibility)
+	observeFlex := h.mgr.Keeper().GetConfigInt64(ctx, constants.ObservationDelayFlexibility)
 
 	slashCtx := ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
 		telemetry.NewLabel("reason", "failed_observe_txin"),
@@ -151,7 +155,7 @@ func (h ObservedTxInHandler) preflightV119(ctx cosmos.Context, voter ObservedTxV
 	return voter, ok
 }
 
-func (h ObservedTxInHandler) handleV116(ctx cosmos.Context, msg MsgObservedTxIn) (*cosmos.Result, error) {
+func (h ObservedTxInHandler) handleV124(ctx cosmos.Context, msg MsgObservedTxIn) (*cosmos.Result, error) {
 	activeNodeAccounts, err := h.mgr.Keeper().ListActiveValidators(ctx)
 	if err != nil {
 		return nil, wrapError(ctx, err, "fail to get list of active node accounts")
@@ -209,23 +213,6 @@ func (h ObservedTxInHandler) handleV116(ctx cosmos.Context, msg MsgObservedTxIn)
 			vault.InboundTxCount++
 		}
 
-		memo, _ := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), tx.Tx.Memo) // ignore err
-		if vault.IsYggdrasil() && memo.IsType(TxYggdrasilFund) {
-			// only add the fund to yggdrasil vault when the memo is yggdrasil+
-			// no one should send fund to yggdrasil vault , if somehow scammer / airdrop send fund to yggdrasil vault
-			// those will be ignored
-			// also only asgard will send fund to yggdrasil , thus doesn't need to have confirmation counting
-			fromAsgard, err := h.isFromAsgard(ctx, tx)
-			if err != nil {
-				ctx.Logger().Error("fail to determinate whether fund is from asgard or not, let's assume it is not", "error", err)
-			}
-			// make sure only funds replenished from asgard will be added to vault
-			if !voter.UpdatedVault && fromAsgard {
-				vault.AddFunds(tx.Tx.Coins)
-				voter.UpdatedVault = true
-			}
-			vault.RemovePendingTxBlockHeights(memo.GetBlockHeight())
-		}
 		// save the changes in Tx Voter to key value store
 		h.mgr.Keeper().SetObservedTxInVoter(ctx, voter)
 		if err := h.mgr.Keeper().SetVault(ctx, vault); err != nil {
@@ -238,6 +225,7 @@ func (h ObservedTxInHandler) handleV116(ctx cosmos.Context, msg MsgObservedTxIn)
 			continue
 		}
 
+		memo, _ := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), tx.Tx.Memo) // ignore err
 		if memo.IsOutbound() || memo.IsInternal() {
 			// do not process outbound handlers here, or internal handlers
 			continue
@@ -433,7 +421,8 @@ func (h ObservedTxInHandler) addSwapDirectV116(ctx cosmos.Context, msg MsgSwap) 
 			// so trigger the preferred asset swap
 			ofRune := h.mgr.GasMgr().GetFee(ctx, affThorname.PreferredAsset.GetChain(), common.RuneNative)
 			multiplier := h.mgr.Keeper().GetConfigInt64(ctx, constants.PreferredAssetOutboundFeeMultiplier)
-			if affcol.RuneAmount.GT(ofRune.Mul(cosmos.NewUint(uint64(multiplier)))) {
+			threshold := ofRune.Mul(cosmos.NewUint(uint64(multiplier)))
+			if affcol.RuneAmount.GT(threshold) {
 				if err = triggerPreferredAssetSwap(ctx, h.mgr, msg.AffiliateAddress, msg.Tx.ID, *affThorname, affcol, 2); err != nil {
 					ctx.Logger().Error("fail to swap to preferred asset", "thorname", affThorname.Name, "err", err)
 				}

@@ -147,6 +147,8 @@ services:
       BIFROST_METRICS_PPROF_ENABLED: "true"
       BIFROST_SIGNER_BACKUP_KEYSHARES: "true"
       BIFROST_SIGNER_AUTO_OBSERVE: "false"
+      BIFROST_SIGNER_KEYGEN_TIMEOUT: 30s
+      BIFROST_SIGNER_KEYSIGN_TIMEOUT: 30s
       BIFROST_CHAINS_AVAX_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS: "5"
       BIFROST_CHAINS_BCH_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS: "5"
       BIFROST_CHAINS_BNB_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS: "5"
@@ -171,6 +173,8 @@ services:
 
       # use new utxo client for doge
       BIFROST_CHAINS_DOGE_UTXO_CLIENT_V2: "true"
+      BIFROST_CHAINS_BCH_UTXO_CLIENT_V2: "true"
+      BIFROST_CHAINS_LTC_UTXO_CLIENT_V2: "true"
 
     ports:
       - 5040:5040
@@ -385,7 +389,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: registry.gitlab.com/thorchain/devops/node-launcher:gaia-daemon-10.0.2
+    image: registry.gitlab.com/thorchain/devops/node-launcher:gaia-daemon-13.0.0
     volumes:
       - "./mocknet:/mocknet"
     environment:
@@ -403,7 +407,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: registry.gitlab.com/thorchain/devops/node-launcher:bitcoin-daemon-25.0
+    image: registry.gitlab.com/thorchain/devops/node-launcher:bitcoin-daemon-25.1
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-1}
@@ -449,7 +453,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: ethereum/client-go:v1.12.0
+    image: ethereum/client-go:v1.13.4
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-5}
@@ -467,7 +471,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: registry.gitlab.com/thorchain/devops/node-launcher:binance-smart-daemon-1.2.10
+    image: registry.gitlab.com/thorchain/devops/node-launcher:binance-smart-daemon-1.2.12
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-5}
@@ -500,15 +504,15 @@ services:
       - mocknet
       - mocknet-cluster
     restart: unless-stopped
-    image: registry.gitlab.com/thorchain/devops/node-launcher:avalanche-daemon-1.10.7
+    image: registry.gitlab.com/thorchain/devops/node-launcher:avalanche-daemon-1.10.13
     volumes:
       - "./mocknet/avax:/mocknet"
     command:
       - ./avalanchego
       - --network-id=local
-      - --staking-enabled=false
-      - --http-host=
+      - --http-host=0.0.0.0
       - --chain-config-dir=/mocknet/configs
+      - --http-allowed-hosts=*
     ports:
       - 9650:9650
     environment:

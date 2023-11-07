@@ -66,8 +66,9 @@ func (c *Client) GetBlockCount() (int64, error) {
 	return count, extractBTCError(err)
 }
 
-// SendRawTransaction serializes and sends the transaction.
-func (c *Client) SendRawTransaction(tx SerializableTx) (string, error) {
+// SendRawTransaction serializes and sends the transaction. The maxFeeParam differs in
+// type between chains - ensure the correct variant is used.
+func (c *Client) SendRawTransaction(tx SerializableTx, maxFeeParam any) (string, error) {
 	txHex := ""
 	if tx != nil {
 		buf := bytes.NewBuffer(make([]byte, 0, tx.SerializeSize()))
@@ -77,12 +78,7 @@ func (c *Client) SendRawTransaction(tx SerializableTx) (string, error) {
 		txHex = hex.EncodeToString(buf.Bytes())
 	}
 
-	args := []interface{}{txHex}
-	if c.version > 19 {
-		args = append(args, 0)
-	} else {
-		args = append(args, false)
-	}
+	args := []interface{}{txHex, maxFeeParam}
 
 	var txid string
 	err := c.c.Call(&txid, "sendrawtransaction", args...)
@@ -97,7 +93,7 @@ func (c *Client) GetBlockHash(height int64) (string, error) {
 }
 
 // GetBlockVerbose returns information about the block with verbosity 2.
-func (c *Client) GetBlockVerboseTxs(hash string, verbosity int) (*btcjson.GetBlockVerboseTxResult, error) {
+func (c *Client) GetBlockVerboseTxs(hash string) (*btcjson.GetBlockVerboseTxResult, error) {
 	var block btcjson.GetBlockVerboseTxResult
 	err := c.c.Call(&block, "getblock", hash, 2)
 	return &block, extractBTCError(err)
@@ -118,10 +114,10 @@ func (c *Client) GetBlockVerbose(hash string) (*btcjson.GetBlockVerboseResult, e
 	return &block, extractBTCError(err)
 }
 
-// GetBlockStats returns statistics about the block at the given height.
-func (c *Client) GetBlockStats(height int64) (*btcjson.GetBlockStatsResult, error) {
+// GetBlockStats returns statistics about the block at the given hash.
+func (c *Client) GetBlockStats(hash string) (*btcjson.GetBlockStatsResult, error) {
 	var stats btcjson.GetBlockStatsResult
-	err := c.c.Call(&stats, "getblockstats", height)
+	err := c.c.Call(&stats, "getblockstats", hash)
 	return &stats, extractBTCError(err)
 }
 
@@ -252,6 +248,11 @@ func (c *Client) GetNetworkInfo() (*btcjson.GetNetworkInfoResult, error) {
 	var info btcjson.GetNetworkInfoResult
 	err := c.c.Call(&info, "getnetworkinfo")
 	return &info, extractBTCError(err)
+}
+
+func (c *Client) Call(result interface{}, method string, args ...interface{}) error {
+	err := c.c.Call(&result, method, args...)
+	return extractBTCError(err)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////

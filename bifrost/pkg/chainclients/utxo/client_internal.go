@@ -12,9 +12,12 @@ import (
 
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcutil"
+	bchtxscript "gitlab.com/thorchain/bifrost/bchd-txscript"
 	dogetxscript "gitlab.com/thorchain/bifrost/dogd-txscript"
+	ltctxscript "gitlab.com/thorchain/bifrost/ltcd-txscript"
 
 	btypes "gitlab.com/thorchain/thornode/bifrost/blockscanner/types"
+	"gitlab.com/thorchain/thornode/bifrost/metrics"
 	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/utxo"
 	"gitlab.com/thorchain/thornode/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/common"
@@ -221,6 +224,82 @@ func (c *Client) updateNetworkInfo() {
 	c.minRelayFeeSats = uint64(amt.ToUnit(btcutil.AmountSatoshi))
 }
 
+func (c *Client) sendNetworkFee(height int64) error {
+	// get block stats
+	var feeRate uint64
+	switch c.cfg.ChainID {
+	case common.BCHChain:
+		// BCH is a special case since the response uses floats
+		hash, err := c.rpc.GetBlockHash(height)
+		if err != nil {
+			return fmt.Errorf("fail to get block hash: %w", err)
+		}
+		type BlockStats struct {
+			AverageFeeRate float64 `json:"avgfeerate"`
+		}
+		var bs BlockStats
+		err = c.rpc.Call(&bs, "getblockstats", hash)
+		if err != nil {
+			return fmt.Errorf("fail to get block stats: %w", err)
+		}
+		feeRate = uint64(bs.AverageFeeRate * common.One)
+
+	case common.LTCChain:
+		hash, err := c.rpc.GetBlockHash(height)
+		if err != nil {
+			return fmt.Errorf("fail to get block hash: %w", err)
+		}
+		bs, err := c.rpc.GetBlockStats(hash)
+		if err != nil {
+			return fmt.Errorf("fail to get block stats: %w", err)
+		}
+		feeRate = uint64(bs.AverageFeeRate)
+
+	default:
+		c.log.Fatal().Msg("unsupported chain")
+	}
+
+	if feeRate == 0 {
+		return nil
+	}
+
+	if c.cfg.UTXO.EstimatedAverageTxSize*feeRate < c.minRelayFeeSats {
+		feeRate = c.minRelayFeeSats / c.cfg.UTXO.EstimatedAverageTxSize
+		if feeRate*c.cfg.UTXO.EstimatedAverageTxSize < c.minRelayFeeSats {
+			feeRate++
+		}
+	}
+	if feeRate < 2 {
+		feeRate = 2
+	}
+
+	// if gas cache blocks are set, use the max gas over that window
+	if c.cfg.BlockScanner.GasCacheBlocks > 0 {
+		c.feeRateCache = append(c.feeRateCache, feeRate)
+		if len(c.feeRateCache) > c.cfg.BlockScanner.GasCacheBlocks {
+			c.feeRateCache = c.feeRateCache[len(c.feeRateCache)-c.cfg.BlockScanner.GasCacheBlocks:]
+		}
+		for _, rate := range c.feeRateCache {
+			if rate > feeRate {
+				feeRate = rate
+			}
+		}
+	}
+
+	c.m.GetGauge(metrics.GasPrice(c.cfg.ChainID)).Set(float64(feeRate))
+	if c.lastFeeRate != feeRate {
+		c.m.GetCounter(metrics.GasPriceChange(c.cfg.ChainID)).Inc()
+	}
+
+	c.lastFeeRate = feeRate
+	txid, err := c.bridge.PostNetworkFee(height, c.cfg.ChainID, c.cfg.UTXO.EstimatedAverageTxSize, feeRate)
+	if err != nil {
+		return fmt.Errorf("fail to post network fee to thornode: %w", err)
+	}
+	c.log.Debug().Str("txid", txid.String()).Msg("send network fee to THORNode successfully")
+	return nil
+}
+
 // sendNetworkFeeFromBlock will send network fee to Thornode based on the block result,
 // for chains like Dogecoin which do not support the getblockstats RPC.
 func (c *Client) sendNetworkFeeFromBlock(blockResult *btcjson.GetBlockVerboseTxResult) error {
@@ -283,6 +362,12 @@ func (c *Client) getBlock(height int64) (*btcjson.GetBlockVerboseTxResult, error
 	switch c.cfg.ChainID {
 	case common.DOGEChain:
 		return c.getBlockWithoutVerbose(height)
+	case common.BCHChain, common.LTCChain:
+		hash, err := c.rpc.GetBlockHash(height)
+		if err != nil {
+			return &btcjson.GetBlockVerboseTxResult{}, err
+		}
+		return c.rpc.GetBlockVerboseTxs(hash)
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 		return nil, nil
@@ -396,6 +481,33 @@ func (c *Client) isValidUTXO(hexPubKey string) bool {
 		default:
 			return len(addresses) == 1 && requireSigs == 1
 		}
+	case common.BCHChain:
+		scriptType, addresses, requireSigs, err := bchtxscript.ExtractPkScriptAddrs(buf, c.getChainCfgBCH())
+		if err != nil {
+			c.log.Err(err).Msg("fail to extract pub key script")
+			return false
+		}
+		switch scriptType {
+		case bchtxscript.MultiSigTy:
+			return false
+
+		default:
+			return len(addresses) == 1 && requireSigs == 1
+		}
+
+	case common.LTCChain:
+		scriptType, addresses, requireSigs, err := ltctxscript.ExtractPkScriptAddrs(buf, c.getChainCfgLTC())
+		if err != nil {
+			c.log.Err(err).Msg("fail to extract pub key script")
+			return false
+		}
+		switch scriptType {
+		case ltctxscript.MultiSigTy:
+			return false
+		default:
+			return len(addresses) == 1 && requireSigs == 1
+		}
+
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 		return false
@@ -444,6 +556,12 @@ func (c *Client) getTxIn(tx *btcjson.TxRawResult, height int64, isMemPool bool) 
 		return types.TxInItem{}, fmt.Errorf("fail to get output from tx: %w", err)
 	}
 	toAddr := output.ScriptPubKey.Addresses[0]
+
+	// strip BCH address prefixes
+	if c.cfg.ChainID.Equals(common.BCHChain) {
+		toAddr = c.stripBCHAddress(toAddr)
+	}
+
 	if c.isAsgardAddress(toAddr) {
 		// only inbound UTXO need to be validated against multi-sig
 		if !c.isValidUTXO(output.ScriptPubKey.Hex) {
@@ -471,6 +589,15 @@ func (c *Client) getTxIn(tx *btcjson.TxRawResult, height int64, isMemPool bool) 
 		Memo: memo,
 		Gas:  gas,
 	}, nil
+}
+
+// stripBCHAddress removes prefix on bch addresses.
+func (c *Client) stripBCHAddress(addr string) string {
+	split := strings.Split(addr, ":")
+	if len(split) > 1 {
+		return split[1]
+	}
+	return split[0]
 }
 
 func (c *Client) extractTxs(block *btcjson.GetBlockVerboseTxResult) (types.TxIn, error) {
@@ -515,19 +642,9 @@ func (c *Client) extractTxs(block *btcjson.GetBlockVerboseTxResult) (types.TxIn,
 }
 
 // ignoreTx checks if we can already ignore a tx according to preset rules
-//
-// we expect array of "vout" to have this format
-// OP_RETURN is mandatory only on inbound tx
-// vout:0 is our vault
-// vout:1 is any any change back to themselves
-// vout:2 is OP_RETURN (first 80 bytes)
-// vout:3 is OP_RETURN (next 80 bytes)
-//
-// Rules to ignore a tx are:
-// - count vouts > 4
-// - count vouts with coins (value) > 2
+// Allow up to 10 Vouts with value and 2 OP_RETURN Vouts (for getMemo appending).
 func (c *Client) ignoreTx(tx *btcjson.TxRawResult, height int64) bool {
-	if len(tx.Vin) == 0 || len(tx.Vout) == 0 || len(tx.Vout) > 4 {
+	if len(tx.Vin) == 0 || len(tx.Vout) == 0 || len(tx.Vout) > 12 {
 		return true
 	}
 	if tx.Vin[0].Txid == "" {
@@ -539,14 +656,9 @@ func (c *Client) ignoreTx(tx *btcjson.TxRawResult, height int64) bool {
 		return true
 	}
 	countWithOutput := 0
-	for idx, vout := range tx.Vout {
+	for _, vout := range tx.Vout {
 		if vout.Value > 0 {
 			countWithOutput++
-		}
-		// check we have one address on the first 2 outputs
-		// TODO check what we do if get multiple addresses
-		if idx < 2 && vout.ScriptPubKey.Type != "nulldata" && len(vout.ScriptPubKey.Addresses) != 1 {
-			return true
 		}
 	}
 
@@ -554,8 +666,8 @@ func (c *Client) ignoreTx(tx *btcjson.TxRawResult, height int64) bool {
 	if countWithOutput == 0 {
 		return true
 	}
-	// there are more than two output with value in it, not THORChain format
-	if countWithOutput > 2 {
+	// there are more than ten outputs with value in them, not THORChain format
+	if countWithOutput > 10 {
 		return true
 	}
 	return false
@@ -563,26 +675,40 @@ func (c *Client) ignoreTx(tx *btcjson.TxRawResult, height int64) bool {
 
 // getOutput retrieve the correct output for both inbound
 // outbound tx.
-// logic is if FROM == TO then its an outbound change output
-// back to the vault and we need to select the other output
-// as Bifrost already filtered the txs to only have here
-// txs with max 2 outputs with values
+// logic is if sender is a vault then prefer the first Vout with value,
+// else prefer the first Vout with value that's to a vault
 // an exception need to be made for consolidate tx , because consolidate tx will be send from asgard back asgard itself
 func (c *Client) getOutput(sender string, tx *btcjson.TxRawResult, consolidate bool) (btcjson.Vout, error) {
+	isSenderAsgard := c.isAsgardAddress(sender)
 	for _, vout := range tx.Vout {
 		if strings.EqualFold(vout.ScriptPubKey.Type, "nulldata") {
 			continue
 		}
-		if len(vout.ScriptPubKey.Addresses) != 1 {
-			return btcjson.Vout{}, fmt.Errorf("no vout address available")
+		if vout.Value <= 0 {
+			continue
 		}
-		if vout.Value > 0 {
-			if consolidate && vout.ScriptPubKey.Addresses[0] == sender {
-				return vout, nil
-			}
-			if !consolidate && vout.ScriptPubKey.Addresses[0] != sender {
-				return vout, nil
-			}
+		if len(vout.ScriptPubKey.Addresses) != 1 {
+			// If more than one address, ignore this Vout.
+			// TODO check what we do if get multiple addresses
+			continue
+		}
+		receiver := vout.ScriptPubKey.Addresses[0]
+		if c.cfg.ChainID.Equals(common.BCHChain) {
+			receiver = c.stripBCHAddress(receiver)
+		}
+		// To be observed, either the sender or receiver must be an observed THORChain vault;
+		// if the sender is a vault then assume the first Vout is the output (and a later Vout could be change).
+		// If the sender isn't a vault, then do do not for instance
+		// return a change address Vout as the output if before the vault-inbound Vout.
+		if !isSenderAsgard && !c.isAsgardAddress(receiver) {
+			continue
+		}
+
+		if consolidate && receiver == sender {
+			return vout, nil
+		}
+		if !consolidate && receiver != sender {
+			return vout, nil
 		}
 	}
 	return btcjson.Vout{}, btypes.ErrFailOutputMatchCriteria
@@ -601,7 +727,11 @@ func (c *Client) getSender(tx *btcjson.TxRawResult) (string, error) {
 	if len(vout.ScriptPubKey.Addresses) == 0 {
 		return "", fmt.Errorf("no address available in vout")
 	}
-	return vout.ScriptPubKey.Addresses[0], nil
+	address := vout.ScriptPubKey.Addresses[0]
+	if c.cfg.ChainID.Equals(common.BCHChain) {
+		address = c.stripBCHAddress(address)
+	}
+	return address, nil
 }
 
 // getMemo returns memo for a btc tx, using vout OP_RETURN
@@ -621,6 +751,10 @@ func (c *Client) getMemo(tx *btcjson.TxRawResult) (string, error) {
 		switch c.cfg.ChainID {
 		case common.DOGEChain:
 			asm, err = dogetxscript.DisasmString(buf)
+		case common.BCHChain:
+			asm, err = bchtxscript.DisasmString(buf)
+		case common.LTCChain:
+			asm, err = ltctxscript.DisasmString(buf)
 		default:
 			c.log.Fatal().Msg("unsupported chain")
 		}
@@ -716,7 +850,7 @@ func (c *Client) getBlockRequiredConfirmation(txIn types.TxIn, height int64) (in
 // getVaultSignerLock , with consolidate UTXO process add into bifrost , there are two entry points for SignTx , one is from signer , signing the outbound tx
 // from state machine, the other one will be consolidate utxo process
 // this keep a lock per vault pubkey , the goal is each vault we only have one key sign in flight at a time, however different vault can do key sign in parallel
-// assume there are multiple asgards(A,B) , and local yggdrasil vault , when A is signing , B and local yggdrasil vault should be able to sign as well
+// assume there are multiple asgards(A,B), when A is signing, B should be able to sign as well
 // however if A already has a key sign in flight , bifrost should not kick off another key sign in parallel, otherwise we might double spend some UTXOs
 func (c *Client) getVaultSignerLock(vaultPubKey string) *sync.Mutex {
 	c.signerLock.Lock()

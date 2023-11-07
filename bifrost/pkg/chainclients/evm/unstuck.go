@@ -66,7 +66,10 @@ func (c *EVMClient) unstuckAction() {
 				Str("txid", item.Hash).
 				Str("vault", item.VaultPubKey).
 				Msg("failed to unstuck tx")
-			continue
+			// Break on error so that if a keysign fails from members getting out of sync
+			// (for multiple cancel transactions)
+			// all vault members will together next try to keysign the first item in the list.
+			break
 		}
 
 		// remove it

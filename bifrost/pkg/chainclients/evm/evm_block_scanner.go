@@ -454,7 +454,17 @@ func (e *EVMScanner) reportNetworkFee(height int64) {
 	feeDelta := new(big.Int).Sub(gasPrice, big.NewInt(int64(e.lastReportedGasPrice)))
 	feeDelta.Abs(feeDelta)
 	if e.lastReportedGasPrice != 0 && feeDelta.Cmp(big.NewInt(e.cfg.GasPriceResolution)) != 1 {
-		return
+		skip := true
+
+		// every 100 blocks send the fee if none is set
+		if height%100 == 0 {
+			hasNetworkFee, err := e.bridge.HasNetworkFee(e.cfg.ChainID)
+			skip = err != nil || hasNetworkFee
+		}
+
+		if skip {
+			return
+		}
 	}
 
 	// gas price to 1e8
@@ -596,7 +606,7 @@ func (e *EVMScanner) getTxInFromSmartContract(tx *etypes.Transaction, receipt *e
 // getTxInFromFailedTransaction when a transaction failed due to out of gas, this method
 // will check whether the transaction is an outbound it fake a txInItem if the failed
 // transaction is an outbound , and report it back to thornode, thus the gas fee can be
-// subsidised need to know that this will also cause the yggdrasil / asgard that send
+// subsidised need to know that this will also cause the vault that send
 // out the outbound to be slashed 1.5x gas it is for security purpose
 func (e *EVMScanner) getTxInFromFailedTransaction(tx *etypes.Transaction, receipt *etypes.Receipt) *stypes.TxInItem {
 	if receipt.Status == 1 {

@@ -43,6 +43,7 @@ Patch version, is backward compatible, usually changes only in bifrost
 
 1. Merge release branch e.g. `release-1.116.0` branch -> `stagenet` branch. Once the changes are pushed, the stagenet image should be created automatically by pipeline.
 1. Make sure `build-thornode` pipeline is successful, you should be able to see the docker image has been built and tagged successfully:
+
    ```logs
    Successfully built bbf5fe970c75
    stagenet: digest: sha256:8ec7a9c832ad13fc28d0af440b5cddfec8e21b4a311903ad92fe0cab0433faac
@@ -96,6 +97,7 @@ The `node-launcher` repo will require the `stagenet` digest hash (e.g. `8ec7a9c8
 
 1. Merge the release branch (e.g. `release-1.116.0` -> `mainnet`). Once the changes are pushed, the mainnet image should be created automatically by pipeline (e.g.: https://gitlab.com/thorchain/thornode/-/jobs/4682407839)
 1. Make sure `build-thornode` pipeline is successful, you should be able to see the docker image has been built and tagged successfully:
+
    ```logs
    Successfully built d92da6e9c460
    mainnet-1.116.0: digest: sha256:58df167b2c515a0cf4f4093ca27ca49d85cd1201801f9baa3ffcdafaaa138bcb

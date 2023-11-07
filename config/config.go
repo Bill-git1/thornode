@@ -262,6 +262,14 @@ func Init() {
 	if err := viper.Unmarshal(&config); err != nil {
 		log.Fatal().Err(err).Msg("failed to unmarshal config")
 	}
+
+	// dynamically set rpc listen address
+	if config.Thornode.Tendermint.RPC.ListenAddress == "" {
+		config.Thornode.Tendermint.RPC.ListenAddress = fmt.Sprintf("tcp://0.0.0.0:%d", rpcPort)
+	}
+	if config.Thornode.Tendermint.P2P.ListenAddress == "" {
+		config.Thornode.Tendermint.P2P.ListenAddress = fmt.Sprintf("tcp://0.0.0.0:%d", p2pPort)
+	}
 }
 
 func InitBifrost() {
@@ -281,7 +289,6 @@ func InitBifrost() {
 				Msg("chain failed validation")
 		}
 		// set shared backoff override
-		chain.BackOff = config.Bifrost.BackOff
 		chains[chain.ChainID] = chain
 	}
 	config.Bifrost.Chains = chains
@@ -330,14 +337,6 @@ func InitThornode(ctx context.Context) {
 	seedAddrs, tmSeeds := thornodeSeeds()
 	config.Thornode.Tendermint.P2P.Seeds = strings.Join(tmSeeds, ",")
 
-	// dynamically set rpc listen address
-	if config.Thornode.Tendermint.RPC.ListenAddress == "" {
-		config.Thornode.Tendermint.RPC.ListenAddress = fmt.Sprintf("tcp://0.0.0.0:%d", rpcPort)
-	}
-	if config.Thornode.Tendermint.P2P.ListenAddress == "" {
-		config.Thornode.Tendermint.P2P.ListenAddress = fmt.Sprintf("tcp://0.0.0.0:%d", p2pPort)
-	}
-
 	// set the Tendermint external address
 	if os.Getenv("EXTERNAL_IP") != "" {
 		config.Thornode.Tendermint.P2P.ExternalAddress = fmt.Sprintf("%s:%d", os.Getenv("EXTERNAL_IP"), p2pPort)
@@ -384,6 +383,11 @@ func InitThornode(ctx context.Context) {
 type Thornode struct {
 	// NodeRelayURL is the URL of the node relay service.
 	NodeRelayURL string `mapstructure:"node_relay_url"`
+
+	// VaultPubkeysCutoffBlocks is the max age in blocks for inactive vaults to be
+	// included in the vaults pubkeys response. Vaults older than this age will not be
+	// observed by bifrost.
+	VaultPubkeysCutoffBlocks int64 `mapstructure:"vault_pubkeys_cutoff_blocks"`
 
 	// LogFilter will drop logs matching the modules and messages when not in debug level.
 	LogFilter struct {
@@ -493,7 +497,6 @@ type Bifrost struct {
 	Metrics   BifrostMetricsConfiguration                `mapstructure:"metrics"`
 	Chains    map[common.Chain]BifrostChainConfiguration `mapstructure:"chains"`
 	TSS       BifrostTSSConfiguration                    `mapstructure:"tss"`
-	BackOff   BifrostBackOff                             `mapstructure:"back_off"`
 
 	ObserverLevelDB LevelDBOptions `mapstructure:"observer_leveldb"`
 }
@@ -542,6 +545,7 @@ type BifrostSignerConfiguration struct {
 	SignerDbPath    string                           `mapstructure:"signer_db_path"`
 	BlockScanner    BifrostBlockScannerConfiguration `mapstructure:"block_scanner"`
 	RetryInterval   time.Duration                    `mapstructure:"retry_interval"`
+
 	// RescheduleBufferBlocks is the number of blocks before reschedule we will stop
 	// attempting to sign and broadcast (for outbounds not in round 7 retry).
 	RescheduleBufferBlocks int64          `mapstructure:"reschedule_buffer_blocks"`
@@ -550,14 +554,13 @@ type BifrostSignerConfiguration struct {
 	// AutoObserve will automatically submit the observation for outbound transactions once
 	// they are signed - regardless of broadcast success.
 	AutoObserve bool `mapstructure:"auto_observe"`
-}
 
-type BifrostBackOff struct {
-	InitialInterval     time.Duration `mapstructure:"initial_interval"`
-	RandomizationFactor float64       `mapstructure:"randomization_factor"`
-	Multiplier          float64       `mapstructure:"multiplier"`
-	MaxInterval         time.Duration `mapstructure:"max_interval"`
-	MaxElapsedTime      time.Duration `mapstructure:"max_elapsed_time"`
+	// -------------------- tss timeouts --------------------
+
+	KeygenTimeout   time.Duration `mapstructure:"keygen_timeout"`
+	KeysignTimeout  time.Duration `mapstructure:"keysign_timeout"`
+	PartyTimeout    time.Duration `mapstructure:"party_timeout"`
+	PreParamTimeout time.Duration `mapstructure:"pre_param_timeout"`
 }
 
 type BifrostChainConfiguration struct {
@@ -576,7 +579,6 @@ type BifrostChainConfiguration struct {
 	Disabled            bool                             `mapstructure:"disabled"`
 	SolvencyBlocks      int64                            `mapstructure:"solvency_blocks"`
 	BlockScanner        BifrostBlockScannerConfiguration `mapstructure:"block_scanner"`
-	BackOff             BifrostBackOff                   `mapstructure:"back_off"`
 
 	// MemPoolTxIDCacheSize is the number of transaction ids to cache in memory. This
 	// prevents read on LevelDB which may hit disk for every transaction in the mempool in
@@ -689,6 +691,14 @@ type BifrostBlockScannerConfiguration struct {
 	// WhitelistTokens is the set of whitelisted token addresses. Inbounds for all other
 	// tokens are ignored.
 	WhitelistTokens []string `mapstructure:"whitelist_tokens"`
+
+	// MaxResumeBlockLag is the max duration to lag behind the latest current consensus
+	// inbound height upon startup. If there is a local scanner position we will start
+	// from that height up to this threshold. The local scanner height is compared to the
+	// height from the lastblock response, which contains the height of the latest
+	// consensus inbound. This is necessary to avoid a race, as there could be a consensus
+	// inbound after an outbound which has not reached consensus, causing double spend.
+	MaxResumeBlockLag time.Duration `mapstructure:"max_resume_block_lag"`
 }
 
 func (b *BifrostBlockScannerConfiguration) Validate() {
@@ -704,7 +714,6 @@ type BifrostClientConfiguration struct {
 	ChainHomeFolder string       `mapstructure:"chain_home_folder"`
 	SignerName      string       `mapstructure:"signer_name"`
 	SignerPasswd    string
-	BackOff         BifrostBackOff `mapstructure:"back_off"`
 }
 
 type BifrostMetricsConfiguration struct {

@@ -40,12 +40,8 @@ Before upgrade , make sure the network is healthy , all active nodes / standby n
 Replace `<CHAIN>` in each Mimir key with capitalized, shortened chain identifier (e.g. `ETH`, `AVAX`)
 
 1. Set admin mimir `ChurnInterval` -> `432000` to stop churn
-2. Set admin mimir `StopFundYggdrasil` -> `1` , to stop funding yggdrasil
-3. Set admin mimir `StopSolvencyCheck<CHAIN>` -> `1` to stop Solvency checker on `CHAIN`, this will make sure the migration fund will not cause solvency checker to halt the chain
-4. Set admin mimir `MimirRecallFund<CHAIN>` -> `1` , this will trigger the network to recall all yggdrasil funds on `CHAIN`
-5. Wait for a few minutes , until all yggdrasil vault return all the ERC20 tokens , Confirm that all yggdrasil vaults have return funds back by checking `/thorchain/vaults/yggdrasil` endpoint , make sure ERC20 token balance of all yggdrasil vaults are zero.
-6. Set admin mimir `MimirUpgradeContract<CHAIN>` -> `1` to update the router on yggdrasil vault , make sure router contract has been updated on all yggdrasil vaults
-7. Set admin mimir `ChurnInterval` -> `43200`
-8. Wait a churn to kick off , and make sure funds have been migrated from older router to new router. And vault retired successfully
-9. Set admin mimir `StopFundYggdrasil` -> `0` to start fund yggdrasil vaults again
-10. Set admin mimir `StopSolvencyCheck<CHAIN>` -> `0` to resume solvency checker on `CHAIN`
+2. Set admin mimir `StopSolvencyCheck<CHAIN>` -> `1` to stop Solvency checker on `CHAIN`, this will make sure the migration fund will not cause solvency checker to halt the chain
+3. Set admin mimir `MimirUpgradeContract<CHAIN>` -> `1` to update the router
+4. Set admin mimir `ChurnInterval` -> `43200`
+5. Wait a churn to kick off , and make sure funds have been migrated from older router to new router. And vault retired successfully
+6. Set admin mimir `StopSolvencyCheck<CHAIN>` -> `0` to resume solvency checker on `CHAIN`

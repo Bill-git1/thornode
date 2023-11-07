@@ -50,6 +50,7 @@ func getKeygenTypeFromString(t string) KeygenType {
 	switch {
 	case strings.EqualFold(t, "asgardKeygen"):
 		return KeygenType_AsgardKeygen
+	// TODO remove on hard fork
 	case strings.EqualFold(t, "yggdrasilKeygen"):
 		return KeygenType_YggdrasilKeygen
 	}

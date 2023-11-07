@@ -12,22 +12,12 @@ import (
 	"github.com/ethereum/go-ethereum/core/txpool"
 	etypes "github.com/ethereum/go-ethereum/core/types"
 
+	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/evm/types"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/constants"
 )
 
-type SignedTxItem struct {
-	Hash        string `json:"hash,omitempty"`
-	Height      int64  `json:"height,omitempty"`
-	VaultPubKey string `json:"vault_pub_key,omitempty"`
-}
-
 const TxWaitBlocks = 150
-
-// String implement fmt.Stringer
-func (st SignedTxItem) String() string {
-	return st.Hash
-}
 
 func (c *Client) unstuck() {
 	c.logger.Info().Msg("start ETH chain unstuck process")
@@ -67,7 +57,10 @@ func (c *Client) unstuckAction() {
 		}
 		if err := c.unstuckTx(item.VaultPubKey, item.Hash); err != nil {
 			c.logger.Err(err).Msgf("fail to unstuck tx with hash:%s vaultPubKey:%s", item.Hash, item.VaultPubKey)
-			continue
+			// Break on error so that if a keysign fails from members getting out of sync
+			// (for multiple cancel transactions)
+			// all vault members will together next try to keysign the first item in the list.
+			break
 		}
 		// remove it
 		if err := c.ethScanner.blockMetaAccessor.RemoveSignedTxItem(item.Hash); err != nil {
@@ -139,7 +132,7 @@ func (c *Client) unstuckTx(vaultPubKey, hash string) error {
 
 // AddSignedTxItem add the transaction to key value store
 func (c *Client) AddSignedTxItem(hash string, height int64, vaultPubKey string) error {
-	return c.ethScanner.blockMetaAccessor.AddSignedTxItem(SignedTxItem{
+	return c.ethScanner.blockMetaAccessor.AddSignedTxItem(types.SignedTxItem{
 		Hash:        hash,
 		Height:      height,
 		VaultPubKey: vaultPubKey,

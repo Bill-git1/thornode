@@ -23,7 +23,7 @@ const (
 	MaxAvailablePools
 	StagedPoolCost
 	PendingLiquidityAgeLimit
-	MinimumNodesForYggdrasil
+	MinimumNodesForYggdrasil // TODO remove on hard fork
 	MinimumNodesForBFT
 	DesiredValidatorSet
 	AsgardSize
@@ -31,6 +31,9 @@ const (
 	DerivedMinDepth
 	MaxAnchorSlip
 	MaxAnchorBlocks
+	DynamicMaxAnchorSlipBlocks
+	DynamicMaxAnchorTarget
+	DynamicMaxAnchorCalcInterval
 	ChurnInterval
 	ChurnRetryInterval
 	ValidatorsChangeWindow
@@ -54,10 +57,11 @@ const (
 	FailKeysignSlashPoints
 	LiquidityLockUpBlocks
 	ObserveSlashPoints
+	MissBlockSignSlashPoints
 	ObservationDelayFlexibility
-	StopFundYggdrasil
-	YggFundLimit
-	YggFundRetry
+	StopFundYggdrasil // TODO remove on hard fork
+	YggFundLimit      // TODO remove on hard fork
+	YggFundRetry      // TODO remove on hard fork
 	JailTimeKeygen
 	JailTimeKeysign
 	NodePauseChainBlocks
@@ -90,13 +94,14 @@ const (
 	StreamingSwapMaxLengthNative
 	MinCR
 	MaxCR
+	LoanStreamingSwapsInterval
 	PauseLoans
 	LoanRepaymentMaturity
 	LendingLever
 	PermittedSolvencyGap
 	NodeOperatorFee
 	ValidatorMaxRewardRatio
-	PoolDepthForYggFundingMin
+	PoolDepthForYggFundingMin // TODO remove on hard fork
 	MaxNodeToChurnOutForLowVersion
 	ChurnOutForLowVersionBlocks
 	POLMaxNetworkDeposit
@@ -124,6 +129,9 @@ const (
 	EnableUSDFees
 	PreferredAssetOutboundFeeMultiplier
 	FeeUSDRoundSignificantDigits
+	MigrationVaultSecurityBps
+	KeygenRetryInterval
+	SaversStreamingSwapsInterval
 )
 
 var nameToString = map[ConstantName]string{
@@ -140,9 +148,9 @@ var nameToString = map[ConstantName]string{
 	MaxAvailablePools:                   "MaxAvailablePools",
 	StagedPoolCost:                      "StagedPoolCost",
 	PendingLiquidityAgeLimit:            "PendingLiquidityAgeLimit",
-	KillSwitchStart:                     "KillSwitchStart",    // TODO remove on hard fork
-	KillSwitchDuration:                  "KillSwitchDuration", // TODO remove on hard fork
-	MinimumNodesForYggdrasil:            "MinimumNodesForYggdrasil",
+	KillSwitchStart:                     "KillSwitchStart",          // TODO remove on hard fork
+	KillSwitchDuration:                  "KillSwitchDuration",       // TODO remove on hard fork
+	MinimumNodesForYggdrasil:            "MinimumNodesForYggdrasil", // TODO remove on hard fork
 	MinimumNodesForBFT:                  "MinimumNodesForBFT",
 	DesiredValidatorSet:                 "DesiredValidatorSet",
 	AsgardSize:                          "AsgardSize",
@@ -150,6 +158,9 @@ var nameToString = map[ConstantName]string{
 	DerivedMinDepth:                     "DerivedMinDepth",
 	MaxAnchorSlip:                       "MaxAnchorSlip",
 	MaxAnchorBlocks:                     "MaxAnchorBlocks",
+	DynamicMaxAnchorSlipBlocks:          "DynamicMaxAnchorSlipBlocks",
+	DynamicMaxAnchorTarget:              "DynamicMaxAnchorTarget",
+	DynamicMaxAnchorCalcInterval:        "DynamicMaxAnchorCalcInterval",
 	ChurnInterval:                       "ChurnInterval",
 	ChurnRetryInterval:                  "ChurnRetryInterval",
 	ValidatorsChangeWindow:              "ValidatorsChangeWindow",
@@ -174,10 +185,11 @@ var nameToString = map[ConstantName]string{
 	FailKeysignSlashPoints:              "FailKeysignSlashPoints",
 	LiquidityLockUpBlocks:               "LiquidityLockUpBlocks",
 	ObserveSlashPoints:                  "ObserveSlashPoints",
+	MissBlockSignSlashPoints:            "MissBlockSignSlashPoints",
 	ObservationDelayFlexibility:         "ObservationDelayFlexibility",
-	StopFundYggdrasil:                   "StopFundYggdrasil",
-	YggFundLimit:                        "YggFundLimit",
-	YggFundRetry:                        "YggFundRetry",
+	StopFundYggdrasil:                   "StopFundYggdrasil", // TODO remove on hard fork
+	YggFundLimit:                        "YggFundLimit",      // TODO remove on hard fork
+	YggFundRetry:                        "YggFundRetry",      // TODO remove on hard fork
 	JailTimeKeygen:                      "JailTimeKeygen",
 	JailTimeKeysign:                     "JailTimeKeysign",
 	NodePauseChainBlocks:                "NodePauseChainBlocks",
@@ -208,7 +220,7 @@ var nameToString = map[ConstantName]string{
 	PermittedSolvencyGap:                "PermittedSolvencyGap",
 	ValidatorMaxRewardRatio:             "ValidatorMaxRewardRatio",
 	NodeOperatorFee:                     "NodeOperatorFee",
-	PoolDepthForYggFundingMin:           "PoolDepthForYggFundingMin",
+	PoolDepthForYggFundingMin:           "PoolDepthForYggFundingMin", // TODO remove on hard fork
 	MaxNodeToChurnOutForLowVersion:      "MaxNodeToChurnOutForLowVersion",
 	ChurnOutForLowVersionBlocks:         "ChurnOutForLowVersionBlocks",
 	SwapOutDexAggregationDisabled:       "SwapOutDexAggregationDisabled",
@@ -231,6 +243,7 @@ var nameToString = map[ConstantName]string{
 	StreamingSwapMaxLengthNative:        "StreamingSwapMaxLengthNative",
 	MinCR:                               "MinCR",
 	MaxCR:                               "MaxCR",
+	LoanStreamingSwapsInterval:          "LoanStreamingSwapsInterval",
 	PauseLoans:                          "PauseLoans",
 	LoanRepaymentMaturity:               "LoanRepaymentMaturity",
 	LendingLever:                        "LendingLever",
@@ -241,6 +254,9 @@ var nameToString = map[ConstantName]string{
 	EnableUSDFees:                       "EnableUSDFees",
 	PreferredAssetOutboundFeeMultiplier: "PreferredAssetOutboundFeeMultiplier",
 	FeeUSDRoundSignificantDigits:        "FeeUSDRoundSignificantDigits",
+	MigrationVaultSecurityBps:           "MigrationVaultSecurityBps",
+	KeygenRetryInterval:                 "KeygenRetryInterval",
+	SaversStreamingSwapsInterval:        "SaversStreamingSwapsInterval",
 }
 
 // String implement fmt.stringer

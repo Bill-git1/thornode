@@ -9,14 +9,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	cKeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"gitlab.com/thorchain/thornode/bifrost/metrics"
+	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/evm/types"
 	"gitlab.com/thorchain/thornode/bifrost/pubkeymanager"
 	"gitlab.com/thorchain/thornode/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/cmd"
-	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/config"
 	types2 "gitlab.com/thorchain/thornode/x/thorchain/types"
 	. "gopkg.in/check.v1"
@@ -40,23 +39,10 @@ func (s *UnstuckTestSuite) SetUpTest(c *C) {
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		switch req.RequestURI {
 		case thorclient.PubKeysEndpoint:
-			priKey, _ := s.thorKeys.GetPrivateKey()
-			tm, _ := codec.ToTmPubKeyInterface(priKey.PubKey())
-			pk, err := common.NewPubKeyFromCrypto(tm)
-			c.Assert(err, IsNil)
 			content, err := os.ReadFile("../../../../test/fixtures/endpoints/vaults/pubKeys.json")
 			c.Assert(err, IsNil)
 			var pubKeysVault types2.QueryVaultsPubKeys
 			c.Assert(json.Unmarshal(content, &pubKeysVault), IsNil)
-			pubKeysVault.Yggdrasil = append(pubKeysVault.Yggdrasil, types2.QueryVaultPubKeyContract{
-				PubKey: pk,
-				Routers: []types2.ChainContract{
-					{
-						Chain:  common.ETHChain,
-						Router: "0xE65e9d372F8cAcc7b6dfcd4af6507851Ed31bb44",
-					},
-				},
-			})
 			buf, err := json.MarshalIndent(pubKeysVault, "", "	")
 			c.Assert(err, IsNil)
 			_, err = rw.Write(buf)
@@ -192,12 +178,12 @@ func (s *UnstuckTestSuite) TestUnstuckProcess(c *C) {
 	txID1 := types2.GetRandomTxHash().String()
 	txID2 := types2.GetRandomTxHash().String()
 	// add some thing here
-	c.Assert(e.ethScanner.blockMetaAccessor.AddSignedTxItem(SignedTxItem{
+	c.Assert(e.ethScanner.blockMetaAccessor.AddSignedTxItem(types.SignedTxItem{
 		Hash:        txID1,
 		Height:      1022,
 		VaultPubKey: pubkey,
 	}), IsNil)
-	c.Assert(e.ethScanner.blockMetaAccessor.AddSignedTxItem(SignedTxItem{
+	c.Assert(e.ethScanner.blockMetaAccessor.AddSignedTxItem(types.SignedTxItem{
 		Hash:        txID2,
 		Height:      1024,
 		VaultPubKey: pubkey,
@@ -209,12 +195,12 @@ func (s *UnstuckTestSuite) TestUnstuckProcess(c *C) {
 	c.Assert(items, HasLen, 2)
 	c.Assert(e.ethScanner.blockMetaAccessor.RemoveSignedTxItem(txID1), IsNil)
 	c.Assert(e.ethScanner.blockMetaAccessor.RemoveSignedTxItem(txID2), IsNil)
-	c.Assert(e.ethScanner.blockMetaAccessor.AddSignedTxItem(SignedTxItem{
+	c.Assert(e.ethScanner.blockMetaAccessor.AddSignedTxItem(types.SignedTxItem{
 		Hash:        "0x88df016429689c079f3b2f6ad39fa052532c56795b733da78a91ebe6a713944b",
 		Height:      800,
 		VaultPubKey: pubkey,
 	}), IsNil)
-	c.Assert(e.ethScanner.blockMetaAccessor.AddSignedTxItem(SignedTxItem{
+	c.Assert(e.ethScanner.blockMetaAccessor.AddSignedTxItem(types.SignedTxItem{
 		Hash:        "0x96395fbdb39e33293999dc1a0a3b87c8a9e51185e177760d1482c2155bb35b87",
 		Height:      800,
 		VaultPubKey: pubkey,

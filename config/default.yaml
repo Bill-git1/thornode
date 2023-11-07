@@ -33,12 +33,6 @@ bifrost:
     chain_rpc: ""
     chain_home_folder: ""
     signer_name: ""
-  back_off:
-    initial_interval: 500ms
-    randomization_factor: 0.5
-    multiplier: 1.5
-    max_interval: 3m
-    max_elapsed_time: 168h
   signer:
     backup_keyshares: true
     signer_db_path: /var/data/bifrost/signer_db
@@ -58,6 +52,10 @@ bifrost:
       max_http_request_retry: "10"
     leveldb: *default-leveldb
     auto_observe: true
+    keygen_timeout: 5m
+    keysign_timeout: 1m
+    party_timeout: 30s
+    pre_param_timeout: 5m
   tss:
     rendezvous: asgard
     p2p_port: 5040
@@ -117,6 +115,7 @@ bifrost:
         max_gas_fee: 0
         gas_price_resolution: 0
         max_contract_gas: 0
+        max_resume_block_lag: 2h
 
       # the following defaults must be defined to override with environment
       chain_host: ""
@@ -126,12 +125,6 @@ bifrost:
       cosmos_grpc_tls: ""
       opt_to_retire: false
       solvency_blocks: 0
-      back_off:
-        initial_interval: 0
-        randomization_factor: 0
-        multiplier: 0
-        max_interval: 0
-        max_elapsed_time: 0
 
     bnb:
       <<: *default-chain
@@ -201,6 +194,7 @@ bifrost:
         <<: *default-block-scanner
         chain_id: DOGE
         gas_price_resolution: 500_000 # sats
+        gas_cache_blocks: 10
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
       utxo:
@@ -226,8 +220,15 @@ bifrost:
         <<: *default-block-scanner
         chain_id: LTC
         observation_flexibility_blocks: 3
+        gas_cache_blocks: 10
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
+      utxo:
+        <<: *utxo
+        block_cache_count: 600
+        version: 21
+        max_sats_per_vbyte: 9765 # backwards compatible with 1e8/10/1024
+        estimated_average_tx_size: 250
     bch:
       <<: *default-chain
       chain_id: BCH
@@ -237,6 +238,12 @@ bifrost:
         observation_flexibility_blocks: 3
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
+      utxo:
+        <<: *utxo
+        block_cache_count: 144
+        version: 26
+        max_sats_per_vbyte: 9765 # backwards compatible with 1e8/10/1024
+        estimated_average_tx_size: 1500
 
 ########################################################################################
 # Thor
@@ -244,6 +251,7 @@ bifrost:
 
 thor:
   node_relay_url: https://node-relay-bot.herokuapp.com
+  vault_pubkeys_cutoff_blocks: 1_000_000
 
   log_filter:
     modules:
@@ -269,7 +277,7 @@ thor:
       - c3613862c2608b3e861406ad02146f41cf5124e6@statesync-seed.ninerealms.com:27146
       - dbd1730bff1e8a21aad93bc6083209904d483185@statesync-seed-2.ninerealms.com:27146
   api:
-    limit_count: 60
+    limit_count: 180
     limit_duration: 1m
   cosmos:
     pruning: nothing

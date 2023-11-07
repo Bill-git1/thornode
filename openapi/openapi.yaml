@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: Thornode API
-  version: 1.120.1
+  version: 1.124.0
   contact:
     email: devs@thorchain.org
   description: Thornode REST API.
@@ -875,12 +875,6 @@ paths:
           type: integer
           format: int64
           example: 10
-      - name: from_address
-        in: query
-        description: the from address, required if the from asset is a synth
-        schema:
-          type: string
-          example: "thor1zupk5lmc84r2dh738a9g3zscavannjy3nzplwt"
       - name: tolerance_bps
         in: query
         description: the maximum basis points from the current feeless swap price to set the limit in the generated memo
@@ -1119,6 +1113,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InvariantsResponse"
+
+  # ------------------------------ block ------------------------------
+
+  /thorchain/block:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+    get:
+      description: Returns verbose details of the block.
+      operationId: block
+      tags:
+        - Block
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlockResponse"
 
 ########################################################################################
 # Components
@@ -1536,6 +1548,7 @@ components:
       type: object
       required:
         - coins
+        - status
         - routers
         - addresses
       properties:
@@ -1787,42 +1800,14 @@ components:
       properties:
         tx:
           $ref: "#/components/schemas/Tx"
-        status:
+        observed_pub_key:
           type: string
-          enum: ["done", "incomplete"]
-          example: "done"
-        out_hashes:
-          type: array
-          items:
-            type: string
-            example: "E17A0906E015F0C343691C18E475C8CB5F3F6C63F5BCDE0F3A341909763CC92B"
-        block_height:
-          type: integer
-          format: int64
-          example: 7581334
-          description: same as external_observed_height, to be deprecated in favour of external_observed_height
+          example: "thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe"
         external_observed_height:
           type: integer
           format: int64
           example: 7581334
           description: the block height on the external source chain when the transaction was observed, not provided if chain is THOR
-        signers:
-          type: array
-          items:
-            type: string
-            example: "thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5"
-        observed_pub_key:
-          type: string
-          example: "thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe"
-        keysign_ms:
-          type: integer
-          format: int64
-          example: 10000
-        finalise_height:
-          type: integer
-          format: int64
-          example: 7581334
-          description: same as external_confirmation_delay_height, to be deprecated in favour of external_confirmation_delay_height
         external_confirmation_delay_height:
           type: integer
           format: int64
@@ -1840,6 +1825,24 @@ components:
           type: string
           description: the aggregator target asset limit provided to transferOutAndCall
           example: "0x0a44986b70527154e9F4290eC14e5f0D1C861822"
+        signers:
+          type: array
+          items:
+            type: string
+            example: "thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5"
+        keysign_ms:
+          type: integer
+          format: int64
+          example: 10000
+        out_hashes:
+          type: array
+          items:
+            type: string
+            example: "E17A0906E015F0C343691C18E475C8CB5F3F6C63F5BCDE0F3A341909763CC92B"
+        status:
+          type: string
+          enum: ["done", "incomplete"]
+          example: "done"
 
     MsgSwap:
       type: object
@@ -2210,6 +2213,52 @@ components:
           format: int64
           description: total basis points in fees relative to amount out
 
+    BlockTx:
+      type: object
+      required:
+        - hash
+        - tx
+        - result
+      properties:
+        hash:
+          type: string
+          example: "223BF64D4A01074DC523A80E76B9BBC786C791FB0A1893AC5B14866356FCFD6C"
+        tx:
+          type: object
+          additionalProperties: true
+        result:
+          type: object
+          properties:
+            code:
+              type: integer
+              format: int64
+              example: 0
+            data:
+              type: string
+              example: ""
+            log:
+              type: string
+              example: "not enough gas"
+            info:
+              type: string
+              example: ""
+            gas_wanted:
+              type: string
+              example: "100"
+            gas_used:
+              type: string
+              example: "100"
+            events:
+              type: array
+              nullable: true
+              items:
+                type: object
+                additionalProperties:
+                  type: string
+            codespace:
+              type: string
+              example: "ibc"
+
     # ------------------------------ responses ------------------------------
 
     PoolResponse:
@@ -2569,6 +2618,8 @@ components:
         - native_tx_fee_rune
         - tns_register_fee_rune
         - tns_fee_per_block_rune
+        - rune_price_in_tor
+        - tor_price_in_rune
       properties:
         bond_reward_rune:
           type: string
@@ -2613,19 +2664,27 @@ components:
         native_outbound_fee_rune:
           type: string
           example: "100000000"
-          description: the outbound transaction fee in rune, converted from the NativeOutboundFeeUSD mimir
+          description: the outbound transaction fee in rune, converted from the NativeOutboundFeeUSD mimir (after USD fees are enabled)
         native_tx_fee_rune:
           type: string
           example: "100000000"
-          description: the native transaction fee in rune, converted from the NativeTransactionFeeUSD mimir
+          description: the native transaction fee in rune, converted from the NativeTransactionFeeUSD mimir (after USD fees are enabled)
         tns_register_fee_rune:
           type: string
           example: "1000000000"
-          description: the thorname register fee in rune, converted from the TNSRegisterFeeUSD mimir
+          description: the thorname register fee in rune, converted from the TNSRegisterFeeUSD mimir (after USD fees are enabled)
         tns_fee_per_block_rune:
           type: string
           example: "20"
-          description: the thorname fee per block in rune, converted from the TNSFeePerBlockUSD mimir
+          description: the thorname fee per block in rune, converted from the TNSFeePerBlockUSD mimir (after USD fees are enabled)
+        rune_price_in_tor:
+          type: string
+          example: "10"
+          description: the rune price in tor
+        tor_price_in_rune:
+          type: string
+          example: "10"
+          description: the tor price in rune
 
     POLResponse:
       type: object
@@ -2810,9 +2869,7 @@ components:
                 $ref: "#/components/schemas/TssMetric"
 
     ThornameResponse:
-      type: array
-      items:
-        $ref: "#/components/schemas/Thorname"
+      $ref: "#/components/schemas/Thorname"
 
     MimirResponse:
       type: object
@@ -2868,6 +2925,144 @@ components:
                 format: int64
               signer:
                 type: string
+
+    BlockResponse:
+      type: object
+      required:
+        - "id"
+        - "header"
+        - "begin_block_events"
+        - "end_block_events"
+        - "txs"
+      properties:
+        id:
+          type: object
+          required:
+            - "hash"
+            - "parts"
+          properties:
+            hash:
+              type: string
+              example: "112BC173FD838FB68EB43476816CD7B4C6661B6884A9E357B417EE957E1CF8F7"
+            parts:
+              type: object
+              required:
+                - "total"
+                - "hash"
+              properties:
+                total:
+                  type: integer
+                  format: int64
+                  example: 1
+                hash:
+                  type: string
+                  example: "38D4B26B5B725C4F13571EFE022C030390E4C33C8CF6F88EDD142EA769642DBD"
+        header:
+          type: object
+          required:
+            - "version"
+            - "chain_id"
+            - "height"
+            - "time"
+            - "last_block_id"
+            - "last_commit_hash"
+            - "data_hash"
+            - "validators_hash"
+            - "next_validators_hash"
+            - "consensus_hash"
+            - "app_hash"
+            - "last_results_hash"
+            - "evidence_hash"
+            - "proposer_address"
+          properties:
+            version:
+              required:
+                - "block"
+                - "app"
+              properties:
+                block:
+                  type: string
+                  example: "10"
+                app:
+                  type: string
+                  example: "0"
+              type: object
+            chain_id:
+              type: string
+              example: "cosmoshub-2"
+            height:
+              type: integer
+              format: int64
+              example: 123
+            time:
+              type: string
+              example: "2019-04-22T17:01:51.701356223Z"
+            last_block_id:
+              type: object
+              required:
+                - "hash"
+                - "parts"
+              properties:
+                hash:
+                  type: string
+                  example: "112BC173FD838FB68EB43476816CD7B4C6661B6884A9E357B417EE957E1CF8F7"
+                parts:
+                  type: object
+                  required:
+                    - "total"
+                    - "hash"
+                  properties:
+                    total:
+                      type: integer
+                      format: int64
+                      example: 1
+                    hash:
+                      type: string
+                      example: "38D4B26B5B725C4F13571EFE022C030390E4C33C8CF6F88EDD142EA769642DBD"
+            last_commit_hash:
+              type: string
+              example: "21B9BC845AD2CB2C4193CDD17BFC506F1EBE5A7402E84AD96E64171287A34812"
+            data_hash:
+              type: string
+              example: "970886F99E77ED0D60DA8FCE0447C2676E59F2F77302B0C4AA10E1D02F18EF73"
+            validators_hash:
+              type: string
+              example: "D658BFD100CA8025CFD3BECFE86194322731D387286FBD26E059115FD5F2BCA0"
+            next_validators_hash:
+              type: string
+              example: "D658BFD100CA8025CFD3BECFE86194322731D387286FBD26E059115FD5F2BCA0"
+            consensus_hash:
+              type: string
+              example: "0F2908883A105C793B74495EB7D6DF2EEA479ED7FC9349206A65CB0F9987A0B8"
+            app_hash:
+              type: string
+              example: "223BF64D4A01074DC523A80E76B9BBC786C791FB0A1893AC5B14866356FCFD6C"
+            last_results_hash:
+              type: string
+              example: ""
+            evidence_hash:
+              type: string
+              example: ""
+            proposer_address:
+              type: string
+              example: "D540AB022088612AC74B287D076DBFBC4A377A2E"
+        begin_block_events:
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
+        end_block_events:
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
+        txs:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/BlockTx"
 
     baseQuoteResponse:
       properties: &quote-properties

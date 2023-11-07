@@ -24,7 +24,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: only one of the sends with sequence 0 is valid
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances[]|select(.denom=="rune")|.amount|tonumber == 2500100000000
@@ -52,7 +51,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: both sends with unique sequence numbers should be valid
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances[]|select(.denom=="rune")|.amount|tonumber == 2500400000000

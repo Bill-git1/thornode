@@ -3,10 +3,25 @@
 ## Changelog
 
 - February 17, 2022: Initial commit
+- September 26, 2023: Add all Saver pools to PoL targets
 
 ## Status
 
-Proposed
+Implemented
+
+## Update Sep 23: Add All Saver Pools to PoL Targets
+
+Recently additional pools (stablecoins) were enabled for Saver positions, but PoL was not activated on those pools. The original Pol ADR was explicit in which pools would receive PoL, but it is not wise to have Saver Pools without PoL protection. This ADR amendment sets out that all Saver pools should receive PoL treatment.
+
+> PoL reduces dual-LP leverage and keeps Synth utilization away from Synth Caps. If synths exceed their caps, then the L1 pool has more synthetic counterparts than L1 assets, and becomes top-heavy. PoL adds L1 liquidity to prevent this.
+
+Going forward, any pool activated for Savers should also enable PoL.
+To sync the pools, the following should be set:
+
+- `POL-AVAX.USDC-0XB97EF9EF8734C71904D8002F8B6BC66DD9C48A6E` to `1`
+- `POL-BNB.BUSD-BD1` to `1`
+- `POL-ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48` to `1`
+- `POL-ETH.USDT-0XDAC17F958D2EE523A2206206994597C13D831EC7` to `1`
 
 ## Context
 

@@ -43,6 +43,13 @@ func LoadChains(thorKeys *thorclient.Keys,
 	failedChains := []common.Chain{}
 
 	loadChain := func(chain config.BifrostChainConfiguration) (ChainClient, error) {
+		if chain.UTXO.ClientV2 {
+			switch chain.ChainID {
+			case common.BCHChain, common.DOGEChain, common.LTCChain:
+				return utxo.NewClient(thorKeys, chain, server, thorchainBridge, m)
+			}
+		}
+
 		switch chain.ChainID {
 		case common.BNBChain:
 			return binance.NewBinance(thorKeys, chain, server, thorchainBridge, m)
@@ -59,11 +66,7 @@ func LoadChains(thorKeys *thorclient.Keys,
 		case common.LTCChain:
 			return litecoin.NewClient(thorKeys, chain, server, thorchainBridge, m)
 		case common.DOGEChain:
-			if chain.UTXO.ClientV2 {
-				return utxo.NewClient(thorKeys, chain, server, thorchainBridge, m)
-			} else {
-				return dogecoin.NewClient(thorKeys, chain, server, thorchainBridge, m)
-			}
+			return dogecoin.NewClient(thorKeys, chain, server, thorchainBridge, m)
 		default:
 			log.Fatal().Msgf("chain %s is not supported", chain.ChainID)
 			return nil, nil
@@ -101,10 +104,10 @@ func LoadChains(thorKeys *thorclient.Keys,
 		chains[chain.ChainID] = client
 	}
 
-	// watch failed chains and restart bifrost if any succeed init
+	// watch failed chains minutely and restart bifrost if any succeed init
 	if len(failedChains) > 0 {
 		go func() {
-			tick := time.NewTicker(config.GetBifrost().BackOff.MaxInterval)
+			tick := time.NewTicker(time.Minute)
 			for range tick.C {
 				for _, chain := range failedChains {
 					ccfg := cfg[chain]

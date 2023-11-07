@@ -2,26 +2,32 @@ package thorchain
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/rs/zerolog/log"
 	abci "github.com/tendermint/tendermint/abci/types"
+	tmhttp "github.com/tendermint/tendermint/rpc/client/http"
 
-	"gitlab.com/thorchain/tss/go-tss/conversion"
-
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/config"
 	"gitlab.com/thorchain/thornode/constants"
 	openapi "gitlab.com/thorchain/thornode/openapi/gen"
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 	q "gitlab.com/thorchain/thornode/x/thorchain/query"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
+	"gitlab.com/thorchain/tss/go-tss/conversion"
 )
 
 var (
@@ -31,7 +37,22 @@ var (
 			fmt.Sprintf("unknown thorchain query endpoint: %s", path[0]),
 		)
 	}
+	tendermintClient   *tmhttp.HTTP
+	initTendermintOnce = sync.Once{}
 )
+
+func initTendermint() {
+	// get tendermint port from config
+	portSplit := strings.Split(config.GetThornode().Tendermint.RPC.ListenAddress, ":")
+	port := portSplit[len(portSplit)-1]
+
+	// setup tendermint client
+	var err error
+	tendermintClient, err = tmhttp.New(fmt.Sprintf("tcp://localhost:%s", port), "/websocket")
+	if err != nil {
+		log.Fatal().Err(err).Msg("fail to create tendermint client")
+	}
+}
 
 // NewQuerier is the module level router for state queries
 func NewQuerier(mgr *Mgrs, kbs cosmos.KeybaseStore) cosmos.Querier {
@@ -96,7 +117,7 @@ func NewQuerier(mgr *Mgrs, kbs cosmos.KeybaseStore) cosmos.Querier {
 			return queryBalanceModule(ctx, path[1:], mgr)
 		case q.QueryVaultsAsgard.Key:
 			return queryAsgardVaults(ctx, mgr)
-		case q.QueryVaultsYggdrasil.Key:
+		case q.QueryVaultsYggdrasil.Key: // TODO remove on hard fork
 			return queryYggdrasilVaults(ctx, mgr)
 		case q.QueryVault.Key:
 			return queryVault(ctx, path[1:], mgr)
@@ -152,6 +173,8 @@ func NewQuerier(mgr *Mgrs, kbs cosmos.KeybaseStore) cosmos.Querier {
 			return queryInvariants(ctx, mgr)
 		case q.QueryInvariant.Key:
 			return queryInvariant(ctx, path[1:], mgr)
+		case q.QueryBlock.Key:
+			return queryBlock(ctx, mgr)
 		default:
 			return optionalQuery(ctx, path, req, mgr)
 		}
@@ -368,6 +391,7 @@ func getVaultChainAddress(ctx cosmos.Context, vault Vault) []QueryChainAddress {
 	return result
 }
 
+// TODO remove on hard fork
 func queryYggdrasilVaults(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 	vaults := make(Vaults, 0)
 	iter := mgr.Keeper().GetVaultIterator(ctx)
@@ -433,7 +457,7 @@ func queryYggdrasilVaults(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 func queryVaultsPubkeys(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 	var resp QueryVaultsPubKeys
 	resp.Asgard = make([]QueryVaultPubKeyContract, 0)
-	resp.Yggdrasil = make([]QueryVaultPubKeyContract, 0)
+	resp.Yggdrasil = make([]QueryVaultPubKeyContract, 0) // TODO remove on hard fork
 	resp.Inactive = make([]QueryVaultPubKeyContract, 0)
 	iter := mgr.Keeper().GetVaultIterator(ctx)
 
@@ -441,9 +465,7 @@ func queryVaultsPubkeys(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	// usually ChurnInterval is 43200, sometimes when the network has issues , we 10x this value ,
-	// so if the inactive vault is older than 500_000 blocks , should not be monitored
-	cutOffAge := ctx.BlockHeight() - 500000
+	cutOffAge := ctx.BlockHeight() - config.GetThornode().VaultPubkeysCutoffBlocks
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var vault Vault
@@ -451,7 +473,7 @@ func queryVaultsPubkeys(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 			ctx.Logger().Error("fail to unmarshal vault", "error", err)
 			return nil, fmt.Errorf("fail to unmarshal vault: %w", err)
 		}
-		if vault.IsYggdrasil() {
+		if vault.IsYggdrasil() { // TODO remove ygg on hard fork
 			na, err := mgr.Keeper().GetNodeAccountByPubKey(ctx, vault.PubKey)
 			if err != nil {
 				ctx.Logger().Error("fail to unmarshal vault", "error", err)
@@ -530,13 +552,12 @@ func queryNetwork(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 		GasSpentRune:          cosmos.NewUint(data.OutboundGasSpentRune).String(),
 		GasWithheldRune:       cosmos.NewUint(data.OutboundGasWithheldRune).String(),
 		OutboundFeeMultiplier: wrapString(outboundFeeMultiplier.String()),
-
-		// TODO: These are temporarily hardcoded to the dollar value fees, for sanity check
-		// before enabling. Switch to the keeper fee methods after USD fees are live.
-		NativeTxFeeRune:       mgr.Keeper().DollarConfigInRune(ctx, constants.NativeTransactionFeeUSD).String(),
-		NativeOutboundFeeRune: mgr.Keeper().DollarConfigInRune(ctx, constants.NativeOutboundFeeUSD).String(),
-		TnsRegisterFeeRune:    mgr.Keeper().DollarConfigInRune(ctx, constants.TNSRegisterFeeUSD).String(),
-		TnsFeePerBlockRune:    mgr.Keeper().DollarConfigInRune(ctx, constants.TNSFeePerBlockUSD).String(),
+		NativeTxFeeRune:       mgr.Keeper().GetNativeTxFee(ctx).String(),
+		NativeOutboundFeeRune: mgr.Keeper().GetOutboundTxFee(ctx).String(),
+		TnsRegisterFeeRune:    mgr.Keeper().GetTHORNameRegisterFee(ctx).String(),
+		TnsFeePerBlockRune:    mgr.Keeper().GetTHORNamePerBlockFee(ctx).String(),
+		RunePriceInTor:        mgr.Keeper().DollarsPerRune(ctx).String(),
+		TorPriceInRune:        mgr.Keeper().RunePerDollar(ctx).String(),
 	}
 
 	return jsonify(ctx, result)
@@ -1887,7 +1908,7 @@ func queryPendingOutbound(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 	if startHeight < 1 {
 		startHeight = 1
 	}
-	var result []TxOutItem
+	result := make([]QueryTxOutItem, 0)
 	for height := startHeight; height <= ctx.BlockHeight(); height++ {
 		txs, err := mgr.Keeper().GetTxOut(ctx, height)
 		if err != nil {
@@ -1896,7 +1917,7 @@ func queryPendingOutbound(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 		}
 		for _, tx := range txs.TxArray {
 			if tx.OutHash.IsEmpty() {
-				result = append(result, tx)
+				result = append(result, NewQueryTxOutItem(tx, height))
 			}
 		}
 	}
@@ -2001,6 +2022,98 @@ func queryInvariant(ctx cosmos.Context, path []string, mgr *Mgrs) ([]byte, error
 	return nil, fmt.Errorf("invariant not registered: %s", path[0])
 }
 
+func queryBlock(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
+	initTendermintOnce.Do(initTendermint)
+	height := ctx.BlockHeight()
+
+	// get the block and results from tendermint rpc
+	block, err := tendermintClient.Block(ctx.Context(), &height)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get block from tendermint rpc: %w", err)
+	}
+	results, err := tendermintClient.BlockResults(ctx.Context(), &height)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get block results from tendermint rpc: %w", err)
+	}
+
+	res := types.QueryBlockResponse{
+		BlockResponse: openapi.BlockResponse{
+			Id: openapi.BlockResponseId{
+				Hash: block.BlockID.Hash.String(),
+				Parts: openapi.BlockResponseIdParts{
+					Total: int64(block.BlockID.PartSetHeader.Total),
+					Hash:  block.BlockID.PartSetHeader.Hash.String(),
+				},
+			},
+			Header: openapi.BlockResponseHeader{
+				Version: openapi.BlockResponseHeaderVersion{
+					Block: strconv.FormatUint(block.Block.Header.Version.Block, 10),
+					App:   strconv.FormatUint(block.Block.Header.Version.App, 10),
+				},
+				ChainId: block.Block.Header.ChainID,
+				Height:  block.Block.Header.Height,
+				Time:    block.Block.Header.Time.Format(time.RFC3339Nano),
+				LastBlockId: openapi.BlockResponseId{
+					Hash: block.Block.Header.LastBlockID.Hash.String(),
+					Parts: openapi.BlockResponseIdParts{
+						Total: int64(block.Block.Header.LastBlockID.PartSetHeader.Total),
+						Hash:  block.Block.Header.LastBlockID.PartSetHeader.Hash.String(),
+					},
+				},
+				LastCommitHash:     block.Block.Header.LastCommitHash.String(),
+				DataHash:           block.Block.Header.DataHash.String(),
+				ValidatorsHash:     block.Block.Header.ValidatorsHash.String(),
+				NextValidatorsHash: block.Block.Header.NextValidatorsHash.String(),
+				ConsensusHash:      block.Block.Header.ConsensusHash.String(),
+				AppHash:            block.Block.Header.AppHash.String(),
+				LastResultsHash:    block.Block.Header.LastResultsHash.String(),
+				EvidenceHash:       block.Block.Header.EvidenceHash.String(),
+				ProposerAddress:    block.Block.Header.ProposerAddress.String(),
+			},
+			BeginBlockEvents: []map[string]string{},
+			EndBlockEvents:   []map[string]string{},
+		},
+		Txs: make([]types.QueryBlockTx, len(block.Block.Txs)),
+	}
+
+	// parse the events
+	for _, event := range results.BeginBlockEvents {
+		res.BeginBlockEvents = append(res.BeginBlockEvents, eventMap(sdk.Event(event)))
+	}
+	for _, event := range results.EndBlockEvents {
+		res.EndBlockEvents = append(res.EndBlockEvents, eventMap(sdk.Event(event)))
+	}
+
+	for i, tx := range block.Block.Txs {
+		res.Txs[i].Hash = strings.ToUpper(hex.EncodeToString(tx.Hash()))
+
+		// decode the protobuf and encode to json
+		dtx, err := authtx.DefaultTxDecoder(mgr.cdc.(*codec.ProtoCodec))(tx)
+		if err != nil {
+			return nil, fmt.Errorf("fail to decode tx: %w", err)
+		}
+		res.Txs[i].Tx, err = authtx.DefaultJSONTxEncoder(mgr.cdc.(*codec.ProtoCodec))(dtx)
+		if err != nil {
+			return nil, fmt.Errorf("fail to encode tx: %w", err)
+		}
+
+		// parse the tx events
+		code := int64(results.TxsResults[i].Code)
+		res.Txs[i].Result.Code = &code
+		res.Txs[i].Result.Data = wrapString(string(results.TxsResults[i].Data))
+		res.Txs[i].Result.Log = wrapString(results.TxsResults[i].Log)
+		res.Txs[i].Result.Info = wrapString(results.TxsResults[i].Info)
+		res.Txs[i].Result.GasWanted = wrapString(strconv.FormatInt(results.TxsResults[i].GasWanted, 10))
+		res.Txs[i].Result.GasUsed = wrapString(strconv.FormatInt(results.TxsResults[i].GasUsed, 10))
+		res.Txs[i].Result.Events = []map[string]string{}
+		for _, event := range results.TxsResults[i].Events {
+			res.Txs[i].Result.Events = append(res.Txs[i].Result.Events, eventMap(sdk.Event(event)))
+		}
+	}
+
+	return jsonify(ctx, res)
+}
+
 // -------------------------------------------------------------------------------------
 // Generic Helpers
 // -------------------------------------------------------------------------------------
@@ -2084,21 +2197,46 @@ func simulate(ctx cosmos.Context, mgr Manager, msg sdk.Msg) (sdk.Events, error) 
 
 	// reset the swap queue
 	iter := mgr.Keeper().GetSwapQueueIterator(ctx)
-	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		mgr.Keeper().DeleteKey(ctx, string(iter.Key()))
 	}
+	iter.Close()
 
-	// simulate the loan open
-	_, err = NewInternalHandler(mgr)(ctx, msg)
+	// save pool state
+	pools, err := mgr.Keeper().GetPools(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to simulate loan: %w", err)
+		return nil, fmt.Errorf("failed to get pools: %w", err)
 	}
 
-	// simulate end block
-	err = mgr.SwapQ().EndBlock(ctx, mgr)
+	// simulate the handler
+	_, err = NewInternalHandler(mgr)(ctx, msg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to simulate end block: %w", err)
+		return nil, fmt.Errorf("failed to simulate handler: %w", err)
+	}
+
+	// simulate end block, loop it until the swap queue is empty
+	var count int64
+	for count < 1000 {
+		err = mgr.SwapQ().EndBlock(ctx.WithBlockHeight(ctx.BlockHeight()+count), mgr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to simulate end block: %w", err)
+		}
+
+		for _, pool := range pools {
+			_ = mgr.Keeper().SetPool(ctx, pool)
+		}
+
+		count += 1
+		queueEmpty := true
+		iter = mgr.Keeper().GetSwapQueueIterator(ctx)
+		for ; iter.Valid(); iter.Next() {
+			queueEmpty = false
+			break
+		}
+		iter.Close()
+		if queueEmpty {
+			break
+		}
 	}
 
 	return em.Events(), nil

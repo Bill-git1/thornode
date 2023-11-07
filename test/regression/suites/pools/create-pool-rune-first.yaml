@@ -4,7 +4,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: should start with no pools
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .|length == 0
@@ -20,13 +19,11 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: LP should be created after first deposit
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_providers
 asserts:
   - .|length == 1
 ---
 type: check
-description: pool should not exist until second deposit
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .|length == 0
@@ -55,13 +52,11 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: transaction should be observed
 endpoint: http://localhost:1317/thorchain/tx/{{ observe_txid 1 }}
 asserts:
 - .observed_tx.status == "done"
 ---
 type: check
-description: pool should be created
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .|length == 1
@@ -70,7 +65,6 @@ asserts:
   - .[0].pending_inbound_rune == "0"
 ---
 type: check
-description: LP should match pool with no pending deposit
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_providers
 asserts:
   - .|length == 1

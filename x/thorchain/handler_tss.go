@@ -25,9 +25,13 @@ func NewTssHandler(mgr Manager) BaseHandler[*MsgTssPool] {
 		mgr:    mgr,
 		logger: MsgTssPoolLogger,
 		validators: NewValidators[*MsgTssPool]().
+			Register("1.124.0", MsgTssPoolValidateV124).
+			Register("1.121.0", MsgTssPoolValidateV121).
 			Register("1.114.0", MsgTssPoolValidateV114).
 			Register("0.71.0", MsgTssPoolValidateV71),
 		handlers: NewHandlers[*MsgTssPool]().
+			Register("1.124.0", MsgTssPoolHandleV124).
+			Register("1.123.0", MsgTssPoolHandleV123).
 			Register("1.120.0", MsgTssPoolHandleV120).
 			Register("1.117.0", MsgTssPoolHandleV117).
 			Register("1.93.0", MsgTssPoolHandleV93).
@@ -40,10 +44,14 @@ func MsgTssPoolLogger(ctx cosmos.Context, msg *MsgTssPool) {
 	ctx.Logger().Info("handleMsgTssPool request", "ID:", msg.ID)
 }
 
-func MsgTssPoolValidateV114(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) error {
+func MsgTssPoolValidateV124(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
+	if msg.KeygenType != AsgardKeygen {
+		return fmt.Errorf("only asgard vaults allowed for tss")
+	}
+
 	newMsg, err := NewMsgTssPool(msg.PubKeys, msg.PoolPubKey, nil, msg.KeygenType, msg.Height, msg.Blame, msg.Chains, msg.Signer, msg.KeygenTime)
 	if err != nil {
 		return fmt.Errorf("fail to recreate MsgTssPool,err: %w", err)
@@ -52,7 +60,7 @@ func MsgTssPoolValidateV114(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) er
 		return cosmos.ErrUnknownRequest("invalid tss message")
 	}
 
-	churnRetryBlocks := mgr.GetConstants().GetInt64Value(constants.ChurnRetryInterval)
+	churnRetryBlocks := mgr.Keeper().GetConfigInt64(ctx, constants.ChurnRetryInterval)
 	if msg.Height <= ctx.BlockHeight()-churnRetryBlocks {
 		return cosmos.ErrUnknownRequest("invalid keygen block")
 	}
@@ -101,7 +109,7 @@ func validateTssAuth(ctx cosmos.Context, k keeper.Keeper, signer cosmos.AccAddre
 	return nil
 }
 
-func MsgTssPoolHandleV120(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) (*cosmos.Result, error) {
+func MsgTssPoolHandleV124(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) (*cosmos.Result, error) {
 	ctx.Logger().Info("handler tss", "current version", mgr.GetVersion())
 	blames := make([]string, 0)
 	if !msg.Blame.IsEmpty() {
@@ -159,7 +167,7 @@ func MsgTssPoolHandleV120(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) (*co
 		return nil, fmt.Errorf("invalid pool pubkey")
 	}
 	observeSlashPoints := mgr.GetConstants().GetInt64Value(constants.ObserveSlashPoints)
-	observeFlex := mgr.GetConstants().GetInt64Value(constants.ObservationDelayFlexibility)
+	observeFlex := mgr.Keeper().GetConfigInt64(ctx, constants.ObservationDelayFlexibility)
 
 	slashCtx := ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
 		telemetry.NewLabel("reason", "failed_observe_tss_pool"),
@@ -197,10 +205,7 @@ func MsgTssPoolHandleV120(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) (*co
 				"id", msg.ID,
 				"pubkey", msg.PoolPubKey,
 			)
-			vaultType := YggdrasilVault
-			if msg.KeygenType == AsgardKeygen {
-				vaultType = AsgardVault
-			}
+			vaultType := AsgardVault
 			chains := voter.ConsensusChains()
 			vault := NewVault(ctx.BlockHeight(), InitVault, vaultType, voter.PoolPubKey, chains.Strings(), mgr.Keeper().GetChainContracts(ctx, chains))
 			vault.Membership = voter.PubKeys

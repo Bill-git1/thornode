@@ -46,7 +46,7 @@ During a churn event the following happens:
 
 ## Bifröst
 
-The Bifröst faciliates connections with external networks, such as Binance Chain, Ethereum and Bitcoin. The Bifröst is generally well-abstracted, needing only minor changes between different chains. The Bifröst handles observations of incoming transactions, which are passed into THORChain via special witness transactions. The Bifröst also handles multi-party computation to sign outgoing transactions via a Genarro-Goldfeder TSS scheme. Only 2/3rds of nodes are required to be in each signing ceremony on a first-come-first-serve basis, and there is no log of who is present. In this way, each node maintains plausible deniabilty around involvement with every transaction.
+The Bifröst facilitates connections with external networks, such as Binance Chain, Ethereum and Bitcoin. The Bifröst is generally well-abstracted, needing only minor changes between different chains. The Bifröst handles observations of incoming transactions, which are passed into THORChain via special witness transactions. The Bifröst also handles multi-party computation to sign outgoing transactions via a Genarro-Goldfeder TSS scheme. Only 2/3rds of nodes are required to be in each signing ceremony on a first-come-first-serve basis, and there is no log of who is present. In this way, each node maintains plausible deniability around involvement with every transaction.
 
 ### Adding a New Chain
 
@@ -86,21 +86,23 @@ The slip-based fee model has the following benefits:
 - Prevents Impermanent Loss to liquidity providers
 
 **Provide Liquidity**
-The provier units awarded to a liquidity provider is given by:
-`liquidityUnits = ((R + T) * (r * T + R * t))/(4 * R * T)`, where `r = Rune Provided, R = Rune Balance, T = Token Balance, t = Token Provided`
+The liquidity units awarded to a liquidity provider is given by:
+`liquidityUnits = P * ((rA + Ra + 2ra) / (rA + Ra + 2RA))`<br/>
+Where: `r = rune deposited, a = asset deposited, R = total Rune Balance (before deposit), A = total Asset Balance (before deposit), P = total Pool Units (before deposit)`<br/>
+Code reference: ([x\thorchain\handler_add_liquidity.go](https://gitlab.com/thorchain/thornode/-/blob/develop/x\thorchain\handler_add_liquidity.go#L427-461))
 
 This allows them to provide liquidity asymmetrically since it has no opinion on price.
 
 ## Incentives
 
-The system is safest and most capital-efficient when 67% of Rune is bonded and 33% is provided liquidity in pools. At this point, nodes will be paid 67% of the System Income, and liquidity providers will be paid 33% of the income. The Sytem Income is the block rewards (`blockReward = totalReserve / 6 / 6311390`) plus the liquidity fees collected in that block.
+The system is safest and most capital-efficient when 67% of Rune is bonded and 33% is provided liquidity in pools. At this point, nodes will be paid 67% of the System Income, and liquidity providers will be paid 33% of the income. The System Income is the block rewards (`blockReward = totalReserve / 6 / 6311390`) plus the liquidity fees collected in that block.
 
-An Incentive Pendulum ensures that liquidity providers receive 100% of the income when 0% is provided liquidity (inefficent), and 0% of the income when `totalLiquidity >= totalBonded` (unsafe).
+An Incentive Pendulum ensures that liquidity providers receive 100% of the income when 0% is provided liquidity (inefficient), and 0% of the income when `totalLiquidity >= totalBonded` (unsafe).
 The Total Reserve accumulates the `transactionFee`, which pays for outgoing gas fees and stabilises long-term value accrual.
 
 ## Governance
 
-There is strictly minimal goverance possible through THORNode software. Each THORNode can only generate valid blocks that is fully-compliant with the binary run by the super-majority.
+There is strictly minimal governance possible through THORNode software. Each THORNode can only generate valid blocks that is fully-compliant with the binary run by the super-majority.
 
 The best way to apply changes to the system is to submit a THORChain Improvement Proposal (TIP) for testing, validation and discussion among the THORChain developer community. If the change is beneficial to the network, it can be merged into the binary. New nodes may opt to run this updated binary, signalling via a `semver` versioning scheme. Once the super-majority are on the same binary, the system will update automatically. Schema and logic changes can be applied via this approach.
 
@@ -270,12 +272,13 @@ go build -tags cgo,ledger
 - Create an issue or find an existing issue on https://gitlab.com/thorchain/thornode/-/issues
 - About to work on an issue? Start a conversation at #thornode-dev channel on [discord](https://discord.gg/BpnPh4tW5c)
 - Assign the issue to yourself
-- Create a branch using the issue id, for example if the issue you are working on is 600, then create a branch call `600-issue` , this way , gitlab will link your PR with the issue
-- Raise a PR , Once your PR is ready for review , post a message in #thornode-dev channel in discord , tag `@thornode-team` for review
-- Make sure the pipeline is green
-- Once PR get approved, you can merge it
+- Create a branch using the issue id, for example if the issue you are working on is 600, then create a branch call `600-issue`, this way, GitLab will link your PR with the issue
+- Raise a PR, Once your PR is ready for review, post a message in #thornode-dev channel in discord, tag `@thornode-team` for review
+- If you do not have the required permissions, the pipeline will not be able to run. In this instance you will need to setup & register a [local runner](https://docs.gitlab.com/runner/register/)
+- If you have completed this step (or have the required permissions to use the shared runners) make sure the pipeline completes and all is green
+- Once the PR gets all required approvals by other contributors, it can be merged
 
-Current active branch is `develop` , so when you open PR , make sure your target branch is `develop`
+Current active branch is `develop`, so when you open PR, make sure your target branch is `develop`
 
 ### Vulnerabilities and Bug Bounties
 
@@ -283,7 +286,7 @@ If you find a vulnerability in THORNode, please submit it for a bounty according
 
 ### the semantic version and release
 
-THORNode manage changelog entry the same way like gitlab, refer to (https://docs.gitlab.com/ee/development/changelog.html) for more detail. Once a merge request get merged into master branch,
+THORNode manage changelog entry the same way like Gitlab, refer to (https://docs.gitlab.com/ee/development/changelog.html) for more detail. Once a merge request get merged into master branch,
 if the merge request upgrades the [version](https://gitlab.com/thorchain/thornode/-/blob/develop/version), then a new release will be created automatically, and the repository will be tagged with
 the new version by the release tool.
 

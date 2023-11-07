@@ -27,6 +27,9 @@ func NewConstantValue() *ConstantVals {
 			DerivedMinDepth:                     100,                // in basis points, min derived pool depth
 			MaxAnchorSlip:                       1500,               // basis points of rune depth to trigger pausing a derived virtual pool
 			MaxAnchorBlocks:                     300,                // max blocks to accumulate swap slips in anchor pools
+			DynamicMaxAnchorSlipBlocks:          14400 * 14,         // number of blocks to sample in calculating the dynamic max anchor slip
+			DynamicMaxAnchorTarget:              0,                  // target depth of derived virtual pool (in basis points)
+			DynamicMaxAnchorCalcInterval:        14400,              // number of blocks to recalculate the dynamic max anchor
 			FundMigrationInterval:               360,                // number of blocks THORNode will attempt to move funds from a retiring vault to an active one
 			ChurnInterval:                       43200,              // How many blocks THORNode try to rotate validators
 			ChurnRetryInterval:                  720,                // How many blocks until we retry a churn (only if we haven't had a successful churn in ChurnInterval blocks
@@ -45,6 +48,7 @@ func NewConstantValue() *ConstantVals {
 			FailKeysignSlashPoints:              2,                  // slash for 2 blocks
 			LiquidityLockUpBlocks:               0,                  // the number of blocks LP can withdraw after their liquidity
 			ObserveSlashPoints:                  1,                  // the number of slashpoints for making an observation (redeems later if observation reaches consensus
+			MissBlockSignSlashPoints:            1,                  // slash points for not signing a block
 			ObservationDelayFlexibility:         10,                 // number of blocks of flexibility for a validator to get their slash points taken off for making an observation
 			YggFundLimit:                        50,                 // percentage of the amount of funds a ygg vault is allowed to have.
 			YggFundRetry:                        1000,               // number of blocks before retrying to fund a yggdrasil vault
@@ -69,6 +73,7 @@ func NewConstantValue() *ConstantVals {
 			StreamingSwapMaxLengthNative:        14400 * 365,        // max number of blocks native streaming swaps can trade over
 			MinCR:                               10_000,             // Minimum collateralization ratio (basis pts)
 			MaxCR:                               60_000,             // Maximum collateralization ratio (basis pts)
+			LoanStreamingSwapsInterval:          0,                  // block interval between each streaming swap of opening or closing a loan
 			PauseLoans:                          1,                  // pause opening new loans and repaying loans
 			LoanRepaymentMaturity:               0,                  // number of blocks before loan has reached maturity and can be repaid
 			LendingLever:                        3333,               // This controls (in basis points) how much lending is allowed relative to rune supply
@@ -106,6 +111,9 @@ func NewConstantValue() *ConstantVals {
 			EnableUSDFees:                       0,                  // enable USD fees
 			PreferredAssetOutboundFeeMultiplier: 100,                // multiplier of the current preferred asset outbound fee, if rune balance > multiplier * outbound_fee, a preferred asset swap is triggered
 			FeeUSDRoundSignificantDigits:        2,                  // number of significant digits to round the RUNE value of USD denominated fees
+			MigrationVaultSecurityBps:           0,                  // vault bond must be greater than bps of funds value in rune to receive migrations
+			KeygenRetryInterval:                 0,                  // number of blocks to wait before retrying a keygen
+			SaversStreamingSwapsInterval:        0,                  // For Savers deposits and withdraws, the streaming swaps interval to use for the Native <> Synth swap
 		},
 		boolValues: map[ConstantName]bool{
 			StrictBondLiquidityRatio: true,

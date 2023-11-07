@@ -14,6 +14,12 @@ import (
 	"github.com/eager7/dogutil"
 	dogetxscript "gitlab.com/thorchain/bifrost/dogd-txscript"
 
+	"github.com/gcash/bchutil"
+	bchtxscript "gitlab.com/thorchain/bifrost/bchd-txscript"
+
+	"github.com/ltcsuite/ltcutil"
+	ltctxscript "gitlab.com/thorchain/bifrost/ltcd-txscript"
+
 	stypes "gitlab.com/thorchain/thornode/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
@@ -26,7 +32,6 @@ import (
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func (c *Client) getMaximumUtxosToSpend() int64 {
-	// TODO: Define this value in the constants package.
 	const mimirMaxUTXOsToSpend = `MaxUTXOsToSpend`
 	utxosToSpend, err := c.bridge.GetMimir(mimirMaxUTXOsToSpend)
 	if err != nil {
@@ -64,7 +69,6 @@ func (c *Client) getUtxoToSpend(pubkey common.PubKey, total float64) ([]btcjson.
 	var result []btcjson.ListUnspentResult
 	var toSpend float64
 	minUTXOAmt := btcutil.Amount(c.cfg.ChainID.DustThreshold().Uint64()).ToBTC()
-	isYggdrasil := c.isYggdrasil(pubkey)       // yggdrasil spends utxos older than 10 blocks
 	utxosToSpend := c.getMaximumUtxosToSpend() // can be set by mimir
 
 	for _, item := range utxos {
@@ -82,12 +86,12 @@ func (c *Client) getUtxoToSpend(pubkey common.PubKey, total float64) ([]btcjson.
 		}
 
 		// skip utxos under the dust threshold for asgards, unless it is a self transaction
-		if item.Amount < minUTXOAmt && !isSelfTx && !isYggdrasil {
+		if item.Amount < minUTXOAmt && !isSelfTx {
 			continue
 		}
 
-		// include utxo for yggdrasils, self transactions, or has enough confirmations
-		if isYggdrasil || isSelfTx || item.Confirmations >= c.cfg.UTXO.MinUTXOConfirmations {
+		// include utxo for self transactions, or has enough confirmations
+		if isSelfTx || item.Confirmations >= c.cfg.UTXO.MinUTXOConfirmations {
 			result = append(result, item)
 			toSpend += item.Amount
 		}
@@ -148,6 +152,18 @@ func (c *Client) getSourceScript(tx stypes.TxOutItem) ([]byte, error) {
 			return nil, fmt.Errorf("fail to decode source address(%s): %w", sourceAddr.String(), err)
 		}
 		return dogetxscript.PayToAddrScript(addr)
+	case common.BCHChain:
+		addr, err := bchutil.DecodeAddress(sourceAddr.String(), c.getChainCfgBCH())
+		if err != nil {
+			return nil, fmt.Errorf("fail to decode source address(%s): %w", sourceAddr.String(), err)
+		}
+		return bchtxscript.PayToAddrScript(addr)
+	case common.LTCChain:
+		addr, err := ltcutil.DecodeAddress(sourceAddr.String(), c.getChainCfgLTC())
+		if err != nil {
+			return nil, fmt.Errorf("fail to decode source address(%s): %w", sourceAddr.String(), err)
+		}
+		return ltctxscript.PayToAddrScript(addr)
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 		return nil, nil
@@ -158,21 +174,33 @@ func (c *Client) getSourceScript(tx stypes.TxOutItem) ([]byte, error) {
 // Build Transaction
 ////////////////////////////////////////////////////////////////////////////////////////
 
+// TODO: Cleanup magic numbers and/or improve comment specificity.
 // estimateTxSize will create a temporary MsgTx, and use it to estimate the final tx size
 // the value in the temporary MsgTx is not real
 // https://bitcoinops.org/en/tools/calc-size/
 func (c *Client) estimateTxSize(memo string, txes []btcjson.ListUnspentResult) int64 {
-	// overhead - 10
-	// Per input - 148
-	// Per output - 34 , we might have 1 / 2 output , depends on the circumstances , here we only count 1  output , would rather underestimate
-	// so we won't hit absurd hight fee issue
-	// overhead for NULL DATA - 9 , len(memo) is the size of memo
-	return int64(10 + 148*len(txes) + 34 + 9 + len([]byte(memo)))
-}
-
-// isYggdrasil - when the pubkey and node pubkey is the same that means it is signing from yggdrasil
-func (c *Client) isYggdrasil(key common.PubKey) bool {
-	return key.Equals(c.nodePubKey)
+	switch c.cfg.ChainID {
+	case common.DOGEChain, common.BCHChain:
+		// overhead - 10
+		// Per input - 148
+		// Per output - 34 , we might have 1 / 2 output , depends on the circumstances , here we only count 1  output , would rather underestimate
+		// so we won't hit absurd hight fee issue
+		// overhead for NULL DATA - 9 , len(memo) is the size of memo
+		return int64(10 + 148*len(txes) + 34 + 9 + len([]byte(memo)))
+	case common.LTCChain:
+		// overhead - 10.75
+		// Per Input - 67.75
+		// Per output - 31 , we sometimes have 2 output , and sometimes only have 1 , it depends ,here we only count 1
+		// it is better to underestimate rather than over estimate
+		// 10.5 overhead for null data
+		// len(memo) is the size of memo put in null data
+		// these get us very close to the final vbytes.
+		// multiple by 100 , and then add, so don't need to deal with float
+		return int64((1075+6775*len(txes)+1050)/100) + int64(31+len([]byte(memo)))
+	default:
+		c.log.Fatal().Msg("unsupported chain")
+		return 0
+	}
 }
 
 func (c *Client) getGasCoin(tx stypes.TxOutItem, vSize int64) common.Coin {
@@ -239,6 +267,24 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 		if err != nil {
 			return nil, nil, fmt.Errorf("fail to get pay to address script: %w", err)
 		}
+	case common.BCHChain:
+		outputAddr, err := bchutil.DecodeAddress(tx.ToAddress.String(), c.getChainCfgBCH())
+		if err != nil {
+			return nil, nil, fmt.Errorf("fail to decode next address: %w", err)
+		}
+		buf, err = bchtxscript.PayToAddrScript(outputAddr)
+		if err != nil {
+			return nil, nil, fmt.Errorf("fail to get pay to address script: %w", err)
+		}
+	case common.LTCChain:
+		outputAddr, err := ltcutil.DecodeAddress(tx.ToAddress.String(), c.getChainCfgLTC())
+		if err != nil {
+			return nil, nil, fmt.Errorf("fail to decode next address: %w", err)
+		}
+		buf, err = ltctxscript.PayToAddrScript(outputAddr)
+		if err != nil {
+			return nil, nil, fmt.Errorf("fail to get pay to address script: %w", err)
+		}
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 	}
@@ -283,9 +329,9 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 		if err != nil {
 			return nil, nil, fmt.Errorf("fail to parse memo: %w", err)
 		}
-		if memo.GetType() == mem.TxYggdrasilReturn || memo.GetType() == mem.TxConsolidate {
+		if memo.GetType() == mem.TxConsolidate {
 			gap := gasAmtSats
-			c.log.Info().Msgf("yggdrasil return asset or consolidate tx, need gas: %d", gap)
+			c.log.Info().Msgf("consolidate tx, need gas: %d", gap)
 			coinToCustomer.Amount = common.SafeSub(coinToCustomer.Amount, cosmos.NewUint(gap))
 		}
 	}
@@ -316,6 +362,10 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 		switch c.cfg.ChainID {
 		case common.DOGEChain:
 			nullDataScript, err = dogetxscript.NullDataScript([]byte(tx.Memo))
+		case common.BCHChain:
+			nullDataScript, err = bchtxscript.NullDataScript([]byte(tx.Memo))
+		case common.LTCChain:
+			nullDataScript, err = ltctxscript.NullDataScript([]byte(tx.Memo))
 		default:
 			c.log.Fatal().Msg("unsupported chain")
 		}

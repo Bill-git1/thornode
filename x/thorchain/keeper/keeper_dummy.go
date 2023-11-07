@@ -351,10 +351,33 @@ func (k KVStoreDummy) RollupSwapSlip(ctx cosmos.Context, blockCount int64, _ com
 	return cosmos.ZeroInt(), kaboom
 }
 
+func (k KVStoreDummy) GetCurrentRollup(ctx cosmos.Context, asset common.Asset) (int64, error) {
+	return 0, kaboom
+}
+
+func (k KVStoreDummy) SetCurrentRollup(ctx cosmos.Context, asset common.Asset, val int64) {}
+
+func (k KVStoreDummy) GetLongRollup(ctx cosmos.Context, asset common.Asset) (int64, error) {
+	return 0, kaboom
+}
+
+func (k KVStoreDummy) SetLongRollup(ctx cosmos.Context, asset common.Asset, slip int64) {}
+
 func (k KVStoreDummy) GetPoolSwapSlip(ctx cosmos.Context, height int64, asset common.Asset) (cosmos.Int, error) {
 	return cosmos.ZeroInt(), kaboom
 }
 func (k KVStoreDummy) DeletePoolSwapSlip(ctx cosmos.Context, height int64, asset common.Asset) {}
+
+func (k KVStoreDummy) GetSwapSlipSnapShot(ctx cosmos.Context, asset common.Asset, height int64) (int64, error) {
+	return 0, kaboom
+}
+
+func (k KVStoreDummy) SetSwapSlipSnapShot(ctx cosmos.Context, asset common.Asset, height, currRollup int64) {
+}
+
+func (k KVStoreDummy) GetSwapSlipSnapShotIterator(ctx cosmos.Context, asset common.Asset) cosmos.Iterator {
+	return nil
+}
 
 func (k KVStoreDummy) GetVaultIterator(_ cosmos.Context) cosmos.Iterator  { return nil }
 func (k KVStoreDummy) VaultExists(_ cosmos.Context, _ common.PubKey) bool { return false }
@@ -374,10 +397,11 @@ func (k KVStoreDummy) RemoveFromAsgardIndex(ctx cosmos.Context, pubkey common.Pu
 	return kaboom
 }
 
-func (k KVStoreDummy) GetLeastSecure(_ cosmos.Context, _ Vaults, _ int64) Vault  { return Vault{} }
-func (k KVStoreDummy) GetMostSecure(_ cosmos.Context, _ Vaults, _ int64) Vault   { return Vault{} }
-func (k KVStoreDummy) SortBySecurity(_ cosmos.Context, _ Vaults, _ int64) Vaults { return nil }
-func (k KVStoreDummy) DeleteVault(_ cosmos.Context, _ common.PubKey) error       { return kaboom }
+func (k KVStoreDummy) GetLeastSecure(_ cosmos.Context, _ Vaults, _ int64) Vault      { return Vault{} }
+func (k KVStoreDummy) GetMostSecure(_ cosmos.Context, _ Vaults, _ int64) Vault       { return Vault{} }
+func (k KVStoreDummy) GetMostSecureStrict(_ cosmos.Context, _ Vaults, _ int64) Vault { return Vault{} }
+func (k KVStoreDummy) SortBySecurity(_ cosmos.Context, _ Vaults, _ int64) Vaults     { return nil }
+func (k KVStoreDummy) DeleteVault(_ cosmos.Context, _ common.PubKey) error           { return kaboom }
 
 func (k KVStoreDummy) HasValidVaultPools(_ cosmos.Context) (bool, error)         { return false, kaboom }
 func (k KVStoreDummy) AddPoolFeeToReserve(_ cosmos.Context, _ cosmos.Uint) error { return kaboom }
@@ -607,6 +631,7 @@ func (k KVStoreDummy) AnchorMedian(ctx cosmos.Context, assets []common.Asset) co
 	return cosmos.ZeroUint()
 }
 func (k KVStoreDummy) DollarsPerRune(ctx cosmos.Context) cosmos.Uint { return cosmos.ZeroUint() }
+func (k KVStoreDummy) RunePerDollar(ctx cosmos.Context) cosmos.Uint  { return cosmos.ZeroUint() }
 func (k KVStoreDummy) DollarInRune(ctx cosmos.Context) cosmos.Uint   { return cosmos.ZeroUint() } // TODO: remove me on hard fork
 func (k KVStoreDummy) DollarConfigInRune(ctx cosmos.Context, key constants.ConstantName) cosmos.Uint {
 	return cosmos.ZeroUint()

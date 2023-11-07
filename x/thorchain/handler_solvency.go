@@ -73,6 +73,8 @@ func (h SolvencyHandler) handle(ctx cosmos.Context, msg MsgSolvency) (*cosmos.Re
 	ctx.Logger().Debug("handle Solvency request", "id", msg.Id.String(), "signer", msg.Signer.String())
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.123.0")):
+		return h.handleV123(ctx, msg)
 	case version.GTE(semver.MustParse("1.110.0")):
 		return h.handleV110(ctx, msg)
 	case version.GTE(semver.MustParse("1.87.0")):
@@ -90,13 +92,13 @@ func (h SolvencyHandler) handle(ctx cosmos.Context, msg MsgSolvency) (*cosmos.Re
 //     if wallet has less fund than asgard vault , and the gap is more than 1% , then the chain
 //     that is insolvent will be halt
 //  3. When chain is halt , bifrost will not observe inbound , and will not sign outbound txs until the issue has been investigated , and enabled it again using mimir
-func (h SolvencyHandler) handleV110(ctx cosmos.Context, msg MsgSolvency) (*cosmos.Result, error) {
+func (h SolvencyHandler) handleV123(ctx cosmos.Context, msg MsgSolvency) (*cosmos.Result, error) {
 	voter, err := h.mgr.Keeper().GetSolvencyVoter(ctx, msg.Id, msg.Chain)
 	if err != nil {
 		return &cosmos.Result{}, fmt.Errorf("fail to get solvency voter, err: %w", err)
 	}
 	observeSlashPoints := h.mgr.GetConstants().GetInt64Value(constants.ObserveSlashPoints)
-	observeFlex := h.mgr.GetConstants().GetInt64Value(constants.ObservationDelayFlexibility)
+	observeFlex := h.mgr.Keeper().GetConfigInt64(ctx, constants.ObservationDelayFlexibility)
 
 	slashCtx := ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
 		telemetry.NewLabel("reason", "failed_observe_solvency"),
@@ -281,11 +283,11 @@ func (h SolvencyHandler) deductVaultBlockPendingOutbound(vault Vault, block *TxO
 		if !txOutItem.MaxGas.IsEmpty() {
 			gasCoin = txOutItem.MaxGas.ToCoins().GetCoin(txOutItem.Chain.GetGasAsset())
 		}
-		for i, yggCoin := range vault.Coins {
-			if yggCoin.Asset.Equals(txOutItem.Coin.Asset) {
+		for i, vaultCoin := range vault.Coins {
+			if vaultCoin.Asset.Equals(txOutItem.Coin.Asset) {
 				vault.Coins[i].Amount = common.SafeSub(vault.Coins[i].Amount, txOutItem.Coin.Amount)
 			}
-			if yggCoin.Asset.Equals(gasCoin.Asset) {
+			if vaultCoin.Asset.Equals(gasCoin.Asset) {
 				vault.Coins[i].Amount = common.SafeSub(vault.Coins[i].Amount, gasCoin.Amount)
 			}
 		}

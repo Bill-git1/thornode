@@ -6,7 +6,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: eth, btc, and usdx pools should exist
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .|length == 5
@@ -25,13 +24,11 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: tor anchor mimir should be set
 endpoint: http://localhost:1317/thorchain/mimir
 asserts:
   - ."TORANCHOR-ETH-USDX-0X9999999999999999999999999999999999999999" == 1
 ---
 type: check
-description: derived pools should not be created
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .|length == 5
@@ -45,13 +42,11 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: derived depth basis points mimir should be set
 endpoint: http://localhost:1317/thorchain/mimir
 asserts:
   - .DERIVEDDEPTHBASISPTS == 10000
 ---
 type: check
-description: derived pools should not be created
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .|length == 5
@@ -60,7 +55,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: check that derived depth bps exists
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .|length == 5
@@ -71,19 +65,16 @@ asserts:
   - .[4].derived_depth_bps|tonumber == 0
 ---
 type: check
-description: check that derived pools exists
 endpoint: http://localhost:1317/thorchain/dpools
 asserts:
   - .|length == 3
 ---
 type: check
-description: thor.btc pool should be created
 endpoint: http://localhost:1317/thorchain/dpool/THOR.BTC
 asserts:
   - .status == "Available"
 ---
 type: check
-description: thor.tor pool should be created
 endpoint: http://localhost:1317/thorchain/dpool/THOR.TOR
 asserts:
   - .status == "Available"
@@ -92,7 +83,6 @@ asserts:
 # fail open loan due to min out
 ########################################################################################
 type: check
-description: check loan open quote with bad min out
 endpoint: http://localhost:1317/thorchain/quote/loan/open
 params:
   from_asset: BTC.BTC
@@ -104,14 +94,12 @@ asserts:
   - .error|test("less than price limit")
 ---
 type: check
-description: BTC pool depth (want to confirm pool depths remain unchanged)
 endpoint: http://localhost:1317/thorchain/pool/btc.btc
 asserts:
   - .balance_rune | tonumber == 100000799088
   - .balance_asset | tonumber == 100000000
 ---
 type: check
-description: ETH pool depth (want to confirm pool depths remain unchanged)
 endpoint: http://localhost:1317/thorchain/pool/eth.eth
 asserts:
   - .balance_rune | tonumber == 100000799088
@@ -141,13 +129,11 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: borrower should NOT be updated
 endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
 asserts:
   - .|length == 0
 ---
 type: check
-description: btc outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -177,20 +163,17 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: btc outbound should be observed
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
 ---
 type: check
-description: BTC pool depth (want to confirm pool depths remain unchanged, except for gas used to refund btc deposit)
 endpoint: http://localhost:1317/thorchain/pool/btc.btc
 asserts:
   - .balance_rune | tonumber == 99997697622
   - .balance_asset | tonumber == 100003500
 ---
 type: check
-description: ETH pool depth (want to confirm pool depths remain unchanged, but depth does change from block rewards it seems)
 endpoint: http://localhost:1317/thorchain/pool/eth.eth
 asserts:
   - .balance_rune | tonumber == 100001198644
@@ -200,7 +183,6 @@ asserts:
 # open loan btc -> rune
 ########################################################################################
 type: check
-description: check loan open quote
 endpoint: http://localhost:1317/thorchain/quote/loan/open
 params:
   from_asset: BTC.BTC
@@ -215,14 +197,13 @@ asserts:
   - .expected_collateralization_ratio|tonumber == 10000
   - .expected_debt_issued|tonumber == 490110000
   - .recommended_min_amount_in == "56000"
-  - .fees.slippage_bps|tonumber == 149
+  - .fees.slippage_bps|tonumber == 145
   - .fees.total_bps|tonumber == 188
   - .fees.outbound|tonumber == 2000000
   - .fees.liquidity|tonumber == 7291171
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
 ---
 type: check
-description: no derived btc should exist
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/supply
 asserts:
   - .supply[]|select(.denom == "rune")|.amount|tonumber == 50000000000000
@@ -251,7 +232,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: borrower should be recorded
 endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
 asserts:
   - .|length == 1
@@ -262,41 +242,35 @@ asserts:
   - .[0]|.owner == "{{ addr_btc_fox }}"
 ---
 type: check
-description: loan should exist in export state
 endpoint: http://localhost:1317/thorchain/export
 asserts:
   - .loans|length == 1
 ---
 type: check
-description: derived btc should exist in the lending module
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_module_lending }}
 asserts:
   - .balances[]|select(.denom == "thor.btc")|.amount|tonumber == 495049
 ---
 type: check
-description: check rune supply decreases
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/supply
 asserts:
   - .supply[]|select(.denom == "rune")|.amount|tonumber == 49999990338049
 ---
 type: check
-description: fox account should not receive rune until next block
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
   - .balances[]|select(.denom == "rune")|.amount|tonumber == 2500483346750
 ---
 type: check
-description: should emit 5 mint_burn events
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .|[.end[]|select(.type == "mint_burn")]|length == 5
+  - .|[.end_block_events[]|select(.type == "mint_burn")]|length == 5
 ---
 ########################################################################################
 # open loan btc -> eth
 ########################################################################################
 type: check
-description: check loan open quote
 endpoint: http://localhost:1317/thorchain/quote/loan/open
 params:
   from_asset: BTC.BTC
@@ -312,7 +286,7 @@ asserts:
   - .expected_debt_issued|tonumber == 485310000
   - .recommended_min_amount_in == "517152"
   - .fees.total_bps|tonumber == 2831
-  - .fees.slippage_bps|tonumber == 195
+  - .fees.slippage_bps|tonumber == 194
   - .fees.outbound|tonumber == 1280000
   - .fees.liquidity|tonumber == 94606
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
@@ -341,18 +315,16 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: borrower should be updated
 endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
 asserts:
   - .|length == 1
   - .[0]|.collateral_deposited == "989774"
-  - .[0]|.debt_issued == "975080000"
+  - .[0]|.debt_issued == "${DEBT_ISSUED=975080000}"
   - .[0]|.collateral_withdrawn == "0"
   - .[0]|.debt_repaid == "0"
   - .[0]|.owner == "{{ addr_btc_fox }}"
 ---
 type: check
-description: eth outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -379,16 +351,14 @@ txs:
     observed_pub_key: {{ pubkey_dog }}
 ---
 type: check
-description: should emit 5 mint_burn events
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .|[.end[]|select(.type == "mint_burn")]|length == 5
+  - .|[.end_block_events[]|select(.type == "mint_burn")]|length == 5
 ---
 type: create-blocks
 count: 1
 ---
 type: check
-description: eth outbound should be observed
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
@@ -420,19 +390,17 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: borrower should NOT be updated
 endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
 asserts:
   - .|length == 1
   - .[0]|.collateral_deposited == "989774"
-  - .[0]|.debt_issued == "975080000"
+  - .[0]|.debt_issued == "${DEBT_ISSUED}"
   - .[0]|.owner == "{{ addr_btc_fox }}"
   # everything above is the same, but now collateral and debt down should exist
   - .[0]|.collateral_withdrawn == "0"
   - .[0]|.debt_repaid == "0"
 ---
 type: check
-description: eth outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -462,7 +430,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: eth outbound should be observed
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
@@ -471,7 +438,6 @@ asserts:
 # close half of loan with rune, should pay down debt but not return collateral
 ########################################################################################
 type: check
-description: check loan close quote
 endpoint: http://localhost:1317/thorchain/quote/loan/close
 params:
   from_asset: THOR.RUNE
@@ -482,8 +448,8 @@ asserts:
   - .memo == "$-:BTC.BTC:{{ addr_btc_fox }}"
   - .expected_collateral_withdrawn|tonumber == 0
   - .expected_debt_repaid|tonumber == 495028435
-  - .fees.total_bps|tonumber == 50
-  - .fees.slippage_bps|tonumber == 50
+  - .fees.total_bps|tonumber == 49
+  - .fees.slippage_bps|tonumber == 49
   - .fees.outbound|not
   - .fees.liquidity|tonumber == 2525
   - .fees.total|tonumber == 2525
@@ -499,18 +465,16 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: borrower should be updated
 endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
 asserts:
   - .|length == 1
   - .[0]|.collateral_deposited == "989774"
-  - .[0]|.debt_issued == "975080000"
+  - .[0]|.debt_issued == "${DEBT_ISSUED}"
   - .[0]|.owner == "{{ addr_btc_fox }}"
   - .[0]|.collateral_withdrawn == "0"
   - .[0]|.debt_repaid == "495028435"
 ---
 type: check
-description: no outbounds should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
@@ -519,7 +483,6 @@ asserts:
 # close remaining loan with eth (overpay)
 ########################################################################################
 type: check
-description: check loan close quote
 endpoint: http://localhost:1317/thorchain/quote/loan/close
 params:
   from_asset: ETH.ETH
@@ -533,7 +496,7 @@ asserts:
   - .expected_collateral_withdrawn|tonumber == 989774
   - .expected_debt_repaid|tonumber == 4180145903
   - .fees.total_bps|tonumber == 4941
-  - .fees.slippage_bps|tonumber == 1118
+  - .fees.slippage_bps|tonumber == 922
   - .fees.outbound|tonumber == 14000
   - .fees.liquidity|tonumber == 448688
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
@@ -562,18 +525,16 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: borrower should be updated
 endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
 asserts:
   - .|length == 1
   - .[0]|.collateral_deposited == "989774"
-  - .[0]|.debt_issued == "975080000"
+  - .[0]|.debt_issued == "${DEBT_ISSUED}"
   - .[0]|.owner == "{{ addr_btc_fox }}"
   - .[0]|.collateral_withdrawn == "989774" # should now be fully repaid
   - .[0]|.debt_repaid == "4675174338" # over repaid
 ---
 type: check
-description: btc outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -600,22 +561,19 @@ txs:
     observed_pub_key: {{ pubkey_dog }}
 ---
 type: check
-description: should emit 5 mint_burn events
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .|[.end[]|select(.type == "mint_burn")]|length == 5
+  - .|[.end_block_events[]|select(.type == "mint_burn")]|length == 5
 ---
 type: create-blocks
 count: 1
 ---
 type: check
-description: btc outbound should be observed
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
 ---
 type: check
-description: no derived btc should exist
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/supply
 asserts:
   - '[.supply[]|select(.denom == "thor.btc")]|length == 0'
@@ -647,7 +605,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: borrower should be updated
 endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
 asserts:
   - .|length == 1
@@ -658,7 +615,6 @@ asserts:
   - .[0]|.debt_repaid == "4675174338"
 ---
 type: check
-description: fox account balance should be unchanged
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
@@ -668,7 +624,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: fox account should have receieved rune
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
@@ -703,7 +658,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: borrower should be updated
 endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
 asserts:
   - .|length == 1
@@ -714,7 +668,6 @@ asserts:
   - .[0]|.debt_repaid == "4675174338"
 ---
 type: check
-description: fox account balance should be unchanged
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
@@ -724,7 +677,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: fox account should have receieved rune
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
@@ -736,7 +688,6 @@ asserts:
 # open loan btc -> usdc (with fuzzy)
 ########################################################################################
 type: check
-description: check loan open quote
 endpoint: http://localhost:1317/thorchain/quote/loan/open
 params:
   from_asset: BTC.BTC
@@ -779,7 +730,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: borrower should be updated
 endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
 asserts:
   - .|length == 1
@@ -790,7 +740,6 @@ asserts:
   - .[0]|.owner == "{{ addr_btc_fox }}"
 ---
 type: check
-description: usdc outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -820,7 +769,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: usdc outbound should be observed
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0

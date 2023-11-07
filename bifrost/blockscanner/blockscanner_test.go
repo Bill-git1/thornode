@@ -19,6 +19,7 @@ import (
 	"gitlab.com/thorchain/thornode/cmd"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/config"
+	"gitlab.com/thorchain/thornode/constants"
 	"gitlab.com/thorchain/thornode/x/thorchain"
 )
 
@@ -300,24 +301,32 @@ func (s *BlockScannerTestSuite) TestIsChainPaused(c *C) {
 
 	// Setting Halt<chain>Chain should pause
 	mimirMap["HaltBNBChain"] = 2
+	// Wait for one block's time so as to replace the cache with an updated query.
+	time.Sleep(constants.ThorchainBlockTime)
 	isHalted = cbs.isChainPaused()
 	c.Assert(isHalted, Equals, true)
 	mimirMap["HaltBNBChain"] = 0
 
 	// Setting SolvencyHalt<chain>Chain should pause
 	mimirMap["SolvencyHaltBNBChain"] = 2
+	// Wait for one block's time so as to replace the cache with an updated query.
+	time.Sleep(constants.ThorchainBlockTime)
 	isHalted = cbs.isChainPaused()
 	c.Assert(isHalted, Equals, true)
 	mimirMap["SolvencyHaltBNBChain"] = 0
 
 	// Setting HaltChainGlobal should pause
 	mimirMap["HaltChainGlobal"] = 2
+	// Wait for one block's time so as to replace the cache with an updated query.
+	time.Sleep(constants.ThorchainBlockTime)
 	isHalted = cbs.isChainPaused()
 	c.Assert(isHalted, Equals, true)
 	mimirMap["HaltChainGlobal"] = 0
 
 	// Setting NodePauseChainGlobal should pause
 	mimirMap["NodePauseChainGlobal"] = 4 // node pause only halts for an hour, so pause height needs to be larger than thor height
+	// Wait for one block's time so as to replace the cache with an updated query.
+	time.Sleep(constants.ThorchainBlockTime)
 	isHalted = cbs.isChainPaused()
 	c.Assert(isHalted, Equals, true)
 }

@@ -1,14 +1,5 @@
 {{ template "default-state.yaml" }}
 ---
-########################################################################################
-# emtpy reserve to avoid emissions that offset IL
-########################################################################################
-type: state
-genesis:
-  app_state:
-    thorchain:
-      reserve: "0"
----
 type: create-blocks
 count: 1
 ---
@@ -46,7 +37,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: cat account should hold full RUNE balances minus LP
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_cat }}
 asserts:
   - .balances[0].amount|tonumber == 2499798000000
@@ -63,7 +53,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: mimir for ILP blocks should be set to 1
 endpoint: http://localhost:1317/thorchain/mimir
 asserts:
   - .FULLIMPLOSSPROTECTIONBLOCKS == 1
@@ -82,7 +71,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: second LP should be created
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_providers
 asserts:
   - .|length == 2
@@ -130,19 +118,16 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: swap should be observed and done
 endpoint: http://localhost:1317/thorchain/tx/{{ observe_txid 2 }}
 asserts:
   - .observed_tx.status == "done"
 ---
 type: check
-description: swap should be observed and done
 endpoint: http://localhost:1317/thorchain/tx/{{ observe_txid 3 }}
 asserts:
   - .observed_tx.status == "done"
 ---
 type: check
-description: cat account should have received some rune
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_cat }}
 asserts:
   - .balances[0].amount|tonumber > 2499798000000
@@ -158,10 +143,9 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: withdraw should have ILP
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .tx[]|select(.imp_loss_protection)|.imp_loss_protection|tonumber == 1360244
+  - .txs[].result.events[]|select(.imp_loss_protection)|.imp_loss_protection|tonumber == 1360244
 ---
 ########################################################################################
 # verify ILP is paid with cutoff in the future
@@ -175,7 +159,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: ILP cutoff should be block 100
 endpoint: http://localhost:1317/thorchain/mimir
 asserts:
   - .ILPCUTOFF == 100
@@ -188,10 +171,9 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: withdraw should have ILP with cutoff in the future
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .tx[]|select(.imp_loss_protection)|.imp_loss_protection|tonumber == 2785127
+  - .txs[].result.events[]|select(.imp_loss_protection)|.imp_loss_protection|tonumber == 2785127
 ---
 ########################################################################################
 # verify ILP is not paid with cutoff in the past
@@ -205,7 +187,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: ILP cutoff should be block 1
 endpoint: http://localhost:1317/thorchain/mimir
 asserts:
   - .ILPCUTOFF == 1
@@ -218,7 +199,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: withdraw should have no ILP
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .tx[]|select(.imp_loss_protection)|.imp_loss_protection|tonumber == 0
+  - .txs[].result.events[]|select(.imp_loss_protection)|.imp_loss_protection|tonumber == 0

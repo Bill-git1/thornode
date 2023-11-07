@@ -71,15 +71,11 @@ func (g Gas) Valid() error {
 			return err
 		}
 	}
-
 	return nil
 }
 
 // IsEmpty return true as long as there is one coin in it that is not empty
 func (g Gas) IsEmpty() bool {
-	if len(g) == 0 {
-		return true
-	}
 	for _, coin := range g {
 		if !coin.IsEmpty() {
 			return false
@@ -90,6 +86,7 @@ func (g Gas) IsEmpty() bool {
 
 // Add combines two gas objects into one, adding amounts where needed
 // or appending new coins.
+// **WARNING**: dangerous, returns self-reference and also self-modifies
 func (g Gas) Add(g2 Gas) Gas {
 	var newGasCoins Gas
 	for _, gc2 := range g2 {
@@ -106,19 +103,6 @@ func (g Gas) Add(g2 Gas) Gas {
 	}
 
 	return append(g, newGasCoins...)
-}
-
-// Sub subtract the given amount gas from existing gas object
-func (g Gas) Sub(g2 Gas) Gas {
-	for _, gc2 := range g2 {
-		for i, gc1 := range g {
-			if gc1.Asset.Equals(gc2.Asset) {
-				g[i].Amount = SafeSub(g[i].Amount, gc2.Amount)
-				break
-			}
-		}
-	}
-	return g
 }
 
 // Equals Check if two lists of coins are equal to each other. Order does not matter
@@ -151,4 +135,17 @@ func (g Gas) ToCoins() Coins {
 		coins[i] = NewCoin(g[i].Asset, g[i].Amount)
 	}
 	return coins
+}
+
+// NoneEmpty returns a new Gas which ignores any coin which is empty
+// either Coin asset is empty or amount is empty
+func (g Gas) NoneEmpty() Gas {
+	newGas := Gas{}
+	for _, item := range g {
+		if item.IsEmpty() {
+			continue
+		}
+		newGas = append(newGas, item)
+	}
+	return newGas
 }

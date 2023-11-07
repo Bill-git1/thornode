@@ -62,13 +62,17 @@ func (h NetworkFeeHandler) validateV1(ctx cosmos.Context, msg MsgNetworkFee) err
 // handle process MsgNetworkFee
 func (h NetworkFeeHandler) handle(ctx cosmos.Context, msg MsgNetworkFee) (*cosmos.Result, error) {
 	version := h.mgr.GetVersion()
-	if version.GTE(semver.MustParse("0.47.0")) {
+	switch {
+	case version.GTE(semver.MustParse("1.123.0")):
+		return h.handleV123(ctx, msg)
+	case version.GTE(semver.MustParse("0.47.0")):
 		return h.handleV47(ctx, msg)
+	default:
+		return nil, errBadVersion
 	}
-	return nil, errBadVersion
 }
 
-func (h NetworkFeeHandler) handleV47(ctx cosmos.Context, msg MsgNetworkFee) (*cosmos.Result, error) {
+func (h NetworkFeeHandler) handleV123(ctx cosmos.Context, msg MsgNetworkFee) (*cosmos.Result, error) {
 	active, err := h.mgr.Keeper().ListActiveValidators(ctx)
 	if err != nil {
 		err = wrapError(ctx, err, "fail to get list of active node accounts")
@@ -80,7 +84,7 @@ func (h NetworkFeeHandler) handleV47(ctx cosmos.Context, msg MsgNetworkFee) (*co
 		return nil, err
 	}
 	observeSlashPoints := h.mgr.GetConstants().GetInt64Value(constants.ObserveSlashPoints)
-	observeFlex := h.mgr.GetConstants().GetInt64Value(constants.ObservationDelayFlexibility)
+	observeFlex := h.mgr.Keeper().GetConfigInt64(ctx, constants.ObservationDelayFlexibility)
 
 	slashCtx := ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
 		telemetry.NewLabel("reason", "failed_observe_network_fee"),

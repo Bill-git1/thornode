@@ -3,15 +3,14 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"syscall"
 	"text/template"
@@ -22,6 +21,8 @@ import (
 )
 
 // trunk-ignore-all(golangci-lint/forcetypeassert)
+
+var reSetVar = regexp.MustCompile(`\$\{([A-Z0-9_]+)=([^}]+)\}`)
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // Run
@@ -47,7 +48,7 @@ func run(out io.Writer, path string, routine int) error {
 		"HOME=" + home,
 		"THOR_TENDERMINT_INSTRUMENTATION_PROMETHEUS=false",
 		// block time should be short, but all consecutive checks must complete within timeout
-		fmt.Sprintf("THOR_TENDERMINT_CONSENSUS_TIMEOUT_COMMIT=%s", time.Second*getTimeFactor()),
+		fmt.Sprintf("THOR_TENDERMINT_CONSENSUS_TIMEOUT_COMMIT=%s", time.Second*3/2*getTimeFactor()),
 		// all ports will be offset by the routine number
 		fmt.Sprintf("THOR_COSMOS_API_ADDRESS=tcp://0.0.0.0:%d", 1317+routine),
 		fmt.Sprintf("THOR_TENDERMINT_RPC_LISTEN_ADDRESS=tcp://0.0.0.0:%d", 26657+routine),
@@ -121,10 +122,31 @@ func run(out io.Writer, path string, routine int) error {
 	}
 
 	// render the template
-	buf := &bytes.Buffer{}
-	err = tmpl.Execute(buf, nil)
+	tmplBuf := &bytes.Buffer{}
+	err = tmpl.Execute(tmplBuf, nil)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to render template")
+	}
+
+	// scan all lines in buffer for variable expansion
+	buf := &bytes.Buffer{}
+	scanner = bufio.NewScanner(tmplBuf)
+	vars := map[string]string{}
+	for i := 0; scanner.Scan(); i++ {
+		line := scanner.Text()
+		matches := reSetVar.FindAllStringSubmatch(line, -1)
+		for _, match := range matches {
+			vars[match[1]] = match[2]
+		}
+
+		// regex replace variables and set variables
+		for k, v := range vars {
+			re := regexp.MustCompile(`\$\{` + k + `(=([^}]+))?\}`)
+			line = re.ReplaceAllString(line, v)
+		}
+
+		// write line
+		buf.WriteString(line + "\n")
 	}
 
 	// all operations we will execute
@@ -297,15 +319,6 @@ func run(out io.Writer, path string, routine int) error {
 		}
 	}
 
-	if returnErr == nil {
-		localLog.Info().Msgf("Checking invariants")
-		api := fmt.Sprintf("http://localhost:%d", 1317+routine)
-		returnErr = checkInvariants(api)
-		if returnErr != nil {
-			localLog.Error().Err(returnErr).Msg("invariants failed")
-		}
-	}
-
 	// log success
 	if returnErr == nil {
 		localLog.Info().Msg("All operations succeeded")
@@ -338,7 +351,7 @@ func run(out io.Writer, path string, routine int) error {
 
 		// restart thornode
 		localLog.Debug().Msg("Restarting thornode")
-		thornode = exec.Command("thornode", "start")
+		thornode = exec.Command("thornode", "--log_level", logLevel, "start")
 		thornode.Env = env
 		thornode.Stdout = os.Stdout
 		thornode.Stderr = os.Stderr
@@ -356,48 +369,4 @@ func run(out io.Writer, path string, routine int) error {
 	}
 
 	return returnErr
-}
-
-func checkInvariants(api string) error {
-	endpoint := fmt.Sprintf("%s/thorchain/invariants", api)
-	req, err := http.NewRequest("GET", endpoint, nil)
-	if err != nil {
-		return err
-	}
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-	invs := struct {
-		Invariants []string
-	}{}
-	if err := json.NewDecoder(resp.Body).Decode(&invs); err != nil {
-		return err
-	}
-	for _, inv := range invs.Invariants {
-		endpoint := fmt.Sprintf("%s/thorchain/invariant/%s", api, inv)
-		req, err := http.NewRequest("GET", endpoint, nil)
-		if err != nil {
-			return err
-		}
-		resp, err := httpClient.Do(req)
-		if err != nil {
-			return err
-		}
-		if err != nil {
-			return err
-		}
-		invRes := struct {
-			Broken    bool
-			Invariant string
-			Msg       []string
-		}{}
-		if err := json.NewDecoder(resp.Body).Decode(&invRes); err != nil {
-			return err
-		}
-		if invRes.Broken {
-			return fmt.Errorf("%s invariant is broken: %v", inv, invRes.Msg)
-		}
-	}
-	return nil
 }

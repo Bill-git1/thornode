@@ -24,7 +24,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: fox's tx should not make it on chain, no seq num
 endpoint: http://localhost:1317/auth/accounts/{{ addr_thor_fox }}
 asserts:
   - .result.value.sequence|length == 0

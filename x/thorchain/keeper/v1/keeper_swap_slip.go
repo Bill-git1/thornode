@@ -3,8 +3,10 @@ package keeperv1
 import (
 	"fmt"
 
+	"github.com/blang/semver"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/x/thorchain/keeper/types"
 )
 
 // AddToSwapSlip - add swap slip to block
@@ -38,6 +40,42 @@ func (k KVStore) getSwapSlip(ctx cosmos.Context, key string) (cosmos.Int, error)
 func (k KVStore) GetPoolSwapSlip(ctx cosmos.Context, height int64, asset common.Asset) (cosmos.Int, error) {
 	key := k.GetKey(ctx, prefixPoolSwapSlip, fmt.Sprintf("%d-%s", height, asset.String()))
 	return k.getSwapSlip(ctx, key)
+}
+
+func (k KVStore) GetCurrentRollup(ctx cosmos.Context, asset common.Asset) (int64, error) {
+	var currRollup int64
+	currRollupKey := k.GetKey(ctx, prefixPoolSwapSlip, fmt.Sprintf("rollup/%s", asset.String()))
+	_, err := k.getInt64(ctx, currRollupKey, &currRollup)
+	if err != nil {
+		return 0, err
+	}
+	return currRollup, nil
+}
+
+func (k KVStore) SetCurrentRollup(ctx cosmos.Context, asset common.Asset, currRollup int64) {
+	currRollupKey := k.GetKey(ctx, prefixPoolSwapSlip, fmt.Sprintf("rollup/%s", asset.String()))
+	k.setInt64(ctx, currRollupKey, currRollup)
+}
+
+// GetSwapSlipSnapShotIterator
+func (k KVStore) GetSwapSlipSnapShotIterator(ctx cosmos.Context, asset common.Asset) cosmos.Iterator {
+	key := k.GetKey(ctx, prefixPoolSwapSnapShot, asset.String())
+	return k.getIterator(ctx, types.DbPrefix(key))
+}
+
+func (k KVStore) GetSwapSlipSnapShot(ctx cosmos.Context, asset common.Asset, height int64) (int64, error) {
+	snapshotKey := k.GetKey(ctx, prefixPoolSwapSnapShot, fmt.Sprintf("%s/%d", asset.String(), height))
+	var record int64
+	_, err := k.getInt64(ctx, snapshotKey, &record)
+	if err != nil {
+		return 0, err
+	}
+	return record, nil
+}
+
+func (k KVStore) SetSwapSlipSnapShot(ctx cosmos.Context, asset common.Asset, height, currRollup int64) {
+	snapshotKey := k.GetKey(ctx, prefixPoolSwapSnapShot, fmt.Sprintf("%s/%d", asset.String(), height))
+	k.setInt64(ctx, snapshotKey, currRollup)
 }
 
 // RollupSwapSlip - sums the amount of slip in a given pool in the last targetCount blocks
@@ -89,10 +127,28 @@ func (k KVStore) RollupSwapSlip(ctx cosmos.Context, targetCount int64, asset com
 		currRollup -= oldBlockSlip.Int64()
 		currCount--
 		k.DeletePoolSwapSlip(ctx, ctx.BlockHeight()-targetCount, asset)
+
+		if k.GetVersion().GTE(semver.MustParse("1.121.0")) {
+			if targetCount > 0 && ctx.BlockHeight()%targetCount == 0 {
+				k.SetSwapSlipSnapShot(ctx, asset, ctx.BlockHeight(), currRollup)
+			}
+		}
 	}
 
 	k.setInt64(ctx, currCountKey, currCount)
 	k.setInt64(ctx, currRollupKey, currRollup)
 
 	return cosmos.NewInt(currRollup), nil
+}
+
+func (k KVStore) GetLongRollup(ctx cosmos.Context, asset common.Asset) (int64, error) {
+	var record int64
+	key := k.GetKey(ctx, prefixPoolSwapSlipLong, asset.String())
+	_, err := k.getInt64(ctx, key, &record)
+	return record, err
+}
+
+func (k KVStore) SetLongRollup(ctx cosmos.Context, asset common.Asset, slip int64) {
+	key := k.GetKey(ctx, prefixPoolSwapSlipLong, asset.String())
+	k.setInt64(ctx, key, slip)
 }

@@ -30,9 +30,10 @@ lint:
   ignore:
     - linters: [ALL]
       paths:
-        - build/docker/Dockerfile
         # NOTE: Temporarily disabled to import Heimdall repo.
         - test/smoke
+        - openapi/gen
+        - "**/*gen.go"
     - linters:
         - prettier
         - yamllint

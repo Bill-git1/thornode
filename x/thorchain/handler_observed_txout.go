@@ -84,6 +84,8 @@ func (h ObservedTxOutHandler) handle(ctx cosmos.Context, msg MsgObservedTxOut) (
 func (h ObservedTxOutHandler) preflight(ctx cosmos.Context, voter ObservedTxVoter, nas NodeAccounts, tx ObservedTx, signer cosmos.AccAddress) (ObservedTxVoter, bool) {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.123.0")):
+		return h.preflightV123(ctx, voter, nas, tx, signer)
 	case version.GTE(semver.MustParse("1.116.0")):
 		return h.preflightV116(ctx, voter, nas, tx, signer)
 	case version.GTE(semver.MustParse("1.89.0")):
@@ -93,9 +95,9 @@ func (h ObservedTxOutHandler) preflight(ctx cosmos.Context, voter ObservedTxVote
 	}
 }
 
-func (h ObservedTxOutHandler) preflightV116(ctx cosmos.Context, voter ObservedTxVoter, nas NodeAccounts, tx ObservedTx, signer cosmos.AccAddress) (ObservedTxVoter, bool) {
+func (h ObservedTxOutHandler) preflightV123(ctx cosmos.Context, voter ObservedTxVoter, nas NodeAccounts, tx ObservedTx, signer cosmos.AccAddress) (ObservedTxVoter, bool) {
 	observeSlashPoints := h.mgr.GetConstants().GetInt64Value(constants.ObserveSlashPoints)
-	observeFlex := h.mgr.GetConstants().GetInt64Value(constants.ObservationDelayFlexibility)
+	observeFlex := h.mgr.Keeper().GetConfigInt64(ctx, constants.ObservationDelayFlexibility)
 	ok := false
 
 	slashCtx := ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
@@ -179,8 +181,7 @@ func (h ObservedTxOutHandler) handleV112(ctx cosmos.Context, msg MsgObservedTxOu
 		}
 		ctx.Logger().Info("handleMsgObservedTxOut request", "Tx:", tx.String())
 
-		// if memo isn't valid or its an inbound memo, and its funds moving
-		// from a yggdrasil vault, slash the node
+		// if memo isn't valid or its an inbound memo, slash the vault
 		memo, _ := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), tx.Tx.Memo)
 		if memo.IsEmpty() || memo.IsInbound() {
 			vault, err := h.mgr.Keeper().GetVault(ctx, tx.ObservedPubKey)

@@ -31,6 +31,7 @@ func (tos *MockTxOutDummy) GetOutboundItems(ctx cosmos.Context) ([]TxOutItem, er
 }
 
 func (s *HandlerLoanSuite) TestLoanValidate(c *C) {
+	txid, _ := common.NewTxID("000000000")
 	ctx, mgr := setupManagerForTest(c)
 
 	pool := NewPool()
@@ -58,15 +59,15 @@ func (s *HandlerLoanSuite) TestLoanValidate(c *C) {
 	handler := NewLoanOpenHandler(mgr)
 
 	// happy path
-	msg := NewMsgLoanOpen(owner, common.BNBAsset, cosmos.NewUint(100), GetRandomBTCAddress(), common.BTCAsset, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), GetRandomBech32Addr())
+	msg := NewMsgLoanOpen(owner, common.BNBAsset, cosmos.NewUint(100), GetRandomBTCAddress(), common.BTCAsset, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), GetRandomBech32Addr(), txid)
 	c.Assert(handler.validate(ctx, *msg), IsNil)
 
 	// not supported collateral asset
-	msg = NewMsgLoanOpen(owner, common.RuneERC20Asset, cosmos.NewUint(100), GetRandomBTCAddress(), common.BTCAsset, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), GetRandomBech32Addr())
+	msg = NewMsgLoanOpen(owner, common.RuneERC20Asset, cosmos.NewUint(100), GetRandomBTCAddress(), common.BTCAsset, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), GetRandomBech32Addr(), txid)
 	c.Assert(handler.validate(ctx, *msg), NotNil)
 
 	// target asset doesn't have a pool
-	msg = NewMsgLoanOpen(owner, common.BNBAsset, cosmos.NewUint(100), GetRandomBTCAddress(), common.RuneERC20Asset, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), GetRandomBech32Addr())
+	msg = NewMsgLoanOpen(owner, common.BNBAsset, cosmos.NewUint(100), GetRandomBTCAddress(), common.RuneERC20Asset, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), GetRandomBech32Addr(), txid)
 	c.Assert(handler.validate(ctx, *msg), NotNil)
 }
 
@@ -119,7 +120,7 @@ func (s *HandlerLoanSuite) TestLoanOpenHandleToBTC(c *C) {
 	txid, _ := common.NewTxID("29FC8D032CF17380AA1DC86F85A479CA9433E85887A9317C5D70D87EF56EAFAA")
 	receiver, _ := common.NewAddress("bcrt1qdn665723epwlg8u2mk7rg4yp7n72mzwqzuv9ye")
 	signer, _ := cosmos.AccAddressFromBech32("tthor1qxcgl07dm3vvewwxag7u0q7nq2uk984v60xpl0")
-	msg := NewMsgLoanOpen(owner, common.BTCAsset, cosmos.NewUint(1e8), receiver, common.BTCAsset, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), signer)
+	msg := NewMsgLoanOpen(owner, common.BTCAsset, cosmos.NewUint(1e8), receiver, common.BTCAsset, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), signer, txid)
 	c.Assert(handler.handle(ctx.WithValue(constants.CtxLoanTxID, txid), *msg), IsNil)
 	c.Assert(mgr.SwapQ().EndBlock(ctx, mgr), IsNil)
 
@@ -190,7 +191,7 @@ func (s *HandlerLoanSuite) TestLoanOpenHandleToTOR(c *C) {
 	txid, _ := common.NewTxID("29FC8D032CF17380AA1DC86F85A479CA9433E85887A9317C5D70D87EF56EAFAA")
 	receiver := GetRandomTHORAddress()
 	signer, _ := cosmos.AccAddressFromBech32("tthor1qxcgl07dm3vvewwxag7u0q7nq2uk984v60xpl0")
-	msg := NewMsgLoanOpen(owner, common.BTCAsset, cosmos.NewUint(1e8), receiver, common.TOR, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), signer)
+	msg := NewMsgLoanOpen(owner, common.BTCAsset, cosmos.NewUint(1e8), receiver, common.TOR, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), signer, txid)
 	c.Assert(handler.handle(ctx.WithValue(constants.CtxLoanTxID, txid), *msg), IsNil)
 	c.Assert(mgr.SwapQ().EndBlock(ctx, mgr), IsNil)
 
@@ -202,11 +203,9 @@ func (s *HandlerLoanSuite) TestLoanOpenHandleToTOR(c *C) {
 
 	outs, err := mgr.txOutStore.GetOutboundItems(ctx)
 	c.Assert(err, IsNil)
-	c.Assert(outs, HasLen, 2, Commentf("Len %d", len(outs)))
-	c.Check(outs[0].Coin.Asset.String(), Equals, "THOR.BTC")
-	c.Check(outs[0].Coin.Amount.Uint64(), Equals, uint64(99761992), Commentf("%d", outs[0].Coin.Amount.Uint64()))
-	c.Check(outs[1].Coin.Asset.Equals(common.TOR), Equals, true)
-	c.Check(outs[1].Coin.Amount.Uint64(), Equals, uint64(1654721160000), Commentf("%d", outs[1].Coin.Amount.Uint64()))
+	c.Assert(outs, HasLen, 1, Commentf("Len %d", len(outs)))
+	c.Check(outs[0].Coin.Asset.Equals(common.TOR), Equals, true)
+	c.Check(outs[0].Coin.Amount.Uint64(), Equals, uint64(1654721160000), Commentf("%d", outs[0].Coin.Amount.Uint64()))
 
 	totalCollateral, err := mgr.Keeper().GetTotalCollateral(ctx, common.BTCAsset)
 	c.Assert(err, IsNil)
@@ -256,7 +255,7 @@ func (s *HandlerLoanSuite) TestLoanSwapFails(c *C) {
 	txid, _ := common.NewTxID("29FC8D032CF17380AA1DC86F85A479CA9433E85887A9317C5D70D87EF56EAFAA")
 	receiver, _ := common.NewAddress("bcrt1qdn665723epwlg8u2mk7rg4yp7n72mzwqzuv9ye")
 	signer, _ := cosmos.AccAddressFromBech32("tthor1qxcgl07dm3vvewwxag7u0q7nq2uk984v60xpl0")
-	msg := NewMsgLoanOpen(owner, common.BTCAsset, cosmos.NewUint(1e8), receiver, common.BTCAsset, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), signer)
+	msg := NewMsgLoanOpen(owner, common.BTCAsset, cosmos.NewUint(1e8), receiver, common.BTCAsset, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), signer, txid)
 	c.Assert(handler.handle(ctx.WithValue(constants.CtxLoanTxID, txid), *msg), IsNil)
 	c.Assert(mgr.SwapQ().EndBlock(ctx, mgr), IsNil)
 

@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -32,6 +33,7 @@ import (
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/config"
 	"gitlab.com/thorchain/thornode/constants"
+	openapi "gitlab.com/thorchain/thornode/openapi/gen"
 	stypes "gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
@@ -68,13 +70,6 @@ type thorchainBridge struct {
 	seqNumber     uint64
 	httpClient    *retryablehttp.Client
 	broadcastLock *sync.RWMutex
-
-	lastBlockHeightCheck     time.Time
-	lastThorchainBlockHeight int64
-
-	pubKeyCheckLock        *sync.Mutex
-	lastPubKeysCheck       time.Time
-	lastPubKeyAddressPairs []byte
 }
 
 type ThorchainBridge interface {
@@ -98,6 +93,7 @@ type ThorchainBridge interface {
 	GetTHORName(name string) (stypes.THORName, error)
 	GetThorchainVersion() (semver.Version, error)
 	IsCatchingUp() (bool, error)
+	HasNetworkFee(chain common.Chain) (bool, error)
 	PostKeysignFailure(blame stypes.Blame, height int64, memo string, coins common.Coins, pubkey common.PubKey) (common.TxID, error)
 	PostNetworkFee(height int64, chain common.Chain, transactionSize, transactionRate uint64) (common.TxID, error)
 	RagnarokInProgress() (bool, error)
@@ -110,6 +106,18 @@ type ThorchainBridge interface {
 	GetNodeAccount(string) (*stypes.NodeAccount, error)
 	GetKeygenBlock(int64, string) (stypes.KeygenBlock, error)
 }
+
+// httpResponseCache used for caching HTTP responses for less frequent querying
+type httpResponseCache struct {
+	httpResponse        []byte
+	httpResponseChecked time.Time
+	httpResponseMu      *sync.Mutex
+}
+
+var (
+	httpResponseCaches   = make(map[string]*httpResponseCache) // String-to-pointer map for quicker lookup
+	httpResponseCachesMu = &sync.Mutex{}
+)
 
 // NewThorchainBridge create a new instance of ThorchainBridge
 func NewThorchainBridge(cfg config.BifrostClientConfiguration, m *metrics.Metrics, k *Keys) (ThorchainBridge, error) {
@@ -127,14 +135,13 @@ func NewThorchainBridge(cfg config.BifrostClientConfiguration, m *metrics.Metric
 	httpClient.Logger = nil
 
 	return &thorchainBridge{
-		logger:          logger,
-		cfg:             cfg,
-		keys:            k,
-		errCounter:      m.GetCounterVec(metrics.ThorchainClientError),
-		httpClient:      httpClient,
-		m:               m,
-		broadcastLock:   &sync.RWMutex{},
-		pubKeyCheckLock: &sync.Mutex{},
+		logger:        logger,
+		cfg:           cfg,
+		keys:          k,
+		errCounter:    m.GetCounterVec(metrics.ThorchainClientError),
+		httpClient:    httpClient,
+		m:             m,
+		broadcastLock: &sync.RWMutex{},
 	}, nil
 }
 
@@ -191,6 +198,26 @@ func (b *thorchainBridge) getWithPath(path string) ([]byte, int, error) {
 
 // get handle all the low level http GET calls using retryablehttp.ThorchainBridge
 func (b *thorchainBridge) get(url string) ([]byte, int, error) {
+	// To reduce querying time and chance of "429 Too Many Requests",
+	// do not query the same endpoint more than once per block time.
+	httpResponseCachesMu.Lock()
+	respCachePointer := httpResponseCaches[url]
+	if respCachePointer == nil {
+		// Since this is the first time using this endpoint, prepare a Mutex for it.
+		respCachePointer = &httpResponseCache{httpResponseMu: &sync.Mutex{}}
+		httpResponseCaches[url] = respCachePointer
+	}
+	httpResponseCachesMu.Unlock()
+
+	// So lengthy queries don't hold up short queries, use query-specific mutexes.
+	respCachePointer.httpResponseMu.Lock()
+	defer respCachePointer.httpResponseMu.Unlock()
+
+	// When the same endpoint has been checked within the span of a single block, return the cached response.
+	if time.Since(respCachePointer.httpResponseChecked) < constants.ThorchainBlockTime && respCachePointer.httpResponse != nil {
+		return respCachePointer.httpResponse, http.StatusOK, nil
+	}
+
 	resp, err := b.httpClient.Get(url)
 	if err != nil {
 		b.errCounter.WithLabelValues("fail_get_from_thorchain", "").Inc()
@@ -210,6 +237,11 @@ func (b *thorchainBridge) get(url string) ([]byte, int, error) {
 		b.errCounter.WithLabelValues("fail_read_thorchain_resp", "").Inc()
 		return nil, resp.StatusCode, fmt.Errorf("failed to read response body: %w", err)
 	}
+
+	// All being well with the response, save it to the cache.
+	respCachePointer.httpResponse = buf
+	respCachePointer.httpResponseChecked = time.Now()
+
 	return buf, resp.StatusCode, nil
 }
 
@@ -306,16 +338,39 @@ func (b *thorchainBridge) GetObservationsStdTx(txIns stypes.ObservedTxs) ([]cosm
 		if err != nil {
 			return nil, err
 		}
+		vaultToAddress := tx.Tx.ToAddress.Equals(obAddr)
+		vaultFromAddress := tx.Tx.FromAddress.Equals(obAddr)
+		var inInboundArray, inOutboundArray bool
+		if vaultToAddress {
+			inInboundArray = inbound.Contains(tx)
+		}
+		if vaultFromAddress {
+			inOutboundArray = outbound.Contains(tx)
+		}
 		// for consolidate UTXO tx, both From & To address will be the asgard address
 		// thus here we need to make sure that one add to inbound , the other add to outbound
-		if tx.Tx.ToAddress.Equals(obAddr) && !inbound.Contains(tx) { // nolint
+		switch {
+		case !vaultToAddress && !vaultFromAddress:
+			// Neither ToAddress nor FromAddress matches obAddr, so drop it.
+			b.logger.Error().Msgf("chain (%s) tx (%s) observedaddress (%s) does not match its toaddress (%s) or fromaddress (%s)", tx.Tx.Chain, tx.Tx.ID, obAddr, tx.Tx.ToAddress, tx.Tx.FromAddress)
+		case vaultToAddress && !inInboundArray:
 			inbound = append(inbound, tx)
-		} else if tx.Tx.FromAddress.Equals(obAddr) && !outbound.Contains(tx) {
+		case vaultFromAddress && !inOutboundArray:
 			// for outbound transaction , there is no need to do confirmation counting
 			tx.FinaliseHeight = tx.BlockHeight
 			outbound = append(outbound, tx)
-		} else {
-			return nil, errors.New("could not determine if this tx as inbound or outbound")
+		case inInboundArray && inOutboundArray:
+			// It's already in both arrays, so drop it.
+			b.logger.Error().Msgf("vault-to-vault chain (%s) tx (%s) is already in both inbound and outbound arrays", tx.Tx.Chain, tx.Tx.ID)
+		case !vaultFromAddress && inInboundArray:
+			// It's already in its only (inbound) array, so drop it.
+			b.logger.Error().Msgf("observed tx in for chain (%s) tx (%s) is already in the inbound array", tx.Tx.Chain, tx.Tx.ID)
+		case !vaultToAddress && inOutboundArray:
+			// It's already in its only (outbound) array, so drop it.
+			b.logger.Error().Msgf("observed tx out for chain (%s) tx (%s) is already in the outbound array", tx.Tx.Chain, tx.Tx.ID)
+		default:
+			// This should never happen; rather than dropping it, return an error.
+			return nil, fmt.Errorf("could not determine if chain (%s) tx (%s) was inbound or outbound", tx.Tx.Chain, tx.Tx.ID)
 		}
 	}
 
@@ -415,6 +470,35 @@ func (b *thorchainBridge) IsCatchingUp() (bool, error) {
 	return resp.Result.SyncInfo.CatchingUp, nil
 }
 
+// HasNetworkFee checks whether the given chain has set a network fee - determined by
+// whether the `outbound_tx_size` for the inbound address response is non-zero.
+func (b *thorchainBridge) HasNetworkFee(chain common.Chain) (bool, error) {
+	buf, s, err := b.getWithPath(InboundAddressesEndpoint)
+	if err != nil {
+		return false, fmt.Errorf("fail to get inbound addresses: %w", err)
+	}
+	if s != http.StatusOK {
+		return false, fmt.Errorf("unexpected status code: %d", s)
+	}
+
+	var resp []openapi.InboundAddress
+	if err := json.Unmarshal(buf, &resp); err != nil {
+		return false, fmt.Errorf("fail to unmarshal inbound addresses: %w", err)
+	}
+
+	for _, addr := range resp {
+		if addr.Chain != nil && *addr.Chain == chain.String() && addr.OutboundTxSize != nil {
+			size, err := strconv.ParseInt(*addr.OutboundTxSize, 10, 64)
+			if err != nil {
+				return false, fmt.Errorf("fail to parse outbound_tx_size: %w", err)
+			}
+			return size > 0, nil
+		}
+	}
+
+	return false, fmt.Errorf("no inbound address found for chain: %s", chain)
+}
+
 // WaitToCatchUp wait for thorchain to catch up
 func (b *thorchainBridge) WaitToCatchUp() error {
 	for {
@@ -448,12 +532,6 @@ func (b *thorchainBridge) GetAsgards() (stypes.Vaults, error) {
 }
 
 func (b *thorchainBridge) getVaultPubkeys() ([]byte, error) {
-	b.pubKeyCheckLock.Lock()
-	defer b.pubKeyCheckLock.Unlock()
-	if time.Since(b.lastPubKeysCheck) < constants.ThorchainBlockTime && b.lastPubKeyAddressPairs != nil {
-		return b.lastPubKeyAddressPairs, nil
-	}
-
 	buf, s, err := b.getWithPath(PubKeysEndpoint)
 	if err != nil {
 		return nil, fmt.Errorf("fail to get asgard vaults: %w", err)
@@ -461,12 +539,10 @@ func (b *thorchainBridge) getVaultPubkeys() ([]byte, error) {
 	if s != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code %d", s)
 	}
-	b.lastPubKeyAddressPairs = buf
-	b.lastPubKeysCheck = time.Now()
 	return buf, nil
 }
 
-// GetPubKeys retrieve asgard vaults and yggdrasil vaults , and it's relevant smart contracts
+// GetPubKeys retrieve vault pub keys and their relevant smart contracts
 func (b *thorchainBridge) GetPubKeys() ([]PubKeyContractAddressPair, error) {
 	buf, err := b.getVaultPubkeys()
 	if err != nil {
@@ -477,7 +553,7 @@ func (b *thorchainBridge) GetPubKeys() ([]PubKeyContractAddressPair, error) {
 		return nil, fmt.Errorf("fail to unmarshal pubkeys: %w", err)
 	}
 	var addressPairs []PubKeyContractAddressPair
-	for _, v := range append(result.Asgard, append(result.Yggdrasil, result.Inactive...)...) {
+	for _, v := range append(result.Asgard, result.Inactive...) {
 		kp := PubKeyContractAddressPair{
 			PubKey:    v.PubKey,
 			Contracts: make(map[common.Chain]common.Address),

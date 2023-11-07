@@ -97,6 +97,7 @@ type Client struct {
 	// ---------- fees / solvency ----------
 	minRelayFeeSats         uint64
 	lastFeeRate             uint64
+	feeRateCache            []uint64
 	lastSolvencyCheckHeight int64
 }
 
@@ -111,6 +112,8 @@ func NewClient(
 	// verify the chain is supported
 	supported := map[common.Chain]bool{
 		common.DOGEChain: true,
+		common.BCHChain:  true,
+		common.LTCChain:  true,
 	}
 	if !supported[cfg.ChainID] {
 		return nil, fmt.Errorf("unsupported utxo chain: %s", cfg.ChainID)
@@ -257,6 +260,16 @@ func (c *Client) RegisterPublicKey(pubkey common.PubKey) error {
 	if err != nil {
 		return fmt.Errorf("fail to get address from pubkey(%s): %w", pubkey, err)
 	}
+
+	// litecoin does not have a default wallet so we need to create one
+	if c.cfg.ChainID.Equals(common.LTCChain) {
+		err = c.rpc.CreateWallet("")
+		if err != nil {
+			c.log.Info().Err(err).Msg("fail to create wallet")
+			return err
+		}
+	}
+
 	return c.rpc.ImportAddress(addr.String())
 }
 
@@ -283,7 +296,7 @@ func (c *Client) GetAccount(pubkey common.PubKey, height *big.Int) (common.Accou
 			continue
 		}
 		if item.Confirmations == 0 {
-			// pending tx that is still in mempool, only count yggdrasil send to itself or from asgard
+			// pending tx in mempool, only count sends to self or from asgard
 			if !c.isSelfTransaction(item.TxID) && !c.isAsgardAddress(item.Address) {
 				continue
 			}
@@ -422,7 +435,15 @@ func (c *Client) FetchTxs(height, chainHeight int64) (types.TxIn, error) {
 
 	// report network fee and solvency if within flexibility blocks of tip
 	if chainHeight-height <= c.cfg.BlockScanner.ObservationFlexibilityBlocks {
-		if err := c.sendNetworkFeeFromBlock(block); err != nil {
+		switch c.cfg.ChainID {
+		case common.DOGEChain:
+			err = c.sendNetworkFeeFromBlock(block)
+		case common.BCHChain, common.LTCChain:
+			err = c.sendNetworkFee(height)
+		default:
+			c.log.Fatal().Msg("unsupported chain")
+		}
+		if err != nil {
 			c.log.Err(err).Msg("fail to send network fee")
 		}
 		if c.IsBlockScannerHealthy() {
@@ -614,13 +635,17 @@ func (c *Client) ConfirmationCountReady(txIn types.TxIn) bool {
 
 // ShouldReportSolvency returns true if solvency should be reported at the given height.
 func (c *Client) ShouldReportSolvency(height int64) bool {
-	if height-c.lastSolvencyCheckHeight < 1 {
+	if height-c.lastSolvencyCheckHeight <= 1 {
 		return false
 	}
 
 	switch c.cfg.ChainID {
 	case common.DOGEChain:
 		return height%10 == 0
+	case common.BCHChain:
+		return true
+	case common.LTCChain:
+		return height-c.lastSolvencyCheckHeight > 5
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 		return false

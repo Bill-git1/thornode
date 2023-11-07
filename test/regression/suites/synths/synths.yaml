@@ -6,7 +6,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: btc pool should exist
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .|length == 1
@@ -25,7 +24,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: fox account should have received btc/btc
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances[]|select(.denom == "btc/btc")|.amount|tonumber == 9068387
@@ -45,7 +43,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: fox account should have swapped all btc/btc back to rune
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
@@ -78,7 +75,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: fox account should have btc/btc
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 2
@@ -99,14 +95,12 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: fox account should have swapped all btc/btc back to btc
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
   - .balances[]|select(.denom == "rune")|.amount|tonumber == 2499119824395
 ---
 type: check
-description: outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1

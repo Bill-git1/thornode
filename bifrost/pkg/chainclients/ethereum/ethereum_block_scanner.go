@@ -25,7 +25,8 @@ import (
 	"gitlab.com/thorchain/thornode/bifrost/blockscanner"
 	btypes "gitlab.com/thorchain/thornode/bifrost/blockscanner/types"
 	"gitlab.com/thorchain/thornode/bifrost/metrics"
-	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/ethereum/types"
+	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/evm"
+	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/evm/types"
 	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/signercache"
 	"gitlab.com/thorchain/thornode/bifrost/pubkeymanager"
 	"gitlab.com/thorchain/thornode/bifrost/thorclient"
@@ -42,18 +43,17 @@ import (
 type SolvencyReporter func(int64) error
 
 const (
-	BlockCacheSize          = 6000
-	MaxContractGas          = 80000
-	depositEvent            = "0xef519b7eb82aaf6ac376a6df2d793843ebfd593de5f1a0601d3cc6ab49ebb395"
-	transferOutEvent        = "0xa9cd03aa3c1b4515114539cd53d22085129d495cb9e9f9af77864526240f1bf7"
-	transferAllowanceEvent  = "0x05b90458f953d3fcb2d7fb25616a2fddeca749d0c47cc5c9832d0266b5346eea"
-	vaultTransferEvent      = "0x281daef48d91e5cd3d32db0784f6af69cd8d8d2e8c612a3568dca51ded51e08f"
-	transferOutAndCallEvent = "0x8e5841bcd195b858d53b38bcf91b38d47f3bc800469b6812d35451ab619c6f6c"
-	ethToken                = "0x0000000000000000000000000000000000000000"
-	symbolMethod            = "symbol"
-	decimalMethod           = "decimals"
-	defaultDecimals         = 18 // on ETH , consolidate all decimals to 18, in Wei
-	tenGwei                 = 10000000000
+	BlockCacheSize  = 6000
+	MaxContractGas  = 80000
+	ethToken        = "0x0000000000000000000000000000000000000000"
+	symbolMethod    = "symbol"
+	decimalMethod   = "decimals"
+	defaultDecimals = 18 // on ETH , consolidate all decimals to 18, in Wei
+	tenGwei         = 10000000000
+	// prefixTokenMeta declares prefix to use in leveldb to avoid conflicts
+	prefixTokenMeta    = `eth-tokenmeta-` // nolint gosec:G101 not a hardcoded credential
+	prefixBlockMeta    = `eth-blockmeta-`
+	prefixSignedTxItem = `signed-txitem-`
 )
 
 // ETHScanner is a scanner that understand how to interact with ETH chain ,and scan block , parse smart contract etc
@@ -67,11 +67,11 @@ type ETHScanner struct {
 	gasPrice             *big.Int
 	lastReportedGasPrice uint64
 	client               *ethclient.Client
-	blockMetaAccessor    BlockMetaAccessor
+	blockMetaAccessor    evm.BlockMetaAccessor
 	globalErrataQueue    chan<- stypes.ErrataBlock
 	vaultABI             *abi.ABI
 	erc20ABI             *abi.ABI
-	tokens               *LevelDBTokenMeta
+	tokens               *evm.LevelDBTokenMeta
 	bridge               thorclient.ThorchainBridge
 	pubkeyMgr            pubkeymanager.PubKeyValidator
 	eipSigner            etypes.Signer
@@ -105,11 +105,11 @@ func NewETHScanner(cfg config.BifrostBlockScannerConfiguration,
 	if pubkeyMgr == nil {
 		return nil, errors.New("pubkey manager is nil")
 	}
-	blockMetaAccessor, err := NewLevelDBBlockMetaAccessor(storage.GetInternalDb())
+	blockMetaAccessor, err := evm.NewLevelDBBlockMetaAccessor(prefixBlockMeta, prefixSignedTxItem, storage.GetInternalDb())
 	if err != nil {
 		return nil, fmt.Errorf("fail to create block meta accessor: %w", err)
 	}
-	tokens, err := NewLevelDBTokenMeta(storage.GetInternalDb())
+	tokens, err := evm.NewLevelDBTokenMeta(storage.GetInternalDb(), prefixTokenMeta)
 	if err != nil {
 		return nil, fmt.Errorf("fail to create token meta db: %w", err)
 	}
@@ -757,36 +757,16 @@ func (e *ETHScanner) getTxInFromSmartContract(tx *etypes.Transaction, receipt *e
 		e.logger.Info().Msgf("tx(%s) state: %d means failed , ignore", tx.Hash().String(), receipt.Status)
 		return nil, nil
 	}
-	p := NewSmartContractLogParser(e.isToValidContractAddress,
+	p := evm.NewSmartContractLogParser(e.isToValidContractAddress,
 		e.getAssetFromTokenAddress,
 		e.getTokenDecimalsForTHORChain,
 		e.convertAmount,
-		e.vaultABI)
-	// txInItem will be changed in p.getTxInItem function, so if the function return an error
+		e.vaultABI,
+		common.ETHAsset)
+	// txInItem will be changed in p.GetTxInItem function, so if the function return an error
 	// txInItem should be abandoned
-	isVaultTransfer, err := p.getTxInItem(receipt.Logs, txInItem)
-	if err != nil {
+	if _, err := p.GetTxInItem(receipt.Logs, txInItem); err != nil {
 		return nil, fmt.Errorf("fail to parse logs, err: %w", err)
-	}
-	if isVaultTransfer {
-		contractAddresses := e.pubkeyMgr.GetContracts(common.ETHChain)
-		isDirectlyToRouter := false
-		for _, item := range contractAddresses {
-			if strings.EqualFold(item.String(), tx.To().String()) {
-				isDirectlyToRouter = true
-				break
-			}
-		}
-		if isDirectlyToRouter {
-			// it is important to keep this part outside the above loop, as when we do router upgrade , which might generate multiple deposit event , along with tx that has eth value in it
-			ethValue := cosmos.NewUintFromBigInt(tx.Value())
-			if !ethValue.IsZero() {
-				ethValue = e.convertAmount(ethToken, tx.Value())
-				if txInItem.Coins.GetCoin(common.ETHAsset).IsEmpty() && !ethValue.IsZero() {
-					txInItem.Coins = append(txInItem.Coins, common.NewCoin(common.ETHAsset, ethValue))
-				}
-			}
-		}
 	}
 	e.logger.Info().Msgf("tx: %s, gas price: %s, gas used: %d,receipt status:%d", txInItem.Tx, tx.GasPrice().String(), receipt.GasUsed, receipt.Status)
 	// under no circumstance ETH gas price will be less than 1 Gwei , unless it is in dev environment
@@ -867,7 +847,7 @@ func (e *ETHScanner) fromTxToTxIn(tx *etypes.Transaction) (*stypes.TxInItem, err
 
 // getTxInFromFailedTransaction when a transaction failed due to out of gas, this method will check whether the transaction is an outbound
 // it fake a txInItem if the failed transaction is an outbound , and report it back to THORNode , thus the gas fee can be subsidised
-// need to know that this will also cause the yggdrasil / asgard that send out the outbound to be slashed 1.5x gas
+// need to know that this will also cause the vault that send out the outbound to be slashed 1.5x gas
 // it is for security purpose
 func (e *ETHScanner) getTxInFromFailedTransaction(tx *etypes.Transaction, receipt *etypes.Receipt) *stypes.TxInItem {
 	if receipt.Status == 1 {

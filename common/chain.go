@@ -86,6 +86,10 @@ func (c Chain) IsTHORChain() bool {
 	return c.Equals(THORChain)
 }
 
+func (c Chain) IsBSCChain() bool {
+	return c.Equals(BSCChain)
+}
+
 // GetEVMChains returns all "EVM" chains connected to THORChain
 // "EVM" is defined, in thornode's context, as a chain that:
 // - uses 0x as an address prefix

@@ -62,17 +62,17 @@ func (s *HandlerObservedTxOutSuite) TestValidate(c *C) {
 
 type TestObservedTxOutHandleKeeper struct {
 	keeper.KVStoreDummy
-	nas        NodeAccounts
-	na         NodeAccount
-	voter      ObservedTxVoter
-	txInVoter  ObservedTxVoter
-	yggExists  bool
-	ygg        Vault
-	height     int64
-	pool       Pool
-	txOutStore TxOutStore
-	observing  []cosmos.AccAddress
-	hashes     []common.TxID
+	nas         NodeAccounts
+	na          NodeAccount
+	voter       ObservedTxVoter
+	txInVoter   ObservedTxVoter
+	vaultExists bool
+	vault       Vault
+	height      int64
+	pool        Pool
+	txOutStore  TxOutStore
+	observing   []cosmos.AccAddress
+	hashes      []common.TxID
 }
 
 func (k *TestObservedTxOutHandleKeeper) ListActiveValidators(_ cosmos.Context) (NodeAccounts, error) {
@@ -101,15 +101,15 @@ func (k *TestObservedTxOutHandleKeeper) SetObservedTxOutVoter(_ cosmos.Context, 
 }
 
 func (k *TestObservedTxOutHandleKeeper) VaultExists(_ cosmos.Context, _ common.PubKey) bool {
-	return k.yggExists
+	return k.vaultExists
 }
 
 func (k *TestObservedTxOutHandleKeeper) GetVault(_ cosmos.Context, _ common.PubKey) (Vault, error) {
-	return k.ygg, nil
+	return k.vault, nil
 }
 
-func (k *TestObservedTxOutHandleKeeper) SetVault(_ cosmos.Context, ygg Vault) error {
-	k.ygg = ygg
+func (k *TestObservedTxOutHandleKeeper) SetVault(_ cosmos.Context, vault Vault) error {
+	k.vault = vault
 	return nil
 }
 
@@ -135,7 +135,7 @@ func (k *TestObservedTxOutHandleKeeper) GetTxOut(ctx cosmos.Context, _ int64) (*
 }
 
 func (k *TestObservedTxOutHandleKeeper) FindPubKeyOfAddress(_ cosmos.Context, _ common.Address, _ common.Chain) (common.PubKey, error) {
-	return k.ygg.PubKey, nil
+	return k.vault.PubKey, nil
 }
 
 func (k *TestObservedTxOutHandleKeeper) SetTxOut(ctx cosmos.Context, blockOut *TxOut) error {
@@ -185,9 +185,9 @@ func (s *HandlerObservedTxOutSuite) TestHandle(c *C) {
 	na.Bond = cosmos.NewUint(1000000 * common.One)
 	na.PubKeySet.Secp256k1 = pk
 
-	ygg := NewVault(ctx.BlockHeight(), ActiveVault, YggdrasilVault, pk, common.Chains{common.BNBChain}.Strings(), []ChainContract{})
-	ygg.Membership = []string{pk.String()}
-	ygg.Coins = common.Coins{
+	vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, pk, common.Chains{common.BNBChain}.Strings(), []ChainContract{})
+	vault.Membership = []string{pk.String()}
+	vault.Coins = common.Coins{
 		common.NewCoin(common.RuneAsset(), cosmos.NewUint(500)),
 		common.NewCoin(common.BNBAsset, cosmos.NewUint(200*common.One)),
 	}
@@ -200,16 +200,16 @@ func (s *HandlerObservedTxOutSuite) TestHandle(c *C) {
 			BalanceRune:  cosmos.NewUint(200_000),
 			BalanceAsset: cosmos.NewUint(300_000),
 		},
-		yggExists: true,
-		ygg:       ygg,
-		hashes:    make([]common.TxID, 0),
+		vaultExists: true,
+		vault:       vault,
+		hashes:      make([]common.TxID, 0),
 	}
 	txOutStore := NewTxStoreDummy()
 	txOutStore.blockOut.TxArray = append(txOutStore.blockOut.TxArray, TxOutItem{
 		Chain:       tx.Chain,
 		InHash:      txInHash,
 		ToAddress:   tx.ToAddress,
-		VaultPubKey: ygg.PubKey,
+		VaultPubKey: vault.PubKey,
 		Coin:        tx.Coins[0],
 		Memo:        tx.Memo,
 	})
@@ -256,7 +256,7 @@ func (s *HandlerObservedTxOutSuite) TestHandle(c *C) {
 	// Gas 37500 has been subtracted from the 300,000 pool depth.
 
 	// make sure the coin has been subtract from the vault
-	c.Check(ygg.Coins.GetCoin(common.BNBAsset).Amount.Equal(cosmos.NewUint(19999962499)), Equals, true, Commentf("%d", ygg.Coins.GetCoin(common.BNBAsset).Amount.Uint64()))
+	c.Check(vault.Coins.GetCoin(common.BNBAsset).Amount.Equal(cosmos.NewUint(19999962499)), Equals, true, Commentf("%d", vault.Coins.GetCoin(common.BNBAsset).Amount.Uint64()))
 	// Gas 37500 and Amount 1 have been subtracted from the 200*common.One vault balance.
 
 	hashes := keeper.GetObservedLink(ctx, tx.ID)
@@ -284,9 +284,9 @@ func (s *HandlerObservedTxOutSuite) TestHandleFailedTransaction(c *C) {
 	na.Bond = cosmos.NewUint(1000000 * common.One)
 	na.PubKeySet.Secp256k1 = pk
 
-	ygg := NewVault(ctx.BlockHeight(), ActiveVault, YggdrasilVault, pk, common.Chains{common.BNBChain}.Strings(), []ChainContract{})
-	ygg.Membership = []string{pk.String()}
-	ygg.Coins = common.Coins{
+	vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, pk, common.Chains{common.BNBChain}.Strings(), []ChainContract{})
+	vault.Membership = []string{pk.String()}
+	vault.Coins = common.Coins{
 		common.NewCoin(common.RuneAsset(), cosmos.NewUint(500)),
 		common.NewCoin(common.BNBAsset, cosmos.NewUint(200*common.One)),
 	}
@@ -299,16 +299,16 @@ func (s *HandlerObservedTxOutSuite) TestHandleFailedTransaction(c *C) {
 			BalanceRune:  cosmos.NewUint(200_000),
 			BalanceAsset: cosmos.NewUint(300_000),
 		},
-		yggExists: true,
-		ygg:       ygg,
-		hashes:    make([]common.TxID, 0),
+		vaultExists: true,
+		vault:       vault,
+		hashes:      make([]common.TxID, 0),
 	}
 	txOutStore := NewTxStoreDummy()
 	txOutStore.blockOut.TxArray = append(txOutStore.blockOut.TxArray, TxOutItem{
 		Chain:       tx.Chain,
 		InHash:      txInHash,
 		ToAddress:   tx.ToAddress,
-		VaultPubKey: ygg.PubKey,
+		VaultPubKey: vault.PubKey,
 		Coin:        common.NewCoin(common.BNBAsset, cosmos.NewUint(100*common.One)), // Different from the observed Amount.
 		Memo:        tx.Memo,
 	})
@@ -356,7 +356,7 @@ func (s *HandlerObservedTxOutSuite) TestHandleFailedTransaction(c *C) {
 	// but with the current code is anyway.
 
 	// make sure the coin has been subtract from the vault
-	c.Check(ygg.Coins.GetCoin(common.BNBAsset).Amount.Equal(cosmos.NewUint(19999962499)), Equals, true, Commentf("%d", ygg.Coins.GetCoin(common.BNBAsset).Amount.Uint64()))
+	c.Check(vault.Coins.GetCoin(common.BNBAsset).Amount.Equal(cosmos.NewUint(19999962499)), Equals, true, Commentf("%d", vault.Coins.GetCoin(common.BNBAsset).Amount.Uint64()))
 	// Being slashed, Amount 1 and Gas 37500 have been subtracted from the 200*common.One vault balance.
 
 	hashes := keeper.GetObservedLink(ctx, tx.ID)
@@ -381,9 +381,9 @@ func (s *HandlerObservedTxOutSuite) TestHandleStolenFundsInvalidMemo(c *C) {
 	na.Bond = cosmos.NewUint(1000000 * common.One)
 	na.PubKeySet.Secp256k1 = pk
 
-	ygg := NewVault(ctx.BlockHeight(), ActiveVault, YggdrasilVault, pk, common.Chains{common.BNBChain}.Strings(), []ChainContract{})
-	ygg.Membership = []string{pk.String()}
-	ygg.Coins = common.Coins{
+	vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, pk, common.Chains{common.BNBChain}.Strings(), []ChainContract{})
+	vault.Membership = []string{pk.String()}
+	vault.Coins = common.Coins{
 		common.NewCoin(common.RuneAsset(), cosmos.NewUint(500*common.One)),
 		common.NewCoin(common.BNBAsset, cosmos.NewUint(200*common.One)),
 	}
@@ -395,8 +395,8 @@ func (s *HandlerObservedTxOutSuite) TestHandleStolenFundsInvalidMemo(c *C) {
 			BalanceRune:  cosmos.NewUint(200 * common.One),
 			BalanceAsset: cosmos.NewUint(300 * common.One),
 		},
-		yggExists: true,
-		ygg:       ygg,
+		vaultExists: true,
+		vault:       vault,
 	}
 
 	txOutStore := NewTxStoreDummy()
@@ -424,7 +424,7 @@ func (s *HandlerObservedTxOutSuite) TestHandleStolenFundsInvalidMemo(c *C) {
 	// the gas cost is not subtracted from the pool a second time.
 
 	// make sure the coin has been subtract from the vault
-	c.Check(ygg.Coins.GetCoin(common.BNBAsset).Amount.Equal(cosmos.NewUint(9999962500)), Equals, true, Commentf("%d", ygg.Coins.GetCoin(common.BNBAsset).Amount.Uint64()))
+	c.Check(vault.Coins.GetCoin(common.BNBAsset).Amount.Equal(cosmos.NewUint(9999962500)), Equals, true, Commentf("%d", vault.Coins.GetCoin(common.BNBAsset).Amount.Uint64()))
 	// Being slashed, Amount 100*common.One and Gas 37500 have been subtracted from the 200*common.One vault balance.
 
 	c.Assert(keeper.na.Bond.LT(cosmos.NewUint(1000000*common.One)), Equals, true, Commentf("%d", keeper.na.Bond.Uint64()))

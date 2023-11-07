@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -24,6 +25,17 @@ func pingHandler(cliCtx client.Context, storeName string) http.HandlerFunc {
 // Generic wrapper to generate GET handler
 func getHandlerWrapper(q query.Query, storeName string, cliCtx client.Context) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// disallow all parameters except height, except on quotes
+		if !strings.HasPrefix(r.URL.Path, "/thorchain/quote") {
+			heightValues := len(r.URL.Query()["height"])
+			if heightValues > 1 ||
+				heightValues == 1 && len(r.URL.Query()) > 1 ||
+				heightValues == 0 && len(r.URL.Query()) > 0 {
+				rest.WriteErrorResponse(w, http.StatusBadRequest, "invalid query parameter")
+				return
+			}
+		}
+
 		heightStr, ok := r.URL.Query()["height"]
 		if ok && len(heightStr) > 0 {
 			height, err := strconv.ParseInt(heightStr[0], 10, 64)

@@ -251,11 +251,6 @@ func (gm *GasMgrVCUR) GetMaxGas(ctx cosmos.Context, chain common.Chain) (common.
 	return gasCoin, nil
 }
 
-// SubGas will subtract the gas from the gas manager
-func (gm *GasMgrVCUR) SubGas(gas common.Gas) {
-	gm.gas = gm.gas.Sub(gas)
-}
-
 // EndBlock emit the events
 func (gm *GasMgrVCUR) EndBlock(ctx cosmos.Context, keeper keeper.Keeper, eventManager EventManager) {
 	gm.ProcessGas(ctx, keeper)

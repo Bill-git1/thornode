@@ -45,7 +45,7 @@ func (s *KeygenSuite) TestGetKeygenID(c *C) {
 	// with different block height two keygen item should be different
 	c.Assert(txID1.Equals(txID), Equals, false)
 	// with different
-	txID2, err := getKeygenID(1, members, KeygenType_YggdrasilKeygen)
+	txID2, err := getKeygenID(1, members, KeygenType_UnknownKeygen)
 	c.Assert(err, IsNil)
 	c.Assert(txID.Equals(txID2), Equals, false)
 

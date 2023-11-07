@@ -61,6 +61,9 @@ BUILDTAG?=$(shell git rev-parse --abbrev-ref HEAD)
 
 # ------------------------------ Generate ------------------------------
 
+generate: go-generate openapi protob-docker
+	@git ls-files openapi/gen | xargs sed -i '/^[- ]*API version.*$(shell cat version)/d;/APIClient.*$(shell cat version)/d'
+
 go-generate:
 	@go generate ./...
 
@@ -111,6 +114,12 @@ install:
 tools:
 	go install -tags ${TAG} ./tools/generate
 	go install -tags ${TAG} ./tools/pubkey2address
+	go install -tags ${TAG} ./tools/p2p-check
+
+# ------------------------------ Gitlab CI ------------------------------
+
+gitlab-trigger-ci:
+	@./scripts/gitlab-trigger-ci.sh
 
 # ------------------------------ Housekeeping ------------------------------
 

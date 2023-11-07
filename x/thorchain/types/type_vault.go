@@ -63,6 +63,7 @@ func (m Vault) IsAsgard() bool {
 }
 
 // IsYggdrasil return true when the vault is YggdrasilVault
+// TODO remove on hard fork
 func (m Vault) IsYggdrasil() bool {
 	return m.IsType(VaultType_YggdrasilVault)
 }

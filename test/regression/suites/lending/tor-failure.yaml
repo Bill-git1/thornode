@@ -73,7 +73,6 @@ asserts:
 # 1/3 of tor anchor pools depeg (no significant effect)
 ########################################################################################
 type: check
-description: quote before manipulation to compare expected
 endpoint: http://localhost:1317/thorchain/quote/loan/open
 params:
   from_asset: BTC.BTC
@@ -95,7 +94,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: quote after manipulation to compare expected
 endpoint: http://localhost:1317/thorchain/quote/loan/open
 params:
   from_asset: BTC.BTC
@@ -185,7 +183,6 @@ asserts:
 # 2/3 of tor anchor pools depeg
 ########################################################################################
 type: check
-description: quote before manipulation to compare expected
 endpoint: http://localhost:1317/thorchain/quote/loan/open
 params:
   from_asset: BTC.BTC
@@ -207,7 +204,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: quote after manipulation to compare expected
 endpoint: http://localhost:1317/thorchain/quote/loan/open
 params:
   from_asset: BTC.BTC
@@ -301,11 +297,11 @@ asserts:
   - .balance_rune|tonumber == 4530511943
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - '[.end[]|select(.type=="outbound" and .to=="{{ addr_thor_pig }}")]|length == 1'
+  - '[.end_block_events[]|select(.type=="outbound" and .to=="{{ addr_thor_pig }}")]|length == 1'
   # use this amount later to pay back the loan after anchor repegs
-  - .end[]|select(.type=="outbound" and .to=="{{ addr_thor_pig }}")|.coin == "400166516 THOR.RUNE"
+  - .end_block_events[]|select(.type=="outbound" and .to=="{{ addr_thor_pig }}")|.coin == "400166516 THOR.RUNE"
 ---
 ########################################################################################
 # 2/3 of tor anchor pools depeg and attacker prevents swaps for max anchor blocks
@@ -316,7 +312,6 @@ key: MaxAnchorBlocks
 value: 2
 ---
 type: check
-description: quote before manipulation to compare expected
 endpoint: http://localhost:1317/thorchain/quote/loan/open
 params:
   from_asset: BTC.BTC
@@ -331,7 +326,6 @@ type: create-blocks
 count: 3
 ---
 type: check
-description: quote after manipulation to compare expected
 endpoint: http://localhost:1317/thorchain/quote/loan/open
 params:
   from_asset: BTC.BTC
@@ -557,11 +551,11 @@ asserts:
   - .|length == 1
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - '[.end[]|select(.type == "refund")]|length == 1'
-  - .end[]|select(.type == "refund")|.from == "{{ addr_btc_duck }}"
-  - .end[]|select(.type == "refund")|.reason == "TOR price cannot be zero"
+  - '[.end_block_events[]|select(.type == "refund")]|length == 1'
+  - .end_block_events[]|select(.type == "refund")|.from == "{{ addr_btc_duck }}"
+  - .end_block_events[]|select(.type == "refund")|.reason == "TOR price cannot be zero"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -610,14 +604,14 @@ type: create-blocks
 count: 1
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .|[.end[]|select(.type == "refund")]|length == 1
-  - .end[]|select(.type == "refund")|.reason == "pool(THOR.TOR) is not available"
-  - .end[]|select(.type == "refund")|.from == "{{ addr_thor_fox }}"
+  - .|[.end_block_events[]|select(.type == "refund")]|length == 1
+  - .end_block_events[]|select(.type == "refund")|.reason == "pool(THOR.TOR) is not available"
+  - .end_block_events[]|select(.type == "refund")|.from == "{{ addr_thor_fox }}"
   # The from field is the user's which receives the refund
-  - .end[]|select(.type == "refund")|.to == "{{ addr_module_asgard }}"
+  - .end_block_events[]|select(.type == "refund")|.to == "{{ addr_module_asgard }}"
   # The to field is the address to which the user first sends the funds (not the swap destination).
-  - .|[.end[]|select(.type == "outbound")]|length == 1
-  - .end[]|select(.type == "outbound")|.from == "{{ addr_module_asgard }}"
-  - .end[]|select(.type == "outbound")|.to == "{{ addr_thor_fox }}"
+  - .|[.end_block_events[]|select(.type == "outbound")]|length == 1
+  - .end_block_events[]|select(.type == "outbound")|.from == "{{ addr_module_asgard }}"
+  - .end_block_events[]|select(.type == "outbound")|.to == "{{ addr_thor_fox }}"

@@ -295,7 +295,7 @@ func (c *Client) GetAccount(pkey common.PubKey, height *big.Int) (common.Account
 			continue
 		}
 		if item.Confirmations == 0 {
-			// pending tx that is still  in mempool, only count yggdrasil send to itself or from asgard
+			// pending tx in mempool, only count sends to self or from asgard
 			if !c.isSelfTransaction(item.TxID) && !c.isAsgardAddress(item.Address) {
 				continue
 			}
@@ -897,19 +897,9 @@ func (c *Client) extractTxs(block *btcjson.GetBlockVerboseTxResult) (types.TxIn,
 }
 
 // ignoreTx checks if we can already ignore a tx according to preset rules
-//
-// we expect array of "vout" for a LTC to have this format
-// OP_RETURN is mandatory only on inbound tx
-// vout:0 is our vault
-// vout:1 is any any change back to themselves
-// vout:2 is OP_RETURN (first 80 bytes)
-// vout:3 is OP_RETURN (next 80 bytes)
-//
-// Rules to ignore a tx are:
-// - count vouts > 4
-// - count vouts with coins (value) > 2
+// Allow up to 10 Vouts with value and 2 OP_RETURN Vouts (for getMemo appending).
 func (c *Client) ignoreTx(tx *btcjson.TxRawResult, height int64) bool {
-	if len(tx.Vin) == 0 || len(tx.Vout) == 0 || len(tx.Vout) > 4 {
+	if len(tx.Vin) == 0 || len(tx.Vout) == 0 || len(tx.Vout) > 12 {
 		return true
 	}
 	if tx.Vin[0].Txid == "" {
@@ -920,16 +910,10 @@ func (c *Client) ignoreTx(tx *btcjson.TxRawResult, height int64) bool {
 	if tx.LockTime > uint32(height) {
 		return true
 	}
-
 	countWithOutput := 0
-	for idx, vout := range tx.Vout {
+	for _, vout := range tx.Vout {
 		if vout.Value > 0 {
 			countWithOutput++
-		}
-		// check we have one address on the first 2 outputs
-		// TODO check what we do if get multiple addresses
-		if idx < 2 && vout.ScriptPubKey.Type != "nulldata" && len(vout.ScriptPubKey.Addresses) != 1 {
-			return true
 		}
 	}
 
@@ -937,8 +921,8 @@ func (c *Client) ignoreTx(tx *btcjson.TxRawResult, height int64) bool {
 	if countWithOutput == 0 {
 		return true
 	}
-	// there are more than two output with value in it, not THORChain format
-	if countWithOutput > 2 {
+	// there are more than ten outputs with value in them, not THORChain format
+	if countWithOutput > 10 {
 		return true
 	}
 	return false
@@ -946,26 +930,37 @@ func (c *Client) ignoreTx(tx *btcjson.TxRawResult, height int64) bool {
 
 // getOutput retrieve the correct output for both inbound
 // outbound tx.
-// logic is if FROM == TO then its an outbound change output
-// back to the vault and we need to select the other output
-// as Bifrost already filtered the txs to only have here
-// txs with max 2 outputs with values
+// logic is if sender is a vault then prefer the first Vout with value,
+// else prefer the first Vout with value that's to a vault
 // an exception need to be made for consolidate tx , because consolidate tx will be send from asgard back asgard itself
 func (c *Client) getOutput(sender string, tx *btcjson.TxRawResult, consolidate bool) (btcjson.Vout, error) {
+	isSenderAsgard := c.isAsgardAddress(sender)
 	for _, vout := range tx.Vout {
 		if strings.EqualFold(vout.ScriptPubKey.Type, "nulldata") {
 			continue
 		}
-		if len(vout.ScriptPubKey.Addresses) != 1 {
-			return btcjson.Vout{}, fmt.Errorf("no vout address available")
+		if vout.Value <= 0 {
+			continue
 		}
-		if vout.Value > 0 {
-			if consolidate && vout.ScriptPubKey.Addresses[0] == sender {
-				return vout, nil
-			}
-			if !consolidate && vout.ScriptPubKey.Addresses[0] != sender {
-				return vout, nil
-			}
+		if len(vout.ScriptPubKey.Addresses) != 1 {
+			// If more than one address, ignore this Vout.
+			// TODO check what we do if get multiple addresses
+			continue
+		}
+		receiver := vout.ScriptPubKey.Addresses[0]
+		// To be observed, either the sender or receiver must be an observed THORChain vault;
+		// if the sender is a vault then assume the first Vout is the output (and a later Vout could be change).
+		// If the sender isn't a vault, then do do not for instance
+		// return a change address Vout as the output if before the vault-inbound Vout.
+		if !isSenderAsgard && !c.isAsgardAddress(receiver) {
+			continue
+		}
+
+		if consolidate && receiver == sender {
+			return vout, nil
+		}
+		if !consolidate && receiver != sender {
+			return vout, nil
 		}
 	}
 	return btcjson.Vout{}, btypes.ErrFailOutputMatchCriteria
@@ -1188,7 +1183,7 @@ func (c *Client) ConfirmationCountReady(txIn types.TxIn) bool {
 // getVaultSignerLock , with consolidate UTXO process add into bifrost , there are two entry points for SignTx , one is from signer , signing the outbound tx
 // from state machine, the other one will be consolidate utxo process
 // this keep a lock per vault pubkey , the goal is each vault we only have one key sign in flight at a time, however different vault can do key sign in parallel
-// assume there are multiple asgards(A,B) , and local yggdrasil vault , when A is signing , B and local yggdrasil vault should be able to sign as well
+// assume there are multiple asgards(A,B), when A is signing, B should be able to sign as well
 // however if A already has a key sign in flight , bifrost should not kick off another key sign in parallel, otherwise we might double spend some UTXOs
 func (c *Client) getVaultSignerLock(vaultPubKey string) *sync.Mutex {
 	c.signerLock.Lock()

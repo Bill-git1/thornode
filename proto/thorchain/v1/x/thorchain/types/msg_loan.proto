@@ -19,6 +19,7 @@ message MsgLoanOpen {
   string aggregator_target_address = 10;
   string aggregator_target_limit = 11 [(gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Uint", (gogoproto.nullable) = false];
   bytes signer = 12  [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
+  string tx_id = 13 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/common.TxID", (gogoproto.customname) = "TxID"];
 }
 
 message MsgLoanRepayment {
@@ -28,4 +29,5 @@ message MsgLoanRepayment {
   string min_out = 4 [(gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Uint", (gogoproto.nullable) = false];
   bytes signer = 5  [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
   string from = 6 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/common.Address"];
+  string tx_id = 7 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/common.TxID", (gogoproto.customname) = "TxID"];
 }

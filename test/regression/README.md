@@ -72,6 +72,10 @@ pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig 
 
 The `dog` mnemonic is a special case and will be used as the mnemonic for the default simulation validator, and as the mimir admin.
 
+### Variables
+
+Variables can be used anywhere in tests to avoid redundant definitions and magic numbers. Set a variable like `${FOO=123}` and all subsequent references to `${FOO}` will expand to `123`. Variables values can also be modified and the most recently set value is used for expansion.
+
 ### State Definition
 
 The state definition can be any valid data to deep merge with the default generated genesis file before initializing the simulation validator. There can be multiple `state` operations at the beginning of a test case. In practice this like just contains some pools and LP records which can be easily copied from some network state to simplify the starting state for the simulation:

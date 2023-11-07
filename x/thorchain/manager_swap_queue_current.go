@@ -1,7 +1,6 @@
 package thorchain
 
 import (
-	"sort"
 	"strconv"
 	"strings"
 
@@ -10,81 +9,6 @@ import (
 	"gitlab.com/thorchain/thornode/constants"
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 )
-
-type swapItem struct {
-	index int
-	msg   MsgSwap
-	fee   cosmos.Uint
-	slip  cosmos.Uint
-}
-type swapItems []swapItem
-
-func (items swapItems) Sort() swapItems {
-	// sort by liquidity fee , descending
-	byFee := items
-	sort.SliceStable(byFee, func(i, j int) bool {
-		return byFee[i].fee.GT(byFee[j].fee)
-	})
-
-	// sort by slip fee , descending
-	bySlip := items
-	sort.SliceStable(bySlip, func(i, j int) bool {
-		return bySlip[i].slip.GT(bySlip[j].slip)
-	})
-
-	type score struct {
-		msg   MsgSwap
-		score int
-		index int
-	}
-
-	// add liquidity fee score
-	scores := make([]score, len(items))
-	for i, item := range byFee {
-		scores[i] = score{
-			msg:   item.msg,
-			score: i,
-			index: item.index,
-		}
-	}
-
-	// add slip score
-	for i, item := range bySlip {
-		for j, score := range scores {
-			if score.msg.Tx.ID.Equals(item.msg.Tx.ID) && score.index == item.index {
-				scores[j].score += i
-				break
-			}
-		}
-	}
-
-	// This sorted appears to sort twice, but actually the first sort informs
-	// the second. If we have multiple swaps with the same score, it will use
-	// the ID sort to deterministically sort within the same score
-
-	// sort by ID, first
-	sort.SliceStable(scores, func(i, j int) bool {
-		return scores[i].msg.Tx.ID.String() < scores[j].msg.Tx.ID.String()
-	})
-
-	// sort by score, second
-	sort.SliceStable(scores, func(i, j int) bool {
-		return scores[i].score < scores[j].score
-	})
-
-	// sort our items by score
-	sorted := make(swapItems, len(items))
-	for i, score := range scores {
-		for _, item := range items {
-			if item.msg.Tx.ID.Equals(score.msg.Tx.ID) && score.index == item.index {
-				sorted[i] = item
-				break
-			}
-		}
-	}
-
-	return sorted
-}
 
 // SwapQueueVCUR is going to manage the swaps queue
 type SwapQueueVCUR struct {
@@ -272,7 +196,14 @@ func (vm *SwapQueueVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 				vm.k.RemoveStreamingSwap(ctx, pick.msg.Tx.ID)
 
 				tois := make([]TxOutItem, 0)
-				if !swp.Out.IsZero() {
+				memo, err := ParseMemoWithTHORNames(ctx, vm.k, pick.msg.Tx.Memo)
+				if err != nil {
+					return err
+				}
+				isSaversAdd := memo.IsType(TxAdd)
+
+				// If this is a savers add skip scheduling outbound
+				if !swp.Out.IsZero() && !isSaversAdd {
 					dexAgg := ""
 					if len(pick.msg.Aggregator) > 0 {
 						dexAgg, err = FetchDexAggregator(
@@ -309,10 +240,6 @@ func (vm *SwapQueueVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 				}
 
 				for _, item := range tois {
-					// let the txout manager mint our outbound asset if it is a synthetic asset
-					if item.Chain.IsTHORChain() && (item.Coin.Asset.IsSyntheticAsset() || item.Coin.Asset.IsDerivedAsset()) {
-						item.ModuleName = ModuleName
-					}
 					ok, err := mgr.TxOutStore().TryAddTxOutItem(ctx, mgr, item, cosmos.ZeroUint())
 					if err != nil {
 						return ErrInternal(err, "fail to add outbound tx")

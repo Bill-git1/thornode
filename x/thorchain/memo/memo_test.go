@@ -204,15 +204,6 @@ func (s *MemoSuite) TestParseWithAbbreviated(c *C) {
 	c.Check(memo.IsType(TxLeave), Equals, true)
 	c.Check(memo.GetAccAddress().String(), Equals, addr.String())
 
-	memo, err = ParseMemoWithTHORNames(ctx, k, "yggdrasil+:30")
-	c.Assert(err, IsNil)
-	c.Check(memo.IsType(TxYggdrasilFund), Equals, true)
-	c.Check(memo.IsInbound(), Equals, false)
-	c.Check(memo.IsInternal(), Equals, true)
-	memo, err = ParseMemoWithTHORNames(ctx, k, "yggdrasil-:30")
-	c.Assert(err, IsNil)
-	c.Check(memo.IsType(TxYggdrasilReturn), Equals, true)
-	c.Check(memo.IsInternal(), Equals, true)
 	memo, err = ParseMemoWithTHORNames(ctx, k, "migrate:100")
 	c.Assert(err, IsNil)
 	c.Check(memo.IsType(TxMigrate), Equals, true)
@@ -421,18 +412,6 @@ func (s *MemoSuite) TestParse(c *C) {
 	c.Check(memo.GetTxID(), Equals, txID)
 	c.Check(memo.String(), Equals, refundMemo)
 
-	yggFundMemo := "YGGDRASIL+:100"
-	memo, err = ParseMemoWithTHORNames(ctx, k, yggFundMemo)
-	c.Check(err, IsNil)
-	c.Check(memo.GetBlockHeight(), Equals, int64(100))
-	c.Check(memo.String(), Equals, yggFundMemo)
-
-	yggReturnMemo := "YGGDRASIL-:100"
-	memo, err = ParseMemoWithTHORNames(ctx, k, yggReturnMemo)
-	c.Check(err, IsNil)
-	c.Check(memo.GetBlockHeight(), Equals, int64(100))
-	c.Check(memo.String(), Equals, yggReturnMemo)
-
 	ragnarokMemo := "RAGNAROK:1024"
 	memo, err = ParseMemoWithTHORNames(ctx, k, ragnarokMemo)
 	c.Check(err, IsNil)
@@ -526,21 +505,11 @@ func (s *MemoSuite) TestParse(c *C) {
 	c.Assert(err, NotNil)
 	_, err = ParseMemoWithTHORNames(ctx, k, "refund") // not enough parameter
 	c.Assert(err, NotNil)
-	_, err = ParseMemoWithTHORNames(ctx, k, "yggdrasil+") // not enough parameter
-	c.Assert(err, NotNil)
-	_, err = ParseMemoWithTHORNames(ctx, k, "yggdrasil+:A") // invalid block height
-	c.Assert(err, NotNil)
-	_, err = ParseMemoWithTHORNames(ctx, k, "yggdrasil-") // not enough parameter
-	c.Assert(err, NotNil)
-	_, err = ParseMemoWithTHORNames(ctx, k, "yggdrasil-:B") // invalid block height
-	c.Assert(err, NotNil)
 	_, err = ParseMemoWithTHORNames(ctx, k, "ragnarok") // not enough parameter
 	c.Assert(err, NotNil)
 	_, err = ParseMemoWithTHORNames(ctx, k, "ragnarok:what") // not enough parameter
 	c.Assert(err, NotNil)
 	_, err = ParseMemoWithTHORNames(ctx, k, "bond:what") // invalid address
-	c.Assert(err, NotNil)
-	_, err = ParseMemoWithTHORNames(ctx, k, "switch:what") // invalid address
 	c.Assert(err, NotNil)
 	_, err = ParseMemoWithTHORNames(ctx, k, "whatever") // not support
 	c.Assert(err, NotNil)

@@ -74,7 +74,7 @@ func (s *EVMSuite) SetUpTest(c *C) {
 			c.Assert(err, IsNil)
 			var pubKeysVault types2.QueryVaultsPubKeys
 			c.Assert(json.Unmarshal(content, &pubKeysVault), IsNil)
-			pubKeysVault.Yggdrasil = append(pubKeysVault.Yggdrasil, types2.QueryVaultPubKeyContract{
+			pubKeysVault.Asgard = append(pubKeysVault.Asgard, types2.QueryVaultPubKeyContract{
 				PubKey: pk,
 				Routers: []types2.ChainContract{
 					{
@@ -573,56 +573,6 @@ func (s *EVMSuite) TestSignEVMTx(c *C) {
 		},
 		GasRate: 1,
 		Memo:    "MIGRATE:1024",
-	}, 1)
-	c.Assert(err, IsNil)
-	c.Assert(result, NotNil)
-	// yggdrasil +
-
-	result, _, _, err = e.SignTx(stypes.TxOutItem{
-		Chain:       common.AVAXChain,
-		ToAddress:   addr,
-		VaultPubKey: e.localPubKey,
-		Coins: common.Coins{
-			common.NewCoin(common.AVAXAsset, cosmos.NewUint(1e18)),
-		},
-		MaxGas: common.Gas{
-			common.NewCoin(common.AVAXAsset, cosmos.NewUint(MaxContractGas)),
-		},
-		GasRate: 1,
-		Memo:    "YGGDRASIL+:1024",
-	}, 1)
-	c.Assert(err, IsNil)
-	c.Assert(result, NotNil)
-	// yggdrasil +
-	result, _, _, err = e.SignTx(stypes.TxOutItem{
-		Chain:       common.AVAXChain,
-		ToAddress:   addr,
-		VaultPubKey: e.localPubKey,
-		Coins: common.Coins{
-			common.NewCoin(asset, cosmos.NewUint(1e18)),
-		},
-		MaxGas: common.Gas{
-			common.NewCoin(common.AVAXAsset, cosmos.NewUint(MaxContractGas)),
-		},
-		GasRate: 1,
-		Memo:    "YGGDRASIL+:1024",
-	}, 1)
-	c.Assert(err, IsNil)
-	c.Assert(result, NotNil)
-	// yggdrasil -
-	result, _, _, err = e.SignTx(stypes.TxOutItem{
-		Chain:       common.AVAXChain,
-		ToAddress:   addr,
-		VaultPubKey: e.localPubKey,
-		Coins: common.Coins{
-			common.NewCoin(common.AVAXAsset, cosmos.NewUint(1e18)),
-			common.NewCoin(asset, cosmos.NewUint(1e18)),
-		},
-		MaxGas: common.Gas{
-			common.NewCoin(common.AVAXAsset, cosmos.NewUint(MaxContractGas)),
-		},
-		GasRate: 1,
-		Memo:    "YGGDRASIL-:1024",
 	}, 1)
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)

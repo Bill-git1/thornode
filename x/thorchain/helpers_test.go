@@ -19,7 +19,6 @@ var _ = Suite(&HelperSuite{})
 
 type TestRefundBondKeeper struct {
 	keeper.KVStoreDummy
-	ygg     Vault
 	pool    Pool
 	na      NodeAccount
 	vaults  Vaults
@@ -37,13 +36,6 @@ func (k *TestRefundBondKeeper) GetAsgardVaultsByStatus(_ cosmos.Context, _ Vault
 
 func (k *TestRefundBondKeeper) VaultExists(_ cosmos.Context, pk common.PubKey) bool {
 	return true
-}
-
-func (k *TestRefundBondKeeper) GetVault(_ cosmos.Context, pk common.PubKey) (Vault, error) {
-	if k.ygg.PubKey.Equals(pk) {
-		return k.ygg, nil
-	}
-	return Vault{}, errKaboom
 }
 
 func (k *TestRefundBondKeeper) GetLeastSecure(ctx cosmos.Context, vaults Vaults, signingTransPeriod int64) Vault {
@@ -70,20 +62,6 @@ func (k *TestRefundBondKeeper) SetPool(_ cosmos.Context, p Pool) error {
 	return errKaboom
 }
 
-func (k *TestRefundBondKeeper) DeleteVault(_ cosmos.Context, key common.PubKey) error {
-	if k.ygg.PubKey.Equals(key) {
-		k.ygg = NewVault(1, InactiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BNBChain}.Strings(), []ChainContract{})
-	}
-	return nil
-}
-
-func (k *TestRefundBondKeeper) SetVault(ctx cosmos.Context, vault Vault) error {
-	if k.ygg.PubKey.Equals(vault.PubKey) {
-		k.ygg = vault
-	}
-	return nil
-}
-
 func (k *TestRefundBondKeeper) SetBondProviders(ctx cosmos.Context, _ BondProviders) error {
 	return nil
 }
@@ -96,137 +74,6 @@ func (k *TestRefundBondKeeper) SendFromModuleToModule(_ cosmos.Context, from, to
 	k.modules[from] -= int64(coins[0].Amount.Uint64())
 	k.modules[to] += int64(coins[0].Amount.Uint64())
 	return nil
-}
-
-func (s *HelperSuite) TestSubsidizePoolWithSlashBond(c *C) {
-	ctx, mgr := setupManagerForTest(c)
-	ygg := GetRandomVault()
-	c.Assert(subsidizePoolWithSlashBond(ctx, ygg, cosmos.NewUint(100*common.One), cosmos.ZeroUint(), mgr), IsNil)
-	poolBNB := NewPool()
-	poolBNB.Asset = common.BNBAsset
-	poolBNB.BalanceRune = cosmos.NewUint(100 * common.One)
-	poolBNB.BalanceAsset = cosmos.NewUint(100 * common.One)
-	poolBNB.Status = PoolAvailable
-	c.Assert(mgr.Keeper().SetPool(ctx, poolBNB), IsNil)
-
-	poolTCAN := NewPool()
-	tCanAsset, err := common.NewAsset("BNB.TCAN-014")
-	c.Assert(err, IsNil)
-	poolTCAN.Asset = tCanAsset
-	poolTCAN.BalanceRune = cosmos.NewUint(200 * common.One)
-	poolTCAN.BalanceAsset = cosmos.NewUint(200 * common.One)
-	poolTCAN.Status = PoolAvailable
-	c.Assert(mgr.Keeper().SetPool(ctx, poolTCAN), IsNil)
-
-	poolBTC := NewPool()
-	poolBTC.Asset = common.BTCAsset
-	poolBTC.BalanceAsset = cosmos.NewUint(300 * common.One)
-	poolBTC.BalanceRune = cosmos.NewUint(300 * common.One)
-	poolBTC.Status = PoolAvailable
-	c.Assert(mgr.Keeper().SetPool(ctx, poolBTC), IsNil)
-	ygg.Type = YggdrasilVault
-	ygg.Coins = common.Coins{
-		common.NewCoin(common.RuneAsset(), cosmos.NewUint(1*common.One)),
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(1*common.One)),            // 1
-		common.NewCoin(tCanAsset, cosmos.NewUint(common.One).QuoUint64(2)),       // 0.5 TCAN
-		common.NewCoin(common.BTCAsset, cosmos.NewUint(common.One).QuoUint64(4)), // 0.25 BTC
-	}
-	totalRuneLeft, err := getTotalYggValueInRune(ctx, mgr.Keeper(), ygg)
-	c.Assert(err, IsNil)
-
-	totalRuneStolen := ygg.GetCoin(common.RuneAsset()).Amount
-	slashAmt := totalRuneLeft.MulUint64(3).QuoUint64(2)
-
-	FundModule(c, ctx, mgr.Keeper(), BondName, slashAmt.Uint64())
-	asgardBeforeSlash := mgr.Keeper().GetRuneBalanceOfModule(ctx, AsgardName)
-	bondBeforeSlash := mgr.Keeper().GetRuneBalanceOfModule(ctx, BondName)
-	poolsBeforeSlash := poolBNB.BalanceRune.Add(poolTCAN.BalanceRune).Add(poolBTC.BalanceRune)
-
-	c.Assert(subsidizePoolWithSlashBond(ctx, ygg, totalRuneLeft, slashAmt, mgr), IsNil)
-
-	slashAmt = common.SafeSub(slashAmt, totalRuneStolen)
-	totalRuneLeft = common.SafeSub(totalRuneLeft, totalRuneStolen)
-
-	amountBNBForBNBPool := slashAmt.Mul(poolBNB.AssetValueInRune(cosmos.NewUint(common.One))).Quo(totalRuneLeft)
-	runeBNB := poolBNB.BalanceRune.Add(amountBNBForBNBPool)
-	bnbPoolAsset := poolBNB.BalanceAsset.Sub(cosmos.NewUint(common.One))
-	poolBNB, err = mgr.Keeper().GetPool(ctx, common.BNBAsset)
-	c.Assert(err, IsNil)
-	c.Assert(poolBNB.BalanceRune.Equal(runeBNB), Equals, true)
-	c.Assert(poolBNB.BalanceAsset.Equal(bnbPoolAsset), Equals, true)
-	amountRuneForTCANPool := slashAmt.Mul(poolTCAN.AssetValueInRune(cosmos.NewUint(common.One).QuoUint64(2))).Quo(totalRuneLeft)
-	runeTCAN := poolTCAN.BalanceRune.Add(amountRuneForTCANPool)
-	tcanPoolAsset := poolTCAN.BalanceAsset.Sub(cosmos.NewUint(common.One).QuoUint64(2))
-	poolTCAN, err = mgr.Keeper().GetPool(ctx, tCanAsset)
-	c.Assert(err, IsNil)
-	c.Assert(poolTCAN.BalanceRune.Equal(runeTCAN), Equals, true)
-	c.Assert(poolTCAN.BalanceAsset.Equal(tcanPoolAsset), Equals, true)
-	amountRuneForBTCPool := slashAmt.Mul(poolBTC.AssetValueInRune(cosmos.NewUint(common.One).QuoUint64(4))).Quo(totalRuneLeft)
-	runeBTC := poolBTC.BalanceRune.Add(amountRuneForBTCPool)
-	btcPoolAsset := poolBTC.BalanceAsset.Sub(cosmos.NewUint(common.One).QuoUint64(4))
-	poolBTC, err = mgr.Keeper().GetPool(ctx, common.BTCAsset)
-	c.Assert(err, IsNil)
-	c.Assert(poolBTC.BalanceRune.Equal(runeBTC), Equals, true)
-	c.Assert(poolBTC.BalanceAsset.Equal(btcPoolAsset), Equals, true)
-
-	asgardAfterSlash := mgr.Keeper().GetRuneBalanceOfModule(ctx, AsgardName)
-	bondAfterSlash := mgr.Keeper().GetRuneBalanceOfModule(ctx, BondName)
-	poolsAfterSlash := poolBNB.BalanceRune.Add(poolTCAN.BalanceRune).Add(poolBTC.BalanceRune)
-
-	// subsidized RUNE should move from bond to asgard
-	c.Assert(poolsAfterSlash.Sub(poolsBeforeSlash).Uint64(), Equals, asgardAfterSlash.Sub(asgardBeforeSlash).Uint64())
-	c.Assert(asgardAfterSlash.Sub(asgardBeforeSlash).Uint64(), Equals, bondBeforeSlash.Sub(bondAfterSlash).Uint64())
-
-	ygg1 := GetRandomVault()
-	ygg1.Type = YggdrasilVault
-	ygg1.Coins = common.Coins{
-		common.NewCoin(tCanAsset, cosmos.NewUint(common.One*2)),       // 2 TCAN
-		common.NewCoin(common.BTCAsset, cosmos.NewUint(common.One*4)), // 4 BTC
-	}
-	totalRuneLeft, err = getTotalYggValueInRune(ctx, mgr.Keeper(), ygg1)
-	c.Assert(err, IsNil)
-	slashAmt = cosmos.NewUint(100 * common.One)
-	c.Assert(subsidizePoolWithSlashBond(ctx, ygg1, totalRuneLeft, slashAmt, mgr), IsNil)
-	amountRuneForTCANPool = slashAmt.Mul(poolTCAN.AssetValueInRune(cosmos.NewUint(common.One * 2))).Quo(totalRuneLeft)
-	runeTCAN = poolTCAN.BalanceRune.Add(amountRuneForTCANPool)
-	poolTCAN, err = mgr.Keeper().GetPool(ctx, tCanAsset)
-	c.Assert(err, IsNil)
-	c.Assert(poolTCAN.BalanceRune.Equal(runeTCAN), Equals, true)
-	amountRuneForBTCPool = slashAmt.Mul(poolBTC.AssetValueInRune(cosmos.NewUint(common.One * 4))).Quo(totalRuneLeft)
-	runeBTC = poolBTC.BalanceRune.Add(amountRuneForBTCPool)
-	poolBTC, err = mgr.Keeper().GetPool(ctx, common.BTCAsset)
-	c.Assert(err, IsNil)
-	c.Assert(poolBTC.BalanceRune.Equal(runeBTC), Equals, true)
-
-	ygg2 := GetRandomVault()
-	ygg2.Type = YggdrasilVault
-	ygg2.Coins = common.Coins{
-		common.NewCoin(common.RuneAsset(), cosmos.NewUint(2*common.One)),
-		common.NewCoin(tCanAsset, cosmos.NewUint(0)),
-	}
-	totalRuneLeft, err = getTotalYggValueInRune(ctx, mgr.Keeper(), ygg2)
-	c.Assert(err, IsNil)
-	slashAmt = cosmos.NewUint(2 * common.One)
-	c.Assert(subsidizePoolWithSlashBond(ctx, ygg2, totalRuneLeft, slashAmt, mgr), IsNil)
-
-	// Skip subsidy if rune value of coin is 0 - can happen with an old, empty pool
-	poolETH := NewPool()
-	poolETH.Asset = common.ETHAsset
-	poolETH.BalanceAsset = cosmos.ZeroUint()
-	poolETH.BalanceRune = cosmos.NewUint(300 * common.One)
-	poolETH.Status = PoolAvailable
-	c.Assert(mgr.Keeper().SetPool(ctx, poolETH), IsNil)
-
-	ygg3 := GetRandomVault()
-	ygg3.Type = YggdrasilVault
-	ygg3.Coins = common.Coins{
-		common.NewCoin(common.ETHAsset, cosmos.NewUint(100)),
-	}
-
-	c.Assert(subsidizePoolWithSlashBond(ctx, ygg3, totalRuneLeft, slashAmt, mgr), IsNil)
-	poolETH, err = mgr.Keeper().GetPool(ctx, common.ETHAsset)
-	c.Assert(err, IsNil)
-	c.Assert(poolETH.BalanceRune.Equal(cosmos.NewUint(300*common.One)), Equals, true)
 }
 
 func (s *HelperSuite) TestPausedLP(c *C) {
@@ -242,79 +89,13 @@ func (s *HelperSuite) TestPausedLP(c *C) {
 	c.Check(isLPPaused(ctx, common.BNBChain, mgr), Equals, true)
 }
 
-func (s *HelperSuite) TestRefundBondError(c *C) {
-	ctx, _ := setupKeeperForTest(c)
-	// active node should not refund bond
-	pk := GetRandomPubKey()
-	na := GetRandomValidatorNode(NodeActive)
-	na.PubKeySet.Secp256k1 = pk
-	na.Bond = cosmos.NewUint(100 * common.One)
-	tx := GetRandomTx()
-	tx.FromAddress = GetRandomTHORAddress()
-	keeper1 := &TestRefundBondKeeper{
-		modules: make(map[string]int64),
-		consts:  constants.GetConstantValues(GetCurrentVersion()),
-	}
-	mgr := NewDummyMgrWithKeeper(keeper1)
-	c.Assert(refundBond(ctx, tx, na.NodeAddress, cosmos.ZeroUint(), &na, mgr), IsNil)
-
-	// fail to get vault should return an error
-	na.UpdateStatus(NodeStandby, ctx.BlockHeight())
-	keeper1.na = na
-	mgr.K = keeper1
-	c.Assert(refundBond(ctx, tx, na.NodeAddress, cosmos.ZeroUint(), &na, mgr), NotNil)
-
-	// if the vault is not a yggdrasil pool , it should return an error
-	ygg := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, pk, common.Chains{common.BNBChain}.Strings(), []ChainContract{})
-	ygg.Coins = common.Coins{}
-	keeper1.ygg = ygg
-	mgr.K = keeper1
-	c.Assert(refundBond(ctx, tx, na.NodeAddress, cosmos.ZeroUint(), &na, mgr), NotNil)
-
-	// fail to get pool should fail
-	ygg = NewVault(ctx.BlockHeight(), ActiveVault, YggdrasilVault, pk, common.Chains{common.BNBChain}.Strings(), []ChainContract{})
-	ygg.Coins = common.Coins{
-		common.NewCoin(common.RuneAsset(), cosmos.NewUint(27*common.One)),
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(27*common.One)),
-	}
-	keeper1.ygg = ygg
-	mgr.K = keeper1
-	c.Assert(refundBond(ctx, tx, na.NodeAddress, cosmos.ZeroUint(), &na, mgr), NotNil)
-
-	// when ygg asset in RUNE is more then bond , thorchain should slash the node account with all their bond
-	keeper1.pool = Pool{
-		Asset:        common.BNBAsset,
-		BalanceRune:  cosmos.NewUint(1024 * common.One),
-		BalanceAsset: cosmos.NewUint(167 * common.One),
-	}
-	mgr.K = keeper1
-	c.Assert(refundBond(ctx, tx, na.NodeAddress, cosmos.ZeroUint(), &na, mgr), IsNil)
-	// make sure no tx has been generated for refund
-	items, err := mgr.TxOutStore().GetOutboundItems(ctx)
-	c.Assert(err, IsNil)
-	c.Check(items, HasLen, 0)
-}
-
 func (s *HelperSuite) TestRefundBondHappyPath(c *C) {
 	ctx, _ := setupKeeperForTest(c)
 	na := GetRandomValidatorNode(NodeActive)
 	na.Bond = cosmos.NewUint(12098 * common.One)
 	pk := GetRandomPubKey()
 	na.PubKeySet.Secp256k1 = pk
-	ygg := NewVault(ctx.BlockHeight(), ActiveVault, YggdrasilVault, pk, common.Chains{common.BNBChain}.Strings(), []ChainContract{})
-
-	ygg.Coins = common.Coins{
-		common.NewCoin(common.RuneAsset(), cosmos.NewUint(3946*common.One)),
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(27*common.One)),
-	}
 	keeper := &TestRefundBondKeeper{
-		pool: Pool{
-			Asset:        common.BNBAsset,
-			BalanceRune:  cosmos.NewUint(23789 * common.One),
-			BalanceAsset: cosmos.NewUint(167 * common.One),
-		},
-		ygg:     ygg,
-		vaults:  Vaults{GetRandomVault()},
 		modules: make(map[string]int64),
 		consts:  constants.GetConstantValues(GetCurrentVersion()),
 	}
@@ -322,20 +103,11 @@ func (s *HelperSuite) TestRefundBondHappyPath(c *C) {
 	mgr := NewDummyMgrWithKeeper(keeper)
 	tx := GetRandomTx()
 	tx.FromAddress, _ = common.NewAddress(na.BondAddress.String())
-	yggAssetInRune, err := getTotalYggValueInRune(ctx, keeper, ygg)
+	err := refundBond(ctx, tx, na.NodeAddress, cosmos.ZeroUint(), &na, mgr)
 	c.Assert(err, IsNil)
-	err = refundBond(ctx, tx, na.NodeAddress, cosmos.ZeroUint(), &na, mgr)
-	c.Assert(err, IsNil)
-	slashAmt := yggAssetInRune.MulUint64(3).QuoUint64(2)
 	items, err := mgr.TxOutStore().GetOutboundItems(ctx)
 	c.Assert(err, IsNil)
 	c.Assert(items, HasLen, 0)
-	p, err := keeper.GetPool(ctx, common.BNBAsset)
-	c.Assert(err, IsNil)
-	expectedPoolRune := cosmos.NewUint(23789 * common.One).Sub(cosmos.NewUint(3946 * common.One)).Add(slashAmt)
-	c.Assert(p.BalanceRune.Equal(expectedPoolRune), Equals, true, Commentf("expect %s however we got %s", expectedPoolRune, p.BalanceRune))
-	expectedPoolBNB := cosmos.NewUint(167 * common.One).Sub(cosmos.NewUint(27 * common.One))
-	c.Assert(p.BalanceAsset.Equal(expectedPoolBNB), Equals, true, Commentf("expected BNB in pool %s , however we got %s", expectedPoolBNB, p.BalanceAsset))
 }
 
 func (s *HelperSuite) TestRefundBondDisableRequestToLeaveNode(c *C) {
@@ -344,20 +116,7 @@ func (s *HelperSuite) TestRefundBondDisableRequestToLeaveNode(c *C) {
 	na.Bond = cosmos.NewUint(12098 * common.One)
 	pk := GetRandomPubKey()
 	na.PubKeySet.Secp256k1 = pk
-	ygg := NewVault(ctx.BlockHeight(), ActiveVault, YggdrasilVault, pk, common.Chains{common.BNBChain}.Strings(), []ChainContract{})
-
-	ygg.Coins = common.Coins{
-		common.NewCoin(common.RuneAsset(), cosmos.NewUint(3946*common.One)),
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(27*common.One)),
-	}
 	keeper := &TestRefundBondKeeper{
-		pool: Pool{
-			Asset:        common.BNBAsset,
-			BalanceRune:  cosmos.NewUint(23789 * common.One),
-			BalanceAsset: cosmos.NewUint(167 * common.One),
-		},
-		ygg:     ygg,
-		vaults:  Vaults{GetRandomVault()},
 		modules: make(map[string]int64),
 		consts:  constants.GetConstantValues(GetCurrentVersion()),
 	}
@@ -365,20 +124,12 @@ func (s *HelperSuite) TestRefundBondDisableRequestToLeaveNode(c *C) {
 	na.RequestedToLeave = true
 	mgr := NewDummyMgrWithKeeper(keeper)
 	tx := GetRandomTx()
-	yggAssetInRune, err := getTotalYggValueInRune(ctx, keeper, ygg)
+	err := refundBond(ctx, tx, na.NodeAddress, cosmos.ZeroUint(), &na, mgr)
 	c.Assert(err, IsNil)
-	err = refundBond(ctx, tx, na.NodeAddress, cosmos.ZeroUint(), &na, mgr)
-	c.Assert(err, IsNil)
-	slashAmt := yggAssetInRune.MulUint64(3).QuoUint64(2)
 	items, err := mgr.TxOutStore().GetOutboundItems(ctx)
 	c.Assert(err, IsNil)
 	c.Assert(items, HasLen, 0)
-	p, err := keeper.GetPool(ctx, common.BNBAsset)
 	c.Assert(err, IsNil)
-	expectedPoolRune := cosmos.NewUint(23789 * common.One).Sub(cosmos.NewUint(3946 * common.One)).Add(slashAmt)
-	c.Assert(p.BalanceRune.Equal(expectedPoolRune), Equals, true, Commentf("expect %s however we got %s", expectedPoolRune, p.BalanceRune))
-	expectedPoolBNB := cosmos.NewUint(167 * common.One).Sub(cosmos.NewUint(27 * common.One))
-	c.Assert(p.BalanceAsset.Equal(expectedPoolBNB), Equals, true, Commentf("expected BNB in pool %s , however we got %s", expectedPoolBNB, p.BalanceAsset))
 	c.Assert(keeper.na.Status == NodeDisabled, Equals, true)
 }
 
@@ -489,8 +240,6 @@ func newAddGasFeeTestHelper(c *C) addGasFeeTestHelper {
 
 	na := GetRandomValidatorNode(NodeActive)
 	c.Assert(mgr.Keeper().SetNodeAccount(ctx, na), IsNil)
-	yggVault := NewVault(ctx.BlockHeight(), ActiveVault, YggdrasilVault, na.PubKeySet.Secp256k1, common.Chains{common.BNBChain}.Strings(), []ChainContract{})
-	c.Assert(mgr.Keeper().SetVault(ctx, yggVault), IsNil)
 	version := GetCurrentVersion()
 	constAccessor := constants.GetConstantValues(version)
 	mgr.gasMgr = newGasMgrV81(constAccessor, keeper)

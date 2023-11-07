@@ -4,19 +4,16 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: no pools should exist
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .|length == 0
 ---
 type: check
-description: supply should be 500M
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/supply
 asserts:
   - .supply[]|select(.denom == "rune")|.amount|tonumber == 500000e8
 ---
 type: check
-description: inbound addresses should exist for all chains
 endpoint: http://localhost:1317/thorchain/inbound_addresses
 asserts:
   - .|length == 10

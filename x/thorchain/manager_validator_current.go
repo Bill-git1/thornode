@@ -50,7 +50,7 @@ func (vm *ValidatorMgrVCUR) BeginBlock(ctx cosmos.Context, mgr Manager, existing
 
 	lastChurnHeight := vm.getLastChurnHeight(ctx)
 	churnInterval := vm.k.GetConfigInt64(ctx, constants.ChurnInterval)
-	churnRetryInterval := vm.k.GetConstants().GetInt64Value(constants.ChurnRetryInterval)
+	churnRetryInterval := vm.k.GetConfigInt64(ctx, constants.ChurnRetryInterval)
 	onChurnTick := (ctx.BlockHeight()-lastChurnHeight-churnInterval)%churnRetryInterval == 0
 	if !onChurnTick {
 		return nil
@@ -278,14 +278,6 @@ func (vm *ValidatorMgrVCUR) EndBlock(ctx cosmos.Context, mgr Manager) []abci.Val
 		return nil
 	}
 
-	yggFundLimit := vm.k.GetConfigInt64(ctx, constants.YggFundLimit)
-	yggFundRetry := vm.k.GetConfigInt64(ctx, constants.YggFundRetry)
-	if yggFundRetry > 0 && yggFundLimit == 0 && ctx.BlockHeight()%yggFundRetry == 0 {
-		if err := vm.recallYggFunds(ctx, mgr); err != nil {
-			ctx.Logger().Error("fail to recall ygg funds", "error", err)
-		}
-	}
-
 	// when ragnarok is in progress, just process ragnarok
 	if vm.k.RagnarokInProgress(ctx) {
 		// process ragnarok
@@ -385,11 +377,6 @@ func (vm *ValidatorMgrVCUR) EndBlock(ctx cosmos.Context, mgr Manager) []abci.Val
 			ctx.Logger().Error("fail to save node account", "error", err)
 		}
 
-		// return yggdrasil funds
-		if err := vm.RequestYggReturn(ctx, nodeRemove, mgr); err != nil {
-			ctx.Logger().Error("fail to request yggdrasil funds return", "error", err)
-		}
-
 		pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeConsPub, nodeRemove.ValidatorConsPubKey)
 		if err != nil {
 			ctx.Logger().Error("fail to parse consensus public key", "key", nodeRemove.ValidatorConsPubKey, "error", err)
@@ -431,8 +418,7 @@ func (vm *ValidatorMgrVCUR) EndBlock(ctx cosmos.Context, mgr Manager) []abci.Val
 	return validators
 }
 
-// checkContractUpgrade for those chains that support smart contract, it the contract get changed , then the network have to recall all
-// the yggdrasil fund for chain, take ETH for example , if the smart contract used to process transactions on ETH chain get updated for some reason
+// checkContractUpgrade for those chains that support smart contract, it the contract get changed, take ETH for example , if the smart contract used to process transactions on ETH chain get updated for some reason
 // then the network has to recall all the fund on ETH(include both ETH and ERC20)
 func (vm *ValidatorMgrVCUR) checkContractUpgrade(ctx cosmos.Context, mgr Manager, removedNodeKeys common.PubKeys) error {
 	activeVaults, err := vm.k.GetAsgardVaultsByStatus(ctx, ActiveVault)
@@ -676,9 +662,6 @@ func (vm *ValidatorMgrVCUR) processRagnarok(ctx cosmos.Context, mgr Manager) err
 	if ragnarokHeight == 0 {
 		ragnarokHeight = ctx.BlockHeight()
 		vm.k.SetRagnarokBlockHeight(ctx, ragnarokHeight)
-		if err := vm.ragnarokProtocolStage1(ctx, mgr); err != nil {
-			return fmt.Errorf("fail to execute ragnarok protocol step 1: %w", err)
-		}
 		if err := vm.distributeBondReward(ctx, mgr); err != nil {
 			return fmt.Errorf("when ragnarok triggered, fail to give all active node bond reward %w", err)
 		}
@@ -749,18 +732,11 @@ func (vm *ValidatorMgrVCUR) getPendingTxOut(ctx cosmos.Context) (int64, error) {
 	return count, nil
 }
 
-// ragnarokProtocolStage1 - request all yggdrasil pool to return the fund
-// when THORNode observe the node return fund successfully, the node's bound will be refund.
-func (vm *ValidatorMgrVCUR) ragnarokProtocolStage1(ctx cosmos.Context, mgr Manager) error {
-	return vm.recallYggFunds(ctx, mgr)
-}
-
 func (vm *ValidatorMgrVCUR) ragnarokProtocolStage2(ctx cosmos.Context, nth int64, mgr Manager) error {
 	// Ragnarok Protocol
 	// If THORNode can no longer be BFT, do a graceful shutdown of the entire network.
-	// 1) THORNode will request all yggdrasil pool to return fund , if THORNode don't have yggdrasil pool THORNode will go to step 3 directly
-	// 2) upon receiving the yggdrasil fund,  THORNode will refund the validator's bond
-	// 3) once all yggdrasil fund get returned, return all fund to liquidity providers
+	// 1) THORNode will refund the validator's bond
+	// 2) return all fund to liquidity providers
 
 	// refund bonders
 	if err := vm.ragnarokBond(ctx, nth, mgr); err != nil {
@@ -839,16 +815,6 @@ func (vm *ValidatorMgrVCUR) ragnarokBond(ctx cosmos.Context, nth int64, mgr Mana
 	for _, na := range nas {
 		if na.Bond.IsZero() {
 			continue
-		}
-		if vm.k.VaultExists(ctx, na.PubKeySet.Secp256k1) {
-			ygg, err := vm.k.GetVault(ctx, na.PubKeySet.Secp256k1)
-			if err != nil {
-				return err
-			}
-			if ygg.HasFunds() {
-				ctx.Logger().Info("skip bond refund due to remaining funds", "node address", na.NodeAddress)
-				continue
-			}
 		}
 
 		if nth >= 9 { // cap at 10
@@ -1034,111 +1000,9 @@ func (vm *ValidatorMgrVCUR) ragnarokPools(ctx cosmos.Context, nth int64, mgr Man
 	return nil
 }
 
-// RequestYggReturn request the node that had been removed (yggdrasil) to return their fund
+// TODO remove on hard fork
 func (vm *ValidatorMgrVCUR) RequestYggReturn(ctx cosmos.Context, node NodeAccount, mgr Manager) error {
-	if !vm.k.VaultExists(ctx, node.PubKeySet.Secp256k1) {
-		return nil
-	}
-	ygg, err := vm.k.GetVault(ctx, node.PubKeySet.Secp256k1)
-	if err != nil {
-		return fmt.Errorf("fail to get yggdrasil: %w", err)
-	}
-	if ygg.IsAsgard() {
-		return nil
-	}
-	if !ygg.HasFunds() {
-		return nil
-	}
-
-	chains := make(common.Chains, 0)
-
-	active, err := vm.k.GetAsgardVaultsByStatus(ctx, ActiveVault)
-	if err != nil {
-		return err
-	}
-
-	retiring, err := vm.k.GetAsgardVaultsByStatus(ctx, RetiringVault)
-	if err != nil {
-		return err
-	}
-
-	for _, v := range append(active, retiring...) {
-		chains = append(chains, v.GetChains()...)
-	}
-	chains = chains.Distinct()
-
-	signingTransactionPeriod := vm.k.GetConstants().GetInt64Value(constants.SigningTransactionPeriod)
-	// select vault that is most secure
-	vault := vm.k.GetMostSecure(ctx, active, signingTransactionPeriod)
-	if vault.IsEmpty() {
-		return fmt.Errorf("unable to determine asgard vault")
-	}
-	for _, chain := range chains {
-		if chain.Equals(common.THORChain) {
-			continue
-		}
-		if !ygg.HasFundsForChain(chain) {
-			ctx.Logger().Info("there is not fund for chain, no need for yggdrasil return", "chain", chain)
-			continue
-		}
-		toAddr, err := vault.PubKey.GetAddress(chain)
-		if err != nil {
-			return err
-		}
-		if !toAddr.IsEmpty() {
-			txOutItem := TxOutItem{
-				Chain:       chain,
-				ToAddress:   toAddr,
-				InHash:      common.BlankTxID,
-				VaultPubKey: ygg.PubKey,
-				Coin:        common.NewCoin(common.RuneAsset(), cosmos.ZeroUint()),
-				Memo:        NewYggdrasilReturn(ctx.BlockHeight()).String(),
-				GasRate:     int64(mgr.GasMgr().GetGasRate(ctx, chain).Uint64()),
-				// DO NOT specify MaxGas , for yggdrasil return , should allow node to spend more on gas , for example ETH, return multiple
-				// ERC20 token / ETH at the same time cost a lot gas
-			}
-
-			// yggdrasil- will not set coin field here, when signer see a TxOutItem that has memo "yggdrasil-" it will query the chain
-			// and find out all the remaining assets , and fill in the field
-			if err := vm.txOutStore.UnSafeAddTxOutItem(ctx, mgr, txOutItem); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
-func (vm *ValidatorMgrVCUR) recallYggFunds(ctx cosmos.Context, mgr Manager) error {
-	iter := vm.k.GetVaultIterator(ctx)
-	defer iter.Close()
-	vaults := Vaults{}
-	for ; iter.Valid(); iter.Next() {
-		var vault Vault
-		if err := vm.k.Cdc().Unmarshal(iter.Value(), &vault); err != nil {
-			return fmt.Errorf("fail to unmarshal vault, %w", err)
-		}
-		if vault.IsYggdrasil() && vault.HasFunds() {
-			vaults = append(vaults, vault)
-		}
-	}
-
-	if len(vaults) == 0 {
-		return nil
-	}
-
-	for _, vault := range vaults {
-		na, err := vm.k.GetNodeAccountByPubKey(ctx, vault.PubKey)
-		if err != nil {
-			ctx.Logger().Error("fail to get node account", "error", err)
-			continue
-		}
-		if err := vm.RequestYggReturn(ctx, na, mgr); err != nil {
-			return fmt.Errorf("fail to request yggdrasil fund back: %w", err)
-		}
-	}
-	ctx.Logger().Info("some yggdrasil vaults (%d) still have funds", len(vaults))
-	return nil
+	return fmt.Errorf("dev error: RequestYggReturn is obsolete")
 }
 
 // setupValidatorNodes it is one off it only get called when genesis
@@ -1423,7 +1287,7 @@ func (vm *ValidatorMgrVCUR) markLowVersionValidators(ctx cosmos.Context) error {
 
 // Finds up to `maxNodesToFind` active validators with version lower than the most "popular" version
 func (vm *ValidatorMgrVCUR) findLowVersionValidators(ctx cosmos.Context, maxNodesToFind int64) (NodeAccounts, error) {
-	minimumVersion := vm.k.GetMinJoinVersion(ctx)
+	minimumVersion, _ := vm.k.GetMinJoinLast(ctx)
 	activeNodes, err := vm.k.ListValidatorsByStatus(ctx, NodeActive)
 	if err != nil {
 		return NodeAccounts{}, err
@@ -1536,7 +1400,7 @@ func (vm *ValidatorMgrVCUR) NodeAccountPreflightCheck(ctx cosmos.Context, na Nod
 		return NodeStandby, fmt.Errorf("node account does not have minimum bond requirement: %d/%d", na.Bond.Uint64(), minBond)
 	}
 
-	minVersion := vm.k.GetMinJoinVersion(ctx)
+	minVersion, _ := vm.k.GetMinJoinLast(ctx)
 	// Check version number is still supported
 	if na.GetVersion().LT(minVersion) {
 		return NodeStandby, fmt.Errorf("node account does not meet min version requirement: %s vs %s", na.Version, minVersion)

@@ -6,7 +6,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: btc and eth pools should exist
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .|length == 2
@@ -38,7 +37,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: new single side lp should exist
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_providers
 asserts:
   - .|length == 2
@@ -67,7 +65,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: new single side lp should exist
 endpoint: http://localhost:1317/thorchain/pool/ETH.ETH/liquidity_providers
 asserts:
   - .|length == 2
@@ -96,7 +93,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: new saver should exist
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
   - .|length == 1
@@ -125,7 +121,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: new saver should exit
 endpoint: http://localhost:1317/thorchain/pool/ETH.ETH/savers
 asserts:
   - .|length == 1
@@ -157,7 +152,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: refund outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -187,7 +181,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should have been observed
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
@@ -219,7 +212,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: refund outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -249,7 +241,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should have been observed
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
@@ -281,7 +272,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: refund outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -311,7 +301,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should have been observed
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
@@ -343,7 +332,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: refund outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -373,7 +361,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should have been observed
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
@@ -405,7 +392,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: refund outbound should be scheduled
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
@@ -435,7 +421,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: outbound should have been observed
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
@@ -454,7 +439,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: rune balance should have lost transaction fee
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
@@ -484,7 +468,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: rune balance should have lost transaction fee
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances|length == 1
@@ -504,7 +487,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: rune balance should have lost transaction fee
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances|length == 1
@@ -514,25 +496,21 @@ asserts:
 # final checks - each pool should still have 2 lps and 1 saver
 ########################################################################################
 type: check
-description: new single side lp should exist
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_providers
 asserts:
   - .|length == 2
 ---
 type: check
-description: new single side lp should exist
 endpoint: http://localhost:1317/thorchain/pool/ETH.ETH/liquidity_providers
 asserts:
   - .|length == 2
 ---
 type: check
-description: new single side lp should exist
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
   - .|length == 1
 ---
 type: check
-description: new single side lp should exist
 endpoint: http://localhost:1317/thorchain/pool/ETH.ETH/savers
 asserts:
   - .|length == 1

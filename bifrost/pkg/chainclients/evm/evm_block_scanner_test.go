@@ -20,7 +20,6 @@ import (
 	ethclient "github.com/ethereum/go-ethereum/ethclient"
 	"gitlab.com/thorchain/thornode/bifrost/blockscanner"
 	"gitlab.com/thorchain/thornode/bifrost/metrics"
-	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/ethereum/types"
 	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/evm"
 	"gitlab.com/thorchain/thornode/bifrost/pubkeymanager"
 	"gitlab.com/thorchain/thornode/bifrost/thorclient"
@@ -33,6 +32,8 @@ import (
 )
 
 const TestGasPriceResolution = 50_000_000_000
+
+const Mainnet = 1
 
 var (
 	//go:embed test/deposit_evm_transaction.json
@@ -160,23 +161,23 @@ func (s *BlockScannerTestSuite) TestNewBlockScanner(c *C) {
 	solvencyReporter := func(height int64) error {
 		return nil
 	}
-	bs, err := NewEVMScanner(getConfigForTest(""), nil, big.NewInt(int64(types.Mainnet)), ethClient, rpcClient, s.bridge, s.m, pubKeyManager, solvencyReporter, nil)
+	bs, err := NewEVMScanner(getConfigForTest(""), nil, big.NewInt(int64(Mainnet)), ethClient, rpcClient, s.bridge, s.m, pubKeyManager, solvencyReporter, nil)
 	c.Assert(err, NotNil)
 	c.Assert(bs, IsNil)
 
-	bs, err = NewEVMScanner(getConfigForTest("http://"+server.Listener.Addr().String()), storage, big.NewInt(int64(types.Mainnet)), ethClient, rpcClient, s.bridge, nil, pubKeyManager, solvencyReporter, nil)
+	bs, err = NewEVMScanner(getConfigForTest("http://"+server.Listener.Addr().String()), storage, big.NewInt(int64(Mainnet)), ethClient, rpcClient, s.bridge, nil, pubKeyManager, solvencyReporter, nil)
 	c.Assert(err, NotNil)
 	c.Assert(bs, IsNil)
 
-	bs, err = NewEVMScanner(getConfigForTest("http://"+server.Listener.Addr().String()), storage, big.NewInt(int64(types.Mainnet)), nil, rpcClient, s.bridge, s.m, pubKeyManager, solvencyReporter, nil)
+	bs, err = NewEVMScanner(getConfigForTest("http://"+server.Listener.Addr().String()), storage, big.NewInt(int64(Mainnet)), nil, rpcClient, s.bridge, s.m, pubKeyManager, solvencyReporter, nil)
 	c.Assert(err, NotNil)
 	c.Assert(bs, IsNil)
 
-	bs, err = NewEVMScanner(getConfigForTest("http://"+server.Listener.Addr().String()), storage, big.NewInt(int64(types.Mainnet)), ethClient, rpcClient, s.bridge, s.m, nil, solvencyReporter, nil)
+	bs, err = NewEVMScanner(getConfigForTest("http://"+server.Listener.Addr().String()), storage, big.NewInt(int64(Mainnet)), ethClient, rpcClient, s.bridge, s.m, nil, solvencyReporter, nil)
 	c.Assert(err, NotNil)
 	c.Assert(bs, IsNil)
 
-	bs, err = NewEVMScanner(getConfigForTest("http://"+server.Listener.Addr().String()), storage, big.NewInt(int64(types.Mainnet)), ethClient, rpcClient, s.bridge, s.m, pubKeyManager, solvencyReporter, nil)
+	bs, err = NewEVMScanner(getConfigForTest("http://"+server.Listener.Addr().String()), storage, big.NewInt(int64(Mainnet)), ethClient, rpcClient, s.bridge, s.m, pubKeyManager, solvencyReporter, nil)
 	c.Assert(err, IsNil)
 	c.Assert(bs, NotNil)
 }
@@ -396,7 +397,7 @@ func (s *BlockScannerTestSuite) TestGetTxInItem(c *C) {
 	}()
 	c.Assert(err, IsNil)
 	config := getConfigForTest(server.URL)
-	bs, err := NewEVMScanner(config, storage, big.NewInt(int64(types.Mainnet)), ethClient, rpcClient, s.bridge, s.m, pkeyMgr, func(height int64) error {
+	bs, err := NewEVMScanner(config, storage, big.NewInt(int64(Mainnet)), ethClient, rpcClient, s.bridge, s.m, pkeyMgr, func(height int64) error {
 		return nil
 	}, nil)
 	c.Assert(err, IsNil)
@@ -534,7 +535,7 @@ func (s *BlockScannerTestSuite) TestUpdateGasPrice(c *C) {
 		return nil
 	}
 	conf := getConfigForTest("http://" + server.Listener.Addr().String())
-	bs, err := NewEVMScanner(conf, storage, big.NewInt(int64(types.Mainnet)), ethClient, rpcClient, s.bridge, s.m, pubKeyManager, solvencyReporter, nil)
+	bs, err := NewEVMScanner(conf, storage, big.NewInt(int64(Mainnet)), ethClient, rpcClient, s.bridge, s.m, pubKeyManager, solvencyReporter, nil)
 	c.Assert(err, IsNil)
 	c.Assert(bs, NotNil)
 

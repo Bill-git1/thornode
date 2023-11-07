@@ -37,6 +37,8 @@ func (m *StreamingSwap) Valid() error {
 
 func (m *StreamingSwap) NextSize(version semver.Version) (cosmos.Uint, cosmos.Uint) {
 	switch {
+	case version.GTE(semver.MustParse("1.121.0")):
+		return m.NextSizeV121()
 	case version.GTE(semver.MustParse("1.116.0")):
 		return m.NextSizeV116()
 	default:
@@ -44,12 +46,12 @@ func (m *StreamingSwap) NextSize(version semver.Version) (cosmos.Uint, cosmos.Ui
 	}
 }
 
-func (m *StreamingSwap) NextSizeV116() (cosmos.Uint, cosmos.Uint) {
+func (m *StreamingSwap) NextSizeV121() (cosmos.Uint, cosmos.Uint) {
 	swapSize := m.DefaultSwapSize()
 
 	// sanity check, ensure we never exceed the deposit amount
 	// Also, if this is the last swap, just do the remainder
-	if m.Deposit.LT(m.In.Add(swapSize)) || m.Count+1 >= m.Quantity {
+	if m.Deposit.LT(m.In.Add(swapSize)) || m.IsLastSwap() {
 		// use remainder of `m.Depost - m.In` instead
 		swapSize = common.SafeSub(m.Deposit, m.In)
 	}
@@ -71,4 +73,8 @@ func (m *StreamingSwap) DefaultSwapSize() cosmos.Uint {
 
 func (m *StreamingSwap) IsDone() bool {
 	return m.Count >= m.Quantity
+}
+
+func (m *StreamingSwap) IsLastSwap() bool {
+	return m.Count+1 >= m.Quantity
 }

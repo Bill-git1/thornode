@@ -22,6 +22,7 @@ func (vm *ValidatorDummyMgr) EndBlock(_ cosmos.Context, _ Manager) []abci.Valida
 	return nil
 }
 
+// TODO remove on hard fork
 func (vm *ValidatorDummyMgr) RequestYggReturn(_ cosmos.Context, _ NodeAccount, _ Manager) error {
 	return errKaboom
 }

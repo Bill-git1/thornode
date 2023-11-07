@@ -122,11 +122,11 @@ type: create-blocks
 count: 1
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - '[.tx[]|select(.type == "refund")]|length == 1'
-  - .tx[]|select(.type == "refund")|.from == "{{ addr_thor_fox }}"
-  - .tx[]|select(.type == "refund")|.reason == "collateral asset does not have a pool"
+  - '[.txs[]|.result.events[]|select(.type=="refund")]|length == 1'
+  - .txs[]|.result.events[]|select(.type=="refund")|.from == "{{ addr_thor_fox }}"
+  - .txs[]|.result.events[]|select(.type=="refund")|.reason == "collateral asset does not have a pool"
 ---
 ########################################################################################
 # open loan with synth collateral from deposit should fail
@@ -157,17 +157,16 @@ type: create-blocks
 count: 1
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - '[.tx[]|select(.type == "refund")]|length == 1'
-  - .tx[]|select(.type == "refund")|.from == "{{ addr_thor_fox }}"
-  - .tx[]|select(.type == "refund")|.reason == "unsupported collateral pool"
+  - '[.txs[]|.result.events[]|select(.type=="refund")]|length == 1'
+  - .txs[]|.result.events[]|select(.type=="refund")|.from == "{{ addr_thor_fox }}"
+  - .txs[]|.result.events[]|select(.type=="refund")|.reason == "unsupported collateral pool"
 ---
 ########################################################################################
 # open loan with rune over max supply should fail
 ########################################################################################
 type: tx-mimir
-description: set max supply to 50k RUNE
 key: MaxRuneSupply
 value: 50000000000000
 signer: {{ addr_thor_dog }}
@@ -186,8 +185,8 @@ type: create-blocks
 count: 1
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/blockevents
+endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - '[.tx[]|select(.type == "refund")]|length == 1'
-  - .tx[]|select(.type == "refund")|.from == "{{ addr_thor_fox }}"
-  - .tx[]|select(.type == "refund")|.reason[:50] == "loans are currently paused, due to rune supply cap"
+  - '[.txs[]|.result.events[]|select(.type=="refund")]|length == 1'
+  - .txs[]|.result.events[]|select(.type=="refund")|.from == "{{ addr_thor_fox }}"
+  - .txs[]|.result.events[]|select(.type=="refund")|.reason[:50] == "loans are currently paused, due to rune supply cap"

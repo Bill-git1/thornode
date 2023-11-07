@@ -11,8 +11,8 @@ func init() {
 		MinimumBondInRune:           200_000_00000000,
 		PoolCycle:                   720,
 		EmissionCurve:               8,
-		StopFundYggdrasil:           1,
-		YggFundLimit:                0,
+		StopFundYggdrasil:           1, // TODO remove on hard fork
+		YggFundLimit:                0, // TODO remove on hard fork
 		NumberOfNewNodesPerChurn:    4,
 		MintSynths:                  1,
 		BurnSynths:                  1,

@@ -121,11 +121,14 @@ func (o *Observer) Start() error {
 	return nil
 }
 
-// ObserveSigned is called when a tx is signed by the signer and returns an observation that should be immediately submitted. Observations passed to this method will be cached in memory and skipped if they are later observed in the mempool or block.
-func (o *Observer) ObserveSigned(txIn types.TxIn) {
-	// add all transaction ids to the signed tx out cache
-	for _, tx := range txIn.TxArray {
-		o.signedTxOutCache.Add(tx.Tx, nil)
+// ObserveSigned is called when a tx is signed by the signer and returns an observation that should be immediately submitted.
+// Observations passed to this method with 'allowFutureObservation' false will be cached in memory and skipped if they are later observed in the mempool or block.
+func (o *Observer) ObserveSigned(txIn types.TxIn, allowFutureObservation bool) {
+	if !allowFutureObservation {
+		// add all transaction ids to the signed tx out cache
+		for _, tx := range txIn.TxArray {
+			o.signedTxOutCache.Add(tx.Tx, nil)
+		}
 	}
 
 	o.globalTxsQueue <- txIn
@@ -326,7 +329,7 @@ func (o *Observer) filterObservations(chain common.Chain, items []types.TxInItem
 		}
 		// check if the to address is a valid pool address
 		// for inbound message , if it is still in mempool , it will be ignored unless it is internal transaction
-		// internal tx means both from & to addresses belongs to the network. for example migrate/yggdrasil+
+		// internal tx means both from & to addresses belongs to the network. for example migrate/consolidate
 		if ok, cpi := o.pubkeyMgr.IsValidPoolAddress(txInItem.To, chain); ok && (!memPool || isInternal) {
 			txInItem.ObservedVaultPubKey = cpi.PubKey
 			txs = append(txs, txInItem)
@@ -619,7 +622,8 @@ func (o *Observer) getThorchainTxIns(txIn types.TxIn) (stypes.ObservedTxs, error
 			height += txIn.ConfirmationRequired
 		}
 		tx := stypes.NewObservedTx(
-			common.NewTx(txID, sender, to, item.Coins.NoneEmpty(), item.Gas, item.Memo),
+			// Strip out any empty Coin from Coins and Gas, as even one empty Coin will make a MsgObservedTxIn for instance fail validation.
+			common.NewTx(txID, sender, to, item.Coins.NoneEmpty(), item.Gas.NoneEmpty(), item.Memo),
 			height,
 			item.ObservedVaultPubKey,
 			item.BlockHeight+txIn.ConfirmationRequired)

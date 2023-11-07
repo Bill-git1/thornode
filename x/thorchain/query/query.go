@@ -61,7 +61,7 @@ var (
 	QueryPOL                 = Query{Key: "pol", EndpointTemplate: "/%s/pol"}
 	QueryBalanceModule       = Query{Key: "balancemodule", EndpointTemplate: "/%s/balance/module/{%s}"}
 	QueryVaultsAsgard        = Query{Key: "vaultsasgard", EndpointTemplate: "/%s/vaults/asgard"}
-	QueryVaultsYggdrasil     = Query{Key: "vaultsyggdrasil", EndpointTemplate: "/%s/vaults/yggdrasil"}
+	QueryVaultsYggdrasil     = Query{Key: "vaultsyggdrasil", EndpointTemplate: "/%s/vaults/yggdrasil"} // TODO remove on hard fork
 	QueryVault               = Query{Key: "vault", EndpointTemplate: "/%s/vault/{%s}"}
 	QueryVaultPubkeys        = Query{Key: "vaultpubkeys", EndpointTemplate: "/%s/vaults/pubkeys"}
 	QueryConstantValues      = Query{Key: "constants", EndpointTemplate: "/%s/constants"}
@@ -89,10 +89,10 @@ var (
 	QueryQuoteLoanClose      = Query{Key: "quoteloanclose", EndpointTemplate: "/%s/quote/loan/close"}
 	QueryInvariants          = Query{Key: "invariants", EndpointTemplate: "/%s/invariants"}
 	QueryInvariant           = Query{Key: "invariant", EndpointTemplate: "/%s/invariant/{%s}"}
+	QueryBlock               = Query{Key: "block", EndpointTemplate: "/%s/block"}
 
 	// queries only available on regtest builds
-	QueryExport      = Query{Key: "export", EndpointTemplate: "/%s/export"}
-	QueryBlockEvents = Query{Key: "blockevents", EndpointTemplate: "/%s/blockevents"}
+	QueryExport = Query{Key: "export", EndpointTemplate: "/%s/export"}
 )
 
 // Queries all queries
@@ -124,7 +124,7 @@ var Queries = []Query{
 	QueryPOL,
 	QueryBalanceModule,
 	QueryVaultsAsgard,
-	QueryVaultsYggdrasil,
+	QueryVaultsYggdrasil, // TODO remove on hard fork
 	QueryVaultPubkeys,
 	QueryVault,
 	QueryKeygensPubkey,
@@ -153,6 +153,6 @@ var Queries = []Query{
 	QueryQuoteLoanClose,
 	QueryInvariants,
 	QueryInvariant,
+	QueryBlock,
 	QueryExport,
-	QueryBlockEvents,
 }

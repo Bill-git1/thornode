@@ -24,7 +24,9 @@ func wireTo{{ ToUpper $chain }}(tx *wire.MsgTx) *{{ $chain }}wire.MsgTx {
 				Index: rtx.PreviousOutPoint.Index,
 			},
 			SignatureScript: rtx.SignatureScript,
+{{- if ne $chain "bch" }}
 			Witness:         {{ $chain }}wire.TxWitness(rtx.Witness),
+{{- end }}
 			Sequence:        rtx.Sequence,
 		}
 		txc.TxIn = append(txc.TxIn, txi)
@@ -51,7 +53,9 @@ func {{ $chain }}ToWire(txc *{{ $chain }}wire.MsgTx) *wire.MsgTx {
 				Index: rtx.PreviousOutPoint.Index,
 			},
 			SignatureScript: rtx.SignatureScript,
+{{- if ne $chain "bch" }}
 			Witness:         wire.TxWitness(rtx.Witness),
+{{- end }}
 			Sequence:        rtx.Sequence,
 		}
 		tx.TxIn = append(tx.TxIn, txi)

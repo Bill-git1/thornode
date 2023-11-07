@@ -52,6 +52,8 @@ func (h LoanOpenHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, 
 func (h LoanOpenHandler) validate(ctx cosmos.Context, msg MsgLoanOpen) error {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.121.0")):
+		return h.validateV121(ctx, msg)
 	case version.GTE(semver.MustParse("1.111.0")):
 		return h.validateV111(ctx, msg)
 	case version.GTE(semver.MustParse("1.108.0")):
@@ -63,7 +65,7 @@ func (h LoanOpenHandler) validate(ctx cosmos.Context, msg MsgLoanOpen) error {
 	}
 }
 
-func (h LoanOpenHandler) validateV111(ctx cosmos.Context, msg MsgLoanOpen) error {
+func (h LoanOpenHandler) validateV121(ctx cosmos.Context, msg MsgLoanOpen) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
@@ -71,6 +73,21 @@ func (h LoanOpenHandler) validateV111(ctx cosmos.Context, msg MsgLoanOpen) error
 	pauseLoans := fetchConfigInt64(ctx, h.mgr, constants.PauseLoans)
 	if pauseLoans > 0 {
 		return fmt.Errorf("loans are currently paused")
+	}
+
+	// ensure that while derived assets are disabled, borrower cannot receive a
+	// derived asset as their debt
+	enableDerived := fetchConfigInt64(ctx, h.mgr, constants.EnableDerivedAssets)
+	if enableDerived == 0 && msg.TargetAsset.IsDerivedAsset() {
+		return fmt.Errorf("cannot receive derived asset")
+	}
+
+	// Do not allow a network module as the target address.
+	targetAccAddr, err := msg.TargetAddress.AccAddress()
+	// A network module address would be resolvable,
+	// so if not resolvable it should not be a network module address.
+	if err == nil && IsModuleAccAddress(h.mgr.Keeper(), targetAccAddr) {
+		return fmt.Errorf("a network module cannot be the target address of a loan open memo")
 	}
 
 	// Circuit Breaker: check if we're hit the max supply
@@ -157,6 +174,8 @@ func (h LoanOpenHandler) handle(ctx cosmos.Context, msg MsgLoanOpen) error {
 func (h LoanOpenHandler) openLoan(ctx cosmos.Context, msg MsgLoanOpen) error {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.121.0")):
+		return h.openLoanV121(ctx, msg)
 	case version.GTE(semver.MustParse("1.113.0")):
 		return h.openLoanV113(ctx, msg)
 	case version.GTE(semver.MustParse("1.112.0")):
@@ -175,6 +194,8 @@ func (h LoanOpenHandler) openLoan(ctx cosmos.Context, msg MsgLoanOpen) error {
 func (h LoanOpenHandler) swap(ctx cosmos.Context, msg MsgLoanOpen) error {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.121.0")):
+		return h.swapV121(ctx, msg)
 	case version.GTE(semver.MustParse("1.113.0")):
 		return h.swapV113(ctx, msg)
 	case version.GTE(semver.MustParse("1.108.0")):
@@ -196,7 +217,7 @@ func (h LoanOpenHandler) handleV113(ctx cosmos.Context, msg MsgLoanOpen) error {
 	}
 }
 
-func (h LoanOpenHandler) openLoanV113(ctx cosmos.Context, msg MsgLoanOpen) error {
+func (h LoanOpenHandler) openLoanV121(ctx cosmos.Context, msg MsgLoanOpen) error {
 	var err error
 	zero := cosmos.ZeroUint()
 
@@ -221,6 +242,14 @@ func (h LoanOpenHandler) openLoanV113(ctx cosmos.Context, msg MsgLoanOpen) error
 	totalCollateral, err := h.mgr.Keeper().GetTotalCollateral(ctx, msg.CollateralAsset)
 	if err != nil {
 		return err
+	}
+
+	// move derived asset collateral into lending module
+	// TODO: on hard fork, change lending module to an actual module (created as account)
+	lendingAcc := h.mgr.Keeper().GetModuleAccAddress(LendingName)
+	collateral := common.NewCoin(msg.CollateralAsset.GetDerivedAsset(), msg.CollateralAmount)
+	if err := h.mgr.Keeper().SendFromModuleToAccount(ctx, AsgardName, lendingAcc, common.NewCoins(collateral)); err != nil {
+		return fmt.Errorf("fail to send collateral funds: %w", err)
 	}
 
 	// get configs
@@ -292,25 +321,27 @@ func (h LoanOpenHandler) openLoanV113(ctx cosmos.Context, msg MsgLoanOpen) error
 			return fmt.Errorf("fail to send TOR vault funds: %w", err)
 		}
 
-		lendingAddr, err := h.mgr.Keeper().GetModuleAddress(LendingName)
-		if err != nil {
-			ctx.Logger().Error("fail to get lending address", "error", err)
-			return err
-		}
-		asgardAddr, err := h.mgr.Keeper().GetModuleAddress(AsgardName)
-		if err != nil {
-			ctx.Logger().Error("fail to get asgard address", "error", err)
-			return err
+		// Get streaming swaps interval to use for loan swap
+		ssInterval := h.mgr.Keeper().GetConfigInt64(ctx, constants.LoanStreamingSwapsInterval)
+		if ssInterval <= 0 || !msg.MinOut.IsZero() {
+			ssInterval = 0
 		}
 
 		// As this is to be a swap from TOR which has been sent to AsgardName, the ToAddress should be AsgardName's address.
-		tx := common.NewTx(txID, lendingAddr, asgardAddr, common.NewCoins(torCoin), nil, "noop")
+		tx := common.NewTx(txID, common.NoopAddress, common.NoopAddress, common.NewCoins(torCoin), nil, "noop")
 		// we do NOT pass affiliate info here as it was already taken out on the swap of the collateral to derived asset
-		swapMsg := NewMsgSwap(tx, msg.TargetAsset, msg.TargetAddress, msg.MinOut, common.NoAddress, zero, msg.Aggregator, msg.AggregatorTargetAddress, &msg.AggregatorTargetLimit, 0, 0, 0, msg.Signer)
-		handler := NewSwapHandler(h.mgr)
-		if _, err := handler.Run(ctx, swapMsg); err != nil {
-			ctx.Logger().Error("fail to make second swap when opening a loan", "error", err)
-			return err
+		swapMsg := NewMsgSwap(tx, msg.TargetAsset, msg.TargetAddress, msg.MinOut, common.NoAddress, zero, msg.Aggregator, msg.AggregatorTargetAddress, &msg.AggregatorTargetLimit, 0, 0, uint64(ssInterval), msg.Signer)
+		if ssInterval == 0 {
+			handler := NewSwapHandler(h.mgr)
+			if _, err := handler.Run(ctx, swapMsg); err != nil {
+				ctx.Logger().Error("fail to make second swap when opening a loan", "error", err)
+				return err
+			}
+		} else {
+			if err := h.mgr.Keeper().SetSwapQueueItem(ctx, *swapMsg, 1); err != nil {
+				ctx.Logger().Error("fail to add swap to queue", "error", err)
+				return err
+			}
 		}
 	}
 
@@ -319,7 +350,7 @@ func (h LoanOpenHandler) openLoanV113(ctx cosmos.Context, msg MsgLoanOpen) error
 	h.mgr.Keeper().SetTotalCollateral(ctx, msg.CollateralAsset, totalCollateral.Add(msg.CollateralAmount))
 
 	// emit events and metrics
-	evt := NewEventLoanOpen(msg.CollateralAmount, cr, debt, msg.CollateralAsset, msg.TargetAsset, msg.Owner)
+	evt := NewEventLoanOpen(msg.CollateralAmount, cr, debt, msg.CollateralAsset, msg.TargetAsset, msg.Owner, msg.TxID)
 	if err := h.mgr.EventMgr().EmitEvent(ctx, evt); nil != err {
 		ctx.Logger().Error("fail to emit loan open event", "error", err)
 	}
@@ -374,13 +405,7 @@ func (h LoanOpenHandler) calcCR(a, b cosmos.Uint, minCR, maxCR int64) cosmos.Uin
 	return cr.AddUint64(uint64(minCR))
 }
 
-func (h LoanOpenHandler) swapV113(ctx cosmos.Context, msg MsgLoanOpen) error {
-	lendAddr, err := h.mgr.Keeper().GetModuleAddress(LendingName)
-	if err != nil {
-		ctx.Logger().Error("fail to get lending address", "error", err)
-		return err
-	}
-
+func (h LoanOpenHandler) swapV121(ctx cosmos.Context, msg MsgLoanOpen) error {
 	txID, ok := ctx.Value(constants.CtxLoanTxID).(common.TxID)
 	if !ok {
 		return fmt.Errorf("fail to get txid")
@@ -400,10 +425,17 @@ func (h LoanOpenHandler) swapV113(ctx cosmos.Context, msg MsgLoanOpen) error {
 		toAddress = "no to address available"
 	}
 
+	// Get streaming swaps interval to use for loan swap
+	ssInterval := h.mgr.Keeper().GetConfigInt64(ctx, constants.LoanStreamingSwapsInterval)
+	if ssInterval <= 0 || !msg.MinOut.IsZero() {
+		ssInterval = 0
+	}
+
+	collateral := common.NewCoin(msg.CollateralAsset, msg.CollateralAmount)
 	memo := fmt.Sprintf("loan+:%s:%s:%d:%s:%d:%s:%s:%d", msg.TargetAsset, msg.TargetAddress, msg.MinOut.Uint64(), msg.AffiliateAddress, msg.AffiliateBasisPoints.Uint64(), msg.Aggregator, msg.AggregatorTargetAddress, msg.AggregatorTargetLimit.Uint64())
 	fakeGas := common.NewCoin(msg.CollateralAsset.GetChain().GetGasAsset(), cosmos.OneUint())
-	tx := common.NewTx(txID, msg.Owner, toAddress, common.NewCoins(common.NewCoin(msg.CollateralAsset, msg.CollateralAmount)), common.Gas{fakeGas}, memo)
-	swapMsg := NewMsgSwap(tx, msg.CollateralAsset.GetDerivedAsset(), lendAddr, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, 0, 0, 0, msg.Signer)
+	tx := common.NewTx(txID, msg.Owner, toAddress, common.NewCoins(collateral), common.Gas{fakeGas}, memo)
+	swapMsg := NewMsgSwap(tx, msg.CollateralAsset.GetDerivedAsset(), common.NoopAddress, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, 0, 0, uint64(ssInterval), msg.Signer)
 	if err := h.mgr.Keeper().SetSwapQueueItem(ctx, *swapMsg, 0); err != nil {
 		ctx.Logger().Error("fail to add swap to queue", "error", err)
 		return err

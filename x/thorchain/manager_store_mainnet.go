@@ -4,6 +4,8 @@
 package thorchain
 
 import (
+	"fmt"
+
 	ctypes "github.com/cosmos/cosmos-sdk/types"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
@@ -626,4 +628,342 @@ func migrateStoreV117(ctx cosmos.Context, mgr *Mgrs) {
 
 	subBalance(ctx, mgr, 636462, "ETH.ETH", "thorpub1addwnpepqf654umpm7vzgmegae0k4yq0xe69kpvvp3w437hvy7rpyk3svxgtszw2tu9")
 	subBalance(ctx, mgr, 8640, "ETH.ETH", "thorpub1addwnpepqfx4cxtsthazf8609lhfcxxlu60er2t90utta66u2xz2xtdhpts9slmkc93")
+}
+
+func migrateStoreV121(ctx cosmos.Context, mgr *Mgrs) {
+	defer func() {
+		if err := recover(); err != nil {
+			ctx.Logger().Error("fail to migrate store to v121", "error", err)
+		}
+	}()
+
+	// For any in-progress streaming swaps to non-RUNE Native coins,
+	// mint the current Out amount to the Pool Module.
+	var coinsToMint common.Coins
+
+	iterator := mgr.Keeper().GetSwapQueueIterator(ctx)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		var msg MsgSwap
+		if err := mgr.Keeper().Cdc().Unmarshal(iterator.Value(), &msg); err != nil {
+			ctx.Logger().Error("fail to fetch swap msg from queue", "error", err)
+			continue
+		}
+
+		if !msg.IsStreaming() || !msg.TargetAsset.IsNative() || msg.TargetAsset.IsRune() {
+			continue
+		}
+
+		swp, err := mgr.Keeper().GetStreamingSwap(ctx, msg.Tx.ID)
+		if err != nil {
+			ctx.Logger().Error("fail to fetch streaming swap", "error", err)
+			continue
+		}
+
+		if !swp.Out.IsZero() {
+			mintCoin := common.NewCoin(msg.TargetAsset, swp.Out)
+			coinsToMint = coinsToMint.Add(mintCoin)
+		}
+	}
+
+	// The minted coins are for in-progress swaps, so keeping the "swap" in the event field and logs.
+	var coinsToTransfer common.Coins
+	for _, mintCoin := range coinsToMint {
+		if err := mgr.Keeper().MintToModule(ctx, ModuleName, mintCoin); err != nil {
+			ctx.Logger().Error("fail to mint coins during swap", "error", err)
+		} else {
+			mintEvt := NewEventMintBurn(MintSupplyType, mintCoin.Asset.Native(), mintCoin.Amount, "swap")
+			if err := mgr.EventMgr().EmitEvent(ctx, mintEvt); err != nil {
+				ctx.Logger().Error("fail to emit mint event", "error", err)
+			}
+			coinsToTransfer = coinsToTransfer.Add(mintCoin)
+		}
+	}
+
+	if len(coinsToTransfer) > 0 {
+		if err := mgr.Keeper().SendFromModuleToModule(ctx, ModuleName, AsgardName, coinsToTransfer); err != nil {
+			ctx.Logger().Error("fail to move coins during swap", "error", err)
+		}
+	}
+}
+
+func mainnetUnobservedTxsV122(ctx cosmos.Context, mgr *Mgrs) {
+	unobservedTxs := ObservedTxs{}
+
+	// Manually refunded by treasury in:
+	// https://blockstream.info/tx/50442a094f14d937056c17697f9e1909fc6fdfea980a48e3caa991bde983d4f6
+	// Fake observation will use the treasury address as the sender for refund.
+	treasuryAddr, err := common.NewAddress("bc1qq2z2f4gs4nd7t0a9jjp90y9l9zzjtegu4nczha")
+	if err != nil {
+		ctx.Logger().Error("fail to create addr", "addr", treasuryAddr.String(), "error", err)
+		return
+	}
+	asgjh5h, err := common.NewAddress("bc1qj9trqrwtp4c8c5hpt63pyavqkgk90av2zsc0vj")
+	if err != nil {
+		ctx.Logger().Error("fail to create addr", "addr", asgjh5h.String(), "error", err)
+		return
+	}
+	asgjh5hPubKey, err := common.NewPubKey("thorpub1addwnpepqgq37yke5ya53rkwx57z65zv0k8e80paxncfpgfzr83pfz9atywdgvgjh5h")
+	if err != nil {
+		ctx.Logger().Error("fail to create pubkey for vault", "addr", asgjh5h.String(), "error", err)
+		return
+	}
+	unobservedTxs = append(
+		unobservedTxs,
+		NewObservedTx(common.Tx{
+			ID:          "919a5bd8a69426d61f141aa93423e33a77c608986c92e124cc2444afe38ef6aa",
+			Chain:       common.BTCChain,
+			FromAddress: treasuryAddr,
+			ToAddress:   asgjh5h,
+			Coins: common.NewCoins(common.Coin{
+				Asset:  common.BTCAsset,
+				Amount: cosmos.NewUint(39000000),
+			}),
+			Gas: common.Gas{common.Coin{
+				Asset:  common.BTCAsset,
+				Amount: cosmos.NewUint(1),
+			}},
+			Memo: "",
+		}, 807061, asgjh5hPubKey, 807061),
+	)
+
+	// Refund bRUTE (Discord).
+	userAddr, err := common.NewAddress("bc1q7cem2mjtl7uzk67xa9n9pvawamwhcttqfryntf")
+	if err != nil {
+		ctx.Logger().Error("fail to create addr", "addr", treasuryAddr.String(), "error", err)
+		return
+	}
+	asg5mza, err := common.NewAddress("bc1qjx8uw8l3vkf59l493nz23vq6mhtf8k5lu2yrqq")
+	if err != nil {
+		ctx.Logger().Error("fail to create addr", "addr", asg5mza.String(), "error", err)
+		return
+	}
+	asg5mzaPubKey, err := common.NewPubKey("thorpub1addwnpepq0j3d5j45kkfnf0arkqxx0g40zmalhp5uxmg2fnfzgt7tz8mp5f9chd5mza")
+	if err != nil {
+		ctx.Logger().Error("fail to create pubkey for vault", "addr", asg5mza.String(), "error", err)
+		return
+	}
+	unobservedTxs = append(
+		unobservedTxs,
+		NewObservedTx(common.Tx{
+			ID:          "3e9bf3b1e92732d75a58d42d43a07f9f45f3549daa18f57f021741a3a56a3414",
+			Chain:       common.BTCChain,
+			FromAddress: userAddr,
+			ToAddress:   asg5mza,
+			Coins: common.NewCoins(common.Coin{
+				Asset:  common.BTCAsset,
+				Amount: cosmos.NewUint(4000000),
+			}),
+			Gas: common.Gas{common.Coin{
+				Asset:  common.BTCAsset,
+				Amount: cosmos.NewUint(1),
+			}},
+			Memo: "",
+		}, 808099, asg5mzaPubKey, 808099),
+	)
+
+	err = makeFakeTxInObservation(ctx, mgr, unobservedTxs)
+	if err != nil {
+		ctx.Logger().Error("failed to migrate v122", "error", err)
+	}
+}
+
+// The following refunds are for the instances of Ethereum double spends on 2023/10/1.
+// The reserve will refund the full bond slash and leave the slash that went to pools.
+// Amounts were taken from:
+// tci nodes slash-diff --height 12687242 --blocks 1
+// tci nodes slash-diff --height 12836219 --blocks 1
+// tci nodes slash-diff --height 12837936 --blocks 1
+//
+// Totals for the above verified to be slash event changes with the following (amounts
+// taken from slash-diff instead since the events contain the operator address and not
+// the node address):
+//
+//	http https://thornode-v1.ninerealms.com/thorchain/block height==12687242 | \
+//		jq -c '[.txs[]|.result.events[]|select((.type=="bond") and (.bond_type=="\u0003"))|.amount|tonumber]|add'
+//
+//	http https://thornode-v1.ninerealms.com/thorchain/block height==12836219 | \
+//		jq -c '[.txs[]|.result.events[]|select((.type=="bond") and (.bond_type=="\u0003"))|.amount|tonumber]|add'
+//
+//	http https://thornode-v1.ninerealms.com/thorchain/block height==12837936 | \
+//		jq -c '[.txs[]|.result.events[]|select((.type=="bond") and (.bond_type=="\u0003"))|.amount|tonumber]|add'
+func mainnetBondRefundsV122(ctx cosmos.Context, mgr *Mgrs) {
+	credits := []struct {
+		address string
+		amount  cosmos.Uint
+	}{
+		// height: 12687242
+		{address: "thor1dwt6szf098rd4vlnjn83w249zky3penf76cuxy", amount: cosmos.NewUint(84168028924)},
+		{address: "thor1muc7w8s4k2v94lz9mhda5dav9nyyf9c9959g89", amount: cosmos.NewUint(90072158640)},
+		{address: "thor1nlxtkz6wjrsz3wcez0vz577kl6xx7m5mdmysvy", amount: cosmos.NewUint(82448629506)},
+		{address: "thor183fwfzgdfxzf5338acw32kplscgltf28j9s68j", amount: cosmos.NewUint(83016415361)},
+		{address: "thor1z3dmy779shx8x9903ldnyqnt3a3g6vjqx68hkt", amount: cosmos.NewUint(91153484540)},
+		{address: "thor1nw2jdqn5u8xsx4j0n4e8cmndapxqj47z8zhcs3", amount: cosmos.NewUint(95306185316)},
+		{address: "thor1raylctzthcvjc0a5pv5ckzjr3rgxk5qcwu7af2", amount: cosmos.NewUint(85327552827)},
+		{address: "thor1u9dnzza6hpesrwq4p8j2f29v6jsyeq4le66j3c", amount: cosmos.NewUint(88209401326)},
+		{address: "thor1xd4j3gk9frpxh8r22runntnqy34lwzrdkazldh", amount: cosmos.NewUint(89740664937)},
+		{address: "thor1zga95gkv87356lmjj0mvw3geylfuv3ph7wa9t0", amount: cosmos.NewUint(90932733476)},
+		{address: "thor18fqat7ta4mdxlzq8xdhuel23ng7plm00qrzdre", amount: cosmos.NewUint(81748865505)},
+		{address: "thor186k9w7hw4zdmd0kyqsrfzhzgvpc8v9shd9qe7u", amount: cosmos.NewUint(90544695864)},
+		{address: "thor1aulde7ynkh8jd9qpuxw5srafew00vpauw5np52", amount: cosmos.NewUint(76386938018)},
+		{address: "thor1faa0c6sqryr0am6ls9u8y6zs22ju2y7yw8ju9g", amount: cosmos.NewUint(71628288242)},
+		{address: "thor1gqtwzazgdncthm2cuu947d0mvk3w5fkahm40qp", amount: cosmos.NewUint(86683624579)},
+		{address: "thor1lgms9fnlgz8den685z0fs5f2vm60jauvkjf6pm", amount: cosmos.NewUint(91474396878)},
+		{address: "thor1lxm4ahz43va3s2mwyed63l5k0mua0ecr9qhmmm", amount: cosmos.NewUint(85358066170)},
+		// height: 12836219
+		{address: "thor1pcylx2quurhr44fg35jgvlrypvag70aszgd2t3", amount: cosmos.NewUint(815835260165)},
+		{address: "thor12jrhy6mqxtff6utq4kkavtvmqz4qxtztxxnk4j", amount: cosmos.NewUint(786637113773)},
+		{address: "thor1errw9wx5pv8rhevexfxa950jx6tux0qywrlwlp", amount: cosmos.NewUint(739209960394)},
+		{address: "thor1z0zph6u9e00y407d7vg7dh2c5knz5an0wzv8v4", amount: cosmos.NewUint(829270201151)},
+		{address: "thor13xa9eseegag6lcg4qa3eaj7uhljc9kmtxld84v", amount: cosmos.NewUint(775486690428)},
+		{address: "thor1xd4j3gk9frpxh8r22runntnqy34lwzrdkazldh", amount: cosmos.NewUint(808331250813)},
+		{address: "thor1nlsfq25y74u8qt2hqmuzh5wd9t4uv28ghc258g", amount: cosmos.NewUint(752359380806)},
+		{address: "thor12z69uvtwxlj2j9c5cqrnnfqy7s2twrqmvqvj20", amount: cosmos.NewUint(801803186341)},
+		{address: "thor1qp8288u08r2da9sj9pkzv3fkh0ugfutkl9gqdj", amount: cosmos.NewUint(765278325822)},
+		{address: "thor1jnmj9jszmwjctxfd5leczrvl7kdcml3uyq43yn", amount: cosmos.NewUint(808893248809)},
+		{address: "thor1haadhysqf9z5hq92eya78e89qehx0wkpm3jkgu", amount: cosmos.NewUint(875592259674)},
+		{address: "thor1hsga5e2ul8jsy4t6tnxuqakulhmxs32ln7zy2g", amount: cosmos.NewUint(747523029022)},
+		{address: "thor1hue0dwzd3lsxyq3qgecyzzmxrhq96qytwdvwj0", amount: cosmos.NewUint(789507173516)},
+		{address: "thor1krcz33mejvc5f6grj2c5w5x3kuj7mnjhgqltj8", amount: cosmos.NewUint(746423338852)},
+		{address: "thor1gqtwzazgdncthm2cuu947d0mvk3w5fkahm40qp", amount: cosmos.NewUint(780797985626)},
+		{address: "thor1raylctzthcvjc0a5pv5ckzjr3rgxk5qcwu7af2", amount: cosmos.NewUint(768569889338)},
+		{address: "thor1vwqz5hhh5un28qlz6x5f8zczj39jqwel38q2kc", amount: cosmos.NewUint(875216599105)},
+		{address: "thor1sqf8fjuj050wq3m2p83af8l93g7s6ucn42eqa0", amount: cosmos.NewUint(819428936375)},
+		// height: 12837936
+		{address: "thor1yak0z56elhcfqw7xn7wjmp43ndnnxgfcmwkwex", amount: cosmos.NewUint(61353663980)},
+		{address: "thor18fqat7ta4mdxlzq8xdhuel23ng7plm00qrzdre", amount: cosmos.NewUint(52153321557)},
+		{address: "thor1nw2jdqn5u8xsx4j0n4e8cmndapxqj47z8zhcs3", amount: cosmos.NewUint(59357869146)},
+		{address: "thor1asnulx9f4hr8e8fsa40wg3yxsyrdesj38vwndn", amount: cosmos.NewUint(54543153298)},
+		{address: "thor1n5ylq3kyylr7jrq6zdksy2jrtyffxssra22tm3", amount: cosmos.NewUint(54698705550)},
+		{address: "thor12g0es965kj3nql8k244unkznqx37r23ytns75x", amount: cosmos.NewUint(52590255978)},
+		{address: "thor1agftrgu74z84hef6dt6ykhe7cmjf3f8dcpkfun", amount: cosmos.NewUint(55325194037)},
+		{address: "thor1h3pvd8x44v63qj488lku6pzzcq3g5p8tc2nd6c", amount: cosmos.NewUint(52068842540)},
+		{address: "thor1dwt6szf098rd4vlnjn83w249zky3penf76cuxy", amount: cosmos.NewUint(52338666870)},
+		{address: "thor1ffz7rvtjvckuj3l05n4xp55v4zsqpxavej9dtr", amount: cosmos.NewUint(55964770042)},
+		{address: "thor1aulde7ynkh8jd9qpuxw5srafew00vpauw5np52", amount: cosmos.NewUint(47599879644)},
+		{address: "thor13r9p8upgtpff05nxy2kagy70qe0ljumhxe6qyf", amount: cosmos.NewUint(55957461500)},
+		{address: "thor1dqlmsm67h363nuxpd68esg54kt2t7xw2xewqml", amount: cosmos.NewUint(53875467917)},
+		{address: "thor1muc7w8s4k2v94lz9mhda5dav9nyyf9c9959g89", amount: cosmos.NewUint(56127352503)},
+		{address: "thor10f40m6nv7ulc0fvhmt07szn3n7ajd7e8xhghc3", amount: cosmos.NewUint(49100123844)},
+		{address: "thor1ucwcatnqwjyucfrf7vv2xnmfzfaplvrkqzl337", amount: cosmos.NewUint(56999681069)},
+		{address: "thor1vt207wgvefjgk88mtfjuurcl3vw6z4d2gu5psw", amount: cosmos.NewUint(55682338872)},
+		{address: "thor1kj56aupxnkhhy0rpdcp2gjncm4y78nnhjv496v", amount: cosmos.NewUint(56017963303)},
+	}
+
+	// sum amounts to get the total we will refund to nodes from the reserve
+	total := cosmos.ZeroUint()
+	for _, credit := range credits {
+		total = total.Add(credit.amount)
+	}
+
+	// assertion for sanity check (~167k RUNE)
+	if !total.Equal(cosmos.NewUint(16732118671769)) {
+		ctx.Logger().Error("total refund amount is not correct", "total", total)
+		return
+	}
+
+	// send coins from reserve to bond module
+	if err := mgr.Keeper().SendFromModuleToModule(ctx, ReserveName, BondName, common.Coins{common.NewCoin(common.RuneNative, total)}); err != nil {
+		ctx.Logger().Error("fail to transfer coin from reserve to bond module", "error", err)
+		return
+	}
+
+	for _, credit := range credits {
+		ctx.Logger().Info("credit", "node", credit.address, "amount", credit.amount)
+
+		// get addresses
+		addr, err := cosmos.AccAddressFromBech32(credit.address)
+		if err != nil {
+			ctx.Logger().Error("fail to parse node address", "error", err)
+			return
+		}
+
+		// get node account
+		na, err := mgr.Keeper().GetNodeAccount(ctx, addr)
+		if err != nil {
+			ctx.Logger().Error("fail to get node account", "error", err)
+			return
+		}
+
+		// update node bond
+		na.Bond = na.Bond.Add(credit.amount)
+
+		// store updated records
+		if err := mgr.Keeper().SetNodeAccount(ctx, na); err != nil {
+			ctx.Logger().Error("fail to save node account", "error", err)
+			return
+		}
+	}
+}
+
+func migrateStoreV122(ctx cosmos.Context, mgr *Mgrs) {
+	defer func() {
+		if err := recover(); err != nil {
+			ctx.Logger().Error("fail to migrate store to v122", "error", err)
+		}
+	}()
+
+	mainnetUnobservedTxsV122(ctx, mgr)
+	mainnetBondRefundsV122(ctx, mgr)
+}
+
+func migrateStoreV123(ctx cosmos.Context, mgr *Mgrs) {
+	defer func() {
+		if err := recover(); err != nil {
+			ctx.Logger().Error("fail to migrate store to v122", "error", err)
+		}
+	}()
+
+	// Reque streaming swap outbound that got swallowed by preferred asset swap
+	danglingInboundTxIDs := []common.TxID{
+		"15D60EDF026A662E5D8BF3A36A50EBF9C0BD7B169340F669C4816376FCF5605E",
+	}
+	requeueDanglingActionsV123(ctx, mgr, danglingInboundTxIDs)
+
+	// Requeue dropped attempt to rescue funds sent to old vault
+	// Original tx: F9FA0745290D5EDB287F8641B390171B45BD84C7628A1A45DADB876F9359B4F8
+	// Sent to bc1qkrcd6cfhmur80lsc0dxj2h3cge6lytaxdy5rl9
+	// thorpub1addwnpepqdu0wrnvx63eqf6gf5qyfz2k95gj9c96hsgecdcfwawckvsgqy3ezh0rxwt
+	originalTxID := "F9FA0745290D5EDB287F8641B390171B45BD84C7628A1A45DADB876F9359B4F8"
+	droppedRescue := TxOutItem{
+		Chain:       common.BTCChain,
+		ToAddress:   common.Address("bc1q0vu0a7zpmgfrjuke7jeg5nlttfknsn2lee2qrx"),
+		VaultPubKey: common.PubKey("thorpub1addwnpepqdu0wrnvx63eqf6gf5qyfz2k95gj9c96hsgecdcfwawckvsgqy3ezh0rxwt"),
+		Coin:        common.NewCoin(common.BTCAsset, cosmos.NewUint(149896000)),
+		Memo:        fmt.Sprintf("REFUND:%s", originalTxID),
+		InHash:      common.TxID(originalTxID),
+		GasRate:     94,
+		MaxGas:      common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(94500))},
+	}
+
+	err := mgr.txOutStore.UnSafeAddTxOutItem(ctx, mgr, droppedRescue)
+	if err != nil {
+		ctx.Logger().Error("fail to requeue BTC rescue tx", "error", err)
+		return
+	}
+}
+
+func migrateStoreV124(ctx cosmos.Context, mgr *Mgrs) {
+	// Second attempt. Previously tried in V123 but amount was not fully spendable
+	// Requeue dropped attempt to rescue funds sent to old vault
+	// Original tx: F9FA0745290D5EDB287F8641B390171B45BD84C7628A1A45DADB876F9359B4F8
+	// Sent to bc1qkrcd6cfhmur80lsc0dxj2h3cge6lytaxdy5rl9
+	// thorpub1addwnpepqdu0wrnvx63eqf6gf5qyfz2k95gj9c96hsgecdcfwawckvsgqy3ezh0rxwt
+	originalTxID := "F9FA0745290D5EDB287F8641B390171B45BD84C7628A1A45DADB876F9359B4F8"
+	droppedRescue := TxOutItem{
+		Chain:       common.BTCChain,
+		ToAddress:   common.Address("bc1q0vu0a7zpmgfrjuke7jeg5nlttfknsn2lee2qrx"),
+		VaultPubKey: common.PubKey("thorpub1addwnpepqdu0wrnvx63eqf6gf5qyfz2k95gj9c96hsgecdcfwawckvsgqy3ezh0rxwt"),
+		Coin:        common.NewCoin(common.BTCAsset, cosmos.NewUint(147000000)),
+		Memo:        fmt.Sprintf("REFUND:%s", originalTxID),
+		InHash:      common.TxID(originalTxID),
+		GasRate:     94,
+		MaxGas:      common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(94500))},
+	}
+
+	err := mgr.txOutStore.UnSafeAddTxOutItem(ctx, mgr, droppedRescue)
+	if err != nil {
+		ctx.Logger().Error("fail to requeue BTC rescue tx", "error", err)
+		return
+	}
 }

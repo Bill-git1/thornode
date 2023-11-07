@@ -11,11 +11,13 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"text/template"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/hashicorp/go-multierror"
 	"github.com/mitchellh/mapstructure"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -95,6 +97,7 @@ func NewOperation(opMap map[string]any) Operation {
 
 	// create decoder supporting embedded structs and weakly typed input
 	dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		TagName:          "json",
 		WeaklyTypedInput: true,
 		ErrorUnused:      true,
 		Squash:           true,
@@ -139,7 +142,7 @@ func NewOperation(opMap map[string]any) Operation {
 		log.Fatal().Interface("op", opMap).Err(err).Msg("failed to decode operation")
 	}
 
-	// require check description and default status check to 200 if endpoint is set
+	// default status check to 200 if endpoint is set
 	if oc, ok := op.(*OpCheck); ok && oc.Endpoint != "" {
 		if oc.Status == 0 {
 			oc.Status = 200
@@ -218,12 +221,11 @@ func (op *OpState) Execute(_ io.Writer, routine int, _ *os.Process, _ chan strin
 ////////////////////////////////////////////////////////////////////////////////////////
 
 type OpCheck struct {
-	OpBase      `yaml:",inline"`
-	Description string            `json:"description"`
-	Endpoint    string            `json:"endpoint"`
-	Params      map[string]string `json:"params"`
-	Status      int               `json:"status"`
-	Asserts     []string          `json:"asserts"`
+	OpBase   `yaml:",inline"`
+	Endpoint string            `json:"endpoint"`
+	Params   map[string]string `json:"params"`
+	Status   int               `json:"status"`
+	Asserts  []string          `json:"asserts"`
 }
 
 func (op *OpCheck) Execute(out io.Writer, routine int, _ *os.Process, logs chan string) error {
@@ -352,9 +354,10 @@ func (op *OpCheck) Execute(out io.Writer, routine int, _ *os.Process, logs chan 
 ////////////////////////////////////////////////////////////////////////////////////////
 
 type OpCreateBlocks struct {
-	OpBase `yaml:",inline"`
-	Count  int  `json:"count"`
-	Exit   *int `json:"exit"`
+	OpBase         `yaml:",inline"`
+	Count          int  `json:"count"`
+	SkipInvariants bool `json:"skip_invariants"`
+	Exit           *int `json:"exit"`
 }
 
 func (op *OpCreateBlocks) Execute(out io.Writer, routine int, p *os.Process, logs chan string) error {
@@ -404,7 +407,79 @@ func (op *OpCreateBlocks) Execute(out io.Writer, routine int, p *os.Process, log
 	// avoid minor raciness after end block
 	time.Sleep(200 * time.Millisecond * getTimeFactor())
 
-	return nil
+	if op.SkipInvariants {
+		return nil
+	}
+	return checkInvariants(routine)
+}
+
+// ------------------------------ invariants ------------------------------
+
+func checkInvariants(routine int) error {
+	api := fmt.Sprintf("http://localhost:%d", 1317+routine)
+	endpoint := fmt.Sprintf("%s/thorchain/invariants", api)
+	req, err := http.NewRequest("GET", endpoint, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	invs := struct {
+		Invariants []string
+	}{}
+	if err := json.NewDecoder(resp.Body).Decode(&invs); err != nil {
+		return err
+	}
+
+	wg := sync.WaitGroup{}
+	mu := sync.Mutex{}
+	var returnErr error
+
+	for _, inv := range invs.Invariants {
+		wg.Add(1)
+		go func(inv string) {
+			defer wg.Done()
+
+			endpoint := fmt.Sprintf("%s/thorchain/invariant/%s", api, inv)
+			req, err := http.NewRequest("GET", endpoint, nil)
+			if err != nil {
+				mu.Lock()
+				returnErr = multierror.Append(returnErr, err)
+				mu.Unlock()
+				return
+			}
+			resp, err := httpClient.Do(req)
+			if err != nil {
+				mu.Lock()
+				returnErr = multierror.Append(returnErr, err)
+				mu.Unlock()
+				return
+			}
+			invRes := struct {
+				Broken    bool
+				Invariant string
+				Msg       []string
+			}{}
+			if err := json.NewDecoder(resp.Body).Decode(&invRes); err != nil {
+				mu.Lock()
+				returnErr = multierror.Append(returnErr, err)
+				mu.Unlock()
+				return
+			}
+			if invRes.Broken {
+				err = fmt.Errorf("%s invariant is broken: %v", inv, invRes.Msg)
+				mu.Lock()
+				returnErr = multierror.Append(returnErr, err)
+				mu.Unlock()
+				return
+			}
+		}(inv)
+	}
+	wg.Wait()
+
+	return returnErr
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////

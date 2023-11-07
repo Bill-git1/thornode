@@ -18,124 +18,6 @@ func (s *NetworkManagerVCURTestSuite) SetUpSuite(c *C) {
 	SetupConfigForTest()
 }
 
-func (s *NetworkManagerVCURTestSuite) TestRagnarokChain(c *C) {
-	ctx, _ := setupKeeperForTest(c)
-	ctx = ctx.WithBlockHeight(100000)
-
-	activeVault := GetRandomVault()
-	activeVault.StatusSince = ctx.BlockHeight() - 10
-	activeVault.Coins = common.Coins{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(100*common.One)),
-	}
-	retireVault := GetRandomVault()
-	retireVault.Chains = common.Chains{common.BNBChain, common.BTCChain}.Strings()
-	yggVault := GetRandomVault()
-	yggVault.Type = YggdrasilVault
-	yggVault.Coins = common.Coins{
-		common.NewCoin(common.BTCAsset, cosmos.NewUint(3*common.One)),
-		common.NewCoin(common.RuneAsset(), cosmos.NewUint(300*common.One)),
-	}
-
-	btcPool := NewPool()
-	btcPool.Asset = common.BTCAsset
-	btcPool.BalanceRune = cosmos.NewUint(1000 * common.One)
-	btcPool.BalanceAsset = cosmos.NewUint(10 * common.One)
-	btcPool.LPUnits = cosmos.NewUint(1600)
-
-	bnbPool := NewPool()
-	bnbPool.Asset = common.BNBAsset
-	bnbPool.BalanceRune = cosmos.NewUint(1000 * common.One)
-	bnbPool.BalanceAsset = cosmos.NewUint(10 * common.One)
-	bnbPool.LPUnits = cosmos.NewUint(1600)
-
-	addr := GetRandomRUNEAddress()
-	lps := LiquidityProviders{
-		{
-			RuneAddress:       addr,
-			AssetAddress:      GetRandomBTCAddress(),
-			LastAddHeight:     5,
-			Units:             btcPool.LPUnits.QuoUint64(2),
-			PendingRune:       cosmos.ZeroUint(),
-			PendingAsset:      cosmos.ZeroUint(),
-			AssetDepositValue: cosmos.ZeroUint(),
-			RuneDepositValue:  cosmos.ZeroUint(),
-		},
-		{
-			RuneAddress:       GetRandomRUNEAddress(),
-			AssetAddress:      GetRandomBTCAddress(),
-			LastAddHeight:     10,
-			Units:             btcPool.LPUnits.QuoUint64(2),
-			PendingRune:       cosmos.ZeroUint(),
-			PendingAsset:      cosmos.ZeroUint(),
-			AssetDepositValue: cosmos.ZeroUint(),
-			RuneDepositValue:  cosmos.ZeroUint(),
-		},
-	}
-
-	keeper := &TestRagnarokChainKeeper{
-		na:          GetRandomValidatorNode(NodeActive),
-		activeVault: activeVault,
-		retireVault: retireVault,
-		yggVault:    yggVault,
-		pools:       Pools{bnbPool, btcPool},
-		lps:         lps,
-	}
-
-	mgr := NewDummyMgrWithKeeper(keeper)
-
-	networkMgr := newNetworkMgrVCUR(keeper, mgr.TxOutStore(), mgr.EventMgr())
-
-	// the first round should just recall yggdrasil fund
-	err := networkMgr.manageChains(ctx, mgr)
-	c.Assert(err, IsNil)
-	c.Check(keeper.pools[1].Asset.Equals(common.BTCAsset), Equals, true)
-	c.Check(keeper.pools[1].LPUnits.IsZero(), Equals, false, Commentf("%d\n", keeper.pools[1].LPUnits.Uint64()))
-	c.Check(keeper.pools[0].LPUnits.Equal(cosmos.NewUint(1600)), Equals, true)
-	for _, skr := range keeper.lps {
-		c.Check(skr.Units.IsZero(), Equals, false)
-	}
-
-	// the first round should just recall yggdrasil fund
-	ctx = ctx.WithBlockHeight(200000)
-	err = networkMgr.manageChains(ctx, mgr)
-	c.Assert(err, IsNil)
-	c.Check(keeper.pools[1].Asset.Equals(common.BTCAsset), Equals, true)
-	c.Check(keeper.pools[1].LPUnits.IsZero(), Equals, true, Commentf("%d\n", keeper.pools[1].LPUnits.Uint64()))
-	c.Check(keeper.pools[0].LPUnits.Equal(cosmos.NewUint(1600)), Equals, true)
-	for _, skr := range keeper.lps {
-		c.Check(skr.Units.IsZero(), Equals, true)
-	}
-	// ensure we have requested for ygg funds to be returned
-	txOutStore := mgr.TxOutStore()
-	c.Assert(err, IsNil)
-	items, err := txOutStore.GetOutboundItems(ctx)
-	c.Assert(err, IsNil)
-
-	// 1 ygg return + 4 withdrawals
-	c.Check(items, HasLen, 3, Commentf("Len %d", items))
-	c.Check(items[0].Memo, Equals, NewYggdrasilReturn(100000).String())
-	c.Check(items[0].Chain.Equals(common.BTCChain), Equals, true)
-
-	ctx, mgr1 := setupManagerForTest(c)
-	helper := NewVaultGenesisSetupTestHelper(mgr1.Keeper())
-	mgr.K = helper
-	networkMgr1 := newNetworkMgrVCUR(helper, mgr1.TxOutStore(), mgr1.EventMgr())
-	// fail to get active nodes should error out
-	helper.failToListActiveAccounts = true
-	c.Assert(networkMgr1.ragnarokChain(ctx, common.BNBChain, 1, mgr), NotNil)
-	helper.failToListActiveAccounts = false
-
-	// no active nodes , should error
-	c.Assert(networkMgr1.ragnarokChain(ctx, common.BNBChain, 1, mgr), NotNil)
-	c.Assert(helper.Keeper.SetNodeAccount(ctx, GetRandomValidatorNode(NodeActive)), IsNil)
-	c.Assert(helper.Keeper.SetNodeAccount(ctx, GetRandomValidatorNode(NodeActive)), IsNil)
-
-	// fail to get pools should error out
-	helper.failGetPools = true
-	c.Assert(networkMgr1.ragnarokChain(ctx, common.BNBChain, 1, mgr), NotNil)
-	helper.failGetPools = false
-}
-
 func (s *NetworkManagerVCURTestSuite) TestUpdateNetwork(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	ver := GetCurrentVersion()
@@ -290,11 +172,11 @@ func (*NetworkManagerVCURTestSuite) TestProcessGenesisSetup(c *C) {
 
 	helper.failGetRetiringAsgardVault = true
 	ctx = ctx.WithBlockHeight(1024)
-	c.Assert(networkMgr.EndBlock(ctx, mgr), NotNil)
+	c.Assert(networkMgr.migrateFunds(ctx, mgr), NotNil)
 	helper.failGetRetiringAsgardVault = false
 
 	helper.failGetActiveAsgardVault = true
-	c.Assert(networkMgr.EndBlock(ctx, mgr), NotNil)
+	c.Assert(networkMgr.migrateFunds(ctx, mgr), NotNil)
 	helper.failGetActiveAsgardVault = false
 }
 
@@ -345,40 +227,6 @@ func (*NetworkManagerVCURTestSuite) TestPayPoolRewards(c *C) {
 	c.Assert(networkMgr.payPoolRewards(ctx, []cosmos.Uint{cosmos.NewUint(100 * common.One)}, Pools{p}), IsNil)
 	helper.failToSetPool = true
 	c.Assert(networkMgr.payPoolRewards(ctx, []cosmos.Uint{cosmos.NewUint(100 * common.One)}, Pools{p}), NotNil)
-}
-
-func (*NetworkManagerVCURTestSuite) TestFindChainsToRetire(c *C) {
-	ctx, mgr := setupManagerForTest(c)
-	helper := NewVaultGenesisSetupTestHelper(mgr.Keeper())
-	mgr.K = helper
-	networkMgr := newNetworkMgrVCUR(helper, mgr.TxOutStore(), mgr.EventMgr())
-	// fail to get active asgard vault
-	helper.failGetActiveAsgardVault = true
-	chains, err := networkMgr.findChainsToRetire(ctx)
-	c.Assert(err, NotNil)
-	c.Assert(chains, HasLen, 0)
-	helper.failGetActiveAsgardVault = false
-
-	// fail to get retire asgard vault
-	helper.failGetRetiringAsgardVault = true
-	chains, err = networkMgr.findChainsToRetire(ctx)
-	c.Assert(err, NotNil)
-	c.Assert(chains, HasLen, 0)
-	helper.failGetRetiringAsgardVault = false
-}
-
-func (*NetworkManagerVCURTestSuite) TestRecallChainFunds(c *C) {
-	ctx, mgr := setupManagerForTest(c)
-	helper := NewVaultGenesisSetupTestHelper(mgr.Keeper())
-	mgr.K = helper
-	networkMgr := newNetworkMgrVCUR(helper, mgr.TxOutStore(), mgr.EventMgr())
-	helper.failToListActiveAccounts = true
-	c.Assert(networkMgr.RecallChainFunds(ctx, common.BNBChain, mgr, common.PubKeys{}), NotNil)
-	helper.failToListActiveAccounts = false
-
-	helper.failGetActiveAsgardVault = true
-	c.Assert(networkMgr.RecallChainFunds(ctx, common.BNBChain, mgr, common.PubKeys{}), NotNil)
-	helper.failGetActiveAsgardVault = false
 }
 
 func (s *NetworkManagerVCURTestSuite) TestRecoverPoolDeficit(c *C) {
@@ -524,13 +372,6 @@ func (s *NetworkManagerVCURTestSuite) TestRagnarokPool(c *C) {
 	c.Assert(k.SetVault(ctx, activeVault), IsNil)
 	retireVault := GetRandomVault()
 	retireVault.Chains = common.Chains{common.BNBChain, common.BTCChain}.Strings()
-	yggVault := GetRandomVault()
-	yggVault.PubKey = na.PubKeySet.Secp256k1
-	yggVault.Type = YggdrasilVault
-	yggVault.Coins = common.Coins{
-		common.NewCoin(common.BTCAsset, cosmos.NewUint(3*common.One)),
-	}
-	c.Assert(k.SetVault(ctx, yggVault), IsNil)
 	btcPool := NewPool()
 	btcPool.Asset = common.BTCAsset
 	btcPool.BalanceRune = cosmos.NewUint(1000 * common.One)
@@ -592,19 +433,17 @@ func (s *NetworkManagerVCURTestSuite) TestRagnarokPool(c *C) {
 
 	// happy path
 	networkMgr.k.SetMimir(ctx, "RAGNAROK-BTC-BTC", 1)
-	// first round , it should recall yggdrasil
+	// first round
 	err = networkMgr.checkPoolRagnarok(ctx, mgr)
 	c.Assert(err, IsNil)
 	items, _ := mgr.txOutStore.GetOutboundItems(ctx)
-	c.Assert(items, HasLen, 1)
-	c.Assert(items[0].Memo, Equals, "YGGDRASIL-:200")
+	c.Assert(items, HasLen, 0)
 
-	// second round, ragnarok
 	ctx = ctx.WithBlockHeight(interval * 6)
 	err = networkMgr.checkPoolRagnarok(ctx, mgr)
 	c.Assert(err, IsNil)
 	items, _ = mgr.txOutStore.GetOutboundItems(ctx)
-	c.Assert(items, HasLen, 3)
+	c.Assert(items, HasLen, 2, Commentf("%d", len(items)))
 
 	tempPool, err := k.GetPool(ctx, common.BTCAsset)
 	c.Assert(err, IsNil)
@@ -984,6 +823,7 @@ func (s *NetworkManagerVCURTestSuite) TestSpawnDerivedAssets(c *C) {
 	nmgr := newNetworkMgrVCUR(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
 
 	vault := GetRandomVault()
+	vault.Chains = append(vault.Chains, common.BSCChain.String())
 	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
 
 	mgr.Keeper().SetMimir(ctx, "DerivedDepthBasisPts", 10_000)
@@ -1010,6 +850,18 @@ func (s *NetworkManagerVCURTestSuite) TestSpawnDerivedAssets(c *C) {
 	pool.BalanceAsset = cosmos.NewUint(2343330836117)
 	pool.Decimals = 8
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	bscBnb, err := common.NewAsset("BSC.BNB")
+	c.Assert(err, IsNil)
+
+	// should not have any affect on THOR.BNB
+	bscPool := NewPool()
+	bscPool.Asset = bscBnb
+	bscPool.Status = PoolAvailable
+	bscPool.BalanceRune = cosmos.NewUint(510119961610327)
+	bscPool.BalanceAsset = cosmos.NewUint(4343330836117)
+	bscPool.Decimals = 8
+	c.Assert(mgr.Keeper().SetPool(ctx, bscPool), IsNil)
 
 	// happy path
 	err = nmgr.spawnDerivedAssets(ctx, mgr)
@@ -1094,4 +946,35 @@ func (s *NetworkManagerVCURTestSuite) TestSpawnDerivedAssetsBasisPoints(c *C) {
 	c.Assert(usd.Status.String(), Equals, "Suspended")
 	c.Assert(usd.BalanceAsset.Uint64(), Equals, uint64(1851363360364602), Commentf("%d", usd.BalanceAsset.Uint64()))
 	c.Assert(usd.BalanceRune.Uint64(), Equals, uint64(374987118770738), Commentf("%d", usd.BalanceRune.Uint64()))
+}
+
+func (s *NetworkManagerVCURTestSuite) TestFetchMedianSlip(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	nmgr := newNetworkMgrVCUR(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
+	asset := common.BTCAsset
+
+	var slip int64
+	var err error
+	slip = nmgr.fetchMedianSlip(ctx, asset, mgr)
+	c.Check(slip, Equals, int64(0))
+
+	/////// setup slip history
+	ctx = ctx.WithBlockHeight(14400 * 14)
+	maxAnchorBlocks := mgr.Keeper().GetConfigInt64(ctx, constants.MaxAnchorBlocks)
+	dynamicMaxAnchorSlipBlocks := mgr.Keeper().GetConfigInt64(ctx, constants.DynamicMaxAnchorSlipBlocks)
+	for i := ctx.BlockHeight(); i > ctx.BlockHeight()-dynamicMaxAnchorSlipBlocks; i -= maxAnchorBlocks {
+		if i <= 0 {
+			break // dynamicMaxAnchorSlipBlocks > ctx.BlockHeight, end of chain history
+		}
+
+		mgr.Keeper().SetSwapSlipSnapShot(ctx, asset, i, i)
+	}
+	//////////////////////////
+
+	slip = nmgr.fetchMedianSlip(ctx, asset, mgr)
+	c.Check(slip, Equals, int64(100950))
+
+	slip, err = mgr.Keeper().GetLongRollup(ctx, asset)
+	c.Assert(err, IsNil)
+	c.Check(slip, Equals, int64(100950))
 }

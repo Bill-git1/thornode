@@ -256,6 +256,11 @@ func main() {
 				continue
 			}
 
+			// skip generated files
+			if strings.HasSuffix(fset.File(file.Pos()).Name(), ".pb.go") {
+				continue
+			}
+
 			ast.Inspect(file, func(node ast.Node) bool {
 				// remove all comments
 				v := reflect.ValueOf(node)

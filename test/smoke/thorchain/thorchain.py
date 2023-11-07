@@ -567,7 +567,8 @@ class ThorchainState:
                                     {"pool_deduct": rune_fee},
                                 ],
                             ))
-                            if coin.asset.is_thor() and coin.asset == in_tx.coins[0].asset and asset_fee > 0:
+                            # Note that currently this lacks a check for Derived status.
+                            if coin.asset.is_synth and asset_fee > 0:
                                 self.events.append(Event(
                                     "mint_burn",
                                     [
@@ -575,16 +576,6 @@ class ThorchainState:
                                         {"denom": f"{tx.coins[0].asset.upper()}"},
                                         {"amount": f"{asset_fee}"},
                                         {"reason": "burn_native_fee"},
-                                    ],
-                                ))
-                            if coin.asset.is_thor() and in_tx.coins[0].asset != coin.asset and coin.amount > 0:
-                                self.events.append(Event(
-                                    "mint_burn",
-                                    [
-                                        {"supply": "mint"},
-                                        {"denom": f"{coin.asset.lower()}"},
-                                        {"amount": f"{coin.amount}"},
-                                        {"reason": "native_tx_out"},
                                     ],
                                 ))
                     if coin.amount > 0:
@@ -1340,19 +1331,6 @@ class ThorchainState:
             # the tx is split in 2 events and gas is handled only once
             in_tx = deepcopy(tx)
 
-            # generate first swap "fake" outbound event
-            out_tx = Transaction(
-                emit.asset.get_chain(),
-                tx.from_address,
-                tx.to_address,
-                [emit],
-                tx.memo,
-                id=Transaction.empty_id,
-            )
-            swap_events.append(
-                Event("outbound", [{"in_tx_id": in_tx.id}, *out_tx.get_attributes()])
-            )
-
             # generate event for SWAP transaction
             event = Event(
                 "swap",
@@ -1429,7 +1407,7 @@ class ThorchainState:
         if from_address != "VAULT":  # don't replace for unit tests
             from_alias = get_alias(in_tx.chain, from_address)
             if target.is_synth:
-                from_address = get_alias_address(target.get_chain(), "SYNTH")
+                from_address = get_alias_address(target.get_chain(), "VAULT")
             else:
                 from_address = get_alias_address(target.get_chain(), from_alias)
 
@@ -1452,6 +1430,19 @@ class ThorchainState:
                 f"OUT:{tx.id.upper()}",
             )
         ]
+
+        if emit.asset.is_synth:
+            out_txs[0].id = Transaction.empty_id
+            self.events.append(Event(
+                "mint_burn",
+                [
+                       {"supply": "mint"},
+                       {"denom": f"{emit.asset.lower()}"},
+                       {"amount": f"{emit.amount}"},
+                    {"reason": "swap"},
+                ],
+               ))
+        
         event = Event(
             "swap",
             [

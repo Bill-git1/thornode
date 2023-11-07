@@ -159,6 +159,13 @@ func (k *TestDoubleSlashKeeper) ListActiveValidators(ctx cosmos.Context) (NodeAc
 	return NodeAccounts{k.na}, nil
 }
 
+func (k *TestDoubleSlashKeeper) GetNodeAccount(ctx cosmos.Context, nodeAddress cosmos.AccAddress) (NodeAccount, error) {
+	if nodeAddress.String() == k.na.NodeAddress.String() {
+		return k.na, nil
+	}
+	return NodeAccount{}, errors.New("kaboom")
+}
+
 func (k *TestDoubleSlashKeeper) SetNodeAccount(ctx cosmos.Context, na NodeAccount) error {
 	k.na = na
 	return nil

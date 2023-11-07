@@ -45,6 +45,8 @@ func (h SwapHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, erro
 func (h SwapHandler) validate(ctx cosmos.Context, msg MsgSwap) error {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.121.0")):
+		return h.validateV121(ctx, msg)
 	case version.GTE(semver.MustParse("1.120.0")):
 		return h.validateV120(ctx, msg)
 	case version.GTE(semver.MustParse("1.117.0")):
@@ -72,9 +74,22 @@ func (h SwapHandler) validate(ctx cosmos.Context, msg MsgSwap) error {
 	}
 }
 
-func (h SwapHandler) validateV120(ctx cosmos.Context, msg MsgSwap) error {
+func (h SwapHandler) validateV121(ctx cosmos.Context, msg MsgSwap) error {
 	if err := msg.ValidateBasicV63(); err != nil {
 		return err
+	}
+
+	// For external-origin (here valid) memos, do not allow a network module as the final destination.
+	// If unable to parse the memo, here assume it to be internal.
+	memo, _ := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), msg.Tx.Memo)
+	mem, isSwapMemo := memo.(SwapMemo)
+	if isSwapMemo {
+		destAccAddr, err := mem.Destination.AccAddress()
+		// A network module address would be resolvable,
+		// so if not resolvable it should not be a network module address.
+		if err == nil && IsModuleAccAddress(h.mgr.Keeper(), destAccAddr) {
+			return fmt.Errorf("a network module cannot be the final destination of a swap memo")
+		}
 	}
 
 	target := msg.TargetAsset
@@ -82,91 +97,12 @@ func (h SwapHandler) validateV120(ctx cosmos.Context, msg MsgSwap) error {
 		return errors.New("trading is halted, can't process swap")
 	}
 
-	if msg.IsStreaming() {
-		pausedStreaming := fetchConfigInt64(ctx, h.mgr, constants.StreamingSwapPause)
-		if pausedStreaming > 0 {
-			return fmt.Errorf("streaming swaps are paused")
-		}
-
-		swp := msg.GetStreamingSwap()
-		if h.mgr.Keeper().StreamingSwapExists(ctx, msg.Tx.ID) {
-			var err error
-			swp, err = h.mgr.Keeper().GetStreamingSwap(ctx, msg.Tx.ID)
-			if err != nil {
-				ctx.Logger().Error("fail to fetch streaming swap", "error", err)
-				return err
-			}
-		}
-
-		if (swp.Quantity > 0 && swp.IsDone()) || swp.In.GTE(swp.Deposit) {
-			// check both swap count and swap in vs deposit to cover all basis
-			return fmt.Errorf("streaming swap is completed, cannot continue to swap again")
-		}
-	}
-
 	if target.IsDerivedAsset() || msg.Tx.Coins[0].Asset.IsDerivedAsset() {
 		if h.mgr.Keeper().GetConfigInt64(ctx, constants.EnableDerivedAssets) == 0 {
 			// since derived assets are disabled, only the protocol can use
 			// them (specifically lending)
-			acc, err := h.mgr.Keeper().GetModuleAddress(LendingName)
-			if err != nil {
-				return err
-			}
-			if !msg.Tx.FromAddress.Equals(acc) && !msg.Destination.Equals(acc) {
-				return errors.New("swapping to/from a derived asset is not allowed, except the lending protocol")
-			}
-		}
-	}
-	if target.IsSyntheticAsset() {
-		if target.GetLayer1Asset().IsNative() {
-			return errors.New("minting a synthetic of a native coin is not allowed")
-		}
-
-		// the following is only applicable for mainnet
-		totalLiquidityRUNE, err := h.getTotalLiquidityRUNE(ctx)
-		if err != nil {
-			return ErrInternal(err, "fail to get total liquidity RUNE")
-		}
-
-		var sourceAsset common.Asset
-		// total liquidity RUNE after current add liquidity
-		if len(msg.Tx.Coins) > 0 {
-			// calculate rune value on incoming swap, and add to total liquidity.
-			coin := msg.Tx.Coins[0]
-			sourceAsset = coin.Asset
-			runeVal := coin.Amount
-			if !coin.Asset.IsRune() {
-				pool, err := h.mgr.Keeper().GetPool(ctx, coin.Asset.GetLayer1Asset())
-				if err != nil {
-					return ErrInternal(err, "fail to get pool")
-				}
-				runeVal = pool.AssetValueInRune(coin.Amount)
-			}
-			totalLiquidityRUNE = totalLiquidityRUNE.Add(runeVal)
-		}
-		maximumLiquidityRune, err := h.mgr.Keeper().GetMimir(ctx, constants.MaximumLiquidityRune.String())
-		if maximumLiquidityRune < 0 || err != nil {
-			maximumLiquidityRune = h.mgr.GetConstants().GetInt64Value(constants.MaximumLiquidityRune)
-		}
-		if maximumLiquidityRune > 0 {
-			if totalLiquidityRUNE.GT(cosmos.NewUint(uint64(maximumLiquidityRune))) {
-				return errAddLiquidityRUNEOverLimit
-			}
-		}
-
-		// fail validation if synth supply is already too high, relative to pool depth
-		err = isSynthMintPaused(ctx, h.mgr, target, cosmos.ZeroUint())
-		if err != nil {
-			return err
-		}
-
-		ensureLiquidityNoLargerThanBond := h.mgr.GetConstants().GetBoolValue(constants.StrictBondLiquidityRatio)
-		if ensureLiquidityNoLargerThanBond {
-			// If source and target are synthetic assets there is no net
-			// liquidity gain (RUNE is just moved from pool A to pool B), so
-			// skip this check
-			if !sourceAsset.IsSyntheticAsset() && atTVLCap(ctx, msg.Tx.Coins, h.mgr) {
-				return errAddLiquidityRUNEMoreThanBond
+			if !msg.Tx.FromAddress.Equals(common.NoopAddress) && !msg.Tx.ToAddress.Equals(common.NoopAddress) && !msg.Destination.Equals(common.NoopAddress) {
+				return fmt.Errorf("swapping to/from a derived asset is not allowed, except for lending (%s or %s)", msg.Tx.FromAddress, msg.Destination)
 			}
 		}
 	}
@@ -192,6 +128,125 @@ func (h SwapHandler) validateV120(ctx cosmos.Context, msg MsgSwap) error {
 		}
 	}
 
+	if target.IsSyntheticAsset() && target.GetLayer1Asset().IsNative() {
+		return errors.New("minting a synthetic of a native coin is not allowed")
+	}
+
+	var sourceCoin common.Coin
+	if len(msg.Tx.Coins) > 0 {
+		sourceCoin = msg.Tx.Coins[0]
+	}
+
+	if msg.IsStreaming() {
+		pausedStreaming := fetchConfigInt64(ctx, h.mgr, constants.StreamingSwapPause)
+		if pausedStreaming > 0 {
+			return fmt.Errorf("streaming swaps are paused")
+		}
+
+		swp := msg.GetStreamingSwap()
+		if h.mgr.Keeper().StreamingSwapExists(ctx, msg.Tx.ID) {
+			var err error
+			swp, err = h.mgr.Keeper().GetStreamingSwap(ctx, msg.Tx.ID)
+			if err != nil {
+				ctx.Logger().Error("fail to fetch streaming swap", "error", err)
+				return err
+			}
+		}
+
+		if (swp.Quantity > 0 && swp.IsDone()) || swp.In.GTE(swp.Deposit) {
+			// check both swap count and swap in vs deposit to cover all basis
+			return fmt.Errorf("streaming swap is completed, cannot continue to swap again")
+		}
+
+		if swp.Count > 0 {
+			// end validation early, as synth TVL caps are not applied to streaming
+			// swaps. This is to ensure that streaming swaps don't get interrupted
+			// and cause a partial fulfillment, which would cause issues for
+			// internal streaming swaps for savers and loans.
+			return nil
+		} else {
+			// first swap we check the entire swap amount (not just the
+			// sub-swap amount) to ensure the value of the entire has TVL/synth
+			// room
+			sourceCoin.Amount = swp.Deposit
+		}
+	}
+
+	if target.IsSyntheticAsset() {
+		// the following is only applicable for mainnet
+		totalLiquidityRUNE, err := h.getTotalLiquidityRUNE(ctx)
+		if err != nil {
+			return ErrInternal(err, "fail to get total liquidity RUNE")
+		}
+
+		// total liquidity RUNE after current add liquidity
+		if len(msg.Tx.Coins) > 0 {
+			// calculate rune value on incoming swap, and add to total liquidity.
+			runeVal := sourceCoin.Amount
+			if !sourceCoin.Asset.IsRune() {
+				pool, err := h.mgr.Keeper().GetPool(ctx, sourceCoin.Asset.GetLayer1Asset())
+				if err != nil {
+					return ErrInternal(err, "fail to get pool")
+				}
+				runeVal = pool.AssetValueInRune(sourceCoin.Amount)
+			}
+			totalLiquidityRUNE = totalLiquidityRUNE.Add(runeVal)
+		}
+		maximumLiquidityRune, err := h.mgr.Keeper().GetMimir(ctx, constants.MaximumLiquidityRune.String())
+		if maximumLiquidityRune < 0 || err != nil {
+			maximumLiquidityRune = h.mgr.GetConstants().GetInt64Value(constants.MaximumLiquidityRune)
+		}
+		if maximumLiquidityRune > 0 {
+			if totalLiquidityRUNE.GT(cosmos.NewUint(uint64(maximumLiquidityRune))) {
+				return errAddLiquidityRUNEOverLimit
+			}
+		}
+
+		// fail validation if synth supply is already too high, relative to pool depth
+		// do a simulated swap to see how much of the target synth the network
+		// will need to mint and check if that amount exceeds limits
+		targetAmount, runeAmount := cosmos.ZeroUint(), cosmos.ZeroUint()
+		swapper, err := GetSwapper(h.mgr.GetVersion())
+		if err == nil {
+			if sourceCoin.Asset.IsRune() {
+				runeAmount = sourceCoin.Amount
+			} else {
+				// asset --> rune swap
+				sourceAssetPool := sourceCoin.Asset
+				if sourceAssetPool.IsSyntheticAsset() {
+					sourceAssetPool = sourceAssetPool.GetLayer1Asset()
+				}
+				sourcePool, err := h.mgr.Keeper().GetPool(ctx, sourceAssetPool)
+				if err != nil {
+					ctx.Logger().Error("fail to fetch pool for swap simulation", "error", err)
+				} else {
+					runeAmount = swapper.CalcAssetEmission(sourcePool.BalanceAsset, sourceCoin.Amount, sourcePool.BalanceRune)
+				}
+			}
+			// rune --> synth swap
+			targetPool, err := h.mgr.Keeper().GetPool(ctx, target.GetLayer1Asset())
+			if err != nil {
+				ctx.Logger().Error("fail to fetch pool for swap simulation", "error", err)
+			} else {
+				targetAmount = swapper.CalcAssetEmission(targetPool.BalanceRune, runeAmount, targetPool.BalanceAsset)
+			}
+		}
+		err = isSynthMintPaused(ctx, h.mgr, target, targetAmount)
+		if err != nil {
+			return err
+		}
+
+		ensureLiquidityNoLargerThanBond := h.mgr.GetConstants().GetBoolValue(constants.StrictBondLiquidityRatio)
+		if ensureLiquidityNoLargerThanBond {
+			// If source and target are synthetic assets there is no net
+			// liquidity gain (RUNE is just moved from pool A to pool B), so
+			// skip this check
+			if !sourceCoin.Asset.IsSyntheticAsset() && atTVLCap(ctx, common.NewCoins(sourceCoin), h.mgr) {
+				return errAddLiquidityRUNEMoreThanBond
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -199,6 +254,8 @@ func (h SwapHandler) handle(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result, er
 	ctx.Logger().Info("receive MsgSwap", "request tx hash", msg.Tx.ID, "source asset", msg.Tx.Coins[0].Asset, "target asset", msg.TargetAsset, "signer", msg.Signer.String())
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.121.0")):
+		return h.handleV121(ctx, msg)
 	case version.GTE(semver.MustParse("1.116.0")):
 		return h.handleV116(ctx, msg)
 	case version.GTE(semver.MustParse("1.110.0")):
@@ -224,7 +281,7 @@ func (h SwapHandler) handle(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result, er
 	}
 }
 
-func (h SwapHandler) handleV116(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result, error) {
+func (h SwapHandler) handleV121(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result, error) {
 	// test that the network we are running matches the destination network
 	// Don't change msg.Destination here; this line was introduced to avoid people from swapping mainnet asset,
 	// but using testnet address.
@@ -265,6 +322,7 @@ func (h SwapHandler) handleV116(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result
 				return nil, err
 			}
 		}
+
 		// for first swap only, override interval and quantity (if needed)
 		if swp.Count == 0 {
 			// ensure interval is never larger than max length, override if so
@@ -335,8 +393,11 @@ func (h SwapHandler) handleV116(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result
 		}
 	}
 
-	// Check if swap to a synth would cause synth supply to exceed MaxSynthPerPoolDepth cap
-	if msg.TargetAsset.IsSyntheticAsset() {
+	// Check if swap to a synth would cause synth supply to exceed
+	// MaxSynthPerPoolDepth cap
+	// Ignore caps when the swap is streaming (its checked at the start of the
+	// stream, not during)
+	if msg.TargetAsset.IsSyntheticAsset() && !msg.IsStreaming() {
 		err = isSynthMintPaused(ctx, h.mgr, msg.TargetAsset, emit)
 		if err != nil {
 			return nil, err
@@ -348,8 +409,10 @@ func (h SwapHandler) handleV116(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result
 		swp.In = swp.In.Add(msg.Tx.Coins[0].Amount)
 		swp.Out = swp.Out.Add(emit)
 		h.mgr.Keeper().SetStreamingSwap(ctx, swp)
-		if !swp.IsDone() {
-			// exit early so we don't execute follow-on handlers mid streaming swap
+		if !swp.IsLastSwap() {
+			// exit early so we don't execute follow-on handlers mid streaming swap. if this
+			// is the last swap execute the follow-on handlers as swap count is incremented in
+			// the swap queue manager
 			return &cosmos.Result{}, nil
 		}
 		emit = swp.Out
@@ -404,7 +467,7 @@ func (h SwapHandler) handleV116(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result
 		ctx = ctx.WithValue(constants.CtxLoanTxID, msg.Tx.ID)
 
 		obTx := ObservedTx{Tx: msg.Tx}
-		msg, err := getMsgLoanOpenFromMemo(ctx, h.mgr.Keeper(), m, obTx, msg.Signer)
+		msg, err := getMsgLoanOpenFromMemo(ctx, h.mgr.Keeper(), m, obTx, msg.Signer, msg.Tx.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -424,7 +487,7 @@ func (h SwapHandler) handleV116(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result
 
 		ctx = ctx.WithValue(constants.CtxLoanTxID, msg.Tx.ID)
 
-		msg, err := getMsgLoanRepaymentFromMemo(m, msg.Tx.FromAddress, common.NewCoin(common.TOR, emit), msg.Signer)
+		msg, err := getMsgLoanRepaymentFromMemo(m, msg.Tx.FromAddress, common.NewCoin(common.TOR, emit), msg.Signer, msg.Tx.ID)
 		if err != nil {
 			return nil, err
 		}

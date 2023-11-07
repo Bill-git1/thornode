@@ -272,8 +272,6 @@ func (s *SlashingVCURSuite) TestNotSigningSlash(c *C) {
 	slasher := newSlasherVCUR(keeper, NewDummyEventMgr())
 	c.Assert(slasher.LackSigning(ctx, mgr), IsNil)
 
-	c.Check(keeper.slashPts[na.NodeAddress.String()], Equals, int64(600), Commentf("%+v\n", na))
-
 	outItems, err := txOutStore.GetOutboundItems(ctx)
 	c.Assert(err, IsNil)
 	c.Assert(outItems, HasLen, 1)
@@ -315,7 +313,12 @@ func (s *SlashingVCURSuite) TestDoubleSign(c *C) {
 
 	pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeConsPub, na.ValidatorConsPubKey)
 	c.Assert(err, IsNil)
-	err = slasher.HandleDoubleSign(ctx, pk.Address(), 0, constAccessor)
+
+	var pair nodeAddressValidatorAddressPairVCUR
+	pair.nodeAddress = na.NodeAddress
+	pair.validatorAddress = pk.Address()
+
+	err = slasher.HandleDoubleSign(ctx, pk.Address(), 0, constAccessor, []nodeAddressValidatorAddressPairVCUR{pair})
 	c.Assert(err, IsNil)
 
 	c.Check(keeper.na.Bond.Equal(cosmos.NewUint(9995000000)), Equals, true, Commentf("%d", keeper.na.Bond.Uint64()))
@@ -438,54 +441,9 @@ func (s *SlashingVCURSuite) TestSlashVault(c *C) {
 	c.Check(nodeBondBeforeSlash.Sub(nodeBondAfterSlash).Uint64(), Equals, uint64(76457722), Commentf("%d", nodeBondBeforeSlash.Sub(nodeBondAfterSlash).Uint64()))
 	c.Check(node1BondBeforeSlash.Sub(node1BondAfterSlash).Uint64(), Equals, uint64(76572581), Commentf("%d", node1BondBeforeSlash.Sub(node1BondAfterSlash).Uint64()))
 
-	val, err := mgr.Keeper().GetMimir(ctx, mimirStopFundYggdrasil)
+	val, err := mgr.Keeper().GetMimir(ctx, "HaltBTCChain")
 	c.Assert(err, IsNil)
 	c.Assert(val, Equals, int64(18), Commentf("%d", val))
-
-	val, err = mgr.Keeper().GetMimir(ctx, "HaltBTCChain")
-	c.Assert(err, IsNil)
-	c.Assert(val, Equals, int64(18), Commentf("%d", val))
-}
-
-func (s *SlashingVCURSuite) TestSlashAndUpdateNodeAccount(c *C) {
-	ctx, mgr := setupManagerForTest(c)
-	slasher := newSlasherVCUR(mgr.Keeper(), mgr.EventMgr())
-
-	// create a node + ygg
-	node := GetRandomValidatorNode(NodeActive)
-	c.Assert(mgr.Keeper().SetNodeAccount(ctx, node), IsNil)
-	FundModule(c, ctx, mgr.Keeper(), BondName, node.Bond.Uint64())
-	ygg := GetRandomYggVault()
-
-	totalBond := node.Bond
-	runeAmtToSlash := node.Bond.Mul(cosmos.NewUint(2))
-	// only used to emit telemetry metrics
-	bnbCoin := common.NewCoin(common.BNBAsset, cosmos.ZeroUint())
-
-	// If amount to slash is greater than bond slash bond to zero and ban node
-	slashedVal := slasher.slashAndUpdateNodeAccount(ctx, node, bnbCoin, ygg, totalBond, runeAmtToSlash)
-	c.Assert(slashedVal.Equal(node.Bond), Equals, true)
-
-	updatedNode, err := mgr.Keeper().GetNodeAccount(ctx, node.NodeAddress)
-	c.Assert(err, IsNil)
-	c.Assert(updatedNode.Bond.IsZero(), Equals, true)
-	c.Assert(updatedNode.ForcedToLeave, Equals, true)
-	c.Assert(updatedNode.LeaveScore, Equals, uint64(1))
-
-	// If amount to slash is less than bond, just subtract and don't ban node
-	node2 := GetRandomValidatorNode(NodeActive)
-	c.Assert(mgr.Keeper().SetNodeAccount(ctx, node), IsNil)
-	FundModule(c, ctx, mgr.Keeper(), BondName, node2.Bond.Uint64())
-
-	totalBond = node2.Bond
-	runeAmtToSlash = node2.Bond.Quo(cosmos.NewUint(2))
-	slashedVal = slasher.slashAndUpdateNodeAccount(ctx, node2, bnbCoin, ygg, totalBond, runeAmtToSlash)
-	c.Assert(slashedVal.Equal(runeAmtToSlash), Equals, true)
-
-	updatedNode, err = mgr.Keeper().GetNodeAccount(ctx, node2.NodeAddress)
-	c.Assert(err, IsNil)
-	c.Assert(updatedNode.Bond.Uint64(), Equals, totalBond.Sub(runeAmtToSlash).Uint64())
-	c.Assert(updatedNode.ForcedToLeave, Equals, false)
 }
 
 func (s *SlashingVCURSuite) TestUpdatePoolFromSlash(c *C) {
@@ -601,11 +559,7 @@ func (s *SlashingVCURSuite) TestNetworkShouldNotSlashMorethanVaultAmount(c *C) {
 	c.Check(nodeBondBeforeSlash.Sub(nodeBondAfterSlash).Uint64(), Equals, uint64(37862675), Commentf("%d", nodeBondBeforeSlash.Sub(nodeBondAfterSlash).Uint64()))
 	c.Check(node1BondBeforeSlash.Sub(node1BondAfterSlash).Uint64(), Equals, uint64(37891094), Commentf("%d", node1BondBeforeSlash.Sub(node1BondAfterSlash).Uint64()))
 
-	val, err := mgr.Keeper().GetMimir(ctx, mimirStopFundYggdrasil)
-	c.Assert(err, IsNil)
-	c.Assert(val, Equals, int64(18), Commentf("%d", val))
-
-	val, err = mgr.Keeper().GetMimir(ctx, "HaltBTCChain")
+	val, err := mgr.Keeper().GetMimir(ctx, "HaltBTCChain")
 	c.Assert(err, IsNil)
 	c.Assert(val, Equals, int64(18), Commentf("%d", val))
 

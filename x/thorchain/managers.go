@@ -9,7 +9,6 @@ import (
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/crypto"
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
@@ -41,7 +40,7 @@ type Manager interface {
 	SwapQ() SwapQueue
 	OrderBookMgr() OrderBook
 	Slasher() Slasher
-	YggManager() YggManager
+	YggManager() YggManager // TODO remove on hard fork
 }
 
 // GasManager define all the methods required to manage gas
@@ -55,7 +54,6 @@ type GasManager interface {
 	GetMaxGas(ctx cosmos.Context, chain common.Chain) (common.Coin, error)
 	GetGasRate(ctx cosmos.Context, chain common.Chain) cosmos.Uint
 	GetNetworkFee(ctx cosmos.Context, chain common.Chain) (types.NetworkFee, error)
-	SubGas(gas common.Gas)
 	CalcOutboundFeeMultiplier(ctx cosmos.Context, targetSurplusRune, gasSpentRune, gasWithheldRune, maxMultiplier, minMultiplier cosmos.Uint) cosmos.Uint
 }
 
@@ -91,7 +89,7 @@ type ObserverManager interface {
 type ValidatorManager interface {
 	BeginBlock(ctx cosmos.Context, mgr Manager, existingValidators []string) error
 	EndBlock(ctx cosmos.Context, mgr Manager) []abci.ValidatorUpdate
-	RequestYggReturn(ctx cosmos.Context, node NodeAccount, mgr Manager) error
+	RequestYggReturn(ctx cosmos.Context, node NodeAccount, mgr Manager) error // TODO remove on hard fork
 	processRagnarok(ctx cosmos.Context, mgr Manager) error
 	NodeAccountPreflightCheck(ctx cosmos.Context, na NodeAccount, constAccessor constants.ConstantValues) (NodeStatus, error)
 }
@@ -126,7 +124,6 @@ type OrderBook interface {
 // Slasher define all the method to perform slash
 type Slasher interface {
 	BeginBlock(ctx cosmos.Context, req abci.RequestBeginBlock, constAccessor constants.ConstantValues)
-	HandleDoubleSign(ctx cosmos.Context, addr crypto.Address, infractionHeight int64, constAccessor constants.ConstantValues) error
 	LackObserving(ctx cosmos.Context, constAccessor constants.ConstantValues) error
 	LackSigning(ctx cosmos.Context, mgr Manager) error
 	SlashVault(ctx cosmos.Context, vaultPK common.PubKey, coins common.Coins, mgr Manager) error
@@ -135,8 +132,30 @@ type Slasher interface {
 }
 
 // YggManager define method to fund yggdrasil
+// TODO remove on hard fork
 type YggManager interface {
 	Fund(ctx cosmos.Context, mgr Manager) error
+}
+
+// Though Swapper is not a full manager, it is recorded here for versioning convenience.
+type Swapper interface {
+	Swap(ctx cosmos.Context,
+		keeper keeper.Keeper,
+		tx common.Tx,
+		target common.Asset,
+		destination common.Address,
+		swapTarget cosmos.Uint,
+		dexAgg string,
+		dexAggTargetAsset string,
+		dexAggLimit *cosmos.Uint,
+		swp StreamingSwap,
+		transactionFee cosmos.Uint,
+		synthVirtualDepthMult int64,
+		mgr Manager,
+	) (cosmos.Uint, []*EventSwap, error)
+	CalcAssetEmission(X, x, Y cosmos.Uint) cosmos.Uint
+	CalcLiquidityFee(X, x, Y cosmos.Uint) cosmos.Uint
+	CalcSwapSlip(Xi, xi cosmos.Uint) cosmos.Uint
 }
 
 // Mgrs is an implementation of Manager interface
@@ -153,17 +172,17 @@ type Mgrs struct {
 	swapQ          SwapQueue
 	orderBook      OrderBook
 	slasher        Slasher
-	yggManager     YggManager
+	yggManager     YggManager // TODO remove on hard fork
 
 	K             keeper.Keeper
-	cdc           codec.BinaryCodec
+	cdc           codec.Codec
 	coinKeeper    bankkeeper.Keeper
 	accountKeeper authkeeper.AccountKeeper
 	storeKey      cosmos.StoreKey
 }
 
 // NewManagers  create a new Manager
-func NewManagers(keeper keeper.Keeper, cdc codec.BinaryCodec, coinKeeper bankkeeper.Keeper, accountKeeper authkeeper.AccountKeeper, storeKey cosmos.StoreKey) *Mgrs {
+func NewManagers(keeper keeper.Keeper, cdc codec.Codec, coinKeeper bankkeeper.Keeper, accountKeeper authkeeper.AccountKeeper, storeKey cosmos.StoreKey) *Mgrs {
 	return &Mgrs{
 		K:             keeper,
 		cdc:           cdc,
@@ -271,6 +290,7 @@ func (mgr *Mgrs) BeginBlock(ctx cosmos.Context) error {
 		return fmt.Errorf("fail to create swap queue: %w", err)
 	}
 
+	// TODO remove on hard fork
 	mgr.yggManager, err = GetYggManager(v, mgr.K)
 	if err != nil {
 		return fmt.Errorf("fail to create swap queue: %w", err)
@@ -312,6 +332,7 @@ func (mgr *Mgrs) OrderBookMgr() OrderBook { return mgr.orderBook }
 func (mgr *Mgrs) Slasher() Slasher { return mgr.slasher }
 
 // YggManager return an implementation of YggManager
+// TODO remove on hard fork
 func (mgr *Mgrs) YggManager() YggManager { return mgr.yggManager }
 
 // GetKeeper return Keeper
@@ -362,8 +383,12 @@ func GetEventManager(version semver.Version) (EventManager, error) {
 func GetTxOutStore(version semver.Version, keeper keeper.Keeper, eventMgr EventManager, gasManager GasManager) (TxOutStore, error) {
 	constAccessor := constants.GetConstantValues(version)
 	switch {
-	case version.GTE(semver.MustParse("1.119.0")):
+	case version.GTE(semver.MustParse("1.124.0")):
 		return newTxOutStorageVCUR(keeper, constAccessor, eventMgr, gasManager), nil
+	case version.GTE(semver.MustParse("1.122.0")):
+		return newTxOutStorageV122(keeper, constAccessor, eventMgr, gasManager), nil
+	case version.GTE(semver.MustParse("1.119.0")):
+		return newTxOutStorageV119(keeper, constAccessor, eventMgr, gasManager), nil
 	case version.GTE(semver.MustParse("1.117.0")):
 		return newTxOutStorageV117(keeper, constAccessor, eventMgr, gasManager), nil
 	case version.GTE(semver.MustParse("1.116.0")):
@@ -410,8 +435,12 @@ func GetTxOutStore(version semver.Version, keeper keeper.Keeper, eventMgr EventM
 // GetNetworkManager  retrieve a NetworkManager that is compatible with the given version
 func GetNetworkManager(version semver.Version, keeper keeper.Keeper, txOutStore TxOutStore, eventMgr EventManager) (NetworkManager, error) {
 	switch {
-	case version.GTE(semver.MustParse("1.120.0")):
+	case version.GTE(semver.MustParse("1.124.0")):
 		return newNetworkMgrVCUR(keeper, txOutStore, eventMgr), nil
+	case version.GTE(semver.MustParse("1.121.0")):
+		return newNetworkMgrV121(keeper, txOutStore, eventMgr), nil
+	case version.GTE(semver.MustParse("1.120.0")):
+		return newNetworkMgrV120(keeper, txOutStore, eventMgr), nil
 	case version.GTE(semver.MustParse("1.117.0")):
 		return newNetworkMgrV117(keeper, txOutStore, eventMgr), nil
 	case version.GTE(semver.MustParse("1.115.0")):
@@ -459,8 +488,14 @@ func GetNetworkManager(version semver.Version, keeper keeper.Keeper, txOutStore 
 // GetValidatorManager create a new instance of Validator Manager
 func GetValidatorManager(version semver.Version, keeper keeper.Keeper, networkMgr NetworkManager, txOutStore TxOutStore, eventMgr EventManager) (ValidatorManager, error) {
 	switch {
-	case version.GTE(semver.MustParse("1.119.0")):
+	case version.GTE(semver.MustParse("1.124.0")):
 		return newValidatorMgrVCUR(keeper, networkMgr, txOutStore, eventMgr), nil
+	case version.GTE(semver.MustParse("1.123.0")):
+		return newValidatorMgrV123(keeper, networkMgr, txOutStore, eventMgr), nil
+	case version.GTE(semver.MustParse("1.121.0")):
+		return newValidatorMgrV121(keeper, networkMgr, txOutStore, eventMgr), nil
+	case version.GTE(semver.MustParse("1.119.0")):
+		return newValidatorMgrV119(keeper, networkMgr, txOutStore, eventMgr), nil
 	case version.GTE(semver.MustParse("1.117.0")):
 		return newValidatorMgrV117(keeper, networkMgr, txOutStore, eventMgr), nil
 	case version.GTE(semver.MustParse("1.116.0")):
@@ -504,8 +539,10 @@ func GetObserverManager(version semver.Version) (ObserverManager, error) {
 // GetPoolManager return an implementation of PoolManager
 func GetPoolManager(version semver.Version) (PoolManager, error) {
 	switch {
-	case version.GTE(semver.MustParse("1.116.0")):
+	case version.GTE(semver.MustParse("1.121.0")):
 		return newPoolMgrVCUR(), nil
+	case version.GTE(semver.MustParse("1.116.0")):
+		return newPoolMgrV116(), nil
 	case version.GTE(semver.MustParse("1.112.0")):
 		return newPoolMgrV112(), nil
 	case version.GTE(semver.MustParse("1.108.0")):
@@ -523,8 +560,14 @@ func GetPoolManager(version semver.Version) (PoolManager, error) {
 // GetSwapQueue retrieve a SwapQueue that is compatible with the given version
 func GetSwapQueue(version semver.Version, keeper keeper.Keeper) (SwapQueue, error) {
 	switch {
-	case version.GTE(semver.MustParse("1.120.0")):
+	case version.GTE(semver.MustParse("1.124.0")):
 		return newSwapQueueVCUR(keeper), nil
+	case version.GTE(semver.MustParse("1.123.0")):
+		return newSwapQueueV123(keeper), nil
+	case version.GTE(semver.MustParse("1.121.0")):
+		return newSwapQueueV121(keeper), nil
+	case version.GTE(semver.MustParse("1.120.0")):
+		return newSwapQueueV120(keeper), nil
 	case version.GTE(semver.MustParse("1.117.0")):
 		return newSwapQueueV117(keeper), nil
 	case version.GTE(semver.MustParse("1.116.0")):
@@ -563,8 +606,10 @@ func GetOrderBook(version semver.Version, keeper keeper.Keeper) (OrderBook, erro
 // GetSlasher return an implementation of Slasher
 func GetSlasher(version semver.Version, keeper keeper.Keeper, eventMgr EventManager) (Slasher, error) {
 	switch {
-	case version.GTE(semver.MustParse("1.116.0")):
+	case version.GTE(semver.MustParse("1.124.0")):
 		return newSlasherVCUR(keeper, eventMgr), nil
+	case version.GTE(semver.MustParse("1.116.0")):
+		return newSlasherV116(keeper, eventMgr), nil
 	case version.GTE(semver.MustParse("1.115.0")):
 		return newSlasherV115(keeper, eventMgr), nil
 	case version.GTE(semver.MustParse("1.112.0")):
@@ -591,14 +636,54 @@ func GetSlasher(version semver.Version, keeper keeper.Keeper, eventMgr EventMana
 }
 
 // GetYggManager return an implementation of YggManager
+// TODO remove on hard fork
 func GetYggManager(version semver.Version, keeper keeper.Keeper) (YggManager, error) {
 	switch {
 	case version.GTE(semver.MustParse("1.116.0")):
-		return newYggMgrVCUR(keeper), nil
+		return newYggMgrV116(keeper), nil
 	case version.GTE(semver.MustParse("1.112.0")):
 		return newYggMgrV112(keeper), nil
 	case version.GTE(semver.MustParse("0.79.0")):
 		return newYggMgrV79(keeper), nil
 	}
 	return nil, errInvalidVersion
+}
+
+// Though Swapper is not a full manager, it is recorded here for versioning convenience.
+// GetSwapper return an implementation of Swapper
+func GetSwapper(version semver.Version) (Swapper, error) {
+	switch {
+	case version.GTE(semver.MustParse("1.122.0")):
+		return newSwapperVCUR(), nil
+	case version.GTE(semver.MustParse("1.121.0")):
+		return newSwapperV121(), nil
+	case version.GTE(semver.MustParse("1.117.0")):
+		return newSwapperV117(), nil
+	case version.GTE(semver.MustParse("1.116.0")):
+		return newSwapperV116(), nil
+	case version.GTE(semver.MustParse("1.115.0")):
+		return newSwapperV115(), nil
+	case version.GTE(semver.MustParse("1.110.0")):
+		return newSwapperV110(), nil
+	case version.GTE(semver.MustParse("1.103.0")):
+		return newSwapperV103(), nil
+	case version.GTE(semver.MustParse("1.102.0")):
+		return newSwapperV102(), nil
+	case version.GTE(semver.MustParse("1.98.0")):
+		return newSwapperV98(), nil
+	case version.GTE(semver.MustParse("1.95.0")):
+		return newSwapperV95(), nil
+	case version.GTE(semver.MustParse("1.94.0")):
+		return newSwapperV94(), nil
+	case version.GTE(semver.MustParse("1.92.0")):
+		return newSwapperV92(), nil
+	case version.GTE(semver.MustParse("1.91.0")):
+		return newSwapperV91(), nil
+	case version.GTE(semver.MustParse("1.90.0")):
+		return newSwapperV90(), nil
+	case version.GTE(semver.MustParse("0.81.0")):
+		return newSwapperV81(), nil
+	default:
+		return nil, errInvalidVersion
+	}
 }

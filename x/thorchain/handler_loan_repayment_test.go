@@ -31,9 +31,10 @@ func (s *HandlerLoanRepaymentSuite) TestLoanValidate(c *C) {
 	mgr.Keeper().SetLoan(ctx, loan)
 
 	handler := NewLoanRepaymentHandler(mgr)
+	txid, _ := common.NewTxID("000000000")
 
 	// happy path
-	msg := NewMsgLoanRepayment(owner, common.BNBAsset, cosmos.OneUint(), owner, common.NewCoin(common.TOR, cosmos.NewUint(10*common.One)), signer)
+	msg := NewMsgLoanRepayment(owner, common.BNBAsset, cosmos.OneUint(), owner, common.NewCoin(common.TOR, cosmos.NewUint(10*common.One)), signer, txid)
 	c.Check(handler.validate(ctx.WithBlockHeight(14400000), *msg), IsNil)
 
 	// unhappy path: loan hasn't matured
@@ -78,7 +79,7 @@ func (s *HandlerLoanRepaymentSuite) TestLoanRepaymentHandleWithTOR(c *C) {
 	coin := common.NewCoin(common.TOR, cosmos.NewUint(1000*common.One))
 	err := mgr.Keeper().MintToModule(ctx, ModuleName, coin)
 	c.Assert(err, IsNil)
-	err = mgr.Keeper().SendFromModuleToModule(ctx, ModuleName, LendingName, common.NewCoins(coin))
+	err = mgr.Keeper().SendFromModuleToModule(ctx, ModuleName, AsgardName, common.NewCoins(coin))
 	c.Assert(err, IsNil)
 
 	// mint derived btc to transfer later
@@ -98,8 +99,8 @@ func (s *HandlerLoanRepaymentSuite) TestLoanRepaymentHandleWithTOR(c *C) {
 
 	// happy path
 	txid, _ := common.NewTxID("29FC8D032CF17380AA1DC86F85A479CA9433E85887A9317C5D70D87EF56EAFAA")
-	msg := NewMsgLoanRepayment(owner, common.BTCAsset, cosmos.OneUint(), owner, common.NewCoin(common.TOR, cosmos.NewUint(10*common.One)), signer)
-	c.Check(handler.handle(ctx.WithValue(constants.CtxLoanTxID, txid), *msg), IsNil)
+	msg := NewMsgLoanRepayment(owner, common.BTCAsset, cosmos.OneUint(), owner, common.NewCoin(common.TOR, cosmos.NewUint(10*common.One)), signer, txid)
+	c.Assert(handler.handle(ctx.WithValue(constants.CtxLoanTxID, txid), *msg), IsNil)
 
 	loan, err = mgr.Keeper().GetLoan(ctx, common.BTCAsset, owner)
 	c.Assert(err, IsNil)
@@ -157,7 +158,7 @@ func (s *HandlerLoanRepaymentSuite) TestLoanRepaymentHandleWithSwap(c *C) {
 	// happy path
 	// overpay the loan to include swap fees
 	txid, _ := common.NewTxID("29FC8D032CF17380AA1DC86F85A479CA9433E85887A9317C5D70D87EF56EAFAA")
-	msg := NewMsgLoanRepayment(owner, common.BTCAsset, cosmos.OneUint(), owner, common.NewCoin(common.BTCAsset, cosmos.NewUint(1e8+15000000)), signer)
+	msg := NewMsgLoanRepayment(owner, common.BTCAsset, cosmos.OneUint(), owner, common.NewCoin(common.BTCAsset, cosmos.NewUint(1e8+15000000)), signer, txid)
 	ctx = ctx.WithBlockHeight(2 * 1440000)
 	c.Check(handler.handle(ctx.WithValue(constants.CtxLoanTxID, txid), *msg), IsNil)
 	c.Assert(mgr.SwapQ().EndBlock(ctx, mgr), IsNil) // swap into TOR

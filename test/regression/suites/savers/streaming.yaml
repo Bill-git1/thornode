@@ -1,0 +1,110 @@
+---
+{{ template "default-state.yaml" }}
+---
+{{ template "btc-eth-3usdx-pool-state.yaml" }}
+---
+type: create-blocks
+count: 1
+---
+########################################################################################
+# deposit savers (non-streaming, quote only)
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/quote/saver/deposit
+params:
+  asset: BTC.BTC
+  amount: 10000000
+asserts:
+  - .inbound_address == "{{ addr_btc_dog }}"
+  - .expected_amount_deposit|tonumber == 9074019
+  - .dust_threshold|tonumber == 10000
+  - .fees.liquidity|tonumber == 1167318
+  - .fees.outbound|tonumber == 2200
+  - .fees.slippage_bps|tonumber == 1139
+  - .fees.total|tonumber == 1169518
+  - .fees.total_bps|tonumber == 1141
+  - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
+---
+########################################################################################
+# enable streaming savers
+########################################################################################
+type: tx-mimir
+signer: {{ addr_thor_dog }}
+key: SaversStreamingSwapsInterval
+value: 1
+---
+type: create-blocks
+count: 1
+---
+########################################################################################
+# streaming savers deposit (quote)
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/quote/saver/deposit
+params:
+  asset: BTC.BTC
+  amount: 10000000
+asserts:
+  - .inbound_address == "{{ addr_btc_dog }}"
+  - .expected_amount_deposit|tonumber == 9949990
+  - .dust_threshold|tonumber == 10000
+  - .fees.liquidity|tonumber == 74000
+  - .fees.outbound|tonumber == 2010
+  - .fees.slippage_bps|tonumber == 73
+  - .fees.total|tonumber == 76010
+  - .fees.total_bps|tonumber == 75
+  - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
+---
+########################################################################################
+# streaming savers deposit
+########################################################################################
+type: tx-observed-in
+signer: {{ addr_thor_dog }}
+txs:
+  - tx:
+      id: "{{ observe_txid 1 }}"
+      chain: BTC
+      from_address: {{ addr_btc_pig }}
+      to_address: {{ addr_btc_dog }}
+      coins:
+        - amount: "10000000"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "10000"
+          asset: "BTC.BTC"
+      memo: "+:BTC/BTC"
+    block_height: 1
+    finalise_height: 1
+    observed_pub_key: {{ pubkey_dog }}
+---
+type: create-blocks
+count: 21
+---
+type: check
+endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
+asserts:
+  - .|length == 1
+  - .[0].asset_deposit_value|tonumber == 9952391
+---
+########################################################################################
+# streaming savers withdraw (quote)
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/quote/saver/withdraw
+params:
+  asset: BTC.BTC
+  withdraw_bps: 10000
+  address: "{{ addr_btc_pig }}"
+asserts:
+  - .inbound_address == "{{ addr_btc_dog }}"
+  - .dust_amount|tonumber == 20000
+  - .dust_threshold|tonumber == 10000
+  - .expected_amount_out|tonumber == 9839092
+  - .fees.liquidity|tonumber == 74160
+  - .fees.outbound|tonumber == 14000
+  - .fees.slippage_bps|tonumber == 74
+  - .fees.total|tonumber == 88160
+  - .fees.total_bps|tonumber == 88
+  - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
+---

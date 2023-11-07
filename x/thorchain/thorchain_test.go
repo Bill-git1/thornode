@@ -311,18 +311,9 @@ func (s *ThorchainSuite) TestRagnarok(c *C) {
 		common.NewCoin(common.BTCAsset, cosmos.NewUint(101*common.One)),
 	})
 
-	lps := []common.Address{
-		lp1, lp2, lp3,
-	}
 	lpsAssets := []common.Address{
 		lp1asset, lp2asset, lp3asset,
 	}
-
-	// get new pool data
-	bnbPool, err := mgr.Keeper().GetPool(ctx, common.BNBAsset)
-	c.Assert(err, IsNil)
-	boltPool, err := mgr.Keeper().GetPool(ctx, boltAsset)
-	c.Assert(err, IsNil)
 
 	// Add bonders/validators
 	bonderCount := 3
@@ -339,18 +330,6 @@ func (s *ThorchainSuite) TestRagnarok(c *C) {
 			common.NewCoin(common.RuneAsset(), na.Bond),
 		})
 		c.Assert(mgr.Keeper().SetVault(ctx, asgard), IsNil)
-
-		// create yggdrasil vault, with 1/3 of the liquidity provider funds
-		ygg := GetRandomVault()
-		ygg.PubKey = na.PubKeySet.Secp256k1
-		ygg.Type = YggdrasilVault
-		ygg.AddFunds(common.Coins{
-			common.NewCoin(common.RuneAsset(), bnbPool.BalanceRune.QuoUint64(uint64(bonderCount))),
-			common.NewCoin(common.BNBAsset, bnbPool.BalanceAsset.QuoUint64(uint64(bonderCount))),
-			common.NewCoin(common.RuneAsset(), boltPool.BalanceRune.QuoUint64(uint64(bonderCount))),
-			common.NewCoin(boltAsset, boltPool.BalanceAsset.QuoUint64(uint64(bonderCount))),
-		})
-		c.Assert(mgr.Keeper().SetVault(ctx, ygg), IsNil)
 	}
 
 	// ////////////////////////////////////////////////////////
@@ -364,59 +343,18 @@ func (s *ThorchainSuite) TestRagnarok(c *C) {
 	c.Assert(mgr.Keeper().SetNetwork(ctx, network), IsNil)
 	ctx = ctx.WithBlockHeight(1024)
 
-	active, err := mgr.Keeper().ListActiveValidators(ctx)
-	c.Assert(err, IsNil)
-	// this should trigger stage 1 of the ragnarok protocol. We should see a tx
-	// out per node account
-	c.Assert(mgr.ValidatorMgr().processRagnarok(ctx, mgr), IsNil)
-	// after ragnarok get trigged , we pay bond reward immediately
-	for idx, bonder := range bonders {
-		na, err := mgr.Keeper().GetNodeAccount(ctx, bonder.NodeAddress)
-		c.Assert(err, IsNil)
-		bonders[idx].Bond = na.Bond
-	}
-	// make sure all yggdrasil vault get recalled
-	items, err := mgr.TxOutStore().GetOutboundItems(ctx)
-	c.Assert(err, IsNil)
-	c.Assert(items, HasLen, bonderCount)
-	for _, item := range items {
-		c.Assert(item.Coin.Equals(common.NewCoin(common.RuneAsset(), cosmos.ZeroUint())), Equals, true)
-	}
-
-	// we'll assume the signer does it's job and sends the yggdrasil funds back
-	// to asgard, and do it ourselves here manually
-	for _, na := range active {
-		ygg, err := mgr.Keeper().GetVault(ctx, na.PubKeySet.Secp256k1)
-		c.Assert(err, IsNil)
-		asgard.AddFunds(ygg.Coins)
-		c.Assert(mgr.Keeper().SetVault(ctx, asgard), IsNil)
-		ygg.SubFunds(ygg.Coins)
-		c.Assert(mgr.Keeper().SetVault(ctx, ygg), IsNil)
-	}
-	mgr.TxOutStore().ClearOutboundItems(ctx) // clear out txs
-
 	for i := 1; i <= 11; i++ { // simulate each round of ragnarok (max of ten)
 		c.Assert(mgr.ValidatorMgr().processRagnarok(ctx, mgr), IsNil)
 		_, err := mgr.TxOutStore().GetOutboundItems(ctx)
 		c.Assert(err, IsNil)
 		// validate liquidity providers get their returns
-		for j, lp := range lpsAssets {
+		for _, lp := range lpsAssets {
 			items := mgr.TxOutStore().GetOutboundItemByToAddress(ctx, lp)
-			if i == 1 { // nolint
-				if j >= len(lps)-1 {
-					c.Assert(items, HasLen, 0, Commentf("%d", len(items)))
-				} else {
-					c.Assert(items, HasLen, 1, Commentf("%d", len(items)))
-				}
-			} else if i > 10 {
-				c.Assert(items, HasLen, 1, Commentf("%d", len(items)))
-			} else {
-				c.Assert(items, HasLen, 0)
-			}
+			c.Assert(items, HasLen, 0)
 		}
 		mgr.TxOutStore().ClearOutboundItems(ctx) // clear out txs
 		mgr.Keeper().SetRagnarokPending(ctx, 0)
-		items, err = mgr.TxOutStore().GetOutboundItems(ctx)
+		items, err := mgr.TxOutStore().GetOutboundItems(ctx)
 		c.Assert(items, HasLen, 0)
 		c.Assert(err, IsNil)
 	}
@@ -461,12 +399,6 @@ func (s *ThorchainSuite) TestRagnarokNoOneLeave(c *C) {
 	}
 	_ = lps
 
-	// get new pool data
-	bnbPool, err := mgr.Keeper().GetPool(ctx, common.BNBAsset)
-	c.Assert(err, IsNil)
-	boltPool, err := mgr.Keeper().GetPool(ctx, boltAsset)
-	c.Assert(err, IsNil)
-
 	// Add bonders/validators
 	bonderCount := 4
 	bonders := make(NodeAccounts, bonderCount)
@@ -483,19 +415,6 @@ func (s *ThorchainSuite) TestRagnarokNoOneLeave(c *C) {
 		})
 		asgard.Membership = append(asgard.Membership, na.PubKeySet.Secp256k1.String())
 		c.Assert(mgr.Keeper().SetVault(ctx, asgard), IsNil)
-
-		// create yggdrasil vault, with 1/3 of the liquidity provider funds
-		ygg := GetRandomVault()
-		ygg.PubKey = na.PubKeySet.Secp256k1
-		ygg.Type = YggdrasilVault
-		ygg.AddFunds(common.Coins{
-			common.NewCoin(common.RuneAsset(), bnbPool.BalanceRune.QuoUint64(uint64(bonderCount))),
-			common.NewCoin(common.BNBAsset, bnbPool.BalanceAsset.QuoUint64(uint64(bonderCount))),
-			common.NewCoin(common.RuneAsset(), boltPool.BalanceRune.QuoUint64(uint64(bonderCount))),
-			common.NewCoin(boltAsset, boltPool.BalanceAsset.QuoUint64(uint64(bonderCount))),
-		})
-		c.Assert(mgr.Keeper().SetVault(ctx, ygg), IsNil)
-
 	}
 
 	// Add reserve contributors

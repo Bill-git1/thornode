@@ -2,6 +2,7 @@ package ethereum
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"math/big"
 	"net/http"
@@ -20,7 +21,7 @@ import (
 
 	"gitlab.com/thorchain/thornode/bifrost/blockscanner"
 	"gitlab.com/thorchain/thornode/bifrost/metrics"
-	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/ethereum/types"
+	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/evm/types"
 	"gitlab.com/thorchain/thornode/bifrost/pubkeymanager"
 	"gitlab.com/thorchain/thornode/bifrost/thorclient"
 	stypes "gitlab.com/thorchain/thornode/bifrost/thorclient/types"
@@ -29,6 +30,8 @@ import (
 	"gitlab.com/thorchain/thornode/config"
 	"gitlab.com/thorchain/thornode/x/thorchain"
 )
+
+const Mainnet = 1
 
 type BlockScannerTestSuite struct {
 	m      *metrics.Metrics
@@ -76,6 +79,34 @@ func getConfigForTest(rpcHost string) config.BifrostBlockScannerConfiguration {
 	}
 }
 
+func CreateBlock(height int) (*etypes.Header, error) {
+	strHeight := fmt.Sprintf("%x", height)
+	blockJson := `{
+               "parentHash":"0x8b535592eb3192017a527bbf8e3596da86b3abea51d6257898b2ced9d3a83826",
+               "difficulty": "0x31962a3fc82b",
+               "extraData": "0x4477617266506f6f6c",
+               "gasLimit": "0x47c3d8",
+               "gasUsed": "0x0",
+               "hash": "0x78bfef68fccd4507f9f4804ba5c65eb2f928ea45b3383ade88aaa720f1209cba",
+               "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+               "miner": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
+               "nonce": "0xa5e8fb780cc2cd5e",
+               "number": "0x` + strHeight + `",
+               "receiptsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+               "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
+               "size": "0x20e",
+               "stateRoot": "0xdc6ed0a382e50edfedb6bd296892690eb97eb3fc88fd55088d5ea753c48253dc",
+               "timestamp": "0x579f4981",
+               "totalDifficulty": "0x25cff06a0d96f4bee",
+               "transactionsRoot": "0x88df016429689c079f3b2f6ad39fa052532c56795b733da78a91ebe6a713944b"
+       }`
+	var header *etypes.Header
+	if err := json.Unmarshal([]byte(blockJson), &header); err != nil {
+		return nil, err
+	}
+	return header, nil
+}
+
 func (s *BlockScannerTestSuite) TestNewBlockScanner(c *C) {
 	storage, err := blockscanner.NewBlockScannerStorage("", config.LevelDBOptions{})
 	c.Assert(err, IsNil)
@@ -107,23 +138,23 @@ func (s *BlockScannerTestSuite) TestNewBlockScanner(c *C) {
 	solvencyReporter := func(height int64) error {
 		return nil
 	}
-	bs, err := NewETHScanner(getConfigForTest(""), nil, big.NewInt(int64(types.Mainnet)), ethClient, s.bridge, s.m, pubKeyManager, solvencyReporter, nil)
+	bs, err := NewETHScanner(getConfigForTest(""), nil, big.NewInt(int64(Mainnet)), ethClient, s.bridge, s.m, pubKeyManager, solvencyReporter, nil)
 	c.Assert(err, NotNil)
 	c.Assert(bs, IsNil)
 
-	bs, err = NewETHScanner(getConfigForTest("127.0.0.1"), storage, big.NewInt(int64(types.Mainnet)), ethClient, s.bridge, nil, pubKeyManager, solvencyReporter, nil)
+	bs, err = NewETHScanner(getConfigForTest("127.0.0.1"), storage, big.NewInt(int64(Mainnet)), ethClient, s.bridge, nil, pubKeyManager, solvencyReporter, nil)
 	c.Assert(err, NotNil)
 	c.Assert(bs, IsNil)
 
-	bs, err = NewETHScanner(getConfigForTest("127.0.0.1"), storage, big.NewInt(int64(types.Mainnet)), nil, s.bridge, s.m, pubKeyManager, solvencyReporter, nil)
+	bs, err = NewETHScanner(getConfigForTest("127.0.0.1"), storage, big.NewInt(int64(Mainnet)), nil, s.bridge, s.m, pubKeyManager, solvencyReporter, nil)
 	c.Assert(err, NotNil)
 	c.Assert(bs, IsNil)
 
-	bs, err = NewETHScanner(getConfigForTest("127.0.0.1"), storage, big.NewInt(int64(types.Mainnet)), ethClient, s.bridge, s.m, nil, solvencyReporter, nil)
+	bs, err = NewETHScanner(getConfigForTest("127.0.0.1"), storage, big.NewInt(int64(Mainnet)), ethClient, s.bridge, s.m, nil, solvencyReporter, nil)
 	c.Assert(err, NotNil)
 	c.Assert(bs, IsNil)
 
-	bs, err = NewETHScanner(getConfigForTest("127.0.0.1"), storage, big.NewInt(int64(types.Mainnet)), ethClient, s.bridge, s.m, pubKeyManager, solvencyReporter, nil)
+	bs, err = NewETHScanner(getConfigForTest("127.0.0.1"), storage, big.NewInt(int64(Mainnet)), ethClient, s.bridge, s.m, pubKeyManager, solvencyReporter, nil)
 	c.Assert(err, IsNil)
 	c.Assert(bs, NotNil)
 }
@@ -297,7 +328,7 @@ func (s *BlockScannerTestSuite) TestFromTxToTxIn(c *C) {
 					c.Assert(err, IsNil)
 					return
 				case `["0xe8d7b5ff2e2f3ae814dfd422444196a72349e03a761eda5452fcc244291fc599"]`:
-					_, err := rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"root":"0x","status":"0x1","cumulativeGasUsed":"0x9a91","logsBloom":"0x00000000000000000002000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000008000000000000000000000000000000000000000002000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000001000000000000004000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000010000800000000000000000","logs":[{"address":"0xe65e9d372f8cacc7b6dfcd4af6507851ed31bb44","topics":["0x05b90458f953d3fcb2d7fb25616a2fddeca749d0c47cc5c9832d0266b5346eea","0x0000000000000000000000003fd2d4ce97b082d4bce3f9fee2a3d60668d2f473","0x0000000000000000000000009f4aab49a9cd8fc54dcb3701846f608a6f2c44da"],"data":"0x0000000000000000000000003b7fa4dd21c6f9ba3ca375217ead7cab9d6bf48300000000000000000000000000000000000000000000000011572680468e44000000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000000f59474744524153494c2b3a313032340000000000000000000000000000000000","blockNumber":"0x1a6","transactionHash":"0xe8d7b5ff2e2f3ae814dfd422444196a72349e03a761eda5452fcc244291fc599","transactionIndex":"0x0","blockHash":"0x39b72c414a032e8172f871c94e2382065c3e848ae69bb68f60114cb5b8fa7868","logIndex":"0x0","removed":false}],"transactionHash":"0xe8d7b5ff2e2f3ae814dfd422444196a72349e03a761eda5452fcc244291fc599","contractAddress":"0x0000000000000000000000000000000000000000","gasUsed":"0x9a91","blockHash":"0x39b72c414a032e8172f871c94e2382065c3e848ae69bb68f60114cb5b8fa7868","blockNumber":"0x1a6","transactionIndex":"0x0"}}`))
+					_, err := rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"root":"0x","status":"0x1","cumulativeGasUsed":"0x9a91","logsBloom":"0x00000000000000000002000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000008000000000000000000000000000000000000000002000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000001000000000000004000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000010000800000000000000000","logs":[{"address":"0xe65e9d372f8cacc7b6dfcd4af6507851ed31bb44","topics":["0x05b90458f953d3fcb2d7fb25616a2fddeca749d0c47cc5c9832d0266b5346eea","0x0000000000000000000000003fd2d4ce97b082d4bce3f9fee2a3d60668d2f473","0x0000000000000000000000009f4aab49a9cd8fc54dcb3701846f608a6f2c44da"],"data":"0x0000000000000000000000003b7fa4dd21c6f9ba3ca375217ead7cab9d6bf48300000000000000000000000000000000000000000000000011572680468e44000000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000000c4d4947524154453a31303234","blockNumber":"0x1a6","transactionHash":"0xe8d7b5ff2e2f3ae814dfd422444196a72349e03a761eda5452fcc244291fc599","transactionIndex":"0x0","blockHash":"0x39b72c414a032e8172f871c94e2382065c3e848ae69bb68f60114cb5b8fa7868","logIndex":"0x0","removed":false}],"transactionHash":"0xe8d7b5ff2e2f3ae814dfd422444196a72349e03a761eda5452fcc244291fc599","contractAddress":"0x0000000000000000000000000000000000000000","gasUsed":"0x9a91","blockHash":"0x39b72c414a032e8172f871c94e2382065c3e848ae69bb68f60114cb5b8fa7868","blockNumber":"0x1a6","transactionIndex":"0x0"}}`))
 					c.Assert(err, IsNil)
 					return
 				case `["0x4b19cce0afd29141931f2c35e8805ab596c6467d19ddbde6268b606c8b258106"]`:
@@ -345,7 +376,7 @@ func (s *BlockScannerTestSuite) TestFromTxToTxIn(c *C) {
 		c.Assert(pkeyMgr.Stop(), IsNil)
 	}()
 	c.Assert(err, IsNil)
-	bs, err := NewETHScanner(getConfigForTest(server.URL), storage, big.NewInt(int64(types.Mainnet)), ethClient, s.bridge, s.m, pkeyMgr, func(height int64) error {
+	bs, err := NewETHScanner(getConfigForTest(server.URL), storage, big.NewInt(int64(Mainnet)), ethClient, s.bridge, s.m, pkeyMgr, func(height int64) error {
 		return nil
 	}, nil)
 	c.Assert(err, IsNil)
@@ -470,7 +501,7 @@ func (s *BlockScannerTestSuite) TestFromTxToTxIn(c *C) {
 	c.Assert(txInItem, NotNil)
 	c.Assert(txInItem.Sender, Equals, "0x3fd2d4ce97b082d4bce3f9fee2a3d60668d2f473")
 	c.Assert(txInItem.To, Equals, "0x9F4AaB49A9cd8FC54Dcb3701846f608a6f2C44dA")
-	c.Assert(txInItem.Memo, Equals, "YGGDRASIL+:1024")
+	c.Assert(txInItem.Memo, Equals, "MIGRATE:1024")
 	c.Assert(txInItem.Tx, Equals, "e8d7b5ff2e2f3ae814dfd422444196a72349e03a761eda5452fcc244291fc599")
 	c.Assert(txInItem.Coins[0].Asset.String(), Equals, "ETH.TKN-0X3B7FA4DD21C6F9BA3CA375217EAD7CAB9D6BF483")
 	c.Logf("======> %+v \n", txInItem)
@@ -577,7 +608,7 @@ func (s *BlockScannerTestSuite) TestProcessReOrg(c *C) {
 	defer func() {
 		c.Assert(pkeyMgr.Stop(), IsNil)
 	}()
-	bs, err := NewETHScanner(getConfigForTest(server.URL), storage, big.NewInt(int64(types.Mainnet)), ethClient, s.bridge, s.m, pkeyMgr, func(height int64) error {
+	bs, err := NewETHScanner(getConfigForTest(server.URL), storage, big.NewInt(int64(Mainnet)), ethClient, s.bridge, s.m, pkeyMgr, func(height int64) error {
 		return nil
 	}, nil)
 	c.Assert(err, IsNil)
@@ -642,7 +673,7 @@ func (s *BlockScannerTestSuite) TestGasPriceV2(c *C) {
 		return nil
 	}
 	conf := getConfigForTest("127.0.0.1")
-	bs, err := NewETHScanner(conf, storage, big.NewInt(int64(types.Mainnet)), ethClient, s.bridge, s.m, pubKeyManager, solvencyReporter, nil)
+	bs, err := NewETHScanner(conf, storage, big.NewInt(int64(Mainnet)), ethClient, s.bridge, s.m, pubKeyManager, solvencyReporter, nil)
 	c.Assert(err, IsNil)
 	c.Assert(bs, NotNil)
 

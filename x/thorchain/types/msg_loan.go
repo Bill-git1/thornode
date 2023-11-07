@@ -8,7 +8,7 @@ import (
 )
 
 // NewMsgLoanOpen create new MsgLoan message
-func NewMsgLoanOpen(owner common.Address, colAsset common.Asset, colAmount cosmos.Uint, targetAddress common.Address, asset common.Asset, minOut cosmos.Uint, affAddr common.Address, affPts cosmos.Uint, dexagg, dexTargetAddr string, dexTargetLimit cosmos.Uint, signer cosmos.AccAddress) *MsgLoanOpen {
+func NewMsgLoanOpen(owner common.Address, colAsset common.Asset, colAmount cosmos.Uint, targetAddress common.Address, asset common.Asset, minOut cosmos.Uint, affAddr common.Address, affPts cosmos.Uint, dexagg, dexTargetAddr string, dexTargetLimit cosmos.Uint, signer cosmos.AccAddress, tx common.TxID) *MsgLoanOpen {
 	return &MsgLoanOpen{
 		Owner:                   owner,
 		CollateralAsset:         colAsset,
@@ -22,6 +22,7 @@ func NewMsgLoanOpen(owner common.Address, colAsset common.Asset, colAmount cosmo
 		AggregatorTargetAddress: dexTargetAddr,
 		AggregatorTargetLimit:   dexTargetLimit,
 		Signer:                  signer,
+		TxID:                    tx,
 	}
 }
 
@@ -77,7 +78,7 @@ func (m *MsgLoanOpen) GetSigners() []cosmos.AccAddress {
 }
 
 // NewMsgLoanRepayment create new MsgLoan message
-func NewMsgLoanRepayment(owner common.Address, asset common.Asset, minOut cosmos.Uint, from common.Address, coin common.Coin, signer cosmos.AccAddress) *MsgLoanRepayment {
+func NewMsgLoanRepayment(owner common.Address, asset common.Asset, minOut cosmos.Uint, from common.Address, coin common.Coin, signer cosmos.AccAddress, tx common.TxID) *MsgLoanRepayment {
 	return &MsgLoanRepayment{
 		Owner:           owner,
 		CollateralAsset: asset,
@@ -85,6 +86,7 @@ func NewMsgLoanRepayment(owner common.Address, asset common.Asset, minOut cosmos
 		From:            from,
 		Coin:            coin,
 		Signer:          signer,
+		TxID:            tx,
 	}
 }
 

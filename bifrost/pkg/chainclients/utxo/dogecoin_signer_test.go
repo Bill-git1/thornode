@@ -56,7 +56,7 @@ func (s *DogecoinSignerSuite) SetUpSuite(c *C) {
 }
 
 func (s *DogecoinSignerSuite) SetUpTest(c *C) {
-	s.m = GetMetricForTest(c)
+	s.m = GetMetricForTest(c, common.DOGEChain)
 	s.cfg = config.BifrostChainConfiguration{
 		ChainID:     "DOGE",
 		UserName:    bob,
@@ -235,9 +235,7 @@ func (s *DogecoinSignerSuite) TestSignTxHappyPathWithPrivateKey(c *C) {
 	s.client.nodePrivKey = pkey
 	s.client.nodePubKey, err = bech32AccountPubKey(pkey)
 	c.Assert(err, IsNil)
-	vaultPubKey, err := bech32AccountPubKey(pkey)
-	c.Assert(err, IsNil)
-	txOutItem.VaultPubKey = vaultPubKey
+	txOutItem.VaultPubKey = s.client.nodePubKey
 	buf, _, _, err := s.client.SignTx(txOutItem, 1)
 	c.Assert(err, IsNil)
 	c.Assert(buf, NotNil)
@@ -253,7 +251,7 @@ func (s *DogecoinSignerSuite) TestSignTxWithoutPredefinedMaxGas(c *C) {
 		Coins: common.Coins{
 			common.NewCoin(common.DOGEAsset, cosmos.NewUint(10)),
 		},
-		Memo:    "YGGDRASIL-:101",
+		Memo:    "MIGRATE:101",
 		GasRate: 25,
 		InHash:  "",
 		OutHash: "",
@@ -272,9 +270,7 @@ func (s *DogecoinSignerSuite) TestSignTxWithoutPredefinedMaxGas(c *C) {
 	s.client.nodePrivKey = pkey
 	s.client.nodePubKey, err = bech32AccountPubKey(pkey)
 	c.Assert(err, IsNil)
-	vaultPubKey, err := bech32AccountPubKey(pkey)
-	c.Assert(err, IsNil)
-	txOutItem.VaultPubKey = vaultPubKey
+	txOutItem.VaultPubKey = s.client.nodePubKey
 	buf, _, _, err := s.client.SignTx(txOutItem, 1)
 	c.Assert(err, IsNil)
 	c.Assert(buf, NotNil)
@@ -360,9 +356,7 @@ func (s *DogecoinSignerSuite) TestSignAddressPubKeyShouldFail(c *C) {
 	s.client.nodePrivKey = pkey
 	s.client.nodePubKey, err = bech32AccountPubKey(pkey)
 	c.Assert(err, IsNil)
-	vaultPubKey, err := bech32AccountPubKey(pkey)
-	c.Assert(err, IsNil)
-	txOutItem.VaultPubKey = vaultPubKey
+	txOutItem.VaultPubKey = s.client.nodePubKey
 	buf, _, _, err := s.client.SignTx(txOutItem, 1)
 	c.Assert(err, IsNil)
 	c.Assert(buf, IsNil)
@@ -395,9 +389,7 @@ func (s *DogecoinSignerSuite) TestToAddressCanNotRoundTripShouldBlock(c *C) {
 	s.client.nodePrivKey = pkey
 	s.client.nodePubKey, err = bech32AccountPubKey(pkey)
 	c.Assert(err, IsNil)
-	vaultPubKey, err := bech32AccountPubKey(pkey)
-	c.Assert(err, IsNil)
-	txOutItem.VaultPubKey = vaultPubKey
+	txOutItem.VaultPubKey = s.client.nodePubKey
 	// The transaction will not signed, but ignored instead
 	buf, _, _, err := s.client.SignTx(txOutItem, 1)
 	c.Assert(err, IsNil)

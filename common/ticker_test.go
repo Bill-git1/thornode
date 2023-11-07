@@ -9,6 +9,8 @@ type TickerSuite struct{}
 var _ = Suite(&TickerSuite{})
 
 func (s TickerSuite) TestTicker(c *C) {
+	const RuneTicker = Ticker("RUNE")
+
 	runeTicker, err := NewTicker("rune")
 	c.Assert(err, IsNil)
 	bnbTicker, err := NewTicker("bnb")

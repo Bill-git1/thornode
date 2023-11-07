@@ -1,14 +1,6 @@
 package common
 
-import (
-	"fmt"
-	"sync"
-)
-
-var (
-	pubkeyToAddressCache   = make(map[string]Address)
-	pubkeyToAddressCacheMu = &sync.Mutex{}
-)
+import "fmt"
 
 // ChainPoolInfo represent the pool address specific for a chain
 type ChainPoolInfo struct {
@@ -29,20 +21,9 @@ func NewChainPoolInfo(chain Chain, pubKey PubKey) (ChainPoolInfo, error) {
 		return EmptyChainPoolInfo, fmt.Errorf("pubkey is empty")
 	}
 
-	// cache pubkey to address, since this is expensive with many vaults in pubkey manager
-	key := fmt.Sprintf("%s-%s", chain.String(), pubKey.String())
-	pubkeyToAddressCacheMu.Lock()
-	defer pubkeyToAddressCacheMu.Unlock()
-	var addr Address
-	if v, ok := pubkeyToAddressCache[key]; ok {
-		addr = v
-	} else {
-		var err error
-		addr, err = pubKey.GetAddress(chain)
-		if err != nil {
-			return EmptyChainPoolInfo, fmt.Errorf("fail to get address for chain %s,%w", chain, err)
-		}
-		pubkeyToAddressCache[key] = addr
+	addr, err := pubKey.GetAddress(chain)
+	if err != nil {
+		return EmptyChainPoolInfo, fmt.Errorf("fail to get address for chain %s,%w", chain, err)
 	}
 
 	return ChainPoolInfo{

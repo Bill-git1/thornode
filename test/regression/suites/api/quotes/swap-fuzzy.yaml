@@ -6,7 +6,6 @@ type: create-blocks
 count: 1
 ---
 type: check
-description: eth, btc, and usdx pools should exist
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .|length == 5
@@ -46,7 +45,7 @@ params:
   tolerance_bps: 8000
   destination: {{ addr_eth_fox }}
 asserts:
-  - .memo == "=:ETH.USDX-3:{{ addr_eth_fox }}:1999999999"
+  - .memo == "=:ETH.USDX-3:{{ addr_eth_fox }}:2000000000"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/quote/swap
@@ -57,7 +56,7 @@ params:
   tolerance_bps: 8000
   destination: {{ addr_eth_fox }}
 asserts:
-  - .memo == "=:ETH.USDX-9999:{{ addr_eth_fox }}:1999999999"
+  - .memo == "=:ETH.USDX-9999:{{ addr_eth_fox }}:2000000000"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/quote/swap
@@ -68,4 +67,4 @@ params:
   tolerance_bps: 8000
   destination: {{ addr_eth_fox }}
 asserts:
-  - .memo == "=:ETH.USDX-3999:{{ addr_eth_fox }}:1999999999"
+  - .memo == "=:ETH.USDX-3999:{{ addr_eth_fox }}:2000000000"

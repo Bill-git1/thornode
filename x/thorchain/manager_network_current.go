@@ -3,6 +3,8 @@ package thorchain
 import (
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/armon/go-metrics"
 	"github.com/cosmos/cosmos-sdk/telemetry"
@@ -177,7 +179,9 @@ func (vm *NetworkMgrVCUR) spawnDerivedAssets(ctx cosmos.Context, mgr Manager) er
 	// get assets to create derived pools
 	layer1Assets := []common.Asset{common.TOR}
 	for _, chain := range active[0].GetChains() {
-		if chain.IsTHORChain() {
+		// Skipping BSC chain to avoid THOR.BNB derived asset overwrite
+		// https://gitlab.com/thorchain/thornode/-/issues/1724
+		if chain.IsTHORChain() || chain.IsBSCChain() {
 			continue
 		}
 		layer1Assets = append(layer1Assets, chain.GetGasAsset())
@@ -208,6 +212,14 @@ func (vm *NetworkMgrVCUR) SpawnDerivedAsset(ctx cosmos.Context, asset common.Ass
 	maxAnchorSlip := mgr.Keeper().GetConfigInt64(ctx, constants.MaxAnchorSlip)
 	depthBasisPts := mgr.Keeper().GetConfigInt64(ctx, constants.DerivedDepthBasisPts)
 	minDepthPts := mgr.Keeper().GetConfigInt64(ctx, constants.DerivedMinDepth)
+	dynamicMaxAnchorTarget := mgr.Keeper().GetConfigInt64(ctx, constants.DynamicMaxAnchorTarget)
+
+	// dynamically calculate the maxAnchorSlip
+	medianSlip := vm.fetchMedianSlip(ctx, layer1Asset, mgr)
+	maxBps := int64(10_000)
+	if medianSlip > 0 && dynamicMaxAnchorTarget > 0 && dynamicMaxAnchorTarget < maxBps {
+		maxAnchorSlip = (medianSlip * maxBps) / (maxBps - dynamicMaxAnchorTarget)
+	}
 
 	derivedAsset := asset.GetDerivedAsset()
 	layer1Pool, err := mgr.Keeper().GetPool(ctx, layer1Asset)
@@ -297,11 +309,63 @@ func (vm *NetworkMgrVCUR) SpawnDerivedAsset(ctx cosmos.Context, asset common.Ass
 		derivedPool.BalanceRune = runeDepth
 	}
 
+	ctx.Logger().Debug("SpawnDerivedAsset",
+		"medianSlip", medianSlip,
+		"runeAmt", runeAmt,
+		"assetAmt", assetAmt,
+		"asset", derivedPool.Asset,
+		"anchorPrice", price,
+		"slippage", slippage)
+
 	if err := mgr.Keeper().SetPool(ctx, derivedPool); err != nil {
 		// Since unable to SetPool here, presumably unable to SetPool in suspendVirtualPool either.
 		ctx.Logger().Error("failed to set pool", "asset", derivedPool.Asset, "err", err)
 		return
 	}
+}
+
+func (vm *NetworkMgrVCUR) fetchMedianSlip(ctx cosmos.Context, asset common.Asset, mgr Manager) (slip int64) {
+	slip, err := mgr.Keeper().GetLongRollup(ctx, asset)
+	if err != nil {
+		ctx.Logger().Error("fail to get long rollup", "error", err)
+	}
+
+	dynamicMaxAnchorCalcInterval := mgr.Keeper().GetConfigInt64(ctx, constants.DynamicMaxAnchorCalcInterval)
+	if (dynamicMaxAnchorCalcInterval > 0 && ctx.BlockHeight()%dynamicMaxAnchorCalcInterval == 0) || slip <= 0 {
+		slip = vm.calculateMedianSlip(ctx, asset, mgr)
+		mgr.Keeper().SetLongRollup(ctx, asset, slip)
+	}
+
+	return slip
+}
+
+func (vm *NetworkMgrVCUR) calculateMedianSlip(ctx cosmos.Context, asset common.Asset, mgr Manager) int64 {
+	dynamicMaxAnchorSlipBlocks := mgr.Keeper().GetConfigInt64(ctx, constants.DynamicMaxAnchorSlipBlocks)
+
+	slips := make([]int64, 0)
+	iter := mgr.Keeper().GetSwapSlipSnapShotIterator(ctx, asset)
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		key := string(iter.Key())
+		parts := strings.Split(key, "/")
+		i, err := strconv.ParseInt(parts[len(parts)-1], 10, 64)
+		if err != nil || i < ctx.BlockHeight()-dynamicMaxAnchorSlipBlocks {
+			mgr.Keeper().DeleteKey(ctx, key)
+			continue
+		}
+
+		value := ProtoInt64{}
+		mgr.Keeper().Cdc().MustUnmarshal(iter.Value(), &value)
+		slip := value.GetValue()
+		if slip <= 0 {
+			mgr.Keeper().DeleteKey(ctx, key)
+			continue
+		}
+
+		slips = append(slips, slip)
+	}
+
+	return common.GetMedianInt64(slips)
 }
 
 // EndBlock move funds from retiring asgard vaults
@@ -316,6 +380,17 @@ func (vm *NetworkMgrVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 		ctx.Logger().Error("fail to process POL liquidity", "error", err)
 	}
 
+	if err := vm.migrateFunds(ctx, mgr); err != nil {
+		ctx.Logger().Error("fail to migrate funds", "error", err)
+	}
+
+	if err := vm.checkPoolRagnarok(ctx, mgr); err != nil {
+		ctx.Logger().Error("fail to process pool ragnarok", "error", err)
+	}
+	return nil
+}
+
+func (vm *NetworkMgrVCUR) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 	migrateInterval, err := vm.k.GetMimir(ctx, constants.FundMigrationInterval.String())
 	if migrateInterval < 0 || err != nil {
 		migrateInterval = mgr.GetConstants().GetInt64Value(constants.FundMigrationInterval)
@@ -356,7 +431,7 @@ func (vm *NetworkMgrVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 
 	for _, vault := range retiring {
 		if !vault.HasFunds() {
-			vault.Status = InactiveVault
+			vault.UpdateStatus(InactiveVault, ctx.BlockHeight())
 			if err := vm.k.SetVault(ctx, vault); err != nil {
 				ctx.Logger().Error("fail to set vault to inactive", "error", err)
 			}
@@ -549,9 +624,6 @@ func (vm *NetworkMgrVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 				}
 			}
 		}
-	}
-	if err := vm.checkPoolRagnarok(ctx, mgr); err != nil {
-		ctx.Logger().Error("fail to process pool ragnarok", "error", err)
 	}
 	return nil
 }
@@ -1008,189 +1080,9 @@ func (vm *NetworkMgrVCUR) cleanupAsgardIndex(ctx cosmos.Context) error {
 	return nil
 }
 
-// manageChains - checks to see if we have any chains that we are ragnaroking,
-// and ragnaroks them
-func (vm *NetworkMgrVCUR) manageChains(ctx cosmos.Context, mgr Manager) error {
-	chains, err := vm.findChainsToRetire(ctx)
-	if err != nil {
-		return err
-	}
-
-	active, err := vm.k.GetAsgardVaultsByStatus(ctx, ActiveVault)
-	if err != nil {
-		return err
-	}
-	vault := active.SelectByMinCoin(common.RuneAsset())
-	if vault.IsEmpty() {
-		return fmt.Errorf("unable to determine asgard vault")
-	}
-
-	migrateInterval, err := vm.k.GetMimir(ctx, constants.FundMigrationInterval.String())
-	if migrateInterval < 0 || err != nil {
-		migrateInterval = mgr.GetConstants().GetInt64Value(constants.FundMigrationInterval)
-	}
-	nth := (ctx.BlockHeight()-vault.StatusSince)/migrateInterval + 1
-	if nth > 10 {
-		nth = 10
-	}
-
-	for _, chain := range chains {
-		// the first round to recall fund from yggdrasil
-		if nth == 1 {
-			if err := vm.RecallChainFunds(ctx, chain, mgr, common.PubKeys{}); err != nil {
-				return err
-			}
-		}
-
-		// only refund after the first nth. This gives yggs time to send funds
-		// back to asgard
-		if nth > 1 {
-			if err := vm.ragnarokChain(ctx, chain, nth, mgr); err != nil {
-				continue
-			}
-		}
-	}
-	return nil
-}
-
-// findChainsToRetire - evaluates the chains associated with active asgard
-// vaults vs retiring asgard vaults to detemine if any chains need to be
-// ragnarok'ed
-func (vm *NetworkMgrVCUR) findChainsToRetire(ctx cosmos.Context) (common.Chains, error) {
-	chains := make(common.Chains, 0)
-
-	active, err := vm.k.GetAsgardVaultsByStatus(ctx, ActiveVault)
-	if err != nil {
-		return chains, err
-	}
-	retiring, err := vm.k.GetAsgardVaultsByStatus(ctx, RetiringVault)
-	if err != nil {
-		return chains, err
-	}
-
-	// collect all chains for active vaults
-	activeChains := make(common.Chains, 0)
-	for _, v := range active {
-		activeChains = append(activeChains, v.GetChains()...)
-	}
-	activeChains = activeChains.Distinct()
-
-	// collect all chains for retiring vaults
-	retiringChains := make(common.Chains, 0)
-	for _, v := range retiring {
-		retiringChains = append(retiringChains, v.GetChains()...)
-	}
-	retiringChains = retiringChains.Distinct()
-
-	for _, chain := range retiringChains {
-		// skip chain if its in active and retiring
-		if activeChains.Has(chain) {
-			continue
-		}
-		chains = append(chains, chain)
-	}
-	return chains, nil
-}
-
-// RecallChainFunds - sends a message to bifrost nodes to send back all funds
-// associated with given chain
-func (vm *NetworkMgrVCUR) RecallChainFunds(ctx cosmos.Context, chain common.Chain, mgr Manager, excludeNodes common.PubKeys) error {
-	allNodes, err := vm.k.ListValidatorsWithBond(ctx)
-	if err != nil {
-		return fmt.Errorf("fail to list all node accounts: %w", err)
-	}
-
-	active, err := vm.k.GetAsgardVaultsByStatus(ctx, ActiveVault)
-	if err != nil {
-		return err
-	}
-
-	signingTransactionPeriod := mgr.GetConstants().GetInt64Value(constants.SigningTransactionPeriod)
-	vault := vm.k.GetMostSecure(ctx, active, signingTransactionPeriod)
-	if vault.IsEmpty() {
-		return fmt.Errorf("unable to determine asgard vault")
-	}
-	toAddr, err := vault.PubKey.GetAddress(chain)
-	if err != nil {
-		return err
-	}
-
-	// get yggdrasil to return funds back to asgard
-	for _, node := range allNodes {
-		if excludeNodes.Contains(node.PubKeySet.Secp256k1) {
-			continue
-		}
-		if !vm.k.VaultExists(ctx, node.PubKeySet.Secp256k1) {
-			continue
-		}
-		ygg, err := vm.k.GetVault(ctx, node.PubKeySet.Secp256k1)
-		if err != nil {
-			ctx.Logger().Error("fail to get ygg vault", "error", err)
-			continue
-		}
-		if ygg.IsAsgard() {
-			continue
-		}
-
-		if !ygg.HasFundsForChain(chain) {
-			continue
-		}
-
-		if !toAddr.IsEmpty() {
-			txOutItem := TxOutItem{
-				Chain:       chain,
-				ToAddress:   toAddr,
-				InHash:      common.BlankTxID,
-				VaultPubKey: ygg.PubKey,
-				Coin:        common.NewCoin(common.RuneAsset(), cosmos.ZeroUint()),
-				Memo:        NewYggdrasilReturn(ctx.BlockHeight()).String(),
-				GasRate:     int64(mgr.GasMgr().GetGasRate(ctx, chain).Uint64()),
-			}
-			// yggdrasil- will not set coin field here, when signer see a
-			// TxOutItem that has memo "yggdrasil-" it will query the chain
-			// and find out all the remaining assets , and fill in the
-			// field
-			if err := vm.txOutStore.UnSafeAddTxOutItem(ctx, mgr, txOutItem); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
-// ragnarokChain - ends a chain by withdrawing all liquidity providers of any pool that's
-// asset is on the given chain
-func (vm *NetworkMgrVCUR) ragnarokChain(ctx cosmos.Context, chain common.Chain, nth int64, mgr Manager) error {
-	nas, err := vm.k.ListActiveValidators(ctx)
-	if err != nil {
-		ctx.Logger().Error("can't get active nodes", "error", err)
-		return err
-	}
-	if chain.IsTHORChain() {
-		return fmt.Errorf("can't ragnarok THORChain")
-	}
-	if len(nas) == 0 {
-		return fmt.Errorf("can't find any active nodes")
-	}
-	na := nas[0]
-
-	pools, err := vm.k.GetPools(ctx)
-	if err != nil {
-		return err
-	}
-
-	// rangarok this chain
-	for _, pool := range pools {
-		if !pool.Asset.GetChain().Equals(chain) || pool.LPUnits.IsZero() {
-			continue
-		}
-		if err := vm.withdrawLiquidity(ctx, pool, na, mgr); err != nil {
-			ctx.Logger().Error("fail to ragnarok liquidity", "error", err)
-		}
-	}
-
-	return nil
+// TODO remove on hard fork
+func (vm *NetworkMgrVCUR) RecallChainFunds(_ cosmos.Context, _ common.Chain, _ Manager, _ common.PubKeys) error {
+	return fmt.Errorf("dev error: RecallChainFunds is obsolete")
 }
 
 // withdrawLiquidity will process a batch of LP per iteration, the batch size is defined by constants.RagnarokProcessNumOfLPPerIteration
@@ -1354,6 +1246,10 @@ func (vm *NetworkMgrVCUR) UpdateNetwork(ctx cosmos.Context, constAccessor consta
 			}
 			if err := vm.paySaverYield(ctx, pool.Asset, amt.Add(fees)); err != nil {
 				return fmt.Errorf("fail to pay saver yield: %w", err)
+			}
+			// when pool reward is zero, don't emit it
+			if amt.IsZero() {
+				continue
 			}
 			rewardAmts = append(rewardAmts, amt)
 			evtPools = append(evtPools, PoolAmt{Asset: pool.Asset, Amount: int64(amt.Uint64())})
@@ -1659,7 +1555,7 @@ func (vm *NetworkMgrVCUR) ragnarokPool(ctx cosmos.Context, mgr Manager, p Pool) 
 	}
 	nth := (ctx.BlockHeight()-startBlockHeight)/mgr.GetConstants().GetInt64Value(constants.FundMigrationInterval) + 1
 
-	// set the pool status to stage , thus the network will not send asset to yggdrasil vault
+	// set the pool status to stage
 	if p.Status != PoolStaged {
 		p.Status = PoolStaged
 		if err := vm.k.SetPool(ctx, p); err != nil {
@@ -1672,10 +1568,10 @@ func (vm *NetworkMgrVCUR) ragnarokPool(ctx cosmos.Context, mgr Manager, p Pool) 
 
 	}
 
-	// first round , let's set the pool to stage , and recall yggdrasil fund
-	// staged pool will not fund yggdrasil again
+	// first round , let's set the pool to stage
 	if nth == 1 {
-		return vm.RecallChainFunds(ctx, p.Asset.GetChain(), mgr, common.PubKeys{})
+		// TODO used to be yggdrasil recall
+		return nil
 	}
 
 	nas, err := vm.k.ListActiveValidators(ctx)

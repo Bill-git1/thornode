@@ -1,7 +1,6 @@
 package thorchain
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/blang/semver"
@@ -48,6 +47,8 @@ func (h UnBondHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, er
 func (h UnBondHandler) validate(ctx cosmos.Context, msg MsgUnBond) error {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.124.0")):
+		return h.validateV124(ctx, msg)
 	case version.GTE(semver.MustParse("1.117.0")):
 		return h.validateV117(ctx, msg)
 	case version.GTE(semver.MustParse("1.88.0")):
@@ -59,7 +60,7 @@ func (h UnBondHandler) validate(ctx cosmos.Context, msg MsgUnBond) error {
 	}
 }
 
-func (h UnBondHandler) validateV117(ctx cosmos.Context, msg MsgUnBond) error {
+func (h UnBondHandler) validateV124(ctx cosmos.Context, msg MsgUnBond) error {
 	if err := msg.ValidateBasicV117(); err != nil {
 		return err
 	}
@@ -75,16 +76,6 @@ func (h UnBondHandler) validateV117(ctx cosmos.Context, msg MsgUnBond) error {
 
 	if h.mgr.Keeper().GetConfigInt64(ctx, constants.PauseUnbond) > 0 {
 		return ErrInternal(err, "unbonding has been paused")
-	}
-
-	if h.mgr.Keeper().VaultExists(ctx, na.PubKeySet.Secp256k1) {
-		ygg, err := h.mgr.Keeper().GetVault(ctx, na.PubKeySet.Secp256k1)
-		if err != nil {
-			return err
-		}
-		if !ygg.IsYggdrasil() {
-			return errors.New("this is not a Yggdrasil vault")
-		}
 	}
 
 	jail, err := h.mgr.Keeper().GetNodeAccountJail(ctx, msg.NodeAddress)
@@ -115,6 +106,8 @@ func (h UnBondHandler) validateV117(ctx cosmos.Context, msg MsgUnBond) error {
 func (h UnBondHandler) handle(ctx cosmos.Context, msg MsgUnBond) error {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.124.0")):
+		return h.handleV124(ctx, msg)
 	case version.GTE(semver.MustParse("1.92.0")):
 		return h.handleV92(ctx, msg)
 	case version.GTE(semver.MustParse("0.81.0")):
@@ -124,65 +117,10 @@ func (h UnBondHandler) handle(ctx cosmos.Context, msg MsgUnBond) error {
 	}
 }
 
-func (h UnBondHandler) handleV92(ctx cosmos.Context, msg MsgUnBond) error {
+func (h UnBondHandler) handleV124(ctx cosmos.Context, msg MsgUnBond) error {
 	na, err := h.mgr.Keeper().GetNodeAccount(ctx, msg.NodeAddress)
 	if err != nil {
 		return ErrInternal(err, fmt.Sprintf("fail to get node account(%s)", msg.NodeAddress))
-	}
-
-	var ygg Vault
-	if h.mgr.Keeper().VaultExists(ctx, na.PubKeySet.Secp256k1) {
-		var err error
-		ygg, err = h.mgr.Keeper().GetVault(ctx, na.PubKeySet.Secp256k1)
-		if err != nil {
-			return err
-		}
-	}
-
-	if ygg.HasFunds() {
-		canUnbond := true
-		totalRuneValue := cosmos.ZeroUint()
-		for _, c := range ygg.Coins {
-			if c.Amount.IsZero() {
-				continue
-			}
-			if !c.Asset.IsGasAsset() {
-				// None gas asset has not been sent back to asgard in full
-				canUnbond = false
-				break
-			}
-			chain := c.Asset.GetChain()
-			maxGas, err := h.mgr.GasMgr().GetMaxGas(ctx, chain)
-			if err != nil {
-				ctx.Logger().Error("fail to get max gas", "chain", chain, "error", err)
-				canUnbond = false
-				break
-			}
-			// 10x the maxGas , if the amount of gas asset left in the yggdrasil vault is larger than 10x of the MaxGas , then we don't allow node to unbond
-			if c.Amount.GT(maxGas.Amount.MulUint64(10)) {
-				canUnbond = false
-			}
-			pool, err := h.mgr.Keeper().GetPool(ctx, c.Asset)
-			if err != nil {
-				ctx.Logger().Error("fail to get pool", "asset", c.Asset, "error", err)
-				canUnbond = false
-				break
-			}
-			totalRuneValue = totalRuneValue.Add(pool.AssetValueInRune(c.Amount))
-		}
-		if !canUnbond {
-			ctx.Logger().Error("cannot unbond while yggdrasil vault still has funds")
-			if err := h.mgr.ValidatorMgr().RequestYggReturn(ctx, na, h.mgr); err != nil {
-				return ErrInternal(err, "fail to request yggdrasil return fund")
-			}
-			return nil
-		}
-		penaltyPts := h.mgr.Keeper().GetConfigInt64(ctx, constants.SlashPenalty)
-		totalRuneValue = common.GetUncappedShare(cosmos.NewUint(uint64(penaltyPts)), cosmos.NewUint(10_000), totalRuneValue)
-		totalAmountCanBeUnbond := common.SafeSub(na.Bond, totalRuneValue)
-		if msg.Amount.GT(totalAmountCanBeUnbond) {
-			return cosmos.ErrUnknownRequest(fmt.Sprintf("unbond amount %s is more than %s , not allowed", msg.Amount, totalAmountCanBeUnbond))
-		}
 	}
 
 	bondLockPeriod, err := h.mgr.Keeper().GetMimir(ctx, constants.BondLockupPeriod.String())

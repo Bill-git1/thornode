@@ -32,7 +32,7 @@ import (
 const (
 	// SatsPervBytes it should be enough , this one will only be used if signer can't find any previous UTXO , and fee info from local storage.
 	SatsPervBytes = 25
-	// MinUTXOConfirmation UTXO that has less confirmation then this will not be spent , unless it is yggdrasil
+	// MinUTXOConfirmation UTXO that has less confirmation then this will not be spent
 	MinUTXOConfirmation   = 1
 	defaultMaxDOGEFeeRate = dogutil.SatoshiPerBitcoin * 10
 	maxUTXOsToSpend       = 10
@@ -83,11 +83,6 @@ func (c *Client) getGasCoin(tx stypes.TxOutItem, vSize int64) common.Coin {
 	return common.NewCoin(common.DOGEAsset, cosmos.NewUint(uint64(gasRate*vSize)))
 }
 
-// isYggdrasil - when the pubkey and node pubkey is the same that means it is signing from yggdrasil
-func (c *Client) isYggdrasil(key common.PubKey) bool {
-	return key.Equals(c.nodePubKey)
-}
-
 func (c *Client) getMaximumUtxosToSpend() int64 {
 	const mimirMaxUTXOsToSpend = `MaxUTXOsToSpend`
 	utxosToSpend, err := c.bridge.GetMimir(mimirMaxUTXOsToSpend)
@@ -106,9 +101,6 @@ func (c *Client) getUtxoToSpend(pubKey common.PubKey, total float64) ([]btcjson.
 	var result []btcjson.ListUnspentResult
 	minConfirmation := 0
 	utxosToSpend := c.getMaximumUtxosToSpend()
-	// Yggdrasil vault is funded by asgard , which will only spend UTXO that is older than 10 blocks, so yggdrasil doesn't need
-	// to do the same logic
-	isYggdrasil := c.isYggdrasil(pubKey)
 	utxos, err := c.getUTXOs(minConfirmation, MaximumConfirmation, pubKey)
 	if err != nil {
 		return nil, fmt.Errorf("fail to get UTXOs: %w", err)
@@ -131,17 +123,17 @@ func (c *Client) getUtxoToSpend(pubKey common.PubKey, total float64) ([]btcjson.
 		}
 		isSelfTx := c.isSelfTransaction(item.TxID)
 		if item.Confirmations == 0 {
-			// pending tx that is still  in mempool, only count yggdrasil send to itself or from asgard
+			// pending tx in mempool, only count sends to self or from asgard
 			if !c.isSelfTransaction(item.TxID) && !c.isAsgardAddress(item.Address) {
 				continue
 			}
 		}
-		// when the utxo is signed by yggdrasil / asgard , even amount is less than DustThreshold
+		// when the utxo is signed by asgard, even amount is less than DustThreshold
 		// it is ok to spend it
-		if item.Amount < minUTXOAmt && !isSelfTx && !isYggdrasil {
+		if item.Amount < minUTXOAmt && !isSelfTx {
 			continue
 		}
-		if isYggdrasil || item.Confirmations >= MinUTXOConfirmation || isSelfTx {
+		if item.Confirmations >= MinUTXOConfirmation || isSelfTx {
 			result = append(result, item)
 			toSpend += item.Amount
 		}
@@ -311,9 +303,9 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 		if err != nil {
 			return nil, nil, fmt.Errorf("fail to parse memo: %w", err)
 		}
-		if memo.GetType() == mem.TxYggdrasilReturn || memo.GetType() == mem.TxConsolidate {
+		if memo.GetType() == mem.TxConsolidate {
 			gap := gasAmtSats
-			c.logger.Info().Msgf("yggdrasil return asset or consolidate tx, need gas: %d", gap)
+			c.logger.Info().Msgf("consolidate tx, need gas: %d", gap)
 			coinToCustomer.Amount = common.SafeSub(coinToCustomer.Amount, cosmos.NewUint(gap))
 		}
 	}

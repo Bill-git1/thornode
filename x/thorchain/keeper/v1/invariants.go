@@ -58,23 +58,36 @@ func AsgardInvariant(k KVStore) common.Invariant {
 			}
 
 			coin := swap.Tx.Coins[0]
-			if !coin.IsNative() {
+			if !coin.IsNative() && !swap.TargetAsset.IsNative() {
 				continue // only verifying native coins in this invariant
 			}
 
 			// adjust for streaming swaps
-			ss, err := k.GetStreamingSwap(ctx, swap.Tx.ID)
-			if err != nil {
-				ctx.Logger().Error("error getting streaming swap", "error", err)
-				continue // should never happen
+			ss := swap.GetStreamingSwap() // GetStreamingSwap() rather than var so In.IsZero() doesn't panic
+			// A non-streaming affiliate swap and streaming main swap could have the same TxID,
+			// so explicitly check IsStreaming to not double-count the main swap's In and Out amounts.
+			if swap.IsStreaming() {
+				var err error
+				ss, err = k.GetStreamingSwap(ctx, swap.Tx.ID)
+				if err != nil {
+					ctx.Logger().Error("error getting streaming swap", "error", err)
+					continue // should never happen
+				}
 			}
-			if !ss.In.IsZero() {
-				// adjust for stream swap amount, the amount In has been added
-				// to the pool but not deducted from the tx or module, so deduct
-				// that In amount from the tx coin
-				coin.Amount = coin.Amount.Sub(ss.In)
+
+			if coin.IsNative() {
+				if !ss.In.IsZero() {
+					// adjust for stream swap amount, the amount In has been added
+					// to the pool but not deducted from the tx or module, so deduct
+					// that In amount from the tx coin
+					coin.Amount = coin.Amount.Sub(ss.In)
+				}
+				swapCoins = swapCoins.Add(coin)
 			}
-			swapCoins = swapCoins.Add(coin)
+
+			if swap.TargetAsset.IsNative() && !ss.Out.IsZero() {
+				swapCoins = swapCoins.Add(common.NewCoin(swap.TargetAsset, ss.Out))
+			}
 		}
 
 		// get asgard module balance
@@ -267,18 +280,9 @@ func StreamingSwapsInvariant(k KVStore) common.Invariant {
 			streams = append(streams, stream)
 		}
 
-		// should be a 1:1 correlation
-		if len(swaps) != len(streams) {
-			broken = true
-			msg = append(msg, fmt.Sprintf(
-				"swap count %d not equal to stream count %d",
-				len(swaps),
-				len(streams)))
-		}
-
-		for _, swap := range swaps {
+		for _, stream := range streams {
 			found := false
-			for _, stream := range streams {
+			for _, swap := range swaps {
 				if !swap.Tx.ID.Equals(stream.TxID) {
 					continue
 				}
@@ -310,7 +314,7 @@ func StreamingSwapsInvariant(k KVStore) common.Invariant {
 			}
 			if !found {
 				broken = true
-				msg = append(msg, fmt.Sprintf("stream not found for swap: %s", swap.Tx.ID.String()))
+				msg = append(msg, fmt.Sprintf("swap not found for stream: %s", stream.TxID.String()))
 			}
 		}
 

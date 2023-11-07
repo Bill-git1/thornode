@@ -1,7 +1,6 @@
 package thorchain
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/blang/semver"
@@ -17,6 +16,7 @@ func NewSendHandler(mgr Manager) BaseHandler[*MsgSend] {
 		mgr:    mgr,
 		logger: MsgSendLogger,
 		validators: NewValidators[*MsgSend]().
+			Register("1.121.0", MsgSendValidateV121).
 			Register("1.87.0", MsgSendValidateV87).
 			Register("0.1.0", MsgSendValidateV1),
 		handlers: NewHandlers[*MsgSend]().
@@ -28,17 +28,14 @@ func NewSendHandler(mgr Manager) BaseHandler[*MsgSend] {
 	}
 }
 
-func MsgSendValidateV87(ctx cosmos.Context, mgr Manager, msg *MsgSend) error {
+func MsgSendValidateV121(ctx cosmos.Context, mgr Manager, msg *MsgSend) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
 
 	// disallow sends to modules, they should only be interacted with via deposit messages
-	if msg.ToAddress.Equals(mgr.Keeper().GetModuleAccAddress(AsgardName)) ||
-		msg.ToAddress.Equals(mgr.Keeper().GetModuleAccAddress(BondName)) ||
-		msg.ToAddress.Equals(mgr.Keeper().GetModuleAccAddress(ReserveName)) ||
-		msg.ToAddress.Equals(mgr.Keeper().GetModuleAccAddress(ModuleName)) {
-		return errors.New("cannot use MsgSend for Module transactions, use MsgDeposit instead")
+	if IsModuleAccAddress(mgr.Keeper(), msg.ToAddress) {
+		return fmt.Errorf("cannot use MsgSend for Module transactions, use MsgDeposit instead")
 	}
 
 	return nil
