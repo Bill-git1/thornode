@@ -84,26 +84,35 @@ func NewAsset(input string) (Asset, error) {
 }
 
 func NewAssetWithShortCodes(version semver.Version, input string) (Asset, error) {
-	shorts := make(map[string]string)
 	switch {
+	case version.GTE(semver.MustParse("1.124.0")):
+		return NewAssetWithShortCodesV124(input)
 	case version.GTE(semver.MustParse("1.115.0")):
-		shorts[AVAXAsset.ShortCode()] = AVAXAsset.String()
-		shorts[BCHAsset.ShortCode()] = BCHAsset.String()
-		shorts[BNBAsset.ShortCode()] = BNBAsset.String()
-		shorts[BNBBEP20Asset.ShortCode()] = BNBBEP20Asset.String()
-		shorts[BTCAsset.ShortCode()] = BTCAsset.String()
-		shorts[DOGEAsset.ShortCode()] = DOGEAsset.String()
-		shorts[ETHAsset.ShortCode()] = ETHAsset.String()
-		shorts[LTCAsset.ShortCode()] = LTCAsset.String()
-		shorts[RuneNative.ShortCode()] = RuneNative.String()
+		return NewAssetWithShortCodesV115(input)
 	default:
-		// do nothing
+		return NewAsset(input)
 	}
+}
+
+func NewAssetWithShortCodesV124(input string) (Asset, error) {
+	shorts := make(map[string]string)
+
+	shorts[ATOMAsset.ShortCode()] = ATOMAsset.String()
+	shorts[AVAXAsset.ShortCode()] = AVAXAsset.String()
+	shorts[BCHAsset.ShortCode()] = BCHAsset.String()
+	shorts[BNBAsset.ShortCode()] = BNBAsset.String()
+	shorts[BNBBEP20Asset.ShortCode()] = BNBBEP20Asset.String()
+	shorts[BTCAsset.ShortCode()] = BTCAsset.String()
+	shorts[DOGEAsset.ShortCode()] = DOGEAsset.String()
+	shorts[ETHAsset.ShortCode()] = ETHAsset.String()
+	shorts[LTCAsset.ShortCode()] = LTCAsset.String()
+	shorts[RuneNative.ShortCode()] = RuneNative.String()
 
 	long, ok := shorts[input]
 	if ok {
 		input = long
 	}
+
 	return NewAsset(input)
 }
 
