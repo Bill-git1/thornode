@@ -8,7 +8,7 @@ import (
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
-	"gitlab.com/thorchain/thornode/constants"
+	"gitlab.com/thorchain/thornode/mimir"
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
 
@@ -194,6 +194,7 @@ type Memo interface {
 	GetDexTargetAddress() string
 	GetDexTargetLimit() *cosmos.Uint
 	GetAffiliateTHORName() *types.THORName
+	GetRefundAddress() common.Address
 }
 
 type MemoBase struct {
@@ -221,6 +222,7 @@ func (m MemoBase) GetDexAggregator() string              { return "" }
 func (m MemoBase) GetDexTargetAddress() string           { return "" }
 func (m MemoBase) GetDexTargetLimit() *cosmos.Uint       { return nil }
 func (m MemoBase) GetAffiliateTHORName() *types.THORName { return nil }
+func (m MemoBase) GetRefundAddress() common.Address      { return common.NoAddress }
 
 func ParseMemo(version semver.Version, memo string) (mem Memo, err error) {
 	defer func() {
@@ -290,8 +292,8 @@ func FetchAddress(ctx cosmos.Context, keeper keeper.Keeper, name string, chain c
 func ParseAffiliateBasisPoints(ctx cosmos.Context, keeper keeper.Keeper, affBasisPoints string) (cosmos.Uint, error) {
 	maxAffFeeBasisPoints := int64(10_000)
 	if keeper != nil {
-		mimirMaxAffFeeBasisPoints, err := keeper.GetMimir(ctx, constants.MaxAffiliateFeeBasisPoints.String())
-		if mimirMaxAffFeeBasisPoints >= 0 && mimirMaxAffFeeBasisPoints <= 10_000 && err == nil {
+		mimirMaxAffFeeBasisPoints := mimir.NewAffiliateFeeBasisPointsMax().FetchValue(ctx, keeper)
+		if mimirMaxAffFeeBasisPoints >= 0 && mimirMaxAffFeeBasisPoints <= 10_000 {
 			maxAffFeeBasisPoints = mimirMaxAffFeeBasisPoints
 		}
 	}

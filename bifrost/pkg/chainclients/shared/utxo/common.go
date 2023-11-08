@@ -7,7 +7,7 @@ import (
 	"gitlab.com/thorchain/thornode/common"
 )
 
-func GetAsgardAddress(chain common.Chain, maxAsgardAddresses int, bridge thorclient.ThorchainBridge) ([]common.Address, error) {
+func GetAsgardAddress(chain common.Chain, bridge thorclient.ThorchainBridge) ([]common.Address, error) {
 	vaults, err := bridge.GetAsgardPubKeys()
 	if err != nil {
 		return nil, fmt.Errorf("fail to get asgards : %w", err)
@@ -20,9 +20,6 @@ func GetAsgardAddress(chain common.Chain, maxAsgardAddresses int, bridge thorcli
 			continue
 		}
 		newAddresses = append(newAddresses, addr)
-		if len(newAddresses) > maxAsgardAddresses {
-			break
-		}
 	}
 	return newAddresses, nil
 }

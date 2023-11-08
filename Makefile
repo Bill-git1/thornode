@@ -139,26 +139,27 @@ lint-ci:
 
 # ------------------------------ Testing ------------------------------
 
-test-coverage:
+test-coverage: test-network-specific
 	@go test ${TEST_BUILD_FLAGS} -v -coverprofile=coverage.txt -covermode count ${TEST_DIR}
 	sed -i '/\.pb\.go:/d' coverage.txt
 
 coverage-report: test-coverage
 	@go tool cover -html=coverage.txt
 
-test-coverage-sum:
+test-coverage-sum: test-network-specific
 	@go run gotest.tools/gotestsum --junitfile report.xml --format testname -- ${TEST_BUILD_FLAGS} -v -coverprofile=coverage.txt -covermode count ${TEST_DIR}
 	sed -i '/\.pb\.go:/d' coverage.txt
 	@GOFLAGS='${TEST_BUILD_FLAGS}' go run github.com/boumenot/gocover-cobertura < coverage.txt > coverage.xml
 	@go tool cover -func=coverage.txt
 	@go tool cover -html=coverage.txt -o coverage.html
 
-test:
+test: test-network-specific
 	@CGO_ENABLED=0 go test ${TEST_BUILD_FLAGS} ${TEST_DIR}
-	# network specific tests
+
+test-network-specific:
 	@CGO_ENABLED=0 go test -tags stagenet ./common
-	@CGO_ENABLED=0 go test -tags testnet ./common ${BIFROST_UTXO_CLIENT_PKGS}
 	@CGO_ENABLED=0 go test -tags mainnet ./common ${BIFROST_UTXO_CLIENT_PKGS}
+	@CGO_ENABLED=0 go test -tags testnet ./common ${BIFROST_UTXO_CLIENT_PKGS}
 
 test-race:
 	@go test -race ${TEST_BUILD_FLAGS} ${TEST_DIR}

@@ -31,6 +31,9 @@ const MaxBasisPts = uint64(10_000)
 // MaxMemoSize Maximum Memo Size
 const MaxMemoSize = 250
 
+// MinMimirV2Vote
+const MinMimirV2Vote = 3
+
 // StreamingSwapMinBPFee multiplier. This is used to allow decimal points for
 // streaming swap math
 const StreamingSwapMinBPFeeMulti = int64(100)

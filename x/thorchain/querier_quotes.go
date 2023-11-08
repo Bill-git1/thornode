@@ -43,6 +43,7 @@ const (
 	minOutParam               = "min_out"
 	intervalParam             = "streaming_interval"
 	quantityParam             = "streaming_quantity"
+	refundAddressParam        = "refund_address"
 
 	quoteWarning         = "Do not cache this response. Do not send funds after the expiry."
 	quoteExpiration      = 15 * time.Minute
@@ -574,6 +575,15 @@ func queryQuoteSwap(ctx cosmos.Context, path []string, req abci.RequestQuery, mg
 		limit = feelessEmit.MulUint64(10000 - toleranceBasisPoints.Uint64()).QuoUint64(10000)
 	}
 
+	// custom refund addr
+	refundAddress := common.NoAddress
+	if len(params[refundAddressParam]) > 0 {
+		refundAddress, err = quoteParseAddress(ctx, mgr, params[refundAddressParam][0], fromAsset.Chain)
+		if err != nil {
+			return quoteErrorResponse(fmt.Errorf("bad refund address: %w", err))
+		}
+	}
+
 	// create the memo
 	memo := &SwapMemo{
 		MemoBase: mem.MemoBase{
@@ -586,6 +596,7 @@ func queryQuoteSwap(ctx cosmos.Context, path []string, req abci.RequestQuery, mg
 		AffiliateBasisPoints: affiliateBps,
 		StreamInterval:       streamingInterval,
 		StreamQuantity:       streamingQuantity,
+		RefundAddress:        refundAddress,
 	}
 
 	// if from asset chain has memo length restrictions use a prefix

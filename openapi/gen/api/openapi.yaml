@@ -1340,6 +1340,30 @@ paths:
           description: OK
       tags:
       - Mimir
+  /thorchain/mimirV2:
+    get:
+      description: Returns current mimir V2 configuration.
+      operationId: mimirV2
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MimirResponse'
+          description: OK
+      tags:
+      - Mimir
   /thorchain/quote/swap:
     get:
       description: Provide a quote estimate for the provided swap.

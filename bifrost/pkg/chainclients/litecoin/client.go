@@ -49,7 +49,6 @@ import (
 const (
 	BlockCacheSize      = 600
 	MaximumConfirmation = 99999999
-	MaxAsgardAddresses  = 100
 	// EstimateAverageTxSize for THORChain the estimate tx size is hard code to 250 here , as most of time it will spend 1 input, have 3 output
 	EstimateAverageTxSize = 250
 	gasCacheBlocks        = 10
@@ -320,7 +319,7 @@ func (c *Client) getAsgardAddress() ([]common.Address, error) {
 	if time.Since(c.lastAsgard) < constants.ThorchainBlockTime && c.asgardAddresses != nil {
 		return c.asgardAddresses, nil
 	}
-	newAddresses, err := utxo.GetAsgardAddress(c.chain, MaxAsgardAddresses, c.bridge)
+	newAddresses, err := utxo.GetAsgardAddress(c.chain, c.bridge)
 	if err != nil {
 		return nil, fmt.Errorf("fail to get asgards : %w", err)
 	}

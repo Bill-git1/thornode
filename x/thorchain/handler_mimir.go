@@ -17,6 +17,7 @@ import (
 var (
 	mimirValidKey    = regexp.MustCompile(`^[a-zA-Z-]+$`).MatchString
 	mimirValidKeyV95 = regexp.MustCompile(constants.MimirKeyRegex).MatchString
+	mimirV2ValidKey  = regexp.MustCompile(`^[0-9]+-[a-z0-9]+$`).MatchString
 )
 
 // MimirHandler is to handle admin messages
@@ -82,6 +83,8 @@ func (h MimirHandler) handle(ctx cosmos.Context, msg MsgMimir) error {
 	ctx.Logger().Info("handleMsgMimir request", "node", msg.Signer, "key", msg.Key, "value", msg.Value)
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.124.0")):
+		return h.handleV124(ctx, msg)
 	case version.GTE(semver.MustParse("1.112.0")):
 		return h.handleV112(ctx, msg)
 	case version.GTE(semver.MustParse("1.92.0")):
@@ -95,120 +98,85 @@ func (h MimirHandler) handle(ctx cosmos.Context, msg MsgMimir) error {
 	return errBadVersion
 }
 
-func (h MimirHandler) handleV112(ctx cosmos.Context, msg MsgMimir) error {
-	// Get the current Mimir key value if it exists.
-	currentMimirValue, _ := h.mgr.Keeper().GetMimir(ctx, msg.Key)
-	// Here, an error is assumed to mean the Mimir key is currently unset.
-	if isAdmin(msg.Signer) {
-		// If the Mimir key is already the submitted value, don't do anything further.
-		if msg.Value == currentMimirValue {
-			return nil
-		}
-		nodeMimirs, err := h.mgr.Keeper().GetNodeMimirs(ctx, msg.Key)
-		if err != nil {
-			ctx.Logger().Error("fail to get node mimirs", "error", err)
-			return err
-		}
-		activeNodes, err := h.mgr.Keeper().ListActiveValidators(ctx)
-		if err != nil {
-			ctx.Logger().Error("fail to list active validators", "error", err)
-			return err
-		}
-		currentSuperMajorityValue, currentlyHasSuperMajority := nodeMimirs.HasSuperMajority(msg.Key, activeNodes.GetNodeAddresses())
-		if currentlyHasSuperMajority && (msg.Value != currentSuperMajorityValue) {
-			ctx.Logger().With("key", msg.Key).
-				With("consensus_value", currentMimirValue).
-				Info("admin mimir should not be able to override node voted mimir value")
-			return nil
-		}
-		// Deleting or setting Mimir key value, and emitting a SetMimir event.
-		if msg.Value < 0 {
-			_ = h.mgr.Keeper().DeleteMimir(ctx, msg.Key)
-		} else {
-			h.mgr.Keeper().SetMimir(ctx, msg.Key, msg.Value)
-		}
-		mimirEvent := NewEventSetMimir(strings.ToUpper(msg.Key), strconv.FormatInt(msg.Value, 10))
-		if err := h.mgr.EventMgr().EmitEvent(ctx, mimirEvent); err != nil {
-			ctx.Logger().Error("fail to emit set_mimir event", "error", err)
-			return nil
-		}
-
+func (h MimirHandler) handleV124(ctx cosmos.Context, msg MsgMimir) error {
+	if mimirV2ValidKey(msg.Key) {
+		return h.mVer2V124(ctx, msg)
 	} else {
-		// Cost and emitting of SetNodeMimir, even if a duplicate
-		// (for instance if needed to confirm a new supermajority after a node number decrease).
-		nodeAccount, err := h.mgr.Keeper().GetNodeAccount(ctx, msg.Signer)
-		if err != nil {
-			ctx.Logger().Error("fail to get node account", "error", err, "address", msg.Signer.String())
-			return cosmos.ErrUnauthorized(fmt.Sprintf("%s is not authorized", msg.Signer))
-		}
-		cost := h.mgr.Keeper().GetNativeTxFee(ctx)
-		nodeAccount.Bond = common.SafeSub(nodeAccount.Bond, cost)
-		if err := h.mgr.Keeper().SetNodeAccount(ctx, nodeAccount); err != nil {
-			ctx.Logger().Error("fail to save node account", "error", err)
-			return fmt.Errorf("fail to save node account: %w", err)
-		}
-		// move set mimir cost from bond module to reserve
-		coin := common.NewCoin(common.RuneNative, cost)
-		if !cost.IsZero() {
-			if err := h.mgr.Keeper().SendFromModuleToModule(ctx, BondName, ReserveName, common.NewCoins(coin)); err != nil {
-				ctx.Logger().Error("fail to transfer funds from bond to reserve", "error", err)
-				return err
-			}
-		}
-		if err := h.mgr.Keeper().SetNodeMimir(ctx, msg.Key, msg.Value, msg.Signer); err != nil {
-			ctx.Logger().Error("fail to save node mimir", "error", err)
-			return err
-		}
-		nodeMimirEvent := NewEventSetNodeMimir(strings.ToUpper(msg.Key), strconv.FormatInt(msg.Value, 10), msg.Signer.String())
-		if err := h.mgr.EventMgr().EmitEvent(ctx, nodeMimirEvent); err != nil {
-			ctx.Logger().Error("fail to emit set_node_mimir event", "error", err)
-			return err
-		}
-		tx := common.Tx{}
-		tx.ID = common.BlankTxID
-		tx.ToAddress = common.Address(nodeAccount.String())
-		bondEvent := NewEventBond(cost, BondCost, tx)
-		if err := h.mgr.EventMgr().EmitEvent(ctx, bondEvent); err != nil {
-			ctx.Logger().Error("fail to emit bond event", "error", err)
-			return err
-		}
+		return h.handleV112(ctx, msg)
+	}
+}
 
-		// If the Mimir key is already the submitted value, don't do anything further.
-		if msg.Value == currentMimirValue {
-			return nil
-		}
+func (h MimirHandler) mVer2V124(ctx cosmos.Context, msg MsgMimir) error {
+	if isAdmin(msg.Signer) {
+		return fmt.Errorf("cannot set mimir v2 with a mimir admin account: %s", msg.Key)
+	}
 
-		// Get the current Active Node supermajority Mimir key value if it exists.
-		// This code needs to be duplicated, since run either for Admin or only after SetNodeMimir.
-		nodeMimirs, err := h.mgr.Keeper().GetNodeMimirs(ctx, msg.Key)
-		if err != nil {
-			ctx.Logger().Error("fail to get node mimirs", "error", err)
+	// Get the current Mimir key value if it exists.
+	currentMimirValue, _ := h.mgr.Keeper().GetMimirV2(ctx, msg.Key)
+
+	// Cost and emitting of SetNodeMimir, even if a duplicate
+	// (for instance if needed to confirm a new supermajority after a node number decrease).
+	nodeAccount, err := h.mgr.Keeper().GetNodeAccount(ctx, msg.Signer)
+	if err != nil {
+		ctx.Logger().Error("fail to get node account", "error", err, "address", msg.Signer.String())
+		return cosmos.ErrUnauthorized(fmt.Sprintf("%s is not authorized", msg.Signer))
+	}
+	cost := h.mgr.Keeper().GetNativeTxFee(ctx)
+	nodeAccount.Bond = common.SafeSub(nodeAccount.Bond, cost)
+	if err := h.mgr.Keeper().SetNodeAccount(ctx, nodeAccount); err != nil {
+		ctx.Logger().Error("fail to save node account", "error", err)
+		return fmt.Errorf("fail to save node account: %w", err)
+	}
+	// move set mimir cost from bond module to reserve
+	coin := common.NewCoin(common.RuneNative, cost)
+	if !cost.IsZero() {
+		if err := h.mgr.Keeper().SendFromModuleToModule(ctx, BondName, ReserveName, common.NewCoins(coin)); err != nil {
+			ctx.Logger().Error("fail to transfer funds from bond to reserve", "error", err)
 			return err
 		}
-		activeNodes, err := h.mgr.Keeper().ListActiveValidators(ctx)
-		if err != nil {
-			ctx.Logger().Error("fail to list active validators", "error", err)
-			return err
-		}
-		currentSuperMajorityValue, currentlyHasSuperMajority := nodeMimirs.HasSuperMajority(msg.Key, activeNodes.GetNodeAddresses())
-		// if the given key doesn't have super majority , then it shall return
-		if !currentlyHasSuperMajority {
-			return nil
-		}
-		// Given that there is an active Node super majority,
-		// a Node must only change the Mimir key value when changing it to the super majority value.
-		if currentlyHasSuperMajority && (currentMimirValue == currentSuperMajorityValue) {
-			return nil
-		}
-		// after this point , means node mimir reach consensus for the first time
-		// set admin mimir to lock in the value
-		// setting Mimir key value, and emitting a SetMimir event.
-		// if admin override node mimir voted value , and node vote again , it will then reset the admin mimir
-		h.mgr.Keeper().SetMimir(ctx, msg.Key, currentSuperMajorityValue)
-		mimirEvent := NewEventSetMimir(strings.ToUpper(msg.Key), strconv.FormatInt(msg.Value, 10))
-		if err := h.mgr.EventMgr().EmitEvent(ctx, mimirEvent); err != nil {
-			ctx.Logger().Error("fail to emit set_mimir event", "error", err)
-		}
+	}
+	if err := h.mgr.Keeper().SetNodeMimirV2(ctx, msg.Key, msg.Value, msg.Signer); err != nil {
+		ctx.Logger().Error("fail to save node mimir", "error", err)
+		return err
+	}
+	nodeMimirEvent := NewEventSetNodeMimir(strings.ToUpper(msg.Key), strconv.FormatInt(msg.Value, 10), msg.Signer.String())
+	if err := h.mgr.EventMgr().EmitEvent(ctx, nodeMimirEvent); err != nil {
+		ctx.Logger().Error("fail to emit set_node_mimir event", "error", err)
+		return err
+	}
+	tx := common.Tx{}
+	tx.ID = common.BlankTxID
+	tx.ToAddress = common.Address(nodeAccount.String())
+	bondEvent := NewEventBond(cost, BondCost, tx)
+	if err := h.mgr.EventMgr().EmitEvent(ctx, bondEvent); err != nil {
+		ctx.Logger().Error("fail to emit bond event", "error", err)
+		return err
+	}
+
+	// If the Mimir key is already the submitted value, don't do anything further.
+	if msg.Value == currentMimirValue {
+		return nil
+	}
+
+	activeNodes, err := h.mgr.Keeper().ListActiveValidators(ctx)
+	if err != nil {
+		ctx.Logger().Error("fail to list active validators", "error", err)
+		return err
+	}
+
+	mimirs, err := h.mgr.Keeper().GetNodeMimirsV2(ctx, msg.Key)
+	if err != nil {
+		ctx.Logger().Error("failed to get node mimir v2", "error", err)
+	}
+
+	value := mimirs.ValueOfEconomic(msg.Key, activeNodes.GetNodeAddresses())
+	if value >= 0 {
+		h.mgr.Keeper().SetMimirV2(ctx, msg.Key, value)
+	}
+
+	mimirEvent := NewEventSetMimir(strings.ToUpper(msg.Key), strconv.FormatInt(msg.Value, 10))
+	if err := h.mgr.EventMgr().EmitEvent(ctx, mimirEvent); err != nil {
+		ctx.Logger().Error("fail to emit set_mimir event", "error", err)
 	}
 	return nil
 }

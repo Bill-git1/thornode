@@ -53,10 +53,21 @@ func refundTxV124(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uin
 
 		// Only attempt an outbound if a fee can be taken from the coin.
 		if coin.Asset.IsNativeRune() || !pool.BalanceRune.IsZero() {
+			toAddr := tx.Tx.FromAddress
+			memo, err := ParseMemoWithTHORNames(ctx, mgr.Keeper(), tx.Tx.Memo)
+			if err == nil && memo.IsType(TxSwap) && !memo.GetRefundAddress().IsEmpty() && !coin.Asset.GetChain().IsTHORChain() {
+				// If the memo specifies a refund address, send the refund to that address. If
+				// refund memo can't be parsed or is invalid for the refund chain, it will
+				// default back to the sender address
+				if memo.GetRefundAddress().IsChain(coin.Asset.GetChain()) {
+					toAddr = memo.GetRefundAddress()
+				}
+			}
+
 			toi := TxOutItem{
 				Chain:       coin.Asset.GetChain(),
 				InHash:      tx.Tx.ID,
-				ToAddress:   tx.Tx.FromAddress,
+				ToAddress:   toAddr,
 				VaultPubKey: tx.ObservedPubKey,
 				Coin:        coin,
 				Memo:        NewRefundMemo(tx.Tx.ID).String(),
@@ -528,41 +539,57 @@ func wrapError(ctx cosmos.Context, err error, wrap string) error {
 
 func addGasFees(ctx cosmos.Context, mgr Manager, tx ObservedTx) error {
 	version := mgr.GetVersion()
-	if version.GTE(semver.MustParse("0.1.0")) {
+	switch {
+	case version.GTE(semver.MustParse("1.124.0")):
+		return addGasFeesV124(ctx, mgr, tx)
+	case version.GTE(semver.MustParse("0.1.0")):
 		return addGasFeesV1(ctx, mgr, tx)
+	default:
+		return errBadVersion
 	}
-	return errBadVersion
 }
 
-// addGasFees to vault
-func addGasFeesV1(ctx cosmos.Context, mgr Manager, tx ObservedTx) error {
-	if len(tx.Tx.Gas) == 0 {
+// addGasFees to gas manager and deduct from vault
+func addGasFeesV124(ctx cosmos.Context, mgr Manager, tx ObservedTx) error {
+	// If there's no gas, then nothing to do.
+	if tx.Tx.Gas.IsEmpty() {
 		return nil
 	}
+
+	// If the transaction wasn't from a known vault, then no relevance for known vaults or pools.
+	if !mgr.Keeper().VaultExists(ctx, tx.ObservedPubKey) {
+		return nil
+	}
+
+	// Since a known vault has spent gas, definitely deduct that gas from the vault's balance
+	vault, err := mgr.Keeper().GetVault(ctx, tx.ObservedPubKey)
+	if err != nil {
+		return err
+	}
+	vault.SubFunds(tx.Tx.Gas.ToCoins())
+	if err := mgr.Keeper().SetVault(ctx, vault); err != nil {
+		return err
+	}
+
+	// If the vault is an InactiveVault doing an automatic refund,
+	// any balance is not represented in the pools,
+	// so the Reserve should not reimburse the gas pool.
+	if vault.Status == InactiveVault {
+		return nil
+	}
+
+	// when ragnarok is in progress, if the tx is for gas coin then don't reimburse the pool with reserve
+	// liquidity providers they need to pay their own gas
+	// if the outbound coin is not gas asset, then reserve will reimburse it , otherwise the gas asset pool will be in a loss
 	if mgr.Keeper().RagnarokInProgress(ctx) {
-		// when ragnarok is in progress, if the tx is for gas coin then doesn't subsidise the pool with reserve
-		// liquidity providers they need to pay their own gas
-		// if the outbound coin is not gas asset, then reserve will subsidise it , otherwise the gas asset pool will be in a loss
 		gasAsset := tx.Tx.Chain.GetGasAsset()
-		if tx.Tx.Coins.GetCoin(gasAsset).IsEmpty() {
-			mgr.GasMgr().AddGasAsset(tx.Tx.Gas, true)
-		}
-	} else {
-		mgr.GasMgr().AddGasAsset(tx.Tx.Gas, true)
-	}
-	// Subtract from the vault
-	if mgr.Keeper().VaultExists(ctx, tx.ObservedPubKey) {
-		vault, err := mgr.Keeper().GetVault(ctx, tx.ObservedPubKey)
-		if err != nil {
-			return err
-		}
-
-		vault.SubFunds(tx.Tx.Gas.ToCoins())
-
-		if err := mgr.Keeper().SetVault(ctx, vault); err != nil {
-			return err
+		if !tx.Tx.Coins.GetCoin(gasAsset).IsEmpty() {
+			return nil
 		}
 	}
+
+	// Add the gas to the gas manager to be reimbursed by the Reserve.
+	mgr.GasMgr().AddGasAsset(tx.Tx.Gas, true)
 	return nil
 }
 

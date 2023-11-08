@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 
 	"gitlab.com/thorchain/thornode/common/cosmos"
@@ -42,6 +43,19 @@ func NewTxID(hash string) (TxID, error) {
 // Equals check whether two TxID are the same
 func (tx TxID) Equals(tx2 TxID) bool {
 	return strings.EqualFold(tx.String(), tx2.String())
+}
+
+func (tx TxID) Int64() int64 {
+	if tx.IsEmpty() {
+		return 0
+	}
+	last8Chars := tx.String()[len(tx)-8:]
+	// using last8 chars to prevent negative int64
+	val, success := new(big.Int).SetString(last8Chars, 16)
+	if !success {
+		panic("Failed to convert")
+	}
+	return val.Int64()
 }
 
 // IsEmpty return true when the tx represent empty string

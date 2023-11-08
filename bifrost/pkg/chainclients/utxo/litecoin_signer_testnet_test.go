@@ -7,6 +7,7 @@ import (
 	"github.com/ltcsuite/ltcd/chaincfg"
 	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/utxo"
 	stypes "gitlab.com/thorchain/thornode/bifrost/thorclient/types"
+	"gitlab.com/thorchain/thornode/bifrost/tss"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	. "gopkg.in/check.v1"
@@ -35,6 +36,9 @@ func (s *LitecoinSignerSuite) TestSignTxWithTSS(c *C) {
 		InHash:  "",
 		OutHash: "",
 	}
+
+	s.client.tssKeySigner = &tss.MockThorchainKeyManager{}
+	s.client.cfg.UTXO.MaxUTXOsToSpend = 2
 	txHash := "66d2d6b5eb564972c59e4797683a1225a02515a41119f0a8919381236b63e948"
 	// utxo := NewUnspentTransactionOutput(*txHash, 0, 0.00018, 100, txOutItem.VaultPubKey)
 	blockMeta := utxo.NewBlockMeta("000000000000008a0da55afa8432af3b15c225cc7e04d32f0de912702dd9e2ae",

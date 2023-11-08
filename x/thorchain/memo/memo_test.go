@@ -127,6 +127,17 @@ func (s *MemoSuite) TestParseWithAbbreviated(c *C) {
 	c.Check(memo.IsOutbound(), Equals, false)
 	c.Check(memo.GetAsset().String(), Equals, "THOR.RUNE")
 
+	// custom refund address
+	refundAddr := types.GetRandomTHORAddress()
+	memo, err = ParseMemoWithTHORNames(ctx, k, fmt.Sprintf("=:b:bnb1lejrrtta9cgr49fuh7ktu3sddhe0ff7wenlpn6/%s:87e7", refundAddr.String()))
+	c.Assert(err, IsNil)
+	c.Check(memo.GetDestination().String(), Equals, "bnb1lejrrtta9cgr49fuh7ktu3sddhe0ff7wenlpn6")
+	c.Check(memo.GetRefundAddress().String(), Equals, refundAddr.String())
+
+	// if refund address is present, but destination is not, should return an err
+	_, err = ParseMemoWithTHORNames(ctx, k, fmt.Sprintf("=:b:/%s:87e7", refundAddr.String()))
+	c.Assert(err, NotNil)
+
 	// test streaming swap
 	memo, err = ParseMemoWithTHORNames(ctx, k, "=:"+common.RuneAsset().String()+":bnb1lejrrtta9cgr49fuh7ktu3sddhe0ff7wenlpn6:1200/10/20")
 	c.Assert(err, IsNil)

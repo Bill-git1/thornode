@@ -26,6 +26,7 @@ type SwapMemo struct {
 	StreamInterval       uint64
 	StreamQuantity       uint64
 	AffiliateTHORName    *types.THORName
+	RefundAddress        common.Address
 }
 
 func (m SwapMemo) GetDestination() common.Address        { return m.Destination }
@@ -39,6 +40,7 @@ func (m SwapMemo) GetOrderType() types.OrderType         { return m.OrderType }
 func (m SwapMemo) GetStreamQuantity() uint64             { return m.StreamQuantity }
 func (m SwapMemo) GetStreamInterval() uint64             { return m.StreamInterval }
 func (m SwapMemo) GetAffiliateTHORName() *types.THORName { return m.AffiliateTHORName }
+func (m SwapMemo) GetRefundAddress() common.Address      { return m.RefundAddress }
 
 func (m SwapMemo) String() string {
 	return m.string(false)
@@ -70,10 +72,16 @@ func (m SwapMemo) string(short bool) string {
 		assetString = m.Asset.String()
 	}
 
+	// destination + custom refund addr
+	destString := m.Destination.String()
+	if !m.RefundAddress.IsEmpty() {
+		destString = m.Destination.String() + "/" + m.RefundAddress.String()
+	}
+
 	args := []string{
 		txType,
 		assetString,
-		m.Destination.String(),
+		destString,
 		slipLimit,
 		m.AffiliateAddress.String(),
 		m.AffiliateBasisPoints.String(),
@@ -102,7 +110,7 @@ func (m SwapMemo) string(short bool) string {
 	return strings.Join(args[:last], ":")
 }
 
-func NewSwapMemo(asset common.Asset, dest common.Address, slip cosmos.Uint, affAddr common.Address, affPts cosmos.Uint, dexAgg, dexTargetAddress string, dexTargetLimit cosmos.Uint, orderType types.OrderType, quan, interval uint64, tn types.THORName) SwapMemo {
+func NewSwapMemo(asset common.Asset, dest common.Address, slip cosmos.Uint, affAddr common.Address, affPts cosmos.Uint, dexAgg, dexTargetAddress string, dexTargetLimit cosmos.Uint, orderType types.OrderType, quan, interval uint64, tn types.THORName, refundAddress common.Address) SwapMemo {
 	swapMemo := SwapMemo{
 		MemoBase:             MemoBase{TxType: TxSwap, Asset: asset},
 		Destination:          dest,
@@ -114,6 +122,7 @@ func NewSwapMemo(asset common.Asset, dest common.Address, slip cosmos.Uint, affA
 		OrderType:            orderType,
 		StreamQuantity:       quan,
 		StreamInterval:       interval,
+		RefundAddress:        refundAddress,
 	}
 	if !dexTargetLimit.IsZero() {
 		swapMemo.DexTargetLimit = &dexTargetLimit
@@ -136,6 +145,8 @@ func (p *parser) ParseSwapMemo() (SwapMemo, error) {
 	}
 
 	switch {
+	case p.version.GTE(semver.MustParse("1.123.0")):
+		return p.ParseSwapMemoV123()
 	case p.version.GTE(semver.MustParse("1.116.0")):
 		return p.ParseSwapMemoV116()
 	case err != nil:
@@ -155,7 +166,7 @@ func (p *parser) ParseSwapMemo() (SwapMemo, error) {
 	}
 }
 
-func (p *parser) ParseSwapMemoV116() (SwapMemo, error) {
+func (p *parser) ParseSwapMemoV123() (SwapMemo, error) {
 	var err error
 	asset := p.getAsset(1, true, common.EmptyAsset)
 	var order types.OrderType
@@ -164,7 +175,7 @@ func (p *parser) ParseSwapMemoV116() (SwapMemo, error) {
 	}
 
 	// DESTADDR can be empty , if it is empty , it will swap to the sender address
-	destination := p.getAddressWithKeeper(2, false, common.NoAddress, asset.Chain)
+	destination, refundAddress := p.getAddressAndRefundAddressWithKeeper(2, false, common.NoAddress, asset.Chain)
 
 	// price limit can be empty , when it is empty , there is no price protection
 	var slip cosmos.Uint
@@ -208,5 +219,5 @@ func (p *parser) ParseSwapMemoV116() (SwapMemo, error) {
 
 	tn := p.getTHORName(4, false, types.NewTHORName("", 0, nil))
 
-	return NewSwapMemo(asset, destination, slip, affAddr, affPts, dexAgg, dexTargetAddress, dexTargetLimit, order, streamQuantity, streamInterval, tn), p.Error()
+	return NewSwapMemo(asset, destination, slip, affAddr, affPts, dexAgg, dexTargetAddress, dexTargetLimit, order, streamQuantity, streamInterval, tn, refundAddress), p.Error()
 }

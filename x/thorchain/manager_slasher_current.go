@@ -386,13 +386,7 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 						vault = active[0]
 					}
 				} else {
-					// each time we reschedule a transaction, we take the age of
-					// the transaction, and move it to an vault that has less funds
-					// than last time. This is here to ensure that if an asgard
-					// vault becomes unavailable, the network will reschedule the
-					// transaction on a different asgard vault.
-					age := ctx.BlockHeight() - voter.FinalisedHeight
-					rep := int(age / signingTransPeriod)
+					rep := int(tx.InHash.Int64() + ctx.BlockHeight())
 					if vault.PubKey.Equals(available[rep%len(available)].PubKey) {
 						// looks like the new vault is going to be the same as the
 						// old vault, increment rep to ensure a differ asgard is

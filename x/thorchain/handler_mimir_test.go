@@ -84,6 +84,14 @@ func (s *HandlerMimirSuite) TestMimirHandle(c *C) {
 	c.Assert(keeper.SetNodeAccount(ctx, na2), IsNil)
 	c.Assert(keeper.SetNodeAccount(ctx, na3), IsNil)
 
+	// mimirV2 set
+	result, err = handler.Run(ctx, NewMsgMimir("1-global", 1, na1.NodeAddress))
+	c.Assert(err, IsNil)
+	c.Assert(result, NotNil)
+	mimirs, err := keeper.GetNodeMimirsV2(ctx, "1-global")
+	c.Assert(err, IsNil)
+	c.Assert(mimirs.Mimirs, HasLen, 1)
+
 	// first node set mimir , no consensus
 	result, err = handler.Run(ctx, NewMsgMimir("node-mimir", 1, na1.NodeAddress))
 	c.Assert(err, IsNil)

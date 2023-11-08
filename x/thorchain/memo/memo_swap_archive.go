@@ -7,9 +7,66 @@ import (
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/constants"
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
+
+func (p *parser) ParseSwapMemoV116() (SwapMemo, error) {
+	var err error
+	asset := p.getAsset(1, true, common.EmptyAsset)
+	var order types.OrderType
+	if strings.EqualFold(p.parts[0], "limito") || strings.EqualFold(p.parts[0], "lo") {
+		order = types.OrderType_limit
+	}
+
+	// DESTADDR can be empty , if it is empty , it will swap to the sender address
+	destination := p.getAddressWithKeeper(2, false, common.NoAddress, asset.Chain)
+
+	// price limit can be empty , when it is empty , there is no price protection
+	var slip cosmos.Uint
+	var streamInterval, streamQuantity uint64
+	if strings.Contains(p.get(3), "/") {
+		parts := strings.SplitN(p.get(3), "/", 3)
+		for i := range parts {
+			if parts[i] == "" {
+				parts[i] = "0"
+			}
+		}
+		if len(parts) < 1 {
+			return SwapMemo{}, fmt.Errorf("invalid streaming swap format: %s", p.get(3))
+		}
+		slip, err = parseTradeTarget(parts[0])
+		if err != nil {
+			return SwapMemo{}, fmt.Errorf("swap price limit:%s is invalid: %s", parts[0], err)
+		}
+		if len(parts) > 1 {
+			streamInterval, err = strconv.ParseUint(parts[1], 10, 64)
+			if err != nil {
+				return SwapMemo{}, fmt.Errorf("failed to parse stream frequency: %s: %s", parts[1], err)
+			}
+		}
+		if len(parts) > 2 {
+			streamQuantity, err = strconv.ParseUint(parts[2], 10, 64)
+			if err != nil {
+				return SwapMemo{}, fmt.Errorf("failed to parse stream quantity: %s: %s", parts[2], err)
+			}
+		}
+	} else {
+		slip = p.getUintWithScientificNotation(3, false, 0)
+	}
+
+	affAddr := p.getAddressWithKeeper(4, false, common.NoAddress, common.THORChain)
+	affPts := p.getUintWithMaxValue(5, false, 0, constants.MaxBasisPts)
+
+	dexAgg := p.get(6)
+	dexTargetAddress := p.get(7)
+	dexTargetLimit := p.getUint(8, false, 0)
+
+	tn := p.getTHORName(4, false, types.NewTHORName("", 0, nil))
+
+	return NewSwapMemo(asset, destination, slip, affAddr, affPts, dexAgg, dexTargetAddress, dexTargetLimit, order, streamQuantity, streamInterval, tn, ""), p.Error()
+}
 
 func ParseSwapMemoV115(ctx cosmos.Context, keeper keeper.Keeper, asset common.Asset, parts []string) (SwapMemo, error) {
 	var err error
@@ -101,7 +158,7 @@ func ParseSwapMemoV115(ctx cosmos.Context, keeper keeper.Keeper, asset common.As
 		}
 	}
 
-	return NewSwapMemo(asset, destination, slip, affAddr, affPts, dexAgg, dexTargetAddress, dexTargetLimit, order, streamQuantity, streamInterval, types.NewTHORName("", 0, nil)), nil
+	return NewSwapMemo(asset, destination, slip, affAddr, affPts, dexAgg, dexTargetAddress, dexTargetLimit, order, streamQuantity, streamInterval, types.NewTHORName("", 0, nil), ""), nil
 }
 
 func ParseSwapMemoV112(ctx cosmos.Context, keeper keeper.Keeper, asset common.Asset, parts []string) (SwapMemo, error) {
@@ -168,7 +225,7 @@ func ParseSwapMemoV112(ctx cosmos.Context, keeper keeper.Keeper, asset common.As
 		}
 	}
 
-	return NewSwapMemo(asset, destination, slip, affAddr, affPts, dexAgg, dexTargetAddress, dexTargetLimit, order, 0, 0, types.NewTHORName("", 0, nil)), nil
+	return NewSwapMemo(asset, destination, slip, affAddr, affPts, dexAgg, dexTargetAddress, dexTargetLimit, order, 0, 0, types.NewTHORName("", 0, nil), ""), nil
 }
 
 func ParseSwapMemoV104(ctx cosmos.Context, keeper keeper.Keeper, asset common.Asset, parts []string) (SwapMemo, error) {
@@ -236,7 +293,7 @@ func ParseSwapMemoV104(ctx cosmos.Context, keeper keeper.Keeper, asset common.As
 		}
 	}
 
-	return NewSwapMemo(asset, destination, slip, affAddr, affPts, dexAgg, dexTargetAddress, dexTargetLimit, order, 0, 0, types.NewTHORName("", 0, nil)), nil
+	return NewSwapMemo(asset, destination, slip, affAddr, affPts, dexAgg, dexTargetAddress, dexTargetLimit, order, 0, 0, types.NewTHORName("", 0, nil), ""), nil
 }
 
 func ParseSwapMemoV1(ctx cosmos.Context, keeper keeper.Keeper, asset common.Asset, parts []string) (SwapMemo, error) {
@@ -287,7 +344,7 @@ func ParseSwapMemoV1(ctx cosmos.Context, keeper keeper.Keeper, asset common.Asse
 		affPts = cosmos.NewUint(pts)
 	}
 
-	return NewSwapMemo(asset, destination, slip, affAddr, affPts, "", "", cosmos.ZeroUint(), order, 0, 0, types.NewTHORName("", 0, nil)), nil
+	return NewSwapMemo(asset, destination, slip, affAddr, affPts, "", "", cosmos.ZeroUint(), order, 0, 0, types.NewTHORName("", 0, nil), ""), nil
 }
 
 func ParseSwapMemoV92(ctx cosmos.Context, keeper keeper.Keeper, asset common.Asset, parts []string) (SwapMemo, error) {
@@ -357,7 +414,7 @@ func ParseSwapMemoV92(ctx cosmos.Context, keeper keeper.Keeper, asset common.Ass
 		}
 	}
 
-	return NewSwapMemo(asset, destination, slip, affAddr, affPts, dexAgg, dexTargetAddress, dexTargetLimit, order, 0, 0, types.NewTHORName("", 0, nil)), nil
+	return NewSwapMemo(asset, destination, slip, affAddr, affPts, dexAgg, dexTargetAddress, dexTargetLimit, order, 0, 0, types.NewTHORName("", 0, nil), ""), nil
 }
 
 func ParseSwapMemoV98(ctx cosmos.Context, keeper keeper.Keeper, asset common.Asset, parts []string) (SwapMemo, error) {
@@ -430,5 +487,5 @@ func ParseSwapMemoV98(ctx cosmos.Context, keeper keeper.Keeper, asset common.Ass
 		}
 	}
 
-	return NewSwapMemo(asset, destination, slip, affAddr, affPts, dexAgg, dexTargetAddress, dexTargetLimit, order, 0, 0, types.NewTHORName("", 0, nil)), nil
+	return NewSwapMemo(asset, destination, slip, affAddr, affPts, dexAgg, dexTargetAddress, dexTargetLimit, order, 0, 0, types.NewTHORName("", 0, nil), ""), nil
 }

@@ -245,6 +245,51 @@ func (p *parser) getAddressWithKeeper(idx int, required bool, def common.Address
 	return addr
 }
 
+func (p *parser) getAddressAndRefundAddressWithKeeper(idx int, required bool, def common.Address, chain common.Chain) (common.Address, common.Address) {
+	p.incRequired(required)
+
+	//nolint:ineffassign
+	destination := common.NoAddress
+	refundAddress := common.NoAddress
+	addresses := p.get(idx)
+
+	if strings.Contains(addresses, "/") {
+		parts := strings.SplitN(addresses, "/", 2)
+		if p.keeper == nil {
+			dest, err := common.NewAddress(parts[0])
+			if err != nil {
+				if required || parts[0] != "" {
+					p.addErr(fmt.Errorf("cannot parse '%s' as an Address: %w", parts[0], err))
+				}
+			}
+			destination = dest
+		} else {
+			destination = p.getAddressFromString(parts[0], chain, required)
+		}
+		if len(parts) > 1 {
+			refundAddress, _ = common.NewAddress(parts[1])
+		}
+	} else {
+		destination = p.getAddressWithKeeper(idx, false, common.NoAddress, chain)
+	}
+
+	if destination.IsEmpty() && !refundAddress.IsEmpty() {
+		p.addErr(fmt.Errorf("refund address is set but destination address is empty"))
+	}
+
+	return destination, refundAddress
+}
+
+func (p *parser) getAddressFromString(val string, chain common.Chain, required bool) common.Address {
+	addr, err := FetchAddress(p.ctx, p.keeper, val, chain)
+	if err != nil {
+		if required || val != "" {
+			p.addErr(fmt.Errorf("cannot parse '%s' as an Address: %w", val, err))
+		}
+	}
+	return addr
+}
+
 func (p *parser) getChain(idx int, required bool, def common.Chain) common.Chain {
 	p.incRequired(required)
 	value, err := common.NewChain(p.get(idx))

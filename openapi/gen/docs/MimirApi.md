@@ -9,6 +9,7 @@ Method | HTTP request | Description
 [**MimirKey**](MimirApi.md#MimirKey) | **Get** /thorchain/mimir/key/{key} | 
 [**MimirNode**](MimirApi.md#MimirNode) | **Get** /thorchain/mimir/node/{address} | 
 [**MimirNodes**](MimirApi.md#MimirNodes) | **Get** /thorchain/mimir/nodes_all | 
+[**MimirV2**](MimirApi.md#MimirV2) | **Get** /thorchain/mimirV2 | 
 
 
 
@@ -339,6 +340,72 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**MimirNodesResponse**](MimirNodesResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## MimirV2
+
+> map[string]string MimirV2(ctx).Height(height).Execute()
+
+
+
+
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    height := int64(789) // int64 | optional block height, defaults to current tip (optional)
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.MimirApi.MimirV2(context.Background()).Height(height).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `MimirApi.MimirV2``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `MimirV2`: map[string]string
+    fmt.Fprintf(os.Stdout, "Response from `MimirApi.MimirV2`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiMimirV2Request struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **height** | **int64** | optional block height, defaults to current tip | 
+
+### Return type
+
+**map[string]string**
 
 ### Authorization
 

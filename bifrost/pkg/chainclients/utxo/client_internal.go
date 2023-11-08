@@ -34,7 +34,7 @@ func (c *Client) getAsgardAddress() ([]common.Address, error) {
 	if time.Since(c.lastAsgard) < constants.ThorchainBlockTime && c.asgardAddresses != nil {
 		return c.asgardAddresses, nil
 	}
-	newAddresses, err := utxo.GetAsgardAddress(c.cfg.ChainID, MaxAsgardAddresses, c.bridge)
+	newAddresses, err := utxo.GetAsgardAddress(c.cfg.ChainID, c.bridge)
 	if err != nil {
 		return nil, fmt.Errorf("fail to get asgards: %w", err)
 	}
