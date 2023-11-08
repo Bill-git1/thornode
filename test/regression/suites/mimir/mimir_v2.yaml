@@ -1,0 +1,126 @@
+{{ template "3-validators-btc-eth-pool-state.yaml" }}
+---
+type: create-blocks
+count: 1
+---
+### check that a mimir admin (not node account) cannot set mimir v2 keys
+type: tx-mimir
+key: "1-global"
+value: 500
+signer: {{ addr_thor_dog }}
+---
+type: tx-mimir
+key: "1-global"
+value: 500
+signer: {{ addr_thor_cat }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/mimirV2
+asserts:
+  - . == {}
+---
+type: check
+endpoint: http://localhost:1317/thorchain/mimir
+asserts:
+  - . == {}
+---
+type: tx-mimir
+key: "1-global"
+value: 500
+signer: {{ addr_thor_fox }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/mimirV2
+asserts:
+  - .AFFILIATEFEEBASISPOINTSMAXGLOBAL == 500
+---
+type: check
+endpoint: http://localhost:1317/thorchain/mimir
+asserts:
+  - .MaxAffiliateFeeBasisPoints == 500
+---
+type: tx-mimir
+key: "1-global"
+value: -1
+signer: {{ addr_thor_fox }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/mimirV2
+asserts:
+  - .AFFILIATEFEEBASISPOINTSMAXGLOBAL == 500
+---
+type: check
+endpoint: http://localhost:1317/thorchain/mimir
+asserts:
+  - .MaxAffiliateFeeBasisPoints == 500
+---
+##################################################
+# Operational Mimir V2
+##################################################
+type: tx-mimir
+key: "2-global"
+value: 1
+signer: {{ addr_thor_cat }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/mimirV2
+asserts:
+  - . | length == 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/mimir
+asserts:
+  - . | length == 1
+---
+type: tx-mimir
+key: "2-global"
+value: 1
+signer: {{ addr_thor_fox }}
+---
+type: tx-mimir
+key: "2-global"
+value: 1
+signer: {{ addr_thor_pig }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/mimirV2
+asserts:
+  - .BONDPAUSEGLOBAL == 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/mimir
+asserts:
+  - .PauseBond == 1
+---
+type: tx-mimir
+key: "2-global"
+value: -1
+signer: {{ addr_thor_pig }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/mimirV2
+asserts:
+  - . | length == 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/mimir
+asserts:
+  - . | length == 1

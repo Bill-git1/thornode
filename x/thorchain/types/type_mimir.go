@@ -98,3 +98,91 @@ func (m NodeMimirs) HasMinority(key string, nas []cosmos.AccAddress) (int64, boo
 	// Minotirty is a bit tricky, because a set can have multiple minorities, which can result in a potential consensus failure
 	return 0, false
 }
+
+// ValueOfEconomic - fetches the value of a given mimir based on 2/3rds consensus
+func (m NodeMimirs) ValueOfEconomic(key string, active []cosmos.AccAddress) int64 {
+	voteCount := make(map[int64]int)
+	hasVoted := make(map[string]bool)
+	totalValidVotes := 0
+
+	for _, mimir := range m.Mimirs {
+		if !strings.EqualFold(mimir.Key, key) {
+			continue
+		}
+
+		if hasVoted[mimir.Signer.String()] {
+			continue // Skip this vote since the node already voted
+		}
+
+		// Ensure that the vote is only from active nodes
+		for _, addr := range active {
+			if addr.Equals(mimir.Signer) {
+				voteCount[mimir.Value]++
+				totalValidVotes++
+				hasVoted[mimir.Signer.String()] = true
+				break
+			}
+		}
+	}
+
+	mostVotedValue := int64(-1)
+	maxVotes := 0
+	// analyze-ignore(map-iteration)
+	for value, count := range voteCount {
+		if count > maxVotes {
+			mostVotedValue = value
+			maxVotes = count
+		}
+	}
+
+	// Check if maxVotes is at least two-thirds of totalValidVotes using integer arithmetic
+	if 3*maxVotes < 2*len(active) {
+		return -1
+	}
+
+	return mostVotedValue
+}
+
+// ValueOfOperational - fetches the value of a given mimir based most votes (above min vote)
+func (m NodeMimirs) ValueOfOperational(key string, minVotes int, active []cosmos.AccAddress) int64 {
+	voteCount := make(map[int64]int)
+	hasVoted := make(map[string]bool)
+
+	for _, mimir := range m.Mimirs {
+		if !strings.EqualFold(mimir.Key, key) {
+			continue
+		}
+
+		if hasVoted[mimir.Signer.String()] {
+			continue // Skip this vote since the node already voted
+		}
+
+		// Ensure that the vote is only from active nodes
+		for _, addr := range active {
+			if addr.Equals(mimir.Signer) {
+				voteCount[mimir.Value]++
+				hasVoted[mimir.Signer.String()] = true
+				break
+			}
+		}
+	}
+
+	mostVotedValue := int64(-1)
+	maxVotes := 0
+	tie := false
+	// analyze-ignore(map-iteration)
+	for value, count := range voteCount {
+		if count > maxVotes {
+			mostVotedValue = value
+			maxVotes = count
+		} else if count == maxVotes {
+			tie = true
+		}
+	}
+
+	if tie || maxVotes < minVotes {
+		return -1
+	}
+
+	return mostVotedValue
+}

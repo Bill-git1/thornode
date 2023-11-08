@@ -8,6 +8,7 @@ import (
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
+	"gitlab.com/thorchain/thornode/mimir"
 )
 
 // BondHandler a handler to process bond
@@ -79,7 +80,7 @@ func (h BondHandler) validateV96(ctx cosmos.Context, msg MsgBond) error {
 	}
 
 	if h.mgr.GetVersion().GTE(semver.MustParse("1.88.1")) {
-		if fetchConfigInt64(ctx, h.mgr, constants.PauseBond) > 0 {
+		if mimir.NewBondPause().IsOn(ctx, h.mgr.Keeper()) {
 			return ErrInternal(err, "bonding has been paused")
 		}
 	}

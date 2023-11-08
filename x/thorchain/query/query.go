@@ -67,6 +67,7 @@ var (
 	QueryConstantValues      = Query{Key: "constants", EndpointTemplate: "/%s/constants"}
 	QueryVersion             = Query{Key: "version", EndpointTemplate: "/%s/version"}
 	QueryMimirValues         = Query{Key: "mimirs", EndpointTemplate: "/%s/mimir"}
+	QueryMimirV2Values       = Query{Key: "mimirsV2", EndpointTemplate: "/%s/mimirV2"}
 	QueryMimirWithKey        = Query{Key: "mimirwithkey", EndpointTemplate: "/%s/mimir/key/{%s}"}
 	QueryMimirAdminValues    = Query{Key: "adminmimirs", EndpointTemplate: "/%s/mimir/admin"}
 	QueryMimirNodesValues    = Query{Key: "nodesmimirs", EndpointTemplate: "/%s/mimir/nodes"}
@@ -131,6 +132,7 @@ var Queries = []Query{
 	QueryConstantValues,
 	QueryVersion,
 	QueryMimirValues,
+	QueryMimirV2Values,
 	QueryMimirWithKey,
 	QueryMimirAdminValues,
 	QueryMimirNodesAllValues,

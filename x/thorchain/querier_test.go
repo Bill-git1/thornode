@@ -535,6 +535,11 @@ func (s *QuerierSuite) TestQueryConstantValues(c *C) {
 
 func (s *QuerierSuite) TestQueryMimir(c *C) {
 	s.k.SetMimir(s.ctx, "hello", 111)
+
+	nodeAccount := GetRandomValidatorNode(NodeActive)
+	c.Assert(s.k.SetNodeAccount(s.ctx, nodeAccount), IsNil)
+	c.Assert(s.k.SetNodeMimirV2(s.ctx, "1-WORLD", 112, nodeAccount.NodeAddress), IsNil)
+
 	result, err := s.querier(s.ctx, []string{
 		query.QueryMimirValues.Key,
 	}, abci.RequestQuery{})
@@ -542,6 +547,9 @@ func (s *QuerierSuite) TestQueryMimir(c *C) {
 	c.Assert(result, NotNil)
 	var m map[string]int64
 	c.Assert(json.Unmarshal(result, &m), IsNil)
+	c.Assert(m, HasLen, 2)
+	c.Assert(m["HELLO"], Equals, int64(111))
+	c.Assert(m["MaxAffiliateFeeBasisPoints"], Equals, int64(112))
 }
 
 func (s *QuerierSuite) TestQueryBan(c *C) {

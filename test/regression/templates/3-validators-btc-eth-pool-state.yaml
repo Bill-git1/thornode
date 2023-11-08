@@ -71,6 +71,11 @@ genesis:
           pub_key: null
           account_number: "8"
           sequence: "0"
+        - "@type": /cosmos.auth.v1beta1.BaseAccount
+          address: {{ addr_thor_pig }}
+          pub_key: null
+          account_number: "9"
+          sequence: "0"
     bank:
       balances:
         - address: {{ addr_thor_dog }}
@@ -78,6 +83,10 @@ genesis:
             - denom: rune
               amount: "5000000000000"
         - address: {{ addr_thor_cat }}
+          coins:
+            - denom: rune
+              amount: "2500000000000"
+        - address: {{ addr_thor_pig }}
           coins:
             - denom: rune
               amount: "2500000000000"

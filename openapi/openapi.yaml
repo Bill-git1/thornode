@@ -831,6 +831,22 @@ paths:
               schema:
                 $ref: "#/components/schemas/MimirResponse"
 
+  /thorchain/mimirV2:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+    get:
+      description: Returns current mimir V2 configuration.
+      operationId: mimirV2
+      tags:
+        - Mimir
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MimirResponse"
+
   # ------------------------------ quotes ------------------------------
 
   /thorchain/quote/swap:
