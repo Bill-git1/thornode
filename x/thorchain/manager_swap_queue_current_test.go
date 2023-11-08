@@ -400,8 +400,8 @@ func (s SwapQueueVCURSuite) TestStreamingSwapOutbounds(c *C) {
 	items, err = mgr.TxOutStore().GetOutboundItems(ctx)
 	c.Assert(err, IsNil)
 	c.Assert(items, HasLen, 2)
-	c.Check(items[0].Memo, Equals, "") // ensure its not a refund tx
-	c.Check(items[1].Memo, Equals, "") // ensure its not a refund tx
+	c.Check(items[0].Memo, Equals, "")                                 // ensure it's not a refund tx (for the partial swap)
+	c.Check(strings.HasPrefix(items[1].Memo, "REFUND:"), Equals, true) // ensure it's a refund tx (for the partial refund)
 	c.Check(items[0].Coin.Equals(common.NewCoin(common.BTCAsset, cosmos.NewUint(12345))), Equals, true, Commentf("%s", items[0].Coin.String()))
 	c.Check(items[1].Coin.Equals(common.NewCoin(common.BNBAsset, cosmos.NewUint(6666666667))), Equals, true, Commentf("%s", items[1].Coin.String()))
 	// make sure we have deleted the streaming swap entity

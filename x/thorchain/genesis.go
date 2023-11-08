@@ -139,8 +139,8 @@ func DefaultGenesisState() GenesisState {
 	}
 }
 
-// InitGenesis read the data in GenesisState and apply it to data store
-func InitGenesis(ctx cosmos.Context, keeper keeper.Keeper, data GenesisState) []abci.ValidatorUpdate {
+// initGenesis read the data in GenesisState and apply it to data store
+func initGenesis(ctx cosmos.Context, keeper keeper.Keeper, data GenesisState) []abci.ValidatorUpdate {
 	for _, record := range data.Pools {
 		if err := keeper.SetPool(ctx, record); err != nil {
 			panic(err)

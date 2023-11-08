@@ -195,7 +195,6 @@ func (vm *SwapQueueVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 				vm.k.RemoveSwapQueueItem(ctx, pick.msg.Tx.ID, pick.index)
 				vm.k.RemoveStreamingSwap(ctx, pick.msg.Tx.ID)
 
-				tois := make([]TxOutItem, 0)
 				memo, err := ParseMemoWithTHORNames(ctx, vm.k, pick.msg.Tx.Memo)
 				if err != nil {
 					return err
@@ -217,7 +216,7 @@ func (vm *SwapQueueVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 					}
 					dexAggTargetAsset := pick.msg.AggregatorTargetAddress
 
-					tois = append(tois, TxOutItem{
+					toi := TxOutItem{
 						Chain:                 pick.msg.TargetAsset.GetChain(),
 						InHash:                pick.msg.Tx.ID,
 						ToAddress:             pick.msg.Destination,
@@ -225,29 +224,26 @@ func (vm *SwapQueueVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 						Aggregator:            dexAgg,
 						AggregatorTargetAsset: dexAggTargetAsset,
 						AggregatorTargetLimit: pick.msg.AggregatorTargetLimit,
-					})
+					}
+
+					if _, err := mgr.TxOutStore().TryAddTxOutItem(ctx, mgr, toi, cosmos.ZeroUint()); err != nil {
+						ctx.Logger().Error("fail streaming swap outbound", "error", err)
+						unrefundableCoinCleanup(ctx, mgr, toi, "failed_outbound")
+					}
 				}
+
 				if swp.Deposit.GT(swp.In) {
 					remainder := common.SafeSub(swp.Deposit, swp.In)
 					source := pick.msg.Tx.Coins[0].Asset
-					toi := TxOutItem{
-						Chain:     source.GetChain(),
-						InHash:    pick.msg.Tx.ID,
-						ToAddress: pick.msg.Tx.FromAddress,
-						Coin:      common.NewCoin(source, remainder),
+					refundCoin := common.NewCoin(source, remainder)
+					refundCoinTx := pick.msg.Tx
+					refundCoinTx.Coins = common.NewCoins(refundCoin)
+					// As this is a streaming swap's partial refund, the vault context may have changed, so do vault selection.
+					if refundErr := refundTx(ctx, ObservedTx{Tx: refundCoinTx}, mgr, CodeSwapFail, handleErr.Error(), ""); refundErr != nil {
+						ctx.Logger().Error("fail to partial-refund swap", "error", refundErr)
 					}
-					tois = append(tois, toi)
 				}
 
-				for _, item := range tois {
-					ok, err := mgr.TxOutStore().TryAddTxOutItem(ctx, mgr, item, cosmos.ZeroUint())
-					if err != nil {
-						return ErrInternal(err, "fail to add outbound tx")
-					}
-					if !ok {
-						return errFailAddOutboundTx
-					}
-				}
 				evt := NewEventStreamingSwap(pick.msg.Tx.Coins[0].Asset, pick.msg.TargetAsset, swp)
 				if err := mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
 					ctx.Logger().Error("fail to emit streaming swap event", "error", err)
