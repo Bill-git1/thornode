@@ -53,10 +53,21 @@ func refundTxV124(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uin
 
 		// Only attempt an outbound if a fee can be taken from the coin.
 		if coin.Asset.IsNativeRune() || !pool.BalanceRune.IsZero() {
+			toAddr := tx.Tx.FromAddress
+			memo, err := ParseMemoWithTHORNames(ctx, mgr.Keeper(), tx.Tx.Memo)
+			if err == nil && memo.IsType(TxSwap) && !memo.GetRefundAddress().IsEmpty() && !coin.Asset.GetChain().IsTHORChain() {
+				// If the memo specifies a refund address, send the refund to that address. If
+				// refund memo can't be parsed or is invalid for the refund chain, it will
+				// default back to the sender address
+				if memo.GetRefundAddress().IsChain(coin.Asset.GetChain()) {
+					toAddr = memo.GetRefundAddress()
+				}
+			}
+
 			toi := TxOutItem{
 				Chain:       coin.Asset.GetChain(),
 				InHash:      tx.Tx.ID,
-				ToAddress:   tx.Tx.FromAddress,
+				ToAddress:   toAddr,
 				VaultPubKey: tx.ObservedPubKey,
 				Coin:        coin,
 				Memo:        NewRefundMemo(tx.Tx.ID).String(),

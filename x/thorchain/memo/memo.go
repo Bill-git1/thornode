@@ -194,6 +194,7 @@ type Memo interface {
 	GetDexTargetAddress() string
 	GetDexTargetLimit() *cosmos.Uint
 	GetAffiliateTHORName() *types.THORName
+	GetRefundAddress() common.Address
 }
 
 type MemoBase struct {
@@ -221,6 +222,7 @@ func (m MemoBase) GetDexAggregator() string              { return "" }
 func (m MemoBase) GetDexTargetAddress() string           { return "" }
 func (m MemoBase) GetDexTargetLimit() *cosmos.Uint       { return nil }
 func (m MemoBase) GetAffiliateTHORName() *types.THORName { return nil }
+func (m MemoBase) GetRefundAddress() common.Address      { return common.NoAddress }
 
 func ParseMemo(version semver.Version, memo string) (mem Memo, err error) {
 	defer func() {
