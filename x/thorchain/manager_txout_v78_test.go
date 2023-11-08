@@ -3,6 +3,8 @@ package thorchain
 import (
 	. "gopkg.in/check.v1"
 
+	"github.com/blang/semver"
+
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
@@ -17,7 +19,8 @@ func (s TxOutStoreV78Suite) TestAddGasFees(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	tx := GetRandomObservedTx()
 
-	version := GetCurrentVersion()
+	version := semver.MustParse("0.78.0")
+	mgr.currentVersion = version
 	constAccessor := constants.GetConstantValues(version)
 	mgr.gasMgr = newGasMgrV81(constAccessor, mgr.Keeper())
 	err := addGasFees(ctx, mgr, tx)

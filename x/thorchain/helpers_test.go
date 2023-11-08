@@ -240,6 +240,9 @@ func newAddGasFeeTestHelper(c *C) addGasFeeTestHelper {
 
 	na := GetRandomValidatorNode(NodeActive)
 	c.Assert(mgr.Keeper().SetNodeAccount(ctx, na), IsNil)
+	vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, na.PubKeySet.Secp256k1, common.Chains{common.BNBChain}.Strings(), []ChainContract{})
+	// TODO:  Perhaps make this vault entirely unrelated to the NodeAccount pubkey, such as with an addGasFeeTestHelper 'vault' field.
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
 	version := GetCurrentVersion()
 	constAccessor := constants.GetConstantValues(version)
 	mgr.gasMgr = newGasMgrV81(constAccessor, keeper)

@@ -17,6 +17,10 @@ func (s TxOutStoreVCURSuite) TestAddGasFees(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	tx := GetRandomObservedTx()
 
+	// Set vault to satisfy VaultExists check.
+	vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, tx.ObservedPubKey, common.Chains{common.BNBChain}.Strings(), []ChainContract{})
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
 	version := GetCurrentVersion()
 	constAccessor := constants.GetConstantValues(version)
 	mgr.gasMgr = newGasMgrV81(constAccessor, mgr.Keeper())

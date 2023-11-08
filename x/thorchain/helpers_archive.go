@@ -2114,3 +2114,34 @@ func subsidizePoolWithSlashBondV92(ctx cosmos.Context, ygg Vault, yggTotalStolen
 	}
 	return nil
 }
+
+func addGasFeesV1(ctx cosmos.Context, mgr Manager, tx ObservedTx) error {
+	if len(tx.Tx.Gas) == 0 {
+		return nil
+	}
+	if mgr.Keeper().RagnarokInProgress(ctx) {
+		// when ragnarok is in progress, if the tx is for gas coin then doesn't subsidise the pool with reserve
+		// liquidity providers they need to pay their own gas
+		// if the outbound coin is not gas asset, then reserve will subsidise it , otherwise the gas asset pool will be in a loss
+		gasAsset := tx.Tx.Chain.GetGasAsset()
+		if tx.Tx.Coins.GetCoin(gasAsset).IsEmpty() {
+			mgr.GasMgr().AddGasAsset(tx.Tx.Gas, true)
+		}
+	} else {
+		mgr.GasMgr().AddGasAsset(tx.Tx.Gas, true)
+	}
+	// Subtract from the vault
+	if mgr.Keeper().VaultExists(ctx, tx.ObservedPubKey) {
+		vault, err := mgr.Keeper().GetVault(ctx, tx.ObservedPubKey)
+		if err != nil {
+			return err
+		}
+
+		vault.SubFunds(tx.Tx.Gas.ToCoins())
+
+		if err := mgr.Keeper().SetVault(ctx, vault); err != nil {
+			return err
+		}
+	}
+	return nil
+}
