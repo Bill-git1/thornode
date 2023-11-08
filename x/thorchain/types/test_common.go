@@ -116,7 +116,7 @@ func GetRandomTx() common.Tx {
 
 // GetRandomBech32Addr is an account address used for test
 func GetRandomBech32Addr() cosmos.AccAddress {
-	name := common.RandStringBytesMask(10)
+	name := common.RandHexString(10)
 	return cosmos.AccAddress(crypto.AddressHash([]byte(name)))
 }
 
@@ -137,7 +137,7 @@ func GetRandomRUNEAddress() common.Address {
 
 // GetRandomTHORAddress will just create a random thor address used for test purpose
 func GetRandomTHORAddress() common.Address {
-	name := common.RandStringBytesMask(10)
+	name := common.RandHexString(10)
 	str, _ := common.ConvertAndEncode(cmd.Bech32PrefixAccAddr, crypto.AddressHash([]byte(name)))
 	thor, _ := common.NewAddress(str)
 	return thor
@@ -145,7 +145,7 @@ func GetRandomTHORAddress() common.Address {
 
 // GetRandomBNBAddress will just create a random bnb address used for test purpose
 func GetRandomBNBAddress() common.Address {
-	name := common.RandStringBytesMask(10)
+	name := common.RandHexString(10)
 	str, _ := common.ConvertAndEncode("tbnb", crypto.AddressHash([]byte(name)))
 	bnb, _ := common.NewAddress(str)
 	return bnb
@@ -153,7 +153,7 @@ func GetRandomBNBAddress() common.Address {
 
 // GetRandomTERRAAddress will just create a random terra address used for test purpose
 func GetRandomTERRAAddress() common.Address {
-	name := common.RandStringBytesMask(10)
+	name := common.RandHexString(10)
 	str, _ := common.ConvertAndEncode("terra", crypto.AddressHash([]byte(name)))
 	terra, _ := common.NewAddress(str)
 	return terra
@@ -168,7 +168,7 @@ func GetRandomETHAddress() common.Address {
 
 // GetRandomGAIAAddress will just create a random terra address used for test purpose
 func GetRandomGAIAAddress() common.Address {
-	name := common.RandStringBytesMask(10)
+	name := common.RandHexString(10)
 	str, _ := common.ConvertAndEncode("cosmos", crypto.AddressHash([]byte(name)))
 	gaia, _ := common.NewAddress(str)
 	return gaia
@@ -200,7 +200,7 @@ func GetRandomBCHAddress() common.Address {
 
 // GetRandomTxHash create a random txHash used for test purpose
 func GetRandomTxHash() common.TxID {
-	txHash, _ := common.NewTxID(common.RandStringBytesMask(64))
+	txHash, _ := common.NewTxID(common.RandHexString(64))
 	return txHash
 }
 

@@ -2,19 +2,19 @@ package common
 
 import "math/rand"
 
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const hexBytes = "abcdefABCDEF0123456789"
 const (
-	letterIdxBits = 6                    // 6 bits to represent a letter index
-	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
+	hexIdxBits = 5                 // 5 bits to represent a hex index
+	hexIdxMask = 1<<hexIdxBits - 1 // All 1-bits, as many as hexIdxBits
 )
 
-// RandStringBytesMask generate random string used for test purpose
-func RandStringBytesMask(n int) string {
+// RandHexString generates random hex string used for test purpose
+func RandHexString(n int) string {
 	b := make([]byte, n)
 	for i := 0; i < n; {
 		// #nosec G404 this is a method only used for test purpose
-		if idx := int(rand.Int63() & letterIdxMask); idx < len(letterBytes) {
-			b[i] = letterBytes[idx]
+		if idx := int(rand.Int31() & hexIdxMask); idx < len(hexBytes) {
+			b[i] = hexBytes[idx]
 			i++
 		}
 	}

@@ -16,13 +16,15 @@ func (s TxSuite) TestTxID(c *C) {
 	c.Check(tx.String(), Equals, ID)
 	c.Check(tx.IsEmpty(), Equals, false)
 	c.Check(tx.Equals(TxID(ID)), Equals, true)
+	c.Check(func() { tx.Int64() }, Not(Panics), "Failed to convert")
 
 	// check eth hash
 	_, err = NewTxID("0xb41cf456e942f3430681298c503def54b79a96e3373ef9d44ea314d7eae41952")
 	c.Assert(err, IsNil)
 
-	_, err = NewTxID("bogus")
+	tx, err = NewTxID("bogus")
 	c.Check(err, NotNil)
+	c.Check(tx.Int64(), Equals, int64(0))
 }
 
 func (s TxSuite) TestTx(c *C) {

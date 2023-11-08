@@ -2185,7 +2185,7 @@ func simulate(ctx cosmos.Context, mgr Manager, msg sdk.Msg) (sdk.Events, error) 
 	}
 
 	// set random txid
-	txid := common.TxID(common.RandStringBytesMask(64))
+	txid := common.TxID(common.RandHexString(64))
 	ctx = ctx.WithValue(constants.CtxLoanTxID, txid)
 
 	// validate
