@@ -30,9 +30,8 @@ describe("AvaxAggregator", function () {
     const avaxRouterDeployment = await ethers.getContractFactory("AvaxRouter");
     avaxRouter = await avaxRouterDeployment.deploy();
 
-    const avaxAggregatorDeployment = await ethers.getContractFactory(
-      "AvaxAggregator",
-    );
+    const avaxAggregatorDeployment =
+      await ethers.getContractFactory("AvaxAggregator");
 
     avaxAggregator = await avaxAggregatorDeployment.deploy(
       WAVAX_ADDRESS,
