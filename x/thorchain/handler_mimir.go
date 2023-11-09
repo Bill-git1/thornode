@@ -17,7 +17,7 @@ import (
 var (
 	mimirValidKey    = regexp.MustCompile(`^[a-zA-Z-]+$`).MatchString
 	mimirValidKeyV95 = regexp.MustCompile(constants.MimirKeyRegex).MatchString
-	mimirV2ValidKey  = regexp.MustCompile(`^[0-9]+-[a-z0-9]+$`).MatchString
+	mimirV2ValidKey  = regexp.MustCompile(`^[0-9]+-[a-zA-Z0-9]+$`).MatchString
 )
 
 // MimirHandler is to handle admin messages
