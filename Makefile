@@ -136,6 +136,7 @@ lint-ci:
 	@go run tools/analyze/main.go ./common/... ./constants/... ./x/...
 	@./scripts/trunk check --all --ci -j8
 	@./scripts/lint-versions.bash
+	@./scripts/lint-mimir-ids.bash
 
 # ------------------------------ Testing ------------------------------
 
