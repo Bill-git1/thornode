@@ -290,6 +290,9 @@ thor:
       enable: true
       enabled_unsafe_cors: true
       address: tcp://0.0.0.0:1317
+    grpc:
+      enable: false
+      address: 0.0.0.0:9090
     state_sync:
       snapshot_interval: 0
       snapshot_keep_recent: 2

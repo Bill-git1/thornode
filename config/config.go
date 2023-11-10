@@ -437,6 +437,11 @@ type Thornode struct {
 			Address           string `mapstructure:"address"`
 		} `mapstructure:"api"`
 
+		GRPC struct {
+			Enable  bool   `mapstructure:"enable"`
+			Address string `mapstructure:"address"`
+		} `mapstructure:"grpc"`
+
 		StateSync struct {
 			SnapshotInterval   int64 `mapstructure:"snapshot_interval"`
 			SnapshotKeepRecent int64 `mapstructure:"snapshot_keep_recent"`

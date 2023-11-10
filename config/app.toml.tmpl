@@ -159,10 +159,10 @@ offline = false
 [grpc]
 
 # Enable defines if the gRPC server should be enabled.
-enable = false
+enable = {{ .GRPC.Enable }}
 
 # Address defines the gRPC server address to bind to.
-address = "0.0.0.0:9090"
+address = "{{ .GRPC.Address }}"
 
 ###############################################################################
 ###                        gRPC Web Configuration                           ###
