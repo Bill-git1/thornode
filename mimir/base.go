@@ -10,6 +10,7 @@ import (
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 )
 
+//go:generate stringer -type=MimirType
 type MimirType uint8
 
 const (

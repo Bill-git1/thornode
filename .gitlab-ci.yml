@@ -55,8 +55,11 @@ generate:
   before_script:
     - apk -U add bash curl findutils git go jq make protoc sed wget
   script:
-    - PATH="$PATH:/root/go/bin" make generate smoke-protob-docker
-    - ./scripts/lint-generated.bash
+    - |
+      export PATH="$PATH:/root/go/bin"
+      go install golang.org/x/tools/cmd/stringer
+      make generate smoke-protob-docker
+      ./scripts/lint-generated.bash
 
 unit-tests:
   rules: *rules

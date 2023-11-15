@@ -1848,19 +1848,10 @@ func queryMimirV2IDs(ctx cosmos.Context, path []string, req abci.RequestQuery, m
 			}
 
 			if _, exists := mimirsMap[m.Key]; !exists {
-				mimirType := ""
-				switch mv2.Type() {
-				case 1:
-					mimirType = "Economic"
-				case 2:
-					mimirType = "Operational"
-				default:
-					mimirType = "Unknown"
-				}
 				mimirsMap[m.Key] = types.QueryMimirV2IDs{
 					ID:        id,
 					Name:      mv2.Name(),
-					Type:      mimirType,
+					Type:      mv2.Type().String(),
 					VoteKey:   fmt.Sprintf("%d-%s", id, ref),
 					LegacyKey: mv2.LegacyKey(ref),
 					Votes:     make(map[int64]int64),

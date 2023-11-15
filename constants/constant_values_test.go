@@ -42,7 +42,8 @@ func (ConstantsTestSuite) TestGetConstantValues(c *C) {
 
 func (ConstantsTestSuite) TestAllConstantName(c *C) {
 	keyRegex := regexp.MustCompile(MimirKeyRegex).MatchString
-	for key := range nameToString {
+	for i := 0; i < len(_ConstantName_index)-1; i++ {
+		key := ConstantName(i)
 		if !keyRegex(key.String()) {
 			c.Errorf("key:%s can't be used to set mimir", key)
 		}

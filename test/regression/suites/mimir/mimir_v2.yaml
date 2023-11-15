@@ -96,13 +96,13 @@ asserts:
   - .[0].name == "AFFILIATEFEEBASISPOINTSMAXGLOBAL"
   - .[0].legacy_key == "MAXAFFILIATEFEEBASISPOINTS"
   - .[0].vote_key == "1-GLOBAL"
-  - .[0].type == "Economic"
+  - .[0].type == "EconomicMimir"
   - .[0].votes."500" == 4
   - .[1].id == 2
   - .[1].name == "BONDPAUSEGLOBAL"
   - .[1].legacy_key == "PAUSEBOND"
   - .[1].vote_key == "2-GLOBAL"
-  - .[1].type == "Operational"
+  - .[1].type == "OperationalMimir"
   - .[1].votes."1" == 1
 ---
 # send in two more votes
