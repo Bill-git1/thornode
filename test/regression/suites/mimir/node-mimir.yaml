@@ -1,4 +1,4 @@
-{{ template "3-validators-btc-eth-pool-state.yaml" }}
+{{ template "5-validators-btc-eth-pool-state.yaml" }}
 ---
 type: create-blocks
 count: 1
@@ -42,6 +42,16 @@ type: tx-mimir
 key: RegressionTest
 value: 2
 signer: {{ addr_thor_fox }}
+---
+type: tx-mimir
+key: RegressionTest
+value: 2
+signer: {{ addr_thor_frog }}
+---
+type: tx-mimir
+key: RegressionTest
+value: 2
+signer: {{ addr_thor_goat }}
 ---
 type: create-blocks
 count: 1

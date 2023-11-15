@@ -549,7 +549,7 @@ func (s *QuerierSuite) TestQueryMimir(c *C) {
 	c.Assert(json.Unmarshal(result, &m), IsNil)
 	c.Assert(m, HasLen, 2)
 	c.Assert(m["HELLO"], Equals, int64(111))
-	c.Assert(m["MaxAffiliateFeeBasisPoints"], Equals, int64(112))
+	c.Assert(m["MAXAFFILIATEFEEBASISPOINTS"], Equals, int64(112))
 }
 
 func (s *QuerierSuite) TestQueryBan(c *C) {

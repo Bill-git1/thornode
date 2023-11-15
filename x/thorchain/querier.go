@@ -132,6 +132,10 @@ func NewQuerier(mgr *Mgrs, kbs cosmos.KeybaseStore) cosmos.Querier {
 			return queryMimirValues(ctx, path[1:], req, mgr)
 		case q.QueryMimirV2Values.Key:
 			return queryMimirV2Values(ctx, path[1:], req, mgr)
+		case q.QueryMimirV2NodesAll.Key:
+			return queryMimirV2NodesAll(ctx, path[1:], req, mgr)
+		case q.QueryMimirV2IDs.Key:
+			return queryMimirV2IDs(ctx, path[1:], req, mgr)
 		case q.QueryMimirWithKey.Key:
 			return queryMimirWithKey(ctx, path[1:], req, mgr)
 		case q.QueryMimirAdminValues.Key:
@@ -1819,6 +1823,60 @@ func queryMimirValues(ctx cosmos.Context, path []string, req abci.RequestQuery, 
 	return jsonify(ctx, values)
 }
 
+func queryMimirV2IDs(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {
+	mimirsMap := make(map[string]types.QueryMimirV2IDs, 0)
+	iter := mgr.Keeper().GetNodeMimirIteratorV2(ctx)
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		nm := NodeMimirs{}
+		if err := mgr.Keeper().Cdc().Unmarshal(iter.Value(), &nm); err != nil {
+			ctx.Logger().Error("fail to unmarshal node mimir value", "error", err)
+			return nil, fmt.Errorf("fail to unmarshal node mimir value: %w", err)
+		}
+
+		for _, m := range nm.GetMimirs() {
+			parts := strings.Split(m.Key, "-")
+			id, err := strconv.Atoi(parts[0])
+			if err != nil {
+				continue
+			}
+			ref := parts[len(parts)-1]
+
+			mv2, exists := mimir.GetMimir(mimir.Id(id), ref)
+			if !exists {
+				continue
+			}
+
+			if _, exists := mimirsMap[m.Key]; !exists {
+				mimirType := ""
+				switch mv2.Type() {
+				case 1:
+					mimirType = "Economic"
+				case 2:
+					mimirType = "Operational"
+				default:
+					mimirType = "Unknown"
+				}
+				mimirsMap[m.Key] = types.QueryMimirV2IDs{
+					ID:        id,
+					Name:      mv2.Name(),
+					Type:      mimirType,
+					VoteKey:   fmt.Sprintf("%d-%s", id, ref),
+					LegacyKey: mv2.LegacyKey(ref),
+					Votes:     make(map[int64]int64),
+				}
+			}
+			mimirsMap[m.Key].Votes[m.Value] += 1
+		}
+	}
+	resp := make([]types.QueryMimirV2IDs, 0)
+	// analyze-ignore(map-iteration)
+	for _, mimir := range mimirsMap {
+		resp = append(resp, mimir)
+	}
+	return jsonify(ctx, resp)
+}
+
 func queryMimirV2Values(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {
 	values := make(map[string]int64)
 
@@ -1859,6 +1917,22 @@ func queryMimirV2Values(ctx cosmos.Context, path []string, req abci.RequestQuery
 	}
 
 	return jsonify(ctx, values)
+}
+
+func queryMimirV2NodesAll(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {
+	mimirs := NodeMimirs{}
+	iter := mgr.Keeper().GetNodeMimirIteratorV2(ctx)
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		m := NodeMimirs{}
+		if err := mgr.Keeper().Cdc().Unmarshal(iter.Value(), &m); err != nil {
+			ctx.Logger().Error("fail to unmarshal node mimir value", "error", err)
+			return nil, fmt.Errorf("fail to unmarshal node mimir value: %w", err)
+		}
+		mimirs.Mimirs = append(mimirs.Mimirs, m.Mimirs...)
+	}
+
+	return jsonify(ctx, mimirs)
 }
 
 func queryMimirAdminValues(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {

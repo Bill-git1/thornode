@@ -43,7 +43,7 @@ type mimir struct {
 }
 
 func (m *mimir) LegacyKey(ref string) string {
-	return m.legacyMimirKey(ref)
+	return strings.ToUpper(m.legacyMimirKey(ref))
 }
 
 func (m *mimir) Tags() []string {

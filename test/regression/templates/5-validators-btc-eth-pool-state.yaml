@@ -76,6 +76,16 @@ genesis:
           pub_key: null
           account_number: "9"
           sequence: "0"
+        - "@type": /cosmos.auth.v1beta1.BaseAccount
+          address: {{ addr_thor_frog }}
+          pub_key: null
+          account_number: "10"
+          sequence: "0"
+        - "@type": /cosmos.auth.v1beta1.BaseAccount
+          address: {{ addr_thor_goat }}
+          pub_key: null
+          account_number: "11"
+          sequence: "0"
     bank:
       balances:
         - address: {{ addr_thor_dog }}
@@ -94,13 +104,21 @@ genesis:
           coins:
             - denom: rune
               amount: "2500000000000"
+        - address: {{ addr_thor_frog }}
+          coins:
+            - denom: rune
+              amount: "2500000000000"
+        - address: {{ addr_thor_goat }}
+          coins:
+            - denom: rune
+              amount: "2500000000000"
         - address: {{ addr_module_reserve }}
           coins:
             - amount: "35000000000000"
               denom: rune
         - address: {{ addr_module_bond }}
           coins:
-            - amount: "7500000000000"
+            - amount: "12500000000000"
               denom: rune
         - address: {{ addr_module_asgard }}
           coins:
@@ -142,6 +160,28 @@ genesis:
           ip_address: 1.1.1.1
           node_address: {{ addr_thor_pig }}
           bond_address: {{ addr_thor_pig }}
+          pub_key_set:
+            secp256k1: "tthorpub1addwnpepqg0rpnr9y7csa6rzy73w7ldfhlf5kthmn77xzeqx68mueh9pest9vlvs93k"
+          signer_membership: []
+          status: Active
+          validator_cons_pub_key: tthorcpub1zcjduepqe2er9prrhm8mtk8lknp6evstnnqvf8uynwatmm3cwh78tz3glsws0wxum3
+          version: {{ version }}
+        - active_block_height: "0"
+          bond: "2500000000000"
+          ip_address: 1.1.1.1
+          node_address: {{ addr_thor_frog }}
+          bond_address: {{ addr_thor_frog }}
+          pub_key_set:
+            secp256k1: "tthorpub1addwnpepqg0rpnr9y7csa6rzy73w7ldfhlf5kthmn77xzeqx68mueh9pest9vlvs93k"
+          signer_membership: []
+          status: Active
+          validator_cons_pub_key: tthorcpub1zcjduepqe2er9prrhm8mtk8lknp6evstnnqvf8uynwatmm3cwh78tz3glsws0wxum3
+          version: {{ version }}
+        - active_block_height: "0"
+          bond: "2500000000000"
+          ip_address: 1.1.1.1
+          node_address: {{ addr_thor_goat }}
+          bond_address: {{ addr_thor_goat }}
           pub_key_set:
             secp256k1: "tthorpub1addwnpepqg0rpnr9y7csa6rzy73w7ldfhlf5kthmn77xzeqx68mueh9pest9vlvs93k"
           signer_membership: []

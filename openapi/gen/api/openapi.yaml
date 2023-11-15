@@ -4,7 +4,7 @@ info:
     email: devs@thorchain.org
   description: Thornode REST API.
   title: Thornode API
-  version: 1.124.0
+  version: 1.125.0
 servers:
 - url: /
 paths:
@@ -1361,6 +1361,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MimirResponse'
+          description: OK
+      tags:
+      - Mimir
+  /thorchain/mimirV2/ids:
+    get:
+      description: Returns mapping of mimir V2 IDs to name.
+      operationId: mimirV2IDs
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MimirV2IDsResponse'
           description: OK
       tags:
       - Mimir
@@ -4385,6 +4409,34 @@ components:
       example:
         NODEOPERATORFEE: 2000
         NUMBEROFNEWNODESPERCHURN: 2
+      type: object
+    MimirV2IDsResponse:
+      example:
+      - id: 1
+        name: AFFILIATEFEEBASISPOINTSMAXGLOBAL
+        legacy_key: MAXAFFILIATEFEEBASISPOINTS
+        vote_key: 1-GLOBAL
+        type: Economic
+        votes:
+          "500": 4
+      - id: 2
+        name: BONDPAUSEGLOBAL
+        legacy_key: PAUSEBOND
+        vote_key: 2-GLOBAL
+        type: Operational
+        votes:
+          "1": 1
+      properties:
+        id:
+          type: int
+        name:
+          type: string
+        legacy_key:
+          type: string
+        vote_key:
+          type: string
+        votes:
+          type: object
       type: object
     InvariantResponse:
       example:
