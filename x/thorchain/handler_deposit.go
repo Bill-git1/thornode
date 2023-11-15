@@ -117,6 +117,7 @@ func (h DepositHandler) handleV119(ctx cosmos.Context, msg MsgDeposit) (*cosmos.
 
 	memo, _ := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), msg.Memo) // ignore err
 	if memo.IsOutbound() || memo.IsInternal() {
+		// trunk-ignore(codespell)
 		return nil, fmt.Errorf("cannot send inbound an outbound or internal transacion")
 	}
 

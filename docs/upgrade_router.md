@@ -25,7 +25,7 @@ https://gitlab.com/thorchain/ethereum/eth-router , if you need to make changes t
 
 ## Router upgrade procedure
 
-Before router upgrade , make sure you already make relevant changes in thornode repo. Replace `<chain>` in the below variables with the lowercase, shortened chain identifer (e.g. `eth`, `avax`).
+Before router upgrade , make sure you already make relevant changes in thornode repo. Replace `<chain>` in the below variables with the lowercase, shortened chain identifier (e.g. `eth`, `avax`).
 
 - New router has been deployed , and the router address has been updated. `<chain>OldRouter` is your current router address, `<chain>NewRouter` is your new router address
   - [Mocknet](https://gitlab.com/thorchain/thornode/-/blob/develop/x/thorchain/router_upgrade_info_mocknet.go)

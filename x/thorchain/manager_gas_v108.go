@@ -101,7 +101,7 @@ func (gm *GasMgrV108) GetFee(ctx cosmos.Context, chain common.Chain, asset commo
 		minOutboundUSD = gm.constantsAccessor.GetInt64Value(constants.MinimumL1OutboundFeeUSD)
 	}
 	oneDollarRune := cosmos.ZeroUint()
-	// since gm.mgr get set at BeginBlock , so here add a safeguard incase gm.mgr is nil
+	// since gm.mgr get set at BeginBlock , so here add a safeguard in case gm.mgr is nil
 	if gm.mgr != nil {
 		oneDollarRune = DollarInRune(ctx, gm.mgr).QuoUint64(constants.DollarMulti)
 	}

@@ -21,7 +21,7 @@ The simplest way to ensure late inbounds to old vaults are handled is by increas
 Nine Realms proposes rolling out this change in 2 stages:
 
 1. Increase `FundMigrationInterval` to `3600` (5x current), which will result in the time to churn out taking roughly half of a current churn cycle.
-1. Allow nodes a few weeks to prepare for the change in cadence and then increase the churn interval to `129600` (3x current) and `FundMigrationInterval` to `14400`, which will result in churns approximately every 9 days with vaults remaining retiring for approximately 7 days. If nodes want to churn out and then back in within one round, they will have roughtly 2 days at the end of the churn to do so.
+1. Allow nodes a few weeks to prepare for the change in cadence and then increase the churn interval to `129600` (3x current) and `FundMigrationInterval` to `14400`, which will result in churns approximately every 9 days with vaults remaining retiring for approximately 7 days. If nodes want to churn out and then back in within one round, they will have roughly 2 days at the end of the churn to do so.
 
 ## Alternatives Considered
 

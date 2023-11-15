@@ -296,7 +296,7 @@ func quoteSimulateSwap(ctx cosmos.Context, mgr *Mgrs, amount sdk.Uint, msg *MsgS
 	}
 	emitAmount = emitCoin.Amount.MulUint64(streamingQuantity)
 
-	// sum the liquidity fees and covert to target asset
+	// sum the liquidity fees and convert to target asset
 	liquidityFee := sdk.ZeroUint()
 	for _, s := range swaps {
 		liquidityFee = liquidityFee.Add(sdk.NewUintFromString(s["liquidity_fee_in_rune"]))
@@ -1088,7 +1088,7 @@ func queryQuoteLoanOpen(ctx cosmos.Context, path []string, req abci.RequestQuery
 		return quoteErrorResponse(fmt.Errorf("destination and affiliate should not be the same"))
 	}
 
-	// generate random adddress for collateral owner
+	// generate random address for collateral owner
 	collateralOwner, err := types.GetRandomPubKey().GetAddress(asset.Chain)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate address: %w", err)

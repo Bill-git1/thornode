@@ -627,7 +627,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
-  # should receieve significantly more than the first open for the same amount since the
+  # should receive significantly more than the first open for the same amount since the
   # excess debt down will be credited on the subsequent open
   - .balances[]|select(.denom == "rune")|.amount|tonumber == 2503838201897
 ---
@@ -680,7 +680,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
-    # this time they should receieve a normal amount relative to the deposit since the
+    # this time they should receive a normal amount relative to the deposit since the
     # excess debt down was credited on the previous open
   - .balances[]|select(.denom == "rune")|.amount|tonumber == 2504315267825
 ---

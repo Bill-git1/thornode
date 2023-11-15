@@ -9,7 +9,7 @@ We provide convenience tools to run mocknet against forked mainnet EVM chains fo
 
 ## Fake Token Balances
 
-The `init.js` script is run during intialization of the EVM fork and uses impersonation APIs to create a fake 100K balance of the chain-native USDC token on all fork chains. The tokens used at the time of writing are:
+The `init.js` script is run during initialization of the EVM fork and uses impersonation APIs to create a fake 100K balance of the chain-native USDC token on all fork chains. The tokens used at the time of writing are:
 
 ```javascript
 const usdTokens = {

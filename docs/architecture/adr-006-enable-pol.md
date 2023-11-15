@@ -66,7 +66,7 @@ POL-ETH.USDT-0XDAC17F958D2EE523A2206206994597C13D831EC7 1
 
 ## Context
 
-Protocol Owned Liquidity is a mechanism whereby the protocol utilizes the Protocol Reserve to deposit $RUNE asymmetrically into liquidity pools. In effect, it is taking the RUNE-side exposure in dual-sided LPs, reducing synth utilization, so that Savers Vaults can grow. Protocol Owned Liquidity may generate profit or losses to the Protcol Reserve, and care should be taken to determine the timing, assets and amount of POL that is deployed to the network.
+Protocol Owned Liquidity is a mechanism whereby the protocol utilizes the Protocol Reserve to deposit $RUNE asymmetrically into liquidity pools. In effect, it is taking the RUNE-side exposure in dual-sided LPs, reducing synth utilization, so that Savers Vaults can grow. Protocol Owned Liquidity may generate profit or losses to the Protocol Reserve, and care should be taken to determine the timing, assets and amount of POL that is deployed to the network.
 
 A vote is currently underway to raise the `MAXSYNTHPERPOOLDEPTH` from `5000` to `6000`. Nodes have already been instructed that raising the vote to `6000` comes with an implicit understanding that Protocol Owned Liquidity (POL) will be activated as a result (https://discord.com/channels/838986635756044328/839001804812451873/1074682919886528542). This ADR serves to codify the exact parameters being proposed to enable POL.
 

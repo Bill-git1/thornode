@@ -16,7 +16,7 @@ const KRAKEN string = "ReleaseTheKraken"
 func (k KVStore) GetMimir(ctx cosmos.Context, key string) (int64, error) {
 	if k.GetVersion().LT(semver.MustParse("1.92.0")) {
 		// Once node mimir reach super majority  , admin mimir will be set automatically to lock in the vote
-		// thus , there is no need to check node mimir everytime
+		// thus , there is no need to check node mimir every time
 		nodeMimirs, err := k.GetNodeMimirs(ctx, key)
 		if err != nil {
 			return -1, err

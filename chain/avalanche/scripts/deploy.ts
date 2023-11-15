@@ -10,6 +10,7 @@ async function main() {
 
   console.log("AvaxRouter deployed to:", avaxRouter.address);
 
+  // trunk-ignore(codespell)
   await hre.ethernal.push({
     name: "AvaxRouter",
     address: avaxRouter.address,
@@ -22,6 +23,7 @@ async function main() {
   );
   await avaxAggregator.deployed();
 
+  // trunk-ignore(codespell)
   await hre.ethernal.push({
     name: "AvaxAggregator",
     address: avaxAggregator.address,

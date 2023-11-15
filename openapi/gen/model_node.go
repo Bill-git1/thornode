@@ -40,7 +40,7 @@ type Node struct {
 	IpAddress string `json:"ip_address"`
 	// the currently set version of the node
 	Version string `json:"version"`
-	// the accumlated slash points, reset at churn but excessive slash points may carry over
+	// the accumulated slash points, reset at churn but excessive slash points may carry over
 	SlashPoints int64 `json:"slash_points"`
 	Jail NodeJail `json:"jail"`
 	CurrentAward string `json:"current_award"`

@@ -370,5 +370,7 @@ func (pks PubKeySet) GetAddress(chain Chain) (Address, error) {
 	case SigningAlgoEd25519:
 		return pks.Ed25519.GetAddress(chain)
 	}
+	// TODO: fix on fork
+	// trunk-ignore(codespell)
 	return NoAddress, fmt.Errorf("unknow signing algorithm")
 }

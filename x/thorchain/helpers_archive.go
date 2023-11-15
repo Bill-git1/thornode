@@ -33,6 +33,7 @@ func triggerPreferredAssetSwapV120(ctx cosmos.Context, mgr Manager, affiliateAdd
 
 	// Sanity check: don't swap 0 amount
 	if affcol.RuneAmount.IsZero() {
+		// trunk-ignore(codespell)
 		return fmt.Errorf("can't execute preferred asset swap, accured RUNE amount is zero")
 	}
 	// Sanity check: ensure the swap amount isn't more than the entire AffiliateCollector module
@@ -114,6 +115,7 @@ func triggerPreferredAssetSwapV116(ctx cosmos.Context, mgr Manager, affiliateAdd
 
 	// Execute the PreferredAsset swap
 	if affcol.RuneAmount.IsZero() {
+		// trunk-ignore(codespell)
 		return fmt.Errorf("can't execute preferred asset swap, accured RUNE amount is zero")
 	}
 	affRune := affcol.RuneAmount
@@ -1639,7 +1641,7 @@ func isTradingHaltV65(ctx cosmos.Context, msg cosmos.Msg, mgr Manager) bool {
 		for _, raw := range WhitelistedArbs {
 			address, err := common.NewAddress(strings.TrimSpace(raw))
 			if err != nil {
-				ctx.Logger().Error("failt to parse address for trading halt check", "address", raw, "error", err)
+				ctx.Logger().Error("failed to parse address for trading halt check", "address", raw, "error", err)
 				continue
 			}
 			if address.Equals(m.Tx.FromAddress) {

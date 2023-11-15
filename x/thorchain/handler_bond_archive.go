@@ -141,7 +141,7 @@ func (h BondHandler) validateV88(ctx cosmos.Context, msg MsgBond) error {
 		return ErrInternal(err, fmt.Sprintf("fail to get bond providers(%s)", msg.NodeAddress))
 	}
 
-	// Attemping to set Operator Fee. If the Node has no bond address yet it will have no fee set, continue
+	// Attempting to set Operator Fee. If the Node has no bond address yet it will have no fee set, continue
 	if msg.OperatorFee > -1 && !nodeAccount.BondAddress.IsEmpty() {
 
 		// Only Node Operator can set fee

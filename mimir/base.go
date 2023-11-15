@@ -105,7 +105,7 @@ func (m *mimir) FetchValue(ctx cosmos.Context, keeper keeper.Keeper) (value int6
 					return value
 				}
 			} else {
-				// value reached, save to persist it beyond loosing 2/3rds
+				// value reached, save to persist it beyond losing 2/3rds
 				keeper.SetMimirV2(ctx, m.key(), value)
 			}
 		case OperationalMimir:

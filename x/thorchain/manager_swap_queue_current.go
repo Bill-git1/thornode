@@ -260,7 +260,7 @@ func (vm *SwapQueueVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 func (vm *SwapQueueVCUR) getTodoNum(queueLen, minSwapsPerBlock, maxSwapsPerBlock int64) int64 {
 	// Do half the length of the queue. Unless...
 	//	1. The queue length is greater than maxSwapsPerBlock
-	//  2. The queue legnth is less than minSwapsPerBlock
+	//  2. The queue length is less than minSwapsPerBlock
 	todo := queueLen / 2
 	if minSwapsPerBlock >= queueLen {
 		todo = queueLen

@@ -146,7 +146,7 @@ func NewCosmosBlockScanner(cfg config.BifrostBlockScannerConfiguration,
 	}, nil
 }
 
-// GetHeight returns the height from the lastest block minus 1
+// GetHeight returns the height from the latest block minus 1
 // NOTE: we must lag by one block due to a race condition fetching the block results
 // Since the GetLatestBlockRequests tells what transactions will be in the block at T+1
 func (c *CosmosBlockScanner) GetHeight() (int64, error) {
@@ -289,7 +289,7 @@ func (c *CosmosBlockScanner) updateGasFees(height int64) error {
 
 func (c *CosmosBlockScanner) processTxs(height int64, rawTxs [][]byte) ([]types.TxInItem, error) {
 	// Proto types for Cosmos chains that we are transacting with may not be included in this repo.
-	// Therefore, it is necessary to incude them in the "proto" directory and register them in
+	// Therefore, it is necessary to include them in the "proto" directory and register them in
 	// the cdc (codec) that is passed below. Registry occurs in the NewCosmosBlockScanner function.
 	decoder := tx.DefaultTxDecoder(c.cdc)
 

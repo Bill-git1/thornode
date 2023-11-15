@@ -1166,6 +1166,7 @@ func triggerPreferredAssetSwapV121(ctx cosmos.Context, mgr Manager, affiliateAdd
 
 	// Sanity check: don't swap 0 amount
 	if affcol.RuneAmount.IsZero() {
+		// trunk-ignore(codespell)
 		return fmt.Errorf("can't execute preferred asset swap, accured RUNE amount is zero")
 	}
 	// Sanity check: ensure the swap amount isn't more than the entire AffiliateCollector module

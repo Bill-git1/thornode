@@ -47,6 +47,7 @@ func (h DepositHandler) handleV115(ctx cosmos.Context, msg MsgDeposit) (*cosmos.
 
 	memo, _ := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), msg.Memo) // ignore err
 	if memo.IsOutbound() || memo.IsInternal() {
+		// trunk-ignore(codespell)
 		return nil, fmt.Errorf("cannot send inbound an outbound or internal transacion")
 	}
 
@@ -201,6 +202,7 @@ func (h DepositHandler) handleV112(ctx cosmos.Context, msg MsgDeposit) (*cosmos.
 
 	memo, _ := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), msg.Memo) // ignore err
 	if memo.IsOutbound() || memo.IsInternal() {
+		// trunk-ignore(codespell)
 		return nil, fmt.Errorf("cannot send inbound an outbound or internal transacion")
 	}
 
@@ -353,6 +355,7 @@ func (h DepositHandler) handleV105(ctx cosmos.Context, msg MsgDeposit) (*cosmos.
 
 	memo, _ := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), msg.Memo) // ignore err
 	if memo.IsOutbound() || memo.IsInternal() {
+		// trunk-ignore(codespell)
 		return nil, fmt.Errorf("cannot send inbound an outbound or internal transacion")
 	}
 
@@ -498,6 +501,7 @@ func (h DepositHandler) handleV99(ctx cosmos.Context, msg MsgDeposit) (*cosmos.R
 
 	memo, _ := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), msg.Memo) // ignore err
 	if memo.IsOutbound() || memo.IsInternal() {
+		// trunk-ignore(codespell)
 		return nil, fmt.Errorf("cannot send inbound an outbound or internal transacion")
 	}
 
@@ -643,6 +647,7 @@ func (h DepositHandler) handleV87(ctx cosmos.Context, msg MsgDeposit) (*cosmos.R
 
 	memo, _ := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), msg.Memo) // ignore err
 	if memo.IsOutbound() || memo.IsInternal() {
+		// trunk-ignore(codespell)
 		return nil, fmt.Errorf("cannot send inbound an outbound or internal transacion")
 	}
 
@@ -794,6 +799,7 @@ func (h DepositHandler) handleV67(ctx cosmos.Context, msg MsgDeposit) (*cosmos.R
 
 	memo, _ := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), msg.Memo) // ignore err
 	if memo.IsOutbound() || memo.IsInternal() {
+		// trunk-ignore(codespell)
 		return nil, fmt.Errorf("cannot send inbound an outbound or internal transacion")
 	}
 
@@ -995,6 +1001,7 @@ func (h DepositHandler) handleV108(ctx cosmos.Context, msg MsgDeposit) (*cosmos.
 
 	memo, _ := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), msg.Memo) // ignore err
 	if memo.IsOutbound() || memo.IsInternal() {
+		// trunk-ignore(codespell)
 		return nil, fmt.Errorf("cannot send inbound an outbound or internal transacion")
 	}
 
@@ -1140,6 +1147,7 @@ func (h DepositHandler) handleV113(ctx cosmos.Context, msg MsgDeposit) (*cosmos.
 
 	memo, _ := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), msg.Memo) // ignore err
 	if memo.IsOutbound() || memo.IsInternal() {
+		// trunk-ignore(codespell)
 		return nil, fmt.Errorf("cannot send inbound an outbound or internal transacion")
 	}
 

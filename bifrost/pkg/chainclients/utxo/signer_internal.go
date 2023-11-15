@@ -184,7 +184,7 @@ func (c *Client) estimateTxSize(memo string, txes []btcjson.ListUnspentResult) i
 		// overhead - 10
 		// Per input - 148
 		// Per output - 34 , we might have 1 / 2 output , depends on the circumstances , here we only count 1  output , would rather underestimate
-		// so we won't hit absurd hight fee issue
+		// so we won't hit absurd high fee issue
 		// overhead for NULL DATA - 9 , len(memo) is the size of memo
 		return int64(10 + 148*len(txes) + 34 + 9 + len([]byte(memo)))
 	case common.LTCChain:

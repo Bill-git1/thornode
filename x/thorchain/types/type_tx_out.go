@@ -98,7 +98,7 @@ func (toi TxOutItem) GetModuleName() string {
 	return toi.ModuleName
 }
 
-// NewTxOut create a new item ot TxOut
+// NewTxOut creates a new TxOut.
 func NewTxOut(height int64) *TxOut {
 	return &TxOut{
 		Height:  height,

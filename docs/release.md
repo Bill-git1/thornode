@@ -80,7 +80,7 @@ The `stagenet` maintainer does not need to keep the upstream `node-launcher` val
 The `node-launcher` repo will require the `stagenet` digest hash (e.g. `8ec7a9c832ad13fc28d0af440b5cddfec8e21b4a311903ad92fe0cab0433faac`). Get this from the `build-thornode` CI step above. Be sure you didn't accidentally copy the `mocknet` digest hash. Using the mocknet image in stagenet will cause a consnesus failure.
 
 1. Apply the `stagenet` image(s) one-by-one.
-1. Wait for them to fully initiailize and rejoin consensus.
+1. Wait for them to fully initialize and rejoin consensus.
 1. Run `make set-version`.
 1. Repeat until all validators on latest version.
 1. Check: `curl thornode:1317/thorchain/version`

@@ -39,7 +39,7 @@ type QuoteLoanOpenResponse struct {
 	Warning string `json:"warning"`
 	// chain specific quote notes
 	Notes string `json:"notes"`
-	// Defines the minimum transaction size for the chain in base units (sats, wei, uatom). Transctions with asset amounts lower than the dust_threshold are ignored.
+	// Defines the minimum transaction size for the chain in base units (sats, wei, uatom). Transactions with asset amounts lower than the dust_threshold are ignored.
 	DustThreshold *string `json:"dust_threshold,omitempty"`
 	// The recommended minimum inbound amount for this transaction type & inbound asset. Sending less than this amount could result in failed refunds.
 	RecommendedMinAmountIn *string `json:"recommended_min_amount_in,omitempty"`

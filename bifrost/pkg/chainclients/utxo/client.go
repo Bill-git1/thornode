@@ -359,7 +359,7 @@ func (c *Client) OnObservedTxIn(txIn types.TxInItem, blockHeight int64) {
 ////////////////////////////////////////////////////////////////////////////////////////
 
 // FetchTxs retrieves txs for a block height. The first argument is the block height to
-// fetch, the second argument is the currnet chain tip.
+// fetch, the second argument is the current chain tip.
 func (c *Client) FetchTxs(height, chainHeight int64) (types.TxIn, error) {
 	txIn := types.TxIn{
 		Chain:   c.cfg.ChainID,

@@ -64,4 +64,4 @@ Long-term LPs should support, since the network is raising fees to bolster the R
 Transient Swappers should largely be unaffected, since outboundFees on most chains are higher than $1.00, and $1.00 is a very cheap minimum fee to pay for decentralised swaps.
 
 ** Arbers **
-Arbitrage agents should largely be nuetral, since they have the option to switch to using synths which has much lower fees (and is faster).
+Arbitrage agents should largely be neutral, since they have the option to switch to using synths which has much lower fees (and is faster).

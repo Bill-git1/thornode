@@ -84,7 +84,7 @@ contract AvaxRouter {
     }
 
     /**
-     * @notice Calls deposit with an experation
+     * @notice Calls deposit with an expiration
      * @param vault address - vault address for router
      * @param asset address - ARC20 asset or zero address for AVAX
      * @param amount uint - amount to deposit

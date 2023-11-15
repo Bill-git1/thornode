@@ -20,7 +20,7 @@ type CacheStore struct {
 	db     *leveldb.DB
 }
 
-// NewCacheStore create a new intance of CacheStore
+// NewCacheStore create a new instance of CacheStore
 func NewCacheStore(db *leveldb.DB) *CacheStore {
 	return &CacheStore{
 		db:     db,

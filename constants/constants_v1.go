@@ -16,7 +16,7 @@ func NewConstantValue() *ConstantVals {
 			StagedPoolCost:                      10_00000000,        // amount of rune to take from a staged pool on every pool cycle
 			PendingLiquidityAgeLimit:            100800,             // age pending liquidity can be pending before its auto committed to the pool
 			KillSwitchStart:                     0,                  // block height to start the kill switch of BEP2/ERC20 old RUNE // TODO remove on hard fork
-			KillSwitchDuration:                  5256000,            // number of blocks until swith no longer works // TODO remove on hard fork
+			KillSwitchDuration:                  5256000,            // number of blocks until switch no longer works // TODO remove on hard fork
 			MinRunePoolDepth:                    10000_00000000,     // minimum rune pool depth to be an available pool
 			MaxAvailablePools:                   100,                // maximum number of available pools
 			MinimumNodesForYggdrasil:            6,                  // No yggdrasil pools if THORNode have less than 6 active nodes

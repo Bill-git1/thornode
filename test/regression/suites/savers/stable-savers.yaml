@@ -93,7 +93,7 @@ asserts:
   - '."TORANCHOR-ETH-USDC-0X9999999999999999999999999999999999999999" == 1'
 ---
 ########################################################################################
-# deposit usdc (should succeeed, USDC in TOR anchor)
+# deposit usdc (should succeed, USDC in TOR anchor)
 ########################################################################################
 type: tx-observed-in
 signer: {{ addr_thor_dog }}

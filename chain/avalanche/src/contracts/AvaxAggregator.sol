@@ -43,7 +43,7 @@ contract AvaxAggregator {
     receive() external payable {}
 
     /**
-     * @notice Calls deposit with an experation
+     * @notice Calls deposit with an expiration
      * @param tcVault address - THORchain vault address
      * @param tcRouter address - THORchain vault address
      * @param tcMemo string - THORchain memo
@@ -90,7 +90,7 @@ contract AvaxAggregator {
     }
 
     /**
-     * @notice Calls deposit with an experation
+     * @notice Calls deposit with an expiration
      * @param token address - ARC20 asset or zero address for AVAX
      * @param to address - address to receive swap
      * @param amountOutMin uint - minimum amount to receive

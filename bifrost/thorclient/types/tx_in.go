@@ -16,7 +16,7 @@ type TxIn struct {
 	TxArray              []TxInItem   `json:"txArray"`
 	Filtered             bool         `json:"filtered"`
 	MemPool              bool         `json:"mem_pool"`          // indicate whether this item is in the mempool or not
-	SentUnFinalised      bool         `json:"sent_un_finalised"` // indicate whehter unfinalised tx had been sent to THORChain
+	SentUnFinalised      bool         `json:"sent_un_finalised"` // indicate whether unfinalised tx had been sent to THORChain
 	Finalised            bool         `json:"finalised"`
 	ConfirmationRequired int64        `json:"confirmation_required"`
 }
@@ -26,7 +26,7 @@ type TxInItem struct {
 	Tx                    string        `json:"tx"`
 	Memo                  string        `json:"memo"`
 	Sender                string        `json:"sender"`
-	To                    string        `json:"to"` // to adddress
+	To                    string        `json:"to"` // to address
 	Coins                 common.Coins  `json:"coins"`
 	Gas                   common.Gas    `json:"gas"`
 	ObservedVaultPubKey   common.PubKey `json:"observed_vault_pub_key"`

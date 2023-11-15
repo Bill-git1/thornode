@@ -82,7 +82,7 @@ func migrateStoreV114(ctx cosmos.Context, mgr *Mgrs) {
 	// the LPs get zero'd out on the BNB pool in stagenet
 	// we will set the LP units equal to the amount of RUNE in the pool
 	// then we'll allocate all of those LP units to the stagenet funding address
-	// this willl give 100% of the pool share to the stagenet funding address
+	// this will give 100% of the pool share to the stagenet funding address
 	// and will make swapping through the BNB pool possible again
 
 	bnbPool, err := mgr.Keeper().GetPool(ctx, common.BNBAsset)

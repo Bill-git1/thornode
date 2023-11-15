@@ -122,7 +122,7 @@ class EVMSetupTool:
         bytecode_file = "router-bytecode.txt"
         args = []
 
-        # if on eth the router contructor takes ERC20 RUNE token address
+        # if on eth the router constructor takes ERC20 RUNE token address
         if self.chain == "ETH":
             abi_file = "eth-" + abi_file
             bytecode_file = "eth-" + bytecode_file

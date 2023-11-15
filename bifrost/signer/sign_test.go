@@ -361,8 +361,8 @@ func (s *SignSuite) SetUpSuite(c *C) {
 	}))
 
 	s.thordir = filepath.Join(os.TempDir(), ns, ".thorcli")
-	splitted := strings.SplitAfter(server.URL, ":")
-	s.rpcHost = splitted[len(splitted)-1]
+	split := strings.SplitAfter(server.URL, ":")
+	s.rpcHost = split[len(split)-1]
 	cfg := config.BifrostClientConfiguration{
 		ChainID:         "thorchain",
 		ChainHost:       "localhost:" + s.rpcHost,

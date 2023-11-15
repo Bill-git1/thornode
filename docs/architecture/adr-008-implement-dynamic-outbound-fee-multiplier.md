@@ -16,7 +16,7 @@ Currently, users are charged a 3x constant on the gas_rate for outbounds on exte
 
 https://flipsidecrypto.xyz/Multipartite/reserve-cumulative-income-health-rOUjF2
 
-This constant 3x multiplier of the outbound fee effects all end users of THORChain: it makes swapping more expensive, and eats into the profits of both LPers and Savers. For swappers, especially smaller swappers and those transacting on historically expensive chains like ETH and BTC, this 3x multiplier becomes a major deterrant to using the network: they simply could use a centralized service and get better price execution. For Savers, espcially savers in lower yield vaults like BTC, this 3x multiplier eats into profits and increases the time-to-break-even.
+This constant 3x multiplier of the outbound fee effects all end users of THORChain: it makes swapping more expensive, and eats into the profits of both LPers and Savers. For swappers, especially smaller swappers and those transacting on historically expensive chains like ETH and BTC, this 3x multiplier becomes a major deterrant to using the network: they simply could use a centralized service and get better price execution. For Savers, especially savers in lower yield vaults like BTC, this 3x multiplier eats into profits and increases the time-to-break-even.
 
 At the same time, this "spread" is a constant source of income for the reserve, amounting to 0.6% in aggregate of the total reserve balance at the time of writing. Modifying the outbound fee system to make it cheaper for the end user would mean effectively removing this income source for the reserve.
 

@@ -135,7 +135,7 @@ func (items orderItems) Sort(ctx cosmos.Context) orderItems {
 		}
 	}
 
-	// sorting by two attribute to ensure there is no abiguity here, since
+	// sorting by two attribute to ensure there is no ambiguity here, since
 	// multiple items can have the same score (but not the same tx hash)
 	sort.SliceStable(scores, func(i, j int) bool {
 		switch {
@@ -611,7 +611,7 @@ func (ob *OrderBookVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 func (ob *OrderBookVCUR) getTodoNum(queueLen, minSwapsPerBlock, maxSwapsPerBlock int64) int64 {
 	// Do half the length of the queue. Unless...
 	//	1. The queue length is greater than maxSwapsPerBlock
-	//  2. The queue legnth is less than minSwapsPerBlock
+	//  2. The queue length is less than minSwapsPerBlock
 	todo := queueLen / 2
 	if minSwapsPerBlock >= queueLen {
 		todo = queueLen

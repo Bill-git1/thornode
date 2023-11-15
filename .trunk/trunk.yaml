@@ -2,6 +2,10 @@ version: 0.1
 cli:
   version: 1.17.1
 lint:
+  definitions:
+    - name: codespell
+      commands:
+        - run: codespell --ignore-words=${workspace}/.trunk/configs/words.txt ${target}
   enabled:
     # TODO: enable these new suggested linters and see which are worth keeping/fixing up codebase.
     #- bandit@1.7.5
@@ -13,6 +17,7 @@ lint:
     #- terrascan@1.18.1
     #- trivy@0.43.1
     #- trufflehog@3.44.0
+    - codespell@2.2.6
     - black@23.9.1
     - flake8@6.1.0
     - git-diff-check
@@ -47,6 +52,13 @@ lint:
         - terrascan
       paths:
         - ci/Dockerfile.regtest.dockerignore
+    - linters:
+        - codespell
+      paths:
+        - bifrost/pkg/chainclients/gaia/test-data/latest_block.json
+        - common/tokenlist/*/*.json
+        - x/thorchain/preregister_thornames.json
+        - third_party/**
 actions:
   disabled:
     - trunk-announce

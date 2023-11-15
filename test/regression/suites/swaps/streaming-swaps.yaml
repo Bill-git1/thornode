@@ -96,7 +96,7 @@ type: create-blocks
 count: 1
 ---
 ########################################################################################
-# streaming swap to ETH.ETH with paused trading halfway through (parital conversion)
+# streaming swap to ETH.ETH with paused trading halfway through (partial conversion)
 ########################################################################################
 type: tx-observed-in
 signer: {{ addr_thor_dog }}

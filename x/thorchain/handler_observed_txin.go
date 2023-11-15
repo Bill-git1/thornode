@@ -397,7 +397,7 @@ func (h ObservedTxInHandler) addSwapDirectV116(ctx cosmos.Context, msg MsgSwap) 
 		}
 
 		// PreferredAsset set, swap to the AffiliateCollector Module + check if the
-		// prefferred asset swap should be triggered
+		// preferred asset swap should be triggered
 		if affThorname != nil && !affThorname.PreferredAsset.IsEmpty() {
 			affcol, err := h.mgr.Keeper().GetAffiliateCollector(ctx, affThorname.Owner)
 			if err != nil {

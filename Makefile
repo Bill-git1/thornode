@@ -134,7 +134,12 @@ lint:
 lint-ci:
 	@./scripts/lint.sh
 	@go run tools/analyze/main.go ./common/... ./constants/... ./x/...
+ifdef CI_MERGE_REQUEST_ID
+	# only check changes on merge requests
+	@./scripts/trunk check --ci -j8 --upstream FETCH_HEAD
+else
 	@./scripts/trunk check --all --ci -j8
+endif
 	@./scripts/lint-versions.bash
 	@./scripts/lint-mimir-ids.bash
 

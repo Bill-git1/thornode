@@ -20,7 +20,7 @@ Name | Type | Description | Notes
 **LeaveHeight** | **int64** |  | 
 **IpAddress** | **string** |  | 
 **Version** | **string** | the currently set version of the node | 
-**SlashPoints** | **int64** | the accumlated slash points, reset at churn but excessive slash points may carry over | 
+**SlashPoints** | **int64** | the accumulated slash points, reset at churn but excessive slash points may carry over | 
 **Jail** | [**NodeJail**](NodeJail.md) |  | 
 **CurrentAward** | **string** |  | 
 **ObserveChains** | [**[]ChainHeight**](ChainHeight.md) | the last observed heights for all chain by the node | 

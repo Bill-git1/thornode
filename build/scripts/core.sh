@@ -53,7 +53,7 @@ disable_bank_send() {
   mv /tmp/genesis.json ~/.thornode/config/genesis.json
 }
 
-# inits a thorchain with a comman separate list of usernames
+# inits a thorchain with the provided list of genesis accounts
 init_chain() {
   IFS=","
 

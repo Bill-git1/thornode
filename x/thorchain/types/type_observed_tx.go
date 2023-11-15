@@ -84,7 +84,7 @@ func (m ObservedTx) Equals(tx2 ObservedTx) bool {
 	return true
 }
 
-// IsFinal indcate whether ObserveTx is final
+// IsFinal indicates whether ObserveTx is final.
 func (m *ObservedTx) IsFinal() bool {
 	return m.FinaliseHeight == m.BlockHeight
 }

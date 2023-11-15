@@ -181,7 +181,7 @@ func derivePrivateKeyForPath(privKeyBytes, chainCode [32]byte, path string) ([32
 			return [32]byte{}, fmt.Errorf("invalid BIP 32 path: %s", err)
 		}
 		if idx < 0 {
-			return [32]byte{}, errors.New("invalid BIP 32 path: index negative ot too large")
+			return [32]byte{}, errors.New("invalid BIP 32 path: index negative or too large")
 		}
 		data, chainCode = derivePrivateKey(data, chainCode, uint32(idx), harden)
 	}

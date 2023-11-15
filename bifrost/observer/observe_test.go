@@ -518,7 +518,7 @@ func (s *ObserverSuite) TestGetSaversMemo(c *C) {
 	memo = obs.getSaversMemo(common.BTCChain, btcSaversTx)
 	c.Assert(memo, Equals, "")
 
-	// memo should still be empty, amount is at the dust thresold, but you can't withdraw 0 basis points
+	// memo should still be empty, amount is at the dust threshold, but you can't withdraw 0 basis points
 	btcSaversTx.Coins = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(10_000)))
 	memo = obs.getSaversMemo(common.BTCChain, btcSaversTx)
 	c.Assert(memo, Equals, "")

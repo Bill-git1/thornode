@@ -196,7 +196,7 @@ asserts:
   - .asset_redeem_value == ("47_75901598" | gsub("_";""))
   - .rune_redeem_value == ("45_351_74408535" | gsub("_";""))
   # Contrast with the initial redeem values of "50_00000000" and "50_000_00000000".
-  # <0.96x now, due to assymmetrical liquidity action swap fees
+  # <0.96x now, due to asymmetrical liquidity action swap fees
   # (not checking luvi_growth_pct which has been reset by the withdraw and deposit).
 ---
 type: check

@@ -16,7 +16,7 @@ Name | Type | Description | Notes
 **Expiry** | Pointer to **int64** | expiration timestamp in unix seconds | [optional] 
 **Warning** | Pointer to **string** | static warning message | [optional] 
 **Notes** | Pointer to **string** | chain specific quote notes | [optional] 
-**DustThreshold** | Pointer to **string** | Defines the minimum transaction size for the chain in base units (sats, wei, uatom). Transctions with asset amounts lower than the dust_threshold are ignored. | [optional] 
+**DustThreshold** | Pointer to **string** | Defines the minimum transaction size for the chain in base units (sats, wei, uatom). Transactions with asset amounts lower than the dust_threshold are ignored. | [optional] 
 **RecommendedMinAmountIn** | Pointer to **string** | The recommended minimum inbound amount for this transaction type &amp; inbound asset. Sending less than this amount could result in failed refunds. | [optional] 
 
 ## Methods

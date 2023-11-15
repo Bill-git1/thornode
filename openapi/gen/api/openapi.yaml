@@ -3025,7 +3025,7 @@ components:
           example: 0.35.0
           type: string
         slash_points:
-          description: "the accumlated slash points, reset at churn but excessive\
+          description: "the accumulated slash points, reset at churn but excessive\
             \ slash points may carry over"
           example: 42
           format: int64
@@ -4588,7 +4588,7 @@ components:
           type: string
         dust_threshold:
           description: "Defines the minimum transaction size for the chain in base\
-            \ units (sats, wei, uatom). Transctions with asset amounts lower than\
+            \ units (sats, wei, uatom). Transactions with asset amounts lower than\
             \ the dust_threshold are ignored."
           example: "10000"
           type: string
@@ -4683,7 +4683,7 @@ components:
           type: string
         dust_threshold:
           description: "Defines the minimum transaction size for the chain in base\
-            \ units (sats, wei, uatom). Transctions with asset amounts lower than\
+            \ units (sats, wei, uatom). Transactions with asset amounts lower than\
             \ the dust_threshold are ignored."
           example: "10000"
           type: string
@@ -4708,7 +4708,7 @@ components:
           example: "10000"
           type: string
         max_streaming_quantity:
-          description: the maxiumum amount of trades a streaming swap can do for a
+          description: the maximum amount of trades a streaming swap can do for a
             trade
           example: 10
           format: int64
@@ -4823,7 +4823,7 @@ components:
           type: string
         dust_threshold:
           description: "Defines the minimum transaction size for the chain in base\
-            \ units (sats, wei, uatom). Transctions with asset amounts lower than\
+            \ units (sats, wei, uatom). Transactions with asset amounts lower than\
             \ the dust_threshold are ignored."
           example: "10000"
           type: string
@@ -4938,7 +4938,7 @@ components:
           type: string
         dust_threshold:
           description: "Defines the minimum transaction size for the chain in base\
-            \ units (sats, wei, uatom). Transctions with asset amounts lower than\
+            \ units (sats, wei, uatom). Transactions with asset amounts lower than\
             \ the dust_threshold are ignored."
           example: "10000"
           type: string
@@ -5059,7 +5059,7 @@ components:
           type: string
         dust_threshold:
           description: "Defines the minimum transaction size for the chain in base\
-            \ units (sats, wei, uatom). Transctions with asset amounts lower than\
+            \ units (sats, wei, uatom). Transactions with asset amounts lower than\
             \ the dust_threshold are ignored."
           example: "10000"
           type: string
@@ -5184,7 +5184,7 @@ components:
           type: string
         dust_threshold:
           description: "Defines the minimum transaction size for the chain in base\
-            \ units (sats, wei, uatom). Transctions with asset amounts lower than\
+            \ units (sats, wei, uatom). Transactions with asset amounts lower than\
             \ the dust_threshold are ignored."
           example: "10000"
           type: string

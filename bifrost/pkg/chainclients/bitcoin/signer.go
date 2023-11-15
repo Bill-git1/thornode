@@ -518,7 +518,7 @@ func (c *Client) BroadcastTx(txOut stypes.TxOutItem, payload []byte) (string, er
 	}
 	bm, err := c.temporalStorage.GetBlockMeta(height)
 	if err != nil {
-		c.logger.Err(err).Msgf("fail to get blockmeta for heigth: %d", height)
+		c.logger.Err(err).Msgf("fail to get blockmeta for height: %d", height)
 	}
 	if bm == nil {
 		bm = utxo.NewBlockMeta("", height, "")

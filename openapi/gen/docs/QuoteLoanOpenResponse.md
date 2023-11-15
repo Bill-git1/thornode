@@ -16,7 +16,7 @@ Name | Type | Description | Notes
 **Expiry** | **int64** | expiration timestamp in unix seconds | 
 **Warning** | **string** | static warning message | 
 **Notes** | **string** | chain specific quote notes | 
-**DustThreshold** | Pointer to **string** | Defines the minimum transaction size for the chain in base units (sats, wei, uatom). Transctions with asset amounts lower than the dust_threshold are ignored. | [optional] 
+**DustThreshold** | Pointer to **string** | Defines the minimum transaction size for the chain in base units (sats, wei, uatom). Transactions with asset amounts lower than the dust_threshold are ignored. | [optional] 
 **RecommendedMinAmountIn** | Pointer to **string** | The recommended minimum inbound amount for this transaction type &amp; inbound asset. Sending less than this amount could result in failed refunds. | [optional] 
 **Memo** | Pointer to **string** | generated memo for the loan open | [optional] 
 **ExpectedAmountOut** | **string** | the amount of the target asset the user can expect to receive after fees in 1e8 decimals | 

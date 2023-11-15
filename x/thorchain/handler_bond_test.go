@@ -333,7 +333,7 @@ func (HandlerBondSuite) TestBondProvider_Handler(c *C) {
 	c.Assert(bp.Has(additionalBondAddress), Equals, true)
 	// New BP should have no bond
 	c.Assert(bp.Get(additionalBondAddress).Bond.Uint64(), Equals, uint64(0), Commentf("%d", bp.Get(additionalBondAddress).Bond.Uint64()))
-	// First BP should have its added bond, and it should have the orignal 100 bond that the node was created with - bond is re-distributed
+	// First BP should have its added bond, and it should have the original 100 bond that the node was created with - bond is re-distributed
 	// to current BPs before new bond is added
 	c.Assert(bp.Get(standbyNA).Bond.Uint64(), Equals, cosmos.NewUint(200*common.One).Uint64(), Commentf("%d", bp.Get(standbyNA).Bond.Uint64()))
 
@@ -346,7 +346,7 @@ func (HandlerBondSuite) TestBondProvider_Handler(c *C) {
 	c.Assert(bp.Has(additionalBondAddress), Equals, true)
 	c.Assert(bp.Get(additionalBondAddress).Bond.Uint64(), Equals, amt.Uint64(), Commentf("%d", bp.Get(additionalBondAddress).Bond.Uint64()))
 
-	// bond with random bonder (doesnt' add new provider, still 2) - effectively adding to rewards, since this random address is not a BP
+	// bond with random bonder (doesn't add new provider, still 2) - effectively adding to rewards, since this random address is not a BP
 	msg = NewMsgBond(txIn, standbyNA, amt, GetRandomTHORAddress(), nil, activeNA, -1)
 	err = handler.handle(ctx, *msg)
 	c.Assert(err, IsNil)

@@ -42,7 +42,7 @@
 `HaltChainGlobal`: Pause all chains (chain clients)
 `Halt<chain>Chain`: Pause a specific blockchain via mimir or detected double-spend
 `SolvencyHalt<chain>Chain`: Solvency checker auto halts chain. Chain will be auto un-halted once solvency is regained
-`NodePauseChainGlobal`: Inidividual node controlled means to pause all chains
+`NodePauseChainGlobal`: Individual node controlled means to pause all chains
 `NodePauseChainBlocks`: Number of block a node operator can pause/resume the chains for
 
 ### Solvency Checker
@@ -107,7 +107,7 @@ This is the number used to be applied to `MaxAnchorSlip`
 `THORNames`: Enable/Disable THORNames
 `TNSRegisterFee`: TNS registration fee of new names
 `TNSFeePerBlock`: TNS cost per block to retain ownership of a name
-`ArtificialRagnarokBlockHeight`: Triggers a chain shutodwn and ragnarok
+`ArtificialRagnarokBlockHeight`: Triggers a chain shutdown and ragnarok
 `NativeTransactionFee`: The rune fee for a native transaction (gas cost in 1e8 notation)
 `HALTSIGNING<chain>`: Halt signing in a specific chain
 `HALTSIGNING`: Halt signing globally

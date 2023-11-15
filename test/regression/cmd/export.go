@@ -162,7 +162,7 @@ func checkExportInvariants(out io.Writer, genesis map[string]any) error {
 		}
 	}
 
-	// print any discrepencies
+	// print any discrepancies
 	for _, coin := range sumPoolAsset {
 		for _, vaultCoin := range sumVaultAsset {
 			if coin.Asset.Equals(vaultCoin.Asset) && !coin.Amount.Equal(vaultCoin.Amount) {

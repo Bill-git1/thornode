@@ -64,7 +64,7 @@ func isVersionedFunction(node ast.Node, fset *token.FileSet) (bool, int) {
 		}
 
 	case !reVersionedName.MatchString(n.Name.Name) && !reCurrentVersionName.MatchString(n.Name.Name):
-		// search receiever for a versioned struct name
+		// search receiver for a versioned struct name
 		if n.Recv != nil {
 			for _, r := range n.Recv.List {
 				buf := new(bytes.Buffer)

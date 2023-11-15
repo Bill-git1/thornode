@@ -459,7 +459,7 @@ func (vm *NetworkMgrV94) manageChains(ctx cosmos.Context, mgr Manager) error {
 }
 
 // findChainsToRetire - evaluates the chains associated with active asgard
-// vaults vs retiring asgard vaults to detemine if any chains need to be
+// vaults vs retiring asgard vaults to determine if any chains need to be
 // ragnarok'ed
 func (vm *NetworkMgrV94) findChainsToRetire(ctx cosmos.Context) (common.Chains, error) {
 	chains := make(common.Chains, 0)

@@ -62,7 +62,7 @@ and the MinimumL1OutboundFeeUSD should be repriced from $1.00 to $2.00.
 ~~One of the draw-backs from paying fees intra-block is volatility - yield for Savers, LPs and Nodes can fluctuate depending on the daily economic activity of the chain.
 This begs the question - why not pay all fees into the Reserve and slightly increase the Emissions?
 This means ALL income goes into a smoothing function and yield would be fairly constant even over periods of 3-6 months.
-The yield computed daily, monthly or even yearly would be very similiar, thus frontends and wallets would align much closer when displaying APR.~~
+The yield computed daily, monthly or even yearly would be very similar, thus frontends and wallets would align much closer when displaying APR.~~
 
 ## Decision
 
@@ -94,7 +94,7 @@ Mimir Requirements
 
 - Arbs will pay 20c per synth swap, which may erode synth arb volume
 
-### Nuetral
+### Neutral
 
 - Exchanges will need to be notified that the transfer fee has increased and how much
 

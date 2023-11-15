@@ -286,7 +286,7 @@ func (s *StoreManagerTestSuite) TestMigrateStoreV94(c *C) {
 	c.Assert(poolLunaAfter.IsEmpty(), Equals, true)
 }
 
-// Check that the hashing behaves as expeected.
+// Check that the hashing behaves as expected.
 func (s *StoreManagerTestSuite) TestMemoHash(c *C) {
 	inboundTxID := "B07A6B1B40ADBA2E404D9BCE1BEF6EDE6F70AD135E83806E4F4B6863CF637D0B"
 	memo := fmt.Sprintf("REFUND:%s", inboundTxID)

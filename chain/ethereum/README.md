@@ -31,10 +31,10 @@ Asgard/Ygg vaults should compose the transactions:
 
 ### Funding Ygg (only ERC20)
 
-Ygg can be funded by transfering an allowance to spend:
+Ygg can be funded by transferring an allowance to spend:
 `await VAULT.transferAllance(vault, asset, amount, memo)`
 
-Ygg can return assets by batch transfering back:
+Ygg can return assets by batch transferring back:
 `await VAULT.batchTransferAllance(asgard[], assets[], amounts[], memos[])`
 
 ### Churning (only ERC20)

@@ -74,7 +74,7 @@ As this is a new component separate from the existing thornode network, coordina
 
 #### Choice of chat server
 
-MatterMost or an IRC daemon? The tradeoff between these two is feature set vs. security footprint, resepectively. Author leans towards MatterMost as it best recreates the current Discord UX, but acknowledges it will require more work to audit and lock down.
+MatterMost or an IRC daemon? The tradeoff between these two is feature set vs. security footprint, respectively. Author leans towards MatterMost as it best recreates the current Discord UX, but acknowledges it will require more work to audit and lock down.
 
 #### Maintenance of Discord
 

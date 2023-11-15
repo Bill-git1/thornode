@@ -28,7 +28,7 @@ BNB.BUSD 100
 TOTAL: 76,793
 ```
 
-Since ILP is effectively negligible to the vast amount of grandfathered users (who have had this protection available to them the entire time, but did not take it), the protocol should take the opportunity to permanently sunset ILP. LPs should be comfortable with the risks of LPing, which is offset by the higher yields due to synths. The protocol has introduced other features (Savers, Lending) which have their own risk spectrum, so removing one line of risk is a win for the protocol -- since it has to survive both bull and bear markets. Risk manangement is a crucial part of survivability.
+Since ILP is effectively negligible to the vast amount of grandfathered users (who have had this protection available to them the entire time, but did not take it), the protocol should take the opportunity to permanently sunset ILP. LPs should be comfortable with the risks of LPing, which is offset by the higher yields due to synths. The protocol has introduced other features (Savers, Lending) which have their own risk spectrum, so removing one line of risk is a win for the protocol -- since it has to survive both bull and bear markets. Risk management is a crucial part of survivability.
 
 To affect this, nodes should vote by setting
 

@@ -39,7 +39,7 @@ type QuoteSwapResponse struct {
 	Warning string `json:"warning"`
 	// chain specific quote notes
 	Notes string `json:"notes"`
-	// Defines the minimum transaction size for the chain in base units (sats, wei, uatom). Transctions with asset amounts lower than the dust_threshold are ignored.
+	// Defines the minimum transaction size for the chain in base units (sats, wei, uatom). Transactions with asset amounts lower than the dust_threshold are ignored.
 	DustThreshold *string `json:"dust_threshold,omitempty"`
 	// The recommended minimum inbound amount for this transaction type & inbound asset. Sending less than this amount could result in failed refunds.
 	RecommendedMinAmountIn *string `json:"recommended_min_amount_in,omitempty"`
@@ -49,7 +49,7 @@ type QuoteSwapResponse struct {
 	ExpectedAmountOut string `json:"expected_amount_out"`
 	// Deprecated - expected_amount_out is streaming amount if interval provided.
 	ExpectedAmountOutStreaming string `json:"expected_amount_out_streaming"`
-	// the maxiumum amount of trades a streaming swap can do for a trade
+	// the maximum amount of trades a streaming swap can do for a trade
 	MaxStreamingQuantity *int64 `json:"max_streaming_quantity,omitempty"`
 	// the number of blocks the streaming swap will execute over
 	StreamingSwapBlocks *int64 `json:"streaming_swap_blocks,omitempty"`

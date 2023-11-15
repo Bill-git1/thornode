@@ -63,7 +63,7 @@ Comparing with 15 seconds per TSS key-sign for 27 nodes (observed performance):
 
 Note1: increasing the count of asgard does not change the economic security of the funds (funds always 100% secured), nor does it change bandwidth requirements, since the same observations are required. The _only_ consideration is fund-splitting. Ie, if someone could demand 10% of the funds of a pool, then TC should be able to fulfil in one tx, (not two from two vaults). So this puts the "limit" at 10 vaults (each with 10% of the funds). But likely users will only demand 2% of the funds of most pools, most of the time. (2% swap is a big swap, and there are only 7/4215 BTC LPs with more than 2% LP). So 50 vaults is "ok", which means `AsgardSize = 3` is theoretically ok to attempt.
 
-Note2: the network currently signs at 0.14tx/sec (so `AsgardSize = 40` can tolerate current useage, thus `AsgardSize = 20` can tolerate an 8x increase in L1 demand).
+Note2: the network currently signs at 0.14tx/sec (so `AsgardSize = 40` can tolerate current usage, thus `AsgardSize = 20` can tolerate an 8x increase in L1 demand).
 
 Note3: Although the network can currently sign at 100tx/sec (100 ygg vaults), it's never been required. Wherever there is a huge gap in performance required vs performance available, almost always compromises can be reclaimed. Here it is complexity and vaulting costs.
 
