@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -125,6 +126,7 @@ func getConfigForTest(rpcHost string) config.BifrostBlockScannerConfiguration {
 		GasCacheBlocks:             100,
 		Concurrency:                1,
 		GasPriceResolution:         TestGasPriceResolution, // 50 navax
+		TransactionBatchSize:       500,
 	}
 }
 
@@ -183,6 +185,63 @@ func (s *BlockScannerTestSuite) TestNewBlockScanner(c *C) {
 }
 
 func (s *BlockScannerTestSuite) TestProcessBlock(c *C) {
+	rpcResults := map[string]string{
+		"eth_chainId":  `"0xa868"`,
+		"eth_gasPrice": `"0x5d21dba00"`,
+		"eth_call":     `"0x52554e45"`,
+	}
+
+	// extract result from embedded json
+	var resp struct {
+		Result json.RawMessage `json:"result"`
+	}
+	err := json.Unmarshal(depositEVMReceipt, &resp)
+	c.Assert(err, IsNil)
+	rpcResults["eth_getTransactionReceipt"] = string(resp.Result)
+	err = json.Unmarshal(blockByNumberResp, &resp)
+	c.Assert(err, IsNil)
+	rpcResults["eth_getBlockByNumber"] = string(resp.Result)
+
+	handleRPC := func(body []byte, rw http.ResponseWriter) {
+		r := struct {
+			Method string        `json:"method"`
+			Params []interface{} `json:"params"`
+		}{}
+
+		err := json.Unmarshal(body, &r)
+		c.Assert(err, IsNil)
+
+		rw.Header().Set("Content-Type", "application/json")
+		result := map[string]json.RawMessage{
+			"result": json.RawMessage(rpcResults[r.Method]),
+		}
+
+		err = json.NewEncoder(rw).Encode(result)
+		c.Assert(err, IsNil)
+	}
+	handleBatchRPC := func(body []byte, rw http.ResponseWriter) {
+		r := []struct {
+			Method string        `json:"method"`
+			Params []interface{} `json:"params"`
+			ID     int           `json:"id"`
+		}{}
+
+		err := json.Unmarshal(body, &r)
+		c.Assert(err, IsNil)
+
+		rw.Header().Set("Content-Type", "application/json")
+		result := make([]map[string]json.RawMessage, len(r))
+		for i, v := range r {
+			result[i] = map[string]json.RawMessage{
+				"result": json.RawMessage(rpcResults[v.Method]),
+				"id":     json.RawMessage(strconv.Itoa(v.ID)),
+			}
+		}
+
+		err = json.NewEncoder(rw).Encode(result)
+		c.Assert(err, IsNil)
+	}
+
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		switch {
 		case req.RequestURI == thorclient.PubKeysEndpoint:
@@ -203,36 +262,10 @@ func (s *BlockScannerTestSuite) TestProcessBlock(c *C) {
 			defer func() {
 				c.Assert(req.Body.Close(), IsNil)
 			}()
-			type RPCRequest struct {
-				JSONRPC string          `json:"jsonrpc"`
-				ID      interface{}     `json:"id"`
-				Method  string          `json:"method"`
-				Params  json.RawMessage `json:"params"`
-			}
-			var rpcRequest RPCRequest
-			err = json.Unmarshal(body, &rpcRequest)
-			if err != nil {
-				return
-			}
-			if rpcRequest.Method == "eth_chainId" {
-				_, err := rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0xa868"}`))
-				c.Assert(err, IsNil)
-			}
-			if rpcRequest.Method == "eth_gasPrice" {
-				_, err := rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x5d21dba00"}`))
-				c.Assert(err, IsNil)
-			}
-			if rpcRequest.Method == "eth_getTransactionReceipt" {
-				_, err := rw.Write(depositEVMReceipt)
-				c.Assert(err, IsNil)
-			}
-			if rpcRequest.Method == "eth_call" {
-				_, err := rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x52554e45"}`))
-				c.Assert(err, IsNil)
-			}
-			if rpcRequest.Method == "eth_getBlockByNumber" {
-				_, err := rw.Write(blockByNumberResp)
-				c.Assert(err, IsNil)
+			if body[0] == '[' {
+				handleBatchRPC(body, rw)
+			} else {
+				handleRPC(body, rw)
 			}
 		}
 	}))

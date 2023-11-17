@@ -115,7 +115,8 @@ bifrost:
         max_gas_fee: 0
         gas_price_resolution: 0
         max_contract_gas: 0
-        max_resume_block_lag: 2h
+        max_resume_block_lag: 24h
+        transaction_batch_size: 500
 
       # the following defaults must be defined to override with environment
       chain_host: ""

@@ -704,6 +704,14 @@ type BifrostBlockScannerConfiguration struct {
 	// consensus inbound. This is necessary to avoid a race, as there could be a consensus
 	// inbound after an outbound which has not reached consensus, causing double spend.
 	MaxResumeBlockLag time.Duration `mapstructure:"max_resume_block_lag"`
+
+	// TransactionBatchSize is the number of transactions to batch in a single request.
+	// This is used as the limit for one iteration of mempool checks and fanout in
+	// fetching block transactions.
+	//
+	// TODO: This is redundant with the UTXO config, but needs to be on this object for
+	// EVM chains - use common config when we refactor to consolidate the config object.
+	TransactionBatchSize int `mapstructure:"transaction_batch_size"`
 }
 
 func (b *BifrostBlockScannerConfiguration) Validate() {

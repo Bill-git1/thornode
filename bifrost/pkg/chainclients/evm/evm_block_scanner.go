@@ -1,7 +1,6 @@
 package evm
 
 import (
-	"context"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -9,7 +8,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 
 	_ "embed"
 
@@ -18,10 +16,10 @@ import (
 	ecommon "github.com/ethereum/go-ethereum/common"
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	ethclient "github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"golang.org/x/sync/semaphore"
 
 	"gitlab.com/thorchain/thornode/bifrost/blockscanner"
 	"gitlab.com/thorchain/thornode/bifrost/metrics"
@@ -174,6 +172,7 @@ func NewEVMScanner(cfg config.BifrostBlockScannerConfiguration,
 		logger:               log.Logger.With().Stringer("chain", cfg.ChainID).Logger(),
 		errCounter:           m.GetCounterVec(metrics.BlockScanError(cfg.ChainID)),
 		ethRpc:               ethRpc,
+		ethClient:            ethClient,
 		db:                   storage,
 		m:                    m,
 		gasPrice:             big.NewInt(0),
@@ -302,20 +301,12 @@ func (e *EVMScanner) getTxIn(block *etypes.Block) (stypes.TxIn, error) {
 		MemPool:  false,
 	}
 
-	sem := semaphore.NewWeighted(e.cfg.Concurrency)
-	mu := sync.Mutex{}
-	wg := sync.WaitGroup{}
-
-	processTx := func(tx *etypes.Transaction) {
-		defer wg.Done()
-		if err := sem.Acquire(context.Background(), 1); err != nil {
-			e.logger.Err(err).Msg("failed to acquire semaphore")
-			return
-		}
-		defer sem.Release(1)
-
-		if tx.To() == nil {
-			return
+	// collect all relevant transactions from the block into batches
+	batches := [][]*etypes.Transaction{}
+	batch := []*etypes.Transaction{}
+	for _, tx := range block.Transactions() {
+		if tx == nil || tx.To() == nil {
+			continue
 		}
 
 		// best effort remove the tx from the signed txs (ok if it does not exist)
@@ -323,35 +314,74 @@ func (e *EVMScanner) getTxIn(block *etypes.Block) (stypes.TxIn, error) {
 			e.logger.Err(err).Str("tx hash", tx.Hash().String()).Msg("failed to remove signed tx item")
 		}
 
-		txInItem, err := e.getTxInItem(tx)
+		batch = append(batch, tx)
+		if len(batch) >= e.cfg.TransactionBatchSize {
+			batches = append(batches, batch)
+			batch = []*etypes.Transaction{}
+		}
+	}
+	if len(batch) > 0 {
+		batches = append(batches, batch)
+	}
+
+	// process all batches
+	for _, batch := range batches {
+		// create the batch rpc request
+		var rpcBatch []rpc.BatchElem
+		for _, tx := range batch {
+			rpcBatch = append(rpcBatch, rpc.BatchElem{
+				Method: "eth_getTransactionReceipt",
+				Args:   []interface{}{tx.Hash().String()},
+				Result: &etypes.Receipt{},
+			})
+		}
+
+		// send the batch rpc request
+		err := e.ethClient.Client().BatchCall(rpcBatch)
 		if err != nil {
-			e.logger.Error().Err(err).Str("hash", tx.Hash().Hex()).Msg("failed to get one tx from server")
-			return
-		}
-		if txInItem == nil {
-			return
+			log.Error().Int("size", len(batch)).Err(err).Msg("failed to batch fetch transaction receipts")
+			return stypes.TxIn{}, err
 		}
 
-		// sometimes if a transaction failed due to a gas problem it will have no `to` address
-		if len(txInItem.To) == 0 {
-			return
-		}
+		// process the batch rpc response
+		for i, elem := range rpcBatch {
+			if elem.Error != nil {
+				if !errors.Is(err, ethereum.NotFound) {
+					log.Error().Err(elem.Error).Msg("failed to fetch transaction receipt")
+				}
+				continue
+			}
 
-		if len([]byte(txInItem.Memo)) > constants.MaxMemoSize {
-			return
+			// get the receipt
+			receipt, ok := elem.Result.(*etypes.Receipt)
+			if !ok {
+				log.Error().Msg("failed to cast to transaction receipt")
+				continue
+			}
+
+			// extract the txInItem
+			txInItem, err := e.receiptToTxInItem(batch[i], receipt)
+			if err != nil {
+				log.Error().Err(err).Msg("failed to convert receipt to txInItem")
+				continue
+			}
+
+			// skip invalid items
+			if txInItem == nil {
+				continue
+			}
+			if len(txInItem.To) == 0 {
+				continue
+			}
+			if len([]byte(txInItem.Memo)) > constants.MaxMemoSize {
+				continue
+			}
+
+			// add the txInItem to the txInbound
+			txInItem.BlockHeight = block.Number().Int64()
+			txInbound.TxArray = append(txInbound.TxArray, *txInItem)
 		}
-		txInItem.BlockHeight = block.Number().Int64()
-		mu.Lock()
-		txInbound.TxArray = append(txInbound.TxArray, *txInItem)
-		mu.Unlock()
 	}
-
-	// process txs in parallel
-	for _, tx := range block.Transactions() {
-		wg.Add(1)
-		go processTx(tx)
-	}
-	wg.Wait()
 
 	if len(txInbound.TxArray) == 0 {
 		e.logger.Debug().Uint64("block", block.NumberU64()).Msg("no tx need to be processed in this block")
@@ -361,6 +391,8 @@ func (e *EVMScanner) getTxIn(block *etypes.Block) (stypes.TxIn, error) {
 	return txInbound, nil
 }
 
+// TODO: This is only used by unit tests now, but covers receiptToTxInItem internally -
+// refactor so this logic is only in test code.
 func (a *EVMScanner) getTxInItem(tx *etypes.Transaction) (*stypes.TxInItem, error) {
 	if tx == nil || tx.To() == nil {
 		return nil, nil
@@ -374,6 +406,10 @@ func (a *EVMScanner) getTxInItem(tx *etypes.Transaction) (*stypes.TxInItem, erro
 		return nil, fmt.Errorf("failed to get transaction receipt: %w", err)
 	}
 
+	return a.receiptToTxInItem(tx, receipt)
+}
+
+func (a *EVMScanner) receiptToTxInItem(tx *etypes.Transaction, receipt *etypes.Receipt) (*stypes.TxInItem, error) {
 	if receipt.Status != 1 {
 		a.logger.Debug().Stringer("txid", tx.Hash()).Uint64("status", receipt.Status).Msg("tx failed")
 
