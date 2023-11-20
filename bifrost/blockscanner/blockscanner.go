@@ -49,7 +49,7 @@ type BlockScanner struct {
 	errorCounter    *prometheus.CounterVec
 	thorchainBridge thorclient.ThorchainBridge
 	chainScanner    BlockScannerFetcher
-	healthy         bool // status of scanner, if last attempt to scan a block was successful or not
+	healthy         *atomic.Bool
 }
 
 // NewBlockScanner create a new instance of BlockScanner
@@ -77,7 +77,7 @@ func NewBlockScanner(cfg config.BifrostBlockScannerConfiguration, scannerStorage
 		errorCounter:    m.GetCounterVec(metrics.CommonBlockScannerError),
 		thorchainBridge: thorchainBridge,
 		chainScanner:    chainScanner,
-		healthy:         false,
+		healthy:         &atomic.Bool{},
 	}
 
 	scanner.previousBlock, err = scanner.FetchLastHeight()
@@ -87,7 +87,7 @@ func NewBlockScanner(cfg config.BifrostBlockScannerConfiguration, scannerStorage
 
 // IsHealthy return if the block scanner is healthy or not
 func (b *BlockScanner) IsHealthy() bool {
-	return b.healthy
+	return b.healthy.Load()
 }
 
 // GetMessages return the channel
@@ -207,7 +207,7 @@ func (b *BlockScanner) scanBlocks() {
 
 			// Chain is paused, mark as unhealthy
 			if isChainPaused {
-				b.healthy = false
+				b.healthy.Store(false)
 				time.Sleep(constants.ThorchainBlockTime)
 				continue
 			}
@@ -227,7 +227,7 @@ func (b *BlockScanner) scanBlocks() {
 				// don't log an error if its because the block doesn't exist yet
 				if !errors.Is(err, btypes.ErrUnavailableBlock) {
 					b.logger.Error().Err(err).Int64("block height", currentBlock).Msg("fail to get RPCBlock")
-					b.healthy = false
+					b.healthy.Store(false)
 				}
 				time.Sleep(b.cfg.BlockHeightDiscoverBackoff)
 				continue
@@ -238,16 +238,19 @@ func (b *BlockScanner) scanBlocks() {
 			ms := b.cfg.ChainID.ApproximateBlockMilliseconds()
 			mod := (60_000 + ms - 1) / ms
 			// enable this one , so we could see how far it is behind
-			if currentBlock%mod == 0 || !b.healthy {
+			if currentBlock%mod == 0 || !b.healthy.Load() {
 				b.logger.Info().Int64("block height", currentBlock).Int("txs", len(txIn.TxArray)).Msg("scan block")
 
 				b.logger.Info().Msgf("the gap is %d , healthy: %+v", chainHeight-currentBlock, b.healthy)
 			}
 			atomic.AddInt64(&b.previousBlock, 1)
-			// if current block height is less than 50 blocks behind the tip , then it should catch up soon, should be safe to mark block scanner as healthy
-			// if the block scanner is too far away from tip , should not mark the block scanner as healthy , otherwise it might cause , reschedule and double send
-			if chainHeight-currentBlock <= 50 {
-				b.healthy = true
+
+			// consider 3 blocks or the configured lag time behind tip as healthy
+			lagDuration := time.Duration((chainHeight-currentBlock)*ms) * time.Millisecond
+			if chainHeight-currentBlock <= 3 || lagDuration < b.cfg.MaxHealthyLag {
+				b.healthy.Store(true)
+			} else {
+				b.healthy.Store(false)
 			}
 			b.logger.Debug().Msgf("the gap is %d , healthy: %+v", chainHeight-currentBlock, b.healthy)
 

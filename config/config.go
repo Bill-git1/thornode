@@ -705,6 +705,10 @@ type BifrostBlockScannerConfiguration struct {
 	// inbound after an outbound which has not reached consensus, causing double spend.
 	MaxResumeBlockLag time.Duration `mapstructure:"max_resume_block_lag"`
 
+	// MaxHealthyLag is the max duration to lag behind the latest block before the scanner
+	// is considered unhealthy.
+	MaxHealthyLag time.Duration `mapstructure:"max_healthy_lag"`
+
 	// TransactionBatchSize is the number of transactions to batch in a single request.
 	// This is used as the limit for one iteration of mempool checks and fanout in
 	// fetching block transactions.
