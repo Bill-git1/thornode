@@ -7998,6 +7998,14 @@
       "symbol": "OKB",
       "decimals": 18,
       "logoURI": "https://static.coinall.ltd/cdn/wallet/logo/okb.png"
+    },
+    {
+      "address": "0x85614A474dBeED440d5BBDB8aC50b0f22367F997",
+      "chainId": 1,
+      "name": "XVG ERC-20",
+      "symbol": "XVG",
+      "decimals": 18,
+      "logoURI": "https://raw.githubusercontent.com/vergecurrency/verge-graphics/master/XVGETH/Verge_Token_erc-20_icon_square-192x192.png"
     }
   ],
   "logoURI": "https://1inch.exchange/assets/images/logo.png"
