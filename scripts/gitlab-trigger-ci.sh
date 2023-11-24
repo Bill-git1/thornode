@@ -5,7 +5,7 @@ read -rp "Enter Gitlab Merge Request ID: " MR
 
 git branch -D mr-"$MR"
 git fetch origin merge-requests/"$MR"/head:mr-"$MR" && git checkout mr-"$MR"
-git push -f --no-verify
+git push --set-upstream origin -f --no-verify
 git checkout "@{-1}"
 
 echo
