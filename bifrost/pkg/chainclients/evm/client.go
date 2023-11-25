@@ -591,13 +591,12 @@ func (c *EVMClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 	// the nonce is stored as the transaction checkpoint, if it is set deserialize it
 	// so we only retry with the same nonce to avoid double spend
 	var nonce uint64
-	var fromAddr common.Address
+	fromAddr, err := tx.VaultPubKey.GetAddress(c.cfg.ChainID)
 	if tx.Checkpoint != nil {
 		if err := json.Unmarshal(tx.Checkpoint, &nonce); err != nil {
 			return nil, nil, nil, fmt.Errorf("fail to unmarshal checkpoint: %w", err)
 		}
 	} else {
-		fromAddr, err := tx.VaultPubKey.GetAddress(c.cfg.ChainID)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("fail to get %s address for pub key(%s): %w", c.GetChain().String(), tx.VaultPubKey, err)
 		}

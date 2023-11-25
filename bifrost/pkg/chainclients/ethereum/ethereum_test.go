@@ -324,6 +324,7 @@ func (s *EthereumSuite) TestClient(c *C) {
         {
             "vault_pub_key": "tthorpub1addwnpepq2mza4j4vplyjw295pkq8j2dan627lz6vufeu22pjx5vnnyjted5vwq3e3d",
             "chain": "ETH",
+			"from_address":"0xa7d9ddbe1f17865597fbd27ec712455208b6b76d",
             "to_address": "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae",
             "coin": {
                 "asset": "ETH.ETH",
@@ -349,9 +350,13 @@ func (s *EthereumSuite) TestClient(c *C) {
 	out := txOut.TxArray[0].TxOutItem()
 	out.Chain = common.ETHChain
 	out.Memo = "OUT:B6BD1A69831B9CCC0A1E9939E9AFBFCA144C427B3F61E176EBDCB14E57981C1B"
-	r, _, _, err := e2.SignTx(out, 1)
+	r, _, obs, err := e2.SignTx(out, 1)
 	c.Assert(err, IsNil)
 	c.Assert(r, NotNil)
+	c.Assert(obs, NotNil)
+	fromAddr, err := out.VaultPubKey.GetAddress(common.ETHChain)
+	c.Assert(err, IsNil)
+	c.Assert(obs.Sender, Equals, fromAddr.String())
 
 	_, err = e2.BroadcastTx(out, r)
 	c.Assert(err, IsNil)
@@ -398,53 +403,59 @@ func (s *EthereumSuite) TestSignETHTx(c *C) {
 	pubkeys := pubkeyMgr.GetPubKeys()
 	addr, err := pubkeys[len(pubkeys)-1].GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
+
 	// Not ETH chain
-	result, _, _, err := e.SignTx(stypes.TxOutItem{
+	result, _, obs, err := e.SignTx(stypes.TxOutItem{
 		Chain:       common.BTCChain,
 		ToAddress:   addr,
 		VaultPubKey: "",
 	}, 1)
 	c.Assert(err, NotNil)
 	c.Assert(result, IsNil)
+	c.Assert(obs, IsNil)
 
 	// to address is empty
-	result, _, _, err = e.SignTx(stypes.TxOutItem{
+	result, _, obs, err = e.SignTx(stypes.TxOutItem{
 		Chain:       common.ETHChain,
 		VaultPubKey: "",
 	}, 1)
 	c.Assert(err, NotNil)
 	c.Assert(result, IsNil)
+	c.Assert(obs, IsNil)
 
 	// vault pub key is empty
-	result, _, _, err = e.SignTx(stypes.TxOutItem{
+	result, _, obs, err = e.SignTx(stypes.TxOutItem{
 		Chain:       common.ETHChain,
 		ToAddress:   addr,
 		VaultPubKey: "",
 	}, 1)
 	c.Assert(err, NotNil)
 	c.Assert(result, IsNil)
+	c.Assert(obs, IsNil)
 
 	// memo is empty
-	result, _, _, err = e.SignTx(stypes.TxOutItem{
+	result, _, obs, err = e.SignTx(stypes.TxOutItem{
 		Chain:       common.ETHChain,
 		ToAddress:   addr,
 		VaultPubKey: e.localPubKey,
 	}, 1)
 	c.Assert(err, NotNil)
 	c.Assert(result, IsNil)
+	c.Assert(obs, IsNil)
 
 	// memo can't be parsed
-	result, _, _, err = e.SignTx(stypes.TxOutItem{
+	result, _, obs, err = e.SignTx(stypes.TxOutItem{
 		Chain:       common.ETHChain,
 		ToAddress:   addr,
 		VaultPubKey: e.localPubKey,
 		Memo:        "whatever",
 	}, 1)
-
 	c.Assert(err, NotNil)
 	c.Assert(result, IsNil)
+	c.Assert(obs, IsNil)
+
 	// memo is inbound
-	result, _, _, err = e.SignTx(stypes.TxOutItem{
+	result, _, obs, err = e.SignTx(stypes.TxOutItem{
 		Chain:       common.ETHChain,
 		ToAddress:   addr,
 		VaultPubKey: e.localPubKey,
@@ -452,9 +463,10 @@ func (s *EthereumSuite) TestSignETHTx(c *C) {
 	}, 1)
 	c.Assert(err, NotNil)
 	c.Assert(result, IsNil)
+	c.Assert(obs, IsNil)
 
 	// Outbound
-	result, _, _, err = e.SignTx(stypes.TxOutItem{
+	result, _, obs, err = e.SignTx(stypes.TxOutItem{
 		Chain:       common.ETHChain,
 		ToAddress:   addr,
 		VaultPubKey: e.localPubKey,
@@ -469,11 +481,16 @@ func (s *EthereumSuite) TestSignETHTx(c *C) {
 	}, 1)
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
+	c.Assert(obs, NotNil)
+	fromAddr, err := e.localPubKey.GetAddress(common.ETHChain)
+	c.Assert(err, IsNil)
+	c.Assert(obs.Sender, Equals, fromAddr.String())
 
 	asset, err := common.NewAsset("ETH.TKN-0X3B7FA4DD21C6F9BA3CA375217EAD7CAB9D6BF483")
 	c.Assert(err, IsNil)
+
 	// Outbound
-	result, _, _, err = e.SignTx(stypes.TxOutItem{
+	result, _, obs, err = e.SignTx(stypes.TxOutItem{
 		Chain:       common.ETHChain,
 		ToAddress:   addr,
 		VaultPubKey: e.localPubKey,
@@ -488,9 +505,13 @@ func (s *EthereumSuite) TestSignETHTx(c *C) {
 	}, 1)
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
+	c.Assert(obs, NotNil)
+	fromAddr, err = e.localPubKey.GetAddress(common.ETHChain)
+	c.Assert(err, IsNil)
+	c.Assert(obs.Sender, Equals, fromAddr.String())
 
 	// refund
-	result, _, _, err = e.SignTx(stypes.TxOutItem{
+	result, _, obs, err = e.SignTx(stypes.TxOutItem{
 		Chain:       common.ETHChain,
 		ToAddress:   addr,
 		VaultPubKey: e.localPubKey,
@@ -505,8 +526,13 @@ func (s *EthereumSuite) TestSignETHTx(c *C) {
 	}, 1)
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
+	c.Assert(obs, NotNil)
+	fromAddr, err = e.localPubKey.GetAddress(common.ETHChain)
+	c.Assert(err, IsNil)
+	c.Assert(obs.Sender, Equals, fromAddr.String())
+
 	// refund
-	result, _, _, err = e.SignTx(stypes.TxOutItem{
+	result, _, obs, err = e.SignTx(stypes.TxOutItem{
 		Chain:       common.ETHChain,
 		ToAddress:   addr,
 		VaultPubKey: e.localPubKey,
@@ -521,9 +547,13 @@ func (s *EthereumSuite) TestSignETHTx(c *C) {
 	}, 1)
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
+	c.Assert(obs, NotNil)
+	fromAddr, err = e.localPubKey.GetAddress(common.ETHChain)
+	c.Assert(err, IsNil)
+	c.Assert(obs.Sender, Equals, fromAddr.String())
 
 	// migrate
-	result, _, _, err = e.SignTx(stypes.TxOutItem{
+	result, _, obs, err = e.SignTx(stypes.TxOutItem{
 		Chain:       common.ETHChain,
 		ToAddress:   addr,
 		VaultPubKey: e.localPubKey,
@@ -538,8 +568,13 @@ func (s *EthereumSuite) TestSignETHTx(c *C) {
 	}, 1)
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
+	c.Assert(obs, NotNil)
+	fromAddr, err = e.localPubKey.GetAddress(common.ETHChain)
+	c.Assert(err, IsNil)
+	c.Assert(obs.Sender, Equals, fromAddr.String())
+
 	// migrate
-	result, _, _, err = e.SignTx(stypes.TxOutItem{
+	result, _, obs, err = e.SignTx(stypes.TxOutItem{
 		Chain:       common.ETHChain,
 		ToAddress:   addr,
 		VaultPubKey: e.localPubKey,
@@ -554,6 +589,10 @@ func (s *EthereumSuite) TestSignETHTx(c *C) {
 	}, 1)
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
+	c.Assert(obs, NotNil)
+	fromAddr, err = e.localPubKey.GetAddress(common.ETHChain)
+	c.Assert(err, IsNil)
+	c.Assert(obs.Sender, Equals, fromAddr.String())
 }
 
 func (s *EthereumSuite) TestGetAsgardAddresses(c *C) {
