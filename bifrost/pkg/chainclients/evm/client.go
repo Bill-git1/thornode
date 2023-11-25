@@ -698,7 +698,7 @@ func (c *EVMClient) BroadcastTx(txOutItem stypes.TxOutItem, hexTx []byte) (strin
 	defer cancel()
 
 	// send the transaction
-	if err := c.ethClient.SendTransaction(ctx, tx); err != nil {
+	if err := c.ethClient.SendTransaction(ctx, tx); !isAcceptableError(err) {
 		c.logger.Error().Str("txid", txID).Err(err).Msg("failed to send transaction")
 		return "", nil
 	}
