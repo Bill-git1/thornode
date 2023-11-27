@@ -593,6 +593,10 @@ type BifrostChainConfiguration struct {
 	// ScannerLevelDB is the LevelDB configuration for the block scanner.
 	ScannerLevelDB LevelDBOptions `mapstructure:"scanner_leveldb"`
 
+	// MinConfirmations is the minimum number of confirmations to require before an
+	// observed inbound transaction is considered valid.
+	MinConfirmations uint64 `mapstructure:"min_confirmations"`
+
 	// UTXO contains UTXO chain specific configuration.
 	UTXO struct {
 		// BlockCacheCount is the number of blocks to cache in storage.

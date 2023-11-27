@@ -78,6 +78,7 @@ bifrost:
         compaction_table_size_multiplier: 10
         write_buffer: 20971520 # 20mb
         block_cache_capacity: 536870912 # 512mb
+      min_confirmations: 0
       utxo: &utxo
         block_cache_count: 144
         version: 25
@@ -199,6 +200,7 @@ bifrost:
         gas_cache_blocks: 10
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
+      min_confirmations: 2
       utxo:
         <<: *utxo
         block_cache_count: 1440

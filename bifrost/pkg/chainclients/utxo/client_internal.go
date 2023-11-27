@@ -844,6 +844,11 @@ func (c *Client) getBlockRequiredConfirmation(txIn types.TxIn, height int64) (in
 	}
 	confirm := totalTxValue.QuoUint64(uint64(totalFeeAndSubsidy)).Uint64()
 	c.log.Info().Msgf("totalTxValue:%s, totalFeeAndSubsidy:%d, confirm:%d", totalTxValue, totalFeeAndSubsidy, confirm)
+
+	if confirm < c.cfg.MinConfirmations {
+		confirm = c.cfg.MinConfirmations
+	}
+
 	return int64(confirm), nil
 }
 
