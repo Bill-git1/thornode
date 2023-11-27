@@ -61,7 +61,6 @@ generate:
   script:
     - |
       export PATH="$PATH:/root/go/bin"
-      go install golang.org/x/tools/cmd/stringer
       make generate smoke-protob-docker
       ./scripts/lint-generated.bash
 

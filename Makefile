@@ -64,6 +64,7 @@ generate: go-generate openapi protob-docker
 	@git ls-files openapi/gen | xargs sed -i '/^[- ]*API version.*$(shell cat version)/d;/APIClient.*$(shell cat version)/d'
 
 go-generate:
+	@go install golang.org/x/tools/cmd/stringer@v0.15.0
 	@go generate ./...
 
 SMOKE_PROTO_DIR=test/smoke/thornode_proto
