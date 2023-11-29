@@ -1,0 +1,99 @@
+# Table of contents
+
+- [Introduction](README.md)
+
+## Swap Guide
+
+- [Quickstart Guide](swap-guide/quickstart-guide.md)
+- [Fees and Wait Times](swap-guide/fees-and-wait-times.md)
+- [Streaming Swaps](swap-guide/streaming-swaps.md)
+
+---
+
+## Lending
+
+- [Quick Start Guide](lending/quick-start-guide.md)
+
+## Saving Guide
+
+- [Quickstart Guide](saving-guide/quickstart-guide.md)
+- [Fees and Wait Times](saving-guide/fees-and-wait-times.md)
+
+## Affiliate Guide
+
+- [THORName Guide](affiliate-guide/thorname-guide.md)
+
+--
+
+## Examples
+
+- [Examples](examples/tutorials.md)
+- [TypeScript (Web)](examples/typescript-web/README.md)
+  - [Overview](examples/typescript-web/overview.md)
+  - [Query Package](examples/typescript-web/query-package.md)
+  - [AMM Package](examples/typescript-web/amm-package.md)
+  - [Client Packages](examples/typescript-web/client-packages.md)
+  - [Packages Breakdown](examples/typescript-web/packages-breakdown.md)
+  - [Coding Guide](examples/typescript-web/coding-guide.md)
+
+## Concepts
+
+- [Connecting to THORChain](concepts/connecting-to-thorchain.md)
+- [Querying THORChain](concepts/querying-thorchain.md)
+- [Transaction Memos](concepts/memos.md)
+- [Asset Notation](concepts/asset-notation.md)
+- [Memo Length Reduction](concepts/memo-length-reduction.md)
+- [Network Halts](concepts/network-halts.md)
+- [Fees](concepts/fees.md)
+- [Delays](concepts/delays.md)
+- [Sending Transactions](concepts/sending-transactions.md)
+- [Code Libraries](concepts/code-libraries.md)
+- [Math](concepts/math.md)
+
+## Aggregators
+
+- [Aggregator Overview](aggregators/aggregator-overview.md)
+- [Memos](aggregators/memos.md)
+- [EVM Implementation](aggregators/evm-implementation.md)
+
+## CLI
+
+- [Overview](cli/overview.md)
+- [Multisig](cli/multisig.md)
+- [Offline Ledger Support](cli/offline-ledger-support.md)
+
+## THORNode
+
+- [Release Process](release.md)
+- [EVM Whitelist Procedure](evm_whitelist_procedure.md)
+- [Upgrade Router](upgrade_router.md)
+- [Mimir Abilities](mimir.md)
+- [How to add a new chain](newchain.md)
+- [New Chain Integrations](chains/README.md)
+- [Architecture Decision Records (ADR)](architecture/README.md)
+  - [ADR Creation Process](architecture/PROCESS.md)
+  - [ADR {ADR-NUMBER}: {TITLE}](architecture/TEMPLATE.md)
+  - [ADR 001: ThorChat](architecture/adr-001-thorchat.md)
+  - [ADR 002: REMOVE YGG VAULTS](architecture/adr-002-removeyggvaults.md)
+  - [ADR 003: FLOORED OUTBOUND FEE](architecture/adr-003-flooredoutboundfee.md)
+  - [ADR 004: Keyshare Backups](architecture/adr-004-keyshare-backups.md)
+  - [ADR 005: Deprecate Impermanent Loss Protection](architecture/adr-005-deprecate-ilp.md)
+  - [ADR 006: Enable POL](architecture/adr-006-enable-pol.md)
+  - [ADR 007: Increase Fund Migration and Churn Interval](architecture/adr-007-increase-fund-migration-and-churn-interval.md)
+  - [ADR 008: Implement a Dynamic Outbound Fee Multiplier (DOFM)](architecture/adr-008-implement-dynamic-outbound-fee-multiplier.md)
+  - [ADR 009: Reserve Income and Fee Overhaul](architecture/adr-009-reserve-income-fee-overhaul.md)
+  - [ADR 010: Introduction of Streaming Swaps](architecture/adr-010-streaming-swaps.md)
+
+## Protocol Development
+
+- [Adding New Chains](protocol-development/adding-new-chains.md)
+- [Chain Clients](protocol-development/chain-clients/README.md)
+  - [UTXO](protocol-development/chain-clients/utxo.md)
+  - [EVM Chains](protocol-development/chain-clients/evm-chains.md)
+  - [BFT Chains](protocol-development/chain-clients/bft-chains.md)
+- [ERC20 Tokens](protocol-development/erc20-tokens.md)
+
+--
+
+- [Dev Discord](https://discord.gg/7RRmc35UEG)
+- [Website](https://thorchain.org/)

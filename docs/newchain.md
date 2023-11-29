@@ -58,26 +58,26 @@ Bifrost is a key component in THORChain, it is a bridge between THORChain and ex
 // GetHeight    get chain height
 // GetAddress   gets address for public key pool in chain
 // GetAccount   gets account from thorclient in cain
-// GetConfig	gets the chain configuration
+// GetConfig    gets the chain configuration
 // GetConfirmationCount given a tx in , return the number of blocks it need to wait for confirmation
 // ConfirmationCountRead given a tx in , return true/false to indicate whether the tx in is ready to be confirmed
 // IsBlockScannerHealthy return true means the blockscanner is healthy ,false otherwise
 // Start
 // Stop
 type ChainClient interface {
-	SignTx(tx stypes.TxOutItem, height int64) ([]byte, error)
-	BroadcastTx(_ stypes.TxOutItem, _ []byte) (string, error)
-	GetHeight() (int64, error)
-	GetAddress(poolPubKey common.PubKey) string
-	GetAccount(poolPubKey common.PubKey) (common.Account, error)
-	GetAccountByAddress(address string) (common.Account, error)
-	GetChain() common.Chain
-	Start(globalTxsQueue chan stypes.TxIn, globalErrataQueue chan stypes.ErrataBlock)
-	GetConfig() config.ChainConfiguration
-	GetConfirmationCount(txIn stypes.TxIn) int64
-	ConfirmationCountReady(txIn stypes.TxIn) bool
-	IsBlockScannerHealthy() bool
-	Stop()
+ SignTx(tx stypes.TxOutItem, height int64) ([]byte, error)
+ BroadcastTx(_ stypes.TxOutItem, _ []byte) (string, error)
+ GetHeight() (int64, error)
+ GetAddress(poolPubKey common.PubKey) string
+ GetAccount(poolPubKey common.PubKey) (common.Account, error)
+ GetAccountByAddress(address string) (common.Account, error)
+ GetChain() common.Chain
+ Start(globalTxsQueue chan stypes.TxIn, globalErrataQueue chan stypes.ErrataBlock)
+ GetConfig() config.ChainConfiguration
+ GetConfirmationCount(txIn stypes.TxIn) int64
+ ConfirmationCountReady(txIn stypes.TxIn) bool
+ IsBlockScannerHealthy() bool
+ Stop()
 }
 ```
 

@@ -5,7 +5,7 @@ lint:
   definitions:
     - name: codespell
       commands:
-        - run: codespell --ignore-words=${workspace}/.trunk/configs/words.txt ${target}
+        - run: codespell --uri-ignore-words-list=* --ignore-words=${workspace}/.trunk/configs/words.txt ${target}
   enabled:
     # TODO: enable these new suggested linters and see which are worth keeping/fixing up codebase.
     #- bandit@1.7.5
