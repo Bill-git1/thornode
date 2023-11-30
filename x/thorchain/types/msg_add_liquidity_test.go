@@ -79,7 +79,7 @@ func (MsgAddLiquiditySuite) TestMsgAddLiquidity(c *C) {
 		},
 	}
 	for i, item := range inputs {
-		tx := common.NewTx(
+		tx = common.NewTx(
 			item.txHash,
 			GetRandomRUNEAddress(),
 			GetRandomBNBAddress(),
@@ -89,7 +89,7 @@ func (MsgAddLiquiditySuite) TestMsgAddLiquidity(c *C) {
 			BNBGasFeeSingleton,
 			"",
 		)
-		m := NewMsgAddLiquidity(tx, item.asset, item.r, item.amt, item.runeAddr, item.assetAddr, common.NoAddress, cosmos.ZeroUint(), item.signer)
+		m = NewMsgAddLiquidity(tx, item.asset, item.r, item.amt, item.runeAddr, item.assetAddr, common.NoAddress, cosmos.ZeroUint(), item.signer)
 		c.Assert(m.ValidateBasicV93(), NotNil, Commentf("%d) %s\n", i, m))
 	}
 	// If affiliate fee basis point is more than 1000 , the message should be rejected

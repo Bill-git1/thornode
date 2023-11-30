@@ -94,7 +94,7 @@ func (t *TemporalStorage) GetBlockMeta(height int64) (*BlockMeta, error) {
 		return nil, fmt.Errorf("fail to get block meta(%s) from storage: %w", key, err)
 	}
 	var blockMeta BlockMeta
-	if err := json.Unmarshal(v, &blockMeta); err != nil {
+	if err = json.Unmarshal(v, &blockMeta); err != nil {
 		return nil, fmt.Errorf("fail to unmarshal block meta from json: %w", err)
 	}
 	return &blockMeta, nil
@@ -182,7 +182,7 @@ func (t *TemporalStorage) GetTransactionFee() (float64, int32, error) {
 		return 0.0, 0, fmt.Errorf("fail to get transaction fee from storage: %w", err)
 	}
 	var transactionFee TransactionFee
-	if err := json.Unmarshal(buf, &transactionFee); err != nil {
+	if err = json.Unmarshal(buf, &transactionFee); err != nil {
 		return 0.0, 0, fmt.Errorf("fail to unmarshal transaction fee: %w", err)
 	}
 	return transactionFee.Fee, transactionFee.VSize, nil

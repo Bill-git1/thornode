@@ -200,7 +200,7 @@ func (s *BlockScannerTestSuite) TestProcessTxs(c *C) {
 		defer jsonFile.Close()
 
 		res, _ := io.ReadAll(jsonFile)
-		if _, err := w.Write(res); err != nil {
+		if _, err = w.Write(res); err != nil {
 			c.Fatal("unable to write /block_result", err)
 		}
 	})

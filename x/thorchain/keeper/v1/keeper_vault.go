@@ -154,7 +154,8 @@ func (k KVStore) getSortedVaultSecurity(ctx cosmos.Context, vaults Vaults, signi
 			}
 			for _, item := range txOut.TxArray {
 				if item.OutHash.IsEmpty() {
-					toAddress, err := vault.PubKey.GetAddress(item.Coin.Asset.GetChain())
+					var toAddress common.Address
+					toAddress, err = vault.PubKey.GetAddress(item.Coin.Asset.GetChain())
 					if err != nil {
 						ctx.Logger().Error("failed to get address of chain", "error", err)
 						continue
@@ -163,7 +164,8 @@ func (k KVStore) getSortedVaultSecurity(ctx cosmos.Context, vaults Vaults, signi
 						if item.Coin.Asset.IsRune() {
 							totalValue = common.SafeSub(totalValue, item.Coin.Amount)
 						} else {
-							pool, err := k.GetPool(ctx, item.Coin.Asset)
+							var pool Pool
+							pool, err = k.GetPool(ctx, item.Coin.Asset)
 							if err != nil {
 								ctx.Logger().Error("failed to get pool", "error", err)
 								continue
@@ -174,7 +176,8 @@ func (k KVStore) getSortedVaultSecurity(ctx cosmos.Context, vaults Vaults, signi
 						if item.Coin.Asset.IsRune() {
 							totalValue = totalValue.Add(item.Coin.Amount)
 						} else {
-							pool, err := k.GetPool(ctx, item.Coin.Asset)
+							var pool Pool
+							pool, err = k.GetPool(ctx, item.Coin.Asset)
 							if err != nil {
 								ctx.Logger().Error("failed to get pool", "error", err)
 								continue
@@ -324,7 +327,8 @@ func (k KVStore) GetAsgardVaults(ctx cosmos.Context) (Vaults, error) {
 
 	var asgards Vaults
 	for _, pk := range pks {
-		vault, err := k.GetVault(ctx, pk)
+		var vault Vault
+		vault, err = k.GetVault(ctx, pk)
 		if err != nil {
 			return nil, err
 		}
@@ -368,7 +372,7 @@ func (k KVStore) DeleteVault(ctx cosmos.Context, pubkey common.PubKey) error {
 	}
 
 	if vault.IsAsgard() {
-		if err := k.RemoveFromAsgardIndex(ctx, pubkey); err != nil {
+		if err = k.RemoveFromAsgardIndex(ctx, pubkey); err != nil {
 			ctx.Logger().Error("fail to remove vault from asgard index", "error", err)
 		}
 	}

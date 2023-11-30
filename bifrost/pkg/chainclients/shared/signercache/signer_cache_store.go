@@ -64,7 +64,7 @@ func (s *CacheStore) RemoveSigned(transactionHash string) error {
 		return err
 	}
 	key := s.getSignedKey(string(value))
-	if err := s.db.Delete([]byte(key), nil); err != nil {
+	if err = s.db.Delete([]byte(key), nil); err != nil {
 		s.logger.Error().Err(err).Msgf("fail to remove %s from signed cache", string(value))
 		return fmt.Errorf("fail to remove signed cache, err: %w", err)
 	}

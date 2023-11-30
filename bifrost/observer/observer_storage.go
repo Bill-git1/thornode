@@ -41,7 +41,7 @@ func (s *ObserverStorage) GetOnDeckTxs() ([]types.TxIn, error) {
 		return nil, fmt.Errorf("fail to get ondeck tx from key value store: %w", err)
 	}
 	var result []types.TxIn
-	if err := json.Unmarshal(buf, &result); err != nil {
+	if err = json.Unmarshal(buf, &result); err != nil {
 		return nil, fmt.Errorf("fail to unmarshal ondeck tx: %w", err)
 	}
 	return result, nil

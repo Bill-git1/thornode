@@ -103,12 +103,14 @@ func (h *TokenManager) GetTokenMeta(token string) (types.TokenMeta, error) {
 			h.logger.Info().Str("token", token).Msg("TM: token not whitelisted")
 			return types.TokenMeta{}, fmt.Errorf("token: %s is not whitelisted", token)
 		}
-		symbol, err := h.getSymbol(token)
+		var symbol string
+		symbol, err = h.getSymbol(token)
 		if err != nil {
 			h.logger.Info().Str("token", token).Msg("fail to get symbol")
 			return types.TokenMeta{}, fmt.Errorf("fail to get symbol: %w", err)
 		}
-		decimals, err := h.getDecimals(token)
+		var decimals uint64
+		decimals, err = h.getDecimals(token)
 		if err != nil {
 			h.logger.Err(err).Uint64("default decimals", h.defaultDecimals).Msg("failed to get decimals from smart contract, returning default")
 		}

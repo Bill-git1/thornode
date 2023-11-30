@@ -30,3 +30,8 @@ linters-settings:
     rules:
       - name: exported
         disabled: true
+  govet:
+    check-shadowing: true
+    settings:
+      shadow:
+        strict: true

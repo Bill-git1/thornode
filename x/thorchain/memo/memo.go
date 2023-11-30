@@ -279,7 +279,8 @@ func FetchAddress(ctx cosmos.Context, keeper keeper.Keeper, name string, chain c
 	}
 
 	if keeper.THORNameExists(ctx, parts[0]) {
-		thorname, err := keeper.GetTHORName(ctx, parts[0])
+		var thorname types.THORName
+		thorname, err = keeper.GetTHORName(ctx, parts[0])
 		if err != nil {
 			return common.NoAddress, err
 		}

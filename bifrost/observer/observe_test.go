@@ -74,7 +74,6 @@ const accountInfoWithMemoFlag string = `
 }`
 
 func (s *ObserverSuite) NewMockBinanceInstance(c *C, jsonData string) {
-	var err error
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		c.Logf("requestUri:%s", req.RequestURI)
 		if strings.EqualFold(req.RequestURI, "/abci_query?path=%22%2Faccount%2Ftbnb1yeuljgpkg2c2qvx3nlmgv7gvnyss6ye2u8rasf%22") { // nolint
@@ -100,6 +99,7 @@ func (s *ObserverSuite) NewMockBinanceInstance(c *C, jsonData string) {
 		}
 	}))
 
+	var err error
 	blockHeightDiscoverBackoff, _ := time.ParseDuration("1s")
 	blockRetryInterval, _ := time.ParseDuration("10s")
 	httpRequestTimeout, _ := time.ParseDuration("30s")
@@ -121,22 +121,6 @@ func (s *ObserverSuite) NewMockBinanceInstance(c *C, jsonData string) {
 }
 
 func (s *ObserverSuite) SetUpSuite(c *C) {
-	var err error
-	s.m, err = metrics.NewMetrics(config.BifrostMetricsConfiguration{
-		Enabled:      false,
-		ListenPort:   9000,
-		ReadTimeout:  time.Second,
-		WriteTimeout: time.Second,
-		Chains:       common.Chains{common.BNBChain},
-	})
-	c.Assert(s.m, NotNil)
-	c.Assert(err, IsNil)
-
-	ns := strconv.Itoa(time.Now().Nanosecond())
-	types2.SetupConfigForTest()
-	ctypes.Network = ctypes.TestNetwork
-	c.Assert(os.Setenv("NET", "testnet"), IsNil)
-
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		if strings.HasPrefix(req.RequestURI, "/errata") { // nolint
 			_, err := rw.Write([]byte(`{ "jsonrpc": "2.0", "id": "E7FDA9DE4D0AD37D823813CB5BC0D6E69AB0D41BB666B65B965D12D24A3AE83C", "result": { "height": "1", "txhash": "AAAA000000000000000000000000000000000000000000000000000000000000", "logs": [{"success": "true", "log": ""}] } }`))
@@ -200,6 +184,22 @@ func (s *ObserverSuite) SetUpSuite(c *C) {
 			c.Errorf("invalid server query: %s", req.RequestURI)
 		}
 	}))
+
+	var err error
+	s.m, err = metrics.NewMetrics(config.BifrostMetricsConfiguration{
+		Enabled:      false,
+		ListenPort:   9000,
+		ReadTimeout:  time.Second,
+		WriteTimeout: time.Second,
+		Chains:       common.Chains{common.BNBChain},
+	})
+	c.Assert(s.m, NotNil)
+	c.Assert(err, IsNil)
+
+	ns := strconv.Itoa(time.Now().Nanosecond())
+	types2.SetupConfigForTest()
+	ctypes.Network = ctypes.TestNetwork
+	c.Assert(os.Setenv("NET", "testnet"), IsNil)
 
 	s.thordir = filepath.Join(os.TempDir(), ns, ".thorcli")
 	cfg := config.BifrostClientConfiguration{

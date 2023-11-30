@@ -150,7 +150,8 @@ func (k KVStore) GetOrderBookIndex(ctx cosmos.Context, msg MsgSwap) (common.TxID
 	}
 	result := make(common.TxIDs, len(record))
 	for i, rec := range record {
-		hash, err := common.NewTxID(rec)
+		var hash common.TxID
+		hash, err = common.NewTxID(rec)
 		if err != nil {
 			_ = dbError(ctx, fmt.Sprintf("failed to parse tx hash: (%s)", rec), err)
 			continue

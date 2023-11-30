@@ -388,8 +388,7 @@ func fuzzyAssetMatchV103(ctx cosmos.Context, keeper keeper.Keeper, origAsset com
 	iterator := keeper.GetPoolIterator(ctx)
 	defer iterator.Close()
 	for ; iterator.Valid(); iterator.Next() {
-		var pool Pool
-		if err := keeper.Cdc().Unmarshal(iterator.Value(), &pool); err != nil {
+		if err = keeper.Cdc().Unmarshal(iterator.Value(), &pool); err != nil {
 			ctx.Logger().Error("fail to fetch pool", "asset", asset, "err", err)
 			continue
 		}

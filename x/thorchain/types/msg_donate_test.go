@@ -61,10 +61,10 @@ func (mas *MsgDonateSuite) TestMsgDonate(c *C) {
 		},
 	}
 	for _, item := range inputs {
-		tx := GetRandomTx()
+		tx = GetRandomTx()
 		tx.ID = item.txHash
 		msgDonate := NewMsgDonate(tx, item.ticker, item.rune, item.asset, item.signer)
-		err := msgDonate.ValidateBasic()
+		err = msgDonate.ValidateBasic()
 		c.Assert(err, NotNil)
 	}
 }

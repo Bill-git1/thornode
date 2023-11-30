@@ -54,7 +54,7 @@ func getPeers(peers map[string]string, source string) (map[string]string, error)
 	// Connect to a known peer
 	peerAddr, _ := ma.NewMultiaddr(source)
 	peerInfo, _ := peer.AddrInfoFromP2pAddr(peerAddr)
-	if err := host.Connect(ctx, *peerInfo); err != nil {
+	if err = host.Connect(ctx, *peerInfo); err != nil {
 		return peers, err
 	}
 
@@ -102,7 +102,7 @@ func main() {
 	} else {
 		defer resp.Body.Close()
 
-		if err := json.NewDecoder(resp.Body).Decode(&nodes); err != nil {
+		if err = json.NewDecoder(resp.Body).Decode(&nodes); err != nil {
 			fmt.Println("fail to decode thornode status", err.Error())
 		} else {
 			for _, node := range nodes {
@@ -127,7 +127,8 @@ func main() {
 			fmt.Println("Error", err.Error())
 		}
 		for k, v := range peers {
-			ip, err := extractIPAddress(v)
+			var ip string
+			ip, err = extractIPAddress(v)
 			if err != nil {
 				fmt.Println("Error", err.Error())
 				continue
@@ -180,7 +181,7 @@ func main() {
 			}
 
 			// get the peer id
-			_, err := fetchPeerId(ipAddr, peerID)
+			_, err = fetchPeerId(ipAddr, peerID)
 			if err != nil {
 				r.description = err.Error()
 				results[node.NodeAddress.String()] = r
@@ -204,7 +205,8 @@ func main() {
 			}
 
 			// check thornode sync at tip
-			nodeHeight, err := fetchBlockHeight(fmt.Sprintf("http://%s:27147", ipAddr))
+			var nodeHeight int64
+			nodeHeight, err = fetchBlockHeight(fmt.Sprintf("http://%s:27147", ipAddr))
 			if err != nil {
 				r.description = err.Error()
 				results[node.NodeAddress.String()] = r
@@ -293,7 +295,7 @@ func fetchBlockHeight(addr string) (int64, error) {
 		return 0, err
 	}
 
-	if err := json.Unmarshal(buf, &result); err != nil {
+	if err = json.Unmarshal(buf, &result); err != nil {
 		return 0, fmt.Errorf("failed to unmarshal tendermint status: %w", err)
 	}
 

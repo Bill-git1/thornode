@@ -108,7 +108,7 @@ func (b *BinanceBlockScanner) GetHeight() (int64, error) {
 	}
 
 	defer func() {
-		if err := resp.Body.Close(); err != nil {
+		if err = resp.Body.Close(); err != nil {
 			log.Error().Err(err).Msg("fail to close resp body")
 		}
 	}()
@@ -129,7 +129,7 @@ func (b *BinanceBlockScanner) GetHeight() (int64, error) {
 	}
 
 	var abci ABCIinfo
-	if err := json.Unmarshal(data, &abci); err != nil {
+	if err = json.Unmarshal(data, &abci); err != nil {
 		return 0, fmt.Errorf("failed to unmarshal: %w", err)
 	}
 
@@ -153,7 +153,7 @@ func (b *BinanceBlockScanner) updateFees(height int64) error {
 		return err
 	}
 	var result btypes.QueryResult
-	if err := json.Unmarshal(bz, &result); err != nil {
+	if err = json.Unmarshal(bz, &result); err != nil {
 		return err
 	}
 
@@ -172,7 +172,7 @@ func (b *BinanceBlockScanner) updateFees(height int64) error {
 	changed := false
 	for _, fee := range fees {
 		if fee.GetParamType() == types.TransferFeeType {
-			if err := fee.Check(); err != nil {
+			if err = fee.Check(); err != nil {
 				return err
 			}
 
@@ -194,7 +194,7 @@ func (b *BinanceBlockScanner) updateFees(height int64) error {
 	b.m.GetGauge(metrics.GasPrice(common.BNBChain)).Set(float64(b.singleFee))
 	if changed {
 		b.m.GetCounter(metrics.GasPriceChange(common.BNBChain)).Inc()
-		if _, err := b.bridge.PostNetworkFee(height, common.BNBChain, 1, b.singleFee); err != nil {
+		if _, err = b.bridge.PostNetworkFee(height, common.BNBChain, 1, b.singleFee); err != nil {
 			b.logger.Err(err).Msg("fail to post Binance chain single transfer fee to THORNode")
 		}
 	}
@@ -259,6 +259,7 @@ func (b *BinanceBlockScanner) getFromHTTP(url string) ([]byte, error) {
 		return nil, fmt.Errorf("fail to get from %s: %w", url, err)
 	}
 	defer func() {
+		// trunk-ignore(golangci-lint/govet): shadow
 		if err := resp.Body.Close(); err != nil {
 			b.logger.Error().Err(err).Msg("fail to close http response body.")
 		}
@@ -364,7 +365,7 @@ func (b *BinanceBlockScanner) FetchTxs(height, chainHeight int64) (stypes.TxIn, 
 		return txIn, err
 	}
 	// set a block as success
-	if err := b.db.RemoveBlockStatus(block.Height); err != nil {
+	if err = b.db.RemoveBlockStatus(block.Height); err != nil {
 		b.logger.Error().Err(err).Int64("block", block.Height).Msg("fail to remove block status from data store, thus block will be re processed")
 	}
 
@@ -373,11 +374,11 @@ func (b *BinanceBlockScanner) FetchTxs(height, chainHeight int64) (stypes.TxIn, 
 		return txIn, nil
 	}
 
-	if err := b.updateFees(block.Height); err != nil {
+	if err = b.updateFees(block.Height); err != nil {
 		b.logger.Error().Err(err).Msg("fail to update Binance gas fees")
 	}
 	if b.solvencyReporter != nil {
-		if err := b.solvencyReporter(height); err != nil {
+		if err = b.solvencyReporter(height); err != nil {
 			b.logger.Err(err).Msg("fail to report solvency to THORChain")
 		}
 	}
@@ -417,7 +418,7 @@ func (b *BinanceBlockScanner) fromTxToTxIn(hash, encodedTx string, blockHeight i
 		return nil, fmt.Errorf("fail to decode tx: %w", err)
 	}
 	var t tx.StdTx
-	if err := tx.Cdc.UnmarshalBinaryLengthPrefixed(buf, &t); err != nil {
+	if err = tx.Cdc.UnmarshalBinaryLengthPrefixed(buf, &t); err != nil {
 		// not returning an error here because it may cause binance to get
 		// stuck if someone has issued a mini token.
 		return nil, nil

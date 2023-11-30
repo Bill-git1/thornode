@@ -128,7 +128,7 @@ func (MsgSwapSuite) TestMsgSwap(c *C) {
 		},
 	}
 	for _, item := range inputs {
-		tx := common.NewTx(
+		tx = common.NewTx(
 			item.requestTxHash,
 			item.requester,
 			GetRandomBNBAddress(),
@@ -139,7 +139,7 @@ func (MsgSwapSuite) TestMsgSwap(c *C) {
 			"SWAP:BNB.BNB",
 		)
 
-		m := NewMsgSwap(tx, item.target, item.destination, item.targetPrice, common.NoAddress, cosmos.ZeroUint(), "", "", nil, 0, 0, 0, item.signer)
+		m = NewMsgSwap(tx, item.target, item.destination, item.targetPrice, common.NoAddress, cosmos.ZeroUint(), "", "", nil, 0, 0, 0, item.signer)
 		c.Assert(m.ValidateBasicV63(), NotNil)
 	}
 

@@ -15,7 +15,8 @@ func GetAsgardAddress(chain common.Chain, bridge thorclient.ThorchainBridge) ([]
 
 	newAddresses := make([]common.Address, 0)
 	for _, v := range vaults {
-		addr, err := v.PubKey.GetAddress(chain)
+		var addr common.Address
+		addr, err = v.PubKey.GetAddress(chain)
 		if err != nil {
 			continue
 		}

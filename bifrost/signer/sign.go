@@ -72,7 +72,6 @@ func NewSigner(cfg config.BifrostSignerConfiguration,
 	}
 	var na *ttypes.NodeAccount
 	for i := 0; i < 300; i++ { // wait for 5 min before timing out
-		var err error
 		na, err = thorchainBridge.GetNodeAccount(thorKeys.GetSignerInfo().GetAddress().String())
 		if err != nil {
 			return nil, fmt.Errorf("fail to get node account from thorchain,err:%w", err)
@@ -274,8 +273,8 @@ func (s *Signer) processTransactions() {
 							s.logger.Error().Err(err).Interface("tx", item.TxOutItem).Msg("round 7 signing error")
 							item.Round7Retry = true
 							item.Checkpoint = checkpoint
-							if err := s.storage.Set(item); err != nil {
-								s.logger.Error().Err(err).Msg("fail to update tx out store item with round 7 retry")
+							if setErr := s.storage.Set(item); err != nil {
+								s.logger.Error().Err(setErr).Msg("fail to update tx out store item with round 7 retry")
 							}
 						}
 
@@ -300,7 +299,7 @@ func (s *Signer) processTransactions() {
 					}
 
 					// We have a successful broadcast! Remove the item from our store
-					if err := s.storage.Remove(item); err != nil {
+					if err = s.storage.Remove(item); err != nil {
 						s.logger.Error().Err(err).Msg("fail to update tx out store item")
 					}
 				}
@@ -400,6 +399,7 @@ func (s *Signer) scheduleRetry(keygenBlock ttypes.KeygenBlock) bool {
 		// every block, try to start processing again
 		for {
 			time.Sleep(constants.ThorchainBlockTime)
+			// trunk-ignore(golangci-lint/govet): shadow
 			height, err := s.thorchainBridge.GetBlockHeight()
 			if err != nil {
 				s.logger.Error().Err(err).Msg("fail to get last chain height")
@@ -431,8 +431,10 @@ func (s *Signer) processKeygenBlock(keygenBlock ttypes.KeygenBlock) {
 		keygenStart := time.Now()
 		pubKey, blame, err := s.tssKeygen.GenerateNewKey(keygenBlock.Height, keygenReq.GetMembers())
 		if !blame.IsEmpty() {
-			err := fmt.Errorf("reason: %s, nodes %+v", blame.FailReason, blame.BlameNodes)
-			s.logger.Error().Err(err).Msg("Blame")
+			s.logger.Error().
+				Str("reason", blame.FailReason).
+				Interface("nodes", blame.BlameNodes).
+				Msg("keygen blame")
 		}
 		keygenTime := time.Since(keygenStart).Milliseconds()
 
@@ -449,7 +451,7 @@ func (s *Signer) processKeygenBlock(keygenBlock ttypes.KeygenBlock) {
 			s.logger.Error().Interface("keygenBlock", keygenBlock).Msg("done with keygen retries")
 		}
 
-		if err := s.sendKeygenToThorchain(keygenBlock.Height, pubKey.Secp256k1, blame, keygenReq.GetMembers(), keygenReq.Type, keygenTime); err != nil {
+		if err = s.sendKeygenToThorchain(keygenBlock.Height, pubKey.Secp256k1, blame, keygenReq.GetMembers(), keygenReq.Type, keygenTime); err != nil {
 			s.errCounter.WithLabelValues("fail_to_broadcast_keygen", "").Inc()
 			s.logger.Error().Err(err).Msg("fail to broadcast keygen")
 		}
@@ -497,6 +499,7 @@ func (s *Signer) sendKeygenToThorchain(height int64, poolPk common.PubKey, blame
 	bf := backoff.NewExponentialBackOff()
 	bf.MaxElapsedTime = constants.ThorchainBlockTime
 	return backoff.Retry(func() error {
+		// trunk-ignore(golangci-lint/govet): shadow
 		txID, err := s.thorchainBridge.Broadcast(keygenMsg)
 		if err != nil {
 			s.logger.Warn().Err(err).Msg("fail to send keygen tx to thorchain")
@@ -641,8 +644,8 @@ func (s *Signer) signAndBroadcast(item TxOutStoreItem) ([]byte, *types.TxInItem,
 
 		// store the signed tx for the next retry
 		item.SignedTx = signedTx
-		if err := s.storage.Set(item); err != nil {
-			s.logger.Error().Err(err).Msg("fail to update tx out store item with signed tx")
+		if storeErr := s.storage.Set(item); err != nil {
+			s.logger.Error().Err(storeErr).Msg("fail to update tx out store item with signed tx")
 		}
 
 		return nil, observation, err

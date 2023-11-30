@@ -15,6 +15,7 @@ import (
 
 	"gitlab.com/thorchain/thornode/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/common"
+	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
@@ -74,12 +75,14 @@ func (kg *KeyGen) GenerateNewKey(keygenBlockHeight int64, pKeys common.PubKeys) 
 		} else {
 			blames := make([]string, len(blame.BlameNodes))
 			for i := range blame.BlameNodes {
-				pk, err := common.NewPubKey(blame.BlameNodes[i].Pubkey)
+				var pk common.PubKey
+				pk, err = common.NewPubKey(blame.BlameNodes[i].Pubkey)
 				if err != nil {
 					kg.logger.Error().Err(err).Int64("height", keygenBlockHeight).Str("pubkey", blame.BlameNodes[i].Pubkey).Msg("tss keygen results error")
 					continue
 				}
-				acc, err := pk.GetThorAddress()
+				var acc cosmos.AccAddress
+				acc, err = pk.GetThorAddress()
 				if err != nil {
 					kg.logger.Error().Err(err).Int64("height", keygenBlockHeight).Str("pubkey", pk.String()).Msg("tss keygen results error")
 					continue

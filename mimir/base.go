@@ -8,6 +8,7 @@ import (
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
+	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
 //go:generate stringer -type=MimirType
@@ -83,22 +84,24 @@ func (m *mimir) FetchValue(ctx cosmos.Context, keeper keeper.Keeper) (value int6
 
 	// fetch mimir v2
 	if keeper.GetVersion().GTE(semver.MustParse("1.124.0")) {
-		active, err := keeper.ListActiveValidators(ctx)
+		var active types.NodeAccounts
+		active, err = keeper.ListActiveValidators(ctx)
 		if err != nil {
 			ctx.Logger().Error("failed to get active validator set", "error", err)
 		}
 
-		mimirs, err := keeper.GetNodeMimirsV2(ctx, m.key())
+		var mimirs types.NodeMimirs
+		mimirs, err = keeper.GetNodeMimirsV2(ctx, m.key())
 		if err != nil {
 			ctx.Logger().Error("failed to get node mimir v2", "error", err)
 		}
-		value := int64(-1)
+		value = int64(-1)
 		switch m.Type() {
 		case EconomicMimir:
 			value = mimirs.ValueOfEconomic(m.key(), active.GetNodeAddresses())
 			if value < 0 {
 				// no value, fallback to last economic value (if present)
-				value, err := keeper.GetMimirV2(ctx, m.key())
+				value, err = keeper.GetMimirV2(ctx, m.key())
 				if err != nil {
 					ctx.Logger().Error("failed to get mimir v2", "error", err)
 				}

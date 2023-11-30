@@ -111,10 +111,10 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 	checkpoint := utxo.SignCheckpoint{}
 	redeemTx := &wire.MsgTx{}
 	if tx.Checkpoint != nil {
-		if err := json.Unmarshal(tx.Checkpoint, &checkpoint); err != nil {
+		if err = json.Unmarshal(tx.Checkpoint, &checkpoint); err != nil {
 			return nil, nil, nil, fmt.Errorf("fail to unmarshal checkpoint: %w", err)
 		}
-		if err := redeemTx.Deserialize(bytes.NewReader(checkpoint.UnsignedTx)); err != nil {
+		if err = redeemTx.Deserialize(bytes.NewReader(checkpoint.UnsignedTx)); err != nil {
 			return nil, nil, nil, fmt.Errorf("fail to deserialize tx: %w", err)
 		}
 	} else {
@@ -131,7 +131,8 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 	}
 
 	// serialize the checkpoint for later
-	checkpointBytes, err := json.Marshal(checkpoint)
+	var checkpointBytes []byte
+	checkpointBytes, err = json.Marshal(checkpoint)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("fail to marshal checkpoint: %w", err)
 	}
@@ -168,6 +169,8 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 	for _, signing := range signings {
 		go func(i int, amount int64) {
 			defer wg.Done()
+
+			// trunk-ignore(golangci-lint/govet): shadow
 			var err error
 
 			// chain specific signing
@@ -212,7 +215,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 	finalVBytes := mempool.GetTxVirtualSize(btcutil.NewTx(redeemTx))
 	c.log.Info().Msgf("final size: %d, final vbyte: %d", finalSize, finalVBytes)
 	var signedTx bytes.Buffer
-	if err := redeemTx.Serialize(&signedTx); err != nil {
+	if err = redeemTx.Serialize(&signedTx); err != nil {
 		return nil, nil, nil, fmt.Errorf("fail to serialize tx to bytes: %w", err)
 	}
 
@@ -269,6 +272,7 @@ func (c *Client) BroadcastTx(txOut stypes.TxOutItem, payload []byte) (string, er
 		bm = utxo.NewBlockMeta("", height, "")
 	}
 	defer func() {
+		// trunk-ignore(golangci-lint/govet): shadow
 		if err := c.temporalStorage.SaveBlockMeta(height, bm); err != nil {
 			c.log.Err(err).Msg("fail to save block metadata")
 		}
@@ -276,7 +280,7 @@ func (c *Client) BroadcastTx(txOut stypes.TxOutItem, payload []byte) (string, er
 
 	redeemTx := wire.NewMsgTx(wire.TxVersion)
 	buf := bytes.NewBuffer(payload)
-	if err := redeemTx.Deserialize(buf); err != nil {
+	if err = redeemTx.Deserialize(buf); err != nil {
 		return "", fmt.Errorf("fail to deserialize payload: %w", err)
 	}
 
@@ -289,7 +293,8 @@ func (c *Client) BroadcastTx(txOut stypes.TxOutItem, payload []byte) (string, er
 	}
 
 	// broadcast tx
-	txid, err := c.rpc.SendRawTransaction(redeemTx, maxFee)
+	var txid string
+	txid, err = c.rpc.SendRawTransaction(redeemTx, maxFee)
 	if txid != "" {
 		bm.AddSelfTransaction(txid)
 	}
@@ -302,7 +307,7 @@ func (c *Client) BroadcastTx(txOut stypes.TxOutItem, payload []byte) (string, er
 	}
 
 	// save tx id to block meta in case we need to errata later
-	if err := c.signerCacheManager.SetSigned(txOut.CacheHash(), txid); err != nil {
+	if err = c.signerCacheManager.SetSigned(txOut.CacheHash(), txid); err != nil {
 		c.log.Err(err).Msgf("fail to mark tx out item (%+v) as signed", txOut)
 	}
 

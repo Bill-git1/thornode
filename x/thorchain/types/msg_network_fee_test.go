@@ -81,7 +81,7 @@ func (MsgNetworkFeeSuite) TestMsgNetworkFee(c *C) {
 		},
 	}
 	for _, tc := range testCases {
-		msg := NewMsgNetworkFee(tc.blockHeight, tc.chain, tc.transactionSize, tc.transactionFeeRate, tc.signer)
+		msg = NewMsgNetworkFee(tc.blockHeight, tc.chain, tc.transactionSize, tc.transactionFeeRate, tc.signer)
 
 		err := msg.ValidateBasic()
 		if tc.expectErr {

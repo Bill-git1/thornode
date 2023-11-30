@@ -97,7 +97,8 @@ func pubKeySigToSigData(cdc *codec.LegacyAmino, key cryptotypes.PubKey, sig []by
 	sigIdx := 0
 	for i := 0; i < n; i++ {
 		if bitArray.GetIndex(i) {
-			data, err := pubKeySigToSigData(cdc, pubKeys[i], multiSig.Sigs[sigIdx])
+			var data signing.SignatureData
+			data, err = pubKeySigToSigData(cdc, pubKeys[i], multiSig.Sigs[sigIdx])
 			if err != nil {
 				return nil, sdkerrors.Wrapf(err, "Unable to convert Signature to SigData %d", sigIdx)
 			}

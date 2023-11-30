@@ -60,7 +60,7 @@ func (MsgRagnarokSuite) TestMsgRagnarokSuite(c *C) {
 	}
 
 	for _, item := range inputs {
-		tx := NewObservedTx(common.NewTx(
+		tx = NewObservedTx(common.NewTx(
 			item.txID,
 			item.sender,
 			GetRandomBNBAddress(),
@@ -68,7 +68,7 @@ func (MsgRagnarokSuite) TestMsgRagnarokSuite(c *C) {
 			BNBGasFeeSingleton,
 			"",
 		), 12, GetRandomPubKey(), 12)
-		m := NewMsgRagnarok(tx, item.blockHeight, item.signer)
+		m = NewMsgRagnarok(tx, item.blockHeight, item.signer)
 		err := m.ValidateBasic()
 		c.Assert(err, NotNil, Commentf("%s", err.Error()))
 	}

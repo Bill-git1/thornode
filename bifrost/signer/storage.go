@@ -110,7 +110,7 @@ func (s *SignerStore) Set(item TxOutStoreItem) error {
 		s.logger.Error().Err(err).Msg("fail to marshal to txout store item")
 		return err
 	}
-	if err := s.db.Put([]byte(key), buf, nil); err != nil {
+	if err = s.db.Put([]byte(key), buf, nil); err != nil {
 		s.logger.Error().Err(err).Msg("fail to set txout item")
 		return err
 	}
@@ -137,7 +137,7 @@ func (s *SignerStore) Get(key string) (item TxOutStoreItem, err error) {
 		return
 	}
 	buf, _ := s.db.Get([]byte(key), nil)
-	if err := json.Unmarshal(buf, &item); err != nil {
+	if err = json.Unmarshal(buf, &item); err != nil {
 		s.logger.Error().Err(err).Msg("fail to unmarshal to txout store item")
 		return item, err
 	}

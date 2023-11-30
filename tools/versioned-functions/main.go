@@ -132,6 +132,7 @@ func main() {
 	// parse all subdirectories with go files
 	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
 		if info.IsDir() {
+			// trunk-ignore(golangci-lint/govet): shadow
 			subPkgs, err := parser.ParseDir(fset, path, nil, parser.ParseComments)
 			if err != nil {
 				return err
@@ -155,7 +156,8 @@ func main() {
 		}
 
 		ast.Inspect(file, func(node ast.Node) bool {
-			n, ok := node.(*ast.CaseClause)
+			var n *ast.CaseClause
+			n, ok = node.(*ast.CaseClause)
 			if !ok {
 				return true
 			}
@@ -168,12 +170,16 @@ func main() {
 					if n == nil || version != "" {
 						return false
 					}
-					if c, ok := n.(*ast.CallExpr); ok {
+					var c *ast.CallExpr
+					if c, ok = n.(*ast.CallExpr); ok {
 						// extract the version from semver.MustParse argument
-						if s, ok := c.Fun.(*ast.SelectorExpr); ok {
-							if x, ok := s.X.(*ast.Ident); ok {
+						var s *ast.SelectorExpr
+						if s, ok = c.Fun.(*ast.SelectorExpr); ok {
+							var x *ast.Ident
+							if x, ok = s.X.(*ast.Ident); ok {
 								if x.Name == "semver" && s.Sel.Name == "MustParse" {
-									if l, ok := c.Args[0].(*ast.BasicLit); ok {
+									var l *ast.BasicLit
+									if l, ok = c.Args[0].(*ast.BasicLit); ok {
 										version = l.Value
 										return false
 									}
@@ -197,7 +203,8 @@ func main() {
 						if n == nil {
 							return false
 						}
-						if c, ok := n.(*ast.CallExpr); ok {
+						var c *ast.CallExpr
+						if c, ok = n.(*ast.CallExpr); ok {
 							// extract function names from the body
 							vFn := ""
 							switch ft := c.Fun.(type) {
@@ -216,7 +223,8 @@ func main() {
 							manager := strings.TrimPrefix(vFn, "new")
 
 							// store the manager version and type mapping
-							if v, ok := currentManagerVersions[manager]; ok {
+							var v string
+							if v, ok = currentManagerVersions[manager]; ok {
 								if v != minor {
 									fmt.Printf("Error: function version mismatch (%s): %s != %s\n", manager, v, minor)
 								}

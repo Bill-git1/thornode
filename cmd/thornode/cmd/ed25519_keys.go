@@ -57,11 +57,12 @@ func ed25519Keys(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		// create new one
 		if errors.Is(err, keyring.ErrKeyNotFound) {
-			newItem, err := generateNewKey(buf)
+			var newItem *keyring.Item
+			newItem, err = generateNewKey(buf)
 			if err != nil {
 				return fmt.Errorf("fail to create a new ED25519 key: %w", err)
 			}
-			if err := db.Set(*newItem); err != nil {
+			if err = db.Set(*newItem); err != nil {
 				return fmt.Errorf("fail to save ED25519 key: %w", err)
 			}
 			item = *newItem

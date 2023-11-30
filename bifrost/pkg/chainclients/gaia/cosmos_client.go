@@ -246,7 +246,8 @@ func (c *CosmosClient) GetAccountByAddress(address string, _ *big.Int) (common.A
 
 	nativeCoins := make([]common.Coin, 0)
 	for _, balance := range balances.Balances {
-		coin, err := fromCosmosToThorchain(balance)
+		var coin common.Coin
+		coin, err = fromCosmosToThorchain(balance)
 		if err != nil {
 			c.logger.Err(err).Interface("balances", balances.Balances).Msg("wasn't able to convert coins that passed whitelist")
 			continue
@@ -285,7 +286,8 @@ func (c *CosmosClient) processOutboundTx(tx stypes.TxOutItem, thorchainHeight in
 	var coins ctypes.Coins
 	for _, coin := range tx.Coins {
 		// convert to cosmos coin
-		cosmosCoin, err := fromThorchainToCosmos(coin)
+		var cosmosCoin ctypes.Coin
+		cosmosCoin, err = fromThorchainToCosmos(coin)
 		if err != nil {
 			c.logger.Warn().Err(err).Interface("tx", tx).Msg("unable to convert coin fromThorchainToCosmos")
 			continue
@@ -313,7 +315,8 @@ func (c *CosmosClient) SignTx(tx stypes.TxOutItem, thorchainHeight int64) (signe
 				}
 
 				// key sign error forward the keysign blame to thorchain
-				txID, err := c.thorchainBridge.PostKeysignFailure(keysignError.Blame, thorchainHeight, tx.Memo, tx.Coins, tx.VaultPubKey)
+				var txID common.TxID
+				txID, err = c.thorchainBridge.PostKeysignFailure(keysignError.Blame, thorchainHeight, tx.Memo, tx.Coins, tx.VaultPubKey)
 				if err != nil {
 					c.logger.Err(err).Msg("fail to post keysign failure to THORChain")
 					return
@@ -346,7 +349,7 @@ func (c *CosmosClient) SignTx(tx stypes.TxOutItem, thorchainHeight int64) (signe
 	// so we only retry with the same account number and sequence to avoid double spend
 	meta := CosmosMetadata{}
 	if tx.Checkpoint != nil {
-		if err := json.Unmarshal(tx.Checkpoint, &meta); err != nil {
+		if err = json.Unmarshal(tx.Checkpoint, &meta); err != nil {
 			c.logger.Err(err).Msg("fail to unmarshal checkpoint")
 			return nil, nil, nil, err
 		}
@@ -355,7 +358,8 @@ func (c *CosmosClient) SignTx(tx stypes.TxOutItem, thorchainHeight int64) (signe
 		// fetching it from the GRPC server
 		meta = c.accts.Get(tx.VaultPubKey)
 		if currentHeight > meta.BlockHeight {
-			acc, err := c.GetAccount(tx.VaultPubKey, big.NewInt(0))
+			var acc common.Account
+			acc, err = c.GetAccount(tx.VaultPubKey, big.NewInt(0))
 			if err != nil {
 				return nil, nil, nil, fmt.Errorf("fail to get account info: %w", err)
 			}
@@ -514,7 +518,7 @@ func (c *CosmosClient) BroadcastTx(tx stypes.TxOutItem, txBytes []byte) (string,
 	// Only add the transaction to signer cache when it is sure the transaction has been broadcast successfully.
 	// So for other scenario , like transaction already in mempool , invalid account sequence # , the transaction can be rescheduled , and retried
 	if broadcastRes.TxResponse.Code == errortypes.SuccessABCICode {
-		if err := c.signerCacheManager.SetSigned(tx.CacheHash(), broadcastRes.TxResponse.TxHash); err != nil {
+		if err = c.signerCacheManager.SetSigned(tx.CacheHash(), broadcastRes.TxResponse.TxHash); err != nil {
 			c.logger.Err(err).Msg("fail to set signer cache")
 		}
 	}
@@ -542,7 +546,8 @@ func (c *CosmosClient) ReportSolvency(blockHeight int64) error {
 		return fmt.Errorf("fail to get asgards,err: %w", err)
 	}
 	for _, asgard := range asgardVaults {
-		acct, err := c.GetAccount(asgard.PubKey, big.NewInt(0))
+		var acct common.Account
+		acct, err = c.GetAccount(asgard.PubKey, big.NewInt(0))
 		if err != nil {
 			c.logger.Err(err).Msgf("fail to get account balance")
 			continue
@@ -586,7 +591,7 @@ func (c *CosmosClient) OnObservedTxIn(txIn stypes.TxInItem, blockHeight int64) {
 	if m.GetTxID().IsEmpty() {
 		return
 	}
-	if err := c.signerCacheManager.SetSigned(txIn.CacheHash(c.GetChain(), m.GetTxID().String()), txIn.Tx); err != nil {
+	if err = c.signerCacheManager.SetSigned(txIn.CacheHash(c.GetChain(), m.GetTxID().String()), txIn.Tx); err != nil {
 		c.logger.Err(err).Msg("fail to update signer cache")
 	}
 }

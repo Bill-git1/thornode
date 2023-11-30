@@ -55,7 +55,7 @@ func (ldbss *LevelDBScannerStorage) SetBlockScanStatus(block Block, status Block
 	if err != nil {
 		return fmt.Errorf("fail to marshal BlockStatusItem to json: %w", err)
 	}
-	if err := ldbss.db.Put([]byte(getBlockStatusKey(block.Height)), buf, nil); err != nil {
+	if err = ldbss.db.Put([]byte(getBlockStatusKey(block.Height)), buf, nil); err != nil {
 		return fmt.Errorf("fail to set block scan status: %w", err)
 	}
 	return nil

@@ -29,7 +29,7 @@ func (b *thorchainBridge) GetKeysign(blockHeight int64, pk string) (types.TxOut,
 		return types.TxOut{}, fmt.Errorf("failed to get tx from a block height: %w", err)
 	}
 	var query QueryKeysign
-	if err := json.Unmarshal(body, &query); err != nil {
+	if err = json.Unmarshal(body, &query); err != nil {
 		return types.TxOut{}, fmt.Errorf("failed to unmarshal TxOut: %w", err)
 	}
 	// there is no txout item , thus no need to validate signature either

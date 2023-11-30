@@ -85,7 +85,7 @@ func (s *PubKeyMgrSuite) TestFetchKeys(c *C) {
 			})
 			buf, err := json.MarshalIndent(result, "", "	")
 			c.Assert(err, IsNil)
-			if _, err := w.Write(buf); err != nil {
+			if _, err = w.Write(buf); err != nil {
 				c.Error(err)
 			}
 		case "/thorchain/vaults/asgard":

@@ -150,7 +150,7 @@ func NewClient(
 	}
 
 	// import the node local address in the daemon wallet
-	if err := c.RegisterPublicKey(c.nodePubKey); err != nil {
+	if err = c.RegisterPublicKey(c.nodePubKey); err != nil {
 		return nil, fmt.Errorf("fail to register (%s): %w", c.nodePubKey, err)
 	}
 
@@ -323,7 +323,7 @@ func (c *Client) OnObservedTxIn(txIn types.TxInItem, blockHeight int64) {
 	if blockMeta == nil {
 		blockMeta = utxo.NewBlockMeta("", blockHeight, "")
 	}
-	if _, err := c.temporalStorage.TrackObservedTx(txIn.Tx); err != nil {
+	if _, err = c.temporalStorage.TrackObservedTx(txIn.Tx); err != nil {
 		c.log.Err(err).Msgf("fail to add hash (%s) to observed tx cache", txIn.Tx)
 	}
 	if c.isAsgardAddress(txIn.Sender) {
@@ -333,11 +333,12 @@ func (c *Client) OnObservedTxIn(txIn types.TxInItem, blockHeight int64) {
 		// add the transaction to block meta
 		blockMeta.AddCustomerTransaction(txIn.Tx)
 	}
-	if err := c.temporalStorage.SaveBlockMeta(blockHeight, blockMeta); err != nil {
+	if err = c.temporalStorage.SaveBlockMeta(blockHeight, blockMeta); err != nil {
 		c.log.Err(err).Int64("height", blockHeight).Msgf("fail to save block meta to storage")
 	}
 	// update the signer cache
-	m, err := mem.ParseMemo(common.LatestVersion, txIn.Memo)
+	var m mem.Memo
+	m, err = mem.ParseMemo(common.LatestVersion, txIn.Memo)
 	if err != nil {
 		// Debug log only as ParseMemo error is expected for THORName inbounds.
 		c.log.Debug().Err(err).Msgf("fail to parse memo: %s", txIn.Memo)
@@ -349,7 +350,7 @@ func (c *Client) OnObservedTxIn(txIn types.TxInItem, blockHeight int64) {
 	if m.GetTxID().IsEmpty() {
 		return
 	}
-	if err := c.signerCacheManager.SetSigned(txIn.CacheHash(c.GetChain(), m.GetTxID().String()), txIn.Tx); err != nil {
+	if err = c.signerCacheManager.SetSigned(txIn.CacheHash(c.GetChain(), m.GetTxID().String()), txIn.Tx); err != nil {
 		c.log.Err(err).Msg("fail to update signer cache")
 	}
 }
@@ -402,19 +403,20 @@ func (c *Client) FetchTxs(height, chainHeight int64) (types.TxIn, error) {
 		blockMeta.BlockHash = block.Hash
 	}
 
-	if err := c.temporalStorage.SaveBlockMeta(block.Height, blockMeta); err != nil {
+	if err = c.temporalStorage.SaveBlockMeta(block.Height, blockMeta); err != nil {
 		return txIn, fmt.Errorf("fail to save block meta into storage: %w", err)
 	}
 	pruneHeight := height - int64(c.cfg.UTXO.BlockCacheCount)
 	if pruneHeight > 0 {
 		defer func() {
-			if err := c.temporalStorage.PruneBlockMeta(pruneHeight, c.canDeleteBlock); err != nil {
+			if err = c.temporalStorage.PruneBlockMeta(pruneHeight, c.canDeleteBlock); err != nil {
 				c.log.Err(err).Int64("height", pruneHeight).Msg("fail to prune block meta")
 			}
 		}()
 	}
 
-	txInBlock, err := c.extractTxs(block)
+	var txInBlock types.TxIn
+	txInBlock, err = c.extractTxs(block)
 	if err != nil {
 		return types.TxIn{}, fmt.Errorf("fail to extract txIn from block: %w", err)
 	}
@@ -438,7 +440,7 @@ func (c *Client) FetchTxs(height, chainHeight int64) (types.TxIn, error) {
 			c.log.Err(err).Msg("fail to send network fee")
 		}
 		if c.IsBlockScannerHealthy() {
-			if err := c.ReportSolvency(height); err != nil {
+			if err = c.ReportSolvency(height); err != nil {
 				c.log.Err(err).Msg("fail to report solvency info")
 			}
 		}
@@ -514,7 +516,9 @@ func (c *Client) FetchMemPool(height int64) (types.TxIn, error) {
 	errCount := 0
 	for i, batch := range batches {
 		// fetch the batch of results
-		results, errs, err := c.rpc.BatchGetRawTransactionVerbose(batch)
+		var results []*btcjson.TxRawResult
+		var errs []error
+		results, errs, err = c.rpc.BatchGetRawTransactionVerbose(batch)
 		if err != nil { // clear mempool cache for unprocessed batches and return error
 			clearMemPoolCache(i)
 			returnErr = fmt.Errorf("fail to get raw transactions from mempool: %w", err)
@@ -524,7 +528,7 @@ func (c *Client) FetchMemPool(height int64) (types.TxIn, error) {
 		// process the batch results
 		for i := range results {
 			result := results[i]
-			err := errs[i]
+			err = errs[i]
 			// the transaction could have been removed, regardless safe to continue
 			if err != nil {
 				errCount++
@@ -534,7 +538,8 @@ func (c *Client) FetchMemPool(height int64) (types.TxIn, error) {
 			}
 
 			// filter transactions
-			txInItem, err := c.getTxIn(result, height, true)
+			var txInItem types.TxInItem
+			txInItem, err = c.getTxIn(result, height, true)
 			if err != nil {
 				c.log.Debug().Err(err).Msg("fail to get TxInItem")
 				continue
@@ -657,7 +662,8 @@ func (c *Client) ReportSolvency(height int64) error {
 
 	// report solvency for each asgard vault
 	for _, asgard := range asgardVaults {
-		acct, err := c.GetAccount(asgard.PubKey, nil)
+		var acct common.Account
+		acct, err = c.GetAccount(asgard.PubKey, nil)
 		if err != nil {
 			c.log.Err(err).Msgf("fail to get account balance")
 			continue

@@ -39,14 +39,16 @@ func main() {
 		currentType := ""
 
 		for _, spec := range genDecl.Specs {
-			valueSpec, ok := spec.(*ast.ValueSpec)
+			var valueSpec *ast.ValueSpec
+			valueSpec, ok = spec.(*ast.ValueSpec)
 			if !ok {
 				continue
 			}
 
 			// if the type is not explicitly stated, use the last type detected
 			if valueSpec.Type != nil {
-				typeIdent, ok := valueSpec.Type.(*ast.Ident)
+				var typeIdent *ast.Ident
+				typeIdent, ok = valueSpec.Type.(*ast.Ident)
 				if ok {
 					currentType = typeIdent.Name
 				}

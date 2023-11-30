@@ -51,7 +51,7 @@ func (s *KeeperOrderBookSuite) TestKeeperOrderBook(c *C) {
 	iter = k.GetOrderBookIndexIterator(ctx, msg1.OrderType, msg1.Tx.Coins[0].Asset, msg1.TargetAsset)
 	for ; iter.Valid(); iter.Next() {
 		hashes := make([]string, 0)
-		ok, err := k.getStrings(ctx, string(iter.Key()), &hashes)
+		ok, err = k.getStrings(ctx, string(iter.Key()), &hashes)
 		c.Assert(err, IsNil)
 		c.Check(ok, Equals, true)
 		c.Check(hashes, HasLen, 2)

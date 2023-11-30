@@ -60,11 +60,11 @@ func getTestEthClient(c *C) (*ethclient.Client, error) {
 		err = json.Unmarshal(body, &rpcRequest)
 		c.Assert(err, IsNil)
 		if rpcRequest.Method == "eth_chainId" {
-			_, err := rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x539"}`))
+			_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x539"}`))
 			c.Assert(err, IsNil)
 		}
 		if rpcRequest.Method == "eth_gasPrice" {
-			_, err := rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x1"}`))
+			_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x1"}`))
 			c.Assert(err, IsNil)
 		}
 		if rpcRequest.Method == "eth_call" {
@@ -74,16 +74,16 @@ func getTestEthClient(c *C) (*ethclient.Client, error) {
 			// Symbol Call
 			if strings.Contains(string(rpcRequest.Params), symbolInput) {
 				// TKN
-				_, err := rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x544B4E"}`))
+				_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x544B4E"}`))
 				c.Assert(err, IsNil)
 
 				// Decimal call
 			} else if strings.Contains(string(rpcRequest.Params), decimalsInput) {
 				// 18
-				_, err := rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x12"}`))
+				_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x12"}`))
 				c.Assert(err, IsNil)
 			}
-			_, err := rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x0"}`))
+			_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x0"}`))
 			c.Assert(err, IsNil)
 		}
 	}))

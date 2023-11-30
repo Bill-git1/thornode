@@ -341,7 +341,8 @@ func (c *EVMClient) GetBalances(addr string, height *big.Int) (common.Coins, err
 	}
 	coins := common.Coins{}
 	for _, token := range tokens {
-		balance, err := c.GetBalance(addr, token.Address, height)
+		var balance *big.Int
+		balance, err = c.GetBalance(addr, token.Address, height)
 		if err != nil {
 			c.logger.Err(err).Str("token", token.Address).Msg("fail to get balance for token")
 			continue
@@ -461,10 +462,6 @@ func (c *EVMClient) buildOutboundTx(txOutItem stypes.TxOutItem, memo mem.Memo, n
 	if contractAddr.IsEmpty() {
 		// we may be churning from a vault that does not have a contract
 		// try getting the toAddress (new vault) contract instead
-		memo, err := mem.ParseMemo(common.LatestVersion, txOutItem.Memo)
-		if err != nil {
-			return nil, fmt.Errorf("fail to parse memo during empty contract recovery(%s):%w", txOutItem.Memo, err)
-		}
 		if memo.GetType() == mem.TxMigrate {
 			contractAddr = c.getSmartContractByAddress(txOutItem.ToAddress)
 		}
@@ -591,9 +588,10 @@ func (c *EVMClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 	// the nonce is stored as the transaction checkpoint, if it is set deserialize it
 	// so we only retry with the same nonce to avoid double spend
 	var nonce uint64
-	fromAddr, err := tx.VaultPubKey.GetAddress(c.cfg.ChainID)
+	var fromAddr common.Address
+	fromAddr, err = tx.VaultPubKey.GetAddress(c.cfg.ChainID)
 	if tx.Checkpoint != nil {
-		if err := json.Unmarshal(tx.Checkpoint, &nonce); err != nil {
+		if err = json.Unmarshal(tx.Checkpoint, &nonce); err != nil {
 			return nil, nil, nil, fmt.Errorf("fail to unmarshal checkpoint: %w", err)
 		}
 	} else {
@@ -633,7 +631,7 @@ func (c *EVMClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 	gas := common.MakeEVMGas(c.GetChain(), outboundTx.GasPrice(), outboundTx.Gas())
 
 	signedTx := &etypes.Transaction{}
-	if err := signedTx.UnmarshalJSON(rawTx); err != nil {
+	if err = signedTx.UnmarshalJSON(rawTx); err != nil {
 		return nil, rawTx, nil, fmt.Errorf("fail to unmarshal signed tx: %w", err)
 	}
 
@@ -714,7 +712,7 @@ func (c *EVMClient) BroadcastTx(txOutItem stypes.TxOutItem, hexTx []byte) (strin
 		c.logger.Err(err).Msg("fail to get current THORChain block height")
 		// at this point , the tx already broadcast successfully , don't return an error
 		// otherwise will cause the same tx to retry
-	} else if err := c.AddSignedTxItem(txID, blockHeight, txOutItem.VaultPubKey.String()); err != nil {
+	} else if err = c.AddSignedTxItem(txID, blockHeight, txOutItem.VaultPubKey.String()); err != nil {
 		c.logger.Err(err).Str("hash", txID).Msg("fail to add signed tx item")
 	}
 
@@ -737,7 +735,7 @@ func (c *EVMClient) OnObservedTxIn(txIn stypes.TxInItem, blockHeight int64) {
 	if m.GetTxID().IsEmpty() {
 		return
 	}
-	if err := c.signerCacheManager.SetSigned(txIn.CacheHash(c.GetChain(), m.GetTxID().String()), txIn.Tx); err != nil {
+	if err = c.signerCacheManager.SetSigned(txIn.CacheHash(c.GetChain(), m.GetTxID().String()), txIn.Tx); err != nil {
 		c.logger.Err(err).Msg("fail to update signer cache")
 	}
 }
@@ -785,7 +783,8 @@ func (c *EVMClient) ReportSolvency(height int64) error {
 	currentGasFee := cosmos.NewUint(3 * MaxContractGas * c.evmScanner.lastReportedGasPrice)
 
 	for _, asgard := range asgardVaults {
-		acct, err := c.GetAccount(asgard.PubKey, new(big.Int).SetInt64(height))
+		var acct common.Account
+		acct, err = c.GetAccount(asgard.PubKey, new(big.Int).SetInt64(height))
 		if err != nil {
 			c.logger.Err(err).Msg("fail to get account balance")
 			continue

@@ -15,7 +15,7 @@ func (b *thorchainBridge) GetNodeAccount(thorAddr string) (*types.NodeAccount, e
 		return &types.NodeAccount{}, fmt.Errorf("failed to get node account: %w", err)
 	}
 	var na types.NodeAccount
-	if err := json.Unmarshal(body, &na); err != nil {
+	if err = json.Unmarshal(body, &na); err != nil {
 		return &types.NodeAccount{}, fmt.Errorf("failed to unmarshal node account: %w", err)
 	}
 	return &na, nil

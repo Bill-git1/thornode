@@ -80,7 +80,7 @@ func (s *MsgWithdrawSuite) TestMsgWithdrawLiquidity(c *C) {
 		},
 	}
 	for _, item := range inputs {
-		m := NewMsgWithdrawLiquidity(item.tx, item.publicAddress, item.withdrawBasisPoints, item.asset, common.EmptyAsset, item.signer)
+		m = NewMsgWithdrawLiquidity(item.tx, item.publicAddress, item.withdrawBasisPoints, item.asset, common.EmptyAsset, item.signer)
 		c.Check(m.ValidateBasic(), NotNil)
 	}
 }

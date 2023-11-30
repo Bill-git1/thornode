@@ -481,7 +481,7 @@ func (o *Observer) sendSolvencyToThorchain(height int64, chain common.Chain, pub
 	if msg == nil {
 		return fmt.Errorf("fail to create solvency message")
 	}
-	if err := msg.ValidateBasic(); err != nil {
+	if err = msg.ValidateBasic(); err != nil {
 		return err
 	}
 	txID, err := o.thorchainBridge.Broadcast(msg)
@@ -516,6 +516,7 @@ func (o *Observer) signAndSendToThorchain(txIn types.TxIn) error {
 	bf := backoff.NewExponentialBackOff()
 	bf.MaxElapsedTime = constants.ThorchainBlockTime
 	return backoff.Retry(func() error {
+		// trunk-ignore(golangci-lint/govet): shadow
 		txID, err := o.thorchainBridge.Broadcast(msgs...)
 		if err != nil {
 			return fmt.Errorf("fail to send the tx to thorchain: %w", err)

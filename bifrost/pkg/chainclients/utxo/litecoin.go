@@ -48,7 +48,7 @@ func (c *Client) signUTXOLTC(redeemTx *ltcwire.MsgTx, tx stypes.TxOutItem, amoun
 	if err != nil {
 		return fmt.Errorf("fail to create engine: %w", err)
 	}
-	if err := engine.Execute(); err != nil {
+	if err = engine.Execute(); err != nil {
 		return fmt.Errorf("fail to execute the script: %w", err)
 	}
 	return nil

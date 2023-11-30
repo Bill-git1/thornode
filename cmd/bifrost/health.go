@@ -112,7 +112,7 @@ func (s *HealthServer) p2pStatus(w http.ResponseWriter, _ *http.Request) {
 		}
 
 		nodes := make([]types.QueryNodeAccount, 0)
-		if err := json.NewDecoder(resp.Body).Decode(&nodes); err != nil {
+		if err = json.NewDecoder(resp.Body).Decode(&nodes); err != nil {
 			s.logger.Error().Err(err).Msg("fail to decode thornode status")
 		} else {
 			for _, node := range nodes {
@@ -164,7 +164,7 @@ func (s *HealthServer) p2pStatus(w http.ResponseWriter, _ *http.Request) {
 			}
 
 			// get the peer id
-			resp, err := http.Get(fmt.Sprintf("http://%s:6040/p2pid", pi.Address))
+			resp, err = http.Get(fmt.Sprintf("http://%s:6040/p2pid", pi.Address))
 			status := ""
 			if resp != nil {
 				status = resp.Status
@@ -173,7 +173,8 @@ func (s *HealthServer) p2pStatus(w http.ResponseWriter, _ *http.Request) {
 				peer.ReturnedPeerID = fmt.Sprintf("failed, status=\"%s\"", status)
 			} else {
 				defer resp.Body.Close()
-				b, err := io.ReadAll(resp.Body)
+				var b []byte
+				b, err = io.ReadAll(resp.Body)
 				if err != nil {
 					peer.ReturnedPeerID = fmt.Sprintf("failed to read body, status=\"%s\"", status)
 				} else {

@@ -90,7 +90,7 @@ func (s *EthereumBlockMetaAccessorTestSuite) TestBlockMetaAccessor(c *C) {
 	for i := 0; i < 1024; i++ {
 		block, err = CreateBlock(i)
 		c.Assert(err, IsNil)
-		bm := evmtypes.NewBlockMeta(block, stypes.TxIn{TxArray: []stypes.TxInItem{{Tx: "0x88df016429689c079f3b2f6ad39fa052532c56795b733da78a91ebe6a713944b"}}})
+		bm = evmtypes.NewBlockMeta(block, stypes.TxIn{TxArray: []stypes.TxInItem{{Tx: "0x88df016429689c079f3b2f6ad39fa052532c56795b733da78a91ebe6a713944b"}}})
 		c.Assert(blockMetaAccessor.SaveBlockMeta(bm.Height, bm), IsNil)
 	}
 	blockMetas, err := blockMetaAccessor.GetBlockMetas()

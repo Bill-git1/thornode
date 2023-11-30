@@ -200,7 +200,8 @@ func postTxsHandler(cliCtx client.Context) http.HandlerFunc {
 				chain = tx.Tx.Coins[0].Asset.Chain
 			}
 
-			obAddr, err := tx.ObservedPubKey.GetAddress(chain)
+			var obAddr common.Address
+			obAddr, err = tx.ObservedPubKey.GetAddress(chain)
 			if err != nil {
 				rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 				return

@@ -61,7 +61,7 @@ func (c *EVMClient) unstuckAction() {
 			// not time yet, continue to wait for this tx to commit
 			continue
 		}
-		if err := c.unstuckTx(item.VaultPubKey, item.Hash); err != nil {
+		if err = c.unstuckTx(item.VaultPubKey, item.Hash); err != nil {
 			c.logger.Err(err).
 				Str("txid", item.Hash).
 				Str("vault", item.VaultPubKey).
@@ -73,7 +73,7 @@ func (c *EVMClient) unstuckAction() {
 		}
 
 		// remove it
-		if err := c.evmScanner.blockMetaAccessor.RemoveSignedTxItem(item.Hash); err != nil {
+		if err = c.evmScanner.blockMetaAccessor.RemoveSignedTxItem(item.Hash); err != nil {
 			c.logger.Err(err).
 				Str("txid", item.Hash).
 				Str("vault", item.VaultPubKey).
@@ -142,7 +142,7 @@ func (c *EVMClient) unstuckTx(vaultPubKey, txid string) error {
 		return fmt.Errorf("fail to sign tx for cancelling with nonce: %d,err: %w", tx.Nonce(), err)
 	}
 	broadcastTx := &etypes.Transaction{}
-	if err := broadcastTx.UnmarshalJSON(rawBytes); err != nil {
+	if err = broadcastTx.UnmarshalJSON(rawBytes); err != nil {
 		return fmt.Errorf("fail to unmarshal tx, err: %w", err)
 	}
 

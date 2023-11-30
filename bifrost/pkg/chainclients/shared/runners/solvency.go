@@ -76,7 +76,7 @@ func SolvencyCheckRunner(chain common.Chain,
 			}
 			if provider.ShouldReportSolvency(currentBlockHeight) {
 				logger.Info().Msgf("current block height: %d, report solvency again", currentBlockHeight)
-				if err := provider.ReportSolvency(currentBlockHeight); err != nil {
+				if err = provider.ReportSolvency(currentBlockHeight); err != nil {
 					logger.Err(err).Msg("fail to report solvency")
 				}
 			}

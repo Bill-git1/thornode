@@ -73,7 +73,7 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("fail to create metric instance")
 	}
-	if err := m.Start(); err != nil {
+	if err = m.Start(); err != nil {
 		log.Fatal().Err(err).Msg("fail to start metric collector")
 	}
 	if len(cfg.Thorchain.SignerName) == 0 {
@@ -93,7 +93,7 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("fail to create new thorchain bridge")
 	}
-	if err := thorchainBridge.EnsureNodeWhitelistedWithTimeout(); err != nil {
+	if err = thorchainBridge.EnsureNodeWhitelistedWithTimeout(); err != nil {
 		log.Fatal().Err(err).Msg("node account is not whitelisted, can't start")
 	}
 	// PubKey Manager
@@ -101,7 +101,7 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("fail to create pubkey manager")
 	}
-	if err := pubkeyMgr.Start(); err != nil {
+	if err = pubkeyMgr.Start(); err != nil {
 		log.Fatal().Err(err).Msg("fail to start pubkey manager")
 	}
 
@@ -158,14 +158,14 @@ func main() {
 		log.Fatal().Err(err).Msg("fail to create tss instance")
 	}
 
-	if err := tssIns.Start(); err != nil {
+	if err = tssIns.Start(); err != nil {
 		log.Err(err).Msg("fail to start tss instance")
 	}
 
 	healthServer := NewHealthServer(cfg.TSS.InfoAddress, tssIns)
 	go func() {
 		defer log.Info().Msg("health server exit")
-		if err := healthServer.Start(); err != nil {
+		if err = healthServer.Start(); err != nil {
 			log.Error().Err(err).Msg("fail to start health server")
 		}
 	}()
@@ -216,7 +216,7 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("fail to create instance of signer")
 	}
-	if err := sign.Start(); err != nil {
+	if err = sign.Start(); err != nil {
 		log.Fatal().Err(err).Msg("fail to start signer")
 	}
 
@@ -230,16 +230,16 @@ func main() {
 	log.Info().Msg("stop signal received")
 
 	// stop observer
-	if err := obs.Stop(); err != nil {
+	if err = obs.Stop(); err != nil {
 		log.Fatal().Err(err).Msg("fail to stop observer")
 	}
 	// stop signer
-	if err := sign.Stop(); err != nil {
+	if err = sign.Stop(); err != nil {
 		log.Fatal().Err(err).Msg("fail to stop signer")
 	}
 	// stop go tss
 	tssIns.Stop()
-	if err := healthServer.Stop(); err != nil {
+	if err = healthServer.Stop(); err != nil {
 		log.Fatal().Err(err).Msg("fail to stop health server")
 	}
 }
@@ -276,7 +276,7 @@ func initLog(level string, pretty bool) {
 		logLevel = golog.LevelPanic
 	}
 	golog.SetAllLoggers(logLevel)
-	if err := golog.SetLogLevel("tss-lib", level); err != nil {
+	if err = golog.SetLogLevel("tss-lib", level); err != nil {
 		log.Fatal().Err(err).Msg("fail to set tss-lib loglevel")
 	}
 }
@@ -299,7 +299,7 @@ func getLocalPreParam(file string) *btsskeygen.LocalPreParams {
 		return nil
 	}
 	var preParam btsskeygen.LocalPreParams
-	if err := json.Unmarshal(result, &preParam); err != nil {
+	if err = json.Unmarshal(result, &preParam); err != nil {
 		log.Fatal().Msg("fail to unmarshal file content to LocalPreParams")
 		return nil
 	}

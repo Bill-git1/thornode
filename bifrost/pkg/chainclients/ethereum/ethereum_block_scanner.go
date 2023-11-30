@@ -190,7 +190,7 @@ func (e *ETHScanner) FetchTxs(height, chainHeight int64) (stypes.TxIn, error) {
 	// blockMeta need to be saved , even there is no transactions found on this block at the time of scan
 	// because at the time of scan , so the block hash will be stored, and it can be used to detect re-org
 	blockMeta := types.NewBlockMeta(block.Header(), txIn)
-	if err := e.blockMetaAccessor.SaveBlockMeta(blockMeta.Height, blockMeta); err != nil {
+	if err = e.blockMetaAccessor.SaveBlockMeta(blockMeta.Height, blockMeta); err != nil {
 		e.logger.Err(err).Msgf("fail to save block meta of height: %d ", blockMeta.Height)
 	}
 
@@ -198,6 +198,7 @@ func (e *ETHScanner) FetchTxs(height, chainHeight int64) (stypes.TxIn, error) {
 	pruneHeight := height - BlockCacheSize
 	if pruneHeight > 0 {
 		defer func() {
+			// trunk-ignore(golangci-lint/govet): shadow
 			if err := e.blockMetaAccessor.PruneBlockMeta(pruneHeight); err != nil {
 				e.logger.Err(err).Msgf("fail to prune block meta, height(%d)", pruneHeight)
 			}
@@ -218,7 +219,7 @@ func (e *ETHScanner) FetchTxs(height, chainHeight int64) (stypes.TxIn, error) {
 
 	// post to thorchain if there is a fee and it has changed
 	if gasPrice.Cmp(big.NewInt(0)) != 0 && tcGasPrice != e.lastReportedGasPrice {
-		if _, err := e.bridge.PostNetworkFee(height, common.ETHChain, MaxContractGas, tcGasPrice); err != nil {
+		if _, err = e.bridge.PostNetworkFee(height, common.ETHChain, MaxContractGas, tcGasPrice); err != nil {
 			e.logger.Err(err).Msg("fail to post ETH chain single transfer fee to THORNode")
 		} else {
 			e.lastReportedGasPrice = tcGasPrice
@@ -226,7 +227,7 @@ func (e *ETHScanner) FetchTxs(height, chainHeight int64) (stypes.TxIn, error) {
 	}
 
 	if e.solvencyReporter != nil {
-		if err := e.solvencyReporter(height); err != nil {
+		if err = e.solvencyReporter(height); err != nil {
 			e.logger.Err(err).Msg("fail to report Solvency info to THORNode")
 		}
 	}
@@ -416,7 +417,7 @@ func (e *ETHScanner) onObservedTxIn(txIn stypes.TxInItem, blockHeight int64) {
 		Hash:        txIn.Tx,
 		BlockHeight: blockHeight,
 	})
-	if err := e.blockMetaAccessor.SaveBlockMeta(blockHeight, blockMeta); err != nil {
+	if err = e.blockMetaAccessor.SaveBlockMeta(blockHeight, blockMeta); err != nil {
 		e.logger.Err(err).Msgf("fail to save block meta to storage,block height(%d)", blockHeight)
 	}
 }
@@ -445,7 +446,8 @@ func (e *ETHScanner) processReorg(block *etypes.Header) ([]stypes.TxIn, error) {
 	var txIns []stypes.TxIn
 	for _, item := range heights {
 		e.logger.Info().Msgf("rescan block height: %d", item)
-		block, err := e.getRPCBlock(item)
+		var block *etypes.Block
+		block, err = e.getRPCBlock(item)
 		if err != nil {
 			e.logger.Err(err).Msgf("fail to get block from RPC endpoint, height:%d", item)
 			continue
@@ -453,7 +455,8 @@ func (e *ETHScanner) processReorg(block *etypes.Header) ([]stypes.TxIn, error) {
 		if block.Transactions().Len() == 0 {
 			continue
 		}
-		txIn, err := e.extractTxs(block)
+		var txIn stypes.TxIn
+		txIn, err = e.extractTxs(block)
 		if err != nil {
 			e.logger.Err(err).Msgf("fail to extract txs from block (%d)", item)
 			continue
@@ -499,7 +502,8 @@ func (e *ETHScanner) reprocessTxs() ([]int64, error) {
 			}
 		}
 		// Let's get the block again to fix the block hash
-		block, err := e.getHeader(blockMeta.Height)
+		var block *etypes.Header
+		block, err = e.getHeader(blockMeta.Height)
 		if err != nil {
 			e.logger.Err(err).Msgf("fail to get block verbose tx result: %d", blockMeta.Height)
 		}
@@ -511,7 +515,7 @@ func (e *ETHScanner) reprocessTxs() ([]int64, error) {
 		blockMeta.PreviousHash = block.ParentHash.Hex()
 		blockMeta.BlockHash = block.Hash().Hex()
 		blockMeta.Transactions = metaTxs
-		if err := e.blockMetaAccessor.SaveBlockMeta(blockMeta.Height, blockMeta); err != nil {
+		if err = e.blockMetaAccessor.SaveBlockMeta(blockMeta.Height, blockMeta); err != nil {
 			e.logger.Err(err).Msgf("fail to save block meta of height: %d ", blockMeta.Height)
 		}
 	}
@@ -670,11 +674,13 @@ func (e *ETHScanner) getTokenMeta(token string) (types.TokenMeta, error) {
 		if !isWhiteListToken {
 			return types.TokenMeta{}, fmt.Errorf("token: %s is not whitelisted", token)
 		}
-		symbol, err := e.getSymbol(token)
+		var symbol string
+		symbol, err = e.getSymbol(token)
 		if err != nil {
 			return types.TokenMeta{}, fmt.Errorf("fail to get symbol: %w", err)
 		}
-		decimals, err := e.getDecimals(token)
+		var decimals uint64
+		decimals, err = e.getDecimals(token)
 		if err != nil {
 			e.logger.Err(err).Msgf("fail to get decimals from smart contract, default to: %d", defaultDecimals)
 		}
@@ -765,7 +771,7 @@ func (e *ETHScanner) getTxInFromSmartContract(tx *etypes.Transaction, receipt *e
 		common.ETHAsset)
 	// txInItem will be changed in p.GetTxInItem function, so if the function return an error
 	// txInItem should be abandoned
-	if _, err := p.GetTxInItem(receipt.Logs, txInItem); err != nil {
+	if _, err = p.GetTxInItem(receipt.Logs, txInItem); err != nil {
 		return nil, fmt.Errorf("fail to parse logs, err: %w", err)
 	}
 	e.logger.Info().Msgf("tx: %s, gas price: %s, gas used: %d,receipt status:%d", txInItem.Tx, tx.GasPrice().String(), receipt.GasUsed, receipt.Status)
@@ -797,7 +803,8 @@ func (e *ETHScanner) getTxInFromTransaction(tx *etypes.Transaction) (*stypes.TxI
 	// this is native , thus memo is data field
 	data := tx.Data()
 	if len(data) > 0 {
-		memo, err := hex.DecodeString(string(data))
+		var memo []byte
+		memo, err = hex.DecodeString(string(data))
 		if err != nil {
 			txInItem.Memo = string(data)
 		} else {

@@ -214,7 +214,8 @@ func init() {
 		for _, chain := range common.AllChains {
 
 			// register template address for all chains
-			addr, err := pk.GetAddress(chain)
+			var addr common.Address
+			addr, err = pk.GetAddress(chain)
 			if err != nil {
 				log.Fatal().Err(err).Msg("failed to get address")
 			}

@@ -60,7 +60,7 @@ func (s *StreamingSwapSuite) TestNextSize(c *C) {
 	swp = NewStreamingSwap(common.BlankTxID, 5, 10, cosmos.NewUint(2345), cosmos.NewUint(472659))
 	total := cosmos.ZeroUint()
 	for i := 1; i <= 5; i++ {
-		size, _ := swp.NextSize(v)
+		size, _ = swp.NextSize(v)
 		total = total.Add(size)
 		swp.Count += 1
 		swp.In = swp.In.Add(size)

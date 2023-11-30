@@ -434,13 +434,13 @@ func (k KVStore) DeductNativeTxFeeFromBond(ctx cosmos.Context, nodeAddr cosmos.A
 		return fmt.Errorf("not enound bond for fee")
 	}
 	na.Bond = common.SafeSub(na.Bond, fee)
-	if err := k.SetNodeAccount(ctx, na); err != nil {
+	if err = k.SetNodeAccount(ctx, na); err != nil {
 		return fmt.Errorf("fail to save node account: %w", err)
 	}
 
 	// transfer fee from bond module to reserve
 	coins := common.NewCoins(common.NewCoin(common.RuneNative, fee))
-	if err := k.SendFromModuleToModule(ctx, BondName, ReserveName, coins); err != nil {
+	if err = k.SendFromModuleToModule(ctx, BondName, ReserveName, coins); err != nil {
 		return err
 	}
 

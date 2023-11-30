@@ -8,9 +8,11 @@ import (
 	"os"
 	"path/filepath"
 
+	ctypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 	"github.com/itchio/lzma"
 	"github.com/rs/zerolog/log"
+	coretypes "github.com/tendermint/tendermint/rpc/core/types"
 
 	"gitlab.com/thorchain/thornode/app"
 	"gitlab.com/thorchain/thornode/bifrost/thorclient"
@@ -74,13 +76,15 @@ func RecoverKeyShares(conf config.Bifrost, thorchain thorclient.ThorchainBridge)
 			log.Info().Msgf("scanning block %d for TssPool message to recover key shares", i)
 		}
 
-		b, err := thorchain.GetContext().Client.Block(context.Background(), &i)
+		var b *coretypes.ResultBlock
+		b, err = thorchain.GetContext().Client.Block(context.Background(), &i)
 		if err != nil {
 			return fmt.Errorf("fail to get block: %w", err)
 		}
 
 		for _, txb := range b.Block.Txs {
-			tx, err := dec(txb)
+			var tx ctypes.Tx
+			tx, err = dec(txb)
 			if err != nil {
 				return fmt.Errorf("fail to decode tx: %w", err)
 			}
@@ -109,12 +113,13 @@ finish:
 	defer f.Close()
 
 	// decrypt and decompress into place
-	decrypted, err := DecryptKeyshares(keysharesEncBytes, os.Getenv("SIGNER_SEED_PHRASE"))
+	var decrypted []byte
+	decrypted, err = DecryptKeyshares(keysharesEncBytes, os.Getenv("SIGNER_SEED_PHRASE"))
 	if err != nil {
 		return fmt.Errorf("failed to decrypt key shares: %w", err)
 	}
 	cmpDec := lzma.NewReader(bytes.NewReader(decrypted))
-	if _, err := io.Copy(f, cmpDec); err != nil {
+	if _, err = io.Copy(f, cmpDec); err != nil {
 		return fmt.Errorf("failed to decompress key shares: %w", err)
 	}
 

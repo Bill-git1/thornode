@@ -1,5 +1,7 @@
 package bitcoincash
 
+// trunk-ignore-all(golangci-lint/govet): deprecating soon, skipping shadow errors
+
 import (
 	"encoding/json"
 	"net/http"

@@ -60,7 +60,7 @@ func (MsgMigrateSuite) TestMsgMigrateSuite(c *C) {
 	}
 
 	for _, item := range inputs {
-		tx := NewObservedTx(common.NewTx(
+		tx = NewObservedTx(common.NewTx(
 			item.txID,
 			item.sender,
 			GetRandomBNBAddress(),
@@ -68,7 +68,7 @@ func (MsgMigrateSuite) TestMsgMigrateSuite(c *C) {
 			BNBGasFeeSingleton,
 			"",
 		), 12, GetRandomPubKey(), 12)
-		m := NewMsgMigrate(tx, item.blockHeight, item.signer)
+		m = NewMsgMigrate(tx, item.blockHeight, item.signer)
 		err := m.ValidateBasic()
 		c.Assert(err, NotNil, Commentf("%s", err))
 	}

@@ -221,11 +221,11 @@ func run(out io.Writer, path string, routine int) error {
 	if err != nil {
 		// dump the genesis
 		fmt.Println(ColorPurple + "Genesis:" + ColorReset)
-		f, err := os.OpenFile(filepath.Join(home, ".thornode/config/genesis.json"), os.O_RDWR, 0o644)
+		f, err = os.OpenFile(filepath.Join(home, ".thornode/config/genesis.json"), os.O_RDWR, 0o644)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to open genesis file")
 		}
-		scanner := bufio.NewScanner(f)
+		scanner = bufio.NewScanner(f)
 		for scanner.Scan() {
 			fmt.Println(scanner.Text())
 		}
@@ -294,7 +294,8 @@ func run(out io.Writer, path string, routine int) error {
 			localLog.Debug().Msg("Waiting for thornode to listen")
 		}
 		time.Sleep(100 * time.Millisecond)
-		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", 8080+routine))
+		var conn net.Conn
+		conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", 8080+routine))
 		if err == nil {
 			conn.Close()
 			break

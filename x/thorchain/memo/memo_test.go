@@ -374,6 +374,7 @@ func (s *MemoSuite) TestParse(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(memo.IsType(TxBond), Equals, true)
 	c.Assert(memo.GetAccAddress().String(), Equals, whiteListAddr.String())
+	// trunk-ignore(golangci-lint/govet): shadow false positive
 	parser, _ := newParser(ctx, k, k.GetVersion(), fmt.Sprintf("BOND:%s:%s", whiteListAddr.String(), bondProvider.String()))
 	mem, err := parser.ParseBondMemo()
 	c.Assert(err, IsNil)

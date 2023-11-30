@@ -44,7 +44,7 @@ func (t *LevelDBTokenMeta) GetTokenMeta(address string) (types.TokenMeta, error)
 		return types.TokenMeta{}, fmt.Errorf("fail to get token meta(%s) from storage: %w", key, err)
 	}
 	var tm types.TokenMeta
-	if err := json.Unmarshal(v, &tm); err != nil {
+	if err = json.Unmarshal(v, &tm); err != nil {
 		return types.TokenMeta{}, fmt.Errorf("fail to unmarshal token meta from json: %w", err)
 	}
 	return tm, nil

@@ -109,7 +109,8 @@ func (h AddLiquidityHandler) validateV119(ctx cosmos.Context, msg MsgAddLiquidit
 	// Even if a destination gas asset pool is empty, the first add liquidity has to be symmetrical,
 	// and so there is no need to check at this stage for whether the addition is of RUNE or Asset or with needsSwap.
 	if !msg.Asset.Equals(gasAsset) {
-		gasPool, err := h.mgr.Keeper().GetPool(ctx, gasAsset)
+		var gasPool Pool
+		gasPool, err = h.mgr.Keeper().GetPool(ctx, gasAsset)
 		// Note that for a synthetic asset msg.Asset.Chain (unlike msg.Asset.GetChain())
 		// is intentionally used to be the external chain rather than THOR.
 		// Any destination asset starting with THOR should be rejected for no THOR.RUNE
@@ -168,7 +169,8 @@ func (h AddLiquidityHandler) validateV119(ctx cosmos.Context, msg MsgAddLiquidit
 			return errAddLiquidityMismatchAddr
 		}
 
-		polAddress, err := h.mgr.Keeper().GetModuleAddress(ReserveName)
+		var polAddress common.Address
+		polAddress, err = h.mgr.Keeper().GetModuleAddress(ReserveName)
 		if err != nil {
 			return err
 		}
@@ -187,11 +189,12 @@ func (h AddLiquidityHandler) validateV119(ctx cosmos.Context, msg MsgAddLiquidit
 		}
 	}
 
-	pool, err := h.mgr.Keeper().GetPool(ctx, msg.Asset)
+	var pool Pool
+	pool, err = h.mgr.Keeper().GetPool(ctx, msg.Asset)
 	if err != nil {
 		return ErrInternal(err, "fail to get pool")
 	}
-	if err := pool.EnsureValidPoolStatus(&msg); err != nil {
+	if err = pool.EnsureValidPoolStatus(&msg); err != nil {
 		ctx.Logger().Error("fail to check pool status", "error", err)
 		return errInvalidPoolStatus
 	}
@@ -279,7 +282,7 @@ func (h AddLiquidityHandler) handleV121(ctx cosmos.Context, msg MsgAddLiquidity)
 		}
 		pool.Status = GetPoolStatus(defaultPoolStatus)
 
-		if err := h.mgr.Keeper().SetPool(ctx, pool); err != nil {
+		if err = h.mgr.Keeper().SetPool(ctx, pool); err != nil {
 			return ErrInternal(err, "fail to save pool to key value store")
 		}
 	}
@@ -294,7 +297,7 @@ func (h AddLiquidityHandler) handleV121(ctx cosmos.Context, msg MsgAddLiquidity)
 				pool.Decimals = coin.Decimals
 			}
 			ctx.Logger().Info("try update pool decimals", "asset", msg.Asset, "pool decimals", pool.Decimals)
-			if err := h.mgr.Keeper().SetPool(ctx, pool); err != nil {
+			if err = h.mgr.Keeper().SetPool(ctx, pool); err != nil {
 				return ErrInternal(err, "fail to save pool to key value store")
 			}
 		}
@@ -543,7 +546,7 @@ func (h AddLiquidityHandler) addLiquidityV107(ctx cosmos.Context,
 	constAccessor constants.ConstantValues,
 ) (err error) {
 	ctx.Logger().Info("liquidity provision", "asset", asset, "rune amount", addRuneAmount, "asset amount", addAssetAmount)
-	if err := h.validateAddLiquidityMessage(ctx, h.mgr.Keeper(), asset, requestTxHash, runeAddr, assetAddr); err != nil {
+	if err = h.validateAddLiquidityMessage(ctx, h.mgr.Keeper(), asset, requestTxHash, runeAddr, assetAddr); err != nil {
 		return fmt.Errorf("add liquidity message fail validation: %w", err)
 	}
 
@@ -618,13 +621,13 @@ func (h AddLiquidityHandler) addLiquidityV107(ctx cosmos.Context,
 		su.PendingRune = pendingRuneAmt
 		su.PendingTxID = requestTxHash
 		h.mgr.Keeper().SetLiquidityProvider(ctx, su)
-		if err := h.mgr.Keeper().SetPool(ctx, pool); err != nil {
+		if err = h.mgr.Keeper().SetPool(ctx, pool); err != nil {
 			ctx.Logger().Error("fail to save pool pending inbound rune", "error", err)
 		}
 
 		// add pending liquidity event
 		evt := NewEventPendingLiquidity(pool.Asset, AddPendingLiquidity, su.RuneAddress, addRuneAmount, su.AssetAddress, cosmos.ZeroUint(), requestTxHash, common.TxID(""))
-		if err := h.mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
+		if err = h.mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
 			return ErrInternal(err, "fail to emit partial add liquidity event")
 		}
 		return nil
@@ -636,11 +639,11 @@ func (h AddLiquidityHandler) addLiquidityV107(ctx cosmos.Context,
 		su.PendingAsset = pendingAssetAmt
 		su.PendingTxID = requestTxHash
 		h.mgr.Keeper().SetLiquidityProvider(ctx, su)
-		if err := h.mgr.Keeper().SetPool(ctx, pool); err != nil {
+		if err = h.mgr.Keeper().SetPool(ctx, pool); err != nil {
 			ctx.Logger().Error("fail to save pool pending inbound asset", "error", err)
 		}
 		evt := NewEventPendingLiquidity(pool.Asset, AddPendingLiquidity, su.RuneAddress, cosmos.ZeroUint(), su.AssetAddress, addAssetAmount, common.TxID(""), requestTxHash)
-		if err := h.mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
+		if err = h.mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
 			return ErrInternal(err, "fail to emit partial add liquidity event")
 		}
 		return nil
@@ -680,12 +683,12 @@ func (h AddLiquidityHandler) addLiquidityV107(ctx cosmos.Context,
 	if (pool.BalanceRune.IsZero() && !asset.IsVaultAsset()) || pool.BalanceAsset.IsZero() {
 		return ErrInternal(err, "pool cannot have zero rune or asset balance")
 	}
-	if err := h.mgr.Keeper().SetPool(ctx, pool); err != nil {
+	if err = h.mgr.Keeper().SetPool(ctx, pool); err != nil {
 		return ErrInternal(err, "fail to save pool")
 	}
 	if originalUnits.IsZero() && !pool.GetPoolUnits().IsZero() {
 		poolEvent := NewEventPool(pool.Asset, pool.Status)
-		if err := h.mgr.EventMgr().EmitEvent(ctx, poolEvent); err != nil {
+		if err = h.mgr.EventMgr().EmitEvent(ctx, poolEvent); err != nil {
 			ctx.Logger().Error("fail to emit pool event", "error", err)
 		}
 	}
@@ -703,7 +706,7 @@ func (h AddLiquidityHandler) addLiquidityV107(ctx cosmos.Context,
 	h.mgr.Keeper().SetLiquidityProvider(ctx, su)
 
 	evt := NewEventAddLiquidity(asset, liquidityUnits, su.RuneAddress, pendingRuneAmt, pendingAssetAmt, runeTxID, assetTxID, su.AssetAddress)
-	if err := h.mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
+	if err = h.mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
 		return ErrInternal(err, "fail to emit add liquidity event")
 	}
 
@@ -714,13 +717,14 @@ func (h AddLiquidityHandler) addLiquidityV107(ctx cosmos.Context,
 	}
 
 	if polAddress.Equals(su.RuneAddress) {
-		pol, err := h.mgr.Keeper().GetPOL(ctx)
+		var pol ProtocolOwnedLiquidity
+		pol, err = h.mgr.Keeper().GetPOL(ctx)
 		if err != nil {
 			return err
 		}
 		pol.RuneDeposited = pol.RuneDeposited.Add(pendingRuneAmt)
 
-		if err := h.mgr.Keeper().SetPOL(ctx, pol); err != nil {
+		if err = h.mgr.Keeper().SetPOL(ctx, pol); err != nil {
 			return err
 		}
 

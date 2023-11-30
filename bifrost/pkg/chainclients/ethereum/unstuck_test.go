@@ -2,7 +2,6 @@ package ethereum
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -67,17 +66,16 @@ func (s *UnstuckTestSuite) SetUpTest(c *C) {
 			var rpcRequest RPCRequest
 			err = json.Unmarshal(body, &rpcRequest)
 			c.Assert(err, IsNil)
-			fmt.Println("rpc request:", rpcRequest.Method)
 			switch rpcRequest.Method {
 			case "eth_chainId":
-				_, err := rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0xf"}`))
+				_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0xf"}`))
 				c.Assert(err, IsNil)
 				return
 			case "eth_getTransactionByHash":
 				var hashes []string
 				c.Assert(json.Unmarshal(rpcRequest.Params, &hashes), IsNil)
 				if hashes[0] == "0x88df016429689c079f3b2f6ad39fa052532c56795b733da78a91ebe6a713944b" {
-					_, err := rw.Write([]byte(`{
+					_, err = rw.Write([]byte(`{
     "jsonrpc": "2.0",
     "id": 1,
     "result": {
@@ -95,7 +93,7 @@ func (s *UnstuckTestSuite) SetUpTest(c *C) {
 }`))
 					c.Assert(err, IsNil)
 				} else if hashes[0] == "0x96395fbdb39e33293999dc1a0a3b87c8a9e51185e177760d1482c2155bb35b87" {
-					_, err := rw.Write([]byte(`{
+					_, err = rw.Write([]byte(`{
     "jsonrpc": "2.0",
     "id": 1,
     "result": {
@@ -119,20 +117,20 @@ func (s *UnstuckTestSuite) SetUpTest(c *C) {
 				}
 				return
 			case "eth_gasPrice":
-				_, err := rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x1"}`))
+				_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x1"}`))
 				c.Assert(err, IsNil)
 				return
 			case "eth_sendRawTransaction":
-				_, err := rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x88df016429689c079f3b2f6ad39fa052532c56795b733da78a91ebe6a713944b"}`))
+				_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x88df016429689c079f3b2f6ad39fa052532c56795b733da78a91ebe6a713944b"}`))
 				c.Assert(err, IsNil)
 				return
 			}
 			if rpcRequest.Method == "eth_call" {
 				if string(rpcRequest.Params) == `[{"data":"0x03b6a6730000000000000000000000009f4aab49a9cd8fc54dcb3701846f608a6f2c44da0000000000000000000000003b7fa4dd21c6f9ba3ca375217ead7cab9d6bf483","from":"0x9f4aab49a9cd8fc54dcb3701846f608a6f2c44da","to":"0xe65e9d372f8cacc7b6dfcd4af6507851ed31bb44"},"latest"]` {
-					_, err := rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x0000000000000000000000000000000000000000000000000000000000000012"}`))
+					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x0000000000000000000000000000000000000000000000000000000000000012"}`))
 					c.Assert(err, IsNil)
 				} else if string(rpcRequest.Params) == `[{"data":"0x95d89b41","from":"0x0000000000000000000000000000000000000000","to":"0x3b7fa4dd21c6f9ba3ca375217ead7cab9d6bf483"},"latest"]` {
-					_, err := rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003544b4e0000000000000000000000000000000000000000000000000000000000"}`))
+					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003544b4e0000000000000000000000000000000000000000000000000000000000"}`))
 					c.Assert(err, IsNil)
 				}
 			}

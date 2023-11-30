@@ -42,7 +42,8 @@ func (s *BitcoinTemporalStorageTestSuite) TestTemporalStorage(c *C) {
 	key := store.getBlockMetaKey(blockMeta.Height)
 	c.Assert(key, Equals, fmt.Sprintf(PrefixBlockMeta+"%d", blockMeta.Height))
 
-	bm, err := store.GetBlockMeta(blockMeta.Height)
+	var bm *BlockMeta
+	bm, err = store.GetBlockMeta(blockMeta.Height)
 	c.Assert(err, IsNil)
 	c.Assert(bm, NotNil)
 
@@ -51,7 +52,7 @@ func (s *BitcoinTemporalStorageTestSuite) TestTemporalStorage(c *C) {
 	c.Assert(nbm, IsNil)
 	hash := thorchain.GetRandomTxHash()
 	for i := 0; i < 1024; i++ {
-		bm := NewBlockMeta(thorchain.GetRandomTxHash().String(), int64(i), thorchain.GetRandomTxHash().String())
+		bm = NewBlockMeta(thorchain.GetRandomTxHash().String(), int64(i), thorchain.GetRandomTxHash().String())
 		if i == 0 {
 			bm.AddSelfTransaction(hash.String())
 		}

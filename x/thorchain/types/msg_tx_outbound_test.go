@@ -61,7 +61,7 @@ func (MsgOutboundTxSuite) TestMsgOutboundTx(c *C) {
 	}
 
 	for _, item := range inputs {
-		tx := NewObservedTx(common.NewTx(
+		tx = NewObservedTx(common.NewTx(
 			item.txID,
 			item.sender,
 			GetRandomBNBAddress(),
@@ -69,7 +69,7 @@ func (MsgOutboundTxSuite) TestMsgOutboundTx(c *C) {
 			BNBGasFeeSingleton,
 			"",
 		), 12, GetRandomPubKey(), 12)
-		m := NewMsgOutboundTx(tx, item.inTxID, item.signer)
+		m = NewMsgOutboundTx(tx, item.inTxID, item.signer)
 		err := m.ValidateBasic()
 		c.Assert(err, NotNil, Commentf("%s", err.Error()))
 	}

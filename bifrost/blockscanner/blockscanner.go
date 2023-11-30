@@ -262,7 +262,7 @@ func (b *BlockScanner) scanBlocks() {
 				case b.globalTxsQueue <- txIn:
 				}
 			}
-			if err := b.scannerStorage.SetScanPos(b.previousBlock); err != nil {
+			if err = b.scannerStorage.SetScanPos(b.previousBlock); err != nil {
 				b.logger.Error().Err(err).Msg("fail to save block scan pos")
 				// alert!!
 				continue

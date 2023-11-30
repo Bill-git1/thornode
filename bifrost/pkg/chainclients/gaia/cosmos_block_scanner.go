@@ -304,7 +304,8 @@ func (c *CosmosBlockScanner) processTxs(height int64, rawTxs [][]byte) ([]types.
 	var txIn []types.TxInItem
 	for i, rawTx := range rawTxs {
 		hash := hex.EncodeToString(tmhash.Sum(rawTx))
-		tx, err := decoder(rawTx)
+		var tx ctypes.Tx
+		tx, err = decoder(rawTx)
 		if err != nil {
 			if strings.Contains(err.Error(), "unable to resolve type URL") {
 				// One of the transaction message contains an unknown type. Although the
@@ -335,7 +336,8 @@ func (c *CosmosBlockScanner) processTxs(height int64, rawTxs [][]byte) ([]types.
 				// Convert cosmos coins to thorchain coins (taking into account asset decimal precision)
 				coins := common.Coins{}
 				for _, coin := range msg.Amount {
-					cCoin, err := fromCosmosToThorchain(coin)
+					var cCoin common.Coin
+					cCoin, err = fromCosmosToThorchain(coin)
 					if err != nil {
 						c.logger.Debug().Err(err).Interface("coins", c).Msg("unable to convert coin, not whitelisted. skipping...")
 						continue
@@ -351,7 +353,8 @@ func (c *CosmosBlockScanner) processTxs(height int64, rawTxs [][]byte) ([]types.
 				// Convert cosmos gas to thorchain coins (taking into account gas asset decimal precision)
 				gasFees := common.Gas{}
 				for _, fee := range fees {
-					cCoin, err := fromCosmosToThorchain(fee)
+					var cCoin common.Coin
+					cCoin, err = fromCosmosToThorchain(fee)
 					if err != nil {
 						c.logger.Debug().Err(err).Interface("fees", fees).Msg("unable to convert coin, not whitelisted. skipping...")
 						continue
@@ -414,7 +417,7 @@ func (c *CosmosBlockScanner) FetchTxs(height, chainHeight int64) (types.TxIn, er
 		c.logger.Err(err).Int64("height", height).Msg("unable to update network fee")
 	}
 
-	if err := c.solvencyReporter(height); err != nil {
+	if err = c.solvencyReporter(height); err != nil {
 		c.logger.Err(err).Msg("fail to send solvency to THORChain")
 	}
 

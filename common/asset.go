@@ -270,7 +270,7 @@ func (a Asset) MarshalJSON() ([]byte, error) {
 func (a *Asset) UnmarshalJSON(data []byte) error {
 	var err error
 	var assetStr string
-	if err := json.Unmarshal(data, &assetStr); err != nil {
+	if err = json.Unmarshal(data, &assetStr); err != nil {
 		return err
 	}
 	if assetStr == "." {

@@ -46,7 +46,7 @@ func (t *LevelDBBlockMetaAccessor) GetBlockMeta(height int64) (*evmtypes.BlockMe
 		return nil, fmt.Errorf("fail to get block meta(%s) from storage: %w", key, err)
 	}
 	var blockMeta evmtypes.BlockMeta
-	if err := json.Unmarshal(v, &blockMeta); err != nil {
+	if err = json.Unmarshal(v, &blockMeta); err != nil {
 		return nil, fmt.Errorf("fail to unmarshal block meta from json: %w", err)
 	}
 	return &blockMeta, nil

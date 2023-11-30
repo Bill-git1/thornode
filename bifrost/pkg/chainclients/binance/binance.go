@@ -103,7 +103,7 @@ func NewBinance(thorKeys *thorclient.Keys, cfg config.BifrostChainConfiguration,
 		wg:              &sync.WaitGroup{},
 	}
 
-	if err := b.checkIsTestNet(); err != nil {
+	if err = b.checkIsTestNet(); err != nil {
 		b.logger.Error().Err(err).Msg("fail to check if is testnet")
 		return b, err
 	}
@@ -181,7 +181,7 @@ func (b *Binance) checkIsTestNet() error {
 	}
 
 	defer func() {
-		if err := resp.Body.Close(); err != nil {
+		if err = resp.Body.Close(); err != nil {
 			b.logger.Error().Err(err).Msg("fail to close resp body")
 		}
 	}()
@@ -202,7 +202,7 @@ func (b *Binance) checkIsTestNet() error {
 	}
 
 	var status Status
-	if err := json.Unmarshal(data, &status); err != nil {
+	if err = json.Unmarshal(data, &status); err != nil {
 		return fmt.Errorf("fail to unmarshal body: %w", err)
 	}
 
@@ -336,7 +336,7 @@ func (b *Binance) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []
 	}
 	fromAddr := b.GetAddress(tx.VaultPubKey)
 	sendMsg := b.parseTx(fromAddr, payload)
-	if err := sendMsg.ValidateBasic(); err != nil {
+	if err = sendMsg.ValidateBasic(); err != nil {
 		return nil, nil, nil, fmt.Errorf("invalid send msg: %w", err)
 	}
 
@@ -350,14 +350,15 @@ func (b *Binance) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []
 	// so we only retry with the same account number and sequence to avoid double spend
 	meta := BinanceMetadata{}
 	if tx.Checkpoint != nil {
-		if err := json.Unmarshal(tx.Checkpoint, &meta); err != nil {
+		if err = json.Unmarshal(tx.Checkpoint, &meta); err != nil {
 			b.logger.Error().Err(err).Msg("fail to unmarshal checkpoint")
 			return nil, nil, nil, err
 		}
 	} else {
 		meta = b.accts.Get(tx.VaultPubKey)
 		if currentHeight > meta.BlockHeight {
-			acc, err := b.GetAccount(tx.VaultPubKey, nil)
+			var acc common.Account
+			acc, err = b.GetAccount(tx.VaultPubKey, nil)
 			if err != nil {
 				return nil, nil, nil, fmt.Errorf("fail to get account info: %w", err)
 			}
@@ -465,6 +466,7 @@ func (b *Binance) GetAccountByAddress(address string, height *big.Int) (common.A
 		return common.Account{}, err
 	}
 	defer func() {
+		// trunk-ignore(golangci-lint/govet): shadow
 		if err := resp.Body.Close(); err != nil {
 			b.logger.Error().Err(err).Msg("fail to close response body")
 		}
@@ -562,7 +564,7 @@ func (b *Binance) BroadcastTx(tx stypes.TxOutItem, hexTx []byte) (string, error)
 	// later.
 	checkTx := commit.Result.CheckTx
 	if checkTx.Code > 0 && checkTx.Code != cosmos.CodeUnauthorized {
-		err := errors.New(checkTx.Log)
+		err = errors.New(checkTx.Log)
 		b.logger.Info().Str("body", string(body)).Msg("broadcast response from Binance Chain")
 		b.logger.Error().Err(err).Msg("fail to broadcast")
 		return "", fmt.Errorf("fail to broadcast: %w", err)
@@ -570,14 +572,14 @@ func (b *Binance) BroadcastTx(tx stypes.TxOutItem, hexTx []byte) (string, error)
 
 	deliverTx := commit.Result.DeliverTx
 	if deliverTx.Code > 0 {
-		err := errors.New(deliverTx.Log)
+		err = errors.New(deliverTx.Log)
 		b.logger.Error().Err(err).Msg("fail to broadcast")
 		return "", fmt.Errorf("fail to broadcast: %w", err)
 	}
 
 	// increment sequence number
 	b.accts.SeqInc(tx.VaultPubKey)
-	if err := b.signerCacheManager.SetSigned(tx.CacheHash(), commit.Result.Hash.String()); err != nil {
+	if err = b.signerCacheManager.SetSigned(tx.CacheHash(), commit.Result.Hash.String()); err != nil {
 		b.logger.Err(err).Msg("fail to set signer cache")
 	}
 	return commit.Result.Hash.String(), nil
@@ -607,7 +609,8 @@ func (b *Binance) ReportSolvency(bnbBlockHeight int64) error {
 		return fmt.Errorf("fail to get asgards,err: %w", err)
 	}
 	for _, asgard := range asgardVaults {
-		acct, err := b.GetAccount(asgard.PubKey, nil)
+		var acct common.Account
+		acct, err = b.GetAccount(asgard.PubKey, nil)
 		if err != nil {
 			b.logger.Err(err).Msgf("fail to get account balance")
 			continue
@@ -644,7 +647,7 @@ func (b *Binance) OnObservedTxIn(txIn stypes.TxInItem, blockHeight int64) {
 	if m.GetTxID().IsEmpty() {
 		return
 	}
-	if err := b.signerCacheManager.SetSigned(txIn.CacheHash(b.GetChain(), m.GetTxID().String()), txIn.Tx); err != nil {
+	if err = b.signerCacheManager.SetSigned(txIn.CacheHash(b.GetChain(), m.GetTxID().String()), txIn.Tx); err != nil {
 		b.logger.Err(err).Msg("fail to update signer cache")
 	}
 }

@@ -55,7 +55,7 @@ func (c *Client) unstuckAction() {
 			// not time yet , continue to wait for this tx to commit
 			continue
 		}
-		if err := c.unstuckTx(item.VaultPubKey, item.Hash); err != nil {
+		if err = c.unstuckTx(item.VaultPubKey, item.Hash); err != nil {
 			c.logger.Err(err).Msgf("fail to unstuck tx with hash:%s vaultPubKey:%s", item.Hash, item.VaultPubKey)
 			// Break on error so that if a keysign fails from members getting out of sync
 			// (for multiple cancel transactions)
@@ -63,7 +63,7 @@ func (c *Client) unstuckAction() {
 			break
 		}
 		// remove it
-		if err := c.ethScanner.blockMetaAccessor.RemoveSignedTxItem(item.Hash); err != nil {
+		if err = c.ethScanner.blockMetaAccessor.RemoveSignedTxItem(item.Hash); err != nil {
 			c.logger.Err(err).Msgf("fail to remove signed tx item with hash:%s vaultPubKey:%s", item.Hash, item.VaultPubKey)
 		}
 	}
@@ -118,12 +118,12 @@ func (c *Client) unstuckTx(vaultPubKey, hash string) error {
 		return fmt.Errorf("fail to sign tx for cancelling with nonce: %d,err: %w", tx.Nonce(), err)
 	}
 	broadcastTx := &etypes.Transaction{}
-	if err := broadcastTx.UnmarshalJSON(rawBytes); err != nil {
+	if err = broadcastTx.UnmarshalJSON(rawBytes); err != nil {
 		return fmt.Errorf("fail to unmarshal tx, err: %w", err)
 	}
 	ctx, cancel = c.getContext()
 	defer cancel()
-	if err := c.client.SendTransaction(ctx, broadcastTx); err != nil && err.Error() != txpool.ErrAlreadyKnown.Error() && err.Error() != ecore.ErrNonceTooLow.Error() {
+	if err = c.client.SendTransaction(ctx, broadcastTx); err != nil && err.Error() != txpool.ErrAlreadyKnown.Error() && err.Error() != ecore.ErrNonceTooLow.Error() {
 		return fmt.Errorf("fail to broadcast the cancel transaction,hash:%s , err: %w", hash, err)
 	}
 	c.logger.Info().Msgf("broadcast cancel transaction , tx hash: %s, nonce: %d , new tx hash:%s", hash, tx.Nonce(), broadcastTx.Hash().String())

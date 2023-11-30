@@ -224,6 +224,7 @@ func (b *thorchainBridge) get(url string) ([]byte, int, error) {
 		return nil, http.StatusNotFound, fmt.Errorf("failed to GET from thorchain: %w", err)
 	}
 	defer func() {
+		// trunk-ignore(golangci-lint/govet): shadow
 		if err := resp.Body.Close(); err != nil {
 			b.logger.Error().Err(err).Msg("failed to close response body")
 		}
@@ -265,7 +266,7 @@ func (b *thorchainBridge) getAccountNumberAndSequenceNumber() (uint64, uint64, e
 	}
 
 	var resp types.AccountResp
-	if err := json.Unmarshal(body, &resp); err != nil {
+	if err = json.Unmarshal(body, &resp); err != nil {
 		return 0, 0, fmt.Errorf("failed to unmarshal account resp: %w", err)
 	}
 	acc := resp.Result.Value
@@ -436,7 +437,7 @@ func (b *thorchainBridge) GetKeysignParty(vaultPubKey common.PubKey) (common.Pub
 		return common.PubKeys{}, fmt.Errorf("fail to get key sign party from thorchain: %w", err)
 	}
 	var keys common.PubKeys
-	if err := json.Unmarshal(result, &keys); err != nil {
+	if err = json.Unmarshal(result, &keys); err != nil {
 		return common.PubKeys{}, fmt.Errorf("fail to unmarshal result to pubkeys:%w", err)
 	}
 	return keys, nil
@@ -464,7 +465,7 @@ func (b *thorchainBridge) IsCatchingUp() (bool, error) {
 		} `json:"result"`
 	}
 
-	if err := json.Unmarshal(body, &resp); err != nil {
+	if err = json.Unmarshal(body, &resp); err != nil {
 		return false, fmt.Errorf("failed to unmarshal tendermint status: %w", err)
 	}
 	return resp.Result.SyncInfo.CatchingUp, nil
@@ -482,13 +483,14 @@ func (b *thorchainBridge) HasNetworkFee(chain common.Chain) (bool, error) {
 	}
 
 	var resp []openapi.InboundAddress
-	if err := json.Unmarshal(buf, &resp); err != nil {
+	if err = json.Unmarshal(buf, &resp); err != nil {
 		return false, fmt.Errorf("fail to unmarshal inbound addresses: %w", err)
 	}
 
 	for _, addr := range resp {
 		if addr.Chain != nil && *addr.Chain == chain.String() && addr.OutboundTxSize != nil {
-			size, err := strconv.ParseInt(*addr.OutboundTxSize, 10, 64)
+			var size int64
+			size, err = strconv.ParseInt(*addr.OutboundTxSize, 10, 64)
 			if err != nil {
 				return false, fmt.Errorf("fail to parse outbound_tx_size: %w", err)
 			}
@@ -525,7 +527,7 @@ func (b *thorchainBridge) GetAsgards() (stypes.Vaults, error) {
 		return nil, fmt.Errorf("unexpected status code %d", s)
 	}
 	var vaults stypes.Vaults
-	if err := json.Unmarshal(buf, &vaults); err != nil {
+	if err = json.Unmarshal(buf, &vaults); err != nil {
 		return nil, fmt.Errorf("fail to unmarshal asgard vaults from json: %w", err)
 	}
 	return vaults, nil
@@ -549,7 +551,7 @@ func (b *thorchainBridge) GetPubKeys() ([]PubKeyContractAddressPair, error) {
 		return nil, fmt.Errorf("fail to get vault pubkeys ,err: %w", err)
 	}
 	var result stypes.QueryVaultsPubKeys
-	if err := json.Unmarshal(buf, &result); err != nil {
+	if err = json.Unmarshal(buf, &result); err != nil {
 		return nil, fmt.Errorf("fail to unmarshal pubkeys: %w", err)
 	}
 	var addressPairs []PubKeyContractAddressPair
@@ -573,7 +575,7 @@ func (b *thorchainBridge) GetAsgardPubKeys() ([]PubKeyContractAddressPair, error
 		return nil, fmt.Errorf("fail to get vault pubkeys ,err: %w", err)
 	}
 	var result stypes.QueryVaultsPubKeys
-	if err := json.Unmarshal(buf, &result); err != nil {
+	if err = json.Unmarshal(buf, &result); err != nil {
 		return nil, fmt.Errorf("fail to unmarshal pubkeys: %w", err)
 	}
 	var addressPairs []PubKeyContractAddressPair
@@ -620,7 +622,7 @@ func (b *thorchainBridge) GetConstants() (map[string]int64, error) {
 	if s != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code: %d", s)
 	}
-	if err := json.Unmarshal(buf, &result); err != nil {
+	if err = json.Unmarshal(buf, &result); err != nil {
 		return nil, fmt.Errorf("fail to unmarshal to json: %w", err)
 	}
 	return result.Int64Values, nil
@@ -636,7 +638,7 @@ func (b *thorchainBridge) RagnarokInProgress() (bool, error) {
 		return false, fmt.Errorf("unexpected status code: %d", s)
 	}
 	var ragnarok bool
-	if err := json.Unmarshal(buf, &ragnarok); err != nil {
+	if err = json.Unmarshal(buf, &ragnarok); err != nil {
 		return false, fmt.Errorf("fail to unmarshal ragnarok status: %w", err)
 	}
 	return ragnarok, nil
@@ -652,7 +654,7 @@ func (b *thorchainBridge) GetThorchainVersion() (semver.Version, error) {
 		return semver.Version{}, fmt.Errorf("unexpected status code: %d", s)
 	}
 	var version stypes.QueryVersion
-	if err := json.Unmarshal(buf, &version); err != nil {
+	if err = json.Unmarshal(buf, &version); err != nil {
 		return semver.Version{}, fmt.Errorf("fail to unmarshal THORChain version : %w", err)
 	}
 	return version.Current, nil
@@ -668,7 +670,7 @@ func (b *thorchainBridge) GetMimir(key string) (int64, error) {
 		return 0, fmt.Errorf("unexpected status code: %d", s)
 	}
 	var value int64
-	if err := json.Unmarshal(buf, &value); err != nil {
+	if err = json.Unmarshal(buf, &value); err != nil {
 		return 0, fmt.Errorf("fail to unmarshal mimir: %w", err)
 	}
 	return value, nil
@@ -697,7 +699,7 @@ func (b *thorchainBridge) GetContractAddress() ([]PubKeyContractAddressPair, err
 		Halted  bool           `json:"halted"`
 	}
 	var resp []address
-	if err := json.Unmarshal(buf, &resp); err != nil {
+	if err = json.Unmarshal(buf, &resp); err != nil {
 		return nil, fmt.Errorf("fail to unmarshal response: %w", err)
 	}
 	var result []PubKeyContractAddressPair
@@ -732,7 +734,7 @@ func (b *thorchainBridge) GetPools() (stypes.Pools, error) {
 		return nil, fmt.Errorf("unexpected status code: %d", s)
 	}
 	var pools stypes.Pools
-	if err := json.Unmarshal(buf, &pools); err != nil {
+	if err = json.Unmarshal(buf, &pools); err != nil {
 		return nil, fmt.Errorf("fail to unmarshal pools from json: %w", err)
 	}
 	return pools, nil
@@ -749,7 +751,7 @@ func (b *thorchainBridge) GetTHORName(name string) (stypes.THORName, error) {
 		return stypes.THORName{}, fmt.Errorf("unexpected status code: %d", s)
 	}
 	var tn stypes.THORName
-	if err := json.Unmarshal(buf, &tn); err != nil {
+	if err = json.Unmarshal(buf, &tn); err != nil {
 		return stypes.THORName{}, fmt.Errorf("fail to unmarshal THORNames from json: %w", err)
 	}
 	return tn, nil

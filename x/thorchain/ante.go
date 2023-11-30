@@ -28,7 +28,7 @@ func (ad AnteDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, ne
 		return next(ctx, tx, simulate)
 	}
 
-	if err := ad.rejectMultipleDepositMsgs(ctx, tx.GetMsgs()); err != nil {
+	if err = ad.rejectMultipleDepositMsgs(ctx, tx.GetMsgs()); err != nil {
 		return ctx, err
 	}
 
@@ -36,7 +36,7 @@ func (ad AnteDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, ne
 	if version.GTE(semver.MustParse("1.114.0")) {
 		// run the message-specific ante for each msg, all must succeed
 		for _, msg := range tx.GetMsgs() {
-			if err := ad.anteHandleMessage(ctx, version, msg); err != nil {
+			if err = ad.anteHandleMessage(ctx, version, msg); err != nil {
 				return ctx, err
 			}
 		}

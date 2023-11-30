@@ -92,12 +92,14 @@ func (c *Client) processReorg(block *btcjson.GetBlockVerboseTxResult) ([]types.T
 	var txIns []types.TxIn
 	for _, height := range blockHeights {
 		c.log.Info().Int64("height", height).Msg("rescanning block")
-		b, err := c.getBlock(height)
+		var b *btcjson.GetBlockVerboseTxResult
+		b, err = c.getBlock(height)
 		if err != nil {
 			c.log.Err(err).Int64("height", height).Msg("fail to get block from RPC")
 			continue
 		}
-		txIn, err := c.extractTxs(b)
+		var txIn types.TxIn
+		txIn, err = c.extractTxs(b)
 		if err != nil {
 			c.log.Err(err).Msgf("fail to extract txIn from block")
 			continue
@@ -147,7 +149,8 @@ func (c *Client) reConfirmTx() ([]int64, error) {
 		}
 
 		// retrieve the block hash again
-		hash, err := c.rpc.GetBlockHash(blockMeta.Height)
+		var hash string
+		hash, err = c.rpc.GetBlockHash(blockMeta.Height)
 		if !strings.EqualFold(blockMeta.BlockHash, hash) {
 			rescanBlockHeights = append(rescanBlockHeights, blockMeta.Height)
 		}
@@ -157,13 +160,14 @@ func (c *Client) reConfirmTx() ([]int64, error) {
 		}
 
 		// update the stored block meta with the new block hash
-		r, err := c.rpc.GetBlockVerbose(hash)
+		var r *btcjson.GetBlockVerboseResult
+		r, err = c.rpc.GetBlockVerbose(hash)
 		if err != nil {
 			c.log.Err(err).Int64("height", blockMeta.Height).Msg("fail to get block verbose result")
 		}
 		blockMeta.PreviousHash = r.PreviousHash
 		blockMeta.BlockHash = r.Hash
-		if err := c.temporalStorage.SaveBlockMeta(blockMeta.Height, blockMeta); err != nil {
+		if err = c.temporalStorage.SaveBlockMeta(blockMeta.Height, blockMeta); err != nil {
 			c.log.Err(err).Int64("height", blockMeta.Height).Msg("fail to save block meta of height")
 		}
 	}
@@ -425,7 +429,9 @@ func (c *Client) getBlockWithoutVerbose(height int64) (*btcjson.GetBlockVerboseT
 	// process batch requests one at a time to avoid overloading the node
 	retries := 0
 	for i := 0; i < len(batches); i++ {
-		results, errs, err := c.rpc.BatchGetRawTransactionVerbose(batches[i])
+		var results []*btcjson.TxRawResult
+		var errs []error
+		results, errs, err = c.rpc.BatchGetRawTransactionVerbose(batches[i])
 
 		// if there was no rpc error, check for any tx errors
 		txErrCount := 0
@@ -462,9 +468,9 @@ func (c *Client) getBlockWithoutVerbose(height int64) (*btcjson.GetBlockVerboseT
 }
 
 func (c *Client) isValidUTXO(hexPubKey string) bool {
-	buf, err := hex.DecodeString(hexPubKey)
-	if err != nil {
-		c.log.Err(err).Msgf("fail to decode hex string, %s", hexPubKey)
+	buf, decErr := hex.DecodeString(hexPubKey)
+	if decErr != nil {
+		c.log.Err(decErr).Msgf("fail to decode hex string, %s", hexPubKey)
 		return false
 	}
 
@@ -629,7 +635,7 @@ func (c *Client) extractTxs(block *btcjson.GetBlockVerboseTxResult) (types.TxIn,
 		}
 		if !exist {
 			c.log.Info().Msgf("tx: %s had been report before, ignore", txInItem.Tx)
-			if err := c.temporalStorage.UntrackObservedTx(txInItem.Tx); err != nil {
+			if err = c.temporalStorage.UntrackObservedTx(txInItem.Tx); err != nil {
 				c.log.Err(err).Msgf("fail to remove observed tx from cache: %s", txInItem.Tx)
 			}
 			continue
@@ -765,7 +771,8 @@ func (c *Client) getMemo(tx *btcjson.TxRawResult) (string, error) {
 		}
 		opReturnFields := strings.Fields(asm)
 		if len(opReturnFields) == 2 {
-			decoded, err := hex.DecodeString(opReturnFields[1])
+			var decoded []byte
+			decoded, err = hex.DecodeString(opReturnFields[1])
 			if err != nil {
 				c.log.Err(err).Msgf("fail to decode OP_RETURN string: %s", opReturnFields[1])
 				continue
@@ -818,7 +825,8 @@ func (c *Client) getCoinbaseValue(blockHeight int64) (int64, error) {
 			for _, opt := range tx.Vout {
 				total += opt.Value
 			}
-			amt, err := btcutil.NewAmount(total)
+			var amt btcutil.Amount
+			amt, err = btcutil.NewAmount(total)
 			if err != nil {
 				return 0, fmt.Errorf("fail to parse amount: %w", err)
 			}
@@ -836,7 +844,8 @@ func (c *Client) getBlockRequiredConfirmation(txIn types.TxIn, height int64) (in
 		c.log.Err(err).Msgf("fail to get coinbase value")
 	}
 	if totalFeeAndSubsidy == 0 {
-		cbValue, err := btcutil.NewAmount(c.cfg.ChainID.DefaultCoinbase())
+		var cbValue btcutil.Amount
+		cbValue, err = btcutil.NewAmount(c.cfg.ChainID.DefaultCoinbase())
 		if err != nil {
 			return 0, fmt.Errorf("fail to get default coinbase value: %w", err)
 		}

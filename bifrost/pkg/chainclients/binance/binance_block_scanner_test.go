@@ -282,7 +282,8 @@ func (s *BlockScannerTestSuite) TestFromTxToTxIn(c *C) {
 		// c.Log(input)
 		for _, item := range query.Result.Txs {
 			c.Logf("hash:%s", item.Hash)
-			txInItem, err := bs.fromTxToTxIn(item.Hash, item.Tx, 2)
+			var txInItem []stypes.TxInItem
+			txInItem, err = bs.fromTxToTxIn(item.Hash, item.Tx, 2)
 			c.Assert(err, errCheck)
 			c.Check(txInItem, txInItemCheck, Commentf("%+v", txInItem))
 			if txInItem != nil {
@@ -383,7 +384,7 @@ func httpTestHandler(c *C, rw http.ResponseWriter, fixture string) {
 		c.Fatal(err)
 	}
 	rw.Header().Set("Content-Type", "application/json")
-	if _, err := rw.Write(content); err != nil {
+	if _, err = rw.Write(content); err != nil {
 		c.Fatal(err)
 	}
 }

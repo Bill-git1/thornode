@@ -75,7 +75,7 @@ func GetCmdGetNORelay() *cobra.Command {
 
 			msg := relay.NewNodeRelay(args[0], args[1])
 
-			if err := msg.Prepare(); err != nil {
+			if err = msg.Prepare(); err != nil {
 				log.Fatalln(err)
 			}
 

@@ -22,7 +22,7 @@ func (b *thorchainBridge) GetKeygenBlock(blockHeight int64, pk string) (types.Ke
 		return types.KeygenBlock{}, fmt.Errorf("failed to get keygen for a block height: %w", err)
 	}
 	var query types.QueryKeygenBlock
-	if err := json.Unmarshal(body, &query); err != nil {
+	if err = json.Unmarshal(body, &query); err != nil {
 		return types.KeygenBlock{}, fmt.Errorf("failed to unmarshal Keygen: %w", err)
 	}
 

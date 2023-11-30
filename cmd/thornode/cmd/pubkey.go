@@ -58,13 +58,15 @@ func convertPubKey(cmd *cobra.Command, args []string) error {
 	prefix, _ := cmd.Flags().GetString(keys.FlagBechPrefix)
 	switch prefix {
 	case sdk.PrefixAccount:
-		pubKey, err := cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeAccPub, pkey)
+		var pubKey string
+		pubKey, err = cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeAccPub, pkey)
 		if err != nil {
 			return err
 		}
 		fmt.Fprintln(cmd.OutOrStdout(), pubKey)
 	case sdk.PrefixConsensus:
-		pubKey, err := cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeConsPub, pkey)
+		var pubKey string
+		pubKey, err = cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeConsPub, pkey)
 		if err != nil {
 			return err
 		}

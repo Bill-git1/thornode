@@ -22,8 +22,9 @@ func deepMerge(a, b map[string]any, overrideKeys ...string) map[string]any {
 	for k := range b {
 		switch v := b[k].(type) {
 		case []any:
-			if av, ok := result[k]; ok {
-				if av, ok := av.([]any); ok {
+			if avx, ok := result[k]; ok {
+				var av []any
+				if av, ok = avx.([]any); ok {
 
 					// deep merge if key in overrideKeys matches in the source and destination
 					for _, ov := range overrideKeys {
@@ -45,8 +46,9 @@ func deepMerge(a, b map[string]any, overrideKeys ...string) map[string]any {
 				}
 			}
 		case map[string]any:
-			if av, ok := result[k]; ok {
-				if av, ok := av.(map[string]any); ok {
+			if avx, ok := result[k]; ok {
+				var av map[string]any
+				if av, ok = avx.(map[string]any); ok {
 					result[k] = deepMerge(av, v, overrideKeys...)
 					continue
 				}

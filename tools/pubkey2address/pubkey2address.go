@@ -48,7 +48,8 @@ func main() {
 	}
 
 	for _, chain := range chains {
-		addr, err := pk.GetAddress(chain)
+		var addr common.Address
+		addr, err = pk.GetAddress(chain)
 		if err != nil {
 			panic(err)
 		}

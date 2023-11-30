@@ -463,7 +463,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 	// so we only retry with the same nonce to avoid double spend
 	var nonce uint64
 	if tx.Checkpoint != nil {
-		if err := json.Unmarshal(tx.Checkpoint, &nonce); err != nil {
+		if err = json.Unmarshal(tx.Checkpoint, &nonce); err != nil {
 			return nil, nil, nil, fmt.Errorf("fail to deserialize checkpoint: %w", err)
 		}
 	} else {
@@ -562,7 +562,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 	gas := common.MakeEVMGas(c.GetChain(), createdTx.GasPrice(), createdTx.Gas())
 
 	signedTx := &etypes.Transaction{}
-	if err := signedTx.UnmarshalJSON(rawTx); err != nil {
+	if err = signedTx.UnmarshalJSON(rawTx); err != nil {
 		return nil, rawTx, nil, fmt.Errorf("fail to unmarshal signed tx: %w", err)
 	}
 
@@ -656,7 +656,8 @@ func (c *Client) GetBalances(addr string, height *big.Int) (common.Coins, error)
 	}
 	coins := common.Coins{}
 	for _, token := range tokens {
-		balance, err := c.GetBalance(addr, token.Address, height)
+		var balance *big.Int
+		balance, err = c.GetBalance(addr, token.Address, height)
 		if err != nil {
 			c.logger.Err(err).Msgf("fail to get balance for token:%s", token.Address)
 			continue
@@ -727,7 +728,7 @@ func (c *Client) BroadcastTx(txOutItem stypes.TxOutItem, hexTx []byte) (string, 
 		c.logger.Err(err).Msgf("fail to get current THORChain block height")
 		// at this point , the tx already broadcast successfully , don't return an error
 		// otherwise will cause the same tx to retry
-	} else if err := c.AddSignedTxItem(txID, blockHeight, txOutItem.VaultPubKey.String()); err != nil {
+	} else if err = c.AddSignedTxItem(txID, blockHeight, txOutItem.VaultPubKey.String()); err != nil {
 		c.logger.Err(err).Msgf("fail to add signed tx item,hash:%s", txID)
 	}
 
@@ -868,7 +869,7 @@ func (c *Client) OnObservedTxIn(txIn stypes.TxInItem, blockHeight int64) {
 	if m.GetTxID().IsEmpty() {
 		return
 	}
-	if err := c.signerCacheManager.SetSigned(txIn.CacheHash(c.GetChain(), m.GetTxID().String()), txIn.Tx); err != nil {
+	if err = c.signerCacheManager.SetSigned(txIn.CacheHash(c.GetChain(), m.GetTxID().String()), txIn.Tx); err != nil {
 		c.logger.Err(err).Msg("fail to update signer cache")
 	}
 }
@@ -887,7 +888,8 @@ func (c *Client) ReportSolvency(ethBlockHeight int64) error {
 		return fmt.Errorf("fail to get asgards,err: %w", err)
 	}
 	for _, asgard := range asgardVaults {
-		acct, err := c.GetAccount(asgard.PubKey, new(big.Int).SetInt64(ethBlockHeight))
+		var acct common.Account
+		acct, err = c.GetAccount(asgard.PubKey, new(big.Int).SetInt64(ethBlockHeight))
 		if err != nil {
 			c.logger.Err(err).Msgf("fail to get account balance")
 			continue

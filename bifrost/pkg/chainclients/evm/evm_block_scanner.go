@@ -251,7 +251,7 @@ func (e *EVMScanner) FetchTxs(height, chainHeight int64) (stypes.TxIn, error) {
 	// report network fee and solvency
 	e.reportNetworkFee(height)
 	if e.solvencyReporter != nil {
-		if err := e.solvencyReporter(height); err != nil {
+		if err = e.solvencyReporter(height); err != nil {
 			e.logger.Err(err).Msg("failed to report Solvency info to THORNode")
 		}
 	}
@@ -360,7 +360,8 @@ func (e *EVMScanner) getTxIn(block *etypes.Block) (stypes.TxIn, error) {
 			}
 
 			// extract the txInItem
-			txInItem, err := e.receiptToTxInItem(batch[i], receipt)
+			var txInItem *stypes.TxInItem
+			txInItem, err = e.receiptToTxInItem(batch[i], receipt)
 			if err != nil {
 				log.Error().Err(err).Msg("failed to convert receipt to txInItem")
 				continue
@@ -531,7 +532,8 @@ func (e *EVMScanner) getTxInFromTransaction(tx *etypes.Transaction) (*stypes.TxI
 	// on native transactions the memo is hex encoded in the data field
 	data := tx.Data()
 	if len(data) > 0 {
-		memo, err := hex.DecodeString(string(data))
+		var memo []byte
+		memo, err = hex.DecodeString(string(data))
 		if err != nil {
 			txInItem.Memo = string(data)
 		} else {

@@ -78,7 +78,8 @@ func (k KVStore) GetTxOutValue(ctx cosmos.Context, height int64) (cosmos.Uint, e
 		if item.Coin.Asset.IsRune() {
 			runeValue = runeValue.Add(item.Coin.Amount)
 		} else {
-			pool, err := k.GetPool(ctx, item.Coin.Asset)
+			var pool Pool
+			pool, err = k.GetPool(ctx, item.Coin.Asset)
 			if err != nil {
 				_ = dbError(ctx, fmt.Sprintf("unable to get pool : %s", item.Coin.Asset), err)
 				continue

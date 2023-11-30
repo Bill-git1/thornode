@@ -143,7 +143,8 @@ func NewOperation(opMap map[string]any) Operation {
 	}
 
 	// default status check to 200 if endpoint is set
-	if oc, ok := op.(*OpCheck); ok && oc.Endpoint != "" {
+	var oc *OpCheck
+	if oc, ok = op.(*OpCheck); ok && oc.Endpoint != "" {
 		if oc.Status == 0 {
 			oc.Status = 200
 		}
@@ -321,7 +322,8 @@ func (op *OpCheck) Execute(out io.Writer, routine int, _ *os.Process, logs chan 
 
 		cmd := exec.Command("jq", "-e", a)
 		cmd.Stdin = bytes.NewReader(buf)
-		cmdOut, err := cmd.CombinedOutput()
+		var cmdOut []byte
+		cmdOut, err = cmd.CombinedOutput()
 		if err != nil {
 			if cmd.ProcessState.ExitCode() == 1 && os.Getenv("DEBUG") == "" {
 				// dump process logs if the assert expression failed
@@ -383,7 +385,8 @@ func (op *OpCreateBlocks) Execute(out io.Writer, routine int, p *os.Process, log
 			}
 
 			// if process is not running, check exit code
-			ps, err := p.Wait()
+			var ps *os.ProcessState
+			ps, err = p.Wait()
 			if err != nil {
 				localLog.Err(err).Msg("failed to wait for process")
 				return err
@@ -429,7 +432,7 @@ func checkInvariants(routine int) error {
 	invs := struct {
 		Invariants []string
 	}{}
-	if err := json.NewDecoder(resp.Body).Decode(&invs); err != nil {
+	if err = json.NewDecoder(resp.Body).Decode(&invs); err != nil {
 		return err
 	}
 
@@ -442,15 +445,15 @@ func checkInvariants(routine int) error {
 		go func(inv string) {
 			defer wg.Done()
 
-			endpoint := fmt.Sprintf("%s/thorchain/invariant/%s", api, inv)
-			req, err := http.NewRequest("GET", endpoint, nil)
+			endpoint = fmt.Sprintf("%s/thorchain/invariant/%s", api, inv)
+			req, err = http.NewRequest("GET", endpoint, nil)
 			if err != nil {
 				mu.Lock()
 				returnErr = multierror.Append(returnErr, err)
 				mu.Unlock()
 				return
 			}
-			resp, err := httpClient.Do(req)
+			resp, err = httpClient.Do(req)
 			if err != nil {
 				mu.Lock()
 				returnErr = multierror.Append(returnErr, err)
@@ -462,7 +465,7 @@ func checkInvariants(routine int) error {
 				Invariant string
 				Msg       []string
 			}{}
-			if err := json.NewDecoder(resp.Body).Decode(&invRes); err != nil {
+			if err = json.NewDecoder(resp.Body).Decode(&invRes); err != nil {
 				mu.Lock()
 				returnErr = multierror.Append(returnErr, err)
 				mu.Unlock()

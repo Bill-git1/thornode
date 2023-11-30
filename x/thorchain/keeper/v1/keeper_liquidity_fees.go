@@ -32,7 +32,8 @@ func (k KVStore) AddToLiquidityFees(ctx cosmos.Context, asset common.Asset, fee 
 	// update pool liquidity
 	k.setUint64(ctx, k.GetKey(ctx, prefixPoolLiquidityFee, fmt.Sprintf("%d-%s", currentHeight, asset.String())), poolFees.Uint64())
 	if k.GetVersion().GTE(semver.MustParse("1.95.0")) {
-		currentValue, err := k.GetRollingPoolLiquidityFee(ctx, asset)
+		var currentValue uint64
+		currentValue, err = k.GetRollingPoolLiquidityFee(ctx, asset)
 		if err != nil {
 			ctx.Logger().Error("fail to get existing rolling pool liquidity fee", "error", err)
 			return nil

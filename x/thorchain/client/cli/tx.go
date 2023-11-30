@@ -64,7 +64,7 @@ func GetCmdDeposit() *cobra.Command {
 			coin := common.NewCoin(asset, cosmos.NewUint(uint64(amt)))
 
 			msg := types.NewMsgDeposit(common.Coins{coin}, args[2], clientCtx.GetFromAddress())
-			if err := msg.ValidateBasic(); err != nil {
+			if err = msg.ValidateBasic(); err != nil {
 				return err
 			}
 
@@ -96,7 +96,7 @@ func GetCmdSend() *cobra.Command {
 			}
 
 			msg := types.NewMsgSend(clientCtx.GetFromAddress(), toAddr, coins)
-			if err := msg.ValidateBasic(); err != nil {
+			if err = msg.ValidateBasic(); err != nil {
 				return err
 			}
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
@@ -122,7 +122,7 @@ func GetCmdMimir() *cobra.Command {
 			}
 
 			msg := types.NewMsgMimir(strings.ToUpper(args[0]), val, clientCtx.GetFromAddress())
-			if err := msg.ValidateBasic(); err != nil {
+			if err = msg.ValidateBasic(); err != nil {
 				return err
 			}
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
@@ -143,7 +143,7 @@ func GetCmdNodePauseChain() *cobra.Command {
 			}
 
 			msg := types.NewMsgNodePauseChain(int64(1), clientCtx.GetFromAddress())
-			if err := msg.ValidateBasic(); err != nil {
+			if err = msg.ValidateBasic(); err != nil {
 				return err
 			}
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
@@ -164,7 +164,7 @@ func GetCmdNodeResumeChain() *cobra.Command {
 			}
 
 			msg := types.NewMsgNodePauseChain(int64(-1), clientCtx.GetFromAddress())
-			if err := msg.ValidateBasic(); err != nil {
+			if err = msg.ValidateBasic(); err != nil {
 				return err
 			}
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
@@ -190,7 +190,7 @@ func GetCmdBan() *cobra.Command {
 			}
 
 			msg := types.NewMsgBan(addr, clientCtx.GetFromAddress())
-			if err := msg.ValidateBasic(); err != nil {
+			if err = msg.ValidateBasic(); err != nil {
 				return err
 			}
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
@@ -211,7 +211,7 @@ func GetCmdSetIPAddress() *cobra.Command {
 			}
 
 			msg := types.NewMsgSetIPAddress(args[0], clientCtx.GetFromAddress())
-			if err := msg.ValidateBasic(); err != nil {
+			if err = msg.ValidateBasic(); err != nil {
 				return err
 			}
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
@@ -232,7 +232,7 @@ func GetCmdSetVersion() *cobra.Command {
 			}
 
 			msg := types.NewMsgSetVersion(constants.SWVersion.String(), clientCtx.GetFromAddress())
-			if err := msg.ValidateBasic(); err != nil {
+			if err = msg.ValidateBasic(); err != nil {
 				return err
 			}
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)

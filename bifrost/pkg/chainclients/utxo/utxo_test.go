@@ -44,7 +44,7 @@ func httpTestHandler(c *C, rw http.ResponseWriter, fixture string) {
 		c.Fatal(err)
 	}
 	rw.Header().Set("Content-Type", "application/json")
-	if _, err := rw.Write(content); err != nil {
+	if _, err = rw.Write(content); err != nil {
 		c.Fatal(err)
 	}
 }

@@ -1,5 +1,7 @@
 package dogecoin
 
+// trunk-ignore-all(golangci-lint/govet): deprecating soon, skipping shadow errors
+
 import (
 	"context"
 	"encoding/hex"

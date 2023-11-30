@@ -120,7 +120,8 @@ func (k KVStore) RollupSwapSlip(ctx cosmos.Context, targetCount int64, asset com
 
 	if currCount > targetCount {
 		// remove the oldest swap slip block from the count
-		oldBlockSlip, err := k.GetPoolSwapSlip(ctx, ctx.BlockHeight()-targetCount, asset)
+		var oldBlockSlip cosmos.Int
+		oldBlockSlip, err = k.GetPoolSwapSlip(ctx, ctx.BlockHeight()-targetCount, asset)
 		if err != nil {
 			return reset(err)
 		}

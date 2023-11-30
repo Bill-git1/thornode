@@ -1,5 +1,7 @@
 package bitcoin
 
+// trunk-ignore-all(golangci-lint/govet): deprecating soon, skipping shadow errors
+
 import (
 	"encoding/base64"
 	"encoding/hex"

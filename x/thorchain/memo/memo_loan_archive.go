@@ -1,5 +1,7 @@
 package thorchain
 
+// trunk-ignore-all(golangci-lint/govet)
+
 import (
 	"fmt"
 	"strconv"

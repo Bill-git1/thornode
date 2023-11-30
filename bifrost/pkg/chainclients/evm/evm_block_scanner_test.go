@@ -131,8 +131,6 @@ func getConfigForTest(rpcHost string) config.BifrostBlockScannerConfiguration {
 }
 
 func (s *BlockScannerTestSuite) TestNewBlockScanner(c *C) {
-	storage, err := blockscanner.NewBlockScannerStorage("", config.LevelDBOptions{})
-	c.Assert(err, IsNil)
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		body, err := io.ReadAll(req.Body)
 		c.Assert(err, IsNil)
@@ -146,14 +144,16 @@ func (s *BlockScannerTestSuite) TestNewBlockScanner(c *C) {
 		err = json.Unmarshal(body, &rpcRequest)
 		c.Assert(err, IsNil)
 		if rpcRequest.Method == "eth_chainId" {
-			_, err := rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x539"}`))
+			_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x539"}`))
 			c.Assert(err, IsNil)
 		}
 		if rpcRequest.Method == "eth_gasPrice" {
-			_, err := rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x1"}`))
+			_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x1"}`))
 			c.Assert(err, IsNil)
 		}
 	}))
+	storage, err := blockscanner.NewBlockScannerStorage("", config.LevelDBOptions{})
+	c.Assert(err, IsNil)
 	ethClient, err := ethclient.Dial(server.URL)
 	c.Assert(err, IsNil)
 	rpcClient, err := evm.NewEthRPC(server.URL, time.Second, "AVAX")
@@ -208,6 +208,7 @@ func (s *BlockScannerTestSuite) TestProcessBlock(c *C) {
 			Params []interface{} `json:"params"`
 		}{}
 
+		// trunk-ignore(golangci-lint/govet): shadow
 		err := json.Unmarshal(body, &r)
 		c.Assert(err, IsNil)
 
@@ -226,6 +227,7 @@ func (s *BlockScannerTestSuite) TestProcessBlock(c *C) {
 			ID     int           `json:"id"`
 		}{}
 
+		// trunk-ignore(golangci-lint/govet): shadow
 		err := json.Unmarshal(body, &r)
 		c.Assert(err, IsNil)
 
@@ -257,6 +259,7 @@ func (s *BlockScannerTestSuite) TestProcessBlock(c *C) {
 		case strings.HasPrefix(req.RequestURI, thorclient.AuthAccountEndpoint):
 			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/auth/accounts/template.json")
 		default:
+			// trunk-ignore(golangci-lint/govet): shadow
 			body, err := io.ReadAll(req.Body)
 			c.Assert(err, IsNil)
 			defer func() {
@@ -320,7 +323,7 @@ func httpTestHandler(c *C, rw http.ResponseWriter, fixture string) {
 	}
 
 	rw.Header().Set("Content-Type", "application/json")
-	if _, err := rw.Write(content); err != nil {
+	if _, err = rw.Write(content); err != nil {
 		c.Fatal(err)
 	}
 }
@@ -351,43 +354,43 @@ func (s *BlockScannerTestSuite) TestGetTxInItem(c *C) {
 				return
 			}
 			if rpcRequest.Method == "eth_chainId" {
-				_, err := rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0xa868"}`))
+				_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0xa868"}`))
 				c.Assert(err, IsNil)
 			}
 			if rpcRequest.Method == "eth_gasPrice" {
-				_, err := rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x1"}`))
+				_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x1"}`))
 				c.Assert(err, IsNil)
 			}
 			if rpcRequest.Method == "eth_call" {
 				c.Log()
 				if string(rpcRequest.Params) == `[{"data":"0x95d89b41", "to":"0x333c3310824b7c685133F2BeDb2CA4b8b4DF633d"},"latest"]` {
-					_, err := rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x544B4E"}`))
+					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x544B4E"}`))
 					c.Assert(err, IsNil)
 					return
 				} else if string(rpcRequest.Params) == `[{"data":"0x313ce567","from":"0x0000000000000000000000000000000000000000","to":"0x333c3310824b7c685133F2BeDb2CA4b8b4DF633d"},"latest"]` {
-					_, err := rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x0000000000000000000000000000000000000000000000000000000000000012"}`))
+					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x0000000000000000000000000000000000000000000000000000000000000012"}`))
 					c.Assert(err, IsNil)
 					return
 				}
-				_, err := rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x544B4E"}`))
+				_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x544B4E"}`))
 				c.Assert(err, IsNil)
 			}
 			if rpcRequest.Method == "eth_getTransactionReceipt" {
 				switch string(rpcRequest.Params) {
 				case `["0xc5df10917683a31c361218577d5e13ee9d7e29f8b92415f337a318942bd2c875"]`:
-					_, err := rw.Write(depositEVMReceipt)
+					_, err = rw.Write(depositEVMReceipt)
 					c.Assert(err, IsNil)
 					return
 				case `["0x08053d250f3897e1e27b29dc97bb71a7f99809a5dfd052117ea335c2ee0f55e5"]`:
-					_, err := rw.Write(depositTknReceipt)
+					_, err = rw.Write(depositTknReceipt)
 					c.Assert(err, IsNil)
 					return
 				case `["0x1f451e1361a1374d135d3da413391cd0d0510e106488b681bed888f3e141bb04"]`:
-					_, err := rw.Write(transferOutReceipt)
+					_, err = rw.Write(transferOutReceipt)
 					c.Assert(err, IsNil)
 					return
 				}
-				_, err := rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{
+				_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{
 				"transactionHash":"0x88df016429689c079f3b2f6ad39fa052532c56795b733da78a91ebe6a713944b",
 				"transactionIndex":"0x0",
 				"blockNumber":"0x1",
@@ -535,8 +538,6 @@ func (s *BlockScannerTestSuite) TestGetTxInItem(c *C) {
 // -------------------------------------------------------------------------------------
 
 func (s *BlockScannerTestSuite) TestUpdateGasPrice(c *C) {
-	storage, err := blockscanner.NewBlockScannerStorage("", config.LevelDBOptions{})
-	c.Assert(err, IsNil)
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		body, err := io.ReadAll(req.Body)
 		c.Assert(err, IsNil)
@@ -550,14 +551,16 @@ func (s *BlockScannerTestSuite) TestUpdateGasPrice(c *C) {
 		err = json.Unmarshal(body, &rpcRequest)
 		c.Assert(err, IsNil)
 		if rpcRequest.Method == "eth_chainId" {
-			_, err := rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x539"}`))
+			_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x539"}`))
 			c.Assert(err, IsNil)
 		}
 		if rpcRequest.Method == "eth_gasPrice" {
-			_, err := rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x1"}`))
+			_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x1"}`))
 			c.Assert(err, IsNil)
 		}
 	}))
+	storage, err := blockscanner.NewBlockScannerStorage("", config.LevelDBOptions{})
+	c.Assert(err, IsNil)
 	ethClient, err := ethclient.Dial(server.URL)
 	c.Assert(err, IsNil)
 	rpcClient, err := evm.NewEthRPC(server.URL, time.Second, "AVAX")
