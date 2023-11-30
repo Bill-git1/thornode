@@ -258,7 +258,7 @@ func quoteSimulateSwap(ctx cosmos.Context, mgr *Mgrs, amount sdk.Uint, msg *MsgS
 
 	// if the generated memo is too long for the source chain send error
 	maxMemoLength := msg.Tx.Coins[0].Asset.Chain.MaxMemoLength()
-	if !msg.Tx.Coins[0].Asset.Synth && maxMemoLength > 0 && len(msg.Tx.Memo) > maxMemoLength {
+	if !msg.Tx.Coins[0].Asset.Synth && len(msg.Tx.Memo) > maxMemoLength {
 		return nil, sdk.ZeroUint(), sdk.ZeroUint(), fmt.Errorf("generated memo too long for source chain")
 	}
 
@@ -673,7 +673,7 @@ func queryQuoteSwap(ctx cosmos.Context, path []string, req abci.RequestQuery, mg
 
 	// if from asset chain has memo length restrictions use a prefix
 	memoString := memo.String()
-	if !fromAsset.Synth && fromAsset.Chain.MaxMemoLength() > 0 && len(memoString) > fromAsset.Chain.MaxMemoLength() {
+	if !fromAsset.Synth && len(memoString) > fromAsset.Chain.MaxMemoLength() {
 		if len(memo.ShortString()) < len(memoString) { // use short codes if available
 			memoString = memo.ShortString()
 		} else { // otherwise attempt to shorten
@@ -1357,7 +1357,7 @@ func queryQuoteLoanOpen(ctx cosmos.Context, path []string, req abci.RequestQuery
 
 		// if from asset chain has memo length restrictions use a prefix
 		memoString := memo.String()
-		if asset.Chain.MaxMemoLength() > 0 && len(memoString) > asset.Chain.MaxMemoLength() {
+		if len(memoString) > asset.Chain.MaxMemoLength() {
 			if len(memo.ShortString()) < len(memoString) { // use short codes if available
 				memoString = memo.ShortString()
 			} else { // otherwise attempt to shorten

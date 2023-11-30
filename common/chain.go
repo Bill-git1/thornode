@@ -11,6 +11,7 @@ import (
 	ltcchaincfg "github.com/ltcsuite/ltcd/chaincfg"
 	btypes "gitlab.com/thorchain/binance-sdk/common/types"
 	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/constants"
 )
 
 const (
@@ -287,13 +288,15 @@ func (c Chain) DustThreshold() cosmos.Uint {
 	}
 }
 
-// MaxMemoLength returns the max memo length for each chain. Returns 0 if no max is configured.
+// MaxMemoLength returns the max memo length for each chain.
 func (c Chain) MaxMemoLength() int {
 	switch c {
 	case BTCChain, LTCChain, BCHChain, DOGEChain:
 		return 80
 	default:
-		return 0
+		// Default to the max memo size that we will process, regardless
+		// of any higher memo size capable on other chains.
+		return constants.MaxMemoSize
 	}
 }
 
