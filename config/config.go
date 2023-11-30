@@ -597,6 +597,9 @@ type BifrostChainConfiguration struct {
 	// observed inbound transaction is considered valid.
 	MinConfirmations uint64 `mapstructure:"min_confirmations"`
 
+	// MaxRPCRetries is the maximum number of retries for RPC requests.
+	MaxRPCRetries int `mapstructure:"max_rpc_retries"`
+
 	// UTXO contains UTXO chain specific configuration.
 	UTXO struct {
 		// BlockCacheCount is the number of blocks to cache in storage.
@@ -644,6 +647,9 @@ type BifrostChainConfiguration struct {
 		// MaxUTXOsToSpend is the maximum number of UTXOs to spend in a single transaction.
 		// This is overridden at runtime by the `MaxUTXOsToSpend` mimir value.
 		MaxUTXOsToSpend int64 `mapstructure:"max_utxos_to_spend"`
+
+		// MaxReorgRescanBlocks is the maximum number of blocks to rescan during a reorg.
+		MaxReorgRescanBlocks int64 `mapstructure:"max_reorg_rescan_blocks"`
 	} `mapstructure:"utxo"`
 }
 

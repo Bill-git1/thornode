@@ -111,7 +111,7 @@ func NewClient(
 	}
 
 	// create rpc client
-	rpcClient, err := rpc.NewClient(cfg.RPCHost, cfg.UserName, cfg.Password, cfg.UTXO.Version)
+	rpcClient, err := rpc.NewClient(cfg.RPCHost, cfg.UserName, cfg.Password, cfg.UTXO.Version, cfg.MaxRPCRetries)
 	if err != nil {
 		return nil, fmt.Errorf("fail to create rpc client: %w", err)
 	}

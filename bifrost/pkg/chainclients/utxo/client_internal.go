@@ -85,7 +85,7 @@ func (c *Client) processReorg(block *btcjson.GetBlockVerboseTxResult) ([]types.T
 		Str("blockMetaHash", prevBlockMeta.BlockHash).
 		Msg("re-org detected")
 
-	blockHeights, err := c.reConfirmTx()
+	blockHeights, err := c.reConfirmTx(block.Height)
 	if err != nil {
 		c.log.Err(err).Msgf("fail to reprocess all txs")
 	}
@@ -112,17 +112,35 @@ func (c *Client) processReorg(block *btcjson.GetBlockVerboseTxResult) ([]types.T
 	return txIns, nil
 }
 
-// reConfirmTx is triggered on detection of a re-org. It will iterate all UTXOs in local
-// storage, and check if the transaction still exists or not. If the transaction no
-// longer exists on chain, then it will send an Errata transaction to Thorchain.
-func (c *Client) reConfirmTx() ([]int64, error) {
-	blockMetas, err := c.temporalStorage.GetBlockMetas()
-	if err != nil {
-		return nil, fmt.Errorf("fail to get block metas from local storage: %w", err)
-	}
+// reConfirmTx is triggered on detection of a re-org. It will walk backwards from the
+// provided height until it finds a block with a matching hash, returning a slice all
+// heights between the re-org height and the height of the common ancestor.
+func (c *Client) reConfirmTx(height int64) ([]int64, error) {
 	var rescanBlockHeights []int64
-	for _, blockMeta := range blockMetas {
+
+	// calculate the earliest look back height
+	earliestHeight := height - c.cfg.UTXO.MaxReorgRescanBlocks
+	if earliestHeight < 1 {
+		earliestHeight = 1
+	}
+
+	// the current block is not yet in block meta, start from previous block
+	for i := height - 1; i >= earliestHeight; i-- {
+		blockMeta, err := c.temporalStorage.GetBlockMeta(i)
+		if err != nil {
+			return nil, fmt.Errorf("fail to get block meta %d from local storage: %w", i, err)
+		}
+
+		hash, err := c.rpc.GetBlockHash(blockMeta.Height)
+		if err != nil {
+			c.log.Err(err).Msgf("fail to get block verbose tx result: %d", blockMeta.Height)
+		}
+		if strings.EqualFold(blockMeta.BlockHash, hash) {
+			break // we know about this block, everything prior is okay
+		}
+
 		c.log.Info().Int64("height", blockMeta.Height).Msg("re-confirming transactions")
+
 		var errataTxs []types.ErrataTx
 		for _, tx := range blockMeta.CustomerTransactions {
 			// check if the tx still exists in chain
@@ -148,16 +166,7 @@ func (c *Client) reConfirmTx() ([]int64, error) {
 			}
 		}
 
-		// retrieve the block hash again
-		var hash string
-		hash, err = c.rpc.GetBlockHash(blockMeta.Height)
-		if !strings.EqualFold(blockMeta.BlockHash, hash) {
-			rescanBlockHeights = append(rescanBlockHeights, blockMeta.Height)
-		}
-		if err != nil {
-			c.log.Err(err).Int64("height", blockMeta.Height).Msg("fail to get block hash")
-			continue
-		}
+		rescanBlockHeights = append(rescanBlockHeights, blockMeta.Height)
 
 		// update the stored block meta with the new block hash
 		var r *btcjson.GetBlockVerboseResult

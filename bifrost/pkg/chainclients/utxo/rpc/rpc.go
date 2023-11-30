@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -31,12 +32,13 @@ type SerializableTx interface {
 // Client represents a client connection to a UTXO daemon. Internally this uses the
 // Ethereum JSON-RPC 2.0 implementation, which allows batching and connection reuse.
 type Client struct {
-	c       *rpc.Client
-	version int
+	c          *rpc.Client
+	version    int
+	maxRetries int
 }
 
 // NewClient returns a client connection to a UTXO daemon.
-func NewClient(host, user, password string, version int) (*Client, error) {
+func NewClient(host, user, password string, version, maxRetries int) (*Client, error) {
 	authFn := func(h http.Header) error {
 		auth := base64.StdEncoding.EncodeToString([]byte(user + ":" + password))
 		h.Set("Authorization", fmt.Sprintf("Basic %s", auth))
@@ -54,15 +56,16 @@ func NewClient(host, user, password string, version int) (*Client, error) {
 	}
 
 	return &Client{
-		c:       c,
-		version: version,
+		c:          c,
+		version:    version,
+		maxRetries: maxRetries,
 	}, nil
 }
 
 // GetBlockCount returns the number of blocks in the longest block chain.
 func (c *Client) GetBlockCount() (int64, error) {
 	var count int64
-	err := c.c.Call(&count, "getblockcount")
+	err := c.Call(&count, "getblockcount")
 	return count, extractBTCError(err)
 }
 
@@ -81,21 +84,21 @@ func (c *Client) SendRawTransaction(tx SerializableTx, maxFeeParam any) (string,
 	args := []interface{}{txHex, maxFeeParam}
 
 	var txid string
-	err := c.c.Call(&txid, "sendrawtransaction", args...)
+	err := c.Call(&txid, "sendrawtransaction", args...)
 	return txid, extractBTCError(err)
 }
 
 // GetBlockHash returns the hash of the block in best-block-chain at the given height.
 func (c *Client) GetBlockHash(height int64) (string, error) {
 	var hash string
-	err := c.c.Call(&hash, "getblockhash", height)
+	err := c.Call(&hash, "getblockhash", height)
 	return hash, extractBTCError(err)
 }
 
 // GetBlockVerbose returns information about the block with verbosity 2.
 func (c *Client) GetBlockVerboseTxs(hash string) (*btcjson.GetBlockVerboseTxResult, error) {
 	var block btcjson.GetBlockVerboseTxResult
-	err := c.c.Call(&block, "getblock", hash, 2)
+	err := c.Call(&block, "getblock", hash, 2)
 	return &block, extractBTCError(err)
 }
 
@@ -110,21 +113,21 @@ func (c *Client) GetBlockVerbose(hash string) (*btcjson.GetBlockVerboseResult, e
 		args = append(args, true)
 	}
 
-	err := c.c.Call(&block, "getblock", args...)
+	err := c.Call(&block, "getblock", args...)
 	return &block, extractBTCError(err)
 }
 
 // GetBlockStats returns statistics about the block at the given hash.
 func (c *Client) GetBlockStats(hash string) (*btcjson.GetBlockStatsResult, error) {
 	var stats btcjson.GetBlockStatsResult
-	err := c.c.Call(&stats, "getblockstats", hash)
+	err := c.Call(&stats, "getblockstats", hash)
 	return &stats, extractBTCError(err)
 }
 
 // GetMempoolEntry returns mempool data for the given transaction.
 func (c *Client) GetMempoolEntry(txid string) (*btcjson.GetMempoolEntryResult, error) {
 	var entry btcjson.GetMempoolEntryResult
-	err := c.c.Call(&entry, "getmempoolentry", txid)
+	err := c.Call(&entry, "getmempoolentry", txid)
 	return &entry, extractBTCError(err)
 }
 
@@ -164,21 +167,21 @@ func (c *Client) BatchGetMempoolEntry(txids []string) ([]*btcjson.GetMempoolEntr
 // GetRawMempool returns all transaction ids in the mempool.
 func (c *Client) GetRawMempool() ([]string, error) {
 	var txids []string
-	err := c.c.Call(&txids, "getrawmempool")
+	err := c.Call(&txids, "getrawmempool")
 	return txids, extractBTCError(err)
 }
 
 // GetRawTransactionVerbose returns a raw transaction for the transaction id.
 func (c *Client) GetRawTransactionVerbose(txid string) (*btcjson.TxRawResult, error) {
 	var tx btcjson.TxRawResult
-	err := c.c.Call(&tx, "getrawtransaction", txid, true)
+	err := c.Call(&tx, "getrawtransaction", txid, true)
 	return &tx, extractBTCError(err)
 }
 
 // GetRawTransaction returns a raw transaction string for the transaction id.
 func (c *Client) GetRawTransaction(txid string) (string, error) {
 	var tx string
-	err := c.c.Call(&tx, "getrawtransaction", txid, false)
+	err := c.Call(&tx, "getrawtransaction", txid, false)
 	return tx, extractBTCError(err)
 }
 
@@ -218,13 +221,13 @@ func (c *Client) BatchGetRawTransactionVerbose(txids []string) ([]*btcjson.TxRaw
 
 // ImportAddress imports the address with no rescan.
 func (c *Client) ImportAddress(address string) error {
-	err := c.c.Call(nil, "importaddress", address, "", false)
+	err := c.Call(nil, "importaddress", address, "", false)
 	return extractBTCError(err)
 }
 
 // CreateWallet creates a new wallet.
 func (c *Client) CreateWallet(name string) error {
-	err := c.c.Call(nil, "createwallet", name)
+	err := c.Call(nil, "createwallet", name)
 	err = extractBTCError(err)
 
 	// ignore code -4 (wallet already exists)
@@ -240,18 +243,21 @@ func (c *Client) ListUnspent(address string) ([]btcjson.ListUnspentResult, error
 	var unspent []btcjson.ListUnspentResult
 	const minConfirm = 0
 	const maxConfirm = 9999999
-	err := c.c.Call(&unspent, "listunspent", minConfirm, maxConfirm, []string{address})
+	err := c.Call(&unspent, "listunspent", minConfirm, maxConfirm, []string{address})
 	return unspent, extractBTCError(err)
 }
 
 func (c *Client) GetNetworkInfo() (*btcjson.GetNetworkInfoResult, error) {
 	var info btcjson.GetNetworkInfoResult
-	err := c.c.Call(&info, "getnetworkinfo")
+	err := c.Call(&info, "getnetworkinfo")
 	return &info, extractBTCError(err)
 }
 
-func (c *Client) Call(result interface{}, method string, args ...interface{}) error {
-	err := c.c.Call(&result, method, args...)
+func (c *Client) Call(result any, method string, args ...interface{}) error {
+	fn := func() error {
+		return c.c.Call(result, method, args...)
+	}
+	err := c.retry(fn)
 	return extractBTCError(err)
 }
 
@@ -287,4 +293,23 @@ func extractBTCError(err error) error {
 
 	// return the error message
 	return btcjson.NewRPCError(response.Error.Code, response.Error.Message)
+}
+
+// retry will wrap the function call with a retry loop on specific errors - namely 500
+// response when the daemon is overloaded the the work queue is exceeded. We use a
+// simple static backoff of 1 second for now.
+func (c *Client) retry(fn func() error) error {
+	var err error
+	for i := 0; i <= c.maxRetries; i++ {
+		err = fn()
+		if err == nil {
+			break
+		}
+
+		if !strings.Contains(strings.ToLower(err.Error()), "work queue depth exceeded") {
+			break
+		}
+		time.Sleep(time.Second)
+	}
+	return err
 }

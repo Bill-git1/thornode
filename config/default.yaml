@@ -79,6 +79,7 @@ bifrost:
         write_buffer: 20971520 # 20mb
         block_cache_capacity: 536870912 # 512mb
       min_confirmations: 0
+      max_rpc_retries: 3
       utxo: &utxo
         block_cache_count: 144
         version: 25
@@ -91,7 +92,7 @@ bifrost:
         max_sats_per_vbyte: 9765 # backwards compatible with 1e8/10/1024
         min_utxo_confirmations: 1
         max_utxos_to_spend: 10
-
+        max_reorg_rescan_blocks: 72 # 12h
       block_scanner: &default-block-scanner
         chain_id: BTC
         enforce_block_height: false
@@ -207,6 +208,7 @@ bifrost:
         version: 14
         default_sats_per_vbyte: 25
         max_sats_per_vbyte: 976562 # backwards compatible with 1e8*10/1024
+        max_reorg_rescan_blocks: 720 # 12h
     gaia:
       <<: *default-chain
       chain_id: GAIA
@@ -233,6 +235,7 @@ bifrost:
         version: 21
         max_sats_per_vbyte: 9765 # backwards compatible with 1e8/10/1024
         estimated_average_tx_size: 250
+        max_reorg_rescan_blocks: 288 # 12h
     bch:
       <<: *default-chain
       chain_id: BCH
@@ -248,6 +251,7 @@ bifrost:
         version: 26
         max_sats_per_vbyte: 9765 # backwards compatible with 1e8/10/1024
         estimated_average_tx_size: 1500
+        max_reorg_rescan_blocks: 72 # 12h
 
 ########################################################################################
 # Thor

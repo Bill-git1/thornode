@@ -98,6 +98,7 @@ func (s *LitecoinSuite) SetUpTest(c *C) {
 	s.cfg.UTXO.TransactionBatchSize = 100
 	s.cfg.UTXO.MaxMempoolBatches = 10
 	s.cfg.UTXO.EstimatedAverageTxSize = 250
+	s.cfg.UTXO.MaxReorgRescanBlocks = 1
 	ns := strconv.Itoa(time.Now().Nanosecond())
 	ctypes.Network = ctypes.TestNetwork
 
@@ -854,10 +855,18 @@ func (s *LitecoinSuite) TestOnObservedTxIn(c *C) {
 
 func (s *LitecoinSuite) TestProcessReOrg(c *C) {
 	// can't get previous block meta should not error
-	var result btcjson.GetBlockVerboseTxResult
+	type response struct {
+		Result btcjson.GetBlockVerboseResult `json:"result"`
+	}
+	res := response{}
 	blockContent, err := os.ReadFile("../../../../test/fixtures/ltc/block.json")
 	c.Assert(err, IsNil)
-	c.Assert(json.Unmarshal(blockContent, &result), IsNil)
+	c.Assert(json.Unmarshal(blockContent, &res), IsNil)
+	result := btcjson.GetBlockVerboseTxResult{
+		Hash:         res.Result.Hash,
+		PreviousHash: res.Result.PreviousHash,
+		Height:       res.Result.Height,
+	}
 	// should not trigger re-org process
 	reOrgedTxIns, err := s.client.processReorg(&result)
 	c.Assert(err, IsNil)
