@@ -77,6 +77,11 @@ endpoint: http://localhost:1317/thorchain/mimir
 asserts:
   - .MAXAFFILIATEFEEBASISPOINTS == 500
 ---
+type: check
+endpoint: http://localhost:1317/thorchain/mimir/key/1-GLOBAL
+asserts:
+  - . == 500
+---
 # check that 3 node accounts (mimir v2) can set an operational mimir (e.g. 2-GLOBAL)
 ---
 type: tx-mimir
@@ -129,6 +134,11 @@ type: check
 endpoint: http://localhost:1317/thorchain/mimir
 asserts:
   - .PAUSEBOND == 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/mimir/key/2-GLOBAL
+asserts:
+  - . == 1
 ---
 # check that an operation mimir can be unset by removing 1 vote
 ---

@@ -1,5 +1,9 @@
 package mimir
 
+import (
+	"gitlab.com/thorchain/thornode/constants"
+)
+
 func getRef(refs []string) (reference string) {
 	for _, ref := range refs {
 		if len(ref) > 0 {
@@ -14,7 +18,7 @@ func NewAffiliateFeeBasisPointsMax(refs ...string) Mimir {
 	return &mimir{
 		id:           id,
 		name:         mimirRefToStringMap[id],
-		defaultValue: 10_000,
+		defaultValue: int64(constants.MaxBasisPts),
 		mimirType:    EconomicMimir,
 		reference:    getRef(refs),
 		tags:         []string{"economic", "affiliate fee"},
@@ -37,6 +41,38 @@ func NewBondPause(refs ...string) Mimir {
 		description:  "Pauses bonding (unbonding is still allowed)",
 		legacyMimirKey: func(_ string) string {
 			return "PauseBond"
+		},
+	}
+}
+
+func NewConfBasisPointValue(refs ...string) Mimir {
+	id := ConfMultiplierBasisPointsId
+	return &mimir{
+		id:           id,
+		name:         mimirRefToStringMap[id],
+		defaultValue: int64(constants.MaxBasisPts),
+		reference:    getRef(refs),
+		mimirType:    EconomicMimir,
+		tags:         []string{"economic", "chain-client"},
+		description:  "adjusts confirmation multiplier for chain client",
+		legacyMimirKey: func(_ string) string {
+			return ""
+		},
+	}
+}
+
+func NewMaxConfValue(refs ...string) Mimir {
+	id := MaxConfirmationsId
+	return &mimir{
+		id:           id,
+		name:         mimirRefToStringMap[id],
+		defaultValue: 0,
+		reference:    getRef(refs),
+		mimirType:    EconomicMimir,
+		tags:         []string{"economic", "chain-client"},
+		description:  "max confirmations for chain client",
+		legacyMimirKey: func(_ string) string {
+			return ""
 		},
 	}
 }

@@ -1072,6 +1072,10 @@ func (c *Client) getBlockRequiredConfirmation(txIn types.TxIn, height int64) (in
 	if err != nil {
 		c.logger.Err(err).Msg("fail to get coinbase value")
 	}
+	confMul, err := utxo.GetConfMulBasisPoint(c.GetChain().String(), c.bridge)
+	if err != nil {
+		c.logger.Err(err).Msgf("fail to get conf multiplier mimir value for %s", c.GetChain().String())
+	}
 	if totalFeeAndSubsidy == 0 {
 		cbValue, err := bchutil.NewAmount(c.chain.DefaultCoinbase())
 		if err != nil {
@@ -1079,7 +1083,8 @@ func (c *Client) getBlockRequiredConfirmation(txIn types.TxIn, height int64) (in
 		}
 		totalFeeAndSubsidy = int64(cbValue)
 	}
-	confirm := totalTxValue.QuoUint64(uint64(totalFeeAndSubsidy)).Uint64()
+	confValue := common.GetUncappedShare(confMul, cosmos.NewUint(constants.MaxBasisPts), cosmos.SafeUintFromInt64(totalFeeAndSubsidy))
+	confirm := totalTxValue.Quo(confValue).Uint64()
 	c.logger.Info().Msgf("totalTxValue:%s,total fee and Subsidy:%d,confirmation:%d", totalTxValue, totalFeeAndSubsidy, confirm)
 	return int64(confirm), nil
 }

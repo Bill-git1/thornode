@@ -1743,9 +1743,21 @@ func queryMimirWithKey(ctx cosmos.Context, path []string, req abci.RequestQuery,
 	if len(path) == 0 && len(path[0]) == 0 {
 		return nil, fmt.Errorf("no mimir key")
 	}
-	v, err := mgr.Keeper().GetMimir(ctx, path[0])
-	if err != nil {
-		return nil, fmt.Errorf("fail to get mimir with key:%s, err : %w", path[0], err)
+	var (
+		v   int64
+		err error
+	)
+	if mimirV2ValidKey(path[0]) {
+		mimirV2, found := mimir.GetMimirByKey(path[0])
+		if !found {
+			return nil, fmt.Errorf("fail to get mimir v2 with key:%s", path[0])
+		}
+		v = mimirV2.FetchValue(ctx, mgr.Keeper())
+	} else {
+		v, err = mgr.Keeper().GetMimir(ctx, path[0])
+		if err != nil {
+			return nil, fmt.Errorf("fail to get mimir with key:%s, err : %w", path[0], err)
+		}
 	}
 	return jsonify(ctx, v)
 }

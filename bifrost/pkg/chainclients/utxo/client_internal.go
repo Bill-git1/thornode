@@ -843,6 +843,10 @@ func (c *Client) getBlockRequiredConfirmation(txIn types.TxIn, height int64) (in
 	if err != nil {
 		c.log.Err(err).Msgf("fail to get coinbase value")
 	}
+	confMul, err := utxo.GetConfMulBasisPoint(c.GetChain().String(), c.bridge)
+	if err != nil {
+		c.log.Err(err).Msgf("fail to get conf multiplier mimir value for %s", c.GetChain().String())
+	}
 	if totalFeeAndSubsidy == 0 {
 		var cbValue btcutil.Amount
 		cbValue, err = btcutil.NewAmount(c.cfg.ChainID.DefaultCoinbase())
@@ -851,12 +855,18 @@ func (c *Client) getBlockRequiredConfirmation(txIn types.TxIn, height int64) (in
 		}
 		totalFeeAndSubsidy = int64(cbValue)
 	}
-	confirm := totalTxValue.QuoUint64(uint64(totalFeeAndSubsidy)).Uint64()
-	c.log.Info().Msgf("totalTxValue:%s, totalFeeAndSubsidy:%d, confirm:%d", totalTxValue, totalFeeAndSubsidy, confirm)
-
+	confValue := common.GetUncappedShare(confMul, cosmos.NewUint(constants.MaxBasisPts), cosmos.SafeUintFromInt64(totalFeeAndSubsidy))
+	confirm := totalTxValue.Quo(confValue).Uint64()
+	if c.GetChain().Equals(common.BTCChain) || c.GetChain().Equals(common.ETHChain) {
+		confirm, err = utxo.MaxConfAdjustment(confirm, c.GetChain().String(), c.bridge)
+		if err != nil {
+			c.log.Err(err).Msgf("fail to get max conf value adjustment for %s", c.GetChain().String())
+		}
+	}
 	if confirm < c.cfg.MinConfirmations {
 		confirm = c.cfg.MinConfirmations
 	}
+	c.log.Info().Msgf("totalTxValue:%s, totalFeeAndSubsidy:%d, confirm:%d", totalTxValue, totalFeeAndSubsidy, confirm)
 
 	return int64(confirm), nil
 }

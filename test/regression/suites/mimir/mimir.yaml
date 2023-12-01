@@ -21,6 +21,11 @@ endpoint: http://localhost:1317/thorchain/mimir
 asserts:
   - .REGRESSIONTEST == 1
 ---
+type: check
+endpoint: http://localhost:1317/thorchain/mimir/key/REGRESSIONTEST
+asserts:
+  - . == 1
+---
 type: tx-mimir
 key: FoxTest
 value: 1

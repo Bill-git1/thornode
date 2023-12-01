@@ -801,11 +801,20 @@ func (c *Client) getBlockRequiredConfirmation(txIn stypes.TxIn, height int64) (i
 	c.logger.Debug().Msgf("asgards: %+v", asgards)
 	totalTxValue := c.getTotalTransactionValue(txIn, asgards)
 	totalTxValueInWei := c.convertThorchainAmountToWei(totalTxValue.BigInt())
+	confMul, err := utxo.GetConfMulBasisPoint(c.GetChain().String(), c.bridge)
+	if err != nil {
+		c.logger.Err(err).Msgf("failed to get conf multiplier mimir value for %s", c.GetChain().String())
+	}
 	totalFeeAndSubsidy, err := c.getBlockReward(height)
+	confValue := common.GetUncappedShare(confMul, cosmos.NewUint(constants.MaxBasisPts), cosmos.NewUintFromBigInt(totalFeeAndSubsidy))
 	if err != nil {
 		return 0, fmt.Errorf("fail to get coinbase value: %w", err)
 	}
-	confirm := cosmos.NewUintFromBigInt(totalTxValueInWei).MulUint64(2).Quo(cosmos.NewUintFromBigInt(totalFeeAndSubsidy)).Uint64()
+	confirm := cosmos.NewUintFromBigInt(totalTxValueInWei).MulUint64(2).Quo(confValue).Uint64()
+	confirm, err = utxo.MaxConfAdjustment(confirm, c.GetChain().String(), c.bridge)
+	if err != nil {
+		c.logger.Err(err).Msgf("fail to get max conf value adjustment for %s", c.GetChain().String())
+	}
 	c.logger.Info().Msgf("totalTxValue:%s,total fee and Subsidy:%d,confirmation:%d", totalTxValueInWei, totalFeeAndSubsidy, confirm)
 	if confirm < 2 {
 		// in ETH PoS (post merge) reorgs are harder to do but can occur. In

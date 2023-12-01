@@ -18,6 +18,7 @@ import (
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
 	"gitlab.com/thorchain/thornode/log"
+	"gitlab.com/thorchain/thornode/mimir"
 	openapi "gitlab.com/thorchain/thornode/openapi/gen"
 	mem "gitlab.com/thorchain/thornode/x/thorchain/memo"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
@@ -381,14 +382,19 @@ func quoteInboundInfo(ctx cosmos.Context, mgr *Mgrs, amount sdk.Uint, chain comm
 		}
 	}
 
-	// estimate the inbound confirmation count blocks: ceil(amount/coinbase)
+	// estimate the inbound confirmation count blocks: ceil(amount/coinbase * conf adjustment)
+	confMimir, found := mimir.GetMimir(mimir.ConfMultiplierBasisPointsId, chain.String())
+	if !found {
+		return common.NoAddress, common.NoAddress, 0, fmt.Errorf("conf multiplier mimir not found")
+	}
+	confMul := confMimir.FetchValue(ctx, mgr.Keeper())
 	if chain.DefaultCoinbase() > 0 {
-		coinbase := cosmos.NewUint(uint64(chain.DefaultCoinbase()) * common.One)
-		confirmations = amount.Quo(coinbase).BigInt().Int64()
-		if !amount.Mod(coinbase).IsZero() {
+		confValue := common.GetUncappedShare(cosmos.NewUint(uint64(confMul)), cosmos.NewUint(constants.MaxBasisPts), cosmos.NewUint(uint64(chain.DefaultCoinbase())*common.One))
+		confirmations = amount.Quo(confValue).BigInt().Int64()
+		if !amount.Mod(confValue).IsZero() {
 			confirmations++
 		}
-	} else if chain.IsEVM() {
+	} else if chain.Equals(common.ETHChain) {
 		// copying logic from getBlockRequiredConfirmation of ethereum.go
 		// convert amount to ETH
 		gasAssetAmount, err := quoteConvertAsset(ctx, mgr, asset, amount, chain.GetGasAsset())
@@ -396,12 +402,24 @@ func quoteInboundInfo(ctx cosmos.Context, mgr *Mgrs, amount sdk.Uint, chain comm
 			return common.NoAddress, common.NoAddress, 0, fmt.Errorf("unable to convert asset: %w", err)
 		}
 		gasAssetAmountWei := convertThorchainAmountToWei(gasAssetAmount.BigInt())
-		blockReward := big.NewInt(ethBlockRewardAndFee)
-		confirm := cosmos.NewUintFromBigInt(gasAssetAmountWei).MulUint64(2).Quo(cosmos.NewUintFromBigInt(blockReward)).Uint64()
-		if confirm < 2 {
-			confirm = 2
+		confValue := common.GetUncappedShare(cosmos.NewUint(uint64(confMul)), cosmos.NewUint(constants.MaxBasisPts), cosmos.NewUintFromBigInt(big.NewInt(ethBlockRewardAndFee)))
+		confirmations = int64(cosmos.NewUintFromBigInt(gasAssetAmountWei).MulUint64(2).Quo(confValue).Uint64())
+	}
+
+	// max confirmation adjustment for btc and eth
+	if chain.Equals(common.BTCChain) || chain.Equals(common.ETHChain) {
+		maxConfMimir, found := mimir.GetMimir(mimir.MaxConfirmationsId, chain.String())
+		if !found {
+			return common.NoAddress, common.NoAddress, 0, fmt.Errorf("max conf multiplier mimir not found")
 		}
-		confirmations = int64(confirm)
+		maxConfirmations := maxConfMimir.FetchValue(ctx, mgr.Keeper())
+		if maxConfirmations > 0 && confirmations > maxConfirmations {
+			confirmations = maxConfirmations
+		}
+	}
+	// min confirmation adjustment
+	if chain.Equals(common.ETHChain) || chain.Equals(common.DOGEChain) && confirmations < 2 {
+		confirmations = 2
 	}
 
 	return address, router, confirmations, nil

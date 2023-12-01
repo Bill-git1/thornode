@@ -70,20 +70,20 @@ func (m *mimir) Type() MimirType {
 
 func (m *mimir) Reference() string {
 	if m.reference == "" {
-		return "Global"
+		return "GLOBAL"
 	}
 	return strings.ToUpper(m.reference)
 }
 
 func (m *mimir) key() string {
-	return fmt.Sprintf("%d-%s", m.id, strings.ToUpper(m.reference))
+	return fmt.Sprintf("%d-%s", m.id, strings.ToUpper(m.Reference()))
 }
 
 func (m *mimir) FetchValue(ctx cosmos.Context, keeper keeper.Keeper) (value int64) {
 	var err error
-
+	version := keeper.GetVersion()
 	// fetch mimir v2
-	if keeper.GetVersion().GTE(semver.MustParse("1.124.0")) {
+	if version.GTE(semver.MustParse("1.124.0")) {
 		var active types.NodeAccounts
 		active, err = keeper.ListActiveValidators(ctx)
 		if err != nil {
@@ -105,11 +105,7 @@ func (m *mimir) FetchValue(ctx cosmos.Context, keeper keeper.Keeper) (value int6
 				if err != nil {
 					ctx.Logger().Error("failed to get mimir v2", "error", err)
 				}
-				if value >= 0 {
-					return value
-				}
-			} else {
-				// value reached, save to persist it beyond losing 2/3rds
+			} else if version.Equals(semver.MustParse("1.124.0")) {
 				keeper.SetMimirV2(ctx, m.key(), value)
 			}
 		case OperationalMimir:
@@ -120,8 +116,15 @@ func (m *mimir) FetchValue(ctx cosmos.Context, keeper keeper.Keeper) (value int6
 		}
 	}
 
+	legacyKey := m.LegacyKey(m.Reference())
+	if version.GTE(semver.MustParse("1.125.0")) {
+		// return if legacy key does not exist (case of v2 only mimir)
+		if len(legacyKey) == 0 {
+			return m.DefaultValue()
+		}
+	}
 	// fetch legacy mimir (v1)
-	value, err = keeper.GetMimir(ctx, m.LegacyKey(m.reference))
+	value, err = keeper.GetMimir(ctx, legacyKey)
 	if err != nil {
 		ctx.Logger().Error("failed to get mimir V1", "error", err)
 		return -1
