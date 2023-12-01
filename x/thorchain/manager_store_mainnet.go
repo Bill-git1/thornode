@@ -967,3 +967,173 @@ func migrateStoreV124(ctx cosmos.Context, mgr *Mgrs) {
 		return
 	}
 }
+
+// Bond refunds for AVAX double spend slash. See PR for details on determining amounts.
+func migrateStoreV125(ctx cosmos.Context, mgr *Mgrs) {
+	defer func() {
+		if err := recover(); err != nil {
+			ctx.Logger().Error("fail to migrate store to v125", "error", err)
+		}
+	}()
+
+	credits := []struct {
+		address string
+		amount  cosmos.Uint
+	}{
+		{address: "thor104un8h7jslr28xq7mxlrcljhnxtqcl0v4zl5pq", amount: cosmos.NewUint(319321625569)},
+		{address: "thor10czf2s89h79fsjmqqck85cdqeq536hw5ngz4lt", amount: cosmos.NewUint(127832591722)},
+		{address: "thor10fgzvdajq2f0gc2a5pmfh9up4qqajuk9je8lnc", amount: cosmos.NewUint(118728742428)},
+		{address: "thor10rgvc7c44mq5vpcq07dx5fg942eykagm9p6gxh", amount: cosmos.NewUint(252712045018)},
+		{address: "thor10zrxnnd75u2kwmdygehuurgapk36wtz9atsmkh", amount: cosmos.NewUint(89892458720)},
+		{address: "thor1283lplant40dy3aq6k22rxamxuypqx9sk4qv2h", amount: cosmos.NewUint(145226714721)},
+		{address: "thor12963n028s8gj5h048x7x5jjx8zjd6ev2uqysgn", amount: cosmos.NewUint(421019486106)},
+		{address: "thor12espg8k5fxqmclx9vyte7cducmmvrtxll40q7z", amount: cosmos.NewUint(72210471615)},
+		{address: "thor12g0es965kj3nql8k244unkznqx37r23ytns75x", amount: cosmos.NewUint(434885263871)},
+		{address: "thor12jrhy6mqxtff6utq4kkavtvmqz4qxtztxxnk4j", amount: cosmos.NewUint(254177439761)},
+		{address: "thor12nfq8smgr93mk845zlqpdel8r8mjk477g99426", amount: cosmos.NewUint(432212517832)},
+		{address: "thor12z69uvtwxlj2j9c5cqrnnfqy7s2twrqmvqvj20", amount: cosmos.NewUint(430168608993)},
+		{address: "thor13r9p8upgtpff05nxy2kagy70qe0ljumhxe6qyf", amount: cosmos.NewUint(148157042392)},
+		{address: "thor13xa9eseegag6lcg4qa3eaj7uhljc9kmtxld84v", amount: cosmos.NewUint(250726994016)},
+		{address: "thor140wms8h9pm5dmj832lwnhw45qvt25v0ps888sf", amount: cosmos.NewUint(73308903138)},
+		{address: "thor14289vlld8lq7qcp67j6w66gfx4l76havr697m2", amount: cosmos.NewUint(117339493525)},
+		{address: "thor14zyn9xdkv4au3frpj5ze6fkf4fwt80s7uy2394", amount: cosmos.NewUint(116666471790)},
+		{address: "thor15hg7xk9k2rh0yyhn2atwj96h9srh4c6ys7vxn5", amount: cosmos.NewUint(422621892057)},
+		{address: "thor15vzju96yvcpuhqk9u2mevdsud96k7cvjxhwk0e", amount: cosmos.NewUint(120985416555)},
+		{address: "thor16ery22gma35h2fduxr0swdfvz4s6yvy6yhskf6", amount: cosmos.NewUint(72457288757)},
+		{address: "thor16ta9xjecs0ju6w4u8f7udh4405lxpvje77kynk", amount: cosmos.NewUint(227093608519)},
+		{address: "thor175jn909du3pwkwradsufuypzgjg4q5d8e26gh0", amount: cosmos.NewUint(515421323080)},
+		{address: "thor17s8u4s635kee8g2u34htqxxg6jalvgvjpdpxsu", amount: cosmos.NewUint(120839256151)},
+		{address: "thor186k9w7hw4zdmd0kyqsrfzhzgvpc8v9shd9qe7u", amount: cosmos.NewUint(149060273172)},
+		{address: "thor18fqat7ta4mdxlzq8xdhuel23ng7plm00qrzdre", amount: cosmos.NewUint(247012541721)},
+		{address: "thor18nlluv0zw5g8930sx3r5xn7tqpsvwd7axxfynv", amount: cosmos.NewUint(121984253317)},
+		{address: "thor19dxkzzp09egc06wv4jcg5q2l6zy2yg3yyxplcw", amount: cosmos.NewUint(16674098338)},
+		{address: "thor19m4kqulyqvya339jfja84h6qp8tkjgxuxa4n4a", amount: cosmos.NewUint(451694082161)},
+		{address: "thor19xxxeetxrjvn2qchx00l4xxm0dlcwjkx0h2r82", amount: cosmos.NewUint(464165882575)},
+		{address: "thor1afpy3lt4dh4x3jwvm0ncss7anm3zrd4wfwsk8n", amount: cosmos.NewUint(434511468328)},
+		{address: "thor1agftrgu74z84hef6dt6ykhe7cmjf3f8dcpkfun", amount: cosmos.NewUint(116036966383)},
+		{address: "thor1asnulx9f4hr8e8fsa40wg3yxsyrdesj38vwndn", amount: cosmos.NewUint(116659084404)},
+		{address: "thor1aulde7ynkh8jd9qpuxw5srafew00vpauw5np52", amount: cosmos.NewUint(311365547994)},
+		{address: "thor1c0grac9sstxey0jvhmzan9a9dplerres8rdg4n", amount: cosmos.NewUint(121015785523)},
+		{address: "thor1dqlmsm67h363nuxpd68esg54kt2t7xw2xewqml", amount: cosmos.NewUint(84858891179)},
+		{address: "thor1dwt6szf098rd4vlnjn83w249zky3penf76cuxy", amount: cosmos.NewUint(66724389440)},
+		{address: "thor1e5v06j4w5u683n6yypg6apcuvft264qdqm5ayd", amount: cosmos.NewUint(391827212146)},
+		{address: "thor1ee5ec0mnvhqvu84lgtxpgcc4yrdhalylfty246", amount: cosmos.NewUint(119818920029)},
+		{address: "thor1ejtuux8f5pzg4h3q54l9hgw6j4969huh7xpamz", amount: cosmos.NewUint(60422728898)},
+		{address: "thor1en5cc7sahcy6phqrvcetyyxsu05h8d05yeg88x", amount: cosmos.NewUint(259902590738)},
+		{address: "thor1errw9wx5pv8rhevexfxa950jx6tux0qywrlwlp", amount: cosmos.NewUint(71521162233)},
+		{address: "thor1ffz7rvtjvckuj3l05n4xp55v4zsqpxavej9dtr", amount: cosmos.NewUint(112764711483)},
+		{address: "thor1fsk42s4trwrrc7k9elwhr0njlt5jfqlw8269mz", amount: cosmos.NewUint(166051691388)},
+		{address: "thor1fy4njncghzmuce87c63mrtwpdpyzusdlfr54k6", amount: cosmos.NewUint(18053756311)},
+		{address: "thor1gqtwzazgdncthm2cuu947d0mvk3w5fkahm40qp", amount: cosmos.NewUint(238082090162)},
+		{address: "thor1gukvqaag4vk2l3uq3kjme5x9xy8556pgv5rw4k", amount: cosmos.NewUint(260514693954)},
+		{address: "thor1h3pvd8x44v63qj488lku6pzzcq3g5p8tc2nd6c", amount: cosmos.NewUint(393026086148)},
+		{address: "thor1h6h54d7jutljwt46qzt2w7nnyuswwv045kmshl", amount: cosmos.NewUint(480572829252)},
+		{address: "thor1haadhysqf9z5hq92eya78e89qehx0wkpm3jkgu", amount: cosmos.NewUint(468358544129)},
+		{address: "thor1hpt4l30qgr3pugg2wdp4hmrv2g0qlg2z7z9m7h", amount: cosmos.NewUint(160670428442)},
+		{address: "thor1hue0dwzd3lsxyq3qgecyzzmxrhq96qytwdvwj0", amount: cosmos.NewUint(17622544431)},
+		{address: "thor1hx3gayvwx0j92nf0ev6c837km4yg4kdk0w6fjl", amount: cosmos.NewUint(516735010159)},
+		{address: "thor1jayc3hvwmgyex2ftmg3hr2mk4ujjhrv9eua74x", amount: cosmos.NewUint(421026220242)},
+		{address: "thor1jk93saw08vwmqdj684f4w5y6v4dkgdfy2jkrdp", amount: cosmos.NewUint(122635027611)},
+		{address: "thor1k2e50ws3d9lce9ycr7ppaazx3ygaa7lxj8kkny", amount: cosmos.NewUint(72959319676)},
+		{address: "thor1k42q8hvzk3r3uy0w2udaxy743d7u996s60jwv8", amount: cosmos.NewUint(90504693795)},
+		{address: "thor1kchgh8t790zlfatdun975mu04xvumq3qjms65a", amount: cosmos.NewUint(130912256935)},
+		{address: "thor1kj56aupxnkhhy0rpdcp2gjncm4y78nnhjv496v", amount: cosmos.NewUint(131295769218)},
+		{address: "thor1krcz33mejvc5f6grj2c5w5x3kuj7mnjhgqltj8", amount: cosmos.NewUint(136535375373)},
+		{address: "thor1lgms9fnlgz8den685z0fs5f2vm60jauvkjf6pm", amount: cosmos.NewUint(242603659660)},
+		{address: "thor1luvyfs2r4cedmmv0fqr2dqdcr4j4fd764hquu3", amount: cosmos.NewUint(109433819474)},
+		{address: "thor1lxm4ahz43va3s2mwyed63l5k0mua0ecr9qhmmm", amount: cosmos.NewUint(487542300305)},
+		{address: "thor1lzzvchm4ldm66rem8u85n8ytj2nzhcnprmtwqr", amount: cosmos.NewUint(219635557647)},
+		{address: "thor1m45tc3uw4egzw9v2j39x47ds926ynfducvt9fx", amount: cosmos.NewUint(17880282436)},
+		{address: "thor1muc7w8s4k2v94lz9mhda5dav9nyyf9c9959g89", amount: cosmos.NewUint(429271927236)},
+		{address: "thor1n5ylq3kyylr7jrq6zdksy2jrtyffxssra22tm3", amount: cosmos.NewUint(542248910653)},
+		{address: "thor1nd4n9s9shgdp4lnn859zq6snx8pnp2u2zc2mqc", amount: cosmos.NewUint(453931314209)},
+		{address: "thor1nl0hc33pllze4athmvyaj9ky35le30vvhx3a25", amount: cosmos.NewUint(125190793050)},
+		{address: "thor1nlsfq25y74u8qt2hqmuzh5wd9t4uv28ghc258g", amount: cosmos.NewUint(110223575724)},
+		{address: "thor1nlxtkz6wjrsz3wcez0vz577kl6xx7m5mdmysvy", amount: cosmos.NewUint(267941321436)},
+		{address: "thor1nw2jdqn5u8xsx4j0n4e8cmndapxqj47z8zhcs3", amount: cosmos.NewUint(139279915982)},
+		{address: "thor1p4mykaudddvnkzpfvtutn3vfjhyy43wktgxxf9", amount: cosmos.NewUint(353051378515)},
+		{address: "thor1pcylx2quurhr44fg35jgvlrypvag70aszgd2t3", amount: cosmos.NewUint(562992832814)},
+		{address: "thor1pszqlupqmp90w8w3368auraw9nnczxysr9em0l", amount: cosmos.NewUint(152131729277)},
+		{address: "thor1pt8zkvkccj4397kemxeq8sjcyl7y6vacaedpvx", amount: cosmos.NewUint(519029350311)},
+		{address: "thor1qp8288u08r2da9sj9pkzv3fkh0ugfutkl9gqdj", amount: cosmos.NewUint(314125641973)},
+		{address: "thor1r0jtp4y6kr627fsgdj5mmqfumkk488sn4k2c3x", amount: cosmos.NewUint(443279651214)},
+		{address: "thor1r6fmvdx85mq55qn59qgun6kyhlgvcy8nm46dz0", amount: cosmos.NewUint(528997248894)},
+		{address: "thor1r9027rfu48kyvs0curxjur7wzywk36ukrk7mc4", amount: cosmos.NewUint(122415521033)},
+		{address: "thor1raylctzthcvjc0a5pv5ckzjr3rgxk5qcwu7af2", amount: cosmos.NewUint(112240778405)},
+		{address: "thor1s7lu6rfxgw0c9xypmrmjxzv0glva02cmn40rde", amount: cosmos.NewUint(144720033501)},
+		{address: "thor1sn88hq7n85a5ju4x9pjghzgqu070h2epnyj53w", amount: cosmos.NewUint(130709199876)},
+		{address: "thor1sngd0zz6pwdx2e20sml27354vzkrwa4fnjxvnc", amount: cosmos.NewUint(73083108474)},
+		{address: "thor1sqf8fjuj050wq3m2p83af8l93g7s6ucn42eqa0", amount: cosmos.NewUint(119538313490)},
+		{address: "thor1szv77gjy2ruvtuqnhd09nckx9kec3x5y96e50x", amount: cosmos.NewUint(218555070403)},
+		{address: "thor1u5pfv07xtxz6aj59pnejaxh2dy7ew5s79ds8cw", amount: cosmos.NewUint(251196444191)},
+		{address: "thor1u9dnzza6hpesrwq4p8j2f29v6jsyeq4le66j3c", amount: cosmos.NewUint(549696983774)},
+		{address: "thor1ucwcatnqwjyucfrf7vv2xnmfzfaplvrkqzl337", amount: cosmos.NewUint(133626712498)},
+		{address: "thor1v882x92avxcmkaucm2h6cp6j2qc4lhll0vfsex", amount: cosmos.NewUint(459913606302)},
+		{address: "thor1v8shd72ns62j9g6za6yupmw2jlvf5ezczcc7vg", amount: cosmos.NewUint(118068825494)},
+		{address: "thor1vp29289yyvfar0ektscjk08r0tufvl24tn6xf9", amount: cosmos.NewUint(432573328768)},
+		{address: "thor1vt207wgvefjgk88mtfjuurcl3vw6z4d2gu5psw", amount: cosmos.NewUint(380057621427)},
+		{address: "thor1vtcpemkcgr72jl8ael0jvt07dfc4pmqc2jj7vf", amount: cosmos.NewUint(398051284534)},
+		{address: "thor1vwqz5hhh5un28qlz6x5f8zczj39jqwel38q2kc", amount: cosmos.NewUint(258025724038)},
+		{address: "thor1w8mntay3xuk3c77j8fgvyyt0nfvl2sk398a3ww", amount: cosmos.NewUint(59098407417)},
+		{address: "thor1wed8wsu98kvphxx39hgjnqtzw0s69u85ckuh40", amount: cosmos.NewUint(554560176371)},
+		{address: "thor1wymexemzfhexhp0kars6fdl9mmteg20tcngm5m", amount: cosmos.NewUint(237970977507)},
+		{address: "thor1x2whgc2nt665y0kc44uywhynazvp0l8tp0vtu6", amount: cosmos.NewUint(465158711923)},
+		{address: "thor1xczxhtnu4vmtmkazny5vkdplfm7gtdfwcerdss", amount: cosmos.NewUint(117963931597)},
+		{address: "thor1xd4j3gk9frpxh8r22runntnqy34lwzrdkazldh", amount: cosmos.NewUint(119946139794)},
+		{address: "thor1xjm3wnxp0fl3a7vrhkagp4slnez0vspv4hfwle", amount: cosmos.NewUint(112248676846)},
+		{address: "thor1xn9whf9nnhcr4mvtq0acjsu43n0x47nna3fyzq", amount: cosmos.NewUint(146444976424)},
+		{address: "thor1yak0z56elhcfqw7xn7wjmp43ndnnxgfcmwkwex", amount: cosmos.NewUint(73476881807)},
+		{address: "thor1ypjwdplx07vf42qdfkex39dp8zxqnaects270v", amount: cosmos.NewUint(82610353774)},
+		{address: "thor1ytvzjwmf9pwuq95mdya4y9gale3864jz2ryu3r", amount: cosmos.NewUint(118287628643)},
+		{address: "thor1yzwjdkujv956lx5j2r7a4fk4ajjjm5773v7v3h", amount: cosmos.NewUint(424889623867)},
+		{address: "thor1z3dmy779shx8x9903ldnyqnt3a3g6vjqx68hkt", amount: cosmos.NewUint(18325429283)},
+		{address: "thor1zfy2dm8urvwzc6shcmfpewdxamf8v35zq593ev", amount: cosmos.NewUint(92205991554)},
+		{address: "thor1zga95gkv87356lmjj0mvw3geylfuv3ph7wa9t0", amount: cosmos.NewUint(119876405200)},
+		{address: "thor1zkt4hzha6he8d0nlkyeer6pfudvkjckr6hj0p6", amount: cosmos.NewUint(88257910154)},
+	}
+
+	// sum amounts to get the total we will refund to nodes from the reserve
+	total := cosmos.ZeroUint()
+	for _, credit := range credits {
+		total = total.Add(credit.amount)
+	}
+
+	// assertion for sanity check (~255k RUNE)
+	if !total.Equal(cosmos.NewUint(25580168572803)) {
+		ctx.Logger().Error("total refund amount is not correct", "total", total)
+		return
+	}
+
+	// send coins from reserve to bond module
+	if err := mgr.Keeper().SendFromModuleToModule(ctx, ReserveName, BondName, common.Coins{common.NewCoin(common.RuneNative, total)}); err != nil {
+		ctx.Logger().Error("fail to transfer coin from reserve to bond module", "error", err)
+		return
+	}
+
+	for _, credit := range credits {
+		ctx.Logger().Info("credit", "node", credit.address, "amount", credit.amount)
+
+		// get addresses
+		addr, err := cosmos.AccAddressFromBech32(credit.address)
+		if err != nil {
+			ctx.Logger().Error("fail to parse node address", "error", err)
+			return
+		}
+
+		// get node account
+		na, err := mgr.Keeper().GetNodeAccount(ctx, addr)
+		if err != nil {
+			ctx.Logger().Error("fail to get node account", "error", err)
+			return
+		}
+
+		// update node bond
+		na.Bond = na.Bond.Add(credit.amount)
+
+		// store updated records
+		if err := mgr.Keeper().SetNodeAccount(ctx, na); err != nil {
+			ctx.Logger().Error("fail to save node account", "error", err)
+			return
+		}
+	}
+}
