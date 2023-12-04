@@ -83,39 +83,16 @@ func (m *mimir) FetchValue(ctx cosmos.Context, keeper keeper.Keeper) (value int6
 	var err error
 	version := keeper.GetVersion()
 	// fetch mimir v2
-	if version.GTE(semver.MustParse("1.124.0")) {
-		var active types.NodeAccounts
-		active, err = keeper.ListActiveValidators(ctx)
-		if err != nil {
-			ctx.Logger().Error("failed to get active validator set", "error", err)
-		}
-
-		var mimirs types.NodeMimirs
-		mimirs, err = keeper.GetNodeMimirsV2(ctx, m.key())
-		if err != nil {
-			ctx.Logger().Error("failed to get node mimir v2", "error", err)
-		}
-		value = int64(-1)
-		switch m.Type() {
-		case EconomicMimir:
-			value = mimirs.ValueOfEconomic(m.key(), active.GetNodeAddresses())
-			if value < 0 {
-				// no value, fallback to last economic value (if present)
-				value, err = keeper.GetMimirV2(ctx, m.key())
-				if err != nil {
-					ctx.Logger().Error("failed to get mimir v2", "error", err)
-				}
-			} else if version.Equals(semver.MustParse("1.124.0")) {
-				keeper.SetMimirV2(ctx, m.key(), value)
-			}
-		case OperationalMimir:
-			value = mimirs.ValueOfOperational(m.key(), constants.MinMimirV2Vote, active.GetNodeAddresses())
-		}
-		if value >= 0 {
-			return value
-		}
+	value = int64(-1)
+	switch {
+	case version.GTE(semver.MustParse("1.125.0")):
+		value = m.fetchValueV125(ctx, keeper)
+	case version.GTE(semver.MustParse("1.124.0")):
+		value = m.fetchValueV124(ctx, keeper)
 	}
-
+	if value >= 0 {
+		return value
+	}
 	legacyKey := m.LegacyKey(m.Reference())
 	if version.GTE(semver.MustParse("1.125.0")) {
 		// return if legacy key does not exist (case of v2 only mimir)
@@ -135,6 +112,40 @@ func (m *mimir) FetchValue(ctx cosmos.Context, keeper keeper.Keeper) (value int6
 
 	// use default
 	return m.DefaultValue()
+}
+
+func (m *mimir) fetchValueV125(ctx cosmos.Context, keeper keeper.Keeper) (value int64) {
+	var (
+		err    error
+		active types.NodeAccounts
+		key    string
+	)
+	active, err = keeper.ListActiveValidators(ctx)
+	if err != nil {
+		ctx.Logger().Error("failed to get active validator set", "error", err)
+	}
+
+	key = m.key()
+	var mimirs types.NodeMimirs
+	mimirs, err = keeper.GetNodeMimirsV2(ctx, key)
+	if err != nil {
+		ctx.Logger().Error("failed to get node mimir v2", "error", err)
+	}
+	value = int64(-1)
+	switch m.Type() {
+	case EconomicMimir:
+		value = mimirs.ValueOfEconomic(key, active.GetNodeAddresses())
+		if value < 0 {
+			// no value, fallback to last economic value (if present)
+			value, err = keeper.GetMimirV2(ctx, key)
+			if err != nil {
+				ctx.Logger().Error("failed to get mimir v2", "error", err)
+			}
+		}
+	case OperationalMimir:
+		value = mimirs.ValueOfOperational(key, constants.MinMimirV2Vote, active.GetNodeAddresses())
+	}
+	return
 }
 
 func (m *mimir) IsOn(ctx cosmos.Context, keeper keeper.Keeper) bool {
