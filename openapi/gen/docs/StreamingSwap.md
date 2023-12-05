@@ -9,10 +9,13 @@ Name | Type | Description | Notes
 **Quantity** | Pointer to **int32** | the total number of swaps in a streaming swaps | [optional] 
 **Count** | Pointer to **int32** | the amount of swap attempts so far | [optional] 
 **LastHeight** | Pointer to **int64** | the block height of the latest swap | [optional] 
-**TradeTarget** | Pointer to **string** | the total number of tokens the swapper wants to receive of the output asset | [optional] 
-**Deposit** | Pointer to **string** | the number of input tokens the swapper has deposited | [optional] 
-**In** | Pointer to **string** | the amount of input tokens that have been swapped so far | [optional] 
-**Out** | Pointer to **string** | the amount of output tokens that have been swapped so far | [optional] 
+**TradeTarget** | **string** | the total number of tokens the swapper wants to receive of the output asset | 
+**SourceAsset** | Pointer to **string** | the asset to be swapped from | [optional] 
+**TargetAsset** | Pointer to **string** | the asset to be swapped to | [optional] 
+**Destination** | Pointer to **string** | the destination address to receive the swap output | [optional] 
+**Deposit** | **string** | the number of input tokens the swapper has deposited | 
+**In** | **string** | the amount of input tokens that have been swapped so far | 
+**Out** | **string** | the amount of output tokens that have been swapped so far | 
 **FailedSwaps** | Pointer to **[]int32** | the list of swap indexes that failed | [optional] 
 **FailedSwapReasons** | Pointer to **[]string** | the list of reasons that sub-swaps have failed | [optional] 
 
@@ -20,7 +23,7 @@ Name | Type | Description | Notes
 
 ### NewStreamingSwap
 
-`func NewStreamingSwap() *StreamingSwap`
+`func NewStreamingSwap(tradeTarget string, deposit string, in string, out string, ) *StreamingSwap`
 
 NewStreamingSwap instantiates a new StreamingSwap object
 This constructor will assign default values to properties that have it defined,
@@ -179,11 +182,81 @@ and a boolean to check if the value has been set.
 
 SetTradeTarget sets TradeTarget field to given value.
 
-### HasTradeTarget
 
-`func (o *StreamingSwap) HasTradeTarget() bool`
+### GetSourceAsset
 
-HasTradeTarget returns a boolean if a field has been set.
+`func (o *StreamingSwap) GetSourceAsset() string`
+
+GetSourceAsset returns the SourceAsset field if non-nil, zero value otherwise.
+
+### GetSourceAssetOk
+
+`func (o *StreamingSwap) GetSourceAssetOk() (*string, bool)`
+
+GetSourceAssetOk returns a tuple with the SourceAsset field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetSourceAsset
+
+`func (o *StreamingSwap) SetSourceAsset(v string)`
+
+SetSourceAsset sets SourceAsset field to given value.
+
+### HasSourceAsset
+
+`func (o *StreamingSwap) HasSourceAsset() bool`
+
+HasSourceAsset returns a boolean if a field has been set.
+
+### GetTargetAsset
+
+`func (o *StreamingSwap) GetTargetAsset() string`
+
+GetTargetAsset returns the TargetAsset field if non-nil, zero value otherwise.
+
+### GetTargetAssetOk
+
+`func (o *StreamingSwap) GetTargetAssetOk() (*string, bool)`
+
+GetTargetAssetOk returns a tuple with the TargetAsset field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetTargetAsset
+
+`func (o *StreamingSwap) SetTargetAsset(v string)`
+
+SetTargetAsset sets TargetAsset field to given value.
+
+### HasTargetAsset
+
+`func (o *StreamingSwap) HasTargetAsset() bool`
+
+HasTargetAsset returns a boolean if a field has been set.
+
+### GetDestination
+
+`func (o *StreamingSwap) GetDestination() string`
+
+GetDestination returns the Destination field if non-nil, zero value otherwise.
+
+### GetDestinationOk
+
+`func (o *StreamingSwap) GetDestinationOk() (*string, bool)`
+
+GetDestinationOk returns a tuple with the Destination field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetDestination
+
+`func (o *StreamingSwap) SetDestination(v string)`
+
+SetDestination sets Destination field to given value.
+
+### HasDestination
+
+`func (o *StreamingSwap) HasDestination() bool`
+
+HasDestination returns a boolean if a field has been set.
 
 ### GetDeposit
 
@@ -204,11 +277,6 @@ and a boolean to check if the value has been set.
 
 SetDeposit sets Deposit field to given value.
 
-### HasDeposit
-
-`func (o *StreamingSwap) HasDeposit() bool`
-
-HasDeposit returns a boolean if a field has been set.
 
 ### GetIn
 
@@ -229,11 +297,6 @@ and a boolean to check if the value has been set.
 
 SetIn sets In field to given value.
 
-### HasIn
-
-`func (o *StreamingSwap) HasIn() bool`
-
-HasIn returns a boolean if a field has been set.
 
 ### GetOut
 
@@ -254,11 +317,6 @@ and a boolean to check if the value has been set.
 
 SetOut sets Out field to given value.
 
-### HasOut
-
-`func (o *StreamingSwap) HasOut() bool`
-
-HasOut returns a boolean if a field has been set.
 
 ### GetFailedSwaps
 

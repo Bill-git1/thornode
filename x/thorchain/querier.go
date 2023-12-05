@@ -1152,13 +1152,34 @@ func queryLiquidityProvider(ctx cosmos.Context, path []string, req abci.RequestQ
 }
 
 func queryStreamingSwaps(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
-	var streams StreamingSwaps
+	var streams []QueryStreamingSwap
 	iter := mgr.Keeper().GetStreamingSwapIterator(ctx)
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var stream StreamingSwap
 		mgr.Keeper().Cdc().MustUnmarshal(iter.Value(), &stream)
-		streams = append(streams, stream)
+
+		var msgSwap MsgSwap
+		// Check up to the first two indices (0 through 1) for the MsgSwap; if not found, leave the fields blank.
+		for i := 0; i <= 1; i++ {
+			swapQueueItem, err := mgr.Keeper().GetSwapQueueItem(ctx, stream.TxID, i)
+			if err != nil {
+				ctx.Logger().Error("fail to get swap queue item", "error", err)
+				// If this errors, leave the MsgSwap-derived fields blank.
+				break
+			}
+			if !swapQueueItem.IsStreaming() {
+				continue
+			}
+			// In case there are multiple streaming swaps with the same TxID, check the input amount.
+			if len(swapQueueItem.Tx.Coins) == 0 || !swapQueueItem.Tx.Coins[0].Amount.Equal(stream.Deposit) {
+				continue
+			}
+			msgSwap = swapQueueItem
+			break
+		}
+
+		streams = append(streams, NewQueryStreamingSwap(stream, msgSwap))
 	}
 	return jsonify(ctx, streams)
 }
@@ -1173,13 +1194,35 @@ func queryStreamingSwap(ctx cosmos.Context, path []string, mgr *Mgrs) ([]byte, e
 		return nil, fmt.Errorf("could not parse txid: %w", err)
 	}
 
-	swp, err := mgr.Keeper().GetStreamingSwap(ctx, txid)
+	streamingSwap, err := mgr.Keeper().GetStreamingSwap(ctx, txid)
 	if err != nil {
 		ctx.Logger().Error("fail to get streaming swap", "error", err)
 		return nil, fmt.Errorf("could not get streaming swap: %w", err)
 	}
 
-	return jsonify(ctx, swp)
+	var msgSwap MsgSwap
+	// Check up to the first two indices (0 through 1) for the MsgSwap; if not found, leave the fields blank.
+	for i := 0; i <= 1; i++ {
+		swapQueueItem, err := mgr.Keeper().GetSwapQueueItem(ctx, txid, i)
+		if err != nil {
+			ctx.Logger().Error("fail to get swap queue item", "error", err)
+			// If this errors, leave the MsgSwap-derived fields blank.
+			break
+		}
+		if !swapQueueItem.IsStreaming() {
+			continue
+		}
+		// In case there are multiple streaming swaps with the same TxID, check the input amount.
+		if len(swapQueueItem.Tx.Coins) == 0 || !swapQueueItem.Tx.Coins[0].Amount.Equal(streamingSwap.Deposit) {
+			continue
+		}
+		msgSwap = swapQueueItem
+		break
+	}
+
+	result := NewQueryStreamingSwap(streamingSwap, msgSwap)
+
+	return jsonify(ctx, result)
 }
 
 func queryPool(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {

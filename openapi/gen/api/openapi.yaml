@@ -2470,14 +2470,17 @@ components:
         in: "100"
         trade_target: "100"
         count: 1
-        deposit: "100"
-        interval: 0
+        destination: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
         failed_swap_reasons:
         - failed_swap_reasons
         - failed_swap_reasons
         tx_id: CF524818D42B63D25BBA0CCC4909F127CAA645C0F9CD07324F2824CC151A64C7
         last_height: 5
         out: "100"
+        target_asset: ETH.ETH
+        deposit: "100"
+        interval: 0
+        source_asset: BTC.BTC
       properties:
         tx_id:
           description: the hash of a transaction
@@ -2504,6 +2507,18 @@ components:
             the output asset
           example: "100"
           type: string
+        source_asset:
+          description: the asset to be swapped from
+          example: BTC.BTC
+          type: string
+        target_asset:
+          description: the asset to be swapped to
+          example: ETH.ETH
+          type: string
+        destination:
+          description: the destination address to receive the swap output
+          example: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
+          type: string
         deposit:
           description: the number of input tokens the swapper has deposited
           example: "100"
@@ -2527,6 +2542,11 @@ components:
           items:
             type: string
           type: array
+      required:
+      - deposit
+      - in
+      - out
+      - trade_target
       type: object
     Tx:
       example:

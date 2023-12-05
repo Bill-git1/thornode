@@ -1672,6 +1672,11 @@ components:
 
     StreamingSwap:
       type: object
+      required:
+        - trade_target
+        - deposit
+        - in
+        - out
       properties:
         tx_id:
           type: string
@@ -1697,6 +1702,18 @@ components:
           type: string
           example: "100"
           description: the total number of tokens the swapper wants to receive of the output asset
+        source_asset:
+          type: string
+          example: "BTC.BTC"
+          description: the asset to be swapped from
+        target_asset:
+          type: string
+          example: "ETH.ETH"
+          description: the asset to be swapped to
+        destination:
+          type: string
+          example: "0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b"
+          description: the destination address to receive the swap output
         deposit:
           type: string
           example: "100"

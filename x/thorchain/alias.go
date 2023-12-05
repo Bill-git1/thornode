@@ -157,6 +157,7 @@ var (
 	NewQueryPool                   = types.NewQueryPool
 	NewQueryDerivedPool            = types.NewQueryDerivedPool
 	NewQuerySaver                  = types.NewQuerySaver
+	NewQueryStreamingSwap          = types.NewQueryStreamingSwap
 	NewQueryTxOutItem              = types.NewQueryTxOutItem
 	NewQueryTxDetails              = types.NewQueryTxDetails
 	NewQueryTxStages               = types.NewQueryTxStages
@@ -274,6 +275,7 @@ type (
 	QueryTxStages                  = types.QueryTxStages
 	QueryTxStatus                  = types.QueryTxStatus
 	QuerySaver                     = types.QuerySaver
+	QueryStreamingSwap             = types.QueryStreamingSwap
 	QueryChainAddress              = types.QueryChainAddress
 	PoolStatus                     = types.PoolStatus
 	Pool                           = types.Pool

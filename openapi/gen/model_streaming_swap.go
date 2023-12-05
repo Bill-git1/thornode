@@ -27,13 +27,19 @@ type StreamingSwap struct {
 	// the block height of the latest swap
 	LastHeight *int64 `json:"last_height,omitempty"`
 	// the total number of tokens the swapper wants to receive of the output asset
-	TradeTarget *string `json:"trade_target,omitempty"`
+	TradeTarget string `json:"trade_target"`
+	// the asset to be swapped from
+	SourceAsset *string `json:"source_asset,omitempty"`
+	// the asset to be swapped to
+	TargetAsset *string `json:"target_asset,omitempty"`
+	// the destination address to receive the swap output
+	Destination *string `json:"destination,omitempty"`
 	// the number of input tokens the swapper has deposited
-	Deposit *string `json:"deposit,omitempty"`
+	Deposit string `json:"deposit"`
 	// the amount of input tokens that have been swapped so far
-	In *string `json:"in,omitempty"`
+	In string `json:"in"`
 	// the amount of output tokens that have been swapped so far
-	Out *string `json:"out,omitempty"`
+	Out string `json:"out"`
 	// the list of swap indexes that failed
 	FailedSwaps []int32 `json:"failed_swaps,omitempty"`
 	// the list of reasons that sub-swaps have failed
@@ -44,8 +50,12 @@ type StreamingSwap struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewStreamingSwap() *StreamingSwap {
+func NewStreamingSwap(tradeTarget string, deposit string, in string, out string) *StreamingSwap {
 	this := StreamingSwap{}
+	this.TradeTarget = tradeTarget
+	this.Deposit = deposit
+	this.In = in
+	this.Out = out
 	return &this
 }
 
@@ -217,132 +227,196 @@ func (o *StreamingSwap) SetLastHeight(v int64) {
 	o.LastHeight = &v
 }
 
-// GetTradeTarget returns the TradeTarget field value if set, zero value otherwise.
+// GetTradeTarget returns the TradeTarget field value
 func (o *StreamingSwap) GetTradeTarget() string {
-	if o == nil || o.TradeTarget == nil {
+	if o == nil {
 		var ret string
 		return ret
 	}
-	return *o.TradeTarget
+
+	return o.TradeTarget
 }
 
-// GetTradeTargetOk returns a tuple with the TradeTarget field value if set, nil otherwise
+// GetTradeTargetOk returns a tuple with the TradeTarget field value
 // and a boolean to check if the value has been set.
 func (o *StreamingSwap) GetTradeTargetOk() (*string, bool) {
-	if o == nil || o.TradeTarget == nil {
+	if o == nil {
 		return nil, false
 	}
-	return o.TradeTarget, true
+	return &o.TradeTarget, true
 }
 
-// HasTradeTarget returns a boolean if a field has been set.
-func (o *StreamingSwap) HasTradeTarget() bool {
-	if o != nil && o.TradeTarget != nil {
+// SetTradeTarget sets field value
+func (o *StreamingSwap) SetTradeTarget(v string) {
+	o.TradeTarget = v
+}
+
+// GetSourceAsset returns the SourceAsset field value if set, zero value otherwise.
+func (o *StreamingSwap) GetSourceAsset() string {
+	if o == nil || o.SourceAsset == nil {
+		var ret string
+		return ret
+	}
+	return *o.SourceAsset
+}
+
+// GetSourceAssetOk returns a tuple with the SourceAsset field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StreamingSwap) GetSourceAssetOk() (*string, bool) {
+	if o == nil || o.SourceAsset == nil {
+		return nil, false
+	}
+	return o.SourceAsset, true
+}
+
+// HasSourceAsset returns a boolean if a field has been set.
+func (o *StreamingSwap) HasSourceAsset() bool {
+	if o != nil && o.SourceAsset != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetTradeTarget gets a reference to the given string and assigns it to the TradeTarget field.
-func (o *StreamingSwap) SetTradeTarget(v string) {
-	o.TradeTarget = &v
+// SetSourceAsset gets a reference to the given string and assigns it to the SourceAsset field.
+func (o *StreamingSwap) SetSourceAsset(v string) {
+	o.SourceAsset = &v
 }
 
-// GetDeposit returns the Deposit field value if set, zero value otherwise.
-func (o *StreamingSwap) GetDeposit() string {
-	if o == nil || o.Deposit == nil {
+// GetTargetAsset returns the TargetAsset field value if set, zero value otherwise.
+func (o *StreamingSwap) GetTargetAsset() string {
+	if o == nil || o.TargetAsset == nil {
 		var ret string
 		return ret
 	}
-	return *o.Deposit
+	return *o.TargetAsset
 }
 
-// GetDepositOk returns a tuple with the Deposit field value if set, nil otherwise
+// GetTargetAssetOk returns a tuple with the TargetAsset field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StreamingSwap) GetTargetAssetOk() (*string, bool) {
+	if o == nil || o.TargetAsset == nil {
+		return nil, false
+	}
+	return o.TargetAsset, true
+}
+
+// HasTargetAsset returns a boolean if a field has been set.
+func (o *StreamingSwap) HasTargetAsset() bool {
+	if o != nil && o.TargetAsset != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetTargetAsset gets a reference to the given string and assigns it to the TargetAsset field.
+func (o *StreamingSwap) SetTargetAsset(v string) {
+	o.TargetAsset = &v
+}
+
+// GetDestination returns the Destination field value if set, zero value otherwise.
+func (o *StreamingSwap) GetDestination() string {
+	if o == nil || o.Destination == nil {
+		var ret string
+		return ret
+	}
+	return *o.Destination
+}
+
+// GetDestinationOk returns a tuple with the Destination field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StreamingSwap) GetDestinationOk() (*string, bool) {
+	if o == nil || o.Destination == nil {
+		return nil, false
+	}
+	return o.Destination, true
+}
+
+// HasDestination returns a boolean if a field has been set.
+func (o *StreamingSwap) HasDestination() bool {
+	if o != nil && o.Destination != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetDestination gets a reference to the given string and assigns it to the Destination field.
+func (o *StreamingSwap) SetDestination(v string) {
+	o.Destination = &v
+}
+
+// GetDeposit returns the Deposit field value
+func (o *StreamingSwap) GetDeposit() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.Deposit
+}
+
+// GetDepositOk returns a tuple with the Deposit field value
 // and a boolean to check if the value has been set.
 func (o *StreamingSwap) GetDepositOk() (*string, bool) {
-	if o == nil || o.Deposit == nil {
+	if o == nil {
 		return nil, false
 	}
-	return o.Deposit, true
+	return &o.Deposit, true
 }
 
-// HasDeposit returns a boolean if a field has been set.
-func (o *StreamingSwap) HasDeposit() bool {
-	if o != nil && o.Deposit != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetDeposit gets a reference to the given string and assigns it to the Deposit field.
+// SetDeposit sets field value
 func (o *StreamingSwap) SetDeposit(v string) {
-	o.Deposit = &v
+	o.Deposit = v
 }
 
-// GetIn returns the In field value if set, zero value otherwise.
+// GetIn returns the In field value
 func (o *StreamingSwap) GetIn() string {
-	if o == nil || o.In == nil {
+	if o == nil {
 		var ret string
 		return ret
 	}
-	return *o.In
+
+	return o.In
 }
 
-// GetInOk returns a tuple with the In field value if set, nil otherwise
+// GetInOk returns a tuple with the In field value
 // and a boolean to check if the value has been set.
 func (o *StreamingSwap) GetInOk() (*string, bool) {
-	if o == nil || o.In == nil {
+	if o == nil {
 		return nil, false
 	}
-	return o.In, true
+	return &o.In, true
 }
 
-// HasIn returns a boolean if a field has been set.
-func (o *StreamingSwap) HasIn() bool {
-	if o != nil && o.In != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetIn gets a reference to the given string and assigns it to the In field.
+// SetIn sets field value
 func (o *StreamingSwap) SetIn(v string) {
-	o.In = &v
+	o.In = v
 }
 
-// GetOut returns the Out field value if set, zero value otherwise.
+// GetOut returns the Out field value
 func (o *StreamingSwap) GetOut() string {
-	if o == nil || o.Out == nil {
+	if o == nil {
 		var ret string
 		return ret
 	}
-	return *o.Out
+
+	return o.Out
 }
 
-// GetOutOk returns a tuple with the Out field value if set, nil otherwise
+// GetOutOk returns a tuple with the Out field value
 // and a boolean to check if the value has been set.
 func (o *StreamingSwap) GetOutOk() (*string, bool) {
-	if o == nil || o.Out == nil {
+	if o == nil {
 		return nil, false
 	}
-	return o.Out, true
+	return &o.Out, true
 }
 
-// HasOut returns a boolean if a field has been set.
-func (o *StreamingSwap) HasOut() bool {
-	if o != nil && o.Out != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetOut gets a reference to the given string and assigns it to the Out field.
+// SetOut sets field value
 func (o *StreamingSwap) SetOut(v string) {
-	o.Out = &v
+	o.Out = v
 }
 
 // GetFailedSwaps returns the FailedSwaps field value if set, zero value otherwise.
@@ -426,16 +500,25 @@ func (o StreamingSwap) MarshalJSON() ([]byte, error) {
 	if o.LastHeight != nil {
 		toSerialize["last_height"] = o.LastHeight
 	}
-	if o.TradeTarget != nil {
+	if true {
 		toSerialize["trade_target"] = o.TradeTarget
 	}
-	if o.Deposit != nil {
+	if o.SourceAsset != nil {
+		toSerialize["source_asset"] = o.SourceAsset
+	}
+	if o.TargetAsset != nil {
+		toSerialize["target_asset"] = o.TargetAsset
+	}
+	if o.Destination != nil {
+		toSerialize["destination"] = o.Destination
+	}
+	if true {
 		toSerialize["deposit"] = o.Deposit
 	}
-	if o.In != nil {
+	if true {
 		toSerialize["in"] = o.In
 	}
-	if o.Out != nil {
+	if true {
 		toSerialize["out"] = o.Out
 	}
 	if o.FailedSwaps != nil {
