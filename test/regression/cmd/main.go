@@ -174,9 +174,8 @@ func main() {
 		fmt.Printf("%s>> FAIL_FAST: Aborting Now <<%s\n", ColorRed, ColorReset)
 	}
 
-	// lock in case this was early abort
+	// lock in case this was early abort, no need to unlock in main
 	mu.Lock()
-	defer mu.Unlock()
 
 	// print the results
 	fmt.Println()

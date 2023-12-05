@@ -420,7 +420,6 @@ func (op *OpCreateBlocks) Execute(out io.Writer, routine int, p *os.Process, log
 
 func checkInvariants(routine int) error {
 	api := fmt.Sprintf("http://localhost:%d", 1317+routine)
-	endpoint := fmt.Sprintf("%s/thorchain/invariants", api)
 
 	wg := sync.WaitGroup{}
 	mu := sync.Mutex{}
@@ -431,7 +430,7 @@ func checkInvariants(routine int) error {
 		go func(inv string) {
 			defer wg.Done()
 
-			endpoint = fmt.Sprintf("%s/thorchain/invariant/%s", api, inv)
+			endpoint := fmt.Sprintf("%s/thorchain/invariant/%s", api, inv)
 			req, err := http.NewRequest("GET", endpoint, nil)
 			if err != nil {
 				mu.Lock()
