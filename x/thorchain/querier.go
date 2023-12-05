@@ -1872,12 +1872,8 @@ func queryMimirV2IDs(ctx cosmos.Context, path []string, req abci.RequestQuery, m
 			mimirsMap[m.Key].Votes[m.Value] += 1
 		}
 	}
-	resp := make([]types.QueryMimirV2IDs, 0)
-	// analyze-ignore(map-iteration)
-	for _, mimir := range mimirsMap {
-		resp = append(resp, mimir)
-	}
-	return jsonify(ctx, resp)
+	// jsonify's json.Marshal sorts the map keys alphabetically.
+	return jsonify(ctx, mimirsMap)
 }
 
 func queryMimirV2Values(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {
