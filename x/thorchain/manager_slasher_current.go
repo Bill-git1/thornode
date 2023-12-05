@@ -19,15 +19,10 @@ import (
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
-// SlasherVCUR is V124 implementation of slasher
+// SlasherVCUR is VCUR implementation of slasher
 type SlasherVCUR struct {
 	keeper   keeper.Keeper
 	eventMgr EventManager
-}
-
-type nodeAddressValidatorAddressPairVCUR struct {
-	nodeAddress      cosmos.AccAddress
-	validatorAddress crypto.Address
 }
 
 // newSlasherVCUR create a new instance of Slasher
@@ -75,14 +70,14 @@ func (s *SlasherVCUR) BeginBlock(ctx cosmos.Context, req abci.RequestBeginBlock,
 		ctx.Logger().Error("fail to list active validators", "error", err)
 		return
 	}
-	var validatorAddresses []nodeAddressValidatorAddressPairVCUR
+	var validatorAddresses []nodeAddressValidatorAddressPair
 	for _, na := range nas {
 		pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeConsPub, na.ValidatorConsPubKey)
 		if err != nil {
 			ctx.Logger().Error("fail to derive validator address", "error", err)
 			continue
 		}
-		var pair nodeAddressValidatorAddressPairVCUR
+		var pair nodeAddressValidatorAddressPair
 		pair.nodeAddress = na.NodeAddress
 		pair.validatorAddress = pk.Address()
 		validatorAddresses = append(validatorAddresses, pair)
@@ -106,7 +101,7 @@ func (s *SlasherVCUR) BeginBlock(ctx cosmos.Context, req abci.RequestBeginBlock,
 // HandleDoubleSign - slashes a validator for signing two blocks at the same
 // block height
 // https://blog.cosmos.network/consensus-compare-casper-vs-tendermint-6df154ad56ae
-func (s *SlasherVCUR) HandleDoubleSign(ctx cosmos.Context, addr crypto.Address, infractionHeight int64, constAccessor constants.ConstantValues, validatorAddresses []nodeAddressValidatorAddressPairVCUR) error {
+func (s *SlasherVCUR) HandleDoubleSign(ctx cosmos.Context, addr crypto.Address, infractionHeight int64, constAccessor constants.ConstantValues, validatorAddresses []nodeAddressValidatorAddressPair) error {
 	// check if we're recent enough to slash for this behavior
 	maxAge := constAccessor.GetInt64Value(constants.DoubleSignMaxAge)
 	if (ctx.BlockHeight() - infractionHeight) > maxAge {
@@ -161,7 +156,7 @@ func (s *SlasherVCUR) HandleDoubleSign(ctx cosmos.Context, addr crypto.Address, 
 }
 
 // HandleMissingSign - slashes a validator for not signing a block
-func (s *SlasherVCUR) HandleMissingSign(ctx cosmos.Context, addr crypto.Address, constAccessor constants.ConstantValues, validatorAddresses []nodeAddressValidatorAddressPairVCUR) error {
+func (s *SlasherVCUR) HandleMissingSign(ctx cosmos.Context, addr crypto.Address, constAccessor constants.ConstantValues, validatorAddresses []nodeAddressValidatorAddressPair) error {
 	missBlockSignSlashPoints := s.keeper.GetConfigInt64(ctx, constants.MissBlockSignSlashPoints)
 
 	for _, pair := range validatorAddresses {
