@@ -606,8 +606,10 @@ func GetOrderBook(version semver.Version, keeper keeper.Keeper) (OrderBook, erro
 // GetSlasher return an implementation of Slasher
 func GetSlasher(version semver.Version, keeper keeper.Keeper, eventMgr EventManager) (Slasher, error) {
 	switch {
-	case version.GTE(semver.MustParse("1.124.0")):
+	case version.GTE(semver.MustParse("1.125.0")):
 		return newSlasherVCUR(keeper, eventMgr), nil
+	case version.GTE(semver.MustParse("1.124.0")):
+		return newSlasherV124(keeper, eventMgr), nil
 	case version.GTE(semver.MustParse("1.116.0")):
 		return newSlasherV116(keeper, eventMgr), nil
 	case version.GTE(semver.MustParse("1.115.0")):
