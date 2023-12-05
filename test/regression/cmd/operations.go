@@ -421,39 +421,25 @@ func (op *OpCreateBlocks) Execute(out io.Writer, routine int, p *os.Process, log
 func checkInvariants(routine int) error {
 	api := fmt.Sprintf("http://localhost:%d", 1317+routine)
 	endpoint := fmt.Sprintf("%s/thorchain/invariants", api)
-	req, err := http.NewRequest("GET", endpoint, nil)
-	if err != nil {
-		return err
-	}
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-	invs := struct {
-		Invariants []string
-	}{}
-	if err = json.NewDecoder(resp.Body).Decode(&invs); err != nil {
-		return err
-	}
 
 	wg := sync.WaitGroup{}
 	mu := sync.Mutex{}
 	var returnErr error
 
-	for _, inv := range invs.Invariants {
+	for _, inv := range invariants {
 		wg.Add(1)
 		go func(inv string) {
 			defer wg.Done()
 
 			endpoint = fmt.Sprintf("%s/thorchain/invariant/%s", api, inv)
-			req, err = http.NewRequest("GET", endpoint, nil)
+			req, err := http.NewRequest("GET", endpoint, nil)
 			if err != nil {
 				mu.Lock()
 				returnErr = multierror.Append(returnErr, err)
 				mu.Unlock()
 				return
 			}
-			resp, err = httpClient.Do(req)
+			resp, err := httpClient.Do(req)
 			if err != nil {
 				mu.Lock()
 				returnErr = multierror.Append(returnErr, err)

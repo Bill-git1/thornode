@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"sync"
+	"text/template"
 
 	"github.com/rs/zerolog/log"
 )
@@ -49,8 +50,15 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to find regression tests")
 	}
 
-	// sort the files
-	sort.Strings(files)
+	// sort the files descending by the number of blocks created (so long tests run first)
+	counts := make(map[string]int)
+	for _, file := range files {
+		ops, _, _ := parseOps(log.Output(io.Discard), file, template.Must(templates.Clone()), []string{})
+		counts[file] = blockCount(ops)
+	}
+	sort.Slice(files, func(i, j int) bool {
+		return counts[files[i]] > counts[files[j]]
+	})
 
 	// keep track of the results
 	mu := sync.Mutex{}
@@ -68,15 +76,31 @@ func main() {
 		}
 		sem = make(chan struct{}, parallelism)
 	}
-	if parallelism > 1 {
-		log.Info().Int("parallelism", parallelism).Msg("running tests in parallel")
+	log.Info().
+		Int("parallelism", parallelism).
+		Int("count", len(files)).
+		Msg("running tests")
+
+	// use a channel to abort early if there is a failure in a merge request run
+	abort := make(chan struct{})
+	aborted := func() bool {
+		select {
+		case <-abort:
+			return true
+		default:
+			return false
+		}
 	}
 
 	// run tests
 	for i, file := range files {
+		// break if aborted
+		if aborted() {
+			break
+		}
+
 		sem <- struct{}{}
 		wg.Add(1)
-
 		go func(routine int, file string) {
 			// create home directory
 			home := "/" + strconv.Itoa(routine)
@@ -110,6 +134,9 @@ func main() {
 			if err != nil {
 				mu.Lock()
 				failed = append(failed, file)
+				if os.Getenv("FAIL_FAST") != "" {
+					close(abort)
+				}
 				mu.Unlock()
 				return
 			}
@@ -119,6 +146,9 @@ func main() {
 			if err != nil {
 				mu.Lock()
 				failed = append(failed, file)
+				if os.Getenv("FAIL_FAST") != "" {
+					close(abort)
+				}
 				mu.Unlock()
 				return
 			}
@@ -131,7 +161,22 @@ func main() {
 	}
 
 	// wait for all tests to finish
-	wg.Wait()
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	// wait for all tests to finish or abort
+	select {
+	case <-done:
+	case <-abort:
+		fmt.Printf("%s>> FAIL_FAST: Aborting Now <<%s\n", ColorRed, ColorReset)
+	}
+
+	// lock in case this was early abort
+	mu.Lock()
+	defer mu.Unlock()
 
 	// print the results
 	fmt.Println()

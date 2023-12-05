@@ -10,19 +10,15 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"syscall"
 	"text/template"
 	"time"
 
 	"github.com/rs/zerolog/log"
-	"gopkg.in/yaml.v3"
 )
 
 // trunk-ignore-all(golangci-lint/forcetypeassert)
-
-var reSetVar = regexp.MustCompile(`\$\{([A-Z0-9_]+)=([^}]+)\}`)
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // Run
@@ -32,7 +28,7 @@ func run(out io.Writer, path string, routine int) error {
 	localLog := consoleLogger(out)
 
 	home := "/" + strconv.Itoa(routine)
-	localLog.Info().Msgf("Running regression test: %s", path)
+	localLog.Info().Str("path", path).Msgf("Loading regression test")
 
 	// clear data directory
 	localLog.Debug().Msg("Clearing data directory")
@@ -94,102 +90,7 @@ func run(out io.Writer, path string, routine int) error {
 		log.Fatal().Msgf("test name collision: %s", filepath.Base(path))
 	}
 
-	// read the file
-	f, err := os.Open(path)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to open test file")
-	}
-	fileBytes, err := io.ReadAll(f)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to read test file")
-	}
-	f.Close()
-
-	// track line numbers
-	opLines := []int{0}
-	scanner := bufio.NewScanner(bytes.NewBuffer(fileBytes))
-	for i := 0; scanner.Scan(); i++ {
-		line := scanner.Text()
-		if line == "---" {
-			opLines = append(opLines, i+2)
-		}
-	}
-
-	// parse the template
-	tmpl, err := tmpls.Parse(string(fileBytes))
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to parse template")
-	}
-
-	// render the template
-	tmplBuf := &bytes.Buffer{}
-	err = tmpl.Execute(tmplBuf, nil)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to render template")
-	}
-
-	// scan all lines in buffer for variable expansion
-	buf := &bytes.Buffer{}
-	scanner = bufio.NewScanner(tmplBuf)
-	vars := map[string]string{}
-	for i := 0; scanner.Scan(); i++ {
-		line := scanner.Text()
-		matches := reSetVar.FindAllStringSubmatch(line, -1)
-		for _, match := range matches {
-			vars[match[1]] = match[2]
-		}
-
-		// regex replace variables and set variables
-		for k, v := range vars {
-			re := regexp.MustCompile(`\$\{` + k + `(=([^}]+))?\}`)
-			line = re.ReplaceAllString(line, v)
-		}
-
-		// write line
-		buf.WriteString(line + "\n")
-	}
-
-	// all operations we will execute
-	ops := []Operation{}
-
-	// track whether we've seen non-state operations
-	seenNonState := false
-
-	dec := yaml.NewDecoder(buf)
-	for {
-		// decode into temporary type
-		op := map[string]any{}
-		err = dec.Decode(&op)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			log.Fatal().Err(err).Msg("failed to decode operation")
-		}
-
-		// warn empty operations
-		if len(op) == 0 {
-			localLog.Warn().Msg("empty operation, line numbers may be wrong")
-			continue
-		}
-
-		// env operations are special
-		if op["type"] == "env" {
-			o := NewOperation(op)
-			env = append(env, fmt.Sprintf("%s=%s", o.(*OpEnv).Key, o.(*OpEnv).Value))
-			continue
-		}
-
-		// state operations must be first
-		if op["type"] == "state" && seenNonState {
-			log.Fatal().Msg("state operations must be first")
-		}
-		if op["type"] != "state" {
-			seenNonState = true
-		}
-
-		ops = append(ops, NewOperation(op))
-	}
+	ops, opLines, env := parseOps(localLog, path, tmpls, env)
 
 	// warn if no operations found
 	if len(ops) == 0 {
@@ -197,6 +98,8 @@ func run(out io.Writer, path string, routine int) error {
 		localLog.Err(err).Msg("")
 		return err
 	}
+
+	localLog.Info().Str("path", path).Int("blocks", blockCount(ops)).Msgf("Running regression test")
 
 	// execute all state operations
 	stateOpCount := 0
@@ -221,11 +124,12 @@ func run(out io.Writer, path string, routine int) error {
 	if err != nil {
 		// dump the genesis
 		fmt.Println(ColorPurple + "Genesis:" + ColorReset)
+		var f *os.File
 		f, err = os.OpenFile(filepath.Join(home, ".thornode/config/genesis.json"), os.O_RDWR, 0o644)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to open genesis file")
 		}
-		scanner = bufio.NewScanner(f)
+		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {
 			fmt.Println(scanner.Text())
 		}

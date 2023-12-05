@@ -211,6 +211,7 @@ test-regression:
     DOCKER_BUILDKIT: "1"
     TIME_FACTOR: "2"
     PARALLELISM: "8"
+    FAIL_FAST: "true"
   before_script:
     - apk -U add make git bash
   script:

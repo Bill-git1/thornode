@@ -20,6 +20,7 @@ import (
 	"gitlab.com/thorchain/thornode/cmd"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
+	keeperv1 "gitlab.com/thorchain/thornode/x/thorchain/keeper/v1"
 
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/rs/zerolog"
@@ -119,10 +120,10 @@ const (
 var httpClient = &http.Client{
 	Transport: &http.Transport{
 		Dial: (&net.Dialer{
-			Timeout: 5 * time.Second * getTimeFactor(),
+			Timeout: 5 * time.Second,
 		}).Dial,
 	},
-	Timeout: 5 * time.Second * getTimeFactor(),
+	Timeout: 5 * time.Second,
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -139,6 +140,19 @@ const (
 	ModuleAddrFeeCollector = "tthor17xpfvakm2amg962yls6f84z3kell8c5ljftt88"
 	ModuleAddrLending      = "tthor1x0kgm82cnj0vtmzdvz4avk3e7sj427t0al8wky"
 )
+
+////////////////////////////////////////////////////////////////////////////////////////
+// Invariants
+////////////////////////////////////////////////////////////////////////////////////////
+
+var invariants []string
+
+func init() {
+	k := keeperv1.KVStore{}
+	for _, ir := range k.InvariantRoutes() {
+		invariants = append(invariants, ir.Route)
+	}
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // Keys
