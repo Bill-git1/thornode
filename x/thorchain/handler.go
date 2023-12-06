@@ -22,7 +22,7 @@ type MsgHandler interface {
 // NewExternalHandler returns a handler for "thorchain" type messages.
 func NewExternalHandler(mgr Manager) cosmos.Handler {
 	return func(ctx cosmos.Context, msg cosmos.Msg) (_ *cosmos.Result, err error) {
-		// recover
+		// TODO: remove the outer if-check on hard fork, always add deferred recover
 		if mgr.GetVersion().GTE(semver.MustParse("1.106.0")) {
 			defer func() {
 				if r := recover(); r != nil {
@@ -69,10 +69,10 @@ func getHandlerMapping(mgr Manager) map[string]MsgHandler {
 }
 
 func getHandlerMappingV65(mgr Manager) map[string]MsgHandler {
-	// New arch handlers
 	m := make(map[string]MsgHandler)
 
-	// consensus handlers
+	// Consensus handlers - can only be sent by addresses in
+	//   the active validator set.
 	m[MsgTssPool{}.Type()] = NewTssHandler(mgr)
 	m[MsgObservedTxIn{}.Type()] = NewObservedTxInHandler(mgr)
 	m[MsgObservedTxOut{}.Type()] = NewObservedTxOutHandler(mgr)
@@ -112,6 +112,7 @@ func NewInternalHandler(mgr Manager) cosmos.Handler {
 			errMsg := fmt.Sprintf("Unrecognized thorchain Msg type: %v", legacyMsg.Type())
 			return nil, cosmos.ErrUnknownRequest(errMsg)
 		}
+		// TODO: remove if-check on hardfork. Always use CacheContext.
 		if version.GTE(semver.MustParse("1.88.1")) {
 			// CacheContext() returns a context which caches all changes and only forwards
 			// to the underlying context when commit() is called. Call commit() only when
