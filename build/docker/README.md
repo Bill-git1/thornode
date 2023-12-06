@@ -22,15 +22,20 @@ docker run \
   registry.gitlab.com/thorchain/thornode:mainnet
 ```
 
-Nine Realms provides snapshots taken from a statesync recovery which can be rsync'd without need for a high memory (80G at time of writing) machine to recover the statesync snapshot. Ensure `gsutil` is installed, and pull the latest statesync snapshot via:
+Nine Realms provides snapshots taken from a statesync recovery which can be downloaded without need for a high memory (80G at time of writing) machine to recover the statesync snapshot. Ensure `aria2c` is installed (you can `wget` or `curl` instead, but they are slower), then pull the latest statesync snapshot via:
 
 ```bash
 mkdir -p thornode-data/data
-HEIGHT=$(
-  curl -s 'https://storage.googleapis.com/storage/v1/b/public-snapshots-ninerealms/o?delimiter=%2F&prefix=thornode/pruned/' |
-  jq -r '.prefixes | map(match("thornode/pruned/([0-9]+)/").captures[0].string) | map(tonumber) | sort | reverse[0]'
+MINIO_IMAGE="minio/minio:RELEASE.2023-10-25T06-33-25Z@sha256:858ee1ca619396ea1b77cc12a36b857a6b57cb4f5d53128b1224365ee1da7305"
+LATEST_SNAPSHOT_KEY=$(
+  docker run --rm --entrypoint sh "${MINIO_IMAGE}" -c "
+    mc config host add minio https://snapshots.ninerealms.com '' '' >/dev/null;
+    mc ls minio/snapshots/thornode --json | tail -n1 | jq -r '.key'"
 )
-gsutil -m rsync -r -d "gs://public-snapshots-ninerealms/thornode/pruned/$HEIGHT/" thornode-data/data
+aria2c --split=16 --max-concurrent-downloads=16 --max-connection-per-server=16 \
+  --continue --min-split-size=100M --out=$LATEST_SNAPSHOT_KEY \
+  "https://snapshots.ninerealms.com/snapshots/thornode/$LATEST_SNAPSHOT_KEY"
+tar xvf $LATEST_SNAPSHOT_KEY -C thornode-data
 docker run \
   -v $(pwd)/thornode-data:/root/.thornode \
   -e CHAIN_ID=thorchain-mainnet-v1 \
