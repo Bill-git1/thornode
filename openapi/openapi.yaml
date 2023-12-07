@@ -1092,13 +1092,13 @@ paths:
         schema:
           type: string
           example: "ETH.ETH"
-      - name: amount
+      - name: repay_bps
         in: query
-        description: the asset amount in 1e8 decimals
+        description: the basis points of the existing position to repay
         schema:
           type: integer
           format: int64
-          example: 1000000
+          example: 100
       - name: to_asset
         in: query
         description: the collateral asset of the loan
@@ -3366,6 +3366,9 @@ components:
         - warning
         - notes
         - expiry
+        - streaming_swap_blocks
+        - streaming_swap_seconds
+        - total_open_loan_seconds
       properties:
         <<: *quote-properties
         memo:
@@ -3388,6 +3391,21 @@ components:
           type: string
           description: the expected amount of TOR debt increase on the loan
           example: "1000000"
+        streaming_swap_blocks:
+          type: integer
+          format: int64
+          description: The number of blocks involved in the streaming swaps during the open loan process.
+          example: 10
+        streaming_swap_seconds:
+          type: integer
+          format: int64
+          description: The approximate number of seconds taken by the streaming swaps involved in the open loan process.
+          example: 600
+        total_open_loan_seconds:
+          type: integer
+          format: int64
+          description: The total expected duration for a open loan, measured in seconds, which includes the time for inbound confirmation, the duration of streaming swaps, and any outbound delays.
+          example: 600
 
     QuoteLoanCloseResponse:
       type: object
@@ -3395,6 +3413,7 @@ components:
         - expected_amount_out
         - expected_collateral_withdrawn
         - expected_debt_repaid
+        - expected_amount_in
         - memo
         - outbound_delay_blocks
         - outbound_delay_seconds
@@ -3402,6 +3421,9 @@ components:
         - warning
         - notes
         - expiry
+        - streaming_swap_blocks
+        - streaming_swap_seconds
+        - total_repay_seconds
       properties:
         <<: *quote-properties
         memo:
@@ -3412,6 +3434,10 @@ components:
           type: string
           description: the amount of collateral asset the user can expect to receive after fees in 1e8 decimals
           example: "10000"
+        expected_amount_in:
+          type: string
+          description: The quantity of the repayment asset to be sent by the user, calculated as the desired percentage of the loan's value, expressed in units of 1e8
+          example: "10000"
         expected_collateral_withdrawn:
           type: string
           description: the expected amount of collateral decrease on the loan
@@ -3420,3 +3446,18 @@ components:
           type: string
           description: the expected amount of TOR debt decrease on the loan
           example: "1000000"
+        streaming_swap_blocks:
+          type: integer
+          format: int64
+          description: The number of blocks involved in the streaming swaps during the repayment process.
+          example: 10
+        streaming_swap_seconds:
+          type: integer
+          format: int64
+          description: The approximate number of seconds taken by the streaming swaps involved in the repayment process.
+          example: 600
+        total_repay_seconds:
+          type: integer
+          format: int64
+          description: The total expected duration for a repayment, measured in seconds, which includes the time for inbound confirmation, the duration of streaming swaps, and any outbound delays.
+          example: 600

@@ -23,12 +23,15 @@ Name | Type | Description | Notes
 **ExpectedCollateralizationRatio** | **string** | the expected collateralization ratio in basis points | 
 **ExpectedCollateralDeposited** | **string** | the expected amount of collateral increase on the loan | 
 **ExpectedDebtIssued** | **string** | the expected amount of TOR debt increase on the loan | 
+**StreamingSwapBlocks** | **int64** | The number of blocks involved in the streaming swaps during the open loan process. | 
+**StreamingSwapSeconds** | **int64** | The approximate number of seconds taken by the streaming swaps involved in the open loan process. | 
+**TotalOpenLoanSeconds** | **int64** | The total expected duration for a open loan, measured in seconds, which includes the time for inbound confirmation, the duration of streaming swaps, and any outbound delays. | 
 
 ## Methods
 
 ### NewQuoteLoanOpenResponse
 
-`func NewQuoteLoanOpenResponse(outboundDelayBlocks int64, outboundDelaySeconds int64, fees QuoteFees, expiry int64, warning string, notes string, expectedAmountOut string, expectedCollateralizationRatio string, expectedCollateralDeposited string, expectedDebtIssued string, ) *QuoteLoanOpenResponse`
+`func NewQuoteLoanOpenResponse(outboundDelayBlocks int64, outboundDelaySeconds int64, fees QuoteFees, expiry int64, warning string, notes string, expectedAmountOut string, expectedCollateralizationRatio string, expectedCollateralDeposited string, expectedDebtIssued string, streamingSwapBlocks int64, streamingSwapSeconds int64, totalOpenLoanSeconds int64, ) *QuoteLoanOpenResponse`
 
 NewQuoteLoanOpenResponse instantiates a new QuoteLoanOpenResponse object
 This constructor will assign default values to properties that have it defined,
@@ -466,6 +469,66 @@ and a boolean to check if the value has been set.
 `func (o *QuoteLoanOpenResponse) SetExpectedDebtIssued(v string)`
 
 SetExpectedDebtIssued sets ExpectedDebtIssued field to given value.
+
+
+### GetStreamingSwapBlocks
+
+`func (o *QuoteLoanOpenResponse) GetStreamingSwapBlocks() int64`
+
+GetStreamingSwapBlocks returns the StreamingSwapBlocks field if non-nil, zero value otherwise.
+
+### GetStreamingSwapBlocksOk
+
+`func (o *QuoteLoanOpenResponse) GetStreamingSwapBlocksOk() (*int64, bool)`
+
+GetStreamingSwapBlocksOk returns a tuple with the StreamingSwapBlocks field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetStreamingSwapBlocks
+
+`func (o *QuoteLoanOpenResponse) SetStreamingSwapBlocks(v int64)`
+
+SetStreamingSwapBlocks sets StreamingSwapBlocks field to given value.
+
+
+### GetStreamingSwapSeconds
+
+`func (o *QuoteLoanOpenResponse) GetStreamingSwapSeconds() int64`
+
+GetStreamingSwapSeconds returns the StreamingSwapSeconds field if non-nil, zero value otherwise.
+
+### GetStreamingSwapSecondsOk
+
+`func (o *QuoteLoanOpenResponse) GetStreamingSwapSecondsOk() (*int64, bool)`
+
+GetStreamingSwapSecondsOk returns a tuple with the StreamingSwapSeconds field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetStreamingSwapSeconds
+
+`func (o *QuoteLoanOpenResponse) SetStreamingSwapSeconds(v int64)`
+
+SetStreamingSwapSeconds sets StreamingSwapSeconds field to given value.
+
+
+### GetTotalOpenLoanSeconds
+
+`func (o *QuoteLoanOpenResponse) GetTotalOpenLoanSeconds() int64`
+
+GetTotalOpenLoanSeconds returns the TotalOpenLoanSeconds field if non-nil, zero value otherwise.
+
+### GetTotalOpenLoanSecondsOk
+
+`func (o *QuoteLoanOpenResponse) GetTotalOpenLoanSecondsOk() (*int64, bool)`
+
+GetTotalOpenLoanSecondsOk returns a tuple with the TotalOpenLoanSeconds field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetTotalOpenLoanSeconds
+
+`func (o *QuoteLoanOpenResponse) SetTotalOpenLoanSeconds(v int64)`
+
+SetTotalOpenLoanSeconds sets TotalOpenLoanSeconds field to given value.
 
 
 

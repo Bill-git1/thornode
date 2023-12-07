@@ -20,14 +20,18 @@ Name | Type | Description | Notes
 **RecommendedMinAmountIn** | Pointer to **string** | The recommended minimum inbound amount for this transaction type &amp; inbound asset. Sending less than this amount could result in failed refunds. | [optional] 
 **Memo** | **string** | generated memo for the loan close | 
 **ExpectedAmountOut** | **string** | the amount of collateral asset the user can expect to receive after fees in 1e8 decimals | 
+**ExpectedAmountIn** | **string** | The quantity of the repayment asset to be sent by the user, calculated as the desired percentage of the loan&#39;s value, expressed in units of 1e8 | 
 **ExpectedCollateralWithdrawn** | **string** | the expected amount of collateral decrease on the loan | 
 **ExpectedDebtRepaid** | **string** | the expected amount of TOR debt decrease on the loan | 
+**StreamingSwapBlocks** | **int64** | The number of blocks involved in the streaming swaps during the repayment process. | 
+**StreamingSwapSeconds** | **int64** | The approximate number of seconds taken by the streaming swaps involved in the repayment process. | 
+**TotalRepaySeconds** | **int64** | The total expected duration for a repayment, measured in seconds, which includes the time for inbound confirmation, the duration of streaming swaps, and any outbound delays. | 
 
 ## Methods
 
 ### NewQuoteLoanCloseResponse
 
-`func NewQuoteLoanCloseResponse(outboundDelayBlocks int64, outboundDelaySeconds int64, fees QuoteFees, expiry int64, warning string, notes string, memo string, expectedAmountOut string, expectedCollateralWithdrawn string, expectedDebtRepaid string, ) *QuoteLoanCloseResponse`
+`func NewQuoteLoanCloseResponse(outboundDelayBlocks int64, outboundDelaySeconds int64, fees QuoteFees, expiry int64, warning string, notes string, memo string, expectedAmountOut string, expectedAmountIn string, expectedCollateralWithdrawn string, expectedDebtRepaid string, streamingSwapBlocks int64, streamingSwapSeconds int64, totalRepaySeconds int64, ) *QuoteLoanCloseResponse`
 
 NewQuoteLoanCloseResponse instantiates a new QuoteLoanCloseResponse object
 This constructor will assign default values to properties that have it defined,
@@ -402,6 +406,26 @@ and a boolean to check if the value has been set.
 SetExpectedAmountOut sets ExpectedAmountOut field to given value.
 
 
+### GetExpectedAmountIn
+
+`func (o *QuoteLoanCloseResponse) GetExpectedAmountIn() string`
+
+GetExpectedAmountIn returns the ExpectedAmountIn field if non-nil, zero value otherwise.
+
+### GetExpectedAmountInOk
+
+`func (o *QuoteLoanCloseResponse) GetExpectedAmountInOk() (*string, bool)`
+
+GetExpectedAmountInOk returns a tuple with the ExpectedAmountIn field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetExpectedAmountIn
+
+`func (o *QuoteLoanCloseResponse) SetExpectedAmountIn(v string)`
+
+SetExpectedAmountIn sets ExpectedAmountIn field to given value.
+
+
 ### GetExpectedCollateralWithdrawn
 
 `func (o *QuoteLoanCloseResponse) GetExpectedCollateralWithdrawn() string`
@@ -440,6 +464,66 @@ and a boolean to check if the value has been set.
 `func (o *QuoteLoanCloseResponse) SetExpectedDebtRepaid(v string)`
 
 SetExpectedDebtRepaid sets ExpectedDebtRepaid field to given value.
+
+
+### GetStreamingSwapBlocks
+
+`func (o *QuoteLoanCloseResponse) GetStreamingSwapBlocks() int64`
+
+GetStreamingSwapBlocks returns the StreamingSwapBlocks field if non-nil, zero value otherwise.
+
+### GetStreamingSwapBlocksOk
+
+`func (o *QuoteLoanCloseResponse) GetStreamingSwapBlocksOk() (*int64, bool)`
+
+GetStreamingSwapBlocksOk returns a tuple with the StreamingSwapBlocks field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetStreamingSwapBlocks
+
+`func (o *QuoteLoanCloseResponse) SetStreamingSwapBlocks(v int64)`
+
+SetStreamingSwapBlocks sets StreamingSwapBlocks field to given value.
+
+
+### GetStreamingSwapSeconds
+
+`func (o *QuoteLoanCloseResponse) GetStreamingSwapSeconds() int64`
+
+GetStreamingSwapSeconds returns the StreamingSwapSeconds field if non-nil, zero value otherwise.
+
+### GetStreamingSwapSecondsOk
+
+`func (o *QuoteLoanCloseResponse) GetStreamingSwapSecondsOk() (*int64, bool)`
+
+GetStreamingSwapSecondsOk returns a tuple with the StreamingSwapSeconds field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetStreamingSwapSeconds
+
+`func (o *QuoteLoanCloseResponse) SetStreamingSwapSeconds(v int64)`
+
+SetStreamingSwapSeconds sets StreamingSwapSeconds field to given value.
+
+
+### GetTotalRepaySeconds
+
+`func (o *QuoteLoanCloseResponse) GetTotalRepaySeconds() int64`
+
+GetTotalRepaySeconds returns the TotalRepaySeconds field if non-nil, zero value otherwise.
+
+### GetTotalRepaySecondsOk
+
+`func (o *QuoteLoanCloseResponse) GetTotalRepaySecondsOk() (*int64, bool)`
+
+GetTotalRepaySecondsOk returns a tuple with the TotalRepaySeconds field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetTotalRepaySeconds
+
+`func (o *QuoteLoanCloseResponse) SetTotalRepaySeconds(v int64)`
+
+SetTotalRepaySeconds sets TotalRepaySeconds field to given value.
 
 
 

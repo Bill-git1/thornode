@@ -53,13 +53,19 @@ type QuoteLoanOpenResponse struct {
 	ExpectedCollateralDeposited string `json:"expected_collateral_deposited"`
 	// the expected amount of TOR debt increase on the loan
 	ExpectedDebtIssued string `json:"expected_debt_issued"`
+	// The number of blocks involved in the streaming swaps during the open loan process.
+	StreamingSwapBlocks int64 `json:"streaming_swap_blocks"`
+	// The approximate number of seconds taken by the streaming swaps involved in the open loan process.
+	StreamingSwapSeconds int64 `json:"streaming_swap_seconds"`
+	// The total expected duration for a open loan, measured in seconds, which includes the time for inbound confirmation, the duration of streaming swaps, and any outbound delays.
+	TotalOpenLoanSeconds int64 `json:"total_open_loan_seconds"`
 }
 
 // NewQuoteLoanOpenResponse instantiates a new QuoteLoanOpenResponse object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewQuoteLoanOpenResponse(outboundDelayBlocks int64, outboundDelaySeconds int64, fees QuoteFees, expiry int64, warning string, notes string, expectedAmountOut string, expectedCollateralizationRatio string, expectedCollateralDeposited string, expectedDebtIssued string) *QuoteLoanOpenResponse {
+func NewQuoteLoanOpenResponse(outboundDelayBlocks int64, outboundDelaySeconds int64, fees QuoteFees, expiry int64, warning string, notes string, expectedAmountOut string, expectedCollateralizationRatio string, expectedCollateralDeposited string, expectedDebtIssued string, streamingSwapBlocks int64, streamingSwapSeconds int64, totalOpenLoanSeconds int64) *QuoteLoanOpenResponse {
 	this := QuoteLoanOpenResponse{}
 	this.OutboundDelayBlocks = outboundDelayBlocks
 	this.OutboundDelaySeconds = outboundDelaySeconds
@@ -71,6 +77,9 @@ func NewQuoteLoanOpenResponse(outboundDelayBlocks int64, outboundDelaySeconds in
 	this.ExpectedCollateralizationRatio = expectedCollateralizationRatio
 	this.ExpectedCollateralDeposited = expectedCollateralDeposited
 	this.ExpectedDebtIssued = expectedDebtIssued
+	this.StreamingSwapBlocks = streamingSwapBlocks
+	this.StreamingSwapSeconds = streamingSwapSeconds
+	this.TotalOpenLoanSeconds = totalOpenLoanSeconds
 	return &this
 }
 
@@ -610,6 +619,78 @@ func (o *QuoteLoanOpenResponse) SetExpectedDebtIssued(v string) {
 	o.ExpectedDebtIssued = v
 }
 
+// GetStreamingSwapBlocks returns the StreamingSwapBlocks field value
+func (o *QuoteLoanOpenResponse) GetStreamingSwapBlocks() int64 {
+	if o == nil {
+		var ret int64
+		return ret
+	}
+
+	return o.StreamingSwapBlocks
+}
+
+// GetStreamingSwapBlocksOk returns a tuple with the StreamingSwapBlocks field value
+// and a boolean to check if the value has been set.
+func (o *QuoteLoanOpenResponse) GetStreamingSwapBlocksOk() (*int64, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.StreamingSwapBlocks, true
+}
+
+// SetStreamingSwapBlocks sets field value
+func (o *QuoteLoanOpenResponse) SetStreamingSwapBlocks(v int64) {
+	o.StreamingSwapBlocks = v
+}
+
+// GetStreamingSwapSeconds returns the StreamingSwapSeconds field value
+func (o *QuoteLoanOpenResponse) GetStreamingSwapSeconds() int64 {
+	if o == nil {
+		var ret int64
+		return ret
+	}
+
+	return o.StreamingSwapSeconds
+}
+
+// GetStreamingSwapSecondsOk returns a tuple with the StreamingSwapSeconds field value
+// and a boolean to check if the value has been set.
+func (o *QuoteLoanOpenResponse) GetStreamingSwapSecondsOk() (*int64, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.StreamingSwapSeconds, true
+}
+
+// SetStreamingSwapSeconds sets field value
+func (o *QuoteLoanOpenResponse) SetStreamingSwapSeconds(v int64) {
+	o.StreamingSwapSeconds = v
+}
+
+// GetTotalOpenLoanSeconds returns the TotalOpenLoanSeconds field value
+func (o *QuoteLoanOpenResponse) GetTotalOpenLoanSeconds() int64 {
+	if o == nil {
+		var ret int64
+		return ret
+	}
+
+	return o.TotalOpenLoanSeconds
+}
+
+// GetTotalOpenLoanSecondsOk returns a tuple with the TotalOpenLoanSeconds field value
+// and a boolean to check if the value has been set.
+func (o *QuoteLoanOpenResponse) GetTotalOpenLoanSecondsOk() (*int64, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.TotalOpenLoanSeconds, true
+}
+
+// SetTotalOpenLoanSeconds sets field value
+func (o *QuoteLoanOpenResponse) SetTotalOpenLoanSeconds(v int64) {
+	o.TotalOpenLoanSeconds = v
+}
+
 func (o QuoteLoanOpenResponse) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.InboundAddress != nil {
@@ -668,6 +749,15 @@ func (o QuoteLoanOpenResponse) MarshalJSON() ([]byte, error) {
 	}
 	if true {
 		toSerialize["expected_debt_issued"] = o.ExpectedDebtIssued
+	}
+	if true {
+		toSerialize["streaming_swap_blocks"] = o.StreamingSwapBlocks
+	}
+	if true {
+		toSerialize["streaming_swap_seconds"] = o.StreamingSwapSeconds
+	}
+	if true {
+		toSerialize["total_open_loan_seconds"] = o.TotalOpenLoanSeconds
 	}
 	return json.Marshal(toSerialize)
 }

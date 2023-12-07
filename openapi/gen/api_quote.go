@@ -27,7 +27,7 @@ type ApiQuoteloancloseRequest struct {
 	ApiService *QuoteApiService
 	height *int64
 	fromAsset *string
-	amount *int64
+	repayBps *int64
 	toAsset *string
 	loanOwner *string
 	minOut *string
@@ -45,9 +45,9 @@ func (r ApiQuoteloancloseRequest) FromAsset(fromAsset string) ApiQuoteloancloseR
 	return r
 }
 
-// the asset amount in 1e8 decimals
-func (r ApiQuoteloancloseRequest) Amount(amount int64) ApiQuoteloancloseRequest {
-	r.amount = &amount
+// the basis points of the existing position to repay
+func (r ApiQuoteloancloseRequest) RepayBps(repayBps int64) ApiQuoteloancloseRequest {
+	r.repayBps = &repayBps
 	return r
 }
 
@@ -115,8 +115,8 @@ func (a *QuoteApiService) QuoteloancloseExecute(r ApiQuoteloancloseRequest) (*Qu
 	if r.fromAsset != nil {
 		localVarQueryParams.Add("from_asset", parameterToString(*r.fromAsset, ""))
 	}
-	if r.amount != nil {
-		localVarQueryParams.Add("amount", parameterToString(*r.amount, ""))
+	if r.repayBps != nil {
+		localVarQueryParams.Add("repay_bps", parameterToString(*r.repayBps, ""))
 	}
 	if r.toAsset != nil {
 		localVarQueryParams.Add("to_asset", parameterToString(*r.toAsset, ""))

@@ -14,7 +14,7 @@ Method | HTTP request | Description
 
 ## Quoteloanclose
 
-> QuoteLoanCloseResponse Quoteloanclose(ctx).Height(height).FromAsset(fromAsset).Amount(amount).ToAsset(toAsset).LoanOwner(loanOwner).MinOut(minOut).Execute()
+> QuoteLoanCloseResponse Quoteloanclose(ctx).Height(height).FromAsset(fromAsset).RepayBps(repayBps).ToAsset(toAsset).LoanOwner(loanOwner).MinOut(minOut).Execute()
 
 
 
@@ -35,14 +35,14 @@ import (
 func main() {
     height := int64(789) // int64 | optional block height, defaults to current tip (optional)
     fromAsset := "ETH.ETH" // string | the asset used to repay the loan (optional)
-    amount := int64(1000000) // int64 | the asset amount in 1e8 decimals (optional)
+    repayBps := int64(100) // int64 | the basis points of the existing position to repay (optional)
     toAsset := "BTC.BTC" // string | the collateral asset of the loan (optional)
     loanOwner := "BTC.BTC" // string | the owner of the loan collateral (optional)
     minOut := "1234" // string | the minimum amount of the target asset to accept (optional)
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.QuoteApi.Quoteloanclose(context.Background()).Height(height).FromAsset(fromAsset).Amount(amount).ToAsset(toAsset).LoanOwner(loanOwner).MinOut(minOut).Execute()
+    resp, r, err := apiClient.QuoteApi.Quoteloanclose(context.Background()).Height(height).FromAsset(fromAsset).RepayBps(repayBps).ToAsset(toAsset).LoanOwner(loanOwner).MinOut(minOut).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `QuoteApi.Quoteloanclose``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -65,7 +65,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **height** | **int64** | optional block height, defaults to current tip | 
  **fromAsset** | **string** | the asset used to repay the loan | 
- **amount** | **int64** | the asset amount in 1e8 decimals | 
+ **repayBps** | **int64** | the basis points of the existing position to repay | 
  **toAsset** | **string** | the collateral asset of the loan | 
  **loanOwner** | **string** | the owner of the loan collateral | 
  **minOut** | **string** | the minimum amount of the target asset to accept | 

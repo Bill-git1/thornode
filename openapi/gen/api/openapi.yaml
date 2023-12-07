@@ -1739,13 +1739,13 @@ paths:
           example: ETH.ETH
           type: string
         style: form
-      - description: the asset amount in 1e8 decimals
+      - description: the basis points of the existing position to repay
         explode: true
         in: query
-        name: amount
+        name: repay_bps
         required: false
         schema:
-          example: 1000000
+          example: 100
           format: int64
           type: integer
         style: form
@@ -5139,9 +5139,12 @@ components:
         outbound_delay_blocks: 1
         memo: $+:ETH.ETH:0x1c7b17362c84287bd1184447e6dfeaf920c31bbe
         dust_threshold: "10000"
+        streaming_swap_seconds: 600
         inbound_confirmation_seconds: 6
+        total_open_loan_seconds: 600
         router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
         expected_amount_out: "10000"
+        streaming_swap_blocks: 10
         warning: Do not cache this response. Do not send funds after the expiry.
         expiry: 1671660285
         expected_collateral_deposited: "1000000"
@@ -5233,6 +5236,25 @@ components:
           description: the expected amount of TOR debt increase on the loan
           example: "1000000"
           type: string
+        streaming_swap_blocks:
+          description: The number of blocks involved in the streaming swaps during
+            the open loan process.
+          example: 10
+          format: int64
+          type: integer
+        streaming_swap_seconds:
+          description: The approximate number of seconds taken by the streaming swaps
+            involved in the open loan process.
+          example: 600
+          format: int64
+          type: integer
+        total_open_loan_seconds:
+          description: "The total expected duration for a open loan, measured in seconds,\
+            \ which includes the time for inbound confirmation, the duration of streaming\
+            \ swaps, and any outbound delays."
+          example: 600
+          format: int64
+          type: integer
       required:
       - expected_amount_out
       - expected_collateral_deposited
@@ -5243,6 +5265,9 @@ components:
       - notes
       - outbound_delay_blocks
       - outbound_delay_seconds
+      - streaming_swap_blocks
+      - streaming_swap_seconds
+      - total_open_loan_seconds
       - warning
       type: object
     QuoteLoanCloseResponse:
@@ -5257,6 +5282,7 @@ components:
           asset: ETH.ETH
           affiliate: "1234"
         slippage_bps: 5
+        total_repay_seconds: 600
         notes: "Transfer the inbound_address the asset with the memo. Do not use multi-in,\
           \ multi-out transactions."
         outbound_delay_seconds: 5
@@ -5265,9 +5291,12 @@ components:
         outbound_delay_blocks: 1
         memo: $-:ETH.ETH:0x1c7b17362c84287bd1184447e6dfeaf920c31bbe
         dust_threshold: "10000"
+        expected_amount_in: "10000"
+        streaming_swap_seconds: 600
         inbound_confirmation_seconds: 6
         router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
         expected_amount_out: "10000"
+        streaming_swap_blocks: 10
         warning: Do not cache this response. Do not send funds after the expiry.
         expiry: 1671660285
         expected_collateral_withdrawn: "1000000"
@@ -5346,6 +5375,12 @@ components:
             after fees in 1e8 decimals
           example: "10000"
           type: string
+        expected_amount_in:
+          description: "The quantity of the repayment asset to be sent by the user,\
+            \ calculated as the desired percentage of the loan's value, expressed\
+            \ in units of 1e8"
+          example: "10000"
+          type: string
         expected_collateral_withdrawn:
           description: the expected amount of collateral decrease on the loan
           example: "1000000"
@@ -5354,7 +5389,27 @@ components:
           description: the expected amount of TOR debt decrease on the loan
           example: "1000000"
           type: string
+        streaming_swap_blocks:
+          description: The number of blocks involved in the streaming swaps during
+            the repayment process.
+          example: 10
+          format: int64
+          type: integer
+        streaming_swap_seconds:
+          description: The approximate number of seconds taken by the streaming swaps
+            involved in the repayment process.
+          example: 600
+          format: int64
+          type: integer
+        total_repay_seconds:
+          description: "The total expected duration for a repayment, measured in seconds,\
+            \ which includes the time for inbound confirmation, the duration of streaming\
+            \ swaps, and any outbound delays."
+          example: 600
+          format: int64
+          type: integer
       required:
+      - expected_amount_in
       - expected_amount_out
       - expected_collateral_withdrawn
       - expected_debt_repaid
@@ -5364,6 +5419,9 @@ components:
       - notes
       - outbound_delay_blocks
       - outbound_delay_seconds
+      - streaming_swap_blocks
+      - streaming_swap_seconds
+      - total_repay_seconds
       - warning
       type: object
     Ping:
