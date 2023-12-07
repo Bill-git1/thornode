@@ -347,6 +347,29 @@ func (s *SwapperVCUR) swapOne(ctx cosmos.Context,
 		return cosmos.ZeroUint(), evt, fmt.Errorf("fail to set pool")
 	}
 
+	// apply swapper clout
+	availableClout := swapEvt.LiquidityFeeInRune
+	for i, addr := range []common.Address{tx.FromAddress, destination} {
+		if addr.IsEmpty() {
+			ctx.Logger().Error("dev error: address is empty for clout calculation")
+			continue
+		}
+		clout, err := keeper.GetSwapperClout(ctx, addr)
+		if err != nil {
+			ctx.Logger().Error("fail to get swapper clout destination address", "error", err)
+			continue
+		}
+		if i == 0 {
+			clout.Score = clout.Score.Add(availableClout.QuoUint64(2))
+			availableClout = common.SafeSub(availableClout, availableClout.QuoUint64(2))
+		} else {
+			clout.Score = clout.Score.Add(availableClout)
+		}
+		if err := keeper.SetSwapperClout(ctx, clout); err != nil {
+			ctx.Logger().Error("fail to save swapper clout", "error", err)
+		}
+	}
+
 	return emitAssets, swapEvt, nil
 }
 

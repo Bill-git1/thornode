@@ -32,6 +32,7 @@ type QueryQueue struct {
 	Outbound               int64       `json:"outbound"`
 	Internal               int64       `json:"internal"`
 	ScheduledOutboundValue cosmos.Uint `json:"scheduled_outbound_value"`
+	ScheduledOutboundClout cosmos.Uint `json:"scheduled_outbound_clout"`
 }
 
 // String implement fmt.Stringer

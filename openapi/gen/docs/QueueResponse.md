@@ -8,12 +8,13 @@ Name | Type | Description | Notes
 **Outbound** | **int64** | number of signed outbound tx in the queue | 
 **Internal** | **int64** |  | 
 **ScheduledOutboundValue** | **string** | scheduled outbound value in RUNE | 
+**ScheduledOutboundClout** | **string** | scheduled outbound clout in RUNE | 
 
 ## Methods
 
 ### NewQueueResponse
 
-`func NewQueueResponse(swap int64, outbound int64, internal int64, scheduledOutboundValue string, ) *QueueResponse`
+`func NewQueueResponse(swap int64, outbound int64, internal int64, scheduledOutboundValue string, scheduledOutboundClout string, ) *QueueResponse`
 
 NewQueueResponse instantiates a new QueueResponse object
 This constructor will assign default values to properties that have it defined,
@@ -106,6 +107,26 @@ and a boolean to check if the value has been set.
 `func (o *QueueResponse) SetScheduledOutboundValue(v string)`
 
 SetScheduledOutboundValue sets ScheduledOutboundValue field to given value.
+
+
+### GetScheduledOutboundClout
+
+`func (o *QueueResponse) GetScheduledOutboundClout() string`
+
+GetScheduledOutboundClout returns the ScheduledOutboundClout field if non-nil, zero value otherwise.
+
+### GetScheduledOutboundCloutOk
+
+`func (o *QueueResponse) GetScheduledOutboundCloutOk() (*string, bool)`
+
+GetScheduledOutboundCloutOk returns a tuple with the ScheduledOutboundClout field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetScheduledOutboundClout
+
+`func (o *QueueResponse) SetScheduledOutboundClout(v string)`
+
+SetScheduledOutboundClout sets ScheduledOutboundClout field to given value.
 
 
 

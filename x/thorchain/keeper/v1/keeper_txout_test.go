@@ -14,12 +14,14 @@ var _ = Suite(&KeeperTxOutSuite{})
 func (KeeperTxOutSuite) TestKeeperTxOut(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	txOut := NewTxOut(1)
+	spent := cosmos.NewUint(100)
 	txOutItem := TxOutItem{
 		Chain:       common.BNBChain,
 		ToAddress:   GetRandomBNBAddress(),
 		VaultPubKey: GetRandomPubKey(),
 		Coin:        common.NewCoin(common.BNBAsset, cosmos.NewUint(100*common.One)),
 		Memo:        "hello",
+		CloutSpent:  &spent,
 	}
 	txOut.TxArray = append(txOut.TxArray, txOutItem)
 	c.Assert(k.SetTxOut(ctx, txOut), IsNil)
@@ -50,7 +52,8 @@ func (KeeperTxOutSuite) TestKeeperTxOut(c *C) {
 	txOut3 := NewTxOut(1024)
 	c.Check(k.SetTxOut(ctx, txOut3), IsNil)
 
-	value, err := k.GetTxOutValue(ctx, 1)
+	value, clout, err := k.GetTxOutValue(ctx, 1)
 	c.Assert(err, IsNil)
 	c.Check(value.Uint64(), Equals, uint64(659193934902), Commentf("%d", value.Uint64()))
+	c.Check(clout.String(), Equals, "100")
 }

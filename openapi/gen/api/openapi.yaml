@@ -960,6 +960,38 @@ paths:
           description: OK
       tags:
       - StreamingSwap
+  /thorchain/clout/swap/{address}:
+    get:
+      description: Returns the clout score of an address
+      operationId: swapper_clout
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      - explode: false
+        in: path
+        name: address
+        required: true
+        schema:
+          example: thor1zupk5lmc84r2dh738a9g3zscavannjy3nzplwt
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SwapperCloutResponse'
+          description: OK
+      tags:
+      - Clout
   /thorchain/queue:
     get:
       description: Returns queue statistics.
@@ -4301,6 +4333,7 @@ components:
         internal: 0
         swap: 0
         outbound: 10
+        scheduled_outbound_clout: scheduled_outbound_clout
         scheduled_outbound_value: scheduled_outbound_value
       properties:
         swap:
@@ -4319,9 +4352,13 @@ components:
         scheduled_outbound_value:
           description: scheduled outbound value in RUNE
           type: string
+        scheduled_outbound_clout:
+          description: scheduled outbound clout in RUNE
+          type: string
       required:
       - internal
       - outbound
+      - scheduled_outbound_clout
       - scheduled_outbound_value
       - swap
       type: object
@@ -4423,6 +4460,40 @@ components:
       type: object
     ThornameResponse:
       $ref: '#/components/schemas/Thorname'
+    SwapperCloutResponse:
+      example:
+        score: score
+        address: bc1....
+        reclaimed: reclaimed
+        spent: spent
+        last_spent_height: 0
+        last_reclaim_height: 6
+      properties:
+        address:
+          description: address associated with this clout account
+          example: bc1....
+          type: string
+        score:
+          description: "clout score, which is the amount of rune spent on swap fees"
+          type: string
+        reclaimed:
+          description: amount of clout that has been reclaimed in total over time
+            (observed clout spent)
+          type: string
+        spent:
+          description: amount of clout that has been spent in total over time
+          type: string
+        last_spent_height:
+          description: last block height that clout was spent
+          format: int64
+          type: integer
+        last_reclaim_height:
+          description: last block height that clout was reclaimed
+          format: int64
+          type: integer
+      required:
+      - address
+      type: object
     MimirResponse:
       additionalProperties:
         type: string

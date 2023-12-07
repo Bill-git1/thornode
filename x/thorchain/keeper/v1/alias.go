@@ -83,6 +83,7 @@ var (
 	NewTssKeysignFailVoter     = types.NewTssKeysignFailVoter
 	SetupConfigForTest         = types.SetupConfigForTest
 	NewChainContract           = types.NewChainContract
+	NewSwapperClout            = types.NewSwapperClout
 )
 
 type (
@@ -128,6 +129,7 @@ type (
 	NodeMimir                = types.NodeMimir
 	NodeMimirs               = types.NodeMimirs
 	ProtocolOwnedLiquidity   = types.ProtocolOwnedLiquidity
+	SwapperClout             = types.SwapperClout
 
 	ProtoInt64        = types.ProtoInt64
 	ProtoUint64       = types.ProtoUint64

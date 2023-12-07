@@ -572,7 +572,7 @@ func (s TxOutStoreV122Suite) TestCalcTxOutHeight(c *C) {
 	c.Check(ctx.BlockHeight(), Equals, int64(18), Commentf("%d", ctx.BlockHeight()))
 	// Confirming that the current height is 18.
 
-	targetBlock, err := txout.CalcTxOutHeight(ctx, keeper.GetVersion(), toi)
+	targetBlock, _, err := txout.CalcTxOutHeight(ctx, keeper.GetVersion(), toi)
 	c.Assert(err, IsNil)
 	c.Check(targetBlock, Equals, int64(24))
 	addValue(targetBlock, value)
@@ -580,7 +580,7 @@ func (s TxOutStoreV122Suite) TestCalcTxOutHeight(c *C) {
 	// which reduces the 25_00000000 TxOutDelayRate to 20_00000000.
 	// value / TxOutDelayRate is then 129 / 20 ~= 6, added to the starting height of 18 to get 24.
 
-	targetBlock, err = txout.CalcTxOutHeight(ctx, keeper.GetVersion(), toi)
+	targetBlock, _, err = txout.CalcTxOutHeight(ctx, keeper.GetVersion(), toi)
 	c.Assert(err, IsNil)
 	c.Check(targetBlock, Equals, int64(26))
 	addValue(targetBlock, value)
@@ -593,7 +593,7 @@ func (s TxOutStoreV122Suite) TestCalcTxOutHeight(c *C) {
 	thousandSizeTOIValue := pool.AssetValueInRune(thousandSizeTOI.Coin.Amount)
 	c.Check(thousandSizeTOIValue.Uint64(), Equals, uint64(129_139_57140964), Commentf("%d", thousandSizeTOIValue.Uint64()))
 
-	targetBlock, err = txout.CalcTxOutHeight(ctx, keeper.GetVersion(), thousandSizeTOI)
+	targetBlock, _, err = txout.CalcTxOutHeight(ctx, keeper.GetVersion(), thousandSizeTOI)
 	c.Assert(err, IsNil)
 	c.Check(targetBlock, Equals, int64(738))
 	addValue(targetBlock, thousandSizeTOIValue)
@@ -603,7 +603,7 @@ func (s TxOutStoreV122Suite) TestCalcTxOutHeight(c *C) {
 	// 18 + 720 = 738
 
 	// Now check the effect on TxOutDelayRate from the already-scheduled value.
-	targetBlock, err = txout.CalcTxOutHeight(ctx, keeper.GetVersion(), toi)
+	targetBlock, _, err = txout.CalcTxOutHeight(ctx, keeper.GetVersion(), toi)
 	c.Assert(err, IsNil)
 	c.Check(targetBlock, Equals, int64(739))
 	// As above, sumValue reduces TxOutDelayRate to 1.

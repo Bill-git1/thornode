@@ -96,6 +96,7 @@ type TxArrayItem struct {
 	GasRate               int64          `json:"gas_rate,omitempty"`
 	InHash                common.TxID    `json:"in_hash,omitempty"`
 	OutHash               common.TxID    `json:"out_hash,omitempty"`
+	CloutSpent            string         `json:"clout_spent,omitempty"`
 	Aggregator            string         `json:"aggregator,omitempty"`
 	AggregatorTargetAsset string         `json:"aggregator_target_asset,omitempty"`
 	AggregatorTargetLimit *cosmos.Uint   `json:"aggregator_target_limit,omitempty"`

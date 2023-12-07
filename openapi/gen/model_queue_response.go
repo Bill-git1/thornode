@@ -22,18 +22,21 @@ type QueueResponse struct {
 	Internal int64 `json:"internal"`
 	// scheduled outbound value in RUNE
 	ScheduledOutboundValue string `json:"scheduled_outbound_value"`
+	// scheduled outbound clout in RUNE
+	ScheduledOutboundClout string `json:"scheduled_outbound_clout"`
 }
 
 // NewQueueResponse instantiates a new QueueResponse object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewQueueResponse(swap int64, outbound int64, internal int64, scheduledOutboundValue string) *QueueResponse {
+func NewQueueResponse(swap int64, outbound int64, internal int64, scheduledOutboundValue string, scheduledOutboundClout string) *QueueResponse {
 	this := QueueResponse{}
 	this.Swap = swap
 	this.Outbound = outbound
 	this.Internal = internal
 	this.ScheduledOutboundValue = scheduledOutboundValue
+	this.ScheduledOutboundClout = scheduledOutboundClout
 	return &this
 }
 
@@ -141,6 +144,30 @@ func (o *QueueResponse) SetScheduledOutboundValue(v string) {
 	o.ScheduledOutboundValue = v
 }
 
+// GetScheduledOutboundClout returns the ScheduledOutboundClout field value
+func (o *QueueResponse) GetScheduledOutboundClout() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.ScheduledOutboundClout
+}
+
+// GetScheduledOutboundCloutOk returns a tuple with the ScheduledOutboundClout field value
+// and a boolean to check if the value has been set.
+func (o *QueueResponse) GetScheduledOutboundCloutOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.ScheduledOutboundClout, true
+}
+
+// SetScheduledOutboundClout sets field value
+func (o *QueueResponse) SetScheduledOutboundClout(v string) {
+	o.ScheduledOutboundClout = v
+}
+
 func (o QueueResponse) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
@@ -154,6 +181,9 @@ func (o QueueResponse) MarshalJSON() ([]byte, error) {
 	}
 	if true {
 		toSerialize["scheduled_outbound_value"] = o.ScheduledOutboundValue
+	}
+	if true {
+		toSerialize["scheduled_outbound_clout"] = o.ScheduledOutboundClout
 	}
 	return json.Marshal(toSerialize)
 }

@@ -70,4 +70,5 @@ type (
 	SolvencyVoter            = types.SolvencyVoter
 	THORName                 = types.THORName
 	AffiliateFeeCollector    = types.AffiliateFeeCollector
+	SwapperClout             = types.SwapperClout
 )

@@ -14,6 +14,7 @@ import (
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
+	"gitlab.com/thorchain/thornode/mimir"
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 )
 
@@ -167,6 +168,7 @@ func (tos *TxOutStorageVCUR) cachedTryAddTxOutItem(ctx cosmos.Context, mgr Manag
 	// calculate the single block height to send all of these txout items,
 	// using the summed amount
 	outboundHeight := ctx.BlockHeight()
+	cloutApplied := cosmos.ZeroUint()
 	if !toi.Chain.IsTHORChain() && !toi.InHash.IsEmpty() && !toi.InHash.Equals(common.BlankTxID) {
 		toi.Memo = outputs[0].Memo
 		voter, err := tos.keeper.GetObservedTxInVoter(ctx, toi.InHash)
@@ -175,10 +177,12 @@ func (tos *TxOutStorageVCUR) cachedTryAddTxOutItem(ctx cosmos.Context, mgr Manag
 			return false, fmt.Errorf("fail to get observe tx in voter,err:%w", err)
 		}
 
-		targetHeight, err := tos.CalcTxOutHeight(ctx, mgr.GetVersion(), toi)
+		var targetHeight int64
+		targetHeight, cloutApplied, err = tos.CalcTxOutHeight(ctx, mgr.GetVersion(), toi)
 		if err != nil {
 			ctx.Logger().Error("failed to calc target block height for txout item", "error", err)
 		}
+
 		// adjust delay to include streaming swap time since inbound consensus
 		if voter.Height > 0 {
 			targetHeight = (targetHeight - ctx.BlockHeight()) + voter.Height
@@ -197,8 +201,23 @@ func (tos *TxOutStorageVCUR) cachedTryAddTxOutItem(ctx cosmos.Context, mgr Manag
 		}
 	}
 
-	// add tx to block out
+	// sum total output asset
+	sumOutput := cosmos.ZeroUint()
 	for _, output := range outputs {
+		sumOutput = sumOutput.Add(output.Coin.Amount)
+	}
+
+	// add tx to block out
+	totalCloutShare := cosmos.ZeroUint()
+	for i, output := range outputs {
+		cloutShare := cosmos.ZeroUint()
+		if i < len(outputs)-1 {
+			cloutShare = common.GetSafeShare(output.Coin.Amount, sumOutput, cloutApplied)
+			totalCloutShare = totalCloutShare.Add(cloutShare)
+		} else {
+			cloutShare = common.SafeSub(cloutApplied, totalCloutShare) // remainder
+		}
+		output.CloutSpent = &cloutShare
 		if err := tos.addToBlockOut(ctx, mgr, output, outboundHeight); err != nil {
 			return false, err
 		}
@@ -674,12 +693,99 @@ func (tos *TxOutStorageVCUR) addToBlockOut(ctx cosmos.Context, mgr Manager, item
 	return tos.keeper.AppendTxOut(ctx, outboundHeight, item)
 }
 
-func (tos *TxOutStorageVCUR) CalcTxOutHeight(ctx cosmos.Context, version semver.Version, toi TxOutItem) (int64, error) {
+func (tos *TxOutStorageVCUR) calcClout(ctx cosmos.Context, runeValue cosmos.Uint, toi TxOutItem) (cosmos.Uint, cosmos.Uint) {
+	cloutOut, err := tos.keeper.GetSwapperClout(ctx, toi.ToAddress)
+	if err != nil {
+		ctx.Logger().Error("fail to get swapper clout destination address", "error", err)
+	}
+	voter, err := tos.keeper.GetObservedTxInVoter(ctx, toi.InHash)
+	if err != nil {
+		ctx.Logger().Error("fail to get txin for clout calculation", "error", err)
+	}
+	cloutIn, err := tos.keeper.GetSwapperClout(ctx, voter.Tx.Tx.FromAddress)
+	if err != nil {
+		ctx.Logger().Error("fail to get swapper clout destination address", "error", err)
+	}
+
+	swapperCloutReset := mimir.NewSwapperCloutReset().FetchValue(ctx, tos.keeper)
+	swapperCloutLimit := mimir.NewSwapperCloutLimit().FetchValue(ctx, tos.keeper)
+
+	// if last clout spend was over an hour ago, restore clout available to
+	// 100%
+	cloutOut.Restore(ctx.BlockHeight(), swapperCloutReset)
+	cloutIn.Restore(ctx.BlockHeight(), swapperCloutReset)
+
+	clout1, clout2, newValue := tos.splitClout(
+		ctx,
+		cosmos.SafeUintFromInt64(swapperCloutLimit),
+		cloutIn.Available(),
+		cloutOut.Available(),
+		runeValue,
+	)
+
+	// sanity check, newValue + clout1 + clout2 should equal runeValue
+	if !newValue.Add(clout1).Add(clout2).Equal(runeValue) {
+		return runeValue, cosmos.ZeroUint()
+	}
+
+	if !clout1.IsZero() {
+		cloutIn.Spent = cloutIn.Spent.Add(clout1)
+		cloutIn.LastSpentHeight = ctx.BlockHeight()
+		if err := tos.keeper.SetSwapperClout(ctx, cloutIn); err != nil {
+			ctx.Logger().Error("fail to save swapper clout", "error", err)
+		}
+	}
+
+	if !clout2.IsZero() {
+		cloutOut.Spent = cloutOut.Spent.Add(clout2)
+		cloutOut.LastSpentHeight = ctx.BlockHeight()
+		if err := tos.keeper.SetSwapperClout(ctx, cloutOut); err != nil {
+			ctx.Logger().Error("fail to save swapper clout", "error", err)
+		}
+	}
+
+	return newValue, clout1.Add(clout2)
+}
+
+// splitClout tries to split runeValue into two Uints, ensuring that it doesn't exceed the given clout1 and clout2.
+func (tos *TxOutStorageVCUR) splitClout(ctx cosmos.Context, swapperCloutLimit, clout1, clout2, runeValue cosmos.Uint) (cosmos.Uint, cosmos.Uint, cosmos.Uint) {
+	if clout1.Add(clout2).GT(swapperCloutLimit) {
+		halfLimit := swapperCloutLimit.QuoUint64(2)
+		switch {
+		case clout1.GT(halfLimit) && clout2.GT(halfLimit):
+			clout1 = halfLimit
+			clout2 = halfLimit
+		case clout1.GT(clout2):
+			clout1 = common.SafeSub(swapperCloutLimit, clout2)
+		case clout2.GT(clout1):
+			clout2 = common.SafeSub(swapperCloutLimit, clout1)
+		}
+	}
+
+	// sanity check - ensure total available clout does not exceed our limit
+	if clout1.Add(clout2).GT(swapperCloutLimit) {
+		ctx.Logger().Error("dev error: clout1 + clout2 cannot exceed clout limit", "clout1", clout1, "clout2", clout2, "clout limit", swapperCloutLimit)
+		return cosmos.ZeroUint(), cosmos.ZeroUint(), runeValue
+	}
+
+	totalClout := clout1.Add(clout2)
+	if totalClout.IsZero() {
+		return cosmos.ZeroUint(), cosmos.ZeroUint(), runeValue
+	}
+
+	appliedClout := cosmos.MinUint(totalClout, runeValue)
+	amountFromClout1 := appliedClout.Mul(clout1).Quo(totalClout)
+	amountFromClout2 := appliedClout.Sub(amountFromClout1)
+
+	return amountFromClout1, amountFromClout2, common.SafeSub(runeValue, amountFromClout1.Add(amountFromClout2))
+}
+
+func (tos *TxOutStorageVCUR) CalcTxOutHeight(ctx cosmos.Context, version semver.Version, toi TxOutItem) (int64, cosmos.Uint, error) {
 	// non-outbound transactions are skipped. This is so this code does not
 	// affect internal transactions (ie consolidation and migrate txs)
 	memo, _ := ParseMemo(version, toi.Memo) // ignore err
 	if !memo.IsType(TxRefund) && !memo.IsType(TxOutbound) {
-		return ctx.BlockHeight(), nil
+		return ctx.BlockHeight(), cosmos.ZeroUint(), nil
 	}
 
 	minTxOutVolumeThreshold := tos.keeper.GetConfigInt64(ctx, constants.MinTxOutVolumeThreshold)
@@ -689,7 +795,7 @@ func (tos *TxOutStorageVCUR) CalcTxOutHeight(ctx cosmos.Context, version semver.
 
 	// only delay if volume threshold and delay rate are positive
 	if minTxOutVolumeThreshold <= 0 || txOutDelayRate <= 0 || maxTxOutOffset <= 0 {
-		return ctx.BlockHeight(), nil
+		return ctx.BlockHeight(), cosmos.ZeroUint(), nil
 	}
 
 	// convert to big ints for safer math
@@ -698,20 +804,28 @@ func (tos *TxOutStorageVCUR) CalcTxOutHeight(ctx cosmos.Context, version semver.
 	maxOffset := cosmos.NewUint(uint64(maxTxOutOffset))
 
 	// get txout item value in rune
+	var cloutApplied cosmos.Uint
 	runeValue := toi.Coin.Amount
 	if !toi.Coin.Asset.IsRune() {
 		pool, err := tos.keeper.GetPool(ctx, toi.Coin.Asset.GetLayer1Asset())
 		if err != nil {
 			ctx.Logger().Error("fail to get pool for appending txout item", "error", err)
-			return ctx.BlockHeight() + maxTxOutOffset, err
+			return ctx.BlockHeight() + maxTxOutOffset, cosmos.ZeroUint(), err
 		}
 		runeValue = pool.AssetValueInRune(toi.Coin.Amount)
+	}
+	// reduce rune value based on clout
+	runeValue, cloutApplied = tos.calcClout(ctx, runeValue, toi)
+	// if clout was large enough to cover the outbound value, no delay applied
+	if runeValue.IsZero() {
+		return ctx.BlockHeight(), cloutApplied, nil
 	}
 
 	// sum value of scheduled txns (including this one)
 	sumValue := runeValue
+	cloutValue := cosmos.ZeroUint()
 	for height := ctx.BlockHeight() + 1; height <= ctx.BlockHeight()+txOutDelayMax; height++ {
-		value, err := tos.keeper.GetTxOutValue(ctx, height)
+		value, clout, err := tos.keeper.GetTxOutValue(ctx, height)
 		if err != nil {
 			ctx.Logger().Error("fail to get tx out array from key value store", "error", err)
 			continue
@@ -722,6 +836,7 @@ func (tos *TxOutStorageVCUR) CalcTxOutHeight(ctx cosmos.Context, version semver.
 			break
 		}
 		sumValue = sumValue.Add(value)
+		cloutValue = cloutValue.Add(clout)
 	}
 
 	// reduce delay rate relative to the total scheduled value. In high volume
@@ -732,7 +847,7 @@ func (tos *TxOutStorageVCUR) CalcTxOutHeight(ctx cosmos.Context, version semver.
 	// own transaction(s), reducing the attack's effectiveness.
 	// The common.One is because delayRate, sumValue, and minVolumeThreshold
 	// all have the same number of decimals (which cancel otherwise).
-	rateReduction := cosmos.NewUint(common.One).Mul(sumValue).Quo(minVolumeThreshold)
+	rateReduction := cosmos.NewUint(common.One).Mul(common.SafeSub(sumValue, cloutValue)).Quo(minVolumeThreshold)
 	if rateReduction.GTE(delayRate) {
 		delayRate = cosmos.NewUint(1)
 	} else {
@@ -750,7 +865,7 @@ func (tos *TxOutStorageVCUR) CalcTxOutHeight(ctx cosmos.Context, version semver.
 	// find targetBlock that has space for new txout item.
 	count := int64(0)
 	for count < txOutDelayMax { // max set 1 day into the future
-		txOutValue, err := tos.keeper.GetTxOutValue(ctx, targetBlock)
+		txOutValue, _, err := tos.keeper.GetTxOutValue(ctx, targetBlock)
 		if err != nil {
 			ctx.Logger().Error("fail to get txOutValue for block height", "error", err)
 			break
@@ -767,7 +882,7 @@ func (tos *TxOutStorageVCUR) CalcTxOutHeight(ctx cosmos.Context, version semver.
 		count++
 	}
 
-	return targetBlock, nil
+	return targetBlock, cloutApplied, nil
 }
 
 func (tos *TxOutStorageVCUR) nativeTxOut(ctx cosmos.Context, mgr Manager, toi TxOutItem) error {

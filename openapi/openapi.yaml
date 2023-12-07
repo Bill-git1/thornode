@@ -587,6 +587,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/StreamingSwapsResponse"
 
+  # ------------------------------ clout ------------------------------
+
+  /thorchain/clout/swap/{address}:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+      - $ref: "#/components/parameters/address"
+    get:
+      description: Returns the clout score of an address
+      operationId: swapper_clout
+      tags:
+        - Clout
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SwapperCloutResponse"
+
   # ------------------------------ queue ------------------------------
 
   /thorchain/queue:
@@ -2843,6 +2862,7 @@ components:
         - outbound
         - internal
         - scheduled_outbound_value
+        - scheduled_outbound_clout
       properties:
         swap:
           type: integer
@@ -2860,6 +2880,9 @@ components:
         scheduled_outbound_value:
           type: string
           description: scheduled outbound value in RUNE
+        scheduled_outbound_clout:
+          type: string
+          description: scheduled outbound clout in RUNE
 
     SwapQueueResponse:
       type: array
@@ -2919,6 +2942,33 @@ components:
 
     ThornameResponse:
       $ref: "#/components/schemas/Thorname"
+
+    SwapperCloutResponse:
+      type: object
+      required:
+        - address
+      properties:
+        address:
+          type: string
+          example: bc1....
+          description: address associated with this clout account
+        score:
+          type: string
+          description: clout score, which is the amount of rune spent on swap fees
+        reclaimed:
+          type: string
+          description: amount of clout that has been reclaimed in total over time (observed clout spent)
+        spent:
+          type: string
+          description: amount of clout that has been spent in total over time
+        last_spent_height:
+          type: integer
+          format: int64
+          description: last block height that clout was spent
+        last_reclaim_height:
+          type: integer
+          format: int64
+          description: last block height that clout was reclaimed
 
     MimirResponse:
       type: object

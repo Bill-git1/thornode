@@ -316,8 +316,8 @@ func (k KVStoreDummy) GetKeygenBlock(_ cosmos.Context, _ int64) (KeygenBlock, er
 func (k KVStoreDummy) SetKeygenBlock(_ cosmos.Context, _ KeygenBlock)          {}
 func (k KVStoreDummy) GetKeygenBlockIterator(_ cosmos.Context) cosmos.Iterator { return nil }
 func (k KVStoreDummy) GetTxOut(_ cosmos.Context, _ int64) (*TxOut, error)      { return nil, kaboom }
-func (k KVStoreDummy) GetTxOutValue(_ cosmos.Context, _ int64) (cosmos.Uint, error) {
-	return cosmos.ZeroUint(), kaboom
+func (k KVStoreDummy) GetTxOutValue(_ cosmos.Context, _ int64) (cosmos.Uint, cosmos.Uint, error) {
+	return cosmos.ZeroUint(), cosmos.ZeroUint(), kaboom
 }
 func (k KVStoreDummy) SetTxOut(_ cosmos.Context, _ *TxOut) error                { return kaboom }
 func (k KVStoreDummy) AppendTxOut(_ cosmos.Context, _ int64, _ TxOutItem) error { return kaboom }
@@ -667,6 +667,12 @@ func (k KVStoreDummy) GetTHORNamePerBlockFee(ctx cosmos.Context) cosmos.Uint {
 
 func (k KVStoreDummy) DeductNativeTxFeeFromAccount(ctx cosmos.Context, acctAddr cosmos.AccAddress) error {
 	return kaboom
+}
+
+func (k KVStoreDummy) GetSwapperCloutIterator(ctx cosmos.Context) cosmos.Iterator    { return nil }
+func (k KVStoreDummy) SetSwapperClout(ctx cosmos.Context, record SwapperClout) error { return kaboom }
+func (k KVStoreDummy) GetSwapperClout(ctx cosmos.Context, addr common.Address) (SwapperClout, error) {
+	return SwapperClout{}, kaboom
 }
 
 // a mock cosmos.Iterator implementation for testing purposes

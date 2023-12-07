@@ -44,6 +44,7 @@ const (
 	prefixVault                   types.DbPrefix = "vault/"
 	prefixVaultAsgardIndex        types.DbPrefix = "vault_asgard_index/"
 	prefixNetwork                 types.DbPrefix = "network/"
+	prefixSwapperClout            types.DbPrefix = "sclout/"
 	prefixPOL                     types.DbPrefix = "pol/"
 	prefixLoan                    types.DbPrefix = "loan/"
 	prefixStreamingSwap           types.DbPrefix = "stream/"

@@ -448,12 +448,14 @@
       "reserve_contributors": null,
       "streaming_swaps": [],
       "swap_queue_items": [],
+      "swapper_clout": [],
       "tx_outs": [
         {
           "height": "2",
           "tx_array": [
             {
               "chain": "BTC",
+              "clout_spent": "0",
               "coin": {
                 "amount": "4999986000",
                 "asset": "BTC.BTC",

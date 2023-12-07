@@ -76,3 +76,35 @@ func NewMaxConfValue(refs ...string) Mimir {
 		},
 	}
 }
+
+func NewSwapperCloutLimit(refs ...string) Mimir {
+	id := CloutSwapperLimitId
+	return &mimir{
+		id:           id,
+		name:         mimirRefToStringMap[id],
+		defaultValue: 0,
+		mimirType:    EconomicMimir,
+		reference:    getRef(refs),
+		tags:         []string{"economic", "clout"},
+		description:  "Maximum clout applicable to an outbound txn",
+		legacyMimirKey: func(_ string) string {
+			return "CloutLimit"
+		},
+	}
+}
+
+func NewSwapperCloutReset(refs ...string) Mimir {
+	id := CloutSwapperResetId
+	return &mimir{
+		id:           id,
+		name:         mimirRefToStringMap[id],
+		defaultValue: 720,
+		mimirType:    EconomicMimir,
+		reference:    getRef(refs),
+		tags:         []string{"economic", "clout"},
+		description:  "Amount of blocks before pending clout spent is reset",
+		legacyMimirKey: func(_ string) string {
+			return "CloutReset"
+		},
+	}
+}

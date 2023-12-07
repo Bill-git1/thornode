@@ -26,6 +26,12 @@ func ValidateGenesis(data GenesisState) error {
 		}
 	}
 
+	for _, record := range data.SwapperClout {
+		if err := record.Valid(); err != nil {
+			return err
+		}
+	}
+
 	for _, voter := range data.ObservedTxInVoters {
 		if err := voter.Valid(); err != nil {
 			return err
@@ -136,6 +142,7 @@ func DefaultGenesisState() GenesisState {
 		THORNames:           make([]THORName, 0),
 		StoreVersion:        38, // refer to func `GetStoreVersion` , let's keep it consistent
 		Loans:               make([]Loan, 0),
+		SwapperClout:        make([]SwapperClout, 0),
 	}
 }
 
@@ -252,6 +259,12 @@ func initGenesis(ctx cosmos.Context, keeper keeper.Keeper, data GenesisState) []
 
 	for _, loan := range data.Loans {
 		keeper.SetLoan(ctx, loan)
+	}
+
+	for _, clout := range data.SwapperClout {
+		if err := keeper.SetSwapperClout(ctx, clout); err != nil {
+			panic(err)
+		}
 	}
 
 	// Mint coins into the reserve
@@ -535,6 +548,24 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		}
 	}
 
+	clouts := make([]SwapperClout, 0)
+	iterClouts := k.GetSwapQueueIterator(ctx)
+	defer iterClouts.Close()
+	for ; iterClouts.Valid(); iterClouts.Next() {
+		var addr common.Address
+		parts := strings.Split(string(iterClouts.Key()), "/")
+		addr, err = common.NewAddress(parts[len(parts)-1])
+		if err != nil {
+			continue
+		}
+		var clout SwapperClout
+		clout, err = k.GetSwapperClout(ctx, addr)
+		if err != nil {
+			continue
+		}
+		clouts = append(clouts, clout)
+	}
+
 	return GenesisState{
 		Pools:              pools,
 		LiquidityProviders: liquidityProviders,
@@ -555,6 +586,7 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		THORNames:          names,
 		Loans:              loans,
 		Mimirs:             mimirs,
+		SwapperClout:       clouts,
 		StoreVersion:       storeVersion,
 	}
 }

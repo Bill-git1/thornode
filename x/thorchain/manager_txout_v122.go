@@ -173,7 +173,7 @@ func (tos *TxOutStorageV122) cachedTryAddTxOutItem(ctx cosmos.Context, mgr Manag
 			return false, fmt.Errorf("fail to get observe tx in voter,err:%w", err)
 		}
 
-		targetHeight, err := tos.CalcTxOutHeight(ctx, mgr.GetVersion(), toi)
+		targetHeight, _, err := tos.CalcTxOutHeight(ctx, mgr.GetVersion(), toi)
 		if err != nil {
 			ctx.Logger().Error("failed to calc target block height for txout item", "error", err)
 		}
@@ -704,12 +704,12 @@ func (tos *TxOutStorageV122) addToBlockOut(ctx cosmos.Context, mgr Manager, item
 	return tos.keeper.AppendTxOut(ctx, outboundHeight, item)
 }
 
-func (tos *TxOutStorageV122) CalcTxOutHeight(ctx cosmos.Context, version semver.Version, toi TxOutItem) (int64, error) {
+func (tos *TxOutStorageV122) CalcTxOutHeight(ctx cosmos.Context, version semver.Version, toi TxOutItem) (int64, cosmos.Uint, error) {
 	// non-outbound transactions are skipped. This is so this code does not
 	// affect internal transactions (ie consolidation and migrate txs)
 	memo, _ := ParseMemo(version, toi.Memo) // ignore err
 	if !memo.IsType(TxRefund) && !memo.IsType(TxOutbound) {
-		return ctx.BlockHeight(), nil
+		return ctx.BlockHeight(), cosmos.ZeroUint(), nil
 	}
 
 	minTxOutVolumeThreshold := tos.keeper.GetConfigInt64(ctx, constants.MinTxOutVolumeThreshold)
@@ -719,7 +719,7 @@ func (tos *TxOutStorageV122) CalcTxOutHeight(ctx cosmos.Context, version semver.
 
 	// only delay if volume threshold and delay rate are positive
 	if minTxOutVolumeThreshold <= 0 || txOutDelayRate <= 0 || maxTxOutOffset <= 0 {
-		return ctx.BlockHeight(), nil
+		return ctx.BlockHeight(), cosmos.ZeroUint(), nil
 	}
 
 	// convert to big ints for safer math
@@ -733,7 +733,7 @@ func (tos *TxOutStorageV122) CalcTxOutHeight(ctx cosmos.Context, version semver.
 		pool, err := tos.keeper.GetPool(ctx, toi.Coin.Asset.GetLayer1Asset())
 		if err != nil {
 			ctx.Logger().Error("fail to get pool for appending txout item", "error", err)
-			return ctx.BlockHeight() + maxTxOutOffset, err
+			return ctx.BlockHeight() + maxTxOutOffset, cosmos.ZeroUint(), err
 		}
 		runeValue = pool.AssetValueInRune(toi.Coin.Amount)
 	}
@@ -741,7 +741,7 @@ func (tos *TxOutStorageV122) CalcTxOutHeight(ctx cosmos.Context, version semver.
 	// sum value of scheduled txns (including this one)
 	sumValue := runeValue
 	for height := ctx.BlockHeight() + 1; height <= ctx.BlockHeight()+txOutDelayMax; height++ {
-		value, err := tos.keeper.GetTxOutValue(ctx, height)
+		value, _, err := tos.keeper.GetTxOutValue(ctx, height)
 		if err != nil {
 			ctx.Logger().Error("fail to get tx out array from key value store", "error", err)
 			continue
@@ -780,7 +780,7 @@ func (tos *TxOutStorageV122) CalcTxOutHeight(ctx cosmos.Context, version semver.
 	// find targetBlock that has space for new txout item.
 	count := int64(0)
 	for count < txOutDelayMax { // max set 1 day into the future
-		txOutValue, err := tos.keeper.GetTxOutValue(ctx, targetBlock)
+		txOutValue, _, err := tos.keeper.GetTxOutValue(ctx, targetBlock)
 		if err != nil {
 			ctx.Logger().Error("fail to get txOutValue for block height", "error", err)
 			break
@@ -797,7 +797,7 @@ func (tos *TxOutStorageV122) CalcTxOutHeight(ctx cosmos.Context, version semver.
 		count++
 	}
 
-	return targetBlock, nil
+	return targetBlock, cosmos.ZeroUint(), nil
 }
 
 func (tos *TxOutStorageV122) nativeTxOut(ctx cosmos.Context, mgr Manager, toi TxOutItem) error {

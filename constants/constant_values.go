@@ -132,6 +132,8 @@ const (
 	PreferredAssetOutboundFeeMultiplier
 	FeeUSDRoundSignificantDigits
 	MigrationVaultSecurityBps
+	CloutReset
+	CloutLimit
 	KeygenRetryInterval
 	SaversStreamingSwapsInterval
 )

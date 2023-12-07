@@ -13,6 +13,8 @@ const (
 	BondPauseId
 	ConfMultiplierBasisPointsId // https://gitlab.com/thorchain/thornode/-/issues/1599
 	MaxConfirmationsId          // https://gitlab.com/thorchain/thornode/-/issues/1761
+	CloutSwapperLimitId
+	CloutSwapperResetId
 )
 
 var StringToId = map[string]Id{
@@ -21,6 +23,8 @@ var StringToId = map[string]Id{
 	"BondPause":                  BondPauseId,
 	"ConfMultiplierBasisPoints":  ConfMultiplierBasisPointsId,
 	"MaxConfirmations":           MaxConfirmationsId,
+	"CloutSwapperLimit":          CloutSwapperLimitId,
+	"CloutSwapperReset":          CloutSwapperResetId,
 }
 
 var mimirRefToStringMap = map[Id]string{
@@ -29,6 +33,8 @@ var mimirRefToStringMap = map[Id]string{
 	BondPauseId:                  "BondPause",
 	ConfMultiplierBasisPointsId:  "ConfMultiplierBasisPoints",
 	MaxConfirmationsId:           "MaxConfirmations",
+	CloutSwapperLimitId:          "CloutSwapperLimit",
+	CloutSwapperResetId:          "CloutSwapperReset",
 }
 
 // GetMimir fetches a mimir by id number
@@ -42,6 +48,10 @@ func GetMimir(id Id, ref string) (Mimir, bool) {
 		return NewConfBasisPointValue(ref), true
 	case MaxConfirmationsId:
 		return NewMaxConfValue(ref), true
+	case CloutSwapperLimitId:
+		return NewSwapperCloutLimit(ref), true
+	case CloutSwapperResetId:
+		return NewSwapperCloutReset(ref), true
 	default:
 		return nil, false
 	}

@@ -32,6 +32,7 @@ func export(out io.Writer, path string, routine int) error {
 	cmd.Env = append(os.Environ(), "HOME="+home)
 	exportOut, err := cmd.CombinedOutput()
 	if err != nil {
+		fmt.Println(string(exportOut))
 		log.Fatal().Err(err).Msg("failed to export state")
 	}
 

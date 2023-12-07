@@ -1,6 +1,7 @@
 package thorchain
 
 import (
+	"gopkg.in/check.v1"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/common"
@@ -407,7 +408,7 @@ func (s TxOutStoreVCURSuite) TestCalcTxOutHeight(c *C) {
 	c.Check(ctx.BlockHeight(), Equals, int64(18), Commentf("%d", ctx.BlockHeight()))
 	// Confirming that the current height is 18.
 
-	targetBlock, err := txout.CalcTxOutHeight(ctx, keeper.GetVersion(), toi)
+	targetBlock, _, err := txout.CalcTxOutHeight(ctx, keeper.GetVersion(), toi)
 	c.Assert(err, IsNil)
 	c.Check(targetBlock, Equals, int64(24))
 	addValue(targetBlock, value)
@@ -415,7 +416,7 @@ func (s TxOutStoreVCURSuite) TestCalcTxOutHeight(c *C) {
 	// which reduces the 25_00000000 TxOutDelayRate to 20_00000000.
 	// value / TxOutDelayRate is then 129 / 20 ~= 6, added to the starting height of 18 to get 24.
 
-	targetBlock, err = txout.CalcTxOutHeight(ctx, keeper.GetVersion(), toi)
+	targetBlock, _, err = txout.CalcTxOutHeight(ctx, keeper.GetVersion(), toi)
 	c.Assert(err, IsNil)
 	c.Check(targetBlock, Equals, int64(26))
 	addValue(targetBlock, value)
@@ -428,7 +429,7 @@ func (s TxOutStoreVCURSuite) TestCalcTxOutHeight(c *C) {
 	thousandSizeTOIValue := pool.AssetValueInRune(thousandSizeTOI.Coin.Amount)
 	c.Check(thousandSizeTOIValue.Uint64(), Equals, uint64(129_139_57140964), Commentf("%d", thousandSizeTOIValue.Uint64()))
 
-	targetBlock, err = txout.CalcTxOutHeight(ctx, keeper.GetVersion(), thousandSizeTOI)
+	targetBlock, _, err = txout.CalcTxOutHeight(ctx, keeper.GetVersion(), thousandSizeTOI)
 	c.Assert(err, IsNil)
 	c.Check(targetBlock, Equals, int64(738))
 	addValue(targetBlock, thousandSizeTOIValue)
@@ -438,7 +439,7 @@ func (s TxOutStoreVCURSuite) TestCalcTxOutHeight(c *C) {
 	// 18 + 720 = 738
 
 	// Now check the effect on TxOutDelayRate from the already-scheduled value.
-	targetBlock, err = txout.CalcTxOutHeight(ctx, keeper.GetVersion(), toi)
+	targetBlock, _, err = txout.CalcTxOutHeight(ctx, keeper.GetVersion(), toi)
 	c.Assert(err, IsNil)
 	c.Check(targetBlock, Equals, int64(739))
 	// As above, sumValue reduces TxOutDelayRate to 1.
@@ -950,4 +951,133 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItem_VaultStatusVersusOutboundNumber(c 
 	// the two outbounds are from the Active vault and the less secure Retiring vault.
 	c.Assert(scheduledOutbounds[0].VaultPubKey, Equals, activeVaultPubKey)
 	c.Assert(scheduledOutbounds[1].VaultPubKey, Equals, retiringVault1PubKey)
+}
+
+func (s *TxOutStoreVCURSuite) TestSplitCloutEqualDistribution(c *check.C) {
+	ctx, _ := setupManagerForTest(c)
+	tos := TxOutStorageVCUR{}
+
+	// Define test cases
+	swapperCloutLimit := cosmos.NewUint(100)
+	clout1 := cosmos.NewUint(30)
+	clout2 := cosmos.NewUint(30)
+	runeValue := cosmos.NewUint(60)
+
+	// Call function under test
+	amountFromClout1, amountFromClout2, remainingRune := tos.splitClout(ctx, swapperCloutLimit, clout1, clout2, runeValue)
+
+	// Assert that the clouts were split equally and no rune value remains
+	c.Check(amountFromClout1.Equal(cosmos.NewUint(30)), check.Equals, true)
+	c.Check(amountFromClout2.Equal(cosmos.NewUint(30)), check.Equals, true)
+	c.Check(remainingRune.IsZero(), check.Equals, true)
+}
+
+func (s *TxOutStoreVCURSuite) TestSplitCloutOneSideExceeds(c *check.C) {
+	ctx, _ := setupManagerForTest(c)
+	tos := TxOutStorageVCUR{}
+
+	// Define test cases
+	swapperCloutLimit := cosmos.NewUint(100)
+	clout1 := cosmos.NewUint(70)
+	clout2 := cosmos.NewUint(20)
+	runeValue := cosmos.NewUint(60)
+
+	// Call function under test
+	amountFromClout1, amountFromClout2, remainingRune := tos.splitClout(ctx, swapperCloutLimit, clout1, clout2, runeValue)
+
+	// Assert that clout2 took all it could, and clout1 took the remainder up to the limit
+	c.Check(amountFromClout1.Equal(cosmos.NewUint(46)), check.Equals, true, Commentf("%d", amountFromClout1.Uint64()))
+	c.Check(amountFromClout2.Equal(cosmos.NewUint(14)), check.Equals, true, Commentf("%d", amountFromClout2.Uint64()))
+	c.Check(remainingRune.Equal(cosmos.NewUint(0)), check.Equals, true)
+}
+
+func (s *TxOutStoreVCURSuite) TestSplitCloutUnevenDistribution(c *check.C) {
+	ctx, _ := setupManagerForTest(c)
+	tos := TxOutStorageVCUR{}
+
+	// Define test cases
+	swapperCloutLimit := cosmos.NewUint(100)
+	clout1 := cosmos.NewUint(60)
+	clout2 := cosmos.NewUint(25)
+	runeValue := cosmos.NewUint(50)
+
+	// Call function under test
+	amountFromClout1, amountFromClout2, remainingRune := tos.splitClout(ctx, swapperCloutLimit, clout1, clout2, runeValue)
+
+	// Assert that the clouts were split according to their capacity
+	c.Check(amountFromClout1.Equal(cosmos.NewUint(35)), check.Equals, true, Commentf("%d", amountFromClout1.Uint64()))
+	c.Check(amountFromClout2.Equal(cosmos.NewUint(15)), check.Equals, true, Commentf("%d", amountFromClout2.Uint64()))
+	c.Check(remainingRune.Equal(cosmos.NewUint(0)), check.Equals, true)
+}
+
+func (s *TxOutStoreVCURSuite) TestSplitCloutOverLimit(c *check.C) {
+	ctx, _ := setupManagerForTest(c)
+	tos := TxOutStorageVCUR{}
+
+	// Define test cases
+	swapperCloutLimit := cosmos.NewUint(100)
+	clout1 := cosmos.NewUint(80)
+	clout2 := cosmos.NewUint(80)
+	runeValue := cosmos.NewUint(100)
+
+	// Call function under test
+	amountFromClout1, amountFromClout2, remainingRune := tos.splitClout(ctx, swapperCloutLimit, clout1, clout2, runeValue)
+
+	// Assert that the clouts were split up to the limit
+	c.Check(amountFromClout1.Equal(cosmos.NewUint(50)), check.Equals, true)
+	c.Check(amountFromClout2.Equal(cosmos.NewUint(50)), check.Equals, true)
+	c.Check(remainingRune.Equal(cosmos.NewUint(0)), check.Equals, true)
+}
+
+func (s *TxOutStoreVCURSuite) TestSplitCloutWithZeroRuneValue(c *check.C) {
+	ctx, _ := setupManagerForTest(c)
+	tos := TxOutStorageVCUR{}
+
+	// Define test cases
+	swapperCloutLimit := cosmos.NewUint(100)
+	clout1 := cosmos.NewUint(40)
+	clout2 := cosmos.NewUint(40)
+	runeValue := cosmos.NewUint(0)
+
+	// Call function under test
+	amountFromClout1, amountFromClout2, remainingRune := tos.splitClout(ctx, swapperCloutLimit, clout1, clout2, runeValue)
+
+	// Assert that no clout was taken from either and rune value remains zero
+	c.Check(amountFromClout1.IsZero(), check.Equals, true)
+	c.Check(amountFromClout2.IsZero(), check.Equals, true)
+	c.Check(remainingRune.IsZero(), check.Equals, true)
+}
+
+func (s *TxOutStoreVCURSuite) TestSplitCloutCloutsAtLimit(c *check.C) {
+	ctx, _ := setupManagerForTest(c)
+	tos := TxOutStorageVCUR{}
+	swapperCloutLimit := cosmos.NewUint(100)
+	clout1 := cosmos.NewUint(50)
+	clout2 := cosmos.NewUint(50)
+	runeValue := cosmos.NewUint(30)
+
+	// Call function under test
+	amountFromClout1, amountFromClout2, remainingRune := tos.splitClout(ctx, swapperCloutLimit, clout1, clout2, runeValue)
+
+	// Assert that the clouts were split equally and no rune value remains
+	c.Check(amountFromClout1.Equal(cosmos.NewUint(15)), check.Equals, true)
+	c.Check(amountFromClout2.Equal(cosmos.NewUint(15)), check.Equals, true)
+	c.Check(remainingRune.Equal(cosmos.NewUint(0)), check.Equals, true)
+}
+
+func (s *TxOutStoreVCURSuite) TestSplitCloutRuneValueExceedingClouts(c *check.C) {
+	ctx, _ := setupManagerForTest(c)
+	tos := TxOutStorageVCUR{}
+	swapperCloutLimit := cosmos.NewUint(100)
+	clout1 := cosmos.NewUint(40)
+	clout2 := cosmos.NewUint(40)
+	runeValue := cosmos.NewUint(120)
+
+	// Call function under test
+	amountFromClout1, amountFromClout2, remainingRune := tos.splitClout(ctx, swapperCloutLimit, clout1, clout2, runeValue)
+
+	// Assert that the clouts took the maximum they could, and the remaining rune is correct
+	c.Check(amountFromClout1.Equal(cosmos.NewUint(40)), check.Equals, true)
+	c.Check(amountFromClout2.Equal(cosmos.NewUint(40)), check.Equals, true)
+	c.Check(remainingRune.Equal(cosmos.NewUint(40)), check.Equals, true)
 }

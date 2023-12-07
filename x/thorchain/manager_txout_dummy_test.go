@@ -59,8 +59,8 @@ func (tos *TxOutStoreDummy) UnSafeAddTxOutItem(ctx cosmos.Context, mgr Manager, 
 	return nil
 }
 
-func (tos *TxOutStoreDummy) CalcTxOutHeight(_ cosmos.Context, _ semver.Version, _ TxOutItem) (int64, error) {
-	return 0, nil
+func (tos *TxOutStoreDummy) CalcTxOutHeight(_ cosmos.Context, _ semver.Version, _ TxOutItem) (int64, cosmos.Uint, error) {
+	return 0, cosmos.ZeroUint(), nil
 }
 
 func (tos *TxOutStoreDummy) addToBlockOut(_ cosmos.Context, toi TxOutItem) {
@@ -113,8 +113,8 @@ func (tos *TxOutStoreFailDummy) TryAddTxOutItem(ctx cosmos.Context, mgr Manager,
 	return false, errKaboom
 }
 
-func (tos *TxOutStoreFailDummy) CalcTxOutHeight(_ cosmos.Context, _ semver.Version, _ TxOutItem) (int64, error) {
-	return 0, nil
+func (tos *TxOutStoreFailDummy) CalcTxOutHeight(_ cosmos.Context, _ semver.Version, _ TxOutItem) (int64, cosmos.Uint, error) {
+	return 0, cosmos.ZeroUint(), nil
 }
 
 func (tos *TxOutStoreFailDummy) UnSafeAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem) error {

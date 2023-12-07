@@ -34,10 +34,14 @@ func (k *TestCalcKeeper) GetConfigInt64(ctx cosmos.Context, key constants.Consta
 	return val
 }
 
-func (k *TestCalcKeeper) GetTxOutValue(ctx cosmos.Context, height int64) (cosmos.Uint, error) {
+func (k *TestCalcKeeper) GetTxOutValue(ctx cosmos.Context, height int64) (cosmos.Uint, cosmos.Uint, error) {
 	val, ok := k.value[height]
 	if !ok {
-		return cosmos.ZeroUint(), nil
+		return cosmos.ZeroUint(), cosmos.ZeroUint(), nil
 	}
-	return val, nil
+	return val, cosmos.ZeroUint(), nil
+}
+
+func (k *TestCalcKeeper) GetSwapperClout(ctx cosmos.Context, addr common.Address) (SwapperClout, error) {
+	return NewSwapperClout(addr), nil
 }

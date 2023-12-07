@@ -211,6 +211,7 @@ var (
 	DefaultGenesis                 = types.DefaultGenesis
 	NewSolvencyVoter               = types.NewSolvencyVoter
 	NewMsgSolvency                 = types.NewMsgSolvency
+	NewSwapperClout                = types.NewSwapperClout
 
 	// Memo
 	ParseMemo              = mem.ParseMemo
@@ -342,6 +343,7 @@ type (
 	AffiliateFeeCollector          = types.AffiliateFeeCollector
 	NodeMimir                      = types.NodeMimir
 	NodeMimirs                     = types.NodeMimirs
+	SwapperClout                   = types.SwapperClout
 
 	// Memo
 	SwapMemo              = mem.SwapMemo

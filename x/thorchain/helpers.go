@@ -866,8 +866,9 @@ func emitEndBlockTelemetry(ctx cosmos.Context, mgr Manager) error {
 			}
 		}
 	}
+	cloutSpent := cosmos.ZeroUint()
 	for height := ctx.BlockHeight() + 1; height <= ctx.BlockHeight()+txOutDelayMax; height++ {
-		value, err := mgr.Keeper().GetTxOutValue(ctx, height)
+		value, clout, err := mgr.Keeper().GetTxOutValue(ctx, height)
 		if err != nil {
 			ctx.Logger().Error("fail to get tx out array from key value store", "error", err)
 			continue
@@ -878,10 +879,13 @@ func emitEndBlockTelemetry(ctx cosmos.Context, mgr Manager) error {
 			break
 		}
 		query.ScheduledOutboundValue = query.ScheduledOutboundValue.Add(value)
+		cloutSpent = cloutSpent.Add(clout)
 	}
 	telemetry.SetGauge(float32(query.Internal), "thornode", "queue", "internal")
 	telemetry.SetGauge(float32(query.Outbound), "thornode", "queue", "outbound")
 	telemetry.SetGauge(float32(query.Swap), "thornode", "queue", "swap")
+	telemetry.SetGauge(telem(cloutSpent), "thornode", "queue", "scheduled", "clout", "rune")
+	telemetry.SetGauge(telem(cloutSpent)*runeUSDPrice, "thornode", "queue", "scheduled", "clout", "usd")
 	telemetry.SetGauge(telem(query.ScheduledOutboundValue), "thornode", "queue", "scheduled", "value", "rune")
 	telemetry.SetGauge(telem(query.ScheduledOutboundValue)*runeUSDPrice, "thornode", "queue", "scheduled", "value", "usd")
 

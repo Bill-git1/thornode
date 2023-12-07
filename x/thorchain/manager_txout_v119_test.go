@@ -570,12 +570,12 @@ func (s TxOutStoreV119Suite) TestCalcTxOutHeight(c *C) {
 	c.Check(value.Uint64(), Equals, uint64(3_228_48928524), Commentf("%d", value.Uint64()))
 	// Expecting a bit over a sixth of the MaxTxOutOffset, so a bit over 120 blocks.
 
-	targetBlock, err := txout.CalcTxOutHeight(ctx, keeper.GetVersion(), toi)
+	targetBlock, _, err := txout.CalcTxOutHeight(ctx, keeper.GetVersion(), toi)
 	c.Assert(err, IsNil)
 	c.Check(targetBlock, Equals, int64(147))
 	addValue(targetBlock, value)
 
-	targetBlock, err = txout.CalcTxOutHeight(ctx, keeper.GetVersion(), toi)
+	targetBlock, _, err = txout.CalcTxOutHeight(ctx, keeper.GetVersion(), toi)
 	c.Assert(err, IsNil)
 	c.Check(targetBlock, Equals, int64(148))
 	addValue(targetBlock, value)
@@ -585,7 +585,7 @@ func (s TxOutStoreV119Suite) TestCalcTxOutHeight(c *C) {
 	thousandSizeTOIValue := pool.AssetValueInRune(thousandSizeTOI.Coin.Amount)
 	c.Check(thousandSizeTOIValue.Uint64(), Equals, uint64(3_228_489_28524094), Commentf("%d", thousandSizeTOIValue.Uint64()))
 
-	targetBlock, err = txout.CalcTxOutHeight(ctx, keeper.GetVersion(), thousandSizeTOI)
+	targetBlock, _, err = txout.CalcTxOutHeight(ctx, keeper.GetVersion(), thousandSizeTOI)
 	c.Assert(err, IsNil)
 	c.Check(targetBlock, Equals, int64(738))
 	addValue(targetBlock, thousandSizeTOIValue)
@@ -596,7 +596,7 @@ func (s TxOutStoreV119Suite) TestCalcTxOutHeight(c *C) {
 	// = 25_00000000 - (3_238_174_75309666 / 25_00000000)
 	// ~= 24_99870473
 
-	targetBlock, err = txout.CalcTxOutHeight(ctx, keeper.GetVersion(), toi)
+	targetBlock, _, err = txout.CalcTxOutHeight(ctx, keeper.GetVersion(), toi)
 	c.Assert(err, IsNil)
 	c.Check(targetBlock, Equals, int64(149))
 	// Despite the 3 million RUNE value already scheduled, the delay for a TxOutItem of the original size is not affected.

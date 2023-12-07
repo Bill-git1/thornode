@@ -522,12 +522,14 @@
       "reserve_contributors": null,
       "streaming_swaps": [],
       "swap_queue_items": [],
+      "swapper_clout": [],
       "tx_outs": [
         {
           "height": "15",
           "tx_array": [
             {
               "chain": "ETH",
+              "clout_spent": "0",
               "coin": {
                 "amount": "477469164",
                 "asset": "ETH.ETH"

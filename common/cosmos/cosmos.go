@@ -193,3 +193,11 @@ func SafeUintFromInt64(i int64) Uint {
 	}
 	return NewUint(uint64(i))
 }
+
+// MinUint returns the minimum of two Uints.
+func MinUint(u1, u2 Uint) Uint {
+	if u1.LT(u2) {
+		return u1
+	}
+	return u2
+}

@@ -156,6 +156,8 @@ func NewQuerier(mgr *Mgrs, kbs cosmos.KeybaseStore) cosmos.Querier {
 			return queryScheduledOutbound(ctx, mgr)
 		case q.QuerySwapQueue.Key:
 			return querySwapQueue(ctx, mgr)
+		case q.QuerySwapperClout.Key:
+			return querySwapperClout(ctx, path[1:], mgr)
 		case q.QueryStreamingSwap.Key:
 			return queryStreamingSwap(ctx, path[1:], mgr)
 		case q.QueryStreamingSwaps.Key:
@@ -1184,6 +1186,25 @@ func queryStreamingSwaps(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 	return jsonify(ctx, streams)
 }
 
+func querySwapperClout(ctx cosmos.Context, path []string, mgr *Mgrs) ([]byte, error) {
+	if len(path) == 0 {
+		return nil, errors.New("address not provided")
+	}
+	addr, err := common.NewAddress(path[0])
+	if err != nil {
+		ctx.Logger().Error("fail to parse address", "error", err)
+		return nil, fmt.Errorf("could not parse address: %w", err)
+	}
+
+	clout, err := mgr.Keeper().GetSwapperClout(ctx, addr)
+	if err != nil {
+		ctx.Logger().Error("fail to get swapper clout", "error", err)
+		return nil, fmt.Errorf("could not get swapper clout: %w", err)
+	}
+
+	return jsonify(ctx, clout)
+}
+
 func queryStreamingSwap(ctx cosmos.Context, path []string, mgr *Mgrs) ([]byte, error) {
 	if len(path) == 0 {
 		return nil, errors.New("tx id not provided")
@@ -1615,6 +1636,10 @@ func queryKeysign(ctx cosmos.Context, kbs cosmos.KeybaseStore, path []string, re
 		}
 		for _, tx := range txs.TxArray {
 			if pk.Equals(tx.VaultPubKey) {
+				zero := cosmos.ZeroUint()
+				if tx.CloutSpent == nil {
+					tx.CloutSpent = &zero
+				}
 				newTxs.TxArray = append(newTxs.TxArray, tx)
 			}
 		}
@@ -1646,6 +1671,7 @@ func queryQueue(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *M
 	startHeight := ctx.BlockHeight() - signingTransactionPeriod
 	query := QueryQueue{
 		ScheduledOutboundValue: cosmos.ZeroUint(),
+		ScheduledOutboundClout: cosmos.ZeroUint(),
 	}
 
 	iterator := mgr.Keeper().GetSwapQueueIterator(ctx)
@@ -1698,7 +1724,7 @@ func queryQueue(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *M
 	}
 
 	for height := ctx.BlockHeight() + 1; height <= ctx.BlockHeight()+txOutDelayMax; height++ {
-		value, err := mgr.Keeper().GetTxOutValue(ctx, height)
+		value, clout, err := mgr.Keeper().GetTxOutValue(ctx, height)
 		if err != nil {
 			ctx.Logger().Error("fail to get tx out array from key value store", "error", err)
 			continue
@@ -1709,6 +1735,7 @@ func queryQueue(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *M
 			break
 		}
 		query.ScheduledOutboundValue = query.ScheduledOutboundValue.Add(value)
+		query.ScheduledOutboundClout = query.ScheduledOutboundClout.Add(clout)
 	}
 
 	return jsonify(ctx, query)

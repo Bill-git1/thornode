@@ -430,7 +430,7 @@ func quoteOutboundInfo(ctx cosmos.Context, mgr *Mgrs, coin common.Coin) (int64, 
 		Memo: "OUT:-",
 		Coin: coin,
 	}
-	outboundHeight, err := mgr.txOutStore.CalcTxOutHeight(ctx, mgr.GetVersion(), toi)
+	outboundHeight, _, err := mgr.txOutStore.CalcTxOutHeight(ctx, mgr.GetVersion(), toi)
 	if err != nil {
 		return 0, err
 	}

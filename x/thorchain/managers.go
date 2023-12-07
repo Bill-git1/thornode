@@ -74,7 +74,7 @@ type TxOutStore interface {
 	TryAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem, minOut cosmos.Uint) (bool, error)
 	UnSafeAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem) error
 	GetOutboundItemByToAddress(cosmos.Context, common.Address) []TxOutItem
-	CalcTxOutHeight(cosmos.Context, semver.Version, TxOutItem) (int64, error)
+	CalcTxOutHeight(cosmos.Context, semver.Version, TxOutItem) (int64, cosmos.Uint, error)
 }
 
 // ObserverManager define the method to manage observes
@@ -383,8 +383,10 @@ func GetEventManager(version semver.Version) (EventManager, error) {
 func GetTxOutStore(version semver.Version, keeper keeper.Keeper, eventMgr EventManager, gasManager GasManager) (TxOutStore, error) {
 	constAccessor := constants.GetConstantValues(version)
 	switch {
-	case version.GTE(semver.MustParse("1.124.0")):
+	case version.GTE(semver.MustParse("1.125.0")):
 		return newTxOutStorageVCUR(keeper, constAccessor, eventMgr, gasManager), nil
+	case version.GTE(semver.MustParse("1.124.0")):
+		return newTxOutStorageV124(keeper, constAccessor, eventMgr, gasManager), nil
 	case version.GTE(semver.MustParse("1.122.0")):
 		return newTxOutStorageV122(keeper, constAccessor, eventMgr, gasManager), nil
 	case version.GTE(semver.MustParse("1.119.0")):
@@ -655,8 +657,10 @@ func GetYggManager(version semver.Version, keeper keeper.Keeper) (YggManager, er
 // GetSwapper return an implementation of Swapper
 func GetSwapper(version semver.Version) (Swapper, error) {
 	switch {
-	case version.GTE(semver.MustParse("1.122.0")):
+	case version.GTE(semver.MustParse("1.125.0")):
 		return newSwapperVCUR(), nil
+	case version.GTE(semver.MustParse("1.122.0")):
+		return newSwapperV122(), nil
 	case version.GTE(semver.MustParse("1.121.0")):
 		return newSwapperV121(), nil
 	case version.GTE(semver.MustParse("1.117.0")):

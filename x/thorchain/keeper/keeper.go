@@ -88,6 +88,7 @@ type Keeper interface {
 	KeeperHalt
 	KeeperAnchors
 	KeeperStreamingSwap
+	KeeperSwapperClout
 }
 
 type KeeperConfig interface {
@@ -116,6 +117,12 @@ type KeeperLastHeight interface {
 	SetLastObserveHeight(ctx cosmos.Context, chain common.Chain, address cosmos.AccAddress, height int64) error
 	ForceSetLastObserveHeight(ctx cosmos.Context, chain common.Chain, address cosmos.AccAddress, height int64)
 	GetLastObserveHeight(ctx cosmos.Context, address cosmos.AccAddress) (map[common.Chain]int64, error)
+}
+
+type KeeperSwapperClout interface {
+	GetSwapperClout(ctx cosmos.Context, addr common.Address) (SwapperClout, error)
+	SetSwapperClout(ctx cosmos.Context, record SwapperClout) error
+	GetSwapperCloutIterator(ctx cosmos.Context) cosmos.Iterator
 }
 
 type KeeperStreamingSwap interface {
@@ -191,7 +198,7 @@ type KeeperTxOut interface {
 	ClearTxOut(ctx cosmos.Context, height int64) error
 	GetTxOutIterator(ctx cosmos.Context) cosmos.Iterator
 	GetTxOut(ctx cosmos.Context, height int64) (*TxOut, error)
-	GetTxOutValue(ctx cosmos.Context, height int64) (cosmos.Uint, error)
+	GetTxOutValue(ctx cosmos.Context, height int64) (cosmos.Uint, cosmos.Uint, error)
 }
 
 type KeeperLiquidityFees interface {

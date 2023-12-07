@@ -112,6 +112,8 @@ func NewConstantValue() *ConstantVals {
 			PreferredAssetOutboundFeeMultiplier: 100,                // multiplier of the current preferred asset outbound fee, if rune balance > multiplier * outbound_fee, a preferred asset swap is triggered
 			FeeUSDRoundSignificantDigits:        2,                  // number of significant digits to round the RUNE value of USD denominated fees
 			MigrationVaultSecurityBps:           0,                  // vault bond must be greater than bps of funds value in rune to receive migrations
+			CloutReset:                          720,                // number of blocks before clout spent gets reset
+			CloutLimit:                          0,                  // max clout allowed to spend
 			KeygenRetryInterval:                 0,                  // number of blocks to wait before retrying a keygen
 			SaversStreamingSwapsInterval:        0,                  // For Savers deposits and withdraws, the streaming swaps interval to use for the Native <> Synth swap
 		},

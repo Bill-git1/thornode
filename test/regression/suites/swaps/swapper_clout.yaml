@@ -1,0 +1,277 @@
+{{ template "default-state.yaml" }}
+---
+{{ template "btc-eth-pool-state.yaml" }}
+---
+type: create-blocks
+count: 1
+---
+type: tx-mimir
+key: CloutLimit
+value: 40000000000000
+signer: {{ addr_thor_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_btc_fox }}
+asserts:
+  - .address == "{{ addr_btc_fox }}"
+  - .score|tonumber == 0
+  - .reclaimed|tonumber == 0
+  - .spent|tonumber == 0
+---
+type: check
+endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_eth_fox }}
+asserts:
+  - .address == "{{ addr_eth_fox }}"
+  - .score|tonumber == 0
+  - .reclaimed|tonumber == 0
+  - .spent|tonumber == 0
+---
+########################################################################################
+# double swap
+########################################################################################
+type: tx-observed-in
+signer: {{ addr_thor_dog }}
+txs:
+- tx:
+    id: '{{ observe_txid 3 }}'
+    chain: BTC
+    from_address: {{ addr_btc_fox }}
+    to_address: {{ addr_btc_dog }}
+    coins:
+      - amount: "5000000"
+        asset: "BTC.BTC"
+        decimals: 8
+    gas:
+      - amount: "10000"
+        asset: "BTC.BTC"
+    memo: "=:ETH.ETH:{{ addr_eth_fox }}"
+  block_height: 3
+  finalise_height: 3
+  observed_pub_key: {{ pubkey_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - .|length == 1
+  - .[0]|.in_hash == "{{ observe_txid 3 }}"
+---
+type: check
+endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_btc_fox }}
+asserts:
+  - .address == "{{ addr_btc_fox }}"
+  - .score|tonumber == 207489194
+  - .reclaimed|tonumber == 0
+  - .spent|tonumber == 207489194
+  - .last_spent_height == 3
+---
+type: check
+endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_eth_fox }}
+asserts:
+  - .address == "{{ addr_eth_fox }}"
+  - .score|tonumber == 207489196
+  - .reclaimed|tonumber == 0
+  - .spent|tonumber == 207489196
+  - .last_spent_height == 3
+---
+type: tx-observed-out
+signer: {{ addr_thor_dog }}
+txs:
+- tx:
+    id: '{{ observe_txid 4 }}'
+    chain: ETH
+    from_address: {{ addr_eth_dog }}
+    to_address: {{ addr_eth_fox }}
+    coins:
+      - amount: "40221780"
+        asset: "ETH.ETH"
+        decimals: 8
+    gas:
+      - amount: "960000"
+        asset: "ETH.ETH"
+    memo: "OUT:{{ observe_txid 3 }}"
+  block_height: 2
+  finalise_height: 2
+  observed_pub_key: {{ pubkey_dog }}
+  clout_spent: "414976178"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - .|length == 0
+---
+type: check
+endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_btc_fox }}
+asserts:
+  - .address == "{{ addr_btc_fox }}"
+  - .score|tonumber == 207489194
+  - .reclaimed|tonumber == 207489194
+  - .spent|tonumber == 207489194
+  - .last_spent_height == 3
+  - .last_reclaim_height == 4
+---
+type: check
+endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_eth_fox }}
+asserts:
+  - .address == "{{ addr_eth_fox }}"
+  - .score|tonumber == 207489196
+  - .reclaimed|tonumber == 207489196
+  - .spent|tonumber == 207489196
+  - .last_spent_height == 3
+  - .last_reclaim_height == 4
+---
+########################################################################################
+# clout reset
+########################################################################################
+type: tx-mimir
+key: CloutReset
+value: 10
+signer: {{ addr_thor_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: tx-observed-in
+signer: {{ addr_thor_dog }}
+txs:
+- tx:
+    id: '{{ observe_txid 4 }}'
+    chain: BTC
+    from_address: {{ addr_btc_fox }}
+    to_address: {{ addr_btc_dog }}
+    coins:
+      - amount: "5000000"
+        asset: "BTC.BTC"
+        decimals: 8
+    gas:
+      - amount: "10000"
+        asset: "BTC.BTC"
+    memo: "=:ETH.ETH:{{ addr_eth_fox }}"
+  block_height: 3
+  finalise_height: 3
+  observed_pub_key: {{ pubkey_dog }}
+---
+type: create-blocks
+count: 11
+---
+type: check
+endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_btc_fox }}
+asserts:
+  - .address == "{{ addr_btc_fox }}"
+  - .score|tonumber == 382046035
+  - .reclaimed|tonumber == 207489194
+  - .spent|tonumber == 589535229
+  - .last_spent_height == 6
+  - .last_reclaim_height == 4
+---
+type: check
+endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_eth_fox }}
+asserts:
+  - .address == "{{ addr_eth_fox }}"
+  - .score|tonumber == 382046038
+  - .reclaimed|tonumber == 207489196
+  - .spent|tonumber == 589535234
+  - .last_spent_height == 6
+  - .last_reclaim_height == 4
+---
+type: tx-observed-in
+signer: {{ addr_thor_dog }}
+txs:
+- tx:
+    id: '{{ observe_txid 5 }}'
+    chain: BTC
+    from_address: {{ addr_btc_fox }}
+    to_address: {{ addr_btc_dog }}
+    coins:
+      - amount: "5000000"
+        asset: "BTC.BTC"
+        decimals: 8
+    gas:
+      - amount: "10000"
+        asset: "BTC.BTC"
+    memo: "=:ETH.ETH:{{ addr_eth_fox }}"
+  block_height: 3
+  finalise_height: 3
+  observed_pub_key: {{ pubkey_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_btc_fox }}
+asserts:
+  - .address == "{{ addr_btc_fox }}"
+  - .score|tonumber == 530400992
+  - .reclaimed|tonumber == 589535229
+  - .spent|tonumber == 1119936221
+  - .last_spent_height == 17
+  - .last_reclaim_height == 4
+---
+type: check
+endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_eth_fox }}
+asserts:
+  - .address == "{{ addr_eth_fox }}"
+  - .score|tonumber == 530400996
+  - .reclaimed|tonumber == 589535234
+  - .spent|tonumber == 1119936230
+  - .last_spent_height == 17
+  - .last_reclaim_height == 4
+---
+type: tx-observed-out
+signer: {{ addr_thor_dog }}
+txs:
+- tx:
+    id: '{{ observe_txid 6 }}'
+    chain: ETH
+    from_address: {{ addr_eth_dog }}
+    to_address: {{ addr_eth_fox }}
+    coins:
+      - amount: "33881286"
+        asset: "ETH.ETH"
+        decimals: 8
+    gas:
+      - amount: "960000"
+        asset: "ETH.ETH"
+    memo: "OUT:{{ observe_txid 4 }}"
+  block_height: 2
+  finalise_height: 2
+  observed_pub_key: {{ pubkey_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: tx-observed-out
+signer: {{ addr_thor_dog }}
+txs:
+- tx:
+    id: '{{ observe_txid 7 }}'
+    chain: ETH
+    from_address: {{ addr_eth_dog }}
+    to_address: {{ addr_eth_fox }}
+    coins:
+      - amount: "28944289"
+        asset: "ETH.ETH"
+        decimals: 8
+    gas:
+      - amount: "960000"
+        asset: "ETH.ETH"
+    memo: "OUT:{{ observe_txid 5 }}"
+  block_height: 17
+  finalise_height: 17
+  observed_pub_key: {{ pubkey_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - .|length == 0

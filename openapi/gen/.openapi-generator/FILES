@@ -4,6 +4,7 @@ README.md
 api/openapi.yaml
 api_block.go
 api_borrowers.go
+api_clout.go
 api_health.go
 api_invariants.go
 api_liquidity_providers.go
@@ -35,6 +36,7 @@ docs/BlockTxResult.md
 docs/Borrower.md
 docs/BorrowersApi.md
 docs/ChainHeight.md
+docs/CloutApi.md
 docs/Coin.md
 docs/ConstantsResponse.md
 docs/DerivedPool.md
@@ -86,6 +88,7 @@ docs/Saver.md
 docs/SaversApi.md
 docs/StreamingSwap.md
 docs/StreamingSwapApi.md
+docs/SwapperCloutResponse.md
 docs/TSSApi.md
 docs/Thorname.md
 docs/ThornameAlias.md
@@ -169,6 +172,7 @@ model_quote_saver_withdraw_response.go
 model_quote_swap_response.go
 model_saver.go
 model_streaming_swap.go
+model_swapper_clout_response.go
 model_thorname.go
 model_thorname_alias.go
 model_tss_keysign_metric.go

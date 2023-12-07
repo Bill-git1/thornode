@@ -67,13 +67,14 @@ func (k KVStore) GetTxOut(ctx cosmos.Context, height int64) (*TxOut, error) {
 	return record, err
 }
 
-func (k KVStore) GetTxOutValue(ctx cosmos.Context, height int64) (cosmos.Uint, error) {
+func (k KVStore) GetTxOutValue(ctx cosmos.Context, height int64) (cosmos.Uint, cosmos.Uint, error) {
 	txout, err := k.GetTxOut(ctx, height)
 	if err != nil {
-		return cosmos.ZeroUint(), err
+		return cosmos.ZeroUint(), cosmos.ZeroUint(), err
 	}
 
 	runeValue := cosmos.ZeroUint()
+	cloutValue := cosmos.ZeroUint()
 	for _, item := range txout.TxArray {
 		if item.Coin.Asset.IsRune() {
 			runeValue = runeValue.Add(item.Coin.Amount)
@@ -86,7 +87,10 @@ func (k KVStore) GetTxOutValue(ctx cosmos.Context, height int64) (cosmos.Uint, e
 			}
 			runeValue = runeValue.Add(pool.AssetValueInRune(item.Coin.Amount))
 		}
+		if item.CloutSpent != nil {
+			cloutValue = cloutValue.Add(*item.CloutSpent)
+		}
 	}
 
-	return runeValue, nil
+	return runeValue, cloutValue, nil
 }

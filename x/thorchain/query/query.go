@@ -79,6 +79,7 @@ var (
 	QueryRagnarok            = Query{Key: "ragnarok", EndpointTemplate: "/%s/ragnarok"}
 	QueryPendingOutbound     = Query{Key: "pendingoutbound", EndpointTemplate: "/%s/queue/outbound"}
 	QueryScheduledOutbound   = Query{Key: "scheduledoutbound", EndpointTemplate: "/%s/queue/scheduled"}
+	QuerySwapperClout        = Query{Key: "swapperclout", EndpointTemplate: "/%s/clout/swap/{%s}"}
 	QueryStreamingSwap       = Query{Key: "streamingswap", EndpointTemplate: "/%s/swap/streaming/{%s}"}
 	QueryStreamingSwaps      = Query{Key: "streamingswaps", EndpointTemplate: "/%s/swaps/streaming"}
 	QuerySwapQueue           = Query{Key: "swapqueue", EndpointTemplate: "/%s/queue/swap"}
@@ -146,6 +147,7 @@ var Queries = []Query{
 	QueryRagnarok,
 	QueryPendingOutbound,
 	QueryScheduledOutbound,
+	QuerySwapperClout,
 	QueryStreamingSwap,
 	QueryStreamingSwaps,
 	QuerySwapQueue,

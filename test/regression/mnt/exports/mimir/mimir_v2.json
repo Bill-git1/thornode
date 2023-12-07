@@ -507,6 +507,7 @@
       "reserve_contributors": null,
       "streaming_swaps": [],
       "swap_queue_items": [],
+      "swapper_clout": [],
       "tx_outs": null,
       "vaults": [
         {

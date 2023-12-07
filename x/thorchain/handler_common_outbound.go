@@ -46,6 +46,8 @@ func (h CommonOutboundTxHandler) slashV96(ctx cosmos.Context, tx ObservedTx) err
 func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxID common.TxID) (*cosmos.Result, error) {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.125.0")):
+		return h.handleV125(ctx, tx, inTxID)
 	case version.GTE(semver.MustParse("1.118.0")):
 		return h.handleV118(ctx, tx, inTxID)
 	case version.GTE(semver.MustParse("1.98.0")):
@@ -68,7 +70,7 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 	return nil, errBadVersion
 }
 
-func (h CommonOutboundTxHandler) handleV118(ctx cosmos.Context, tx ObservedTx, inTxID common.TxID) (*cosmos.Result, error) {
+func (h CommonOutboundTxHandler) handleV125(ctx cosmos.Context, tx ObservedTx, inTxID common.TxID) (*cosmos.Result, error) {
 	// note: Outbound tx usually it is related to an inbound tx except migration
 	// thus here try to get the ObservedTxInVoter,  and set the tx out hash accordingly
 	voter, err := h.mgr.Keeper().GetObservedTxInVoter(ctx, inTxID)
@@ -191,6 +193,39 @@ func (h CommonOutboundTxHandler) handleV118(ctx cosmos.Context, tx ObservedTx, i
 				if err := h.mgr.Keeper().SetTxOut(ctx, txOut); err != nil {
 					ctx.Logger().Error("fail to save tx out", "error", err)
 				}
+
+				// reclaim clout spent
+				outTxn := txOut.TxArray[i]
+				spent := outTxn.CloutSpent
+				if spent != nil && !spent.IsZero() {
+					cloutOut, err := h.mgr.Keeper().GetSwapperClout(ctx, outTxn.ToAddress)
+					if err != nil {
+						ctx.Logger().Error("fail to get swapper clout destination address", "error", err)
+					}
+					voter, err := h.mgr.Keeper().GetObservedTxInVoter(ctx, outTxn.InHash)
+					if err != nil {
+						ctx.Logger().Error("fail to get txin for clout calculation", "error", err)
+					}
+					cloutIn, err := h.mgr.Keeper().GetSwapperClout(ctx, voter.Tx.Tx.FromAddress)
+					if err != nil {
+						ctx.Logger().Error("fail to get swapper clout destination address", "error", err)
+					}
+
+					clout1, clout2 := calcReclaim(cloutIn.Claimable(), cloutOut.Claimable(), *spent)
+
+					cloutIn.Reclaim(clout1)
+					cloutIn.LastReclaimHeight = ctx.BlockHeight()
+					if err := h.mgr.Keeper().SetSwapperClout(ctx, cloutIn); err != nil {
+						ctx.Logger().Error("fail to save swapper clout in", "error", err)
+					}
+
+					cloutOut.Reclaim(clout2)
+					cloutOut.LastReclaimHeight = ctx.BlockHeight()
+					if err := h.mgr.Keeper().SetSwapperClout(ctx, cloutOut); err != nil {
+						ctx.Logger().Error("fail to save swapper clout out", "error", err)
+					}
+				}
+
 				break
 
 			}
@@ -218,6 +253,28 @@ func (h CommonOutboundTxHandler) handleV118(ctx cosmos.Context, tx ObservedTx, i
 	}
 
 	return &cosmos.Result{}, nil
+}
+
+// calcReclaim attempts to split spent clout between two reclaimable clouts as equally as possible.
+func calcReclaim(reclaimable1, reclaimable2, spent cosmos.Uint) (reclaim1, reclaim2 cosmos.Uint) {
+	// Ensure that the spent clout doesn't exceed the total reclaimable clout
+	totalReclaimable := reclaimable1.Add(reclaimable2)
+	if spent.GT(totalReclaimable) {
+		return reclaimable1, reclaimable2
+	}
+
+	// Split the spent clout in half
+	halfSpent := spent.Quo(types.NewUint(2))
+
+	// If either clout is less than half the spent amount, allocate all to that clout
+	if reclaimable1.LT(halfSpent) {
+		return reclaimable1, spent.Sub(reclaimable1)
+	} else if reclaimable2.LT(halfSpent) {
+		return spent.Sub(reclaimable2), reclaimable2
+	}
+
+	// Otherwise, split the spent clout equally
+	return halfSpent, spent.Sub(halfSpent)
 }
 
 // isOutboundFakeGasTX returns true if the observed outbound which is missing an inbound is a "fake" tx sent purposely by bifrost
