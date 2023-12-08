@@ -31,7 +31,7 @@ func GetMetricForTest(c *C, chain common.Chain) *metrics.Metrics {
 		ListenPort:   9000,
 		ReadTimeout:  time.Second,
 		WriteTimeout: time.Second,
-		Chains:       common.Chains{common.DOGEChain, common.BCHChain, common.LTCChain},
+		Chains:       common.Chains{common.DOGEChain, common.BCHChain, common.LTCChain, common.BTCChain},
 	})
 	c.Assert(m, NotNil)
 	c.Assert(err, IsNil)

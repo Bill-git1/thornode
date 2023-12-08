@@ -227,7 +227,7 @@ func (c *Client) ImportAddress(address string) error {
 
 // CreateWallet creates a new wallet.
 func (c *Client) CreateWallet(name string) error {
-	err := c.Call(nil, "createwallet", name)
+	err := c.Call(nil, "createwallet", name, false, false, "", false, false)
 	err = extractBTCError(err)
 
 	// ignore code -4 (wallet already exists)

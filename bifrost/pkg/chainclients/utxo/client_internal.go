@@ -15,6 +15,7 @@ import (
 	bchtxscript "gitlab.com/thorchain/bifrost/bchd-txscript"
 	dogetxscript "gitlab.com/thorchain/bifrost/dogd-txscript"
 	ltctxscript "gitlab.com/thorchain/bifrost/ltcd-txscript"
+	btctxscript "gitlab.com/thorchain/bifrost/txscript"
 
 	btypes "gitlab.com/thorchain/thornode/bifrost/blockscanner/types"
 	"gitlab.com/thorchain/thornode/bifrost/metrics"
@@ -257,7 +258,7 @@ func (c *Client) sendNetworkFee(height int64) error {
 		}
 		feeRate = uint64(bs.AverageFeeRate * common.One)
 
-	case common.LTCChain:
+	case common.LTCChain, common.BTCChain:
 		hash, err := c.rpc.GetBlockHash(height)
 		if err != nil {
 			return fmt.Errorf("fail to get block hash: %w", err)
@@ -282,7 +283,7 @@ func (c *Client) sendNetworkFee(height int64) error {
 			feeRate++
 		}
 	}
-	if feeRate < 2 {
+	if c.cfg.ChainID.Equals(common.BCHChain) && feeRate < 2 {
 		feeRate = 2
 	}
 
@@ -375,7 +376,7 @@ func (c *Client) getBlock(height int64) (*btcjson.GetBlockVerboseTxResult, error
 	switch c.cfg.ChainID {
 	case common.DOGEChain:
 		return c.getBlockWithoutVerbose(height)
-	case common.BCHChain, common.LTCChain:
+	case common.BCHChain, common.LTCChain, common.BTCChain:
 		hash, err := c.rpc.GetBlockHash(height)
 		if err != nil {
 			return &btcjson.GetBlockVerboseTxResult{}, err
@@ -523,6 +524,19 @@ func (c *Client) isValidUTXO(hexPubKey string) bool {
 			return len(addresses) == 1 && requireSigs == 1
 		}
 
+	case common.BTCChain:
+		scriptType, addresses, requireSigs, err := btctxscript.ExtractPkScriptAddrs(buf, c.getChainCfgBTC())
+		if err != nil {
+			c.log.Err(err).Msg("fail to extract pub key script")
+			return false
+		}
+		switch scriptType {
+		case btctxscript.MultiSigTy:
+			return false
+		default:
+			return len(addresses) == 1 && requireSigs == 1
+		}
+
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 		return false
@@ -570,7 +584,9 @@ func (c *Client) getTxIn(tx *btcjson.TxRawResult, height int64, isMemPool bool) 
 		}
 		return types.TxInItem{}, fmt.Errorf("fail to get output from tx: %w", err)
 	}
-	toAddr := output.ScriptPubKey.Addresses[0]
+
+	addresses := c.getAddressesFromScriptPubKey(output.ScriptPubKey)
+	toAddr := addresses[0]
 
 	// strip BCH address prefixes
 	if c.cfg.ChainID.Equals(common.BCHChain) {
@@ -702,12 +718,13 @@ func (c *Client) getOutput(sender string, tx *btcjson.TxRawResult, consolidate b
 		if vout.Value <= 0 {
 			continue
 		}
-		if len(vout.ScriptPubKey.Addresses) != 1 {
+		addresses := c.getAddressesFromScriptPubKey(vout.ScriptPubKey)
+		if len(addresses) != 1 {
 			// If more than one address, ignore this Vout.
 			// TODO check what we do if get multiple addresses
 			continue
 		}
-		receiver := vout.ScriptPubKey.Addresses[0]
+		receiver := addresses[0]
 		if c.cfg.ChainID.Equals(common.BCHChain) {
 			receiver = c.stripBCHAddress(receiver)
 		}
@@ -739,14 +756,24 @@ func (c *Client) getSender(tx *btcjson.TxRawResult) (string, error) {
 		return "", fmt.Errorf("fail to query raw tx")
 	}
 	vout := vinTx.Vout[tx.Vin[0].Vout]
-	if len(vout.ScriptPubKey.Addresses) == 0 {
+
+	addresses := c.getAddressesFromScriptPubKey(vout.ScriptPubKey)
+	if len(addresses) == 0 {
 		return "", fmt.Errorf("no address available in vout")
 	}
-	address := vout.ScriptPubKey.Addresses[0]
+	address := addresses[0]
+
 	if c.cfg.ChainID.Equals(common.BCHChain) {
 		address = c.stripBCHAddress(address)
 	}
 	return address, nil
+}
+
+func (c *Client) getAddressesFromScriptPubKey(scriptPubKey btcjson.ScriptPubKeyResult) []string {
+	if c.cfg.ChainID.Equals(common.BTCChain) {
+		return c.getAddressesFromScriptPubKeyBTC(scriptPubKey)
+	}
+	return scriptPubKey.Addresses
 }
 
 // getMemo returns memo for a btc tx, using vout OP_RETURN
@@ -770,6 +797,8 @@ func (c *Client) getMemo(tx *btcjson.TxRawResult) (string, error) {
 			asm, err = bchtxscript.DisasmString(buf)
 		case common.LTCChain:
 			asm, err = ltctxscript.DisasmString(buf)
+		case common.BTCChain:
+			asm, err = btctxscript.DisasmString(buf)
 		default:
 			c.log.Fatal().Msg("unsupported chain")
 		}

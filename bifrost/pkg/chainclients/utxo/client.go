@@ -15,6 +15,7 @@ import (
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/btcjson"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil"
 
 	"gitlab.com/thorchain/thornode/bifrost/blockscanner"
@@ -105,6 +106,7 @@ func NewClient(
 		common.DOGEChain: true,
 		common.BCHChain:  true,
 		common.LTCChain:  true,
+		common.BTCChain:  true,
 	}
 	if !supported[cfg.ChainID] {
 		return nil, fmt.Errorf("unsupported utxo chain: %s", cfg.ChainID)
@@ -267,7 +269,8 @@ func (c *Client) RegisterPublicKey(pubkey common.PubKey) error {
 	}
 
 	// litecoin does not have a default wallet so we need to create one
-	if c.cfg.ChainID.Equals(common.LTCChain) {
+	switch c.cfg.ChainID {
+	case common.LTCChain, common.BTCChain:
 		err = c.rpc.CreateWallet("")
 		if err != nil {
 			c.log.Info().Err(err).Msg("fail to create wallet")
@@ -275,7 +278,14 @@ func (c *Client) RegisterPublicKey(pubkey common.PubKey) error {
 		}
 	}
 
-	return c.rpc.ImportAddress(addr.String())
+	err = c.rpc.ImportAddress(addr.String())
+	if err != nil {
+		log.Error().Err(err).
+			Str("pubkey", pubkey.String()).
+			Str("addr", addr.String()).
+			Msg("fail to import address")
+	}
+	return err
 }
 
 // GetAccount returns the account details for the given public key.
@@ -329,6 +339,13 @@ func (c *Client) GetAccountByAddress(address string, height *big.Int) (common.Ac
 
 // OnObservedTxIn is called by the observer when a transaction is observed.
 func (c *Client) OnObservedTxIn(txIn types.TxInItem, blockHeight int64) {
+	// sanity check the transaction has a valid hash
+	_, err := chainhash.NewHashFromStr(txIn.Tx)
+	if err != nil {
+		c.log.Error().Err(err).Str("txID", txIn.Tx).Msg("fail to add spendable utxo to storage")
+		return
+	}
+
 	blockMeta, err := c.temporalStorage.GetBlockMeta(blockHeight)
 	if err != nil {
 		c.log.Err(err).Int64("height", blockHeight).Msgf("fail to get block meta")
@@ -445,7 +462,7 @@ func (c *Client) FetchTxs(height, chainHeight int64) (types.TxIn, error) {
 		switch c.cfg.ChainID {
 		case common.DOGEChain:
 			err = c.sendNetworkFeeFromBlock(block)
-		case common.BCHChain, common.LTCChain:
+		case common.BCHChain, common.LTCChain, common.BTCChain:
 			err = c.sendNetworkFee(height)
 		default:
 			c.log.Fatal().Msg("unsupported chain")
@@ -652,10 +669,10 @@ func (c *Client) ShouldReportSolvency(height int64) bool {
 	switch c.cfg.ChainID {
 	case common.DOGEChain:
 		return height%10 == 0
-	case common.BCHChain:
+	case common.BCHChain, common.BTCChain:
 		return true
 	case common.LTCChain:
-		return height-c.lastSolvencyCheckHeight > 5
+		return height-c.lastSolvencyCheckHeight > 5 && height%5 == 0
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 		return false

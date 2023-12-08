@@ -245,7 +245,7 @@ func (b *BlockScanner) scanBlocks() {
 			if currentBlock%mod == 0 || !b.healthy.Load() {
 				b.logger.Info().Int64("block height", currentBlock).Int("txs", len(txIn.TxArray)).Msg("scan block")
 
-				b.logger.Info().Msgf("the gap is %d , healthy: %+v", chainHeight-currentBlock, b.healthy)
+				b.logger.Info().Msgf("the gap is %d , healthy: %+v", chainHeight-currentBlock, b.healthy.Load())
 			}
 			atomic.AddInt64(&b.previousBlock, 1)
 
@@ -256,7 +256,7 @@ func (b *BlockScanner) scanBlocks() {
 			} else {
 				b.healthy.Store(false)
 			}
-			b.logger.Debug().Msgf("the gap is %d , healthy: %+v", chainHeight-currentBlock, b.healthy)
+			b.logger.Debug().Msgf("the gap is %d , healthy: %+v", chainHeight-currentBlock, b.healthy.Load())
 
 			b.metrics.GetCounter(metrics.TotalBlockScanned).Inc()
 			if len(txIn.TxArray) > 0 {

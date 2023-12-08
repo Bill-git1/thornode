@@ -54,6 +54,7 @@ func main() {
 		"doge": "github.com/eager7/dogd",
 		"bch":  "github.com/gcash/bchd",
 		"ltc":  "github.com/ltcsuite/ltcd",
+		"btc":  "github.com/btcsuite/btcd",
 	}
 
 	err = tmpl.ExecuteTemplate(f, "wire.tmpl", data)

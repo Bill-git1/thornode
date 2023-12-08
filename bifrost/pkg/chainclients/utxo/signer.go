@@ -16,6 +16,7 @@ import (
 
 	"github.com/btcsuite/btcd/mempool"
 	"github.com/btcsuite/btcd/wire"
+	btcwire "github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	dogewire "github.com/eager7/dogd/wire"
 	"github.com/eager7/dogutil"
@@ -91,6 +92,12 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 			return nil, nil, nil, fmt.Errorf("fail to decode next address: %w", err)
 		}
 		outputAddrStr = outputAddr.(ltcutil.Address).String() // trunk-ignore(golangci-lint/forcetypeassert)
+	case common.BTCChain:
+		outputAddr, err = btcutil.DecodeAddress(tx.ToAddress.String(), c.getChainCfgBTC())
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("fail to decode next address: %w", err)
+		}
+		outputAddrStr = outputAddr.(btcutil.Address).String() // trunk-ignore(golangci-lint/forcetypeassert)
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 	}
@@ -101,7 +108,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 		return nil, nil, nil, nil
 	}
 	switch outputAddr.(type) {
-	case *dogutil.AddressPubKey, *bchutil.AddressPubKey, *ltcutil.AddressPubKey:
+	case *dogutil.AddressPubKey, *bchutil.AddressPubKey, *ltcutil.AddressPubKey, *btcutil.AddressPubKey:
 		c.log.Info().Msgf("address: %s is address pubkey type, should not be used", outputAddrStr)
 		return nil, nil, nil, nil
 	default: // keep lint happy
@@ -157,6 +164,8 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 		stx = wireToBCH(redeemTx)
 	case common.LTCChain:
 		stx = wireToLTC(redeemTx)
+	case common.BTCChain:
+		stx = wireToBTC(redeemTx)
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 	}
@@ -181,6 +190,8 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 				err = c.signUTXOBCH(stx.(*bchwire.MsgTx), tx, amount, sourceScript, i, thorchainHeight)
 			case common.LTCChain:
 				err = c.signUTXOLTC(stx.(*ltcwire.MsgTx), tx, amount, sourceScript, i, thorchainHeight)
+			case common.BTCChain:
+				err = c.signUTXOBTC(stx.(*btcwire.MsgTx), tx, amount, sourceScript, i, thorchainHeight)
 			default:
 				c.log.Fatal().Msg("unsupported chain")
 			}
@@ -206,6 +217,8 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 		redeemTx = bchToWire(stx.(*bchwire.MsgTx))
 	case common.LTCChain:
 		redeemTx = ltcToWire(stx.(*ltcwire.MsgTx))
+	case common.BTCChain:
+		redeemTx = btcToWire(stx.(*btcwire.MsgTx))
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 	}
@@ -260,6 +273,12 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 
 // BroadcastTx will broadcast the given payload.
 func (c *Client) BroadcastTx(txOut stypes.TxOutItem, payload []byte) (string, error) {
+	redeemTx := wire.NewMsgTx(wire.TxVersion)
+	buf := bytes.NewBuffer(payload)
+	if err := redeemTx.Deserialize(buf); err != nil {
+		return "", fmt.Errorf("fail to deserialize payload: %w", err)
+	}
+
 	height, err := c.rpc.GetBlockCount()
 	if err != nil {
 		return "", fmt.Errorf("fail to get block height: %w", err)
@@ -278,17 +297,11 @@ func (c *Client) BroadcastTx(txOut stypes.TxOutItem, payload []byte) (string, er
 		}
 	}()
 
-	redeemTx := wire.NewMsgTx(wire.TxVersion)
-	buf := bytes.NewBuffer(payload)
-	if err = redeemTx.Deserialize(buf); err != nil {
-		return "", fmt.Errorf("fail to deserialize payload: %w", err)
-	}
-
 	var maxFee any
 	switch c.cfg.ChainID {
 	case common.DOGEChain, common.BCHChain:
-		maxFee = true
-	case common.LTCChain:
+		maxFee = true // "allowHighFees"
+	case common.LTCChain, common.BTCChain:
 		maxFee = 10_000_000
 	}
 

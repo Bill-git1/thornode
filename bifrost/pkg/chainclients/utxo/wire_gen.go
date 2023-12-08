@@ -7,6 +7,8 @@ import (
   "github.com/btcsuite/btcd/chaincfg/chainhash"
   bchwire "github.com/gcash/bchd/wire"
   bchchainhash "github.com/gcash/bchd/chaincfg/chainhash"
+  btcwire "github.com/btcsuite/btcd/wire"
+  btcchainhash "github.com/btcsuite/btcd/chaincfg/chainhash"
   dogewire "github.com/eager7/dogd/wire"
   dogechainhash "github.com/eager7/dogd/chaincfg/chainhash"
   ltcwire "github.com/ltcsuite/ltcd/wire"
@@ -51,6 +53,60 @@ func bchToWire(txc *bchwire.MsgTx) *wire.MsgTx {
 				Index: rtx.PreviousOutPoint.Index,
 			},
 			SignatureScript: rtx.SignatureScript,
+			Sequence:        rtx.Sequence,
+		}
+		tx.TxIn = append(tx.TxIn, txi)
+	}
+	for _, stx := range txc.TxOut {
+		txo := &wire.TxOut{
+			Value:    stx.Value,
+			PkScript: stx.PkScript,
+		}
+		tx.TxOut = append(tx.TxOut, txo)
+	}
+	return tx
+}
+
+func wireToBTC(tx *wire.MsgTx) *btcwire.MsgTx {
+	txc := &btcwire.MsgTx{
+		Version:  tx.Version,
+		LockTime: tx.LockTime,
+	}
+	for _, rtx := range tx.TxIn {
+		txi := &btcwire.TxIn{
+			PreviousOutPoint: btcwire.OutPoint{
+				Hash:  btcchainhash.Hash(rtx.PreviousOutPoint.Hash),
+				Index: rtx.PreviousOutPoint.Index,
+			},
+			SignatureScript: rtx.SignatureScript,
+			Witness:         btcwire.TxWitness(rtx.Witness),
+			Sequence:        rtx.Sequence,
+		}
+		txc.TxIn = append(txc.TxIn, txi)
+	}
+	for _, stx := range tx.TxOut {
+		txo := &btcwire.TxOut{
+			Value:    stx.Value,
+			PkScript: stx.PkScript,
+		}
+		txc.TxOut = append(txc.TxOut, txo)
+	}
+	return txc
+}
+
+func btcToWire(txc *btcwire.MsgTx) *wire.MsgTx {
+	tx := &wire.MsgTx{
+		Version:  txc.Version,
+		LockTime: txc.LockTime,
+	}
+	for _, rtx := range txc.TxIn {
+		txi := &wire.TxIn{
+			PreviousOutPoint: wire.OutPoint{
+				Hash:  chainhash.Hash(rtx.PreviousOutPoint.Hash),
+				Index: rtx.PreviousOutPoint.Index,
+			},
+			SignatureScript: rtx.SignatureScript,
+			Witness:         wire.TxWitness(rtx.Witness),
 			Sequence:        rtx.Sequence,
 		}
 		tx.TxIn = append(tx.TxIn, txi)

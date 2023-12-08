@@ -54,7 +54,8 @@ class MockLitecoin(HttpClient):
     def create_wallet(self):
         wallets = self.call("listwallets")
         if len(wallets) == 0:
-            self.call("createwallet", "", "false", "false", "", "false", "false")
+            # wait for bifrost to create
+            raise Exception("wallet not created yet")
 
     def scan_blocks(self):
         while True:

@@ -9,7 +9,6 @@ import (
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
 
 	"github.com/eager7/dogutil"
 	dogetxscript "gitlab.com/thorchain/bifrost/dogd-txscript"
@@ -19,6 +18,9 @@ import (
 
 	"github.com/ltcsuite/ltcutil"
 	ltctxscript "gitlab.com/thorchain/bifrost/ltcd-txscript"
+
+	"github.com/btcsuite/btcutil"
+	btctxscript "gitlab.com/thorchain/bifrost/txscript"
 
 	stypes "gitlab.com/thorchain/thornode/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/common"
@@ -167,6 +169,13 @@ func (c *Client) getSourceScript(tx stypes.TxOutItem) ([]byte, error) {
 			return nil, fmt.Errorf("fail to decode source address(%s): %w", sourceAddr.String(), err)
 		}
 		return ltctxscript.PayToAddrScript(addr)
+	case common.BTCChain:
+		var addr btcutil.Address
+		addr, err = btcutil.DecodeAddress(sourceAddr.String(), c.getChainCfgBTC())
+		if err != nil {
+			return nil, fmt.Errorf("fail to decode source address(%s): %w", sourceAddr.String(), err)
+		}
+		return btctxscript.PayToAddrScript(addr)
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 		return nil, nil
@@ -190,7 +199,7 @@ func (c *Client) estimateTxSize(memo string, txes []btcjson.ListUnspentResult) i
 		// so we won't hit absurd high fee issue
 		// overhead for NULL DATA - 9 , len(memo) is the size of memo
 		return int64(10 + 148*len(txes) + 34 + 9 + len([]byte(memo)))
-	case common.LTCChain:
+	case common.LTCChain, common.BTCChain:
 		// overhead - 10.75
 		// Per Input - 67.75
 		// Per output - 31 , we sometimes have 2 output , and sometimes only have 1 , it depends ,here we only count 1
@@ -294,6 +303,16 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 		if err != nil {
 			return nil, nil, fmt.Errorf("fail to get pay to address script: %w", err)
 		}
+	case common.BTCChain:
+		var outputAddr btcutil.Address
+		outputAddr, err = btcutil.DecodeAddress(tx.ToAddress.String(), c.getChainCfgBTC())
+		if err != nil {
+			return nil, nil, fmt.Errorf("fail to decode next address: %w", err)
+		}
+		buf, err = btctxscript.PayToAddrScript(outputAddr)
+		if err != nil {
+			return nil, nil, fmt.Errorf("fail to get pay to address script: %w", err)
+		}
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 	}
@@ -377,6 +396,8 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 			nullDataScript, err = bchtxscript.NullDataScript([]byte(tx.Memo))
 		case common.LTCChain:
 			nullDataScript, err = ltctxscript.NullDataScript([]byte(tx.Memo))
+		case common.BTCChain:
+			nullDataScript, err = btctxscript.NullDataScript([]byte(tx.Memo))
 		default:
 			c.log.Fatal().Msg("unsupported chain")
 		}
