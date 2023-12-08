@@ -1136,4 +1136,17 @@ func migrateStoreV125(ctx cosmos.Context, mgr *Mgrs) {
 			return
 		}
 	}
+
+	for _, item := range getInitClout() {
+		addr, err := common.NewAddress(item.address)
+		if err != nil {
+			ctx.Logger().Error("failed to parse address during init clout", "address", item.address, "error", err)
+			continue
+		}
+		c := NewSwapperClout(addr)
+		c.Score = item.amount
+		if err := mgr.Keeper().SetSwapperClout(ctx, c); err != nil {
+			ctx.Logger().Error("failed to set swapper clout", "address", item.address, "score", item.amount, "error", err)
+		}
+	}
 }
