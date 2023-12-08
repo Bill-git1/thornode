@@ -87,6 +87,10 @@ func (t TxInItem) CacheHash(chain common.Chain, inboundHash string) string {
 	return fmt.Sprintf("%X", sha256.Sum256([]byte(str)))
 }
 
+func (t TxInItem) CacheVault(chain common.Chain) string {
+	return InboundCacheKey(t.ObservedVaultPubKey.String(), chain.String())
+}
+
 // GetTotalTransactionValue return the total value of the requested asset
 func (t TxIn) GetTotalTransactionValue(asset common.Asset, excludeFrom []common.Address) cosmos.Uint {
 	total := cosmos.ZeroUint()
@@ -127,4 +131,8 @@ func (t TxIn) GetTotalGas() cosmos.Uint {
 		total = total.Add(item.Gas[0].Amount)
 	}
 	return total
+}
+
+func InboundCacheKey(vault, chain string) string {
+	return fmt.Sprintf("inbound-%s-%s", vault, chain)
 }

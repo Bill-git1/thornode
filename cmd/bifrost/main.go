@@ -162,13 +162,6 @@ func main() {
 		log.Err(err).Msg("fail to start tss instance")
 	}
 
-	healthServer := NewHealthServer(cfg.TSS.InfoAddress, tssIns)
-	go func() {
-		defer log.Info().Msg("health server exit")
-		if err = healthServer.Start(); err != nil {
-			log.Error().Err(err).Msg("fail to start health server")
-		}
-	}()
 	if len(cfg.Chains) == 0 {
 		log.Fatal().Err(err).Msg("missing chains")
 		return
@@ -201,7 +194,13 @@ func main() {
 		log.Fatal().Msg("fail to load any chains")
 	}
 	tssKeysignMetricMgr := metrics.NewTssKeysignMetricMgr()
-
+	healthServer := NewHealthServer(cfg.TSS.InfoAddress, tssIns, chains)
+	go func() {
+		defer log.Info().Msg("health server exit")
+		if err = healthServer.Start(); err != nil {
+			log.Error().Err(err).Msg("fail to start health server")
+		}
+	}()
 	// start observer
 	obs, err := observer.NewObserver(pubkeyMgr, chains, thorchainBridge, m, cfg.Chains[tcommon.BTCChain].BlockScanner.DBPath, tssKeysignMetricMgr)
 	if err != nil {

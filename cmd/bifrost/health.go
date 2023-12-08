@@ -15,6 +15,9 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients"
+	"gitlab.com/thorchain/thornode/bifrost/thorclient"
+	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/config"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
 	"gitlab.com/thorchain/tss/go-tss/tss"
@@ -44,6 +47,25 @@ type P2PStatusResponse struct {
 	Errors         []string        `json:"errors"`
 }
 
+type ScannerResponse struct {
+	Chain              string `json:"chain"`
+	ChainHeight        int64  `json:"chain_height"`
+	BlockScannerHeight int64  `json:"block_scanner_height"`
+}
+
+type signingChain struct {
+	Chain               string `json:"chain"`
+	LatestBroadcastedTx string `json:"latest_broadcasted_tx"`
+	LatestObservedTx    string `json:"latest_observed_tx"`
+	CurrentSequence     int64  `json:"current_sequence"`
+}
+
+type VaultResponse struct {
+	Pubkey       common.PubKey     `json:"pubkey"`
+	Status       types.VaultStatus `json:"status"`
+	ChainDetails []signingChain    `json:"chain_details"`
+}
+
 // -------------------------------------------------------------------------------------
 // Health Server
 // -------------------------------------------------------------------------------------
@@ -53,13 +75,15 @@ type HealthServer struct {
 	logger    zerolog.Logger
 	s         *http.Server
 	tssServer tss.Server
+	chains    map[common.Chain]chainclients.ChainClient
 }
 
 // NewHealthServer create a new instance of health server
-func NewHealthServer(addr string, tssServer tss.Server) *HealthServer {
+func NewHealthServer(addr string, tssServer tss.Server, chains map[common.Chain]chainclients.ChainClient) *HealthServer {
 	hs := &HealthServer{
 		logger:    log.With().Str("module", "http").Logger(),
 		tssServer: tssServer,
+		chains:    chains,
 	}
 	s := &http.Server{
 		Addr:              addr,
@@ -76,6 +100,8 @@ func (s *HealthServer) newHandler() http.Handler {
 	router.Handle("/ping", http.HandlerFunc(s.pingHandler)).Methods(http.MethodGet)
 	router.Handle("/p2pid", http.HandlerFunc(s.getP2pIDHandler)).Methods(http.MethodGet)
 	router.Handle("/status/p2p", http.HandlerFunc(s.p2pStatus)).Methods(http.MethodGet)
+	router.Handle("/status/scanner", http.HandlerFunc(s.chainScanner)).Methods(http.MethodGet)
+	router.Handle("/status/signing", http.HandlerFunc(s.currentSigning)).Methods(http.MethodGet)
 	return router
 }
 
@@ -189,6 +215,136 @@ func (s *HealthServer) p2pStatus(w http.ResponseWriter, _ *http.Request) {
 		}(pi)
 	}
 	wg.Wait()
+
+	// write the response
+	jsonBytes, err := json.MarshalIndent(res, "", "  ")
+	if err != nil {
+		s.logger.Error().Err(err).Msg("fail to write to response")
+		w.WriteHeader(http.StatusInternalServerError)
+	} else {
+		_, err = w.Write(jsonBytes)
+		if err != nil {
+			s.logger.Error().Err(err).Msg("fail to write to response")
+		}
+	}
+}
+
+func (s *HealthServer) currentSigning(w http.ResponseWriter, _ *http.Request) {
+	res := make([]VaultResponse, 0)
+
+	thornode := config.GetBifrost().Thorchain.ChainHost
+	url := fmt.Sprintf("http://%s%s", thornode, thorclient.AsgardVault)
+	// trunk-ignore(golangci-lint/gosec): the request URL is variable, but comes from our local config.
+	resp, err := http.Get(url)
+	if err != nil {
+		s.logger.Error().Err(err).Msg("fail to get thornode status")
+	} else {
+		defer resp.Body.Close()
+
+		vaults := make([]types.QueryVaultResp, 0)
+		if err = json.NewDecoder(resp.Body).Decode(&vaults); err != nil {
+			s.logger.Error().Err(err).Msg("fail to decode thornode status")
+		}
+		for _, vault := range vaults {
+			valRes := VaultResponse{
+				Pubkey:       vault.PubKey,
+				Status:       vault.Status,
+				ChainDetails: make([]signingChain, 0),
+			}
+
+			for _, chain := range vault.Chains {
+				client := s.chains[common.Chain(chain)]
+				var account common.Account
+				account, err = client.GetAccount(vault.PubKey, nil)
+				if err != nil {
+					s.logger.Error().Err(err).Msgf("failed to get account for vault:%s on chain:%s", vault.PubKey.String(), chain)
+					continue
+				}
+				var lastObserved, lastBroadcasted string
+				lastObserved, lastBroadcasted, err = client.GetLatestTxForVault(vault.PubKey.String())
+				if err != nil {
+					s.logger.Error().Err(err).Msgf("failed to get latest tx for vault:%s on chain:%s", vault.PubKey.String(), chain)
+				}
+				valRes.ChainDetails = append(valRes.ChainDetails, signingChain{
+					Chain:               chain,
+					LatestBroadcastedTx: lastBroadcasted,
+					LatestObservedTx:    lastObserved,
+					CurrentSequence:     account.Sequence,
+				})
+				res = append(res, valRes)
+			}
+		}
+	}
+
+	// write the response
+	jsonBytes, err := json.MarshalIndent(res, "", "  ")
+	if err != nil {
+		s.logger.Error().Err(err).Msg("fail to write to response")
+		w.WriteHeader(http.StatusInternalServerError)
+	} else {
+		_, err = w.Write(jsonBytes)
+		if err != nil {
+			s.logger.Error().Err(err).Msg("fail to write to response")
+		}
+	}
+}
+
+func (s *HealthServer) chainScanner(w http.ResponseWriter, _ *http.Request) {
+	res := make(map[string]ScannerResponse)
+
+	// Iterate through each chain client
+	mu := sync.Mutex{}
+	wg := sync.WaitGroup{}
+	for chain, client := range s.chains {
+		wg.Add(1)
+		chain := chain
+		client := client
+		go func() {
+			defer wg.Done()
+
+			// Fetch the current block height of the chain daemon
+			height, err := client.GetHeight()
+			if err != nil {
+				// failed to get chain height
+				height = -1
+			}
+
+			// check for local blockScanner height
+			blockScannerHeight, err := client.GetBlockScannerHeight()
+			if err != nil {
+				blockScannerHeight = -1
+			}
+			mu.Lock()
+			res[chain.String()] = ScannerResponse{
+				Chain:              chain.String(),
+				ChainHeight:        height,
+				BlockScannerHeight: blockScannerHeight,
+			}
+			mu.Unlock()
+		}()
+	}
+	wg.Wait()
+
+	// Fetch thorchain height
+	thornode := config.GetBifrost().Thorchain.ChainHost
+	url := fmt.Sprintf("http://%s/thorchain/lastblock", thornode)
+	// trunk-ignore(golangci-lint/gosec): the request URL is variable, but comes from our local config.
+	resp, err := http.Get(url)
+	if err != nil {
+		s.logger.Error().Err(err).Msg("fail to get thornode status")
+	} else {
+		defer resp.Body.Close()
+		var height int64
+		height, err = strconv.ParseInt(resp.Header.Get("x-thorchain-height"), 10, 64)
+		if err != nil {
+			s.logger.Error().Err(err).Msg("fail to parse thornode height")
+		}
+		res[common.THORChain.String()] = ScannerResponse{
+			Chain:              common.THORChain.String(),
+			ChainHeight:        height,
+			BlockScannerHeight: -1, // TODO: pending for thorchain
+		}
+	}
 
 	// write the response
 	jsonBytes, err := json.MarshalIndent(res, "", "  ")

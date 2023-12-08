@@ -253,6 +253,20 @@ func (c *EVMClient) GetHeight() (int64, error) {
 	return c.evmScanner.GetHeight()
 }
 
+// GetBlockScannerHeight returns blockscanner height
+func (c *EVMClient) GetBlockScannerHeight() (int64, error) {
+	return c.blockScanner.PreviousHeight(), nil
+}
+
+func (c *EVMClient) GetLatestTxForVault(vault string) (string, string, error) {
+	lastObserved, err := c.signerCacheManager.GetLatestRecordedTx(stypes.InboundCacheKey(vault, c.GetChain().String()))
+	if err != nil {
+		return "", "", err
+	}
+	lastBroadCasted, err := c.signerCacheManager.GetLatestRecordedTx(stypes.BroadcastCacheKey(vault, c.GetChain().String()))
+	return lastObserved, lastBroadCasted, err
+}
+
 // --------------------------------- addresses ---------------------------------
 
 // GetAddress returns the address for the given public key.
@@ -703,7 +717,7 @@ func (c *EVMClient) BroadcastTx(txOutItem stypes.TxOutItem, hexTx []byte) (strin
 	c.logger.Info().Str("memo", txOutItem.Memo).Str("txid", txID).Msg("broadcast tx")
 
 	// update the signer cache
-	if err := c.signerCacheManager.SetSigned(txOutItem.CacheHash(), txID); err != nil {
+	if err := c.signerCacheManager.SetSigned(txOutItem.CacheHash(), txOutItem.CacheVault(c.GetChain()), txID); err != nil {
 		c.logger.Err(err).Interface("txOutItem", txOutItem).Msg("fail to mark tx out item as signed")
 	}
 
@@ -735,7 +749,7 @@ func (c *EVMClient) OnObservedTxIn(txIn stypes.TxInItem, blockHeight int64) {
 	if m.GetTxID().IsEmpty() {
 		return
 	}
-	if err = c.signerCacheManager.SetSigned(txIn.CacheHash(c.GetChain(), m.GetTxID().String()), txIn.Tx); err != nil {
+	if err = c.signerCacheManager.SetSigned(txIn.CacheHash(c.GetChain(), m.GetTxID().String()), txIn.CacheVault(c.GetChain()), txIn.Tx); err != nil {
 		c.logger.Err(err).Msg("fail to update signer cache")
 	}
 }

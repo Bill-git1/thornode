@@ -55,6 +55,12 @@ type ChainClient interface {
 
 	// ConfirmationCountReady returns true if the confirmation count is ready.
 	ConfirmationCountReady(txIn types.TxIn) bool
+
+	// GetBlockScannerHeight returns block scanner height for chain
+	GetBlockScannerHeight() (int64, error)
+
+	// GetLatestTxForVault returns last observed and broadcasted tx for a particular vault and chain
+	GetLatestTxForVault(vault string) (string, string, error)
 }
 
 // SolvencyReporter reports the solvency of the chain at the given height.

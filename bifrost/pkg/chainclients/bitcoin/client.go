@@ -209,6 +209,20 @@ func (c *Client) GetHeight() (int64, error) {
 	return c.client.GetBlockCount()
 }
 
+// GetBlockScannerHeight returns blockscanner height
+func (c *Client) GetBlockScannerHeight() (int64, error) {
+	return c.blockScanner.PreviousHeight(), nil
+}
+
+func (c *Client) GetLatestTxForVault(vault string) (string, string, error) {
+	lastObserved, err := c.signerCacheManager.GetLatestRecordedTx(types.InboundCacheKey(vault, c.GetChain().String()))
+	if err != nil {
+		return "", "", err
+	}
+	lastBroadCasted, err := c.signerCacheManager.GetLatestRecordedTx(types.BroadcastCacheKey(vault, c.GetChain().String()))
+	return lastObserved, lastBroadCasted, err
+}
+
 func (c *Client) IsBlockScannerHealthy() bool {
 	return c.blockScanner.IsHealthy()
 }
@@ -350,7 +364,7 @@ func (c *Client) OnObservedTxIn(txIn types.TxInItem, blockHeight int64) {
 	if m.GetTxID().IsEmpty() {
 		return
 	}
-	if err := c.signerCacheManager.SetSigned(txIn.CacheHash(c.GetChain(), m.GetTxID().String()), txIn.Tx); err != nil {
+	if err := c.signerCacheManager.SetSigned(txIn.CacheHash(c.GetChain(), m.GetTxID().String()), txIn.CacheVault(c.GetChain()), txIn.Tx); err != nil {
 		c.logger.Err(err).Msg("fail to update signer cache")
 	}
 }

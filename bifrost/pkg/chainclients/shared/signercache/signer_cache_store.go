@@ -12,6 +12,7 @@ import (
 const (
 	signedCachePrefix = "signed-v6-"
 	txMapPrefix       = "tx-map-v6-"
+	vaultCachePrefix  = "vault-v6-"
 )
 
 // CacheStore manage the key value store used to store what tx out items have been signed before
@@ -41,6 +42,10 @@ func (s *CacheStore) getSignedKey(hash string) string {
 
 func (s *CacheStore) getMapKey(txHash string) string {
 	return fmt.Sprintf("%s%s", txMapPrefix, txHash)
+}
+
+func (s *CacheStore) getVaultKey(vaultKey string) string {
+	return fmt.Sprintf("%s%s", vaultCachePrefix, vaultKey)
 }
 
 // HasSigned check whether the given height and hash has been signed before or not
@@ -75,6 +80,21 @@ func (s *CacheStore) RemoveSigned(transactionHash string) error {
 func (s *CacheStore) SetTransactionHashMap(txOutItemHash, transactionHash string) error {
 	key := s.getMapKey(transactionHash)
 	return s.db.Put([]byte(key), []byte(txOutItemHash), nil)
+}
+
+// SetLatestRecordedTx map a vault and transaction inbound or outbound to transaction hash
+func (s *CacheStore) SetLatestRecordedTx(vaultKey, transactionHash string) error {
+	key := s.getVaultKey(vaultKey)
+	return s.db.Put([]byte(key), []byte(transactionHash), nil)
+}
+
+func (s *CacheStore) GetLatestRecordedTx(vaultKey string) (string, error) {
+	key := s.getVaultKey(vaultKey)
+	hash, err := s.db.Get([]byte(key), nil)
+	if err != nil {
+		return "", err
+	}
+	return string(hash), nil
 }
 
 // Close underlying db

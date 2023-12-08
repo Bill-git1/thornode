@@ -38,6 +38,10 @@ func (tx TxOutItem) CacheHash() string {
 	return fmt.Sprintf("%X", sha256.Sum256([]byte(str)))
 }
 
+func (tx TxOutItem) CacheVault(chain common.Chain) string {
+	return BroadcastCacheKey(tx.VaultPubKey.String(), chain.String())
+}
+
 // Equals compare two TxOutItem , return true when they are the same , otherwise false
 func (tx TxOutItem) Equals(tx2 TxOutItem) bool {
 	if !tx.Chain.Equals(tx2.Chain) {
@@ -124,4 +128,8 @@ func (tx TxArrayItem) TxOutItem() TxOutItem {
 type TxOut struct {
 	Height  int64         `json:"height"`
 	TxArray []TxArrayItem `json:"tx_array"`
+}
+
+func BroadcastCacheKey(vault, chain string) string {
+	return fmt.Sprintf("broadcast-%s-%s", vault, chain)
 }

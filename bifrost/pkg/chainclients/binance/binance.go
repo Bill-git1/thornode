@@ -161,6 +161,20 @@ func (b *Binance) IsBlockScannerHealthy() bool {
 	return b.blockScanner.IsHealthy()
 }
 
+// GetBlockScannerHeight returns blockscanner height
+func (b *Binance) GetBlockScannerHeight() (int64, error) {
+	return b.blockScanner.PreviousHeight(), nil
+}
+
+func (b *Binance) GetLatestTxForVault(vault string) (string, string, error) {
+	lastObserved, err := b.signerCacheManager.GetLatestRecordedTx(stypes.InboundCacheKey(vault, b.GetChain().String()))
+	if err != nil {
+		return "", "", err
+	}
+	lastBroadCasted, err := b.signerCacheManager.GetLatestRecordedTx(stypes.BroadcastCacheKey(vault, b.GetChain().String()))
+	return lastObserved, lastBroadCasted, err
+}
+
 // checkIsTestNet determinate whether we are running on test net by checking the status
 func (b *Binance) checkIsTestNet() error {
 	// Cached data after first call
@@ -579,10 +593,11 @@ func (b *Binance) BroadcastTx(tx stypes.TxOutItem, hexTx []byte) (string, error)
 
 	// increment sequence number
 	b.accts.SeqInc(tx.VaultPubKey)
-	if err = b.signerCacheManager.SetSigned(tx.CacheHash(), commit.Result.Hash.String()); err != nil {
+	hash := commit.Result.Hash.String()
+	if err = b.signerCacheManager.SetSigned(tx.CacheHash(), tx.CacheVault(b.GetChain()), hash); err != nil {
 		b.logger.Err(err).Msg("fail to set signer cache")
 	}
-	return commit.Result.Hash.String(), nil
+	return hash, nil
 }
 
 // ConfirmationCountReady binance chain has almost instant finality , so doesn't need to wait for confirmation
@@ -647,7 +662,7 @@ func (b *Binance) OnObservedTxIn(txIn stypes.TxInItem, blockHeight int64) {
 	if m.GetTxID().IsEmpty() {
 		return
 	}
-	if err = b.signerCacheManager.SetSigned(txIn.CacheHash(b.GetChain(), m.GetTxID().String()), txIn.Tx); err != nil {
+	if err = b.signerCacheManager.SetSigned(txIn.CacheHash(b.GetChain(), m.GetTxID().String()), txIn.CacheVault(b.GetChain()), txIn.Tx); err != nil {
 		b.logger.Err(err).Msg("fail to update signer cache")
 	}
 }

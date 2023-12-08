@@ -220,6 +220,14 @@ func (b *MockChainClient) GetChain() common.Chain {
 	return common.BNBChain
 }
 
+func (b *MockChainClient) GetBlockScannerHeight() (int64, error) {
+	return 0, nil
+}
+
+func (b *MockChainClient) GetLatestTxForVault(vault string) (string, string, error) {
+	return "", "", nil
+}
+
 func (b *MockChainClient) Churn(pubKey common.PubKey, height int64) error {
 	return nil
 }

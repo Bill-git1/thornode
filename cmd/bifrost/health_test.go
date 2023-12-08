@@ -63,7 +63,7 @@ var _ = Suite(&HealthServerTestSuite{})
 
 func (HealthServerTestSuite) TestHealthServer(c *C) {
 	tssServer := &MockTssServer{}
-	s := NewHealthServer("127.0.0.1:8080", tssServer)
+	s := NewHealthServer("127.0.0.1:8080", tssServer, nil)
 	c.Assert(s, NotNil)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -78,7 +78,7 @@ func (HealthServerTestSuite) TestHealthServer(c *C) {
 
 func (HealthServerTestSuite) TestPingHandler(c *C) {
 	tssServer := &MockTssServer{}
-	s := NewHealthServer("127.0.0.1:8080", tssServer)
+	s := NewHealthServer("127.0.0.1:8080", tssServer, nil)
 	c.Assert(s, NotNil)
 	req := httptest.NewRequest(http.MethodGet, "/ping", nil)
 	res := httptest.NewRecorder()
@@ -88,7 +88,7 @@ func (HealthServerTestSuite) TestPingHandler(c *C) {
 
 func (HealthServerTestSuite) TestGetP2pIDHandler(c *C) {
 	tssServer := &MockTssServer{}
-	s := NewHealthServer("127.0.0.1:8080", tssServer)
+	s := NewHealthServer("127.0.0.1:8080", tssServer, nil)
 	c.Assert(s, NotNil)
 	req := httptest.NewRequest(http.MethodGet, "/p2pid", nil)
 	res := httptest.NewRecorder()

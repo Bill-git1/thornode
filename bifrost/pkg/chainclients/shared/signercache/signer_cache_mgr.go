@@ -14,6 +14,8 @@ type StorageAccessor interface {
 	HasSigned(hash string) bool
 	RemoveSigned(transactionHash string) error
 	SetTransactionHashMap(txOutItemHash, transactionHash string) error
+	SetLatestRecordedTx(vaultKey, transactionHash string) error
+	GetLatestRecordedTx(vaultKey string) (string, error)
 }
 
 // CacheManager maintain a store of the transaction that signer already signed
@@ -35,7 +37,7 @@ func NewSignerCacheManager(db *leveldb.DB) (*CacheManager, error) {
 }
 
 // SetSigned mark a tx out item has been signed
-func (cm *CacheManager) SetSigned(txOutItemHash, transactionHash string) error {
+func (cm *CacheManager) SetSigned(txOutItemHash, vaultKey, transactionHash string) error {
 	if err := cm.storageAccessor.SetSigned(txOutItemHash); err != nil {
 		cm.logger.Err(err).
 			Str("txout_hash", txOutItemHash).
@@ -43,12 +45,21 @@ func (cm *CacheManager) SetSigned(txOutItemHash, transactionHash string) error {
 			Msg("fail to set signed cache")
 		return fmt.Errorf("fail to set signed cache %w", err)
 	}
-	return cm.storageAccessor.SetTransactionHashMap(txOutItemHash, transactionHash)
+	err := cm.storageAccessor.SetTransactionHashMap(txOutItemHash, transactionHash)
+	if err != nil {
+		return err
+	}
+
+	return cm.storageAccessor.SetLatestRecordedTx(vaultKey, transactionHash)
 }
 
 // HasSigned check whether the given tx out item has been signed before
 func (cm *CacheManager) HasSigned(txOutItemHash string) bool {
 	return cm.storageAccessor.HasSigned(txOutItemHash)
+}
+
+func (cm *CacheManager) GetLatestRecordedTx(vaultKey string) (string, error) {
+	return cm.storageAccessor.GetLatestRecordedTx(vaultKey)
 }
 
 // RemoveSigned remove the given transaction hash related tx out item cache

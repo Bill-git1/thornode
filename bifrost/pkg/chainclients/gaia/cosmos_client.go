@@ -214,6 +214,20 @@ func (c *CosmosClient) GetHeight() (int64, error) {
 	return c.cosmosScanner.GetHeight()
 }
 
+// GetBlockScannerHeight returns blockscanner height
+func (c *CosmosClient) GetBlockScannerHeight() (int64, error) {
+	return c.blockScanner.PreviousHeight(), nil
+}
+
+func (c *CosmosClient) GetLatestTxForVault(vault string) (string, string, error) {
+	lastObserved, err := c.signerCacheManager.GetLatestRecordedTx(stypes.InboundCacheKey(vault, c.GetChain().String()))
+	if err != nil {
+		return "", "", err
+	}
+	lastBroadCasted, err := c.signerCacheManager.GetLatestRecordedTx(stypes.BroadcastCacheKey(vault, c.GetChain().String()))
+	return lastObserved, lastBroadCasted, err
+}
+
 // GetAddress return current signer address, it will be bech32 encoded address
 func (c *CosmosClient) GetAddress(poolPubKey common.PubKey) string {
 	addr, err := poolPubKey.GetAddress(c.GetChain())
@@ -518,7 +532,7 @@ func (c *CosmosClient) BroadcastTx(tx stypes.TxOutItem, txBytes []byte) (string,
 	// Only add the transaction to signer cache when it is sure the transaction has been broadcast successfully.
 	// So for other scenario , like transaction already in mempool , invalid account sequence # , the transaction can be rescheduled , and retried
 	if broadcastRes.TxResponse.Code == errortypes.SuccessABCICode {
-		if err = c.signerCacheManager.SetSigned(tx.CacheHash(), broadcastRes.TxResponse.TxHash); err != nil {
+		if err = c.signerCacheManager.SetSigned(tx.CacheHash(), tx.CacheVault(c.GetChain()), broadcastRes.TxResponse.TxHash); err != nil {
 			c.logger.Err(err).Msg("fail to set signer cache")
 		}
 	}
@@ -591,7 +605,7 @@ func (c *CosmosClient) OnObservedTxIn(txIn stypes.TxInItem, blockHeight int64) {
 	if m.GetTxID().IsEmpty() {
 		return
 	}
-	if err = c.signerCacheManager.SetSigned(txIn.CacheHash(c.GetChain(), m.GetTxID().String()), txIn.Tx); err != nil {
+	if err = c.signerCacheManager.SetSigned(txIn.CacheHash(c.GetChain(), m.GetTxID().String()), txIn.CacheVault(c.GetChain()), txIn.Tx); err != nil {
 		c.logger.Err(err).Msg("fail to update signer cache")
 	}
 }

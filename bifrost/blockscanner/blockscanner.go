@@ -90,6 +90,10 @@ func (b *BlockScanner) IsHealthy() bool {
 	return b.healthy.Load()
 }
 
+func (b *BlockScanner) PreviousHeight() int64 {
+	return atomic.LoadInt64(&b.previousBlock)
+}
+
 // GetMessages return the channel
 func (b *BlockScanner) GetMessages() <-chan int64 {
 	return b.scanChan
