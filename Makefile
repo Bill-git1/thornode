@@ -14,22 +14,21 @@ endif
 .PHONY: build test tools export healthcheck run-mocknet build-mocknet stop-mocknet halt-mocknet ps-mocknet reset-mocknet logs-mocknet openapi
 
 # compiler flags
-NOW=$(shell date +'%Y-%m-%d_%T')
 COMMIT:=$(shell git log -1 --format='%H')
 VERSION:=$(shell cat version)
 TAG?=testnet
 ldflags = -X gitlab.com/thorchain/thornode/constants.Version=$(VERSION) \
 		  -X gitlab.com/thorchain/thornode/constants.GitCommit=$(COMMIT) \
-		  -X gitlab.com/thorchain/thornode/constants.BuildTime=${NOW} \
 		  -X github.com/cosmos/cosmos-sdk/version.Name=THORChain \
 		  -X github.com/cosmos/cosmos-sdk/version.AppName=thornode \
 		  -X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
 		  -X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
-		  -X github.com/cosmos/cosmos-sdk/version.BuildTags=$(TAG)
+		  -X github.com/cosmos/cosmos-sdk/version.BuildTags=$(TAG) \
+          -buildid=
 
 # golang settings
 TEST_DIR?="./..."
-BUILD_FLAGS := -ldflags '$(ldflags)' -tags ${TAG}
+BUILD_FLAGS := -ldflags '$(ldflags)' -tags ${TAG} -trimpath
 TEST_BUILD_FLAGS := -parallel=1 -tags=mocknet
 GOBIN?=${GOPATH}/bin
 BINARIES=./cmd/thornode ./cmd/bifrost ./tools/generate
