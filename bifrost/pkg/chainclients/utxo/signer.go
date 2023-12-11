@@ -97,7 +97,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("fail to decode next address: %w", err)
 		}
-		outputAddrStr = outputAddr.(btcutil.Address).String() // trunk-ignore(golangci-lint/forcetypeassert)
+		outputAddrStr = outputAddr.(btcutil.Address).String()
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 	}
