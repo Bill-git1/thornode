@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -253,7 +254,11 @@ func (s *HealthServer) currentSigning(w http.ResponseWriter, _ *http.Request) {
 			}
 
 			for _, chain := range vault.Chains {
-				client := s.chains[common.Chain(chain)]
+				client, found := s.chains[common.Chain(strings.ToUpper(chain))]
+				if !found {
+					s.logger.Error().Msgf("failed to get bifrost chain client for %s", chain)
+					continue
+				}
 				var account common.Account
 				account, err = client.GetAccount(vault.PubKey, nil)
 				if err != nil {
