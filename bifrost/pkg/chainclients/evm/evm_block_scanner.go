@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ecommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	ethclient "github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -294,7 +295,94 @@ func (e *EVMScanner) processBlock(block *etypes.Block) (stypes.TxIn, error) {
 	return txIn, nil
 }
 
+func (e *EVMScanner) getTxInOptimized(method string, block *etypes.Block) (stypes.TxIn, error) {
+	// Use custom method name as it varies between implementation
+	// It should be akin to: "fetch all transaction receipts within a block", e.g. getBlockReceipts
+	// This has shown to be more efficient than getTransactionReceipt in a batch call
+	txInbound := stypes.TxIn{
+		Chain:    e.cfg.ChainID,
+		Filtered: false,
+		MemPool:  false,
+	}
+
+	// tx lookup for compatibility with shared evm functions
+	txByHash := make(map[string]etypes.Transaction)
+	for _, tx := range block.Transactions() {
+		if tx == nil || tx.To() == nil {
+			continue
+		}
+		txByHash[tx.Hash().String()] = *tx
+	}
+
+	var receipts []*etypes.Receipt
+	blockNumStr := hexutil.EncodeBig(block.Number())
+	err := e.ethClient.Client().Call(
+		&receipts,
+		method,
+		blockNumStr,
+	)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to fetch block receipts")
+		return stypes.TxIn{}, err
+	}
+
+	for _, receipt := range receipts {
+		txForReceipt, ok := txByHash[receipt.TxHash.String()]
+		if !ok {
+			log.Error().Err(err).Msg("receipt tx not in block.Transactions")
+			return stypes.TxIn{}, err
+		}
+
+		// extract the txInItem
+		var txInItem *stypes.TxInItem
+		txInItem, err = e.receiptToTxInItem(&txForReceipt, receipt)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to convert receipt to txInItem")
+			continue
+		}
+
+		// skip invalid items
+		if txInItem == nil {
+			continue
+		}
+		if len(txInItem.To) == 0 {
+			continue
+		}
+		if len([]byte(txInItem.Memo)) > constants.MaxMemoSize {
+			continue
+		}
+
+		// add the txInItem to the txInbound
+		txInItem.BlockHeight = block.Number().Int64()
+		txInbound.TxArray = append(txInbound.TxArray, *txInItem)
+	}
+
+	if len(txInbound.TxArray) == 0 {
+		e.logger.Debug().Uint64("block", block.NumberU64()).Msg("no tx need to be processed in this block")
+		return stypes.TxIn{}, nil
+	}
+	txInbound.Count = strconv.Itoa(len(txInbound.TxArray))
+	return txInbound, nil
+}
+
 func (e *EVMScanner) getTxIn(block *etypes.Block) (stypes.TxIn, error) {
+	// CHANGEME: if an EVM chain supports some way of fetching all transaction receipts
+	// within a block, register it here.
+	// switch e.cfg.ChainID {
+	// case common.BSCChain:
+	// return e.getTxInOptimized("eth_getTransactionReceiptsByBlockNumber", block)
+	// TODO: add ETH chain after giving BSC some time to bake on mainnet
+	// case common.ETHChain:
+	// 	return e.getTxInOptimized("eth_getBlockReceipts", block)
+	// TODO: add AVAX chain when supported
+	// case common.AVAXChain:
+	// 	return e.getTxIn("TBD", block)
+	// }
+
+	if e.cfg.ChainID.IsBSCChain() {
+		return e.getTxInOptimized("eth_getTransactionReceiptsByBlockNumber", block)
+	}
+
 	txInbound := stypes.TxIn{
 		Chain:    e.cfg.ChainID,
 		Filtered: false,
