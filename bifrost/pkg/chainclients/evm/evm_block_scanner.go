@@ -308,7 +308,7 @@ func (e *EVMScanner) getTxInOptimized(method string, block *etypes.Block) (stype
 	// tx lookup for compatibility with shared evm functions
 	txByHash := make(map[string]etypes.Transaction)
 	for _, tx := range block.Transactions() {
-		if tx == nil || tx.To() == nil {
+		if tx == nil {
 			continue
 		}
 		txByHash[tx.Hash().String()] = *tx
@@ -322,22 +322,30 @@ func (e *EVMScanner) getTxInOptimized(method string, block *etypes.Block) (stype
 		blockNumStr,
 	)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to fetch block receipts")
+		e.logger.Error().Err(err).Msg("failed to fetch block receipts")
 		return stypes.TxIn{}, err
 	}
 
 	for _, receipt := range receipts {
 		txForReceipt, ok := txByHash[receipt.TxHash.String()]
 		if !ok {
-			log.Error().Err(err).Msg("receipt tx not in block.Transactions")
-			return stypes.TxIn{}, err
+			e.logger.Warn().
+				Str("txHash", receipt.TxHash.String()).
+				Uint64("blockNumber", block.NumberU64()).
+				Msg("receipt tx not in block.Transactions or nil, ignoring...")
+			continue
+		}
+
+		// tx without to address is not valid
+		if txForReceipt.To() == nil {
+			continue
 		}
 
 		// extract the txInItem
 		var txInItem *stypes.TxInItem
 		txInItem, err = e.receiptToTxInItem(&txForReceipt, receipt)
 		if err != nil {
-			log.Error().Err(err).Msg("failed to convert receipt to txInItem")
+			e.logger.Error().Err(err).Msg("failed to convert receipt to txInItem")
 			continue
 		}
 
@@ -427,7 +435,7 @@ func (e *EVMScanner) getTxIn(block *etypes.Block) (stypes.TxIn, error) {
 		// send the batch rpc request
 		err := e.ethClient.Client().BatchCall(rpcBatch)
 		if err != nil {
-			log.Error().Int("size", len(batch)).Err(err).Msg("failed to batch fetch transaction receipts")
+			e.logger.Error().Int("size", len(batch)).Err(err).Msg("failed to batch fetch transaction receipts")
 			return stypes.TxIn{}, err
 		}
 
@@ -435,7 +443,7 @@ func (e *EVMScanner) getTxIn(block *etypes.Block) (stypes.TxIn, error) {
 		for i, elem := range rpcBatch {
 			if elem.Error != nil {
 				if !errors.Is(err, ethereum.NotFound) {
-					log.Error().Err(elem.Error).Msg("failed to fetch transaction receipt")
+					e.logger.Error().Err(elem.Error).Msg("failed to fetch transaction receipt")
 				}
 				continue
 			}
@@ -443,7 +451,7 @@ func (e *EVMScanner) getTxIn(block *etypes.Block) (stypes.TxIn, error) {
 			// get the receipt
 			receipt, ok := elem.Result.(*etypes.Receipt)
 			if !ok {
-				log.Error().Msg("failed to cast to transaction receipt")
+				e.logger.Error().Msg("failed to cast to transaction receipt")
 				continue
 			}
 
@@ -451,7 +459,7 @@ func (e *EVMScanner) getTxIn(block *etypes.Block) (stypes.TxIn, error) {
 			var txInItem *stypes.TxInItem
 			txInItem, err = e.receiptToTxInItem(batch[i], receipt)
 			if err != nil {
-				log.Error().Err(err).Msg("failed to convert receipt to txInItem")
+				e.logger.Error().Err(err).Msg("failed to convert receipt to txInItem")
 				continue
 			}
 
@@ -482,12 +490,12 @@ func (e *EVMScanner) getTxIn(block *etypes.Block) (stypes.TxIn, error) {
 
 // TODO: This is only used by unit tests now, but covers receiptToTxInItem internally -
 // refactor so this logic is only in test code.
-func (a *EVMScanner) getTxInItem(tx *etypes.Transaction) (*stypes.TxInItem, error) {
+func (e *EVMScanner) getTxInItem(tx *etypes.Transaction) (*stypes.TxInItem, error) {
 	if tx == nil || tx.To() == nil {
 		return nil, nil
 	}
 
-	receipt, err := a.ethRpc.GetReceipt(tx.Hash().Hex())
+	receipt, err := e.ethRpc.GetReceipt(tx.Hash().Hex())
 	if err != nil {
 		if errors.Is(err, ethereum.NotFound) {
 			return nil, nil
@@ -495,27 +503,27 @@ func (a *EVMScanner) getTxInItem(tx *etypes.Transaction) (*stypes.TxInItem, erro
 		return nil, fmt.Errorf("failed to get transaction receipt: %w", err)
 	}
 
-	return a.receiptToTxInItem(tx, receipt)
+	return e.receiptToTxInItem(tx, receipt)
 }
 
-func (a *EVMScanner) receiptToTxInItem(tx *etypes.Transaction, receipt *etypes.Receipt) (*stypes.TxInItem, error) {
+func (e *EVMScanner) receiptToTxInItem(tx *etypes.Transaction, receipt *etypes.Receipt) (*stypes.TxInItem, error) {
 	if receipt.Status != 1 {
-		a.logger.Debug().Stringer("txid", tx.Hash()).Uint64("status", receipt.Status).Msg("tx failed")
+		e.logger.Debug().Stringer("txid", tx.Hash()).Uint64("status", receipt.Status).Msg("tx failed")
 
 		// remove failed transactions from signer cache so they are retried
-		if a.signerCacheManager != nil {
-			a.signerCacheManager.RemoveSigned(tx.Hash().String())
+		if e.signerCacheManager != nil {
+			e.signerCacheManager.RemoveSigned(tx.Hash().String())
 		}
 
-		return a.getTxInFromFailedTransaction(tx, receipt), nil
+		return e.getTxInFromFailedTransaction(tx, receipt), nil
 	}
 
-	if a.isToValidContractAddress(tx.To(), true) {
-		return a.getTxInFromSmartContract(tx, receipt)
+	if e.isToValidContractAddress(tx.To(), true) {
+		return e.getTxInFromSmartContract(tx, receipt)
 	}
 
-	a.logger.Debug().Stringer("txid", tx.Hash()).Stringer("to", tx.To()).Msg("not a valid contract")
-	return a.getTxInFromTransaction(tx)
+	e.logger.Debug().Stringer("txid", tx.Hash()).Stringer("to", tx.To()).Msg("not a valid contract")
+	return e.getTxInFromTransaction(tx)
 }
 
 // --------------------------------- gas ---------------------------------
@@ -649,6 +657,9 @@ func (e *EVMScanner) getTxInFromTransaction(tx *etypes.Transaction) (*stypes.TxI
 // isToValidContractAddress this method make sure the transaction to address is to
 // THORChain router or a whitelist address
 func (e *EVMScanner) isToValidContractAddress(addr *ecommon.Address, includeWhiteList bool) bool {
+	if addr == nil {
+		return false
+	}
 	// get the smart contract used by thornode
 	contractAddresses := e.pubkeyMgr.GetContracts(e.cfg.ChainID)
 	if includeWhiteList {
