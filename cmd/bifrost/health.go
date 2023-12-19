@@ -276,8 +276,8 @@ func (s *HealthServer) currentSigning(w http.ResponseWriter, _ *http.Request) {
 					LatestObservedTx:    lastObserved,
 					CurrentSequence:     account.Sequence,
 				})
-				res = append(res, valRes)
 			}
+			res = append(res, valRes)
 		}
 	}
 
