@@ -608,6 +608,7 @@ func (c *EVMClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 		if err = json.Unmarshal(tx.Checkpoint, &nonce); err != nil {
 			return nil, nil, nil, fmt.Errorf("fail to unmarshal checkpoint: %w", err)
 		}
+		c.logger.Warn().Stringer("in_hash", tx.InHash).Uint64("nonce", nonce).Msg("using checkpoint nonce")
 	} else {
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("fail to get %s address for pub key(%s): %w", c.GetChain().String(), tx.VaultPubKey, err)

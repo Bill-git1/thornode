@@ -311,6 +311,12 @@ func (e *EVMScanner) getTxInOptimized(method string, block *etypes.Block) (stype
 		if tx == nil {
 			continue
 		}
+
+		// best effort remove the tx from the signed txs (ok if it does not exist)
+		if err := e.blockMetaAccessor.RemoveSignedTxItem(tx.Hash().String()); err != nil {
+			e.logger.Err(err).Str("tx hash", tx.Hash().String()).Msg("failed to remove signed tx item")
+		}
+
 		txByHash[tx.Hash().String()] = *tx
 	}
 
