@@ -1,5 +1,5 @@
-//go:build !testnet && !mocknet
-// +build !testnet,!mocknet
+//go:build !stagenet && !mocknet
+// +build !stagenet,!mocknet
 
 package thorchain
 

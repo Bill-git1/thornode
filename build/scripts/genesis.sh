@@ -4,10 +4,10 @@ set -o pipefail
 
 . "$(dirname "$0")/core.sh"
 
-if [ "$NET" = "mocknet" ] || [ "$NET" = "testnet" ]; then
-  echo "Loading unsafe init for mocknet and testnet..."
+if [ "$NET" = "mocknet" ]; then
+  echo "Loading unsafe init for mocknet..."
   . "$(dirname "$0")/core-unsafe.sh"
-  . "$(dirname "$0")/testnet/state.sh"
+  . "$(dirname "$0")/mock/state.sh"
 fi
 
 NODES="${NODES:=1}"
@@ -79,12 +79,12 @@ if [ "$SEED" = "$(hostname)" ]; then
       fi
     fi
 
-    if [ "$NET" = "testnet" ]; then
-      # mint 1m RUNE to reserve for testnet
+    if [ "$NET" = "mocknet" ]; then
+      # mint 1m RUNE to reserve for mocknet
       reserve 100000000000000
 
-      # add testnet account and balances
-      testnet_add_accounts
+      # add mocnet account and balances
+      mocknet_add_accounts
     elif [ "$NET" = "stagenet" ]; then
       if [ -z ${FAUCET+x} ]; then
         echo "env variable 'FAUCET' is not defined: should be a sthor address"

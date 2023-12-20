@@ -1,5 +1,5 @@
-//go:build !testnet && !mocknet && !stagenet
-// +build !testnet,!mocknet,!stagenet
+//go:build !mocknet && !stagenet
+// +build !mocknet,!stagenet
 
 package ethereum
 

@@ -19,8 +19,8 @@ func main() {
 	// Read in the configuration file for the sdk
 	nw := common.CurrentChainNetwork
 	switch nw {
-	case common.TestNet:
-		fmt.Println("THORChain testnet:")
+	case common.MockNet:
+		fmt.Println("THORChain mocknet:")
 		config := cosmos.GetConfig()
 		config.SetBech32PrefixForAccount("tthor", "tthorpub")
 		config.SetBech32PrefixForValidator("tthorv", "tthorvpub")

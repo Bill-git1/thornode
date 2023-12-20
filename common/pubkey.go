@@ -135,8 +135,6 @@ func (pubKey PubKey) GetAddress(chain Chain) (Address, error) {
 		switch chainNetwork {
 		case MockNet:
 			net = &chaincfg.RegressionNetParams
-		case TestNet:
-			net = &chaincfg.TestNet3Params
 		case MainNet, StageNet:
 			net = &chaincfg.MainNetParams
 		}
@@ -154,8 +152,6 @@ func (pubKey PubKey) GetAddress(chain Chain) (Address, error) {
 		switch chainNetwork {
 		case MockNet:
 			net = &ltcchaincfg.RegressionNetParams
-		case TestNet:
-			net = &ltcchaincfg.TestNet4Params
 		case MainNet, StageNet:
 			net = &ltcchaincfg.MainNetParams
 		}
@@ -173,8 +169,6 @@ func (pubKey PubKey) GetAddress(chain Chain) (Address, error) {
 		switch chainNetwork {
 		case MockNet:
 			net = &dogchaincfg.RegressionNetParams
-		case TestNet:
-			net = &dogchaincfg.TestNet3Params
 		case MainNet, StageNet:
 			net = &dogchaincfg.MainNetParams
 		}
@@ -192,8 +186,6 @@ func (pubKey PubKey) GetAddress(chain Chain) (Address, error) {
 		switch chainNetwork {
 		case MockNet:
 			net = &bchchaincfg.RegressionNetParams
-		case TestNet:
-			net = &bchchaincfg.TestNet3Params
 		case MainNet, StageNet:
 			net = &bchchaincfg.MainNetParams
 		}

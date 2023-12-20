@@ -34,13 +34,13 @@ var (
 	// AVAXAsset AVAX
 	AVAXAsset = Asset{Chain: AVAXChain, Symbol: "AVAX", Ticker: "AVAX", Synth: false}
 	// Rune67CAsset RUNE on Binance test net
-	Rune67CAsset = Asset{Chain: BNBChain, Symbol: "RUNE-67C", Ticker: "RUNE", Synth: false} // testnet asset on binance ganges
+	Rune67CAsset = Asset{Chain: BNBChain, Symbol: "RUNE-67C", Ticker: "RUNE", Synth: false} // mocknet asset on binance ganges
 	// RuneB1AAsset RUNE on Binance main net
 	RuneB1AAsset = Asset{Chain: BNBChain, Symbol: "RUNE-B1A", Ticker: "RUNE", Synth: false} // mainnet
 	// RuneNative RUNE on thorchain
 	RuneNative            = Asset{Chain: THORChain, Symbol: "RUNE", Ticker: "RUNE", Synth: false}
 	RuneERC20Asset        = Asset{Chain: ETHChain, Symbol: "RUNE-0x3155ba85d5f96b2d030a4966af206230e46849cb", Ticker: "RUNE", Synth: false}
-	RuneERC20TestnetAsset = Asset{Chain: ETHChain, Symbol: "RUNE-0xd601c6A3a36721320573885A8d8420746dA3d7A0", Ticker: "RUNE", Synth: false}
+	RuneERC20MocknetAsset = Asset{Chain: ETHChain, Symbol: "RUNE-0xd601c6A3a36721320573885A8d8420746dA3d7A0", Ticker: "RUNE", Synth: false}
 	TOR                   = Asset{Chain: THORChain, Symbol: "TOR", Ticker: "TOR", Synth: false}
 	THORBTC               = Asset{Chain: THORChain, Symbol: "BTC", Ticker: "BTC", Synth: false}
 )
@@ -298,7 +298,7 @@ func RuneAsset() Asset {
 
 // BEP2RuneAsset is RUNE on BEP2
 func BEP2RuneAsset() Asset {
-	if strings.EqualFold(os.Getenv("NET"), "testnet") || strings.EqualFold(os.Getenv("NET"), "mocknet") {
+	if strings.EqualFold(os.Getenv("NET"), "mocknet") {
 		return Rune67CAsset
 	}
 	return RuneB1AAsset
@@ -306,8 +306,8 @@ func BEP2RuneAsset() Asset {
 
 // ERC20RuneAsset is RUNE on ETH
 func ERC20RuneAsset() Asset {
-	if strings.EqualFold(os.Getenv("NET"), "testnet") || strings.EqualFold(os.Getenv("NET"), "mocknet") {
-		// On testnet/mocknet, return  ERC20_RUNE_CONTRACT if it is explicitly set
+	if strings.EqualFold(os.Getenv("NET"), "mocknet") {
+		// On mocknet, return  ERC20_RUNE_CONTRACT if it is explicitly set
 		if os.Getenv("ERC20_RUNE_CONTRACT") != "" {
 			return Asset{
 				Chain:  ETHChain,
@@ -317,7 +317,7 @@ func ERC20RuneAsset() Asset {
 			}
 		}
 		// Default to hardcoded address
-		return RuneERC20TestnetAsset
+		return RuneERC20MocknetAsset
 	}
 	return RuneERC20Asset
 }

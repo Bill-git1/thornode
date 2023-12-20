@@ -16,8 +16,6 @@ func (c *Client) getChainCfgBCH() *bchchaincfg.Params {
 	switch common.CurrentChainNetwork {
 	case common.MockNet:
 		return &bchchaincfg.RegressionNetParams
-	case common.TestNet:
-		return &bchchaincfg.TestNet3Params
 	case common.MainNet:
 		return &bchchaincfg.MainNetParams
 	case common.StageNet:

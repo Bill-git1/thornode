@@ -11,6 +11,6 @@ var _ = Suite(&ETHTokenListSuite{})
 
 func (s ETHTokenListSuite) TestLoad(c *C) {
 	tokens := GetETHTokenList(constants.SWVersion)
-	c.Check(tokens.Name, Equals, "Testnet Token List")
+	c.Check(tokens.Name, Equals, "Mocknet Token List")
 	c.Check(len(tokens.Tokens) > 0, Equals, true)
 }

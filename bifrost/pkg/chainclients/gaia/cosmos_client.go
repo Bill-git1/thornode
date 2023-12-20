@@ -119,7 +119,7 @@ func NewCosmosClient(
 	marshaler := codec.NewProtoCodec(interfaceRegistry)
 	txConfig := tx.NewTxConfig(marshaler, []signingtypes.SignMode{signingtypes.SignMode_SIGN_MODE_DIRECT})
 
-	// CHANGEME: each THORNode network (e.g. mainnet, testnet, etc.) may connect to a Cosmos chain with a different chain ID
+	// CHANGEME: each THORNode network (e.g. mainnet, mocknet, etc.) may connect to a Cosmos chain with a different chain ID
 	// Implement the logic here for determinine which chain ID to use.
 	chainID := ""
 	switch os.Getenv("NET") {

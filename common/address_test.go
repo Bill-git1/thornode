@@ -36,7 +36,7 @@ func (s *AddressSuite) TestAddress(c *C) {
 	c.Check(addr.IsChain(THORChain), Equals, false)
 	c.Check(addr.IsChain(BCHChain), Equals, false)
 	c.Check(addr.IsChain(DOGEChain), Equals, false)
-	c.Check(addr.GetNetwork(semver.MustParse("999.0.0"), BNBChain), Equals, TestNet)
+	c.Check(addr.GetNetwork(semver.MustParse("999.0.0"), BNBChain), Equals, MockNet)
 
 	// random
 	c.Check(err, IsNil)
@@ -71,7 +71,7 @@ func (s *AddressSuite) TestAddress(c *C) {
 	c.Check(addr.IsChain(LTCChain), Equals, false)
 	c.Check(addr.IsChain(BCHChain), Equals, false)
 	c.Check(addr.IsChain(DOGEChain), Equals, false)
-	c.Check(addr.GetNetwork(semver.MustParse("999.0.0"), THORChain), Equals, TestNet)
+	c.Check(addr.GetNetwork(semver.MustParse("999.0.0"), THORChain), Equals, MockNet)
 
 	// eth tests
 	addr, err = NewAddress("0x90f2b1ae50e6018230e90a33f98c7844a0ab635a")
@@ -115,7 +115,7 @@ func (s *AddressSuite) TestAddress(c *C) {
 	c.Check(addr.IsChain(THORChain), Equals, false)
 	c.Check(addr.IsChain(BCHChain), Equals, true)
 	c.Check(addr.IsChain(DOGEChain), Equals, true)
-	c.Check(addr.GetNetwork(semver.MustParse("999.0.0"), BTCChain), Equals, TestNet)
+	c.Check(addr.GetNetwork(semver.MustParse("999.0.0"), BTCChain), Equals, MockNet)
 
 	// mainnet p2pkh
 	addr, err = NewAddress("12MzCDwodF9G1e7jfwLXfR164RNtx4BRVG")
@@ -151,7 +151,7 @@ func (s *AddressSuite) TestAddress(c *C) {
 	c.Check(addr.IsChain(DOGEChain), Equals, false)
 	c.Check(addr.GetNetwork(semver.MustParse("999.0.0"), BTCChain), Equals, MainNet)
 
-	// testnet p2sh
+	// mocknet p2sh
 	addr, err = NewAddress("2NBFNJTktNa7GZusGbDbGKRZTxdK9VVez3n")
 	c.Check(err, IsNil)
 	c.Check(addr.IsChain(BTCChain), Equals, true)
@@ -160,7 +160,7 @@ func (s *AddressSuite) TestAddress(c *C) {
 	c.Check(addr.IsChain(THORChain), Equals, false)
 	c.Check(addr.IsChain(BCHChain), Equals, true)
 	c.Check(addr.IsChain(DOGEChain), Equals, true)
-	c.Check(addr.GetNetwork(semver.MustParse("999.0.0"), BTCChain), Equals, TestNet)
+	c.Check(addr.GetNetwork(semver.MustParse("999.0.0"), BTCChain), Equals, MockNet)
 
 	// mainnet p2pk compressed (0x02)
 	addr, err = NewAddress("02192d74d0cb94344c9569c2e77901573d8d7903c3ebec3a957724895dca52c6b4")
@@ -220,7 +220,7 @@ func (s *AddressSuite) TestAddress(c *C) {
 	c.Check(addr.IsChain(DOGEChain), Equals, true)
 	c.Check(addr.GetNetwork(semver.MustParse("999.0.0"), BTCChain), Equals, MainNet)
 
-	// testnet p2pk compressed (0x02)
+	// mocknet p2pk compressed (0x02)
 	addr, err = NewAddress("02192d74d0cb94344c9569c2e77901573d8d7903c3ebec3a957724895dca52c6b4")
 	c.Check(err, IsNil)
 	c.Check(addr.IsChain(BTCChain), Equals, true)
@@ -255,7 +255,7 @@ func (s *AddressSuite) TestAddress(c *C) {
 	c.Check(addr.IsChain(DOGEChain), Equals, true)
 	c.Check(addr.GetNetwork(semver.MustParse("999.0.0"), BTCChain), Equals, MainNet)
 
-	// segwit testnet p2wpkh v0
+	// segwit mocknet p2wpkh v0
 	addr, err = NewAddress("tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx")
 	c.Check(err, IsNil)
 	c.Check(addr.IsChain(BTCChain), Equals, true)
@@ -265,9 +265,9 @@ func (s *AddressSuite) TestAddress(c *C) {
 	c.Check(addr.IsChain(THORChain), Equals, false)
 	c.Check(addr.IsChain(BCHChain), Equals, false)
 	c.Check(addr.IsChain(DOGEChain), Equals, true)
-	c.Check(addr.GetNetwork(semver.MustParse("999.0.0"), BTCChain), Equals, TestNet)
+	c.Check(addr.GetNetwork(semver.MustParse("999.0.0"), BTCChain), Equals, MockNet)
 
-	// segwit testnet p2wsh witness v0
+	// segwit mocknet p2wsh witness v0
 	addr, err = NewAddress("tb1qqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsesrxh6hy")
 	c.Check(err, IsNil)
 	c.Check(addr.IsChain(BTCChain), Equals, true)
@@ -277,7 +277,7 @@ func (s *AddressSuite) TestAddress(c *C) {
 	c.Check(addr.IsChain(THORChain), Equals, false)
 	c.Check(addr.IsChain(BCHChain), Equals, false)
 	c.Check(addr.IsChain(DOGEChain), Equals, true)
-	c.Check(addr.GetNetwork(semver.MustParse("999.0.0"), BTCChain), Equals, TestNet)
+	c.Check(addr.GetNetwork(semver.MustParse("999.0.0"), BTCChain), Equals, MockNet)
 
 	// segwit mainnet witness v1
 	addr, err = NewAddress("bc1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7k7grplx")
@@ -338,7 +338,7 @@ func (s *AddressSuite) TestAddress(c *C) {
 	c.Check(addr.IsChain(DOGEChain), Equals, false)
 
 	// bch tests
-	// testnet bech32 address
+	// mocknet bech32 address
 	addr, err = NewAddress("qq0y8fmkq48rt3z5dlkv87ged93ranf2ggkuz9gfl8")
 	c.Check(err, IsNil)
 	c.Check(addr.IsChain(BCHChain), Equals, true)
@@ -348,7 +348,7 @@ func (s *AddressSuite) TestAddress(c *C) {
 	c.Check(addr.IsChain(THORChain), Equals, false)
 	c.Check(addr.IsChain(LTCChain), Equals, false)
 	c.Check(addr.IsChain(DOGEChain), Equals, false)
-	c.Check(addr.GetNetwork(semver.MustParse("999.0.0"), BCHChain), Equals, TestNet)
+	c.Check(addr.GetNetwork(semver.MustParse("999.0.0"), BCHChain), Equals, MockNet)
 
 	// doge tests
 	addr, err = NewAddress("DJbKker23xfz3ufxAbqUuQwp1EBibGJJHu")
@@ -371,7 +371,7 @@ func (s *AddressSuite) TestAddress(c *C) {
 	c.Check(addr.IsChain(BNBChain), Equals, false)
 	c.Check(addr.IsChain(THORChain), Equals, false)
 	c.Check(addr.IsChain(DOGEChain), Equals, true)
-	c.Check(addr.GetNetwork(semver.MustParse("999.0.0"), DOGEChain), Equals, TestNet)
+	c.Check(addr.GetNetwork(semver.MustParse("999.0.0"), DOGEChain), Equals, MockNet)
 
 	addr, err = NewAddress("mtyBWSzMZaCxJ1xy9apJBZzXz648BZrpJg")
 	c.Check(err, IsNil)

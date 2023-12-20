@@ -87,8 +87,6 @@ lint:
   rules:
     - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != "thorchain/thornode"
       when: never
-    - if: $CI_COMMIT_BRANCH == "testnet"
-      when: never
     - if: $CI_COMMIT_BRANCH == "stagenet"
       when: never
     - if: $CI_COMMIT_BRANCH == "mainnet"
@@ -106,8 +104,6 @@ build-thornode:
     - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != "thorchain/thornode"
       when: never
     - if: $CI_COMMIT_BRANCH == "develop"
-      when: always
-    - if: $CI_COMMIT_BRANCH == "testnet"
       when: always
     - if: $CI_COMMIT_BRANCH == "stagenet"
       when: always

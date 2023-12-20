@@ -34,7 +34,7 @@ import (
 var encodingConfig params.EncodingConfig
 
 func init() {
-	// initialize the bech32 prefix for testnet/mocknet
+	// initialize the bech32 prefix for mocknet
 	config := cosmos.GetConfig()
 	config.SetBech32PrefixForAccount("tthor", "tthorpub")
 	config.SetBech32PrefixForValidator("tthorv", "tthorvpub")

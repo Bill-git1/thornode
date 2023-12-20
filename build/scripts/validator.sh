@@ -4,8 +4,8 @@ set -o pipefail
 
 . "$(dirname "$0")/core.sh"
 
-if [ "$NET" = "mocknet" ] || [ "$NET" = "testnet" ]; then
-  echo "Loading unsafe init for mocknet and testnet..."
+if [ "$NET" = "mocknet" ]; then
+  echo "Loading unsafe init for mocknet..."
   . "$(dirname "$0")/core-unsafe.sh"
 fi
 
@@ -71,7 +71,7 @@ if [ ! -f ~/.thornode/config/genesis.json ]; then
       sleep 5
     done
 
-  elif [ "$NET" = "testnet" ]; then
+  elif [ "$NET" = "mocknet" ]; then
     # create a binance wallet
     gen_bnb_address
     ADDRESS=$(cat ~/.bond/address.txt)

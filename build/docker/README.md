@@ -50,10 +50,9 @@ while true; do
 do
 ```
 
-The above commands also apply to `testnet` and `stagenet` by simply using the respective image (in these cases `-e NET=...` is not required):
+The above commands also apply to `stagenet` by simply using the respective image (in these cases `-e NET=...` is not required):
 
 ```code
-testnet  => registry.gitlab.com/thorchain/thornode:testnet
 stagenet => registry.gitlab.com/thorchain/thornode:stagenet
 ```
 

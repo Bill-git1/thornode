@@ -313,7 +313,7 @@ func (s *SignSuite) SetUpSuite(c *C) {
 	ns := strconv.Itoa(time.Now().Nanosecond())
 	types2.SetupConfigForTest()
 	ctypes.Network = ctypes.TestNetwork
-	c.Assert(os.Setenv("NET", "testnet"), IsNil)
+	c.Assert(os.Setenv("NET", "mocknet"), IsNil)
 
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		c.Logf("requestUri:%s", req.RequestURI)

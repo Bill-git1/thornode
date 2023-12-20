@@ -1,6 +1,5 @@
-//go:build (testnet || mocknet) && !regtest
-// +build testnet mocknet
-// +build !regtest
+//go:build mocknet && !regtest
+// +build mocknet,!regtest
 
 package thorchain
 

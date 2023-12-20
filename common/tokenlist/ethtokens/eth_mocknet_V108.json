@@ -1,7 +1,7 @@
 {
-  "name": "Testnet Token List",
+  "name": "Mocknet Token List",
   "logoURI": "ipfs://QmaypvtnoXGQo4gSGHjgXaMUY98hf2FotQRfXgdLL4jo4i",
-  "keywords": ["testnet"],
+  "keywords": ["mocknet"],
   "tags": {},
   "timestamp": "2020-09-01T00:00:00+00:00",
   "tokens": [

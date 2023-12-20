@@ -1512,7 +1512,7 @@ func (vm *ValidatorMgrV121) NodeAccountPreflightCheck(ctx cosmos.Context, na Nod
 		return NodeWhiteListed, fmt.Errorf("node account has not registered their pubkey set")
 	}
 
-	// check if node account is whitelisted. This is used for testnet/stagenet environments
+	// check if node account is whitelisted. This is used for mocknet/stagenet environments
 	if len(VALIDATORS) > 0 {
 		found := false
 		for _, val := range VALIDATORS {

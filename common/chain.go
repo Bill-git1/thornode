@@ -216,14 +216,14 @@ func (c Chain) GetGasAssetDecimal() int64 {
 }
 
 // IsValidAddress make sure the address is correct for the chain
-// And this also make sure testnet doesn't use mainnet address vice versa
+// And this also make sure mocknet doesn't use mainnet address vice versa
 func (c Chain) IsValidAddress(addr Address) bool {
 	network := CurrentChainNetwork
 	prefix := c.AddressPrefix(network)
 	return strings.HasPrefix(addr.String(), prefix)
 }
 
-// AddressPrefix return the address prefix used by the given network (testnet/mainnet)
+// AddressPrefix return the address prefix used by the given network (mocknet/mainnet)
 func (c Chain) AddressPrefix(cn ChainNetwork) string {
 	if c.IsEVM() {
 		return "0x"
@@ -238,7 +238,7 @@ func (c Chain) AddressPrefix(cn ChainNetwork) string {
 		case GAIAChain:
 			return "cosmos"
 		case THORChain:
-			// TODO update this to use testnet address prefix
+			// TODO update this to use mocknet address prefix
 			return types.GetConfig().GetBech32AccountAddrPrefix()
 		case BTCChain:
 			return chaincfg.RegressionNetParams.Bech32HRPSegwit
@@ -246,24 +246,6 @@ func (c Chain) AddressPrefix(cn ChainNetwork) string {
 			return ltcchaincfg.RegressionNetParams.Bech32HRPSegwit
 		case DOGEChain:
 			return dogchaincfg.RegressionNetParams.Bech32HRPSegwit
-		}
-	case TestNet:
-		switch c {
-		case BNBChain:
-			return btypes.TestNetwork.Bech32Prefixes()
-		case TERRAChain:
-			return "terra"
-		case GAIAChain:
-			return "cosmos"
-		case THORChain:
-			// TODO update this to use testnet address prefix
-			return types.GetConfig().GetBech32AccountAddrPrefix()
-		case BTCChain:
-			return chaincfg.TestNet3Params.Bech32HRPSegwit
-		case LTCChain:
-			return ltcchaincfg.TestNet4Params.Bech32HRPSegwit
-		case DOGEChain:
-			return dogchaincfg.TestNet3Params.Bech32HRPSegwit
 		}
 	case MainNet, StageNet:
 		switch c {

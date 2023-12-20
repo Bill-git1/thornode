@@ -64,7 +64,7 @@ func (s *BinancechainSuite) SetUpSuite(c *C) {
 	ns := strconv.Itoa(time.Now().Nanosecond())
 	types2.SetupConfigForTest()
 	ctypes.Network = ctypes.TestNetwork
-	c.Assert(os.Setenv("NET", "testnet"), IsNil)
+	c.Assert(os.Setenv("NET", "mocknet"), IsNil)
 
 	s.thordir = filepath.Join(os.TempDir(), ns, ".thorcli")
 	cfg := config.BifrostClientConfiguration{

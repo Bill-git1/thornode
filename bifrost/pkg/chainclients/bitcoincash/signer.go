@@ -49,8 +49,6 @@ func (c *Client) getChainCfg() *chaincfg.Params {
 	switch cn {
 	case common.MockNet:
 		return &chaincfg.RegressionNetParams
-	case common.TestNet:
-		return &chaincfg.TestNet3Params
 	case common.MainNet:
 		return &chaincfg.MainNetParams
 	case common.StageNet:

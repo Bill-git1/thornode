@@ -1,13 +1,13 @@
-//go:build testnet
-// +build testnet
+//go:build mocknet
+// +build mocknet
 
-package utxo
+package dogecoin
 
 import (
 	. "gopkg.in/check.v1"
 )
 
-func (s *LitecoinSuite) TestGetAccount(c *C) {
+func (s *DogecoinSuite) TestGetAccount(c *C) {
 	acct, err := s.client.GetAccount("tthorpub1addwnpepqt7qug8vk9r3saw8n4r803ydj2g3dqwx0mvq5akhnze86fc536xcycgtrnv", nil)
 	c.Assert(err, IsNil)
 	c.Assert(acct.AccountNumber, Equals, int64(0))

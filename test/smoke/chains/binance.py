@@ -84,7 +84,7 @@ class MockBinance(HttpClient):
     @classmethod
     def get_address_from_pubkey(cls, pubkey, prefix="tbnb"):
         """
-        Get bnb testnet address for a public key
+        Get bnb mocknet address for a public key
 
         :param string pubkey: public key
         :returns: string bech32 encoded address

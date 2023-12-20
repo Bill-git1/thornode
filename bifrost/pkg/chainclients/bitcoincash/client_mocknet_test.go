@@ -1,7 +1,7 @@
-//go:build testnet
-// +build testnet
+//go:build mocknet
+// +build mocknet
 
-package utxo
+package bitcoincash
 
 import (
 	"gitlab.com/thorchain/thornode/common"

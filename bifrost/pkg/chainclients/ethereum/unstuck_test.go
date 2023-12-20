@@ -33,7 +33,7 @@ func (s *UnstuckTestSuite) SetUpTest(c *C) {
 	s.m = GetMetricForTest(c)
 	c.Assert(s.m, NotNil)
 	types2.SetupConfigForTest()
-	c.Assert(os.Setenv("NET", "testnet"), IsNil)
+	c.Assert(os.Setenv("NET", "mocknet"), IsNil)
 
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		switch req.RequestURI {

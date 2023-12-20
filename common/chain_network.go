@@ -4,17 +4,18 @@ package common
 type ChainNetwork uint8
 
 const (
-	// TestNet network for test
+	// TestNet network for test - DO NOT USE
+	// TODO: remove on hard fork
 	TestNet ChainNetwork = iota
-	// MainNet network for main net
+	// MainNet network for mainnet
 	MainNet
-	// MockNet network for main net
+	// MockNet network for mocknet
 	MockNet
-	// Stagenet network for stage net
+	// Stagenet network for stagenet
 	StageNet
 )
 
-// Soft Equals check is mainnet == mainet, or (testnet/mocknet == testnet/mocknet)
+// Soft Equals check is mainnet == mainet, or mocknet == mocknet
 func (net ChainNetwork) SoftEquals(net2 ChainNetwork) bool {
 	if net == MainNet && net2 == MainNet {
 		return true

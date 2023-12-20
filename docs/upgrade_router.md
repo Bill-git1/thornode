@@ -29,7 +29,6 @@ Before router upgrade , make sure you already make relevant changes in thornode 
 
 - New router has been deployed , and the router address has been updated. `<chain>OldRouter` is your current router address, `<chain>NewRouter` is your new router address
   - [Mocknet](https://gitlab.com/thorchain/thornode/-/blob/develop/x/thorchain/router_upgrade_info_mocknet.go)
-  - [Testnet](https://gitlab.com/thorchain/thornode/-/blob/develop/x/thorchain/router_upgrade_info_testnet.go)
   - [Stagenet](https://gitlab.com/thorchain/thornode/-/blob/develop/x/thorchain/router_upgrade_info_stagenet.go)
   - [Mainnet](https://gitlab.com/thorchain/thornode/-/blob/develop/x/thorchain/router_upgrade_info.go)
 
