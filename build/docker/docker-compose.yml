@@ -390,7 +390,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: registry.gitlab.com/thorchain/devops/node-launcher:gaia-daemon-13.0.0
+    image: registry.gitlab.com/thorchain/devops/node-launcher:gaia-daemon-14.1.0
     volumes:
       - "./mocknet:/mocknet"
     environment:
@@ -454,7 +454,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: ethereum/client-go:v1.13.4
+    image: ethereum/client-go:v1.13.7
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-5}
@@ -472,7 +472,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: registry.gitlab.com/thorchain/devops/node-launcher:binance-smart-daemon-1.2.12
+    image: registry.gitlab.com/thorchain/devops/node-launcher:binance-smart-daemon-1.3.5
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-5}
@@ -505,7 +505,7 @@ services:
       - mocknet
       - mocknet-cluster
     restart: unless-stopped
-    image: registry.gitlab.com/thorchain/devops/node-launcher:avalanche-daemon-1.10.13
+    image: registry.gitlab.com/thorchain/devops/node-launcher:avalanche-daemon-1.10.17
     volumes:
       - "./mocknet/avax:/mocknet"
     command:
