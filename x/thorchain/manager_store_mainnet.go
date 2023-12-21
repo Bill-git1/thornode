@@ -1150,3 +1150,24 @@ func migrateStoreV125(ctx cosmos.Context, mgr *Mgrs) {
 		}
 	}
 }
+
+func migrateStoreV126(ctx cosmos.Context, mgr *Mgrs) {
+	defer func() {
+		if err := recover(); err != nil {
+			ctx.Logger().Error("fail to migrate store to v126", "error", err)
+		}
+	}()
+
+	for _, item := range getInitCloutTHORNames() {
+		addr, err := common.NewAddress(item.address)
+		if err != nil {
+			ctx.Logger().Error("failed to parse address during init clout", "address", item.address, "error", err)
+			continue
+		}
+		c := NewSwapperClout(addr)
+		c.Score = item.amount
+		if err := mgr.Keeper().SetSwapperClout(ctx, c); err != nil {
+			ctx.Logger().Error("failed to set swapper clout", "address", item.address, "score", item.amount, "error", err)
+		}
+	}
+}
