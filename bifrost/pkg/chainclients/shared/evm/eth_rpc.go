@@ -94,11 +94,22 @@ func (e *EthRPC) GetRPCBlock(height int64) (*etypes.Block, error) {
 	return block, nil
 }
 
-// GetNonce gets nonce
+// GetNonce gets nonce (including pending) of an address.
 func (e *EthRPC) GetNonce(addr string) (uint64, error) {
 	ctx, cancel := e.getContext()
 	defer cancel()
 	nonce, err := e.client.PendingNonceAt(ctx, ecommon.HexToAddress(addr))
+	if err != nil {
+		return 0, fmt.Errorf("fail to get account nonce: %w", err)
+	}
+	return nonce, nil
+}
+
+// GetNonceFinalized gets the nonce excluding pending transactions.
+func (e *EthRPC) GetNonceFinalized(addr string) (uint64, error) {
+	ctx, cancel := e.getContext()
+	defer cancel()
+	nonce, err := e.client.NonceAt(ctx, ecommon.HexToAddress(addr), nil)
 	if err != nil {
 		return 0, fmt.Errorf("fail to get account nonce: %w", err)
 	}

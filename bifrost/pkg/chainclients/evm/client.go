@@ -615,7 +615,21 @@ func (c *EVMClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 		}
 		nonce, err = c.evmScanner.GetNonce(fromAddr.String())
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("fail to fetch account(%s) nonce : %w", fromAddr, err)
+			return nil, nil, nil, fmt.Errorf("fail to fetch account(%s) nonce: %w", fromAddr, err)
+		}
+
+		// abort signing if the pending nonce is too far in the future
+		var finalizedNonce uint64
+		finalizedNonce, err = c.evmScanner.GetNonceFinalized(fromAddr.String())
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("fail to fetch account(%s) finalized nonce: %w", fromAddr, err)
+		}
+		if nonce-finalizedNonce > c.cfg.MaxPendingNonces {
+			c.logger.Warn().
+				Uint64("nonce", nonce).
+				Uint64("finalizedNonce", finalizedNonce).
+				Msg("pending nonce too far in future")
+			return nil, nil, nil, fmt.Errorf("pending nonce too far in future")
 		}
 	}
 

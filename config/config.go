@@ -600,6 +600,10 @@ type BifrostChainConfiguration struct {
 	// MaxRPCRetries is the maximum number of retries for RPC requests.
 	MaxRPCRetries int `mapstructure:"max_rpc_retries"`
 
+	// MaxPendingNonces is the maximum number of pending nonces to allow before aborting
+	// new signing attempts.
+	MaxPendingNonces uint64 `mapstructure:"max_pending_nonces"`
+
 	// UTXO contains UTXO chain specific configuration.
 	UTXO struct {
 		// BlockCacheCount is the number of blocks to cache in storage.

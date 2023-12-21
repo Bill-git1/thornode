@@ -210,9 +210,14 @@ func (e *EVMScanner) GetHeight() (int64, error) {
 	return height, nil
 }
 
-// GetNonce returns the nonce for the given address.
+// GetNonce returns the nonce (including pending) for the given address.
 func (e *EVMScanner) GetNonce(addr string) (uint64, error) {
 	return e.ethRpc.GetNonce(addr)
+}
+
+// GetNonceFinalized returns the nonce for the given address.
+func (e *EVMScanner) GetNonceFinalized(addr string) (uint64, error) {
+	return e.ethRpc.GetNonceFinalized(addr)
 }
 
 // FetchMemPool returns all transactions in the mempool.
