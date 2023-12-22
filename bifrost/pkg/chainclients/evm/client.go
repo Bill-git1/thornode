@@ -363,7 +363,7 @@ func (c *EVMClient) GetBalances(addr string, height *big.Int) (common.Coins, err
 		}
 		asset := c.cfg.ChainID.GetGasAsset()
 		if !strings.EqualFold(token.Address, evm.NativeTokenAddr) {
-			asset, err = common.NewAsset(fmt.Sprintf("EVM.%s-%s", token.Symbol, token.Address))
+			asset, err = common.NewAsset(fmt.Sprintf("%s.%s-%s", c.GetChain(), token.Symbol, token.Address))
 			if err != nil {
 				return nil, err
 			}
