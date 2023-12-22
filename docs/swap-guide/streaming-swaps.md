@@ -64,9 +64,9 @@ $$
 {MinimumSwapSize} = (MinBPStreamingSwap / 2) * virtualRuneDepth
 $$
 
-{% hint style="success" %}
+```admonish success
 The larger the difference between the pools, the more the virtual pool skews towards the smaller pool. This results in less rewards given to the larger pool, and more rewards given to the smaller pool.
-{% endhint %}
+```
 
 Example using BTC and ETH Pool
 

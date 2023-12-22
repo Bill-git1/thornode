@@ -1,7 +1,3 @@
----
-description: Understanding Transaction Memo In Detail
----
-
 # Transaction Memos
 
 ## Overview
@@ -141,9 +137,9 @@ Depositing savers can work without a memo; however, memos are recommended to be 
 | `:AFFILIATE` | The [affiliate](fees.md#affiliate-fee) address. The affiliate is added to the pool as an LP. | Optional. Must be THORName or THOR Address.    |
 | `:FEE`       | The affiliate fee. Fee is allocated to the affiliate.                                        | Optional. Limited from 0 to 1000 Basis Points. |
 
-{% hint style="warning" %}
+```admonish warning
 Affiliate and Affiliate Fee yet to be implemented
-{% endhint %}
+```
 
 **Examples:**
 

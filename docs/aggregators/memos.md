@@ -1,7 +1,3 @@
----
-description: Aggregator Memos
----
-
 # Memos
 
 ## Swap Memo (from [here](https://gitlab.com/thorchain/thornode/-/merge_requests/2218))
@@ -16,9 +12,9 @@ In order to support SwapOut DEX Aggregation feature, a few more fields added int
 | `:FinalTokenAddr`    | The final token (must be on 1INCH Whitelist)              | Can be shortened                                                                                                                                                                                    |
 | `:minAmountOut`      | The parameter to pass into AmountOutMin in AMM contracts. | Handled by the aggregator, so:<br>1. Can be 0 (no protection). <br>2. Can be in any decimals<br>3. Can be in % or BasisPoints, then converted to a price at the time of swap by the aggregator.</p> |
 
-{% hint style="success" %}
+```admonish success
 If you include a vertical pipe (|) at the end of the memo, any data following it will be sent as an outbound memo to the specified outbound address. This feature enables developers to send generic data to contracts cross-chain.
-{% endhint %}
+```
 
 ### Additional ObserveTxIn field
 

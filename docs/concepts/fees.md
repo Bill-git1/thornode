@@ -1,7 +1,3 @@
----
-description: Understanding how fees are calculated.
----
-
 # Fees
 
 ## Overview
@@ -32,13 +28,13 @@ $$
 inboundFee = txSize * gasRate
 $$
 
-{% hint style="success" %}
+```admonish success
 THORChain calculates and posts fee rates at [`https://thornode.ninerealms.com/thorchain/inbound_addresses`](https://thornode.ninerealms.com/thorchain/inbound_addresses)
-{% endhint %}
+```
 
-{% hint style="warning" %}
+```admonish warning
 Always use a "fast" or "fastest" fee, if the transaction is not confirmed in time, it could be abandoned by the network or failed due to old prices. You should allow your users to cancel or re-try with higher fees.
-{% endhint %}
+```
 
 ### Liquidity Fee
 
@@ -93,21 +89,15 @@ For example, if you wanted to be paid out in USDC you would:
 
    The full memo would look like:
 
-{% code overflow="wrap" %}
+   > `~:ac-test:ETH:0x6621d872f17109d6601c49edba526ebcfd332d5d:thor1dl7un46w7l7f3ewrnrm6nq58nerjtp0dradjtd:ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48`
 
-```text
-~:ac-test:ETH:0x6621d872f17109d6601c49edba526ebcfd332d5d:thor1dl7un46w7l7f3ewrnrm6nq58nerjtp0dradjtd:ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48
+```admonish info
+You can use [Asgardex](https://github.com/thorchain/asgardex-electron) to post a MsgDeposit with a custom memo. Load your wallet, then open your THORChain wallet page > Deposit > Custom.
 ```
 
-{% endcode %}
-
-{% hint style="info" %}
-You can use [Asgardex](https://github.com/thorchain/asgardex-electron) to post a MsgDeposit with a custom memo. Load your wallet, then open your THORChain wallet page > Deposit > Custom.
-{% endhint %}
-
-{% hint style="info" %}
+```admonish info
 You will also need a THOR alias set to collect affiliate fees. Use another MsgDeposit with memo: `~:<thorname>:THOR:<thorchain-address>` to set your THOR alias. Your THOR alias address can be the same as your owner address, but won't be used for anything if a preferred asset is set.
-{% endhint %}
+```
 
 Once you successfully post your MsgDeposit you can verify that your THORName is configured properly. View your THORName info from THORNode at the following endpoint:\
 [https://thornode.ninerealms.com/thorchain/thorname/ac-test](https://thornode.ninerealms.com/thorchain/thorname/ac-test)
@@ -229,6 +219,6 @@ An Ether Tx fee is: `gasRate * 10^9 (GWEI) * 21000 (units).`
 
 An ERC20 Tx is larger: `gasRate * 10^9 (GWEI) * 70000 (units)`
 
-{% hint style="success" %}
+```admonish success
 THORChain calculates and posts gas fee rates at [`https://thornode.ninerealms.com/thorchain/inbound_addresses`](https://thornode.ninerealms.com/thorchain/inbound_addresses)
-{% endhint %}
+```

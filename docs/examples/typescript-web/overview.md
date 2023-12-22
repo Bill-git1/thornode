@@ -1,7 +1,3 @@
----
-description: XChainJS library overview and the main components
----
-
 # Overview
 
 XChainJS is an open-source library with a common interface for multiple blockchains, built for simple and fast integration for wallets and Dexs and more. xChainjs is designed to abstract THORChain and specific blockchain complexity and to provide an easy-to-use API for developers.
@@ -14,17 +10,13 @@ xChain has several key modules allowing powerful functionality.
 
 Allows easy information retrieval and estimates from THORChain.
 
-{% content-ref url="query-package.md" %}
-[query-package.md](query-package.md)
-{% endcontent-ref %}
+[Query Package](query-package.md)
 
 ## **Thorchain-amm**
 
 Conducts actions such as swap, add and remove. It wraps xchain clients and creates a new wallet class for and balance collection.
 
-{% content-ref url="amm-package.md" %}
-[amm-package.md](amm-package.md)
-{% endcontent-ref %}
+[AMM Package](amm-package.md)
 
 ## **Chain clients**
 
@@ -43,18 +35,14 @@ Current clients implemented are**:**
 - xchain-mayachain
 - xchain-thorchain
 
-{% content-ref url="client-packages.md" %}
-[client-packages.md](client-packages.md)
-{% endcontent-ref %}
+[Client Packages](client-packages.md)
 
 **APIs** for getting data from THORChain.
 
 - Midgard
 - Thornode
 
-{% content-ref url="packages-breakdown.md" %}
-[packages-breakdown.md](packages-breakdown.md)
-{% endcontent-ref %}
+[Packages Breakdown](packages-breakdown.md)
 
 See the package breakdown for more information.
 

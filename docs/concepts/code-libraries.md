@@ -1,7 +1,3 @@
----
-description: The following libraries will help you in your integration
----
-
 # Code Libraries
 
 ## XCHAINJS

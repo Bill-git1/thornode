@@ -4,9 +4,9 @@
 
 The following libraries implement the math below.&#x20;
 
-{% embed url="<https://gitlab.com/thorchain/asgardex-common/asgardex-util/-/tree/master/src/calc>" %}
+{{#embed <https://gitlab.com/thorchain/asgardex-common/asgardex-util/-/tree/master/src/calc> }}
 
-{% embed url="<https://github.com/xchainjs/xchainjs-lib/blob/master/packages/xchain-thorchain-query/src/utils/swap.ts>" %}
+{{#embed <https://github.com/xchainjs/xchainjs-lib/blob/master/packages/xchain-thorchain-query/src/utils/swap.ts> }}
 
 ### Example Data
 

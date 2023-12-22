@@ -1,7 +1,3 @@
----
-description: Example actions within THORChain
----
-
 # Tutorials
 
 ## Find Savers Position

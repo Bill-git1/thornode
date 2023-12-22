@@ -1,9 +1,3 @@
----
-description: >-
-  Using the official CLI with Ledger provides a zero-frontend experience to
-  interacting with THORChain.
----
-
 # Offline Ledger Support
 
 When used in conjunction with a locally-running fullnode, the THORNode CLI + Ledger provides the ultimate, privacy-focused "offline, no-tracking" experience. Interact directly with the THORChain network to bond validators, swap RUNE (or synthetic assets) and administrate LPs from a cold-wallet.

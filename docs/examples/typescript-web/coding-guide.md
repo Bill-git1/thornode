@@ -11,11 +11,11 @@ The foundation of xchainjs is defined in the [xchain-util](https://github.com/xc
 - `AssetAmount`: a BaseAmount\*10^8. E.g. 1 BTC = 1 in Asset Amount.
 - `Asset`: Asset details {Chain, symbol, ticker, isSynth}
 
-{% hint style="info" %}
+```admonish info
 All `Assets` must conform to the [Asset Notation](../../concepts/memos.md#asset-notation)
 
 `assetFromString()` is used to quickly create assets and will assign chain and synth.
-{% endhint %}
+```
 
 - `CryptoAmount:` is a class that has:
 
@@ -87,9 +87,9 @@ Return type of `estimateSwap`. This is designed to be used by interfaces to give
 | `expiry`     | DateTime     | When the `SwapEstimate` information will no longer be valid |
 | `toAddress`  | string       | Current Asgard Vault address from `inbound_address`         |
 
-{% hint style="danger" %}
+```admonish danger
 Do not use `toAddress` after `expiry` as the Asgard vault rotates
-{% endhint %}
+```
 
 ## AMM
 

@@ -1,7 +1,3 @@
----
-description: API for performing actions with THORChain
----
-
 # AMM Package
 
 While the Query package allows quick and powerful information retrieval from THORChain such as a swap estimate., this package performs the actions (sends the transactions), such as a swap, add and remove.
@@ -22,22 +18,22 @@ DoSwap runs [EstimateSwap](query-package.md#estimate-swap) first then if success
 
 A seed is provided in the example but it has no funds so it will error.
 
-{% embed url="https://replit.com/@thorchain/doSwap-Single#index.ts" %}
+<iframe width="100%" height="600" src="https://replit.com/@thorchain/doSwap-Single?embed=true" ></iframe>
 
 ### Savers
 
 Adds and removed liquidity from Savers. Requires a seed with funds.
 
-{% embed url="https://replit.com/@thorchain/saversTs#index.ts" %}
+<iframe width="100%" height="600" src="https://replit.com/@thorchain/saversTs?embed=true" ></iframe>
 
 ### Add Liquidity
 
 Adds liquidity to a pool. Provide both assets for the pool. lp type is determined from the amount of the asset. The example is a single-sided rune deposit. A seed is provided in the example but it has no funds so it will error.
 
-{% embed url="https://replit.com/@thorchain/addLiquidity#index.ts" %}
+<iframe width="100%" height="600" src="https://replit.com/@thorchain/addLiquidity?embed=true" ></iframe>
 
 ### Remove Liquidity
 
 Removes Liquidity from a pool. The opposite of adding liquidity.
 
-{% embed url="https://replit.com/@thorchain/removeLiquidity#index.ts" %}
+<iframe width="100%" height="600" src="https://replit.com/@thorchain/removeLiquidity?embed=true" ></iframe>

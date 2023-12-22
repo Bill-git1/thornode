@@ -1,7 +1,3 @@
----
-description: Create and manage a THORName to earn fees and monitor your integration.
----
-
 # THORName Guide
 
 ## Summary
@@ -41,21 +37,21 @@ Memo template is: `~:name:chain:address:?owner:?preferredAsset:?expiry`
 - **owner**: THORChain address of owner (optional).
 - **preferredAsset:** Asset to receive fees in. Must be supported be an active pool on THORChain. Value should be `asset` property from the [Pools endpoint](https://thornode.ninerealms.com/thorchain/pools).;
 
-{% hint style="info" %}
+```admonish info
 Example: `~:ODIN:BTC:bc1Address:thorAddress:BTC.BTC`
-{% endhint %}
+```
 
 This will register a new THORName called `ODIN` with a Bitcoin alias of `bc1Address` owner of `thorAddress` and preferred asset of BTC.BTC.
 
-{% hint style="info" %}
+```admonish info
 You can use [Asgardex](https://github.com/thorchain/asgardex-electron) to post a MsgDeposit with a custom memo. Load your wallet, then open your THORChain wallet page > Deposit > Custom.;
-{% endhint %}
+```
 
-{% hint style="info" %}
+```admonish info
 View your THORName's configuration at the THORName endpoint:
 
 e.g. [https://thornode.ninerealms.com/thorchain/thorname/](https://thornode.ninerealms.com/thorchain/thorname/ac-test){name}
-{% endhint %}
+```
 
 ## Renewing your THORName
 
@@ -99,17 +95,11 @@ For example, if you wanted to be paid out in USDC you would:
 
    The full memo would look like:
 
-{% code overflow="wrap" %}
+   > `~:ac-test:ETH:0x6621d872f17109d6601c49edba526ebcfd332d5d:thor1dl7un46w7l7f3ewrnrm6nq58nerjtp0dradjtd:ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48`
 
-```text
-~:ac-test:ETH:0x6621d872f17109d6601c49edba526ebcfd332d5d:thor1dl7un46w7l7f3ewrnrm6nq58nerjtp0dradjtd:ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48
-```
-
-{% endcode %}
-
-{% hint style="info" %}
+```admonish info
 You will also need a THOR alias set to collect affiliate fees. Use another MsgDeposit with memo: `~:<thorname>:THOR:<thorchain-address>` to set your THOR alias. Your THOR alias address can be the same as your owner address, but won't be used for anything if a preferred asset is set.;
-{% endhint %}
+```
 
 Once you successfully post your MsgDeposit you can verify that your THORName is configured properly. View your THORName info from THORNode at the following endpoint:\
 [https://thornode.ninerealms.com/thorchain/thorname/ac-test](https://thornode.ninerealms.com/thorchain/thorname/ac-test)

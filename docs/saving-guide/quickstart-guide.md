@@ -48,21 +48,21 @@ Savers Quote endpoints have been created to simplify the implementation process.
 
 _If you send 1 BTC to_ bc1quuf5sr444km2zlgrg654mjdfgkuzayfs7nqrfm*with the memo* `+:BTC/BTC`_, you can expect `0.99932` BTC will and will incur 13 basis points (0.13%) of slippage._
 
-{% hint style="danger" %}
+```admonish danger
 The `Inbound_Address` changes regularly, do not cache!
-{% endhint %}
+```
 
-{% hint style="danger" %}
+```admonish danger
 Inbound transactions should not be delayed for any reason else there is risk funds will be sent to an unreachable address. Use standard transactions, check the `inbound address` before sending and use the recommended [`gas rate`](../concepts/querying-thorchain.md#getting-the-asgard-vault) to ensure transactions are confirmed in the next block to the latest `Inbound_Address`.
-{% endhint %}
+```
 
 _For security reasons, your inbound transaction will be delayed by 1 BTC Block._
 
-{% hint style="info" %}
+```admonish info
 Full quote saving endpoint specification can be found here: [https://thornode.ninerealms.com/thorchain/doc/](https://thornode.ninerealms.com/thorchain/doc/).
 
 See an example implementation [here](https://replit.com/@thorchain/quoteSavers#index.js).
-{% endhint %}
+```
 
 **User withdrawing all of their BTC Saver's position.**
 
@@ -97,9 +97,9 @@ See an example implementation [here](https://replit.com/@thorchain/quoteSavers#i
 }
 ```
 
-{% hint style="warning" %}
+```admonish warning
 Deposit and withdraw interfaces will return `inbound_address` and `memo` fields that can be used to construct the transaction. Do not cache the`inbound_address` field!
-{% endhint %}
+```
 
 ### Basic Mechanics
 
@@ -133,9 +133,9 @@ To **deposit**, users should send any amount of asset they wish (avoiding dust a
 To **withdraw**, the user should send a specific dust amount of asset (avoiding the dust threshold), from an amount 0 units above the dust threshold, to an amount 10,000 units above the threshold. \
 10000 units is read as “withdraw 10000 basis points”, which is 100%.
 
-{% hint style="info" %}
+```admonish info
 The dust threshold is the point at which the network will ignore the amount sent to stop dust attacks (widely seen on UTXO chains).
-{% endhint %}
+```
 
 Specific rules for each chain and action are as follows:
 
@@ -153,9 +153,9 @@ The `dust_threshold` for each chain are defined as:
 - ATOM: 0 uatom
 - BNB: 0 nbnb
 
-{% hint style="info" %}
+```admonish info
 Transactions with asset amounts equal to or below the `dust_threshold` for the chain will be ignored to prevent dust attacks. Ensure you are converting the “human readable” amount (1 BTC) to the correct gas units (100,000,000 sats)
-{% endhint %}
+```
 
 **Examples:**
 
@@ -198,11 +198,11 @@ The easy way to determine lifetime performance of the savers vault is to look ba
 
 Example code:\
 
-{% embed url="https://replit.com/@thorchain/THORChain-Savers-Tracker#index.js" %}
+<iframe width="100%" height="600" src="https://replit.com/@thorchain/THORChain-Savers-Tracker?embed=true" ></iframe>
 
-{% hint style="info" %}
+```admonish info
 [https://thornode.ninerealms.com/thorchain/pool/BTC.BTC/savers](https://thornode.ninerealms.com/thorchain/pool/BTC.BTC/savers) will show all BTC Savers
-{% endhint %}
+```
 
 ### Support
 

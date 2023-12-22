@@ -1,7 +1,3 @@
----
-description: How to query THORChain information
----
-
 # Query Package
 
 This package is designed to obtain any desired information from THORChain that a developer could want. While it uses Midgard and Thornode packages it is much more powerful as it knows where to get the best information and how to package the information for easy consumption by developers or higher functions.
@@ -28,19 +24,19 @@ Provides estimated swap information for a single or double swap for any given tw
 
 Note: This will be the best estimate using the information available, however exact values will be different depending on pool depth changes and network congestion.
 
-{% embed url="https://replit.com/@thorchain/estimateSwap#index.ts" %}
+<iframe width="100%" height="600" src="https://replit.com/@thorchain/estimateSwap?embed=true"></iframe>
 
 ### Savers
 
 Shows use of the savers quote endpoints.
 
-{% embed url="https://replit.com/@thorchain/quoteSaversTS#index.ts" %}
+<iframe width="100%" height="600" src="https://replit.com/@thorchain/quoteSaversTS?embed=true"></iframe>
 
 ### Check Balance
 
 Checks the liquidity position of a given address in a given pool. Retrieves information such as current value, ILP coverage, pool share and last added.
 
-{% embed url="https://replit.com/@thorchain/checkLiquidity#package.json" %}
+<iframe width="100%" height="600" src="https://replit.com/@thorchain/checkLiquidity?embed=true"></iframe>
 
 ### Check Transaction
 
@@ -52,24 +48,24 @@ In development
 
 Provides an estimate for given add liquidity parameters such as slip fee, transaction fees, and expected wait time. Supports symmetrical, asymmetrical and uneven additions.
 
-{% embed url="https://replit.com/@thorchain/estimateWithdrawLiquidity#index.ts" %}
+<iframe width="100%" height="600" src="https://replit.com/@thorchain/estimateWithdrawLiquidity?embed=true" ></iframe>
 
 ### Estimate Remove Liquidity
 
 Provides information for a planned withdrawal for a given liquidity position and withdrawal percentage. Information such as fees, wait time and ILP coverage
 
-{% embed url="https://replit.com/@thorchain/estimateWithdrawLiquidity#index.ts" %}
+<iframe width="100%" height="600" src="https://replit.com/@thorchain/estimateWithdrawLiquidity?embed=true" ></iframe>
 
 ### List Pools
 
 Lists all the pool detail within THORChain.
 
-{% embed url="https://replit.com/@thorchain/listPools#index.ts" %}
+<iframe width="100%" height="600" src="https://replit.com/@thorchain/listPools?embed=true" ></iframe>
 
 ### Network Values
 
 List current network values from constants and mimir. If mimir override exists, it is displayed instead.
 
-{% embed url="https://replit.com/@thorchain/networkSetting#index.ts" %}
+<iframe width="100%" height="600" src="https://replit.com/@thorchain/networkSetting?embed=true" ></iframe>
 
 If there is a function you want to be added, reach out in Telegram or the dev discord server.

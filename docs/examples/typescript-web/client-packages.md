@@ -1,14 +1,10 @@
----
-description: Using xchain client packages
----
-
 # Client Packages
 
 ## Full Multichain Wallet Example
 
 A wallet class has been created that instantiates every chain client and leverages the interface which greatly simplifies working with wallets and THORChain. See the below code example.
 
-{% embed url="https://replit.com/@thorchain/xchain-wallet#index.ts" %}
+<iframe width="100%" height="600" src="https://replit.com/@thorchain/xchain-wallet?embed=true" ></iframe>
 
 ### Client Packages breakdown
 
@@ -18,9 +14,9 @@ Common functions with code examples are:
 
 ### **Config and Set Up of a Wallet**
 
-{% embed url="https://replit.com/@thorchain/TestBed#index.ts" %}
+<iframe width="100%" height="600" src="https://replit.com/@thorchain/TestBed?embed=true" ></iframe>
+
 Some chains require address history to query balances and Txs
-{% endembed %}
 
 ### **Querying**
 
@@ -33,9 +29,8 @@ All clients implement these functions. While most can use the same code, some ha
 
 See below for a Bitcoin example. Also see [Ethereum](https://replit.com/@thorchain/xchain-ethereum#index.ts), [Binance](https://replit.com/@thorchain/xchain-binance#index.ts), [THORChain](https://replit.com/@thorchain/xchain-thorchain), [Cosmos](https://replit.com/@thorchain/xchain-cosmos#index.ts), and [Avalanche](https://replit.com/@thorchain/xchain-avax) examples.
 
-{% embed url="https://replit.com/@thorchain/xchain-bitcoin#index.ts" %}
+<iframe width="100%" height="600" src="https://replit.com/@thorchain/xchain-bitcoin?embed=true" ></iframe>
 Some chains require address history to query balances and Txs
-{% endembed %}
 
 ### Transactions
 

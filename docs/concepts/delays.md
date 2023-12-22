@@ -1,7 +1,3 @@
----
-description: Understanding end to end transaction times.
----
-
 # Delays
 
 ## Overview
@@ -42,9 +38,9 @@ Example: [https://thornode.ninerealms.com/thorchain/tx/0AAA205438B6409CBA11DED8C
 
 `finalise_height` is the external height it needs to see before it will confirm it.
 
-{% hint style="warning" %}
+```admonish warning
 An event is not sent until the external block height crosses `finalise_height` so Midgard will NOT see the tx until confirmation-counted.
-{% endhint %}
+```
 
 Examples:
 

@@ -1,7 +1,3 @@
----
-description: How the Bifrost works for UTXO chains like Bitcoin and its forks.
----
-
 # UTXO
 
 ## Chain Client
@@ -10,11 +6,11 @@ Example for Bitcoin.
 
 ### Observer
 
-{% embed url="https://gitlab.com/thorchain/thornode/-/blob/develop/bifrost/pkg/chainclients/bitcoin/client.go" %}
+{{#embed https://gitlab.com/thorchain/thornode/-/blob/develop/bifrost/pkg/chainclients/bitcoin/client.go }}
 
 #### Signer
 
-{% embed url="https://gitlab.com/thorchain/thornode/-/blob/develop/bifrost/pkg/chainclients/bitcoin/signer.go" %}
+{{#embed https://gitlab.com/thorchain/thornode/-/blob/develop/bifrost/pkg/chainclients/bitcoin/signer.go }}
 
 ### Scanning Blocks
 
@@ -55,9 +51,9 @@ UTXOs consume inputs, and these inputs need to be signed independently. Thus con
 
 Asgard cannot consume a pending transaction spent to it, since THORChain requires at least 1 confirmation. However, Ygg Vaults will consume pending transactions, since they continually spend back to themselves and are only funded by Asgard. To do this, outbound transactions from Ygg Vaults are actually witnessed when in the mempool, instead of being confirmed. This allows Ygg vaults to have high swap throughput, even if the swaps are still pending in the mempool.
 
-{% hint style="warning" %}
+```admonish warning
 Ygg vaults have historically been subject to dust attacks which spend large-size transactions with low fees, causing vaults to lock up. To prevent this, Ygg vaults only consume pending transactions spent to itself.
-{% endhint %}
+```
 
 #### ReplaceByFee
 

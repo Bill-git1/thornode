@@ -1,7 +1,3 @@
----
-description: Swap Fees and Delay
----
-
 # Fees and Wait Times
 
 ## Fee Types
@@ -13,9 +9,9 @@ Users pay up to four kinds of fees when conducting a swap.
 3. **Affiliate Fee** - (optional) a percentage skimmed from the inbound amount that can be paid to exchanges or wallet providers. _Wallets can now accept fees in any THORChain-supported asset (USDC, BTC, etc). Check the "Preferred Asset for Affiliate Fees" section in_ [fees.md](../concepts/fees.md "mention") _for more details and setup information._
 4. **Outbound Fee** - the fee the Network pays on behalf of the user to send the outbound transaction. See [Outbound Fee](../concepts/fees.md#outbound-fee).
 
-{% hint style="info" %}
+```admonish info
 The Swap Quote endpoint will calculate and show all fees.
-{% endhint %}
+```
 
 See the [fees](../concepts/fees.md) section for full details.
 
@@ -41,8 +37,8 @@ There are four phases of a transaction sent to THORChain each taking time to com
 
 Wait times can be between a few seconds up to an hour. The assets being swapped, the size of the swap and the current network traffic within THORChain will determine the wait time.
 
-{% hint style="info" %}
+```admonish info
 The Swap Quote endpoint will calculate points 3 and 4.
-{% endhint %}
+```
 
 See the [delays.md](../concepts/delays.md "mention") section for full details.

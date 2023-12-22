@@ -1,7 +1,3 @@
----
-description: An overview of how Chain Clients are implemented for different chain types.
----
-
 # Chain Clients
 
 ## Chain Client
@@ -31,15 +27,15 @@ The `blockValue` is typically just the coinbase reward, which already sums up th
 
 To do this, the Bifrost reports every tx immediately, but also specifies a `finalisation` blockheight. If the confs required is 1, then the tx is immediately processed. If the finalisation height exceeds the current blockheight, then the Bifrost will also wait that many blocks, then send \*another\* witness transaction as soon as those blocks occur. At this point the transaction can be finalised in the state machine.
 
-{% embed url="https://gitlab.com/thorchain/thornode/-/blob/develop/bifrost/observer/observe.go#L117" %}
+{{#embed https://gitlab.com/thorchain/thornode/-/blob/develop/bifrost/observer/observe.go#L117 }}
 
-{% hint style="warning" %}
+```admonish warning
 Although THORChain will not act on an inbound transaction that is undergoing conf-counting, it will consume it when it migrates vaults. This means conf-counted UTXOs will not be abandoned if still being finalised.
-{% endhint %}
+```
 
-{% hint style="info" %}
+```admonish info
 A malicious re-org would never happen unless the value to gain from re-org exceeds the cost to re-org. The value to gain is the sum of the transactions sent to Asgard, whilst the cost to re-org is taken to be the value of each block -- the sum of fees and subsidies.
-{% endhint %}
+```
 
 ### Re-orgs
 

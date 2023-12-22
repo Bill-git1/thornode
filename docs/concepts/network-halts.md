@@ -1,20 +1,16 @@
----
-description: Interfaces need to monitor and react to keep network parameters.
----
-
 # Network Halts
 
-{% hint style="warning" %}
+```admonish warning
 If the network is halted, do not send funds. The easiest check to do is if `halted = true` on the inbound addresses endpoint.
-{% endhint %}
+```
 
-{% hint style="info" %}
+```admonish info
 In most cases funds won't be lost if they are sent when halted, but they may be significantly delayed.
-{% endhint %}
+```
 
-{% hint style="danger" %}
+```admonish danger
 In the worse case if THORChain suffers a consensus halt the `inbound_addresses` endpoint will freeze with `halted = false` but the network is actually hard-halted. In this case running a fullnode is beneficial, because the last block will become stale after 6 seconds and interfaces can detect this.
-{% endhint %}
+```
 
 Interfaces that provide LP management can provide more feedback to the user what specifically is halted.
 
@@ -37,9 +33,9 @@ Each chain has granular control allowing each chain to be halted or resumed on a
 4. **Specific Chain Halt** - Serious halt where transitions on that chain are no longer observed and THORNodes will not be synced to the chain tip, usually their Bifrost offline. Resumption will require a majority of nodes syncing to the tip before trading can commence.
    1. Mimir setting is `HALT[Chain]CHAIN`, e,g, `HALTBCHCHAIN` for BCH.
 
-{% hint style="warning" %}
+```admonish warning
 Chain specific halts do occur and need to be monitored and reacted to when they occur. Users should not be able to send transactions via an interface when a halt is in effect.
-{% endhint %}
+```
 
 ### **Network Level Halts**
 
@@ -53,9 +49,9 @@ There is no Network level chain halt setting as the THORChain Blockchain continu
 
 A chain halt is possible in which case Mimir or Midgard will not return data. This can happen if the chain suffers consensus failure or more than 1/3 of nodes are switched off. If this occurs the Dev Discord Server `#interface-alerts` will issue alerts.
 
-{% hint style="warning" %}
+```admonish warning
 While very rare, a network level halt is possible and should be monitored for.
-{% endhint %}
+```
 
 ### Synth Management
 

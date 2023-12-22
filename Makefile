@@ -103,6 +103,22 @@ openapi:
 		generate -i /mnt/openapi.yaml -g go -o /mnt/gen
 	@rm openapi/gen/go.mod openapi/gen/go.sum
 
+# ------------------------------ Docs ------------------------------
+
+docs-init:
+	@cargo install mdbook --version 0.4.36
+	@cargo install mdbook-admonish --version 1.14.0
+	@cargo install mdbook-catppuccin --version 2.1.0
+	@cargo install mdbook-katex --version 0.5.9
+	@cd docs && mdbook-catppuccin install
+	@cd docs && mdbook-admonish install --css-dir theme
+
+docs-generate: docs-init
+	@cd docs && mdbook build -d ../public
+
+docs-dev: docs-init
+	@cd docs && mdbook serve -d ../public --open
+
 # ------------------------------ Build ------------------------------
 
 build:

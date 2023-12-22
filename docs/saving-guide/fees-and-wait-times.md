@@ -1,7 +1,3 @@
----
-description: Savers entry & exit Fees and Wait Times
----
-
 # Fees and Wait Times
 
 ## **Fees**
@@ -21,9 +17,9 @@ poolDepth = curl -SL https://thornode.ninerealms.com/thorchain/pools | jq '.[] |
 => 68352710830 => 683.5 BTC
 ```
 
-{% hint style="info" %}
+```admonish info
 The Quote endpoints will return fee estimates.
-{% endhint %}
+```
 
 ### Deposit Fees
 
@@ -57,9 +53,9 @@ liquidityFee = 1.1 / (1.1 + 1001.1) * 1.1 = 120,734 sats
 total fee = 150,734 sats
 ```
 
-{% hint style="info" %}
+```admonish info
 Remember, the **liquidityFee** is entirely dependent on the size of the transaction the user is wishing to do. They may wish to do smaller transactions over a period of time to reduce fees.
-{% endhint %}
+```
 
 ## Wait Times
 
@@ -78,8 +74,8 @@ When **withdrawing** using the dust threshold, there are three phases to the tra
 
 Wait times can be between a few seconds up to an hour. The assets being swapped, the size of the swap and the current network traffic within THORChain will determine the wait time
 
-{% hint style="info" %}
+```admonish info
 The Quote endpoint will calculate wait times.
-{% endhint %}
+```
 
 See the [delays.md](../concepts/delays.md "mention") section for full details.

@@ -1,7 +1,3 @@
----
-description: How to setup a multisig & send transactions.
----
-
 # Multisig
 
 ## Setup Multisig
@@ -115,8 +111,8 @@ thornode tx broadcast tx.json --chain-id thorchain-mainnet-v1 --node https://rpc
 
 ## THORSafe
 
-{% hint style="info" %}
+```admonish info
 THORSafe does not support Ledger yet!
-{% endhint %}
+```
 
 THORSafe is a multisig frontend (developed by THORSwap): [https://app.thorswap.finance/thorsafe](https://app.thorswap.finance/thorsafe)

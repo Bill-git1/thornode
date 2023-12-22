@@ -1,7 +1,3 @@
----
-description: Lending Quick Start Guide
----
-
 # Quick Start Guide
 
 Lending allows users to deposit native collateral, and then create a debt at a collateralization ratio `CR` (collateralization ratio). The debt is always denominated in USD (aka `TOR`) regardless of what L1 asset the user receives.
@@ -48,13 +44,13 @@ Lending Quote endpoints have been created to simplify the implementation process
 
 _If you send 1 BTC to `bc1q2hldv0pmy9mcpddj2qrvdgcx6pw6h6h7gqytwy` with the_ [_memo_](../concepts/memos.md#open-loan) _`$+:ETH.USDT:0xe7062003a7be4df3a86127293a0d6b1f54c04220` you will receive approx. 1128.8773 USDT debt sent to `0xe7062003a7be4df3a86127293a0d6b1f54c04220` with a CR of 314.6% and will incur 49 basis points (0.49%) slippage._&#x20;
 
-{% hint style="danger" %}
+```admonish danger
 The `Inbound_Address` changes regularly, do not cache!
-{% endhint %}
+```
 
-{% hint style="warning" %}
+```admonish warning
 Loans cannot be repaid until a minimum time has passed, as determined by [LOANREPAYMENTMATURITY](https://thornode.ninerealms.com/thorchain/mimir), which is currently set as the current block height plus LOANREPAYMENTMATURITY. Currently, LOANREPAYMENTMATURITY is set to 432,000 blocks, equivalent to 30 days. Increasing the collateral on an existing loan to obtain additional debit resets the period.
-{% endhint %}
+```
 
 ## **Close a Loan**
 

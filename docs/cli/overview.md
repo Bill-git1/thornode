@@ -1,7 +1,3 @@
----
-description: How to install & interact with THORCli.
----
-
 # Overview
 
 ## Install (Mac)

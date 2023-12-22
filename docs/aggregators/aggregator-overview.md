@@ -1,7 +1,3 @@
----
-description: How THORChain supports cross-chain aggregation.
----
-
 # Aggregator Overview
 
 ## Overview
@@ -21,9 +17,9 @@ ETH swap contracts such as Sushi Swap to convert to/from THORChain support L1 to
 
 There can be multiple `aggregators`. The first `thorchain aggregator` will use Sushiswap only and use ETH as the base asset. Aggregators need to follow a spec for compatibility with THORChain. Any THORChain ecosystem project can launch their own aggregator and get it whitelisted into THORChain. They can add custom/exotic routing logic if they wish.
 
-{% hint style="warning" %}
+```admonish warning
 Destination addresses should only be user-controlled addresses, not smart contract addresses.;
-{% endhint %}
+```
 
 ### SwapIn
 
@@ -41,7 +37,7 @@ The SwapOut is called by the User invoking the aggregator memo on THORChain.;
 
 The User needs to pass the aggregator contract address in the memo. THORChain will perform the swap to the preferred Base Asset for that chain. The rest of the parameters, being `to, asset, limit` are what is passed by THORChain in the SwapOut call for further execution.
 
-`User ->  Deposit into THORChain -> Swap to Base Asset -> Call into Aggregator -> Swap Via AMM`
+`User -> Deposit into THORChain -> Swap to Base Asset -> Call into Aggregator -> Swap Via AMM`
 
 Eg: Swap from BTC on THORChain to long tail ERC20 via Sushiswap. See [Memos](memos.md).;
 
@@ -53,11 +49,7 @@ A user can combine the two. Swapping In first, then passing an Aggregator Memo t
 
 Eg: Swap long tail ERC20 via Sushiswap into ETH on THORChain to LUNA then long tail CW20 via TerraSwap.
 
-### EVM Implementation
-
-{% content-ref url="evm-implementation.md" %}
-[evm-implementation.md](evm-implementation.md)
-{% endcontent-ref %}
+### [EVM Implementation](evm-implementation.md)
 
 ### CosmWasm Implementation
 
@@ -67,6 +59,6 @@ For **SwapOut** THORChain will execute a `MsgExecuteContract` which then sends t
 
 ### Deploying An Aggregator
 
-If you would like to deploy your own aggregator with your own custom logic, deploy it with the principles above, then submit a PR for it to get whitelisted on THORChain.;
+If you would like to deploy your own aggregator with your own custom logic, deploy it with the principles above, then submit a PR for it to get whitelisted on THORChain.
 
-{% embed url="https://gitlab.com/thorchain/thornode/-/merge_requests/2132/diffs" %}
+Example: https://gitlab.com/thorchain/thornode/-/merge_requests/2132

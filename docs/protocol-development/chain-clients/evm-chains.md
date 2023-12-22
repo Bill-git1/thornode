@@ -1,7 +1,3 @@
----
-description: This page describes how ETH and EVM chains are implemented
----
-
 # EVM Chains
 
 ## Chain Client
@@ -10,7 +6,7 @@ Example for Ethereum.
 
 ### Observer And Signer
 
-{% embed url="https://gitlab.com/thorchain/thornode/-/blob/develop/bifrost/pkg/chainclients/ethereum/ethereum.go" %}
+{{#embed https://gitlab.com/thorchain/thornode/-/blob/develop/bifrost/pkg/chainclients/ethereum/ethereum.go }}
 
 ### Router
 
@@ -22,17 +18,17 @@ Instead of paying ERC20s to vault addresses, an `allowance` to spend is given on
 
 Additionally because of this, the Router is a permissionless contract with no special privileges (there is no `owner`).
 
-{% hint style="info" %}
+```admonish info
 The Router is necessary because the ERC20 standard has no "push" functionality, and no ability to attach native memos. The Router uses the transferFrom "pull" and emits an event with a memo string.
-{% endhint %}
+```
 
-{% hint style="warning" %}
+```admonish warning
 The V3 Router uses solidity `.Send()` to transfer ETH assets outbound. When an outbound ETH tx is sent to a contract, it must complete execution with only 2300 Gas. If the recipient runs out of Gas, the network still considers the payment sent. Developers of THORChain UI's should check recipient ETH addresses for the presence of code and warn users who may have complex fallback functions that their payment may not succeed, and they could lose funds. Geth `eth.getCode("0xaddress")` may be useful.
-{% endhint %}
+```
 
-{% hint style="warning" %}
+```admonish warning
 The Router does not accept deposits from Smart Contracts. Deposits from Smart Contracts are ignored.&#x20;
-{% endhint %}
+```
 
 ### Scanning Blocks
 

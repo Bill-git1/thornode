@@ -1,9 +1,3 @@
----
-description: >-
-  This page goes over how to build an inbound THORChain transaction for each
-  chain type.
----
-
 # Sending Transactions
 
 Confirm you have:
@@ -25,25 +19,25 @@ You are ready to make the transaction and swap via THORChain.
 - [ ] Use a high enough `gas_rate` to be included
 - [ ] Do not send below the dust threshold (10k Sats BTC, BCH, LTC, 1m DOGE), exhaustive values can be found on the [Inbound Addresses](https://thornode.ninerealms.com/thorchain/inbound_addresses) endpoint
 
-{% hint style="warning" %}
+```admonish warning
 Inbound transactions should not be delayed for any reason else there is risk funds will be sent to an unreachable address. Use standard transactions, check the [`Inbound_Address`](querying-thorchain.md#getting-the-asgard-vault) before sending and use the recommended [`gas rate`](querying-thorchain.md#getting-the-asgard-vault) to ensure transactions are confirmed in the next block to the latest `Inbound_Address`.
-{% endhint %}
+```
 
-{% hint style="info" %}
+```admonish info
 Memo limited to 80 bytes on BTC. Use abbreviated options and [THORNames](https://docs.thorchain.org/network/thorchain-name-service) where possible.
-{% endhint %}
+```
 
-{% hint style="warning" %}
+```admonish warning
 Do not use HD wallets that forward the change to a new address, because THORChain IDs the user as the address in VIN0. The user must keep their VIN0 address funded for refunds.
-{% endhint %}
+```
 
-{% hint style="danger" %}
+```admonish danger
 Override randomised VOUT ordering; THORChain requires specific output ordering.
-{% endhint %}
+```
 
 ### EVM Chains
 
-{% embed url="https://gitlab.com/thorchain/ethereum/eth-router/-/blob/master/contracts/THORChain_Router.sol#L66" %}
+{{#embed https://gitlab.com/thorchain/ethereum/eth-router/-/blob/master/contracts/THORChain_Router.sol#L66 }}
 
 ```go
 depositWithExpiry(vault, asset, amount, memo, expiry)
@@ -55,13 +49,13 @@ depositWithExpiry(vault, asset, amount, memo, expiry)
 - [ ] Use an expiry which is +60mins on the current time (if the tx is delayed, it will get refunded)
 - [ ] Use a high enough `gas_rate` to be included, otherwise the tx will get stuck
 
-{% hint style="info" %}
+```admonish info
 ETH is `0x0000000000000000000000000000000000000000`
-{% endhint %}
+```
 
-{% hint style="danger" %}
+```admonish danger
 ETH is sent and received as an internal transaction. Your wallet may not be set to read internal balances and transactions
-{% endhint %}
+```
 
 ### BFT Chains
 

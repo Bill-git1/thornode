@@ -1,7 +1,3 @@
----
-description: How to connect to Midgard, THORNode and the base Tendermint layer.
----
-
 # Connecting to THORChain
 
 The Network Information comes from four sources:
@@ -11,9 +7,9 @@ The Network Information comes from four sources:
 3. **Cosmos RPC**: Used to query for generic CosmosSDK information.
 4. **Tendermint RPC**: Used to query for consensus-related information.
 
-{% hint style="info" %}
+```admonish info
 The below endpoints are run by specific organisations for public use. There is a cost to running these services. If you want to run your own full node, please see [https://docs.thorchain.org/thornodes/overview.](https://docs.thorchain.org/thornodes/overview)
-{% endhint %}
+```
 
 ## Midgard
 

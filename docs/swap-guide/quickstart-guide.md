@@ -1,7 +1,3 @@
----
-description: Make a cross-chain swap on THORChain in less than 5 minutes.
----
-
 # Quickstart Guide
 
 ## Introduction
@@ -10,9 +6,9 @@ THORChain allows native L1 Swaps. On-chain [Memos](../concepts/memos.md) are use
 
 Let's demonstrate decentralized, non-custodial cross-chain swaps. In this example, we will build a transaction that instructs THORChain to swap native Bitcoin to native Ethereum in one transaction.
 
-{% hint style="info" %}
+```admonish info
 The following examples use a free, hosted API provided by [Nine Realms](https://twitter.com/ninerealms_cap). If you want to run your own full node, please see [connecting-to-thorchain.md](../concepts/connecting-to-thorchain.md "mention").
-{% endhint %}
+```
 
 ### 1. Determine the correct asset name
 
@@ -21,15 +17,15 @@ THORChain uses a specific [asset notation](../concepts/asset-notation.md#layer-1
 BTC => `BTC.BTC`\
 ETH => `ETH.ETH`
 
-{% hint style="info" %}
+```admonish info
 Only available pools can be used. (`where 'status' == Available)`
-{% endhint %}
+```
 
 ### 2. Query for a swap quote
 
-{% hint style="info" %}
+```admonish info
 All amounts are 1e8. Multiply native asset amounts by 100000000 when dealing with amounts in THORChain. 1 BTC = 100,000,000.
-{% endhint %}
+```
 
 **Request**: _Swap 1 BTC to ETH and send the ETH to_ `0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430`.
 
@@ -67,11 +63,11 @@ _If you send 1 BTC to `bc1qlccxv985m20qvd8g5yp6g9lc0wlc70v6zlalz8` with the memo
 
 _For security reasons, your inbound transaction will be delayed by 600 seconds (1 BTC Block) and 2040 seconds (or 136 native THORChain blocks) for the outbound transaction,_ 2640 seconds all up*. You will pay an outbound gas fee of 0.0048 ETH and will incur 41 basis points (0.41%) of slippage.*
 
-{% hint style="info" %}
+```admonish info
 Full quote swap endpoint specification can be found here: [https://thornode.ninerealms.com/thorchain/doc/](https://thornode.ninerealms.com/thorchain/doc/).
 
 See an example implementation [here.](https://replit.com/@thorchain/quoteSwap#index.js)
-{% endhint %}
+```
 
 If you'd prefer to calculate the swap yourself, see the [Fees](fees-and-wait-times.md) section to understand what fees need to be accounted for in the output amount. Also, review the [Transaction Memos](../concepts/memos.md) section to understand how to create the swap memos.
 
@@ -85,13 +81,13 @@ Recipient => `bc1qlccxv985m20qvd8g5yp6g9lc0wlc70v6zlalz8`
 
 Memo => `=:ETH.ETH:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430`
 
-{% hint style="warning" %}
+```admonish warning
 Never cache inbound addresses! Quotes should only be considered valid for 10 minutes. Sending funds to an old inbound address will result in loss of funds.
-{% endhint %}
+```
 
-{% hint style="info" %}
+```admonish info
 Learn more about how to construct inbound transactions for each chain type here: [Sending Transactions](../concepts/sending-transactions.md)
-{% endhint %}
+```
 
 ### 4. Receive tokens
 
@@ -99,13 +95,13 @@ Once a majority of nodes have observed your inbound BTC transaction, they will s
 
 ## Additional Considerations
 
-{% hint style="warning" %}
+```admonish warning
 There is a rate limit of 1 request per second per IP address on /quote endpoints. It is advised to put a timeout on frontend components input fields, so that a request for quote only fires at most once per second. If not implemented correctly, you will receive 503 errors.
-{% endhint %}
+```
 
-{% hint style="success" %}
+```admonish success
 For best results, request a new quote right before the user submits a transaction. This will tell you whether the _expected_amount_out_ has changed or if the _inbound_address_ has changed. Ensuring that the _expected_amount_out_ is still valid will lead to better user experience and less frequent failed transactions.
-{% endhint %}
+```
 
 ### Price Limits
 

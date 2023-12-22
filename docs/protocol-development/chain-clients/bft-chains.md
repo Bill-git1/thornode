@@ -1,7 +1,3 @@
----
-description: This covers BNB and Cosmos connections
----
-
 # BFT Chains
 
 ## Assets
