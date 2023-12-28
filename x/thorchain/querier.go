@@ -1286,6 +1286,13 @@ func queryPool(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mg
 		return nil, fmt.Errorf("fail to fetch total loan collateral: %w", err)
 	}
 
+	loanHandler := NewLoanOpenHandler(mgr)
+	cr, _ := loanHandler.getPoolCR(ctx, pool, cosmos.OneUint())
+	loanCollateralRemaining, err := loanHandler.GetLoanCollateralRemainingForPool(ctx, pool)
+	if err != nil {
+		return nil, fmt.Errorf("fail to fetch remaining loan collateral: %w", err)
+	}
+
 	runeDepth, _, _ := mgr.NetworkMgr().CalcAnchor(ctx, mgr, asset)
 	dpool, _ := mgr.Keeper().GetPool(ctx, asset.GetDerivedAsset())
 	dbps := common.GetUncappedShare(dpool.BalanceRune, runeDepth, cosmos.NewUint(constants.MaxBasisPts))
@@ -1300,10 +1307,8 @@ func queryPool(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mg
 	p.SynthMintPaused = (synthMintPausedErr != nil)
 	p.SynthSupplyRemaining = synthSupplyRemaining.String()
 	p.LoanCollateral = totalCollateral.String()
+	p.LoanCollateralRemaining = loanCollateralRemaining.String()
 	p.DerivedDepthBps = dbps.String()
-
-	handler := NewLoanOpenHandler(mgr)
-	cr, _ := handler.getPoolCR(ctx, pool, cosmos.OneUint())
 	p.LoanCR = cr.String()
 
 	return jsonify(ctx, p)
@@ -1353,6 +1358,13 @@ func queryPools(ctx cosmos.Context, req abci.RequestQuery, mgr *Mgrs) ([]byte, e
 			return nil, fmt.Errorf("fail to fetch total loan collateral: %w", err)
 		}
 
+		loanHandler := NewLoanOpenHandler(mgr)
+		cr, _ := loanHandler.getPoolCR(ctx, pool, cosmos.OneUint())
+		loanCollateralRemaining, err := loanHandler.GetLoanCollateralRemainingForPool(ctx, pool)
+		if err != nil {
+			return nil, fmt.Errorf("fail to fetch remaining loan collateral: %w", err)
+		}
+
 		runeDepth, _, _ := mgr.NetworkMgr().CalcAnchor(ctx, mgr, pool.Asset)
 		dpool, _ := mgr.Keeper().GetPool(ctx, pool.Asset.GetDerivedAsset())
 		dbps := common.GetUncappedShare(dpool.BalanceRune, runeDepth, cosmos.NewUint(constants.MaxBasisPts))
@@ -1367,10 +1379,8 @@ func queryPools(ctx cosmos.Context, req abci.RequestQuery, mgr *Mgrs) ([]byte, e
 		p.SynthMintPaused = (synthMintPausedErr != nil)
 		p.SynthSupplyRemaining = synthSupplyRemaining.String()
 		p.LoanCollateral = totalCollateral.String()
+		p.LoanCollateralRemaining = loanCollateralRemaining.String()
 		p.DerivedDepthBps = dbps.String()
-
-		handler := NewLoanOpenHandler(mgr)
-		cr, _ := handler.getPoolCR(ctx, pool, cosmos.OneUint())
 		p.LoanCR = cr.String()
 
 		pools = append(pools, p)

@@ -1279,6 +1279,7 @@ components:
         - synth_mint_paused
         - synth_supply_remaining
         - loan_collateral
+        - loan_collateral_remaining
         - loan_cr
         - derived_depth_bps
       properties:
@@ -1343,6 +1344,10 @@ components:
           type: string
           example: "123456"
           description: the amount of collateral collects for loans
+        loan_collateral_remaining:
+          type: string
+          example: "123456"
+          description: the amount of remaining collateral collects for loans
         loan_cr:
           type: string
           example: "123456"

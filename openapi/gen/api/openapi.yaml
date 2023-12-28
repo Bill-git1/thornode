@@ -1952,6 +1952,7 @@ components:
         derived_depth_bps: "123456"
         balance_asset: "3197744873"
         synth_supply: "0"
+        loan_collateral_remaining: "123456"
         synth_mint_paused: true
         pending_inbound_rune: "464993836"
         decimals: 6
@@ -2027,6 +2028,10 @@ components:
           description: the amount of collateral collects for loans
           example: "123456"
           type: string
+        loan_collateral_remaining:
+          description: the amount of remaining collateral collects for loans
+          example: "123456"
+          type: string
         loan_cr:
           description: the current loan collateralization ratio
           example: "123456"
@@ -2043,6 +2048,7 @@ components:
       - balance_rune
       - derived_depth_bps
       - loan_collateral
+      - loan_collateral_remaining
       - loan_cr
       - pending_inbound_asset
       - pending_inbound_rune

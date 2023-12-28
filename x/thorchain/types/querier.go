@@ -294,25 +294,26 @@ func NewQueryObservedTx(obTx ObservedTx) QueryObservedTx {
 
 // QueryPool holds all the information related to a pool
 type QueryPool struct {
-	Asset                string `json:"asset"`
-	ShortCode            string `json:"short_code,omitempty"`
-	Status               string `json:"status"`
-	Decimals             int64  `json:"decimals,omitempty"`
-	PendingInboundAsset  string `json:"pending_inbound_asset"`
-	PendingInboundRune   string `json:"pending_inbound_rune"`
-	BalanceAsset         string `json:"balance_asset"`
-	BalanceRune          string `json:"balance_rune"`
-	PoolUnits            string `json:"pool_units"`
-	LPUnits              string `json:"LP_units"`
-	SynthUnits           string `json:"synth_units"`
-	SynthSupply          string `json:"synth_supply"`
-	SaversDepth          string `json:"savers_depth"`
-	SaversUnits          string `json:"savers_units"`
-	SynthMintPaused      bool   `json:"synth_mint_paused"`
-	SynthSupplyRemaining string `json:"synth_supply_remaining"`
-	LoanCollateral       string `json:"loan_collateral"`
-	LoanCR               string `json:"loan_cr"`
-	DerivedDepthBps      string `json:"derived_depth_bps"`
+	Asset                   string `json:"asset"`
+	ShortCode               string `json:"short_code,omitempty"`
+	Status                  string `json:"status"`
+	Decimals                int64  `json:"decimals,omitempty"`
+	PendingInboundAsset     string `json:"pending_inbound_asset"`
+	PendingInboundRune      string `json:"pending_inbound_rune"`
+	BalanceAsset            string `json:"balance_asset"`
+	BalanceRune             string `json:"balance_rune"`
+	PoolUnits               string `json:"pool_units"`
+	LPUnits                 string `json:"LP_units"`
+	SynthUnits              string `json:"synth_units"`
+	SynthSupply             string `json:"synth_supply"`
+	SaversDepth             string `json:"savers_depth"`
+	SaversUnits             string `json:"savers_units"`
+	SynthMintPaused         bool   `json:"synth_mint_paused"`
+	SynthSupplyRemaining    string `json:"synth_supply_remaining"`
+	LoanCollateral          string `json:"loan_collateral"`
+	LoanCollateralRemaining string `json:"loan_collateral_remaining"`
+	LoanCR                  string `json:"loan_cr"`
+	DerivedDepthBps         string `json:"derived_depth_bps"`
 }
 
 // NewQueryPool creates a new QueryPool based on the given pool parameters

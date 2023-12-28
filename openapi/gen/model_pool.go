@@ -42,6 +42,8 @@ type Pool struct {
 	SynthSupplyRemaining string `json:"synth_supply_remaining"`
 	// the amount of collateral collects for loans
 	LoanCollateral string `json:"loan_collateral"`
+	// the amount of remaining collateral collects for loans
+	LoanCollateralRemaining string `json:"loan_collateral_remaining"`
 	// the current loan collateralization ratio
 	LoanCr string `json:"loan_cr"`
 	// the depth of the derived virtual pool relative to L1 pool (in basis points)
@@ -52,7 +54,7 @@ type Pool struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewPool(asset string, status string, pendingInboundAsset string, pendingInboundRune string, balanceAsset string, balanceRune string, poolUnits string, lPUnits string, synthUnits string, synthSupply string, saversDepth string, saversUnits string, synthMintPaused bool, synthSupplyRemaining string, loanCollateral string, loanCr string, derivedDepthBps string) *Pool {
+func NewPool(asset string, status string, pendingInboundAsset string, pendingInboundRune string, balanceAsset string, balanceRune string, poolUnits string, lPUnits string, synthUnits string, synthSupply string, saversDepth string, saversUnits string, synthMintPaused bool, synthSupplyRemaining string, loanCollateral string, loanCollateralRemaining string, loanCr string, derivedDepthBps string) *Pool {
 	this := Pool{}
 	this.Asset = asset
 	this.Status = status
@@ -69,6 +71,7 @@ func NewPool(asset string, status string, pendingInboundAsset string, pendingInb
 	this.SynthMintPaused = synthMintPaused
 	this.SynthSupplyRemaining = synthSupplyRemaining
 	this.LoanCollateral = loanCollateral
+	this.LoanCollateralRemaining = loanCollateralRemaining
 	this.LoanCr = loanCr
 	this.DerivedDepthBps = derivedDepthBps
 	return &this
@@ -506,6 +509,30 @@ func (o *Pool) SetLoanCollateral(v string) {
 	o.LoanCollateral = v
 }
 
+// GetLoanCollateralRemaining returns the LoanCollateralRemaining field value
+func (o *Pool) GetLoanCollateralRemaining() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.LoanCollateralRemaining
+}
+
+// GetLoanCollateralRemainingOk returns a tuple with the LoanCollateralRemaining field value
+// and a boolean to check if the value has been set.
+func (o *Pool) GetLoanCollateralRemainingOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.LoanCollateralRemaining, true
+}
+
+// SetLoanCollateralRemaining sets field value
+func (o *Pool) SetLoanCollateralRemaining(v string) {
+	o.LoanCollateralRemaining = v
+}
+
 // GetLoanCr returns the LoanCr field value
 func (o *Pool) GetLoanCr() string {
 	if o == nil {
@@ -606,6 +633,9 @@ func (o Pool) MarshalJSON() ([]byte, error) {
 	}
 	if true {
 		toSerialize["loan_collateral"] = o.LoanCollateral
+	}
+	if true {
+		toSerialize["loan_collateral_remaining"] = o.LoanCollateralRemaining
 	}
 	if true {
 		toSerialize["loan_cr"] = o.LoanCr
