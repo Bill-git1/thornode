@@ -1,6 +1,8 @@
 version: 0.1
 cli:
   version: 1.17.1
+repo:
+  trunk_branch: develop
 lint:
   definitions:
     - name: codespell
