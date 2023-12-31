@@ -758,47 +758,41 @@ func (vm *NetworkMgrVCUR) POLCycle(ctx cosmos.Context, mgr Manager) error {
 		return err
 	}
 
-	pools := vm.fetchPOLPools(ctx, mgr)
+	pools, mimirVals := vm.fetchPOLPools(ctx, mgr)
 
 	if len(pools) == 0 {
 		return fmt.Errorf("no POL pools")
 	}
 
-	pool := pools[int(ctx.BlockHeight()%int64(len(pools)))]
+	for idx, pool := range pools {
+		val := mimirVals[idx]
 
-	// The POL key for the ETH.ETH pool would be POL-ETH-ETH .
-	key := "POL-" + pool.Asset.MimirString()
-	val, err := mgr.Keeper().GetMimir(ctx, key)
-	if err != nil {
-		ctx.Logger().Error("fail to manage POL in pool", "pool", pool.Asset.String(), "error", err)
-		return nil
-	}
-
-	// if pool isn't available or mimir has it configured, force withdraw from the pool
-	if val == 2 || pool.Status != PoolAvailable {
-		targetSynthPerPoolDepth = cosmos.NewUint(10_000)
-	}
-
-	synthSupply := mgr.Keeper().GetTotalSupply(ctx, pool.Asset.GetSyntheticAsset())
-	pool.CalcUnits(mgr.GetVersion(), synthSupply)
-	synthPerPoolDepth := common.GetUncappedShare(pool.SynthUnits, pool.GetPoolUnits(), cosmos.NewUint(10_000))
-
-	// detect if we need to deposit rune
-	if common.SafeSub(synthPerPoolDepth, buffer).GT(targetSynthPerPoolDepth) {
-		if maxDeposit <= pol.CurrentDeposit().Int64() {
-			ctx.Logger().Info("maximum rune deployed from POL")
-			return nil
+		// if pool isn't available or mimir has it configured, force withdraw from the pool
+		if val == 2 || pool.Status != PoolAvailable {
+			targetSynthPerPoolDepth = cosmos.NewUint(10_000)
 		}
-		if err := vm.addPOLLiquidity(ctx, pool, polAddress, asgardAddress, signer, maxMovement, synthPerPoolDepth, targetSynthPerPoolDepth, mgr); err != nil {
-			ctx.Logger().Error("fail to manage POL in pool", "pool", pool.Asset.String(), "error", err)
-		}
-		return nil
-	}
 
-	// detect if we need to withdraw rune
-	if synthPerPoolDepth.Add(buffer).LT(targetSynthPerPoolDepth) {
-		if err := vm.removePOLLiquidity(ctx, pool, polAddress, asgardAddress, signer, maxMovement, synthPerPoolDepth, targetSynthPerPoolDepth, mgr); err != nil {
-			ctx.Logger().Error("fail to manage POL in pool", "pool", pool.Asset.String(), "error", err)
+		synthSupply := mgr.Keeper().GetTotalSupply(ctx, pool.Asset.GetSyntheticAsset())
+		pool.CalcUnits(mgr.GetVersion(), synthSupply)
+		synthPerPoolDepth := common.GetUncappedShare(pool.SynthUnits, pool.GetPoolUnits(), cosmos.NewUint(10_000))
+
+		// detect if we need to deposit rune
+		if common.SafeSub(synthPerPoolDepth, buffer).GT(targetSynthPerPoolDepth) {
+			if maxDeposit <= pol.CurrentDeposit().Int64() {
+				ctx.Logger().Info("maximum rune deployed from POL")
+				continue
+			}
+			if err := vm.addPOLLiquidity(ctx, pool, polAddress, asgardAddress, signer, maxMovement, synthPerPoolDepth, targetSynthPerPoolDepth, mgr); err != nil {
+				ctx.Logger().Error("fail to manage POL in pool", "pool", pool.Asset.String(), "error", err)
+			}
+			continue
+		}
+
+		// detect if we need to withdraw rune
+		if synthPerPoolDepth.Add(buffer).LT(targetSynthPerPoolDepth) {
+			if err := vm.removePOLLiquidity(ctx, pool, polAddress, asgardAddress, signer, maxMovement, synthPerPoolDepth, targetSynthPerPoolDepth, mgr); err != nil {
+				ctx.Logger().Error("fail to manage POL in pool", "pool", pool.Asset.String(), "error", err)
+			}
 		}
 	}
 
@@ -806,8 +800,9 @@ func (vm *NetworkMgrVCUR) POLCycle(ctx cosmos.Context, mgr Manager) error {
 }
 
 // generated a filtered list of pools that the POL is active with
-func (mv *NetworkMgrVCUR) fetchPOLPools(ctx cosmos.Context, mgr Manager) Pools {
+func (mv *NetworkMgrVCUR) fetchPOLPools(ctx cosmos.Context, mgr Manager) (Pools, []int64) {
 	var pools Pools
+	mimirVals := make([]int64, 0)
 	iterator := mgr.Keeper().GetPoolIterator(ctx)
 	defer iterator.Close()
 	for ; iterator.Valid(); iterator.Next() {
@@ -853,9 +848,10 @@ func (mv *NetworkMgrVCUR) fetchPOLPools(ctx cosmos.Context, mgr Manager) Pools {
 		}
 
 		pools = append(pools, pool)
+		mimirVals = append(mimirVals, val)
 	}
 
-	return pools
+	return pools, mimirVals
 }
 
 func (vm *NetworkMgrVCUR) addPOLLiquidity(
