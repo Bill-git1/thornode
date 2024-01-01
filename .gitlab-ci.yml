@@ -131,6 +131,29 @@ build-thornode:
     - BUILDTAG=mocknet BRANCH=mocknet make docker-gitlab-build
     - BUILDTAG=mocknet BRANCH=mocknet make docker-gitlab-push
 
+chain-avalanche:
+  only:
+    changes:
+      - chain/avalanche/
+  stage: test
+  image: node:16
+  script:
+    - cd chain/avalanche/
+    - yarn install --non-interactive
+    - yarn hardhat compile
+    - yarn hardhat test
+
+chain-ethereum:
+  only:
+    changes:
+      - chain/ethereum/
+  stage: test
+  image: node:16
+  script:
+    - cd chain/ethereum/
+    - yarn install --non-interactive
+    - yarn hardhat test
+
 pages:
   rules:
     - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != "thorchain/thornode"
