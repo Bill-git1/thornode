@@ -6,6 +6,7 @@ import (
 	"github.com/blang/semver"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/common/tokenlist"
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 )
 
@@ -506,4 +507,127 @@ func processOneTxInV120(ctx cosmos.Context, keeper keeper.Keeper, tx ObservedTx,
 		return newMsg, m.ValidateBasicV63()
 	}
 	return newMsg, newMsg.ValidateBasic()
+}
+
+func externalAssetMatchV93(version semver.Version, chain common.Chain, hint string) string {
+	if len(hint) == 0 {
+		return hint
+	}
+	switch chain {
+	case common.ETHChain:
+		// find all potential matches
+		matches := []string{}
+		for _, token := range tokenlist.GetETHTokenList(version).Tokens {
+			if strings.HasSuffix(strings.ToLower(token.Address), strings.ToLower(hint)) {
+				matches = append(matches, token.Address)
+				if len(matches) > 1 {
+					break
+				}
+			}
+		}
+
+		// if we only have one match, lets go with it, otherwise leave the
+		// user's input alone. It may still work, if it doesn't, should get the
+		// gas asset instead of the erc20 desired.
+		if len(matches) == 1 {
+			return matches[0]
+		}
+
+		return hint
+	default:
+		return hint
+	}
+}
+
+func externalAssetMatchV95(version semver.Version, chain common.Chain, hint string) string {
+	if len(hint) == 0 {
+		return hint
+	}
+	if chain.IsEVM() {
+		// find all potential matches
+		matches := []string{}
+		for _, token := range tokenlist.GetEVMTokenList(chain, version).Tokens {
+			if strings.HasSuffix(strings.ToLower(token.Address), strings.ToLower(hint)) {
+				matches = append(matches, token.Address)
+				if len(matches) > 1 {
+					break
+				}
+			}
+		}
+		// if we only have one match, lets go with it, otherwise leave the
+		// user's input alone. It may still work, if it doesn't, should get the
+		// gas asset instead of the erc20 desired.
+		if len(matches) == 1 {
+			return matches[0]
+		}
+
+		return hint
+	}
+	return hint
+}
+
+func fuzzyAssetMatchV103(ctx cosmos.Context, keeper keeper.Keeper, origAsset common.Asset) common.Asset {
+	asset := origAsset.GetLayer1Asset()
+	// if it's already an exact match with successfully-added liquidity, return it immediately
+	pool, err := keeper.GetPool(ctx, asset)
+	if err != nil {
+		return origAsset
+	}
+	// Only check BalanceRune after checking the error so that no panic if there were an error.
+	if !pool.BalanceRune.IsZero() {
+		return origAsset
+	}
+
+	matches := make(Pools, 0)
+
+	iterator := keeper.GetPoolIterator(ctx)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		if err = keeper.Cdc().Unmarshal(iterator.Value(), &pool); err != nil {
+			ctx.Logger().Error("fail to fetch pool", "asset", asset, "err", err)
+			continue
+		}
+
+		// check chain match
+		if !asset.Chain.Equals(pool.Asset.Chain) {
+			continue
+		}
+
+		// check ticker match
+		if !asset.Ticker.Equals(pool.Asset.Ticker) {
+			continue
+		}
+
+		// check symbol
+		parts := strings.Split(asset.Symbol.String(), "-")
+		// check if no symbol given (ie "USDT" or "USDT-")
+		if len(parts) < 2 || strings.EqualFold(parts[1], "") {
+			matches = append(matches, pool)
+			continue
+		}
+
+		if strings.HasSuffix(strings.ToLower(pool.Asset.Symbol.String()), strings.ToLower(parts[1])) {
+			matches = append(matches, pool)
+			continue
+		}
+	}
+
+	// if we found no matches, return the argument given
+	if len(matches) == 0 {
+		return origAsset
+	}
+
+	// find the deepest pool
+	winner := NewPool()
+	for _, pool := range matches {
+		// Use LTE rather than LT so this function can only return origAsset or a match,
+		// never NewPool()'s empty Asset.
+		if winner.BalanceRune.LTE(pool.BalanceRune) {
+			winner = pool
+		}
+	}
+
+	winner.Asset.Synth = origAsset.Synth
+
+	return winner.Asset
 }
