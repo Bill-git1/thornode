@@ -294,3 +294,72 @@ func (s *KeeperNodeAccountSuite) TestBondProviders(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(providers.Providers, HasLen, 1)
 }
+
+func (s *KeeperNodeAccountSuite) TestRemoveLowBondValidatorAccounts(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	ctx = ctx.WithBlockHeight(10)
+
+	na1 := GetRandomValidatorNode(NodeActive)
+	na1.Bond = cosmos.ZeroUint()
+
+	na2 := GetRandomValidatorNode(NodeStandby)
+	na2.Bond = cosmos.NewUint(common.One)
+	na2Coin := common.NewCoin(common.RuneAsset(), na2.Bond)
+
+	// sending tokens to bond
+	c.Assert(k.MintToModule(ctx, ModuleName, na2Coin), IsNil)
+	c.Assert(k.SendFromModuleToModule(ctx, ModuleName, BondName, common.NewCoins(na2Coin)), IsNil)
+
+	// adding bond providers
+	bAddress, err := na2.BondAddress.AccAddress()
+	c.Assert(err, IsNil)
+	bond := cosmos.NewUint(common.One / 2)
+	na2BondProviders := BondProviders{
+		NodeAddress:     na2.NodeAddress,
+		NodeOperatorFee: cosmos.ZeroUint(),
+		Providers: []BondProvider{
+			{
+				BondAddress: bAddress,
+				Bond:        bond,
+			},
+			{
+				BondAddress: GetRandomBech32Addr(),
+				Bond:        bond,
+			},
+		},
+	}
+	c.Assert(k.SetBondProviders(ctx, na2BondProviders), IsNil)
+
+	na3 := GetRandomVaultNode(NodeStandby)
+	na3.Bond = cosmos.NewUint(10 * common.One)
+
+	c.Assert(k.SetNodeAccount(ctx, na1), IsNil)
+	c.Assert(k.SetNodeAccount(ctx, na2), IsNil)
+	c.Assert(k.SetNodeAccount(ctx, na3), IsNil)
+	c.Assert(k.RemoveLowBondValidatorAccounts(ctx), IsNil)
+
+	// 1st and 3rd na should be skipped
+	na1Store, err := k.GetNodeAccount(ctx, na1.NodeAddress)
+	c.Assert(err, IsNil)
+	c.Check(na1Store.IsEmpty(), Equals, false)
+	c.Check(na1Store.String(), Equals, na1.String())
+
+	na2Store, err := k.GetNodeAccount(ctx, na2.NodeAddress)
+	c.Assert(err, IsNil)
+	c.Check(na2Store.IsEmpty(), Equals, true)
+
+	// check bond providers
+	baStore, err := k.GetBondProviders(ctx, bAddress)
+	c.Assert(err, IsNil)
+	c.Check(len(baStore.Providers), Equals, 0)
+	// check bal
+	for _, bps := range na2BondProviders.Providers {
+		bal := k.GetBalance(ctx, bps.BondAddress)
+		c.Check(bal[0].Amount.Int64(), Equals, int64(bond.Uint64()))
+	}
+
+	na3Store, err := k.GetNodeAccount(ctx, na3.NodeAddress)
+	c.Assert(err, IsNil)
+	c.Check(na3Store.IsEmpty(), Equals, false)
+	c.Check(na3Store.String(), Equals, na3.String())
+}

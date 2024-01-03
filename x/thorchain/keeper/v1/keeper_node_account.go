@@ -84,6 +84,69 @@ func (k KVStore) ListActiveValidators(ctx cosmos.Context) (NodeAccounts, error) 
 	return k.ListValidatorsByStatus(ctx, NodeActive)
 }
 
+func (k KVStore) RemoveLowBondValidatorAccounts(ctx cosmos.Context) error {
+	lowBondValidators := make([][]byte, 0)
+	naIterator := k.GetNodeAccountIterator(ctx)
+	defer naIterator.Close()
+	for ; naIterator.Valid(); naIterator.Next() {
+		var na NodeAccount
+		if err := k.cdc.Unmarshal(naIterator.Value(), &na); err != nil {
+			return dbError(ctx, "Unmarshal: node account", err)
+		}
+		if na.Type == NodeTypeVault || na.Status == NodeActive {
+			continue
+		}
+		if na.Type == NodeTypeValidator && na.Bond.LTE(cosmos.NewUint(common.One)) {
+			lowBondValidators = append(lowBondValidators, naIterator.Key())
+			if na.Bond.IsZero() {
+				continue
+			}
+			bps, err := k.GetBondProviders(ctx, na.NodeAddress)
+			if err != nil {
+				return err
+			}
+			to, err := na.BondAddress.AccAddress()
+			if err != nil {
+				return dbError(ctx, "", fmt.Errorf("fail to parse bond address(%s)", na.BondAddress))
+			}
+
+			// No bond providers
+			if len(bps.Providers) == 0 {
+				coin := common.NewCoin(common.RuneAsset(), na.Bond)
+				if err = k.SendFromModuleToAccount(ctx, BondName, to, common.NewCoins(coin)); err != nil {
+					ctx.Logger().Error("failed to return bond pool coins", "error", err)
+				}
+				continue
+			}
+
+			bps.Adjust(k.GetVersion(), na.Bond)
+			totalSent := cosmos.ZeroUint()
+			for _, provider := range bps.Providers {
+				if provider.Bond.IsZero() || provider.BondAddress.Empty() {
+					continue
+				}
+				coin := common.NewCoin(common.RuneAsset(), provider.Bond)
+				if err = k.SendFromModuleToAccount(ctx, BondName, provider.BondAddress, common.NewCoins(coin)); err != nil {
+					ctx.Logger().Error("failed to return bond pool coins", "error", err)
+					continue
+				}
+				totalSent = totalSent.Add(provider.Bond)
+			}
+			// sanity check
+			if totalSent.GT(na.Bond) {
+				return dbError(ctx, "", fmt.Errorf("total bond returned greater than node bond"))
+			}
+
+			// remove bond providers
+			k.del(ctx, k.GetKey(ctx, prefixBondProviders, na.NodeAddress.String()))
+		}
+	}
+	for _, naKey := range lowBondValidators {
+		k.del(ctx, string(naKey))
+	}
+	return nil
+}
+
 // GetMinJoinVersion - get min version to join. Min version is the most popular version
 func (k KVStore) GetMinJoinVersion(ctx cosmos.Context) semver.Version {
 	return k.getMinJoinVersionV1(ctx)
@@ -439,7 +502,7 @@ func (k KVStore) DeductNativeTxFeeFromBond(ctx cosmos.Context, nodeAddr cosmos.A
 	}
 
 	// transfer fee from bond module to reserve
-	coins := common.NewCoins(common.NewCoin(common.RuneNative, fee))
+	coins := common.NewCoins(common.NewCoin(common.RuneAsset(), fee))
 	if err = k.SendFromModuleToModule(ctx, BondName, ReserveName, coins); err != nil {
 		return err
 	}
