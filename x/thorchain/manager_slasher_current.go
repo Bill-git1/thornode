@@ -377,7 +377,7 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 						vault = active[0]
 					}
 				} else {
-					rep := int(tx.InHash.Int64() + ctx.BlockHeight())
+					rep := int(tx.InHash.Int64() + ctx.BlockHeight()/signingTransPeriod)
 					if vault.PubKey.Equals(available[rep%len(available)].PubKey) {
 						// looks like the new vault is going to be the same as the
 						// old vault, increment rep to ensure a differ asgard is
