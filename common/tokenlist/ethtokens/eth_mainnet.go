@@ -8,10 +8,7 @@ import (
 )
 
 //go:embed eth_mainnet_latest.json
-var ETHTokenListRawV125 []byte
-
-//go:embed eth_mainnet_V124.json
-var ETHTokenListRawV124 []byte
+var ETHTokenListRawV126 []byte
 
 //go:embed eth_mainnet_V120.json
 var ETHTokenListRawV120 []byte

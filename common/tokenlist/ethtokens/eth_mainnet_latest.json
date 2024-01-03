@@ -9,6 +9,14 @@
   "keywords": ["1inch", "default", "list"],
   "tokens": [
     {
+      "address": "0xa6C0c097741D55ECd9a3A7DeF3A8253fD022ceB9",
+      "chainId": 1,
+      "name": "AVA",
+      "symbol": "AVA",
+      "decimals": 18,
+      "logoURI": "https://etherscan.io/token/images/avafoundation_32.png"
+    },
+    {
       "address": "0x9506d37f70eB4C3d79C398d326C871aBBf10521d",
       "chainId": 1,
       "name": "Media Licensing Token",
@@ -8006,6 +8014,54 @@
       "symbol": "XVG",
       "decimals": 18,
       "logoURI": "https://raw.githubusercontent.com/vergecurrency/verge-graphics/master/XVGETH/Verge_Token_erc-20_icon_square-192x192.png"
+    },
+    {
+      "address": "0xb2e96a63479C2Edd2FD62b382c89D5CA79f572d3",
+      "chainId": 1,
+      "name": "WrappedZNN",
+      "symbol": "wZNN",
+      "decimals": 8,
+      "logoURI": "https://tokens.1inch.io/0xb2e96a63479c2edd2fd62b382c89d5ca79f572d3.png"
+    },
+    {
+      "address": "0x0E573Ce2736Dd9637A0b21058352e1667925C7a8",
+      "chainId": 1,
+      "name": "Verified USD",
+      "symbol": "USDV",
+      "decimals": 6,
+      "logoURI": "https://usdv.money/static/features/home/token.svg"
+    },
+    {
+      "address": "0x5283D291DBCF85356A21bA090E6db59121208b44",
+      "chainId": 1,
+      "name": "Blur",
+      "symbol": "BLUR",
+      "decimals": 18,
+      "logoURI": "https://etherscan.io/token/images/blurio_32.png"
+    },
+    {
+      "address": "0x046EeE2cc3188071C02BfC1745A6b17c656e3f3d",
+      "chainId": 1,
+      "name": "Rollbit",
+      "symbol": "RLB",
+      "decimals": 18,
+      "logoURI": "https://etherscan.io/token/images/rollbitcoin_32.png"
+    },
+    {
+      "address": "0x582d872A1B094FC48F5DE31D3B73F2D9bE47def1",
+      "chainId": 1,
+      "name": "Wrapped TON Coin",
+      "symbol": "TONCOIN",
+      "decimals": 9,
+      "logoURI": "https://etherscan.io/token/images/rollbitcoin_32.png"
+    },
+    {
+      "address": "0x815C23eCA83261b6Ec689b60Cc4a58b54BC24D8D",
+      "chainId": 1,
+      "name": "vTHOR",
+      "symbol": "vTHOR",
+      "decimals": 18,
+      "logoURI": "https://cdn.discordapp.com/emojis/971344444391563275.webp"
     }
   ],
   "logoURI": "https://1inch.exchange/assets/images/logo.png"
