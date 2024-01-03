@@ -7,7 +7,7 @@ import (
 	"gitlab.com/thorchain/thornode/common"
 )
 
-func DexAggregatorsV124() []Aggregator {
+func DexAggregatorsV126() []Aggregator {
 	return []Aggregator{
 		// TSAggregatorPancakeSwap Ethereum V2
 		{common.ETHChain, `0x35CF22003c90126528fbe95b21bB3ADB2ca8c53D`, 400_000},
@@ -103,5 +103,9 @@ func DexAggregatorsV124() []Aggregator {
 		{common.AVAXChain, `0x892Fb7C2A23772f4A2FFC3DC82419147dC22021C`, 400_000},
 		// RangoThorchainOutputAggUniV2_COMPACT_PANGOLIN
 		{common.AVAXChain, `0xBd039a45e656221E28594d2761DDed8F6712AE46`, 400_000},
+		// SymbiosisProxy - ETH
+		{common.ETHChain, `0x5523985926Aa12BA58DC5Ad00DDca99678D7227E`, 800_000},
+		// SymbiosisProxy - AVAX
+		{common.AVAXChain, `0x292fC50e4eB66C3f6514b9E402dBc25961824D62`, 800_000},
 	}
 }
