@@ -250,7 +250,7 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 		return nil, nil, fmt.Errorf("fail to get unspent UTXO")
 	}
 	redeemTx := wire.NewMsgTx(wire.TxVersion)
-	totalAmt := float64(0)
+	totalAmt := int64(0)
 	individualAmounts := make(map[string]int64, len(txes))
 	for _, item := range txes {
 		var txID *chainhash.Hash
@@ -262,13 +262,13 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 		outputPoint := wire.NewOutPoint(txID, item.Vout)
 		sourceTxIn := wire.NewTxIn(outputPoint, nil, nil)
 		redeemTx.AddTxIn(sourceTxIn)
-		totalAmt += item.Amount
 		var amt btcutil.Amount
 		amt, err = btcutil.NewAmount(item.Amount)
 		if err != nil {
 			return nil, nil, fmt.Errorf("fail to parse amount(%f): %w", item.Amount, err)
 		}
 		individualAmounts[fmt.Sprintf("%s-%d", txID, item.Vout)] = int64(amt)
+		totalAmt += int64(amt)
 	}
 
 	var buf []byte
@@ -317,11 +317,6 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 		c.log.Fatal().Msg("unsupported chain")
 	}
 
-	var total btcutil.Amount
-	total, err = btcutil.NewAmount(totalAmt)
-	if err != nil {
-		return nil, nil, fmt.Errorf("fail to parse total amount(%f),err: %w", totalAmt, err)
-	}
 	coinToCustomer := tx.Coins.GetCoin(c.cfg.ChainID.GetGasAsset())
 	totalSize := c.estimateTxSize(tx.Memo, txes)
 
@@ -376,8 +371,8 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 
 	// balance to ourselves
 	// add output to pay the balance back ourselves
-	balance := int64(total) - redeemTxOut.Value - int64(gasAmt)
-	c.log.Info().Msgf("total: %d, to customer: %d, gas: %d", int64(total), redeemTxOut.Value, int64(gasAmt))
+	balance := totalAmt - redeemTxOut.Value - int64(gasAmt)
+	c.log.Info().Msgf("total: %d, to customer: %d, gas: %d", totalAmt, redeemTxOut.Value, int64(gasAmt))
 	if balance < 0 {
 		return nil, nil, fmt.Errorf("not enough balance to pay customer: %d", balance)
 	}
