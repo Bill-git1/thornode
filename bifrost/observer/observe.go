@@ -371,6 +371,17 @@ func (o *Observer) filterBinanceMemoFlag(chain common.Chain, items []types.TxInI
 		if len(raw) == 0 {
 			return common.NoAddress
 		}
+
+		// if raw dest is a valid address, return it if BNB
+		addr, err := common.NewAddress(raw)
+		if err == nil {
+			if addr.IsChain(common.BNBChain) {
+				return addr
+			}
+			return common.NoAddress
+		}
+
+		// attempt to resolve the dest as a thorname
 		name, _ := bridge.GetTHORName(raw)
 		return name.GetAlias(common.BNBChain)
 	}

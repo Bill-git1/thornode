@@ -356,6 +356,23 @@ func (s *ObserverSuite) TestFilterMemoFlag(c *C) {
 	})
 	c.Assert(result, HasLen, 0)
 
+	// memo parsing fails on thorname affiliate but dest is bnb addr
+	result = obs.filterBinanceMemoFlag(common.BTCChain, []types.TxInItem{
+		{
+			BlockHeight: 1024,
+			Tx:          "tx1",
+			Memo:        "swap:BNB.RUNE-67C:tbnb1yeuljgpkg2c2qvx3nlmgv7gvnyss6ye2u8rasf:all-good:10",
+			Sender:      thorchain.GetRandomBNBAddress().String(),
+			To:          thorchain.GetRandomBNBAddress().String(),
+			Coins: common.Coins{
+				common.NewCoin(common.BNBAsset, cosmos.NewUint(1024)),
+			},
+			Gas:                 nil,
+			ObservedVaultPubKey: thorchain.GetRandomPubKey(),
+		},
+	})
+	c.Assert(result, HasLen, 0)
+
 	// normal swap
 	result = obs.filterBinanceMemoFlag(common.BTCChain, []types.TxInItem{
 		{
