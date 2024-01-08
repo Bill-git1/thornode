@@ -56,7 +56,9 @@ func (s *CacheStore) HasSigned(hash string) bool {
 	return exist
 }
 
-// RemoveSigned delete a hash from the signed cache
+// RemoveSigned removes the corresponding TxOutItem from the signer cache. The provided
+// transaction hash should be for the broadcast transaction - it is internally mapped to
+// the cache key for the TxOutItem.
 func (s *CacheStore) RemoveSigned(transactionHash string) error {
 	mapKey := s.getMapKey(transactionHash)
 	value, err := s.db.Get([]byte(mapKey), nil)

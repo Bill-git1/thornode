@@ -347,7 +347,7 @@ func (s *EthereumSuite) TestClient(c *C) {
 	txOut.TxArray[0].VaultPubKey = e2.kw.GetPubKey()
 	c.Logf(txOut.TxArray[0].VaultPubKey.String())
 	c.Logf(e2.kw.GetPubKey().String())
-	out := txOut.TxArray[0].TxOutItem()
+	out := txOut.TxArray[0].TxOutItem(txOut.Height)
 	out.Chain = common.ETHChain
 	out.Memo = "OUT:B6BD1A69831B9CCC0A1E9939E9AFBFCA144C427B3F61E176EBDCB14E57981C1B"
 	r, _, obs, err := e2.SignTx(out, 1)

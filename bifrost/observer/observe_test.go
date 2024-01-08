@@ -228,7 +228,7 @@ func (s *ObserverSuite) SetUpSuite(c *C) {
 	c.Assert(err, IsNil)
 	txOut := getTxOutFromJSONInput(`{ "height": 0, "tx_array": [ { "vault_pub_key":"", "to_address": "tbnb186nvjtqk4kkea3f8a30xh4vqtkrlu2rm9xgly3", "memo": "migrate", "coin":  { "asset": "BNB", "amount": "194765912" }  } ]}`, c)
 	txOut.TxArray[0].VaultPubKey = pk
-	out := txOut.TxArray[0].TxOutItem()
+	out := txOut.TxArray[0].TxOutItem(txOut.Height)
 
 	s.NewMockBinanceInstance(c, "")
 

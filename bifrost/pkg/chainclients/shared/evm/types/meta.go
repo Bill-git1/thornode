@@ -7,9 +7,10 @@ import (
 )
 
 type SignedTxItem struct {
-	Hash        string `json:"hash,omitempty"`
-	Height      int64  `json:"height,omitempty"`
-	VaultPubKey string `json:"vault_pub_key,omitempty"`
+	Hash        string            `json:"hash,omitempty"`
+	Height      int64             `json:"height,omitempty"`
+	VaultPubKey string            `json:"vault_pub_key,omitempty"`
+	TxOutItem   *stypes.TxOutItem `json:"tx_out_item,omitempty"`
 }
 
 // String implement fmt.Stringer

@@ -24,6 +24,7 @@ type TxOutItem struct {
 	AggregatorTargetAsset string         `json:"aggregator_target_asset,omitempty"`
 	AggregatorTargetLimit *cosmos.Uint   `json:"aggregator_target_limit,omitempty"`
 	Checkpoint            []byte         `json:"-"`
+	Height                int64          `json:"height"`
 }
 
 // Hash return a sha256 hash that can uniquely represent the TxOutItem
@@ -42,7 +43,11 @@ func (tx TxOutItem) CacheVault(chain common.Chain) string {
 	return BroadcastCacheKey(tx.VaultPubKey.String(), chain.String())
 }
 
-// Equals compare two TxOutItem , return true when they are the same , otherwise false
+// Equals returns true when the TxOutItems are equal.
+//
+// NOTE: The height field should NOT be compared. This is necessary to pass through on
+// the TxOutItem to the unstuck routine to determine the position within the signing
+// period, but should not be used to determine equality for deduplication.
 func (tx TxOutItem) Equals(tx2 TxOutItem) bool {
 	if !tx.Chain.Equals(tx2.Chain) {
 		return false
@@ -107,7 +112,7 @@ type TxArrayItem struct {
 }
 
 // TxOutItem convert the information to TxOutItem
-func (tx TxArrayItem) TxOutItem() TxOutItem {
+func (tx TxArrayItem) TxOutItem(height int64) TxOutItem {
 	return TxOutItem{
 		Chain:                 tx.Chain,
 		ToAddress:             tx.ToAddress,
@@ -121,6 +126,7 @@ func (tx TxArrayItem) TxOutItem() TxOutItem {
 		Aggregator:            tx.Aggregator,
 		AggregatorTargetAsset: tx.AggregatorTargetAsset,
 		AggregatorTargetLimit: tx.AggregatorTargetLimit,
+		Height:                height,
 	}
 }
 

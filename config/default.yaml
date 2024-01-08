@@ -37,7 +37,7 @@ bifrost:
     backup_keyshares: true
     signer_db_path: /var/data/bifrost/signer_db
     retry_interval: 2s
-    reschedule_buffer_blocks: 50 # 5 minutes
+    reschedule_buffer_blocks: 150 # 15 minutes
     block_scanner:
       chain_id: ThorChain
       rpc_host: 127.0.0.1:26657

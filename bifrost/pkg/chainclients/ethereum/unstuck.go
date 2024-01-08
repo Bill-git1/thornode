@@ -11,13 +11,14 @@ import (
 	ecore "github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/txpool"
 	etypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/rs/zerolog"
 
 	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/evm/types"
+	stypes "gitlab.com/thorchain/thornode/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/common"
+	"gitlab.com/thorchain/thornode/config"
 	"gitlab.com/thorchain/thornode/constants"
 )
-
-const TxWaitBlocks = 150
 
 func (c *Client) unstuck() {
 	c.logger.Info().Msg("start ETH chain unstuck process")
@@ -40,67 +41,110 @@ func (c *Client) unstuckAction() {
 		c.logger.Err(err).Msg("fail to get THORChain block height")
 		return
 	}
+
+	// We only attempt unstuck on transactions within the reschedule buffer blocks of the
+	// next signing period. This will ensure we do not clear the signer cache and
+	// re-attempt signing right before a reschedule, which may assign to a different vault
+	// (behavior post https://gitlab.com/thorchain/thornode/-/merge_requests/3266 should
+	// not) or adjust gas values for the tx out. This should result in no more than one
+	// sign and broadcast per signing period for a given outbound.
+	constValues, err := c.bridge.GetConstants()
+	if err != nil {
+		c.logger.Err(err).Msg("failed to get THORChain constants")
+		return
+	}
+	signingPeriod := constValues[constants.SigningTransactionPeriod.String()]
+	if signingPeriod <= 0 {
+		c.logger.Err(err).Int64("signingPeriod", signingPeriod).Msg("invalid signing period")
+		return
+	}
+	rescheduleBufferBlocks := config.GetBifrost().Signer.RescheduleBufferBlocks
+	txWaitBlocks := signingPeriod - rescheduleBufferBlocks
+
 	signedTxItems, err := c.ethScanner.blockMetaAccessor.GetSignedTxItems()
 	if err != nil {
 		c.logger.Err(err).Msg("fail to get all signed tx items")
 		return
 	}
 	for _, item := range signedTxItems {
+		clog := c.logger.With().
+			Str("txid", item.Hash).
+			Str("vault", item.VaultPubKey).
+			Interface("txout", item.TxOutItem).
+			Logger()
+
 		// this should not possible , but just skip it
 		if item.Height > height {
+			clog.Warn().Msg("signed outbound height greater than current thorchain height")
 			continue
 		}
 
-		if (height - item.Height) < TxWaitBlocks {
+		if (height - item.Height) < txWaitBlocks {
 			// not time yet , continue to wait for this tx to commit
 			continue
 		}
-		if err = c.unstuckTx(item.VaultPubKey, item.Hash); err != nil {
-			c.logger.Err(err).Msgf("fail to unstuck tx with hash:%s vaultPubKey:%s", item.Hash, item.VaultPubKey)
+
+		// only attempt unstuck during the reschedule buffer of the signing period
+		if item.TxOutItem != nil {
+			periodBlock := (height - item.TxOutItem.Height) % signingPeriod
+			if signingPeriod-periodBlock > rescheduleBufferBlocks {
+				clog.Warn().Msg("waiting for start of reschedule buffer blocks to unstuck")
+				continue
+			}
+		}
+
+		clog.Warn().Msg("attempting unstuck")
+
+		err = c.unstuckTx(clog, item)
+		if err != nil {
+			clog.Err(err).Msg("failed to unstuck tx")
 			// Break on error so that if a keysign fails from members getting out of sync
 			// (for multiple cancel transactions)
 			// all vault members will together next try to keysign the first item in the list.
 			break
 		}
-		// remove it
+
+		// remove stuck transaction from block meta
 		if err = c.ethScanner.blockMetaAccessor.RemoveSignedTxItem(item.Hash); err != nil {
-			c.logger.Err(err).Msgf("fail to remove signed tx item with hash:%s vaultPubKey:%s", item.Hash, item.VaultPubKey)
+			clog.Err(err).Msg("failed to remove block meta tx item")
 		}
 	}
 }
 
 // unstuckTx is the method used to unstuck ETH address
 // when unstuckTx return an err , then the same hash should retry otherwise it can be removed
-func (c *Client) unstuckTx(vaultPubKey, hash string) error {
+func (c *Client) unstuckTx(clog zerolog.Logger, item types.SignedTxItem) error {
 	ctx, cancel := c.getContext()
 	defer cancel()
-	tx, pending, err := c.client.TransactionByHash(ctx, ecommon.HexToHash(hash))
+	tx, pending, err := c.client.TransactionByHash(ctx, ecommon.HexToHash(item.Hash))
 	if err != nil {
 		if errors.Is(err, ethereum.NotFound) {
-			c.logger.Err(err).Msgf("Transaction with hash: %s doesn't exist on ETH chain anymore", hash)
+			clog.Err(err).Msg("transaction not found on chain")
 			return nil
 		}
-		return fmt.Errorf("fail to get transaction by hash:%s, error:: %w", hash, err)
+		return fmt.Errorf("fail to get transaction by hash: %s, error: %w", item.Hash, err)
 	}
 	// the transaction is not pending any more
 	if !pending {
-		c.logger.Info().Msgf("transaction with hash %s already committed on block , don't need to unstuck, remove it", hash)
+		clog.Info().Msg("transaction already committed")
 		return nil
 	}
 
-	pubKey, err := common.NewPubKey(vaultPubKey)
+	pubKey, err := common.NewPubKey(item.VaultPubKey)
 	if err != nil {
-		c.logger.Err(err).Msgf("public key: %s is invalid", vaultPubKey)
+		clog.Err(err).Msg("vault public key is invalid")
 		// this should not happen , and if it does , there is no point to try it again , just remove it
 		return nil
 	}
 	address, err := pubKey.GetAddress(common.ETHChain)
 	if err != nil {
-		c.logger.Err(err).Msgf("fail to get ETH address")
+		clog.Err(err).Msg("fail to get ETH address")
 		return nil
 	}
 
-	c.logger.Info().Msgf("cancel tx hash: %s, nonce: %d", hash, tx.Nonce())
+	clog = clog.With().Uint64("nonce", tx.Nonce()).Logger()
+	clog.Info().Msg("cancel tx with nonce")
+
 	// double the current suggest gas price
 	currentGasRate := big.NewInt(1).Mul(c.GetGasPrice(), big.NewInt(2))
 	// inflate the originGasPrice by 10% as per ETH chain , the transaction to cancel an existing tx in the mempool
@@ -115,7 +159,7 @@ func (c *Client) unstuckTx(vaultPubKey, hash string) error {
 	canceltx := etypes.NewTransaction(tx.Nonce(), ecommon.HexToAddress(address.String()), big.NewInt(0), MaxContractGas, currentGasRate, nil)
 	rawBytes, err := c.kw.Sign(canceltx, pubKey)
 	if err != nil {
-		return fmt.Errorf("fail to sign tx for cancelling with nonce: %d,err: %w", tx.Nonce(), err)
+		return fmt.Errorf("fail to sign tx for cancelling with nonce: %d, err: %w", tx.Nonce(), err)
 	}
 	broadcastTx := &etypes.Transaction{}
 	if err = broadcastTx.UnmarshalJSON(rawBytes); err != nil {
@@ -124,17 +168,28 @@ func (c *Client) unstuckTx(vaultPubKey, hash string) error {
 	ctx, cancel = c.getContext()
 	defer cancel()
 	if err = c.client.SendTransaction(ctx, broadcastTx); err != nil && err.Error() != txpool.ErrAlreadyKnown.Error() && err.Error() != ecore.ErrNonceTooLow.Error() {
-		return fmt.Errorf("fail to broadcast the cancel transaction,hash:%s , err: %w", hash, err)
+		return fmt.Errorf("fail to broadcast the cancel transaction, hash: %s, err: %w", item.Hash, err)
 	}
-	c.logger.Info().Msgf("broadcast cancel transaction , tx hash: %s, nonce: %d , new tx hash:%s", hash, tx.Nonce(), broadcastTx.Hash().String())
+
+	clog = clog.With().Stringer("unstuck_txid", broadcastTx.Hash()).Logger()
+	clog.Info().Msg("broadcast new tx, old tx cancelled")
+
+	// add cancel transaction to signer cache so scanner removes outbound on confirmation
+	toi := item.TxOutItem
+	err = c.signerCacheManager.SetSigned(toi.CacheHash(), toi.CacheVault(c.GetChain()), broadcastTx.Hash().Hex())
+	if err != nil {
+		clog.Err(err).Msg("fail to set signed tx, unstuck outbound will not retry")
+	}
+
 	return nil
 }
 
 // AddSignedTxItem add the transaction to key value store
-func (c *Client) AddSignedTxItem(hash string, height int64, vaultPubKey string) error {
+func (c *Client) AddSignedTxItem(hash string, height int64, vaultPubKey string, toi *stypes.TxOutItem) error {
 	return c.ethScanner.blockMetaAccessor.AddSignedTxItem(types.SignedTxItem{
 		Hash:        hash,
 		Height:      height,
 		VaultPubKey: vaultPubKey,
+		TxOutItem:   toi,
 	})
 }

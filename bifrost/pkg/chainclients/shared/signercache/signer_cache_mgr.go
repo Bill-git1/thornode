@@ -62,8 +62,9 @@ func (cm *CacheManager) GetLatestRecordedTx(vaultKey string) (string, error) {
 	return cm.storageAccessor.GetLatestRecordedTx(vaultKey)
 }
 
-// RemoveSigned remove the given transaction hash related tx out item cache
-// Usually this means the given transaction failed, so need to remove it from cache , so it can retry
+// RemoveSigned removes the corresponding TxOutItem from the signer cache. The provided
+// transaction hash should be for the broadcast transaction - it is internally mapped to
+// the cache key for the TxOutItem.
 func (cm *CacheManager) RemoveSigned(transactionHash string) {
 	if err := cm.storageAccessor.RemoveSigned(transactionHash); err != nil {
 		cm.logger.Err(err).Msgf("fail to remove signed transaction hash: %s", transactionHash)

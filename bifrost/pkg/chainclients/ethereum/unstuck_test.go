@@ -1,20 +1,28 @@
 package ethereum
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	cKeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
+	ctypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rlp"
 	"gitlab.com/thorchain/thornode/bifrost/metrics"
 	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/evm/types"
 	"gitlab.com/thorchain/thornode/bifrost/pubkeymanager"
 	"gitlab.com/thorchain/thornode/bifrost/thorclient"
+	ttypes "gitlab.com/thorchain/thornode/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/cmd"
+	"gitlab.com/thorchain/thornode/common"
+	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/config"
 	types2 "gitlab.com/thorchain/thornode/x/thorchain/types"
 	. "gopkg.in/check.v1"
@@ -35,14 +43,44 @@ func (s *UnstuckTestSuite) SetUpTest(c *C) {
 	types2.SetupConfigForTest()
 	c.Assert(os.Setenv("NET", "mocknet"), IsNil)
 
+	cfg := config.BifrostClientConfiguration{
+		ChainID:      "thorchain",
+		SignerName:   "bob",
+		SignerPasswd: "password",
+	}
+
+	kb := cKeys.NewInMemory()
+	_, _, err := kb.NewMnemonic(cfg.SignerName, cKeys.English, cmd.THORChainHDPath, cfg.SignerPasswd, hd.Secp256k1)
+	c.Assert(err, IsNil)
+	s.thorKeys = thorclient.NewKeysWithKeybase(kb, cfg.SignerName, cfg.SignerPasswd)
+
+	// get public key
+	priv, err := s.thorKeys.GetPrivateKey()
+	c.Assert(err, IsNil)
+	temp, err := codec.ToTmPubKeyInterface(priv.PubKey())
+	c.Assert(err, IsNil)
+	pubkey, err := common.NewPubKeyFromCrypto(temp)
+	c.Assert(err, IsNil)
+
+	var vaultAddr common.Address
+	vaultAddr, err = pubkey.GetAddress(common.ETHChain)
+	c.Assert(err, IsNil)
+
+	lastBroadcastTx := ""
+	var lastBroadcastTxJSON []byte
+
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		switch req.RequestURI {
+		case thorclient.ThorchainConstants:
+			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/constants/constants.json")
 		case thorclient.PubKeysEndpoint:
-			content, err := os.ReadFile("../../../../test/fixtures/endpoints/vaults/pubKeys.json")
+			var content []byte
+			content, err = os.ReadFile("../../../../test/fixtures/endpoints/vaults/pubKeys.json")
 			c.Assert(err, IsNil)
 			var pubKeysVault types2.QueryVaultsPubKeys
 			c.Assert(json.Unmarshal(content, &pubKeysVault), IsNil)
-			buf, err := json.MarshalIndent(pubKeysVault, "", "	")
+			var buf []byte
+			buf, err = json.MarshalIndent(pubKeysVault, "", "	")
 			c.Assert(err, IsNil)
 			_, err = rw.Write(buf)
 			c.Assert(err, IsNil)
@@ -55,7 +93,8 @@ func (s *UnstuckTestSuite) SetUpTest(c *C) {
 		case thorclient.NodeAccountEndpoint:
 			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/nodeaccount/template.json")
 		default:
-			body, err := io.ReadAll(req.Body)
+			var body []byte
+			body, err = io.ReadAll(req.Body)
 			c.Assert(err, IsNil)
 			type RPCRequest struct {
 				JSONRPC string          `json:"jsonrpc"`
@@ -66,15 +105,43 @@ func (s *UnstuckTestSuite) SetUpTest(c *C) {
 			var rpcRequest RPCRequest
 			err = json.Unmarshal(body, &rpcRequest)
 			c.Assert(err, IsNil)
+
 			switch rpcRequest.Method {
 			case "eth_chainId":
-				_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0xf"}`))
+				_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x539"}`))
 				c.Assert(err, IsNil)
 				return
+			case "eth_getTransactionReceipt":
+				// read txid from the request
+				var params []string
+				err = json.Unmarshal(rpcRequest.Params, &params)
+				c.Assert(err, IsNil)
+
+				_, err = rw.Write([]byte(`{
+						"jsonrpc": "2.0",
+						"id": 1,
+						"result": {
+							"blockHash": "0x96395fbdb39e33293999dc1a0a3b87c8a9e51185e177760d1482c2155bb35b87",
+							"blockNumber": "0x1",
+							"contractAddress": null,
+							"cumulativeGasUsed": "0x1",
+							"from": "` + vaultAddr.String() + `",
+							"gasUsed": "0x1",
+							"logs": [],
+							"logsBloom": "0x` + strings.Repeat("00", 256) + `",
+							"status": "0x1",
+							"to": "` + vaultAddr.String() + `",
+							"transactionHash": "` + lastBroadcastTx + `",
+							"transactionIndex": "0x1"
+						}
+					}`))
+				c.Assert(err, IsNil)
+
 			case "eth_getTransactionByHash":
 				var hashes []string
 				c.Assert(json.Unmarshal(rpcRequest.Params, &hashes), IsNil)
-				if hashes[0] == "0x88df016429689c079f3b2f6ad39fa052532c56795b733da78a91ebe6a713944b" {
+				switch hashes[0] {
+				case "0x88df016429689c079f3b2f6ad39fa052532c56795b733da78a91ebe6a713944b":
 					_, err = rw.Write([]byte(`{
     "jsonrpc": "2.0",
     "id": 1,
@@ -92,7 +159,7 @@ func (s *UnstuckTestSuite) SetUpTest(c *C) {
     }
 }`))
 					c.Assert(err, IsNil)
-				} else if hashes[0] == "0x96395fbdb39e33293999dc1a0a3b87c8a9e51185e177760d1482c2155bb35b87" {
+				case "0x96395fbdb39e33293999dc1a0a3b87c8a9e51185e177760d1482c2155bb35b87":
 					_, err = rw.Write([]byte(`{
     "jsonrpc": "2.0",
     "id": 1,
@@ -121,11 +188,27 @@ func (s *UnstuckTestSuite) SetUpTest(c *C) {
 				c.Assert(err, IsNil)
 				return
 			case "eth_sendRawTransaction":
+				// read tx data from the request
+				var params []string
+				err = json.Unmarshal(rpcRequest.Params, &params)
+				c.Assert(err, IsNil)
+				tx := params[0]
+
+				// decode tx
+				var data []byte
+				data, err = hex.DecodeString(tx[2:])
+				c.Assert(err, IsNil)
+				var txData ctypes.Transaction
+				err = rlp.DecodeBytes(data, &txData)
+				c.Assert(err, IsNil)
+				lastBroadcastTxJSON, err = json.MarshalIndent(&txData, "", "  ")
+				c.Assert(err, IsNil)
+				lastBroadcastTx = txData.Hash().Hex()
+
 				_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x88df016429689c079f3b2f6ad39fa052532c56795b733da78a91ebe6a713944b"}`))
 				c.Assert(err, IsNil)
 				return
-			}
-			if rpcRequest.Method == "eth_call" {
+			case "eth_call":
 				if string(rpcRequest.Params) == `[{"data":"0x03b6a6730000000000000000000000009f4aab49a9cd8fc54dcb3701846f608a6f2c44da0000000000000000000000003b7fa4dd21c6f9ba3ca375217ead7cab9d6bf483","from":"0x9f4aab49a9cd8fc54dcb3701846f608a6f2c44da","to":"0xe65e9d372f8cacc7b6dfcd4af6507851ed31bb44"},"latest"]` {
 					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x0000000000000000000000000000000000000000000000000000000000000012"}`))
 					c.Assert(err, IsNil)
@@ -133,21 +216,41 @@ func (s *UnstuckTestSuite) SetUpTest(c *C) {
 					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003544b4e0000000000000000000000000000000000000000000000000000000000"}`))
 					c.Assert(err, IsNil)
 				}
+			case "eth_getBlockByNumber":
+				_, err = rw.Write([]byte(`{
+						"jsonrpc": "2.0",
+						"id": 1,
+						"result": {
+							"difficulty": "0x2",
+							"extraData": "0xd88301091a846765746888676f312e31352e36856c696e757800000000000000e86d9af8b427b780cd1e6f7cabd2f9231ccac25d313ed475351ed64ac19f21491461ed1fae732d3bbf73a5866112aec23b0ca436185685b9baee4f477a950f9400",
+							"gasLimit": "0x9e0f54",
+							"gasUsed": "0xabd3",
+							"hash": "0xb273789207ce61a1ec0314fdb88efe6c6b554a9505a97ff3dff05aa691e220ac",
+							"logsBloom": "0x00010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000040000000000000000010000200020000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000000000000000040000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000010000000000000000000000000000000000000000000000020000000000000",
+							"miner": "0x0000000000000000000000000000000000000000",
+							"mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+							"nonce": "0x0000000000000000",
+							"number": "0x6b",
+							"parentHash": "0xf18470c54efec284fb5ad57c0ee4afe2774d61393bd5224ac5484b39a0a07556",
+							"receiptsRoot": "0x794a74d56ec50769a1400f7ae0887061b0ec3ea6702589a0b45b9102df2c9954",
+							"sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
+							"size": "0x30a",
+							"stateRoot": "0x1c84090d7f5dc8137d6762e3d4babe10b30bf61fa827618346ae1ba8600a9629",
+							"timestamp": "0x6008f03a",
+							"totalDifficulty": "0xd7",
+							"transactions": [` + string(lastBroadcastTxJSON) + `],
+							"transactionsRoot": "0x4247bb112edbe20ee8cf406864b335f4a3aa215f65ea686c9820f056c637aca6",
+							"uncles": []
+						}
+					}
+					`))
+				c.Assert(err, IsNil)
 			}
 		}
 	}))
 	s.server = server
-	cfg := config.BifrostClientConfiguration{
-		ChainID:      "thorchain",
-		ChainHost:    server.Listener.Addr().String(),
-		SignerName:   "bob",
-		SignerPasswd: "password",
-	}
 
-	kb := cKeys.NewInMemory()
-	_, _, err := kb.NewMnemonic(cfg.SignerName, cKeys.English, cmd.THORChainHDPath, cfg.SignerPasswd, hd.Secp256k1)
-	c.Assert(err, IsNil)
-	s.thorKeys = thorclient.NewKeysWithKeybase(kb, cfg.SignerName, cfg.SignerPasswd)
+	cfg.ChainHost = server.Listener.Addr().String()
 	s.bridge, err = thorclient.NewThorchainBridge(cfg, s.m, s.thorKeys)
 	c.Assert(err, IsNil)
 }
@@ -157,6 +260,7 @@ func (s *UnstuckTestSuite) TearDownTest(c *C) {
 }
 
 func (s *UnstuckTestSuite) TestUnstuckProcess(c *C) {
+	config.Init()
 	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
 	c.Assert(err, IsNil)
 	poolMgr := thorclient.NewPoolMgr(s.bridge)
@@ -165,6 +269,8 @@ func (s *UnstuckTestSuite) TestUnstuckProcess(c *C) {
 		BlockScanner: config.BifrostBlockScannerConfiguration{
 			StartBlockHeight:   1, // avoids querying thorchain for block height
 			HTTPRequestTimeout: time.Second * 10,
+			GasCacheBlocks:     40,
+			Concurrency:        1,
 		},
 	}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
 	c.Assert(err, IsNil)
@@ -193,10 +299,28 @@ func (s *UnstuckTestSuite) TestUnstuckProcess(c *C) {
 	c.Assert(items, HasLen, 2)
 	c.Assert(e.ethScanner.blockMetaAccessor.RemoveSignedTxItem(txID1), IsNil)
 	c.Assert(e.ethScanner.blockMetaAccessor.RemoveSignedTxItem(txID2), IsNil)
+
+	inHash := types2.GetRandomTxHash()
+	toi := ttypes.TxOutItem{
+		Chain:       common.ETHChain,
+		ToAddress:   types2.GetRandomETHAddress(),
+		VaultPubKey: e.kw.GetPubKey(),
+		Coins:       common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(100000000))},
+		Memo:        "OUT:" + inHash.String(),
+		MaxGas:      common.Gas(common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(100000000)))),
+		GasRate:     5,
+		InHash:      inHash,
+		Height:      800,
+	}
+	stuckTxID := "0x88df016429689c079f3b2f6ad39fa052532c56795b733da78a91ebe6a713944b"
+	err = e.signerCacheManager.SetSigned(toi.CacheHash(), toi.CacheVault(e.GetChain()), stuckTxID)
+	c.Assert(err, IsNil)
+
 	c.Assert(e.ethScanner.blockMetaAccessor.AddSignedTxItem(types.SignedTxItem{
-		Hash:        "0x88df016429689c079f3b2f6ad39fa052532c56795b733da78a91ebe6a713944b",
+		Hash:        stuckTxID,
 		Height:      800,
 		VaultPubKey: pubkey,
+		TxOutItem:   &toi,
 	}), IsNil)
 	c.Assert(e.ethScanner.blockMetaAccessor.AddSignedTxItem(types.SignedTxItem{
 		Hash:        "0x96395fbdb39e33293999dc1a0a3b87c8a9e51185e177760d1482c2155bb35b87",
@@ -207,5 +331,18 @@ func (s *UnstuckTestSuite) TestUnstuckProcess(c *C) {
 	e.unstuckAction()
 	items, err = e.ethScanner.blockMetaAccessor.GetSignedTxItems()
 	c.Assert(err, IsNil)
+
+	// the stuck tx should be removed
 	c.Assert(items, HasLen, 0)
+
+	// signer cache item should not have been removed yet
+	c.Assert(e.signerCacheManager.HasSigned(toi.CacheHash()), Equals, true)
+
+	// removal should occur after the block containing the cancel transaction is scanned
+	txIn, err := e.ethScanner.FetchTxs(int64(1), int64(1))
+	c.Assert(err, IsNil)
+	c.Check(len(txIn.TxArray), Equals, 1)
+
+	// after one block the goroutine should remove from signer cache
+	c.Assert(e.signerCacheManager.HasSigned(toi.CacheHash()), Equals, false)
 }

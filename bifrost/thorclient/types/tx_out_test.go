@@ -43,3 +43,31 @@ func (TxOutTestSuite) TestTxOutItemHash(c *C) {
 	}
 	c.Check(item.Hash(), Equals, "0D920B69BC43443CF58A382BE9714FC67516CD87DD89212A2F2989566E2E632B")
 }
+
+func (TxOutTestSuite) TestTxOutItemEqualsShouldIgnoreHeight(c *C) {
+	item1 := TxOutItem{
+		Chain:       "BNB",
+		ToAddress:   "tbnb1yxfyeda8pnlxlmx0z3cwx74w9xevspwdpzdxpj",
+		VaultPubKey: "",
+		Coins: common.Coins{
+			common.NewCoin(common.BNBAsset, cosmos.NewUint(194765912)),
+		},
+		Memo:   "REFUND:9999A5A08D8FCF942E1AAAA01AB1E521B699BA3A009FA0591C011DC1FFDC5E68",
+		InHash: "9999A5A08D8FCF942E1AAAA01AB1E521B699BA3A009FA0591C011DC1FFDC5E68",
+	}
+	item2 := TxOutItem{
+		Chain:       "BNB",
+		ToAddress:   "tbnb1yxfyeda8pnlxlmx0z3cwx74w9xevspwdpzdxpj",
+		VaultPubKey: "",
+		Coins: common.Coins{
+			common.NewCoin(common.BNBAsset, cosmos.NewUint(194765912)),
+		},
+		Memo:   "REFUND:9999A5A08D8FCF942E1AAAA01AB1E521B699BA3A009FA0591C011DC1FFDC5E68",
+		InHash: "9999A5A08D8FCF942E1AAAA01AB1E521B699BA3A009FA0591C011DC1FFDC5E68",
+	}
+	c.Check(item1.Equals(item2), Equals, true)
+
+	item1.Height = 1
+	item2.Height = 2
+	c.Check(item1.Equals(item2), Equals, true)
+}
