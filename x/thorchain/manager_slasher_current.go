@@ -704,7 +704,7 @@ func (s *SlasherVCUR) needsNewVault(ctx cosmos.Context, mgr Manager, vault Vault
 				if err != nil {
 					continue
 				}
-				addr, err := pk.GetThorAddress()
+				addr, err := pk.GetAddress(common.THORChain)
 				if err != nil {
 					continue
 				}
