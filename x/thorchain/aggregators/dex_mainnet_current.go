@@ -103,6 +103,12 @@ func DexAggregatorsV126() []Aggregator {
 		{common.AVAXChain, `0x892Fb7C2A23772f4A2FFC3DC82419147dC22021C`, 400_000},
 		// RangoThorchainOutputAggUniV2_COMPACT_PANGOLIN
 		{common.AVAXChain, `0xBd039a45e656221E28594d2761DDed8F6712AE46`, 400_000},
+		// OKXRouter - ETH
+		{common.ETHChain, `0xFc99f58A8974A4bc36e60E2d490Bb8D72899ee9f`, 800_000},
+		// OKXRouter - BSC
+		{common.BSCChain, `0xFc99f58A8974A4bc36e60E2d490Bb8D72899ee9f`, 800_000},
+		// OKXRouter - AVAX
+		{common.AVAXChain, `0xf956D9FA19656D8e5219fd6fa8bA6cb198094138`, 800_000},
 		// SymbiosisProxy - ETH
 		{common.ETHChain, `0x5523985926Aa12BA58DC5Ad00DDca99678D7227E`, 800_000},
 		// SymbiosisProxy - AVAX
