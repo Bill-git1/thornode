@@ -2168,7 +2168,7 @@ func queryPendingOutbound(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 }
 
 func querySwapQueue(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
-	var result []MsgSwap
+	result := make([]MsgSwap, 0)
 
 	iterator := mgr.Keeper().GetSwapQueueIterator(ctx)
 	defer iterator.Close()
