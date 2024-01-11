@@ -649,3 +649,34 @@ asserts:
   - .fees.slippage_bps == 9989
   - .fees.total_bps == 9989
   - .expected_amount_out == "88358"
+---
+########################################################################################
+# from ETH - affiliate swap fails, should return error
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/quote/swap
+params:
+  from_asset: ETH.ETH
+  to_asset: THOR.RUNE
+  amount: 1000000
+  affiliate: xx
+  affiliate_bps: 10
+  destination: {{ addr_thor_fox }}
+asserts:
+  - .error|contains("output RUNE (96137) is not enough to pay transaction fee")
+---
+########################################################################################
+# from RUNE - affiliate swap fails, should return error
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/quote/swap
+params:
+  from_asset: THOR.RUNE
+  to_asset: ETH.ETH
+  amount: 1000000
+  affiliate: xx
+  affiliate_bps: 10
+  destination: {{ addr_eth_fox }}
+asserts:
+  - .error|contains("affiliate amount must be greater than native fee")
+---
