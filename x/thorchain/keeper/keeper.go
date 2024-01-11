@@ -3,14 +3,11 @@ package keeper
 import (
 	"github.com/blang/semver"
 	"github.com/cosmos/cosmos-sdk/codec"
-	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
-	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
 	kvTypes "gitlab.com/thorchain/thornode/x/thorchain/keeper/types"
-	kv1 "gitlab.com/thorchain/thornode/x/thorchain/keeper/v1"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
@@ -394,10 +391,4 @@ type KeeperAnchors interface {
 	DollarsPerRune(ctx cosmos.Context) cosmos.Uint
 	RunePerDollar(ctx cosmos.Context) cosmos.Uint
 	DollarInRune(ctx cosmos.Context) cosmos.Uint // TODO: remove me on hard fork
-}
-
-// NewKVStore creates new instances of the thorchain Keeper
-func NewKeeper(cdc codec.BinaryCodec, coinKeeper bankkeeper.Keeper, accountKeeper authkeeper.AccountKeeper, storeKey cosmos.StoreKey) Keeper {
-	version := semver.MustParse("0.0.0")
-	return kv1.NewKVStore(cdc, coinKeeper, accountKeeper, storeKey, version)
 }

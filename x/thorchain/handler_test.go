@@ -99,7 +99,7 @@ func setupManagerForTest(c *C) (cosmos.Context, *Mgrs) {
 	c.Assert(bk.MintCoins(ctx, ModuleName, cosmos.Coins{
 		cosmos.NewCoin(common.RuneAsset().Native(), cosmos.NewInt(200_000_000_00000000)),
 	}), IsNil)
-	k := keeper.NewKeeper(marshaler, bk, ak, keyThorchain)
+	k := kv1.NewKeeper(marshaler, bk, ak, keyThorchain)
 	FundModule(c, ctx, k, ModuleName, 10000*common.One)
 	FundModule(c, ctx, k, AsgardName, common.One)
 	FundModule(c, ctx, k, ReserveName, 10000*common.One)

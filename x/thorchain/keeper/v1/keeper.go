@@ -12,6 +12,7 @@ import (
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
+	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper/types"
 )
 
@@ -112,6 +113,12 @@ func NewKVStore(cdc codec.BinaryCodec, coinKeeper bankkeeper.Keeper, accountKeep
 		version:       version,
 		constAccessor: constants.GetConstantValues(version),
 	}
+}
+
+// NewKeeper creates new instances of the thorchain Keeper
+func NewKeeper(cdc codec.BinaryCodec, coinKeeper bankkeeper.Keeper, accountKeeper authkeeper.AccountKeeper, storeKey cosmos.StoreKey) keeper.Keeper {
+	version := semver.MustParse("0.0.0")
+	return NewKVStore(cdc, coinKeeper, accountKeeper, storeKey, version)
 }
 
 // Cdc return the amino codec

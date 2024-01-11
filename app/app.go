@@ -58,6 +58,7 @@ import (
 	appparams "gitlab.com/thorchain/thornode/app/params"
 	"gitlab.com/thorchain/thornode/x/thorchain"
 	thorchainkeeper "gitlab.com/thorchain/thornode/x/thorchain/keeper"
+	thorchainkeeperv1 "gitlab.com/thorchain/thornode/x/thorchain/keeper/v1"
 	thorchaintypes "gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
@@ -229,7 +230,7 @@ func New(
 	ibcRouter.AddRoute(ibctransfertypes.ModuleName, transferModule)
 	app.IBCKeeper.SetRouter(ibcRouter)
 
-	app.thorchainKeeper = thorchainkeeper.NewKeeper(
+	app.thorchainKeeper = thorchainkeeperv1.NewKeeper(
 		appCodec, app.BankKeeper, app.AccountKeeper, keys[thorchaintypes.StoreKey],
 	)
 
