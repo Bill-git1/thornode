@@ -144,12 +144,12 @@ format:
 
 lint:
 	@./scripts/lint.sh
-	@go run tools/analyze/main.go ./common/... ./constants/... ./x/...
+	@go run tools/analyze/main.go ./common/... ./constants/... ./x/... ./mimir/...
 	@./scripts/trunk check --no-fix --upstream origin/develop
 
 lint-ci:
 	@./scripts/lint.sh
-	@go run tools/analyze/main.go ./common/... ./constants/... ./x/...
+	@go run tools/analyze/main.go ./common/... ./constants/... ./x/... ./mimir/...
 ifdef CI_MERGE_REQUEST_ID
 	# only check changes on merge requests
 	@./scripts/trunk check --ci -j8 --upstream FETCH_HEAD

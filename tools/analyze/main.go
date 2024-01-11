@@ -4,7 +4,9 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"go/ast"
+	"go/token"
 	"regexp"
 	"strings"
 
@@ -175,6 +177,88 @@ func VersionSwitch(pass *analysis.Pass) (interface{}, error) {
 }
 
 // -------------------------------------------------------------------------------------
+// GetMimirCheck
+// -------------------------------------------------------------------------------------
+
+func GetMimirCheck(pass *analysis.Pass) (interface{}, error) {
+	inspect, ok := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+	if !ok {
+		return nil, errors.New("analyzer is not type *inspector.Inspector")
+	}
+
+	var (
+		switchStmt *ast.SwitchStmt
+		constIds   []string
+	)
+
+	// getmimir func and const ids for mimirv2
+	inspect.Preorder([]ast.Node{(*ast.FuncDecl)(nil)}, func(node ast.Node) {
+		n, ok := node.(*ast.FuncDecl)
+		if !ok {
+			return
+		}
+		if n.Name.Name != "GetMimir" {
+			return
+		}
+		for _, stmt := range n.Body.List {
+			if s, ok := stmt.(*ast.SwitchStmt); ok {
+				switchStmt = s
+				break
+			}
+		}
+	})
+
+	if switchStmt == nil {
+		return nil, nil
+	}
+
+	inspect.Preorder([]ast.Node{(*ast.GenDecl)(nil)}, func(node ast.Node) {
+		n, ok := node.(*ast.GenDecl)
+		if !ok {
+			return
+		}
+		if n.Tok != token.CONST {
+			return
+		}
+		if len(n.Specs) == 0 {
+			return
+		}
+		firstSpec, ok := n.Specs[0].(*ast.ValueSpec)
+		if !ok || len(firstSpec.Names) == 0 || firstSpec.Names[0].Name != "UnknownId" {
+			return
+		}
+		for _, spec := range n.Specs {
+			if valueSpec, ok := spec.(*ast.ValueSpec); ok {
+				for _, name := range valueSpec.Names {
+					constIds = append(constIds, name.Name)
+				}
+			}
+		}
+	})
+
+	caseClauses := make(map[string]struct{})
+	for _, stmt := range switchStmt.Body.List {
+		caseClause, ok := stmt.(*ast.CaseClause)
+		if !ok {
+			continue
+		}
+		for _, clause := range caseClause.List {
+			caseClauses[fmt.Sprintf("%s", clause)] = struct{}{}
+		}
+	}
+
+	for _, id := range constIds {
+		if id == "UnknownId" {
+			continue
+		}
+		if _, found := caseClauses[id]; !found {
+			pass.Reportf(switchStmt.Pos(), "get mimir case not found for : %s", id)
+		}
+	}
+	return nil, nil
+}
+
+// -------------------------------------------------------------------------------------
 // Main
 // -------------------------------------------------------------------------------------
 
@@ -191,6 +275,12 @@ func main() {
 			Doc:      "fails on bad version switches",
 			Requires: []*analysis.Analyzer{inspect.Analyzer},
 			Run:      VersionSwitch,
+		},
+		&analysis.Analyzer{
+			Name:     "mimir_v2_getmimir",
+			Doc:      "fails if no get mimir case is defined for mimirv2 id",
+			Requires: []*analysis.Analyzer{inspect.Analyzer},
+			Run:      GetMimirCheck,
 		},
 	)
 }
