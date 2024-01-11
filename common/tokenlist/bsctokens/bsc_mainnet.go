@@ -1,5 +1,5 @@
-//go:build !stagenet && !mocknet
-// +build !stagenet,!mocknet
+//go:build !mocknet
+// +build !mocknet
 
 package bsctokens
 
