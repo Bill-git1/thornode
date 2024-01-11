@@ -14,17 +14,18 @@ You are ready to make the transaction and swap via THORChain.
 > ⚠️ THORChain does NOT currently support BTC Taproot. User funds will be lost if sent to or from a taproot address!
 
 - [ ] Send the transaction with Asgard vault as VOUT0
-- [ ] Include the memo as an OP_RETURN in VOUT1
-- [ ] Pass all change back to the VIN0 address in VOUT3
+- [ ] Pass all change back to the VIN0 address in a subsequent VOUT e.g. VOUT1
+- [ ] Include the memo as an OP_RETURN in a subsequent VOUT e.g. VOUT2
 - [ ] Use a high enough `gas_rate` to be included
 - [ ] Do not send below the dust threshold (10k Sats BTC, BCH, LTC, 1m DOGE), exhaustive values can be found on the [Inbound Addresses](https://thornode.ninerealms.com/thorchain/inbound_addresses) endpoint
+- [ ] Do not send funds that are part of a transaction with more than 10 outputs
 
 ```admonish warning
 Inbound transactions should not be delayed for any reason else there is risk funds will be sent to an unreachable address. Use standard transactions, check the [`Inbound_Address`](querying-thorchain.md#getting-the-asgard-vault) before sending and use the recommended [`gas rate`](querying-thorchain.md#getting-the-asgard-vault) to ensure transactions are confirmed in the next block to the latest `Inbound_Address`.
 ```
 
 ```admonish info
-Memo limited to 80 bytes on BTC. Use abbreviated options and [THORNames](https://docs.thorchain.org/network/thorchain-name-service) where possible.
+Memo limited to 80 bytes on BTC, BCH, LTC and DOGE. Use abbreviated options and [THORNames](https://docs.thorchain.org/network/thorchain-name-service) where possible.
 ```
 
 ```admonish warning
@@ -32,7 +33,7 @@ Do not use HD wallets that forward the change to a new address, because THORChai
 ```
 
 ```admonish danger
-Override randomised VOUT ordering; THORChain requires specific output ordering.
+Override randomised VOUT ordering; THORChain requires specific output ordering. Funds using wrong ordering are very likely to be lost.
 ```
 
 ### EVM Chains
@@ -46,7 +47,7 @@ depositWithExpiry(vault, asset, amount, memo, expiry)
 - [ ] If ERC20, approve the router to spend an allowance of the token first
 - [ ] Send the transaction as a `depositWithExpiry()` on the router
 - [ ] Vault is the Asgard vault address, asset is the token address to swap, memo as a string
-- [ ] Use an expiry which is +60mins on the current time (if the tx is delayed, it will get refunded)
+- [ ] Use an expiry which is +60mins on the current time (if the tx is delayed, it will get refunded). The timestamp is in seconds (Solidity's `block.timestamp`).
 - [ ] Use a high enough `gas_rate` to be included, otherwise the tx will get stuck
 
 ```admonish info
@@ -54,7 +55,11 @@ ETH is `0x0000000000000000000000000000000000000000`
 ```
 
 ```admonish danger
-ETH is sent and received as an internal transaction. Your wallet may not be set to read internal balances and transactions
+ETH is sent and received as an internal transaction. Your wallet may not be set to read internal balances and transactions.
+```
+
+```admonish danger
+Do not send assets from a smart contract (including smart contract wallets) without adding your contract to the whitelist. As a security measure, Thorchain ignores transactions coming from unknown smart contracts, resulting in a loss of funds.
 ```
 
 ### BFT Chains
