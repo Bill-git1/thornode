@@ -137,6 +137,7 @@ const (
 	KeygenRetryInterval
 	SaversStreamingSwapsInterval
 	RescheduleCoalesceBlocks
+	SignerConcurrency
 )
 
 // ConstantValues define methods used to get constant values

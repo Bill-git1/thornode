@@ -37,6 +37,15 @@ var (
 	reVersionedName        = regexp.MustCompile(`.*V([0-9]+)$`)
 	reNonMainnetBuildFlags = regexp.MustCompile(`([^!](test|mock|stage)net|[^!]regtest)`)
 	currentManagerVersions = map[string]string{}
+	skipRootPackages       = map[string]bool{
+		"bifrost": true,
+		"chain":   true,
+		"docs":    true,
+		"openapi": true,
+		"scripts": true,
+		"test":    true,
+		"tools":   true,
+	}
 )
 
 func isVersionedFunction(node ast.Node, fset *token.FileSet) (bool, int) {
@@ -245,6 +254,12 @@ func main() {
 	fnsDedupe := map[uint64][]string{}
 	for _, pkg := range pkgs {
 		for _, file := range pkg.Files {
+
+			// skip packages with no versioned functions relevant for consensus
+			rootPackage := strings.Split(fset.File(file.Pos()).Name(), "/")[0]
+			if skipRootPackages[rootPackage] {
+				continue
+			}
 
 			if hasBuildFlags(file) {
 				// explicitly disallow build flags on handler files

@@ -47,6 +47,7 @@ const (
 	NodeAccountEndpoint      = "/thorchain/node"
 	SignerMembershipEndpoint = "/thorchain/vaults/%s/signers"
 	StatusEndpoint           = "/status"
+	VaultEndpoint            = "/thorchain/vault/%s"
 	AsgardVault              = "/thorchain/vaults/asgard"
 	PubKeysEndpoint          = "/thorchain/vaults/pubkeys"
 	ThorchainConstants       = "/thorchain/constants"
@@ -77,6 +78,7 @@ type ThorchainBridge interface {
 	EnsureNodeWhitelistedWithTimeout() error
 	FetchNodeStatus() (stypes.NodeStatus, error)
 	GetAsgards() (stypes.Vaults, error)
+	GetVault(pubkey string) (stypes.Vault, error)
 	GetConfig() config.BifrostClientConfiguration
 	GetConstants() (map[string]int64, error)
 	GetContext() client.Context
@@ -532,6 +534,22 @@ func (b *thorchainBridge) GetAsgards() (stypes.Vaults, error) {
 		return nil, fmt.Errorf("fail to unmarshal asgard vaults from json: %w", err)
 	}
 	return vaults, nil
+}
+
+// GetVault retrieves a specific vault from thorchain.
+func (b *thorchainBridge) GetVault(pubkey string) (stypes.Vault, error) {
+	buf, s, err := b.getWithPath(fmt.Sprintf(VaultEndpoint, pubkey))
+	if err != nil {
+		return stypes.Vault{}, fmt.Errorf("fail to get vault: %w", err)
+	}
+	if s != http.StatusOK {
+		return stypes.Vault{}, fmt.Errorf("unexpected status code %d", s)
+	}
+	var vault stypes.Vault
+	if err = json.Unmarshal(buf, &vault); err != nil {
+		return stypes.Vault{}, fmt.Errorf("fail to unmarshal vault from json: %w", err)
+	}
+	return vault, nil
 }
 
 func (b *thorchainBridge) getVaultPubkeys() ([]byte, error) {
