@@ -168,10 +168,10 @@ func checkExportInvariants(out io.Writer, genesis map[string]any) error {
 		for _, vaultCoin := range sumVaultAsset {
 			if coin.Asset.Equals(vaultCoin.Asset) && !coin.Amount.Equal(vaultCoin.Amount) {
 				if coin.Amount.GT(vaultCoin.Amount) {
-					fmt.Printf("%s pool has %s more than its vaults\n", coin.Asset, common.SafeSub(coin.Amount, vaultCoin.Amount))
+					localLog.Error().Msgf("%s pool has %s more than its vaults\n", coin.Asset, common.SafeSub(coin.Amount, vaultCoin.Amount))
 				}
 				if vaultCoin.Amount.GT(coin.Amount) {
-					fmt.Printf("%s vaults have %s more than their pool\n", coin.Asset, common.SafeSub(vaultCoin.Amount, coin.Amount))
+					localLog.Error().Msgf("%s vaults have %s more than their pool\n", coin.Asset, common.SafeSub(vaultCoin.Amount, coin.Amount))
 				}
 				err = errors.New("pool discrepancy")
 			}
@@ -182,7 +182,7 @@ func checkExportInvariants(out io.Writer, genesis map[string]any) error {
 	if err != nil {
 		for _, txout := range genesisState.TxOuts {
 			for _, toi := range txout.TxArray {
-				fmt.Printf("%s outbound: %s\n", toi.Coin.Asset, toi.Coin.Amount)
+				localLog.Error().Msgf("%s outbound: %s\n", toi.Coin.Asset, toi.Coin.Amount)
 			}
 		}
 	}

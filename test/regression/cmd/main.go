@@ -64,6 +64,8 @@ func main() {
 	mu := sync.Mutex{}
 	succeeded := []string{}
 	failed := []string{}
+	completed := 0
+	total := len(files)
 
 	// get parallelism from environment variable if DEBUG is not set
 	parallelism := 1
@@ -78,8 +80,9 @@ func main() {
 	}
 	log.Info().
 		Int("parallelism", parallelism).
-		Int("count", len(files)).
+		Int("count", total).
 		Msg("running tests")
+	fmt.Println() // A blank line before the first regression test whether parallel or not.
 
 	// use a channel to abort early if there is a failure in a merge request run
 	abort := make(chan struct{})
@@ -120,16 +123,17 @@ func main() {
 
 				// write buffer to outputs
 				mu.Lock()
+				completed++
+				localLog := consoleLogger(out)
+				localLog.Info().Msg(fmt.Sprintf("%d/%d regression tests completed.", completed, total))
 				if parallelism > 1 {
-					fmt.Println(buf.String())
+					fmt.Print(buf.String())
 				}
+				fmt.Println() // Blank line separating regression tests.
 				mu.Unlock()
 			}()
 
 			// run test
-			if parallelism == 1 {
-				fmt.Println()
-			}
 			err = run(out, file, routine)
 			if err != nil {
 				mu.Lock()
@@ -178,7 +182,6 @@ func main() {
 	mu.Lock()
 
 	// print the results
-	fmt.Println()
 	fmt.Printf("%sSucceeded:%s %d\n", ColorGreen, ColorReset, len(succeeded))
 	for _, file := range succeeded {
 		fmt.Printf("- %s\n", file)
