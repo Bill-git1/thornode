@@ -14,6 +14,7 @@ Name | Type | Description | Notes
 **InHash** | Pointer to **string** |  | [optional] 
 **OutHash** | Pointer to **string** |  | [optional] 
 **Height** | **int64** |  | 
+**CloutSpent** | Pointer to **string** | clout spent in RUNE for the outbound | [optional] 
 
 ## Methods
 
@@ -258,6 +259,31 @@ and a boolean to check if the value has been set.
 
 SetHeight sets Height field to given value.
 
+
+### GetCloutSpent
+
+`func (o *TxOutItem) GetCloutSpent() string`
+
+GetCloutSpent returns the CloutSpent field if non-nil, zero value otherwise.
+
+### GetCloutSpentOk
+
+`func (o *TxOutItem) GetCloutSpentOk() (*string, bool)`
+
+GetCloutSpentOk returns a tuple with the CloutSpent field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetCloutSpent
+
+`func (o *TxOutItem) SetCloutSpent(v string)`
+
+SetCloutSpent sets CloutSpent field to given value.
+
+### HasCloutSpent
+
+`func (o *TxOutItem) HasCloutSpent() bool`
+
+HasCloutSpent returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

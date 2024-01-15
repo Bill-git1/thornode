@@ -2928,6 +2928,7 @@ components:
         - amount: "100000"
           decimals: 6
           asset: BTC.BTC
+        clout_spent: "1234"
         coin:
           amount: "100000"
           decimals: 6
@@ -2965,6 +2966,10 @@ components:
           example: 1234
           format: int64
           type: integer
+        clout_spent:
+          description: clout spent in RUNE for the outbound
+          example: "1234"
+          type: string
       required:
       - chain
       - coin
@@ -3484,6 +3489,7 @@ components:
           - amount: "100000"
             decimals: 6
             asset: BTC.BTC
+          clout_spent: "1234"
           coin:
             amount: "100000"
             decimals: 6
@@ -3503,6 +3509,7 @@ components:
           - amount: "100000"
             decimals: 6
             asset: BTC.BTC
+          clout_spent: "1234"
           coin:
             amount: "100000"
             decimals: 6
@@ -3719,6 +3726,7 @@ components:
           - amount: "100000"
             decimals: 6
             asset: BTC.BTC
+          clout_spent: "1234"
           coin:
             amount: "100000"
             decimals: 6
@@ -3738,6 +3746,7 @@ components:
           - amount: "100000"
             decimals: 6
             asset: BTC.BTC
+          clout_spent: "1234"
           coin:
             amount: "100000"
             decimals: 6
@@ -4399,6 +4408,7 @@ components:
             - amount: "100000"
               decimals: 6
               asset: BTC.BTC
+            clout_spent: "1234"
             coin:
               amount: "100000"
               decimals: 6
@@ -4418,6 +4428,7 @@ components:
             - amount: "100000"
               decimals: 6
               asset: BTC.BTC
+            clout_spent: "1234"
             coin:
               amount: "100000"
               decimals: 6
@@ -5819,6 +5830,7 @@ components:
           - amount: "100000"
             decimals: 6
             asset: BTC.BTC
+          clout_spent: "1234"
           coin:
             amount: "100000"
             decimals: 6
@@ -5838,6 +5850,7 @@ components:
           - amount: "100000"
             decimals: 6
             asset: BTC.BTC
+          clout_spent: "1234"
           coin:
             amount: "100000"
             decimals: 6

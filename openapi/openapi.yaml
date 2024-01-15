@@ -2010,6 +2010,10 @@ components:
           type: integer
           format: int64
           example: 1234
+        clout_spent:
+          type: string
+          description: clout spent in RUNE for the outbound
+          example: "1234"
 
     TssMetric:
       type: object

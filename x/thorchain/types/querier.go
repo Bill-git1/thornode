@@ -375,6 +375,7 @@ type QueryTxOutItem struct {
 	InHash      common.TxID    `json:"in_hash,omitempty"`
 	OutHash     common.TxID    `json:"out_hash,omitempty"`
 	Height      int64          `json:"height"`
+	CloutSpent  *cosmos.Uint   `json:"clout_spent,omitempty"`
 }
 
 // NewQueryTxOutItem create a new QueryTxOutItem based on the given txout item parameter
@@ -390,6 +391,7 @@ func NewQueryTxOutItem(toi TxOutItem, height int64) QueryTxOutItem {
 		InHash:      toi.InHash,
 		OutHash:     toi.OutHash,
 		Height:      height,
+		CloutSpent:  toi.CloutSpent,
 	}
 }
 

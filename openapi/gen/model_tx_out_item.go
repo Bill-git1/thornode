@@ -26,6 +26,8 @@ type TxOutItem struct {
 	InHash *string `json:"in_hash,omitempty"`
 	OutHash *string `json:"out_hash,omitempty"`
 	Height int64 `json:"height"`
+	// clout spent in RUNE for the outbound
+	CloutSpent *string `json:"clout_spent,omitempty"`
 }
 
 // NewTxOutItem instantiates a new TxOutItem object
@@ -330,6 +332,38 @@ func (o *TxOutItem) SetHeight(v int64) {
 	o.Height = v
 }
 
+// GetCloutSpent returns the CloutSpent field value if set, zero value otherwise.
+func (o *TxOutItem) GetCloutSpent() string {
+	if o == nil || o.CloutSpent == nil {
+		var ret string
+		return ret
+	}
+	return *o.CloutSpent
+}
+
+// GetCloutSpentOk returns a tuple with the CloutSpent field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TxOutItem) GetCloutSpentOk() (*string, bool) {
+	if o == nil || o.CloutSpent == nil {
+		return nil, false
+	}
+	return o.CloutSpent, true
+}
+
+// HasCloutSpent returns a boolean if a field has been set.
+func (o *TxOutItem) HasCloutSpent() bool {
+	if o != nil && o.CloutSpent != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetCloutSpent gets a reference to the given string and assigns it to the CloutSpent field.
+func (o *TxOutItem) SetCloutSpent(v string) {
+	o.CloutSpent = &v
+}
+
 func (o TxOutItem) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
@@ -361,6 +395,9 @@ func (o TxOutItem) MarshalJSON() ([]byte, error) {
 	}
 	if true {
 		toSerialize["height"] = o.Height
+	}
+	if o.CloutSpent != nil {
+		toSerialize["clout_spent"] = o.CloutSpent
 	}
 	return json.Marshal(toSerialize)
 }
