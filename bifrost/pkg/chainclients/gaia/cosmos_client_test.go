@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -131,11 +132,19 @@ func (s *CosmosTestSuite) TestProcessOutboundTx(c *C) {
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 	}))
 
+	// This test does not actually contact the gRPC endpoint,
+	// but gRPC throws an error if a TCP connection cannot be establish.
+	// This hack switches the schema for the mock HTTP server
+	// to keep gRPC happy.
+	fakeGRPCHost := strings.ReplaceAll(server.URL, "http://", "grpc://")
+
 	client, err := NewCosmosClient(s.thorKeys, config.BifrostChainConfiguration{
-		ChainID: common.GAIAChain,
-		RPCHost: server.URL,
+		ChainID:        common.GAIAChain,
+		RPCHost:        server.URL,
+		CosmosGRPCHost: fakeGRPCHost,
 		BlockScanner: config.BifrostBlockScannerConfiguration{
 			RPCHost:          server.URL,
+			CosmosGRPCHost:   fakeGRPCHost,
 			StartBlockHeight: 1, // avoids querying thorchain for block height
 		},
 	}, nil, s.bridge, s.m)

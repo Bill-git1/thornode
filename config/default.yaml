@@ -126,7 +126,7 @@ bifrost:
       chain_network: ""
       rpc_host: ""
       cosmos_grpc_host: ""
-      cosmos_grpc_tls: ""
+      cosmos_grpc_tls: false
       opt_to_retire: false
       solvency_blocks: 0
 
