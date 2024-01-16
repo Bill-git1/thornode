@@ -16,6 +16,7 @@ import (
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	ctypes "github.com/cosmos/cosmos-sdk/types"
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
+	grpctypes "github.com/cosmos/cosmos-sdk/types/grpc"
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 	signingtypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/x/auth/signing"
@@ -39,6 +40,8 @@ import (
 	"gitlab.com/thorchain/thornode/config"
 	"gitlab.com/thorchain/thornode/constants"
 	memo "gitlab.com/thorchain/thornode/x/thorchain/memo"
+
+	"google.golang.org/grpc/metadata"
 )
 
 // CosmosSuccessCodes a transaction is considered successful if it returns 0
@@ -238,17 +241,21 @@ func (c *CosmosClient) GetAddress(poolPubKey common.PubKey) string {
 	return addr.String()
 }
 
-func (c *CosmosClient) GetAccount(pkey common.PubKey, _ *big.Int) (common.Account, error) {
+func (c *CosmosClient) GetAccount(pkey common.PubKey, height *big.Int) (common.Account, error) {
 	addr, err := pkey.GetAddress(c.GetChain())
 	if err != nil {
 		return common.Account{}, fmt.Errorf("failed to convert address (%s) from bech32: %w", pkey, err)
 	}
-	return c.GetAccountByAddress(addr.String(), big.NewInt(0))
+	return c.GetAccountByAddress(addr.String(), height)
 }
 
-func (c *CosmosClient) GetAccountByAddress(address string, _ *big.Int) (common.Account, error) {
+func (c *CosmosClient) GetAccountByAddress(address string, height *big.Int) (common.Account, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
+	if height != nil && height.Cmp(big.NewInt(0)) > 0 {
+		// Set the height (to be parsed in Cosmos SDK's Invoke) to query for the specific block height
+		ctx = metadata.AppendToOutgoingContext(ctx, grpctypes.GRPCBlockHeightHeader, height.String())
+	}
 
 	bankReq := &btypes.QueryAllBalancesRequest{
 		Address: address,
@@ -561,7 +568,7 @@ func (c *CosmosClient) ReportSolvency(blockHeight int64) error {
 	}
 	for _, asgard := range asgardVaults {
 		var acct common.Account
-		acct, err = c.GetAccount(asgard.PubKey, big.NewInt(0))
+		acct, err = c.GetAccount(asgard.PubKey, new(big.Int).SetInt64(blockHeight))
 		if err != nil {
 			c.logger.Err(err).Msgf("fail to get account balance")
 			continue
