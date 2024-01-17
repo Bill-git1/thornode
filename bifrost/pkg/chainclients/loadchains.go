@@ -6,18 +6,13 @@ import (
 	"github.com/rs/zerolog/log"
 	"gitlab.com/thorchain/tss/go-tss/tss"
 
-	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/dogecoin"
-	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/evm"
-	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/gaia"
-	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/utxo"
-
 	"gitlab.com/thorchain/thornode/bifrost/metrics"
 	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/binance"
-	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/bitcoin"
-	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/bitcoincash"
 	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/ethereum"
-	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/litecoin"
+	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/evm"
+	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/gaia"
 	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/types"
+	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/utxo"
 	"gitlab.com/thorchain/thornode/bifrost/pubkeymanager"
 	"gitlab.com/thorchain/thornode/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/common"
@@ -43,10 +38,6 @@ func LoadChains(thorKeys *thorclient.Keys,
 	failedChains := []common.Chain{}
 
 	loadChain := func(chain config.BifrostChainConfiguration) (ChainClient, error) {
-		if chain.UTXO.ClientV2 {
-			return utxo.NewClient(thorKeys, chain, server, thorchainBridge, m)
-		}
-
 		switch chain.ChainID {
 		case common.BNBChain:
 			return binance.NewBinance(thorKeys, chain, server, thorchainBridge, m)
@@ -56,14 +47,8 @@ func LoadChains(thorKeys *thorclient.Keys,
 			return evm.NewEVMClient(thorKeys, chain, server, thorchainBridge, m, pubKeyValidator, poolMgr)
 		case common.GAIAChain:
 			return gaia.NewCosmosClient(thorKeys, chain, server, thorchainBridge, m)
-		case common.BTCChain:
-			return bitcoin.NewClient(thorKeys, chain, server, thorchainBridge, m)
-		case common.BCHChain:
-			return bitcoincash.NewClient(thorKeys, chain, server, thorchainBridge, m)
-		case common.LTCChain:
-			return litecoin.NewClient(thorKeys, chain, server, thorchainBridge, m)
-		case common.DOGEChain:
-			return dogecoin.NewClient(thorKeys, chain, server, thorchainBridge, m)
+		case common.BTCChain, common.BCHChain, common.LTCChain, common.DOGEChain:
+			return utxo.NewClient(thorKeys, chain, server, thorchainBridge, m)
 		default:
 			log.Fatal().Msgf("chain %s is not supported", chain.ChainID)
 			return nil, nil
@@ -84,19 +69,9 @@ func LoadChains(thorKeys *thorclient.Keys,
 		}
 
 		// trunk-ignore-all(golangci-lint/forcetypeassert)
-		if chain.UTXO.ClientV2 {
+		switch chain.ChainID {
+		case common.BTCChain, common.BCHChain, common.LTCChain, common.DOGEChain:
 			pubKeyValidator.RegisterCallback(client.(*utxo.Client).RegisterPublicKey)
-		} else {
-			switch chain.ChainID {
-			case common.BTCChain:
-				pubKeyValidator.RegisterCallback(client.(*bitcoin.Client).RegisterPublicKey)
-			case common.BCHChain:
-				pubKeyValidator.RegisterCallback(client.(*bitcoincash.Client).RegisterPublicKey)
-			case common.LTCChain:
-				pubKeyValidator.RegisterCallback(client.(*litecoin.Client).RegisterPublicKey)
-			case common.DOGEChain:
-				pubKeyValidator.RegisterCallback(client.(*dogecoin.Client).RegisterPublicKey)
-			}
 		}
 		chains[chain.ChainID] = client
 	}

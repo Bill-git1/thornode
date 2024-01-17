@@ -622,10 +622,6 @@ type BifrostChainConfiguration struct {
 		// a single scanning pass.
 		MaxMempoolBatches int `mapstructure:"max_mempool_batches"`
 
-		// ClientV2 flags on the usage of the replacement generic utxo client.
-		// TODO: Remove after full adoption on all UTXO chains.
-		ClientV2 bool `mapstructure:"client_v2"`
-
 		// NOTE: The following fields must be consistent across all validators. Otherwise,
 		// nodes can fail to sign outbounds from asgard since they may build different
 		// transactions. They may also be slashed for reporting different fee and solvency.

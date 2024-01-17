@@ -86,7 +86,6 @@ bifrost:
         version: 25
         transaction_batch_size: 500
         max_mempool_batches: 10
-        client_v2: false
         estimated_average_tx_size: 1000
         default_min_relay_fee_sats: 1000
         default_sats_per_vbyte: 25

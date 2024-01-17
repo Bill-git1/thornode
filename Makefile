@@ -32,11 +32,6 @@ BUILD_FLAGS := -ldflags '$(ldflags)' -tags ${TAG} -trimpath
 TEST_BUILD_FLAGS := -parallel=1 -tags=mocknet
 GOBIN?=${GOPATH}/bin
 BINARIES=./cmd/thornode ./cmd/bifrost ./tools/generate
-BIFROST_UTXO_CLIENT_PKGS := ./bifrost/pkg/chainclients/dogecoin/... \
-		  ./bifrost/pkg/chainclients/bitcoin/... \
-		  ./bifrost/pkg/chainclients/bitcoincash/... \
-		  ./bifrost/pkg/chainclients/litecoin/... \
-		  ./bifrost/pkg/chainclients/utxo/...
 
 # docker tty args are disabled in CI
 ifndef CI
@@ -182,8 +177,8 @@ test: test-network-specific
 
 test-network-specific:
 	@CGO_ENABLED=0 go test -tags stagenet ./common
-	@CGO_ENABLED=0 go test -tags mainnet ./common ${BIFROST_UTXO_CLIENT_PKGS}
-	@CGO_ENABLED=0 go test -tags mocknet ./common ${BIFROST_UTXO_CLIENT_PKGS}
+	@CGO_ENABLED=0 go test -tags mainnet ./common ./bifrost/pkg/chainclients/utxo/...
+	@CGO_ENABLED=0 go test -tags mocknet ./common ./bifrost/pkg/chainclients/utxo/...
 
 test-race:
 	@go test -race ${TEST_BUILD_FLAGS} ${TEST_DIR}
