@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
 # prompt for gitlab merge request id
 read -rp "Enter Gitlab Merge Request ID: " MR
 
-git branch -D mr-"$MR"
-git fetch origin merge-requests/"$MR"/head:mr-"$MR" && git checkout mr-"$MR"
-git push --set-upstream origin -f --no-verify
+BRANCH="mr-$MR"
+
+git branch -D "${BRANCH}"
+git fetch origin merge-requests/"$MR"/head:"${BRANCH}"
+git checkout "${BRANCH}"
+git push --set-upstream origin "${BRANCH}" -f --no-verify
 git checkout "@{-1}"
 
 echo

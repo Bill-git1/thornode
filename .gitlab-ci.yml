@@ -33,8 +33,9 @@ fork:
   script:
     - |
       echo Project ID: $CI_PROJECT_ID
+      echo Merge project ID: $CI_MERGE_REQUEST_PROJECT_ID
       echo Commit SHA: $CI_COMMIT_SHA
-      if ! curl https://gitlab.com/api/v4/projects/$CI_PROJECT_ID/pipelines?sha=$CI_COMMIT_SHA | tee /dev/stderr | jq -e '.[]|select(.status=="success")'; then
+      if ! curl https://gitlab.com/api/v4/projects/$CI_MERGE_REQUEST_PROJECT_ID/pipelines?sha=$CI_COMMIT_SHA | tee /dev/stderr | jq -e '.[]|select(.status=="success")'; then
         echo
         echo
         echo '1. Ensure the following passes locally: `make generate lint test smoke test-regression`'
