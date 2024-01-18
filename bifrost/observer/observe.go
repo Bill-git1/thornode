@@ -606,28 +606,31 @@ func (o *Observer) getThorchainTxIns(txIn types.TxIn) (stypes.ObservedTxs, error
 		txID, err := common.NewTxID(item.Tx)
 		if err != nil {
 			o.errCounter.WithLabelValues("fail_to_parse_tx_hash", blockHeight).Inc()
-			return nil, fmt.Errorf("fail to parse tx hash, %s is invalid: %w", item.Tx, err)
+			o.logger.Err(err).Msgf("fail to parse tx hash, %s is invalid", item.Tx)
+			continue
 		}
 		sender, err := common.NewAddress(item.Sender)
 		if err != nil {
 			o.errCounter.WithLabelValues("fail_to_parse_sender", item.Sender).Inc()
 			// log the error , and ignore the transaction, since the address is not valid
-			o.logger.Err(err).Msgf("fail to parse sender,%s is invalid sender address", item.Sender)
-			return nil, nil
+			o.logger.Err(err).Msgf("fail to parse sender, %s is invalid sender address", item.Sender)
+			continue
 		}
 
 		to, err := common.NewAddress(item.To)
 		if err != nil {
-			o.errCounter.WithLabelValues("fail_to_parse_sender", item.Sender).Inc()
-			return nil, fmt.Errorf("fail to parse sender,%s is invalid sender address: %w", item.Sender, err)
+			o.errCounter.WithLabelValues("fail_to_parse_to", item.To).Inc()
+			o.logger.Err(err).Msgf("fail to parse to, %s is invalid to address", item.To)
+			continue
 		}
 
 		o.logger.Debug().Msgf("pool pubkey %s", item.ObservedVaultPubKey)
-		chainAddr, _ := item.ObservedVaultPubKey.GetAddress(txIn.Chain)
+		chainAddr, err := item.ObservedVaultPubKey.GetAddress(txIn.Chain)
 		o.logger.Debug().Msgf("%s address %s", txIn.Chain.String(), chainAddr)
 		if err != nil {
 			o.errCounter.WithLabelValues("fail to parse observed pool address", item.ObservedVaultPubKey.String()).Inc()
-			return nil, fmt.Errorf("fail to parse observed pool address: %s: %w", item.ObservedVaultPubKey.String(), err)
+			o.logger.Err(err).Msgf("fail to parse observed pool address: %s", item.ObservedVaultPubKey.String())
+			continue
 		}
 		height := item.BlockHeight
 		if txIn.Finalised {

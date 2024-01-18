@@ -337,7 +337,8 @@ func (b *thorchainBridge) GetObservationsStdTx(txIns stypes.ObservedTxs) ([]cosm
 
 		obAddr, err := tx.ObservedPubKey.GetAddress(chain)
 		if err != nil {
-			return nil, err
+			b.logger.Err(err).Msgf("fail to parse observed pool address: %s", tx.ObservedPubKey.String())
+			continue
 		}
 		vaultToAddress := tx.Tx.ToAddress.Equals(obAddr)
 		vaultFromAddress := tx.Tx.FromAddress.Equals(obAddr)
