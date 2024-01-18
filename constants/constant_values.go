@@ -136,6 +136,7 @@ const (
 	CloutLimit
 	KeygenRetryInterval
 	SaversStreamingSwapsInterval
+	RescheduleCoalesceBlocks
 )
 
 // ConstantValues define methods used to get constant values

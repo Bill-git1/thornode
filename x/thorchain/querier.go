@@ -2146,12 +2146,20 @@ func queryScheduledOutbound(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 func queryPendingOutbound(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 	constAccessor := mgr.GetConstants()
 	signingTransactionPeriod := constAccessor.GetInt64Value(constants.SigningTransactionPeriod)
+	rescheduleCoalesceBlocks := mgr.Keeper().GetConfigInt64(ctx, constants.RescheduleCoalesceBlocks)
 	startHeight := ctx.BlockHeight() - signingTransactionPeriod
 	if startHeight < 1 {
 		startHeight = 1
 	}
+
+	// outbounds can be scheduled up to reschedule coalesce blocks in the future
+	lastOutboundHeight := ctx.BlockHeight()
+	if rescheduleCoalesceBlocks > 1 {
+		lastOutboundHeight += rescheduleCoalesceBlocks - (lastOutboundHeight % rescheduleCoalesceBlocks)
+	}
+
 	result := make([]QueryTxOutItem, 0)
-	for height := startHeight; height <= ctx.BlockHeight(); height++ {
+	for height := startHeight; height <= lastOutboundHeight; height++ {
 		txs, err := mgr.Keeper().GetTxOut(ctx, height)
 		if err != nil {
 			ctx.Logger().Error("fail to get tx out array from key value store", "error", err)

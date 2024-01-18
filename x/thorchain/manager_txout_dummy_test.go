@@ -52,7 +52,7 @@ func (tos *TxOutStoreDummy) TryAddTxOutItem(ctx cosmos.Context, mgr Manager, toi
 	return true, nil
 }
 
-func (tos *TxOutStoreDummy) UnSafeAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem) error {
+func (tos *TxOutStoreDummy) UnSafeAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem, height int64) error {
 	if !toi.Chain.Equals(common.THORChain) {
 		tos.addToBlockOut(ctx, toi)
 	}
@@ -117,7 +117,7 @@ func (tos *TxOutStoreFailDummy) CalcTxOutHeight(_ cosmos.Context, _ semver.Versi
 	return 0, cosmos.ZeroUint(), nil
 }
 
-func (tos *TxOutStoreFailDummy) UnSafeAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem) error {
+func (tos *TxOutStoreFailDummy) UnSafeAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem, height int64) error {
 	if !toi.Chain.Equals(common.THORChain) {
 		tos.addToBlockOut(ctx, toi)
 	}

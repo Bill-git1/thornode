@@ -253,7 +253,7 @@ func requeueDanglingActionsV124(ctx cosmos.Context, mgr *Mgrs, txIDs []common.Tx
 			actionItem.GasRate = int64(mgr.GasMgr().GetGasRate(ctx, actionItem.Chain).Uint64())
 
 			// UnSafeAddTxOutItem is used to queue the txout item directly, without for instance deducting another fee.
-			err = mgr.TxOutStore().UnSafeAddTxOutItem(ctx, mgr, *actionItem)
+			err = mgr.TxOutStore().UnSafeAddTxOutItem(ctx, mgr, *actionItem, ctx.BlockHeight())
 			if err != nil {
 				ctx.Logger().Error("fail to add outbound tx", "error", err)
 				continue
@@ -336,7 +336,7 @@ func requeueDanglingActionsV123(ctx cosmos.Context, mgr *Mgrs, txIDs []common.Tx
 			actionItem.GasRate = int64(mgr.GasMgr().GetGasRate(ctx, actionItem.Chain).Uint64())
 
 			// UnSafeAddTxOutItem is used to queue the txout item directly, without for instance deducting another fee.
-			err = mgr.TxOutStore().UnSafeAddTxOutItem(ctx, mgr, *actionItem)
+			err = mgr.TxOutStore().UnSafeAddTxOutItem(ctx, mgr, *actionItem, ctx.BlockHeight())
 			if err != nil {
 				ctx.Logger().Error("fail to add outbound tx", "error", err)
 				continue
@@ -417,7 +417,7 @@ func requeueDanglingActionsV108(ctx cosmos.Context, mgr *Mgrs, txIDs []common.Tx
 			actionItem.GasRate = int64(mgr.GasMgr().GetGasRate(ctx, actionItem.Chain).Uint64())
 
 			// UnSafeAddTxOutItem is used to queue the txout item directly, without for instance deducting another fee.
-			err = mgr.TxOutStore().UnSafeAddTxOutItem(ctx, mgr, *actionItem)
+			err = mgr.TxOutStore().UnSafeAddTxOutItem(ctx, mgr, *actionItem, ctx.BlockHeight())
 			if err != nil {
 				ctx.Logger().Error("fail to add outbound tx", "error", err)
 				continue

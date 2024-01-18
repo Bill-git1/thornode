@@ -53,20 +53,22 @@ func init() {
 		DefaultPoolStatus: "Available",
 	}
 
+	v1Values := NewConstantValue()
+
 	// allow overrides from environment variables in mocknet
-	for k := range int64Overrides {
+	for k := range v1Values.int64values {
 		env := camelToSnakeUpper(k.String())
 		if os.Getenv(env) != "" {
 			int64Overrides[k], _ = strconv.ParseInt(os.Getenv(env), 10, 64)
 		}
 	}
-	for k := range boolOverrides {
+	for k := range v1Values.boolValues {
 		env := camelToSnakeUpper(k.String())
 		if os.Getenv(env) != "" {
 			boolOverrides[k], _ = strconv.ParseBool(os.Getenv(env))
 		}
 	}
-	for k := range stringOverrides {
+	for k := range v1Values.stringValues {
 		env := camelToSnakeUpper(k.String())
 		if os.Getenv(env) != "" {
 			stringOverrides[k] = os.Getenv(env)

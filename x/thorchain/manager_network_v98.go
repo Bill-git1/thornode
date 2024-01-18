@@ -907,7 +907,7 @@ func (vm *NetworkMgrV98) RecallChainFunds(ctx cosmos.Context, chain common.Chain
 			// TxOutItem that has memo "yggdrasil-" it will query the chain
 			// and find out all the remaining assets , and fill in the
 			// field
-			if err := vm.txOutStore.UnSafeAddTxOutItem(ctx, mgr, txOutItem); err != nil {
+			if err := vm.txOutStore.UnSafeAddTxOutItem(ctx, mgr, txOutItem, ctx.BlockHeight()); err != nil {
 				return err
 			}
 		}

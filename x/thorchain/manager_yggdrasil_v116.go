@@ -277,7 +277,7 @@ func (ymgr YggMgrV116) sendCoinsToYggdrasil(ctx cosmos.Context, coins common.Coi
 				},
 				GasRate: int64(mgr.GasMgr().GetGasRate(ctx, coin.Asset.GetChain()).Uint64()),
 			}
-			if err := mgr.TxOutStore().UnSafeAddTxOutItem(ctx, mgr, toi); err != nil {
+			if err := mgr.TxOutStore().UnSafeAddTxOutItem(ctx, mgr, toi, ctx.BlockHeight()); err != nil {
 				return count, err
 			}
 			count++

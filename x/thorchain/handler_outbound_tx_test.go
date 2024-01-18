@@ -481,7 +481,7 @@ func (s *HandlerOutboundTxSuite) TestOutboundTxHandlerETHChainSpendTooMuchGasSho
 		Memo:        NewOutboundMemo(helper.inboundTx.Tx.ID).String(),
 		InHash:      helper.inboundTx.Tx.ID,
 	}
-	c.Assert(txOutStorage.UnSafeAddTxOutItem(helper.ctx, helper.mgr, toi), IsNil)
+	c.Assert(txOutStorage.UnSafeAddTxOutItem(helper.ctx, helper.mgr, toi, helper.ctx.BlockHeight()), IsNil)
 	tx := NewObservedTx(common.Tx{
 		ID:    GetRandomTxHash(),
 		Chain: common.ETHChain,
@@ -534,7 +534,7 @@ func (s *HandlerOutboundTxSuite) TestOutboundTxHandlerETHChainSpendTooMuchGasPer
 			common.NewCoin(common.ETHAsset, cosmos.NewUint(1*common.One)),
 		},
 	}
-	c.Assert(txOutStorage.UnSafeAddTxOutItem(helper.ctx, helper.mgr, toi), IsNil)
+	c.Assert(txOutStorage.UnSafeAddTxOutItem(helper.ctx, helper.mgr, toi, helper.ctx.BlockHeight()), IsNil)
 	tx := NewObservedTx(common.Tx{
 		ID:    GetRandomTxHash(),
 		Chain: common.ETHChain,
@@ -586,7 +586,7 @@ func (s *HandlerOutboundTxSuite) TestOutboundTxHandlerMismatchDecimalShouldNotSl
 		Memo:        NewOutboundMemo(helper.inboundTx.Tx.ID).String(),
 		InHash:      helper.inboundTx.Tx.ID,
 	}
-	c.Assert(txOutStorage.UnSafeAddTxOutItem(helper.ctx, helper.mgr, toi), IsNil)
+	c.Assert(txOutStorage.UnSafeAddTxOutItem(helper.ctx, helper.mgr, toi, helper.ctx.BlockHeight()), IsNil)
 	tx := NewObservedTx(common.Tx{
 		ID:    GetRandomTxHash(),
 		Chain: common.ETHChain,

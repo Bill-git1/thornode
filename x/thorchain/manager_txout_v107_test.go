@@ -38,7 +38,7 @@ func (s TxOutStoreV107Suite) TestEndBlock(c *C) {
 		InHash:    GetRandomTxHash(),
 		Coin:      common.NewCoin(common.BNBAsset, cosmos.NewUint(20*common.One)),
 	}
-	err := txOutStore.UnSafeAddTxOutItem(w.ctx, w.mgr, item)
+	err := txOutStore.UnSafeAddTxOutItem(w.ctx, w.mgr, item, w.ctx.BlockHeight())
 	c.Assert(err, IsNil)
 
 	c.Assert(txOutStore.EndBlock(w.ctx, w.mgr), IsNil)

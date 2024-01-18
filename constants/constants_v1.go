@@ -116,6 +116,7 @@ func NewConstantValue() *ConstantVals {
 			CloutLimit:                          0,                  // max clout allowed to spend
 			KeygenRetryInterval:                 0,                  // number of blocks to wait before retrying a keygen
 			SaversStreamingSwapsInterval:        0,                  // For Savers deposits and withdraws, the streaming swaps interval to use for the Native <> Synth swap
+			RescheduleCoalesceBlocks:            0,                  // number of blocks to coalesce rescheduled outbounds
 		},
 		boolValues: map[ConstantName]bool{
 			StrictBondLiquidityRatio: true,

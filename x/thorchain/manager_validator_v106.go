@@ -1032,7 +1032,7 @@ func (vm *ValidatorMgrV106) RequestYggReturn(ctx cosmos.Context, node NodeAccoun
 
 			// yggdrasil- will not set coin field here, when signer see a TxOutItem that has memo "yggdrasil-" it will query the chain
 			// and find out all the remaining assets , and fill in the field
-			if err := vm.txOutStore.UnSafeAddTxOutItem(ctx, mgr, txOutItem); err != nil {
+			if err := vm.txOutStore.UnSafeAddTxOutItem(ctx, mgr, txOutItem, ctx.BlockHeight()); err != nil {
 				return err
 			}
 		}

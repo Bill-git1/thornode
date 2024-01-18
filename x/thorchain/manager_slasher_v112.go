@@ -409,7 +409,7 @@ func (s *SlasherV112) LackSigning(ctx cosmos.Context, mgr Manager) error {
 				continue
 			}
 
-			err = mgr.TxOutStore().UnSafeAddTxOutItem(ctx, mgr, tx)
+			err = mgr.TxOutStore().UnSafeAddTxOutItem(ctx, mgr, tx, ctx.BlockHeight())
 			if err != nil {
 				ctx.Logger().Error("fail to add outbound tx", "error", err)
 				resultErr = fmt.Errorf("failed to add outbound tx: %w", err)

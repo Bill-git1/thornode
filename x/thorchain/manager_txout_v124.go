@@ -223,7 +223,7 @@ func (tos *TxOutStorageV124) cachedTryAddTxOutItem(ctx cosmos.Context, mgr Manag
 
 // UnSafeAddTxOutItem - blindly adds a tx out, skipping vault selection, transaction
 // fee deduction, etc
-func (tos *TxOutStorageV124) UnSafeAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem) error {
+func (tos *TxOutStorageV124) UnSafeAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem, height int64) error {
 	if toi.ToAddress.IsNoop() {
 		return nil
 	}
@@ -239,7 +239,7 @@ func (tos *TxOutStorageV124) UnSafeAddTxOutItem(ctx cosmos.Context, mgr Manager,
 		}
 		toi.ToAddress = newBCHAddress
 	}
-	return tos.addToBlockOut(ctx, mgr, toi, ctx.BlockHeight())
+	return tos.addToBlockOut(ctx, mgr, toi, height)
 }
 
 func (tos *TxOutStorageV124) discoverOutbounds(ctx cosmos.Context, transactionFeeAsset cosmos.Uint, maxGasAsset common.Coin, toi TxOutItem, vaults Vaults) ([]TxOutItem, cosmos.Uint) {

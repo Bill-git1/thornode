@@ -936,7 +936,7 @@ func migrateStoreV123(ctx cosmos.Context, mgr *Mgrs) {
 		MaxGas:      common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(94500))},
 	}
 
-	err := mgr.txOutStore.UnSafeAddTxOutItem(ctx, mgr, droppedRescue)
+	err := mgr.txOutStore.UnSafeAddTxOutItem(ctx, mgr, droppedRescue, ctx.BlockHeight())
 	if err != nil {
 		ctx.Logger().Error("fail to requeue BTC rescue tx", "error", err)
 		return
@@ -961,7 +961,7 @@ func migrateStoreV124(ctx cosmos.Context, mgr *Mgrs) {
 		MaxGas:      common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(94500))},
 	}
 
-	err := mgr.txOutStore.UnSafeAddTxOutItem(ctx, mgr, droppedRescue)
+	err := mgr.txOutStore.UnSafeAddTxOutItem(ctx, mgr, droppedRescue, ctx.BlockHeight())
 	if err != nil {
 		ctx.Logger().Error("fail to requeue BTC rescue tx", "error", err)
 		return

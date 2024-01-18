@@ -72,7 +72,7 @@ type TxOutStore interface {
 	ClearOutboundItems(ctx cosmos.Context)
 	GetOutboundItems(ctx cosmos.Context) ([]TxOutItem, error)
 	TryAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem, minOut cosmos.Uint) (bool, error)
-	UnSafeAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem) error
+	UnSafeAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem, height int64) error
 	GetOutboundItemByToAddress(cosmos.Context, common.Address) []TxOutItem
 	CalcTxOutHeight(cosmos.Context, semver.Version, TxOutItem) (int64, cosmos.Uint, error)
 }
@@ -383,8 +383,10 @@ func GetEventManager(version semver.Version) (EventManager, error) {
 func GetTxOutStore(version semver.Version, keeper keeper.Keeper, eventMgr EventManager, gasManager GasManager) (TxOutStore, error) {
 	constAccessor := constants.GetConstantValues(version)
 	switch {
-	case version.GTE(semver.MustParse("1.125.0")):
+	case version.GTE(semver.MustParse("1.127.0")):
 		return newTxOutStorageVCUR(keeper, constAccessor, eventMgr, gasManager), nil
+	case version.GTE(semver.MustParse("1.125.0")):
+		return newTxOutStorageV125(keeper, constAccessor, eventMgr, gasManager), nil
 	case version.GTE(semver.MustParse("1.124.0")):
 		return newTxOutStorageV124(keeper, constAccessor, eventMgr, gasManager), nil
 	case version.GTE(semver.MustParse("1.122.0")):
@@ -612,8 +614,10 @@ func GetOrderBook(version semver.Version, keeper keeper.Keeper) (OrderBook, erro
 // GetSlasher return an implementation of Slasher
 func GetSlasher(version semver.Version, keeper keeper.Keeper, eventMgr EventManager) (Slasher, error) {
 	switch {
-	case version.GTE(semver.MustParse("1.126.0")):
+	case version.GTE(semver.MustParse("1.127.0")):
 		return newSlasherVCUR(keeper, eventMgr), nil
+	case version.GTE(semver.MustParse("1.126.0")):
+		return newSlasherV126(keeper, eventMgr), nil
 	case version.GTE(semver.MustParse("1.125.0")):
 		return newSlasherV125(keeper, eventMgr), nil
 	case version.GTE(semver.MustParse("1.124.0")):

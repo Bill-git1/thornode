@@ -449,7 +449,14 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 				continue
 			}
 
-			err = mgr.TxOutStore().UnSafeAddTxOutItem(ctx, mgr, tx)
+			// round up to next coalesce block
+			rescheduleHeight := ctx.BlockHeight()
+			rescheduleCoalesceBlocks := mgr.Keeper().GetConfigInt64(ctx, constants.RescheduleCoalesceBlocks)
+			if rescheduleCoalesceBlocks > 1 {
+				rescheduleHeight += rescheduleCoalesceBlocks - (rescheduleHeight % rescheduleCoalesceBlocks)
+			}
+
+			err = mgr.TxOutStore().UnSafeAddTxOutItem(ctx, mgr, tx, rescheduleHeight)
 			if err != nil {
 				ctx.Logger().Error("fail to add outbound tx", "error", err)
 				resultErr = fmt.Errorf("failed to add outbound tx: %w", err)

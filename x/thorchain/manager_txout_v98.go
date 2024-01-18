@@ -180,7 +180,7 @@ func (tos *TxOutStorageV98) TryAddTxOutItem(ctx cosmos.Context, mgr Manager, toi
 
 // UnSafeAddTxOutItem - blindly adds a tx out, skipping vault selection, transaction
 // fee deduction, etc
-func (tos *TxOutStorageV98) UnSafeAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem) error {
+func (tos *TxOutStorageV98) UnSafeAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem, height int64) error {
 	// BCH chain will convert legacy address to new format automatically , thus when observe it back can't be associated with the original inbound
 	// so here convert the legacy address to new format
 	if toi.Chain.Equals(common.BCHChain) {
@@ -193,7 +193,7 @@ func (tos *TxOutStorageV98) UnSafeAddTxOutItem(ctx cosmos.Context, mgr Manager, 
 		}
 		toi.ToAddress = newBCHAddress
 	}
-	return tos.addToBlockOut(ctx, mgr, toi, ctx.BlockHeight())
+	return tos.addToBlockOut(ctx, mgr, toi, height)
 }
 
 func (tos *TxOutStorageV98) discoverOutbounds(ctx cosmos.Context, transactionFeeAsset cosmos.Uint, maxGasAsset common.Coin, toi TxOutItem, vaults Vaults) ([]TxOutItem, cosmos.Uint) {
