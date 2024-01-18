@@ -129,7 +129,7 @@ func NewClient(thorKeys *thorclient.Keys,
 	if err != nil {
 		return nil, fmt.Errorf("fail to create ETH key sign wrapper: %w", err)
 	}
-	vaultABI, _, err := getContractABI()
+	vaultABI, _, err := evm.GetContractABI(routerContractABI, erc20ContractABI)
 	if err != nil {
 		return nil, fmt.Errorf("fail to get contract abi: %w", err)
 	}

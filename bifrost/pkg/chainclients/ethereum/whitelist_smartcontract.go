@@ -1,6 +1,3 @@
-//go:build !mocknet && !stagenet
-// +build !mocknet,!stagenet
-
 package ethereum
 
 import (

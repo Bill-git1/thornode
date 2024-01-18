@@ -116,7 +116,7 @@ func NewETHScanner(cfg config.BifrostBlockScannerConfiguration,
 	if err != nil {
 		return nil, err
 	}
-	vaultABI, erc20ABI, err := getContractABI()
+	vaultABI, erc20ABI, err := evm.GetContractABI(routerContractABI, erc20ContractABI)
 	if err != nil {
 		return nil, fmt.Errorf("fail to create contract abi: %w", err)
 	}
