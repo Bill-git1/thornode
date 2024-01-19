@@ -209,24 +209,7 @@ func (s *Signer) processTransactions() {
 		go func(items []TxOutStoreItem) {
 			chain := items[0].TxOutItem.Chain // all items in a batch should be the same chain
 
-			// make all observations for the batch before returning
-			observations := []types.TxInItem{}
-			defer func() {
-				if len(observations) > 0 {
-					s.observer.ObserveSigned(types.TxIn{
-						Count:                strconv.Itoa(len(observations)),
-						Chain:                chain,
-						TxArray:              observations,
-						MemPool:              true,
-						Filtered:             true,
-						SentUnFinalised:      false,
-						Finalised:            false,
-						ConfirmationRequired: 0,
-					}, chain.IsEVM()) // Instant EVM observations have wrong gas and need future correct observations
-				}
-
-				wg.Done()
-			}()
+			defer wg.Done()
 
 			// precondition: all transactions should be for the same chain
 			for _, item := range items {
@@ -293,9 +276,19 @@ func (s *Signer) processTransactions() {
 					}
 					cancel()
 
-					// if enabled and the observation is non-nil, add to this batch's observations
+					// if enabled and the observation is non-nil, instant-observe without waiting for end of batch's range
+					// (aim to instant-observe SetSigned prior to any failed transaction RemoveSigned)
 					if s.cfg.AutoObserve && obs != nil {
-						observations = append(observations, *obs)
+						s.observer.ObserveSigned(types.TxIn{
+							Count:                "1",
+							Chain:                chain,
+							TxArray:              []types.TxInItem{*obs},
+							MemPool:              true,
+							Filtered:             true,
+							SentUnFinalised:      false,
+							Finalised:            false,
+							ConfirmationRequired: 0,
+						}, chain.IsEVM()) // Instant EVM observations have wrong gas and need future correct observations
 					}
 
 					// We have a successful broadcast! Remove the item from our store
