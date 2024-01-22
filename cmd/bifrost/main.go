@@ -1,9 +1,6 @@
 package main
 
 import (
-	"bytes"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -12,7 +9,6 @@ import (
 	"syscall"
 	"time"
 
-	btsskeygen "github.com/binance-chain/tss-lib/ecdsa/keygen"
 	golog "github.com/ipfs/go-log"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -54,7 +50,6 @@ func main() {
 	showVersion := flag.Bool("version", false, "Shows version")
 	logLevel := flag.StringP("log-level", "l", "info", "Log Level")
 	pretty := flag.BoolP("pretty-log", "p", false, "Enables unstructured prettified logging. This is useful for local debugging")
-	tssPreParam := flag.StringP("preparm", "t", "", "pre-generated PreParam file used for tss")
 	flag.Parse()
 
 	if *showVersion {
@@ -151,7 +146,7 @@ func main() {
 			PartyTimeout:    cfg.Signer.PartyTimeout,
 			PreParamTimeout: cfg.Signer.PreParamTimeout,
 		},
-		getLocalPreParam(*tssPreParam),
+		nil,
 		cfg.TSS.ExternalIP,
 	)
 	if err != nil {
@@ -278,29 +273,4 @@ func initLog(level string, pretty bool) {
 	if err = golog.SetLogLevel("tss-lib", level); err != nil {
 		log.Fatal().Err(err).Msg("fail to set tss-lib loglevel")
 	}
-}
-
-func getLocalPreParam(file string) *btsskeygen.LocalPreParams {
-	if len(file) == 0 {
-		return nil
-	}
-	// #nosec G304 this is to read a file provided by a start up parameter , it will not be any random user input
-	buf, err := os.ReadFile(file)
-	if err != nil {
-		log.Fatal().Msgf("fail to read file:%s", file)
-		return nil
-	}
-	buf = bytes.Trim(buf, "\n")
-	log.Info().Msg(string(buf))
-	result, err := hex.DecodeString(string(buf))
-	if err != nil {
-		log.Fatal().Msg("fail to hex decode the file content")
-		return nil
-	}
-	var preParam btsskeygen.LocalPreParams
-	if err = json.Unmarshal(result, &preParam); err != nil {
-		log.Fatal().Msg("fail to unmarshal file content to LocalPreParams")
-		return nil
-	}
-	return &preParam
 }
