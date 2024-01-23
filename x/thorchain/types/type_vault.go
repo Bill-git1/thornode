@@ -255,6 +255,31 @@ func (m *Vault) subFund(coin common.Coin) {
 	}
 }
 
+func (m *Vault) DeductVaultPendingOutbounds(pendingOutbounds []TxOutItem) {
+	for _, txOutItem := range pendingOutbounds {
+		if !txOutItem.VaultPubKey.Equals(m.PubKey) {
+			continue
+		}
+		// only still outstanding txout will be considered
+		if !txOutItem.OutHash.IsEmpty() {
+			continue
+		}
+		// deduct the gas asset from the vault as well
+		var gasCoin common.Coin
+		if !txOutItem.MaxGas.IsEmpty() {
+			gasCoin = txOutItem.MaxGas.ToCoins().GetCoin(txOutItem.Chain.GetGasAsset())
+		}
+		for i := range m.Coins {
+			if m.Coins[i].Asset.Equals(txOutItem.Coin.Asset) {
+				m.Coins[i].Amount = common.SafeSub(m.Coins[i].Amount, txOutItem.Coin.Amount)
+			}
+			if m.Coins[i].Asset.Equals(gasCoin.Asset) {
+				m.Coins[i].Amount = common.SafeSub(m.Coins[i].Amount, gasCoin.Amount)
+			}
+		}
+	}
+}
+
 // AppendPendingTxBlockHeights will add current block height into the list , also remove the block height that is too old
 func (m *Vault) AppendPendingTxBlockHeights(blockHeight int64, constAccessor constants.ConstantValues) {
 	heights := []int64{blockHeight}

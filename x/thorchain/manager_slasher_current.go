@@ -361,7 +361,29 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 				if err != nil {
 					return fmt.Errorf("fail to get active asgard vaults: %w", err)
 				}
-				available := active.Has(tx.Coin).SortBy(tx.Coin.Asset)
+				// Deduct the asset's pending outbound funds to represent only the available funds.
+				pendingOutbounds := mgr.Keeper().GetPendingOutbounds(ctx, tx.Coin.Asset)
+				for i := range active {
+					active[i].DeductVaultPendingOutbounds(pendingOutbounds)
+				}
+
+				available := active
+				mainCoin := tx.Coin
+				maxGasCoin, err := mgr.GasMgr().GetMaxGas(ctx, tx.Chain)
+				if err != nil {
+					ctx.Logger().Error("fail to get max gas", "error", err)
+				}
+				if mainCoin.Asset.Equals(maxGasCoin.Asset) {
+					// If the main coin and the gas coin are the same asset,
+					// ensure the assigned vault has enough available for both.
+					mainCoin.Amount = mainCoin.Amount.Add(maxGasCoin.Amount)
+				} else {
+					// If the gas coin isn't the main asset,
+					// directly ensure the assigned vault has enough available for it.
+					available = active.Has(maxGasCoin)
+				}
+				available = available.Has(mainCoin)
+
 				if len(available) == 0 {
 					// we need to give it somewhere to send from, even if that
 					// asgard doesn't have enough funds. This is because if we
@@ -374,7 +396,8 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 					// this edge case.
 					ctx.Logger().Error("unable to determine asgard vault to send funds, trying first asgard")
 					if len(active) > 0 {
-						vault = active[0]
+						// Fall back on the vault with the most available funds.
+						vault = active.SortBy(mainCoin.Asset)[0]
 					}
 				} else {
 					rep := int(tx.InHash.Int64() + ctx.BlockHeight()/signingTransPeriod)
@@ -424,13 +447,10 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 				tx.VaultPubKey = vault.PubKey
 
 				// update max gas
-				maxGas, err := mgr.GasMgr().GetMaxGas(ctx, tx.Chain)
-				if err != nil {
-					ctx.Logger().Error("fail to get max gas", "error", err)
-				} else {
-					tx.MaxGas = common.Gas{maxGas}
+				if !maxGasCoin.IsEmpty() {
+					tx.MaxGas = common.Gas{maxGasCoin}
 					// Update MaxGas in ObservedTxVoter action as well
-					if err := updateTxOutGas(ctx, s.keeper, tx, common.Gas{maxGas}); err != nil {
+					if err := updateTxOutGas(ctx, s.keeper, tx, common.Gas{maxGasCoin}); err != nil {
 						ctx.Logger().Error("Failed to update MaxGas of action in ObservedTxVoter", "hash", tx.InHash, "error", err)
 					}
 				}

@@ -221,6 +221,42 @@ func (k KVStore) getSortedVaultSecurity(ctx cosmos.Context, vaults Vaults, signi
 	return vaultSecurity
 }
 
+// GetPendingOutbounds selects txouts in the outbound and scheduled outbound queues (for deduction to leave only 'available' balances),
+// as the amounts of both types of txout items are yet to be deducted from the vault balances
+func (k KVStore) GetPendingOutbounds(ctx cosmos.Context, asset common.Asset) []TxOutItem {
+	signingPeriod := k.GetConstants().GetInt64Value(constants.SigningTransactionPeriod)
+	startHeight := ctx.BlockHeight() - signingPeriod
+	if startHeight < 1 {
+		startHeight = 1
+	}
+	txOutDelayMax := k.GetConfigInt64(ctx, constants.TxOutDelayMax)
+	maxTxOutOffset := k.GetConfigInt64(ctx, constants.MaxTxOutOffset)
+	var outbounds []TxOutItem
+	for height := startHeight; height <= ctx.BlockHeight()+txOutDelayMax; height++ {
+		blockOut, err := k.GetTxOut(ctx, height)
+		if err != nil {
+			ctx.Logger().Error("fail to get block tx out", "error", err)
+		}
+		if height > ctx.BlockHeight()+maxTxOutOffset && len(blockOut.TxArray) == 0 {
+			// we've hit our max offset, and an empty block, we can assume the
+			// rest will be empty as well
+			break
+		}
+		for _, txOutItem := range blockOut.TxArray {
+			// only need to look at outbounds for the same asset
+			if !txOutItem.Coin.Asset.Equals(asset) {
+				continue
+			}
+			// only still outstanding txout will be considered
+			if !txOutItem.OutHash.IsEmpty() {
+				continue
+			}
+			outbounds = append(outbounds, txOutItem)
+		}
+	}
+	return outbounds
+}
+
 // SetVault save the Vault object to store
 func (k KVStore) SetVault(ctx cosmos.Context, vault Vault) error {
 	if vault.IsAsgard() {

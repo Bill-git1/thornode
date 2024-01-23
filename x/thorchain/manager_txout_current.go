@@ -424,7 +424,7 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 			// THORNode don't have a vault already selected to send from, discover one.
 			// List all pending outbounds for the asset, this will be used
 			// to deduct balances of vaults that have outstanding txs assigned
-			pendingOutbounds := tos.getPendingOutbounds(ctx, toi.Coin.Asset)
+			pendingOutbounds := tos.keeper.GetPendingOutbounds(ctx, toi.Coin.Asset)
 
 			// ///////////// COLLECT ACTIVE ASGARD VAULTS ///////////////////
 			activeAsgards, err := tos.keeper.GetAsgardVaultsByStatus(ctx, ActiveVault)
@@ -437,7 +437,7 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 
 			for i := range activeAsgards {
 				// having sorted by security, deduct the value of any assigned pending outbounds
-				activeAsgards[i] = tos.deductVaultPendingOutbounds(activeAsgards[i], pendingOutbounds)
+				activeAsgards[i].DeductVaultPendingOutbounds(pendingOutbounds)
 			}
 			// //////////////////////////////////////////////////////////////
 
@@ -452,7 +452,7 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 
 			for i := range retiringAsgards {
 				// having sorted by security, deduct the value of any assigned pending outbounds
-				retiringAsgards[i] = tos.deductVaultPendingOutbounds(retiringAsgards[i], pendingOutbounds)
+				retiringAsgards[i].DeductVaultPendingOutbounds(pendingOutbounds)
 			}
 			// //////////////////////////////////////////////////////////////
 
@@ -978,66 +978,4 @@ func (tos *TxOutStorageVCUR) nativeTxOut(ctx cosmos.Context, mgr Manager, toi Tx
 	}
 
 	return nil
-}
-
-// getPendingOutbounds deducts txouts in the outbound and scheduled outbound queues to leave only 'available' balances,
-// as the amounts of both types of txout items are yet to be deducted from the vault balances
-func (tos *TxOutStorageVCUR) getPendingOutbounds(ctx cosmos.Context, asset common.Asset) []TxOutItem {
-	signingPeriod := tos.constAccessor.GetInt64Value(constants.SigningTransactionPeriod)
-	startHeight := ctx.BlockHeight() - signingPeriod
-	if startHeight < 1 {
-		startHeight = 1
-	}
-	txOutDelayMax := tos.keeper.GetConfigInt64(ctx, constants.TxOutDelayMax)
-	maxTxOutOffset := tos.keeper.GetConfigInt64(ctx, constants.MaxTxOutOffset)
-	var outbounds []TxOutItem
-	for height := startHeight; height <= ctx.BlockHeight()+txOutDelayMax; height++ {
-		blockOut, err := tos.keeper.GetTxOut(ctx, height)
-		if err != nil {
-			ctx.Logger().Error("fail to get block tx out", "error", err)
-		}
-		if height > ctx.BlockHeight()+maxTxOutOffset && len(blockOut.TxArray) == 0 {
-			// we've hit our max offset, and an empty block, we can assume the
-			// rest will be empty as well
-			break
-		}
-		for _, txOutItem := range blockOut.TxArray {
-			// only need to look at outbounds for the same asset
-			if !txOutItem.Coin.Asset.Equals(asset) {
-				continue
-			}
-			// only still outstanding txout will be considered
-			if !txOutItem.OutHash.IsEmpty() {
-				continue
-			}
-			outbounds = append(outbounds, txOutItem)
-		}
-	}
-	return outbounds
-}
-
-func (tos *TxOutStorageVCUR) deductVaultPendingOutbounds(vault Vault, pendingOutbounds []TxOutItem) Vault {
-	for _, txOutItem := range pendingOutbounds {
-		if !txOutItem.VaultPubKey.Equals(vault.PubKey) {
-			continue
-		}
-		// only still outstanding txout will be considered
-		if !txOutItem.OutHash.IsEmpty() {
-			continue
-		}
-		// deduct the gas asset from the vault as well
-		var gasCoin common.Coin
-		if !txOutItem.MaxGas.IsEmpty() {
-			gasCoin = txOutItem.MaxGas.ToCoins().GetCoin(txOutItem.Chain.GetGasAsset())
-		}
-		for i := range vault.Coins {
-			if vault.Coins[i].Asset.Equals(txOutItem.Coin.Asset) {
-				vault.Coins[i].Amount = common.SafeSub(vault.Coins[i].Amount, txOutItem.Coin.Amount)
-			}
-			if vault.Coins[i].Asset.Equals(gasCoin.Asset) {
-				vault.Coins[i].Amount = common.SafeSub(vault.Coins[i].Amount, gasCoin.Amount)
-			}
-		}
-	}
-	return vault
 }
