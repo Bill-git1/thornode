@@ -7,7 +7,7 @@ import (
 	"gitlab.com/thorchain/thornode/common"
 )
 
-func DexAggregatorsV126() []Aggregator {
+func DexAggregatorsV127() []Aggregator {
 	return []Aggregator{
 		// TSAggregatorPancakeSwap Ethereum V2
 		{common.ETHChain, `0x35CF22003c90126528fbe95b21bB3ADB2ca8c53D`, 400_000},
@@ -113,5 +113,17 @@ func DexAggregatorsV126() []Aggregator {
 		{common.ETHChain, `0x5523985926Aa12BA58DC5Ad00DDca99678D7227E`, 800_000},
 		// SymbiosisProxy - AVAX
 		{common.AVAXChain, `0x292fC50e4eB66C3f6514b9E402dBc25961824D62`, 800_000},
+		// LiFi - ETH
+		{common.ETHChain, `0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE`, 800_000},
+		// LiFi - BSC
+		{common.BSCChain, `0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE`, 800_000},
+		// LiFi - AVAX
+		{common.AVAXChain, `0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE`, 800_000},
+		// LiFi Staging - ETH
+		{common.ETHChain, `0xbEbCDb5093B47Cd7add8211E4c77B6826aF7bc5F`, 800_000},
+		// LiFi Staging - BSC
+		{common.BSCChain, `0xbEbCDb5093B47Cd7add8211E4c77B6826aF7bc5F`, 800_000},
+		// LiFi Staging - AVAX
+		{common.AVAXChain, `0xbEbCDb5093B47Cd7add8211E4c77B6826aF7bc5F`, 800_000},
 	}
 }
