@@ -1,7 +1,7 @@
 ########################################################################################
 # Bifrost
 ########################################################################################
-
+# trunk-ignore-all(codespell/misspelled)
 bifrost:
   # leveldb defaults to start, plus 10 bit per key filter
   observer_leveldb: &default-leveldb
@@ -166,9 +166,11 @@ bifrost:
         observation_flexibility_blocks: 80
         max_gas_fee: 400000
         max_contract_gas: 80000
-        whitelist_tokens: # stable coins only
+        whitelist_tokens:
           - 0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7 # USDT
           - 0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E # USDC
+          - 0xFE6B19286885a4F7F55AdAD09C3Cd1f906D2478F # WSOL
+          - 0x093783055F9047C2BfF99c4e414501F8A147bC69 # ALOT
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
     bsc:
