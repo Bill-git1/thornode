@@ -44,7 +44,6 @@ type SolvencyReporter func(int64) error
 
 const (
 	BlockCacheSize  = 6000
-	MaxContractGas  = 80000
 	ethToken        = "0x0000000000000000000000000000000000000000"
 	symbolMethod    = "symbol"
 	decimalMethod   = "decimals"
@@ -219,7 +218,7 @@ func (e *ETHScanner) FetchTxs(height, chainHeight int64) (stypes.TxIn, error) {
 
 	// post to thorchain if there is a fee and it has changed
 	if gasPrice.Cmp(big.NewInt(0)) != 0 && tcGasPrice != e.lastReportedGasPrice {
-		if _, err = e.bridge.PostNetworkFee(height, common.ETHChain, MaxContractGas, tcGasPrice); err != nil {
+		if _, err = e.bridge.PostNetworkFee(height, common.ETHChain, e.cfg.MaxGasLimit, tcGasPrice); err != nil {
 			e.logger.Err(err).Msg("fail to post ETH chain single transfer fee to THORNode")
 		} else {
 			e.lastReportedGasPrice = tcGasPrice

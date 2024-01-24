@@ -156,7 +156,7 @@ func (c *Client) unstuckTx(clog zerolog.Logger, item types.SignedTxItem) error {
 	if inflatedOriginalGasPrice.Cmp(currentGasRate) > 0 {
 		currentGasRate = big.NewInt(1).Mul(originGasPrice, big.NewInt(2))
 	}
-	canceltx := etypes.NewTransaction(tx.Nonce(), ecommon.HexToAddress(address.String()), big.NewInt(0), MaxContractGas, currentGasRate, nil)
+	canceltx := etypes.NewTransaction(tx.Nonce(), ecommon.HexToAddress(address.String()), big.NewInt(0), c.cfg.BlockScanner.MaxGasLimit, currentGasRate, nil)
 	rawBytes, err := c.kw.Sign(canceltx, pubKey)
 	if err != nil {
 		return fmt.Errorf("fail to sign tx for cancelling with nonce: %d, err: %w", tx.Nonce(), err)

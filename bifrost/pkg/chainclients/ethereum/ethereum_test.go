@@ -333,7 +333,7 @@ func (s *EthereumSuite) TestClient(c *C) {
             "max_gas": [
                 {
                     "asset": "ETH.ETH",
-                    "amount": "300000"
+                    "amount": "600000"
                 }
             ],
 			"gas_rate":1
@@ -394,6 +394,7 @@ func (s *EthereumSuite) TestSignETHTx(c *C) {
 		BlockScanner: config.BifrostBlockScannerConfiguration{
 			StartBlockHeight:   1, // avoids querying thorchain for block height
 			HTTPRequestTimeout: time.Second,
+			MaxGasLimit:        80000,
 		},
 	}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
 	c.Assert(err, IsNil)
@@ -474,7 +475,7 @@ func (s *EthereumSuite) TestSignETHTx(c *C) {
 			common.NewCoin(common.ETHAsset, cosmos.NewUint(1e18)),
 		},
 		MaxGas: common.Gas{
-			common.NewCoin(common.ETHAsset, cosmos.NewUint(MaxContractGas)),
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(e.cfg.BlockScanner.MaxGasLimit*8)),
 		},
 		GasRate: 1,
 		Memo:    "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87",
@@ -498,7 +499,7 @@ func (s *EthereumSuite) TestSignETHTx(c *C) {
 			common.NewCoin(asset, cosmos.NewUint(1e18)),
 		},
 		MaxGas: common.Gas{
-			common.NewCoin(common.ETHAsset, cosmos.NewUint(MaxContractGas)),
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(e.cfg.BlockScanner.MaxGasLimit*8)),
 		},
 		GasRate: 1,
 		Memo:    "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87",
@@ -519,7 +520,7 @@ func (s *EthereumSuite) TestSignETHTx(c *C) {
 			common.NewCoin(common.ETHAsset, cosmos.NewUint(1e18)),
 		},
 		MaxGas: common.Gas{
-			common.NewCoin(common.ETHAsset, cosmos.NewUint(MaxContractGas)),
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(e.cfg.BlockScanner.MaxGasLimit*8)),
 		},
 		GasRate: 1,
 		Memo:    "REFUND:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87",
@@ -540,7 +541,7 @@ func (s *EthereumSuite) TestSignETHTx(c *C) {
 			common.NewCoin(asset, cosmos.NewUint(1e18)),
 		},
 		MaxGas: common.Gas{
-			common.NewCoin(common.ETHAsset, cosmos.NewUint(MaxContractGas)),
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(e.cfg.BlockScanner.MaxGasLimit*8)),
 		},
 		GasRate: 1,
 		Memo:    "OUT:4D91ADAFA69765E7805B5FF2F3A0BA1DBE69E37A1CFCD20C48B99C528AA3EE87",
@@ -561,7 +562,7 @@ func (s *EthereumSuite) TestSignETHTx(c *C) {
 			common.NewCoin(common.ETHAsset, cosmos.NewUint(1e18)),
 		},
 		MaxGas: common.Gas{
-			common.NewCoin(common.ETHAsset, cosmos.NewUint(MaxContractGas)),
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(e.cfg.BlockScanner.MaxGasLimit*8)),
 		},
 		GasRate: 1,
 		Memo:    "MIGRATE:1024",
@@ -582,7 +583,7 @@ func (s *EthereumSuite) TestSignETHTx(c *C) {
 			common.NewCoin(asset, cosmos.NewUint(1e18)),
 		},
 		MaxGas: common.Gas{
-			common.NewCoin(common.ETHAsset, cosmos.NewUint(MaxContractGas)),
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(e.cfg.BlockScanner.MaxGasLimit*8)),
 		},
 		GasRate: 1,
 		Memo:    "MIGRATE:1024",

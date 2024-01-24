@@ -40,11 +40,11 @@ import (
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/config"
 	"gitlab.com/thorchain/thornode/constants"
+	"gitlab.com/thorchain/thornode/x/thorchain/aggregators"
 	mem "gitlab.com/thorchain/thornode/x/thorchain/memo"
 )
 
 const (
-	maxGasLimit          = 800000
 	ethBlockRewardAndFee = 3 * 1e18
 )
 
@@ -512,7 +512,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		// as long as we pass in an ETH value , which we almost guarantee it will not exceed the ETH balance , so we can avoid the above two errors
 		estimatedETHValue = estimatedETHValue.SetInt64(21000)
 	}
-	createdTx := etypes.NewTransaction(nonce, ecommon.HexToAddress(contractAddr.String()), estimatedETHValue, MaxContractGas, gasRate, data)
+	createdTx := etypes.NewTransaction(nonce, ecommon.HexToAddress(contractAddr.String()), estimatedETHValue, c.cfg.BlockScanner.MaxGasLimit, gasRate, data)
 	estimatedGas, err := c.estimateGas(fromAddr.String(), createdTx)
 	if err != nil {
 		// in an edge case that vault doesn't have enough fund to fulfill an outbound transaction , it will fail to estimate gas
@@ -524,43 +524,57 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 	}
 	c.logger.Info().Msgf("memo:%s estimated gas unit: %d", tx.Memo, estimatedGas)
 
-	gasOut := big.NewInt(0)
+	scheduledMaxFee := big.NewInt(0)
 	for _, coin := range tx.MaxGas {
-		gasOut.Add(gasOut, c.convertThorchainAmountToWei(coin.Amount.BigInt()))
+		scheduledMaxFee.Add(scheduledMaxFee, c.convertThorchainAmountToWei(coin.Amount.BigInt()))
 	}
-	totalGas := big.NewInt(int64(estimatedGas) * gasRate.Int64())
-	if ethValue.Uint64() > 0 {
-		if tx.Aggregator != "" {
-			// At this point, if this is is to an aggregator (which should be white-listed), allow the maximum gas.
-			if estimatedGas > maxGasLimit {
-				// the estimated gas unit is more than the maximum , so bring down the gas rate
-				maxGasWei := big.NewInt(1).Mul(big.NewInt(maxGasLimit), gasRate)
-				gasRate = big.NewInt(1).Div(maxGasWei, big.NewInt(int64(estimatedGas)))
-			} else {
-				estimatedGas = maxGasLimit // pay the maximum
-			}
-		} else {
-			// when the estimated gas is larger than the MaxGas that is allowed to be used
-			// adjust the gas price to reflect that , so not breach the MaxGas restriction
-			// This might cause the tx to delay
-			if totalGas.Cmp(gasOut) == 1 {
-				gasRate = gasOut.Div(gasOut, big.NewInt(int64(estimatedGas)))
-				c.logger.Info().Msgf("based on estimated gas unit (%d) , total gas will be %s, which is more than %s, so adjust gas rate to %s", estimatedGas, totalGas.String(), gasOut.String(), gasRate.String())
-			} else {
-				// override estimate gas with the max
-				estimatedGas = big.NewInt(0).Div(gasOut, gasRate).Uint64()
-				c.logger.Info().Msgf("transaction with memo %s can spend up to %d gas unit, gasRate:%s", tx.Memo, estimatedGas, gasRate)
-			}
+
+	if tx.Aggregator != "" {
+		var gasLimitForAggregator uint64
+		gasLimitForAggregator, err = aggregators.FetchDexAggregatorGasLimit(
+			common.LatestVersion, c.cfg.ChainID, tx.Aggregator,
+		)
+		if err != nil {
+			c.logger.Err(err).
+				Str("aggregator", tx.Aggregator).
+				Msg("fail to get aggregator gas limit, aborting to let thornode reschdule")
+			return nil, nil, nil, nil
 		}
-		createdTx = etypes.NewTransaction(nonce, ecommon.HexToAddress(contractAddr.String()), ethValue, estimatedGas, gasRate, data)
-	} else {
-		if estimatedGas > maxGasLimit {
-			// the estimated gas unit is more than the maximum , so bring down the gas rate
-			maxGasWei := big.NewInt(1).Mul(big.NewInt(maxGasLimit), gasRate)
-			gasRate = big.NewInt(1).Div(maxGasWei, big.NewInt(int64(estimatedGas)))
+
+		// if the estimate gas is over the max, abort and let thornode reschedule for now
+		if estimatedGas > gasLimitForAggregator {
+			c.logger.Warn().
+				Stringer("in_hash", tx.InHash).
+				Uint64("estimated_gas", estimatedGas).
+				Uint64("aggregator_gas_limit", gasLimitForAggregator).
+				Msg("aggregator gas limit exceeded, aborting to let thornode reschedule")
+			return nil, nil, nil, nil
 		}
-		createdTx = etypes.NewTransaction(nonce, ecommon.HexToAddress(contractAddr.String()), ethValue, estimatedGas, gasRate, data)
+
+		// set limit to aggregator gas limit
+		estimatedGas = gasLimitForAggregator
+
+		// aggregator swap outs currently ignore max gas, but abort if 10x over for safety
+		//
+		// TODO: Update thornode to take aggregator gas limit into consideration and set a
+		// max gas that should be respected.
+		scheduledMaxFee = scheduledMaxFee.Mul(scheduledMaxFee, big.NewInt(10))
 	}
+
+	// if over max scheduled gas, abort and let thornode reschedule
+	estimatedFee := big.NewInt(int64(estimatedGas) * gasRate.Int64())
+	if scheduledMaxFee.Cmp(estimatedFee) < 0 {
+		c.logger.Warn().
+			Stringer("in_hash", tx.InHash).
+			Str("estimated_fee", estimatedFee.String()).
+			Str("scheduled_max_fee", scheduledMaxFee.String()).
+			Msg("max gas exceeded, aborting to let thornode reschedule")
+		return nil, nil, nil, nil
+	}
+
+	createdTx = etypes.NewTransaction(
+		nonce, ecommon.HexToAddress(contractAddr.String()), ethValue, estimatedGas, gasRate, data,
+	)
 
 	rawTx, err := c.sign(createdTx, tx.VaultPubKey, height, tx)
 	if err != nil || len(rawTx) == 0 {
@@ -917,7 +931,7 @@ func (c *Client) ReportSolvency(ethBlockHeight int64) error {
 			c.logger.Err(err).Msgf("fail to get account balance")
 			continue
 		}
-		if runners.IsVaultSolvent(acct, asgard, cosmos.NewUint(3*MaxContractGas*c.ethScanner.lastReportedGasPrice)) && c.IsBlockScannerHealthy() {
+		if runners.IsVaultSolvent(acct, asgard, cosmos.NewUint(3*c.cfg.BlockScanner.MaxGasLimit*c.ethScanner.lastReportedGasPrice)) && c.IsBlockScannerHealthy() {
 			// when vault is solvent , don't need to report solvency
 			// when block scanner is not healthy , usually that means the chain is halted , in that scenario , we continue to report solvency
 			continue

@@ -115,9 +115,8 @@ bifrost:
         gas_cache_blocks: 0
         whitelist_tokens: []
         concurrency: 0
-        max_gas_fee: 0
+        max_gas_limit: 0
         gas_price_resolution: 0
-        max_contract_gas: 0
         max_resume_block_lag: 24h
         max_healthy_lag: 30m
         transaction_batch_size: 500
@@ -150,6 +149,7 @@ bifrost:
         concurrency: 1
         chain_id: ETH
         observation_flexibility_blocks: 20
+        max_gas_limit: 80000
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
     avax:
@@ -164,8 +164,7 @@ bifrost:
         gas_cache_blocks: 40
         gas_price_resolution: 50_000_000_000 # 50 navax
         observation_flexibility_blocks: 80
-        max_gas_fee: 400000
-        max_contract_gas: 80000
+        max_gas_limit: 80000
         whitelist_tokens:
           - 0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7 # USDT
           - 0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E # USDC
@@ -186,8 +185,7 @@ bifrost:
         gas_cache_blocks: 40
         gas_price_resolution: 50_000_000_000 # 50 gwei
         observation_flexibility_blocks: 80
-        max_gas_fee: 400000
-        max_contract_gas: 80000
+        max_gas_limit: 80000
         whitelist_tokens: # stable coins only
           - 0x55d398326f99059fF775485246999027B3197955 # Binance Pegged USDT
           - 0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d # Binance Pegged USDC

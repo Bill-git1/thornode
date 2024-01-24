@@ -615,7 +615,7 @@ func (e *EVMScanner) reportNetworkFee(height int64) {
 	tcGasPrice := new(big.Int).Div(gasPrice, big.NewInt(common.One*100))
 
 	// post to thorchain
-	if _, err := e.bridge.PostNetworkFee(height, e.cfg.ChainID, MaxContractGas, tcGasPrice.Uint64()); err != nil {
+	if _, err := e.bridge.PostNetworkFee(height, e.cfg.ChainID, e.cfg.MaxGasLimit, tcGasPrice.Uint64()); err != nil {
 		e.logger.Err(err).Msg("failed to post EVM chain single transfer fee to THORNode")
 	} else {
 		e.lastReportedGasPrice = gasPrice.Uint64()

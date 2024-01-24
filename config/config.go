@@ -701,11 +701,10 @@ type BifrostBlockScannerConfiguration struct {
 	// submit network fee and solvency observations.
 	ObservationFlexibilityBlocks int64 `mapstructure:"observation_flexibility_blocks"`
 
-	// MaxGasFee is the maximum gas fee (in base asset) that will be used for a transaction.
-	MaxGasFee int64 `mapstructure:"max_gas_fee"`
-
-	// MaxContractGas is the maximum gas allowed for a contract transaction.
-	MaxContractGas int64 `mapstructure:"max_contract_gas"`
+	// MaxGasLimit is the maximum gas allowed for non-aggregator outbounds. This is used
+	// as the limit in the estimate gas call, and the estimate gas (lower) is used in the
+	// final outbound.
+	MaxGasLimit uint64 `mapstructure:"max_gas_limit"`
 
 	// WhitelistTokens is the set of whitelisted token addresses. Inbounds for all other
 	// tokens are ignored.

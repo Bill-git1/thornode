@@ -164,7 +164,7 @@ func (c *EVMClient) unstuckTx(clog zerolog.Logger, item evmtypes.SignedTxItem) e
 		tx.Nonce(),
 		ecommon.HexToAddress(address.String()),
 		big.NewInt(0),
-		MaxContractGas,
+		c.cfg.BlockScanner.MaxGasLimit,
 		currentGasRate,
 		nil,
 	)

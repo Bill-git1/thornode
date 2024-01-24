@@ -33,6 +33,7 @@ import (
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/config"
 	"gitlab.com/thorchain/thornode/constants"
+	"gitlab.com/thorchain/thornode/x/thorchain/aggregators"
 	mem "gitlab.com/thorchain/thornode/x/thorchain/memo"
 	tssp "gitlab.com/thorchain/tss/go-tss/tss"
 )
@@ -514,7 +515,7 @@ func (c *EVMClient) buildOutboundTx(txOutItem stypes.TxOutItem, memo mem.Memo, n
 		// as long as we pass in an EVM value , which we almost guarantee it will not exceed the EVM balance , so we can avoid the above two errors
 		estimatedEVMValue = estimatedEVMValue.SetInt64(21000)
 	}
-	createdTx := etypes.NewTransaction(nonce, ecommon.HexToAddress(contractAddr.String()), estimatedEVMValue, MaxContractGas, gasRate, txData)
+	createdTx := etypes.NewTransaction(nonce, ecommon.HexToAddress(contractAddr.String()), estimatedEVMValue, c.cfg.BlockScanner.MaxGasLimit, gasRate, txData)
 	estimatedGas, err := c.evmScanner.ethRpc.EstimateGas(fromAddr.String(), createdTx)
 	if err != nil {
 		// in an edge case that vault doesn't have enough fund to fulfill an outbound transaction , it will fail to estimate gas
@@ -525,43 +526,57 @@ func (c *EVMClient) buildOutboundTx(txOutItem stypes.TxOutItem, memo mem.Memo, n
 		return nil, nil
 	}
 
-	gasOut := big.NewInt(0)
+	scheduledMaxFee := big.NewInt(0)
 	for _, coin := range txOutItem.MaxGas {
-		gasOut.Add(gasOut, convertThorchainAmountToWei(coin.Amount.BigInt()))
+		scheduledMaxFee.Add(scheduledMaxFee, convertThorchainAmountToWei(coin.Amount.BigInt()))
 	}
-	totalGas := big.NewInt(int64(estimatedGas) * gasRate.Int64())
-	if evmValue.Uint64() > 0 {
-		// when the estimated gas is larger than the MaxGas that is allowed to be used
-		// adjust the gas price to reflect that , so not breach the MaxGas restriction
-		// This might cause the tx to delay
-		if totalGas.Cmp(gasOut) == 1 {
-			// At this point, if this is is to an aggregator (which should be white-listed), allow the maximum gas.
-			if txOutItem.Aggregator == "" {
-				gasRate = gasOut.Div(gasOut, big.NewInt(int64(estimatedGas)))
-				c.logger.Info().Msgf("based on estimated gas unit (%d) , total gas will be %s, which is more than %s, so adjust gas rate to %s", estimatedGas, totalGas.String(), gasOut.String(), gasRate.String())
-			} else {
-				if estimatedGas > uint64(c.cfg.BlockScanner.MaxGasFee) {
-					// the estimated gas unit is more than the maximum , so bring down the gas rate
-					maxGasWei := big.NewInt(1).Mul(big.NewInt(c.cfg.BlockScanner.MaxGasFee), gasRate)
-					gasRate = big.NewInt(1).Div(maxGasWei, big.NewInt(int64(estimatedGas)))
-				} else {
-					estimatedGas = uint64(c.cfg.BlockScanner.MaxGasFee) // pay the maximum
-				}
-			}
-		} else {
-			// override estimate gas with the max
-			estimatedGas = big.NewInt(0).Div(gasOut, gasRate).Uint64()
-			c.logger.Info().Str("memo", txOutItem.Memo).Uint64("estimatedGas", estimatedGas).Int64("gasRate", gasRate.Int64()).Msg("override estimate gas with max")
+
+	if txOutItem.Aggregator != "" {
+		var gasLimitForAggregator uint64
+		gasLimitForAggregator, err = aggregators.FetchDexAggregatorGasLimit(
+			common.LatestVersion, c.cfg.ChainID, txOutItem.Aggregator,
+		)
+		if err != nil {
+			c.logger.Err(err).
+				Str("aggregator", txOutItem.Aggregator).
+				Msg("fail to get aggregator gas limit, aborting to let thornode reschdule")
+			return nil, nil
 		}
-		createdTx = etypes.NewTransaction(nonce, ecommon.HexToAddress(contractAddr.String()), evmValue, estimatedGas, gasRate, txData)
-	} else {
-		if estimatedGas > uint64(c.cfg.BlockScanner.MaxGasFee) {
-			// the estimated gas unit is more than the maximum , so bring down the gas rate
-			maxGasWei := big.NewInt(1).Mul(big.NewInt(c.cfg.BlockScanner.MaxGasFee), gasRate)
-			gasRate = big.NewInt(1).Div(maxGasWei, big.NewInt(int64(estimatedGas)))
+
+		// if the estimate gas is over the max, abort and let thornode reschedule for now
+		if estimatedGas > gasLimitForAggregator {
+			c.logger.Warn().
+				Stringer("in_hash", txOutItem.InHash).
+				Uint64("estimated_gas", estimatedGas).
+				Uint64("aggregator_gas_limit", gasLimitForAggregator).
+				Msg("swap out gas limit exceeded, aborting to let thornode reschedule")
+			return nil, nil
 		}
-		createdTx = etypes.NewTransaction(nonce, ecommon.HexToAddress(contractAddr.String()), evmValue, estimatedGas, gasRate, txData)
+
+		// set limit to aggregator gas limit
+		estimatedGas = gasLimitForAggregator
+
+		// aggregator swap outs currently ignore max gas, but abort if 10x over for safety
+		//
+		// TODO: Update thornode to take aggregator gas limit into consideration and set a
+		// max gas that should be respected.
+		scheduledMaxFee = scheduledMaxFee.Mul(scheduledMaxFee, big.NewInt(10))
 	}
+
+	// if over max scheduled gas, abort and let thornode reschedule
+	estimatedFee := big.NewInt(int64(estimatedGas) * gasRate.Int64())
+	if scheduledMaxFee.Cmp(estimatedFee) < 0 {
+		c.logger.Warn().
+			Stringer("in_hash", txOutItem.InHash).
+			Str("estimated_fee", estimatedFee.String()).
+			Str("scheduled_max_fee", scheduledMaxFee.String()).
+			Msg("max gas exceeded, aborting to let thornode reschedule")
+		return nil, nil
+	}
+
+	createdTx = etypes.NewTransaction(
+		nonce, ecommon.HexToAddress(contractAddr.String()), evmValue, estimatedGas, gasRate, txData,
+	)
 
 	return createdTx, nil
 }
@@ -643,6 +658,11 @@ func (c *EVMClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 	if err != nil {
 		c.logger.Err(err).Msg("Failed to build outbound tx")
 		return nil, nil, nil, err
+	}
+
+	// if transaction is nil, abort to allow thornode reschedule
+	if outboundTx == nil {
+		return nil, nil, nil, nil
 	}
 
 	rawTx, err := c.sign(outboundTx, tx.VaultPubKey, height, tx)
@@ -809,7 +829,7 @@ func (c *EVMClient) ReportSolvency(height int64) error {
 		return fmt.Errorf("fail to get asgards, err: %w", err)
 	}
 
-	currentGasFee := cosmos.NewUint(3 * MaxContractGas * c.evmScanner.lastReportedGasPrice)
+	currentGasFee := cosmos.NewUint(3 * c.cfg.BlockScanner.MaxGasLimit * c.evmScanner.lastReportedGasPrice)
 
 	for _, asgard := range asgardVaults {
 		var acct common.Account

@@ -9,8 +9,6 @@ var routerContractABI string
 var erc20ContractABI string
 
 const (
-	MaxContractGas = 80000
-
 	defaultDecimals = 18 // evm chains consolidate all decimals to 18 (wei)
 	tenGwei         = 10000000000
 )
