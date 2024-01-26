@@ -6,7 +6,7 @@ read -rp "Enter Gitlab Merge Request ID: " MR
 
 BRANCH="mr-$MR"
 
-git branch -D "${BRANCH}"
+git branch -D "${BRANCH}" || true
 git fetch origin merge-requests/"$MR"/head:"${BRANCH}"
 git checkout "${BRANCH}"
 git push --set-upstream origin "${BRANCH}" -f --no-verify
