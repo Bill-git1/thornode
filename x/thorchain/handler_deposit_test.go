@@ -137,7 +137,7 @@ func (s *HandlerDepositSuite) TestDifferentValidation(c *C) {
 			validator: func(c *C, ctx cosmos.Context, result *cosmos.Result, err error, helper *HandlerDepositTestHelper, name string) {
 				c.Check(err, NotNil, Commentf(name))
 				c.Check(result, IsNil, Commentf(name))
-				c.Check(errors.Is(err, se.ErrInsufficientFunds), Equals, true, Commentf(name))
+				c.Check(err, Equals, se.ErrInsufficientFunds, Commentf(name))
 			},
 		},
 		{

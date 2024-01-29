@@ -35,6 +35,12 @@ endpoint: http://localhost:1317/thorchain/node/{{ addr_thor_fox }}
 asserts:
   - .total_bond == "0"
 ---
+type: check
+endpoint: http://localhost:1317/thorchain/block
+asserts:
+  - .txs|length == 1
+  - .txs[0]|.result.log|contains("insufficient funds")
+---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
 coins:
