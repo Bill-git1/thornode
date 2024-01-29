@@ -312,7 +312,7 @@ No authorization required
 
 ## Quoteswap
 
-> QuoteSwapResponse Quoteswap(ctx).Height(height).FromAsset(fromAsset).ToAsset(toAsset).Amount(amount).Destination(destination).StreamingInterval(streamingInterval).StreamingQuantity(streamingQuantity).ToleranceBps(toleranceBps).AffiliateBps(affiliateBps).Affiliate(affiliate).Execute()
+> QuoteSwapResponse Quoteswap(ctx).Height(height).FromAsset(fromAsset).ToAsset(toAsset).Amount(amount).Destination(destination).RefundAddress(refundAddress).StreamingInterval(streamingInterval).StreamingQuantity(streamingQuantity).ToleranceBps(toleranceBps).AffiliateBps(affiliateBps).Affiliate(affiliate).Execute()
 
 
 
@@ -336,6 +336,7 @@ func main() {
     toAsset := "ETH.ETH" // string | the target asset (optional)
     amount := int64(1000000) // int64 | the source asset amount in 1e8 decimals (optional)
     destination := "0x1c7b17362c84287bd1184447e6dfeaf920c31bbe" // string | the destination address, required to generate memo (optional)
+    refundAddress := "0x1c7b17362c84287bd1184447e6dfeaf920c31bbe" // string | the refund address, refunds will be sent here if the swap fails (optional)
     streamingInterval := int64(10) // int64 | the interval in which streaming swaps are swapped (optional)
     streamingQuantity := int64(10) // int64 | the quantity of swaps within a streaming swap (optional)
     toleranceBps := int64(100) // int64 | the maximum basis points from the current feeless swap price to set the limit in the generated memo (optional)
@@ -344,7 +345,7 @@ func main() {
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.QuoteApi.Quoteswap(context.Background()).Height(height).FromAsset(fromAsset).ToAsset(toAsset).Amount(amount).Destination(destination).StreamingInterval(streamingInterval).StreamingQuantity(streamingQuantity).ToleranceBps(toleranceBps).AffiliateBps(affiliateBps).Affiliate(affiliate).Execute()
+    resp, r, err := apiClient.QuoteApi.Quoteswap(context.Background()).Height(height).FromAsset(fromAsset).ToAsset(toAsset).Amount(amount).Destination(destination).RefundAddress(refundAddress).StreamingInterval(streamingInterval).StreamingQuantity(streamingQuantity).ToleranceBps(toleranceBps).AffiliateBps(affiliateBps).Affiliate(affiliate).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `QuoteApi.Quoteswap``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -370,6 +371,7 @@ Name | Type | Description  | Notes
  **toAsset** | **string** | the target asset | 
  **amount** | **int64** | the source asset amount in 1e8 decimals | 
  **destination** | **string** | the destination address, required to generate memo | 
+ **refundAddress** | **string** | the refund address, refunds will be sent here if the swap fails | 
  **streamingInterval** | **int64** | the interval in which streaming swaps are swapped | 
  **streamingQuantity** | **int64** | the quantity of swaps within a streaming swap | 
  **toleranceBps** | **int64** | the maximum basis points from the current feeless swap price to set the limit in the generated memo | 

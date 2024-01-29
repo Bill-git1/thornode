@@ -636,6 +636,7 @@ type ApiQuoteswapRequest struct {
 	toAsset *string
 	amount *int64
 	destination *string
+	refundAddress *string
 	streamingInterval *int64
 	streamingQuantity *int64
 	toleranceBps *int64
@@ -670,6 +671,12 @@ func (r ApiQuoteswapRequest) Amount(amount int64) ApiQuoteswapRequest {
 // the destination address, required to generate memo
 func (r ApiQuoteswapRequest) Destination(destination string) ApiQuoteswapRequest {
 	r.destination = &destination
+	return r
+}
+
+// the refund address, refunds will be sent here if the swap fails
+func (r ApiQuoteswapRequest) RefundAddress(refundAddress string) ApiQuoteswapRequest {
+	r.refundAddress = &refundAddress
 	return r
 }
 
@@ -757,6 +764,9 @@ func (a *QuoteApiService) QuoteswapExecute(r ApiQuoteswapRequest) (*QuoteSwapRes
 	}
 	if r.destination != nil {
 		localVarQueryParams.Add("destination", parameterToString(*r.destination, ""))
+	}
+	if r.refundAddress != nil {
+		localVarQueryParams.Add("refund_address", parameterToString(*r.refundAddress, ""))
 	}
 	if r.streamingInterval != nil {
 		localVarQueryParams.Add("streaming_interval", parameterToString(*r.streamingInterval, ""))

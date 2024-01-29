@@ -115,7 +115,17 @@ Notice how a minimum amount (1342846539 / \~13.42 ETH) has been appended to the 
 
 ### Affiliate Fees
 
-Specify affiliate\__address_ and _affiliate_bps t_o skim a percentage of the \_expected_\__amount_out._
+Specify `affiliate` and `affiliate_bps` to skim a percentage of the swap as an affiliate fee. When a valid affiliate address and affiliate basis points are present in the memo, the protocol will skim affiliate_bps from the inbound swap amount and swap this to $RUNE with the affiliate address as the destination address.
+
+Params:
+
+- **affiliate**: Can be a THORName or valid THORChain address
+- **affiliate_bps**: 0-1000 basis points
+
+Memo format:
+`=:BTC.BTC:<destination_addr>:<limit>:<affiliate>:<affiliate_bps>`
+
+Quote example:
 
 [https://thornode.ninerealms.com/thorchain/quote/swap?amount=100000000\&from_asset=BTC.BTC\&to_asset=ETH.ETH\&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430\&affiliate=thorname\&affiliate_bps=10](https://thornode.ninerealms.com/thorchain/quote/swap?amount=100000000&from_asset=BTC.BTC&to_asset=ETH.ETH&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430&affiliate=thorname&affiliate_bps=10)
 
@@ -153,7 +163,15 @@ For more information on affiliate fees: [fees.md](../concepts/fees.md "mention")
 
 [_Streaming Swaps_](streaming-swaps.md) _can be used to break up the trade to reduce slip fees._
 
-Specify `streaming_interval` to define the interval in which streaming swaps are swapped.
+Params:
+
+- **streaming_interval**: # of THORChain blocks between each subswap. Larger # of blocks gives arb bots more time to rebalance pools. For deeper/more active pools a value of `1` is most likely okay. For shallower/less active pools a larger value should be considered.
+- **streaming_quantity**: # of subswaps to execute. If this value is omitted or set to `0` the protocol will calculate the # of subswaps such that each subswap has a slippage of 5 bps.
+
+Memo format:
+`=:BTC.BTC:<destination_addr>:<limit>/<streaming_interval>/<streaming_quantity>`
+
+Quote example:
 
 [_https://stagenet-thornode.ninerealms.com/thorchain/quote/swap?amount=100000000\&from_asset=BTC.BTC\&to_asset=ETH.ETH\&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430\&streaming_interval=10_](https://stagenet-thornode.ninerealms.com/thorchain/quote/swap?amount=100000000&from_asset=BTC.BTC&to_asset=ETH.ETH&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430&streaming_interval=10)
 
@@ -186,6 +204,28 @@ Specify `streaming_interval` to define the interval in which streaming swaps are
 ```
 
 Notice how `approx_streaming_savings` shows the savings by using streaming swaps. `total_swap_seconds` also shows the amount of time the swap will take.
+
+### Custom Refund Address
+
+By default, in the case of a refund the protocol will return the inbound swap to the original sender. However, in the case of protocol <> protocol interactions, many times the original sender is a smart contract, and not the user's EOA. In these cases, a custom refund address can be defined in the memo, which will ensure the user will receive the refund and not the smart contract.
+
+Params:
+
+- **refund_address**: User's refund address. Needs to be a valid address for the inbound asset, otherwise refunds will be returned to the sender
+
+Memo format:
+`=:BTC.BTC:<destination>/<refund_address>`
+
+Quote example:
+[https://thornode.ninerealms.com/thorchain/quote/swap?amount=100000000&from_asset=ETH.ETH&to_asset=BTC.BTC&destination=bc1qyl7wjm2ldfezgnjk2c78adqlk7dvtm8sd7gn0q&refund_address=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430](https://thornode.ninerealms.com/thorchain/quote/swap?amount=100000000&from_asset=ETH.ETH&to_asset=BTC.BTC&destination=bc1qyl7wjm2ldfezgnjk2c78adqlk7dvtm8sd7gn0q&refund_address=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430)
+
+```json
+{
+  ...
+  "memo": "=:BTC.BTC:bc1qyl7wjm2ldfezgnjk2c78adqlk7dvtm8sd7gn0q/0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430",
+  ...
+}
+```
 
 ### Error Handling
 

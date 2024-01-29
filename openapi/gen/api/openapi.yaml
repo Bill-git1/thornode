@@ -1472,6 +1472,15 @@ paths:
           example: 0x1c7b17362c84287bd1184447e6dfeaf920c31bbe
           type: string
         style: form
+      - description: "the refund address, refunds will be sent here if the swap fails"
+        explode: true
+        in: query
+        name: refund_address
+        required: false
+        schema:
+          example: 0x1c7b17362c84287bd1184447e6dfeaf920c31bbe
+          type: string
+        style: form
       - description: the interval in which streaming swaps are swapped
         explode: true
         in: query
