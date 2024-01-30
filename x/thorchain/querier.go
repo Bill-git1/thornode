@@ -1287,11 +1287,12 @@ func queryPool(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mg
 	}
 
 	loanHandler := NewLoanOpenHandler(mgr)
+	// getPoolCR and GetLoanCollateralRemainingForPool
+	// are expected to error for block heights earlier than 12241034
+	// from negative MaxRuneSupply, so dropping the errors for both
+	// and instead displaying both as zero when unretrievable.
 	cr, _ := loanHandler.getPoolCR(ctx, pool, cosmos.OneUint())
-	loanCollateralRemaining, err := loanHandler.GetLoanCollateralRemainingForPool(ctx, pool)
-	if err != nil {
-		return nil, fmt.Errorf("fail to fetch remaining loan collateral: %w", err)
-	}
+	loanCollateralRemaining, _ := loanHandler.GetLoanCollateralRemainingForPool(ctx, pool)
 
 	runeDepth, _, _ := mgr.NetworkMgr().CalcAnchor(ctx, mgr, asset)
 	dpool, _ := mgr.Keeper().GetPool(ctx, asset.GetDerivedAsset())
@@ -1359,11 +1360,12 @@ func queryPools(ctx cosmos.Context, req abci.RequestQuery, mgr *Mgrs) ([]byte, e
 		}
 
 		loanHandler := NewLoanOpenHandler(mgr)
+		// getPoolCR and GetLoanCollateralRemainingForPool
+		// are expected to error for block heights earlier than 12241034
+		// from negative MaxRuneSupply, so dropping the errors for both
+		// and instead displaying both as zero when unretrievable.
 		cr, _ := loanHandler.getPoolCR(ctx, pool, cosmos.OneUint())
-		loanCollateralRemaining, err := loanHandler.GetLoanCollateralRemainingForPool(ctx, pool)
-		if err != nil {
-			return nil, fmt.Errorf("fail to fetch remaining loan collateral: %w", err)
-		}
+		loanCollateralRemaining, _ := loanHandler.GetLoanCollateralRemainingForPool(ctx, pool)
 
 		runeDepth, _, _ := mgr.NetworkMgr().CalcAnchor(ctx, mgr, pool.Asset)
 		dpool, _ := mgr.Keeper().GetPool(ctx, pool.Asset.GetDerivedAsset())
