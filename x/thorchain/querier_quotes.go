@@ -214,10 +214,11 @@ func quoteReverseFuzzyAsset(ctx cosmos.Context, mgr *Mgrs, asset common.Asset) (
 	}
 
 	// find all other assets that match the chain and ticker
+	// (without exactly matching the symbol)
 	addressMatches := []string{}
 	for _, p := range pools {
 		if p.IsAvailable() && !p.IsEmpty() && !p.Asset.IsVaultAsset() &&
-			!p.Asset.Equals(asset) &&
+			!p.Asset.Symbol.Equals(asset.Symbol) &&
 			p.Asset.Chain.Equals(asset.Chain) && p.Asset.Ticker.Equals(asset.Ticker) {
 			pSplit := strings.Split(p.Asset.Symbol.String(), "-")
 			if len(pSplit) != 2 {
@@ -492,14 +493,16 @@ func queryQuoteSwap(ctx cosmos.Context, path []string, req abci.RequestQuery, mg
 	}
 
 	// parse assets
-	fromAsset, err := common.NewAsset(params[fromAssetParam][0])
+	fromAsset, err := common.NewAssetWithShortCodes(mgr.GetVersion(), params[fromAssetParam][0])
 	if err != nil {
 		return quoteErrorResponse(fmt.Errorf("bad from asset: %w", err))
 	}
-	toAsset, err := common.NewAsset(params[toAssetParam][0])
+	fromAsset = fuzzyAssetMatch(ctx, mgr.Keeper(), fromAsset)
+	toAsset, err := common.NewAssetWithShortCodes(mgr.GetVersion(), params[toAssetParam][0])
 	if err != nil {
 		return quoteErrorResponse(fmt.Errorf("bad to asset: %w", err))
 	}
+	toAsset = fuzzyAssetMatch(ctx, mgr.Keeper(), toAsset)
 
 	// parse amount
 	amount, err := cosmos.ParseUint(params[amountParam][0])
@@ -852,10 +855,11 @@ func queryQuoteSaverDeposit(ctx cosmos.Context, path []string, req abci.RequestQ
 	}
 
 	// parse asset
-	asset, err := common.NewAsset(params[assetParam][0])
+	asset, err := common.NewAssetWithShortCodes(mgr.GetVersion(), params[assetParam][0])
 	if err != nil {
 		return quoteErrorResponse(fmt.Errorf("bad asset: %w", err))
 	}
+	asset = fuzzyAssetMatch(ctx, mgr.Keeper(), asset)
 
 	// parse amount
 	amount, err := cosmos.ParseUint(params[amountParam][0])
@@ -962,10 +966,11 @@ func queryQuoteSaverWithdraw(ctx cosmos.Context, path []string, req abci.Request
 	}
 
 	// parse asset
-	asset, err := common.NewAsset(params[assetParam][0])
+	asset, err := common.NewAssetWithShortCodes(mgr.GetVersion(), params[assetParam][0])
 	if err != nil {
 		return quoteErrorResponse(fmt.Errorf("bad asset: %w", err))
 	}
+	asset = fuzzyAssetMatch(ctx, mgr.Keeper(), asset)
 	asset = asset.GetSyntheticAsset() // always use the vault asset
 
 	// parse address
@@ -1101,10 +1106,11 @@ func queryQuoteLoanOpen(ctx cosmos.Context, path []string, req abci.RequestQuery
 	}
 
 	// parse asset
-	asset, err := common.NewAsset(params[fromAssetParam][0])
+	asset, err := common.NewAssetWithShortCodes(mgr.GetVersion(), params[fromAssetParam][0])
 	if err != nil {
 		return quoteErrorResponse(fmt.Errorf("bad asset: %w", err))
 	}
+	asset = fuzzyAssetMatch(ctx, mgr.Keeper(), asset)
 
 	// parse amount
 	amount, err := cosmos.ParseUint(params[amountParam][0])
@@ -1133,10 +1139,11 @@ func queryQuoteLoanOpen(ctx cosmos.Context, path []string, req abci.RequestQuery
 	}
 
 	// parse target asset
-	targetAsset, err := common.NewAsset(params[toAssetParam][0])
+	targetAsset, err := common.NewAssetWithShortCodes(mgr.GetVersion(), params[toAssetParam][0])
 	if err != nil {
 		return quoteErrorResponse(fmt.Errorf("bad target asset: %w", err))
 	}
+	targetAsset = fuzzyAssetMatch(ctx, mgr.Keeper(), targetAsset)
 
 	// parse destination address or generate a random one
 	sendMemo := true
@@ -1673,10 +1680,11 @@ func queryQuoteLoanClose(ctx cosmos.Context, path []string, req abci.RequestQuer
 	}
 
 	// parse asset
-	asset, err := common.NewAsset(params[fromAssetParam][0])
+	asset, err := common.NewAssetWithShortCodes(mgr.GetVersion(), params[fromAssetParam][0])
 	if err != nil {
 		return quoteErrorResponse(fmt.Errorf("bad asset: %w", err))
 	}
+	asset = fuzzyAssetMatch(ctx, mgr.Keeper(), asset)
 
 	// parse repayment bps
 	repayBps, err := cosmos.ParseUint(params[repayBpsParam][0])
@@ -1694,10 +1702,11 @@ func queryQuoteLoanClose(ctx cosmos.Context, path []string, req abci.RequestQuer
 	}
 
 	// parse loan asset
-	loanAsset, err := common.NewAsset(params[toAssetParam][0])
+	loanAsset, err := common.NewAssetWithShortCodes(mgr.GetVersion(), params[toAssetParam][0])
 	if err != nil {
 		return quoteErrorResponse(fmt.Errorf("bad loan asset: %w", err))
 	}
+	loanAsset = fuzzyAssetMatch(ctx, mgr.Keeper(), loanAsset)
 
 	// parse loan owner
 	loanOwner, err := common.NewAddress(params[loanOwnerParam][0])
