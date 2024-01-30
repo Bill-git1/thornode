@@ -639,7 +639,7 @@ func (c *EVMClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("fail to fetch account(%s) finalized nonce: %w", fromAddr, err)
 		}
-		if nonce-finalizedNonce > c.cfg.MaxPendingNonces {
+		if (nonce - finalizedNonce) > c.cfg.MaxPendingNonces {
 			c.logger.Warn().
 				Uint64("nonce", nonce).
 				Uint64("finalizedNonce", finalizedNonce).

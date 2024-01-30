@@ -143,6 +143,7 @@ bifrost:
     eth:
       <<: *default-chain
       chain_id: ETH
+      max_pending_nonces: 3
       block_scanner:
         <<: *default-block-scanner
         gas_cache_blocks: 40

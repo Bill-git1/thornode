@@ -295,7 +295,7 @@ func (c *Client) estimateGas(from string, tx *etypes.Transaction) (uint64, error
 	})
 }
 
-// GetNonce gets nonce
+// GetNonce returns the nonce (including pending) for the given address.
 func (c *Client) GetNonce(addr string) (uint64, error) {
 	ctx, cancel := c.getContext()
 	defer cancel()
@@ -304,6 +304,13 @@ func (c *Client) GetNonce(addr string) (uint64, error) {
 		return 0, fmt.Errorf("fail to get account nonce: %w", err)
 	}
 	return nonce, nil
+}
+
+// GetNonceFinalized returns the nonce for the given address.
+func (c *Client) GetNonceFinalized(addr string) (uint64, error) {
+	ctx, cancel := c.getContext()
+	defer cancel()
+	return c.client.NonceAt(ctx, ecommon.HexToAddress(addr), nil)
 }
 
 func getTokenAddressFromAsset(asset common.Asset) string {
@@ -484,6 +491,20 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		nonce, err = c.GetNonce(fromAddr.String())
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("fail to fetch account(%s) nonce : %w", fromAddr, err)
+		}
+
+		// abort signing if the pending nonce is too far in the future
+		var finalizedNonce uint64
+		finalizedNonce, err = c.GetNonceFinalized(fromAddr.String())
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("fail to fetch account(%s) finalized nonce: %w", fromAddr, err)
+		}
+		if (nonce - finalizedNonce) > c.cfg.MaxPendingNonces {
+			c.logger.Warn().
+				Uint64("nonce", nonce).
+				Uint64("finalizedNonce", finalizedNonce).
+				Msg("pending nonce too far in future")
+			return nil, nil, nil, fmt.Errorf("pending nonce too far in future")
 		}
 	}
 	c.logger.Info().Uint64("nonce", nonce).Msg("account info")
