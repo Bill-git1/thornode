@@ -587,6 +587,8 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 	if scheduledMaxFee.Cmp(estimatedFee) < 0 {
 		c.logger.Warn().
 			Stringer("in_hash", tx.InHash).
+			Stringer("rate", gasRate).
+			Uint64("estimated_gas", estimatedGas).
 			Str("estimated_fee", estimatedFee.String()).
 			Str("scheduled_max_fee", scheduledMaxFee.String()).
 			Msg("max gas exceeded, aborting to let thornode reschedule")

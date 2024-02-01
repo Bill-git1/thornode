@@ -568,6 +568,8 @@ func (c *EVMClient) buildOutboundTx(txOutItem stypes.TxOutItem, memo mem.Memo, n
 	if scheduledMaxFee.Cmp(estimatedFee) < 0 {
 		c.logger.Warn().
 			Stringer("in_hash", txOutItem.InHash).
+			Stringer("rate", gasRate).
+			Uint64("estimated_gas", estimatedGas).
 			Str("estimated_fee", estimatedFee.String()).
 			Str("scheduled_max_fee", scheduledMaxFee.String()).
 			Msg("max gas exceeded, aborting to let thornode reschedule")
