@@ -194,6 +194,7 @@ func (s *BitcoinCashSuite) SetUpTest(c *C) {
 	c.Assert(err, IsNil)
 	s.cfg.RPCHost = s.server.Listener.Addr().String()
 	s.client, err = NewClient(s.keys, s.cfg, nil, s.bridge, s.m)
+	s.client.disableVinZeroBatch = true
 	c.Assert(err, IsNil)
 	c.Assert(s.client, NotNil)
 }
@@ -245,12 +246,12 @@ func (s *BitcoinCashSuite) TestGetSender(c *C) {
 			},
 		},
 	}
-	sender, err := s.client.getSender(&tx)
+	sender, err := s.client.getSender(&tx, nil)
 	c.Assert(err, IsNil)
 	c.Assert(sender, Equals, "qqqzdh86crxjpyh2tgfy7gyfcwk4k74ze55ympqehp")
 
 	tx.Vin[0].Vout = 1
-	sender, err = s.client.getSender(&tx)
+	sender, err = s.client.getSender(&tx, nil)
 	c.Assert(err, IsNil)
 	c.Assert(sender, Equals, "qzfc77h794v2scmrmsj7sjreuzmy2q9p8sc74ea43r")
 }

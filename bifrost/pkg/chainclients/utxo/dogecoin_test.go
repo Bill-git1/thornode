@@ -194,6 +194,7 @@ func (s *DogecoinSuite) SetUpTest(c *C) {
 	c.Assert(err, IsNil)
 	s.cfg.RPCHost = s.server.Listener.Addr().String()
 	s.client, err = NewClient(s.keys, s.cfg, nil, s.bridge, s.m)
+	s.client.disableVinZeroBatch = true
 	c.Assert(err, IsNil)
 	c.Assert(s.client, NotNil)
 }
@@ -252,12 +253,12 @@ func (s *DogecoinSuite) TestGetSender(c *C) {
 			},
 		},
 	}
-	sender, err := s.client.getSender(&tx)
+	sender, err := s.client.getSender(&tx, nil)
 	c.Assert(err, IsNil)
 	c.Assert(sender, Equals, "n3jYBjCzgGNydQwf83Hz6GBzGBhMkKfgL1")
 
 	tx.Vin[0].Vout = 1
-	sender, err = s.client.getSender(&tx)
+	sender, err = s.client.getSender(&tx, nil)
 	c.Assert(err, IsNil)
 	c.Assert(sender, Equals, "nfWiQeddE4zsYsDuYhvpgVC7y4gjr5RyqK")
 }

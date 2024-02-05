@@ -91,6 +91,9 @@ type Client struct {
 	lastFeeRate             uint64
 	feeRateCache            []uint64
 	lastSolvencyCheckHeight int64
+
+	// ---------- testing ----------
+	disableVinZeroBatch bool
 }
 
 // NewClient generates a new Client
@@ -570,7 +573,7 @@ func (c *Client) FetchMemPool(height int64) (types.TxIn, error) {
 
 			// filter transactions
 			var txInItem types.TxInItem
-			txInItem, err = c.getTxIn(result, height, true)
+			txInItem, err = c.getTxIn(result, height, true, nil)
 			if err != nil {
 				c.log.Debug().Err(err).Msg("fail to get TxInItem")
 				continue
