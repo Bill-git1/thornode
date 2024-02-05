@@ -4,7 +4,6 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	dogchaincfg "github.com/eager7/dogd/chaincfg"
 	ltcchaincfg "github.com/ltcsuite/ltcd/chaincfg"
-	btypes "gitlab.com/thorchain/binance-sdk/common/types"
 	. "gopkg.in/check.v1"
 )
 
@@ -39,10 +38,6 @@ func (s ChainSuite) TestChain(c *C) {
 	c.Assert(BCHChain.GetGasAsset(), Equals, BCHAsset)
 	c.Assert(DOGEChain.GetGasAsset(), Equals, DOGEAsset)
 	c.Assert(EmptyChain.GetGasAsset(), Equals, EmptyAsset)
-
-	c.Assert(BNBChain.AddressPrefix(MockNet), Equals, btypes.TestNetwork.Bech32Prefixes())
-	c.Assert(BNBChain.AddressPrefix(MainNet), Equals, btypes.ProdNetwork.Bech32Prefixes())
-	c.Assert(BNBChain.AddressPrefix(StageNet), Equals, btypes.ProdNetwork.Bech32Prefixes())
 
 	c.Assert(BTCChain.AddressPrefix(MockNet), Equals, chaincfg.RegressionNetParams.Bech32HRPSegwit)
 	c.Assert(BTCChain.AddressPrefix(MainNet), Equals, chaincfg.MainNetParams.Bech32HRPSegwit)

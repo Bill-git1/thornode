@@ -9,7 +9,6 @@ import (
 	dogchaincfg "github.com/eager7/dogd/chaincfg"
 	"github.com/hashicorp/go-multierror"
 	ltcchaincfg "github.com/ltcsuite/ltcd/chaincfg"
-	btypes "gitlab.com/thorchain/binance-sdk/common/types"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
 )
@@ -233,7 +232,7 @@ func (c Chain) AddressPrefix(cn ChainNetwork) string {
 	case MockNet:
 		switch c {
 		case BNBChain:
-			return btypes.TestNetwork.Bech32Prefixes()
+			return "tbnb"
 		case TERRAChain:
 			return "terra"
 		case GAIAChain:
@@ -251,7 +250,7 @@ func (c Chain) AddressPrefix(cn ChainNetwork) string {
 	case MainNet, StageNet:
 		switch c {
 		case BNBChain:
-			return btypes.ProdNetwork.Bech32Prefixes()
+			return "bnb"
 		case TERRAChain:
 			return "terra"
 		case GAIAChain:

@@ -19,7 +19,6 @@ import (
 	cKeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/rs/zerolog/log"
 	"github.com/tendermint/tendermint/crypto"
-	ctypes "gitlab.com/thorchain/binance-sdk/common/types"
 	"gitlab.com/thorchain/tss/go-tss/blame"
 	"gitlab.com/thorchain/tss/go-tss/keysign"
 	tssMessages "gitlab.com/thorchain/tss/go-tss/messages"
@@ -323,7 +322,6 @@ func (s *SignSuite) SetUpSuite(c *C) {
 	c.Assert(s.m, NotNil)
 	ns := strconv.Itoa(time.Now().Nanosecond())
 	types2.SetupConfigForTest()
-	ctypes.Network = ctypes.TestNetwork
 	c.Assert(os.Setenv("NET", "mocknet"), IsNil)
 
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {

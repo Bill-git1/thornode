@@ -9,7 +9,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/codec"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
-	ctypes "gitlab.com/thorchain/binance-sdk/common/types"
+	"github.com/cosmos/cosmos-sdk/types"
 	"gitlab.com/thorchain/binance-sdk/keys"
 	"gitlab.com/thorchain/binance-sdk/types/tx"
 
@@ -18,7 +18,7 @@ import (
 
 type keyManager struct {
 	privKey  cryptotypes.PrivKey
-	addr     ctypes.AccAddress
+	addr     types.AccAddress
 	pubkey   common.PubKey
 	mnemonic string
 }
@@ -60,7 +60,7 @@ func (m *keyManager) GetPrivKey() cryptotypes.PrivKey {
 	return m.privKey
 }
 
-func (m *keyManager) GetAddr() ctypes.AccAddress {
+func (m *keyManager) GetAddr() types.AccAddress {
 	return m.addr
 }
 

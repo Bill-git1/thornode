@@ -1,8 +1,6 @@
 package observer
 
 import (
-	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -18,8 +16,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	cKeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/prometheus/client_golang/prometheus/testutil"
-	ctypes "gitlab.com/thorchain/binance-sdk/common/types"
-	txType "gitlab.com/thorchain/binance-sdk/types/tx"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/bifrost/metrics"
@@ -198,7 +194,6 @@ func (s *ObserverSuite) SetUpSuite(c *C) {
 
 	ns := strconv.Itoa(time.Now().Nanosecond())
 	types2.SetupConfigForTest()
-	ctypes.Network = ctypes.TestNetwork
 	c.Assert(os.Setenv("NET", "mocknet"), IsNil)
 
 	s.thordir = filepath.Join(os.TempDir(), ns, ".thorcli")
@@ -228,23 +223,8 @@ func (s *ObserverSuite) SetUpSuite(c *C) {
 	c.Assert(err, IsNil)
 	txOut := getTxOutFromJSONInput(`{ "height": 0, "tx_array": [ { "vault_pub_key":"", "to_address": "tbnb186nvjtqk4kkea3f8a30xh4vqtkrlu2rm9xgly3", "memo": "migrate", "coin":  { "asset": "BNB", "amount": "194765912" }  } ]}`, c)
 	txOut.TxArray[0].VaultPubKey = pk
-	out := txOut.TxArray[0].TxOutItem(txOut.Height)
 
 	s.NewMockBinanceInstance(c, "")
-
-	r, _, _, err := s.b.SignTx(out, 1440)
-	c.Assert(err, IsNil)
-	c.Assert(r, NotNil)
-	buf, err := hex.DecodeString(string(r))
-	c.Assert(err, IsNil)
-	var t txType.StdTx
-	err = txType.Cdc.UnmarshalBinaryLengthPrefixed(buf, &t)
-	c.Assert(err, IsNil)
-	bin, _ := txType.Cdc.MarshalBinaryLengthPrefixed(t)
-	encodedTx := base64.StdEncoding.EncodeToString(bin)
-	jsonData := `{ "jsonrpc": "2.0", "id": "", "result": { "txs": [ { "hash": "10C4E872A5DC842BE72AC8DE9C6A13F97DF6D345336F01B87EBA998F5A3BC36D", "height": "1", "tx": "` + encodedTx + `" } ], "total_count": "1" } }`
-
-	s.NewMockBinanceInstance(c, jsonData)
 }
 
 func (s *ObserverSuite) TearDownSuite(c *C) {

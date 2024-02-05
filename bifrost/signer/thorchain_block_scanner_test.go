@@ -14,7 +14,6 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	cKeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
-	ctypes "gitlab.com/thorchain/binance-sdk/common/types"
 
 	"gitlab.com/thorchain/thornode/bifrost/metrics"
 	"gitlab.com/thorchain/thornode/bifrost/pubkeymanager"
@@ -44,7 +43,6 @@ func (s *ThorchainBlockScanSuite) SetUpSuite(c *C) {
 	c.Assert(s.m, NotNil)
 	ns := strconv.Itoa(time.Now().Nanosecond())
 	types2.SetupConfigForTest()
-	ctypes.Network = ctypes.TestNetwork
 	c.Assert(os.Setenv("NET", "mocknet"), IsNil)
 
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {

@@ -3,18 +3,15 @@ package tss
 import (
 	"encoding/base64"
 
+	ctypes "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 	"github.com/tendermint/tendermint/crypto"
-	ctypes "gitlab.com/thorchain/binance-sdk/common/types"
-	"gitlab.com/thorchain/binance-sdk/keys"
-	"gitlab.com/thorchain/binance-sdk/types/tx"
-
-	"gitlab.com/thorchain/thornode/common"
 )
 
 // MockThorchainKeymanager is to mock the TSS , so as we could test it
 type MockThorchainKeyManager struct{}
 
-func (k *MockThorchainKeyManager) Sign(tx.StdSignMsg) ([]byte, error) {
+func (k *MockThorchainKeyManager) Sign(legacytx.StdSignMsg) ([]byte, error) {
 	return nil, nil
 }
 
@@ -34,11 +31,7 @@ func (k *MockThorchainKeyManager) ExportAsPrivateKey() (string, error) {
 	return "", nil
 }
 
-func (k *MockThorchainKeyManager) ExportAsKeyStore(password string) (*keys.EncryptedKeyJSON, error) {
-	return nil, nil
-}
-
-func (k *MockThorchainKeyManager) SignWithPool(msg tx.StdSignMsg, poolPubKey common.PubKey) ([]byte, error) {
+func (k *MockThorchainKeyManager) ExportAsKeyStore(password string) (*EncryptedKeyJSON, error) {
 	return nil, nil
 }
 

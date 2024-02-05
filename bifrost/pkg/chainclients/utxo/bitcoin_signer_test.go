@@ -20,7 +20,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/storage"
-	ctypes "gitlab.com/thorchain/binance-sdk/common/types"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/bifrost/metrics"
@@ -66,7 +65,6 @@ func (s *BitcoinSignerSuite) SetUpTest(c *C) {
 			StartBlockHeight: 1, // avoids querying thorchain for block height
 		},
 	}
-	ctypes.Network = ctypes.TestNetwork
 
 	ns := strconv.Itoa(time.Now().Nanosecond())
 	thordir := filepath.Join(os.TempDir(), ns, ".thorcli")

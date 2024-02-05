@@ -15,6 +15,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
+	ctypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/hashicorp/go-multierror"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -86,7 +87,7 @@ func NewBinance(thorKeys *thorclient.Keys, cfg config.BifrostChainConfiguration,
 	}
 	localKm := &keyManager{
 		privKey: priv,
-		addr:    types.AccAddress(priv.PubKey().Address()),
+		addr:    ctypes.AccAddress(priv.PubKey().Address()),
 		pubkey:  pk,
 	}
 
@@ -415,11 +416,13 @@ func (b *Binance) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []
 	return hexTx, nil, nil, nil
 }
 
-func (b *Binance) sign(signMsg btx.StdSignMsg, poolPubKey common.PubKey) ([]byte, error) {
+func (b *Binance) sign(bnbSignMsg btx.StdSignMsg, poolPubKey common.PubKey) ([]byte, error) {
 	if b.localKeyManager.Pubkey().Equals(poolPubKey) {
-		return b.localKeyManager.Sign(signMsg)
+		return b.localKeyManager.Sign(bnbSignMsg)
 	}
-	return b.tssKeyManager.SignWithPool(signMsg, poolPubKey)
+
+	res, _, err := b.tssKeyManager.RemoteSign(bnbSignMsg.Data, poolPubKey.String())
+	return res, err
 }
 
 // signMsg is design to sign a given message until it success or the same message had been send out by other signer
@@ -520,7 +523,7 @@ func (b *Binance) GetAccountByAddress(address string, height *big.Int) (common.A
 	if err != nil {
 		return common.Account{}, err
 	}
-	coins, err := common.GetCoins(common.BNBChain, acc.BaseAccount.Coins)
+	coins, err := getCoins(common.BNBChain, acc.BaseAccount.Coins)
 	if err != nil {
 		return common.Account{}, err
 	}
@@ -670,4 +673,17 @@ func (b *Binance) OnObservedTxIn(txIn stypes.TxInItem, blockHeight int64) {
 // ShouldReportSolvency given block height , should chain client report solvency to THORNode
 func (b *Binance) ShouldReportSolvency(height int64) bool {
 	return height%900 == 0
+}
+
+// getCoins transforms from binance coins
+func getCoins(chain common.Chain, accCoins []types.Coin) (common.Coins, error) {
+	coins := make(common.Coins, 0)
+	for _, coin := range accCoins {
+		asset, err := common.NewAsset(chain.String() + "." + coin.Denom)
+		if err != nil {
+			return nil, err
+		}
+		coins = append(coins, common.NewCoin(asset, cosmos.NewUint(uint64(coin.Amount))))
+	}
+	return coins, nil
 }
