@@ -630,14 +630,24 @@ func (c *Client) stripBCHAddress(addr string) string {
 
 func (c *Client) getVinZeroTxs(block *btcjson.GetBlockVerboseTxResult) (map[string]*btcjson.TxRawResult, error) {
 	vinZeroTxs := make(map[string]*btcjson.TxRawResult)
+	start := time.Now()
 
 	// create our batches
 	batches := [][]string{}
 	batch := []string{}
+	var ignoreCount, failMemoSkipCount int // just for debug logs
 	for i := range block.Tx {
 		if c.ignoreTx(&block.Tx[i], block.Height) {
+			ignoreCount++
 			continue
 		}
+
+		memo, err := c.getMemo(&block.Tx[i])
+		if err != nil || len(memo) > constants.MaxMemoSize {
+			failMemoSkipCount++
+			continue
+		}
+
 		batch = append(batch, block.Tx[i].Vin[0].Txid)
 		if len(batch) >= c.cfg.UTXO.TransactionBatchSize {
 			batches = append(batches, batch)
@@ -647,6 +657,14 @@ func (c *Client) getVinZeroTxs(block *btcjson.GetBlockVerboseTxResult) (map[stri
 	if len(batch) > 0 {
 		batches = append(batches, batch)
 	}
+
+	c.log.Debug().
+		Int64("height", block.Height).
+		Int("ignoreCount", ignoreCount).
+		Int("failMemoSkipCount", failMemoSkipCount).
+		Int("batchSize", len(batches[0])).
+		Int("batchCount", len(batches)).
+		Msg("getVinZeroTxs")
 
 	// get the vin zero txs one batch at a time
 	retries := 0
@@ -682,6 +700,11 @@ func (c *Client) getVinZeroTxs(block *btcjson.GetBlockVerboseTxResult) (map[stri
 			vinZeroTxs[tx.Txid] = tx
 		}
 	}
+
+	c.log.Debug().
+		Int64("height", block.Height).
+		Dur("duration", time.Since(start)).
+		Msg("getVinZeroTxs complete")
 
 	return vinZeroTxs, nil
 }
