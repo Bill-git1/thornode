@@ -632,13 +632,24 @@ func (c *Client) getVinZeroTxs(block *btcjson.GetBlockVerboseTxResult) (map[stri
 	vinZeroTxs := make(map[string]*btcjson.TxRawResult)
 	start := time.Now()
 
+	dustThreshold := c.cfg.ChainID.DustThreshold().Uint64()
+
 	// create our batches
 	batches := [][]string{}
 	batch := []string{}
-	var ignoreCount, failMemoSkipCount int // just for debug logs
+	var count, ignoreCount, failMemoSkipCount, skipDustCount int // just for debug logs
 	for i := range block.Tx {
 		if c.ignoreTx(&block.Tx[i], block.Height) {
 			ignoreCount++
+			continue
+		}
+
+		// skip if sum of vout value is under thorchain dust threshold
+		voutSats, err := sumVoutSats(&block.Tx[i])
+		if err != nil {
+			c.log.Error().Err(err).Str("txid", block.Tx[i].Txid).Msg("fail to sum vout sats")
+		} else if voutSats < dustThreshold {
+			skipDustCount++
 			continue
 		}
 
@@ -648,6 +659,7 @@ func (c *Client) getVinZeroTxs(block *btcjson.GetBlockVerboseTxResult) (map[stri
 			continue
 		}
 
+		count++
 		batch = append(batch, block.Tx[i].Vin[0].Txid)
 		if len(batch) >= c.cfg.UTXO.TransactionBatchSize {
 			batches = append(batches, batch)
@@ -662,7 +674,9 @@ func (c *Client) getVinZeroTxs(block *btcjson.GetBlockVerboseTxResult) (map[stri
 		Int64("height", block.Height).
 		Int("ignoreCount", ignoreCount).
 		Int("failMemoSkipCount", failMemoSkipCount).
-		Int("batchSize", len(batches[0])).
+		Int("skipDustCount", skipDustCount).
+		Int("count", count).
+		Int("batchSize", c.cfg.UTXO.TransactionBatchSize).
 		Int("batchCount", len(batches)).
 		Msg("getVinZeroTxs")
 
@@ -846,7 +860,11 @@ func (c *Client) getSender(tx *btcjson.TxRawResult, vinZeroTxs map[string]*btcjs
 	if vinZeroTxs != nil {
 		vinTx, ok := vinZeroTxs[tx.Vin[0].Txid]
 		if !ok {
-			c.log.Info().Msgf("tx: %s vin zero tx not found", tx.Vin[0].Txid)
+			// if vouts are below dust this is expected, so skip log noise
+			value, err := sumVoutSats(tx)
+			if err != nil || value >= c.cfg.ChainID.DustThreshold().Uint64() {
+				c.log.Debug().Str("txid", tx.Txid).Msg("vin zero tx not found")
+			}
 			return "", fmt.Errorf("missing vin zero tx")
 		}
 		vout = vinTx.Vout[tx.Vin[0].Vout]
