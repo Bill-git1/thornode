@@ -86,6 +86,7 @@ bifrost:
         version: 25
         transaction_batch_size: 500
         max_mempool_batches: 10
+        get_block_verbose_txs_available: true
         estimated_average_tx_size: 1000
         default_min_relay_fee_sats: 1000
         default_sats_per_vbyte: 25
@@ -202,7 +203,7 @@ bifrost:
         chain_id: DOGE
         gas_price_resolution: 500_000 # sats
         gas_cache_blocks: 10
-      mempool_tx_id_cache_size: 0
+      mempool_tx_id_cache_size: 1_000_000
       scanner_leveldb: *default-leveldb
       min_confirmations: 2
       utxo:
@@ -212,6 +213,7 @@ bifrost:
         default_sats_per_vbyte: 25
         max_sats_per_vbyte: 976562 # backwards compatible with 1e8*10/1024
         max_reorg_rescan_blocks: 720 # 12h
+        get_block_verbose_txs_available: false
     gaia:
       <<: *default-chain
       chain_id: GAIA
@@ -230,7 +232,7 @@ bifrost:
         chain_id: LTC
         observation_flexibility_blocks: 3
         gas_cache_blocks: 10
-      mempool_tx_id_cache_size: 0
+      mempool_tx_id_cache_size: 1_000_000
       scanner_leveldb: *default-leveldb
       utxo:
         <<: *utxo
@@ -246,7 +248,7 @@ bifrost:
         <<: *default-block-scanner
         chain_id: BCH
         observation_flexibility_blocks: 3
-      mempool_tx_id_cache_size: 0
+      mempool_tx_id_cache_size: 1_000_000
       scanner_leveldb: *default-leveldb
       utxo:
         <<: *utxo

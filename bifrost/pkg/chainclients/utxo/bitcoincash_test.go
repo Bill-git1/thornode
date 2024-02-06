@@ -97,6 +97,7 @@ func (s *BitcoinCashSuite) SetUpTest(c *C) {
 	s.cfg.UTXO.MaxMempoolBatches = 10
 	s.cfg.UTXO.EstimatedAverageTxSize = 1500
 	s.cfg.UTXO.MaxReorgRescanBlocks = 1
+	s.cfg.UTXO.GetBlockVerboseTxsAvailable = true
 	ns := strconv.Itoa(time.Now().Nanosecond())
 
 	thordir := filepath.Join(os.TempDir(), ns, ".thorcli")

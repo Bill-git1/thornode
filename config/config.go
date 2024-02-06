@@ -622,6 +622,12 @@ type BifrostChainConfiguration struct {
 		// a single scanning pass.
 		MaxMempoolBatches int `mapstructure:"max_mempool_batches"`
 
+		// GetBlockVerboseTxsAvailable is a flag to indicate if the chain supports the
+		// getblock RPC with verbosity level 2. This is used to determine if we can fetch
+		// the full transaction details from the block of must fan out. The current mainnet
+		// Dogecoin daemon does not support this RPC call (dev branch for 1.14.7 does).
+		GetBlockVerboseTxsAvailable bool `mapstructure:"get_block_verbose_txs_available"`
+
 		// NOTE: The following fields must be consistent across all validators. Otherwise,
 		// nodes can fail to sign outbounds from asgard since they may build different
 		// transactions. They may also be slashed for reporting different fee and solvency.
