@@ -679,6 +679,9 @@ type BifrostBlockScannerConfiguration struct {
 	DBPath                     string        `mapstructure:"db_path"`
 	ChainID                    common.Chain  `mapstructure:"chain_id"`
 
+	// ScanBlocks indicates whether mempool transactions should be scanned.
+	ScanMemPool bool `mapstructure:"scan_mempool"`
+
 	// The following configuration values apply only to a subset of chains.
 
 	// CosmosGRPCHost is the <host>:<port> of the gRPC endpoint of the Cosmos SDK chain.

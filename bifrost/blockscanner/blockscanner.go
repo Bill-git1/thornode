@@ -114,9 +114,14 @@ func (b *BlockScanner) Start(globalTxsQueue chan types.TxIn) {
 }
 
 func (b *BlockScanner) scanMempool() {
-	b.logger.Debug().Msg("start to scan mempool")
-	defer b.logger.Debug().Msg("stop scan mempool")
+	b.logger.Info().Msg("start to scan mempool")
+	defer b.logger.Info().Msg("stop scan mempool")
 	defer b.wg.Done()
+
+	if !b.cfg.ScanMemPool {
+		b.logger.Info().Msg("mempool scan is disabled")
+		return
+	}
 
 	for {
 		select {
