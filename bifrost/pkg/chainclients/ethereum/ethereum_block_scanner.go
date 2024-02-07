@@ -505,8 +505,9 @@ func (e *ETHScanner) reprocessTxs() ([]int64, error) {
 		block, err = e.getHeader(blockMeta.Height)
 		if err != nil {
 			e.logger.Err(err).Msgf("fail to get block verbose tx result: %d", blockMeta.Height)
+			rescanBlockHeights = append(rescanBlockHeights, blockMeta.Height)
+			continue
 		}
-
 		if !strings.EqualFold(blockMeta.BlockHash, block.Hash().Hex()) {
 			// if the block hash is different as previously recorded , then the block should be rescanned
 			rescanBlockHeights = append(rescanBlockHeights, blockMeta.Height)
