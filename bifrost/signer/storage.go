@@ -33,13 +33,16 @@ const (
 )
 
 type TxOutStoreItem struct {
-	TxOutItem   types.TxOutItem
-	Status      TxStatus
-	Height      int64
-	Index       int64
-	Round7Retry bool
-	Checkpoint  []byte
-	SignedTx    []byte
+	TxOutItem    types.TxOutItem
+	Status       TxStatus
+	Height       int64
+	Index        int64
+	Round7Retry  bool
+	Checkpoint   []byte
+	SignedTx     []byte
+	RetrievalKey string `json:"-"`
+	// RetrievalKey is to ensure consistent KV overwrite/deletion after iterator retrieval;
+	// the json "-" tag is to not store it in the KVStore.
 }
 
 func NewTxOutStoreItem(height int64, item types.TxOutItem, idx int64) TxOutStoreItem {
@@ -52,6 +55,12 @@ func NewTxOutStoreItem(height int64, item types.TxOutItem, idx int64) TxOutStore
 }
 
 func (s *TxOutStoreItem) Key() string {
+	// If this is a retrieved item then refer to the same key-value pair
+	// for overwriting/deletion, else newly derive it.
+	if len(s.RetrievalKey) != 0 {
+		return s.RetrievalKey
+	}
+
 	buf, _ := json.Marshal(struct {
 		TxOutItem types.TxOutItem
 		Height    int64
@@ -131,16 +140,20 @@ func (s *SignerStore) Batch(items []TxOutStoreItem) error {
 	return s.db.Write(batch, nil)
 }
 
-func (s *SignerStore) Get(key string) (item TxOutStoreItem, err error) {
-	ok, err := s.db.Has([]byte(key), nil)
+func (s *SignerStore) Get(keyString string) (item TxOutStoreItem, err error) {
+	key := []byte(keyString)
+
+	ok, err := s.db.Has(key, nil)
 	if !ok || err != nil {
 		return
 	}
-	buf, _ := s.db.Get([]byte(key), nil)
+	buf, _ := s.db.Get(key, nil)
 	if err = json.Unmarshal(buf, &item); err != nil {
 		s.logger.Error().Err(err).Msg("fail to unmarshal to txout store item")
 		return item, err
 	}
+	// Record the key so not needing to successfully rederive to overwrite/delete the key-value pair.
+	item.RetrievalKey = keyString
 	return
 }
 
@@ -176,6 +189,9 @@ func (s *SignerStore) List() []TxOutStoreItem {
 		if item.Status == TxSpent {
 			continue
 		}
+
+		// Record the key so not needing to successfully rederive to overwrite/delete the key-value pair.
+		item.RetrievalKey = string(iterator.Key())
 
 		results = append(results, item)
 	}
