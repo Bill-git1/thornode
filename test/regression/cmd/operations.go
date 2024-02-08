@@ -110,6 +110,8 @@ func NewOperation(opMap map[string]any) Operation {
 		op = &OpTxTssPool{}
 	case "tx-version":
 		op = &OpTxVersion{}
+	case "fail-export-invariants":
+		op = &OpFailExportInvariants{}
 	default:
 		log.Fatal().Str("type", t).Msg("unknown operation type")
 	}
@@ -737,6 +739,16 @@ type OpTxVersion struct {
 
 func (op *OpTxVersion) Execute(out io.Writer, routine int, _ *os.Process, logs chan string) error {
 	return sendMsg(out, routine, &op.MsgSetVersion, op.Signer, op.Sequence, op.Gas, op, logs)
+}
+
+// ------------------------------ OpFailExportInvariants ------------------------------
+
+type OpFailExportInvariants struct {
+	OpBase `yaml:",inline"`
+}
+
+func (op *OpFailExportInvariants) Execute(out io.Writer, routine int, _ *os.Process, logs chan string) error {
+	return fmt.Errorf("fail-export-invariants should only be the last operation")
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////

@@ -498,13 +498,39 @@ func (c *EVMClient) buildOutboundTx(txOutItem stypes.TxOutItem, memo mem.Memo, n
 		evmValue = cosmos.ZeroUint().BigInt()
 	}
 
-	// compare the gas rate prescribed by THORChain against the price it can get from the chain
-	// ensure signer always pay enough higher gas price
-	// GasRate from thorchain is in 1e8, need to convert to Wei
-	gasRate := convertThorchainAmountToWei(big.NewInt(txOutItem.GasRate))
-	if gasRate.Cmp(c.GetGasPrice()) < 0 {
-		gasRate = c.GetGasPrice()
+	gasRate := c.GetGasPrice()
+	if c.cfg.FixedOutboundGasRate || gasRate.Cmp(big.NewInt(0)) == 0 {
+		// if chain gas is zero we are still filling our gas price buffer, use outbound rate
+		gasRate = convertThorchainAmountToWei(big.NewInt(txOutItem.GasRate))
+	} else {
+		// Thornode uses a gas rate 1.5x the reported network fee for the rate and computed
+		// max gas to ensure the rate is sufficient when it is signed later. Since we now know
+		// the more recent rate, we will use our current rate with a lower bound on 2/3 the
+		// outbound rate (the original rate we reported to Thornode in the network fee).
+		lowerBound := convertThorchainAmountToWei(big.NewInt(txOutItem.GasRate))
+		lowerBound.Mul(lowerBound, big.NewInt(2))
+		lowerBound.Div(lowerBound, big.NewInt(3))
+
+		// round current rate to avoid consensus trouble, same rounding implied in outbound
+		gasRate.Div(gasRate, big.NewInt(common.One*100))
+		if gasRate.Cmp(big.NewInt(0)) == 0 { // floor at 1 like in network fee reporting
+			gasRate = big.NewInt(1)
+		}
+		gasRate.Mul(gasRate, big.NewInt(common.One*100))
+
+		// if the gas rate is less than the lower bound, use the lower bound
+		if gasRate.Cmp(lowerBound) < 0 {
+			gasRate = lowerBound
+		}
 	}
+
+	c.logger.Info().
+		Stringer("inHash", txOutItem.InHash).
+		Str("outboundRate", convertThorchainAmountToWei(big.NewInt(txOutItem.GasRate)).String()).
+		Str("currentRate", c.GetGasPrice().String()).
+		Str("effectiveRate", gasRate.String()).
+		Msg("gas rate")
+
 	// outbound tx always send to smart contract address
 	estimatedEVMValue := big.NewInt(0)
 	if evmValue.Uint64() > 0 {
@@ -556,11 +582,9 @@ func (c *EVMClient) buildOutboundTx(txOutItem stypes.TxOutItem, memo mem.Memo, n
 		// set limit to aggregator gas limit
 		estimatedGas = gasLimitForAggregator
 
-		// aggregator swap outs currently ignore max gas, but abort if 10x over for safety
-		//
-		// TODO: Update thornode to take aggregator gas limit into consideration and set a
-		// max gas that should be respected.
-		scheduledMaxFee = scheduledMaxFee.Mul(scheduledMaxFee, big.NewInt(10))
+		scheduledMaxFee = scheduledMaxFee.Mul(scheduledMaxFee, big.NewInt(c.cfg.AggregatorMaxGasMultiplier))
+	} else if !txOutItem.Coins[0].Asset.IsGasAsset() {
+		scheduledMaxFee = scheduledMaxFee.Mul(scheduledMaxFee, big.NewInt(c.cfg.TokenMaxGasMultiplier))
 	}
 
 	// if over max scheduled gas, abort and let thornode reschedule

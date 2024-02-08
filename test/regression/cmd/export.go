@@ -22,7 +22,7 @@ import (
 // Export
 ////////////////////////////////////////////////////////////////////////////////////////
 
-func export(out io.Writer, path string, routine int) error {
+func export(out io.Writer, path string, routine int, failExportInvariants bool) error {
 	localLog := consoleLogger(out)
 	home := "/" + strconv.Itoa(routine)
 
@@ -75,7 +75,7 @@ func export(out io.Writer, path string, routine int) error {
 
 	// check export invariants
 	err = checkExportInvariants(out, export)
-	if err != nil {
+	if err != nil && !failExportInvariants {
 		// also log export changes for easier debugging
 		if exportExists {
 			_ = checkExportChanges(out, export, exportPath)

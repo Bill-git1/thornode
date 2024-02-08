@@ -134,8 +134,8 @@ func main() {
 			}()
 
 			// run test
-			err = run(out, file, routine)
-			if err != nil {
+			failExportInvariants, runErr := run(out, file, routine)
+			if runErr != nil {
 				mu.Lock()
 				failed = append(failed, file)
 				if os.Getenv("FAIL_FAST") != "" {
@@ -146,8 +146,8 @@ func main() {
 			}
 
 			// check export state
-			err = export(out, file, routine)
-			if err != nil {
+			exportErr := export(out, file, routine, failExportInvariants)
+			if exportErr != nil {
 				mu.Lock()
 				failed = append(failed, file)
 				if os.Getenv("FAIL_FAST") != "" {

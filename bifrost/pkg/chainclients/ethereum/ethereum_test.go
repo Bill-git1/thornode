@@ -396,6 +396,8 @@ func (s *EthereumSuite) TestSignETHTx(c *C) {
 			HTTPRequestTimeout: time.Second,
 			MaxGasLimit:        80000,
 		},
+		AggregatorMaxGasMultiplier: 10,
+		TokenMaxGasMultiplier:      3,
 	}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
 	c.Assert(err, IsNil)
 	c.Assert(e, NotNil)

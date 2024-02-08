@@ -81,6 +81,9 @@ bifrost:
       min_confirmations: 0
       max_rpc_retries: 3
       max_pending_nonces: 0
+      fixed_outbound_gas_rate: false
+      token_max_gas_multiplier: 0
+      aggregator_max_gas_multiplier: 0
       utxo: &utxo
         block_cache_count: 144
         version: 25
@@ -145,6 +148,8 @@ bifrost:
       <<: *default-chain
       chain_id: ETH
       max_pending_nonces: 3
+      token_max_gas_multiplier: 3
+      aggregator_max_gas_multiplier: 10
       block_scanner:
         <<: *default-block-scanner
         gas_cache_blocks: 40
@@ -159,6 +164,8 @@ bifrost:
       chain_id: AVAX
       solvency_blocks: 100
       max_pending_nonces: 3
+      token_max_gas_multiplier: 3
+      aggregator_max_gas_multiplier: 10
       block_scanner:
         <<: *default-block-scanner
         concurrency: 1
@@ -180,6 +187,8 @@ bifrost:
       chain_id: BSC
       solvency_blocks: 100
       max_pending_nonces: 3
+      token_max_gas_multiplier: 3
+      aggregator_max_gas_multiplier: 10
       block_scanner:
         <<: *default-block-scanner
         concurrency: 1

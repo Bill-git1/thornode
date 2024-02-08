@@ -600,6 +600,21 @@ type BifrostChainConfiguration struct {
 	// MaxRPCRetries is the maximum number of retries for RPC requests.
 	MaxRPCRetries int `mapstructure:"max_rpc_retries"`
 
+	// FixedOutboundGasRate will force signed transactions to use the specific rate in the
+	// outbound instead of adjusting based on current chain gas price. This is currently
+	// only used in mocknet to for smoke tests.
+	FixedOutboundGasRate bool `mapstructure:"fixed_outbound_gas_rate"`
+
+	// TokenMaxGasMultiplier is a multiplier applied to max gas for outbounds which are
+	// not the gas asset. This compensates for variance in gas units when contracts for
+	// pool assets use more than the configured MaxGasLimit gas units in transferOut.
+	TokenMaxGasMultiplier int64 `mapstructure:"token_max_gas_multiplier"`
+
+	// AggregatorMaxGasMultiplier is a multiplier applied to max gas for outbounds which
+	// swap out via an aggregator contract. This compensates for variance in gas units when
+	// aggregator swaps outs use more than the configured MaxGasLimit gas units.
+	AggregatorMaxGasMultiplier int64 `mapstructure:"aggregator_max_gas_multiplier"`
+
 	// MaxPendingNonces is the maximum number of pending nonces to allow before aborting
 	// new signing attempts.
 	MaxPendingNonces uint64 `mapstructure:"max_pending_nonces"`

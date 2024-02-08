@@ -22,7 +22,7 @@ import (
 // Run
 ////////////////////////////////////////////////////////////////////////////////////////
 
-func run(out io.Writer, path string, routine int) error {
+func run(out io.Writer, path string, routine int) (failExportInvariants bool, err error) {
 	localLog := consoleLogger(out)
 
 	home := "/" + strconv.Itoa(routine)
@@ -94,10 +94,16 @@ func run(out io.Writer, path string, routine int) error {
 	if len(ops) == 0 {
 		err = errors.New("no operations found")
 		localLog.Err(err).Msg("")
-		return err
+		return false, err
 	}
 
 	localLog.Info().Str("path", path).Int("blocks", blockCount(ops)).Msgf("Running regression test")
+
+	// extract fail-export operation from end if provided
+	if _, ok := ops[len(ops)-1].(*OpFailExportInvariants); ok {
+		failExportInvariants = true
+		ops = ops[:len(ops)-1]
+	}
 
 	// execute all state operations
 	stateOpCount := 0
@@ -271,5 +277,5 @@ func run(out io.Writer, path string, routine int) error {
 		}
 	}
 
-	return returnErr
+	return failExportInvariants, returnErr
 }
