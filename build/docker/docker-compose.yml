@@ -418,7 +418,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: registry.gitlab.com/thorchain/devops/node-launcher:bitcoin-daemon-25.1
+    image: registry.gitlab.com/thorchain/devops/node-launcher:bitcoin-daemon-26.0-1
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-1}
@@ -464,7 +464,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: ethereum/client-go:v1.13.8
+    image: ethereum/client-go:v1.13.12
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-5}
@@ -482,7 +482,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: registry.gitlab.com/thorchain/devops/node-launcher:binance-smart-daemon-1.3.7
+    image: registry.gitlab.com/thorchain/devops/node-launcher:binance-smart-daemon-1.3.8
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-5}
@@ -515,7 +515,7 @@ services:
       - mocknet
       - mocknet-cluster
     restart: unless-stopped
-    image: registry.gitlab.com/thorchain/devops/node-launcher:avalanche-daemon-1.10.17
+    image: registry.gitlab.com/thorchain/devops/node-launcher:avalanche-daemon-1.10.19
     volumes:
       - "./mocknet/avax:/mocknet"
     command:
