@@ -615,19 +615,29 @@ func (s *SlashingVCURSuite) TestNeedsNewVault(c *C) {
 	vault := GetRandomVault()
 	vault.Membership = []string{pk1.String(), pk2.String(), pk3.String()}
 
+	slasher := newSlasherVCUR(mgr.Keeper(), mgr.EventMgr())
+
+	c.Assert(len(tx.Coins), Equals, 1)
+	toi := TxOutItem{
+		InHash:      inhash,
+		Coin:        tx.Coins[0],
+		VaultPubKey: pk,
+	}
+
+	c.Check(slasher.needsNewVault(ctx, mgr, vault, 300, 1, toi), Equals, true)
+
 	voter := NewObservedTxVoter(outhash, []ObservedTx{obs})
 	mgr.Keeper().SetObservedTxOutVoter(ctx, voter)
 
 	mgr.Keeper().SetObservedLink(ctx, inhash, outhash)
-	slasher := newSlasherVCUR(mgr.Keeper(), mgr.EventMgr())
 
-	c.Check(slasher.needsNewVault(ctx, mgr, vault, 300, 1, inhash, pk), Equals, false)
+	c.Check(slasher.needsNewVault(ctx, mgr, vault, 300, 1, toi), Equals, false)
 	ctx = ctx.WithBlockHeight(600)
-	c.Check(slasher.needsNewVault(ctx, mgr, vault, 300, 1, inhash, pk), Equals, false)
+	c.Check(slasher.needsNewVault(ctx, mgr, vault, 300, 1, toi), Equals, false)
 	ctx = ctx.WithBlockHeight(900)
-	c.Check(slasher.needsNewVault(ctx, mgr, vault, 300, 1, inhash, pk), Equals, false)
+	c.Check(slasher.needsNewVault(ctx, mgr, vault, 300, 1, toi), Equals, false)
 
 	// test that more than 2/3rd will always return false
 	ctx = ctx.WithBlockHeight(999999999)
-	c.Check(slasher.needsNewVault(ctx, mgr, vault, 300, 1, inhash, pk), Equals, false)
+	c.Check(slasher.needsNewVault(ctx, mgr, vault, 300, 1, toi), Equals, false)
 }
