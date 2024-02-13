@@ -49,6 +49,7 @@ message EventSwap {
   string synth_units = 9 [(gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Uint", (gogoproto.nullable) = false];
   uint64 streaming_swap_quantity = 10;
   uint64 streaming_swap_count = 11;
+  string pool_slip = 12 [(gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Uint", (gogoproto.nullable) = false];
 }
 
 message EventAddLiquidity {

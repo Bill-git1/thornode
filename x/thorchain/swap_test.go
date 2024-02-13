@@ -143,3 +143,7 @@ func (k *TestSwapKeeper) BurnFromModule(ctx cosmos.Context, module string, coin 
 func (k *TestSwapKeeper) MintToModule(ctx cosmos.Context, module string, coin common.Coin) error {
 	return nil
 }
+
+func (k *TestSwapKeeper) GetMimirV2(ctx cosmos.Context, key string) (int64, error) {
+	return 1_00, nil
+}

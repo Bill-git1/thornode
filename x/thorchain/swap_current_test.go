@@ -215,6 +215,19 @@ func (s *SwapVCURSuite) TestSwap(c *C) {
 			expectedErr:   nil,
 			events:        1,
 		},
+		{
+			name:          "swap-slip-min",
+			requestTxHash: "hash",
+			source:        common.RuneAsset(),
+			target:        common.BNBAsset,
+			amount:        cosmos.NewUint(2 * 1000_000),
+			requester:     GetRandomTHORAddress(),
+			destination:   GetRandomBNBAddress(),
+			returnAmount:  cosmos.NewUint(1979604),
+			tradeTarget:   cosmos.NewUint(1979604),
+			expectedErr:   nil,
+			events:        1,
+		},
 	}
 
 	for _, item := range inputs {
@@ -537,4 +550,50 @@ func (s *SwapVCURSuite) TestSynthSwap_AssetSynth(c *C) {
 	// We don't check pool.SynthUnits to not duplicate the calculation here,
 	// but we did check BalanceAsset, LPUnits, and totalSynthSupply, the
 	// three inputs to the calculation.
+}
+
+func (s *SwapVCURSuite) TestSwap_GetSwapCalc(c *C) {
+	swapper := newSwapperVCUR()
+	inputs := []struct {
+		name         string
+		x            cosmos.Uint
+		X            cosmos.Uint
+		Y            cosmos.Uint
+		minSlipBps   cosmos.Uint
+		expectedEmit cosmos.Uint
+		expectedFee  cosmos.Uint
+		expectedSlip cosmos.Uint
+	}{
+		{
+			name:         "no-min-slip",
+			x:            cosmos.NewUint(1e7),
+			X:            cosmos.NewUint(1e8),
+			Y:            cosmos.NewUint(1e8),
+			minSlipBps:   cosmos.NewUint(1e2),
+			expectedEmit: cosmos.NewUint(8264462),
+			expectedFee:  cosmos.NewUint(826446),
+			expectedSlip: cosmos.NewUint(909),
+		},
+		{
+			name:         "min-slip",
+			x:            cosmos.NewUint(1e5),
+			X:            cosmos.NewUint(1e8),
+			Y:            cosmos.NewUint(1e8),
+			minSlipBps:   cosmos.NewUint(1e3),
+			expectedEmit: cosmos.NewUint(89910),
+			expectedFee:  cosmos.NewUint(9990),
+			expectedSlip: cosmos.NewUint(1e3),
+		},
+	}
+	for _, item := range inputs {
+		c.Logf("test name:%s", item.name)
+		slip := swapper.CalcSwapSlip(item.X, item.x)
+		emitAssets, liquidityFee, swapSlip := swapper.GetSwapCalc(item.X, item.x, item.Y, slip, item.minSlipBps)
+		c.Check(swapSlip.Uint64(), Equals, item.expectedSlip.Uint64(),
+			Commentf("Actual: %s Exp: %s", swapSlip.String(), item.expectedSlip.String()))
+		c.Check(emitAssets.Uint64(), Equals, item.expectedEmit.Uint64(),
+			Commentf("Actual: %s Exp: %s", emitAssets.String(), item.expectedEmit.String()))
+		c.Check(liquidityFee.Uint64(), Equals, item.expectedFee.Uint64(),
+			Commentf("Actual: %s Exp: %s", liquidityFee.String(), item.expectedFee.String()))
+	}
 }

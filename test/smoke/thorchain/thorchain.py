@@ -1343,6 +1343,7 @@ class ThorchainState:
                     {"emit_asset": f"{emit.amount} {emit.asset}"},
                     {"streaming_swap_quantity": "1"},
                     {"streaming_swap_count": "1"},
+                    {"pool_slip": swap_slip},
                     *in_tx.get_attributes(),
                 ],
             )
@@ -1454,6 +1455,7 @@ class ThorchainState:
                 {"emit_asset": f"{emit.amount} {emit.asset}"},
                 {"streaming_swap_quantity": "1"},
                 {"streaming_swap_count": "1"},
+                {"pool_slip": swap_slip},
                 *in_tx.get_attributes(),
             ],
         )

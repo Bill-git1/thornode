@@ -98,6 +98,7 @@ func NewEventSwap(pool common.Asset, swapTarget, fee, swapSlip, liquidityFeeInRu
 		SynthUnits:            synthUnits,
 		StreamingSwapQuantity: 0,
 		StreamingSwapCount:    0,
+		PoolSlip:              cosmos.ZeroUint(),
 	}
 }
 
@@ -117,6 +118,7 @@ func (m *EventSwap) Events() (cosmos.Events, error) {
 		cosmos.NewAttribute("emit_asset", m.EmitAsset.String()),
 		cosmos.NewAttribute("streaming_swap_quantity", strconv.FormatUint(m.StreamingSwapQuantity, 10)),
 		cosmos.NewAttribute("streaming_swap_count", strconv.FormatUint(m.StreamingSwapCount, 10)),
+		cosmos.NewAttribute("pool_slip", m.PoolSlip.String()),
 	)
 	if !m.SynthUnits.IsZero() {
 		evt = evt.AppendAttributes(cosmos.NewAttribute("synth_units", m.SynthUnits.String()))

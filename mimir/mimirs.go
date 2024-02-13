@@ -108,3 +108,19 @@ func NewSwapperCloutReset(refs ...string) Mimir {
 		},
 	}
 }
+
+func NewSwapSlipBasisPointsMin(refs ...string) Mimir {
+	id := SwapSlipBasisPointsMinId
+	return &mimir{
+		id:           id,
+		name:         mimirRefToStringMap[id],
+		defaultValue: 0,
+		reference:    getRef(refs),
+		mimirType:    EconomicMimir,
+		tags:         []string{"economic", "swap min slip"},
+		description:  "Min slip on swap",
+		legacyMimirKey: func(_ string) string {
+			return ""
+		},
+	}
+}
