@@ -2,16 +2,16 @@
 
 Streaming Swaps is a means for a swapper to get better price execution if they are patient. This ensures Capital Efficiency while still keeping with the philosophy "impatient people pay more".
 
-There are two important parts to streaming swaps:&#x20;
+There are two important parts to streaming swaps:
 
 1. The **interval** part of the stream allows arbs enough time to rebalance intra-swap - this means the capital demands of swaps are met throughout, instead of _after_.
 2. The **quantity** part of the stream allows the swapper to reduce the size of their sub-swap so each is executed with less slip (so the total swap will be executed with less slip) _without_ losing capital to on-chain L1 fees.
 
 If a swapper is willing to be patient, they can execute the swap with a better price, by allowing arbs to rebalance the pool between the streaming swaps.
 
-Once all swaps are executed and the streaming swap is completed, the target token is sent to the user (minus outbound fees).&#x20;
+Once all swaps are executed and the streaming swap is completed, the target token is sent to the user (minus outbound fees).
 
-Streaming Swaps is similar to a Time Weighted Average Price (TWAP) trade however it is restricted to 24 hours (Mimir `STREAMINGSWAPMAXLENGTH = 14400` blocks).&#x20;
+Streaming Swaps is similar to a Time Weighted Average Price (TWAP) trade however it is restricted to 24 hours (Mimir `STREAMINGSWAPMAXLENGTH = 14400` blocks).
 
 ## Using Streaming Swaps
 
@@ -35,7 +35,7 @@ A min swap size is placed on the network for streaming swaps (Mimir `StreamingSw
 
 ### Calculate Optimal Swap
 
-The network works out the optimal streaming swap solution based on the Mimumn Swap Size and the swapAmount. &#x20;
+The network works out the optimal streaming swap solution based on the Mimumn Swap Size and the swapAmount.
 
 **Single Swap**: To calculate the minimum swap size for a single swap, you take 2.5 basis points (bps) of the depth of the pool. The formula is as follows:
 
@@ -102,6 +102,6 @@ $$
 
 The `difference`value represents the percentage of the swap fee saved compared to doing the same swap with a regular fee structure. There higher the swapCount, the bigger the difference.
 
-Example:&#x20;
+Example:
 
-- (7-1)/7 = 6/7 = 85% better price execution by being patient.&#x20;
+- (7-1)/7 = 6/7 = 85% better price execution by being patient.

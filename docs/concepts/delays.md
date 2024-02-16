@@ -52,6 +52,10 @@ Examples:
 
 THORChain throttles all outputs to prevent fund loss attacks, but the maximum delay is 1hr. It does this by computing the value of the outbound transaction then applying an artificial delay. If the tx is in "scheduled", it will be delayed by a number of blocks. Once it is "outbound" it is being processed. See more information [here](https://docs.thorchain.org/how-it-works/security#b905-1).
 
+```admonish info
+Arbs and Traders who have trade history can have a reduced wait time to do [Swapper Clout.](https://gitlab.com/thorchain/thornode/-/issues/1723)
+```
+
 **Queue:**
 
 [https://thornode.ninerealms.com/thorchain/queue](https://thornode.ninerealms.com/thorchain/queue)

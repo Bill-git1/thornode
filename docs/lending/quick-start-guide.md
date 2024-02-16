@@ -2,11 +2,13 @@
 
 Lending allows users to deposit native collateral, and then create a debt at a collateralization ratio `CR` (collateralization ratio). The debt is always denominated in USD (aka `TOR`) regardless of what L1 asset the user receives.
 
-Streaming swaps is enabled for lending.&#x20;
+```admonish indo
+[Streaming swaps](../swap-guide/streaming-swaps.md) is enabled for lending.
+```
 
 ## Open a Loan Quote
 
-Lending Quote endpoints have been created to simplify the implementation process.&#x20;
+Lending Quote endpoints have been created to simplify the implementation process.
 
 **Request:** Loan quote using 1 BTC as collateral, target debt asset is USDT at 0XDAC17F958D2EE523A2206206994597C13D831EC7
 
@@ -42,7 +44,7 @@ Lending Quote endpoints have been created to simplify the implementation process
 }
 ```
 
-_If you send 1 BTC to `bc1q2hldv0pmy9mcpddj2qrvdgcx6pw6h6h7gqytwy` with the_ [_memo_](../concepts/memos.md#open-loan) _`$+:ETH.USDT:0xe7062003a7be4df3a86127293a0d6b1f54c04220` you will receive approx. 1128.8773 USDT debt sent to `0xe7062003a7be4df3a86127293a0d6b1f54c04220` with a CR of 314.6% and will incur 49 basis points (0.49%) slippage._&#x20;
+_If you send 1 BTC to `bc1q2hldv0pmy9mcpddj2qrvdgcx6pw6h6h7gqytwy` with the_ [_memo_](../concepts/memos.md#open-loan) _`$+:ETH.USDT:0xe7062003a7be4df3a86127293a0d6b1f54c04220` you will receive approx. 1128.8773 USDT debt sent to `0xe7062003a7be4df3a86127293a0d6b1f54c04220` with a CR of 314.6% and will incur 49 basis points (0.49%) slippage._
 
 ```admonish danger
 The `Inbound_Address` changes regularly, do not cache!
@@ -54,7 +56,7 @@ Loans cannot be repaid until a minimum time has passed, as determined by [LOANRE
 
 ## **Close a Loan**
 
-**Request**: Repay a loan using USDT where BTC.BTC was used as colloteral. Note any asset can be used to repay a loan. [https://thornode.ninerealms.com/thorchain/quote/loan/close?from_asset=BTC.BTC\&amount=114947930000\&to_asset=BTC.BTC\&loan_owner=bc1q089j003xwj07uuavt2as5r45a95k5zzrhe4ac3](https://thornode.ninerealms.com/thorchain/quote/loan/close?from_asset=BTC.BTC&amount=114947930000&to_asset=BTC.BTC&loan_owner=bc1q089j003xwj07uuavt2as5r45a95k5zzrhe4ac3)&#x20;
+**Request**: Repay a loan using USDT where BTC.BTC was used as colloteral. Note any asset can be used to repay a loan. [https://thornode.ninerealms.com/thorchain/quote/loan/close?from_asset=BTC.BTC\&amount=114947930000\&to_asset=BTC.BTC\&loan_owner=bc1q089j003xwj07uuavt2as5r45a95k5zzrhe4ac3](https://thornode.ninerealms.com/thorchain/quote/loan/close?from_asset=BTC.BTC&amount=114947930000&to_asset=BTC.BTC&loan_owner=bc1q089j003xwj07uuavt2as5r45a95k5zzrhe4ac3)
 
 **Response:**
 
@@ -85,7 +87,7 @@ Loans cannot be repaid until a minimum time has passed, as determined by [LOANRE
 }
 ```
 
-_If you send 1149.47 USDT with a memo `$-:BTC.BTC:bc1q089j003xwj07uuavt2as5r45a95k5zzrhe4ac3` of you will repay your loan down._&#x20;
+_If you send 1149.47 USDT with a memo `$-:BTC.BTC:bc1q089j003xwj07uuavt2as5r45a95k5zzrhe4ac3` of you will repay your loan down._
 
 ### **Borrowers Position**
 
@@ -110,7 +112,7 @@ Get brower's positin in the BTC pool who tool out a loan from `bc1q089j003xwj07u
 }
 ```
 
-_The borrower has provided 0.0997 BTC and has a current TOR debt of $1149.78. No repayments have been yet._&#x20;
+_The borrower has provided 0.0997 BTC and has a current TOR debt of $1149.78. No repayments have been yet._
 
 ### Support
 

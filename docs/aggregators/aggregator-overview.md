@@ -2,7 +2,7 @@
 
 ## Overview
 
-THORChain will only support a set number of assets and is not designed to support log tailed assets. If a user wants to swap from a long tail ERC20 asset to Bitcoin, they have to use an Ethereum AMM like Sushi Swap to swap the ERC20 asset to ETH then they can swap the ETH to BTC.;
+THORChain will only support a set number of assets and is not designed to support long tailed assets. If a user wants to swap from a long tail ERC20 asset to Bitcoin, they have to use an Ethereum AMM like Sushi Swap to swap the ERC20 asset to ETH then they can swap the ETH to BTC.;
 
 The same process applies for long tail tokens on other chains such as Avalanche and Cosmos.;
 
@@ -61,4 +61,4 @@ For **SwapOut** THORChain will execute a `MsgExecuteContract` which then sends t
 
 If you would like to deploy your own aggregator with your own custom logic, deploy it with the principles above, then submit a PR for it to get whitelisted on THORChain.
 
-Example: https://gitlab.com/thorchain/thornode/-/merge_requests/2132
+Example: [https://gitlab.com/thorchain/thornode/-/merge_requests/2132](https://gitlab.com/thorchain/thornode/-/merge_requests/2132)

@@ -105,6 +105,7 @@ docs-init:
 	@cargo install mdbook-admonish --version 1.14.0
 	@cargo install mdbook-catppuccin --version 2.1.0
 	@cargo install mdbook-katex --version 0.5.9
+	@cargo install mdbook-embed --version 0.2.0
 	@cd docs && mdbook-catppuccin install
 	@cd docs && mdbook-admonish install --css-dir theme
 

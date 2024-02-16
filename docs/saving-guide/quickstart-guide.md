@@ -8,6 +8,10 @@ There is no permission, authentication or prior steps, so developers can get sta
 
 Under the hood, THORChain deposits the user’s Layer1 asset into a liquidity pool which earns yield. This yield is tracked and paid to the user’s deposit value. Users can withdraw their Layer1 asset, including the yield earned. There is no slashing, penalties, timelocks, or account minimum/maximums. The only fees paid are the Layer1 fees to make a deposit and withdraw transaction (as necessitated), and a slip-based fee on entry and exit to stop price manipulation attacks. Both of these are transparent and within the user’s control.
 
+```admonish indo
+[Streaming swaps](../swap-guide/streaming-swaps.md) is enabled for savers.
+```
+
 ## Quote for a Savers Quote
 
 Savers Quote endpoints have been created to simplify the implementation process.
