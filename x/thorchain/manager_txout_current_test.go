@@ -375,33 +375,28 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItemWithoutBFT(c *C) {
 }
 
 func (s TxOutStoreVCURSuite) TestCalcTxOutHeight(c *C) {
-	keeper := &TestCalcKeeper{
-		value: make(map[int64]cosmos.Uint),
-		mimir: make(map[string]int64),
-	}
+	ctx, keeper := setupKeeperForTest(c)
 
-	keeper.mimir["MinTxOutVolumeThreshold"] = 25_00000000
-	keeper.mimir["TxOutDelayRate"] = 25_00000000
-	keeper.mimir["MaxTxOutOffset"] = 720
-	keeper.mimir["TxOutDelayMax"] = 17280
+	pool := NewPool()
+	pool.Asset = common.BNBAsset
+	pool.BalanceRune = cosmos.NewUint(90527581399649)
+	pool.BalanceAsset = cosmos.NewUint(1402011488988)
+	c.Assert(keeper.SetPool(ctx, pool), IsNil)
+
+	keeper.SetMimir(ctx, "MinTxOutVolumeThreshold", 2500000000)
+	keeper.SetMimir(ctx, "TxOutDelayRate", 2500000000)
+	keeper.SetMimir(ctx, "MaxTxOutOffset", 720)
+	keeper.SetMimir(ctx, "TxOutDelayMax", 17280)
 	// With the above values, a RUNE value of 18,000 would be delayed for the full MaxTxOutOffset.
 
-	addValue := func(h int64, v cosmos.Uint) {
-		if _, ok := keeper.value[h]; !ok {
-			keeper.value[h] = cosmos.ZeroUint()
-		}
-		keeper.value[h] = keeper.value[h].Add(v)
-	}
-
-	ctx, _ := setupManagerForTest(c)
-
-	txout := TxOutStorageVCUR{keeper: keeper}
+	version := GetCurrentVersion()
+	txout, err := GetTxOutStore(version, keeper, NewDummyEventMgr(), NewDummyGasManager())
+	c.Assert(err, IsNil)
 
 	toi := TxOutItem{
 		Coin: common.NewCoin(common.BNBAsset, cosmos.NewUint(2*common.One)),
 		Memo: "OUT:nomnomnom",
 	}
-	pool, _ := keeper.GetPool(ctx, common.BNBAsset)
 	value := pool.AssetValueInRune(toi.Coin.Amount)
 	c.Check(value.Uint64(), Equals, uint64(129_13957141), Commentf("%d", value.Uint64()))
 
@@ -411,7 +406,7 @@ func (s TxOutStoreVCURSuite) TestCalcTxOutHeight(c *C) {
 	targetBlock, _, err := txout.CalcTxOutHeight(ctx, keeper.GetVersion(), toi)
 	c.Assert(err, IsNil)
 	c.Check(targetBlock, Equals, int64(24))
-	addValue(targetBlock, value)
+	c.Assert(keeper.AppendTxOut(ctx, targetBlock, toi), IsNil)
 	// (sumValue / minTxOutVolumeThreshold) * common.One = (129_13957141 / 25_00000000) * 1_00000000 = 5_00000000,
 	// which reduces the 25_00000000 TxOutDelayRate to 20_00000000.
 	// value / TxOutDelayRate is then 129 / 20 ~= 6, added to the starting height of 18 to get 24.
@@ -419,10 +414,28 @@ func (s TxOutStoreVCURSuite) TestCalcTxOutHeight(c *C) {
 	targetBlock, _, err = txout.CalcTxOutHeight(ctx, keeper.GetVersion(), toi)
 	c.Assert(err, IsNil)
 	c.Check(targetBlock, Equals, int64(26))
-	addValue(targetBlock, value)
+	c.Assert(keeper.AppendTxOut(ctx, targetBlock, toi), IsNil)
 	// (sumValue / minTxOutVolumeThreshold) * common.One = (258_27914282 / 25_00000000) * 1_00000000 = 10_00000000,
 	// which reduces the 25_00000000 TxOutDelayRate to 15_00000000.
 	// value / TxOutDelayRate is then 129 / 15 ~= 8, added to the starting height of 18 to get 26.
+
+	normalGasTOI := toi
+	normalGasTOI.MaxGas = common.Gas{toi.Coin}
+	normalGasTOI.MaxGas[0].Amount = cosmos.NewUint(7500)
+	normalGasValue := pool.AssetValueInRune(normalGasTOI.MaxGas[0].Amount)
+	c.Check(normalGasValue.String(), Equals, "484273", Commentf("%s", normalGasValue.String()))
+	targetBlock, _, err = txout.CalcTxOutHeight(ctx, keeper.GetVersion(), normalGasTOI)
+	c.Assert(err, IsNil)
+	c.Check(targetBlock, Equals, int64(31))
+
+	millionGasTOI := normalGasTOI
+	millionGasTOI.MaxGas = common.Gas{normalGasTOI.MaxGas[0]}
+	millionGasTOI.MaxGas[0].Amount = millionGasTOI.MaxGas[0].Amount.MulUint64(1e6)
+	millionGasValue := pool.AssetValueInRune(millionGasTOI.MaxGas[0].Amount)
+	c.Check(millionGasValue.String(), Equals, "484273392786", Commentf("%s", millionGasValue.String()))
+	targetBlock, _, err = txout.CalcTxOutHeight(ctx, keeper.GetVersion(), millionGasTOI)
+	c.Assert(err, IsNil)
+	c.Check(targetBlock, Equals, int64(738)) // This would have the maximum delay in contrast to with normal gas, due to its higher value.
 
 	thousandSizeTOI := toi
 	thousandSizeTOI.Coin.Amount = toi.Coin.Amount.MulUint64(1000)
@@ -432,7 +445,7 @@ func (s TxOutStoreVCURSuite) TestCalcTxOutHeight(c *C) {
 	targetBlock, _, err = txout.CalcTxOutHeight(ctx, keeper.GetVersion(), thousandSizeTOI)
 	c.Assert(err, IsNil)
 	c.Check(targetBlock, Equals, int64(738))
-	addValue(targetBlock, thousandSizeTOIValue)
+	c.Assert(keeper.AppendTxOut(ctx, targetBlock, thousandSizeTOI), IsNil)
 	// (sumValue / minTxOutVolumeThreshold) * common.One = (129_397_85055246 / 25_00000000) * 1_00000000 = 5_175_00000000,
 	// which reduces the 25_00000000 TxOutDelayRate to 1.
 	// value / TxOutDelayRate is then 129_139_57140964 / 1, which is capped at MaxTxOutOffset (720).

@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/blang/semver"
+
+	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 )
 
@@ -68,29 +71,52 @@ func (k KVStore) GetTxOut(ctx cosmos.Context, height int64) (*TxOut, error) {
 }
 
 func (k KVStore) GetTxOutValue(ctx cosmos.Context, height int64) (cosmos.Uint, cosmos.Uint, error) {
+	version := k.GetVersion()
+	switch {
+	case version.GTE(semver.MustParse("1.128.0")):
+		return k.GetTxOutValueV128(ctx, height)
+	default:
+		return k.GetTxOutValueV1(ctx, height)
+	}
+}
+
+func (k KVStore) GetTxOutValueV128(ctx cosmos.Context, height int64) (cosmos.Uint, cosmos.Uint, error) {
 	txout, err := k.GetTxOut(ctx, height)
 	if err != nil {
 		return cosmos.ZeroUint(), cosmos.ZeroUint(), err
 	}
+	runeValue, cloutValue := k.GetTOIsValue(ctx, txout.TxArray...)
+	return runeValue, cloutValue, nil
+}
 
+func (k KVStore) GetTOIsValue(ctx cosmos.Context, tois ...TxOutItem) (cosmos.Uint, cosmos.Uint) {
 	runeValue := cosmos.ZeroUint()
 	cloutValue := cosmos.ZeroUint()
-	for _, item := range txout.TxArray {
-		if item.Coin.Asset.IsRune() {
-			runeValue = runeValue.Add(item.Coin.Amount)
-		} else {
-			var pool Pool
-			pool, err = k.GetPool(ctx, item.Coin.Asset)
-			if err != nil {
-				_ = dbError(ctx, fmt.Sprintf("unable to get pool : %s", item.Coin.Asset), err)
+	poolCache := map[common.Asset]Pool{} // Cache the pools to avoid duplicated GetPool calls
+	for i := range tois {
+		for _, coin := range append(common.Coins{tois[i].Coin}, tois[i].MaxGas...) {
+			if coin.Asset.IsRune() {
+				runeValue = runeValue.Add(coin.Amount)
 				continue
 			}
-			runeValue = runeValue.Add(pool.AssetValueInRune(item.Coin.Amount))
+
+			pool, ok := poolCache[coin.Asset]
+			if !ok {
+				var err error
+				pool, err = k.GetPool(ctx, coin.Asset.GetLayer1Asset())
+				if err != nil {
+					_ = dbError(ctx, fmt.Sprintf("unable to get pool : %s", coin.Asset), err)
+					continue
+				}
+				poolCache[coin.Asset] = pool
+			}
+			runeValue = runeValue.Add(pool.AssetValueInRune(coin.Amount))
 		}
-		if item.CloutSpent != nil {
-			cloutValue = cloutValue.Add(*item.CloutSpent)
+
+		if tois[i].CloutSpent != nil {
+			cloutValue = cloutValue.Add(*tois[i].CloutSpent)
 		}
 	}
 
-	return runeValue, cloutValue, nil
+	return runeValue, cloutValue
 }
