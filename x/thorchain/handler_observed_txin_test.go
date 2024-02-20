@@ -273,12 +273,11 @@ func (s *HandlerObservedTxInSuite) testHandleWithConfirmation(c *C) {
 	voter, err = keeper.GetObservedTxInVoter(ctx, tx.ID)
 	c.Assert(err, IsNil)
 	c.Assert(voter.Txs, HasLen, 1)
-	c.Assert(voter.UpdatedVault, Equals, true)
+	c.Assert(voter.UpdatedVault, Equals, false)
 	c.Assert(voter.FinalisedHeight, Equals, int64(0))
 	c.Check(keeper.height, Equals, int64(12))
-	// make sure fund has been credit to vault correctly
 	bnbCoin := keeper.vault.Coins.GetCoin(common.BNBAsset)
-	c.Assert(bnbCoin.Amount.Equal(cosmos.OneUint()), Equals, true)
+	c.Assert(bnbCoin.Amount.Equal(cosmos.ZeroUint()), Equals, true)
 	// make sure the logic has not been processed , as tx has not been finalised , still waiting for confirmation
 	c.Check(keeper.msg.Tx.ID.Equals(tx.ID), Equals, false)
 
@@ -289,12 +288,11 @@ func (s *HandlerObservedTxInSuite) testHandleWithConfirmation(c *C) {
 	voter, err = keeper.GetObservedTxInVoter(ctx, tx.ID)
 	c.Assert(err, IsNil)
 	c.Assert(voter.Txs, HasLen, 1)
-	c.Assert(voter.UpdatedVault, Equals, true)
+	c.Assert(voter.UpdatedVault, Equals, false)
 	c.Assert(voter.FinalisedHeight, Equals, int64(0))
 	c.Check(keeper.height, Equals, int64(12))
-	// make sure fund has not been doubled
 	bnbCoin = keeper.vault.Coins.GetCoin(common.BNBAsset)
-	c.Assert(bnbCoin.Amount.Equal(cosmos.OneUint()), Equals, true)
+	c.Assert(bnbCoin.Amount.Equal(cosmos.ZeroUint()), Equals, true)
 	c.Check(keeper.msg.Tx.ID.Equals(tx.ID), Equals, false)
 
 	//  first finalised message
@@ -304,12 +302,11 @@ func (s *HandlerObservedTxInSuite) testHandleWithConfirmation(c *C) {
 	c.Assert(err, IsNil)
 	voter, err = keeper.GetObservedTxInVoter(ctx, tx.ID)
 	c.Assert(err, IsNil)
-	c.Assert(voter.UpdatedVault, Equals, true)
+	c.Assert(voter.UpdatedVault, Equals, false)
 	c.Assert(voter.FinalisedHeight, Equals, int64(0))
 	c.Assert(voter.Height, Equals, int64(18))
-	// make sure fund has not been doubled
 	bnbCoin = keeper.vault.Coins.GetCoin(common.BNBAsset)
-	c.Assert(bnbCoin.Amount.Equal(cosmos.OneUint()), Equals, true)
+	c.Assert(bnbCoin.Amount.Equal(cosmos.ZeroUint()), Equals, true)
 	c.Check(keeper.msg.Tx.ID.Equals(tx.ID), Equals, false)
 
 	// second finalised message
@@ -318,17 +315,30 @@ func (s *HandlerObservedTxInSuite) testHandleWithConfirmation(c *C) {
 	c.Assert(err, IsNil)
 	voter, err = keeper.GetObservedTxInVoter(ctx, tx.ID)
 	c.Assert(err, IsNil)
-	c.Assert(voter.UpdatedVault, Equals, true)
+	c.Assert(voter.UpdatedVault, Equals, false)
 	c.Assert(voter.FinalisedHeight, Equals, int64(0))
 	c.Assert(voter.Height, Equals, int64(18))
-	// make sure fund has not been doubled
 	bnbCoin = keeper.vault.Coins.GetCoin(common.BNBAsset)
-	c.Assert(bnbCoin.Amount.Equal(cosmos.OneUint()), Equals, true)
+	c.Assert(bnbCoin.Amount.Equal(cosmos.ZeroUint()), Equals, true)
 	c.Check(keeper.msg.Tx.ID.Equals(tx.ID), Equals, false)
 
 	// third finalised message
 	fMsg2 := NewMsgObservedTxIn(txs, keeper.nas[2].NodeAddress)
 	_, err = handler.handle(ctx, *fMsg2)
+	c.Assert(err, IsNil)
+	voter, err = keeper.GetObservedTxInVoter(ctx, tx.ID)
+	c.Assert(err, IsNil)
+	c.Assert(voter.UpdatedVault, Equals, true)
+	c.Assert(voter.FinalisedHeight, Equals, int64(18))
+	c.Assert(voter.Height, Equals, int64(18))
+	// make sure fund has been credit to vault correctly
+	bnbCoin = keeper.vault.Coins.GetCoin(common.BNBAsset)
+	c.Assert(bnbCoin.Amount.Equal(cosmos.OneUint()), Equals, true)
+	c.Check(keeper.msg.Tx.ID.Equals(tx.ID), Equals, true)
+
+	// third finalised message
+	fMsg3 := NewMsgObservedTxIn(txs, keeper.nas[3].NodeAddress)
+	_, err = handler.handle(ctx, *fMsg3)
 	c.Assert(err, IsNil)
 	voter, err = keeper.GetObservedTxInVoter(ctx, tx.ID)
 	c.Assert(err, IsNil)
@@ -781,7 +791,7 @@ func (s *HandlerObservedTxInSuite) TestVaultStatus(c *C) {
 		c.Assert(err, IsNil, Commentf(tc.name))
 		c.Check(keeper.voter.Height, Equals, int64(18), Commentf(tc.name))
 
-		c.Check(keeper.voter.UpdatedVault, Equals, true, Commentf(tc.name))
+		c.Check(keeper.voter.UpdatedVault, Equals, false, Commentf(tc.name))
 		c.Check(keeper.vault.InboundTxCount, Equals, int64(0), Commentf(tc.name))
 
 		keeper.vault.Status = tc.statusAtFinalisation

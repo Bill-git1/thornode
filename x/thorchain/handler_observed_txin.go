@@ -70,6 +70,8 @@ func (h ObservedTxInHandler) validateV1(ctx cosmos.Context, msg MsgObservedTxIn)
 func (h ObservedTxInHandler) handle(ctx cosmos.Context, msg MsgObservedTxIn) (*cosmos.Result, error) {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.128.0")):
+		return h.handleV128(ctx, msg)
 	case version.GTE(semver.MustParse("1.124.0")):
 		return h.handleV124(ctx, msg)
 	case version.GTE(semver.MustParse("1.116.0")):
@@ -155,7 +157,7 @@ func (h ObservedTxInHandler) preflightV123(ctx cosmos.Context, voter ObservedTxV
 	return voter, ok
 }
 
-func (h ObservedTxInHandler) handleV124(ctx cosmos.Context, msg MsgObservedTxIn) (*cosmos.Result, error) {
+func (h ObservedTxInHandler) handleV128(ctx cosmos.Context, msg MsgObservedTxIn) (*cosmos.Result, error) {
 	activeNodeAccounts, err := h.mgr.Keeper().ListActiveValidators(ctx)
 	if err != nil {
 		return nil, wrapError(ctx, err, "fail to get list of active node accounts")
@@ -174,8 +176,8 @@ func (h ObservedTxInHandler) handleV124(ctx cosmos.Context, msg MsgObservedTxIn)
 			continue
 		}
 
-		voter, ok := h.preflight(ctx, voter, activeNodeAccounts, tx, msg.Signer)
-		if !ok {
+		voter, isConsensus := h.preflight(ctx, voter, activeNodeAccounts, tx, msg.Signer)
+		if !isConsensus {
 			if voter.Height == ctx.BlockHeight() || voter.FinalisedHeight == ctx.BlockHeight() {
 				// we've already process the transaction, but we should still
 				// update the observing addresses
@@ -184,7 +186,7 @@ func (h ObservedTxInHandler) handleV124(ctx cosmos.Context, msg MsgObservedTxIn)
 			continue
 		}
 
-		// all logic after this  is after consensus
+		// all logic after this is upon consensus
 
 		ctx.Logger().Info("handleMsgObservedTxIn request", "Tx:", tx.String())
 		if voter.Reverted {
@@ -192,25 +194,24 @@ func (h ObservedTxInHandler) handleV124(ctx cosmos.Context, msg MsgObservedTxIn)
 			continue
 		}
 
-		var txIn ObservedTx
-		if voter.HasFinalised(activeNodeAccounts) || voter.HasConsensus(activeNodeAccounts) {
-			voter.Tx.Tx.Memo = tx.Tx.Memo
-			txIn = voter.Tx
-		}
 		vault, err := h.mgr.Keeper().GetVault(ctx, tx.ObservedPubKey)
 		if err != nil {
 			ctx.Logger().Error("fail to get vault", "error", err)
 			continue
 		}
 
-		if vault.IsAsgard() {
-			if !voter.UpdatedVault {
+		voter.Tx.Tx.Memo = tx.Tx.Memo
+
+		hasFinalised := voter.HasFinalised(activeNodeAccounts)
+		if hasFinalised {
+			if vault.IsAsgard() && !voter.UpdatedVault {
 				vault.AddFunds(tx.Tx.Coins)
 				voter.UpdatedVault = true
 			}
-		}
-		if voter.HasFinalised(activeNodeAccounts) {
 			vault.InboundTxCount++
+		}
+		if err := h.mgr.Keeper().SetLastChainHeight(ctx, tx.Tx.Chain, tx.BlockHeight); err != nil {
+			ctx.Logger().Error("fail to set last chain height", "error", err)
 		}
 
 		// save the changes in Tx Voter to key value store
@@ -231,16 +232,12 @@ func (h ObservedTxInHandler) handleV124(ctx cosmos.Context, msg MsgObservedTxIn)
 			continue
 		}
 
-		if err := h.mgr.Keeper().SetLastChainHeight(ctx, tx.Tx.Chain, tx.BlockHeight); err != nil {
-			ctx.Logger().Error("fail to set last chain height", "error", err)
-		}
-
 		// add addresses to observing addresses. This is used to detect
 		// active/inactive observing node accounts
 
-		h.mgr.ObMgr().AppendObserver(tx.Tx.Chain, txIn.GetSigners())
+		h.mgr.ObMgr().AppendObserver(tx.Tx.Chain, voter.Tx.GetSigners())
 
-		if !voter.HasFinalised(activeNodeAccounts) {
+		if !hasFinalised {
 			ctx.Logger().Info("Tx has not been finalised yet , waiting for confirmation counting", "hash", voter.TxID)
 			continue
 		}
@@ -254,7 +251,7 @@ func (h ObservedTxInHandler) handleV124(ctx cosmos.Context, msg MsgObservedTxIn)
 		}
 
 		// construct msg from memo
-		m, txErr := processOneTxIn(ctx, h.mgr.GetVersion(), h.mgr.Keeper(), txIn, msg.Signer)
+		m, txErr := processOneTxIn(ctx, h.mgr.GetVersion(), h.mgr.Keeper(), voter.Tx, msg.Signer)
 		if txErr != nil {
 			ctx.Logger().Error("fail to process inbound tx", "error", txErr.Error(), "tx hash", tx.Tx.ID.String())
 			if newErr := refundTx(ctx, tx, h.mgr, CodeInvalidMemo, txErr.Error(), ""); nil != newErr {
