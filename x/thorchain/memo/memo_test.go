@@ -193,6 +193,11 @@ func (s *MemoSuite) TestParseWithAbbreviated(c *C) {
 	c.Check(memo.GetDexTargetAddress(), Equals, "0x2354234523452345")
 	c.Check(memo.GetDexTargetLimit().Equal(cosmos.NewUint(1234444)), Equals, true)
 
+	// test dex agg limit with scientific notation - long number
+	memo, err = ParseMemoWithTHORNames(ctx, k, "=:"+common.RuneAsset().String()+":bnb1lejrrtta9cgr49fuh7ktu3sddhe0ff7wenlpn6::::123:0x2354234523452345:1425e18")
+	c.Assert(err, IsNil)
+	c.Check(memo.GetDexTargetLimit().Equal(cosmos.NewUintFromString("1425000000000000000000")), Equals, true) // noting the large number overflows `cosmos.NewUint`
+
 	memo, err = ParseMemoWithTHORNames(ctx, k, "OUT:MUKVQILIHIAUSEOVAXBFEZAJKYHFJYHRUUYGQJZGFYBYVXCXYNEMUOAIQKFQLLCX")
 	c.Assert(err, IsNil)
 	c.Check(memo.IsType(TxOutbound), Equals, true, Commentf("%s", memo.GetType()))
