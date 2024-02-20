@@ -1171,3 +1171,38 @@ func migrateStoreV126(ctx cosmos.Context, mgr *Mgrs) {
 		}
 	}
 }
+
+func migrateStoreV128(ctx cosmos.Context, mgr *Mgrs) {
+	defer func() {
+		if err := recover(); err != nil {
+			ctx.Logger().Error("fail to migrate store to v128", "error", err)
+		}
+	}()
+
+	// burn 60m RUNE from standby reserve
+	toBurn := common.NewCoin(common.RuneNative, cosmos.NewUint(60000000*1e8))
+	standbyReserveAddress, err := cosmos.AccAddressFromBech32("thor1lj62pg6ryxv2htekqx04nv7wd3g98qf9gfvamy")
+	if err != nil {
+		ctx.Logger().Error("unable to AccAddressFromBech32 in v128 store migration", "error", err)
+		return
+	}
+
+	// cannot burn directly from account. send to thorchain module, then burn
+	err = mgr.Keeper().SendFromAccountToModule(ctx, standbyReserveAddress, ModuleName, common.Coins{toBurn})
+	if err != nil {
+		ctx.Logger().Error("unable to SendFromAccountToModule in v128 store migration", "error", err)
+		return
+	}
+
+	// burn coins
+	err = mgr.Keeper().BurnFromModule(ctx, ModuleName, toBurn)
+	if err != nil {
+		ctx.Logger().Error("unable to BurnFromModule in v128 store migration", "error", err)
+		return
+	}
+	burnEvt := NewEventMintBurn(BurnSupplyType, toBurn.Asset.Native(), toBurn.Amount, "adr")
+	if err := mgr.EventMgr().EmitEvent(ctx, burnEvt); err != nil {
+		ctx.Logger().Error("fail to emit burn event in v128 store migration", "error", err)
+	}
+	ctx.Logger().Info("Burned 60m RUNE")
+}
