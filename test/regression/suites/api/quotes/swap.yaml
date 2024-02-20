@@ -240,6 +240,7 @@ params:
 asserts:
   - .memo == "=:BTC.BTC:{{ addr_btc_fox }}:912514:{{ addr_thor_pig }}:500"
   - .expected_amount_out|tonumber == 980425
+  - .recommended_min_amount_in == "80000000"
   - .fees.affiliate == "53363"
   - .fees.liquidity == "9692"
   - .fees.outbound == "14000"
@@ -337,6 +338,7 @@ params:
 asserts:
   - .memo == "=:BTC.BTC:{{ addr_btc_fox }}:895131:{{ addr_thor_pig }}:500"
   - .expected_amount_out|tonumber == 943729
+  - .recommended_min_amount_in == "5120000"
   - .fees.affiliate == "52347"
   - .fees.liquidity == "18343"
   - .fees.outbound == "14000"
@@ -440,6 +442,7 @@ params:
 asserts:
   - .memo == "=:THOR.RUNE:{{ addr_thor_fox }}:838252262:xx:500"
   - .expected_amount_out|tonumber == 912114319
+  - .recommended_min_amount_in == "5120000"
   - .fees.affiliate == "49020600"
   - .fees.liquidity == "8598104"
   - .fees.outbound == "2000000"

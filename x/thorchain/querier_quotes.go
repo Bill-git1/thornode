@@ -447,15 +447,24 @@ func quoteOutboundInfo(ctx cosmos.Context, mgr *Mgrs, coin common.Coin) (int64, 
 // Swap
 // -------------------------------------------------------------------------------------
 
-// calculateMinSwapAmount returns the recommended minimum swap amount
-// The recommended min swap amount is:
-// - MAX(outbound_fee(src_chain), outbound_fee(dest_chain)) * 4 (priced in the inbound asset)
+// calculateMinSwapAmount returns the recommended minimum swap amount The recommended
+// min swap amount is: - MAX(
 //
-// The reason the base value is the MAX of the outbound fees of each chain is because if the swap is refunded
-// the input amount will need to cover the outbound fee of the source chain.
-// A 4x buffer is applied because outbound fees can spike quickly, meaning the original input amount could be less than the new
-// outbound fee. If this happens and the swap is refunded, the refund will fail, and the user will lose the entire input amount.
-func calculateMinSwapAmount(ctx cosmos.Context, mgr *Mgrs, fromAsset, toAsset common.Asset) (cosmos.Uint, error) {
+//	  outbound_fee(src_chain) * 4,
+//	  outbound_fee(dest_chain) * 4,
+//	  (native_tx_fee_rune * 2) * 10,000 / affiliateBps
+//	)
+//
+// The reason the base value is the MAX of the outbound fees of each chain is because if
+// the swap is refunded the input amount will need to cover the outbound fee of the
+// source chain. A 4x buffer is applied because outbound fees can spike quickly, meaning
+// the original input amount could be less than the new outbound fee. If this happens
+// and the swap is refunded, the refund will fail, and the user will lose the entire
+// input amount. The min amount could also be determined by the affiliate bps of the
+// swap. The affiliate bps of the input amount needs to be enough to cover the native tx fee for the
+// affiliate swap to RUNE. In this case, we give a 2x buffer on the native_tx_fee so the
+// affiliate receives some amount after the fee is deducted.
+func calculateMinSwapAmount(ctx cosmos.Context, mgr *Mgrs, fromAsset, toAsset common.Asset, affiliateBps cosmos.Uint) (cosmos.Uint, error) {
 	srcOutboundFee := mgr.GasMgr().GetFee(ctx, fromAsset.GetChain(), fromAsset)
 	destOutboundFee := mgr.GasMgr().GetFee(ctx, toAsset.GetChain(), toAsset)
 
@@ -475,7 +484,24 @@ func calculateMinSwapAmount(ctx cosmos.Context, mgr *Mgrs, fromAsset, toAsset co
 		minSwapAmount = destInSrcAsset
 	}
 
-	return minSwapAmount.Mul(cosmos.NewUint(4)), nil
+	minSwapAmount = minSwapAmount.Mul(cosmos.NewUint(4))
+
+	if affiliateBps.GT(cosmos.ZeroUint()) {
+		nativeTxFeeRune := mgr.GasMgr().GetFee(ctx, common.THORChain, common.RuneNative)
+		affSwapAmountRune := nativeTxFeeRune.Mul(cosmos.NewUint(2))
+		mainSwapAmountRune := affSwapAmountRune.Mul(cosmos.NewUint(10_000)).Quo(affiliateBps)
+
+		mainSwapAmount, err := quoteConvertAsset(ctx, mgr, common.RuneAsset(), mainSwapAmountRune, fromAsset)
+		if err != nil {
+			return cosmos.ZeroUint(), fmt.Errorf("fail to convert main swap amount to src asset %w", err)
+		}
+
+		if mainSwapAmount.GT(minSwapAmount) {
+			minSwapAmount = mainSwapAmount
+		}
+	}
+
+	return minSwapAmount, nil
 }
 
 func queryQuoteSwap(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {
@@ -827,7 +853,7 @@ func queryQuoteSwap(ctx cosmos.Context, path []string, req abci.RequestQuery, mg
 	res.Notes = fromAsset.GetChain().InboundNotes()
 	res.Warning = quoteWarning
 	res.Expiry = time.Now().Add(quoteExpiration).Unix()
-	minSwapAmount, err := calculateMinSwapAmount(ctx, mgr, fromAsset, toAsset)
+	minSwapAmount, err := calculateMinSwapAmount(ctx, mgr, fromAsset, toAsset, affiliateBps)
 	if err != nil {
 		return quoteErrorResponse(fmt.Errorf("Failed to calculate min amount in: %s", err.Error()))
 	}
@@ -1384,7 +1410,7 @@ func queryQuoteLoanOpen(ctx cosmos.Context, path []string, req abci.RequestQuery
 		res.Memo = wrapString(memoString)
 	}
 
-	minLoanOpenAmount, err := calculateMinSwapAmount(ctx, mgr, asset, targetAsset)
+	minLoanOpenAmount, err := calculateMinSwapAmount(ctx, mgr, asset, targetAsset, cosmos.ZeroUint())
 	if err != nil {
 		return quoteErrorResponse(fmt.Errorf("Failed to calculate min amount in: %s", err.Error()))
 	}
@@ -1627,7 +1653,7 @@ func quoteSimulateCloseLoan(ctx cosmos.Context, mgr *Mgrs, msg *MsgLoanRepayment
 	}
 	res.Memo = memo.String()
 
-	minLoanCloseAmount, err := calculateMinSwapAmount(ctx, mgr, msg.Coin.Asset, msg.CollateralAsset)
+	minLoanCloseAmount, err := calculateMinSwapAmount(ctx, mgr, msg.Coin.Asset, msg.CollateralAsset, cosmos.ZeroUint())
 	if err != nil {
 		data, err = quoteErrorResponse(fmt.Errorf("Failed to calculate min amount in: %s", err.Error()))
 		return nil, data, err
