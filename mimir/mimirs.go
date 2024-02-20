@@ -14,10 +14,10 @@ func getRef(refs []string) (reference string) {
 }
 
 func NewAffiliateFeeBasisPointsMax(refs ...string) Mimir {
-	id := AffiliateFeeBasisPointsMaxId
+	id := AffiliateFeeBasisPointsMax
 	return &mimir{
 		id:           id,
-		name:         mimirRefToStringMap[id],
+		name:         id.String(),
 		defaultValue: int64(constants.MaxBasisPts),
 		mimirType:    EconomicMimir,
 		reference:    getRef(refs),
@@ -30,10 +30,10 @@ func NewAffiliateFeeBasisPointsMax(refs ...string) Mimir {
 }
 
 func NewBondPause(refs ...string) Mimir {
-	id := BondPauseId
+	id := BondPause
 	return &mimir{
 		id:           id,
-		name:         mimirRefToStringMap[id],
+		name:         id.String(),
 		defaultValue: 0,
 		reference:    getRef(refs),
 		mimirType:    OperationalMimir,
@@ -46,10 +46,10 @@ func NewBondPause(refs ...string) Mimir {
 }
 
 func NewConfBasisPointValue(refs ...string) Mimir {
-	id := ConfMultiplierBasisPointsId
+	id := ConfMultiplierBasisPoints
 	return &mimir{
 		id:           id,
-		name:         mimirRefToStringMap[id],
+		name:         id.String(),
 		defaultValue: int64(constants.MaxBasisPts),
 		reference:    getRef(refs),
 		mimirType:    EconomicMimir,
@@ -62,10 +62,10 @@ func NewConfBasisPointValue(refs ...string) Mimir {
 }
 
 func NewMaxConfValue(refs ...string) Mimir {
-	id := MaxConfirmationsId
+	id := MaxConfirmations
 	return &mimir{
 		id:           id,
-		name:         mimirRefToStringMap[id],
+		name:         id.String(),
 		defaultValue: 0,
 		reference:    getRef(refs),
 		mimirType:    EconomicMimir,
@@ -78,10 +78,10 @@ func NewMaxConfValue(refs ...string) Mimir {
 }
 
 func NewSwapperCloutLimit(refs ...string) Mimir {
-	id := CloutSwapperLimitId
+	id := CloutSwapperLimit
 	return &mimir{
 		id:           id,
-		name:         mimirRefToStringMap[id],
+		name:         id.String(),
 		defaultValue: 0,
 		mimirType:    EconomicMimir,
 		reference:    getRef(refs),
@@ -94,10 +94,10 @@ func NewSwapperCloutLimit(refs ...string) Mimir {
 }
 
 func NewSwapperCloutReset(refs ...string) Mimir {
-	id := CloutSwapperResetId
+	id := CloutSwapperReset
 	return &mimir{
 		id:           id,
-		name:         mimirRefToStringMap[id],
+		name:         id.String(),
 		defaultValue: 720,
 		mimirType:    EconomicMimir,
 		reference:    getRef(refs),
@@ -110,10 +110,10 @@ func NewSwapperCloutReset(refs ...string) Mimir {
 }
 
 func NewSwapSlipBasisPointsMin(refs ...string) Mimir {
-	id := SwapSlipBasisPointsMinId
+	id := SwapSlipBasisPointsMin
 	return &mimir{
 		id:           id,
-		name:         mimirRefToStringMap[id],
+		name:         id.String(),
 		defaultValue: 0,
 		reference:    getRef(refs),
 		mimirType:    EconomicMimir,

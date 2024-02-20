@@ -27,5 +27,10 @@ diff -u --color=always /tmp/mimir-ids-develop /tmp/mimir-ids-current || true
 size=$(wc -c </tmp/mimir-ids-develop)
 if ! cmp -n "$size" /tmp/mimir-ids-develop /tmp/mimir-ids-current; then
   echo "Mimir IDs are immutable. Do not remove existing IDs or insert new ones before the end. New IDs must be appended."
-  exit 1
+  if [[ $CI_MERGE_REQUEST_TITLE == *"#check-lint-warning"* ]]; then
+    echo "Merge request contains #check-lint-warning."
+  else
+    echo 'Correct the change to mimir IDs or add "#check-lint-warning" to the PR description.'
+    exit 1
+  fi
 fi

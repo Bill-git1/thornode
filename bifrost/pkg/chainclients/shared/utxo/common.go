@@ -29,7 +29,7 @@ func GetAsgardAddress(chain common.Chain, bridge thorclient.ThorchainBridge) ([]
 }
 
 func GetConfMulBasisPoint(chain string, bridge thorclient.ThorchainBridge) (cosmos.Uint, error) {
-	confMultiplier, err := bridge.GetMimir(fmt.Sprintf("%d-%s", mimir.ConfMultiplierBasisPointsId, chain))
+	confMultiplier, err := bridge.GetMimir(fmt.Sprintf("%d-%s", mimir.ConfMultiplierBasisPoints, chain))
 	// should never be negative
 	if err != nil || confMultiplier <= 0 {
 		return cosmos.NewUint(constants.MaxBasisPts), err
@@ -38,7 +38,7 @@ func GetConfMulBasisPoint(chain string, bridge thorclient.ThorchainBridge) (cosm
 }
 
 func MaxConfAdjustment(confirm uint64, chain string, bridge thorclient.ThorchainBridge) (uint64, error) {
-	maxConfirmations, err := bridge.GetMimir(fmt.Sprintf("%d-%s", mimir.MaxConfirmationsId, chain))
+	maxConfirmations, err := bridge.GetMimir(fmt.Sprintf("%d-%s", mimir.MaxConfirmations, chain))
 	if err != nil {
 		return confirm, err
 	}

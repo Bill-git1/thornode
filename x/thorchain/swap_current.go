@@ -472,7 +472,7 @@ func (s *SwapperVCUR) MinSlipBps(
 	} else {
 		ref = constants.L1SlipMinBps.String()
 	}
-	minFeeMimir, found := mimir.GetMimir(mimir.SwapSlipBasisPointsMinId, ref)
+	minFeeMimir, found := mimir.GetMimir(mimir.SwapSlipBasisPointsMin, ref)
 	if !found {
 		return cosmos.ZeroUint()
 	}

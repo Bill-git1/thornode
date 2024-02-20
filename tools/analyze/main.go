@@ -224,7 +224,7 @@ func GetMimirCheck(pass *analysis.Pass) (interface{}, error) {
 			return
 		}
 		firstSpec, ok := n.Specs[0].(*ast.ValueSpec)
-		if !ok || len(firstSpec.Names) == 0 || firstSpec.Names[0].Name != "UnknownId" {
+		if !ok || len(firstSpec.Names) == 0 || firstSpec.Names[0].Name != "Unknown" {
 			return
 		}
 		for _, spec := range n.Specs {
@@ -248,7 +248,7 @@ func GetMimirCheck(pass *analysis.Pass) (interface{}, error) {
 	}
 
 	for _, id := range constIds {
-		if id == "UnknownId" {
+		if id == "Unknown" {
 			continue
 		}
 		if _, found := caseClauses[id]; !found {

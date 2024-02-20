@@ -389,7 +389,7 @@ func quoteInboundInfo(ctx cosmos.Context, mgr *Mgrs, amount sdk.Uint, chain comm
 	}
 
 	// estimate the inbound confirmation count blocks: ceil(amount/coinbase * conf adjustment)
-	confMimir, found := mimir.GetMimir(mimir.ConfMultiplierBasisPointsId, chain.String())
+	confMimir, found := mimir.GetMimir(mimir.ConfMultiplierBasisPoints, chain.String())
 	if !found {
 		return common.NoAddress, common.NoAddress, 0, fmt.Errorf("conf multiplier mimir not found")
 	}
@@ -414,7 +414,7 @@ func quoteInboundInfo(ctx cosmos.Context, mgr *Mgrs, amount sdk.Uint, chain comm
 
 	// max confirmation adjustment for btc and eth
 	if chain.Equals(common.BTCChain) || chain.Equals(common.ETHChain) {
-		maxConfMimir, found := mimir.GetMimir(mimir.MaxConfirmationsId, chain.String())
+		maxConfMimir, found := mimir.GetMimir(mimir.MaxConfirmations, chain.String())
 		if !found {
 			return common.NoAddress, common.NoAddress, 0, fmt.Errorf("max conf multiplier mimir not found")
 		}
