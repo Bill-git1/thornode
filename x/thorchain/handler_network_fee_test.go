@@ -32,11 +32,11 @@ func (k KeeperObserveNetworkFeeTest) ListActiveValidators(ctx cosmos.Context) (N
 	return k.Keeper.ListActiveValidators(ctx)
 }
 
-func (k KeeperObserveNetworkFeeTest) GetObservedNetworkFeeVoter(ctx cosmos.Context, height int64, chain common.Chain, rate int64) (ObservedNetworkFeeVoter, error) {
+func (k KeeperObserveNetworkFeeTest) GetObservedNetworkFeeVoter(ctx cosmos.Context, height int64, chain common.Chain, rate, size int64) (ObservedNetworkFeeVoter, error) {
 	if k.errFailGetObservedNetworkVoter {
 		return ObservedNetworkFeeVoter{}, errKaboom
 	}
-	return k.Keeper.GetObservedNetworkFeeVoter(ctx, height, chain, rate)
+	return k.Keeper.GetObservedNetworkFeeVoter(ctx, height, chain, rate, size)
 }
 
 func (k KeeperObserveNetworkFeeTest) SaveNetworkFee(ctx cosmos.Context, chain common.Chain, networkFee NetworkFee) error {

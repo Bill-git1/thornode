@@ -79,7 +79,7 @@ func (h NetworkFeeHandler) handleV123(ctx cosmos.Context, msg MsgNetworkFee) (*c
 		return nil, err
 	}
 
-	voter, err := h.mgr.Keeper().GetObservedNetworkFeeVoter(ctx, msg.BlockHeight, msg.Chain, int64(msg.TransactionFeeRate))
+	voter, err := h.mgr.Keeper().GetObservedNetworkFeeVoter(ctx, msg.BlockHeight, msg.Chain, int64(msg.TransactionFeeRate), int64(msg.TransactionSize))
 	if err != nil {
 		return nil, err
 	}

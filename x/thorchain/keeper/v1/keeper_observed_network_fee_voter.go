@@ -3,6 +3,8 @@ package keeperv1
 import (
 	"fmt"
 
+	"github.com/blang/semver"
+
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 )
@@ -32,7 +34,14 @@ func (k KVStore) getObservedNetworkFeeVoter(ctx cosmos.Context, key string, reco
 
 // SetObservedNetworkFeeVoter - save a observed network fee voter object
 func (k KVStore) SetObservedNetworkFeeVoter(ctx cosmos.Context, networkFeeVoter ObservedNetworkFeeVoter) {
-	k.setObservedNetworkFeeVoter(ctx, k.GetKey(ctx, prefixNetworkFeeVoter, networkFeeVoter.String()), networkFeeVoter)
+	// TODO on hard fork remove version check
+	var key string
+	if k.GetVersion().GTE(semver.MustParse("1.128.0")) {
+		key = networkFeeVoter.ID()
+	} else {
+		key = networkFeeVoter.String()
+	}
+	k.setObservedNetworkFeeVoter(ctx, k.GetKey(ctx, prefixNetworkFeeVoter, key), networkFeeVoter)
 }
 
 // GetObservedNetworkFeeVoterIterator iterate tx in voters
@@ -41,11 +50,21 @@ func (k KVStore) GetObservedNetworkFeeVoterIterator(ctx cosmos.Context) cosmos.I
 }
 
 // GetObservedNetworkFeeVoter - gets information of an observed network fee voter
-func (k KVStore) GetObservedNetworkFeeVoter(ctx cosmos.Context, height int64, chain common.Chain, rate int64) (ObservedNetworkFeeVoter, error) {
+func (k KVStore) GetObservedNetworkFeeVoter(ctx cosmos.Context, height int64, chain common.Chain, rate, size int64) (ObservedNetworkFeeVoter, error) {
 	record := NewObservedNetworkFeeVoter(height, chain)
 	if rate > 0 {
 		record.FeeRate = rate
 	}
-	_, err := k.getObservedNetworkFeeVoter(ctx, k.GetKey(ctx, prefixNetworkFeeVoter, record.String()), &record)
+	// TODO on hard fork remove version check
+	var key string
+	if k.GetVersion().GTE(semver.MustParse("1.128.0")) {
+		if size > 0 {
+			record.TransactionSize = size
+		}
+		key = record.ID()
+	} else {
+		key = record.String()
+	}
+	_, err := k.getObservedNetworkFeeVoter(ctx, k.GetKey(ctx, prefixNetworkFeeVoter, key), &record)
 	return record, err
 }

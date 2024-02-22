@@ -557,7 +557,7 @@ func (k KVStoreDummy) GetObservedNetworkFeeVoterIterator(ctx cosmos.Context) cos
 	return nil
 }
 
-func (k KVStoreDummy) GetObservedNetworkFeeVoter(ctx cosmos.Context, height int64, chain common.Chain, rate int64) (ObservedNetworkFeeVoter, error) {
+func (k KVStoreDummy) GetObservedNetworkFeeVoter(ctx cosmos.Context, height int64, chain common.Chain, rate, size int64) (ObservedNetworkFeeVoter, error) {
 	return ObservedNetworkFeeVoter{}, nil
 }
 

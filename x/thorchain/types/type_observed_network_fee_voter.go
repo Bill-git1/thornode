@@ -15,6 +15,10 @@ func NewObservedNetworkFeeVoter(reportBlockHeight int64, chain common.Chain) Obs
 	}
 }
 
+func (m *ObservedNetworkFeeVoter) ID() string {
+	return fmt.Sprintf("%s-%d-%d-%d", m.Chain.String(), m.ReportBlockHeight, m.FeeRate, m.TransactionSize)
+}
+
 func (m *ObservedNetworkFeeVoter) GetSigners() []cosmos.AccAddress {
 	addrs := make([]cosmos.AccAddress, 0)
 	for _, a := range m.Signers {
