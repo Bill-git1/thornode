@@ -632,6 +632,8 @@ func getSynthSupplyRemainingV102(ctx cosmos.Context, mgr Manager, asset common.A
 func isSynthMintPaused(ctx cosmos.Context, mgr Manager, targetAsset common.Asset, outputAmt cosmos.Uint) error {
 	version := mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.128.0")):
+		return isSynthMintPausedV128(ctx, mgr, targetAsset, outputAmt)
 	case version.GTE(semver.MustParse("1.116.0")):
 		return isSynthMintPausedV116(ctx, mgr, targetAsset, outputAmt)
 	case version.GTE(semver.MustParse("1.103.0")):
@@ -643,6 +645,20 @@ func isSynthMintPaused(ctx cosmos.Context, mgr Manager, targetAsset common.Asset
 	default:
 		return nil
 	}
+}
+
+func isSynthMintPausedV128(ctx cosmos.Context, mgr Manager, targetAsset common.Asset, outputAmt cosmos.Uint) error {
+	// check if the pool is in ragnarok
+	k := "RAGNAROK-" + targetAsset.MimirString()
+	v, err := mgr.Keeper().GetMimir(ctx, k)
+	if err != nil {
+		return err
+	}
+	if v > 0 {
+		return fmt.Errorf("pool is in ragnarok")
+	}
+
+	return isSynthMintPausedV116(ctx, mgr, targetAsset, outputAmt)
 }
 
 func isSynthMintPausedV116(ctx cosmos.Context, mgr Manager, targetAsset common.Asset, outputAmt cosmos.Uint) error {

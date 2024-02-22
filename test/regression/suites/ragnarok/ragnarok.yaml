@@ -1,0 +1,377 @@
+{{ template "default-state.yaml" }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/pools
+asserts:
+  - .|length == 0
+---
+type: tx-mimir
+key: "RagnarokProcessNumOfLPPerIteration"
+value: 2
+signer: {{ addr_thor_dog }}
+sequence: 0
+---
+type: tx-mimir
+key: "FundMigrationInterval"
+value: 1
+signer: {{ addr_thor_dog }}
+sequence: 1
+---
+type: tx-network-fee
+signer: {{ addr_thor_dog }}
+block_height: 1
+chain: BTC
+transaction_size: 1000
+transaction_rate: 10
+sequence: 2
+---
+type: create-blocks
+count: 1
+---
+########################################################################################
+# create btc pool with 2 liquidity providers
+########################################################################################
+type: tx-observed-in
+signer: {{ addr_thor_dog }}
+txs:
+  - tx:
+      id: "{{ observe_txid 1 }}"
+      chain: BTC
+      from_address: {{ addr_btc_cat }}
+      to_address: {{ addr_btc_dog }}
+      coins:
+        - amount: "100000000"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "10000"
+          asset: "BTC.BTC"
+      memo: "+:BTC.BTC:{{ addr_thor_cat }}"
+    block_height: 1
+    finalise_height: 1
+    observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 2 }}"
+      chain: BTC
+      from_address: {{ addr_btc_fox }}
+      to_address: {{ addr_btc_dog }}
+      coins:
+        - amount: "100000000"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "10000"
+          asset: "BTC.BTC"
+      memo: "+:BTC.BTC:{{ addr_thor_fox }}"
+    block_height: 1
+    finalise_height: 1
+    observed_pub_key: {{ pubkey_dog }}
+---
+type: tx-deposit
+signer: {{ addr_thor_cat }}
+coins:
+  - amount: "200000000"
+    asset: "rune"
+memo: "+:BTC.BTC:{{ addr_btc_cat }}"
+---
+type: tx-deposit
+signer: {{ addr_thor_fox }}
+coins:
+  - amount: "200000000"
+    asset: "rune"
+memo: "+:BTC.BTC:{{ addr_btc_fox }}"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/tx/{{ observe_txid 1 }}
+asserts:
+  - .observed_tx.status == "done"
+---
+type: check
+endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_providers
+asserts:
+  - .|length == 2
+---
+type: check
+endpoint: http://localhost:1317/thorchain/pools
+asserts:
+  - .|length == 1
+  - .[0].LP_units == "400000000"
+  - .[0].pending_inbound_asset == "0"
+  - .[0].pending_inbound_rune == "0"
+---
+type: check
+endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_providers
+asserts:
+  - .|length == 2
+  - .[0].units == "200000000"
+  - .[1].units == "200000000"
+---
+type: check
+endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
+asserts:
+  - .|length == 0
+---
+########################################################################################
+# add 3 savers
+########################################################################################
+type: tx-observed-in
+signer: {{ addr_thor_dog }}
+txs:
+  - tx:
+      id: "{{ observe_txid 3 }}"
+      chain: BTC
+      from_address: {{ addr_btc_cat }}
+      to_address: {{ addr_btc_dog }}
+      coins:
+        - amount: "10000000"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "10000"
+          asset: "BTC.BTC"
+      memo: "+:BTC/BTC"
+    block_height: 1
+    finalise_height: 1
+    observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 4 }}"
+      chain: BTC
+      from_address: {{ addr_btc_fox }}
+      to_address: {{ addr_btc_dog }}
+      coins:
+        - amount: "10000000"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "10000"
+          asset: "BTC.BTC"
+      memo: "+:BTC/BTC"
+    block_height: 1
+    finalise_height: 1
+    observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 5 }}"
+      chain: BTC
+      from_address: {{ addr_btc_pig }}
+      to_address: {{ addr_btc_dog }}
+      coins:
+        - amount: "10000000"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "10000"
+          asset: "BTC.BTC"
+      memo: "+:BTC/BTC"
+    block_height: 1
+    finalise_height: 1
+    observed_pub_key: {{ pubkey_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
+asserts:
+  - .|length == 3
+---
+########################################################################################
+# ragnarok the pool
+########################################################################################
+type: tx-mimir
+key: "RAGNAROK-BTC-BTC"
+value: 1
+signer: {{ addr_thor_dog }}
+---
+type: create-blocks
+count: 1
+---
+########################################################################################
+# first block should eject two savers
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
+asserts:
+  - .|length == 1
+---
+# savers eject to the swap queue for synth -> L1 before outbound
+type: check
+endpoint: http://localhost:1317/thorchain/queue/swap
+asserts:
+  - .|length == 2
+---
+########################################################################################
+# second block should eject last saver and create outbounds for the first 2
+########################################################################################
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
+asserts:
+  - .|length == 0
+---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/swap
+asserts:
+  - .|length == 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - .|length == 2
+---
+# lps should be untouched
+type: check
+endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_providers
+asserts:
+  - .|length == 2
+  - .[0].units == "200000000"
+  - .[1].units == "200000000"
+---
+type: check
+endpoint: http://localhost:1317/thorchain/pool/BTC.BTC
+asserts:
+  - .status == "Available"
+---
+# set to 1 to see the pool status change Available -> Staged -> Suspended
+type: tx-mimir
+key: "RagnarokProcessNumOfLPPerIteration"
+value: 1
+signer: {{ addr_thor_dog }}
+---
+########################################################################################
+# third block should create last saver outbound,stage the pool, and eject first lp
+########################################################################################
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/swap
+asserts:
+  - .|length == 0
+---
+# all saver outbounds plus the first LP
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - .|length == 4
+---
+type: check
+endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_providers
+asserts:
+  - .|length == 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/pool/BTC.BTC
+asserts:
+  - .status == "Staged"
+---
+# observe saver outbounds
+type: tx-observed-out
+signer: {{ addr_thor_dog }}
+txs:
+  - tx:
+      id: "{{ observe_txid 6 }}"
+      chain: BTC
+      from_address: {{ addr_btc_dog }}
+      to_address: {{ addr_btc_pig }}
+      coins:
+        - amount: "8815334"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "15000"
+          asset: "BTC.BTC"
+      memo: "OUT:08225BF81303B3A86025AE667C66FF37248B5FDB25FF407CD9EF26F462CFFFDE"
+    block_height: 2
+    finalise_height: 2
+    observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 7 }}"
+      chain: BTC
+      from_address: {{ addr_btc_dog }}
+      to_address: {{ addr_btc_fox }}
+      coins:
+        - amount: "8769933"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "15000"
+          asset: "BTC.BTC"
+      memo: "OUT:AA60EAE5F458E2792021ED907F458AF263566DF3AD47235D2CE8E19730BD5E8E"
+    block_height: 2
+    finalise_height: 2
+    observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 8 }}"
+      chain: BTC
+      from_address: {{ addr_btc_dog }}
+      to_address: {{ addr_btc_cat }}
+      coins:
+        - amount: "8735705"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "15000"
+          asset: "BTC.BTC"
+      memo: "OUT:29F6955711136F1C53BDF8ED9103B45E0346F95D632187EC934989545FE5CF74"
+    block_height: 2
+    finalise_height: 2
+    observed_pub_key: {{ pubkey_dog }}
+---
+########################################################################################
+# fourth block should eject last lp, but it will fail with insufficient funds
+########################################################################################
+type: create-blocks
+count: 1
+skip_invariants: true # last withdraw failed, but LP was removed
+---
+# just the one lp outbound remains
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - .|length == 1
+---
+# observe lp outbound
+type: tx-observed-out
+signer: {{ addr_thor_dog }}
+txs:
+  - tx:
+      id: "{{ observe_txid 9 }}"
+      chain: BTC
+      from_address: {{ addr_btc_dog }}
+      to_address: {{ addr_btc_fox }}
+      coins:
+        - amount: "101824514"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "15000"
+          asset: "BTC.BTC"
+      memo: "RAGNAROK:7"
+    block_height: 3
+    finalise_height: 3
+    observed_pub_key: {{ pubkey_dog }}
+---
+########################################################################################
+# fifth block should mark the pool suspended
+########################################################################################
+type: create-blocks
+count: 1
+skip_invariants: true # last withdraw failed, but LP was removed
+---
+type: check
+endpoint: http://localhost:1317/thorchain/pool/BTC.BTC
+asserts:
+  - .status == "Suspended"
+---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - .|length == 0

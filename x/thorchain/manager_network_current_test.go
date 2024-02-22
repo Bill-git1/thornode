@@ -432,12 +432,13 @@ func (s *NetworkManagerVCURTestSuite) TestRagnarokPool(c *C) {
 	c.Assert(err, IsNil)
 
 	// happy path
+	networkMgr.k.SetMimir(ctx, "RagnarokProcessNumOfLPPerIteration", 1)
 	networkMgr.k.SetMimir(ctx, "RAGNAROK-BTC-BTC", 1)
 	// first round
 	err = networkMgr.checkPoolRagnarok(ctx, mgr)
 	c.Assert(err, IsNil)
 	items, _ := mgr.txOutStore.GetOutboundItems(ctx)
-	c.Assert(items, HasLen, 0)
+	c.Assert(items, HasLen, 1, Commentf("%d", len(items)))
 
 	ctx = ctx.WithBlockHeight(interval * 6)
 	err = networkMgr.checkPoolRagnarok(ctx, mgr)
@@ -446,6 +447,16 @@ func (s *NetworkManagerVCURTestSuite) TestRagnarokPool(c *C) {
 	c.Assert(items, HasLen, 2, Commentf("%d", len(items)))
 
 	tempPool, err := k.GetPool(ctx, common.BTCAsset)
+	c.Assert(err, IsNil)
+	c.Assert(tempPool.Status, Equals, PoolStaged)
+
+	ctx = ctx.WithBlockHeight(interval * 7)
+	err = networkMgr.checkPoolRagnarok(ctx, mgr)
+	c.Assert(err, IsNil)
+	items, _ = mgr.txOutStore.GetOutboundItems(ctx)
+	c.Assert(items, HasLen, 2, Commentf("%d", len(items)))
+
+	tempPool, err = k.GetPool(ctx, common.BTCAsset)
 	c.Assert(err, IsNil)
 	c.Assert(tempPool.Status, Equals, PoolSuspended)
 
