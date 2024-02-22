@@ -48,6 +48,8 @@ const (
 	prefixSwapperClout            types.DbPrefix = "sclout/"
 	prefixPOL                     types.DbPrefix = "pol/"
 	prefixLoan                    types.DbPrefix = "loan/"
+	prefixTradeAccount            types.DbPrefix = "tr_acct/"
+	prefixTradeUnit               types.DbPrefix = "tr_unit/"
 	prefixStreamingSwap           types.DbPrefix = "stream/"
 	prefixLoanTotalCollateral     types.DbPrefix = "loan_col_total/"
 	prefixObservingAddresses      types.DbPrefix = "observing_addresses/"

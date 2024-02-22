@@ -51,12 +51,15 @@ func NewAsset(input string) (Asset, error) {
 	var asset Asset
 	var sym string
 	var parts []string
-	if strings.Count(input, "/") > 0 {
+	switch {
+	case strings.Count(input, "~") > 0:
+		parts = strings.SplitN(input, "~", 2)
+		asset.Trade = true
+	case strings.Count(input, "/") > 0:
 		parts = strings.SplitN(input, "/", 2)
 		asset.Synth = true
-	} else {
+	default:
 		parts = strings.SplitN(input, ".", 2)
-		asset.Synth = false
 	}
 	if len(parts) == 1 {
 		asset.Chain = THORChain
@@ -118,11 +121,11 @@ func NewAssetWithShortCodesV124(input string) (Asset, error) {
 
 // Equals determinate whether two assets are equivalent
 func (a Asset) Equals(a2 Asset) bool {
-	return a.Chain.Equals(a2.Chain) && a.Symbol.Equals(a2.Symbol) && a.Ticker.Equals(a2.Ticker) && a.Synth == a2.Synth
+	return a.Chain.Equals(a2.Chain) && a.Symbol.Equals(a2.Symbol) && a.Ticker.Equals(a2.Ticker) && a.Synth == a2.Synth && a.Trade == a2.Trade
 }
 
 func (a Asset) GetChain() Chain {
-	if a.Synth {
+	if a.Synth || a.Trade {
 		return THORChain
 	}
 	return a.Chain
@@ -130,7 +133,7 @@ func (a Asset) GetChain() Chain {
 
 // Get layer1 asset version
 func (a Asset) GetLayer1Asset() Asset {
-	if !a.IsSyntheticAsset() {
+	if !a.IsSyntheticAsset() && !a.IsTradeAsset() {
 		return a
 	}
 	return Asset{
@@ -138,6 +141,7 @@ func (a Asset) GetLayer1Asset() Asset {
 		Symbol: a.Symbol,
 		Ticker: a.Ticker,
 		Synth:  false,
+		Trade:  false,
 	}
 }
 
@@ -151,6 +155,19 @@ func (a Asset) GetSyntheticAsset() Asset {
 		Symbol: a.Symbol,
 		Ticker: a.Ticker,
 		Synth:  true,
+	}
+}
+
+// Get trade asset of asset
+func (a Asset) GetTradeAsset() Asset {
+	if a.IsTradeAsset() {
+		return a
+	}
+	return Asset{
+		Chain:  a.Chain,
+		Symbol: a.Symbol,
+		Ticker: a.Ticker,
+		Trade:  true,
 	}
 }
 
@@ -169,13 +186,17 @@ func (a Asset) IsSyntheticAsset() bool {
 	return a.Synth
 }
 
+func (a Asset) IsTradeAsset() bool {
+	return a.Trade
+}
+
 func (a Asset) IsVaultAsset() bool {
 	return a.IsSyntheticAsset()
 }
 
 // Check if asset is a derived asset
 func (a Asset) IsDerivedAsset() bool {
-	return !a.Synth && a.GetChain().IsTHORChain() && !a.IsRune()
+	return !a.Synth && !a.Trade && a.GetChain().IsTHORChain() && !a.IsRune()
 }
 
 // Native return native asset, only relevant on THORChain
@@ -199,6 +220,9 @@ func (a Asset) String() string {
 	div := "."
 	if a.Synth {
 		div = "/"
+	}
+	if a.Trade {
+		div = "~"
 	}
 	return fmt.Sprintf("%s%s%s", a.Chain.String(), div, a.Symbol.String())
 }

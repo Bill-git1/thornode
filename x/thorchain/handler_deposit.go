@@ -89,13 +89,20 @@ func (h DepositHandler) handleV128(ctx cosmos.Context, msg MsgDeposit) (*cosmos.
 		return nil, fmt.Errorf("unable to use MsgDeposit while THORChain is halted")
 	}
 
-	coins, err := msg.Coins.Native()
-	if err != nil {
-		return nil, ErrInternal(err, "coins are native to THORChain")
-	}
+	if msg.Coins[0].Asset.IsTradeAsset() {
+		balance := h.mgr.TradeAccountManager().BalanceOf(ctx, msg.Coins[0].Asset, msg.Signer)
+		if msg.Coins[0].Amount.GT(balance) {
+			return nil, se.ErrInsufficientFunds
+		}
+	} else {
+		coins, err := msg.Coins.Native()
+		if err != nil {
+			return nil, ErrInternal(err, "coins are native to THORChain")
+		}
 
-	if !h.mgr.Keeper().HasCoins(ctx, msg.GetSigners()[0], coins) {
-		return nil, se.ErrInsufficientFunds
+		if !h.mgr.Keeper().HasCoins(ctx, msg.GetSigners()[0], coins) {
+			return nil, se.ErrInsufficientFunds
+		}
 	}
 
 	hash := tmtypes.Tx(ctx.TxBytes()).Hash()
@@ -133,7 +140,7 @@ func (h DepositHandler) handleV128(ctx cosmos.Context, msg MsgDeposit) (*cosmos.
 		targetModule = AsgardName
 	}
 	coinsInMsg := msg.Coins
-	if !coinsInMsg.IsEmpty() {
+	if !coinsInMsg.IsEmpty() && !coinsInMsg[0].Asset.IsTradeAsset() {
 		// send funds to target module
 		err := h.mgr.Keeper().SendFromAccountToModule(ctx, msg.GetSigners()[0], targetModule, msg.Coins)
 		if err != nil {

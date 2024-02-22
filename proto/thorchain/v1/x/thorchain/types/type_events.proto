@@ -240,6 +240,23 @@ message EventMintBurn {
   string reason = 4;
 }
 
+message EventTradeAccountDeposit {
+  string amount = 1 [(gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Uint", (gogoproto.nullable) = false];
+  common.Asset asset = 2 [(gogoproto.nullable) = false];
+  string asset_address = 3 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/common.Address"];
+  string rune_address = 4 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/common.Address"];
+  string tx_id = 5 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/common.TxID", (gogoproto.customname) = "TxID"];
+
+}
+
+message EventTradeAccountWithdraw {
+  string amount = 1 [(gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Uint", (gogoproto.nullable) = false];
+  common.Asset asset = 2 [(gogoproto.nullable) = false];
+  string asset_address = 3 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/common.Address"];
+  string rune_address = 4 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/common.Address"];
+  string tx_id = 5 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/common.TxID", (gogoproto.customname) = "TxID"];
+}
+
 message EventLoanOpen {
   string collateral_deposited = 1 [(gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Uint", (gogoproto.nullable) = false];
   common.Asset collateral_asset = 2 [(gogoproto.nullable) = false];

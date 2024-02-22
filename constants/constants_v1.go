@@ -117,6 +117,7 @@ func NewConstantValue() *ConstantVals {
 			KeygenRetryInterval:                 0,                  // number of blocks to wait before retrying a keygen
 			SaversStreamingSwapsInterval:        0,                  // For Savers deposits and withdraws, the streaming swaps interval to use for the Native <> Synth swap
 			RescheduleCoalesceBlocks:            0,                  // number of blocks to coalesce rescheduled outbounds
+			TradeAccountsEnabled:                0,                  // enable/disable trade account
 		},
 		boolValues: map[ConstantName]bool{
 			StrictBondLiquidityRatio: true,

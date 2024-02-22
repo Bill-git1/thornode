@@ -143,6 +143,8 @@ func DefaultGenesisState() GenesisState {
 		StoreVersion:        38, // refer to func `GetStoreVersion` , let's keep it consistent
 		Loans:               make([]Loan, 0),
 		SwapperClout:        make([]SwapperClout, 0),
+		TradeAccounts:       make([]TradeAccount, 0),
+		TradeUnits:          make([]TradeUnit, 0),
 	}
 }
 
@@ -265,6 +267,13 @@ func initGenesis(ctx cosmos.Context, keeper keeper.Keeper, data GenesisState) []
 		if err := keeper.SetSwapperClout(ctx, clout); err != nil {
 			panic(err)
 		}
+	}
+
+	for _, acct := range data.TradeAccounts {
+		keeper.SetTradeAccount(ctx, acct)
+	}
+	for _, unit := range data.TradeUnits {
+		keeper.SetTradeUnit(ctx, unit)
 	}
 
 	// Mint coins into the reserve
@@ -566,6 +575,23 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		clouts = append(clouts, clout)
 	}
 
+	tradeAccts := make([]TradeAccount, 0)
+	iterTradeAccts := k.GetTradeAccountIterator(ctx)
+	defer iterTradeAccts.Close()
+	for ; iterTradeAccts.Valid(); iterTradeAccts.Next() {
+		var acct TradeAccount
+		k.Cdc().MustUnmarshal(iterTradeAccts.Value(), &acct)
+		tradeAccts = append(tradeAccts, acct)
+	}
+	tradeUnits := make([]TradeUnit, 0)
+	iterTradeUnits := k.GetTradeUnitIterator(ctx)
+	defer iterTradeUnits.Close()
+	for ; iterTradeUnits.Valid(); iterTradeUnits.Next() {
+		var unit TradeUnit
+		k.Cdc().MustUnmarshal(iterTradeUnits.Value(), &unit)
+		tradeUnits = append(tradeUnits, unit)
+	}
+
 	return GenesisState{
 		Pools:              pools,
 		LiquidityProviders: liquidityProviders,
@@ -587,6 +613,8 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		Loans:              loans,
 		Mimirs:             mimirs,
 		SwapperClout:       clouts,
+		TradeAccounts:      tradeAccts,
+		TradeUnits:         tradeUnits,
 		StoreVersion:       storeVersion,
 	}
 }

@@ -82,6 +82,14 @@ type APIClient struct {
 
 	ThornamesApi *ThornamesApiService
 
+	TradeAccountApi *TradeAccountApiService
+
+	TradeAccountsApi *TradeAccountsApiService
+
+	TradeUnitApi *TradeUnitApiService
+
+	TradeUnitsApi *TradeUnitsApiService
+
 	TransactionsApi *TransactionsApiService
 
 	VaultsApi *VaultsApiService
@@ -120,6 +128,10 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 	c.StreamingSwapApi = (*StreamingSwapApiService)(&c.common)
 	c.TSSApi = (*TSSApiService)(&c.common)
 	c.ThornamesApi = (*ThornamesApiService)(&c.common)
+	c.TradeAccountApi = (*TradeAccountApiService)(&c.common)
+	c.TradeAccountsApi = (*TradeAccountsApiService)(&c.common)
+	c.TradeUnitApi = (*TradeUnitApiService)(&c.common)
+	c.TradeUnitsApi = (*TradeUnitsApiService)(&c.common)
 	c.TransactionsApi = (*TransactionsApiService)(&c.common)
 	c.VaultsApi = (*VaultsApiService)(&c.common)
 

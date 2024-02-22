@@ -152,6 +152,10 @@ func checkExportInvariants(out io.Writer, genesis map[string]any) error {
 			sumPoolAsset = sumPoolAsset.Add(toi.Coin)
 		}
 	}
+	for _, tu := range genesisState.TradeUnits {
+		coin := common.NewCoin(tu.Asset.GetLayer1Asset(), tu.Depth)
+		sumPoolAsset = sumPoolAsset.Add(coin)
+	}
 
 	// adjust vault depths to ignore streaming swap amounts
 	for _, swp := range genesisState.StreamingSwaps {

@@ -102,6 +102,10 @@ func (p *parser) parse() (mem Memo, err error) {
 		return p.ParseLoanOpenMemo()
 	case TxLoanRepayment:
 		return p.ParseLoanRepaymentMemo()
+	case TxTradeAccountDeposit:
+		return p.ParseTradeAccountDeposit()
+	case TxTradeAccountWithdrawal:
+		return p.ParseTradeAccountWithdrawal()
 
 	case TxSwitch: // TODO remove on hard fork
 		if p.keeper.GetVersion().GTE(semver.MustParse("1.117.0")) {
@@ -305,11 +309,13 @@ func (p *parser) getChain(idx int, required bool, def common.Chain) common.Chain
 func (p *parser) getAsset(idx int, required bool, def common.Asset) common.Asset {
 	p.incRequired(required)
 	value, err := common.NewAssetWithShortCodes(p.version, p.get(idx))
-	if err != nil {
-		if required || p.get(idx) != "" {
-			p.addErr(fmt.Errorf("cannot parse '%s' as an asset: %w", p.get(idx), err))
-		}
+	if err != nil && (required || p.get(idx) != "") {
+		p.addErr(fmt.Errorf("cannot parse '%s' as an asset: %w", p.get(idx), err))
 		return def
+	}
+	if value.IsTradeAsset() && p.version.LT(semver.MustParse("1.128.0")) {
+		p.addErr(fmt.Errorf("trade assets are not yet supported: %s", p.get(idx)))
+		return common.EmptyAsset
 	}
 	return value
 }

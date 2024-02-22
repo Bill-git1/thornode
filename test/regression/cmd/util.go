@@ -173,8 +173,10 @@ func parseOps(localLog zerolog.Logger, path string, tmpls *template.Template, en
 		buf.WriteString(line + "\n")
 	}
 
-	// track whether we've seen non-state operations
-	seenNonState := false
+	// track whether we complete seen state and env operations
+	stateComplete := false
+	envComplete := false
+	envAdded := 0
 
 	dec := yaml.NewDecoder(buf)
 	for {
@@ -196,21 +198,29 @@ func parseOps(localLog zerolog.Logger, path string, tmpls *template.Template, en
 
 		// env operations are special
 		if op["type"] == "env" {
+			if envComplete {
+				log.Fatal().Msg("env operations must be first")
+			}
 			o := NewOperation(op)
 			env = append(env, fmt.Sprintf("%s=%s", o.(*OpEnv).Key, o.(*OpEnv).Value))
+			envAdded++
 			continue
 		}
+		envComplete = true
 
 		// state operations must be first
-		if op["type"] == "state" && seenNonState {
-			log.Fatal().Msg("state operations must be first")
+		if op["type"] == "state" && stateComplete {
+			log.Fatal().Msg("state operations must come before all operations other than env")
 		}
 		if op["type"] != "state" {
-			seenNonState = true
+			stateComplete = true
 		}
 
 		ops = append(ops, NewOperation(op))
 	}
+
+	// remove env operations from op lines so numbers are correct
+	opLines = opLines[envAdded:]
 
 	return ops, opLines, env
 }

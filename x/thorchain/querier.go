@@ -82,6 +82,14 @@ func NewQuerier(mgr *Mgrs, kbs cosmos.KeybaseStore) cosmos.Querier {
 			return queryLiquidityProviders(ctx, path[1:], req, mgr, false)
 		case q.QueryLiquidityProvider.Key:
 			return queryLiquidityProvider(ctx, path[1:], req, mgr, false)
+		case q.QueryTradeUnit.Key:
+			return queryTradeUnit(ctx, path[1:], req, mgr)
+		case q.QueryTradeUnits.Key:
+			return queryTradeUnits(ctx, path[1:], req, mgr)
+		case q.QueryTradeAccount.Key:
+			return queryTradeAccount(ctx, path[1:], req, mgr)
+		case q.QueryTradeAccounts.Key:
+			return queryTradeAccounts(ctx, path[1:], req, mgr)
 		case q.QueryTxStages.Key:
 			return queryTxStages(ctx, path[1:], req, mgr)
 		case q.QueryTxStatus.Key:
@@ -1448,6 +1456,129 @@ func queryDerivedPools(ctx cosmos.Context, req abci.RequestQuery, mgr *Mgrs) ([]
 		pools = append(pools, p)
 	}
 	return jsonify(ctx, pools)
+}
+
+func queryTradeUnit(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {
+	if len(path) == 0 {
+		return nil, errors.New("asset not provided")
+	}
+	asset, err := common.NewAsset(path[0])
+	if err != nil {
+		ctx.Logger().Error("fail to parse asset", "error", err)
+		return nil, fmt.Errorf("could not parse asset: %w", err)
+	}
+
+	tu, err := mgr.Keeper().GetTradeUnit(ctx, asset)
+	if err != nil {
+		ctx.Logger().Error("fail to get trade unit", "error", err)
+		return nil, fmt.Errorf("could not get trade unit: %w", err)
+	}
+	tuResp := openapi.TradeUnitResponse{
+		Asset: tu.Asset.String(),
+		Units: tu.Units.String(),
+		Depth: tu.Depth.String(),
+	}
+	return jsonify(ctx, tuResp)
+}
+
+func queryTradeUnits(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {
+	pools, err := mgr.Keeper().GetPools(ctx)
+	if err != nil {
+		return nil, errors.New("failed to get pools")
+	}
+	units := make([]openapi.TradeUnitResponse, 0)
+	for _, pool := range pools {
+		// skip non-layer1 pools
+		if pool.Asset.GetChain().IsTHORChain() {
+			continue
+		}
+		asset := pool.Asset.GetTradeAsset()
+		tu, err := mgr.Keeper().GetTradeUnit(ctx, asset)
+		if err != nil {
+			ctx.Logger().Error("fail to get trade unit", "error", err)
+			return nil, fmt.Errorf("could not get trade unit: %w", err)
+		}
+		tuResp := openapi.TradeUnitResponse{
+			Asset: tu.Asset.String(),
+			Units: tu.Units.String(),
+			Depth: tu.Depth.String(),
+		}
+		units = append(units, tuResp)
+	}
+
+	return jsonify(ctx, units)
+}
+
+func queryTradeAccounts(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {
+	if len(path) == 0 {
+		return nil, errors.New("asset not provided")
+	}
+	asset, err := common.NewAsset(path[0])
+	if err != nil {
+		ctx.Logger().Error("fail to parse address", "error", err)
+		return nil, fmt.Errorf("could not parse address: %w", err)
+	}
+
+	accounts := make([]openapi.TradeAccountResponse, 0)
+	iter := mgr.Keeper().GetTradeAccountIterator(ctx)
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		var ta TradeAccount
+		if err := mgr.Keeper().Cdc().Unmarshal(iter.Value(), &ta); err != nil {
+			continue
+		}
+		if !ta.Asset.Equals(asset) {
+			continue
+		}
+		if ta.Units.IsZero() {
+			continue
+		}
+		taResp := openapi.TradeAccountResponse{
+			Asset:              ta.Asset.String(),
+			Units:              ta.Units.String(),
+			Owner:              ta.Owner.String(),
+			LastAddHeight:      &ta.LastAddHeight,
+			LastWithdrawHeight: &ta.LastWithdrawHeight,
+		}
+		accounts = append(accounts, taResp)
+	}
+
+	return jsonify(ctx, accounts)
+}
+
+func queryTradeAccount(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {
+	if len(path) == 0 {
+		return nil, errors.New("address not provided")
+	}
+	addr, err := cosmos.AccAddressFromBech32(path[0])
+	if err != nil {
+		ctx.Logger().Error("fail to parse address", "error", err)
+		return nil, fmt.Errorf("could not parse address: %w", err)
+	}
+
+	accounts := make([]openapi.TradeAccountResponse, 0)
+	iter := mgr.Keeper().GetTradeAccountIteratorWithAddress(ctx, addr)
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		var ta TradeAccount
+		if err := mgr.Keeper().Cdc().Unmarshal(iter.Value(), &ta); err != nil {
+			continue
+		}
+		if ta.Units.IsZero() {
+			continue
+		}
+
+		taResp := openapi.TradeAccountResponse{
+			Asset:              ta.Asset.String(),
+			Units:              ta.Units.String(),
+			Owner:              ta.Owner.String(),
+			LastAddHeight:      &ta.LastAddHeight,
+			LastWithdrawHeight: &ta.LastWithdrawHeight,
+		}
+		accounts = append(accounts, taResp)
+	}
+
+	return jsonify(ctx, accounts)
 }
 
 func extractVoter(ctx cosmos.Context, path []string, mgr *Mgrs) (common.TxID, ObservedTxVoter, error) {

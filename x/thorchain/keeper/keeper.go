@@ -86,6 +86,7 @@ type Keeper interface {
 	KeeperAnchors
 	KeeperStreamingSwap
 	KeeperSwapperClout
+	KeeperTradeAccount
 }
 
 type KeeperConfig interface {
@@ -220,6 +221,17 @@ type KeeperSwapSlip interface {
 	GetSwapSlipSnapShot(ctx cosmos.Context, asset common.Asset, height int64) (int64, error)
 	SetSwapSlipSnapShot(ctx cosmos.Context, asset common.Asset, height, currRollup int64)
 	GetSwapSlipSnapShotIterator(ctx cosmos.Context, asset common.Asset) cosmos.Iterator
+}
+
+type KeeperTradeAccount interface {
+	GetTradeAccount(ctx cosmos.Context, addr cosmos.AccAddress, asset common.Asset) (TradeAccount, error)
+	SetTradeAccount(ctx cosmos.Context, record TradeAccount)
+	RemoveTradeAccount(ctx cosmos.Context, record TradeAccount)
+	GetTradeAccountIterator(ctx cosmos.Context) cosmos.Iterator
+	GetTradeAccountIteratorWithAddress(ctx cosmos.Context, addr cosmos.AccAddress) cosmos.Iterator
+	GetTradeUnit(ctx cosmos.Context, asset common.Asset) (TradeUnit, error)
+	SetTradeUnit(ctx cosmos.Context, unit TradeUnit)
+	GetTradeUnitIterator(ctx cosmos.Context) cosmos.Iterator
 }
 
 type KeeperVault interface {

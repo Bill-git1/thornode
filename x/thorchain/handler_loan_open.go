@@ -52,6 +52,8 @@ func (h LoanOpenHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, 
 func (h LoanOpenHandler) validate(ctx cosmos.Context, msg MsgLoanOpen) error {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.128.0")):
+		return h.validateV128(ctx, msg)
 	case version.GTE(semver.MustParse("1.121.0")):
 		return h.validateV121(ctx, msg)
 	case version.GTE(semver.MustParse("1.111.0")):
@@ -65,7 +67,7 @@ func (h LoanOpenHandler) validate(ctx cosmos.Context, msg MsgLoanOpen) error {
 	}
 }
 
-func (h LoanOpenHandler) validateV121(ctx cosmos.Context, msg MsgLoanOpen) error {
+func (h LoanOpenHandler) validateV128(ctx cosmos.Context, msg MsgLoanOpen) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
@@ -73,6 +75,10 @@ func (h LoanOpenHandler) validateV121(ctx cosmos.Context, msg MsgLoanOpen) error
 	pauseLoans := fetchConfigInt64(ctx, h.mgr, constants.PauseLoans)
 	if pauseLoans > 0 {
 		return fmt.Errorf("loans are currently paused")
+	}
+
+	if msg.TargetAsset.IsTradeAsset() || msg.CollateralAsset.IsTradeAsset() {
+		return fmt.Errorf("trade assets may not be used for loans")
 	}
 
 	// ensure that while derived assets are disabled, borrower cannot receive a

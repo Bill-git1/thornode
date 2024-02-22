@@ -289,12 +289,15 @@ func quoteSimulateSwap(ctx cosmos.Context, mgr *Mgrs, amount sdk.Uint, msg *MsgS
 	}
 	finalSwap := swaps[len(swaps)-1]
 
-	// parse outbound fee from event
-	outboundFeeCoin, err := common.ParseCoin(fee["coins"])
-	if err != nil {
-		return nil, sdk.ZeroUint(), sdk.ZeroUint(), fmt.Errorf("unable to parse outbound fee coin: %w", err)
+	// parse outbound fee from event (except on trade assets with no outbound fee)
+	outboundFeeAmount = sdk.ZeroUint()
+	if !msg.TargetAsset.IsTradeAsset() {
+		outboundFeeCoin, err := common.ParseCoin(fee["coins"])
+		if err != nil {
+			return nil, sdk.ZeroUint(), sdk.ZeroUint(), fmt.Errorf("unable to parse outbound fee coin: %w", err)
+		}
+		outboundFeeAmount = outboundFeeCoin.Amount
 	}
-	outboundFeeAmount = outboundFeeCoin.Amount
 
 	// parse outbound amount from event
 	emitCoin, err := common.ParseCoin(finalSwap["emit_asset"])
@@ -719,12 +722,35 @@ func queryQuoteSwap(ctx cosmos.Context, path []string, req abci.RequestQuery, mg
 		}
 	}
 
+	// trade assets must have from address on the source tx
+	fromChain := fromAsset.Chain
+	if fromAsset.IsSyntheticAsset() || fromAsset.IsDerivedAsset() || fromAsset.IsTradeAsset() {
+		fromChain = common.THORChain
+	}
+	fromPubkey := types.GetRandomPubKey()
+	fromAddress, err := fromPubkey.GetAddress(fromChain)
+	if err != nil {
+		return quoteErrorResponse(fmt.Errorf("bad from address: %w", err))
+	}
+
+	// if from asset is a trade asset, create fake balance
+	if fromAsset.IsTradeAsset() {
+		thorAddr, err := fromPubkey.GetThorAddress()
+		if err != nil {
+			return quoteErrorResponse(fmt.Errorf("failed to get thor address: %w", err))
+		}
+		_, err = mgr.TradeAccountManager().Deposit(ctx, fromAsset, amount, thorAddr)
+		if err != nil {
+			return quoteErrorResponse(fmt.Errorf("failed to deposit trade asset: %w", err))
+		}
+	}
+
 	// create the swap message
 	msg := &types.MsgSwap{
 		Tx: common.Tx{
 			ID:          common.BlankTxID,
 			Chain:       fromAsset.Chain,
-			FromAddress: common.NoopAddress,
+			FromAddress: fromAddress,
 			ToAddress:   common.NoopAddress,
 			Coins: []common.Coin{
 				{

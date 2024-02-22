@@ -13,38 +13,40 @@ import (
 
 // all event types support by THORChain
 const (
-	AddLiquidityEventType      = "add_liquidity"
-	BondEventType              = "bond"
-	DonateEventType            = "donate"
-	ErrataEventType            = "errata"
-	FeeEventType               = "fee"
-	GasEventType               = "gas"
-	OutboundEventType          = "outbound"
-	PendingLiquidity           = "pending_liquidity"
-	PoolBalanceChangeEventType = "pool_balance_change"
-	PoolEventType              = "pool"
-	RefundEventType            = "refund"
-	ReserveEventType           = "reserve"
-	RewardEventType            = "rewards"
-	ScheduledOutboundEventType = "scheduled_outbound"
-	SecurityEventType          = "security"
-	SetMimirEventType          = "set_mimir"
-	SetNodeMimirEventType      = "set_node_mimir"
-	SlashEventType             = "slash"
-	SlashPointEventType        = "slash_points"
-	StreamingSwapEventType     = "streaming_swap"
-	SwapEventType              = "swap"
-	LimitOrderEventType        = "limit_order"
-	MintBurnType               = "mint_burn"
-	THORNameEventType          = "thorname"
-	LoanOpenEventType          = "loan_open"
-	LoanRepaymentEventType     = "loan_repayment"
-	TSSKeygenSuccess           = "tss_keygen_success"
-	TSSKeygenFailure           = "tss_keygen_failure"
-	TSSKeygenMetricEventType   = "tss_keygen"
-	TSSKeysignMetricEventType  = "tss_keysign"
-	VersionEventType           = "version"
-	WithdrawEventType          = "withdraw"
+	AddLiquidityEventType         = "add_liquidity"
+	BondEventType                 = "bond"
+	DonateEventType               = "donate"
+	ErrataEventType               = "errata"
+	FeeEventType                  = "fee"
+	GasEventType                  = "gas"
+	OutboundEventType             = "outbound"
+	PendingLiquidity              = "pending_liquidity"
+	PoolBalanceChangeEventType    = "pool_balance_change"
+	PoolEventType                 = "pool"
+	RefundEventType               = "refund"
+	ReserveEventType              = "reserve"
+	RewardEventType               = "rewards"
+	ScheduledOutboundEventType    = "scheduled_outbound"
+	SecurityEventType             = "security"
+	SetMimirEventType             = "set_mimir"
+	SetNodeMimirEventType         = "set_node_mimir"
+	SlashEventType                = "slash"
+	SlashPointEventType           = "slash_points"
+	StreamingSwapEventType        = "streaming_swap"
+	SwapEventType                 = "swap"
+	LimitOrderEventType           = "limit_order"
+	MintBurnType                  = "mint_burn"
+	THORNameEventType             = "thorname"
+	LoanOpenEventType             = "loan_open"
+	LoanRepaymentEventType        = "loan_repayment"
+	TradeAccountDepositEventType  = "trade_account_deposit"
+	TradeAccountWithdrawEventType = "trade_account_withdraw"
+	TSSKeygenSuccess              = "tss_keygen_success"
+	TSSKeygenFailure              = "tss_keygen_failure"
+	TSSKeygenMetricEventType      = "tss_keygen"
+	TSSKeysignMetricEventType     = "tss_keysign"
+	VersionEventType              = "version"
+	WithdrawEventType             = "withdraw"
 )
 
 // PoolMods a list of pool modifications
@@ -866,6 +868,71 @@ func (m *EventLoanRepayment) Events() (cosmos.Events, error) {
 		cosmos.NewAttribute("debt_repaid", m.DebtRepaid.String()),
 		cosmos.NewAttribute("collateral_asset", m.CollateralAsset.String()),
 		cosmos.NewAttribute("owner", m.Owner.String()),
+		cosmos.NewAttribute("tx_id", m.TxID.String()))
+	return cosmos.Events{evt}, nil
+}
+
+// NewEventWithdraw create a new withdraw event
+func NewEventTradeAccountDeposit(
+	amt cosmos.Uint,
+	asset common.Asset,
+	assetAddress common.Address,
+	runeAddress common.Address,
+	txID common.TxID,
+) *EventTradeAccountDeposit {
+	return &EventTradeAccountDeposit{
+		Amount:       amt,
+		Asset:        asset,
+		AssetAddress: assetAddress,
+		RuneAddress:  runeAddress,
+		TxID:         txID,
+	}
+}
+
+// Type return the withdraw event type
+func (m *EventTradeAccountDeposit) Type() string {
+	return TradeAccountDepositEventType
+}
+
+// Events return the cosmos event
+func (m *EventTradeAccountDeposit) Events() (cosmos.Events, error) {
+	evt := cosmos.NewEvent(m.Type(),
+		cosmos.NewAttribute("amount", m.Asset.String()),
+		cosmos.NewAttribute("asset", m.Asset.String()),
+		cosmos.NewAttribute("rune_address", m.RuneAddress.String()),
+		cosmos.NewAttribute("asset_address", m.AssetAddress.String()),
+		cosmos.NewAttribute("tx_id", m.TxID.String()))
+	return cosmos.Events{evt}, nil
+}
+
+// NewEventWithdraw create a new withdraw event
+func NewEventTradeAccountWithdraw(
+	amt cosmos.Uint,
+	asset common.Asset,
+	assetAddress common.Address,
+	runeAddress common.Address,
+	txID common.TxID,
+) *EventTradeAccountWithdraw {
+	return &EventTradeAccountWithdraw{
+		Amount:       amt,
+		Asset:        asset,
+		AssetAddress: assetAddress,
+		RuneAddress:  runeAddress,
+		TxID:         txID,
+	}
+}
+
+// Type return the withdraw event type
+func (m *EventTradeAccountWithdraw) Type() string {
+	return TradeAccountWithdrawEventType
+}
+
+// Events return the cosmos event
+func (m *EventTradeAccountWithdraw) Events() (cosmos.Events, error) {
+	evt := cosmos.NewEvent(m.Type(),
+		cosmos.NewAttribute("amount", m.Asset.String()),
+		cosmos.NewAttribute("asset", m.Asset.String()),
+		cosmos.NewAttribute("address", m.RuneAddress.String()),
 		cosmos.NewAttribute("tx_id", m.TxID.String()))
 	return cosmos.Events{evt}, nil
 }

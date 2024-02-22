@@ -41,6 +41,14 @@ type Manager interface {
 	OrderBookMgr() OrderBook
 	Slasher() Slasher
 	YggManager() YggManager // TODO remove on hard fork
+	TradeAccountManager() TradeAccountManager
+}
+
+type TradeAccountManager interface {
+	EndBlock(ctx cosmos.Context, keeper keeper.Keeper) error
+	Deposit(_ cosmos.Context, _ common.Asset, _ cosmos.Uint, _ cosmos.AccAddress) (cosmos.Uint, error)
+	Withdrawal(_ cosmos.Context, _ common.Asset, _ cosmos.Uint, _ cosmos.AccAddress) (cosmos.Uint, error)
+	BalanceOf(_ cosmos.Context, _ common.Asset, _ cosmos.AccAddress) cosmos.Uint
 }
 
 // GasManager define all the methods required to manage gas
@@ -173,6 +181,7 @@ type Mgrs struct {
 	orderBook      OrderBook
 	slasher        Slasher
 	yggManager     YggManager // TODO remove on hard fork
+	tradeManager   TradeAccountManager
 
 	K             keeper.Keeper
 	cdc           codec.Codec
@@ -295,6 +304,13 @@ func (mgr *Mgrs) BeginBlock(ctx cosmos.Context) error {
 	if err != nil {
 		return fmt.Errorf("fail to create swap queue: %w", err)
 	}
+
+	if v.GTE(semver.MustParse("1.128.0")) { // TODO: remove on hard fork
+		mgr.tradeManager, err = GetTradeAccountManager(v, mgr.K)
+		if err != nil {
+			return fmt.Errorf("fail to create trade manager: %w", err)
+		}
+	}
 	return nil
 }
 
@@ -334,6 +350,8 @@ func (mgr *Mgrs) Slasher() Slasher { return mgr.slasher }
 // YggManager return an implementation of YggManager
 // TODO remove on hard fork
 func (mgr *Mgrs) YggManager() YggManager { return mgr.yggManager }
+
+func (mgr *Mgrs) TradeAccountManager() TradeAccountManager { return mgr.tradeManager }
 
 // GetKeeper return Keeper
 func GetKeeper(version semver.Version, cdc codec.BinaryCodec, coinKeeper bankkeeper.Keeper, accountKeeper authkeeper.AccountKeeper, storeKey cosmos.StoreKey) (keeper.Keeper, error) {
@@ -705,6 +723,15 @@ func GetSwapper(version semver.Version) (Swapper, error) {
 		return newSwapperV90(), nil
 	case version.GTE(semver.MustParse("0.81.0")):
 		return newSwapperV81(), nil
+	default:
+		return nil, errInvalidVersion
+	}
+}
+
+func GetTradeAccountManager(version semver.Version, keeper keeper.Keeper) (TradeAccountManager, error) {
+	switch {
+	case version.GTE(semver.MustParse("1.128.0")):
+		return newTradeMgrVCUR(keeper), nil
 	default:
 		return nil, errInvalidVersion
 	}

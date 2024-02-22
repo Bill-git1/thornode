@@ -31,6 +31,12 @@ func (s *SwapperVCUR) validateMessage(tx common.Tx, target common.Asset, destina
 	if destination.IsEmpty() {
 		return errors.New("destination is empty")
 	}
+	if tx.Coins[0].Asset.IsTradeAsset() && !target.IsTradeAsset() {
+		return errors.New("swaps from trade asset to L1 incur slip, use trade-")
+	}
+	if (!tx.Coins[0].Asset.IsSyntheticAsset() && !tx.Coins[0].Asset.IsTradeAsset()) && target.IsTradeAsset() {
+		return errors.New("swaps from L1 to trade asset incur slip, use trade+")
+	}
 
 	return nil
 }
@@ -199,6 +205,20 @@ func (s *SwapperVCUR) swapOne(ctx cosmos.Context,
 		poolAsset = source.GetLayer1Asset()
 	}
 
+	if source.IsTradeAsset() {
+		if mimir.NewTradeAccountsEnabled().IsOff(ctx, mgr.Keeper()) {
+			return cosmos.ZeroUint(), evt, fmt.Errorf("trade account is disabled")
+		}
+		fromAcc, err := cosmos.AccAddressFromBech32(tx.FromAddress.String())
+		if err != nil {
+			return cosmos.ZeroUint(), evt, ErrInternal(err, "fail to parse from address")
+		}
+		amount, err = mgr.TradeAccountManager().Withdrawal(ctx, source, amount, fromAcc)
+		if err != nil {
+			return cosmos.ZeroUint(), evt, ErrInternal(err, "fail to withdraw from trade")
+		}
+	}
+
 	swapEvt := NewEventSwap(
 		poolAsset,
 		swapTarget,
@@ -267,7 +287,7 @@ func (s *SwapperVCUR) swapOne(ctx cosmos.Context,
 
 	swapSlipBps := s.CalcSwapSlip(X, x)
 	swapEvt.PoolSlip = swapSlipBps
-	minSlipBps := s.MinSlipBps(ctx, mgr.Keeper(), target.IsSyntheticAsset())
+	minSlipBps := s.MinSlipBps(ctx, mgr.Keeper(), target.IsSyntheticAsset(), target.IsTradeAsset())
 	var (
 		emitAssets   cosmos.Uint
 		liquidityFee cosmos.Uint
@@ -350,6 +370,21 @@ func (s *SwapperVCUR) swapOne(ctx cosmos.Context,
 	// Even for a Derived Asset pool, set the pool so the txout manager's GetFee for toi.Coin.Asset uses updated balances.
 	if err := keeper.SetPool(ctx, pool); err != nil {
 		return cosmos.ZeroUint(), evt, fmt.Errorf("fail to set pool")
+	}
+
+	// if target is trade account, deposit the asset to trade account
+	if target.IsTradeAsset() {
+		if mimir.NewTradeAccountsEnabled().IsOff(ctx, keeper) {
+			return cosmos.ZeroUint(), evt, fmt.Errorf("trade account is disabled")
+		}
+		acc, err := destination.AccAddress()
+		if err != nil {
+			return cosmos.ZeroUint(), evt, ErrInternal(err, "fail to parse trade account address")
+		}
+		_, err = mgr.TradeAccountManager().Deposit(ctx, target, emitAssets, acc)
+		if err != nil {
+			return cosmos.ZeroUint(), evt, ErrInternal(err, "fail to deposit to trade account")
+		}
 	}
 
 	// apply swapper clout
@@ -465,11 +500,15 @@ func (s *SwapperVCUR) MinSlipBps(
 	ctx cosmos.Context,
 	k keeper.Keeper,
 	isSynth bool,
+	isTradeAccounts bool,
 ) cosmos.Uint {
 	var ref string
-	if isSynth {
+	switch {
+	case isSynth:
 		ref = constants.SynthSlipMinBps.String()
-	} else {
+	case isTradeAccounts:
+		ref = constants.TradeAccountsSlipMinBps.String()
+	default:
 		ref = constants.L1SlipMinBps.String()
 	}
 	minFeeMimir, found := mimir.GetMimir(mimir.SwapSlipBasisPointsMin, ref)

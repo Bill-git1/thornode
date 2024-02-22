@@ -71,4 +71,6 @@ type (
 	THORName                 = types.THORName
 	AffiliateFeeCollector    = types.AffiliateFeeCollector
 	SwapperClout             = types.SwapperClout
+	TradeAccount             = types.TradeAccount
+	TradeUnit                = types.TradeUnit
 )

@@ -138,8 +138,10 @@ const (
 	SaversStreamingSwapsInterval
 	RescheduleCoalesceBlocks
 	SignerConcurrency
-	L1SlipMinBps    // SwapSlipBasisPointsMinId mimirv2 ref
-	SynthSlipMinBps // SwapSlipBasisPointsMinId mimirv2 ref
+	L1SlipMinBps            // SwapSlipBasisPointsMinId mimirv2 ref
+	SynthSlipMinBps         // SwapSlipBasisPointsMinId mimirv2 ref
+	TradeAccountsSlipMinBps // SwapSlipBasisPointsMinId mimirv2 ref
+	TradeAccountsEnabled
 )
 
 // ConstantValues define methods used to get constant values

@@ -19,6 +19,7 @@ import "thorchain/v1/x/thorchain/types/type_liquidity_provider.proto";
 import "thorchain/v1/x/thorchain/types/type_thorname.proto";
 import "thorchain/v1/x/thorchain/types/type_loan.proto";
 import "thorchain/v1/x/thorchain/types/type_clout.proto";
+import "thorchain/v1/x/thorchain/types/type_trade_account.proto";
 import "gogoproto/gogo.proto";
 
 message lastChainHeight {
@@ -58,4 +59,6 @@ message GenesisState {
   repeated types.StreamingSwap streaming_swaps = 29 [(gogoproto.nullable) = false];
   repeated types.MsgSwap swap_queue_items = 30 [(gogoproto.nullable) = false];
   repeated types.SwapperClout swapper_clout = 31 [(gogoproto.nullable) = false];
+  repeated types.TradeAccount trade_accounts = 32 [(gogoproto.nullable) = false];
+  repeated types.TradeUnit trade_units = 33 [(gogoproto.nullable) = false];
 }

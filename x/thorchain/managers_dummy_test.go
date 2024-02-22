@@ -19,6 +19,7 @@ type DummyMgr struct {
 	swapQ         SwapQueue
 	orderBook     OrderBook
 	slasher       Slasher
+	tradeMgr      TradeAccountManager
 }
 
 func NewDummyMgrWithKeeper(k keeper.Keeper) *DummyMgr {
@@ -33,6 +34,7 @@ func NewDummyMgrWithKeeper(k keeper.Keeper) *DummyMgr {
 		obMgr:         NewDummyObserverManager(),
 		poolMgr:       NewDummyPoolManager(),
 		slasher:       NewDummySlasher(),
+		tradeMgr:      NewDummyTradeAccountManager(),
 		// TODO add dummy swap queue
 		// TODO add dummy order book
 	}
@@ -50,22 +52,24 @@ func NewDummyMgr() *DummyMgr {
 		obMgr:         NewDummyObserverManager(),
 		poolMgr:       NewDummyPoolManager(),
 		slasher:       NewDummySlasher(),
+		tradeMgr:      NewDummyTradeAccountManager(),
 		// TODO add dummy swap queue
 		// TODO add dummy order book
 	}
 }
 
-func (m DummyMgr) GetVersion() semver.Version             { return GetCurrentVersion() }
-func (m DummyMgr) GetConstants() constants.ConstantValues { return m.constAccessor }
-func (m DummyMgr) Keeper() keeper.Keeper                  { return m.K }
-func (m DummyMgr) GasMgr() GasManager                     { return m.gasMgr }
-func (m DummyMgr) EventMgr() EventManager                 { return m.eventMgr }
-func (m DummyMgr) TxOutStore() TxOutStore                 { return m.txOutStore }
-func (m DummyMgr) NetworkMgr() NetworkManager             { return m.networkMgr }
-func (m DummyMgr) ValidatorMgr() ValidatorManager         { return m.validatorMgr }
-func (m DummyMgr) ObMgr() ObserverManager                 { return m.obMgr }
-func (m DummyMgr) PoolMgr() PoolManager                   { return m.poolMgr }
-func (m DummyMgr) SwapQ() SwapQueue                       { return m.swapQ }
-func (m DummyMgr) Slasher() Slasher                       { return m.slasher }
-func (m DummyMgr) YggManager() YggManager                 { return nil } // TODO remove on hard fork
-func (m DummyMgr) OrderBookMgr() OrderBook                { return m.orderBook }
+func (m DummyMgr) GetVersion() semver.Version               { return GetCurrentVersion() }
+func (m DummyMgr) GetConstants() constants.ConstantValues   { return m.constAccessor }
+func (m DummyMgr) Keeper() keeper.Keeper                    { return m.K }
+func (m DummyMgr) GasMgr() GasManager                       { return m.gasMgr }
+func (m DummyMgr) EventMgr() EventManager                   { return m.eventMgr }
+func (m DummyMgr) TxOutStore() TxOutStore                   { return m.txOutStore }
+func (m DummyMgr) NetworkMgr() NetworkManager               { return m.networkMgr }
+func (m DummyMgr) ValidatorMgr() ValidatorManager           { return m.validatorMgr }
+func (m DummyMgr) ObMgr() ObserverManager                   { return m.obMgr }
+func (m DummyMgr) PoolMgr() PoolManager                     { return m.poolMgr }
+func (m DummyMgr) SwapQ() SwapQueue                         { return m.swapQ }
+func (m DummyMgr) Slasher() Slasher                         { return m.slasher }
+func (m DummyMgr) YggManager() YggManager                   { return nil } // TODO remove on hard fork
+func (m DummyMgr) OrderBookMgr() OrderBook                  { return m.orderBook }
+func (m DummyMgr) TradeAccountManager() TradeAccountManager { return m.tradeMgr }

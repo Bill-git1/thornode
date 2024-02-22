@@ -323,6 +323,8 @@
       "streaming_swaps": [],
       "swap_queue_items": [],
       "swapper_clout": [],
+      "trade_accounts": [],
+      "trade_units": [],
       "tx_outs": null,
       "vaults": [
         {

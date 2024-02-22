@@ -94,6 +94,8 @@ var (
 	NewBanVoter                    = types.NewBanVoter
 	NewErrataTxVoter               = types.NewErrataTxVoter
 	NewObservedTxVoter             = types.NewObservedTxVoter
+	NewMsgTradeAccountDeposit      = types.NewMsgTradeAccountDeposit
+	NewMsgTradeAccountWithdrawal   = types.NewMsgTradeAccountWithdrawal
 	NewMsgLoanOpen                 = types.NewMsgLoanOpen
 	NewMsgLoanRepayment            = types.NewMsgLoanRepayment
 	NewMsgMimir                    = types.NewMsgMimir
@@ -144,6 +146,8 @@ var (
 	NewEventTHORName               = types.NewEventTHORName
 	NewEventMintBurn               = types.NewEventMintBurn
 	NewEventVersion                = types.NewEventVersion
+	NewEventTradeAccountDeposit    = types.NewEventTradeAccountDeposit
+	NewEventTradeAccountWithdraw   = types.NewEventTradeAccountWithdraw
 	NewEventLoanOpen               = types.NewEventLoanOpen
 	NewEventLoanRepayment          = types.NewEventLoanRepayment
 	NewPoolMod                     = types.NewPoolMod
@@ -232,6 +236,8 @@ type (
 	MsgBond                        = types.MsgBond
 	MsgUnBond                      = types.MsgUnBond
 	MsgNoOp                        = types.MsgNoOp
+	MsgTradeAccountDeposit         = types.MsgTradeAccountDeposit
+	MsgTradeAccountWithdrawal      = types.MsgTradeAccountWithdrawal
 	MsgConsolidate                 = types.MsgConsolidate
 	MsgDonate                      = types.MsgDonate
 	MsgWithdrawLiquidity           = types.MsgWithdrawLiquidity
@@ -344,30 +350,33 @@ type (
 	NodeMimir                      = types.NodeMimir
 	NodeMimirs                     = types.NodeMimirs
 	SwapperClout                   = types.SwapperClout
+	TradeAccount                   = types.TradeAccount
+	TradeUnit                      = types.TradeUnit
 
 	// Memo
-	SwapMemo              = mem.SwapMemo
-	AddLiquidityMemo      = mem.AddLiquidityMemo
-	WithdrawLiquidityMemo = mem.WithdrawLiquidityMemo
-	DonateMemo            = mem.DonateMemo
-	RefundMemo            = mem.RefundMemo
-	MigrateMemo           = mem.MigrateMemo
-	RagnarokMemo          = mem.RagnarokMemo
-	BondMemo              = mem.BondMemo
-	UnbondMemo            = mem.UnbondMemo
-	OutboundMemo          = mem.OutboundMemo
-	LeaveMemo             = mem.LeaveMemo
-	ReserveMemo           = mem.ReserveMemo
-	NoOpMemo              = mem.NoOpMemo
-	ConsolidateMemo       = mem.ConsolidateMemo
-	ManageTHORNameMemo    = mem.ManageTHORNameMemo
+	SwapMemo                   = mem.SwapMemo
+	AddLiquidityMemo           = mem.AddLiquidityMemo
+	WithdrawLiquidityMemo      = mem.WithdrawLiquidityMemo
+	DonateMemo                 = mem.DonateMemo
+	RefundMemo                 = mem.RefundMemo
+	MigrateMemo                = mem.MigrateMemo
+	RagnarokMemo               = mem.RagnarokMemo
+	BondMemo                   = mem.BondMemo
+	UnbondMemo                 = mem.UnbondMemo
+	OutboundMemo               = mem.OutboundMemo
+	LeaveMemo                  = mem.LeaveMemo
+	ReserveMemo                = mem.ReserveMemo
+	NoOpMemo                   = mem.NoOpMemo
+	ConsolidateMemo            = mem.ConsolidateMemo
+	ManageTHORNameMemo         = mem.ManageTHORNameMemo
+	TradeAccountDepositMemo    = mem.TradeAccountDepositMemo
+	TradeAccountWithdrawalMemo = mem.TradeAccountWithdrawalMemo
+	LoanOpenMemo               = mem.LoanOpenMemo
+	LoanRepaymentMemo          = mem.LoanRepaymentMemo
 
 	// Proto
 	ProtoStrings = types.ProtoStrings
 	ProtoInt64   = types.ProtoInt64
-
-	LoanOpenMemo      = mem.LoanOpenMemo
-	LoanRepaymentMemo = mem.LoanRepaymentMemo
 )
 
 var _ codec.ProtoMarshaler = &types.LiquidityProvider{}

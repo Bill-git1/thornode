@@ -606,6 +606,77 @@ paths:
               schema:
                 $ref: "#/components/schemas/SwapperCloutResponse"
 
+  # ------------------------------ trade unit ------------------------------
+
+  /thorchain/trade/unit/{asset}:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+      - $ref: "#/components/parameters/asset"
+    get:
+      description: Returns the total units and depth of a trade asset
+      operationId: trade_unit
+      tags:
+        - TradeUnit
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TradeUnitResponse"
+
+  /thorchain/trade/units:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+    get:
+      description: Returns the total units and depth for each trade asset
+      operationId: trade_units
+      tags:
+        - TradeUnits
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TradeUnitsResponse"
+
+  # ------------------------------ trade account ------------------------------
+
+  /thorchain/trade/account/{address}:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+      - $ref: "#/components/parameters/address"
+    get:
+      description: Returns the units and depth of a trade account
+      operationId: trade_account
+      tags:
+        - TradeAccount
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TradeAccountResponse"
+
+  /thorchain/trade/accounts/{asset}:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+      - $ref: "#/components/parameters/asset"
+    get:
+      description: Returns all trade accounts for an asset
+      operationId: trade_accounts
+      tags:
+        - TradeAccounts
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TradeAccountsResponse"
+
   # ------------------------------ queue ------------------------------
 
   /thorchain/queue:
@@ -2984,6 +3055,60 @@ components:
           type: integer
           format: int64
           description: last block height that clout was reclaimed
+
+    TradeUnitResponse:
+      type: object
+      required:
+        - asset
+        - units
+        - depth
+      properties:
+        asset:
+          type: string
+          example: "BTC~BTC"
+          description: trade account asset with "~" separator
+        units:
+          type: string
+          description: total units of trade asset
+        depth:
+          type: string
+          description: total depth of trade asset
+
+    TradeUnitsResponse:
+      type: array
+      items:
+        $ref: "#/components/schemas/TradeUnitResponse"
+
+    TradeAccountResponse:
+      type: object
+      required:
+        - asset
+        - units
+        - owner
+      properties:
+        asset:
+          type: string
+          example: "BTC~BTC"
+          description: trade account asset with "~" separator
+        units:
+          type: string
+          description: units of trade asset belonging to this owner
+        owner:
+          type: string
+          description: thor address of trade account owner
+        last_add_height:
+          type: integer
+          format: int64
+          description: last thorchain height trade assets were added to trade account
+        last_withdraw_height:
+          type: integer
+          format: int64
+          description: last thorchain height trade assets were withdrawn from trade account
+
+    TradeAccountsResponse:
+      type: array
+      items:
+        $ref: "#/components/schemas/TradeAccountResponse"
 
     MimirResponse:
       type: object

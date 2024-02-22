@@ -398,6 +398,8 @@
         }
       ],
       "swapper_clout": [],
+      "trade_accounts": [],
+      "trade_units": [],
       "tx_outs": null,
       "vaults": [
         {

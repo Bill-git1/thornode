@@ -146,6 +146,11 @@ func (tos *TxOutStorageVCUR) TryAddTxOutItem(ctx cosmos.Context, mgr Manager, to
 // return bool indicate whether the transaction had been added successful or not
 // return error indicate error
 func (tos *TxOutStorageVCUR) cachedTryAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem, minOut cosmos.Uint) (bool, error) {
+	if toi.Coin.Asset.IsTradeAsset() {
+		// no outbound needed for trade assets
+		return true, nil
+	}
+
 	outputs, totalOutboundFeeRune, err := tos.prepareTxOutItem(ctx, toi)
 	if err != nil {
 		return false, fmt.Errorf("fail to prepare outbound tx: %w", err)

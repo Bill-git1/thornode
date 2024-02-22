@@ -13,6 +13,7 @@ message Asset {
     string symbol = 2 [(gogoproto.casttype) = "Symbol"];
     string ticker = 3 [(gogoproto.casttype) = "Ticker"];
     bool synth = 4;
+    bool trade = 5;
 }
 
 message Coin {

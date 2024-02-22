@@ -115,6 +115,10 @@ func refundTxV124(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uin
 func unrefundableCoinCleanup(ctx cosmos.Context, mgr Manager, toi TxOutItem, burnReason string) {
 	coin := toi.Coin
 
+	if coin.Asset.IsTradeAsset() {
+		return
+	}
+
 	sourceModuleName := toi.GetModuleName() // Ensure that non-"".
 
 	// For context in emitted events, retrieve the original transaction that prompted the cleanup.

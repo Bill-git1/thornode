@@ -45,6 +45,7 @@ func init() {
 		MaxOutboundFeeMultiplierBasisPoints: 20_000,
 		MinOutboundFeeMultiplierBasisPoints: 15_000,
 		PreferredAssetOutboundFeeMultiplier: 100,
+		TradeAccountsEnabled:                1,
 	}
 	boolOverrides = map[ConstantName]bool{
 		StrictBondLiquidityRatio: false,

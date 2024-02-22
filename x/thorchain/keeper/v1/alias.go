@@ -57,6 +57,8 @@ var (
 	NewTxOut                   = types.NewTxOut
 	HasSuperMajority           = types.HasSuperMajority
 	RegisterCodec              = types.RegisterCodec
+	NewTradeAccount            = types.NewTradeAccount
+	NewTradeUnit               = types.NewTradeUnit
 	NewNodeAccount             = types.NewNodeAccount
 	NewBondProviders           = types.NewBondProviders
 	NewBondProvider            = types.NewBondProvider
@@ -130,6 +132,8 @@ type (
 	NodeMimirs               = types.NodeMimirs
 	ProtocolOwnedLiquidity   = types.ProtocolOwnedLiquidity
 	SwapperClout             = types.SwapperClout
+	TradeAccount             = types.TradeAccount
+	TradeUnit                = types.TradeUnit
 
 	ProtoInt64        = types.ProtoInt64
 	ProtoUint64       = types.ProtoUint64

@@ -126,6 +126,22 @@ func (k KVStoreDummy) GetLastChainHeights(ctx cosmos.Context) (map[common.Chain]
 	return nil, kaboom
 }
 
+func (k KVStoreDummy) GetTradeAccount(ctx cosmos.Context, addr cosmos.AccAddress, asset common.Asset) (TradeAccount, error) {
+	return TradeAccount{}, kaboom
+}
+func (k KVStoreDummy) SetTradeAccount(ctx cosmos.Context, record TradeAccount)    {}
+func (k KVStoreDummy) RemoveTradeAccount(ctx cosmos.Context, record TradeAccount) {}
+func (k KVStoreDummy) GetTradeAccountIterator(ctx cosmos.Context) cosmos.Iterator { return nil }
+func (k KVStoreDummy) GetTradeAccountIteratorWithAddress(ctx cosmos.Context, addr cosmos.AccAddress) cosmos.Iterator {
+	return nil
+}
+
+func (k KVStoreDummy) GetTradeUnit(ctx cosmos.Context, asset common.Asset) (TradeUnit, error) {
+	return TradeUnit{}, kaboom
+}
+func (k KVStoreDummy) SetTradeUnit(ctx cosmos.Context, unit TradeUnit)         {}
+func (k KVStoreDummy) GetTradeUnitIterator(ctx cosmos.Context) cosmos.Iterator { return nil }
+
 func (k KVStoreDummy) GetRagnarokBlockHeight(_ cosmos.Context) (int64, error) {
 	return 0, kaboom
 }

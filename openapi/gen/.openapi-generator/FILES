@@ -18,6 +18,10 @@ api_quote.go
 api_savers.go
 api_streaming_swap.go
 api_thornames.go
+api_trade_account.go
+api_trade_accounts.go
+api_trade_unit.go
+api_trade_units.go
 api_transactions.go
 api_tss.go
 api_vaults.go
@@ -93,6 +97,12 @@ docs/TSSApi.md
 docs/Thorname.md
 docs/ThornameAlias.md
 docs/ThornamesApi.md
+docs/TradeAccountApi.md
+docs/TradeAccountResponse.md
+docs/TradeAccountsApi.md
+docs/TradeUnitApi.md
+docs/TradeUnitResponse.md
+docs/TradeUnitsApi.md
 docs/TransactionsApi.md
 docs/TssKeysignMetric.md
 docs/TssMetric.md
@@ -175,6 +185,8 @@ model_streaming_swap.go
 model_swapper_clout_response.go
 model_thorname.go
 model_thorname_alias.go
+model_trade_account_response.go
+model_trade_unit_response.go
 model_tss_keysign_metric.go
 model_tss_metric.go
 model_tx.go

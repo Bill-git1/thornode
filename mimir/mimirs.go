@@ -124,3 +124,18 @@ func NewSwapSlipBasisPointsMin(refs ...string) Mimir {
 		},
 	}
 }
+
+func NewTradeAccountsEnabled(refs ...string) Mimir {
+	id := TradeAccountEnabled
+	return &mimir{
+		id:          id,
+		name:        id.String(),
+		mimirType:   OperationalMimir,
+		reference:   getRef(refs),
+		tags:        []string{"operational", "trade"},
+		description: "Enable or disable trade accounts",
+		legacyMimirKey: func(_ string) string {
+			return "TradeAccountsEnabled"
+		},
+	}
+}

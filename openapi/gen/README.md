@@ -126,6 +126,10 @@ Class | Method | HTTP request | Description
 *TSSApi* | [**Metrics**](docs/TSSApi.md#metrics) | **Get** /thorchain/metrics | 
 *TSSApi* | [**MetricsKeygen**](docs/TSSApi.md#metricskeygen) | **Get** /thorchain/metric/keygen/{pubkey} | 
 *ThornamesApi* | [**Thorname**](docs/ThornamesApi.md#thorname) | **Get** /thorchain/thorname/{name} | 
+*TradeAccountApi* | [**TradeAccount**](docs/TradeAccountApi.md#tradeaccount) | **Get** /thorchain/trade/account/{address} | 
+*TradeAccountsApi* | [**TradeAccounts**](docs/TradeAccountsApi.md#tradeaccounts) | **Get** /thorchain/trade/accounts/{asset} | 
+*TradeUnitApi* | [**TradeUnit**](docs/TradeUnitApi.md#tradeunit) | **Get** /thorchain/trade/unit/{asset} | 
+*TradeUnitsApi* | [**TradeUnits**](docs/TradeUnitsApi.md#tradeunits) | **Get** /thorchain/trade/units | 
 *TransactionsApi* | [**Tx**](docs/TransactionsApi.md#tx) | **Get** /thorchain/tx/{hash} | 
 *TransactionsApi* | [**TxSigners**](docs/TransactionsApi.md#txsigners) | **Get** /thorchain/tx/details/{hash} | 
 *TransactionsApi* | [**TxSignersOld**](docs/TransactionsApi.md#txsignersold) | **Get** /thorchain/tx/{hash}/signers | 
@@ -192,6 +196,8 @@ Class | Method | HTTP request | Description
  - [SwapperCloutResponse](docs/SwapperCloutResponse.md)
  - [Thorname](docs/Thorname.md)
  - [ThornameAlias](docs/ThornameAlias.md)
+ - [TradeAccountResponse](docs/TradeAccountResponse.md)
+ - [TradeUnitResponse](docs/TradeUnitResponse.md)
  - [TssKeysignMetric](docs/TssKeysignMetric.md)
  - [TssMetric](docs/TssMetric.md)
  - [Tx](docs/Tx.md)

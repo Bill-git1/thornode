@@ -992,6 +992,126 @@ paths:
           description: OK
       tags:
       - Clout
+  /thorchain/trade/unit/{asset}:
+    get:
+      description: Returns the total units and depth of a trade asset
+      operationId: trade_unit
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      - explode: false
+        in: path
+        name: asset
+        required: true
+        schema:
+          example: BTC.BTC
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeUnitResponse'
+          description: OK
+      tags:
+      - TradeUnit
+  /thorchain/trade/units:
+    get:
+      description: Returns the total units and depth for each trade asset
+      operationId: trade_units
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeUnitsResponse'
+          description: OK
+      tags:
+      - TradeUnits
+  /thorchain/trade/account/{address}:
+    get:
+      description: Returns the units and depth of a trade account
+      operationId: trade_account
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      - explode: false
+        in: path
+        name: address
+        required: true
+        schema:
+          example: thor1zupk5lmc84r2dh738a9g3zscavannjy3nzplwt
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeAccountResponse'
+          description: OK
+      tags:
+      - TradeAccount
+  /thorchain/trade/accounts/{asset}:
+    get:
+      description: Returns all trade accounts for an asset
+      operationId: trade_accounts
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      - explode: false
+        in: path
+        name: asset
+        required: true
+        schema:
+          example: BTC.BTC
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeAccountsResponse'
+          description: OK
+      tags:
+      - TradeAccounts
   /thorchain/queue:
     get:
       description: Returns queue statistics.
@@ -4520,6 +4640,67 @@ components:
       required:
       - address
       type: object
+    TradeUnitResponse:
+      example:
+        depth: depth
+        units: units
+        asset: BTC~BTC
+      properties:
+        asset:
+          description: trade account asset with "~" separator
+          example: BTC~BTC
+          type: string
+        units:
+          description: total units of trade asset
+          type: string
+        depth:
+          description: total depth of trade asset
+          type: string
+      required:
+      - asset
+      - depth
+      - units
+      type: object
+    TradeUnitsResponse:
+      items:
+        $ref: '#/components/schemas/TradeUnitResponse'
+      type: array
+    TradeAccountResponse:
+      example:
+        owner: owner
+        last_withdraw_height: 6
+        units: units
+        asset: BTC~BTC
+        last_add_height: 0
+      properties:
+        asset:
+          description: trade account asset with "~" separator
+          example: BTC~BTC
+          type: string
+        units:
+          description: units of trade asset belonging to this owner
+          type: string
+        owner:
+          description: thor address of trade account owner
+          type: string
+        last_add_height:
+          description: last thorchain height trade assets were added to trade account
+          format: int64
+          type: integer
+        last_withdraw_height:
+          description: last thorchain height trade assets were withdrawn from trade
+            account
+          format: int64
+          type: integer
+      required:
+      - asset
+      - owner
+      - units
+      type: object
+    TradeAccountsResponse:
+      items:
+        $ref: '#/components/schemas/TradeAccountResponse'
+      type: array
     MimirResponse:
       additionalProperties:
         type: string

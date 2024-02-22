@@ -43,6 +43,10 @@ var (
 	QuerySaver               = Query{Key: "saver", EndpointTemplate: "/%s/pool/{%s}/saver/{%s}"}
 	QueryBorrowers           = Query{Key: "borrowers", EndpointTemplate: "/%s/pool/{%s}/borrowers"}
 	QueryBorrower            = Query{Key: "borrower", EndpointTemplate: "/%s/pool/{%s}/borrower/{%s}"}
+	QueryTradeUnit           = Query{Key: "tradeunit", EndpointTemplate: "/%s/trade/unit/{%s}"}
+	QueryTradeUnits          = Query{Key: "tradeunits", EndpointTemplate: "/%s/trade/units"}
+	QueryTradeAccount        = Query{Key: "tradeaccount", EndpointTemplate: "/%s/trade/account/{%s}"}
+	QueryTradeAccounts       = Query{Key: "tradeaccounts", EndpointTemplate: "/%s/trade/accounts/{%s}"}
 	QueryTx                  = Query{Key: "tx", EndpointTemplate: "/%s/tx/{%s}"}
 	QueryTxVoterOld          = Query{Key: "txvoterold", EndpointTemplate: "/%s/tx/{%s}/signers"}
 	QueryTxVoter             = Query{Key: "txvoter", EndpointTemplate: "/%s/tx/details/{%s}"}
@@ -111,6 +115,10 @@ var Queries = []Query{
 	QuerySaver,
 	QueryBorrowers,
 	QueryBorrower,
+	QueryTradeUnit,
+	QueryTradeUnits,
+	QueryTradeAccount,
+	QueryTradeAccounts,
 	QueryTxStages,
 	QueryTxStatus,
 	QueryTxVoter,
