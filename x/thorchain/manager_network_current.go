@@ -1305,21 +1305,19 @@ func (vm *NetworkMgrVCUR) UpdateNetwork(ctx cosmos.Context, constAccessor consta
 	// extremely unlikely), ignore it for now (attempt to recover in the next
 	// block). This should be OK as the asset amount in the pool has already
 	// been deducted so the balances are correct. Just operating at a deficit.
-	totalBonded, err := vm.getTotalActiveBond(ctx)
+	active, err := vm.k.ListActiveValidators(ctx)
 	if err != nil {
-		return fmt.Errorf("fail to get total active bond: %w", err)
+		return fmt.Errorf("fail to get all active accounts: %w", err)
 	}
+	effectiveSecurityBond := getEffectiveSecurityBond(active)
+	totalEffectiveBond, _ := getTotalEffectiveBond(active)
 
 	emissionCurve, err := vm.k.GetMimir(ctx, constants.EmissionCurve.String())
 	if emissionCurve < 0 || err != nil {
 		emissionCurve = constAccessor.GetInt64Value(constants.EmissionCurve)
 	}
-	incentiveCurve, err := vm.k.GetMimir(ctx, constants.IncentiveCurve.String())
-	if incentiveCurve < 0 || err != nil {
-		incentiveCurve = constAccessor.GetInt64Value(constants.IncentiveCurve)
-	}
 	blocksPerYear := constAccessor.GetInt64Value(constants.BlocksPerYear)
-	bondReward, totalPoolRewards, lpDeficit, lpShare := vm.calcBlockRewards(totalProvidedLiquidity, totalBonded, totalReserve, totalLiquidityFees, emissionCurve, incentiveCurve, blocksPerYear)
+	bondReward, totalPoolRewards, lpDeficit, lpShare := vm.calcBlockRewards(totalProvidedLiquidity, effectiveSecurityBond, totalEffectiveBond, totalReserve, totalLiquidityFees, emissionCurve, blocksPerYear)
 
 	network.LPIncomeSplit = int64(lpShare.Uint64())
 	network.NodeIncomeSplit = int64(10_000) - network.LPIncomeSplit
@@ -1421,18 +1419,6 @@ func (vm *NetworkMgrVCUR) getTotalProvidedLiquidityRune(ctx cosmos.Context) (Poo
 	return pools, totalProvidedLiquidity, nil
 }
 
-func (vm *NetworkMgrVCUR) getTotalActiveBond(ctx cosmos.Context) (cosmos.Uint, error) {
-	totalBonded := cosmos.ZeroUint()
-	nodes, err := vm.k.ListActiveValidators(ctx)
-	if err != nil {
-		return cosmos.ZeroUint(), fmt.Errorf("fail to get all active accounts: %w", err)
-	}
-	for _, node := range nodes {
-		totalBonded = totalBonded.Add(node.Bond)
-	}
-	return totalBonded, nil
-}
-
 // Pays out Rewards
 func (vm *NetworkMgrVCUR) payPoolRewards(ctx cosmos.Context, poolRewards []cosmos.Uint, pools Pools) error {
 	for i, reward := range poolRewards {
@@ -1457,7 +1443,7 @@ func (vm *NetworkMgrVCUR) calcPoolDeficit(lpDeficit, totalFees, poolFees cosmos.
 }
 
 // Calculate the block rewards that bonders and liquidity providers should receive
-func (vm *NetworkMgrVCUR) calcBlockRewards(totalProvidedLiquidity, totalBonded, totalReserve, totalLiquidityFees cosmos.Uint, emissionCurve, incentiveCurve, blocksPerYear int64) (cosmos.Uint, cosmos.Uint, cosmos.Uint, cosmos.Uint) {
+func (vm *NetworkMgrVCUR) calcBlockRewards(totalProvidedLiquidity, effectiveSecurityBond, totalEffectiveBond, totalReserve, totalLiquidityFees cosmos.Uint, emissionCurve, blocksPerYear int64) (cosmos.Uint, cosmos.Uint, cosmos.Uint, cosmos.Uint) {
 	// Block Rewards will take the latest reserve, divide it by the emission
 	// curve factor, then divide by blocks per year
 	trD := cosmos.NewDec(int64(totalReserve.Uint64()))
@@ -1468,8 +1454,8 @@ func (vm *NetworkMgrVCUR) calcBlockRewards(totalProvidedLiquidity, totalBonded, 
 
 	systemIncome := blockReward.Add(totalLiquidityFees) // Get total system income for block
 
-	lpSplit := vm.getPoolShare(incentiveCurve, totalProvidedLiquidity, totalBonded, systemIncome) // Get liquidity provider share
-	bonderSplit := common.SafeSub(systemIncome, lpSplit)                                          // Remainder to Bonders
+	lpSplit := vm.getPoolShare(totalProvidedLiquidity, effectiveSecurityBond, totalEffectiveBond, systemIncome) // Get liquidity provider share
+	bonderSplit := common.SafeSub(systemIncome, lpSplit)                                                        // Remainder to Bonders
 	lpShare := common.GetSafeShare(lpSplit, systemIncome, cosmos.NewUint(10_000))
 
 	lpDeficit := cosmos.ZeroUint()
@@ -1486,37 +1472,34 @@ func (vm *NetworkMgrVCUR) calcBlockRewards(totalProvidedLiquidity, totalBonded, 
 	return bonderSplit, poolReward, lpDeficit, lpShare
 }
 
-func (vm *NetworkMgrVCUR) getPoolShare(incentiveCurve int64, totalProvidedLiquidity, totalBonded, totalRewards cosmos.Uint) cosmos.Uint {
-	/*
-		Pooled : Share
-		0 : 100%
-		33% : 50% <- need to be 50% to match node rewards, when 33% is pooled
-		50% : 0%
-		https://gitlab.com/thorchain/thornode/-/issues/693
-	*/
-	if incentiveCurve <= 0 {
-		incentiveCurve = 1
-	}
-	if totalProvidedLiquidity.GTE(totalBonded) { // Zero payments to liquidity providers when provided liquidity == bonded
+// getPoolShare calculates the pool share of the total rewards. The distribution is
+// calculated such that the amount distributed to pools should equal the amount
+// distributed to the security bond when security bond is 2x the value in pools.
+//
+// totalLiquidty: RUNE value in pools
+// securityBond: RUNE value bonded by smallest 66% of nodes
+// effectiveBond: total RUNE value bonded, with max per-node at 66th percentile
+// totalRewards: total RUNE rewards to be distributed
+func (vm *NetworkMgrVCUR) getPoolShare(
+	totalLiquidity, securityBond, effectiveBond, totalRewards cosmos.Uint,
+) cosmos.Uint {
+	// no payments to liquidity providers when more liquidity than security
+	if securityBond.LTE(totalLiquidity) {
 		return cosmos.ZeroUint()
 	}
-	/*
-		B = bondedRune
-		P = pooledRune
-		incentiveCurve = 33
-		poolShareFactor = (B - P)/(B + P/incentiveCurve)
-	*/
 
-	var total cosmos.Uint
-	if incentiveCurve >= 100 {
-		total = totalBonded
-	} else {
-		inD := cosmos.NewDec(incentiveCurve)
-		divi := cosmos.NewDecFromBigInt(totalProvidedLiquidity.BigInt()).Quo(inD)
-		total = cosmos.NewUint(uint64((divi).RoundInt64())).Add(totalBonded)
-	}
-	part := common.SafeSub(totalBonded, totalProvidedLiquidity)
-	return common.GetSafeShare(part, total, totalRewards)
+	// calculate the base node share rewards
+	baseNodeShare := common.GetSafeShare(totalLiquidity, securityBond, totalRewards)
+
+	// base pool share is the remaining
+	basePoolShare := common.SafeSub(totalRewards, baseNodeShare)
+
+	// compensate for share of node rewards not received by the security bond
+	adjustmentNodeShare := common.GetUncappedShare(effectiveBond, securityBond, baseNodeShare)
+	adjustmentRewards := basePoolShare.Add(adjustmentNodeShare)
+
+	// reduce the pool share according to the adjustment rewards
+	return common.GetSafeShare(basePoolShare, adjustmentRewards, totalRewards)
 }
 
 // deductPoolRewardDeficit - When swap fees accrued by the pools surpass what

@@ -930,6 +930,24 @@ func getEffectiveSecurityBond(nas NodeAccounts) cosmos.Uint {
 	return amt
 }
 
+// Calculates total "effective bond" - the total bond when taking into account the
+// Bond-weighted hard-cap
+func getTotalEffectiveBond(nas NodeAccounts) (cosmos.Uint, cosmos.Uint) {
+	bondHardCap := getHardBondCap(nas)
+
+	totalEffectiveBond := cosmos.ZeroUint()
+	for _, item := range nas {
+		b := item.Bond
+		if item.Bond.GT(bondHardCap) {
+			b = bondHardCap
+		}
+
+		totalEffectiveBond = totalEffectiveBond.Add(b)
+	}
+
+	return totalEffectiveBond, bondHardCap
+}
+
 // find the bond size the highest of the bottom 2/3rds node bonds
 func getHardBondCap(nas NodeAccounts) cosmos.Uint {
 	if len(nas) == 0 {

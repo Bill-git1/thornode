@@ -2233,3 +2233,12 @@ func (h SwapHandler) validateV112(ctx cosmos.Context, msg MsgSwap) error {
 
 	return nil
 }
+
+// get the total bond of the bottom 2/3rds active validators
+func (h SwapHandler) getEffectiveSecurityBond(ctx cosmos.Context) (cosmos.Uint, error) {
+	nodeAccounts, err := h.mgr.Keeper().ListActiveValidators(ctx)
+	if err != nil {
+		return cosmos.ZeroUint(), err
+	}
+	return getEffectiveSecurityBond(nodeAccounts), nil
+}

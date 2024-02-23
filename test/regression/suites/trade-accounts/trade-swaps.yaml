@@ -185,7 +185,7 @@ params:
   destination: {{ addr_thor_fox }}
   amount: 20750890
 asserts:
-  - .expected_amount_out|tonumber == 2280058
+  - .expected_amount_out|tonumber == 2280069
   - .fees|.total_bps == 433
 ---
 type: tx-deposit
@@ -203,7 +203,7 @@ endpoint: http://localhost:1317/thorchain/trade/account/{{ addr_thor_fox }}
 asserts:
   - .|length == 2
   - .[0].asset == "BTC~BTC"
-  - .[0].units|tonumber == 7280058
+  - .[0].units|tonumber == 7280069
   - .[0].owner == "{{ addr_thor_fox }}"
   - .[1].asset == "ETH~ETH"
   - .[1].units|tonumber == 20750890 # 0.2 ETH
@@ -218,7 +218,7 @@ params:
   amount: 20750890
   streaming_interval: 1
 asserts:
-  - .expected_amount_out|tonumber == 2233644
+  - .expected_amount_out|tonumber == 2233652
   - .fees|.total_bps == 107
 ---
 type: tx-deposit
@@ -250,7 +250,7 @@ endpoint: http://localhost:1317/thorchain/trade/account/{{ addr_thor_fox }}
 asserts:
   - .|length == 1
   - .[0].asset == "BTC~BTC"
-  - .[0].units|tonumber == 9444726
+  - .[0].units|tonumber == 9444747
   - .[0].owner == "{{ addr_thor_fox }}"
 ---
 ########################################################################################
@@ -264,7 +264,7 @@ params:
   destination: {{ addr_thor_fox }}
   amount: 10000
 asserts:
-  - .expected_amount_out|tonumber == 98904
+  - .expected_amount_out|tonumber == 98903
   - .fees.total_bps == 1
 ---
 type: tx-mimir
@@ -298,5 +298,5 @@ params:
   destination: {{ addr_thor_fox }}
   amount: 10000
 asserts:
-  - .expected_amount_out|tonumber == 89023
+  - .expected_amount_out|tonumber == 89022
   - .fees.total_bps == 1000

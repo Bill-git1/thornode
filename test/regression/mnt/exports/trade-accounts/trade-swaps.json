@@ -210,7 +210,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "200003511508",
+              "amount": "199998687288",
               "denom": "rune"
             }
           ]
@@ -228,7 +228,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35000001791729",
+              "amount": "35000001791724",
               "denom": "rune"
             }
           ]
@@ -255,7 +255,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "12500000696763",
+              "amount": "12500005520988",
               "denom": "rune"
             }
           ]
@@ -406,9 +406,9 @@
         }
       ],
       "network": {
-        "LPIncomeSplit": "9840",
-        "NodeIncomeSplit": "160",
-        "bond_reward_rune": "8696763",
+        "LPIncomeSplit": "9751",
+        "NodeIncomeSplit": "249",
+        "bond_reward_rune": "13520988",
         "burned_bep2_rune": "0",
         "burned_erc20_rune": "0",
         "total_bond_units": "55"
@@ -494,8 +494,8 @@
         {
           "LP_units": "100000000000",
           "asset": "BTC.BTC",
-          "balance_asset": "100555274",
-          "balance_rune": "99747669445",
+          "balance_asset": "100555253",
+          "balance_rune": "99745006409",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -506,7 +506,7 @@
           "LP_units": "100000000000",
           "asset": "ETH.ETH",
           "balance_asset": "1000000000",
-          "balance_rune": "100255842063",
+          "balance_rune": "100253680879",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -524,7 +524,7 @@
           "last_add_height": "9",
           "last_withdraw_height": "4",
           "owner": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
-          "units": "9444726"
+          "units": "9444747"
         },
         {
           "asset": "ETH~ETH",
@@ -537,8 +537,8 @@
       "trade_units": [
         {
           "asset": "BTC~BTC",
-          "depth": "9444726",
-          "units": "9444726"
+          "depth": "9444747",
+          "units": "9444747"
         },
         {
           "asset": "ETH~ETH",

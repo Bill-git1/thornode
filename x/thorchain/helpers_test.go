@@ -645,20 +645,27 @@ func (s *HelperSuite) TestPOLPoolValue(c *C) {
 	c.Check(value.Uint64(), Equals, uint64(150023441162), Commentf("%d", value.Uint64()))
 }
 
+// This including the test of getTotalEffectiveBond.
 func (s *HelperSuite) TestSecurityBond(c *C) {
 	nas := make(NodeAccounts, 0)
 	c.Assert(getEffectiveSecurityBond(nas).Uint64(), Equals, uint64(0), Commentf("%d", getEffectiveSecurityBond(nas).Uint64()))
+	totalEffectiveBond, _ := getTotalEffectiveBond(nas)
+	c.Assert(totalEffectiveBond.Uint64(), Equals, uint64(0), Commentf("%d", totalEffectiveBond.Uint64()))
 
 	nas = NodeAccounts{
 		NodeAccount{Bond: cosmos.NewUint(10)},
 	}
 	c.Assert(getEffectiveSecurityBond(nas).Uint64(), Equals, uint64(10), Commentf("%d", getEffectiveSecurityBond(nas).Uint64()))
+	totalEffectiveBond, _ = getTotalEffectiveBond(nas)
+	c.Assert(totalEffectiveBond.Uint64(), Equals, uint64(10), Commentf("%d", totalEffectiveBond.Uint64()))
 
 	nas = NodeAccounts{
 		NodeAccount{Bond: cosmos.NewUint(10)},
 		NodeAccount{Bond: cosmos.NewUint(20)},
 	}
 	c.Assert(getEffectiveSecurityBond(nas).Uint64(), Equals, uint64(30), Commentf("%d", getEffectiveSecurityBond(nas).Uint64()))
+	totalEffectiveBond, _ = getTotalEffectiveBond(nas)
+	c.Assert(totalEffectiveBond.Uint64(), Equals, uint64(30), Commentf("%d", totalEffectiveBond.Uint64()))
 
 	nas = NodeAccounts{
 		NodeAccount{Bond: cosmos.NewUint(10)},
@@ -666,6 +673,9 @@ func (s *HelperSuite) TestSecurityBond(c *C) {
 		NodeAccount{Bond: cosmos.NewUint(30)},
 	}
 	c.Assert(getEffectiveSecurityBond(nas).Uint64(), Equals, uint64(30), Commentf("%d", getEffectiveSecurityBond(nas).Uint64()))
+	totalEffectiveBond, _ = getTotalEffectiveBond(nas)
+	c.Assert(totalEffectiveBond.Uint64(), Equals, uint64(50), Commentf("%d", totalEffectiveBond.Uint64()))
+	// Only 20 of the top-bond's node is effective.
 
 	nas = NodeAccounts{
 		NodeAccount{Bond: cosmos.NewUint(10)},
@@ -674,6 +684,9 @@ func (s *HelperSuite) TestSecurityBond(c *C) {
 		NodeAccount{Bond: cosmos.NewUint(40)},
 	}
 	c.Assert(getEffectiveSecurityBond(nas).Uint64(), Equals, uint64(60), Commentf("%d", getEffectiveSecurityBond(nas).Uint64()))
+	totalEffectiveBond, _ = getTotalEffectiveBond(nas)
+	c.Assert(totalEffectiveBond.Uint64(), Equals, uint64(90), Commentf("%d", totalEffectiveBond.Uint64()))
+	// Only 30 of the top-bond's node is effective.
 
 	nas = NodeAccounts{
 		NodeAccount{Bond: cosmos.NewUint(10)},
@@ -683,6 +696,9 @@ func (s *HelperSuite) TestSecurityBond(c *C) {
 		NodeAccount{Bond: cosmos.NewUint(50)},
 	}
 	c.Assert(getEffectiveSecurityBond(nas).Uint64(), Equals, uint64(100), Commentf("%d", getEffectiveSecurityBond(nas).Uint64()))
+	totalEffectiveBond, _ = getTotalEffectiveBond(nas)
+	c.Assert(totalEffectiveBond.Uint64(), Equals, uint64(140), Commentf("%d", totalEffectiveBond.Uint64()))
+	// Only 40 of the top-bond's node is effective.
 
 	nas = NodeAccounts{
 		NodeAccount{Bond: cosmos.NewUint(10)},
@@ -693,6 +709,9 @@ func (s *HelperSuite) TestSecurityBond(c *C) {
 		NodeAccount{Bond: cosmos.NewUint(60)},
 	}
 	c.Assert(getEffectiveSecurityBond(nas).Uint64(), Equals, uint64(100), Commentf("%d", getEffectiveSecurityBond(nas).Uint64()))
+	totalEffectiveBond, _ = getTotalEffectiveBond(nas)
+	c.Assert(totalEffectiveBond.Uint64(), Equals, uint64(180), Commentf("%d", totalEffectiveBond.Uint64()))
+	// Only 40 each of the top-bonds two nodes is effective.
 }
 
 func (s *HelperSuite) TestGetHardBondCap(c *C) {

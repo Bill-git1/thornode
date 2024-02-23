@@ -12,8 +12,8 @@ import (
 type ConstantName int
 
 const (
-	EmissionCurve ConstantName = iota
-	IncentiveCurve
+	EmissionCurve  ConstantName = iota
+	IncentiveCurve              // TODO remove on hard fork
 	MaxRuneSupply
 	BlocksPerYear
 	OutboundTransactionFee

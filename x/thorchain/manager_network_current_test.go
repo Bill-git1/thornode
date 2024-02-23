@@ -75,42 +75,111 @@ func (s *NetworkManagerVCURTestSuite) TestCalcBlockRewards(c *C) {
 
 	ver := GetCurrentVersion()
 	constAccessor := constants.GetConstantValues(ver)
+
+	// calcBlockRewards arguments: totalProvidedLiquidity, effectiveSecurityBond, totalEffectiveBond, totalReserve, totalLiquidityFees cosmos.Uint, emissionCurve, blocksPerYear int64
+
+	totalProvidedLiquidity := cosmos.NewUint(1000 * common.One)
+	effectiveSecurityBond := cosmos.NewUint(2000 * common.One)
+	// Equilibrium state where effectiveSecurityBond is double totalProvidedLiquidity,
+	// so expecting equal rewards for totalProvidedLiquidity and the effectiveSecurityBond portion of totalEffectiveBond.
+
+	totalEffectiveBond := effectiveSecurityBond.MulUint64(3).QuoUint64(2)
+	totalReserve := cosmos.NewUint(1000 * common.One)
+	totalLiquidityFees := cosmos.ZeroUint() // No liquidity fees unless explicitly specified.
 	emissionCurve := constAccessor.GetInt64Value(constants.EmissionCurve)
-	incentiveCurve := constAccessor.GetInt64Value(constants.IncentiveCurve)
 	blocksPerYear := constAccessor.GetInt64Value(constants.BlocksPerYear)
 
-	bondR, poolR, lpD, lpShare := networkMgr.calcBlockRewards(cosmos.NewUint(1000*common.One), cosmos.NewUint(2000*common.One), cosmos.NewUint(1000*common.One), cosmos.ZeroUint(), emissionCurve, incentiveCurve, blocksPerYear)
-	c.Check(bondR.Uint64(), Equals, uint64(1585), Commentf("%d", bondR.Uint64()))
-	c.Check(poolR.Uint64(), Equals, uint64(1586), Commentf("%d", poolR.Uint64()))
-	c.Check(lpD.Uint64(), Equals, uint64(0), Commentf("%d", lpD.Uint64()))
-	c.Check(lpShare.Uint64(), Equals, uint64(5002), Commentf("%d", lpShare.Uint64()))
+	// For each example, first totalEffectiveBond = effectiveSecurityBond, as though there were only one node;
+	// then totalEffectiveBond = 1.5 * effectiveSecurityBond, as though multiple nodes all with the same bond.
 
-	bondR, poolR, lpD, lpShare = networkMgr.calcBlockRewards(cosmos.NewUint(1000*common.One), cosmos.NewUint(2000*common.One), cosmos.NewUint(1000*common.One), cosmos.NewUint(3000), emissionCurve, incentiveCurve, blocksPerYear)
-	c.Check(bondR.Uint64(), Equals, uint64(3085), Commentf("%d", bondR.Uint64()))
-	c.Check(poolR.Uint64(), Equals, uint64(86), Commentf("%d", poolR.Uint64()))
+	bondR, poolR, lpD, lpShare := networkMgr.calcBlockRewards(totalProvidedLiquidity, effectiveSecurityBond, effectiveSecurityBond, totalReserve, totalLiquidityFees, emissionCurve, blocksPerYear)
+	c.Check(bondR.Uint64(), Equals, uint64(1586), Commentf("%d", bondR.Uint64()))
+	c.Check(poolR.Uint64(), Equals, uint64(1585), Commentf("%d", poolR.Uint64()))
 	c.Check(lpD.Uint64(), Equals, uint64(0), Commentf("%d", lpD.Uint64()))
-	c.Check(lpShare.Uint64(), Equals, uint64(5001), Commentf("%d", lpShare.Uint64()))
+	c.Check(lpShare.Uint64(), Equals, uint64(4998), Commentf("%d", lpShare.Uint64())) // Equilibrium
+	// With totalEffectiveBond = 1.5 * effectiveSecurityBond:
+	bondR, poolR, lpD, lpShare = networkMgr.calcBlockRewards(totalProvidedLiquidity, effectiveSecurityBond, totalEffectiveBond, totalReserve, totalLiquidityFees, emissionCurve, blocksPerYear)
+	c.Check(bondR.Uint64(), Equals, uint64(1903), Commentf("%d", bondR.Uint64()))
+	effectiveSecurityBondR := bondR.Mul(effectiveSecurityBond).Quo(totalEffectiveBond)
+	c.Check(effectiveSecurityBondR.Uint64(), Equals, uint64(1268), Commentf("%d", effectiveSecurityBondR.Uint64()))
+	c.Check(poolR.Uint64(), Equals, uint64(1268), Commentf("%d", poolR.Uint64())) // Equilibrium
+	c.Check(lpD.Uint64(), Equals, uint64(0), Commentf("%d", lpD.Uint64()))
+	c.Check(lpShare.Uint64(), Equals, uint64(3999), Commentf("%d", lpShare.Uint64())) // ~40% for totalProvidedLiquidity, ~40% for effectiveSecurityBond (equilibrium), ~60% for totalEffectiveBond
 
-	bondR, poolR, lpD, lpShare = networkMgr.calcBlockRewards(cosmos.NewUint(1000*common.One), cosmos.NewUint(2000*common.One), cosmos.ZeroUint(), cosmos.ZeroUint(), emissionCurve, incentiveCurve, blocksPerYear)
+	// Liquidity fees non-zero.
+	bondR, poolR, lpD, lpShare = networkMgr.calcBlockRewards(totalProvidedLiquidity, effectiveSecurityBond, effectiveSecurityBond, totalReserve, cosmos.NewUint(3000), emissionCurve, blocksPerYear)
+	c.Check(bondR.Uint64(), Equals, uint64(3086), Commentf("%d", bondR.Uint64()))
+	c.Check(poolR.Uint64(), Equals, uint64(85), Commentf("%d", poolR.Uint64()))
+	c.Check(lpD.Uint64(), Equals, uint64(0), Commentf("%d", lpD.Uint64()))
+	c.Check(lpShare.Uint64(), Equals, uint64(4999), Commentf("%d", lpShare.Uint64())) // Equilibrium
+	// With totalEffectiveBond = 1.5 * effectiveSecurityBond:
+	bondR, poolR, lpD, lpShare = networkMgr.calcBlockRewards(totalProvidedLiquidity, effectiveSecurityBond, totalEffectiveBond, totalReserve, cosmos.NewUint(3000), emissionCurve, blocksPerYear)
+	c.Check(bondR.Uint64(), Equals, uint64(3703), Commentf("%d", bondR.Uint64()))
+	effectiveSecurityBondR = bondR.Mul(effectiveSecurityBond).Quo(totalEffectiveBond)
+	c.Check(effectiveSecurityBondR.Uint64(), Equals, uint64(2468), Commentf("%d", effectiveSecurityBondR.Uint64()))
+	c.Check(poolR.Uint64(), Equals, uint64(0), Commentf("%d", poolR.Uint64()))
+	c.Check(lpD.Uint64(), Equals, uint64(532), Commentf("%d", lpD.Uint64()))          // Pool got 3000 liquidity fees and sent out 532, thus left with 2468, equilibrium with effectiveSecurityBondR.
+	c.Check(lpShare.Uint64(), Equals, uint64(3999), Commentf("%d", lpShare.Uint64())) // ~40% for totalProvidedLiquidity, ~40% for effectiveSecurityBond (equilibrium), ~60% for totalEffectiveBond
+
+	// Empty Reserve and no liquidity fees (all rewards zero).
+	bondR, poolR, lpD, lpShare = networkMgr.calcBlockRewards(totalProvidedLiquidity, effectiveSecurityBond, effectiveSecurityBond, cosmos.ZeroUint(), totalLiquidityFees, emissionCurve, blocksPerYear)
 	c.Check(bondR.Uint64(), Equals, uint64(0), Commentf("%d", bondR.Uint64()))
 	c.Check(poolR.Uint64(), Equals, uint64(0), Commentf("%d", poolR.Uint64()))
 	c.Check(lpD.Uint64(), Equals, uint64(0), Commentf("%d", lpD.Uint64()))
 	c.Check(lpShare.Uint64(), Equals, uint64(0), Commentf("%d", lpShare.Uint64()))
-
-	bondR, poolR, lpD, lpShare = networkMgr.calcBlockRewards(cosmos.NewUint(1000*common.One), cosmos.NewUint(1000*common.One), cosmos.NewUint(1000*common.One), cosmos.ZeroUint(), emissionCurve, incentiveCurve, blocksPerYear)
-	c.Check(bondR.Uint64(), Equals, uint64(3171), Commentf("%d", bondR.Uint64()))
+	// With totalEffectiveBond = 1.5 * effectiveSecurityBond:
+	bondR, poolR, lpD, lpShare = networkMgr.calcBlockRewards(totalProvidedLiquidity, effectiveSecurityBond, totalEffectiveBond, cosmos.ZeroUint(), totalLiquidityFees, emissionCurve, blocksPerYear)
+	c.Check(bondR.Uint64(), Equals, uint64(0), Commentf("%d", bondR.Uint64()))
+	effectiveSecurityBondR = bondR.Mul(effectiveSecurityBond).Quo(totalEffectiveBond)
+	c.Check(effectiveSecurityBondR.Uint64(), Equals, uint64(0), Commentf("%d", effectiveSecurityBondR.Uint64()))
 	c.Check(poolR.Uint64(), Equals, uint64(0), Commentf("%d", poolR.Uint64()))
 	c.Check(lpD.Uint64(), Equals, uint64(0), Commentf("%d", lpD.Uint64()))
 	c.Check(lpShare.Uint64(), Equals, uint64(0), Commentf("%d", lpShare.Uint64()))
 
-	bondR, poolR, lpD, lpShare = networkMgr.calcBlockRewards(cosmos.ZeroUint(), cosmos.NewUint(1000*common.One), cosmos.NewUint(1000*common.One), cosmos.ZeroUint(), emissionCurve, incentiveCurve, blocksPerYear)
+	// Now, half-size of effectiveSecurityBond.
+	effectiveSecurityBond = cosmos.NewUint(1000 * common.One)
+
+	// Provided liquidity equal to effectiveSecurityBond (no pool rewards).
+	bondR, poolR, lpD, lpShare = networkMgr.calcBlockRewards(totalProvidedLiquidity, effectiveSecurityBond, effectiveSecurityBond, totalReserve, totalLiquidityFees, emissionCurve, blocksPerYear)
+	c.Check(bondR.Uint64(), Equals, uint64(3171), Commentf("%d", bondR.Uint64()))
+	c.Check(poolR.Uint64(), Equals, uint64(0), Commentf("%d", poolR.Uint64()))
+	c.Check(lpD.Uint64(), Equals, uint64(0), Commentf("%d", lpD.Uint64()))
+	c.Check(lpShare.Uint64(), Equals, uint64(0), Commentf("%d", lpShare.Uint64()))
+	// With totalEffectiveBond = 1.5 * effectiveSecurityBond:
+	bondR, poolR, lpD, lpShare = networkMgr.calcBlockRewards(totalProvidedLiquidity, effectiveSecurityBond, totalEffectiveBond, totalReserve, totalLiquidityFees, emissionCurve, blocksPerYear)
+	c.Check(bondR.Uint64(), Equals, uint64(3171), Commentf("%d", bondR.Uint64()))
+	effectiveSecurityBondR = bondR.Mul(effectiveSecurityBond).Quo(totalEffectiveBond)
+	c.Check(effectiveSecurityBondR.Uint64(), Equals, uint64(1057), Commentf("%d", effectiveSecurityBondR.Uint64()))
+	c.Check(poolR.Uint64(), Equals, uint64(0), Commentf("%d", poolR.Uint64()))
+	c.Check(lpD.Uint64(), Equals, uint64(0), Commentf("%d", lpD.Uint64()))
+	c.Check(lpShare.Uint64(), Equals, uint64(0), Commentf("%d", lpShare.Uint64()))
+
+	// Zero provided liquidity.
+	bondR, poolR, lpD, lpShare = networkMgr.calcBlockRewards(cosmos.ZeroUint(), effectiveSecurityBond, effectiveSecurityBond, totalReserve, totalLiquidityFees, emissionCurve, blocksPerYear)
 	c.Check(bondR.Uint64(), Equals, uint64(0), Commentf("%d", bondR.Uint64()))
 	c.Check(poolR.Uint64(), Equals, uint64(3171), Commentf("%d", poolR.Uint64()))
 	c.Check(lpD.Uint64(), Equals, uint64(0), Commentf("%d", lpD.Uint64()))
 	c.Check(lpShare.Uint64(), Equals, uint64(10_000), Commentf("%d", lpShare.Uint64()))
+	// With totalEffectiveBond = 1.5 * effectiveSecurityBond:
+	bondR, poolR, lpD, lpShare = networkMgr.calcBlockRewards(cosmos.ZeroUint(), effectiveSecurityBond, totalEffectiveBond, totalReserve, totalLiquidityFees, emissionCurve, blocksPerYear)
+	c.Check(bondR.Uint64(), Equals, uint64(0), Commentf("%d", bondR.Uint64()))
+	effectiveSecurityBondR = bondR.Mul(effectiveSecurityBond).Quo(totalEffectiveBond)
+	c.Check(effectiveSecurityBondR.Uint64(), Equals, uint64(0), Commentf("%d", effectiveSecurityBondR.Uint64()))
+	c.Check(poolR.Uint64(), Equals, uint64(3171), Commentf("%d", poolR.Uint64()))
+	c.Check(lpD.Uint64(), Equals, uint64(0), Commentf("%d", lpD.Uint64()))
+	c.Check(lpShare.Uint64(), Equals, uint64(10_000), Commentf("%d", lpShare.Uint64()))
 
-	bondR, poolR, lpD, lpShare = networkMgr.calcBlockRewards(cosmos.NewUint(2001*common.One), cosmos.NewUint(1000*common.One), cosmos.NewUint(1000*common.One), cosmos.ZeroUint(), emissionCurve, incentiveCurve, blocksPerYear)
+	// Provided liquidity more than effectiveSecurityBond.
+	bondR, poolR, lpD, lpShare = networkMgr.calcBlockRewards(cosmos.NewUint(2001*common.One), effectiveSecurityBond, effectiveSecurityBond, totalReserve, totalLiquidityFees, emissionCurve, blocksPerYear)
 	c.Check(bondR.Uint64(), Equals, uint64(3171), Commentf("%d", bondR.Uint64()))
+	c.Check(poolR.Uint64(), Equals, uint64(0), Commentf("%d", poolR.Uint64()))
+	c.Check(lpD.Uint64(), Equals, uint64(0), Commentf("%d", lpD.Uint64()))
+	c.Check(lpShare.Uint64(), Equals, uint64(0), Commentf("%d", lpShare.Uint64()))
+	// With totalEffectiveBond = 1.5 * effectiveSecurityBond:
+	bondR, poolR, lpD, lpShare = networkMgr.calcBlockRewards(cosmos.NewUint(2001*common.One), effectiveSecurityBond, totalEffectiveBond, totalReserve, totalLiquidityFees, emissionCurve, blocksPerYear)
+	c.Check(bondR.Uint64(), Equals, uint64(3171), Commentf("%d", bondR.Uint64()))
+	effectiveSecurityBondR = bondR.Mul(effectiveSecurityBond).Quo(totalEffectiveBond)
+	c.Check(effectiveSecurityBondR.Uint64(), Equals, uint64(1057), Commentf("%d", effectiveSecurityBondR.Uint64()))
 	c.Check(poolR.Uint64(), Equals, uint64(0), Commentf("%d", poolR.Uint64()))
 	c.Check(lpD.Uint64(), Equals, uint64(0), Commentf("%d", lpD.Uint64()))
 	c.Check(lpShare.Uint64(), Equals, uint64(0), Commentf("%d", lpShare.Uint64()))
@@ -178,22 +247,6 @@ func (*NetworkManagerVCURTestSuite) TestProcessGenesisSetup(c *C) {
 	helper.failGetActiveAsgardVault = true
 	c.Assert(networkMgr.migrateFunds(ctx, mgr), NotNil)
 	helper.failGetActiveAsgardVault = false
-}
-
-func (*NetworkManagerVCURTestSuite) TestGetTotalActiveBond(c *C) {
-	ctx, mgr := setupManagerForTest(c)
-	helper := NewVaultGenesisSetupTestHelper(mgr.Keeper())
-	mgr.K = helper
-	networkMgr := newNetworkMgrVCUR(helper, mgr.TxOutStore(), mgr.EventMgr())
-	helper.failToListActiveAccounts = true
-	bond, err := networkMgr.getTotalActiveBond(ctx)
-	c.Assert(err, NotNil)
-	c.Assert(bond.Equal(cosmos.ZeroUint()), Equals, true)
-	helper.failToListActiveAccounts = false
-	c.Assert(helper.Keeper.SetNodeAccount(ctx, GetRandomValidatorNode(NodeActive)), IsNil)
-	bond, err = networkMgr.getTotalActiveBond(ctx)
-	c.Assert(err, IsNil)
-	c.Assert(bond.Uint64() > 0, Equals, true)
 }
 
 func (*NetworkManagerVCURTestSuite) TestGetTotalLiquidityRune(c *C) {

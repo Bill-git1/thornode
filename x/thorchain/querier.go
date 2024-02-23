@@ -758,11 +758,7 @@ func queryNode(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mg
 			return nil, fmt.Errorf("no active vaults")
 		}
 
-		bondHardCap := getHardBondCap(active)
-		totalEffectiveBond, err := getTotalEffectiveBond(ctx, mgr, bondHardCap)
-		if err != nil {
-			return nil, fmt.Errorf("fail to get total effective bond: %w", err)
-		}
+		totalEffectiveBond, bondHardCap := getTotalEffectiveBond(active)
 
 		// Note that unlike actual BondRewardRune distribution in manager_validator_current.go ,
 		// this estimate treats lastChurnHeight as the block_height of the first (oldest) Asgard vault,
@@ -845,27 +841,6 @@ func getNodeCurrentRewards(ctx cosmos.Context, mgr *Mgrs, nodeAcc NodeAccount, l
 	return reward, nil
 }
 
-// Calculates total "effective bond" - the total bond when taking into account the
-// Bond-weighted hard-cap
-func getTotalEffectiveBond(ctx cosmos.Context, mgr *Mgrs, bondHardCap cosmos.Uint) (cosmos.Uint, error) {
-	activeNodes, err := mgr.Keeper().ListValidatorsByStatus(ctx, NodeActive)
-	if err != nil {
-		return cosmos.ZeroUint(), fmt.Errorf("fail to get active nodes: %w", err)
-	}
-
-	totalEffectiveBond := cosmos.ZeroUint()
-	for _, item := range activeNodes {
-		b := item.Bond
-		if item.Bond.GT(bondHardCap) {
-			b = bondHardCap
-		}
-
-		totalEffectiveBond = totalEffectiveBond.Add(b)
-	}
-
-	return totalEffectiveBond, nil
-}
-
 // queryNodes return all the nodes that has bond
 // /thorchain/nodes
 func queryNodes(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {
@@ -892,11 +867,7 @@ func queryNodes(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *M
 		return nil, fmt.Errorf("no active vaults")
 	}
 
-	bondHardCap := getHardBondCap(active)
-	totalEffectiveBond, err := getTotalEffectiveBond(ctx, mgr, bondHardCap)
-	if err != nil {
-		return nil, fmt.Errorf("fail to get total effective bond: %w", err)
-	}
+	totalEffectiveBond, bondHardCap := getTotalEffectiveBond(active)
 
 	lastChurnHeight := vaults[0].BlockHeight
 	version := mgr.GetVersion()

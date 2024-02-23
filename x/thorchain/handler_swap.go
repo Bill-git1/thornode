@@ -533,15 +533,6 @@ func (h SwapHandler) processPreferredAssetSwap(ctx cosmos.Context, msg MsgSwap) 
 	return nil
 }
 
-// get the total bond of the bottom 2/3rds active validators
-func (h SwapHandler) getEffectiveSecurityBond(ctx cosmos.Context) (cosmos.Uint, error) {
-	nodeAccounts, err := h.mgr.Keeper().ListActiveValidators(ctx)
-	if err != nil {
-		return cosmos.ZeroUint(), err
-	}
-	return getEffectiveSecurityBond(nodeAccounts), nil
-}
-
 func (h SwapHandler) getTotalLiquidityRUNE(ctx cosmos.Context) (cosmos.Uint, error) {
 	version := h.mgr.GetVersion()
 	switch {
