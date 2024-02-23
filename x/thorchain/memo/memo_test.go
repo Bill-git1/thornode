@@ -480,6 +480,16 @@ func (s *MemoSuite) TestParse(c *C) {
 	c.Check(memo.IsType(TxAdd), Equals, true)
 	c.Check(memo.String(), Equals, "+:BNB.BNB:thor1z83z5t9vqxys8nhpkxk5zp6zym0lalcp8ywhvj:thor1z83z5t9vqxys8nhpkxk5zp6zym0lalcp8ywhvj:5000")
 
+	// aff fee savers memo
+	_, err = ParseMemoWithTHORNames(ctx, k, "+:BSC/BNB::t:0")
+	// should fail, thorname not registered
+	c.Assert(err.Error(), Equals, "MEMO: +:BSC/BNB::t:0\nPARSE FAILURE(S): cannot parse 't' as an Address: t is not recognizable")
+	// register thorname
+	thorname := types.NewTHORName("t", 50, []types.THORNameAlias{{Chain: common.THORChain, Address: thorAddr}})
+	k.SetTHORName(ctx, thorname)
+	_, err = ParseMemoWithTHORNames(ctx, k, "+:BSC/BNB::t:15")
+	c.Assert(err, IsNil)
+
 	// no address or aff fee
 	memo, err = ParseMemoWithTHORNames(ctx, k, "add:bnb.bnb")
 	c.Assert(err, IsNil)

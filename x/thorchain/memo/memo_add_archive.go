@@ -7,8 +7,17 @@ import (
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/constants"
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 )
+
+func (p *parser) ParseAddLiquidityMemoV116() (AddLiquidityMemo, error) {
+	asset := p.getAsset(1, true, common.EmptyAsset)
+	addr := p.getAddressWithKeeper(2, false, common.NoAddress, asset.Chain)
+	affAddr := p.getAddressWithKeeper(3, false, common.NoAddress, common.THORChain)
+	affPts := p.getUintWithMaxValue(4, false, 0, constants.MaxBasisPts)
+	return NewAddLiquidityMemo(asset, addr, affAddr, affPts), p.Error()
+}
 
 func ParseAddLiquidityMemoV104(ctx cosmos.Context, keeper keeper.Keeper, asset common.Asset, parts []string) (AddLiquidityMemo, error) {
 	var err error

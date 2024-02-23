@@ -57,6 +57,8 @@ func (p *parser) ParseAddLiquidityMemo() (AddLiquidityMemo, error) {
 		return ParseAddLiquidityMemoV1(p.ctx, p.keeper, p.getAsset(1, true, common.EmptyAsset), p.parts)
 	}
 	switch {
+	case p.version.GTE(semver.MustParse("1.128.0")):
+		return p.ParseAddLiquidityMemoV128()
 	case p.version.GTE(semver.MustParse("1.116.0")):
 		return p.ParseAddLiquidityMemoV116()
 	case p.version.GTE(semver.MustParse("1.104.0")):
@@ -66,10 +68,16 @@ func (p *parser) ParseAddLiquidityMemo() (AddLiquidityMemo, error) {
 	}
 }
 
-func (p *parser) ParseAddLiquidityMemoV116() (AddLiquidityMemo, error) {
+func (p *parser) ParseAddLiquidityMemoV128() (AddLiquidityMemo, error) {
 	asset := p.getAsset(1, true, common.EmptyAsset)
 	addr := p.getAddressWithKeeper(2, false, common.NoAddress, asset.Chain)
-	affAddr := p.getAddressWithKeeper(3, false, common.NoAddress, common.THORChain)
+	affChain := common.THORChain
+	if asset.IsSyntheticAsset() {
+		// For a Savers add, an Affiliate THORName must be resolved
+		// to an address for the Layer 1 Chain of the synth to succeed.
+		affChain = asset.GetLayer1Asset().GetChain()
+	}
+	affAddr := p.getAddressWithKeeper(3, false, common.NoAddress, affChain)
 	affPts := p.getUintWithMaxValue(4, false, 0, constants.MaxBasisPts)
 	return NewAddLiquidityMemo(asset, addr, affAddr, affPts), p.Error()
 }
