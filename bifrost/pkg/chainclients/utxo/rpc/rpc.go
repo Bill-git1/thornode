@@ -14,6 +14,7 @@ import (
 
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/rs/zerolog"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -33,12 +34,15 @@ type SerializableTx interface {
 // Ethereum JSON-RPC 2.0 implementation, which allows batching and connection reuse.
 type Client struct {
 	c          *rpc.Client
+	log        zerolog.Logger
 	version    int
 	maxRetries int
 }
 
 // NewClient returns a client connection to a UTXO daemon.
-func NewClient(host, user, password string, version, maxRetries int) (*Client, error) {
+func NewClient(host, user, password string, version, maxRetries int, log zerolog.Logger) (
+	*Client, error,
+) {
 	authFn := func(h http.Header) error {
 		auth := base64.StdEncoding.EncodeToString([]byte(user + ":" + password))
 		h.Set("Authorization", fmt.Sprintf("Basic %s", auth))
@@ -300,16 +304,44 @@ func extractBTCError(err error) error {
 // simple static backoff of 1 second for now.
 func (c *Client) retry(fn func() error) error {
 	var err error
+	backoff := time.Second
 	for i := 0; i <= c.maxRetries; i++ {
 		err = fn()
 		if err == nil {
 			break
 		}
 
-		if !strings.Contains(strings.ToLower(err.Error()), "work queue depth exceeded") {
+		errStr := strings.ToLower(err.Error())
+
+		// check in order of most to least likely based on log sampling
+		retry := strings.Contains(errStr, "connect: connection refused") ||
+			strings.Contains(errStr, "work queue depth exceeded") ||
+			(strings.HasPrefix(errStr, "post") && strings.HasSuffix(errStr, "eof")) ||
+			strings.Contains(errStr, "loading block index") || // daemon startup
+			strings.Contains(errStr, "verifying wallet") || // daemon startup
+			strings.HasPrefix(errStr, "503 service unavailable")
+
+		// break if not a retryable error
+		if !retry {
 			break
 		}
-		time.Sleep(time.Second)
+
+		// break if this was the last retry
+		if i == c.maxRetries {
+			break
+		}
+
+		// backoff and retry
+		c.log.Err(err).
+			Str("backoff", backoff.String()).
+			Msgf("retrying %d/%d after backoff", i+1, c.maxRetries)
+		time.Sleep(backoff)
+
+		// exponential backoff, max 10 seconds
+		backoff *= 2
+		if backoff > time.Second*10 {
+			backoff = time.Second * 10
+		}
 	}
 	return err
 }

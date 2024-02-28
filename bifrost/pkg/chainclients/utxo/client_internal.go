@@ -204,11 +204,11 @@ func (c *Client) removeFromMemPoolCache(hash string) {
 }
 
 func (c *Client) tryAddToMemPoolCache(hash string) bool {
-	exist, err := c.temporalStorage.TrackMempoolTx(hash)
+	added, err := c.temporalStorage.TrackMempoolTx(hash)
 	if err != nil {
 		c.log.Err(err).Str("txid", hash).Msg("fail to add to mempool cache")
 	}
-	return exist
+	return added
 }
 
 func (c *Client) canDeleteBlock(blockMeta *utxo.BlockMeta) bool {
@@ -745,7 +745,7 @@ func (c *Client) extractTxs(block *btcjson.GetBlockVerboseTxResult) (types.TxIn,
 		var txInItem types.TxInItem
 		txInItem, err = c.getTxIn(&block.Tx[idx], block.Height, false, vinZeroTxs)
 		if err != nil {
-			c.log.Debug().Err(err).Msg("fail to get TxInItem")
+			c.log.Info().Err(err).Msg("fail to get TxInItem")
 			continue
 		}
 		if txInItem.IsEmpty() {
@@ -757,12 +757,12 @@ func (c *Client) extractTxs(block *btcjson.GetBlockVerboseTxResult) (types.TxIn,
 		if txInItem.Coins[0].Amount.LT(c.cfg.ChainID.DustThreshold()) {
 			continue
 		}
-		var exist bool
-		exist, err = c.temporalStorage.TrackObservedTx(txInItem.Tx)
+		var added bool
+		added, err = c.temporalStorage.TrackObservedTx(txInItem.Tx)
 		if err != nil {
-			c.log.Err(err).Msgf("fail to determinate whether hash(%s) had been observed before", txInItem.Tx)
+			c.log.Err(err).Msgf("fail to determine whether hash(%s) had been observed before", txInItem.Tx)
 		}
-		if !exist {
+		if !added {
 			c.log.Info().Msgf("tx: %s had been report before, ignore", txInItem.Tx)
 			if err = c.temporalStorage.UntrackObservedTx(txInItem.Tx); err != nil {
 				c.log.Err(err).Msgf("fail to remove observed tx from cache: %s", txInItem.Tx)
@@ -928,6 +928,11 @@ func (c *Client) getMemo(tx *btcjson.TxRawResult) (string, error) {
 		}
 		opReturnFields := strings.Fields(asm)
 		if len(opReturnFields) == 2 {
+			// skip "0" field to avoid log noise
+			if opReturnFields[1] == "0" {
+				continue
+			}
+
 			var decoded []byte
 			decoded, err = hex.DecodeString(opReturnFields[1])
 			if err != nil {

@@ -115,8 +115,10 @@ func NewClient(
 		return nil, fmt.Errorf("unsupported utxo chain: %s", cfg.ChainID)
 	}
 
+	logger := log.Logger.With().Stringer("chain", cfg.ChainID).Logger()
+
 	// create rpc client
-	rpcClient, err := rpc.NewClient(cfg.RPCHost, cfg.UserName, cfg.Password, cfg.UTXO.Version, cfg.MaxRPCRetries)
+	rpcClient, err := rpc.NewClient(cfg.RPCHost, cfg.UserName, cfg.Password, cfg.UTXO.Version, cfg.MaxRPCRetries, logger)
 	if err != nil {
 		return nil, fmt.Errorf("fail to create rpc client: %w", err)
 	}
@@ -139,7 +141,7 @@ func NewClient(
 	// create base client
 	c := &Client{
 		cfg:                   cfg,
-		log:                   log.Logger.With().Stringer("chain", cfg.ChainID).Logger(),
+		log:                   logger,
 		m:                     m,
 		rpc:                   rpcClient,
 		nodePubKey:            nodePubKey,

@@ -79,7 +79,7 @@ bifrost:
         write_buffer: 20971520 # 20mb
         block_cache_capacity: 536870912 # 512mb
       min_confirmations: 0
-      max_rpc_retries: 3
+      max_rpc_retries: 9 # about 1 min
       max_pending_nonces: 0
       fixed_outbound_gas_rate: false
       token_max_gas_multiplier: 0
