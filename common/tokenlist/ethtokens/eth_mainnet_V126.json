@@ -8062,14 +8062,6 @@
       "symbol": "vTHOR",
       "decimals": 18,
       "logoURI": "https://cdn.discordapp.com/emojis/971344444391563275.webp"
-    },
-    {
-      "address": "0x826180541412D574cf1336d22c0C0a287822678A",
-      "chainId": 1,
-      "name": "Chainflip",
-      "symbol": "FLIP",
-      "decimals": 18,
-      "logoURI": "https://cdn.discordapp.com/emojis/971344444391563275.webp"
     }
   ],
   "logoURI": "https://1inch.exchange/assets/images/logo.png"
