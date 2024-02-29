@@ -373,105 +373,11 @@ func (c *Client) sendNetworkFeeFromBlock(blockResult *btcjson.GetBlockVerboseTxR
 }
 
 func (c *Client) getBlock(height int64) (*btcjson.GetBlockVerboseTxResult, error) {
-	// only relevant for DOGE before version 1.14.7
-	if !c.cfg.UTXO.GetBlockVerboseTxsAvailable {
-		return c.getBlockWithoutVerbose(height)
-	}
-
 	hash, err := c.rpc.GetBlockHash(height)
 	if err != nil {
 		return &btcjson.GetBlockVerboseTxResult{}, err
 	}
 	return c.rpc.GetBlockVerboseTxs(hash)
-}
-
-// getBlockWithoutVerbose will get the block without verbose transaction details, and
-// then make batch calls to populate them. This should only be used on chains that do not
-// support verbosity level 2 for getblock (currently only dogecoin).
-func (c *Client) getBlockWithoutVerbose(height int64) (*btcjson.GetBlockVerboseTxResult, error) {
-	hash, err := c.rpc.GetBlockHash(height)
-	if err != nil {
-		return &btcjson.GetBlockVerboseTxResult{}, err
-	}
-
-	// get block without verbose transactions
-	block, err := c.rpc.GetBlockVerbose(hash)
-	if err != nil {
-		return &btcjson.GetBlockVerboseTxResult{}, err
-	}
-
-	// copy block data to verbose result
-	blockResult := btcjson.GetBlockVerboseTxResult{
-		Hash:          block.Hash,
-		Confirmations: block.Confirmations,
-		StrippedSize:  block.StrippedSize,
-		Size:          block.Size,
-		Weight:        block.Weight,
-		Height:        block.Height,
-		Version:       block.Version,
-		VersionHex:    block.VersionHex,
-		MerkleRoot:    block.MerkleRoot,
-		Time:          block.Time,
-		Nonce:         block.Nonce,
-		Bits:          block.Bits,
-		Difficulty:    block.Difficulty,
-		PreviousHash:  block.PreviousHash,
-		NextHash:      block.NextHash,
-	}
-
-	// create our batches
-	batches := [][]string{}
-	batch := []string{}
-	for _, txid := range block.Tx {
-		batch = append(batch, txid)
-		if len(batch) >= c.cfg.UTXO.TransactionBatchSize {
-			batches = append(batches, batch)
-			batch = []string{}
-		}
-	}
-	if len(batch) > 0 {
-		batches = append(batches, batch)
-	}
-
-	// process batch requests one at a time to avoid overloading the node
-	retries := 0
-	for i := 0; i < len(batches); i++ {
-		var results []*btcjson.TxRawResult
-		var errs []error
-		results, errs, err = c.rpc.BatchGetRawTransactionVerbose(batches[i])
-
-		// if there was no rpc error, check for any tx errors
-		txErrCount := 0
-		if err == nil {
-			for _, txErr := range errs {
-				if txErr != nil {
-					err = txErr
-				}
-				txErrCount++
-			}
-		}
-
-		// retry the batch a few times on any errors to avoid wasted work
-		// TODO: implement partial retry
-		if err != nil {
-			if retries >= 3 {
-				return &btcjson.GetBlockVerboseTxResult{}, err
-			}
-
-			c.log.Err(err).Int("txErrCount", txErrCount).Msgf("retrying block txs batch %d", i)
-			time.Sleep(time.Second)
-			retries++
-			i-- // retry the same batch
-			continue
-		}
-
-		// add transactions to block result
-		for _, tx := range results {
-			blockResult.Tx = append(blockResult.Tx, *tx)
-		}
-	}
-
-	return &blockResult, nil
 }
 
 func (c *Client) isValidUTXO(hexPubKey string) bool {

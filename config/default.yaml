@@ -86,10 +86,8 @@ bifrost:
       aggregator_max_gas_multiplier: 0
       utxo: &utxo
         block_cache_count: 144
-        version: 25
         transaction_batch_size: 500
         max_mempool_batches: 10
-        get_block_verbose_txs_available: true
         estimated_average_tx_size: 1000
         default_min_relay_fee_sats: 1000
         default_sats_per_vbyte: 25
@@ -220,11 +218,9 @@ bifrost:
       utxo:
         <<: *utxo
         block_cache_count: 1440
-        version: 14
         default_sats_per_vbyte: 25
         max_sats_per_vbyte: 976562 # backwards compatible with 1e8*10/1024
         max_reorg_rescan_blocks: 720 # 12h
-        get_block_verbose_txs_available: false
     gaia:
       <<: *default-chain
       chain_id: GAIA
@@ -248,7 +244,6 @@ bifrost:
       utxo:
         <<: *utxo
         block_cache_count: 600
-        version: 21
         max_sats_per_vbyte: 9765 # backwards compatible with 1e8/10/1024
         estimated_average_tx_size: 250
         max_reorg_rescan_blocks: 288 # 12h
@@ -264,7 +259,6 @@ bifrost:
       utxo:
         <<: *utxo
         block_cache_count: 144
-        version: 26
         max_sats_per_vbyte: 9765 # backwards compatible with 1e8/10/1024
         estimated_average_tx_size: 1500
         max_reorg_rescan_blocks: 72 # 12h

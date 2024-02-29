@@ -215,7 +215,7 @@ func (s *DogecoinSuite) TestGetBlock(c *C) {
 		}
 	}
 	c.Assert(exist, Equals, true)
-	c.Assert(len(block.Tx), Equals, 6)
+	c.Assert(len(block.Tx), Equals, 5)
 }
 
 func (s *DogecoinSuite) TestFetchTxs(c *C) {

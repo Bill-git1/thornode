@@ -35,12 +35,11 @@ type SerializableTx interface {
 type Client struct {
 	c          *rpc.Client
 	log        zerolog.Logger
-	version    int
 	maxRetries int
 }
 
 // NewClient returns a client connection to a UTXO daemon.
-func NewClient(host, user, password string, version, maxRetries int, log zerolog.Logger) (
+func NewClient(host, user, password string, maxRetries int, log zerolog.Logger) (
 	*Client, error,
 ) {
 	authFn := func(h http.Header) error {
@@ -61,7 +60,7 @@ func NewClient(host, user, password string, version, maxRetries int, log zerolog
 
 	return &Client{
 		c:          c,
-		version:    version,
+		log:        log,
 		maxRetries: maxRetries,
 	}, nil
 }
@@ -109,15 +108,7 @@ func (c *Client) GetBlockVerboseTxs(hash string) (*btcjson.GetBlockVerboseTxResu
 // GetBlockVerbose returns information about the block with verbosity 1.
 func (c *Client) GetBlockVerbose(hash string) (*btcjson.GetBlockVerboseResult, error) {
 	var block btcjson.GetBlockVerboseResult
-
-	args := []interface{}{hash}
-	if c.version >= 15 {
-		args = append(args, 1)
-	} else {
-		args = append(args, true)
-	}
-
-	err := c.Call(&block, "getblock", args...)
+	err := c.Call(&block, "getblock", hash, 1)
 	return &block, extractBTCError(err)
 }
 
