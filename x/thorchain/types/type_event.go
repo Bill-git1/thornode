@@ -897,7 +897,7 @@ func (m *EventTradeAccountDeposit) Type() string {
 // Events return the cosmos event
 func (m *EventTradeAccountDeposit) Events() (cosmos.Events, error) {
 	evt := cosmos.NewEvent(m.Type(),
-		cosmos.NewAttribute("amount", m.Asset.String()),
+		cosmos.NewAttribute("amount", m.Amount.String()),
 		cosmos.NewAttribute("asset", m.Asset.String()),
 		cosmos.NewAttribute("rune_address", m.RuneAddress.String()),
 		cosmos.NewAttribute("asset_address", m.AssetAddress.String()),
@@ -930,9 +930,10 @@ func (m *EventTradeAccountWithdraw) Type() string {
 // Events return the cosmos event
 func (m *EventTradeAccountWithdraw) Events() (cosmos.Events, error) {
 	evt := cosmos.NewEvent(m.Type(),
-		cosmos.NewAttribute("amount", m.Asset.String()),
+		cosmos.NewAttribute("amount", m.Amount.String()),
 		cosmos.NewAttribute("asset", m.Asset.String()),
-		cosmos.NewAttribute("address", m.RuneAddress.String()),
+		cosmos.NewAttribute("rune_address", m.RuneAddress.String()),
+		cosmos.NewAttribute("asset_address", m.AssetAddress.String()),
 		cosmos.NewAttribute("tx_id", m.TxID.String()))
 	return cosmos.Events{evt}, nil
 }
