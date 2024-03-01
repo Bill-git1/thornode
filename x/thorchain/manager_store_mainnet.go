@@ -662,7 +662,7 @@ func migrateStoreV121(ctx cosmos.Context, mgr *Mgrs) {
 
 		if !swp.Out.IsZero() {
 			mintCoin := common.NewCoin(msg.TargetAsset, swp.Out)
-			coinsToMint = coinsToMint.Add(mintCoin)
+			coinsToMint = coinsToMint.Add_deprecated(mintCoin)
 		}
 	}
 
@@ -676,7 +676,7 @@ func migrateStoreV121(ctx cosmos.Context, mgr *Mgrs) {
 			if err := mgr.EventMgr().EmitEvent(ctx, mintEvt); err != nil {
 				ctx.Logger().Error("fail to emit mint event", "error", err)
 			}
-			coinsToTransfer = coinsToTransfer.Add(mintCoin)
+			coinsToTransfer = coinsToTransfer.Add_deprecated(mintCoin)
 		}
 	}
 
