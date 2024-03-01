@@ -94,7 +94,7 @@ func (o *KeygenMetric) SetNodeTssTimes(v []NodeKeygenMetric) {
 	o.NodeTssTimes = v
 }
 
-func (o KeygenMetric) MarshalJSON() ([]byte, error) {
+func (o KeygenMetric) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.PubKey != nil {
 		toSerialize["pub_key"] = o.PubKey
@@ -132,7 +132,7 @@ func NewNullableKeygenMetric(val *KeygenMetric) *NullableKeygenMetric {
 	return &NullableKeygenMetric{value: val, isSet: true}
 }
 
-func (v NullableKeygenMetric) MarshalJSON() ([]byte, error) {
+func (v NullableKeygenMetric) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

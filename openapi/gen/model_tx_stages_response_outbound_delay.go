@@ -130,7 +130,7 @@ func (o *TxStagesResponseOutboundDelay) SetCompleted(v bool) {
 	o.Completed = v
 }
 
-func (o TxStagesResponseOutboundDelay) MarshalJSON() ([]byte, error) {
+func (o TxStagesResponseOutboundDelay) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.RemainingDelayBlocks != nil {
 		toSerialize["remaining_delay_blocks"] = o.RemainingDelayBlocks
@@ -171,7 +171,7 @@ func NewNullableTxStagesResponseOutboundDelay(val *TxStagesResponseOutboundDelay
 	return &NullableTxStagesResponseOutboundDelay{value: val, isSet: true}
 }
 
-func (v NullableTxStagesResponseOutboundDelay) MarshalJSON() ([]byte, error) {
+func (v NullableTxStagesResponseOutboundDelay) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

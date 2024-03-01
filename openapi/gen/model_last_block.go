@@ -139,7 +139,7 @@ func (o *LastBlock) SetThorchain(v int64) {
 	o.Thorchain = v
 }
 
-func (o LastBlock) MarshalJSON() ([]byte, error) {
+func (o LastBlock) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["chain"] = o.Chain
@@ -183,7 +183,7 @@ func NewNullableLastBlock(val *LastBlock) *NullableLastBlock {
 	return &NullableLastBlock{value: val, isSet: true}
 }
 
-func (v NullableLastBlock) MarshalJSON() ([]byte, error) {
+func (v NullableLastBlock) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

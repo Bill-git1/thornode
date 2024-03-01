@@ -95,7 +95,7 @@ func (o *TxStagesResponseSwapStatus) SetStreaming(v TxStagesResponseSwapStatusSt
 	o.Streaming = &v
 }
 
-func (o TxStagesResponseSwapStatus) MarshalJSON() ([]byte, error) {
+func (o TxStagesResponseSwapStatus) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["pending"] = o.Pending
@@ -133,7 +133,7 @@ func NewNullableTxStagesResponseSwapStatus(val *TxStagesResponseSwapStatus) *Nul
 	return &NullableTxStagesResponseSwapStatus{value: val, isSet: true}
 }
 
-func (v NullableTxStagesResponseSwapStatus) MarshalJSON() ([]byte, error) {
+func (v NullableTxStagesResponseSwapStatus) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

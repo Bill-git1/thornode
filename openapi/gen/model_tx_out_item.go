@@ -364,7 +364,7 @@ func (o *TxOutItem) SetCloutSpent(v string) {
 	o.CloutSpent = &v
 }
 
-func (o TxOutItem) MarshalJSON() ([]byte, error) {
+func (o TxOutItem) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["chain"] = o.Chain
@@ -429,7 +429,7 @@ func NewNullableTxOutItem(val *TxOutItem) *NullableTxOutItem {
 	return &NullableTxOutItem{value: val, isSet: true}
 }
 
-func (v NullableTxOutItem) MarshalJSON() ([]byte, error) {
+func (v NullableTxOutItem) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

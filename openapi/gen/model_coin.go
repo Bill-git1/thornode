@@ -120,7 +120,7 @@ func (o *Coin) SetDecimals(v int64) {
 	o.Decimals = &v
 }
 
-func (o Coin) MarshalJSON() ([]byte, error) {
+func (o Coin) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["asset"] = o.Asset
@@ -161,7 +161,7 @@ func NewNullableCoin(val *Coin) *NullableCoin {
 	return &NullableCoin{value: val, isSet: true}
 }
 
-func (v NullableCoin) MarshalJSON() ([]byte, error) {
+func (v NullableCoin) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

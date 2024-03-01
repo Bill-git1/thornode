@@ -184,7 +184,7 @@ func (o *TradeAccountResponse) SetLastWithdrawHeight(v int64) {
 	o.LastWithdrawHeight = &v
 }
 
-func (o TradeAccountResponse) MarshalJSON() ([]byte, error) {
+func (o TradeAccountResponse) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["asset"] = o.Asset
@@ -231,7 +231,7 @@ func NewNullableTradeAccountResponse(val *TradeAccountResponse) *NullableTradeAc
 	return &NullableTradeAccountResponse{value: val, isSet: true}
 }
 
-func (v NullableTradeAccountResponse) MarshalJSON() ([]byte, error) {
+func (v NullableTradeAccountResponse) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

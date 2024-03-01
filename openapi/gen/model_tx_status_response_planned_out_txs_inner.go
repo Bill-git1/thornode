@@ -140,7 +140,7 @@ func (o *TxStatusResponsePlannedOutTxsInner) SetRefund(v bool) {
 	o.Refund = v
 }
 
-func (o TxStatusResponsePlannedOutTxsInner) MarshalJSON() ([]byte, error) {
+func (o TxStatusResponsePlannedOutTxsInner) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["chain"] = o.Chain
@@ -184,7 +184,7 @@ func NewNullableTxStatusResponsePlannedOutTxsInner(val *TxStatusResponsePlannedO
 	return &NullableTxStatusResponsePlannedOutTxsInner{value: val, isSet: true}
 }
 
-func (v NullableTxStatusResponsePlannedOutTxsInner) MarshalJSON() ([]byte, error) {
+func (v NullableTxStatusResponsePlannedOutTxsInner) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

@@ -164,7 +164,7 @@ func (o *TxStagesResponseInboundObserved) SetCompleted(v bool) {
 	o.Completed = v
 }
 
-func (o TxStagesResponseInboundObserved) MarshalJSON() ([]byte, error) {
+func (o TxStagesResponseInboundObserved) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Started != nil {
 		toSerialize["started"] = o.Started
@@ -208,7 +208,7 @@ func NewNullableTxStagesResponseInboundObserved(val *TxStagesResponseInboundObse
 	return &NullableTxStagesResponseInboundObserved{value: val, isSet: true}
 }
 
-func (v NullableTxStagesResponseInboundObserved) MarshalJSON() ([]byte, error) {
+func (v NullableTxStagesResponseInboundObserved) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

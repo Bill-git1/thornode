@@ -101,7 +101,7 @@ func (o *KeysignResponse) SetSignature(v string) {
 	o.Signature = &v
 }
 
-func (o KeysignResponse) MarshalJSON() ([]byte, error) {
+func (o KeysignResponse) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Keysign != nil {
 		toSerialize["keysign"] = o.Keysign
@@ -139,7 +139,7 @@ func NewNullableKeysignResponse(val *KeysignResponse) *NullableKeysignResponse {
 	return &NullableKeysignResponse{value: val, isSet: true}
 }
 
-func (v NullableKeysignResponse) MarshalJSON() ([]byte, error) {
+func (v NullableKeysignResponse) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

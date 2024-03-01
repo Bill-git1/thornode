@@ -62,7 +62,7 @@ func (o *TxStagesResponseSwapFinalised) SetCompleted(v bool) {
 	o.Completed = v
 }
 
-func (o TxStagesResponseSwapFinalised) MarshalJSON() ([]byte, error) {
+func (o TxStagesResponseSwapFinalised) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["completed"] = o.Completed
@@ -97,7 +97,7 @@ func NewNullableTxStagesResponseSwapFinalised(val *TxStagesResponseSwapFinalised
 	return &NullableTxStagesResponseSwapFinalised{value: val, isSet: true}
 }
 
-func (v NullableTxStagesResponseSwapFinalised) MarshalJSON() ([]byte, error) {
+func (v NullableTxStagesResponseSwapFinalised) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

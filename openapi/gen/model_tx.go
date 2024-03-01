@@ -252,7 +252,7 @@ func (o *Tx) SetMemo(v string) {
 	o.Memo = &v
 }
 
-func (o Tx) MarshalJSON() ([]byte, error) {
+func (o Tx) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Id != nil {
 		toSerialize["id"] = o.Id
@@ -305,7 +305,7 @@ func NewNullableTx(val *Tx) *NullableTx {
 	return &NullableTx{value: val, isSet: true}
 }
 
-func (v NullableTx) MarshalJSON() ([]byte, error) {
+func (v NullableTx) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

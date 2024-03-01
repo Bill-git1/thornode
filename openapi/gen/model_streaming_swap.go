@@ -483,7 +483,7 @@ func (o *StreamingSwap) SetFailedSwapReasons(v []string) {
 	o.FailedSwapReasons = v
 }
 
-func (o StreamingSwap) MarshalJSON() ([]byte, error) {
+func (o StreamingSwap) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.TxId != nil {
 		toSerialize["tx_id"] = o.TxId
@@ -557,7 +557,7 @@ func NewNullableStreamingSwap(val *StreamingSwap) *NullableStreamingSwap {
 	return &NullableStreamingSwap{value: val, isSet: true}
 }
 
-func (v NullableStreamingSwap) MarshalJSON() ([]byte, error) {
+func (v NullableStreamingSwap) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

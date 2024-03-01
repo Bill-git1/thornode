@@ -399,7 +399,7 @@ func (o *BlockResponseHeader) SetProposerAddress(v string) {
 	o.ProposerAddress = v
 }
 
-func (o BlockResponseHeader) MarshalJSON() ([]byte, error) {
+func (o BlockResponseHeader) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["version"] = o.Version
@@ -473,7 +473,7 @@ func NewNullableBlockResponseHeader(val *BlockResponseHeader) *NullableBlockResp
 	return &NullableBlockResponseHeader{value: val, isSet: true}
 }
 
-func (v NullableBlockResponseHeader) MarshalJSON() ([]byte, error) {
+func (v NullableBlockResponseHeader) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

@@ -200,7 +200,7 @@ func (o *MimirV2IDsResponse) SetVotes(v map[string]interface{}) {
 	o.Votes = v
 }
 
-func (o MimirV2IDsResponse) MarshalJSON() ([]byte, error) {
+func (o MimirV2IDsResponse) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Id != nil {
 		toSerialize["id"] = o.Id
@@ -247,7 +247,7 @@ func NewNullableMimirV2IDsResponse(val *MimirV2IDsResponse) *NullableMimirV2IDsR
 	return &NullableMimirV2IDsResponse{value: val, isSet: true}
 }
 
-func (v NullableMimirV2IDsResponse) MarshalJSON() ([]byte, error) {
+func (v NullableMimirV2IDsResponse) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

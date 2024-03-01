@@ -102,7 +102,7 @@ func (o *NodeBondProviders) SetProviders(v NodeBondProvider) {
 	o.Providers = &v
 }
 
-func (o NodeBondProviders) MarshalJSON() ([]byte, error) {
+func (o NodeBondProviders) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.NodeOperatorFee != nil {
 		toSerialize["node_operator_fee"] = o.NodeOperatorFee
@@ -140,7 +140,7 @@ func NewNullableNodeBondProviders(val *NodeBondProviders) *NullableNodeBondProvi
 	return &NullableNodeBondProviders{value: val, isSet: true}
 }
 
-func (v NullableNodeBondProviders) MarshalJSON() ([]byte, error) {
+func (v NullableNodeBondProviders) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

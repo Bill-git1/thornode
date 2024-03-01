@@ -87,7 +87,7 @@ func (o *VaultInfo) SetRouters(v []VaultRouter) {
 	o.Routers = v
 }
 
-func (o VaultInfo) MarshalJSON() ([]byte, error) {
+func (o VaultInfo) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["pub_key"] = o.PubKey
@@ -125,7 +125,7 @@ func NewNullableVaultInfo(val *VaultInfo) *NullableVaultInfo {
 	return &NullableVaultInfo{value: val, isSet: true}
 }
 
-func (v NullableVaultInfo) MarshalJSON() ([]byte, error) {
+func (v NullableVaultInfo) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

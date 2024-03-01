@@ -238,7 +238,7 @@ func (o *QuoteFees) SetTotalBps(v int64) {
 	o.TotalBps = v
 }
 
-func (o QuoteFees) MarshalJSON() ([]byte, error) {
+func (o QuoteFees) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["asset"] = o.Asset
@@ -291,7 +291,7 @@ func NewNullableQuoteFees(val *QuoteFees) *NullableQuoteFees {
 	return &NullableQuoteFees{value: val, isSet: true}
 }
 
-func (v NullableQuoteFees) MarshalJSON() ([]byte, error) {
+func (v NullableQuoteFees) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

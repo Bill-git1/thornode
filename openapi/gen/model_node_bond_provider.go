@@ -101,7 +101,7 @@ func (o *NodeBondProvider) SetBond(v string) {
 	o.Bond = &v
 }
 
-func (o NodeBondProvider) MarshalJSON() ([]byte, error) {
+func (o NodeBondProvider) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.BondAddress != nil {
 		toSerialize["bond_address"] = o.BondAddress
@@ -139,7 +139,7 @@ func NewNullableNodeBondProvider(val *NodeBondProvider) *NullableNodeBondProvide
 	return &NullableNodeBondProvider{value: val, isSet: true}
 }
 
-func (v NullableNodeBondProvider) MarshalJSON() ([]byte, error) {
+func (v NullableNodeBondProvider) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

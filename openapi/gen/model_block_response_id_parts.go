@@ -87,7 +87,7 @@ func (o *BlockResponseIdParts) SetHash(v string) {
 	o.Hash = v
 }
 
-func (o BlockResponseIdParts) MarshalJSON() ([]byte, error) {
+func (o BlockResponseIdParts) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["total"] = o.Total
@@ -125,7 +125,7 @@ func NewNullableBlockResponseIdParts(val *BlockResponseIdParts) *NullableBlockRe
 	return &NullableBlockResponseIdParts{value: val, isSet: true}
 }
 
-func (v NullableBlockResponseIdParts) MarshalJSON() ([]byte, error) {
+func (v NullableBlockResponseIdParts) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

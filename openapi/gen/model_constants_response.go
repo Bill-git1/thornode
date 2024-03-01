@@ -134,7 +134,7 @@ func (o *ConstantsResponse) SetStringValues(v map[string]string) {
 	o.StringValues = &v
 }
 
-func (o ConstantsResponse) MarshalJSON() ([]byte, error) {
+func (o ConstantsResponse) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Int64Values != nil {
 		toSerialize["int_64_values"] = o.Int64Values
@@ -175,7 +175,7 @@ func NewNullableConstantsResponse(val *ConstantsResponse) *NullableConstantsResp
 	return &NullableConstantsResponse{value: val, isSet: true}
 }
 
-func (v NullableConstantsResponse) MarshalJSON() ([]byte, error) {
+func (v NullableConstantsResponse) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

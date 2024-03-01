@@ -68,7 +68,7 @@ func (o *InvariantsResponse) SetInvariants(v []string) {
 	o.Invariants = v
 }
 
-func (o InvariantsResponse) MarshalJSON() ([]byte, error) {
+func (o InvariantsResponse) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Invariants != nil {
 		toSerialize["invariants"] = o.Invariants
@@ -103,7 +103,7 @@ func NewNullableInvariantsResponse(val *InvariantsResponse) *NullableInvariantsR
 	return &NullableInvariantsResponse{value: val, isSet: true}
 }
 
-func (v NullableInvariantsResponse) MarshalJSON() ([]byte, error) {
+func (v NullableInvariantsResponse) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

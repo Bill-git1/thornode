@@ -300,7 +300,7 @@ func (o *BlockTxResult) SetCodespace(v string) {
 	o.Codespace = &v
 }
 
-func (o BlockTxResult) MarshalJSON() ([]byte, error) {
+func (o BlockTxResult) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Code != nil {
 		toSerialize["code"] = o.Code
@@ -356,7 +356,7 @@ func NewNullableBlockTxResult(val *BlockTxResult) *NullableBlockTxResult {
 	return &NullableBlockTxResult{value: val, isSet: true}
 }
 
-func (v NullableBlockTxResult) MarshalJSON() ([]byte, error) {
+func (v NullableBlockTxResult) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

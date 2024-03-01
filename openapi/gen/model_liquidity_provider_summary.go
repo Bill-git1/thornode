@@ -356,7 +356,7 @@ func (o *LiquidityProviderSummary) SetAssetDepositValue(v string) {
 	o.AssetDepositValue = v
 }
 
-func (o LiquidityProviderSummary) MarshalJSON() ([]byte, error) {
+func (o LiquidityProviderSummary) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["asset"] = o.Asset
@@ -421,7 +421,7 @@ func NewNullableLiquidityProviderSummary(val *LiquidityProviderSummary) *Nullabl
 	return &NullableLiquidityProviderSummary{value: val, isSet: true}
 }
 
-func (v NullableLiquidityProviderSummary) MarshalJSON() ([]byte, error) {
+func (v NullableLiquidityProviderSummary) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

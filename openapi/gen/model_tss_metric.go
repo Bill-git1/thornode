@@ -101,7 +101,7 @@ func (o *TssMetric) SetTssTime(v int64) {
 	o.TssTime = &v
 }
 
-func (o TssMetric) MarshalJSON() ([]byte, error) {
+func (o TssMetric) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Address != nil {
 		toSerialize["address"] = o.Address
@@ -139,7 +139,7 @@ func NewNullableTssMetric(val *TssMetric) *NullableTssMetric {
 	return &NullableTssMetric{value: val, isSet: true}
 }
 
-func (v NullableTssMetric) MarshalJSON() ([]byte, error) {
+func (v NullableTssMetric) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

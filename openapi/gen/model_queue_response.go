@@ -168,7 +168,7 @@ func (o *QueueResponse) SetScheduledOutboundClout(v string) {
 	o.ScheduledOutboundClout = v
 }
 
-func (o QueueResponse) MarshalJSON() ([]byte, error) {
+func (o QueueResponse) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["swap"] = o.Swap
@@ -215,7 +215,7 @@ func NewNullableQueueResponse(val *QueueResponse) *NullableQueueResponse {
 	return &NullableQueueResponse{value: val, isSet: true}
 }
 
-func (v NullableQueueResponse) MarshalJSON() ([]byte, error) {
+func (v NullableQueueResponse) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

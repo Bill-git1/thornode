@@ -101,7 +101,7 @@ func (o *VaultAddress) SetAddress(v string) {
 	o.Address = &v
 }
 
-func (o VaultAddress) MarshalJSON() ([]byte, error) {
+func (o VaultAddress) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Chain != nil {
 		toSerialize["chain"] = o.Chain
@@ -139,7 +139,7 @@ func NewNullableVaultAddress(val *VaultAddress) *NullableVaultAddress {
 	return &NullableVaultAddress{value: val, isSet: true}
 }
 
-func (v NullableVaultAddress) MarshalJSON() ([]byte, error) {
+func (v NullableVaultAddress) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

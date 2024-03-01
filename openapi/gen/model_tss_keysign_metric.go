@@ -94,7 +94,7 @@ func (o *TssKeysignMetric) SetNodeTssTimes(v []TssMetric) {
 	o.NodeTssTimes = v
 }
 
-func (o TssKeysignMetric) MarshalJSON() ([]byte, error) {
+func (o TssKeysignMetric) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.TxId != nil {
 		toSerialize["tx_id"] = o.TxId
@@ -132,7 +132,7 @@ func NewNullableTssKeysignMetric(val *TssKeysignMetric) *NullableTssKeysignMetri
 	return &NullableTssKeysignMetric{value: val, isSet: true}
 }
 
-func (v NullableTssKeysignMetric) MarshalJSON() ([]byte, error) {
+func (v NullableTssKeysignMetric) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

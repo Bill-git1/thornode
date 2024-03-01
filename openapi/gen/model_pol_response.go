@@ -170,7 +170,7 @@ func (o *POLResponse) SetCurrentDeposit(v string) {
 	o.CurrentDeposit = v
 }
 
-func (o POLResponse) MarshalJSON() ([]byte, error) {
+func (o POLResponse) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["rune_deposited"] = o.RuneDeposited
@@ -217,7 +217,7 @@ func NewNullablePOLResponse(val *POLResponse) *NullablePOLResponse {
 	return &NullablePOLResponse{value: val, isSet: true}
 }
 
-func (v NullablePOLResponse) MarshalJSON() ([]byte, error) {
+func (v NullablePOLResponse) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

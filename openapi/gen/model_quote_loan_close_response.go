@@ -684,7 +684,7 @@ func (o *QuoteLoanCloseResponse) SetTotalRepaySeconds(v int64) {
 	o.TotalRepaySeconds = v
 }
 
-func (o QuoteLoanCloseResponse) MarshalJSON() ([]byte, error) {
+func (o QuoteLoanCloseResponse) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.InboundAddress != nil {
 		toSerialize["inbound_address"] = o.InboundAddress
@@ -782,7 +782,7 @@ func NewNullableQuoteLoanCloseResponse(val *QuoteLoanCloseResponse) *NullableQuo
 	return &NullableQuoteLoanCloseResponse{value: val, isSet: true}
 }
 
-func (v NullableQuoteLoanCloseResponse) MarshalJSON() ([]byte, error) {
+func (v NullableQuoteLoanCloseResponse) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

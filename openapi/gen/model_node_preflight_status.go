@@ -115,7 +115,7 @@ func (o *NodePreflightStatus) SetCode(v int64) {
 	o.Code = v
 }
 
-func (o NodePreflightStatus) MarshalJSON() ([]byte, error) {
+func (o NodePreflightStatus) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["status"] = o.Status
@@ -156,7 +156,7 @@ func NewNullableNodePreflightStatus(val *NodePreflightStatus) *NullableNodePrefl
 	return &NullableNodePreflightStatus{value: val, isSet: true}
 }
 
-func (v NullableNodePreflightStatus) MarshalJSON() ([]byte, error) {
+func (v NullableNodePreflightStatus) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

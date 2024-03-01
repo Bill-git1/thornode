@@ -199,7 +199,7 @@ func (o *DerivedPool) SetDerivedDepthBps(v string) {
 	o.DerivedDepthBps = v
 }
 
-func (o DerivedPool) MarshalJSON() ([]byte, error) {
+func (o DerivedPool) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["asset"] = o.Asset
@@ -249,7 +249,7 @@ func NewNullableDerivedPool(val *DerivedPool) *NullableDerivedPool {
 	return &NullableDerivedPool{value: val, isSet: true}
 }
 
-func (v NullableDerivedPool) MarshalJSON() ([]byte, error) {
+func (v NullableDerivedPool) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

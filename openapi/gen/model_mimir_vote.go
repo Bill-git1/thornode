@@ -134,7 +134,7 @@ func (o *MimirVote) SetSigner(v string) {
 	o.Signer = &v
 }
 
-func (o MimirVote) MarshalJSON() ([]byte, error) {
+func (o MimirVote) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Key != nil {
 		toSerialize["key"] = o.Key
@@ -175,7 +175,7 @@ func NewNullableMimirVote(val *MimirVote) *NullableMimirVote {
 	return &NullableMimirVote{value: val, isSet: true}
 }
 
-func (v NullableMimirVote) MarshalJSON() ([]byte, error) {
+func (v NullableMimirVote) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

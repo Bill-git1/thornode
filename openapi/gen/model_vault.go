@@ -470,7 +470,7 @@ func (o *Vault) SetFrozen(v []string) {
 	o.Frozen = v
 }
 
-func (o Vault) MarshalJSON() ([]byte, error) {
+func (o Vault) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.BlockHeight != nil {
 		toSerialize["block_height"] = o.BlockHeight
@@ -544,7 +544,7 @@ func NewNullableVault(val *Vault) *NullableVault {
 	return &NullableVault{value: val, isSet: true}
 }
 
-func (v NullableVault) MarshalJSON() ([]byte, error) {
+func (v NullableVault) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

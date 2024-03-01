@@ -101,7 +101,7 @@ func (o *NodeJail) SetReason(v string) {
 	o.Reason = &v
 }
 
-func (o NodeJail) MarshalJSON() ([]byte, error) {
+func (o NodeJail) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.ReleaseHeight != nil {
 		toSerialize["release_height"] = o.ReleaseHeight
@@ -139,7 +139,7 @@ func NewNullableNodeJail(val *NodeJail) *NullableNodeJail {
 	return &NullableNodeJail{value: val, isSet: true}
 }
 
-func (v NullableNodeJail) MarshalJSON() ([]byte, error) {
+func (v NullableNodeJail) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

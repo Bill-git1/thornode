@@ -123,7 +123,7 @@ func (o *TradeAccountsUnitResponse) SetDepth(v string) {
 	o.Depth = v
 }
 
-func (o TradeAccountsUnitResponse) MarshalJSON() ([]byte, error) {
+func (o TradeAccountsUnitResponse) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["asset"] = o.Asset
@@ -164,7 +164,7 @@ func NewNullableTradeAccountsUnitResponse(val *TradeAccountsUnitResponse) *Nulla
 	return &NullableTradeAccountsUnitResponse{value: val, isSet: true}
 }
 
-func (v NullableTradeAccountsUnitResponse) MarshalJSON() ([]byte, error) {
+func (v NullableTradeAccountsUnitResponse) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

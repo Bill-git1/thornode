@@ -68,7 +68,7 @@ func (o *MimirNodesResponse) SetMimirs(v []MimirVote) {
 	o.Mimirs = v
 }
 
-func (o MimirNodesResponse) MarshalJSON() ([]byte, error) {
+func (o MimirNodesResponse) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Mimirs != nil {
 		toSerialize["mimirs"] = o.Mimirs
@@ -103,7 +103,7 @@ func NewNullableMimirNodesResponse(val *MimirNodesResponse) *NullableMimirNodesR
 	return &NullableMimirNodesResponse{value: val, isSet: true}
 }
 
-func (v NullableMimirNodesResponse) MarshalJSON() ([]byte, error) {
+func (v NullableMimirNodesResponse) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

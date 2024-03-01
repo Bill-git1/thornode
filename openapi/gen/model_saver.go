@@ -257,7 +257,7 @@ func (o *Saver) SetGrowthPct(v string) {
 	o.GrowthPct = v
 }
 
-func (o Saver) MarshalJSON() ([]byte, error) {
+func (o Saver) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["asset"] = o.Asset
@@ -313,7 +313,7 @@ func NewNullableSaver(val *Saver) *NullableSaver {
 	return &NullableSaver{value: val, isSet: true}
 }
 
-func (v NullableSaver) MarshalJSON() ([]byte, error) {
+func (v NullableSaver) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

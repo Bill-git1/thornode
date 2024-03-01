@@ -232,7 +232,7 @@ func (o *SwapperCloutResponse) SetLastReclaimHeight(v int64) {
 	o.LastReclaimHeight = &v
 }
 
-func (o SwapperCloutResponse) MarshalJSON() ([]byte, error) {
+func (o SwapperCloutResponse) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["address"] = o.Address
@@ -282,7 +282,7 @@ func NewNullableSwapperCloutResponse(val *SwapperCloutResponse) *NullableSwapper
 	return &NullableSwapperCloutResponse{value: val, isSet: true}
 }
 
-func (v NullableSwapperCloutResponse) MarshalJSON() ([]byte, error) {
+func (v NullableSwapperCloutResponse) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

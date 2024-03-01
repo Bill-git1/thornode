@@ -116,7 +116,7 @@ func (o *TxStagesResponseSwapStatusStreaming) SetCount(v int32) {
 	o.Count = v
 }
 
-func (o TxStagesResponseSwapStatusStreaming) MarshalJSON() ([]byte, error) {
+func (o TxStagesResponseSwapStatusStreaming) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["interval"] = o.Interval
@@ -157,7 +157,7 @@ func NewNullableTxStagesResponseSwapStatusStreaming(val *TxStagesResponseSwapSta
 	return &NullableTxStagesResponseSwapStatusStreaming{value: val, isSet: true}
 }
 
-func (v NullableTxStagesResponseSwapStatusStreaming) MarshalJSON() ([]byte, error) {
+func (v NullableTxStagesResponseSwapStatusStreaming) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

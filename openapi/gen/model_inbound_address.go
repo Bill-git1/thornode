@@ -466,7 +466,7 @@ func (o *InboundAddress) SetDustThreshold(v string) {
 	o.DustThreshold = &v
 }
 
-func (o InboundAddress) MarshalJSON() ([]byte, error) {
+func (o InboundAddress) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Chain != nil {
 		toSerialize["chain"] = o.Chain
@@ -537,7 +537,7 @@ func NewNullableInboundAddress(val *InboundAddress) *NullableInboundAddress {
 	return &NullableInboundAddress{value: val, isSet: true}
 }
 
-func (v NullableInboundAddress) MarshalJSON() ([]byte, error) {
+func (v NullableInboundAddress) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

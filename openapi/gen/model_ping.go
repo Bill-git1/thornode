@@ -68,7 +68,7 @@ func (o *Ping) SetPing(v string) {
 	o.Ping = &v
 }
 
-func (o Ping) MarshalJSON() ([]byte, error) {
+func (o Ping) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Ping != nil {
 		toSerialize["ping"] = o.Ping
@@ -103,7 +103,7 @@ func NewNullablePing(val *Ping) *NullablePing {
 	return &NullablePing{value: val, isSet: true}
 }
 
-func (v NullablePing) MarshalJSON() ([]byte, error) {
+func (v NullablePing) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

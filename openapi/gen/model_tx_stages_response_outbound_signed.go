@@ -130,7 +130,7 @@ func (o *TxStagesResponseOutboundSigned) SetCompleted(v bool) {
 	o.Completed = v
 }
 
-func (o TxStagesResponseOutboundSigned) MarshalJSON() ([]byte, error) {
+func (o TxStagesResponseOutboundSigned) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.ScheduledOutboundHeight != nil {
 		toSerialize["scheduled_outbound_height"] = o.ScheduledOutboundHeight
@@ -171,7 +171,7 @@ func NewNullableTxStagesResponseOutboundSigned(val *TxStagesResponseOutboundSign
 	return &NullableTxStagesResponseOutboundSigned{value: val, isSet: true}
 }
 
-func (v NullableTxStagesResponseOutboundSigned) MarshalJSON() ([]byte, error) {
+func (v NullableTxStagesResponseOutboundSigned) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 

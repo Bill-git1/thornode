@@ -232,7 +232,7 @@ func (o *TxStagesResponseInboundConfirmationCounted) SetCompleted(v bool) {
 	o.Completed = v
 }
 
-func (o TxStagesResponseInboundConfirmationCounted) MarshalJSON() ([]byte, error) {
+func (o TxStagesResponseInboundConfirmationCounted) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.CountingStartHeight != nil {
 		toSerialize["counting_start_height"] = o.CountingStartHeight
@@ -282,7 +282,7 @@ func NewNullableTxStagesResponseInboundConfirmationCounted(val *TxStagesResponse
 	return &NullableTxStagesResponseInboundConfirmationCounted{value: val, isSet: true}
 }
 
-func (v NullableTxStagesResponseInboundConfirmationCounted) MarshalJSON() ([]byte, error) {
+func (v NullableTxStagesResponseInboundConfirmationCounted) MarshalJSON_deprecated() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 
