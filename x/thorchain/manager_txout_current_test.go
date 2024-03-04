@@ -22,9 +22,6 @@ func (s TxOutStoreVCURSuite) TestAddGasFees(c *C) {
 	vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, tx.ObservedPubKey, common.Chains{common.BNBChain}.Strings(), []ChainContract{})
 	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
 
-	version := GetCurrentVersion()
-	constAccessor := constants.GetConstantValues(version)
-	mgr.gasMgr = newGasMgrV81(constAccessor, mgr.Keeper())
 	err := addGasFees(ctx, mgr, tx)
 	c.Assert(err, IsNil)
 	c.Assert(mgr.GasMgr().GetGas(), HasLen, 1)

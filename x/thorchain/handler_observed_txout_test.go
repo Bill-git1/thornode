@@ -218,11 +218,9 @@ func (s *HandlerObservedTxOutSuite) TestHandle(c *C) {
 	mgr.K = keeper
 	eventMgr := NewDummyEventMgr()
 	mgr.eventMgr = eventMgr
-	mgr.slasher = newSlasherV92(keeper, eventMgr)
-	validatorMgr := newValidatorMgrV95(keeper, mgr.NetworkMgr(), txOutStore, eventMgr)
+	mgr.slasher = newSlasherVCUR(keeper, eventMgr)
+	validatorMgr := newValidatorMgrVCUR(keeper, mgr.NetworkMgr(), txOutStore, eventMgr)
 	mgr.validatorMgr = validatorMgr
-	constAccessor := mgr.GetConstants()
-	mgr.gasMgr = newGasMgrV94(constAccessor, keeper)
 
 	handler := NewObservedTxOutHandler(mgr)
 	msg := NewMsgObservedTxOut(txs, keeper.nas[0].NodeAddress)
@@ -230,7 +228,7 @@ func (s *HandlerObservedTxOutSuite) TestHandle(c *C) {
 	items, err := txOutStore.GetOutboundItems(ctx)
 	c.Assert(err, IsNil)
 	c.Assert(items, HasLen, 1)
-	pendingTxOuts, err := validatorMgr.getPendingTxOut(ctx, constAccessor)
+	pendingTxOuts, err := validatorMgr.getPendingTxOut(ctx)
 	c.Assert(err, IsNil)
 	// c.Check(pendingTxOuts, Equals, int64(1))
 	c.Check(pendingTxOuts, Equals, int64(301)) // pendingTxOuts in fact returns 301; learn why.
@@ -241,7 +239,7 @@ func (s *HandlerObservedTxOutSuite) TestHandle(c *C) {
 	items, err = txOutStore.GetOutboundItems(ctx)
 	c.Assert(err, IsNil)
 	c.Assert(items, HasLen, 1) // Still present, but now has an OutHash.
-	pendingTxOuts, err = validatorMgr.getPendingTxOut(ctx, constAccessor)
+	pendingTxOuts, err = validatorMgr.getPendingTxOut(ctx)
 	c.Assert(err, IsNil)
 	c.Check(pendingTxOuts, Equals, int64(0))
 
@@ -317,11 +315,9 @@ func (s *HandlerObservedTxOutSuite) TestHandleFailedTransaction(c *C) {
 	mgr.K = keeper
 	eventMgr := NewDummyEventMgr()
 	mgr.eventMgr = eventMgr
-	mgr.slasher = newSlasherV92(keeper, eventMgr)
-	validatorMgr := newValidatorMgrV95(keeper, mgr.NetworkMgr(), txOutStore, eventMgr)
+	mgr.slasher = newSlasherVCUR(keeper, eventMgr)
+	validatorMgr := newValidatorMgrVCUR(keeper, mgr.NetworkMgr(), txOutStore, eventMgr)
 	mgr.validatorMgr = validatorMgr
-	constAccessor := mgr.GetConstants()
-	mgr.gasMgr = newGasMgrV94(constAccessor, keeper)
 
 	handler := NewObservedTxOutHandler(mgr)
 	msg := NewMsgObservedTxOut(txs, keeper.nas[0].NodeAddress)
@@ -329,7 +325,7 @@ func (s *HandlerObservedTxOutSuite) TestHandleFailedTransaction(c *C) {
 	items, err := txOutStore.GetOutboundItems(ctx)
 	c.Assert(err, IsNil)
 	c.Assert(items, HasLen, 1)
-	pendingTxOuts, err := validatorMgr.getPendingTxOut(ctx, constAccessor)
+	pendingTxOuts, err := validatorMgr.getPendingTxOut(ctx)
 	c.Assert(err, IsNil)
 	// c.Check(pendingTxOuts, Equals, int64(1))
 	c.Check(pendingTxOuts, Equals, int64(301)) // pendingTxOuts in fact returns 301; learn why.
@@ -340,7 +336,7 @@ func (s *HandlerObservedTxOutSuite) TestHandleFailedTransaction(c *C) {
 	items, err = txOutStore.GetOutboundItems(ctx)
 	c.Assert(err, IsNil)
 	c.Assert(items, HasLen, 1)
-	pendingTxOuts, err = validatorMgr.getPendingTxOut(ctx, constAccessor)
+	pendingTxOuts, err = validatorMgr.getPendingTxOut(ctx)
 	c.Assert(err, IsNil)
 	// c.Check(pendingTxOuts, Equals, int64(1)) // The pending outbound remains.
 	c.Check(pendingTxOuts, Equals, int64(301)) // pendingTxOuts in fact returns 301; learn why.
@@ -405,9 +401,7 @@ func (s *HandlerObservedTxOutSuite) TestHandleStolenFundsInvalidMemo(c *C) {
 	mgr.K = keeper
 	eventMgr := NewDummyEventMgr()
 	mgr.eventMgr = eventMgr
-	mgr.slasher = newSlasherV92(keeper, NewDummyEventMgr())
-	constAccessor := mgr.GetConstants()
-	mgr.gasMgr = newGasMgrV94(constAccessor, keeper)
+	mgr.slasher = newSlasherVCUR(keeper, NewDummyEventMgr())
 
 	handler := NewObservedTxOutHandler(mgr)
 	msg := NewMsgObservedTxOut(txs, keeper.nas[0].NodeAddress)

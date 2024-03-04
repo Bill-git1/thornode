@@ -43,7 +43,7 @@ func (s *HandlerOutboundTxSuite) TestValidate(c *C) {
 	}
 
 	mgr.K = k
-	mgr.slasher = newSlasherV75(k, NewDummyEventMgr())
+	mgr.slasher = newSlasherVCUR(k, NewDummyEventMgr())
 
 	handler := NewOutboundTxHandler(mgr)
 
@@ -189,6 +189,14 @@ func newOutboundTxHandlerTestHelper(c *C) outboundTxHandlerTestHelper {
 	version := GetCurrentVersion()
 	asgardVault := GetRandomVault()
 	asgardVault.Membership = []string{asgardVault.PubKey.String()}
+	usdtAsset, err := common.NewAsset("ETH.USDT-0XA3910454BF2CB59B8B3A401589A3BACC5CA42306")
+	c.Check(err, IsNil)
+	vaultCoins := common.Coins{
+		common.NewCoin(common.BNBAsset, cosmos.NewUint(2*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(2*common.One)),
+		common.NewCoin(usdtAsset, cosmos.NewUint(2*common.One)),
+	}
+	asgardVault.AddFunds(vaultCoins)
 	c.Assert(mgr.Keeper().SetVault(ctx, asgardVault), IsNil)
 	addr, err := asgardVault.PubKey.GetAddress(common.RuneAsset().Chain)
 	c.Check(err, IsNil)
@@ -222,7 +230,7 @@ func newOutboundTxHandlerTestHelper(c *C) outboundTxHandlerTestHelper {
 	keeperHelper.SetObservedTxOutVoter(ctx, voter)
 
 	constAccessor := constants.GetConstantValues(version)
-	txOutStorage := newTxOutStorageV83(keeperHelper, constAccessor, NewDummyEventMgr(), newGasMgrV81(constAccessor, keeperHelper))
+	txOutStorage := newTxOutStorageVCUR(keeperHelper, constAccessor, NewDummyEventMgr(), newGasMgrVCUR(constAccessor, keeperHelper))
 	toi := TxOutItem{
 		Chain:       common.BNBChain,
 		ToAddress:   tx.Tx.FromAddress,
@@ -232,7 +240,7 @@ func newOutboundTxHandlerTestHelper(c *C) outboundTxHandlerTestHelper {
 		InHash:      tx.Tx.ID,
 	}
 	mgr.K = keeperHelper
-	mgr.slasher = newSlasherV75(keeperHelper, NewDummyEventMgr())
+	mgr.slasher = newSlasherVCUR(keeperHelper, NewDummyEventMgr())
 	result, err := txOutStorage.TryAddTxOutItem(ctx, mgr, toi, cosmos.ZeroUint())
 	c.Assert(err, IsNil)
 	c.Check(result, Equals, true)
@@ -337,7 +345,7 @@ func (s *HandlerOutboundTxSuite) TestOutboundTxNormalCase(c *C) {
 		ID:    GetRandomTxHash(),
 		Chain: common.BNBChain,
 		Coins: common.Coins{
-			common.NewCoin(common.BNBAsset, cosmos.NewUint(199887500)),
+			common.NewCoin(common.BNBAsset, cosmos.NewUint(199925000)),
 		},
 		Memo:        NewOutboundMemo(helper.inboundTx.Tx.ID).String(),
 		FromAddress: fromAddr,
@@ -371,18 +379,18 @@ func (s *HandlerOutboundTxSuite) TestOuboundTxHandlerSendExtraFundShouldBeSlashe
 		ToAddress:   helper.inboundTx.Tx.FromAddress,
 		Gas:         BNBGasFeeSingleton,
 	}, helper.ctx.BlockHeight(), helper.nodeAccount.PubKeySet.Secp256k1, helper.ctx.BlockHeight())
-	// expectedBond := helper.nodeAccount.Bond.Sub(cosmos.NewUint(common.One * 2).Add(BNBGasFeeSingleton[0].Amount).MulUint64(3).QuoUint64(2))
-	expectedBond := cosmos.NewUint(9699945439)
-	expectedVaultTotalReserve := cosmos.NewUint(7766279631552373170)
+	// expectedBond := helper.nodeAccount.Bond.Sub(BNBGasFeeSingleton[0].Amount).MulUint64(3).QuoUint64(2))
+	expectedBond := cosmos.NewUint(9999943752)
+	expectedVaultTotalReserve := cosmos.NewUint(7766279631452335668)
 	// valid outbound message, with event, with txout
 	outMsg := NewMsgOutboundTx(tx, helper.inboundTx.Tx.ID, helper.nodeAccount.NodeAddress)
 	_, err = handler.Run(helper.ctx, outMsg)
 	c.Assert(err, IsNil)
 	na, err := helper.keeper.GetNodeAccount(helper.ctx, helper.nodeAccount.NodeAddress)
-	c.Assert(na.Bond.Equal(expectedBond), Equals, true, Commentf("expected bond:%s, real bond: %s", expectedBond, na.Bond))
+	c.Assert(na.Bond, DeepEquals, expectedBond)
 	newReserve := helper.keeper.GetRuneBalanceOfModule(helper.ctx, ReserveName)
 	c.Assert(err, IsNil)
-	c.Assert(newReserve.Equal(expectedVaultTotalReserve), Equals, true)
+	c.Assert(newReserve, DeepEquals, expectedVaultTotalReserve)
 }
 
 func (s *HandlerOutboundTxSuite) TestOutboundTxHandlerSendAdditionalCoinsShouldBeSlashed(c *C) {
@@ -402,14 +410,14 @@ func (s *HandlerOutboundTxSuite) TestOutboundTxHandlerSendAdditionalCoinsShouldB
 		ToAddress:   helper.inboundTx.Tx.FromAddress,
 		Gas:         BNBGasFeeSingleton,
 	}, helper.ctx.BlockHeight(), helper.nodeAccount.PubKeySet.Secp256k1, helper.ctx.BlockHeight())
-	expectedBond := cosmos.NewUint(9700704420)
+	expectedBond := cosmos.NewUint(9849946002)
 	// slash one BNB, and one rune
 	outMsg := NewMsgOutboundTx(tx, helper.inboundTx.Tx.ID, helper.nodeAccount.NodeAddress)
 	_, err = handler.Run(helper.ctx, outMsg)
 	c.Assert(err, IsNil)
 	na, err := helper.keeper.GetNodeAccount(helper.ctx, helper.nodeAccount.NodeAddress)
 	c.Assert(err, IsNil)
-	c.Assert(na.Bond.Equal(expectedBond), Equals, true, Commentf("%d/%d", na.Bond.Uint64(), expectedBond.Uint64()))
+	c.Assert(na.Bond, DeepEquals, expectedBond)
 }
 
 func (s *HandlerOutboundTxSuite) TestOutboundTxHandlerInvalidObservedTxVoterShouldSlash(c *C) {
@@ -430,10 +438,10 @@ func (s *HandlerOutboundTxSuite) TestOutboundTxHandlerInvalidObservedTxVoterShou
 		Gas:         BNBGasFeeSingleton,
 	}, helper.ctx.BlockHeight(), helper.nodeAccount.PubKeySet.Secp256k1, helper.ctx.BlockHeight())
 
-	expectedBond := cosmos.NewUint(9700704420)
+	expectedBond := cosmos.NewUint(9849946002)
 
 	// expected 0.5 slashed RUNE be added to reserve
-	expectedVaultTotalReserve := cosmos.NewUint(7766279631552877459)
+	expectedVaultTotalReserve := cosmos.NewUint(7766279631502334918)
 	pool, err := helper.keeper.GetPool(helper.ctx, common.BNBAsset)
 	c.Assert(err, IsNil)
 	poolBNB := common.SafeSub(pool.BalanceAsset, cosmos.NewUint(common.One).Add(BNBGasFeeSingleton[0].Amount))
@@ -445,14 +453,14 @@ func (s *HandlerOutboundTxSuite) TestOutboundTxHandlerInvalidObservedTxVoterShou
 	c.Assert(err, IsNil)
 	na, err := helper.keeper.GetNodeAccount(helper.ctx, helper.nodeAccount.NodeAddress)
 	c.Assert(err, IsNil)
-	c.Assert(na.Bond.Equal(expectedBond), Equals, true, Commentf("%d/%d", na.Bond.Uint64(), expectedBond.Uint64()))
+	c.Assert(na.Bond, DeepEquals, expectedBond)
 
 	newReserve := helper.keeper.GetRuneBalanceOfModule(helper.ctx, ReserveName)
-	c.Assert(newReserve.Equal(expectedVaultTotalReserve), Equals, true)
+	c.Assert(newReserve, DeepEquals, expectedVaultTotalReserve)
 	pool, err = helper.keeper.GetPool(helper.ctx, common.BNBAsset)
 	c.Assert(err, IsNil)
-	c.Assert(pool.BalanceRune.Equal(cosmos.NewUint(10100933578)), Equals, true, Commentf("%d/%s", pool.BalanceRune.Uint64(), cosmos.NewUint(10149884125)))
-	c.Assert(pool.BalanceAsset.Equal(poolBNB), Equals, true, Commentf("%d/%d", pool.BalanceAsset.Uint64(), poolBNB.Uint64()))
+	c.Assert(pool.BalanceRune, DeepEquals, cosmos.NewUint(10099961000))
+	c.Assert(pool.BalanceAsset, DeepEquals, poolBNB)
 }
 
 func (s *HandlerOutboundTxSuite) TestOutboundTxHandlerETHChainSpendTooMuchGasShouldSlash(c *C) {
@@ -469,7 +477,7 @@ func (s *HandlerOutboundTxSuite) TestOutboundTxHandlerETHChainSpendTooMuchGasSho
 	usdtAsset, err := common.NewAsset("ETH.USDT-0XA3910454BF2CB59B8B3A401589A3BACC5CA42306")
 	c.Assert(err, IsNil)
 
-	txOutStorage := newTxOutStorageV83(helper.keeper, helper.constAccessor, NewDummyEventMgr(), newGasMgrV81(helper.constAccessor, helper.keeper))
+	txOutStorage := newTxOutStorageVCUR(helper.keeper, helper.constAccessor, NewDummyEventMgr(), newGasMgrVCUR(helper.constAccessor, helper.keeper))
 	pubKey := GetRandomPubKey()
 	toAddr, err := pubKey.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
@@ -495,14 +503,14 @@ func (s *HandlerOutboundTxSuite) TestOutboundTxHandlerETHChainSpendTooMuchGasSho
 			common.NewCoin(common.ETHAsset, cosmos.NewUint(1*common.One)),
 		},
 	}, helper.ctx.BlockHeight(), helper.nodeAccount.PubKeySet.Secp256k1, helper.ctx.BlockHeight())
-	expectedBond := cosmos.NewUint(9848484849)
+	expectedBond := cosmos.NewUint(9850000000)
 
 	outMsg := NewMsgOutboundTx(tx, helper.inboundTx.Tx.ID, helper.nodeAccount.NodeAddress)
 	_, err = handler.Run(helper.ctx, outMsg)
 	c.Assert(err, IsNil)
 	na, err := helper.keeper.GetNodeAccount(helper.ctx, helper.nodeAccount.NodeAddress)
 	c.Assert(err, IsNil)
-	c.Assert(na.Bond.Equal(expectedBond), Equals, true, Commentf("%d/%d", na.Bond.Uint64(), expectedBond.Uint64()))
+	c.Assert(na.Bond, DeepEquals, expectedBond)
 }
 
 func (s *HandlerOutboundTxSuite) TestOutboundTxHandlerETHChainSpendTooMuchGasPerTHORNodeInstructionShouldNotSlash(c *C) {
@@ -519,7 +527,7 @@ func (s *HandlerOutboundTxSuite) TestOutboundTxHandlerETHChainSpendTooMuchGasPer
 	usdtAsset, err := common.NewAsset("ETH.USDT-0XA3910454BF2CB59B8B3A401589A3BACC5CA42306")
 	c.Assert(err, IsNil)
 
-	txOutStorage := newTxOutStorageV83(helper.keeper, helper.constAccessor, NewDummyEventMgr(), newGasMgrV81(helper.constAccessor, helper.keeper))
+	txOutStorage := newTxOutStorageVCUR(helper.keeper, helper.constAccessor, NewDummyEventMgr(), newGasMgrVCUR(helper.constAccessor, helper.keeper))
 	pubKey := GetRandomPubKey()
 	toAddr, err := pubKey.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
@@ -574,7 +582,7 @@ func (s *HandlerOutboundTxSuite) TestOutboundTxHandlerMismatchDecimalShouldNotSl
 	fromAddr, err := helper.asgardVault.PubKey.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
 
-	txOutStorage := newTxOutStorageV85(helper.keeper, helper.constAccessor, NewDummyEventMgr(), newGasMgrV81(helper.constAccessor, helper.keeper))
+	txOutStorage := newTxOutStorageVCUR(helper.keeper, helper.constAccessor, NewDummyEventMgr(), newGasMgrVCUR(helper.constAccessor, helper.keeper))
 	pubKey := GetRandomPubKey()
 	toAddr, err := pubKey.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)

@@ -131,14 +131,19 @@ func newRefundTxHandlerTestHelper(c *C) refundTxHandlerTestHelper {
 	asgardVault := GetRandomVault()
 	asgardVault.Membership = []string{asgardVault.PubKey.String()}
 	addr, err := asgardVault.PubKey.GetAddress(common.BNBChain)
+	c.Assert(err, IsNil)
+
 	yggVault := GetRandomVault()
 	yggVault.Membership = []string{yggVault.PubKey.String()}
-	c.Assert(err, IsNil)
+	vaultCoins := common.Coins{
+		common.NewCoin(common.BNBAsset, cosmos.NewUint(2*common.One)),
+	}
+	yggVault.AddFunds(vaultCoins)
 
 	tx := NewObservedTx(common.Tx{
 		ID:          GetRandomTxHash(),
 		Chain:       common.BNBChain,
-		Coins:       common.Coins{common.NewCoin(common.BNBAsset, cosmos.NewUint(2*common.One))},
+		Coins:       vaultCoins,
 		Memo:        "swap:RUNE-67C",
 		FromAddress: GetRandomBNBAddress(),
 		ToAddress:   addr,
@@ -149,7 +154,7 @@ func newRefundTxHandlerTestHelper(c *C) refundTxHandlerTestHelper {
 	keeperTestHelper.vault = yggVault
 
 	mgr := NewDummyMgrWithKeeper(keeperTestHelper)
-	mgr.slasher = newSlasherV75(keeperTestHelper, NewDummyEventMgr())
+	mgr.slasher = newSlasherVCUR(keeperTestHelper, NewDummyEventMgr())
 
 	nodeAccount := GetRandomValidatorNode(NodeActive)
 	nodeAccount.NodeAddress, err = yggVault.PubKey.GetThorAddress()
@@ -168,7 +173,7 @@ func newRefundTxHandlerTestHelper(c *C) refundTxHandlerTestHelper {
 	keeperTestHelper.SetObservedTxOutVoter(ctx, voter)
 
 	constAccessor := constants.GetConstantValues(version)
-	txOutStorage := newTxOutStorageV83(keeperTestHelper, constAccessor, NewDummyEventMgr(), newGasMgrV81(constAccessor, keeperTestHelper))
+	txOutStorage := newTxOutStorageVCUR(keeperTestHelper, constAccessor, NewDummyEventMgr(), newGasMgrVCUR(constAccessor, keeperTestHelper))
 	toi := TxOutItem{
 		Chain:       common.BNBChain,
 		ToAddress:   tx.Tx.FromAddress,
@@ -282,7 +287,7 @@ func (s *HandlerRefundSuite) TestRefundTxNormalCase(c *C) {
 		ID:    GetRandomTxHash(),
 		Chain: common.BNBChain,
 		Coins: common.Coins{
-			common.NewCoin(common.BNBAsset, cosmos.NewUint(199887500)),
+			common.NewCoin(common.BNBAsset, cosmos.NewUint(199925000)),
 		},
 		Memo:        NewRefundMemo(helper.inboundTx.Tx.ID).String(),
 		FromAddress: fromAddr,
@@ -316,19 +321,19 @@ func (s *HandlerRefundSuite) TestRefundTxHandlerSendExtraFundShouldBeSlashed(c *
 		ToAddress:   helper.inboundTx.Tx.FromAddress,
 		Gas:         BNBGasFeeSingleton,
 	}, helper.ctx.BlockHeight(), helper.nodeAccount.PubKeySet.Secp256k1, helper.ctx.BlockHeight())
-	// expectedBond := helper.nodeAccount.Bond.Sub(cosmos.NewUint(common.One * 2).Add(BNBGasFeeSingleton[0].Amount).MulUint64(3).QuoUint64(2))
-	expectedBond := cosmos.NewUint(9699945439)
-	expectedVaultTotalReserve := cosmos.NewUint(7766279631552373170)
+	// expectedBond := helper.nodeAccount.Bond.Sub(BNBGasFeeSingleton[0].Amount).MulUint64(3).QuoUint64(2)
+	expectedBond := cosmos.NewUint(9999943752)
+	expectedVaultTotalReserve := cosmos.NewUint(7766279631452335668)
 	// valid outbound message, with event, with txout
 	outMsg := NewMsgRefundTx(tx, helper.inboundTx.Tx.ID, helper.nodeAccount.NodeAddress)
 	_, err = handler.Run(helper.ctx, outMsg)
 	c.Assert(err, IsNil)
 	na, err := helper.keeper.GetNodeAccount(helper.ctx, helper.nodeAccount.NodeAddress)
 	c.Assert(err, IsNil)
-	c.Assert(na.Bond.Equal(expectedBond), Equals, true, Commentf("%d/%d", na.Bond.Uint64(), expectedBond.Uint64()))
+	c.Assert(na.Bond, DeepEquals, expectedBond)
 	newReserve := helper.keeper.GetRuneBalanceOfModule(helper.ctx, ReserveName)
 	c.Log(newReserve.String())
-	c.Assert(newReserve.Equal(expectedVaultTotalReserve), Equals, true)
+	c.Assert(newReserve, DeepEquals, expectedVaultTotalReserve)
 }
 
 func (s *HandlerRefundSuite) TestOutboundTxHandlerSendAdditionalCoinsShouldBeSlashed(c *C) {
@@ -341,21 +346,21 @@ func (s *HandlerRefundSuite) TestOutboundTxHandlerSendAdditionalCoinsShouldBeSla
 		Chain: common.BNBChain,
 		Coins: common.Coins{
 			common.NewCoin(common.RuneAsset(), cosmos.NewUint(1*common.One)),
-			common.NewCoin(common.BNBAsset, cosmos.NewUint(common.One)),
+			common.NewCoin(common.BNBAsset, cosmos.NewUint(1*common.One)),
 		},
 		Memo:        NewRefundMemo(helper.inboundTx.Tx.ID).String(),
 		FromAddress: fromAddr,
 		ToAddress:   helper.inboundTx.Tx.FromAddress,
 		Gas:         BNBGasFeeSingleton,
 	}, helper.ctx.BlockHeight(), helper.nodeAccount.PubKeySet.Secp256k1, helper.ctx.BlockHeight())
-	expectedBond := cosmos.NewUint(9700704420)
+	expectedBond := cosmos.NewUint(9849946002)
 	// slash one BNB and one rune
 	outMsg := NewMsgRefundTx(tx, helper.inboundTx.Tx.ID, helper.nodeAccount.NodeAddress)
 	_, err = handler.Run(helper.ctx, outMsg)
 	c.Assert(err, IsNil)
 	na, err := helper.keeper.GetNodeAccount(helper.ctx, helper.nodeAccount.NodeAddress)
 	c.Assert(err, IsNil)
-	c.Assert(na.Bond.Equal(expectedBond), Equals, true, Commentf("Bond: %d != %d", na.Bond.Uint64(), expectedBond.Uint64()))
+	c.Assert(na.Bond, DeepEquals, expectedBond)
 }
 
 func (s *HandlerRefundSuite) TestOutboundTxHandlerInvalidObservedTxVoterShouldSlash(c *C) {
@@ -376,9 +381,9 @@ func (s *HandlerRefundSuite) TestOutboundTxHandlerInvalidObservedTxVoterShouldSl
 		Gas:         BNBGasFeeSingleton,
 	}, helper.ctx.BlockHeight(), helper.nodeAccount.PubKeySet.Secp256k1, helper.ctx.BlockHeight())
 
-	expectedBond := cosmos.NewUint(9700704420)
+	expectedBond := cosmos.NewUint(9849946002)
 	// expected 0.5 slashed RUNE be added to reserve
-	expectedVaultTotalReserve := cosmos.NewUint(7766279631552877459)
+	expectedVaultTotalReserve := cosmos.NewUint(7766279631502334918)
 	pool, err := helper.keeper.GetPool(helper.ctx, common.BNBAsset)
 	c.Assert(err, IsNil)
 	poolBNB := common.SafeSub(pool.BalanceAsset, cosmos.NewUint(common.One).Add(BNBGasFeeSingleton[0].Amount))
@@ -389,12 +394,13 @@ func (s *HandlerRefundSuite) TestOutboundTxHandlerInvalidObservedTxVoterShouldSl
 	c.Assert(err, IsNil)
 	na, err := helper.keeper.GetNodeAccount(helper.ctx, helper.nodeAccount.NodeAddress)
 	c.Assert(err, IsNil)
-	c.Assert(na.Bond.Equal(expectedBond), Equals, true, Commentf("Bond: %d != %d", na.Bond.Uint64(), expectedBond.Uint64()))
+	c.Assert(na.Bond, DeepEquals, expectedBond)
 
 	newReserve := helper.keeper.GetRuneBalanceOfModule(helper.ctx, ReserveName)
-	c.Assert(newReserve.Equal(expectedVaultTotalReserve), Equals, true)
+	c.Assert(newReserve, DeepEquals, expectedVaultTotalReserve)
 	pool, err = helper.keeper.GetPool(helper.ctx, common.BNBAsset)
 	c.Assert(err, IsNil)
-	c.Assert(pool.BalanceRune.Equal(cosmos.NewUint(10100933578)), Equals, true, Commentf("%d/%d", pool.BalanceRune.Uint64(), cosmos.NewUint(10149884125).Uint64()))
-	c.Assert(pool.BalanceAsset.Equal(poolBNB), Equals, true, Commentf("%s/%s", pool.BalanceAsset, poolBNB))
+	newBalance := cosmos.NewUint(10099961000)
+	c.Assert(pool.BalanceRune, DeepEquals, newBalance)
+	c.Assert(pool.BalanceAsset, DeepEquals, poolBNB)
 }

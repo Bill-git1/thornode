@@ -63,7 +63,7 @@ func (HandlerMigrateSuite) TestMigrate(c *C) {
 }
 
 type TestMigrateKeeperHappyPath struct {
-	keeper.KVStoreDummy
+	keeper.Keeper
 	activeNodeAccount NodeAccount
 	newVault          Vault
 	retireVault       Vault
@@ -115,7 +115,7 @@ func (k *TestMigrateKeeperHappyPath) SetPool(_ cosmos.Context, p Pool) error {
 }
 
 func (HandlerMigrateSuite) TestMigrateHappyPath(c *C) {
-	ctx, _ := setupKeeperForTest(c)
+	ctx, k := setupKeeperForTest(c)
 	retireVault := GetRandomVault()
 
 	newVault := GetRandomVault()
@@ -131,6 +131,7 @@ func (HandlerMigrateSuite) TestMigrateHappyPath(c *C) {
 		Memo:        NewMigrateMemo(1).String(),
 	})
 	keeper := &TestMigrateKeeperHappyPath{
+		Keeper:            k,
 		activeNodeAccount: GetRandomValidatorNode(NodeActive),
 		newVault:          newVault,
 		retireVault:       retireVault,
@@ -158,10 +159,13 @@ func (HandlerMigrateSuite) TestMigrateHappyPath(c *C) {
 }
 
 func (HandlerMigrateSuite) TestSlash(c *C) {
-	ctx, _ := setupKeeperForTest(c)
+	ctx, k := setupKeeperForTest(c)
 	retireVault := GetRandomVault()
-
 	newVault := GetRandomVault()
+	vaultCoins := common.Coins{
+		common.NewCoin(common.BNBAsset, cosmos.NewUint(2*common.One)),
+	}
+	retireVault.AddFunds(vaultCoins)
 	txout := NewTxOut(1)
 	newVaultAddr, err := newVault.PubKey.GetAddress(common.BNBChain)
 	c.Assert(err, IsNil)
@@ -176,6 +180,7 @@ func (HandlerMigrateSuite) TestSlash(c *C) {
 		na.PubKeySet.Secp256k1.String(),
 	}
 	keeper := &TestMigrateKeeperHappyPath{
+		Keeper:            k,
 		activeNodeAccount: na,
 		newVault:          newVault,
 		retireVault:       retireVault,
@@ -185,7 +190,7 @@ func (HandlerMigrateSuite) TestSlash(c *C) {
 	addr, err := keeper.retireVault.PubKey.GetAddress(common.BNBChain)
 	c.Assert(err, IsNil)
 	mgr := NewDummyMgrWithKeeper(keeper)
-	mgr.slasher = newSlasherV75(keeper, NewDummyEventMgr())
+	mgr.slasher = newSlasherVCUR(keeper, NewDummyEventMgr())
 	handler := NewMigrateHandler(mgr)
 	tx := NewObservedTx(common.Tx{
 		ID:    GetRandomTxHash(),
@@ -200,9 +205,9 @@ func (HandlerMigrateSuite) TestSlash(c *C) {
 	}, 1, retireVault.PubKey, 1)
 
 	msgMigrate := NewMsgMigrate(tx, 1, keeper.activeNodeAccount.NodeAddress)
-	_, err = handler.handleV1(ctx, *msgMigrate)
+	_, err = handler.handle(ctx, *msgMigrate)
 	c.Assert(err, IsNil)
-	c.Assert(keeper.activeNodeAccount.Bond.Equal(cosmos.NewUint(9999942214)), Equals, true, Commentf("%d", keeper.activeNodeAccount.Bond.Uint64()))
+	c.Assert(keeper.activeNodeAccount.Bond, DeepEquals, cosmos.NewUint(9999942214))
 }
 
 func (HandlerMigrateSuite) TestHandlerMigrateValidation(c *C) {

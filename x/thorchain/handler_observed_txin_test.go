@@ -723,7 +723,7 @@ func (HandlerObservedTxInSuite) TestObservedTxHandler_validations(c *C) {
 func (s HandlerObservedTxInSuite) TestSwapWithAffiliate(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 
-	queue := newSwapQv58(mgr.Keeper())
+	queue := newSwapQueueVCUR(mgr.Keeper())
 	handler := NewObservedTxInHandler(mgr)
 
 	msg := NewMsgSwap(common.Tx{

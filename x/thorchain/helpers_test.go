@@ -245,7 +245,7 @@ func newAddGasFeeTestHelper(c *C) addGasFeeTestHelper {
 	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
 	version := GetCurrentVersion()
 	constAccessor := constants.GetConstantValues(version)
-	mgr.gasMgr = newGasMgrV81(constAccessor, keeper)
+	mgr.gasMgr = newGasMgrVCUR(constAccessor, keeper)
 	return addGasFeeTestHelper{
 		ctx: ctx,
 		mgr: mgr,

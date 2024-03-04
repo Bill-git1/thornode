@@ -150,7 +150,7 @@ func (s *ThorchainSuite) TestChurn(c *C) {
 	// trigger marking bad actors as well as a keygen
 	rotateHeight := consts.GetInt64Value(constants.ChurnInterval) + vault.BlockHeight
 	ctx = ctx.WithBlockHeight(rotateHeight)
-	valMgr := newValidatorMgrV80(mgr.Keeper(), mgr.NetworkMgr(), mgr.TxOutStore(), mgr.EventMgr())
+	valMgr := newValidatorMgrVCUR(mgr.Keeper(), mgr.NetworkMgr(), mgr.TxOutStore(), mgr.EventMgr())
 	c.Assert(valMgr.BeginBlock(ctx, mgr, existingValidators), IsNil)
 
 	// check we've created a keygen, with the correct members

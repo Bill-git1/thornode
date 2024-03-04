@@ -11,7 +11,6 @@ import (
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
-	"gitlab.com/thorchain/thornode/constants"
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
@@ -42,13 +41,9 @@ func (s *HandlerDepositSuite) TestValidate(c *C) {
 
 func (s *HandlerDepositSuite) TestHandle(c *C) {
 	ctx, k := setupKeeperForTest(c)
-	constAccessor := constants.NewDummyConstants(map[constants.ConstantName]int64{
-		constants.NativeTransactionFee: 1000_000,
-	}, map[constants.ConstantName]bool{}, map[constants.ConstantName]string{})
 	activeNode := GetRandomValidatorNode(NodeActive)
 	c.Assert(k.SetNodeAccount(ctx, activeNode), IsNil)
 	dummyMgr := NewDummyMgrWithKeeper(k)
-	dummyMgr.gasMgr = newGasMgrV81(constAccessor, k)
 	handler := NewDepositHandler(dummyMgr)
 
 	addr := GetRandomBech32Addr()

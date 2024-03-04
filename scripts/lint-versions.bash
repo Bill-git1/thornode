@@ -16,6 +16,20 @@ if git merge-base --is-ancestor "$(git rev-parse HEAD)" "$(git rev-parse FETCH_H
   exit 0
 fi
 
+echo -n "Checking unversioned tests for versioned managers... "
+go run tools/current-test-versions/main.go --managers >/tmp/testing-old-versions
+if [ -s /tmp/testing-old-versions ]; then
+  echo "Detected use of versioned manager in unversioned test."
+  if [[ $CI_MERGE_REQUEST_TITLE == *"#check-lint-warning"* ]]; then
+    echo "Merge request is marked unsafe."
+  else
+    echo 'In the following locations, switch to the current manager, or add "#check-lint-warning" to the PR description.'
+    cat /tmp/testing-old-versions
+    exit 1
+  fi
+fi
+echo "OK"
+
 go run tools/versioned-functions/main.go --version="$VERSION" >/tmp/versioned-fns-current
 git checkout FETCH_HEAD
 git checkout - -- tools scripts

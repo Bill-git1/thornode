@@ -69,7 +69,7 @@ func (HandlerRagnarokSuite) TestRagnarok(c *C) {
 }
 
 type TestRagnarokKeeperHappyPath struct {
-	keeper.KVStoreDummy
+	keeper.Keeper
 	activeNodeAccount NodeAccount
 	newVault          Vault
 	retireVault       Vault
@@ -121,9 +121,12 @@ func (k *TestRagnarokKeeperHappyPath) SetPool(_ cosmos.Context, p Pool) error {
 }
 
 func (HandlerRagnarokSuite) TestRagnarokHappyPath(c *C) {
-	ctx, _ := setupKeeperForTest(c)
+	ctx, k := setupKeeperForTest(c)
 	retireVault := GetRandomVault()
-
+	vaultCoins := common.Coins{
+		common.NewCoin(common.BNBAsset, cosmos.NewUint(2*common.One)),
+	}
+	retireVault.AddFunds(vaultCoins)
 	newVault := GetRandomVault()
 	txout := NewTxOut(1)
 	newVaultAddr, err := newVault.PubKey.GetAddress(common.BNBChain)
@@ -137,6 +140,7 @@ func (HandlerRagnarokSuite) TestRagnarokHappyPath(c *C) {
 		Memo:        NewRagnarokMemo(1).String(),
 	})
 	keeper := &TestRagnarokKeeperHappyPath{
+		Keeper:            k,
 		activeNodeAccount: GetRandomValidatorNode(NodeActive),
 		newVault:          newVault,
 		retireVault:       retireVault,
@@ -170,9 +174,12 @@ func (HandlerRagnarokSuite) TestRagnarokHappyPath(c *C) {
 }
 
 func (HandlerRagnarokSuite) TestSlash(c *C) {
-	ctx, _ := setupKeeperForTest(c)
+	ctx, k := setupKeeperForTest(c)
 	retireVault := GetRandomVault()
-
+	vaultCoins := common.Coins{
+		common.NewCoin(common.BNBAsset, cosmos.NewUint(2*common.One)),
+	}
+	retireVault.AddFunds(vaultCoins)
 	newVault := GetRandomVault()
 	txout := NewTxOut(1)
 	newVaultAddr, err := newVault.PubKey.GetAddress(common.BNBChain)
@@ -188,6 +195,7 @@ func (HandlerRagnarokSuite) TestSlash(c *C) {
 		na.PubKeySet.Secp256k1.String(),
 	}
 	keeper := &TestRagnarokKeeperHappyPath{
+		Keeper:            k,
 		activeNodeAccount: na,
 		newVault:          newVault,
 		retireVault:       retireVault,
@@ -198,7 +206,7 @@ func (HandlerRagnarokSuite) TestSlash(c *C) {
 	c.Assert(err, IsNil)
 
 	mgr := NewDummyMgrWithKeeper(keeper)
-	mgr.slasher = newSlasherV75(keeper, NewDummyEventMgr())
+	mgr.slasher = newSlasherVCUR(keeper, NewDummyEventMgr())
 	handler := NewRagnarokHandler(mgr)
 
 	tx := NewObservedTx(common.Tx{
@@ -216,5 +224,5 @@ func (HandlerRagnarokSuite) TestSlash(c *C) {
 	msgRagnarok := NewMsgRagnarok(tx, 1, keeper.activeNodeAccount.NodeAddress)
 	_, err = handler.handle(ctx, *msgRagnarok)
 	c.Assert(err, IsNil)
-	c.Assert(keeper.activeNodeAccount.Bond.Equal(cosmos.NewUint(9999942214)), Equals, true, Commentf("%d", keeper.activeNodeAccount.Bond.Uint64()))
+	c.Assert(keeper.activeNodeAccount.Bond, DeepEquals, cosmos.NewUint(9999942214))
 }
