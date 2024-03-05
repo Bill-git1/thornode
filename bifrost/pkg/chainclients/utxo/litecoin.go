@@ -25,7 +25,7 @@ func (c *Client) getChainCfgLTC() *ltcchaincfg.Params {
 	return nil
 }
 
-func (c *Client) signUTXOLTC(redeemTx *ltcwire.MsgTx, tx stypes.TxOutItem, amount int64, sourceScript []byte, idx int, thorchainHeight int64) error {
+func (c *Client) signUTXOLTC(redeemTx *ltcwire.MsgTx, tx stypes.TxOutItem, amount int64, sourceScript []byte, idx int) error {
 	sigHashes := ltctxscript.NewTxSigHashes(redeemTx)
 
 	var signable ltctxscript.Signable

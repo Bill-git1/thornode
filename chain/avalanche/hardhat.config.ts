@@ -17,11 +17,11 @@ const forkingData = FORK_FUJI
       url: "https://api.avax-test.network/ext/bc/C/rpc",
     }
   : FORK_MAINNET
-  ? {
-      url: "https://api.avax.network/ext/bc/C/rpc",
-      blockNumber: 16343472,
-    }
-  : undefined;
+    ? {
+        url: "https://api.avax.network/ext/bc/C/rpc",
+        blockNumber: 16343472,
+      }
+    : undefined;
 
 task(
   "accounts",

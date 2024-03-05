@@ -15,7 +15,6 @@ import (
 	"github.com/ltcsuite/ltcutil"
 
 	"github.com/btcsuite/btcd/mempool"
-	"github.com/btcsuite/btcd/wire"
 	btcwire "github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	dogewire "github.com/eager7/dogd/wire"
@@ -116,7 +115,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 
 	// load from checkpoint if it exists
 	checkpoint := utxo.SignCheckpoint{}
-	redeemTx := &wire.MsgTx{}
+	redeemTx := &btcwire.MsgTx{}
 	if tx.Checkpoint != nil {
 		if err = json.Unmarshal(tx.Checkpoint, &checkpoint); err != nil {
 			return nil, nil, nil, fmt.Errorf("fail to unmarshal checkpoint: %w", err)
@@ -185,13 +184,13 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 			// chain specific signing
 			switch c.cfg.ChainID {
 			case common.DOGEChain:
-				err = c.signUTXODOGE(stx.(*dogewire.MsgTx), tx, amount, sourceScript, i, thorchainHeight)
+				err = c.signUTXODOGE(stx.(*dogewire.MsgTx), tx, amount, sourceScript, i)
 			case common.BCHChain:
-				err = c.signUTXOBCH(stx.(*bchwire.MsgTx), tx, amount, sourceScript, i, thorchainHeight)
+				err = c.signUTXOBCH(stx.(*bchwire.MsgTx), tx, amount, sourceScript, i)
 			case common.LTCChain:
-				err = c.signUTXOLTC(stx.(*ltcwire.MsgTx), tx, amount, sourceScript, i, thorchainHeight)
+				err = c.signUTXOLTC(stx.(*ltcwire.MsgTx), tx, amount, sourceScript, i)
 			case common.BTCChain:
-				err = c.signUTXOBTC(stx.(*btcwire.MsgTx), tx, amount, sourceScript, i, thorchainHeight)
+				err = c.signUTXOBTC(stx.(*btcwire.MsgTx), tx, amount, sourceScript, i)
 			default:
 				c.log.Fatal().Msg("unsupported chain")
 			}
@@ -273,7 +272,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 
 // BroadcastTx will broadcast the given payload.
 func (c *Client) BroadcastTx(txOut stypes.TxOutItem, payload []byte) (string, error) {
-	redeemTx := wire.NewMsgTx(wire.TxVersion)
+	redeemTx := btcwire.NewMsgTx(btcwire.TxVersion)
 	buf := bytes.NewBuffer(payload)
 	if err := redeemTx.Deserialize(buf); err != nil {
 		return "", fmt.Errorf("fail to deserialize payload: %w", err)

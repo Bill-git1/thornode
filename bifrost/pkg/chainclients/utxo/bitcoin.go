@@ -29,7 +29,7 @@ func (c *Client) getChainCfgBTC() *btcchaincfg.Params {
 	}
 }
 
-func (c *Client) signUTXOBTC(redeemTx *btcwire.MsgTx, tx stypes.TxOutItem, amount int64, sourceScript []byte, idx int, thorchainHeight int64) error {
+func (c *Client) signUTXOBTC(redeemTx *btcwire.MsgTx, tx stypes.TxOutItem, amount int64, sourceScript []byte, idx int) error {
 	sigHashes := btctxscript.NewTxSigHashes(redeemTx)
 
 	var signable btctxscript.Signable

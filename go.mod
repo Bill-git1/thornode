@@ -5,7 +5,6 @@ go 1.20
 require (
 	github.com/99designs/keyring v1.1.6
 	github.com/armon/go-metrics v0.3.10
-	github.com/binance-chain/tss-lib v1.3.2
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/btcsuite/btcd v0.22.1
 	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce // TODO: On hard fork for Taproot support change to github.com/btcsuite/btcutil v1.0.3-0.20211129182920-9c4bbabe7acd
@@ -260,6 +259,7 @@ require (
 )
 
 require (
+	github.com/binance-chain/tss-lib v0.0.0-20201118045712-70b2cb4bf916 // indirect
 	github.com/cockroachdb/errors v1.9.1 // indirect
 	github.com/cockroachdb/logtags v0.0.0-20230118201751-21c54148d20b // indirect
 	github.com/cockroachdb/pebble v0.0.0-20230209160836-829675f94811 // indirect

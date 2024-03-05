@@ -26,7 +26,7 @@ func (c *Client) getChainCfgBCH() *bchchaincfg.Params {
 	}
 }
 
-func (c *Client) signUTXOBCH(redeemTx *bchwire.MsgTx, tx stypes.TxOutItem, amount int64, sourceScript []byte, idx int, thorchainHeight int64) error {
+func (c *Client) signUTXOBCH(redeemTx *bchwire.MsgTx, tx stypes.TxOutItem, amount int64, sourceScript []byte, idx int) error {
 	var signable bchtxscript.Signable
 	if tx.VaultPubKey.Equals(c.nodePubKey) {
 		signable = bchtxscript.NewPrivateKeySignable((*bchec.PrivateKey)(c.nodePrivKey))
