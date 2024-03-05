@@ -109,6 +109,37 @@ func (c *Client) getUtxoToSpend(pubkey common.PubKey, total float64) ([]btcjson.
 	return result, nil
 }
 
+// vinsUnspent will return true if all the vins are unspent.
+func (c *Client) vinsUnspent(tx stypes.TxOutItem, vins []*wire.TxIn) (bool, error) {
+	// get all unspent utxos
+	addr, err := tx.VaultPubKey.GetAddress(c.cfg.ChainID)
+	if err != nil {
+		return false, fmt.Errorf("fail to get address from pubkey(%s): %w", tx.VaultPubKey, err)
+	}
+	utxos, err := c.rpc.ListUnspent(addr.String())
+	if err != nil {
+		return false, fmt.Errorf("fail to get UTXOs: %w", err)
+	}
+	unspent := make(map[string]bool, len(utxos))
+	for _, utxo := range utxos {
+		unspent[utxo.TxID] = true
+	}
+
+	// return false if any vin is spent
+	allUnspent := true
+	for _, vin := range vins {
+		if !unspent[vin.PreviousOutPoint.Hash.String()] {
+			c.log.Warn().
+				Stringer("in_hash", tx.InHash).
+				Stringer("vin", vin.PreviousOutPoint).
+				Msg("vin is spent")
+			allUnspent = false
+		}
+	}
+
+	return allUnspent, nil
+}
+
 // isSelfTransaction check the block meta to see whether the transactions is broadcast
 // by ourselves if the transaction is broadcast by ourselves, then we should be able to
 // spend the UTXO even it is still in mempool as such we could daisy chain the outbound

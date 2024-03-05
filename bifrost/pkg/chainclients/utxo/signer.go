@@ -123,6 +123,18 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 		if err = redeemTx.Deserialize(bytes.NewReader(checkpoint.UnsignedTx)); err != nil {
 			return nil, nil, nil, fmt.Errorf("fail to deserialize tx: %w", err)
 		}
+
+		// abort if any checkpoint VIN is spent
+		c.log.Info().Stringer("in_hash", tx.InHash).Msgf("verifying checkpoint vins")
+		var unspent bool
+		unspent, err = c.vinsUnspent(tx, redeemTx.TxIn)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("fail to verify checkpoint vins: %w", err)
+		}
+		if !unspent {
+			return nil, nil, nil, nil
+		}
+
 	} else {
 		redeemTx, checkpoint.IndividualAmounts, err = c.buildTx(tx, sourceScript)
 		if err != nil {
