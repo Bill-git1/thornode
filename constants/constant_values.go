@@ -79,7 +79,7 @@ const (
 	VirtualMultSynths
 	VirtualMultSynthsBasisPoints
 	MinSlashPointsForBadValidator
-	FullImpLossProtectionBlocks
+	FullImpLossProtectionBlocks // TODO: remove me on hard fork
 	BondLockupPeriod
 	MaxBondProviders
 	NumberOfNewNodesPerChurn
@@ -117,7 +117,7 @@ const (
 	SynthYieldCycle
 	MinimumL1OutboundFeeUSD
 	MinimumPoolLiquidityFee
-	ILPCutoff
+	ILPCutoff // TODO: remove me on hard fork
 	ChurnMigrateRounds
 	AllowWideBlame
 	MaxAffiliateFeeBasisPoints

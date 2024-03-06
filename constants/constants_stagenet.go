@@ -1,7 +1,6 @@
 //go:build stagenet
 // +build stagenet
 
-// For internal testing and mockneting
 package constants
 
 func init() {
@@ -19,6 +18,6 @@ func init() {
 		KillSwitchStart:             1,
 		KillSwitchDuration:          1,
 		MaxRuneSupply:               500_000_000_00000000,
-		FullImpLossProtectionBlocks: 0,
+		FullImpLossProtectionBlocks: 0, // TODO remove on hard fork
 	}
 }

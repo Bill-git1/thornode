@@ -83,7 +83,6 @@ The slip-based fee model has the following benefits:
 - Resistant to manipulation
 - A proxy for demand of liquidity
 - Asymptotes to zero over time, ensuring pool prices match reference prices
-- Prevents Impermanent Loss to liquidity providers
 
 **Provide Liquidity**
 The liquidity units awarded to a liquidity provider is given by:

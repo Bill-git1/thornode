@@ -14,7 +14,7 @@ var adminMimirDenyList = []*re.Regexp{
 	re.MustCompile("(?i)MinimumBondInRune"),
 	re.MustCompile("(?i)NumberOfNewNodesPerChurn"),
 	re.MustCompile("(?i)AsgardSize"),
-	re.MustCompile("(?i)FullImpLossProtectionBlocks"),
+	re.MustCompile("(?i)FullImpLossProtectionBlocks"), // TODO: remove on hard fork
 	re.MustCompile("(?i)DesiredValidatorSet"),
 	re.MustCompile("(?i)MinimumNodesForBFT"),
 	re.MustCompile("(?i)ObserveSlashPoints"),

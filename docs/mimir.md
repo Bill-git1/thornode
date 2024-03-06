@@ -32,11 +32,6 @@
 `PauseLP<chain>`: Pauses the ability for LPs to add/remove liquidity, per chain
 `MaximumLiquidityRune`: Max rune capped on the pools
 
-### Impermanet Loss Protection
-
-`FullImpLossProtectionBlocks`: Number of blocks before an LP gets full imp loss protection
-`ILP-DISABLED-<asset>`: Enable/Disable imp loss protection per asset
-
 ## Chain Management
 
 `HaltChainGlobal`: Pause all chains (chain clients)

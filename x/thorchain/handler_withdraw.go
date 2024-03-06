@@ -95,6 +95,8 @@ func (h WithdrawLiquidityHandler) validateV112(ctx cosmos.Context, msg MsgWithdr
 func (h WithdrawLiquidityHandler) handle(ctx cosmos.Context, msg MsgWithdrawLiquidity) (*cosmos.Result, error) {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.129.0")):
+		return h.handleV129(ctx, msg)
 	case version.GTE(semver.MustParse("1.107.0")):
 		return h.handleV107(ctx, msg)
 	case version.GTE(semver.MustParse("1.100.0")):
@@ -124,12 +126,12 @@ func (h WithdrawLiquidityHandler) handle(ctx cosmos.Context, msg MsgWithdrawLiqu
 	return nil, errBadVersion
 }
 
-func (h WithdrawLiquidityHandler) handleV107(ctx cosmos.Context, msg MsgWithdrawLiquidity) (*cosmos.Result, error) {
+func (h WithdrawLiquidityHandler) handleV129(ctx cosmos.Context, msg MsgWithdrawLiquidity) (*cosmos.Result, error) {
 	lp, err := h.mgr.Keeper().GetLiquidityProvider(ctx, msg.Asset, msg.WithdrawAddress)
 	if err != nil {
 		return nil, multierror.Append(errFailGetLiquidityProvider, err)
 	}
-	runeAmt, assetAmt, impLossProtection, units, gasAsset, err := withdraw(ctx, msg, h.mgr)
+	runeAmt, assetAmt, _, units, gasAsset, err := withdraw(ctx, msg, h.mgr)
 	if err != nil {
 		return nil, ErrInternal(err, "fail to process withdraw request")
 	}
@@ -142,7 +144,7 @@ func (h WithdrawLiquidityHandler) handleV107(ctx cosmos.Context, msg MsgWithdraw
 
 	// Thanks to CacheContext, the withdraw event can be emitted before handling outbounds,
 	// since if there's a later error the event emission will not take place.
-	if units.IsZero() && impLossProtection.IsZero() {
+	if units.IsZero() {
 		// withdraw pending liquidity event
 		runeHash := common.TxID("")
 		assetHash := common.TxID("")
@@ -173,7 +175,7 @@ func (h WithdrawLiquidityHandler) handleV107(ctx cosmos.Context, msg MsgWithdraw
 			msg.Tx,
 			assetAmt,
 			runeAmt,
-			impLossProtection,
+			cosmos.ZeroUint(),
 		)
 		if err := h.mgr.EventMgr().EmitEvent(ctx, withdrawEvt); err != nil {
 			return nil, multierror.Append(errFailSaveEvent, err)
@@ -288,12 +290,6 @@ func (h WithdrawLiquidityHandler) handleV107(ctx cosmos.Context, msg MsgWithdraw
 			return nil, ErrInternal(err, "fail to save pool to key value store")
 		}
 	}
-
-	telemetry.IncrCounterWithLabels(
-		[]string{"thornode", "withdraw", "implossprotection"},
-		telem(impLossProtection),
-		[]metrics.Label{telemetry.NewLabel("asset", msg.Asset.String())},
-	)
 
 	return &cosmos.Result{}, nil
 }

@@ -8,8 +8,6 @@ import (
 	"github.com/magiconair/properties/assert"
 	. "gopkg.in/check.v1"
 
-	"gitlab.com/thorchain/thornode/constants"
-
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
@@ -632,67 +630,6 @@ func (WithdrawSuiteV76) TestWithdrawPendingRuneOrAsset(c *C) {
 	c.Assert(runeAmt.IsZero(), Equals, true)
 	c.Assert(unitsLeft.IsZero(), Equals, true)
 	c.Assert(gas.IsZero(), Equals, true)
-}
-
-func (s *WithdrawSuiteV76) TestWithdrawWithImpermanentLossProtection(c *C) {
-	accountAddr := GetRandomValidatorNode(NodeActive).NodeAddress
-	ctx, mgr := setupManagerForTest(c)
-	pool := Pool{
-		BalanceRune:  cosmos.NewUint(100 * common.One),
-		BalanceAsset: cosmos.NewUint(100 * common.One),
-		Asset:        common.BTCAsset,
-		LPUnits:      cosmos.NewUint(200 * common.One),
-		Status:       PoolAvailable,
-	}
-	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
-	v := GetCurrentVersion()
-	constantAccessor := constants.GetConstantValues(v)
-	addHandler := NewAddLiquidityHandler(mgr)
-	// add some liquidity
-	// add some liquidity
-	for i := 0; i <= 10; i++ {
-		c.Assert(addHandler.addLiquidity(ctx,
-			common.BTCAsset,
-			cosmos.NewUint(common.One),
-			cosmos.NewUint(common.One),
-			GetRandomTHORAddress(),
-			GetRandomBTCAddress(),
-			GetRandomTxHash(),
-			false,
-			constantAccessor), IsNil)
-	}
-	lpAddr := GetRandomTHORAddress()
-	c.Assert(addHandler.addLiquidity(ctx,
-		common.BTCAsset,
-		cosmos.NewUint(common.One),
-		cosmos.NewUint(common.One),
-		lpAddr,
-		GetRandomBTCAddress(),
-		GetRandomTxHash(),
-		false,
-		constantAccessor), IsNil)
-	newctx := ctx.WithBlockHeight(ctx.BlockHeight() + 17280*2)
-	msg2 := MsgWithdrawLiquidity{
-		WithdrawAddress: lpAddr,
-		BasisPoints:     cosmos.NewUint(2500),
-		Asset:           common.BTCAsset,
-		Tx:              common.Tx{ID: "28B40BF105A112389A339A64BD1A042E6140DC9082C679586C6CF493A9FDE3FE"},
-		WithdrawalAsset: common.BTCAsset,
-		Signer:          accountAddr,
-	}
-	p, err := mgr.Keeper().GetPool(ctx, common.BTCAsset)
-	c.Assert(err, IsNil)
-	p.BalanceRune = p.BalanceRune.Sub(cosmos.NewUint(5 * common.One))
-	p.BalanceAsset = p.BalanceAsset.Add(cosmos.NewUint(common.One))
-	mgr.Keeper().SetMimir(ctx, fmt.Sprintf("ilp-%s", p.Asset), 1)
-	c.Assert(mgr.Keeper().SetPool(ctx, p), IsNil)
-	runeAmt, assetAmt, protectoinRuneAmt, unitsClaimed, gas, err := withdrawV76(newctx, msg2, mgr)
-	c.Assert(err, IsNil)
-	c.Assert(assetAmt.Equal(cosmos.NewUint(50356727)), Equals, true, Commentf("%d", assetAmt.Uint64()))
-	c.Assert(runeAmt.IsZero(), Equals, true)
-	c.Assert(unitsClaimed.Equal(cosmos.NewUint(50000000)), Equals, true, Commentf("%d", unitsClaimed.Uint64()))
-	c.Assert(gas.IsZero(), Equals, true)
-	c.Assert(protectoinRuneAmt.Equal(cosmos.NewUint(21713)), Equals, true, Commentf("%d", protectoinRuneAmt.Uint64()))
 }
 
 func getWithdrawTestKeeperV76(c *C, ctx cosmos.Context, k keeper.Keeper, runeAddress common.Address) keeper.Keeper {

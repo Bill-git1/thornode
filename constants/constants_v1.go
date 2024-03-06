@@ -66,7 +66,7 @@ func NewConstantValue() *ConstantVals {
 			MaxSynthPerPoolDepth:                1700,               // percentage (in basis points) of how many synths are allowed relative to pool depth of the related pool
 			MaxSynthsForSaversYield:             0,                  // percentage (in basis points) synth per pool where synth yield reaches 0%
 			MinSlashPointsForBadValidator:       100,                // The minimum slash point
-			FullImpLossProtectionBlocks:         1440000,            // number of blocks before a liquidity provider gets 100% impermanent loss protection
+			FullImpLossProtectionBlocks:         1440000,            // TODO: remove me on hard fork
 			StreamingSwapPause:                  0,                  // pause streaming swaps from being processed or accepted
 			StreamingSwapMinBPFee:               0,                  // min swap fee (in basis points) for a streaming swap trade
 			StreamingSwapMaxLength:              14400,              // max number of blocks a streaming swap can trade for
@@ -101,7 +101,7 @@ func NewConstantValue() *ConstantVals {
 			SynthYieldCycle:                     0,                  // number of blocks when the network pays out rewards to yield bearing synths
 			MinimumL1OutboundFeeUSD:             1000000,            // Minimum fee in USD to charge for LP swap, default to $0.01 , nodes need to vote it to a larger value
 			MinimumPoolLiquidityFee:             0,                  // Minimum liquidity fee made by the pool,active pool fail to meet this within a PoolCycle will be demoted
-			ILPCutoff:                           0,                  // the cutoff height for impermanent loss protection
+			ILPCutoff:                           0,                  // TODO: remove me on hard fork
 			ChurnMigrateRounds:                  5,                  // Number of rounds to migrate vaults during churn
 			AllowWideBlame:                      0,                  // allow for a wide blame, only set in mocknet for regression testing tss keysign failures
 			MaxAffiliateFeeBasisPoints:          10_000,             // Max allowed affiliate fee basis points

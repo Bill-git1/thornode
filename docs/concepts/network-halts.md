@@ -61,9 +61,4 @@ Synths minting and redeeming can be enabled and disabled using flags. There is a
 - `BURNSYNTHS` controls whether synths can be burned (swapping from synth to L1)
 - `MAXSYNTHPERPOOLDEPTH` - controls the synth depth limit for each pool, expressed in basis points of the total pool depth (asset + RUNE). For example: `5000` basis points equals 50% of the total pool. If the pool contains 100 BTC and 100 BTC worth of RUNE, a 50% `MAXSYNTHPERPOOLDEPTH` allows 100 BTC of synthetic assets to be minted.
 
-### ILP Management
-
-- ILP is managed by the integer setting `FULLIMPLOSSPROTECTIONBLOCKS`, the number of blocks after which impermanent loss protection reaches 100% (zero = disabled). Impermanent loss protection scales linearly between an LP's `last_add_height` and `last_add_heigh`t + \```FULLIMPLOSSPROTECTIONBLOCKS`.``
-- As of January 2023, nodes voted to `DEPRECATEILP`([ADR 005](https://gitlab.com/thorchain/thornode/-/blob/develop/docs/architecture/adr-005-deprecate-ilp.md)). As a result, the `ILPCUTOFF` mimir was set to block height `9450000` (approx. 30 days after node voted passed). After this block, new LPs (or changes to existing LPs) do not receive impermanent loss protection. Existing LPs that have not added to their LP continue to receive ILP in perpetuity.
-
 See also [Constants and Mimir](https://docs.thorchain.org/network/constants-and-mimir).
