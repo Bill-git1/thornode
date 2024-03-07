@@ -369,3 +369,94 @@ endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .|[..|select(.type? == "refund")] | length == 1
   - .|..|select(.type? == "refund").reason | contains("swapping to a trade asset of a native coin is not allowed")
+---
+########################################################################################
+# swap to RUNE (for instance if there were an arbitrage opportunity)
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/trade/account/{{ addr_thor_fox }}
+asserts:
+  - .|length == 1
+  - .[0].asset == "BTC~BTC"
+  - .[0].units|tonumber == ${INITIAL_UNITS=9444747}
+  - .[0].owner == "{{ addr_thor_fox }}"
+---
+type: check
+endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
+asserts:
+  - .result | length == 1
+  - .result[0].denom == "rune"
+  - .result[0].amount == "${INITIAL_RUNE=2499992000000}"
+---
+type: tx-deposit
+signer: {{ addr_thor_fox }}
+coins:
+  - amount: "1000000" # 0.01 BTC
+    asset: "BTC~BTC"
+memo: "=:THOR.RUNE:{{ addr_thor_fox }}"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/trade/account/{{ addr_thor_fox }}
+asserts:
+  - .|length == 1
+  - .[0].asset == "BTC~BTC"
+  - .[0].units|tonumber < ${INITIAL_UNITS}
+  - .[0].owner == "{{ addr_thor_fox }}"
+---
+type: check
+endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
+asserts:
+  - .result | length == 1
+  - .result[0].denom == "rune"
+  - .result[0].amount|tonumber > ${INITIAL_RUNE} # Swap to RUNE succeeds.
+---
+########################################################################################
+# swap from RUNE
+########################################################################################
+type: check
+endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
+asserts:
+  - .result | length == 1
+  - .result[0].denom == "rune"
+  - .result[0].amount|tonumber == ${INITIAL_RUNE=2500960519214}
+---
+type: check
+endpoint: http://localhost:1317/thorchain/network
+asserts:
+  - .native_tx_fee_rune == "${NATIVE_TX_FEE_RUNE=2000000}"
+---
+type: check
+endpoint: http://localhost:1317/thorchain/trade/account/{{ addr_thor_fox }}
+asserts:
+  - .|length == 1
+  - .[0].asset == "BTC~BTC"
+  - .[0].units|tonumber == ${INITIAL_UNITS=8444747}
+  - .[0].owner == "{{ addr_thor_fox }}"
+---
+type: tx-deposit
+signer: {{ addr_thor_fox }}
+coins:
+  - amount: "1000000000"
+    asset: "THOR.RUNE"
+memo: "=:BTC~BTC:{{ addr_thor_fox }}"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
+asserts:
+  - .result | length == 1
+  - .result[0].denom == "rune"
+  - .result[0].amount|tonumber < ${INITIAL_RUNE} - ${NATIVE_TX_FEE_RUNE}
+---
+type: check
+endpoint: http://localhost:1317/thorchain/trade/account/{{ addr_thor_fox }}
+asserts:
+  - .|length == 1
+  - .[0].asset == "BTC~BTC"
+  - .[0].units|tonumber > ${INITIAL_UNITS} # Swap from RUNE succeeds.
+  - .[0].owner == "{{ addr_thor_fox }}"

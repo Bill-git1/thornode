@@ -31,10 +31,10 @@ func (s *SwapperVCUR) validateMessage(tx common.Tx, target common.Asset, destina
 	if destination.IsEmpty() {
 		return errors.New("destination is empty")
 	}
-	if tx.Coins[0].Asset.IsTradeAsset() && !target.IsTradeAsset() {
+	if tx.Coins[0].Asset.IsTradeAsset() && !target.IsTradeAsset() && !target.IsRune() {
 		return errors.New("swaps from trade asset to L1 incur slip, use trade-")
 	}
-	if (!tx.Coins[0].Asset.IsSyntheticAsset() && !tx.Coins[0].Asset.IsTradeAsset()) && target.IsTradeAsset() {
+	if target.IsTradeAsset() && !tx.Coins[0].Asset.IsTradeAsset() && !tx.Coins[0].Asset.IsRune() {
 		return errors.New("swaps from L1 to trade asset incur slip, use trade+")
 	}
 
