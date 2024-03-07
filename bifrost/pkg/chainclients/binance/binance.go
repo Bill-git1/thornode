@@ -420,9 +420,7 @@ func (b *Binance) sign(bnbSignMsg btx.StdSignMsg, poolPubKey common.PubKey) ([]b
 	if b.localKeyManager.Pubkey().Equals(poolPubKey) {
 		return b.localKeyManager.Sign(bnbSignMsg)
 	}
-
-	res, _, err := b.tssKeyManager.RemoteSign(bnbSignMsg.Data, poolPubKey.String())
-	return res, err
+	return b.tssKeyManager.SignWithPool(bnbSignMsg, poolPubKey)
 }
 
 // signMsg is design to sign a given message until it success or the same message had been send out by other signer
