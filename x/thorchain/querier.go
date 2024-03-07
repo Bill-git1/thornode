@@ -1145,9 +1145,8 @@ func queryStreamingSwaps(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 		for i := 0; i <= 1; i++ {
 			swapQueueItem, err := mgr.Keeper().GetSwapQueueItem(ctx, stream.TxID, i)
 			if err != nil {
-				ctx.Logger().Error("fail to get swap queue item", "error", err)
-				// If this errors, leave the MsgSwap-derived fields blank.
-				break
+				// GetSwapQueueItem returns an error if there is no MsgSwap set for that index, a normal occurrence here.
+				continue
 			}
 			if !swapQueueItem.IsStreaming() {
 				continue
@@ -1205,9 +1204,8 @@ func queryStreamingSwap(ctx cosmos.Context, path []string, mgr *Mgrs) ([]byte, e
 	for i := 0; i <= 1; i++ {
 		swapQueueItem, err := mgr.Keeper().GetSwapQueueItem(ctx, txid, i)
 		if err != nil {
-			ctx.Logger().Error("fail to get swap queue item", "error", err)
-			// If this errors, leave the MsgSwap-derived fields blank.
-			break
+			// GetSwapQueueItem returns an error if there is no MsgSwap set for that index, a normal occurrence here.
+			continue
 		}
 		if !swapQueueItem.IsStreaming() {
 			continue
