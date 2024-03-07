@@ -300,3 +300,72 @@ params:
 asserts:
   - .expected_amount_out|tonumber == 89022
   - .fees.total_bps == 1000
+---
+########################################################################################
+# try obtaining THOR.BTC with EnabledDerivedAssets 0
+########################################################################################
+type: check
+endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
+asserts:
+  - .result | length == 1
+  - .result[0].denom == "rune"
+---
+type: check
+endpoint: http://localhost:1317/auth/accounts/{{ addr_thor_dog }}
+asserts:
+  - .result.value.sequence == "1"
+---
+type: tx-mimir
+key: EnableDerivedAssets
+value: 0
+signer: {{ addr_thor_dog }}
+sequence: 1
+---
+type: tx-mimir
+key: DerivedDepthBasisPts
+value: 10000
+signer: {{ addr_thor_dog }}
+sequence: 2
+---
+type: create-blocks
+count: 2 # One block to set the Mimirs by the end, one to spawn the THOR.BTC pool at the beginning.
+---
+# Confirm the Mimir values
+type: check
+endpoint: http://localhost:1317/thorchain/mimir
+asserts:
+  - .["DerivedDepthBasisPts" | ascii_upcase] == 10000
+  - .["EnableDerivedAssets" | ascii_upcase] == 0
+  - .["TradeAccountsEnabled" | ascii_upcase] == 1
+  - .[""] == 1000 # (from "7-TradeAccountsSlipMinBps" earlier)
+---
+type: check
+endpoint: http://localhost:1317/thorchain/mimirV2
+asserts:
+  - . == {"SWAPSLIPBASISPOINTSMINTRADEACCOUNTSSLIPMINBPS":1000}
+  # TODO: Is this satisfactorily readable?
+---
+# Confirm that the THOR.BTC pool exists.
+type: check
+endpoint: http://localhost:1317/thorchain/pool/THOR.BTC
+asserts:
+  - .asset == "THOR.BTC"
+  - .status == "Available"
+  - .balance_asset | tonumber > 0
+  - .balance_rune | tonumber > 0
+---
+type: tx-deposit
+signer: {{ addr_thor_fox }}
+coins:
+  - amount: "1000000" # 0.01 BTC
+    asset: "BTC~BTC"
+memo: "=:THOR~BTC:{{ addr_thor_fox }}"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/block
+asserts:
+  - .|[..|select(.type? == "refund")] | length == 1
+  - .|..|select(.type? == "refund").reason | contains("swapping to a trade asset of a native coin is not allowed")
