@@ -961,34 +961,69 @@ func (c *Client) ReportSolvency(ethBlockHeight int64) error {
 	if !c.ShouldReportSolvency(ethBlockHeight) {
 		return nil
 	}
-	// when block scanner is not healthy , falling behind , we don't report solvency , unless the request is coming from
-	// auto-unhalt solvency runner
+
+	// when block scanner is not healthy, only report from auto-unhalt SolvencyCheckRunner
+	// (FetchTxs passes currentBlockHeight, while SolvencyCheckRunner passes chainHeight)
 	if !c.IsBlockScannerHealthy() && ethBlockHeight == c.ethScanner.currentBlockHeight {
 		return nil
 	}
+
+	// fetch all asgard vaults
 	asgardVaults, err := c.bridge.GetAsgards()
 	if err != nil {
 		return fmt.Errorf("fail to get asgards,err: %w", err)
 	}
-	for _, asgard := range asgardVaults {
+
+	currentGasFee := cosmos.NewUint(3 * c.cfg.BlockScanner.MaxGasLimit * c.ethScanner.lastReportedGasPrice)
+
+	// report insolvent asgard vaults,
+	// or else all if the chain is halted and all are solvent
+	msgs := make([]stypes.Solvency, 0, len(asgardVaults))
+	solventMsgs := make([]stypes.Solvency, 0, len(asgardVaults))
+	for i := range asgardVaults {
 		var acct common.Account
-		acct, err = c.GetAccount(asgard.PubKey, new(big.Int).SetInt64(ethBlockHeight))
+		acct, err = c.GetAccount(asgardVaults[i].PubKey, new(big.Int).SetInt64(ethBlockHeight))
 		if err != nil {
 			c.logger.Err(err).Msgf("fail to get account balance")
 			continue
 		}
-		if runners.IsVaultSolvent(acct, asgard, cosmos.NewUint(3*c.cfg.BlockScanner.MaxGasLimit*c.ethScanner.lastReportedGasPrice)) && c.IsBlockScannerHealthy() {
-			// when vault is solvent , don't need to report solvency
-			// when block scanner is not healthy , usually that means the chain is halted , in that scenario , we continue to report solvency
-			continue
-		}
-		select {
-		case c.globalSolvencyQueue <- stypes.Solvency{
+
+		msg := stypes.Solvency{
 			Height: ethBlockHeight,
 			Chain:  common.ETHChain,
-			PubKey: asgard.PubKey,
+			PubKey: asgardVaults[i].PubKey,
 			Coins:  acct.Coins,
-		}:
+		}
+
+		if runners.IsVaultSolvent(acct, asgardVaults[i], currentGasFee) {
+			solventMsgs = append(solventMsgs, msg) // Solvent-vault message
+			continue
+		}
+		msgs = append(msgs, msg) // Insolvent-vault message
+	}
+
+	// Only if the block scanner is unhealthy (e.g. solvency-halted) and all vaults are solvent,
+	// report that all the vaults are solvent.
+	// If there are any insolvent vaults, report only them.
+	// Not reporting both solvent and insolvent vaults is to avoid noise (spam):
+	// Reporting both could halt-and-unhalt SolvencyHalt in the same THOR block
+	// (resetting its height), plus making it harder to know at a glance from solvency reports which vaults were insolvent.
+	solvent := false
+	if !c.IsBlockScannerHealthy() && len(solventMsgs) == len(asgardVaults) {
+		msgs = solventMsgs
+		solvent = true
+	}
+
+	for i := range msgs {
+		c.logger.Info().
+			Stringer("asgard", msgs[i].PubKey).
+			Interface("coins", msgs[i].Coins).
+			Bool("solvent", solvent).
+			Msg("reporting solvency")
+
+		// send solvency to thorchain via global queue consumed by the observer
+		select {
+		case c.globalSolvencyQueue <- msgs[i]:
 		case <-time.After(constants.ThorchainBlockTime):
 			c.logger.Info().Msgf("fail to send solvency info to THORChain, timeout")
 		}
