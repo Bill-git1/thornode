@@ -297,10 +297,8 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 				ctx.Logger().Error("Unable to get vault", "error", err, "vault pub key", toi.VaultPubKey.String())
 			}
 
-			// don't reschedule transactions on frozen vaults. This will cause
-			// txns to be trapped in a specific asgard forever, which is the
-			// expected result. This is here to protect the network from a
-			// round7 attack
+			// if the vault is frozen, reschedule to same vault with no changes
+			frozen := false
 			if len(vault.Frozen) > 0 {
 				chains, err := common.NewChains(vault.Frozen)
 				if err != nil {
@@ -315,11 +313,11 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 						Gas:       toi.MaxGas,
 						Memo:      toi.Memo,
 					}
-					eve := NewEventSecurity(etx, "skipping reschedule on frozen vault")
+					eve := NewEventSecurity(etx, "frozen vault reschedule")
 					if err := mgr.EventMgr().EmitEvent(ctx, eve); err != nil {
 						ctx.Logger().Error("fail to emit security event", "error", err)
 					}
-					continue // skip this transaction
+					frozen = true
 				}
 			}
 
@@ -356,7 +354,7 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 				continue
 			}
 
-			if s.needsNewVault(ctx, mgr, vault, signingTransPeriod, voter.FinalisedHeight, toi) {
+			if !frozen && s.needsNewVault(ctx, mgr, vault, signingTransPeriod, voter.FinalisedHeight, toi) {
 				active, err := s.keeper.GetAsgardVaultsByStatus(ctx, ActiveVault)
 				if err != nil {
 					return fmt.Errorf("fail to get active asgard vaults: %w", err)

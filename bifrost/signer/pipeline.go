@@ -120,6 +120,9 @@ func (p *pipeline) SpawnSignings(s pipelineSigner, bridge thorclient.ThorchainBr
 				Msg("found multiple retry items for vault/chain")
 		} else {
 			itemsToSign = append(itemsToSign, items[0])
+			log.Warn().
+				Interface("items", items).
+				Msg("found retry items")
 		}
 	}
 

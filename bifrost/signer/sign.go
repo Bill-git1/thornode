@@ -588,10 +588,45 @@ func (s *Signer) signAndBroadcast(item TxOutStoreItem) ([]byte, *types.TxInItem,
 		return nil, nil, err
 	}
 
-	// if not in round 7 retry, discard outbound if within configured blocks of reschedule
-	if !item.Round7Retry && blockHeight-signingTransactionPeriod > height-s.cfg.RescheduleBufferBlocks {
-		s.logger.Error().Msgf("tx was created at block height(%d), now it is (%d), it is older than (%d) blocks, skip it", height, blockHeight, signingTransactionPeriod)
-		return nil, nil, nil
+	// if in round 7 retry, discard outbound if over the max outbound attempts
+	inactiveVaultRound7Retry := false
+	if item.Round7Retry {
+		mimirKey := "MAXOUTBOUNDATTEMPTS"
+		var maxOutboundAttemptsMimir int64
+		maxOutboundAttemptsMimir, err = s.thorchainBridge.GetMimir(mimirKey)
+		if err != nil {
+			s.logger.Err(err).Msgf("fail to get %s", mimirKey)
+			return nil, nil, err
+		}
+		attempt := (blockHeight - height) / signingTransactionPeriod
+		if attempt > maxOutboundAttemptsMimir {
+			s.logger.Warn().
+				Int64("outbound_height", height).
+				Int64("current_height", blockHeight).
+				Int64("attempt", attempt).
+				Msg("round 7 retry outbound tx has reached max outbound attempts")
+			return nil, nil, nil
+		}
+
+		// determine if the round 7 retry is for an inactive vault
+		var vault ttypes.Vault
+		vault, err = s.thorchainBridge.GetVault(item.TxOutItem.VaultPubKey.String())
+		if err != nil {
+			log.Err(err).
+				Stringer("vault_pubkey", item.TxOutItem.VaultPubKey).
+				Msg("failed to get tx out item vault")
+			return nil, nil, err
+		}
+		inactiveVaultRound7Retry = vault.Status == ttypes.VaultStatus_InactiveVault
+	}
+
+	// if not in round 7 retry or the round 7 retry is on an inactive vault, discard
+	// outbound if within configured blocks of reschedule
+	if !item.Round7Retry || inactiveVaultRound7Retry {
+		if blockHeight-signingTransactionPeriod > height-s.cfg.RescheduleBufferBlocks {
+			s.logger.Error().Msgf("tx was created at block height(%d), now it is (%d), it is older than (%d) blocks, skip it", height, blockHeight, signingTransactionPeriod)
+			return nil, nil, nil
+		}
 	}
 
 	chain, err := s.getChain(tx.Chain)
