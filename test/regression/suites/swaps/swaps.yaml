@@ -119,7 +119,8 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
-  - .[0]|.in_hash == "{{ observe_txid 3 }}"
+  - .[0].in_hash == "{{ observe_txid 3 }}"
+  - .[0].coin.amount == "${OUT_AMOUNT=43748410}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -130,7 +131,7 @@ txs:
     from_address: {{ addr_eth_dog }}
     to_address: {{ addr_eth_fox }}
     coins:
-      - amount: "43749725"
+      - amount: "${OUT_AMOUNT}"
         asset: "ETH.ETH"
         decimals: 8
     gas:

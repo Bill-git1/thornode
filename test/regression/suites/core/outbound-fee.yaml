@@ -57,7 +57,7 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/network
 asserts:
-  - .gas_spent_rune == "12582968"
+  - .gas_spent_rune == "12582593"
   - .gas_withheld_rune == "16784900"
 ---
 type: tx-observed-in
@@ -87,10 +87,10 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2495385742829
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2495385582428
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/network
 asserts:
-  - .gas_spent_rune == "12582968"
+  - .gas_spent_rune == "12582593"
   - .gas_withheld_rune == "16784900"

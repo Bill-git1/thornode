@@ -162,7 +162,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "200000152376",
+              "amount": "199999897317",
               "denom": "rune"
             }
           ]
@@ -171,7 +171,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35000001403702",
+              "amount": "35000001403704",
               "denom": "rune"
             }
           ]
@@ -198,7 +198,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "5000000443922",
+              "amount": "5000000698979",
               "denom": "rune"
             }
           ]
@@ -330,13 +330,13 @@
         }
       ],
       "network": {
-        "LPIncomeSplit": "9600",
-        "NodeIncomeSplit": "400",
-        "bond_reward_rune": "443922",
+        "LPIncomeSplit": "9383",
+        "NodeIncomeSplit": "617",
+        "bond_reward_rune": "698979",
         "burned_bep2_rune": "0",
         "burned_erc20_rune": "0",
-        "outbound_gas_spent_rune": "31490095",
-        "outbound_gas_withheld_rune": "41992225",
+        "outbound_gas_spent_rune": "31490082",
+        "outbound_gas_withheld_rune": "41992214",
         "total_bond_units": "10"
       },
       "network_fees": [
@@ -374,7 +374,7 @@
           "LP_units": "100000000000",
           "asset": "BTC.BTC",
           "balance_asset": "100010500",
-          "balance_rune": "99994824806",
+          "balance_rune": "99994697284",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -385,7 +385,7 @@
           "LP_units": "100000000000",
           "asset": "ETH.ETH",
           "balance_asset": "1000000000",
-          "balance_rune": "100005327570",
+          "balance_rune": "100005200033",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",

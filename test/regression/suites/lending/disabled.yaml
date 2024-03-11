@@ -618,7 +618,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2500483175495
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${INITIAL_BALANCE=2500483175493}
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
@@ -641,7 +641,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2500483175495-4000000
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${INITIAL_BALANCE} - 4000000
 ---
 ########################################################################################
 # close existing loan on disabled pool should succeed
@@ -666,7 +666,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2500479175495
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${INITIAL_BALANCE} - 4000000
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
@@ -682,7 +682,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
 asserts:
   - .|length == 1
-  - .[0].debt_repaid|tonumber == 494989518
+  - .[0].debt_repaid|tonumber == 494989521
   - .[0].collateral_withdrawn|tonumber == 495050
 ---
 type: check

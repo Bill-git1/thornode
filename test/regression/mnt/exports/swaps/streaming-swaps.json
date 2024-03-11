@@ -162,7 +162,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "207351315081",
+              "amount": "207351002557",
               "denom": "rune"
             }
           ]
@@ -171,7 +171,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35000133784604",
+              "amount": "35000133784356",
               "denom": "rune"
             }
           ]
@@ -180,11 +180,11 @@
           "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "coins": [
             {
-              "amount": "24186039",
+              "amount": "24186711",
               "denom": "eth/eth"
             },
             {
-              "amount": "2492221962085",
+              "amount": "2492221873842",
               "denom": "rune"
             }
           ]
@@ -202,7 +202,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "5000292938230",
+              "amount": "5000293339245",
               "denom": "rune"
             }
           ]
@@ -215,7 +215,7 @@
       },
       "supply": [
         {
-          "amount": "24186039",
+          "amount": "24186711",
           "denom": "eth/eth"
         },
         {
@@ -339,11 +339,11 @@
       "network": {
         "LPIncomeSplit": "9585",
         "NodeIncomeSplit": "415",
-        "bond_reward_rune": "292938230",
+        "bond_reward_rune": "293339245",
         "burned_bep2_rune": "0",
         "burned_erc20_rune": "0",
-        "outbound_gas_spent_rune": "600462318",
-        "outbound_gas_withheld_rune": "801716390",
+        "outbound_gas_spent_rune": "600461507",
+        "outbound_gas_withheld_rune": "801715333",
         "total_bond_units": "68"
       },
       "network_fees": [
@@ -382,7 +382,7 @@
           "LP_units": "100000000000",
           "asset": "BTC.BTC",
           "balance_asset": "118503499",
-          "balance_rune": "84488551478",
+          "balance_rune": "84488352286",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -392,13 +392,13 @@
         {
           "LP_units": "100000000000",
           "asset": "ETH.ETH",
-          "balance_asset": "867667827",
-          "balance_rune": "122862763603",
+          "balance_asset": "867667850",
+          "balance_rune": "122862650271",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
           "status": "Available",
-          "synth_units": "1413438006"
+          "synth_units": "1413477795"
         }
       ],
       "reserve_contributors": null,
@@ -430,7 +430,7 @@
               "decimals": "8"
             },
             {
-              "amount": "867667827",
+              "amount": "867667850",
               "asset": "ETH.ETH",
               "decimals": "8"
             }

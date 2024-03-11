@@ -177,7 +177,7 @@ asserts:
   - .|length == 1
   - .[0]|.in_hash == "${INBOUND_TXID}"
   - .[0]|.coin.asset == "${OUTPUT_ASSET}"
-  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=43058890}"
+  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=43058884}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -247,7 +247,7 @@ asserts:
   - .|length == 2
   - .[0]|.in_hash == "${INBOUND_TXID}"
   - .[0]|.coin.asset == "${OUTPUT_ASSET}"
-  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=6500711}"
+  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=6500709}"
   - .[0]|.memo == "OUT:${INBOUND_TXID}"
   - .[1]|.in_hash == "${INBOUND_TXID}"
   - .[1]|.coin.asset == "${INPUT_ASSET}"
@@ -343,7 +343,7 @@ asserts:
   - .|length == 1
   - .[0]|.in_hash == "${INBOUND_TXID}"
   - .[0]|.coin.asset == "${OUTPUT_ASSET}"
-  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=33882043}"
+  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=33882029}"
   - .[0]|.memo == "OUT:${INBOUND_TXID}"
 ---
 type: create-blocks
@@ -414,7 +414,7 @@ asserts:
   - .|length == 1
   - .[0]|.in_hash == "${INBOUND_TXID}"
   - .[0]|.coin.asset == "${OUTPUT_ASSET}"
-  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=327668}"
+  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=327667}"
   - .[0]|.memo == "OUT:${INBOUND_TXID}"
 ---
 type: create-blocks

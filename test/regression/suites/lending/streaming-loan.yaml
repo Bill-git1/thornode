@@ -129,8 +129,8 @@ type: check
 endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
 asserts:
   - .|length == 1
-  - .[0]|.collateral_deposited == "989774"
-  - .[0]|.debt_issued == "970320000"
+  - .[0]|.collateral_deposited == "${COLLATERAL_DEPOSITED=989774}"
+  - .[0]|.debt_issued == "${DEBT_ISSUED=970320000}"
   - .[0]|.collateral_withdrawn == "0"
   - .[0]|.debt_repaid == "0"
   - .[0]|.owner == "{{ addr_btc_fox }}"
@@ -183,11 +183,11 @@ type: check
 endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
 asserts:
   - .|length == 1
-  - .[0]|.collateral_deposited == "989774"
-  - .[0]|.debt_issued == "970320000"
+  - .[0]|.collateral_deposited == "${COLLATERAL_DEPOSITED}"
+  - .[0]|.debt_issued == "${DEBT_ISSUED}"
   - .[0]|.owner == "{{ addr_btc_fox }}"
-  - .[0]|.collateral_withdrawn == "989774" # should now be fully repaid
-  - .[0]|.debt_repaid == "975565979" # over repaid
+  - .[0]|.collateral_withdrawn == "${COLLATERAL_DEPOSITED}" # should now be fully repaid
+  - .[0]|.debt_repaid == "${DEBT_REPAID=975565975}" # over repaid
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
@@ -219,10 +219,10 @@ type: check
 endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
 asserts:
   - .|length == 1
-  - .[0]|.collateral_deposited == "989774"
-  - .[0]|.debt_issued == "970320000"
-  - .[0]|.collateral_withdrawn == "989774"
-  - .[0]|.debt_repaid == "975565979"
+  - .[0]|.collateral_deposited == "${COLLATERAL_DEPOSITED}"
+  - .[0]|.debt_issued == "${DEBT_ISSUED}"
+  - .[0]|.collateral_withdrawn == "${COLLATERAL_DEPOSITED}"
+  - .[0]|.debt_repaid == "${DEBT_REPAID}"
   - .[0]|.owner == "{{ addr_btc_fox }}"
 ---
 type: create-blocks
@@ -237,4 +237,3 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/supply
 asserts:
   - '[.supply[]|select(.denom == "thor.btc")]|length == 0'
----

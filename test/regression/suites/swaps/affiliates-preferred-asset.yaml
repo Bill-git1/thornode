@@ -226,8 +226,11 @@ type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .|[.end_block_events[]|select(.type == "scheduled_outbound")]|length == 2
+  - .|[.end_block_events[]|select(.type == "scheduled_outbound")]|.[0].to_address == "{{ addr_btc_cat }}"
+  - .|[.end_block_events[]|select(.type == "scheduled_outbound")]|.[0].coin_amount == "${OUT_ONE=21861985}"
+  - .|[.end_block_events[]|select(.type == "scheduled_outbound")]|.[0].coin_asset == "BTC.BTC"
   - .|[.end_block_events[]|select(.type == "scheduled_outbound")]|.[1].to_address == "{{ addr_btc_pig }}"
-  - .|[.end_block_events[]|select(.type == "scheduled_outbound")]|.[1].coin_amount == "1503986"
+  - .|[.end_block_events[]|select(.type == "scheduled_outbound")]|.[1].coin_amount == "${OUT_TWO=1503989}"
   - .|[.end_block_events[]|select(.type == "scheduled_outbound")]|.[1].coin_asset == "BTC.BTC"
 ---
 type: check
@@ -245,7 +248,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_cat }}
       coins:
-        - amount: "21861953"
+        - amount: "${OUT_ONE}"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -269,7 +272,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_pig }}
       coins:
-        - amount: "1503986"
+        - amount: "${OUT_TWO}"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -317,12 +320,12 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
-  - .affiliate_collector_rune == "429942580"
+  - .affiliate_collector_rune == "429364870"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/balance/module/affiliate_collector
 asserts:
-  - .coins[]|select(.denom == "rune")|.amount == "429942580"
+  - .coins[]|select(.denom == "rune")|.amount == "429364870"
 ---
 # BTC paused
 type: tx-mimir
@@ -364,12 +367,12 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
-  - .affiliate_collector_rune == "2256550089"
+  - .affiliate_collector_rune == "2255972390"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/balance/module/affiliate_collector
 asserts:
-  - .coins[]|select(.denom == "rune")|.amount == "2256550089"
+  - .coins[]|select(.denom == "rune")|.amount == "2255972390"
 ---
 ########################################################################################
 # Swap RUNE -> BTC w/ affiliate "test", which should trigger preferred asset swap
@@ -387,12 +390,12 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
-  - .affiliate_collector_rune == "4756550089"
+  - .affiliate_collector_rune == "4755972390"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/balance/module/affiliate_collector
 asserts:
-  - .coins[]|select(.denom == "rune")|.amount == "4756550089"
+  - .coins[]|select(.denom == "rune")|.amount == "4755972390"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound

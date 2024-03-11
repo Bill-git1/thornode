@@ -166,9 +166,9 @@ type: check
 endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_btc_fox }}
 asserts:
   - .address == "{{ addr_btc_fox }}"
-  - .score|tonumber == 382046035
+  - .score|tonumber == 382045227
   - .reclaimed|tonumber == 207489194
-  - .spent|tonumber == 589535229
+  - .spent|tonumber == 589534421
   - .last_spent_height == 6
   - .last_reclaim_height == 4
 ---
@@ -176,9 +176,9 @@ type: check
 endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_eth_fox }}
 asserts:
   - .address == "{{ addr_eth_fox }}"
-  - .score|tonumber == 382046038
+  - .score|tonumber == 382045230
   - .reclaimed|tonumber == 207489196
-  - .spent|tonumber == 589535234
+  - .spent|tonumber == 589534426
   - .last_spent_height == 6
   - .last_reclaim_height == 4
 ---
@@ -209,9 +209,9 @@ type: check
 endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_btc_fox }}
 asserts:
   - .address == "{{ addr_btc_fox }}"
-  - .score|tonumber == 530400992
-  - .reclaimed|tonumber == 589535229
-  - .spent|tonumber == 1119936221
+  - .score|tonumber == 530398951
+  - .reclaimed|tonumber == 589534421
+  - .spent|tonumber == 1119933372
   - .last_spent_height == 17
   - .last_reclaim_height == 4
 ---
@@ -219,12 +219,20 @@ type: check
 endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_eth_fox }}
 asserts:
   - .address == "{{ addr_eth_fox }}"
-  - .score|tonumber == 530400996
-  - .reclaimed|tonumber == 589535234
-  - .spent|tonumber == 1119936230
+  - .score|tonumber == 530398955
+  - .reclaimed|tonumber == 589534426
+  - .spent|tonumber == 1119933381
   - .last_spent_height == 17
   - .last_reclaim_height == 4
 ---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - .|length == 2
+  - .[0].coin.amount == "${OUT_ONE=33881254}"
+  - .[1].coin.amount == "${OUT_TWO=28944229}"
+---
+
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
 txs:
@@ -234,7 +242,7 @@ txs:
     from_address: {{ addr_eth_dog }}
     to_address: {{ addr_eth_fox }}
     coins:
-      - amount: "33881286"
+      - amount: "${OUT_ONE}"
         asset: "ETH.ETH"
         decimals: 8
     gas:
@@ -257,7 +265,7 @@ txs:
     from_address: {{ addr_eth_dog }}
     to_address: {{ addr_eth_fox }}
     coins:
-      - amount: "28944289"
+      - amount: "${OUT_TWO}"
         asset: "ETH.ETH"
         decimals: 8
     gas:

@@ -185,7 +185,7 @@ params:
   destination: {{ addr_thor_fox }}
   amount: 20750890
 asserts:
-  - .expected_amount_out|tonumber == 2280069
+  - .expected_amount_out|tonumber == 2280072
   - .fees|.total_bps == 433
 ---
 type: tx-deposit
@@ -203,7 +203,7 @@ endpoint: http://localhost:1317/thorchain/trade/account/{{ addr_thor_fox }}
 asserts:
   - .|length == 2
   - .[0].asset == "BTC~BTC"
-  - .[0].units|tonumber == 7280069
+  - .[0].units|tonumber == 7280072
   - .[0].owner == "{{ addr_thor_fox }}"
   - .[1].asset == "ETH~ETH"
   - .[1].units|tonumber == 20750890 # 0.2 ETH
@@ -218,7 +218,7 @@ params:
   amount: 20750890
   streaming_interval: 1
 asserts:
-  - .expected_amount_out|tonumber == 2233652
+  - .expected_amount_out|tonumber == 2233656
   - .fees|.total_bps == 107
 ---
 type: tx-deposit
@@ -250,7 +250,7 @@ endpoint: http://localhost:1317/thorchain/trade/account/{{ addr_thor_fox }}
 asserts:
   - .|length == 1
   - .[0].asset == "BTC~BTC"
-  - .[0].units|tonumber == 9444747
+  - .[0].units|tonumber == 9444753
   - .[0].owner == "{{ addr_thor_fox }}"
 ---
 ########################################################################################
@@ -378,7 +378,7 @@ endpoint: http://localhost:1317/thorchain/trade/account/{{ addr_thor_fox }}
 asserts:
   - .|length == 1
   - .[0].asset == "BTC~BTC"
-  - .[0].units|tonumber == ${INITIAL_UNITS=9444747}
+  - .[0].units|tonumber == ${INITIAL_UNITS=9444753}
   - .[0].owner == "{{ addr_thor_fox }}"
 ---
 type: check
@@ -421,7 +421,7 @@ endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
 asserts:
   - .result | length == 1
   - .result[0].denom == "rune"
-  - .result[0].amount|tonumber == ${INITIAL_RUNE=2500960519214}
+  - .result[0].amount|tonumber == ${INITIAL_RUNE=2500960512608}
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/network
@@ -433,7 +433,7 @@ endpoint: http://localhost:1317/thorchain/trade/account/{{ addr_thor_fox }}
 asserts:
   - .|length == 1
   - .[0].asset == "BTC~BTC"
-  - .[0].units|tonumber == ${INITIAL_UNITS=8444747}
+  - .[0].units|tonumber == ${INITIAL_UNITS=8444753}
   - .[0].owner == "{{ addr_thor_fox }}"
 ---
 type: tx-deposit

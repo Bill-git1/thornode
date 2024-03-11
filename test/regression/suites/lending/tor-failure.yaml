@@ -80,8 +80,8 @@ params:
   to_asset: RUNE
   destination: {{ addr_thor_fox }}
 asserts:
-  - .expected_amount_out|tonumber == 486545262
-  - .expected_debt_issued|tonumber == 490140000
+  - .expected_amount_out|tonumber == ${INITIAL_EXPECTED_OUT=486545262}
+  - .expected_debt_issued|tonumber == ${INITIAL_EXPECTED_DEBT_ISSUED=490140000}
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
@@ -101,8 +101,9 @@ params:
   to_asset: RUNE
   destination: {{ addr_thor_fox }}
 asserts:
-  - .expected_amount_out|tonumber == 486934519 # some change (TODO below)
-  - .expected_debt_issued|tonumber == 490140000 # no change, since no median price change
+  - .expected_amount_out|tonumber == 486932548 # some change (TODO below)
+  - .expected_amount_out|tonumber != ${INITIAL_EXPECTED_OUT}
+  - .expected_debt_issued|tonumber == ${INITIAL_EXPECTED_DEBT_ISSUED} # no change, since no median price change
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
@@ -143,8 +144,8 @@ endpoint: http://localhost:1317/thorchain/pool/thor.tor
 asserts:
   # TODO: Manipulation of a single anchor should not increase the virtual depth. We
   # should still use the median price, but the max (or at least mean) of slips.
-  - .balance_asset|tonumber == 396873101946
-  - .balance_rune|tonumber == 396875480470
+  - .balance_asset|tonumber == 396225570053
+  - .balance_rune|tonumber == 396227944697
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -190,7 +191,7 @@ params:
   to_asset: RUNE
   destination: {{ addr_thor_fox }}
 asserts:
-  - .expected_amount_out|tonumber == 4010697933
+  - .expected_amount_out|tonumber == ${INITIAL_EXPECTED_OUT=4010563969}
   - .expected_debt_issued|tonumber == 4095920000
 ---
 type: tx-deposit
@@ -214,8 +215,9 @@ asserts:
   # TODO: Price manipulation of pools up to and including the median, even with virtual
   # depth, can result in the debt on the loan being manipulated by more than the penalty
   # on the outbound debt.
-  - .expected_amount_out|tonumber == 4001309682
-  - .expected_debt_issued|tonumber == 1555150000
+  - .expected_amount_out|tonumber == 4001139453
+  - .expected_amount_out|tonumber != ${INITIAL_EXPECTED_OUT}
+  - .expected_debt_issued|tonumber == 1560180000
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
@@ -254,8 +256,8 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/pool/thor.tor
 asserts:
-  - .balance_asset|tonumber == 1884944291
-  - .balance_rune|tonumber == 4932671652
+  - .balance_asset|tonumber == 1886131063
+  - .balance_rune|tonumber == 4919864800
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -285,7 +287,7 @@ endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
 asserts:
   - .|length == 2
   - .[1]|.collateral_deposited == "494905"
-  - .[1]|.debt_issued == "185400000" # almost 3x less debt than no manipulation
+  - .[1]|.debt_issued == "186000000" # almost 3x less debt than no manipulation
   - .[1]|.collateral_withdrawn == "0"
   - .[1]|.debt_repaid == "0"
   - .[1]|.owner == "{{ addr_btc_pig }}"
@@ -293,15 +295,15 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/pool/thor.tor
 asserts:
-  - .balance_asset|tonumber == 2070344291
-  - .balance_rune|tonumber == 4530511943
+  - .balance_asset|tonumber == 2072131063
+  - .balance_rune|tonumber == 4517891888
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - '[.end_block_events[]|select(.type=="outbound" and .to=="{{ addr_thor_pig }}")]|length == 1'
   # use this amount later to pay back the loan after anchor repegs
-  - .end_block_events[]|select(.type=="outbound" and .to=="{{ addr_thor_pig }}")|.coin == "400166516 THOR.RUNE"
+  - .end_block_events[]|select(.type=="outbound" and .to=="{{ addr_thor_pig }}")|.coin == "${RUNE_BORROWED=399979715} THOR.RUNE"
 ---
 ########################################################################################
 # 2/3 of tor anchor pools depeg and attacker prevents swaps for max anchor blocks
@@ -319,8 +321,8 @@ params:
   to_asset: RUNE
   destination: {{ addr_thor_fox }}
 asserts:
-  - .expected_amount_out|tonumber == 1219164077
-  - .expected_debt_issued|tonumber == 1546380000
+  - .expected_amount_out|tonumber == 1216303847
+  - .expected_debt_issued|tonumber == 1551380000
 ---
 type: create-blocks
 count: 3
@@ -335,14 +337,14 @@ params:
 asserts:
   # anchor blocks must be set sufficiently high, otherwise debt can be manipulated with
   # no penalty on the debt outbound from the contracted virtual pool
-  - .expected_amount_out|tonumber == 3991253558
-  - .expected_debt_issued|tonumber == 1551170000
+  - .expected_amount_out|tonumber == 3991091487
+  - .expected_debt_issued|tonumber == 1556190000
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/pool/thor.tor
 asserts:
-  - .balance_asset|tonumber == 188494429131
-  - .balance_rune|tonumber == 493269208029
+  - .balance_asset|tonumber == 188613106302
+  - .balance_rune|tonumber == 491988521840
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -372,7 +374,7 @@ endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
 asserts:
   - .|length == 3
   - .[2]|.collateral_deposited == "495098"
-  - .[2]|.debt_issued == "183660000" # almost 3x less debt than no manipulation
+  - .[2]|.debt_issued == "184250000" # almost 3x less debt than no manipulation
   - .[2]|.collateral_withdrawn == "0"
   - .[2]|.debt_repaid == "0"
   - .[2]|.owner == "{{ addr_btc_bird }}"
@@ -405,7 +407,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/pool/thor.tor
 asserts:
   - .balance_asset|tonumber == 99999999999
-  - .balance_rune|tonumber == 100001453464
+  - .balance_rune|tonumber == 100001455157
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -443,10 +445,17 @@ asserts:
 ########################################################################################
 # malicious actor profits when repaying loan after tor repegs
 ########################################################################################
+type: check
+endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
+asserts:
+  - .balances[]|select(.denom == "rune")|.amount == "${RUNE_BORROWED}"
+  # Prepare repay amount.
+  - ${RUNE_BORROWED} - 2000000 == ${REPAY_AMOUNT=397979715}
+---
 type: tx-deposit
 signer: {{ addr_thor_pig }}
 coins:
-  - amount: "398166516" # exactly what we received as debt minus gas fee
+  - amount: "${REPAY_AMOUNT}" # exactly what we received as debt minus gas fee
     asset: "rune"
 memo: "LOAN-:BTC.BTC:{{ addr_btc_pig }}"
 ---
@@ -464,8 +473,8 @@ asserts:
   - .|length == 4
   - .[2]|.collateral_deposited   == "494905"
   - .[2]|.collateral_withdrawn == "494905"
-  - .[2]|.debt_issued   == "185400000"
-  - .[2]|.debt_repaid == "395008384" # over 2x overpaid after original debt repaid
+  - .[2]|.debt_issued   == "186000000"
+  - .[2]|.debt_repaid == "394824526" # over 2x the repaid debt
   - .[2]|.owner == "{{ addr_btc_pig }}"
 ---
 type: check

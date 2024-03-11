@@ -1337,18 +1337,22 @@ func (vm *NetworkMgrVCUR) UpdateNetwork(ctx cosmos.Context, constAccessor consta
 	if totalReserve.IsZero() {
 		return nil
 	}
-	currentHeight := uint64(ctx.BlockHeight())
-	pools, totalProvidedLiquidity, err := vm.getTotalProvidedLiquidityRune(ctx)
+	availablePools, availablePoolsRune, err := vm.getAvailablePoolsRune(ctx)
 	if err != nil {
-		return fmt.Errorf("fail to get available pools and total provided liquidity rune: %w", err)
+		return fmt.Errorf("fail to get available pools and their rune: %w", err)
+	}
+	vaultsLiquidityRune, err := vm.getVaultsLiquidityRune(ctx)
+	if err != nil {
+		return fmt.Errorf("fail to get vaults liquidity rune: %w", err)
 	}
 
-	// If no Rune is provided liquidity, then don't give out block rewards.
-	if totalProvidedLiquidity.IsZero() {
-		return nil // If no Rune is provided liquidity, then don't give out block rewards.
+	// If no Rune is in Available pools, then don't give out block rewards.
+	if availablePoolsRune.IsZero() {
+		return nil // If no Rune is in available pools, then don't give out block rewards.
 	}
 
 	// get total liquidity fees
+	currentHeight := uint64(ctx.BlockHeight())
 	totalLiquidityFees, err := vm.k.GetTotalLiquidityFees(ctx, currentHeight)
 	if err != nil {
 		return fmt.Errorf("fail to get total liquidity fee: %w", err)
@@ -1370,7 +1374,7 @@ func (vm *NetworkMgrVCUR) UpdateNetwork(ctx cosmos.Context, constAccessor consta
 		emissionCurve = constAccessor.GetInt64Value(constants.EmissionCurve)
 	}
 	blocksPerYear := constAccessor.GetInt64Value(constants.BlocksPerYear)
-	bondReward, totalPoolRewards, lpDeficit, lpShare := vm.calcBlockRewards(totalProvidedLiquidity, effectiveSecurityBond, totalEffectiveBond, totalReserve, totalLiquidityFees, emissionCurve, blocksPerYear)
+	bondReward, totalPoolRewards, lpDeficit, lpShare := vm.calcBlockRewards(availablePoolsRune, vaultsLiquidityRune, effectiveSecurityBond, totalEffectiveBond, totalReserve, totalLiquidityFees, emissionCurve, blocksPerYear)
 
 	network.LPIncomeSplit = int64(lpShare.Uint64())
 	network.NodeIncomeSplit = int64(10_000) - network.LPIncomeSplit
@@ -1385,13 +1389,10 @@ func (vm *NetworkMgrVCUR) UpdateNetwork(ctx cosmos.Context, constAccessor consta
 		var rewardAmts []cosmos.Uint
 		var rewardPools []Pool
 		// Pool Rewards are based on Fee Share
-		for _, pool := range pools {
-			if !pool.IsAvailable() {
-				continue
-			}
+		for _, pool := range availablePools {
 			var amt, fees cosmos.Uint
 			if totalLiquidityFees.IsZero() {
-				amt = common.GetSafeShare(pool.BalanceRune, totalProvidedLiquidity, totalPoolRewards)
+				amt = common.GetSafeShare(pool.BalanceRune, availablePoolsRune, totalPoolRewards)
 				fees = cosmos.ZeroUint()
 			} else {
 				var err error
@@ -1421,7 +1422,7 @@ func (vm *NetworkMgrVCUR) UpdateNetwork(ctx cosmos.Context, constAccessor consta
 
 	} else { // Else deduct pool deficit
 
-		poolAmts, err := vm.deductPoolRewardDeficit(ctx, pools, totalLiquidityFees, lpDeficit)
+		poolAmts, err := vm.deductPoolRewardDeficit(ctx, availablePools, totalLiquidityFees, lpDeficit)
 		if err != nil {
 			return err
 		}
@@ -1450,10 +1451,10 @@ func (vm *NetworkMgrVCUR) UpdateNetwork(ctx cosmos.Context, constAccessor consta
 	return vm.k.SetNetwork(ctx, network)
 }
 
-func (vm *NetworkMgrVCUR) getTotalProvidedLiquidityRune(ctx cosmos.Context) (Pools, cosmos.Uint, error) {
-	// First get active pools and total provided liquidity Rune
-	totalProvidedLiquidity := cosmos.ZeroUint()
-	var pools Pools
+func (vm *NetworkMgrVCUR) getAvailablePoolsRune(ctx cosmos.Context) (Pools, cosmos.Uint, error) {
+	// Get Available layer 1 pools and sum their RUNE balances.
+	availablePoolsRune := cosmos.ZeroUint()
+	var availablePools Pools
 	iterator := vm.k.GetPoolIterator(ctx)
 	defer iterator.Close()
 	for ; iterator.Valid(); iterator.Next() {
@@ -1461,15 +1462,60 @@ func (vm *NetworkMgrVCUR) getTotalProvidedLiquidityRune(ctx cosmos.Context) (Poo
 		if err := vm.k.Cdc().Unmarshal(iterator.Value(), &pool); err != nil {
 			return nil, cosmos.ZeroUint(), fmt.Errorf("fail to unmarhsl pool: %w", err)
 		}
+		if !pool.IsAvailable() {
+			continue
+		}
 		if pool.Asset.IsNative() {
 			continue
 		}
-		if !pool.BalanceRune.IsZero() {
-			totalProvidedLiquidity = totalProvidedLiquidity.Add(pool.BalanceRune)
-			pools = append(pools, pool)
+		if pool.BalanceRune.IsZero() {
+			continue
+		}
+		availablePoolsRune = availablePoolsRune.Add(pool.BalanceRune)
+		availablePools = append(availablePools, pool)
+	}
+	return availablePools, availablePoolsRune, nil
+}
+
+func (vm *NetworkMgrVCUR) getVaultsLiquidityRune(ctx cosmos.Context) (cosmos.Uint, error) {
+	// Sum the RUNE values of non-Inactive vault Coins.
+	vaultsLiquidityRune := cosmos.ZeroUint()
+	poolCache := map[common.Asset]Pool{}
+	vaults, err := vm.k.GetAsgardVaults(ctx)
+	if err != nil {
+		return cosmos.ZeroUint(), fmt.Errorf("fail to get vaults: %w", err)
+	}
+	for i := range vaults {
+		// cleanupAsgardIndex removes InactiveVaults from the index on churn,
+		// but RetiringVaults which become InactiveVaults and later receive inbounds
+		// are not cleared from the index until the next churn,
+		// so check nevertheless.
+		// Similarly, an InactiveVault inbound (to be automatically refunded)
+		// re-adds that InactiveVault to the Asgard Index with SetVault
+		// until cleared again in the next churn.
+		if vaults[i].Status == InactiveVault {
+			continue
+		}
+
+		for _, coin := range vaults[i].Coins {
+			if coin.Asset.IsRune() {
+				vaultsLiquidityRune = vaultsLiquidityRune.Add(coin.Amount)
+				continue
+			}
+
+			pool, ok := poolCache[coin.Asset]
+			if !ok {
+				pool, err = vm.k.GetPool(ctx, coin.Asset)
+				if err != nil {
+					return cosmos.ZeroUint(), fmt.Errorf("fail to get pool for asset %s, err:%w", coin.Asset, err)
+				}
+				poolCache[coin.Asset] = pool
+			}
+
+			vaultsLiquidityRune = vaultsLiquidityRune.Add(pool.AssetValueInRune(coin.Amount))
 		}
 	}
-	return pools, totalProvidedLiquidity, nil
+	return vaultsLiquidityRune, nil
 }
 
 // Pays out Rewards
@@ -1496,7 +1542,7 @@ func (vm *NetworkMgrVCUR) calcPoolDeficit(lpDeficit, totalFees, poolFees cosmos.
 }
 
 // Calculate the block rewards that bonders and liquidity providers should receive
-func (vm *NetworkMgrVCUR) calcBlockRewards(totalProvidedLiquidity, effectiveSecurityBond, totalEffectiveBond, totalReserve, totalLiquidityFees cosmos.Uint, emissionCurve, blocksPerYear int64) (cosmos.Uint, cosmos.Uint, cosmos.Uint, cosmos.Uint) {
+func (vm *NetworkMgrVCUR) calcBlockRewards(availablePoolsRune, vaultsLiquidityRune, effectiveSecurityBond, totalEffectiveBond, totalReserve, totalLiquidityFees cosmos.Uint, emissionCurve, blocksPerYear int64) (cosmos.Uint, cosmos.Uint, cosmos.Uint, cosmos.Uint) {
 	// Block Rewards will take the latest reserve, divide it by the emission
 	// curve factor, then divide by blocks per year
 	trD := cosmos.NewDec(int64(totalReserve.Uint64()))
@@ -1507,8 +1553,8 @@ func (vm *NetworkMgrVCUR) calcBlockRewards(totalProvidedLiquidity, effectiveSecu
 
 	systemIncome := blockReward.Add(totalLiquidityFees) // Get total system income for block
 
-	lpSplit := vm.getPoolShare(totalProvidedLiquidity, effectiveSecurityBond, totalEffectiveBond, systemIncome) // Get liquidity provider share
-	bonderSplit := common.SafeSub(systemIncome, lpSplit)                                                        // Remainder to Bonders
+	lpSplit := vm.getPoolShare(availablePoolsRune, vaultsLiquidityRune, effectiveSecurityBond, totalEffectiveBond, systemIncome) // Get liquidity provider share
+	bonderSplit := common.SafeSub(systemIncome, lpSplit)                                                                         // Remainder to Bonders
 	lpShare := common.GetSafeShare(lpSplit, systemIncome, cosmos.NewUint(10_000))
 
 	lpDeficit := cosmos.ZeroUint()
@@ -1534,25 +1580,28 @@ func (vm *NetworkMgrVCUR) calcBlockRewards(totalProvidedLiquidity, effectiveSecu
 // effectiveBond: total RUNE value bonded, with max per-node at 66th percentile
 // totalRewards: total RUNE rewards to be distributed
 func (vm *NetworkMgrVCUR) getPoolShare(
-	totalLiquidity, securityBond, effectiveBond, totalRewards cosmos.Uint,
+	pooledRune, vaultLiquidity, securityBond, effectiveBond, totalRewards cosmos.Uint,
 ) cosmos.Uint {
 	// no payments to liquidity providers when more liquidity than security
-	if securityBond.LTE(totalLiquidity) {
+	if securityBond.LTE(vaultLiquidity) {
 		return cosmos.ZeroUint()
 	}
 
 	// calculate the base node share rewards
-	baseNodeShare := common.GetSafeShare(totalLiquidity, securityBond, totalRewards)
+	baseNodeShare := common.GetSafeShare(vaultLiquidity, securityBond, totalRewards)
 
 	// base pool share is the remaining
 	basePoolShare := common.SafeSub(totalRewards, baseNodeShare)
 
 	// compensate for share of node rewards not received by the security bond
+	// and for that pools shouldn't receive rewards for vault liquidity not in pools
 	adjustmentNodeShare := common.GetUncappedShare(effectiveBond, securityBond, baseNodeShare)
-	adjustmentRewards := basePoolShare.Add(adjustmentNodeShare)
+	adjustmentPoolShare := common.GetSafeShare(pooledRune, vaultLiquidity, basePoolShare)
+	adjustmentRewards := adjustmentPoolShare.Add(adjustmentNodeShare)
 
-	// reduce the pool share according to the adjustment rewards
-	return common.GetSafeShare(basePoolShare, adjustmentRewards, totalRewards)
+	// Derive the pool share according to the adjustment rewards,
+	// totalRewards being the allocation to never be exceeded.
+	return common.GetSafeShare(adjustmentPoolShare, adjustmentRewards, totalRewards)
 }
 
 // deductPoolRewardDeficit - When swap fees accrued by the pools surpass what

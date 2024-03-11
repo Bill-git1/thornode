@@ -148,15 +148,15 @@ type: check
 endpoint: http://localhost:1317/thorchain/trade/unit/BTC~BTC
 asserts:
   - .asset == "BTC~BTC"
-  - .units|tonumber == 9522358
-  - .depth|tonumber == 9522358
+  - .units|tonumber == ${REMAINING_UNITS=9522367}
+  - .depth|tonumber == ${REMAINING_UNITS}
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/trade/accounts/BTC~BTC
 asserts:
   - .|length == 1
   - .[0].asset == "BTC~BTC"
-  - .[0].units|tonumber == 9522358
+  - .[0].units|tonumber == ${REMAINING_UNITS}
   - .[0].owner == "{{ addr_thor_fox }}"
 ---
 type: check
@@ -164,8 +164,12 @@ endpoint: http://localhost:1317/thorchain/trade/account/{{ addr_thor_fox }}
 asserts:
   - .|length == 1
   - .[0].asset == "BTC~BTC"
-  - .[0].units|tonumber == 9522358
+  - .[0].units|tonumber == ${REMAINING_UNITS}
   - .[0].owner == "{{ addr_thor_fox }}"
+  # Prepare the withdraw amount (~2/3rds of remaining units, leaving a round number).
+  - ${REMAINING_UNITS} * (1/3) | log10 | floor | pow(10;.) == ${DIGITS=1000000}
+  - ${REMAINING_UNITS} * (1/3) / ${DIGITS} | floor * ${DIGITS} == ${NEW_REMAINING_UNITS=3000000}
+  - ${REMAINING_UNITS} - ${NEW_REMAINING_UNITS} == ${WITHDRAW_AMOUNT=6522367}
 ---
 ########################################################################################
 # withdraw btc
@@ -173,7 +177,7 @@ asserts:
 type: tx-deposit
 signer: {{ addr_thor_fox }}
 coins:
-  - amount: "6522358"
+  - amount: "${WITHDRAW_AMOUNT}"
     asset: "BTC~BTC"
 memo: "trade-:{{ addr_btc_fox }}"
 ---
@@ -186,7 +190,7 @@ asserts:
   - .txs|length == 1
   - '[.txs[0].result.events[]|select(.type == "trade_account_withdraw")]|length == 1'
   - .txs[0].result.events[]|select(.type == "trade_account_withdraw")|.asset == "BTC~BTC"
-  - .txs[0].result.events[]|select(.type == "trade_account_withdraw")|.amount == "6522358"
+  - .txs[0].result.events[]|select(.type == "trade_account_withdraw")|.amount == "${WITHDRAW_AMOUNT}"
   - .txs[0].result.events[]|select(.type == "trade_account_withdraw")|.rune_address == "{{ addr_thor_fox }}"
   - .txs[0].result.events[]|select(.type == "trade_account_withdraw")|.asset_address == "{{ addr_btc_fox }}"
 ---
@@ -194,8 +198,8 @@ type: check
 endpoint: http://localhost:1317/thorchain/trade/unit/BTC~BTC
 asserts:
   - .asset == "BTC~BTC"
-  - .units|tonumber == 3000000
-  - .depth|tonumber == 3000000
+  - .units|tonumber == ${NEW_REMAINING_UNITS}
+  - .depth|tonumber == ${NEW_REMAINING_UNITS}
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/trade/accounts/BTC~BTC
@@ -208,10 +212,17 @@ asserts:
   - .|length == 1
 ---
 type: check
+endpoint: http://localhost:1317/thorchain/inbound_addresses
+asserts:
+  - .[]|select(.chain == "BTC").outbound_fee == "${OUT_FEE=14000}"
+---
+type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ native_txid -1 }}"
+  -  ${WITHDRAW_AMOUNT} - ${OUT_FEE} == ${OUT_AMOUNT=6508367}
+  - .[0].coin.amount == "${OUT_AMOUNT}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -222,7 +233,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "6508358"
+        - amount: "${OUT_AMOUNT}"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -247,7 +258,7 @@ asserts:
 type: tx-deposit
 signer: {{ addr_thor_fox }}
 coins:
-  - amount: "3000000"
+  - amount: "${NEW_REMAINING_UNITS}"
     asset: "BTC~BTC"
 memo: "trade-:{{ addr_btc_fox }}"
 ---
@@ -260,7 +271,7 @@ asserts:
   - .txs|length == 1
   - '[.txs[0].result.events[]|select(.type == "trade_account_withdraw")]|length == 1'
   - .txs[0].result.events[]|select(.type == "trade_account_withdraw")|.asset == "BTC~BTC"
-  - .txs[0].result.events[]|select(.type == "trade_account_withdraw")|.amount == "3000000"
+  - .txs[0].result.events[]|select(.type == "trade_account_withdraw")|.amount == "${NEW_REMAINING_UNITS}"
   - .txs[0].result.events[]|select(.type == "trade_account_withdraw")|.rune_address == "{{ addr_thor_fox }}"
   - .txs[0].result.events[]|select(.type == "trade_account_withdraw")|.asset_address == "{{ addr_btc_fox }}"
 ---
@@ -286,6 +297,8 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ native_txid -1 }}"
+  - ${NEW_REMAINING_UNITS} - ${OUT_FEE} == ${OUT_AMOUNT=2986000}
+  - .[0].coin.amount == "${OUT_AMOUNT}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -296,7 +309,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "2986000"
+        - amount: "${OUT_AMOUNT}"
           asset: "BTC.BTC"
           decimals: 8
       gas:
