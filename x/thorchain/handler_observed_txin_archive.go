@@ -12,6 +12,153 @@ import (
 	"gitlab.com/thorchain/thornode/constants"
 )
 
+func (h ObservedTxInHandler) handleV128(ctx cosmos.Context, msg MsgObservedTxIn) (*cosmos.Result, error) {
+	activeNodeAccounts, err := h.mgr.Keeper().ListActiveValidators(ctx)
+	if err != nil {
+		return nil, wrapError(ctx, err, "fail to get list of active node accounts")
+	}
+	handler := NewInternalHandler(h.mgr)
+	for _, tx := range msg.Txs {
+		// check we are sending to a valid vault
+		if !h.mgr.Keeper().VaultExists(ctx, tx.ObservedPubKey) {
+			ctx.Logger().Info("Not valid Observed Pubkey", "observed pub key", tx.ObservedPubKey)
+			continue
+		}
+
+		voter, err := h.mgr.Keeper().GetObservedTxInVoter(ctx, tx.Tx.ID)
+		if err != nil {
+			ctx.Logger().Error("fail to get tx in voter", "error", err)
+			continue
+		}
+
+		voter, isConsensus := h.preflight(ctx, voter, activeNodeAccounts, tx, msg.Signer)
+		if !isConsensus {
+			if voter.Height == ctx.BlockHeight() || voter.FinalisedHeight == ctx.BlockHeight() {
+				// we've already process the transaction, but we should still
+				// update the observing addresses
+				h.mgr.ObMgr().AppendObserver(tx.Tx.Chain, msg.GetSigners())
+			}
+			continue
+		}
+
+		// all logic after this is upon consensus
+
+		ctx.Logger().Info("handleMsgObservedTxIn request", "Tx:", tx.String())
+		if voter.Reverted {
+			ctx.Logger().Info("tx had been reverted", "Tx", tx.String())
+			continue
+		}
+
+		vault, err := h.mgr.Keeper().GetVault(ctx, tx.ObservedPubKey)
+		if err != nil {
+			ctx.Logger().Error("fail to get vault", "error", err)
+			continue
+		}
+
+		voter.Tx.Tx.Memo = tx.Tx.Memo
+
+		hasFinalised := voter.HasFinalised(activeNodeAccounts)
+		if hasFinalised {
+			if vault.IsAsgard() && !voter.UpdatedVault {
+				vault.AddFunds(tx.Tx.Coins)
+				voter.UpdatedVault = true
+			}
+			vault.InboundTxCount++
+		}
+		if err := h.mgr.Keeper().SetLastChainHeight(ctx, tx.Tx.Chain, tx.BlockHeight); err != nil {
+			ctx.Logger().Error("fail to set last chain height", "error", err)
+		}
+
+		// save the changes in Tx Voter to key value store
+		h.mgr.Keeper().SetObservedTxInVoter(ctx, voter)
+		if err := h.mgr.Keeper().SetVault(ctx, vault); err != nil {
+			ctx.Logger().Error("fail to set vault", "error", err)
+			continue
+		}
+
+		if !vault.IsAsgard() {
+			ctx.Logger().Info("Vault is not an Asgard vault, transaction ignored.")
+			continue
+		}
+
+		memo, _ := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), tx.Tx.Memo) // ignore err
+		if memo.IsOutbound() || memo.IsInternal() {
+			// do not process outbound handlers here, or internal handlers
+			continue
+		}
+
+		// add addresses to observing addresses. This is used to detect
+		// active/inactive observing node accounts
+
+		h.mgr.ObMgr().AppendObserver(tx.Tx.Chain, voter.Tx.GetSigners())
+
+		if !hasFinalised {
+			ctx.Logger().Info("Tx has not been finalised yet , waiting for confirmation counting", "hash", voter.TxID)
+			continue
+		}
+
+		if vault.Status == InactiveVault {
+			ctx.Logger().Error("observed tx on inactive vault", "tx", tx.String())
+			if newErr := refundTx(ctx, tx, h.mgr, CodeInvalidVault, "observed inbound tx to an inactive vault", ""); newErr != nil {
+				ctx.Logger().Error("fail to refund", "error", newErr)
+			}
+			continue
+		}
+
+		// construct msg from memo
+		m, txErr := processOneTxIn(ctx, h.mgr.GetVersion(), h.mgr.Keeper(), voter.Tx, msg.Signer)
+		if txErr != nil {
+			ctx.Logger().Error("fail to process inbound tx", "error", txErr.Error(), "tx hash", tx.Tx.ID.String())
+			if newErr := refundTx(ctx, tx, h.mgr, CodeInvalidMemo, txErr.Error(), ""); nil != newErr {
+				ctx.Logger().Error("fail to refund", "error", err)
+			}
+			continue
+		}
+
+		// check if we've halted trading
+		swapMsg, isSwap := m.(*MsgSwap)
+		_, isAddLiquidity := m.(*MsgAddLiquidity)
+
+		if isSwap || isAddLiquidity {
+			if h.mgr.Keeper().IsTradingHalt(ctx, m) || h.mgr.Keeper().RagnarokInProgress(ctx) {
+				if newErr := refundTx(ctx, tx, h.mgr, se.ErrUnauthorized.ABCICode(), "trading halted", ""); nil != newErr {
+					ctx.Logger().Error("fail to refund for halted trading", "error", err)
+				}
+				continue
+			}
+		}
+
+		// if its a swap, send it to our queue for processing later
+		if isSwap {
+			h.addSwap(ctx, *swapMsg)
+			continue
+		}
+
+		// if it is a loan, inject the observed TxID and ToAddress into the context
+		_, isLoanOpen := m.(*MsgLoanOpen)
+		_, isLoanRepayment := m.(*MsgLoanRepayment)
+		mCtx := ctx
+		if isLoanOpen || isLoanRepayment {
+			mCtx = ctx.WithValue(constants.CtxLoanTxID, tx.Tx.ID)
+			mCtx = mCtx.WithValue(constants.CtxLoanToAddress, tx.Tx.ToAddress)
+		}
+
+		_, err = handler(mCtx, m)
+		if err != nil {
+			if err := refundTx(ctx, tx, h.mgr, CodeTxFail, err.Error(), ""); err != nil {
+				ctx.Logger().Error("fail to refund", "error", err)
+			}
+			continue
+		}
+		// for those Memo that will not have outbound at all , set the observedTx to done
+		if !memo.GetType().HasOutbound() {
+			voter.SetDone()
+			h.mgr.Keeper().SetObservedTxInVoter(ctx, voter)
+		}
+	}
+	return &cosmos.Result{}, nil
+}
+
 func (h ObservedTxInHandler) handleV124(ctx cosmos.Context, msg MsgObservedTxIn) (*cosmos.Result, error) {
 	activeNodeAccounts, err := h.mgr.Keeper().ListActiveValidators(ctx)
 	if err != nil {

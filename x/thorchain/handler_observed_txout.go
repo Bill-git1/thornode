@@ -67,6 +67,8 @@ func (h ObservedTxOutHandler) validateV1(ctx cosmos.Context, msg MsgObservedTxOu
 func (h ObservedTxOutHandler) handle(ctx cosmos.Context, msg MsgObservedTxOut) (*cosmos.Result, error) {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.129.0")):
+		return h.handleV129(ctx, msg)
 	case version.GTE(semver.MustParse("1.128.0")):
 		return h.handleV128(ctx, msg)
 	case version.GTE(semver.MustParse("1.124.0")):
@@ -144,7 +146,7 @@ func (h ObservedTxOutHandler) preflightV123(ctx cosmos.Context, voter ObservedTx
 }
 
 // Handle a message to observe outbound tx
-func (h ObservedTxOutHandler) handleV128(ctx cosmos.Context, msg MsgObservedTxOut) (*cosmos.Result, error) {
+func (h ObservedTxOutHandler) handleV129(ctx cosmos.Context, msg MsgObservedTxOut) (*cosmos.Result, error) {
 	activeNodeAccounts, err := h.mgr.Keeper().ListActiveValidators(ctx)
 	if err != nil {
 		return nil, wrapError(ctx, err, "fail to get list of active node accounts")
@@ -259,8 +261,12 @@ func (h ObservedTxOutHandler) handleV128(ctx cosmos.Context, msg MsgObservedTxOu
 			ctx.Logger().Error("fail to get vault", "error", err)
 			continue
 		}
-		vault.SubFunds(tx.Tx.Coins)
-		vault.OutboundTxCount++
+		if !tx.Tx.FromAddress.Equals(tx.Tx.ToAddress) {
+			// Don't add to or subtract from vault balances when the sender and recipient are the same
+			// (particularly avoid Consolidate SafeSub zeroing of vault balances).
+			vault.SubFunds(tx.Tx.Coins)
+			vault.OutboundTxCount++
+		}
 		if vault.IsAsgard() && memo.IsType(TxMigrate) {
 			// only remove the block height that had been specified in the memo
 			vault.RemovePendingTxBlockHeights(memo.GetBlockHeight())
