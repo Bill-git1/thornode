@@ -433,15 +433,55 @@ func (vm *NetworkMgrVCUR) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 			ctx.Logger().Error("fail to update chain contract", "error", err)
 		}
 	}
+
+	vaultsAvailableCoins := map[common.PubKey]common.Coins{}
 	for _, vault := range retiring {
 		if vault.LenPendingTxBlockHeights(ctx.BlockHeight(), mgr.GetConstants().GetInt64Value(constants.SigningTransactionPeriod)) > 0 {
 			ctx.Logger().Info("Skipping the migration of funds while transactions are still pending")
+			// This refers to migrate TxOutItems only.
 			return nil
 		}
+
+		// Copy the RetiringVault Coins for deduction.
+		vaultsAvailableCoins[vault.PubKey] = common.NewCoins(vault.Coins...)
 	}
 
 	migrationRounds := mgr.GetConstants().GetInt64Value(constants.ChurnMigrateRounds)
 	signingTransactionPeriod := mgr.GetConstants().GetInt64Value(constants.SigningTransactionPeriod)
+	startHeight := ctx.BlockHeight() - signingTransactionPeriod
+	if startHeight < 1 {
+		startHeight = 1
+	}
+	txOutDelayMax := mgr.Keeper().GetConfigInt64(ctx, constants.TxOutDelayMax)
+	maxTxOutOffset := mgr.Keeper().GetConfigInt64(ctx, constants.MaxTxOutOffset)
+	for height := startHeight; height <= ctx.BlockHeight()+txOutDelayMax; height++ {
+		blockOut, err := mgr.Keeper().GetTxOut(ctx, height)
+		if err != nil {
+			ctx.Logger().Error("fail to get block tx out", "error", err)
+		}
+		if height > ctx.BlockHeight()+maxTxOutOffset && len(blockOut.TxArray) == 0 {
+			// we've hit our max offset, and an empty block, we can assume the
+			// rest will be empty as well
+			break
+		}
+		for _, toi := range blockOut.TxArray {
+			// only still outstanding txout will be considered
+			if !toi.OutHash.IsEmpty() {
+				continue
+			}
+			availableCoins, ok := vaultsAvailableCoins[toi.VaultPubKey]
+			if !ok {
+				// This isn't one of the RetiringVaults.
+				continue
+			}
+			// Deduct from the available Coins all pending outbounds and their MaxGas.
+			for _, coin := range append(common.Coins{toi.Coin}, toi.MaxGas...) {
+				availableCoins = availableCoins.SafeSub(coin)
+			}
+			// Having deducted from the Coins, ensure the map reflects the new amounts.
+			vaultsAvailableCoins[toi.VaultPubKey] = availableCoins
+		}
+	}
 
 	for _, vault := range retiring {
 		if !vault.HasFunds() {
@@ -452,9 +492,16 @@ func (vm *NetworkMgrVCUR) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 			continue
 		}
 
+		availableCoins, ok := vaultsAvailableCoins[vault.PubKey]
+		if !ok {
+			// This should never happen.
+			ctx.Logger().Error("RetiringVault Coins not found in map", "vault_pubkey", vault.PubKey)
+			continue
+		}
+
 		// move partial funds every 30 minutes
 		if (ctx.BlockHeight()-vault.StatusSince)%migrateInterval == 0 {
-			for _, coin := range vault.Coins {
+			for _, coin := range availableCoins {
 				// non-native rune assets are no migrated, therefore they are
 				// burned in each churn
 				if coin.IsNative() {
@@ -570,6 +617,12 @@ func (vm *NetworkMgrVCUR) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 					// the left amount is not enough to pay for gas, likely only dust left, the network can't migrate it across
 					// and this will only happen after 5th round
 					if amt.IsZero() && nth > migrationRounds {
+						// No migration should be attempted, but only burn dust if there are no pending outbounds.
+						// (That is, truly only dust remaining in the vault for this Coin.)
+						if !coin.Amount.Equal(vault.Coins.GetCoin(coin.Asset).Amount) {
+							continue
+						}
+
 						ctx.Logger().Info("left coin is not enough to pay for gas, thus burn it", "coin", coin, "gas", gasAmount)
 						vault.SubFunds(common.Coins{
 							coin,

@@ -229,13 +229,16 @@ func (s *ThorchainSuite) TestChurn(c *C) {
 	c.Assert(items, HasLen, 1)
 	item := items[0]
 	c.Check(item.Coin.Amount.Uint64(), Equals, uint64(1579962500), Commentf("%d", item.Coin.Amount.Uint64()))
+
 	// check we empty the rest at the last migration event
+	// Ensure that the height is past the SigningTransactionPeriod,
+	// so not deducting the previous migrate amount as a pending outbound.
 	migrateInterval := consts.GetInt64Value(constants.FundMigrationInterval)
-	ctx = ctx.WithBlockHeight(vault.StatusSince + (migrateInterval * 7))
+	signingTranactionPeriod := consts.GetInt64Value(constants.SigningTransactionPeriod)
+	ctx = ctx.WithBlockHeight(vault.StatusSince + (migrateInterval * signingTranactionPeriod))
 	vault, err = mgr.Keeper().GetVault(ctx, vault.PubKey)
 	c.Assert(err, IsNil)
-	vault.PendingTxBlockHeights = nil
-	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+	c.Assert(vault.LenPendingTxBlockHeights(ctx.BlockHeight(), signingTranactionPeriod), Equals, 0)
 	c.Check(mgr.NetworkMgr().EndBlock(ctx, mgr), IsNil) // should attempt to send 100% of the coin values
 	items, err = mgr.TxOutStore().GetOutboundItems(ctx)
 	c.Assert(err, IsNil)
