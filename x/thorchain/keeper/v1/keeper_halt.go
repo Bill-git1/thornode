@@ -3,11 +3,49 @@ package keeperv1
 import (
 	"fmt"
 
+	"github.com/blang/semver"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 )
 
 func (k KVStore) IsTradingHalt(ctx cosmos.Context, msg cosmos.Msg) bool {
+	// consider halted if ragnarok in progress for either asset or chain gas asset
+	if k.GetVersion().GTE(semver.MustParse("1.129.0")) {
+		// gather source and target assets
+		checkAssets := []common.Asset{}
+		switch m := msg.(type) {
+		case *MsgSwap:
+			// regardless ragnarok, synth to equivalent layer1 asset is allowed
+			source := m.Tx.Coins[0].Asset
+			if !(source.IsSyntheticAsset() && m.TargetAsset.Equals(source.GetLayer1Asset())) {
+				checkAssets = []common.Asset{m.Tx.Coins[0].Asset, m.TargetAsset}
+			}
+
+		case *MsgAddLiquidity:
+			checkAssets = []common.Asset{m.Asset}
+		}
+
+		// add any corresponding gas assets
+		seen := make(map[string]bool)
+		for i := range checkAssets {
+			gasAsset := checkAssets[i].GetChain().GetGasAsset()
+			if !checkAssets[i].Equals(gasAsset) && !seen[gasAsset.MimirString()] {
+				checkAssets = append(checkAssets, gasAsset)
+				seen[gasAsset.MimirString()] = true
+			}
+		}
+
+		// check if any of the assets are in ragnarok
+		for i := range checkAssets {
+			key := "RAGNAROK-" + checkAssets[i].MimirString()
+			v, err := k.GetMimir(ctx, key)
+			if err == nil && v > 0 {
+				return true
+			}
+		}
+
+	}
+
 	switch m := msg.(type) {
 	case *MsgSwap:
 		source := common.EmptyChain

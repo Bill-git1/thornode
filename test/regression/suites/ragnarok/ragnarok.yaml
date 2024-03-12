@@ -206,11 +206,38 @@ asserts:
   - .|length == 2
 ---
 ########################################################################################
-# second block should eject last saver and create outbounds for the first 2
+# swap should not be allowed on ragnarok pool
 ########################################################################################
+type: check
+endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_cat }}
+asserts:
+  - .balances[]|select(.denom=="rune")|.amount|tonumber == ${CAT_BALANCE=2499798000000}
+---
+type: tx-deposit
+signer: {{ addr_thor_cat }}
+coins:
+  - amount: "200000000"
+    asset: "rune"
+memo: "=:BTC.BTC:{{ addr_btc_cat }}"
+---
 type: create-blocks
 count: 1
 ---
+# cat account lost gas
+type: check
+endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_cat }}
+asserts:
+  - .balances[]|select(.denom=="rune")|.amount|tonumber == ${CAT_BALANCE}-4000000
+---
+# cat account had refund event
+type: check
+endpoint: http://localhost:1317/thorchain/block
+asserts:
+  - .txs[0].result.events[]|select(.type=="refund")|.reason=="trading halted"
+---
+########################################################################################
+# second block should eject last saver and create outbounds for the first 2
+########################################################################################
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
