@@ -136,6 +136,13 @@ func (k KVStore) RollupSwapSlip(ctx cosmos.Context, targetCount int64, asset com
 		}
 	}
 
+	if k.GetVersion().GTE(semver.MustParse("1.129.0")) {
+		// slip rollup should never be negative
+		if currRollup < 0 {
+			currRollup = 0
+		}
+	}
+
 	k.setInt64(ctx, currCountKey, currCount)
 	k.setInt64(ctx, currRollupKey, currRollup)
 

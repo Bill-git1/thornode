@@ -151,6 +151,10 @@ func (vm *NetworkMgrVCUR) CalcAnchor(ctx cosmos.Context, mgr Manager, asset comm
 			ctx.Logger().Error("failed to rollup swap slip", "asset", anchorAsset, "err", err)
 			continue
 		}
+		// if slip is not in uint64 range, default to 0
+		if !slip.IsUint64() {
+			slip = cosmos.ZeroInt()
+		}
 
 		totalRuneDepth = totalRuneDepth.Add(p.BalanceRune)
 		availableAnchors = append(availableAnchors, anchorAsset)
