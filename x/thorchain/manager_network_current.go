@@ -1316,16 +1316,29 @@ func (vm *NetworkMgrVCUR) withdrawLiquidity(ctx cosmos.Context, pool Pool, na No
 	// store gas asset pools as suspended, remove token pools
 	if afterPool.Asset.IsGasAsset() {
 		afterPool.Status = PoolSuspended
-		return vm.k.SetPool(ctx, afterPool)
+		err = vm.k.SetPool(ctx, afterPool)
+		if err != nil {
+			ctx.Logger().Error("fail to set pool to suspended", "error", err)
+		}
 	} else {
 		vm.k.RemovePool(ctx, pool.Asset)
+	}
+
+	// zero all loans
+	iterator := vm.k.GetLoanIterator(ctx, pool.Asset)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		var loan Loan
+		vm.k.Cdc().MustUnmarshal(iterator.Value(), &loan)
+		ctx.Logger().Info("removing loan", "loan", loan.Key())
+		vm.k.RemoveLoan(ctx, loan)
 	}
 
 	// remove synth and derived asset pools
 	vm.k.RemovePool(ctx, pool.Asset.GetSyntheticAsset())
 	vm.k.RemovePool(ctx, pool.Asset.GetDerivedAsset())
 
-	return nil
+	return err
 }
 
 // UpdateNetwork Update the network data to reflect changing in this block
