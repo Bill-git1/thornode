@@ -181,6 +181,43 @@ asserts:
   - .|length == 3
 ---
 ########################################################################################
+# stream to one synth holder
+########################################################################################
+type: tx-deposit
+signer: {{ addr_thor_fox }}
+coins:
+  - amount: "100000000"
+    asset: "rune"
+memo: "=:BTC/BTC:{{ addr_thor_fox }}:0/1/2"
+---
+type: check
+endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
+asserts:
+  - .balances|length == 1
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/swaps/streaming
+asserts:
+  - .|length == 1
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/swaps/streaming
+asserts:
+  - .|length == 0
+---
+type: check
+endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
+asserts:
+  - .balances|length == 2
+  - .balances[]|select(.denom=="btc/btc")|.amount|tonumber == 47214625
+---
+########################################################################################
 # ragnarok the pool
 ########################################################################################
 type: tx-mimir
@@ -206,7 +243,7 @@ asserts:
   - .|length == 2
 ---
 ########################################################################################
-# swap should not be allowed on ragnarok pool
+# swap to L1 and streaming synth exit should not be allowed on ragnarok pool
 ########################################################################################
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_cat }}
@@ -219,6 +256,13 @@ coins:
   - amount: "200000000"
     asset: "rune"
 memo: "=:BTC.BTC:{{ addr_btc_cat }}"
+---
+type: tx-deposit
+signer: {{ addr_thor_fox }}
+coins:
+  - amount: "47214625"
+    asset: "btc/btc"
+memo: "=:BTC.BTC:{{ addr_btc_fox }}:0/1/0"
 ---
 type: create-blocks
 count: 1
@@ -234,6 +278,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .txs[0].result.events[]|select(.type=="refund")|.reason=="trading halted"
+  - .end_block_events[]|select(.type=="refund")|.reason="streaming swaps disabled on ragnarok asset BTC/BTC"
 ---
 ########################################################################################
 # second block should eject last saver and create outbounds for the first 2
@@ -273,10 +318,26 @@ value: 1
 signer: {{ addr_thor_dog }}
 ---
 ########################################################################################
-# third block should create last saver outbound,stage the pool, and eject first lp
+# non streaming synth exit is allowed
+########################################################################################
+type: tx-deposit
+signer: {{ addr_thor_fox }}
+coins:
+  - amount: "46301122"
+    asset: "btc/btc"
+memo: "=:BTC.BTC:{{ addr_btc_fox }}"
+---
+########################################################################################
+# third block should create last saver outbound, stage the pool, and eject first lp
 ########################################################################################
 type: create-blocks
 count: 1
+---
+# non streaming exit should have processed
+type: check
+endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
+asserts:
+  - .balances|length == 1
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/swap
@@ -287,7 +348,7 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
-  - .|length == 4
+  - .|length == 5
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_providers
@@ -309,7 +370,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_pig }}
       coins:
-        - amount: "8815334"
+        - amount: "8836439"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -325,7 +386,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "8769933"
+        - amount: "8790793"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -341,13 +402,29 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_cat }}
       coins:
-        - amount: "8735705"
+        - amount: "8622955"
           asset: "BTC.BTC"
           decimals: 8
       gas:
         - amount: "15000"
           asset: "BTC.BTC"
       memo: "OUT:29F6955711136F1C53BDF8ED9103B45E0346F95D632187EC934989545FE5CF74"
+    block_height: 2
+    finalise_height: 2
+    observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 9 }}"
+      chain: BTC
+      from_address: {{ addr_btc_dog }}
+      to_address: {{ addr_btc_fox }}
+      coins:
+        - amount: "30952865"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "15000"
+          asset: "BTC.BTC"
+      memo: "OUT:D784DDCCD906333B48C8493B836BFB5CD9DA805549A9B7927548C33A43E863D3"
     block_height: 2
     finalise_height: 2
     observed_pub_key: {{ pubkey_dog }}
@@ -370,18 +447,18 @@ type: tx-observed-out
 signer: {{ addr_thor_dog }}
 txs:
   - tx:
-      id: "{{ observe_txid 9 }}"
+      id: "{{ observe_txid 10 }}"
       chain: BTC
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "101824514"
+        - amount: "86383474"
           asset: "BTC.BTC"
           decimals: 8
       gas:
         - amount: "15000"
           asset: "BTC.BTC"
-      memo: "RAGNAROK:7"
+      memo: "RAGNAROK:9"
     block_height: 3
     finalise_height: 3
     observed_pub_key: {{ pubkey_dog }}

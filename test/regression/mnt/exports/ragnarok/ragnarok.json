@@ -85,7 +85,7 @@
             "@type": "/cosmos.crypto.secp256k1.PubKey",
             "key": "Aw/2MBvAhnLEifCInxlpTjCXxV0I/nE8pI5jNI+Zblx6"
           },
-          "sequence": "1"
+          "sequence": "4"
         },
         {
           "@type": "/cosmos.auth.v1beta1.BaseAccount",
@@ -165,7 +165,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "202836454",
+              "amount": "252004773",
               "denom": "rune"
             }
           ]
@@ -174,7 +174,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35000002445473",
+              "amount": "35000010202798",
               "denom": "rune"
             }
           ]
@@ -183,7 +183,7 @@
           "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "coins": [
             {
-              "amount": "2500000716994",
+              "amount": "2499943786144",
               "denom": "rune"
             }
           ]
@@ -201,7 +201,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "5000000001079",
+              "amount": "5000000006285",
               "denom": "rune"
             }
           ]
@@ -300,7 +300,7 @@
           "height": "1"
         }
       ],
-      "last_signed_height": "7",
+      "last_signed_height": "9",
       "liquidity_providers": null,
       "loans": [],
       "mimirs": [
@@ -318,14 +318,14 @@
         }
       ],
       "network": {
-        "LPIncomeSplit": "9999",
-        "NodeIncomeSplit": "1",
-        "bond_reward_rune": "1079",
+        "LPIncomeSplit": "9998",
+        "NodeIncomeSplit": "2",
+        "bond_reward_rune": "6285",
         "burned_bep2_rune": "0",
         "burned_erc20_rune": "0",
-        "outbound_gas_spent_rune": "119460",
-        "outbound_gas_withheld_rune": "114148",
-        "total_bond_units": "5"
+        "outbound_gas_spent_rune": "218629",
+        "outbound_gas_withheld_rune": "206156",
+        "total_bond_units": "7"
       },
       "network_fees": [
         {
@@ -389,7 +389,7 @@
           ],
           "coins": [
             {
-              "amount": "101794514",
+              "amount": "86338474",
               "asset": "BTC.BTC",
               "decimals": "8"
             }
@@ -398,7 +398,7 @@
           "membership": [
             "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
           ],
-          "outbound_tx_count": "4",
+          "outbound_tx_count": "5",
           "pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
           "routers": null,
           "status": "ActiveVault",
@@ -435,5 +435,5 @@
     },
     "version": {}
   },
-  "initial_height": "10"
+  "initial_height": "12"
 }
