@@ -1182,6 +1182,7 @@ func (vm *NetworkMgrVCUR) withdrawSavers(ctx cosmos.Context, pool Pool, na NodeA
 		)
 
 		// best effort to process the withdraw
+		ctx.Logger().Info("ragnarok saver", "pool", pool.Asset, "saver", lp.AssetAddress, "txid", tx.ID)
 		_, err = handler(ctx, withdrawMsg)
 		if err != nil {
 			ctx.Logger().Error("saver withdraw failed", "address", lp.AssetAddress, "error", err)
@@ -1245,6 +1246,7 @@ func (vm *NetworkMgrVCUR) withdrawLPs(ctx cosmos.Context, pool Pool, na NodeAcco
 		)
 
 		// withdraw is best effort only, fails and deletes LP if vault has insufficient gas
+		ctx.Logger().Info("ragnarok LP", "pool", pool.Asset, "rune_address", lp.RuneAddress, "asset_address", lp.AssetAddress)
 		_, err := handler(ctx, withdrawMsg)
 		if err != nil {
 			ctx.Logger().Error(
