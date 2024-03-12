@@ -181,6 +181,14 @@ asserts:
   - .|length == 3
 ---
 ########################################################################################
+# enable streaming withdraw to verify later on that withdraws remain non-streaming
+########################################################################################
+type: tx-mimir
+key: "SaversStreamingSwapsInterval"
+value: 1
+signer: {{ addr_thor_dog }}
+---
+########################################################################################
 # stream to one synth holder
 ########################################################################################
 type: tx-deposit

@@ -9,6 +9,7 @@ import (
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/constants"
 )
 
 func (h WithdrawLiquidityHandler) validateV96(ctx cosmos.Context, msg MsgWithdrawLiquidity) error {
@@ -1215,6 +1216,42 @@ func (h WithdrawLiquidityHandler) handleV75(ctx cosmos.Context, msg MsgWithdrawL
 	)
 
 	return &cosmos.Result{}, nil
+}
+
+func (h WithdrawLiquidityHandler) swapV121(ctx cosmos.Context, msg MsgWithdrawLiquidity, coin common.Coin, addr common.Address) error {
+	// ensure TxID does NOT have a collision with another swap, this could
+	// happen if the user submits two identical loan requests in the same
+	// block
+	if ok := h.mgr.Keeper().HasSwapQueueItem(ctx, msg.Tx.ID, 0); ok {
+		return fmt.Errorf("txn hash conflict")
+	}
+
+	// Use layer 1 asset in case msg.Asset is synthetic (i.e. savers withdraw)
+	targetAsset := msg.Asset.GetLayer1Asset()
+
+	// Get streaming swaps interval to use for synth -> native swap
+	ssInterval := h.mgr.Keeper().GetConfigInt64(ctx, constants.SaversStreamingSwapsInterval)
+	if ssInterval <= 0 {
+		ssInterval = 0
+	}
+
+	memo := fmt.Sprintf("=:%s:%s", targetAsset, addr)
+	msg.Tx.Memo = memo
+	msg.Tx.Coins = common.NewCoins(coin)
+	swapMsg := NewMsgSwap(msg.Tx, targetAsset, addr, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 0, uint64(ssInterval), msg.Signer)
+
+	// sanity check swap msg
+	handler := NewSwapHandler(h.mgr)
+	if err := handler.validate(ctx, *swapMsg); err != nil {
+		return err
+	}
+
+	if err := h.mgr.Keeper().SetSwapQueueItem(ctx, *swapMsg, 0); err != nil {
+		ctx.Logger().Error("fail to add swap to queue", "error", err)
+		return err
+	}
+
+	return nil
 }
 
 func (h WithdrawLiquidityHandler) swapV119(ctx cosmos.Context, msg MsgWithdrawLiquidity, coin common.Coin, addr common.Address) error {

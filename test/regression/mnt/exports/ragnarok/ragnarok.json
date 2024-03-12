@@ -11,7 +11,7 @@
             "@type": "/cosmos.crypto.secp256k1.PubKey",
             "key": "AmF4AUTWZEUSBtgqiR5n2Lgic/Yrr1mWupMo5TAubNRO"
           },
-          "sequence": "9"
+          "sequence": "10"
         },
         {
           "@type": "/cosmos.auth.v1beta1.ModuleAccount",
@@ -314,6 +314,10 @@
         },
         {
           "key": "RAGNAROKPROCESSNUMOFLPPERITERATION",
+          "value": "1"
+        },
+        {
+          "key": "SAVERSSTREAMINGSWAPSINTERVAL",
           "value": "1"
         }
       ],

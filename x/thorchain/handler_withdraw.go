@@ -297,6 +297,8 @@ func (h WithdrawLiquidityHandler) handleV129(ctx cosmos.Context, msg MsgWithdraw
 func (h WithdrawLiquidityHandler) swap(ctx cosmos.Context, msg MsgWithdrawLiquidity, coin common.Coin, addr common.Address) error {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.129.0")):
+		return h.swapV129(ctx, msg, coin, addr)
 	case version.GTE(semver.MustParse("1.121.0")):
 		return h.swapV121(ctx, msg, coin, addr)
 	case version.GTE(semver.MustParse("1.119.0")):
@@ -310,7 +312,7 @@ func (h WithdrawLiquidityHandler) swap(ctx cosmos.Context, msg MsgWithdrawLiquid
 	}
 }
 
-func (h WithdrawLiquidityHandler) swapV121(ctx cosmos.Context, msg MsgWithdrawLiquidity, coin common.Coin, addr common.Address) error {
+func (h WithdrawLiquidityHandler) swapV129(ctx cosmos.Context, msg MsgWithdrawLiquidity, coin common.Coin, addr common.Address) error {
 	// ensure TxID does NOT have a collision with another swap, this could
 	// happen if the user submits two identical loan requests in the same
 	// block
@@ -324,6 +326,13 @@ func (h WithdrawLiquidityHandler) swapV121(ctx cosmos.Context, msg MsgWithdrawLi
 	// Get streaming swaps interval to use for synth -> native swap
 	ssInterval := h.mgr.Keeper().GetConfigInt64(ctx, constants.SaversStreamingSwapsInterval)
 	if ssInterval <= 0 {
+		ssInterval = 0
+	}
+
+	// if the asset is in ragnarok, disable streaming withdraw
+	key := "RAGNAROK-" + targetAsset.MimirString()
+	ragnarok, err := h.mgr.Keeper().GetMimir(ctx, key)
+	if err == nil && ragnarok > 0 {
 		ssInterval = 0
 	}
 

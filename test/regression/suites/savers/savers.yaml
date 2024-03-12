@@ -484,7 +484,7 @@ asserts:
   - .|length == 0
 ---
 ########################################################################################
-# unhappy path: swaps paused half way through deposit streaming swaps 
+# unhappy path: swaps paused half way through deposit streaming swaps
 ########################################################################################
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -622,4 +622,3 @@ type: check
 endpoint: http://localhost:1317/thorchain/swaps/streaming
 asserts:
   - .|length == 0
----
