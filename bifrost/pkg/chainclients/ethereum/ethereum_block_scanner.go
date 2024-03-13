@@ -381,6 +381,11 @@ func (e *ETHScanner) extractTxs(block *etypes.Block) (stypes.TxIn, error) {
 
 	// process txs in parallel
 	for _, tx := range block.Transactions() {
+		// skip blob transactions
+		if tx.Type() == etypes.BlobTxType {
+			continue
+		}
+
 		wg.Add(1)
 		go processTx(tx)
 	}

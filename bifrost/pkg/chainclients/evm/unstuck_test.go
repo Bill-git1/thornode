@@ -118,7 +118,7 @@ func (s *UnstuckTestSuite) SetUpTest(c *C) {
 				c.Assert(params[0], Equals, lastBroadcastTx)
 				_, err = rw.Write([]byte(`[{
 						"jsonrpc": "2.0",
-						"id": 1,
+						"id": 5,
 						"result": {
 							"blockHash": "0x96395fbdb39e33293999dc1a0a3b87c8a9e51185e177760d1482c2155bb35b87",
 							"blockNumber": "0x1",
