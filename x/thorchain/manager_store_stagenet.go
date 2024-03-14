@@ -256,3 +256,5 @@ func migrateStoreV128(ctx cosmos.Context, mgr *Mgrs) {
 	}
 	ctx.Logger().Info("Burned 100k RUNE")
 }
+
+func migrateStoreV129(ctx cosmos.Context, mgr *Mgrs) {}

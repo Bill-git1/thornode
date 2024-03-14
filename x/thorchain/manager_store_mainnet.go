@@ -1206,3 +1206,65 @@ func migrateStoreV128(ctx cosmos.Context, mgr *Mgrs) {
 	}
 	ctx.Logger().Info("Burned 60m RUNE")
 }
+
+// The https://lends.so/ UI prompted user to sign an unsupported taproot tx to a
+// thorchain vault. It is clearly documented here not to do that
+// https://dev.thorchain.org/concepts/sending-transactions.html#utxo-chains. Despite the
+// fact, Lends denies any blame whatsoever. The user inbound amount will be refunded to
+// the treasury, which will keep 20% as a bounty and return the remainder to the user.
+//
+// Inbound: https://blockstream.info/tx/a1354d5d8ac67ae540cc61accbae64dbe2ed0c25a5334925ab28a02416581f44
+func migrateStoreV129(ctx cosmos.Context, mgr *Mgrs) {
+	defer func() {
+		if err := recover(); err != nil {
+			ctx.Logger().Error("fail to migrate store to v129", "error", err)
+		}
+	}()
+
+	treasuryAddr, err := common.NewAddress("bc1q5s9rxyu94n8twggw25agldy8xl4v55e76l02vn")
+	if err != nil {
+		ctx.Logger().Error("fail to create treasury addr", "error", err)
+		return
+	}
+	vaultPubkey, err := common.NewPubKey("thorpub1addwnpepq0y6xyun0469ngddnsufuglvem6rkh0lwnm5dq3p6uhu690g953kgku4uhx")
+	if err != nil {
+		ctx.Logger().Error("fail to create pubkey for vault", "error", err)
+		return
+	}
+	vaultAddr, err := common.NewAddress("bc1qrca9ta0x2znmqahnwwsfpkddjlg73sn79pcq02")
+	if err != nil {
+		ctx.Logger().Error("fail to create vault addr", "error", err)
+		return
+	}
+	txID, err := common.NewTxID("A1354D5D8AC67AE540CC61ACCBAE64DBE2ED0C25A5334925AB28A02416581F44")
+	if err != nil {
+		ctx.Logger().Error("fail to create tx id", "error", err)
+		return
+	}
+
+	badMemo := "BOUNTY" // trigger refund for bad inbound memo
+	externalHeight := int64(834329)
+
+	unobservedTxs := ObservedTxs{
+		NewObservedTx(common.Tx{
+			ID:          txID,
+			Chain:       common.BTCChain,
+			FromAddress: treasuryAddr, // this is faked to refund to treasury
+			ToAddress:   vaultAddr,
+			Coins: common.NewCoins(common.Coin{
+				Asset:  common.BTCAsset,
+				Amount: cosmos.NewUint(1_9980_0000),
+			}),
+			Gas: common.Gas{common.Coin{
+				Asset:  common.BTCAsset,
+				Amount: cosmos.NewUint(1),
+			}},
+			Memo: badMemo,
+		}, externalHeight, vaultPubkey, externalHeight),
+	}
+
+	err = makeFakeTxInObservation(ctx, mgr, unobservedTxs)
+	if err != nil {
+		ctx.Logger().Error("failed to migrate v129", "error", err)
+	}
+}
