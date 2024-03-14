@@ -32,6 +32,12 @@ type: check
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .|length == 5
+  - .[]|select(.asset=="BTC.BTC")|.asset_tor_price == "99999999542"
+  - .[]|select(.asset=="ETH.ETH")|.asset_tor_price == "9999999954"
+  # ETH.USDX-*
+  - .[2]|.asset_tor_price == "99999999"
+  - .[3]|.asset_tor_price == "99999999"
+  - .[4]|.asset_tor_price == "99999999"
 ---
 type: tx-mimir
 signer: {{ addr_thor_dog }}

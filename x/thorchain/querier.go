@@ -1441,10 +1441,16 @@ func queryPool(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mg
 	p.DerivedDepthBps = dbps.String()
 	p.LoanCr = cr.String()
 
+	if !pool.BalanceAsset.IsZero() && !pool.BalanceRune.IsZero() {
+		dollarsPerRune := mgr.Keeper().DollarsPerRune(ctx)
+		p.AssetTorPrice = dollarsPerRune.Mul(pool.BalanceRune).Quo(pool.BalanceAsset).String()
+	}
+
 	return jsonify(ctx, p)
 }
 
 func queryPools(ctx cosmos.Context, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {
+	dollarsPerRune := mgr.Keeper().DollarsPerRune(ctx)
 	pools := make([]openapi.Pool, 0)
 	iterator := mgr.Keeper().GetPoolIterator(ctx)
 	for ; iterator.Valid(); iterator.Next() {
@@ -1516,6 +1522,7 @@ func queryPools(ctx cosmos.Context, req abci.RequestQuery, mgr *Mgrs) ([]byte, e
 			LPUnits:             pool.LPUnits.String(),
 			SynthUnits:          pool.SynthUnits.String(),
 		}
+
 		p.SynthSupply = synthSupply.String()
 		p.SaversDepth = saversDepth.String()
 		p.SaversUnits = saversUnits.String()
@@ -1525,6 +1532,10 @@ func queryPools(ctx cosmos.Context, req abci.RequestQuery, mgr *Mgrs) ([]byte, e
 		p.LoanCollateralRemaining = loanCollateralRemaining.String()
 		p.DerivedDepthBps = dbps.String()
 		p.LoanCr = cr.String()
+
+		if !pool.BalanceAsset.IsZero() && !pool.BalanceRune.IsZero() {
+			p.AssetTorPrice = dollarsPerRune.Mul(pool.BalanceRune).Quo(pool.BalanceAsset).String()
+		}
 
 		pools = append(pools, p)
 	}

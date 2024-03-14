@@ -24,6 +24,8 @@ type Pool struct {
 	PendingInboundRune string `json:"pending_inbound_rune"`
 	BalanceAsset string `json:"balance_asset"`
 	BalanceRune string `json:"balance_rune"`
+	// the USD (TOR) price of the asset in 1e8
+	AssetTorPrice string `json:"asset_tor_price"`
 	// the total pool units, this is the sum of LP and synth units
 	PoolUnits string `json:"pool_units"`
 	// the total pool liquidity provider units
@@ -54,7 +56,7 @@ type Pool struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewPool(asset string, status string, pendingInboundAsset string, pendingInboundRune string, balanceAsset string, balanceRune string, poolUnits string, lPUnits string, synthUnits string, synthSupply string, saversDepth string, saversUnits string, synthMintPaused bool, synthSupplyRemaining string, loanCollateral string, loanCollateralRemaining string, loanCr string, derivedDepthBps string) *Pool {
+func NewPool(asset string, status string, pendingInboundAsset string, pendingInboundRune string, balanceAsset string, balanceRune string, assetTorPrice string, poolUnits string, lPUnits string, synthUnits string, synthSupply string, saversDepth string, saversUnits string, synthMintPaused bool, synthSupplyRemaining string, loanCollateral string, loanCollateralRemaining string, loanCr string, derivedDepthBps string) *Pool {
 	this := Pool{}
 	this.Asset = asset
 	this.Status = status
@@ -62,6 +64,7 @@ func NewPool(asset string, status string, pendingInboundAsset string, pendingInb
 	this.PendingInboundRune = pendingInboundRune
 	this.BalanceAsset = balanceAsset
 	this.BalanceRune = balanceRune
+	this.AssetTorPrice = assetTorPrice
 	this.PoolUnits = poolUnits
 	this.LPUnits = lPUnits
 	this.SynthUnits = synthUnits
@@ -291,6 +294,30 @@ func (o *Pool) GetBalanceRuneOk() (*string, bool) {
 // SetBalanceRune sets field value
 func (o *Pool) SetBalanceRune(v string) {
 	o.BalanceRune = v
+}
+
+// GetAssetTorPrice returns the AssetTorPrice field value
+func (o *Pool) GetAssetTorPrice() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.AssetTorPrice
+}
+
+// GetAssetTorPriceOk returns a tuple with the AssetTorPrice field value
+// and a boolean to check if the value has been set.
+func (o *Pool) GetAssetTorPriceOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.AssetTorPrice, true
+}
+
+// SetAssetTorPrice sets field value
+func (o *Pool) SetAssetTorPrice(v string) {
+	o.AssetTorPrice = v
 }
 
 // GetPoolUnits returns the PoolUnits field value
@@ -606,6 +633,9 @@ func (o Pool) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if true {
 		toSerialize["balance_rune"] = o.BalanceRune
+	}
+	if true {
+		toSerialize["asset_tor_price"] = o.AssetTorPrice
 	}
 	if true {
 		toSerialize["pool_units"] = o.PoolUnits

@@ -2227,6 +2227,7 @@ components:
         balance_asset: "3197744873"
         synth_supply: "0"
         loan_collateral_remaining: "123456"
+        asset_tor_price: "123456"
         synth_mint_paused: true
         pending_inbound_rune: "464993836"
         decimals: 6
@@ -2264,6 +2265,10 @@ components:
           type: string
         balance_rune:
           example: "13460619152985"
+          type: string
+        asset_tor_price:
+          description: the USD (TOR) price of the asset in 1e8
+          example: "123456"
           type: string
         pool_units:
           description: "the total pool units, this is the sum of LP and synth units"
@@ -2318,6 +2323,7 @@ components:
       required:
       - LP_units
       - asset
+      - asset_tor_price
       - balance_asset
       - balance_rune
       - derived_depth_bps
