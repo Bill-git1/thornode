@@ -366,7 +366,7 @@ func (r ApiYggdrasilRequest) Height(height int64) ApiYggdrasilRequest {
 	return r
 }
 
-func (r ApiYggdrasilRequest) Execute() ([]Vault, *http.Response, error) {
+func (r ApiYggdrasilRequest) Execute() ([]YggdrasilVault, *http.Response, error) {
 	return r.ApiService.YggdrasilExecute(r)
 }
 
@@ -386,13 +386,13 @@ func (a *VaultsApiService) Yggdrasil(ctx context.Context) ApiYggdrasilRequest {
 }
 
 // Execute executes the request
-//  @return []Vault
-func (a *VaultsApiService) YggdrasilExecute(r ApiYggdrasilRequest) ([]Vault, *http.Response, error) {
+//  @return []YggdrasilVault
+func (a *VaultsApiService) YggdrasilExecute(r ApiYggdrasilRequest) ([]YggdrasilVault, *http.Response, error) {
 	var (
 		localVarHTTPMethod   = http.MethodGet
 		localVarPostBody     interface{}
 		formFiles            []formFile
-		localVarReturnValue  []Vault
+		localVarReturnValue  []YggdrasilVault
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "VaultsApiService.Yggdrasil")

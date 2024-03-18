@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"gitlab.com/thorchain/thornode/common"
-	"gitlab.com/thorchain/thornode/x/thorchain/types"
+	openapi "gitlab.com/thorchain/thornode/openapi/gen"
 )
 
 // GetLastObservedInHeight returns the lastobservedin value for the chain past in
@@ -15,8 +15,8 @@ func (b *thorchainBridge) GetLastObservedInHeight(chain common.Chain) (int64, er
 		return 0, fmt.Errorf("failed to GetLastObservedInHeight: %w", err)
 	}
 	for _, item := range lastblock {
-		if item.Chain == chain {
-			return item.LastChainHeight, nil
+		if item.Chain == chain.String() {
+			return item.LastObservedIn, nil
 		}
 	}
 	return 0, fmt.Errorf("fail to GetLastObservedInHeight,chain(%s)", chain)
@@ -29,8 +29,8 @@ func (b *thorchainBridge) GetLastSignedOutHeight(chain common.Chain) (int64, err
 		return 0, fmt.Errorf("failed to GetLastSignedOutHeight: %w", err)
 	}
 	for _, item := range lastblock {
-		if item.Chain == chain {
-			return item.LastSignedHeight, nil
+		if item.Chain == chain.String() {
+			return item.LastSignedOut, nil
 		}
 	}
 	return 0, fmt.Errorf("fail to GetLastSignedOutHeight,chain(%s)", chain)
@@ -49,7 +49,7 @@ func (b *thorchainBridge) GetBlockHeight() (int64, error) {
 }
 
 // getLastBlock calls the /lastblock/{chain} endpoint and Unmarshal's into the QueryResLastBlockHeights type
-func (b *thorchainBridge) getLastBlock(chain common.Chain) ([]types.QueryResLastBlockHeights, error) {
+func (b *thorchainBridge) getLastBlock(chain common.Chain) ([]openapi.LastBlock, error) {
 	path := LastBlockEndpoint
 	if !chain.IsEmpty() {
 		path = fmt.Sprintf("%s/%s", path, chain.String())
@@ -58,7 +58,7 @@ func (b *thorchainBridge) getLastBlock(chain common.Chain) ([]types.QueryResLast
 	if err != nil {
 		return nil, fmt.Errorf("failed to get lastblock: %w", err)
 	}
-	var lastBlock []types.QueryResLastBlockHeights
+	var lastBlock []openapi.LastBlock
 	if err = json.Unmarshal(buf, &lastBlock); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal last block: %w", err)
 	}

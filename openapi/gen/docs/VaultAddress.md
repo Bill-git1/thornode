@@ -4,14 +4,14 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**Chain** | Pointer to **string** |  | [optional] 
-**Address** | Pointer to **string** |  | [optional] 
+**Chain** | **string** |  | 
+**Address** | **string** |  | 
 
 ## Methods
 
 ### NewVaultAddress
 
-`func NewVaultAddress() *VaultAddress`
+`func NewVaultAddress(chain string, address string, ) *VaultAddress`
 
 NewVaultAddress instantiates a new VaultAddress object
 This constructor will assign default values to properties that have it defined,
@@ -45,11 +45,6 @@ and a boolean to check if the value has been set.
 
 SetChain sets Chain field to given value.
 
-### HasChain
-
-`func (o *VaultAddress) HasChain() bool`
-
-HasChain returns a boolean if a field has been set.
 
 ### GetAddress
 
@@ -70,11 +65,6 @@ and a boolean to check if the value has been set.
 
 SetAddress sets Address field to given value.
 
-### HasAddress
-
-`func (o *VaultAddress) HasAddress() bool`
-
-HasAddress returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

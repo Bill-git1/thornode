@@ -609,7 +609,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/VaultsResponse'
+                $ref: '#/components/schemas/YggdrasilVaultsResponse'
           description: OK
       tags:
       - Vaults
@@ -1263,6 +1263,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/KeysignResponse'
+          description: OK
+      tags:
+      - TSS
+  /thorchain/keygen/{height}/{pubkey}:
+    get:
+      description: Returns keygen information for the provided height and pubkey -
+        the pubkey being of one of the members of a keygen block for that height
+      operationId: keygenPubkey
+      parameters:
+      - explode: false
+        in: path
+        name: height
+        required: true
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: simple
+      - explode: false
+        in: path
+        name: pubkey
+        required: true
+        schema:
+          example: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KeygenResponse'
           description: OK
       tags:
       - TSS
@@ -2356,14 +2388,9 @@ components:
       required:
       - asset
       - asset_deposit_value
-      - asset_redeem_value
-      - luvi_deposit_value
-      - luvi_growth_pct
-      - luvi_redeem_value
       - pending_asset
       - pending_rune
       - rune_deposit_value
-      - rune_redeem_value
       - units
       type: object
     Saver:
@@ -2584,6 +2611,107 @@ components:
       - routers
       - status
       type: object
+    YggdrasilVault:
+      example:
+        total_value: "83456789"
+        addresses:
+        - chain: BTC
+          address: bc1qd45uzetakjvdy5ynjjyp4nlnj89am88e4e5jeq
+        - chain: BTC
+          address: bc1qd45uzetakjvdy5ynjjyp4nlnj89am88e4e5jeq
+        coins:
+        - amount: "100000"
+          decimals: 6
+          asset: BTC.BTC
+        - amount: "100000"
+          decimals: 6
+          asset: BTC.BTC
+        chains:
+        - chains
+        - chains
+        block_height: 0
+        membership:
+        - membership
+        - membership
+        type: AsgardVault
+        bond: "123456789"
+        pub_key: pub_key
+        inbound_tx_count: 1
+        status_since: 6
+        pending_tx_block_heights:
+        - 5
+        - 5
+        outbound_tx_count: 5
+        routers:
+        - chain: ETH
+          router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
+        - chain: ETH
+          router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
+        status: status
+      properties:
+        block_height:
+          format: int64
+          type: integer
+        pub_key:
+          type: string
+        coins:
+          items:
+            $ref: '#/components/schemas/Coin'
+          type: array
+        type:
+          enum:
+          - AsgardVault
+          - YggdrasilVault
+          type: string
+        status_since:
+          format: int64
+          type: integer
+        membership:
+          description: the list of node public keys which are members of the vault
+          items:
+            type: string
+          type: array
+        chains:
+          items:
+            type: string
+          type: array
+        inbound_tx_count:
+          format: int64
+          type: integer
+        outbound_tx_count:
+          format: int64
+          type: integer
+        pending_tx_block_heights:
+          items:
+            format: int64
+            type: integer
+          type: array
+        routers:
+          items:
+            $ref: '#/components/schemas/VaultRouter'
+          type: array
+        status:
+          type: string
+        bond:
+          description: current node bond
+          example: "123456789"
+          type: string
+        total_value:
+          description: value in rune of the vault's assets
+          example: "83456789"
+          type: string
+        addresses:
+          items:
+            $ref: '#/components/schemas/VaultAddress'
+          type: array
+      required:
+      - addresses
+      - bond
+      - coins
+      - routers
+      - status
+      - total_value
+      type: object
     VaultRouter:
       example:
         chain: ETH
@@ -2607,6 +2735,9 @@ components:
         address:
           example: bc1qd45uzetakjvdy5ynjjyp4nlnj89am88e4e5jeq
           type: string
+      required:
+      - address
+      - chain
       type: object
     VaultInfo:
       example:
@@ -2655,15 +2786,15 @@ components:
           type: string
         interval:
           description: "how often each swap is made, in blocks"
-          format: uint64
+          format: int64
           type: integer
         quantity:
           description: the total number of swaps in a streaming swaps
-          format: uint64
+          format: int64
           type: integer
         count:
           description: the amount of swap attempts so far
-          format: uint64
+          format: int64
           type: integer
         last_height:
           description: the block height of the latest swap
@@ -2701,7 +2832,7 @@ components:
         failed_swaps:
           description: the list of swap indexes that failed
           items:
-            format: uint64
+            format: int64
             type: integer
           type: array
         failed_swap_reasons:
@@ -2980,11 +3111,11 @@ components:
         destination: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
         affiliate_basis_points: affiliate_basis_points
         aggregator_target_limit: aggregator_target_limit
-        stream_quantity: 6
+        stream_quantity: 0
         target_asset: ETH.ETH
-        stream_interval: 1
+        stream_interval: 6
         affiliate_address: thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
-        order_type: 0
+        order_type: order_type
         signer: signer
       properties:
         tx:
@@ -3023,17 +3154,16 @@ components:
             the SwapOut and receiving THORChain's output)
           type: string
         order_type:
-          description: "0 if a market order (immediately completed or refunded), 1\
-            \ if a limit order (held until fulfillable)"
-          format: int64
-          type: integer
+          description: "market if immediately completed or refunded, limit if held\
+            \ until fulfillable"
+          type: string
         stream_quantity:
           description: number of swaps to execute in a streaming swap
-          format: uint64
+          format: int64
           type: integer
         stream_interval:
           description: the interval (in blocks) to execute the streaming swap
-          format: uint64
+          format: int64
           type: integer
       required:
       - affiliate_basis_points
@@ -3102,7 +3232,6 @@ components:
       required:
       - chain
       - coin
-      - height
       - max_gas
       - to_address
       type: object
@@ -3171,7 +3300,9 @@ components:
         bond_providers:
           node_operator_fee: node_operator_fee
           providers:
-            bond_address: bond_address
+          - bond_address: bond_address
+            bond: bond
+          - bond_address: bond_address
             bond: bond
         node_operator_address: thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
         status: Active
@@ -4031,19 +4162,19 @@ components:
           completed: false
       properties:
         inbound_observed:
-          $ref: '#/components/schemas/TxStagesResponse_inbound_observed'
+          $ref: '#/components/schemas/InboundObservedStage'
         inbound_confirmation_counted:
-          $ref: '#/components/schemas/TxStagesResponse_inbound_confirmation_counted'
+          $ref: '#/components/schemas/InboundConfirmationCountedStage'
         inbound_finalised:
-          $ref: '#/components/schemas/TxStagesResponse_inbound_finalised'
+          $ref: '#/components/schemas/InboundFinalisedStage'
         swap_status:
-          $ref: '#/components/schemas/TxStagesResponse_swap_status'
+          $ref: '#/components/schemas/SwapStatus'
         swap_finalised:
-          $ref: '#/components/schemas/TxStagesResponse_swap_finalised'
+          $ref: '#/components/schemas/SwapFinalisedStage'
         outbound_delay:
-          $ref: '#/components/schemas/TxStagesResponse_outbound_delay'
+          $ref: '#/components/schemas/OutboundDelayStage'
         outbound_signed:
-          $ref: '#/components/schemas/TxStagesResponse_outbound_signed'
+          $ref: '#/components/schemas/OutboundSignedStage'
       required:
       - inbound_observed
       type: object
@@ -4159,7 +4290,7 @@ components:
           $ref: '#/components/schemas/Tx'
         planned_out_txs:
           items:
-            $ref: '#/components/schemas/TxStatusResponse_planned_out_txs_inner'
+            $ref: '#/components/schemas/PlannedOutTx'
           type: array
         out_txs:
           items:
@@ -4182,6 +4313,10 @@ components:
       type: array
     StreamingSwapResponse:
       $ref: '#/components/schemas/StreamingSwap'
+    YggdrasilVaultsResponse:
+      items:
+        $ref: '#/components/schemas/YggdrasilVault'
+      type: array
     VaultsResponse:
       items:
         $ref: '#/components/schemas/Vault'
@@ -4569,6 +4704,34 @@ components:
           $ref: '#/components/schemas/KeysignInfo'
         signature:
           type: string
+      required:
+      - keysign
+      - signature
+      type: object
+    KeygenResponse:
+      example:
+        signature: signature
+        keygen_block:
+          height: 0
+          keygens:
+          - members:
+            - members
+            - members
+            id: id
+            type: type
+          - members:
+            - members
+            - members
+            id: id
+            type: type
+      properties:
+        keygen_block:
+          $ref: '#/components/schemas/KeygenBlock'
+        signature:
+          type: string
+      required:
+      - keygen_block
+      - signature
       type: object
     KeygenMetricsResponse:
       items:
@@ -4729,12 +4892,24 @@ components:
           type: int
         name:
           type: string
-        legacy_key:
-          type: string
         vote_key:
           type: string
+        legacy_key:
+          type: string
+        type:
+          type: string
         votes:
+          additionalProperties:
+            format: int64
+            type: integer
           type: object
+      required:
+      - id
+      - legacy_key
+      - name
+      - type
+      - vote_key
+      - votes
       type: object
     InvariantResponse:
       example:
@@ -5668,14 +5843,22 @@ components:
       example:
         node_operator_fee: node_operator_fee
         providers:
-          bond_address: bond_address
+        - bond_address: bond_address
+          bond: bond
+        - bond_address: bond_address
           bond: bond
       properties:
         node_operator_fee:
           description: node operator fee in basis points
           type: string
         providers:
-          $ref: '#/components/schemas/NodeBondProvider'
+          description: all the bond providers for the node
+          items:
+            $ref: '#/components/schemas/NodeBondProvider'
+          type: array
+      required:
+      - node_operator_fee
+      - providers
       title: NodeBondProviders
       type: object
     NodeJail:
@@ -5786,7 +5969,7 @@ components:
           example: ibc
           type: string
       type: object
-    TxStagesResponse_inbound_observed:
+    InboundObservedStage:
       example:
         pre_confirmation_count: 80
         started: false
@@ -5801,13 +5984,13 @@ components:
         pre_confirmation_count:
           description: number of signers for pre-confirmation-counting observations
           example: 80
-          format: uint64
+          format: int64
           type: integer
         final_count:
           description: "number of signers for final observations, after any confirmation\
             \ counting complete"
           example: 80
-          format: uint64
+          format: int64
           type: integer
         completed:
           description: returns true if no transaction observation remains to be done
@@ -5815,9 +5998,10 @@ components:
           type: boolean
       required:
       - completed
-      - final_observations
+      - final_count
+      title: InboundObservedStage
       type: object
-    TxStagesResponse_inbound_confirmation_counted:
+    InboundConfirmationCountedStage:
       example:
         chain: BTC
         external_observed_height: 16042625
@@ -5861,8 +6045,9 @@ components:
           type: boolean
       required:
       - completed
+      title: InboundConfirmationCountedStage
       type: object
-    TxStagesResponse_inbound_finalised:
+    InboundFinalisedStage:
       example:
         completed: false
       properties:
@@ -5873,8 +6058,9 @@ components:
           type: boolean
       required:
       - completed
+      title: InboundFinalisedStage
       type: object
-    TxStagesResponse_swap_status_streaming:
+    StreamingStatus:
       example:
         quantity: 6
         count: 1
@@ -5882,22 +6068,23 @@ components:
       properties:
         interval:
           description: "how often each swap is made, in blocks"
-          format: uint64
+          format: int64
           type: integer
         quantity:
           description: the total number of swaps in a streaming swaps
-          format: uint64
+          format: int64
           type: integer
         count:
           description: the amount of swap attempts so far
-          format: uint64
+          format: int64
           type: integer
       required:
       - count
       - interval
       - quantity
+      title: StreamingStatus
       type: object
-    TxStagesResponse_swap_status:
+    SwapStatus:
       example:
         streaming:
           quantity: 6
@@ -5910,11 +6097,12 @@ components:
           example: false
           type: boolean
         streaming:
-          $ref: '#/components/schemas/TxStagesResponse_swap_status_streaming'
+          $ref: '#/components/schemas/StreamingStatus'
       required:
       - pending
+      title: SwapStatus
       type: object
-    TxStagesResponse_swap_finalised:
+    SwapFinalisedStage:
       example:
         completed: false
       properties:
@@ -5925,8 +6113,9 @@ components:
           type: boolean
       required:
       - completed
+      title: SwapFinalisedStage
       type: object
-    TxStagesResponse_outbound_delay:
+    OutboundDelayStage:
       example:
         remaining_delay_blocks: 5
         completed: false
@@ -5950,8 +6139,9 @@ components:
           type: boolean
       required:
       - completed
+      title: OutboundDelayStage
       type: object
-    TxStagesResponse_outbound_signed:
+    OutboundSignedStage:
       example:
         completed: false
         scheduled_outbound_height: 1234
@@ -5974,8 +6164,9 @@ components:
           type: boolean
       required:
       - completed
+      title: OutboundSignedStage
       type: object
-    TxStatusResponse_planned_out_txs_inner:
+    PlannedOutTx:
       example:
         chain: BTC
         to_address: bcrt1qf3s7q037eancht7sg0aj995dht25rwrnqsf45e
@@ -6002,6 +6193,7 @@ components:
       - coin
       - refund
       - to_address
+      title: PlannedOutTx
       type: object
     KeysignInfo:
       example:
@@ -6060,6 +6252,52 @@ components:
       required:
       - tx_array
       title: KeysignInfo
+      type: object
+    keygen:
+      example:
+        members:
+        - members
+        - members
+        id: id
+        type: type
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        members:
+          items:
+            description: pubkeys of the keygen block member nodes
+            type: string
+          type: array
+      title: keygen
+      type: object
+    KeygenBlock:
+      example:
+        height: 0
+        keygens:
+        - members:
+          - members
+          - members
+          id: id
+          type: type
+        - members:
+          - members
+          - members
+          id: id
+          type: type
+      properties:
+        height:
+          description: the height of the keygen block
+          format: int64
+          type: integer
+        keygens:
+          items:
+            $ref: '#/components/schemas/keygen'
+          type: array
+      required:
+      - keygens
+      title: KeygenBlock
       type: object
     KeysignMetrics:
       example:

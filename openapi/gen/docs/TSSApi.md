@@ -4,11 +4,85 @@ All URIs are relative to *http://localhost*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
+[**KeygenPubkey**](TSSApi.md#KeygenPubkey) | **Get** /thorchain/keygen/{height}/{pubkey} | 
 [**Keysign**](TSSApi.md#Keysign) | **Get** /thorchain/keysign/{height} | 
 [**KeysignPubkey**](TSSApi.md#KeysignPubkey) | **Get** /thorchain/keysign/{height}/{pubkey} | 
 [**Metrics**](TSSApi.md#Metrics) | **Get** /thorchain/metrics | 
 [**MetricsKeygen**](TSSApi.md#MetricsKeygen) | **Get** /thorchain/metric/keygen/{pubkey} | 
 
+
+
+## KeygenPubkey
+
+> KeygenResponse KeygenPubkey(ctx, height, pubkey).Execute()
+
+
+
+
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    height := int64(789) // int64 | 
+    pubkey := "thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc" // string | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.TSSApi.KeygenPubkey(context.Background(), height, pubkey).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `TSSApi.KeygenPubkey``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `KeygenPubkey`: KeygenResponse
+    fmt.Fprintf(os.Stdout, "Response from `TSSApi.KeygenPubkey`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**height** | **int64** |  | 
+**pubkey** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiKeygenPubkeyRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+### Return type
+
+[**KeygenResponse**](KeygenResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
 
 
 ## Keysign

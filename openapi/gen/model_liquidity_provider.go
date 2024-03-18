@@ -27,18 +27,18 @@ type LiquidityProvider struct {
 	PendingTxId *string `json:"pending_tx_id,omitempty"`
 	RuneDepositValue string `json:"rune_deposit_value"`
 	AssetDepositValue string `json:"asset_deposit_value"`
-	RuneRedeemValue string `json:"rune_redeem_value"`
-	AssetRedeemValue string `json:"asset_redeem_value"`
-	LuviDepositValue string `json:"luvi_deposit_value"`
-	LuviRedeemValue string `json:"luvi_redeem_value"`
-	LuviGrowthPct string `json:"luvi_growth_pct"`
+	RuneRedeemValue *string `json:"rune_redeem_value,omitempty"`
+	AssetRedeemValue *string `json:"asset_redeem_value,omitempty"`
+	LuviDepositValue *string `json:"luvi_deposit_value,omitempty"`
+	LuviRedeemValue *string `json:"luvi_redeem_value,omitempty"`
+	LuviGrowthPct *string `json:"luvi_growth_pct,omitempty"`
 }
 
 // NewLiquidityProvider instantiates a new LiquidityProvider object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewLiquidityProvider(asset string, units string, pendingRune string, pendingAsset string, runeDepositValue string, assetDepositValue string, runeRedeemValue string, assetRedeemValue string, luviDepositValue string, luviRedeemValue string, luviGrowthPct string) *LiquidityProvider {
+func NewLiquidityProvider(asset string, units string, pendingRune string, pendingAsset string, runeDepositValue string, assetDepositValue string) *LiquidityProvider {
 	this := LiquidityProvider{}
 	this.Asset = asset
 	this.Units = units
@@ -46,11 +46,6 @@ func NewLiquidityProvider(asset string, units string, pendingRune string, pendin
 	this.PendingAsset = pendingAsset
 	this.RuneDepositValue = runeDepositValue
 	this.AssetDepositValue = assetDepositValue
-	this.RuneRedeemValue = runeRedeemValue
-	this.AssetRedeemValue = assetRedeemValue
-	this.LuviDepositValue = luviDepositValue
-	this.LuviRedeemValue = luviRedeemValue
-	this.LuviGrowthPct = luviGrowthPct
 	return &this
 }
 
@@ -366,124 +361,164 @@ func (o *LiquidityProvider) SetAssetDepositValue(v string) {
 	o.AssetDepositValue = v
 }
 
-// GetRuneRedeemValue returns the RuneRedeemValue field value
+// GetRuneRedeemValue returns the RuneRedeemValue field value if set, zero value otherwise.
 func (o *LiquidityProvider) GetRuneRedeemValue() string {
-	if o == nil {
+	if o == nil || o.RuneRedeemValue == nil {
 		var ret string
 		return ret
 	}
-
-	return o.RuneRedeemValue
+	return *o.RuneRedeemValue
 }
 
-// GetRuneRedeemValueOk returns a tuple with the RuneRedeemValue field value
+// GetRuneRedeemValueOk returns a tuple with the RuneRedeemValue field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 func (o *LiquidityProvider) GetRuneRedeemValueOk() (*string, bool) {
-	if o == nil {
+	if o == nil || o.RuneRedeemValue == nil {
 		return nil, false
 	}
-	return &o.RuneRedeemValue, true
+	return o.RuneRedeemValue, true
 }
 
-// SetRuneRedeemValue sets field value
+// HasRuneRedeemValue returns a boolean if a field has been set.
+func (o *LiquidityProvider) HasRuneRedeemValue() bool {
+	if o != nil && o.RuneRedeemValue != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetRuneRedeemValue gets a reference to the given string and assigns it to the RuneRedeemValue field.
 func (o *LiquidityProvider) SetRuneRedeemValue(v string) {
-	o.RuneRedeemValue = v
+	o.RuneRedeemValue = &v
 }
 
-// GetAssetRedeemValue returns the AssetRedeemValue field value
+// GetAssetRedeemValue returns the AssetRedeemValue field value if set, zero value otherwise.
 func (o *LiquidityProvider) GetAssetRedeemValue() string {
-	if o == nil {
+	if o == nil || o.AssetRedeemValue == nil {
 		var ret string
 		return ret
 	}
-
-	return o.AssetRedeemValue
+	return *o.AssetRedeemValue
 }
 
-// GetAssetRedeemValueOk returns a tuple with the AssetRedeemValue field value
+// GetAssetRedeemValueOk returns a tuple with the AssetRedeemValue field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 func (o *LiquidityProvider) GetAssetRedeemValueOk() (*string, bool) {
-	if o == nil {
+	if o == nil || o.AssetRedeemValue == nil {
 		return nil, false
 	}
-	return &o.AssetRedeemValue, true
+	return o.AssetRedeemValue, true
 }
 
-// SetAssetRedeemValue sets field value
+// HasAssetRedeemValue returns a boolean if a field has been set.
+func (o *LiquidityProvider) HasAssetRedeemValue() bool {
+	if o != nil && o.AssetRedeemValue != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetAssetRedeemValue gets a reference to the given string and assigns it to the AssetRedeemValue field.
 func (o *LiquidityProvider) SetAssetRedeemValue(v string) {
-	o.AssetRedeemValue = v
+	o.AssetRedeemValue = &v
 }
 
-// GetLuviDepositValue returns the LuviDepositValue field value
+// GetLuviDepositValue returns the LuviDepositValue field value if set, zero value otherwise.
 func (o *LiquidityProvider) GetLuviDepositValue() string {
-	if o == nil {
+	if o == nil || o.LuviDepositValue == nil {
 		var ret string
 		return ret
 	}
-
-	return o.LuviDepositValue
+	return *o.LuviDepositValue
 }
 
-// GetLuviDepositValueOk returns a tuple with the LuviDepositValue field value
+// GetLuviDepositValueOk returns a tuple with the LuviDepositValue field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 func (o *LiquidityProvider) GetLuviDepositValueOk() (*string, bool) {
-	if o == nil {
+	if o == nil || o.LuviDepositValue == nil {
 		return nil, false
 	}
-	return &o.LuviDepositValue, true
+	return o.LuviDepositValue, true
 }
 
-// SetLuviDepositValue sets field value
+// HasLuviDepositValue returns a boolean if a field has been set.
+func (o *LiquidityProvider) HasLuviDepositValue() bool {
+	if o != nil && o.LuviDepositValue != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetLuviDepositValue gets a reference to the given string and assigns it to the LuviDepositValue field.
 func (o *LiquidityProvider) SetLuviDepositValue(v string) {
-	o.LuviDepositValue = v
+	o.LuviDepositValue = &v
 }
 
-// GetLuviRedeemValue returns the LuviRedeemValue field value
+// GetLuviRedeemValue returns the LuviRedeemValue field value if set, zero value otherwise.
 func (o *LiquidityProvider) GetLuviRedeemValue() string {
-	if o == nil {
+	if o == nil || o.LuviRedeemValue == nil {
 		var ret string
 		return ret
 	}
-
-	return o.LuviRedeemValue
+	return *o.LuviRedeemValue
 }
 
-// GetLuviRedeemValueOk returns a tuple with the LuviRedeemValue field value
+// GetLuviRedeemValueOk returns a tuple with the LuviRedeemValue field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 func (o *LiquidityProvider) GetLuviRedeemValueOk() (*string, bool) {
-	if o == nil {
+	if o == nil || o.LuviRedeemValue == nil {
 		return nil, false
 	}
-	return &o.LuviRedeemValue, true
+	return o.LuviRedeemValue, true
 }
 
-// SetLuviRedeemValue sets field value
+// HasLuviRedeemValue returns a boolean if a field has been set.
+func (o *LiquidityProvider) HasLuviRedeemValue() bool {
+	if o != nil && o.LuviRedeemValue != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetLuviRedeemValue gets a reference to the given string and assigns it to the LuviRedeemValue field.
 func (o *LiquidityProvider) SetLuviRedeemValue(v string) {
-	o.LuviRedeemValue = v
+	o.LuviRedeemValue = &v
 }
 
-// GetLuviGrowthPct returns the LuviGrowthPct field value
+// GetLuviGrowthPct returns the LuviGrowthPct field value if set, zero value otherwise.
 func (o *LiquidityProvider) GetLuviGrowthPct() string {
-	if o == nil {
+	if o == nil || o.LuviGrowthPct == nil {
 		var ret string
 		return ret
 	}
-
-	return o.LuviGrowthPct
+	return *o.LuviGrowthPct
 }
 
-// GetLuviGrowthPctOk returns a tuple with the LuviGrowthPct field value
+// GetLuviGrowthPctOk returns a tuple with the LuviGrowthPct field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 func (o *LiquidityProvider) GetLuviGrowthPctOk() (*string, bool) {
-	if o == nil {
+	if o == nil || o.LuviGrowthPct == nil {
 		return nil, false
 	}
-	return &o.LuviGrowthPct, true
+	return o.LuviGrowthPct, true
 }
 
-// SetLuviGrowthPct sets field value
+// HasLuviGrowthPct returns a boolean if a field has been set.
+func (o *LiquidityProvider) HasLuviGrowthPct() bool {
+	if o != nil && o.LuviGrowthPct != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetLuviGrowthPct gets a reference to the given string and assigns it to the LuviGrowthPct field.
 func (o *LiquidityProvider) SetLuviGrowthPct(v string) {
-	o.LuviGrowthPct = v
+	o.LuviGrowthPct = &v
 }
 
 func (o LiquidityProvider) MarshalJSON_deprecated() ([]byte, error) {
@@ -521,19 +556,19 @@ func (o LiquidityProvider) MarshalJSON_deprecated() ([]byte, error) {
 	if true {
 		toSerialize["asset_deposit_value"] = o.AssetDepositValue
 	}
-	if true {
+	if o.RuneRedeemValue != nil {
 		toSerialize["rune_redeem_value"] = o.RuneRedeemValue
 	}
-	if true {
+	if o.AssetRedeemValue != nil {
 		toSerialize["asset_redeem_value"] = o.AssetRedeemValue
 	}
-	if true {
+	if o.LuviDepositValue != nil {
 		toSerialize["luvi_deposit_value"] = o.LuviDepositValue
 	}
-	if true {
+	if o.LuviRedeemValue != nil {
 		toSerialize["luvi_redeem_value"] = o.LuviRedeemValue
 	}
-	if true {
+	if o.LuviGrowthPct != nil {
 		toSerialize["luvi_growth_pct"] = o.LuviGrowthPct
 	}
 	return json.Marshal(toSerialize)

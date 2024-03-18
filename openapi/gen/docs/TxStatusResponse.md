@@ -5,7 +5,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Tx** | Pointer to [**Tx**](Tx.md) |  | [optional] 
-**PlannedOutTxs** | Pointer to [**[]TxStatusResponsePlannedOutTxsInner**](TxStatusResponsePlannedOutTxsInner.md) |  | [optional] 
+**PlannedOutTxs** | Pointer to [**[]PlannedOutTx**](PlannedOutTx.md) |  | [optional] 
 **OutTxs** | Pointer to [**[]Tx**](Tx.md) |  | [optional] 
 **Stages** | [**TxStagesResponse**](TxStagesResponse.md) |  | 
 
@@ -55,20 +55,20 @@ HasTx returns a boolean if a field has been set.
 
 ### GetPlannedOutTxs
 
-`func (o *TxStatusResponse) GetPlannedOutTxs() []TxStatusResponsePlannedOutTxsInner`
+`func (o *TxStatusResponse) GetPlannedOutTxs() []PlannedOutTx`
 
 GetPlannedOutTxs returns the PlannedOutTxs field if non-nil, zero value otherwise.
 
 ### GetPlannedOutTxsOk
 
-`func (o *TxStatusResponse) GetPlannedOutTxsOk() (*[]TxStatusResponsePlannedOutTxsInner, bool)`
+`func (o *TxStatusResponse) GetPlannedOutTxsOk() (*[]PlannedOutTx, bool)`
 
 GetPlannedOutTxsOk returns a tuple with the PlannedOutTxs field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetPlannedOutTxs
 
-`func (o *TxStatusResponse) SetPlannedOutTxs(v []TxStatusResponsePlannedOutTxsInner)`
+`func (o *TxStatusResponse) SetPlannedOutTxs(v []PlannedOutTx)`
 
 SetPlannedOutTxs sets PlannedOutTxs field to given value.
 

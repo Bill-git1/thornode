@@ -16,16 +16,18 @@ import (
 
 // KeysignResponse struct for KeysignResponse
 type KeysignResponse struct {
-	Keysign *KeysignInfo `json:"keysign,omitempty"`
-	Signature *string `json:"signature,omitempty"`
+	Keysign KeysignInfo `json:"keysign"`
+	Signature string `json:"signature"`
 }
 
 // NewKeysignResponse instantiates a new KeysignResponse object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewKeysignResponse() *KeysignResponse {
+func NewKeysignResponse(keysign KeysignInfo, signature string) *KeysignResponse {
 	this := KeysignResponse{}
+	this.Keysign = keysign
+	this.Signature = signature
 	return &this
 }
 
@@ -37,76 +39,60 @@ func NewKeysignResponseWithDefaults() *KeysignResponse {
 	return &this
 }
 
-// GetKeysign returns the Keysign field value if set, zero value otherwise.
+// GetKeysign returns the Keysign field value
 func (o *KeysignResponse) GetKeysign() KeysignInfo {
-	if o == nil || o.Keysign == nil {
+	if o == nil {
 		var ret KeysignInfo
 		return ret
 	}
-	return *o.Keysign
+
+	return o.Keysign
 }
 
-// GetKeysignOk returns a tuple with the Keysign field value if set, nil otherwise
+// GetKeysignOk returns a tuple with the Keysign field value
 // and a boolean to check if the value has been set.
 func (o *KeysignResponse) GetKeysignOk() (*KeysignInfo, bool) {
-	if o == nil || o.Keysign == nil {
+	if o == nil {
 		return nil, false
 	}
-	return o.Keysign, true
+	return &o.Keysign, true
 }
 
-// HasKeysign returns a boolean if a field has been set.
-func (o *KeysignResponse) HasKeysign() bool {
-	if o != nil && o.Keysign != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetKeysign gets a reference to the given KeysignInfo and assigns it to the Keysign field.
+// SetKeysign sets field value
 func (o *KeysignResponse) SetKeysign(v KeysignInfo) {
-	o.Keysign = &v
+	o.Keysign = v
 }
 
-// GetSignature returns the Signature field value if set, zero value otherwise.
+// GetSignature returns the Signature field value
 func (o *KeysignResponse) GetSignature() string {
-	if o == nil || o.Signature == nil {
+	if o == nil {
 		var ret string
 		return ret
 	}
-	return *o.Signature
+
+	return o.Signature
 }
 
-// GetSignatureOk returns a tuple with the Signature field value if set, nil otherwise
+// GetSignatureOk returns a tuple with the Signature field value
 // and a boolean to check if the value has been set.
 func (o *KeysignResponse) GetSignatureOk() (*string, bool) {
-	if o == nil || o.Signature == nil {
+	if o == nil {
 		return nil, false
 	}
-	return o.Signature, true
+	return &o.Signature, true
 }
 
-// HasSignature returns a boolean if a field has been set.
-func (o *KeysignResponse) HasSignature() bool {
-	if o != nil && o.Signature != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetSignature gets a reference to the given string and assigns it to the Signature field.
+// SetSignature sets field value
 func (o *KeysignResponse) SetSignature(v string) {
-	o.Signature = &v
+	o.Signature = v
 }
 
 func (o KeysignResponse) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
-	if o.Keysign != nil {
+	if true {
 		toSerialize["keysign"] = o.Keysign
 	}
-	if o.Signature != nil {
+	if true {
 		toSerialize["signature"] = o.Signature
 	}
 	return json.Marshal(toSerialize)

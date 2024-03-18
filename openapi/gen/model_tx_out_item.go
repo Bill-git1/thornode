@@ -25,7 +25,7 @@ type TxOutItem struct {
 	GasRate *int64 `json:"gas_rate,omitempty"`
 	InHash *string `json:"in_hash,omitempty"`
 	OutHash *string `json:"out_hash,omitempty"`
-	Height int64 `json:"height"`
+	Height *int64 `json:"height,omitempty"`
 	// clout spent in RUNE for the outbound
 	CloutSpent *string `json:"clout_spent,omitempty"`
 }
@@ -34,13 +34,12 @@ type TxOutItem struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewTxOutItem(chain string, toAddress string, coin Coin, maxGas []Coin, height int64) *TxOutItem {
+func NewTxOutItem(chain string, toAddress string, coin Coin, maxGas []Coin) *TxOutItem {
 	this := TxOutItem{}
 	this.Chain = chain
 	this.ToAddress = toAddress
 	this.Coin = coin
 	this.MaxGas = maxGas
-	this.Height = height
 	return &this
 }
 
@@ -308,28 +307,36 @@ func (o *TxOutItem) SetOutHash(v string) {
 	o.OutHash = &v
 }
 
-// GetHeight returns the Height field value
+// GetHeight returns the Height field value if set, zero value otherwise.
 func (o *TxOutItem) GetHeight() int64 {
-	if o == nil {
+	if o == nil || o.Height == nil {
 		var ret int64
 		return ret
 	}
-
-	return o.Height
+	return *o.Height
 }
 
-// GetHeightOk returns a tuple with the Height field value
+// GetHeightOk returns a tuple with the Height field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 func (o *TxOutItem) GetHeightOk() (*int64, bool) {
-	if o == nil {
+	if o == nil || o.Height == nil {
 		return nil, false
 	}
-	return &o.Height, true
+	return o.Height, true
 }
 
-// SetHeight sets field value
+// HasHeight returns a boolean if a field has been set.
+func (o *TxOutItem) HasHeight() bool {
+	if o != nil && o.Height != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetHeight gets a reference to the given int64 and assigns it to the Height field.
 func (o *TxOutItem) SetHeight(v int64) {
-	o.Height = v
+	o.Height = &v
 }
 
 // GetCloutSpent returns the CloutSpent field value if set, zero value otherwise.
@@ -393,7 +400,7 @@ func (o TxOutItem) MarshalJSON_deprecated() ([]byte, error) {
 	if o.OutHash != nil {
 		toSerialize["out_hash"] = o.OutHash
 	}
-	if true {
+	if o.Height != nil {
 		toSerialize["height"] = o.Height
 	}
 	if o.CloutSpent != nil {

@@ -16,20 +16,20 @@ import (
 
 // TxStagesResponse struct for TxStagesResponse
 type TxStagesResponse struct {
-	InboundObserved TxStagesResponseInboundObserved `json:"inbound_observed"`
-	InboundConfirmationCounted *TxStagesResponseInboundConfirmationCounted `json:"inbound_confirmation_counted,omitempty"`
-	InboundFinalised *TxStagesResponseInboundFinalised `json:"inbound_finalised,omitempty"`
-	SwapStatus *TxStagesResponseSwapStatus `json:"swap_status,omitempty"`
-	SwapFinalised *TxStagesResponseSwapFinalised `json:"swap_finalised,omitempty"`
-	OutboundDelay *TxStagesResponseOutboundDelay `json:"outbound_delay,omitempty"`
-	OutboundSigned *TxStagesResponseOutboundSigned `json:"outbound_signed,omitempty"`
+	InboundObserved InboundObservedStage `json:"inbound_observed"`
+	InboundConfirmationCounted *InboundConfirmationCountedStage `json:"inbound_confirmation_counted,omitempty"`
+	InboundFinalised *InboundFinalisedStage `json:"inbound_finalised,omitempty"`
+	SwapStatus *SwapStatus `json:"swap_status,omitempty"`
+	SwapFinalised *SwapFinalisedStage `json:"swap_finalised,omitempty"`
+	OutboundDelay *OutboundDelayStage `json:"outbound_delay,omitempty"`
+	OutboundSigned *OutboundSignedStage `json:"outbound_signed,omitempty"`
 }
 
 // NewTxStagesResponse instantiates a new TxStagesResponse object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewTxStagesResponse(inboundObserved TxStagesResponseInboundObserved) *TxStagesResponse {
+func NewTxStagesResponse(inboundObserved InboundObservedStage) *TxStagesResponse {
 	this := TxStagesResponse{}
 	this.InboundObserved = inboundObserved
 	return &this
@@ -44,9 +44,9 @@ func NewTxStagesResponseWithDefaults() *TxStagesResponse {
 }
 
 // GetInboundObserved returns the InboundObserved field value
-func (o *TxStagesResponse) GetInboundObserved() TxStagesResponseInboundObserved {
+func (o *TxStagesResponse) GetInboundObserved() InboundObservedStage {
 	if o == nil {
-		var ret TxStagesResponseInboundObserved
+		var ret InboundObservedStage
 		return ret
 	}
 
@@ -55,7 +55,7 @@ func (o *TxStagesResponse) GetInboundObserved() TxStagesResponseInboundObserved 
 
 // GetInboundObservedOk returns a tuple with the InboundObserved field value
 // and a boolean to check if the value has been set.
-func (o *TxStagesResponse) GetInboundObservedOk() (*TxStagesResponseInboundObserved, bool) {
+func (o *TxStagesResponse) GetInboundObservedOk() (*InboundObservedStage, bool) {
 	if o == nil {
 		return nil, false
 	}
@@ -63,14 +63,14 @@ func (o *TxStagesResponse) GetInboundObservedOk() (*TxStagesResponseInboundObser
 }
 
 // SetInboundObserved sets field value
-func (o *TxStagesResponse) SetInboundObserved(v TxStagesResponseInboundObserved) {
+func (o *TxStagesResponse) SetInboundObserved(v InboundObservedStage) {
 	o.InboundObserved = v
 }
 
 // GetInboundConfirmationCounted returns the InboundConfirmationCounted field value if set, zero value otherwise.
-func (o *TxStagesResponse) GetInboundConfirmationCounted() TxStagesResponseInboundConfirmationCounted {
+func (o *TxStagesResponse) GetInboundConfirmationCounted() InboundConfirmationCountedStage {
 	if o == nil || o.InboundConfirmationCounted == nil {
-		var ret TxStagesResponseInboundConfirmationCounted
+		var ret InboundConfirmationCountedStage
 		return ret
 	}
 	return *o.InboundConfirmationCounted
@@ -78,7 +78,7 @@ func (o *TxStagesResponse) GetInboundConfirmationCounted() TxStagesResponseInbou
 
 // GetInboundConfirmationCountedOk returns a tuple with the InboundConfirmationCounted field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *TxStagesResponse) GetInboundConfirmationCountedOk() (*TxStagesResponseInboundConfirmationCounted, bool) {
+func (o *TxStagesResponse) GetInboundConfirmationCountedOk() (*InboundConfirmationCountedStage, bool) {
 	if o == nil || o.InboundConfirmationCounted == nil {
 		return nil, false
 	}
@@ -94,15 +94,15 @@ func (o *TxStagesResponse) HasInboundConfirmationCounted() bool {
 	return false
 }
 
-// SetInboundConfirmationCounted gets a reference to the given TxStagesResponseInboundConfirmationCounted and assigns it to the InboundConfirmationCounted field.
-func (o *TxStagesResponse) SetInboundConfirmationCounted(v TxStagesResponseInboundConfirmationCounted) {
+// SetInboundConfirmationCounted gets a reference to the given InboundConfirmationCountedStage and assigns it to the InboundConfirmationCounted field.
+func (o *TxStagesResponse) SetInboundConfirmationCounted(v InboundConfirmationCountedStage) {
 	o.InboundConfirmationCounted = &v
 }
 
 // GetInboundFinalised returns the InboundFinalised field value if set, zero value otherwise.
-func (o *TxStagesResponse) GetInboundFinalised() TxStagesResponseInboundFinalised {
+func (o *TxStagesResponse) GetInboundFinalised() InboundFinalisedStage {
 	if o == nil || o.InboundFinalised == nil {
-		var ret TxStagesResponseInboundFinalised
+		var ret InboundFinalisedStage
 		return ret
 	}
 	return *o.InboundFinalised
@@ -110,7 +110,7 @@ func (o *TxStagesResponse) GetInboundFinalised() TxStagesResponseInboundFinalise
 
 // GetInboundFinalisedOk returns a tuple with the InboundFinalised field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *TxStagesResponse) GetInboundFinalisedOk() (*TxStagesResponseInboundFinalised, bool) {
+func (o *TxStagesResponse) GetInboundFinalisedOk() (*InboundFinalisedStage, bool) {
 	if o == nil || o.InboundFinalised == nil {
 		return nil, false
 	}
@@ -126,15 +126,15 @@ func (o *TxStagesResponse) HasInboundFinalised() bool {
 	return false
 }
 
-// SetInboundFinalised gets a reference to the given TxStagesResponseInboundFinalised and assigns it to the InboundFinalised field.
-func (o *TxStagesResponse) SetInboundFinalised(v TxStagesResponseInboundFinalised) {
+// SetInboundFinalised gets a reference to the given InboundFinalisedStage and assigns it to the InboundFinalised field.
+func (o *TxStagesResponse) SetInboundFinalised(v InboundFinalisedStage) {
 	o.InboundFinalised = &v
 }
 
 // GetSwapStatus returns the SwapStatus field value if set, zero value otherwise.
-func (o *TxStagesResponse) GetSwapStatus() TxStagesResponseSwapStatus {
+func (o *TxStagesResponse) GetSwapStatus() SwapStatus {
 	if o == nil || o.SwapStatus == nil {
-		var ret TxStagesResponseSwapStatus
+		var ret SwapStatus
 		return ret
 	}
 	return *o.SwapStatus
@@ -142,7 +142,7 @@ func (o *TxStagesResponse) GetSwapStatus() TxStagesResponseSwapStatus {
 
 // GetSwapStatusOk returns a tuple with the SwapStatus field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *TxStagesResponse) GetSwapStatusOk() (*TxStagesResponseSwapStatus, bool) {
+func (o *TxStagesResponse) GetSwapStatusOk() (*SwapStatus, bool) {
 	if o == nil || o.SwapStatus == nil {
 		return nil, false
 	}
@@ -158,15 +158,15 @@ func (o *TxStagesResponse) HasSwapStatus() bool {
 	return false
 }
 
-// SetSwapStatus gets a reference to the given TxStagesResponseSwapStatus and assigns it to the SwapStatus field.
-func (o *TxStagesResponse) SetSwapStatus(v TxStagesResponseSwapStatus) {
+// SetSwapStatus gets a reference to the given SwapStatus and assigns it to the SwapStatus field.
+func (o *TxStagesResponse) SetSwapStatus(v SwapStatus) {
 	o.SwapStatus = &v
 }
 
 // GetSwapFinalised returns the SwapFinalised field value if set, zero value otherwise.
-func (o *TxStagesResponse) GetSwapFinalised() TxStagesResponseSwapFinalised {
+func (o *TxStagesResponse) GetSwapFinalised() SwapFinalisedStage {
 	if o == nil || o.SwapFinalised == nil {
-		var ret TxStagesResponseSwapFinalised
+		var ret SwapFinalisedStage
 		return ret
 	}
 	return *o.SwapFinalised
@@ -174,7 +174,7 @@ func (o *TxStagesResponse) GetSwapFinalised() TxStagesResponseSwapFinalised {
 
 // GetSwapFinalisedOk returns a tuple with the SwapFinalised field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *TxStagesResponse) GetSwapFinalisedOk() (*TxStagesResponseSwapFinalised, bool) {
+func (o *TxStagesResponse) GetSwapFinalisedOk() (*SwapFinalisedStage, bool) {
 	if o == nil || o.SwapFinalised == nil {
 		return nil, false
 	}
@@ -190,15 +190,15 @@ func (o *TxStagesResponse) HasSwapFinalised() bool {
 	return false
 }
 
-// SetSwapFinalised gets a reference to the given TxStagesResponseSwapFinalised and assigns it to the SwapFinalised field.
-func (o *TxStagesResponse) SetSwapFinalised(v TxStagesResponseSwapFinalised) {
+// SetSwapFinalised gets a reference to the given SwapFinalisedStage and assigns it to the SwapFinalised field.
+func (o *TxStagesResponse) SetSwapFinalised(v SwapFinalisedStage) {
 	o.SwapFinalised = &v
 }
 
 // GetOutboundDelay returns the OutboundDelay field value if set, zero value otherwise.
-func (o *TxStagesResponse) GetOutboundDelay() TxStagesResponseOutboundDelay {
+func (o *TxStagesResponse) GetOutboundDelay() OutboundDelayStage {
 	if o == nil || o.OutboundDelay == nil {
-		var ret TxStagesResponseOutboundDelay
+		var ret OutboundDelayStage
 		return ret
 	}
 	return *o.OutboundDelay
@@ -206,7 +206,7 @@ func (o *TxStagesResponse) GetOutboundDelay() TxStagesResponseOutboundDelay {
 
 // GetOutboundDelayOk returns a tuple with the OutboundDelay field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *TxStagesResponse) GetOutboundDelayOk() (*TxStagesResponseOutboundDelay, bool) {
+func (o *TxStagesResponse) GetOutboundDelayOk() (*OutboundDelayStage, bool) {
 	if o == nil || o.OutboundDelay == nil {
 		return nil, false
 	}
@@ -222,15 +222,15 @@ func (o *TxStagesResponse) HasOutboundDelay() bool {
 	return false
 }
 
-// SetOutboundDelay gets a reference to the given TxStagesResponseOutboundDelay and assigns it to the OutboundDelay field.
-func (o *TxStagesResponse) SetOutboundDelay(v TxStagesResponseOutboundDelay) {
+// SetOutboundDelay gets a reference to the given OutboundDelayStage and assigns it to the OutboundDelay field.
+func (o *TxStagesResponse) SetOutboundDelay(v OutboundDelayStage) {
 	o.OutboundDelay = &v
 }
 
 // GetOutboundSigned returns the OutboundSigned field value if set, zero value otherwise.
-func (o *TxStagesResponse) GetOutboundSigned() TxStagesResponseOutboundSigned {
+func (o *TxStagesResponse) GetOutboundSigned() OutboundSignedStage {
 	if o == nil || o.OutboundSigned == nil {
-		var ret TxStagesResponseOutboundSigned
+		var ret OutboundSignedStage
 		return ret
 	}
 	return *o.OutboundSigned
@@ -238,7 +238,7 @@ func (o *TxStagesResponse) GetOutboundSigned() TxStagesResponseOutboundSigned {
 
 // GetOutboundSignedOk returns a tuple with the OutboundSigned field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *TxStagesResponse) GetOutboundSignedOk() (*TxStagesResponseOutboundSigned, bool) {
+func (o *TxStagesResponse) GetOutboundSignedOk() (*OutboundSignedStage, bool) {
 	if o == nil || o.OutboundSigned == nil {
 		return nil, false
 	}
@@ -254,8 +254,8 @@ func (o *TxStagesResponse) HasOutboundSigned() bool {
 	return false
 }
 
-// SetOutboundSigned gets a reference to the given TxStagesResponseOutboundSigned and assigns it to the OutboundSigned field.
-func (o *TxStagesResponse) SetOutboundSigned(v TxStagesResponseOutboundSigned) {
+// SetOutboundSigned gets a reference to the given OutboundSignedStage and assigns it to the OutboundSigned field.
+func (o *TxStagesResponse) SetOutboundSigned(v OutboundSignedStage) {
 	o.OutboundSigned = &v
 }
 

@@ -4,14 +4,14 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**Keysign** | Pointer to [**KeysignInfo**](KeysignInfo.md) |  | [optional] 
-**Signature** | Pointer to **string** |  | [optional] 
+**Keysign** | [**KeysignInfo**](KeysignInfo.md) |  | 
+**Signature** | **string** |  | 
 
 ## Methods
 
 ### NewKeysignResponse
 
-`func NewKeysignResponse() *KeysignResponse`
+`func NewKeysignResponse(keysign KeysignInfo, signature string, ) *KeysignResponse`
 
 NewKeysignResponse instantiates a new KeysignResponse object
 This constructor will assign default values to properties that have it defined,
@@ -45,11 +45,6 @@ and a boolean to check if the value has been set.
 
 SetKeysign sets Keysign field to given value.
 
-### HasKeysign
-
-`func (o *KeysignResponse) HasKeysign() bool`
-
-HasKeysign returns a boolean if a field has been set.
 
 ### GetSignature
 
@@ -70,11 +65,6 @@ and a boolean to check if the value has been set.
 
 SetSignature sets Signature field to given value.
 
-### HasSignature
-
-`func (o *KeysignResponse) HasSignature() bool`
-
-HasSignature returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

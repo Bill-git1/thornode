@@ -13,14 +13,14 @@ Name | Type | Description | Notes
 **GasRate** | Pointer to **int64** |  | [optional] 
 **InHash** | Pointer to **string** |  | [optional] 
 **OutHash** | Pointer to **string** |  | [optional] 
-**Height** | **int64** |  | 
+**Height** | Pointer to **int64** |  | [optional] 
 **CloutSpent** | Pointer to **string** | clout spent in RUNE for the outbound | [optional] 
 
 ## Methods
 
 ### NewTxOutItem
 
-`func NewTxOutItem(chain string, toAddress string, coin Coin, maxGas []Coin, height int64, ) *TxOutItem`
+`func NewTxOutItem(chain string, toAddress string, coin Coin, maxGas []Coin, ) *TxOutItem`
 
 NewTxOutItem instantiates a new TxOutItem object
 This constructor will assign default values to properties that have it defined,
@@ -259,6 +259,11 @@ and a boolean to check if the value has been set.
 
 SetHeight sets Height field to given value.
 
+### HasHeight
+
+`func (o *TxOutItem) HasHeight() bool`
+
+HasHeight returns a boolean if a field has been set.
 
 ### GetCloutSpent
 

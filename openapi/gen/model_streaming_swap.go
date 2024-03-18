@@ -19,11 +19,11 @@ type StreamingSwap struct {
 	// the hash of a transaction
 	TxId *string `json:"tx_id,omitempty"`
 	// how often each swap is made, in blocks
-	Interval *int32 `json:"interval,omitempty"`
+	Interval *int64 `json:"interval,omitempty"`
 	// the total number of swaps in a streaming swaps
-	Quantity *int32 `json:"quantity,omitempty"`
+	Quantity *int64 `json:"quantity,omitempty"`
 	// the amount of swap attempts so far
-	Count *int32 `json:"count,omitempty"`
+	Count *int64 `json:"count,omitempty"`
 	// the block height of the latest swap
 	LastHeight *int64 `json:"last_height,omitempty"`
 	// the total number of tokens the swapper wants to receive of the output asset
@@ -41,7 +41,7 @@ type StreamingSwap struct {
 	// the amount of output tokens that have been swapped so far
 	Out string `json:"out"`
 	// the list of swap indexes that failed
-	FailedSwaps []int32 `json:"failed_swaps,omitempty"`
+	FailedSwaps []int64 `json:"failed_swaps,omitempty"`
 	// the list of reasons that sub-swaps have failed
 	FailedSwapReasons []string `json:"failed_swap_reasons,omitempty"`
 }
@@ -100,9 +100,9 @@ func (o *StreamingSwap) SetTxId(v string) {
 }
 
 // GetInterval returns the Interval field value if set, zero value otherwise.
-func (o *StreamingSwap) GetInterval() int32 {
+func (o *StreamingSwap) GetInterval() int64 {
 	if o == nil || o.Interval == nil {
-		var ret int32
+		var ret int64
 		return ret
 	}
 	return *o.Interval
@@ -110,7 +110,7 @@ func (o *StreamingSwap) GetInterval() int32 {
 
 // GetIntervalOk returns a tuple with the Interval field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *StreamingSwap) GetIntervalOk() (*int32, bool) {
+func (o *StreamingSwap) GetIntervalOk() (*int64, bool) {
 	if o == nil || o.Interval == nil {
 		return nil, false
 	}
@@ -126,15 +126,15 @@ func (o *StreamingSwap) HasInterval() bool {
 	return false
 }
 
-// SetInterval gets a reference to the given int32 and assigns it to the Interval field.
-func (o *StreamingSwap) SetInterval(v int32) {
+// SetInterval gets a reference to the given int64 and assigns it to the Interval field.
+func (o *StreamingSwap) SetInterval(v int64) {
 	o.Interval = &v
 }
 
 // GetQuantity returns the Quantity field value if set, zero value otherwise.
-func (o *StreamingSwap) GetQuantity() int32 {
+func (o *StreamingSwap) GetQuantity() int64 {
 	if o == nil || o.Quantity == nil {
-		var ret int32
+		var ret int64
 		return ret
 	}
 	return *o.Quantity
@@ -142,7 +142,7 @@ func (o *StreamingSwap) GetQuantity() int32 {
 
 // GetQuantityOk returns a tuple with the Quantity field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *StreamingSwap) GetQuantityOk() (*int32, bool) {
+func (o *StreamingSwap) GetQuantityOk() (*int64, bool) {
 	if o == nil || o.Quantity == nil {
 		return nil, false
 	}
@@ -158,15 +158,15 @@ func (o *StreamingSwap) HasQuantity() bool {
 	return false
 }
 
-// SetQuantity gets a reference to the given int32 and assigns it to the Quantity field.
-func (o *StreamingSwap) SetQuantity(v int32) {
+// SetQuantity gets a reference to the given int64 and assigns it to the Quantity field.
+func (o *StreamingSwap) SetQuantity(v int64) {
 	o.Quantity = &v
 }
 
 // GetCount returns the Count field value if set, zero value otherwise.
-func (o *StreamingSwap) GetCount() int32 {
+func (o *StreamingSwap) GetCount() int64 {
 	if o == nil || o.Count == nil {
-		var ret int32
+		var ret int64
 		return ret
 	}
 	return *o.Count
@@ -174,7 +174,7 @@ func (o *StreamingSwap) GetCount() int32 {
 
 // GetCountOk returns a tuple with the Count field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *StreamingSwap) GetCountOk() (*int32, bool) {
+func (o *StreamingSwap) GetCountOk() (*int64, bool) {
 	if o == nil || o.Count == nil {
 		return nil, false
 	}
@@ -190,8 +190,8 @@ func (o *StreamingSwap) HasCount() bool {
 	return false
 }
 
-// SetCount gets a reference to the given int32 and assigns it to the Count field.
-func (o *StreamingSwap) SetCount(v int32) {
+// SetCount gets a reference to the given int64 and assigns it to the Count field.
+func (o *StreamingSwap) SetCount(v int64) {
 	o.Count = &v
 }
 
@@ -420,9 +420,9 @@ func (o *StreamingSwap) SetOut(v string) {
 }
 
 // GetFailedSwaps returns the FailedSwaps field value if set, zero value otherwise.
-func (o *StreamingSwap) GetFailedSwaps() []int32 {
+func (o *StreamingSwap) GetFailedSwaps() []int64 {
 	if o == nil || o.FailedSwaps == nil {
-		var ret []int32
+		var ret []int64
 		return ret
 	}
 	return o.FailedSwaps
@@ -430,7 +430,7 @@ func (o *StreamingSwap) GetFailedSwaps() []int32 {
 
 // GetFailedSwapsOk returns a tuple with the FailedSwaps field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *StreamingSwap) GetFailedSwapsOk() ([]int32, bool) {
+func (o *StreamingSwap) GetFailedSwapsOk() ([]int64, bool) {
 	if o == nil || o.FailedSwaps == nil {
 		return nil, false
 	}
@@ -446,8 +446,8 @@ func (o *StreamingSwap) HasFailedSwaps() bool {
 	return false
 }
 
-// SetFailedSwaps gets a reference to the given []int32 and assigns it to the FailedSwaps field.
-func (o *StreamingSwap) SetFailedSwaps(v []int32) {
+// SetFailedSwaps gets a reference to the given []int64 and assigns it to the FailedSwaps field.
+func (o *StreamingSwap) SetFailedSwaps(v []int64) {
 	o.FailedSwaps = v
 }
 

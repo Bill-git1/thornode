@@ -217,7 +217,7 @@ No authorization required
 
 ## Yggdrasil
 
-> []Vault Yggdrasil(ctx).Height(height).Execute()
+> []YggdrasilVault Yggdrasil(ctx).Height(height).Execute()
 
 
 
@@ -245,7 +245,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `VaultsApi.Yggdrasil``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `Yggdrasil`: []Vault
+    // response from `Yggdrasil`: []YggdrasilVault
     fmt.Fprintf(os.Stdout, "Response from `VaultsApi.Yggdrasil`: %v\n", resp)
 }
 ```
@@ -265,7 +265,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**[]Vault**](Vault.md)
+[**[]YggdrasilVault**](YggdrasilVault.md)
 
 ### Authorization
 

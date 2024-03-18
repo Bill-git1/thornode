@@ -22,10 +22,9 @@ var (
 )
 
 type (
-	MsgSwitch            = types.MsgSwitch
-	SwitchMemo           = mem.SwitchMemo
-	MsgYggdrasil         = types.MsgYggdrasil
-	QueryYggdrasilVaults = types.QueryYggdrasilVaults
-	YggdrasilFundMemo    = mem.YggdrasilFundMemo
-	YggdrasilReturnMemo  = mem.YggdrasilReturnMemo
+	MsgSwitch           = types.MsgSwitch
+	SwitchMemo          = mem.SwitchMemo
+	MsgYggdrasil        = types.MsgYggdrasil
+	YggdrasilFundMemo   = mem.YggdrasilFundMemo
+	YggdrasilReturnMemo = mem.YggdrasilReturnMemo
 )

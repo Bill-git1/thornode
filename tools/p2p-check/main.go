@@ -18,6 +18,7 @@ import (
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	ma "github.com/multiformats/go-multiaddr"
 	"gitlab.com/thorchain/thornode/common/cosmos"
+	openapi "gitlab.com/thorchain/thornode/openapi/gen"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
@@ -93,7 +94,7 @@ func main() {
 	config.Seal()
 
 	nodesByPeerID := make(map[string]string)
-	nodes := make([]types.QueryNodeAccount, 0)
+	nodes := make([]openapi.Node, 0)
 	url := fmt.Sprintf("%s/thorchain/nodes", getEnvOrDefault("THORNODE", "https://thornode.ninerealms.com"))
 	// nolint
 	resp, err := http.Get(url)
@@ -106,8 +107,8 @@ func main() {
 			fmt.Println("fail to decode thornode status", err.Error())
 		} else {
 			for _, node := range nodes {
-				if node.PreflightStatus.Status == types.NodeStatus_Ready {
-					nodesByPeerID[node.PeerID] = ""
+				if node.PreflightStatus.Status == types.NodeStatus_Ready.String() {
+					nodesByPeerID[node.PeerId] = ""
 				}
 			}
 		}
@@ -115,14 +116,14 @@ func main() {
 
 	fmt.Println("Discovering IP addresses for nodes...")
 	for _, node := range nodes {
-		if node.PreflightStatus.Status != types.NodeStatus_Ready {
+		if node.PreflightStatus.Status != types.NodeStatus_Ready.String() {
 			continue
 		}
-		if nodesByPeerID[node.PeerID] != "" {
+		if nodesByPeerID[node.PeerId] != "" {
 			continue
 		}
 		peers := make(map[string]string)
-		peers, err = getPeers(peers, fmt.Sprintf("/ip4/%s/tcp/5040/p2p/%s", node.IPAddress, node.PeerID))
+		peers, err = getPeers(peers, fmt.Sprintf("/ip4/%s/tcp/5040/p2p/%s", node.IpAddress, node.PeerId))
 		if err != nil {
 			fmt.Println("Error", err.Error())
 		}
@@ -158,7 +159,7 @@ func main() {
 	}
 	wg := sync.WaitGroup{}
 	type rslt struct {
-		node        types.QueryNodeAccount
+		node        openapi.Node
 		description string
 	}
 	results := make(map[string]rslt)
@@ -173,7 +174,7 @@ func main() {
 			}()
 
 			node := fetchNode(peerID, nodes)
-			if node.PreflightStatus.Status != types.NodeStatus_Ready {
+			if node.PreflightStatus.Status != types.NodeStatus_Ready.String() {
 				return
 			}
 			r := rslt{
@@ -184,7 +185,7 @@ func main() {
 			_, err = fetchPeerId(ipAddr, peerID)
 			if err != nil {
 				r.description = err.Error()
-				results[node.NodeAddress.String()] = r
+				results[node.NodeAddress] = r
 				return
 			}
 
@@ -192,7 +193,7 @@ func main() {
 			ok := checkPortOpen(ipAddr, 5040)
 			if !ok {
 				r.description = "port 5040 not open"
-				results[node.NodeAddress.String()] = r
+				results[node.NodeAddress] = r
 				return
 			}
 
@@ -200,7 +201,7 @@ func main() {
 			ok = checkPortOpen(ipAddr, 27147)
 			if !ok {
 				r.description = "port 27147 not open"
-				results[node.NodeAddress.String()] = r
+				results[node.NodeAddress] = r
 				return
 			}
 
@@ -209,12 +210,12 @@ func main() {
 			nodeHeight, err = fetchBlockHeight(fmt.Sprintf("http://%s:27147", ipAddr))
 			if err != nil {
 				r.description = err.Error()
-				results[node.NodeAddress.String()] = r
+				results[node.NodeAddress] = r
 				return
 			}
 			if height > nodeHeight+5 {
 				r.description = fmt.Sprintf("thornode behind the tip %d", height-nodeHeight)
-				results[node.NodeAddress.String()] = r
+				results[node.NodeAddress] = r
 				return
 			}
 		}(peerID, ipAddr)
@@ -232,13 +233,13 @@ func main() {
 	}
 }
 
-func fetchNode(peerID string, nodes []types.QueryNodeAccount) types.QueryNodeAccount {
+func fetchNode(peerID string, nodes []openapi.Node) openapi.Node {
 	for _, node := range nodes {
-		if node.PeerID == peerID {
+		if node.PeerId == peerID {
 			return node
 		}
 	}
-	return types.QueryNodeAccount{}
+	return openapi.Node{}
 }
 
 func fetchPeerId(addr, peerID string) (string, error) {

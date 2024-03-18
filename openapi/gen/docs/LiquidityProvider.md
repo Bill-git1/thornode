@@ -15,17 +15,17 @@ Name | Type | Description | Notes
 **PendingTxId** | Pointer to **string** |  | [optional] 
 **RuneDepositValue** | **string** |  | 
 **AssetDepositValue** | **string** |  | 
-**RuneRedeemValue** | **string** |  | 
-**AssetRedeemValue** | **string** |  | 
-**LuviDepositValue** | **string** |  | 
-**LuviRedeemValue** | **string** |  | 
-**LuviGrowthPct** | **string** |  | 
+**RuneRedeemValue** | Pointer to **string** |  | [optional] 
+**AssetRedeemValue** | Pointer to **string** |  | [optional] 
+**LuviDepositValue** | Pointer to **string** |  | [optional] 
+**LuviRedeemValue** | Pointer to **string** |  | [optional] 
+**LuviGrowthPct** | Pointer to **string** |  | [optional] 
 
 ## Methods
 
 ### NewLiquidityProvider
 
-`func NewLiquidityProvider(asset string, units string, pendingRune string, pendingAsset string, runeDepositValue string, assetDepositValue string, runeRedeemValue string, assetRedeemValue string, luviDepositValue string, luviRedeemValue string, luviGrowthPct string, ) *LiquidityProvider`
+`func NewLiquidityProvider(asset string, units string, pendingRune string, pendingAsset string, runeDepositValue string, assetDepositValue string, ) *LiquidityProvider`
 
 NewLiquidityProvider instantiates a new LiquidityProvider object
 This constructor will assign default values to properties that have it defined,
@@ -304,6 +304,11 @@ and a boolean to check if the value has been set.
 
 SetRuneRedeemValue sets RuneRedeemValue field to given value.
 
+### HasRuneRedeemValue
+
+`func (o *LiquidityProvider) HasRuneRedeemValue() bool`
+
+HasRuneRedeemValue returns a boolean if a field has been set.
 
 ### GetAssetRedeemValue
 
@@ -324,6 +329,11 @@ and a boolean to check if the value has been set.
 
 SetAssetRedeemValue sets AssetRedeemValue field to given value.
 
+### HasAssetRedeemValue
+
+`func (o *LiquidityProvider) HasAssetRedeemValue() bool`
+
+HasAssetRedeemValue returns a boolean if a field has been set.
 
 ### GetLuviDepositValue
 
@@ -344,6 +354,11 @@ and a boolean to check if the value has been set.
 
 SetLuviDepositValue sets LuviDepositValue field to given value.
 
+### HasLuviDepositValue
+
+`func (o *LiquidityProvider) HasLuviDepositValue() bool`
+
+HasLuviDepositValue returns a boolean if a field has been set.
 
 ### GetLuviRedeemValue
 
@@ -364,6 +379,11 @@ and a boolean to check if the value has been set.
 
 SetLuviRedeemValue sets LuviRedeemValue field to given value.
 
+### HasLuviRedeemValue
+
+`func (o *LiquidityProvider) HasLuviRedeemValue() bool`
+
+HasLuviRedeemValue returns a boolean if a field has been set.
 
 ### GetLuviGrowthPct
 
@@ -384,6 +404,11 @@ and a boolean to check if the value has been set.
 
 SetLuviGrowthPct sets LuviGrowthPct field to given value.
 
+### HasLuviGrowthPct
+
+`func (o *LiquidityProvider) HasLuviGrowthPct() bool`
+
+HasLuviGrowthPct returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

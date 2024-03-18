@@ -5,9 +5,9 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **TxId** | Pointer to **string** | the hash of a transaction | [optional] 
-**Interval** | Pointer to **int32** | how often each swap is made, in blocks | [optional] 
-**Quantity** | Pointer to **int32** | the total number of swaps in a streaming swaps | [optional] 
-**Count** | Pointer to **int32** | the amount of swap attempts so far | [optional] 
+**Interval** | Pointer to **int64** | how often each swap is made, in blocks | [optional] 
+**Quantity** | Pointer to **int64** | the total number of swaps in a streaming swaps | [optional] 
+**Count** | Pointer to **int64** | the amount of swap attempts so far | [optional] 
 **LastHeight** | Pointer to **int64** | the block height of the latest swap | [optional] 
 **TradeTarget** | **string** | the total number of tokens the swapper wants to receive of the output asset | 
 **SourceAsset** | Pointer to **string** | the asset to be swapped from | [optional] 
@@ -16,7 +16,7 @@ Name | Type | Description | Notes
 **Deposit** | **string** | the number of input tokens the swapper has deposited | 
 **In** | **string** | the amount of input tokens that have been swapped so far | 
 **Out** | **string** | the amount of output tokens that have been swapped so far | 
-**FailedSwaps** | Pointer to **[]int32** | the list of swap indexes that failed | [optional] 
+**FailedSwaps** | Pointer to **[]int64** | the list of swap indexes that failed | [optional] 
 **FailedSwapReasons** | Pointer to **[]string** | the list of reasons that sub-swaps have failed | [optional] 
 
 ## Methods
@@ -65,20 +65,20 @@ HasTxId returns a boolean if a field has been set.
 
 ### GetInterval
 
-`func (o *StreamingSwap) GetInterval() int32`
+`func (o *StreamingSwap) GetInterval() int64`
 
 GetInterval returns the Interval field if non-nil, zero value otherwise.
 
 ### GetIntervalOk
 
-`func (o *StreamingSwap) GetIntervalOk() (*int32, bool)`
+`func (o *StreamingSwap) GetIntervalOk() (*int64, bool)`
 
 GetIntervalOk returns a tuple with the Interval field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetInterval
 
-`func (o *StreamingSwap) SetInterval(v int32)`
+`func (o *StreamingSwap) SetInterval(v int64)`
 
 SetInterval sets Interval field to given value.
 
@@ -90,20 +90,20 @@ HasInterval returns a boolean if a field has been set.
 
 ### GetQuantity
 
-`func (o *StreamingSwap) GetQuantity() int32`
+`func (o *StreamingSwap) GetQuantity() int64`
 
 GetQuantity returns the Quantity field if non-nil, zero value otherwise.
 
 ### GetQuantityOk
 
-`func (o *StreamingSwap) GetQuantityOk() (*int32, bool)`
+`func (o *StreamingSwap) GetQuantityOk() (*int64, bool)`
 
 GetQuantityOk returns a tuple with the Quantity field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetQuantity
 
-`func (o *StreamingSwap) SetQuantity(v int32)`
+`func (o *StreamingSwap) SetQuantity(v int64)`
 
 SetQuantity sets Quantity field to given value.
 
@@ -115,20 +115,20 @@ HasQuantity returns a boolean if a field has been set.
 
 ### GetCount
 
-`func (o *StreamingSwap) GetCount() int32`
+`func (o *StreamingSwap) GetCount() int64`
 
 GetCount returns the Count field if non-nil, zero value otherwise.
 
 ### GetCountOk
 
-`func (o *StreamingSwap) GetCountOk() (*int32, bool)`
+`func (o *StreamingSwap) GetCountOk() (*int64, bool)`
 
 GetCountOk returns a tuple with the Count field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetCount
 
-`func (o *StreamingSwap) SetCount(v int32)`
+`func (o *StreamingSwap) SetCount(v int64)`
 
 SetCount sets Count field to given value.
 
@@ -320,20 +320,20 @@ SetOut sets Out field to given value.
 
 ### GetFailedSwaps
 
-`func (o *StreamingSwap) GetFailedSwaps() []int32`
+`func (o *StreamingSwap) GetFailedSwaps() []int64`
 
 GetFailedSwaps returns the FailedSwaps field if non-nil, zero value otherwise.
 
 ### GetFailedSwapsOk
 
-`func (o *StreamingSwap) GetFailedSwapsOk() (*[]int32, bool)`
+`func (o *StreamingSwap) GetFailedSwapsOk() (*[]int64, bool)`
 
 GetFailedSwapsOk returns a tuple with the FailedSwaps field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetFailedSwaps
 
-`func (o *StreamingSwap) SetFailedSwaps(v []int32)`
+`func (o *StreamingSwap) SetFailedSwaps(v []int64)`
 
 SetFailedSwaps sets FailedSwaps field to given value.
 

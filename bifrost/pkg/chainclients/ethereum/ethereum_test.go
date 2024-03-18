@@ -24,6 +24,7 @@ import (
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/config"
+	openapi "gitlab.com/thorchain/thornode/openapi/gen"
 	types2 "gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
@@ -72,14 +73,16 @@ func (s *EthereumSuite) SetUpTest(c *C) {
 			c.Assert(err, IsNil)
 			content, err := os.ReadFile("../../../../test/fixtures/endpoints/vaults/pubKeys.json")
 			c.Assert(err, IsNil)
-			var pubKeysVault types2.QueryVaultsPubKeys
+			var pubKeysVault openapi.VaultPubkeysResponse
 			c.Assert(json.Unmarshal(content, &pubKeysVault), IsNil)
-			pubKeysVault.Asgard = append(pubKeysVault.Asgard, types2.QueryVaultPubKeyContract{
-				PubKey: pk,
-				Routers: []types2.ChainContract{
+			chain := common.ETHChain.String()
+			router := "0xE65e9d372F8cAcc7b6dfcd4af6507851Ed31bb44"
+			pubKeysVault.Asgard = append(pubKeysVault.Asgard, openapi.VaultInfo{
+				PubKey: pk.String(),
+				Routers: []openapi.VaultRouter{
 					{
-						Chain:  common.ETHChain,
-						Router: "0xE65e9d372F8cAcc7b6dfcd4af6507851Ed31bb44",
+						Chain:  &chain,
+						Router: &router,
 					},
 				},
 			})

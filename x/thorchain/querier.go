@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/blang/semver"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -198,48 +199,6 @@ func NewQuerier(mgr *Mgrs, kbs cosmos.KeybaseStore) cosmos.Querier {
 	}
 }
 
-// TODO: Remove isSwap and isPending code when SwapFinalised field deprecated.
-func checkPending(ctx cosmos.Context, keeper keeper.Keeper, voter ObservedTxVoter) (isSwap, isPending, pending bool, streamingSwap StreamingSwap) {
-	// If there's no (confirmation-counting-complete) consensus transaction yet, don't spend time checking the swap status.
-	if voter.Tx.IsEmpty() || !voter.Tx.IsFinal() {
-		return
-	}
-
-	pending = keeper.HasSwapQueueItem(ctx, voter.TxID, 0) || keeper.HasOrderBookItem(ctx, voter.TxID)
-
-	// Only look for streaming information when a swap is pending.
-	if pending {
-		var err error
-		streamingSwap, err = keeper.GetStreamingSwap(ctx, voter.TxID)
-		if err != nil {
-			// Log the error, but continue without streaming information.
-			ctx.Logger().Error("fail to get streaming swap", "error", err)
-		}
-	}
-
-	memo, err := ParseMemoWithTHORNames(ctx, keeper, voter.Tx.Tx.Memo)
-	if err != nil {
-		// If unable to parse, assume not a (valid) swap or limit order memo.
-		return
-	}
-
-	memoType := memo.GetType()
-	// If the memo asset is a synth, as with Savers add liquidity or withdraw, a swap is assumed to be involved.
-	if memoType == TxSwap || memoType == TxLimitOrder || memo.GetAsset().IsVaultAsset() {
-		isSwap = true
-		// Only check the KVStore when the inbound transaction has already been finalised
-		// and when there haven't been any Actions planned.
-		// This will also check the KVStore when an inbound transaction has no output,
-		// such as the output being not enough to cover a fee.
-		if voter.FinalisedHeight != 0 && len(voter.Actions) == 0 {
-			// Use of Swap Queue or Order Book depends on Mimir key EnableOrderBooks rather than memo type, so check both.
-			isPending = pending
-		}
-	}
-
-	return
-}
-
 func getPeerIDFromPubKey(pubkey common.PubKey) string {
 	peerID, err := conversion.GetPeerIDFromPubKey(pubkey.String())
 	if err != nil {
@@ -333,21 +292,21 @@ func queryVault(ctx cosmos.Context, path []string, mgr *Mgrs) ([]byte, error) {
 		return nil, errors.New("vault not found")
 	}
 
-	resp := types.QueryVaultResp{
-		BlockHeight:           v.BlockHeight,
-		PubKey:                v.PubKey,
-		Coins:                 v.Coins,
-		Type:                  v.Type,
-		Status:                v.Status,
-		StatusSince:           v.StatusSince,
+	resp := openapi.Vault{
+		BlockHeight:           wrapInt64(v.BlockHeight),
+		PubKey:                wrapString(v.PubKey.String()),
+		Coins:                 castCoins(v.Coins...),
+		Type:                  wrapString(v.Type.String()),
+		Status:                v.Status.String(),
+		StatusSince:           wrapInt64(v.StatusSince),
 		Membership:            v.Membership,
 		Chains:                v.Chains,
-		InboundTxCount:        v.InboundTxCount,
-		OutboundTxCount:       v.OutboundTxCount,
+		InboundTxCount:        wrapInt64(v.InboundTxCount),
+		OutboundTxCount:       wrapInt64(v.OutboundTxCount),
 		PendingTxBlockHeights: v.PendingTxBlockHeights,
-		Routers:               v.Routers,
+		Routers:               castVaultRouters(v.Routers),
+		Addresses:             getVaultChainAddresses(ctx, v),
 		Frozen:                v.Frozen,
-		Addresses:             getVaultChainAddress(ctx, v),
 	}
 	return jsonify(ctx, resp)
 }
@@ -358,7 +317,7 @@ func queryAsgardVaults(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 		return nil, fmt.Errorf("fail to get asgard vaults: %w", err)
 	}
 
-	var vaultsWithFunds []types.QueryVaultResp
+	var vaultsWithFunds []openapi.Vault
 	for _, vault := range vaults {
 		if vault.Status == InactiveVault {
 			continue
@@ -368,21 +327,21 @@ func queryAsgardVaults(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 		}
 		// Being in a RetiringVault blocks a node from unbonding, so display them even if having no funds.
 		if vault.HasFunds() || vault.Status == ActiveVault || vault.Status == RetiringVault {
-			vaultsWithFunds = append(vaultsWithFunds, types.QueryVaultResp{
-				BlockHeight:           vault.BlockHeight,
-				PubKey:                vault.PubKey,
-				Coins:                 vault.Coins,
-				Type:                  vault.Type,
-				Status:                vault.Status,
-				StatusSince:           vault.StatusSince,
+			vaultsWithFunds = append(vaultsWithFunds, openapi.Vault{
+				BlockHeight:           wrapInt64(vault.BlockHeight),
+				PubKey:                wrapString(vault.PubKey.String()),
+				Coins:                 castCoins(vault.Coins...),
+				Type:                  wrapString(vault.Type.String()),
+				Status:                vault.Status.String(),
+				StatusSince:           wrapInt64(vault.StatusSince),
 				Membership:            vault.Membership,
 				Chains:                vault.Chains,
-				InboundTxCount:        vault.InboundTxCount,
-				OutboundTxCount:       vault.OutboundTxCount,
+				InboundTxCount:        wrapInt64(vault.InboundTxCount),
+				OutboundTxCount:       wrapInt64(vault.OutboundTxCount),
 				PendingTxBlockHeights: vault.PendingTxBlockHeights,
-				Routers:               vault.Routers,
+				Routers:               castVaultRouters(vault.Routers),
 				Frozen:                vault.Frozen,
-				Addresses:             getVaultChainAddress(ctx, vault),
+				Addresses:             getVaultChainAddresses(ctx, vault),
 			})
 		}
 	}
@@ -390,8 +349,8 @@ func queryAsgardVaults(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 	return jsonify(ctx, vaultsWithFunds)
 }
 
-func getVaultChainAddress(ctx cosmos.Context, vault Vault) []QueryChainAddress {
-	var result []QueryChainAddress
+func getVaultChainAddresses(ctx cosmos.Context, vault Vault) []openapi.VaultAddress {
+	var result []openapi.VaultAddress
 	allChains := append(vault.GetChains(), common.THORChain)
 	for _, c := range allChains.Distinct() {
 		addr, err := vault.PubKey.GetAddress(c)
@@ -400,9 +359,9 @@ func getVaultChainAddress(ctx cosmos.Context, vault Vault) []QueryChainAddress {
 			continue
 		}
 		result = append(result,
-			QueryChainAddress{
-				Chain:   c,
-				Address: addr,
+			openapi.VaultAddress{
+				Chain:   c.String(),
+				Address: addr.String(),
 			})
 	}
 	return result
@@ -424,7 +383,7 @@ func queryYggdrasilVaults(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 		}
 	}
 
-	respVaults := make([]QueryYggdrasilVaults, len(vaults))
+	respVaults := make([]openapi.YggdrasilVault, len(vaults))
 	for i, vault := range vaults {
 		totalValue := cosmos.ZeroUint()
 
@@ -449,22 +408,22 @@ func queryYggdrasilVaults(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 			}
 		}
 
-		respVaults[i] = QueryYggdrasilVaults{
-			BlockHeight:           vault.BlockHeight,
-			PubKey:                vault.PubKey,
-			Coins:                 vault.Coins,
-			Type:                  vault.Type,
-			StatusSince:           vault.StatusSince,
+		respVaults[i] = openapi.YggdrasilVault{
+			BlockHeight:           wrapInt64(vault.BlockHeight),
+			PubKey:                wrapString(vault.PubKey.String()),
+			Coins:                 castCoins(vault.Coins...),
+			Type:                  wrapString(vault.Type.String()),
+			StatusSince:           wrapInt64(vault.StatusSince),
 			Membership:            vault.Membership,
 			Chains:                vault.Chains,
-			InboundTxCount:        vault.InboundTxCount,
-			OutboundTxCount:       vault.OutboundTxCount,
+			InboundTxCount:        wrapInt64(vault.InboundTxCount),
+			OutboundTxCount:       wrapInt64(vault.OutboundTxCount),
 			PendingTxBlockHeights: vault.PendingTxBlockHeights,
-			Routers:               vault.Routers,
-			Status:                na.Status,
-			Bond:                  na.Bond,
-			TotalValue:            totalValue,
-			Addresses:             getVaultChainAddress(ctx, vault),
+			Routers:               castVaultRouters(vault.Routers),
+			Status:                na.Status.String(),
+			Bond:                  na.Bond.String(),
+			TotalValue:            totalValue.String(),
+			Addresses:             getVaultChainAddresses(ctx, vault),
 		}
 	}
 
@@ -472,10 +431,10 @@ func queryYggdrasilVaults(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 }
 
 func queryVaultsPubkeys(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
-	var resp QueryVaultsPubKeys
-	resp.Asgard = make([]QueryVaultPubKeyContract, 0)
-	resp.Yggdrasil = make([]QueryVaultPubKeyContract, 0) // TODO remove on hard fork
-	resp.Inactive = make([]QueryVaultPubKeyContract, 0)
+	var resp openapi.VaultPubkeysResponse
+	resp.Asgard = make([]openapi.VaultInfo, 0)
+	resp.Yggdrasil = make([]openapi.VaultInfo, 0) // TODO remove on hard fork
+	resp.Inactive = make([]openapi.VaultInfo, 0)
 	iter := mgr.Keeper().GetVaultIterator(ctx)
 
 	active, err := mgr.Keeper().ListActiveValidators(ctx)
@@ -497,17 +456,17 @@ func queryVaultsPubkeys(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 				return nil, fmt.Errorf("fail to unmarshal vault: %w", err)
 			}
 			if !na.Bond.IsZero() {
-				resp.Yggdrasil = append(resp.Yggdrasil, QueryVaultPubKeyContract{
-					PubKey:  vault.PubKey,
-					Routers: vault.Routers,
+				resp.Yggdrasil = append(resp.Yggdrasil, openapi.VaultInfo{
+					PubKey:  vault.PubKey.String(),
+					Routers: castVaultRouters(vault.Routers),
 				})
 			}
 		} else if vault.IsAsgard() {
 			switch vault.Status {
 			case ActiveVault, RetiringVault:
-				resp.Asgard = append(resp.Asgard, QueryVaultPubKeyContract{
-					PubKey:  vault.PubKey,
-					Routers: vault.Routers,
+				resp.Asgard = append(resp.Asgard, openapi.VaultInfo{
+					PubKey:  vault.PubKey.String(),
+					Routers: castVaultRouters(vault.Routers),
 				})
 			case InactiveVault:
 				// skip inactive vaults that have never received an inbound
@@ -527,9 +486,9 @@ func queryVaultsPubkeys(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 				}
 				allMembers := vault.Membership
 				if HasSuperMajority(len(activeMembers), len(allMembers)) {
-					resp.Inactive = append(resp.Inactive, QueryVaultPubKeyContract{
-						PubKey:  vault.PubKey,
-						Routers: vault.Routers,
+					resp.Inactive = append(resp.Inactive, openapi.VaultInfo{
+						PubKey:  vault.PubKey.String(),
+						Routers: castVaultRouters(vault.Routers),
 					})
 				}
 			}
@@ -727,20 +686,49 @@ func queryNode(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mg
 		return nil, fmt.Errorf("fail to get all active node account: %w", err)
 	}
 
-	result := NewQueryNodeAccount(nodeAcc)
-	result.PeerID = getPeerIDFromPubKey(nodeAcc.PubKeySet.Secp256k1)
+	result := openapi.Node{
+		NodeAddress: nodeAcc.NodeAddress.String(),
+		Status:      nodeAcc.Status.String(),
+		PubKeySet: openapi.NodePubKeySet{
+			Secp256k1: wrapString(nodeAcc.PubKeySet.Secp256k1.String()),
+			Ed25519:   wrapString(nodeAcc.PubKeySet.Ed25519.String()),
+		},
+		ValidatorConsPubKey: nodeAcc.ValidatorConsPubKey,
+		ActiveBlockHeight:   nodeAcc.ActiveBlockHeight,
+		StatusSince:         nodeAcc.StatusSince,
+		NodeOperatorAddress: nodeAcc.BondAddress.String(),
+		TotalBond:           nodeAcc.Bond.String(),
+		SignerMembership:    nodeAcc.GetSignerMembership().Strings(),
+		RequestedToLeave:    nodeAcc.RequestedToLeave,
+		ForcedToLeave:       nodeAcc.ForcedToLeave,
+		LeaveHeight:         int64(nodeAcc.LeaveScore), // OpenAPI can only represent uint64 as int64
+		IpAddress:           nodeAcc.IPAddress,
+		Version:             nodeAcc.GetVersion().String(),
+		CurrentAward:        cosmos.ZeroUint().String(), // Default display for if not overwritten.
+	}
+	result.PeerId = getPeerIDFromPubKey(nodeAcc.PubKeySet.Secp256k1)
 	result.SlashPoints = slashPts
 
-	result.Jail = Jail{
+	result.Jail = openapi.NodeJail{
 		// Since redundant, leave out the node address
-		ReleaseHeight: jail.ReleaseHeight,
-		Reason:        jail.Reason,
+		ReleaseHeight: wrapInt64(jail.ReleaseHeight),
+		Reason:        wrapString(jail.Reason),
 	}
 
-	result.BondProviders = BondProviders{
+	var providers []openapi.NodeBondProvider
+	// Leave this nil (null rather than []) if the source is nil.
+	if bp.Providers != nil {
+		providers = make([]openapi.NodeBondProvider, len(bp.Providers))
+		for i := range bp.Providers {
+			providers[i].BondAddress = wrapString(bp.Providers[i].BondAddress.String())
+			providers[i].Bond = wrapString(bp.Providers[i].Bond.String())
+		}
+	}
+
+	result.BondProviders = openapi.NodeBondProviders{
 		// Since redundant, leave out the node address
-		NodeOperatorFee: bp.NodeOperatorFee,
-		Providers:       bp.Providers,
+		NodeOperatorFee: bp.NodeOperatorFee.String(),
+		Providers:       providers,
 	}
 
 	// CurrentAward is an estimation of reward for node in active status
@@ -774,18 +762,19 @@ func queryNode(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mg
 			return nil, fmt.Errorf("fail to get current node rewards: %w", err)
 		}
 
-		result.CurrentAward = reward
+		result.CurrentAward = reward.String()
 	}
 
+	// TODO: Represent this map as the field directly, instead of making an array?
+	// It would then always be represented in alphabetical order.
 	chainHeights, err := mgr.Keeper().GetLastObserveHeight(ctx, addr)
 	if err != nil {
 		return nil, fmt.Errorf("fail to get last observe chain height: %w", err)
 	}
-
 	// analyze-ignore(map-iteration)
 	for c, h := range chainHeights {
-		result.ObserveChains = append(result.ObserveChains, types.QueryChainHeight{
-			Chain:  c,
+		result.ObserveChains = append(result.ObserveChains, openapi.ChainHeight{
+			Chain:  c.String(),
 			Height: h,
 		})
 	}
@@ -799,16 +788,16 @@ func queryNode(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mg
 	return jsonify(ctx, result)
 }
 
-func getNodePreflightResult(ctx cosmos.Context, mgr *Mgrs, nodeAcc NodeAccount) (QueryNodeAccountPreflightCheck, error) {
+func getNodePreflightResult(ctx cosmos.Context, mgr *Mgrs, nodeAcc NodeAccount) (openapi.NodePreflightStatus, error) {
 	constAccessor := mgr.GetConstants()
-	preflightResult := QueryNodeAccountPreflightCheck{}
+	preflightResult := openapi.NodePreflightStatus{}
 	status, err := mgr.ValidatorMgr().NodeAccountPreflightCheck(ctx, nodeAcc, constAccessor)
-	preflightResult.Status = status
+	preflightResult.Status = status.String()
 	if err != nil {
-		preflightResult.Description = err.Error()
+		preflightResult.Reason = err.Error()
 		preflightResult.Code = 1
 	} else {
-		preflightResult.Description = "OK"
+		preflightResult.Reason = "OK"
 		preflightResult.Code = 0
 	}
 	return preflightResult, nil
@@ -871,10 +860,19 @@ func queryNodes(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *M
 
 	lastChurnHeight := vaults[0].BlockHeight
 	version := mgr.GetVersion()
-	result := make([]QueryNodeAccount, len(nodeAccounts))
+	result := make([]openapi.Node, len(nodeAccounts))
 	for i, na := range nodeAccounts {
 		if na.RequestedToLeave && na.Bond.LTE(cosmos.NewUint(common.One)) {
 			// ignore the node , it left and also has very little bond
+			// Set the default display for fields which would otherwise be "".
+			result[i] = openapi.Node{
+				Status:          types.NodeStatus_Unknown.String(),
+				TotalBond:       cosmos.ZeroUint().String(),
+				BondProviders:   openapi.NodeBondProviders{NodeOperatorFee: cosmos.ZeroUint().String()},
+				Version:         semver.MustParse("0.0.0").String(),
+				CurrentAward:    cosmos.ZeroUint().String(),
+				PreflightStatus: openapi.NodePreflightStatus{Status: types.NodeStatus_Unknown.String()},
+			}
 			continue
 		}
 
@@ -883,8 +881,27 @@ func queryNodes(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *M
 			return nil, fmt.Errorf("fail to get node slash points: %w", err)
 		}
 
-		result[i] = NewQueryNodeAccount(na)
-		result[i].PeerID = getPeerIDFromPubKey(na.PubKeySet.Secp256k1)
+		result[i] = openapi.Node{
+			NodeAddress: na.NodeAddress.String(),
+			Status:      na.Status.String(),
+			PubKeySet: openapi.NodePubKeySet{
+				Secp256k1: wrapString(na.PubKeySet.Secp256k1.String()),
+				Ed25519:   wrapString(na.PubKeySet.Ed25519.String()),
+			},
+			ValidatorConsPubKey: na.ValidatorConsPubKey,
+			ActiveBlockHeight:   na.ActiveBlockHeight,
+			StatusSince:         na.StatusSince,
+			NodeOperatorAddress: na.BondAddress.String(),
+			TotalBond:           na.Bond.String(),
+			SignerMembership:    na.GetSignerMembership().Strings(),
+			RequestedToLeave:    na.RequestedToLeave,
+			ForcedToLeave:       na.ForcedToLeave,
+			LeaveHeight:         int64(na.LeaveScore), // OpenAPI can only represent uint64 as int64
+			IpAddress:           na.IPAddress,
+			Version:             na.GetVersion().String(),
+			CurrentAward:        cosmos.ZeroUint().String(), // Default display for if not overwritten.
+		}
+		result[i].PeerId = getPeerIDFromPubKey(na.PubKeySet.Secp256k1)
 		result[i].SlashPoints = slashPts
 		if na.Status == NodeActive {
 			reward, err := getNodeCurrentRewards(ctx, mgr, na, lastChurnHeight, network.BondRewardRune, totalEffectiveBond, bondHardCap)
@@ -892,27 +909,29 @@ func queryNodes(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *M
 				return nil, fmt.Errorf("fail to get current node rewards: %w", err)
 			}
 
-			result[i].CurrentAward = reward
+			result[i].CurrentAward = reward.String()
 		}
 
 		jail, err := mgr.Keeper().GetNodeAccountJail(ctx, na.NodeAddress)
 		if err != nil {
 			return nil, fmt.Errorf("fail to get node jail: %w", err)
 		}
-		result[i].Jail = Jail{
+		result[i].Jail = openapi.NodeJail{
 			// Since redundant, leave out the node address
-			ReleaseHeight: jail.ReleaseHeight,
-			Reason:        jail.Reason,
+			ReleaseHeight: wrapInt64(jail.ReleaseHeight),
+			Reason:        wrapString(jail.Reason),
 		}
+
+		// TODO: Represent this map as the field directly, instead of making an array?
+		// It would then always be represented in alphabetical order.
 		chainHeights, err := mgr.Keeper().GetLastObserveHeight(ctx, na.NodeAddress)
 		if err != nil {
 			return nil, fmt.Errorf("fail to get last observe chain height: %w", err)
 		}
-
 		// analyze-ignore(map-iteration)
 		for c, h := range chainHeights {
-			result[i].ObserveChains = append(result[i].ObserveChains, types.QueryChainHeight{
-				Chain:  c,
+			result[i].ObserveChains = append(result[i].ObserveChains, openapi.ChainHeight{
+				Chain:  c.String(),
 				Height: h,
 			})
 		}
@@ -924,15 +943,26 @@ func queryNodes(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *M
 			result[i].PreflightStatus = preflightCheckResult
 		}
 
-		bp, err := mgr.Keeper().GetBondProviders(ctx, result[i].NodeAddress)
+		bp, err := mgr.Keeper().GetBondProviders(ctx, na.NodeAddress)
 		if err != nil {
 			ctx.Logger().Error("fail to get bond providers", "error", err)
 		}
 		bp.Adjust(version, na.Bond)
-		result[i].BondProviders = BondProviders{
+
+		var providers []openapi.NodeBondProvider
+		// Leave this nil (null rather than []) if the source is nil.
+		if bp.Providers != nil {
+			providers = make([]openapi.NodeBondProvider, len(bp.Providers))
+			for i := range bp.Providers {
+				providers[i].BondAddress = wrapString(bp.Providers[i].BondAddress.String())
+				providers[i].Bond = wrapString(bp.Providers[i].Bond.String())
+			}
+		}
+
+		result[i].BondProviders = openapi.NodeBondProviders{
 			// Since redundant, leave out the node address
-			NodeOperatorFee: bp.NodeOperatorFee,
-			Providers:       bp.Providers,
+			NodeOperatorFee: bp.NodeOperatorFee.String(),
+			Providers:       providers,
 		}
 	}
 
@@ -1021,6 +1051,29 @@ func queryBorrower(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr
 	return jsonify(ctx, borrower)
 }
 
+func newSaver(lp LiquidityProvider, pool Pool) openapi.Saver {
+	assetRedeemableValue := lp.GetSaversAssetRedeemValue(pool)
+
+	gp := cosmos.NewDec(0)
+	if !lp.AssetDepositValue.IsZero() {
+		adv := cosmos.NewDec(lp.AssetDepositValue.BigInt().Int64())
+		arv := cosmos.NewDec(assetRedeemableValue.BigInt().Int64())
+		gp = arv.Sub(adv)
+		gp = gp.Quo(adv)
+	}
+
+	return openapi.Saver{
+		Asset:              lp.Asset.GetLayer1Asset().String(),
+		AssetAddress:       lp.AssetAddress.String(),
+		LastAddHeight:      wrapInt64(lp.LastAddHeight),
+		LastWithdrawHeight: wrapInt64(lp.LastWithdrawHeight),
+		Units:              lp.Units.String(),
+		AssetDepositValue:  lp.AssetDepositValue.String(),
+		AssetRedeemValue:   assetRedeemableValue.String(),
+		GrowthPct:          gp.String(),
+	}
+}
+
 // queryLiquidityProviders
 // isSavers is true if request is for the savers of a Savers Pool, if false the request is for an L1 pool
 func queryLiquidityProviders(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgrs, isSavers bool) ([]byte, error) {
@@ -1055,17 +1108,30 @@ func queryLiquidityProviders(ctx cosmos.Context, path []string, req abci.Request
 		return nil, fmt.Errorf("fail to get pool: %w", err)
 	}
 
-	var lps LiquidityProviders
-	var savers []QuerySaver
+	var lps []openapi.LiquidityProvider
+	var savers []openapi.Saver
 	iterator := mgr.Keeper().GetLiquidityProviderIterator(ctx, asset)
 	defer iterator.Close()
 	for ; iterator.Valid(); iterator.Next() {
 		var lp LiquidityProvider
 		mgr.Keeper().Cdc().MustUnmarshal(iterator.Value(), &lp)
 		if !isSavers {
-			lps = append(lps, lp)
+			lps = append(lps, openapi.LiquidityProvider{
+				// No redeem or LUVI calculations for the array response.
+				Asset:              lp.Asset.GetLayer1Asset().String(),
+				RuneAddress:        wrapString(lp.RuneAddress.String()),
+				AssetAddress:       wrapString(lp.AssetAddress.String()),
+				LastAddHeight:      wrapInt64(lp.LastAddHeight),
+				LastWithdrawHeight: wrapInt64(lp.LastWithdrawHeight),
+				Units:              lp.Units.String(),
+				PendingRune:        lp.PendingRune.String(),
+				PendingAsset:       lp.PendingAsset.String(),
+				PendingTxId:        wrapString(lp.PendingTxID.String()),
+				RuneDepositValue:   lp.RuneDepositValue.String(),
+				AssetDepositValue:  lp.AssetDepositValue.String(),
+			})
 		} else {
-			savers = append(savers, NewQuerySaver(lp, pool))
+			savers = append(savers, newSaver(lp, pool))
 		}
 	}
 	if !isSavers {
@@ -1124,16 +1190,80 @@ func queryLiquidityProvider(ctx cosmos.Context, path []string, req abci.RequestQ
 
 	if !isSavers {
 		synthSupply := mgr.Keeper().GetTotalSupply(ctx, poolAsset.GetSyntheticAsset())
-		liqp := NewQueryLiquidityProvider(lp, pool, synthSupply, mgr.GetVersion())
+		_, runeRedeemValue := lp.GetRuneRedeemValue(mgr.GetVersion(), pool, synthSupply)
+		_, assetRedeemValue := lp.GetAssetRedeemValue(mgr.GetVersion(), pool, synthSupply)
+		_, luviDepositValue := lp.GetLuviDepositValue(pool)
+		_, luviRedeemValue := lp.GetLuviRedeemValue(runeRedeemValue, assetRedeemValue)
+
+		lgp := cosmos.NewDec(0)
+		if !luviDepositValue.IsZero() {
+			ldv := cosmos.NewDec(luviDepositValue.BigInt().Int64())
+			lrv := cosmos.NewDec(luviRedeemValue.BigInt().Int64())
+			lgp = lrv.Sub(ldv)
+			lgp = lgp.Quo(ldv)
+		}
+
+		liqp := openapi.LiquidityProvider{
+			Asset:              lp.Asset.GetLayer1Asset().String(),
+			RuneAddress:        wrapString(lp.RuneAddress.String()),
+			AssetAddress:       wrapString(lp.AssetAddress.String()),
+			LastAddHeight:      wrapInt64(lp.LastAddHeight),
+			LastWithdrawHeight: wrapInt64(lp.LastWithdrawHeight),
+			Units:              lp.Units.String(),
+			PendingRune:        lp.PendingRune.String(),
+			PendingAsset:       lp.PendingAsset.String(),
+			PendingTxId:        wrapString(lp.PendingTxID.String()),
+			RuneDepositValue:   lp.RuneDepositValue.String(),
+			AssetDepositValue:  lp.AssetDepositValue.String(),
+			RuneRedeemValue:    wrapString(runeRedeemValue.String()),
+			AssetRedeemValue:   wrapString(assetRedeemValue.String()),
+			LuviDepositValue:   wrapString(luviDepositValue.String()),
+			LuviRedeemValue:    wrapString(luviRedeemValue.String()),
+			LuviGrowthPct:      wrapString(lgp.String()),
+		}
 		return jsonify(ctx, liqp)
 	} else {
-		saver := NewQuerySaver(lp, pool)
+		saver := newSaver(lp, pool)
 		return jsonify(ctx, saver)
 	}
 }
 
+func newStreamingSwap(streamingSwap StreamingSwap, msgSwap MsgSwap) openapi.StreamingSwap {
+	var sourceAsset common.Asset
+	// Leave the source_asset field empty if there is more than a single input Coin.
+	if len(msgSwap.Tx.Coins) == 1 {
+		sourceAsset = msgSwap.Tx.Coins[0].Asset
+	}
+
+	var failedSwaps []int64
+	// Leave this nil (null rather than []) if the source is nil.
+	if streamingSwap.FailedSwaps != nil {
+		failedSwaps = make([]int64, len(streamingSwap.FailedSwaps))
+		for i := range streamingSwap.FailedSwaps {
+			failedSwaps[i] = int64(streamingSwap.FailedSwaps[i])
+		}
+	}
+
+	return openapi.StreamingSwap{
+		TxId:              wrapString(streamingSwap.TxID.String()),
+		Interval:          wrapInt64(int64(streamingSwap.Interval)),
+		Quantity:          wrapInt64(int64(streamingSwap.Quantity)),
+		Count:             wrapInt64(int64(streamingSwap.Count)),
+		LastHeight:        wrapInt64(streamingSwap.LastHeight),
+		TradeTarget:       streamingSwap.TradeTarget.String(),
+		SourceAsset:       wrapString(sourceAsset.String()),
+		TargetAsset:       wrapString(msgSwap.TargetAsset.String()),
+		Destination:       wrapString(msgSwap.Destination.String()),
+		Deposit:           streamingSwap.Deposit.String(),
+		In:                streamingSwap.In.String(),
+		Out:               streamingSwap.Out.String(),
+		FailedSwaps:       failedSwaps,
+		FailedSwapReasons: streamingSwap.FailedSwapReasons,
+	}
+}
+
 func queryStreamingSwaps(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
-	var streams []QueryStreamingSwap
+	var streams []openapi.StreamingSwap
 	iter := mgr.Keeper().GetStreamingSwapIterator(ctx)
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
@@ -1159,7 +1289,7 @@ func queryStreamingSwaps(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 			break
 		}
 
-		streams = append(streams, NewQueryStreamingSwap(stream, msgSwap))
+		streams = append(streams, newStreamingSwap(stream, msgSwap))
 	}
 	return jsonify(ctx, streams)
 }
@@ -1218,7 +1348,7 @@ func queryStreamingSwap(ctx cosmos.Context, path []string, mgr *Mgrs) ([]byte, e
 		break
 	}
 
-	result := NewQueryStreamingSwap(streamingSwap, msgSwap)
+	result := newStreamingSwap(streamingSwap, msgSwap)
 
 	return jsonify(ctx, result)
 }
@@ -1278,7 +1408,19 @@ func queryPool(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mg
 		dbps = cosmos.ZeroUint()
 	}
 
-	p := NewQueryPool(pool)
+	p := openapi.Pool{
+		Asset:               pool.Asset.String(),
+		ShortCode:           wrapString(pool.Asset.ShortCode()),
+		Status:              pool.Status.String(),
+		Decimals:            wrapInt64(pool.Decimals),
+		PendingInboundAsset: pool.PendingInboundAsset.String(),
+		PendingInboundRune:  pool.PendingInboundRune.String(),
+		BalanceAsset:        pool.BalanceAsset.String(),
+		BalanceRune:         pool.BalanceRune.String(),
+		PoolUnits:           pool.GetPoolUnits().String(),
+		LPUnits:             pool.LPUnits.String(),
+		SynthUnits:          pool.SynthUnits.String(),
+	}
 	p.SynthSupply = synthSupply.String()
 	p.SaversDepth = saversDepth.String()
 	p.SaversUnits = saversUnits.String()
@@ -1287,13 +1429,13 @@ func queryPool(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mg
 	p.LoanCollateral = totalCollateral.String()
 	p.LoanCollateralRemaining = loanCollateralRemaining.String()
 	p.DerivedDepthBps = dbps.String()
-	p.LoanCR = cr.String()
+	p.LoanCr = cr.String()
 
 	return jsonify(ctx, p)
 }
 
 func queryPools(ctx cosmos.Context, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {
-	pools := make([]QueryPool, 0)
+	pools := make([]openapi.Pool, 0)
 	iterator := mgr.Keeper().GetPoolIterator(ctx)
 	for ; iterator.Valid(); iterator.Next() {
 		var pool Pool
@@ -1351,7 +1493,19 @@ func queryPools(ctx cosmos.Context, req abci.RequestQuery, mgr *Mgrs) ([]byte, e
 			dbps = cosmos.ZeroUint()
 		}
 
-		p := NewQueryPool(pool)
+		p := openapi.Pool{
+			Asset:               pool.Asset.String(),
+			ShortCode:           wrapString(pool.Asset.ShortCode()),
+			Status:              pool.Status.String(),
+			Decimals:            wrapInt64(pool.Decimals),
+			PendingInboundAsset: pool.PendingInboundAsset.String(),
+			PendingInboundRune:  pool.PendingInboundRune.String(),
+			BalanceAsset:        pool.BalanceAsset.String(),
+			BalanceRune:         pool.BalanceRune.String(),
+			PoolUnits:           pool.GetPoolUnits().String(),
+			LPUnits:             pool.LPUnits.String(),
+			SynthUnits:          pool.SynthUnits.String(),
+		}
 		p.SynthSupply = synthSupply.String()
 		p.SaversDepth = saversDepth.String()
 		p.SaversUnits = saversUnits.String()
@@ -1360,7 +1514,7 @@ func queryPools(ctx cosmos.Context, req abci.RequestQuery, mgr *Mgrs) ([]byte, e
 		p.LoanCollateral = totalCollateral.String()
 		p.LoanCollateralRemaining = loanCollateralRemaining.String()
 		p.DerivedDepthBps = dbps.String()
-		p.LoanCR = cr.String()
+		p.LoanCr = cr.String()
 
 		pools = append(pools, p)
 	}
@@ -1388,19 +1542,25 @@ func queryDerivedPool(ctx cosmos.Context, path []string, req abci.RequestQuery, 
 
 	runeDepth, _, _ := mgr.NetworkMgr().CalcAnchor(ctx, mgr, asset)
 	dpool, _ := mgr.Keeper().GetPool(ctx, asset.GetDerivedAsset())
-	dbps := common.GetUncappedShare(dpool.BalanceRune, runeDepth, cosmos.NewUint(constants.MaxBasisPts))
-	if dpool.Status != PoolAvailable {
-		dbps = cosmos.ZeroUint()
+	dbps := cosmos.ZeroUint()
+	if dpool.Status == PoolAvailable {
+		dbps = common.GetUncappedShare(dpool.BalanceRune, runeDepth, cosmos.NewUint(constants.MaxBasisPts))
 	}
 
-	p := NewQueryDerivedPool(pool)
+	p := openapi.DerivedPool{
+		Asset:        dpool.Asset.String(),
+		Status:       dpool.Status.String(),
+		Decimals:     wrapInt64(dpool.Decimals),
+		BalanceAsset: dpool.BalanceAsset.String(),
+		BalanceRune:  dpool.BalanceRune.String(),
+	}
 	p.DerivedDepthBps = dbps.String()
 
 	return jsonify(ctx, p)
 }
 
 func queryDerivedPools(ctx cosmos.Context, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {
-	pools := make([]QueryDerivedPool, 0)
+	pools := make([]openapi.DerivedPool, 0)
 	iterator := mgr.Keeper().GetPoolIterator(ctx)
 	for ; iterator.Valid(); iterator.Next() {
 		var pool Pool
@@ -1414,12 +1574,18 @@ func queryDerivedPools(ctx cosmos.Context, req abci.RequestQuery, mgr *Mgrs) ([]
 
 		runeDepth, _, _ := mgr.NetworkMgr().CalcAnchor(ctx, mgr, pool.Asset)
 		dpool, _ := mgr.Keeper().GetPool(ctx, pool.Asset.GetDerivedAsset())
-		dbps := common.GetUncappedShare(dpool.BalanceRune, runeDepth, cosmos.NewUint(constants.MaxBasisPts))
-		if dpool.Status != PoolAvailable {
-			dbps = cosmos.ZeroUint()
+		dbps := cosmos.ZeroUint()
+		if dpool.Status == PoolAvailable {
+			dbps = common.GetUncappedShare(dpool.BalanceRune, runeDepth, cosmos.NewUint(constants.MaxBasisPts))
 		}
 
-		p := NewQueryDerivedPool(pool)
+		p := openapi.DerivedPool{
+			Asset:        dpool.Asset.String(),
+			Status:       dpool.Status.String(),
+			Decimals:     wrapInt64(dpool.Decimals),
+			BalanceAsset: dpool.BalanceAsset.String(),
+			BalanceRune:  dpool.BalanceRune.String(),
+		}
 		p.DerivedDepthBps = dbps.String()
 
 		pools = append(pools, p)
@@ -1583,9 +1749,248 @@ func queryTxVoters(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr
 		}
 	}
 
-	result := NewQueryTxDetails(voter)
+	var txs []openapi.ObservedTx
+	// Leave this nil (null rather than []) if the source is nil.
+	if voter.Txs != nil {
+		txs = make([]openapi.ObservedTx, len(voter.Txs))
+		for i := range voter.Txs {
+			txs[i] = castObservedTx(voter.Txs[i])
+		}
+	}
+
+	var actions []openapi.TxOutItem
+	// Leave this nil (null rather than []) if the source is nil.
+	if voter.Actions != nil {
+		actions = make([]openapi.TxOutItem, len(voter.Actions))
+		for i := range voter.Actions {
+			actions[i] = castTxOutItem(voter.Actions[i], 0) // Omitted Height field
+		}
+	}
+
+	var outTxs []openapi.Tx
+	// Leave this nil (null rather than []) if the source is nil.
+	if voter.OutTxs != nil {
+		outTxs = make([]openapi.Tx, len(voter.OutTxs))
+		for i := range voter.OutTxs {
+			outTxs[i] = castTx(voter.OutTxs[i])
+		}
+	}
+
+	result := openapi.TxDetailsResponse{
+		TxId:            wrapString(voter.TxID.String()),
+		Tx:              castObservedTx(voter.Tx),
+		Txs:             txs,
+		Actions:         actions,
+		OutTxs:          outTxs,
+		ConsensusHeight: wrapInt64(voter.Height),
+		FinalisedHeight: wrapInt64(voter.FinalisedHeight),
+		UpdatedVault:    wrapBool(voter.UpdatedVault),
+		Reverted:        wrapBool(voter.Reverted),
+		OutboundHeight:  wrapInt64(voter.OutboundHeight),
+	}
 
 	return jsonify(ctx, result)
+}
+
+// TODO: Remove isSwap and isPending code when SwapFinalised field deprecated.
+func checkPending(ctx cosmos.Context, keeper keeper.Keeper, voter ObservedTxVoter) (isSwap, isPending, pending bool, streamingSwap StreamingSwap) {
+	// If there's no (confirmation-counting-complete) consensus transaction yet, don't spend time checking the swap status.
+	if voter.Tx.IsEmpty() || !voter.Tx.IsFinal() {
+		return
+	}
+
+	pending = keeper.HasSwapQueueItem(ctx, voter.TxID, 0) || keeper.HasOrderBookItem(ctx, voter.TxID)
+
+	// Only look for streaming information when a swap is pending.
+	if pending {
+		var err error
+		streamingSwap, err = keeper.GetStreamingSwap(ctx, voter.TxID)
+		if err != nil {
+			// Log the error, but continue without streaming information.
+			ctx.Logger().Error("fail to get streaming swap", "error", err)
+		}
+	}
+
+	memo, err := ParseMemoWithTHORNames(ctx, keeper, voter.Tx.Tx.Memo)
+	if err != nil {
+		// If unable to parse, assume not a (valid) swap or limit order memo.
+		return
+	}
+
+	memoType := memo.GetType()
+	// If the memo asset is a synth, as with Savers add liquidity or withdraw, a swap is assumed to be involved.
+	if memoType == TxSwap || memoType == TxLimitOrder || memo.GetAsset().IsVaultAsset() {
+		isSwap = true
+		// Only check the KVStore when the inbound transaction has already been finalised
+		// and when there haven't been any Actions planned.
+		// This will also check the KVStore when an inbound transaction has no output,
+		// such as the output being not enough to cover a fee.
+		if voter.FinalisedHeight != 0 && len(voter.Actions) == 0 {
+			// Use of Swap Queue or Order Book depends on Mimir key EnableOrderBooks rather than memo type, so check both.
+			isPending = pending
+		}
+	}
+
+	return
+}
+
+// Get the largest number of signers for a not-final (pre-confirmation-counting) and final Txs respectively.
+func countSigners(voter ObservedTxVoter) (*int64, int64) {
+	var notFinalCount, finalCount int64
+	for i, refTx := range voter.Txs {
+		signersMap := make(map[string]bool)
+		final := refTx.IsFinal()
+		for f, tx := range voter.Txs {
+			// Earlier Txs already checked against all, so no need to check,
+			// but do include the signers of the current Txs.
+			if f < i {
+				continue
+			}
+			// Count larger number of signers for not-final and final observations separately.
+			if tx.IsFinal() != final {
+				continue
+			}
+			if !refTx.Tx.EqualsEx(tx.Tx) {
+				continue
+			}
+
+			for _, signer := range tx.GetSigners() {
+				signersMap[signer.String()] = true
+			}
+		}
+		if final && int64(len(signersMap)) > finalCount {
+			finalCount = int64(len(signersMap))
+		} else if int64(len(signersMap)) > notFinalCount {
+			notFinalCount = int64(len(signersMap))
+		}
+	}
+	return wrapInt64(notFinalCount), finalCount
+}
+
+// Call newTxStagesResponse from both queryTxStatus (which includes the stages) and queryTxStages.
+// TODO: Remove isSwap and isPending arguments when SwapFinalised deprecated in favour of SwapStatus.
+// TODO: Deprecate InboundObserved.Started field in favour of the observation counting.
+func newTxStagesResponse(ctx cosmos.Context, voter ObservedTxVoter, isSwap, isPending, pending bool, streamingSwap StreamingSwap) (result openapi.TxStagesResponse) {
+	result.InboundObserved.PreConfirmationCount, result.InboundObserved.FinalCount = countSigners(voter)
+	result.InboundObserved.Completed = !voter.Tx.IsEmpty()
+
+	// If not Completed, fill in Started and do not proceed.
+	if !result.InboundObserved.Completed {
+		obStart := (len(voter.Txs) != 0)
+		result.InboundObserved.Started = &obStart
+		return result
+	}
+
+	// Current block height is relevant in the confirmation counting and outbound stages.
+	currentHeight := ctx.BlockHeight()
+
+	// Only fill in InboundConfirmationCounted when confirmation counting took place.
+	if voter.Height != 0 {
+		var confCount openapi.InboundConfirmationCountedStage
+
+		// Set the Completed state first.
+		extObsHeight := voter.Tx.BlockHeight
+		extConfDelayHeight := voter.Tx.FinaliseHeight
+		confCount.Completed = !(extConfDelayHeight > extObsHeight)
+
+		// Only fill in other fields if not Completed.
+		if !confCount.Completed {
+			countStartHeight := voter.Height
+			confCount.CountingStartHeight = wrapInt64(countStartHeight)
+			confCount.Chain = wrapString(voter.Tx.Tx.Chain.String())
+			confCount.ExternalObservedHeight = wrapInt64(extObsHeight)
+			confCount.ExternalConfirmationDelayHeight = wrapInt64(extConfDelayHeight)
+
+			estConfMs := voter.Tx.Tx.Chain.ApproximateBlockMilliseconds() * (extConfDelayHeight - extObsHeight)
+			if currentHeight > countStartHeight {
+				estConfMs -= (currentHeight - countStartHeight) * common.THORChain.ApproximateBlockMilliseconds()
+			}
+			estConfSec := estConfMs / 1000
+			// Floor at 0.
+			if estConfSec < 0 {
+				estConfSec = 0
+			}
+			confCount.RemainingConfirmationSeconds = &estConfSec
+		}
+
+		result.InboundConfirmationCounted = &confCount
+	}
+
+	var inboundFinalised openapi.InboundFinalisedStage
+	inboundFinalised.Completed = (voter.FinalisedHeight != 0)
+	result.InboundFinalised = &inboundFinalised
+
+	var swapStatus openapi.SwapStatus
+	swapStatus.Pending = pending
+	// Only display the SwapStatus stage's Streaming field when there's streaming information available.
+	if streamingSwap.Valid() == nil {
+		streaming := openapi.StreamingStatus{
+			Interval: int64(streamingSwap.Interval),
+			Quantity: int64(streamingSwap.Quantity),
+			Count:    int64(streamingSwap.Count),
+		}
+		swapStatus.Streaming = &streaming
+	}
+	result.SwapStatus = &swapStatus
+
+	// Whether there's an external outbound or not, show the SwapFinalised stage from the start.
+	if isSwap {
+		var swapFinalisedState openapi.SwapFinalisedStage
+
+		swapFinalisedState.Completed = false
+		if !isPending && result.InboundFinalised.Completed {
+			// Record as completed only when not pending after the inbound has already been finalised.
+			swapFinalisedState.Completed = true
+		}
+
+		result.SwapFinalised = &swapFinalisedState
+	}
+
+	// Only fill ExternalOutboundDelay and ExternalOutboundKeysign for inbound transactions with an external outbound;
+	// namely, transactions with an outbound_height .
+	if voter.OutboundHeight == 0 {
+		return result
+	}
+
+	// Only display the OutboundDelay stage when there's a delay.
+	if voter.OutboundHeight > voter.FinalisedHeight {
+		var outDelay openapi.OutboundDelayStage
+
+		// Set the Completed state first.
+		outDelay.Completed = (currentHeight >= voter.OutboundHeight)
+
+		// Only fill in other fields if not Completed.
+		if !outDelay.Completed {
+			remainBlocks := voter.OutboundHeight - currentHeight
+			outDelay.RemainingDelayBlocks = &remainBlocks
+
+			remainSec := remainBlocks * common.THORChain.ApproximateBlockMilliseconds() / 1000
+			outDelay.RemainingDelaySeconds = &remainSec
+		}
+
+		result.OutboundDelay = &outDelay
+	}
+
+	var outSigned openapi.OutboundSignedStage
+
+	// Set the Completed state first.
+	outSigned.Completed = (voter.Tx.Status != types.Status_incomplete)
+
+	// Only fill in other fields if not Completed.
+	if !outSigned.Completed {
+		scheduledHeight := voter.OutboundHeight
+		outSigned.ScheduledOutboundHeight = &scheduledHeight
+
+		// Only fill in BlocksSinceScheduled if the outbound delay is complete.
+		if currentHeight >= scheduledHeight {
+			sinceScheduled := currentHeight - scheduledHeight
+			outSigned.BlocksSinceScheduled = &sinceScheduled
+		}
+	}
+
+	result.OutboundSigned = &outSigned
+
+	return result
 }
 
 func queryTxStages(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {
@@ -1599,7 +2004,7 @@ func queryTxStages(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr
 
 	isSwap, isPending, pending, streamingSwap := checkPending(ctx, mgr.Keeper(), voter)
 
-	result := NewQueryTxStages(ctx, voter, isSwap, isPending, pending, streamingSwap)
+	result := newTxStagesResponse(ctx, voter, isSwap, isPending, pending, streamingSwap)
 
 	return jsonify(ctx, result)
 }
@@ -1613,9 +2018,44 @@ func queryTxStatus(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr
 	// when no TxIn voter don't check TxOut voter, as TxOut THORChain observation or not matters little to the user once signed and broadcast
 	// Rather than a "tx: %s doesn't exist" result, allow a response to an existing-but-unobserved hash with Stages.Observation.Started 'false'.
 
+	// TODO: Remove isSwap and isPending arguments when SwapFinalised deprecated.
 	isSwap, isPending, pending, streamingSwap := checkPending(ctx, mgr.Keeper(), voter)
 
-	result := NewQueryTxStatus(ctx, voter, isSwap, isPending, pending, streamingSwap)
+	var result openapi.TxStatusResponse
+
+	// If there's a consensus Tx, display that.
+	// If not, but there's at least one observation, display the first observation's Tx.
+	// If there are no observations yet, don't display a Tx (only showing the 'Observation' stage with 'Started' false).
+	if !voter.Tx.Tx.IsEmpty() {
+		tx := castTx(voter.Tx.Tx)
+		result.Tx = &tx
+	} else if len(voter.Txs) > 0 {
+		tx := castTx(voter.Txs[0].Tx)
+		result.Tx = &tx
+	}
+
+	// Leave this nil (null rather than []) if the source is nil.
+	if voter.Actions != nil {
+		result.PlannedOutTxs = make([]openapi.PlannedOutTx, len(voter.Actions))
+		for i := range voter.Actions {
+			result.PlannedOutTxs[i] = openapi.PlannedOutTx{
+				Chain:     voter.Actions[i].Chain.String(),
+				ToAddress: voter.Actions[i].ToAddress.String(),
+				Coin:      castCoin(voter.Actions[i].Coin),
+				Refund:    strings.HasPrefix(voter.Actions[i].Memo, "REFUND"),
+			}
+		}
+	}
+
+	// Leave this nil (null rather than []) if the source is nil.
+	if voter.OutTxs != nil {
+		result.OutTxs = make([]openapi.Tx, len(voter.OutTxs))
+		for i := range voter.OutTxs {
+			result.OutTxs[i] = castTx(voter.OutTxs[i])
+		}
+	}
+
+	result.Stages = newTxStagesResponse(ctx, voter, isSwap, isPending, pending, streamingSwap)
 
 	return jsonify(ctx, result)
 }
@@ -1644,18 +2084,18 @@ func queryTx(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgrs
 		ctx.Logger().Error("fail to get keysign metrics", "error", err)
 	}
 	result := struct {
-		QueryObservedTx `json:"observed_tx"`
+		ObservedTx      openapi.ObservedTx     `json:"observed_tx"`
 		ConsensusHeight int64                  `json:"consensus_height,omitempty"`
 		FinalisedHeight int64                  `json:"finalised_height,omitempty"`
 		OutboundHeight  int64                  `json:"outbound_height,omitempty"`
 		KeysignMetrics  types.TssKeysignMetric `json:"keysign_metric"`
 	}{
+		ObservedTx:      castObservedTx(voter.GetTx(nodeAccounts)),
 		ConsensusHeight: voter.Height,
 		FinalisedHeight: voter.FinalisedHeight,
 		OutboundHeight:  voter.OutboundHeight,
 		KeysignMetrics:  *keysignMetric,
 	}
-	result.QueryObservedTx = NewQueryObservedTx(voter.GetTx(nodeAccounts))
 	return jsonify(ctx, result)
 }
 
@@ -1713,9 +2153,25 @@ func queryKeygen(ctx cosmos.Context, kbs cosmos.KeybaseStore, path []string, req
 		return nil, fmt.Errorf("fail to sign keygen: %w", err)
 	}
 
-	query := QueryKeygenBlock{
-		KeygenBlock: keygenBlock,
-		Signature:   base64.StdEncoding.EncodeToString(sig),
+	var keygens []openapi.Keygen
+	// Leave this nil (null rather than []) if the source is nil.
+	if keygenBlock.Keygens != nil {
+		keygens = make([]openapi.Keygen, len(keygenBlock.Keygens))
+		for i := range keygenBlock.Keygens {
+			keygens[i] = openapi.Keygen{
+				Id:      wrapString(keygenBlock.Keygens[i].ID.String()),
+				Type:    wrapString(keygenBlock.Keygens[i].Type.String()),
+				Members: keygenBlock.Keygens[i].Members,
+			}
+		}
+	}
+
+	query := openapi.KeygenResponse{
+		KeygenBlock: openapi.KeygenBlock{
+			Height:  wrapInt64(keygenBlock.Height),
+			Keygens: keygens,
+		},
+		Signature: base64.StdEncoding.EncodeToString(sig),
 	}
 
 	return jsonify(ctx, query)
@@ -1768,8 +2224,21 @@ func queryKeysign(ctx cosmos.Context, kbs cosmos.KeybaseStore, path []string, re
 		ctx.Logger().Error("fail to sign keysign", "error", err)
 		return nil, fmt.Errorf("fail to sign keysign: %w", err)
 	}
-	query := QueryKeysign{
-		Keysign:   *txs,
+
+	var tois []openapi.TxOutItem
+	// Leave this nil (null rather than []) if the source is nil.
+	if txs.TxArray != nil {
+		tois = make([]openapi.TxOutItem, len(txs.TxArray))
+		for i := range txs.TxArray {
+			tois[i] = castTxOutItem(txs.TxArray[i], 0) // 0 is omitted.
+		}
+	}
+
+	query := openapi.KeysignResponse{
+		Keysign: openapi.KeysignInfo{
+			Height:  wrapInt64(txs.Height),
+			TxArray: tois,
+		},
 		Signature: base64.StdEncoding.EncodeToString(sig),
 	}
 
@@ -1781,10 +2250,9 @@ func queryQueue(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *M
 	constAccessor := mgr.GetConstants()
 	signingTransactionPeriod := constAccessor.GetInt64Value(constants.SigningTransactionPeriod)
 	startHeight := ctx.BlockHeight() - signingTransactionPeriod
-	query := QueryQueue{
-		ScheduledOutboundValue: cosmos.ZeroUint(),
-		ScheduledOutboundClout: cosmos.ZeroUint(),
-	}
+	var query openapi.QueueResponse
+	scheduledOutboundValue := cosmos.ZeroUint()
+	scheduledOutboundClout := cosmos.ZeroUint()
 
 	iterator := mgr.Keeper().GetSwapQueueIterator(ctx)
 	defer iterator.Close()
@@ -1846,9 +2314,12 @@ func queryQueue(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *M
 			// rest will be empty as well
 			break
 		}
-		query.ScheduledOutboundValue = query.ScheduledOutboundValue.Add(value)
-		query.ScheduledOutboundClout = query.ScheduledOutboundClout.Add(clout)
+		scheduledOutboundValue = scheduledOutboundValue.Add(value)
+		scheduledOutboundClout = scheduledOutboundClout.Add(clout)
 	}
+
+	query.ScheduledOutboundValue = scheduledOutboundValue.String()
+	query.ScheduledOutboundClout = scheduledOutboundClout.String()
 
 	return jsonify(ctx, query)
 }
@@ -1873,7 +2344,7 @@ func queryLastBlockHeights(ctx cosmos.Context, path []string, req abci.RequestQu
 			break
 		}
 	}
-	var result []QueryResLastBlockHeights
+	var result []openapi.LastBlock
 	for _, c := range chains {
 		if c == common.THORChain {
 			continue
@@ -1887,11 +2358,11 @@ func queryLastBlockHeights(ctx cosmos.Context, path []string, req abci.RequestQu
 		if err != nil {
 			return nil, fmt.Errorf("fail to get last sign height: %w", err)
 		}
-		result = append(result, QueryResLastBlockHeights{
-			Chain:            c,
-			LastChainHeight:  chainHeight,
-			LastSignedHeight: signed,
-			Thorchain:        ctx.BlockHeight(),
+		result = append(result, openapi.LastBlock{
+			Chain:          c.String(),
+			LastObservedIn: chainHeight,
+			LastSignedOut:  signed,
+			Thorchain:      ctx.BlockHeight(),
 		})
 	}
 
@@ -1912,11 +2383,11 @@ func queryVersion(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr 
 
 	minJoinLast, minJoinLastChangedHeight := mgr.Keeper().GetMinJoinLast(ctx)
 
-	ver := QueryVersion{
-		Current:         v,
-		Next:            minJoinLast,
-		NextSinceHeight: minJoinLastChangedHeight, // omitted if 0
-		Querier:         constants.SWVersion,
+	ver := openapi.VersionResponse{
+		Current:         v.String(),
+		Next:            minJoinLast.String(),
+		NextSinceHeight: wrapInt64(minJoinLastChangedHeight), // omitted if 0
+		Querier:         constants.SWVersion.String(),
 	}
 	return jsonify(ctx, ver)
 }
@@ -2018,7 +2489,7 @@ func queryMimirValues(ctx cosmos.Context, path []string, req abci.RequestQuery, 
 }
 
 func queryMimirV2IDs(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {
-	mimirsMap := make(map[string]types.QueryMimirV2IDs, 0)
+	mimirsMap := make(map[string]openapi.MimirV2IDsResponse, 0)
 	iter := mgr.Keeper().GetNodeMimirIteratorV2(ctx)
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
@@ -2042,16 +2513,16 @@ func queryMimirV2IDs(ctx cosmos.Context, path []string, req abci.RequestQuery, m
 			}
 
 			if _, exists := mimirsMap[m.Key]; !exists {
-				mimirsMap[m.Key] = types.QueryMimirV2IDs{
-					ID:        id,
+				mimirsMap[m.Key] = openapi.MimirV2IDsResponse{
+					Id:        id,
 					Name:      mv2.Name(),
 					Type:      mv2.Type().String(),
 					VoteKey:   fmt.Sprintf("%d-%s", id, ref),
 					LegacyKey: mv2.LegacyKey(ref),
-					Votes:     make(map[int64]int64),
+					Votes:     make(map[string]int64), // OpenAPI only supports string keys.
 				}
 			}
-			mimirsMap[m.Key].Votes[m.Value] += 1
+			mimirsMap[m.Key].Votes[strconv.FormatInt(m.Value, 10)] += 1
 		}
 	}
 	// jsonify's json.Marshal sorts the map keys alphabetically.
@@ -2220,7 +2691,7 @@ func queryBan(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgr
 }
 
 func queryScheduledOutbound(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
-	result := make([]QueryTxOutItem, 0)
+	result := make([]openapi.TxOutItem, 0)
 	constAccessor := mgr.GetConstants()
 	maxTxOutOffset, err := mgr.Keeper().GetMimir(ctx, constants.MaxTxOutOffset.String())
 	if maxTxOutOffset < 0 || err != nil {
@@ -2238,7 +2709,7 @@ func queryScheduledOutbound(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 			break
 		}
 		for _, toi := range txOut.TxArray {
-			result = append(result, NewQueryTxOutItem(toi, height))
+			result = append(result, castTxOutItem(toi, height))
 		}
 	}
 
@@ -2260,7 +2731,7 @@ func queryPendingOutbound(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 		lastOutboundHeight += rescheduleCoalesceBlocks - (lastOutboundHeight % rescheduleCoalesceBlocks)
 	}
 
-	result := make([]QueryTxOutItem, 0)
+	result := make([]openapi.TxOutItem, 0)
 	for height := startHeight; height <= lastOutboundHeight; height++ {
 		txs, err := mgr.Keeper().GetTxOut(ctx, height)
 		if err != nil {
@@ -2269,7 +2740,7 @@ func queryPendingOutbound(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 		}
 		for _, tx := range txs.TxArray {
 			if tx.OutHash.IsEmpty() {
-				result = append(result, NewQueryTxOutItem(tx, height))
+				result = append(result, castTxOutItem(tx, height))
 			}
 		}
 	}
@@ -2278,7 +2749,7 @@ func queryPendingOutbound(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 }
 
 func querySwapQueue(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
-	result := make([]MsgSwap, 0)
+	result := make([]openapi.MsgSwap, 0)
 
 	iterator := mgr.Keeper().GetSwapQueueIterator(ctx)
 	defer iterator.Close()
@@ -2287,7 +2758,7 @@ func querySwapQueue(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 		if err := mgr.Keeper().Cdc().Unmarshal(iterator.Value(), &msg); err != nil {
 			continue
 		}
-		result = append(result, msg)
+		result = append(result, castMsgSwap(msg))
 	}
 
 	return jsonify(ctx, result)
@@ -2470,6 +2941,13 @@ func queryBlock(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 // Generic Helpers
 // -------------------------------------------------------------------------------------
 
+func wrapBool(b bool) *bool {
+	if !b {
+		return nil
+	}
+	return &b
+}
+
 func wrapString(s string) *string {
 	if s == "" {
 		return nil
@@ -2482,6 +2960,126 @@ func wrapInt64(d int64) *int64 {
 		return nil
 	}
 	return &d
+}
+
+func wrapUintPtr(uintPtr *cosmos.Uint) *string {
+	if uintPtr == nil {
+		return nil
+	}
+	return wrapString(uintPtr.String())
+}
+
+func castCoin(sourceCoin common.Coin) openapi.Coin {
+	return openapi.Coin{
+		Asset:    sourceCoin.Asset.String(),
+		Amount:   sourceCoin.Amount.String(),
+		Decimals: wrapInt64(sourceCoin.Decimals),
+	}
+}
+
+func castCoins(sourceCoins ...common.Coin) []openapi.Coin {
+	// Leave this nil (null rather than []) if the source is nil.
+	if sourceCoins == nil {
+		return nil
+	}
+
+	coins := make([]openapi.Coin, len(sourceCoins))
+	for i := range sourceCoins {
+		coins[i] = castCoin(sourceCoins[i])
+	}
+	return coins
+}
+
+func castTxOutItem(toi TxOutItem, height int64) openapi.TxOutItem {
+	return openapi.TxOutItem{
+		Chain:       toi.Chain.String(),
+		ToAddress:   toi.ToAddress.String(),
+		VaultPubKey: wrapString(toi.VaultPubKey.String()),
+		Coin:        castCoin(toi.Coin),
+		Memo:        wrapString(toi.Memo),
+		MaxGas:      castCoins(toi.MaxGas...),
+		GasRate:     wrapInt64(toi.GasRate),
+		InHash:      wrapString(toi.InHash.String()),
+		OutHash:     wrapString(toi.OutHash.String()),
+		Height:      wrapInt64(height), // Omitted if 0, for use in openapi.TxDetailsResponse
+		CloutSpent:  wrapUintPtr(toi.CloutSpent),
+	}
+}
+
+func castTx(tx common.Tx) openapi.Tx {
+	return openapi.Tx{
+		Id:          wrapString(tx.ID.String()),
+		Chain:       wrapString(tx.Chain.String()),
+		FromAddress: wrapString(tx.FromAddress.String()),
+		ToAddress:   wrapString(tx.ToAddress.String()),
+		Coins:       castCoins(tx.Coins...),
+		Gas:         castCoins(tx.Gas...),
+		Memo:        wrapString(tx.Memo),
+	}
+}
+
+func castObservedTx(observedTx ObservedTx) openapi.ObservedTx {
+	// Only display the Status if it is "done", not if "incomplete".
+	var status *string
+	if observedTx.Status != types.Status_incomplete {
+		status = wrapString(observedTx.Status.String())
+	}
+
+	return openapi.ObservedTx{
+		Tx:                              castTx(observedTx.Tx),
+		ObservedPubKey:                  wrapString(observedTx.ObservedPubKey.String()),
+		ExternalObservedHeight:          wrapInt64(observedTx.BlockHeight),
+		ExternalConfirmationDelayHeight: wrapInt64(observedTx.FinaliseHeight),
+		Aggregator:                      wrapString(observedTx.Aggregator),
+		AggregatorTarget:                wrapString(observedTx.AggregatorTarget),
+		AggregatorTargetLimit:           wrapUintPtr(observedTx.AggregatorTargetLimit),
+		Signers:                         observedTx.Signers,
+		KeysignMs:                       wrapInt64(observedTx.KeysignMs),
+		OutHashes:                       observedTx.OutHashes,
+		Status:                          status,
+	}
+}
+
+func castMsgSwap(msg MsgSwap) openapi.MsgSwap {
+	// Only display the OrderType if it is "limit", not if "market".
+	var orderType *string
+	if msg.OrderType != types.OrderType_market {
+		orderType = wrapString(msg.OrderType.String())
+	}
+	// TODO: After order books implementation,
+	// always display the OrderType?
+
+	return openapi.MsgSwap{
+		Tx:                      castTx(msg.Tx),
+		TargetAsset:             msg.TargetAsset.String(),
+		Destination:             wrapString(msg.Destination.String()),
+		TradeTarget:             msg.TradeTarget.String(),
+		AffiliateAddress:        wrapString(msg.AffiliateAddress.String()),
+		AffiliateBasisPoints:    msg.AffiliateBasisPoints.String(),
+		Signer:                  wrapString(msg.Signer.String()),
+		Aggregator:              wrapString(msg.Aggregator),
+		AggregatorTargetAddress: wrapString(msg.AggregatorTargetAddress),
+		AggregatorTargetLimit:   wrapUintPtr(msg.AggregatorTargetLimit),
+		OrderType:               orderType,
+		StreamQuantity:          wrapInt64(int64(msg.StreamQuantity)),
+		StreamInterval:          wrapInt64(int64(msg.StreamInterval)),
+	}
+}
+
+func castVaultRouters(chainContracts []ChainContract) []openapi.VaultRouter {
+	// Leave this nil (null rather than []) if the source is nil.
+	if chainContracts == nil {
+		return nil
+	}
+
+	routers := make([]openapi.VaultRouter, len(chainContracts))
+	for i := range chainContracts {
+		routers[i] = openapi.VaultRouter{
+			Chain:  wrapString(chainContracts[i].Chain.String()),
+			Router: wrapString(chainContracts[i].Router.String()),
+		}
+	}
+	return routers
 }
 
 // TODO: Migrate callers to use simulate instead.

@@ -24,6 +24,7 @@ import (
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/config"
+	openapi "gitlab.com/thorchain/thornode/openapi/gen"
 	types2 "gitlab.com/thorchain/thornode/x/thorchain/types"
 	. "gopkg.in/check.v1"
 )
@@ -77,7 +78,7 @@ func (s *UnstuckTestSuite) SetUpTest(c *C) {
 			var content []byte
 			content, err = os.ReadFile("../../../../test/fixtures/endpoints/vaults/pubKeys.json")
 			c.Assert(err, IsNil)
-			var pubKeysVault types2.QueryVaultsPubKeys
+			var pubKeysVault openapi.VaultPubkeysResponse
 			c.Assert(json.Unmarshal(content, &pubKeysVault), IsNil)
 			var buf []byte
 			buf, err = json.MarshalIndent(pubKeysVault, "", "	")

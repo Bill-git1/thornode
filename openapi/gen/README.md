@@ -121,6 +121,7 @@ Class | Method | HTTP request | Description
 *SaversApi* | [**Savers**](docs/SaversApi.md#savers) | **Get** /thorchain/pool/{asset}/savers | 
 *StreamingSwapApi* | [**StreamSwap**](docs/StreamingSwapApi.md#streamswap) | **Get** /thorchain/swap/streaming/{hash} | 
 *StreamingSwapApi* | [**StreamSwaps**](docs/StreamingSwapApi.md#streamswaps) | **Get** /thorchain/swaps/streaming | 
+*TSSApi* | [**KeygenPubkey**](docs/TSSApi.md#keygenpubkey) | **Get** /thorchain/keygen/{height}/{pubkey} | 
 *TSSApi* | [**Keysign**](docs/TSSApi.md#keysign) | **Get** /thorchain/keysign/{height} | 
 *TSSApi* | [**KeysignPubkey**](docs/TSSApi.md#keysignpubkey) | **Get** /thorchain/keysign/{height}/{pubkey} | 
 *TSSApi* | [**Metrics**](docs/TSSApi.md#metrics) | **Get** /thorchain/metrics | 
@@ -158,9 +159,15 @@ Class | Method | HTTP request | Description
  - [ConstantsResponse](docs/ConstantsResponse.md)
  - [DerivedPool](docs/DerivedPool.md)
  - [InboundAddress](docs/InboundAddress.md)
+ - [InboundConfirmationCountedStage](docs/InboundConfirmationCountedStage.md)
+ - [InboundFinalisedStage](docs/InboundFinalisedStage.md)
+ - [InboundObservedStage](docs/InboundObservedStage.md)
  - [InvariantResponse](docs/InvariantResponse.md)
  - [InvariantsResponse](docs/InvariantsResponse.md)
+ - [Keygen](docs/Keygen.md)
+ - [KeygenBlock](docs/KeygenBlock.md)
  - [KeygenMetric](docs/KeygenMetric.md)
+ - [KeygenResponse](docs/KeygenResponse.md)
  - [KeysignInfo](docs/KeysignInfo.md)
  - [KeysignMetrics](docs/KeysignMetrics.md)
  - [KeysignResponse](docs/KeysignResponse.md)
@@ -181,8 +188,11 @@ Class | Method | HTTP request | Description
  - [NodePreflightStatus](docs/NodePreflightStatus.md)
  - [NodePubKeySet](docs/NodePubKeySet.md)
  - [ObservedTx](docs/ObservedTx.md)
+ - [OutboundDelayStage](docs/OutboundDelayStage.md)
+ - [OutboundSignedStage](docs/OutboundSignedStage.md)
  - [POLResponse](docs/POLResponse.md)
  - [Ping](docs/Ping.md)
+ - [PlannedOutTx](docs/PlannedOutTx.md)
  - [Pool](docs/Pool.md)
  - [QueueResponse](docs/QueueResponse.md)
  - [QuoteFees](docs/QuoteFees.md)
@@ -192,7 +202,10 @@ Class | Method | HTTP request | Description
  - [QuoteSaverWithdrawResponse](docs/QuoteSaverWithdrawResponse.md)
  - [QuoteSwapResponse](docs/QuoteSwapResponse.md)
  - [Saver](docs/Saver.md)
+ - [StreamingStatus](docs/StreamingStatus.md)
  - [StreamingSwap](docs/StreamingSwap.md)
+ - [SwapFinalisedStage](docs/SwapFinalisedStage.md)
+ - [SwapStatus](docs/SwapStatus.md)
  - [SwapperCloutResponse](docs/SwapperCloutResponse.md)
  - [Thorname](docs/Thorname.md)
  - [ThornameAlias](docs/ThornameAlias.md)
@@ -206,22 +219,14 @@ Class | Method | HTTP request | Description
  - [TxResponse](docs/TxResponse.md)
  - [TxSignersResponse](docs/TxSignersResponse.md)
  - [TxStagesResponse](docs/TxStagesResponse.md)
- - [TxStagesResponseInboundConfirmationCounted](docs/TxStagesResponseInboundConfirmationCounted.md)
- - [TxStagesResponseInboundFinalised](docs/TxStagesResponseInboundFinalised.md)
- - [TxStagesResponseInboundObserved](docs/TxStagesResponseInboundObserved.md)
- - [TxStagesResponseOutboundDelay](docs/TxStagesResponseOutboundDelay.md)
- - [TxStagesResponseOutboundSigned](docs/TxStagesResponseOutboundSigned.md)
- - [TxStagesResponseSwapFinalised](docs/TxStagesResponseSwapFinalised.md)
- - [TxStagesResponseSwapStatus](docs/TxStagesResponseSwapStatus.md)
- - [TxStagesResponseSwapStatusStreaming](docs/TxStagesResponseSwapStatusStreaming.md)
  - [TxStatusResponse](docs/TxStatusResponse.md)
- - [TxStatusResponsePlannedOutTxsInner](docs/TxStatusResponsePlannedOutTxsInner.md)
  - [Vault](docs/Vault.md)
  - [VaultAddress](docs/VaultAddress.md)
  - [VaultInfo](docs/VaultInfo.md)
  - [VaultPubkeysResponse](docs/VaultPubkeysResponse.md)
  - [VaultRouter](docs/VaultRouter.md)
  - [VersionResponse](docs/VersionResponse.md)
+ - [YggdrasilVault](docs/YggdrasilVault.md)
 
 
 ## Documentation For Authorization

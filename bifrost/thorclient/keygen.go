@@ -8,6 +8,8 @@ import (
 	"net/http"
 
 	btypes "gitlab.com/thorchain/thornode/bifrost/blockscanner/types"
+	"gitlab.com/thorchain/thornode/common"
+	openapi "gitlab.com/thorchain/thornode/openapi/gen"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
@@ -21,7 +23,7 @@ func (b *thorchainBridge) GetKeygenBlock(blockHeight int64, pk string) (types.Ke
 		}
 		return types.KeygenBlock{}, fmt.Errorf("failed to get keygen for a block height: %w", err)
 	}
-	var query types.QueryKeygenBlock
+	var query openapi.KeygenResponse
 	if err = json.Unmarshal(body, &query); err != nil {
 		return types.KeygenBlock{}, fmt.Errorf("failed to unmarshal Keygen: %w", err)
 	}
@@ -44,5 +46,18 @@ func (b *thorchainBridge) GetKeygenBlock(blockHeight int64, pk string) (types.Ke
 		return types.KeygenBlock{}, errors.New("invalid keygen signature: bad signature")
 	}
 
-	return query.KeygenBlock, nil
+	keygens := make([]types.Keygen, len(query.KeygenBlock.Keygens))
+	for i := range query.KeygenBlock.Keygens {
+		keygens[i] = types.Keygen{
+			ID:      common.TxID(*query.KeygenBlock.Keygens[i].Id),
+			Type:    types.KeygenType(types.KeygenType_value[*query.KeygenBlock.Keygens[i].Type]),
+			Members: query.KeygenBlock.Keygens[i].Members,
+		}
+	}
+	keygenBlock := types.KeygenBlock{
+		Height:  *query.KeygenBlock.Height,
+		Keygens: keygens,
+	}
+
+	return keygenBlock, nil
 }

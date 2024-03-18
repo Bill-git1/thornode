@@ -16,19 +16,26 @@ import (
 
 // MimirV2IDsResponse struct for MimirV2IDsResponse
 type MimirV2IDsResponse struct {
-	Id *int `json:"id,omitempty"`
-	Name *string `json:"name,omitempty"`
-	LegacyKey *string `json:"legacy_key,omitempty"`
-	VoteKey *string `json:"vote_key,omitempty"`
-	Votes map[string]interface{} `json:"votes,omitempty"`
+	Id int `json:"id"`
+	Name string `json:"name"`
+	VoteKey string `json:"vote_key"`
+	LegacyKey string `json:"legacy_key"`
+	Type string `json:"type"`
+	Votes map[string]int64 `json:"votes"`
 }
 
 // NewMimirV2IDsResponse instantiates a new MimirV2IDsResponse object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewMimirV2IDsResponse() *MimirV2IDsResponse {
+func NewMimirV2IDsResponse(id int, name string, voteKey string, legacyKey string, type_ string, votes map[string]int64) *MimirV2IDsResponse {
 	this := MimirV2IDsResponse{}
+	this.Id = id
+	this.Name = name
+	this.VoteKey = voteKey
+	this.LegacyKey = legacyKey
+	this.Type = type_
+	this.Votes = votes
 	return &this
 }
 
@@ -40,181 +47,168 @@ func NewMimirV2IDsResponseWithDefaults() *MimirV2IDsResponse {
 	return &this
 }
 
-// GetId returns the Id field value if set, zero value otherwise.
+// GetId returns the Id field value
 func (o *MimirV2IDsResponse) GetId() int {
-	if o == nil || o.Id == nil {
+	if o == nil {
 		var ret int
 		return ret
 	}
-	return *o.Id
+
+	return o.Id
 }
 
-// GetIdOk returns a tuple with the Id field value if set, nil otherwise
+// GetIdOk returns a tuple with the Id field value
 // and a boolean to check if the value has been set.
 func (o *MimirV2IDsResponse) GetIdOk() (*int, bool) {
-	if o == nil || o.Id == nil {
+	if o == nil {
 		return nil, false
 	}
-	return o.Id, true
+	return &o.Id, true
 }
 
-// HasId returns a boolean if a field has been set.
-func (o *MimirV2IDsResponse) HasId() bool {
-	if o != nil && o.Id != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetId gets a reference to the given int and assigns it to the Id field.
+// SetId sets field value
 func (o *MimirV2IDsResponse) SetId(v int) {
-	o.Id = &v
+	o.Id = v
 }
 
-// GetName returns the Name field value if set, zero value otherwise.
+// GetName returns the Name field value
 func (o *MimirV2IDsResponse) GetName() string {
-	if o == nil || o.Name == nil {
+	if o == nil {
 		var ret string
 		return ret
 	}
-	return *o.Name
+
+	return o.Name
 }
 
-// GetNameOk returns a tuple with the Name field value if set, nil otherwise
+// GetNameOk returns a tuple with the Name field value
 // and a boolean to check if the value has been set.
 func (o *MimirV2IDsResponse) GetNameOk() (*string, bool) {
-	if o == nil || o.Name == nil {
+	if o == nil {
 		return nil, false
 	}
-	return o.Name, true
+	return &o.Name, true
 }
 
-// HasName returns a boolean if a field has been set.
-func (o *MimirV2IDsResponse) HasName() bool {
-	if o != nil && o.Name != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetName gets a reference to the given string and assigns it to the Name field.
+// SetName sets field value
 func (o *MimirV2IDsResponse) SetName(v string) {
-	o.Name = &v
+	o.Name = v
 }
 
-// GetLegacyKey returns the LegacyKey field value if set, zero value otherwise.
-func (o *MimirV2IDsResponse) GetLegacyKey() string {
-	if o == nil || o.LegacyKey == nil {
-		var ret string
-		return ret
-	}
-	return *o.LegacyKey
-}
-
-// GetLegacyKeyOk returns a tuple with the LegacyKey field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *MimirV2IDsResponse) GetLegacyKeyOk() (*string, bool) {
-	if o == nil || o.LegacyKey == nil {
-		return nil, false
-	}
-	return o.LegacyKey, true
-}
-
-// HasLegacyKey returns a boolean if a field has been set.
-func (o *MimirV2IDsResponse) HasLegacyKey() bool {
-	if o != nil && o.LegacyKey != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetLegacyKey gets a reference to the given string and assigns it to the LegacyKey field.
-func (o *MimirV2IDsResponse) SetLegacyKey(v string) {
-	o.LegacyKey = &v
-}
-
-// GetVoteKey returns the VoteKey field value if set, zero value otherwise.
+// GetVoteKey returns the VoteKey field value
 func (o *MimirV2IDsResponse) GetVoteKey() string {
-	if o == nil || o.VoteKey == nil {
+	if o == nil {
 		var ret string
 		return ret
 	}
-	return *o.VoteKey
+
+	return o.VoteKey
 }
 
-// GetVoteKeyOk returns a tuple with the VoteKey field value if set, nil otherwise
+// GetVoteKeyOk returns a tuple with the VoteKey field value
 // and a boolean to check if the value has been set.
 func (o *MimirV2IDsResponse) GetVoteKeyOk() (*string, bool) {
-	if o == nil || o.VoteKey == nil {
+	if o == nil {
 		return nil, false
 	}
-	return o.VoteKey, true
+	return &o.VoteKey, true
 }
 
-// HasVoteKey returns a boolean if a field has been set.
-func (o *MimirV2IDsResponse) HasVoteKey() bool {
-	if o != nil && o.VoteKey != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetVoteKey gets a reference to the given string and assigns it to the VoteKey field.
+// SetVoteKey sets field value
 func (o *MimirV2IDsResponse) SetVoteKey(v string) {
-	o.VoteKey = &v
+	o.VoteKey = v
 }
 
-// GetVotes returns the Votes field value if set, zero value otherwise.
-func (o *MimirV2IDsResponse) GetVotes() map[string]interface{} {
-	if o == nil || o.Votes == nil {
-		var ret map[string]interface{}
+// GetLegacyKey returns the LegacyKey field value
+func (o *MimirV2IDsResponse) GetLegacyKey() string {
+	if o == nil {
+		var ret string
 		return ret
 	}
+
+	return o.LegacyKey
+}
+
+// GetLegacyKeyOk returns a tuple with the LegacyKey field value
+// and a boolean to check if the value has been set.
+func (o *MimirV2IDsResponse) GetLegacyKeyOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.LegacyKey, true
+}
+
+// SetLegacyKey sets field value
+func (o *MimirV2IDsResponse) SetLegacyKey(v string) {
+	o.LegacyKey = v
+}
+
+// GetType returns the Type field value
+func (o *MimirV2IDsResponse) GetType() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.Type
+}
+
+// GetTypeOk returns a tuple with the Type field value
+// and a boolean to check if the value has been set.
+func (o *MimirV2IDsResponse) GetTypeOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.Type, true
+}
+
+// SetType sets field value
+func (o *MimirV2IDsResponse) SetType(v string) {
+	o.Type = v
+}
+
+// GetVotes returns the Votes field value
+func (o *MimirV2IDsResponse) GetVotes() map[string]int64 {
+	if o == nil {
+		var ret map[string]int64
+		return ret
+	}
+
 	return o.Votes
 }
 
-// GetVotesOk returns a tuple with the Votes field value if set, nil otherwise
+// GetVotesOk returns a tuple with the Votes field value
 // and a boolean to check if the value has been set.
-func (o *MimirV2IDsResponse) GetVotesOk() (map[string]interface{}, bool) {
-	if o == nil || o.Votes == nil {
+func (o *MimirV2IDsResponse) GetVotesOk() (*map[string]int64, bool) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Votes, true
+	return &o.Votes, true
 }
 
-// HasVotes returns a boolean if a field has been set.
-func (o *MimirV2IDsResponse) HasVotes() bool {
-	if o != nil && o.Votes != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetVotes gets a reference to the given map[string]interface{} and assigns it to the Votes field.
-func (o *MimirV2IDsResponse) SetVotes(v map[string]interface{}) {
+// SetVotes sets field value
+func (o *MimirV2IDsResponse) SetVotes(v map[string]int64) {
 	o.Votes = v
 }
 
 func (o MimirV2IDsResponse) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
-	if o.Id != nil {
+	if true {
 		toSerialize["id"] = o.Id
 	}
-	if o.Name != nil {
+	if true {
 		toSerialize["name"] = o.Name
 	}
-	if o.LegacyKey != nil {
-		toSerialize["legacy_key"] = o.LegacyKey
-	}
-	if o.VoteKey != nil {
+	if true {
 		toSerialize["vote_key"] = o.VoteKey
 	}
-	if o.Votes != nil {
+	if true {
+		toSerialize["legacy_key"] = o.LegacyKey
+	}
+	if true {
+		toSerialize["type"] = o.Type
+	}
+	if true {
 		toSerialize["votes"] = o.Votes
 	}
 	return json.Marshal(toSerialize)

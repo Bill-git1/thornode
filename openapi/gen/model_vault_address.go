@@ -16,16 +16,18 @@ import (
 
 // VaultAddress struct for VaultAddress
 type VaultAddress struct {
-	Chain *string `json:"chain,omitempty"`
-	Address *string `json:"address,omitempty"`
+	Chain string `json:"chain"`
+	Address string `json:"address"`
 }
 
 // NewVaultAddress instantiates a new VaultAddress object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewVaultAddress() *VaultAddress {
+func NewVaultAddress(chain string, address string) *VaultAddress {
 	this := VaultAddress{}
+	this.Chain = chain
+	this.Address = address
 	return &this
 }
 
@@ -37,76 +39,60 @@ func NewVaultAddressWithDefaults() *VaultAddress {
 	return &this
 }
 
-// GetChain returns the Chain field value if set, zero value otherwise.
+// GetChain returns the Chain field value
 func (o *VaultAddress) GetChain() string {
-	if o == nil || o.Chain == nil {
+	if o == nil {
 		var ret string
 		return ret
 	}
-	return *o.Chain
+
+	return o.Chain
 }
 
-// GetChainOk returns a tuple with the Chain field value if set, nil otherwise
+// GetChainOk returns a tuple with the Chain field value
 // and a boolean to check if the value has been set.
 func (o *VaultAddress) GetChainOk() (*string, bool) {
-	if o == nil || o.Chain == nil {
+	if o == nil {
 		return nil, false
 	}
-	return o.Chain, true
+	return &o.Chain, true
 }
 
-// HasChain returns a boolean if a field has been set.
-func (o *VaultAddress) HasChain() bool {
-	if o != nil && o.Chain != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetChain gets a reference to the given string and assigns it to the Chain field.
+// SetChain sets field value
 func (o *VaultAddress) SetChain(v string) {
-	o.Chain = &v
+	o.Chain = v
 }
 
-// GetAddress returns the Address field value if set, zero value otherwise.
+// GetAddress returns the Address field value
 func (o *VaultAddress) GetAddress() string {
-	if o == nil || o.Address == nil {
+	if o == nil {
 		var ret string
 		return ret
 	}
-	return *o.Address
+
+	return o.Address
 }
 
-// GetAddressOk returns a tuple with the Address field value if set, nil otherwise
+// GetAddressOk returns a tuple with the Address field value
 // and a boolean to check if the value has been set.
 func (o *VaultAddress) GetAddressOk() (*string, bool) {
-	if o == nil || o.Address == nil {
+	if o == nil {
 		return nil, false
 	}
-	return o.Address, true
+	return &o.Address, true
 }
 
-// HasAddress returns a boolean if a field has been set.
-func (o *VaultAddress) HasAddress() bool {
-	if o != nil && o.Address != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetAddress gets a reference to the given string and assigns it to the Address field.
+// SetAddress sets field value
 func (o *VaultAddress) SetAddress(v string) {
-	o.Address = &v
+	o.Address = v
 }
 
 func (o VaultAddress) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
-	if o.Chain != nil {
+	if true {
 		toSerialize["chain"] = o.Chain
 	}
-	if o.Address != nil {
+	if true {
 		toSerialize["address"] = o.Address
 	}
 	return json.Marshal(toSerialize)

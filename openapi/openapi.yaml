@@ -366,7 +366,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/VaultsResponse"
+                $ref: "#/components/schemas/YggdrasilVaultsResponse"
 
   /thorchain/vault/{pubkey}:
     parameters:
@@ -771,6 +771,23 @@ paths:
       tags:
         - TSS
       responses: *keysign-response
+
+  /thorchain/keygen/{height}/{pubkey}:
+    parameters:
+      - $ref: "#/components/parameters/pathHeight"
+      - $ref: "#/components/parameters/pubkey"
+    get:
+      description: Returns keygen information for the provided height and pubkey - the pubkey being of one of the members of a keygen block for that height
+      operationId: keygenPubkey
+      tags:
+        - TSS
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KeygenResponse"
 
   # ------------------------------ tss metrics ------------------------------
 
@@ -1519,11 +1536,6 @@ components:
         - pending_asset
         - rune_deposit_value
         - asset_deposit_value
-        - rune_redeem_value
-        - asset_redeem_value
-        - luvi_deposit_value
-        - luvi_redeem_value
-        - luvi_growth_pct
       properties:
         asset:
           type: string
@@ -1699,7 +1711,7 @@ components:
           enum: ["AsgardVault", "YggdrasilVault"]
         status:
           type: string
-          # TODO: Currently status is not consistent between asgard and yggdrasil.
+          # TODO: Currently status is not consistent between asgard (VaultStatus) and yggdrasil (NodeStatus).
           # enum: ["Active", ...]
         status_since:
           type: integer
@@ -1737,6 +1749,72 @@ components:
           items:
             type: string
 
+    YggdrasilVault:
+      type: object
+      required:
+        - coins
+        - routers
+        - status
+        - bond
+        - total_value
+        - addresses
+      properties:
+        block_height:
+          type: integer
+          format: int64
+        pub_key:
+          type: string
+        coins:
+          type: array
+          items:
+            $ref: "#/components/schemas/Coin"
+        type:
+          type: string
+          enum: ["AsgardVault", "YggdrasilVault"]
+        status_since:
+          type: integer
+          format: int64
+        membership:
+          type: array
+          description: the list of node public keys which are members of the vault
+          items:
+            type: string
+        chains:
+          type: array
+          items:
+            type: string
+        inbound_tx_count:
+          type: integer
+          format: int64
+        outbound_tx_count:
+          type: integer
+          format: int64
+        pending_tx_block_heights:
+          type: array
+          items:
+            type: integer
+            format: int64
+        routers:
+          type: array
+          items:
+            $ref: "#/components/schemas/VaultRouter"
+        status:
+          type: string
+          # TODO: Currently status is not consistent between asgard (VaultStatus) and yggdrasil (NodeStatus).
+          # enum: ["Active", ...]
+        bond:
+          type: string
+          description: current node bond
+          example: "123456789"
+        total_value:
+          type: string
+          description: value in rune of the vault's assets
+          example: "83456789"
+        addresses:
+          type: array
+          items:
+            $ref: "#/components/schemas/VaultAddress"
+
     VaultRouter:
       type: object
       properties:
@@ -1749,6 +1827,9 @@ components:
 
     VaultAddress:
       type: object
+      required:
+        - chain
+        - address
       properties:
         chain:
           type: string
@@ -1785,15 +1866,15 @@ components:
           description: the hash of a transaction
         interval:
           type: integer
-          format: uint64
+          format: int64 # OpenAPI cannot generate a uint64 or int128 field, so using int64 instead.
           description: how often each swap is made, in blocks
         quantity:
           type: integer
-          format: uint64
+          format: int64 # OpenAPI cannot generate a uint64 or int128 field, so using int64 instead.
           description: the total number of swaps in a streaming swaps
         count:
           type: integer
-          format: uint64
+          format: int64 # OpenAPI cannot generate a uint64 or int128 field, so using int64 instead.
           description: the amount of swap attempts so far
         last_height:
           type: integer
@@ -1832,7 +1913,7 @@ components:
           description: the list of swap indexes that failed
           items:
             type: integer
-            format: uint64
+            format: int64 # OpenAPI cannot generate a uint64 or int128 field, so using int64 instead.
         failed_swap_reasons:
           type: array
           description: the list of reasons that sub-swaps have failed
@@ -2035,16 +2116,15 @@ components:
           type: string
           description: the minimum amount of SwapOut asset to receive (else cancelling the SwapOut and receiving THORChain's output)
         order_type:
-          type: integer
-          format: int64
-          description: 0 if a market order (immediately completed or refunded), 1 if a limit order (held until fulfillable)
+          type: string
+          description: market if immediately completed or refunded, limit if held until fulfillable
         stream_quantity:
           type: integer
-          format: uint64
+          format: int64 # OpenAPI cannot generate a uint64 or int128 field, so using int64 instead.
           description: number of swaps to execute in a streaming swap
         stream_interval:
           type: integer
-          format: uint64
+          format: int64 # OpenAPI cannot generate a uint64 or int128 field, so using int64 instead.
           description: the interval (in blocks) to execute the streaming swap
 
     TxOutItem:
@@ -2054,7 +2134,6 @@ components:
         - to_address
         - coin
         - max_gas
-        - height
       properties:
         chain:
           type: string
@@ -2183,18 +2262,24 @@ components:
         bond_providers:
           type: object
           title: NodeBondProviders
+          required:
+            - node_operator_fee
+            - providers
           properties:
             node_operator_fee:
               type: string
               description: node operator fee in basis points
             providers:
-              type: object
-              title: NodeBondProvider
-              properties:
-                bond_address:
-                  type: string
-                bond:
-                  type: string
+              type: array
+              description: all the bond providers for the node
+              items:
+                type: object
+                title: NodeBondProvider
+                properties:
+                  bond_address:
+                    type: string
+                  bond:
+                    type: string
         signer_membership:
           type: array
           description: the set of vault public keys of which the node is a member
@@ -2208,7 +2293,7 @@ components:
           description: indicates whether the node has been forced to leave by the network, typically via ban
         leave_height:
           type: integer
-          format: int64
+          format: int64 # OpenAPI cannot generate a uint64 or int128 field, so using int64 instead.
           example: 0
         ip_address:
           type: string
@@ -2534,8 +2619,9 @@ components:
       properties:
         inbound_observed:
           type: object
+          title: InboundObservedStage
           required:
-            - final_observations
+            - final_count
             - completed
           properties:
             started:
@@ -2544,12 +2630,12 @@ components:
               description: returns true if any nodes have observed the transaction (to be deprecated in favour of counts)
             pre_confirmation_count:
               type: integer
-              format: uint64
+              format: int64 # OpenAPI cannot generate a uint64 or int128 field, so using int64 instead.
               example: 80
               description: number of signers for pre-confirmation-counting observations
             final_count:
               type: integer
-              format: uint64
+              format: int64 # OpenAPI cannot generate a uint64 or int128 field, so using int64 instead.
               example: 80
               description: number of signers for final observations, after any confirmation counting complete
             completed:
@@ -2558,6 +2644,7 @@ components:
               description: returns true if no transaction observation remains to be done
         inbound_confirmation_counted:
           type: object
+          title: InboundConfirmationCountedStage
           required:
             - completed
           properties:
@@ -2591,6 +2678,7 @@ components:
               description: returns true if no transaction confirmation counting remains to be done
         inbound_finalised:
           type: object
+          title: InboundFinalisedStage
           required:
             - completed
           properties:
@@ -2600,6 +2688,7 @@ components:
               description: returns true if the inbound transaction has been finalised (THORChain agreeing it exists)
         swap_status:
           type: object
+          title: SwapStatus
           required:
             - pending
           properties:
@@ -2609,6 +2698,7 @@ components:
               description: true when awaiting a swap
             streaming:
               type: object
+              title: StreamingStatus
               required:
                 - interval
                 - quantity
@@ -2616,18 +2706,19 @@ components:
               properties:
                 interval:
                   type: integer
-                  format: uint64
+                  format: int64 # OpenAPI cannot generate a uint64 or int128 field, so using int64 instead.
                   description: how often each swap is made, in blocks
                 quantity:
                   type: integer
-                  format: uint64
+                  format: int64 # OpenAPI cannot generate a uint64 or int128 field, so using int64 instead.
                   description: the total number of swaps in a streaming swaps
                 count:
                   type: integer
-                  format: uint64
+                  format: int64 # OpenAPI cannot generate a uint64 or int128 field, so using int64 instead.
                   description: the amount of swap attempts so far
         swap_finalised:
           type: object
+          title: SwapFinalisedStage
           required:
             - completed
           properties:
@@ -2637,6 +2728,7 @@ components:
               description: (to be deprecated in favor of swap_status) returns true if an inbound transaction's swap (successful or refunded) is no longer pending
         outbound_delay:
           type: object
+          title: OutboundDelayStage
           required:
             - completed
           properties:
@@ -2656,6 +2748,7 @@ components:
               description: returns true if no transaction outbound delay remains
         outbound_signed:
           type: object
+          title: OutboundSignedStage
           required:
             - completed
           properties:
@@ -2685,6 +2778,7 @@ components:
           type: array
           items:
             type: object
+            title: PlannedOutTx
             required:
               - chain
               - to_address
@@ -2725,6 +2819,11 @@ components:
 
     StreamingSwapResponse:
       $ref: "#/components/schemas/StreamingSwap"
+
+    YggdrasilVaultsResponse:
+      type: array
+      items:
+        $ref: "#/components/schemas/YggdrasilVault"
 
     VaultsResponse:
       type: array
@@ -2987,6 +3086,9 @@ components:
 
     KeysignResponse:
       type: object
+      required:
+        - keysign
+        - signature
       properties:
         keysign:
           type: object
@@ -3002,6 +3104,40 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/TxOutItem"
+        signature:
+          type: string
+
+    KeygenResponse:
+      type: object
+      required:
+        - keygen_block
+        - signature
+      properties:
+        keygen_block:
+          type: object
+          title: KeygenBlock
+          required:
+            - keygens
+          properties:
+            height:
+              type: integer
+              format: int64
+              description: the height of the keygen block
+            keygens:
+              type: array
+              items:
+                type: object
+                title: keygen
+                properties:
+                  id:
+                    type: string
+                  type:
+                    type: string
+                  members:
+                    type: array
+                    items:
+                      type: string
+                      description: pubkeys of the keygen block member nodes
         signature:
           type: string
 
@@ -3120,17 +3256,29 @@ components:
 
     MimirV2IDsResponse:
       type: object
+      required:
+        - id
+        - name
+        - vote_key
+        - legacy_key
+        - type
+        - votes
       properties:
         id:
           type: int
         name:
           type: string
+        vote_key:
+          type: string
         legacy_key:
           type: string
-        vote_key:
+        type:
           type: string
         votes:
           type: object
+          additionalProperties:
+            type: integer
+            format: int64
       example:
         - id: 1
           name: AFFILIATEFEEBASISPOINTSMAXGLOBAL

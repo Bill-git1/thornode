@@ -23,6 +23,116 @@ import (
 // TSSApiService TSSApi service
 type TSSApiService service
 
+type ApiKeygenPubkeyRequest struct {
+	ctx context.Context
+	ApiService *TSSApiService
+	height int64
+	pubkey string
+}
+
+func (r ApiKeygenPubkeyRequest) Execute() (*KeygenResponse, *http.Response, error) {
+	return r.ApiService.KeygenPubkeyExecute(r)
+}
+
+/*
+KeygenPubkey Method for KeygenPubkey
+
+Returns keygen information for the provided height and pubkey - the pubkey being of one of the members of a keygen block for that height
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param height
+ @param pubkey
+ @return ApiKeygenPubkeyRequest
+*/
+func (a *TSSApiService) KeygenPubkey(ctx context.Context, height int64, pubkey string) ApiKeygenPubkeyRequest {
+	return ApiKeygenPubkeyRequest{
+		ApiService: a,
+		ctx: ctx,
+		height: height,
+		pubkey: pubkey,
+	}
+}
+
+// Execute executes the request
+//  @return KeygenResponse
+func (a *TSSApiService) KeygenPubkeyExecute(r ApiKeygenPubkeyRequest) (*KeygenResponse, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodGet
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *KeygenResponse
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "TSSApiService.KeygenPubkey")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/thorchain/keygen/{height}/{pubkey}"
+	localVarPath = strings.Replace(localVarPath, "{"+"height"+"}", url.PathEscape(parameterToString(r.height, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"pubkey"+"}", url.PathEscape(parameterToString(r.pubkey, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.height < 0 {
+		return localVarReturnValue, nil, reportError("height must be greater than 0")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiKeysignRequest struct {
 	ctx context.Context
 	ApiService *TSSApiService

@@ -38,43 +38,18 @@ func (Test) TestJSONSpec(c *C) {
 	assertJSONStructTagsMatch(c, common.Tx{}, gen.Tx{})
 
 	// queue and lp
-	assertJSONStructTagsMatch(c, types.QueryLiquidityProvider{}, gen.LiquidityProvider{})
-	assertJSONStructTagsMatch(c, types.QueryPool{}, gen.Pool{})
-	assertJSONStructTagsMatch(c, types.QueryQueue{}, gen.QueueResponse{})
-	assertJSONStructTagsMatch(c, types.QuerySaver{}, gen.Saver{})
 	assertJSONStructTagsMatch(c, types.MsgSwap{}, gen.MsgSwap{})
-	assertJSONStructTagsMatch(c, types.QueryStreamingSwap{}, gen.StreamingSwap{})
 
 	// txs
 	assertJSONStructTagsMatch(c, types.TxOut{}, gen.KeysignInfo{})
-	assertJSONStructTagsMatch(c, types.QueryObservedTx{}, gen.ObservedTx{})
-	assertJSONStructTagsMatch(c, types.QueryTxOutItem{}, gen.TxOutItem{})
-	assertJSONStructTagsMatch(c, types.QueryTxDetails{}, gen.TxDetailsResponse{})
-	assertJSONStructTagsMatch(c, types.QueryTxStages{}, gen.TxStagesResponse{})
-	assertJSONStructTagsMatch(c, types.QueryTxStatus{}, gen.TxStatusResponse{})
-
-	// nodes
-	assertJSONStructTagsMatch(c, types.QueryNodeAccountPreflightCheck{}, gen.NodePreflightStatus{})
-	assertJSONStructTagsMatch(c, types.QueryNodeAccount{}, gen.Node{})
-	assertJSONStructTagsMatch(c, types.QueryChainHeight{}, gen.ChainHeight{})
-	// As node_address is omitted from the jail display,
-	// skip assertJSONStructTagsMatch for types.Jail{} / gen.NodeJail{}
-	// so that the spec can match the display.
 
 	// tss
 	assertJSONStructTagsMatch(c, types.NodeTssTime{}, gen.NodeKeygenMetric{})
 	assertJSONStructTagsMatch(c, types.TssKeygenMetric{}, gen.KeygenMetric{})
 	assertJSONStructTagsMatch(c, types.TssKeysignMetric{}, gen.TssKeysignMetric{})
 
-	// vaults
-	assertJSONStructTagsMatch(c, types.QueryVaultPubKeyContract{}, gen.VaultInfo{})
-	assertJSONStructTagsMatch(c, types.QueryVaultResp{}, gen.Vault{})
-	assertJSONStructTagsMatch(c, types.QueryVaultsPubKeys{}, gen.VaultPubkeysResponse{})
-
 	// miscellaneous
 	assertJSONStructTagsMatch(c, types.BanVoter{}, gen.BanResponse{})
-	assertJSONStructTagsMatch(c, types.QueryResLastBlockHeights{}, gen.LastBlock{})
-	assertJSONStructTagsMatch(c, types.QueryVersion{}, gen.VersionResponse{})
 }
 
 // -------------------------------------------------------------------------------------

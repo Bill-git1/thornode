@@ -17,16 +17,19 @@ import (
 // NodeBondProviders struct for NodeBondProviders
 type NodeBondProviders struct {
 	// node operator fee in basis points
-	NodeOperatorFee *string `json:"node_operator_fee,omitempty"`
-	Providers *NodeBondProvider `json:"providers,omitempty"`
+	NodeOperatorFee string `json:"node_operator_fee"`
+	// all the bond providers for the node
+	Providers []NodeBondProvider `json:"providers"`
 }
 
 // NewNodeBondProviders instantiates a new NodeBondProviders object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewNodeBondProviders() *NodeBondProviders {
+func NewNodeBondProviders(nodeOperatorFee string, providers []NodeBondProvider) *NodeBondProviders {
 	this := NodeBondProviders{}
+	this.NodeOperatorFee = nodeOperatorFee
+	this.Providers = providers
 	return &this
 }
 
@@ -38,76 +41,60 @@ func NewNodeBondProvidersWithDefaults() *NodeBondProviders {
 	return &this
 }
 
-// GetNodeOperatorFee returns the NodeOperatorFee field value if set, zero value otherwise.
+// GetNodeOperatorFee returns the NodeOperatorFee field value
 func (o *NodeBondProviders) GetNodeOperatorFee() string {
-	if o == nil || o.NodeOperatorFee == nil {
+	if o == nil {
 		var ret string
 		return ret
 	}
-	return *o.NodeOperatorFee
+
+	return o.NodeOperatorFee
 }
 
-// GetNodeOperatorFeeOk returns a tuple with the NodeOperatorFee field value if set, nil otherwise
+// GetNodeOperatorFeeOk returns a tuple with the NodeOperatorFee field value
 // and a boolean to check if the value has been set.
 func (o *NodeBondProviders) GetNodeOperatorFeeOk() (*string, bool) {
-	if o == nil || o.NodeOperatorFee == nil {
+	if o == nil {
 		return nil, false
 	}
-	return o.NodeOperatorFee, true
+	return &o.NodeOperatorFee, true
 }
 
-// HasNodeOperatorFee returns a boolean if a field has been set.
-func (o *NodeBondProviders) HasNodeOperatorFee() bool {
-	if o != nil && o.NodeOperatorFee != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetNodeOperatorFee gets a reference to the given string and assigns it to the NodeOperatorFee field.
+// SetNodeOperatorFee sets field value
 func (o *NodeBondProviders) SetNodeOperatorFee(v string) {
-	o.NodeOperatorFee = &v
+	o.NodeOperatorFee = v
 }
 
-// GetProviders returns the Providers field value if set, zero value otherwise.
-func (o *NodeBondProviders) GetProviders() NodeBondProvider {
-	if o == nil || o.Providers == nil {
-		var ret NodeBondProvider
+// GetProviders returns the Providers field value
+func (o *NodeBondProviders) GetProviders() []NodeBondProvider {
+	if o == nil {
+		var ret []NodeBondProvider
 		return ret
 	}
-	return *o.Providers
+
+	return o.Providers
 }
 
-// GetProvidersOk returns a tuple with the Providers field value if set, nil otherwise
+// GetProvidersOk returns a tuple with the Providers field value
 // and a boolean to check if the value has been set.
-func (o *NodeBondProviders) GetProvidersOk() (*NodeBondProvider, bool) {
-	if o == nil || o.Providers == nil {
+func (o *NodeBondProviders) GetProvidersOk() ([]NodeBondProvider, bool) {
+	if o == nil {
 		return nil, false
 	}
 	return o.Providers, true
 }
 
-// HasProviders returns a boolean if a field has been set.
-func (o *NodeBondProviders) HasProviders() bool {
-	if o != nil && o.Providers != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetProviders gets a reference to the given NodeBondProvider and assigns it to the Providers field.
-func (o *NodeBondProviders) SetProviders(v NodeBondProvider) {
-	o.Providers = &v
+// SetProviders sets field value
+func (o *NodeBondProviders) SetProviders(v []NodeBondProvider) {
+	o.Providers = v
 }
 
 func (o NodeBondProviders) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
-	if o.NodeOperatorFee != nil {
+	if true {
 		toSerialize["node_operator_fee"] = o.NodeOperatorFee
 	}
-	if o.Providers != nil {
+	if true {
 		toSerialize["providers"] = o.Providers
 	}
 	return json.Marshal(toSerialize)

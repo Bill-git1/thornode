@@ -17,7 +17,7 @@ import (
 // TxStatusResponse struct for TxStatusResponse
 type TxStatusResponse struct {
 	Tx *Tx `json:"tx,omitempty"`
-	PlannedOutTxs []TxStatusResponsePlannedOutTxsInner `json:"planned_out_txs,omitempty"`
+	PlannedOutTxs []PlannedOutTx `json:"planned_out_txs,omitempty"`
 	OutTxs []Tx `json:"out_txs,omitempty"`
 	Stages TxStagesResponse `json:"stages"`
 }
@@ -73,9 +73,9 @@ func (o *TxStatusResponse) SetTx(v Tx) {
 }
 
 // GetPlannedOutTxs returns the PlannedOutTxs field value if set, zero value otherwise.
-func (o *TxStatusResponse) GetPlannedOutTxs() []TxStatusResponsePlannedOutTxsInner {
+func (o *TxStatusResponse) GetPlannedOutTxs() []PlannedOutTx {
 	if o == nil || o.PlannedOutTxs == nil {
-		var ret []TxStatusResponsePlannedOutTxsInner
+		var ret []PlannedOutTx
 		return ret
 	}
 	return o.PlannedOutTxs
@@ -83,7 +83,7 @@ func (o *TxStatusResponse) GetPlannedOutTxs() []TxStatusResponsePlannedOutTxsInn
 
 // GetPlannedOutTxsOk returns a tuple with the PlannedOutTxs field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *TxStatusResponse) GetPlannedOutTxsOk() ([]TxStatusResponsePlannedOutTxsInner, bool) {
+func (o *TxStatusResponse) GetPlannedOutTxsOk() ([]PlannedOutTx, bool) {
 	if o == nil || o.PlannedOutTxs == nil {
 		return nil, false
 	}
@@ -99,8 +99,8 @@ func (o *TxStatusResponse) HasPlannedOutTxs() bool {
 	return false
 }
 
-// SetPlannedOutTxs gets a reference to the given []TxStatusResponsePlannedOutTxsInner and assigns it to the PlannedOutTxs field.
-func (o *TxStatusResponse) SetPlannedOutTxs(v []TxStatusResponsePlannedOutTxsInner) {
+// SetPlannedOutTxs gets a reference to the given []PlannedOutTx and assigns it to the PlannedOutTxs field.
+func (o *TxStatusResponse) SetPlannedOutTxs(v []PlannedOutTx) {
 	o.PlannedOutTxs = v
 }
 

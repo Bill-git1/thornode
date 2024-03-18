@@ -12,6 +12,7 @@ import (
 	"gitlab.com/thorchain/thornode/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/config"
+	openapi "gitlab.com/thorchain/thornode/openapi/gen"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
@@ -73,13 +74,15 @@ func (s *PubKeyMgrSuite) TestFetchKeys(c *C) {
 		c.Logf("================>:%s", r.RequestURI)
 		switch r.RequestURI {
 		case "/thorchain/vaults/pubkeys":
-			var result types.QueryVaultsPubKeys
-			result.Asgard = append(result.Asgard, types.QueryVaultPubKeyContract{
-				PubKey: pk1,
-				Routers: []types.ChainContract{
+			var result openapi.VaultPubkeysResponse
+			chain := common.ETHChain.String()
+			router := "0xE65e9d372F8cAcc7b6dfcd4af6507851Ed31bb44"
+			result.Asgard = append(result.Asgard, openapi.VaultInfo{
+				PubKey: pk1.String(),
+				Routers: []openapi.VaultRouter{
 					{
-						Chain:  common.ETHChain,
-						Router: "0xE65e9d372F8cAcc7b6dfcd4af6507851Ed31bb44",
+						Chain:  &chain,
+						Router: &router,
 					},
 				},
 			})

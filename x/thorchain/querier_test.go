@@ -247,7 +247,7 @@ func (s *QuerierSuite) TestQueryNodeAccounts(c *C) {
 	c.Assert(keeper.SetNodeAccount(ctx, nodeAccount2), IsNil)
 
 	/* Check Bond-weighted rewards estimation works*/
-	var nodeAccountResp []QueryNodeAccount
+	var nodeAccountResp []openapi.Node
 
 	// Add bond rewards + set min bond for bond-weighted system
 	network, _ := keeper.GetNetwork(ctx)
@@ -263,13 +263,13 @@ func (s *QuerierSuite) TestQueryNodeAccounts(c *C) {
 	c.Assert(len(nodeAccountResp), Equals, 2)
 
 	for _, node := range nodeAccountResp {
-		if node.NodeAddress.Equals(nodeAccount.NodeAddress) {
+		if node.NodeAddress == nodeAccount.NodeAddress.String() {
 			// First node has 25% of total bond, gets 25% of rewards
-			c.Assert(node.CurrentAward.Uint64(), Equals, cosmos.NewUint(common.One*250).Uint64())
+			c.Assert(node.CurrentAward, Equals, cosmos.NewUint(common.One*250).String())
 			continue
-		} else if node.NodeAddress.Equals(nodeAccount2.NodeAddress) {
+		} else if node.NodeAddress == nodeAccount2.NodeAddress.String() {
 			// Second node has 75% of total bond, gets 75% of rewards
-			c.Assert(node.CurrentAward.Uint64(), Equals, cosmos.NewUint(common.One*750).Uint64())
+			c.Assert(node.CurrentAward, Equals, cosmos.NewUint(common.One*750).String())
 			continue
 		}
 
@@ -370,9 +370,22 @@ func (s *QuerierSuite) TestQueryTxInVoter(c *C) {
 	result, err = s.querier(s.ctx, []string{query.QueryTxVoter.Key, tx.ID.String()}, req)
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
-	var voter QueryTxDetails
+	var voter openapi.TxDetailsResponse
 	c.Assert(json.Unmarshal(result, &voter), IsNil)
-	c.Assert(voter.Valid(), IsNil)
+
+	// common.Tx Valid cannot be used for openapi.Tx, so checking some criteria individually.
+	c.Assert(voter.TxId == nil, Equals, false)
+	c.Assert(len(voter.Txs) == 1, Equals, true)
+	c.Assert(voter.Txs[0].ExternalObservedHeight == nil, Equals, false)
+	c.Assert(*voter.Txs[0].ExternalObservedHeight <= 0, Equals, false)
+	c.Assert(voter.Txs[0].ObservedPubKey == nil, Equals, false)
+	c.Assert(voter.Txs[0].ExternalConfirmationDelayHeight == nil, Equals, false)
+	c.Assert(*voter.Txs[0].ExternalConfirmationDelayHeight <= 0, Equals, false)
+	c.Assert(voter.Txs[0].Tx.Id == nil, Equals, false)
+	c.Assert(voter.Txs[0].Tx.FromAddress == nil, Equals, false)
+	c.Assert(voter.Txs[0].Tx.ToAddress == nil, Equals, false)
+	c.Assert(voter.Txs[0].Tx.Chain == nil, Equals, false)
+	c.Assert(len(voter.Txs[0].Tx.Coins) == 0, Equals, false)
 }
 
 func (s *QuerierSuite) TestQueryTxStages(c *C) {
@@ -434,11 +447,22 @@ func (s *QuerierSuite) TestQueryTx(c *C) {
 	result, err = s.querier(s.ctx, []string{query.QueryTx.Key, tx.ID.String()}, req)
 	c.Assert(err, IsNil)
 	var newTx struct {
-		QueryObservedTx `json:"observed_tx"`
-		KeysignMetrics  types.TssKeysignMetric `json:"keysign_metric,omitempty"`
+		openapi.ObservedTx `json:"observed_tx"`
+		KeysignMetrics     types.TssKeysignMetric `json:"keysign_metric,omitempty"`
 	}
 	c.Assert(json.Unmarshal(result, &newTx), IsNil)
-	c.Assert(newTx.Valid(), IsNil)
+
+	// common.Tx Valid cannot be used for openapi.Tx, so checking some criteria individually.
+	c.Assert(newTx.ExternalObservedHeight == nil, Equals, false)
+	c.Assert(*newTx.ExternalObservedHeight <= 0, Equals, false)
+	c.Assert(newTx.ObservedPubKey == nil, Equals, false)
+	c.Assert(newTx.ExternalConfirmationDelayHeight == nil, Equals, false)
+	c.Assert(*newTx.ExternalConfirmationDelayHeight <= 0, Equals, false)
+	c.Assert(newTx.Tx.Id == nil, Equals, false)
+	c.Assert(newTx.Tx.FromAddress == nil, Equals, false)
+	c.Assert(newTx.Tx.ToAddress == nil, Equals, false)
+	c.Assert(newTx.Tx.Chain == nil, Equals, false)
+	c.Assert(len(newTx.Tx.Coins) == 0, Equals, false)
 }
 
 func (s *QuerierSuite) TestQueryKeyGen(c *C) {
@@ -488,7 +512,7 @@ func (s *QuerierSuite) TestQueryQueue(c *C) {
 	}, abci.RequestQuery{})
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
-	var q QueryQueue
+	var q openapi.QueueResponse
 	c.Assert(json.Unmarshal(result, &q), IsNil)
 }
 
@@ -505,7 +529,7 @@ func (s *QuerierSuite) TestQueryHeights(c *C) {
 	}, abci.RequestQuery{})
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
-	var q []QueryResLastBlockHeights
+	var q []openapi.LastBlock
 	c.Assert(json.Unmarshal(result, &q), IsNil)
 
 	result, err = s.querier(s.ctx, []string{
@@ -600,7 +624,7 @@ func (s *QuerierSuite) TestQueryNodeAccount(c *C) {
 	}, abci.RequestQuery{})
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
-	var r QueryNodeAccount
+	var r openapi.Node
 	c.Assert(json.Unmarshal(result, &r), IsNil)
 
 	/* Check bond-weighted rewards estimation works */
@@ -623,12 +647,12 @@ func (s *QuerierSuite) TestQueryNodeAccount(c *C) {
 	}, abci.RequestQuery{})
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
-	var r2 QueryNodeAccount
+	var r2 openapi.Node
 	c.Assert(json.Unmarshal(result, &r2), IsNil)
 
 	// First node has 25% of bond, should have 25% of the rewards
-	c.Assert(r2.TotalBond.Uint64(), Equals, cosmos.NewUint(common.One*1000).Uint64())
-	c.Assert(r2.CurrentAward.Uint64(), Equals, cosmos.NewUint(common.One*250).Uint64())
+	c.Assert(r2.TotalBond, Equals, cosmos.NewUint(common.One*1000).String())
+	c.Assert(r2.CurrentAward, Equals, cosmos.NewUint(common.One*250).String())
 
 	// Get second node
 	result, err = s.querier(s.ctx, []string{
@@ -637,12 +661,12 @@ func (s *QuerierSuite) TestQueryNodeAccount(c *C) {
 	}, abci.RequestQuery{})
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
-	var r3 QueryNodeAccount
+	var r3 openapi.Node
 	c.Assert(json.Unmarshal(result, &r3), IsNil)
 
 	// Second node has 75% of bond, should have 75% of the rewards
-	c.Assert(r3.TotalBond.Uint64(), Equals, cosmos.NewUint(common.One*3000).Uint64())
-	c.Assert(r3.CurrentAward.Uint64(), Equals, cosmos.NewUint(common.One*750).Uint64())
+	c.Assert(r3.TotalBond, Equals, cosmos.NewUint(common.One*3000).String())
+	c.Assert(r3.CurrentAward, Equals, cosmos.NewUint(common.One*750).String())
 }
 
 func (s *QuerierSuite) TestQueryPoolAddresses(c *C) {
@@ -688,7 +712,7 @@ func (s *QuerierSuite) TestQueryKeysignArrayPubKey(c *C) {
 	}, abci.RequestQuery{})
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
-	var r QueryKeysign
+	var r openapi.KeysignResponse
 	c.Assert(json.Unmarshal(result, &r), IsNil)
 }
 
@@ -726,7 +750,7 @@ func (s *QuerierSuite) TestQueryYggdrasilVault(c *C) {
 	}, abci.RequestQuery{})
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
-	var r []QueryYggdrasilVaults
+	var r []openapi.YggdrasilVault
 	c.Assert(json.Unmarshal(result, &r), IsNil)
 }
 
@@ -754,7 +778,7 @@ func (s *QuerierSuite) TestQueryVaultPubKeys(c *C) {
 	}, abci.RequestQuery{})
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
-	var r types.QueryVaultsPubKeys
+	var r openapi.VaultPubkeysResponse
 	c.Assert(json.Unmarshal(result, &r), IsNil)
 }
 
@@ -807,11 +831,11 @@ func (s *QuerierSuite) TestQueryVersion(c *C) {
 	}, abci.RequestQuery{})
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
-	var r types.QueryVersion
+	var r openapi.VersionResponse
 	c.Assert(json.Unmarshal(result, &r), IsNil)
 
 	verComputed := s.k.GetLowestActiveVersion(s.ctx)
-	c.Assert(r.Current.String(), Equals, verComputed.String(),
+	c.Assert(r.Current, Equals, verComputed.String(),
 		Commentf("query should return same version as computed"))
 
 	// override the version computed in BeginBlock
@@ -823,7 +847,7 @@ func (s *QuerierSuite) TestQueryVersion(c *C) {
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
 	c.Assert(json.Unmarshal(result, &r), IsNil)
-	c.Assert(r.Current.String(), Equals, "4.5.6",
+	c.Assert(r.Current, Equals, "4.5.6",
 		Commentf("query should use stored version"))
 }
 

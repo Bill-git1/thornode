@@ -858,9 +858,8 @@ func emitEndBlockTelemetry(ctx cosmos.Context, mgr Manager) error {
 	if maxTxOutOffset <= 0 || err != nil {
 		maxTxOutOffset = mgr.GetConstants().GetInt64Value(constants.MaxTxOutOffset)
 	}
-	query := QueryQueue{
-		ScheduledOutboundValue: cosmos.ZeroUint(),
-	}
+	var queueSwap, queueInternal, queueOutbound int64
+	queueScheduledOutboundValue := cosmos.ZeroUint()
 	iterator := mgr.Keeper().GetSwapQueueIterator(ctx)
 	defer iterator.Close()
 	for ; iterator.Valid(); iterator.Next() {
@@ -868,7 +867,7 @@ func emitEndBlockTelemetry(ctx cosmos.Context, mgr Manager) error {
 		if err := mgr.Keeper().Cdc().Unmarshal(iterator.Value(), &msg); err != nil {
 			continue
 		}
-		query.Swap++
+		queueSwap++
 	}
 	for height := startHeight; height <= ctx.BlockHeight(); height++ {
 		txs, err := mgr.Keeper().GetTxOut(ctx, height)
@@ -879,9 +878,9 @@ func emitEndBlockTelemetry(ctx cosmos.Context, mgr Manager) error {
 			if tx.OutHash.IsEmpty() {
 				memo, _ := ParseMemo(mgr.GetVersion(), tx.Memo)
 				if memo.IsInternal() {
-					query.Internal++
+					queueInternal++
 				} else if memo.IsOutbound() {
-					query.Outbound++
+					queueOutbound++
 				}
 			}
 		}
@@ -898,16 +897,16 @@ func emitEndBlockTelemetry(ctx cosmos.Context, mgr Manager) error {
 			// rest will be empty as well
 			break
 		}
-		query.ScheduledOutboundValue = query.ScheduledOutboundValue.Add(value)
+		queueScheduledOutboundValue = queueScheduledOutboundValue.Add(value)
 		cloutSpent = cloutSpent.Add(clout)
 	}
-	telemetry.SetGauge(float32(query.Internal), "thornode", "queue", "internal")
-	telemetry.SetGauge(float32(query.Outbound), "thornode", "queue", "outbound")
-	telemetry.SetGauge(float32(query.Swap), "thornode", "queue", "swap")
+	telemetry.SetGauge(float32(queueInternal), "thornode", "queue", "internal")
+	telemetry.SetGauge(float32(queueOutbound), "thornode", "queue", "outbound")
+	telemetry.SetGauge(float32(queueSwap), "thornode", "queue", "swap")
 	telemetry.SetGauge(telem(cloutSpent), "thornode", "queue", "scheduled", "clout", "rune")
 	telemetry.SetGauge(telem(cloutSpent)*runeUSDPrice, "thornode", "queue", "scheduled", "clout", "usd")
-	telemetry.SetGauge(telem(query.ScheduledOutboundValue), "thornode", "queue", "scheduled", "value", "rune")
-	telemetry.SetGauge(telem(query.ScheduledOutboundValue)*runeUSDPrice, "thornode", "queue", "scheduled", "value", "usd")
+	telemetry.SetGauge(telem(queueScheduledOutboundValue), "thornode", "queue", "scheduled", "value", "rune")
+	telemetry.SetGauge(telem(queueScheduledOutboundValue)*runeUSDPrice, "thornode", "queue", "scheduled", "value", "usd")
 
 	return nil
 }
