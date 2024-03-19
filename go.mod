@@ -40,7 +40,7 @@ require (
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	github.com/tendermint/btcd v0.1.1
 	github.com/tendermint/go-amino v0.16.0
-	github.com/tendermint/tendermint v0.34.14
+	github.com/tendermint/tendermint v0.34.15
 	github.com/tendermint/tm-db v0.6.6
 	gitlab.com/thorchain/bifrost/bchd-txscript v0.0.0-20221030141659-2c0aa3290779
 	gitlab.com/thorchain/bifrost/dogd-txscript v0.0.0-20221115151937-74db6a9d3c92

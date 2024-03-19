@@ -463,8 +463,10 @@ type Thornode struct {
 		} `mapstructure:"log"`
 
 		RPC struct {
-			ListenAddress     string `mapstructure:"listen_address"`
-			CORSAllowedOrigin string `mapstructure:"cors_allowed_origin"`
+			ListenAddress                        string `mapstructure:"listen_address"`
+			CORSAllowedOrigin                    string `mapstructure:"cors_allowed_origin"`
+			ExperimentalSubscriptionBufferSize   int64  `mapstructure:"experimental_subscription_buffer_size"`
+			ExperimentalWebsocketWriteBufferSize int64  `mapstructure:"experimental_websocket_write_buffer_size"`
 		} `mapstructure:"rpc"`
 
 		P2P struct {

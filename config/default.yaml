@@ -321,6 +321,8 @@ thor:
     rpc:
       listen_address: "" # set dynamically
       cors_allowed_origin: "*"
+      experimental_subscription_buffer_size: 200
+      experimental_websocket_write_buffer_size: 200
     p2p:
       listen_address: "" # set dynamically
       seeds: "" # set dynamically
