@@ -18,7 +18,6 @@ type GasMgrVCUR struct {
 	gasCount          map[common.Asset]int64
 	constantsAccessor constants.ConstantValues
 	keeper            keeper.Keeper
-	mgr               Manager
 }
 
 // newGasMgrVCUR create a new instance of GasMgrV1
@@ -39,8 +38,7 @@ func (gm *GasMgrVCUR) reset() {
 }
 
 // BeginBlock need to be called when a new block get created , update the internal EventGas to new one
-func (gm *GasMgrVCUR) BeginBlock(mgr Manager) {
-	gm.mgr = mgr
+func (gm *GasMgrVCUR) BeginBlock(_ Manager) { // TODO: Remove Manager argument on hard fork.
 	gm.reset()
 }
 
@@ -96,11 +94,7 @@ func (gm *GasMgrVCUR) GetFee(ctx cosmos.Context, chain common.Chain, asset commo
 	if minOutboundUSD < 0 || err != nil {
 		minOutboundUSD = gm.constantsAccessor.GetInt64Value(constants.MinimumL1OutboundFeeUSD)
 	}
-	runeUSDPrice := cosmos.ZeroUint()
-	// since gm.mgr get set at BeginBlock , so here add a safeguard in case gm.mgr is nil
-	if gm.mgr != nil {
-		runeUSDPrice = gm.keeper.DollarsPerRune(ctx)
-	}
+	runeUSDPrice := gm.keeper.DollarsPerRune(ctx)
 	minAsset := cosmos.ZeroUint()
 	if !runeUSDPrice.IsZero() {
 		// since MinOutboundUSD is in USD value , thus need to figure out how much RUNE
