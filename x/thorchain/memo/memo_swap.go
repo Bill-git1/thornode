@@ -145,8 +145,8 @@ func (p *parser) ParseSwapMemo() (SwapMemo, error) {
 	}
 
 	switch {
-	case p.version.GTE(semver.MustParse("1.129.0")):
-		return p.ParseSwapMemoV129()
+	case p.version.GTE(semver.MustParse("1.130.0")):
+		return p.ParseSwapMemoV130()
 	case p.version.GTE(semver.MustParse("1.123.0")):
 		return p.ParseSwapMemoV123()
 	case p.version.GTE(semver.MustParse("1.116.0")):
@@ -168,7 +168,7 @@ func (p *parser) ParseSwapMemo() (SwapMemo, error) {
 	}
 }
 
-func (p *parser) ParseSwapMemoV129() (SwapMemo, error) {
+func (p *parser) ParseSwapMemoV130() (SwapMemo, error) {
 	var err error
 	asset := p.getAsset(1, true, common.EmptyAsset)
 	var order types.OrderType
