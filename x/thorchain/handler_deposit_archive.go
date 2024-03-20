@@ -12,6 +12,10 @@ import (
 	"gitlab.com/thorchain/thornode/constants"
 )
 
+func (h DepositHandler) validateV1(ctx cosmos.Context, msg MsgDeposit) error {
+	return msg.ValidateBasic()
+}
+
 func (h DepositHandler) handleV119(ctx cosmos.Context, msg MsgDeposit) (*cosmos.Result, error) {
 	if h.mgr.Keeper().IsChainHalted(ctx, common.THORChain) {
 		return nil, fmt.Errorf("unable to use MsgDeposit while THORChain is halted")

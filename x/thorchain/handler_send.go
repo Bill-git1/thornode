@@ -1,6 +1,7 @@
 package thorchain
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/blang/semver"
@@ -16,6 +17,7 @@ func NewSendHandler(mgr Manager) BaseHandler[*MsgSend] {
 		mgr:    mgr,
 		logger: MsgSendLogger,
 		validators: NewValidators[*MsgSend]().
+			Register("1.130.0", MsgSendValidateV130).
 			Register("1.121.0", MsgSendValidateV121).
 			Register("1.87.0", MsgSendValidateV87).
 			Register("0.1.0", MsgSendValidateV1),
@@ -28,7 +30,7 @@ func NewSendHandler(mgr Manager) BaseHandler[*MsgSend] {
 	}
 }
 
-func MsgSendValidateV121(ctx cosmos.Context, mgr Manager, msg *MsgSend) error {
+func MsgSendValidateV130(ctx cosmos.Context, mgr Manager, msg *MsgSend) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
@@ -36,6 +38,11 @@ func MsgSendValidateV121(ctx cosmos.Context, mgr Manager, msg *MsgSend) error {
 	// disallow sends to modules, they should only be interacted with via deposit messages
 	if IsModuleAccAddress(mgr.Keeper(), msg.ToAddress) {
 		return fmt.Errorf("cannot use MsgSend for Module transactions, use MsgDeposit instead")
+	}
+
+	// send only allowed with one coin
+	if len(msg.Amount) != 1 {
+		return errors.New("only one coin is allowed")
 	}
 
 	return nil

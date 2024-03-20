@@ -11,6 +11,19 @@ import (
 	"gitlab.com/thorchain/thornode/constants"
 )
 
+func MsgSendValidateV121(ctx cosmos.Context, mgr Manager, msg *MsgSend) error {
+	if err := msg.ValidateBasic(); err != nil {
+		return err
+	}
+
+	// disallow sends to modules, they should only be interacted with via deposit messages
+	if IsModuleAccAddress(mgr.Keeper(), msg.ToAddress) {
+		return fmt.Errorf("cannot use MsgSend for Module transactions, use MsgDeposit instead")
+	}
+
+	return nil
+}
+
 func MsgSendValidateV87(ctx cosmos.Context, mgr Manager, msg *MsgSend) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err

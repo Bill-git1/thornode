@@ -46,14 +46,27 @@ func (h DepositHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, e
 
 func (h DepositHandler) validate(ctx cosmos.Context, msg MsgDeposit) error {
 	version := h.mgr.GetVersion()
-	if version.GTE(semver.MustParse("0.1.0")) {
+	switch {
+	case version.GTE(semver.MustParse("1.130.0")):
+		return h.validateV130(ctx, msg)
+	case version.GTE(semver.MustParse("0.1.0")):
 		return h.validateV1(ctx, msg)
 	}
 	return errInvalidVersion
 }
 
-func (h DepositHandler) validateV1(ctx cosmos.Context, msg MsgDeposit) error {
-	return msg.ValidateBasic()
+func (h DepositHandler) validateV130(ctx cosmos.Context, msg MsgDeposit) error {
+	err := msg.ValidateBasic()
+	if err != nil {
+		return err
+	}
+
+	// deposit only allowed with one coin
+	if len(msg.Coins) != 1 {
+		return errors.New("only one coin is allowed")
+	}
+
+	return nil
 }
 
 func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit) (*cosmos.Result, error) {
