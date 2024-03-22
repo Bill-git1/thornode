@@ -23,7 +23,7 @@ sequence: 1
 type: tx-network-fee
 signer: {{ addr_thor_dog }}
 block_height: 1
-chain: BTC
+chain: ETH
 transaction_size: 1000
 transaction_rate: 10
 sequence: 2
@@ -32,40 +32,40 @@ type: create-blocks
 count: 1
 ---
 ########################################################################################
-# create btc pool with 2 liquidity providers
+# create eth pool with 2 liquidity providers
 ########################################################################################
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
 txs:
   - tx:
       id: "{{ observe_txid 1 }}"
-      chain: BTC
-      from_address: {{ addr_btc_cat }}
-      to_address: {{ addr_btc_dog }}
+      chain: ETH
+      from_address: {{ addr_eth_cat }}
+      to_address: {{ addr_eth_dog }}
       coins:
         - amount: "100000000"
-          asset: "BTC.BTC"
+          asset: "ETH.ETH"
           decimals: 8
       gas:
         - amount: "10000"
-          asset: "BTC.BTC"
-      memo: "+:BTC.BTC:{{ addr_thor_cat }}"
+          asset: "ETH.ETH"
+      memo: "+:ETH.ETH:{{ addr_thor_cat }}"
     block_height: 1
     finalise_height: 1
     observed_pub_key: {{ pubkey_dog }}
   - tx:
       id: "{{ observe_txid 2 }}"
-      chain: BTC
-      from_address: {{ addr_btc_fox }}
-      to_address: {{ addr_btc_dog }}
+      chain: ETH
+      from_address: {{ addr_eth_fox }}
+      to_address: {{ addr_eth_dog }}
       coins:
         - amount: "100000000"
-          asset: "BTC.BTC"
+          asset: "ETH.ETH"
           decimals: 8
       gas:
         - amount: "10000"
-          asset: "BTC.BTC"
-      memo: "+:BTC.BTC:{{ addr_thor_fox }}"
+          asset: "ETH.ETH"
+      memo: "+:ETH.ETH:{{ addr_thor_fox }}"
     block_height: 1
     finalise_height: 1
     observed_pub_key: {{ pubkey_dog }}
@@ -75,14 +75,14 @@ signer: {{ addr_thor_cat }}
 coins:
   - amount: "200000000"
     asset: "rune"
-memo: "+:BTC.BTC:{{ addr_btc_cat }}"
+memo: "+:ETH.ETH:{{ addr_eth_cat }}"
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
 coins:
   - amount: "200000000"
     asset: "rune"
-memo: "+:BTC.BTC:{{ addr_btc_fox }}"
+memo: "+:ETH.ETH:{{ addr_eth_fox }}"
 ---
 type: create-blocks
 count: 1
@@ -93,7 +93,7 @@ asserts:
   - .observed_tx.status == "done"
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_providers
+endpoint: http://localhost:1317/thorchain/pool/ETH.ETH/liquidity_providers
 asserts:
   - .|length == 2
 ---
@@ -106,16 +106,60 @@ asserts:
   - .[0].pending_inbound_rune == "0"
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_providers
+endpoint: http://localhost:1317/thorchain/pool/ETH.ETH/liquidity_providers
 asserts:
   - .|length == 2
   - .[0].units == "200000000"
   - .[1].units == "200000000"
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
+endpoint: http://localhost:1317/thorchain/pool/ETH.ETH/savers
 asserts:
   - .|length == 0
+---
+########################################################################################
+# create token pool
+########################################################################################
+type: tx-observed-in
+signer: {{ addr_thor_dog }}
+txs:
+  - tx:
+      id: "{{ observe_txid 3 }}"
+      chain: ETH
+      from_address: {{ addr_eth_cat }}
+      to_address: {{ addr_eth_dog }}
+      coins:
+        - amount: "100000000"
+          asset: "ETH.FOO"
+          decimals: 8
+      gas:
+        - amount: "10000"
+          asset: "ETH.ETH"
+      memo: "+:ETH.FOO:{{ addr_thor_cat }}"
+    block_height: 1
+    finalise_height: 1
+    observed_pub_key: {{ pubkey_dog }}
+---
+type: tx-deposit
+signer: {{ addr_thor_cat }}
+coins:
+  - amount: "100000000"
+    asset: "rune"
+memo: "+:ETH.FOO:{{ addr_eth_cat }}"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/pools
+asserts:
+  - .|length == 2
+---
+type: check
+endpoint: http://localhost:1317/thorchain/pool/ETH.FOO/liquidity_providers
+asserts:
+  - .|length == 1
+  - .[0].units == "100000000"
 ---
 ########################################################################################
 # add 3 savers
@@ -124,50 +168,50 @@ type: tx-observed-in
 signer: {{ addr_thor_dog }}
 txs:
   - tx:
-      id: "{{ observe_txid 3 }}"
-      chain: BTC
-      from_address: {{ addr_btc_cat }}
-      to_address: {{ addr_btc_dog }}
-      coins:
-        - amount: "10000000"
-          asset: "BTC.BTC"
-          decimals: 8
-      gas:
-        - amount: "10000"
-          asset: "BTC.BTC"
-      memo: "+:BTC/BTC"
-    block_height: 1
-    finalise_height: 1
-    observed_pub_key: {{ pubkey_dog }}
-  - tx:
       id: "{{ observe_txid 4 }}"
-      chain: BTC
-      from_address: {{ addr_btc_fox }}
-      to_address: {{ addr_btc_dog }}
+      chain: ETH
+      from_address: {{ addr_eth_cat }}
+      to_address: {{ addr_eth_dog }}
       coins:
         - amount: "10000000"
-          asset: "BTC.BTC"
+          asset: "ETH.ETH"
           decimals: 8
       gas:
         - amount: "10000"
-          asset: "BTC.BTC"
-      memo: "+:BTC/BTC"
+          asset: "ETH.ETH"
+      memo: "+:ETH/ETH"
     block_height: 1
     finalise_height: 1
     observed_pub_key: {{ pubkey_dog }}
   - tx:
       id: "{{ observe_txid 5 }}"
-      chain: BTC
-      from_address: {{ addr_btc_pig }}
-      to_address: {{ addr_btc_dog }}
+      chain: ETH
+      from_address: {{ addr_eth_fox }}
+      to_address: {{ addr_eth_dog }}
       coins:
         - amount: "10000000"
-          asset: "BTC.BTC"
+          asset: "ETH.ETH"
           decimals: 8
       gas:
         - amount: "10000"
-          asset: "BTC.BTC"
-      memo: "+:BTC/BTC"
+          asset: "ETH.ETH"
+      memo: "+:ETH/ETH"
+    block_height: 1
+    finalise_height: 1
+    observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 6 }}"
+      chain: ETH
+      from_address: {{ addr_eth_pig }}
+      to_address: {{ addr_eth_dog }}
+      coins:
+        - amount: "10000000"
+          asset: "ETH.ETH"
+          decimals: 8
+      gas:
+        - amount: "10000"
+          asset: "ETH.ETH"
+      memo: "+:ETH/ETH"
     block_height: 1
     finalise_height: 1
     observed_pub_key: {{ pubkey_dog }}
@@ -176,7 +220,7 @@ type: create-blocks
 count: 1
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
+endpoint: http://localhost:1317/thorchain/pool/ETH.ETH/savers
 asserts:
   - .|length == 3
 ---
@@ -196,7 +240,7 @@ signer: {{ addr_thor_fox }}
 coins:
   - amount: "100000000"
     asset: "rune"
-memo: "=:BTC/BTC:{{ addr_thor_fox }}:0/1/2"
+memo: "=:ETH/ETH:{{ addr_thor_fox }}:0/1/2"
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
@@ -223,13 +267,18 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 2
-  - .balances[]|select(.denom=="btc/btc")|.amount|tonumber == 47214625
+  - .balances[]|select(.denom=="eth/eth")|.amount|tonumber == 47127015
+---
+type: check
+endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_cat }}
+asserts:
+  - .balances[]|select(.denom=="rune")|.amount|tonumber == 2499696000000
 ---
 ########################################################################################
 # ragnarok the pool
 ########################################################################################
 type: tx-mimir
-key: "RAGNAROK-BTC-BTC"
+key: "RAGNAROK-ETH-ETH"
 value: 1
 signer: {{ addr_thor_dog }}
 ---
@@ -237,10 +286,52 @@ type: create-blocks
 count: 1
 ---
 ########################################################################################
+# before gas asset ragnarok should eject the token pool LP
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - .|length == 1
+---
+type: check
+endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_cat }}
+asserts:
+  - .balances[]|select(.denom=="rune")|.amount|tonumber == 2499696000000+100405724
+---
+# observe token pool outbound
+type: tx-observed-out
+signer: {{ addr_thor_dog }}
+txs:
+  - tx:
+      id: "{{ observe_txid 7 }}"
+      chain: ETH
+      from_address: {{ addr_eth_dog }}
+      to_address: {{ addr_eth_cat }}
+      coins:
+        - amount: "100000000"
+          asset: "ETH.FOO"
+          decimals: 8
+      gas:
+        - amount: "15000"
+          asset: "ETH.ETH"
+      memo: "RAGNAROK:8"
+    block_height: 1
+    finalise_height: 1
+    observed_pub_key: {{ pubkey_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - .|length == 0
+---
+########################################################################################
 # first block should eject two savers
 ########################################################################################
 type: check
-endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
+endpoint: http://localhost:1317/thorchain/pool/ETH.ETH/savers
 asserts:
   - .|length == 1
 ---
@@ -256,21 +347,21 @@ asserts:
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_cat }}
 asserts:
-  - .balances[]|select(.denom=="rune")|.amount|tonumber == ${CAT_BALANCE=2499798000000}
+  - .balances[]|select(.denom=="rune")|.amount|tonumber == ${CAT_BALANCE=2499796405724}
 ---
 type: tx-deposit
 signer: {{ addr_thor_cat }}
 coins:
   - amount: "200000000"
     asset: "rune"
-memo: "=:BTC.BTC:{{ addr_btc_cat }}"
+memo: "=:ETH.ETH:{{ addr_eth_cat }}"
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
 coins:
-  - amount: "47214625"
-    asset: "btc/btc"
-memo: "=:BTC.BTC:{{ addr_btc_fox }}:0/1/0"
+  - amount: "47127015"
+    asset: "eth/eth"
+memo: "=:ETH.ETH:{{ addr_eth_fox }}:0/1/0"
 ---
 type: create-blocks
 count: 1
@@ -286,13 +377,13 @@ type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .txs[0].result.events[]|select(.type=="refund")|.reason=="trading halted"
-  - .end_block_events[]|select(.type=="refund")|.reason="streaming swaps disabled on ragnarok asset BTC/BTC"
+  - .end_block_events[]|select(.type=="refund")|.reason="streaming swaps disabled on ragnarok asset ETH/ETH"
 ---
 ########################################################################################
 # second block should eject last saver and create outbounds for the first 2
 ########################################################################################
 type: check
-endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
+endpoint: http://localhost:1317/thorchain/pool/ETH.ETH/savers
 asserts:
   - .|length == 0
 ---
@@ -308,14 +399,14 @@ asserts:
 ---
 # lps should be untouched
 type: check
-endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_providers
+endpoint: http://localhost:1317/thorchain/pool/ETH.ETH/liquidity_providers
 asserts:
   - .|length == 2
   - .[0].units == "200000000"
   - .[1].units == "200000000"
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/pool/BTC.BTC
+endpoint: http://localhost:1317/thorchain/pool/ETH.ETH
 asserts:
   - .status == "Available"
 ---
@@ -331,9 +422,9 @@ signer: {{ addr_thor_dog }}
 type: tx-deposit
 signer: {{ addr_thor_fox }}
 coins:
-  - amount: "46301122"
-    asset: "btc/btc"
-memo: "=:BTC.BTC:{{ addr_btc_fox }}"
+  - amount: "46216908"
+    asset: "eth/eth"
+memo: "=:ETH.ETH:{{ addr_eth_fox }}"
 ---
 ########################################################################################
 # third block should create last saver outbound, stage the pool, and eject first lp
@@ -359,12 +450,12 @@ asserts:
   - .|length == 5
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_providers
+endpoint: http://localhost:1317/thorchain/pool/ETH.ETH/liquidity_providers
 asserts:
   - .|length == 1
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/pool/BTC.BTC
+endpoint: http://localhost:1317/thorchain/pool/ETH.ETH
 asserts:
   - .status == "Staged"
 ---
@@ -373,66 +464,66 @@ type: tx-observed-out
 signer: {{ addr_thor_dog }}
 txs:
   - tx:
-      id: "{{ observe_txid 6 }}"
-      chain: BTC
-      from_address: {{ addr_btc_dog }}
-      to_address: {{ addr_btc_pig }}
-      coins:
-        - amount: "8836439"
-          asset: "BTC.BTC"
-          decimals: 8
-      gas:
-        - amount: "15000"
-          asset: "BTC.BTC"
-      memo: "OUT:08225BF81303B3A86025AE667C66FF37248B5FDB25FF407CD9EF26F462CFFFDE"
-    block_height: 2
-    finalise_height: 2
-    observed_pub_key: {{ pubkey_dog }}
-  - tx:
-      id: "{{ observe_txid 7 }}"
-      chain: BTC
-      from_address: {{ addr_btc_dog }}
-      to_address: {{ addr_btc_fox }}
-      coins:
-        - amount: "8790793"
-          asset: "BTC.BTC"
-          decimals: 8
-      gas:
-        - amount: "15000"
-          asset: "BTC.BTC"
-      memo: "OUT:AA60EAE5F458E2792021ED907F458AF263566DF3AD47235D2CE8E19730BD5E8E"
-    block_height: 2
-    finalise_height: 2
-    observed_pub_key: {{ pubkey_dog }}
-  - tx:
       id: "{{ observe_txid 8 }}"
-      chain: BTC
-      from_address: {{ addr_btc_dog }}
-      to_address: {{ addr_btc_cat }}
+      chain: ETH
+      from_address: {{ addr_eth_dog }}
+      to_address: {{ addr_eth_pig }}
       coins:
-        - amount: "8622955"
-          asset: "BTC.BTC"
+        - amount: "8838815"
+          asset: "ETH.ETH"
           decimals: 8
       gas:
         - amount: "15000"
-          asset: "BTC.BTC"
-      memo: "OUT:29F6955711136F1C53BDF8ED9103B45E0346F95D632187EC934989545FE5CF74"
+          asset: "ETH.ETH"
+      memo: "OUT:2FF438919C271403C9466D0AA735BFAA8C8294FC11A8A9D3963BBEA2CC8166FA"
     block_height: 2
     finalise_height: 2
     observed_pub_key: {{ pubkey_dog }}
   - tx:
       id: "{{ observe_txid 9 }}"
-      chain: BTC
-      from_address: {{ addr_btc_dog }}
-      to_address: {{ addr_btc_fox }}
+      chain: ETH
+      from_address: {{ addr_eth_dog }}
+      to_address: {{ addr_eth_cat }}
       coins:
-        - amount: "30952865"
-          asset: "BTC.BTC"
+        - amount: "8774453"
+          asset: "ETH.ETH"
           decimals: 8
       gas:
         - amount: "15000"
-          asset: "BTC.BTC"
-      memo: "OUT:D784DDCCD906333B48C8493B836BFB5CD9DA805549A9B7927548C33A43E863D3"
+          asset: "ETH.ETH"
+      memo: "OUT:F82010910E993C6D7AAD9B530E017710C2597CFFC89D92A76767EEA2190A76A8"
+    block_height: 2
+    finalise_height: 2
+    observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 10 }}"
+      chain: ETH
+      from_address: {{ addr_eth_dog }}
+      to_address: {{ addr_eth_fox }}
+      coins:
+        - amount: "8643424"
+          asset: "ETH.ETH"
+          decimals: 8
+      gas:
+        - amount: "15000"
+          asset: "ETH.ETH"
+      memo: "OUT:78BA1529FAD7E7F40ACB923E1AC2952DA63BD7F904A8E97A8E830B4B13799B96"
+    block_height: 2
+    finalise_height: 2
+    observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 11 }}"
+      chain: ETH
+      from_address: {{ addr_eth_dog }}
+      to_address: {{ addr_eth_fox }}
+      coins:
+        - amount: "30917274"
+          asset: "ETH.ETH"
+          decimals: 8
+      gas:
+        - amount: "15000"
+          asset: "ETH.ETH"
+      memo: "OUT:1F0879AAE452C869F47C1B7A1310D1D4BABF75003A528741681FF878F5345038"
     block_height: 2
     finalise_height: 2
     observed_pub_key: {{ pubkey_dog }}
@@ -455,18 +546,18 @@ type: tx-observed-out
 signer: {{ addr_thor_dog }}
 txs:
   - tx:
-      id: "{{ observe_txid 10 }}"
-      chain: BTC
-      from_address: {{ addr_btc_dog }}
-      to_address: {{ addr_btc_fox }}
+      id: "{{ observe_txid 12 }}"
+      chain: ETH
+      from_address: {{ addr_eth_dog }}
+      to_address: {{ addr_eth_fox }}
       coins:
-        - amount: "86383474"
-          asset: "BTC.BTC"
+        - amount: "86390517"
+          asset: "ETH.ETH"
           decimals: 8
       gas:
         - amount: "15000"
-          asset: "BTC.BTC"
-      memo: "RAGNAROK:9"
+          asset: "ETH.ETH"
+      memo: "RAGNAROK:11"
     block_height: 3
     finalise_height: 3
     observed_pub_key: {{ pubkey_dog }}
@@ -479,7 +570,7 @@ count: 1
 skip_invariants: true # last withdraw failed, but LP was removed
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/pool/BTC.BTC
+endpoint: http://localhost:1317/thorchain/pool/ETH.ETH
 asserts:
   - .status == "Suspended"
 ---

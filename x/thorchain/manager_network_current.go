@@ -1690,16 +1690,10 @@ func (vm *NetworkMgrVCUR) checkPoolRagnarok(ctx cosmos.Context, mgr Manager) err
 			continue
 		}
 
-		// The Ragnarok key for the TERRA.UST pool would be RAGNAROK-TERRA-UST .
-		k := "RAGNAROK-" + pool.Asset.MimirString()
-		v, err := vm.k.GetMimir(ctx, k)
-		if err != nil {
-			ctx.Logger().Error("fail to get mimir value", "mimir", k, "error", err)
+		if !vm.k.IsRagnarok(ctx, []common.Asset{pool.Asset}) {
 			continue
 		}
-		if v < 1 {
-			continue
-		}
+
 		if pool.Asset.IsGasAsset() && !vm.canRagnarokGasPool(ctx, pool.Asset.GetChain(), pools) {
 			continue
 		}

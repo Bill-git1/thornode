@@ -11,7 +11,7 @@
             "@type": "/cosmos.crypto.secp256k1.PubKey",
             "key": "AmF4AUTWZEUSBtgqiR5n2Lgic/Yrr1mWupMo5TAubNRO"
           },
-          "sequence": "10"
+          "sequence": "12"
         },
         {
           "@type": "/cosmos.auth.v1beta1.ModuleAccount",
@@ -95,7 +95,7 @@
             "@type": "/cosmos.crypto.secp256k1.PubKey",
             "key": "A79mmwQR0zNaJgvyBZyo1g3eKxUQTlINRlNJTUFCRxUj"
           },
-          "sequence": "2"
+          "sequence": "3"
         },
         {
           "@type": "/cosmos.auth.v1beta1.ModuleAccount",
@@ -165,7 +165,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "252004773",
+              "amount": "252928364",
               "denom": "rune"
             }
           ]
@@ -174,7 +174,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35000010202798",
+              "amount": "35000009950159",
               "denom": "rune"
             }
           ]
@@ -183,7 +183,7 @@
           "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "coins": [
             {
-              "amount": "2499943786144",
+              "amount": "2499944708952",
               "denom": "rune"
             }
           ]
@@ -192,7 +192,7 @@
           "address": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
           "coins": [
             {
-              "amount": "2499794000000",
+              "amount": "2499792405724",
               "denom": "rune"
             }
           ]
@@ -201,7 +201,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "5000000006285",
+              "amount": "5000000006801",
               "denom": "rune"
             }
           ]
@@ -296,11 +296,11 @@
       "chain_contracts": [],
       "last_chain_heights": [
         {
-          "chain": "BTC",
+          "chain": "ETH",
           "height": "1"
         }
       ],
-      "last_signed_height": "9",
+      "last_signed_height": "11",
       "liquidity_providers": null,
       "loans": [],
       "mimirs": [
@@ -309,7 +309,7 @@
           "value": "1"
         },
         {
-          "key": "RAGNAROK-BTC-BTC",
+          "key": "RAGNAROK-ETH-ETH",
           "value": "1"
         },
         {
@@ -324,16 +324,16 @@
       "network": {
         "LPIncomeSplit": "9998",
         "NodeIncomeSplit": "2",
-        "bond_reward_rune": "6285",
+        "bond_reward_rune": "6801",
         "burned_bep2_rune": "0",
         "burned_erc20_rune": "0",
-        "outbound_gas_spent_rune": "218629",
-        "outbound_gas_withheld_rune": "206156",
-        "total_bond_units": "7"
+        "outbound_gas_spent_rune": "252371",
+        "outbound_gas_withheld_rune": "206902",
+        "total_bond_units": "9"
       },
       "network_fees": [
         {
-          "chain": "BTC",
+          "chain": "ETH",
           "transaction_fee_rate": "10",
           "transaction_size": "1000"
         }
@@ -382,16 +382,21 @@
           ],
           "coins": [
             {
-              "amount": "86338474",
-              "asset": "BTC.BTC",
+              "amount": "86345517",
+              "asset": "ETH.ETH",
+              "decimals": "8"
+            },
+            {
+              "amount": "0",
+              "asset": "ETH.FOO",
               "decimals": "8"
             }
           ],
-          "inbound_tx_count": "5",
+          "inbound_tx_count": "6",
           "membership": [
             "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
           ],
-          "outbound_tx_count": "5",
+          "outbound_tx_count": "6",
           "pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
           "routers": null,
           "status": "ActiveVault",
@@ -428,5 +433,5 @@
     },
     "version": {}
   },
-  "initial_height": "12"
+  "initial_height": "14"
 }

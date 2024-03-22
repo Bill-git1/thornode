@@ -392,6 +392,7 @@ type KeeperTHORName interface {
 }
 
 type KeeperHalt interface {
+	IsRagnarok(ctx cosmos.Context, assets []common.Asset) bool
 	IsTradingHalt(ctx cosmos.Context, msg cosmos.Msg) bool
 	IsGlobalTradingHalted(ctx cosmos.Context) bool
 	IsChainTradingHalted(ctx cosmos.Context, chain common.Chain) bool

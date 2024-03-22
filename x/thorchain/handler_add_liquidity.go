@@ -52,6 +52,8 @@ func (h AddLiquidityHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Resu
 func (h AddLiquidityHandler) validate(ctx cosmos.Context, msg MsgAddLiquidity) error {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.131.0")):
+		return h.validateV131(ctx, msg)
 	case version.GTE(semver.MustParse("1.128.0")):
 		return h.validateV128(ctx, msg)
 	case version.GTE(semver.MustParse("1.119.0")):
@@ -81,7 +83,7 @@ func (h AddLiquidityHandler) validate(ctx cosmos.Context, msg MsgAddLiquidity) e
 	}
 }
 
-func (h AddLiquidityHandler) validateV128(ctx cosmos.Context, msg MsgAddLiquidity) error {
+func (h AddLiquidityHandler) validateV131(ctx cosmos.Context, msg MsgAddLiquidity) error {
 	if !msg.Tx.ID.IsBlank() { // don't validate tx if internal txn
 		if err := msg.ValidateBasicV98(); err != nil {
 			ctx.Logger().Error(err.Error())
@@ -100,13 +102,7 @@ func (h AddLiquidityHandler) validateV128(ctx cosmos.Context, msg MsgAddLiquidit
 		}
 	}
 
-	// The Ragnarok key for the TERRA.LUNA pool would be RAGNAROK-TERRA-LUNA .
-	k := "RAGNAROK-" + msg.Asset.MimirString()
-	v, err := h.mgr.Keeper().GetMimir(ctx, k)
-	if err != nil {
-		ctx.Logger().Error("fail to get mimir value", "mimir", k, "error", err)
-	}
-	if v >= 1 {
+	if h.mgr.Keeper().IsRagnarok(ctx, []common.Asset{msg.Asset}) {
 		return fmt.Errorf("cannot add liquidity to Ragnaroked pool (%s)", msg.Asset.String())
 	}
 
@@ -115,8 +111,7 @@ func (h AddLiquidityHandler) validateV128(ctx cosmos.Context, msg MsgAddLiquidit
 	// Even if a destination gas asset pool is empty, the first add liquidity has to be symmetrical,
 	// and so there is no need to check at this stage for whether the addition is of RUNE or Asset or with needsSwap.
 	if !msg.Asset.Equals(gasAsset) {
-		var gasPool Pool
-		gasPool, err = h.mgr.Keeper().GetPool(ctx, gasAsset)
+		gasPool, err := h.mgr.Keeper().GetPool(ctx, gasAsset)
 		// Note that for a synthetic asset msg.Asset.Chain (unlike msg.Asset.GetChain())
 		// is intentionally used to be the external chain rather than THOR.
 		// Any destination asset starting with THOR should be rejected for no THOR.RUNE
@@ -175,8 +170,7 @@ func (h AddLiquidityHandler) validateV128(ctx cosmos.Context, msg MsgAddLiquidit
 			return errAddLiquidityMismatchAddr
 		}
 
-		var polAddress common.Address
-		polAddress, err = h.mgr.Keeper().GetModuleAddress(ReserveName)
+		polAddress, err := h.mgr.Keeper().GetModuleAddress(ReserveName)
 		if err != nil {
 			return err
 		}
@@ -195,8 +189,7 @@ func (h AddLiquidityHandler) validateV128(ctx cosmos.Context, msg MsgAddLiquidit
 		}
 	}
 
-	var pool Pool
-	pool, err = h.mgr.Keeper().GetPool(ctx, msg.Asset)
+	pool, err := h.mgr.Keeper().GetPool(ctx, msg.Asset)
 	if err != nil {
 		return ErrInternal(err, "fail to get pool")
 	}

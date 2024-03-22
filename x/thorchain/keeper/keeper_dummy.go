@@ -655,6 +655,7 @@ func (k KVStoreDummy) GetConfigInt64(ctx cosmos.Context, key constants.ConstantN
 	return -1
 }
 
+func (k KVStoreDummy) IsRagnarok(ctx cosmos.Context, assets []common.Asset) bool        { return false }
 func (k KVStoreDummy) IsTradingHalt(ctx cosmos.Context, msg cosmos.Msg) bool            { return false }
 func (k KVStoreDummy) IsGlobalTradingHalted(ctx cosmos.Context) bool                    { return false }
 func (k KVStoreDummy) IsChainTradingHalted(ctx cosmos.Context, chain common.Chain) bool { return false }
