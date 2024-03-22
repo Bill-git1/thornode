@@ -14,7 +14,7 @@ func main() {
 	config.Init()
 
 	failed := false
-	for chain, chainConfig := range config.GetBifrost().Chains {
+	for chain, chainConfig := range config.GetBifrost().GetChains() {
 		if !chain.IsEVM() {
 			continue
 		}

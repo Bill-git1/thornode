@@ -140,7 +140,10 @@ class MockGaia(HttpClient):
                     fee=Fee(200000, "20000uatom"),  # fee 0.02 atom
                 )
             )
-            self.lcd_client.tx.broadcast_sync(tx)
+
+            enc_tx = self.lcd_client.tx.encode(tx)
+            data = {"tx_bytes": enc_tx, "mode": "BROADCAST_MODE_ASYNC"}
+            asyncio.run(self.lcd_client.tx._c._post("/cosmos/tx/v1beta1/txs", data))
 
     def scan_blocks(self):
         loop = asyncio.new_event_loop()
@@ -272,8 +275,25 @@ class MockGaia(HttpClient):
             )
         )
 
-        result = self.lcd_client.tx.broadcast(tx)
-        txn.id = result.txhash
+        enc_tx = self.lcd_client.tx.encode(tx)
+        data = {"tx_bytes": enc_tx, "mode": "BROADCAST_MODE_SYNC"}
+        result = asyncio.run(
+            self.lcd_client.tx._c._post("/cosmos/tx/v1beta1/txs", data)
+        )
+        txid = result["tx_response"]["txhash"]
+
+        # wait for block inclusion
+        while True:
+            try:
+                result = asyncio.run(
+                    self.lcd_client.tx._c._get(f"/cosmos/tx/v1beta1/txs/{txid}")
+                )
+                if result["tx_response"]["height"] != "0":
+                    break
+            except:
+                time.sleep(0.1)
+
+        txn.id = txid
         txn.gas = [Coin("GAIA.ATOM", self.default_gas)]
 
 

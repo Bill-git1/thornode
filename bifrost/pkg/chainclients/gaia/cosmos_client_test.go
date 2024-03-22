@@ -203,14 +203,13 @@ func (s *CosmosTestSuite) TestSign(c *C) {
 	scannerConfig := config.BifrostBlockScannerConfiguration{ChainID: common.GAIAChain}
 	txConfig := tx.NewTxConfig(marshaler, []signingtypes.SignMode{signingtypes.SignMode_SIGN_MODE_DIRECT})
 
-	mockTmServiceClient := NewMockTmServiceClient()
 	mockAccountServiceClient := NewMockAccountServiceClient()
 	mockBankServiceClient := NewMockBankServiceClient()
 
 	client := CosmosClient{
 		cfg:             clientConfig,
 		txConfig:        txConfig,
-		cosmosScanner:   &CosmosBlockScanner{cfg: scannerConfig, tmService: mockTmServiceClient},
+		cosmosScanner:   &CosmosBlockScanner{cfg: scannerConfig, rpc: &mockTendermintRPC{}},
 		bankClient:      mockBankServiceClient,
 		accountClient:   mockAccountServiceClient,
 		chainID:         "columbus-5",

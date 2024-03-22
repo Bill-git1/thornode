@@ -10,23 +10,21 @@ import (
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
 	"github.com/cosmos/cosmos-sdk/codec"
+	ctypes "github.com/cosmos/cosmos-sdk/types"
 	signingtypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
-	rpcclient "github.com/tendermint/tendermint/rpc/client/http"
-
-	ctypes "github.com/cosmos/cosmos-sdk/types"
 	btypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/tendermint/tendermint/crypto/tmhash"
-	tmtypes "github.com/tendermint/tendermint/proto/tendermint/types"
-	"google.golang.org/grpc"
+
+	"github.com/cometbft/cometbft/crypto/tmhash"
+	rpcclienthttp "github.com/cometbft/cometbft/rpc/client/http"
+	tmtypes "github.com/cometbft/cometbft/types"
 
 	"gitlab.com/thorchain/thornode/bifrost/blockscanner"
 	"gitlab.com/thorchain/thornode/bifrost/metrics"
-	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/gaia/wasm"
 	"gitlab.com/thorchain/thornode/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/common"
@@ -57,10 +55,9 @@ const (
 )
 
 var (
-	_                     ctypes.Msg = &wasm.MsgExecuteContract{}
-	ErrInvalidScanStorage            = errors.New("scan storage is empty or nil")
-	ErrInvalidMetrics                = errors.New("metrics is empty or nil")
-	ErrEmptyTx                       = errors.New("empty tx")
+	ErrInvalidScanStorage = errors.New("scan storage is empty or nil")
+	ErrInvalidMetrics     = errors.New("metrics is empty or nil")
+	ErrEmptyTx            = errors.New("empty tx")
 )
 
 // CosmosBlockScanner is to scan the blocks
@@ -70,9 +67,7 @@ type CosmosBlockScanner struct {
 	db               blockscanner.ScannerStorage
 	cdc              *codec.ProtoCodec
 	txConfig         client.TxConfig
-	txService        *rpcclient.HTTP
-	tmService        tmservice.ServiceClient
-	grpc             *grpc.ClientConn
+	rpc              TendermintRPC
 	bridge           thorclient.ThorchainBridge
 	solvencyReporter SolvencyReporter
 
@@ -106,26 +101,13 @@ func NewCosmosBlockScanner(cfg config.BifrostBlockScannerConfiguration,
 	// Registry for decoding txs
 	registry := bridge.GetContext().InterfaceRegistry
 
-	// CHANGEME: if you need to be able to process messages containing non-standard messages
-	// e.g. those not shipped with CosmosSDK by default, they need to be defined in the "proto" directory
-	// And registered to the codec manually here.
-	// In this case, we are saying a MsgExecuteContract can be decoded as a ctypes.Msg,
-	// which is necessary when using the TxDecoder to decode the transaction bytes from Tendermint.
-	registry.RegisterImplementations((*ctypes.Msg)(nil), &wasm.MsgExecuteContract{})
-
 	btypes.RegisterInterfaces(registry)
 	cdc := codec.NewProtoCodec(registry)
-
-	grpcConn, err := getGRPCConn(cfg.CosmosGRPCHost, cfg.CosmosGRPCTLS)
-	if err != nil {
-		logger.Fatal().Err(err).Msg("fail to create grpc connection")
-	}
 
 	// Registry for encoding txs
 	marshaler := codec.NewProtoCodec(registry)
 	txConfig := tx.NewTxConfig(marshaler, []signingtypes.SignMode{signingtypes.SignMode_SIGN_MODE_DIRECT})
-	tmService := tmservice.NewServiceClient(grpcConn)
-	rpcClient, err := rpcclient.New(cfg.RPCHost, "/websocket")
+	rpcClient, err := rpcclienthttp.New(cfg.RPCHost, "/websocket")
 	if err != nil {
 		logger.Fatal().Err(err).Msg("fail to create tendemrint rpcclient")
 	}
@@ -136,11 +118,9 @@ func NewCosmosBlockScanner(cfg config.BifrostBlockScannerConfiguration,
 		db:               scanStorage,
 		cdc:              cdc,
 		txConfig:         txConfig,
-		txService:        rpcClient,
-		tmService:        tmService,
+		rpc:              rpcClient,
 		feeCache:         make([]ctypes.Uint, 0),
 		lastFee:          ctypes.NewUint(0),
-		grpc:             grpcConn,
 		bridge:           bridge,
 		solvencyReporter: solvencyReporter,
 	}, nil
@@ -152,14 +132,13 @@ func NewCosmosBlockScanner(cfg config.BifrostBlockScannerConfiguration,
 func (c *CosmosBlockScanner) GetHeight() (int64, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	resultHeight, err := c.tmService.GetLatestBlock(
-		ctx,
-		&tmservice.GetLatestBlockRequest{})
+
+	resultBlock, err := c.rpc.Block(ctx, nil)
 	if err != nil {
 		return 0, err
 	}
 
-	return resultHeight.Block.Header.Height - 1, nil
+	return resultBlock.Block.Header.Height - 1, nil
 }
 
 // FetchMemPool returns nothing since we are only concerned about finalized transactions in Cosmos
@@ -174,9 +153,7 @@ func (c *CosmosBlockScanner) GetBlock(height int64) (*tmtypes.Block, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	resultBlock, err := c.tmService.GetBlockByHeight(
-		ctx,
-		&tmservice.GetBlockByHeightRequest{Height: height})
+	resultBlock, err := c.rpc.Block(ctx, &height)
 	if err != nil {
 		c.logger.Error().Int64("height", height).Msgf("failed to get block: %v", err)
 		return nil, fmt.Errorf("failed to get block: %w", err)
@@ -287,7 +264,7 @@ func (c *CosmosBlockScanner) updateGasFees(height int64) error {
 	return nil
 }
 
-func (c *CosmosBlockScanner) processTxs(height int64, rawTxs [][]byte) ([]types.TxInItem, error) {
+func (c *CosmosBlockScanner) processTxs(height int64, rawTxs []tmtypes.Tx) ([]types.TxInItem, error) {
 	// Proto types for Cosmos chains that we are transacting with may not be included in this repo.
 	// Therefore, it is necessary to include them in the "proto" directory and register them in
 	// the cdc (codec) that is passed below. Registry occurs in the NewCosmosBlockScanner function.
@@ -296,7 +273,7 @@ func (c *CosmosBlockScanner) processTxs(height int64, rawTxs [][]byte) ([]types.
 	// Fetch the block results so that we can ensure the transaction was successful before processing a TxInItem
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	blockResults, err := c.txService.BlockResults(ctx, &height)
+	blockResults, err := c.rpc.BlockResults(ctx, &height)
 	if err != nil {
 		return []types.TxInItem{}, fmt.Errorf("unable to get BlockResults: %w", err)
 	}

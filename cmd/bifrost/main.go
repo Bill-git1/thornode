@@ -157,13 +157,10 @@ func main() {
 		log.Err(err).Msg("fail to start tss instance")
 	}
 
-	if len(cfg.Chains) == 0 {
-		log.Fatal().Err(err).Msg("missing chains")
-		return
-	}
+	cfgChains := cfg.GetChains()
 
 	// ensure we have a protocol for chain RPC Hosts
-	for _, chainCfg := range cfg.Chains {
+	for _, chainCfg := range cfgChains {
 		if chainCfg.Disabled {
 			continue
 		}
@@ -184,7 +181,7 @@ func main() {
 		}
 	}
 	poolMgr := thorclient.NewPoolMgr(thorchainBridge)
-	chains, restart := chainclients.LoadChains(k, cfg.Chains, tssIns, thorchainBridge, m, pubkeyMgr, poolMgr)
+	chains, restart := chainclients.LoadChains(k, cfgChains, tssIns, thorchainBridge, m, pubkeyMgr, poolMgr)
 	if len(chains) == 0 {
 		log.Fatal().Msg("fail to load any chains")
 	}
@@ -197,7 +194,7 @@ func main() {
 		}
 	}()
 	// start observer
-	obs, err := observer.NewObserver(pubkeyMgr, chains, thorchainBridge, m, cfg.Chains[tcommon.BTCChain].BlockScanner.DBPath, tssKeysignMetricMgr)
+	obs, err := observer.NewObserver(pubkeyMgr, chains, thorchainBridge, m, cfgChains[tcommon.BTCChain].BlockScanner.DBPath, tssKeysignMetricMgr)
 	if err != nil {
 		log.Fatal().Err(err).Msg("fail to create observer")
 	}

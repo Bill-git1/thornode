@@ -1,6 +1,5 @@
 linters:
   enable:
-    - deadcode
     - errcheck
     - exportloopref
     - forcetypeassert
@@ -17,7 +16,6 @@ linters:
     - typecheck
     - unconvert
     - unused
-    - varcheck
   ERROR: []
 linters-settings:
   exhaustive:
@@ -32,6 +30,7 @@ linters-settings:
         disabled: true
   govet:
     check-shadowing: true
-    settings:
-      shadow:
-        strict: true
+  # TODO: disable above and uncomment these on future versions
+  # settings:
+  #   shadow:
+  #     strict: true

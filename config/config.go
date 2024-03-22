@@ -273,28 +273,22 @@ func Init() {
 }
 
 func InitBifrost() {
-	chains := map[common.Chain]BifrostChainConfiguration{}
-	for chainId, chain := range config.Bifrost.Chains {
+	for _, chain := range config.Bifrost.GetChains() {
 		// validate chain configurations
 		if err := chain.ChainID.Validate(); err != nil {
 			log.Fatal().Err(err).
-				Stringer("chain", chainId).
 				Stringer("chain_id", chain.ChainID).
 				Msg("chain failed validation")
 		}
 		if err := chain.BlockScanner.ChainID.Validate(); err != nil {
 			log.Fatal().Err(err).
-				Stringer("chain", chainId).
 				Stringer("chain_id", chain.BlockScanner.ChainID).
 				Msg("chain failed validation")
 		}
-		// set shared backoff override
-		chains[chain.ChainID] = chain
 	}
-	config.Bifrost.Chains = chains
 
 	// create observer db paths
-	for _, chain := range config.Bifrost.Chains {
+	for _, chain := range config.Bifrost.GetChains() {
 		err := os.MkdirAll(chain.BlockScanner.DBPath, os.ModePerm)
 		if err != nil {
 			log.Fatal().Err(err).Str("path", chain.BlockScanner.DBPath).
@@ -499,13 +493,36 @@ type Thornode struct {
 // -------------------------------------------------------------------------------------
 
 type Bifrost struct {
-	Signer    BifrostSignerConfiguration                 `mapstructure:"signer"`
-	Thorchain BifrostClientConfiguration                 `mapstructure:"thorchain"`
-	Metrics   BifrostMetricsConfiguration                `mapstructure:"metrics"`
-	Chains    map[common.Chain]BifrostChainConfiguration `mapstructure:"chains"`
-	TSS       BifrostTSSConfiguration                    `mapstructure:"tss"`
+	Signer    BifrostSignerConfiguration  `mapstructure:"signer"`
+	Thorchain BifrostClientConfiguration  `mapstructure:"thorchain"`
+	Metrics   BifrostMetricsConfiguration `mapstructure:"metrics"`
+	Chains    struct {
+		AVAX BifrostChainConfiguration `mapstructure:"avax"`
+		BCH  BifrostChainConfiguration `mapstructure:"bch"`
+		BNB  BifrostChainConfiguration `mapstructure:"bnb"`
+		BSC  BifrostChainConfiguration `mapstructure:"bsc"`
+		BTC  BifrostChainConfiguration `mapstructure:"btc"`
+		DOGE BifrostChainConfiguration `mapstructure:"doge"`
+		ETH  BifrostChainConfiguration `mapstructure:"eth"`
+		GAIA BifrostChainConfiguration `mapstructure:"gaia"`
+		LTC  BifrostChainConfiguration `mapstructure:"ltc"`
+	} `mapstructure:"chains"`
+	TSS             BifrostTSSConfiguration `mapstructure:"tss"`
+	ObserverLevelDB LevelDBOptions          `mapstructure:"observer_leveldb"`
+}
 
-	ObserverLevelDB LevelDBOptions `mapstructure:"observer_leveldb"`
+func (b Bifrost) GetChains() map[common.Chain]BifrostChainConfiguration {
+	return map[common.Chain]BifrostChainConfiguration{
+		common.AVAXChain: b.Chains.AVAX,
+		common.BCHChain:  b.Chains.BCH,
+		common.BNBChain:  b.Chains.BNB,
+		common.BSCChain:  b.Chains.BSC,
+		common.BTCChain:  b.Chains.BTC,
+		common.DOGEChain: b.Chains.DOGE,
+		common.ETHChain:  b.Chains.ETH,
+		common.GAIAChain: b.Chains.GAIA,
+		common.LTCChain:  b.Chains.LTC,
+	}
 }
 
 // LevelDBOptions are a superset of the options passed to the LevelDB constructor.

@@ -195,7 +195,6 @@ func (c *CosmosClient) Start(globalTxsQueue chan stypes.TxIn, globalErrataQueue 
 func (c *CosmosClient) Stop() {
 	c.tssKeyManager.Stop()
 	c.blockScanner.Stop()
-	c.cosmosScanner.grpc.Close()
 	close(c.stopchan)
 	c.wg.Wait()
 }

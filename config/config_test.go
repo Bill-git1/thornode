@@ -15,6 +15,11 @@ type Test struct{}
 
 var _ = Suite(&Test{})
 
+func (Test) TestAllChainsReturned(c *C) {
+	b := Bifrost{}
+	c.Assert(len(b.GetChains()), Equals, reflect.TypeOf(b.Chains).NumField())
+}
+
 func (Test) TestAllDefaultDefined(c *C) {
 	// In order to override configuration values, defaults must first be defined
 	// in the default YAML file. This test ensures all fields have defaults defined.
