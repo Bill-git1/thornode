@@ -193,7 +193,7 @@ func (h BondHandler) handleV105(ctx cosmos.Context, msg MsgBond) error {
 	// so as the node address will be created on THORChain otherwise node account won't be able to send tx
 	if acct == nil && nodeAccount.Bond.GTE(cosmos.NewUint(common.One)) {
 		coin := common.NewCoin(common.RuneNative, cosmos.NewUint(common.One))
-		// trunk-ignore(golangci-lint/govet): shadow (fixme)
+		// trunk-ignore(golangci-lint/govet): shadow
 		if err := h.mgr.Keeper().SendFromModuleToAccount(ctx, BondName, msg.NodeAddress, common.NewCoins(coin)); err != nil {
 			ctx.Logger().Error("fail to send one RUNE to node address", "error", err)
 			nodeAccount.Status = NodeUnknown
