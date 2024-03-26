@@ -756,6 +756,31 @@ func (c *Client) getOutput(sender string, tx *btcjson.TxRawResult, consolidate b
 	return btcjson.Vout{}, btypes.ErrFailOutputMatchCriteria
 }
 
+// isFromAsgard returns true if the tx is from asgard and false if not or on error.
+// Since this is used to determine UTXOs used for outbounds, the risk of false negative
+// is only that vault members may not find consensus on the outbound, whereas aborting
+// on the error would guarantee the member is not a part of consensus. Returning a false
+// negative should never be done, as it could result in members using an unconfirmed or
+// dust VIN not sent by asgard in an outbound, which can be gamed by a malicious party.
+func (c *Client) isFromAsgard(txid string) bool {
+	// lookup the txid
+	tx, err := c.rpc.GetRawTransactionVerbose(txid)
+	if err != nil {
+		c.log.Error().Err(err).Str("txid", txid).Msg("fail to get tx")
+		return false
+	}
+
+	// get the sender
+	sender, err := c.getSender(tx, nil)
+	if err != nil {
+		c.log.Error().Err(err).Str("txid", txid).Msg("fail to get sender")
+		return false
+	}
+
+	// check if the sender is an asgard address
+	return c.isAsgardAddress(sender)
+}
+
 // getSender returns sender address for a btc tx, using vin:0
 func (c *Client) getSender(tx *btcjson.TxRawResult, vinZeroTxs map[string]*btcjson.TxRawResult) (string, error) {
 	if len(tx.Vin) == 0 {

@@ -182,7 +182,7 @@ func (b *thorchainBridge) GetContext() client.Context {
 	ctx = ctx.WithAccountRetriever(authtypes.AccountRetriever{})
 
 	remote := b.cfg.ChainRPC
-	if !strings.HasSuffix(b.cfg.ChainHost, "http") {
+	if !strings.HasPrefix(b.cfg.ChainHost, "http") {
 		remote = fmt.Sprintf("tcp://%s", remote)
 	}
 	ctx = ctx.WithNodeURI(remote)
@@ -250,6 +250,10 @@ func (b *thorchainBridge) get(url string) ([]byte, int, error) {
 
 // getThorChainURL with the given path
 func (b *thorchainBridge) getThorChainURL(path string) string {
+	if strings.HasPrefix(b.cfg.ChainHost, "http") {
+		return fmt.Sprintf("%s/%s", b.cfg.ChainHost, path)
+	}
+
 	uri := url.URL{
 		Scheme: "http",
 		Host:   b.cfg.ChainHost,
