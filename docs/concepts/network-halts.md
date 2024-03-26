@@ -16,7 +16,7 @@ Interfaces that provide LP management can provide more feedback to the user what
 
 There are levels of granularity the network has to control itself and chains in the event of issues. Interfaces need to monitor these settings and apply appropriate controls in their interfaces, inform users and prevent unsupported actions.
 
-All activity is controlled within [Mimir](https://midgard.thorchain.info/v2/thorchain/mimir) and needs to be observed by interfaces and acted upon. Also, see a description of [Constants and Mimir](https://docs.thorchain.org/network/constants-and-mimir).
+All activity is controlled within [Mimir](https://thornode.ninerealms.com/thorchain/mimir) and needs to be observed by interfaces and acted upon. Also, see a description of [Constants and Mimir](https://docs.thorchain.org/network/constants-and-mimir).
 
 Halt flags are Boolean. For clarity `0` = false, no issues and `> 0` = true (usually 1), halt in effect.
 
@@ -39,11 +39,9 @@ Chain specific halts do occur and need to be monitored and reacted to when they 
 
 ### **Network Level Halts**
 
-**Network Pause LP** `PAUSELP =` 1 Addition and withdrawal of liquidity are suspended for all pools but swaps and other transactions are processed.
-
-**Network Pause Lending** `PAUSELOANS = 1` Opening and closing of loans is paused for all loans.
-
-**Network Trading Halt** `HALTTRADING = 1` will stop all trading for every connected chain. The THORChain blockchain will continue and native RUNE transactions will be processed.
+- **Network Pause LP** `PAUSELP = 1` Addition and withdrawal of liquidity are suspended for all pools but swaps and other transactions are processed.
+- **Network Pause Lending** `PAUSELOANS = 1` Opening and closing of loans is paused for all loans.
+- **Network Trading Halt** `HALTTRADING = 1` Will stop all trading for every connected chain. The THORChain blockchain will continue and native RUNE transactions will be processed.
 
 There is no Network level chain halt setting as the THORChain Blockchain continually needs to produce blocks.
 
@@ -60,5 +58,9 @@ Synths minting and redeeming can be enabled and disabled using flags. There is a
 - `MINTSYNTHS` - controls whether synths can be minted (swapping from L1 to synth)
 - `BURNSYNTHS` controls whether synths can be burned (swapping from synth to L1)
 - `MAXSYNTHPERPOOLDEPTH` - controls the synth depth limit for each pool, expressed in basis points of the total pool depth (asset + RUNE). For example: `5000` basis points equals 50% of the total pool. If the pool contains 100 BTC and 100 BTC worth of RUNE, a 50% `MAXSYNTHPERPOOLDEPTH` allows 100 BTC of synthetic assets to be minted.
+
+### Lending Management
+
+**Lending Pause** `PAUSELOANS = 1` Opening and closing of loans are suspended
 
 See also [Constants and Mimir](https://docs.thorchain.org/network/constants-and-mimir).

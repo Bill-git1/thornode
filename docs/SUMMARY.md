@@ -38,6 +38,8 @@
   - [Transaction Memos](concepts/memos.md)
   - [Asset Notation](concepts/asset-notation.md)
   - [Memo Length Reduction](concepts/memo-length-reduction.md)
+  - [Swapper Clout](./concepts/swapper-clout.md)
+  - [Trade Accounts](./concepts/trade-accounts.md)
   - [Network Halts](concepts/network-halts.md)
   - [Fees](concepts/fees.md)
   - [Delays](concepts/delays.md)

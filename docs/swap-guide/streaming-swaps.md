@@ -31,7 +31,7 @@ If the first swap attempt fails for some reason, the entire streaming swap is re
 
 ## Minimum Swap Size
 
-A min swap size is placed on the network for streaming swaps (Mimir `StreamingSwapMinBPFee = 10` Basis Points). This is the minimum slip for each individual swap within a streaming swap allowed. This also puts a cap on the number of swaps in a streaming swap. This allows the network to be more friendly to large trades, while also keeping revenues up for small or medium-sized trades.
+A min swap size is placed on the network for streaming swaps (Mimir `StreamingSwapMinBPFee = 5` Basis Points). This is the minimum slip for each individual swap within a streaming swap allowed. This also puts a cap on the number of swaps in a streaming swap. This allows the network to be more friendly to large trades, while also keeping revenues up for small or medium-sized trades.
 
 ### Calculate Optimal Swap
 

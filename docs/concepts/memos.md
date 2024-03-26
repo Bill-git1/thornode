@@ -2,7 +2,7 @@
 
 ## Overview
 
-Transactions to THORChain pass user intent with the `MEMO` field on their respective chains. THORChain inspects the transaction object and the `MEMO` in order to process the transaction, so care must be taken to ensure the `MEMO` and the transaction are both valid. If not, THORChain will automatically refund the assets.
+Transactions to THORChain pass user intent with the `MEMO` field on their respective chains. THORChain inspects the transaction object and the `MEMO` in order to process the transaction, so care must be taken to ensure the `MEMO` and the transaction are both valid. If not, THORChain will automatically refund the assets. Memos are set in inbound transactions unless specified.
 
 THORChain uses specific [asset notation](asset-notation.md) for all assets. Assets and functions can be abbreviated, and affiliate addresses and asset amounts can be shortened to [reduce memo length](memo-length-reduction.md), including through use of [scientific notation](memo-length-reduction.md#scientific-notation). Some parameters can also refer to a [THORName](../affiliate-guide/thorname-guide.md) instead of an address.
 
@@ -30,17 +30,19 @@ Some parameters are optional. Simply leave them blank but retain the `:` separat
 
 The following functions can be put into a memo:
 
-1. [**SWAP**](#swap)
-2. [**DEPOSIT** **Savers**](#deposit-savers)
-3. [**WITHDRAW Savers**](#withdraw-savers)
-4. [**OPEN** **Loan**](#open-loan)
-5. [**REPAY Loan**](#repay-loan)
-6. [**ADD** **Liquidity**](#add-liquidity)
-7. [**WITHDRAW** **Liquidity**](#withdraw-liquidity)
-8. [**BOND**, **UNBOND** and **LEAVE**](#bond-unbond-and-leave)
-9. [**DONATE** and **RESERVE**](#donate-and-reserve)
-10. [**MIGRATE**](#migrate)
-11. [**NOOP**](#noop)
+1. [**SWAP**](memos.md#swap)
+1. [**DEPOSIT** **Savers**](memos.md#deposit-savers)
+1. [**WITHDRAW Savers**](memos.md#withdraw-savers)
+1. [**OPEN** **Loan**](memos.md#open-loan)
+1. [**REPAY Loan**](memos.md#repay-loan)
+1. [**ADD** **Liquidity**](memos.md#add-liquidity)
+1. [**WITHDRAW** **Liquidity**](memos.md#withdraw-liquidity)
+1. [**ADD** **Trade Account**](memos.md#add-trade-account)
+1. [**WITHDRAW** **Trade Account**](memos.md#withdraw-liquidity)
+1. [**BOND**, **UNBOND** & **LEAVE**](memos.md#bond-unbond-and-leave)
+1. [**DONATE** & **RESERVE**](memos.md#donate-and-reserve)
+1. [**MIGRATE**](memos.md#migrate)
+1. [**NOOP**](memos.md#noop)
 
 ### Swap
 
@@ -222,7 +224,49 @@ A withdrawal can be either dual-sided (withdrawn based on pool's price) or entir
 - `-:POOL:1000` &mdash; dual-sided 10% withdraw liquidity
 - `wd:POOL:5000:ASSET` &mdash; withdraw 50% liquidity as the asset specified while the rest stays in the pool, e.g., `w:BTC.BTC:5000:BTC.BTC`
 
-### DONATE and RESERVE
+### Add Trade Account
+
+**`TRADE+:ADDR`**
+
+Adds an L1 asset to the Trade Account.
+
+| Parameter | Notes                                 | Extra                                          |
+| --------- | ------------------------------------- | ---------------------------------------------- |
+| Payload   | The asset to add to the Trade Account | Must be a L1 asset and supported by THORChain. |
+| `TRADE+`  | The trade account handler.            |                                                |
+| `ADDR`    | Must be a thor address                | Specifies the owner                            |
+
+**Example:** `TRADE+:thor1x2whgc2nt665y0kc44uywhynazvp0l8tp0vtu6` - Add the sent asset and amount to the Trade Account.
+
+### Withdraw Trade Account
+
+Withdraws an L1 asset from the Trade Account.
+
+**`TRADE-:ADDR`**
+
+| Parameter | Notes                                                                          | Extra                    |
+| --------- | ------------------------------------------------------------------------------ | ------------------------ |
+| Payload   | The [Trade Asset](./asset-notation.md#trade-assets) to be withdrawn and amount | Use `MsgDeposit`.        |
+| `TRADE-`  | The trade account handler.                                                     |                          |
+| `ADDR`    | L1 address to which the withdrawal will be sent                                | Cannot be a thor address |
+
+Note: Trade Asset and Amount are determined by the `coins` within the `MsgDeposit`. Transaction fee in `RUNE` does apply.
+
+**Examples:**
+
+- `TRADE-:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430`- Withdraw 1 AVAX from the Trade Account and sent to `0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430`
+
+  ```text
+  {"body":{"messages":[{"":"/types.MsgDeposit","coins":[{"asset":"AVAX~AVAX","amount":"100000000","decimals":"0"}],"memo":"trade-:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430","signer":"thor19phfqh3ce3nnjhh0cssn433nydq9shx7wfmk7k"}],"memo":"","timeout_height":"0","extension_options":[],"non_critical_extension_options":[]},"auth_info":{"signer_infos":[],"fee":{"amount":[],"gas_limit":"200000","payer":"","granter":""}},"signatures":[]}
+  ```
+
+- `TRADE-:bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw` - Withdraw 0.1 BTC from the Trade Account and sent to `bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw`
+
+  ```text
+  {"body":{"messages":[{"":"/types.MsgDeposit","coins":[{"asset":"BTC~BTC","amount":"10000000","decimals":"0"}],"memo":"trade-:bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw","signer":"thor19phfqh3ce3nnjhh0cssn433nydq9shx7wfmk7k"}],"memo":"","timeout_height":"0","extension_options":[],"non_critical_extension_options":[]},"auth_info":{"signer_infos":[],"fee":{"amount":[],"gas_limit":"200000","payer":"","granter":""}},"signatures":[]}
+  ```
+
+### DONATE & RESERVE
 
 Donate to a pool.
 
@@ -297,7 +341,7 @@ Internal memo type used to mark migration transactions between a retiring vault 
 | `MIGRATE`      | The migrate handler.               |                               |
 | `:BLOCKHEIGHT` | THORChain block height to migrate. | Must be a valid block height. |
 
-**Examples:**
+**Example:**
 
 - `MIGRATE:3494355` &mdash; migrate at height 3494355. See a [real-world example on RuneScan](https://runescan.io/tx/8330CAC064370F86352D247DE3046C9AA8C3E53C78760E5D35CFC7CAA3068DC6)
 
@@ -328,14 +372,14 @@ The following are the conditions for refunds:
 | Invalid Transaction Type | If the user is performing a multi-send vs a send for a particular transaction, they are refunded.            |
 | Exceeding Price Limit    | If the final value achieved in a trade differs to expected, they are refunded.                               |
 
-Refunds cost fees to prevent DoS (denial-of-service) attacks. The user will pay the correct outbound fee for that chain.
+Refunds cost fees to prevent DoS (denial-of-service) attacks. The user will pay the correct outbound fee for that chain. Refund memo is sent within a outbound transaction.
 
 ## **Other Internal Memos**
 
 - `consolidate` &mdash; consolidate UTXO transactions
 - `limito` or `lo` &mdash; limit order functions (to be implemented)
 - `name` or `n` or `~` &mdash; THORName operations; see [THORName Guide](../affiliate-guide/thorname-guide.md)
-- `out` &mdash; outbound transaction
-- `ragnarok` &mdash; used to delist pools
+- `out` &mdash; for outbound transaction, set within a outbound transaction
+- `ragnarok` &mdash; used to delist pools, set within a outbound transaction
 - `switch` &mdash; [killswitch](https://medium.com/thorchain/upgrading-to-native-rune-a9d48e0bf40f) operations (deprecated)
 - `yggdrasil+` and `yggdrasil-` &mdash; Yggdrasil vault operations (deprecated; see [ADR002](../architecture/adr-002-removeyggvaults.md))

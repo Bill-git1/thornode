@@ -50,10 +50,10 @@ Examples:
 
 ### Outbound Delay
 
-THORChain throttles all outputs to prevent fund loss attacks, but the maximum delay is 1hr. It does this by computing the value of the outbound transaction then applying an artificial delay. If the tx is in "scheduled", it will be delayed by a number of blocks. Once it is "outbound" it is being processed. See more information [here](https://docs.thorchain.org/how-it-works/security#b905-1).
+THORChain throttles all outputs to prevent fund loss attacks. The maximum delay is 720 blocks which is approx 1 hour. Outbound delay worked out by computing the value of the outbound transaction in RUNE then applying an artificial delay. If the tx is in "scheduled", it will be delayed by a number of blocks. Once it is "outbound" it is being processed. See more information [here](https://docs.thorchain.org/how-it-works/security#b905-1).
 
 ```admonish info
-Arbs and Traders who have trade history can have a reduced wait time to do [Swapper Clout.](https://gitlab.com/thorchain/thornode/-/issues/1723)
+Arbs and Traders who have trade history can have a reduced wait time to do [Swapper Clout.](./swapper-clout.md)
 ```
 
 **Queue:**
@@ -67,6 +67,10 @@ Arbs and Traders who have trade history can have a reduced wait time to do [Swap
 **Finalised txOuts:**
 
 [https://thornode.ninerealms.com/thorchain/queue/outbound](https://thornode.ninerealms.com/thorchain/queue/outbound)
+
+**Swap Clout:**
+
+[Clout](./swapper-clout.md) is the cumulative total fees paid (in RUNE) for a given address. Swappers with a high clout have proven themselves to be highly aligned to the project and therefore can reap the rewards by getting faster trade execution. Clout is deducted from the RUNE value of an outbound before a delay relative to the outbound value is applied. Clout is removed from an address when an outbound using it is scheduled, and the clout is reclaimed when the outbound achieves observation consensus.
 
 ### Outbound Confirmation
 

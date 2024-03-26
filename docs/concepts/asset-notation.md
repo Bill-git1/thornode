@@ -7,8 +7,9 @@ THORChain uses a CHAIN.ASSET notation for all assets. TICKER and ID are added wh
 There are three kinds of assets within THORChain:
 
 1. [Layer 1 Assets](asset-notation.md#layer-1-assets) - CHAIN.ASSET
-2. [Synthetic Assets](asset-notation.md#synthetic-assets) - CHAIN/Asset
-3. [Derived Assets](asset-notation.md#derived-assets) - THOR.ASSET
+1. [Synthetic Assets](asset-notation.md#synthetic-assets) - CHAIN/Asset
+1. [Trade Assets](asset-notation.md#trade-assets) - CHAIN~ASSET
+1. [Derived Assets](asset-notation.md#derived-assets) - THOR.ASSET
 
 ## Examples
 
@@ -17,6 +18,7 @@ There are three kinds of assets within THORChain:
 | Bitcoin       | BTC.BTC (Native BTC)                                |
 | Bitcoin       | BTC/BTC (Synthetic BTC)                             |
 | Bitcoin       | THOR.BTC (Derived BTC)                              |
+| Bitcoin       | BTC~BTC (Trade BTC)                                 |
 | Ethereum      | ETH.ETH                                             |
 | USDT          | ETH.USDT-0xdac17f958d2ee523a2206206994597c13d831ec7 |
 | BNB           | BNB.BNB (Native)                                    |
@@ -37,11 +39,16 @@ THOR.RUNE is the only RUNE asset in use. All other RUNE assets on other chains a
 
 ### Synthetic Assets
 
-- [Synthetic Assets](https://docs.thorchain.org/thorchain-finance/synthetic-asset-model) are denoted as `CHAIN/ASSET` instead of `CHAIN.ASSET, e`.g. Synthetic BTC is `BTC/BTC` and Synthetic USDT is `ETH/USDT.` While Synthetic assets live on the THORChain blockchain, they retain their CHAIN identifier.
+- [Synthetic Assets](https://docs.thorchain.org/thorchain-finance/synthetic-asset-model) are denoted as `CHAIN/ASSET` instead of `CHAIN.ASSET`, e.g. Synthetic BTC is `BTC/BTC` and Synthetic USDT is `ETH/USDT.` While Synthetic assets live on the THORChain blockchain, they retain their CHAIN identifier.
 - Synthetic Assets can only be created from THORChain-supported L1 assets and are only denoted as `CHAIN/ASSET`, no ticker or ID is required.
 - Chain differentiation is also used for Synthetics, e.g. `ETH/USDC` and `AVAX/USDC` are different Synthetic assets created and redeemable on different chains.
 
-### **Derived Assets**
+### Trade Assets
+
+- Trade Assets are held within a Trade Account and are created from Layer1 assets, denoted as `CHAIN~ASSET`. The Bitcoin trading asset is `BTC~BTC`.
+- Unlike synths which are minted as coins in the Cosmos bank module, trade asset balances are recorded in a custom keeper and cannot be transfer from one native address to another.
+
+### Derived Assets
 
 - Derived Assets, currently specific to Lending, are denoted as `THOR.ASSET.` E.g. `THOR.BTC` is Derived Bitcoin.
 - All Derived Assets live on the THORChain blockchain and do not have a Chain identifier.

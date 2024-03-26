@@ -2,7 +2,7 @@
 
 ## ​Math Library
 
-The following libraries implement the math below.&#x20;
+The following libraries implement the math below.
 
 {{#embed <https://gitlab.com/thorchain/asgardex-common/asgardex-util/-/tree/master/src/calc> }}
 
@@ -10,7 +10,7 @@ The following libraries implement the math below.&#x20;
 
 ### Example Data
 
-All the examples below use the following snapshotted BTC and BUSD Pool data&#x20;
+All the examples below use the following snapshotted BTC and BUSD Pool data
 
 ​[https://thornode.ninerealms.com/thorchain/pool/BTC.BTC](https://thornode.ninerealms.com/thorchain/pool/BTC.BTC)​ ​[https://thornode.ninerealms.com/thorchain/pool/BNB.BUSD-BD1](https://thornode.ninerealms.com/thorchain/pool/BNB.BUSD-BD1)​
 
@@ -47,7 +47,7 @@ $$
 price = \frac{quoteBalance}{baseBalance}=\frac{USD}{RUNE} = $RUNE
 $$
 
-Prices of all assets on THORChain are in ratios of each other, based on the depths of the pools. The quote asset is the "pricing" asset, and the base asset is the asset to be quoted. Ie, for the $ value of RUNE, the quote asset is USD and the base asset is RUNE.&#x20;
+Prices of all assets on THORChain are in ratios of each other, based on the depths of the pools. The quote asset is the "pricing" asset, and the base asset is the asset to be quoted. Ie, for the $ value of RUNE, the quote asset is USD and the base asset is RUNE.
 
 ### Example
 
@@ -97,11 +97,11 @@ $$
 slippage = \frac{inputAmount}{(inputAmount + inputBalance)}
 $$
 
-Slippage is simply the transaction divided by its corresponding depth.&#x20;
+Slippage is simply the transaction divided by its corresponding depth.
 
 Ie, swapping 10 BTC to RUNE = `1000000000 / (1000000000 + 81439552768) = 0.012 = 1.2%`
 
-Since THORChain has all pools in RUNE, a cross-asset (double) swap would involve two swaps in two pools, thus the slip needs to be doubled.&#x20;
+Since THORChain has all pools in RUNE, a cross-asset (double) swap would involve two swaps in two pools, thus the slip needs to be doubled.
 
 Here's a reference implementation of calculating slip for a double swap:
 
@@ -144,9 +144,9 @@ $$
 output = \frac{(inputAmount * outputBalance * inputBalance)}{(inputAmount + inputBalance)^{2}}
 $$
 
-​The output in a swap is the CLP formula.&#x20;
+​The output in a swap is the CLP formula.
 
-Ie, output after swapping 10 BTC: `(1000000000 * 81439552768 * 863897777396922)/ (1000000000 + 81439552768)^2 = 10352052898302 = 103520 RUNE`&#x20;
+Ie, output after swapping 10 BTC: `(1000000000 * 81439552768 * 863897777396922)/ (1000000000 + 81439552768)^2 = 10352052898302 = 103520 RUNE`
 
 ```javascript
 export const getSwapOutput = (inputAmount: BaseAmount, pool: PoolData, toRune: boolean): BaseAmount => {
@@ -178,7 +178,7 @@ $$
 
 `Y = outputBalance`, `y = outputAmount`
 
-The swap formula can be reversed to specify what needs to be deposited to get a certain output.&#x20;
+The swap formula can be reversed to specify what needs to be deposited to get a certain output.
 
 ```javascript
 export const getSwapInput = (toRune: boolean, pool: PoolData, outputAmount: BaseAmount): BaseAmount => {

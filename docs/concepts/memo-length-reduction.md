@@ -24,7 +24,7 @@ The examples below use the following features to reduce memo length:
 
 ### **Shortened Asset Names**
 
-Native asset names can be shortened to reduce the length of the memo. The exact list is [here](https://gitlab.com/thorchain/thornode/-/blob/develop/common/asset.go#L198).
+Native asset names can be shortened to reduce the length of the memo. The exact list is [here](https://gitlab.com/thorchain/thornode/-/blob/develop/common/asset.go#L231).
 
 | Shorten Asset | Asset Notation |
 | ------------- | -------------- |
