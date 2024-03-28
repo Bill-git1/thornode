@@ -7,7 +7,7 @@ import (
 	"gitlab.com/thorchain/thornode/common"
 )
 
-func DexAggregatorsV127() []Aggregator {
+func DexAggregatorsV131() []Aggregator {
 	return []Aggregator{
 		// TSAggregatorPancakeSwap Ethereum V2
 		{common.ETHChain, `0x35CF22003c90126528fbe95b21bB3ADB2ca8c53D`, 400_000},
@@ -125,5 +125,9 @@ func DexAggregatorsV127() []Aggregator {
 		{common.BSCChain, `0xbEbCDb5093B47Cd7add8211E4c77B6826aF7bc5F`, 800_000},
 		// LiFi Staging - AVAX
 		{common.AVAXChain, `0xbEbCDb5093B47Cd7add8211E4c77B6826aF7bc5F`, 800_000},
+		// TSWrapperLedger_V1
+		{common.ETHChain, `0x5e006856AA4Ee2E0158A1Fe2158df5b37378fB40`, 600_000},
+		// TSWrapperTCRouterV4_V1
+		{common.ETHChain, `0x94B7F2145C328DaB2EC56aB982CaB95F00941aE7`, 400_000},
 	}
 }
