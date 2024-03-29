@@ -33,7 +33,8 @@ func (s *TradeMgrVCUR) BalanceOf(ctx cosmos.Context, asset common.Asset, addr co
 		return cosmos.ZeroUint()
 	}
 
-	return common.GetSafeShare(tu.Units, tu.Depth, tr.Units)
+	// Proportion of total Depth that the account's Units entitle it to:
+	return common.GetSafeShare(tr.Units, tu.Units, tu.Depth)
 }
 
 func (s *TradeMgrVCUR) Deposit(ctx cosmos.Context, asset common.Asset, amount cosmos.Uint, addr cosmos.AccAddress) (cosmos.Uint, error) {
@@ -83,10 +84,18 @@ func (s *TradeMgrVCUR) Withdrawal(ctx cosmos.Context, asset common.Asset, amount
 	}
 	tr.LastWithdrawHeight = ctx.BlockHeight()
 
-	assetAvailable := common.GetSafeShare(tu.Units, tu.Depth, tr.Units)
+	// assetAvailable is the same as BalanceOf:
+	// Proportion of total Depth that the account's Units entitle it to:
+	assetAvailable := common.GetSafeShare(tr.Units, tu.Units, tu.Depth)
+
+	// unitsToClaim is the account's units for the specified amount to be withdrawn from assetAvailable,
+	// capped at the accounts total Units.
 	unitsToClaim := common.GetSafeShare(amount, assetAvailable, tr.Units)
 
-	tokensToClaim := common.GetSafeShare(unitsToClaim, tu.Units, tu.Depth)
+	// tokensToClaim is the exact amount to be withdrawn from those unitsToClaim,
+	// capped at the account's assetAvailable.
+	tokensToClaim := common.GetSafeShare(unitsToClaim, tr.Units, assetAvailable)
+
 	tu.Units = common.SafeSub(tu.Units, unitsToClaim)
 	tr.Units = common.SafeSub(tr.Units, unitsToClaim)
 	tu.Depth = common.SafeSub(tu.Depth, tokensToClaim)

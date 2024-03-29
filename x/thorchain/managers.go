@@ -746,8 +746,10 @@ func GetSwapper(version semver.Version) (Swapper, error) {
 
 func GetTradeAccountManager(version semver.Version, keeper keeper.Keeper) (TradeAccountManager, error) {
 	switch {
-	case version.GTE(semver.MustParse("1.128.0")):
+	case version.GTE(semver.MustParse("1.131.0")):
 		return newTradeMgrVCUR(keeper), nil
+	case version.GTE(semver.MustParse("1.128.0")):
+		return newTradeMgrV128(keeper), nil
 	default:
 		return nil, errInvalidVersion
 	}
