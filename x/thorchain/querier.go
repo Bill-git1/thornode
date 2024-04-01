@@ -2725,10 +2725,13 @@ func queryPendingOutbound(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 		startHeight = 1
 	}
 
-	// outbounds can be scheduled up to reschedule coalesce blocks in the future
+	// outbounds can be rescheduled to a future height which is the rounded-up nearest multiple of reschedule coalesce blocks
 	lastOutboundHeight := ctx.BlockHeight()
 	if rescheduleCoalesceBlocks > 1 {
-		lastOutboundHeight += rescheduleCoalesceBlocks - (lastOutboundHeight % rescheduleCoalesceBlocks)
+		overBlocks := lastOutboundHeight % rescheduleCoalesceBlocks
+		if overBlocks != 0 {
+			lastOutboundHeight += rescheduleCoalesceBlocks - overBlocks
+		}
 	}
 
 	result := make([]openapi.TxOutItem, 0)
