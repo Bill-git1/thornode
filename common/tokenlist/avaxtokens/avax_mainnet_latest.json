@@ -10,6 +10,14 @@
   "tokens": [
     {
       "chainId": 43114,
+      "address": "0x47c3118Ad183712Acd42648e9E522e13690f29a0",
+      "decimals": 6,
+      "name": "Meat",
+      "symbol": "MEAT",
+      "logoURI": "https://raw.githubusercontent.com/traderjoe-xyz/joe-tokenlists/main/logos/0x47c3118Ad183712Acd42648e9E522e13690f29a0/logo.png"
+    },
+    {
+      "chainId": 43114,
       "address": "0x420FcA0121DC28039145009570975747295f2329",
       "decimals": 18,
       "name": "Coq Inu",

@@ -195,12 +195,18 @@ bifrost:
         gas_price_resolution: 50_000_000_000 # 50 gwei
         observation_flexibility_blocks: 80
         max_gas_limit: 100000
-        whitelist_tokens: # stable coins only
+        whitelist_tokens:
           - 0x55d398326f99059fF775485246999027B3197955 # Binance Pegged USDT
           - 0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d # Binance Pegged USDC
           - 0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56 # Binance Pegged BUSD
           - 0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3 # Binance Pegged DAI
           - 0x14016E85a25aeb13065688cAFB43044C2ef86784 # True USD
+          - 0x2170Ed0880ac9A755fd29B2688956BD959F933F8 # Binance Pegged ETH
+          - 0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c # Binance Pegged BTC
+          - 0x570A5D26f7765Ecb712C0924E4De545B89fD43dF # Binance Pegged SOL
+          - 0x3EE2200Efb3400fAbB9AacF31297cBdD1d435D47 # Binance Pegged Cardano
+          - 0x4B0F1812e5Df2A09796481Ff14017e6005508003 # Trust Wallet Token (TWT)
+          - 0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82 # PancakeSwap (CAKE)
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
     doge:

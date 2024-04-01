@@ -10,6 +10,22 @@
   "keywords": ["pancakeswap", "extended"],
   "tokens": [
     {
+      "name": "SOLANA",
+      "symbol": "SOL",
+      "address": "0x570A5D26f7765Ecb712C0924E4De545B89fD43dF",
+      "chainId": 56,
+      "decimals": 18,
+      "logoURI": "https://tokens.pancakeswap.finance/images/0x570A5D26f7765Ecb712C0924E4De545B89fD43dF.png"
+    },
+    {
+      "name": "CumRocket",
+      "symbol": "CUMMIES",
+      "address": "0x27Ae27110350B98d564b9A3eeD31bAeBc82d878d",
+      "chainId": 56,
+      "decimals": 18,
+      "logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/9212.png"
+    },
+    {
       "name": "PancakeSwap Token",
       "symbol": "CAKE",
       "address": "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82",
