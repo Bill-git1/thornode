@@ -70,6 +70,8 @@ func (h ObservedTxInHandler) validateV1(ctx cosmos.Context, msg MsgObservedTxIn)
 func (h ObservedTxInHandler) handle(ctx cosmos.Context, msg MsgObservedTxIn) (*cosmos.Result, error) {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.131.0")):
+		return h.handleV131(ctx, msg)
 	case version.GTE(semver.MustParse("1.129.0")):
 		return h.handleV129(ctx, msg)
 	case version.GTE(semver.MustParse("1.128.0")):
@@ -159,7 +161,7 @@ func (h ObservedTxInHandler) preflightV123(ctx cosmos.Context, voter ObservedTxV
 	return voter, ok
 }
 
-func (h ObservedTxInHandler) handleV129(ctx cosmos.Context, msg MsgObservedTxIn) (*cosmos.Result, error) {
+func (h ObservedTxInHandler) handleV131(ctx cosmos.Context, msg MsgObservedTxIn) (*cosmos.Result, error) {
 	activeNodeAccounts, err := h.mgr.Keeper().ListActiveValidators(ctx)
 	if err != nil {
 		return nil, wrapError(ctx, err, "fail to get list of active node accounts")
@@ -305,8 +307,14 @@ func (h ObservedTxInHandler) handleV129(ctx cosmos.Context, msg MsgObservedTxIn)
 			}
 			continue
 		}
-		// for those Memo that will not have outbound at all , set the observedTx to done
+
+		// if an outbound is not expected, mark the voter as done
 		if !memo.GetType().HasOutbound() {
+			// retrieve the voter from store in case the handler caused a change
+			voter, err := h.mgr.Keeper().GetObservedTxInVoter(ctx, tx.Tx.ID)
+			if err != nil {
+				return nil, fmt.Errorf("fail to get voter")
+			}
 			voter.SetDone()
 			h.mgr.Keeper().SetObservedTxInVoter(ctx, voter)
 		}

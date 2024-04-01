@@ -73,6 +73,8 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit) (*cosmos.Resu
 	ctx.Logger().Info("receive MsgDeposit", "from", msg.GetSigners()[0], "coins", msg.Coins, "memo", msg.Memo)
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.131.0")):
+		return h.handleV131(ctx, msg)
 	case version.GTE(semver.MustParse("1.128.0")):
 		return h.handleV128(ctx, msg)
 	case version.GTE(semver.MustParse("1.119.0")):
@@ -97,7 +99,7 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit) (*cosmos.Resu
 	return nil, errInvalidVersion
 }
 
-func (h DepositHandler) handleV128(ctx cosmos.Context, msg MsgDeposit) (*cosmos.Result, error) {
+func (h DepositHandler) handleV131(ctx cosmos.Context, msg MsgDeposit) (*cosmos.Result, error) {
 	if h.mgr.Keeper().IsChainHalted(ctx, common.THORChain) {
 		return nil, fmt.Errorf("unable to use MsgDeposit while THORChain is halted")
 	}
@@ -238,10 +240,16 @@ func (h DepositHandler) handleV128(ctx cosmos.Context, msg MsgDeposit) (*cosmos.
 		}
 		return &cosmos.Result{}, nil
 	}
-	// for those Memo that will not have outbound at all , set the observedTx to done
+
+	// if an outbound is not expected, mark the voter as done
 	if !memo.GetType().HasOutbound() {
-		txInVoter.SetDone()
-		h.mgr.Keeper().SetObservedTxInVoter(ctx, txInVoter)
+		// retrieve the voter from store in case the handler caused a change
+		voter, err := h.mgr.Keeper().GetObservedTxInVoter(ctx, txID)
+		if err != nil {
+			return nil, fmt.Errorf("fail to get voter")
+		}
+		voter.SetDone()
+		h.mgr.Keeper().SetObservedTxInVoter(ctx, voter)
 	}
 	return result, nil
 }
