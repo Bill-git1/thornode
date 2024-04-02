@@ -242,8 +242,8 @@ test-regression:
     name: integration
   variables:
     DOCKER_BUILDKIT: "1"
-    TIME_FACTOR: "2"
-    PARALLELISM: "8"
+    TIME_FACTOR: "3"
+    PARALLELISM: "16"
     FAIL_FAST: "true"
   before_script:
     - apk -U add make git bash

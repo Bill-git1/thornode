@@ -259,6 +259,45 @@ func GetMimirCheck(pass *analysis.Pass) (interface{}, error) {
 }
 
 // -------------------------------------------------------------------------------------
+// Rand
+// -------------------------------------------------------------------------------------
+
+func Rand(pass *analysis.Pass) (interface{}, error) {
+	inspect, ok := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+	if !ok {
+		return nil, errors.New("analyzer is not type *inspector.Inspector")
+	}
+
+	allow := func(pos token.Pos) bool {
+		p := pass.Fset.Position(pos)
+		if strings.HasSuffix(p.Filename, "_test.go") {
+			return true
+		}
+		if strings.HasSuffix(p.Filename, "querier_quotes.go") {
+			return true
+		}
+		if strings.HasSuffix(p.Filename, "test_common.go") {
+			return true
+		}
+		return false
+	}
+
+	inspect.Preorder([]ast.Node{(*ast.CallExpr)(nil)}, func(node ast.Node) {
+		n, ok := node.(*ast.CallExpr)
+		if !ok {
+			return
+		}
+		if id, ok := n.Fun.(*ast.Ident); ok {
+			if strings.Contains(id.Name, "Rand") && !allow(n.Pos()) {
+				pass.Reportf(n.Pos(), "use of functions with \"Rand\" in name is prohibited")
+			}
+		}
+	})
+
+	return nil, nil
+}
+
+// -------------------------------------------------------------------------------------
 // Main
 // -------------------------------------------------------------------------------------
 
@@ -281,6 +320,12 @@ func main() {
 			Doc:      "fails if no get mimir case is defined for mimirv2 id",
 			Requires: []*analysis.Analyzer{inspect.Analyzer},
 			Run:      GetMimirCheck,
+		},
+		&analysis.Analyzer{
+			Name:     "rand",
+			Doc:      "fails on use of functions with \"Rand\" in name",
+			Requires: []*analysis.Analyzer{inspect.Analyzer},
+			Run:      Rand,
 		},
 	)
 }
