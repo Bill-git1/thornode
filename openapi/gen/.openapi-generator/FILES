@@ -81,6 +81,7 @@ docs/NodePubKeySet.md
 docs/NodesApi.md
 docs/ObservedTx.md
 docs/OutboundDelayStage.md
+docs/OutboundFee.md
 docs/OutboundSignedStage.md
 docs/POLApi.md
 docs/POLResponse.md
@@ -181,6 +182,7 @@ model_node_preflight_status.go
 model_node_pub_key_set.go
 model_observed_tx.go
 model_outbound_delay_stage.go
+model_outbound_fee.go
 model_outbound_signed_stage.go
 model_ping.go
 model_planned_out_tx.go

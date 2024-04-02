@@ -336,8 +336,6 @@
         "bond_reward_rune": "45452074",
         "burned_bep2_rune": "0",
         "burned_erc20_rune": "0",
-        "outbound_gas_spent_rune": "344929890",
-        "outbound_gas_withheld_rune": "450152814",
         "total_bond_units": "19"
       },
       "network_fees": [
@@ -370,6 +368,18 @@
       "observed_tx_in_voters": null,
       "observed_tx_out_voters": null,
       "orderbook_items": [],
+      "outbound_fee_spent_rune": [
+        {
+          "amount": "344929890",
+          "asset": "ETH.ETH"
+        }
+      ],
+      "outbound_fee_withheld_rune": [
+        {
+          "amount": "450152814",
+          "asset": "ETH.ETH"
+        }
+      ],
       "pools": [
         {
           "LP_units": "100000000000",

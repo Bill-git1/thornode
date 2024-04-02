@@ -593,7 +593,12 @@ func addGasFeesV124(ctx cosmos.Context, mgr Manager, tx ObservedTx) error {
 	}
 
 	// Add the gas to the gas manager to be reimbursed by the Reserve.
-	mgr.GasMgr().AddGasAsset(tx.Tx.Gas, true)
+	outAsset := common.EmptyAsset
+	if len(tx.Tx.Coins) != 0 {
+		// Use the first Coin's Asset to indicate the associated outbound Asset for this Gas.
+		outAsset = tx.Tx.Coins[0].Asset
+	}
+	mgr.GasMgr().AddGasAsset(outAsset, tx.Tx.Gas, true)
 	return nil
 }
 

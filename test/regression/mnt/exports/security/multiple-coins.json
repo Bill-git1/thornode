@@ -353,6 +353,8 @@
       "observed_tx_in_voters": null,
       "observed_tx_out_voters": null,
       "orderbook_items": [],
+      "outbound_fee_spent_rune": [],
+      "outbound_fee_withheld_rune": [],
       "pools": [
         {
           "LP_units": "100000000000",

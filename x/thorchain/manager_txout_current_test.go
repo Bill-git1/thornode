@@ -61,10 +61,12 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItem(c *C) {
 	}
 	c.Assert(w.keeper.SetVault(w.ctx, vault), IsNil)
 
-	network, err := w.keeper.GetNetwork(w.ctx)
+	outboundFeeWithheldRune, err := w.keeper.GetOutboundFeeWithheldRune(w.ctx, common.BNBAsset)
 	c.Assert(err, IsNil)
-	c.Assert(network.OutboundGasSpentRune, Equals, uint64(0))
-	c.Assert(network.OutboundGasWithheldRune, Equals, uint64(0))
+	outboundFeeSpentRune, err := w.keeper.GetOutboundFeeSpentRune(w.ctx, common.BNBAsset)
+	c.Assert(err, IsNil)
+	c.Check(outboundFeeWithheldRune.String(), Equals, "0")
+	c.Check(outboundFeeSpentRune.String(), Equals, "0")
 
 	acc1 := GetRandomValidatorNode(NodeActive)
 	acc2 := GetRandomValidatorNode(NodeActive)
@@ -105,10 +107,12 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItem(c *C) {
 	c.Assert(msgs[0].Coin.Amount.Equal(cosmos.NewUint(1999925000)), Equals, true, Commentf("%d", msgs[0].Coin.Amount.Uint64()))
 
 	// Gas withheld should be updated
-	network, err = w.keeper.GetNetwork(w.ctx)
+	outboundFeeWithheldRune, err = w.keeper.GetOutboundFeeWithheldRune(w.ctx, common.BNBAsset)
 	c.Assert(err, IsNil)
-	c.Assert(network.OutboundGasSpentRune, Equals, uint64(0))
-	c.Assert(network.OutboundGasWithheldRune, Equals, uint64(74999)) // After slippage the 75000 BNB fee is 74999 in RUNE
+	outboundFeeSpentRune, err = w.keeper.GetOutboundFeeSpentRune(w.ctx, common.BNBAsset)
+	c.Assert(err, IsNil)
+	c.Check(outboundFeeWithheldRune.String(), Equals, "74999") // After slippage the 75000 BNB fee is 74999 in RUNE
+	c.Check(outboundFeeSpentRune.String(), Equals, "0")
 
 	// Should get acc1. Acc3 hasn't signed and acc1 now has the highest amount
 	// of coin.
@@ -127,10 +131,10 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItem(c *C) {
 	c.Assert(msgs, HasLen, 1)
 	c.Assert(msgs[0].VaultPubKey.String(), Equals, vault.PubKey.String())
 
-	// Gas withheld should be updated
-	network, err = w.keeper.GetNetwork(w.ctx)
+	// Outbound fee withheld RUNE should be updated
+	outboundFeeWithheldRune, err = w.keeper.GetOutboundFeeWithheldRune(w.ctx, common.BNBAsset)
 	c.Assert(err, IsNil)
-	c.Assert(network.OutboundGasWithheldRune, Equals, uint64(149997))
+	c.Assert(outboundFeeWithheldRune.String(), Equals, "149997")
 
 	item = TxOutItem{
 		Chain:     common.BNBChain,
@@ -147,10 +151,10 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItem(c *C) {
 	c.Assert(msgs, HasLen, 1)
 	c.Check(msgs[0].VaultPubKey.String(), Equals, vault.PubKey.String())
 
-	// Gas withheld should be updated
-	network, err = w.keeper.GetNetwork(w.ctx)
+	// Outbound fee withheld RUNE should be updated
+	outboundFeeWithheldRune, err = w.keeper.GetOutboundFeeWithheldRune(w.ctx, common.BNBAsset)
 	c.Assert(err, IsNil)
-	c.Assert(network.OutboundGasWithheldRune, Equals, uint64(224994))
+	c.Assert(outboundFeeWithheldRune.String(), Equals, "224994")
 
 	item = TxOutItem{
 		Chain:     common.BCHChain,

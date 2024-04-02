@@ -164,7 +164,7 @@ func (h CommonOutboundTxHandler) handleV127(ctx cosmos.Context, tx ObservedTx, i
 							if vault.Status != InactiveVault {
 								// the outbound spend less than MaxGas
 								diffGas := maxGasAmt.Sub(realGasAmt)
-								h.mgr.GasMgr().AddGasAsset(common.Gas{
+								h.mgr.GasMgr().AddGasAsset(txOutItem.Coin.Asset, common.Gas{
 									common.NewCoin(asset, diffGas),
 								}, false)
 							}

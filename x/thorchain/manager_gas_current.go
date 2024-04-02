@@ -14,17 +14,22 @@ import (
 // emit GasEvent per block if there are any
 type GasMgrVCUR struct {
 	gasEvent          *EventGas
-	gas               common.Gas
+	outAssetGas       []OutAssetGas
 	gasCount          map[common.Asset]int64
 	constantsAccessor constants.ConstantValues
 	keeper            keeper.Keeper
+}
+
+type OutAssetGas struct {
+	outAsset common.Asset
+	gas      common.Gas
 }
 
 // newGasMgrVCUR create a new instance of GasMgrV1
 func newGasMgrVCUR(constantsAccessor constants.ConstantValues, k keeper.Keeper) *GasMgrVCUR {
 	return &GasMgrVCUR{
 		gasEvent:          NewEventGas(),
-		gas:               common.Gas{},
+		outAssetGas:       []OutAssetGas{},
 		gasCount:          make(map[common.Asset]int64),
 		constantsAccessor: constantsAccessor,
 		keeper:            k,
@@ -33,7 +38,7 @@ func newGasMgrVCUR(constantsAccessor constants.ConstantValues, k keeper.Keeper) 
 
 func (gm *GasMgrVCUR) reset() {
 	gm.gasEvent = NewEventGas()
-	gm.gas = common.Gas{}
+	gm.outAssetGas = []OutAssetGas{}
 	gm.gasCount = make(map[common.Asset]int64)
 }
 
@@ -42,20 +47,51 @@ func (gm *GasMgrVCUR) BeginBlock(_ Manager) { // TODO: Remove Manager argument o
 	gm.reset()
 }
 
-// AddGasAsset to the EventGas
-func (gm *GasMgrVCUR) AddGasAsset(gas common.Gas, increaseTxCount bool) {
-	gm.gas = gm.gas.Adds_deprecated(gas)
+// AddGasAsset for EndBlock's ProcessGas;
+// add the outbound-Asset-associated Gas to the gas manager's outAssetGas,
+// and optionally increment the gas manager's gasCount.
+func (gm *GasMgrVCUR) AddGasAsset(outAsset common.Asset, gas common.Gas, increaseTxCount bool) {
+	matched := false
+	for i := range gm.outAssetGas {
+		if !gm.outAssetGas[i].outAsset.Equals(outAsset) {
+			continue
+		}
+		matched = true
+		gm.outAssetGas[i].gas = gm.outAssetGas[i].gas.Add(gas...)
+		break
+	}
+	if !matched {
+		outAssetGas := OutAssetGas{
+			outAsset: outAsset,
+			gas:      common.Gas(common.NewCoins(gas...)), // Copied contents
+		}
+		gm.outAssetGas = append(gm.outAssetGas, outAssetGas)
+	}
+
+	// Update transaction count for each gas asset.
 	if !increaseTxCount {
 		return
 	}
-	for _, coin := range gas {
-		gm.gasCount[coin.Asset]++
+
+	incremented := map[common.Asset]bool{}
+	for i := range gas {
+		// Only increment each distinct gas asset's count by 1 maximum.
+		if incremented[gas[i].Asset] {
+			continue
+		}
+		gm.gasCount[gas[i].Asset]++
+		incremented[gas[i].Asset] = true
 	}
 }
 
 // GetGas return gas
 func (gm *GasMgrVCUR) GetGas() common.Gas {
-	return gm.gas
+	// Collect gas by gas asset.
+	gas := common.Gas{}
+	for i := range gm.outAssetGas {
+		gas = gas.Add(gm.outAssetGas[i].gas...)
+	}
+	return gas
 }
 
 // GetFee retrieve the network fee information from kv store, and calculate the dynamic fee customer should pay
@@ -106,9 +142,15 @@ func (gm *GasMgrVCUR) GetFee(ctx cosmos.Context, chain common.Chain, asset commo
 		minAsset = pool.RuneValueInAsset(minOutboundInRune)
 	}
 
-	network, err := gm.keeper.GetNetwork(ctx)
+	outboundFeeWithheldRune, err := gm.keeper.GetOutboundFeeWithheldRune(ctx, asset)
 	if err != nil {
-		ctx.Logger().Error("fail to get network data", "error", err)
+		ctx.Logger().Error("fail to get outbound fee withheld rune", "outbound asset", asset, "error", err)
+		outboundFeeWithheldRune = cosmos.ZeroUint()
+	}
+	outboundFeeSpentRune, err := gm.keeper.GetOutboundFeeSpentRune(ctx, asset)
+	if err != nil {
+		ctx.Logger().Error("fail to get outbound fee spent rune", "outbound asset", asset, "error", err)
+		outboundFeeSpentRune = cosmos.ZeroUint()
 	}
 
 	targetOutboundFeeSurplus := gm.keeper.GetConfigInt64(ctx, constants.TargetOutboundFeeSurplusRune)
@@ -117,8 +159,8 @@ func (gm *GasMgrVCUR) GetFee(ctx cosmos.Context, chain common.Chain, asset commo
 
 	// Calculate outbound fee based on current fee multiplier
 	chainBaseFee := networkFee.TransactionSize * networkFee.TransactionFeeRate
-	feeMultiplierBps := gm.CalcOutboundFeeMultiplier(ctx, cosmos.NewUint(uint64(targetOutboundFeeSurplus)), cosmos.NewUint(network.OutboundGasSpentRune), cosmos.NewUint(network.OutboundGasWithheldRune), cosmos.NewUint(uint64(maxMultiplierBasisPoints)), cosmos.NewUint(uint64(minMultiplierBasisPoints)))
-	finalFee := common.GetUncappedShare(cosmos.NewUint(chainBaseFee), cosmos.NewUint(10_000), feeMultiplierBps)
+	feeMultiplierBps := gm.CalcOutboundFeeMultiplier(ctx, cosmos.NewUint(uint64(targetOutboundFeeSurplus)), outboundFeeSpentRune, outboundFeeWithheldRune, cosmos.NewUint(uint64(maxMultiplierBasisPoints)), cosmos.NewUint(uint64(minMultiplierBasisPoints)))
+	finalFee := common.GetUncappedShare(feeMultiplierBps, cosmos.NewUint(constants.MaxBasisPts), cosmos.NewUint(chainBaseFee))
 
 	fee := cosmos.RoundToDecimal(
 		finalFee,
@@ -258,69 +300,91 @@ func (gm *GasMgrVCUR) EndBlock(ctx cosmos.Context, keeper keeper.Keeper, eventMa
 	gm.reset() // do not remove, will cause consensus failures
 }
 
-// ProcessGas to subsidise the pool with RUNE for the gas they have spent
+// ProcessGas to subsidise the gas asset pools with RUNE for the gas they have spent
 func (gm *GasMgrVCUR) ProcessGas(ctx cosmos.Context, keeper keeper.Keeper) {
 	if keeper.RagnarokInProgress(ctx) {
 		// ragnarok is in progress , stop
 		return
 	}
 
-	network, err := keeper.GetNetwork(ctx)
-	if err != nil {
-		ctx.Logger().Error("fail to get network data", "error", err)
-		return
-	}
-
-	for _, gas := range gm.gas {
-		// if the coin is zero amount, don't need to do anything
-		if gas.Amount.IsZero() {
-			continue
-		}
-
-		pool, err := keeper.GetPool(ctx, gas.Asset)
-		if err != nil {
-			ctx.Logger().Error("fail to get pool", "pool", gas.Asset, "error", err)
-			continue
-		}
-		if err := pool.Valid(); err != nil {
-			ctx.Logger().Error("invalid pool", "pool", gas.Asset, "error", err)
-			continue
-		}
-		runeGas := pool.AssetValueInRune(gas.Amount) // Convert to Rune (gas will never be RUNE)
-		if runeGas.IsZero() {
-			continue
-		}
-		// If Rune owed now exceeds the Total Reserve, return it all
-		if runeGas.LT(keeper.GetRuneBalanceOfModule(ctx, ReserveName)) {
-			coin := common.NewCoin(common.RuneNative, runeGas)
-			if err := keeper.SendFromModuleToModule(ctx, ReserveName, AsgardName, common.NewCoins(coin)); err != nil {
-				ctx.Logger().Error("fail to transfer funds from reserve to asgard", "pool", gas.Asset, "error", err)
+	reserveRune := keeper.GetRuneBalanceOfModule(ctx, ReserveName)
+	poolCache := map[common.Asset]Pool{}
+	for i := range gm.outAssetGas {
+		feeSpentRune := cosmos.ZeroUint()
+		for _, coin := range gm.outAssetGas[i].gas {
+			// if the coin is empty, don't need to do anything
+			if coin.IsEmpty() {
 				continue
 			}
-			pool.BalanceRune = pool.BalanceRune.Add(runeGas) // Add to the pool
-			network.OutboundGasSpentRune += runeGas.Uint64() // Add $RUNE spent on gas by the reserve
-		} else {
-			// since we don't have enough in the reserve to cover the gas used,
-			// no rune is added to the pool, sorry LPs!
-			runeGas = cosmos.ZeroUint()
-		}
-		pool.BalanceAsset = common.SafeSub(pool.BalanceAsset, gas.Amount)
 
-		if err := keeper.SetPool(ctx, pool); err != nil {
-			ctx.Logger().Error("fail to set pool", "pool", gas.Asset, "error", err)
-			continue
-		}
+			pool, ok := poolCache[coin.Asset]
+			if !ok {
+				var err error // Declare error variable to prevent 'pool' shadowing
+				pool, err = keeper.GetPool(ctx, coin.Asset)
+				if err != nil {
+					ctx.Logger().Error("fail to get pool", "pool", coin.Asset, "error", err)
+					continue
+				}
+				if err = pool.Valid(); err != nil {
+					// Cache the invalid pool, logging only when added to the cache.
+					ctx.Logger().Error("invalid pool", "pool", coin.Asset, "error", err)
+				}
+				poolCache[coin.Asset] = pool
+			}
+			if err := pool.Valid(); err != nil {
+				continue
+			}
 
-		gasPool := GasPool{
-			Asset:    gas.Asset,
-			AssetAmt: gas.Amount,
-			RuneAmt:  runeGas,
-			Count:    gm.gasCount[gas.Asset],
+			// TODO:  Use RuneReimbursementForAssetWithdrawal and, within this range, do cached pool updates before a single later SetPool?
+			// Currently this uses a constant AssetValueInRune ratio without ensuring a constant depths-product,
+			// as a result of which asset-associated reimbursement order does not matter.
+			runeGas := pool.AssetValueInRune(coin.Amount) // Convert to Rune (gas will never be RUNE)
+			if runeGas.IsZero() {
+				continue
+			}
+			// Keep track of whether the Reserve RUNE will be enough for all reimbursements.
+			reserveRune = common.SafeSub(reserveRune, runeGas)
+			if reserveRune.IsZero() {
+				// since we don't have enough in the reserve to cover the gas used,
+				// no further rune is added to gas pools, sorry LPs!
+				runeGas = cosmos.ZeroUint()
+			}
+
+			gasPool := GasPool{
+				Asset:    coin.Asset,
+				AssetAmt: coin.Amount,
+				RuneAmt:  runeGas,
+				Count:    gm.gasCount[coin.Asset],
+			}
+			gm.gasEvent.UpsertGasPool(gasPool)
+
+			feeSpentRune = feeSpentRune.Add(runeGas)
 		}
-		gm.gasEvent.UpsertGasPool(gasPool)
+		// Add RUNE spent on gas by the reserve
+		if err := keeper.AddToOutboundFeeSpentRune(ctx, gm.outAssetGas[i].outAsset, feeSpentRune); err != nil {
+			ctx.Logger().Error("fail to add to outbound fee spent rune", "outbound asset", gm.outAssetGas[i].outAsset, "error", err)
+		}
 	}
 
-	if err := keeper.SetNetwork(ctx, network); err != nil {
-		ctx.Logger().Error("fail to set network data", "error", err)
+	// Carry out the actual reimbursement and Set the pools.
+	for i := range gm.gasEvent.Pools {
+		pool, ok := poolCache[gm.gasEvent.Pools[i].Asset]
+		if !ok {
+			// This should never happen.
+			ctx.Logger().Error("pool asset in gas event for which no cached pool", "asset", gm.gasEvent.Pools[i].Asset)
+			continue
+		}
+		if !gm.gasEvent.Pools[i].RuneAmt.IsZero() {
+			coin := common.NewCoin(common.RuneNative, gm.gasEvent.Pools[i].RuneAmt)
+			if err := keeper.SendFromModuleToModule(ctx, ReserveName, AsgardName, common.NewCoins(coin)); err != nil {
+				ctx.Logger().Error("fail to transfer funds from reserve to asgard", "pool", gm.gasEvent.Pools[i].Asset, "error", err)
+			} else {
+				pool.BalanceRune = pool.BalanceRune.Add(gm.gasEvent.Pools[i].RuneAmt)
+			}
+		}
+		pool.BalanceAsset = common.SafeSub(pool.BalanceAsset, gm.gasEvent.Pools[i].AssetAmt)
+		if err := keeper.SetPool(ctx, pool); err != nil {
+			ctx.Logger().Error("fail to set pool", "pool", pool.Asset, "error", err)
+		}
 	}
 }

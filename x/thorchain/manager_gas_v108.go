@@ -45,7 +45,7 @@ func (gm *GasMgrV108) BeginBlock(mgr Manager) {
 }
 
 // AddGasAsset to the EventGas
-func (gm *GasMgrV108) AddGasAsset(gas common.Gas, increaseTxCount bool) {
+func (gm *GasMgrV108) AddGasAsset(_ common.Asset, gas common.Gas, increaseTxCount bool) {
 	gm.gas = gm.gas.Adds_deprecated(gas)
 	if !increaseTxCount {
 		return

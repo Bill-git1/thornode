@@ -70,6 +70,8 @@ const (
 	prefixOrderBookLimitIndex     types.DbPrefix = "olim/"
 	prefixOrderBookMarketIndex    types.DbPrefix = "omark/"
 	prefixOrderBookProcessor      types.DbPrefix = "oproc/"
+	prefixOutboundFeeWithheldRune types.DbPrefix = "outbound_fee_withheld_rune/"
+	prefixOutboundFeeSpentRune    types.DbPrefix = "outbound_fee_spent_rune/"
 	prefixMimir                   types.DbPrefix = "mimir/"
 	prefixMimirV2                 types.DbPrefix = "mimirV2/"
 	prefixMinJoinLast             types.DbPrefix = "minjoinlast/"
@@ -501,14 +503,6 @@ func (k KVStore) GetNativeTxFee(ctx cosmos.Context) cosmos.Uint {
 		return k.DollarConfigInRune(ctx, constants.NativeTransactionFeeUSD)
 	}
 	fee := k.GetConfigInt64(ctx, constants.NativeTransactionFee)
-	return cosmos.NewUint(uint64(fee))
-}
-
-func (k KVStore) GetOutboundTxFee(ctx cosmos.Context) cosmos.Uint {
-	if k.usdFeesEnabled(ctx) {
-		return k.DollarConfigInRune(ctx, constants.NativeOutboundFeeUSD)
-	}
-	fee := k.GetConfigInt64(ctx, constants.OutboundTransactionFee)
 	return cosmos.NewUint(uint64(fee))
 }
 

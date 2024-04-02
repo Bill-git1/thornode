@@ -14,7 +14,8 @@ import (
 // One is useful type so THORNode doesn't need to manage 8 zeroes all the time
 const One = 100000000
 
-// GetSafeShare does the same as GetUncappedShare , but GetSafeShare will guarantee the result will not more than total
+// GetSafeShare does the same as GetUncappedShare , but GetSafeShare will guarantee the result will not more than total.
+// The first two arguments should always have the same units (cancelling out to represent a unitless ratio applied to the allocation).
 func GetSafeShare(part, total, allocation cosmos.Uint) cosmos.Uint {
 	if part.GTE(total) {
 		part = total
@@ -23,7 +24,8 @@ func GetSafeShare(part, total, allocation cosmos.Uint) cosmos.Uint {
 }
 
 // GetUncappedShare this method will panic if any of the input parameter can't be convert to cosmos.Dec
-// which shouldn't happen
+// which shouldn't happen.
+// The first two arguments should always have the same units (cancelling out to represent a unitless ratio applied to the allocation).
 func GetUncappedShare(part, total, allocation cosmos.Uint) (share cosmos.Uint) {
 	if part.IsZero() || total.IsZero() {
 		return cosmos.ZeroUint()

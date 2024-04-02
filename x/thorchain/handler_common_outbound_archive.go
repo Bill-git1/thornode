@@ -108,7 +108,7 @@ func (h CommonOutboundTxHandler) handleV125(ctx cosmos.Context, tx ObservedTx, i
 							if vault.Status != InactiveVault {
 								// the outbound spend less than MaxGas
 								diffGas := maxGasAmt.Sub(realGasAmt)
-								h.mgr.GasMgr().AddGasAsset(common.Gas{
+								h.mgr.GasMgr().AddGasAsset(common.EmptyAsset, common.Gas{
 									common.NewCoin(asset, diffGas),
 								}, false)
 							}
@@ -293,7 +293,7 @@ func (h CommonOutboundTxHandler) handleV118(ctx cosmos.Context, tx ObservedTx, i
 							if vault.Status != InactiveVault {
 								// the outbound spend less than MaxGas
 								diffGas := maxGasAmt.Sub(realGasAmt)
-								h.mgr.GasMgr().AddGasAsset(common.Gas{
+								h.mgr.GasMgr().AddGasAsset(common.EmptyAsset, common.Gas{
 									common.NewCoin(asset, diffGas),
 								}, false)
 							}
@@ -439,7 +439,7 @@ func (h CommonOutboundTxHandler) handleV98(ctx cosmos.Context, tx ObservedTx, in
 						if maxGasAmt.GT(realGasAmt) {
 							// the outbound spend less than MaxGas
 							diffGas := maxGasAmt.Sub(realGasAmt)
-							h.mgr.GasMgr().AddGasAsset(common.Gas{
+							h.mgr.GasMgr().AddGasAsset(common.EmptyAsset, common.Gas{
 								common.NewCoin(asset, diffGas),
 							}, false)
 						} else if maxGasAmt.LT(realGasAmt) {
@@ -584,7 +584,7 @@ func (h CommonOutboundTxHandler) handleV94(ctx cosmos.Context, tx ObservedTx, in
 						if maxGasAmt.GT(realGasAmt) {
 							// the outbound spend less than MaxGas
 							diffGas := maxGasAmt.Sub(realGasAmt)
-							h.mgr.GasMgr().AddGasAsset(common.Gas{
+							h.mgr.GasMgr().AddGasAsset(common.EmptyAsset, common.Gas{
 								common.NewCoin(asset, diffGas),
 							}, false)
 						} else if maxGasAmt.LT(realGasAmt) {
@@ -745,7 +745,7 @@ func (h CommonOutboundTxHandler) handleV92(ctx cosmos.Context, tx ObservedTx, in
 						if maxGasAmt.GT(realGasAmt) {
 							// the outbound spend less than MaxGas
 							diffGas := maxGasAmt.Sub(realGasAmt)
-							h.mgr.GasMgr().AddGasAsset(common.Gas{
+							h.mgr.GasMgr().AddGasAsset(common.EmptyAsset, common.Gas{
 								common.NewCoin(asset, diffGas),
 							}, false)
 						} else if maxGasAmt.LT(realGasAmt) {
@@ -881,7 +881,7 @@ func (h CommonOutboundTxHandler) handleV69(ctx cosmos.Context, tx ObservedTx, in
 						if maxGasAmt.GT(realGasAmt) {
 							// the outbound spend less than MaxGas
 							diffGas := maxGasAmt.Sub(realGasAmt)
-							h.mgr.GasMgr().AddGasAsset(common.Gas{
+							h.mgr.GasMgr().AddGasAsset(common.EmptyAsset, common.Gas{
 								common.NewCoin(asset, diffGas),
 							}, false)
 						} else if maxGasAmt.LT(realGasAmt) {
@@ -1018,7 +1018,7 @@ func (h CommonOutboundTxHandler) handleV85(ctx cosmos.Context, tx ObservedTx, in
 						if maxGasAmt.GT(realGasAmt) {
 							// the outbound spend less than MaxGas
 							diffGas := maxGasAmt.Sub(realGasAmt)
-							h.mgr.GasMgr().AddGasAsset(common.Gas{
+							h.mgr.GasMgr().AddGasAsset(common.EmptyAsset, common.Gas{
 								common.NewCoin(asset, diffGas),
 							}, false)
 						} else if maxGasAmt.LT(realGasAmt) {
@@ -1155,7 +1155,7 @@ func (h CommonOutboundTxHandler) handleV87(ctx cosmos.Context, tx ObservedTx, in
 						if maxGasAmt.GT(realGasAmt) {
 							// the outbound spend less than MaxGas
 							diffGas := maxGasAmt.Sub(realGasAmt)
-							h.mgr.GasMgr().AddGasAsset(common.Gas{
+							h.mgr.GasMgr().AddGasAsset(common.EmptyAsset, common.Gas{
 								common.NewCoin(asset, diffGas),
 							}, false)
 						} else if maxGasAmt.LT(realGasAmt) {
@@ -1301,7 +1301,7 @@ func (h CommonOutboundTxHandler) handleV88(ctx cosmos.Context, tx ObservedTx, in
 						if maxGasAmt.GT(realGasAmt) {
 							// the outbound spend less than MaxGas
 							diffGas := maxGasAmt.Sub(realGasAmt)
-							h.mgr.GasMgr().AddGasAsset(common.Gas{
+							h.mgr.GasMgr().AddGasAsset(common.EmptyAsset, common.Gas{
 								common.NewCoin(asset, diffGas),
 							}, false)
 						} else if maxGasAmt.LT(realGasAmt) {
@@ -1446,7 +1446,7 @@ func (h CommonOutboundTxHandler) handleV96(ctx cosmos.Context, tx ObservedTx, in
 						if maxGasAmt.GT(realGasAmt) {
 							// the outbound spend less than MaxGas
 							diffGas := maxGasAmt.Sub(realGasAmt)
-							h.mgr.GasMgr().AddGasAsset(common.Gas{
+							h.mgr.GasMgr().AddGasAsset(common.EmptyAsset, common.Gas{
 								common.NewCoin(asset, diffGas),
 							}, false)
 						} else if maxGasAmt.LT(realGasAmt) {

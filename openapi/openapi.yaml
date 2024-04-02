@@ -419,6 +419,39 @@ paths:
               schema:
                 $ref: "#/components/schemas/NetworkResponse"
 
+  /thorchain/outbound_fees:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+    get:
+      description: Returns the last block information for all chains.
+      operationId: outboundFees
+      tags:
+        - Network
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OutboundFeesResponse"
+
+  /thorchain/outbound_fee/{asset}:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+      - $ref: "#/components/parameters/asset"
+    get:
+      description: Returns the outbound fee information for the provided asset.
+      operationId: outboundFeeAsset
+      tags:
+        - Network
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OutboundFeesResponse"
+
   # ------------------------------ POL ------------------------------
 
   /thorchain/pol:
@@ -2075,6 +2108,37 @@ components:
           enum: ["done", "incomplete"]
           example: "done"
 
+    OutboundFee:
+      type: object
+      required:
+        - asset
+        - outbound_fee
+      properties:
+        asset:
+          type: string
+          example: "ETH.ETH"
+          description: the asset to display the outbound fee for
+        outbound_fee:
+          type: string
+          example: "300000"
+          description: the asset's outbound fee, in (1e8-format) units of the asset
+        fee_withheld_rune:
+          type: string
+          example: "30000000000000"
+          description: Total RUNE the network has withheld as fees to later cover gas costs for this asset's outbounds
+        fee_spent_rune:
+          type: string
+          example: "20000000000000"
+          description: Total RUNE the network has spent to reimburse gas costs for this asset's outbounds
+        surplus_rune:
+          type: string
+          example: "10000000000000"
+          description: amount of RUNE by which the fee_withheld_rune exceeds the fee_spent_rune
+        dynamic_multiplier_basis_points:
+          type: string
+          example: "15000"
+          description: dynamic multiplier basis points, based on the surplus_rune, affecting the size of the outbound_fee
+
     MsgSwap:
       type: object
       required:
@@ -2938,6 +3002,11 @@ components:
           type: string
           example: "10"
           description: the tor price in rune
+
+    OutboundFeesResponse:
+      type: array
+      items:
+        $ref: "#/components/schemas/OutboundFee"
 
     POLResponse:
       type: object

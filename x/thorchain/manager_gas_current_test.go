@@ -28,21 +28,21 @@ func (GasManagerTestSuiteVCUR) TestGasManagerVCUR(c *C) {
 	pool.Asset = common.BTCAsset
 	c.Assert(k.SetPool(ctx, pool), IsNil)
 
-	gasMgr.AddGasAsset(common.Gas{
+	gasMgr.AddGasAsset(common.EmptyAsset, common.Gas{
 		common.NewCoin(common.BNBAsset, cosmos.NewUint(37500)),
 		common.NewCoin(common.BTCAsset, cosmos.NewUint(1000)),
 	}, true)
 	c.Assert(gasMgr.GetGas(), HasLen, 2)
-	gasMgr.AddGasAsset(common.Gas{
+	gasMgr.AddGasAsset(common.EmptyAsset, common.Gas{
 		common.NewCoin(common.BNBAsset, cosmos.NewUint(38500)),
 		common.NewCoin(common.BTCAsset, cosmos.NewUint(2000)),
 	}, true)
 	c.Assert(gasMgr.GetGas(), HasLen, 2)
-	gasMgr.AddGasAsset(common.Gas{
+	gasMgr.AddGasAsset(common.EmptyAsset, common.Gas{
 		common.NewCoin(common.ETHAsset, cosmos.NewUint(38500)),
 	}, true)
 	c.Assert(gasMgr.GetGas(), HasLen, 3)
-	eventMgr := newEventMgrVCUR()
+	eventMgr := NewDummyEventMgr()
 	gasMgr.EndBlock(ctx, k, eventMgr)
 }
 
@@ -127,7 +127,7 @@ func (GasManagerTestSuiteVCUR) TestDifferentValidations(c *C) {
 	gasMgr := newGasMgrVCUR(constAccessor, k)
 	gasMgr.BeginBlock(mgr)
 	helper := newGasManagerTestHelper(k)
-	eventMgr := newEventMgrVCUR()
+	eventMgr := NewDummyEventMgr()
 	gasMgr.EndBlock(ctx, helper, eventMgr)
 
 	helper.failGetNetwork = true
@@ -135,7 +135,7 @@ func (GasManagerTestSuiteVCUR) TestDifferentValidations(c *C) {
 	helper.failGetNetwork = false
 
 	helper.failGetPool = true
-	gasMgr.AddGasAsset(common.Gas{
+	gasMgr.AddGasAsset(common.EmptyAsset, common.Gas{
 		common.NewCoin(common.BNBAsset, cosmos.NewUint(37500)),
 		common.NewCoin(common.BTCAsset, cosmos.NewUint(1000)),
 		common.NewCoin(common.ETHAsset, cosmos.ZeroUint()),
@@ -149,7 +149,7 @@ func (GasManagerTestSuiteVCUR) TestDifferentValidations(c *C) {
 	p.BalanceRune = cosmos.NewUint(common.One * 100)
 	p.Status = PoolAvailable
 	c.Assert(helper.Keeper.SetPool(ctx, p), IsNil)
-	gasMgr.AddGasAsset(common.Gas{
+	gasMgr.AddGasAsset(common.EmptyAsset, common.Gas{
 		common.NewCoin(common.BNBAsset, cosmos.NewUint(37500)),
 	}, true)
 	gasMgr.EndBlock(ctx, helper, eventMgr)

@@ -403,8 +403,6 @@
         "bond_reward_rune": "2886753",
         "burned_bep2_rune": "0",
         "burned_erc20_rune": "0",
-        "outbound_gas_spent_rune": "10492080",
-        "outbound_gas_withheld_rune": "13991263",
         "total_bond_units": "13"
       },
       "network_fees": [
@@ -437,6 +435,18 @@
       "observed_tx_in_voters": null,
       "observed_tx_out_voters": null,
       "orderbook_items": [],
+      "outbound_fee_spent_rune": [
+        {
+          "amount": "10492080",
+          "asset": "BTC.BTC"
+        }
+      ],
+      "outbound_fee_withheld_rune": [
+        {
+          "amount": "13991263",
+          "asset": "BTC.BTC"
+        }
+      ],
       "pools": [
         {
           "LP_units": "100000000000",

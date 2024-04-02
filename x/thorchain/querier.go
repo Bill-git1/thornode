@@ -155,6 +155,10 @@ func NewQuerier(mgr *Mgrs, kbs cosmos.KeybaseStore) cosmos.Querier {
 			return queryMimirNodesValues(ctx, path[1:], req, mgr)
 		case q.QueryMimirNodeValues.Key:
 			return queryMimirNodeValues(ctx, path[1:], req, mgr)
+		case q.QueryOutboundFees.Key:
+			return queryOutboundFees(ctx, path[1:], req, mgr)
+		case q.QueryOutboundFee.Key:
+			return queryOutboundFees(ctx, path[1:], req, mgr)
 		case q.QueryBan.Key:
 			return queryBan(ctx, path[1:], req, mgr)
 		case q.QueryRagnarok.Key:
@@ -2669,6 +2673,94 @@ func queryMimirNodeValues(ctx cosmos.Context, path []string, req abci.RequestQue
 	}
 
 	return jsonify(ctx, values)
+}
+
+func queryOutboundFees(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {
+	var assets []common.Asset
+
+	if len(path) > 0 && len(path[0]) > 0 {
+		// If an Asset has been specified, return information for just that Asset
+		// (even if for instance a Derived Asset to show its THORChain outbound fee).
+		asset, err := common.NewAsset(path[0])
+		if err != nil {
+			ctx.Logger().Error("fail to parse asset", "error", err, "asset", path[0])
+			return nil, fmt.Errorf("fail to parse asset (%s): %w", path[0], err)
+		}
+		assets = []common.Asset{asset}
+	} else {
+		// By default display the outbound fees of RUNE and all external-chain Layer 1 assets.
+		// Even Staged pool Assets can incur outbound fees (from withdraw outbounds).
+		assets = []common.Asset{common.RuneAsset()}
+		iterator := mgr.Keeper().GetPoolIterator(ctx)
+		for ; iterator.Valid(); iterator.Next() {
+			var pool Pool
+			if err := mgr.Keeper().Cdc().Unmarshal(iterator.Value(), &pool); err != nil {
+				return nil, fmt.Errorf("fail to unmarshal pool: %w", err)
+			}
+
+			if pool.Asset.IsNative() {
+				// To avoid clutter do not by default display the outbound fees
+				// of THORChain Assets other than RUNE.
+				continue
+			}
+			if pool.BalanceAsset.IsZero() || pool.BalanceRune.IsZero() {
+				// A Layer 1 Asset's pool must have both depths be non-zero
+				// for any outbound fee withholding or gas reimbursement to take place.
+				// (This can take place even if the PoolUnits are zero and all liquidity is synths.)
+				continue
+			}
+
+			assets = append(assets, pool.Asset)
+		}
+	}
+
+	// Obtain the unchanging CalcOutboundFeeMultiplier arguments before the loop which calls it.
+	targetSurplusRune := cosmos.NewUint(uint64(mgr.Keeper().GetConfigInt64(ctx, constants.TargetOutboundFeeSurplusRune)))
+	maxMultiplier := cosmos.NewUint(uint64(mgr.Keeper().GetConfigInt64(ctx, constants.MaxOutboundFeeMultiplierBasisPoints)))
+	minMultiplier := cosmos.NewUint(uint64(mgr.Keeper().GetConfigInt64(ctx, constants.MinOutboundFeeMultiplierBasisPoints)))
+
+	// Due to the nature of pool iteration by key, this is expected to have RUNE at the top and then be in alphabetical order.
+	result := make([]openapi.OutboundFee, 0, len(assets))
+	for i := range assets {
+		// Display the Asset's fee as the amount of that Asset deducted.
+		outboundFee := mgr.GasMgr().GetFee(ctx, assets[i].GetChain(), assets[i])
+
+		// Only display fields other than asset and outbound_fee when the Asset is external,
+		// as a non-zero dynamic multiplier could be misleading otherwise.
+		var outboundFeeWithheldRuneString, outboundFeeSpentRuneString, surplusRuneString, dynamicMultiplierBasisPointsString string
+		if !assets[i].IsNative() {
+			outboundFeeWithheldRune, err := mgr.Keeper().GetOutboundFeeWithheldRune(ctx, assets[i])
+			if err != nil {
+				ctx.Logger().Error("fail to get outbound fee withheld rune", "outbound asset", assets[i], "error", err)
+				return nil, fmt.Errorf("fail to get outbound fee withheld rune for asset (%s): %w", assets[i], err)
+			}
+			outboundFeeWithheldRuneString = outboundFeeWithheldRune.String()
+
+			outboundFeeSpentRune, err := mgr.Keeper().GetOutboundFeeSpentRune(ctx, assets[i])
+			if err != nil {
+				ctx.Logger().Error("fail to get outbound fee spent rune", "outbound asset", assets[i], "error", err)
+				return nil, fmt.Errorf("fail to get outbound fee spent rune for asset (%s): %w", assets[i], err)
+			}
+			outboundFeeSpentRuneString = outboundFeeSpentRune.String()
+
+			surplusRuneString = common.SafeSub(outboundFeeWithheldRune, outboundFeeSpentRune).String()
+
+			dynamicMultiplierBasisPointsString = mgr.GasMgr().CalcOutboundFeeMultiplier(ctx, targetSurplusRune, outboundFeeSpentRune, outboundFeeWithheldRune, maxMultiplier, minMultiplier).String()
+		}
+
+		// As the entire endpoint is for outbounds, the term 'Outbound' is omitted from the field names.
+		result = append(result, openapi.OutboundFee{
+			Asset:                        assets[i].String(),
+			OutboundFee:                  outboundFee.String(),
+			FeeWithheldRune:              wrapString(outboundFeeWithheldRuneString),
+			FeeSpentRune:                 wrapString(outboundFeeSpentRuneString),
+			SurplusRune:                  wrapString(surplusRuneString),
+			DynamicMultiplierBasisPoints: wrapString(dynamicMultiplierBasisPointsString),
+		})
+
+	}
+
+	return jsonify(ctx, result)
 }
 
 func queryBan(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {

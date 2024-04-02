@@ -260,7 +260,7 @@ class Ethereum(GenericChain):
         if txn.memo == "WITHDRAW:ETH.ETH:1000":
             gas = 39836
         elif txn.memo.startswith("SWAP:ETH.ETH:"):
-            gas = 39836
+            gas = 39824
         elif txn.memo.startswith(
             "SWAP:ETH.TKN-0X52C84043CD9C865236F11D9FC9F56AA003C1F922"
         ):

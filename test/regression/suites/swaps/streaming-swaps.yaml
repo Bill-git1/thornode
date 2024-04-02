@@ -10,6 +10,26 @@ endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .|length == 2
 ---
+type: check
+endpoint: http://localhost:1317/thorchain/outbound_fees
+asserts:
+  - .|length == 3
+  - .[0] == {"asset":"THOR.RUNE","outbound_fee":"2000000"}
+  ###
+  - .[1].asset == "BTC.BTC"
+  - .[1].outbound_fee == "14000"
+  - .[1].fee_withheld_rune == "0"
+  - .[1].fee_spent_rune == "0"
+  - .[1].surplus_rune == "0"
+  - .[1].dynamic_multiplier_basis_points == "20000"
+  ###
+  - .[2].asset == "ETH.ETH"
+  - .[2].outbound_fee == "1280000"
+  - .[2].fee_withheld_rune == "0"
+  - .[2].fee_spent_rune == "0"
+  - .[2].surplus_rune == "0"
+  - .[2].dynamic_multiplier_basis_points == "20000"
+---
 ########################################################################################
 # streaming swap to ETH.ETH (100% conversion)
 ########################################################################################
@@ -223,7 +243,7 @@ txs:
       to_address: {{ addr_btc_dog }}
       coins:
         - amount: "6000000"
-          asset: "BTC.BTC"
+          asset: "${INPUT_ASSET=BTC.BTC}"
           decimals: 8
       gas:
         - amount: "10000"
@@ -251,7 +271,7 @@ asserts:
   - .[0]|.memo == "OUT:${INBOUND_TXID}"
   - .[1]|.in_hash == "${INBOUND_TXID}"
   - .[1]|.coin.asset == "${INPUT_ASSET}"
-  - .[1]|.coin.amount == "${REFUND_AMOUNT=4786001}"
+  - .[1]|.coin.amount == "${REFUND_AMOUNT=4786000}"
   - .[1]|.memo == "REFUND:${INBOUND_TXID}"
 ---
 type: tx-observed-out
@@ -343,7 +363,7 @@ asserts:
   - .|length == 1
   - .[0]|.in_hash == "${INBOUND_TXID}"
   - .[0]|.coin.asset == "${OUTPUT_ASSET}"
-  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=33882029}"
+  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=33882026}"
   - .[0]|.memo == "OUT:${INBOUND_TXID}"
 ---
 type: create-blocks
@@ -554,3 +574,23 @@ type: check
 endpoint: http://localhost:1317/thorchain/invariant/streaming_swaps
 asserts:
   - .broken == false
+---
+type: check
+endpoint: http://localhost:1317/thorchain/outbound_fees
+asserts:
+  - .|length == 3
+  - .[0] == {"asset":"THOR.RUNE","outbound_fee":"2000000"}
+  ###
+  - .[1].asset == "BTC.BTC"
+  - .[1].outbound_fee == "14000"
+  - .[1].fee_withheld_rune == "11128679"
+  - .[1].fee_spent_rune == "8345557"
+  - .[1].surplus_rune == "2783122"
+  - .[1].dynamic_multiplier_basis_points == "20000"
+  ###
+  - .[2].asset == "ETH.ETH"
+  - .[2].outbound_fee == "1279936"
+  - .[2].fee_withheld_rune == "790587448"
+  - .[2].fee_spent_rune == "592115949"
+  - .[2].surplus_rune == "198471499"
+  - .[2].dynamic_multiplier_basis_points == "19999"

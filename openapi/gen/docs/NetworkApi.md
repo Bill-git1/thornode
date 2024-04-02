@@ -10,6 +10,8 @@ Method | HTTP request | Description
 [**Lastblock**](NetworkApi.md#Lastblock) | **Get** /thorchain/lastblock | 
 [**LastblockChain**](NetworkApi.md#LastblockChain) | **Get** /thorchain/lastblock/{chain} | 
 [**Network**](NetworkApi.md#Network) | **Get** /thorchain/network | 
+[**OutboundFeeAsset**](NetworkApi.md#OutboundFeeAsset) | **Get** /thorchain/outbound_fee/{asset} | 
+[**OutboundFees**](NetworkApi.md#OutboundFees) | **Get** /thorchain/outbound_fees | 
 [**Ragnarok**](NetworkApi.md#Ragnarok) | **Get** /thorchain/ragnarok | 
 [**Version**](NetworkApi.md#Version) | **Get** /thorchain/version | 
 
@@ -408,6 +410,144 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**NetworkResponse**](NetworkResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## OutboundFeeAsset
+
+> []OutboundFee OutboundFeeAsset(ctx, asset).Height(height).Execute()
+
+
+
+
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    asset := "BTC.BTC" // string | 
+    height := int64(789) // int64 | optional block height, defaults to current tip (optional)
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.NetworkApi.OutboundFeeAsset(context.Background(), asset).Height(height).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `NetworkApi.OutboundFeeAsset``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `OutboundFeeAsset`: []OutboundFee
+    fmt.Fprintf(os.Stdout, "Response from `NetworkApi.OutboundFeeAsset`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**asset** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiOutboundFeeAssetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+ **height** | **int64** | optional block height, defaults to current tip | 
+
+### Return type
+
+[**[]OutboundFee**](OutboundFee.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## OutboundFees
+
+> []OutboundFee OutboundFees(ctx).Height(height).Execute()
+
+
+
+
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    height := int64(789) // int64 | optional block height, defaults to current tip (optional)
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.NetworkApi.OutboundFees(context.Background()).Height(height).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `NetworkApi.OutboundFees``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `OutboundFees`: []OutboundFee
+    fmt.Fprintf(os.Stdout, "Response from `NetworkApi.OutboundFees`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiOutboundFeesRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **height** | **int64** | optional block height, defaults to current tip | 
+
+### Return type
+
+[**[]OutboundFee**](OutboundFee.md)
 
 ### Authorization
 

@@ -55,7 +55,7 @@ type TradeAccountManager interface {
 type GasManager interface {
 	BeginBlock(mgr Manager) // TODO: Remove Manager argument on hard fork.
 	EndBlock(ctx cosmos.Context, keeper keeper.Keeper, eventManager EventManager)
-	AddGasAsset(gas common.Gas, increaseTxCount bool)
+	AddGasAsset(outAsset common.Asset, gas common.Gas, increaseTxCount bool)
 	ProcessGas(ctx cosmos.Context, keeper keeper.Keeper)
 	GetGas() common.Gas
 	GetFee(ctx cosmos.Context, chain common.Chain, asset common.Asset) cosmos.Uint

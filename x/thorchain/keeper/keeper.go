@@ -47,7 +47,6 @@ type Keeper interface {
 	DollarConfigInRune(ctx cosmos.Context, key constants.ConstantName) cosmos.Uint
 
 	GetNativeTxFee(ctx cosmos.Context) cosmos.Uint
-	GetOutboundTxFee(ctx cosmos.Context) cosmos.Uint
 	GetTHORNameRegisterFee(ctx cosmos.Context) cosmos.Uint
 	GetTHORNamePerBlockFee(ctx cosmos.Context) cosmos.Uint
 
@@ -64,6 +63,7 @@ type Keeper interface {
 	KeeperObservedTx
 	KeeperTxOut
 	KeeperLiquidityFees
+	KeeperOutboundFees
 	KeeperSwapSlip
 	KeeperVault
 	KeeperReserveContributors
@@ -207,6 +207,16 @@ type KeeperLiquidityFees interface {
 	GetPoolLiquidityFees(ctx cosmos.Context, height uint64, asset common.Asset) (cosmos.Uint, error)
 	GetRollingPoolLiquidityFee(ctx cosmos.Context, asset common.Asset) (uint64, error)
 	ResetRollingPoolLiquidityFee(ctx cosmos.Context, asset common.Asset)
+}
+
+type KeeperOutboundFees interface {
+	AddToOutboundFeeWithheldRune(ctx cosmos.Context, outAsset common.Asset, withheld cosmos.Uint) error
+	AddToOutboundFeeSpentRune(ctx cosmos.Context, outAsset common.Asset, spent cosmos.Uint) error
+	GetOutboundFeeWithheldRune(ctx cosmos.Context, outAsset common.Asset) (cosmos.Uint, error)
+	GetOutboundFeeWithheldRuneIterator(ctx cosmos.Context) cosmos.Iterator
+	GetOutboundFeeSpentRune(ctx cosmos.Context, outAsset common.Asset) (cosmos.Uint, error)
+	GetOutboundFeeSpentRuneIterator(ctx cosmos.Context) cosmos.Iterator
+	GetOutboundTxFee(ctx cosmos.Context) cosmos.Uint
 }
 
 type KeeperSwapSlip interface {

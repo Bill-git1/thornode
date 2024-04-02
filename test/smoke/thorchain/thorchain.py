@@ -208,8 +208,8 @@ class ThorchainState:
         self.bond_reward = 0
         self.vault_pubkey = None
         self.network_fees = {}
-        self.gas_spent_rune = 0
-        self.gas_withheld_rune = 0
+        self.gas_spent_rune = {}
+        self.gas_withheld_rune = {}
         self.btc_estimate_size = 188
         self.bch_estimate_size = 269
         self.ltc_estimate_size = 188
@@ -319,10 +319,10 @@ class ThorchainState:
                 gases = tx.max_gas
 
             for gas in gases:
-                if gas.asset not in gas_coins:
-                    gas_coins[gas.asset] = Coin(gas.asset)
+                if tx.coins[0].asset not in gas_coins:
+                    gas_coins[tx.coins[0].asset] = Coin(gas.asset) # In Python this assumes that each outbound asset always has the same gas asset.
                     gas_coin_count[gas.asset] = 0
-                gas_coins[gas.asset].amount += gas.amount
+                gas_coins[tx.coins[0].asset].amount += gas.amount
                 gas_coin_count[gas.asset] += 1
 
         if not len(gas_coins.items()):
@@ -336,7 +336,9 @@ class ThorchainState:
 
             # only append gas spent if it's not a native THORChain asset
             if not asset.is_thor():
-                self.gas_spent_rune += rune_amt
+                if not self.gas_spent_rune.get(asset):
+                    self.gas_spent_rune[asset] = 0
+                self.gas_spent_rune[asset] += rune_amt
                 
             pool.add(rune_amt, 0)  # replenish gas costs with rune
             pool.sub(0, gas.amount)  # subtract gas from pool
@@ -345,10 +347,10 @@ class ThorchainState:
             event = Event(
                 "gas",
                 [
-                    {"asset": asset},
+                    {"asset": gas.asset},
                     {"asset_amt": gas.amount},
                     {"rune_amt": rune_amt},
-                    {"transaction_count": gas_coin_count[asset]},
+                    {"transaction_count": gas_coin_count[gas.asset]},
                 ],
             )
             self.events.append(event)
@@ -396,10 +398,10 @@ class ThorchainState:
             amount = self.network_fees["BNB"]
         return Coin(gas_asset, amount)
     
-    def _calc_outbound_fee_multiplier(self):
+    def _calc_outbound_fee_multiplier(self, out_asset):
         min_multiplier = 15_000
         max_multiplier = 20_000
-        surplus = self.gas_withheld_rune - self.gas_spent_rune
+        surplus = self.gas_withheld_rune.get(out_asset, 0) - self.gas_spent_rune.get(out_asset, 0)
         if surplus <= 0:
             return max_multiplier
         elif surplus >= self.target_surplus:
@@ -409,7 +411,8 @@ class ThorchainState:
             m_reduced = get_share(surplus, self.target_surplus, m_diff)
             return max_multiplier - m_reduced
 
-    def get_rune_fee(self, chain):
+    def get_rune_fee(self, out_asset):
+        chain = out_asset.get_chain()
         if chain not in self.network_fees:
             return self.rune_fee
         chain_fee = self.network_fees[chain]
@@ -419,15 +422,16 @@ class ThorchainState:
         pool = self.get_pool(gas_asset)
         if pool.asset_balance == 0 or pool.rune_balance == 0:
             return self.rune_fee
-        multiplier_bps = self._calc_outbound_fee_multiplier()
+        multiplier_bps = self._calc_outbound_fee_multiplier(out_asset)
         chain_fee = get_share(multiplier_bps, 10_000, chain_fee)
         if chain == "GAIA":
             chain_fee = int(chain_fee / 100) * 100
         return pool.get_asset_in_rune(chain_fee)
 
-    def get_asset_fee(self, chain):
+    def get_asset_fee(self, out_asset):
+        chain = out_asset.get_chain()
         if chain in self.network_fees:
-            multiplier_bps = self._calc_outbound_fee_multiplier()
+            multiplier_bps = self._calc_outbound_fee_multiplier(out_asset)
             asset_fee = get_share(multiplier_bps, 10_000, self.network_fees[chain])
             if chain == "GAIA":
                 asset_fee = int(asset_fee / 100) * 100
@@ -446,7 +450,7 @@ class ThorchainState:
             txs = [txs]
         for tx in txs:
             # fee amount in rune value
-            rune_fee = self.get_rune_fee(tx.chain)
+            rune_fee = self.get_rune_fee(tx.coins[0].asset)
             if not tx.gas:
                 tx.gas = [self.get_gas(tx.chain, in_tx)]
 
@@ -478,7 +482,7 @@ class ThorchainState:
                         rune_fee = 0
                     else:
                         if coin.asset == self.get_gas_asset(tx.chain):
-                            asset_fee = self.get_asset_fee(tx.chain)
+                            asset_fee = self.get_asset_fee(tx.coins[0].asset)
                         else:
                             asset_fee = pool.get_rune_in_asset(rune_fee)
                         if coin.amount <= asset_fee:
@@ -551,7 +555,7 @@ class ThorchainState:
                                 tx.max_gas = [Coin(coin.asset, int(self.network_fees["ETH"] * 3/2))]
 
                             elif coin.asset.is_erc():
-                                fee_in_gas_asset = self.get_asset_fee(tx.chain)
+                                fee_in_gas_asset = self.get_asset_fee(tx.coins[0].asset)
                                 gas_asset = self.get_gas_asset("ETH")
                                 tx.max_gas = [
                                     Coin(gas_asset, int(fee_in_gas_asset / 2))
@@ -587,7 +591,9 @@ class ThorchainState:
                 self.reserve += rune_fee
                 # only add to surplus if it's an external L1 outbound
                 if not coin.asset.is_thor():
-                    self.gas_withheld_rune += rune_fee
+                    if not self.gas_withheld_rune.get(coin.asset):
+                        self.gas_withheld_rune[coin.asset] = 0
+                    self.gas_withheld_rune[coin.asset] += rune_fee
         return outbounds
 
     def _total_liquidity(self):
@@ -1074,7 +1080,7 @@ class ThorchainState:
             dynamic_fee = int(self.network_fees[chain] * 3/2)
         else:
             dynamic_fee = int(
-                round(pool.get_rune_in_asset(self.get_rune_fee(chain)))
+                round(pool.get_rune_in_asset(self.get_rune_fee(asset)))
             )
         tx_rune_gas = self.get_gas(RUNE.get_chain(), tx)
         withdraw_units, rune_amt, asset_amt = pool.withdraw(
@@ -1302,7 +1308,7 @@ class ThorchainState:
         in_tx = tx
 
         # check if we have enough to cover the fee
-        rune_fee = self.get_rune_fee(target.get_chain())
+        rune_fee = self.get_rune_fee(target)
         in_coin = in_tx.coins[0]
         if in_coin.is_rune() and in_coin.amount <= rune_fee:
             return self.refund(tx, 108, "fail swap, not enough fee")
@@ -1363,7 +1369,7 @@ class ThorchainState:
             asset = target
 
         # check if we have enough to cover the fee
-        rune_fee = self.get_rune_fee(target.get_chain())
+        rune_fee = self.get_rune_fee(target)
         
         in_coin = in_tx.coins[0]
         if in_coin.is_rune() and in_coin.amount <= rune_fee:

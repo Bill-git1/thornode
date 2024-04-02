@@ -3,6 +3,7 @@ package thorchain;
 
 option go_package = "gitlab.com/thorchain/thornode/x/thorchain";
 
+import "thorchain/v1/common/common.proto";
 import "thorchain/v1/x/thorchain/types/type_pool.proto";
 import "thorchain/v1/x/thorchain/types/type_chain_contract.proto";
 import "thorchain/v1/x/thorchain/types/type_network_fee.proto";
@@ -61,4 +62,6 @@ message GenesisState {
   repeated types.SwapperClout swapper_clout = 31 [(gogoproto.nullable) = false];
   repeated types.TradeAccount trade_accounts = 32 [(gogoproto.nullable) = false];
   repeated types.TradeUnit trade_units = 33 [(gogoproto.nullable) = false];
+  repeated common.Coin outbound_fee_withheld_rune = 34 [(gogoproto.castrepeated) = "gitlab.com/thorchain/thornode/common.Coins", (gogoproto.nullable) = false];
+  repeated common.Coin outbound_fee_spent_rune = 35 [(gogoproto.castrepeated) = "gitlab.com/thorchain/thornode/common.Coins", (gogoproto.nullable) = false];
 }

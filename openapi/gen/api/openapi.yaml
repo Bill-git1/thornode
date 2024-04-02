@@ -693,6 +693,62 @@ paths:
           description: OK
       tags:
       - Network
+  /thorchain/outbound_fees:
+    get:
+      description: Returns the last block information for all chains.
+      operationId: outboundFees
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OutboundFeesResponse'
+          description: OK
+      tags:
+      - Network
+  /thorchain/outbound_fee/{asset}:
+    get:
+      description: Returns the outbound fee information for the provided asset.
+      operationId: outboundFeeAsset
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      - explode: false
+        in: path
+        name: asset
+        required: true
+        schema:
+          example: BTC.BTC
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OutboundFeesResponse'
+          description: OK
+      tags:
+      - Network
   /thorchain/pol:
     get:
       description: Returns protocol owned liquidity overview statistics.
@@ -3083,6 +3139,46 @@ components:
       required:
       - tx
       type: object
+    OutboundFee:
+      example:
+        surplus_rune: "10000000000000"
+        outbound_fee: "300000"
+        fee_withheld_rune: "30000000000000"
+        dynamic_multiplier_basis_points: "15000"
+        asset: ETH.ETH
+        fee_spent_rune: "20000000000000"
+      properties:
+        asset:
+          description: the asset to display the outbound fee for
+          example: ETH.ETH
+          type: string
+        outbound_fee:
+          description: "the asset's outbound fee, in (1e8-format) units of the asset"
+          example: "300000"
+          type: string
+        fee_withheld_rune:
+          description: Total RUNE the network has withheld as fees to later cover
+            gas costs for this asset's outbounds
+          example: "30000000000000"
+          type: string
+        fee_spent_rune:
+          description: Total RUNE the network has spent to reimburse gas costs for
+            this asset's outbounds
+          example: "20000000000000"
+          type: string
+        surplus_rune:
+          description: amount of RUNE by which the fee_withheld_rune exceeds the fee_spent_rune
+          example: "10000000000000"
+          type: string
+        dynamic_multiplier_basis_points:
+          description: "dynamic multiplier basis points, based on the surplus_rune,\
+            \ affecting the size of the outbound_fee"
+          example: "15000"
+          type: string
+      required:
+      - asset
+      - outbound_fee
+      type: object
     MsgSwap:
       example:
         aggregator_target_address: aggregator_target_address
@@ -4487,6 +4583,10 @@ components:
       - total_reserve
       - vaults_migrating
       type: object
+    OutboundFeesResponse:
+      items:
+        $ref: '#/components/schemas/OutboundFee'
+      type: array
     POLResponse:
       example:
         current_deposit: "21999180112172346"

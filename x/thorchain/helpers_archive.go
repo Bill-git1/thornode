@@ -2127,10 +2127,10 @@ func addGasFeesV1(ctx cosmos.Context, mgr Manager, tx ObservedTx) error {
 		// if the outbound coin is not gas asset, then reserve will subsidise it , otherwise the gas asset pool will be in a loss
 		gasAsset := tx.Tx.Chain.GetGasAsset()
 		if tx.Tx.Coins.GetCoin(gasAsset).IsEmpty() {
-			mgr.GasMgr().AddGasAsset(tx.Tx.Gas, true)
+			mgr.GasMgr().AddGasAsset(common.EmptyAsset, tx.Tx.Gas, true)
 		}
 	} else {
-		mgr.GasMgr().AddGasAsset(tx.Tx.Gas, true)
+		mgr.GasMgr().AddGasAsset(common.EmptyAsset, tx.Tx.Gas, true)
 	}
 	// Subtract from the vault
 	if mgr.Keeper().VaultExists(ctx, tx.ObservedPubKey) {

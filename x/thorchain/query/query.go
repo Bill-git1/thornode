@@ -79,6 +79,8 @@ var (
 	QueryMimirNodesValues    = Query{Key: "nodesmimirs", EndpointTemplate: "/%s/mimir/nodes"}
 	QueryMimirNodesAllValues = Query{Key: "nodesmimirsall", EndpointTemplate: "/%s/mimir/nodes_all"}
 	QueryMimirNodeValues     = Query{Key: "nodemimirs", EndpointTemplate: "/%s/mimir/node/{%s}"}
+	QueryOutboundFees        = Query{Key: "outboundfees", EndpointTemplate: "/%s/outbound_fees"}
+	QueryOutboundFee         = Query{Key: "outboundfee", EndpointTemplate: "/%s/outbound_fee/{%s}"}
 	QueryBan                 = Query{Key: "ban", EndpointTemplate: "/%s/ban/{%s}"}
 	QueryRagnarok            = Query{Key: "ragnarok", EndpointTemplate: "/%s/ragnarok"}
 	QueryPendingOutbound     = Query{Key: "pendingoutbound", EndpointTemplate: "/%s/queue/outbound"}
@@ -151,6 +153,8 @@ var Queries = []Query{
 	QueryMimirNodesAllValues,
 	QueryMimirNodesValues,
 	QueryMimirNodeValues,
+	QueryOutboundFees,
+	QueryOutboundFee,
 	QueryBan,
 	QueryRagnarok,
 	QueryPendingOutbound,

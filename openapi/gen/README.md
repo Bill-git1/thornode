@@ -99,6 +99,8 @@ Class | Method | HTTP request | Description
 *NetworkApi* | [**Lastblock**](docs/NetworkApi.md#lastblock) | **Get** /thorchain/lastblock | 
 *NetworkApi* | [**LastblockChain**](docs/NetworkApi.md#lastblockchain) | **Get** /thorchain/lastblock/{chain} | 
 *NetworkApi* | [**Network**](docs/NetworkApi.md#network) | **Get** /thorchain/network | 
+*NetworkApi* | [**OutboundFeeAsset**](docs/NetworkApi.md#outboundfeeasset) | **Get** /thorchain/outbound_fee/{asset} | 
+*NetworkApi* | [**OutboundFees**](docs/NetworkApi.md#outboundfees) | **Get** /thorchain/outbound_fees | 
 *NetworkApi* | [**Ragnarok**](docs/NetworkApi.md#ragnarok) | **Get** /thorchain/ragnarok | 
 *NetworkApi* | [**Version**](docs/NetworkApi.md#version) | **Get** /thorchain/version | 
 *NodesApi* | [**Node**](docs/NodesApi.md#node) | **Get** /thorchain/node/{address} | 
@@ -189,6 +191,7 @@ Class | Method | HTTP request | Description
  - [NodePubKeySet](docs/NodePubKeySet.md)
  - [ObservedTx](docs/ObservedTx.md)
  - [OutboundDelayStage](docs/OutboundDelayStage.md)
+ - [OutboundFee](docs/OutboundFee.md)
  - [OutboundSignedStage](docs/OutboundSignedStage.md)
  - [POLResponse](docs/POLResponse.md)
  - [Ping](docs/Ping.md)
