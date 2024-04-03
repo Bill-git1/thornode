@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"syscall"
 	"text/template"
 	"time"
@@ -42,7 +43,7 @@ func run(out io.Writer, path string, routine int) (failExportInvariants bool, er
 		"HOME=" + home,
 		"THOR_TENDERMINT_INSTRUMENTATION_PROMETHEUS=false",
 		// block time should be short, but all consecutive checks must complete within timeout
-		fmt.Sprintf("THOR_TENDERMINT_CONSENSUS_TIMEOUT_COMMIT=%s", time.Second*3/2*getTimeFactor()),
+		fmt.Sprintf("THOR_TENDERMINT_CONSENSUS_TIMEOUT_COMMIT=%s", time.Second*getTimeFactor()),
 		// all ports will be offset by the routine number
 		fmt.Sprintf("THOR_COSMOS_API_ADDRESS=tcp://0.0.0.0:%d", 1317+routine),
 		fmt.Sprintf("THOR_TENDERMINT_RPC_LISTEN_ADDRESS=tcp://0.0.0.0:%d", 26657+routine),
@@ -214,6 +215,24 @@ func run(out io.Writer, path string, routine int) (failExportInvariants bool, er
 	var returnErr error
 	localLog.Info().Msgf("Executing %d operations", len(ops))
 	for i, op := range ops {
+
+		// prefetch if this is the first of a sequence of check operations
+		if op.OpType() == "check" && ops[i-1].OpType() != "check" {
+			wg := sync.WaitGroup{}
+			for j := i; j < len(ops); j++ {
+				if ops[j].OpType() != "check" {
+					break
+				}
+				wg.Add(1)
+				go func(j int) {
+					defer wg.Done()
+					// trunk-ignore(golangci-lint/forcetypeassert)
+					ops[j].(*OpCheck).prefetch(routine)
+				}(j)
+			}
+			wg.Wait()
+		}
+
 		localLog.Info().Int("line", opLines[i]).Msgf(">>> [%d] %s", stateOpCount+i+1, op.OpType())
 		returnErr = op.Execute(out, routine, thornode.Process, stderrLines)
 		if returnErr != nil {

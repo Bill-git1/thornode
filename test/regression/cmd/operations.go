@@ -248,14 +248,16 @@ type OpCheck struct {
 	Params   map[string]string `json:"params"`
 	Status   int               `json:"status"`
 	Asserts  []string          `json:"asserts"`
+
+	prefetchResp *http.Response
+	prefetchErr  error
 }
 
-func (op *OpCheck) Execute(out io.Writer, routine int, _ *os.Process, logs chan string) error {
-	localLog := consoleLogger(out)
-
+func (op *OpCheck) prefetch(routine int) {
 	// abort if no endpoint is set (empty check op is allowed for breakpoint convenience)
 	if op.Endpoint == "" {
-		return fmt.Errorf("check")
+		op.prefetchErr = errors.New("check")
+		return
 	}
 
 	tmpl := template.Must(template.Must(templates.Clone()).Funcs(opFuncMap(routine)).Parse(op.Endpoint))
@@ -290,28 +292,33 @@ func (op *OpCheck) Execute(out io.Writer, routine int, _ *os.Process, logs chan 
 	req.URL.RawQuery = q.Encode()
 
 	// send request
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		localLog.Err(err).Msg("failed to send request")
-		return err
+	op.prefetchResp, op.prefetchErr = httpClient.Do(req)
+}
+
+func (op *OpCheck) Execute(out io.Writer, routine int, _ *os.Process, logs chan string) error {
+	localLog := consoleLogger(out)
+
+	if op.prefetchErr != nil {
+		localLog.Err(op.prefetchErr).Msg("prefetch check failed")
+		return op.prefetchErr
 	}
 
 	// read response
-	buf, err := io.ReadAll(resp.Body)
+	buf, err := io.ReadAll(op.prefetchResp.Body)
 	if err != nil {
 		localLog.Err(err).Msg("failed to read response")
 		return err
 	}
 
 	// ensure status code matches
-	if resp.StatusCode != op.Status {
+	if op.prefetchResp.StatusCode != op.Status {
 		// dump pretty output for debugging
 		_, _ = out.Write([]byte(ColorPurple + "\nOperation:" + ColorReset + "\n"))
 		_ = yaml.NewEncoder(out).Encode(op)
 		_, _ = out.Write([]byte(ColorPurple + "\nEndpoint Response:" + ColorReset + "\n"))
 		_, _ = out.Write([]byte(string(buf) + "\n"))
 
-		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return fmt.Errorf("unexpected status code: %d", op.prefetchResp.StatusCode)
 	}
 
 	// ensure response is not empty
@@ -330,8 +337,8 @@ func (op *OpCheck) Execute(out io.Writer, routine int, _ *os.Process, logs chan 
 	// pipe response to jq for assertions
 	for _, a := range op.Asserts {
 		// render the assert expression (used for native_txid)
-		tmpl = template.Must(template.Must(templates.Clone()).Funcs(opFuncMap(routine)).Parse(a))
-		expr = bytes.NewBuffer(nil)
+		tmpl := template.Must(template.Must(templates.Clone()).Funcs(opFuncMap(routine)).Parse(a))
+		expr := bytes.NewBuffer(nil)
 		err = tmpl.Execute(expr, nil)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to render assert expression")
