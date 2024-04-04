@@ -7,7 +7,6 @@ set -o pipefail
 if [ "$NET" = "mocknet" ]; then
   echo "Loading unsafe init for mocknet..."
   . "$(dirname "$0")/core-unsafe.sh"
-  . "$(dirname "$0")/mock/state.sh"
 fi
 
 NODES="${NODES:=1}"
@@ -60,7 +59,14 @@ if [ "$SEED" = "$(hostname)" ]; then
       add_account tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr rune 200000000000000 # fox
       add_account tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u rune 200000000000000 # pig
 
+      # simulation master
+      add_account tthor1f4l5dlqhaujgkxxqmug4stfvmvt58vx2tspx4g rune 100000000000000 # master
+
+      # mint to reserve for mocknet
       reserve 22000000000000000
+
+      # set mocknet bond module balance for invariant
+      set_mocknet_bond_module
 
       # deploy evm contracts
       deploy_evm_contracts
@@ -79,13 +85,7 @@ if [ "$SEED" = "$(hostname)" ]; then
       fi
     fi
 
-    if [ "$NET" = "mocknet" ]; then
-      # mint 1m RUNE to reserve for mocknet
-      reserve 100000000000000
-
-      # add mocnet account and balances
-      mocknet_add_accounts
-    elif [ "$NET" = "stagenet" ]; then
+    if [ "$NET" = "stagenet" ]; then
       if [ -z ${FAUCET+x} ]; then
         echo "env variable 'FAUCET' is not defined: should be a sthor address"
         exit 1

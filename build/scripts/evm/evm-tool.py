@@ -31,6 +31,7 @@ class EVMSetupTool:
     zero_address = Web3.toChecksumAddress("0x0000000000000000000000000000000000000000")
     headers = {"content-type": "application/json", "cache-control": "no-cache"}
     admin_key = "56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027"
+    simulation_master = "0xEE4eaA642b992412F628fF4Cec1C96cf2Fd0eA4D"
     erc20rune = "0x3155BA85D5F96b2d030a4966AF206230e46849cb"  # mainnet, does not matter
 
     def __init__(self, chain, base_url):
@@ -39,6 +40,10 @@ class EVMSetupTool:
         self.rpc_url = base_url
         self.web3 = Web3(HTTPProvider(self.rpc_url))
         self.web3.middleware_onion.inject(geth_poa_middleware, layer=0)
+
+        # fund simulation account
+        coinbase_addr = self.web3.geth.personal.list_accounts()[0]
+        self.fund_account(coinbase_addr, self.simulation_master, int(1000e18))  # 1k ETH
 
         # get admin account address
         self.addr = self.web3.eth.account.privateKeyToAccount(self.admin_key).address
@@ -52,7 +57,6 @@ class EVMSetupTool:
 
             # setup admin account
             if self.chain != "AVAX":  # geth creates a random first account so skip it
-                coinbase_addr = self.web3.geth.personal.list_accounts()[0]
                 if self.web3.eth.getBalance(self.addr) == 0:
                     self.fund_account(coinbase_addr, self.addr, int(1000e18))  # 1k ETH
             else:
@@ -85,7 +89,8 @@ class EVMSetupTool:
 
         # wait for the transaction to be mined
         tx_hash = self.web3.geth.personal.send_transaction(tx, "")
-        self.web3.eth.waitForTransactionReceipt(tx_hash)
+        receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
+        print(f"fund account tx receipt: {receipt}")
 
     def calculate_gas(self, msg) -> Wei:
         return Wei(self.default_gas + self.gas_per_byte * len(msg))

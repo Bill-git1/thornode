@@ -19,6 +19,31 @@ add_account() {
   mv /tmp/genesis.json ~/.thornode/config/genesis.json
 }
 
+set_mocknet_bond_module() {
+  jq '.app_state.state.accounts += [
+    {
+      "@type": "/cosmos.auth.v1beta1.ModuleAccount",
+      "base_account": {
+        "account_number": "0",
+        "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
+        "pub_key": null,
+        "sequence": "0"
+      },
+      "name": "bond",
+      "permissions": []
+    }
+  ]' <~/.thornode/config/genesis.json >/tmp/genesis.json
+  mv /tmp/genesis.json ~/.thornode/config/genesis.json
+
+  jq '.app_state.bank.balances += [
+    {
+      "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
+      "coins": [ { "denom": "rune", "amount": "100000000" } ]
+    }
+  ]' <~/.thornode/config/genesis.json >/tmp/genesis.json
+  mv /tmp/genesis.json ~/.thornode/config/genesis.json
+}
+
 deploy_evm_contracts() {
   for CHAIN in ETH AVAX BSC; do
     # deploy contract and get address from output

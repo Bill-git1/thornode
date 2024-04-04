@@ -950,11 +950,9 @@ func (c *Client) getBlockRequiredConfirmation(txIn types.TxIn, height int64) (in
 	}
 	confValue := common.GetUncappedShare(confMul, cosmos.NewUint(constants.MaxBasisPts), cosmos.SafeUintFromInt64(totalFeeAndSubsidy))
 	confirm := totalTxValue.Quo(confValue).Uint64()
-	if c.GetChain().Equals(common.BTCChain) || c.GetChain().Equals(common.ETHChain) {
-		confirm, err = utxo.MaxConfAdjustment(confirm, c.GetChain().String(), c.bridge)
-		if err != nil {
-			c.log.Err(err).Msgf("fail to get max conf value adjustment for %s", c.GetChain().String())
-		}
+	confirm, err = utxo.MaxConfAdjustment(confirm, c.GetChain().String(), c.bridge)
+	if err != nil {
+		c.log.Err(err).Msgf("fail to get max conf value adjustment for %s", c.GetChain().String())
 	}
 	if confirm < c.cfg.MinConfirmations {
 		confirm = c.cfg.MinConfirmations

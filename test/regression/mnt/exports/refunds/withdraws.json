@@ -5,7 +5,7 @@
       "accounts": [
         {
           "@type": "/cosmos.auth.v1beta1.BaseAccount",
-          "account_number": "11",
+          "account_number": "12",
           "address": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
           "pub_key": {
             "@type": "/cosmos.crypto.secp256k1.PubKey",
@@ -61,6 +61,13 @@
           },
           "name": "asgard",
           "permissions": []
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "11",
+          "address": "tthor1f4l5dlqhaujgkxxqmug4stfvmvt58vx2tspx4g",
+          "pub_key": null,
+          "sequence": "0"
         },
         {
           "@type": "/cosmos.auth.v1beta1.ModuleAccount",
@@ -195,6 +202,15 @@
           ]
         },
         {
+          "address": "tthor1f4l5dlqhaujgkxxqmug4stfvmvt58vx2tspx4g",
+          "coins": [
+            {
+              "amount": "100000000000",
+              "denom": "thor.mimir"
+            }
+          ]
+        },
+        {
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
@@ -250,7 +266,7 @@
           "denom": "rune"
         },
         {
-          "amount": "300000000000",
+          "amount": "400000000000",
           "denom": "thor.mimir"
         }
       ]

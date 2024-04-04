@@ -220,6 +220,12 @@ func (c *Client) ImportAddress(address string) error {
 	return extractBTCError(err)
 }
 
+// ImportAddressRescan imports the address with rescan.
+func (c *Client) ImportAddressRescan(address string) error {
+	err := c.Call(nil, "importaddress", address, "", true)
+	return extractBTCError(err)
+}
+
 // CreateWallet creates a new wallet.
 func (c *Client) CreateWallet(name string) error {
 	err := c.Call(nil, "createwallet", name, false, false, "", false, false)
@@ -310,6 +316,8 @@ func (c *Client) retry(fn func() error) error {
 			(strings.HasPrefix(errStr, "post") && strings.HasSuffix(errStr, "eof")) ||
 			strings.Contains(errStr, "loading block index") || // daemon startup
 			strings.Contains(errStr, "verifying wallet") || // daemon startup
+			strings.Contains(errStr, "verifying wallet") || // daemon startup
+			strings.Contains(errStr, "currently rescanning") || // rescanning wallet
 			strings.HasPrefix(errStr, "503 service unavailable")
 
 		// break if not a retryable error

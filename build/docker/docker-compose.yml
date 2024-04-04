@@ -10,12 +10,10 @@ volumes:
   cli:
   thornode:
   thornode-cat:
-  thornode-dog:
   thornode-fox:
   thornode-pig:
   bifrost:
   bifrost-cat:
-  bifrost-dog:
   bifrost-fox:
   bifrost-pig:
 
@@ -86,6 +84,7 @@ services:
       <<: *thorchain-environment
       NODES: 1
       SEED: thornode
+      SIGNER_SEED_PHRASE: "dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog fossil"
       THOR_BLOCK_TIME: ${THOR_BLOCK_TIME:-5s}
       THOR_API_LIMIT_COUNT: 100
       THOR_API_LIMIT_DURATION: 1s
@@ -130,6 +129,7 @@ services:
       - "host.docker.internal:host-gateway"
     environment: &bifrost-environment
       <<: *thorchain-environment
+      SIGNER_SEED_PHRASE: "dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog fossil"
       CHAIN_API: thornode:1317
       CHAIN_RPC: thornode:26657
       BINANCE_HOST: ${BINANCE_HOST:-http://binance:26660}
@@ -245,23 +245,6 @@ services:
       - thornode-cat:/root/.thornode
     entrypoint: /docker/scripts/validator.sh
 
-  thornode-dog:
-    <<: *thornode
-    profiles:
-      - mocknet-cluster
-    ports: []
-    hostname: thornode-dog
-    environment:
-      <<: *thornode-environment
-      PEER: thornode
-      SEED: thornode-dog
-      SEEDS: thornode,thornode-fox,thornode-pig
-      SIGNER_SEED_PHRASE: "dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog fossil"
-    volumes:
-      - "../scripts:/docker/scripts"
-      - thornode-dog:/root/.thornode
-    entrypoint: /docker/scripts/validator.sh
-
   thornode-fox:
     <<: *thornode
     profiles:
@@ -315,25 +298,6 @@ services:
       - "../scripts:/docker/scripts"
       - bifrost-cat:/var/data/bifrost
       - thornode-cat:/root/.thornode
-    command: ["bifrost"]
-
-  bifrost-dog:
-    <<: *bifrost
-    profiles:
-      - mocknet-cluster
-    environment:
-      <<: *bifrost-environment
-      PEER: bifrost
-      CHAIN_API: thornode-dog:1317
-      CHAIN_RPC: thornode-dog:26657
-      SIGNER_SEED_PHRASE: "dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog fossil"
-    ports:
-      - 5040
-      - 6040
-    volumes:
-      - "../scripts:/docker/scripts"
-      - bifrost-dog:/var/data/bifrost
-      - thornode-dog:/root/.thornode
     command: ["bifrost"]
 
   bifrost-fox:
@@ -415,6 +379,7 @@ services:
     image: registry.gitlab.com/thorchain/devops/node-launcher:bitcoin-daemon-26.0-1
     restart: unless-stopped
     environment:
+      BTC_MASTER_ADDR: ${BTC_MASTER_ADDR:-bcrt1qj08ys4ct2hzzc2hcz6h2hgrvlmsjynawhcf2xa}
       BLOCK_TIME: ${BLOCK_TIME:-1}
     ports:
       - 18443:18443
@@ -432,6 +397,7 @@ services:
     restart: unless-stopped
     environment:
       RPC_PORT: "28443"
+      BTC_MASTER_ADDR: ${BCH_MASTER_ADDR:-bchreg:qzfuujzhpd2ugtp2lqt2a2aqdnlwzgj04cwqq36m3u}
       BLOCK_TIME: ${BLOCK_TIME:-1}
     ports:
       - 28443:28443
@@ -448,9 +414,27 @@ services:
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-1}
+      DOGE_MASTER_ADDR: ${DOGE_MASTER_ADDR:-mtzUk1zTJzTdyC8Pz6PPPyCHTEL5RLVyDJ}
     ports:
       - 18332:18332
     entrypoint: "/scripts/entrypoint-mock.sh"
+
+  # ------------------------------ litecoin ------------------------------
+
+  litecoin:
+    profiles:
+      - mocknet
+      - mocknet-cluster
+    image: registry.gitlab.com/thorchain/devops/node-launcher:litecoin-daemon-0.21.3
+    restart: unless-stopped
+    environment:
+      BTC_MASTER_ADDR: ${LTC_MASTER_ADDR:-rltc1qj08ys4ct2hzzc2hcz6h2hgrvlmsjynawf4nr3r}
+      RPC_PORT: "38443"
+    ports:
+      - 38443:38443
+    volumes:
+      - "./mocknet:/mocknet"
+    entrypoint: "/mocknet/litecoin-entrypoint.sh"
 
   # ------------------------------ ethereum ------------------------------
 
@@ -485,22 +469,6 @@ services:
     volumes:
       - "../scripts:/docker/scripts"
     entrypoint: /docker/scripts/mock/start-eth.sh
-
-  # ------------------------------ litecoin ------------------------------
-
-  litecoin:
-    profiles:
-      - mocknet
-      - mocknet-cluster
-    image: registry.gitlab.com/thorchain/devops/node-launcher:litecoin-daemon-0.21.3
-    restart: unless-stopped
-    environment:
-      RPC_PORT: "38443"
-    ports:
-      - 38443:38443
-    volumes:
-      - "./mocknet:/mocknet"
-    entrypoint: "/mocknet/litecoin-entrypoint.sh"
 
   # ------------------------------ avalanche ------------------------------
 

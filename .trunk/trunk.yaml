@@ -54,6 +54,7 @@ lint:
         - terrascan
       paths:
         - ci/Dockerfile.regtest.dockerignore
+        - ci/Dockerfile.simtest.dockerignore
     - linters:
         - codespell
       paths:

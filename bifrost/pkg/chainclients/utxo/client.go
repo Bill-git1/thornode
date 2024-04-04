@@ -285,7 +285,7 @@ func (c *Client) RegisterPublicKey(pubkey common.PubKey) error {
 
 	err = c.rpc.ImportAddress(addr.String())
 	if err != nil {
-		log.Error().Err(err).
+		c.log.Error().Err(err).
 			Str("pubkey", pubkey.String()).
 			Str("addr", addr.String()).
 			Msg("fail to import address")

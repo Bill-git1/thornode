@@ -152,7 +152,7 @@ else
 	@./scripts/trunk check --all --ci -j8
 endif
 
-# ------------------------------ Testing ------------------------------
+# ------------------------------ Unit Tests ------------------------------
 
 test-coverage: test-network-specific
 	@go test ${TEST_BUILD_FLAGS} -v -coverprofile=coverage.txt -covermode count ${TEST_DIR}
@@ -179,7 +179,7 @@ test-network-specific:
 test-race:
 	@go test -race ${TEST_BUILD_FLAGS} ${TEST_DIR}
 
-# ------------------------------ Test Regressions ------------------------------
+# ------------------------------ Regression Tests ------------------------------
 
 test-regression:
 	@DOCKER_BUILDKIT=1 docker build -t thornode-regtest -f ci/Dockerfile.regtest .
@@ -211,30 +211,23 @@ _test-regression:
 	@awk '/^total:/ {print "Regression Coverage: " $$3}' /mnt/coverage/func-coverage.txt
 	@chown -R ${UID}:${GID} /mnt
 
-# ------------------------------ Test Sync ------------------------------
+# ------------------------------ Simulation Tests ------------------------------
 
-test-sync-mainnet:
-	@BUILDTAG=mainnet BRANCH=mainnet $(MAKE) docker-gitlab-build
-	@docker run --rm -e CHAIN_ID=thorchain-mainnet-v1 -e NET=mainnet registry.gitlab.com/thorchain/thornode:mainnet
+test-simulation: build-simulation stop-mocknet run-simulation-mocknet
+	@docker run --rm ${DOCKER_TTY_ARGS} \
+		-e PARALLELISM --network host -w /app \
+		thornode-simtest sh -c 'make _test-simulation'
 
-test-sync-stagenet:
-	@BUILDTAG=stagenet BRANCH=stagenet $(MAKE) docker-gitlab-build
-	@docker run --rm -e CHAIN_ID=thorchain-stagenet-v2 -e NET=stagenet registry.gitlab.com/thorchain/thornode:stagenet
+build-simulation:
+	@DOCKER_BUILDKIT=1 docker build -t thornode-simtest -f ci/Dockerfile.simtest .
 
-# ------------------------------ Docker Build ------------------------------
+# internal target used in docker build
+_build-test-simulation:
+	@go build -ldflags '$(ldflags)' -tags mocknet -o /simtest/simtest ./test/simulation/cmd
 
-docker-gitlab-login:
-	docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
-
-docker-gitlab-push:
-	./build/docker/semver_tags.sh registry.gitlab.com/thorchain/thornode ${BRANCH} $(shell cat version) \
-		| xargs -n1 | grep registry | xargs -n1 docker push
-	docker push registry.gitlab.com/thorchain/thornode:${GITREF}
-
-docker-gitlab-build:
-	docker build -f build/docker/Dockerfile \
-		$(shell sh ./build/docker/semver_tags.sh registry.gitlab.com/thorchain/thornode ${BRANCH} $(shell cat version)) \
-		-t registry.gitlab.com/thorchain/thornode:${GITREF} --build-arg TAG=${BUILDTAG} .
+# internal target used in test run
+_test-simulation:
+	@cd test/simulation && /simtest/simtest
 
 # ------------------------------ Smoke Tests ------------------------------
 
@@ -275,6 +268,13 @@ cli-mocknet:
 
 run-mocknet:
 	@docker compose -f build/docker/docker-compose.yml --profile mocknet --profile midgard up -d
+
+run-simulation-mocknet:
+	@BTC_MASTER_ADDR="bcrt1qf4l5dlqhaujgkxxqmug4stfvmvt58vx2h44c39" \
+		BCH_MASTER_ADDR="qpxh73huzlhjfzcccr03zkpd9nd3wsasegmrreet72" \
+		DOGE_MASTER_ADDR="mnaioCtEGdw6bd6rWJ13Mbre1kN5rPa2Mo" \
+		LTC_MASTER_ADDR="rltc1qf4l5dlqhaujgkxxqmug4stfvmvt58vx2fc03xm" \
+		docker compose -f build/docker/docker-compose.yml --profile mocknet up -d
 
 stop-mocknet:
 	@docker compose -f build/docker/docker-compose.yml --profile mocknet --profile midgard down -v
@@ -324,3 +324,28 @@ ps-mocknet-cluster:
 	@docker compose -f build/docker/docker-compose.yml --profile mocknet-cluster --profile midgard ps
 
 reset-mocknet-cluster: stop-mocknet-cluster build-mocknet-cluster run-mocknet-cluster
+
+# ------------------------------ Test Sync ------------------------------
+
+test-sync-mainnet:
+	@BUILDTAG=mainnet BRANCH=mainnet $(MAKE) docker-gitlab-build
+	@docker run --rm -e CHAIN_ID=thorchain-mainnet-v1 -e NET=mainnet registry.gitlab.com/thorchain/thornode:mainnet
+
+test-sync-stagenet:
+	@BUILDTAG=stagenet BRANCH=stagenet $(MAKE) docker-gitlab-build
+	@docker run --rm -e CHAIN_ID=thorchain-stagenet-v2 -e NET=stagenet registry.gitlab.com/thorchain/thornode:stagenet
+
+# ------------------------------ Docker Build ------------------------------
+
+docker-gitlab-login:
+	docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
+
+docker-gitlab-push:
+	./build/docker/semver_tags.sh registry.gitlab.com/thorchain/thornode ${BRANCH} $(shell cat version) \
+		| xargs -n1 | grep registry | xargs -n1 docker push
+	docker push registry.gitlab.com/thorchain/thornode:${GITREF}
+
+docker-gitlab-build:
+	docker build -f build/docker/Dockerfile \
+		$(shell sh ./build/docker/semver_tags.sh registry.gitlab.com/thorchain/thornode ${BRANCH} $(shell cat version)) \
+		-t registry.gitlab.com/thorchain/thornode:${GITREF} --build-arg TAG=${BUILDTAG} .

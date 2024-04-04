@@ -5,7 +5,7 @@
       "accounts": [
         {
           "@type": "/cosmos.auth.v1beta1.BaseAccount",
-          "account_number": "12",
+          "account_number": "13",
           "address": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
           "pub_key": {
             "@type": "/cosmos.crypto.secp256k1.PubKey",
@@ -15,7 +15,7 @@
         },
         {
           "@type": "/cosmos.auth.v1beta1.BaseAccount",
-          "account_number": "14",
+          "account_number": "15",
           "address": "tthor1p3pm60jxtqvr6zvlw97l2ef5rm6cn8nfrtt2ds",
           "pub_key": null,
           "sequence": "0"
@@ -32,7 +32,7 @@
         },
         {
           "@type": "/cosmos.auth.v1beta1.BaseAccount",
-          "account_number": "13",
+          "account_number": "14",
           "address": "tthor1yqz8q00jlvn4r4hycvkg555ak7lxtxx6jwapqj",
           "pub_key": null,
           "sequence": "0"
@@ -67,7 +67,7 @@
         },
         {
           "@type": "/cosmos.auth.v1beta1.BaseAccount",
-          "account_number": "11",
+          "account_number": "12",
           "address": "tthor1x0kgm82cnj0vtmzdvz4avk3e7sj427t0al8wky",
           "pub_key": null,
           "sequence": "0"
@@ -82,6 +82,13 @@
           },
           "name": "asgard",
           "permissions": []
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "11",
+          "address": "tthor1f4l5dlqhaujgkxxqmug4stfvmvt58vx2tspx4g",
+          "pub_key": null,
+          "sequence": "0"
         },
         {
           "@type": "/cosmos.auth.v1beta1.ModuleAccount",
@@ -226,6 +233,15 @@
           ]
         },
         {
+          "address": "tthor1f4l5dlqhaujgkxxqmug4stfvmvt58vx2tspx4g",
+          "coins": [
+            {
+              "amount": "100000000000",
+              "denom": "thor.mimir"
+            }
+          ]
+        },
+        {
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
@@ -277,7 +293,7 @@
           "denom": "thor.btc"
         },
         {
-          "amount": "300000000000",
+          "amount": "400000000000",
           "denom": "thor.mimir"
         }
       ]

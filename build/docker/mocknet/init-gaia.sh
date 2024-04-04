@@ -20,6 +20,7 @@ EOF
 /gaiad genesis add-genesis-account cosmos1hnyy4gp5tgarpg3xu6w5cw4zsyphx2lyq6u60y 10000000uatom        # validator
 /gaiad genesis add-genesis-account cosmos1cyyzpxplxdzkeea7kwsydadg87357qnalx9dqz 150000000000000uatom # smoke contrib
 /gaiad genesis add-genesis-account cosmos1phaxpevm5wecex2jyaqty2a4v02qj7qmhq3xz0 150000000000000uatom # smoke master
+/gaiad genesis add-genesis-account cosmos1f4l5dlqhaujgkxxqmug4stfvmvt58vx2fqfdej 1000000000000uatom   # master
 
 # replace stake with uatom
 sed -i 's/"stake"/"uatom"/g' /root/.gaia/config/genesis.json

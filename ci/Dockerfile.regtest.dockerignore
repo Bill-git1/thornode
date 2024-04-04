@@ -11,4 +11,5 @@ README.md
 test/regression/mnt
 test/regression/suites
 test/regression/templates
+tools/hardhat
 .git

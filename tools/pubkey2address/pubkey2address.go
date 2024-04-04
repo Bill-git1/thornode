@@ -40,14 +40,7 @@ func main() {
 		panic(err)
 	}
 
-	chains := common.Chains{
-		common.THORChain,
-		common.BNBChain,
-		common.BTCChain,
-		common.ETHChain,
-	}
-
-	for _, chain := range chains {
+	for _, chain := range common.AllChains {
 		var addr common.Address
 		addr, err = pk.GetAddress(chain)
 		if err != nil {
