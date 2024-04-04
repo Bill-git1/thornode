@@ -102,3 +102,8 @@ func (k KVStore) GetPoolRagnarokStart(ctx cosmos.Context, asset common.Asset) (i
 	_, err := k.getInt64(ctx, k.GetKey(ctx, prefixRagnarokPoolHeight, asset.String()), &record)
 	return record, err
 }
+
+// DeletePoolRagnarokStart deletes the pool ragnarok start block height
+func (k KVStore) DeletePoolRagnarokStart(ctx cosmos.Context, asset common.Asset) {
+	k.del(ctx, k.GetKey(ctx, prefixRagnarokPoolHeight, asset.String()))
+}

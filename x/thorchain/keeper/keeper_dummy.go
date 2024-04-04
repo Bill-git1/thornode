@@ -168,6 +168,9 @@ func (k KVStoreDummy) GetPoolRagnarokStart(ctx cosmos.Context, asset common.Asse
 	return 0, kaboom
 }
 
+// DeletePoolRagnarokStart deletes the pool ragnarok start block height
+func (k KVStoreDummy) DeletePoolRagnarokStart(ctx cosmos.Context, asset common.Asset) {}
+
 func (k KVStoreDummy) GetPoolBalances(_ cosmos.Context, _, _ common.Asset) (cosmos.Uint, cosmos.Uint) {
 	return cosmos.ZeroUint(), cosmos.ZeroUint()
 }

@@ -162,19 +162,10 @@
           ]
         },
         {
-          "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
-          "coins": [
-            {
-              "amount": "252928364",
-              "denom": "rune"
-            }
-          ]
-        },
-        {
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35000009950159",
+              "amount": "35000262878523",
               "denom": "rune"
             }
           ]
@@ -356,7 +347,7 @@
       "orderbook_items": [],
       "outbound_fee_spent_rune": [
         {
-          "amount": "219412",
+          "amount": "175481",
           "asset": "ETH.ETH"
         },
         {
