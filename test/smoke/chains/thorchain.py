@@ -159,8 +159,12 @@ class MockThorchain(HttpClient):
             tx = wallet.create_and_sign_tx(tx_options)
             result = self.lcd_client.tx.broadcast(tx)
             if result.code:
-                raise Exception(result)
+                logging.error(result)
+                # Errors are expected for e.g. unactionable memos;
+                # clearly log for visability without terminating smoke tests.
+                txn.code = result.code # Track that the code is non-zero.
             txn.id = result.txhash
+            txn.height = result.height # Use this to track in which Mocknet block a MsgDeposit fee was added to the Reserve.
 
 
 class Thorchain(GenericChain):

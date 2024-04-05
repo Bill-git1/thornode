@@ -459,6 +459,8 @@ class Smoker:
         outbounds = []
         processed = False
         processed_events = False
+        stop_retry_after_block = False
+        msgdeposit_fee_pending = (txn.chain == Thorchain.chain)
         pending_txs = 0
         block_height = None
         old_events = self.thorchain_state.events
@@ -474,9 +476,26 @@ class Smoker:
 
             new_events = events[-count_events:] if count_events > 0 else []
             for evt_t in new_events:
+                if msgdeposit_fee_pending and txn.height == int(evt_t.height):
+                    # Deduct network fee whether or not the MsgDeposit is ever handled
+                    # (particularly even if a non-zero Code);
+                    # do this in a height-dependent way to not be early or late for the affected "rewards" events.
+                    # (Increment before the handle_rewards rewards calculation.)
+                    self.thorchain_state.reserve += self.thorchain_state.rune_fee
+                    msgdeposit_fee_pending = False
+                    if txn.code:
+                        # If a THORChain fee was needed and the code is non-zero,
+                        # no need to check for other events from this transaction.
+                        stop_retry_after_block = True
 
                 # we have more real events than sim, fill in the gaps
-                if evt_t.type == "gas":
+                if evt_t.type == "transfer":
+                    # Only copy the event, "transfer" events only tracked so the MsgDeposit fee is incremented to the Reserve
+                    # when a MsgDeposit errors and the blocks have no "rewards" events yet.
+                    # Don't do the fee incrementation from the "transfer" event itself to avoid false positives.
+                    self.thorchain_state.events.append(evt_t)
+
+                elif evt_t.type == "gas":
                     todo = []
                     # with the given gas pool event data, figure out
                     # which outbound txns are for this gas pool, vs
@@ -531,6 +550,8 @@ class Smoker:
                     continue
 
             old_events = events
+            if stop_retry_after_block:
+                break
             if len(events) == len(sim_events) and pending_txs <= 0 and processed_events:
                 break
             time.sleep(0.3)
@@ -606,6 +627,7 @@ class Smoker:
 
             self.broadcast_chain(txn)
             self.broadcast_simulator(txn)
+            # Call broadcast_simulator after broadcast_chain to react to whether broadcast_chain had a non-zero Code (and was THORChain).
 
             if txn.memo == "SEED":
                 continue
@@ -618,6 +640,7 @@ class Smoker:
 
             self.check_events(events, sim_events)
             self.check_pools()
+            self.check_vaults(block_height)
 
             self.check_binance()
             self.check_cosmos(self.gaia, self.mock_gaia)

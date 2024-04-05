@@ -40,6 +40,7 @@ func MsgSendValidateV130(ctx cosmos.Context, mgr Manager, msg *MsgSend) error {
 		return fmt.Errorf("cannot use MsgSend for Module transactions, use MsgDeposit instead")
 	}
 
+	// TODO on hard fork move to ValidateBasic
 	// send only allowed with one coin
 	if len(msg.Amount) != 1 {
 		return errors.New("only one coin is allowed")

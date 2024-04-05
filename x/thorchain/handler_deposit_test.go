@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	se "github.com/cosmos/cosmos-sdk/types/errors"
 	tmtypes "github.com/tendermint/tendermint/types"
@@ -136,7 +137,7 @@ func (s *HandlerDepositSuite) TestDifferentValidation(c *C) {
 			},
 		},
 		{
-			name: "invalid memo should refund",
+			name: "invalid memo should err",
 			messageProvider: func(c *C, ctx cosmos.Context, helper *HandlerDepositTestHelper) cosmos.Msg {
 				FundAccount(c, ctx, helper.Keeper, acctAddr, 100)
 				vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BNBChain, common.THORChain}.Strings(), []ChainContract{})
@@ -146,13 +147,9 @@ func (s *HandlerDepositSuite) TestDifferentValidation(c *C) {
 				}, "hello", acctAddr)
 			},
 			validator: func(c *C, ctx cosmos.Context, result *cosmos.Result, err error, helper *HandlerDepositTestHelper, name string) {
-				c.Check(err, IsNil, Commentf(name))
-				c.Check(result, NotNil, Commentf(name))
-				coins := common.NewCoin(common.RuneNative, cosmos.NewUint(98*common.One))
-				coin, err := coins.Native()
-				c.Check(err, IsNil)
-				hasCoin := helper.Keeper.HasCoins(ctx, acctAddr, cosmos.NewCoins().Add(coin))
-				c.Check(hasCoin, Equals, true)
+				c.Check(err, NotNil, Commentf(name))
+				c.Check(result, IsNil, Commentf(name))
+				c.Check(strings.Contains(err.Error(), "invalid tx type: hello"), Equals, true)
 			},
 		},
 	}

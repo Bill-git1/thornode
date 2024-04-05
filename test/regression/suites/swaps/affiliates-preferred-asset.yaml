@@ -88,7 +88,7 @@ asserts:
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
 asserts:
-  - .result[]|select(.denom == "rune")|.amount == "4992000000"
+  - .result[]|select(.denom == "rune")|.amount == "4994000000"
 ---
 ########################################################################################
 # swap BTC -> RUNE w/ "test" affiliate
@@ -132,7 +132,7 @@ asserts:
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
 asserts:
-  - .result[]|select(.denom == "rune")|.amount == "4992000000"
+  - .result[]|select(.denom == "rune")|.amount == "4994000000"
 ---
 ########################################################################################
 # Swap RUNE -> BTC w/ affiliate "test"
@@ -163,7 +163,7 @@ asserts:
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
 asserts:
-  - .result[]|select(.denom == "rune")|.amount == "4992000000"
+  - .result[]|select(.denom == "rune")|.amount == "4994000000"
 ---
 # Observe the outbound.
 type: tx-observed-out
@@ -220,7 +220,7 @@ asserts:
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
 asserts:
-  - .result[]|select(.denom == "rune")|.amount == "4992000000"
+  - .result[]|select(.denom == "rune")|.amount == "4994000000"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block

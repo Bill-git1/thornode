@@ -61,6 +61,7 @@ func (h DepositHandler) validateV130(ctx cosmos.Context, msg MsgDeposit) error {
 		return err
 	}
 
+	// TODO on hard fork move to ValidateBasic
 	// deposit only allowed with one coin
 	if len(msg.Coins) != 1 {
 		return errors.New("only one coin is allowed")
@@ -139,10 +140,13 @@ func (h DepositHandler) handleV131(ctx cosmos.Context, msg MsgDeposit) (*cosmos.
 
 	handler := NewInternalHandler(h.mgr)
 
-	memo, _ := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), msg.Memo) // ignore err
+	memo, err := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), msg.Memo)
+	if err != nil {
+		return nil, ErrInternal(err, "invalid memo")
+	}
+
 	if memo.IsOutbound() || memo.IsInternal() {
-		// trunk-ignore(codespell)
-		return nil, fmt.Errorf("cannot send inbound an outbound or internal transacion")
+		return nil, fmt.Errorf("cannot send inbound an outbound or internal transaction")
 	}
 
 	var targetModule string
@@ -182,14 +186,7 @@ func (h DepositHandler) handleV131(ctx cosmos.Context, msg MsgDeposit) (*cosmos.
 	m, txErr := processOneTxIn(ctx, h.mgr.GetVersion(), h.mgr.Keeper(), txIn, msg.Signer)
 	if txErr != nil {
 		ctx.Logger().Error("fail to process native inbound tx", "error", txErr.Error(), "tx hash", tx.ID.String())
-		if txIn.Tx.Coins.IsEmpty() {
-			return &cosmos.Result{}, nil
-		}
-		if newErr := refundTx(ctx, txIn, h.mgr, CodeInvalidMemo, txErr.Error(), targetModule); nil != newErr {
-			return nil, newErr
-		}
-
-		return &cosmos.Result{}, nil
+		return nil, txErr
 	}
 
 	// check if we've halted trading
@@ -197,13 +194,7 @@ func (h DepositHandler) handleV131(ctx cosmos.Context, msg MsgDeposit) (*cosmos.
 	_, isAddLiquidity := m.(*MsgAddLiquidity)
 	if isSwap || isAddLiquidity {
 		if h.mgr.Keeper().IsTradingHalt(ctx, m) || h.mgr.Keeper().RagnarokInProgress(ctx) {
-			if txIn.Tx.Coins.IsEmpty() {
-				return &cosmos.Result{}, nil
-			}
-			if newErr := refundTx(ctx, txIn, h.mgr, se.ErrUnauthorized.ABCICode(), "trading halted", targetModule); nil != newErr {
-				return nil, ErrInternal(newErr, "trading is halted, fail to refund")
-			}
-			return &cosmos.Result{}, nil
+			return nil, fmt.Errorf("trading is halted")
 		}
 	}
 
@@ -227,18 +218,7 @@ func (h DepositHandler) handleV131(ctx cosmos.Context, msg MsgDeposit) (*cosmos.
 
 	result, err := handler(mCtx, m)
 	if err != nil {
-		code := uint32(1)
-		var e se.Error
-		if errors.As(err, &e) {
-			code = e.ABCICode()
-		}
-		if txIn.Tx.Coins.IsEmpty() {
-			return &cosmos.Result{}, nil
-		}
-		if err := refundTx(ctx, txIn, h.mgr, code, err.Error(), targetModule); err != nil {
-			return nil, fmt.Errorf("fail to refund tx: %w", err)
-		}
-		return &cosmos.Result{}, nil
+		return nil, err
 	}
 
 	// if an outbound is not expected, mark the voter as done

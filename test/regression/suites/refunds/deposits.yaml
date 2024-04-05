@@ -325,7 +325,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2499996000000
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2499998000000
 ---
 ########################################################################################
 # rune single side deposit to non-existent pool
@@ -344,7 +344,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2499992000000
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2499996000000
 ---
 ########################################################################################
 # rune double side deposit with bad l1 address
@@ -363,4 +363,4 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2499988000000
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2499994000000

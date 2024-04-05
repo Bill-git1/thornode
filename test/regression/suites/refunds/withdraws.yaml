@@ -442,7 +442,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2499996000000
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2499998000000
 ---
 ########################################################################################
 # rune withdraw non-existent position
@@ -471,7 +471,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 99996000000
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 99998000000
 ---
 ########################################################################################
 # rune withdraw non-existent pool
@@ -490,7 +490,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 99992000000
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 99996000000
 ---
 ########################################################################################
 # final checks - each pool should still have 2 lps and 1 saver

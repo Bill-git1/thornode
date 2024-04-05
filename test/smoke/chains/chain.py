@@ -50,8 +50,11 @@ class GenericChain:
 
         from_acct.sub(txn.gas[0])
 
-        from_acct.sub(txn.coins)
-        to_acct.add(txn.coins)
+        # When the simulated chain is THORChain and the Mocknet transaction was rejected (non-zero Code),
+        # the MsgDeposit Coins are not moved.
+        if not (txn.chain == "THOR" and txn.code):
+            from_acct.sub(txn.coins)
+            to_acct.add(txn.coins)
 
         self.set_account(from_acct)
         self.set_account(to_acct)

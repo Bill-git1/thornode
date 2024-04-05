@@ -442,6 +442,8 @@ class Transaction(Jsonable):
             max_gas = [max_gas]
         self.max_gas = max_gas
         self.fee = None
+        self.code = 0 # Use this to track if a THORChain MsgDeposit has errored.
+        self.height = 0 # Use this to track in which Mocknet block a MsgDeposit fee was added to the Reserve.
 
     def __repr__(self):
         coins = self.coins if self.coins else "No Coins"

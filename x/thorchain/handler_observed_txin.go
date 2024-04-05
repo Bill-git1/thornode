@@ -207,7 +207,10 @@ func (h ObservedTxInHandler) handleV131(ctx cosmos.Context, msg MsgObservedTxIn)
 		voter.Tx.Tx.Memo = tx.Tx.Memo
 
 		hasFinalised := voter.HasFinalised(activeNodeAccounts)
-		memo, _ := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), tx.Tx.Memo) // ignore err
+		// memo errors are ignored here and will be caught later in processing,
+		// after vault update, voter setup, etc and the coin will be refunded
+		memo, _ := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), tx.Tx.Memo)
+
 		// Update vault balances from inbounds with Migrate memos immediately,
 		// to minimise any gap between outbound and inbound observations.
 		// TODO: In future somehow update both balances in a single action,

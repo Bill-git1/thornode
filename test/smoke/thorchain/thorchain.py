@@ -112,7 +112,6 @@ class ThorchainClient(HttpClient):
         for event in events:
             if event["type"] in [
                 "message",
-                "transfer",
                 "coin_spent",
                 "coin_received",
                 "tx",
@@ -120,6 +119,8 @@ class ThorchainClient(HttpClient):
                 "burn",
             ]:
                 continue
+            # "transfer" events only tracked so the MsgDeposit fee is incremented to the Reserve
+            # when a MsgDeposit errors and the blocks have no "rewards" events yet.
             self.decode_event(event)
             event = Event(event["type"], event["attributes"], block_height)
             self.events.append(event)
@@ -815,8 +816,6 @@ class ThorchainState:
         tx = deepcopy(tx)  # copy of transaction
         out_txs = []
 
-        if tx.chain == "THOR":
-            self.reserve += self.rune_fee
         if tx.memo.startswith("ADD:"):
             out_txs = self.handle_add_liquidity(tx)
         elif tx.memo.startswith("DONATE:"):
