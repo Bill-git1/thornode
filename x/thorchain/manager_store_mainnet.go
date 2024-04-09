@@ -1,11 +1,15 @@
-//go:build !stagenet && !mocknet
-// +build !stagenet,!mocknet
+//go:build !stagenet && !mocknet && !regtest
+// +build !stagenet,!mocknet,!regtest
 
 package thorchain
 
 import (
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"strings"
 
+	"github.com/cometbft/cometbft/crypto/tmhash"
 	ctypes "github.com/cosmos/cosmos-sdk/types"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
@@ -1266,5 +1270,292 @@ func migrateStoreV129(ctx cosmos.Context, mgr *Mgrs) {
 	err = makeFakeTxInObservation(ctx, mgr, unobservedTxs)
 	if err != nil {
 		ctx.Logger().Error("failed to migrate v129", "error", err)
+	}
+}
+
+func migrateStoreV131(ctx cosmos.Context, mgr *Mgrs) {
+	defer func() {
+		if err := recover(); err != nil {
+			ctx.Logger().Error("fail to migrate store to v131", "error", err)
+		}
+	}()
+
+	// Helper function
+	subBalance := func(ctx cosmos.Context, mgr *Mgrs, amountUint64 uint64, assetString, pkString string) {
+		amount := cosmos.NewUint(amountUint64)
+
+		asset, err := common.NewAsset(assetString)
+		if err != nil {
+			ctx.Logger().Error("fail to make asset", "assetString", assetString, "error", err)
+			return
+		}
+
+		pubkey, err := common.NewPubKey(pkString)
+		if err != nil {
+			ctx.Logger().Error("fail to make pubkey", "pkString", pkString, "error", err)
+			return
+		}
+
+		vault, err := mgr.Keeper().GetVault(ctx, pubkey)
+		if err != nil {
+			ctx.Logger().Error("fail to get vault", "pubkey", pubkey, "error", err)
+			return
+		}
+
+		coins := common.NewCoins(common.NewCoin(asset, amount))
+		vault.SubFunds(coins)
+
+		if err := mgr.Keeper().SetVault(ctx, vault); err != nil {
+			ctx.Logger().Error("fail to set vault", "vault", vault, "error", err)
+			return
+		}
+	}
+
+	// This migration address 6 separate issues.
+
+	// Issue 1: https://gitlab.com/thorchain/thornode/-/issues/1898
+	// Attempt to rescue 1 BTC from old vault, original tx unobserved by majority of nodes
+	originalTxID := common.TxID("9F465AE9A43655619E0ADCC0EC52187B8856BF7F025E9142A424C272394CFA50")
+	vaultPubKey := common.PubKey("thorpub1addwnpepqw68vqcyfyerpqvmfn7r39myxgn9q5hwd7crk82radl7ggl5dvmm2uqxzwk")
+	externalHeight := int64(837277)
+	unobservedTxs := ObservedTxs{
+		NewObservedTx(common.Tx{
+			ID:          originalTxID,
+			Chain:       common.BTCChain,
+			FromAddress: "bc1qneepjkjy2p3rzk9aryvygm39gv9kzk0tvzt7g7",
+			ToAddress:   "bc1qgydyyxt7t3nq73vk98t0850t4kxhx8tmfw78js",
+			Coins: common.NewCoins(common.Coin{
+				Asset:  common.BTCAsset,
+				Amount: cosmos.NewUint(100000000),
+			}),
+			Gas: common.Gas{common.Coin{
+				Asset:  common.BTCAsset,
+				Amount: cosmos.NewUint(1),
+			}},
+			Memo: "badMemo",
+		}, externalHeight, vaultPubKey, externalHeight),
+	}
+	if err := makeFakeTxInObservation(ctx, mgr, unobservedTxs); err != nil {
+		ctx.Logger().Error("fail to handle issue 1", "err", err)
+	} else {
+		ctx.Logger().Info("successfully handled issue 1")
+	}
+
+	// Issue 2: https://gitlab.com/thorchain/thornode/-/issues/1880
+	// The target asset (partial fill) sent OK, but THORChain did not reschedule
+	// the source asset refund (USDT) and it dropped off.
+	// The vault has since migrated and has zero allowance for USDT on the router contract.
+	// The sum of vault asset amount ~= the sum of vault allowances on the router contract.
+	// the pool asset amount is -300k than the vault amount. so THORChain knows it has 300k more USDT than the pool.
+	// Therefore, for this transaction, balance was already deducted from pool, but remains in vault.
+	// Methodology: create the outbound without VaultPubKey specified, allowing THORChain to choose a vault.
+	// NOTE: per the issue above, the UI advanced the refund to the customer, so refund the wallet that sent that tx.
+	// https://etherscan.io/tx/0x705b941fc7b5d619836b03b711bb5cbe8b1a1251cff8fe3a94a357a27ad52905
+	originalTxID = "8C7A9E17BDDE0E1F90EB2251E65ED4633B9F44E8EF3D0BA04308DB2C4D5CA92D"
+	usdt, err := common.NewAsset("ETH.USDT-0XDAC17F958D2EE523A2206206994597C13D831EC7")
+	if err != nil {
+		ctx.Logger().Error("unable to create NewAsset in ETH.USDT rescue tx", "error", err)
+	} else {
+		toi := TxOutItem{
+			Chain:     common.ETHChain,
+			ToAddress: common.Address("0xc85fef7a1b039a9e080aadf80ff6f1536dada088"),
+			Coin:      common.NewCoin(usdt, cosmos.NewUint(11225335474500)),
+			Memo:      fmt.Sprintf("REFUND:%s", originalTxID),
+			InHash:    originalTxID,
+		}
+		_, err := mgr.txOutStore.TryAddTxOutItem(ctx, mgr, toi, cosmos.NewUint(0))
+		if err != nil {
+			ctx.Logger().Error("fail to attempt ETH.USDT rescue tx", "error", err)
+		} else {
+			ctx.Logger().Info("successfully handled issue 2")
+		}
+	}
+
+	// Issue 3: https://gitlab.com/thorchain/thornode/-/issues/1926
+	// V129 fix for an edge case in vault accounting for UTXO chains.
+	// Pool accounting is correct, but vaults think they have more asset (DOGE) than they do.
+	// Remove those improperly credited balances, so that vault accounting more closely matches pool accounting.
+	subBalance(ctx, mgr, 1160074_8155_8121, "DOGE.DOGE", "thorpub1addwnpepq0y6xyun0469ngddnsufuglvem6rkh0lwnm5dq3p6uhu690g953kgku4uhx")
+	subBalance(ctx, mgr, 1004979_3428_7850, "DOGE.DOGE", "thorpub1addwnpepq0xtamtm6l35efh3f5wlt5fql7cx9j94fywtumz83vvnzagx46h76yk8sa3")
+	subBalance(ctx, mgr, 414685_0000_0000, "DOGE.DOGE", "thorpub1addwnpepq23r8srfathem5jgu8szm9mrjylx9y9atjeawwz4kajqpg3y9vvy7xghtst")
+	subBalance(ctx, mgr, 156000_0000_0000, "DOGE.DOGE", "thorpub1addwnpepqf3h9xa9qantpfjmvv37cuvzm7u0zy48qrh25tafctyzvyn2l8fr7e66mqq")
+	subBalance(ctx, mgr, 124812_2354_6484, "DOGE.DOGE", "thorpub1addwnpepqdaln9pasrj33vzcupezwp60hdgk8v797shp75jxp23xfvtu5gyd546uwcy")
+	subBalance(ctx, mgr, 500_0000_0000, "DOGE.DOGE", "thorpub1addwnpepq2v44c4392cwa80mt9enycql7m90ghukuw2x2u72t60e9knlqer7gdcprrr")
+	ctx.Logger().Info("finished handling issue 3")
+
+	// Issue 4: https://gitlab.com/thorchain/thornode/-/issues/1881
+	// Savers add with affiliates had a bug where not only would the add liquidity fail,
+	// but the user would only be partially refunded..
+	// Return the customer the difference between what they got and what they were owed.
+
+	// First refund (LTC)
+	originalTxID = "8EC6D7B459136D708BF03FCB55C3BBA04F0F32E924354E7BBB3F40637F0E56AD"
+	toi := TxOutItem{
+		Chain:     common.LTCChain,
+		ToAddress: common.Address("ltc1qe2jleyfezmahfcmlgls2flqht9mlu8aaal7xhm"),
+		Coin:      common.NewCoin(common.LTCAsset, cosmos.NewUint(5978633839)),
+		Memo:      fmt.Sprintf("REFUND:%s", originalTxID),
+		InHash:    originalTxID,
+	}
+	_, err = mgr.txOutStore.TryAddTxOutItem(ctx, mgr, toi, cosmos.NewUint(0))
+	if err != nil {
+		ctx.Logger().Error("fail to attempt LTC rescue tx", "error", err)
+	} else {
+		ctx.Logger().Info("successfully handled issue 4.1")
+	}
+
+	// Second refund (ETH.USDC)
+	originalTxID = "B42EBA71BCF8D7ACEB14BE738A25670327A9441FCC29D70754AAF1D68A793529"
+	usdc, err := common.NewAsset("ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48")
+	if err != nil {
+		ctx.Logger().Error("unable to create NewAsset in ETH.USDC rescue tx", "error", err)
+	} else {
+		toi := TxOutItem{
+			Chain:     common.ETHChain,
+			ToAddress: common.Address("0x58fa7c9c34e1e54e9b66d586203ec074ce412501"),
+			Coin:      common.NewCoin(usdc, cosmos.NewUint(4751145371600)),
+			Memo:      fmt.Sprintf("REFUND:%s", originalTxID),
+			InHash:    originalTxID,
+		}
+		_, err := mgr.txOutStore.TryAddTxOutItem(ctx, mgr, toi, cosmos.NewUint(0))
+		if err != nil {
+			ctx.Logger().Error("fail to attempt ETH.USDC rescue tx", "error", err)
+		} else {
+			ctx.Logger().Info("successfully handled issue 4.2")
+		}
+	}
+
+	// Third refund (BNB)
+	originalTxID = "374E024BB5162CF62F3A8F1C0DA7B0A52F2B4B395E154EECDC4F3EDB0C5E3D43"
+	bnb, err := common.NewAsset("BSC.BNB")
+	if err != nil {
+		ctx.Logger().Error("fail to create NewAsset in BNB rescue tx", "error", err)
+	} else {
+		toi := TxOutItem{
+			Chain:     common.BSCChain,
+			ToAddress: common.Address("0x04c5998ded94f89263370444ce64a99b7dbc9f46"),
+			Coin:      common.NewCoin(bnb, cosmos.NewUint(2691840026)),
+			Memo:      fmt.Sprintf("REFUND:%s", originalTxID),
+			InHash:    originalTxID,
+		}
+		_, err := mgr.txOutStore.TryAddTxOutItem(ctx, mgr, toi, cosmos.NewUint(0))
+		if err != nil {
+			ctx.Logger().Error("fail to attempt BNB rescue tx", "error", err)
+		} else {
+			ctx.Logger().Info("successfully handled issue 4.3")
+		}
+	}
+
+	// Issue 5: https://gitlab.com/thorchain/thornode/-/issues/1935
+	// BNB Beacon ragnarok resulted in ~8229 RUNE sent to RESERVE that should have been
+	// left in the Pool Module. Bug fixed in separate PR.
+	ragnarokPoolModuleInsolvency := cosmos.NewUint(822893701389)
+	// send coins from reserve to pool module
+	if err := mgr.Keeper().SendFromModuleToModule(ctx, ReserveName, AsgardName, common.Coins{common.NewCoin(common.RuneNative, ragnarokPoolModuleInsolvency)}); err != nil {
+		ctx.Logger().Error("fail to transfer coin from reserve to pool module", "error", err)
+	} else {
+		ctx.Logger().Info("successfully handled issue 5")
+	}
+
+	// Issue 6: https://gitlab.com/thorchain/thornode/-/issues/1936
+	// Following ragnarok, attempt to donate remaining tokens in BNB vaults to treasury
+	// A subsequent store migration will drop any remaining vault balances from the KV store
+	type TreasuryRecovery struct {
+		Asset       string
+		Amount      cosmos.Uint
+		VaultPubKey string
+	}
+	recoveries := []TreasuryRecovery{}
+
+	// bnb1rca9ta0x2znmqahnwwsfpkddjlg73sn73le82f
+	// manually decremented for 0.2 BNB to ensure there is enough for gas
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.BNB", Amount: cosmos.NewUint(35858610344), VaultPubKey: "thorpub1addwnpepq0y6xyun0469ngddnsufuglvem6rkh0lwnm5dq3p6uhu690g953kgku4uhx"})
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.AVA-645", Amount: cosmos.NewUint(16463772289), VaultPubKey: "thorpub1addwnpepq0y6xyun0469ngddnsufuglvem6rkh0lwnm5dq3p6uhu690g953kgku4uhx"})
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.TWT-8C2", Amount: cosmos.NewUint(669391046606), VaultPubKey: "thorpub1addwnpepq0y6xyun0469ngddnsufuglvem6rkh0lwnm5dq3p6uhu690g953kgku4uhx"})
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.ETH-1C9", Amount: cosmos.NewUint(415113), VaultPubKey: "thorpub1addwnpepq0y6xyun0469ngddnsufuglvem6rkh0lwnm5dq3p6uhu690g953kgku4uhx"})
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.BUSD-BD1", Amount: cosmos.NewUint(23596032), VaultPubKey: "thorpub1addwnpepq0y6xyun0469ngddnsufuglvem6rkh0lwnm5dq3p6uhu690g953kgku4uhx"})
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.BTCB-1DE", Amount: cosmos.NewUint(248757), VaultPubKey: "thorpub1addwnpepq0y6xyun0469ngddnsufuglvem6rkh0lwnm5dq3p6uhu690g953kgku4uhx"})
+
+	// bnb1pg8zcjzrjjnknzkqh2eenyeaxj7qlax6rl9a0z
+	// this vault needs a donation of BNB to pay for gas
+	// recoveries = append(recoveries, TreasuryRecovery{VaultAddress: "bnb1pg8zcjzrjjnknzkqh2eenyeaxj7qlax6rl9a0z", Asset: "BNB.BNB", Amount: cosmos.NewUint(106412), VaultPubKey: "thorpub1addwnpepq23r8srfathem5jgu8szm9mrjylx9y9atjeawwz4kajqpg3y9vvy7xghtst"})
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.BUSD-BD1", Amount: cosmos.NewUint(14317902698143), VaultPubKey: "thorpub1addwnpepq23r8srfathem5jgu8szm9mrjylx9y9atjeawwz4kajqpg3y9vvy7xghtst"})
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.BTCB-1DE", Amount: cosmos.NewUint(21192302), VaultPubKey: "thorpub1addwnpepq23r8srfathem5jgu8szm9mrjylx9y9atjeawwz4kajqpg3y9vvy7xghtst"})
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.ETH-1C9", Amount: cosmos.NewUint(3453816695), VaultPubKey: "thorpub1addwnpepq23r8srfathem5jgu8szm9mrjylx9y9atjeawwz4kajqpg3y9vvy7xghtst"})
+
+	// bnb1wy9467ppep0z8sdmzd5nc3xtt0ygu092l9a93u
+	// this vault needs a donation of BNB to pay for gas
+	// recoveries = append(recoveries, TreasuryRecovery{VaultAddress: "bnb1wy9467ppep0z8sdmzd5nc3xtt0ygu092l9a93u", Asset: "BNB.BNB", Amount: cosmos.NewUint(27689), VaultPubKey: "thorpub1addwnpepqf3h9xa9qantpfjmvv37cuvzm7u0zy48qrh25tafctyzvyn2l8fr7e66mqq"})
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.BTCB-1DE", Amount: cosmos.NewUint(2507), VaultPubKey: "thorpub1addwnpepqf3h9xa9qantpfjmvv37cuvzm7u0zy48qrh25tafctyzvyn2l8fr7e66mqq"})
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.AVA-645", Amount: cosmos.NewUint(25227036220), VaultPubKey: "thorpub1addwnpepqf3h9xa9qantpfjmvv37cuvzm7u0zy48qrh25tafctyzvyn2l8fr7e66mqq"})
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.TWT-8C2", Amount: cosmos.NewUint(1867406976001), VaultPubKey: "thorpub1addwnpepqf3h9xa9qantpfjmvv37cuvzm7u0zy48qrh25tafctyzvyn2l8fr7e66mqq"})
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.ETH-1C9", Amount: cosmos.NewUint(119945), VaultPubKey: "thorpub1addwnpepqf3h9xa9qantpfjmvv37cuvzm7u0zy48qrh25tafctyzvyn2l8fr7e66mqq"})
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.BUSD-BD1", Amount: cosmos.NewUint(1896139686), VaultPubKey: "thorpub1addwnpepqf3h9xa9qantpfjmvv37cuvzm7u0zy48qrh25tafctyzvyn2l8fr7e66mqq"})
+
+	// bnb1hal0a2ywtd5qt97zfc2mmjwelxwlshgjn27xae
+	// this vault needs a donation of BNB to pay for gas
+	// recoveries = append(recoveries, TreasuryRecovery{VaultAddress: "bnb1hal0a2ywtd5qt97zfc2mmjwelxwlshgjn27xae", Asset: "BNB.BNB", Amount: cosmos.NewUint(150552), VaultPubKey: "thorpub1addwnpepqdaln9pasrj33vzcupezwp60hdgk8v797shp75jxp23xfvtu5gyd546uwcy"})
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.ETH-1C9", Amount: cosmos.NewUint(2301791), VaultPubKey: "thorpub1addwnpepqdaln9pasrj33vzcupezwp60hdgk8v797shp75jxp23xfvtu5gyd546uwcy"})
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.TWT-8C2", Amount: cosmos.NewUint(387443465935), VaultPubKey: "thorpub1addwnpepqdaln9pasrj33vzcupezwp60hdgk8v797shp75jxp23xfvtu5gyd546uwcy"})
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.BTCB-1DE", Amount: cosmos.NewUint(329860), VaultPubKey: "thorpub1addwnpepqdaln9pasrj33vzcupezwp60hdgk8v797shp75jxp23xfvtu5gyd546uwcy"})
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.BUSD-BD1", Amount: cosmos.NewUint(7542272440680), VaultPubKey: "thorpub1addwnpepqdaln9pasrj33vzcupezwp60hdgk8v797shp75jxp23xfvtu5gyd546uwcy"})
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.AVA-645", Amount: cosmos.NewUint(46237488), VaultPubKey: "thorpub1addwnpepqdaln9pasrj33vzcupezwp60hdgk8v797shp75jxp23xfvtu5gyd546uwcy"})
+
+	// bnb1faprhnsvxmv586zwuyv3dugtegsa8yqz8nnmnh
+	// manually decremented for 0.2 BNB to ensure there is enough for gas
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.BNB", Amount: cosmos.NewUint(44312404328), VaultPubKey: "thorpub1addwnpepq0xtamtm6l35efh3f5wlt5fql7cx9j94fywtumz83vvnzagx46h76yk8sa3"})
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.BUSD-BD1", Amount: cosmos.NewUint(23758202063840), VaultPubKey: "thorpub1addwnpepq0xtamtm6l35efh3f5wlt5fql7cx9j94fywtumz83vvnzagx46h76yk8sa3"})
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.ETH-1C9", Amount: cosmos.NewUint(612881), VaultPubKey: "thorpub1addwnpepq0xtamtm6l35efh3f5wlt5fql7cx9j94fywtumz83vvnzagx46h76yk8sa3"})
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.BTCB-1DE", Amount: cosmos.NewUint(235740384), VaultPubKey: "thorpub1addwnpepq0xtamtm6l35efh3f5wlt5fql7cx9j94fywtumz83vvnzagx46h76yk8sa3"})
+
+	// bnb1tdrfuq4my89fk39lq8u9zp3x8zh9qnk7s0vgqu
+	// manually decremented for 0.2 BNB to ensure there is enough for gas
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.BNB", Amount: cosmos.NewUint(166821351), VaultPubKey: "thorpub1addwnpepq2v44c4392cwa80mt9enycql7m90ghukuw2x2u72t60e9knlqer7gdcprrr"})
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.ETH-1C9", Amount: cosmos.NewUint(26936939), VaultPubKey: "thorpub1addwnpepq2v44c4392cwa80mt9enycql7m90ghukuw2x2u72t60e9knlqer7gdcprrr"})
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.BUSD-BD1", Amount: cosmos.NewUint(13784540734936), VaultPubKey: "thorpub1addwnpepq2v44c4392cwa80mt9enycql7m90ghukuw2x2u72t60e9knlqer7gdcprrr"})
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.BTCB-1DE", Amount: cosmos.NewUint(720964), VaultPubKey: "thorpub1addwnpepq2v44c4392cwa80mt9enycql7m90ghukuw2x2u72t60e9knlqer7gdcprrr"})
+	recoveries = append(recoveries, TreasuryRecovery{Asset: "BNB.TWT-8C2", Amount: cosmos.NewUint(1859478374319), VaultPubKey: "thorpub1addwnpepq2v44c4392cwa80mt9enycql7m90ghukuw2x2u72t60e9knlqer7gdcprrr"})
+
+	gasRate := mgr.GasMgr().GetGasRate(ctx, common.BNBChain)
+	maxGas, err := mgr.GasMgr().GetMaxGas(ctx, common.BNBChain)
+	if err != nil {
+		ctx.Logger().Error("fail to GetMaxGas for BNB recovery", "error", err)
+		return
+	}
+	requeueTxBnb := func(ctx cosmos.Context, mgr *Mgrs, recovery TreasuryRecovery) {
+		asset, err := common.NewAsset(recovery.Asset)
+		if err != nil {
+			ctx.Logger().Error("fail to create asset", "error", err, "recovery", recovery)
+			return
+		}
+		recoveryTx := TxOutItem{
+			Chain:       common.BNBChain,
+			VaultPubKey: common.PubKey(recovery.VaultPubKey),
+			ToAddress:   common.Address("bnb1pa6hpjs7qv0vkd5ks5tqa2xtt2gk5n08yw7v7f"),
+			Coin:        common.NewCoin(asset, recovery.Amount),
+			Memo:        "",
+			InHash:      "",
+			GasRate:     int64(gasRate.Uint64()),
+			MaxGas:      common.Gas{maxGas},
+		}
+
+		txBytes, err := json.Marshal(recoveryTx)
+		if err != nil {
+			ctx.Logger().Error("fail to Marshal recoveryTx", "error", err, "recovery", recovery)
+			return
+		}
+
+		hash := strings.ToUpper(hex.EncodeToString(tmhash.Sum(txBytes)))
+		recoveryTx.Memo = fmt.Sprintf("REFUND:%s", hash)
+		recoveryTx.InHash = common.TxID(hash)
+
+		err = mgr.txOutStore.UnSafeAddTxOutItem(ctx, mgr, recoveryTx, ctx.BlockHeight())
+		if err != nil {
+			ctx.Logger().Error("fail to add BNB recovery tx", "error", err, "tx", recoveryTx)
+		}
+	}
+
+	for _, recovery := range recoveries {
+		requeueTxBnb(ctx, mgr, recovery)
 	}
 }

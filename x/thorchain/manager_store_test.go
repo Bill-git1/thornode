@@ -2,8 +2,12 @@ package thorchain
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"strings"
 
+	"github.com/cometbft/cometbft/crypto/tmhash"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/common"
@@ -13,6 +17,33 @@ import (
 type StoreManagerTestSuite struct{}
 
 var _ = Suite(&StoreManagerTestSuite{})
+
+func (s *StoreManagerTestSuite) TestFakeTxHash(c *C) {
+	recoveryTx := TxOutItem{
+		Chain:       common.BSCChain,
+		VaultPubKey: common.PubKey("thorpub1addwnpepq0xtamtm6l35efh3f5wlt5fql7cx9j94fywtumz83vvnzagx46h76yk8sa3"),
+		ToAddress:   common.Address("bnb1pa6hpjs7qv0vkd5ks5tqa2xtt2gk5n08yw7v7f"),
+		Coin:        common.NewCoin(common.BNBBEP20Asset, cosmos.NewUint(100000000)),
+		Memo:        "",
+		InHash:      "",
+		GasRate:     int64(10),
+		MaxGas:      common.Gas{common.NewCoin(common.BNBBEP20Asset, cosmos.NewUint(50000))},
+	}
+
+	txBytes, err := json.Marshal(recoveryTx)
+	c.Assert(err, IsNil)
+
+	hash := strings.ToUpper(hex.EncodeToString(tmhash.Sum(txBytes)))
+	c.Assert(hash, Equals, "DC44C3AFAB4D7B9A078726179D58FC7BFCFF8440C1354E72A99D396A1D01EF7D")
+
+	// Change one thing, make sure it produces a different hash
+	recoveryTx.GasRate = int64(11)
+	txBytes, err = json.Marshal(recoveryTx)
+	c.Assert(err, IsNil)
+
+	hash = strings.ToUpper(hex.EncodeToString(tmhash.Sum(txBytes)))
+	c.Assert(hash, Equals, "14C10F837126B1E8A796AFCEC377CC6764DD58D7CBE82786E1FFFCB951489E38")
+}
 
 func (s *StoreManagerTestSuite) TestRemoveTransactions(c *C) {
 	ctx, mgr := setupManagerForTest(c)
