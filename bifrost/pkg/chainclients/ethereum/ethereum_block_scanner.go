@@ -233,6 +233,36 @@ func (e *ETHScanner) FetchTxs(height, chainHeight int64) (stypes.TxIn, error) {
 	return txIn, nil
 }
 
+// updateGasPriceV3 records base fee + 25th percentile priority fee, rounded up 10 gwei.
+func (e *ETHScanner) updateGasPriceV3(baseFee *big.Int, priorityFees []*big.Int) {
+	// skip empty blocks
+	if len(priorityFees) == 0 {
+		return
+	}
+
+	// find the 25th percentile priority fee in the block
+	sort.Slice(priorityFees, func(i, j int) bool { return priorityFees[i].Cmp(priorityFees[j]) == -1 })
+	priorityFee := priorityFees[len(priorityFees)/4]
+
+	// consider gas price as base fee + 25th percentile priority fee
+	gasPriceWei := new(big.Int).Add(baseFee, priorityFee)
+
+	// round the price up to nearest configured resolution
+	resolution := big.NewInt(e.cfg.GasPriceResolution)
+	gasPriceWei.Add(gasPriceWei, new(big.Int).Sub(resolution, big.NewInt(1)))
+	gasPriceWei = gasPriceWei.Div(gasPriceWei, resolution)
+	gasPriceWei = gasPriceWei.Mul(gasPriceWei, resolution)
+
+	// add to the cache
+	e.gasCache = append(e.gasCache, gasPriceWei)
+	if len(e.gasCache) > e.cfg.GasCacheBlocks {
+		e.gasCache = e.gasCache[(len(e.gasCache) - e.cfg.GasCacheBlocks):]
+	}
+
+	e.updateGasPriceFromCache()
+}
+
+// updateGasPriceV2 records the 25th percentile gas price in the block.
 func (e *ETHScanner) updateGasPriceV2(prices []*big.Int) {
 	// skip empty blocks
 	if len(prices) == 0 {
@@ -249,19 +279,23 @@ func (e *ETHScanner) updateGasPriceV2(prices []*big.Int) {
 		e.gasCache = e.gasCache[(len(e.gasCache) - e.cfg.GasCacheBlocks):]
 	}
 
+	e.updateGasPriceFromCache()
+}
+
+func (e *ETHScanner) updateGasPriceFromCache() {
 	// skip update unless cache is full
 	if len(e.gasCache) < e.cfg.GasCacheBlocks {
 		return
 	}
 
-	// compute the mean of the 25th percentiles in the cache
+	// compute the mean of cache
 	sum := new(big.Int)
 	for _, fee := range e.gasCache {
 		sum.Add(sum, fee)
 	}
 	mean := new(big.Int).Quo(sum, big.NewInt(int64(e.cfg.GasCacheBlocks)))
 
-	// compute the standard deviation of the 25th percentiles in cache
+	// compute the standard deviation of cache
 	std := new(big.Int)
 	for _, fee := range e.gasCache {
 		v := new(big.Int).Sub(fee, mean)
@@ -271,7 +305,7 @@ func (e *ETHScanner) updateGasPriceV2(prices []*big.Int) {
 	std.Quo(std, big.NewInt(int64(e.cfg.GasCacheBlocks)))
 	std.Sqrt(std)
 
-	// mean + 3x standard deviation of the 25th percentile fee over blocks
+	// mean + 3x standard deviation over cache blocks
 	e.gasPrice = mean.Add(mean, std.Mul(std, big.NewInt(3)))
 
 	// record metrics
@@ -293,11 +327,24 @@ func (e *ETHScanner) processBlock(block *etypes.Block) (stypes.TxIn, error) {
 	}
 
 	// update gas price
-	var txsGas []*big.Int
-	for _, tx := range block.Transactions() {
-		txsGas = append(txsGas, tx.GasPrice())
+	version, err := e.bridge.GetThorchainVersion()
+	if err != nil || version.GTE(semver.MustParse("1.131.0")) {
+		var priorityFees []*big.Int
+		for _, tx := range block.Transactions() {
+			tipCap := tx.GasTipCap()
+			if tipCap == nil {
+				tipCap = big.NewInt(0)
+			}
+			priorityFees = append(priorityFees, tipCap)
+		}
+		e.updateGasPriceV3(block.BaseFee(), priorityFees)
+	} else {
+		var txsGas []*big.Int
+		for _, tx := range block.Transactions() {
+			txsGas = append(txsGas, tx.GasPrice())
+		}
+		e.updateGasPriceV2(txsGas)
 	}
-	e.updateGasPriceV2(txsGas)
 
 	reorgedTxIns, err := e.processReorg(block.Header())
 	if err != nil {

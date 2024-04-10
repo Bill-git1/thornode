@@ -28,7 +28,7 @@ type KeySignWrapper struct {
 	pubKey        common.PubKey
 	tssKeyManager tss.ThorchainKeyManager
 	logger        zerolog.Logger
-	eipSigner     etypes.EIP155Signer
+	signer        etypes.Signer
 }
 
 // NewKeySignWrapper create a new instance of keysign wrapper
@@ -37,7 +37,7 @@ func NewKeySignWrapper(privateKey *ecdsa.PrivateKey, pubKey common.PubKey, keyMa
 		privKey:       privateKey,
 		pubKey:        pubKey,
 		tssKeyManager: keyManager,
-		eipSigner:     etypes.NewEIP155Signer(chainID),
+		signer:        etypes.NewLondonSigner(chainID),
 		logger:        log.With().Str("module", "signer").Str("chain", chain).Logger(),
 	}, nil
 }
@@ -70,7 +70,7 @@ func (w *KeySignWrapper) Sign(tx *etypes.Transaction, poolPubKey common.PubKey) 
 	if err != nil {
 		return nil, fmt.Errorf("fail to sign tx: %w", err)
 	}
-	newTx, err := tx.WithSignature(w.eipSigner, sig)
+	newTx, err := tx.WithSignature(w.signer, sig)
 	if err != nil {
 		return nil, fmt.Errorf("fail to apply signature to tx: %w", err)
 	}
@@ -82,7 +82,7 @@ func (w *KeySignWrapper) Sign(tx *etypes.Transaction, poolPubKey common.PubKey) 
 }
 
 func (w *KeySignWrapper) sign(tx *etypes.Transaction) ([]byte, error) {
-	hash := w.eipSigner.Hash(tx)
+	hash := w.signer.Hash(tx)
 	return ecrypto.Sign(hash[:], w.privKey)
 }
 
@@ -92,7 +92,7 @@ func (w *KeySignWrapper) signTSS(tx *etypes.Transaction, poolPubKey string) ([]b
 		return nil, fmt.Errorf("fail to get pub key: %w", err)
 	}
 
-	hash := w.eipSigner.Hash(tx)
+	hash := w.signer.Hash(tx)
 	sig, recovery, err := w.tssKeyManager.RemoteSign(hash[:], poolPubKey)
 	if err != nil || sig == nil {
 		return nil, fmt.Errorf("fail to TSS sign: %w", err)

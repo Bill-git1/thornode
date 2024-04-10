@@ -567,17 +567,12 @@ func (e *EVMScanner) updateGasPrice(prices []*big.Int) {
 	sort.Slice(medians, func(i, j int) bool { return medians[i].Cmp(medians[j]) == -1 })
 	median := medians[len(medians)/2]
 
-	// round the price up to avoid fee noise
+	// round the price up to nearest configured resolution
 	resolution := big.NewInt(e.cfg.GasPriceResolution)
-	if median.Cmp(resolution) != 1 {
-		e.gasPrice = resolution
-	} else {
-		median.Sub(median, big.NewInt(1))
-		median.Quo(median, big.NewInt(e.cfg.GasPriceResolution))
-		median.Add(median, big.NewInt(1))
-		median.Mul(median, big.NewInt(e.cfg.GasPriceResolution))
-		e.gasPrice = median
-	}
+	median.Add(median, new(big.Int).Sub(resolution, big.NewInt(1)))
+	median = median.Div(median, resolution)
+	median = median.Mul(median, resolution)
+	e.gasPrice = median
 
 	// record metrics
 	gasPriceFloat, _ := new(big.Float).SetInt64(e.gasPrice.Int64()).Float64()

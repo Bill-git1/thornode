@@ -66,6 +66,9 @@ func (s *EthereumSuite) SetUpTest(c *C) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		switch req.RequestURI {
+		case thorclient.ChainVersionEndpoint:
+			_, err := rw.Write([]byte(`{"current":"1.131.0"}`))
+			c.Assert(err, IsNil)
 		case thorclient.PubKeysEndpoint:
 			priKey, _ := s.thorKeys.GetPrivateKey()
 			tm, _ := codec.ToTmPubKeyInterface(priKey.PubKey())

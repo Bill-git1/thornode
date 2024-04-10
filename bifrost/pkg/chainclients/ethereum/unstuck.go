@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/blang/semver"
 	"github.com/ethereum/go-ethereum"
 	ecommon "github.com/ethereum/go-ethereum/common"
 	ecore "github.com/ethereum/go-ethereum/core"
@@ -156,8 +157,34 @@ func (c *Client) unstuckTx(clog zerolog.Logger, item types.SignedTxItem) error {
 	if inflatedOriginalGasPrice.Cmp(currentGasRate) > 0 {
 		currentGasRate = big.NewInt(1).Mul(originGasPrice, big.NewInt(2))
 	}
-	canceltx := etypes.NewTransaction(tx.Nonce(), ecommon.HexToAddress(address.String()), big.NewInt(0), c.cfg.BlockScanner.MaxGasLimit, currentGasRate, nil)
-	rawBytes, err := c.kw.Sign(canceltx, pubKey)
+
+	// TODO: remove version check after v131
+	var cancelTx *etypes.Transaction
+	version, err := c.bridge.GetThorchainVersion()
+	if err != nil {
+		return fmt.Errorf("fail to get thorchain version: %w", err)
+	}
+	if !c.cfg.FixedOutboundGasRate && version.GTE(semver.MustParse("1.131.0")) {
+		to := ecommon.HexToAddress(address.String())
+
+		// tip cap at configured percentage of max fee
+		tipCap := new(big.Int).Mul(currentGasRate, big.NewInt(int64(c.cfg.MaxGasTipPercentage)))
+		tipCap.Div(tipCap, big.NewInt(100))
+
+		cancelTx = etypes.NewTx(&etypes.DynamicFeeTx{
+			ChainID:   c.chainID,
+			Nonce:     tx.Nonce(),
+			To:        &to,
+			Value:     big.NewInt(0),
+			Gas:       c.cfg.BlockScanner.MaxGasLimit,
+			GasFeeCap: currentGasRate,
+			GasTipCap: tipCap,
+		})
+	} else {
+		cancelTx = etypes.NewTransaction(tx.Nonce(), ecommon.HexToAddress(address.String()), big.NewInt(0), c.cfg.BlockScanner.MaxGasLimit, currentGasRate, nil)
+	}
+
+	rawBytes, err := c.kw.Sign(cancelTx, pubKey)
 	if err != nil {
 		return fmt.Errorf("fail to sign tx for cancelling with nonce: %d, err: %w", tx.Nonce(), err)
 	}

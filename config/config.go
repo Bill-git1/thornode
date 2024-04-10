@@ -624,6 +624,10 @@ type BifrostChainConfiguration struct {
 	// only used in mocknet to for smoke tests.
 	FixedOutboundGasRate bool `mapstructure:"fixed_outbound_gas_rate"`
 
+	// MaxGasTipPercentage is the percentage of the max fee to set for the max tip cap on
+	// dynamic fee EVM transactions.
+	MaxGasTipPercentage int `mapstructure:"max_gas_tip_percentage"`
+
 	// TokenMaxGasMultiplier is a multiplier applied to max gas for outbounds which are
 	// not the gas asset. This compensates for variance in gas units when contracts for
 	// pool assets use more than the configured MaxGasLimit gas units in transferOut.
@@ -724,7 +728,8 @@ type BifrostBlockScannerConfiguration struct {
 	Concurrency int64 `mapstructure:"concurrency"`
 
 	// GasPriceResolution is the resolution of price per gas unit in the base asset of the
-	// chain (wei, tavax, uatom, satoshi, etc) and is transitively the floor price.
+	// chain (wei, tavax, uatom, satoshi, etc) and is transitively the floor price. The
+	// gas price will be rounded up to the nearest multiple of this value.
 	GasPriceResolution int64 `mapstructure:"gas_price_resolution"`
 
 	// ObservationFlexibilityBlocks is the number of blocks behind the current tip we will

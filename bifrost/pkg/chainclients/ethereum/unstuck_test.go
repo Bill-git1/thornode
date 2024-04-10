@@ -72,6 +72,9 @@ func (s *UnstuckTestSuite) SetUpTest(c *C) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		switch req.RequestURI {
+		case thorclient.ChainVersionEndpoint:
+			_, err = rw.Write([]byte(`{"current":"1.131.0"}`))
+			c.Assert(err, IsNil)
 		case thorclient.ThorchainConstants:
 			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/constants/constants.json")
 		case thorclient.PubKeysEndpoint:
@@ -226,6 +229,7 @@ func (s *UnstuckTestSuite) SetUpTest(c *C) {
 							"extraData": "0xd88301091a846765746888676f312e31352e36856c696e757800000000000000e86d9af8b427b780cd1e6f7cabd2f9231ccac25d313ed475351ed64ac19f21491461ed1fae732d3bbf73a5866112aec23b0ca436185685b9baee4f477a950f9400",
 							"gasLimit": "0x9e0f54",
 							"gasUsed": "0xabd3",
+							"baseFeePerGas": "0x1",
 							"hash": "0xb273789207ce61a1ec0314fdb88efe6c6b554a9505a97ff3dff05aa691e220ac",
 							"logsBloom": "0x00010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000040000000000000000010000200020000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000000000000000040000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000010000000000000000000000000000000000000000000000020000000000000",
 							"miner": "0x0000000000000000000000000000000000000000",
@@ -272,7 +276,9 @@ func (s *UnstuckTestSuite) TestUnstuckProcess(c *C) {
 			HTTPRequestTimeout: time.Second * 10,
 			GasCacheBlocks:     40,
 			Concurrency:        1,
+			GasPriceResolution: 10_000_000_000,
 		},
+		FixedOutboundGasRate: true,
 	}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
 	c.Assert(err, IsNil)
 	c.Assert(e, NotNil)

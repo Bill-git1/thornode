@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/blang/semver"
 	"github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -54,6 +55,7 @@ type Client struct {
 	cfg                     config.BifrostChainConfiguration
 	localPubKey             common.PubKey
 	client                  *ethclient.Client
+	chainID                 *big.Int
 	kw                      *evm.KeySignWrapper
 	ethScanner              *ETHScanner
 	bridge                  thorclient.ThorchainBridge
@@ -138,6 +140,7 @@ func NewClient(thorKeys *thorclient.Keys,
 		logger:       log.With().Str("module", "ethereum").Logger(),
 		cfg:          cfg,
 		client:       ethClient,
+		chainID:      chainID,
 		localPubKey:  pk,
 		kw:           keysignWrapper,
 		bridge:       bridge,
@@ -541,6 +544,10 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		}
 	}
 
+	// tip cap at configured percentage of max fee
+	tipCap := new(big.Int).Mul(gasRate, big.NewInt(int64(c.cfg.MaxGasTipPercentage)))
+	tipCap.Div(tipCap, big.NewInt(100))
+
 	c.logger.Info().
 		Stringer("inHash", tx.InHash).
 		Str("outboundRate", c.convertThorchainAmountToWei(big.NewInt(tx.GasRate)).String()).
@@ -558,7 +565,31 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		// as long as we pass in an ETH value , which we almost guarantee it will not exceed the ETH balance , so we can avoid the above two errors
 		estimatedETHValue = estimatedETHValue.SetInt64(21000)
 	}
-	createdTx := etypes.NewTransaction(nonce, ecommon.HexToAddress(contractAddr.String()), estimatedETHValue, c.cfg.BlockScanner.MaxGasLimit, gasRate, data)
+
+	// TODO: remove version check after v131
+	var createdTx *etypes.Transaction
+	version, err := c.bridge.GetThorchainVersion()
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("fail to get thorchain version: %w", err)
+	}
+	if !c.cfg.FixedOutboundGasRate && version.GTE(semver.MustParse("1.131.0")) {
+		to := ecommon.HexToAddress(contractAddr.String())
+		createdTx = etypes.NewTx(&etypes.DynamicFeeTx{
+			ChainID:   c.chainID,
+			Nonce:     nonce,
+			To:        &to,
+			Value:     estimatedETHValue,
+			GasFeeCap: gasRate, // maxFeePerGas
+			GasTipCap: tipCap,  // maxPriorityFeePerGas
+			Data:      data,
+
+			// gas is ignored in estimate gas call
+			// Gas: c.cfg.BlockScanner.MaxGasLimit,
+		})
+	} else {
+		createdTx = etypes.NewTransaction(nonce, ecommon.HexToAddress(contractAddr.String()), estimatedETHValue, c.cfg.BlockScanner.MaxGasLimit, gasRate, data)
+	}
+
 	estimatedGas, err := c.estimateGas(fromAddr.String(), createdTx)
 	if err != nil {
 		// in an edge case that vault doesn't have enough fund to fulfill an outbound transaction , it will fail to estimate gas
@@ -583,7 +614,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		if err != nil {
 			c.logger.Err(err).
 				Str("aggregator", tx.Aggregator).
-				Msg("fail to get aggregator gas limit, aborting to let thornode reschdule")
+				Msg("fail to get aggregator gas limit, aborting to let thornode reschedule")
 			return nil, nil, nil, nil
 		}
 
@@ -605,22 +636,53 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		scheduledMaxFee = scheduledMaxFee.Mul(scheduledMaxFee, big.NewInt(c.cfg.TokenMaxGasMultiplier))
 	}
 
-	// if over max scheduled gas, abort and let thornode reschedule
-	estimatedFee := big.NewInt(int64(estimatedGas) * gasRate.Int64())
-	if scheduledMaxFee.Cmp(estimatedFee) < 0 {
-		c.logger.Warn().
-			Stringer("in_hash", tx.InHash).
-			Stringer("rate", gasRate).
-			Uint64("estimated_gas", estimatedGas).
-			Str("estimated_fee", estimatedFee.String()).
-			Str("scheduled_max_fee", scheduledMaxFee.String()).
-			Msg("max gas exceeded, aborting to let thornode reschedule")
-		return nil, nil, nil, nil
-	}
+	// TODO: remove version check after v131
+	if !c.cfg.FixedOutboundGasRate && version.GTE(semver.MustParse("1.131.0")) {
+		// determine max gas units based on scheduled max gas (fee) and current rate
+		maxGasUnits := new(big.Int).Div(scheduledMaxFee, gasRate).Uint64()
 
-	createdTx = etypes.NewTransaction(
-		nonce, ecommon.HexToAddress(contractAddr.String()), ethValue, estimatedGas, gasRate, data,
-	)
+		// if estimated gas is more than the planned gas, abort and let thornode reschedule
+		if estimatedGas > maxGasUnits {
+			c.logger.Warn().
+				Stringer("in_hash", tx.InHash).
+				Stringer("rate", gasRate).
+				Uint64("estimated_gas_units", estimatedGas).
+				Uint64("max_gas_units", maxGasUnits).
+				Str("scheduled_max_fee", scheduledMaxFee.String()).
+				Msg("max gas exceeded, aborting to let thornode reschedule")
+			return nil, nil, nil, nil
+		}
+
+		to := ecommon.HexToAddress(contractAddr.String())
+		createdTx = etypes.NewTx(&etypes.DynamicFeeTx{
+			ChainID:   c.chainID,
+			Nonce:     nonce,
+			To:        &to,
+			Value:     ethValue,
+			Gas:       maxGasUnits,
+			GasFeeCap: gasRate,
+			GasTipCap: tipCap,
+			Data:      data,
+		})
+	} else {
+
+		// if over max scheduled gas, abort and let thornode reschedule
+		estimatedFee := big.NewInt(int64(estimatedGas) * gasRate.Int64())
+		if scheduledMaxFee.Cmp(estimatedFee) < 0 {
+			c.logger.Warn().
+				Stringer("in_hash", tx.InHash).
+				Stringer("rate", gasRate).
+				Uint64("estimated_gas", estimatedGas).
+				Str("estimated_fee", estimatedFee.String()).
+				Str("scheduled_max_fee", scheduledMaxFee.String()).
+				Msg("max gas exceeded, aborting to let thornode reschedule")
+			return nil, nil, nil, nil
+		}
+
+		createdTx = etypes.NewTransaction(
+			nonce, ecommon.HexToAddress(contractAddr.String()), ethValue, estimatedGas, gasRate, data,
+		)
+	}
 
 	rawTx, err := c.sign(createdTx, tx.VaultPubKey, height, tx)
 	if err != nil || len(rawTx) == 0 {
