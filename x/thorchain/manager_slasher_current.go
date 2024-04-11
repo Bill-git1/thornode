@@ -340,7 +340,16 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 				continue
 			}
 			var voter ObservedTxVoter
-			if !memo.IsType(TxRagnarok) {
+			if memo.IsType(TxRagnarok) {
+				// A Ragnarok outbound has no ObservedTxInVoter,
+				// so check MaxOutboundAttempts against the memo height.
+				ragnarokHeight := memo.GetBlockHeight()
+				// Though a negative is not expected to cause problems,
+				// nevertheless keep the default 0 as the minimum.
+				if ragnarokHeight > 0 {
+					voter.FinalisedHeight = ragnarokHeight
+				}
+			} else {
 				voter, err = s.keeper.GetObservedTxInVoter(ctx, toi.InHash)
 				if err != nil {
 					ctx.Logger().Error("fail to get observed tx voter", "error", err)
