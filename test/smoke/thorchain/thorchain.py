@@ -198,7 +198,7 @@ class ThorchainState:
 
     rune_fee = 2000000
     synth_multiplier = 2
-    target_surplus = 10_000_00000000 # target outbound fee surplus
+    target_surplus = 10_000_00000000  # target outbound fee surplus
 
     def __init__(self):
         self.pools = []
@@ -321,7 +321,9 @@ class ThorchainState:
 
             for gas in gases:
                 if tx.coins[0].asset not in gas_coins:
-                    gas_coins[tx.coins[0].asset] = Coin(gas.asset) # In Python this assumes that each outbound asset always has the same gas asset.
+                    gas_coins[tx.coins[0].asset] = Coin(
+                        gas.asset
+                    )  # In Python this assumes that each outbound asset always has the same gas asset.
                     gas_coin_count[gas.asset] = 0
                 gas_coins[tx.coins[0].asset].amount += gas.amount
                 gas_coin_count[gas.asset] += 1
@@ -340,7 +342,7 @@ class ThorchainState:
                 if not self.gas_spent_rune.get(asset):
                     self.gas_spent_rune[asset] = 0
                 self.gas_spent_rune[asset] += rune_amt
-                
+
             pool.add(rune_amt, 0)  # replenish gas costs with rune
             pool.sub(0, gas.amount)  # subtract gas from pool
             self.set_pool(pool)
@@ -398,11 +400,13 @@ class ThorchainState:
         if chain == "BNB":
             amount = self.network_fees["BNB"]
         return Coin(gas_asset, amount)
-    
+
     def _calc_outbound_fee_multiplier(self, out_asset):
         min_multiplier = 15_000
         max_multiplier = 20_000
-        surplus = self.gas_withheld_rune.get(out_asset, 0) - self.gas_spent_rune.get(out_asset, 0)
+        surplus = self.gas_withheld_rune.get(out_asset, 0) - self.gas_spent_rune.get(
+            out_asset, 0
+        )
         if surplus <= 0:
             return max_multiplier
         elif surplus >= self.target_surplus:
@@ -504,8 +508,14 @@ class ThorchainState:
                         self.set_pool(pool)
 
                         coin.amount -= asset_fee
-                        if coin.asset.is_btc() and not coin.asset.is_synth_asset() and not asset_fee == 0:
-                            tx.max_gas = [Coin(coin.asset, int(self.network_fees["BTC"] * 3/2))]
+                        if (
+                            coin.asset.is_btc()
+                            and not coin.asset.is_synth_asset()
+                            and not asset_fee == 0
+                        ):
+                            tx.max_gas = [
+                                Coin(coin.asset, int(self.network_fees["BTC"] * 3 / 2))
+                            ]
                             btc_max_gas = self.get_max_gas("BTC")
                             gap = tx.max_gas[0].amount - btc_max_gas.amount
                             if gap > 0:
@@ -513,8 +523,14 @@ class ThorchainState:
                             else:
                                 tx.gas = tx.max_gas
 
-                        if coin.asset.is_bch() and not coin.asset.is_synth_asset() and not asset_fee == 0:
-                            tx.max_gas = [Coin(coin.asset, int(self.network_fees["BCH"] * 3/2))]
+                        if (
+                            coin.asset.is_bch()
+                            and not coin.asset.is_synth_asset()
+                            and not asset_fee == 0
+                        ):
+                            tx.max_gas = [
+                                Coin(coin.asset, int(self.network_fees["BCH"] * 3 / 2))
+                            ]
                             bch_max_gas = self.get_max_gas("BCH")
                             gap = tx.max_gas[0].amount - bch_max_gas.amount
                             if gap > 0:
@@ -522,8 +538,14 @@ class ThorchainState:
                             else:
                                 tx.gas = tx.max_gas
 
-                        if coin.asset.is_ltc() and not coin.asset.is_synth_asset() and not asset_fee == 0:
-                            tx.max_gas = [Coin(coin.asset, int(self.network_fees["LTC"] * 3/2))]
+                        if (
+                            coin.asset.is_ltc()
+                            and not coin.asset.is_synth_asset()
+                            and not asset_fee == 0
+                        ):
+                            tx.max_gas = [
+                                Coin(coin.asset, int(self.network_fees["LTC"] * 3 / 2))
+                            ]
                             ltc_max_gas = self.get_max_gas("LTC")
                             gap = tx.max_gas[0].amount - ltc_max_gas.amount
                             if gap > 0:
@@ -531,8 +553,14 @@ class ThorchainState:
                             else:
                                 tx.gas = tx.max_gas
 
-                        if coin.asset.is_doge() and not coin.asset.is_synth_asset() and not asset_fee == 0:
-                            tx.max_gas = [Coin(coin.asset, int(self.network_fees["DOGE"] * 3/2))]
+                        if (
+                            coin.asset.is_doge()
+                            and not coin.asset.is_synth_asset()
+                            and not asset_fee == 0
+                        ):
+                            tx.max_gas = [
+                                Coin(coin.asset, int(self.network_fees["DOGE"] * 3 / 2))
+                            ]
                             doge_max_gas = self.get_max_gas("DOGE")
                             gap = tx.max_gas[0].amount - doge_max_gas.amount
                             if gap > 0:
@@ -540,8 +568,14 @@ class ThorchainState:
                             else:
                                 tx.gas = tx.max_gas
 
-                        if coin.asset.is_gaia()  and not coin.asset.is_synth_asset() and not asset_fee == 0:
-                            tx.max_gas = [Coin(coin.asset, int(self.network_fees["GAIA"] * 3/2))]
+                        if (
+                            coin.asset.is_gaia()
+                            and not coin.asset.is_synth_asset()
+                            and not asset_fee == 0
+                        ):
+                            tx.max_gas = [
+                                Coin(coin.asset, int(self.network_fees["GAIA"] * 3 / 2))
+                            ]
                             tx.max_gas[0].amount = int(tx.max_gas[0].amount / 100) * 100
                             gaia_max_gas = self.get_max_gas("GAIA")
                             gap = tx.max_gas[0].amount - gaia_max_gas.amount
@@ -553,7 +587,12 @@ class ThorchainState:
 
                         if coin.asset.get_chain() == "ETH" and not asset_fee == 0:
                             if coin.asset.is_eth():
-                                tx.max_gas = [Coin(coin.asset, int(self.network_fees["ETH"] * 3/2))]
+                                tx.max_gas = [
+                                    Coin(
+                                        coin.asset,
+                                        int(self.network_fees["ETH"] * 3 / 2),
+                                    )
+                                ]
 
                             elif coin.asset.is_erc():
                                 fee_in_gas_asset = self.get_asset_fee(tx.coins[0].asset)
@@ -564,25 +603,29 @@ class ThorchainState:
 
                         if rune_fee > 0 or asset_fee > 0:
                             # add fee event
-                            self.events.append(Event(
-                                "fee",
-                                [
-                                    {"tx_id": in_tx.id},
-                                    {"coins": f"{asset_fee} {coin.asset}"},
-                                    {"pool_deduct": rune_fee},
-                                ],
-                            ))
+                            self.events.append(
+                                Event(
+                                    "fee",
+                                    [
+                                        {"tx_id": in_tx.id},
+                                        {"coins": f"{asset_fee} {coin.asset}"},
+                                        {"pool_deduct": rune_fee},
+                                    ],
+                                )
+                            )
                             # Note that currently this lacks a check for Derived status.
                             if coin.asset.is_synth and asset_fee > 0:
-                                self.events.append(Event(
-                                    "mint_burn",
-                                    [
-                                        {"supply": "burn"},
-                                        {"denom": f"{tx.coins[0].asset.upper()}"},
-                                        {"amount": f"{asset_fee}"},
-                                        {"reason": "burn_native_fee"},
-                                    ],
-                                ))
+                                self.events.append(
+                                    Event(
+                                        "mint_burn",
+                                        [
+                                            {"supply": "burn"},
+                                            {"denom": f"{tx.coins[0].asset.upper()}"},
+                                            {"amount": f"{asset_fee}"},
+                                            {"reason": "burn_native_fee"},
+                                        ],
+                                    )
+                                )
                     if coin.amount > 0:
                         tx.fee = Coin(coin.asset, asset_fee)
                         outbounds.append(tx)
@@ -749,16 +792,16 @@ class ThorchainState:
             # Since no refund txout, burn all synths and send RUNE to the Reserve
             for coin in in_tx.coins:
                 if coin.asset.is_synth:
-                    self.get_pool(coin.asset).synth_balance -= coin.amount
-                    self.events.append(Event(
-                        "mint_burn",
-                        [
-                            {"supply": "burn"},
-                            {"denom": f"{coin.asset.lower()}"},
-                            {"amount": f"{coin.amount}"},
-                            {"reason": "failed_refund"},
-                        ],
-                    ))
+                    self.events.append(
+                        Event(
+                            "reserve",
+                            [
+                                {"contributor_address": in_tx.from_address},
+                                {"amount": f"{coin.amount}"},
+                                *in_tx.get_attributes(),
+                            ],
+                        )
+                    )
                 if coin.is_rune():
                     self.reserve += coin.amount
 
@@ -1076,11 +1119,9 @@ class ThorchainState:
         # get the fee that are supposed to be charged, this will only be
         # used if it is the last withdraw
         if asset == self.get_gas_asset(chain):
-            dynamic_fee = int(self.network_fees[chain] * 3/2)
+            dynamic_fee = int(self.network_fees[chain] * 3 / 2)
         else:
-            dynamic_fee = int(
-                round(pool.get_rune_in_asset(self.get_rune_fee(asset)))
-            )
+            dynamic_fee = int(round(pool.get_rune_in_asset(self.get_rune_fee(asset))))
         tx_rune_gas = self.get_gas(RUNE.get_chain(), tx)
         withdraw_units, rune_amt, asset_amt = pool.withdraw(
             tx.from_address, withdraw_basis_points
@@ -1369,7 +1410,7 @@ class ThorchainState:
 
         # check if we have enough to cover the fee
         rune_fee = self.get_rune_fee(target)
-        
+
         in_coin = in_tx.coins[0]
         if in_coin.is_rune() and in_coin.amount <= rune_fee:
             return self.refund(tx, 108, "fail swap, not enough fee")
@@ -1418,15 +1459,17 @@ class ThorchainState:
                 from_address = get_alias_address(target.get_chain(), from_alias)
 
         if tx.coins[0].asset.is_synth:
-            swap_events.append(Event(
-                "mint_burn",
-                [
-                    {"supply": "burn"},
-                    {"denom": f"{tx.coins[0].asset.lower()}"},
-                    {"amount": f"{tx.coins[0].amount}"},
-                    {"reason": "swap"},
-                ],
-            ))
+            swap_events.append(
+                Event(
+                    "mint_burn",
+                    [
+                        {"supply": "burn"},
+                        {"denom": f"{tx.coins[0].asset.lower()}"},
+                        {"amount": f"{tx.coins[0].amount}"},
+                        {"reason": "swap"},
+                    ],
+                )
+            )
         out_txs = [
             Transaction(
                 target.get_chain(),
@@ -1439,16 +1482,18 @@ class ThorchainState:
 
         if emit.asset.is_synth:
             out_txs[0].id = Transaction.empty_id
-            self.events.append(Event(
-                "mint_burn",
-                [
-                       {"supply": "mint"},
-                       {"denom": f"{emit.asset.lower()}"},
-                       {"amount": f"{emit.amount}"},
-                    {"reason": "swap"},
-                ],
-               ))
-        
+            self.events.append(
+                Event(
+                    "mint_burn",
+                    [
+                        {"supply": "mint"},
+                        {"denom": f"{emit.asset.lower()}"},
+                        {"amount": f"{emit.amount}"},
+                        {"reason": "swap"},
+                    ],
+                )
+            )
+
         event = Event(
             "swap",
             [

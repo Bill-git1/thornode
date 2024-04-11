@@ -456,19 +456,31 @@
         "height": null
     },
     {
-        "type": "mint_burn",
+        "type": "reserve",
         "attributes": [
             {
-                "supply": "burn"
-            },
-            {
-                "denom": "bnb/bnb"
+                "contributor_address": "PROVIDER-1"
             },
             {
                 "amount": "10"
             },
             {
-                "reason": "failed_refund"
+                "id": "TODO"
+            },
+            {
+                "chain": "THOR"
+            },
+            {
+                "from": "PROVIDER-1"
+            },
+            {
+                "to": "VAULT"
+            },
+            {
+                "coin": "10 BNB/BNB"
+            },
+            {
+                "memo": "SWAP:THOR.RUNE:PROVIDER-1"
             }
         ],
         "height": null

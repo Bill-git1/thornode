@@ -242,6 +242,9 @@ asserts:
   - '[.end_block_events[]|select(.type == "refund")]|length == 1'
   - .end_block_events[]|select(.type == "refund")|.from == "{{ addr_btc_fox }}"
   - .end_block_events[]|select(.type == "refund")|.reason|startswith("fail swap, not enough fee; fail to refund (10100 BTC.BTC)")
-  - .|[.end_block_events[]|select(.type=="donate")]|length == 1
-  - .end_block_events[]|select(.type=="donate")|.memo == "LOAN+:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877"
-  - .end_block_events[]|select(.type=="donate")|.coin == "10100 BTC.BTC" # Since added to the pool, the vault-pool invariant isn't broken
+  # TODO:  Having removed the donate-to-pool invariant preservation, replace it with a different unrefundableCoinCleanup method.
+  # - .|[.end_block_events[]|select(.type=="donate")]|length == 1
+  # - .end_block_events[]|select(.type=="donate")|.memo == "LOAN+:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877"
+  # - .end_block_events[]|select(.type=="donate")|.coin == "10100 BTC.BTC" # Since added to the pool, the vault-pool invariant isn't broken
+---
+type: fail-export-invariants

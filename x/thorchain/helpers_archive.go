@@ -23,6 +23,92 @@ var WhitelistedArbs = []string{ // treasury addresses
 	"ltc1qaa064vvv4d6stgywnf777j6dl8rd3tt93fp6jx",
 }
 
+// unrefundableCoinCleanup - update the accounting for a failed outbound of toi.Coin
+// native rune: send to the reserve
+// native coin besides rune: burn
+// non-native coin: donate to its pool
+func unrefundableCoinCleanupV124(ctx cosmos.Context, mgr Manager, toi TxOutItem, burnReason string) {
+	coin := toi.Coin
+
+	if coin.Asset.IsTradeAsset() {
+		return
+	}
+
+	sourceModuleName := toi.GetModuleName() // Ensure that non-"".
+
+	// For context in emitted events, retrieve the original transaction that prompted the cleanup.
+	// If there is no retrievable transaction, leave those fields empty.
+	voter, err := mgr.Keeper().GetObservedTxInVoter(ctx, toi.InHash)
+	if err != nil {
+		ctx.Logger().Error("fail to get observed tx in", "error", err, "hash", toi.InHash.String())
+		return
+	}
+	tx := voter.Tx.Tx
+	// For emitted events' amounts (such as EventDonate), replace the Coins with the coin being cleaned up.
+	tx.Coins = common.NewCoins(toi.Coin)
+
+	// Select course of action according to coin type:
+	// External coin, native coin which isn't RUNE, or native RUNE (not from the Reserve).
+	switch {
+	case !coin.Asset.IsNative():
+		// If unable to refund external-chain coins, add them to their pools
+		// (so they aren't left in the vaults with no reflection in the pools).
+		// Failed-refund external coins have earlier been established to have existing pools with non-zero BalanceRune.
+
+		pool, err := mgr.Keeper().GetPool(ctx, coin.Asset.GetLayer1Asset())
+		if err != nil {
+			ctx.Logger().Error("fail to get pool", "error", err)
+			return
+		}
+
+		pool.BalanceAsset = pool.BalanceAsset.Add(coin.Amount)
+		if err := mgr.Keeper().SetPool(ctx, pool); err != nil {
+			ctx.Logger().Error("fail to save pool", "asset", pool.Asset, "error", err)
+			return
+		}
+
+		donateEvt := NewEventDonate(coin.Asset, tx)
+		if err := mgr.EventMgr().EmitEvent(ctx, donateEvt); err != nil {
+			ctx.Logger().Error("fail to emit donate event", "error", err)
+		}
+	case !coin.Asset.IsNativeRune():
+		// If unable to refund native coins other than RUNE, burn them.
+
+		if sourceModuleName != ModuleName {
+			if err := mgr.Keeper().SendFromModuleToModule(ctx, sourceModuleName, ModuleName, common.NewCoins(coin)); err != nil {
+				ctx.Logger().Error("fail to move coin during cleanup burn", "error", err)
+				return
+			}
+		}
+
+		if err := mgr.Keeper().BurnFromModule(ctx, ModuleName, coin); err != nil {
+			ctx.Logger().Error("fail to burn coin during cleanup burn", "error", err)
+			return
+		}
+
+		burnEvt := NewEventMintBurn(BurnSupplyType, coin.Asset.Native(), coin.Amount, burnReason)
+		if err := mgr.EventMgr().EmitEvent(ctx, burnEvt); err != nil {
+			ctx.Logger().Error("fail to emit burn event", "error", err)
+		}
+	case sourceModuleName != ReserveName:
+		// If unable to refund THOR.RUNE, send it to the Reserve.
+		err := mgr.Keeper().SendFromModuleToModule(ctx, sourceModuleName, ReserveName, common.NewCoins(coin))
+		if err != nil {
+			ctx.Logger().Error("fail to send RUNE to Reserve during cleanup", "error", err)
+			return
+		}
+
+		reserveContributor := NewReserveContributor(tx.FromAddress, coin.Amount)
+		reserveEvent := NewEventReserve(reserveContributor, tx)
+		if err := mgr.EventMgr().EmitEvent(ctx, reserveEvent); err != nil {
+			ctx.Logger().Error("fail to emit reserve event", "error", err)
+		}
+	default:
+		// If not satisfying the other conditions this coin should be native RUNE in the Reserve,
+		// so leave it there.
+	}
+}
+
 func triggerPreferredAssetSwapV120(ctx cosmos.Context, mgr Manager, affiliateAddress common.Address, txID common.TxID, tn THORName, affcol AffiliateFeeCollector, queueIndex int) error {
 	// Check that the THORName has an address alias for the PreferredAsset, if not skip
 	// the swap
