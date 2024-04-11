@@ -85,8 +85,7 @@ func (TxOutTestSuite) TestTxOutItem(c *C) {
 		GasRate: 1,
 		InHash:  GetRandomTxHash(),
 	}
-	hash, err := txOutItem.TxHash()
-	c.Check(err, IsNil)
+	hash := GetRandomTxHash()
 	c.Check(len(hash) > 0, Equals, true)
 	inputs := []struct {
 		name        string

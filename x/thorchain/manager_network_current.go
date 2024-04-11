@@ -1167,7 +1167,7 @@ func (vm *NetworkMgrVCUR) withdrawSavers(ctx cosmos.Context, pool Pool, na NodeA
 
 		// create the saver withdraw message
 		tx := common.GetRagnarokTx(pool.Asset.GetChain(), lp.AssetAddress, lp.AssetAddress)
-		tx.ID, err = common.NewTxID(tx.Hash())
+		tx.ID, err = common.NewTxID(tx.Hash_deprecated())
 		if err != nil {
 			ctx.Logger().Error("fail to create tx id", "error", err, "tx", tx)
 			return false, fmt.Errorf("fail to create tx id: %w", err)

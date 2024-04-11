@@ -121,8 +121,16 @@ func NewTx(txID TxID, from, to Address, coins Coins, gas Gas, memo string) Tx {
 	}
 }
 
-// Hash calculate a hash based on from address, coins and to address
-func (tx Tx) Hash() string {
+// Hash calculates a hash based on from address, coins and to address
+// TODO: Only uncomment the below after the Hash_deprecated refactor is merged,
+//       to avoid sync failure.
+// func (tx Tx) Hash() string {
+// 	str := fmt.Sprintf("%s|%s|%s", tx.FromAddress, tx.Coins, tx.ToAddress)
+// 	return fmt.Sprintf("%X", sha256.Sum256([]byte(str)))
+// }
+
+// Hash_deprecated calculates a hash only based on from address and to address
+func (tx Tx) Hash_deprecated() string {
 	str := fmt.Sprintf("%s|%s", tx.FromAddress, tx.ToAddress)
 	return fmt.Sprintf("%X", sha256.Sum256([]byte(str)))
 }

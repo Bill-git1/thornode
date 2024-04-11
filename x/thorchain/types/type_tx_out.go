@@ -4,8 +4,6 @@ import (
 	"errors"
 	"strconv"
 	"strings"
-
-	"gitlab.com/thorchain/thornode/common"
 )
 
 // Valid check whether TxOutItem hold valid information
@@ -36,20 +34,6 @@ func (m TxOutItem) Valid() error {
 	}
 
 	return nil
-}
-
-// TxHash return a hash value generated based on the TxOutItem
-func (m TxOutItem) TxHash() (string, error) {
-	fromAddr, err := m.VaultPubKey.GetAddress(m.Chain)
-	if err != nil {
-		return "", err
-	}
-	tx := common.Tx{
-		FromAddress: fromAddr,
-		ToAddress:   m.ToAddress,
-		Coins:       common.Coins{m.Coin},
-	}
-	return tx.Hash(), nil
 }
 
 // Equals compare two tx out item
