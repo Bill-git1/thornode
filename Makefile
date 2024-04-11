@@ -13,8 +13,13 @@ endif
 
 .PHONY: build test tools export healthcheck run-mocknet build-mocknet stop-mocknet halt-mocknet ps-mocknet reset-mocknet logs-mocknet openapi
 
+# image build settings
+COMMIT?=$(shell git log -1 --format='%H' 2>/dev/null)
+BRANCH?=$(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
+GITREF?=$(shell git rev-parse --short HEAD 2>/dev/null)
+BUILDTAG?=$(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
+
 # compiler flags
-COMMIT:=$(shell git log -1 --format='%H')
 VERSION:=$(shell cat version)
 TAG?=mocknet
 ldflags = -X gitlab.com/thorchain/thornode/constants.Version=$(VERSION) \
@@ -44,10 +49,6 @@ ifdef CI_COMMIT_BRANCH
 	BUILDTAG?=$(shell echo ${CI_COMMIT_BRANCH})
 endif
 
-# image build settings
-BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
-GITREF=$(shell git rev-parse --short HEAD)
-BUILDTAG?=$(shell git rev-parse --abbrev-ref HEAD)
 
 ########################################################################################
 # Targets
@@ -181,8 +182,7 @@ test-race:
 
 # ------------------------------ Regression Tests ------------------------------
 
-test-regression:
-	@DOCKER_BUILDKIT=1 docker build -t thornode-regtest -f ci/Dockerfile.regtest .
+test-regression: build-test-regression
 	@docker run --rm ${DOCKER_TTY_ARGS} \
 		-e DEBUG -e RUN -e EXPORT -e TIME_FACTOR -e PARALLELISM -e FAIL_FAST \
 		-e UID=$(shell id -u) -e GID=$(shell id -g) \
@@ -191,6 +191,12 @@ test-regression:
 		-v $(shell pwd)/test/regression/suites:/app/test/regression/suites \
 		-v $(shell pwd)/test/regression/templates:/app/test/regression/templates \
 		-w /app thornode-regtest sh -c 'make _test-regression'
+
+build-test-regression:
+	@DOCKER_BUILDKIT=1 docker build . \
+		-t thornode-regtest \
+		-f ci/Dockerfile.regtest \
+		--build-arg COMMIT=$(COMMIT)
 
 test-regression-coverage:
 	@go tool cover -html=test/regression/mnt/coverage/coverage.txt
@@ -213,13 +219,16 @@ _test-regression:
 
 # ------------------------------ Simulation Tests ------------------------------
 
-test-simulation: build-simulation stop-mocknet run-simulation-mocknet
+test-simulation: build-test-simulation stop-mocknet run-simulation-mocknet
 	@docker run --rm ${DOCKER_TTY_ARGS} \
 		-e PARALLELISM --network host -w /app \
 		thornode-simtest sh -c 'make _test-simulation'
 
-build-simulation:
-	@DOCKER_BUILDKIT=1 docker build -t thornode-simtest -f ci/Dockerfile.simtest .
+build-test-simulation:
+	@DOCKER_BUILDKIT=1 docker build . \
+		-t thornode-simtest \
+		-f ci/Dockerfile.simtest \
+		--build-arg COMMIT=$(COMMIT) \
 
 # internal target used in docker build
 _build-test-simulation:
@@ -346,6 +355,9 @@ docker-gitlab-push:
 	docker push registry.gitlab.com/thorchain/thornode:${GITREF}
 
 docker-gitlab-build:
-	docker build -f build/docker/Dockerfile \
+	docker build . \
+		-f build/docker/Dockerfile \
 		$(shell sh ./build/docker/semver_tags.sh registry.gitlab.com/thorchain/thornode ${BRANCH} $(shell cat version)) \
-		-t registry.gitlab.com/thorchain/thornode:${GITREF} --build-arg TAG=${BUILDTAG} .
+		-t registry.gitlab.com/thorchain/thornode:${GITREF} \
+		--build-arg COMMIT=$(COMMIT) \
+		--build-arg TAG=$(BUILDTAG) \

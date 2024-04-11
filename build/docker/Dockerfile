@@ -19,6 +19,8 @@ RUN go mod download
 COPY . .
 
 ARG TAG=mainnet
+ARG COMMIT=unknown
+
 RUN make protob install
 
 #

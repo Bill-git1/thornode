@@ -21,4 +21,6 @@ RUN go mod download
 
 COPY . .
 
+ARG COMMIT=unknown
+
 RUN --mount=type=cache,target=/root/.cache/go-build make _build-test-regression
