@@ -327,8 +327,10 @@ func (tos *TxOutStorageVCUR) discoverOutbounds(ctx cosmos.Context, transactionFe
 		if err != nil || fromAddr.IsEmpty() || toi.ToAddress.Equals(fromAddr) {
 			continue
 		}
+
+		vaultCoinAmount := vault.GetCoin(toi.Coin.Asset).Amount
 		// if the asset in the vault is not enough to pay for the fee , then skip it
-		if vault.GetCoin(toi.Coin.Asset).Amount.LTE(transactionFeeAsset) {
+		if vaultCoinAmount.LTE(transactionFeeAsset) {
 			continue
 		}
 		// if the vault doesn't have gas asset in it , or it doesn't have enough to pay for gas
@@ -337,13 +339,22 @@ func (tos *TxOutStorageVCUR) discoverOutbounds(ctx cosmos.Context, transactionFe
 			continue
 		}
 
+		// If the outbound Asset is the gas Asset, assigning to the limit would go over the limit,
+		// so reduce the available vaultCoinAmount by that MaxGas Amount.
+		if toi.Coin.Asset.Equals(maxGasAsset.Asset) {
+			vaultCoinAmount = common.SafeSub(vaultCoinAmount, maxGasAsset.Amount)
+			if vaultCoinAmount.IsZero() {
+				continue
+			}
+		}
+
 		toi.VaultPubKey = vault.PubKey
-		if toi.Coin.Amount.LTE(vault.GetCoin(toi.Coin.Asset).Amount) {
+		if toi.Coin.Amount.LTE(vaultCoinAmount) {
 			outputs = append(outputs, toi)
 			toi.Coin.Amount = cosmos.ZeroUint()
 			break
 		} else {
-			remainingAmount := common.SafeSub(toi.Coin.Amount, vault.GetCoin(toi.Coin.Asset).Amount)
+			remainingAmount := common.SafeSub(toi.Coin.Amount, vaultCoinAmount)
 			toi.Coin.Amount = common.SafeSub(toi.Coin.Amount, remainingAmount)
 			outputs = append(outputs, toi)
 			toi.Coin.Amount = remainingAmount
