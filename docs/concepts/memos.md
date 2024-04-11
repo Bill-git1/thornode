@@ -61,7 +61,7 @@ For the DEX aggregator-oriented variation of the `SWAP` memo, see [Aggregators M
 | `:ASSET`     | The [asset identifier](asset-notation.md).                                            | Can be shortened.                                           |
 | `:DESTADDR`  | The destination address to send to.                                                   | Can use THORName.                                           |
 | `:LIM`       | The trade limit, i.e., set 100000000 to get a minimum of 1 full asset, else a refund. | Optional. 1e8 or scientific notation.                       |
-| `/INTERVAL`  | Swap interval in blocks.                                                              | Optional. If 1, do not stream.                              |
+| `/INTERVAL`  | Swap interval in blocks.                                                              | Optional. If 0, do not stream.                              |
 | `/QUANTITY`  | Swap Quantity. Swap interval times every Interval blocks.                             | Optional. If 0, network will determine the number of swaps. |
 | `:AFFILIATE` | The affiliate address.                                                                | Optional. Must be a THORName or THOR Address.               |
 | `:FEE`       | The [affiliate fee](fees.md#affiliate-fee). RUNE is sent to affiliate.                | Optional. Ranges from 0 to 1000 Basis Points.               |
@@ -70,7 +70,7 @@ For the DEX aggregator-oriented variation of the `SWAP` memo, see [Aggregators M
 
 - `SWAP:ASSET:DESTADDR` &mdash; simple swap
 - `SWAP:ASSET:DESTADDR:LIM` &mdash; swap with trade limit
-- `SWAP:ASSET:DESTADDR:LIM/1/1` &mdash; swap with limit, do not stream swap
+- `SWAP:ASSET:DESTADDR:LIM/0/1` &mdash; swap with limit, do not stream swap
 - `SWAP:ASSET:DESTADDR:LIM/3/0` &mdash; swap with limit, optimise swap amount, every 3 blocks
 - `SWAP:ASSET:DESTADDR:LIM/1/0:AFFILIATE:FEE` &mdash; swap with limit, optimised and affiliate fee
 
@@ -80,7 +80,7 @@ For the DEX aggregator-oriented variation of the `SWAP` memo, see [Aggregators M
 - `SWAP:ETH.ETH:0xe6a30f4f3bad978910e2cbb4d97581f5b5a0ade0:10000000` &mdash; same as above except the ETH output should be more than 0.1 ETH else refund
 - `SWAP:ETH.ETH:0xe6a30f4f3bad978910e2cbb4d97581f5b5a0ade0:10000000/1/1` &mdash; same as above except do not stream the swap
 - `SWAP:ETH.ETH:0xe6a30f4f3bad978910e2cbb4d97581f5b5a0ade0:10000000/3/0` &mdash; same as above except streaming the swap, every 3 blocks, and THORChain to calculate the number of swaps required to achieve optimal price efficiency
-- `SWAP:ETH.ETH:0xe6a30f4f3bad978910e2cbb4d97581f5b5a0ade0:10000000/3/0:t:10` &mdash; same as above except sends 10 basis points from the input) to affiliate `t` (THORSwap)
+- `SWAP:ETH.ETH:0xe6a30f4f3bad978910e2cbb4d97581f5b5a0ade0:10000000/3/0:t:10` &mdash; same as above except sends 10 basis points from the input to affiliate `t` (THORSwap)
 - `s:ETH.ETH:0xe6a30f4f3bad978910e2cbb4d97581f5b5a0ade0:1e6/3/0:t:10` &mdash; same as above except with a reduced memo and scientific notation trade limit
 - `=:r:thor1el4ufmhll3yw7zxzszvfakrk66j7fx0tvcslym:19779138111` &mdash; swap to at least 197.79 RUNE
 - `=:BNB/BUSD-BD1:thor15s4apx9ap7lazpsct42nmvf0t6am4r3w0r64f2:628197586176` &mdash; swap to at least 6281.9 Synthetic BUSD

@@ -2,7 +2,8 @@
 
 ## Overview
 
-The network launched with a set number of constants, which has not changed. Constants can be overridden via Mimir and nodes have the ability to [vote on](../thornodes/overview.md#node-voting) and change Mimir values.
+The network launched with a set number of constants, which has not changed. Constants can be overridden via Mimir and nodes have the ability to [vote on](../thornodes/overview.md#node-voting) and change Mimir values. \
+See [Halt Management](./concepts/network-halts.md) for halt and pause specific settings.
 
 Mimir setting can be created and changed without a corresponding Constant.
 
@@ -40,6 +41,7 @@ Mimir setting can be created and changed without a corresponding Constant.
 - `StreamingSwapMinBPFee`\*: Minimum swap fee (in basis points) for a streaming swap trade
 - `StreamingSwapMaxLength`: Maximum number of blocks a streaming swap can trade for
 - `StreamingSwapMaxLengthNative`: Maximum number of blocks native streaming swaps can trade over
+- `TradeAccountsEnabled`: Enable/disable trade account
 
 ## Synths
 
@@ -198,5 +200,3 @@ Mimir setting can be created and changed without a corresponding Constant.
 
 - `MimirRecallFund<CHAIN>`: Recalls Chain funds, typically used for router upgrades only
 - `MimirUpgradeContract<CHAIN>`: Upgrades contract, typically used for router upgrades only
-
-See [Halt Management](./concepts/network-halts.md) for halt specific settings.

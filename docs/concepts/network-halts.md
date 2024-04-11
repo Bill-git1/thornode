@@ -12,11 +12,11 @@ In most cases funds won't be lost if they are sent when halted, but they may be 
 In the worse case if THORChain suffers a consensus halt the `inbound_addresses` endpoint will freeze with `halted = false` but the network is actually hard-halted. In this case running a fullnode is beneficial, because the last block will become stale after 6 seconds and interfaces can detect this.
 ```
 
-Interfaces that provide LP management can provide more feedback to the user what specifically is halted.
+Interfaces that provide LP management can provide more feedback to the user what specifically is paused.
 
 There are levels of granularity the network has to control itself and chains in the event of issues. Interfaces need to monitor these settings and apply appropriate controls in their interfaces, inform users and prevent unsupported actions.
 
-All activity is controlled within [Mimir](https://thornode.ninerealms.com/thorchain/mimir) and needs to be observed by interfaces and acted upon. Also, see a description of [Constants and Mimir](https://docs.thorchain.org/network/constants-and-mimir).
+All activity is controlled within [Mimir](https://thornode.ninerealms.com/thorchain/mimir) and needs to be observed by interfaces and acted upon. Also, see a description of [Constants and Mimir](../mimir.md).
 
 Halt flags are Boolean. For clarity `0` = false, no issues and `> 0` = true (usually 1), halt in effect.
 
@@ -61,6 +61,10 @@ Synths minting and redeeming can be enabled and disabled using flags. There is a
 
 ### Lending Management
 
-**Lending Pause** `PAUSELOANS = 1` Opening and closing of loans are suspended
+**Lending Pause** `PAUSELOANS = 1` - Opening and closing of loans are suspended
+
+### Trade Accounts
+
+**Trade Accounts Pause** `TradeAccountsEnabled = 1` - Adding to and withdrawing from the Trade Account is enabled.
 
 See also [Constants and Mimir](https://docs.thorchain.org/network/constants-and-mimir).
