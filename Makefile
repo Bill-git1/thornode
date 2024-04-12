@@ -360,3 +360,15 @@ docker-gitlab-build:
 		-t registry.gitlab.com/thorchain/thornode:${GITREF} \
 		--build-arg COMMIT=$(COMMIT) \
 		--build-arg TAG=$(BUILDTAG)
+
+########################################################################################
+# Tools
+########################################################################################
+
+thorscan-build:
+	@docker build -f build/docker/Dockerfile.thorscan -t thorscan tools/thorscan
+
+thorscan-gitlab-push:
+	@docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
+	@docker push registry.gitlab.com/thorchain/thornode:thorscan-${GITREF}
+	@docker push registry.gitlab.com/thorchain/thornode:thorscan

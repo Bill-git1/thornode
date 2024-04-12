@@ -169,6 +169,20 @@ pages:
   script:
     - make docs-generate
 
+build-thorscan:
+  rules:
+    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != "thorchain/thornode"
+      when: never
+    - if: $CI_COMMIT_BRANCH == "develop"
+      when: always
+  stage: build
+  image: docker:20.10.12
+  services:
+    - docker:20.10.12-dind
+  script:
+    - make thorscan-build
+    - make thorscan-gitlab-push
+
 build-smoke:
   rules:
     - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != "thorchain/thornode"
