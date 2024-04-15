@@ -443,7 +443,7 @@ endpoint: http://localhost:1317/thorchain/queue/swap
 asserts:
   - .|length == 0
 ---
-# all saver outbounds plus the first LP
+# outbounds for all savers withdrawals, synth swap, and the first LP withdrawal
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
@@ -459,7 +459,7 @@ endpoint: http://localhost:1317/thorchain/pool/ETH.ETH
 asserts:
   - .status == "Staged"
 ---
-# observe saver outbounds
+# observe outbounds for saver withdrawals and the synth swap
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
 txs:
@@ -475,7 +475,7 @@ txs:
       gas:
         - amount: "15000"
           asset: "ETH.ETH"
-      memo: "OUT:2FF438919C271403C9466D0AA735BFAA8C8294FC11A8A9D3963BBEA2CC8166FA"
+      memo: "OUT:B67DF2101C0D1F72B4A9D01698F1124731706498DA6F846FDF61FA1359B6B720"
     block_height: 2
     finalise_height: 2
     observed_pub_key: {{ pubkey_dog }}
@@ -491,7 +491,7 @@ txs:
       gas:
         - amount: "15000"
           asset: "ETH.ETH"
-      memo: "OUT:F82010910E993C6D7AAD9B530E017710C2597CFFC89D92A76767EEA2190A76A8"
+      memo: "OUT:81F26AE4FA60FF2B82DCD75F55B269BEE9406B69F305147663D7B4DB050D148C"
     block_height: 2
     finalise_height: 2
     observed_pub_key: {{ pubkey_dog }}
@@ -507,7 +507,7 @@ txs:
       gas:
         - amount: "15000"
           asset: "ETH.ETH"
-      memo: "OUT:78BA1529FAD7E7F40ACB923E1AC2952DA63BD7F904A8E97A8E830B4B13799B96"
+      memo: "OUT:5C1C31B740EC3D1FDE1AA3A2C42CA714EEB966F087FC1687F81A683ACD2F05CB"
     block_height: 2
     finalise_height: 2
     observed_pub_key: {{ pubkey_dog }}
