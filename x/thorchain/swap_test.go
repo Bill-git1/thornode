@@ -3,12 +3,19 @@ package thorchain
 import (
 	"errors"
 
+	"github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/blang/semver"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 	thorchaintypes "gitlab.com/thorchain/thornode/x/thorchain/types"
 )
+
+func QuoUint(num, denom types.Uint) types.Dec {
+	res := cosmos.NewDecFromBigInt(num.BigInt()).Quo(cosmos.NewDecFromBigInt(denom.BigInt()))
+	return res
+}
 
 type TestSwapKeeper struct {
 	keeper.KVStoreDummy

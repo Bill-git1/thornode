@@ -8,7 +8,6 @@ import (
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
-	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
@@ -729,32 +728,4 @@ func (s TxOutStoreV88Suite) TestAddOutTxItemInteractionWithPool(c *C) {
 	//       = 100e8 - 100e8 * (20e8 - 1999887500) / (50e8 + (20e8 - 1999887500)) = 9999775005
 	c.Assert(pool.BalanceAsset.Equal(cosmos.NewUint(5000112500)), Equals, true, Commentf("%d", pool.BalanceAsset.Uint64()))
 	c.Assert(pool.BalanceRune.Equal(cosmos.NewUint(9999775005)), Equals, true, Commentf("%d", pool.BalanceRune.Uint64()))
-}
-
-// using int64 so this can also represent deltas
-type ModuleBalances struct {
-	Asgard  int64
-	Bond    int64
-	Reserve int64
-	Module  int64
-}
-
-func getModuleBalances(c *C, ctx cosmos.Context, k keeper.Keeper) ModuleBalances {
-	return ModuleBalances{
-		Asgard:  int64(k.GetRuneBalanceOfModule(ctx, AsgardName).Uint64()),
-		Bond:    int64(k.GetRuneBalanceOfModule(ctx, BondName).Uint64()),
-		Reserve: int64(k.GetRuneBalanceOfModule(ctx, ReserveName).Uint64()),
-		Module:  int64(k.GetRuneBalanceOfModule(ctx, ModuleName).Uint64()),
-	}
-}
-
-func testAndCheckModuleBalances(c *C, ctx cosmos.Context, k keeper.Keeper, runTest func(), expDeltas ModuleBalances) {
-	before := getModuleBalances(c, ctx, k)
-	runTest()
-	after := getModuleBalances(c, ctx, k)
-
-	c.Assert(expDeltas.Asgard, Equals, after.Asgard-before.Asgard)
-	c.Assert(expDeltas.Bond, Equals, after.Bond-before.Bond)
-	c.Assert(expDeltas.Reserve, Equals, after.Reserve-before.Reserve)
-	c.Assert(expDeltas.Module, Equals, after.Module-before.Module)
 }

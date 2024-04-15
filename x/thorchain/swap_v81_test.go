@@ -4,7 +4,6 @@ import (
 	"errors"
 	"os"
 
-	"github.com/cosmos/cosmos-sdk/types"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/common"
@@ -248,11 +247,6 @@ func (s *SwapV81Suite) TestSwap(c *C) {
 		c.Check(item.returnAmount.Uint64(), Equals, amount.Uint64())
 
 	}
-}
-
-func QuoUint(num, denom types.Uint) types.Dec {
-	res := cosmos.NewDecFromBigInt(num.BigInt()).Quo(cosmos.NewDecFromBigInt(denom.BigInt()))
-	return res
 }
 
 func (s *SwapV81Suite) TestSynthSwap_RuneSynthRune(c *C) {
