@@ -316,8 +316,8 @@ func (c *Client) GetAccount(pubkey common.PubKey, height *big.Int) (common.Accou
 			continue
 		}
 		if item.Confirmations == 0 {
-			// pending tx in mempool, only count sends from asgard ('self')
-			if !c.isSelfTransaction(item.TxID) {
+			// pending tx in mempool, only count sends from asgard
+			if !c.isSelfTransaction(item.TxID) && !c.isFromAsgard(item.TxID) {
 				continue
 			}
 		}
