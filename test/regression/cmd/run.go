@@ -41,6 +41,9 @@ func run(out io.Writer, path string, routine int) (failExportInvariants bool, er
 	// use same environment for all commands
 	env := []string{
 		"HOME=" + home,
+		"SIGNER_NAME=thorchain",
+		"SIGNER_PASSWD=password",
+		"CHAIN_HOME_FOLDER=" + thornodePath,
 		"THOR_TENDERMINT_INSTRUMENTATION_PROMETHEUS=false",
 		// block time should be short, but all consecutive checks must complete within timeout
 		fmt.Sprintf("THOR_TENDERMINT_CONSENSUS_TIMEOUT_COMMIT=%s", time.Second*getTimeFactor()),
@@ -66,6 +69,17 @@ func run(out io.Writer, path string, routine int) (failExportInvariants bool, er
 	if err != nil {
 		fmt.Println(string(cmdOut))
 		log.Fatal().Err(err).Msg("failed to initialize chain")
+	}
+
+	// init keys with dog mnemonic
+	localLog.Debug().Msg("Initializing keys")
+	cmd = exec.Command("thornode", "keys", "--keyring-backend=file", "add", "--recover", "thorchain")
+	cmd.Stdin = bytes.NewBufferString(dogMnemonic + "\npassword\npassword\n")
+	cmd.Env = env
+	cmdOut, err = cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println(string(cmdOut))
+		log.Fatal().Err(err).Msg("failed to initialize keys")
 	}
 
 	// init chain

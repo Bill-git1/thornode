@@ -2229,20 +2229,14 @@ func queryKeysign(ctx cosmos.Context, kbs cosmos.KeybaseStore, path []string, re
 		return nil, fmt.Errorf("fail to sign keysign: %w", err)
 	}
 
-	var tois []openapi.TxOutItem
-	// Leave this nil (null rather than []) if the source is nil.
-	if txs.TxArray != nil {
-		tois = make([]openapi.TxOutItem, len(txs.TxArray))
-		for i := range txs.TxArray {
-			tois[i] = castTxOutItem(txs.TxArray[i], 0) // 0 is omitted.
-		}
+	// TODO: use openapi type after Bifrost uses the same so signatures match.
+	type QueryKeysign struct {
+		Keysign   TxOut  `json:"keysign"`
+		Signature string `json:"signature"`
 	}
 
-	query := openapi.KeysignResponse{
-		Keysign: openapi.KeysignInfo{
-			Height:  wrapInt64(txs.Height),
-			TxArray: tois,
-		},
+	query := QueryKeysign{
+		Keysign:   *txs,
 		Signature: base64.StdEncoding.EncodeToString(sig),
 	}
 
