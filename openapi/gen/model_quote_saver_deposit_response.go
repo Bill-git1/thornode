@@ -43,6 +43,10 @@ type QuoteSaverDepositResponse struct {
 	DustThreshold *string `json:"dust_threshold,omitempty"`
 	// The recommended minimum inbound amount for this transaction type & inbound asset. Sending less than this amount could result in failed refunds.
 	RecommendedMinAmountIn *string `json:"recommended_min_amount_in,omitempty"`
+	// the recommended gas rate to use for the inbound to ensure timely confirmation
+	RecommendedGasRate string `json:"recommended_gas_rate"`
+	// the units of the recommended gas rate
+	GasRateUnits string `json:"gas_rate_units"`
 	// generated memo for the deposit
 	Memo string `json:"memo"`
 	// same as expected_amount_deposit, to be deprecated in favour of expected_amount_deposit
@@ -55,7 +59,7 @@ type QuoteSaverDepositResponse struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewQuoteSaverDepositResponse(inboundAddress string, fees QuoteFees, slippageBps int64, expiry int64, warning string, notes string, memo string, expectedAmountDeposit string) *QuoteSaverDepositResponse {
+func NewQuoteSaverDepositResponse(inboundAddress string, fees QuoteFees, slippageBps int64, expiry int64, warning string, notes string, recommendedGasRate string, gasRateUnits string, memo string, expectedAmountDeposit string) *QuoteSaverDepositResponse {
 	this := QuoteSaverDepositResponse{}
 	this.InboundAddress = inboundAddress
 	this.Fees = fees
@@ -63,6 +67,8 @@ func NewQuoteSaverDepositResponse(inboundAddress string, fees QuoteFees, slippag
 	this.Expiry = expiry
 	this.Warning = warning
 	this.Notes = notes
+	this.RecommendedGasRate = recommendedGasRate
+	this.GasRateUnits = gasRateUnits
 	this.Memo = memo
 	this.ExpectedAmountDeposit = expectedAmountDeposit
 	return &this
@@ -476,6 +482,54 @@ func (o *QuoteSaverDepositResponse) SetRecommendedMinAmountIn(v string) {
 	o.RecommendedMinAmountIn = &v
 }
 
+// GetRecommendedGasRate returns the RecommendedGasRate field value
+func (o *QuoteSaverDepositResponse) GetRecommendedGasRate() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.RecommendedGasRate
+}
+
+// GetRecommendedGasRateOk returns a tuple with the RecommendedGasRate field value
+// and a boolean to check if the value has been set.
+func (o *QuoteSaverDepositResponse) GetRecommendedGasRateOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.RecommendedGasRate, true
+}
+
+// SetRecommendedGasRate sets field value
+func (o *QuoteSaverDepositResponse) SetRecommendedGasRate(v string) {
+	o.RecommendedGasRate = v
+}
+
+// GetGasRateUnits returns the GasRateUnits field value
+func (o *QuoteSaverDepositResponse) GetGasRateUnits() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.GasRateUnits
+}
+
+// GetGasRateUnitsOk returns a tuple with the GasRateUnits field value
+// and a boolean to check if the value has been set.
+func (o *QuoteSaverDepositResponse) GetGasRateUnitsOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.GasRateUnits, true
+}
+
+// SetGasRateUnits sets field value
+func (o *QuoteSaverDepositResponse) SetGasRateUnits(v string) {
+	o.GasRateUnits = v
+}
+
 // GetMemo returns the Memo field value
 func (o *QuoteSaverDepositResponse) GetMemo() string {
 	if o == nil {
@@ -599,6 +653,12 @@ func (o QuoteSaverDepositResponse) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if o.RecommendedMinAmountIn != nil {
 		toSerialize["recommended_min_amount_in"] = o.RecommendedMinAmountIn
+	}
+	if true {
+		toSerialize["recommended_gas_rate"] = o.RecommendedGasRate
+	}
+	if true {
+		toSerialize["gas_rate_units"] = o.GasRateUnits
 	}
 	if true {
 		toSerialize["memo"] = o.Memo

@@ -43,6 +43,10 @@ type QuoteSaverWithdrawResponse struct {
 	DustThreshold *string `json:"dust_threshold,omitempty"`
 	// The recommended minimum inbound amount for this transaction type & inbound asset. Sending less than this amount could result in failed refunds.
 	RecommendedMinAmountIn *string `json:"recommended_min_amount_in,omitempty"`
+	// the recommended gas rate to use for the inbound to ensure timely confirmation
+	RecommendedGasRate string `json:"recommended_gas_rate"`
+	// the units of the recommended gas rate
+	GasRateUnits string `json:"gas_rate_units"`
 	// generated memo for the withdraw, the client can use this OR send the dust amount
 	Memo string `json:"memo"`
 	// the dust amount of the target asset the user should send to initialize the withdraw, the client can send this OR provide the memo
@@ -55,7 +59,7 @@ type QuoteSaverWithdrawResponse struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewQuoteSaverWithdrawResponse(inboundAddress string, outboundDelayBlocks int64, outboundDelaySeconds int64, fees QuoteFees, slippageBps int64, expiry int64, warning string, notes string, memo string, dustAmount string, expectedAmountOut string) *QuoteSaverWithdrawResponse {
+func NewQuoteSaverWithdrawResponse(inboundAddress string, outboundDelayBlocks int64, outboundDelaySeconds int64, fees QuoteFees, slippageBps int64, expiry int64, warning string, notes string, recommendedGasRate string, gasRateUnits string, memo string, dustAmount string, expectedAmountOut string) *QuoteSaverWithdrawResponse {
 	this := QuoteSaverWithdrawResponse{}
 	this.InboundAddress = inboundAddress
 	this.OutboundDelayBlocks = outboundDelayBlocks
@@ -65,6 +69,8 @@ func NewQuoteSaverWithdrawResponse(inboundAddress string, outboundDelayBlocks in
 	this.Expiry = expiry
 	this.Warning = warning
 	this.Notes = notes
+	this.RecommendedGasRate = recommendedGasRate
+	this.GasRateUnits = gasRateUnits
 	this.Memo = memo
 	this.DustAmount = dustAmount
 	this.ExpectedAmountOut = expectedAmountOut
@@ -463,6 +469,54 @@ func (o *QuoteSaverWithdrawResponse) SetRecommendedMinAmountIn(v string) {
 	o.RecommendedMinAmountIn = &v
 }
 
+// GetRecommendedGasRate returns the RecommendedGasRate field value
+func (o *QuoteSaverWithdrawResponse) GetRecommendedGasRate() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.RecommendedGasRate
+}
+
+// GetRecommendedGasRateOk returns a tuple with the RecommendedGasRate field value
+// and a boolean to check if the value has been set.
+func (o *QuoteSaverWithdrawResponse) GetRecommendedGasRateOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.RecommendedGasRate, true
+}
+
+// SetRecommendedGasRate sets field value
+func (o *QuoteSaverWithdrawResponse) SetRecommendedGasRate(v string) {
+	o.RecommendedGasRate = v
+}
+
+// GetGasRateUnits returns the GasRateUnits field value
+func (o *QuoteSaverWithdrawResponse) GetGasRateUnits() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.GasRateUnits
+}
+
+// GetGasRateUnitsOk returns a tuple with the GasRateUnits field value
+// and a boolean to check if the value has been set.
+func (o *QuoteSaverWithdrawResponse) GetGasRateUnitsOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.GasRateUnits, true
+}
+
+// SetGasRateUnits sets field value
+func (o *QuoteSaverWithdrawResponse) SetGasRateUnits(v string) {
+	o.GasRateUnits = v
+}
+
 // GetMemo returns the Memo field value
 func (o *QuoteSaverWithdrawResponse) GetMemo() string {
 	if o == nil {
@@ -578,6 +632,12 @@ func (o QuoteSaverWithdrawResponse) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if o.RecommendedMinAmountIn != nil {
 		toSerialize["recommended_min_amount_in"] = o.RecommendedMinAmountIn
+	}
+	if true {
+		toSerialize["recommended_gas_rate"] = o.RecommendedGasRate
+	}
+	if true {
+		toSerialize["gas_rate_units"] = o.GasRateUnits
 	}
 	if true {
 		toSerialize["memo"] = o.Memo

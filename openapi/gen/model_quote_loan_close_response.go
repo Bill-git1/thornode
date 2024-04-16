@@ -43,6 +43,10 @@ type QuoteLoanCloseResponse struct {
 	DustThreshold *string `json:"dust_threshold,omitempty"`
 	// The recommended minimum inbound amount for this transaction type & inbound asset. Sending less than this amount could result in failed refunds.
 	RecommendedMinAmountIn *string `json:"recommended_min_amount_in,omitempty"`
+	// the recommended gas rate to use for the inbound to ensure timely confirmation
+	RecommendedGasRate *string `json:"recommended_gas_rate,omitempty"`
+	// the units of the recommended gas rate
+	GasRateUnits *string `json:"gas_rate_units,omitempty"`
 	// generated memo for the loan close
 	Memo string `json:"memo"`
 	// the amount of collateral asset the user can expect to receive after fees in 1e8 decimals
@@ -492,6 +496,70 @@ func (o *QuoteLoanCloseResponse) SetRecommendedMinAmountIn(v string) {
 	o.RecommendedMinAmountIn = &v
 }
 
+// GetRecommendedGasRate returns the RecommendedGasRate field value if set, zero value otherwise.
+func (o *QuoteLoanCloseResponse) GetRecommendedGasRate() string {
+	if o == nil || o.RecommendedGasRate == nil {
+		var ret string
+		return ret
+	}
+	return *o.RecommendedGasRate
+}
+
+// GetRecommendedGasRateOk returns a tuple with the RecommendedGasRate field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *QuoteLoanCloseResponse) GetRecommendedGasRateOk() (*string, bool) {
+	if o == nil || o.RecommendedGasRate == nil {
+		return nil, false
+	}
+	return o.RecommendedGasRate, true
+}
+
+// HasRecommendedGasRate returns a boolean if a field has been set.
+func (o *QuoteLoanCloseResponse) HasRecommendedGasRate() bool {
+	if o != nil && o.RecommendedGasRate != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetRecommendedGasRate gets a reference to the given string and assigns it to the RecommendedGasRate field.
+func (o *QuoteLoanCloseResponse) SetRecommendedGasRate(v string) {
+	o.RecommendedGasRate = &v
+}
+
+// GetGasRateUnits returns the GasRateUnits field value if set, zero value otherwise.
+func (o *QuoteLoanCloseResponse) GetGasRateUnits() string {
+	if o == nil || o.GasRateUnits == nil {
+		var ret string
+		return ret
+	}
+	return *o.GasRateUnits
+}
+
+// GetGasRateUnitsOk returns a tuple with the GasRateUnits field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *QuoteLoanCloseResponse) GetGasRateUnitsOk() (*string, bool) {
+	if o == nil || o.GasRateUnits == nil {
+		return nil, false
+	}
+	return o.GasRateUnits, true
+}
+
+// HasGasRateUnits returns a boolean if a field has been set.
+func (o *QuoteLoanCloseResponse) HasGasRateUnits() bool {
+	if o != nil && o.GasRateUnits != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetGasRateUnits gets a reference to the given string and assigns it to the GasRateUnits field.
+func (o *QuoteLoanCloseResponse) SetGasRateUnits(v string) {
+	o.GasRateUnits = &v
+}
+
 // GetMemo returns the Memo field value
 func (o *QuoteLoanCloseResponse) GetMemo() string {
 	if o == nil {
@@ -727,6 +795,12 @@ func (o QuoteLoanCloseResponse) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if o.RecommendedMinAmountIn != nil {
 		toSerialize["recommended_min_amount_in"] = o.RecommendedMinAmountIn
+	}
+	if o.RecommendedGasRate != nil {
+		toSerialize["recommended_gas_rate"] = o.RecommendedGasRate
+	}
+	if o.GasRateUnits != nil {
+		toSerialize["gas_rate_units"] = o.GasRateUnits
 	}
 	if true {
 		toSerialize["memo"] = o.Memo

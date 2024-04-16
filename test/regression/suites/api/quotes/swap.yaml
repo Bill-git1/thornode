@@ -30,6 +30,8 @@ asserts:
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
   - .fees.slippage_bps == 99
   - .fees.total_bps == 237
+  - has("recommended_gas_rate")|not # skipped for native
+  - has("gas_rate_units")|not
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
@@ -101,6 +103,8 @@ asserts:
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
   - .fees.slippage_bps == 480
   - .fees.total_bps == 484
+  - .recommended_gas_rate == "10"
+  - .gas_rate_units == "satsperbyte"
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}

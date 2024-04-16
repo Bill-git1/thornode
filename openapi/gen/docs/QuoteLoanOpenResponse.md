@@ -18,6 +18,8 @@ Name | Type | Description | Notes
 **Notes** | **string** | chain specific quote notes | 
 **DustThreshold** | Pointer to **string** | Defines the minimum transaction size for the chain in base units (sats, wei, uatom). Transactions with asset amounts lower than the dust_threshold are ignored. | [optional] 
 **RecommendedMinAmountIn** | Pointer to **string** | The recommended minimum inbound amount for this transaction type &amp; inbound asset. Sending less than this amount could result in failed refunds. | [optional] 
+**RecommendedGasRate** | **string** | the recommended gas rate to use for the inbound to ensure timely confirmation | 
+**GasRateUnits** | **string** | the units of the recommended gas rate | 
 **Memo** | Pointer to **string** | generated memo for the loan open | [optional] 
 **ExpectedAmountOut** | **string** | the amount of the target asset the user can expect to receive after fees in 1e8 decimals | 
 **ExpectedCollateralizationRatio** | **string** | the expected collateralization ratio in basis points | 
@@ -31,7 +33,7 @@ Name | Type | Description | Notes
 
 ### NewQuoteLoanOpenResponse
 
-`func NewQuoteLoanOpenResponse(outboundDelayBlocks int64, outboundDelaySeconds int64, fees QuoteFees, expiry int64, warning string, notes string, expectedAmountOut string, expectedCollateralizationRatio string, expectedCollateralDeposited string, expectedDebtIssued string, streamingSwapBlocks int64, streamingSwapSeconds int64, totalOpenLoanSeconds int64, ) *QuoteLoanOpenResponse`
+`func NewQuoteLoanOpenResponse(outboundDelayBlocks int64, outboundDelaySeconds int64, fees QuoteFees, expiry int64, warning string, notes string, recommendedGasRate string, gasRateUnits string, expectedAmountOut string, expectedCollateralizationRatio string, expectedCollateralDeposited string, expectedDebtIssued string, streamingSwapBlocks int64, streamingSwapSeconds int64, totalOpenLoanSeconds int64, ) *QuoteLoanOpenResponse`
 
 NewQuoteLoanOpenResponse instantiates a new QuoteLoanOpenResponse object
 This constructor will assign default values to properties that have it defined,
@@ -365,6 +367,46 @@ SetRecommendedMinAmountIn sets RecommendedMinAmountIn field to given value.
 `func (o *QuoteLoanOpenResponse) HasRecommendedMinAmountIn() bool`
 
 HasRecommendedMinAmountIn returns a boolean if a field has been set.
+
+### GetRecommendedGasRate
+
+`func (o *QuoteLoanOpenResponse) GetRecommendedGasRate() string`
+
+GetRecommendedGasRate returns the RecommendedGasRate field if non-nil, zero value otherwise.
+
+### GetRecommendedGasRateOk
+
+`func (o *QuoteLoanOpenResponse) GetRecommendedGasRateOk() (*string, bool)`
+
+GetRecommendedGasRateOk returns a tuple with the RecommendedGasRate field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetRecommendedGasRate
+
+`func (o *QuoteLoanOpenResponse) SetRecommendedGasRate(v string)`
+
+SetRecommendedGasRate sets RecommendedGasRate field to given value.
+
+
+### GetGasRateUnits
+
+`func (o *QuoteLoanOpenResponse) GetGasRateUnits() string`
+
+GetGasRateUnits returns the GasRateUnits field if non-nil, zero value otherwise.
+
+### GetGasRateUnitsOk
+
+`func (o *QuoteLoanOpenResponse) GetGasRateUnitsOk() (*string, bool)`
+
+GetGasRateUnitsOk returns a tuple with the GasRateUnits field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetGasRateUnits
+
+`func (o *QuoteLoanOpenResponse) SetGasRateUnits(v string)`
+
+SetGasRateUnits sets GasRateUnits field to given value.
+
 
 ### GetMemo
 

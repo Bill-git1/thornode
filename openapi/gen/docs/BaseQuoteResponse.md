@@ -18,6 +18,8 @@ Name | Type | Description | Notes
 **Notes** | Pointer to **string** | chain specific quote notes | [optional] 
 **DustThreshold** | Pointer to **string** | Defines the minimum transaction size for the chain in base units (sats, wei, uatom). Transactions with asset amounts lower than the dust_threshold are ignored. | [optional] 
 **RecommendedMinAmountIn** | Pointer to **string** | The recommended minimum inbound amount for this transaction type &amp; inbound asset. Sending less than this amount could result in failed refunds. | [optional] 
+**RecommendedGasRate** | Pointer to **string** | the recommended gas rate to use for the inbound to ensure timely confirmation | [optional] 
+**GasRateUnits** | Pointer to **string** | the units of the recommended gas rate | [optional] 
 
 ## Methods
 
@@ -387,6 +389,56 @@ SetRecommendedMinAmountIn sets RecommendedMinAmountIn field to given value.
 `func (o *BaseQuoteResponse) HasRecommendedMinAmountIn() bool`
 
 HasRecommendedMinAmountIn returns a boolean if a field has been set.
+
+### GetRecommendedGasRate
+
+`func (o *BaseQuoteResponse) GetRecommendedGasRate() string`
+
+GetRecommendedGasRate returns the RecommendedGasRate field if non-nil, zero value otherwise.
+
+### GetRecommendedGasRateOk
+
+`func (o *BaseQuoteResponse) GetRecommendedGasRateOk() (*string, bool)`
+
+GetRecommendedGasRateOk returns a tuple with the RecommendedGasRate field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetRecommendedGasRate
+
+`func (o *BaseQuoteResponse) SetRecommendedGasRate(v string)`
+
+SetRecommendedGasRate sets RecommendedGasRate field to given value.
+
+### HasRecommendedGasRate
+
+`func (o *BaseQuoteResponse) HasRecommendedGasRate() bool`
+
+HasRecommendedGasRate returns a boolean if a field has been set.
+
+### GetGasRateUnits
+
+`func (o *BaseQuoteResponse) GetGasRateUnits() string`
+
+GetGasRateUnits returns the GasRateUnits field if non-nil, zero value otherwise.
+
+### GetGasRateUnitsOk
+
+`func (o *BaseQuoteResponse) GetGasRateUnitsOk() (*string, bool)`
+
+GetGasRateUnitsOk returns a tuple with the GasRateUnits field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetGasRateUnits
+
+`func (o *BaseQuoteResponse) SetGasRateUnits(v string)`
+
+SetGasRateUnits sets GasRateUnits field to given value.
+
+### HasGasRateUnits
+
+`func (o *BaseQuoteResponse) HasGasRateUnits() bool`
+
+HasGasRateUnits returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

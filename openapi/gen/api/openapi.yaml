@@ -5223,6 +5223,15 @@ components:
             refunds.
           example: "15000"
           type: string
+        recommended_gas_rate:
+          description: the recommended gas rate to use for the inbound to ensure timely
+            confirmation
+          example: "10"
+          type: string
+        gas_rate_units:
+          description: the units of the recommended gas rate
+          example: gwei
+          type: string
     QuoteSwapResponse:
       example:
         fees:
@@ -5234,6 +5243,7 @@ components:
           asset: ETH.ETH
           affiliate: "1234"
         slippage_bps: 7
+        recommended_gas_rate: "10"
         notes: "Transfer the inbound_address the asset with the memo. Do not use multi-in,\
           \ multi-out transactions."
         outbound_delay_seconds: 5
@@ -5250,6 +5260,7 @@ components:
         expected_amount_out: "10000"
         expected_amount_out_streaming: "10000"
         streaming_swap_blocks: 100
+        gas_rate_units: gwei
         warning: Do not cache this response. Do not send funds after the expiry.
         expiry: 1671660285
         inbound_confirmation_blocks: 0
@@ -5317,6 +5328,15 @@ components:
             type & inbound asset. Sending less than this amount could result in failed
             refunds.
           example: "15000"
+          type: string
+        recommended_gas_rate:
+          description: the recommended gas rate to use for the inbound to ensure timely
+            confirmation
+          example: "10"
+          type: string
+        gas_rate_units:
+          description: the units of the recommended gas rate
+          example: gwei
           type: string
         memo:
           description: generated memo for the swap
@@ -5378,6 +5398,7 @@ components:
           asset: ETH.ETH
           affiliate: "1234"
         slippage_bps: 5
+        recommended_gas_rate: "10"
         notes: "Transfer the inbound_address the asset with the memo. Do not use multi-in,\
           \ multi-out transactions."
         outbound_delay_seconds: 5
@@ -5390,6 +5411,7 @@ components:
         inbound_confirmation_seconds: 6
         router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
         expected_amount_out: "10000"
+        gas_rate_units: gwei
         warning: Do not cache this response. Do not send funds after the expiry.
         expiry: 1671660285
         inbound_confirmation_blocks: 0
@@ -5457,6 +5479,15 @@ components:
             type & inbound asset. Sending less than this amount could result in failed
             refunds.
           example: "15000"
+          type: string
+        recommended_gas_rate:
+          description: the recommended gas rate to use for the inbound to ensure timely
+            confirmation
+          example: "10"
+          type: string
+        gas_rate_units:
+          description: the units of the recommended gas rate
+          example: gwei
           type: string
         memo:
           description: generated memo for the deposit
@@ -5476,9 +5507,11 @@ components:
       - expected_amount_deposit
       - expiry
       - fees
+      - gas_rate_units
       - inbound_address
       - memo
       - notes
+      - recommended_gas_rate
       - slippage_bps
       - warning
       type: object
@@ -5493,6 +5526,7 @@ components:
           asset: ETH.ETH
           affiliate: "1234"
         slippage_bps: 5
+        recommended_gas_rate: "10"
         notes: "Transfer the inbound_address the asset with the memo. Do not use multi-in,\
           \ multi-out transactions."
         outbound_delay_seconds: 5
@@ -5505,6 +5539,7 @@ components:
         router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
         dust_amount: "10000"
         expected_amount_out: "10000"
+        gas_rate_units: gwei
         warning: Do not cache this response. Do not send funds after the expiry.
         expiry: 1671660285
         inbound_confirmation_blocks: 0
@@ -5572,6 +5607,15 @@ components:
             type & inbound asset. Sending less than this amount could result in failed
             refunds.
           example: "15000"
+          type: string
+        recommended_gas_rate:
+          description: the recommended gas rate to use for the inbound to ensure timely
+            confirmation
+          example: "10"
+          type: string
+        gas_rate_units:
+          description: the units of the recommended gas rate
+          example: gwei
           type: string
         memo:
           description: "generated memo for the withdraw, the client can use this OR\
@@ -5593,11 +5637,13 @@ components:
       - expected_amount_out
       - expiry
       - fees
+      - gas_rate_units
       - inbound_address
       - memo
       - notes
       - outbound_delay_blocks
       - outbound_delay_seconds
+      - recommended_gas_rate
       - slippage_bps
       - warning
       type: object
@@ -5613,6 +5659,7 @@ components:
           asset: ETH.ETH
           affiliate: "1234"
         slippage_bps: 5
+        recommended_gas_rate: "10"
         notes: "Transfer the inbound_address the asset with the memo. Do not use multi-in,\
           \ multi-out transactions."
         outbound_delay_seconds: 5
@@ -5627,6 +5674,7 @@ components:
         router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
         expected_amount_out: "10000"
         streaming_swap_blocks: 10
+        gas_rate_units: gwei
         warning: Do not cache this response. Do not send funds after the expiry.
         expiry: 1671660285
         expected_collateral_deposited: "1000000"
@@ -5697,6 +5745,15 @@ components:
             refunds.
           example: "15000"
           type: string
+        recommended_gas_rate:
+          description: the recommended gas rate to use for the inbound to ensure timely
+            confirmation
+          example: "10"
+          type: string
+        gas_rate_units:
+          description: the units of the recommended gas rate
+          example: gwei
+          type: string
         memo:
           description: generated memo for the loan open
           example: $+:ETH.ETH:0x1c7b17362c84287bd1184447e6dfeaf920c31bbe
@@ -5744,9 +5801,11 @@ components:
       - expected_debt_issued
       - expiry
       - fees
+      - gas_rate_units
       - notes
       - outbound_delay_blocks
       - outbound_delay_seconds
+      - recommended_gas_rate
       - streaming_swap_blocks
       - streaming_swap_seconds
       - total_open_loan_seconds
@@ -5764,6 +5823,7 @@ components:
           asset: ETH.ETH
           affiliate: "1234"
         slippage_bps: 5
+        recommended_gas_rate: "10"
         total_repay_seconds: 600
         notes: "Transfer the inbound_address the asset with the memo. Do not use multi-in,\
           \ multi-out transactions."
@@ -5779,6 +5839,7 @@ components:
         router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
         expected_amount_out: "10000"
         streaming_swap_blocks: 10
+        gas_rate_units: gwei
         warning: Do not cache this response. Do not send funds after the expiry.
         expiry: 1671660285
         expected_collateral_withdrawn: "1000000"
@@ -5847,6 +5908,15 @@ components:
             type & inbound asset. Sending less than this amount could result in failed
             refunds.
           example: "15000"
+          type: string
+        recommended_gas_rate:
+          description: the recommended gas rate to use for the inbound to ensure timely
+            confirmation
+          example: "10"
+          type: string
+        gas_rate_units:
+          description: the units of the recommended gas rate
+          example: gwei
           type: string
         memo:
           description: generated memo for the loan close

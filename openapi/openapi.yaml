@@ -3606,6 +3606,14 @@ components:
           type: string
           description: The recommended minimum inbound amount for this transaction type & inbound asset. Sending less than this amount could result in failed refunds.
           example: "15000"
+        recommended_gas_rate:
+          type: string
+          example: "10"
+          description: the recommended gas rate to use for the inbound to ensure timely confirmation
+        gas_rate_units:
+          type: string
+          example: "gwei"
+          description: the units of the recommended gas rate
 
     QuoteSwapResponse:
       type: object
@@ -3666,6 +3674,8 @@ components:
         - warning
         - notes
         - expiry
+        - recommended_gas_rate
+        - gas_rate_units
       properties:
         <<: *quote-properties
         memo:
@@ -3695,6 +3705,8 @@ components:
         - warning
         - notes
         - expiry
+        - recommended_gas_rate
+        - gas_rate_units
       properties:
         <<: *quote-properties
         memo:
@@ -3726,6 +3738,8 @@ components:
         - streaming_swap_blocks
         - streaming_swap_seconds
         - total_open_loan_seconds
+        - recommended_gas_rate
+        - gas_rate_units
       properties:
         <<: *quote-properties
         memo:

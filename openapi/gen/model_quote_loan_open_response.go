@@ -43,6 +43,10 @@ type QuoteLoanOpenResponse struct {
 	DustThreshold *string `json:"dust_threshold,omitempty"`
 	// The recommended minimum inbound amount for this transaction type & inbound asset. Sending less than this amount could result in failed refunds.
 	RecommendedMinAmountIn *string `json:"recommended_min_amount_in,omitempty"`
+	// the recommended gas rate to use for the inbound to ensure timely confirmation
+	RecommendedGasRate string `json:"recommended_gas_rate"`
+	// the units of the recommended gas rate
+	GasRateUnits string `json:"gas_rate_units"`
 	// generated memo for the loan open
 	Memo *string `json:"memo,omitempty"`
 	// the amount of the target asset the user can expect to receive after fees in 1e8 decimals
@@ -65,7 +69,7 @@ type QuoteLoanOpenResponse struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewQuoteLoanOpenResponse(outboundDelayBlocks int64, outboundDelaySeconds int64, fees QuoteFees, expiry int64, warning string, notes string, expectedAmountOut string, expectedCollateralizationRatio string, expectedCollateralDeposited string, expectedDebtIssued string, streamingSwapBlocks int64, streamingSwapSeconds int64, totalOpenLoanSeconds int64) *QuoteLoanOpenResponse {
+func NewQuoteLoanOpenResponse(outboundDelayBlocks int64, outboundDelaySeconds int64, fees QuoteFees, expiry int64, warning string, notes string, recommendedGasRate string, gasRateUnits string, expectedAmountOut string, expectedCollateralizationRatio string, expectedCollateralDeposited string, expectedDebtIssued string, streamingSwapBlocks int64, streamingSwapSeconds int64, totalOpenLoanSeconds int64) *QuoteLoanOpenResponse {
 	this := QuoteLoanOpenResponse{}
 	this.OutboundDelayBlocks = outboundDelayBlocks
 	this.OutboundDelaySeconds = outboundDelaySeconds
@@ -73,6 +77,8 @@ func NewQuoteLoanOpenResponse(outboundDelayBlocks int64, outboundDelaySeconds in
 	this.Expiry = expiry
 	this.Warning = warning
 	this.Notes = notes
+	this.RecommendedGasRate = recommendedGasRate
+	this.GasRateUnits = gasRateUnits
 	this.ExpectedAmountOut = expectedAmountOut
 	this.ExpectedCollateralizationRatio = expectedCollateralizationRatio
 	this.ExpectedCollateralDeposited = expectedCollateralDeposited
@@ -491,6 +497,54 @@ func (o *QuoteLoanOpenResponse) SetRecommendedMinAmountIn(v string) {
 	o.RecommendedMinAmountIn = &v
 }
 
+// GetRecommendedGasRate returns the RecommendedGasRate field value
+func (o *QuoteLoanOpenResponse) GetRecommendedGasRate() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.RecommendedGasRate
+}
+
+// GetRecommendedGasRateOk returns a tuple with the RecommendedGasRate field value
+// and a boolean to check if the value has been set.
+func (o *QuoteLoanOpenResponse) GetRecommendedGasRateOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.RecommendedGasRate, true
+}
+
+// SetRecommendedGasRate sets field value
+func (o *QuoteLoanOpenResponse) SetRecommendedGasRate(v string) {
+	o.RecommendedGasRate = v
+}
+
+// GetGasRateUnits returns the GasRateUnits field value
+func (o *QuoteLoanOpenResponse) GetGasRateUnits() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.GasRateUnits
+}
+
+// GetGasRateUnitsOk returns a tuple with the GasRateUnits field value
+// and a boolean to check if the value has been set.
+func (o *QuoteLoanOpenResponse) GetGasRateUnitsOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.GasRateUnits, true
+}
+
+// SetGasRateUnits sets field value
+func (o *QuoteLoanOpenResponse) SetGasRateUnits(v string) {
+	o.GasRateUnits = v
+}
+
 // GetMemo returns the Memo field value if set, zero value otherwise.
 func (o *QuoteLoanOpenResponse) GetMemo() string {
 	if o == nil || o.Memo == nil {
@@ -734,6 +788,12 @@ func (o QuoteLoanOpenResponse) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if o.RecommendedMinAmountIn != nil {
 		toSerialize["recommended_min_amount_in"] = o.RecommendedMinAmountIn
+	}
+	if true {
+		toSerialize["recommended_gas_rate"] = o.RecommendedGasRate
+	}
+	if true {
+		toSerialize["gas_rate_units"] = o.GasRateUnits
 	}
 	if o.Memo != nil {
 		toSerialize["memo"] = o.Memo

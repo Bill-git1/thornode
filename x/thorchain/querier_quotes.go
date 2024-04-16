@@ -884,6 +884,13 @@ func queryQuoteSwap(ctx cosmos.Context, path []string, req abci.RequestQuery, mg
 	}
 	res.RecommendedMinAmountIn = wrapString(minSwapAmount.String())
 
+	// set inbound recommended gas for non-native swaps
+	if !fromAsset.Chain.IsTHORChain() {
+		inboundGas := mgr.GasMgr().GetGasRate(ctx, fromAsset.Chain)
+		res.RecommendedGasRate = wrapString(inboundGas.String())
+		res.GasRateUnits = wrapString(fromAsset.Chain.GetGasUnits())
+	}
+
 	return json.MarshalIndent(res, "", "  ")
 }
 
@@ -994,6 +1001,11 @@ func queryQuoteSaverDeposit(ctx cosmos.Context, path []string, req abci.RequestQ
 	res.Notes = chain.InboundNotes()
 	res.Warning = quoteWarning
 	res.Expiry = time.Now().Add(quoteExpiration).Unix()
+
+	// set inbound recommended gas
+	inboundGas := mgr.GasMgr().GetGasRate(ctx, chain)
+	res.RecommendedGasRate = inboundGas.String()
+	res.GasRateUnits = chain.GetGasUnits()
 
 	return json.MarshalIndent(res, "", "  ")
 }
@@ -1117,6 +1129,11 @@ func queryQuoteSaverWithdraw(ctx cosmos.Context, path []string, req abci.Request
 	res.Notes = chain.InboundNotes()
 	res.Warning = quoteWarning
 	res.Expiry = time.Now().Add(quoteExpiration).Unix()
+
+	// set inbound recommended gas
+	inboundGas := mgr.GasMgr().GetGasRate(ctx, chain)
+	res.RecommendedGasRate = inboundGas.String()
+	res.GasRateUnits = chain.GetGasUnits()
 
 	return json.MarshalIndent(res, "", "  ")
 }
@@ -1452,6 +1469,11 @@ func queryQuoteLoanOpen(ctx cosmos.Context, path []string, req abci.RequestQuery
 
 	res.StreamingSwapBlocks = streamingSwapBlocks
 	res.StreamingSwapSeconds = streamingSwapSeconds
+
+	// set inbound recommended gas
+	inboundGas := mgr.GasMgr().GetGasRate(ctx, asset.Chain)
+	res.RecommendedGasRate = inboundGas.String()
+	res.GasRateUnits = asset.Chain.GetGasUnits()
 
 	return json.MarshalIndent(res, "", "  ")
 }
@@ -1848,6 +1870,13 @@ func queryQuoteLoanClose(ctx cosmos.Context, path []string, req abci.RequestQuer
 		if err != nil {
 			return data, err
 		}
+	}
+
+	// set inbound recommended gas for non-native in asset
+	if !asset.Chain.IsTHORChain() {
+		inboundGas := mgr.GasMgr().GetGasRate(ctx, asset.Chain)
+		res.RecommendedGasRate = wrapString(inboundGas.String())
+		res.GasRateUnits = wrapString(asset.Chain.GetGasUnits())
 	}
 
 	return json.MarshalIndent(res, "", "  ")

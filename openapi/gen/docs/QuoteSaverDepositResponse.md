@@ -18,6 +18,8 @@ Name | Type | Description | Notes
 **Notes** | **string** | chain specific quote notes | 
 **DustThreshold** | Pointer to **string** | Defines the minimum transaction size for the chain in base units (sats, wei, uatom). Transactions with asset amounts lower than the dust_threshold are ignored. | [optional] 
 **RecommendedMinAmountIn** | Pointer to **string** | The recommended minimum inbound amount for this transaction type &amp; inbound asset. Sending less than this amount could result in failed refunds. | [optional] 
+**RecommendedGasRate** | **string** | the recommended gas rate to use for the inbound to ensure timely confirmation | 
+**GasRateUnits** | **string** | the units of the recommended gas rate | 
 **Memo** | **string** | generated memo for the deposit | 
 **ExpectedAmountOut** | Pointer to **string** | same as expected_amount_deposit, to be deprecated in favour of expected_amount_deposit | [optional] 
 **ExpectedAmountDeposit** | **string** | the amount of the target asset the user can expect to deposit after fees | 
@@ -26,7 +28,7 @@ Name | Type | Description | Notes
 
 ### NewQuoteSaverDepositResponse
 
-`func NewQuoteSaverDepositResponse(inboundAddress string, fees QuoteFees, slippageBps int64, expiry int64, warning string, notes string, memo string, expectedAmountDeposit string, ) *QuoteSaverDepositResponse`
+`func NewQuoteSaverDepositResponse(inboundAddress string, fees QuoteFees, slippageBps int64, expiry int64, warning string, notes string, recommendedGasRate string, gasRateUnits string, memo string, expectedAmountDeposit string, ) *QuoteSaverDepositResponse`
 
 NewQuoteSaverDepositResponse instantiates a new QuoteSaverDepositResponse object
 This constructor will assign default values to properties that have it defined,
@@ -360,6 +362,46 @@ SetRecommendedMinAmountIn sets RecommendedMinAmountIn field to given value.
 `func (o *QuoteSaverDepositResponse) HasRecommendedMinAmountIn() bool`
 
 HasRecommendedMinAmountIn returns a boolean if a field has been set.
+
+### GetRecommendedGasRate
+
+`func (o *QuoteSaverDepositResponse) GetRecommendedGasRate() string`
+
+GetRecommendedGasRate returns the RecommendedGasRate field if non-nil, zero value otherwise.
+
+### GetRecommendedGasRateOk
+
+`func (o *QuoteSaverDepositResponse) GetRecommendedGasRateOk() (*string, bool)`
+
+GetRecommendedGasRateOk returns a tuple with the RecommendedGasRate field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetRecommendedGasRate
+
+`func (o *QuoteSaverDepositResponse) SetRecommendedGasRate(v string)`
+
+SetRecommendedGasRate sets RecommendedGasRate field to given value.
+
+
+### GetGasRateUnits
+
+`func (o *QuoteSaverDepositResponse) GetGasRateUnits() string`
+
+GetGasRateUnits returns the GasRateUnits field if non-nil, zero value otherwise.
+
+### GetGasRateUnitsOk
+
+`func (o *QuoteSaverDepositResponse) GetGasRateUnitsOk() (*string, bool)`
+
+GetGasRateUnitsOk returns a tuple with the GasRateUnits field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetGasRateUnits
+
+`func (o *QuoteSaverDepositResponse) SetGasRateUnits(v string)`
+
+SetGasRateUnits sets GasRateUnits field to given value.
+
 
 ### GetMemo
 

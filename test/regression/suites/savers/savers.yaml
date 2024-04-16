@@ -28,6 +28,8 @@ asserts:
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
   - .fees.slippage_bps == 647
   - .fees.total_bps == 651
+  - .recommended_gas_rate == "10"
+  - .gas_rate_units == "satsperbyte"
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -114,6 +116,8 @@ asserts:
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
   - .fees.slippage_bps == 69
   - .fees.total_bps == 118
+  - .recommended_gas_rate == "10"
+  - .gas_rate_units == "satsperbyte"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
@@ -198,6 +202,8 @@ asserts:
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
   - .fees.slippage_bps == 70
   - .fees.total_bps == 118
+  - .recommended_gas_rate == "10"
+  - .gas_rate_units == "satsperbyte"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers

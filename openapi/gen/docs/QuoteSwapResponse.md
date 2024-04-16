@@ -18,6 +18,8 @@ Name | Type | Description | Notes
 **Notes** | **string** | chain specific quote notes | 
 **DustThreshold** | Pointer to **string** | Defines the minimum transaction size for the chain in base units (sats, wei, uatom). Transactions with asset amounts lower than the dust_threshold are ignored. | [optional] 
 **RecommendedMinAmountIn** | Pointer to **string** | The recommended minimum inbound amount for this transaction type &amp; inbound asset. Sending less than this amount could result in failed refunds. | [optional] 
+**RecommendedGasRate** | Pointer to **string** | the recommended gas rate to use for the inbound to ensure timely confirmation | [optional] 
+**GasRateUnits** | Pointer to **string** | the units of the recommended gas rate | [optional] 
 **Memo** | Pointer to **string** | generated memo for the swap | [optional] 
 **ExpectedAmountOut** | **string** | the amount of the target asset the user can expect to receive after fees | 
 **ExpectedAmountOutStreaming** | **string** | Deprecated - expected_amount_out is streaming amount if interval provided. | 
@@ -354,6 +356,56 @@ SetRecommendedMinAmountIn sets RecommendedMinAmountIn field to given value.
 `func (o *QuoteSwapResponse) HasRecommendedMinAmountIn() bool`
 
 HasRecommendedMinAmountIn returns a boolean if a field has been set.
+
+### GetRecommendedGasRate
+
+`func (o *QuoteSwapResponse) GetRecommendedGasRate() string`
+
+GetRecommendedGasRate returns the RecommendedGasRate field if non-nil, zero value otherwise.
+
+### GetRecommendedGasRateOk
+
+`func (o *QuoteSwapResponse) GetRecommendedGasRateOk() (*string, bool)`
+
+GetRecommendedGasRateOk returns a tuple with the RecommendedGasRate field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetRecommendedGasRate
+
+`func (o *QuoteSwapResponse) SetRecommendedGasRate(v string)`
+
+SetRecommendedGasRate sets RecommendedGasRate field to given value.
+
+### HasRecommendedGasRate
+
+`func (o *QuoteSwapResponse) HasRecommendedGasRate() bool`
+
+HasRecommendedGasRate returns a boolean if a field has been set.
+
+### GetGasRateUnits
+
+`func (o *QuoteSwapResponse) GetGasRateUnits() string`
+
+GetGasRateUnits returns the GasRateUnits field if non-nil, zero value otherwise.
+
+### GetGasRateUnitsOk
+
+`func (o *QuoteSwapResponse) GetGasRateUnitsOk() (*string, bool)`
+
+GetGasRateUnitsOk returns a tuple with the GasRateUnits field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetGasRateUnits
+
+`func (o *QuoteSwapResponse) SetGasRateUnits(v string)`
+
+SetGasRateUnits sets GasRateUnits field to given value.
+
+### HasGasRateUnits
+
+`func (o *QuoteSwapResponse) HasGasRateUnits() bool`
+
+HasGasRateUnits returns a boolean if a field has been set.
 
 ### GetMemo
 
