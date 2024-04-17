@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/blang/semver"
 	"github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ecommon "github.com/ethereum/go-ethereum/common"
@@ -588,49 +587,24 @@ func (c *EVMClient) buildOutboundTx(txOutItem stypes.TxOutItem, memo mem.Memo, n
 		scheduledMaxFee = scheduledMaxFee.Mul(scheduledMaxFee, big.NewInt(c.cfg.TokenMaxGasMultiplier))
 	}
 
-	version, err := c.bridge.GetThorchainVersion()
-	if err != nil {
-		return nil, fmt.Errorf("fail to get thorchain version: %w", err)
+	// determine max gas units based on scheduled max gas (fee) and current rate
+	maxGasUnits := new(big.Int).Div(scheduledMaxFee, gasRate).Uint64()
+
+	// if estimated gas is more than the planned gas, abort and let thornode reschedule
+	if estimatedGas > maxGasUnits {
+		c.logger.Warn().
+			Stringer("in_hash", txOutItem.InHash).
+			Stringer("rate", gasRate).
+			Uint64("estimated_gas_units", estimatedGas).
+			Uint64("max_gas_units", maxGasUnits).
+			Str("scheduled_max_fee", scheduledMaxFee.String()).
+			Msg("max gas exceeded, aborting to let thornode reschedule")
+		return nil, nil
 	}
 
-	// TODO: remove version check after v131
-	if version.GTE(semver.MustParse("1.131.0")) {
-		// determine max gas units based on scheduled max gas (fee) and current rate
-		maxGasUnits := new(big.Int).Div(scheduledMaxFee, gasRate).Uint64()
-
-		// if estimated gas is more than the planned gas, abort and let thornode reschedule
-		if estimatedGas > maxGasUnits {
-			c.logger.Warn().
-				Stringer("in_hash", txOutItem.InHash).
-				Stringer("rate", gasRate).
-				Uint64("estimated_gas_units", estimatedGas).
-				Uint64("max_gas_units", maxGasUnits).
-				Str("scheduled_max_fee", scheduledMaxFee.String()).
-				Msg("max gas exceeded, aborting to let thornode reschedule")
-			return nil, nil
-		}
-
-		createdTx = etypes.NewTransaction(
-			nonce, ecommon.HexToAddress(contractAddr.String()), evmValue, maxGasUnits, gasRate, txData,
-		)
-	} else {
-		// if over max scheduled gas, abort and let thornode reschedule
-		estimatedFee := big.NewInt(int64(estimatedGas) * gasRate.Int64())
-		if scheduledMaxFee.Cmp(estimatedFee) < 0 {
-			c.logger.Warn().
-				Stringer("in_hash", txOutItem.InHash).
-				Stringer("rate", gasRate).
-				Uint64("estimated_gas", estimatedGas).
-				Str("estimated_fee", estimatedFee.String()).
-				Str("scheduled_max_fee", scheduledMaxFee.String()).
-				Msg("max gas exceeded, aborting to let thornode reschedule")
-			return nil, nil
-		}
-
-		createdTx = etypes.NewTransaction(
-			nonce, ecommon.HexToAddress(contractAddr.String()), evmValue, estimatedGas, gasRate, txData,
-		)
-	}
+	createdTx = etypes.NewTransaction(
+		nonce, ecommon.HexToAddress(contractAddr.String()), evmValue, maxGasUnits, gasRate, txData,
+	)
 
 	return createdTx, nil
 }
@@ -732,6 +706,8 @@ func (c *EVMClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 
 	coin := tx.Coins[0]
 	gas := common.MakeEVMGas(c.GetChain(), outboundTx.GasPrice(), outboundTx.Gas())
+	// This is the maximum gas, using the gas limit for instant-observation
+	// rather than the GasUsed which can only be gotten from the receipt when scanning.
 
 	signedTx := &etypes.Transaction{}
 	if err = signedTx.UnmarshalJSON(rawTx); err != nil {

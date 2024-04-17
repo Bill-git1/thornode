@@ -29,6 +29,7 @@ import (
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/config"
 	"gitlab.com/thorchain/thornode/x/thorchain"
+	"gitlab.com/thorchain/thornode/x/thorchain/types"
 	. "gopkg.in/check.v1"
 )
 
@@ -246,6 +247,9 @@ func (s *BlockScannerTestSuite) TestProcessBlock(c *C) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		switch {
+		case req.RequestURI == thorclient.ChainVersionEndpoint:
+			_, err = rw.Write([]byte(`{"current":"` + types.GetCurrentVersion().String() + `"}`))
+			c.Assert(err, IsNil)
 		case req.RequestURI == thorclient.PubKeysEndpoint:
 			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/vaults/pubKeys.json")
 		case req.RequestURI == thorclient.InboundAddressesEndpoint:
@@ -331,6 +335,9 @@ func httpTestHandler(c *C, rw http.ResponseWriter, fixture string) {
 func (s *BlockScannerTestSuite) TestGetTxInItem(c *C) {
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		switch {
+		case req.RequestURI == thorclient.ChainVersionEndpoint:
+			_, err := rw.Write([]byte(`{"current":"` + types.GetCurrentVersion().String() + `"}`))
+			c.Assert(err, IsNil)
 		case req.RequestURI == thorclient.PubKeysEndpoint:
 			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/vaults/pubKeys.json")
 		case req.RequestURI == thorclient.InboundAddressesEndpoint:
@@ -433,7 +440,7 @@ func (s *BlockScannerTestSuite) TestGetTxInItem(c *C) {
 	}()
 	c.Assert(err, IsNil)
 	config := getConfigForTest(server.URL)
-	bs, err := NewEVMScanner(config, storage, big.NewInt(int64(Mainnet)), ethClient, rpcClient, s.bridge, s.m, pkeyMgr, func(height int64) error {
+	bs, err := NewEVMScanner(config, storage, big.NewInt(int64(Mainnet)), ethClient, rpcClient, bridge, s.m, pkeyMgr, func(height int64) error {
 		return nil
 	}, nil)
 	c.Assert(err, IsNil)
@@ -474,12 +481,12 @@ func (s *BlockScannerTestSuite) TestGetTxInItem(c *C) {
 		true,
 	)
 	c.Check(
-		txInItem.Gas[0].Amount.Equal(cosmos.NewUint(100000)),
+		txInItem.Gas[0].Amount.Equal(cosmos.NewUint(2488)), // from GasUsed rather than gas limit
 		Equals,
 		true,
 	)
 
-	bs, err = NewEVMScanner(config, storage, big.NewInt(43112), ethClient, rpcClient, s.bridge, s.m, pkeyMgr, func(height int64) error {
+	bs, err = NewEVMScanner(config, storage, big.NewInt(43112), ethClient, rpcClient, bridge, s.m, pkeyMgr, func(height int64) error {
 		return nil
 	}, nil)
 	c.Assert(err, IsNil)
@@ -498,7 +505,7 @@ func (s *BlockScannerTestSuite) TestGetTxInItem(c *C) {
 
 	config.WhitelistTokens = append(config.WhitelistTokens, "0x333c3310824b7c685133F2BeDb2CA4b8b4DF633d")
 
-	bs, err = NewEVMScanner(config, storage, big.NewInt(43112), ethClient, rpcClient, s.bridge, s.m, pkeyMgr, func(height int64) error {
+	bs, err = NewEVMScanner(config, storage, big.NewInt(43112), ethClient, rpcClient, bridge, s.m, pkeyMgr, func(height int64) error {
 		return nil
 	}, nil)
 	// whitelist the address for test

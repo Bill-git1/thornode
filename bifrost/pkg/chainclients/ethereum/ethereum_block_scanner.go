@@ -262,26 +262,6 @@ func (e *ETHScanner) updateGasPriceV3(baseFee *big.Int, priorityFees []*big.Int)
 	e.updateGasPriceFromCache()
 }
 
-// updateGasPriceV2 records the 25th percentile gas price in the block.
-func (e *ETHScanner) updateGasPriceV2(prices []*big.Int) {
-	// skip empty blocks
-	if len(prices) == 0 {
-		return
-	}
-
-	// find the 25th percentile gas price in the block
-	sort.Slice(prices, func(i, j int) bool { return prices[i].Cmp(prices[j]) == -1 })
-	gasPrice := prices[len(prices)/4]
-
-	// add to the cache
-	e.gasCache = append(e.gasCache, gasPrice)
-	if len(e.gasCache) > e.cfg.GasCacheBlocks {
-		e.gasCache = e.gasCache[(len(e.gasCache) - e.cfg.GasCacheBlocks):]
-	}
-
-	e.updateGasPriceFromCache()
-}
-
 func (e *ETHScanner) updateGasPriceFromCache() {
 	// skip update unless cache is full
 	if len(e.gasCache) < e.cfg.GasCacheBlocks {
@@ -327,24 +307,15 @@ func (e *ETHScanner) processBlock(block *etypes.Block) (stypes.TxIn, error) {
 	}
 
 	// update gas price
-	version, err := e.bridge.GetThorchainVersion()
-	if err != nil || version.GTE(semver.MustParse("1.131.0")) {
-		var priorityFees []*big.Int
-		for _, tx := range block.Transactions() {
-			tipCap := tx.GasTipCap()
-			if tipCap == nil {
-				tipCap = big.NewInt(0)
-			}
-			priorityFees = append(priorityFees, tipCap)
+	var priorityFees []*big.Int
+	for _, tx := range block.Transactions() {
+		tipCap := tx.GasTipCap()
+		if tipCap == nil {
+			tipCap = big.NewInt(0)
 		}
-		e.updateGasPriceV3(block.BaseFee(), priorityFees)
-	} else {
-		var txsGas []*big.Int
-		for _, tx := range block.Transactions() {
-			txsGas = append(txsGas, tx.GasPrice())
-		}
-		e.updateGasPriceV2(txsGas)
+		priorityFees = append(priorityFees, tipCap)
 	}
+	e.updateGasPriceV3(block.BaseFee(), priorityFees)
 
 	reorgedTxIns, err := e.processReorg(block.Header())
 	if err != nil {
@@ -841,7 +812,7 @@ func (e *ETHScanner) getTxInFromSmartContract(tx *etypes.Transaction, receipt *e
 	return txInItem, nil
 }
 
-func (e *ETHScanner) getTxInFromTransaction(tx *etypes.Transaction) (*stypes.TxInItem, error) {
+func (e *ETHScanner) getTxInFromTransaction(tx *etypes.Transaction, receipt *etypes.Receipt) (*stypes.TxInItem, error) {
 	txInItem := &stypes.TxInItem{
 		Tx: tx.Hash().Hex()[2:],
 	}
@@ -869,7 +840,16 @@ func (e *ETHScanner) getTxInFromTransaction(tx *etypes.Transaction) (*stypes.TxI
 	if txGasPrice.Cmp(big.NewInt(tenGwei)) < 0 {
 		txGasPrice = big.NewInt(tenGwei)
 	}
-	txInItem.Gas = common.MakeEVMGas(common.ETHChain, txGasPrice, tx.Gas())
+	// TODO: remove version check after v132
+	version, err := e.bridge.GetThorchainVersion()
+	if err != nil {
+		return nil, fmt.Errorf("fail to get thorchain version: %w", err)
+	}
+	if version.GTE(semver.MustParse("1.132.0")) {
+		txInItem.Gas = common.MakeEVMGas(common.ETHChain, txGasPrice, receipt.GasUsed)
+	} else {
+		txInItem.Gas = common.MakeEVMGas(common.ETHChain, txGasPrice, tx.Gas())
+	}
 	if txInItem.Coins.IsEmpty() {
 		if txInItem.Sender == txInItem.To {
 			// When the Sender and To is the same then there's no balance chance whatever the Coins,
@@ -912,7 +892,7 @@ func (e *ETHScanner) fromTxToTxIn(tx *etypes.Transaction) (*stypes.TxInItem, err
 	if e.isToValidContractAddress(tx.To(), true) {
 		return e.getTxInFromSmartContract(tx, receipt)
 	}
-	return e.getTxInFromTransaction(tx)
+	return e.getTxInFromTransaction(tx, receipt)
 }
 
 // getTxInFromFailedTransaction when a transaction failed due to out of gas, this method will check whether the transaction is an outbound
@@ -939,12 +919,29 @@ func (e *ETHScanner) getTxInFromFailedTransaction(tx *etypes.Transaction, receip
 	}
 	txHash := tx.Hash().Hex()[2:]
 
-	return &stypes.TxInItem{
-		Tx:     txHash,
-		Memo:   memo.NewOutboundMemo(common.TxID(txHash)).String(),
-		Sender: strings.ToLower(fromAddr.String()),
-		To:     strings.ToLower(tx.To().String()),
-		Coins:  common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1))),
-		Gas:    common.MakeEVMGas(common.ETHChain, txGasPrice, tx.Gas()),
+	// TODO: remove version check after v132
+	version, err := e.bridge.GetThorchainVersion()
+	if err != nil {
+		e.logger.Err(err).Msg("fail to get thorchain version")
+		return nil
+	}
+	if version.GTE(semver.MustParse("1.132.0")) {
+		return &stypes.TxInItem{
+			Tx:     txHash,
+			Memo:   memo.NewOutboundMemo(common.TxID(txHash)).String(),
+			Sender: strings.ToLower(fromAddr.String()),
+			To:     strings.ToLower(tx.To().String()),
+			Coins:  common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1))),
+			Gas:    common.MakeEVMGas(common.ETHChain, txGasPrice, receipt.GasUsed),
+		}
+	} else {
+		return &stypes.TxInItem{
+			Tx:     txHash,
+			Memo:   memo.NewOutboundMemo(common.TxID(txHash)).String(),
+			Sender: strings.ToLower(fromAddr.String()),
+			To:     strings.ToLower(tx.To().String()),
+			Coins:  common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1))),
+			Gas:    common.MakeEVMGas(common.ETHChain, txGasPrice, tx.Gas()),
+		}
 	}
 }

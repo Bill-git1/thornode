@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/blang/semver"
 	"github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -566,13 +565,8 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		estimatedETHValue = estimatedETHValue.SetInt64(21000)
 	}
 
-	// TODO: remove version check after v131
 	var createdTx *etypes.Transaction
-	version, err := c.bridge.GetThorchainVersion()
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("fail to get thorchain version: %w", err)
-	}
-	if !c.cfg.FixedOutboundGasRate && version.GTE(semver.MustParse("1.131.0")) {
+	if !c.cfg.FixedOutboundGasRate {
 		to := ecommon.HexToAddress(contractAddr.String())
 		createdTx = etypes.NewTx(&etypes.DynamicFeeTx{
 			ChainID:   c.chainID,
@@ -636,8 +630,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		scheduledMaxFee = scheduledMaxFee.Mul(scheduledMaxFee, big.NewInt(c.cfg.TokenMaxGasMultiplier))
 	}
 
-	// TODO: remove version check after v131
-	if !c.cfg.FixedOutboundGasRate && version.GTE(semver.MustParse("1.131.0")) {
+	if !c.cfg.FixedOutboundGasRate {
 		// determine max gas units based on scheduled max gas (fee) and current rate
 		maxGasUnits := new(big.Int).Div(scheduledMaxFee, gasRate).Uint64()
 
@@ -696,6 +689,8 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 	}
 	coin := tx.Coins[0]
 	gas := common.MakeEVMGas(c.GetChain(), createdTx.GasPrice(), createdTx.Gas())
+	// This is the maximum gas, using the gas limit for instant-observation
+	// rather than the GasUsed which can only be gotten from the receipt when scanning.
 
 	signedTx := &etypes.Transaction{}
 	if err = signedTx.UnmarshalJSON(rawTx); err != nil {

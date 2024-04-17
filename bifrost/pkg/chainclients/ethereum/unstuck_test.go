@@ -73,7 +73,7 @@ func (s *UnstuckTestSuite) SetUpTest(c *C) {
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		switch req.RequestURI {
 		case thorclient.ChainVersionEndpoint:
-			_, err = rw.Write([]byte(`{"current":"1.131.0"}`))
+			_, err = rw.Write([]byte(`{"current":"` + types2.GetCurrentVersion().String() + `"}`))
 			c.Assert(err, IsNil)
 		case thorclient.ThorchainConstants:
 			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/constants/constants.json")

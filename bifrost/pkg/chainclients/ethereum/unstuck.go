@@ -6,7 +6,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/blang/semver"
 	"github.com/ethereum/go-ethereum"
 	ecommon "github.com/ethereum/go-ethereum/common"
 	ecore "github.com/ethereum/go-ethereum/core"
@@ -158,13 +157,8 @@ func (c *Client) unstuckTx(clog zerolog.Logger, item types.SignedTxItem) error {
 		currentGasRate = big.NewInt(1).Mul(originGasPrice, big.NewInt(2))
 	}
 
-	// TODO: remove version check after v131
 	var cancelTx *etypes.Transaction
-	version, err := c.bridge.GetThorchainVersion()
-	if err != nil {
-		return fmt.Errorf("fail to get thorchain version: %w", err)
-	}
-	if !c.cfg.FixedOutboundGasRate && version.GTE(semver.MustParse("1.131.0")) {
+	if !c.cfg.FixedOutboundGasRate {
 		to := ecommon.HexToAddress(address.String())
 
 		// tip cap at configured percentage of max fee
