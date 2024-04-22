@@ -74,7 +74,7 @@ func (p *parser) parse() (mem Memo, err error) {
 	case TxWithdraw:
 		return p.ParseWithdrawLiquidityMemo()
 	case TxSwap, TxLimitOrder:
-		if p.getType() == TxLimitOrder && p.keeper.GetVersion().LT(semver.MustParse("1.98.0")) {
+		if p.getType() == TxLimitOrder && p.version.LT(semver.MustParse("1.98.0")) {
 			return EmptyMemo, fmt.Errorf("TxType not supported: %s", p.getType().String())
 		}
 		return p.ParseSwapMemo()
@@ -108,17 +108,17 @@ func (p *parser) parse() (mem Memo, err error) {
 		return p.ParseTradeAccountWithdrawal()
 
 	case TxSwitch: // TODO remove on hard fork
-		if p.keeper.GetVersion().GTE(semver.MustParse("1.117.0")) {
+		if p.version.GTE(semver.MustParse("1.117.0")) {
 			return EmptyMemo, fmt.Errorf("TxType not supported: %s", p.getType().String())
 		}
 		return p.ParseSwitchMemo()
 	case TxYggdrasilFund: // TODO remove on hard fork
-		if p.keeper.GetVersion().GTE(semver.MustParse("1.124.0")) {
+		if p.version.GTE(semver.MustParse("1.124.0")) {
 			return EmptyMemo, fmt.Errorf("TxType not supported: %s", p.getType().String())
 		}
 		return p.ParseYggdrasilFundMemo()
 	case TxYggdrasilReturn: // TODO remove on hard fork
-		if p.keeper.GetVersion().GTE(semver.MustParse("1.124.0")) {
+		if p.version.GTE(semver.MustParse("1.124.0")) {
 			return EmptyMemo, fmt.Errorf("TxType not supported: %s", p.getType().String())
 		}
 		return p.ParseYggdrasilReturnMemo()
