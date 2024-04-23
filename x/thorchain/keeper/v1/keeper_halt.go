@@ -8,29 +8,6 @@ import (
 	"gitlab.com/thorchain/thornode/common/cosmos"
 )
 
-func (k KVStore) IsRagnarok(ctx cosmos.Context, assets []common.Asset) bool {
-	// add any corresponding gas assets
-	seen := make(map[string]bool)
-	for i := range assets {
-		gasAsset := assets[i].GetChain().GetGasAsset()
-		if !assets[i].Equals(gasAsset) && !seen[gasAsset.MimirString()] {
-			assets = append(assets, gasAsset)
-			seen[gasAsset.MimirString()] = true
-		}
-	}
-
-	// check if any of the assets are in ragnarok
-	for i := range assets {
-		key := "RAGNAROK-" + assets[i].MimirString()
-		v, err := k.GetMimir(ctx, key)
-		if err == nil && v > 0 {
-			return true
-		}
-	}
-
-	return false
-}
-
 func (k KVStore) IsTradingHalt(ctx cosmos.Context, msg cosmos.Msg) bool {
 	// consider halted if ragnarok in progress for either asset or chain gas asset
 	if k.GetVersion().GTE(semver.MustParse("1.129.0")) {

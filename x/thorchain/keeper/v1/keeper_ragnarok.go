@@ -107,3 +107,26 @@ func (k KVStore) GetPoolRagnarokStart(ctx cosmos.Context, asset common.Asset) (i
 func (k KVStore) DeletePoolRagnarokStart(ctx cosmos.Context, asset common.Asset) {
 	k.del(ctx, k.GetKey(ctx, prefixRagnarokPoolHeight, asset.String()))
 }
+
+func (k KVStore) IsRagnarok(ctx cosmos.Context, assets []common.Asset) bool {
+	// add any corresponding gas assets
+	seen := make(map[string]bool)
+	for i := range assets {
+		gasAsset := assets[i].GetChain().GetGasAsset()
+		if !assets[i].Equals(gasAsset) && !seen[gasAsset.MimirString()] {
+			assets = append(assets, gasAsset)
+			seen[gasAsset.MimirString()] = true
+		}
+	}
+
+	// check if any of the assets are in ragnarok
+	for i := range assets {
+		key := "RAGNAROK-" + assets[i].MimirString()
+		v, err := k.GetMimir(ctx, key)
+		if err == nil && v > 0 {
+			return true
+		}
+	}
+
+	return false
+}

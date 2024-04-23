@@ -316,6 +316,7 @@ type KeeperRagnarok interface {
 	SetPoolRagnarokStart(ctx cosmos.Context, asset common.Asset)
 	GetPoolRagnarokStart(ctx cosmos.Context, asset common.Asset) (int64, error)
 	DeletePoolRagnarokStart(ctx cosmos.Context, asset common.Asset)
+	IsRagnarok(ctx cosmos.Context, assets []common.Asset) bool
 }
 
 type KeeperErrataTx interface {
@@ -403,7 +404,6 @@ type KeeperTHORName interface {
 }
 
 type KeeperHalt interface {
-	IsRagnarok(ctx cosmos.Context, assets []common.Asset) bool
 	IsTradingHalt(ctx cosmos.Context, msg cosmos.Msg) bool
 	IsGlobalTradingHalted(ctx cosmos.Context) bool
 	IsChainTradingHalted(ctx cosmos.Context, chain common.Chain) bool

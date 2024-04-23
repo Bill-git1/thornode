@@ -91,6 +91,7 @@ var (
 type (
 	MsgSwap                  = types.MsgSwap
 	MsgAddLiquidity          = types.MsgAddLiquidity
+	MsgWithdrawLiquidity     = types.MsgWithdrawLiquidity
 	Pool                     = types.Pool
 	Pools                    = types.Pools
 	LiquidityProvider        = types.LiquidityProvider
