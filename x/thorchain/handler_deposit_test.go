@@ -164,7 +164,7 @@ func (s *HandlerDepositSuite) TestDifferentValidation(c *C) {
 	}
 }
 
-func (s *HandlerDepositSuite) TestAddSwapV64(c *C) {
+func (s *HandlerDepositSuite) TestAddSwap(c *C) {
 	SetupConfigForTest()
 	ctx, mgr := setupManagerForTest(c)
 	handler := NewDepositHandler(mgr)
@@ -176,18 +176,22 @@ func (s *HandlerDepositSuite) TestAddSwapV64(c *C) {
 		common.Gas{
 			{Asset: common.BNBAsset, Amount: cosmos.NewUint(37500)},
 		},
-		"",
+		// memo is only used for getting the affiliate thorname but must be
+		// valid in order for addSwap to complete successfully
+		fmt.Sprintf("=:BTC.BTC:%s::%s:10000", GetRandomBTCAddress().String(), GetRandomTHORAddress()),
 	)
 	// no affiliate fee
 	msg := NewMsgSwap(tx, common.BTCAsset, GetRandomBTCAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 0, 0, GetRandomBech32Addr())
-	handler.addSwapV65(ctx, *msg)
+
+	handler.addSwap(ctx, *msg)
 	swap, err := mgr.Keeper().GetSwapQueueItem(ctx, tx.ID, 0)
 	c.Assert(err, IsNil)
 	c.Assert(swap.String(), Equals, msg.String())
 
 	// affiliate fee, with more than 10K as basis points
 	msg1 := NewMsgSwap(tx, common.BTCAsset, GetRandomBTCAddress(), cosmos.ZeroUint(), GetRandomTHORAddress(), cosmos.NewUint(20000), "", "", nil, MarketOrder, 0, 0, GetRandomBech32Addr())
-	handler.addSwapV65(ctx, *msg1)
+
+	handler.addSwap(ctx, *msg1)
 	swap, err = mgr.Keeper().GetSwapQueueItem(ctx, tx.ID, 0)
 	c.Assert(err, IsNil)
 	c.Assert(swap.Tx.Coins[0].Amount.IsZero(), Equals, true)
@@ -199,7 +203,7 @@ func (s *HandlerDepositSuite) TestAddSwapV64(c *C) {
 	// normal affiliate fee
 	tx.Coins[0].Amount = cosmos.NewUint(common.One)
 	msg2 := NewMsgSwap(tx, common.BTCAsset, GetRandomBTCAddress(), cosmos.ZeroUint(), GetRandomTHORAddress(), cosmos.NewUint(1000), "", "", nil, MarketOrder, 0, 0, GetRandomBech32Addr())
-	handler.addSwapV65(ctx, *msg2)
+	handler.addSwap(ctx, *msg2)
 	swap, err = mgr.Keeper().GetSwapQueueItem(ctx, tx.ID, 0)
 	c.Assert(err, IsNil)
 	c.Assert(swap.Tx.Coins[0].Amount.IsZero(), Equals, false)
@@ -221,13 +225,15 @@ func (s *HandlerDepositSuite) TestAddSwapV64(c *C) {
 		common.Gas{
 			{Asset: common.RuneNative, Amount: cosmos.NewUint(200000)},
 		},
-		"",
+		// memo is only used for getting the affiliate thorname but must be
+		// valid in order for addSwap to complete successfully
+		tx.Memo,
 	)
 
 	c.Assert(mgr.Keeper().MintToModule(ctx, ModuleName, tx1.Coins[0]), IsNil)
 	c.Assert(mgr.Keeper().SendFromModuleToModule(ctx, ModuleName, AsgardName, tx1.Coins), IsNil)
 	msg3 := NewMsgSwap(tx1, common.BTCAsset, GetRandomBTCAddress(), cosmos.ZeroUint(), GetRandomTHORAddress(), cosmos.NewUint(1000), "", "", nil, MarketOrder, 0, 0, GetRandomBech32Addr())
-	handler.addSwapV65(ctx, *msg3)
+	handler.addSwap(ctx, *msg3)
 	swap, err = mgr.Keeper().GetSwapQueueItem(ctx, tx1.ID, 0)
 	c.Assert(err, IsNil)
 	c.Assert(swap.Tx.Coins[0].Amount.IsZero(), Equals, false)

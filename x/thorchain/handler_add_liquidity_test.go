@@ -542,79 +542,7 @@ func (p *AddLiquidityTestKeeper) AddOwnership(ctx cosmos.Context, coin common.Co
 	return nil
 }
 
-func (s *HandlerAddLiquiditySuite) TestCalculateLPUnitsV1(c *C) {
-	inputs := []struct {
-		name           string
-		oldLPUnits     cosmos.Uint
-		poolRune       cosmos.Uint
-		poolAsset      cosmos.Uint
-		addRune        cosmos.Uint
-		addAsset       cosmos.Uint
-		poolUnits      cosmos.Uint
-		liquidityUnits cosmos.Uint
-		expectedErr    error
-	}{
-		{
-			name:           "first-add-zero-rune",
-			oldLPUnits:     cosmos.ZeroUint(),
-			poolRune:       cosmos.ZeroUint(),
-			poolAsset:      cosmos.ZeroUint(),
-			addRune:        cosmos.ZeroUint(),
-			addAsset:       cosmos.NewUint(100 * common.One),
-			poolUnits:      cosmos.ZeroUint(),
-			liquidityUnits: cosmos.ZeroUint(),
-			expectedErr:    errors.New("total RUNE in the pool is zero"),
-		},
-		{
-			name:           "first-add-zero-asset",
-			oldLPUnits:     cosmos.ZeroUint(),
-			poolRune:       cosmos.ZeroUint(),
-			poolAsset:      cosmos.ZeroUint(),
-			addRune:        cosmos.NewUint(100 * common.One),
-			addAsset:       cosmos.ZeroUint(),
-			poolUnits:      cosmos.ZeroUint(),
-			liquidityUnits: cosmos.ZeroUint(),
-			expectedErr:    errors.New("total asset in the pool is zero"),
-		},
-		{
-			name:           "first-add",
-			oldLPUnits:     cosmos.ZeroUint(),
-			poolRune:       cosmos.ZeroUint(),
-			poolAsset:      cosmos.ZeroUint(),
-			addRune:        cosmos.NewUint(100 * common.One),
-			addAsset:       cosmos.NewUint(100 * common.One),
-			poolUnits:      cosmos.NewUint(100 * common.One),
-			liquidityUnits: cosmos.NewUint(100 * common.One),
-			expectedErr:    nil,
-		},
-		{
-			name:           "second-add",
-			oldLPUnits:     cosmos.NewUint(500 * common.One),
-			poolRune:       cosmos.NewUint(500 * common.One),
-			poolAsset:      cosmos.NewUint(500 * common.One),
-			addRune:        cosmos.NewUint(345 * common.One),
-			addAsset:       cosmos.NewUint(234 * common.One),
-			poolUnits:      cosmos.NewUint(76359469067),
-			liquidityUnits: cosmos.NewUint(26359469067),
-			expectedErr:    nil,
-		},
-	}
-
-	for _, item := range inputs {
-		c.Logf("Name: %s", item.name)
-		poolUnits, liquidityUnits, err := calculatePoolUnitsV1(item.oldLPUnits, item.poolRune, item.poolAsset, item.addRune, item.addAsset)
-		if item.expectedErr == nil {
-			c.Assert(err, IsNil)
-		} else {
-			c.Assert(err.Error(), Equals, item.expectedErr.Error())
-		}
-
-		c.Check(item.poolUnits.Uint64(), Equals, poolUnits.Uint64(), Commentf("%d / %d", item.poolUnits.Uint64(), poolUnits.Uint64()))
-		c.Check(item.liquidityUnits.Uint64(), Equals, liquidityUnits.Uint64(), Commentf("%d / %d", item.liquidityUnits.Uint64(), liquidityUnits.Uint64()))
-	}
-}
-
-func (s *HandlerAddLiquiditySuite) TestCalculateLPUnitsV98(c *C) {
+func (s *HandlerAddLiquiditySuite) TestCalculateLPUnits(c *C) {
 	inputs := []struct {
 		name           string
 		oldLPUnits     cosmos.Uint
@@ -683,9 +611,11 @@ func (s *HandlerAddLiquiditySuite) TestCalculateLPUnitsV98(c *C) {
 		},
 	}
 
+	_, mgr := setupManagerForTest(c)
+	h := NewAddLiquidityHandler(mgr)
 	for _, item := range inputs {
 		c.Logf("Name: %s", item.name)
-		poolUnits, liquidityUnits, err := calculatePoolUnitsV98(item.oldLPUnits, item.poolRune, item.poolAsset, item.addRune, item.addAsset)
+		poolUnits, liquidityUnits, err := h.calculatePoolUnits(item.oldLPUnits, item.poolRune, item.poolAsset, item.addRune, item.addAsset)
 		if item.expectedErr == nil {
 			c.Assert(err, IsNil)
 		} else {
