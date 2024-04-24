@@ -34,12 +34,9 @@ type SwapActor struct {
 
 func NewSwapActor(from, to common.Asset) *Actor {
 	a := &SwapActor{
-		Actor: Actor{
-			Name: fmt.Sprintf("Swap %s => %s", from, to),
-			Ops:  []Op{},
-		},
-		from: from,
-		to:   to,
+		Actor: *NewActor(fmt.Sprintf("Swap %s => %s", from, to)),
+		from:  from,
+		to:    to,
 	}
 
 	// lock an account with from balance

@@ -68,7 +68,7 @@ func main() {
 	}
 
 	// combine all actor dags for the complete test run
-	root := &Actor{Name: "root"}
+	root := NewActor("Root")
 	root.Append(static.Bootstrap())
 	root.Append(static.Swaps())
 	root.Append(static.Ragnarok())

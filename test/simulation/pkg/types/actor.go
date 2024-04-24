@@ -34,14 +34,23 @@ type Actor struct {
 	Ops []Op `json:"-"`
 
 	// Children is the set of children to execute after the operations have completed.
-	Children []*Actor
+	Children map[*Actor]bool `json:"-"`
 
 	// -------------------- internal --------------------
 
 	log      zerolog.Logger
-	parents  []*Actor
+	parents  map[*Actor]bool
 	started  *atomic.Bool
 	finished *atomic.Bool
+}
+
+// NewActor will create a new actor with the provided name.
+func NewActor(name string) *Actor {
+	return &Actor{
+		Name:     name,
+		Children: map[*Actor]bool{},
+		parents:  map[*Actor]bool{},
+	}
 }
 
 // Start will mark the actor as started.
@@ -60,7 +69,7 @@ func (a *Actor) Finished() bool {
 }
 
 // Parents returns the parents of the actor.
-func (a *Actor) Parents() []*Actor {
+func (a *Actor) Parents() map[*Actor]bool {
 	return a.parents
 }
 
@@ -70,25 +79,8 @@ func (a *Actor) WalkDepthFirst(f func(*Actor) bool) (cont bool) {
 	if !f(a) {
 		return false
 	}
-	for _, child := range a.Children {
-		if !child.WalkDepthFirst(f) {
-			return false
-		}
-	}
-	return true
-}
-
-// WalkBreadthFirst will walk the actor tree breadth first and execute the provided
-// function on each actor. If the function returns false, the walk will stop.
-func (a *Actor) WalkBreadthFirst(f func(*Actor) bool) (cont bool) {
-	queue := []*Actor{a}
-	for len(queue) > 0 {
-		a := queue[0]
-		queue = queue[1:]
-		if !f(a) {
-			return false
-		}
-		queue = append(queue, a.Children...)
+	for child := range a.Children {
+		child.WalkDepthFirst(f)
 	}
 	return true
 }
@@ -105,8 +97,8 @@ func (a *Actor) InitRoot() {
 		if b.Interval == 0 {
 			b.Interval = time.Second
 		}
-		for _, child := range b.Children {
-			child.parents = append(child.parents, b)
+		for child := range b.Children {
+			child.parents[b] = true
 		}
 		return true
 	})
@@ -121,17 +113,17 @@ func (a *Actor) InitRoot() {
 // all parents have completed).
 func (a *Actor) Append(b *Actor) {
 	// gather all final descendants of a
-	var descendants []*Actor
+	descendants := map[*Actor]bool{}
 	a.WalkDepthFirst(func(actor *Actor) bool {
 		if len(actor.Children) == 0 {
-			descendants = append(descendants, actor)
+			descendants[actor] = true
 		}
 		return true
 	})
 
 	// set b as a child of all descendants
-	for _, descendant := range descendants {
-		descendant.Children = append(descendant.Children, b)
+	for descendant := range descendants {
+		descendant.Children[b] = true
 	}
 
 	// set all descendants as parents of b

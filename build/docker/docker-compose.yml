@@ -458,7 +458,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: registry.gitlab.com/thorchain/devops/node-launcher:binance-smart-daemon-1.3.13
+    image: registry.gitlab.com/thorchain/devops/node-launcher:binance-smart-daemon-1.2.12
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-5}
@@ -480,6 +480,7 @@ services:
       - "./mocknet/avax:/mocknet"
     command:
       - ./avalanchego
+      - --sybil-protection-enabled=false
       - --network-id=local
       - --http-host=0.0.0.0
       - --chain-config-dir=/mocknet/configs

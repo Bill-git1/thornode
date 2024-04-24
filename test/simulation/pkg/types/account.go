@@ -61,15 +61,10 @@ func NewAccount(mnemonic string, constructors map[common.Chain]LiteChainClientCo
 	// create chain clients
 	chainClients := make(map[common.Chain]LiteChainClient)
 	for _, chain := range common.AllChains {
+		// skip thorchain and deprecated chains
 		switch chain {
-		case common.BTCChain:
-		case common.LTCChain:
-		case common.DOGEChain:
-		case common.BCHChain:
-		case common.ETHChain:
-		case common.GAIAChain:
-		default:
-			continue // all other chains currently unsupported
+		case common.THORChain, common.BNBChain, common.TERRAChain:
+			continue
 		}
 
 		chainClients[chain], err = constructors[chain](chain, keys)

@@ -1,6 +1,7 @@
 package static
 
 import (
+	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/test/simulation/actors"
 	. "gitlab.com/thorchain/thornode/test/simulation/pkg/types"
 )
@@ -10,21 +11,29 @@ import (
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func Swaps() *Actor {
-	a := &Actor{
-		Name: "Swaps",
-	}
+	a := NewActor("Swaps")
 
 	// check every gas asset swap route
-	for _, sourceChain := range Chains {
-		for _, targetChain := range Chains {
+	for _, sourceChain := range common.AllChains {
+		// skip thorchain and deprecated chains
+		switch sourceChain {
+		case common.THORChain, common.BNBChain, common.TERRAChain:
+			continue
+		}
+
+		for _, targetChain := range common.AllChains {
+			// skip thorchain and deprecated chains
+			switch targetChain {
+			case common.THORChain, common.BNBChain, common.TERRAChain:
+				continue
+			}
+
 			// skip swap to self
 			if sourceChain.Equals(targetChain) {
 				continue
 			}
 
-			a.Children = append(
-				a.Children, actors.NewSwapActor(sourceChain.GetGasAsset(), targetChain.GetGasAsset()),
-			)
+			a.Children[actors.NewSwapActor(sourceChain.GetGasAsset(), targetChain.GetGasAsset())] = true
 		}
 	}
 

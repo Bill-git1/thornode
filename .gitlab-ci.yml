@@ -242,13 +242,7 @@ smoke-test:
       done
 
 test-simulation:
-  rules:
-    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != "thorchain/thornode"
-      when: never
-    - if: $CI_COMMIT_BRANCH == "develop"
-      when: always
-    - if: $CI == "true"
-      when: manual
+  rules: *rules
   allow_failure: true
   stage: simulation
   image: docker:20.10.12

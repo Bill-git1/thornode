@@ -22,19 +22,27 @@ func (s *DAGSuite) TestExecute(c *C) {
 	}
 
 	// create nodes
-	root := &Actor{Name: "root"}
-	child1 := &Actor{Name: "child1", Ops: []Op{op}}
-	child2 := &Actor{Name: "child2", Ops: []Op{op}}
-	child3 := &Actor{Name: "child3", Ops: []Op{op}}
-	grandchild1 := &Actor{Name: "grandchild1", Ops: []Op{op}}
-	grandchild2 := &Actor{Name: "grandchild2", Ops: []Op{op}}
-	grandchild3 := &Actor{Name: "grandchild3", Ops: []Op{op}}
+	root := NewActor("root")
+	child1 := NewActor("child1")
+	child2 := NewActor("child2")
+	child3 := NewActor("child3")
+	grandchild1 := NewActor("grandchild1")
+	grandchild2 := NewActor("grandchild2")
+	grandchild3 := NewActor("grandchild3")
+
+	// add operations
+	descendants := []*Actor{child1, child2, child3, grandchild1, grandchild2, grandchild3}
+	for _, node := range descendants {
+		node.Ops = []Op{op}
+	}
 
 	// build dag
-	root.Children = []*Actor{child1, child2, child3}
-	child1.Children = []*Actor{grandchild1}
-	child2.Children = []*Actor{grandchild2}
-	child3.Children = []*Actor{grandchild3}
+	root.Children[child1] = true
+	root.Children[child2] = true
+	root.Children[child3] = true
+	child1.Children[grandchild1] = true
+	child2.Children[grandchild2] = true
+	child3.Children[grandchild3] = true
 
 	// execute
 	Execute(nil, root, 1)

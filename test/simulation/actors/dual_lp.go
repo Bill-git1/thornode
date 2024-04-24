@@ -29,10 +29,7 @@ type DualLPActor struct {
 
 func NewDualLPActor(asset common.Asset) *Actor {
 	a := &DualLPActor{
-		Actor: Actor{
-			Name: fmt.Sprintf("DualLP-%s", asset),
-			Ops:  []Op{},
-		},
+		Actor: *NewActor(fmt.Sprintf("DualLP-%s", asset)),
 		asset: asset,
 	}
 

@@ -34,39 +34,42 @@ class EVMSetupTool:
     simulation_master = "0xEE4eaA642b992412F628fF4Cec1C96cf2Fd0eA4D"
     erc20rune = "0x3155BA85D5F96b2d030a4966AF206230e46849cb"  # mainnet, does not matter
 
-    def __init__(self, chain, base_url):
+    def __init__(self, chain, url):
         # setup web3 client
         self.chain = chain
-        self.rpc_url = base_url
+        self.rpc_url = url
         self.web3 = Web3(HTTPProvider(self.rpc_url))
         self.web3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
-        # fund simulation account
+        # on AVAX the admin key is the local network funded account
+        if chain == "AVAX" and len(self.web3.geth.personal.list_accounts()) == 0:
+            self.web3.geth.personal.import_raw_key(self.admin_key, "")
+
+        # fund simulation account with 1m ETH
         coinbase_addr = self.web3.geth.personal.list_accounts()[0]
-        self.fund_account(coinbase_addr, self.simulation_master, int(1000e18))  # 1k ETH
+        self.fund_account(coinbase_addr, self.simulation_master, int(1000000e18))
 
         # get admin account address
         self.addr = self.web3.eth.account.privateKeyToAccount(self.admin_key).address
 
-        # import admin key (assume loaded if running hardhat)
-        if self.web3.net.version != "31337":
-            # check if account already exists
-            if self.addr not in self.web3.geth.personal.list_accounts():
-                print("importing admin key...")
-                self.web3.geth.personal.import_raw_key(self.admin_key, "")
+        # done if this is hardhat
+        if self.web3.net.version == "31337":
+            return
 
-            # setup admin account
-            if self.chain != "AVAX":  # geth creates a random first account so skip it
-                if self.web3.eth.getBalance(self.addr) == 0:
-                    self.fund_account(coinbase_addr, self.addr, int(1000e18))  # 1k ETH
-            else:
-                balance = self.web3.eth.getBalance(self.addr)
-                print(f"{self.addr} balance: {balance}")
+        # check if account already exists
+        if self.addr not in self.web3.geth.personal.list_accounts():
+            print("importing admin key...")
+            self.web3.geth.personal.import_raw_key(self.admin_key, "")
 
-        # unlock default account (assume unlocked if running hardhat)
-        if self.web3.net.version != "31337":
-            self.web3.eth.defaultAccount = self.addr
-            self.web3.geth.personal.unlock_account(self.addr, "")
+        # fund admin account on chains other than AVAX since coinbase is random
+        if self.chain != "AVAX" and self.web3.eth.getBalance(self.addr) == 0:
+            self.fund_account(coinbase_addr, self.addr, int(1000e18))  # 1k ETH
+
+        balance = self.web3.eth.getBalance(self.addr)
+        print(f"{self.addr} balance: {balance}")
+
+        self.web3.eth.defaultAccount = self.addr
+        self.web3.geth.personal.unlock_account(self.addr, "")
 
     def gas_asset(self):
         if self.chain == "AVAX":
@@ -79,7 +82,7 @@ class EVMSetupTool:
             logging.fatal(f"unknown chain: {self.chain}")
 
     def fund_account(self, from_address, to_address, amount):
-        print(f"funding account: {to_address} {amount}")
+        print(f"funding account: {from_address} -> {to_address} {amount}")
         tx: TxParams = {
             "from": Web3.toChecksumAddress(from_address),
             "to": Web3.toChecksumAddress(to_address),
@@ -224,8 +227,8 @@ class EVMSetupTool:
             raise ValueError("thor-address is required")
 
         router, _ = self.router_contract(address=self.get_router_addr())
-        token = self.token_contract(address=Web3.toChecksumAddress(args.token_address))
 
+        token = self.token_contract(address=Web3.toChecksumAddress(args.token_address))
         tx_hash = token.functions.approve(
             self.get_router_addr(), args.amount
         ).transact()

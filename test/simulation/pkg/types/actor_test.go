@@ -14,15 +14,16 @@ type ActorSuite struct{}
 var _ = Suite(&ActorSuite{})
 
 func (s *ActorSuite) TestInit(c *C) {
-	root := &Actor{Name: "root"}
-	child1 := &Actor{Name: "child1"}
-	child2 := &Actor{Name: "child2"}
-	grandchild1 := &Actor{Name: "grandchild1"}
-	grandchild2 := &Actor{Name: "grandchild2"}
+	root := NewActor("root")
+	child1 := NewActor("child1")
+	child2 := NewActor("child2")
+	grandchild1 := NewActor("grandchild1")
+	grandchild2 := NewActor("grandchild2")
 
-	root.Children = []*Actor{child1, child2}
-	child1.Children = []*Actor{grandchild1}
-	child2.Children = []*Actor{grandchild2}
+	root.Children[child1] = true
+	root.Children[child2] = true
+	child1.Children[grandchild1] = true
+	child2.Children[grandchild2] = true
 
 	root.InitRoot()
 
@@ -33,20 +34,21 @@ func (s *ActorSuite) TestInit(c *C) {
 	c.Assert(grandchild2.finished, NotNil)
 
 	// ensure parents are set
-	c.Assert(child1.parents, DeepEquals, []*Actor{root})
-	c.Assert(grandchild2.parents, DeepEquals, []*Actor{child2})
+	c.Assert(child1.parents, DeepEquals, map[*Actor]bool{root: true})
+	c.Assert(grandchild2.parents, DeepEquals, map[*Actor]bool{child2: true})
 }
 
 func (s *ActorSuite) TestWalkDepthFirst(c *C) {
-	root := &Actor{Name: "root"}
-	child1 := &Actor{Name: "child1"}
-	child2 := &Actor{Name: "child2"}
-	grandchild1 := &Actor{Name: "grandchild1"}
-	grandchild2 := &Actor{Name: "grandchild2"}
+	root := NewActor("root")
+	child1 := NewActor("child1")
+	child2 := NewActor("child2")
+	grandchild1 := NewActor("grandchild1")
+	grandchild2 := NewActor("grandchild2")
 
-	root.Children = []*Actor{child1, child2}
-	child1.Children = []*Actor{grandchild1}
-	child2.Children = []*Actor{grandchild2}
+	root.Children[child1] = true
+	root.Children[child2] = true
+	child1.Children[grandchild1] = true
+	child2.Children[grandchild2] = true
 
 	root.InitRoot()
 
@@ -65,50 +67,37 @@ func (s *ActorSuite) TestWalkDepthFirstFail(c *C) {
 		return OpResult{Continue: false, Finish: true, Error: errors.New("foo")}
 	}
 
-	root := &Actor{Name: "root"}
-	child1 := &Actor{Name: "child1"}
-	child2 := &Actor{Name: "child2", Ops: []Op{opFail}}
-	child3 := &Actor{Name: "child3"}
-	grandchild1 := &Actor{Name: "grandchild1"}
-	grandchild2 := &Actor{Name: "grandchild2"}
-	grandchild3 := &Actor{Name: "grandchild3"}
+	root := NewActor("root")
+	child1 := NewActor("child1")
+	child2 := NewActor("child2")
+	child2.Ops = []Op{opFail}
+	child3 := NewActor("child3")
+	grandchild1 := NewActor("grandchild1")
+	grandchild2 := NewActor("grandchild2")
+	grandchild3 := NewActor("grandchild3")
 
-	root.Children = []*Actor{child1, child2, child3}
-	child1.Children = []*Actor{grandchild1}
-	child2.Children = []*Actor{grandchild2}
-	child3.Children = []*Actor{grandchild3}
+	root.Children[child1] = true
+	root.Children[child2] = true
+	root.Children[child3] = true
+	child1.Children[grandchild1] = true
+	child2.Children[grandchild2] = true
+	child3.Children[grandchild3] = true
 
 	root.InitRoot()
 
-	var visited []string
+	visited := map[string]bool{}
 	root.WalkDepthFirst(func(a *Actor) bool {
-		visited = append(visited, a.Name)
+		visited[a.Name] = true
 		return a.Execute(nil) == nil
 	})
 
-	expected := []string{"root", "child1", "grandchild1", "child2"}
-	c.Assert(visited, DeepEquals, expected)
-}
-
-func (s *ActorSuite) TestWalkBreadthFirst(c *C) {
-	root := &Actor{Name: "root"}
-	child1 := &Actor{Name: "child1"}
-	child2 := &Actor{Name: "child2"}
-	grandchild1 := &Actor{Name: "grandchild1"}
-	grandchild2 := &Actor{Name: "grandchild2"}
-
-	root.Children = []*Actor{child1, child2}
-	child1.Children = []*Actor{grandchild1}
-	child2.Children = []*Actor{grandchild2}
-
-	root.InitRoot()
-
-	var visited []string
-	root.WalkBreadthFirst(func(a *Actor) bool {
-		visited = append(visited, a.Name)
-		return a.Execute(nil) == nil
-	})
-
-	expected := []string{"root", "child1", "child2", "grandchild1", "grandchild2"}
+	expected := map[string]bool{
+		"root":        true,
+		"child1":      true,
+		"child2":      true,
+		"child3":      true,
+		"grandchild1": true,
+		"grandchild3": true,
+	}
 	c.Assert(visited, DeepEquals, expected)
 }

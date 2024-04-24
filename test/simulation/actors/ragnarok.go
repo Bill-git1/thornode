@@ -22,13 +22,10 @@ type RagnarokPoolActor struct {
 
 func NewRagnarokPoolActor(asset common.Asset) *Actor {
 	a := &RagnarokPoolActor{
-		Actor: Actor{
-			Name:    fmt.Sprintf("Ragnarok-%s", asset),
-			Timeout: 5 * time.Minute,
-			Ops:     []Op{},
-		},
+		Actor: *NewActor(fmt.Sprintf("Ragnarok-%s", asset)),
 		asset: asset,
 	}
+	a.Timeout = 5 * time.Minute
 
 	// TODO: get all LPs for the asset and store in state
 

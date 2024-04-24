@@ -32,39 +32,27 @@ func Execute(c *OpConfig, root *Actor, parallelism int) {
 	// execute dag
 	log.Info().Int("actors", total).Int("parallelism", parallelism).Msg("executing dag")
 	for {
-		sem <- struct{}{}
-
 		// determine all actors that are ready to execute
-		ready := []*Actor{}
+		ready := map[*Actor]bool{}
 		finished := map[*Actor]bool{}
-		root.WalkBreadthFirst(func(a *Actor) bool {
+		running := map[*Actor]bool{}
+		root.WalkDepthFirst(func(a *Actor) bool {
 			if a.Finished() {
 				finished[a] = true
 				return true
 			}
 			if a.Started() {
+				running[a] = true
 				return true
 			}
 
-			// if no parents are started no need to process further
-			exit := true
-			for _, parent := range a.Parents() {
-				if parent.Started() {
-					exit = false
-					break
-				}
-			}
-			if exit {
-				return false
-			}
-
-			for _, parent := range a.Parents() { // all parents must be finished to start
+			for parent := range a.Parents() { // all parents must be finished to start
 				if !parent.Finished() {
-					return true
+					return false
 				}
 			}
 
-			ready = append(ready, a)
+			ready[a] = true
 			return true
 		})
 
@@ -74,10 +62,17 @@ func Execute(c *OpConfig, root *Actor, parallelism int) {
 			return
 		}
 
+		// info log context
+		infoLog := log.Info().
+			Int("finished", len(finished)).
+			Int("running", len(running)).
+			Int("remaining", total-len(finished)).
+			Int("ready", len(ready))
+
 		// sleep if no actors are ready to execute
 		if len(ready) == 0 {
 			time.Sleep(time.Second)
-			<-sem
+			infoLog.Msg("waiting for ready actors")
 			continue
 		}
 
@@ -86,13 +81,22 @@ func Execute(c *OpConfig, root *Actor, parallelism int) {
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to generate random number")
 		}
-		a := ready[int(random.Mod(random, big.NewInt(int64(len(ready)))).Int64())]
-		a.Start()
+		readySlice := make([]*Actor, 0, len(ready))
+		for a := range ready {
+			readySlice = append(readySlice, a)
+		}
+		a := readySlice[random.Int64()]
 
 		// execute actor
-		log.Info().Str("actor", a.Name).Int("children", len(a.Children)).Msg("executing")
-		go func(a *Actor) {
-			defer func() { <-sem }()
+		infoLog.Str("actor", a.Name).Msg("executing actor")
+		a.Start()
+		sem <- struct{}{}
+		go func(a *Actor, start time.Time) {
+			defer func() {
+				duration := time.Since(start) / time.Second * time.Second // round to second
+				a.Log().Info().Str("duration", duration.String()).Msg("finished")
+				<-sem
+			}()
 
 			// tee the actor logs to a buffer that we dump if it fails
 			buf := new(bytes.Buffer)
@@ -104,6 +108,6 @@ func Execute(c *OpConfig, root *Actor, parallelism int) {
 				os.Stderr.Write([]byte("\n\nFailed actor logs:\n" + buf.String() + "\n\n"))
 				a.Log().Fatal().Err(err).Msg("actor execution failed")
 			}
-		}(a)
+		}(a, time.Now())
 	}
 }

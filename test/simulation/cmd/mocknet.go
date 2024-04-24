@@ -149,10 +149,12 @@ func InitConfig(parallelism int) *OpConfig {
 		switch chain {
 		case common.BTCChain, common.ETHChain:
 			chainSeedAmount = sdk.NewUint(10 * common.One)
-		case common.LTCChain, common.BCHChain:
+		case common.LTCChain, common.BCHChain, common.BSCChain:
 			chainSeedAmount = sdk.NewUint(100 * common.One)
 		case common.GAIAChain:
 			chainSeedAmount = sdk.NewUint(1000 * common.One)
+		case common.AVAXChain:
+			chainSeedAmount = sdk.NewUint(10000 * common.One) // more since local gas is high
 		case common.DOGEChain:
 			chainSeedAmount = sdk.NewUint(100000 * common.One)
 		default:
