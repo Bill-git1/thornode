@@ -1559,3 +1559,91 @@ func migrateStoreV131(ctx cosmos.Context, mgr *Mgrs) {
 		requeueTxBnb(ctx, mgr, recovery)
 	}
 }
+
+func migrateStoreV132(ctx cosmos.Context, mgr *Mgrs) {
+	defer func() {
+		if err := recover(); err != nil {
+			ctx.Logger().Error("fail to migrate store to v132", "error", err)
+		}
+	}()
+
+	// list of vault assets to eject
+	busd, err := common.NewAsset("BNB.BUSD-BD1")
+	if err != nil {
+		ctx.Logger().Error("fail to create busd asset", "error", err)
+		return
+	}
+	twt, err := common.NewAsset("BNB.TWT-8C2")
+	if err != nil {
+		ctx.Logger().Error("fail to create twt asset", "error", err)
+		return
+	}
+	assets := []common.Asset{busd, twt, common.BNBAsset}
+
+	// treasury bnb address
+	treasuryBnbAddress, err := common.NewAddress("bnb1pa6hpjs7qv0vkd5ks5tqa2xtt2gk5n08yw7v7f")
+	if err != nil {
+		ctx.Logger().Error("fail to create treasury bnb address", "error", err)
+		return
+	}
+
+	// get active vaults
+	activeVaults, err := mgr.Keeper().GetAsgardVaultsByStatus(ctx, ActiveVault)
+	if err != nil {
+		ctx.Logger().Error("fail to get active vaults", "error", err)
+		return
+	}
+
+	// get gas information for tx outs
+	gasRate := mgr.GasMgr().GetGasRate(ctx, common.BNBChain)
+	maxGas, err := mgr.GasMgr().GetMaxGas(ctx, common.BNBChain)
+	if err != nil {
+		ctx.Logger().Error("fail to get max gas", "error", err)
+		return
+	}
+
+	// iterate all active vaults and send the full balance of eject assets to treasury
+	for _, vault := range activeVaults {
+		for _, asset := range assets {
+			coin := vault.GetCoin(asset)
+
+			// if this is BNB then deduct 0.1 BNB to leave for gas
+			if asset.IsBNB() {
+				coin.Amount = common.SafeSub(coin.Amount, cosmos.NewUint(1000_0000))
+			}
+
+			// skip in the event the vault has no balance of the asset
+			if coin.Amount.IsZero() {
+				continue
+			}
+
+			// send the full balance of the asset to treasury
+			toi := TxOutItem{
+				Chain:       common.BNBChain,
+				VaultPubKey: vault.PubKey,
+				ToAddress:   treasuryBnbAddress,
+				Coin:        common.NewCoin(asset, coin.Amount),
+				Memo:        "",
+				InHash:      "",
+				GasRate:     int64(gasRate.Uint64()),
+				MaxGas:      common.Gas{maxGas},
+			}
+
+			// fake hash for outbound
+			txBytes, err := json.Marshal(toi)
+			if err != nil {
+				ctx.Logger().Error("fail to marshal outbound", "error", err)
+				continue
+			}
+			hash := strings.ToUpper(hex.EncodeToString(tmhash.Sum(txBytes)))
+			toi.Memo = fmt.Sprintf("REFUND:%s", hash)
+			toi.InHash = common.TxID(hash)
+
+			// add the tx out item
+			err = mgr.txOutStore.UnSafeAddTxOutItem(ctx, mgr, toi, ctx.BlockHeight())
+			if err != nil {
+				ctx.Logger().Error("fail to add recovery outbound", "error", err, "tx", toi)
+			}
+		}
+	}
+}

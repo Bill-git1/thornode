@@ -260,3 +260,5 @@ func migrateStoreV128(ctx cosmos.Context, mgr *Mgrs) {
 func migrateStoreV129(ctx cosmos.Context, mgr *Mgrs) {}
 
 func migrateStoreV131(ctx cosmos.Context, mgr *Mgrs) {}
+
+func migrateStoreV132(ctx cosmos.Context, mgr *Mgrs) {}
