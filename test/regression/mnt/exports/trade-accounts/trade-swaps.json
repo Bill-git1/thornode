@@ -541,8 +541,8 @@
         {
           "LP_units": "0",
           "asset": "THOR.BTC",
-          "balance_asset": "94920304",
-          "balance_rune": "92320999399",
+          "balance_asset": "33174714",
+          "balance_rune": "32266255139",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
           "status": "Available",
@@ -552,8 +552,8 @@
         {
           "LP_units": "0",
           "asset": "THOR.ETH",
-          "balance_asset": "999999999",
-          "balance_rune": "100254753282",
+          "balance_asset": "429999999",
+          "balance_rune": "43109543911",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
           "status": "Available",

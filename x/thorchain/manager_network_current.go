@@ -125,8 +125,6 @@ func (vm *NetworkMgrVCUR) suspendVirtualPool(ctx cosmos.Context, mgr Manager, de
 func (vm *NetworkMgrVCUR) CalcAnchor(ctx cosmos.Context, mgr Manager, asset common.Asset) (cosmos.Uint, cosmos.Uint, cosmos.Uint) {
 	anchors := mgr.Keeper().GetAnchors(ctx, asset)
 
-	maxAnchorBlocks := mgr.Keeper().GetConfigInt64(ctx, constants.MaxAnchorBlocks)
-
 	// sum anchor pool rune depths
 	totalRuneDepth := cosmos.ZeroUint()
 	availableAnchors := make([]common.Asset, 0)
@@ -152,19 +150,19 @@ func (vm *NetworkMgrVCUR) CalcAnchor(ctx cosmos.Context, mgr Manager, asset comm
 			continue
 		}
 
-		slip, err := mgr.Keeper().RollupSwapSlip(ctx, maxAnchorBlocks, anchorAsset)
+		slip, err := mgr.Keeper().GetCurrentRollup(ctx, anchorAsset)
 		if err != nil {
-			ctx.Logger().Error("failed to rollup swap slip", "asset", anchorAsset, "err", err)
+			ctx.Logger().Error("failed to get current rollup", "asset", anchorAsset, "err", err)
 			continue
 		}
-		// if slip is not in uint64 range, default to 0
-		if !slip.IsUint64() {
-			slip = cosmos.ZeroInt()
+		// if slip is negative, default to 0
+		if slip < 0 {
+			slip = 0
 		}
 
 		totalRuneDepth = totalRuneDepth.Add(p.BalanceRune)
 		availableAnchors = append(availableAnchors, anchorAsset)
-		slippageCollector = append(slippageCollector, cosmos.NewUint(slip.Uint64()))
+		slippageCollector = append(slippageCollector, cosmos.NewUint(uint64(slip)))
 	}
 
 	slippage := common.GetMedianUint(slippageCollector)
@@ -214,7 +212,23 @@ func (vm *NetworkMgrVCUR) spawnDerivedAssets(ctx cosmos.Context, mgr Manager) er
 		layer1Assets = append(layer1Assets, chain.GetGasAsset())
 	}
 
+	// Update anchor swap slip rollups and spawn assets.
+	anchorMap := map[common.Asset]bool{}
+	maxAnchorBlocks := vm.k.GetConfigInt64(ctx, constants.MaxAnchorBlocks)
 	for _, asset := range layer1Assets {
+		anchors := vm.k.GetAnchors(ctx, asset)
+		for _, anchorAsset := range anchors {
+			// Ensure RollupSwapSlip called only once per anchor.
+			if anchorMap[anchorAsset] {
+				continue
+			}
+			anchorMap[anchorAsset] = true
+
+			_, err := vm.k.RollupSwapSlip(ctx, maxAnchorBlocks, anchorAsset)
+			if err != nil {
+				ctx.Logger().Error("failed to rollup swap slip", "asset", anchorAsset, "err", err)
+			}
+		}
 		vm.SpawnDerivedAsset(ctx, asset, mgr)
 	}
 
@@ -1801,18 +1815,4 @@ func (vm *NetworkMgrVCUR) ragnarokPool(ctx cosmos.Context, mgr Manager, p Pool) 
 	na := nas[0]
 
 	return vm.withdrawLiquidity(ctx, p, na, mgr)
-}
-
-func getTotalActiveNodeWithBond(ctx cosmos.Context, k keeper.Keeper) (int64, error) {
-	nas, err := k.ListActiveValidators(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("fail to get active node accounts: %w", err)
-	}
-	var total int64
-	for _, item := range nas {
-		if !item.Bond.IsZero() {
-			total++
-		}
-	}
-	return total, nil
 }

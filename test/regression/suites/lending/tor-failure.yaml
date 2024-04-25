@@ -215,9 +215,9 @@ asserts:
   # TODO: Price manipulation of pools up to and including the median, even with virtual
   # depth, can result in the debt on the loan being manipulated by more than the penalty
   # on the outbound debt.
-  - .expected_amount_out|tonumber == 4001139453
+  - .expected_amount_out|tonumber == 4014262071
   - .expected_amount_out|tonumber != ${INITIAL_EXPECTED_OUT}
-  - .expected_debt_issued|tonumber == 1560180000
+  - .expected_debt_issued|tonumber == 1565380000
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
@@ -492,7 +492,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_pig }}
       coins:
-        - amount: "471136"
+        - amount: "471303"
           asset: "BTC.BTC"
           decimals: 8
       gas:
