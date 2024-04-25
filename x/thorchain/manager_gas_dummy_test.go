@@ -20,6 +20,10 @@ func (m *DummyGasManager) AddGasAsset(_ common.Asset, gas common.Gas, increaseTx
 func (m *DummyGasManager) AddGas(gas common.Gas)                                            {}
 func (m *DummyGasManager) GetGas() common.Gas                                               { return nil }
 func (m *DummyGasManager) ProcessGas(ctx cosmos.Context, keeper keeper.Keeper)              {}
+func (m *DummyGasManager) GetAssetOutboundFee(ctx cosmos.Context, asset common.Asset, inRune bool) (cosmos.Uint, error) {
+	return cosmos.ZeroUint(), nil
+}
+
 func (m *DummyGasManager) GetFee(ctx cosmos.Context, chain common.Chain, _ common.Asset) cosmos.Uint {
 	return cosmos.ZeroUint()
 }

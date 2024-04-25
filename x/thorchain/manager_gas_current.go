@@ -94,6 +94,113 @@ func (gm *GasMgrVCUR) GetGas() common.Gas {
 	return gas
 }
 
+// GetAssetOutboundFee returns current outbound fee for the asset. fee = chainBaseFee *
+// assetDOFM (asset-specific Dynamic Outbound Fee Multiplier)
+// - asset: the asset to calculate the fee for
+// - inRune: whether the fee should be returned in RUNE. If false the fee is returned in
+// asset units.
+func (gm *GasMgrVCUR) GetAssetOutboundFee(ctx cosmos.Context, asset common.Asset, inRune bool) (cosmos.Uint, error) {
+	thorchainOutboundFee := gm.keeper.GetOutboundTxFee(ctx)
+
+	// If the asset is native RUNE, return the default native outbound fee.
+	if asset.IsNativeRune() {
+		return thorchainOutboundFee, nil
+	}
+
+	// Asset is on THORChain, but not RUNE, convert the fee to asset value.
+	if asset.IsSyntheticAsset() || asset.IsDerivedAsset() || asset.IsTradeAsset() {
+		return gm.getRuneInAssetValue(ctx, thorchainOutboundFee, asset), nil
+	}
+
+	chainOutboundFee, err := gm.keeper.GetNetworkFee(ctx, asset.GetChain())
+	if err != nil {
+		return cosmos.ZeroUint(), err
+	}
+	if err := chainOutboundFee.Valid(); err != nil {
+		return cosmos.ZeroUint(), err
+	}
+
+	gasPool, err := gm.keeper.GetPool(ctx, asset.GetChain().GetGasAsset())
+	if err != nil {
+		return cosmos.ZeroUint(), err
+	}
+
+	minOutboundUSD, err := gm.keeper.GetMimir(ctx, constants.MinimumL1OutboundFeeUSD.String())
+	if minOutboundUSD < 0 || err != nil {
+		minOutboundUSD = gm.constantsAccessor.GetInt64Value(constants.MinimumL1OutboundFeeUSD)
+	}
+	runeUSDPrice := gm.keeper.DollarsPerRune(ctx)
+	minAsset := cosmos.ZeroUint()
+	if !runeUSDPrice.IsZero() {
+		// since MinOutboundUSD is in USD value , thus need to figure out how much RUNE
+		// here use GetShare instead GetSafeShare it is because minOutboundUSD can set to more than $1
+		minOutboundInRune := common.GetUncappedShare(cosmos.NewUint(uint64(minOutboundUSD)),
+			runeUSDPrice,
+			cosmos.NewUint(common.One))
+
+		minAsset = gasPool.RuneValueInAsset(minOutboundInRune)
+	}
+
+	outboundFeeWithheldRune, err := gm.keeper.GetOutboundFeeWithheldRune(ctx, asset)
+	if err != nil {
+		ctx.Logger().Error("fail to get outbound fee withheld rune", "outbound asset", asset, "error", err)
+		outboundFeeWithheldRune = cosmos.ZeroUint()
+	}
+	outboundFeeSpentRune, err := gm.keeper.GetOutboundFeeSpentRune(ctx, asset)
+	if err != nil {
+		ctx.Logger().Error("fail to get outbound fee spent rune", "outbound asset", asset, "error", err)
+		outboundFeeSpentRune = cosmos.ZeroUint()
+	}
+
+	targetOutboundFeeSurplus := gm.keeper.GetConfigInt64(ctx, constants.TargetOutboundFeeSurplusRune)
+	maxMultiplierBasisPoints := gm.keeper.GetConfigInt64(ctx, constants.MaxOutboundFeeMultiplierBasisPoints)
+	minMultiplierBasisPoints := gm.keeper.GetConfigInt64(ctx, constants.MinOutboundFeeMultiplierBasisPoints)
+
+	// Calculate outbound fee based on current fee multiplier
+	chainBaseFee := chainOutboundFee.TransactionSize * chainOutboundFee.TransactionFeeRate
+	feeMultiplierBps := gm.CalcOutboundFeeMultiplier(ctx, cosmos.NewUint(uint64(targetOutboundFeeSurplus)), outboundFeeSpentRune, outboundFeeWithheldRune, cosmos.NewUint(uint64(maxMultiplierBasisPoints)), cosmos.NewUint(uint64(minMultiplierBasisPoints)))
+	finalFee := common.GetUncappedShare(feeMultiplierBps, cosmos.NewUint(constants.MaxBasisPts), cosmos.NewUint(chainBaseFee))
+
+	fee := cosmos.RoundToDecimal(
+		finalFee,
+		gasPool.Decimals,
+	)
+
+	// Ensure fee is always more than minAsset
+	if fee.LT(minAsset) {
+		fee = minAsset
+	}
+
+	// If feeAsset = gas asset && inRune = false, we are in the correct units, return
+	if asset.Equals(asset.GetChain().GetGasAsset()) && !inRune {
+		return fee, nil
+	}
+
+	if gasPool.BalanceAsset.Equal(cosmos.ZeroUint()) || gasPool.BalanceRune.Equal(cosmos.ZeroUint()) {
+		ctx.Logger().Error("fail to calculate fee as gas pool balance is zero, returning 0 fee", "pool", gasPool.Asset.String(), "rune", gasPool.BalanceRune.String(), "asset", gasPool.BalanceAsset.String())
+		return cosmos.ZeroUint(), nil
+	}
+
+	// Convert gas asset fee to rune, if inRune = true, return
+	fee = gasPool.AssetValueInRune(fee)
+	if inRune {
+		return fee, nil
+	}
+
+	// convert rune value into non-gas asset value
+	assetPool, err := gm.keeper.GetPool(ctx, asset)
+	if err != nil {
+		return cosmos.ZeroUint(), err
+	}
+	if assetPool.BalanceAsset.Equal(cosmos.ZeroUint()) || assetPool.BalanceRune.Equal(cosmos.ZeroUint()) {
+		ctx.Logger().Error("fail to calculate fee as asset pool balance is zero, returning 0 fee", "pool", gasPool.Asset.String(), "rune", gasPool.BalanceRune.String(), "asset", gasPool.BalanceAsset.String())
+		return cosmos.ZeroUint(), nil
+	}
+
+	return assetPool.RuneValueInAsset(fee), nil
+}
+
+// TODO: remove in hard fork
 // GetFee retrieve the network fee information from kv store, and calculate the dynamic fee customer should pay
 // the return value is the amount of fee in asset
 func (gm *GasMgrVCUR) GetFee(ctx cosmos.Context, chain common.Chain, asset common.Asset) cosmos.Uint {
@@ -221,7 +328,7 @@ func (gm *GasMgrVCUR) CalcOutboundFeeMultiplier(ctx cosmos.Context, targetSurplu
 // getRuneInAssetValue convert the transaction fee to asset value , when the given asset is synthetic , it will need to get
 // the layer1 asset first , and then use the pool to convert
 func (gm *GasMgrVCUR) getRuneInAssetValue(ctx cosmos.Context, transactionFee cosmos.Uint, asset common.Asset) cosmos.Uint {
-	if asset.IsSyntheticAsset() {
+	if asset.IsSyntheticAsset() || asset.IsTradeAsset() {
 		asset = asset.GetLayer1Asset()
 	}
 	pool, err := gm.keeper.GetPool(ctx, asset)

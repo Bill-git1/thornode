@@ -328,9 +328,21 @@ func (h DepositHandler) addSwapDirectV116(ctx cosmos.Context, msg MsgSwap) {
 	}
 }
 
+func (h DepositHandler) updateAffiliateCollector(ctx cosmos.Context, coin common.Coin, msg MsgSwap, thorname *THORName) {
+	version := h.mgr.GetVersion()
+	switch {
+	case version.GTE(semver.MustParse("1.132.0")):
+		h.updateAffiliateCollectorV132(ctx, coin, msg, thorname)
+	case version.GTE(semver.MustParse("1.116.0")):
+		h.updateAffiliateCollectorV116(ctx, coin, msg, thorname)
+	default:
+		return
+	}
+}
+
 // updateAffiliateCollector - accrue RUNE in the AffiliateCollector module and check if
 // a PreferredAsset swap should be triggered
-func (h DepositHandler) updateAffiliateCollector(ctx cosmos.Context, coin common.Coin, msg MsgSwap, thorname *THORName) {
+func (h DepositHandler) updateAffiliateCollectorV132(ctx cosmos.Context, coin common.Coin, msg MsgSwap, thorname *THORName) {
 	affcol, err := h.mgr.Keeper().GetAffiliateCollector(ctx, thorname.Owner)
 	if err != nil {
 		ctx.Logger().Error("failed to get affiliate collector", "msg", msg.AffiliateAddress, "error", err)
@@ -345,7 +357,12 @@ func (h DepositHandler) updateAffiliateCollector(ctx cosmos.Context, coin common
 
 	// Check if accrued RUNE is 100x current outbound fee of preferred asset chain, if so
 	// trigger the preferred asset swap
-	ofRune := h.mgr.GasMgr().GetFee(ctx, thorname.PreferredAsset.GetChain(), common.RuneNative)
+	ofRune, err := h.mgr.GasMgr().GetAssetOutboundFee(ctx, thorname.PreferredAsset, true)
+	if err != nil {
+		ctx.Logger().Error("failed to get outbound fee for preferred asset, skipping preferred asset swap", "name", thorname.Name, "asset", thorname.PreferredAsset, "error", err)
+		return
+	}
+
 	multiplier := h.mgr.Keeper().GetConfigInt64(ctx, constants.PreferredAssetOutboundFeeMultiplier)
 	threshold := ofRune.Mul(cosmos.NewUint(uint64(multiplier)))
 	if affcol.RuneAmount.GT(threshold) {

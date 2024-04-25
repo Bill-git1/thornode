@@ -1547,3 +1547,30 @@ func (h DepositHandler) handleV128(ctx cosmos.Context, msg MsgDeposit) (*cosmos.
 	}
 	return result, nil
 }
+
+// updateAffiliateCollector - accrue RUNE in the AffiliateCollector module and check if
+// a PreferredAsset swap should be triggered
+func (h DepositHandler) updateAffiliateCollectorV116(ctx cosmos.Context, coin common.Coin, msg MsgSwap, thorname *THORName) {
+	affcol, err := h.mgr.Keeper().GetAffiliateCollector(ctx, thorname.Owner)
+	if err != nil {
+		ctx.Logger().Error("failed to get affiliate collector", "msg", msg.AffiliateAddress, "error", err)
+	} else {
+		if err := h.mgr.Keeper().SendFromModuleToModule(ctx, AsgardName, AffiliateCollectorName, common.NewCoins(coin)); err != nil {
+			ctx.Logger().Error("failed to send funds to affiliate collector", "error", err)
+		} else {
+			affcol.RuneAmount = affcol.RuneAmount.Add(coin.Amount)
+			h.mgr.Keeper().SetAffiliateCollector(ctx, affcol)
+		}
+	}
+
+	// Check if accrued RUNE is 100x current outbound fee of preferred asset chain, if so
+	// trigger the preferred asset swap
+	ofRune := h.mgr.GasMgr().GetFee(ctx, thorname.PreferredAsset.GetChain(), common.RuneNative)
+	multiplier := h.mgr.Keeper().GetConfigInt64(ctx, constants.PreferredAssetOutboundFeeMultiplier)
+	threshold := ofRune.Mul(cosmos.NewUint(uint64(multiplier)))
+	if affcol.RuneAmount.GT(threshold) {
+		if err = triggerPreferredAssetSwap(ctx, h.mgr, msg.AffiliateAddress, msg.Tx.ID, *thorname, affcol, 1); err != nil {
+			ctx.Logger().Error("fail to swap to preferred asset", "thorname", thorname.Name, "err", err)
+		}
+	}
+}

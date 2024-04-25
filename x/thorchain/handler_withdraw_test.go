@@ -520,6 +520,10 @@ func (s *HandlerWithdrawSuite) TestFairMergeAddAndWithdrawLiquidityHandlerSavers
 	c.Assert(err, IsNil)
 	c.Assert(outbound, HasLen, 0)
 
+	// set network fee
+	networkFee := NewNetworkFee(common.AVAXChain, 1, 10)
+	c.Assert(mgr.Keeper().SaveNetworkFee(ctx, common.AVAXChain, networkFee), IsNil)
+
 	withdrawHandler := NewWithdrawLiquidityHandler(mgr)
 
 	msgWithdraw := NewMsgWithdrawLiquidity(GetRandomTx(), avaxAddr, cosmos.NewUint(uint64(MaxWithdrawBasisPoints)), common.AVAXAsset.GetSyntheticAsset(), common.EmptyAsset, activeNodeAccount.NodeAddress)

@@ -626,10 +626,8 @@ func queryInboundAddresses(ctx cosmos.Context, path []string, req abci.RequestQu
 			gasRate = gasRate.MulUint64(10)
 		}
 
-		// Retrieve the value the network charges for outbound fees for this chain
-		// Note: If calculating the outbound fee of a non-gas asset outbound, the returned value must be converted to RUNE,
-		// then to the non-gas asset using the pool depths. That will be the value deducted from the non-gas asset outbound amount
-		outboundFee := mgr.GasMgr().GetFee(ctx, chain, chain.GetGasAsset())
+		// Retrieve the outbound fee for the chain's gas asset - fee will be zero if no network fee has been posted/the pool doesn't exist
+		outboundFee, _ := mgr.GasMgr().GetAssetOutboundFee(ctx, chain.GetGasAsset(), false)
 
 		addr := openapi.InboundAddress{
 			Chain:                wrapString(chain.String()),
@@ -2717,7 +2715,10 @@ func queryOutboundFees(ctx cosmos.Context, path []string, req abci.RequestQuery,
 	result := make([]openapi.OutboundFee, 0, len(assets))
 	for i := range assets {
 		// Display the Asset's fee as the amount of that Asset deducted.
-		outboundFee := mgr.GasMgr().GetFee(ctx, assets[i].GetChain(), assets[i])
+		outboundFee, err := mgr.GasMgr().GetAssetOutboundFee(ctx, assets[i], false)
+		if err != nil {
+			ctx.Logger().Error("fail to get asset outbound fee", "asset", assets[i], "error", err)
+		}
 
 		// Only display fields other than asset and outbound_fee when the Asset is external,
 		// as a non-zero dynamic multiplier could be misleading otherwise.

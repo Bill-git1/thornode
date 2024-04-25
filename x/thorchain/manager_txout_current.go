@@ -420,8 +420,10 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 	}
 
 	signingTransactionPeriod := tos.constAccessor.GetInt64Value(constants.SigningTransactionPeriod)
-	transactionFeeRune := tos.gasManager.GetFee(ctx, toi.Chain, common.RuneAsset())
-	transactionFeeAsset := tos.gasManager.GetFee(ctx, toi.Chain, toi.Coin.Asset)
+	transactionFee, err := tos.gasManager.GetAssetOutboundFee(ctx, toi.Coin.Asset, false)
+	if err != nil {
+		return nil, cosmos.ZeroUint(), fmt.Errorf("fail to get outbound fee: %w", err)
+	}
 	maxGasAsset, err := tos.gasManager.GetMaxGas(ctx, toi.Chain)
 	if err != nil {
 		ctx.Logger().Error("fail to get max gas asset", "error", err)
@@ -471,7 +473,7 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 			// iterate over discovered vaults and find vaults to send funds from
 
 			// All else being equal, choose active Asgards over retiring Asgards.
-			outputs, remaining = tos.discoverOutbounds(ctx, transactionFeeAsset, maxGasAsset, toi, append(activeAsgards, retiringAsgards...))
+			outputs, remaining = tos.discoverOutbounds(ctx, transactionFee, maxGasAsset, toi, append(activeAsgards, retiringAsgards...))
 
 			// Check we found enough funds to satisfy the request, error if we didn't
 			if !remaining.IsZero() {
@@ -500,7 +502,7 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 			outputs[i].GasRate = int64(tos.gasManager.GetGasRate(ctx, outputs[i].Chain).Uint64())
 		}
 
-		runeFee := transactionFeeRune // Fee is the prescribed fee
+		runeFee := transactionFee // Fee is the prescribed fee
 
 		// get the lending address to avoid deducting the outbound fee
 		lendAddr, err := tos.keeper.GetModuleAddress(LendingName)
@@ -512,7 +514,7 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 		memo, err := ParseMemoWithTHORNames(ctx, tos.keeper, outputs[i].Memo)
 		if err == nil && !memo.IsType(TxMigrate) && !memo.IsType(TxRagnarok) && !toi.ToAddress.Equals(lendAddr) {
 			if outputs[i].Coin.Asset.IsRune() {
-				if outputs[i].Coin.Amount.LTE(transactionFeeRune) {
+				if outputs[i].Coin.Amount.LTE(transactionFee) {
 					runeFee = outputs[i].Coin.Amount // Fee is the full amount
 				}
 				finalRuneFee = finalRuneFee.Add(runeFee)
@@ -531,7 +533,7 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 
 				// if pool units is zero, no asset fee is taken
 				if !pool.GetPoolUnits().IsZero() {
-					assetFee := transactionFeeAsset
+					assetFee := transactionFee
 					if outputs[i].Coin.Amount.LTE(assetFee) {
 						assetFee = outputs[i].Coin.Amount // Fee is the full amount
 					}

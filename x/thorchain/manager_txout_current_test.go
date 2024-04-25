@@ -156,6 +156,9 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItem(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(outboundFeeWithheldRune.String(), Equals, "224994")
 
+	networkFee := NewNetworkFee(common.BCHChain, 1, 10)
+	c.Assert(w.keeper.SaveNetworkFee(w.ctx, common.BCHChain, networkFee), IsNil)
+
 	item = TxOutItem{
 		Chain:     common.BCHChain,
 		ToAddress: "1EFJFJm7Y9mTVsCBXA9PKuRuzjgrdBe4rR",

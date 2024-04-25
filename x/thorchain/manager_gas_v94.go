@@ -312,3 +312,7 @@ func (gm *GasMgrV94) ProcessGas(ctx cosmos.Context, keeper keeper.Keeper) {
 func (gm *GasMgrV94) CalcOutboundFeeMultiplier(ctx cosmos.Context, targetSurplusRune, gasSpentRune, gasWithheldRune, maxMultiplier, minMultiplier cosmos.Uint) cosmos.Uint {
 	return cosmos.ZeroUint()
 }
+
+func (gm *GasMgrV94) GetAssetOutboundFee(ctx cosmos.Context, asset common.Asset, inRune bool) (cosmos.Uint, error) {
+	return cosmos.ZeroUint(), nil
+}

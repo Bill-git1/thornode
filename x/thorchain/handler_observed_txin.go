@@ -362,6 +362,8 @@ func (h ObservedTxInHandler) addSwapV116(ctx cosmos.Context, msg MsgSwap) {
 func (h ObservedTxInHandler) addSwapDirect(ctx cosmos.Context, msg MsgSwap) {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.132.0")):
+		h.addSwapDirectV132(ctx, msg)
 	case version.GTE(semver.MustParse("1.116.0")):
 		h.addSwapDirectV116(ctx, msg)
 	default:
@@ -369,7 +371,7 @@ func (h ObservedTxInHandler) addSwapDirect(ctx cosmos.Context, msg MsgSwap) {
 	}
 }
 
-func (h ObservedTxInHandler) addSwapDirectV116(ctx cosmos.Context, msg MsgSwap) {
+func (h ObservedTxInHandler) addSwapDirectV132(ctx cosmos.Context, msg MsgSwap) {
 	if msg.Tx.Coins.IsEmpty() {
 		return
 	}
@@ -437,10 +439,13 @@ func (h ObservedTxInHandler) addSwapDirectV116(ctx cosmos.Context, msg MsgSwap) 
 
 			// Check if accrued RUNE is 100x current outbound fee of preferred asset chain, if
 			// so trigger the preferred asset swap
-			ofRune := h.mgr.GasMgr().GetFee(ctx, affThorname.PreferredAsset.GetChain(), common.RuneNative)
+			ofRune, err := h.mgr.GasMgr().GetAssetOutboundFee(ctx, affThorname.PreferredAsset, true)
+			if err != nil {
+				ctx.Logger().Error("failed to get outbound fee for preferred asset, skipping preferred asset swap", "name", affThorname.Name, "asset", affThorname.PreferredAsset, "error", err)
+			}
 			multiplier := h.mgr.Keeper().GetConfigInt64(ctx, constants.PreferredAssetOutboundFeeMultiplier)
 			threshold := ofRune.Mul(cosmos.NewUint(uint64(multiplier)))
-			if affcol.RuneAmount.GT(threshold) {
+			if err == nil && affcol.RuneAmount.GT(threshold) {
 				if err = triggerPreferredAssetSwap(ctx, h.mgr, msg.AffiliateAddress, msg.Tx.ID, *affThorname, affcol, 2); err != nil {
 					ctx.Logger().Error("fail to swap to preferred asset", "thorname", affThorname.Name, "err", err)
 				}

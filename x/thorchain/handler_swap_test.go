@@ -264,7 +264,6 @@ func (s *HandlerSwapSuite) TestHandle(c *C) {
 		activeNodeAccount: GetRandomValidatorNode(NodeActive),
 		synthSupply:       cosmos.ZeroUint(),
 	}
-	mgr.K = keeper
 	mgr.txOutStore = NewTxStoreDummy()
 	handler := NewSwapHandler(mgr)
 
@@ -293,12 +292,16 @@ func (s *HandlerSwapSuite) TestHandle(c *C) {
 	pool.Asset = common.BNBAsset
 	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
 	pool.BalanceRune = cosmos.NewUint(100 * common.One)
-	c.Assert(keeper.SetPool(ctx, pool), IsNil)
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
 	// fund is not enough to pay for transaction fee
 	_, err = handler.handle(ctx, *msg)
-	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "fail swap, not enough fee")
 
-	tx = common.NewTx(txID, signerBNBAddr, signerBNBAddr,
+	tx = common.NewTx(
+		txID,
+		signerBNBAddr,
+		signerBNBAddr,
 		common.Coins{
 			common.NewCoin(common.RuneAsset(), cosmos.NewUint(2*common.One)),
 		},
@@ -306,7 +309,7 @@ func (s *HandlerSwapSuite) TestHandle(c *C) {
 		"",
 	)
 	msgSwapPriceProtection := NewMsgSwap(tx, common.BNBAsset, signerBNBAddr, cosmos.NewUint(2*common.One), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 0, 0, observerAddr)
-	result, err = handler.Run(ctx, msgSwapPriceProtection)
+	result, err = handler.handle(ctx, *msgSwapPriceProtection)
 	c.Assert(err.Error(), Equals, errors.New("emit asset 192233756 less than price limit 200000000").Error())
 	c.Assert(result, IsNil)
 
@@ -316,7 +319,7 @@ func (s *HandlerSwapSuite) TestHandle(c *C) {
 	poolTCAN.Asset = tCanAsset
 	poolTCAN.BalanceAsset = cosmos.NewUint(334850000)
 	poolTCAN.BalanceRune = cosmos.NewUint(2349500000)
-	c.Assert(keeper.SetPool(ctx, poolTCAN), IsNil)
+	c.Assert(mgr.Keeper().SetPool(ctx, poolTCAN), IsNil)
 	bnbAddr := GetRandomBNBAddress()
 	m, err := ParseMemo(mgr.GetVersion(), "swap:BNB.BNB:"+bnbAddr.String()+":121893238")
 	c.Assert(err, IsNil)
@@ -337,7 +340,7 @@ func (s *HandlerSwapSuite) TestHandle(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(items, HasLen, 0)
 
-	c.Assert(keeper.SetPool(ctx, pool), IsNil) // reset the pool
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil) // reset the pool
 	_, err = handler.Run(ctx, msgSwapFromTxIn.(*MsgSwap))
 	c.Assert(err, IsNil)
 	items, err = mgr.TxOutStore().GetOutboundItems(ctx)
@@ -351,6 +354,13 @@ func (s *HandlerSwapSuite) TestHandle(c *C) {
 	result, err = handler.Run(ctx, msgSwap)
 	c.Assert(err, NotNil)
 	c.Assert(result, IsNil)
+
+	// add RUNE-67C pool
+	pool = NewPool()
+	pool.Asset = common.Rune67CAsset
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
 
 	msgSwap2 := NewMsgSwap(GetRandomTx(), common.Rune67CAsset, GetRandomBNBAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 0, 0, GetRandomBech32Addr())
 	result, err = handler.Run(ctx, msgSwap2)
@@ -483,7 +493,6 @@ func (s *HandlerSwapSuite) TestDoubleSwap(c *C) {
 		activeNodeAccount: GetRandomValidatorNode(NodeActive),
 		synthSupply:       cosmos.ZeroUint(),
 	}
-	mgr.K = keeper
 	mgr.txOutStore = NewTxStoreDummy()
 	handler := NewSwapHandler(mgr)
 
@@ -491,7 +500,7 @@ func (s *HandlerSwapSuite) TestDoubleSwap(c *C) {
 	pool.Asset = common.BNBAsset
 	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
 	pool.BalanceRune = cosmos.NewUint(100 * common.One)
-	c.Assert(keeper.SetPool(ctx, pool), IsNil)
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
 
 	poolTCAN := NewPool()
 	tCanAsset, err := common.NewAsset("BNB.TCAN-014")
@@ -499,7 +508,7 @@ func (s *HandlerSwapSuite) TestDoubleSwap(c *C) {
 	poolTCAN.Asset = tCanAsset
 	poolTCAN.BalanceAsset = cosmos.NewUint(334850000)
 	poolTCAN.BalanceRune = cosmos.NewUint(2349500000)
-	c.Assert(keeper.SetPool(ctx, poolTCAN), IsNil)
+	c.Assert(mgr.Keeper().SetPool(ctx, poolTCAN), IsNil)
 
 	signerBNBAddr := GetRandomBNBAddress()
 	observerAddr := keeper.activeNodeAccount.NodeAddress
@@ -538,7 +547,7 @@ func (s *HandlerSwapSuite) TestDoubleSwap(c *C) {
 	txIn1 := NewObservedTx(
 		common.NewTx(GetRandomTxHash(), signerBNBAddr, GetRandomBNBAddress(),
 			common.Coins{
-				common.NewCoin(tCanAsset, cosmos.NewUint(100000)),
+				common.NewCoin(tCanAsset, cosmos.NewUint(10000)),
 			},
 			BNBGasFeeSingleton,
 			"swap:BNB.BNB:"+testnetBNBAddr.String(),
@@ -569,6 +578,12 @@ func (s *HandlerSwapSuite) TestSwapOutDexIntegration(c *C) {
 	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
 	pool.BalanceRune = cosmos.NewUint(100 * common.One)
 	c.Assert(mgr.K.SetPool(ctx, pool), IsNil)
+
+	c.Assert(mgr.K.SaveNetworkFee(ctx, common.ETHChain, NetworkFee{
+		Chain:              common.ETHChain,
+		TransactionSize:    10,
+		TransactionFeeRate: 50_000,
+	}), IsNil)
 
 	swapMemo := "swap:ETH.ETH:" + types.GetRandomETHAddress().String() + "::::2f2386f3848:" + types.GetRandomETHAddress().String()
 	m, err := ParseMemoWithTHORNames(ctx, mgr.Keeper(), swapMemo)

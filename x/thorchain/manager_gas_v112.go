@@ -330,3 +330,7 @@ func (gm *GasMgrV112) ProcessGas(ctx cosmos.Context, keeper keeper.Keeper) {
 		ctx.Logger().Error("fail to set network data", "error", err)
 	}
 }
+
+func (gm *GasMgrV112) GetAssetOutboundFee(ctx cosmos.Context, asset common.Asset, inRune bool) (cosmos.Uint, error) {
+	return cosmos.ZeroUint(), nil
+}

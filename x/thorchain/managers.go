@@ -58,7 +58,8 @@ type GasManager interface {
 	AddGasAsset(outAsset common.Asset, gas common.Gas, increaseTxCount bool)
 	ProcessGas(ctx cosmos.Context, keeper keeper.Keeper)
 	GetGas() common.Gas
-	GetFee(ctx cosmos.Context, chain common.Chain, asset common.Asset) cosmos.Uint
+	GetFee(ctx cosmos.Context, chain common.Chain, asset common.Asset) cosmos.Uint // TODO: remove on hard fork
+	GetAssetOutboundFee(ctx cosmos.Context, asset common.Asset, inRune bool) (cosmos.Uint, error)
 	GetMaxGas(ctx cosmos.Context, chain common.Chain) (common.Coin, error)
 	GetGasRate(ctx cosmos.Context, chain common.Chain) cosmos.Uint
 	GetNetworkFee(ctx cosmos.Context, chain common.Chain) (types.NetworkFee, error)
@@ -365,8 +366,10 @@ func GetKeeper(version semver.Version, cdc codec.BinaryCodec, coinKeeper bankkee
 func GetGasManager(version semver.Version, keeper keeper.Keeper) (GasManager, error) {
 	constAccessor := constants.GetConstantValues(version)
 	switch {
-	case version.GTE(semver.MustParse("1.131.0")):
+	case version.GTE(semver.MustParse("1.132.0")):
 		return newGasMgrVCUR(constAccessor, keeper), nil
+	case version.GTE(semver.MustParse("1.131.0")):
+		return newGasMgrV131(constAccessor, keeper), nil
 	case version.GTE(semver.MustParse("1.113.0")):
 		return newGasMgrV113(constAccessor, keeper), nil
 	case version.GTE(semver.MustParse("1.112.0")):
@@ -403,8 +406,10 @@ func GetEventManager(version semver.Version) (EventManager, error) {
 func GetTxOutStore(version semver.Version, keeper keeper.Keeper, eventMgr EventManager, gasManager GasManager) (TxOutStore, error) {
 	constAccessor := constants.GetConstantValues(version)
 	switch {
-	case version.GTE(semver.MustParse("1.131.0")):
+	case version.GTE(semver.MustParse("1.132.0")):
 		return newTxOutStorageVCUR(keeper, constAccessor, eventMgr, gasManager), nil
+	case version.GTE(semver.MustParse("1.131.0")):
+		return newTxOutStorageV131(keeper, constAccessor, eventMgr, gasManager), nil
 	case version.GTE(semver.MustParse("1.128.0")):
 		return newTxOutStorageV128(keeper, constAccessor, eventMgr, gasManager), nil
 	case version.GTE(semver.MustParse("1.127.0")):

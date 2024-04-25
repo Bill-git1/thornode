@@ -468,8 +468,14 @@ func quoteOutboundInfo(ctx cosmos.Context, mgr *Mgrs, coin common.Coin) (int64, 
 // affiliate swap to RUNE. In this case, we give a 2x buffer on the native_tx_fee so the
 // affiliate receives some amount after the fee is deducted.
 func calculateMinSwapAmount(ctx cosmos.Context, mgr *Mgrs, fromAsset, toAsset common.Asset, affiliateBps cosmos.Uint) (cosmos.Uint, error) {
-	srcOutboundFee := mgr.GasMgr().GetFee(ctx, fromAsset.GetChain(), fromAsset)
-	destOutboundFee := mgr.GasMgr().GetFee(ctx, toAsset.GetChain(), toAsset)
+	srcOutboundFee, err := mgr.GasMgr().GetAssetOutboundFee(ctx, fromAsset, false)
+	if err != nil {
+		return cosmos.ZeroUint(), fmt.Errorf("fail to get outbound fee for source chain gas asset %s: %w", fromAsset, err)
+	}
+	destOutboundFee, err := mgr.GasMgr().GetAssetOutboundFee(ctx, toAsset, false)
+	if err != nil {
+		return cosmos.ZeroUint(), fmt.Errorf("fail to get outbound fee for destination chain gas asset %s: %w", toAsset, err)
+	}
 
 	if fromAsset.GetChain().IsTHORChain() && toAsset.GetChain().IsTHORChain() {
 		// If this is a purely THORChain swap, no need to give a 4x buffer since outbound fees do not change
@@ -490,7 +496,10 @@ func calculateMinSwapAmount(ctx cosmos.Context, mgr *Mgrs, fromAsset, toAsset co
 	minSwapAmount = minSwapAmount.Mul(cosmos.NewUint(4))
 
 	if affiliateBps.GT(cosmos.ZeroUint()) {
-		nativeTxFeeRune := mgr.GasMgr().GetFee(ctx, common.THORChain, common.RuneNative)
+		nativeTxFeeRune, err := mgr.GasMgr().GetAssetOutboundFee(ctx, common.RuneNative, true)
+		if err != nil {
+			return cosmos.ZeroUint(), fmt.Errorf("fail to get native tx fee for rune: %w", err)
+		}
 		affSwapAmountRune := nativeTxFeeRune.Mul(cosmos.NewUint(2))
 		mainSwapAmountRune := affSwapAmountRune.Mul(cosmos.NewUint(10_000)).Quo(affiliateBps)
 

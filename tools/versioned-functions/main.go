@@ -127,6 +127,16 @@ func hasMainnetBuildFlags(file *ast.File) bool {
 	return true
 }
 
+// Returns true if the function is just a single return statement
+func skipDedupe(fn *ast.FuncDecl) bool {
+	if fn.Body == nil || len(fn.Body.List) != 1 {
+		return false
+	}
+
+	_, ok := fn.Body.List[0].(*ast.ReturnStmt)
+	return ok
+}
+
 // -------------------------------------------------------------------------------------
 // Main
 // -------------------------------------------------------------------------------------
@@ -305,6 +315,7 @@ func main() {
 					if !ok {
 						panic("unreachable")
 					}
+
 					fnHash := fnv.New64a()
 					name := []string{}
 					if fn.Recv != nil {
@@ -317,15 +328,20 @@ func main() {
 					}
 					printer.Fprint(fnHash, fset, fn.Body)
 
+					// record all versioned functions outside current version
+					if version != *flagVersion {
+						fnsMap[node.Pos()] = node
+					}
+
+					// skip empty functions
+					if skipDedupe(fn) {
+						return true
+					}
+
 					// dedupe by function receiver and body
 					if len(fn.Body.List) > 0 {
 						name = append(name, fn.Name.Name)
 						fnsDedupe[fnHash.Sum64()] = append(fnsDedupe[fnHash.Sum64()], strings.Join(name, "."))
-					}
-
-					// record all versioned functions outside current version
-					if version != *flagVersion {
-						fnsMap[node.Pos()] = node
 					}
 				}
 				return true

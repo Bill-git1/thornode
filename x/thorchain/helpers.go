@@ -22,6 +22,8 @@ import (
 func refundTx(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uint32, refundReason, sourceModuleName string) error {
 	version := mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.132.0")):
+		return refundTxV132(ctx, tx, mgr, refundCode, refundReason, sourceModuleName)
 	case version.GTE(semver.MustParse("1.124.0")):
 		return refundTxV124(ctx, tx, mgr, refundCode, refundReason, sourceModuleName)
 	case version.GTE(semver.MustParse("1.117.0")):
@@ -37,7 +39,7 @@ func refundTx(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uint32,
 	}
 }
 
-func refundTxV124(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uint32, refundReason, sourceModuleName string) error {
+func refundTxV132(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uint32, refundReason, sourceModuleName string) error {
 	// If THORNode recognize one of the coins, and therefore able to refund
 	// withholding fees, refund all coins.
 
@@ -95,11 +97,7 @@ func refundTxV124(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uin
 		// create a new TX based on the coins thorchain refund , some of the coins thorchain doesn't refund
 		// coin thorchain doesn't have pool with , likely airdrop
 		newTx := common.NewTx(tx.Tx.ID, tx.Tx.FromAddress, tx.Tx.ToAddress, tx.Tx.Coins, tx.Tx.Gas, tx.Tx.Memo)
-
-		// all the coins in tx.Tx should belongs to the same chain
-		transactionFee := mgr.GasMgr().GetFee(ctx, tx.Tx.Chain, common.RuneAsset())
-		fee := getFee(tx.Tx.Coins, refundCoins, transactionFee)
-		eventRefund = NewEventRefund(refundCode, refundReason, newTx, fee)
+		eventRefund = NewEventRefund(refundCode, refundReason, newTx, common.Fee{}) // fee param not used in downstream event
 	}
 	if err := mgr.EventMgr().EmitEvent(ctx, eventRefund); err != nil {
 		return fmt.Errorf("fail to emit refund event: %w", err)
@@ -305,36 +303,6 @@ func getMaxSwapQuantityV121(ctx cosmos.Context, mgr Manager, sourceAsset, target
 	}
 
 	return maxSwapQuantity.Uint64(), nil
-}
-
-func getFee(input, output common.Coins, transactionFee cosmos.Uint) common.Fee {
-	var fee common.Fee
-	assetTxCount := 0
-	for _, out := range output {
-		if !out.Asset.IsRune() {
-			assetTxCount++
-		}
-	}
-	for _, in := range input {
-		outCoin := common.NoCoin
-		for _, out := range output {
-			if out.Asset.Equals(in.Asset) {
-				outCoin = out
-				break
-			}
-		}
-		if outCoin.IsEmpty() {
-			if !in.Amount.IsZero() {
-				fee.Coins = append(fee.Coins, common.NewCoin(in.Asset, in.Amount))
-			}
-		} else {
-			if !in.Amount.Sub(outCoin.Amount).IsZero() {
-				fee.Coins = append(fee.Coins, common.NewCoin(in.Asset, in.Amount.Sub(outCoin.Amount)))
-			}
-		}
-	}
-	fee.PoolDeduct = transactionFee.MulUint64(uint64(assetTxCount))
-	return fee
 }
 
 func refundBond(ctx cosmos.Context, tx common.Tx, acc cosmos.AccAddress, amt cosmos.Uint, nodeAcc *NodeAccount, mgr Manager) error {
