@@ -221,6 +221,7 @@ type KeeperOutboundFees interface {
 
 type KeeperSwapSlip interface {
 	AddToSwapSlip(ctx cosmos.Context, asset common.Asset, amt cosmos.Int) error
+	GetRollupCount(ctx cosmos.Context, asset common.Asset) (int64, error)
 	RollupSwapSlip(ctx cosmos.Context, blockCount int64, _ common.Asset) (cosmos.Int, error)
 	GetCurrentRollup(ctx cosmos.Context, asset common.Asset) (int64, error)
 	SetCurrentRollup(ctx cosmos.Context, asset common.Asset, val int64)

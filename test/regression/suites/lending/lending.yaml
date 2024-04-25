@@ -813,3 +813,21 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
+---
+########################################################################################
+# check stored rollup details
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/lastblock
+asserts:
+  - .|length >= 1
+  - .[0].thorchain == ${HEIGHT=20}
+---
+type: check
+endpoint: http://localhost:1317/thorchain/slip/BTC.BTC
+asserts:
+  - length == 1
+  - .[0].rollup_count == ${HEIGHT}
+  - .[0].rollup == 343
+  - .[0].summed_rollup == .[0].rollup
+  # Rollup count does not exceed the height, and stored rollup is consistent with summed rollup.

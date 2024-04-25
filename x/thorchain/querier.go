@@ -169,6 +169,10 @@ func NewQuerier(mgr *Mgrs, kbs cosmos.KeybaseStore) cosmos.Querier {
 			return queryScheduledOutbound(ctx, mgr)
 		case q.QuerySwapQueue.Key:
 			return querySwapQueue(ctx, mgr)
+		case q.QueryPoolSlip.Key:
+			return queryPoolSlips(ctx, path[1:], req, mgr)
+		case q.QueryPoolSlips.Key:
+			return queryPoolSlips(ctx, path[1:], req, mgr)
 		case q.QuerySwapperClout.Key:
 			return querySwapperClout(ctx, path[1:], mgr)
 		case q.QueryStreamingSwap.Key:
@@ -1521,6 +1525,83 @@ func queryPools(ctx cosmos.Context, req abci.RequestQuery, mgr *Mgrs) ([]byte, e
 		pools = append(pools, p)
 	}
 	return jsonify(ctx, pools)
+}
+
+func queryPoolSlips(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {
+	var assets []common.Asset
+	if len(path) > 0 && len(path[0]) > 0 {
+		// If an Asset has been specified, return information for just that Asset
+		// (even if for instance a Derived Asset to check whether it has values set).
+		asset, err := common.NewAsset(path[0])
+		if err != nil {
+			ctx.Logger().Error("fail to parse asset", "error", err, "asset", path[0])
+			return nil, fmt.Errorf("fail to parse asset (%s): %w", path[0], err)
+		}
+		assets = []common.Asset{asset}
+	} else {
+		iterator := mgr.Keeper().GetPoolIterator(ctx)
+		for ; iterator.Valid(); iterator.Next() {
+			var pool Pool
+			if err := mgr.Keeper().Cdc().Unmarshal(iterator.Value(), &pool); err != nil {
+				return nil, fmt.Errorf("fail to unmarshal pool: %w", err)
+			}
+
+			// Display the swap slips of Available-pool Layer 1 assets.
+			if pool.Status != PoolAvailable || pool.Asset.IsNative() {
+				continue
+			}
+			assets = append(assets, pool.Asset)
+		}
+	}
+
+	result := make([]openapi.PoolSlipResponseInner, len(assets))
+	for i := range assets {
+		result[i].Asset = assets[i].String()
+
+		poolSlip, err := mgr.Keeper().GetPoolSwapSlip(ctx, ctx.BlockHeight(), assets[i])
+		if err != nil {
+			return nil, fmt.Errorf("fail to get swap slip for asset (%s) height (%d), err:%w", assets[i], ctx.BlockHeight(), err)
+		}
+		result[i].PoolSlip = poolSlip.Int64()
+
+		rollupCount, err := mgr.Keeper().GetRollupCount(ctx, assets[i])
+		if err != nil {
+			return nil, fmt.Errorf("fail to get rollup count for asset (%s) height (%d), err:%w", assets[i], ctx.BlockHeight(), err)
+		}
+		result[i].RollupCount = rollupCount
+
+		longRollup, err := mgr.Keeper().GetLongRollup(ctx, assets[i])
+		if err != nil {
+			return nil, fmt.Errorf("fail to get long rollup for asset (%s) height (%d), err:%w", assets[i], ctx.BlockHeight(), err)
+		}
+		result[i].LongRollup = longRollup
+
+		rollup, err := mgr.Keeper().GetCurrentRollup(ctx, assets[i])
+		if err != nil {
+			return nil, fmt.Errorf("fail to get rollup count for asset (%s) height (%d), err:%w", assets[i], ctx.BlockHeight(), err)
+		}
+		result[i].Rollup = rollup
+	}
+
+	// For performance, only sum the rollup swap slip for comparison
+	// when a single asset has been specified.
+	if len(assets) == 1 {
+		maxAnchorBlocks := mgr.Keeper().GetConfigInt64(ctx, constants.MaxAnchorBlocks)
+		var summedRollup int64
+		for i := ctx.BlockHeight() - maxAnchorBlocks; i < ctx.BlockHeight(); i++ {
+			poolSlip, err := mgr.Keeper().GetPoolSwapSlip(ctx, i, assets[0])
+			if err != nil {
+				// Log the error, zero the sum, and exit the loop.
+				ctx.Logger().Error("fail to get swap slip", "error", err, "asset", assets[0], "height", i)
+				summedRollup = 0
+				break
+			}
+			summedRollup += poolSlip.Int64()
+		}
+		result[0].SummedRollup = &summedRollup
+	}
+
+	return jsonify(ctx, result)
 }
 
 func queryDerivedPool(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {

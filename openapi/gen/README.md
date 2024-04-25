@@ -106,6 +106,8 @@ Class | Method | HTTP request | Description
 *NodesApi* | [**Node**](docs/NodesApi.md#node) | **Get** /thorchain/node/{address} | 
 *NodesApi* | [**Nodes**](docs/NodesApi.md#nodes) | **Get** /thorchain/nodes | 
 *POLApi* | [**Pol**](docs/POLApi.md#pol) | **Get** /thorchain/pol | 
+*PoolSlipApi* | [**Poolslip**](docs/PoolSlipApi.md#poolslip) | **Get** /thorchain/slip/{asset} | 
+*PoolSlipApi* | [**Poolslips**](docs/PoolSlipApi.md#poolslips) | **Get** /thorchain/slips | 
 *PoolsApi* | [**Dpool**](docs/PoolsApi.md#dpool) | **Get** /thorchain/dpool/{asset} | 
 *PoolsApi* | [**Dpools**](docs/PoolsApi.md#dpools) | **Get** /thorchain/dpools | 
 *PoolsApi* | [**Pool**](docs/PoolsApi.md#pool) | **Get** /thorchain/pool/{asset} | 
@@ -197,6 +199,7 @@ Class | Method | HTTP request | Description
  - [Ping](docs/Ping.md)
  - [PlannedOutTx](docs/PlannedOutTx.md)
  - [Pool](docs/Pool.md)
+ - [PoolSlipResponseInner](docs/PoolSlipResponseInner.md)
  - [QueueResponse](docs/QueueResponse.md)
  - [QuoteFees](docs/QuoteFees.md)
  - [QuoteLoanCloseResponse](docs/QuoteLoanCloseResponse.md)

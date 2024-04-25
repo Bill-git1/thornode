@@ -68,6 +68,8 @@ type APIClient struct {
 
 	POLApi *POLApiService
 
+	PoolSlipApi *PoolSlipApiService
+
 	PoolsApi *PoolsApiService
 
 	QueueApi *QueueApiService
@@ -121,6 +123,7 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 	c.NetworkApi = (*NetworkApiService)(&c.common)
 	c.NodesApi = (*NodesApiService)(&c.common)
 	c.POLApi = (*POLApiService)(&c.common)
+	c.PoolSlipApi = (*PoolSlipApiService)(&c.common)
 	c.PoolsApi = (*PoolsApiService)(&c.common)
 	c.QueueApi = (*QueueApiService)(&c.common)
 	c.QuoteApi = (*QuoteApiService)(&c.common)

@@ -78,26 +78,35 @@ func (k KVStore) SetSwapSlipSnapShot(ctx cosmos.Context, asset common.Asset, hei
 	k.setInt64(ctx, snapshotKey, currRollup)
 }
 
-// RollupSwapSlip - sums the amount of slip in a given pool in the last targetCount blocks
-func (k KVStore) RollupSwapSlip(ctx cosmos.Context, targetCount int64, asset common.Asset) (cosmos.Int, error) {
+func (k KVStore) GetRollupCount(ctx cosmos.Context, asset common.Asset) (int64, error) {
 	var currCount int64
 	currCountKey := k.GetKey(ctx, prefixPoolSwapSlip, fmt.Sprintf("rollup-count/%s", asset.String()))
 	_, err := k.getInt64(ctx, currCountKey, &currCount)
 	if err != nil {
-		return cosmos.ZeroInt(), err
+		return 0, err
 	}
+	return currCount, nil
+}
 
-	var currRollup int64
-	currRollupKey := k.GetKey(ctx, prefixPoolSwapSlip, fmt.Sprintf("rollup/%s", asset.String()))
-	_, err = k.getInt64(ctx, currRollupKey, &currRollup)
+// RollupSwapSlip - sums the amount of slip in a given pool in the last targetCount blocks
+func (k KVStore) RollupSwapSlip(ctx cosmos.Context, targetCount int64, asset common.Asset) (cosmos.Int, error) {
+	currCount, err := k.GetRollupCount(ctx, asset)
 	if err != nil {
 		return cosmos.ZeroInt(), err
 	}
 
+	currRollup, err := k.GetCurrentRollup(ctx, asset)
+	if err != nil {
+		return cosmos.ZeroInt(), err
+	}
+
+	currCountKey := k.GetKey(ctx, prefixPoolSwapSlip, fmt.Sprintf("rollup-count/%s", asset.String()))
+	currRollupKey := k.GetKey(ctx, prefixPoolSwapSlip, fmt.Sprintf("rollup/%s", asset.String()))
 	reset := func(err error) (cosmos.Int, error) {
 		if err != nil {
 			ctx.Logger().Error("resetting pool swap slip rollup", "asset", asset.String(), "err", err)
 		}
+
 		k.setInt64(ctx, currCountKey, 0)
 		k.setInt64(ctx, currRollupKey, 0)
 		return cosmos.ZeroInt(), err

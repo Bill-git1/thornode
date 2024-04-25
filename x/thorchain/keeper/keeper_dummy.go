@@ -370,6 +370,10 @@ func (k KVStoreDummy) AddToSwapSlip(ctx cosmos.Context, asset common.Asset, amt 
 	return kaboom
 }
 
+func (k KVStoreDummy) GetRollupCount(ctx cosmos.Context, asset common.Asset) (int64, error) {
+	return 0, kaboom
+}
+
 func (k KVStoreDummy) RollupSwapSlip(ctx cosmos.Context, blockCount int64, _ common.Asset) (cosmos.Int, error) {
 	return cosmos.ZeroInt(), kaboom
 }

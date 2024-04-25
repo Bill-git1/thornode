@@ -12,6 +12,7 @@ api_mimir.go
 api_network.go
 api_nodes.go
 api_pol.go
+api_pool_slip.go
 api_pools.go
 api_queue.go
 api_quote.go
@@ -88,6 +89,8 @@ docs/POLResponse.md
 docs/Ping.md
 docs/PlannedOutTx.md
 docs/Pool.md
+docs/PoolSlipApi.md
+docs/PoolSlipResponseInner.md
 docs/PoolsApi.md
 docs/QueueApi.md
 docs/QueueResponse.md
@@ -188,6 +191,7 @@ model_ping.go
 model_planned_out_tx.go
 model_pol_response.go
 model_pool.go
+model_pool_slip_response_inner.go
 model_queue_response.go
 model_quote_fees.go
 model_quote_loan_close_response.go

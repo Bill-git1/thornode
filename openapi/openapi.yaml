@@ -66,6 +66,39 @@ paths:
               schema:
                 $ref: "#/components/schemas/PoolsResponse"
 
+  /thorchain/slip/{asset}:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+      - $ref: "#/components/parameters/asset"
+    get:
+      description: Returns the pool slip information for the provided asset.
+      operationId: poolslip
+      tags:
+        - PoolSlip
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PoolSlipResponse"
+
+  /thorchain/slips:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+    get:
+      description: Returns the pool slip information for all Available Layer 1 pool assets.
+      operationId: poolslips
+      tags:
+        - PoolSlip
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PoolSlipResponse"
+
   # ------------------------------ derived pools ------------------------------
 
   /thorchain/dpool/{asset}:
@@ -2571,6 +2604,47 @@ components:
       type: array
       items:
         $ref: "#/components/schemas/Pool"
+
+    PoolSlipResponse:
+      type: array
+      title: PoolSlipResponse
+      items:
+        type: object
+        required:
+          - asset
+          - pool_slip
+          - rollup_count
+          - long_rollup
+          - rollup
+        properties:
+          asset:
+            type: string
+            example: "BTC.BTC"
+          pool_slip:
+            type: integer
+            format: int64
+            example: 5
+            description: Pool slip for this asset's pool for the current height
+          rollup_count:
+            type: integer
+            format: int64
+            example: 300
+            description: Number of stored pool slips contributing to the current stored rollup
+          long_rollup:
+            type: integer
+            format: int64
+            example: 1500
+            description: Median of rollup snapshots over a long period
+          rollup:
+            type: integer
+            format: int64
+            example: 1500
+            description: Stored sum of pool slips over a number of previous block heights
+          summed_rollup:
+            type: integer
+            format: int64
+            example: 1500
+            description: Summed pool slips over a number of previous block heights, to checksum the stored rollup
 
     DerivedPoolResponse:
       $ref: "#/components/schemas/DerivedPool"

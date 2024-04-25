@@ -35,6 +35,8 @@ func (q Query) Path(args ...string) string {
 var (
 	QueryPool                = Query{Key: "pool", EndpointTemplate: "/%s/pool/{%s}"}
 	QueryPools               = Query{Key: "pools", EndpointTemplate: "/%s/pools"}
+	QueryPoolSlip            = Query{Key: "poolslip", EndpointTemplate: "/%s/slip/{%s}"}
+	QueryPoolSlips           = Query{Key: "poolslips", EndpointTemplate: "/%s/slips"}
 	QueryDerivedPools        = Query{Key: "derived_pools", EndpointTemplate: "/%s/dpools"}
 	QueryDerivedPool         = Query{Key: "derived_pool", EndpointTemplate: "/%s/dpool/{%s}"}
 	QueryLiquidityProviders  = Query{Key: "lps", EndpointTemplate: "/%s/pool/{%s}/liquidity_providers"}
@@ -109,6 +111,8 @@ var (
 var Queries = []Query{
 	QueryPool,
 	QueryPools,
+	QueryPoolSlip,
+	QueryPoolSlips,
 	QueryDerivedPool,
 	QueryDerivedPools,
 	QueryLiquidityProviders,
