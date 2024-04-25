@@ -1,6 +1,6 @@
 module gitlab.com/thorchain/thornode
 
-go 1.20
+go 1.22
 
 require (
 	github.com/99designs/keyring v1.1.6

@@ -5,7 +5,7 @@
 #
 # Build
 #
-FROM registry.gitlab.com/thorchain/thornode:builder-v4@sha256:a58b06a98485bcef78d7733cc6d66e8c62a306b1ec388a032469c592c5a71841 AS build
+FROM registry.gitlab.com/thorchain/thornode:builder-v5@sha256:33a2345924750d45a7e9060f429f66ddc1888482e6ef73e2358a23024dc41f01 AS build
 
 ENV GOBIN=/go/bin
 ENV GOPATH=/go
