@@ -376,8 +376,8 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .txs[0].result.code == 1
-  - .txs[0].result.log == "internal" # TODO better error, see issue #1923
+  - .txs[0].result.code == 99
+  - .txs[0].result.log | contains("trading is halted")
 ---
 ########################################################################################
 # second block should eject last saver and create outbounds for the first 2

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/blang/semver"
+	sdkerrs "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 
 	"gitlab.com/thorchain/thornode/common"
@@ -52,6 +53,13 @@ func NewExternalHandler(mgr Manager) cosmos.Handler {
 		}
 		result, err := h.Run(ctx, msg)
 		if err != nil {
+			// TODO: remove version condition on hard fork
+			if mgr.GetVersion().GTE(semver.MustParse("1.132.0")) {
+				if _, code, _ := sdkerrs.ABCIInfo(err, false); code == 1 {
+					// This would be redacted, so wrap it.
+					err = sdkerrs.Wrap(errInternal, err.Error())
+				}
+			}
 			return nil, err
 		}
 		if result == nil {

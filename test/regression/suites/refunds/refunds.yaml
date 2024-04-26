@@ -29,6 +29,13 @@ asserts:
   - .balances|length == 1
   - .balances[]|select(.denom == "rune")|.amount|tonumber == 2499998000000
 ---
+type: check
+endpoint: http://localhost:1317/thorchain/block
+asserts:
+  - .|[..|select(.code?)]|length == 1
+  - ..|select(.code?).code == 99
+  - ..|select(.code?).log| contains("internal error") and contains("invalid memo")
+---
 ########################################################################################
 type: tx-deposit
 signer: {{ addr_thor_fox }}
