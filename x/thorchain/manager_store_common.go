@@ -12,6 +12,64 @@ import (
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 )
 
+// discoverOutbounds is used to select one more TxOutItem with an appropriate VaultPubKey(s) selected for a given TxOutItem
+// this will split a large TxOutItem into multiple smaller []TxOutItem needed to fulfill the original TxOutItem
+// it should be used when issuing a manual refund in store migrations
+func discoverOutbounds(ctx cosmos.Context, mgr *Mgrs, toi TxOutItem) ([]TxOutItem, error) {
+	signingTransactionPeriod := mgr.GetConstants().GetInt64Value(constants.SigningTransactionPeriod)
+	transactionFee, err := mgr.GasMgr().GetAssetOutboundFee(ctx, toi.Coin.Asset, false)
+	if err != nil {
+		return []TxOutItem{}, fmt.Errorf("fail to get outbound fee: %w", err)
+	}
+	maxGasAsset, err := mgr.GasMgr().GetMaxGas(ctx, toi.Chain)
+	if err != nil {
+		ctx.Logger().Error("fail to get max gas asset", "error", err)
+	}
+
+	pendingOutbounds := mgr.Keeper().GetPendingOutbounds(ctx, toi.Coin.Asset)
+
+	// ///////////// COLLECT ACTIVE ASGARD VAULTS ///////////////////
+	activeAsgards, err := mgr.Keeper().GetAsgardVaultsByStatus(ctx, ActiveVault)
+	if err != nil {
+		ctx.Logger().Error("fail to get active vaults", "error", err)
+	}
+
+	// All else being equal, prefer lower-security vaults for outbounds.
+	activeAsgards = mgr.Keeper().SortBySecurity(ctx, activeAsgards, signingTransactionPeriod)
+
+	for i := range activeAsgards {
+		// having sorted by security, deduct the value of any assigned pending outbounds
+		activeAsgards[i].DeductVaultPendingOutbounds(pendingOutbounds)
+	}
+	// //////////////////////////////////////////////////////////////
+
+	// ///////////// COLLECT RETIRING ASGARD VAULTS /////////////////
+	retiringAsgards, err := mgr.Keeper().GetAsgardVaultsByStatus(ctx, RetiringVault)
+	if err != nil {
+		ctx.Logger().Error("fail to get retiring vaults", "error", err)
+	}
+
+	// All else being equal, prefer lower-security vaults for outbounds.
+	retiringAsgards = mgr.Keeper().SortBySecurity(ctx, retiringAsgards, signingTransactionPeriod)
+
+	for i := range retiringAsgards {
+		// having sorted by security, deduct the value of any assigned pending outbounds
+		retiringAsgards[i].DeductVaultPendingOutbounds(pendingOutbounds)
+	}
+	// //////////////////////////////////////////////////////////////
+
+	// iterate over discovered vaults and find vaults to send funds from
+
+	// All else being equal, choose active Asgards over retiring Asgards.
+	outputs, remaining := mgr.TxOutStore().DiscoverOutbounds(ctx, transactionFee, maxGasAsset, toi, append(activeAsgards, retiringAsgards...))
+
+	// Check we found enough funds to satisfy the request, error if we didn't
+	if !remaining.IsZero() {
+		return []TxOutItem{}, fmt.Errorf("insufficient funds for outbound request: %s %s remaining", toi.ToAddress.String(), remaining.String())
+	}
+	return outputs, nil
+}
+
 // removeTransactions is a method used to remove a tx out item in the queue
 func removeTransactions(ctx cosmos.Context, mgr Manager, hashes ...string) {
 	for _, txID := range hashes {

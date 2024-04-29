@@ -63,6 +63,10 @@ func (tos *TxOutStoreDummy) CalcTxOutHeight(_ cosmos.Context, _ semver.Version, 
 	return 0, cosmos.ZeroUint(), nil
 }
 
+func (tos *TxOutStoreDummy) DiscoverOutbounds(_ cosmos.Context, _ cosmos.Uint, _ common.Coin, _ TxOutItem, _ Vaults) ([]TxOutItem, cosmos.Uint) {
+	return []TxOutItem{}, cosmos.ZeroUint()
+}
+
 func (tos *TxOutStoreDummy) addToBlockOut(_ cosmos.Context, toi TxOutItem) {
 	tos.blockOut.TxArray = append(tos.blockOut.TxArray, toi)
 }
@@ -115,6 +119,10 @@ func (tos *TxOutStoreFailDummy) TryAddTxOutItem(ctx cosmos.Context, mgr Manager,
 
 func (tos *TxOutStoreFailDummy) CalcTxOutHeight(_ cosmos.Context, _ semver.Version, _ TxOutItem) (int64, cosmos.Uint, error) {
 	return 0, cosmos.ZeroUint(), nil
+}
+
+func (tos *TxOutStoreFailDummy) DiscoverOutbounds(_ cosmos.Context, _ cosmos.Uint, _ common.Coin, _ TxOutItem, _ Vaults) ([]TxOutItem, cosmos.Uint) {
+	return []TxOutItem{}, cosmos.ZeroUint()
 }
 
 func (tos *TxOutStoreFailDummy) UnSafeAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem, height int64) error {

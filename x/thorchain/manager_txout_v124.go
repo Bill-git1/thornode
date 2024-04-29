@@ -242,7 +242,7 @@ func (tos *TxOutStorageV124) UnSafeAddTxOutItem(ctx cosmos.Context, mgr Manager,
 	return tos.addToBlockOut(ctx, mgr, toi, height)
 }
 
-func (tos *TxOutStorageV124) discoverOutbounds(ctx cosmos.Context, transactionFeeAsset cosmos.Uint, maxGasAsset common.Coin, toi TxOutItem, vaults Vaults) ([]TxOutItem, cosmos.Uint) {
+func (tos *TxOutStorageV124) DiscoverOutbounds(ctx cosmos.Context, transactionFeeAsset cosmos.Uint, maxGasAsset common.Coin, toi TxOutItem, vaults Vaults) ([]TxOutItem, cosmos.Uint) {
 	var outputs []TxOutItem
 
 	// When there is more than one vault, sort the vaults by
@@ -440,7 +440,7 @@ func (tos *TxOutStorageV124) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 			// iterate over discovered vaults and find vaults to send funds from
 
 			// All else being equal, choose active Asgards over retiring Asgards.
-			outputs, remaining = tos.discoverOutbounds(ctx, transactionFeeAsset, maxGasAsset, toi, append(activeAsgards, retiringAsgards...))
+			outputs, remaining = tos.DiscoverOutbounds(ctx, transactionFeeAsset, maxGasAsset, toi, append(activeAsgards, retiringAsgards...))
 
 			// Check we found enough funds to satisfy the request, error if we didn't
 			if !remaining.IsZero() {

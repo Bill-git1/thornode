@@ -193,7 +193,7 @@ func (tos *TxOutStorageV93) UnSafeAddTxOutItem(ctx cosmos.Context, mgr Manager, 
 	return tos.addToBlockOut(ctx, mgr, toi, height)
 }
 
-func (tos *TxOutStorageV93) discoverOutbounds(ctx cosmos.Context, transactionFeeAsset cosmos.Uint, maxGasAsset common.Coin, toi TxOutItem, vaults Vaults) ([]TxOutItem, cosmos.Uint) {
+func (tos *TxOutStorageV93) DiscoverOutbounds(ctx cosmos.Context, transactionFeeAsset cosmos.Uint, maxGasAsset common.Coin, toi TxOutItem, vaults Vaults) ([]TxOutItem, cosmos.Uint) {
 	var outputs []TxOutItem
 	for _, vault := range vaults {
 		// Ensure THORNode are not sending from and to the same address
@@ -349,9 +349,9 @@ func (tos *TxOutStorageV93) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem) 
 			// iterate over discovered vaults and find vaults to send funds from
 
 			// evaluate the outputs if we process yggs first
-			outputs, remaining = tos.discoverOutbounds(ctx, transactionFeeAsset, maxGasAsset, toi, append(yggs, asgards...))
+			outputs, remaining = tos.DiscoverOutbounds(ctx, transactionFeeAsset, maxGasAsset, toi, append(yggs, asgards...))
 			// evaluate the outputs if we process asgards first
-			outputsB, remainingB := tos.discoverOutbounds(ctx, transactionFeeAsset, maxGasAsset, toi, append(asgards, yggs...))
+			outputsB, remainingB := tos.DiscoverOutbounds(ctx, transactionFeeAsset, maxGasAsset, toi, append(asgards, yggs...))
 
 			// pick the output plan that has less outbound transactions to reduce on gas fees to the user
 			if len(outputs) > len(outputsB) && remaining.GTE(remainingB) {

@@ -84,6 +84,7 @@ type TxOutStore interface {
 	UnSafeAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem, height int64) error
 	GetOutboundItemByToAddress(cosmos.Context, common.Address) []TxOutItem
 	CalcTxOutHeight(cosmos.Context, semver.Version, TxOutItem) (int64, cosmos.Uint, error)
+	DiscoverOutbounds(ctx cosmos.Context, transactionFeeAsset cosmos.Uint, maxGasAsset common.Coin, toi TxOutItem, vaults Vaults) ([]TxOutItem, cosmos.Uint)
 }
 
 // ObserverManager define the method to manage observes

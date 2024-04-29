@@ -231,7 +231,7 @@ func (tos *TxOutStorageV115) UnSafeAddTxOutItem(ctx cosmos.Context, mgr Manager,
 	return tos.addToBlockOut(ctx, mgr, toi, height)
 }
 
-func (tos *TxOutStorageV115) discoverOutbounds(ctx cosmos.Context, transactionFeeAsset cosmos.Uint, maxGasAsset common.Coin, toi TxOutItem, vaults Vaults) ([]TxOutItem, cosmos.Uint) {
+func (tos *TxOutStorageV115) DiscoverOutbounds(ctx cosmos.Context, transactionFeeAsset cosmos.Uint, maxGasAsset common.Coin, toi TxOutItem, vaults Vaults) ([]TxOutItem, cosmos.Uint) {
 	var outputs []TxOutItem
 
 	// When there is more than one vault, sort the vaults by
@@ -461,7 +461,7 @@ func (tos *TxOutStorageV115) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 
 			// All else being equal, prefer Yggdrasils over Asgards (less TSS burden, if not deprecated)
 			// and active Asgards over retiring Asgards (less TSS burden during migrates).
-			outputs, remaining = tos.discoverOutbounds(ctx, transactionFeeAsset, maxGasAsset, toi, append(append(yggs, activeAsgards...), retiringAsgards...))
+			outputs, remaining = tos.DiscoverOutbounds(ctx, transactionFeeAsset, maxGasAsset, toi, append(append(yggs, activeAsgards...), retiringAsgards...))
 
 			// Check we found enough funds to satisfy the request, error if we didn't
 			if !remaining.IsZero() {

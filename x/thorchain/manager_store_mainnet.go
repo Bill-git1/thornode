@@ -1560,6 +1560,10 @@ func migrateStoreV131(ctx cosmos.Context, mgr *Mgrs) {
 	}
 }
 
+// migrateStoreV132 retries several migrations from v131:
+// 1) BNB treasury recovery - retry substantial remaining balances for BNB, BUSD, and TWT.
+// 2) Issue 2 and 4 from previous version - both failed on TryTxOutAddItem due to voter.OutboundHeight being set at a lower height, when the partial refund occurred.
+// Prefer to use UnSafeAddTxOutItem w/ discoverOutbounds helper functions to skip other handling logic and prepare multiple outbounds for an explicit TxOutItem
 func migrateStoreV132(ctx cosmos.Context, mgr *Mgrs) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -1643,6 +1647,124 @@ func migrateStoreV132(ctx cosmos.Context, mgr *Mgrs) {
 			err = mgr.txOutStore.UnSafeAddTxOutItem(ctx, mgr, toi, ctx.BlockHeight())
 			if err != nil {
 				ctx.Logger().Error("fail to add recovery outbound", "error", err, "tx", toi)
+			}
+		}
+	}
+
+	// Requeue failed attempt Issue 1 from previous version migration
+	// See L1316 from this file (manager_store_mainnet.go)
+	originalTxID := "9F465AE9A43655619E0ADCC0EC52187B8856BF7F025E9142A424C272394CFA50"
+	maxGas, err = mgr.gasMgr.GetMaxGas(ctx, common.BTCChain)
+	if err != nil {
+		ctx.Logger().Error("unable to GetMaxGas while retrying issue 1", "err", err)
+	} else {
+		gasRate = mgr.gasMgr.GetGasRate(ctx, common.BTCChain)
+		droppedRescue := TxOutItem{
+			Chain:       common.BTCChain,
+			ToAddress:   common.Address("bc1qneepjkjy2p3rzk9aryvygm39gv9kzk0tvzt7g7"),
+			VaultPubKey: common.PubKey("thorpub1addwnpepqw68vqcyfyerpqvmfn7r39myxgn9q5hwd7crk82radl7ggl5dvmm2uqxzwk"), // vaults/asgard?height=14766979
+			Coin:        common.NewCoin(common.BTCAsset, cosmos.NewUint(99000000)),
+			Memo:        fmt.Sprintf("REFUND:%s", originalTxID),
+			InHash:      common.TxID(originalTxID),
+			GasRate:     int64(gasRate.Uint64()),
+			MaxGas:      common.Gas{maxGas},
+		}
+
+		err := mgr.txOutStore.UnSafeAddTxOutItem(ctx, mgr, droppedRescue, ctx.BlockHeight())
+		if err != nil {
+			ctx.Logger().Error("fail to retry BTC rescue tx", "error", err)
+		}
+	}
+
+	// Retry failed attempt Issue 2 from previous version migration
+	// See L1344 from this file (manager_store_mainnet.go)
+	originalTxID = "8C7A9E17BDDE0E1F90EB2251E65ED4633B9F44E8EF3D0BA04308DB2C4D5CA92D"
+	usdt, err := common.NewAsset("ETH.USDT-0XDAC17F958D2EE523A2206206994597C13D831EC7")
+	if err != nil {
+		ctx.Logger().Error("unable to create NewAsset in Issue 2 retry", "error", err)
+	} else {
+		toi := TxOutItem{
+			Chain:     common.ETHChain,
+			ToAddress: common.Address("0xc85fef7a1b039a9e080aadf80ff6f1536dada088"),
+			Coin:      common.NewCoin(usdt, cosmos.NewUint(11225335474500)),
+			Memo:      fmt.Sprintf("REFUND:%s", originalTxID),
+			InHash:    common.TxID(originalTxID),
+		}
+		outbounds, err := discoverOutbounds(ctx, mgr, toi)
+		if err != nil {
+			ctx.Logger().Error("unable to discoverOutbounds for Issue 2 retry", "error", err)
+		}
+		for _, outbound := range outbounds {
+			if err := mgr.txOutStore.UnSafeAddTxOutItem(ctx, mgr, outbound, ctx.BlockHeight()); err != nil {
+				ctx.Logger().Error("unable to UnSafeAddTxOutItem Issue 2 retry", "error", err, "outbound", outbound)
+			}
+		}
+	}
+
+	// Retry failed attempt(s) Issue 4 from previous version migration
+	// See 1386 from this file (manager_store_mainnet.go)
+	originalTxID = "8EC6D7B459136D708BF03FCB55C3BBA04F0F32E924354E7BBB3F40637F0E56AD"
+	toi := TxOutItem{
+		Chain:     common.LTCChain,
+		ToAddress: common.Address("ltc1qe2jleyfezmahfcmlgls2flqht9mlu8aaal7xhm"),
+		Coin:      common.NewCoin(common.LTCAsset, cosmos.NewUint(5978633839)),
+		Memo:      fmt.Sprintf("REFUND:%s", originalTxID),
+		InHash:    common.TxID(originalTxID),
+	}
+	outbounds, err := discoverOutbounds(ctx, mgr, toi)
+	if err != nil {
+		ctx.Logger().Error("unable to discoverOutbounds for Issue 4 retry", "error", err)
+	}
+	for _, outbound := range outbounds {
+		if err := mgr.txOutStore.UnSafeAddTxOutItem(ctx, mgr, outbound, ctx.BlockHeight()); err != nil {
+			ctx.Logger().Error("unable to UnSafeAddTxOutItem Issue 4 retry", "error", err, "outbound", outbound)
+		}
+	}
+
+	// Second refund (ETH.USDC)
+	originalTxID = "B42EBA71BCF8D7ACEB14BE738A25670327A9441FCC29D70754AAF1D68A793529"
+	usdc, err := common.NewAsset("ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48")
+	if err != nil {
+		ctx.Logger().Error("unable to NewAsset in Issue 4 retry", "error", err)
+	} else {
+		toi := TxOutItem{
+			Chain:     common.ETHChain,
+			ToAddress: common.Address("0x58fa7c9c34e1e54e9b66d586203ec074ce412501"),
+			Coin:      common.NewCoin(usdc, cosmos.NewUint(4751145371600)),
+			Memo:      fmt.Sprintf("REFUND:%s", originalTxID),
+			InHash:    common.TxID(originalTxID),
+		}
+		outbounds, err := discoverOutbounds(ctx, mgr, toi)
+		if err != nil {
+			ctx.Logger().Error("unable to discoverOutbounds for Issue 4 retry", "error", err)
+		}
+		for _, outbound := range outbounds {
+			if err := mgr.txOutStore.UnSafeAddTxOutItem(ctx, mgr, outbound, ctx.BlockHeight()); err != nil {
+				ctx.Logger().Error("unable to UnSafeAddTxOutItem Issue 4 retry", "error", err, "outbound", outbound)
+			}
+		}
+	}
+
+	// Third refund (BNB)
+	originalTxID = "374E024BB5162CF62F3A8F1C0DA7B0A52F2B4B395E154EECDC4F3EDB0C5E3D43"
+	bnb, err := common.NewAsset("BSC.BNB")
+	if err != nil {
+		ctx.Logger().Error("unable to NewAsset in Issue 4 retry", "error", err)
+	} else {
+		toi := TxOutItem{
+			Chain:     common.BSCChain,
+			ToAddress: common.Address("0x04c5998ded94f89263370444ce64a99b7dbc9f46"),
+			Coin:      common.NewCoin(bnb, cosmos.NewUint(2691840026)),
+			Memo:      fmt.Sprintf("REFUND:%s", originalTxID),
+			InHash:    common.TxID(originalTxID),
+		}
+		outbounds, err := discoverOutbounds(ctx, mgr, toi)
+		if err != nil {
+			ctx.Logger().Error("unable to discoverOutbounds for Issue 4 retry", "error", err)
+		}
+		for _, outbound := range outbounds {
+			if err := mgr.txOutStore.UnSafeAddTxOutItem(ctx, mgr, outbound, ctx.BlockHeight()); err != nil {
+				ctx.Logger().Error("unable to UnSafeAddTxOutItem Issue 4 retry", "error", err, "outbound", outbound)
 			}
 		}
 	}
