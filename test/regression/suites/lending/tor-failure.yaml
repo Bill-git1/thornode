@@ -54,20 +54,20 @@ asserts:
   - .|length == 5
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/pool/THOR.BTC
+endpoint: http://localhost:1317/thorchain/dpool/THOR.BTC
 asserts:
   - .status == "Available"
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/pool/THOR.ETH
+endpoint: http://localhost:1317/thorchain/dpool/THOR.ETH
 asserts:
   - .status == "Available"
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/pool/thor.tor
+endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
   - .balance_asset|tonumber == 299999999999
-  - .balance_rune|tonumber == 300001198632
+  - .balance_rune|tonumber == 300001797948
 ---
 ########################################################################################
 # 1/3 of tor anchor pools depeg (no significant effect)
@@ -140,12 +140,11 @@ asserts:
   - .|length == 0
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/pool/thor.tor
+endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
-  # TODO: Manipulation of a single anchor should not increase the virtual depth. We
-  # should still use the median price, but the max (or at least mean) of slips.
-  - .balance_asset|tonumber == 396225570053
-  - .balance_rune|tonumber == 396227944697
+  - .balance_asset|tonumber == 3962255700
+  - .balance_rune|tonumber == 3962285943
+  - .derived_depth_bps|tonumber == 100 # squash to 1%
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -191,7 +190,7 @@ params:
   to_asset: RUNE
   destination: {{ addr_thor_fox }}
 asserts:
-  - .expected_amount_out|tonumber == ${INITIAL_EXPECTED_OUT=4010563969}
+  - .expected_amount_out|tonumber == ${INITIAL_EXPECTED_OUT=988298937}
   - .expected_debt_issued|tonumber == 4095920000
 ---
 type: tx-deposit
@@ -212,11 +211,9 @@ params:
   to_asset: RUNE
   destination: {{ addr_thor_fox }}
 asserts:
-  # TODO: Price manipulation of pools up to and including the median, even with virtual
-  # depth, can result in the debt on the loan being manipulated by more than the penalty
-  # on the outbound debt.
-  - .expected_amount_out|tonumber == 4014262071
-  - .expected_amount_out|tonumber != ${INITIAL_EXPECTED_OUT}
+  # the expected amount is up, but by less than the RUNE to manipulate
+  - .expected_amount_out|tonumber > ${INITIAL_EXPECTED_OUT}
+  - .expected_amount_out|tonumber-100000000000 < ${INITIAL_EXPECTED_OUT}
   - .expected_debt_issued|tonumber == 1565380000
 ---
 type: check
@@ -254,10 +251,10 @@ asserts:
   - .|length == 0
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/pool/thor.tor
+endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
   - .balance_asset|tonumber == 1886131063
-  - .balance_rune|tonumber == 4919864800
+  - .balance_rune|tonumber == 4919871603
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -293,10 +290,10 @@ asserts:
   - .[1]|.owner == "{{ addr_btc_pig }}"
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/pool/thor.tor
+endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
-  - .balance_asset|tonumber == 2072131063
-  - .balance_rune|tonumber == 4517891888
+  - .balance_asset|tonumber == 1886131063
+  - .balance_rune|tonumber == 4919871603
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block
@@ -341,10 +338,10 @@ asserts:
   - .expected_debt_issued|tonumber == 1556190000
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/pool/thor.tor
+endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
   - .balance_asset|tonumber == 188613106302
-  - .balance_rune|tonumber == 491988521840
+  - .balance_rune|tonumber == 491989202611
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -404,10 +401,10 @@ asserts:
   - ."TORANCHOR-ETH-USDZ-0X9999999999999999999999999999999999999999" == null
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/pool/thor.tor
+endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
   - .balance_asset|tonumber == 99999999999
-  - .balance_rune|tonumber == 100001455157
+  - .balance_rune|tonumber == 100001593642
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}

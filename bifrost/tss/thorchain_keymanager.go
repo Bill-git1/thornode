@@ -12,6 +12,7 @@ type EncryptedKeyJSON struct {
 	Id      string     `json:"id"`
 	Version int        `json:"version"`
 }
+
 type CryptoJSON struct {
 	Cipher       string                 `json:"cipher"`
 	CipherText   string                 `json:"ciphertext"`

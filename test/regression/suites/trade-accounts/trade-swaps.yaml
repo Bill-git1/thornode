@@ -347,7 +347,7 @@ asserts:
 ---
 # Confirm that the THOR.BTC pool exists.
 type: check
-endpoint: http://localhost:1317/thorchain/pool/THOR.BTC
+endpoint: http://localhost:1317/thorchain/dpool/THOR.BTC
 asserts:
   - .asset == "THOR.BTC"
   - .status == "Available"

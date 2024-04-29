@@ -201,3 +201,12 @@ func MinUint(u1, u2 Uint) Uint {
 	}
 	return u2
 }
+
+// Sum returns the sum of all the Uints in the slice.
+func Sum(u []Uint) Uint {
+	sum := ZeroUint()
+	for _, i := range u {
+		sum = sum.Add(i)
+	}
+	return sum
+}

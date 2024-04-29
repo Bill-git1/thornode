@@ -99,12 +99,12 @@ asserts:
   - .|length == 3
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/pool/THOR.BTC
+endpoint: http://localhost:1317/thorchain/dpool/THOR.BTC
 asserts:
   - .status == "Available"
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/pool/THOR.ETH
+endpoint: http://localhost:1317/thorchain/dpool/THOR.ETH
 asserts:
   - .status == "Available"
 ---

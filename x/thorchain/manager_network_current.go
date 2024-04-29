@@ -122,14 +122,15 @@ func (vm *NetworkMgrVCUR) suspendVirtualPool(ctx cosmos.Context, mgr Manager, de
 	}
 }
 
-func (vm *NetworkMgrVCUR) CalcAnchor(ctx cosmos.Context, mgr Manager, asset common.Asset) (cosmos.Uint, cosmos.Uint, cosmos.Uint) {
-	anchors := mgr.Keeper().GetAnchors(ctx, asset)
-
-	// sum anchor pool rune depths
-	totalRuneDepth := cosmos.ZeroUint()
+// GetAvailableAnchorsAndDepths returns anchor assets for available pools and a slice of
+// equivalent length with their pool depths in RUNE.
+func (vm *NetworkMgrVCUR) GetAvailableAnchorsAndDepths(
+	ctx cosmos.Context, mgr Manager, asset common.Asset,
+) ([]common.Asset, []cosmos.Uint) {
+	// gather anchor assets with available pools and their rune depths
 	availableAnchors := make([]common.Asset, 0)
-	slippageCollector := make([]cosmos.Uint, 0)
-	for _, anchorAsset := range anchors {
+	runeDepths := make([]cosmos.Uint, 0)
+	for _, anchorAsset := range mgr.Keeper().GetAnchors(ctx, asset) {
 		// skip assets where trading isn't occurring (hence price is likely not correct)
 		if mgr.Keeper().IsGlobalTradingHalted(ctx) || mgr.Keeper().IsChainTradingHalted(ctx, anchorAsset.Chain) {
 			continue
@@ -150,25 +151,46 @@ func (vm *NetworkMgrVCUR) CalcAnchor(ctx cosmos.Context, mgr Manager, asset comm
 			continue
 		}
 
+		availableAnchors = append(availableAnchors, anchorAsset)
+		runeDepths = append(runeDepths, p.BalanceRune)
+	}
+
+	return availableAnchors, runeDepths
+}
+
+func (vm *NetworkMgrVCUR) CalcAnchor(ctx cosmos.Context, mgr Manager, asset common.Asset) (cosmos.Uint, cosmos.Uint, cosmos.Uint) {
+	availableAnchors, depths := vm.GetAvailableAnchorsAndDepths(ctx, mgr, asset)
+
+	// track slips used and their corresponding depths for weighted mean
+	slips := make([]cosmos.Uint, 0)
+	slipsDepths := make([]cosmos.Uint, 0)
+
+	for i, anchorAsset := range availableAnchors {
 		slip, err := mgr.Keeper().GetCurrentRollup(ctx, anchorAsset)
 		if err != nil {
 			ctx.Logger().Error("failed to get current rollup", "asset", anchorAsset, "err", err)
 			continue
 		}
+
 		// if slip is negative, default to 0
 		if slip < 0 {
 			slip = 0
 		}
 
-		totalRuneDepth = totalRuneDepth.Add(p.BalanceRune)
-		availableAnchors = append(availableAnchors, anchorAsset)
-		slippageCollector = append(slippageCollector, cosmos.NewUint(uint64(slip)))
+		slips = append(slips, cosmos.NewUint(uint64(slip)))
+		slipsDepths = append(slipsDepths, depths[i])
 	}
 
-	slippage := common.GetMedianUint(slippageCollector)
 	price := mgr.Keeper().AnchorMedian(ctx, availableAnchors)
 
-	return totalRuneDepth, price, slippage
+	// calculate the weighted mean slip
+	totalRuneDepth := cosmos.Sum(slipsDepths)
+	weightedMeanSlip, err := common.WeightedMean(slips, slipsDepths)
+	if err != nil {
+		ctx.Logger().Debug("failed to calculate weighted mean slip", "asset", asset, "error", err)
+	}
+
+	return totalRuneDepth, price, weightedMeanSlip
 }
 
 func (vm *NetworkMgrVCUR) spawnDerivedAssets(ctx cosmos.Context, mgr Manager) error {
@@ -256,10 +278,10 @@ func (vm *NetworkMgrVCUR) SpawnDerivedAsset(ctx cosmos.Context, asset common.Ass
 	dynamicMaxAnchorTarget := mgr.Keeper().GetConfigInt64(ctx, constants.DynamicMaxAnchorTarget)
 
 	// dynamically calculate the maxAnchorSlip
-	medianSlip := vm.fetchMedianSlip(ctx, layer1Asset, mgr)
+	weightedMeanSlip := vm.fetchWeightedMeanSlip(ctx, layer1Asset, mgr)
 	maxBps := int64(10_000)
-	if medianSlip > 0 && dynamicMaxAnchorTarget > 0 && dynamicMaxAnchorTarget < maxBps {
-		maxAnchorSlip = (medianSlip * maxBps) / (maxBps - dynamicMaxAnchorTarget)
+	if weightedMeanSlip > 0 && dynamicMaxAnchorTarget > 0 && dynamicMaxAnchorTarget < maxBps {
+		maxAnchorSlip = (weightedMeanSlip * maxBps) / (maxBps - dynamicMaxAnchorTarget)
 	}
 
 	derivedAsset := asset.GetDerivedAsset()
@@ -351,7 +373,7 @@ func (vm *NetworkMgrVCUR) SpawnDerivedAsset(ctx cosmos.Context, asset common.Ass
 	}
 
 	ctx.Logger().Debug("SpawnDerivedAsset",
-		"medianSlip", medianSlip,
+		"weightedMeanSlip", weightedMeanSlip,
 		"runeAmt", runeAmt,
 		"assetAmt", assetAmt,
 		"asset", derivedPool.Asset,
@@ -365,7 +387,7 @@ func (vm *NetworkMgrVCUR) SpawnDerivedAsset(ctx cosmos.Context, asset common.Ass
 	}
 }
 
-func (vm *NetworkMgrVCUR) fetchMedianSlip(ctx cosmos.Context, asset common.Asset, mgr Manager) (slip int64) {
+func (vm *NetworkMgrVCUR) fetchWeightedMeanSlip(ctx cosmos.Context, asset common.Asset, mgr Manager) (slip int64) {
 	slip, err := mgr.Keeper().GetLongRollup(ctx, asset)
 	if err != nil {
 		ctx.Logger().Error("fail to get long rollup", "error", err)
@@ -373,40 +395,63 @@ func (vm *NetworkMgrVCUR) fetchMedianSlip(ctx cosmos.Context, asset common.Asset
 
 	dynamicMaxAnchorCalcInterval := mgr.Keeper().GetConfigInt64(ctx, constants.DynamicMaxAnchorCalcInterval)
 	if (dynamicMaxAnchorCalcInterval > 0 && ctx.BlockHeight()%dynamicMaxAnchorCalcInterval == 0) || slip <= 0 {
-		slip = vm.calculateMedianSlip(ctx, asset, mgr)
+		slip = vm.calculateWeightedMeanSlip(ctx, asset, mgr)
 		mgr.Keeper().SetLongRollup(ctx, asset, slip)
 	}
 
 	return slip
 }
 
-func (vm *NetworkMgrVCUR) calculateMedianSlip(ctx cosmos.Context, asset common.Asset, mgr Manager) int64 {
+func (vm *NetworkMgrVCUR) calculateWeightedMeanSlip(ctx cosmos.Context, asset common.Asset, mgr Manager) int64 {
 	dynamicMaxAnchorSlipBlocks := mgr.Keeper().GetConfigInt64(ctx, constants.DynamicMaxAnchorSlipBlocks)
+	availableAnchors, depths := vm.GetAvailableAnchorsAndDepths(ctx, mgr, asset)
 
-	slips := make([]int64, 0)
-	iter := mgr.Keeper().GetSwapSlipSnapShotIterator(ctx, asset)
-	defer iter.Close()
-	for ; iter.Valid(); iter.Next() {
-		key := string(iter.Key())
-		parts := strings.Split(key, "/")
-		i, err := strconv.ParseInt(parts[len(parts)-1], 10, 64)
-		if err != nil || i < ctx.BlockHeight()-dynamicMaxAnchorSlipBlocks {
-			mgr.Keeper().DeleteKey(ctx, key)
+	// track median slips used and their corresponding depths for weighted mean
+	medianSlips := make([]cosmos.Uint, 0)
+	medianSlipsDepths := make([]cosmos.Uint, 0)
+
+	for i, anchorAsset := range availableAnchors {
+		slips := make([]int64, 0)
+		iter := mgr.Keeper().GetSwapSlipSnapShotIterator(ctx, anchorAsset)
+		defer iter.Close()
+		for ; iter.Valid(); iter.Next() {
+			key := string(iter.Key())
+			parts := strings.Split(key, "/")
+			i, err := strconv.ParseInt(parts[len(parts)-1], 10, 64)
+			if err != nil || i < ctx.BlockHeight()-dynamicMaxAnchorSlipBlocks {
+				mgr.Keeper().DeleteKey(ctx, key)
+				continue
+			}
+
+			value := ProtoInt64{}
+			mgr.Keeper().Cdc().MustUnmarshal(iter.Value(), &value)
+			slip := value.GetValue()
+			if slip <= 0 {
+				mgr.Keeper().DeleteKey(ctx, key)
+				continue
+			}
+
+			slips = append(slips, slip)
+		}
+
+		// if there are no slips, skip this anchor
+		if len(slips) == 0 {
 			continue
 		}
 
-		value := ProtoInt64{}
-		mgr.Keeper().Cdc().MustUnmarshal(iter.Value(), &value)
-		slip := value.GetValue()
-		if slip <= 0 {
-			mgr.Keeper().DeleteKey(ctx, key)
-			continue
-		}
-
-		slips = append(slips, slip)
+		medianSlip := cosmos.NewUint(uint64(common.GetMedianInt64(slips)))
+		medianSlips = append(medianSlips, medianSlip)
+		medianSlipsDepths = append(medianSlipsDepths, depths[i])
 	}
 
-	return common.GetMedianInt64(slips)
+	// calculate the weighted mean slip
+	weightedMeanSlip, err := common.WeightedMean(medianSlips, medianSlipsDepths)
+	if err != nil {
+		ctx.Logger().Debug("failed to calculate weighted mean slip", "asset", asset, "error", err)
+		return 0
+	}
+
+	return int64(weightedMeanSlip.Uint64())
 }
 
 // EndBlock move funds from retiring asgard vaults

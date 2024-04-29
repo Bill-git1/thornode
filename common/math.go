@@ -1,6 +1,7 @@
 package common
 
 import (
+	"errors"
 	"sort"
 
 	"gitlab.com/thorchain/thornode/common/cosmos"
@@ -57,4 +58,27 @@ func GetMedianInt64(vals []int64) int64 {
 		median = (pt1 + pt2) / 2
 	}
 	return median
+}
+
+// WeightedMean calculates the weighted mean of a set of values and their weights.
+func WeightedMean(vals, weights []cosmos.Uint) (cosmos.Uint, error) {
+	totalWeight := cosmos.Sum(weights)
+
+	// if total weight is zero, return an error
+	if totalWeight.IsZero() {
+		return cosmos.ZeroUint(), errors.New("total weight is zero")
+	}
+
+	// assert that the number of values and weights are the same
+	if len(vals) != len(weights) {
+		panic("number of values and weights do not match")
+	}
+
+	// calculate the weight in basis points for each anchor
+	weightedTotal := cosmos.ZeroUint()
+	for i, val := range vals {
+		weightedTotal = weightedTotal.Add(val.Mul(weights[i]))
+	}
+
+	return weightedTotal.Quo(totalWeight), nil
 }

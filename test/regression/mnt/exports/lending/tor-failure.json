@@ -254,7 +254,7 @@
           "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "coins": [
             {
-              "amount": "2300478933349",
+              "amount": "2300378169090",
               "denom": "rune"
             }
           ]
@@ -285,7 +285,7 @@
       },
       "supply": [
         {
-          "amount": "49999963866267",
+          "amount": "49999863102008",
           "denom": "rune"
         },
         {

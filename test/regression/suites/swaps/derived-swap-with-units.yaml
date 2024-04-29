@@ -41,19 +41,16 @@ value: 1
 signer: {{ addr_thor_dog }}
 sequence: 1
 ---
-type: create-blocks
-count: 1
----
 type: check
-endpoint: http://localhost:1317/thorchain/pool/THOR.BTC
+endpoint: http://localhost:1317/thorchain/dpool/THOR.BTC
 asserts:
   - .status == "Suspended"
 ---
 type: create-blocks
-count: 1
+count: 2
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/pool/THOR.BTC
+endpoint: http://localhost:1317/thorchain/dpool/THOR.BTC
 asserts:
   - .status == "Available"
 ---

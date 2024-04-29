@@ -1057,17 +1057,17 @@ func (s *NetworkManagerVCURTestSuite) TestSpawnDerivedAssetsBasisPoints(c *C) {
 	c.Assert(usd.BalanceRune.Uint64(), Equals, uint64(374987118770738), Commentf("%d", usd.BalanceRune.Uint64()))
 }
 
-func (s *NetworkManagerVCURTestSuite) TestFetchMedianSlip(c *C) {
+func (s *NetworkManagerVCURTestSuite) TestFetchMeanSlip(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	nmgr := newNetworkMgrVCUR(mgr.Keeper(), NewTxStoreDummy(), NewDummyEventMgr())
 	asset := common.BTCAsset
 
 	var slip int64
 	var err error
-	slip = nmgr.fetchMedianSlip(ctx, asset, mgr)
+	slip = nmgr.fetchWeightedMeanSlip(ctx, asset, mgr)
 	c.Check(slip, Equals, int64(0))
 
-	/////// setup slip history
+	// setup slip history
 	ctx = ctx.WithBlockHeight(14400 * 14)
 	maxAnchorBlocks := mgr.Keeper().GetConfigInt64(ctx, constants.MaxAnchorBlocks)
 	dynamicMaxAnchorSlipBlocks := mgr.Keeper().GetConfigInt64(ctx, constants.DynamicMaxAnchorSlipBlocks)
@@ -1078,11 +1078,25 @@ func (s *NetworkManagerVCURTestSuite) TestFetchMedianSlip(c *C) {
 
 		mgr.Keeper().SetSwapSlipSnapShot(ctx, asset, i, i)
 	}
-	//////////////////////////
 
-	slip = nmgr.fetchMedianSlip(ctx, asset, mgr)
+	// mean slip will be 0 if the asset has no available pools
+	slip = nmgr.fetchWeightedMeanSlip(ctx, asset, mgr)
+	c.Check(slip, Equals, int64(0))
+	slip, err = mgr.Keeper().GetLongRollup(ctx, asset)
+	c.Assert(err, IsNil)
+	c.Check(slip, Equals, int64(0))
+
+	// create corresponding pool
+	pool := NewPool()
+	pool.Asset = asset
+	pool.BalanceRune = cosmos.NewUint(100 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.LPUnits = cosmos.NewUint(100)
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	// mean slip is available after pool creation, should set long rollup
+	slip = nmgr.fetchWeightedMeanSlip(ctx, asset, mgr)
 	c.Check(slip, Equals, int64(100950))
-
 	slip, err = mgr.Keeper().GetLongRollup(ctx, asset)
 	c.Assert(err, IsNil)
 	c.Check(slip, Equals, int64(100950))

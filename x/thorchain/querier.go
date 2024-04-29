@@ -1369,6 +1369,10 @@ func queryPool(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mg
 		return nil, fmt.Errorf("could not parse asset: %w", err)
 	}
 
+	if asset.IsDerivedAsset() {
+		return nil, fmt.Errorf("asset: %s is a derived asset", path[0])
+	}
+
 	pool, err := mgr.Keeper().GetPool(ctx, asset)
 	if err != nil {
 		ctx.Logger().Error("fail to get pool", "error", err)
@@ -1614,16 +1618,20 @@ func queryDerivedPool(ctx cosmos.Context, path []string, req abci.RequestQuery, 
 		return nil, fmt.Errorf("could not parse asset: %w", err)
 	}
 
-	pool, err := mgr.Keeper().GetPool(ctx, asset)
-	if err != nil {
-		ctx.Logger().Error("fail to get pool", "error", err)
-		return nil, fmt.Errorf("could not get pool: %w", err)
-	}
-	if pool.IsEmpty() {
-		return nil, fmt.Errorf("pool: %s doesn't exist", path[0])
+	if !asset.IsDerivedAsset() {
+		return nil, fmt.Errorf("asset is not a derived asset: %s", asset)
 	}
 
-	runeDepth, _, _ := mgr.NetworkMgr().CalcAnchor(ctx, mgr, asset)
+	// call begin block so the derived depth matches the next block execution state
+	_ = mgr.NetworkMgr().BeginBlock(ctx.WithBlockHeight(ctx.BlockHeight()+1), mgr)
+
+	// sum rune depth of anchor pools
+	runeDepth := sdk.ZeroUint()
+	for _, anchor := range mgr.Keeper().GetAnchors(ctx, asset) {
+		aPool, _ := mgr.Keeper().GetPool(ctx, anchor)
+		runeDepth = runeDepth.Add(aPool.BalanceRune)
+	}
+
 	dpool, _ := mgr.Keeper().GetPool(ctx, asset.GetDerivedAsset())
 	dbps := cosmos.ZeroUint()
 	if dpool.Status == PoolAvailable {
