@@ -95,8 +95,6 @@ lint:
     - if: $CI == "true"
       when: on_success
   stage: test
-  before_script:
-    - git fetch https://gitlab.com/thorchain/thornode.git develop
   script:
     - make lint-ci
 

@@ -8,11 +8,9 @@ set -euo pipefail
 VERSION=$(awk -F. '{ print $2 }' version)
 CI_MERGE_REQUEST_TITLE=${CI_MERGE_REQUEST_TITLE-}
 
-git fetch https://gitlab.com/thorchain/thornode.git develop
-
 # skip for develop
-if git merge-base --is-ancestor "$(git rev-parse HEAD)" "$(git rev-parse FETCH_HEAD)"; then
-  echo "Skipping lint for commit in develop ($(git rev-parse FETCH_HEAD))."
+if git merge-base --is-ancestor "$(git rev-parse HEAD)" "$(git rev-parse origin/develop)"; then
+  echo "Skipping lint for commit in develop ($(git rev-parse origin/develop))."
   exit 0
 fi
 
@@ -34,7 +32,7 @@ echo "OK"
 
 go run tools/versioned-functions/main.go --version="$VERSION" >/tmp/versioned-functions-current
 go run tools/versioned-tokenlists/main.go --version="$VERSION" >/tmp/versioned-tokenlists-current
-git checkout FETCH_HEAD
+git checkout origin/develop
 git checkout - -- tools scripts
 go run tools/versioned-functions/main.go --version="$VERSION" >/tmp/versioned-functions-develop
 go run tools/versioned-tokenlists/main.go --version="$VERSION" >/tmp/versioned-tokenlists-develop
