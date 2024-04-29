@@ -385,5 +385,5 @@ func (gm *GasMgrV131) ProcessGas(ctx cosmos.Context, keeper keeper.Keeper) {
 }
 
 func (gm *GasMgrV131) GetAssetOutboundFee(ctx cosmos.Context, asset common.Asset, inRune bool) (cosmos.Uint, error) {
-	return cosmos.ZeroUint(), nil
+	return gm.GetFee(ctx, asset.GetChain(), asset), nil
 }

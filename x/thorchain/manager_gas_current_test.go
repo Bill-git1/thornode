@@ -53,15 +53,15 @@ func (GasManagerTestSuiteVCUR) TestGetAssetOutboundFee(c *C) {
 	gasMgr := newGasMgrVCUR(constAccessor, k)
 	gasMgr.BeginBlock(mgr)
 
-	// when there is no network fee available, an error should be returned
+	// when there is no network fee available, 0 fee and nil error should be returned
 	fee, err := gasMgr.GetAssetOutboundFee(ctx, common.AVAXAsset, true)
 	c.Assert(fee.Uint64(), Equals, cosmos.ZeroUint().Uint64())
-	c.Assert(err.Error(), Equals, "transaction size can't be zero or negative: 0")
+	c.Assert(err, IsNil)
 
-	// should still return an error if inRune is false
+	// should still return nil error if inRune is false
 	fee, err = gasMgr.GetAssetOutboundFee(ctx, common.AVAXAsset, false)
 	c.Assert(fee.Uint64(), Equals, cosmos.ZeroUint().Uint64())
-	c.Assert(err.Error(), Equals, "transaction size can't be zero or negative: 0")
+	c.Assert(err, IsNil)
 
 	// set network fee
 	networkFee := NewNetworkFee(common.AVAXChain, 1, 1000)
