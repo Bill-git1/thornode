@@ -7,6 +7,7 @@ import (
 	"gitlab.com/thorchain/thornode/common"
 	cosmos "gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
+	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
 // "LOAN+:BTC.BTC:bc1YYYYYY:minBTC:affAddr:affPts:dexAgg:dexTarAddr:DexTargetLimit"
@@ -21,15 +22,17 @@ type LoanOpenMemo struct {
 	DexAggregator        string
 	DexTargetAddress     string
 	DexTargetLimit       cosmos.Uint
+	AffiliateTHORName    *types.THORName
 }
 
-func (m LoanOpenMemo) GetTargetAsset() common.Asset         { return m.TargetAsset }
-func (m LoanOpenMemo) GetTargetAddress() common.Address     { return m.TargetAddress }
-func (m LoanOpenMemo) GetMinOut() cosmos.Uint               { return m.MinOut }
-func (m LoanOpenMemo) GetAffiliateAddress() common.Address  { return m.AffiliateAddress }
-func (m LoanOpenMemo) GetAffiliateBasisPoints() cosmos.Uint { return m.AffiliateBasisPoints }
-func (m LoanOpenMemo) GetDexAggregator() string             { return m.DexAggregator }
-func (m LoanOpenMemo) GetDexTargetAddress() string          { return m.DexTargetAddress }
+func (m LoanOpenMemo) GetTargetAsset() common.Asset          { return m.TargetAsset }
+func (m LoanOpenMemo) GetTargetAddress() common.Address      { return m.TargetAddress }
+func (m LoanOpenMemo) GetMinOut() cosmos.Uint                { return m.MinOut }
+func (m LoanOpenMemo) GetAffiliateAddress() common.Address   { return m.AffiliateAddress }
+func (m LoanOpenMemo) GetAffiliateBasisPoints() cosmos.Uint  { return m.AffiliateBasisPoints }
+func (m LoanOpenMemo) GetDexAggregator() string              { return m.DexAggregator }
+func (m LoanOpenMemo) GetDexTargetAddress() string           { return m.DexTargetAddress }
+func (m LoanOpenMemo) GetAffiliateTHORName() *types.THORName { return m.AffiliateTHORName }
 
 func (m LoanOpenMemo) String() string {
 	return m.string(false)
@@ -78,7 +81,7 @@ func (m LoanOpenMemo) string(short bool) string {
 	return strings.Join(args[:last], ":")
 }
 
-func NewLoanOpenMemo(targetAsset common.Asset, targetAddr common.Address, minOut cosmos.Uint, affAddr common.Address, affPts cosmos.Uint, dexAgg, dexTargetAddr string, dexTargetLimit cosmos.Uint) LoanOpenMemo {
+func NewLoanOpenMemo(targetAsset common.Asset, targetAddr common.Address, minOut cosmos.Uint, affAddr common.Address, affPts cosmos.Uint, dexAgg, dexTargetAddr string, dexTargetLimit cosmos.Uint, tn types.THORName) LoanOpenMemo {
 	return LoanOpenMemo{
 		MemoBase:             MemoBase{TxType: TxLoanOpen},
 		TargetAsset:          targetAsset,
@@ -89,11 +92,14 @@ func NewLoanOpenMemo(targetAsset common.Asset, targetAddr common.Address, minOut
 		DexAggregator:        dexAgg,
 		DexTargetAddress:     dexTargetAddr,
 		DexTargetLimit:       dexTargetLimit,
+		AffiliateTHORName:    &tn,
 	}
 }
 
 func (p *parser) ParseLoanOpenMemo() (LoanOpenMemo, error) {
 	switch {
+	case p.version.GTE(semver.MustParse("1.132.0")):
+		return p.ParseLoanOpenMemoV132()
 	case p.version.GTE(semver.MustParse("1.116.0")):
 		return p.ParseLoanOpenMemoV116()
 	case p.version.GTE(semver.MustParse("1.112.0")):
@@ -103,16 +109,17 @@ func (p *parser) ParseLoanOpenMemo() (LoanOpenMemo, error) {
 	}
 }
 
-func (p *parser) ParseLoanOpenMemoV116() (LoanOpenMemo, error) {
+func (p *parser) ParseLoanOpenMemoV132() (LoanOpenMemo, error) {
 	targetAsset := p.getAsset(1, true, common.EmptyAsset)
 	targetAddress := p.getAddressWithKeeper(2, true, common.NoAddress, targetAsset.GetChain())
 	minOut := p.getUintWithScientificNotation(3, false, 0)
 	affAddr := p.getAddressWithKeeper(4, false, common.NoAddress, common.THORChain)
+	tn := p.getTHORName(4, false, types.NewTHORName("", 0, nil))
 	affPts := p.getUintWithMaxValue(5, false, 0, constants.MaxBasisPts)
 	dexAgg := p.get(6)
 	dexTargetAddr := p.get(7)
 	dexTargetLimit := p.getUint(8, false, 0)
-	return NewLoanOpenMemo(targetAsset, targetAddress, minOut, affAddr, affPts, dexAgg, dexTargetAddr, dexTargetLimit), p.Error()
+	return NewLoanOpenMemo(targetAsset, targetAddress, minOut, affAddr, affPts, dexAgg, dexTargetAddr, dexTargetLimit, tn), p.Error()
 }
 
 // "LOAN-:BTC.BTC:bc1YYYYYY:minOut"

@@ -936,6 +936,47 @@ func (h LoanOpenHandler) openLoanV107(ctx cosmos.Context, msg MsgLoanOpen) error
 	return nil
 }
 
+func (h LoanOpenHandler) swapV121(ctx cosmos.Context, msg MsgLoanOpen) error {
+	txID, ok := ctx.Value(constants.CtxLoanTxID).(common.TxID)
+	if !ok {
+		return fmt.Errorf("fail to get txid")
+	}
+	// ensure TxID does NOT have a collision with another swap, this could
+	// happen if the user submits two identical loan requests in the same
+	// block
+	if ok := h.mgr.Keeper().HasSwapQueueItem(ctx, txID, 0); ok {
+		return fmt.Errorf("txn hash conflict")
+	}
+
+	toAddress, ok := ctx.Value(constants.CtxLoanToAddress).(common.Address)
+	// An empty ToAddress fails Tx validation,
+	// and a querier quote or unit test has no provided ToAddress.
+	// As this only affects emitted swap event contents, do not return an error.
+	if !ok || toAddress.IsEmpty() {
+		toAddress = "no to address available"
+	}
+
+	// Get streaming swaps interval to use for loan swap
+	ssInterval := h.mgr.Keeper().GetConfigInt64(ctx, constants.LoanStreamingSwapsInterval)
+	if ssInterval <= 0 || !msg.MinOut.IsZero() {
+		ssInterval = 0
+	}
+
+	collateral := common.NewCoin(msg.CollateralAsset, msg.CollateralAmount)
+	memo := fmt.Sprintf("loan+:%s:%s:%d:%s:%d:%s:%s:%d", msg.TargetAsset, msg.TargetAddress, msg.MinOut.Uint64(), msg.AffiliateAddress, msg.AffiliateBasisPoints.Uint64(), msg.Aggregator, msg.AggregatorTargetAddress, msg.AggregatorTargetLimit.Uint64())
+	fakeGas := common.NewCoin(msg.CollateralAsset.GetChain().GetGasAsset(), cosmos.OneUint())
+	tx := common.NewTx(txID, msg.Owner, toAddress, common.NewCoins(collateral), common.Gas{fakeGas}, memo)
+	swapMsg := NewMsgSwap(tx, msg.CollateralAsset.GetDerivedAsset(), common.NoopAddress, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, 0, 0, uint64(ssInterval), msg.Signer)
+	if err := h.mgr.Keeper().SetSwapQueueItem(ctx, *swapMsg, 0); err != nil {
+		ctx.Logger().Error("fail to add swap to queue", "error", err)
+		return err
+	}
+
+	// TODO: send affiliate fee
+
+	return nil
+}
+
 func (h LoanOpenHandler) swapV113(ctx cosmos.Context, msg MsgLoanOpen) error {
 	lendAddr, err := h.mgr.Keeper().GetModuleAddress(LendingName)
 	if err != nil {

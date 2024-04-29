@@ -1204,15 +1204,28 @@ func queryQuoteLoanOpen(ctx cosmos.Context, path []string, req abci.RequestQuery
 		}
 	}
 
+	// Affiliate fee in RUNE
+	affiliateRuneAmt := sdk.ZeroUint()
+
 	// parse affiliate
-	affiliate, affiliateMemo, affiliateBps, _, _, err := quoteHandleAffiliate(ctx, mgr, params, amount)
+	affiliate, affiliateMemo, affiliateBps, amt, affiliateAmt, err := quoteHandleAffiliate(ctx, mgr, params, amount)
 	if err != nil {
 		return quoteErrorResponse(err)
 	}
 
-	// TODO: remove after affiliates work
-	if !affiliate.IsEmpty() || len(params[affiliateBpsParam]) > 0 {
-		return quoteErrorResponse(fmt.Errorf("affiliate not yet supported"))
+	if affiliate != common.NoAddress && !affiliateBps.IsZero() {
+		affCoin := common.NewCoin(asset, affiliateAmt)
+		gasCoin := common.NewCoin(asset.GetChain().GetGasAsset(), cosmos.OneUint())
+		fakeTx := common.NewTx(common.BlankTxID, common.NoopAddress, common.NoopAddress, common.NewCoins(affCoin), common.Gas{gasCoin}, "noop")
+		affiliateSwap := NewMsgSwap(fakeTx, common.RuneAsset(), affiliate, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, 0, 0, 0, nil)
+
+		_, affiliateRuneAmt, _, err = quoteSimulateSwap(ctx, mgr, affiliateAmt, affiliateSwap, 1)
+		if err == nil {
+			// skim fee off collateral amount
+			amount = amt
+		} else {
+			affiliateRuneAmt = sdk.ZeroUint()
+		}
 	}
 
 	// parse target asset
@@ -1252,14 +1265,16 @@ func queryQuoteLoanOpen(ctx cosmos.Context, path []string, req abci.RequestQuery
 
 	// create message for simulation
 	msg := &types.MsgLoanOpen{
-		Owner:                collateralOwner,
-		CollateralAsset:      asset,
-		CollateralAmount:     amount,
-		TargetAddress:        destination,
-		TargetAsset:          targetAsset,
-		MinOut:               minOut,
-		AffiliateAddress:     affiliate,
-		AffiliateBasisPoints: affiliateBps,
+		Owner:            collateralOwner,
+		CollateralAsset:  asset,
+		CollateralAmount: amount,
+		TargetAddress:    destination,
+		TargetAsset:      targetAsset,
+		MinOut:           minOut,
+
+		// We calculate the affiliate fee manually as handler_open_loan expects a TxVoter to
+		// get the affiliate params from the memo
+		AffiliateBasisPoints: cosmos.ZeroUint(),
 
 		// TODO: support aggregator
 		Aggregator:              "",
@@ -1305,7 +1320,7 @@ func queryQuoteLoanOpen(ctx cosmos.Context, path []string, req abci.RequestQuery
 	// sum liquidity fees in rune from all swap events
 	outboundFee := sdk.ZeroUint()
 	liquidityFee := sdk.ZeroUint()
-	affiliateFee := sdk.ZeroUint()
+	affiliateFee := affiliateRuneAmt
 	expectedAmountOut := sdk.ZeroUint()
 	finalEmitAmount := sdk.ZeroUint() // used to calculate slippage
 	streamingSwapBlocks := int64(0)
@@ -1350,14 +1365,6 @@ func queryQuoteLoanOpen(ctx cosmos.Context, path []string, req abci.RequestQuery
 				if !coin.Asset.Equals(targetAsset) { // should be unreachable
 					return quoteErrorResponse(fmt.Errorf("unexpected outbound asset: %s", coin.Asset))
 				}
-			}
-
-			// check for affiliate
-			if !affiliate.IsEmpty() && toAddress.Equals(affiliate) {
-				if !coin.Asset.Equals(common.RuneNative) { // should be unreachable
-					return quoteErrorResponse(fmt.Errorf("unexpected affiliate outbound asset: %s", coin.Asset))
-				}
-				affiliateFee = affiliateFee.Add(coin.Amount)
 			}
 
 		// sum liquidity fee in rune for all swap events
@@ -1410,7 +1417,7 @@ func queryQuoteLoanOpen(ctx cosmos.Context, path []string, req abci.RequestQuery
 		if err != nil {
 			return quoteErrorResponse(fmt.Errorf("failed to get pool: %w", err))
 		}
-		affiliateFee = targetPool.RuneValueInAsset(affiliateFee)
+		affiliateFee = targetPool.RuneValueInAsset(affiliateRuneAmt)
 		liquidityFee = targetPool.RuneValueInAsset(liquidityFee)
 	}
 	slippageBps := liquidityFee.MulUint64(10000).Quo(finalEmitAmount.Add(liquidityFee))

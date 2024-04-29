@@ -1264,3 +1264,60 @@ func IsModuleAccAddressV121(keeper keeper.Keeper, accAddr cosmos.AccAddress) boo
 		accAddr.Equals(keeper.GetModuleAccAddress(AffiliateCollectorName)) ||
 		accAddr.Equals(keeper.GetModuleAccAddress(ModuleName))
 }
+
+func NewSwapMemo(ctx cosmos.Context, mgr Manager, targetAsset common.Asset, destination common.Address, limit cosmos.Uint, affiliate string, affiliateBps cosmos.Uint) string {
+	version := mgr.GetVersion()
+	switch {
+	case version.GTE(semver.MustParse("1.132.0")):
+		return NewSwapMemoV132(targetAsset, destination, limit, affiliate, affiliateBps)
+	default:
+		panic("invalid version")
+	}
+}
+
+func NewSwapMemoV132(targetAsset common.Asset, destination common.Address, limit cosmos.Uint, affiliate string, affiliateBps cosmos.Uint) string {
+	return fmt.Sprintf("=:%s:%s:%s:%s:%s", targetAsset, destination, limit.String(), affiliate, affiliateBps.String())
+}
+
+// willSwapOutputExceedLimitAndFees returns true if the swap output will exceed the
+// limit (if provided) + the outbound fee on the destination chain
+func willSwapOutputExceedLimitAndFees(ctx cosmos.Context, mgr Manager, msg MsgSwap) bool {
+	swapper, err := GetSwapper(mgr.GetVersion())
+	if err != nil {
+		panic(err)
+	}
+
+	source := msg.Tx.Coins[0]
+	target := common.NewCoin(msg.TargetAsset, msg.TradeTarget)
+
+	var emit cosmos.Uint
+	switch {
+	case !source.Asset.IsNativeRune() && !target.Asset.IsNativeRune():
+		sourcePool, err := mgr.Keeper().GetPool(ctx, source.Asset.GetLayer1Asset())
+		if err != nil {
+			return false
+		}
+		targetPool, err := mgr.Keeper().GetPool(ctx, target.Asset.GetLayer1Asset())
+		if err != nil {
+			return false
+		}
+		emit = swapper.CalcAssetEmission(sourcePool.BalanceAsset, source.Amount, sourcePool.BalanceRune)
+		emit = swapper.CalcAssetEmission(targetPool.BalanceRune, emit, targetPool.BalanceAsset)
+	case source.Asset.IsNativeRune():
+		pool, err := mgr.Keeper().GetPool(ctx, target.Asset.GetLayer1Asset())
+		if err != nil {
+			return false
+		}
+		emit = swapper.CalcAssetEmission(pool.BalanceRune, source.Amount, pool.BalanceAsset)
+	case target.Asset.IsNativeRune():
+		pool, err := mgr.Keeper().GetPool(ctx, source.Asset.GetLayer1Asset())
+		if err != nil {
+			return false
+		}
+		emit = swapper.CalcAssetEmission(pool.BalanceAsset, source.Amount, pool.BalanceRune)
+	}
+
+	// Check that the swap will emit more than the limit amount + outbound fee
+	transactionFeeAsset, err := mgr.GasMgr().GetAssetOutboundFee(ctx, msg.TargetAsset, false)
+	return err == nil && emit.GT(target.Amount.Add(transactionFeeAsset))
+}

@@ -150,10 +150,6 @@ Open a loan on THORChain.
 | `:AFFILIATE` | The affiliate address.                                                 | Optional. Must be a THORName or THOR Address. |
 | `:FEE`       | The [affiliate fee](fees.md#affiliate-fee). RUNE is sent to affiliate. | Optional. Ranges from 0 to 1000 Basis Points. |
 
-```admonish warning
-Affiliate and Affiliate Fee parameters yet to be implemented.
-```
-
 **Examples:**
 
 - `LOAN+:BNB.BUSD:bnb177kuwn6n9fv83txq04y2tkcsp97s4yclz9k7dh` &mdash; open a loan with BUSD as the debt asset

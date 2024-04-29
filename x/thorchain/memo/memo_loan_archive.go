@@ -8,8 +8,22 @@ import (
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/constants"
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
+	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
+
+func (p *parser) ParseLoanOpenMemoV116() (LoanOpenMemo, error) {
+	targetAsset := p.getAsset(1, true, common.EmptyAsset)
+	targetAddress := p.getAddressWithKeeper(2, true, common.NoAddress, targetAsset.GetChain())
+	minOut := p.getUintWithScientificNotation(3, false, 0)
+	affAddr := p.getAddressWithKeeper(4, false, common.NoAddress, common.THORChain)
+	affPts := p.getUintWithMaxValue(5, false, 0, constants.MaxBasisPts)
+	dexAgg := p.get(6)
+	dexTargetAddr := p.get(7)
+	dexTargetLimit := p.getUint(8, false, 0)
+	return NewLoanOpenMemo(targetAsset, targetAddress, minOut, affAddr, affPts, dexAgg, dexTargetAddr, dexTargetLimit, types.NewTHORName("", 0, nil)), p.Error()
+}
 
 func ParseLoanOpenMemoV112(ctx cosmos.Context, keeper keeper.Keeper, targetAsset common.Asset, parts []string) (LoanOpenMemo, error) {
 	var err error
@@ -71,7 +85,7 @@ func ParseLoanOpenMemoV112(ctx cosmos.Context, keeper keeper.Keeper, targetAsset
 		}
 	}
 
-	return NewLoanOpenMemo(targetAsset, targetAddress, minOut, affAddr, affPts, dexAgg, dexTargetAddr, dexTargetLimit), nil
+	return NewLoanOpenMemo(targetAsset, targetAddress, minOut, affAddr, affPts, dexAgg, dexTargetAddr, dexTargetLimit, types.NewTHORName("", 0, nil)), nil
 }
 
 func ParseLoanRepaymentMemoV112(ctx cosmos.Context, keeper keeper.Keeper, asset common.Asset, parts []string) (LoanRepaymentMemo, error) {
@@ -163,7 +177,7 @@ func ParseLoanOpenMemoV1(ctx cosmos.Context, keeper keeper.Keeper, targetAsset c
 		}
 	}
 
-	return NewLoanOpenMemo(targetAsset, targetAddress, minOut, affAddr, affPts, dexAgg, dexTargetAddr, dexTargetLimit), nil
+	return NewLoanOpenMemo(targetAsset, targetAddress, minOut, affAddr, affPts, dexAgg, dexTargetAddr, dexTargetLimit, types.NewTHORName("", 0, nil)), nil
 }
 
 func ParseLoanRepaymentMemoV1(ctx cosmos.Context, keeper keeper.Keeper, asset common.Asset, parts []string) (LoanRepaymentMemo, error) {

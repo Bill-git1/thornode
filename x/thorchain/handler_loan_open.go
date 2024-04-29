@@ -8,6 +8,8 @@ import (
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
+	"gitlab.com/thorchain/thornode/mimir"
+	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
 // LoanOpenHandler a handler to process bond
@@ -33,7 +35,10 @@ func (h LoanOpenHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, 
 		"col_asset", msg.CollateralAsset,
 		"col_amount", msg.CollateralAmount,
 		"target_address", msg.TargetAddress,
-		"target_asset", msg.TargetAsset)
+		"target_asset", msg.TargetAsset,
+		"affiliate", msg.AffiliateAddress,
+		"affiliate_basis_points", msg.AffiliateBasisPoints,
+	)
 
 	if err := h.validate(ctx, *msg); err != nil {
 		ctx.Logger().Error("msg loan fail validation", "error", err)
@@ -200,6 +205,8 @@ func (h LoanOpenHandler) openLoan(ctx cosmos.Context, msg MsgLoanOpen) error {
 func (h LoanOpenHandler) swap(ctx cosmos.Context, msg MsgLoanOpen) error {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.132.0")):
+		return h.swapV132(ctx, msg)
 	case version.GTE(semver.MustParse("1.121.0")):
 		return h.swapV121(ctx, msg)
 	case version.GTE(semver.MustParse("1.113.0")):
@@ -411,7 +418,7 @@ func (h LoanOpenHandler) calcCR(a, b cosmos.Uint, minCR, maxCR int64) cosmos.Uin
 	return cr.AddUint64(uint64(minCR))
 }
 
-func (h LoanOpenHandler) swapV121(ctx cosmos.Context, msg MsgLoanOpen) error {
+func (h LoanOpenHandler) swapV132(ctx cosmos.Context, msg MsgLoanOpen) error {
 	txID, ok := ctx.Value(constants.CtxLoanTxID).(common.TxID)
 	if !ok {
 		return fmt.Errorf("fail to get txid")
@@ -438,6 +445,18 @@ func (h LoanOpenHandler) swapV121(ctx cosmos.Context, msg MsgLoanOpen) error {
 	}
 
 	collateral := common.NewCoin(msg.CollateralAsset, msg.CollateralAmount)
+	maxAffPoints := mimir.NewAffiliateFeeBasisPointsMax().FetchValue(ctx, h.mgr.Keeper())
+
+	// only take affiliate fee if parameters are set and it's the original swap (not the derived asset swap)
+	if !msg.AffiliateBasisPoints.IsZero() && msg.AffiliateBasisPoints.LTE(cosmos.NewUint(uint64(maxAffPoints))) && !msg.AffiliateAddress.IsEmpty() && !msg.CollateralAsset.IsNative() {
+		newAmt, err := h.handleAffiliateSwap(ctx, msg, collateral)
+		if err != nil {
+			ctx.Logger().Error("fail to handle affiliate swap", "error", err)
+		} else {
+			collateral.Amount = newAmt
+		}
+	}
+
 	memo := fmt.Sprintf("loan+:%s:%s:%d:%s:%d:%s:%s:%d", msg.TargetAsset, msg.TargetAddress, msg.MinOut.Uint64(), msg.AffiliateAddress, msg.AffiliateBasisPoints.Uint64(), msg.Aggregator, msg.AggregatorTargetAddress, msg.AggregatorTargetLimit.Uint64())
 	fakeGas := common.NewCoin(msg.CollateralAsset.GetChain().GetGasAsset(), cosmos.OneUint())
 	tx := common.NewTx(txID, msg.Owner, toAddress, common.NewCoins(collateral), common.Gas{fakeGas}, memo)
@@ -447,9 +466,88 @@ func (h LoanOpenHandler) swapV121(ctx cosmos.Context, msg MsgLoanOpen) error {
 		return err
 	}
 
-	// TODO: send affiliate fee
-
 	return nil
+}
+
+// handleAffiliateSwap handles the affiliate swap for the loan open and returns updated
+// collateral amount for the loan with affiliate amount deducted
+func (h LoanOpenHandler) handleAffiliateSwap(ctx cosmos.Context, msg MsgLoanOpen, collateral common.Coin) (cosmos.Uint, error) {
+	version := h.mgr.GetVersion()
+	switch {
+	case version.GTE(semver.MustParse("1.132.0")):
+		return h.handleAffiliateSwapV132(ctx, msg, collateral)
+	default:
+		return cosmos.ZeroUint(), errBadVersion
+	}
+}
+
+func (h LoanOpenHandler) handleAffiliateSwapV132(ctx cosmos.Context, msg MsgLoanOpen, collateral common.Coin) (cosmos.Uint, error) {
+	// Setup affiliate swap
+	affAmt := common.GetSafeShare(
+		msg.AffiliateBasisPoints,
+		cosmos.NewUint(constants.MaxBasisPts),
+		msg.CollateralAmount,
+	)
+
+	affCoin := common.NewCoin(msg.CollateralAsset, affAmt)
+	gasCoin := common.NewCoin(msg.CollateralAsset.GetChain().GetGasAsset(), cosmos.OneUint())
+	fakeTx := common.NewTx(msg.TxID, common.NoopAddress, common.NoopAddress, common.NewCoins(affCoin), common.Gas{gasCoin}, "noop")
+	affiliateSwap := NewMsgSwap(fakeTx, common.RuneAsset(), msg.AffiliateAddress, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, 0, 0, 0, msg.Signer)
+
+	var affThorname *types.THORName
+	voter, err := h.mgr.Keeper().GetObservedTxInVoter(ctx, msg.TxID)
+	if err == nil {
+		memo, err := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), voter.Tx.Tx.Memo)
+		if err != nil {
+			ctx.Logger().Error("fail to parse memo", "error", err)
+		}
+		affThorname = memo.GetAffiliateTHORName()
+	}
+
+	// PreferredAsset set, swap to the AffiliateCollector Module + check if the
+	// preferred asset swap should be triggered
+	if affThorname != nil && !affThorname.PreferredAsset.IsEmpty() {
+		affcol, err := h.mgr.Keeper().GetAffiliateCollector(ctx, affThorname.Owner)
+		if err != nil {
+			return collateral.Amount, err
+		}
+		affColAddress, err := h.mgr.Keeper().GetModuleAddress(AffiliateCollectorName)
+		if err != nil {
+			return collateral.Amount, err
+		}
+		// Set AffiliateCollector Module as destination and populate the AffiliateAddress
+		// so that the swap handler can increment the emitted RUNE for the affiliate in
+		// the AffiliateCollector KVStore.
+		affiliateSwap.Destination = affColAddress
+		affiliateSwap.AffiliateAddress = msg.AffiliateAddress
+		// Need to set the memo as a normal swap, so that the swap handler doesn't run the
+		// open loan handler for the affiliate swaps
+		affiliateSwap.Tx.Memo = NewSwapMemo(ctx, h.mgr, common.RuneNative, msg.AffiliateAddress, cosmos.ZeroUint(), affThorname.Name, cosmos.ZeroUint())
+
+		// Check if accrued RUNE is 100x current outbound fee of preferred asset, if
+		// so trigger the preferred asset swap
+		ofRune, err := h.mgr.GasMgr().GetAssetOutboundFee(ctx, affThorname.PreferredAsset, true)
+		if err != nil {
+			ctx.Logger().Error("fail to get outbound fee", "err", err)
+		}
+		multiplier := h.mgr.Keeper().GetConfigInt64(ctx, constants.PreferredAssetOutboundFeeMultiplier)
+		threshold := ofRune.Mul(cosmos.NewUint(uint64(multiplier)))
+		if err == nil && affcol.RuneAmount.GT(threshold) {
+			if err = triggerPreferredAssetSwap(ctx, h.mgr, msg.AffiliateAddress, msg.TxID, *affThorname, affcol, 3); err != nil {
+				ctx.Logger().Error("fail to queue preferred asset swap", "thorname", affThorname.Name, "err", err)
+			}
+		}
+	}
+
+	// If the affiliate swap would exceed the native tx fee, add it to the queue
+	if willSwapOutputExceedLimitAndFees(ctx, h.mgr, *affiliateSwap) {
+		if err := h.mgr.Keeper().SetSwapQueueItem(ctx, *affiliateSwap, 2); err != nil {
+			return collateral.Amount, fmt.Errorf("fail to add affiliate swap to queue: %w", err)
+		}
+		collateral.Amount = common.SafeSub(collateral.Amount, affAmt)
+	}
+
+	return collateral.Amount, nil
 }
 
 func (h LoanOpenHandler) getTotalLiquidityRUNELoanPools(ctx cosmos.Context) (cosmos.Uint, error) {
