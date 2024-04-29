@@ -19,7 +19,6 @@ variables:
 
 stages:
   - fork
-  - reset
   - generate
   - test
   - build
@@ -136,7 +135,7 @@ build-thornode:
 chain-avalanche:
   only:
     changes:
-      - chain/avalanche/
+      - chain/avalanche/**/*
   stage: test
   image: node:16
   script:
@@ -148,7 +147,7 @@ chain-avalanche:
 chain-ethereum:
   only:
     changes:
-      - chain/ethereum/
+      - chain/ethereum/**/*
   stage: test
   image: node:16
   script:
