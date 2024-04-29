@@ -13,6 +13,12 @@ endif
 
 .PHONY: build test tools export healthcheck run-mocknet build-mocknet stop-mocknet halt-mocknet ps-mocknet reset-mocknet logs-mocknet openapi
 
+# pull branch name from CI if unset and available
+ifdef CI_COMMIT_BRANCH
+	BRANCH?=$(shell echo ${CI_COMMIT_BRANCH})
+	BUILDTAG?=$(shell echo ${CI_COMMIT_BRANCH})
+endif
+
 # image build settings
 COMMIT?=$(shell git log -1 --format='%H' 2>/dev/null)
 BRANCH?=$(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
@@ -42,13 +48,6 @@ BINARIES=./cmd/thornode ./cmd/bifrost ./tools/generate
 ifndef CI
 DOCKER_TTY_ARGS=-it
 endif
-
-# pull branch name from CI if unset and available
-ifdef CI_COMMIT_BRANCH
-	BRANCH?=$(shell echo ${CI_COMMIT_BRANCH})
-	BUILDTAG?=$(shell echo ${CI_COMMIT_BRANCH})
-endif
-
 
 ########################################################################################
 # Targets
