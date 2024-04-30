@@ -356,7 +356,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: registry.gitlab.com/thorchain/devops/node-launcher:gaia-daemon-15.2.0
+    image: registry.gitlab.com/thorchain/devops/node-launcher:gaia-daemon-16.0.0
     volumes:
       - "./mocknet:/mocknet"
     environment:
@@ -440,7 +440,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: ethereum/client-go:v1.13.15
+    image: ethereum/client-go:v1.14.2
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-5}
@@ -475,7 +475,7 @@ services:
       - mocknet
       - mocknet-cluster
     restart: unless-stopped
-    image: registry.gitlab.com/thorchain/devops/node-launcher:avalanche-daemon-1.11.4
+    image: registry.gitlab.com/thorchain/devops/node-launcher:avalanche-daemon-1.11.5
     volumes:
       - "./mocknet/avax:/mocknet"
     command:
