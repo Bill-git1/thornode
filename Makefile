@@ -15,8 +15,8 @@ endif
 
 # pull branch name from CI if unset and available
 ifdef CI_COMMIT_BRANCH
-	BRANCH?=$(shell echo ${CI_COMMIT_BRANCH})
-	BUILDTAG?=$(shell echo ${CI_COMMIT_BRANCH})
+BRANCH?=${CI_COMMIT_BRANCH}
+BUILDTAG?=${CI_COMMIT_BRANCH}
 endif
 
 # image build settings
@@ -29,13 +29,13 @@ BUILDTAG?=$(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
 VERSION:=$(shell cat version)
 TAG?=mocknet
 ldflags = -X gitlab.com/thorchain/thornode/constants.Version=$(VERSION) \
-		  -X gitlab.com/thorchain/thornode/constants.GitCommit=$(COMMIT) \
-		  -X github.com/cosmos/cosmos-sdk/version.Name=THORChain \
-		  -X github.com/cosmos/cosmos-sdk/version.AppName=thornode \
-		  -X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
-		  -X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
-		  -X github.com/cosmos/cosmos-sdk/version.BuildTags=$(TAG) \
-          -buildid=
+      -X gitlab.com/thorchain/thornode/constants.GitCommit=$(COMMIT) \
+      -X github.com/cosmos/cosmos-sdk/version.Name=THORChain \
+      -X github.com/cosmos/cosmos-sdk/version.AppName=thornode \
+      -X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
+      -X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
+      -X github.com/cosmos/cosmos-sdk/version.BuildTags=$(TAG) \
+      -buildid=
 
 # golang settings
 TEST_DIR?="./..."
@@ -359,4 +359,4 @@ docker-gitlab-build:
 		$(shell sh ./build/docker/semver_tags.sh registry.gitlab.com/thorchain/thornode ${BRANCH} $(shell cat version)) \
 		-t registry.gitlab.com/thorchain/thornode:${GITREF} \
 		--build-arg COMMIT=$(COMMIT) \
-		--build-arg TAG=$(BUILDTAG) \
+		--build-arg TAG=$(BUILDTAG)
