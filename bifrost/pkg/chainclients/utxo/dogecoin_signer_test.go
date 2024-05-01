@@ -32,6 +32,7 @@ import (
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/config"
+	"gitlab.com/thorchain/thornode/x/thorchain"
 	types2 "gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
@@ -204,6 +205,9 @@ func (s *DogecoinSignerSuite) TestSignTx(c *C) {
 func (s *DogecoinSignerSuite) TestSignTxHappyPathWithPrivateKey(c *C) {
 	addr, err := types2.GetRandomPubKey().GetAddress(common.DOGEChain)
 	c.Assert(err, IsNil)
+	inHash := thorchain.GetRandomTxHash()
+	memo := "OUT:" + inHash.String() // Memo must be parsable or ParseMemo will error.
+
 	txOutItem := stypes.TxOutItem{
 		Chain:       common.DOGEChain,
 		ToAddress:   addr,
@@ -214,8 +218,9 @@ func (s *DogecoinSignerSuite) TestSignTxHappyPathWithPrivateKey(c *C) {
 		MaxGas: common.Gas{
 			common.NewCoin(common.DOGEAsset, cosmos.NewUint(1000)),
 		},
-		InHash:  "",
+		InHash:  inHash,
 		OutHash: "",
+		Memo:    memo,
 	}
 	txHash := "256222fb25a9950479bb26049a2c00e75b89abbb7f0cf646c623b93e942c4c34"
 	c.Assert(err, IsNil)
