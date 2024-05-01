@@ -53,5 +53,9 @@ if [[ -n $REMOVED ]]; then
 Error: Handler registrations were removed:
 $REMOVED
 EOF
-  exit 1
+  if [[ ${CI_MERGE_REQUEST_TITLE-} == *"#check-lint-warning"* ]]; then
+    echo "Merge request is marked unsafe - please carefully evaluate warnings above"
+  else
+    exit 1
+  fi
 fi
