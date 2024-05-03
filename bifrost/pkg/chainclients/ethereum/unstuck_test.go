@@ -277,8 +277,8 @@ func (s *UnstuckTestSuite) TestUnstuckProcess(c *C) {
 			GasCacheBlocks:     40,
 			Concurrency:        1,
 			GasPriceResolution: 10_000_000_000,
+			FixedGasRate:       10_000_000_000,
 		},
-		FixedOutboundGasRate: true,
 	}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
 	c.Assert(err, IsNil)
 	c.Assert(e, NotNil)

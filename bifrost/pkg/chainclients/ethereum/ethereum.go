@@ -518,7 +518,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 	}
 
 	gasRate := c.GetGasPrice()
-	if c.cfg.FixedOutboundGasRate || gasRate.Cmp(big.NewInt(0)) == 0 {
+	if c.cfg.BlockScanner.FixedGasRate > 0 || gasRate.Cmp(big.NewInt(0)) == 0 {
 		// if chain gas is zero we are still filling our gas price buffer, use outbound rate
 		gasRate = c.convertThorchainAmountToWei(big.NewInt(tx.GasRate))
 	} else {
@@ -566,7 +566,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 	}
 
 	var createdTx *etypes.Transaction
-	if !c.cfg.FixedOutboundGasRate {
+	if c.cfg.BlockScanner.FixedGasRate == 0 {
 		to := ecommon.HexToAddress(contractAddr.String())
 		createdTx = etypes.NewTx(&etypes.DynamicFeeTx{
 			ChainID:   c.chainID,
@@ -630,7 +630,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		scheduledMaxFee = scheduledMaxFee.Mul(scheduledMaxFee, big.NewInt(c.cfg.TokenMaxGasMultiplier))
 	}
 
-	if !c.cfg.FixedOutboundGasRate {
+	if c.cfg.BlockScanner.FixedGasRate == 0 {
 		// determine max gas units based on scheduled max gas (fee) and current rate
 		maxGasUnits := new(big.Int).Div(scheduledMaxFee, gasRate).Uint64()
 

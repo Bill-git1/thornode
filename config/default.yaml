@@ -81,7 +81,6 @@ bifrost:
       min_confirmations: 0
       max_rpc_retries: 9 # about 1 min
       max_pending_nonces: 0
-      fixed_outbound_gas_rate: false
       max_gas_tip_percentage: 0
       token_max_gas_multiplier: 0
       aggregator_max_gas_multiplier: 0
@@ -119,6 +118,7 @@ bifrost:
         whitelist_tokens: []
         concurrency: 0
         max_gas_limit: 0
+        fixed_gas_rate: 0
         gas_price_resolution: 10_000_000_000 # 10 gwei
         max_resume_block_lag: 24h
         max_healthy_lag: 30m

@@ -16,7 +16,7 @@ import (
 func Ragnarok() *Actor {
 	a := NewActor("Ragnarok")
 
-	// ragnarok all pools
+	// ragnarok all gas asset pools (should apply to tokens implicitly)
 	for _, chain := range common.AllChains {
 		// skip thorchain and deprecated chains
 		switch chain {

@@ -17,8 +17,8 @@ import (
 // Account
 ////////////////////////////////////////////////////////////////////////////////////////
 
-// Account holds a set of chain clients configured with a given private key.
-type Account struct {
+// User holds a set of chain clients configured with a given private key.
+type User struct {
 	// Thorchain is the thorchain client for the account.
 	Thorchain thorclient.ThorchainBridge
 
@@ -30,8 +30,8 @@ type Account struct {
 	mnemonic string
 }
 
-// NewAccount returns a new client using the private key from the given mnemonic.
-func NewAccount(mnemonic string, constructors map[common.Chain]LiteChainClientConstructor) *Account {
+// NewUser returns a new client using the private key from the given mnemonic.
+func NewUser(mnemonic string, constructors map[common.Chain]LiteChainClientConstructor) *User {
 	// create pubkey for mnemonic
 	derivedPriv, err := hd.Secp256k1.Derive()(mnemonic, "", cmd.THORChainHDPath)
 	if err != nil {
@@ -60,13 +60,7 @@ func NewAccount(mnemonic string, constructors map[common.Chain]LiteChainClientCo
 
 	// create chain clients
 	chainClients := make(map[common.Chain]LiteChainClient)
-	for _, chain := range common.AllChains {
-		// skip thorchain and deprecated chains
-		switch chain {
-		case common.THORChain, common.BNBChain, common.TERRAChain:
-			continue
-		}
-
+	for chain := range constructors {
 		chainClients[chain], err = constructors[chain](chain, keys)
 		if err != nil {
 			log.Fatal().Err(err).Stringer("chain", chain).Msg("failed to create chain client")
@@ -81,7 +75,7 @@ func NewAccount(mnemonic string, constructors map[common.Chain]LiteChainClientCo
 		log.Fatal().Err(err).Msg("failed to create thorchain client")
 	}
 
-	return &Account{
+	return &User{
 		ChainClients: chainClients,
 		Thorchain:    thorchain,
 		lock:         make(chan struct{}, 1),
@@ -91,15 +85,15 @@ func NewAccount(mnemonic string, constructors map[common.Chain]LiteChainClientCo
 }
 
 // Name returns the name of the account.
-func (a *Account) Name() string {
-	return strings.Split(a.mnemonic, " ")[0]
+func (u *User) Name() string {
+	return strings.Split(u.mnemonic, " ")[0]
 }
 
 // Acquire will attempt to acquire the lock. If the lock is already acquired, it will
 // return false. If true is returned, the caller has locked and must release when done.
-func (a *Account) Acquire() bool {
+func (u *User) Acquire() bool {
 	select {
-	case a.lock <- struct{}{}:
+	case u.lock <- struct{}{}:
 		return true
 	default:
 		return false
@@ -107,11 +101,20 @@ func (a *Account) Acquire() bool {
 }
 
 // Release will release the lock.
-func (a *Account) Release() {
-	<-a.lock
+func (u *User) Release() {
+	<-u.lock
 }
 
 // PubKey returns the public key of the client.
-func (a *Account) PubKey() common.PubKey {
-	return a.pubkey
+func (u *User) PubKey() common.PubKey {
+	return u.pubkey
+}
+
+// Address returns the address of the client for the given chain.
+func (u *User) Address(chain common.Chain) common.Address {
+	address, err := u.pubkey.GetAddress(chain)
+	if err != nil {
+		log.Fatal().Err(err).Stringer("chain", chain).Msg("failed to get address")
+	}
+	return address
 }

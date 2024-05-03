@@ -2,10 +2,16 @@ package actors
 
 import (
 	"fmt"
+	"math/big"
+	"strings"
+	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	ecommon "github.com/ethereum/go-ethereum/common"
 
 	"gitlab.com/thorchain/thornode/common"
+	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/test/simulation/pkg/evm"
 	"gitlab.com/thorchain/thornode/test/simulation/pkg/thornode"
 	. "gitlab.com/thorchain/thornode/test/simulation/pkg/types"
 )
@@ -17,7 +23,7 @@ import (
 type SwapActor struct {
 	Actor
 
-	account *Account
+	account *User
 
 	// starting balances
 	from        common.Asset
@@ -46,7 +52,11 @@ func NewSwapActor(from, to common.Asset) *Actor {
 	a.Ops = append(a.Ops, a.getQuote)
 
 	// send swap inbound
-	a.Ops = append(a.Ops, a.sendSwap)
+	if from.Chain.IsEVM() && !from.IsGasAsset() {
+		a.Ops = append(a.Ops, a.sendTokenSwap)
+	} else {
+		a.Ops = append(a.Ops, a.sendSwap)
+	}
 
 	// verify the swap within expected range
 	a.Ops = append(a.Ops, a.verifyOutbound)
@@ -68,7 +78,7 @@ func (a *SwapActor) acquireUser(config *OpConfig) OpResult {
 	}
 	a.swapAmount = sdk.NewUintFromString(pool.BalanceAsset).QuoUint64(200)
 
-	for _, user := range config.UserAccounts {
+	for _, user := range config.Users {
 		// skip users already being used
 		if !user.Acquire() {
 			continue
@@ -142,9 +152,9 @@ func (a *SwapActor) getQuote(config *OpConfig) OpResult {
 		}
 	}
 
-	// store expected range to fail if received amount is outside 5% tolerance
+	// store expected range to fail if received amount is outside 10% tolerance
 	quoteOut := sdk.NewUintFromString(quote.ExpectedAmountOut)
-	tolerance := quoteOut.QuoUint64(20)
+	tolerance := quoteOut.QuoUint64(10)
 	a.minExpected = quoteOut.Sub(tolerance)
 	a.maxExpected = quoteOut.Add(tolerance)
 
@@ -160,7 +170,7 @@ func (a *SwapActor) getQuote(config *OpConfig) OpResult {
 
 func (a *SwapActor) sendSwap(config *OpConfig) OpResult {
 	// get inbound address
-	inboundAddr, err := thornode.GetInboundAddress(a.from.Chain)
+	inboundAddr, _, err := thornode.GetInboundAddress(a.from.Chain)
 	if err != nil {
 		a.Log().Error().Err(err).Msg("failed to get inbound address")
 		return OpResult{
@@ -168,8 +178,14 @@ func (a *SwapActor) sendSwap(config *OpConfig) OpResult {
 		}
 	}
 
+	// if on a utxo chain, shorten the to asset to fuzzy match
+	to := a.to.String()
+	if a.from.Chain.IsUTXO() && !a.to.IsGasAsset() {
+		to = strings.Split(to, "-")[0]
+	}
+
 	// create tx out
-	memo := fmt.Sprintf("=:%s:%s", a.to, a.toAddress)
+	memo := fmt.Sprintf("=:%s:%s", to, a.toAddress)
 	tx := SimTx{
 		Chain:     a.from.Chain,
 		ToAddress: inboundAddr,
@@ -196,6 +212,109 @@ func (a *SwapActor) sendSwap(config *OpConfig) OpResult {
 			Continue: false,
 		}
 	}
+	a.swapTxID = txid
+
+	a.Log().Info().Str("txid", txid).Msg("broadcasted swap tx")
+	return OpResult{
+		Continue: true,
+	}
+}
+
+func (a *SwapActor) sendTokenSwap(config *OpConfig) OpResult {
+	// get router address
+	inboundAddr, routerAddr, err := thornode.GetInboundAddress(a.from.Chain)
+	if err != nil {
+		a.Log().Error().Err(err).Msg("failed to get inbound address")
+		return OpResult{
+			Continue: false,
+		}
+	}
+	if routerAddr == nil {
+		a.Log().Error().Msg("failed to get router address")
+		return OpResult{
+			Continue: false,
+		}
+	}
+
+	token := evm.Tokens(a.from.Chain)[a.from]
+
+	// convert amount to token decimals
+	factor := big.NewInt(1).Exp(big.NewInt(10), big.NewInt(int64(token.Decimals)), nil)
+	tokenAmount := a.swapAmount.Mul(cosmos.NewUintFromBigInt(factor))
+	tokenAmount = tokenAmount.QuoUint64(common.One)
+
+	// approve the router
+	eRouterAddr := ecommon.HexToAddress(routerAddr.String())
+	tx := SimContractTx{
+		Chain:    a.from.Chain,
+		Contract: common.Address(token.Address),
+		ABI:      evm.ERC20ABI(),
+		Method:   "approve",
+		Args:     []interface{}{eRouterAddr, tokenAmount.BigInt()},
+	}
+
+	iClient := a.account.ChainClients[a.from.Chain]
+	client, ok := iClient.(*evm.Client)
+	if !ok {
+		a.Log().Fatal().Msg("failed to get evm client")
+	}
+
+	// sign approve transaction
+	signed, err := client.SignContractTx(tx)
+	if err != nil {
+		a.Log().Error().Err(err).Msg("failed to sign tx")
+		return OpResult{
+			Continue: false,
+		}
+	}
+
+	// broadcast approve transaction
+	txid, err := client.BroadcastTx(signed)
+	if err != nil {
+		a.Log().Error().Err(err).Msg("failed to broadcast tx")
+		return OpResult{
+			Continue: false,
+		}
+	}
+	a.Log().Info().Str("txid", txid).Msg("broadcasted router approve tx")
+
+	// call depositWithExpiry
+	memo := fmt.Sprintf("=:%s:%s", a.to, a.toAddress)
+	expiry := time.Now().Add(time.Hour).Unix()
+	eInboundAddr := ecommon.HexToAddress(inboundAddr.String())
+	eTokenAddr := ecommon.HexToAddress(token.Address)
+	tx = SimContractTx{
+		Chain:    a.from.Chain,
+		Contract: *routerAddr,
+		ABI:      evm.RouterABI(),
+		Method:   "depositWithExpiry",
+		Args: []interface{}{
+			eInboundAddr,
+			eTokenAddr,
+			tokenAmount.BigInt(),
+			memo,
+			big.NewInt(expiry),
+		},
+	}
+
+	// sign deposit transaction
+	signed, err = client.SignContractTx(tx)
+	if err != nil {
+		a.Log().Error().Err(err).Msg("failed to sign tx")
+		return OpResult{
+			Continue: false,
+		}
+	}
+
+	// broadcast deposit transaction
+	txid, err = client.BroadcastTx(signed)
+	if err != nil {
+		a.Log().Error().Err(err).Msg("failed to broadcast tx")
+		return OpResult{
+			Continue: false,
+		}
+	}
+
 	a.swapTxID = txid
 
 	a.Log().Info().Str("txid", txid).Msg("broadcasted swap tx")

@@ -499,7 +499,7 @@ func (c *EVMClient) buildOutboundTx(txOutItem stypes.TxOutItem, memo mem.Memo, n
 	}
 
 	gasRate := c.GetGasPrice()
-	if c.cfg.FixedOutboundGasRate || gasRate.Cmp(big.NewInt(0)) == 0 {
+	if c.cfg.BlockScanner.FixedGasRate > 0 || gasRate.Cmp(big.NewInt(0)) == 0 {
 		// if chain gas is zero we are still filling our gas price buffer, use outbound rate
 		gasRate = convertThorchainAmountToWei(big.NewInt(txOutItem.GasRate))
 	} else {

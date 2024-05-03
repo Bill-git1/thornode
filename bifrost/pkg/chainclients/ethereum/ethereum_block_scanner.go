@@ -147,6 +147,9 @@ func NewETHScanner(cfg config.BifrostBlockScannerConfiguration,
 
 // GetGasPrice returns current gas price
 func (e *ETHScanner) GetGasPrice() *big.Int {
+	if e.cfg.FixedGasRate > 0 {
+		return big.NewInt(e.cfg.FixedGasRate)
+	}
 	return e.gasPrice
 }
 

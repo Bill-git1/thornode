@@ -158,7 +158,7 @@ func (c *Client) unstuckTx(clog zerolog.Logger, item types.SignedTxItem) error {
 	}
 
 	var cancelTx *etypes.Transaction
-	if !c.cfg.FixedOutboundGasRate {
+	if c.cfg.BlockScanner.FixedGasRate == 0 {
 		to := ecommon.HexToAddress(address.String())
 
 		// tip cap at configured percentage of max fee

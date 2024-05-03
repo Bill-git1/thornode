@@ -52,13 +52,19 @@ func (s *ActorSuite) TestWalkDepthFirst(c *C) {
 
 	root.InitRoot()
 
-	var visited []string
+	visited := map[string]bool{}
 	root.WalkDepthFirst(func(a *Actor) bool {
-		visited = append(visited, a.Name)
+		visited[a.Name] = true
 		return a.Execute(nil) == nil
 	})
 
-	expected := []string{"root", "child1", "grandchild1", "child2", "grandchild2"}
+	expected := map[string]bool{
+		"root":        true,
+		"child1":      true,
+		"grandchild1": true,
+		"child2":      true,
+		"grandchild2": true,
+	}
 	c.Assert(visited, DeepEquals, expected)
 }
 

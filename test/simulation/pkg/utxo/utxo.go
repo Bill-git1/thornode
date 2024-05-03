@@ -162,6 +162,10 @@ func (c *Client) GetAccount(pk *common.PubKey) (*common.Account, error) {
 // SignTx
 ////////////////////////////////////////////////////////////////////////////////////////
 
+func (c *Client) SignContractTx(SimContractTx) ([]byte, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
 func (c *Client) SignTx(tx SimTx) ([]byte, error) {
 	sourceScript, err := c.getSourceScript(tx)
 	if err != nil {

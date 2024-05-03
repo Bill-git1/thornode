@@ -199,6 +199,9 @@ func NewEVMScanner(cfg config.BifrostBlockScannerConfiguration,
 
 // GetGasPrice returns the current gas price.
 func (e *EVMScanner) GetGasPrice() *big.Int {
+	if e.cfg.FixedGasRate > 0 {
+		return big.NewInt(e.cfg.FixedGasRate)
+	}
 	return e.gasPrice
 }
 

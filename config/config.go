@@ -619,11 +619,6 @@ type BifrostChainConfiguration struct {
 	// MaxRPCRetries is the maximum number of retries for RPC requests.
 	MaxRPCRetries int `mapstructure:"max_rpc_retries"`
 
-	// FixedOutboundGasRate will force signed transactions to use the specific rate in the
-	// outbound instead of adjusting based on current chain gas price. This is currently
-	// only used in mocknet to for smoke tests.
-	FixedOutboundGasRate bool `mapstructure:"fixed_outbound_gas_rate"`
-
 	// MaxGasTipPercentage is the percentage of the max fee to set for the max tip cap on
 	// dynamic fee EVM transactions.
 	MaxGasTipPercentage int `mapstructure:"max_gas_tip_percentage"`
@@ -726,6 +721,9 @@ type BifrostBlockScannerConfiguration struct {
 	// Concurrency is the number of goroutines used for RPC requests on data within a
 	// block - e.g. transactions, receipts, logs, etc. Blocks are processed sequentially.
 	Concurrency int64 `mapstructure:"concurrency"`
+
+	// FixedGasRate will force the scanner to only report the defined gas rate.
+	FixedGasRate int64 `mapstructure:"fixed_gas_rate"`
 
 	// GasPriceResolution is the resolution of price per gas unit in the base asset of the
 	// chain (wei, tavax, uatom, satoshi, etc) and is transitively the floor price. The

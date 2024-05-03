@@ -6,6 +6,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/test/simulation/actors"
+	"gitlab.com/thorchain/thornode/test/simulation/pkg/evm"
 	"gitlab.com/thorchain/thornode/test/simulation/pkg/thornode"
 	. "gitlab.com/thorchain/thornode/test/simulation/pkg/types"
 )
@@ -47,6 +48,33 @@ func Bootstrap() *Actor {
 
 		a.Children[actors.NewDualLPActor(chain.GetGasAsset())] = true
 	}
+
+	// create token pools
+	tokenPools := NewActor("Bootstrap-TokenPools")
+	for _, chain := range common.AllChains {
+		if !chain.IsEVM() {
+			continue
+		}
+		count++
+
+		for asset := range evm.Tokens(chain) {
+			// skip bootstrapping existing pools
+			found := false
+			for _, pool := range pools {
+				if pool.Asset == asset.String() {
+					found = true
+					break
+				}
+			}
+			if found {
+				log.Info().Str("chain", chain.GetGasAsset().String()).Msg("skip existing pool bootstrap")
+				continue
+			}
+
+			tokenPools.Children[actors.NewDualLPActor(asset)] = true
+		}
+	}
+	a.Append(tokenPools)
 
 	// verify pools
 	verify := NewActor("Bootstrap-Verify")

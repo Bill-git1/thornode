@@ -63,7 +63,30 @@ func GetBalances(addr common.Address) (common.Coins, error) {
 	return coins, nil
 }
 
-func GetInboundAddress(chain common.Chain) (common.Address, error) {
+func GetInboundAddress(chain common.Chain) (address common.Address, router *common.Address, err error) {
+	url := fmt.Sprintf("%s/thorchain/inbound_addresses", thornodeURL)
+	var inboundAddresses []openapi.InboundAddress
+	err = get(url, &inboundAddresses)
+	if err != nil {
+		return "", nil, err
+	}
+
+	// find address for chain
+	for _, inboundAddress := range inboundAddresses {
+		if *inboundAddress.Chain == string(chain) {
+			var router *common.Address
+			if inboundAddress.Router != nil {
+				router = new(common.Address)
+				*router = common.Address(*inboundAddress.Router)
+			}
+			return common.Address(*inboundAddress.Address), router, nil
+		}
+	}
+
+	return "", nil, fmt.Errorf("no inbound address found for chain %s", chain)
+}
+
+func GetRouterAddress(chain common.Chain) (common.Address, error) {
 	url := fmt.Sprintf("%s/thorchain/inbound_addresses", thornodeURL)
 	var inboundAddresses []openapi.InboundAddress
 	err := get(url, &inboundAddresses)
@@ -74,7 +97,7 @@ func GetInboundAddress(chain common.Chain) (common.Address, error) {
 	// find address for chain
 	for _, inboundAddress := range inboundAddresses {
 		if *inboundAddress.Chain == string(chain) {
-			return common.Address(*inboundAddress.Address), nil
+			return common.Address(*inboundAddress.Router), nil
 		}
 	}
 

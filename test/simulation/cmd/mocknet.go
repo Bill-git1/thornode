@@ -5,16 +5,19 @@ package main
 
 import (
 	"fmt"
+	"math/big"
 	"os"
 	"strings"
 	"sync"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	ecommon "github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/config"
+	"gitlab.com/thorchain/thornode/test/simulation/pkg/evm"
 	"gitlab.com/thorchain/thornode/test/simulation/pkg/thornode"
 	. "gitlab.com/thorchain/thornode/test/simulation/pkg/types"
 	ttypes "gitlab.com/thorchain/thornode/x/thorchain/types"
@@ -71,7 +74,10 @@ var (
 
 func InitConfig(parallelism int) *OpConfig {
 	if parallelism > len(mocknetUserMnemonics) {
-		log.Fatal().Msg("parallelism exceeds number of user accounts")
+		log.Error().
+			Int("parallelism", parallelism).
+			Int("accounts", len(mocknetUserMnemonics)).
+			Msg("parallelism limited by available user accounts")
 	}
 	log.Info().Msg("initializing mocknet simulation user accounts")
 
@@ -90,9 +96,9 @@ func InitConfig(parallelism int) *OpConfig {
 		wg.Add(1)
 		sem <- struct{}{}
 		go func(mnemonic string) {
-			a := NewAccount(mnemonic, liteClientConstructors)
+			a := NewUser(mnemonic, liteClientConstructors)
 			mu.Lock()
-			c.NodeAccounts = append(c.NodeAccounts, a)
+			c.NodeUsers = append(c.NodeUsers, a)
 			mu.Unlock()
 
 			// send gaia network fee observation
@@ -116,27 +122,66 @@ func InitConfig(parallelism int) *OpConfig {
 		wg.Add(1)
 		sem <- struct{}{}
 		go func(mnemonic string) {
-			a := NewAccount(mnemonic, liteClientConstructors)
+			a := NewUser(mnemonic, liteClientConstructors)
 			mu.Lock()
-			c.UserAccounts = append(c.UserAccounts, a)
+			c.Users = append(c.Users, a)
 			mu.Unlock()
 			<-sem
 			wg.Done()
 		}(mnemonic)
 	}
 
-	// wait for all accounts to be created
+	// wait for all users to be created
 	wg.Wait()
 
 	// fund all user accounts from master
-	master := NewAccount(mocknetMasterMnemonic, liteClientConstructors)
+	master := NewUser(mocknetMasterMnemonic, liteClientConstructors)
 
-	// master account is also mimir admin
-	c.AdminAccount = master
+	// log all configured tokens, their decimals, and master balance
+	for chain := range liteClientConstructors {
+		account, err := master.ChainClients[chain].GetAccount(nil)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get master account")
+		}
+		for _, coin := range account.Coins {
+			ctxLog := log.Info().
+				Stringer("chain", chain).
+				Stringer("asset", coin.Asset).
+				Stringer("address", master.Address(chain)).
+				Str("amount", coin.Amount.String())
+
+			// on evm chains, also log token decimals for debugging
+			if chain.IsEVM() {
+				token := evm.Tokens(chain)[coin.Asset]
+				evmClient := master.ChainClients[chain].(*evm.Client)
+				tokenDecimals, err := evmClient.GetTokenDecimals(token.Address)
+				if err != nil {
+					log.Fatal().Err(err).Msg("failed to get token decimals")
+				}
+
+				// sanity check our configured token decimals
+				if tokenDecimals != token.Decimals {
+					log.Fatal().
+						Int("actual", tokenDecimals).
+						Int("configured", token.Decimals).
+						Err(err).
+						Msg("token decimals mismatch")
+				}
+
+				ctxLog = ctxLog.Int("decimals", tokenDecimals)
+			}
+
+			// log balance
+			ctxLog.Msg("master account balance")
+		}
+	}
+
+	// master user is also mimir admin
+	c.AdminUser = master
 
 	// fund all user accounts
-	funded := []*Account{}
-	for _, user := range c.UserAccounts {
+	funded := []*User{}
+	for _, user := range c.Users {
 		if fundUserThorAccount(master, user) {
 			funded = append(funded, user)
 		}
@@ -145,6 +190,8 @@ func InitConfig(parallelism int) *OpConfig {
 	// fund user accounts with one goroutine per chain
 	wg = &sync.WaitGroup{}
 	for _, chain := range common.AllChains {
+
+		// determine the amount to seed
 		chainSeedAmount := sdk.ZeroUint()
 		switch chain {
 		case common.BTCChain, common.ETHChain:
@@ -166,6 +213,7 @@ func InitConfig(parallelism int) *OpConfig {
 			defer wg.Done()
 			fundUserChainAccounts(master, funded, chain, chainSeedAmount)
 		}(chain, chainSeedAmount)
+
 	}
 	wg.Wait()
 
@@ -176,13 +224,13 @@ func InitConfig(parallelism int) *OpConfig {
 // Helpers
 ////////////////////////////////////////////////////////////////////////////////////////
 
-func fundUserChainAccounts(master *Account, users []*Account, chain common.Chain, amount sdk.Uint) {
+func fundUserChainAccounts(master *User, users []*User, chain common.Chain, amount sdk.Uint) {
 	for _, user := range users {
 		fundUserChainAccount(master, user, chain, amount)
 	}
 }
 
-func fundUserChainAccount(master, user *Account, chain common.Chain, amount sdk.Uint) {
+func fundUserChainAccount(master, user *User, chain common.Chain, amount sdk.Uint) {
 	// build tx
 	addr, err := user.PubKey().GetAddress(chain)
 	if err != nil {
@@ -214,14 +262,57 @@ func fundUserChainAccount(master, user *Account, chain common.Chain, amount sdk.
 	amountFloat := float64(amount.Uint64()) / float64(common.One)
 	log.Info().
 		Str("txid", txid).
-		Str("account", user.Name()).
+		Str("user", user.Name()).
 		Stringer("chain", chain).
 		Stringer("address", addr).
 		Str("amount", fmt.Sprintf("%08f", amountFloat)).
 		Msg("account funded")
+
+	// if this is an EVM chain also fund token balances
+	if !chain.IsEVM() {
+		return
+	}
+
+	// fund token balances
+	eAddr := ecommon.HexToAddress(addr.String())
+	for asset, token := range evm.Tokens(chain) {
+		// convert funding amount to token decimals
+		factor := big.NewInt(1).Exp(big.NewInt(10), big.NewInt(int64(token.Decimals)), nil)
+		tokenAmount := amount.Mul(sdk.NewUintFromBigInt(factor))
+		tokenAmount = tokenAmount.Quo(sdk.NewUint(common.One))
+
+		tokenTx := SimContractTx{
+			Chain:    chain,
+			Contract: common.Address(token.Address),
+			ABI:      evm.ERC20ABI(),
+			Method:   "transfer",
+			Args:     []interface{}{eAddr, tokenAmount.BigInt()},
+		}
+		tokenSigned, err := master.ChainClients[chain].(*evm.Client).SignContractTx(tokenTx)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to sign master token tx")
+		}
+		tokenTxid, err := master.ChainClients[chain].BroadcastTx(tokenSigned)
+		if err != nil {
+			from, _ := master.PubKey().GetAddress(chain)
+			log.Fatal().Err(err).
+				Stringer("chain", chain).
+				Stringer("from", from).
+				Msg("failed to broadcast funding token tx")
+		}
+		amountFloat := float64(amount.Uint64()) / float64(common.One)
+		log.Info().
+			Str("txid", tokenTxid).
+			Str("account", user.Name()).
+			Stringer("asset", asset).
+			Stringer("address", addr).
+			Str("token", token.Address).
+			Str("amount", fmt.Sprintf("%08f", amountFloat)).
+			Msg("token balance funded")
+	}
 }
 
-func fundUserThorAccount(master, user *Account) bool {
+func fundUserThorAccount(master, user *User) bool {
 	masterThorAddress, err := master.PubKey().GetThorAddress()
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to get master thor address")

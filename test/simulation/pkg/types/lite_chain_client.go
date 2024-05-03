@@ -1,6 +1,7 @@
 package types
 
 import (
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"gitlab.com/thorchain/thornode/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/common"
 )
@@ -11,6 +12,15 @@ type SimTx struct {
 	ToAddress common.Address
 	Coin      common.Coin
 	Memo      string
+}
+
+// SimContractTx is a struct used for simulation contract call transactions.
+type SimContractTx struct {
+	Chain    common.Chain
+	Contract common.Address
+	ABI      abi.ABI
+	Method   string
+	Args     []interface{}
 }
 
 // LiteChainClient is a subset of the ChainClient interface used for simulation tests.

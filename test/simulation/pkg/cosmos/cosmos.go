@@ -145,6 +145,10 @@ func (c *Client) GetAccount(pk *common.PubKey) (*common.Account, error) {
 	}, nil
 }
 
+func (c *Client) SignContractTx(SimContractTx) ([]byte, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
 func (c *Client) SignTx(tx SimTx) ([]byte, error) {
 	// get account
 	account, err := c.GetAccount(nil)

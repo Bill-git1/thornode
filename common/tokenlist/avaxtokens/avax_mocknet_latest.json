@@ -25,6 +25,14 @@
       "tags": []
     },
     {
+      "chainId": 4,
+      "address": "0x17aB05351fC94a1a67Bf3f56DdbB941aE6c63E25",
+      "symbol": "TKN",
+      "name": "",
+      "decimals": 18,
+      "tags": []
+    },
+    {
       "name": "",
       "symbol": "USDC",
       "address": "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",

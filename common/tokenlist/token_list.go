@@ -1,6 +1,8 @@
 package tokenlist
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/blang/semver"
@@ -13,6 +15,15 @@ type ERC20Token struct {
 	Symbol   string `json:"symbol"`
 	Name     string `json:"name"`
 	Decimals int    `json:"decimals"`
+}
+
+// Asset returns the common.Asset representation of the token.
+func (t ERC20Token) Asset(chain common.Chain) common.Asset {
+	return common.Asset{
+		Chain:  chain,
+		Ticker: common.Ticker(t.Symbol),
+		Symbol: common.Symbol(strings.ToUpper(fmt.Sprintf("%s-%s", t.Symbol, t.Address))),
+	}
 }
 
 type EVMTokenList struct {

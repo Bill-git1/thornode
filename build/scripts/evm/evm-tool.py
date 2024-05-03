@@ -10,9 +10,9 @@ from contextlib import closing
 from urllib.parse import urlparse
 
 import requests
-from eth_typing import ChecksumAddress
+from eth_typing.evm import ChecksumAddress
 from web3 import HTTPProvider, Web3
-from web3.middleware import geth_poa_middleware
+from web3.middleware.geth_poa import geth_poa_middleware
 from web3.types import TxParams, Wei
 
 ########################################################################################
@@ -107,6 +107,16 @@ class EVMSetupTool:
         tx_hash = self.token_contract().constructor().transact()
         receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
         print(f"Token Contract Address: {receipt.contractAddress}")
+
+        # send half the balance to simulation master if not in smoke test
+        if os.getenv("SMOKE") == "true":
+            return
+        token = self.token_contract(address=receipt.contractAddress)
+        tx_hash = token.functions.transfer(
+            Web3.toChecksumAddress(self.simulation_master), int(500_000e18)
+        ).transact()
+        receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
+        print(f"Transfer to Simulation Master Receipt: {receipt}")
 
     def deploy_router(self):
         print("deploying router contract...")

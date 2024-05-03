@@ -277,6 +277,7 @@ run-simulation-mocknet:
 		BCH_MASTER_ADDR="qpxh73huzlhjfzcccr03zkpd9nd3wsasegmrreet72" \
 		DOGE_MASTER_ADDR="mnaioCtEGdw6bd6rWJ13Mbre1kN5rPa2Mo" \
 		LTC_MASTER_ADDR="rltc1qf4l5dlqhaujgkxxqmug4stfvmvt58vx2fc03xm" \
+		SMOKE="false" \
 		docker compose -f build/docker/docker-compose.yml --profile mocknet up -d
 
 stop-mocknet:

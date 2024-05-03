@@ -6,14 +6,14 @@ package types
 
 // OpConfig is the configuration passed to each operation during execution.
 type OpConfig struct {
-	// AdminAccount is the client for the mimir admin account.
-	AdminAccount *Account
+	// AdminUser is the client for the mimir admin account.
+	AdminUser *User
 
-	// NodeAccounts is a slice clients for simulation validator keys.
-	NodeAccounts []*Account
+	// NodeUsers is a slice clients for simulation validator keys.
+	NodeUsers []*User
 
-	// UserAccounts is a slice of clients for simulation user keys.
-	UserAccounts []*Account
+	// Users is a slice of clients for simulation user keys.
+	Users []*User
 }
 
 // OpResult is the result of an operation.

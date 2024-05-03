@@ -46,7 +46,7 @@ func NewRagnarokPoolActor(asset common.Asset) *Actor {
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func (a *RagnarokPoolActor) sendMimir(config *OpConfig) OpResult {
-	accAddr, err := config.AdminAccount.PubKey().GetThorAddress()
+	accAddr, err := config.AdminUser.PubKey().GetThorAddress()
 	if err != nil {
 		a.Log().Error().Err(err).Msg("failed to get thor address")
 		return OpResult{
@@ -54,7 +54,7 @@ func (a *RagnarokPoolActor) sendMimir(config *OpConfig) OpResult {
 		}
 	}
 	mimir := types.NewMsgMimir(fmt.Sprintf("RAGNAROK-%s", a.asset.MimirString()), 1, accAddr)
-	txid, err := config.AdminAccount.Thorchain.Broadcast(mimir)
+	txid, err := config.AdminUser.Thorchain.Broadcast(mimir)
 	if err != nil {
 		a.Log().Error().Err(err).Msg("failed to broadcast mimir")
 		return OpResult{
