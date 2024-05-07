@@ -83,8 +83,9 @@ For the DEX aggregator-oriented variation of the `SWAP` memo, see [Aggregators M
 - `SWAP:ETH.ETH:0xe6a30f4f3bad978910e2cbb4d97581f5b5a0ade0:10000000/3/0:t:10` &mdash; same as above except sends 10 basis points from the input to affiliate `t` (THORSwap)
 - `s:ETH.ETH:0xe6a30f4f3bad978910e2cbb4d97581f5b5a0ade0:1e6/3/0:t:10` &mdash; same as above except with a reduced memo and scientific notation trade limit
 - `=:r:thor1el4ufmhll3yw7zxzszvfakrk66j7fx0tvcslym:19779138111` &mdash; swap to at least 197.79 RUNE
-- `=:BNB/BUSD-BD1:thor15s4apx9ap7lazpsct42nmvf0t6am4r3w0r64f2:628197586176` &mdash; swap to at least 6281.9 Synthetic BUSD
-- `=:BNB.BNB:bnb108n64knfm38f0mm23nkreqqmpc7rpcw89sqqw5:544e6/2/6` &mdash; swap to at least 5.4 BNB, using streaming swaps, 6 swaps, every 2 blocks
+- `=:ETH/USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48:thor15s4apx9ap7lazpsct42nmvf0t6am4r3w0r64f2:628197586176` &mdash; swap to at least 6281.9 Synthetic USDC
+- `=:BSC.BNB:0xe6a30f4f3bad978910e2cbb4d97581f5b5a0ade0:544e6/2/6` &mdash; swap to at least 5.4 BNB, using streaming swaps, 6 swaps, every 2 blocks
+- `=:BTC~BTC:thor1g6pnmnyeg48yc3lg796plt0uw50qpp7humfggz:1e6/1/0:dx:10` &mdash; - Swap to Bitcoin Trade Asset, using a Limit, Streaming Swaps and a 10 bansis point fee to the affiliate `dx` (Asgardex)
 
 ### **Deposit Savers**
 
@@ -95,7 +96,7 @@ Deposit an asset into THORChain Savers.
 | Parameter    | Notes                                                                  | Conditions                                      |
 | ------------ | ---------------------------------------------------------------------- | ----------------------------------------------- |
 | Payload      | The asset to add liquidity with.                                       | Must be supported by THORChain.                 |
-| `ADD`        | The deposit handler.                                                   | Also `a` or `+`                                 |
+| `ADD`        | The deposit handler.                                                   | Also `+`                                        |
 | `:POOL`      | The pool to add liquidity to.                                          | Gas and stablecoin pools only.                  |
 | `:`          | Must be empty.                                                         | Optional. Required if adding affiliate and fee. |
 | `:AFFILIATE` | The affiliate address.                                                 | Optional. Must be a THORName or THOR Address.   |
@@ -152,7 +153,7 @@ Open a loan on THORChain.
 
 **Examples:**
 
-- `LOAN+:BNB.BUSD:bnb177kuwn6n9fv83txq04y2tkcsp97s4yclz9k7dh` &mdash; open a loan with BUSD as the debt asset
+- `LOAN+:BSC.BUSD:0xe6a30f4f3bad978910e2cbb4d97581f5b5a0ade0` &mdash; open a loan with BUSD as the debt asset
 - `$+:ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48:0x1c7b17362c84287bd1184447e6dfeaf920c31bbe:10400000000` &mdash; open a loan where the debt is at least 104 USDT
 
 ### **Repay Loan**
@@ -248,15 +249,9 @@ Withdraws an L1 asset from the Trade Account.
 
 Note: Trade Asset and Amount are determined by the `coins` within the `MsgDeposit`. Transaction fee in `RUNE` does apply.
 
-**Examples:**
+**Example:**
 
-- `TRADE-:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430`- Withdraw 1 AVAX from the Trade Account and sent to `0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430`
-
-  ```text
-  {"body":{"messages":[{"":"/types.MsgDeposit","coins":[{"asset":"AVAX~AVAX","amount":"100000000","decimals":"0"}],"memo":"trade-:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430","signer":"thor19phfqh3ce3nnjhh0cssn433nydq9shx7wfmk7k"}],"memo":"","timeout_height":"0","extension_options":[],"non_critical_extension_options":[]},"auth_info":{"signer_infos":[],"fee":{"amount":[],"gas_limit":"200000","payer":"","granter":""}},"signatures":[]}
-  ```
-
-- `TRADE-:bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw` - Withdraw 0.1 BTC from the Trade Account and sent to `bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw`
+- `TRADE-:bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw` - Withdraw 0.1 BTC from the Trade Account and send to `bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw`
 
   ```text
   {"body":{"messages":[{"":"/types.MsgDeposit","coins":[{"asset":"BTC~BTC","amount":"10000000","decimals":"0"}],"memo":"trade-:bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw","signer":"thor19phfqh3ce3nnjhh0cssn433nydq9shx7wfmk7k"}],"memo":"","timeout_height":"0","extension_options":[],"non_critical_extension_options":[]},"auth_info":{"signer_infos":[],"fee":{"amount":[],"gas_limit":"200000","payer":"","granter":""}},"signatures":[]}

@@ -82,7 +82,7 @@ Memos contain functions such as Swap or Add, which describe the user's intent an
 
 **Example**:
 
-`=SWAP:e:0x388C818CA8B9251b393131C08a736A67ccB19297` is reduced to `=:e:0x388C818CA8B9251b393131C08a736A67ccB19297`
+`SWAP:e:0x388C818CA8B9251b393131C08a736A67ccB19297` is reduced to `=:e:0x388C818CA8B9251b393131C08a736A67ccB19297`
 
 ### Scientific Notation
 

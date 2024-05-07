@@ -26,32 +26,33 @@ Vaults are fetched from the `/inbound_addresses` endpoint:
 
 [https://thornode.ninerealms.com/thorchain/inbound_addresses](https://thornode.ninerealms.com/thorchain/inbound_addresses)
 
-You need to select the address of the Chain the inbound transaction will go to.
+You need to select the address of the Chain the inbound transaction. See [supported address formats](./querying-thorchain.md#supported-address-formats).
 
 The address will be the current active Asgard Address that accepts inbounds. Do not cache these address as they change regularly. Do not delay inbound transactions (e.g. do not use future timeLocks).
 
 Example Output, each connected chain will be displayed.
 
-````json
+```json
 
-{
-    "address": "bc1q2taly7tynxvmmw5n2048wv56cyhmnc6lvx7737",
+  {
     "chain": "BTC",
-    "chain_lp_actions_paused": false,
-    "chain_trading_paused": false,
-    "dust_threshold": "10000",
-    "gas_rate": "19",
-    "gas_rate_units": "satsperbyte",
-    "global_trading_paused": false,
+    "pub_key": "thorpub1addwnpepqtwl02y7c30shldqe3lr0s45xt6s0n9jkjchcd7zgscknmcn92vugv5v2ng",
+    "address": "bc1qkqg0v50q2wj7r5jykkmsjm549kpua70yfyav5t",
     "halted": false,
-    "outbound_fee": "39000",
+    "global_trading_paused": false,
+    "chain_trading_paused": false,
+    "chain_lp_actions_paused": false,
+    "gas_rate": "22",
+    "gas_rate_units": "satsperbyte",
     "outbound_tx_size": "1000",
-    "pub_key": "thorpub1addwnpepq22rph4ed3nkp6lp060nmuqy3p0axadaklnvcs4qfrgyq6zl0rrux9jxkxj"
-  }
+    "outbound_fee": "45000",
+    "dust_threshold": "10000"
+  },
+```
 
 ```admonish danger
-Never cache vault addresses, they churn regularly
-````
+Never cache vault addresses, they churn regularly!
+```
 
 ```admonish danger
 Inbound transactions should not be delayed for any reason else there is risk funds will be sent to an unreachable address. Use standard transactions, check the `inbound address` before sending and use the recommended [`gas rate`](querying-thorchain.md#getting-the-asgard-vault) to ensure transactions are confirmed in the next block to the latest `Inbound_Address`.
@@ -62,7 +63,7 @@ Check for the `halted` parameter and never send funds if it is set to true
 ```
 
 ````admonish warning
-If a chain has a `router` on the inbound address endpoint, then everything must be deposited via the router. The router is a contract that the user first approves, and the deposit call transfers the asset into the network and emits an event to THORChain.&#x20;
+If a chain has a `router` on the inbound address endpoint, then everything must be deposited via the router. The router is a contract that the user first approves, and the deposit call transfers the asset into the network and emits an event to THORChain.
 
 \
 This is done because "tokens" on protocols don't support memos on-chain, thus need to be wrapped by a router which can force a memo.

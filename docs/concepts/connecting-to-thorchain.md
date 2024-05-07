@@ -46,7 +46,7 @@ THORNode returns application-specific information regarding the THORChain state 
 The Cosmos RPC allows Cosmos base blockchain information to be returned. However, not all endpoints have been enabled.\
 \
 **Endpoints guide:**
-[https://v1.cosmos.network/rpc/v0.45.1](https://v1.cosmos.network/rpc/v0.45.1)
+[Cosmos RPC v0.45.1](https://web.archive.org/web/20240106223257/https://v1.cosmos.network/rpc/v0.45.1)
 
 **Example URL** [https://thornode.ninerealms.com/cosmos/bank/v1beta1/balances/thor1dheycdevq39qlkxs2a6wuuzyn4aqxhve4qxtxt](https://thornode.ninerealms.com/cosmos/bank/v1beta1/balances/thor1dheycdevq39qlkxs2a6wuuzyn4aqxhve4qxtxt)
 
