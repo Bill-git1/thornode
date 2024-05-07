@@ -366,7 +366,9 @@ docker-gitlab-build:
 ########################################################################################
 
 thorscan-build:
-	@docker build -f build/docker/Dockerfile.thorscan -t thorscan tools/thorscan
+	@docker build tools/thorscan -f tools/thorscan/Dockerfile \
+		-t registry.gitlab.com/thorchain/thornode:thorscan-${GITREF} \
+		-t registry.gitlab.com/thorchain/thornode:thorscan
 
 thorscan-gitlab-push:
 	@docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
