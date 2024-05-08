@@ -363,7 +363,12 @@ func observeTxs(outbound bool) func(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("--txids requires --thornode-api")
 		}
 
+		// ensure node address is set
 		nodeAddress := clientCtx.GetFromAddress().String()
+		if nodeAddress == "" {
+			return fmt.Errorf("--from must be set")
+		}
+
 		var observations []types.ObservedTx
 
 		// if txids is set, retrieve highest count observation this node did not broadcast
@@ -373,6 +378,9 @@ func observeTxs(outbound bool) func(cmd *cobra.Command, args []string) error {
 				observation, err := findLackingObservation(txid, nodeAddress, thorNodeAPI)
 				if err != nil {
 					return fmt.Errorf("failed to find lacking observation: %w", err)
+				}
+				if observation == nil {
+					continue
 				}
 				observations = append(observations, *observation)
 
@@ -393,6 +401,12 @@ func observeTxs(outbound bool) func(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("cannot observe more than 50 transactions at once")
 		}
 
+		// abort if no observations
+		if len(observations) == 0 {
+			fmt.Println("node has broadcast all observation versions")
+			return nil
+		}
+
 		// create the message
 		var msg cosmos.Msg
 		if outbound {
@@ -401,19 +415,11 @@ func observeTxs(outbound bool) func(cmd *cobra.Command, args []string) error {
 			msg = types.NewMsgObservedTxIn(observations, clientCtx.GetFromAddress())
 		}
 
-		// output and prompt for confirmation
+		// output the message to be broadcast
 		enc := json.NewEncoder(cmd.OutOrStdout())
 		enc.SetIndent("", "  ")
 		if err := enc.Encode(msg); err != nil {
 			return fmt.Errorf("failed to encode message: %w", err)
-		}
-		if !clientCtx.SkipConfirm {
-			fmt.Print("Enter 'OBSERVE' to confirm: ")
-			var confirm string
-			fmt.Scanln(&confirm)
-			if confirm != "OBSERVE" {
-				return fmt.Errorf("aborted")
-			}
 		}
 
 		return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
@@ -468,7 +474,9 @@ func findLackingObservation(txid, address, thornodeAPI string) (*types.ObservedT
 		}
 	}
 
-	fmt.Printf("[%s] %s will observe tx with %d signers\n", txid, shortAddress, highestCount)
+	if observation != nil {
+		fmt.Printf("[%s] %s will observe tx with %d signers\n", txid, shortAddress, highestCount)
+	}
 
 	return observation, nil
 }
