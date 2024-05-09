@@ -312,7 +312,7 @@ func (e *EVMScanner) getTxInOptimized(method string, block *etypes.Block) (stype
 	}
 
 	// tx lookup for compatibility with shared evm functions
-	txByHash := make(map[string]etypes.Transaction)
+	txByHash := make(map[string]*etypes.Transaction)
 	for _, tx := range block.Transactions() {
 		if tx == nil {
 			continue
@@ -323,7 +323,7 @@ func (e *EVMScanner) getTxInOptimized(method string, block *etypes.Block) (stype
 			e.logger.Err(err).Str("tx hash", tx.Hash().String()).Msg("failed to remove signed tx item")
 		}
 
-		txByHash[tx.Hash().String()] = *tx
+		txByHash[tx.Hash().String()] = tx
 	}
 
 	var receipts []*etypes.Receipt
@@ -355,7 +355,7 @@ func (e *EVMScanner) getTxInOptimized(method string, block *etypes.Block) (stype
 
 		// extract the txInItem
 		var txInItem *stypes.TxInItem
-		txInItem, err = e.receiptToTxInItem(&txForReceipt, receipt)
+		txInItem, err = e.receiptToTxInItem(txForReceipt, receipt)
 		if err != nil {
 			e.logger.Error().Err(err).Msg("failed to convert receipt to txInItem")
 			continue

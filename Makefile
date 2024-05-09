@@ -145,12 +145,7 @@ lint:
 
 lint-ci:
 	@./scripts/lint.sh
-ifdef CI_MERGE_REQUEST_ID
-# only check changes on merge requests
-	@./scripts/trunk check --ci -j8 --upstream FETCH_HEAD
-else
-	@./scripts/trunk check --all --ci -j8
-endif
+	@./scripts/trunk-ci.sh
 
 # ------------------------------ Unit Tests ------------------------------
 
