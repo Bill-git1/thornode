@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"text/template"
@@ -114,6 +115,11 @@ func run(out io.Writer, path string, routine int) (failExportInvariants bool, er
 
 	localLog.Info().Str("path", path).Int("blocks", blockCount(ops)).Msgf("Running regression test")
 
+	// clear block directory
+	blocksPath := filepath.Join("/mnt/blocks", strings.TrimPrefix(path, "suites/"))
+	blocksPath = strings.TrimSuffix(blocksPath, ".yaml")
+	_ = os.RemoveAll(blocksPath)
+
 	// extract fail-export operation from end if provided
 	if _, ok := ops[len(ops)-1].(*OpFailExportInvariants); ok {
 		failExportInvariants = true
@@ -125,7 +131,7 @@ func run(out io.Writer, path string, routine int) (failExportInvariants bool, er
 	for i, op := range ops {
 		if _, ok := op.(*OpState); ok {
 			localLog.Info().Int("line", opLines[i]).Msgf(">>> [%d] %s", i+1, op.OpType())
-			err = op.Execute(out, routine, cmd.Process, nil)
+			err = op.Execute(out, path, routine, cmd.Process, nil)
 			if err != nil {
 				log.Fatal().Err(err).Msg("failed to execute state operation")
 			}
@@ -248,7 +254,7 @@ func run(out io.Writer, path string, routine int) (failExportInvariants bool, er
 		}
 
 		localLog.Info().Int("line", opLines[i]).Msgf(">>> [%d] %s", stateOpCount+i+1, op.OpType())
-		returnErr = op.Execute(out, routine, thornode.Process, stderrLines)
+		returnErr = op.Execute(out, path, routine, thornode.Process, stderrLines)
 		if returnErr != nil {
 			localLog.Error().Err(returnErr).
 				Int("line", opLines[i]).

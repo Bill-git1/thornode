@@ -47,6 +47,7 @@ lint:
         - test/fixtures/endpoints/auth/accounts/malformed.json
         - test/regression/README.md
         - test/regression/mnt/exports/**
+        - test/regression/mnt/blocks/**
         - test/regression/suites/**
         - test/regression/templates/**
     - linters:
@@ -62,6 +63,7 @@ lint:
         - common/tokenlist/*/*.json
         - x/thorchain/preregister_thornames.json
         - third_party/**
+        - test/regression/mnt/blocks/**
 actions:
   disabled:
     - trunk-announce

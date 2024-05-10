@@ -1,3 +1,6 @@
+# ignore all regression test individual block files
+test/regression/mnt/blocks/**/[0-9]*.json
+
 # OS
 .DS_Store
 *.swp

@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"text/template"
 	"time"
@@ -22,6 +23,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"gitlab.com/thorchain/thornode/common"
+	openapi "gitlab.com/thorchain/thornode/openapi/gen"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
 	"gopkg.in/yaml.v3"
 )
@@ -50,7 +52,7 @@ func opFuncMap(routine int) template.FuncMap {
 ////////////////////////////////////////////////////////////////////////////////////////
 
 type Operation interface {
-	Execute(out io.Writer, routine int, thornode *os.Process, logs chan string) error
+	Execute(out io.Writer, path string, routine int, thornode *os.Process, logs chan string) error
 	OpType() string
 }
 
@@ -184,7 +186,7 @@ type OpEnv struct {
 	Value  string `json:"value"`
 }
 
-func (op *OpEnv) Execute(_ io.Writer, routine int, _ *os.Process, _ chan string) error {
+func (op *OpEnv) Execute(_ io.Writer, _ string, _ int, _ *os.Process, _ chan string) error {
 	return nil
 }
 
@@ -197,7 +199,7 @@ type OpState struct {
 	Genesis map[string]any `json:"genesis"`
 }
 
-func (op *OpState) Execute(_ io.Writer, routine int, _ *os.Process, _ chan string) error {
+func (op *OpState) Execute(_ io.Writer, _ string, routine int, _ *os.Process, _ chan string) error {
 	// extract HOME from command environment
 	home := fmt.Sprintf("/%d", routine)
 
@@ -295,7 +297,7 @@ func (op *OpCheck) prefetch(routine int) {
 	op.prefetchResp, op.prefetchErr = httpClient.Do(req)
 }
 
-func (op *OpCheck) Execute(out io.Writer, routine int, _ *os.Process, logs chan string) error {
+func (op *OpCheck) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
 	localLog := consoleLogger(out)
 
 	if op.prefetchErr != nil {
@@ -387,7 +389,7 @@ type OpCreateBlocks struct {
 	Exit           *int `json:"exit"`
 }
 
-func (op *OpCreateBlocks) Execute(out io.Writer, routine int, p *os.Process, logs chan string) error {
+func (op *OpCreateBlocks) Execute(out io.Writer, path string, routine int, p *os.Process, logs chan string) error {
 	localLog := consoleLogger(out)
 
 	// clear existing log output
@@ -395,7 +397,7 @@ func (op *OpCreateBlocks) Execute(out io.Writer, routine int, p *os.Process, log
 
 	for i := 0; i < op.Count; i++ {
 		// http request to localhost to unblock block creation
-		_, err := httpClient.Get(fmt.Sprintf("http://localhost:%d/newBlock", 8080+routine))
+		newBlockRes, err := httpClient.Get(fmt.Sprintf("http://localhost:%d/newBlock", 8080+routine))
 		if err != nil {
 			// if exit code is not set this was unexpected
 			if op.Exit == nil {
@@ -424,6 +426,77 @@ func (op *OpCreateBlocks) Execute(out io.Writer, routine int, p *os.Process, log
 			// exit code is correct, return nil
 			return nil
 		}
+
+		// parse height from response
+		body, err := io.ReadAll(newBlockRes.Body)
+		if err != nil {
+			localLog.Err(err).Msg("failed to read new block response")
+			return err
+		}
+		newBlockRes.Body.Close()
+		height, err := strconv.Atoi(string(body))
+		if err != nil {
+			localLog.Err(err).Msg("failed to parse new block response")
+			return err
+		}
+
+		// determine path for block output
+		path = strings.TrimPrefix(path, "suites/")
+		path = strings.TrimSuffix(path, filepath.Ext(path))
+		blockPath := fmt.Sprintf("/mnt/blocks/%s/%03d.json", path, height)
+
+		// make block directory
+		err = os.MkdirAll(filepath.Dir(blockPath), 0o755)
+		if err != nil {
+			localLog.Err(err).Str("path", blockPath).Msg("failed to create block directory")
+			return err
+		}
+
+		// truncate or create file
+		f, err := os.OpenFile(blockPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
+		if err != nil {
+			localLog.Err(err).Str("path", blockPath).Msg("failed to create block file")
+			return err
+		}
+
+		// avoid minor raciness after end block
+		time.Sleep(200 * time.Millisecond * getTimeFactor())
+
+		// get the block response
+		url := fmt.Sprintf("http://localhost:%d/thorchain/block?height=%d", 1317+routine, height)
+		// trunk-ignore(golangci-lint/gosec): variable url ok
+		res, err := http.Get(url)
+		if err != nil {
+			localLog.Err(err).Msg("failed to get block")
+			return err
+		}
+
+		// decode response
+		blockResponse := &openapi.BlockResponse{}
+		err = json.NewDecoder(res.Body).Decode(blockResponse)
+		if err != nil {
+			localLog.Err(err).Msg("failed to decode block response")
+			return err
+		}
+
+		// zero non-deterministic fields
+		blockResponse.Id = openapi.BlockResponseId{}
+		blockResponse.Header.Time = ""
+		blockResponse.Header.LastBlockId = openapi.BlockResponseId{}
+		blockResponse.Header.LastCommitHash = ""
+
+		// write to file
+		enc := json.NewEncoder(f)
+		enc.SetIndent("", "  ")
+		err = enc.Encode(blockResponse)
+		if err != nil {
+			localLog.Err(err).Msg("failed to encode block response")
+			return err
+		}
+
+		// close the file and response
+		_ = f.Close()
+		_ = res.Body.Close()
 	}
 
 	// if exit code is set, this was unexpected
@@ -431,9 +504,6 @@ func (op *OpCreateBlocks) Execute(out io.Writer, routine int, p *os.Process, log
 		localLog.Error().Int("expect", *op.Exit).Msg("expected exit code")
 		return errors.New("expected exit code")
 	}
-
-	// avoid minor raciness after end block
-	time.Sleep(200 * time.Millisecond * getTimeFactor())
 
 	if op.SkipInvariants {
 		return nil
@@ -509,7 +579,7 @@ type OpTxBan struct {
 	Gas         *int64         `json:"gas"`
 }
 
-func (op *OpTxBan) Execute(out io.Writer, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxBan) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
 	msg := types.NewMsgBan(op.NodeAddress, op.Signer)
 	return sendMsg(out, routine, msg, op.Signer, op.Sequence, op.Gas, op, logs)
 }
@@ -525,7 +595,7 @@ type OpTxErrataTx struct {
 	Gas      *int64         `json:"gas"`
 }
 
-func (op *OpTxErrataTx) Execute(out io.Writer, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxErrataTx) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
 	msg := types.NewMsgErrataTx(op.TxID, op.Chain, op.Signer)
 	return sendMsg(out, routine, msg, op.Signer, op.Sequence, op.Gas, op, logs)
 }
@@ -543,7 +613,7 @@ type OpTxNetworkFee struct {
 	Gas             *int64         `json:"gas"`
 }
 
-func (op *OpTxNetworkFee) Execute(out io.Writer, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxNetworkFee) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
 	msg := types.NewMsgNetworkFee(op.BlockHeight, op.Chain, op.TransactionSize, op.TransactionRate, op.Signer)
 	return sendMsg(out, routine, msg, op.Signer, op.Sequence, op.Gas, op, logs)
 }
@@ -558,7 +628,7 @@ type OpTxNodePauseChain struct {
 	Gas      *int64         `json:"gas"`
 }
 
-func (op *OpTxNodePauseChain) Execute(out io.Writer, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxNodePauseChain) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
 	msg := types.NewMsgNodePauseChain(op.Value, op.Signer)
 	return sendMsg(out, routine, msg, op.Signer, op.Sequence, op.Gas, op, logs)
 }
@@ -573,7 +643,7 @@ type OpTxObservedIn struct {
 	Gas      *int64             `json:"gas"`
 }
 
-func (op *OpTxObservedIn) Execute(out io.Writer, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxObservedIn) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
 	msg := types.NewMsgObservedTxIn(op.Txs, op.Signer)
 	return sendMsg(out, routine, msg, op.Signer, op.Sequence, op.Gas, op, logs)
 }
@@ -588,7 +658,7 @@ type OpTxObservedOut struct {
 	Gas      *int64             `json:"gas"`
 }
 
-func (op *OpTxObservedOut) Execute(out io.Writer, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxObservedOut) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
 	// render the memos (used for native_txid)
 	for i := range op.Txs {
 		tx := &op.Txs[i]
@@ -615,7 +685,7 @@ type OpTxSetIPAddress struct {
 	Gas       *int64         `json:"gas"`
 }
 
-func (op *OpTxSetIPAddress) Execute(out io.Writer, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxSetIPAddress) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
 	msg := types.NewMsgSetIPAddress(op.IPAddress, op.Signer)
 	return sendMsg(out, routine, msg, op.Signer, op.Sequence, op.Gas, op, logs)
 }
@@ -633,7 +703,7 @@ type OpTxSolvency struct {
 	Gas      *int64         `json:"gas"`
 }
 
-func (op *OpTxSolvency) Execute(out io.Writer, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxSolvency) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
 	msg, err := types.NewMsgSolvency(op.Chain, op.PubKey, op.Coins, op.Height, op.Signer)
 	if err != nil {
 		return err
@@ -652,7 +722,7 @@ type OpTxSetNodeKeys struct {
 	Gas                 *int64           `json:"gas"`
 }
 
-func (op *OpTxSetNodeKeys) Execute(out io.Writer, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxSetNodeKeys) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
 	msg := types.NewMsgSetNodeKeys(op.PubKeySet, op.ValidatorConsPubKey, op.Signer)
 	return sendMsg(out, routine, msg, op.Signer, op.Sequence, op.Gas, op, logs)
 }
@@ -667,7 +737,7 @@ type OpTxTssKeysign struct {
 	Gas      *int64 `json:"gas"`
 }
 
-func (op *OpTxTssKeysign) Execute(out io.Writer, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxTssKeysign) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
 	return sendMsg(out, routine, &op.MsgTssKeysignFail, op.MsgTssKeysignFail.Signer, op.Sequence, op.Gas, op, logs)
 }
 
@@ -688,7 +758,7 @@ type OpTxTssPool struct {
 	Gas             *int64           `json:"gas"`
 }
 
-func (op *OpTxTssPool) Execute(out io.Writer, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxTssPool) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
 	msg, err := types.NewMsgTssPool(op.PubKeys, op.PoolPubKey, op.KeysharesBackup, op.KeygenType, op.Height, op.Blame, op.Chains, op.Signer, op.KeygenTime)
 	if err != nil {
 		return err
@@ -705,7 +775,7 @@ type OpTxDeposit struct {
 	Gas              *int64 `json:"gas"`
 }
 
-func (op *OpTxDeposit) Execute(out io.Writer, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxDeposit) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
 	return sendMsg(out, routine, &op.MsgDeposit, op.Signer, op.Sequence, op.Gas, op, logs)
 }
 
@@ -718,7 +788,7 @@ type OpTxMimir struct {
 	Gas            *int64 `json:"gas"`
 }
 
-func (op *OpTxMimir) Execute(out io.Writer, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxMimir) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
 	return sendMsg(out, routine, &op.MsgMimir, op.Signer, op.Sequence, op.Gas, op, logs)
 }
 
@@ -731,7 +801,7 @@ type OpTxSend struct {
 	Gas           *int64 `json:"gas"`
 }
 
-func (op *OpTxSend) Execute(out io.Writer, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxSend) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
 	return sendMsg(out, routine, &op.MsgSend, op.FromAddress, op.Sequence, op.Gas, op, logs)
 }
 
@@ -744,7 +814,7 @@ type OpTxVersion struct {
 	Gas                 *int64 `json:"gas"`
 }
 
-func (op *OpTxVersion) Execute(out io.Writer, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxVersion) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
 	return sendMsg(out, routine, &op.MsgSetVersion, op.Signer, op.Sequence, op.Gas, op, logs)
 }
 
@@ -754,7 +824,7 @@ type OpFailExportInvariants struct {
 	OpBase `yaml:",inline"`
 }
 
-func (op *OpFailExportInvariants) Execute(out io.Writer, routine int, _ *os.Process, logs chan string) error {
+func (op *OpFailExportInvariants) Execute(out io.Writer, _ string, _ int, _ *os.Process, _ chan string) error {
 	return fmt.Errorf("fail-export-invariants should only be the last operation")
 }
 

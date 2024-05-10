@@ -15,6 +15,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/rs/zerolog/log"
 	"gitlab.com/thorchain/thornode/common"
+	openapi "gitlab.com/thorchain/thornode/openapi/gen"
 	"gitlab.com/thorchain/thornode/x/thorchain"
 )
 
@@ -25,6 +26,12 @@ import (
 func export(out io.Writer, path string, routine int, failExportInvariants bool) error {
 	localLog := consoleLogger(out)
 	home := "/" + strconv.Itoa(routine)
+
+	// export blocks
+	err := exportBlocks(out, path)
+	if err != nil {
+		return err
+	}
 
 	// export state
 	localLog.Debug().Msg("Exporting state")
@@ -103,6 +110,71 @@ func export(out io.Writer, path string, routine int, failExportInvariants bool) 
 	}
 
 	return checkExportChanges(out, export, exportPath)
+}
+
+// exportBlocks will concatenate the blocks exports written during the create-blocks
+// operations to a single file for the suite.
+func exportBlocks(out io.Writer, path string) error {
+	localLog := consoleLogger(out)
+
+	// determine path for the export
+	path = strings.TrimPrefix(path, "suites/")
+	path = strings.TrimSuffix(path, filepath.Ext(path))
+	blocksPath := fmt.Sprintf("/mnt/blocks/%s.json", path)
+	blocksDir := strings.TrimSuffix(blocksPath, filepath.Ext(blocksPath))
+
+	// read all block exports in the blocks directory
+	files, err := os.ReadDir(blocksDir)
+	if err != nil {
+		localLog.Fatal().Err(err).Msg("failed to read block exports")
+	}
+	blocks := []openapi.BlockResponse{}
+	for _, file := range files {
+		// append all blocks to the export
+		block := openapi.BlockResponse{}
+		var f *os.File
+		f, err = os.Open(filepath.Join(blocksDir, file.Name()))
+		if err != nil {
+			localLog.Fatal().Err(err).Msg("failed to open block export")
+		}
+		err = json.NewDecoder(f).Decode(&block)
+		if err != nil {
+			localLog.Fatal().Err(err).Msg("failed to decode block export")
+		}
+		blocks = append(blocks, block)
+		f.Close()
+	}
+
+	// check whether existing blocks export exists
+	_, err = os.Stat(blocksPath)
+	exportExists := err == nil
+
+	if !exportExists || os.Getenv("EXPORT") != "" {
+		localLog.Debug().Msg("Writing blocks export")
+
+		// create the parent directory
+		err = os.MkdirAll(filepath.Dir(blocksPath), 0o700)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to create blocks export directory")
+		}
+
+		// write the blocks file
+		f, err := os.Create(blocksPath)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to create blocks export")
+		}
+		enc := json.NewEncoder(f)
+		enc.SetIndent("", "  ")
+		err = enc.Encode(blocks)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to write blocks export")
+		}
+		f.Close()
+
+		return nil
+	}
+
+	return checkBlocksChanges(out, blocks, blocksPath)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -223,5 +295,36 @@ func checkExportChanges(out io.Writer, newExport map[string]any, path string) er
 	}
 
 	localLog.Info().Msg("State export matches expected")
+	return nil
+}
+
+func checkBlocksChanges(out io.Writer, newBlocks []openapi.BlockResponse, path string) error {
+	localLog := consoleLogger(out)
+
+	// compare existing blocks
+	localLog.Debug().Msg("Reading existing blocks")
+
+	// open existing blocks
+	f, err := os.Open(path)
+	if err != nil {
+		localLog.Fatal().Err(err).Msg("failed to open existing blocks")
+	}
+	defer f.Close()
+
+	// decode existing blocks
+	oldBlocks := []openapi.BlockResponse{}
+	err = json.NewDecoder(f).Decode(&oldBlocks)
+	if err != nil {
+		localLog.Err(err).Msg("failed to decode existing blocks")
+	}
+
+	// compare blocks
+	diff := cmp.Diff(oldBlocks, newBlocks)
+	if diff != "" {
+		localLog.Error().Msgf("blocks differ: %s", diff)
+		return errors.New("blocks differ")
+	}
+
+	localLog.Info().Msg("Blocks export matches expected")
 	return nil
 }

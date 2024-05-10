@@ -6,6 +6,7 @@ package app
 import (
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/rs/zerolog/log"
 
@@ -19,10 +20,14 @@ var (
 )
 
 func init() {
+	count := 0
+
 	// start an http server to unblock a block creation when a request is received
 	newBlock := func(w http.ResponseWriter, r *http.Request) {
 		begin <- struct{}{}
 		<-end
+		count++
+		w.Write([]byte(strconv.Itoa(count)))
 	}
 	http.HandleFunc("/newBlock", newBlock)
 	portString := os.Getenv("CREATE_BLOCK_PORT")
