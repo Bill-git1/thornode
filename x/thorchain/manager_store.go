@@ -119,6 +119,8 @@ func (smgr *StoreMgr) migrate(ctx cosmos.Context, i uint64) error {
 		migrateStoreV131(ctx, smgr.mgr)
 	case 132:
 		migrateStoreV132(ctx, smgr.mgr)
+	case 133:
+		migrateStoreV133(ctx, smgr.mgr)
 	}
 
 	smgr.mgr.Keeper().SetStoreVersion(ctx, int64(i))
@@ -318,5 +320,31 @@ func migrateStoreV95(ctx cosmos.Context, mgr *Mgrs) {
 
 	if err := mgr.Keeper().SetPOL(ctx, NewProtocolOwnedLiquidity()); err != nil {
 		panic(err)
+	}
+}
+
+func migrateStoreV133(ctx cosmos.Context, mgr *Mgrs) {
+	defer func() {
+		if err := recover(); err != nil {
+			ctx.Logger().Error("fail to migrate store to v133", "error", err)
+		}
+	}()
+
+	vaults, err := mgr.Keeper().GetAsgardVaults(ctx)
+	if err != nil {
+		ctx.Logger().Error("fail to get asgard vaults", "error", err)
+		return
+	}
+
+	// Zero all BNB Asset Amounts (following Ragnarok, in preparation for BEP2 sunset).
+	for _, vault := range vaults {
+		for i := range vault.Coins {
+			if vault.Coins[i].Asset.Chain.IsBNB() {
+				vault.Coins[i].Amount = cosmos.ZeroUint()
+			}
+		}
+		if err := mgr.Keeper().SetVault(ctx, vault); err != nil {
+			ctx.Logger().Error("fail to save vault", "error", err)
+		}
 	}
 }
