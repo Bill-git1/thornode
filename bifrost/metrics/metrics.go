@@ -173,6 +173,9 @@ func NewMetrics(cfg config.BifrostMetricsConfiguration) (*Metrics, error) {
 	for _, item := range histograms {
 		prometheus.MustRegister(item)
 	}
+	for _, item := range gauges {
+		prometheus.MustRegister(item)
+	}
 	// create a new mux server
 	server := http.NewServeMux()
 	// register a new handler for the /metrics endpoint
