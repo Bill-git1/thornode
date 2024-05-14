@@ -374,7 +374,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: registry.gitlab.com/thorchain/devops/node-launcher:bitcoin-daemon-26.0-1
+    image: registry.gitlab.com/thorchain/devops/node-launcher:bitcoin-daemon-26.1
     restart: unless-stopped
     environment:
       BTC_MASTER_ADDR: ${BTC_MASTER_ADDR:-bcrt1qj08ys4ct2hzzc2hcz6h2hgrvlmsjynawhcf2xa}
