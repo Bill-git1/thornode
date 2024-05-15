@@ -16,6 +16,7 @@ var (
 	ethTokenListV114 EVMTokenList
 	ethTokenListV126 EVMTokenList
 	ethTokenListV128 EVMTokenList
+	ethTokenListV133 EVMTokenList
 )
 
 func init() {
@@ -43,10 +44,15 @@ func init() {
 	if err := json.Unmarshal(ethtokens.ETHTokenListRawV128, &ethTokenListV128); err != nil {
 		panic(err)
 	}
+	if err := json.Unmarshal(ethtokens.ETHTokenListRawV133, &ethTokenListV133); err != nil {
+		panic(err)
+	}
 }
 
 func GetETHTokenList(version semver.Version) EVMTokenList {
 	switch {
+	case version.GTE(semver.MustParse("1.133.0")):
+		return ethTokenListV133
 	case version.GTE(semver.MustParse("1.128.0")):
 		return ethTokenListV128
 	case version.GTE(semver.MustParse("1.126.0")):

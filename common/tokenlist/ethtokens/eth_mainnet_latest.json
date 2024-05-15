@@ -8070,6 +8070,14 @@
       "symbol": "FLIP",
       "decimals": 18,
       "logoURI": "https://static.thorswap.net/token-list/images/eth.flip-0x826180541412d574cf1336d22c0c0a287822678a.png"
+    },
+    {
+      "address": "0x2C06BA9e7F0dACcbC1f6A33EA67e85bb68fbEE3a",
+      "chainId": 1,
+      "name": "Lends",
+      "symbol": "LENDS",
+      "decimals": 18,
+      "logoURI": "https://app.lends.so/tokens/eth.lends-0x2c06ba9e7f0daccbc1f6a33ea67e85bb68fbee3a.svg"
     }
   ],
   "logoURI": "https://1inch.exchange/assets/images/logo.png"
