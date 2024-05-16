@@ -269,6 +269,8 @@ func (h SwapHandler) handle(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result, er
 	ctx.Logger().Info("receive MsgSwap", "request tx hash", msg.Tx.ID, "source asset", msg.Tx.Coins[0].Asset, "target asset", msg.TargetAsset, "signer", msg.Signer.String())
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.133.0")):
+		return h.handleV133(ctx, msg)
 	case version.GTE(semver.MustParse("1.132.0")):
 		return h.handleV132(ctx, msg)
 	case version.GTE(semver.MustParse("1.121.0")):
@@ -298,7 +300,7 @@ func (h SwapHandler) handle(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result, er
 	}
 }
 
-func (h SwapHandler) handleV132(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result, error) {
+func (h SwapHandler) handleV133(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result, error) {
 	// test that the network we are running matches the destination network
 	// Don't change msg.Destination here; this line was introduced to avoid people from swapping mainnet asset,
 	// but using mocknet address.
@@ -306,10 +308,6 @@ func (h SwapHandler) handleV132(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result
 		return nil, fmt.Errorf("address(%s) is not same network", msg.Destination)
 	}
 
-	transactionFee, err := h.mgr.GasMgr().GetAssetOutboundFee(ctx, msg.TargetAsset, true)
-	if err != nil {
-		return nil, fmt.Errorf("fail to get transaction fee: %w", err)
-	}
 	synthVirtualDepthMult, err := h.mgr.Keeper().GetMimir(ctx, constants.VirtualMultSynthsBasisPoints.String())
 	if synthVirtualDepthMult < 1 || err != nil {
 		synthVirtualDepthMult = h.mgr.GetConstants().GetInt64Value(constants.VirtualMultSynthsBasisPoints)
@@ -381,7 +379,7 @@ func (h SwapHandler) handleV132(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result
 		dexAggTargetAsset,
 		msg.AggregatorTargetLimit,
 		swp,
-		transactionFee,
+		cosmos.ZeroUint(), // TODO: Remove this argument on hard fork.
 		synthVirtualDepthMult,
 		h.mgr)
 	if swapErr != nil {
@@ -408,9 +406,15 @@ func (h SwapHandler) handleV132(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result
 		if err != nil {
 			ctx.Logger().Error("failed to retrieve AffiliateCollector for thorname owner", "address", affThorname.Owner.String(), "error", err)
 		} else {
-			addRuneAmt := common.SafeSub(emit, transactionFee)
-			affCol.RuneAmount = affCol.RuneAmount.Add(addRuneAmt)
-			h.mgr.Keeper().SetAffiliateCollector(ctx, affCol)
+			// The TargetAsset has already been established to be RUNE.
+			transactionFee, err := h.mgr.GasMgr().GetAssetOutboundFee(ctx, common.RuneAsset(), true)
+			if err != nil {
+				ctx.Logger().Error("failed to get transaction fee", "error", err)
+			} else {
+				addRuneAmt := common.SafeSub(emit, transactionFee)
+				affCol.RuneAmount = affCol.RuneAmount.Add(addRuneAmt)
+				h.mgr.Keeper().SetAffiliateCollector(ctx, affCol)
+			}
 		}
 	}
 

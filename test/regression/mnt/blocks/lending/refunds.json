@@ -679,7 +679,7 @@
         "from": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
         "id": "0000000000000000000000000000000000000000000000000000000000000001",
         "memo": "loan+:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877:0::0:::0",
-        "reason": "fail swap, not enough fee",
+        "reason": "fail to add outbound tx: 2 errors occurred:\n\t* internal error\n\t* not enough asset to pay for fees\n\n",
         "to": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk",
         "type": "refund"
       },
@@ -2070,7 +2070,7 @@
         "from": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
         "id": "0000000000000000000000000000000000000000000000000000000000000005",
         "memo": "loan+:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877:0::0:::0",
-        "reason": "fail swap, not enough fee; fail to refund (10100 BTC.BTC): not enough asset to pay for fees",
+        "reason": "fail to add outbound tx: 2 errors occurred:\n\t* internal error\n\t* not enough asset to pay for fees\n\n; fail to refund (10100 BTC.BTC): not enough asset to pay for fees",
         "to": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk",
         "type": "refund"
       },

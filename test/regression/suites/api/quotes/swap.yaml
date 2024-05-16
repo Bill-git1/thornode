@@ -670,7 +670,7 @@ params:
   affiliate_bps: 10
   destination: {{ addr_thor_fox }}
 asserts:
-  - .error|contains("output RUNE (96137) is not enough to pay transaction fee")
+  - .error|contains("not enough asset to pay for fees")
 ---
 ########################################################################################
 # from RUNE - affiliate swap fails, should return error

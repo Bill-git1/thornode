@@ -51,7 +51,7 @@ func (s *SwapperVCUR) Swap(ctx cosmos.Context,
 	dexAggTargetAsset string,
 	dexAggLimit *cosmos.Uint,
 	swp StreamingSwap,
-	transactionFee cosmos.Uint, synthVirtualDepthMult int64, mgr Manager,
+	_ cosmos.Uint, synthVirtualDepthMult int64, mgr Manager,
 ) (cosmos.Uint, []*EventSwap, error) {
 	var swapEvents []*EventSwap
 
@@ -86,7 +86,7 @@ func (s *SwapperVCUR) Swap(ctx cosmos.Context,
 		var swapEvt *EventSwap
 		var amt cosmos.Uint
 		// Here we use a swapTarget of 0 because the target is for the next swap asset in a double swap
-		amt, swapEvt, swapErr = s.swapOne(ctx, mgr, tx, common.RuneAsset(), destination, cosmos.ZeroUint(), transactionFee, synthVirtualDepthMult)
+		amt, swapEvt, swapErr = s.swapOne(ctx, mgr, tx, common.RuneAsset(), destination, cosmos.ZeroUint(), synthVirtualDepthMult)
 		if swapErr != nil {
 			return cosmos.ZeroUint(), swapEvents, swapErr
 		}
@@ -94,7 +94,7 @@ func (s *SwapperVCUR) Swap(ctx cosmos.Context,
 		tx.Gas = nil
 		swapEvents = append(swapEvents, swapEvt)
 	}
-	assetAmount, swapEvt, swapErr := s.swapOne(ctx, mgr, tx, target, destination, swapTarget, transactionFee, synthVirtualDepthMult)
+	assetAmount, swapEvt, swapErr := s.swapOne(ctx, mgr, tx, target, destination, swapTarget, synthVirtualDepthMult)
 	if swapErr != nil {
 		return cosmos.ZeroUint(), swapEvents, swapErr
 	}
@@ -104,11 +104,6 @@ func (s *SwapperVCUR) Swap(ctx cosmos.Context,
 		// catch the error. DO NOT change this error string without updating
 		// the order book manager as well
 		return cosmos.ZeroUint(), swapEvents, fmt.Errorf("emit asset %s less than price limit %s", assetAmount, swapTarget)
-	}
-	if target.IsRune() {
-		if assetAmount.LTE(transactionFee) {
-			return cosmos.ZeroUint(), swapEvents, fmt.Errorf("output RUNE (%s) is not enough to pay transaction fee", assetAmount)
-		}
 	}
 	// emit asset is zero
 	if assetAmount.IsZero() {
@@ -185,21 +180,16 @@ func (s *SwapperVCUR) swapOne(ctx cosmos.Context,
 	target common.Asset,
 	destination common.Address,
 	swapTarget cosmos.Uint,
-	transactionFee cosmos.Uint,
 	synthVirtualDepthMult int64,
 ) (amt cosmos.Uint, evt *EventSwap, swapErr error) {
 	source := tx.Coins[0].Asset
 	amount := tx.Coins[0].Amount
 
-	ctx.Logger().Info("swapping", "from", tx.FromAddress, "coins", tx.Coins[0], "target", target, "to", destination, "fee", transactionFee)
+	ctx.Logger().Info("swapping", "from", tx.FromAddress, "coins", tx.Coins[0], "target", target, "to", destination)
 
 	// Set asset to our pool asset
 	var poolAsset common.Asset
 	if source.IsRune() {
-		if amount.LTE(transactionFee) {
-			// stop swap , because the output will not enough to pay for transaction fee
-			return cosmos.ZeroUint(), evt, errSwapFailNotEnoughFee
-		}
 		poolAsset = target.GetLayer1Asset()
 	} else {
 		poolAsset = source.GetLayer1Asset()

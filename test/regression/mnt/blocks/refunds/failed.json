@@ -523,7 +523,7 @@
         "from": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
         "id": "251B8BFF7DA1A9063CA3DA1D8858EA33572376AE9124E401E65F8DF30C002554",
         "memo": "=:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
-        "reason": "fail swap, not enough fee; fail to refund (10000 THOR.RUNE): not enough asset to pay for fees",
+        "reason": "fail to add outbound tx: 2 errors occurred:\n\t* internal error\n\t* not enough asset to pay for fees\n\n; fail to refund (10000 THOR.RUNE): not enough asset to pay for fees",
         "to": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "refund"
       },
@@ -785,7 +785,7 @@
         "from": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
         "id": "E78A753857922D7716ED318C09C5EF912F63C384AB6DB4AEA74CD3D9413261FE",
         "memo": "=:THOR.RUNE:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
-        "reason": "output RUNE (100999) is not enough to pay transaction fee; fail to refund (100 BTC/BTC): not enough asset to pay for fees",
+        "reason": "fail to add outbound tx: 2 errors occurred:\n\t* internal error\n\t* not enough asset to pay for fees\n\n; fail to refund (100 BTC/BTC): not enough asset to pay for fees",
         "to": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "refund"
       },
@@ -1016,7 +1016,7 @@
         "from": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
         "id": "0000000000000000000000000000000000000000000000000000000000000001",
         "memo": "=:THOR.RUNE:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
-        "reason": "output RUNE (1009984) is not enough to pay transaction fee; fail to refund (1000 BTC.BTC): not enough asset to pay for fees",
+        "reason": "fail to add outbound tx: 2 errors occurred:\n\t* internal error\n\t* not enough asset to pay for fees\n\n; fail to refund (1000 BTC.BTC): not enough asset to pay for fees",
         "to": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk",
         "type": "refund"
       },

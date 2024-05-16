@@ -4998,7 +4998,7 @@
         "from": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
         "id": "0000000000000000000000000000000000000000000000000000000000000006",
         "memo": "loan+:ETH.USDX-0X9999999999999999999999999999999999999999:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877:0:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u:100:::0",
-        "reason": "fail swap, not enough fee",
+        "reason": "fail to add outbound tx: 2 errors occurred:\n\t* internal error\n\t* not enough asset to pay for fees\n\n",
         "to": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk",
         "type": "refund"
       },
