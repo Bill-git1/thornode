@@ -11,6 +11,9 @@ import (
 	"strings"
 	"time"
 
+	ctypes "github.com/cosmos/cosmos-sdk/types"
+	"gitlab.com/thorchain/thornode/app"
+	"gitlab.com/thorchain/thornode/app/params"
 	"gitlab.com/thorchain/thornode/constants"
 	openapi "gitlab.com/thorchain/thornode/openapi/gen"
 
@@ -75,7 +78,7 @@ func height() (int64, error) {
 	return strconv.ParseInt(statusResp.Result.SyncInfo.LatestBlockHeight, 10, 64)
 }
 
-func getBlock(height int64) (*openapi.BlockResponse, error) {
+func getBlock(height int64) (*BlockResponse, error) {
 	url := APIEndpoint + "/thorchain/block?height=" + strconv.FormatInt(height, 10)
 
 	// build request
@@ -114,7 +117,7 @@ func getBlock(height int64) (*openapi.BlockResponse, error) {
 	}
 
 	// decode response
-	var blockResp openapi.BlockResponse
+	var blockResp BlockResponse
 	err = json.NewDecoder(res.Body).Decode(&blockResp)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to decode block response")
@@ -131,6 +134,8 @@ var (
 	Parallelism = 4
 	RPCEndpoint = "https://rpc-v1.ninerealms.com"
 	APIEndpoint = "https://thornode-v1.ninerealms.com"
+
+	encodingConfig params.EncodingConfig
 )
 
 func init() {
@@ -174,13 +179,56 @@ func init() {
 
 	// create new client with better connection reuse
 	httpClient = &http.Client{Transport: transport}
+
+	// create encoding config
+	encodingConfig = app.MakeEncodingConfig()
+}
+
+// -------------------------------------------------------------------------------------
+// Types
+// -------------------------------------------------------------------------------------
+
+// BlockTx wraps the openapi type with a custom Tx field for unmarshaling.
+type BlockTx struct {
+	openapi.BlockTx
+	Tx ctypes.Tx `json:"tx"`
+}
+
+func (b *BlockTx) UnmarshalJSON(data []byte) error {
+	// unmarshal into temporary type with raw json tx
+	type unmarshalQueryBlockTx struct {
+		openapi.BlockTx
+		Tx json.RawMessage `json:"tx,omitempty"`
+	}
+	var ubt unmarshalQueryBlockTx
+	if err := json.Unmarshal(data, &ubt); err != nil {
+		return err
+	}
+	b.BlockTx = ubt.BlockTx
+
+	// unmarshal tx into cosmos type
+	if ubt.Tx != nil {
+		tx, err := encodingConfig.TxConfig.TxJSONDecoder()(ubt.Tx)
+		if err != nil {
+			return err
+		}
+		b.Tx = tx
+	}
+
+	return nil
+}
+
+// BlockResponse wraps the openapi type with a custom Txs field for unmarshaling.
+type BlockResponse struct {
+	openapi.BlockResponse
+	Txs []BlockTx `json:"txs"`
 }
 
 // -------------------------------------------------------------------------------------
 // Exported
 // -------------------------------------------------------------------------------------
 
-func Scan(startHeight, stopHeight int) <-chan *openapi.BlockResponse {
+func Scan(startHeight, stopHeight int) <-chan *BlockResponse {
 	// get current height if start was not provided
 	if startHeight <= 0 || stopHeight < 0 {
 		height, err := height()
@@ -206,10 +254,10 @@ func Scan(startHeight, stopHeight int) <-chan *openapi.BlockResponse {
 	}()
 
 	// setup ring buffer for block prefetching with routine per slot
-	ring := make([]chan *openapi.BlockResponse, Parallelism)
+	ring := make([]chan *BlockResponse, Parallelism)
 	shutdown := make(chan struct{}, Parallelism-1)
 	for i := 0; i < Parallelism; i++ {
-		ring[i] = make(chan *openapi.BlockResponse)
+		ring[i] = make(chan *BlockResponse)
 		go func(i int) {
 			for height := range queue {
 				for {
@@ -245,7 +293,7 @@ func Scan(startHeight, stopHeight int) <-chan *openapi.BlockResponse {
 	}
 
 	// start sequential reader to send to blocks channel
-	out := make(chan *openapi.BlockResponse)
+	out := make(chan *BlockResponse)
 	go func() {
 		for height := int64(startHeight); stopHeight == 0 || int(height) <= stopHeight; height++ {
 			out <- <-ring[int(height)%Parallelism]

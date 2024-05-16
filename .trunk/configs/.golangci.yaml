@@ -34,3 +34,6 @@ linters-settings:
   # settings:
   #   shadow:
   #     strict: true
+  gosec:
+    excludes:
+      - G107 # variable urls
