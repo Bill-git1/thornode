@@ -426,9 +426,14 @@ func quoteInboundInfo(ctx cosmos.Context, mgr *Mgrs, amount sdk.Uint, chain comm
 			confirmations = maxConfirmations
 		}
 	}
+
 	// min confirmation adjustment
-	if chain.Equals(common.ETHChain) || chain.Equals(common.DOGEChain) && confirmations < 2 {
-		confirmations = 2
+	confFloor := map[common.Chain]int64{
+		common.ETHChain:  2,
+		common.DOGEChain: 2,
+	}
+	if floor := confFloor[chain]; confirmations < floor {
+		confirmations = floor
 	}
 
 	return address, router, confirmations, nil
