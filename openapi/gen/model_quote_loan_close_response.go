@@ -27,10 +27,6 @@ type QuoteLoanCloseResponse struct {
 	// the approximate seconds for the outbound delay before it will be sent
 	OutboundDelaySeconds int64 `json:"outbound_delay_seconds"`
 	Fees QuoteFees `json:"fees"`
-	// Deprecated - migrate to fees object.
-	SlippageBps *int64 `json:"slippage_bps,omitempty"`
-	// Deprecated - migrate to fees object.
-	StreamingSlippageBps *int64 `json:"streaming_slippage_bps,omitempty"`
 	// the EVM chain router contract address
 	Router *string `json:"router,omitempty"`
 	// expiration timestamp in unix seconds
@@ -262,70 +258,6 @@ func (o *QuoteLoanCloseResponse) GetFeesOk() (*QuoteFees, bool) {
 // SetFees sets field value
 func (o *QuoteLoanCloseResponse) SetFees(v QuoteFees) {
 	o.Fees = v
-}
-
-// GetSlippageBps returns the SlippageBps field value if set, zero value otherwise.
-func (o *QuoteLoanCloseResponse) GetSlippageBps() int64 {
-	if o == nil || o.SlippageBps == nil {
-		var ret int64
-		return ret
-	}
-	return *o.SlippageBps
-}
-
-// GetSlippageBpsOk returns a tuple with the SlippageBps field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *QuoteLoanCloseResponse) GetSlippageBpsOk() (*int64, bool) {
-	if o == nil || o.SlippageBps == nil {
-		return nil, false
-	}
-	return o.SlippageBps, true
-}
-
-// HasSlippageBps returns a boolean if a field has been set.
-func (o *QuoteLoanCloseResponse) HasSlippageBps() bool {
-	if o != nil && o.SlippageBps != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetSlippageBps gets a reference to the given int64 and assigns it to the SlippageBps field.
-func (o *QuoteLoanCloseResponse) SetSlippageBps(v int64) {
-	o.SlippageBps = &v
-}
-
-// GetStreamingSlippageBps returns the StreamingSlippageBps field value if set, zero value otherwise.
-func (o *QuoteLoanCloseResponse) GetStreamingSlippageBps() int64 {
-	if o == nil || o.StreamingSlippageBps == nil {
-		var ret int64
-		return ret
-	}
-	return *o.StreamingSlippageBps
-}
-
-// GetStreamingSlippageBpsOk returns a tuple with the StreamingSlippageBps field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *QuoteLoanCloseResponse) GetStreamingSlippageBpsOk() (*int64, bool) {
-	if o == nil || o.StreamingSlippageBps == nil {
-		return nil, false
-	}
-	return o.StreamingSlippageBps, true
-}
-
-// HasStreamingSlippageBps returns a boolean if a field has been set.
-func (o *QuoteLoanCloseResponse) HasStreamingSlippageBps() bool {
-	if o != nil && o.StreamingSlippageBps != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetStreamingSlippageBps gets a reference to the given int64 and assigns it to the StreamingSlippageBps field.
-func (o *QuoteLoanCloseResponse) SetStreamingSlippageBps(v int64) {
-	o.StreamingSlippageBps = &v
 }
 
 // GetRouter returns the Router field value if set, zero value otherwise.
@@ -771,12 +703,6 @@ func (o QuoteLoanCloseResponse) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if true {
 		toSerialize["fees"] = o.Fees
-	}
-	if o.SlippageBps != nil {
-		toSerialize["slippage_bps"] = o.SlippageBps
-	}
-	if o.StreamingSlippageBps != nil {
-		toSerialize["streaming_slippage_bps"] = o.StreamingSlippageBps
 	}
 	if o.Router != nil {
 		toSerialize["router"] = o.Router

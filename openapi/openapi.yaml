@@ -3652,14 +3652,6 @@ components:
           description: the approximate seconds for the outbound delay before it will be sent
         fees:
           $ref: "#/components/schemas/QuoteFees"
-        slippage_bps:
-          type: integer
-          format: int64
-          description: Deprecated - migrate to fees object.
-        streaming_slippage_bps:
-          type: integer
-          format: int64
-          description: Deprecated - migrate to fees object.
         router:
           type: string
           description: the EVM chain router contract address
@@ -3698,12 +3690,9 @@ components:
       type: object
       required:
         - expected_amount_out
-        - expected_amount_out_streaming
         - outbound_delay_blocks
         - outbound_delay_seconds
         - fees
-        - slippage_bps
-        - streaming_slippage_bps
         - warning
         - notes
         - expiry
@@ -3716,10 +3705,6 @@ components:
         expected_amount_out:
           type: string
           description: the amount of the target asset the user can expect to receive after fees
-          example: "10000"
-        expected_amount_out_streaming:
-          type: string
-          description: Deprecated - expected_amount_out is streaming amount if interval provided.
           example: "10000"
         max_streaming_quantity:
           type: integer

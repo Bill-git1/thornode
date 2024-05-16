@@ -27,10 +27,6 @@ type QuoteSwapResponse struct {
 	// the approximate seconds for the outbound delay before it will be sent
 	OutboundDelaySeconds int64 `json:"outbound_delay_seconds"`
 	Fees QuoteFees `json:"fees"`
-	// Deprecated - migrate to fees object.
-	SlippageBps int64 `json:"slippage_bps"`
-	// Deprecated - migrate to fees object.
-	StreamingSlippageBps int64 `json:"streaming_slippage_bps"`
 	// the EVM chain router contract address
 	Router *string `json:"router,omitempty"`
 	// expiration timestamp in unix seconds
@@ -51,8 +47,6 @@ type QuoteSwapResponse struct {
 	Memo *string `json:"memo,omitempty"`
 	// the amount of the target asset the user can expect to receive after fees
 	ExpectedAmountOut string `json:"expected_amount_out"`
-	// Deprecated - expected_amount_out is streaming amount if interval provided.
-	ExpectedAmountOutStreaming string `json:"expected_amount_out_streaming"`
 	// the maximum amount of trades a streaming swap can do for a trade
 	MaxStreamingQuantity *int64 `json:"max_streaming_quantity,omitempty"`
 	// the number of blocks the streaming swap will execute over
@@ -67,18 +61,15 @@ type QuoteSwapResponse struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewQuoteSwapResponse(outboundDelayBlocks int64, outboundDelaySeconds int64, fees QuoteFees, slippageBps int64, streamingSlippageBps int64, expiry int64, warning string, notes string, expectedAmountOut string, expectedAmountOutStreaming string) *QuoteSwapResponse {
+func NewQuoteSwapResponse(outboundDelayBlocks int64, outboundDelaySeconds int64, fees QuoteFees, expiry int64, warning string, notes string, expectedAmountOut string) *QuoteSwapResponse {
 	this := QuoteSwapResponse{}
 	this.OutboundDelayBlocks = outboundDelayBlocks
 	this.OutboundDelaySeconds = outboundDelaySeconds
 	this.Fees = fees
-	this.SlippageBps = slippageBps
-	this.StreamingSlippageBps = streamingSlippageBps
 	this.Expiry = expiry
 	this.Warning = warning
 	this.Notes = notes
 	this.ExpectedAmountOut = expectedAmountOut
-	this.ExpectedAmountOutStreaming = expectedAmountOutStreaming
 	return &this
 }
 
@@ -256,54 +247,6 @@ func (o *QuoteSwapResponse) GetFeesOk() (*QuoteFees, bool) {
 // SetFees sets field value
 func (o *QuoteSwapResponse) SetFees(v QuoteFees) {
 	o.Fees = v
-}
-
-// GetSlippageBps returns the SlippageBps field value
-func (o *QuoteSwapResponse) GetSlippageBps() int64 {
-	if o == nil {
-		var ret int64
-		return ret
-	}
-
-	return o.SlippageBps
-}
-
-// GetSlippageBpsOk returns a tuple with the SlippageBps field value
-// and a boolean to check if the value has been set.
-func (o *QuoteSwapResponse) GetSlippageBpsOk() (*int64, bool) {
-	if o == nil {
-		return nil, false
-	}
-	return &o.SlippageBps, true
-}
-
-// SetSlippageBps sets field value
-func (o *QuoteSwapResponse) SetSlippageBps(v int64) {
-	o.SlippageBps = v
-}
-
-// GetStreamingSlippageBps returns the StreamingSlippageBps field value
-func (o *QuoteSwapResponse) GetStreamingSlippageBps() int64 {
-	if o == nil {
-		var ret int64
-		return ret
-	}
-
-	return o.StreamingSlippageBps
-}
-
-// GetStreamingSlippageBpsOk returns a tuple with the StreamingSlippageBps field value
-// and a boolean to check if the value has been set.
-func (o *QuoteSwapResponse) GetStreamingSlippageBpsOk() (*int64, bool) {
-	if o == nil {
-		return nil, false
-	}
-	return &o.StreamingSlippageBps, true
-}
-
-// SetStreamingSlippageBps sets field value
-func (o *QuoteSwapResponse) SetStreamingSlippageBps(v int64) {
-	o.StreamingSlippageBps = v
 }
 
 // GetRouter returns the Router field value if set, zero value otherwise.
@@ -594,30 +537,6 @@ func (o *QuoteSwapResponse) SetExpectedAmountOut(v string) {
 	o.ExpectedAmountOut = v
 }
 
-// GetExpectedAmountOutStreaming returns the ExpectedAmountOutStreaming field value
-func (o *QuoteSwapResponse) GetExpectedAmountOutStreaming() string {
-	if o == nil {
-		var ret string
-		return ret
-	}
-
-	return o.ExpectedAmountOutStreaming
-}
-
-// GetExpectedAmountOutStreamingOk returns a tuple with the ExpectedAmountOutStreaming field value
-// and a boolean to check if the value has been set.
-func (o *QuoteSwapResponse) GetExpectedAmountOutStreamingOk() (*string, bool) {
-	if o == nil {
-		return nil, false
-	}
-	return &o.ExpectedAmountOutStreaming, true
-}
-
-// SetExpectedAmountOutStreaming sets field value
-func (o *QuoteSwapResponse) SetExpectedAmountOutStreaming(v string) {
-	o.ExpectedAmountOutStreaming = v
-}
-
 // GetMaxStreamingQuantity returns the MaxStreamingQuantity field value if set, zero value otherwise.
 func (o *QuoteSwapResponse) GetMaxStreamingQuantity() int64 {
 	if o == nil || o.MaxStreamingQuantity == nil {
@@ -766,12 +685,6 @@ func (o QuoteSwapResponse) MarshalJSON_deprecated() ([]byte, error) {
 	if true {
 		toSerialize["fees"] = o.Fees
 	}
-	if true {
-		toSerialize["slippage_bps"] = o.SlippageBps
-	}
-	if true {
-		toSerialize["streaming_slippage_bps"] = o.StreamingSlippageBps
-	}
 	if o.Router != nil {
 		toSerialize["router"] = o.Router
 	}
@@ -801,9 +714,6 @@ func (o QuoteSwapResponse) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if true {
 		toSerialize["expected_amount_out"] = o.ExpectedAmountOut
-	}
-	if true {
-		toSerialize["expected_amount_out_streaming"] = o.ExpectedAmountOutStreaming
 	}
 	if o.MaxStreamingQuantity != nil {
 		toSerialize["max_streaming_quantity"] = o.MaxStreamingQuantity

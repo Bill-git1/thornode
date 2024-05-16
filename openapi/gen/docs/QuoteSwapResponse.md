@@ -10,8 +10,6 @@ Name | Type | Description | Notes
 **OutboundDelayBlocks** | **int64** | the number of thorchain blocks the outbound will be delayed | 
 **OutboundDelaySeconds** | **int64** | the approximate seconds for the outbound delay before it will be sent | 
 **Fees** | [**QuoteFees**](QuoteFees.md) |  | 
-**SlippageBps** | **int64** | Deprecated - migrate to fees object. | 
-**StreamingSlippageBps** | **int64** | Deprecated - migrate to fees object. | 
 **Router** | Pointer to **string** | the EVM chain router contract address | [optional] 
 **Expiry** | **int64** | expiration timestamp in unix seconds | 
 **Warning** | **string** | static warning message | 
@@ -22,7 +20,6 @@ Name | Type | Description | Notes
 **GasRateUnits** | Pointer to **string** | the units of the recommended gas rate | [optional] 
 **Memo** | Pointer to **string** | generated memo for the swap | [optional] 
 **ExpectedAmountOut** | **string** | the amount of the target asset the user can expect to receive after fees | 
-**ExpectedAmountOutStreaming** | **string** | Deprecated - expected_amount_out is streaming amount if interval provided. | 
 **MaxStreamingQuantity** | Pointer to **int64** | the maximum amount of trades a streaming swap can do for a trade | [optional] 
 **StreamingSwapBlocks** | Pointer to **int64** | the number of blocks the streaming swap will execute over | [optional] 
 **StreamingSwapSeconds** | Pointer to **int64** | approx the number of seconds the streaming swap will execute over | [optional] 
@@ -32,7 +29,7 @@ Name | Type | Description | Notes
 
 ### NewQuoteSwapResponse
 
-`func NewQuoteSwapResponse(outboundDelayBlocks int64, outboundDelaySeconds int64, fees QuoteFees, slippageBps int64, streamingSlippageBps int64, expiry int64, warning string, notes string, expectedAmountOut string, expectedAmountOutStreaming string, ) *QuoteSwapResponse`
+`func NewQuoteSwapResponse(outboundDelayBlocks int64, outboundDelaySeconds int64, fees QuoteFees, expiry int64, warning string, notes string, expectedAmountOut string, ) *QuoteSwapResponse`
 
 NewQuoteSwapResponse instantiates a new QuoteSwapResponse object
 This constructor will assign default values to properties that have it defined,
@@ -180,46 +177,6 @@ and a boolean to check if the value has been set.
 `func (o *QuoteSwapResponse) SetFees(v QuoteFees)`
 
 SetFees sets Fees field to given value.
-
-
-### GetSlippageBps
-
-`func (o *QuoteSwapResponse) GetSlippageBps() int64`
-
-GetSlippageBps returns the SlippageBps field if non-nil, zero value otherwise.
-
-### GetSlippageBpsOk
-
-`func (o *QuoteSwapResponse) GetSlippageBpsOk() (*int64, bool)`
-
-GetSlippageBpsOk returns a tuple with the SlippageBps field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetSlippageBps
-
-`func (o *QuoteSwapResponse) SetSlippageBps(v int64)`
-
-SetSlippageBps sets SlippageBps field to given value.
-
-
-### GetStreamingSlippageBps
-
-`func (o *QuoteSwapResponse) GetStreamingSlippageBps() int64`
-
-GetStreamingSlippageBps returns the StreamingSlippageBps field if non-nil, zero value otherwise.
-
-### GetStreamingSlippageBpsOk
-
-`func (o *QuoteSwapResponse) GetStreamingSlippageBpsOk() (*int64, bool)`
-
-GetStreamingSlippageBpsOk returns a tuple with the StreamingSlippageBps field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetStreamingSlippageBps
-
-`func (o *QuoteSwapResponse) SetStreamingSlippageBps(v int64)`
-
-SetStreamingSlippageBps sets StreamingSlippageBps field to given value.
 
 
 ### GetRouter
@@ -450,26 +407,6 @@ and a boolean to check if the value has been set.
 `func (o *QuoteSwapResponse) SetExpectedAmountOut(v string)`
 
 SetExpectedAmountOut sets ExpectedAmountOut field to given value.
-
-
-### GetExpectedAmountOutStreaming
-
-`func (o *QuoteSwapResponse) GetExpectedAmountOutStreaming() string`
-
-GetExpectedAmountOutStreaming returns the ExpectedAmountOutStreaming field if non-nil, zero value otherwise.
-
-### GetExpectedAmountOutStreamingOk
-
-`func (o *QuoteSwapResponse) GetExpectedAmountOutStreamingOk() (*string, bool)`
-
-GetExpectedAmountOutStreamingOk returns a tuple with the ExpectedAmountOutStreaming field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetExpectedAmountOutStreaming
-
-`func (o *QuoteSwapResponse) SetExpectedAmountOutStreaming(v string)`
-
-SetExpectedAmountOutStreaming sets ExpectedAmountOutStreaming field to given value.
 
 
 ### GetMaxStreamingQuantity

@@ -10,8 +10,6 @@ Name | Type | Description | Notes
 **OutboundDelayBlocks** | Pointer to **int64** | the number of thorchain blocks the outbound will be delayed | [optional] 
 **OutboundDelaySeconds** | Pointer to **int64** | the approximate seconds for the outbound delay before it will be sent | [optional] 
 **Fees** | [**QuoteFees**](QuoteFees.md) |  | 
-**SlippageBps** | **int64** | Deprecated - migrate to fees object. | 
-**StreamingSlippageBps** | Pointer to **int64** | Deprecated - migrate to fees object. | [optional] 
 **Router** | Pointer to **string** | the EVM chain router contract address | [optional] 
 **Expiry** | **int64** | expiration timestamp in unix seconds | 
 **Warning** | **string** | static warning message | 
@@ -28,7 +26,7 @@ Name | Type | Description | Notes
 
 ### NewQuoteSaverDepositResponse
 
-`func NewQuoteSaverDepositResponse(inboundAddress string, fees QuoteFees, slippageBps int64, expiry int64, warning string, notes string, recommendedGasRate string, gasRateUnits string, memo string, expectedAmountDeposit string, ) *QuoteSaverDepositResponse`
+`func NewQuoteSaverDepositResponse(inboundAddress string, fees QuoteFees, expiry int64, warning string, notes string, recommendedGasRate string, gasRateUnits string, memo string, expectedAmountDeposit string, ) *QuoteSaverDepositResponse`
 
 NewQuoteSaverDepositResponse instantiates a new QuoteSaverDepositResponse object
 This constructor will assign default values to properties that have it defined,
@@ -182,51 +180,6 @@ and a boolean to check if the value has been set.
 
 SetFees sets Fees field to given value.
 
-
-### GetSlippageBps
-
-`func (o *QuoteSaverDepositResponse) GetSlippageBps() int64`
-
-GetSlippageBps returns the SlippageBps field if non-nil, zero value otherwise.
-
-### GetSlippageBpsOk
-
-`func (o *QuoteSaverDepositResponse) GetSlippageBpsOk() (*int64, bool)`
-
-GetSlippageBpsOk returns a tuple with the SlippageBps field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetSlippageBps
-
-`func (o *QuoteSaverDepositResponse) SetSlippageBps(v int64)`
-
-SetSlippageBps sets SlippageBps field to given value.
-
-
-### GetStreamingSlippageBps
-
-`func (o *QuoteSaverDepositResponse) GetStreamingSlippageBps() int64`
-
-GetStreamingSlippageBps returns the StreamingSlippageBps field if non-nil, zero value otherwise.
-
-### GetStreamingSlippageBpsOk
-
-`func (o *QuoteSaverDepositResponse) GetStreamingSlippageBpsOk() (*int64, bool)`
-
-GetStreamingSlippageBpsOk returns a tuple with the StreamingSlippageBps field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetStreamingSlippageBps
-
-`func (o *QuoteSaverDepositResponse) SetStreamingSlippageBps(v int64)`
-
-SetStreamingSlippageBps sets StreamingSlippageBps field to given value.
-
-### HasStreamingSlippageBps
-
-`func (o *QuoteSaverDepositResponse) HasStreamingSlippageBps() bool`
-
-HasStreamingSlippageBps returns a boolean if a field has been set.
 
 ### GetRouter
 

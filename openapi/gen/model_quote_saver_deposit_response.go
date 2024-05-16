@@ -27,10 +27,6 @@ type QuoteSaverDepositResponse struct {
 	// the approximate seconds for the outbound delay before it will be sent
 	OutboundDelaySeconds *int64 `json:"outbound_delay_seconds,omitempty"`
 	Fees QuoteFees `json:"fees"`
-	// Deprecated - migrate to fees object.
-	SlippageBps int64 `json:"slippage_bps"`
-	// Deprecated - migrate to fees object.
-	StreamingSlippageBps *int64 `json:"streaming_slippage_bps,omitempty"`
 	// the EVM chain router contract address
 	Router *string `json:"router,omitempty"`
 	// expiration timestamp in unix seconds
@@ -59,11 +55,10 @@ type QuoteSaverDepositResponse struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewQuoteSaverDepositResponse(inboundAddress string, fees QuoteFees, slippageBps int64, expiry int64, warning string, notes string, recommendedGasRate string, gasRateUnits string, memo string, expectedAmountDeposit string) *QuoteSaverDepositResponse {
+func NewQuoteSaverDepositResponse(inboundAddress string, fees QuoteFees, expiry int64, warning string, notes string, recommendedGasRate string, gasRateUnits string, memo string, expectedAmountDeposit string) *QuoteSaverDepositResponse {
 	this := QuoteSaverDepositResponse{}
 	this.InboundAddress = inboundAddress
 	this.Fees = fees
-	this.SlippageBps = slippageBps
 	this.Expiry = expiry
 	this.Warning = warning
 	this.Notes = notes
@@ -256,62 +251,6 @@ func (o *QuoteSaverDepositResponse) GetFeesOk() (*QuoteFees, bool) {
 // SetFees sets field value
 func (o *QuoteSaverDepositResponse) SetFees(v QuoteFees) {
 	o.Fees = v
-}
-
-// GetSlippageBps returns the SlippageBps field value
-func (o *QuoteSaverDepositResponse) GetSlippageBps() int64 {
-	if o == nil {
-		var ret int64
-		return ret
-	}
-
-	return o.SlippageBps
-}
-
-// GetSlippageBpsOk returns a tuple with the SlippageBps field value
-// and a boolean to check if the value has been set.
-func (o *QuoteSaverDepositResponse) GetSlippageBpsOk() (*int64, bool) {
-	if o == nil {
-		return nil, false
-	}
-	return &o.SlippageBps, true
-}
-
-// SetSlippageBps sets field value
-func (o *QuoteSaverDepositResponse) SetSlippageBps(v int64) {
-	o.SlippageBps = v
-}
-
-// GetStreamingSlippageBps returns the StreamingSlippageBps field value if set, zero value otherwise.
-func (o *QuoteSaverDepositResponse) GetStreamingSlippageBps() int64 {
-	if o == nil || o.StreamingSlippageBps == nil {
-		var ret int64
-		return ret
-	}
-	return *o.StreamingSlippageBps
-}
-
-// GetStreamingSlippageBpsOk returns a tuple with the StreamingSlippageBps field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *QuoteSaverDepositResponse) GetStreamingSlippageBpsOk() (*int64, bool) {
-	if o == nil || o.StreamingSlippageBps == nil {
-		return nil, false
-	}
-	return o.StreamingSlippageBps, true
-}
-
-// HasStreamingSlippageBps returns a boolean if a field has been set.
-func (o *QuoteSaverDepositResponse) HasStreamingSlippageBps() bool {
-	if o != nil && o.StreamingSlippageBps != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetStreamingSlippageBps gets a reference to the given int64 and assigns it to the StreamingSlippageBps field.
-func (o *QuoteSaverDepositResponse) SetStreamingSlippageBps(v int64) {
-	o.StreamingSlippageBps = &v
 }
 
 // GetRouter returns the Router field value if set, zero value otherwise.
@@ -629,12 +568,6 @@ func (o QuoteSaverDepositResponse) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if true {
 		toSerialize["fees"] = o.Fees
-	}
-	if true {
-		toSerialize["slippage_bps"] = o.SlippageBps
-	}
-	if o.StreamingSlippageBps != nil {
-		toSerialize["streaming_slippage_bps"] = o.StreamingSlippageBps
 	}
 	if o.Router != nil {
 		toSerialize["router"] = o.Router

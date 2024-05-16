@@ -10,8 +10,6 @@ Name | Type | Description | Notes
 **OutboundDelayBlocks** | Pointer to **int64** | the number of thorchain blocks the outbound will be delayed | [optional] 
 **OutboundDelaySeconds** | Pointer to **int64** | the approximate seconds for the outbound delay before it will be sent | [optional] 
 **Fees** | Pointer to [**QuoteFees**](QuoteFees.md) |  | [optional] 
-**SlippageBps** | Pointer to **int64** | Deprecated - migrate to fees object. | [optional] 
-**StreamingSlippageBps** | Pointer to **int64** | Deprecated - migrate to fees object. | [optional] 
 **Router** | Pointer to **string** | the EVM chain router contract address | [optional] 
 **Expiry** | Pointer to **int64** | expiration timestamp in unix seconds | [optional] 
 **Warning** | Pointer to **string** | static warning message | [optional] 
@@ -189,56 +187,6 @@ SetFees sets Fees field to given value.
 `func (o *BaseQuoteResponse) HasFees() bool`
 
 HasFees returns a boolean if a field has been set.
-
-### GetSlippageBps
-
-`func (o *BaseQuoteResponse) GetSlippageBps() int64`
-
-GetSlippageBps returns the SlippageBps field if non-nil, zero value otherwise.
-
-### GetSlippageBpsOk
-
-`func (o *BaseQuoteResponse) GetSlippageBpsOk() (*int64, bool)`
-
-GetSlippageBpsOk returns a tuple with the SlippageBps field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetSlippageBps
-
-`func (o *BaseQuoteResponse) SetSlippageBps(v int64)`
-
-SetSlippageBps sets SlippageBps field to given value.
-
-### HasSlippageBps
-
-`func (o *BaseQuoteResponse) HasSlippageBps() bool`
-
-HasSlippageBps returns a boolean if a field has been set.
-
-### GetStreamingSlippageBps
-
-`func (o *BaseQuoteResponse) GetStreamingSlippageBps() int64`
-
-GetStreamingSlippageBps returns the StreamingSlippageBps field if non-nil, zero value otherwise.
-
-### GetStreamingSlippageBpsOk
-
-`func (o *BaseQuoteResponse) GetStreamingSlippageBpsOk() (*int64, bool)`
-
-GetStreamingSlippageBpsOk returns a tuple with the StreamingSlippageBps field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetStreamingSlippageBps
-
-`func (o *BaseQuoteResponse) SetStreamingSlippageBps(v int64)`
-
-SetStreamingSlippageBps sets StreamingSlippageBps field to given value.
-
-### HasStreamingSlippageBps
-
-`func (o *BaseQuoteResponse) HasStreamingSlippageBps() bool`
-
-HasStreamingSlippageBps returns a boolean if a field has been set.
 
 ### GetRouter
 

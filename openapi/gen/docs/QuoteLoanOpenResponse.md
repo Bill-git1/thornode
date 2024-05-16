@@ -10,8 +10,6 @@ Name | Type | Description | Notes
 **OutboundDelayBlocks** | **int64** | the number of thorchain blocks the outbound will be delayed | 
 **OutboundDelaySeconds** | **int64** | the approximate seconds for the outbound delay before it will be sent | 
 **Fees** | [**QuoteFees**](QuoteFees.md) |  | 
-**SlippageBps** | Pointer to **int64** | Deprecated - migrate to fees object. | [optional] 
-**StreamingSlippageBps** | Pointer to **int64** | Deprecated - migrate to fees object. | [optional] 
 **Router** | Pointer to **string** | the EVM chain router contract address | [optional] 
 **Expiry** | **int64** | expiration timestamp in unix seconds | 
 **Warning** | **string** | static warning message | 
@@ -182,56 +180,6 @@ and a boolean to check if the value has been set.
 
 SetFees sets Fees field to given value.
 
-
-### GetSlippageBps
-
-`func (o *QuoteLoanOpenResponse) GetSlippageBps() int64`
-
-GetSlippageBps returns the SlippageBps field if non-nil, zero value otherwise.
-
-### GetSlippageBpsOk
-
-`func (o *QuoteLoanOpenResponse) GetSlippageBpsOk() (*int64, bool)`
-
-GetSlippageBpsOk returns a tuple with the SlippageBps field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetSlippageBps
-
-`func (o *QuoteLoanOpenResponse) SetSlippageBps(v int64)`
-
-SetSlippageBps sets SlippageBps field to given value.
-
-### HasSlippageBps
-
-`func (o *QuoteLoanOpenResponse) HasSlippageBps() bool`
-
-HasSlippageBps returns a boolean if a field has been set.
-
-### GetStreamingSlippageBps
-
-`func (o *QuoteLoanOpenResponse) GetStreamingSlippageBps() int64`
-
-GetStreamingSlippageBps returns the StreamingSlippageBps field if non-nil, zero value otherwise.
-
-### GetStreamingSlippageBpsOk
-
-`func (o *QuoteLoanOpenResponse) GetStreamingSlippageBpsOk() (*int64, bool)`
-
-GetStreamingSlippageBpsOk returns a tuple with the StreamingSlippageBps field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetStreamingSlippageBps
-
-`func (o *QuoteLoanOpenResponse) SetStreamingSlippageBps(v int64)`
-
-SetStreamingSlippageBps sets StreamingSlippageBps field to given value.
-
-### HasStreamingSlippageBps
-
-`func (o *QuoteLoanOpenResponse) HasStreamingSlippageBps() bool`
-
-HasStreamingSlippageBps returns a boolean if a field has been set.
 
 ### GetRouter
 

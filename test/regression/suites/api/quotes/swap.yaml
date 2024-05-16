@@ -561,8 +561,6 @@ asserts:
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
   - .fees.slippage_bps == 101
   - .fees.total_bps == 115
-  - .slippage_bps == 1629
-  - .streaming_slippage_bps == 101
   - .streaming_swap_seconds == 1080
   - .total_swap_seconds == 1104
   - .expected_amount_out == "9665246"
@@ -603,8 +601,6 @@ asserts:
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
   - .fees.slippage_bps == 191
   - .fees.total_bps == 205
-  - .slippage_bps == 1629
-  - .streaming_slippage_bps == 191
   - .total_swap_seconds == 564
   - .expected_amount_out == "9492080"
 ---
@@ -634,8 +630,6 @@ asserts:
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
   - .fees.slippage_bps == 101
   - .fees.total_bps == 115
-  - .slippage_bps == 1629
-  - .streaming_slippage_bps == 101
   - .total_swap_seconds == 1104
   - .expected_amount_out == "9665246"
 ---

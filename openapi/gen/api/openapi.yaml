@@ -5253,14 +5253,6 @@ components:
           type: integer
         fees:
           $ref: '#/components/schemas/QuoteFees'
-        slippage_bps:
-          description: Deprecated - migrate to fees object.
-          format: int64
-          type: integer
-        streaming_slippage_bps:
-          description: Deprecated - migrate to fees object.
-          format: int64
-          type: integer
         router:
           description: the EVM chain router contract address
           example: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
@@ -5310,14 +5302,12 @@ components:
           liquidity: "1234"
           asset: ETH.ETH
           affiliate: "1234"
-        slippage_bps: 7
         recommended_gas_rate: "10"
         notes: "Transfer the inbound_address the asset with the memo. Do not use multi-in,\
           \ multi-out transactions."
         outbound_delay_seconds: 5
         recommended_min_amount_in: "15000"
         total_swap_seconds: 600
-        streaming_slippage_bps: 9
         outbound_delay_blocks: 1
         memo: =:ETH.ETH:0x1c7b17362c84287bd1184447e6dfeaf920c31bbe:1440450000:thor17gw75axcnr8747pkanye45pnrwk7p9c3cqncsv:100
         dust_threshold: "10000"
@@ -5326,7 +5316,6 @@ components:
         max_streaming_quantity: 10
         router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
         expected_amount_out: "10000"
-        expected_amount_out_streaming: "10000"
         streaming_swap_blocks: 100
         gas_rate_units: gwei
         warning: Do not cache this response. Do not send funds after the expiry.
@@ -5359,14 +5348,6 @@ components:
           type: integer
         fees:
           $ref: '#/components/schemas/QuoteFees'
-        slippage_bps:
-          description: Deprecated - migrate to fees object.
-          format: int64
-          type: integer
-        streaming_slippage_bps:
-          description: Deprecated - migrate to fees object.
-          format: int64
-          type: integer
         router:
           description: the EVM chain router contract address
           example: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
@@ -5415,11 +5396,6 @@ components:
             after fees
           example: "10000"
           type: string
-        expected_amount_out_streaming:
-          description: Deprecated - expected_amount_out is streaming amount if interval
-            provided.
-          example: "10000"
-          type: string
         max_streaming_quantity:
           description: the maximum amount of trades a streaming swap can do for a
             trade
@@ -5445,14 +5421,11 @@ components:
           type: integer
       required:
       - expected_amount_out
-      - expected_amount_out_streaming
       - expiry
       - fees
       - notes
       - outbound_delay_blocks
       - outbound_delay_seconds
-      - slippage_bps
-      - streaming_slippage_bps
       - warning
       type: object
     QuoteSaverDepositResponse:
@@ -5465,13 +5438,11 @@ components:
           liquidity: "1234"
           asset: ETH.ETH
           affiliate: "1234"
-        slippage_bps: 5
         recommended_gas_rate: "10"
         notes: "Transfer the inbound_address the asset with the memo. Do not use multi-in,\
           \ multi-out transactions."
         outbound_delay_seconds: 5
         recommended_min_amount_in: "15000"
-        streaming_slippage_bps: 2
         outbound_delay_blocks: 1
         memo: +:ETH/ETH::thor17gw75axcnr8747pkanye45pnrwk7p9c3cqncsv:100
         expected_amount_deposit: "10000"
@@ -5510,14 +5481,6 @@ components:
           type: integer
         fees:
           $ref: '#/components/schemas/QuoteFees'
-        slippage_bps:
-          description: Deprecated - migrate to fees object.
-          format: int64
-          type: integer
-        streaming_slippage_bps:
-          description: Deprecated - migrate to fees object.
-          format: int64
-          type: integer
         router:
           description: the EVM chain router contract address
           example: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
@@ -5593,13 +5556,11 @@ components:
           liquidity: "1234"
           asset: ETH.ETH
           affiliate: "1234"
-        slippage_bps: 5
         recommended_gas_rate: "10"
         notes: "Transfer the inbound_address the asset with the memo. Do not use multi-in,\
           \ multi-out transactions."
         outbound_delay_seconds: 5
         recommended_min_amount_in: "15000"
-        streaming_slippage_bps: 2
         outbound_delay_blocks: 1
         memo: -:ETH.ETH:0x1c7b17362c84287bd1184447e6dfeaf920c31bbe:1440450000:thor17gw75axcnr8747pkanye45pnrwk7p9c3cqncsv:100
         dust_threshold: "10000"
@@ -5638,14 +5599,6 @@ components:
           type: integer
         fees:
           $ref: '#/components/schemas/QuoteFees'
-        slippage_bps:
-          description: Deprecated - migrate to fees object.
-          format: int64
-          type: integer
-        streaming_slippage_bps:
-          description: Deprecated - migrate to fees object.
-          format: int64
-          type: integer
         router:
           description: the EVM chain router contract address
           example: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
@@ -5726,13 +5679,11 @@ components:
           liquidity: "1234"
           asset: ETH.ETH
           affiliate: "1234"
-        slippage_bps: 5
         recommended_gas_rate: "10"
         notes: "Transfer the inbound_address the asset with the memo. Do not use multi-in,\
           \ multi-out transactions."
         outbound_delay_seconds: 5
         recommended_min_amount_in: "15000"
-        streaming_slippage_bps: 2
         outbound_delay_blocks: 1
         memo: $+:ETH.ETH:0x1c7b17362c84287bd1184447e6dfeaf920c31bbe
         dust_threshold: "10000"
@@ -5775,14 +5726,6 @@ components:
           type: integer
         fees:
           $ref: '#/components/schemas/QuoteFees'
-        slippage_bps:
-          description: Deprecated - migrate to fees object.
-          format: int64
-          type: integer
-        streaming_slippage_bps:
-          description: Deprecated - migrate to fees object.
-          format: int64
-          type: integer
         router:
           description: the EVM chain router contract address
           example: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
@@ -5890,14 +5833,12 @@ components:
           liquidity: "1234"
           asset: ETH.ETH
           affiliate: "1234"
-        slippage_bps: 5
         recommended_gas_rate: "10"
         total_repay_seconds: 600
         notes: "Transfer the inbound_address the asset with the memo. Do not use multi-in,\
           \ multi-out transactions."
         outbound_delay_seconds: 5
         recommended_min_amount_in: "15000"
-        streaming_slippage_bps: 2
         outbound_delay_blocks: 1
         memo: $-:ETH.ETH:0x1c7b17362c84287bd1184447e6dfeaf920c31bbe
         dust_threshold: "10000"
@@ -5939,14 +5880,6 @@ components:
           type: integer
         fees:
           $ref: '#/components/schemas/QuoteFees'
-        slippage_bps:
-          description: Deprecated - migrate to fees object.
-          format: int64
-          type: integer
-        streaming_slippage_bps:
-          description: Deprecated - migrate to fees object.
-          format: int64
-          type: integer
         router:
           description: the EVM chain router contract address
           example: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
