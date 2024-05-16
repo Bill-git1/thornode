@@ -95,8 +95,6 @@ services:
       AVAX_HOST: ${AVAX_HOST:-http://avalanche:9650/ext/bc/C/rpc}
       ETH_HOST: ${ETH_HOST:-http://ethereum:8545}
       BSC_HOST: ${BSC_HOST:-http://binance-smart:8545}
-      # TODO: remove after deprecation of smoke tests
-      SMOKE: ${SMOKE:-true}
     ports:
       - 26657:26657
       - 26656:26656

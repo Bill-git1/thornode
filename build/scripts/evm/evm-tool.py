@@ -108,9 +108,7 @@ class EVMSetupTool:
         receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
         print(f"Token Contract Address: {receipt.contractAddress}")
 
-        # send half the balance to simulation master if not in smoke test
-        if os.getenv("SMOKE") == "true":
-            return
+        # send half the balance to simulation master
         token = self.token_contract(address=receipt.contractAddress)
         tx_hash = token.functions.transfer(
             Web3.toChecksumAddress(self.simulation_master), int(500_000e18)

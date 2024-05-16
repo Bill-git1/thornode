@@ -61,7 +61,6 @@ go-generate:
 	@go install golang.org/x/tools/cmd/stringer@v0.15.0
 	@go generate ./...
 
-SMOKE_PROTO_DIR=test/smoke/thornode_proto
 
 protob:
 	@./scripts/protocgen.sh
@@ -70,24 +69,6 @@ protob-docker:
 	@docker run --rm -v $(shell pwd):/app -w /app \
 		registry.gitlab.com/thorchain/thornode:builder-v5@sha256:33a2345924750d45a7e9060f429f66ddc1888482e6ef73e2358a23024dc41f01 \
 		make protob
-
-smoke-protob:
-	@echo "Install betterproto..."
-	@pip3 install --break-system-packages --upgrade markupsafe==2.0.1 betterproto[compiler]==2.0.0b4
-	@rm -rf "${SMOKE_PROTO_DIR}"
-	@mkdir -p "${SMOKE_PROTO_DIR}"
-	@echo "Processing thornode proto files..."
-	@protoc -I ./proto -I ./third_party/proto \
-	--python_betterproto_out="${SMOKE_PROTO_DIR}" \
-	$(shell find ./proto -path -prune -o -name '*.proto' -print0 | xargs -0)
-
-smoke-protob-docker:
-	@docker run --rm -v $(shell pwd):/app -w /app \
-		registry.gitlab.com/thorchain/thornode:builder-v5@sha256:33a2345924750d45a7e9060f429f66ddc1888482e6ef73e2358a23024dc41f01 \
-		sh -c 'make smoke-protob'
-
-$(SMOKE_PROTO_DIR):
-	@$(MAKE) smoke-protob-docker
 
 openapi:
 	@docker run --rm \
@@ -213,7 +194,7 @@ _test-regression:
 
 # ------------------------------ Simulation Tests ------------------------------
 
-test-simulation: build-test-simulation stop-mocknet run-simulation-mocknet
+test-simulation: build-test-simulation stop-mocknet run-mocknet
 	@docker run --rm ${DOCKER_TTY_ARGS} \
 		-e PARALLELISM --network host -w /app \
 		thornode-simtest sh -c 'make _test-simulation'
@@ -232,52 +213,16 @@ _build-test-simulation:
 _test-simulation:
 	@cd test/simulation && /simtest/simtest
 
-# ------------------------------ Smoke Tests ------------------------------
-
-SMOKE_DOCKER_OPTS = --network=host --rm -e RUNE=THOR.RUNE -e LOGLEVEL=INFO -e PYTHONPATH=/app -w /app -v ${PWD}/test/smoke:/app
-
-smoke-unit-test:
-	@docker run ${SMOKE_DOCKER_OPTS} \
-		-e EXPORT=${EXPORT} \
-		-e EXPORT_EVENTS=${EXPORT_EVENTS} \
-		registry.gitlab.com/thorchain/thornode:smoke \
-		sh -c 'python -m unittest tests/test_*'
-
-smoke-build-image:
-	@docker pull registry.gitlab.com/thorchain/thornode:smoke || true
-	@docker build --cache-from registry.gitlab.com/thorchain/thornode:smoke \
-		-f test/smoke/Dockerfile -t registry.gitlab.com/thorchain/thornode:smoke \
-		./test/smoke
-
-smoke-push-image:
-	@docker push registry.gitlab.com/thorchain/thornode:smoke
-
-smoke: reset-mocknet smoke-build-image
-	@docker run ${SMOKE_DOCKER_OPTS} \
-		-e BLOCK_SCANNER_BACKOFF=${BLOCK_SCANNER_BACKOFF} \
-		registry.gitlab.com/thorchain/thornode:smoke \
-		python scripts/smoke.py --fast-fail=True
-
-smoke-remote-ci: reset-mocknet
-	@docker run ${SMOKE_DOCKER_OPTS} \
-		-e BLOCK_SCANNER_BACKOFF=${BLOCK_SCANNER_BACKOFF} \
-		registry.gitlab.com/thorchain/thornode:smoke \
-		python scripts/smoke.py --fast-fail=True
-
 # ------------------------------ Single Node Mocknet ------------------------------
 
 cli-mocknet:
 	@docker compose -f build/docker/docker-compose.yml run --rm cli
 
 run-mocknet:
-	@docker compose -f build/docker/docker-compose.yml --profile mocknet --profile midgard up -d
-
-run-simulation-mocknet:
 	@BTC_MASTER_ADDR="bcrt1qf4l5dlqhaujgkxxqmug4stfvmvt58vx2h44c39" \
 		BCH_MASTER_ADDR="qpxh73huzlhjfzcccr03zkpd9nd3wsasegmrreet72" \
 		DOGE_MASTER_ADDR="mnaioCtEGdw6bd6rWJ13Mbre1kN5rPa2Mo" \
 		LTC_MASTER_ADDR="rltc1qf4l5dlqhaujgkxxqmug4stfvmvt58vx2fc03xm" \
-		SMOKE="false" \
 		docker compose -f build/docker/docker-compose.yml --profile mocknet up -d
 
 stop-mocknet:
@@ -290,10 +235,10 @@ halt-mocknet:
 build-mocknet:
 	@docker compose -f build/docker/docker-compose.yml --profile mocknet --profile midgard build
 
-bootstrap-mocknet: $(SMOKE_PROTO_DIR)
-	@docker run ${SMOKE_DOCKER_OPTS} \
-		registry.gitlab.com/thorchain/thornode:smoke \
-		python scripts/smoke.py --bootstrap-only=True
+bootstrap-mocknet:
+	@docker run --rm ${DOCKER_TTY_ARGS} \
+		-e PARALLELISM -e BOOTSTRAP_ONLY=true --network host -w /app \
+		thornode-simtest sh -c 'make _test-simulation'
 
 ps-mocknet:
 	@docker compose -f build/docker/docker-compose.yml --profile mocknet --profile midgard images

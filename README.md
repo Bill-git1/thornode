@@ -182,7 +182,7 @@ make reset-mocknet-cluster
 make cli-mocknet
 > thornode tx thorchain mimir CHURNINTERVAL 1000 --from dog $TX_FLAGS
 
-# bootstrap vaults from smoke test add liquidity transactions
+# bootstrap vaults from simulation test add liquidity transactions
 make mocknet-bootstrap
 
 # verify vault balances
@@ -201,23 +201,12 @@ make cli-mocknet
 
 See [build/docker/README.md](./build/docker/README.md) for more detailed documentation on the THORNode images and local mocknet environment.
 
-### Smoke Tests
+### Simulation Tests
 
-The smoke tests compare a mocknet against a simulator implemented in python. Changes to thornode, particularly to the calculations, will require also updating the python simulator, and subsequently the unit-tests for the simulator.
-
-The smoke-test currently requires that all synth balances be cleared be liquidity is withdrawn at the end of the smoke-test, so it is possible the transactions in `test/smoke/data/smoke_test_transactions.json` may need to be changed.
-
-#### Run Smoke Tests
+More details on simulation tests can be found in the [Simulation Test README](./test/simulation/README.md).
 
 ```bash
-make smoke-protob-docker
-make smoke
-```
-
-#### Update Balances and Events
-
-```bash
-EXPORT=data/smoke_test_balances.json EXPORT_EVENTS=data/smoke_test_events.json make smoke-unit-test
+make test-simulation
 ```
 
 ### Format code

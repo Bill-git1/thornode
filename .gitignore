@@ -15,7 +15,6 @@ vendor
 observe
 *balances.json
 node_modules
-test/smoke/thornode_proto
 test/regression/mnt/coverage
 __pycache__
 /docs/book

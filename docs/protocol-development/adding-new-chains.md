@@ -9,7 +9,7 @@ There is now a specific process for the addition of new chains, see: [https://gi
 1. Read [https://gitlab.com/thorchain/thornode/-/blob/develop/docs/newchain.md](https://gitlab.com/thorchain/thornode/-/blob/develop/docs/newchain.md)
 2. Bifrost: Start by forking one of the existing Bifrosts (UTXO, EVM or BFT).
 3. Daemon: Add the chain daemon to THORChain/Node-Launcher [https://gitlab.com/thorchain/thornode/-/tree/develop/bifrost/pkg/chainclients](https://gitlab.com/thorchain/thornode/-/tree/develop/bifrost/pkg/chainclients)
-4. Smoke Tests: Build out the smoke tests for the chain. This ensures the connection is robustly tested.
+4. Simulation Tests: Build out the simulation tests for the chain. This ensures the connection is robustly tested.
 5. [XChainJS](https://github.com/xchainjs/xchainjs-lib): Add a new chain package to xchainjs so the entire ecosystem of wallets can easily support.
 
 Once this is complete, the chain can be added to Stagenet. After some time of demonstrating Stability on Stagenet, the THORChain Node Operator community is polled and if supported, it can be merged to Mainnet.

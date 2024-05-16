@@ -70,8 +70,12 @@ func main() {
 	// combine all actor dags for the complete test run
 	root := NewActor("Root")
 	root.Append(static.Bootstrap())
-	root.Append(static.Swaps())
-	root.Append(static.Ragnarok())
+
+	// skip swaps and ragnarok if this is bootstrap only mode
+	if os.Getenv("BOOTSTRAP_ONLY") != "true" {
+		root.Append(static.Swaps())
+		root.Append(static.Ragnarok())
+	}
 
 	// gather config from the environment
 	parallelism := os.Getenv("PARALLELISM")

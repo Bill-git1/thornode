@@ -36,8 +36,6 @@ lint:
   ignore:
     - linters: [ALL]
       paths:
-        # NOTE: Temporarily disabled to import Heimdall repo.
-        - test/smoke
         - openapi/gen
         - "**/*gen.go"
     - linters:

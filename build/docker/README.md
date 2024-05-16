@@ -180,7 +180,7 @@ There are scripts for creation of a mocknet using forked mainnet EVM chains for 
 
 ## Bootstrap Mocknet Data
 
-You can leverage the smoke tests to bootstrap local vaults with a subset of test data. Run:
+You can leverage the simulation tests to bootstrap local vaults with a subset of test data. Run:
 
 ```bash
 make bootstrap-mocknet
