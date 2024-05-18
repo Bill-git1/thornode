@@ -15,6 +15,7 @@ const (
 	BondName               = types.BondName
 	LendingName            = types.LendingName
 	AffiliateCollectorName = types.AffiliateCollectorName
+	TreasuryName           = types.TreasuryName
 	RouterKey              = types.RouterKey
 	StoreKey               = types.StoreKey
 	DefaultCodespace       = types.DefaultCodespace

@@ -1769,3 +1769,52 @@ func migrateStoreV132(ctx cosmos.Context, mgr *Mgrs) {
 		}
 	}
 }
+
+func migrateStoreV133(ctx cosmos.Context, mgr *Mgrs) {
+	defer func() {
+		if err := recover(); err != nil {
+			ctx.Logger().Error("fail to migrate store to v133", "error", err)
+		}
+	}()
+
+	vaults, err := mgr.Keeper().GetAsgardVaults(ctx)
+	if err != nil {
+		ctx.Logger().Error("fail to get asgard vaults", "error", err)
+		return
+	}
+
+	// Zero all BNB Asset Amounts (following Ragnarok, in preparation for BEP2 sunset).
+	for _, vault := range vaults {
+		for i := range vault.Coins {
+			if vault.Coins[i].Asset.Chain.IsBNB() {
+				vault.Coins[i].Amount = cosmos.ZeroUint()
+			}
+		}
+		if err := mgr.Keeper().SetVault(ctx, vault); err != nil {
+			ctx.Logger().Error("fail to save vault", "error", err)
+		}
+	}
+
+	// https://gitlab.com/thorchain/thornode/-/issues/1545
+	// Zero out L1 address and set RUNE address (owner) to TreasuryModule for all treasury LPs
+
+	// Mint and send smallest amount possible to initialize module account
+	oneRune := common.NewCoin(common.RuneNative, cosmos.NewUint(1))
+	if err := mgr.Keeper().MintToModule(ctx, ModuleName, oneRune); err != nil {
+		ctx.Logger().Error("fail to MintToModule", "error", err)
+		return
+	}
+	if err := mgr.Keeper().SendFromModuleToModule(ctx, ModuleName, TreasuryName, common.Coins{oneRune}); err != nil {
+		ctx.Logger().Error("fail to SendFromModuleToModule", "error", err)
+		return
+	}
+
+	// Change ownership of existing treasury LPs to new module account
+	treasuryAddr, err := mgr.Keeper().GetModuleAddress(TreasuryName)
+	if err != nil {
+		ctx.Logger().Error("fail to get treasury module address", "error", err)
+		return
+	}
+	changeLPOwnership(ctx, mgr, common.Address("thor1egxvam70a86jafa8gcg3kqfmfax3s0m2g3m754"), treasuryAddr)
+	changeLPOwnership(ctx, mgr, common.Address("thor1wfe7hsuvup27lx04p5al4zlcnx6elsnyft7dzm"), treasuryAddr)
+}

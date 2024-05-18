@@ -97,11 +97,13 @@ var (
 		thorchain.ReserveName:            {},
 		thorchain.LendingName:            {},
 		thorchain.AffiliateCollectorName: {},
+		thorchain.TreasuryName:           {},
 	}
 
 	// module accounts that are allowed to receive tokens
 	allowedReceivingModAcc = map[string]bool{
-		thorchain.LendingName: true,
+		thorchain.LendingName:  true,
+		thorchain.TreasuryName: true,
 	}
 )
 

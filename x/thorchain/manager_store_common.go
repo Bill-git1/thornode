@@ -573,3 +573,37 @@ func processModuleBalanceActions(ctx cosmos.Context, k keeper.Keeper, actions []
 		}
 	}
 }
+
+// changeLPOwnership finds all LPs with oldOwner rune_address and changes to newOwner
+// This helper also zeroes out the asset_address, effectively converting the LP to asymmetric
+func changeLPOwnership(ctx cosmos.Context, mgr *Mgrs, oldOwner common.Address, newOwner common.Address) {
+	pools, err := mgr.Keeper().GetPools(ctx)
+	if err != nil {
+		ctx.Logger().Error("fail to get pools", "error", err)
+		return
+	}
+
+	for _, pool := range pools {
+		iterator := mgr.Keeper().GetLiquidityProviderIterator(ctx, pool.Asset)
+		defer iterator.Close()
+		for ; iterator.Valid(); iterator.Next() {
+			var lp LiquidityProvider
+			if err := mgr.Keeper().Cdc().Unmarshal(iterator.Value(), &lp); err != nil {
+				ctx.Logger().Error("fail to get unmarshal LP", "error", err)
+				return
+			}
+			// Existing treasury RUNE address
+			if lp.RuneAddress == oldOwner {
+				// LPs cannot upsert RUNE address. Delete existing LP and re-create.
+				mgr.Keeper().RemoveLiquidityProvider(ctx, lp)
+
+				// Update LP RUNE address to Treasury module RUNE address
+				lp.RuneAddress = newOwner
+				// Unset AssetAddress, effectively converting LP to asymmetric (RUNE-only).
+				// N.B. this does not change pool ratio or LP amounts
+				lp.AssetAddress = ""
+				mgr.Keeper().SetLiquidityProvider(ctx, lp)
+			}
+		}
+	}
+}

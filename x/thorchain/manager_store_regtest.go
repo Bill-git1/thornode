@@ -154,3 +154,30 @@ func migrateStoreV129(ctx cosmos.Context, mgr *Mgrs) {}
 func migrateStoreV131(ctx cosmos.Context, mgr *Mgrs) {}
 
 func migrateStoreV132(ctx cosmos.Context, mgr *Mgrs) {}
+
+func migrateStoreV133(ctx cosmos.Context, mgr *Mgrs) {
+	defer func() {
+		if err := recover(); err != nil {
+			ctx.Logger().Error("fail to migrate store to v133", "error", err)
+		}
+	}()
+
+	treasuryAddr, err := mgr.Keeper().GetModuleAddress(TreasuryName)
+	if err != nil {
+		ctx.Logger().Error("fail to get treasury module address", "error", err)
+		return
+	}
+
+	// Mint and send smallest amount possible to initialize module account
+	oneRune := common.NewCoin(common.RuneNative, cosmos.NewUint(1))
+	if err := mgr.Keeper().MintToModule(ctx, ModuleName, oneRune); err != nil {
+		ctx.Logger().Error("fail to MintToModule", "error", err)
+		return
+	}
+	if err := mgr.Keeper().SendFromModuleToModule(ctx, ModuleName, TreasuryName, common.Coins{oneRune}); err != nil {
+		ctx.Logger().Error("fail to SendFromModuleToModule", "error", err)
+		return
+	}
+
+	changeLPOwnership(ctx, mgr, common.Address("tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej"), treasuryAddr)
+}

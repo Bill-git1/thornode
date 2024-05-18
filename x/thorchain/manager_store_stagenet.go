@@ -262,3 +262,40 @@ func migrateStoreV129(ctx cosmos.Context, mgr *Mgrs) {}
 func migrateStoreV131(ctx cosmos.Context, mgr *Mgrs) {}
 
 func migrateStoreV132(ctx cosmos.Context, mgr *Mgrs) {}
+
+func migrateStoreV133(ctx cosmos.Context, mgr *Mgrs) {
+	defer func() {
+		if err := recover(); err != nil {
+			ctx.Logger().Error("fail to migrate store to v133", "error", err)
+		}
+	}()
+
+	vaults, err := mgr.Keeper().GetAsgardVaults(ctx)
+	if err != nil {
+		ctx.Logger().Error("fail to get asgard vaults", "error", err)
+		return
+	}
+
+	// Zero all BNB Asset Amounts (following Ragnarok, in preparation for BEP2 sunset).
+	for _, vault := range vaults {
+		for i := range vault.Coins {
+			if vault.Coins[i].Asset.Chain.IsBNB() {
+				vault.Coins[i].Amount = cosmos.ZeroUint()
+			}
+		}
+		if err := mgr.Keeper().SetVault(ctx, vault); err != nil {
+			ctx.Logger().Error("fail to save vault", "error", err)
+		}
+	}
+
+	// Mint and send smallest amount possible to initialize module account
+	oneRune := common.NewCoin(common.RuneNative, cosmos.NewUint(1))
+	if err := mgr.Keeper().MintToModule(ctx, ModuleName, oneRune); err != nil {
+		ctx.Logger().Error("fail to MintToModule", "error", err)
+		return
+	}
+	if err := mgr.Keeper().SendFromModuleToModule(ctx, ModuleName, TreasuryName, common.Coins{oneRune}); err != nil {
+		ctx.Logger().Error("fail to SendFromModuleToModule", "error", err)
+		return
+	}
+}
