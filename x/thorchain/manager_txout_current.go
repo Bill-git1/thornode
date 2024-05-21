@@ -135,6 +135,25 @@ func (tos *TxOutStorageVCUR) TryAddTxOutItem(ctx cosmos.Context, mgr Manager, to
 	if toi.ToAddress.IsNoop() {
 		return true, nil
 	}
+
+	// EVM outbounds to the null address should be dropped and a security event emitted
+	if toi.Chain.IsEVM() && toi.ToAddress.Equals(common.EVMNullAddress) {
+		ctx.Logger().Error("evm outbound to null address", "txout", toi)
+		etx := common.Tx{
+			ID:        toi.InHash,
+			Chain:     toi.Chain,
+			ToAddress: toi.ToAddress,
+			Coins:     common.Coins{toi.Coin},
+			Gas:       toi.MaxGas,
+			Memo:      toi.Memo,
+		}
+		event := NewEventSecurity(etx, "evm outbound to null address")
+		if err := tos.eventMgr.EmitEvent(ctx, event); err != nil {
+			ctx.Logger().Error("failed to emit security event", "error", err)
+		}
+		return true, nil
+	}
+
 	cacheCtx, commit := ctx.CacheContext()
 	success, err := tos.cachedTryAddTxOutItem(cacheCtx, mgr, toi, minOut)
 	if err == nil {

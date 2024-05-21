@@ -23,8 +23,9 @@ import (
 type Address string
 
 const (
-	NoAddress   = Address("")
-	NoopAddress = Address("noop")
+	NoAddress      = Address("")
+	NoopAddress    = Address("noop")
+	EVMNullAddress = Address("0x0000000000000000000000000000000000000000")
 )
 
 var alphaNumRegex = regexp.MustCompile("^[:A-Za-z0-9]*$")
