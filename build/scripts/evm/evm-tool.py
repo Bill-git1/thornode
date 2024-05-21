@@ -101,6 +101,7 @@ class EVMSetupTool:
     def deploy_init_contracts(self):
         self.deploy_token()
         self.deploy_router()
+        self.deploy_dex()
 
     def deploy_token(self):
         print("deploying token contract...")
@@ -123,6 +124,13 @@ class EVMSetupTool:
         receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
         print(f"Router Contract Address: {receipt.contractAddress}")
 
+    def deploy_dex(self):
+        print("deploying dex contract...")
+        dex, args = self.dex_contract()
+        tx_hash = dex.constructor(*args).transact()
+        receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
+        print(f"Dex Contract Address: {receipt.contractAddress}")
+
     # --------------------------------- helpers ---------------------------------
 
     def token_contract(self, address=None):
@@ -143,6 +151,18 @@ class EVMSetupTool:
             abi_file = "eth-" + abi_file
             bytecode_file = "eth-" + bytecode_file
             args = [self.erc20rune]
+
+        # load abi and bytecode
+        with open(os.path.join(os.path.dirname(__file__), abi_file), "r") as f:
+            abi = json.load(f)
+        with open(os.path.join(os.path.dirname(__file__), bytecode_file), "r") as f:
+            bytecode = f.read()
+        return self.web3.eth.contract(abi=abi, bytecode=bytecode, address=address), args
+
+    def dex_contract(self, address=None):
+        abi_file = "dexcontract-abi.json"
+        bytecode_file = "dexcontract-bytecode.txt"
+        args = []
 
         # load abi and bytecode
         with open(os.path.join(os.path.dirname(__file__), abi_file), "r") as f:
@@ -228,6 +248,32 @@ class EVMSetupTool:
         receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
         print(f"Deposit Receipt: {receipt}")
 
+    def deposit_from_dex(self, args):
+        dex, _ = self.dex_contract(address=args.dex_address)
+        memo = args.memo or f"=:THOR.RUNE:{args.thor_address}"
+        tx_hash = dex.functions.callDeposit(
+            Web3.toChecksumAddress(self.get_router_addr()),
+            Web3.toChecksumAddress(self.get_vault_addr()),
+            self.zero_address,
+            0,
+            memo,
+        ).transact({"value": Wei(args.amount)})
+        receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
+        print(f"Deposit from DEX Receipt: {receipt}")
+
+    def deposit_from_dex_with_logs(self, args):
+        dex, _ = self.dex_contract(address=args.dex_address)
+        memo = args.memo or f"=:THOR.RUNE:{args.thor_address}"
+        tx_hash = dex.functions.callDepositWithLogs(
+            Web3.toChecksumAddress(self.get_router_addr()),
+            Web3.toChecksumAddress(self.get_vault_addr()),
+            self.zero_address,
+            0,
+            memo,
+        ).transact({"value": Wei(args.amount)})
+        receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
+        print(f"Deposit from DEX Receipt: {receipt}")
+
     def deposit_token(self, args):
         if args.token_address is None:
             raise ValueError("token-address is required")
@@ -303,6 +349,8 @@ def main():
         choices=[
             "deploy",
             "deposit",
+            "deposit-from-dex",
+            "deposit-from-dex-with-logs",
             "token-balance",
             "deposit-token",
             "vault-allowance",
@@ -312,6 +360,7 @@ def main():
 
     # only used for extended commands
     parser.add_argument("--address", help="the address")
+    parser.add_argument("--dex-address", help="the dex address")
     parser.add_argument("--token-address", help="the token address")
     parser.add_argument("--vault-address", help="the vault address")
     parser.add_argument("--agg-address", help="the aggregator address")
@@ -350,6 +399,10 @@ def main():
     mux = {
         "deploy": setup_tool.deploy_init_contracts,
         "deposit": lambda: setup_tool.deposit(args),
+        "deposit-from-dex": lambda: setup_tool.deposit_from_dex(args),
+        "deposit-from-dex-with-logs": lambda: setup_tool.deposit_from_dex_with_logs(
+            args
+        ),
         "token-balance": lambda: setup_tool.token_balance(args),
         "deposit-token": lambda: setup_tool.deposit_token(args),
         "vault-allowance": lambda: setup_tool.vault_allowance(args),

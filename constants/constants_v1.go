@@ -118,6 +118,7 @@ func NewConstantValue() *ConstantVals {
 			SaversStreamingSwapsInterval:        0,                  // For Savers deposits and withdraws, the streaming swaps interval to use for the Native <> Synth swap
 			RescheduleCoalesceBlocks:            0,                  // number of blocks to coalesce rescheduled outbounds
 			TradeAccountsEnabled:                0,                  // enable/disable trade account
+			EVMDisableContractWhitelist:         0,                  // enable/disable contract whitelist
 		},
 		boolValues: map[ConstantName]bool{
 			StrictBondLiquidityRatio: true,

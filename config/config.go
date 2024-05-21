@@ -739,6 +739,10 @@ type BifrostBlockScannerConfiguration struct {
 	// final outbound.
 	MaxGasLimit uint64 `mapstructure:"max_gas_limit"`
 
+	// MaxContractTxLogs is the maximum logs allowed for an inbound EVM tx. This is used to prevent
+	// bifrost being bogged down during smart contract log parsing down by large txs.
+	MaxContractTxLogs int `mapstructure:"max_contract_tx_logs"`
+
 	// WhitelistTokens is the set of whitelisted token addresses. Inbounds for all other
 	// tokens are ignored.
 	WhitelistTokens []string `mapstructure:"whitelist_tokens"`

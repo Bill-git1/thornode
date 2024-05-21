@@ -774,7 +774,7 @@ func (e *ETHScanner) getAssetFromTokenAddress(token string) (common.Asset, error
 }
 
 // getTxInFromSmartContract returns txInItem
-func (e *ETHScanner) getTxInFromSmartContract(tx *etypes.Transaction, receipt *etypes.Receipt) (*stypes.TxInItem, error) {
+func (e *ETHScanner) getTxInFromSmartContract(tx *etypes.Transaction, receipt *etypes.Receipt, maxLogs int64) (*stypes.TxInItem, error) {
 	e.logger.Debug().Msg("parse tx from smart contract")
 	txInItem := &stypes.TxInItem{
 		Tx: tx.Hash().Hex()[2:],
@@ -794,7 +794,8 @@ func (e *ETHScanner) getTxInFromSmartContract(tx *etypes.Transaction, receipt *e
 		e.getTokenDecimalsForTHORChain,
 		e.convertAmount,
 		e.vaultABI,
-		common.ETHAsset)
+		common.ETHAsset,
+		maxLogs)
 	// txInItem will be changed in p.GetTxInItem function, so if the function return an error
 	// txInItem should be abandoned
 	if _, err = p.GetTxInItem(receipt.Logs, txInItem); err != nil {
@@ -892,10 +893,38 @@ func (e *ETHScanner) fromTxToTxIn(tx *etypes.Transaction) (*stypes.TxInItem, err
 		return e.getTxInFromFailedTransaction(tx, receipt), nil
 	}
 
-	if e.isToValidContractAddress(tx.To(), true) {
-		return e.getTxInFromSmartContract(tx, receipt)
+	disableWhitelist, err := e.bridge.GetMimir(constants.EVMDisableContractWhitelist.String())
+	if err != nil {
+		e.logger.Err(err).Msgf("fail to get %s", constants.EVMDisableContractWhitelist.String())
+		disableWhitelist = 0
 	}
-	return e.getTxInFromTransaction(tx, receipt)
+
+	if disableWhitelist == 1 {
+		// parse tx without whitelist
+		destination := tx.To()
+		isToVault, _ := e.pubkeyMgr.IsValidPoolAddress(destination.String(), e.cfg.ChainID)
+
+		switch {
+		case isToVault:
+			// Tx to a vault
+			return e.getTxInFromTransaction(tx, receipt)
+		case e.isToValidContractAddress(destination, true):
+			// Deposit directly to router
+			return e.getTxInFromSmartContract(tx, receipt, 0)
+		case evm.IsSmartContractCall(tx, receipt):
+			// Tx to a different contract, attempt to parse with max allowable logs
+			return e.getTxInFromSmartContract(tx, receipt, int64(e.cfg.MaxContractTxLogs))
+		default:
+			// Tx to a non-contract or vault address
+			return e.getTxInFromTransaction(tx, receipt)
+		}
+	} else {
+		// parse tx with whitelist
+		if e.isToValidContractAddress(tx.To(), true) {
+			return e.getTxInFromSmartContract(tx, receipt, 0)
+		}
+		return e.getTxInFromTransaction(tx, receipt)
+	}
 }
 
 // getTxInFromFailedTransaction when a transaction failed due to out of gas, this method will check whether the transaction is an outbound

@@ -120,7 +120,7 @@ func (t *SmartContractLogParserTestSuite) getTransferAllowanceEvent(smartContrac
 func (t *SmartContractLogParserTestSuite) TestGetTxInItem_DepositEvents(c *C) {
 	vaultABI, _, err := GetContractABI(routerContractABI, erc20ContractABI)
 	c.Assert(err, IsNil)
-	parser := NewSmartContractLogParser(mockIsValidContractAddr, mockAssetResolver, mockTokenDecimalResolver, mockAmountConverter, vaultABI, common.ETHAsset)
+	parser := NewSmartContractLogParser(mockIsValidContractAddr, mockAssetResolver, mockTokenDecimalResolver, mockAmountConverter, vaultABI, common.ETHAsset, 2)
 
 	// when logs are empty
 	isVaultTransfer, err := parser.GetTxInItem(nil, &types.TxInItem{})
@@ -268,7 +268,7 @@ func (t *SmartContractLogParserTestSuite) TestGetTxInItem_DepositEvents(c *C) {
 func (t *SmartContractLogParserTestSuite) TestGetTxInItem_TransferOutEvents(c *C) {
 	vaultABI, _, err := GetContractABI(routerContractABI, erc20ContractABI)
 	c.Assert(err, IsNil)
-	parser := NewSmartContractLogParser(mockIsValidContractAddr, mockAssetResolver, mockTokenDecimalResolver, mockAmountConverter, vaultABI, common.ETHAsset)
+	parser := NewSmartContractLogParser(mockIsValidContractAddr, mockAssetResolver, mockTokenDecimalResolver, mockAmountConverter, vaultABI, common.ETHAsset, 2)
 	// corrupted transferOutEvent should be ignored
 	txInItem := &types.TxInItem{
 		Sender: "0x3fd2D4cE97B082d4BcE3f9fee2A3D60668D2f473",
@@ -325,7 +325,7 @@ func (t *SmartContractLogParserTestSuite) TestGetTxInItem_TransferOutEvents(c *C
 func (t *SmartContractLogParserTestSuite) TestGetTxInItem_TransferAllowance(c *C) {
 	vaultABI, _, err := GetContractABI(routerContractABI, erc20ContractABI)
 	c.Assert(err, IsNil)
-	parser := NewSmartContractLogParser(mockIsValidContractAddr, mockAssetResolver, mockTokenDecimalResolver, mockAmountConverter, vaultABI, common.ETHAsset)
+	parser := NewSmartContractLogParser(mockIsValidContractAddr, mockAssetResolver, mockTokenDecimalResolver, mockAmountConverter, vaultABI, common.ETHAsset, 2)
 	// corrupted transferAllowance should be ignored
 	txInItem := &types.TxInItem{
 		Sender: "0x3fd2D4cE97B082d4BcE3f9fee2A3D60668D2f473",
@@ -427,7 +427,7 @@ func (t *SmartContractLogParserTestSuite) TestGetTxInItem_TransferAllowance(c *C
 func (t *SmartContractLogParserTestSuite) TestFakeDeposit(c *C) {
 	vaultABI, _, err := GetContractABI(routerContractABI, erc20ContractABI)
 	c.Assert(err, IsNil)
-	parser := NewSmartContractLogParser(mockIsValidContractAddr, mockAssetResolver, mockTokenDecimalResolver, mockAmountConverter, vaultABI, common.ETHAsset)
+	parser := NewSmartContractLogParser(mockIsValidContractAddr, mockAssetResolver, mockTokenDecimalResolver, mockAmountConverter, vaultABI, common.ETHAsset, 2)
 	// When user deposit , if user use a malicious contract to trigger transferAllowance before Deposit
 	// it should fail , because memo is not the same
 	txInItem := &types.TxInItem{
@@ -446,7 +446,7 @@ func (t *SmartContractLogParserTestSuite) TestFakeDeposit(c *C) {
 func (t *SmartContractLogParserTestSuite) TestFakeTransferOut(c *C) {
 	vaultABI, _, err := GetContractABI(routerContractABI, erc20ContractABI)
 	c.Assert(err, IsNil)
-	parser := NewSmartContractLogParser(mockIsValidContractAddr, mockAssetResolver, mockTokenDecimalResolver, mockAmountConverter, vaultABI, common.ETHAsset)
+	parser := NewSmartContractLogParser(mockIsValidContractAddr, mockAssetResolver, mockTokenDecimalResolver, mockAmountConverter, vaultABI, common.ETHAsset, 2)
 	tknAsset, err := common.NewAsset("ETH.TKN-0X3B7FA4DD21C6F9BA3CA375217EAD7CAB9D6BF483")
 	c.Assert(err, IsNil)
 

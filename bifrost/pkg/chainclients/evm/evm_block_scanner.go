@@ -533,12 +533,38 @@ func (e *EVMScanner) receiptToTxInItem(tx *etypes.Transaction, receipt *etypes.R
 		return e.getTxInFromFailedTransaction(tx, receipt), nil
 	}
 
-	if e.isToValidContractAddress(tx.To(), true) {
-		return e.getTxInFromSmartContract(tx, receipt)
+	disableWhitelist, err := e.bridge.GetMimir(constants.EVMDisableContractWhitelist.String())
+	if err != nil {
+		e.logger.Err(err).Msgf("fail to get %s", constants.EVMDisableContractWhitelist.String())
+		disableWhitelist = 0
 	}
 
-	e.logger.Debug().Stringer("txid", tx.Hash()).Stringer("to", tx.To()).Msg("not a valid contract")
-	return e.getTxInFromTransaction(tx, receipt)
+	if disableWhitelist == 1 {
+		// parse tx without whitelist
+		destination := tx.To()
+		isToVault, _ := e.pubkeyMgr.IsValidPoolAddress(destination.String(), e.cfg.ChainID)
+
+		switch {
+		case isToVault:
+			// Tx to a vault
+			return e.getTxInFromTransaction(tx, receipt)
+		case e.isToValidContractAddress(destination, true):
+			// Deposit directly to router
+			return e.getTxInFromSmartContract(tx, receipt, 0)
+		case evm.IsSmartContractCall(tx, receipt):
+			// Tx to a different contract, attempt to parse with max allowable logs
+			return e.getTxInFromSmartContract(tx, receipt, int64(e.cfg.MaxContractTxLogs))
+		default:
+			// Tx to a non-contract or vault address
+			return e.getTxInFromTransaction(tx, receipt)
+		}
+	} else {
+		// parse tx with whitelist
+		if e.isToValidContractAddress(tx.To(), true) {
+			return e.getTxInFromSmartContract(tx, receipt, 0)
+		}
+		return e.getTxInFromTransaction(tx, receipt)
+	}
 }
 
 // --------------------------------- gas ---------------------------------
@@ -697,7 +723,7 @@ func (e *EVMScanner) isToValidContractAddress(addr *ecommon.Address, includeWhit
 }
 
 // getTxInFromSmartContract returns txInItem
-func (e *EVMScanner) getTxInFromSmartContract(tx *etypes.Transaction, receipt *etypes.Receipt) (*stypes.TxInItem, error) {
+func (e *EVMScanner) getTxInFromSmartContract(tx *etypes.Transaction, receipt *etypes.Receipt, maxLogs int64) (*stypes.TxInItem, error) {
 	txInItem := &stypes.TxInItem{
 		Tx: tx.Hash().Hex()[2:], // drop the "0x" prefix
 	}
@@ -717,6 +743,7 @@ func (e *EVMScanner) getTxInFromSmartContract(tx *etypes.Transaction, receipt *e
 		e.tokenManager.ConvertAmount,
 		e.vaultABI,
 		e.cfg.ChainID.GetGasAsset(),
+		maxLogs,
 	)
 
 	// txInItem will be changed in p.getTxInItem function, so if the function return an

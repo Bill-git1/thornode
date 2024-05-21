@@ -41,6 +41,7 @@ type SmartContractLogParser struct {
 	logger           zerolog.Logger
 	vaultABI         *abi.ABI
 	nativeAsset      common.Asset
+	maxLogs          int64
 }
 
 func NewSmartContractLogParser(validator contractAddressValidator,
@@ -49,6 +50,7 @@ func NewSmartContractLogParser(validator contractAddressValidator,
 	amtConverter amountConverter,
 	vaultABI *abi.ABI,
 	nativeAsset common.Asset,
+	maxLogs int64,
 ) SmartContractLogParser {
 	return SmartContractLogParser{
 		addressValidator: validator,
@@ -58,6 +60,7 @@ func NewSmartContractLogParser(validator contractAddressValidator,
 		amtConverter:     amtConverter,
 		logger:           log.Logger.With().Str("module", "SmartContractLogParser").Logger(),
 		nativeAsset:      nativeAsset,
+		maxLogs:          maxLogs,
 	}
 }
 
@@ -163,6 +166,9 @@ func (scp *SmartContractLogParser) parseTransferOutAndCall(log etypes.Log) (*THO
 func (scp *SmartContractLogParser) GetTxInItem(logs []*etypes.Log, txInItem *types.TxInItem) (bool, error) {
 	if len(logs) == 0 {
 		scp.logger.Info().Msg("tx logs are empty return nil")
+		return false, nil
+	} else if int(scp.maxLogs) > 0 && len(logs) > int(scp.maxLogs) {
+		scp.logger.Info().Msgf("tx logs are too many, ignore")
 		return false, nil
 	}
 	isVaultTransfer := false
