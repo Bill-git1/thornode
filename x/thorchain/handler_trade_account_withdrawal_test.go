@@ -16,7 +16,7 @@ func (HandlerTradeAccountWithdrawal) TestTradeAccountWithdrawal_Run(c *C) {
 	bc1Addr := GetRandomBTCAddress()
 	dummyTx := common.Tx{ID: "test"}
 
-	_, err := mgr.TradeAccountManager().Deposit(ctx, asset, cosmos.NewUint(500), addr)
+	_, err := mgr.TradeAccountManager().Deposit(ctx, asset, cosmos.NewUint(500), addr, common.NoAddress, dummyTx.ID)
 	c.Assert(err, IsNil)
 
 	msg := NewMsgTradeAccountWithdrawal(asset, cosmos.NewUint(350), bc1Addr, addr, dummyTx)

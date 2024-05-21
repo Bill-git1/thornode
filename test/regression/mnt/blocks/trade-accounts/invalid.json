@@ -1918,6 +1918,14 @@
               "type": "message"
             },
             {
+              "amount": "100000000",
+              "asset": "BTC~BTC",
+              "asset_address": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
+              "rune_address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
+              "tx_id": "88F5966C4BEFD2D7907E7570459C7D01782B9C8E8B0380BFEA4EA2437FC8406E",
+              "type": "trade_account_withdraw"
+            },
+            {
               "coins": "14000 BTC.BTC",
               "pool_deduct": "13996667",
               "tx_id": "88F5966C4BEFD2D7907E7570459C7D01782B9C8E8B0380BFEA4EA2437FC8406E",
@@ -1959,14 +1967,6 @@
               "to_address": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
               "type": "scheduled_outbound",
               "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
-            },
-            {
-              "amount": "100000000",
-              "asset": "BTC~BTC",
-              "asset_address": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
-              "rune_address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
-              "tx_id": "88F5966C4BEFD2D7907E7570459C7D01782B9C8E8B0380BFEA4EA2437FC8406E",
-              "type": "trade_account_withdraw"
             }
           ]
         }

@@ -5,7 +5,6 @@ import (
 
 	"github.com/blang/semver"
 
-	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/mimir"
 )
@@ -65,14 +64,10 @@ func (h TradeAccountDepositHandler) handle(ctx cosmos.Context, msg MsgTradeAccou
 
 // handle process MsgTradeAccountDeposit
 func (h TradeAccountDepositHandler) handleV1(ctx cosmos.Context, msg MsgTradeAccountDeposit) error {
-	_, err := h.mgr.TradeAccountManager().Deposit(ctx, msg.Asset, msg.Amount, msg.Address)
+	_, err := h.mgr.TradeAccountManager().Deposit(ctx, msg.Asset, msg.Amount, msg.Address, msg.Tx.FromAddress, msg.Tx.ID)
 	if err != nil {
 		ctx.Logger().Error("fail to handle Deposit", "error", err)
 		return err
-	}
-	depositEvent := NewEventTradeAccountDeposit(msg.Amount, msg.Asset.GetTradeAsset(), msg.Tx.FromAddress, common.Address(msg.Address.String()), msg.Tx.ID)
-	if err := h.mgr.EventMgr().EmitEvent(ctx, depositEvent); err != nil {
-		ctx.Logger().Error("fail to emit deposit event", "error", err)
 	}
 	return nil
 }

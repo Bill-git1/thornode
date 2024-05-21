@@ -46,9 +46,9 @@ type Manager interface {
 
 type TradeAccountManager interface {
 	EndBlock(ctx cosmos.Context, keeper keeper.Keeper) error
-	Deposit(_ cosmos.Context, _ common.Asset, _ cosmos.Uint, _ cosmos.AccAddress) (cosmos.Uint, error)
-	Withdrawal(_ cosmos.Context, _ common.Asset, _ cosmos.Uint, _ cosmos.AccAddress) (cosmos.Uint, error)
-	BalanceOf(_ cosmos.Context, _ common.Asset, _ cosmos.AccAddress) cosmos.Uint
+	Deposit(_ cosmos.Context, _ common.Asset, amount cosmos.Uint, owner cosmos.AccAddress, assetAddr common.Address, _ common.TxID) (cosmos.Uint, error)
+	Withdrawal(_ cosmos.Context, _ common.Asset, amount cosmos.Uint, owner cosmos.AccAddress, assetAddr common.Address, _ common.TxID) (cosmos.Uint, error)
+	BalanceOf(_ cosmos.Context, _ common.Asset, owner cosmos.AccAddress) cosmos.Uint
 }
 
 // GasManager define all the methods required to manage gas
@@ -308,7 +308,7 @@ func (mgr *Mgrs) BeginBlock(ctx cosmos.Context) error {
 	}
 
 	if v.GTE(semver.MustParse("1.128.0")) { // TODO: remove on hard fork
-		mgr.tradeManager, err = GetTradeAccountManager(v, mgr.K)
+		mgr.tradeManager, err = GetTradeAccountManager(v, mgr.K, mgr.eventMgr)
 		if err != nil {
 			return fmt.Errorf("fail to create trade manager: %w", err)
 		}
@@ -756,12 +756,12 @@ func GetSwapper(version semver.Version) (Swapper, error) {
 	}
 }
 
-func GetTradeAccountManager(version semver.Version, keeper keeper.Keeper) (TradeAccountManager, error) {
+func GetTradeAccountManager(version semver.Version, keeper keeper.Keeper, eventMgr EventManager) (TradeAccountManager, error) {
 	switch {
 	case version.GTE(semver.MustParse("1.131.0")):
-		return newTradeMgrVCUR(keeper), nil
+		return newTradeMgrVCUR(keeper, eventMgr), nil
 	case version.GTE(semver.MustParse("1.128.0")):
-		return newTradeMgrV128(keeper), nil
+		return newTradeMgrV128(keeper, eventMgr), nil
 	default:
 		return nil, errInvalidVersion
 	}

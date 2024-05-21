@@ -20,10 +20,10 @@ func (d DummyTradeAccountManager) BalanceOf(_ cosmos.Context, _ common.Asset, _ 
 	return cosmos.ZeroUint()
 }
 
-func (d DummyTradeAccountManager) Deposit(ctx cosmos.Context, asset common.Asset, amount cosmos.Uint, addr cosmos.AccAddress) (cosmos.Uint, error) {
+func (d DummyTradeAccountManager) Deposit(ctx cosmos.Context, asset common.Asset, amount cosmos.Uint, owner cosmos.AccAddress, assetAddr common.Address, _ common.TxID) (cosmos.Uint, error) {
 	return cosmos.ZeroUint(), nil
 }
 
-func (d DummyTradeAccountManager) Withdrawal(ctx cosmos.Context, asset common.Asset, amount cosmos.Uint, addr cosmos.AccAddress) (cosmos.Uint, error) {
+func (d DummyTradeAccountManager) Withdrawal(ctx cosmos.Context, asset common.Asset, amount cosmos.Uint, owner cosmos.AccAddress, assetAddr common.Address, _ common.TxID) (cosmos.Uint, error) {
 	return cosmos.ZeroUint(), nil
 }

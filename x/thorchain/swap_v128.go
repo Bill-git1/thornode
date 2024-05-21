@@ -213,7 +213,7 @@ func (s *SwapperV128) swapOne(ctx cosmos.Context,
 		if err != nil {
 			return cosmos.ZeroUint(), evt, ErrInternal(err, "fail to parse from address")
 		}
-		amount, err = mgr.TradeAccountManager().Withdrawal(ctx, source, amount, fromAcc)
+		amount, err = mgr.TradeAccountManager().Withdrawal(ctx, source, amount, fromAcc, common.NoAddress, tx.ID)
 		if err != nil {
 			return cosmos.ZeroUint(), evt, ErrInternal(err, "fail to withdraw from trade")
 		}
@@ -381,7 +381,7 @@ func (s *SwapperV128) swapOne(ctx cosmos.Context,
 		if err != nil {
 			return cosmos.ZeroUint(), evt, ErrInternal(err, "fail to parse trade account address")
 		}
-		_, err = mgr.TradeAccountManager().Deposit(ctx, target, emitAssets, acc)
+		_, err = mgr.TradeAccountManager().Deposit(ctx, target, emitAssets, acc, common.NoAddress, tx.ID)
 		if err != nil {
 			return cosmos.ZeroUint(), evt, ErrInternal(err, "fail to deposit to trade account")
 		}

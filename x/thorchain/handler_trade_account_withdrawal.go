@@ -67,7 +67,7 @@ func (h TradeAccountWithdrawalHandler) handle(ctx cosmos.Context, msg MsgTradeAc
 
 // handle process MsgTradeAccountWithdrawal
 func (h TradeAccountWithdrawalHandler) handleV1(ctx cosmos.Context, msg MsgTradeAccountWithdrawal) error {
-	withdraw, err := h.mgr.TradeAccountManager().Withdrawal(ctx, msg.Asset, msg.Amount, msg.Signer)
+	withdraw, err := h.mgr.TradeAccountManager().Withdrawal(ctx, msg.Asset, msg.Amount, msg.Signer, msg.AssetAddress, msg.Tx.ID)
 	if err != nil {
 		return err
 	}
@@ -94,11 +94,6 @@ func (h TradeAccountWithdrawalHandler) handleV1(ctx cosmos.Context, msg MsgTrade
 	}
 	if !ok {
 		return errFailAddOutboundTx
-	}
-
-	withdrawEvent := NewEventTradeAccountWithdraw(msg.Amount, msg.Asset.GetTradeAsset(), msg.AssetAddress, common.Address(msg.Signer.String()), msg.Tx.ID)
-	if err := h.mgr.EventMgr().EmitEvent(ctx, withdrawEvent); err != nil {
-		ctx.Logger().Error("fail to emit deposit event", "error", err)
 	}
 
 	return nil

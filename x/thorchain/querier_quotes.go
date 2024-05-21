@@ -752,7 +752,7 @@ func queryQuoteSwap(ctx cosmos.Context, path []string, req abci.RequestQuery, mg
 		if err != nil {
 			return quoteErrorResponse(fmt.Errorf("failed to get thor address: %w", err))
 		}
-		_, err = mgr.TradeAccountManager().Deposit(ctx, fromAsset, amount, thorAddr)
+		_, err = mgr.TradeAccountManager().Deposit(ctx, fromAsset, amount, thorAddr, common.NoAddress, common.BlankTxID)
 		if err != nil {
 			return quoteErrorResponse(fmt.Errorf("failed to deposit trade asset: %w", err))
 		}
