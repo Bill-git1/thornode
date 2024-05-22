@@ -39,22 +39,22 @@ count: 1
 ---
 # set fee floor
 type: tx-mimir
-key: "7-SYNTHSLIPMINBPS"
+key: "SwapSlipBasisPointsMin-Synth"
 value: 500
 signer: {{ addr_thor_cat }}
 ---
 type: tx-mimir
-key: "7-SYNTHSLIPMINBPS"
+key: "SwapSlipBasisPointsMin-Synth"
 value: 500
 signer: {{ addr_thor_pig }}
 ---
 type: tx-mimir
-key: "7-SYNTHSLIPMINBPS"
+key: "SwapSlipBasisPointsMin-Synth"
 value: 500
 signer: {{ addr_thor_fox }}
 ---
 type: tx-mimir
-key: "7-SYNTHSLIPMINBPS"
+key: "SwapSlipBasisPointsMin-Synth"
 value: 500
 signer: {{ addr_thor_goat }}
 ---
@@ -62,9 +62,9 @@ type: create-blocks
 count: 1
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/mimirV2
+endpoint: http://localhost:1317/thorchain/mimir
 asserts:
-  - .SWAPSLIPBASISPOINTSMINSYNTHSLIPMINBPS == 500
+  - .["SwapSlipBasisPointsMin-Synth" | ascii_upcase] == 500
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/quote/swap

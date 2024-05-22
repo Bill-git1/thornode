@@ -143,6 +143,7 @@ const (
 	TradeAccountsSlipMinBps // SwapSlipBasisPointsMinId mimirv2 ref
 	TradeAccountsEnabled
 	EVMDisableContractWhitelist
+	OperationalVotesMin
 )
 
 // ConstantValues define methods used to get constant values

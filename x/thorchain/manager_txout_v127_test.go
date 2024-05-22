@@ -1,6 +1,8 @@
 package thorchain
 
 import (
+	"fmt"
+
 	"gopkg.in/check.v1"
 	. "gopkg.in/check.v1"
 
@@ -31,6 +33,11 @@ func (k *TestCalcKeeper) GetPool(ctx cosmos.Context, asset common.Asset) (types.
 
 func (k *TestCalcKeeper) GetMimir(ctx cosmos.Context, key string) (int64, error) {
 	return k.mimir[key], nil
+}
+
+func (k *TestCalcKeeper) GetMimirWithRef(ctx cosmos.Context, template, ref string) (int64, error) {
+	key := fmt.Sprintf(template, ref)
+	return k.GetMimir(ctx, key)
 }
 
 func (k *TestCalcKeeper) GetConfigInt64(ctx cosmos.Context, key constants.ConstantName) int64 {

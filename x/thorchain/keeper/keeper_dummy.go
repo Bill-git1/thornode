@@ -3,6 +3,7 @@ package keeper
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/blang/semver"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -533,7 +534,10 @@ func (k KVStoreDummy) GetOrderBookProcessor(ctx cosmos.Context) ([]bool, error) 
 }
 
 func (k KVStoreDummy) GetMimir(_ cosmos.Context, key string) (int64, error) { return 0, kaboom }
-func (k KVStoreDummy) SetMimir(_ cosmos.Context, key string, value int64)   {}
+func (k KVStoreDummy) GetMimirWithRef(_ cosmos.Context, template, key string) (int64, error) {
+	return 0, kaboom
+}
+func (k KVStoreDummy) SetMimir(_ cosmos.Context, key string, value int64) {}
 func (k KVStoreDummy) GetNodeMimirs(ctx cosmos.Context, key string) (NodeMimirs, error) {
 	return NodeMimirs{}, kaboom
 }
@@ -541,6 +545,8 @@ func (k KVStoreDummy) GetNodeMimirs(ctx cosmos.Context, key string) (NodeMimirs,
 func (k KVStoreDummy) SetNodeMimir(_ cosmos.Context, key string, value int64, acc cosmos.AccAddress) error {
 	return kaboom
 }
+func (k KVStoreDummy) DeleteNodeMimirs(_ cosmos.Context, key string)           {}
+func (k KVStoreDummy) PurgeOperationalNodeMimirs(_ cosmos.Context)             {}
 func (k KVStoreDummy) DeleteMimir(_ cosmos.Context, key string) error          { return kaboom }
 func (k KVStoreDummy) GetMimirIterator(ctx cosmos.Context) cosmos.Iterator     { return nil }
 func (k KVStoreDummy) GetNodeMimirIterator(ctx cosmos.Context) cosmos.Iterator { return nil }
@@ -548,6 +554,11 @@ func (k KVStoreDummy) GetNodePauseChain(ctx cosmos.Context, acc cosmos.AccAddres
 	return int64(-1)
 }
 func (k KVStoreDummy) SetNodePauseChain(ctx cosmos.Context, acc cosmos.AccAddress) {}
+func (k KVStoreDummy) IsOperationalMimir(key string) bool {
+	key = strings.ToUpper(key)
+	// Simplified representation.
+	return strings.Contains(key, "HALT") || strings.Contains(key, "PAUSE")
+}
 
 func (k KVStoreDummy) GetNodeMimirsV2(ctx cosmos.Context, key string) (NodeMimirs, error) {
 	return NodeMimirs{}, kaboom

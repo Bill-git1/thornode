@@ -2,13 +2,17 @@ package thorchain
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
+	"gitlab.com/thorchain/thornode/mimir"
 )
+
+var mimirV2ValidKey = regexp.MustCompile(`^[0-9]+-[a-zA-Z0-9]+$`).MatchString
 
 func (h MimirHandler) validateV95(ctx cosmos.Context, msg MsgMimir) error {
 	if err := msg.ValidateBasic(); err != nil {
@@ -32,6 +36,99 @@ func (h MimirHandler) validateV78(ctx cosmos.Context, msg MsgMimir) error {
 	}
 	if !isAdmin(msg.Signer) && !isSignedByActiveNodeAccounts(ctx, h.mgr.Keeper(), msg.GetSigners()) {
 		return cosmos.ErrUnauthorized(fmt.Sprintf("%s is not authorizaed", msg.Signer))
+	}
+	return nil
+}
+
+func (h MimirHandler) handleV125(ctx cosmos.Context, msg MsgMimir) error {
+	if mimirV2ValidKey(msg.Key) {
+		return h.mVer2V125(ctx, msg)
+	} else {
+		return h.handleV112(ctx, msg)
+	}
+}
+
+func (h MimirHandler) mVer2V125(ctx cosmos.Context, msg MsgMimir) error {
+	if isAdmin(msg.Signer) {
+		return fmt.Errorf("cannot set mimir v2 with a mimir admin account: %s", msg.Key)
+	}
+
+	mimirVal, found := mimir.GetMimirByKey(msg.Key)
+	if !found {
+		// v2 mimir does not exist
+		return fmt.Errorf("fail to get mimir v2 with key:%s", msg.Key)
+	}
+
+	// Cost and emitting of SetNodeMimir, even if a duplicate
+	// (for instance if needed to confirm a new supermajority after a node number decrease).
+	nodeAccount, err := h.mgr.Keeper().GetNodeAccount(ctx, msg.Signer)
+	if err != nil {
+		ctx.Logger().Error("fail to get node account", "error", err, "address", msg.Signer.String())
+		return cosmos.ErrUnauthorized(fmt.Sprintf("%s is not authorized", msg.Signer))
+	}
+	cost := h.mgr.Keeper().GetNativeTxFee(ctx)
+	nodeAccount.Bond = common.SafeSub(nodeAccount.Bond, cost)
+	if err := h.mgr.Keeper().SetNodeAccount(ctx, nodeAccount); err != nil {
+		ctx.Logger().Error("fail to save node account", "error", err)
+		return fmt.Errorf("fail to save node account: %w", err)
+	}
+	// move set mimir cost from bond module to reserve
+	coin := common.NewCoin(common.RuneNative, cost)
+	if !cost.IsZero() {
+		if err := h.mgr.Keeper().SendFromModuleToModule(ctx, BondName, ReserveName, common.NewCoins(coin)); err != nil {
+			ctx.Logger().Error("fail to transfer funds from bond to reserve", "error", err)
+			return err
+		}
+	}
+	if err := h.mgr.Keeper().SetNodeMimirV2(ctx, msg.Key, msg.Value, msg.Signer); err != nil {
+		ctx.Logger().Error("fail to save node mimir", "error", err)
+		return err
+	}
+	nodeMimirEvent := NewEventSetNodeMimir(strings.ToUpper(msg.Key), strconv.FormatInt(msg.Value, 10), msg.Signer.String())
+	if err := h.mgr.EventMgr().EmitEvent(ctx, nodeMimirEvent); err != nil {
+		ctx.Logger().Error("fail to emit set_node_mimir event", "error", err)
+		return err
+	}
+	tx := common.Tx{}
+	tx.ID = common.BlankTxID
+	tx.ToAddress = common.Address(nodeAccount.String())
+	bondEvent := NewEventBond(cost, BondCost, tx)
+	if err := h.mgr.EventMgr().EmitEvent(ctx, bondEvent); err != nil {
+		ctx.Logger().Error("fail to emit bond event", "error", err)
+		return err
+	}
+
+	if mimirVal.Type() != mimir.EconomicMimir {
+		return nil
+	}
+
+	// Get the current Mimir key value if it exists.
+	currentMimirValue, _ := h.mgr.Keeper().GetMimirV2(ctx, msg.Key)
+
+	// If the Mimir key is already the submitted value, don't do anything further.
+	if msg.Value == currentMimirValue {
+		return nil
+	}
+
+	activeNodes, err := h.mgr.Keeper().ListActiveValidators(ctx)
+	if err != nil {
+		ctx.Logger().Error("fail to list active validators", "error", err)
+		return err
+	}
+
+	mimirs, err := h.mgr.Keeper().GetNodeMimirsV2(ctx, msg.Key)
+	if err != nil {
+		ctx.Logger().Error("failed to get node mimir v2", "error", err)
+		return err
+	}
+
+	value := mimirs.ValueOfEconomic(msg.Key, activeNodes.GetNodeAddresses())
+	if value >= 0 {
+		h.mgr.Keeper().SetMimirV2(ctx, msg.Key, value)
+		mimirEvent := NewEventSetMimir(strings.ToUpper(msg.Key), strconv.FormatInt(value, 10))
+		if err := h.mgr.EventMgr().EmitEvent(ctx, mimirEvent); err != nil {
+			ctx.Logger().Error("fail to emit set_mimir event", "error", err)
+		}
 	}
 	return nil
 }

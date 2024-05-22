@@ -44,6 +44,7 @@ func init() {
 		TargetOutboundFeeSurplusRune:        10_000_00000000,
 		MaxOutboundFeeMultiplierBasisPoints: 20_000,
 		MinOutboundFeeMultiplierBasisPoints: 15_000,
+		OperationalVotesMin:                 1, // For regtest single-signer Mimir changes without Admin
 		PreferredAssetOutboundFeeMultiplier: 100,
 		TradeAccountsEnabled:                1,
 		MaxAffiliateFeeBasisPoints:          10_000,

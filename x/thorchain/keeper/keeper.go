@@ -352,14 +352,18 @@ type KeeperOrderBooks interface {
 
 type KeeperMimir interface {
 	GetMimir(_ cosmos.Context, key string) (int64, error)
+	GetMimirWithRef(_ cosmos.Context, template, ref string) (int64, error)
 	SetMimir(_ cosmos.Context, key string, value int64)
 	GetNodeMimirs(ctx cosmos.Context, key string) (NodeMimirs, error)
 	SetNodeMimir(_ cosmos.Context, key string, value int64, acc cosmos.AccAddress) error
+	DeleteNodeMimirs(ctx cosmos.Context, key string)
+	PurgeOperationalNodeMimirs(ctx cosmos.Context)
 	GetMimirIterator(ctx cosmos.Context) cosmos.Iterator
 	GetNodeMimirIterator(ctx cosmos.Context) cosmos.Iterator
 	DeleteMimir(_ cosmos.Context, key string) error
 	GetNodePauseChain(ctx cosmos.Context, acc cosmos.AccAddress) int64
 	SetNodePauseChain(ctx cosmos.Context, acc cosmos.AccAddress)
+	IsOperationalMimir(key string) bool
 	GetNodeMimirsV2(ctx cosmos.Context, key string) (NodeMimirs, error)
 	SetNodeMimirV2(_ cosmos.Context, key string, value int64, acc cosmos.AccAddress) error
 	GetNodeMimirIteratorV2(ctx cosmos.Context) cosmos.Iterator

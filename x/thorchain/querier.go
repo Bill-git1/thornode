@@ -2492,93 +2492,33 @@ func queryMimirWithKey(ctx cosmos.Context, path []string, req abci.RequestQuery,
 	if len(path) == 0 && len(path[0]) == 0 {
 		return nil, fmt.Errorf("no mimir key")
 	}
-	var (
-		v   int64
-		err error
-	)
-	if mimirV2ValidKey(path[0]) {
-		mimirV2, found := mimir.GetMimirByKey(path[0])
-		if !found {
-			return nil, fmt.Errorf("fail to get mimir v2 with key:%s", path[0])
-		}
-		v = mimirV2.FetchValue(ctx, mgr.Keeper())
-	} else {
-		v, err = mgr.Keeper().GetMimir(ctx, path[0])
-		if err != nil {
-			return nil, fmt.Errorf("fail to get mimir with key:%s, err : %w", path[0], err)
-		}
+
+	v, err := mgr.Keeper().GetMimir(ctx, path[0])
+	if err != nil {
+		return nil, fmt.Errorf("fail to get mimir with key:%s, err : %w", path[0], err)
 	}
 	return jsonify(ctx, v)
 }
 
 func queryMimirValues(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {
-	values := make(map[string]int64)
+	values := map[string]int64{}
 
-	// collect keys
-	iter := mgr.Keeper().GetMimirIterator(ctx)
+	// collect all keys with set values, not displaying those with votes but no set value
+	keeper := mgr.Keeper()
+	iter := keeper.GetMimirIterator(ctx)
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
-		k := strings.TrimPrefix(string(iter.Key()), "mimir//")
-		values[k] = 0
-	}
-	iterNode := mgr.Keeper().GetNodeMimirIterator(ctx)
-	defer iterNode.Close()
-	for ; iterNode.Valid(); iterNode.Next() {
-		k := strings.TrimPrefix(string(iterNode.Key()), "nodemimir//")
-		values[k] = 0
-	}
-
-	// analyze-ignore(map-iteration)
-	for k := range values {
-		v, err := mgr.Keeper().GetMimir(ctx, k)
+		key := strings.TrimPrefix(string(iter.Key()), "mimir//")
+		value, err := keeper.GetMimir(ctx, key)
 		if err != nil {
-			return nil, fmt.Errorf("fail to get mimir, err: %w", err)
-		}
-		// v from GetMimir is of type int64.
-		if v == -1 {
-			// This key has node votes but no node consensus or Admin-set value,
-			// so do not display its unset status in the Mimir endpoint.
-			delete(values, k)
+			ctx.Logger().Error("fail to get mimir value", "error", err)
 			continue
 		}
-		values[k] = v
-	}
-
-	// overwrite values based on mimir v2
-	active, err := mgr.Keeper().ListActiveValidators(ctx)
-	if err != nil {
-		ctx.Logger().Error("failed to get active validator set", "error", err)
-	}
-
-	iteration := mgr.Keeper().GetNodeMimirIteratorV2(ctx)
-	defer iteration.Close()
-	for ; iteration.Valid(); iteration.Next() {
-		key := strings.TrimPrefix(string(iteration.Key()), "nodemimirV2//")
-		mimirs, err := mgr.Keeper().GetNodeMimirsV2(ctx, key)
-		if err != nil {
+		if value < 0 {
+			ctx.Logger().Error("negative mimir value set", "key", key, "value", value)
 			continue
 		}
-		parts := strings.Split(key, "-")
-		id, err := strconv.Atoi(parts[0])
-		if err != nil {
-			continue
-		}
-		ref := parts[len(parts)-1]
-
-		m, _ := mimir.GetMimir(mimir.Id(id), ref)
-		value := int64(-1)
-		switch m.Type() {
-		case mimir.EconomicMimir:
-			value = mimirs.ValueOfEconomic(key, active.GetNodeAddresses())
-			if value < 0 {
-				value, _ = mgr.Keeper().GetMimirV2(ctx, key)
-			}
-		case mimir.OperationalMimir:
-			value = mimirs.ValueOfOperational(key, constants.MinMimirV2Vote, active.GetNodeAddresses())
-		}
-		if value >= 0 {
-			values[m.LegacyKey(m.Reference())] = value
-		}
+		values[key] = value
 	}
 
 	return jsonify(ctx, values)

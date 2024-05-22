@@ -1,6 +1,8 @@
 package thorchain
 
 import (
+	"fmt"
+
 	. "gopkg.in/check.v1"
 
 	"github.com/blang/semver"
@@ -491,6 +493,11 @@ func (k *TestCalcKeeperV87) GetPool(ctx cosmos.Context, asset common.Asset) (typ
 
 func (k *TestCalcKeeperV87) GetMimir(ctx cosmos.Context, key string) (int64, error) {
 	return k.mimir[key], nil
+}
+
+func (k *TestCalcKeeperV87) GetMimirWithRef(ctx cosmos.Context, template, ref string) (int64, error) {
+	key := fmt.Sprintf(template, ref)
+	return k.GetMimir(ctx, key)
 }
 
 func (k *TestCalcKeeperV87) GetTxOutValue(ctx cosmos.Context, height int64) (cosmos.Uint, cosmos.Uint, error) {

@@ -490,20 +490,24 @@ func (s *SwapperVCUR) MinSlipBps(
 	ctx cosmos.Context,
 	k keeper.Keeper,
 	isSynth bool,
-	isTradeAccounts bool,
+	isTradeAccount bool,
 ) cosmos.Uint {
 	var ref string
 	switch {
 	case isSynth:
-		ref = constants.SynthSlipMinBps.String()
-	case isTradeAccounts:
-		ref = constants.TradeAccountsSlipMinBps.String()
+		ref = constants.MimirRefSynth
+	case isTradeAccount:
+		ref = constants.MimirRefTradeAccount
 	default:
-		ref = constants.L1SlipMinBps.String()
+		ref = constants.MimirRefL1
 	}
-	minFeeMimir, found := mimir.GetMimir(mimir.SwapSlipBasisPointsMin, ref)
-	if !found {
+	key := fmt.Sprintf(constants.MimirTemplateSwapSlipBasisPointsMin, ref)
+	minFeeMimir, err := k.GetMimir(ctx, key)
+	if minFeeMimir < 0 || err != nil {
+		if err != nil {
+			ctx.Logger().Error("fail to get mimir", "key", key, "error", err)
+		}
 		return cosmos.ZeroUint()
 	}
-	return cosmos.SafeUintFromInt64(minFeeMimir.FetchValue(ctx, k))
+	return cosmos.SafeUintFromInt64(minFeeMimir)
 }

@@ -408,7 +408,12 @@
         }
       ],
       "loans": [],
-      "mimirs": [],
+      "mimirs": [
+        {
+          "key": "SWAPSLIPBASISPOINTSMIN-L1",
+          "value": "500"
+        }
+      ],
       "network": {
         "LPIncomeSplit": "9751",
         "NodeIncomeSplit": "249",

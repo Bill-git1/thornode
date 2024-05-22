@@ -2,6 +2,8 @@ package thorchain
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/cosmos/cosmos-sdk/types"
 
@@ -153,4 +155,16 @@ func (k *TestSwapKeeper) MintToModule(ctx cosmos.Context, module string, coin co
 
 func (k *TestSwapKeeper) GetMimirV2(ctx cosmos.Context, key string) (int64, error) {
 	return 1_00, nil
+}
+
+func (k *TestSwapKeeper) GetMimir(ctx cosmos.Context, key string) (int64, error) {
+	if strings.EqualFold(key, "SwapSlipBasisPointsMin-L1") {
+		return 1_00, nil
+	}
+	return 0, errKaboom
+}
+
+func (k *TestSwapKeeper) GetMimirWithRef(ctx cosmos.Context, template, ref string) (int64, error) {
+	key := fmt.Sprintf(template, ref)
+	return k.GetMimir(ctx, key)
 }

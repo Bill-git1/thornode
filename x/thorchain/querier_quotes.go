@@ -18,7 +18,6 @@ import (
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
 	"gitlab.com/thorchain/thornode/log"
-	"gitlab.com/thorchain/thornode/mimir"
 	openapi "gitlab.com/thorchain/thornode/openapi/gen"
 	mem "gitlab.com/thorchain/thornode/x/thorchain/memo"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
@@ -392,11 +391,10 @@ func quoteInboundInfo(ctx cosmos.Context, mgr *Mgrs, amount sdk.Uint, chain comm
 	}
 
 	// estimate the inbound confirmation count blocks: ceil(amount/coinbase * conf adjustment)
-	confMimir, found := mimir.GetMimir(mimir.ConfMultiplierBasisPoints, chain.String())
-	if !found {
-		return common.NoAddress, common.NoAddress, 0, fmt.Errorf("conf multiplier mimir not found")
+	confMul, err := mgr.Keeper().GetMimirWithRef(ctx, constants.MimirTemplateConfMultiplierBasisPoints, chain.String())
+	if confMul < 0 || err != nil {
+		confMul = int64(constants.MaxBasisPts)
 	}
-	confMul := confMimir.FetchValue(ctx, mgr.Keeper())
 	if chain.DefaultCoinbase() > 0 {
 		confValue := common.GetUncappedShare(cosmos.NewUint(uint64(confMul)), cosmos.NewUint(constants.MaxBasisPts), cosmos.NewUint(uint64(chain.DefaultCoinbase())*common.One))
 		confirmations = amount.Quo(confValue).BigInt().Int64()
@@ -417,11 +415,10 @@ func quoteInboundInfo(ctx cosmos.Context, mgr *Mgrs, amount sdk.Uint, chain comm
 
 	// max confirmation adjustment for btc and eth
 	if chain.Equals(common.BTCChain) || chain.Equals(common.ETHChain) {
-		maxConfMimir, found := mimir.GetMimir(mimir.MaxConfirmations, chain.String())
-		if !found {
-			return common.NoAddress, common.NoAddress, 0, fmt.Errorf("max conf multiplier mimir not found")
+		maxConfirmations, err := mgr.Keeper().GetMimirWithRef(ctx, constants.MimirTemplateMaxConfirmations, chain.String())
+		if maxConfirmations < 0 || err != nil {
+			maxConfirmations = 0
 		}
-		maxConfirmations := maxConfMimir.FetchValue(ctx, mgr.Keeper())
 		if maxConfirmations > 0 && confirmations > maxConfirmations {
 			confirmations = maxConfirmations
 		}

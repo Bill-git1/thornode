@@ -137,6 +137,11 @@ func (k *TestSwapHandleKeeper) GetMimir(ctx cosmos.Context, key string) (int64, 
 	return k.haltChain, nil
 }
 
+func (k *TestSwapHandleKeeper) GetMimirWithRef(ctx cosmos.Context, template, ref string) (int64, error) {
+	key := fmt.Sprintf(template, ref)
+	return k.GetMimir(ctx, key)
+}
+
 func (k *TestSwapHandleKeeper) MintToModule(_ cosmos.Context, _ string, _ common.Coin) error {
 	return nil
 }

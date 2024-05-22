@@ -5,6 +5,7 @@ import (
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/constants"
 )
 
 type HandlerMimirSuite struct{}
@@ -84,11 +85,10 @@ func (s *HandlerMimirSuite) TestMimirHandle(c *C) {
 	c.Assert(keeper.SetNodeAccount(ctx, na2), IsNil)
 	c.Assert(keeper.SetNodeAccount(ctx, na3), IsNil)
 
-	// mimirV2 set
-	result, err = handler.Run(ctx, NewMsgMimir("1-global", 1, na1.NodeAddress))
+	result, err = handler.Run(ctx, NewMsgMimir("AffiliateFeeBasisPointsMax", 1, na1.NodeAddress))
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
-	mimirs, err := keeper.GetNodeMimirsV2(ctx, "1-global")
+	mimirs, err := keeper.GetNodeMimirs(ctx, "AffiliateFeeBasisPointsMax")
 	c.Assert(err, IsNil)
 	c.Assert(mimirs.Mimirs, HasLen, 1)
 
@@ -139,4 +139,24 @@ func (s *HandlerMimirSuite) TestMimirHandle(c *C) {
 	result, err = handler.Run(ctx, NewMsgMimir("node-mimir-1", 0, na2.NodeAddress))
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
+
+	// With OperationalVotesMin 3, Operational Mimir should not be set until at least three nodes agree.
+	keeper.SetMimir(ctx, constants.OperationalVotesMin.String(), 3)
+
+	result, err = handler.Run(ctx, NewMsgMimir("HaltSigning", 1, na1.NodeAddress))
+	c.Assert(err, IsNil)
+	c.Assert(result, NotNil)
+	result, err = handler.Run(ctx, NewMsgMimir("HaltSigning", 1, na2.NodeAddress))
+	c.Assert(err, IsNil)
+	c.Assert(result, NotNil)
+	val, err = keeper.GetMimir(ctx, "HaltSigning")
+	c.Assert(err, IsNil)
+	c.Assert(val, Equals, int64(-1))
+	// Now the third.
+	result, err = handler.Run(ctx, NewMsgMimir("HaltSigning", 1, na3.NodeAddress))
+	c.Assert(err, IsNil)
+	c.Assert(result, NotNil)
+	val, err = keeper.GetMimir(ctx, "HaltSigning")
+	c.Assert(err, IsNil)
+	c.Assert(val, Equals, int64(1))
 }

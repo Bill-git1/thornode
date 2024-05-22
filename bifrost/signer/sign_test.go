@@ -78,6 +78,11 @@ func (b fakeBridge) GetMimir(key string) (int64, error) {
 	panic("not implemented")
 }
 
+func (b fakeBridge) GetMimirWithRef(template, ref string) (int64, error) {
+	key := fmt.Sprintf(template, ref)
+	return b.GetMimir(key)
+}
+
 func (b fakeBridge) GetVault(pubkey string) (types2.Vault, error) {
 	pk, err := common.NewPubKey(pubkey)
 	if err != nil {

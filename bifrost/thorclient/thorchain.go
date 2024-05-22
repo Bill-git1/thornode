@@ -87,6 +87,7 @@ type ThorchainBridge interface {
 	GetKeygenStdTx(poolPubKey common.PubKey, keysharesBackup []byte, blame stypes.Blame, inputPks common.PubKeys, keygenType stypes.KeygenType, chains common.Chains, height, keygenTime int64) (sdk.Msg, error)
 	GetKeysignParty(vaultPubKey common.PubKey) (common.PubKeys, error)
 	GetMimir(key string) (int64, error)
+	GetMimirWithRef(template, ref string) (int64, error)
 	GetObservationsStdTx(txIns stypes.ObservedTxs) ([]cosmos.Msg, error)
 	GetPools() (stypes.Pools, error)
 	GetPubKeys() ([]PubKeyContractAddressPair, error)
@@ -697,6 +698,14 @@ func (b *thorchainBridge) GetMimir(key string) (int64, error) {
 		return 0, fmt.Errorf("fail to unmarshal mimir: %w", err)
 	}
 	return value, nil
+}
+
+// GetMimirWithRef is a helper function to more readably insert references (such as Asset MimirString or Chain) into Mimir key templates.
+func (b *thorchainBridge) GetMimirWithRef(template, ref string) (int64, error) {
+	// 'template' should be something like "Halt%sChain" (to halt an arbitrary specified chain)
+	// or "Ragnarok-%s" (to halt the pool of an arbitrary specified Asset (MimirString used for Assets to join Chain and Symbol with a hyphen).
+	key := fmt.Sprintf(template, ref)
+	return b.GetMimir(key)
 }
 
 // PubKeyContractAddressPair is an entry to map pubkey and contract addresses
