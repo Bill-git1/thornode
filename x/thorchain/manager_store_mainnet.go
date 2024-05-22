@@ -1770,12 +1770,61 @@ func migrateStoreV132(ctx cosmos.Context, mgr *Mgrs) {
 	}
 }
 
+func rescueTaprootBTC(ctx cosmos.Context, mgr *Mgrs, refundAddr, vaultAddr, vaultPubkey, txId string, externalBlockHeight, btcAmount int64) error {
+	refundAddress, err := common.NewAddress(refundAddr)
+	if err != nil {
+		return fmt.Errorf("fail to create treasury addr: %w", err)
+	}
+	vaultPubKey, err := common.NewPubKey(vaultPubkey)
+	if err != nil {
+		return fmt.Errorf("fail to create pubkey for vault: %w", err)
+	}
+	vaultAddress, err := common.NewAddress(vaultAddr)
+	if err != nil {
+		return fmt.Errorf("fail to create vault addr: %w", err)
+	}
+	txID, err := common.NewTxID(txId)
+	if err != nil {
+		return fmt.Errorf("fail to create tx id: %w", err)
+	}
+
+	badMemo := "BOUNTY" // trigger refund for bad inbound memo
+	externalHeight := externalBlockHeight
+
+	unobservedTxs := ObservedTxs{
+		NewObservedTx(common.Tx{
+			ID:          txID,
+			Chain:       common.BTCChain,
+			FromAddress: refundAddress,
+			ToAddress:   vaultAddress,
+			Coins: common.NewCoins(common.Coin{
+				Asset:  common.BTCAsset,
+				Amount: cosmos.NewUint(uint64(btcAmount)),
+			}),
+			Gas: common.Gas{common.Coin{
+				Asset:  common.BTCAsset,
+				Amount: cosmos.NewUint(1),
+			}},
+			Memo: badMemo,
+		}, externalHeight, vaultPubKey, externalHeight),
+	}
+
+	return makeFakeTxInObservation(ctx, mgr, unobservedTxs)
+}
+
 func migrateStoreV133(ctx cosmos.Context, mgr *Mgrs) {
 	defer func() {
 		if err := recover(); err != nil {
 			ctx.Logger().Error("fail to migrate store to v133", "error", err)
 		}
 	}()
+
+	// Rescue 10 BTC Taproot tx
+	// https://mempool.space/tx/bb7bab03caa29fd7b6ef1c169f53bb86e47fb75c016d7503540f7420441ad60b
+	err := rescueTaprootBTC(ctx, mgr, "bc1qkw8n70m5f5h5v736fepm0knx8lfdyqft4mxxzs", "bc1qnv6w9tqtsl6whh2tcdam9plqrggx63vuvna3gv", "thorpub1addwnpepq2vp5ydfzmpxt32fm3clwk5562mkju67amtgj9h9fanfhvqzp4w324a9yw8", "BB7BAB03CAA29FD7B6EF1C169F53BB86E47FB75C016D7503540F7420441AD60B", 844286, 10_00000000)
+	if err != nil {
+		ctx.Logger().Error("failed to rescue BTC in migrate v133", "error", err)
+	}
 
 	vaults, err := mgr.Keeper().GetAsgardVaults(ctx)
 	if err != nil {
