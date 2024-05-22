@@ -101,7 +101,6 @@ class EVMSetupTool:
     def deploy_init_contracts(self):
         self.deploy_token()
         self.deploy_router()
-        self.deploy_dex()
 
     def deploy_token(self):
         print("deploying token contract...")
