@@ -727,6 +727,11 @@ func (tos *TxOutStorageVCUR) addToBlockOut(ctx cosmos.Context, mgr Manager, item
 }
 
 func (tos *TxOutStorageVCUR) calcClout(ctx cosmos.Context, runeValue cosmos.Uint, toi TxOutItem) (cosmos.Uint, cosmos.Uint) {
+	// disable swapper clout for dex agg txs
+	if toi.Aggregator != "" || toi.AggregatorTargetAsset != "" || toi.AggregatorTargetLimit != nil {
+		return runeValue, cosmos.ZeroUint()
+	}
+
 	cloutOut, err := tos.keeper.GetSwapperClout(ctx, toi.ToAddress)
 	if err != nil {
 		ctx.Logger().Error("fail to get swapper clout destination address", "error", err)

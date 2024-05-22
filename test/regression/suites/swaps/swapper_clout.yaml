@@ -232,7 +232,6 @@ asserts:
   - .[0].coin.amount == "${OUT_ONE=33881254}"
   - .[1].coin.amount == "${OUT_TWO=28944229}"
 ---
-
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
 txs:
@@ -283,3 +282,45 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
+---
+########################################################################################
+# swapper clout w/ dex agg
+########################################################################################
+type: tx-deposit
+signer: {{ addr_thor_fox }}
+coins:
+  - amount: "10000000000"
+    asset: "rune"
+memo: "=:e:{{ addr_eth_fox }}::::6f3848:19e4348"
+---
+type: create-blocks
+count: 1
+---
+########################################################################################
+# check that no swapper clout is applied
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - |
+    .[0] == {
+      chain: "ETH",
+      clout_spent: "0",
+      coin: {
+          amount: "65817296",
+          asset: "ETH.ETH"
+      },
+      gas_rate: 12,
+      height: 20,
+      in_hash: "34AA325C82F0B9572B54B1AD403146200625DB5F31EF59C5F8BF9BF22F93E71A",
+      max_gas: [
+          {
+              amount: "960000",
+              asset: "ETH.ETH",
+              decimals: 8
+          }
+      ],
+      memo: "OUT:34AA325C82F0B9572B54B1AD403146200625DB5F31EF59C5F8BF9BF22F93E71A",
+      to_address: "0xe3c64974c78f5693bd2bc68b3221d58df5c6e877",
+      vault_pub_key: "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
+    }
