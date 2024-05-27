@@ -127,9 +127,10 @@ build-thornode:
     - BUILDTAG=mocknet BRANCH=mocknet make docker-gitlab-push
 
 chain-avalanche:
-  only:
-    changes:
-      - chain/avalanche/**/*
+  rules:
+    - changes:
+        paths:
+          - chain/avalanche/**/*
   stage: test
   image: node:16
   script:
@@ -139,9 +140,10 @@ chain-avalanche:
     - yarn hardhat test
 
 chain-ethereum:
-  only:
-    changes:
-      - chain/ethereum/**/*
+  rules:
+    - changes:
+        paths:
+          - chain/ethereum/**/*
   stage: test
   image: node:16
   script:
