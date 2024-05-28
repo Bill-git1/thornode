@@ -12,12 +12,13 @@ import (
 	prefix "gitlab.com/thorchain/thornode/cmd"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/test/simulation/actors"
+	"gitlab.com/thorchain/thornode/test/simulation/actors/suites"
 	pkgcosmos "gitlab.com/thorchain/thornode/test/simulation/pkg/cosmos"
 	"gitlab.com/thorchain/thornode/test/simulation/pkg/dag"
 	"gitlab.com/thorchain/thornode/test/simulation/pkg/evm"
 	. "gitlab.com/thorchain/thornode/test/simulation/pkg/types"
 	"gitlab.com/thorchain/thornode/test/simulation/pkg/utxo"
-	"gitlab.com/thorchain/thornode/test/simulation/suites/static"
 	"gitlab.com/thorchain/thornode/test/simulation/watchers"
 )
 
@@ -69,12 +70,13 @@ func main() {
 
 	// combine all actor dags for the complete test run
 	root := NewActor("Root")
-	root.Append(static.Bootstrap())
+	root.Append(suites.Bootstrap())
+	root.Append(actors.NewArbActor())
 
 	// skip swaps and ragnarok if this is bootstrap only mode
 	if os.Getenv("BOOTSTRAP_ONLY") != "true" {
-		root.Append(static.Swaps())
-		root.Append(static.Ragnarok())
+		root.Append(suites.Swaps())
+		root.Append(suites.Ragnarok())
 	}
 
 	// gather config from the environment

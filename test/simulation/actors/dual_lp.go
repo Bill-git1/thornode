@@ -2,15 +2,11 @@ package actors
 
 import (
 	"fmt"
-	"math/big"
-	"time"
 
-	ecommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-multierror"
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
-	"gitlab.com/thorchain/thornode/test/simulation/pkg/evm"
 	"gitlab.com/thorchain/thornode/test/simulation/pkg/thornode"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
 
@@ -115,7 +111,7 @@ func (a *DualLPActor) acquireUser(config *OpConfig) OpResult {
 		// set acquired account and amounts in state context
 		a.Log().Info().
 			Stringer("address", thorAddress).
-			Stringer("l1_address", l1Address).
+			Stringer("l1Address", l1Address).
 			Msg("acquired user")
 		a.thorAddress = thorAddress
 		a.l1Address = l1Address
@@ -135,95 +131,11 @@ func (a *DualLPActor) acquireUser(config *OpConfig) OpResult {
 }
 
 func (a *DualLPActor) depositL1Token(config *OpConfig) OpResult {
-	// get router address
-	inboundAddr, routerAddr, err := thornode.GetInboundAddress(a.asset.Chain)
-	if err != nil {
-		a.Log().Error().Err(err).Msg("failed to get inbound address")
-		return OpResult{
-			Continue: false,
-		}
-	}
-	if routerAddr == nil {
-		a.Log().Error().Msg("failed to get router address")
-		return OpResult{
-			Continue: false,
-		}
-	}
-
-	token := evm.Tokens(a.asset.Chain)[a.asset]
-
-	// convert amount to token decimals
-	factor := big.NewInt(1).Exp(big.NewInt(10), big.NewInt(int64(token.Decimals)), nil)
-	tokenAmount := a.l1Amount.Mul(cosmos.NewUintFromBigInt(factor))
-	tokenAmount = tokenAmount.QuoUint64(common.One)
-
-	// approve the router
-	eRouterAddr := ecommon.HexToAddress(routerAddr.String())
-	tx := SimContractTx{
-		Chain:    a.asset.Chain,
-		Contract: common.Address(token.Address),
-		ABI:      evm.ERC20ABI(),
-		Method:   "approve",
-		Args:     []interface{}{eRouterAddr, tokenAmount.BigInt()},
-	}
-
-	iClient := a.account.ChainClients[a.asset.Chain]
-	client, ok := iClient.(*evm.Client)
-	if !ok {
-		a.Log().Fatal().Msg("failed to get evm client")
-	}
-
-	// sign approve transaction
-	signed, err := client.SignContractTx(tx)
-	if err != nil {
-		a.Log().Error().Err(err).Msg("failed to sign tx")
-		return OpResult{
-			Continue: false,
-		}
-	}
-
-	// broadcast approve transaction
-	txid, err := client.BroadcastTx(signed)
-	if err != nil {
-		a.Log().Error().Err(err).Msg("failed to broadcast tx")
-		return OpResult{
-			Continue: false,
-		}
-	}
-	a.Log().Info().Str("txid", txid).Msg("broadcasted router approve tx")
-
-	// call depositWithExpiry
 	memo := fmt.Sprintf("+:%s:%s", a.asset, a.thorAddress)
-	expiry := time.Now().Add(time.Hour).Unix()
-	eInboundAddr := ecommon.HexToAddress(inboundAddr.String())
-	eTokenAddr := ecommon.HexToAddress(token.Address)
-	tx = SimContractTx{
-		Chain:    a.asset.Chain,
-		Contract: *routerAddr,
-		ABI:      evm.RouterABI(),
-		Method:   "depositWithExpiry",
-		Args: []interface{}{
-			eInboundAddr,
-			eTokenAddr,
-			tokenAmount.BigInt(),
-			memo,
-			big.NewInt(expiry),
-		},
-	}
-
-	// sign deposit transaction
-	signed, err = client.SignContractTx(tx)
+	client := a.account.ChainClients[a.asset.Chain]
+	txid, err := depositL1Token(a.Log(), client, a.asset, memo, a.l1Amount)
 	if err != nil {
-		a.Log().Error().Err(err).Msg("failed to sign tx")
-		return OpResult{
-			Continue: false,
-		}
-	}
-
-	// broadcast deposit transaction
-	txid, err = client.BroadcastTx(signed)
-	if err != nil {
-		a.Log().Error().Err(err).Msg("failed to broadcast tx")
+		a.Log().Error().Err(err).Msg("failed to deposit L1 token")
 		return OpResult{
 			Continue: false,
 		}
@@ -236,39 +148,11 @@ func (a *DualLPActor) depositL1Token(config *OpConfig) OpResult {
 }
 
 func (a *DualLPActor) depositL1(config *OpConfig) OpResult {
-	// get inbound address
-	inboundAddr, _, err := thornode.GetInboundAddress(a.asset.Chain)
-	if err != nil {
-		a.Log().Error().Err(err).Msg("failed to get inbound address")
-		return OpResult{
-			Continue: false,
-		}
-	}
-
-	// create tx out
 	memo := fmt.Sprintf("+:%s:%s", a.asset, a.thorAddress)
-	tx := SimTx{
-		Chain:     a.asset.Chain,
-		ToAddress: inboundAddr,
-		Coin:      common.NewCoin(a.asset, a.l1Amount),
-		Memo:      memo,
-	}
-
 	client := a.account.ChainClients[a.asset.Chain]
-
-	// sign transaction
-	signed, err := client.SignTx(tx)
+	txid, err := depositL1(a.Log(), client, a.asset, memo, a.l1Amount)
 	if err != nil {
-		a.Log().Error().Err(err).Msg("failed to sign tx")
-		return OpResult{
-			Continue: false,
-		}
-	}
-
-	// broadcast transaction
-	txid, err := client.BroadcastTx(signed)
-	if err != nil {
-		a.Log().Error().Err(err).Msg("failed to broadcast tx")
+		a.Log().Error().Err(err).Msg("failed to deposit L1")
 		return OpResult{
 			Continue: false,
 		}

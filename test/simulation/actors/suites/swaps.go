@@ -1,4 +1,4 @@
-package static
+package suites
 
 import (
 	"math/rand"

@@ -23,7 +23,6 @@ stages:
   - test
   - build
   - long-test
-  - simulation
 
 fork:
   stage: fork
@@ -181,8 +180,7 @@ build-thorscan:
 
 test-simulation:
   rules: *rules
-  allow_failure: true
-  stage: simulation
+  stage: long-test
   image: docker:20.10.12
   services:
     - docker:20.10.12-dind
