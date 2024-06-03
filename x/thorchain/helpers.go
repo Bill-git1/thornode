@@ -763,6 +763,15 @@ func emitEndBlockTelemetry(ctx cosmos.Context, mgr Manager) error {
 			price = runeUSDPrice * telem(pool.BalanceRune) / telem(pool.BalanceAsset)
 		}
 		telemetry.SetGaugeWithLabels([]string{"thornode", "pool", "price", "usd"}, price, labels)
+
+		// trade accounts
+		tu, err := mgr.Keeper().GetTradeUnit(ctx, pool.Asset.GetTradeAsset())
+		if err != nil {
+			ctx.Logger().Error("fail to get trade unit", "error", err)
+			continue
+		}
+		telemetry.SetGaugeWithLabels([]string{"thornode", "pool", "tradeasset", "units"}, telem(tu.Units), labels)
+		telemetry.SetGaugeWithLabels([]string{"thornode", "pool", "tradeasset", "depth"}, telem(tu.Depth), labels)
 	}
 
 	// emit vault metrics
