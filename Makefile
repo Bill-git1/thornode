@@ -194,7 +194,7 @@ _test-regression:
 
 # ------------------------------ Simulation Tests ------------------------------
 
-test-simulation: build-test-simulation stop-mocknet run-mocknet
+test-simulation: build-test-simulation build-mocknet reset-mocknet
 	@docker run --rm ${DOCKER_TTY_ARGS} \
 		-e PARALLELISM --network host -w /app \
 		thornode-simtest sh -c 'make _test-simulation'
