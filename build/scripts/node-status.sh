@@ -23,7 +23,6 @@ API=http://thornode:1317
 THORNODE_PORT="${THORNODE_SERVICE_PORT_RPC:-27147}"
 RPC=http://thornode:${THORNODE_PORT}
 
-BINANCE_ENDPOINT="${BINANCE_HOST:-binance-daemon:${BINANCE_DAEMON_SERVICE_PORT_RPC:-26657}}"
 BITCOIN_ENDPOINT="${BTC_HOST:-bitcoin-daemon:${BITCOIN_DAEMON_SERVICE_PORT_RPC:-8332}}"
 LITECOIN_ENDPOINT="${LTC_HOST:-litecoin-daemon:${LITECOIN_DAEMON_SERVICE_PORT_RPC:-9332}}"
 BITCOIN_CASH_ENDPOINT="${BCH_HOST:-bitcoin-cash-daemon:${BITCOIN_CASH_DAEMON_SERVICE_PORT_RPC:-8332}}"
@@ -48,20 +47,6 @@ PUB_KEY=$(echo "$JSON" | jq -r ".pub_key_set.secp256k1")
 [ "$VALIDATOR" = "false" ] && IP=$EXTERNAL_IP
 
 if [ "$VALIDATOR" = "true" ]; then
-  # calculate BNB chain sync progress
-  if [ "$NET" = "mainnet" ] || [ "$NET" = "stagenet" ]; then # Seeds from https://docs.binance.org/smart-chain/developer/rpc.html
-    BNB_PEERS='https://dataseed1.binance.org https://dataseed2.binance.org https://dataseed3.binance.org https://dataseed4.binance.org'
-  else
-    BNB_PEERS='http://data-seed-pre-0-s1.binance.org http://data-seed-pre-1-s1.binance.org http://data-seed-pre-2-s1.binance.org http://data-seed-pre-0-s3.binance.org http://data-seed-pre-1-s3.binance.org'
-  fi
-  for BNB_PEER in ${BNB_PEERS}; do
-    BNB_HEIGHT=$(curl -sL --fail -m 10 "$BNB_PEER"/status | jq -e -r ".result.sync_info.latest_block_height") || continue
-    if [ -z "$BNB_HEIGHT" ]; then continue; fi # Continue if empty height (malformed/bad json reply?)
-    break
-  done
-  BNB_SYNC_HEIGHT=$(curl -sL --fail -m 10 "$BINANCE_ENDPOINT"/status | jq -r ".result.sync_info.index_height")
-  BNB_PROGRESS=$(calc_progress "$BNB_SYNC_HEIGHT" "$BNB_HEIGHT")
-
   # calculate BTC chain sync progress
   BTC_RESULT=$(curl -sL --fail -m 10 --data-binary '{"jsonrpc": "1.0", "id": "node-status", "method": "getblockchaininfo", "params": []}' -H 'content-type: text/plain;' http://thorchain:password@"$BITCOIN_ENDPOINT")
   BTC_HEIGHT=$(echo "$BTC_RESULT" | jq -r ".result.headers")
@@ -191,8 +176,6 @@ echo "MIDGARD     http://$IP:8080/v2/doc"
 # set defaults to avoid failures in math below
 THOR_HEIGHT=${THOR_HEIGHT:=0}
 THOR_SYNC_HEIGHT=${THOR_SYNC_HEIGHT:=0}
-BNB_HEIGHT=${BNB_HEIGHT:=0}
-BNB_SYNC_HEIGHT=${BNB_SYNC_HEIGHT:=0}
 BTC_HEIGHT=${BTC_HEIGHT:=0}
 BTC_SYNC_HEIGHT=${BTC_SYNC_HEIGHT:=0}
 ETH_HEIGHT=${ETH_HEIGHT:=0}
@@ -211,7 +194,6 @@ printf "%-18s %-10s %-14s %-10s\n" CHAIN SYNC BEHIND TIP
 printf "%-18s %-10s %-14s %-10s\n" THOR "$THOR_PROGRESS" "$(format_int $((THOR_SYNC_HEIGHT - THOR_HEIGHT)))" "$(format_int "$THOR_HEIGHT")"
 
 if [ "$VALIDATOR" = "true" ]; then
-  printf "%-18s %-10s %-14s %-10s\n" BNB "$BNB_PROGRESS" "$(format_int $((BNB_SYNC_HEIGHT - BNB_HEIGHT)))" "$(format_int "$BNB_HEIGHT")"
   printf "%-18s %-10s %-14s %-10s\n" BTC "$BTC_PROGRESS" "$(format_int $((BTC_SYNC_HEIGHT - BTC_HEIGHT)))" "$(format_int "$BTC_HEIGHT")"
   printf "%-18s %-10s %-14s %-10s\n" "ETH" "$ETH_PROGRESS" "$(format_int $((ETH_SYNC_HEIGHT - ETH_HEIGHT)))" "$(format_int "$ETH_HEIGHT")"
   printf "%-18s %-10s %-14s %-10s\n" "ETH (beacon slot)" "$ETH_BEACON_PROGRESS" "$(format_int $((ETH_BEACON_SYNC_HEIGHT - ETH_BEACON_HEIGHT)))" "$(format_int "$ETH_BEACON_HEIGHT")"
