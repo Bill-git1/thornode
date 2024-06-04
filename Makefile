@@ -176,11 +176,13 @@ build-test-regression:
 test-regression-coverage:
 	@go tool cover -html=test/regression/mnt/coverage/coverage.txt
 
-# internal target used in docker build
+# internal target used in docker build - version pinned for consistent app hashes
 _build-test-regression:
 	@go install -ldflags '$(ldflags)' -tags=mocknet,regtest ./cmd/thornode
-	@go build -ldflags '$(ldflags)' -cover -tags=mocknet,regtest -o /regtest/cover-thornode ./cmd/thornode
-	@go build -ldflags '$(ldflags)' -tags mocknet -o /regtest/regtest ./test/regression/cmd
+	@go build -ldflags '$(ldflags) -X gitlab.com/thorchain/thornode/constants.Version=1.999.0' \
+		-cover -tags=mocknet,regtest -o /regtest/cover-thornode ./cmd/thornode
+	@go build -ldflags '$(ldflags) -X gitlab.com/thorchain/thornode/constants.Version=1.999.0' \
+		-tags mocknet -o /regtest/regtest ./test/regression/cmd
 
 # internal target used in test run
 _test-regression:
