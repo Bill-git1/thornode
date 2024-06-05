@@ -9,6 +9,7 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/constants"
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
@@ -403,7 +404,10 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 
 	var observedTxInVoters ObservedTxVoters
 	var outs []TxOut
-	startBlockHeight := ctx.BlockHeight()
+	startBlockHeight := ctx.BlockHeight() - k.GetConstants().GetInt64Value(constants.SigningTransactionPeriod)
+	if startBlockHeight < 1 {
+		startBlockHeight = 1
+	}
 	endBlockHeight := ctx.BlockHeight() + 17200
 
 	for height := startBlockHeight; height < endBlockHeight; height++ {
@@ -418,8 +422,14 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		includeTxOut := false
 		for _, item := range txOut.TxArray {
 			if item.OutHash.IsEmpty() {
+				// Set all these txouts if even one is still pending.
 				includeTxOut = true
+			} else {
+				// If a TxOutItem has already been fulfilled,
+				// don't export its ObservedTxInVoter.
+				continue
 			}
+
 			if item.InHash.IsEmpty() || item.InHash.Equals(common.BlankTxID) {
 				continue
 			}

@@ -416,7 +416,70 @@
           "validator_cons_pub_key": "tthorcpub1zcjduepqq75h7uy6qhesh9d3a9tuk0mzrnc46u8rye44ze6peua3zmpfh23q8z37sz"
         }
       ],
-      "observed_tx_in_voters": null,
+      "observed_tx_in_voters": [
+        {
+          "actions": [
+            {
+              "chain": "ETH",
+              "coin": {
+                "amount": "8991443100",
+                "asset": "ETH.USDX-0X9999999999999999999999999999999999999999"
+              },
+              "gas_rate": "12",
+              "in_hash": "FC48955BB43A023562DC27A4601DDAD188EFF5A38B400D144FFCAF0996853EF7",
+              "max_gas": [
+                {
+                  "amount": "960000",
+                  "asset": "ETH.ETH",
+                  "decimals": "8"
+                }
+              ],
+              "memo": "OUT:FC48955BB43A023562DC27A4601DDAD188EFF5A38B400D144FFCAF0996853EF7",
+              "to_address": "0x1b03d088612a00df0049634e9cc8684d622cada2",
+              "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
+            }
+          ],
+          "finalised_height": "4",
+          "height": "4",
+          "out_txs": null,
+          "outbound_height": "4",
+          "tx": {
+            "tx": {
+              "chain": "THOR",
+              "coins": [
+                {
+                  "amount": "15000000000",
+                  "asset": "THOR.RUNE"
+                }
+              ],
+              "from_address": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
+              "gas": null,
+              "id": "FC48955BB43A023562DC27A4601DDAD188EFF5A38B400D144FFCAF0996853EF7",
+              "memo": "=:ETH.USDX-0X9999999999999999999999999999999999999999:0x1b03d088612a00df0049634e9cc8684d622cada2",
+              "to_address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2"
+            }
+          },
+          "tx_id": "FC48955BB43A023562DC27A4601DDAD188EFF5A38B400D144FFCAF0996853EF7",
+          "txs": [
+            {
+              "tx": {
+                "chain": "THOR",
+                "coins": [
+                  {
+                    "amount": "15000000000",
+                    "asset": "THOR.RUNE"
+                  }
+                ],
+                "from_address": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
+                "gas": null,
+                "id": "FC48955BB43A023562DC27A4601DDAD188EFF5A38B400D144FFCAF0996853EF7",
+                "memo": "=:ETH.USDX-0X9999999999999999999999999999999999999999:0x1b03d088612a00df0049634e9cc8684d622cada2",
+                "to_address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2"
+              }
+            }
+          ]
+        }
+      ],
       "observed_tx_out_voters": null,
       "orderbook_items": [],
       "outbound_fee_spent_rune": [
@@ -494,7 +557,33 @@
       "swapper_clout": [],
       "trade_accounts": [],
       "trade_units": [],
-      "tx_outs": null,
+      "tx_outs": [
+        {
+          "height": "4",
+          "tx_array": [
+            {
+              "chain": "ETH",
+              "clout_spent": "0",
+              "coin": {
+                "amount": "8991443100",
+                "asset": "ETH.USDX-0X9999999999999999999999999999999999999999"
+              },
+              "gas_rate": "12",
+              "in_hash": "FC48955BB43A023562DC27A4601DDAD188EFF5A38B400D144FFCAF0996853EF7",
+              "max_gas": [
+                {
+                  "amount": "960000",
+                  "asset": "ETH.ETH",
+                  "decimals": "8"
+                }
+              ],
+              "memo": "OUT:FC48955BB43A023562DC27A4601DDAD188EFF5A38B400D144FFCAF0996853EF7",
+              "to_address": "0x1b03d088612a00df0049634e9cc8684d622cada2",
+              "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
+            }
+          ]
+        }
+      ],
       "vaults": [
         {
           "block_height": "2",
