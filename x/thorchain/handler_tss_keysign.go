@@ -159,7 +159,6 @@ func (h TssKeysignHandler) handleV110(ctx cosmos.Context, msg MsgTssKeysignFail)
 
 	// doesn't have consensus yet
 	if !voter.HasConsensus(vaultMemberNodes) {
-		ctx.Logger().Info("not having consensus yet, return")
 		return &cosmos.Result{}, nil
 	}
 	violaters := make([]string, len(msg.Blame.BlameNodes))
@@ -167,7 +166,7 @@ func (h TssKeysignHandler) handleV110(ctx cosmos.Context, msg MsgTssKeysignFail)
 		violaters[i] = node.Pubkey
 	}
 	ctx.Logger().Info(
-		"has tss keysign consensus!!",
+		"tss keysign failure",
 		"reason", msg.Blame.FailReason,
 		"is_unicast", msg.Blame.IsUnicast,
 		"round", msg.Blame.Round,
