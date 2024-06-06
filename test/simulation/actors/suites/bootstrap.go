@@ -79,7 +79,7 @@ func Bootstrap() *Actor {
 	// verify pools
 	verify := NewActor("Bootstrap-Verify")
 	verify.Ops = append(verify.Ops, func(config *OpConfig) OpResult {
-		pools, err := thornode.GetPools()
+		pools, err = thornode.GetPools()
 		if err != nil {
 			return OpResult{Finish: true, Error: err}
 		}

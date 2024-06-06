@@ -127,7 +127,6 @@ func (s *HealthServer) p2pStatus(w http.ResponseWriter, _ *http.Request) {
 	nodesByIP := map[string]openapi.Node{}
 	thornode := config.GetBifrost().Thorchain.ChainHost
 	url := fmt.Sprintf("http://%s/thorchain/nodes", thornode)
-	// trunk-ignore(golangci-lint/gosec): the request URL is variable, but comes from our local config.
 	resp, err := http.Get(url)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("fail to get thornode status")
@@ -237,7 +236,6 @@ func (s *HealthServer) currentSigning(w http.ResponseWriter, _ *http.Request) {
 
 	thornode := config.GetBifrost().Thorchain.ChainHost
 	url := fmt.Sprintf("http://%s%s", thornode, thorclient.AsgardVault)
-	// trunk-ignore(golangci-lint/gosec): the request URL is variable, but comes from our local config.
 	resp, err := http.Get(url)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("fail to get thornode status")
@@ -344,7 +342,6 @@ func (s *HealthServer) chainScanner(w http.ResponseWriter, _ *http.Request) {
 	// Fetch thorchain height
 	thornode := config.GetBifrost().Thorchain.ChainHost
 	url := fmt.Sprintf("http://%s/thorchain/lastblock", thornode)
-	// trunk-ignore(golangci-lint/gosec): the request URL is variable, but comes from our local config.
 	resp, err := http.Get(url)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("fail to get thornode status")

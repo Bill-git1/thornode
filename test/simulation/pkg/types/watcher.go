@@ -35,7 +35,7 @@ func (w *Watcher) Execute(c *OpConfig, l zerolog.Logger) (err error) {
 	}()
 
 	for ; ; time.Sleep(w.Interval) {
-		err := w.Fn(c)
+		err = w.Fn(c)
 		if err != nil {
 			return err
 		}

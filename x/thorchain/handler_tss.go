@@ -162,7 +162,7 @@ func MsgTssPoolHandleV124(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) (*co
 		voter.PoolPubKey = msg.PoolPubKey
 		voter.PubKeys = msg.PubKeys
 	}
-	// voter's pool pubkey is the same as the one in messasge
+	// voter's pool pubkey is the same as the one in message
 	if !voter.PoolPubKey.Equals(msg.PoolPubKey) {
 		return nil, fmt.Errorf("invalid pool pubkey")
 	}

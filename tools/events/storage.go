@@ -17,7 +17,8 @@ func Store(path string, obj any) error {
 	defer file.Close()
 
 	encoder := json.NewEncoder(file)
-	if err := encoder.Encode(obj); err != nil {
+	err = encoder.Encode(obj)
+	if err != nil {
 		return err
 	}
 
@@ -35,7 +36,8 @@ func Load(path string, obj any) error {
 	defer file.Close()
 
 	decoder := json.NewDecoder(file)
-	if err := decoder.Decode(obj); err != nil {
+	err = decoder.Decode(obj)
+	if err != nil {
 		return err
 	}
 

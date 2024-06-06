@@ -159,7 +159,8 @@ func exportBlocks(out io.Writer, path string) error {
 		}
 
 		// write the blocks file
-		f, err := os.Create(blocksPath)
+		var f *os.File
+		f, err = os.Create(blocksPath)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to create blocks export")
 		}

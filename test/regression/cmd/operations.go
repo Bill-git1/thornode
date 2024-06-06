@@ -464,7 +464,6 @@ func (op *OpCreateBlocks) Execute(out io.Writer, path string, routine int, p *os
 
 		// get the block response
 		url := fmt.Sprintf("http://localhost:%d/thorchain/block?height=%d", 1317+routine, height)
-		// trunk-ignore(golangci-lint/gosec): variable url ok
 		res, err := http.Get(url)
 		if err != nil {
 			localLog.Err(err).Msg("failed to get block")

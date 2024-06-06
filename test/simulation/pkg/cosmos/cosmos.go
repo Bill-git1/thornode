@@ -251,7 +251,8 @@ func (c *Client) BroadcastTx(signed []byte) (string, error) {
 	txReq := &txtypes.GetTxRequest{Hash: broadcast.TxResponse.TxHash}
 	for {
 		time.Sleep(500 * time.Millisecond)
-		response, err := txService.GetTx(ctx(), txReq)
+		var response *txtypes.GetTxResponse
+		response, err = txService.GetTx(ctx(), txReq)
 		if err == nil && response.TxResponse != nil {
 			break
 		}

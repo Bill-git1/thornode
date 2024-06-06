@@ -31,7 +31,6 @@ func NewInvariants() *Watcher {
 			for _, invariant := range invariants {
 				endpoint := fmt.Sprintf("%s/thorchain/invariant/%s", thornodeURL, invariant)
 
-				// trunk-ignore(golangci-lint/gosec): variable url ok
 				resp, err := http.Get(endpoint)
 				if err != nil {
 					cl.Error().Err(err).Str("invariant", invariant).Msg("failed to get invariant")
@@ -50,7 +49,7 @@ func NewInvariants() *Watcher {
 					Invariant string
 					Msg       []string
 				}{}
-				if err := json.NewDecoder(resp.Body).Decode(&invRes); err != nil {
+				if err = json.NewDecoder(resp.Body).Decode(&invRes); err != nil {
 					cl.Error().Err(err).
 						Str("invariant", invariant).
 						Msg("failed to decode invariant response")
@@ -58,7 +57,7 @@ func NewInvariants() *Watcher {
 				}
 				if invRes.Broken {
 					msg := strings.Join(invRes.Msg, ", ")
-					err := fmt.Errorf("invariant %s is broken: %s", invRes.Invariant, msg)
+					err = fmt.Errorf("invariant %s is broken: %s", invRes.Invariant, msg)
 					cl.Error().Err(err).Msg("invariant is broken")
 					return err
 				}

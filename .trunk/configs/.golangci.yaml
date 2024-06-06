@@ -16,11 +16,8 @@ linters:
     - typecheck
     - unconvert
     - unused
-  ERROR: []
 linters-settings:
   exhaustive:
-    check-generated: false
-  exhaustivestruct:
     check-generated: false
   staticcheck:
     checks: ["all"]
@@ -29,11 +26,11 @@ linters-settings:
       - name: exported
         disabled: true
   govet:
-    check-shadowing: true
-  # TODO: disable above and uncomment these on future versions
-  # settings:
-  #   shadow:
-  #     strict: true
+    enable:
+      - shadow
+    settings:
+      shadow:
+        strict: true
   gosec:
     excludes:
       - G107 # variable urls

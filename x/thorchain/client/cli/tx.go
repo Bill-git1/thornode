@@ -375,7 +375,8 @@ func observeTxs(outbound bool) func(cmd *cobra.Command, args []string) error {
 		if txids != "" {
 			txidList := strings.Split(txids, ",")
 			for _, txid := range txidList {
-				observation, err := findLackingObservation(txid, nodeAddress, thorNodeAPI)
+				var observation *types.ObservedTx
+				observation, err = findLackingObservation(txid, nodeAddress, thorNodeAPI)
 				if err != nil {
 					return fmt.Errorf("failed to find lacking observation: %w", err)
 				}
@@ -391,7 +392,7 @@ func observeTxs(outbound bool) func(cmd *cobra.Command, args []string) error {
 
 		// if rawObservations is set, parse the raw json array into observations
 		if rawObservations != "" {
-			if err := json.Unmarshal([]byte(rawObservations), &observations); err != nil {
+			if err = json.Unmarshal([]byte(rawObservations), &observations); err != nil {
 				return fmt.Errorf("failed to parse raw observations: %w", err)
 			}
 		}
@@ -418,7 +419,7 @@ func observeTxs(outbound bool) func(cmd *cobra.Command, args []string) error {
 		// output the message to be broadcast
 		enc := json.NewEncoder(cmd.OutOrStdout())
 		enc.SetIndent("", "  ")
-		if err := enc.Encode(msg); err != nil {
+		if err = enc.Encode(msg); err != nil {
 			return fmt.Errorf("failed to encode message: %w", err)
 		}
 
@@ -431,7 +432,7 @@ func observeTxs(outbound bool) func(cmd *cobra.Command, args []string) error {
 func findLackingObservation(txid, address, thornodeAPI string) (*types.ObservedTx, error) {
 	// get tx details from thornode API
 	url := fmt.Sprintf("%s/thorchain/tx/details/%s", thornodeAPI, txid)
-	resp, err := http.Get(url) // trunk-ignore(golangci-lint/gosec): variable url ok
+	resp, err := http.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tx details: %w", err)
 	}

@@ -73,7 +73,6 @@ func (h BanHandler) handleV1(ctx cosmos.Context, msg MsgBan) (*cosmos.Result, er
 		err = wrapError(ctx, err, "fail to get to ban node account")
 		return nil, err
 	}
-	// trunk-ignore(golangci-lint/govet): shadow
 	if err := toBan.Valid(); err != nil {
 		return nil, err
 	}
@@ -94,7 +93,6 @@ func (h BanHandler) handleV1(ctx cosmos.Context, msg MsgBan) (*cosmos.Result, er
 		err = wrapError(ctx, err, "fail to get banner node account")
 		return nil, err
 	}
-	// trunk-ignore(golangci-lint/govet): shadow
 	if err := banner.Valid(); err != nil {
 		return nil, err
 	}

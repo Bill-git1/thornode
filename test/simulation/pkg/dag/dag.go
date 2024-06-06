@@ -104,7 +104,7 @@ func Execute(c *OpConfig, root *Actor, parallelism int) {
 			teeWriter := zerolog.MultiLevelWriter(buf, os.Stdout)
 			a.SetLogger(a.Log().Output(zerolog.ConsoleWriter{Out: teeWriter}))
 
-			err := a.Execute(c)
+			err = a.Execute(c)
 			if err != nil {
 				os.Stderr.Write([]byte("\n\nFailed actor logs:\n" + buf.String() + "\n\n"))
 				a.Log().Fatal().Err(err).Msg("actor execution failed")

@@ -140,7 +140,8 @@ func (a *ArbActor) bootstrapTradeAssets(config *OpConfig) OpResult {
 
 	// deposit trade assets for all pools
 	for _, pool := range pools {
-		asset, err := common.NewAsset(pool.Asset)
+		var asset common.Asset
+		asset, err = common.NewAsset(pool.Asset)
 		if err != nil {
 			a.Log().Fatal().Err(err).Str("asset", pool.Asset).Msg("failed to create asset")
 		}
@@ -148,7 +149,8 @@ func (a *ArbActor) bootstrapTradeAssets(config *OpConfig) OpResult {
 		// get deposit parameters for 90% of asset balance
 		client := a.account.ChainClients[asset.Chain]
 		memo := fmt.Sprintf("trade+:%s", a.thorAddress)
-		l1Acct, err := a.account.ChainClients[asset.Chain].GetAccount(nil)
+		var l1Acct *common.Account
+		l1Acct, err = a.account.ChainClients[asset.Chain].GetAccount(nil)
 		if err != nil {
 			a.Log().Fatal().Err(err).Msg("failed to get L1 account")
 		}

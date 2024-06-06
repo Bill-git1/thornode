@@ -68,7 +68,7 @@ func MsgTssPoolHandleV120(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) (*co
 		voter.PoolPubKey = msg.PoolPubKey
 		voter.PubKeys = msg.PubKeys
 	}
-	// voter's pool pubkey is the same as the one in messasge
+	// voter's pool pubkey is the same as the one in message
 	if !voter.PoolPubKey.Equals(msg.PoolPubKey) {
 		return nil, fmt.Errorf("invalid pool pubkey")
 	}
@@ -324,7 +324,7 @@ func MsgTssPoolHandleV117(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) (*co
 		voter.PoolPubKey = msg.PoolPubKey
 		voter.PubKeys = msg.PubKeys
 	}
-	// voter's pool pubkey is the same as the one in messasge
+	// voter's pool pubkey is the same as the one in message
 	if !voter.PoolPubKey.Equals(msg.PoolPubKey) {
 		return nil, fmt.Errorf("invalid pool pubkey")
 	}
@@ -606,7 +606,7 @@ func MsgTssPoolHandleV93(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) (*cos
 		voter.PoolPubKey = msg.PoolPubKey
 		voter.PubKeys = msg.PubKeys
 	}
-	// voter's pool pubkey is the same as the one in messasge
+	// voter's pool pubkey is the same as the one in message
 	if !voter.PoolPubKey.Equals(msg.PoolPubKey) {
 		return nil, fmt.Errorf("invalid pool pubkey")
 	}
@@ -809,7 +809,7 @@ func MsgTssPoolHandleV92(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) (*cos
 		voter.PoolPubKey = msg.PoolPubKey
 		voter.PubKeys = msg.PubKeys
 	}
-	// voter's pool pubkey is the same as the one in messasge
+	// voter's pool pubkey is the same as the one in message
 	if !voter.PoolPubKey.Equals(msg.PoolPubKey) {
 		return nil, fmt.Errorf("invalid pool pubkey")
 	}
@@ -1009,7 +1009,7 @@ func MsgTssPoolHandleV73(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) (*cos
 		voter.PoolPubKey = msg.PoolPubKey
 		voter.PubKeys = msg.PubKeys
 	}
-	// voter's pool pubkey is the same as the one in messasge
+	// voter's pool pubkey is the same as the one in message
 	if !voter.PoolPubKey.Equals(msg.PoolPubKey) {
 		return nil, fmt.Errorf("invalid pool pubkey")
 	}
@@ -1342,7 +1342,7 @@ func MsgTssPoolHandleV123(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) (*co
 		voter.PoolPubKey = msg.PoolPubKey
 		voter.PubKeys = msg.PubKeys
 	}
-	// voter's pool pubkey is the same as the one in messasge
+	// voter's pool pubkey is the same as the one in message
 	if !voter.PoolPubKey.Equals(msg.PoolPubKey) {
 		return nil, fmt.Errorf("invalid pool pubkey")
 	}

@@ -101,7 +101,7 @@ func main() {
 	for block := range thorscan.Scan(height, 0) {
 		ScanInfo(block)
 
-		err := Store("height", block.Header.Height)
+		err = Store("height", block.Header.Height)
 		if err != nil {
 			log.Fatal().Err(err).Int64("height", block.Header.Height).Msg("unable to store height")
 		}

@@ -7,7 +7,7 @@ lint:
   definitions:
     - name: codespell
       commands:
-        - run: codespell --uri-ignore-words-list=* --ignore-words=${workspace}/.trunk/configs/words.txt ${target}
+        - run: codespell --uri-ignore-words-list=* --ignore-words-list=toi,amountIn ${target}
   enabled:
     # TODO: enable these new suggested linters and see which are worth keeping/fixing up codebase.
     #- bandit@1.7.5
@@ -19,7 +19,7 @@ lint:
     #- terrascan@1.18.1
     #- trivy@0.43.1
     #- trufflehog@3.44.0
-    - codespell@2.2.6
+    - codespell@2.3.0
     - black@24.4.2
     - flake8@7.0.0
     - git-diff-check
@@ -27,7 +27,7 @@ lint:
     - golangci-lint@1.57.2
     - hadolint@2.12.0
     - isort@5.13.2
-    - markdownlint@0.40.0
+    - markdownlint@0.41.0
     - prettier@3.2.5
     - shellcheck@0.10.0
     - shfmt@3.6.0
@@ -76,6 +76,6 @@ plugins:
       uri: https://github.com/trunk-io/plugins
 runtimes:
   enabled:
-    - go@1.22.2
+    - go@1.22.3
     - node@18.12.1
     - python@3.10.8

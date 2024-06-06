@@ -35,7 +35,8 @@ func ThornodeCachedGet(path string, height int, result interface{}) error {
 
 	// check the cache first
 	if val, ok := cache.Get(url); ok {
-		bytes, ok := val.([]byte)
+		var bytes []byte
+		bytes, ok = val.([]byte)
 		if !ok {
 			log.Fatal().Msg("unreachable: failed to cast cache value to []byte")
 		}
@@ -78,7 +79,8 @@ func ThornodeCachedGet(path string, height int, result interface{}) error {
 
 	// check the cache again
 	if val, ok := cache.Get(url); ok {
-		bytes, ok := val.([]byte)
+		var bytes []byte
+		bytes, ok = val.([]byte)
 		if !ok {
 			log.Fatal().Msg("unreachable: failed to cast cache value to []byte")
 		}

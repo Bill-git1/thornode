@@ -113,7 +113,7 @@ func slack(webhook, title string, lines []string, tag bool, fields *OrderedMap) 
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		body, err := io.ReadAll(resp.Body)
+		body, err = io.ReadAll(resp.Body)
 		if err == nil {
 			log.Error().Str("status", resp.Status).Str("body", string(body)).Msg("slack error")
 		} else {
@@ -170,7 +170,7 @@ func discord(webhook, title string, lines []string, tag bool, fields *OrderedMap
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNoContent {
-		body, err := io.ReadAll(resp.Body)
+		body, err = io.ReadAll(resp.Body)
 		if err == nil {
 			log.Error().Str("status", resp.Status).Str("body", string(body)).Msg("discord error")
 		} else {

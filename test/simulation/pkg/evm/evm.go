@@ -225,13 +225,15 @@ func (c *Client) GetAccount(pk *common.PubKey) (*common.Account, error) {
 	for asset, token := range Tokens(c.chain) {
 		// get balance
 		abi := ERC20ABI()
-		data, err := abi.Pack("balanceOf", ecommon.HexToAddress(c.address.String()))
+		var data []byte
+		data, err = abi.Pack("balanceOf", ecommon.HexToAddress(c.address.String()))
 		if err != nil {
 			log.Error().Err(err).Msg("error packing balanceOf")
 			continue
 		}
 		to := ecommon.HexToAddress(token.Address)
-		result, err := c.rpc.CallContract(ctx(), ethereum.CallMsg{
+		var result []byte
+		result, err = c.rpc.CallContract(ctx(), ethereum.CallMsg{
 			To:   &to,
 			Data: data,
 		}, nil)
@@ -239,7 +241,7 @@ func (c *Client) GetAccount(pk *common.PubKey) (*common.Account, error) {
 			log.Error().Err(err).Msg("error calling contract")
 			continue
 		}
-		balance := new(big.Int)
+		balance = new(big.Int)
 		balance.SetBytes(result)
 
 		// convert balance from decimals to 1e8

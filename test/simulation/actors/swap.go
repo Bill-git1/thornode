@@ -94,7 +94,8 @@ func (a *SwapActor) acquireUser(config *OpConfig) OpResult {
 		a.SetLogger(cl)
 
 		// skip users that don't have from asset balance
-		fromAcct, err := user.ChainClients[a.from.Chain].GetAccount(nil)
+		var fromAcct *common.Account
+		fromAcct, err = user.ChainClients[a.from.Chain].GetAccount(nil)
 		if err != nil {
 			a.Log().Error().Err(err).Msg("failed to get from account")
 			user.Release()
@@ -117,7 +118,8 @@ func (a *SwapActor) acquireUser(config *OpConfig) OpResult {
 		}
 
 		// get to asset balance for tracking
-		toAcct, err := user.ChainClients[a.to.Chain].GetAccount(nil)
+		var toAcct *common.Account
+		toAcct, err = user.ChainClients[a.to.Chain].GetAccount(nil)
 		if err != nil {
 			a.Log().Warn().Err(err).Msg("failed to get to account")
 		} else {

@@ -410,7 +410,6 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 				coinToCustomer.Amount = coinToCustomer.Amount.Add(cosmos.NewUint(gap))
 			}
 		} else {
-			var memo mem.Memo
 			memo, err = mem.ParseMemo(common.LatestVersion, tx.Memo)
 			if err != nil {
 				return nil, nil, fmt.Errorf("fail to parse memo: %w", err)

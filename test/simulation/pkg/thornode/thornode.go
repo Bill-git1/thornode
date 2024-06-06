@@ -49,11 +49,13 @@ func GetBalances(addr common.Address) (common.Coins, error) {
 	// convert to common.Coins
 	coins := make(common.Coins, 0, len(balances.Balances))
 	for _, balance := range balances.Balances {
-		amount, err := strconv.ParseUint(balance.Amount, 10, 64)
+		var amount uint64
+		amount, err = strconv.ParseUint(balance.Amount, 10, 64)
 		if err != nil {
 			return nil, err
 		}
-		asset, err := common.NewAsset(strings.ToUpper(balance.Denom))
+		var asset common.Asset
+		asset, err = common.NewAsset(strings.ToUpper(balance.Denom))
 		if err != nil {
 			return nil, err
 		}
@@ -74,7 +76,6 @@ func GetInboundAddress(chain common.Chain) (address common.Address, router *comm
 	// find address for chain
 	for _, inboundAddress := range inboundAddresses {
 		if *inboundAddress.Chain == string(chain) {
-			var router *common.Address
 			if inboundAddress.Router != nil {
 				router = new(common.Address)
 				*router = common.Address(*inboundAddress.Router)
@@ -162,7 +163,6 @@ func GetTxDetails(txid string) (openapi.TxDetailsResponse, error) {
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func get(url string, target interface{}) error {
-	// trunk-ignore(golangci-lint/gosec): variable url ok
 	resp, err := http.Get(url)
 	if err != nil {
 		return err

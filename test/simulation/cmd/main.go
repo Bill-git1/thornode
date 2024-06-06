@@ -95,7 +95,7 @@ func main() {
 	for _, w := range []*Watcher{watchers.NewInvariants()} {
 		log.Info().Str("watcher", w.Name).Msg("starting watcher")
 		go func(w *Watcher) {
-			err := w.Execute(cfg, log.Output(os.Stderr))
+			err = w.Execute(cfg, log.Output(os.Stderr))
 			if err != nil {
 				log.Fatal().Err(err).Msg("watcher failed")
 			}
