@@ -76,7 +76,7 @@ def transactions(
         for tx in block["txs"]:
             if failed and tx["result"]["code"] == 0:
                 continue
-            elif tx["result"]["code"] != 0:
+            elif not failed and tx["result"]["code"] != 0:
                 continue
             for listener in listeners:
                 _print(listener(block, tx))
@@ -105,7 +105,7 @@ def events(
             for listener in listeners:
                 _print(listener(block, None, event))
         for tx in block["txs"]:
-            for event in tx.get("events", []):
+            for event in tx.get("result", {}).get("events", []):
                 if types is not None and event["type"] not in types:
                     continue
                 for listener in listeners:

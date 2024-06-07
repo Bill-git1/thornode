@@ -2,10 +2,15 @@ package main
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/rs/zerolog/log"
+	"gitlab.com/thorchain/thornode/common/cosmos"
+	openapi "gitlab.com/thorchain/thornode/openapi/gen"
 	"gitlab.com/thorchain/thornode/tools/thorscan"
 	"gitlab.com/thorchain/thornode/x/thorchain"
+	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -13,7 +18,10 @@ import (
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func ScanInfo(block *thorscan.BlockResponse) {
+	Churn(block)
+	SetNodeMimir(block)
 	SetMimir(block)
+	KeygenFailure(block)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -23,22 +31,397 @@ func ScanInfo(block *thorscan.BlockResponse) {
 func SetMimir(block *thorscan.BlockResponse) {
 	for _, tx := range block.Txs {
 		for _, event := range tx.Result.Events {
-			if event["type"] == "set_mimir" {
-				// if the transaction contains a mimir message it is admin
-				source := "auto"
-				for _, msg := range tx.Tx.GetMsgs() {
-					if _, ok := msg.(*thorchain.MsgMimir); ok {
-						source = "admin"
+			if event["type"] != "set_mimir" {
+				continue
+			}
+
+			// if the transaction does not contain mimir message it auto triggered
+			source := "auto"
+
+		msgs: // determine if this is an admin or node mimir
+			for _, msg := range tx.Tx.GetMsgs() {
+				if msgMimir, ok := msg.(*thorchain.MsgMimir); ok {
+					signer := msgMimir.Signer.String()
+					for _, admin := range thorchain.ADMINS {
+						if admin == signer {
+							source = "admin"
+							break msgs
+						}
 					}
+
+					source = "node"
 				}
-				msg := formatMimirMessage(block.Header.Height, source, event["key"], event["value"])
-				err := Notify(config.Notifications.Info, "", []string{msg}, false, nil)
-				if err != nil {
-					log.Fatal().Err(err).Msg("failed to send notification")
-				}
+			}
+
+			msg := formatMimirMessage(block.Header.Height, source, event["key"], event["value"])
+			Notify(config.Notifications.Info, msg, nil, false, nil)
+		}
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+// SetNodeMimir
+////////////////////////////////////////////////////////////////////////////////////////
+
+func SetNodeMimir(block *thorscan.BlockResponse) {
+	for _, tx := range block.Txs {
+		for _, event := range tx.Result.Events {
+			if event["type"] == "set_node_mimir" {
+				msg := formatNodeMimirMessage(block.Header.Height, event["address"], event["key"], event["value"])
+				Notify(config.Notifications.Info, "", []string{msg}, false, nil)
 			}
 		}
 	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+// Keygen Failure
+////////////////////////////////////////////////////////////////////////////////////////
+
+func KeygenFailure(block *thorscan.BlockResponse) {
+	for _, tx := range block.Txs {
+		// skip failed decode transactions
+		if tx.Tx == nil {
+			continue
+		}
+
+		for _, event := range tx.Result.Events {
+			if event["type"] != "tss_keygen_failure" {
+				continue
+			}
+
+			// get nodes
+			nodes := []openapi.Node{}
+			err := ThornodeCachedRetryGet("thorchain/nodes", block.Header.Height, &nodes)
+			if err != nil {
+				log.Fatal().Err(err).Msg("failed to get nodes")
+			}
+
+			// gather pubkey and operator mappings
+			pubToAddr := make(map[string]string)
+			addrToOperator := make(map[string]string)
+			for _, node := range nodes {
+				if node.PubKeySet.Secp256k1 == nil {
+					continue
+				}
+				pubToAddr[*node.PubKeySet.Secp256k1] = node.NodeAddress
+				addrToOperator[node.NodeAddress] = node.NodeOperatorAddress
+			}
+
+			// gather blame nodes
+			blames := []string{}
+			blameNodes := make(map[string]bool)
+			for _, blame := range strings.Split(event["blame"], ",") {
+				blame = strings.TrimSpace(blame)
+				if blame == "" {
+					continue
+				}
+				blames = append(blames, blame)
+				blameNodes[blame] = true
+			}
+
+			// find tsspool message
+			var msgTssPool *thorchain.MsgTssPool
+			found := false
+			for _, msg := range tx.Tx.GetMsgs() {
+				if _, ok := msg.(*thorchain.MsgTssPool); ok {
+					msgTssPool, _ = msg.(*thorchain.MsgTssPool)
+					found = true
+				}
+			}
+			if !found {
+				log.Fatal().Msg("failed to find tsspool message for keygen failure event")
+			}
+
+			// gather all members
+			members := make(map[string]bool)
+			for _, pk := range msgTssPool.PubKeys {
+				members[pubToAddr[pk]] = true
+			}
+
+			// gather unblamed members
+			others := make(map[string]bool)
+			for member := range members {
+				if blameNodes[member] {
+					continue
+				}
+				others[member] = true
+			}
+
+			// build the blame and others strings
+			blameStrs := []string{}
+			for _, blame := range blames {
+				blameStr := fmt.Sprintf(
+					"`%s:%s`",
+					addrToOperator[blame][len(addrToOperator[blame])-4:], blame[len(blame)-4:],
+				)
+				blameStrs = append(blameStrs, blameStr)
+			}
+			othersStrs := []string{}
+			for other := range others {
+				othersStrs = append(othersStrs, other[len(other)-4:])
+			}
+
+			// build the fields
+			fields := NewOrderedMap()
+			fields.Set("Keygen Height", event["height"])
+			fields.Set("Reason", event["reason"])
+			fields.Set("Blame", strings.Join(blameStrs, ", "))
+			fields.Set("Others", fmt.Sprintf("`%s`", strings.Join(othersStrs, ", ")))
+
+			// notify
+			title := fmt.Sprintf("`[%d]` Keygen Failure", block.Header.Height)
+			Notify(config.Notifications.Info, title, nil, false, fields)
+		}
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+// Churn
+////////////////////////////////////////////////////////////////////////////////////////
+
+type ChurnState int64
+
+const (
+	ChurnStateComplete ChurnState = iota
+	ChurnStateKeygen
+	ChurnStateMigrating
+)
+
+type ChurnInfo struct {
+	State           ChurnState                 `json:"state"`
+	KeyshareBackups map[string]map[string]bool `json:"keyshare_backups"`
+}
+
+func Churn(block *thorscan.BlockResponse) {
+	// get the current state
+	info := ChurnInfo{}
+	err := Load("churn", &info)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to load churn state")
+	}
+
+	// track keyshare backups
+	updated := false
+	for _, tx := range block.Txs {
+		// skip failed decode transactions
+		if tx.Tx == nil {
+			continue
+		}
+
+		for _, msg := range tx.Tx.GetMsgs() {
+			msgTssPool, ok := msg.(*thorchain.MsgTssPool)
+			if !ok {
+				continue
+			}
+
+			// track keyshare backups
+			if msgTssPool.KeysharesBackup != nil && len(msgTssPool.KeysharesBackup) > 1 {
+				pk := string(msgTssPool.PoolPubKey)
+				if info.KeyshareBackups == nil {
+					info.KeyshareBackups = make(map[string]map[string]bool)
+				}
+				if info.KeyshareBackups[pk] == nil {
+					info.KeyshareBackups[pk] = make(map[string]bool)
+				}
+				updated = true
+				info.KeyshareBackups[pk][msgTssPool.Signer.String()] = true
+			}
+		}
+	}
+	if updated {
+		err = Store("churn", info)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to save churn state")
+		}
+	}
+
+	for _, tx := range block.Txs {
+		for _, event := range tx.Result.Events {
+			switch event["type"] {
+			case "tss_keygen", "ActiveVault":
+			default:
+				continue
+			}
+
+			// check for keygen started
+			if info.State == ChurnStateComplete && event["type"] == "tss_keygen" {
+				info.State = ChurnStateKeygen
+				err = Store("churn", info)
+				if err != nil {
+					log.Fatal().Err(err).Msg("failed to save churn state")
+				}
+				title := fmt.Sprintf("[%d] Keygen Started", block.Header.Height)
+				Notify(config.Notifications.Info, title, nil, false, nil)
+			}
+
+			// check for active vault (all keygens complete)
+			if info.State == ChurnStateKeygen && event["type"] == "ActiveVault" {
+				info.State = ChurnStateMigrating
+				err = Store("churn", info)
+				if err != nil {
+					log.Fatal().Err(err).Msg("failed to save churn state")
+				}
+				notifyChurnStarted(block.Header.Height, info.KeyshareBackups)
+			}
+		}
+	}
+
+	// if migrating, check for completion on every block
+	if info.State == ChurnStateMigrating {
+		network := openapi.NetworkResponse{}
+		err = ThornodeCachedRetryGet("thorchain/network", block.Header.Height, &network)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get network")
+		}
+
+		if !network.VaultsMigrating {
+			// reset churn info for next churn
+			info.State = ChurnStateComplete
+			info.KeyshareBackups = make(map[string]map[string]bool)
+
+			err = Store("churn", info)
+			if err != nil {
+				log.Fatal().Err(err).Msg("failed to save churn state")
+			}
+			title := fmt.Sprintf("[%d] Churn Complete", block.Header.Height)
+			Notify(config.Notifications.Info, title, nil, false, nil)
+		}
+	}
+}
+
+func notifyChurnStarted(height int64, keyshareBackups map[string]map[string]bool) {
+	// get nodes at current and previous height
+	oldNodes := []openapi.Node{}
+	newNodes := []openapi.Node{}
+	err := ThornodeCachedRetryGet("thorchain/nodes", height-1, &oldNodes)
+	if err != nil {
+		log.Fatal().Err(err).Int64("height", height-1).Msg("failed to get old nodes")
+	}
+	err = ThornodeCachedRetryGet("thorchain/nodes", height, &newNodes)
+	if err != nil {
+		log.Fatal().Err(err).Int64("height", height).Msg("failed to get new nodes")
+	}
+
+	// determine the nodes that were removed
+	oldActive := make(map[string]openapi.Node)
+	newActive := make(map[string]openapi.Node)
+	for _, oldNode := range oldNodes {
+		if oldNode.Status != types.NodeStatus_Active.String() {
+			continue
+		}
+		oldActive[oldNode.NodeAddress] = oldNode
+	}
+	for _, newNode := range newNodes {
+		if newNode.Status != types.NodeStatus_Active.String() {
+			continue
+		}
+		newActive[newNode.NodeAddress] = newNode
+	}
+
+	// determine the nodes that were added
+	added := []openapi.Node{}
+	for _, newNode := range newActive {
+		if _, ok := oldActive[newNode.NodeAddress]; !ok {
+			added = append(added, newNode)
+		}
+	}
+
+	// determine the nodes that were removed
+	left := []openapi.Node{}
+	removed := []openapi.Node{}
+	for _, oldNode := range oldActive {
+		if _, ok := newActive[oldNode.NodeAddress]; ok {
+			continue
+		}
+		if oldNode.LeaveHeight > 0 {
+			if oldNode.LeaveHeight < height {
+				left = append(left, oldNode)
+			} else {
+				removed = append(removed, oldNode)
+			}
+		}
+	}
+
+	// find worst removed
+	worstIdx := 0
+	for i, node := range removed {
+		if node.SlashPoints > removed[worstIdx].SlashPoints {
+			worstIdx = i
+		}
+	}
+	worst := removed[worstIdx]
+	removed = append(removed[:worstIdx], removed[worstIdx+1:]...)
+
+	// find lowest bond
+	lowestIdx := 0
+	for i, node := range removed {
+		if cosmos.NewUintFromString(node.TotalBond).LT(cosmos.NewUintFromString(removed[lowestIdx].TotalBond)) {
+			lowestIdx = i
+		}
+	}
+	lowest := removed[lowestIdx]
+	removed = append(removed[:lowestIdx], removed[lowestIdx+1:]...)
+
+	// find oldest removed
+	oldestIdx := 0
+	for i, node := range removed {
+		if node.ActiveBlockHeight < removed[oldestIdx].ActiveBlockHeight {
+			oldestIdx = i
+		}
+	}
+	oldest := removed[oldestIdx]
+	removed = append(removed[:oldestIdx], removed[oldestIdx+1:]...)
+
+	title := fmt.Sprintf("[%d] Churn Started", height)
+
+	// compute the keyshare backups counts for new vault members
+	lines := []string{"> _Keyshare Backups_"}
+	vaults := []openapi.Vault{}
+	err = ThornodeCachedRetryGet("thorchain/vaults/asgard", height, &vaults)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get vaults")
+	}
+	for _, vault := range vaults {
+		if vault.Status != types.VaultStatus_ActiveVault.String() {
+			continue
+		}
+		pk := *vault.PubKey
+		lines = append(lines,
+			fmt.Sprintf(
+				"> `%s`: %d/%d (%.2f%%)",
+				pk[len(pk)-4:], len(keyshareBackups[pk]), len(vault.Membership),
+				100*float64(len(keyshareBackups[pk]))/float64(len(vault.Membership)),
+			),
+		)
+	}
+
+	fields := NewOrderedMap()
+
+	// active nodes
+	if len(added) > 0 {
+		activeNodes := []string{}
+		for _, node := range added {
+			activeNodes = append(activeNodes, fmt.Sprintf("`%s`", node.NodeAddress[len(node.NodeAddress)-4:]))
+		}
+		fields.Set("Active", strings.Join(activeNodes, ", "))
+	}
+
+	// standby nodes
+	standbyNodes := []string{
+		fmt.Sprintf("`%s` (worst)", worst.NodeAddress[len(worst.NodeAddress)-4:]),
+		fmt.Sprintf("`%s` (lowest bond)", lowest.NodeAddress[len(lowest.NodeAddress)-4:]),
+		fmt.Sprintf("`%s` (oldest)", oldest.NodeAddress[len(oldest.NodeAddress)-4:]),
+	}
+	for _, node := range left {
+		standbyNodes = append(standbyNodes, fmt.Sprintf("`%s` (leave)", node.NodeAddress[len(node.NodeAddress)-4:]))
+	}
+	for _, node := range removed {
+		standbyNodes = append(standbyNodes, fmt.Sprintf("`%s`", node.NodeAddress[len(node.NodeAddress)-4:]))
+	}
+	fields.Set("Standby", strings.Join(standbyNodes, ", "))
+
+	Notify(config.Notifications.Info, title, lines, false, fields)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -48,7 +431,7 @@ func SetMimir(block *thorscan.BlockResponse) {
 func formatMimirMessage(height int64, source, key, value string) string {
 	// get value at previous height
 	mimirs := make(map[string]int64)
-	err := ThornodeCachedGet("thorchain/mimir", int(height)-1, &mimirs)
+	err := ThornodeCachedRetryGet("thorchain/mimir", height-1, &mimirs)
 	if err != nil {
 		log.Fatal().Int64("height", height-1).Err(err).Msg("failed to get mimirs")
 	}
@@ -57,4 +440,91 @@ func formatMimirMessage(height int64, source, key, value string) string {
 		return fmt.Sprintf("`[%d]` **%s**: %d -> %s (%s)", height, key, previous, value, source)
 	}
 	return fmt.Sprintf("`[%d]` **%s**: %s (%s)", height, key, value, source)
+}
+
+func formatNodeMimirMessage(height int64, node, key, value string) string {
+	// convert value to int64
+	valueInt, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		log.Fatal().Err(err).Str("value", value).Msg("failed to parse value")
+	}
+
+	// get all active nodes at current height
+	nodes := []openapi.Node{}
+	err = ThornodeCachedRetryGet("thorchain/nodes", height, &nodes)
+	if err != nil {
+		log.Fatal().Int64("height", height).Err(err).Msg("failed to get active nodes")
+	}
+	activeNodes := make(map[string]bool)
+	for _, node := range nodes {
+		if node.Status == types.NodeStatus_Active.String() {
+			activeNodes[node.NodeAddress] = true
+		}
+	}
+
+	// get value at previous height
+	mimirs := openapi.MimirNodesResponse{}
+	err = ThornodeCachedRetryGet("thorchain/mimir/nodes_all", height-1, &mimirs)
+	if err != nil {
+		log.Fatal().Int64("height", height-1).Err(err).Msg("failed to get node mimirs")
+	}
+
+	var previous *int64
+	votes := make(map[int64]int64)
+	for _, mimir := range mimirs.Mimirs {
+		// skip votes that are not this key
+		if *mimir.Key != key {
+			continue
+		}
+
+		// TODO: fix in thornode - missing value in response is "0"
+		value := int64(0)
+		if mimir.Value != nil {
+			value = *mimir.Value
+		}
+
+		// skip votes from non-active nodes
+		if _, ok := activeNodes[*mimir.Signer]; !ok {
+			continue
+		}
+
+		// see if there was a previous value
+		if *mimir.Signer == node {
+			previous = &value
+			continue
+		}
+
+		// count the votes
+		if _, ok := votes[value]; !ok {
+			votes[value] = 1
+		} else {
+			votes[value]++
+		}
+	}
+
+	// add the new vote
+	votes[valueInt]++
+
+	// compute the percent voted for the node vote value
+	votePercent := 100 * float64(votes[valueInt]) / float64(len(activeNodes))
+
+	// base message
+	msg := fmt.Sprintf(
+		"`[%d]` Node `%s` Vote - **%s**: %d (%.2f%%)",
+		height, node[len(node)-4:], key, valueInt, votePercent,
+	)
+	if previous != nil {
+		msg = fmt.Sprintf(
+			"`[%d]` Node `%s` Vote - **%s**: %d -> %d (%.2f%%)",
+			height, node[len(node)-4:], key, *previous, valueInt, votePercent,
+		)
+	}
+
+	// add the votes and validator count
+	for vote, count := range votes {
+		msg += fmt.Sprintf(" | _`%d`_: %d votes", vote, count)
+	}
+	msg += fmt.Sprintf(" | Validators: %d", len(activeNodes))
+
+	return msg
 }

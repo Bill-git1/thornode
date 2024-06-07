@@ -16,13 +16,12 @@ import (
 // Notify
 ////////////////////////////////////////////////////////////////////////////////////////
 
-func Notify(w Webhooks, title string, lines []string, tag bool, fields *OrderedMap) error {
+func Notify(w Webhooks, title string, lines []string, tag bool, fields *OrderedMap) {
 	log.Info().Str("title", title).Msg("sending notifications")
 
 	// if in console mode only print
 	if config.Console {
 		console(title, lines, fields)
-		return nil
 	}
 
 	// send slack
@@ -31,8 +30,7 @@ func Notify(w Webhooks, title string, lines []string, tag bool, fields *OrderedM
 		func() error { return slack(w.Slack, title, lines, tag, fields) },
 	)
 	if err != nil {
-		log.Error().Err(err).Msg("unable to send slack notification")
-		return err
+		log.Fatal().Err(err).Msg("unable to send slack notification")
 	}
 
 	// send discord
@@ -41,8 +39,7 @@ func Notify(w Webhooks, title string, lines []string, tag bool, fields *OrderedM
 		func() error { return discord(w.Discord, title, lines, tag, fields) },
 	)
 	if err != nil {
-		log.Error().Err(err).Msg("unable to send discord notification")
-		return err
+		log.Fatal().Err(err).Msg("unable to send discord notification")
 	}
 
 	// send pagerduty
@@ -51,11 +48,8 @@ func Notify(w Webhooks, title string, lines []string, tag bool, fields *OrderedM
 		func() error { return pagerduty(w.PagerDuty, title, lines, fields) },
 	)
 	if err != nil {
-		log.Error().Err(err).Msg("unable to send pagerduty notification")
-		return err
+		log.Fatal().Err(err).Msg("unable to send pagerduty notification")
 	}
-
-	return nil
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -202,23 +196,35 @@ func console(title string, lines []string, fields *OrderedMap) {
 	}
 
 	fmt.Println()
+	fmt.Println("--------------------------------------------------")
 	for _, line := range lines {
+		// strip markdown line formatting
+		line = StripMarkdownLinks(line)
+
 		// handle ansi formatting
 		for {
 			newLine := strings.Replace(line, "**", boldStart, 1)
 			newLine = strings.Replace(newLine, "**", reset, 1)
 			newLine = strings.Replace(newLine, "`", blue, 1)
 			newLine = strings.Replace(newLine, "`", reset, 1)
+			newLine = strings.Replace(newLine, "_", italicStart, 1)
+			newLine = strings.Replace(newLine, "_", reset, 1)
 			if newLine == line {
 				break
 			}
 			line = newLine
 		}
 
+		// replace emojis
+		line = strings.ReplaceAll(line, EmojiMoneybag, "💰")
+		line = strings.ReplaceAll(line, EmojiMoneyWithWings, "💸")
+		line = strings.ReplaceAll(line, EmojiDollar, "💵")
+		line = strings.ReplaceAll(line, EmojiWhiteCheckMark, "✅")
+
 		fmt.Println(line)
 	}
-	fmt.Println()
 	fmt.Println("--------------------------------------------------")
+	fmt.Println()
 }
 
 func pagerduty(webhook, title string, lines []string, fields *OrderedMap) error {

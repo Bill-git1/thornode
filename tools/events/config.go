@@ -8,6 +8,17 @@ import (
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////
+// Constants
+////////////////////////////////////////////////////////////////////////////////////////
+
+const (
+	EmojiMoneybag       = ":moneybag:"
+	EmojiMoneyWithWings = ":money_with_wings:"
+	EmojiDollar         = ":dollar:"
+	EmojiWhiteCheckMark = ":white_check_mark:"
+)
+
+////////////////////////////////////////////////////////////////////////////////////////
 // Webhooks
 ////////////////////////////////////////////////////////////////////////////////////////
 
@@ -62,16 +73,19 @@ type Config struct {
 		// - <explorer>/address/<address>
 		// - <explorer>/block/<height>
 		Explorer string `mapstructure:"explorer"`
+
+		// Thornode is the Thornode API endpoint to use in message links.
+		Thornode string `mapstructure:"thornode"`
 	} `mapstructure:"explorers"`
 
 	// Thresholds contain various thresholds for alerts.
 	Thresholds struct {
-		USDValue  int `mapstructure:"usd_value"`
-		RuneValue int `mapstructure:"rune_value"`
+		USDValue  uint64 `mapstructure:"usd_value"`
+		RuneValue uint64 `mapstructure:"rune_value"`
 
 		Security struct {
-			USDValue    int `mapstructure:"usd_value"`
-			ErrataCount int `mapstructure:"errata_count"`
+			USDValue    uint64 `mapstructure:"usd_value"`
+			ErrataCount uint64 `mapstructure:"errata_count"`
 		} `mapstructure:"security"`
 	} `mapstructure:"thresholds"`
 
@@ -92,7 +106,7 @@ var config = Config{}
 
 func init() {
 	// storage path
-	config.StoragePath = "/tmp"
+	config.StoragePath = "/tmp/events"
 
 	// endpoints
 	config.Endpoints.CacheSize = 100
@@ -107,6 +121,16 @@ func init() {
 
 	// links
 	config.Links.Track = "https://track.ninerealms.com"
+	config.Links.Explorer = "https://runescan.io"
+	config.Links.Thornode = "https://thornode.ninerealms.com"
+
+	// thresholds
+	config.Thresholds.USDValue = 100_000
+	config.Thresholds.RuneValue = 1_000_000
+	config.Thresholds.Security.USDValue = 3_000_000
+
+	// styles
+	config.Styles.USDPerMoneyBag = 100_000
 
 	// labeled addresses
 	// https://raw.githubusercontent.com/ViewBlock/cryptometa/master/data/thorchain/labels.json

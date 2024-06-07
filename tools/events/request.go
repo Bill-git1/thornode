@@ -11,6 +11,29 @@ import (
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////
+// Retry
+////////////////////////////////////////////////////////////////////////////////////////
+
+func RetryGet(url string, result interface{}) error {
+	return Retry(config.MaxRetries, func() error {
+		// make the request
+		res, err := http.DefaultClient.Get(url)
+		if err != nil {
+			return err
+		}
+
+		// check the status code
+		if res.StatusCode != http.StatusOK {
+			return fmt.Errorf("status code %d", res.StatusCode)
+		}
+
+		// populate the result
+		defer res.Body.Close()
+		return json.NewDecoder(res.Body).Decode(result)
+	})
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
 // Cache
 ////////////////////////////////////////////////////////////////////////////////////////
 
@@ -28,9 +51,9 @@ func InitCache() {
 // Cache
 ////////////////////////////////////////////////////////////////////////////////////////
 
-// ThornodeCachedGet fetches the Thornode API response at the provided height. Responses
-// at a specific height are assumed immutable and cached indefinitely.
-func ThornodeCachedGet(path string, height int, result interface{}) error {
+// ThornodeCachedRetryGet fetches the Thornode API response at the provided height with
+// retry. Responses at a specific height are assumed immutable and cached indefinitely.
+func ThornodeCachedRetryGet(path string, height int64, result interface{}) error {
 	url := fmt.Sprintf("%s/%s?height=%d", config.Endpoints.Thornode, path, height)
 
 	// check the cache first

@@ -120,7 +120,7 @@ func getBlock(height int64) (*BlockResponse, error) {
 	var blockResp BlockResponse
 	err = json.NewDecoder(res.Body).Decode(&blockResp)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to decode block response")
+		log.Error().Err(err).Int64("height", height).Msg("failed to decode block response")
 	}
 
 	return &blockResp, nil

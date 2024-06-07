@@ -10,6 +10,12 @@ import (
 func Store(path string, obj any) error {
 	path = filepath.Join(config.StoragePath, path)
 
+	dir := filepath.Dir(path)
+	err := os.MkdirAll(dir, 0o755)
+	if err != nil {
+		return err
+	}
+
 	file, err := os.Create(path)
 	if err != nil {
 		return err
