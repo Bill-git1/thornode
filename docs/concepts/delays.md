@@ -53,7 +53,7 @@ Examples:
 THORChain throttles all outputs to prevent fund loss attacks. The maximum delay is 720 blocks which is approx 1 hour. Outbound delay worked out by computing the value of the outbound transaction in RUNE then applying an artificial delay. If the tx is in "scheduled", it will be delayed by a number of blocks. Once it is "outbound" it is being processed. See more information [here](https://docs.thorchain.org/how-it-works/security#b905-1).
 
 ```admonish info
-Arbs and Traders who have trade history can have a reduced wait time to do [Swapper Clout.](./swapper-clout.md)
+Arbs and Traders who have trade history can have a reduced wait time due to [Swapper Clout.](./swapper-clout.md)
 ```
 
 **Queue:**

@@ -37,7 +37,7 @@ A min swap size is placed on the network for streaming swaps (Mimir `StreamingSw
 
 The network works out the optimal streaming swap solution based on the Mimumn Swap Size and the swapAmount.
 
-**Single Swap**: To calculate the minimum swap size for a single swap, you take 2.5 basis points (bps) of the depth of the pool. The formula is as follows:
+**Single Swap**: To calculate the minimum swap size for a single swap, you take 5 basis points (bps) of the depth of the pool. The formula is as follows:
 
 $$
 {MinimumSwapSize} = MinBPStreamingSwap * Rune Pool Depth

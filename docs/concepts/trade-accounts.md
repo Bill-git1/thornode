@@ -58,11 +58,11 @@ The destination/receiving address of the Trade Assets MUST be a THORChain Addres
 
 ### Withdrawing from the Trade Account
 
-Send a THORChain MsgDeposit with the memo **`WITHDRAW:POOL:BASISPOINTS:ASSET`.**
+Send a THORChain MsgDeposit with the memo **`TRADE-:ADDR`**.
 
 **Example:**
 
-`TRADE-:bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw` - Withdraw 0.1 BTC from the Trade Account and send to `bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw`.
+`TRADE-:bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw` - Withdraw 0.1 BTC from the Trade Account and send to `bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw`. The amount in the coins array defines the withdrawal amount.
 
 ```json
 {
