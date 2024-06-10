@@ -8,7 +8,7 @@ Router contract hold all ERC20 assets, but not the native asset (e.g. `ETH` or `
 
 # Where is Router code?
 
-https://gitlab.com/thorchain/ethereum/eth-router , if you need to make changes to this router, please raise a PR in [this repository](https://gitlab.com/thorchain/ethereum/eth-router)
+EVM router code lives in this repository, under the [chain/](../chain/) directory. Open a PR against this repository for any changes to the routers.
 
 # How to upgrade Router?
 

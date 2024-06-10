@@ -39,7 +39,7 @@ Override randomised VOUT ordering; THORChain requires specific output ordering. 
 
 ### EVM Chains
 
-{{#embed https://gitlab.com/thorchain/ethereum/eth-router/-/blob/master/contracts/THORChain_Router.sol#L66 }}
+{{#embed https://gitlab.com/thorchain/thornode/-/blob/develop/chain/ethereum/contracts/THORChain_Router.sol }}
 
 ```go
 depositWithExpiry(vault, asset, amount, memo, expiry)

@@ -2,7 +2,7 @@
 
 THORChain Aggregator Example
 
-{{#embed https://gitlab.com/thorchain/ethereum/eth-router/-/blob/master/contracts/THORChain_Aggregator.sol }}
+{{#embed https://gitlab.com/thorchain/thornode/-/blob/develop/chain/ethereum/contracts/THORChain_Aggregator.sol }}
 
 Tokens must be on the [ETH Whitelist](https://gitlab.com/thorchain/thornode/-/blob/develop/docs/evm_whitelist_procedure.md#dex-token). The destination address should be a user control address, not a contract address.
 
