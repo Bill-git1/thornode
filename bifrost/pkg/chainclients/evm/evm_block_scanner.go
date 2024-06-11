@@ -774,7 +774,7 @@ func (e *EVMScanner) getTxInFromSmartContract(tx *etypes.Transaction, receipt *e
 			}
 		}
 	}
-	e.logger.Info().
+	e.logger.Debug().
 		Str("tx hash", txInItem.Tx).
 		Str("gas price", tx.GasPrice().String()).
 		Uint64("gas used", receipt.GasUsed).
