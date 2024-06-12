@@ -95,6 +95,10 @@ func NewHandlerDepositTestHelper(k keeper.Keeper) *HandlerDepositTestHelper {
 
 func (s *HandlerDepositSuite) TestDifferentValidation(c *C) {
 	acctAddr := GetRandomBech32Addr()
+	badAsset := common.Asset{
+		Chain:  common.THORChain,
+		Symbol: "ETH~ETH",
+	}
 	testCases := []struct {
 		name            string
 		messageProvider func(c *C, ctx cosmos.Context, helper *HandlerDepositTestHelper) cosmos.Msg
@@ -121,6 +125,18 @@ func (s *HandlerDepositSuite) TestDifferentValidation(c *C) {
 			validator: func(c *C, ctx cosmos.Context, result *cosmos.Result, err error, helper *HandlerDepositTestHelper, name string) {
 				c.Check(err, NotNil, Commentf(name))
 				c.Check(result, IsNil, Commentf(name))
+			},
+		},
+		{
+			name: "invalid coin should result in error",
+			messageProvider: func(c *C, ctx cosmos.Context, helper *HandlerDepositTestHelper) cosmos.Msg {
+				return NewMsgDeposit(common.Coins{
+					common.NewCoin(badAsset, cosmos.NewUint(100)),
+				}, "hello", GetRandomBech32Addr())
+			},
+			validator: func(c *C, ctx cosmos.Context, result *cosmos.Result, err error, helper *HandlerDepositTestHelper, name string) {
+				c.Check(err, NotNil, Commentf(name))
+				c.Check(strings.Contains(err.Error(), "invalid coin"), Equals, true, Commentf(name))
 			},
 		},
 		{

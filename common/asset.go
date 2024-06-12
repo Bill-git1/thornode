@@ -119,6 +119,16 @@ func NewAssetWithShortCodesV124(input string) (Asset, error) {
 	return NewAsset(input)
 }
 
+func (a Asset) Valid() error {
+	if err := a.Chain.Valid(); err != nil {
+		return fmt.Errorf("invalid chain: %w", err)
+	}
+	if err := a.Symbol.Valid(); err != nil {
+		return fmt.Errorf("invalid symbol: %w", err)
+	}
+	return nil
+}
+
 // Equals determinate whether two assets are equivalent
 func (a Asset) Equals(a2 Asset) bool {
 	return a.Chain.Equals(a2.Chain) && a.Symbol.Equals(a2.Symbol) && a.Ticker.Equals(a2.Ticker) && a.Synth == a2.Synth && a.Trade == a2.Trade

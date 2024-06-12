@@ -1574,3 +1574,18 @@ func (h DepositHandler) updateAffiliateCollectorV116(ctx cosmos.Context, coin co
 		}
 	}
 }
+
+func (h DepositHandler) validateV130(ctx cosmos.Context, msg MsgDeposit) error {
+	err := msg.ValidateBasic()
+	if err != nil {
+		return err
+	}
+
+	// TODO on hard fork move to ValidateBasic
+	// deposit only allowed with one coin
+	if len(msg.Coins) != 1 {
+		return errors.New("only one coin is allowed")
+	}
+
+	return nil
+}

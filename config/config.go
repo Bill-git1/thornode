@@ -275,12 +275,12 @@ func Init() {
 func InitBifrost() {
 	for _, chain := range config.Bifrost.GetChains() {
 		// validate chain configurations
-		if err := chain.ChainID.Validate(); err != nil {
+		if err := chain.ChainID.Valid(); err != nil {
 			log.Fatal().Err(err).
 				Stringer("chain_id", chain.ChainID).
 				Msg("chain failed validation")
 		}
-		if err := chain.BlockScanner.ChainID.Validate(); err != nil {
+		if err := chain.BlockScanner.ChainID.Valid(); err != nil {
 			log.Fatal().Err(err).
 				Stringer("chain_id", chain.BlockScanner.ChainID).
 				Msg("chain failed validation")

@@ -72,6 +72,7 @@ func (c Coin) IsEmpty() bool {
 
 // Valid return an error if the coin is not correct
 func (c Coin) Valid() error {
+	// TODO on hard fork check more restrictive c.Asset.Valid()
 	if c.Asset.IsEmpty() {
 		return errors.New("denom cannot be empty")
 	}

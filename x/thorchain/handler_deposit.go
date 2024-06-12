@@ -47,6 +47,8 @@ func (h DepositHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, e
 func (h DepositHandler) validate(ctx cosmos.Context, msg MsgDeposit) error {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.134.0")):
+		return h.validateV134(ctx, msg)
 	case version.GTE(semver.MustParse("1.130.0")):
 		return h.validateV130(ctx, msg)
 	case version.GTE(semver.MustParse("0.1.0")):
@@ -55,7 +57,7 @@ func (h DepositHandler) validate(ctx cosmos.Context, msg MsgDeposit) error {
 	return errInvalidVersion
 }
 
-func (h DepositHandler) validateV130(ctx cosmos.Context, msg MsgDeposit) error {
+func (h DepositHandler) validateV134(ctx cosmos.Context, msg MsgDeposit) error {
 	err := msg.ValidateBasic()
 	if err != nil {
 		return err
@@ -65,6 +67,11 @@ func (h DepositHandler) validateV130(ctx cosmos.Context, msg MsgDeposit) error {
 	// deposit only allowed with one coin
 	if len(msg.Coins) != 1 {
 		return errors.New("only one coin is allowed")
+	}
+
+	// TODO on hard fork move to Coin.Valid() and call that from ValidateBasic
+	if err := msg.Coins[0].Asset.Valid(); err != nil {
+		return fmt.Errorf("invalid coin: %w", err)
 	}
 
 	return nil

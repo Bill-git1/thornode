@@ -29,6 +29,13 @@ func NewSymbol(input string) (Symbol, error) {
 	return Symbol(strings.ToUpper(input)), nil
 }
 
+func (s Symbol) Valid() error {
+	if !isAlphaNumeric(s.String()) {
+		return errors.New("symbol must be alphanumeric")
+	}
+	return nil
+}
+
 // Ticker return the ticker part of symbol
 func (s Symbol) Ticker() Ticker {
 	parts := strings.Split(s.String(), "-")

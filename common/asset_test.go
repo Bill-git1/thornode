@@ -1,6 +1,8 @@
 package common
 
 import (
+	"strings"
+
 	"github.com/blang/semver"
 	. "gopkg.in/check.v1"
 )
@@ -12,6 +14,7 @@ var _ = Suite(&AssetSuite{})
 func (s AssetSuite) TestAsset(c *C) {
 	asset, err := NewAsset("thor.rune")
 	c.Assert(err, IsNil)
+	c.Check(asset.Valid(), IsNil)
 	c.Check(asset.Equals(RuneNative), Equals, true)
 	c.Check(asset.IsRune(), Equals, true)
 	c.Check(asset.IsEmpty(), Equals, false)
@@ -20,6 +23,7 @@ func (s AssetSuite) TestAsset(c *C) {
 
 	asset, err = NewAsset("thor/rune")
 	c.Assert(err, IsNil)
+	c.Check(asset.Valid(), IsNil)
 	c.Check(asset.Equals(RuneNative), Equals, false)
 	c.Check(asset.IsRune(), Equals, false)
 	c.Check(asset.IsEmpty(), Equals, false)
@@ -32,6 +36,7 @@ func (s AssetSuite) TestAsset(c *C) {
 
 	asset, err = NewAsset("BNB.SWIPE.B-DC0")
 	c.Assert(err, IsNil)
+	c.Check(asset.Valid(), IsNil)
 	c.Check(asset.String(), Equals, "BNB.SWIPE.B-DC0")
 	c.Check(asset.Chain.Equals(BNBChain), Equals, true)
 	c.Check(asset.Symbol.Equals(Symbol("SWIPE.B-DC0")), Equals, true)
@@ -40,11 +45,13 @@ func (s AssetSuite) TestAsset(c *C) {
 	// parse without chain
 	asset, err = NewAsset("rune")
 	c.Assert(err, IsNil)
+	c.Check(asset.Valid(), IsNil)
 	c.Check(asset.Equals(RuneNative), Equals, true)
 
 	// ETH test
 	asset, err = NewAsset("eth.knc")
 	c.Assert(err, IsNil)
+	c.Check(asset.Valid(), IsNil)
 	c.Check(asset.Chain.Equals(ETHChain), Equals, true)
 	c.Check(asset.Symbol.Equals(Symbol("KNC")), Equals, true)
 	c.Check(asset.Ticker.Equals(Ticker("KNC")), Equals, true)
@@ -54,6 +61,7 @@ func (s AssetSuite) TestAsset(c *C) {
 	// DOGE test
 	asset, err = NewAsset("doge.doge")
 	c.Assert(err, IsNil)
+	c.Check(asset.Valid(), IsNil)
 	c.Check(asset.Chain.Equals(DOGEChain), Equals, true)
 	c.Check(asset.Equals(DOGEAsset), Equals, true)
 	c.Check(asset.IsRune(), Equals, false)
@@ -63,6 +71,7 @@ func (s AssetSuite) TestAsset(c *C) {
 	// BCH test
 	asset, err = NewAsset("bch.bch")
 	c.Assert(err, IsNil)
+	c.Check(asset.Valid(), IsNil)
 	c.Check(asset.Chain.Equals(BCHChain), Equals, true)
 	c.Check(asset.Equals(BCHAsset), Equals, true)
 	c.Check(asset.IsRune(), Equals, false)
@@ -72,6 +81,7 @@ func (s AssetSuite) TestAsset(c *C) {
 	// LTC test
 	asset, err = NewAsset("ltc.ltc")
 	c.Assert(err, IsNil)
+	c.Check(asset.Valid(), IsNil)
 	c.Check(asset.Chain.Equals(LTCChain), Equals, true)
 	c.Check(asset.Equals(LTCAsset), Equals, true)
 	c.Check(asset.IsRune(), Equals, false)
@@ -81,6 +91,7 @@ func (s AssetSuite) TestAsset(c *C) {
 	// btc/btc
 	asset, err = NewAsset("btc/btc")
 	c.Check(err, IsNil)
+	c.Check(asset.Valid(), IsNil)
 	c.Check(asset.Chain.Equals(BTCChain), Equals, true)
 	c.Check(asset.Equals(BTCAsset), Equals, false)
 	c.Check(asset.IsEmpty(), Equals, false)
@@ -89,12 +100,31 @@ func (s AssetSuite) TestAsset(c *C) {
 	// test shorts
 	asset, err = NewAssetWithShortCodes(semver.MustParse("1.115.0"), "b")
 	c.Assert(err, IsNil)
+	c.Check(asset.Valid(), IsNil)
 	c.Check(asset.String(), Equals, "BTC.BTC")
 	asset, err = NewAssetWithShortCodes(semver.MustParse("1.115.0"), "BLAH.BLAH")
 	c.Assert(err, IsNil)
+	c.Check(asset.Valid(), IsNil)
 	c.Check(asset.String(), Equals, "BLAH.BLAH")
 
 	asset, err = NewAssetWithShortCodes(semver.MustParse("0.0.0"), "BTC.BTC")
 	c.Assert(err, IsNil)
+	c.Check(asset.Valid(), IsNil)
 	c.Check(asset.String(), Equals, "BTC.BTC")
+
+	asset = Asset{
+		Chain:  "THOR.ETH",
+		Symbol: "ETH",
+	}
+	err = asset.Valid()
+	c.Assert(err, NotNil)
+	c.Check(strings.Contains(err.Error(), "invalid chain"), Equals, true)
+
+	asset = Asset{
+		Chain:  "THOR",
+		Symbol: "ETH~ETH",
+	}
+	err = asset.Valid()
+	c.Assert(err, NotNil)
+	c.Check(strings.Contains(err.Error(), "invalid symbol"), Equals, true)
 }
