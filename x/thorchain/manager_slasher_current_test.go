@@ -302,12 +302,12 @@ func (s *SlashingVCURSuite) TestDoubleSign(c *C) {
 	constAccessor := constants.GetConstantValues(GetCurrentVersion())
 
 	na := GetRandomValidatorNode(NodeActive)
-	na.Bond = cosmos.NewUint(100 * common.One)
 
 	keeper := &TestDoubleSlashKeeper{
-		na:      na,
-		network: NewNetwork(),
-		modules: make(map[string]int64),
+		na:          na,
+		network:     NewNetwork(),
+		slashPoints: make(map[string]int64),
+		constants:   make(map[string]int64),
 	}
 	slasher := newSlasherVCUR(keeper, NewDummyEventMgr())
 
@@ -318,11 +318,11 @@ func (s *SlashingVCURSuite) TestDoubleSign(c *C) {
 	pair.nodeAddress = na.NodeAddress
 	pair.validatorAddress = pk.Address()
 
+	c.Assert(keeper.slashPoints[na.NodeAddress.String()], Equals, int64(0))
+	keeper.constants["DoubleBlockSignSlashPoints"] = 1
 	err = slasher.HandleDoubleSign(ctx, pk.Address(), 0, constAccessor, []nodeAddressValidatorAddressPair{pair})
 	c.Assert(err, IsNil)
-
-	c.Check(keeper.na.Bond.Equal(cosmos.NewUint(9995000000)), Equals, true, Commentf("%d", keeper.na.Bond.Uint64()))
-	c.Check(keeper.modules[ReserveName], Equals, int64(5000000))
+	c.Assert(keeper.slashPoints[na.NodeAddress.String()], Equals, int64(1))
 }
 
 func (s *SlashingVCURSuite) TestIncreaseDecreaseSlashPoints(c *C) {

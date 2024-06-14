@@ -109,6 +109,7 @@ func (s *SlasherVCUR) HandleDoubleSign(ctx cosmos.Context, addr crypto.Address, 
 		return nil
 	}
 
+	doubleBlockSignSlashPoints := s.keeper.GetConfigInt64(ctx, constants.DoubleBlockSignSlashPoints)
 	for _, pair := range validatorAddresses {
 		if addr.String() != pair.validatorAddress.String() {
 			continue
@@ -119,34 +120,12 @@ func (s *SlasherVCUR) HandleDoubleSign(ctx cosmos.Context, addr crypto.Address, 
 			return err
 		}
 
-		if na.Bond.IsZero() {
-			return fmt.Errorf("found account to slash for double signing, but did not have any bond to slash: %s", addr)
-		}
-		// take 5% of the minimum bond, and put it into the reserve
-		minBond, err := s.keeper.GetMimir(ctx, constants.MinimumBondInRune.String())
-		if minBond < 0 || err != nil {
-			minBond = constAccessor.GetInt64Value(constants.MinimumBondInRune)
-		}
-		slashAmount := cosmos.NewUint(uint64(minBond)).MulUint64(5).QuoUint64(100)
-		if slashAmount.GT(na.Bond) {
-			slashAmount = na.Bond
-		}
-
-		slashFloat, _ := new(big.Float).SetInt(slashAmount.BigInt()).Float32()
-		telemetry.IncrCounterWithLabels(
-			[]string{"thornode", "bond_slash"},
-			slashFloat,
-			[]metrics.Label{
-				telemetry.NewLabel("address", addr.String()),
-				telemetry.NewLabel("reason", "double_block_sign"),
-			},
-		)
-
-		na.Bond = common.SafeSub(na.Bond, slashAmount)
-		coin := common.NewCoin(common.RuneNative, slashAmount)
-		if err := s.keeper.SendFromModuleToModule(ctx, BondName, ReserveName, common.NewCoins(coin)); err != nil {
-			ctx.Logger().Error("fail to transfer funds from bond to reserve", "error", err)
-			return fmt.Errorf("fail to transfer funds from bond to reserve: %w", err)
+		slashCtx := ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
+			telemetry.NewLabel("address", na.NodeAddress.String()),
+			telemetry.NewLabel("reason", "double_block_sign"),
+		}))
+		if err := s.keeper.IncNodeAccountSlashPoints(slashCtx, na.NodeAddress, doubleBlockSignSlashPoints); err != nil {
+			ctx.Logger().Error("fail to increase node account slash point", "error", err, "address", na.NodeAddress.String())
 		}
 
 		return s.keeper.SetNodeAccount(ctx, na)

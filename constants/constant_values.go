@@ -59,6 +59,7 @@ const (
 	FailKeysignSlashPoints
 	LiquidityLockUpBlocks
 	ObserveSlashPoints
+	DoubleBlockSignSlashPoints
 	MissBlockSignSlashPoints
 	ObservationDelayFlexibility
 	StopFundYggdrasil // TODO remove on hard fork

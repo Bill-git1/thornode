@@ -7,6 +7,7 @@ import (
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/constants"
 )
 
 type TestSlashingLackKeeper struct {
@@ -147,6 +148,7 @@ type TestDoubleSlashKeeper struct {
 	network     Network
 	slashPoints map[string]int64
 	modules     map[string]int64
+	constants   map[string]int64
 }
 
 func (k *TestDoubleSlashKeeper) SendFromModuleToModule(_ cosmos.Context, from, to string, coins common.Coins) error {
@@ -188,4 +190,8 @@ func (k *TestDoubleSlashKeeper) IncNodeAccountSlashPoints(ctx cosmos.Context, ad
 func (k *TestDoubleSlashKeeper) DecNodeAccountSlashPoints(ctx cosmos.Context, addr cosmos.AccAddress, pts int64) error {
 	k.slashPoints[addr.String()] -= pts
 	return nil
+}
+
+func (k *TestDoubleSlashKeeper) GetConfigInt64(ctx cosmos.Context, key constants.ConstantName) int64 {
+	return k.constants[key.String()]
 }
