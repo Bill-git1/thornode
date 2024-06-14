@@ -215,3 +215,16 @@ func validateNodeKeysAuthV114(ctx cosmos.Context, k keeper.Keeper, signer cosmos
 
 	return nil
 }
+
+func (h SetNodeKeysHandler) validateV114(ctx cosmos.Context, msg MsgSetNodeKeys) error {
+	if err := msg.ValidateBasic(); err != nil {
+		return err
+	}
+	if err := validateNodeKeysAuth(ctx, h.mgr.Keeper(), msg.Signer); err != nil {
+		return err
+	}
+	if err := h.mgr.Keeper().EnsureNodeKeysUnique(ctx, msg.ValidatorConsPubKey, msg.PubKeySetSet); err != nil {
+		return err
+	}
+	return nil
+}

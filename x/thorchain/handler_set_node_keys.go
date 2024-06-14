@@ -42,6 +42,8 @@ func (h SetNodeKeysHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Resul
 func (h SetNodeKeysHandler) validate(ctx cosmos.Context, msg MsgSetNodeKeys) error {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.134.0")):
+		return h.validateV134(ctx, msg)
 	case version.GTE(semver.MustParse("1.114.0")):
 		return h.validateV114(ctx, msg)
 	case version.GTE(semver.MustParse("1.112.0")):
@@ -52,7 +54,7 @@ func (h SetNodeKeysHandler) validate(ctx cosmos.Context, msg MsgSetNodeKeys) err
 	return errInvalidVersion
 }
 
-func (h SetNodeKeysHandler) validateV114(ctx cosmos.Context, msg MsgSetNodeKeys) error {
+func (h SetNodeKeysHandler) validateV134(ctx cosmos.Context, msg MsgSetNodeKeys) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
@@ -62,6 +64,15 @@ func (h SetNodeKeysHandler) validateV114(ctx cosmos.Context, msg MsgSetNodeKeys)
 	if err := h.mgr.Keeper().EnsureNodeKeysUnique(ctx, msg.ValidatorConsPubKey, msg.PubKeySetSet); err != nil {
 		return err
 	}
+
+	addr, err := msg.PubKeySetSet.Secp256k1.GetThorAddress()
+	if err != nil {
+		return err
+	}
+	if !msg.Signer.Equals(addr) {
+		return fmt.Errorf("node address must match secp256k1 pubkey")
+	}
+
 	return nil
 }
 

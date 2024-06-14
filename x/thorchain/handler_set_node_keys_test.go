@@ -62,15 +62,22 @@ func (s *HandlerSetNodeKeysSuite) TestValidate(c *C) {
 
 	handler := NewSetNodeKeysHandler(NewDummyMgrWithKeeper(keeper))
 
-	// happy path
-	signer := GetRandomBech32Addr()
-	c.Assert(signer.Empty(), Equals, false)
 	consensPubKey := GetRandomBech32ConsensusPubKey()
 	pubKeys := GetRandomPubKeySet()
-
-	msg := NewMsgSetNodeKeys(pubKeys, consensPubKey, signer)
-	err := handler.validate(ctx, *msg)
+	signer, err := pubKeys.Secp256k1.GetThorAddress()
 	c.Assert(err, IsNil)
+	c.Assert(signer.Empty(), Equals, false)
+
+	msg := NewMsgSetNodeKeys(pubKeys, consensPubKey, GetRandomBech32Addr())
+	err = handler.validate(ctx, *msg)
+	c.Assert(err, NotNil)
+	c.Check(err, ErrorMatches, ".*must match secp256k1.*")
+
+	// happy path
+	msg.Signer = signer
+	err = handler.validate(ctx, *msg)
+	c.Assert(err, IsNil)
+
 	result, err := handler.Run(ctx, msg)
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
