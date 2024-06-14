@@ -20,11 +20,6 @@ type GasMgrVCUR struct {
 	keeper            keeper.Keeper
 }
 
-type OutAssetGas struct {
-	outAsset common.Asset
-	gas      common.Gas
-}
-
 // newGasMgrVCUR create a new instance of GasMgrV1
 func newGasMgrVCUR(constantsAccessor constants.ConstantValues, k keeper.Keeper) *GasMgrVCUR {
 	return &GasMgrVCUR{
@@ -109,6 +104,9 @@ func (gm *GasMgrVCUR) GetAssetOutboundFee(ctx cosmos.Context, asset common.Asset
 
 	// Asset is on THORChain, but not RUNE, convert the fee to asset value.
 	if asset.IsSyntheticAsset() || asset.IsDerivedAsset() || asset.IsTradeAsset() {
+		if inRune {
+			return thorchainOutboundFee, nil
+		}
 		return gm.getRuneInAssetValue(ctx, thorchainOutboundFee, asset), nil
 	}
 
