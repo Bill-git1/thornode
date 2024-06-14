@@ -77,6 +77,12 @@ func init() {
 			return vv
 		}
 	}
+	for k, v := range templateConsPubKey {
+		vv := v // copy
+		funcMap[k] = func() string {
+			return vv
+		}
+	}
 
 	// parse all templates with custom functions
 	templates = template.Must(

@@ -12,6 +12,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	tmhttp "github.com/tendermint/tendermint/rpc/client/http"
@@ -159,10 +160,11 @@ func init() {
 ////////////////////////////////////////////////////////////////////////////////////////
 
 var (
-	keyRing         = keyring.NewInMemory()
-	addressToName   = map[string]string{} // thor...->dog, 0x...->dog
-	templateAddress = map[string]string{} // addr_thor_dog->thor..., addr_eth_dog->0x...
-	templatePubKey  = map[string]string{} // pubkey_dog->thorpub...
+	keyRing            = keyring.NewInMemory()
+	addressToName      = map[string]string{} // thor...->dog, 0x...->dog
+	templateAddress    = map[string]string{} // addr_thor_dog->thor..., addr_eth_dog->0x...
+	templatePubKey     = map[string]string{} // pubkey_dog->thorpub...
+	templateConsPubKey = map[string]string{} // cons_pubkey_dog->thorcpub...
 
 	birdMnemonic   = strings.Repeat("bird ", 23) + "asthma"
 	catMnemonic    = strings.Repeat("cat ", 23) + "crawl"
@@ -219,6 +221,12 @@ func init() {
 		}
 		pk := common.PubKey(s)
 
+		consPrivKey := ed25519.GenPrivKeyFromSecret([]byte(m))
+		consPk, err := cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeConsPub, consPrivKey.PubKey())
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to bech32ify cons pubkey")
+		}
+
 		// add key to keyring
 		_, err = keyRing.NewAccount(name, m, "", cmd.THORChainHDPath, hd.Secp256k1)
 		if err != nil {
@@ -242,6 +250,7 @@ func init() {
 			// register pubkey for thorchain
 			if chain == common.THORChain {
 				templatePubKey[fmt.Sprintf("pubkey_%s", name)] = pk.String()
+				templateConsPubKey[fmt.Sprintf("cons_pubkey_%s", name)] = consPk
 			}
 		}
 	}

@@ -107,7 +107,7 @@ genesis:
           node_address: {{ addr_thor_dog }}
           bond_address: {{ addr_thor_dog }}
           pub_key_set:
-            secp256k1: "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
+            secp256k1: {{ pubkey_dog }}
             ed25519: "tthorpub1zcjduepqfan43w2emjhfv45gspf98squqlnl2rcchc3e4dx7z2nxr27edflsy2e8ql"
           signer_membership: []
           status: Active

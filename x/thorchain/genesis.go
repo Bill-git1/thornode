@@ -379,6 +379,7 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 	}
 
 	var nodeAccounts NodeAccounts
+	vaultStatus := make(map[string]types.VaultStatus)
 	iterator = k.GetNodeAccountIterator(ctx)
 	defer iterator.Close()
 	for ; iterator.Valid(); iterator.Next() {
@@ -390,6 +391,26 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		if na.Bond.IsZero() {
 			continue
 		}
+
+		// filter inactive vaults from signer membership
+		membership := make([]string, 0)
+		for _, pk := range na.GetSignerMembership() {
+			status, ok := vaultStatus[pk.String()]
+			if !ok {
+				vault, err := k.GetVault(ctx, pk)
+				if err != nil {
+					continue
+				}
+				status = vault.Status
+				vaultStatus[pk.String()] = status
+			}
+			if status == types.VaultStatus_InactiveVault || status == types.VaultStatus_InitVault {
+				continue
+			}
+			membership = append(membership, pk.String())
+		}
+		na.SignerMembership = membership
+
 		nodeAccounts = append(nodeAccounts, na)
 	}
 
