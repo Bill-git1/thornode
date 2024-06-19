@@ -1,4 +1,4 @@
-package actors
+package common
 
 import (
 	"math/big"
@@ -16,10 +16,10 @@ import (
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// L1 Deposit
+// Deposit L1
 ////////////////////////////////////////////////////////////////////////////////////////
 
-func depositL1(log *zerolog.Logger, client LiteChainClient, asset common.Asset, memo string, amount cosmos.Uint) (string, error) {
+func DepositL1(log *zerolog.Logger, client LiteChainClient, asset common.Asset, memo string, amount cosmos.Uint) (string, error) {
 	// get inbound address
 	inboundAddr, _, err := thornode.GetInboundAddress(asset.Chain)
 	if err != nil {
@@ -52,10 +52,10 @@ func depositL1(log *zerolog.Logger, client LiteChainClient, asset common.Asset, 
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// L1 Token Deposit
+// Deposit L1 Token
 ////////////////////////////////////////////////////////////////////////////////////////
 
-func depositL1Token(log *zerolog.Logger, client LiteChainClient, asset common.Asset, memo string, amount cosmos.Uint) (string, error) {
+func DepositL1Token(log *zerolog.Logger, client LiteChainClient, asset common.Asset, memo string, amount cosmos.Uint) (string, error) {
 	// get router address
 	inboundAddr, routerAddr, err := thornode.GetInboundAddress(asset.Chain)
 	if err != nil {

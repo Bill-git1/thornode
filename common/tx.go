@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/blang/semver"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
 )
@@ -121,8 +122,13 @@ func NewTx(txID TxID, from, to Address, coins Coins, gas Gas, memo string) Tx {
 	}
 }
 
-// Hash calculates a hash based on from address, coins and to address
-func (tx Tx) Hash() string {
+// Hash calculates an internal hash based on chain, from address, coins and to address.
+// TODO: remove version on hard fork
+func (tx Tx) Hash(version semver.Version) string {
+	if version.GTE(semver.MustParse("1.134.0")) {
+		str := fmt.Sprintf("%s|%s|%s|%s", tx.Chain, tx.FromAddress, tx.Coins, tx.ToAddress)
+		return fmt.Sprintf("%X", sha256.Sum256([]byte(str)))
+	}
 	str := fmt.Sprintf("%s|%s|%s", tx.FromAddress, tx.Coins, tx.ToAddress)
 	return fmt.Sprintf("%X", sha256.Sum256([]byte(str)))
 }

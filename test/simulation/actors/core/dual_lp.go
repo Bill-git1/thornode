@@ -1,4 +1,4 @@
-package actors
+package core
 
 import (
 	"fmt"
@@ -10,6 +10,7 @@ import (
 	"gitlab.com/thorchain/thornode/test/simulation/pkg/thornode"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
 
+	. "gitlab.com/thorchain/thornode/test/simulation/actors/common"
 	. "gitlab.com/thorchain/thornode/test/simulation/pkg/types"
 )
 
@@ -133,7 +134,7 @@ func (a *DualLPActor) acquireUser(config *OpConfig) OpResult {
 func (a *DualLPActor) depositL1Token(config *OpConfig) OpResult {
 	memo := fmt.Sprintf("+:%s:%s", a.asset, a.thorAddress)
 	client := a.account.ChainClients[a.asset.Chain]
-	txid, err := depositL1Token(a.Log(), client, a.asset, memo, a.l1Amount)
+	txid, err := DepositL1Token(a.Log(), client, a.asset, memo, a.l1Amount)
 	if err != nil {
 		a.Log().Error().Err(err).Msg("failed to deposit L1 token")
 		return OpResult{
@@ -150,7 +151,7 @@ func (a *DualLPActor) depositL1Token(config *OpConfig) OpResult {
 func (a *DualLPActor) depositL1(config *OpConfig) OpResult {
 	memo := fmt.Sprintf("+:%s:%s", a.asset, a.thorAddress)
 	client := a.account.ChainClients[a.asset.Chain]
-	txid, err := depositL1(a.Log(), client, a.asset, memo, a.l1Amount)
+	txid, err := DepositL1(a.Log(), client, a.asset, memo, a.l1Amount)
 	if err != nil {
 		a.Log().Error().Err(err).Msg("failed to deposit L1")
 		return OpResult{

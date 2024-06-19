@@ -5,7 +5,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"gitlab.com/thorchain/thornode/common"
-	"gitlab.com/thorchain/thornode/test/simulation/actors"
+	"gitlab.com/thorchain/thornode/test/simulation/actors/core"
 	"gitlab.com/thorchain/thornode/test/simulation/pkg/evm"
 	"gitlab.com/thorchain/thornode/test/simulation/pkg/thornode"
 	. "gitlab.com/thorchain/thornode/test/simulation/pkg/types"
@@ -33,20 +33,7 @@ func Bootstrap() *Actor {
 		}
 		count++
 
-		// skip bootstrapping existing pools
-		found := false
-		for _, pool := range pools {
-			if pool.Asset == chain.GetGasAsset().String() {
-				found = true
-				break
-			}
-		}
-		if found {
-			log.Info().Str("chain", chain.GetGasAsset().String()).Msg("skip existing pool bootstrap")
-			continue
-		}
-
-		a.Children[actors.NewDualLPActor(chain.GetGasAsset())] = true
+		a.Children[core.NewDualLPActor(chain.GetGasAsset())] = true
 	}
 
 	// create token pools
@@ -58,20 +45,7 @@ func Bootstrap() *Actor {
 		count++
 
 		for asset := range evm.Tokens(chain) {
-			// skip bootstrapping existing pools
-			found := false
-			for _, pool := range pools {
-				if pool.Asset == asset.String() {
-					found = true
-					break
-				}
-			}
-			if found {
-				log.Info().Str("chain", chain.GetGasAsset().String()).Msg("skip existing pool bootstrap")
-				continue
-			}
-
-			tokenPools.Children[actors.NewDualLPActor(asset)] = true
+			tokenPools.Children[core.NewDualLPActor(asset)] = true
 		}
 	}
 	a.Append(tokenPools)

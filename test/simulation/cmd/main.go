@@ -4,16 +4,21 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/rivo/tview"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/term"
 
 	prefix "gitlab.com/thorchain/thornode/cmd"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
-	"gitlab.com/thorchain/thornode/test/simulation/actors"
+	"gitlab.com/thorchain/thornode/test/simulation/actors/core"
+	"gitlab.com/thorchain/thornode/test/simulation/actors/features"
 	"gitlab.com/thorchain/thornode/test/simulation/actors/suites"
+	"gitlab.com/thorchain/thornode/test/simulation/pkg/cli"
 	pkgcosmos "gitlab.com/thorchain/thornode/test/simulation/pkg/cosmos"
 	"gitlab.com/thorchain/thornode/test/simulation/pkg/dag"
 	"gitlab.com/thorchain/thornode/test/simulation/pkg/evm"
@@ -30,7 +35,6 @@ const (
 	DefaultParallelism = "8"
 )
 
-// trunk-ignore(golangci-lint/unused)
 var liteClientConstructors = map[common.Chain]LiteChainClientConstructor{
 	common.BTCChain:  utxo.NewConstructor(chainRPCs[common.BTCChain]),
 	common.LTCChain:  utxo.NewConstructor(chainRPCs[common.LTCChain]),
@@ -43,10 +47,10 @@ var liteClientConstructors = map[common.Chain]LiteChainClientConstructor{
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// Main
+// Init
 ////////////////////////////////////////////////////////////////////////////////////////
 
-func main() {
+func init() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout}).With().Caller().Logger()
 
 	// init prefixes
@@ -57,6 +61,42 @@ func main() {
 	ccfg.SetCoinType(prefix.THORChainCoinType)
 	ccfg.SetPurpose(prefix.THORChainCoinPurpose)
 	ccfg.Seal()
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+// Main
+////////////////////////////////////////////////////////////////////////////////////////
+
+func main() {
+	// prompt to filter run stages if connected to a terminal
+	enabledStages := map[string]bool{}
+	stages := []cli.Option{
+		{"seed", true},
+		{"bootstrap", true},
+		{"savers", true},
+		{"arb", true},
+		{"swaps", true},
+		{"feature-saver-eject", false},
+		{"ragnarok", true},
+	}
+	if os.Getenv("STAGES") != "" {
+		for _, stage := range strings.Split(os.Getenv("STAGES"), ",") {
+			enabledStages[stage] = true
+		}
+	} else if term.IsTerminal(int(os.Stdout.Fd())) {
+		app := tview.NewApplication()
+		opts := cli.NewOptions(app, stages)
+		opts.SetBorder(true).SetTitle(" Select Stages ")
+		app.SetRoot(opts, true)
+		if err := app.Run(); err != nil {
+			panic(err)
+		}
+		enabledStages = opts.Selected()
+	} else {
+		for _, stage := range stages {
+			enabledStages[stage.Name] = stage.Default
+		}
+	}
 
 	// wait until bifrost is ready
 	for {
@@ -70,14 +110,18 @@ func main() {
 
 	// combine all actor dags for the complete test run
 	root := NewActor("Root")
-	root.Append(suites.Bootstrap())
-	root.Append(actors.NewArbActor())
 
-	// skip swaps and ragnarok if this is bootstrap only mode
-	if os.Getenv("BOOTSTRAP_ONLY") != "true" {
-		root.Append(suites.Swaps())
-		root.Append(suites.Ragnarok())
+	appendIfEnabled := func(key string, constructor func() *Actor) {
+		if enabledStages[key] {
+			root.Append(constructor())
+		}
 	}
+	appendIfEnabled("bootstrap", suites.Bootstrap)
+	appendIfEnabled("savers", suites.Savers)
+	appendIfEnabled("arb", core.NewArbActor)
+	appendIfEnabled("swaps", suites.Swaps)
+	appendIfEnabled("feature-saver-eject", features.SaverEject)
+	appendIfEnabled("ragnarok", suites.Ragnarok)
 
 	// gather config from the environment
 	parallelism := os.Getenv("PARALLELISM")
@@ -89,7 +133,7 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to parse PARALLELISM")
 	}
 
-	cfg := InitConfig(parallelismInt)
+	cfg := InitConfig(parallelismInt, enabledStages["seed"])
 
 	// start watchers
 	for _, w := range []*Watcher{watchers.NewInvariants()} {

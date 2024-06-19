@@ -72,14 +72,13 @@ var (
 // Init
 ////////////////////////////////////////////////////////////////////////////////////////
 
-func InitConfig(parallelism int) *OpConfig {
+func InitConfig(parallelism int, seed bool) *OpConfig {
 	if parallelism > len(mocknetUserMnemonics) {
 		log.Error().
 			Int("parallelism", parallelism).
 			Int("accounts", len(mocknetUserMnemonics)).
 			Msg("parallelism limited by available user accounts")
 	}
-	log.Info().Msg("initializing mocknet simulation user accounts")
 
 	c := &OpConfig{}
 	mu := &sync.Mutex{}
@@ -101,7 +100,15 @@ func InitConfig(parallelism int) *OpConfig {
 			c.NodeUsers = append(c.NodeUsers, a)
 			mu.Unlock()
 
-			// send gaia network fee observation
+			defer func() {
+				<-sem
+				wg.Done()
+			}()
+
+			// send gaia network fee observation if this is a seed run
+			if !seed {
+				return
+			}
 			log.Info().Msg("posting gaia network fee")
 			for {
 				_, err := a.Thorchain.PostNetworkFee(1, common.GAIAChain, 1, 1_000_000)
@@ -111,9 +118,6 @@ func InitConfig(parallelism int) *OpConfig {
 				log.Error().Err(err).Msg("failed to post network fee")
 				time.Sleep(5 * time.Second)
 			}
-
-			<-sem
-			wg.Done()
 		}(mnemonic)
 	}
 
@@ -178,6 +182,12 @@ func InitConfig(parallelism int) *OpConfig {
 
 	// master user is also mimir admin
 	c.AdminUser = master
+
+	// return if not seeding accounts
+	if !seed {
+		return c
+	}
+	log.Info().Msg("initializing mocknet simulation user accounts")
 
 	// fund all user accounts
 	funded := []*User{}

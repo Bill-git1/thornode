@@ -4,7 +4,7 @@ import (
 	"math/rand"
 
 	"gitlab.com/thorchain/thornode/common"
-	"gitlab.com/thorchain/thornode/test/simulation/actors"
+	"gitlab.com/thorchain/thornode/test/simulation/actors/core"
 	"gitlab.com/thorchain/thornode/test/simulation/pkg/evm"
 	. "gitlab.com/thorchain/thornode/test/simulation/pkg/types"
 )
@@ -53,7 +53,7 @@ func Swaps() *Actor {
 			if source.Equals(target) {
 				continue
 			}
-			a.Children[actors.NewSwapActor(source, target)] = true
+			a.Children[core.NewSwapActor(source, target)] = true
 		}
 	}
 

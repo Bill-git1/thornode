@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"gitlab.com/thorchain/thornode/common"
-	"gitlab.com/thorchain/thornode/test/simulation/actors"
+	"gitlab.com/thorchain/thornode/test/simulation/actors/core"
 	"gitlab.com/thorchain/thornode/test/simulation/pkg/thornode"
 	. "gitlab.com/thorchain/thornode/test/simulation/pkg/types"
 )
@@ -23,7 +23,7 @@ func Ragnarok() *Actor {
 		case common.THORChain, common.BNBChain, common.TERRAChain:
 			continue
 		}
-		a.Children[actors.NewRagnarokPoolActor(chain.GetGasAsset())] = true
+		a.Children[core.NewRagnarokPoolActor(chain.GetGasAsset())] = true
 	}
 
 	// verify pool removals

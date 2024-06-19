@@ -1,4 +1,4 @@
-package actors
+package core
 
 import (
 	"fmt"
@@ -10,6 +10,7 @@ import (
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
 	openapi "gitlab.com/thorchain/thornode/openapi/gen"
+	. "gitlab.com/thorchain/thornode/test/simulation/actors/common"
 	"gitlab.com/thorchain/thornode/test/simulation/pkg/thornode"
 	. "gitlab.com/thorchain/thornode/test/simulation/pkg/types"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
@@ -159,9 +160,9 @@ func (a *ArbActor) bootstrapTradeAssets(config *OpConfig) OpResult {
 		// make deposit
 		var txid string
 		if asset.Chain.IsEVM() && !asset.IsGasAsset() {
-			txid, err = depositL1Token(a.Log(), client, asset, memo, depositAmount)
+			txid, err = DepositL1Token(a.Log(), client, asset, memo, depositAmount)
 		} else {
-			txid, err = depositL1(a.Log(), client, asset, memo, depositAmount)
+			txid, err = DepositL1(a.Log(), client, asset, memo, depositAmount)
 		}
 		if err != nil {
 			a.Log().Fatal().

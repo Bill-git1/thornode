@@ -196,9 +196,11 @@ _test-regression:
 
 # ------------------------------ Simulation Tests ------------------------------
 
-test-simulation: build-test-simulation build-mocknet reset-mocknet
+test-simulation: build-mocknet reset-mocknet test-simulation-no-reset
+
+test-simulation-no-reset: build-test-simulation
 	@docker run --rm ${DOCKER_TTY_ARGS} \
-		-e PARALLELISM --network host -w /app \
+		-e PARALLELISM -e STAGES --network host -w /app \
 		thornode-simtest sh -c 'make _test-simulation'
 
 build-test-simulation:
@@ -209,7 +211,8 @@ build-test-simulation:
 
 # internal target used in docker build
 _build-test-simulation:
-	@go build -ldflags '$(ldflags)' -tags mocknet -o /simtest/simtest ./test/simulation/cmd
+	@cd test/simulation && \
+		go build -ldflags '$(ldflags)' -tags mocknet -o /simtest/simtest ./cmd
 
 # internal target used in test run
 _test-simulation:
@@ -240,7 +243,7 @@ build-mocknet:
 
 bootstrap-mocknet:
 	@docker run --rm ${DOCKER_TTY_ARGS} \
-		-e PARALLELISM -e BOOTSTRAP_ONLY=true --network host -w /app \
+		-e PARALLELISM -e STAGES=seed,bootstrap --network host -w /app \
 		thornode-simtest sh -c 'make _test-simulation'
 
 ps-mocknet:

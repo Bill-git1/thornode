@@ -1,4 +1,4 @@
-package actors
+package core
 
 import (
 	"fmt"
