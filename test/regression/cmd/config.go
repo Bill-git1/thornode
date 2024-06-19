@@ -12,10 +12,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	tmhttp "github.com/tendermint/tendermint/rpc/client/http"
+
 	"gitlab.com/thorchain/thornode/app"
 	"gitlab.com/thorchain/thornode/app/params"
 	"gitlab.com/thorchain/thornode/cmd"
@@ -24,6 +24,7 @@ import (
 	keeperv1 "gitlab.com/thorchain/thornode/x/thorchain/keeper/v1"
 
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
+	eddsaKey "github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -215,16 +216,19 @@ func init() {
 			log.Fatal().Err(err).Msg("failed to derive private key")
 		}
 		privKey := hd.Secp256k1.Generate()(derivedPriv)
-		s, err := cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeAccPub, privKey.PubKey())
+		ecdsaPubKey, err := cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeAccPub, privKey.PubKey())
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to bech32ify pubkey")
+			log.Fatal().Err(err).Msg("failed to bech32ify ecdsa pubkey")
 		}
-		pk := common.PubKey(s)
 
-		consPrivKey := ed25519.GenPrivKeyFromSecret([]byte(m))
-		consPk, err := cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeConsPub, consPrivKey.PubKey())
+		ed25519PrivKey := eddsaKey.GenPrivKeyFromSecret([]byte(m))
+		edd2519ConsPubKey, err := cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeConsPub, ed25519PrivKey.PubKey())
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to bech32ify cons pubkey")
+			log.Fatal().Err(err).Msg("failed to bech32ify EdDSA cons pubkey")
+		}
+		ed25519PubKey, err := cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeAccPub, ed25519PrivKey.PubKey())
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to bech32ify EdDSA acc pubkey")
 		}
 
 		// add key to keyring
@@ -237,7 +241,7 @@ func init() {
 
 			// register template address for all chains
 			var addr common.Address
-			addr, err = pk.GetAddress(chain)
+			addr, err = common.PubKey(ecdsaPubKey).GetAddress(chain)
 			if err != nil {
 				log.Fatal().Err(err).Msg("failed to get address")
 			}
@@ -249,8 +253,9 @@ func init() {
 
 			// register pubkey for thorchain
 			if chain == common.THORChain {
-				templatePubKey[fmt.Sprintf("pubkey_%s", name)] = pk.String()
-				templateConsPubKey[fmt.Sprintf("cons_pubkey_%s", name)] = consPk
+				templatePubKey[fmt.Sprintf("pubkey_%s", name)] = ecdsaPubKey
+				templateConsPubKey[fmt.Sprintf("cons_pubkey_%s", name)] = edd2519ConsPubKey
+				templatePubKey[fmt.Sprintf("pubkey_%s_eddsa", name)] = ed25519PubKey
 			}
 		}
 	}
