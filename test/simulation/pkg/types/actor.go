@@ -174,7 +174,7 @@ func (a *Actor) Execute(c *OpConfig) (err error) {
 		for { // run each op until continue or finished
 			result := op(c)
 			if result.Error != nil {
-				a.Log().Err(result.Error).Msg("op failed")
+				a.Log().Err(result.Error).Stringer("op", op).Msg("op failed")
 			}
 			if result.Finish {
 				return result.Error
@@ -183,6 +183,7 @@ func (a *Actor) Execute(c *OpConfig) (err error) {
 				break
 			}
 			if a.Timeout > 0 && time.Since(start) > a.Timeout {
+				a.Log().Err(ErrTimeout).Stringer("op", op).Msg("actor timed out")
 				return ErrTimeout
 			}
 			time.Sleep(a.Interval)

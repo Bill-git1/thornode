@@ -2,12 +2,12 @@ package core
 
 import (
 	"fmt"
+	"math/rand"
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
 	"gitlab.com/thorchain/thornode/test/simulation/pkg/thornode"
-	"golang.org/x/exp/rand"
 
 	. "gitlab.com/thorchain/thornode/test/simulation/actors/common"
 	. "gitlab.com/thorchain/thornode/test/simulation/pkg/types"

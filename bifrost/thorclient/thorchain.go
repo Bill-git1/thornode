@@ -407,7 +407,7 @@ func (b *thorchainBridge) EnsureNodeWhitelistedWithTimeout() error {
 				return nil
 			}
 			b.logger.Error().Err(err).Msg("observer is not whitelisted , will retry a bit later")
-			time.Sleep(time.Second * 30)
+			time.Sleep(time.Second * 5)
 		}
 	}
 }

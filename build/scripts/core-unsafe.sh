@@ -46,21 +46,24 @@ set_mocknet_bond_module() {
 
 deploy_evm_contracts() {
   for CHAIN in ETH AVAX BSC; do
-    # deploy contract and get address from output
-    echo "Deploying $CHAIN contracts"
-    if ! python3 scripts/evm/evm-tool.py --chain $CHAIN --rpc "$(eval echo "\$${CHAIN}_HOST")" --action deploy >/tmp/evm-tool.log 2>&1; then
-      cat /tmp/evm-tool.log && exit 1
-    fi
-    cat /tmp/evm-tool.log
-    CONTRACT=$(grep </tmp/evm-tool.log "Router Contract Address" | awk '{print $NF}')
+    (
+      # deploy contract and get address from output
+      echo "Deploying $CHAIN contracts"
+      if ! python3 scripts/evm/evm-tool.py --chain $CHAIN --rpc "$(eval echo "\$${CHAIN}_HOST")" --action deploy >/tmp/evm-tool-$CHAIN.log 2>&1; then
+        cat /tmp/evm-tool-$CHAIN.log && exit 1
+      fi
+      cat /tmp/evm-tool-$CHAIN.log
+      CONTRACT=$(grep </tmp/evm-tool-$CHAIN.log "Router Contract Address" | awk '{print $NF}')
 
-    # add contract address to genesis
-    echo "$CHAIN Contract Address: $CONTRACT"
-    jq --arg CHAIN "$CHAIN" --arg CONTRACT "$CONTRACT" \
-      '.app_state.thorchain.chain_contracts += [{"chain": $CHAIN, "router": $CONTRACT}]' \
-      ~/.thornode/config/genesis.json >/tmp/genesis.json
-    mv /tmp/genesis.json ~/.thornode/config/genesis.json
+      # add contract address to genesis
+      echo "$CHAIN Contract Address: $CONTRACT"
+      jq --arg CHAIN "$CHAIN" --arg CONTRACT "$CONTRACT" \
+        '.app_state.thorchain.chain_contracts += [{"chain": $CHAIN, "router": $CONTRACT}]' \
+        ~/.thornode/config/genesis.json >/tmp/genesis-$CHAIN.json
+      mv /tmp/genesis-$CHAIN.json ~/.thornode/config/genesis.json
+    ) &
   done
+  wait
 }
 
 set_eth_contract() {

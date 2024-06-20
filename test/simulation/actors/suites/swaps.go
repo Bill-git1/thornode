@@ -36,25 +36,21 @@ func Swaps() *Actor {
 		}
 	}
 
-	// copy pools to new slice for shuffling target pools
-	shufflePools := make([]common.Asset, len(swapPools))
-	copy(shufflePools, swapPools)
-
-	// check every gas asset swap route
-	for _, source := range swapPools {
-		// shuffle the pools
-		rand.Shuffle(len(shufflePools), func(i, j int) {
-			shufflePools[i], shufflePools[j] = shufflePools[j], shufflePools[i]
-		})
-
-		// swap to a random half of the pools
-		for _, target := range shufflePools[:len(shufflePools)/2] {
-			// skip swap to self
-			if source.Equals(target) {
-				continue
-			}
-			a.Children[core.NewSwapActor(source, target)] = true
+	// swap from each pool to one random one
+	for i, pool := range swapPools {
+		// choose a random (other) pool to swap to
+		j := rand.Intn(len(swapPools))
+		for j == i {
+			j = rand.Intn(len(swapPools))
 		}
+		a.Children[core.NewSwapActor(pool, swapPools[j])] = true
+
+		// choose a new random (other) pool to swap from
+		j = rand.Intn(len(swapPools))
+		for j == i {
+			j = rand.Intn(len(swapPools))
+		}
+		a.Children[core.NewSwapActor(swapPools[j], pool)] = true
 	}
 
 	return a

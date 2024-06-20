@@ -85,7 +85,7 @@ services:
       NODES: 1
       SEED: thornode
       SIGNER_SEED_PHRASE: "dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog fossil"
-      THOR_BLOCK_TIME: ${THOR_BLOCK_TIME:-5s}
+      THOR_BLOCK_TIME: ${BLOCK_TIME:-2s}
       THOR_API_LIMIT_COUNT: 100
       THOR_API_LIMIT_DURATION: 1s
       HARDFORK_BLOCK_HEIGHT: ${HARDFORK_BLOCK_HEIGHT:-}
@@ -141,7 +141,7 @@ services:
       AVAX_HOST: ${AVAX_HOST:-http://avalanche:9650/ext/bc/C/rpc}
       GAIA_HOST: ${GAIA_HOST:-http://gaia:26657}
       GAIA_GRPC_HOST: ${GAIA_GRPC_HOST:-gaia:9090}
-      THOR_BLOCK_TIME: ${THOR_BLOCK_TIME:-5s}
+      THOR_BLOCK_TIME: ${BLOCK_TIME:-2s}
       BLOCK_SCANNER_BACKOFF: ${BLOCK_SCANNER_BACKOFF:-5s}
       PEER: ${PEER:-}
       BIFROST_METRICS_PPROF_ENABLED: "true"
@@ -202,7 +202,7 @@ services:
       MIDGARD_THORCHAIN_THOR_NODE_URL: http://thornode:1317/thorchain
       MIDGARD_THORCHAIN_TENDERMINT_URL: http://thornode:26657/websocket
       MIDGARD_TIMESCALE_HOST: midgard-db
-      MIDGARD_THORCHAIN_LAST_CHAIN_BACKOFF: ${THOR_BLOCK_TIME:-5s}
+      MIDGARD_THORCHAIN_LAST_CHAIN_BACKOFF: ${THOR_BLOCK_TIME:-2s}
     ports:
       - 8080:8080
     logging: *logging

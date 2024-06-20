@@ -23,7 +23,7 @@ func Savers() *Actor {
 
 		// add saver
 		saver := core.NewSaverActor(chain.GetGasAsset(), 500) // 5% of asset depth
-		a.Append(saver)
+		a.Children[saver] = true
 
 		// TODO: uncomment when non-gas asset savers are allowed
 		// add token savers

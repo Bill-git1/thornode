@@ -1,5 +1,11 @@
 package types
 
+import (
+	"reflect"
+	"runtime"
+	"strings"
+)
+
 ////////////////////////////////////////////////////////////////////////////////////////
 // Ops
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -30,3 +36,10 @@ type OpResult struct {
 
 // Op is an operation that can be executed by an actor.
 type Op func(config *OpConfig) OpResult
+
+// String returns the function name of the operation.
+func (op Op) String() string {
+	fqName := runtime.FuncForPC(reflect.ValueOf(op).Pointer()).Name()
+	parts := strings.Split(fqName, "/")
+	return strings.Split(parts[len(parts)-1], "-")[0]
+}
