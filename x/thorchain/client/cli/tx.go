@@ -292,8 +292,8 @@ func GetCmdSetNodeKeys() *cobra.Command {
 // GetCmdObserveTxIns command manually observes inbound transactions.
 func GetCmdObserveTxIns() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "observe-tx-ins --txids [tx-id-1],[tx-id-2],[tx-id-3] --raw [json-array]",
-		Short: "manually observe inbound transactions with either --txids or --raw flag",
+		Use:   "observe-tx-ins --txids [tx-id-1],[tx-id-2],[tx-id-3] --raw-observations [json-array]",
+		Short: "manually observe inbound transactions with either --txids or --raw-observations flag",
 		Args:  cobra.ExactArgs(0),
 	}
 
@@ -310,8 +310,8 @@ func GetCmdObserveTxIns() *cobra.Command {
 // GetCmdObserveTxOuts command manually observes outbound transactions.
 func GetCmdObserveTxOuts() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "observe-tx-outs --txids [tx-id-1],[tx-id-2],[tx-id-3] --raw [json-array]",
-		Short: "manually observe outbound transactions with either --txids or --raw flag",
+		Use:   "observe-tx-outs --txids [tx-id-1],[tx-id-2],[tx-id-3] --raw-observations [json-array]",
+		Short: "manually observe outbound transactions with either --txids or --raw-observations flag",
 		Args:  cobra.ExactArgs(0),
 	}
 
