@@ -71,13 +71,13 @@ func main() {
 	// prompt to filter run stages if connected to a terminal
 	enabledStages := map[string]bool{}
 	stages := []cli.Option{
-		{"seed", true},
-		{"bootstrap", true},
-		{"savers", true},
-		{"arb", true},
-		{"swaps", true},
-		{"feature-saver-eject", false},
-		{"ragnarok", true},
+		{Name: "seed", Default: true},
+		{Name: "bootstrap", Default: true},
+		{Name: "savers", Default: true},
+		{Name: "arb", Default: true},
+		{Name: "swaps", Default: true},
+		{Name: "feature-saver-eject", Default: false},
+		{Name: "ragnarok", Default: true},
 	}
 	if os.Getenv("STAGES") != "" {
 		for _, stage := range strings.Split(os.Getenv("STAGES"), ",") {

@@ -212,10 +212,7 @@ func (c *Client) SignTx(tx SimTx) ([]byte, error) {
 		go func(i int, amount int64) {
 			defer wg.Done()
 
-			// trunk-ignore(golangci-lint/govet): shadow
 			var err error
-
-			// trunk-ignore-all(golangci-lint/forcetypeassert)
 			switch c.chain {
 			case common.DOGEChain:
 				err = c.signUTXODOGE(stx.(*dogewire.MsgTx), amount, sourceScript, i)
