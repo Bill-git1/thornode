@@ -677,9 +677,6 @@ type BifrostChainConfiguration struct {
 		// MaxUTXOsToSpend is the maximum number of UTXOs to spend in a single transaction.
 		// This is overridden at runtime by the `MaxUTXOsToSpend` mimir value.
 		MaxUTXOsToSpend int64 `mapstructure:"max_utxos_to_spend"`
-
-		// MaxReorgRescanBlocks is the maximum number of blocks to rescan during a reorg.
-		MaxReorgRescanBlocks int64 `mapstructure:"max_reorg_rescan_blocks"`
 	} `mapstructure:"utxo"`
 }
 
@@ -766,6 +763,9 @@ type BifrostBlockScannerConfiguration struct {
 	// TODO: This is redundant with the UTXO config, but needs to be on this object for
 	// EVM chains - use common config when we refactor to consolidate the config object.
 	TransactionBatchSize int `mapstructure:"transaction_batch_size"`
+
+	// MaxReorgRescanBlocks is the maximum number of blocks to rescan during a reorg.
+	MaxReorgRescanBlocks int64 `mapstructure:"max_reorg_rescan_blocks"`
 }
 
 func (b *BifrostBlockScannerConfiguration) Validate() {

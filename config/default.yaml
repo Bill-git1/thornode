@@ -94,8 +94,8 @@ bifrost:
         max_sats_per_vbyte: 9765 # backwards compatible with 1e8/10/1024
         min_utxo_confirmations: 1
         max_utxos_to_spend: 10
-        max_reorg_rescan_blocks: 72 # 12h
       block_scanner: &default-block-scanner
+        max_reorg_rescan_blocks: 72 # 12h
         chain_id: BTC
         enforce_block_height: false
         block_scan_processors: 1
@@ -144,6 +144,7 @@ bifrost:
         observation_flexibility_blocks: 2
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
+
     eth:
       <<: *default-chain
       chain_id: ETH
@@ -153,6 +154,7 @@ bifrost:
       aggregator_max_gas_multiplier: 10
       block_scanner:
         <<: *default-block-scanner
+        max_reorg_rescan_blocks: 96 # 3 epochs
         gas_cache_blocks: 40
         concurrency: 1
         chain_id: ETH
@@ -161,6 +163,7 @@ bifrost:
         max_contract_tx_logs: 50
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
+
     avax:
       <<: *default-chain
       chain_id: AVAX
@@ -170,6 +173,7 @@ bifrost:
       aggregator_max_gas_multiplier: 10
       block_scanner:
         <<: *default-block-scanner
+        max_reorg_rescan_blocks: 0 # avax has guaranteed finality
         concurrency: 1
         chain_id: AVAX
         gas_cache_blocks: 40
@@ -184,6 +188,7 @@ bifrost:
           - 0x093783055F9047C2BfF99c4e414501F8A147bC69 # ALOT
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
+
     bsc:
       disabled: true
       <<: *default-chain
@@ -194,6 +199,7 @@ bifrost:
       aggregator_max_gas_multiplier: 10
       block_scanner:
         <<: *default-block-scanner
+        max_reorg_rescan_blocks: 600 # 30m
         concurrency: 1
         chain_id: BSC
         gas_cache_blocks: 40
@@ -215,11 +221,13 @@ bifrost:
           - 0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82 # PancakeSwap (CAKE)
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
+
     doge:
       <<: *default-chain
       chain_id: DOGE
       block_scanner:
         <<: *default-block-scanner
+        max_reorg_rescan_blocks: 720 # 12h
         chain_id: DOGE
         gas_price_resolution: 500_000 # sats
         gas_cache_blocks: 10
@@ -232,7 +240,7 @@ bifrost:
         block_cache_count: 1440
         default_sats_per_vbyte: 25
         max_sats_per_vbyte: 976562 # backwards compatible with 1e8*10/1024
-        max_reorg_rescan_blocks: 720 # 12h
+
     gaia:
       <<: *default-chain
       chain_id: GAIA
@@ -243,11 +251,13 @@ bifrost:
         observation_flexibility_blocks: 40
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
+
     ltc:
       <<: *default-chain
       chain_id: LTC
       block_scanner:
         <<: *default-block-scanner
+        max_reorg_rescan_blocks: 288 # 12h
         chain_id: LTC
         observation_flexibility_blocks: 3
         gas_cache_blocks: 10
@@ -258,12 +268,13 @@ bifrost:
         block_cache_count: 600
         max_sats_per_vbyte: 9765 # backwards compatible with 1e8/10/1024
         estimated_average_tx_size: 250
-        max_reorg_rescan_blocks: 288 # 12h
+
     bch:
       <<: *default-chain
       chain_id: BCH
       block_scanner:
         <<: *default-block-scanner
+        max_reorg_rescan_blocks: 72 # 12h
         chain_id: BCH
         observation_flexibility_blocks: 3
       mempool_tx_id_cache_size: 1_000_000
@@ -273,7 +284,6 @@ bifrost:
         block_cache_count: 144
         max_sats_per_vbyte: 9765 # backwards compatible with 1e8/10/1024
         estimated_average_tx_size: 1500
-        max_reorg_rescan_blocks: 72 # 12h
 
 ########################################################################################
 # Thor

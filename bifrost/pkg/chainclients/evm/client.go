@@ -213,6 +213,7 @@ func NewEVMClient(
 
 // Start starts the chain client with the given queues.
 func (c *EVMClient) Start(globalTxsQueue chan stypes.TxIn, globalErrataQueue chan stypes.ErrataBlock, globalSolvencyQueue chan stypes.Solvency) {
+	c.evmScanner.globalErrataQueue = globalErrataQueue
 	c.globalSolvencyQueue = globalSolvencyQueue
 	c.tssKeySigner.Start()
 	c.blockScanner.Start(globalTxsQueue)

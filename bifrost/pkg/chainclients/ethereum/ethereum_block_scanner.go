@@ -43,7 +43,6 @@ import (
 type SolvencyReporter func(int64) error
 
 const (
-	BlockCacheSize  = 6000
 	ethToken        = "0x0000000000000000000000000000000000000000"
 	symbolMethod    = "symbol"
 	decimalMethod   = "decimals"
@@ -197,7 +196,7 @@ func (e *ETHScanner) FetchTxs(height, chainHeight int64) (stypes.TxIn, error) {
 	}
 
 	e.currentBlockHeight = height
-	pruneHeight := height - BlockCacheSize
+	pruneHeight := height - e.cfg.MaxReorgRescanBlocks
 	if pruneHeight > 0 {
 		defer func() {
 			// trunk-ignore(golangci-lint/govet): shadow

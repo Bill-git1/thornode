@@ -26,6 +26,7 @@ import (
 	"gitlab.com/thorchain/thornode/bifrost/blockscanner"
 	"gitlab.com/thorchain/thornode/bifrost/metrics"
 	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/evm"
+	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/evm/types"
 	evmtypes "gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/evm/types"
 	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/signercache"
 	. "gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/types"
@@ -57,6 +58,7 @@ type EVMScanner struct {
 	ethClient            *ethclient.Client
 	ethRpc               *evm.EthRPC
 	blockMetaAccessor    evm.BlockMetaAccessor
+	globalErrataQueue    chan<- stypes.ErrataBlock
 	bridge               thorclient.ThorchainBridge
 	pubkeyMgr            pubkeymanager.PubKeyValidator
 	eipSigner            etypes.Signer
@@ -253,6 +255,22 @@ func (e *EVMScanner) FetchTxs(height, chainHeight int64) (stypes.TxIn, error) {
 		return stypes.TxIn{}, fmt.Errorf("failed to process block: %d, err:%w", height, err)
 	}
 
+	// if reorgs are possible on this chain store block meta for handling
+	if e.cfg.MaxReorgRescanBlocks > 0 {
+		blockMeta := evmtypes.NewBlockMeta(block.Header(), txIn)
+		if err = e.blockMetaAccessor.SaveBlockMeta(height, blockMeta); err != nil {
+			e.logger.Err(err).Int64("height", height).Msg("fail to save block meta")
+		}
+		pruneHeight := height - e.cfg.MaxReorgRescanBlocks
+		if pruneHeight > 0 {
+			defer func() {
+				if err = e.blockMetaAccessor.PruneBlockMeta(pruneHeight); err != nil {
+					e.logger.Err(err).Int64("height", height).Msg("fail to prune block meta")
+				}
+			}()
+		}
+	}
+
 	// skip reporting network fee and solvency if block more than flexibility blocks from tip
 	if chainHeight-height > e.cfg.ObservationFlexibilityBlocks {
 		return txIn, nil
@@ -292,6 +310,23 @@ func (e *EVMScanner) processBlock(block *etypes.Block) (stypes.TxIn, error) {
 		txsGas = append(txsGas, tx.GasPrice())
 	}
 	e.updateGasPrice(txsGas)
+
+	// process reorg if possible on this chain
+	if e.cfg.MaxReorgRescanBlocks > 0 {
+		reorgedTxIns, err := e.processReorg(block.Header())
+		if err != nil {
+			e.logger.Error().Err(err).Msgf("fail to process reorg for block %d", block.NumberU64())
+			return txIn, err
+		}
+		if len(reorgedTxIns) > 0 {
+			for _, item := range reorgedTxIns {
+				if len(item.TxArray) == 0 {
+					continue
+				}
+				txIn.TxArray = append(txIn.TxArray, item.TxArray...)
+			}
+		}
+	}
 
 	// collect all relevant transactions from the block
 	txInBlock, err := e.getTxIn(block)
@@ -565,6 +600,129 @@ func (e *EVMScanner) receiptToTxInItem(tx *etypes.Transaction, receipt *etypes.R
 		}
 		return e.getTxInFromTransaction(tx, receipt)
 	}
+}
+
+// --------------------------------- reorg ---------------------------------
+
+// processReorg compares the block's parent hash with the stored block hash. When a
+// reorg is detected, it triggers a rescan of all cached blocks in the reorg window.
+// The function returns observations from the rescanned blocks.
+func (e *EVMScanner) processReorg(block *etypes.Header) ([]stypes.TxIn, error) {
+	previousHeight := block.Number.Int64() - 1
+	prevBlockMeta, err := e.blockMetaAccessor.GetBlockMeta(previousHeight)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get block meta of height(%d) : %w", previousHeight, err)
+	}
+
+	// skip re-org processing if we did not store the previous block meta
+	if prevBlockMeta == nil {
+		return nil, nil
+	}
+
+	// no re-org if stored block hash at previous height is equal to current block parent
+	if strings.EqualFold(prevBlockMeta.BlockHash, block.ParentHash.Hex()) {
+		return nil, nil
+	}
+	e.logger.Info().
+		Int64("height", previousHeight).
+		Str("stored_hash", prevBlockMeta.BlockHash).
+		Str("current_parent_hash", block.ParentHash.Hex()).
+		Msg("reorg detected")
+
+	// send erratas and determine the block heights to rescan
+	heights, err := e.reprocessTxs()
+	if err != nil {
+		e.logger.Err(err).Msg("fail to reprocess all txs")
+	}
+
+	// rescan heights
+	var txIns []stypes.TxIn
+	for _, rescanHeight := range heights {
+		e.logger.Info().Msgf("rescan block height: %d", rescanHeight)
+		var block *etypes.Block
+		block, err = e.ethRpc.GetBlock(rescanHeight)
+		if err != nil {
+			e.logger.Err(err).Int64("height", rescanHeight).Msg("fail to get block")
+			continue
+		}
+		if block.Transactions().Len() == 0 {
+			continue
+		}
+		var txIn stypes.TxIn
+		txIn, err = e.getTxIn(block)
+		if err != nil {
+			e.logger.Err(err).Int64("height", rescanHeight).Msg("fail to extract txs from block")
+			continue
+		}
+		if len(txIn.TxArray) > 0 {
+			txIns = append(txIns, txIn)
+		}
+	}
+	return txIns, nil
+}
+
+// reprocessTx is initiated when the chain client detects a reorg. It reads block
+// metadata from local storage and processes all transactions, sending an RPC request to
+// check each transaction's existence. If a transaction no longer exists, the chain
+// client reports this to Thorchain.
+//
+// The []int64 return value represents the block heights to be rescanned.
+func (e *EVMScanner) reprocessTxs() ([]int64, error) {
+	blockMetas, err := e.blockMetaAccessor.GetBlockMetas()
+	if err != nil {
+		return nil, fmt.Errorf("fail to get block metas from local storage: %w", err)
+	}
+	var rescanBlockHeights []int64
+	for _, blockMeta := range blockMetas {
+		metaTxs := make([]types.TransactionMeta, 0)
+		var errataTxs []stypes.ErrataTx
+		for _, tx := range blockMeta.Transactions {
+			if e.ethRpc.CheckTransaction(tx.Hash) {
+				e.logger.Debug().Msgf("height: %d, tx: %s still exists", blockMeta.Height, tx.Hash)
+				metaTxs = append(metaTxs, tx)
+				continue
+			}
+
+			// send an errata if the transactino no longer exists on chain
+			errataTxs = append(errataTxs, stypes.ErrataTx{
+				TxID:  common.TxID(tx.Hash),
+				Chain: e.cfg.ChainID,
+			})
+		}
+		if len(errataTxs) > 0 {
+			e.globalErrataQueue <- stypes.ErrataBlock{
+				Height: blockMeta.Height,
+				Txs:    errataTxs,
+			}
+		}
+
+		// fetch the header header to determine if the hash has changed and requires rescan
+		var header *etypes.Header
+		header, err = e.ethRpc.GetHeader(blockMeta.Height)
+		if err != nil {
+			e.logger.Err(err).
+				Int64("height", blockMeta.Height).
+				Msg("fail to get block header to check for reorg")
+
+			// err on the side of caution and rescan the block
+			rescanBlockHeights = append(rescanBlockHeights, blockMeta.Height)
+			continue
+		}
+
+		// if the block hash is different than previously recorded, rescan the block
+		if !strings.EqualFold(blockMeta.BlockHash, header.Hash().Hex()) {
+			rescanBlockHeights = append(rescanBlockHeights, blockMeta.Height)
+		}
+
+		// save the updated block meta
+		blockMeta.PreviousHash = header.ParentHash.Hex()
+		blockMeta.BlockHash = header.Hash().Hex()
+		blockMeta.Transactions = metaTxs
+		if err = e.blockMetaAccessor.SaveBlockMeta(blockMeta.Height, blockMeta); err != nil {
+			e.logger.Err(err).Int64("height", blockMeta.Height).Msg("fail to save block meta")
+		}
+	}
+	return rescanBlockHeights, nil
 }
 
 // --------------------------------- gas ---------------------------------

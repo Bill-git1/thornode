@@ -83,8 +83,7 @@ func (t *LevelDBBlockMetaAccessor) GetBlockMetas() ([]*evmtypes.BlockMeta, error
 	return blockMetas, nil
 }
 
-// PruneBlockMeta remove all block meta that is older than the given block height
-// with exception, if there are unspent transaction output in it , then the block meta will not be removed
+// PruneBlockMeta removes all block meta that is older than the given block height.
 func (t *LevelDBBlockMetaAccessor) PruneBlockMeta(height int64) error {
 	iterator := t.db.NewIterator(util.BytesPrefix([]byte(t.PrefixBlockMeta)), nil)
 	defer iterator.Release()

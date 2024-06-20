@@ -120,7 +120,7 @@ func (c *Client) reConfirmTx(height int64) ([]int64, error) {
 	var rescanBlockHeights []int64
 
 	// calculate the earliest look back height
-	earliestHeight := height - c.cfg.UTXO.MaxReorgRescanBlocks
+	earliestHeight := height - c.cfg.BlockScanner.MaxReorgRescanBlocks
 	if earliestHeight < 1 {
 		earliestHeight = 1
 	}
