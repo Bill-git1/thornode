@@ -33,15 +33,17 @@ With [EIP-1559](https://ultrasound.money/); the market converges around the Fee-
 
 Burning the fees does not directly benefit LPs-Nodes, since it temporarily reduces their income. However it does theoretically enrich all holders equally. The stronger aspect at play here; is that LP-Nodes are part of a long-term capital-allocating cohort, so a short-term drop in income doesn't measurably affect their positions. Instead, this mechanism should influence short-term allocators and give Nodes an ability to calm markets; similar to Overnight Bank Funding Rates which directly influences the market, but does typically does not affet 5-10year bond participation rates.
 
+Lifetime System Income is 16bn RUNE, so this proposal would have burnt 1.6m RUNE in the last 3 years.
+
 ## Proposal
 
 New Mimir
 
 ```text
-SystemIncomeBurnRateBP = 0.005 //5BPS
+SystemIncomeBurnRateBP = 0.0001 //1BPS
 ```
 
-This immediately starts burning 5% of system income (prior to be split to Nodes-LPs). It can be increased or set to 0 to turn off completely.
+This immediately starts burning 1% of system income (prior to be split to Nodes-LPs). It can be increased or set to 0 to turn off completely.
 
 ## Decision
 
