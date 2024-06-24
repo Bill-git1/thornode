@@ -14,6 +14,7 @@ import (
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
+	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 )
 
 func migrateStoreV86(ctx cosmos.Context, mgr *Mgrs) {}
@@ -1866,4 +1867,81 @@ func migrateStoreV133(ctx cosmos.Context, mgr *Mgrs) {
 	}
 	changeLPOwnership(ctx, mgr, common.Address("thor1egxvam70a86jafa8gcg3kqfmfax3s0m2g3m754"), treasuryAddr)
 	changeLPOwnership(ctx, mgr, common.Address("thor1wfe7hsuvup27lx04p5al4zlcnx6elsnyft7dzm"), treasuryAddr)
+}
+
+func migrateStoreV134(ctx cosmos.Context, mgr *Mgrs) {
+	defer func() {
+		if err := recover(); err != nil {
+			ctx.Logger().Error("fail to migrate store to v134", "error", err)
+		}
+	}()
+
+	// To rescue liquidity in zero-units ETH.WSTETH pool (for refund to lost-funds liquidity providers),
+	// create a dual-address Treasury position and set its and the pool's units to the same number.
+	if err := func(ctx cosmos.Context, keeper keeper.Keeper) error {
+		// Pool and position changes should be committed together or not at all,
+		// so use CacheContext to only commit them if all succeed.
+		ctx, commit := ctx.CacheContext()
+
+		asset, err := common.NewAsset("ETH.WSTETH-0X7F39C581F595B53C5CB19BD0B3F8DA6C935E2CA0")
+		if err != nil {
+			return err
+		}
+		pool, err := keeper.GetPool(ctx, asset)
+		if err != nil {
+			return err
+		}
+		if pool.BalanceRune.IsZero() || pool.BalanceAsset.IsZero() || !pool.LPUnits.IsZero() {
+			return fmt.Errorf("The pool was not in the expected state of non-zero balances and zero LPUnits.")
+		}
+		// Set the pool LPUnits to the (confirmed non-zero) BalanceRune.
+		units := pool.BalanceRune
+		pool.LPUnits = units
+		// Always set pools with accurate SynthUnits.
+		synthSupply := keeper.GetTotalSupply(ctx, asset.GetSyntheticAsset())
+		pool.CalcUnits(keeper.GetVersion(), synthSupply)
+		if err := keeper.SetPool(ctx, pool); err != nil {
+			return err
+		}
+
+		// Clear all zero-units nothing-pending liquidity providers of the pool.
+		iterator := keeper.GetLiquidityProviderIterator(ctx, asset)
+		defer iterator.Close()
+		for ; iterator.Valid(); iterator.Next() {
+			var lp LiquidityProvider
+			if err := keeper.Cdc().Unmarshal(iterator.Value(), &lp); err != nil {
+				ctx.Logger().Error("fail to unmarshal liquidity provider", "error", err)
+				continue
+			}
+			if lp.Units.IsZero() && lp.PendingAsset.IsZero() && lp.PendingRune.IsZero() {
+				keeper.RemoveLiquidityProvider(ctx, lp)
+			}
+		}
+
+		// (Not using Treasury Multisig addresses as the Ethereum address would be a contract and withdrawal fail.)
+		// THORChain (former) TreasuryLP address
+		treasuryRuneAddr, err := common.NewAddress("thor1egxvam70a86jafa8gcg3kqfmfax3s0m2g3m754")
+		if err != nil {
+			return err
+		}
+		lp, err := keeper.GetLiquidityProvider(ctx, asset, treasuryRuneAddr)
+		if err != nil {
+			return err
+		}
+		if lp.AssetAddress.IsEmpty() {
+			// Ethereum (all EVM) Treasury address (non-Multisig)
+			treasuryEVMAddr, err := common.NewAddress("0x04c5998ded94f89263370444ce64a99b7dbc9f46")
+			if err != nil {
+				return err
+			}
+			lp.AssetAddress = treasuryEVMAddr
+		}
+		lp.Units = units
+		keeper.SetLiquidityProvider(ctx, lp)
+
+		commit() // No EmitEvents needed as no events to emit.
+		return nil
+	}(ctx, mgr.Keeper()); err != nil {
+		ctx.Logger().Error("fail to rescue ETH.WSTETH pool liquidity", "error", err)
+	}
 }

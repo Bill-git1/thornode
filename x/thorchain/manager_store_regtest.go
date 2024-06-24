@@ -181,3 +181,5 @@ func migrateStoreV133(ctx cosmos.Context, mgr *Mgrs) {
 
 	changeLPOwnership(ctx, mgr, common.Address("tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej"), treasuryAddr)
 }
+
+func migrateStoreV134(ctx cosmos.Context, mgr *Mgrs) {}

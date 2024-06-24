@@ -448,6 +448,8 @@ func (h AddLiquidityHandler) validateAddLiquidityMessage(ctx cosmos.Context, kee
 func (h AddLiquidityHandler) calculatePoolUnits(oldPoolUnits, poolRune, poolAsset, addRune, addAsset cosmos.Uint) (cosmos.Uint, cosmos.Uint, error) {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.134.0")):
+		return calculatePoolUnitsV134(oldPoolUnits, poolRune, poolAsset, addRune, addAsset)
 	case version.GTE(semver.MustParse("1.98.0")):
 		return calculatePoolUnitsV98(oldPoolUnits, poolRune, poolAsset, addRune, addAsset)
 	default:
@@ -462,16 +464,27 @@ func (h AddLiquidityHandler) calculatePoolUnits(oldPoolUnits, poolRune, poolAsse
 // P = Pool Units (before)
 // units / (P + units) = (1/2) * ((r / (R + r)) + (a / (A + a)))
 // units = P * (r*A + a*R + 2*r*a) / (r*A + a*R + 2*R*A)
-func calculatePoolUnitsV98(oldPoolUnits, poolRune, poolAsset, addRune, addAsset cosmos.Uint) (cosmos.Uint, cosmos.Uint, error) {
+func calculatePoolUnitsV134(oldPoolUnits, poolRune, poolAsset, addRune, addAsset cosmos.Uint) (cosmos.Uint, cosmos.Uint, error) {
 	if addRune.Add(poolRune).IsZero() {
 		return cosmos.ZeroUint(), cosmos.ZeroUint(), errors.New("total RUNE in the pool is zero")
 	}
 	if addAsset.Add(poolAsset).IsZero() {
 		return cosmos.ZeroUint(), cosmos.ZeroUint(), errors.New("total asset in the pool is zero")
 	}
-	if poolRune.IsZero() || poolAsset.IsZero() {
-		return addRune, addRune, nil
+
+	if poolRune.IsZero() || poolAsset.IsZero() || oldPoolUnits.IsZero() {
+		sUnits := addRune
+		if addRune.IsZero() {
+			if !poolAsset.IsZero() {
+				// Where possible, keep a RUNE scale for new units.
+				sUnits = addAsset.Mul(poolRune).Quo(poolAsset)
+			} else {
+				sUnits = addAsset
+			}
+		}
+		return oldPoolUnits.Add(sUnits), sUnits, nil
 	}
+
 	P := cosmos.NewDecFromBigInt(oldPoolUnits.BigInt())
 	R := cosmos.NewDecFromBigInt(poolRune.BigInt())
 	A := cosmos.NewDecFromBigInt(poolAsset.BigInt())
@@ -519,6 +532,8 @@ func (h AddLiquidityHandler) addLiquidity(ctx cosmos.Context,
 ) error {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.134.0")):
+		return h.addLiquidityV134(ctx, asset, addRuneAmount, addAssetAmount, runeAddr, assetAddr, requestTxHash, stage, constAccessor)
 	case version.GTE(semver.MustParse("1.107.0")):
 		return h.addLiquidityV107(ctx, asset, addRuneAmount, addAssetAmount, runeAddr, assetAddr, requestTxHash, stage, constAccessor)
 	case version.GTE(semver.MustParse("1.98.0")):
@@ -536,7 +551,7 @@ func (h AddLiquidityHandler) addLiquidity(ctx cosmos.Context,
 	}
 }
 
-func (h AddLiquidityHandler) addLiquidityV107(ctx cosmos.Context,
+func (h AddLiquidityHandler) addLiquidityV134(ctx cosmos.Context,
 	asset common.Asset,
 	addRuneAmount, addAssetAmount cosmos.Uint,
 	runeAddr, assetAddr common.Address,
@@ -682,6 +697,10 @@ func (h AddLiquidityHandler) addLiquidityV107(ctx cosmos.Context,
 	if (pool.BalanceRune.IsZero() && !asset.IsVaultAsset()) || pool.BalanceAsset.IsZero() {
 		return ErrInternal(err, "pool cannot have zero rune or asset balance")
 	}
+
+	// CalcUnits to set the correct SynthUnits before the DepositValue calculations
+	pool.CalcUnits(h.mgr.GetVersion(), synthSupply)
+
 	if err = h.mgr.Keeper().SetPool(ctx, pool); err != nil {
 		return ErrInternal(err, "fail to save pool")
 	}

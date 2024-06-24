@@ -342,12 +342,12 @@
       "liquidity_providers": [
         {
           "asset": "BTC.BTC",
-          "asset_deposit_value": "4990644524",
+          "asset_deposit_value": "4775901598",
           "last_add_height": "12",
           "pending_asset": "0",
           "pending_rune": "0",
           "rune_address": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
-          "rune_deposit_value": "4739093312616",
+          "rune_deposit_value": "4535174408536",
           "units": "4493413608188"
         },
         {
@@ -412,7 +412,7 @@
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
           "status": "Available",
-          "synth_units": "40543325871154"
+          "synth_units": "44591724364280"
         }
       ],
       "reserve_contributors": null,
