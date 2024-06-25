@@ -228,7 +228,7 @@ func (am AppModule) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) []abci.V
 		}
 	}
 
-	// slash node accounts for not observing any accepted inbound tx
+	// TODO: remove me on hard fork
 	if err := am.mgr.Slasher().LackObserving(ctx, am.mgr.GetConstants()); err != nil {
 		ctx.Logger().Error("Unable to slash for lack of observing:", "error", err)
 	}

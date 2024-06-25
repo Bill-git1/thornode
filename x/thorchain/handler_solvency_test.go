@@ -2,10 +2,12 @@ package thorchain
 
 import (
 	"errors"
+	"fmt"
 
 	se "github.com/cosmos/cosmos-sdk/types/errors"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/constants"
 	. "gopkg.in/check.v1"
 )
 
@@ -140,4 +142,105 @@ func (s *HandlerSolvencyTestSuite) TestValidate(c *C) {
 	c.Assert(err, NotNil)
 	c.Assert(errors.Is(err, se.ErrUnknownRequest), Equals, true)
 	c.Assert(result, IsNil)
+}
+
+func (s *HandlerSolvencyTestSuite) TestObservingSlashing(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	height := int64(1024)
+	ctx = ctx.WithBlockHeight(height)
+
+	// Check expected slash point amounts
+	observeSlashPoints := mgr.GetConstants().GetInt64Value(constants.ObserveSlashPoints)
+	lackOfObservationPenalty := mgr.GetConstants().GetInt64Value(constants.LackOfObservationPenalty)
+	observeFlex := mgr.GetConstants().GetInt64Value(constants.ObservationDelayFlexibility)
+	c.Assert(observeSlashPoints, Equals, int64(1))
+	c.Assert(lackOfObservationPenalty, Equals, int64(2))
+	c.Assert(observeFlex, Equals, int64(10))
+
+	asgardVault := GetRandomVault()
+	asgardVault.Chains = []string{common.ETHChain.String()}
+	asgardVault.AddFunds(common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1000*common.One))))
+	c.Assert(mgr.Keeper().SetVault(ctx, asgardVault), IsNil)
+
+	nas := NodeAccounts{
+		// 6 Active nodes, 1 Standby node; 1/3rd SolvencyVoter consensus needs 2.
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeStandby),
+	}
+	for _, item := range nas {
+		c.Assert(mgr.Keeper().SetNodeAccount(ctx, item), IsNil)
+	}
+
+	msg, err := NewMsgSolvency(common.ETHChain,
+		asgardVault.PubKey,
+		common.NewCoins(
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(1000*common.One)),
+		),
+		1024,
+		cosmos.AccAddress{})
+	c.Assert(err, IsNil)
+
+	handler := NewSolvencyHandler(mgr)
+
+	broadcast := func(c *C, ctx cosmos.Context, na NodeAccount, msg *MsgSolvency) {
+		msg.Signer = na.NodeAddress
+		_, err := handler.handle(ctx, *msg)
+		c.Assert(err, IsNil)
+	}
+
+	checkSlashPoints := func(c *C, ctx cosmos.Context, nas NodeAccounts, expected [7]int64) {
+		var slashPoints [7]int64
+		for i, na := range nas {
+			slashPoint, err := mgr.Keeper().GetNodeAccountSlashPoints(ctx, na.NodeAddress)
+			c.Assert(err, IsNil)
+			slashPoints[i] = slashPoint
+		}
+		c.Assert(slashPoints == expected, Equals, true, Commentf(fmt.Sprint(slashPoints)))
+	}
+
+	checkSlashPoints(c, ctx, nas, [7]int64{0, 0, 0, 0, 0, 0, 0})
+
+	// 1 of 6 Active nodes observe.
+	broadcast(c, ctx, nas[0], msg)
+	checkSlashPoints(c, ctx, nas, [7]int64{1, 0, 0, 0, 0, 0, 0})
+
+	// nas[0] observes again.
+	broadcast(c, ctx, nas[0], msg)
+	checkSlashPoints(c, ctx, nas, [7]int64{2, 0, 0, 0, 0, 0, 0})
+
+	// nas[1] observes, reaching consensus (2/6, being exactly the 1/3 SolvencyVoter threshold).
+	// (Active nodes which observed are decremented ObserveSlashPoints;
+	//  those which haven't are incremented LackOfObservationPenalty.)
+	broadcast(c, ctx, nas[1], msg)
+	checkSlashPoints(c, ctx, nas, [7]int64{1, 0, 2, 2, 2, 2, 0})
+
+	// nas[0] observes again.
+	broadcast(c, ctx, nas[0], msg)
+	checkSlashPoints(c, ctx, nas, [7]int64{2, 0, 2, 2, 2, 2, 0})
+
+	// Within the ObservationDelayFlexibility period, nas[2] observes
+	// (and is decremented LackOfObservationPenalty).
+	height += observeFlex
+	ctx = ctx.WithBlockHeight(height)
+	broadcast(c, ctx, nas[2], msg)
+	checkSlashPoints(c, ctx, nas, [7]int64{2, 0, 0, 2, 2, 2, 0})
+
+	// The ObservationDelayFlexibility period ends, after which nas[3] observes;
+	// it is not incremented ObserveSlashPoints (and it is added to the list of signers)
+	// and is also not decremented LackOfObservationPenalty.
+	height++
+	ctx = ctx.WithBlockHeight(height)
+	broadcast(c, ctx, nas[3], msg)
+	checkSlashPoints(c, ctx, nas, [7]int64{2, 0, 0, 2, 2, 2, 0})
+
+	// nas[3] observes again, this time incremented ObserveSlashPoints for the extra signing.
+	broadcast(c, ctx, nas[3], msg)
+	checkSlashPoints(c, ctx, nas, [7]int64{2, 0, 0, 3, 2, 2, 0})
+
+	// Note that nas[6], the Standby node, remains unaffected by the Actives nodes' observations.
 }

@@ -90,6 +90,8 @@ func (h ObservedTxOutHandler) handle(ctx cosmos.Context, msg MsgObservedTxOut) (
 func (h ObservedTxOutHandler) preflight(ctx cosmos.Context, voter ObservedTxVoter, nas NodeAccounts, tx ObservedTx, signer cosmos.AccAddress) (ObservedTxVoter, bool) {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.134.0")):
+		return h.preflightV134(ctx, voter, nas, tx, signer)
 	case version.GTE(semver.MustParse("1.123.0")):
 		return h.preflightV123(ctx, voter, nas, tx, signer)
 	case version.GTE(semver.MustParse("1.116.0")):
@@ -101,8 +103,9 @@ func (h ObservedTxOutHandler) preflight(ctx cosmos.Context, voter ObservedTxVote
 	}
 }
 
-func (h ObservedTxOutHandler) preflightV123(ctx cosmos.Context, voter ObservedTxVoter, nas NodeAccounts, tx ObservedTx, signer cosmos.AccAddress) (ObservedTxVoter, bool) {
+func (h ObservedTxOutHandler) preflightV134(ctx cosmos.Context, voter ObservedTxVoter, nas NodeAccounts, tx ObservedTx, signer cosmos.AccAddress) (ObservedTxVoter, bool) {
 	observeSlashPoints := h.mgr.GetConstants().GetInt64Value(constants.ObserveSlashPoints)
+	lackOfObservationPenalty := h.mgr.GetConstants().GetInt64Value(constants.LackOfObservationPenalty)
 	observeFlex := h.mgr.Keeper().GetConfigInt64(ctx, constants.ObservationDelayFlexibility)
 	ok := false
 
@@ -110,13 +113,13 @@ func (h ObservedTxOutHandler) preflightV123(ctx cosmos.Context, voter ObservedTx
 		telemetry.NewLabel("reason", "failed_observe_txout"),
 		telemetry.NewLabel("chain", string(tx.Tx.Chain)),
 	}))
-	h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, signer)
 
 	if err := h.mgr.Keeper().SetLastObserveHeight(ctx, tx.Tx.Chain, signer, tx.BlockHeight); err != nil {
 		ctx.Logger().Error("fail to save last observe height", "error", err, "signer", signer, "chain", tx.Tx.Chain)
 	}
 	if !voter.Add(tx, signer) {
-		// when the signer already sign it
+		// Slash for the network having to handle the extra message/s.
+		h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, signer)
 		return voter, ok
 	}
 	parts := strings.Split(tx.Tx.Memo, ":")
@@ -126,17 +129,25 @@ func (h ObservedTxOutHandler) preflightV123(ctx cosmos.Context, voter ObservedTx
 			h.mgr.Keeper().SetObservedLink(ctx, inhash, tx.Tx.ID)
 		}
 	}
-	if voter.HasFinalised(nas) {
+	if !voter.HasFinalised(nas) {
+		// Before consensus, slash until consensus.
+		h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, signer)
+	} else {
 		if voter.FinalisedHeight == 0 {
 			ok = true
 			voter.FinalisedHeight = ctx.BlockHeight()
 			voter.Tx = voter.GetTx(nas)
-			// tx has consensus now, so decrease the slashing point for all the signers whom voted for it
-			h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints, voter.GetConsensusSigners()...)
 
+			// This signer brings the voter to consensus; increment the signer's slash points like the before-consensus signers,
+			// then decrement all the signers' slash points and increment the non-signers' slash points.
+			h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, signer)
+			signers := voter.GetConsensusSigners()
+			nonSigners := getNonSigners(nas, signers)
+			h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints, signers...)
+			h.mgr.Slasher().IncSlashPoints(slashCtx, lackOfObservationPenalty, nonSigners...)
 		} else if ctx.BlockHeight() <= (voter.FinalisedHeight+observeFlex) && voter.Tx.Equals(tx) {
 			// event the tx had been processed , given the signer just a bit late , so we still take away their slash points
-			h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints, signer)
+			h.mgr.Slasher().DecSlashPoints(slashCtx, lackOfObservationPenalty, signer)
 		}
 	}
 	h.mgr.Keeper().SetObservedTxOutVoter(ctx, voter)

@@ -5570,7 +5570,7 @@
           "data": "\n\u0018\n\u0016/types.MsgObservedTxIn",
           "log": "[{\"events\":[{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_observed_txin\"}]}]}]",
           "gas_wanted": "0",
-          "gas_used": "110899",
+          "gas_used": "105156",
           "events": [
             {
               "fee": "",

@@ -73,6 +73,8 @@ func (h SolvencyHandler) handle(ctx cosmos.Context, msg MsgSolvency) (*cosmos.Re
 	ctx.Logger().Debug("handle Solvency request", "id", msg.Id.String(), "signer", msg.Signer.String())
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.134.0")):
+		return h.handleV134(ctx, msg)
 	case version.GTE(semver.MustParse("1.128.0")):
 		return h.handleV128(ctx, msg)
 	case version.GTE(semver.MustParse("1.123.0")):
@@ -94,23 +96,25 @@ func (h SolvencyHandler) handle(ctx cosmos.Context, msg MsgSolvency) (*cosmos.Re
 //     if wallet has less fund than asgard vault , and the gap is more than 1% , then the chain
 //     that is insolvent will be halt
 //  3. When chain is halt , bifrost will not observe inbound , and will not sign outbound txs until the issue has been investigated , and enabled it again using mimir
-func (h SolvencyHandler) handleV128(ctx cosmos.Context, msg MsgSolvency) (*cosmos.Result, error) {
+func (h SolvencyHandler) handleV134(ctx cosmos.Context, msg MsgSolvency) (*cosmos.Result, error) {
 	voter, err := h.mgr.Keeper().GetSolvencyVoter(ctx, msg.Id, msg.Chain)
 	if err != nil {
 		return &cosmos.Result{}, fmt.Errorf("fail to get solvency voter, err: %w", err)
 	}
 	observeSlashPoints := h.mgr.GetConstants().GetInt64Value(constants.ObserveSlashPoints)
+	lackOfObservationPenalty := h.mgr.GetConstants().GetInt64Value(constants.LackOfObservationPenalty)
 	observeFlex := h.mgr.Keeper().GetConfigInt64(ctx, constants.ObservationDelayFlexibility)
 
 	slashCtx := ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
 		telemetry.NewLabel("reason", "failed_observe_solvency"),
 		telemetry.NewLabel("chain", string(msg.Chain)),
 	}))
-	h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, msg.Signer)
 
 	if voter.Empty() {
 		voter = NewSolvencyVoter(msg.Id, msg.Chain, msg.PubKey, msg.Coins, msg.Height, msg.Signer)
 	} else if !voter.Sign(msg.Signer) {
+		// Slash for the network having to handle the extra message/s.
+		h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, msg.Signer)
 		ctx.Logger().Info("signer already signed MsgSolvency", "signer", msg.Signer.String(), "id", msg.Id)
 		return &cosmos.Result{}, nil
 	}
@@ -120,21 +124,31 @@ func (h SolvencyHandler) handleV128(ctx cosmos.Context, msg MsgSolvency) (*cosmo
 		return nil, wrapError(ctx, err, "fail to get list of active node accounts")
 	}
 	if !voter.HasConsensus(active) {
+		// Before consensus, slash until consensus.
+		h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, msg.Signer)
 		return &cosmos.Result{}, nil
 	}
 
 	// from this point , solvency reach consensus
 	if voter.ConsensusBlockHeight > 0 {
+		// After consensus, only decrement slash points if within the ObservationDelayFlexibility period.
 		if (voter.ConsensusBlockHeight + observeFlex) >= ctx.BlockHeight() {
-			h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints, msg.Signer)
+			h.mgr.Slasher().DecSlashPoints(slashCtx, lackOfObservationPenalty, msg.Signer)
 		}
 		// solvency tx already processed
 		return &cosmos.Result{}, nil
 	}
 	voter.ConsensusBlockHeight = ctx.BlockHeight()
 	h.mgr.Keeper().SetSolvencyVoter(ctx, voter)
-	// decrease the slash points
-	h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints, voter.GetSigners()...)
+
+	// This signer brings the voter to consensus; increment the signer's slash points like the before-consensus signers,
+	// then decrement all the signers' slash points and increment the non-signers' slash points.
+	h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, msg.Signer)
+	signers := voter.GetSigners()
+	nonSigners := getNonSigners(active, signers)
+	h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints, signers...)
+	h.mgr.Slasher().IncSlashPoints(slashCtx, lackOfObservationPenalty, nonSigners...)
+
 	vault, err := h.mgr.Keeper().GetVault(ctx, voter.PubKey)
 	if err != nil {
 		ctx.Logger().Error("fail to get vault", "error", err)

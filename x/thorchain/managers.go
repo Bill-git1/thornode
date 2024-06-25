@@ -134,7 +134,7 @@ type OrderBook interface {
 // Slasher define all the method to perform slash
 type Slasher interface {
 	BeginBlock(ctx cosmos.Context, req abci.RequestBeginBlock, constAccessor constants.ConstantValues)
-	LackObserving(ctx cosmos.Context, constAccessor constants.ConstantValues) error
+	LackObserving(ctx cosmos.Context, constAccessor constants.ConstantValues) error // TODO: remove me on hard fork
 	LackSigning(ctx cosmos.Context, mgr Manager) error
 	SlashVault(ctx cosmos.Context, vaultPK common.PubKey, coins common.Coins, mgr Manager) error
 	IncSlashPoints(ctx cosmos.Context, point int64, addresses ...cosmos.AccAddress)

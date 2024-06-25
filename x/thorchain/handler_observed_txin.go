@@ -97,6 +97,8 @@ func (h ObservedTxInHandler) handle(ctx cosmos.Context, msg MsgObservedTxIn) (*c
 func (h ObservedTxInHandler) preflight(ctx cosmos.Context, voter ObservedTxVoter, nas NodeAccounts, tx ObservedTx, signer cosmos.AccAddress) (ObservedTxVoter, bool) {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.134.0")):
+		return h.preflightV134(ctx, voter, nas, tx, signer)
 	case version.GTE(semver.MustParse("1.123.0")):
 		return h.preflightV123(ctx, voter, nas, tx, signer)
 	case version.GTE(semver.MustParse("1.119.0")):
@@ -108,35 +110,46 @@ func (h ObservedTxInHandler) preflight(ctx cosmos.Context, voter ObservedTxVoter
 	}
 }
 
-func (h ObservedTxInHandler) preflightV123(ctx cosmos.Context, voter ObservedTxVoter, nas NodeAccounts, tx ObservedTx, signer cosmos.AccAddress) (ObservedTxVoter, bool) {
+func (h ObservedTxInHandler) preflightV134(ctx cosmos.Context, voter ObservedTxVoter, nas NodeAccounts, tx ObservedTx, signer cosmos.AccAddress) (ObservedTxVoter, bool) {
 	observeSlashPoints := h.mgr.GetConstants().GetInt64Value(constants.ObserveSlashPoints)
+	lackOfObservationPenalty := h.mgr.GetConstants().GetInt64Value(constants.LackOfObservationPenalty)
 	observeFlex := h.mgr.Keeper().GetConfigInt64(ctx, constants.ObservationDelayFlexibility)
 
 	slashCtx := ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
 		telemetry.NewLabel("reason", "failed_observe_txin"),
 		telemetry.NewLabel("chain", string(tx.Tx.Chain)),
 	}))
-	h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, signer)
 
 	ok := false
 	if err := h.mgr.Keeper().SetLastObserveHeight(ctx, tx.Tx.Chain, signer, tx.BlockHeight); err != nil {
 		ctx.Logger().Error("fail to save last observe height", "error", err, "signer", signer, "chain", tx.Tx.Chain)
 	}
 	if !voter.Add(tx, signer) {
+		// Slash for the network having to handle the extra message/s.
+		h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, signer)
 		return voter, ok
 	}
-	if voter.HasFinalised(nas) {
+	if !voter.HasFinalised(nas) {
+		// Before consensus, slash until consensus.
+		h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, signer)
+	} else {
 		if voter.FinalisedHeight == 0 {
 			ok = true
 			voter.Height = ctx.BlockHeight() // Always record the consensus height of the finalised Tx
 			voter.FinalisedHeight = ctx.BlockHeight()
 			voter.Tx = voter.GetTx(nas)
-			// tx has consensus now, so decrease the slashing points for all the signers whom had voted for it
-			h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints, voter.GetConsensusSigners()...)
+
+			// This signer brings the voter to consensus; increment the signer's slash points like the before-consensus signers,
+			// then decrement all the signers' slash points and increment the non-signers' slash points.
+			h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, signer)
+			signers := voter.GetConsensusSigners()
+			nonSigners := getNonSigners(nas, signers)
+			h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints, signers...)
+			h.mgr.Slasher().IncSlashPoints(slashCtx, lackOfObservationPenalty, nonSigners...)
 		} else if ctx.BlockHeight() <= (voter.FinalisedHeight+observeFlex) && voter.Tx.Equals(tx) {
 			// event the tx had been processed , given the signer just a bit late , so still take away their slash points
 			// but only when the tx signer are voting is the tx that already reached consensus
-			h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints, signer)
+			h.mgr.Slasher().DecSlashPoints(slashCtx, lackOfObservationPenalty, signer)
 		}
 	}
 	if !ok && voter.HasConsensus(nas) && !tx.IsFinal() && voter.FinalisedHeight == 0 {
@@ -146,12 +159,17 @@ func (h ObservedTxInHandler) preflightV123(ctx cosmos.Context, voter ObservedTxV
 			// this is the tx that has consensus
 			voter.Tx = voter.GetTx(nas)
 
-			// tx has consensus now, so decrease the slashing points for all the signers whom had voted for it
-			h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints, voter.Tx.GetSigners()...)
+			// This signer brings the voter to consensus; increment the signer's slash points like the before-consensus signers,
+			// then decrement all the signers' slash points and increment the non-signers' slash points.
+			h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, signer)
+			signers := voter.GetConsensusSigners()
+			nonSigners := getNonSigners(nas, signers)
+			h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints, signers...)
+			h.mgr.Slasher().IncSlashPoints(slashCtx, lackOfObservationPenalty, nonSigners...)
 		} else if ctx.BlockHeight() <= (voter.Height+observeFlex) && voter.Tx.Equals(tx) {
 			// event the tx had been processed , given the signer just a bit late , so still take away their slash points
 			// but only when the tx signer are voting is the tx that already reached consensus
-			h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints, signer)
+			h.mgr.Slasher().DecSlashPoints(slashCtx, lackOfObservationPenalty, signer)
 		}
 	}
 

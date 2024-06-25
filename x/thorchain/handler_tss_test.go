@@ -2,6 +2,7 @@ package thorchain
 
 import (
 	"errors"
+	"fmt"
 	"sort"
 
 	"github.com/blang/semver"
@@ -665,6 +666,7 @@ func (s *HandlerTssSuite) TestKeygenSuccessHandler(c *C) {
 	keygenTime := int64(1024)
 	poolPubKey := GetRandomPubKey()
 	failKeyGenSlashPoints := helper.constAccessor.GetInt64Value(constants.FailKeygenSlashPoints)
+	lackOfObservationPenalty := helper.constAccessor.GetInt64Value(constants.LackOfObservationPenalty)
 	for idx, item := range helper.members {
 		thorAddr, err := item.GetThorAddress()
 		c.Assert(err, IsNil)
@@ -680,7 +682,7 @@ func (s *HandlerTssSuite) TestKeygenSuccessHandler(c *C) {
 				c.Assert(err, IsNil)
 				points, ok := dummySlasher.pts[slashThorAddr.String()]
 				c.Assert(ok, Equals, true)
-				c.Assert(points == failKeyGenSlashPoints, Equals, true)
+				c.Assert(points == failKeyGenSlashPoints+lackOfObservationPenalty, Equals, true)
 				j, err := helper.keeper.GetNodeAccountJail(helper.ctx, slashThorAddr)
 				c.Assert(err, IsNil)
 				c.Assert(j.ReleaseHeight > helper.ctx.BlockHeight(), Equals, true)
@@ -698,4 +700,123 @@ func (s *HandlerTssSuite) TestKeygenSuccessHandler(c *C) {
 		c.Assert(err, IsNil)
 		c.Assert(j.ReleaseHeight <= helper.ctx.BlockHeight(), Equals, true)
 	}
+}
+
+func (s *HandlerTssSuite) TestObservingSlashing(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	height := int64(1024)
+	ctx = ctx.WithBlockHeight(height)
+
+	// Check expected slash point amounts
+	observeSlashPoints := mgr.GetConstants().GetInt64Value(constants.ObserveSlashPoints)
+	lackOfObservationPenalty := mgr.GetConstants().GetInt64Value(constants.LackOfObservationPenalty)
+	observeFlex := mgr.GetConstants().GetInt64Value(constants.ObservationDelayFlexibility)
+	failKeygenSlashPoints := mgr.GetConstants().GetInt64Value(constants.FailKeygenSlashPoints)
+	c.Assert(observeSlashPoints, Equals, int64(1))
+	c.Assert(lackOfObservationPenalty, Equals, int64(2))
+	c.Assert(observeFlex, Equals, int64(10))
+	c.Assert(failKeygenSlashPoints, Equals, int64(720))
+
+	asgardVault := GetRandomVault()
+	c.Assert(mgr.Keeper().SetVault(ctx, asgardVault), IsNil)
+
+	nas := NodeAccounts{
+		// 6 Active nodes, 1 Standby node; 2/3rd consensus needs 4, 3/3rds success needs 6.
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeActive),
+		GetRandomValidatorNode(NodeStandby),
+	}
+	for _, item := range nas {
+		c.Assert(mgr.Keeper().SetNodeAccount(ctx, item), IsNil)
+	}
+
+	var members common.PubKeys
+	for i := 0; i < 6; i++ {
+		members = append(members, nas[i].PubKeySet.Secp256k1)
+	}
+	sort.SliceStable(members, func(i, j int) bool {
+		return members[i].String() < members[j].String()
+	})
+	keygenBlock := NewKeygenBlock(ctx.BlockHeight())
+	keygenBlock.Keygens = []Keygen{
+		{
+			Type:    AsgardKeygen,
+			Members: members.Strings(),
+		},
+	}
+	mgr.Keeper().SetKeygenBlock(ctx, keygenBlock)
+	keygenTime := int64(1024)
+	poolPk := GetRandomPubKey()
+
+	msg, err := NewMsgTssPool(members.Strings(), poolPk, nil, AsgardKeygen, ctx.BlockHeight(), Blame{}, common.Chains{common.RuneAsset().Chain}.Strings(), cosmos.AccAddress{}, keygenTime)
+	c.Assert(err, IsNil)
+
+	handler := NewTssHandler(mgr)
+
+	broadcast := func(c *C, ctx cosmos.Context, na NodeAccount, msg *MsgTssPool) {
+		msg.Signer = na.NodeAddress
+		_, err := handler.handle(ctx, msg)
+		c.Assert(err, IsNil)
+	}
+
+	checkSlashPoints := func(c *C, ctx cosmos.Context, nas NodeAccounts, expected [7]int64) {
+		var slashPoints [7]int64
+		for i, na := range nas {
+			slashPoint, err := mgr.Keeper().GetNodeAccountSlashPoints(ctx, na.NodeAddress)
+			c.Assert(err, IsNil)
+			slashPoints[i] = slashPoint
+		}
+		c.Assert(slashPoints == expected, Equals, true, Commentf(fmt.Sprint(slashPoints)))
+	}
+
+	checkSlashPoints(c, ctx, nas, [7]int64{0, 0, 0, 0, 0, 0, 0})
+
+	// 3/6 Active nodes observe.
+	broadcast(c, ctx, nas[0], msg)
+	checkSlashPoints(c, ctx, nas, [7]int64{1, 0, 0, 0, 0, 0, 0})
+	broadcast(c, ctx, nas[1], msg)
+	checkSlashPoints(c, ctx, nas, [7]int64{1, 1, 0, 0, 0, 0, 0})
+	broadcast(c, ctx, nas[2], msg)
+	checkSlashPoints(c, ctx, nas, [7]int64{1, 1, 1, 0, 0, 0, 0})
+
+	// nas[0] observes again.
+	broadcast(c, ctx, nas[0], msg)
+	checkSlashPoints(c, ctx, nas, [7]int64{2, 1, 1, 0, 0, 0, 0})
+
+	// nas[3] observes, reaching consensus (4/6, being exactly the 2/3 threshold).
+	// (Active nodes which observed are decremented ObserveSlashPoints;
+	//  those which haven't are incremented LackOfObservationPenalty.)
+	// Also, those which haven't observed are incremented FailKeygenSlashPoints.
+	broadcast(c, ctx, nas[3], msg)
+	checkSlashPoints(c, ctx, nas, [7]int64{1, 0, 0, 0, 722, 722, 0})
+
+	// nas[0] observes again.
+	broadcast(c, ctx, nas[0], msg)
+	checkSlashPoints(c, ctx, nas, [7]int64{2, 0, 0, 0, 722, 722, 0})
+
+	// Within the ObservationDelayFlexibility period, nas[4] observes
+	// (and is decremented LackOfObservationPenalty as well as FailKeygenSlashPoints).
+	height += observeFlex
+	ctx = ctx.WithBlockHeight(height)
+	broadcast(c, ctx, nas[4], msg)
+	checkSlashPoints(c, ctx, nas, [7]int64{2, 0, 0, 0, 0, 722, 0})
+
+	// The ObservationDelayFlexibility period ends, after which nas[5] observes (still within ChurnRetryInterval);
+	// it is not incremented ObserveSlashPoints (and it is added to the list of signers)
+	// and is also not decremented LackOfObservationPenalty.
+	// However, it is decremented FailKeygenSlashPoints as the keygen can still succeed.
+	height++
+	ctx = ctx.WithBlockHeight(height)
+	broadcast(c, ctx, nas[5], msg)
+	checkSlashPoints(c, ctx, nas, [7]int64{2, 0, 0, 0, 0, 2, 0})
+
+	// nas[5] observes again, this time incremented ObserveSlashPoints for the extra signing.
+	broadcast(c, ctx, nas[5], msg)
+	checkSlashPoints(c, ctx, nas, [7]int64{2, 0, 0, 0, 0, 3, 0})
+
+	// Note that nas[6], the Standby node, remains unaffected by the Actives nodes' observations.
 }

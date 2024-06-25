@@ -922,6 +922,27 @@ func getHardBondCap(nas NodeAccounts) cosmos.Uint {
 	return nas[i].Bond
 }
 
+// From a list of (active) nodes, get a list of those not in a list (of signers).
+func getNonSigners(nas []NodeAccount, signers []cosmos.AccAddress) []cosmos.AccAddress {
+	var nonSigners []cosmos.AccAddress
+	var signed bool
+
+	for _, na := range nas {
+		signed = false
+		for _, signer := range signers {
+			if na.NodeAddress.Equals(signer) {
+				signed = true
+				break
+			}
+		}
+
+		if !signed {
+			nonSigners = append(nonSigners, na.NodeAddress)
+		}
+	}
+	return nonSigners
+}
+
 // In the case where the max gas of the chain of a queued outbound tx has changed
 // Update the ObservedTxVoter so the network can still match the outbound with
 // the observed inbound

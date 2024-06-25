@@ -63,6 +63,8 @@ func (h ErrataTxHandler) handle(ctx cosmos.Context, msg MsgErrataTx) (*cosmos.Re
 	ctx.Logger().Info("handleMsgErrataTx request", "txid", msg.TxID.String())
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.134.0")):
+		return h.handleV134(ctx, msg)
 	case version.GTE(semver.MustParse("1.123.0")):
 		return h.handleV123(ctx, msg)
 	case version.GTE(semver.MustParse("0.58.0")):
@@ -73,7 +75,7 @@ func (h ErrataTxHandler) handle(ctx cosmos.Context, msg MsgErrataTx) (*cosmos.Re
 	}
 }
 
-func (h ErrataTxHandler) handleV123(ctx cosmos.Context, msg MsgErrataTx) (*cosmos.Result, error) {
+func (h ErrataTxHandler) handleV134(ctx cosmos.Context, msg MsgErrataTx) (*cosmos.Result, error) {
 	active, err := h.mgr.Keeper().ListActiveValidators(ctx)
 	if err != nil {
 		return nil, wrapError(ctx, err, "fail to get list of active node accounts")
@@ -84,28 +86,33 @@ func (h ErrataTxHandler) handleV123(ctx cosmos.Context, msg MsgErrataTx) (*cosmo
 		return nil, err
 	}
 	observeSlashPoints := h.mgr.GetConstants().GetInt64Value(constants.ObserveSlashPoints)
+	lackOfObservationPenalty := h.mgr.GetConstants().GetInt64Value(constants.LackOfObservationPenalty)
 	observeFlex := h.mgr.Keeper().GetConfigInt64(ctx, constants.ObservationDelayFlexibility)
 
 	slashCtx := ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{ // nolint
 		telemetry.NewLabel("reason", "failed_observe_errata"),
 		telemetry.NewLabel("chain", string(msg.Chain)),
 	}))
-	h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, msg.Signer)
 
 	if !voter.Sign(msg.Signer) {
+		// Slash for the network having to handle the extra message/s.
+		h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, msg.Signer)
 		ctx.Logger().Info("signer already signed MsgErrataTx", "signer", msg.Signer.String(), "txid", msg.TxID)
 		return &cosmos.Result{}, nil
 	}
 	h.mgr.Keeper().SetErrataTxVoter(ctx, voter)
 	// doesn't have consensus yet
 	if !voter.HasConsensus(active) {
+		// Before consensus, slash until consensus.
+		h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, msg.Signer)
 		ctx.Logger().Info("not having consensus yet, return")
 		return &cosmos.Result{}, nil
 	}
 
 	if voter.BlockHeight > 0 {
+		// After consensus, only decrement slash points if within the ObservationDelayFlexibility period.
 		if (voter.BlockHeight + observeFlex) >= ctx.BlockHeight() {
-			h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints, msg.Signer)
+			h.mgr.Slasher().DecSlashPoints(slashCtx, lackOfObservationPenalty, msg.Signer)
 		}
 		// errata tx already processed
 		return &cosmos.Result{}, nil
@@ -113,8 +120,15 @@ func (h ErrataTxHandler) handleV123(ctx cosmos.Context, msg MsgErrataTx) (*cosmo
 
 	voter.BlockHeight = ctx.BlockHeight()
 	h.mgr.Keeper().SetErrataTxVoter(ctx, voter)
-	// decrease the slash points
-	h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints, voter.GetSigners()...)
+
+	// This signer brings the voter to consensus; increment the signer's slash points like the before-consensus signers,
+	// then decrement all the signers' slash points and increment the non-signers' slash points.
+	h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, msg.Signer)
+	signers := voter.GetSigners()
+	nonSigners := getNonSigners(active, signers)
+	h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints, signers...)
+	h.mgr.Slasher().IncSlashPoints(slashCtx, lackOfObservationPenalty, nonSigners...)
+
 	observedVoter, err := h.mgr.Keeper().GetObservedTxInVoter(ctx, msg.TxID)
 	if err != nil {
 		return nil, err

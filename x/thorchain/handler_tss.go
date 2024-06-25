@@ -30,6 +30,7 @@ func NewTssHandler(mgr Manager) BaseHandler[*MsgTssPool] {
 			Register("1.114.0", MsgTssPoolValidateV114).
 			Register("0.71.0", MsgTssPoolValidateV71),
 		handlers: NewHandlers[*MsgTssPool]().
+			Register("1.134.0", MsgTssPoolHandleV134).
 			Register("1.124.0", MsgTssPoolHandleV124).
 			Register("1.123.0", MsgTssPoolHandleV123).
 			Register("1.120.0", MsgTssPoolHandleV120).
@@ -109,7 +110,7 @@ func validateTssAuth(ctx cosmos.Context, k keeper.Keeper, signer cosmos.AccAddre
 	return nil
 }
 
-func MsgTssPoolHandleV124(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) (*cosmos.Result, error) {
+func MsgTssPoolHandleV134(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) (*cosmos.Result, error) {
 	ctx.Logger().Info("handler tss", "current version", mgr.GetVersion())
 	blames := make([]string, 0)
 	if !msg.Blame.IsEmpty() {
@@ -167,100 +168,84 @@ func MsgTssPoolHandleV124(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) (*co
 		return nil, fmt.Errorf("invalid pool pubkey")
 	}
 	observeSlashPoints := mgr.GetConstants().GetInt64Value(constants.ObserveSlashPoints)
+	lackOfObservationPenalty := mgr.GetConstants().GetInt64Value(constants.LackOfObservationPenalty)
 	observeFlex := mgr.Keeper().GetConfigInt64(ctx, constants.ObservationDelayFlexibility)
 
 	slashCtx := ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
 		telemetry.NewLabel("reason", "failed_observe_tss_pool"),
 	}))
-	mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, msg.Signer)
 
 	if !voter.Sign(msg.Signer, msg.Chains) {
+		// Slash for the network having to handle the extra message/s.
+		mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, msg.Signer)
 		ctx.Logger().Info("signer already signed MsgTssPool", "signer", msg.Signer.String(), "txid", msg.ID)
 		return &cosmos.Result{}, nil
 
 	}
 	mgr.Keeper().SetTssVoter(ctx, voter)
 
-	// doesn't have 2/3 majority consensus yet
 	if !voter.HasConsensus() {
+		// Slash until 2/3rds consensus.
+		mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, msg.Signer)
 		return &cosmos.Result{}, nil
 	}
 
-	// when keygen success
-	if msg.IsSuccess() {
-		judgeLateSigner(ctx, mgr, msg, voter)
-		if !voter.HasCompleteConsensus() {
-			return &cosmos.Result{}, nil
-		}
+	if voter.BlockHeight > 0 && (voter.BlockHeight+observeFlex) >= ctx.BlockHeight() {
+		// After 2/3rds consensus, only decrement slash points if within the ObservationDelayFlexibility period.
+		// (This is expected to only apply for a failed keygen.)
+		mgr.Slasher().DecSlashPoints(slashCtx, lackOfObservationPenalty, msg.Signer)
 	}
 
 	if voter.BlockHeight == 0 {
+		// This message brings the voter to 2/3rds consensus.
+		// For an IsSuccess() message, BlockHeight and MajorityConsensusBlockHeight will initially be the same.
 		voter.BlockHeight = ctx.BlockHeight()
 		mgr.Keeper().SetTssVoter(ctx, voter)
-		mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints, voter.GetSigners()...)
-		if msg.IsSuccess() {
-			ctx.Logger().Info(
-				"tss keygen results success",
-				"height", msg.Height,
-				"id", msg.ID,
-				"pubkey", msg.PoolPubKey,
-			)
-			vaultType := AsgardVault
-			chains := voter.ConsensusChains()
-			vault := NewVault(ctx.BlockHeight(), InitVault, vaultType, voter.PoolPubKey, chains.Strings(), mgr.Keeper().GetChainContracts(ctx, chains))
-			vault.Membership = voter.PubKeys
 
-			if err := mgr.Keeper().SetVault(ctx, vault); err != nil {
-				return nil, fmt.Errorf("fail to save vault: %w", err)
-			}
-			keygenBlock, err := mgr.Keeper().GetKeygenBlock(ctx, msg.Height)
+		// A list of keygen node accounts isn't readily available,
+		// so (rather than do a KVStore-check GetNodeAccount)
+		// prepare the non-signer AccAddresses manually.
+		signers := voter.GetSigners()
+		var keygenNodeAccAddresses []cosmos.AccAddress
+		for _, member := range msg.PubKeys {
+			pkey, err := common.NewPubKey(member)
 			if err != nil {
-				return nil, fmt.Errorf("fail to get keygen block, err: %w, height: %d", err, msg.Height)
+				ctx.Logger().Error("fail to get pub key", "error", err)
+				continue
 			}
-			initVaults, err := mgr.Keeper().GetAsgardVaultsByStatus(ctx, InitVault)
+			thorAddr, err := pkey.GetThorAddress()
 			if err != nil {
-				return nil, fmt.Errorf("fail to get init vaults: %w", err)
+				ctx.Logger().Error("fail to get thor address", "error", err)
+				continue
 			}
-
-			metric, err := mgr.Keeper().GetTssKeygenMetric(ctx, msg.PoolPubKey)
-			if err != nil {
-				ctx.Logger().Error("fail to get keygen metric", "error", err)
-			} else {
-				var total int64
-				for _, item := range metric.NodeTssTimes {
-					total += item.TssTime
-				}
-				evt := NewEventTssKeygenMetric(metric.PubKey, metric.GetMedianTime())
-				if err := mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
-					ctx.Logger().Error("fail to emit tss metric event", "error", err)
+			keygenNodeAccAddresses = append(keygenNodeAccAddresses, thorAddr)
+		}
+		var nonSigners []cosmos.AccAddress
+		var signed bool
+		for _, keygenNodeAccAddress := range keygenNodeAccAddresses {
+			signed = false
+			for _, signer := range signers {
+				if keygenNodeAccAddress.Equals(signer) {
+					signed = true
+					break
 				}
 			}
 
-			if len(initVaults) == len(keygenBlock.Keygens) {
-				ctx.Logger().Info("tss keygen results churn", "asgards", len(initVaults))
-				for _, v := range initVaults {
-					if err := mgr.NetworkMgr().RotateVault(ctx, v); err != nil {
-						return nil, fmt.Errorf("fail to rotate vault: %w", err)
-					}
-				}
-			} else {
-				ctx.Logger().Info("not enough keygen yet", "expecting", len(keygenBlock.Keygens), "current", len(initVaults))
+			if !signed {
+				nonSigners = append(nonSigners, keygenNodeAccAddress)
 			}
+		}
 
-			addrs, err := vault.GetMembership().Addresses()
-			members := make([]string, len(addrs))
-			if err != nil {
-				ctx.Logger().Error("fail to get member addresses", "error", err)
-			} else {
-				for i, addr := range addrs {
-					members[i] = addr.String()
-				}
-				if err := mgr.EventMgr().EmitEvent(ctx, NewEventTssKeygenSuccess(msg.PoolPubKey, msg.Height, members)); err != nil {
-					ctx.Logger().Error("fail to emit keygen success event")
-				}
-			}
-		} else {
-			// since the keygen failed, its now safe to reset all nodes in
+		// As this signer brings the voter to 2/3rds consensus,
+		// increment the signer's slash points like the before-consensus signers,
+		// then decrement all the signers' slash points and increment the non-signers' slash points.
+		mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, msg.Signer)
+		mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints, signers...)
+		mgr.Slasher().IncSlashPoints(slashCtx, lackOfObservationPenalty, nonSigners...)
+
+		// Do the below only for a non-success message upon 2/3rds consensus.
+		if !msg.IsSuccess() {
+			// since the keygen failed, it's now safe to reset all nodes in
 			// ready status back to standby status
 			ready, err := mgr.Keeper().ListValidatorsByStatus(ctx, NodeReady)
 			if err != nil {
@@ -352,11 +337,81 @@ func MsgTssPoolHandleV124(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) (*co
 				ctx.Logger().Error("fail to emit keygen failure event")
 			}
 		}
-		return &cosmos.Result{}, nil
 	}
 
-	if (voter.BlockHeight + observeFlex) >= ctx.BlockHeight() {
-		mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints, msg.Signer)
+	// when keygen success
+	if msg.IsSuccess() {
+		// Separately from the usual consensus-agreement slash points,
+		// those who haven't agreed with a consensus success message incur FailKeygenSlashPoints until agreement.
+		judgeLateSigner(ctx, mgr, msg, voter)
+
+		// Do the below only for a success message upon complete consensus.
+		if voter.HasCompleteConsensus() {
+			ctx.Logger().Info(
+				"tss keygen results success",
+				"height", msg.Height,
+				"id", msg.ID,
+				"pubkey", msg.PoolPubKey,
+			)
+			// Update the BlockHeight to reflect the newly reached state.
+			voter.BlockHeight = ctx.BlockHeight()
+			mgr.Keeper().SetTssVoter(ctx, voter)
+
+			vaultType := AsgardVault
+			chains := voter.ConsensusChains()
+			vault := NewVault(ctx.BlockHeight(), InitVault, vaultType, voter.PoolPubKey, chains.Strings(), mgr.Keeper().GetChainContracts(ctx, chains))
+			vault.Membership = voter.PubKeys
+
+			if err := mgr.Keeper().SetVault(ctx, vault); err != nil {
+				return nil, fmt.Errorf("fail to save vault: %w", err)
+			}
+			keygenBlock, err := mgr.Keeper().GetKeygenBlock(ctx, msg.Height)
+			if err != nil {
+				return nil, fmt.Errorf("fail to get keygen block, err: %w, height: %d", err, msg.Height)
+			}
+			initVaults, err := mgr.Keeper().GetAsgardVaultsByStatus(ctx, InitVault)
+			if err != nil {
+				return nil, fmt.Errorf("fail to get init vaults: %w", err)
+			}
+
+			metric, err := mgr.Keeper().GetTssKeygenMetric(ctx, msg.PoolPubKey)
+			if err != nil {
+				ctx.Logger().Error("fail to get keygen metric", "error", err)
+			} else {
+				var total int64
+				for _, item := range metric.NodeTssTimes {
+					total += item.TssTime
+				}
+				evt := NewEventTssKeygenMetric(metric.PubKey, metric.GetMedianTime())
+				if err := mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
+					ctx.Logger().Error("fail to emit tss metric event", "error", err)
+				}
+			}
+
+			if len(initVaults) == len(keygenBlock.Keygens) {
+				ctx.Logger().Info("tss keygen results churn", "asgards", len(initVaults))
+				for _, v := range initVaults {
+					if err := mgr.NetworkMgr().RotateVault(ctx, v); err != nil {
+						return nil, fmt.Errorf("fail to rotate vault: %w", err)
+					}
+				}
+			} else {
+				ctx.Logger().Info("not enough keygen yet", "expecting", len(keygenBlock.Keygens), "current", len(initVaults))
+			}
+
+			addrs, err := vault.GetMembership().Addresses()
+			members := make([]string, len(addrs))
+			if err != nil {
+				ctx.Logger().Error("fail to get member addresses", "error", err)
+			} else {
+				for i, addr := range addrs {
+					members[i] = addr.String()
+				}
+				if err := mgr.EventMgr().EmitEvent(ctx, NewEventTssKeygenSuccess(msg.PoolPubKey, msg.Height, members)); err != nil {
+					ctx.Logger().Error("fail to emit keygen success event")
+				}
+			}
+		}
 	}
 
 	return &cosmos.Result{}, nil
