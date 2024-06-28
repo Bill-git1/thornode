@@ -417,7 +417,7 @@
       "loans": [],
       "mimirs": [
         {
-          "key": "SWAPSLIPBASISPOINTSMIN-SYNTH",
+          "key": "SYNTHSLIPMINBPS",
           "value": "500"
         }
       ],

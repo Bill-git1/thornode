@@ -8,7 +8,7 @@ import (
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
-	"gitlab.com/thorchain/thornode/mimir"
+	"gitlab.com/thorchain/thornode/constants"
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
 
@@ -296,15 +296,15 @@ func FetchAddress(ctx cosmos.Context, keeper keeper.Keeper, name string, chain c
 	return common.NoAddress, fmt.Errorf("%s is not recognizable", name)
 }
 
+// TODO: remove on hard fork
 func ParseAffiliateBasisPoints(ctx cosmos.Context, keeper keeper.Keeper, affBasisPoints string) (cosmos.Uint, error) {
 	maxAffFeeBasisPoints := int64(10_000)
 	if keeper != nil {
-		mimirMaxAffFeeBasisPoints := mimir.NewAffiliateFeeBasisPointsMax().FetchValue(ctx, keeper)
+		mimirMaxAffFeeBasisPoints := keeper.GetConfigInt64(ctx, constants.MaxAffiliateFeeBasisPoints)
 		if mimirMaxAffFeeBasisPoints >= 0 && mimirMaxAffFeeBasisPoints <= 10_000 {
 			maxAffFeeBasisPoints = mimirMaxAffFeeBasisPoints
 		}
 	}
-
 	pts, err := strconv.ParseUint(affBasisPoints, 10, 64)
 	if err != nil {
 		return cosmos.ZeroUint(), err

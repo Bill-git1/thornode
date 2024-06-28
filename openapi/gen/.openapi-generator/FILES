@@ -67,7 +67,6 @@ docs/LiquidityProvidersApi.md
 docs/MetricsResponse.md
 docs/MimirApi.md
 docs/MimirNodesResponse.md
-docs/MimirV2IDsResponse.md
 docs/MimirVote.md
 docs/MsgSwap.md
 docs/NetworkApi.md
@@ -172,7 +171,6 @@ model_liquidity_provider.go
 model_liquidity_provider_summary.go
 model_metrics_response.go
 model_mimir_nodes_response.go
-model_mimir_v2_ids_response.go
 model_mimir_vote.go
 model_msg_swap.go
 model_network_response.go

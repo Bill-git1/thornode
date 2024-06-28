@@ -14,7 +14,6 @@ import (
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
-	"gitlab.com/thorchain/thornode/mimir"
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 )
 
@@ -745,8 +744,8 @@ func (tos *TxOutStorageVCUR) calcClout(ctx cosmos.Context, runeValue cosmos.Uint
 		ctx.Logger().Error("fail to get swapper clout destination address", "error", err)
 	}
 
-	swapperCloutReset := mimir.NewSwapperCloutReset().FetchValue(ctx, tos.keeper)
-	swapperCloutLimit := mimir.NewSwapperCloutLimit().FetchValue(ctx, tos.keeper)
+	swapperCloutReset := tos.keeper.GetConfigInt64(ctx, constants.CloutReset)
+	swapperCloutLimit := tos.keeper.GetConfigInt64(ctx, constants.CloutLimit)
 
 	// if last clout spend was over an hour ago, restore clout available to
 	// 100%

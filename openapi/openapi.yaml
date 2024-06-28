@@ -1004,38 +1004,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/MimirResponse"
 
-  /thorchain/mimirV2:
-    parameters:
-      - $ref: "#/components/parameters/queryHeight"
-    get:
-      description: Returns current mimir V2 configuration.
-      operationId: mimirV2
-      tags:
-        - Mimir
-      responses:
-        200:
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MimirResponse"
-
-  /thorchain/mimirV2/ids:
-    parameters:
-      - $ref: "#/components/parameters/queryHeight"
-    get:
-      description: Returns mapping of mimir V2 IDs to name.
-      operationId: mimirV2IDs
-      tags:
-        - Mimir
-      responses:
-        200:
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MimirV2IDsResponse"
-
   # ------------------------------ quotes ------------------------------
 
   /thorchain/quote/swap:
@@ -3401,47 +3369,6 @@ components:
       example:
         NODEOPERATORFEE: 2000
         NUMBEROFNEWNODESPERCHURN: 2
-
-    MimirV2IDsResponse:
-      type: object
-      required:
-        - id
-        - name
-        - vote_key
-        - legacy_key
-        - type
-        - votes
-      properties:
-        id:
-          type: int
-        name:
-          type: string
-        vote_key:
-          type: string
-        legacy_key:
-          type: string
-        type:
-          type: string
-        votes:
-          type: object
-          additionalProperties:
-            type: integer
-            format: int64
-      example:
-        - id: 1
-          name: AFFILIATEFEEBASISPOINTSMAXGLOBAL
-          legacy_key: MAXAFFILIATEFEEBASISPOINTS
-          vote_key: 1-GLOBAL
-          type: Economic
-          votes:
-            500: 4
-        - id: 2
-          name: BONDPAUSEGLOBAL
-          legacy_key: PAUSEBOND
-          vote_key: 2-GLOBAL
-          type: Operational
-          votes:
-            1: 1
 
     InvariantResponse:
       type: object

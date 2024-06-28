@@ -409,8 +409,10 @@ func GetEventManager(version semver.Version) (EventManager, error) {
 func GetTxOutStore(version semver.Version, keeper keeper.Keeper, eventMgr EventManager, gasManager GasManager) (TxOutStore, error) {
 	constAccessor := constants.GetConstantValues(version)
 	switch {
-	case version.GTE(semver.MustParse("1.133.0")):
+	case version.GTE(semver.MustParse("1.134.0")):
 		return newTxOutStorageVCUR(keeper, constAccessor, eventMgr, gasManager), nil
+	case version.GTE(semver.MustParse("1.133.0")):
+		return newTxOutStorageV133(keeper, constAccessor, eventMgr, gasManager), nil
 	case version.GTE(semver.MustParse("1.132.0")):
 		return newTxOutStorageV132(keeper, constAccessor, eventMgr, gasManager), nil
 	case version.GTE(semver.MustParse("1.131.0")):
@@ -721,8 +723,10 @@ func GetYggManager(version semver.Version, keeper keeper.Keeper) (YggManager, er
 // GetSwapper return an implementation of Swapper
 func GetSwapper(version semver.Version) (Swapper, error) {
 	switch {
-	case version.GTE(semver.MustParse("1.133.0")):
+	case version.GTE(semver.MustParse("1.134.0")):
 		return newSwapperVCUR(), nil
+	case version.GTE(semver.MustParse("1.133.0")):
+		return newSwapperV133(), nil
 	case version.GTE(semver.MustParse("1.129.0")):
 		return newSwapperV129(), nil
 	case version.GTE(semver.MustParse("1.128.0")):

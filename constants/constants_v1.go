@@ -121,6 +121,9 @@ func NewConstantValue() *ConstantVals {
 			TradeAccountsEnabled:                0,                  // enable/disable trade account
 			EVMDisableContractWhitelist:         0,                  // enable/disable contract whitelist
 			OperationalVotesMin:                 3,                  // Minimum node votes to set an Operational Mimir
+			L1SlipMinBps:                        0,
+			TradeAccountsSlipMinBps:             0,
+			SynthSlipMinBps:                     0,
 		},
 		boolValues: map[ConstantName]bool{
 			StrictBondLiquidityRatio: true,

@@ -10,7 +10,6 @@ import (
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
-	"gitlab.com/thorchain/thornode/mimir"
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 )
 
@@ -182,6 +181,8 @@ func (s *SwapperVCUR) swapOne(ctx cosmos.Context,
 	swapTarget cosmos.Uint,
 	synthVirtualDepthMult int64,
 ) (amt cosmos.Uint, evt *EventSwap, swapErr error) {
+	tradeAccountsEnabled := mgr.Keeper().GetConfigInt64(ctx, constants.TradeAccountsEnabled)
+
 	source := tx.Coins[0].Asset
 	amount := tx.Coins[0].Amount
 
@@ -196,8 +197,8 @@ func (s *SwapperVCUR) swapOne(ctx cosmos.Context,
 	}
 
 	if source.IsTradeAsset() {
-		if mimir.NewTradeAccountsEnabled().IsOff(ctx, mgr.Keeper()) {
-			return cosmos.ZeroUint(), evt, fmt.Errorf("trade account is disabled")
+		if tradeAccountsEnabled <= 0 {
+			return cosmos.ZeroUint(), evt, fmt.Errorf("trade accounts are disabled")
 		}
 		fromAcc, err := cosmos.AccAddressFromBech32(tx.FromAddress.String())
 		if err != nil {
@@ -364,8 +365,8 @@ func (s *SwapperVCUR) swapOne(ctx cosmos.Context,
 
 	// if target is trade account, deposit the asset to trade account
 	if target.IsTradeAsset() {
-		if mimir.NewTradeAccountsEnabled().IsOff(ctx, keeper) {
-			return cosmos.ZeroUint(), evt, fmt.Errorf("trade account is disabled")
+		if tradeAccountsEnabled <= 0 {
+			return cosmos.ZeroUint(), evt, fmt.Errorf("trade accounts are disabled")
 		}
 		acc, err := destination.AccAddress()
 		if err != nil {
@@ -492,22 +493,15 @@ func (s *SwapperVCUR) MinSlipBps(
 	isSynth bool,
 	isTradeAccount bool,
 ) cosmos.Uint {
-	var ref string
+	var ref constants.ConstantName
 	switch {
 	case isSynth:
-		ref = constants.MimirRefSynth
+		ref = constants.SynthSlipMinBps
 	case isTradeAccount:
-		ref = constants.MimirRefTradeAccount
+		ref = constants.TradeAccountsSlipMinBps
 	default:
-		ref = constants.MimirRefL1
+		ref = constants.L1SlipMinBps
 	}
-	key := fmt.Sprintf(constants.MimirTemplateSwapSlipBasisPointsMin, ref)
-	minFeeMimir, err := k.GetMimir(ctx, key)
-	if minFeeMimir < 0 || err != nil {
-		if err != nil {
-			ctx.Logger().Error("fail to get mimir", "key", key, "error", err)
-		}
-		return cosmos.ZeroUint()
-	}
+	minFeeMimir := k.GetConfigInt64(ctx, ref)
 	return cosmos.SafeUintFromInt64(minFeeMimir)
 }

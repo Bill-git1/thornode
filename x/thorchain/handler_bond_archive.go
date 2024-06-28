@@ -8,7 +8,77 @@ import (
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
+	"gitlab.com/thorchain/thornode/mimir"
 )
+
+func (h BondHandler) validateV96(ctx cosmos.Context, msg MsgBond) error {
+	if err := msg.ValidateBasic(); err != nil {
+		return err
+	}
+	// When RUNE is on thorchain , pay bond doesn't need to be active node
+	// in fact , usually the node will not be active at the time it bond
+
+	nodeAccount, err := h.mgr.Keeper().GetNodeAccount(ctx, msg.NodeAddress)
+	if err != nil {
+		return ErrInternal(err, fmt.Sprintf("fail to get node account(%s)", msg.NodeAddress))
+	}
+
+	if nodeAccount.Status == NodeReady {
+		return ErrInternal(err, "cannot add bond while node is ready status")
+	}
+
+	if h.mgr.GetVersion().GTE(semver.MustParse("1.88.1")) {
+		if mimir.NewBondPause().IsOn(ctx, h.mgr.Keeper()) {
+			return ErrInternal(err, "bonding has been paused")
+		}
+	}
+
+	bond := msg.Bond.Add(nodeAccount.Bond)
+	maxBond, err := h.mgr.Keeper().GetMimir(ctx, "MaximumBondInRune")
+	if maxBond > 0 && err == nil {
+		maxValidatorBond := cosmos.NewUint(uint64(maxBond))
+		if bond.GT(maxValidatorBond) {
+			return cosmos.ErrUnknownRequest(fmt.Sprintf("too much bond, max validator bond (%s), bond(%s)", maxValidatorBond.String(), bond))
+		}
+	}
+
+	if !msg.BondAddress.IsChain(common.THORChain) {
+		return cosmos.ErrUnknownRequest(fmt.Sprintf("bonding address is NOT a THORChain address: %s", msg.BondAddress.String()))
+	}
+
+	bp, err := h.mgr.Keeper().GetBondProviders(ctx, msg.NodeAddress)
+	if err != nil {
+		return ErrInternal(err, fmt.Sprintf("fail to get bond providers(%s)", msg.NodeAddress))
+	}
+
+	// Attempting to set Operator Fee. If the Node has no bond address yet, it will have no fee set, continue
+	if msg.OperatorFee > -1 && !nodeAccount.BondAddress.IsEmpty() {
+		// Only Node Operator can set fee
+		if !msg.BondAddress.Equals(nodeAccount.BondAddress) {
+			return cosmos.ErrUnknownRequest("only node operator can set fee")
+		}
+	}
+
+	// Validate bond address
+	if msg.BondAddress.Equals(nodeAccount.BondAddress) {
+		return nil
+	}
+
+	if nodeAccount.BondAddress.IsEmpty() {
+		// no bond address yet, allow it to be bonded by any address
+		return nil
+	}
+
+	from, err := msg.BondAddress.AccAddress()
+	if err != nil {
+		return ErrInternal(err, fmt.Sprintf("fail to parse bond address(%s)", msg.BondAddress))
+	}
+	if !bp.Has(from) {
+		return cosmos.ErrUnknownRequest("bond address is not valid for node account")
+	}
+
+	return nil
+}
 
 func (h BondHandler) validateV81(ctx cosmos.Context, msg MsgBond) error {
 	if err := msg.ValidateBasic(); err != nil {

@@ -1498,7 +1498,7 @@
           "data": "\n\u0018\n\u0016/types.MsgObservedTxIn",
           "log": "[{\"events\":[{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_observed_txin\"}]}]}]",
           "gas_wanted": "0",
-          "gas_used": "383699",
+          "gas_used": "374665",
           "events": [
             {
               "fee": "",
@@ -1550,7 +1550,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "D67A11F595D98AEE59AC93AEC8889A0785E1EEA25E5D7B599E4C3282360D768D",
-      "last_results_hash": "5C5A2029A6EA920130140D66CAF7095373A0EAB92B68ABBE6CD439E7E3AF8E72",
+      "last_results_hash": "33884673752DCC52E7B5D5AB23925CFCD9E5608FE8289595089187C5FACA8EE4",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -2784,7 +2784,7 @@
           "data": "\n\u0018\n\u0016/types.MsgObservedTxIn",
           "log": "[{\"events\":[{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_observed_txin\"}]}]}]",
           "gas_wanted": "0",
-          "gas_used": "390823",
+          "gas_used": "381789",
           "events": [
             {
               "fee": "",
@@ -2836,7 +2836,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "22319E8913CCF24B63AE868B56B025FF8274A56118FC12D95BF8D9EE2D8BB46B",
-      "last_results_hash": "4DA2AE1A79BC9BA706CEE7354B4499EA58E851371B35F3D478E1E223EAA019A3",
+      "last_results_hash": "024FFFA7E8F19D6DBA02638EFEE4BAE2F2FC6955D53ACEAE378E155082B60F83",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -4001,7 +4001,7 @@
           "data": "\n\u0018\n\u0016/types.MsgObservedTxIn",
           "log": "[{\"events\":[{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_observed_txin\"}]}]}]",
           "gas_wanted": "0",
-          "gas_used": "392335",
+          "gas_used": "383301",
           "events": [
             {
               "fee": "",

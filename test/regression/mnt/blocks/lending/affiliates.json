@@ -2116,7 +2116,7 @@
           "data": "\n\u0018\n\u0016/types.MsgObservedTxIn",
           "log": "[{\"events\":[{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_observed_txin\"}]}]}]",
           "gas_wanted": "0",
-          "gas_used": "285989",
+          "gas_used": "281472",
           "events": [
             {
               "fee": "",
@@ -2168,7 +2168,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "7592759A5C31D851E56C701D5F94F7A56509A70E38EB1237B8F2F8EDFFE3F9DE",
-      "last_results_hash": "64BAF5C3A4B80D1155646C877CAD5DBD027E7B0EAEA40AA2ED9A8C594BE45975",
+      "last_results_hash": "0D50E38BD41F62B47ED406F81FD7A325BB4966925A6FDBA118F60F7006D73A71",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -3411,7 +3411,7 @@
           "data": "\n\u0018\n\u0016/types.MsgObservedTxIn",
           "log": "[{\"events\":[{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_observed_txin\"}]}]}]",
           "gas_wanted": "0",
-          "gas_used": "355999",
+          "gas_used": "351482",
           "events": [
             {
               "fee": "",
@@ -3463,7 +3463,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "DF84489C020C9CC7C188E9FD30498DDFACFF916A6AACEEFF0F117DCDD49EEECF",
-      "last_results_hash": "7228B781AF4DA8F02D5CD313685FE2C12519EDECAE96970F3068814F6A4FF7B5",
+      "last_results_hash": "1179550B6A4E703785A6DB2295FEA0E61841B764CCDE2911C450286FEE22E547",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -4466,7 +4466,7 @@
           "data": "\n\u0018\n\u0016/types.MsgObservedTxIn",
           "log": "[{\"events\":[{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_observed_txin\"}]}]}]",
           "gas_wanted": "0",
-          "gas_used": "392987",
+          "gas_used": "388470",
           "events": [
             {
               "fee": "",
@@ -4518,7 +4518,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "76AEBE146CDA039CE13978EC15AD9597A1450DF34B04BF5BC15C38F96EB7B0DC",
-      "last_results_hash": "54E6D7E1DF41C4C451097E27DC4D7559B48B556A4CE8345EF060CEE6CC9D5C44",
+      "last_results_hash": "08DAD19D056AD6B40B7CF56EB0ED83509706EB08B15A4E7835E73C01E62C6F0D",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -5204,7 +5204,7 @@
           "data": "\n\u0018\n\u0016/types.MsgObservedTxIn",
           "log": "[{\"events\":[{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_observed_txin\"}]}]}]",
           "gas_wanted": "0",
-          "gas_used": "265419",
+          "gas_used": "260902",
           "events": [
             {
               "fee": "",

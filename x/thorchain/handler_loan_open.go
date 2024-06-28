@@ -8,7 +8,6 @@ import (
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
-	"gitlab.com/thorchain/thornode/mimir"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
@@ -205,6 +204,8 @@ func (h LoanOpenHandler) openLoan(ctx cosmos.Context, msg MsgLoanOpen) error {
 func (h LoanOpenHandler) swap(ctx cosmos.Context, msg MsgLoanOpen) error {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.134.0")):
+		return h.swapV134(ctx, msg)
 	case version.GTE(semver.MustParse("1.132.0")):
 		return h.swapV132(ctx, msg)
 	case version.GTE(semver.MustParse("1.121.0")):
@@ -418,7 +419,7 @@ func (h LoanOpenHandler) calcCR(a, b cosmos.Uint, minCR, maxCR int64) cosmos.Uin
 	return cr.AddUint64(uint64(minCR))
 }
 
-func (h LoanOpenHandler) swapV132(ctx cosmos.Context, msg MsgLoanOpen) error {
+func (h LoanOpenHandler) swapV134(ctx cosmos.Context, msg MsgLoanOpen) error {
 	txID, ok := ctx.Value(constants.CtxLoanTxID).(common.TxID)
 	if !ok {
 		return fmt.Errorf("fail to get txid")
@@ -445,7 +446,7 @@ func (h LoanOpenHandler) swapV132(ctx cosmos.Context, msg MsgLoanOpen) error {
 	}
 
 	collateral := common.NewCoin(msg.CollateralAsset, msg.CollateralAmount)
-	maxAffPoints := mimir.NewAffiliateFeeBasisPointsMax().FetchValue(ctx, h.mgr.Keeper())
+	maxAffPoints := h.mgr.Keeper().GetConfigInt64(ctx, constants.MaxAffiliateFeeBasisPoints)
 
 	// only take affiliate fee if parameters are set and it's the original swap (not the derived asset swap)
 	if !msg.AffiliateBasisPoints.IsZero() && msg.AffiliateBasisPoints.LTE(cosmos.NewUint(uint64(maxAffPoints))) && !msg.AffiliateAddress.IsEmpty() && !msg.CollateralAsset.IsNative() {

@@ -6,7 +6,7 @@ import (
 	"github.com/blang/semver"
 
 	"gitlab.com/thorchain/thornode/common/cosmos"
-	"gitlab.com/thorchain/thornode/mimir"
+	"gitlab.com/thorchain/thornode/constants"
 )
 
 // TradeAccountDepositHandler is handler to process MsgTradeAccountDeposit
@@ -41,15 +41,20 @@ func (h TradeAccountDepositHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosm
 
 func (h TradeAccountDepositHandler) validate(ctx cosmos.Context, msg MsgTradeAccountDeposit) error {
 	version := h.mgr.GetVersion()
-	if version.GTE(semver.MustParse("0.1.0")) {
+	switch {
+	case version.GTE(semver.MustParse("1.134.0")):
+		return h.validateV134(ctx, msg)
+	case version.GTE(semver.MustParse("0.1.0")):
 		return h.validateV1(ctx, msg)
+	default:
+		return errBadVersion
 	}
-	return errBadVersion
 }
 
-func (h TradeAccountDepositHandler) validateV1(ctx cosmos.Context, msg MsgTradeAccountDeposit) error {
-	if mimir.NewTradeAccountsEnabled().IsOff(ctx, h.mgr.Keeper()) {
-		return fmt.Errorf("trade account is disabled")
+func (h TradeAccountDepositHandler) validateV134(ctx cosmos.Context, msg MsgTradeAccountDeposit) error {
+	tradeAccountsEnabled := h.mgr.Keeper().GetConfigInt64(ctx, constants.TradeAccountsEnabled)
+	if tradeAccountsEnabled <= 0 {
+		return fmt.Errorf("trade accounts are disabled")
 	}
 	return msg.ValidateBasic()
 }

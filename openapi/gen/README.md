@@ -91,8 +91,6 @@ Class | Method | HTTP request | Description
 *MimirApi* | [**MimirKey**](docs/MimirApi.md#mimirkey) | **Get** /thorchain/mimir/key/{key} | 
 *MimirApi* | [**MimirNode**](docs/MimirApi.md#mimirnode) | **Get** /thorchain/mimir/node/{address} | 
 *MimirApi* | [**MimirNodes**](docs/MimirApi.md#mimirnodes) | **Get** /thorchain/mimir/nodes_all | 
-*MimirApi* | [**MimirV2**](docs/MimirApi.md#mimirv2) | **Get** /thorchain/mimirV2 | 
-*MimirApi* | [**MimirV2IDs**](docs/MimirApi.md#mimirv2ids) | **Get** /thorchain/mimirV2/ids | 
 *NetworkApi* | [**Ban**](docs/NetworkApi.md#ban) | **Get** /thorchain/ban/{address} | 
 *NetworkApi* | [**Constants**](docs/NetworkApi.md#constants) | **Get** /thorchain/constants | 
 *NetworkApi* | [**InboundAddresses**](docs/NetworkApi.md#inboundaddresses) | **Get** /thorchain/inbound_addresses | 
@@ -180,7 +178,6 @@ Class | Method | HTTP request | Description
  - [LiquidityProviderSummary](docs/LiquidityProviderSummary.md)
  - [MetricsResponse](docs/MetricsResponse.md)
  - [MimirNodesResponse](docs/MimirNodesResponse.md)
- - [MimirV2IDsResponse](docs/MimirV2IDsResponse.md)
  - [MimirVote](docs/MimirVote.md)
  - [MsgSwap](docs/MsgSwap.md)
  - [NetworkResponse](docs/NetworkResponse.md)

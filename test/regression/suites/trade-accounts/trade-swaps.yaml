@@ -269,22 +269,22 @@ asserts:
 ---
 type: tx-mimir
 signer: {{ addr_thor_cat }}
-key: "SwapSlipBasisPointsMin-TradeAccount"
+key: "TradeAccountsSlipMinBps"
 value: 1000
 ---
 type: tx-mimir
 signer: {{ addr_thor_pig }}
-key: "SwapSlipBasisPointsMin-TradeAccount"
+key: "TradeAccountsSlipMinBps"
 value: 1000
 ---
 type: tx-mimir
 signer: {{ addr_thor_fox }}
-key: "SwapSlipBasisPointsMin-TradeAccount"
+key: "TradeAccountsSlipMinBps"
 value: 1000
 ---
 type: tx-mimir
 signer: {{ addr_thor_goat }}
-key: "SwapSlipBasisPointsMin-TradeAccount"
+key: "TradeAccountsSlipMinBps"
 value: 1000
 ---
 type: create-blocks
@@ -336,7 +336,7 @@ endpoint: http://localhost:1317/thorchain/mimir
 asserts:
   - .["DerivedDepthBasisPts" | ascii_upcase] == 10000
   - .["EnableDerivedAssets" | ascii_upcase] == 0
-  - .["SwapSlipBasisPointsMin-TradeAccount" | ascii_upcase] == 1000
+  - .["TradeAccountsSlipMinBps" | ascii_upcase] == 1000
   - .["TradeAccountsEnabled" | ascii_upcase] == 1
 ---
 # Confirm that the THOR.BTC pool exists.

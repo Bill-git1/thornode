@@ -26,10 +26,8 @@ go mod verify
 
 ./scripts/lint-erc20s.bash
 
-go run tools/analyze/main.go ./common/... ./constants/... ./x/... ./mimir/...
+go run tools/analyze/main.go ./common/... ./constants/... ./x/...
 
 go run tools/lint-whitelist-tokens/main.go
 
 ./scripts/lint-versions.bash
-
-./scripts/lint-mimir-ids.bash

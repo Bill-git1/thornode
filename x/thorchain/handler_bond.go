@@ -8,7 +8,6 @@ import (
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
-	"gitlab.com/thorchain/thornode/mimir"
 )
 
 // BondHandler a handler to process bond
@@ -50,6 +49,8 @@ func (h BondHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, erro
 func (h BondHandler) validate(ctx cosmos.Context, msg MsgBond) error {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.134.0")):
+		return h.validateV134(ctx, msg)
 	case version.GTE(semver.MustParse("1.96.0")):
 		return h.validateV96(ctx, msg)
 	case version.GTE(semver.MustParse("1.95.0")):
@@ -63,7 +64,7 @@ func (h BondHandler) validate(ctx cosmos.Context, msg MsgBond) error {
 	}
 }
 
-func (h BondHandler) validateV96(ctx cosmos.Context, msg MsgBond) error {
+func (h BondHandler) validateV134(ctx cosmos.Context, msg MsgBond) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
@@ -80,7 +81,8 @@ func (h BondHandler) validateV96(ctx cosmos.Context, msg MsgBond) error {
 	}
 
 	if h.mgr.GetVersion().GTE(semver.MustParse("1.88.1")) {
-		if mimir.NewBondPause().IsOn(ctx, h.mgr.Keeper()) {
+		bondPause := h.mgr.Keeper().GetConfigInt64(ctx, constants.PauseBond)
+		if bondPause > 0 {
 			return ErrInternal(err, "bonding has been paused")
 		}
 	}
