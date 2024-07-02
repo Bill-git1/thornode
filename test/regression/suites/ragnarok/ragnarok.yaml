@@ -475,7 +475,7 @@ txs:
       gas:
         - amount: "15000"
           asset: "ETH.ETH"
-      memo: "OUT:1B3B95C7F5310DF16F152BE668F752A4870905743F53771F7BD77E0BD5085FB1"
+      memo: "OUT:3923E57EDC783496CBAD6D8EFC06B40ABEFF1D097E0B52B75CBBD45AD6BFD3EA"
     block_height: 2
     finalise_height: 2
     observed_pub_key: {{ pubkey_dog }}
@@ -491,7 +491,7 @@ txs:
       gas:
         - amount: "15000"
           asset: "ETH.ETH"
-      memo: "OUT:9469B1E6790FE33519A2889AC42893B5CE1328EA9658615540F84991C1BC5E59"
+      memo: "OUT:D419BD2BC42AE8366025C5B67311D9663AD8C8EF39797BB231335D5133DC6EB7"
     block_height: 2
     finalise_height: 2
     observed_pub_key: {{ pubkey_dog }}
@@ -507,7 +507,7 @@ txs:
       gas:
         - amount: "15000"
           asset: "ETH.ETH"
-      memo: "OUT:C0C3E19DE72AFD9FCF2016C0F1FC8B9112CD6A13ABC586B512752358BDB845EA"
+      memo: "OUT:F811750EB58BA5B5953602C15B0282E201BC93F2E0E7BEF4B36A4426D9799620"
     block_height: 2
     finalise_height: 2
     observed_pub_key: {{ pubkey_dog }}

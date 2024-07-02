@@ -76,7 +76,7 @@ func main() {
 		{Name: "savers", Default: true},
 		{Name: "arb", Default: true},
 		{Name: "swaps", Default: true},
-		{Name: "feature-saver-eject", Default: false},
+		{Name: "feature-saver-eject", Default: true},
 		{Name: "ragnarok", Default: true},
 	}
 	if os.Getenv("STAGES") != "" {

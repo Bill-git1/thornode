@@ -147,6 +147,7 @@ const (
 	OperationalVotesMin
 	RUNEPoolEnabled
 	RUNEPoolCooldown
+	SaversEjectInterval
 )
 
 // ConstantValues define methods used to get constant values

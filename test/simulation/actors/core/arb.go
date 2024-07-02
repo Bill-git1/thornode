@@ -104,6 +104,7 @@ func (a *ArbActor) enableTradeAssets(config *OpConfig) OpResult {
 			Continue: false,
 		}
 	}
+	defer config.AdminUser.Release()
 
 	// enable trade assets
 	accAddr, err := config.AdminUser.PubKey().GetThorAddress()
