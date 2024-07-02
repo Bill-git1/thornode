@@ -16,6 +16,7 @@ api_pool_slip.go
 api_pools.go
 api_queue.go
 api_quote.go
+api_rune_providers.go
 api_savers.go
 api_streaming_swap.go
 api_thornames.go
@@ -100,6 +101,8 @@ docs/QuoteLoanOpenResponse.md
 docs/QuoteSaverDepositResponse.md
 docs/QuoteSaverWithdrawResponse.md
 docs/QuoteSwapResponse.md
+docs/RUNEProvider.md
+docs/RUNEProvidersApi.md
 docs/Saver.md
 docs/SaversApi.md
 docs/StreamingStatus.md
@@ -197,6 +200,7 @@ model_quote_loan_open_response.go
 model_quote_saver_deposit_response.go
 model_quote_saver_withdraw_response.go
 model_quote_swap_response.go
+model_rune_provider.go
 model_saver.go
 model_streaming_status.go
 model_streaming_swap.go

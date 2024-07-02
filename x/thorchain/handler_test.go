@@ -93,6 +93,8 @@ func setupManagerForTest(c *C) (cosmos.Context, *Mgrs) {
 		ReserveName:            {},
 		LendingName:            {},
 		AffiliateCollectorName: {},
+		TreasuryName:           {},
+		RUNEPoolName:           {},
 	})
 
 	bk := bankkeeper.NewBaseKeeper(marshaler, keyBank, ak, pk.Subspace(banktypes.ModuleName), nil)

@@ -10,6 +10,8 @@ const (
 	ReserveName            = types.ReserveName
 	AsgardName             = types.AsgardName
 	AffiliateCollectorName = types.AffiliateCollectorName
+	TreasuryName           = types.TreasuryName
+	RUNEPoolName           = types.RUNEPoolName
 	BondName               = types.BondName
 	StoreKey               = types.StoreKey
 
@@ -59,6 +61,7 @@ var (
 	RegisterCodec              = types.RegisterCodec
 	NewTradeAccount            = types.NewTradeAccount
 	NewTradeUnit               = types.NewTradeUnit
+	NewRUNEProvider            = types.NewRUNEProvider
 	NewNodeAccount             = types.NewNodeAccount
 	NewBondProviders           = types.NewBondProviders
 	NewBondProvider            = types.NewBondProvider
@@ -135,6 +138,7 @@ type (
 	SwapperClout             = types.SwapperClout
 	TradeAccount             = types.TradeAccount
 	TradeUnit                = types.TradeUnit
+	RUNEProvider             = types.RUNEProvider
 
 	ProtoInt64        = types.ProtoInt64
 	ProtoUint64       = types.ProtoUint64

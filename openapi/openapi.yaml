@@ -171,6 +171,41 @@ paths:
               schema:
                 $ref: "#/components/schemas/LiquidityProvidersResponse"
 
+  # # ------------------------------ rune providers ------------------------------
+
+  /thorchain/rune_providers/{address}:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+      - $ref: "#/components/parameters/address"
+    get:
+      description: Returns the RUNE Provider information for an address.
+      operationId: runeProvider
+      tags:
+        - RUNE Providers
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RUNEProviderResponse"
+
+  /thorchain/rune_providers:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+    get:
+      description: Returns all RUNE Providers.
+      operationId: runeProviders
+      tags:
+        - RUNE Providers
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RUNEProvidersResponse"
+
   # # ------------------------------ savers ------------------------------
 
   /thorchain/pool/{asset}/saver/{address}:
@@ -1520,6 +1555,37 @@ components:
           example: "123456"
           description: the depth of the derived virtual pool relative to L1 pool (in basis points)
 
+    RUNEProvider:
+      type: object
+      required:
+        - rune_address
+        - units
+        - deposit_amount
+        - withdraw_amount
+        - last_deposit_height
+        - last_withdraw_height
+      properties:
+        rune_address:
+          type: string
+          example: "THOR.RUNE"
+        units:
+          type: string
+          example: "1234"
+        deposit_amount:
+          type: string
+          example: "6677"
+        withdraw_amount:
+          type: string
+          example: "5443"
+        last_deposit_height:
+          type: integer
+          format: int64
+          example: 82745
+        last_withdraw_height:
+          type: integer
+          format: int64
+          example: 82745
+
     LiquidityProviderSummary:
       type: object
       required:
@@ -2626,6 +2692,14 @@ components:
       type: array
       items:
         $ref: "#/components/schemas/DerivedPool"
+
+    RUNEProviderResponse:
+      $ref: "#/components/schemas/RUNEProvider"
+
+    RUNEProvidersResponse:
+      type: array
+      items:
+        $ref: "#/components/schemas/RUNEProvider"
 
     LiquidityProvidersResponse:
       type: array

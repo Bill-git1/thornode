@@ -119,6 +119,8 @@ Class | Method | HTTP request | Description
 *QuoteApi* | [**Quotesaverdeposit**](docs/QuoteApi.md#quotesaverdeposit) | **Get** /thorchain/quote/saver/deposit | 
 *QuoteApi* | [**Quotesaverwithdraw**](docs/QuoteApi.md#quotesaverwithdraw) | **Get** /thorchain/quote/saver/withdraw | 
 *QuoteApi* | [**Quoteswap**](docs/QuoteApi.md#quoteswap) | **Get** /thorchain/quote/swap | 
+*RUNEProvidersApi* | [**RuneProvider**](docs/RUNEProvidersApi.md#runeprovider) | **Get** /thorchain/rune_providers/{address} | 
+*RUNEProvidersApi* | [**RuneProviders**](docs/RUNEProvidersApi.md#runeproviders) | **Get** /thorchain/rune_providers | 
 *SaversApi* | [**Saver**](docs/SaversApi.md#saver) | **Get** /thorchain/pool/{asset}/saver/{address} | 
 *SaversApi* | [**Savers**](docs/SaversApi.md#savers) | **Get** /thorchain/pool/{asset}/savers | 
 *StreamingSwapApi* | [**StreamSwap**](docs/StreamingSwapApi.md#streamswap) | **Get** /thorchain/swap/streaming/{hash} | 
@@ -204,6 +206,7 @@ Class | Method | HTTP request | Description
  - [QuoteSaverDepositResponse](docs/QuoteSaverDepositResponse.md)
  - [QuoteSaverWithdrawResponse](docs/QuoteSaverWithdrawResponse.md)
  - [QuoteSwapResponse](docs/QuoteSwapResponse.md)
+ - [RUNEProvider](docs/RUNEProvider.md)
  - [Saver](docs/Saver.md)
  - [StreamingStatus](docs/StreamingStatus.md)
  - [StreamingSwap](docs/StreamingSwap.md)

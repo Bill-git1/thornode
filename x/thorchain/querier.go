@@ -156,6 +156,10 @@ func NewQuerier(mgr *Mgrs, kbs cosmos.KeybaseStore) cosmos.Querier {
 			return queryBan(ctx, path[1:], req, mgr)
 		case q.QueryRagnarok.Key:
 			return queryRagnarok(ctx, mgr)
+		case q.QueryRUNEProvider.Key:
+			return queryRUNEProvider(ctx, path[1:], req, mgr)
+		case q.QueryRUNEProviders.Key:
+			return queryRUNEProviders(ctx, mgr)
 		case q.QueryPendingOutbound.Key:
 			return queryPendingOutbound(ctx, mgr)
 		case q.QueryScheduledOutbound.Key:
@@ -496,6 +500,54 @@ func queryVaultsPubkeys(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 		}
 	}
 	return jsonify(ctx, resp)
+}
+
+// queryRUNEProvider
+func queryRUNEProvider(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {
+	if len(path) == 0 {
+		return nil, errors.New("address not provided")
+	}
+	addr, err := cosmos.AccAddressFromBech32(path[0])
+	if err != nil {
+		return nil, errors.New("unable to decode address")
+	}
+	rp, err := mgr.Keeper().GetRUNEProvider(ctx, addr)
+	if err != nil {
+		return nil, fmt.Errorf("unable to GetRUNEProvider: %s", err)
+	}
+	if err != nil {
+		ctx.Logger().Error("unable to GetRUNEProvider", "error", err)
+		return nil, fmt.Errorf("unable to GetRUNEProvider: %w", err)
+	}
+	result := openapi.RUNEProvider{
+		RuneAddress:        rp.RuneAddress.String(),
+		Units:              rp.Units.String(),
+		DepositAmount:      rp.DepositAmount.String(),
+		WithdrawAmount:     rp.WithdrawAmount.String(),
+		LastDepositHeight:  rp.LastDepositHeight,
+		LastWithdrawHeight: rp.LastWithdrawHeight,
+	}
+	return jsonify(ctx, result)
+}
+
+// queryRUNEProviders
+func queryRUNEProviders(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
+	var runeProviders []openapi.RUNEProvider
+	iterator := mgr.Keeper().GetRUNEProviderIterator(ctx)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		var rp types.RUNEProvider
+		mgr.Keeper().Cdc().MustUnmarshal(iterator.Value(), &rp)
+		runeProviders = append(runeProviders, openapi.RUNEProvider{
+			RuneAddress:        rp.RuneAddress.String(),
+			Units:              rp.Units.String(),
+			DepositAmount:      rp.DepositAmount.String(),
+			WithdrawAmount:     rp.WithdrawAmount.String(),
+			LastDepositHeight:  rp.LastDepositHeight,
+			LastWithdrawHeight: rp.LastWithdrawHeight,
+		})
+	}
+	return jsonify(ctx, runeProviders)
 }
 
 func queryNetwork(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {

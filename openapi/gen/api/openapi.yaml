@@ -261,6 +261,62 @@ paths:
           description: OK
       tags:
       - Liquidity Providers
+  /thorchain/rune_providers/{address}:
+    get:
+      description: Returns the RUNE Provider information for an address.
+      operationId: runeProvider
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      - explode: false
+        in: path
+        name: address
+        required: true
+        schema:
+          example: thor1zupk5lmc84r2dh738a9g3zscavannjy3nzplwt
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RUNEProviderResponse'
+          description: OK
+      tags:
+      - RUNE Providers
+  /thorchain/rune_providers:
+    get:
+      description: Returns all RUNE Providers.
+      operationId: runeProviders
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RUNEProvidersResponse'
+          description: OK
+      tags:
+      - RUNE Providers
   /thorchain/pool/{asset}/saver/{address}:
     get:
       description: Returns the saver position given then savers pool and address.
@@ -2330,6 +2386,43 @@ components:
       - derived_depth_bps
       - status
       type: object
+    RUNEProvider:
+      example:
+        deposit_amount: "6677"
+        withdraw_amount: "5443"
+        last_deposit_height: 82745
+        last_withdraw_height: 82745
+        rune_address: THOR.RUNE
+        units: "1234"
+      properties:
+        rune_address:
+          example: THOR.RUNE
+          type: string
+        units:
+          example: "1234"
+          type: string
+        deposit_amount:
+          example: "6677"
+          type: string
+        withdraw_amount:
+          example: "5443"
+          type: string
+        last_deposit_height:
+          example: 82745
+          format: int64
+          type: integer
+        last_withdraw_height:
+          example: 82745
+          format: int64
+          type: integer
+      required:
+      - deposit_amount
+      - last_deposit_height
+      - last_withdraw_height
+      - rune_address
+      - units
+      - withdraw_amount
+      type: object
     LiquidityProviderSummary:
       example:
         pending_asset: "242000000"
@@ -3683,6 +3776,12 @@ components:
     DerivedPoolsResponse:
       items:
         $ref: '#/components/schemas/DerivedPool'
+      type: array
+    RUNEProviderResponse:
+      $ref: '#/components/schemas/RUNEProvider'
+    RUNEProvidersResponse:
+      items:
+        $ref: '#/components/schemas/RUNEProvider'
       type: array
     LiquidityProvidersResponse:
       items:

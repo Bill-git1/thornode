@@ -124,6 +124,8 @@ func NewConstantValue() *ConstantVals {
 			L1SlipMinBps:                        0,
 			TradeAccountsSlipMinBps:             0,
 			SynthSlipMinBps:                     0,
+			RUNEPoolEnabled:                     0,   // enable/disable RUNE Pool
+			RUNEPoolCooldown:                    100, // Minimum number of blocks between last RUNEPool deposit/withdraw
 		},
 		boolValues: map[ConstantName]bool{
 			StrictBondLiquidityRatio: true,

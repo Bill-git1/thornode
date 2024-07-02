@@ -143,6 +143,8 @@ func NewInternalHandler(mgr Manager) cosmos.Handler {
 func getInternalHandlerMapping(mgr Manager) map[string]MsgHandler {
 	version := mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.134.0")):
+		return getInternalHandlerMappingV134(mgr)
 	case version.GTE(semver.MustParse("1.128.0")):
 		return getInternalHandlerMappingV128(mgr)
 	case version.GTE(semver.MustParse("1.124.0")):
@@ -154,7 +156,7 @@ func getInternalHandlerMapping(mgr Manager) map[string]MsgHandler {
 	}
 }
 
-func getInternalHandlerMappingV128(mgr Manager) map[string]MsgHandler {
+func getInternalHandlerMappingV134(mgr Manager) map[string]MsgHandler {
 	// New arch handlers
 	m := make(map[string]MsgHandler)
 	m[MsgOutboundTx{}.Type()] = NewOutboundTxHandler(mgr)
@@ -176,6 +178,8 @@ func getInternalHandlerMappingV128(mgr Manager) map[string]MsgHandler {
 	m[MsgLoanRepayment{}.Type()] = NewLoanRepaymentHandler(mgr)
 	m[MsgTradeAccountDeposit{}.Type()] = NewTradeAccountDepositHandler(mgr)
 	m[MsgTradeAccountWithdrawal{}.Type()] = NewTradeAccountWithdrawalHandler(mgr)
+	m[MsgRunePoolDeposit{}.Type()] = NewRunePoolDepositHandler(mgr)
+	m[MsgRunePoolWithdraw{}.Type()] = NewRunePoolWithdrawHandler(mgr)
 	return m
 }
 
@@ -280,6 +284,8 @@ func getMsgManageTHORNameFromMemo(memo ManageTHORNameMemo, tx ObservedTx, signer
 
 func processOneTxIn(ctx cosmos.Context, version semver.Version, keeper keeper.Keeper, tx ObservedTx, signer cosmos.AccAddress) (cosmos.Msg, error) {
 	switch {
+	case version.GTE(semver.MustParse("1.134.0")):
+		return processOneTxInV134(ctx, keeper, tx, signer)
 	case version.GTE(semver.MustParse("1.128.0")):
 		return processOneTxInV128(ctx, keeper, tx, signer)
 	case version.GTE(semver.MustParse("1.124.0")):
@@ -296,7 +302,7 @@ func processOneTxIn(ctx cosmos.Context, version semver.Version, keeper keeper.Ke
 	return nil, errBadVersion
 }
 
-func processOneTxInV128(ctx cosmos.Context, keeper keeper.Keeper, tx ObservedTx, signer cosmos.AccAddress) (cosmos.Msg, error) {
+func processOneTxInV134(ctx cosmos.Context, keeper keeper.Keeper, tx ObservedTx, signer cosmos.AccAddress) (cosmos.Msg, error) {
 	if len(tx.Tx.Coins) != 1 {
 		return nil, cosmos.ErrInvalidCoins("only send 1 coins per message")
 	}
@@ -362,6 +368,10 @@ func processOneTxInV128(ctx cosmos.Context, keeper keeper.Keeper, tx ObservedTx,
 	case TradeAccountWithdrawalMemo:
 		coin := tx.Tx.Coins[0]
 		newMsg = NewMsgTradeAccountWithdrawal(coin.Asset, coin.Amount, m.GetAddress(), signer, tx.Tx)
+	case RunePoolDepositMemo:
+		newMsg = NewMsgRunePoolDeposit(signer, tx.Tx)
+	case RunePoolWithdrawMemo:
+		newMsg = NewMsgRunePoolWithdraw(tx.Tx.FromAddress, m.GetBasisPts(), m.GetAffiliateAddress(), m.GetAffiliateBasisPoints(), signer)
 	default:
 		return nil, errInvalidMemo
 	}

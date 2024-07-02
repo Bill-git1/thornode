@@ -86,6 +86,8 @@ func setupKeeperForTest(c *C) (cosmos.Context, KVStore) {
 		ModuleName:                     {authtypes.Minter, authtypes.Burner},
 		ReserveName:                    {},
 		AsgardName:                     {},
+		TreasuryName:                   {},
+		RUNEPoolName:                   {},
 		BondName:                       {authtypes.Staking},
 	}
 

@@ -76,6 +76,8 @@ type APIClient struct {
 
 	QuoteApi *QuoteApiService
 
+	RUNEProvidersApi *RUNEProvidersApiService
+
 	SaversApi *SaversApiService
 
 	StreamingSwapApi *StreamingSwapApiService
@@ -127,6 +129,7 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 	c.PoolsApi = (*PoolsApiService)(&c.common)
 	c.QueueApi = (*QueueApiService)(&c.common)
 	c.QuoteApi = (*QuoteApiService)(&c.common)
+	c.RUNEProvidersApi = (*RUNEProvidersApiService)(&c.common)
 	c.SaversApi = (*SaversApiService)(&c.common)
 	c.StreamingSwapApi = (*StreamingSwapApiService)(&c.common)
 	c.TSSApi = (*TSSApiService)(&c.common)

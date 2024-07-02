@@ -148,6 +148,8 @@ func (k KVStore) SetNodePauseChain(ctx cosmos.Context, acc cosmos.AccAddress) {
 func (k KVStore) IsOperationalMimir(key string) bool {
 	version := k.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.134.0")):
+		return isOperationalMimirV134(key)
 	case version.GTE(semver.MustParse("1.133.0")):
 		return isOperationalMimirV133(key)
 	default:
@@ -155,10 +157,14 @@ func (k KVStore) IsOperationalMimir(key string) bool {
 	}
 }
 
-func isOperationalMimirV133(key string) bool {
+func isOperationalMimirV134(key string) bool {
 	exactMatches := []string{
 		"BurnSynths",
 		"MintSynths",
+		"TradeAccountsEnabled",
+		"RUNEPoolEnabled",
+		"EVMDisableContractWhitelist",
+		"MaxOutboundAttempts",
 	}
 	for i := range exactMatches {
 		if strings.EqualFold(key, exactMatches[i]) {

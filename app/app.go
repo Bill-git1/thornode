@@ -98,6 +98,7 @@ var (
 		thorchain.LendingName:            {},
 		thorchain.AffiliateCollectorName: {},
 		thorchain.TreasuryName:           {},
+		thorchain.RUNEPoolName:           {},
 	}
 
 	// module accounts that are allowed to receive tokens

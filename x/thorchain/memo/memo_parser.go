@@ -73,6 +73,10 @@ func (p *parser) parse() (mem Memo, err error) {
 		return p.ParseAddLiquidityMemo()
 	case TxWithdraw:
 		return p.ParseWithdrawLiquidityMemo()
+	case TxRunePoolDeposit:
+		return p.ParseRunePoolDepositMemo()
+	case TxRunePoolWithdraw:
+		return p.ParseRunePoolWithdrawMemo()
 	case TxSwap, TxLimitOrder:
 		if p.getType() == TxLimitOrder && p.version.LT(semver.MustParse("1.98.0")) {
 			return EmptyMemo, fmt.Errorf("TxType not supported: %s", p.getType().String())

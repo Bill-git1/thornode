@@ -87,6 +87,7 @@ type Keeper interface {
 	KeeperStreamingSwap
 	KeeperSwapperClout
 	KeeperTradeAccount
+	KeeperRUNEPool
 }
 
 type KeeperConfig interface {
@@ -243,6 +244,14 @@ type KeeperTradeAccount interface {
 	GetTradeUnit(ctx cosmos.Context, asset common.Asset) (TradeUnit, error)
 	SetTradeUnit(ctx cosmos.Context, unit TradeUnit)
 	GetTradeUnitIterator(ctx cosmos.Context) cosmos.Iterator
+}
+
+type KeeperRUNEPool interface {
+	GetRUNEProviderIterator(ctx cosmos.Context) cosmos.Iterator
+	GetRUNEProvider(ctx cosmos.Context, addr cosmos.AccAddress) (RUNEProvider, error)
+	GetRUNEProviderUnitsTotal(ctx cosmos.Context) (cosmos.Uint, error)
+	SetRUNEProvider(ctx cosmos.Context, rp RUNEProvider)
+	RemoveRUNEProvider(ctx cosmos.Context, rp RUNEProvider)
 }
 
 type KeeperVault interface {

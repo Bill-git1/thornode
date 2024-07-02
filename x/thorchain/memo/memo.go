@@ -44,6 +44,8 @@ const (
 	TxLoanRepayment
 	TxTradeAccountDeposit
 	TxTradeAccountWithdrawal
+	TxRunePoolDeposit
+	TxRunePoolWithdraw
 )
 
 var stringToTxTypeMap = map[string]TxType{
@@ -78,6 +80,8 @@ var stringToTxTypeMap = map[string]TxType{
 	"loan-":       TxLoanRepayment,
 	"trade+":      TxTradeAccountDeposit,
 	"trade-":      TxTradeAccountWithdrawal,
+	"pool+":       TxRunePoolDeposit,
+	"pool-":       TxRunePoolWithdraw,
 
 	// TODO remove on hard fork
 	"switch":     TxSwitch,
@@ -126,7 +130,7 @@ func StringToTxType(s string) (TxType, error) {
 
 func (tx TxType) IsInbound() bool {
 	switch tx {
-	case TxAdd, TxWithdraw, TxTradeAccountDeposit, TxSwap, TxLimitOrder, TxDonate, TxBond, TxUnbond, TxLeave, TxReserve, TxNoOp, TxTHORName, TxLoanOpen, TxLoanRepayment:
+	case TxAdd, TxWithdraw, TxTradeAccountDeposit, TxRunePoolDeposit, TxRunePoolWithdraw, TxSwap, TxLimitOrder, TxDonate, TxBond, TxUnbond, TxLeave, TxReserve, TxNoOp, TxTHORName, TxLoanOpen, TxLoanRepayment:
 		return true
 	case TxSwitch: // TODO remove on hard fork
 		return true
@@ -158,7 +162,7 @@ func (tx TxType) IsInternal() bool {
 // HasOutbound whether the txtype might trigger outbound tx
 func (tx TxType) HasOutbound() bool {
 	switch tx {
-	case TxAdd, TxBond, TxTradeAccountDeposit, TxDonate, TxReserve, TxMigrate, TxRagnarok:
+	case TxAdd, TxBond, TxTradeAccountDeposit, TxRunePoolDeposit, TxDonate, TxReserve, TxMigrate, TxRagnarok:
 		return false
 	case TxYggdrasilReturn, TxSwitch: // TODO remove on hard fork
 		return false

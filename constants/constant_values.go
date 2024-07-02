@@ -145,6 +145,8 @@ const (
 	TradeAccountsEnabled
 	EVMDisableContractWhitelist
 	OperationalVotesMin
+	RUNEPoolEnabled
+	RUNEPoolCooldown
 )
 
 // ConstantValues define methods used to get constant values

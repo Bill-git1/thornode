@@ -21,6 +21,7 @@ import "thorchain/v1/x/thorchain/types/type_thorname.proto";
 import "thorchain/v1/x/thorchain/types/type_loan.proto";
 import "thorchain/v1/x/thorchain/types/type_clout.proto";
 import "thorchain/v1/x/thorchain/types/type_trade_account.proto";
+import "thorchain/v1/x/thorchain/types/type_rune_provider.proto";
 import "gogoproto/gogo.proto";
 
 message lastChainHeight {
@@ -64,4 +65,5 @@ message GenesisState {
   repeated types.TradeUnit trade_units = 33 [(gogoproto.nullable) = false];
   repeated common.Coin outbound_fee_withheld_rune = 34 [(gogoproto.castrepeated) = "gitlab.com/thorchain/thornode/common.Coins", (gogoproto.nullable) = false];
   repeated common.Coin outbound_fee_spent_rune = 35 [(gogoproto.castrepeated) = "gitlab.com/thorchain/thornode/common.Coins", (gogoproto.nullable) = false];
+  repeated types.RUNEProvider rune_providers = 36 [(gogoproto.nullable) = false];
 }

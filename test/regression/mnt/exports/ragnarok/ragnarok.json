@@ -379,6 +379,7 @@
       ],
       "pools": null,
       "reserve_contributors": null,
+      "rune_providers": [],
       "streaming_swaps": [],
       "swap_queue_items": [],
       "swapper_clout": [],

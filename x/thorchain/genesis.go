@@ -148,6 +148,7 @@ func DefaultGenesisState() GenesisState {
 		SwapperClout:            make([]SwapperClout, 0),
 		TradeAccounts:           make([]TradeAccount, 0),
 		TradeUnits:              make([]TradeUnit, 0),
+		RuneProviders:           make([]RUNEProvider, 0),
 	}
 }
 
@@ -161,6 +162,10 @@ func initGenesis(ctx cosmos.Context, keeper keeper.Keeper, data GenesisState) []
 
 	for _, lp := range data.LiquidityProviders {
 		keeper.SetLiquidityProvider(ctx, lp)
+	}
+
+	for _, rp := range data.RuneProviders {
+		keeper.SetRUNEProvider(ctx, rp)
 	}
 
 	validators := make([]abci.ValidatorUpdate, 0, len(data.NodeAccounts))
@@ -332,6 +337,8 @@ func initGenesis(ctx cosmos.Context, keeper keeper.Keeper, data GenesisState) []
 	ctx.Logger().Info("Asgard Module", "address", asgardAddr.String())
 	treasuryAddr, _ := keeper.GetModuleAddress(TreasuryName)
 	ctx.Logger().Info("Treasury Module", "address", treasuryAddr.String())
+	runePoolAddr, _ := keeper.GetModuleAddress(RUNEPoolName)
+	ctx.Logger().Info("RUNEPool Module", "address", runePoolAddr.String())
 
 	return validators
 }
@@ -621,6 +628,15 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		clouts = append(clouts, clout)
 	}
 
+	runeProviders := make([]RUNEProvider, 0)
+	iterRUNEProviders := k.GetRUNEProviderIterator(ctx)
+	defer iterRUNEProviders.Close()
+	for ; iterRUNEProviders.Valid(); iterRUNEProviders.Next() {
+		var rp RUNEProvider
+		k.Cdc().MustUnmarshal(iterRUNEProviders.Value(), &rp)
+		runeProviders = append(runeProviders, rp)
+	}
+
 	tradeAccts := make([]TradeAccount, 0)
 	iterTradeAccts := k.GetTradeAccountIterator(ctx)
 	defer iterTradeAccts.Close()
@@ -700,5 +716,6 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		TradeAccounts:           tradeAccts,
 		TradeUnits:              tradeUnits,
 		StoreVersion:            storeVersion,
+		RuneProviders:           runeProviders,
 	}
 }

@@ -5,12 +5,14 @@ import (
 )
 
 const (
-	ModuleName  = types.ModuleName
-	ReserveName = types.ReserveName
-	AsgardName  = types.AsgardName
-	BondName    = types.BondName
-	RouterKey   = types.RouterKey
-	StoreKey    = types.StoreKey
+	ModuleName   = types.ModuleName
+	ReserveName  = types.ReserveName
+	AsgardName   = types.AsgardName
+	TreasuryName = types.TreasuryName
+	RUNEPoolName = types.RUNEPoolName
+	BondName     = types.BondName
+	RouterKey    = types.RouterKey
+	StoreKey     = types.StoreKey
 
 	ActiveVault = types.VaultStatus_ActiveVault
 
@@ -73,4 +75,5 @@ type (
 	SwapperClout             = types.SwapperClout
 	TradeAccount             = types.TradeAccount
 	TradeUnit                = types.TradeUnit
+	RUNEProvider             = types.RUNEProvider
 )

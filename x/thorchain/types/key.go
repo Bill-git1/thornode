@@ -17,6 +17,8 @@ const (
 	AffiliateCollectorName = "affiliate_collector"
 	// TreasuryName the name of the account used for treasury governance
 	TreasuryName = "treasury"
+	// RUNEPoolName the name of the account used to track RUNEPool
+	RUNEPoolName = "rune_pool"
 
 	// StoreKey to be used when creating the KVStore
 	StoreKey = ModuleName

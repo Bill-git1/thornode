@@ -41,6 +41,8 @@ const (
 	LoanRepaymentEventType        = "loan_repayment"
 	TradeAccountDepositEventType  = "trade_account_deposit"
 	TradeAccountWithdrawEventType = "trade_account_withdraw"
+	RUNEPoolDepositEventType      = "rune_pool_deposit"
+	RUNEPoolWithdrawEventType     = "rune_pool_withdraw"
 	TSSKeygenSuccess              = "tss_keygen_success"
 	TSSKeygenFailure              = "tss_keygen_failure"
 	TSSKeygenMetricEventType      = "tss_keygen"
@@ -872,7 +874,7 @@ func (m *EventLoanRepayment) Events() (cosmos.Events, error) {
 	return cosmos.Events{evt}, nil
 }
 
-// NewEventWithdraw create a new withdraw event
+// NewEventWithdraw create a new deposit event
 func NewEventTradeAccountDeposit(
 	amt cosmos.Uint,
 	asset common.Asset,
@@ -889,7 +891,7 @@ func NewEventTradeAccountDeposit(
 	}
 }
 
-// Type return the withdraw event type
+// Type return the deposit event type
 func (m *EventTradeAccountDeposit) Type() string {
 	return TradeAccountDepositEventType
 }
@@ -935,6 +937,79 @@ func (m *EventTradeAccountWithdraw) Events() (cosmos.Events, error) {
 		cosmos.NewAttribute("rune_address", m.RuneAddress.String()),
 		cosmos.NewAttribute("asset_address", m.AssetAddress.String()),
 		cosmos.NewAttribute("tx_id", m.TxID.String()))
+	return cosmos.Events{evt}, nil
+}
+
+// NewEventRUNEPoolWithdraw create a new RUNEPool withdraw event
+func NewEventRUNEPoolWithdraw(
+	runeAddress cosmos.AccAddress,
+	basisPts int64,
+	runeAmount cosmos.Uint,
+	units cosmos.Uint,
+	txID common.TxID,
+	affAddr common.Address,
+	affBps int64,
+	affAmt cosmos.Uint,
+) *EventRUNEPoolWithdraw {
+	return &EventRUNEPoolWithdraw{
+		RuneAddress:       runeAddress,
+		BasisPoints:       basisPts,
+		RuneAmount:        runeAmount,
+		Units:             units,
+		TxId:              txID,
+		AffiliateAddress:  affAddr,
+		AffiliateBasisPts: affBps,
+		AffiliateAmount:   affAmt,
+	}
+}
+
+// Type return the withdraw event type
+func (m *EventRUNEPoolWithdraw) Type() string {
+	return TradeAccountWithdrawEventType
+}
+
+// Events return the cosmos event
+func (m *EventRUNEPoolWithdraw) Events() (cosmos.Events, error) {
+	evt := cosmos.NewEvent(m.Type(),
+		cosmos.NewAttribute("rune_address", m.RuneAddress.String()),
+		cosmos.NewAttribute("basis_points", strconv.FormatInt(m.BasisPoints, 10)),
+		cosmos.NewAttribute("rune_amoumt", m.RuneAmount.String()),
+		cosmos.NewAttribute("units", m.Units.String()),
+		cosmos.NewAttribute("tx_id", m.TxId.String()),
+		cosmos.NewAttribute("affiliate_address", m.AffiliateAddress.String()),
+		cosmos.NewAttribute("affiliate_basis_points", strconv.FormatInt(m.AffiliateBasisPts, 10)),
+		cosmos.NewAttribute("affiliate_amount", m.AffiliateAmount.String()))
+	return cosmos.Events{evt}, nil
+}
+
+// NewEventRUNEPoolDeposit create a new RUNEPool deposit event
+func NewEventRUNEPoolDeposit(
+	runeAddress cosmos.AccAddress,
+	runeAmount cosmos.Uint,
+	units cosmos.Uint,
+	txID common.TxID,
+) *EventRUNEPoolDeposit {
+	return &EventRUNEPoolDeposit{
+		RuneAddress: runeAddress,
+		RuneAmount:  runeAmount,
+		Units:       units,
+		TxId:        txID,
+	}
+}
+
+// Type return the withdraw event type
+func (m *EventRUNEPoolDeposit) Type() string {
+	return TradeAccountDepositEventType
+}
+
+// Events return the cosmos event
+func (m *EventRUNEPoolDeposit) Events() (cosmos.Events, error) {
+	evt := cosmos.NewEvent(m.Type(),
+		cosmos.NewAttribute("rune_address", m.RuneAddress.String()),
+		cosmos.NewAttribute("rune_amoumt", m.RuneAmount.String()),
+		cosmos.NewAttribute("units", m.Units.String()),
+		cosmos.NewAttribute("tx_id", m.TxId.String()),
+	)
 	return cosmos.Events{evt}, nil
 }
 

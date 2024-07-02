@@ -257,6 +257,24 @@ message EventTradeAccountWithdraw {
   string tx_id = 5 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/common.TxID", (gogoproto.customname) = "TxID"];
 }
 
+message EventRUNEPoolDeposit {
+  bytes rune_address = 1 [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
+  string rune_amount = 2 [(gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Uint", (gogoproto.nullable) = false];
+  string units = 3 [(gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Uint", (gogoproto.nullable) = false];
+  string tx_id = 4 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/common.TxID"];
+}
+
+message EventRUNEPoolWithdraw {
+  bytes rune_address = 1 [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
+  int64 basis_points = 2;
+  string rune_amount = 3 [(gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Uint", (gogoproto.nullable) = false];
+  string units = 4 [(gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Uint", (gogoproto.nullable) = false];
+  string tx_id = 5 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/common.TxID"];
+  int64 affiliate_basis_pts = 6;
+  string affiliate_amount = 7 [(gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Uint", (gogoproto.nullable) = false];
+  string affiliate_address = 8 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/common.Address"];
+}
+
 message EventLoanOpen {
   string collateral_deposited = 1 [(gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Uint", (gogoproto.nullable) = false];
   common.Asset collateral_asset = 2 [(gogoproto.nullable) = false];

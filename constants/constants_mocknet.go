@@ -48,6 +48,7 @@ func init() {
 		PreferredAssetOutboundFeeMultiplier: 100,
 		TradeAccountsEnabled:                1,
 		MaxAffiliateFeeBasisPoints:          10_000,
+		RUNEPoolCooldown:                    0,
 	}
 	boolOverrides = map[ConstantName]bool{
 		StrictBondLiquidityRatio: false,
