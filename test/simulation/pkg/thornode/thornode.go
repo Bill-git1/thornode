@@ -182,6 +182,13 @@ func GetTxDetails(txid string) (openapi.TxDetailsResponse, error) {
 	return details, err
 }
 
+func GetMimirs() (map[string]int64, error) {
+	url := fmt.Sprintf("%s/thorchain/mimir", thornodeURL)
+	var mimirs map[string]int64
+	err := get(url, &mimirs)
+	return mimirs, err
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////
 // Internal
 ////////////////////////////////////////////////////////////////////////////////////////

@@ -201,9 +201,9 @@ func InitConfig(parallelism int, seed bool) *OpConfig {
 		// determine the amount to seed
 		chainSeedAmount := sdk.ZeroUint()
 		switch chain {
-		case common.BTCChain, common.ETHChain:
+		case common.BTCChain, common.ETHChain, common.LTCChain, common.BCHChain:
 			chainSeedAmount = sdk.NewUint(10 * common.One)
-		case common.LTCChain, common.BCHChain, common.BSCChain:
+		case common.BSCChain:
 			chainSeedAmount = sdk.NewUint(100 * common.One)
 		case common.GAIAChain:
 			chainSeedAmount = sdk.NewUint(1000 * common.One)
@@ -253,7 +253,7 @@ func fundUserChainAccount(master, user *User, chain common.Chain, amount sdk.Uin
 	// sign tx
 	signed, err := master.ChainClients[chain].SignTx(tx)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to sign master tx")
+		log.Fatal().Err(err).Stringer("chain", chain).Msg("failed to sign master tx")
 	}
 
 	// broadcast tx

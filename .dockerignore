@@ -5,10 +5,11 @@ README.md
 __pycache__
 bugbounty.md
 build/docker
+chain
 ci
 docs
 midgard
 semgrep
-test/regression/mnt
-test/regression/suites
-test/regression/templates
+test
+tools
+!tools/generate

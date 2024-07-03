@@ -29,13 +29,11 @@ func Execute(c *OpConfig, root *Actor, parallelism int) {
 	root.InitRoot()
 	sem := make(chan struct{}, parallelism)
 
-	// execute dag
-	log.Info().Int("actors", total).Int("parallelism", parallelism).Msg("executing dag")
-	for {
+	status := func() (ready, running, finished map[*Actor]bool) {
 		// determine all actors that are ready to execute
-		ready := map[*Actor]bool{}
-		finished := map[*Actor]bool{}
-		running := map[*Actor]bool{}
+		ready = map[*Actor]bool{}
+		finished = map[*Actor]bool{}
+		running = map[*Actor]bool{}
 		root.WalkDepthFirst(func(a *Actor) bool {
 			if a.Finished() {
 				finished[a] = true
@@ -57,6 +55,14 @@ func Execute(c *OpConfig, root *Actor, parallelism int) {
 			return true
 		})
 
+		return ready, running, finished
+	}
+
+	// execute dag
+	log.Info().Int("actors", total).Int("parallelism", parallelism).Msg("executing dag")
+	for {
+		ready, running, finished := status()
+
 		// if all actors are finished we are done
 		if len(finished) == total {
 			log.Info().Int("actors", len(finished)).Msg("simulation finished successfully")
@@ -73,7 +79,23 @@ func Execute(c *OpConfig, root *Actor, parallelism int) {
 		// sleep if no actors are ready to execute
 		if len(ready) == 0 {
 			time.Sleep(time.Second)
-			infoLog.Msg("waiting for ready actors")
+
+			// determine how many users are available to help debug deadlock
+			lockedUsers := 0
+			availableUsers := 0
+			for _, user := range c.Users {
+				if !user.IsLocked() {
+					availableUsers++
+				} else {
+					lockedUsers++
+				}
+			}
+
+			infoLog.
+				Int("available_users", availableUsers).
+				Int("locked_users", lockedUsers).
+				Msg("waiting for ready actors")
+
 			continue
 		}
 
@@ -107,6 +129,15 @@ func Execute(c *OpConfig, root *Actor, parallelism int) {
 			err = a.Execute(c)
 			if err != nil {
 				os.Stderr.Write([]byte("\n\nFailed actor logs:\n" + buf.String() + "\n\n"))
+
+				// print currently running actors
+				os.Stderr.Write([]byte("\n\nCurrently running actors:\n"))
+				running, _, _ := status()
+				for a := range running {
+					os.Stderr.Write([]byte(a.Name + "\n"))
+				}
+				os.Stderr.Write([]byte("\n\n"))
+
 				a.Log().Fatal().Err(err).Msg("actor execution failed")
 			}
 		}(a, time.Now())

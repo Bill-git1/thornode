@@ -2,6 +2,7 @@ package features
 
 import (
 	"fmt"
+	"sync/atomic"
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
@@ -21,8 +22,10 @@ func SaverEject() *Actor {
 	a := NewActor("Savers")
 
 	// test saver eject actor for btc and eth
-	a.Append(NewSaverEjectActor(common.BTCAsset))
-	a.Append(NewSaverEjectActor(common.ETHAsset))
+	pendingDeposits := &atomic.Int64{}
+	pendingDeposits.Store(2)
+	a.Children[NewSaverEjectActor(common.BTCAsset, pendingDeposits)] = true
+	a.Children[NewSaverEjectActor(common.ETHAsset, pendingDeposits)] = true
 
 	return a
 }
@@ -39,13 +42,16 @@ type SaverEjectActor struct {
 	saverAddress  common.Address
 	depositAmount cosmos.Uint
 	poolDepthBps  uint64
+
+	pendingDeposits *atomic.Int64 // ensure deposits complete before mimirs to eject
 }
 
-func NewSaverEjectActor(asset common.Asset) *Actor {
+func NewSaverEjectActor(asset common.Asset, pendingDeposits *atomic.Int64) *Actor {
 	a := &SaverEjectActor{
-		Actor:        *NewActor(fmt.Sprintf("Feature-Saver-Eject-%s", asset)),
-		asset:        asset,
-		poolDepthBps: 2000,
+		Actor:           *NewActor(fmt.Sprintf("Feature-Saver-Eject-%s", asset)),
+		asset:           asset,
+		poolDepthBps:    2000,
+		pendingDeposits: pendingDeposits,
 	}
 
 	// reset mimirs for test
@@ -160,6 +166,7 @@ func (a *SaverEjectActor) verifySaverDeposit(config *OpConfig) OpResult {
 		if saver.AssetAddress != a.saverAddress.String() {
 			continue
 		}
+		a.pendingDeposits.Add(-1) // signal the saver deposit is complete
 		return OpResult{
 			Continue: true,
 		}
@@ -183,6 +190,13 @@ func (a *SaverEjectActor) resetMimirs(config *OpConfig) OpResult {
 }
 
 func (a *SaverEjectActor) setMimirs(config *OpConfig) OpResult {
+	// wait for the saver deposits to complete
+	if a.pendingDeposits.Load() > 0 {
+		return OpResult{
+			Continue: false,
+		}
+	}
+
 	if !a.setMimir(config, "MaxSynthPerPoolDepth", 500) || !a.setMimir(config, "SaversEjectInterval", 1) {
 		return OpResult{
 			Continue: false,
@@ -200,6 +214,18 @@ func (a *SaverEjectActor) setMimir(config *OpConfig, key string, value int64) bo
 	}
 	defer config.AdminUser.Release()
 
+	// get mimir
+	mimirs, err := thornode.GetMimirs()
+	if err != nil {
+		a.Log().Error().Err(err).Msg("failed to get mimirs")
+		return false
+	}
+
+	// skip if already set
+	if mimir, ok := mimirs[key]; (ok && mimir == value) || (!ok && value == -1) {
+		return true
+	}
+
 	// set mimirs to trigger eject
 	accAddr, err := config.AdminUser.PubKey().GetThorAddress()
 	if err != nil {
@@ -213,7 +239,12 @@ func (a *SaverEjectActor) setMimir(config *OpConfig, key string, value int64) bo
 		return false
 	}
 
-	a.Log().Info().Str("txid", txid.String()).Msg("broadcasted mimir")
+	a.Log().Info().
+		Str("key", key).
+		Int64("value", value).
+		Str("txid", txid.String()).
+		Msg("broadcasted mimir")
+
 	return true
 }
 

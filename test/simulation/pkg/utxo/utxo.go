@@ -387,7 +387,7 @@ func (c *Client) buildTx(tx SimTx, sourceScript []byte) (
 ) {
 	txes, err := c.getUtxoToSpend(c.getPaymentAmount(tx))
 	if err != nil {
-		return nil, nil, fmt.Errorf("fail to get unspent UTXO")
+		return nil, nil, fmt.Errorf("fail to get unspent UTXO: %w", err)
 	}
 	redeemTx := wire.NewMsgTx(wire.TxVersion)
 	totalAmt := int64(0)

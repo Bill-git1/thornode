@@ -454,7 +454,9 @@ func (pm *PoolMgrVCUR) checkSaversUtilization(ctx cosmos.Context, mgr Manager) e
 	}
 
 	coins := common.NewCoins(common.NewCoin(synthPool.Asset.GetLayer1Asset(), cosmos.ZeroUint())) // used in tx hash
-	tx := common.NewTx(common.BlankTxID, latestLp.AssetAddress, latestLp.AssetAddress, coins, nil, TxWithdraw.String())
+	tx := common.NewTx(
+		common.BlankTxID, latestLp.AssetAddress, latestLp.AssetAddress, coins, nil, "THOR-SAVER-EJECT",
+	)
 	tx.Chain = synthPool.Asset.GetChain()
 	tx.ID, err = common.NewTxID(tx.Hash(mgr.Keeper().GetVersion(), ctx.BlockHeight()))
 	if err != nil {

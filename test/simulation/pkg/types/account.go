@@ -100,6 +100,17 @@ func (u *User) Acquire() bool {
 	}
 }
 
+// IsLocked will return true if the lock is already acquired.
+func (u *User) IsLocked() bool {
+	select {
+	case u.lock <- struct{}{}:
+		<-u.lock
+		return false
+	default:
+		return true
+	}
+}
+
 // Release will release the lock.
 func (u *User) Release() {
 	<-u.lock
