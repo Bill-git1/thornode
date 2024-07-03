@@ -1,5 +1,10 @@
 package main
 
+import (
+	"gitlab.com/thorchain/thornode/common"
+	"gitlab.com/thorchain/thornode/common/cosmos"
+)
+
 ////////////////////////////////////////////////////////////////////////////////////////
 // OrderedMap
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -42,4 +47,24 @@ func (om *OrderedMap) Delete(key string) {
 
 func (om *OrderedMap) Keys() []string {
 	return om.keys
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+// Midgard
+////////////////////////////////////////////////////////////////////////////////////////
+
+// MidgardActionsResponse contains a subset of fields we use from Midgard actions.
+type MidgardActionsResponse struct {
+	Actions []struct {
+		Type     string `json:"type"`
+		Metadata struct {
+			Swap struct {
+				LiquidityFee string `json:"liquidityFee"`
+				NetworkFees  []struct {
+					Asset  common.Asset `json:"asset"`
+					Amount cosmos.Uint  `json:"amount"`
+				}
+			} `json:"swap"`
+		} `json:"metadata"`
+	} `json:"actions"`
 }

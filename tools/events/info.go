@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog/log"
+
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	openapi "gitlab.com/thorchain/thornode/openapi/gen"
 	"gitlab.com/thorchain/thornode/tools/thorscan"
@@ -31,7 +32,7 @@ func ScanInfo(block *thorscan.BlockResponse) {
 func SetMimir(block *thorscan.BlockResponse) {
 	for _, tx := range block.Txs {
 		for _, event := range tx.Result.Events {
-			if event["type"] != "set_mimir" {
+			if event["type"] != types.SetMimirEventType {
 				continue
 			}
 
@@ -66,7 +67,7 @@ func SetMimir(block *thorscan.BlockResponse) {
 func SetNodeMimir(block *thorscan.BlockResponse) {
 	for _, tx := range block.Txs {
 		for _, event := range tx.Result.Events {
-			if event["type"] == "set_node_mimir" {
+			if event["type"] == types.SetNodeMimirEventType {
 				msg := formatNodeMimirMessage(block.Header.Height, event["address"], event["key"], event["value"])
 				Notify(config.Notifications.Info, "", []string{msg}, false, nil)
 			}
@@ -86,7 +87,7 @@ func KeygenFailure(block *thorscan.BlockResponse) {
 		}
 
 		for _, event := range tx.Result.Events {
-			if event["type"] != "tss_keygen_failure" {
+			if event["type"] != types.TSSKeygenFailure {
 				continue
 			}
 
@@ -94,7 +95,7 @@ func KeygenFailure(block *thorscan.BlockResponse) {
 			nodes := []openapi.Node{}
 			err := ThornodeCachedRetryGet("thorchain/nodes", block.Header.Height, &nodes)
 			if err != nil {
-				log.Fatal().Err(err).Msg("failed to get nodes")
+				log.Panic().Err(err).Msg("failed to get nodes")
 			}
 
 			// gather pubkey and operator mappings
@@ -130,7 +131,7 @@ func KeygenFailure(block *thorscan.BlockResponse) {
 				}
 			}
 			if !found {
-				log.Fatal().Msg("failed to find tsspool message for keygen failure event")
+				log.Panic().Msg("failed to find tsspool message for keygen failure event")
 			}
 
 			// gather all members
@@ -198,7 +199,7 @@ func Churn(block *thorscan.BlockResponse) {
 	info := ChurnInfo{}
 	err := Load("churn", &info)
 	if err != nil {
-		log.Warn().Err(err).Msg("failed to load churn state")
+		log.Debug().Err(err).Msg("failed to load churn state")
 	}
 
 	// track keyshare backups
@@ -232,35 +233,35 @@ func Churn(block *thorscan.BlockResponse) {
 	if updated {
 		err = Store("churn", info)
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to save churn state")
+			log.Panic().Err(err).Msg("failed to save churn state")
 		}
 	}
 
 	for _, tx := range block.Txs {
 		for _, event := range tx.Result.Events {
 			switch event["type"] {
-			case "tss_keygen", "ActiveVault":
+			case types.TSSKeygenMetricEventType, thorchain.EventTypeActiveVault:
 			default:
 				continue
 			}
 
 			// check for keygen started
-			if info.State == ChurnStateComplete && event["type"] == "tss_keygen" {
+			if info.State == ChurnStateComplete && event["type"] == types.TSSKeygenMetricEventType {
 				info.State = ChurnStateKeygen
 				err = Store("churn", info)
 				if err != nil {
-					log.Fatal().Err(err).Msg("failed to save churn state")
+					log.Panic().Err(err).Msg("failed to save churn state")
 				}
 				title := fmt.Sprintf("[%d] Keygen Started", block.Header.Height)
 				Notify(config.Notifications.Info, title, nil, false, nil)
 			}
 
 			// check for active vault (all keygens complete)
-			if info.State == ChurnStateKeygen && event["type"] == "ActiveVault" {
+			if info.State == ChurnStateKeygen && event["type"] == thorchain.EventTypeActiveVault {
 				info.State = ChurnStateMigrating
 				err = Store("churn", info)
 				if err != nil {
-					log.Fatal().Err(err).Msg("failed to save churn state")
+					log.Panic().Err(err).Msg("failed to save churn state")
 				}
 				notifyChurnStarted(block.Header.Height, info.KeyshareBackups)
 			}
@@ -272,7 +273,7 @@ func Churn(block *thorscan.BlockResponse) {
 		network := openapi.NetworkResponse{}
 		err = ThornodeCachedRetryGet("thorchain/network", block.Header.Height, &network)
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get network")
+			log.Panic().Err(err).Msg("failed to get network")
 		}
 
 		if !network.VaultsMigrating {
@@ -282,7 +283,7 @@ func Churn(block *thorscan.BlockResponse) {
 
 			err = Store("churn", info)
 			if err != nil {
-				log.Fatal().Err(err).Msg("failed to save churn state")
+				log.Panic().Err(err).Msg("failed to save churn state")
 			}
 			title := fmt.Sprintf("[%d] Churn Complete", block.Header.Height)
 			Notify(config.Notifications.Info, title, nil, false, nil)
@@ -296,11 +297,11 @@ func notifyChurnStarted(height int64, keyshareBackups map[string]map[string]bool
 	newNodes := []openapi.Node{}
 	err := ThornodeCachedRetryGet("thorchain/nodes", height-1, &oldNodes)
 	if err != nil {
-		log.Fatal().Err(err).Int64("height", height-1).Msg("failed to get old nodes")
+		log.Panic().Err(err).Int64("height", height-1).Msg("failed to get old nodes")
 	}
 	err = ThornodeCachedRetryGet("thorchain/nodes", height, &newNodes)
 	if err != nil {
-		log.Fatal().Err(err).Int64("height", height).Msg("failed to get new nodes")
+		log.Panic().Err(err).Int64("height", height).Msg("failed to get new nodes")
 	}
 
 	// determine the nodes that were removed
@@ -380,7 +381,7 @@ func notifyChurnStarted(height int64, keyshareBackups map[string]map[string]bool
 	vaults := []openapi.Vault{}
 	err = ThornodeCachedRetryGet("thorchain/vaults/asgard", height, &vaults)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to get vaults")
+		log.Panic().Err(err).Msg("failed to get vaults")
 	}
 	for _, vault := range vaults {
 		if vault.Status != types.VaultStatus_ActiveVault.String() {
@@ -433,7 +434,7 @@ func formatMimirMessage(height int64, source, key, value string) string {
 	mimirs := make(map[string]int64)
 	err := ThornodeCachedRetryGet("thorchain/mimir", height-1, &mimirs)
 	if err != nil {
-		log.Fatal().Int64("height", height-1).Err(err).Msg("failed to get mimirs")
+		log.Panic().Int64("height", height-1).Err(err).Msg("failed to get mimirs")
 	}
 
 	if previous, ok := mimirs[key]; ok {
@@ -446,14 +447,14 @@ func formatNodeMimirMessage(height int64, node, key, value string) string {
 	// convert value to int64
 	valueInt, err := strconv.ParseInt(value, 10, 64)
 	if err != nil {
-		log.Fatal().Err(err).Str("value", value).Msg("failed to parse value")
+		log.Panic().Err(err).Str("value", value).Msg("failed to parse value")
 	}
 
 	// get all active nodes at current height
 	nodes := []openapi.Node{}
 	err = ThornodeCachedRetryGet("thorchain/nodes", height, &nodes)
 	if err != nil {
-		log.Fatal().Int64("height", height).Err(err).Msg("failed to get active nodes")
+		log.Panic().Int64("height", height).Err(err).Msg("failed to get active nodes")
 	}
 	activeNodes := make(map[string]bool)
 	for _, node := range nodes {
@@ -466,7 +467,7 @@ func formatNodeMimirMessage(height int64, node, key, value string) string {
 	mimirs := openapi.MimirNodesResponse{}
 	err = ThornodeCachedRetryGet("thorchain/mimir/nodes_all", height-1, &mimirs)
 	if err != nil {
-		log.Fatal().Int64("height", height-1).Err(err).Msg("failed to get node mimirs")
+		log.Panic().Int64("height", height-1).Err(err).Msg("failed to get node mimirs")
 	}
 
 	var previous *int64

@@ -66,6 +66,27 @@ services:
       - cli:/root
       - "./cli/:/cli"
 
+  # ------------------------------ events ------------------------------
+
+  events:
+    build:
+      context: ../..
+      dockerfile: ./tools/events/Dockerfile
+      args:
+        TAG: mocknet
+    environment:
+      CONSOLE: 1
+      ENDPOINTS_THORNODE: http://thornode:1317
+      ENDPOINTS_MIDGARD: http://midgard:8080
+      NETWORK: mocknet
+      SCAN_START: 1
+      SCAN_STOP: -1
+      # output everything
+      THRESHOLDS_USD_VALUE: 0
+      THRESHOLDS_RUNE_VALUE: 0
+      THRESHOLDS_DELTA_USD_VALUE: 0
+      THRESHOLDS_DELTA_PERCENT: 0
+
   # ------------------------------ thornode ------------------------------
 
   thornode: &thornode

@@ -209,6 +209,9 @@ build-test-simulation:
 		-f ci/Dockerfile.simtest \
 		--build-arg COMMIT=$(COMMIT) \
 
+test-simulation-events:
+	@docker compose -f build/docker/docker-compose.yml run --rm events
+
 # internal target used in docker build
 _build-test-simulation:
 	@cd test/simulation && \
@@ -228,7 +231,8 @@ run-mocknet:
 		BCH_MASTER_ADDR="qpxh73huzlhjfzcccr03zkpd9nd3wsasegmrreet72" \
 		DOGE_MASTER_ADDR="mnaioCtEGdw6bd6rWJ13Mbre1kN5rPa2Mo" \
 		LTC_MASTER_ADDR="rltc1qf4l5dlqhaujgkxxqmug4stfvmvt58vx2fc03xm" \
-		docker compose -f build/docker/docker-compose.yml --profile mocknet up -d
+		docker compose -f build/docker/docker-compose.yml \
+		--profile mocknet --profile midgard up -d
 
 stop-mocknet:
 	@docker compose -f build/docker/docker-compose.yml --profile mocknet --profile midgard down -v
@@ -321,3 +325,13 @@ thorscan-gitlab-push:
 	@docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
 	@docker push registry.gitlab.com/thorchain/thornode:thorscan-${GITREF}
 	@docker push registry.gitlab.com/thorchain/thornode:thorscan
+
+events-build:
+	@docker build . -f tools/events/Dockerfile \
+		-t registry.gitlab.com/thorchain/thornode:events-${GITREF} \
+		-t registry.gitlab.com/thorchain/thornode:events
+
+events-gitlab-push:
+	@docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
+	@docker push registry.gitlab.com/thorchain/thornode:events-${GITREF}
+	@docker push registry.gitlab.com/thorchain/thornode:events

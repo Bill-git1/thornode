@@ -14,6 +14,29 @@ import (
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////
+// Regexes
+////////////////////////////////////////////////////////////////////////////////////////
+
+var (
+	reMemoMigration = regexp.MustCompile(`MIGRATE:(\d+)`)
+	reMemoRagnarok  = regexp.MustCompile(`RAGNAROK:(\d+)`)
+	reMemoRefund    = regexp.MustCompile(`REFUND:(.+)`)
+)
+
+////////////////////////////////////////////////////////////////////////////////////////
+// Type Conversions
+////////////////////////////////////////////////////////////////////////////////////////
+
+func CoinToCommon(coin openapi.Coin) common.Coin {
+	amount := cosmos.NewUintFromString(coin.Amount)
+	asset, err := common.NewAsset(coin.Asset)
+	if err != nil {
+		log.Panic().Err(err).Str("asset", coin.Asset).Msg("failed to parse coin asset")
+	}
+	return common.NewCoin(asset, amount)
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
 // Format
 ////////////////////////////////////////////////////////////////////////////////////////
 
@@ -33,10 +56,26 @@ func StripMarkdownLinks(input string) string {
 	return reStripMarkdownLinks.ReplaceAllString(input, "$1")
 }
 
-func FormatLocale[T int | uint | int64 | uint64](n T) string {
-	s := fmt.Sprintf("%d", n)
+func FormatLocale[T int | uint | int64 | uint64 | float64](n T) string {
+	negative := false
+	if n < 0 {
+		negative = true
+		n = -n
+	}
+
+	// extract decimals from float
+	var decimals string
+	if x, ok := any(n).(float64); ok {
+		n = T(int64(x))
+		decimals = fmt.Sprintf("%.8f", x)[len(fmt.Sprintf("%v", n)):]
+	}
+
+	s := fmt.Sprintf("%v", n)
 	if len(s) <= 3 {
-		return s
+		if negative {
+			return "-" + s + decimals
+		}
+		return s + decimals
 	}
 
 	var result strings.Builder
@@ -55,11 +94,31 @@ func FormatLocale[T int | uint | int64 | uint64](n T) string {
 		}
 	}
 
+	result.WriteString(decimals)
+
+	if negative {
+		return "-" + result.String()
+	}
 	return result.String()
 }
 
-func Moneybags(usdValue int) string {
-	count := usdValue / config.Styles.USDPerMoneyBag
+func FormatUSD(value float64) string {
+	negative := false
+	if value < 0 {
+		negative = true
+		value = -value
+	}
+	integerPart := int(value)
+	decimalPart := int((value - float64(integerPart)) * 100)
+	str := fmt.Sprintf("$%s.%02d", FormatLocale(integerPart), decimalPart)
+	if negative {
+		str = "-" + str
+	}
+	return str
+}
+
+func Moneybags(usdValue uint64) string {
+	count := int(usdValue / config.Styles.USDPerMoneyBag)
 	return strings.Repeat(EmojiMoneybag, count)
 }
 
@@ -68,16 +127,20 @@ func Moneybags(usdValue int) string {
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func USDValue(height int64, coin common.Coin) float64 {
+	if coin.Asset.Equals(common.TOR) {
+		return float64(coin.Amount.Uint64()) / common.One
+	}
+
 	if coin.Asset.IsRune() {
 		network := openapi.NetworkResponse{}
 		err := ThornodeCachedRetryGet("thorchain/network", height, &network)
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get network")
+			log.Panic().Err(err).Msg("failed to get network")
 		}
 
 		price, err := strconv.ParseFloat(network.RunePriceInTor, 64)
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to parse network rune price")
+			log.Panic().Err(err).Msg("failed to parse network rune price")
 		}
 		return float64(coin.Amount.Uint64()) / common.One * price / common.One
 	}
@@ -86,20 +149,23 @@ func USDValue(height int64, coin common.Coin) float64 {
 	pools := []openapi.Pool{}
 	err := ThornodeCachedRetryGet("thorchain/pools", height, &pools)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to get pools")
+		log.Panic().Err(err).Msg("failed to get pools")
 	}
 
 	// find pool and convert value
+	asset := coin.Asset.GetLayer1Asset()
+	if asset.IsDerivedAsset() {
+		asset.Chain = common.Chain(asset.Symbol)
+	}
 	for _, pool := range pools {
-		if pool.Asset != coin.Asset.GetLayer1Asset().String() {
+		if pool.Asset != asset.GetLayer1Asset().String() {
 			continue
 		}
 		price := cosmos.NewUintFromString(pool.AssetTorPrice)
 		return float64(coin.Amount.Uint64()) / common.One * float64(price.Uint64()) / common.One
 	}
 
-	// should be unreachable
-	log.Fatal().Str("asset", coin.Asset.String()).Msg("failed to find pool")
+	log.Error().Str("asset", asset.String()).Msg("failed to find pool")
 	return 0
 }
 
@@ -129,12 +195,10 @@ func ExternalUSDValue(coin common.Coin) float64 {
 		return 0
 	}
 
-	return float64(coin.Amount.Uint64()) / common.One * price.USD / common.One
+	return float64(coin.Amount.Uint64()) * price.USD / common.One
 }
 
 func USDValueString(height int64, coin common.Coin) string {
 	value := USDValue(height, coin)
-	integerPart := int(value)
-	decimalPart := int((value - float64(integerPart)) * 100)
-	return fmt.Sprintf("$%s.%02d", FormatLocale(integerPart), decimalPart)
+	return FormatUSD(value)
 }

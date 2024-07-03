@@ -92,6 +92,7 @@ func main() {
 	// initialize
 	InitCache()
 	InitNetwork()
+	thorscan.APIEndpoint = config.Endpoints.Thornode
 
 	// load the last scanned height from storage
 	height := -1
@@ -103,13 +104,19 @@ func main() {
 		height++ // start from the next block
 	}
 
+	// override with config
+	if config.Scan.Start != 0 {
+		height = config.Scan.Start
+		log.Info().Int("height", height).Msg("overriding start height")
+	}
+
 	// if in console mode set log level to error
 	if config.Console {
 		log.Info().Msg("console mode enabled")
 		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 	}
 
-	for block := range thorscan.Scan(height, 0) {
+	for block := range thorscan.Scan(height, config.Scan.Stop) {
 		ScanBlock(block)
 
 		err = Store("height", block.Header.Height)

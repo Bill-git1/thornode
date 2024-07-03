@@ -24,7 +24,7 @@ func RetryGet(url string, result interface{}) error {
 
 		// check the status code
 		if res.StatusCode != http.StatusOK {
-			return fmt.Errorf("status code %d", res.StatusCode)
+			return fmt.Errorf("%s: status code %d", url, res.StatusCode)
 		}
 
 		// populate the result
@@ -43,7 +43,7 @@ func InitCache() {
 	var err error
 	cache, err = lru.New(config.Endpoints.CacheSize)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to initialize cache")
+		log.Panic().Err(err).Msg("failed to initialize cache")
 	}
 }
 
@@ -61,7 +61,7 @@ func ThornodeCachedRetryGet(path string, height int64, result interface{}) error
 		var bytes []byte
 		bytes, ok = val.([]byte)
 		if !ok {
-			log.Fatal().Msg("unreachable: failed to cast cache value to []byte")
+			log.Panic().Msg("unreachable: failed to cast cache value to []byte")
 		}
 		return json.Unmarshal(bytes, result)
 	}
@@ -105,7 +105,7 @@ func ThornodeCachedRetryGet(path string, height int64, result interface{}) error
 		var bytes []byte
 		bytes, ok = val.([]byte)
 		if !ok {
-			log.Fatal().Msg("unreachable: failed to cast cache value to []byte")
+			log.Panic().Msg("unreachable: failed to cast cache value to []byte")
 		}
 		return json.Unmarshal(bytes, result)
 	}

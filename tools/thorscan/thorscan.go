@@ -54,32 +54,11 @@ var httpClient *http.Client
 // Helpers
 // -------------------------------------------------------------------------------------
 
-func height() (int64, error) {
-	res, err := httpClient.Get(RPCEndpoint + "/status")
-	if err != nil {
-		return 0, err
-	}
-
-	// decode response
-	var statusResp struct {
-		Result struct {
-			SyncInfo struct {
-				LatestBlockHeight string `json:"latest_block_height"`
-			} `json:"sync_info"`
-		} `json:"result"`
-	}
-	err = json.NewDecoder(res.Body).Decode(&statusResp)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to decode status response")
-	}
-
-	res.Body.Close()
-
-	return strconv.ParseInt(statusResp.Result.SyncInfo.LatestBlockHeight, 10, 64)
-}
-
 func getBlock(height int64) (*BlockResponse, error) {
-	url := APIEndpoint + "/thorchain/block?height=" + strconv.FormatInt(height, 10)
+	url := APIEndpoint + "/thorchain/block"
+	if height > 0 {
+		url += "?height=" + strconv.FormatInt(height, 10)
+	}
 
 	// build request
 	req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -132,7 +111,6 @@ func getBlock(height int64) (*BlockResponse, error) {
 
 var (
 	Parallelism = 4
-	RPCEndpoint = "https://rpc-v1.ninerealms.com"
 	APIEndpoint = "https://thornode-v1.ninerealms.com"
 
 	encodingConfig params.EncodingConfig
@@ -145,10 +123,6 @@ func init() {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 
 	// set config from env
-	if e := os.Getenv(EnvRPCEndpoint); e != "" {
-		log.Info().Str("endpoint", e).Msg("setting rpc endpoint")
-		RPCEndpoint = e
-	}
 	if e := os.Getenv(EnvAPIEndpoint); e != "" {
 		log.Info().Str("endpoint", e).Msg("setting api endpoint")
 		APIEndpoint = e
@@ -231,17 +205,17 @@ type BlockResponse struct {
 func Scan(startHeight, stopHeight int) <-chan *BlockResponse {
 	// get current height if start was not provided
 	if startHeight <= 0 || stopHeight < 0 {
-		height, err := height()
+		block, err := getBlock(-1)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get current height")
 		}
 
 		// set start height
 		if startHeight <= 0 {
-			startHeight = int(height) + startHeight
+			startHeight = int(block.Header.Height) + startHeight
 		}
 		if stopHeight < 0 { // zero height means tail indefinitely
-			stopHeight = int(height) + stopHeight
+			stopHeight = int(block.Header.Height) + stopHeight
 		}
 	}
 

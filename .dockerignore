@@ -12,4 +12,6 @@ midgard
 semgrep
 test
 tools
+!tools/events
 !tools/generate
+!tools/thorscan

@@ -12,10 +12,12 @@ import (
 ////////////////////////////////////////////////////////////////////////////////////////
 
 const (
-	EmojiMoneybag       = ":moneybag:"
-	EmojiMoneyWithWings = ":money_with_wings:"
-	EmojiDollar         = ":dollar:"
-	EmojiWhiteCheckMark = ":white_check_mark:"
+	EmojiMoneybag         = ":moneybag:"
+	EmojiMoneyWithWings   = ":money_with_wings:"
+	EmojiDollar           = ":dollar:"
+	EmojiWhiteCheckMark   = ":white_check_mark:"
+	EmojiSmallRedTriangle = ":small_red_triangle:"
+	EmojiRotatingLight    = ":rotating_light:"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -44,6 +46,15 @@ type Config struct {
 
 	// Network is the network to user for prefixes.
 	Network string `mapstructure:"network"`
+
+	// Scan contains overrides for the heights to scan.
+	Scan struct {
+		// Start is the block height to start scanning from.
+		Start int `mapstructure:"start"`
+
+		// Stop is the block height to stop scanning at.
+		Stop int `mapstructure:"stop"`
+	} `mapstructure:"scan"`
 
 	// Endpoints contain URLs to services that are used in block scanning.
 	Endpoints struct {
@@ -83,15 +94,21 @@ type Config struct {
 		USDValue  uint64 `mapstructure:"usd_value"`
 		RuneValue uint64 `mapstructure:"rune_value"`
 
+		// Delta contains thresholds for USD value and percent change. The alert will fire
+		// if both thresholds are met.
+		Delta struct {
+			USDValue uint64 `mapstructure:"usd_value"`
+			Percent  uint64 `mapstructure:"percent"`
+		} `mapstructure:"delta"`
+
 		Security struct {
-			USDValue    uint64 `mapstructure:"usd_value"`
-			ErrataCount uint64 `mapstructure:"errata_count"`
+			USDValue uint64 `mapstructure:"usd_value"`
 		} `mapstructure:"security"`
 	} `mapstructure:"thresholds"`
 
 	// Styles contain various styling for alerts.
 	Styles struct {
-		USDPerMoneyBag int `mapstructure:"usd_per_money_bag"`
+		USDPerMoneyBag uint64 `mapstructure:"usd_per_money_bag"`
 	} `mapstructure:"styles"`
 
 	// LabeledAddresses is a map of addresses to labels.
@@ -127,6 +144,8 @@ func init() {
 	// thresholds
 	config.Thresholds.USDValue = 100_000
 	config.Thresholds.RuneValue = 1_000_000
+	config.Thresholds.Delta.USDValue = 50_000
+	config.Thresholds.Delta.Percent = 5
 	config.Thresholds.Security.USDValue = 3_000_000
 
 	// styles
@@ -163,6 +182,6 @@ func init() {
 	viper.AutomaticEnv()
 	viper.AllowEmptyEnv(true)
 	if err := viper.Unmarshal(&config); err != nil {
-		log.Fatal().Err(err).Msg("failed to unmarshal config")
+		log.Panic().Err(err).Msg("failed to unmarshal config")
 	}
 }

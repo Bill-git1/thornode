@@ -25,30 +25,36 @@ func Notify(w Webhooks, title string, lines []string, tag bool, fields *OrderedM
 	}
 
 	// send slack
-	err := Retry(
-		config.MaxRetries,
-		func() error { return slack(w.Slack, title, lines, tag, fields) },
-	)
-	if err != nil {
-		log.Fatal().Err(err).Msg("unable to send slack notification")
+	if w.Slack != "" {
+		err := Retry(
+			config.MaxRetries,
+			func() error { return slack(w.Slack, title, lines, tag, fields) },
+		)
+		if err != nil {
+			log.Panic().Err(err).Msg("unable to send slack notification")
+		}
 	}
 
 	// send discord
-	err = Retry(
-		config.MaxRetries,
-		func() error { return discord(w.Discord, title, lines, tag, fields) },
-	)
-	if err != nil {
-		log.Fatal().Err(err).Msg("unable to send discord notification")
+	if w.Discord != "" {
+		err := Retry(
+			config.MaxRetries,
+			func() error { return discord(w.Discord, title, lines, tag, fields) },
+		)
+		if err != nil {
+			log.Panic().Err(err).Msg("unable to send discord notification")
+		}
 	}
 
 	// send pagerduty
-	err = Retry(
-		config.MaxRetries,
-		func() error { return pagerduty(w.PagerDuty, title, lines, fields) },
-	)
-	if err != nil {
-		log.Fatal().Err(err).Msg("unable to send pagerduty notification")
+	if w.PagerDuty != "" {
+		err := Retry(
+			config.MaxRetries,
+			func() error { return pagerduty(w.PagerDuty, title, lines, fields) },
+		)
+		if err != nil {
+			log.Panic().Err(err).Msg("unable to send pagerduty notification")
+		}
 	}
 }
 
@@ -201,6 +207,14 @@ func console(title string, lines []string, fields *OrderedMap) {
 		// strip markdown line formatting
 		line = StripMarkdownLinks(line)
 
+		// replace emojis
+		line = strings.ReplaceAll(line, EmojiMoneybag, "💰")
+		line = strings.ReplaceAll(line, EmojiMoneyWithWings, "💸")
+		line = strings.ReplaceAll(line, EmojiDollar, "💵")
+		line = strings.ReplaceAll(line, EmojiWhiteCheckMark, "✅")
+		line = strings.ReplaceAll(line, EmojiSmallRedTriangle, "🔺")
+		line = strings.ReplaceAll(line, EmojiRotatingLight, "🚨")
+
 		// handle ansi formatting
 		for {
 			newLine := strings.Replace(line, "**", boldStart, 1)
@@ -214,12 +228,6 @@ func console(title string, lines []string, fields *OrderedMap) {
 			}
 			line = newLine
 		}
-
-		// replace emojis
-		line = strings.ReplaceAll(line, EmojiMoneybag, "💰")
-		line = strings.ReplaceAll(line, EmojiMoneyWithWings, "💸")
-		line = strings.ReplaceAll(line, EmojiDollar, "💵")
-		line = strings.ReplaceAll(line, EmojiWhiteCheckMark, "✅")
 
 		fmt.Println(line)
 	}

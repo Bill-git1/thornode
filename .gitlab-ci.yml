@@ -180,6 +180,21 @@ build-thorscan:
     - make thorscan-build
     - make thorscan-gitlab-push
 
+build-events:
+  rules:
+    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != "thorchain/thornode"
+      when: never
+    - if: $CI_COMMIT_BRANCH == "develop"
+      when: always
+  stage: build
+  image: docker:20.10.12
+  services:
+    - docker:20.10.12-dind
+  script:
+    - apk -U add make
+    - make events-build
+    - make events-gitlab-push
+
 test-simulation:
   rules: *rules
   stage: long-test
@@ -203,6 +218,7 @@ test-simulation:
   script:
     - make test-simulation
   after_script:
+    - make test-simulation-events
     - mkdir logs
     - docker ps -a >./logs/ps.log 2>&1
     - |

@@ -6,6 +6,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"gitlab.com/thorchain/thornode/tools/thorscan"
+	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -26,7 +27,7 @@ func SecurityEvents(block *thorscan.BlockResponse) {
 	// transaction security events
 	for _, tx := range block.Txs {
 		for _, event := range tx.Result.Events {
-			if event["type"] != "security" {
+			if event["type"] != types.SecurityEventType {
 				continue
 			}
 
@@ -49,7 +50,7 @@ func SecurityEvents(block *thorscan.BlockResponse) {
 
 	// block security events
 	for _, event := range block.EndBlockEvents {
-		if event["type"] != "security" {
+		if event["type"] != types.SecurityEventType {
 			continue
 		}
 
@@ -109,4 +110,23 @@ func FailedTransactions(block *thorscan.BlockResponse) {
 // ErrataTransactions
 ////////////////////////////////////////////////////////////////////////////////////////
 
-func ErrataTransactions(block *thorscan.BlockResponse) {}
+func ErrataTransactions(block *thorscan.BlockResponse) {
+	for _, tx := range block.Txs {
+		for _, event := range tx.Result.Events {
+			if event["type"] != types.ErrataEventType {
+				continue
+			}
+
+			// build the notification
+			title := fmt.Sprintf("`[%d]` Errata", block.Header.Height)
+			fields := NewOrderedMap()
+			fields.Set(
+				"Links",
+				fmt.Sprintf("[Details](%s/thorchain/tx/details/%s)", config.Links.Thornode, event["tx_id"]),
+			)
+
+			// notify errata transaction
+			Notify(config.Notifications.Security, title, nil, false, fields)
+		}
+	}
+}
