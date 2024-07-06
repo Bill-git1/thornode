@@ -1,10 +1,5 @@
 package types
 
-import (
-	"errors"
-	"math"
-)
-
 const (
 	// SuperMajorityFactor - super majority 2/3
 	SuperMajorityFactor = 3
@@ -58,13 +53,4 @@ func HasMinority(signers, total int) bool {
 	}
 
 	return signers >= min
-}
-
-// GetThreshold calculate threshold
-func GetThreshold(value int) (int, error) {
-	if value < 0 {
-		return 0, errors.New("negative input")
-	}
-	threshold := int(math.Ceil(float64(value) * 2.0 / 3.0))
-	return threshold, nil
 }

@@ -213,11 +213,6 @@ func (k KVStore) getSortedVaultSecurity(ctx cosmos.Context, vaults Vaults, signi
 		return vaultSecurity[i].Diff.LT(vaultSecurity[j].Diff)
 	})
 
-	final := make(Vaults, len(vaultSecurity))
-	for i, v := range vaultSecurity {
-		final[i] = v.Vault
-	}
-
 	return vaultSecurity
 }
 

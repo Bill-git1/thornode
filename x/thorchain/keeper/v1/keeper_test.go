@@ -36,11 +36,6 @@ func FundModule(c *C, ctx cosmos.Context, k KVStore, name string, amt uint64) {
 	c.Assert(err, IsNil)
 }
 
-func FundAccount(c *C, ctx cosmos.Context, k KVStore, addr cosmos.AccAddress, amt uint64) {
-	coin := common.NewCoin(common.RuneNative, cosmos.NewUint(amt*common.One))
-	c.Assert(k.MintAndSendToAccount(ctx, addr, coin), IsNil)
-}
-
 // create a codec used only for testing
 func makeTestCodec() *codec.LegacyAmino {
 	cdc := codec.NewLegacyAmino()

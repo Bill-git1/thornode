@@ -7,13 +7,6 @@ type DummyFetcher struct {
 	Err error
 }
 
-func NewDummyFetcher(tx types.TxIn, err error) DummyFetcher {
-	return DummyFetcher{
-		Tx:  tx,
-		Err: err,
-	}
-}
-
 func (d DummyFetcher) FetchMemPool(height int64) (types.TxIn, error) {
 	return d.Tx, d.Err
 }

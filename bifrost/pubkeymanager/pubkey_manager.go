@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -45,7 +44,6 @@ type pubKeyInfo struct {
 
 // PubKeyManager manager an always up to date pubkeys , which implement PubKeyValidator interface
 type PubKeyManager struct {
-	cdc        *codec.LegacyAmino
 	bridge     thorclient.ThorchainBridge
 	pubkeys    []pubKeyInfo
 	rwMutex    *sync.RWMutex
@@ -59,7 +57,6 @@ type PubKeyManager struct {
 // NewPubKeyManager create a new instance of PubKeyManager
 func NewPubKeyManager(bridge thorclient.ThorchainBridge, m *metrics.Metrics) (*PubKeyManager, error) {
 	return &PubKeyManager{
-		cdc:        thorclient.MakeLegacyCodec(),
 		logger:     log.With().Str("module", "public_key_mgr").Logger(),
 		bridge:     bridge,
 		errCounter: m.GetCounterVec(metrics.PubKeyManagerError),

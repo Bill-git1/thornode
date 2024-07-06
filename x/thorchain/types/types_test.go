@@ -66,23 +66,6 @@ func (TypesSuite) TestHasMinority(c *C) {
 	c.Check(HasMinority(100000, 3000000), Equals, false)
 }
 
-func (TypesSuite) TestGetThreshold(c *C) {
-	_, err := GetThreshold(-2)
-	c.Assert(err, NotNil)
-	output, err := GetThreshold(4)
-	c.Assert(err, IsNil)
-	c.Assert(output, Equals, 3)
-	output, err = GetThreshold(9)
-	c.Assert(err, IsNil)
-	c.Assert(output, Equals, 6)
-	output, err = GetThreshold(10)
-	c.Assert(err, IsNil)
-	c.Assert(output, Equals, 7)
-	output, err = GetThreshold(99)
-	c.Assert(err, IsNil)
-	c.Assert(output, Equals, 66)
-}
-
 func EnsureMsgBasicCorrect(m cosmos.Msg, c *C) {
 	signers := m.GetSigners()
 	c.Check(signers, NotNil)

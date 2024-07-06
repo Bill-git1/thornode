@@ -6,20 +6,11 @@ import (
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
-	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 )
 
 type HandlerManageTHORNameSuite struct{}
 
 var _ = Suite(&HandlerManageTHORNameSuite{})
-
-type KeeperManageTHORNameTest struct {
-	keeper.Keeper
-}
-
-func NewKeeperManageTHORNameTest(k keeper.Keeper) KeeperManageTHORNameTest {
-	return KeeperManageTHORNameTest{Keeper: k}
-}
 
 func (s *HandlerManageTHORNameSuite) TestValidator(c *C) {
 	ctx, mgr := setupManagerForTest(c)

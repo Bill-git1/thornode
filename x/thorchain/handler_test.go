@@ -55,7 +55,6 @@ func FundAccount(c *C, ctx cosmos.Context, k keeper.Keeper, addr cosmos.AccAddre
 	c.Assert(err, IsNil)
 }
 
-// nolint: deadcode unused
 // create a codec used only for testing
 func makeTestCodec() *codec.LegacyAmino {
 	return types.MakeTestCodec()

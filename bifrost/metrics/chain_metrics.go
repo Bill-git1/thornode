@@ -34,10 +34,6 @@ func BlockNoTxIn(chain common.Chain) MetricName {
 	return MetricName(chain + "_block_no_tx_in")
 }
 
-func BlockWithTxOut(chain common.Chain) MetricName {
-	return MetricName(chain + "_block_with_tx_out")
-}
-
 func BlockNoTxOut(chain common.Chain) MetricName {
 	return MetricName(chain + "_block_no_tx_out")
 }
