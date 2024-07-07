@@ -8,10 +8,12 @@ import (
 
 type HandlerTradeAccountDeposit struct{}
 
-func (HandlerTradeAccountDeposit) TestTradeAccountDeposit_Run(c *C) {
+var _ = Suite(&HandlerTradeAccountDeposit{})
+
+func (HandlerTradeAccountDeposit) TestTradeAccountDeposit(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	h := NewTradeAccountDepositHandler(mgr)
-	asset := common.BTCAsset.GetTradeAsset()
+	asset := common.BTCAsset
 	addr := GetRandomBech32Addr()
 	dummyTx := common.Tx{ID: "test"}
 
