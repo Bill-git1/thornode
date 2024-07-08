@@ -15,11 +15,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	"github.com/rs/zerolog/log"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmhttp "github.com/tendermint/tendermint/rpc/client/http"
+	"gitlab.com/thorchain/tss/go-tss/conversion"
 
-	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/config"
@@ -28,7 +29,6 @@ import (
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 	q "gitlab.com/thorchain/thornode/x/thorchain/query"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
-	"gitlab.com/thorchain/tss/go-tss/conversion"
 )
 
 var (
@@ -1436,12 +1436,18 @@ func queryPool(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mg
 
 	saversDepth := saversPool.BalanceAsset
 	saversUnits := saversPool.LPUnits
-
 	synthSupply := mgr.Keeper().GetTotalSupply(ctx, pool.Asset.GetSyntheticAsset())
 	pool.CalcUnits(mgr.GetVersion(), synthSupply)
 
 	synthMintPausedErr := isSynthMintPaused(ctx, mgr, saversAsset, cosmos.ZeroUint())
 	synthSupplyRemaining, _ := getSynthSupplyRemainingV102(ctx, mgr, saversAsset)
+
+	maxSynthsForSaversYield := mgr.Keeper().GetConfigInt64(ctx, constants.MaxSynthsForSaversYield)
+	// Capping the synths at double the pool balance of Assets.
+	maxSynthsForSaversYieldUint := common.GetUncappedShare(cosmos.NewUint(uint64(maxSynthsForSaversYield)), cosmos.NewUint(constants.MaxBasisPts), pool.BalanceAsset.MulUint64(2))
+
+	saversFillBps := common.GetUncappedShare(synthSupply, maxSynthsForSaversYieldUint, cosmos.NewUint(constants.MaxBasisPts))
+	saversCapacityRemaining := common.SafeSub(maxSynthsForSaversYieldUint, synthSupply)
 
 	totalCollateral, err := mgr.Keeper().GetTotalCollateral(ctx, pool.Asset)
 	if err != nil {
@@ -1479,6 +1485,8 @@ func queryPool(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mg
 	p.SynthSupply = synthSupply.String()
 	p.SaversDepth = saversDepth.String()
 	p.SaversUnits = saversUnits.String()
+	p.SaversFillBps = saversFillBps.String()
+	p.SaversCapacityRemaining = saversCapacityRemaining.String()
 	p.SynthMintPaused = (synthMintPausedErr != nil)
 	p.SynthSupplyRemaining = synthSupplyRemaining.String()
 	p.LoanCollateral = totalCollateral.String()
@@ -1534,6 +1542,13 @@ func queryPools(ctx cosmos.Context, req abci.RequestQuery, mgr *Mgrs) ([]byte, e
 		synthMintPausedErr := isSynthMintPaused(ctx, mgr, pool.Asset, cosmos.ZeroUint())
 		synthSupplyRemaining, _ := getSynthSupplyRemainingV102(ctx, mgr, pool.Asset)
 
+		maxSynthsForSaversYield := mgr.Keeper().GetConfigInt64(ctx, constants.MaxSynthsForSaversYield)
+		// Capping the synths at double the pool balance of Assets.
+		maxSynthsForSaversYieldUint := common.GetUncappedShare(cosmos.NewUint(uint64(maxSynthsForSaversYield)), cosmos.NewUint(constants.MaxBasisPts), pool.BalanceAsset.MulUint64(2))
+
+		saversFillBps := common.GetUncappedShare(synthSupply, maxSynthsForSaversYieldUint, cosmos.NewUint(constants.MaxBasisPts))
+		saversCapacityRemaining := common.SafeSub(maxSynthsForSaversYieldUint, synthSupply)
+
 		totalCollateral, err := mgr.Keeper().GetTotalCollateral(ctx, pool.Asset)
 		if err != nil {
 			return nil, fmt.Errorf("fail to fetch total loan collateral: %w", err)
@@ -1571,6 +1586,8 @@ func queryPools(ctx cosmos.Context, req abci.RequestQuery, mgr *Mgrs) ([]byte, e
 		p.SynthSupply = synthSupply.String()
 		p.SaversDepth = saversDepth.String()
 		p.SaversUnits = saversUnits.String()
+		p.SaversFillBps = saversFillBps.String()
+		p.SaversCapacityRemaining = saversCapacityRemaining.String()
 		p.SynthMintPaused = (synthMintPausedErr != nil)
 		p.SynthSupplyRemaining = synthSupplyRemaining.String()
 		p.LoanCollateral = totalCollateral.String()
@@ -1723,7 +1740,11 @@ func queryDerivedPools(ctx cosmos.Context, req abci.RequestQuery, mgr *Mgrs) ([]
 		dpool, _ := mgr.Keeper().GetPool(ctx, pool.Asset.GetDerivedAsset())
 		dbps := cosmos.ZeroUint()
 		if dpool.Status == PoolAvailable {
-			dbps = common.GetUncappedShare(dpool.BalanceRune, runeDepth, cosmos.NewUint(constants.MaxBasisPts))
+			dbps = common.GetUncappedShare(
+				dpool.BalanceRune,
+				runeDepth,
+				cosmos.NewUint(constants.MaxBasisPts),
+			)
 		}
 
 		p := openapi.DerivedPool{

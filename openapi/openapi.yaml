@@ -1440,6 +1440,8 @@ components:
         - synth_supply
         - savers_depth
         - savers_units
+        - savers_fill_bps
+        - savers_capacity_remaining
         - synth_mint_paused
         - synth_supply_remaining
         - loan_collateral
@@ -1500,6 +1502,14 @@ components:
           type: string
           example: "199998"
           description: the number of units owned by Savers
+        savers_fill_bps:
+          type: string
+          example: "4500"
+          description: the filled savers capacity in basis points, 4500/10000 = 45%
+        savers_capacity_remaining:
+          type: string
+          example: "1000"
+          description: amount of remaining capacity in asset
         synth_mint_paused:
           type: boolean
           example: true

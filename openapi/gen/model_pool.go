@@ -38,6 +38,10 @@ type Pool struct {
 	SaversDepth string `json:"savers_depth"`
 	// the number of units owned by Savers
 	SaversUnits string `json:"savers_units"`
+	// the filled savers capacity in basis points, 4500/10000 = 45%
+	SaversFillBps string `json:"savers_fill_bps"`
+	// amount of remaining capacity in asset
+	SaversCapacityRemaining string `json:"savers_capacity_remaining"`
 	// whether additional synths cannot be minted
 	SynthMintPaused bool `json:"synth_mint_paused"`
 	// the amount of synth supply remaining before the current max supply is reached
@@ -56,7 +60,7 @@ type Pool struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewPool(asset string, status string, pendingInboundAsset string, pendingInboundRune string, balanceAsset string, balanceRune string, assetTorPrice string, poolUnits string, lPUnits string, synthUnits string, synthSupply string, saversDepth string, saversUnits string, synthMintPaused bool, synthSupplyRemaining string, loanCollateral string, loanCollateralRemaining string, loanCr string, derivedDepthBps string) *Pool {
+func NewPool(asset string, status string, pendingInboundAsset string, pendingInboundRune string, balanceAsset string, balanceRune string, assetTorPrice string, poolUnits string, lPUnits string, synthUnits string, synthSupply string, saversDepth string, saversUnits string, saversFillBps string, saversCapacityRemaining string, synthMintPaused bool, synthSupplyRemaining string, loanCollateral string, loanCollateralRemaining string, loanCr string, derivedDepthBps string) *Pool {
 	this := Pool{}
 	this.Asset = asset
 	this.Status = status
@@ -71,6 +75,8 @@ func NewPool(asset string, status string, pendingInboundAsset string, pendingInb
 	this.SynthSupply = synthSupply
 	this.SaversDepth = saversDepth
 	this.SaversUnits = saversUnits
+	this.SaversFillBps = saversFillBps
+	this.SaversCapacityRemaining = saversCapacityRemaining
 	this.SynthMintPaused = synthMintPaused
 	this.SynthSupplyRemaining = synthSupplyRemaining
 	this.LoanCollateral = loanCollateral
@@ -464,6 +470,54 @@ func (o *Pool) SetSaversUnits(v string) {
 	o.SaversUnits = v
 }
 
+// GetSaversFillBps returns the SaversFillBps field value
+func (o *Pool) GetSaversFillBps() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.SaversFillBps
+}
+
+// GetSaversFillBpsOk returns a tuple with the SaversFillBps field value
+// and a boolean to check if the value has been set.
+func (o *Pool) GetSaversFillBpsOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.SaversFillBps, true
+}
+
+// SetSaversFillBps sets field value
+func (o *Pool) SetSaversFillBps(v string) {
+	o.SaversFillBps = v
+}
+
+// GetSaversCapacityRemaining returns the SaversCapacityRemaining field value
+func (o *Pool) GetSaversCapacityRemaining() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.SaversCapacityRemaining
+}
+
+// GetSaversCapacityRemainingOk returns a tuple with the SaversCapacityRemaining field value
+// and a boolean to check if the value has been set.
+func (o *Pool) GetSaversCapacityRemainingOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.SaversCapacityRemaining, true
+}
+
+// SetSaversCapacityRemaining sets field value
+func (o *Pool) SetSaversCapacityRemaining(v string) {
+	o.SaversCapacityRemaining = v
+}
+
 // GetSynthMintPaused returns the SynthMintPaused field value
 func (o *Pool) GetSynthMintPaused() bool {
 	if o == nil {
@@ -654,6 +708,12 @@ func (o Pool) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if true {
 		toSerialize["savers_units"] = o.SaversUnits
+	}
+	if true {
+		toSerialize["savers_fill_bps"] = o.SaversFillBps
+	}
+	if true {
+		toSerialize["savers_capacity_remaining"] = o.SaversCapacityRemaining
 	}
 	if true {
 		toSerialize["synth_mint_paused"] = o.SynthMintPaused
