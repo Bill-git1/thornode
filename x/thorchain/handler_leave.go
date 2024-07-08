@@ -74,6 +74,8 @@ func (h LeaveHandler) validateV1(ctx cosmos.Context, msg MsgLeave) error {
 func (h LeaveHandler) handle(ctx cosmos.Context, msg MsgLeave) error {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.134.0")):
+		return h.handleV134(ctx, msg)
 	case version.GTE(semver.MustParse("1.124.0")):
 		return h.handleV124(ctx, msg)
 	case version.GTE(semver.MustParse("0.76.0")):
@@ -83,7 +85,7 @@ func (h LeaveHandler) handle(ctx cosmos.Context, msg MsgLeave) error {
 	}
 }
 
-func (h LeaveHandler) handleV124(ctx cosmos.Context, msg MsgLeave) error {
+func (h LeaveHandler) handleV134(ctx cosmos.Context, msg MsgLeave) error {
 	nodeAcc, err := h.mgr.Keeper().GetNodeAccount(ctx, msg.NodeAddress)
 	if err != nil {
 		return ErrInternal(err, "fail to get node account by bond address")
@@ -155,9 +157,9 @@ func (h LeaveHandler) handleV124(ctx cosmos.Context, msg MsgLeave) error {
 	}
 	ctx.EventManager().EmitEvent(
 		cosmos.NewEvent("validator_request_leave",
-			cosmos.NewAttribute("signer bnb address", msg.Tx.FromAddress.String()),
-			cosmos.NewAttribute("destination", nodeAcc.BondAddress.String()),
-			cosmos.NewAttribute("tx", msg.Tx.ID.String())))
+			cosmos.NewAttribute("signer", msg.Tx.FromAddress.String()),
+			cosmos.NewAttribute("node", msg.NodeAddress.String()),
+			cosmos.NewAttribute("txid", msg.Tx.ID.String())))
 
 	return nil
 }
