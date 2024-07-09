@@ -1944,4 +1944,79 @@ func migrateStoreV134(ctx cosmos.Context, mgr *Mgrs) {
 	}(ctx, mgr.Keeper()); err != nil {
 		ctx.Logger().Error("fail to rescue ETH.WSTETH pool liquidity", "error", err)
 	}
+
+	// restore values from lost treasury lps from v133 migration (height 16276999)
+	if err := func(ctx cosmos.Context, k keeper.Keeper) error {
+		// following are lps for thor1egxvam70a86jafa8gcg3kqfmfax3s0m2g3m754 (height 16276998)
+		ethUSDT, err := common.NewAsset("ETH.USDT-0XDAC17F958D2EE523A2206206994597C13D831EC7")
+		if err != nil {
+			return err
+		}
+		oldLPs := []LiquidityProvider{
+			{
+				Asset:              common.BCHAsset,
+				LastAddHeight:      10675361,
+				LastWithdrawHeight: 0,
+				Units:              cosmos.NewUint(uint64(3059999955206)),
+				RuneDepositValue:   cosmos.NewUint(uint64(4837032778833)),
+				AssetDepositValue:  cosmos.NewUint(uint64(57029397598)),
+			},
+			{
+				Asset:              common.BTCAsset,
+				LastAddHeight:      10675114,
+				LastWithdrawHeight: 0,
+				Units:              cosmos.NewUint(uint64(14670633948765)),
+				RuneDepositValue:   cosmos.NewUint(uint64(16121953128934)),
+				AssetDepositValue:  cosmos.NewUint(uint64(2805224694)),
+			},
+			{
+				Asset:              common.LTCAsset,
+				LastAddHeight:      4863710,
+				LastWithdrawHeight: 0,
+				Units:              cosmos.NewUint(uint64(5218868907409)),
+				RuneDepositValue:   cosmos.NewUint(uint64(6359825008873)),
+				AssetDepositValue:  cosmos.NewUint(uint64(324510136802)),
+			},
+			{
+				Asset:              common.ETHAsset,
+				LastAddHeight:      10675140,
+				LastWithdrawHeight: 173447,
+				Units:              cosmos.NewUint(uint64(12007277666219)),
+				RuneDepositValue:   cosmos.NewUint(uint64(17841797821234)),
+				AssetDepositValue:  cosmos.NewUint(uint64(50902496166)),
+			},
+			{
+				Asset:              ethUSDT,
+				LastAddHeight:      10675248,
+				LastWithdrawHeight: 0,
+				Units:              cosmos.NewUint(uint64(13100217684725)),
+				RuneDepositValue:   cosmos.NewUint(uint64(10621328914962)),
+				AssetDepositValue:  cosmos.NewUint(uint64(122741741673245)),
+			},
+		}
+		newAddr, err := k.GetModuleAddress(TreasuryName)
+		if err != nil {
+			return err
+		}
+		for _, oldLP := range oldLPs {
+			asset := oldLP.Asset
+			lp, err := k.GetLiquidityProvider(ctx, asset, newAddr)
+			if err != nil {
+				return err
+			}
+			if oldLP.LastAddHeight > lp.LastAddHeight {
+				lp.LastAddHeight = oldLP.LastAddHeight
+			}
+			if oldLP.LastWithdrawHeight > lp.LastWithdrawHeight {
+				lp.LastWithdrawHeight = oldLP.LastWithdrawHeight
+			}
+			lp.Units = lp.Units.Add(oldLP.Units)
+			lp.RuneDepositValue = lp.RuneDepositValue.Add(oldLP.RuneDepositValue)
+			lp.AssetDepositValue = lp.AssetDepositValue.Add(oldLP.AssetDepositValue)
+			k.SetLiquidityProvider(ctx, lp)
+		}
+		return nil
+	}(ctx, mgr.Keeper()); err != nil {
+		ctx.Logger().Error("fail to restore lost treasury LPs", "error", err)
+	}
 }
