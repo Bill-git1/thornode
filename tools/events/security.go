@@ -79,6 +79,8 @@ func FailedTransactions(block *thorscan.BlockResponse) {
 			continue
 		case 32: // bad sequence
 			continue
+		case 99: // internal, avoid noise
+			continue
 		}
 
 		// alert fields

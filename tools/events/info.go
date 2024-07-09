@@ -54,7 +54,14 @@ func SetMimir(block *thorscan.BlockResponse) {
 				}
 			}
 
-			msg := formatMimirMessage(block.Header.Height, source, event["key"], event["value"])
+			var msg string
+			switch event["key"] {
+			case "NODEPAUSECHAINGLOBAL":
+				msg = formatNodePauseMessage(block.Header.Height, tx, event)
+			default:
+				msg = formatMimirMessage(block.Header.Height, source, event["key"], event["value"])
+			}
+
 			Notify(config.Notifications.Info, msg, nil, false, nil)
 		}
 	}
@@ -428,6 +435,21 @@ func notifyChurnStarted(height int64, keyshareBackups map[string]map[string]bool
 ////////////////////////////////////////////////////////////////////////////////////////
 // Helpers
 ////////////////////////////////////////////////////////////////////////////////////////
+
+func formatNodePauseMessage(height int64, tx thorscan.BlockTx, event map[string]string) string {
+	signer := tx.Tx.GetMsgs()[0].GetSigners()[0].String()
+	pauseHeight, err := strconv.ParseInt(event["value"], 10, 64)
+	if err != nil {
+		log.Panic().Str("value", event["value"]).Err(err).Msg("failed to parse pause height")
+	}
+
+	action := fmt.Sprintf("**Node `%s` Unpaused**", signer[len(signer)-4:])
+	if height <= pauseHeight {
+		action = fmt.Sprintf("**Node `%s` Paused**: %d blocks", signer[len(signer)-4:], pauseHeight-height)
+	}
+
+	return fmt.Sprintf("`[%d]` %s", height, action)
+}
 
 func formatMimirMessage(height int64, source, key, value string) string {
 	// get value at previous height

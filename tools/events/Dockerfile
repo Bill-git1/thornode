@@ -15,7 +15,7 @@ RUN go mod download
 
 COPY . .
 ARG TAG=mainnet
-RUN --mount=type=cache,target=/root/.cache/go-build make protob && go install -tags $TAG ./tools/events
+RUN make protob && go install -tags $TAG ./tools/events
 
 ########################################################################################
 # Deploy
