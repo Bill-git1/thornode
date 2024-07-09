@@ -823,8 +823,10 @@ func (c *EVMClient) OnObservedTxIn(txIn stypes.TxInItem, blockHeight int64) {
 // GetConfirmationCount returns the confirmation count for the given tx.
 func (c *EVMClient) GetConfirmationCount(txIn stypes.TxIn) int64 {
 	switch c.cfg.ChainID {
-	case common.AVAXChain, common.BSCChain: // instant finality
+	case common.AVAXChain: // instant finality
 		return 0
+	case common.BSCChain:
+		return 3 // round up from 2.5 blocks required for finality
 	default:
 		c.logger.Fatal().Msgf("unsupported chain: %s", c.cfg.ChainID)
 		return 0
