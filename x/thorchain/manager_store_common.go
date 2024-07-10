@@ -239,6 +239,7 @@ func refundDroppedSwapOutFromRUNEV106(ctx cosmos.Context, mgr *Mgrs, droppedTx D
 // which causes the nodes to be slashed and requeed outbound to remain in the outbound
 // queue. Reference:
 // https://gitlab.com/thorchain/thornode/-/blob/develop/x/thorchain/handler_common_outbound.go?ref_type=heads#L97-105
+// trunk-ignore(golangci-lint/unused)
 func requeueDanglingActionsV124(ctx cosmos.Context, mgr *Mgrs, txIDs []common.TxID) {
 	// Select the least secure ActiveVault Asgard for all outbounds.
 	// Even if it fails (as in if the version changed upon the keygens-complete block of a churn),

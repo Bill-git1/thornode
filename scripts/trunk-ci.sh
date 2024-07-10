@@ -10,6 +10,9 @@ if [ -n "${CI_MERGE_REQUEST_ID-}" ]; then
   # if go modules or trunk settings changed, also run with --all on merge requests
   if ! git diff --exit-code origin/develop -- go.mod go.sum .trunk >/dev/null; then
     FLAGS="$FLAGS --all"
+  # if there is a trunk-ignore comment change, also run with --all on merge requests
+  elif git diff --unified=0 --no-prefix origin/develop | sed '/^@@/d' | grep -q 'trunk-ignore'; then
+    FLAGS="$FLAGS --all"
   else
     FLAGS="$FLAGS --upstream origin/develop"
   fi
