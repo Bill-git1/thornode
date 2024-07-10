@@ -1210,6 +1210,85 @@ func refundTxV47(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uint
 	return nil
 }
 
+func refundBondV124(ctx cosmos.Context, tx common.Tx, acc cosmos.AccAddress, amt cosmos.Uint, nodeAcc *NodeAccount, mgr Manager) error {
+	if nodeAcc.Status == NodeActive {
+		ctx.Logger().Info("node still active, cannot refund bond", "node address", nodeAcc.NodeAddress, "node pub key", nodeAcc.PubKeySet.Secp256k1)
+		return nil
+	}
+
+	// ensures nodes don't return bond while being churned into the network
+	// (removing their bond last second)
+	if nodeAcc.Status == NodeReady {
+		ctx.Logger().Info("node ready, cannot refund bond", "node address", nodeAcc.NodeAddress, "node pub key", nodeAcc.PubKeySet.Secp256k1)
+		return nil
+	}
+
+	if amt.IsZero() || amt.GT(nodeAcc.Bond) {
+		amt = nodeAcc.Bond
+	}
+
+	bp, err := mgr.Keeper().GetBondProviders(ctx, nodeAcc.NodeAddress)
+	if err != nil {
+		return ErrInternal(err, fmt.Sprintf("fail to get bond providers(%s)", nodeAcc.NodeAddress))
+	}
+
+	err = passiveBackfill(ctx, mgr, *nodeAcc, &bp)
+	if err != nil {
+		return err
+	}
+
+	bp.Adjust(mgr.GetVersion(), nodeAcc.Bond) // redistribute node bond amongst bond providers
+	provider := bp.Get(acc)
+
+	if !provider.IsEmpty() && !provider.Bond.IsZero() {
+		if amt.GT(provider.Bond) {
+			amt = provider.Bond
+		}
+
+		bp.Unbond(amt, provider.BondAddress)
+
+		toAddress, err := common.NewAddress(provider.BondAddress.String())
+		if err != nil {
+			return fmt.Errorf("fail to parse bond address: %w", err)
+		}
+
+		// refund bond
+		txOutItem := TxOutItem{
+			Chain:      common.RuneAsset().Chain,
+			ToAddress:  toAddress,
+			InHash:     tx.ID,
+			Coin:       common.NewCoin(common.RuneAsset(), amt),
+			ModuleName: BondName,
+		}
+		_, err = mgr.TxOutStore().TryAddTxOutItem(ctx, mgr, txOutItem, cosmos.ZeroUint())
+		if err != nil {
+			return fmt.Errorf("fail to add outbound tx: %w", err)
+		}
+
+		bondEvent := NewEventBond(amt, BondReturned, tx)
+		if err := mgr.EventMgr().EmitEvent(ctx, bondEvent); err != nil {
+			ctx.Logger().Error("fail to emit bond event", "error", err)
+		}
+
+		nodeAcc.Bond = common.SafeSub(nodeAcc.Bond, amt)
+	}
+
+	if nodeAcc.RequestedToLeave {
+		// when node already request to leave , it can't come back , here means the node already unbond
+		// so set the node to disabled status
+		nodeAcc.UpdateStatus(NodeDisabled, ctx.BlockHeight())
+	}
+	if err := mgr.Keeper().SetNodeAccount(ctx, *nodeAcc); err != nil {
+		ctx.Logger().Error(fmt.Sprintf("fail to save node account(%s)", nodeAcc), "error", err)
+		return err
+	}
+	if err := mgr.Keeper().SetBondProviders(ctx, bp); err != nil {
+		return ErrInternal(err, fmt.Sprintf("fail to save bond providers(%s)", bp.NodeAddress.String()))
+	}
+
+	return nil
+}
+
 func refundBondV81(ctx cosmos.Context, tx common.Tx, acc cosmos.AccAddress, amt cosmos.Uint, nodeAcc *NodeAccount, mgr Manager) error {
 	if nodeAcc.Status == NodeActive {
 		ctx.Logger().Info("node still active, cannot refund bond", "node address", nodeAcc.NodeAddress, "node pub key", nodeAcc.PubKeySet.Secp256k1)

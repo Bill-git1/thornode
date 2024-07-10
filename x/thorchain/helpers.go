@@ -308,6 +308,8 @@ func getMaxSwapQuantityV121(ctx cosmos.Context, mgr Manager, sourceAsset, target
 func refundBond(ctx cosmos.Context, tx common.Tx, acc cosmos.AccAddress, amt cosmos.Uint, nodeAcc *NodeAccount, mgr Manager) error {
 	version := mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.134.0")):
+		return refundBondV134(ctx, tx, acc, amt, nodeAcc, mgr)
 	case version.GTE(semver.MustParse("1.124.0")):
 		return refundBondV124(ctx, tx, acc, amt, nodeAcc, mgr)
 	case version.GTE(semver.MustParse("1.103.0")):
@@ -323,7 +325,7 @@ func refundBond(ctx cosmos.Context, tx common.Tx, acc cosmos.AccAddress, amt cos
 	}
 }
 
-func refundBondV124(ctx cosmos.Context, tx common.Tx, acc cosmos.AccAddress, amt cosmos.Uint, nodeAcc *NodeAccount, mgr Manager) error {
+func refundBondV134(ctx cosmos.Context, tx common.Tx, acc cosmos.AccAddress, amt cosmos.Uint, nodeAcc *NodeAccount, mgr Manager) error {
 	if nodeAcc.Status == NodeActive {
 		ctx.Logger().Info("node still active, cannot refund bond", "node address", nodeAcc.NodeAddress, "node pub key", nodeAcc.PubKeySet.Secp256k1)
 		return nil
@@ -360,22 +362,14 @@ func refundBondV124(ctx cosmos.Context, tx common.Tx, acc cosmos.AccAddress, amt
 
 		bp.Unbond(amt, provider.BondAddress)
 
-		toAddress, err := common.NewAddress(provider.BondAddress.String())
+		// refund bond;
+		// this is always RUNE, and the MsgDeposit handler should have already deducted a network fee,
+		// so this can be done with SendFromModuleToAccount even if under 0.02 RUNE
+		// (which would cause TryAddTxOutItem to fail from no output after fee deduction)
+		unbondCoin := common.NewCoin(common.RuneAsset(), amt)
+		err = mgr.Keeper().SendFromModuleToAccount(ctx, BondName, provider.BondAddress, common.NewCoins(unbondCoin))
 		if err != nil {
-			return fmt.Errorf("fail to parse bond address: %w", err)
-		}
-
-		// refund bond
-		txOutItem := TxOutItem{
-			Chain:      common.RuneAsset().Chain,
-			ToAddress:  toAddress,
-			InHash:     tx.ID,
-			Coin:       common.NewCoin(common.RuneAsset(), amt),
-			ModuleName: BondName,
-		}
-		_, err = mgr.TxOutStore().TryAddTxOutItem(ctx, mgr, txOutItem, cosmos.ZeroUint())
-		if err != nil {
-			return fmt.Errorf("fail to add outbound tx: %w", err)
+			return ErrInternal(err, "fail to send unbonded RUNE to bond address")
 		}
 
 		bondEvent := NewEventBond(amt, BondReturned, tx)

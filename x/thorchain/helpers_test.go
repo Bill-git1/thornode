@@ -76,6 +76,11 @@ func (k *TestRefundBondKeeper) SendFromModuleToModule(_ cosmos.Context, from, to
 	return nil
 }
 
+func (k *TestRefundBondKeeper) SendFromModuleToAccount(_ cosmos.Context, from string, _ cosmos.AccAddress, coins common.Coins) error {
+	k.modules[from] -= int64(coins[0].Amount.Uint64())
+	return nil
+}
+
 func (s *HelperSuite) TestRefundBondHappyPath(c *C) {
 	ctx, _ := setupKeeperForTest(c)
 	na := GetRandomValidatorNode(NodeActive)
