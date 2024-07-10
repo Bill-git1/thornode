@@ -1,4 +1,6 @@
-{{ template "5-validators-btc-eth-pool-state.yaml" }}
+{{ template "default-state.yaml" }}
+---
+{{ template "btc-pool-state.yaml" }}
 ---
 type: create-blocks
 count: 1
@@ -6,7 +8,7 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
-  - .|length == 2
+  - .|length == 1
 ---
 # set fee floor
 type: tx-mimir
@@ -44,67 +46,7 @@ asserts:
   - .gas_rate_units == "satsperbyte"
 ---
 type: tx-observed-in
-signer: {{ addr_thor_cat }}
-txs:
-  - tx:
-      id: "{{ observe_txid 1 }}"
-      chain: BTC
-      from_address: {{ addr_btc_pig }}
-      to_address: {{ addr_btc_dog }}
-      coins:
-        - amount: "5000000"
-          asset: "BTC.BTC"
-          decimals: 8
-      gas:
-        - amount: "10000"
-          asset: "BTC.BTC"
-      memo: "+:BTC/BTC"
-    block_height: 2
-    finalise_height: 2
-    observed_pub_key: {{ pubkey_dog }}
----
-type: tx-observed-in
-signer: {{ addr_thor_pig }}
-txs:
-  - tx:
-      id: "{{ observe_txid 1 }}"
-      chain: BTC
-      from_address: {{ addr_btc_pig }}
-      to_address: {{ addr_btc_dog }}
-      coins:
-        - amount: "5000000"
-          asset: "BTC.BTC"
-          decimals: 8
-      gas:
-        - amount: "10000"
-          asset: "BTC.BTC"
-      memo: "+:BTC/BTC"
-    block_height: 2
-    finalise_height: 2
-    observed_pub_key: {{ pubkey_dog }}
----
-type: tx-observed-in
-signer: {{ addr_thor_fox }}
-txs:
-  - tx:
-      id: "{{ observe_txid 1 }}"
-      chain: BTC
-      from_address: {{ addr_btc_pig }}
-      to_address: {{ addr_btc_dog }}
-      coins:
-        - amount: "5000000"
-          asset: "BTC.BTC"
-          decimals: 8
-      gas:
-        - amount: "10000"
-          asset: "BTC.BTC"
-      memo: "+:BTC/BTC"
-    block_height: 2
-    finalise_height: 2
-    observed_pub_key: {{ pubkey_dog }}
----
-type: tx-observed-in
-signer: {{ addr_thor_goat }}
+signer: {{ addr_thor_dog }}
 txs:
   - tx:
       id: "{{ observe_txid 1 }}"
@@ -141,7 +83,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/supply
 asserts:
   - .supply|length == 3
-  - .supply[]|select(.denom == "btc/btc")|.amount|tonumber == 4763003
+  - .supply[]|select(.denom == "btc/btc")|.amount|tonumber == 4763021
 ---
 type: create-blocks
 count: 1
@@ -155,7 +97,7 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC
 asserts:
-  - .savers_depth|tonumber == 4763009
+  - .savers_depth|tonumber == 4763033
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/saver/{{ addr_btc_pig }}
