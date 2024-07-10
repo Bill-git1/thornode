@@ -836,8 +836,16 @@ func (c *EVMClient) GetConfirmationCount(txIn stypes.TxIn) int64 {
 // ConfirmationCountReady returns true if the confirmation count is ready.
 func (c *EVMClient) ConfirmationCountReady(txIn stypes.TxIn) bool {
 	switch c.cfg.ChainID {
-	case common.AVAXChain, common.BSCChain: // instant finality
+	case common.AVAXChain: // instant finality
 		return true
+	case common.BSCChain:
+		if len(txIn.TxArray) == 0 {
+			return true
+		}
+		blockHeight := txIn.TxArray[0].BlockHeight
+		confirm := txIn.ConfirmationRequired
+		c.logger.Info().Msgf("confirmation required: %d", confirm)
+		return (c.evmScanner.currentBlockHeight - blockHeight) >= confirm
 	default:
 		c.logger.Fatal().Msgf("unsupported chain: %s", c.cfg.ChainID)
 		return false
