@@ -142,7 +142,7 @@ func InitConfig(parallelism int, seed bool) *OpConfig {
 	for chain := range liteClientConstructors {
 		account, err := master.ChainClients[chain].GetAccount(nil)
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get master account")
+			log.Fatal().Stringer("chain", chain).Err(err).Msg("failed to get master account")
 		}
 		for _, coin := range account.Coins {
 			ctxLog := log.Info().
@@ -259,11 +259,7 @@ func fundUserChainAccount(master, user *User, chain common.Chain, amount sdk.Uin
 	// broadcast tx
 	txid, err := master.ChainClients[chain].BroadcastTx(signed)
 	if err != nil {
-		from, _ := master.PubKey().GetAddress(chain)
-		log.Fatal().Err(err).
-			Stringer("chain", chain).
-			Stringer("from", from).
-			Msg("failed to broadcast funding tx")
+		log.Fatal().Err(err).Interface("tx", tx).Msg("failed to broadcast funding tx")
 	}
 
 	amountFloat := float64(amount.Uint64()) / float64(common.One)
