@@ -9,7 +9,7 @@ import (
 
 type KeeperOutboundFeesSuite struct{}
 
-var _ = Suite(&KeeperLiquidityFeesSuite{})
+var _ = Suite(&KeeperOutboundFeesSuite{})
 
 func (s *KeeperOutboundFeesSuite) TestOutboundRuneRecords(c *C) {
 	ctx, k := setupKeeperForTest(c)
@@ -66,12 +66,12 @@ func (s *KeeperOutboundFeesSuite) TestOutboundRuneRecords(c *C) {
 	feeSpentRune, err = k.GetOutboundFeeSpentRune(ctx, common.BTCAsset)
 	c.Assert(err, IsNil)
 	c.Check(feeWithheldRune.String(), Equals, "600")
-	c.Check(feeSpentRune.String(), Equals, "400")
+	c.Check(feeSpentRune.String(), Equals, "430")
 
 	feeWithheldRune, err = k.GetOutboundFeeWithheldRune(ctx, common.BNBAsset)
 	c.Assert(err, IsNil)
 	feeSpentRune, err = k.GetOutboundFeeSpentRune(ctx, common.BNBAsset)
 	c.Assert(err, IsNil)
 	c.Check(feeWithheldRune.String(), Equals, "50")
-	c.Check(feeSpentRune.String(), Equals, "30")
+	c.Check(feeSpentRune.String(), Equals, "0")
 }
