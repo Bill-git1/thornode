@@ -371,7 +371,7 @@ func processOneTxInV134(ctx cosmos.Context, keeper keeper.Keeper, tx ObservedTx,
 	case RunePoolDepositMemo:
 		newMsg = NewMsgRunePoolDeposit(signer, tx.Tx)
 	case RunePoolWithdrawMemo:
-		newMsg = NewMsgRunePoolWithdraw(tx.Tx.FromAddress, m.GetBasisPts(), m.GetAffiliateAddress(), m.GetAffiliateBasisPoints(), signer)
+		newMsg = NewMsgRunePoolWithdraw(signer, tx.Tx, m.GetBasisPts(), m.GetAffiliateAddress(), m.GetAffiliateBasisPoints())
 	default:
 		return nil, errInvalidMemo
 	}

@@ -12,10 +12,10 @@ type: check
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .|length == 2
+---
 ########################################################################################
 # check balances before deposit
 ########################################################################################
----
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
 asserts:
@@ -44,7 +44,6 @@ count: 1
 ########################################################################################
 # check balances after deposit
 ########################################################################################
----
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
 asserts:
@@ -60,7 +59,7 @@ asserts:
   - .coins[0].amount == "667700000000"
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/rune_providers/{{ addr_thor_fox }}
+endpoint: http://localhost:1317/thorchain/rune_provider/{{ addr_thor_fox }}
 asserts:
   - .rune_address == "{{ addr_thor_fox }}"
   - .deposit_amount == "667700000000"
@@ -80,7 +79,7 @@ type: create-blocks
 count: 1
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/rune_providers/{{ addr_thor_fox }}
+endpoint: http://localhost:1317/thorchain/rune_provider/{{ addr_thor_fox }}
 asserts:
   - .rune_address == "{{ addr_thor_fox }}"
   - .deposit_amount == "667700000000"
@@ -100,7 +99,7 @@ asserts:
   - .name == "rune_pool"
   - .address == "tthor1rzqfv62dzu585607s5awqtgnvvwz5rzhfuaw80"
   - .coins[0].denom == "rune"
-  - .coins[0].amount == "333850000000" # 6,667 RUNE deposit - 50% withdraw 
+  - .coins[0].amount == "333850000000" # 6,667 RUNE deposit - 50% withdraw
 ---
 ########################################################################################
 # withdraw rune with affiliate
@@ -116,7 +115,7 @@ type: create-blocks
 count: 1
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/rune_providers/{{ addr_thor_fox }}
+endpoint: http://localhost:1317/thorchain/rune_provider/{{ addr_thor_fox }}
 asserts:
   - .rune_address == "{{ addr_thor_fox }}"
   - .deposit_amount == "667700000000"
@@ -128,13 +127,13 @@ type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
 asserts:
   - .result[0].denom == "rune"
-  - .result[0].amount == "2499493225000" # 25,000 RUNE - (3338.5 RUNE withdraw - 15bps affiliate fee) - 0.02 RUNE tx fee
+  - .result[0].amount == "2499994000000" # 25k RUNE - 3x0.02 RUNE tx fee
 ---
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_cat }}
 asserts:
   - .result[0].denom == "rune"
-  - .result[0].amount == "2500500775000" # 25,000 RUNE + (3338.5 RUNE withdrawn - 15 bps affiliate fee) = 25005.00775 RUNE
+  - .result[0].amount == "2500000000000" # no profit, so no affiliate fee
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/balance/module/rune_pool
@@ -142,6 +141,26 @@ asserts:
   - .name == "rune_pool"
   - .address == "tthor1rzqfv62dzu585607s5awqtgnvvwz5rzhfuaw80"
   - .coins | length == 0 # 100% withdrawn
+---
+type: check
+endpoint: http://localhost:1317/thorchain/runepool
+asserts:
+  - 'all(.pol|.[]; . == "0")'
+  - 'all(.reserve|.[]; . == "0")'
+  - 'all(.providers|.[]; . == "0")'
+---
+type: check
+endpoint: http://localhost:1317/thorchain/block
+asserts:
+  - .txs[0].result.events[-1].type == "rune_pool_withdraw"
+  - .txs[0].result.events[-1].rune_address == "{{ addr_thor_fox }}"
+  - .txs[0].result.events[-1].rune_amoumt == "333850000000"
+  - .txs[0].result.events[-1].basis_points == "10000"
+  - .txs[0].result.events[-1].units == "333850000000"
+  - .txs[0].result.events[-1].affiliate_address == "{{ addr_thor_cat }}"
+  - .txs[0].result.events[-1].affiliate_amount == "0"
+  - .txs[0].result.events[-1].affiliate_basis_points == "15"
+  - .txs[0].result.events[-1]|keys|length == 9
 ########################################################################################
 # withdraw rune with invalid affiliate pts
 ########################################################################################
@@ -170,29 +189,20 @@ asserts:
   - >
     select(.txs[].result.log | contains("invalid affiliate basis points, max: 10, request: 11"))
 ---
-########################################################################################
-# deposit rune with cooldown
-########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/runepool
+asserts:
+  - 'all(.pol|.[]; . == "0")'
+  - 'all(.reserve|.[]; . == "0")'
+  - 'all(.providers|.[]; . == "0")'
 ---
+########################################################################################
+# attempt to withdraw rune with insufficient maturity
+########################################################################################
 type: tx-mimir
-key: RUNEPoolCooldown
-value: 5
+key: RUNEPoolDepositMaturityBlocks
+value: 2
 signer: {{ addr_thor_dog }}
----
-type: tx-mimir
-key: RUNEPoolCooldown
-value: 5
-signer: {{ addr_thor_cat }}
----
-type: tx-mimir
-key: RUNEPoolCooldown
-value: 5
-signer: {{ addr_thor_fox }}
----
-type: tx-mimir
-key: RUNEPoolCooldown
-value: 5
-signer: {{ addr_thor_pig }}
 ---
 type: create-blocks
 count: 1
@@ -200,7 +210,7 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/mimir
 asserts:
-  - .RUNEPOOLCOOLDOWN == 5
+  - .RUNEPOOLDEPOSITMATURITYBLOCKS == 2
 ---
 type: tx-deposit
 signer: {{ addr_thor_pig }}
@@ -213,33 +223,77 @@ type: create-blocks
 count: 1
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/rune_providers/{{ addr_thor_pig }}
+endpoint: http://localhost:1317/thorchain/rune_provider/{{ addr_thor_pig }}
 asserts:
   - .rune_address == "{{ addr_thor_pig }}"
   - .deposit_amount == "10"
   - .last_deposit_height == 8
   - .last_withdraw_height == 0
 ---
+type: check
+endpoint: http://localhost:1317/thorchain/runepool
+asserts:
+  - 'all(.pol|.[]; . == "0")'
+  - 'all(.reserve|.[]; . == "0")'
+  - .reserve.units == "0"
+  - .reserve.value == "0"
+  - .reserve.pnl == "0"
+  - .reserve.current_deposit == "0"
+  - .providers.units == "10"
+  - .providers.value == "10"
+  - .providers.pnl == "0"
+  - .providers.pending_units == "10"
+---
 type: tx-deposit
 signer: {{ addr_thor_pig }}
 coins:
-  - amount: "10"
+  - amount: "0"
     asset: "THOR.RUNE"
-memo: "pool+"
+memo: "pool-:10000"
 ---
 type: create-blocks
 count: 1
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/rune_providers/{{ addr_thor_pig }}
+endpoint: http://localhost:1317/thorchain/rune_provider/{{ addr_thor_pig }}
 asserts:
   - .rune_address == "{{ addr_thor_pig }}"
-  - .deposit_amount == "10" # didn't change
-  - .last_deposit_height == 8 # didn't change
+  - .deposit_amount == "10" # no change
+  - .last_deposit_height == 8 # no change
   - .last_withdraw_height == 0
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - >
-    select(.txs[].result.log | contains("last deposit (1 blocks ago) sooner than RUNEPool cooldown (5), please wait 4 blocks and try again"))
+    select(.txs[0].result.log | contains("deposit reaches maturity in 1 blocks"))
+---
+########################################################################################
+# withdraw after maturity
+########################################################################################
+type: tx-deposit
+signer: {{ addr_thor_pig }}
+coins:
+  - amount: "0"
+    asset: "THOR.RUNE"
+memo: "pool-:10000"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/rune_provider/{{ addr_thor_pig }}
+asserts:
+  - .rune_address == "{{ addr_thor_pig }}"
+  - .value == "0"
+  - .withdraw_amount == "10"
+  - .deposit_amount == "10" # no change
+  - .last_deposit_height == 8 # no change
+  - .last_withdraw_height == 10
+---
+type: check
+endpoint: http://localhost:1317/thorchain/runepool
+asserts:
+  - 'all(.pol|.[]; . == "0")'
+  - 'all(.reserve|.[]; . == "0")'
+  - 'all(.providers|.[]; . == "0")'

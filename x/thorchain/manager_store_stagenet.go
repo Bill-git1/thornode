@@ -300,4 +300,22 @@ func migrateStoreV133(ctx cosmos.Context, mgr *Mgrs) {
 	}
 }
 
-func migrateStoreV134(ctx cosmos.Context, mgr *Mgrs) {}
+func migrateStoreV134(ctx cosmos.Context, mgr *Mgrs) {
+	defer func() {
+		if err := recover(); err != nil {
+			ctx.Logger().Error("fail to migrate store to v134", "error", err)
+		}
+	}()
+
+	// initialize rune pool with current reserve units
+	value, err := polPoolValue(ctx, mgr)
+	if err != nil {
+		ctx.Logger().Error("fail to get pol value", "error", err)
+		return
+	}
+	rp := RUNEPool{
+		ReserveUnits: value,
+		PoolUnits:    cosmos.ZeroUint(),
+	}
+	mgr.Keeper().SetRUNEPool(ctx, rp)
+}

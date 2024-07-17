@@ -70,13 +70,26 @@ coins:
 memo: "=:BTC/BTC"
 ---
 type: create-blocks
-count: 2
+count: 1
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/pol
+endpoint: http://localhost:1317/thorchain/runepool
 asserts:
-  - .current_deposit|tonumber == 102619017519
-  - .rune_deposited|tonumber == 102619017519
+  - .pol.current_deposit|tonumber == 48350402323
+  - .pol.rune_deposited|tonumber == 48350402323
+  - .pol.rune_withdrawn|tonumber == 0
+  - .reserve.units|tonumber == 48350402323
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/runepool
+asserts:
+  - .pol.current_deposit|tonumber == 102619017519
+  - .pol.rune_deposited|tonumber == 102619017519
+  - .pol.rune_withdrawn|tonumber == 0
+  - .reserve.units|tonumber == 96700804646
 ---
 ########################################################################################
 # Ensure Max Deposit is Respected
@@ -85,11 +98,12 @@ type: create-blocks
 count: 1
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/pol
+endpoint: http://localhost:1317/thorchain/runepool
 asserts:
-  - .current_deposit|tonumber == 102619017519
-  - .rune_deposited|tonumber == 102619017519
-  - .rune_withdrawn|tonumber == 0
+  - .pol.current_deposit|tonumber == 102619017519
+  - .pol.rune_deposited|tonumber == 102619017519
+  - .pol.rune_withdrawn|tonumber == 0
+  - .reserve.units|tonumber == 96700804646
 ---
 ########################################################################################
 # Burn Synth to Trigger Withdraw
@@ -117,11 +131,14 @@ type: create-blocks
 count: 1
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/pol
+endpoint: http://localhost:1317/thorchain/runepool
 asserts:
-  - .current_deposit|tonumber == 102610310221
-  - .rune_deposited|tonumber == 102619017519
-  - .rune_withdrawn|tonumber == 8707298
+  - .pol.current_deposit|tonumber == 102610310221
+  - .pol.rune_deposited|tonumber == 102619017519
+  - .pol.rune_withdrawn|tonumber == 8707298
+  - .pol.value|tonumber == 87064290494
+  - .pol.pnl|tonumber == -15546019727
+  - .reserve.units|tonumber == 96700804646-9670080
 ---
 type: tx-mimir
 key: POLMaxPoolMovement
@@ -132,8 +149,27 @@ type: create-blocks
 count: 2
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/pol
+endpoint: http://localhost:1317/thorchain/runepool
 asserts:
-  - .current_deposit|tonumber == 26302140331
-  - .rune_deposited|tonumber == 102619017519
-  - .rune_withdrawn|tonumber == 76316877188
+  - .pol.current_deposit|tonumber == 26302140331
+  - .pol.rune_deposited|tonumber == 102619017519
+  - .pol.rune_withdrawn|tonumber == 76316877188
+  - .pol.value|tonumber == 0
+  - .pol.pnl|tonumber == -26302140331
+  - .reserve.units|tonumber == 0
+---
+########################################################################################
+# Nothing else to withdraw
+########################################################################################
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/runepool
+asserts:
+  - .pol.current_deposit|tonumber == 26302140331
+  - .pol.rune_deposited|tonumber == 102619017519
+  - .pol.rune_withdrawn|tonumber == 76316877188
+  - .pol.value|tonumber == 0
+  - .pol.pnl|tonumber == -26302140331
+  - .reserve.units|tonumber == 0

@@ -96,88 +96,128 @@ func (h RunePoolWithdrawHandler) handleV134(ctx cosmos.Context, msg MsgRunePoolW
 		return fmt.Errorf("unable to GetRUNEProvider: %s", err)
 	}
 
-	runePoolCooldown := h.mgr.Keeper().GetConfigInt64(ctx, constants.RUNEPoolCooldown)
+	// ensure the deposit has reached maturity
+	depositMaturity := h.mgr.Keeper().GetConfigInt64(ctx, constants.RUNEPoolDepositMaturityBlocks)
 	currentBlockHeight := ctx.BlockHeight()
-
-	blocksSinceLastWithdraw := currentBlockHeight - runeProvider.LastWithdrawHeight
 	blocksSinceLastDeposit := currentBlockHeight - runeProvider.LastDepositHeight
-
-	if blocksSinceLastWithdraw < runePoolCooldown {
-		tryAgain := runePoolCooldown - blocksSinceLastWithdraw
-		return fmt.Errorf(
-			"last withdraw (%d blocks ago) sooner than RUNEPool cooldown (%d), please wait %d blocks and try again",
-			blocksSinceLastWithdraw,
-			runePoolCooldown,
-			tryAgain,
-		)
+	if blocksSinceLastDeposit < depositMaturity {
+		return fmt.Errorf("deposit reaches maturity in %d blocks", depositMaturity-blocksSinceLastDeposit)
 	}
 
-	if blocksSinceLastDeposit < runePoolCooldown {
-		tryAgain := runePoolCooldown - blocksSinceLastDeposit
-		return fmt.Errorf(
-			"last deposit (%d blocks ago) sooner than RUNEPool cooldown (%d), please wait %d blocks and try again",
-			blocksSinceLastDeposit,
-			runePoolCooldown,
-			tryAgain,
-		)
-	}
-
-	withdrawable := common.SafeSub(runeProvider.DepositAmount, runeProvider.WithdrawAmount)
-	if withdrawable.IsZero() {
-		return fmt.Errorf("nothing to withdraw")
-	}
-
-	var userRUNE cosmos.Uint
-	userRUNE = common.GetSafeShare(msg.BasisPoints, cosmos.NewUint(constants.MaxBasisPts), withdrawable)
-	if userRUNE.GT(withdrawable) {
-		return fmt.Errorf("insufficient balance, withdrawable: %s", withdrawable.String())
-	}
-
-	affiliateRUNE := cosmos.ZeroUint()
-	if !msg.AffiliateBasisPoints.IsZero() {
-		affiliateRUNE = common.GetSafeShare(msg.AffiliateBasisPoints, cosmos.NewUint(constants.MaxBasisPts), userRUNE)
-		userRUNE = common.SafeSub(userRUNE, affiliateRUNE)
-		runeProvider.WithdrawAmount = runeProvider.WithdrawAmount.Add(affiliateRUNE)
-	}
-	runeProvider.LastWithdrawHeight = ctx.BlockHeight()
-	runeProvider.WithdrawAmount = runeProvider.WithdrawAmount.Add(userRUNE)
-	h.mgr.Keeper().SetRUNEProvider(ctx, runeProvider)
-
-	err = h.mgr.Keeper().SendFromModuleToAccount(
-		ctx,
-		RUNEPoolName,
-		runeProvider.RuneAddress,
-		common.Coins{common.NewCoin(common.RuneNative, userRUNE)},
-	)
+	// rune pool tracks the reserve and pooler unit shares of pol
+	runePool, err := h.mgr.Keeper().GetRUNEPool(ctx)
 	if err != nil {
-		return fmt.Errorf("unable to SendFromModuleToAccount: %s", err)
+		return fmt.Errorf("fail to get rune pool: %s", err)
 	}
 
-	if !affiliateRUNE.IsZero() {
-		affAccAddr, err := msg.AffiliateAddress.AccAddress()
+	// compute withdraw units
+	maxBps := cosmos.NewUint(constants.MaxBasisPts)
+	withdrawUnits := common.GetSafeShare(msg.BasisPoints, maxBps, runeProvider.Units)
+
+	totalRunePoolValue, err := runePoolValue(ctx, h.mgr)
+	if err != nil {
+		return fmt.Errorf("fail to get rune pool value: %w", err)
+	}
+
+	// determine the profit of the withdraw amount to share with affiliate
+	affiliateAmount := cosmos.ZeroUint()
+	if !msg.AffiliateBasisPoints.IsZero() {
+		totalUnits := runePool.TotalUnits()
+		currentValue := common.GetSafeShare(runeProvider.Units, totalUnits, totalRunePoolValue)
+		depositRemaining := common.SafeSub(runeProvider.DepositAmount, runeProvider.WithdrawAmount)
+		currentYield := common.SafeSub(currentValue, depositRemaining)
+		withdrawYield := common.GetSafeShare(msg.BasisPoints, maxBps, currentYield)
+		affiliateAmount = common.GetSafeShare(msg.AffiliateBasisPoints, maxBps, withdrawYield)
+	}
+
+	// compute withdraw amount
+	withdrawAmount := common.GetSafeShare(withdrawUnits, runePool.TotalUnits(), totalRunePoolValue)
+
+	// if insufficient pending units, reserve should enter to create space for withdraw
+	pendingRune := h.mgr.Keeper().GetRuneBalanceOfModule(ctx, RUNEPoolName)
+	if withdrawAmount.GT(pendingRune) {
+		reserveEnterRune := common.SafeSub(withdrawAmount, pendingRune)
+
+		// There may be cases where providers are in a state of profit, and for the reserve
+		// to buy their share of POL it must exceed POLMaxNetworkDeposit to cover the profit
+		// of the provider. We allow exceeding this limit up to RUNEPoolMaxReserveBackstop
+		// beyond the POLMaxNetworkDeposit as a circuit breaker. If the circuit breaker is
+		// reached, withdraws will fail pending governance to increase the limit or extend
+		// logic to trigger POL withdraw and sacrifice pool depth to satisfy withdrawals.
+		maxReserveBackstop := h.mgr.Keeper().GetConfigInt64(ctx, constants.RUNEPoolMaxReserveBackstop)
+		polMaxNetworkDeposit := h.mgr.Keeper().GetConfigInt64(ctx, constants.POLMaxNetworkDeposit)
+		maxReserveUsage := cosmos.NewInt(maxReserveBackstop + polMaxNetworkDeposit)
+		pol, err := h.mgr.Keeper().GetPOL(ctx)
 		if err != nil {
-			return fmt.Errorf("unable to resolve affiliate AccAddress: %s", err)
+			return fmt.Errorf("fail to get POL: %w", err)
 		}
-		err = h.mgr.Keeper().SendFromModuleToAccount(
-			ctx,
-			RUNEPoolName,
-			affAccAddr,
-			common.Coins{common.NewCoin(common.RuneNative, affiliateRUNE)},
-		)
+		currentReserveDeposit := pol.CurrentDeposit().
+			Sub(runePool.CurrentDeposit()).
+			Add(cosmos.NewIntFromBigInt(pendingRune.BigInt()))
+		newReserveDeposit := currentReserveDeposit.Add(cosmos.NewIntFromBigInt(reserveEnterRune.BigInt()))
+		if newReserveDeposit.GT(maxReserveUsage) {
+			return fmt.Errorf("reserve enter %d rune exceeds backstop", reserveEnterRune.Uint64())
+		}
+
+		err = reserveEnterRUNEPool(ctx, h.mgr, reserveEnterRune)
 		if err != nil {
-			return fmt.Errorf("unable to SendFromModuleToAccount (affiliate): %s", err)
+			return fmt.Errorf("fail to reserve enter rune pool: %w", err)
+		}
+
+		// fetch rune pool after reserve enter for updated units
+		runePool, err = h.mgr.Keeper().GetRUNEPool(ctx)
+		if err != nil {
+			return fmt.Errorf("fail to get rune pool: %w", err)
 		}
 	}
+
+	// update provider and rune pool records
+	runeProvider.Units = common.SafeSub(runeProvider.Units, withdrawUnits)
+	runeProvider.WithdrawAmount = runeProvider.WithdrawAmount.Add(withdrawAmount)
+	runeProvider.LastWithdrawHeight = ctx.BlockHeight()
+	h.mgr.Keeper().SetRUNEProvider(ctx, runeProvider)
+	runePool.PoolUnits = common.SafeSub(runePool.PoolUnits, withdrawUnits)
+	runePool.RuneWithdrawn = runePool.RuneWithdrawn.Add(withdrawAmount)
+	h.mgr.Keeper().SetRUNEPool(ctx, runePool)
+
+	// send the affiliate fee
+	userAmount := common.SafeSub(withdrawAmount, affiliateAmount)
+	if !affiliateAmount.IsZero() {
+		affiliateCoins := common.NewCoins(common.NewCoin(common.RuneNative, affiliateAmount))
+		affiliateAddress, err := msg.AffiliateAddress.AccAddress()
+		if err != nil {
+			return fmt.Errorf("fail to get affiliate address: %w", err)
+		}
+		err = h.mgr.Keeper().SendFromModuleToAccount(ctx, RUNEPoolName, affiliateAddress, affiliateCoins)
+		if err != nil {
+			return fmt.Errorf("fail to send affiliate fee: %w", err)
+		}
+	}
+
+	// send the user the withdraw
+	userCoins := common.NewCoins(common.NewCoin(common.RuneNative, userAmount))
+	err = h.mgr.Keeper().SendFromModuleToAccount(ctx, RUNEPoolName, msg.Signer, userCoins)
+	if err != nil {
+		return fmt.Errorf("fail to send user withdraw: %w", err)
+	}
+
+	ctx.Logger().Info(
+		"runepool withdraw",
+		"address", msg.Signer,
+		"units", withdrawUnits,
+		"amount", userAmount,
+		"affiliate_amount", affiliateAmount,
+	)
 
 	withdrawEvent := NewEventRUNEPoolWithdraw(
 		runeProvider.RuneAddress,
-		int64(msg.AffiliateBasisPoints.Uint64()),
-		userRUNE,
-		cosmos.ZeroUint(), // replace with units withdrawn once added
+		int64(msg.BasisPoints.Uint64()),
+		withdrawAmount,
+		withdrawUnits,
 		msg.Tx.ID,
 		msg.AffiliateAddress,
 		int64(msg.AffiliateBasisPoints.Uint64()),
-		affiliateRUNE,
+		affiliateAmount,
 	)
 	if err := h.mgr.EventMgr().EmitEvent(ctx, withdrawEvent); err != nil {
 		ctx.Logger().Error("fail to emit rune pool withdraw event", "error", err)

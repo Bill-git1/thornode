@@ -49,6 +49,7 @@ var (
 	NewStreamingSwap           = types.NewStreamingSwap
 	NewNetwork                 = types.NewNetwork
 	NewProtocolOwnedLiquidity  = types.NewProtocolOwnedLiquidity
+	NewRUNEPool                = types.NewRUNEPool
 	NewObservedTx              = types.NewObservedTx
 	NewTssVoter                = types.NewTssVoter
 	NewBanVoter                = types.NewBanVoter
@@ -139,6 +140,7 @@ type (
 	TradeAccount             = types.TradeAccount
 	TradeUnit                = types.TradeUnit
 	RUNEProvider             = types.RUNEProvider
+	RUNEPool                 = types.RUNEPool
 
 	ProtoInt64        = types.ProtoInt64
 	ProtoUint64       = types.ProtoUint64

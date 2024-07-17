@@ -18,6 +18,8 @@ import (
 type RUNEProvider struct {
 	RuneAddress string `json:"rune_address"`
 	Units string `json:"units"`
+	Value string `json:"value"`
+	Pnl string `json:"pnl"`
 	DepositAmount string `json:"deposit_amount"`
 	WithdrawAmount string `json:"withdraw_amount"`
 	LastDepositHeight int64 `json:"last_deposit_height"`
@@ -28,10 +30,12 @@ type RUNEProvider struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewRUNEProvider(runeAddress string, units string, depositAmount string, withdrawAmount string, lastDepositHeight int64, lastWithdrawHeight int64) *RUNEProvider {
+func NewRUNEProvider(runeAddress string, units string, value string, pnl string, depositAmount string, withdrawAmount string, lastDepositHeight int64, lastWithdrawHeight int64) *RUNEProvider {
 	this := RUNEProvider{}
 	this.RuneAddress = runeAddress
 	this.Units = units
+	this.Value = value
+	this.Pnl = pnl
 	this.DepositAmount = depositAmount
 	this.WithdrawAmount = withdrawAmount
 	this.LastDepositHeight = lastDepositHeight
@@ -93,6 +97,54 @@ func (o *RUNEProvider) GetUnitsOk() (*string, bool) {
 // SetUnits sets field value
 func (o *RUNEProvider) SetUnits(v string) {
 	o.Units = v
+}
+
+// GetValue returns the Value field value
+func (o *RUNEProvider) GetValue() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.Value
+}
+
+// GetValueOk returns a tuple with the Value field value
+// and a boolean to check if the value has been set.
+func (o *RUNEProvider) GetValueOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.Value, true
+}
+
+// SetValue sets field value
+func (o *RUNEProvider) SetValue(v string) {
+	o.Value = v
+}
+
+// GetPnl returns the Pnl field value
+func (o *RUNEProvider) GetPnl() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.Pnl
+}
+
+// GetPnlOk returns a tuple with the Pnl field value
+// and a boolean to check if the value has been set.
+func (o *RUNEProvider) GetPnlOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.Pnl, true
+}
+
+// SetPnl sets field value
+func (o *RUNEProvider) SetPnl(v string) {
+	o.Pnl = v
 }
 
 // GetDepositAmount returns the DepositAmount field value
@@ -198,6 +250,12 @@ func (o RUNEProvider) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if true {
 		toSerialize["units"] = o.Units
+	}
+	if true {
+		toSerialize["value"] = o.Value
+	}
+	if true {
+		toSerialize["pnl"] = o.Pnl
 	}
 	if true {
 		toSerialize["deposit_amount"] = o.DepositAmount

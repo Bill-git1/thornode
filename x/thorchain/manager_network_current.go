@@ -1012,6 +1012,24 @@ func (vm *NetworkMgrVCUR) addPOLLiquidity(
 	}
 	coins := common.NewCoins(common.NewCoin(common.RuneAsset(), runeAmt))
 
+	// rune pool tracks the reserve and pooler unit shares of pol
+	runePool, err := mgr.Keeper().GetRUNEPool(ctx)
+	if err != nil {
+		return fmt.Errorf("fail to get rune pool: %s", err)
+	}
+
+	// if there are no units, this is the initial deposit
+	depositUnits := runeAmt
+
+	// compute the new provider units
+	if !runePool.TotalUnits().IsZero() {
+		runePoolValue, err := runePoolValue(ctx, mgr)
+		if err != nil {
+			return fmt.Errorf("fail to get rune pool value: %s", err)
+		}
+		depositUnits = common.GetSafeShare(runeAmt, runePoolValue, runePool.TotalUnits())
+	}
+
 	// check balance
 	bal := mgr.Keeper().GetRuneBalanceOfModule(ctx, ReserveName)
 	if runeAmt.GT(bal) {
@@ -1023,14 +1041,25 @@ func (vm *NetworkMgrVCUR) addPOLLiquidity(
 
 	tx := common.NewTx(common.BlankTxID, polAddress, asgardAddress, coins, nil, "THOR-POL-ADD")
 	msg := NewMsgAddLiquidity(tx, pool.Asset, runeAmt, cosmos.ZeroUint(), polAddress, common.NoAddress, common.NoAddress, cosmos.ZeroUint(), signer)
-	_, err := handler(ctx, msg)
+	_, err = handler(ctx, msg)
 	if err != nil {
 		// revert the rune back to the reserve
 		if err := mgr.Keeper().SendFromModuleToModule(ctx, AsgardName, ReserveName, coins); err != nil {
 			return err
 		}
+		return err
 	}
-	return err
+
+	// deposit was successful, update the rune pool units accordingly
+	runePool.ReserveUnits = runePool.ReserveUnits.Add(depositUnits)
+	mgr.Keeper().SetRUNEPool(ctx, runePool)
+
+	// rebalance ownership from reserve to poolers if able
+	err = reserveExitRUNEPool(ctx, mgr)
+	if err != nil {
+		return fmt.Errorf("fail to exit runepool: %s", err)
+	}
+	return nil
 }
 
 func (vm *NetworkMgrVCUR) removePOLLiquidity(
@@ -1062,14 +1091,46 @@ func (vm *NetworkMgrVCUR) removePOLLiquidity(
 	if runeAmt.IsZero() {
 		return nil
 	}
+	maxBps := cosmos.NewUint(constants.MaxBasisPts)
 	lpRune := common.GetSafeShare(lp.Units, pool.GetPoolUnits(), pool.BalanceRune).MulUint64(2)
-	basisPts := common.GetSafeShare(runeAmt, lpRune, cosmos.NewUint(10_000))
+	basisPts := common.GetSafeShare(runeAmt, lpRune, maxBps)
 
 	// if the move is smaller than 1 basis point of the position, withdraw 1 basis point
 	if basisPts.IsZero() {
 		basisPts = cosmos.OneUint()
 	}
 
+	// adjust rune amount to reflect basis points of withdraw
+	runeAmt = common.GetSafeShare(basisPts, maxBps, lpRune)
+
+	// rune pool tracks the reserve and pooler unit shares of pol
+	runePool, err := mgr.Keeper().GetRUNEPool(ctx)
+	if err != nil {
+		return fmt.Errorf("fail to get runepool: %s", err)
+	}
+
+	// reserve acquires corresponding runepool units that will be withdrawn
+	runePoolValue, err := runePoolValue(ctx, mgr)
+	if err != nil {
+		return fmt.Errorf("fail to get rune pool value: %s", err)
+	}
+	reserveRunePoolValue := common.GetSafeShare(runePool.ReserveUnits, runePool.TotalUnits(), runePoolValue)
+	if reserveRunePoolValue.LT(runeAmt) {
+		rebalanceRune := common.SafeSub(runeAmt, reserveRunePoolValue)
+		err = reserveEnterRUNEPool(ctx, mgr, rebalanceRune)
+		if err != nil {
+			return fmt.Errorf("fail to enter runepool: %s", err)
+		}
+
+		// fetch updated runepool
+		runePool, err = mgr.Keeper().GetRUNEPool(ctx)
+		if err != nil {
+			return fmt.Errorf("fail to get runepool: %s", err)
+		}
+	}
+
+	// process the withdraw
+	withdrawUnits := common.GetSafeShare(runeAmt, runePoolValue, runePool.TotalUnits())
 	coins := common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.ZeroUint()))
 	tx := common.NewTx(common.BlankTxID, polAddress, asgardAddress, coins, nil, "THOR-POL-REMOVE")
 	msg := NewMsgWithdrawLiquidity(
@@ -1082,7 +1143,15 @@ func (vm *NetworkMgrVCUR) removePOLLiquidity(
 	)
 
 	_, err = handler(ctx, msg)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// withdraw was successful, update the runepool units accordingly
+	runePool.ReserveUnits = common.SafeSub(runePool.ReserveUnits, withdrawUnits)
+	mgr.Keeper().SetRUNEPool(ctx, runePool)
+
+	return nil
 }
 
 // TriggerKeygen generate a record to instruct signer kick off keygen process

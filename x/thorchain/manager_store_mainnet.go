@@ -2019,4 +2019,16 @@ func migrateStoreV134(ctx cosmos.Context, mgr *Mgrs) {
 	}(ctx, mgr.Keeper()); err != nil {
 		ctx.Logger().Error("fail to restore lost treasury LPs", "error", err)
 	}
+
+	// initialize rune pool with current reserve units
+	value, err := polPoolValue(ctx, mgr)
+	if err != nil {
+		ctx.Logger().Error("fail to get pol value", "error", err)
+		return
+	}
+	rp := RUNEPool{
+		ReserveUnits: value,
+		PoolUnits:    cosmos.ZeroUint(),
+	}
+	mgr.Keeper().SetRUNEPool(ctx, rp)
 }

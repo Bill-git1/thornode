@@ -120,8 +120,6 @@ func NewQuerier(mgr *Mgrs, kbs cosmos.KeybaseStore) cosmos.Querier {
 			return queryInboundAddresses(ctx, path[1:], req, mgr)
 		case q.QueryNetwork.Key:
 			return queryNetwork(ctx, mgr)
-		case q.QueryPOL.Key:
-			return queryPOL(ctx, mgr)
 		case q.QueryBalanceModule.Key:
 			return queryBalanceModule(ctx, path[1:], mgr)
 		case q.QueryVaultsAsgard.Key:
@@ -156,6 +154,8 @@ func NewQuerier(mgr *Mgrs, kbs cosmos.KeybaseStore) cosmos.Querier {
 			return queryBan(ctx, path[1:], req, mgr)
 		case q.QueryRagnarok.Key:
 			return queryRagnarok(ctx, mgr)
+		case q.QueryRUNEPool.Key:
+			return queryRUNEPool(ctx, mgr)
 		case q.QueryRUNEProvider.Key:
 			return queryRUNEProvider(ctx, path[1:], req, mgr)
 		case q.QueryRUNEProviders.Key:
@@ -502,6 +502,70 @@ func queryVaultsPubkeys(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 	return jsonify(ctx, resp)
 }
 
+func queryRUNEPool(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
+	// gather pol data
+	pol, err := mgr.Keeper().GetPOL(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get POL: %w", err)
+	}
+	polValue, err := polPoolValue(ctx, mgr)
+	if err != nil {
+		return nil, fmt.Errorf("fail to fetch POL value: %w", err)
+	}
+	pnl := pol.PnL(polValue)
+
+	// gather runepool data
+	runePool, err := mgr.Keeper().GetRUNEPool(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get RUNE pool: %w", err)
+	}
+
+	// calculate pending units
+	runePoolValue, err := runePoolValue(ctx, mgr)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get rune pool value: %w", err)
+	}
+	pendingRune := mgr.Keeper().GetRuneBalanceOfModule(ctx, RUNEPoolName)
+	pendingUnits := common.GetSafeShare(pendingRune, runePoolValue, runePool.TotalUnits())
+
+	// calculate provider shares
+	providerValue := common.GetSafeShare(runePool.PoolUnits, runePool.TotalUnits(), runePoolValue)
+	providerPnl := sdk.NewIntFromBigInt(providerValue.BigInt()).Sub(runePool.CurrentDeposit())
+
+	// calculate reserve shares
+	reserveValue := common.GetSafeShare(runePool.ReserveUnits, runePool.TotalUnits(), runePoolValue)
+	reserveCurrentDeposit := pol.CurrentDeposit().
+		Sub(runePool.CurrentDeposit()).
+		Add(cosmos.NewIntFromBigInt(pendingRune.BigInt()))
+	reservePnl := sdk.NewIntFromBigInt(reserveValue.BigInt()).Sub(reserveCurrentDeposit)
+
+	result := openapi.RUNEPoolResponse{
+		Pol: openapi.POL{
+			RuneDeposited:  pol.RuneDeposited.String(),
+			RuneWithdrawn:  pol.RuneWithdrawn.String(),
+			Value:          polValue.String(),
+			Pnl:            pnl.String(),
+			CurrentDeposit: pol.CurrentDeposit().String(),
+		},
+		Providers: openapi.RUNEPoolResponseProviders{
+			Units:          runePool.PoolUnits.String(),
+			PendingUnits:   pendingUnits.String(),
+			PendingRune:    pendingRune.String(),
+			Value:          providerValue.String(),
+			Pnl:            providerPnl.String(),
+			CurrentDeposit: runePool.CurrentDeposit().String(),
+		},
+		Reserve: openapi.RUNEPoolResponseReserve{
+			Units:          runePool.ReserveUnits.String(),
+			Value:          reserveValue.String(),
+			Pnl:            reservePnl.String(),
+			CurrentDeposit: reserveCurrentDeposit.String(),
+		},
+	}
+
+	return jsonify(ctx, result)
+}
+
 // queryRUNEProvider
 func queryRUNEProvider(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {
 	if len(path) == 0 {
@@ -515,13 +579,26 @@ func queryRUNEProvider(ctx cosmos.Context, path []string, req abci.RequestQuery,
 	if err != nil {
 		return nil, fmt.Errorf("unable to GetRUNEProvider: %s", err)
 	}
+
+	// get runepool value to determine current value and pnl
+	runePool, err := mgr.Keeper().GetRUNEPool(ctx)
 	if err != nil {
-		ctx.Logger().Error("unable to GetRUNEProvider", "error", err)
-		return nil, fmt.Errorf("unable to GetRUNEProvider: %w", err)
+		return nil, fmt.Errorf("fail to get RUNE pool: %w", err)
 	}
+	runePoolValue, err := runePoolValue(ctx, mgr)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get rune pool value: %w", err)
+	}
+	providerValue := common.GetSafeShare(rp.Units, runePool.TotalUnits(), runePoolValue)
+	providerPnl := providerValue.BigInt()
+	providerPnl.Sub(providerPnl, rp.DepositAmount.BigInt())
+	providerPnl.Add(providerPnl, rp.WithdrawAmount.BigInt())
+
 	result := openapi.RUNEProvider{
 		RuneAddress:        rp.RuneAddress.String(),
 		Units:              rp.Units.String(),
+		Value:              providerValue.String(),
+		Pnl:                providerPnl.String(),
 		DepositAmount:      rp.DepositAmount.String(),
 		WithdrawAmount:     rp.WithdrawAmount.String(),
 		LastDepositHeight:  rp.LastDepositHeight,
@@ -532,15 +609,33 @@ func queryRUNEProvider(ctx cosmos.Context, path []string, req abci.RequestQuery,
 
 // queryRUNEProviders
 func queryRUNEProviders(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
+	// get runepool value to determine current value and pnl
+	runePool, err := mgr.Keeper().GetRUNEPool(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get RUNE pool: %w", err)
+	}
+	runePoolValue, err := runePoolValue(ctx, mgr)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get rune pool value: %w", err)
+	}
+
 	var runeProviders []openapi.RUNEProvider
 	iterator := mgr.Keeper().GetRUNEProviderIterator(ctx)
 	defer iterator.Close()
 	for ; iterator.Valid(); iterator.Next() {
 		var rp types.RUNEProvider
 		mgr.Keeper().Cdc().MustUnmarshal(iterator.Value(), &rp)
+
+		providerValue := common.GetSafeShare(rp.Units, runePool.TotalUnits(), runePoolValue)
+		providerPnl := providerValue.BigInt()
+		providerPnl.Sub(providerPnl, rp.DepositAmount.BigInt())
+		providerPnl.Add(providerPnl, rp.WithdrawAmount.BigInt())
+
 		runeProviders = append(runeProviders, openapi.RUNEProvider{
 			RuneAddress:        rp.RuneAddress.String(),
 			Units:              rp.Units.String(),
+			Value:              providerValue.String(),
+			Pnl:                providerPnl.String(),
 			DepositAmount:      rp.DepositAmount.String(),
 			WithdrawAmount:     rp.WithdrawAmount.String(),
 			LastDepositHeight:  rp.LastDepositHeight,
@@ -594,29 +689,6 @@ func queryNetwork(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 		TnsFeePerBlockRune:    mgr.Keeper().GetTHORNamePerBlockFee(ctx).String(),
 		RunePriceInTor:        mgr.Keeper().DollarsPerRune(ctx).String(),
 		TorPriceInRune:        mgr.Keeper().RunePerDollar(ctx).String(),
-	}
-
-	return jsonify(ctx, result)
-}
-
-func queryPOL(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
-	data, err := mgr.Keeper().GetPOL(ctx)
-	if err != nil {
-		ctx.Logger().Error("fail to get POL", "error", err)
-		return nil, fmt.Errorf("fail to get POL: %w", err)
-	}
-	polValue, err := polPoolValue(ctx, mgr)
-	if err != nil {
-		ctx.Logger().Error("fail to fetch POL value", "error", err)
-		return nil, fmt.Errorf("fail to fetch POL value: %w", err)
-	}
-	pnl := data.PnL(polValue)
-	result := openapi.POLResponse{
-		RuneDeposited:  data.RuneDeposited.String(),
-		RuneWithdrawn:  data.RuneWithdrawn.String(),
-		Value:          polValue.String(),
-		Pnl:            pnl.String(),
-		CurrentDeposit: data.CurrentDeposit().String(),
 	}
 
 	return jsonify(ctx, result)

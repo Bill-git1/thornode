@@ -38,7 +38,7 @@ func (m *MsgRunePoolDeposit) ValidateBasic() error {
 		return cosmos.ErrInvalidAddress("signer must not be empty")
 	}
 	if m.Tx.Coins[0].Amount.IsZero() {
-		return cosmos.ErrUnknownRequest("coins must not be zero")
+		return cosmos.ErrUnknownRequest("coins amount must not be zero")
 	}
 	return nil
 }
@@ -54,9 +54,10 @@ func (m *MsgRunePoolDeposit) GetSigners() []cosmos.AccAddress {
 }
 
 // NewMsgRunePoolWithdraw create new MsgRunePoolWithdraw message
-func NewMsgRunePoolWithdraw(address common.Address, basisPoints cosmos.Uint, affAddr common.Address, affBps cosmos.Uint, signer cosmos.AccAddress) *MsgRunePoolWithdraw {
+func NewMsgRunePoolWithdraw(signer cosmos.AccAddress, tx common.Tx, basisPoints cosmos.Uint, affAddr common.Address, affBps cosmos.Uint) *MsgRunePoolWithdraw {
 	return &MsgRunePoolWithdraw{
 		Signer:               signer,
+		Tx:                   tx,
 		BasisPoints:          basisPoints,
 		AffiliateAddress:     affAddr,
 		AffiliateBasisPoints: affBps,
@@ -71,12 +72,22 @@ func (m MsgRunePoolWithdraw) Type() string { return "rune_pool_withdraw" }
 
 // ValidateBasic runs stateless checks on the message
 func (m *MsgRunePoolWithdraw) ValidateBasic() error {
+	if !m.Tx.Coins.IsEmpty() {
+		return cosmos.ErrInvalidCoins("coins must be empty (zero amount)")
+	}
 	if m.Signer.Empty() {
-		return cosmos.ErrInvalidAddress("signer cannot be empty")
+		return cosmos.ErrInvalidAddress("signer must not be empty")
 	}
 	if m.BasisPoints.IsZero() || m.BasisPoints.GT(cosmos.NewUint(constants.MaxBasisPts)) {
 		return cosmos.ErrUnknownRequest("invalid basis points")
 	}
+	if m.AffiliateBasisPoints.GT(cosmos.NewUint(constants.MaxBasisPts)) {
+		return cosmos.ErrUnknownRequest("invalid affiliate basis points")
+	}
+	if !m.AffiliateBasisPoints.IsZero() && m.AffiliateAddress.IsEmpty() {
+		return cosmos.ErrInvalidAddress("affiliate basis points with no affiliate address")
+	}
+
 	return nil
 }
 

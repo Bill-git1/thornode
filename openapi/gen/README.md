@@ -103,7 +103,6 @@ Class | Method | HTTP request | Description
 *NetworkApi* | [**Version**](docs/NetworkApi.md#version) | **Get** /thorchain/version | 
 *NodesApi* | [**Node**](docs/NodesApi.md#node) | **Get** /thorchain/node/{address} | 
 *NodesApi* | [**Nodes**](docs/NodesApi.md#nodes) | **Get** /thorchain/nodes | 
-*POLApi* | [**Pol**](docs/POLApi.md#pol) | **Get** /thorchain/pol | 
 *PoolSlipApi* | [**Poolslip**](docs/PoolSlipApi.md#poolslip) | **Get** /thorchain/slip/{asset} | 
 *PoolSlipApi* | [**Poolslips**](docs/PoolSlipApi.md#poolslips) | **Get** /thorchain/slips | 
 *PoolsApi* | [**Dpool**](docs/PoolsApi.md#dpool) | **Get** /thorchain/dpool/{asset} | 
@@ -119,8 +118,9 @@ Class | Method | HTTP request | Description
 *QuoteApi* | [**Quotesaverdeposit**](docs/QuoteApi.md#quotesaverdeposit) | **Get** /thorchain/quote/saver/deposit | 
 *QuoteApi* | [**Quotesaverwithdraw**](docs/QuoteApi.md#quotesaverwithdraw) | **Get** /thorchain/quote/saver/withdraw | 
 *QuoteApi* | [**Quoteswap**](docs/QuoteApi.md#quoteswap) | **Get** /thorchain/quote/swap | 
-*RUNEProvidersApi* | [**RuneProvider**](docs/RUNEProvidersApi.md#runeprovider) | **Get** /thorchain/rune_providers/{address} | 
-*RUNEProvidersApi* | [**RuneProviders**](docs/RUNEProvidersApi.md#runeproviders) | **Get** /thorchain/rune_providers | 
+*RUNEPoolApi* | [**RunePool**](docs/RUNEPoolApi.md#runepool) | **Get** /thorchain/runepool | 
+*RUNEPoolApi* | [**RuneProvider**](docs/RUNEPoolApi.md#runeprovider) | **Get** /thorchain/rune_provider/{address} | 
+*RUNEPoolApi* | [**RuneProviders**](docs/RUNEPoolApi.md#runeproviders) | **Get** /thorchain/rune_providers | 
 *SaversApi* | [**Saver**](docs/SaversApi.md#saver) | **Get** /thorchain/pool/{asset}/saver/{address} | 
 *SaversApi* | [**Savers**](docs/SaversApi.md#savers) | **Get** /thorchain/pool/{asset}/savers | 
 *StreamingSwapApi* | [**StreamSwap**](docs/StreamingSwapApi.md#streamswap) | **Get** /thorchain/swap/streaming/{hash} | 
@@ -194,7 +194,7 @@ Class | Method | HTTP request | Description
  - [OutboundDelayStage](docs/OutboundDelayStage.md)
  - [OutboundFee](docs/OutboundFee.md)
  - [OutboundSignedStage](docs/OutboundSignedStage.md)
- - [POLResponse](docs/POLResponse.md)
+ - [POL](docs/POL.md)
  - [Ping](docs/Ping.md)
  - [PlannedOutTx](docs/PlannedOutTx.md)
  - [Pool](docs/Pool.md)
@@ -206,6 +206,9 @@ Class | Method | HTTP request | Description
  - [QuoteSaverDepositResponse](docs/QuoteSaverDepositResponse.md)
  - [QuoteSaverWithdrawResponse](docs/QuoteSaverWithdrawResponse.md)
  - [QuoteSwapResponse](docs/QuoteSwapResponse.md)
+ - [RUNEPoolResponse](docs/RUNEPoolResponse.md)
+ - [RUNEPoolResponseProviders](docs/RUNEPoolResponseProviders.md)
+ - [RUNEPoolResponseReserve](docs/RUNEPoolResponseReserve.md)
  - [RUNEProvider](docs/RUNEProvider.md)
  - [Saver](docs/Saver.md)
  - [StreamingStatus](docs/StreamingStatus.md)

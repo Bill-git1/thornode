@@ -82,7 +82,14 @@ func (h RunePoolDepositHandler) handle(ctx cosmos.Context, msg MsgRunePoolDeposi
 }
 
 func (h RunePoolDepositHandler) handleV134(ctx cosmos.Context, msg MsgRunePoolDeposit) error {
-	err := h.mgr.Keeper().SendFromModuleToModule(
+	// get rune pool value before deposit
+	runePoolValue, err := runePoolValue(ctx, h.mgr)
+	if err != nil {
+		return fmt.Errorf("fail to get rune pool value: %s", err)
+	}
+
+	// send deposit to runepool module
+	err = h.mgr.Keeper().SendFromModuleToModule(
 		ctx,
 		AsgardName,
 		RUNEPoolName,
@@ -101,40 +108,48 @@ func (h RunePoolDepositHandler) handleV134(ctx cosmos.Context, msg MsgRunePoolDe
 		return fmt.Errorf("unable to GetRUNEProvider: %s", err)
 	}
 
-	runePoolCooldown := h.mgr.Keeper().GetConfigInt64(ctx, constants.RUNEPoolCooldown)
-	currentBlockHeight := ctx.BlockHeight()
-
-	blocksSinceLastWithdraw := currentBlockHeight - runeProvider.LastWithdrawHeight
-	blocksSinceLastDeposit := currentBlockHeight - runeProvider.LastDepositHeight
-
-	if blocksSinceLastWithdraw < runePoolCooldown {
-		tryAgain := runePoolCooldown - blocksSinceLastWithdraw
-		return fmt.Errorf(
-			"last withdraw (%d blocks ago) sooner than RUNEPool cooldown (%d), please wait %d blocks and try again",
-			blocksSinceLastWithdraw,
-			runePoolCooldown,
-			tryAgain,
-		)
-	}
-
-	if blocksSinceLastDeposit < runePoolCooldown {
-		tryAgain := runePoolCooldown - blocksSinceLastDeposit
-		return fmt.Errorf(
-			"last deposit (%d blocks ago) sooner than RUNEPool cooldown (%d), please wait %d blocks and try again",
-			blocksSinceLastDeposit,
-			runePoolCooldown,
-			tryAgain,
-		)
-	}
-
 	runeProvider.LastDepositHeight = ctx.BlockHeight()
 	runeProvider.DepositAmount = runeProvider.DepositAmount.Add(msg.Tx.Coins[0].Amount)
+
+	// rune pool tracks the reserve and pooler unit shares of pol
+	runePool, err := h.mgr.Keeper().GetRUNEPool(ctx)
+	if err != nil {
+		return fmt.Errorf("fail to get rune pool: %s", err)
+	}
+
+	// if there are no units, this is the initial deposit
+	depositUnits := msg.Tx.Coins[0].Amount
+
+	// compute deposit units
+	if !runePool.TotalUnits().IsZero() {
+		depositRune := msg.Tx.Coins[0].Amount
+		depositUnits = common.GetSafeShare(depositRune, runePoolValue, runePool.TotalUnits())
+	}
+
+	// update the provider and rune pool records
+	runeProvider.Units = runeProvider.Units.Add(depositUnits)
 	h.mgr.Keeper().SetRUNEProvider(ctx, runeProvider)
+	runePool.PoolUnits = runePool.PoolUnits.Add(depositUnits)
+	runePool.RuneDeposited = runePool.RuneDeposited.Add(msg.Tx.Coins[0].Amount)
+	h.mgr.Keeper().SetRUNEPool(ctx, runePool)
+
+	// rebalance ownership from reserve to poolers if able
+	err = reserveExitRUNEPool(ctx, h.mgr)
+	if err != nil {
+		return fmt.Errorf("fail to exit reserve rune pool: %w", err)
+	}
+
+	ctx.Logger().Info(
+		"runepool deposit",
+		"address", msg.Signer,
+		"units", depositUnits,
+		"amount", msg.Tx.Coins[0].Amount,
+	)
 
 	depositEvent := NewEventRUNEPoolDeposit(
 		runeProvider.RuneAddress,
 		msg.Tx.Coins[0].Amount,
-		cosmos.ZeroUint(), // replace with units withdrawn once added
+		depositUnits,
 		msg.Tx.ID,
 	)
 	if err := h.mgr.EventMgr().EmitEvent(ctx, depositEvent); err != nil {

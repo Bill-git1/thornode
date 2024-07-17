@@ -874,7 +874,7 @@ func (m *EventLoanRepayment) Events() (cosmos.Events, error) {
 	return cosmos.Events{evt}, nil
 }
 
-// NewEventWithdraw create a new deposit event
+// NewEventTradeAccountDeposit creates a new trade account deposit event.
 func NewEventTradeAccountDeposit(
 	amt cosmos.Uint,
 	asset common.Asset,
@@ -907,7 +907,7 @@ func (m *EventTradeAccountDeposit) Events() (cosmos.Events, error) {
 	return cosmos.Events{evt}, nil
 }
 
-// NewEventWithdraw create a new withdraw event
+// NewEventTradeAccountWithdraw creates a new trade account withdraw event.
 func NewEventTradeAccountWithdraw(
 	amt cosmos.Uint,
 	asset common.Asset,
@@ -965,7 +965,7 @@ func NewEventRUNEPoolWithdraw(
 
 // Type return the withdraw event type
 func (m *EventRUNEPoolWithdraw) Type() string {
-	return TradeAccountWithdrawEventType
+	return RUNEPoolWithdrawEventType
 }
 
 // Events return the cosmos event
@@ -987,19 +987,19 @@ func NewEventRUNEPoolDeposit(
 	runeAddress cosmos.AccAddress,
 	runeAmount cosmos.Uint,
 	units cosmos.Uint,
-	txID common.TxID,
+	txid common.TxID,
 ) *EventRUNEPoolDeposit {
 	return &EventRUNEPoolDeposit{
 		RuneAddress: runeAddress,
 		RuneAmount:  runeAmount,
 		Units:       units,
-		TxId:        txID,
+		TxId:        txid,
 	}
 }
 
-// Type return the withdraw event type
+// Type return the deposit event type
 func (m *EventRUNEPoolDeposit) Type() string {
-	return TradeAccountDepositEventType
+	return RUNEPoolDepositEventType
 }
 
 // Events return the cosmos event
@@ -1013,8 +1013,8 @@ func (m *EventRUNEPoolDeposit) Events() (cosmos.Events, error) {
 	return cosmos.Events{evt}, nil
 }
 
-// NewEventSetMimir create a new instance of EventSetMimir
 func NewEventSetMimir(key, value string) *EventSetMimir {
+	// NewEventSetMimir create a new instance of EventSetMimir
 	return &EventSetMimir{
 		Key:   key,
 		Value: value,

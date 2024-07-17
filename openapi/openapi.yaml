@@ -134,7 +134,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/DerivedPoolsResponse"
 
-  # # ------------------------------ liquidity providers ------------------------------
+  # ------------------------------ liquidity providers ------------------------------
 
   /thorchain/pool/{asset}/liquidity_provider/{address}:
     parameters:
@@ -171,9 +171,27 @@ paths:
               schema:
                 $ref: "#/components/schemas/LiquidityProvidersResponse"
 
-  # # ------------------------------ rune providers ------------------------------
+  # ------------------------------ rune pool ------------------------------
 
-  /thorchain/rune_providers/{address}:
+  /thorchain/runepool:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+    get:
+      description: Returns the pool information for the RUNE pool.
+      operationId: runePool
+      tags:
+        - RUNE Pool
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RUNEPoolResponse"
+
+  # ------------------------------ rune providers ------------------------------
+
+  /thorchain/rune_provider/{address}:
     parameters:
       - $ref: "#/components/parameters/queryHeight"
       - $ref: "#/components/parameters/address"
@@ -181,7 +199,7 @@ paths:
       description: Returns the RUNE Provider information for an address.
       operationId: runeProvider
       tags:
-        - RUNE Providers
+        - RUNE Pool
       responses:
         200:
           description: OK
@@ -197,7 +215,7 @@ paths:
       description: Returns all RUNE Providers.
       operationId: runeProviders
       tags:
-        - RUNE Providers
+        - RUNE Pool
       responses:
         200:
           description: OK
@@ -206,7 +224,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/RUNEProvidersResponse"
 
-  # # ------------------------------ savers ------------------------------
+  # ------------------------------ savers ------------------------------
 
   /thorchain/pool/{asset}/saver/{address}:
     parameters:
@@ -243,7 +261,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/SaversResponse"
 
-  # # ------------------------------ loans ------------------------------
+  # ------------------------------ loans ------------------------------
 
   /thorchain/pool/{asset}/borrower/{address}:
     parameters:
@@ -519,24 +537,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OutboundFeesResponse"
-
-  # ------------------------------ POL ------------------------------
-
-  /thorchain/pol:
-    parameters:
-      - $ref: "#/components/parameters/queryHeight"
-    get:
-      description: Returns protocol owned liquidity overview statistics.
-      operationId: pol
-      tags:
-        - POL
-      responses:
-        200:
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/POLResponse"
 
   /thorchain/inbound_addresses:
     parameters:
@@ -1565,11 +1565,43 @@ components:
           example: "123456"
           description: the depth of the derived virtual pool relative to L1 pool (in basis points)
 
+    POL:
+      type: object
+      required:
+        - rune_deposited
+        - rune_withdrawn
+        - value
+        - pnl
+        - current_deposit
+      properties:
+        rune_deposited:
+          type: string
+          example: "857134475040"
+          description: total amount of RUNE deposited into the pools
+        rune_withdrawn:
+          type: string
+          example: "0"
+          description: total amount of RUNE withdrawn from the pools
+        value:
+          type: string
+          example: "21999180112172346"
+          description: total value of protocol's LP position in RUNE value
+        pnl:
+          type: string
+          example: "21999180112172346"
+          description: profit and loss of protocol owned liquidity
+        current_deposit:
+          type: string
+          example: "21999180112172346"
+          description: current amount of rune deposited
+
     RUNEProvider:
       type: object
       required:
         - rune_address
         - units
+        - value
+        - pnl
         - deposit_amount
         - withdraw_amount
         - last_deposit_height
@@ -1581,6 +1613,12 @@ components:
         units:
           type: string
           example: "1234"
+        value:
+          type: string
+          example: "123456"
+        pnl:
+          type: string
+          example: "123456"
         deposit_amount:
           type: string
           example: "6677"
@@ -2703,9 +2741,80 @@ components:
       items:
         $ref: "#/components/schemas/DerivedPool"
 
+    RUNEPoolResponse:
+      type: object
+      required:
+        - pol
+        - providers
+        - reserve
+      properties:
+        pol:
+          $ref: "#/components/schemas/POL"
+        providers:
+          type: object
+          required:
+            - units
+            - pending_units
+            - pending_rune
+            - value
+            - pnl
+            - rune_deposited
+            - rune_withdrawn
+            - current_deposit
+          properties:
+            units:
+              type: string
+              example: "123456"
+              description: the units of RUNEPool owned by providers (including pending)
+            pending_units:
+              type: string
+              example: "123456"
+              description: the units of RUNEPool owned by providers that remain pending
+            pending_rune:
+              type: string
+              example: "123456"
+              description: the amount of RUNE pending
+            value:
+              type: string
+              example: "123456"
+              description: the value of the provider share of the RUNEPool (includes pending RUNE)
+            pnl:
+              type: string
+              example: "123456"
+              description: the profit and loss of the provider share of the RUNEPool
+            current_deposit:
+              type: string
+              example: "123456"
+              description: the current RUNE deposited by providers
+        reserve:
+          type: object
+          required:
+            - units
+            - value
+            - pnl
+            - rune_deposited
+            - rune_withdrawn
+            - current_deposit
+          properties:
+            units:
+              type: string
+              example: "123456"
+              description: the units of RUNEPool owned by the reserve
+            value:
+              type: string
+              example: "123456"
+              description: the value of the reserve share of the RUNEPool
+            pnl:
+              type: string
+              example: "123456"
+              description: the profit and loss of the reserve share of the RUNEPool
+            current_deposit:
+              type: string
+              example: "123456"
+              description: the current RUNE deposited by the reserve
+
     RUNEProviderResponse:
       $ref: "#/components/schemas/RUNEProvider"
-
     RUNEProvidersResponse:
       type: array
       items:
@@ -3138,36 +3247,6 @@ components:
       type: array
       items:
         $ref: "#/components/schemas/OutboundFee"
-
-    POLResponse:
-      type: object
-      required:
-        - rune_deposited
-        - rune_withdrawn
-        - value
-        - pnl
-        - current_deposit
-      properties:
-        rune_deposited:
-          type: string
-          example: "857134475040"
-          description: total amount of RUNE deposited into the pools
-        rune_withdrawn:
-          type: string
-          example: "0"
-          description: total amount of RUNE withdrawn from the pools
-        value:
-          type: string
-          example: "21999180112172346"
-          description: total value of protocol's LP position in RUNE value
-        pnl:
-          type: string
-          example: "21999180112172346"
-          description: profit and loss of protocol owned liquidity
-        current_deposit:
-          type: string
-          example: "21999180112172346"
-          description: current amount of rune deposited
 
     InboundAddressesResponse:
       type: array

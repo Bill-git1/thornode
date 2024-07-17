@@ -16,6 +16,7 @@ func (k KVStore) InvariantRoutes() []common.InvariantRoute {
 		common.NewInvariantRoute("affiliate_collector", AffilliateCollectorInvariant(k)),
 		common.NewInvariantRoute("pools", PoolsInvariant(k)),
 		common.NewInvariantRoute("streaming_swaps", StreamingSwapsInvariant(k)),
+		common.NewInvariantRoute("runepool", RUNEPoolInvariant(k)),
 	}
 }
 
@@ -316,6 +317,62 @@ func StreamingSwapsInvariant(k KVStore) common.Invariant {
 				broken = true
 				msg = append(msg, fmt.Sprintf("swap not found for stream: %s", stream.TxID.String()))
 			}
+		}
+
+		return msg, broken
+	}
+}
+
+// RUNEPoolInvariant asserts that the RUNEPool units and provider units are consistent.
+func RUNEPoolInvariant(k KVStore) common.Invariant {
+	return func(ctx cosmos.Context) (msg []string, broken bool) {
+		runePool, err := k.GetRUNEPool(ctx)
+		if err != nil {
+			ctx.Logger().Error("error getting rune pool", "error", err)
+			return []string{err.Error()}, true
+		}
+
+		providerUnits := cosmos.ZeroUint()
+		providerDeposited := cosmos.ZeroUint()
+		providerWithdrawn := cosmos.ZeroUint()
+		iterator := k.GetRUNEProviderIterator(ctx)
+		defer iterator.Close()
+		for ; iterator.Valid(); iterator.Next() {
+			var rp RUNEProvider
+			k.Cdc().MustUnmarshal(iterator.Value(), &rp)
+			if rp.RuneAddress.Empty() {
+				continue
+			}
+			providerUnits = providerUnits.Add(rp.Units)
+			providerDeposited = providerDeposited.Add(rp.DepositAmount)
+			providerWithdrawn = providerWithdrawn.Add(rp.WithdrawAmount)
+		}
+
+		if !providerUnits.Equal(runePool.PoolUnits) {
+			m := fmt.Sprintf(
+				"pool units %s != provider units %s",
+				runePool.PoolUnits, providerUnits,
+			)
+			msg = append(msg, m)
+			broken = true
+		}
+
+		if !providerDeposited.Equal(runePool.RuneDeposited) {
+			m := fmt.Sprintf(
+				"rune deposited %s != provider rune deposited %s",
+				runePool.RuneDeposited, providerDeposited,
+			)
+			msg = append(msg, m)
+			broken = true
+		}
+
+		if !providerWithdrawn.Equal(runePool.RuneWithdrawn) {
+			m := fmt.Sprintf(
+				"rune withdrawn %s != provider rune withdrawn %s",
+				runePool.RuneWithdrawn, providerWithdrawn,
+			)
+			msg = append(msg, m)
+			broken = true
 		}
 
 		return msg, broken

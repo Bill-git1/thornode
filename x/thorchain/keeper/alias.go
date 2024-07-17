@@ -76,4 +76,5 @@ type (
 	TradeAccount             = types.TradeAccount
 	TradeUnit                = types.TradeUnit
 	RUNEProvider             = types.RUNEProvider
+	RUNEPool                 = types.RUNEPool
 )

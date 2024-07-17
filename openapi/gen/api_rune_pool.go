@@ -20,12 +20,121 @@ import (
 )
 
 
-// RUNEProvidersApiService RUNEProvidersApi service
-type RUNEProvidersApiService service
+// RUNEPoolApiService RUNEPoolApi service
+type RUNEPoolApiService service
+
+type ApiRunePoolRequest struct {
+	ctx context.Context
+	ApiService *RUNEPoolApiService
+	height *int64
+}
+
+// optional block height, defaults to current tip
+func (r ApiRunePoolRequest) Height(height int64) ApiRunePoolRequest {
+	r.height = &height
+	return r
+}
+
+func (r ApiRunePoolRequest) Execute() (*RUNEPoolResponse, *http.Response, error) {
+	return r.ApiService.RunePoolExecute(r)
+}
+
+/*
+RunePool Method for RunePool
+
+Returns the pool information for the RUNE pool.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @return ApiRunePoolRequest
+*/
+func (a *RUNEPoolApiService) RunePool(ctx context.Context) ApiRunePoolRequest {
+	return ApiRunePoolRequest{
+		ApiService: a,
+		ctx: ctx,
+	}
+}
+
+// Execute executes the request
+//  @return RUNEPoolResponse
+func (a *RUNEPoolApiService) RunePoolExecute(r ApiRunePoolRequest) (*RUNEPoolResponse, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodGet
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *RUNEPoolResponse
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "RUNEPoolApiService.RunePool")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/thorchain/runepool"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.height != nil {
+		localVarQueryParams.Add("height", parameterToString(*r.height, ""))
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
 
 type ApiRuneProviderRequest struct {
 	ctx context.Context
-	ApiService *RUNEProvidersApiService
+	ApiService *RUNEPoolApiService
 	address string
 	height *int64
 }
@@ -49,7 +158,7 @@ Returns the RUNE Provider information for an address.
  @param address
  @return ApiRuneProviderRequest
 */
-func (a *RUNEProvidersApiService) RuneProvider(ctx context.Context, address string) ApiRuneProviderRequest {
+func (a *RUNEPoolApiService) RuneProvider(ctx context.Context, address string) ApiRuneProviderRequest {
 	return ApiRuneProviderRequest{
 		ApiService: a,
 		ctx: ctx,
@@ -59,7 +168,7 @@ func (a *RUNEProvidersApiService) RuneProvider(ctx context.Context, address stri
 
 // Execute executes the request
 //  @return RUNEProvider
-func (a *RUNEProvidersApiService) RuneProviderExecute(r ApiRuneProviderRequest) (*RUNEProvider, *http.Response, error) {
+func (a *RUNEPoolApiService) RuneProviderExecute(r ApiRuneProviderRequest) (*RUNEProvider, *http.Response, error) {
 	var (
 		localVarHTTPMethod   = http.MethodGet
 		localVarPostBody     interface{}
@@ -67,12 +176,12 @@ func (a *RUNEProvidersApiService) RuneProviderExecute(r ApiRuneProviderRequest) 
 		localVarReturnValue  *RUNEProvider
 	)
 
-	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "RUNEProvidersApiService.RuneProvider")
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "RUNEPoolApiService.RuneProvider")
 	if err != nil {
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/thorchain/rune_providers/{address}"
+	localVarPath := localBasePath + "/thorchain/rune_provider/{address}"
 	localVarPath = strings.Replace(localVarPath, "{"+"address"+"}", url.PathEscape(parameterToString(r.address, "")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -138,7 +247,7 @@ func (a *RUNEProvidersApiService) RuneProviderExecute(r ApiRuneProviderRequest) 
 
 type ApiRuneProvidersRequest struct {
 	ctx context.Context
-	ApiService *RUNEProvidersApiService
+	ApiService *RUNEPoolApiService
 	height *int64
 }
 
@@ -160,7 +269,7 @@ Returns all RUNE Providers.
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @return ApiRuneProvidersRequest
 */
-func (a *RUNEProvidersApiService) RuneProviders(ctx context.Context) ApiRuneProvidersRequest {
+func (a *RUNEPoolApiService) RuneProviders(ctx context.Context) ApiRuneProvidersRequest {
 	return ApiRuneProvidersRequest{
 		ApiService: a,
 		ctx: ctx,
@@ -169,7 +278,7 @@ func (a *RUNEProvidersApiService) RuneProviders(ctx context.Context) ApiRuneProv
 
 // Execute executes the request
 //  @return []RUNEProvider
-func (a *RUNEProvidersApiService) RuneProvidersExecute(r ApiRuneProvidersRequest) ([]RUNEProvider, *http.Response, error) {
+func (a *RUNEPoolApiService) RuneProvidersExecute(r ApiRuneProvidersRequest) ([]RUNEProvider, *http.Response, error) {
 	var (
 		localVarHTTPMethod   = http.MethodGet
 		localVarPostBody     interface{}
@@ -177,7 +286,7 @@ func (a *RUNEProvidersApiService) RuneProvidersExecute(r ApiRuneProvidersRequest
 		localVarReturnValue  []RUNEProvider
 	)
 
-	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "RUNEProvidersApiService.RuneProviders")
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "RUNEPoolApiService.RuneProviders")
 	if err != nil {
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}

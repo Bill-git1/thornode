@@ -445,6 +445,12 @@
         }
       ],
       "reserve_contributors": null,
+      "rune_pool": {
+        "pool_units": "0",
+        "reserve_units": "0",
+        "rune_deposited": "0",
+        "rune_withdrawn": "0"
+      },
       "rune_providers": [],
       "streaming_swaps": [],
       "swap_queue_items": [],

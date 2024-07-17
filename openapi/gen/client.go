@@ -66,8 +66,6 @@ type APIClient struct {
 
 	NodesApi *NodesApiService
 
-	POLApi *POLApiService
-
 	PoolSlipApi *PoolSlipApiService
 
 	PoolsApi *PoolsApiService
@@ -76,7 +74,7 @@ type APIClient struct {
 
 	QuoteApi *QuoteApiService
 
-	RUNEProvidersApi *RUNEProvidersApiService
+	RUNEPoolApi *RUNEPoolApiService
 
 	SaversApi *SaversApiService
 
@@ -124,12 +122,11 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 	c.MimirApi = (*MimirApiService)(&c.common)
 	c.NetworkApi = (*NetworkApiService)(&c.common)
 	c.NodesApi = (*NodesApiService)(&c.common)
-	c.POLApi = (*POLApiService)(&c.common)
 	c.PoolSlipApi = (*PoolSlipApiService)(&c.common)
 	c.PoolsApi = (*PoolsApiService)(&c.common)
 	c.QueueApi = (*QueueApiService)(&c.common)
 	c.QuoteApi = (*QuoteApiService)(&c.common)
-	c.RUNEProvidersApi = (*RUNEProvidersApiService)(&c.common)
+	c.RUNEPoolApi = (*RUNEPoolApiService)(&c.common)
 	c.SaversApi = (*SaversApiService)(&c.common)
 	c.StreamingSwapApi = (*StreamingSwapApiService)(&c.common)
 	c.TSSApi = (*TSSApiService)(&c.common)

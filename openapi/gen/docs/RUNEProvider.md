@@ -6,6 +6,8 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **RuneAddress** | **string** |  | 
 **Units** | **string** |  | 
+**Value** | **string** |  | 
+**Pnl** | **string** |  | 
 **DepositAmount** | **string** |  | 
 **WithdrawAmount** | **string** |  | 
 **LastDepositHeight** | **int64** |  | 
@@ -15,7 +17,7 @@ Name | Type | Description | Notes
 
 ### NewRUNEProvider
 
-`func NewRUNEProvider(runeAddress string, units string, depositAmount string, withdrawAmount string, lastDepositHeight int64, lastWithdrawHeight int64, ) *RUNEProvider`
+`func NewRUNEProvider(runeAddress string, units string, value string, pnl string, depositAmount string, withdrawAmount string, lastDepositHeight int64, lastWithdrawHeight int64, ) *RUNEProvider`
 
 NewRUNEProvider instantiates a new RUNEProvider object
 This constructor will assign default values to properties that have it defined,
@@ -68,6 +70,46 @@ and a boolean to check if the value has been set.
 `func (o *RUNEProvider) SetUnits(v string)`
 
 SetUnits sets Units field to given value.
+
+
+### GetValue
+
+`func (o *RUNEProvider) GetValue() string`
+
+GetValue returns the Value field if non-nil, zero value otherwise.
+
+### GetValueOk
+
+`func (o *RUNEProvider) GetValueOk() (*string, bool)`
+
+GetValueOk returns a tuple with the Value field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetValue
+
+`func (o *RUNEProvider) SetValue(v string)`
+
+SetValue sets Value field to given value.
+
+
+### GetPnl
+
+`func (o *RUNEProvider) GetPnl() string`
+
+GetPnl returns the Pnl field if non-nil, zero value otherwise.
+
+### GetPnlOk
+
+`func (o *RUNEProvider) GetPnlOk() (*string, bool)`
+
+GetPnlOk returns a tuple with the Pnl field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetPnl
+
+`func (o *RUNEProvider) SetPnl(v string)`
+
+SetPnl sets Pnl field to given value.
 
 
 ### GetDepositAmount

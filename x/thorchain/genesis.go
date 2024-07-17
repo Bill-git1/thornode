@@ -149,6 +149,7 @@ func DefaultGenesisState() GenesisState {
 		TradeAccounts:           make([]TradeAccount, 0),
 		TradeUnits:              make([]TradeUnit, 0),
 		RuneProviders:           make([]RUNEProvider, 0),
+		RunePool:                NewRUNEPool(),
 	}
 }
 
@@ -167,6 +168,7 @@ func initGenesis(ctx cosmos.Context, keeper keeper.Keeper, data GenesisState) []
 	for _, rp := range data.RuneProviders {
 		keeper.SetRUNEProvider(ctx, rp)
 	}
+	keeper.SetRUNEPool(ctx, data.RunePool)
 
 	validators := make([]abci.ValidatorUpdate, 0, len(data.NodeAccounts))
 	for _, nodeAccount := range data.NodeAccounts {
@@ -637,6 +639,11 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		runeProviders = append(runeProviders, rp)
 	}
 
+	runePool, err := k.GetRUNEPool(ctx)
+	if err != nil {
+		ctx.Logger().Error("fail to get rune pool", "error", err)
+	}
+
 	tradeAccts := make([]TradeAccount, 0)
 	iterTradeAccts := k.GetTradeAccountIterator(ctx)
 	defer iterTradeAccts.Close()
@@ -717,5 +724,6 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		TradeUnits:              tradeUnits,
 		StoreVersion:            storeVersion,
 		RuneProviders:           runeProviders,
+		RunePool:                runePool,
 	}
 }

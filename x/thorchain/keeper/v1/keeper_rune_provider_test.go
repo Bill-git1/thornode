@@ -41,8 +41,16 @@ func (s *KeeperRUNEProviderSuite) TestRUNEProvider(c *C) {
 	c.Check(rp.DepositAmount.Equal(cosmos.NewUint(12)), Equals, true)
 	c.Check(rp.WithdrawAmount.Equal(cosmos.NewUint(0)), Equals, true)
 
-	rps, err := k.getRUNEProviders(ctx)
-	c.Check(err, IsNil)
+	var rps []RUNEProvider
+	iterator := k.GetRUNEProviderIterator(ctx)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		k.Cdc().MustUnmarshal(iterator.Value(), &rp)
+		if rp.RuneAddress.Empty() {
+			continue
+		}
+		rps = append(rps, rp)
+	}
 	c.Check(rps[0].RuneAddress.Equals(accAddr), Equals, true)
 
 	secondAddr := GetRandomRUNEAddress()
@@ -55,12 +63,28 @@ func (s *KeeperRUNEProviderSuite) TestRUNEProvider(c *C) {
 	}
 	k.SetRUNEProvider(ctx, rp2)
 
-	rps, err = k.getRUNEProviders(ctx)
-	c.Check(err, IsNil)
+	rps = []RUNEProvider{}
+	iterator = k.GetRUNEProviderIterator(ctx)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		k.Cdc().MustUnmarshal(iterator.Value(), &rp)
+		if rp.RuneAddress.Empty() {
+			continue
+		}
+		rps = append(rps, rp)
+	}
 	c.Check(len(rps), Equals, 2)
 
-	totalUnits, err := k.GetRUNEProviderUnitsTotal(ctx)
-	c.Check(err, IsNil)
+	totalUnits := cosmos.ZeroUint()
+	iterator = k.GetRUNEProviderIterator(ctx)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		k.Cdc().MustUnmarshal(iterator.Value(), &rp)
+		if rp.RuneAddress.Empty() {
+			continue
+		}
+		totalUnits = totalUnits.Add(rp.Units)
+	}
 	c.Check(totalUnits.Equal(cosmos.NewUint(36)), Equals, true)
 
 	k.RemoveRUNEProvider(ctx, rp)

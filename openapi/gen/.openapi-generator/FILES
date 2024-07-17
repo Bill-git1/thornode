@@ -11,12 +11,11 @@ api_liquidity_providers.go
 api_mimir.go
 api_network.go
 api_nodes.go
-api_pol.go
 api_pool_slip.go
 api_pools.go
 api_queue.go
 api_quote.go
-api_rune_providers.go
+api_rune_pool.go
 api_savers.go
 api_streaming_swap.go
 api_thornames.go
@@ -84,8 +83,7 @@ docs/ObservedTx.md
 docs/OutboundDelayStage.md
 docs/OutboundFee.md
 docs/OutboundSignedStage.md
-docs/POLApi.md
-docs/POLResponse.md
+docs/POL.md
 docs/Ping.md
 docs/PlannedOutTx.md
 docs/Pool.md
@@ -101,8 +99,11 @@ docs/QuoteLoanOpenResponse.md
 docs/QuoteSaverDepositResponse.md
 docs/QuoteSaverWithdrawResponse.md
 docs/QuoteSwapResponse.md
+docs/RUNEPoolApi.md
+docs/RUNEPoolResponse.md
+docs/RUNEPoolResponseProviders.md
+docs/RUNEPoolResponseReserve.md
 docs/RUNEProvider.md
-docs/RUNEProvidersApi.md
 docs/Saver.md
 docs/SaversApi.md
 docs/StreamingStatus.md
@@ -190,7 +191,7 @@ model_outbound_fee.go
 model_outbound_signed_stage.go
 model_ping.go
 model_planned_out_tx.go
-model_pol_response.go
+model_pol.go
 model_pool.go
 model_pool_slip_response_inner.go
 model_queue_response.go
@@ -200,6 +201,9 @@ model_quote_loan_open_response.go
 model_quote_saver_deposit_response.go
 model_quote_saver_withdraw_response.go
 model_quote_swap_response.go
+model_rune_pool_response.go
+model_rune_pool_response_providers.go
+model_rune_pool_response_reserve.go
 model_rune_provider.go
 model_saver.go
 model_streaming_status.go
