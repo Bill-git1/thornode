@@ -31,6 +31,7 @@ func (h RunePoolDepositHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.R
 		return nil, errInvalidMessage
 	}
 	ctx.Logger().Info("receive MsgRunePoolDeposit",
+		"tx_id", msg.Tx.ID,
 		"rune_address", msg.Signer,
 		"deposit_asset", msg.Tx.Coins[0].Asset,
 		"deposit_amount", msg.Tx.Coins[0].Amount,
