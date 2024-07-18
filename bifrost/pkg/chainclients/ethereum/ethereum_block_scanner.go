@@ -800,7 +800,7 @@ func (e *ETHScanner) getTxInFromSmartContract(tx *etypes.Transaction, receipt *e
 	if _, err = p.GetTxInItem(receipt.Logs, txInItem); err != nil {
 		return nil, fmt.Errorf("fail to parse logs, err: %w", err)
 	}
-	e.logger.Info().Msgf("tx: %s, gas price: %s, gas used: %d,receipt status:%d", txInItem.Tx, tx.GasPrice().String(), receipt.GasUsed, receipt.Status)
+	e.logger.Debug().Msgf("tx: %s, gas price: %s, gas used: %d,receipt status:%d", txInItem.Tx, tx.GasPrice().String(), receipt.GasUsed, receipt.Status)
 	// under no circumstance ETH gas price will be less than 1 Gwei , unless it is in dev environment
 	txGasPrice := tx.GasPrice()
 	if txGasPrice.Cmp(big.NewInt(tenGwei)) < 0 {
