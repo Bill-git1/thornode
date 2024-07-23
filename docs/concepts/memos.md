@@ -35,6 +35,8 @@ The following functions can be put into a memo:
 1. [**WITHDRAW Savers**](memos.md#withdraw-savers)
 1. [**OPEN** **Loan**](memos.md#open-loan)
 1. [**REPAY Loan**](memos.md#repay-loan)
+1. [**DEPOSIT RUNEPool**](memos.md#deposit-runepool)
+1. [**WITHDRAW RUNEPool**](memos.md#withdraw-runepool)
 1. [**ADD** **Liquidity**](memos.md#add-liquidity)
 1. [**WITHDRAW** **Liquidity**](memos.md#withdraw-liquidity)
 1. [**ADD** **Trade Account**](memos.md#add-trade-account)
@@ -175,6 +177,31 @@ Repay a loan on THORChain.
 - `LOAN-:BTC.BTC:bc1qp2t4hl4jr6wjfzv28tsdyjysw7p5armf7px55w` &mdash; repay BTC loan owned by owner bc1qp2t4hl4jr6wjfzv28tsdyjysw7p5armf7px55w
 - `$-:ETH.ETH:0xe9973cb51ee04446a54ffca73446d33f133d2f49:404204059` &mdash; repay ETH loan owned by `0xe9973cb51ee04446a54ffca73446d33f133d2f49` and receive at least 4.04 ETH collateral back, else refund
 
+### Deposit RUNEPool
+
+Deposit RUNE to the RUNEPool
+
+**`POOL+`**
+
+| Parameter | Notes                 | Extra                                                                    |
+| --------- | --------------------- | ------------------------------------------------------------------------ |
+| Payload   | THOR.RUNE             | Use `MsgDeposit`. The amount of RUNE in the tx will be added to RunePool |
+| `POOL+`   | The RUNEPool handler. |                                                                          |
+
+### Withdraw RUNEPool
+
+**`POOL-:BASISPOINTS:AFFILIATE:FEE`**
+
+| Parameter      | Notes                                       | Extra                                         |
+| -------------- | ------------------------------------------- | --------------------------------------------- |
+| Payload        | None required.                              | Use `MsgDeposit`.                             |
+| `POOL-`        | The The RUNEPool handler.                   |                                               |
+| `:BASISPOINTS` | Basis points.                               | Required. Range 0-10000, where 10000 = 100%.  |
+| `:AFFILIATE`   | The affiliate address.                      | Optional. Must be a THORName or THOR Address. |
+| `:FEE`         | The [affiliate fee](fees.md#affiliate-fee). | Optional. Ranges from 0 to 1000 Basis Points. |
+
+Example: `POOL-:10000:dx:10` - 100% Withdraw from RUNEPool with a 10 basis point affiliate fee. Affiliates receive the corresponding basis points of positive PnL. If user is withdrawing with a loss, the affiliate will receive no fee.
+
 ### Add Liquidity
 
 Add liquidity to a pool.
@@ -190,7 +217,7 @@ There are rules for adding liquidity, see [the rules here](https://docs.thorchai
 | `:POOL`       | The pool to add liquidity to.                                                                                                                                                                                                          | Can be shortened.                                                           |
 | `:PAIREDADDR` | The other address to link with. If on external chain, link to THOR address. If on THORChain, link to external address. If a paired address is found, the LP is matched and added. If none is found, the liquidity is put into pending. | Optional. If not specified, a single-sided add-liquidity action is created. |
 | `:AFFILIATE`  | The affiliate address. The affiliate is added to the pool as an LP.                                                                                                                                                                    | Optional. Must be a THORName or THOR Address.                               |
-| `:FEE`        | The [affiliate fee](fees.md#affiliate-fee). RUNE is sent to affiliate.                                                                                                                                                                 | Optional. Ranges from 0 to 1000 Basis Points.                               |
+| `:FEE`        | The [affiliate fee](fees.md#affiliate-fee).                                                                                                                                                                                            | Optional. Ranges from 0 to 1000 Basis Points.                               |
 
 **Examples:**
 

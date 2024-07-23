@@ -42,6 +42,14 @@ None
 - [004 - Keyshare Backups](./adr-004-keyshare-backups.md)
 - [005 - Deprecate Impermanent Loss Protection](./adr-005-deprecate-ilp.md)
 - [006 - Enable POL](./adr-006-enable-pol.md)
+- [008 - Implement a Dynamic Outbound Fee Multiplier (DOFM)](architecture/adr-008-implement-dynamic-outbound-fee-multiplier.md)
+- [009 - Reserve Income and Fee Overhaul](architecture/adr-009-reserve-income-fee-overhaul.md)
+- [010 - Introduction of Streaming Swaps](architecture/adr-010-streaming-swaps.md)
+- [011 - THORFi Lending Feature](architecture/adr-011-lending.md)
+- [012 - Scale Lending](architecture/adr-012-scale-lending.md)
+- [013 - Synth Backstop](architecture/adr-013-synth-backstop.md)
+- [014 - Reduce Saver Yield Synth Target to Match POL Target](architecture/adr-014-reduce-saver-yield-target.md)
+- [016 - Affiliate Rev Share](architecture/adr-016-aff-rev-share.md)
 
 ### Deprecated
 
@@ -49,12 +57,9 @@ None
 
 ### Rejected
 
-None
+- [007 - Increase Fund Migration and Churn Interval](./adr-007-increase-fund-migration-and-churn-interval.md)
 
 ### Proposed
-
-- [007 - Increase Fund Migration and Churn Interval](./adr-007-increase-fund-migration-and-churn-interval.md)
-- [008 - Dynamic Outbound Fee Multiplier](./adr-008-implement-dynamic-outbound-fee-multiplier.md)
 
 ### On Pause
 

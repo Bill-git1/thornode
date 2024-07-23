@@ -90,6 +90,12 @@ Mimir setting can be created and changed without a corresponding Constant.
 - `LiquidityLockUpBlocks`: The number of blocks LP can withdraw after their liquidity
 - `PendingLiquidityAgeLimit`: The number of blocks the network waits before initiating pending liquidity cleanup. Cleanup of all pools lasts for the same duration.
 
+## RunePool
+
+- `RUNEPoolEnabled`: Enable/disable RUNE Pool
+- `RUNEPoolDepositMaturityBlocks`: Minimum number of blocks from last RUNEPool deposit when a withdraw is allowed.
+- `RUNEPoolMaxReserveBackstop`: Max amount of RUNE above the `POLMaxNetworkDeposit` that the reserve can enter RunePool before withdrawls are disabled.
+
 ## Chain Management
 
 - `HaltChainGlobal`#: Pause observations on all chains (chain clients)

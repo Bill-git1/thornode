@@ -81,9 +81,11 @@
     - [ADR 009: Reserve Income and Fee Overhaul](architecture/adr-009-reserve-income-fee-overhaul.md)
     - [ADR 010: Introduction of Streaming Swaps](architecture/adr-010-streaming-swaps.md)
     - [ADR 011: THORFi Lending Feature](architecture/adr-011-lending.md)
-    - [ADR 012: ADR 012: Scale Lending](architecture/adr-012-scale-lending.md)
+    - [ADR 012: Scale Lending](architecture/adr-012-scale-lending.md)
     - [ADR 013: Synth Backstop](architecture/adr-013-synth-backstop.md)
     - [ADR 014: Reduce Saver Yield Synth Target to Match POL Target](architecture/adr-014-reduce-saver-yield-target.md)
+    - [ADR 016: Affiliate Rev Share](architecture/adr-016-aff-rev-share.md)
+    - [ADR 017: Burn System Income Lever](architecture/adr-017-burn-system-income-lever.md)
 
 - [Protocol Development](protocol-development/adding-new-chains.md)
   - [Adding New Chains](protocol-development/adding-new-chains.md)
