@@ -100,6 +100,8 @@ func (k KVStoreDummy) GetAccount(ctx cosmos.Context, addr cosmos.AccAddress) cos
 	return nil
 }
 
+func (k KVStoreDummy) RagnarokAccount(ctx cosmos.Context, addr cosmos.AccAddress) {}
+
 func (k KVStoreDummy) GetBalance(ctx cosmos.Context, addr cosmos.AccAddress) cosmos.Coins {
 	return nil
 }

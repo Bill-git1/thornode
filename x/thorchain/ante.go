@@ -3,7 +3,10 @@ package thorchain
 import (
 	"github.com/blang/semver"
 
+	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256r1"
+	"github.com/cosmos/cosmos-sdk/crypto/types/multisig"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
@@ -32,6 +35,11 @@ func (ad AnteDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, ne
 		return ctx, err
 	}
 
+	// TODO remove on hard fork, when all signers will be allowed
+	if err = ad.rejectInvalidSigners(tx); err != nil {
+		return ctx, err
+	}
+
 	// TODO on hard fork remove version check, before 114 all antes return nil
 	if version.GTE(semver.MustParse("1.114.0")) {
 		// run the message-specific ante for each msg, all must succeed
@@ -43,6 +51,32 @@ func (ad AnteDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, ne
 	}
 
 	return next(ctx, tx, simulate)
+}
+
+// rejectInvalidSigners reject txs if they are signed with secp256r1 keys
+func (ad AnteDecorator) rejectInvalidSigners(tx sdk.Tx) error {
+	sigTx, okTx := tx.(authsigning.SigVerifiableTx)
+	if !okTx {
+		return cosmos.ErrUnknownRequest("invalid transaction type")
+	}
+	sigs, err := sigTx.GetSignaturesV2()
+	if err != nil {
+		return err
+	}
+	for _, sig := range sigs {
+		pubkey := sig.PubKey
+		switch pubkey := pubkey.(type) {
+		case *secp256r1.PubKey:
+			return cosmos.ErrUnknownRequest("secp256r1 keys not allowed")
+		case multisig.PubKey:
+			for _, pk := range pubkey.GetPubKeys() {
+				if _, okPk := pk.(*secp256r1.PubKey); okPk {
+					return cosmos.ErrUnknownRequest("secp256r1 keys not allowed")
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // rejectMultipleDepositMsgs only one deposit msg allowed per tx

@@ -607,8 +607,8 @@ func (e *EVMScanner) receiptToTxInItem(tx *etypes.Transaction, receipt *etypes.R
 // processReorg compares the block's parent hash with the stored block hash. When a
 // reorg is detected, it triggers a rescan of all cached blocks in the reorg window.
 // The function returns observations from the rescanned blocks.
-func (e *EVMScanner) processReorg(block *etypes.Header) ([]stypes.TxIn, error) {
-	previousHeight := block.Number.Int64() - 1
+func (e *EVMScanner) processReorg(header *etypes.Header) ([]stypes.TxIn, error) {
+	previousHeight := header.Number.Int64() - 1
 	prevBlockMeta, err := e.blockMetaAccessor.GetBlockMeta(previousHeight)
 	if err != nil {
 		return nil, fmt.Errorf("fail to get block meta of height(%d) : %w", previousHeight, err)
@@ -620,13 +620,13 @@ func (e *EVMScanner) processReorg(block *etypes.Header) ([]stypes.TxIn, error) {
 	}
 
 	// no re-org if stored block hash at previous height is equal to current block parent
-	if strings.EqualFold(prevBlockMeta.BlockHash, block.ParentHash.Hex()) {
+	if strings.EqualFold(prevBlockMeta.BlockHash, header.ParentHash.Hex()) {
 		return nil, nil
 	}
 	e.logger.Info().
 		Int64("height", previousHeight).
 		Str("stored_hash", prevBlockMeta.BlockHash).
-		Str("current_parent_hash", block.ParentHash.Hex()).
+		Str("current_parent_hash", header.ParentHash.Hex()).
 		Msg("reorg detected")
 
 	// send erratas and determine the block heights to rescan

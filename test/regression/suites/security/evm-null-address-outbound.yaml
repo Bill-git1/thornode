@@ -46,7 +46,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - '[.end_block_events[]|select(.type == "security")]|length == 1'
-  - .end_block_events[]|select(.type == "security")|.msg = "evm outbound to null address"
+  - .end_block_events[]|select(.type == "security")|.msg == "evm outbound to null address"
 ---
 ########################################################################################
 # vault will have more than pool

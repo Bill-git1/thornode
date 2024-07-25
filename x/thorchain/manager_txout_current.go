@@ -499,6 +499,7 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 			}
 		}
 	}
+
 	var finalOutput []TxOutItem
 	var pool Pool
 	var feeEvents []*EventFee
@@ -577,6 +578,17 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 							}
 						}
 					}
+
+					// drop any gas asset outputs below the dust threshold
+					if toi.Coin.Asset.IsGasAsset() && outputs[i].Coin.Amount.LT(toi.Chain.DustThreshold()) {
+						ctx.Logger().
+							With("inbound", toi.InHash).
+							With("amount", outputs[i].Coin.Amount).
+							With("fee", transactionFee).
+							Error("dropping gas asset output below dust threshold")
+						continue
+					}
+
 					var poolDeduct cosmos.Uint
 					runeFee = pool.RuneDisbursementForAssetAdd(assetFee)
 					if runeFee.GT(pool.BalanceRune) {

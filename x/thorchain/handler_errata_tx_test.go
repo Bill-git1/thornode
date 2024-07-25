@@ -481,7 +481,7 @@ func (s *HandlerErrataTxSuite) TestErrataHandlerDifferentError(c *C) {
 	}
 }
 
-func (*HandlerErrataTxSuite) TestProcessErrortaOutboundTx(c *C) {
+func (*HandlerErrataTxSuite) TestProcessErrataOutboundTx(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	helper := NewErrataTxHandlerTestHelper(mgr.Keeper())
 	handler := NewErrataTxHandler(mgr)
@@ -583,16 +583,6 @@ func (*HandlerErrataTxSuite) TestProcessErrortaOutboundTx(c *C) {
 			1024, observedPubKey, 1024),
 	}
 	txInVoter := NewObservedTxVoter(txInID, observedTxInbound)
-	txInVoter.Actions = []TxOutItem{
-		{
-			Chain:     common.LTCChain,
-			InHash:    txInID,
-			ToAddress: GetRandomLTCAddress(),
-			Coin:      common.NewCoin(common.LTCAsset, cosmos.NewUint(10240000)),
-			Memo:      "OUT:" + txInID.String(),
-			OutHash:   txID,
-		},
-	}
 	helper.Keeper.SetObservedTxInVoter(ctx, txInVoter)
 	newActiveAsgardVault := NewVault(1024, ActiveVault, AsgardVault, GetRandomPubKey(), []string{
 		common.BTCChain.String(),
@@ -608,12 +598,25 @@ func (*HandlerErrataTxSuite) TestProcessErrortaOutboundTx(c *C) {
 		TransactionSize:    250,
 		TransactionFeeRate: 10,
 	}), IsNil)
+
+	// clear events
+	ctx = ctx.WithEventManager(cosmos.NewEventManager())
+
 	result, err = handler.processErrataOutboundTx(ctx, *msg)
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
 	txOut, err := helper.Keeper.GetTxOut(ctx, ctx.BlockHeight())
 	c.Assert(err, IsNil)
-	c.Assert(txOut.TxArray, HasLen, 1)
+
+	// we no longer re-attempt the outbound, and instead just emit a security event
+	c.Assert(txOut.TxArray, HasLen, 0)
+	found := 0
+	for _, event := range ctx.EventManager().Events() {
+		if event.Type == "security" {
+			found++
+		}
+	}
+	c.Assert(found, Equals, 1)
 }
 
 func (*HandlerErrataTxSuite) TestProcessErrortaOutboundTx_EnsureMigrateTxWillSetInactiveVaultBackToRetiring(c *C) {

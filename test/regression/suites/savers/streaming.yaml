@@ -348,7 +348,7 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/saver/{{ addr_btc_fish }}
 asserts:
-  - .units = "0" # Savers position yet for the Affiliate's BTC address.
+  - .units == "0" # Savers position yet for the Affiliate's BTC address.
 ---
 type: create-blocks
 count: 1
@@ -361,7 +361,7 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/saver/{{ addr_btc_fish }}
 asserts:
-  - .units = "${SAVER_UNITS=148982}" # Successful Savers add for the Affiliate BTC address.
+  - .units == "${SAVER_UNITS=148982}" # Successful Savers add for the Affiliate BTC address.
 ---
 ###########################################################################
 type: tx-observed-in

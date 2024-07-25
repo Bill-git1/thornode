@@ -562,3 +562,40 @@ func (k KVStore) DeductNativeTxFeeFromAccount(ctx cosmos.Context, acctAddr cosmo
 	coins := common.NewCoins(common.NewCoin(common.RuneNative, fee))
 	return k.SendFromAccountToModule(ctx, acctAddr, ReserveName, coins)
 }
+
+// RagnarokAccount remove account and return all assets to the protocol
+func (k KVStore) RagnarokAccount(ctx cosmos.Context, addr cosmos.AccAddress) {
+	acc := k.accountKeeper.GetAccount(ctx, addr)
+	if acc != nil {
+		balances := k.GetBalance(ctx, addr)
+		for _, bal := range balances {
+			if !bal.IsPositive() {
+				continue
+			}
+			asset, err := common.NewAsset(bal.Denom)
+			if err != nil {
+				ctx.Logger().Error("invalid denom", "error", err)
+				continue
+			}
+			coin := common.NewCoin(asset, cosmos.NewUint(bal.Amount.Uint64()))
+			coins := common.NewCoins(coin)
+			if asset.IsNativeRune() {
+				err = k.SendFromAccountToModule(ctx, addr, ReserveName, coins)
+				if err != nil {
+					ctx.Logger().Error("failed to transfer", "error", err)
+				}
+			} else {
+				err = k.SendFromAccountToModule(ctx, addr, ModuleName, coins)
+				if err != nil {
+					ctx.Logger().Error("failed to transfer", "error", err)
+				} else {
+					err = k.BurnFromModule(ctx, ModuleName, coin)
+					if err != nil {
+						ctx.Logger().Error("failed to burn", "error", err)
+					}
+				}
+			}
+		}
+		k.accountKeeper.RemoveAccount(ctx, acc)
+	}
+}

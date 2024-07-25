@@ -8,18 +8,18 @@ endpoint: http://localhost:1317/thorchain/quote/swap
 params:
   from_asset: THOR.RUNE
   to_asset: BTC.BTC
-  amount: 20000000
+  amount: 30000000
   destination: {{ addr_btc_fox }}
 asserts:
-  - .expected_amount_out == "5991"
-  - .fees.liquidity == "3"
+  - .expected_amount_out == "15981"
+  - .fees.liquidity == "8"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
 ---
 # before fee floor
 type: tx-deposit
 signer: {{ addr_thor_fox }}
 coins:
-  - amount: "20000000"
+  - amount: "30000000"
     asset: "rune"
 memo: "=:BTC.BTC:{{ addr_btc_fox }}"
 ---
@@ -31,27 +31,27 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ native_txid -1 }}"
-  - .[0]|.coin.amount == "5991"
+  - .[0]|.coin.amount == "15981"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .end_block_events[] | select(.type == "swap") | .swap_slip == "2"
-  - .end_block_events[] | select(.type == "swap") | .pool_slip == "2"
-  - .end_block_events[] | select(.type == "swap") | .liquidity_fee == "3"
-  - .end_block_events[] | select(.type == "swap") | .liquidity_fee_in_rune == "3000"
-  - .end_block_events[] | select(.type == "swap") | .emit_asset == "19991 BTC.BTC"
+  - .end_block_events[] | select(.type == "swap") | .swap_slip == "3"
+  - .end_block_events[] | select(.type == "swap") | .pool_slip == "3"
+  - .end_block_events[] | select(.type == "swap") | .liquidity_fee == "8"
+  - .end_block_events[] | select(.type == "swap") | .liquidity_fee_in_rune == "8000"
+  - .end_block_events[] | select(.type == "swap") | .emit_asset == "29981 BTC.BTC"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_cat }}
 txs:
   - tx:
-      id: '{{ observe_txid 1 }}'
+      id: "{{ observe_txid 1 }}"
       chain: BTC
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "5991"
+        - amount: "15981"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -66,12 +66,12 @@ type: tx-observed-out
 signer: {{ addr_thor_fox }}
 txs:
   - tx:
-      id: '{{ observe_txid 1 }}'
+      id: "{{ observe_txid 1 }}"
       chain: BTC
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "5991"
+        - amount: "15981"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -86,12 +86,12 @@ type: tx-observed-out
 signer: {{ addr_thor_pig }}
 txs:
   - tx:
-      id: '{{ observe_txid 1 }}'
+      id: "{{ observe_txid 1 }}"
       chain: BTC
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "5991"
+        - amount: "15981"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -106,12 +106,12 @@ type: tx-observed-out
 signer: {{ addr_thor_goat }}
 txs:
   - tx:
-      id: '{{ observe_txid 1 }}'
+      id: "{{ observe_txid 1 }}"
       chain: BTC
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "5991"
+        - amount: "15981"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -164,17 +164,17 @@ endpoint: http://localhost:1317/thorchain/quote/swap
 params:
   from_asset: THOR.RUNE
   to_asset: BTC.BTC
-  amount: 20000000
+  amount: 30000000
   destination: {{ addr_btc_fox }}
 asserts:
-  - .expected_amount_out == "4989"
-  - .fees.liquidity == "999"
+  - .expected_amount_out == "14476"
+  - .fees.liquidity == "1498"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
 coins:
-  - amount: "20000000"
+  - amount: "30000000"
     asset: "rune"
 memo: "=:BTC.BTC:{{ addr_btc_fox }}"
 ---
@@ -186,13 +186,14 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ native_txid -1 }}"
-  - .[0]|.coin.amount == "4989"
+  - .[0]|.coin.amount == "14476"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .end_block_events[] | select(.type == "swap") | .swap_slip == "500"
-  - .end_block_events[] | select(.type == "swap") | .pool_slip == "2"
-  - .end_block_events[] | select(.type == "swap") | .liquidity_fee == "999"
-  - .end_block_events[] | select(.type == "swap") | .liquidity_fee_in_rune == "999357"
-  - .end_block_events[] | select(.type == "swap") | .emit_asset == "18989 BTC.BTC"
+  - .end_block_events[] | select(.type == "swap") | .pool_slip == "3"
+  - .end_block_events[] | select(.type == "swap") | .liquidity_fee == "1498"
+  - .end_block_events[] | select(.type == "swap") | .liquidity_fee_in_rune == "1498834"
+  - .end_block_events[] | select(.type == "swap") | .emit_asset == "28476 BTC.BTC"
+

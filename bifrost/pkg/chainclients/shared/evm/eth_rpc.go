@@ -116,17 +116,31 @@ func (e *EthRPC) GetNonceFinalized(addr string) (uint64, error) {
 	return nonce, nil
 }
 
-// CheckTransaction returns true if a tx can be found by TransactionByHash rpc method
+// CheckTransaction returns true if a transaction is found and successful on chain. This
+// is used to determine when a transaction has been dropped from the chain or failed on
+// subsequent execution after reorgs. This can return false positives, but should not
+// return false negatives - as we want to errata an observation only when we are certain
+// it has later been dropped or failed.
 func (e *EthRPC) CheckTransaction(hash string) bool {
 	ctx, cancel := e.getContext()
 	defer cancel()
 	tx, pending, err := e.client.TransactionByHash(ctx, ecommon.HexToHash(hash))
 	if err != nil || tx == nil {
-		e.logger.Info().Str("tx hash", hash).Err(err).Msg("tx could not be found")
+		e.logger.Info().Str("txid", hash).Err(err).Msg("tx not found")
 		return false
 	}
+
+	// pending transactions may fail, but we should only errata when there is certainty
 	if pending {
-		e.logger.Info().Str("tx hash", hash).Msg("tx is pending")
+		e.logger.Warn().Str("txid", hash).Msg("observed transaction is pending")
+		return true // unknown, prefer false positive
 	}
-	return true
+
+	// ensure the tx was successful
+	receipt, err := e.GetReceipt(hash)
+	if err != nil {
+		e.logger.Warn().Str("txid", hash).Err(err).Msg("tx receipt not found")
+		return true // unknown, prefer false positive
+	}
+	return receipt.Status == etypes.ReceiptStatusSuccessful
 }

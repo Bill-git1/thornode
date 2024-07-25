@@ -35,6 +35,7 @@ type Keeper interface {
 	GetBalance(ctx cosmos.Context, addr cosmos.AccAddress) cosmos.Coins
 	HasCoins(ctx cosmos.Context, addr cosmos.AccAddress, coins cosmos.Coins) bool
 	GetAccount(ctx cosmos.Context, addr cosmos.AccAddress) cosmos.Account
+	RagnarokAccount(ctx cosmos.Context, addr cosmos.AccAddress)
 
 	// passthrough funcs
 	SendCoins(ctx cosmos.Context, from, to cosmos.AccAddress, coins cosmos.Coins) error

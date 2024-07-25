@@ -126,6 +126,15 @@ func (a Asset) Valid() error {
 	if err := a.Symbol.Valid(); err != nil {
 		return fmt.Errorf("invalid symbol: %w", err)
 	}
+	if a.Synth && a.Trade {
+		return fmt.Errorf("trade assets cannot be synth assets")
+	}
+	if a.Synth && a.Chain.IsTHORChain() {
+		return fmt.Errorf("synth asset cannot have chain THOR: %s", a)
+	}
+	if a.Trade && a.Chain.IsTHORChain() {
+		return fmt.Errorf("trade asset cannot have chain THOR: %s", a)
+	}
 	return nil
 }
 

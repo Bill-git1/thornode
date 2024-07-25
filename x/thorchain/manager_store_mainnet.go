@@ -2031,4 +2031,13 @@ func migrateStoreV134(ctx cosmos.Context, mgr *Mgrs) {
 		PoolUnits:    cosmos.ZeroUint(),
 	}
 	mgr.Keeper().SetRUNEPool(ctx, rp)
+
+	// ragnarok account with secp256r1 signer
+	addr, err := cosmos.AccAddressFromBech32("thor1ff7mpgge4tt33p6cafatra65cyegp4g5wgreqfkw5yxf6yxt73asrf6xr8")
+	if err != nil {
+		ctx.Logger().Error("error parsing address", "error", err)
+		return
+	}
+
+	mgr.Keeper().RagnarokAccount(ctx, addr)
 }

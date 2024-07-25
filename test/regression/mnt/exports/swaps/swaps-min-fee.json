@@ -214,7 +214,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "200027875502",
+              "amount": "200047856698",
               "denom": "rune"
             }
           ]
@@ -241,7 +241,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35000023961509",
+              "amount": "35000023967740",
               "denom": "rune"
             }
           ]
@@ -250,7 +250,7 @@
           "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "coins": [
             {
-              "amount": "2499956000000",
+              "amount": "2499936000000",
               "denom": "rune"
             }
           ]
@@ -268,7 +268,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "12499992162989",
+              "amount": "12499992175562",
               "denom": "rune"
             }
           ]
@@ -417,7 +417,7 @@
       "network": {
         "LPIncomeSplit": "9751",
         "NodeIncomeSplit": "249",
-        "bond_reward_rune": "162989",
+        "bond_reward_rune": "175562",
         "burned_bep2_rune": "0",
         "burned_erc20_rune": "0",
         "total_bond_units": "25"
@@ -517,11 +517,11 @@
             {
               "chain": "BTC",
               "coin": {
-                "amount": "4989",
+                "amount": "14476",
                 "asset": "BTC.BTC"
               },
               "gas_rate": "10",
-              "in_hash": "C5FEAA6BD581D19DB8B2107DC7824FDEE7B44E9170376CC32D4326A895289372",
+              "in_hash": "84362BEECF3712A3C8D6E46F10A2C63C1B2F3E53659E3A5BDF803660F5C9D49A",
               "max_gas": [
                 {
                   "amount": "10500",
@@ -529,7 +529,7 @@
                   "decimals": "8"
                 }
               ],
-              "memo": "OUT:C5FEAA6BD581D19DB8B2107DC7824FDEE7B44E9170376CC32D4326A895289372",
+              "memo": "OUT:84362BEECF3712A3C8D6E46F10A2C63C1B2F3E53659E3A5BDF803660F5C9D49A",
               "to_address": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
               "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
             }
@@ -543,31 +543,31 @@
               "chain": "THOR",
               "coins": [
                 {
-                  "amount": "20000000",
+                  "amount": "30000000",
                   "asset": "THOR.RUNE"
                 }
               ],
               "from_address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "gas": null,
-              "id": "C5FEAA6BD581D19DB8B2107DC7824FDEE7B44E9170376CC32D4326A895289372",
+              "id": "84362BEECF3712A3C8D6E46F10A2C63C1B2F3E53659E3A5BDF803660F5C9D49A",
               "memo": "=:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
               "to_address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2"
             }
           },
-          "tx_id": "C5FEAA6BD581D19DB8B2107DC7824FDEE7B44E9170376CC32D4326A895289372",
+          "tx_id": "84362BEECF3712A3C8D6E46F10A2C63C1B2F3E53659E3A5BDF803660F5C9D49A",
           "txs": [
             {
               "tx": {
                 "chain": "THOR",
                 "coins": [
                   {
-                    "amount": "20000000",
+                    "amount": "30000000",
                     "asset": "THOR.RUNE"
                   }
                 ],
                 "from_address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
                 "gas": null,
-                "id": "C5FEAA6BD581D19DB8B2107DC7824FDEE7B44E9170376CC32D4326A895289372",
+                "id": "84362BEECF3712A3C8D6E46F10A2C63C1B2F3E53659E3A5BDF803660F5C9D49A",
                 "memo": "=:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
                 "to_address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2"
               }
@@ -579,13 +579,13 @@
       "orderbook_items": [],
       "outbound_fee_spent_rune": [
         {
-          "amount": "10501486",
+          "amount": "10503585",
           "asset": "BTC.BTC"
         }
       ],
       "outbound_fee_withheld_rune": [
         {
-          "amount": "28012212",
+          "amount": "28020542",
           "asset": "BTC.BTC"
         }
       ],
@@ -593,8 +593,8 @@
         {
           "LP_units": "100000000000",
           "asset": "BTC.BTC",
-          "balance_asset": "99978520",
-          "balance_rune": "100026252218",
+          "balance_asset": "99959043",
+          "balance_rune": "100046233469",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -605,7 +605,7 @@
           "LP_units": "100000000000",
           "asset": "ETH.ETH",
           "balance_asset": "1000000000",
-          "balance_rune": "100001623284",
+          "balance_rune": "100001623229",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -634,11 +634,11 @@
               "chain": "BTC",
               "clout_spent": "0",
               "coin": {
-                "amount": "4989",
+                "amount": "14476",
                 "asset": "BTC.BTC"
               },
               "gas_rate": "10",
-              "in_hash": "C5FEAA6BD581D19DB8B2107DC7824FDEE7B44E9170376CC32D4326A895289372",
+              "in_hash": "84362BEECF3712A3C8D6E46F10A2C63C1B2F3E53659E3A5BDF803660F5C9D49A",
               "max_gas": [
                 {
                   "amount": "10500",
@@ -646,7 +646,7 @@
                   "decimals": "8"
                 }
               ],
-              "memo": "OUT:C5FEAA6BD581D19DB8B2107DC7824FDEE7B44E9170376CC32D4326A895289372",
+              "memo": "OUT:84362BEECF3712A3C8D6E46F10A2C63C1B2F3E53659E3A5BDF803660F5C9D49A",
               "to_address": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
               "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
             }
@@ -670,7 +670,7 @@
           ],
           "coins": [
             {
-              "amount": "99983509",
+              "amount": "99973519",
               "asset": "BTC.BTC",
               "decimals": "8"
             },

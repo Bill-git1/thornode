@@ -683,9 +683,8 @@ func (vm *NetworkMgrVCUR) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 					gasAmount := gas.Amount.MulUint64(uint64(vault.CoinLengthByChain(coin.Asset.GetChain())))
 					amt = common.SafeSub(amt, gasAmount)
 
-					// the left amount is not enough to pay for gas, likely only dust left, the network can't migrate it across
-					// and this will only happen after 5th round
-					if amt.IsZero() && nth > migrationRounds {
+					// burn the remainder if amount after deducting gas is below dust threshold
+					if amt.LTE(coin.Asset.GetChain().DustThreshold()) && nth > migrationRounds {
 						// No migration should be attempted, but only burn dust if there are no pending outbounds.
 						// (That is, truly only dust remaining in the vault for this Coin.)
 						if !coin.Amount.Equal(vault.Coins.GetCoin(coin.Asset).Amount) {

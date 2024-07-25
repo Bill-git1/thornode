@@ -554,10 +554,20 @@ func (e *ETHScanner) checkTransaction(hash string) bool {
 	if err != nil || tx == nil {
 		return false
 	}
+
+	// pending transactions may fail, but we should only errata when there is certainty
 	if pending {
-		e.logger.Info().Msgf("tx: %s is in pending status", hash)
+		e.logger.Warn().Msgf("tx: %s is in pending status", hash)
+		return true // unknown, prefer false positive
 	}
-	return true
+
+	// ensure the tx was successful
+	receipt, err := e.getReceipt(hash)
+	if err != nil {
+		e.logger.Warn().Err(err).Msgf("fail to get receipt for tx: %s", hash)
+		return true // unknown, prefer false positive
+	}
+	return receipt.Status == etypes.ReceiptStatusSuccessful
 }
 
 func (e *ETHScanner) getReceipt(hash string) (*etypes.Receipt, error) {

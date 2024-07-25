@@ -23,16 +23,9 @@ func (s AssetSuite) TestAsset(c *C) {
 
 	asset, err = NewAsset("thor/rune")
 	c.Assert(err, IsNil)
-	c.Check(asset.Valid(), IsNil)
-	c.Check(asset.Equals(RuneNative), Equals, false)
-	c.Check(asset.IsRune(), Equals, false)
-	c.Check(asset.IsEmpty(), Equals, false)
-	c.Check(asset.Synth, Equals, true)
-	c.Check(asset.String(), Equals, "THOR/RUNE")
-
-	c.Check(asset.Chain.Equals(THORChain), Equals, true)
-	c.Check(asset.Symbol.Equals(Symbol("RUNE")), Equals, true)
-	c.Check(asset.Ticker.Equals(Ticker("RUNE")), Equals, true)
+	err = asset.Valid()
+	c.Check(err, NotNil)
+	c.Check(err.Error(), Equals, "synth asset cannot have chain THOR: THOR/RUNE")
 
 	asset, err = NewAsset("BNB.SWIPE.B-DC0")
 	c.Assert(err, IsNil)
@@ -96,6 +89,27 @@ func (s AssetSuite) TestAsset(c *C) {
 	c.Check(asset.Equals(BTCAsset), Equals, false)
 	c.Check(asset.IsEmpty(), Equals, false)
 	c.Check(asset.String(), Equals, "BTC/BTC")
+
+	// btc~btc
+	asset, err = NewAsset("btc~btc")
+	c.Check(err, IsNil)
+	c.Check(asset.Valid(), IsNil)
+	c.Check(asset.Chain.Equals(BTCChain), Equals, true)
+	c.Check(asset.Equals(BTCAsset), Equals, false)
+	c.Check(asset.IsEmpty(), Equals, false)
+	c.Check(asset.String(), Equals, "BTC~BTC")
+
+	asset, err = NewAsset("thor~rune")
+	c.Assert(err, IsNil)
+	err = asset.Valid()
+	c.Check(err, NotNil)
+	c.Check(err.Error(), Equals, "trade asset cannot have chain THOR: THOR~RUNE")
+
+	// btc~btc with invalid synth flag
+	asset.Synth = true
+	err = asset.Valid()
+	c.Check(err, NotNil)
+	c.Check(err.Error(), Equals, "trade assets cannot be synth assets")
 
 	// test shorts
 	asset, err = NewAssetWithShortCodes(semver.MustParse("1.115.0"), "b")

@@ -240,6 +240,8 @@ func (h ErrataTxHandler) handleV134(ctx cosmos.Context, msg MsgErrataTx) (*cosmo
 func (h ErrataTxHandler) processErrataOutboundTx(ctx cosmos.Context, msg MsgErrataTx) (*cosmos.Result, error) {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("1.134.0")):
+		return h.processErrataOutboundTxV134(ctx, msg)
 	case version.GTE(semver.MustParse("1.124.0")):
 		return h.processErrataOutboundTxV124(ctx, msg)
 	case version.GTE(semver.MustParse("0.65.0")):
@@ -250,7 +252,7 @@ func (h ErrataTxHandler) processErrataOutboundTx(ctx cosmos.Context, msg MsgErra
 
 // processErrataOutboundTx when the network detect an outbound tx which previously had been sent out to customer , however it get re-org , and it doesn't
 // exist on the external chain anymore , then it will need to reschedule the tx
-func (h ErrataTxHandler) processErrataOutboundTxV124(ctx cosmos.Context, msg MsgErrataTx) (*cosmos.Result, error) {
+func (h ErrataTxHandler) processErrataOutboundTxV134(ctx cosmos.Context, msg MsgErrataTx) (*cosmos.Result, error) {
 	txOutVoter, err := h.mgr.Keeper().GetObservedTxOutVoter(ctx, msg.GetTxID())
 	if err != nil {
 		return nil, fmt.Errorf("fail to get observed tx out voter for tx (%s) : %w", msg.GetTxID(), err)
@@ -330,30 +332,12 @@ func (h ErrataTxHandler) processErrataOutboundTxV124(ctx cosmos.Context, msg Msg
 		}
 	}
 
-	if !m.IsInternal() && !m.GetTxID().IsEmpty() && !m.GetTxID().Equals(common.BlankTxID) {
-		txInVoter, err := h.mgr.Keeper().GetObservedTxInVoter(ctx, m.GetTxID())
-		if err != nil {
-			return nil, fmt.Errorf("fail to get tx in voter for tx (%s): %w", m.GetTxID(), err)
-		}
-
-		for _, item := range txInVoter.Actions {
-			if !item.OutHash.Equals(msg.GetTxID()) {
-				continue
-			}
-			newTxOutItem := TxOutItem{
-				Chain:     item.Chain,
-				InHash:    item.InHash,
-				ToAddress: item.ToAddress,
-				Coin:      item.Coin,
-				Memo:      item.Memo,
-			}
-			_, err := h.mgr.TxOutStore().TryAddTxOutItem(ctx, h.mgr, newTxOutItem, cosmos.ZeroUint())
-			if err != nil {
-				return nil, fmt.Errorf("fail to reschedule tx out item: %w", err)
-			}
-			break
-		}
+	// emit security event
+	event := NewEventSecurity(tx, "outbound errata")
+	if err := h.mgr.EventMgr().EmitEvent(ctx, event); err != nil {
+		return nil, ErrInternal(err, "fail to emit security event")
 	}
+
 	txOutVoter.SetReverted()
 	h.mgr.Keeper().SetObservedTxOutVoter(ctx, txOutVoter)
 	return &cosmos.Result{}, nil
