@@ -23,10 +23,6 @@ type KeeperObserveNetworkFeeTest struct {
 	errFailSaveNetworkFee          bool
 }
 
-func NewKeeperObserveNetworkFeeTest(k keeper.Keeper) KeeperObserveNetworkFeeTest {
-	return KeeperObserveNetworkFeeTest{Keeper: k}
-}
-
 func (k KeeperObserveNetworkFeeTest) ListActiveValidators(ctx cosmos.Context) (NodeAccounts, error) {
 	if k.errFailListActiveNodeAccount {
 		return NodeAccounts{}, errKaboom

@@ -14,11 +14,6 @@ import (
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
-// NewGenesisState create a new instance of GenesisState
-func NewGenesisState() GenesisState {
-	return GenesisState{}
-}
-
 // ValidateGenesis validate genesis is valid or not
 func ValidateGenesis(data GenesisState) error {
 	for _, record := range data.Pools {

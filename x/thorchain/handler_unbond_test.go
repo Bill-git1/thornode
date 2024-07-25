@@ -5,36 +5,14 @@ import (
 	"fmt"
 
 	se "github.com/cosmos/cosmos-sdk/types/errors"
-	abci "github.com/tendermint/tendermint/abci/types"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
-	"gitlab.com/thorchain/thornode/constants"
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 )
 
 type HandlerUnBondSuite struct{}
-
-type BlankValidatorManager struct {
-	ValidatorDummyMgr
-}
-
-func (vm BlankValidatorManager) BeginBlock(_ cosmos.Context, _ Manager, _ []string) error {
-	return nil
-}
-
-func (vm BlankValidatorManager) EndBlock(_ cosmos.Context, _ Manager) []abci.ValidatorUpdate {
-	return nil
-}
-
-func (vm BlankValidatorManager) processRagnarok(_ cosmos.Context, _ Manager) error {
-	return nil
-}
-
-func (vm BlankValidatorManager) NodeAccountPreflightCheck(ctx cosmos.Context, na NodeAccount, constAccessor constants.ConstantValues) (NodeStatus, error) {
-	return NodeActive, nil
-}
 
 type TestUnBondKeeper struct {
 	keeper.KVStoreDummy
