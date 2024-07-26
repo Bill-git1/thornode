@@ -40,6 +40,7 @@
   - [Memo Length Reduction](concepts/memo-length-reduction.md)
   - [Swapper Clout](./concepts/swapper-clout.md)
   - [Trade Accounts](./concepts/trade-accounts.md)
+  - [RUNE Pool](./concepts/rune-pool.md)
   - [Network Halts](concepts/network-halts.md)
   - [Fees](concepts/fees.md)
   - [Delays](concepts/delays.md)
@@ -84,8 +85,10 @@
     - [ADR 012: Scale Lending](architecture/adr-012-scale-lending.md)
     - [ADR 013: Synth Backstop](architecture/adr-013-synth-backstop.md)
     - [ADR 014: Reduce Saver Yield Synth Target to Match POL Target](architecture/adr-014-reduce-saver-yield-target.md)
+    - [ADR 015: Refund Synth Positions After Ragnarok](architecture/adr-015-refund-synth-positions-after-ragnarok.md)
     - [ADR 016: Affiliate Rev Share](architecture/adr-016-aff-rev-share.md)
     - [ADR 017: Burn System Income Lever](architecture/adr-017-burn-system-income-lever.md)
+    - [ADR 018: Core Protocol Sustainability](architecture/adr-018-core-protocol-sustainability.md)
 
 - [Protocol Development](protocol-development/adding-new-chains.md)
   - [Adding New Chains](protocol-development/adding-new-chains.md)
