@@ -11,8 +11,6 @@ You are ready to make the transaction and swap via THORChain.
 
 ## UTXO Chains
 
-> ⚠️ THORChain does NOT currently support BTC Taproot. User funds will be lost if sent to or from a taproot address!
-
 - [ ] Ensure the [address type](./querying-thorchain.md#supported-address-formats) is supported
 - [ ] Send the transaction with Asgard vault as VOUT0
 - [ ] Pass all change back to the VIN0 address in a subsequent VOUT e.g. VOUT1

@@ -18,8 +18,6 @@ Below are the list of supported Address Formats. Not using this risks loss of fu
 
 All inbound_address support this format.
 
-> ⚠️ THORChain does NOT currently support BTC Taproot. User funds will be lost if sent to or from a taproot address!
-
 ## Getting the Asgard Vault
 
 Vaults are fetched from the `/inbound_addresses` endpoint:
