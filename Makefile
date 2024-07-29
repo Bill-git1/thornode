@@ -56,11 +56,12 @@ endif
 # ------------------------------ Generate ------------------------------
 
 generate: go-generate openapi protob-docker
+	@./scripts/generate.py
+	@cd test/simulation && go mod tidy
 
 go-generate:
 	@go install golang.org/x/tools/cmd/stringer@v0.15.0
 	@go generate ./...
-
 
 protob:
 	@./scripts/protocgen.sh

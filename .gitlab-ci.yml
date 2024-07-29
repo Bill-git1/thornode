@@ -57,7 +57,7 @@ generate:
   stage: generate
   <<: *use_dind
   before_script:
-    - apk -U add bash curl findutils git go jq make protoc sed wget
+    - apk -U add bash curl findutils git go jq make protoc sed wget python3
   script:
     - |
       export PATH="$PATH:/root/go/bin"
