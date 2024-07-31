@@ -4,7 +4,7 @@ info:
     email: devs@thorchain.org
   description: Thornode REST API.
   title: Thornode API
-  version: 1.134.0
+  version: 2.135.0
 servers:
 - url: /
 paths:
@@ -4696,26 +4696,16 @@ components:
         outbound_fee_multiplier: "15000"
         total_reserve: "21999180112172346"
         native_outbound_fee_rune: "100000000"
-        burned_bep_2_rune: "674699077345087"
         tns_fee_per_block_rune: "20"
         gas_spent_rune: "1000000000"
         rune_price_in_tor: "10"
         tns_register_fee_rune: "1000000000"
         tor_price_in_rune: "10"
-        burned_erc_20_rune: "66369401654835"
         vaults_migrating: false
       properties:
         bond_reward_rune:
           description: total amount of RUNE awarded to node operators
           example: "857134475040"
-          type: string
-        burned_bep_2_rune:
-          description: total of burned BEP2 RUNE
-          example: "674699077345087"
-          type: string
-        burned_erc_20_rune:
-          description: total of burned ERC20 RUNE
-          example: "66369401654835"
           type: string
         total_bond_units:
           description: total bonded RUNE
@@ -4776,8 +4766,6 @@ components:
           type: string
       required:
       - bond_reward_rune
-      - burned_bep_2_rune
-      - burned_erc_20_rune
       - effective_security_bond
       - gas_spent_rune
       - gas_withheld_rune

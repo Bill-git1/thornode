@@ -8,8 +8,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/blang/semver"
-
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 )
@@ -73,14 +71,7 @@ func (m *Pool) GetPoolUnits() cosmos.Uint {
 	return m.LPUnits.Add(m.SynthUnits)
 }
 
-func (m *Pool) CalcUnits(version semver.Version, s cosmos.Uint) cosmos.Uint {
-	if version.GTE(semver.MustParse("0.80.0")) {
-		return m.CalcUnitsV80(s)
-	}
-	return m.GetPoolUnits()
-}
-
-func (m *Pool) CalcUnitsV80(s cosmos.Uint) cosmos.Uint {
+func (m *Pool) CalcUnits(s cosmos.Uint) cosmos.Uint {
 	// Calculate synth units
 	// (L*S)/(2*A-S)
 	// S := k.GetTotalSupply(ctx, p.Asset.GetSyntheticAsset())

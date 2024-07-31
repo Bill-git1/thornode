@@ -355,7 +355,6 @@ func (vm *ValidatorMgrVCUR) EndBlock(ctx cosmos.Context, mgr Manager) []abci.Val
 		}
 		validators = append(validators, abci.Ed25519ValidatorUpdate(pk.Bytes(), 100))
 	}
-	removedNodeKeys := common.PubKeys{}
 	for _, na := range removedNodes {
 		// retrieve the node from key value store again , as the node might get paid bond, thus the node properties has been changed
 		nodeRemove, err := vm.k.GetNodeAccount(ctx, na.NodeAddress)
@@ -388,7 +387,6 @@ func (vm *ValidatorMgrVCUR) EndBlock(ctx cosmos.Context, mgr Manager) []abci.Val
 			continue
 		}
 		caddr := sdk.ValAddress(pk.Address()).String()
-		removedNodeKeys = append(removedNodeKeys, nodeRemove.PubKeySet.Secp256k1)
 		found := false
 		for _, exist := range vm.existingValidators {
 			if exist == caddr {
@@ -401,9 +399,6 @@ func (vm *ValidatorMgrVCUR) EndBlock(ctx cosmos.Context, mgr Manager) []abci.Val
 			ctx.Logger().Info("validator is not present, so can't be removed", "validator address", caddr)
 		}
 
-	}
-	if err := vm.checkContractUpgrade(ctx, mgr, removedNodeKeys); err != nil {
-		ctx.Logger().Error("fail to check contract upgrade", "error", err)
 	}
 	// reset all nodes in ready status back to standby status
 	ready, err := vm.k.ListValidatorsByStatus(ctx, NodeReady)
@@ -429,52 +424,6 @@ func (vm *ValidatorMgrVCUR) EndBlock(ctx cosmos.Context, mgr Manager) []abci.Val
 	vm.k.PurgeOperationalNodeMimirs(ctx)
 
 	return validators
-}
-
-// checkContractUpgrade for those chains that support smart contract, it the contract get changed, take ETH for example , if the smart contract used to process transactions on ETH chain get updated for some reason
-// then the network has to recall all the fund on ETH(include both ETH and ERC20)
-func (vm *ValidatorMgrVCUR) checkContractUpgrade(ctx cosmos.Context, mgr Manager, removedNodeKeys common.PubKeys) error {
-	activeVaults, err := vm.k.GetAsgardVaultsByStatus(ctx, ActiveVault)
-	if err != nil {
-		return fmt.Errorf("fail to get active asgards: %w", err)
-	}
-	retiringVaults, err := vm.k.GetAsgardVaultsByStatus(ctx, RetiringVault)
-	if err != nil {
-		return fmt.Errorf("fail to get retiring asgards: %w", err)
-	}
-
-	// no active asgard vault , not possible
-	if len(activeVaults) == 0 {
-		return nil
-	}
-	if len(retiringVaults) == 0 {
-		return nil
-	}
-	oldChainRouters := retiringVaults[0].Routers
-	newChainRouters := activeVaults[0].Routers
-	chains := common.Chains{}
-	for _, old := range oldChainRouters {
-		found := false
-		for _, n := range newChainRouters {
-			if n.Chain.Equals(old.Chain) {
-				found = true
-				if !n.Router.Equals(old.Router) {
-					// contract address get changed , need to recall funds
-					chains = append(chains, n.Chain)
-				}
-			}
-		}
-		if !found {
-			chains = append(chains, old.Chain)
-		}
-	}
-
-	for _, c := range chains.Distinct() {
-		if err := vm.networkMgr.RecallChainFunds(ctx, c, mgr, removedNodeKeys); err != nil {
-			ctx.Logger().Error("fail to recall chain fund", "error", err, "chain", c.String())
-		}
-	}
-	return nil
 }
 
 // getChangedNodes to identify which node had been removed ,and which one had been added
@@ -577,7 +526,7 @@ func (vm *ValidatorMgrVCUR) payNodeAccountBondAward(ctx cosmos.Context, lastChur
 		return err
 	}
 	// Ensure that previous rewards are already accounted for
-	bp.Adjust(vm.k.GetVersion(), na.Bond)
+	bp.Adjust(na.Bond)
 	nodeOperatorProvider := bp.Get(nodeOperatorAccAddr)
 	// Sanity check that the node operator is accounted for
 	if nodeOperatorProvider.IsEmpty() {
@@ -606,7 +555,7 @@ func (vm *ValidatorMgrVCUR) payNodeAccountBondAward(ctx cosmos.Context, lastChur
 
 	// Distribute reward to bond providers and remove the NodeOperatorFee portion for node operator payout.
 	// (This is the full fee from other bond providers' rewards, plus an equivalent proportion of the node operator's rewards.)
-	bp.Adjust(vm.k.GetVersion(), na.Bond)
+	bp.Adjust(na.Bond)
 	nodeOperatorProvider = bp.Get(nodeOperatorAccAddr)
 	nodeOperatorFees := common.GetSafeShare(bp.NodeOperatorFee, cosmos.NewUint(10000), reward)
 	// Sanity check:  Fees to pay out should never exceed the increase of the node operator's bond.
@@ -1003,11 +952,6 @@ func (vm *ValidatorMgrVCUR) ragnarokPools(ctx cosmos.Context, nth int64, mgr Man
 	return nil
 }
 
-// TODO remove on hard fork
-func (vm *ValidatorMgrVCUR) RequestYggReturn(ctx cosmos.Context, node NodeAccount, mgr Manager) error {
-	return fmt.Errorf("dev error: RequestYggReturn is obsolete")
-}
-
 // setupValidatorNodes it is one off it only get called when genesis
 func (vm *ValidatorMgrVCUR) setupValidatorNodes(ctx cosmos.Context, height int64) error {
 	if height != genesisBlockHeight {
@@ -1377,24 +1321,6 @@ func (vm *ValidatorMgrVCUR) NodeAccountPreflightCheck(ctx cosmos.Context, na Nod
 	// Check that the node account has an pubkey set
 	if na.PubKeySet.IsEmpty() {
 		return NodeWhiteListed, fmt.Errorf("node account has not registered their pubkey set")
-	}
-
-	// check if node account is whitelisted. This is used for mocknet/stagenet environments
-	if len(VALIDATORS) > 0 {
-		found := false
-		for _, val := range VALIDATORS {
-			acc, err := cosmos.AccAddressFromBech32(val)
-			if err != nil {
-				continue
-			}
-			if acc.Equals(na.NodeAddress) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return NodeStandby, fmt.Errorf("node account is not a whitelisted validator")
-		}
 	}
 
 	// ensure we have enough rune

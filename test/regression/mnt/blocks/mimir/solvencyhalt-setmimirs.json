@@ -110,7 +110,7 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "D4FEB00ABACE25B700D0B75B2703CC8AC637BD82848BD9E5B5B7F631B237043B",
+      "app_hash": "235686C536DA80FAD3E19754DAA28409084EF5C6327FAD448EBD83F8DBE37592",
       "last_results_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
@@ -221,7 +221,7 @@
           "data": "\n\u0014\n\u0012/types.MsgSolvency",
           "log": "[{\"events\":[{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"solvency\"}]},{\"type\":\"set_mimir\",\"attributes\":[{\"key\":\"key\",\"value\":\"SOLVENCYHALTBTCCHAIN\"},{\"key\":\"value\",\"value\":\"2\"}]}]}]",
           "gas_wanted": "0",
-          "gas_used": "112052",
+          "gas_used": "107100",
           "events": [
             {
               "fee": "",
@@ -304,7 +304,7 @@
           "data": "\n\u0014\n\u0012/types.MsgSolvency",
           "log": "[{\"events\":[{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"solvency\"}]}]}]",
           "gas_wanted": "0",
-          "gas_used": "97516",
+          "gas_used": "94564",
           "events": [
             {
               "fee": "",

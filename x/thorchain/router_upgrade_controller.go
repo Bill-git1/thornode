@@ -47,10 +47,6 @@ func (r *RouterUpgradeController) getRouterChains(version semver.Version) ([]com
 	switch {
 	case version.GTE(semver.MustParse("1.111.0")):
 		return []common.Chain{common.ETHChain, common.AVAXChain, common.BSCChain}, nil
-	case version.GTE(semver.MustParse("1.94.0")):
-		return []common.Chain{common.ETHChain, common.AVAXChain}, nil
-	case version.GTE(semver.MustParse("0.1.0")):
-		return []common.Chain{common.ETHChain}, nil
 	default:
 		return nil, fmt.Errorf("invalid version %s", version.String())
 	}
@@ -58,19 +54,6 @@ func (r *RouterUpgradeController) getRouterChains(version semver.Version) ([]com
 
 // upgradeContract updates a chain's router in the KVStore if needed
 func (r *RouterUpgradeController) upgradeContract(ctx cosmos.Context, version semver.Version) error {
-	switch {
-	case version.GTE(semver.MustParse("1.124.0")):
-		return r.upgradeContractV124(ctx, version)
-	case version.GTE(semver.MustParse("1.94.0")):
-		return r.upgradeContractV94(ctx, version)
-	case version.GTE(semver.MustParse("0.1.0")):
-		return r.upgradeContractV1(ctx)
-	default:
-		return fmt.Errorf("invalid version %s", version.String())
-	}
-}
-
-func (r *RouterUpgradeController) upgradeContractV124(ctx cosmos.Context, version semver.Version) error {
 	chains, err := r.getRouterChains(version)
 	if err != nil {
 		return fmt.Errorf("fail to get router chains: %w", err)
@@ -142,13 +125,6 @@ func (r *RouterUpgradeController) upgradeContractV124(ctx cosmos.Context, versio
 // all these steps are controlled by mimir
 func (r *RouterUpgradeController) Process(ctx cosmos.Context) {
 	version := r.mgr.GetVersion()
-
-	if version.LT(semver.MustParse("1.124.0")) {
-		// TODO remove on hard fork
-		if err := r.recallYggdrasilFund(ctx, version); err != nil {
-			ctx.Logger().Error("fail to recall yggdrasil funds", "error", err)
-		}
-	}
 
 	if err := r.upgradeContract(ctx, version); err != nil {
 		ctx.Logger().Error("fail to upgrade contract", "error", err)

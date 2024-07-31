@@ -16,12 +16,11 @@ const (
 	StoreKey               = types.StoreKey
 
 	// Vaults
-	AsgardVault    = types.VaultType_AsgardVault
-	YggdrasilVault = types.VaultType_YggdrasilVault // TODO remove on hard fork
-	ActiveVault    = types.VaultStatus_ActiveVault
-	InitVault      = types.VaultStatus_InitVault
-	RetiringVault  = types.VaultStatus_RetiringVault
-	InactiveVault  = types.VaultStatus_InactiveVault
+	AsgardVault   = types.VaultType_AsgardVault
+	ActiveVault   = types.VaultStatus_ActiveVault
+	InitVault     = types.VaultStatus_InitVault
+	RetiringVault = types.VaultStatus_RetiringVault
+	InactiveVault = types.VaultStatus_InactiveVault
 
 	// Node status
 	NodeActive  = types.NodeStatus_Active

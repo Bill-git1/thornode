@@ -25,11 +25,6 @@ func (d DummySlasher) HandleDoubleSign(ctx cosmos.Context, addr crypto.Address, 
 	return errKaboom
 }
 
-// TODO: remove me on hard fork
-func (d DummySlasher) LackObserving(ctx cosmos.Context, constAccessor constants.ConstantValues) error {
-	return errKaboom
-}
-
 func (d DummySlasher) LackSigning(ctx cosmos.Context, mgr Manager) error {
 	return errKaboom
 }

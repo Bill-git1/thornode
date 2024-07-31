@@ -44,14 +44,9 @@ func (h SetNodeKeysHandler) validate(ctx cosmos.Context, msg MsgSetNodeKeys) err
 	switch {
 	case version.GTE(semver.MustParse("1.134.0")):
 		return h.validateV134(ctx, msg)
-	case version.GTE(semver.MustParse("1.114.0")):
-		return h.validateV114(ctx, msg)
-	case version.GTE(semver.MustParse("1.112.0")):
-		return h.validateV112(ctx, msg)
-	case version.GTE(semver.MustParse("0.64.0")):
-		return h.validateV64(ctx, msg)
+	default:
+		return errInvalidVersion
 	}
-	return errInvalidVersion
 }
 
 func (h SetNodeKeysHandler) validateV134(ctx cosmos.Context, msg MsgSetNodeKeys) error {
@@ -82,12 +77,9 @@ func (h SetNodeKeysHandler) handle(ctx cosmos.Context, msg MsgSetNodeKeys) (*cos
 	switch {
 	case version.GTE(semver.MustParse("1.115.0")):
 		return h.handleV115(ctx, msg)
-	case version.GTE(semver.MustParse("1.112.0")):
-		return h.handleV112(ctx, msg)
-	case version.GTE(semver.MustParse("0.57.0")):
-		return h.handleV57(ctx, msg)
+	default:
+		return nil, errBadVersion
 	}
-	return nil, errBadVersion
 }
 
 func (h SetNodeKeysHandler) handleV115(ctx cosmos.Context, msg MsgSetNodeKeys) (*cosmos.Result, error) {
@@ -115,18 +107,6 @@ func (h SetNodeKeysHandler) handleV115(ctx cosmos.Context, msg MsgSetNodeKeys) (
 }
 
 func validateNodeKeysAuth(ctx cosmos.Context, k keeper.Keeper, signer cosmos.AccAddress) error {
-	version, _ := k.GetVersionWithCtx(ctx)
-	switch {
-	case version.GTE(semver.MustParse("1.115.0")):
-		return validateNodeKeysAuthV115(ctx, k, signer)
-	case version.GTE(semver.MustParse("1.114.0")):
-		return validateNodeKeysAuthV114(ctx, k, signer)
-	default:
-		return errBadVersion
-	}
-}
-
-func validateNodeKeysAuthV115(ctx cosmos.Context, k keeper.Keeper, signer cosmos.AccAddress) error {
 	nodeAccount, err := k.GetNodeAccount(ctx, signer)
 	if err != nil {
 		return cosmos.ErrUnauthorized(fmt.Sprintf("fail to get node account(%s):%s", signer.String(), err)) // notAuthorized
@@ -158,9 +138,6 @@ func SetNodeKeysAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keepe
 	if err := validateNodeKeysAuth(ctx, k, msg.Signer); err != nil {
 		return err
 	}
-	// TODO on hard fork remove version check
-	if v.GTE(semver.MustParse("1.115.0")) {
-		return k.DeductNativeTxFeeFromBond(ctx, msg.Signer)
-	}
-	return nil
+
+	return k.DeductNativeTxFeeFromBond(ctx, msg.Signer)
 }

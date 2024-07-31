@@ -43,10 +43,12 @@ func (h RagnarokHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, 
 
 func (h RagnarokHandler) validate(ctx cosmos.Context, msg MsgRagnarok) error {
 	version := h.mgr.GetVersion()
-	if version.GTE(semver.MustParse("0.1.0")) {
+	switch {
+	case version.GTE(semver.MustParse("0.1.0")):
 		return h.validateV1(ctx, msg)
+	default:
+		return errInvalidVersion
 	}
-	return errInvalidVersion
 }
 
 func (h RagnarokHandler) validateV1(ctx cosmos.Context, msg MsgRagnarok) error {
@@ -59,17 +61,15 @@ func (h RagnarokHandler) handle(ctx cosmos.Context, msg MsgRagnarok) (*cosmos.Re
 	switch {
 	case version.GTE(semver.MustParse("1.96.0")):
 		return h.handleV96(ctx, msg)
-	case version.GTE(semver.MustParse("0.65.0")):
-		return h.handleV65(ctx, msg)
 	default:
 		return nil, errBadVersion
 	}
 }
 
-func (h RagnarokHandler) slashV96(ctx cosmos.Context, tx ObservedTx) error {
+func (h RagnarokHandler) slash(ctx cosmos.Context, tx ObservedTx) error {
 	toSlash := make(common.Coins, len(tx.Tx.Coins))
 	copy(toSlash, tx.Tx.Coins)
-	toSlash = toSlash.Adds_deprecated(tx.Tx.Gas.ToCoins())
+	toSlash = toSlash.Add(tx.Tx.Gas.ToCoins()...)
 
 	ctx = ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
 		telemetry.NewLabel("reason", "failed_ragnarok"),
@@ -107,7 +107,7 @@ func (h RagnarokHandler) handleV96(ctx cosmos.Context, msg MsgRagnarok) (*cosmos
 				tx.ToAddress.Equals(msg.Tx.Tx.ToAddress) &&
 				fromAddress.Equals(msg.Tx.Tx.FromAddress) {
 
-				matchCoin := msg.Tx.Tx.Coins.Equals_deprecated(common.Coins{tx.Coin})
+				matchCoin := msg.Tx.Tx.Coins.EqualsEx(common.Coins{tx.Coin})
 				// when outbound is gas asset
 				if !matchCoin && tx.Coin.Asset.Equals(tx.Chain.GetGasAsset()) {
 					asset := tx.Chain.GetGasAsset()
@@ -148,7 +148,7 @@ func (h RagnarokHandler) handleV96(ctx cosmos.Context, msg MsgRagnarok) (*cosmos
 	}
 
 	if shouldSlash {
-		if err := h.slashV96(ctx, msg.Tx); err != nil {
+		if err := h.slash(ctx, msg.Tx); err != nil {
 			return nil, ErrInternal(err, "fail to slash account")
 		}
 	}

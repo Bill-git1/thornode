@@ -50,12 +50,6 @@ func (h WithdrawLiquidityHandler) validate(ctx cosmos.Context, msg MsgWithdrawLi
 	switch {
 	case version.GTE(semver.MustParse("1.112.0")):
 		return h.validateV112(ctx, msg)
-	case version.GTE(semver.MustParse("1.108.0")):
-		return h.validateV108(ctx, msg)
-	case version.GTE(semver.MustParse("1.96.0")):
-		return h.validateV96(ctx, msg)
-	case version.GTE(semver.MustParse("0.80.0")):
-		return h.validateV80(ctx, msg)
 	default:
 		return errBadVersion
 	}
@@ -97,33 +91,9 @@ func (h WithdrawLiquidityHandler) handle(ctx cosmos.Context, msg MsgWithdrawLiqu
 	switch {
 	case version.GTE(semver.MustParse("1.129.0")):
 		return h.handleV129(ctx, msg)
-	case version.GTE(semver.MustParse("1.107.0")):
-		return h.handleV107(ctx, msg)
-	case version.GTE(semver.MustParse("1.100.0")):
-		return h.handleV100(ctx, msg)
-	case version.GTE(semver.MustParse("1.98.0")):
-		return h.handleV98(ctx, msg)
-	case version.GTE(semver.MustParse("1.95.0")):
-		return h.handleV95(ctx, msg)
-	case version.GTE(semver.MustParse("1.94.0")):
-		return h.handleV94(ctx, msg)
-	case version.GTE(semver.MustParse("1.93.0")):
-		return h.handleV93(ctx, msg)
-	case version.GTE(semver.MustParse("1.88.1")):
-		return h.handleV88(ctx, msg)
-	case version.GTE(semver.MustParse("1.88.0")):
-		// only change in 1.88.1 is moving cacheCtx to the caller
-		cacheCtx, commit := ctx.CacheContext()
-		res, err := h.handleV88(cacheCtx, msg)
-		if err == nil {
-			commit()
-			ctx.EventManager().EmitEvents(cacheCtx.EventManager().Events())
-		}
-		return res, err
-	case version.GTE(semver.MustParse("0.75.0")):
-		return h.handleV75(ctx, msg)
+	default:
+		return nil, errBadVersion
 	}
-	return nil, errBadVersion
 }
 
 func (h WithdrawLiquidityHandler) handleV129(ctx cosmos.Context, msg MsgWithdrawLiquidity) (*cosmos.Result, error) {
@@ -131,7 +101,7 @@ func (h WithdrawLiquidityHandler) handleV129(ctx cosmos.Context, msg MsgWithdraw
 	if err != nil {
 		return nil, multierror.Append(errFailGetLiquidityProvider, err)
 	}
-	runeAmt, assetAmt, _, units, gasAsset, err := withdraw(ctx, msg, h.mgr)
+	runeAmt, assetAmt, units, gasAsset, err := withdraw(ctx, msg, h.mgr)
 	if err != nil {
 		return nil, ErrInternal(err, "fail to process withdraw request")
 	}
@@ -295,24 +265,6 @@ func (h WithdrawLiquidityHandler) handleV129(ctx cosmos.Context, msg MsgWithdraw
 }
 
 func (h WithdrawLiquidityHandler) swap(ctx cosmos.Context, msg MsgWithdrawLiquidity, coin common.Coin, addr common.Address) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.129.0")):
-		return h.swapV129(ctx, msg, coin, addr)
-	case version.GTE(semver.MustParse("1.121.0")):
-		return h.swapV121(ctx, msg, coin, addr)
-	case version.GTE(semver.MustParse("1.119.0")):
-		return h.swapV119(ctx, msg, coin, addr)
-	case version.GTE(semver.MustParse("1.100.0")):
-		return h.swapV100(ctx, msg, coin, addr)
-	case version.GTE(semver.MustParse("1.93.0")):
-		return h.swapV93(ctx, msg, coin, addr)
-	default:
-		return nil
-	}
-}
-
-func (h WithdrawLiquidityHandler) swapV129(ctx cosmos.Context, msg MsgWithdrawLiquidity, coin common.Coin, addr common.Address) error {
 	// ensure TxID does NOT have a collision with another swap, this could
 	// happen if the user submits two identical loan requests in the same
 	// block

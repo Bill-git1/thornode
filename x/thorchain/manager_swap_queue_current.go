@@ -354,9 +354,9 @@ func (vm *SwapQueueVCUR) getLiquidityFeeAndSlip(ctx cosmos.Context, pool Pool, s
 
 	swapper, err := GetSwapper(vm.k.GetVersion())
 	if err != nil {
-		ctx.Logger().Error("fail to fetch swapper", "error", err)
-		swapper = newSwapperV92()
+		panic(err)
 	}
+
 	fee := swapper.CalcLiquidityFee(X, x, Y)
 	if sourceCoin.Asset.IsRune() {
 		fee = pool.AssetValueInRune(fee)

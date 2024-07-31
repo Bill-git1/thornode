@@ -59,7 +59,6 @@ lint:
       paths:
         - bifrost/pkg/chainclients/gaia/test-data/latest_block.json
         - common/tokenlist/*/*.json
-        - x/thorchain/preregister_thornames.json
         - third_party/**
         - test/regression/mnt/blocks/**
 actions:

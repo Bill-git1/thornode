@@ -37,10 +37,12 @@ func (h OutboundTxHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result
 
 func (h OutboundTxHandler) validate(ctx cosmos.Context, msg MsgOutboundTx) error {
 	version := h.mgr.GetVersion()
-	if version.GTE(semver.MustParse("0.1.0")) {
+	switch {
+	case version.GTE(semver.MustParse("0.1.0")):
 		return h.validateV1(ctx, msg)
+	default:
+		return errBadVersion
 	}
-	return errBadVersion
 }
 
 func (h OutboundTxHandler) validateV1(ctx cosmos.Context, msg MsgOutboundTx) error {
@@ -54,10 +56,12 @@ func (h OutboundTxHandler) handle(ctx cosmos.Context, msg MsgOutboundTx) (*cosmo
 		ctx.Logger().Debug("receive MsgOutboundTx", "request outbound tx hash", msg.Tx.Tx.ID)
 	}
 	version := h.mgr.GetVersion()
-	if version.GTE(semver.MustParse("0.1.0")) {
+	switch {
+	case version.GTE(semver.MustParse("0.1.0")):
 		return h.handleV1(ctx, msg)
+	default:
+		return nil, errBadVersion
 	}
-	return nil, errBadVersion
 }
 
 func (h OutboundTxHandler) handleV1(ctx cosmos.Context, msg MsgOutboundTx) (*cosmos.Result, error) {

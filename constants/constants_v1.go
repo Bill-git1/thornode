@@ -6,20 +6,16 @@ func NewConstantValue() *ConstantVals {
 		int64values: map[ConstantName]int64{
 			EmissionCurve:                       6,
 			BlocksPerYear:                       5256000,
-			MaxRuneSupply:                       -1,                 // max supply of rune. Default set to -1 to avoid consensus failure
-			IncentiveCurve:                      100,                // configures incentive pendulum
-			OutboundTransactionFee:              2_000000,           // TODO: remove me on hard fork
-			NativeOutboundFeeUSD:                2_000000,           // $0.02 fee on all swaps and withdrawals
-			NativeTransactionFee:                2_000000,           // TODO: remove me on hard fork
+			MaxRuneSupply:                       -1, // max supply of rune. Default set to -1 to avoid consensus failure
+			OutboundTransactionFee:              2_000000,
+			NativeOutboundFeeUSD:                2_000000, // $0.02 fee on all swaps and withdrawals
+			NativeTransactionFee:                2_000000,
 			NativeTransactionFeeUSD:             2_000000,           // $0.02 fee on all on chain txs
 			PoolCycle:                           43200,              // Make a pool available every 3 days
 			StagedPoolCost:                      10_00000000,        // amount of rune to take from a staged pool on every pool cycle
 			PendingLiquidityAgeLimit:            100800,             // age pending liquidity can be pending before its auto committed to the pool
-			KillSwitchStart:                     0,                  // block height to start the kill switch of BEP2/ERC20 old RUNE // TODO remove on hard fork
-			KillSwitchDuration:                  5256000,            // number of blocks until switch no longer works // TODO remove on hard fork
 			MinRunePoolDepth:                    10000_00000000,     // minimum rune pool depth to be an available pool
 			MaxAvailablePools:                   100,                // maximum number of available pools
-			MinimumNodesForYggdrasil:            6,                  // No yggdrasil pools if THORNode have less than 6 active nodes
 			MinimumNodesForBFT:                  4,                  // Minimum node count to keep network running. Below this, Ragnarök is performed.
 			DesiredValidatorSet:                 100,                // desire validator set
 			AsgardSize:                          40,                 // desired node operators in an asgard vault
@@ -51,8 +47,6 @@ func NewConstantValue() *ConstantVals {
 			DoubleBlockSignSlashPoints:          1000,               // slash points for double block sign (3-4 days (over 43200 blocks) rewards lost from 5 minutes (50 blocks))
 			MissBlockSignSlashPoints:            1,                  // slash points for not signing a block
 			ObservationDelayFlexibility:         10,                 // number of blocks of flexibility for a validator to get their slash points taken off for making an observation
-			YggFundLimit:                        50,                 // percentage of the amount of funds a ygg vault is allowed to have.
-			YggFundRetry:                        1000,               // number of blocks before retrying to fund a yggdrasil vault
 			JailTimeKeygen:                      720 * 6,            // blocks a node account is jailed for failing to keygen. DO NOT drop below tss timeout
 			JailTimeKeysign:                     60,                 // blocks a node account is jailed for failing to keysign. DO NOT drop below tss timeout
 			NodePauseChainBlocks:                720,                // number of blocks that a node can pause/resume a global chain halt
@@ -63,11 +57,9 @@ func NewConstantValue() *ConstantVals {
 			EnableOrderBooks:                    0,                  // enable order books instead of swap queue
 			VirtualMultSynths:                   2,                  // pool depth multiplier for synthetic swaps
 			VirtualMultSynthsBasisPoints:        10_000,             // pool depth multiplier for synthetic swaps (in basis points)
-			MaxSynthPerAssetDepth:               3300,               // TODO: remove me on hard fork
 			MaxSynthPerPoolDepth:                1700,               // percentage (in basis points) of how many synths are allowed relative to pool depth of the related pool
 			MaxSynthsForSaversYield:             0,                  // percentage (in basis points) synth per pool where synth yield reaches 0%
 			MinSlashPointsForBadValidator:       100,                // The minimum slash point
-			FullImpLossProtectionBlocks:         1440000,            // TODO: remove me on hard fork
 			StreamingSwapPause:                  0,                  // pause streaming swaps from being processed or accepted
 			StreamingSwapMinBPFee:               0,                  // min swap fee (in basis points) for a streaming swap trade
 			StreamingSwapMaxLength:              14400,              // max number of blocks a streaming swap can trade for
@@ -82,45 +74,42 @@ func NewConstantValue() *ConstantVals {
 			TxOutDelayRate:                      25_00000000,        // outbound rune per block rate for scheduled transactions (excluding native assets)
 			TxOutDelayMax:                       17280,              // max number of blocks a transaction can be delayed
 			MaxTxOutOffset:                      720,                // max blocks to offset a txout into a future block
-			TNSRegisterFee:                      10_00000000,        // TODO: remove me on hard fork
-			TNSRegisterFeeUSD:                   10_00000000,        // registration fee for new THORName in USD
-			TNSFeeOnSale:                        1000,               // fee for TNS sale in basis points
-			TNSFeePerBlock:                      20,                 // TODO: remove me on hard fork
-			TNSFeePerBlockUSD:                   20,                 // per block cost for TNS in USD
-			PermittedSolvencyGap:                100,                // the setting is in basis points
-			ValidatorMaxRewardRatio:             1,                  // the ratio to MinimumBondInRune at which validators stop receiving rewards proportional to their bond
-			PoolDepthForYggFundingMin:           500_000_00000000,   // the minimum pool depth in RUNE required for ygg funding
-			MaxNodeToChurnOutForLowVersion:      1,                  // the maximum number of nodes to churn out for low version per churn
-			ChurnOutForLowVersionBlocks:         21600,              // the blocks after the MinJoinVersion changes before nodes can be churned out for low version
-			POLMaxNetworkDeposit:                0,                  // Maximum amount of rune deposited into the pools
-			POLMaxPoolMovement:                  100,                // Maximum amount of rune to enter/exit a pool per iteration - 1 equals one hundredth of a basis point of pool rune depth
-			POLSynthUtilization:                 0,                  // TODO: remove me on hard fork
-			POLTargetSynthPerPoolDepth:          0,                  // target synth per pool depth for POL (basis points)
-			POLBuffer:                           0,                  // buffer around the POL synth utilization (basis points added to/subtracted from POLTargetSynthPerPoolDepth basis points)
-			RagnarokProcessNumOfLPPerIteration:  200,                // the number of LP to be processed per iteration during ragnarok pool
-			SynthYieldBasisPoints:               5000,               // amount of the yield the capital earns the synth holder receives if synth per pool is 0%
-			SynthYieldCycle:                     0,                  // number of blocks when the network pays out rewards to yield bearing synths
-			MinimumL1OutboundFeeUSD:             1000000,            // Minimum fee in USD to charge for LP swap, default to $0.01 , nodes need to vote it to a larger value
-			MinimumPoolLiquidityFee:             0,                  // Minimum liquidity fee made by the pool,active pool fail to meet this within a PoolCycle will be demoted
-			ILPCutoff:                           0,                  // TODO: remove me on hard fork
-			ChurnMigrateRounds:                  5,                  // Number of rounds to migrate vaults during churn
-			AllowWideBlame:                      0,                  // allow for a wide blame, only set in mocknet for regression testing tss keysign failures
-			MaxAffiliateFeeBasisPoints:          10_000,             // Max allowed affiliate fee basis points
-			TargetOutboundFeeSurplusRune:        100_000_00000000,   // Target amount of RUNE for Outbound Fee Surplus: the sum of the diff between outbound cost to user and outbound cost to network
-			MaxOutboundFeeMultiplierBasisPoints: 30_000,             // Maximum multiplier applied to base outbound fee charged to user, in basis points
-			MinOutboundFeeMultiplierBasisPoints: 15_000,             // Minimum multiplier applied to base outbound fee charged to user, in basis points
-			EnableUSDFees:                       0,                  // enable USD fees
-			PreferredAssetOutboundFeeMultiplier: 100,                // multiplier of the current preferred asset outbound fee, if rune balance > multiplier * outbound_fee, a preferred asset swap is triggered
-			FeeUSDRoundSignificantDigits:        2,                  // number of significant digits to round the RUNE value of USD denominated fees
-			MigrationVaultSecurityBps:           0,                  // vault bond must be greater than bps of funds value in rune to receive migrations
-			CloutReset:                          720,                // number of blocks before clout spent gets reset
-			CloutLimit:                          0,                  // max clout allowed to spend
-			KeygenRetryInterval:                 0,                  // number of blocks to wait before retrying a keygen
-			SaversStreamingSwapsInterval:        0,                  // For Savers deposits and withdraws, the streaming swaps interval to use for the Native <> Synth swap
-			RescheduleCoalesceBlocks:            0,                  // number of blocks to coalesce rescheduled outbounds
-			TradeAccountsEnabled:                0,                  // enable/disable trade account
-			EVMDisableContractWhitelist:         0,                  // enable/disable contract whitelist
-			OperationalVotesMin:                 3,                  // Minimum node votes to set an Operational Mimir
+			TNSRegisterFee:                      10_00000000,
+			TNSRegisterFeeUSD:                   10_00000000, // registration fee for new THORName in USD
+			TNSFeeOnSale:                        1000,        // fee for TNS sale in basis points
+			TNSFeePerBlock:                      20,
+			TNSFeePerBlockUSD:                   20,               // per block cost for TNS in USD
+			PermittedSolvencyGap:                100,              // the setting is in basis points
+			ValidatorMaxRewardRatio:             1,                // the ratio to MinimumBondInRune at which validators stop receiving rewards proportional to their bond
+			MaxNodeToChurnOutForLowVersion:      1,                // the maximum number of nodes to churn out for low version per churn
+			ChurnOutForLowVersionBlocks:         21600,            // the blocks after the MinJoinVersion changes before nodes can be churned out for low version
+			POLMaxNetworkDeposit:                0,                // Maximum amount of rune deposited into the pools
+			POLMaxPoolMovement:                  100,              // Maximum amount of rune to enter/exit a pool per iteration - 1 equals one hundredth of a basis point of pool rune depth
+			POLTargetSynthPerPoolDepth:          0,                // target synth per pool depth for POL (basis points)
+			POLBuffer:                           0,                // buffer around the POL synth utilization (basis points added to/subtracted from POLTargetSynthPerPoolDepth basis points)
+			RagnarokProcessNumOfLPPerIteration:  200,              // the number of LP to be processed per iteration during ragnarok pool
+			SynthYieldBasisPoints:               5000,             // amount of the yield the capital earns the synth holder receives if synth per pool is 0%
+			SynthYieldCycle:                     0,                // number of blocks when the network pays out rewards to yield bearing synths
+			MinimumL1OutboundFeeUSD:             1000000,          // Minimum fee in USD to charge for LP swap, default to $0.01 , nodes need to vote it to a larger value
+			MinimumPoolLiquidityFee:             0,                // Minimum liquidity fee made by the pool,active pool fail to meet this within a PoolCycle will be demoted
+			ChurnMigrateRounds:                  5,                // Number of rounds to migrate vaults during churn
+			AllowWideBlame:                      0,                // allow for a wide blame, only set in mocknet for regression testing tss keysign failures
+			MaxAffiliateFeeBasisPoints:          10_000,           // Max allowed affiliate fee basis points
+			TargetOutboundFeeSurplusRune:        100_000_00000000, // Target amount of RUNE for Outbound Fee Surplus: the sum of the diff between outbound cost to user and outbound cost to network
+			MaxOutboundFeeMultiplierBasisPoints: 30_000,           // Maximum multiplier applied to base outbound fee charged to user, in basis points
+			MinOutboundFeeMultiplierBasisPoints: 15_000,           // Minimum multiplier applied to base outbound fee charged to user, in basis points
+			EnableUSDFees:                       0,                // enable USD fees
+			PreferredAssetOutboundFeeMultiplier: 100,              // multiplier of the current preferred asset outbound fee, if rune balance > multiplier * outbound_fee, a preferred asset swap is triggered
+			FeeUSDRoundSignificantDigits:        2,                // number of significant digits to round the RUNE value of USD denominated fees
+			MigrationVaultSecurityBps:           0,                // vault bond must be greater than bps of funds value in rune to receive migrations
+			CloutReset:                          720,              // number of blocks before clout spent gets reset
+			CloutLimit:                          0,                // max clout allowed to spend
+			KeygenRetryInterval:                 0,                // number of blocks to wait before retrying a keygen
+			SaversStreamingSwapsInterval:        0,                // For Savers deposits and withdraws, the streaming swaps interval to use for the Native <> Synth swap
+			RescheduleCoalesceBlocks:            0,                // number of blocks to coalesce rescheduled outbounds
+			TradeAccountsEnabled:                0,                // enable/disable trade account
+			EVMDisableContractWhitelist:         0,                // enable/disable contract whitelist
+			OperationalVotesMin:                 3,                // Minimum node votes to set an Operational Mimir
 			L1SlipMinBps:                        0,
 			TradeAccountsSlipMinBps:             0,
 			SynthSlipMinBps:                     0,

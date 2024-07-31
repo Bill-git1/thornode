@@ -123,10 +123,10 @@ func (s *HandlerVersionSuite) TestHandle(c *C) {
 
 	handler := NewVersionHandler(NewDummyMgrWithKeeper(keeper))
 
-	msg := NewMsgSetVersion("2.0.0", GetRandomBech32Addr())
+	msg := NewMsgSetVersion("999.0.0", GetRandomBech32Addr())
 	err := handler.handle(ctx, *msg)
 	c.Assert(err, IsNil)
-	c.Check(keeper.na.Version, Equals, "2.0.0")
+	c.Check(keeper.na.Version, Equals, "999.0.0")
 
 	// fail to set node account should return an error
 	keeper.failSaveNodeAccount = true

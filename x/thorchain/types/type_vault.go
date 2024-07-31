@@ -62,12 +62,6 @@ func (m Vault) IsAsgard() bool {
 	return m.IsType(VaultType_AsgardVault)
 }
 
-// IsYggdrasil return true when the vault is YggdrasilVault
-// TODO remove on hard fork
-func (m Vault) IsYggdrasil() bool {
-	return m.IsType(VaultType_YggdrasilVault)
-}
-
 // IsActive return true when the vault is in active status
 func (m Vault) IsActive() bool {
 	return m.Status == VaultStatus_ActiveVault

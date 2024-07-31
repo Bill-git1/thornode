@@ -38,10 +38,12 @@ func (h MigrateHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, e
 
 func (h MigrateHandler) validate(ctx cosmos.Context, msg MsgMigrate) error {
 	version := h.mgr.GetVersion()
-	if version.GTE(semver.MustParse("0.1.0")) {
+	switch {
+	case version.GTE(semver.MustParse("0.1.0")):
 		return h.validateV1(ctx, msg)
+	default:
+		return errInvalidVersion
 	}
-	return errInvalidVersion
 }
 
 func (h MigrateHandler) validateV1(ctx cosmos.Context, msg MsgMigrate) error {
@@ -57,17 +59,15 @@ func (h MigrateHandler) handle(ctx cosmos.Context, msg MsgMigrate) (*cosmos.Resu
 	switch {
 	case version.GTE(semver.MustParse("1.96.0")):
 		return h.handleV96(ctx, msg)
-	case version.GTE(semver.MustParse("0.1.0")):
-		return h.handleV1(ctx, msg)
 	default:
 		return nil, errBadVersion
 	}
 }
 
-func (h MigrateHandler) slashV96(ctx cosmos.Context, tx ObservedTx) error {
+func (h MigrateHandler) slash(ctx cosmos.Context, tx ObservedTx) error {
 	toSlash := make(common.Coins, len(tx.Tx.Coins))
 	copy(toSlash, tx.Tx.Coins)
-	toSlash = toSlash.Adds_deprecated(tx.Tx.Gas.ToCoins())
+	toSlash = toSlash.Add(tx.Tx.Gas.ToCoins()...)
 
 	ctx = ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
 		telemetry.NewLabel("reason", "failed_migration"),
@@ -130,7 +130,7 @@ func (h MigrateHandler) handleV96(ctx cosmos.Context, msg MsgMigrate) (*cosmos.R
 
 	if shouldSlash {
 		ctx.Logger().Info("slash node account,migration has no matched txout", "outbound tx", msg.Tx.Tx)
-		if err := h.slashV96(ctx, msg.Tx); err != nil {
+		if err := h.slash(ctx, msg.Tx); err != nil {
 			return nil, ErrInternal(err, "fail to slash account")
 		}
 	}

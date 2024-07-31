@@ -58,14 +58,6 @@ func (h LoanOpenHandler) validate(ctx cosmos.Context, msg MsgLoanOpen) error {
 	switch {
 	case version.GTE(semver.MustParse("1.128.0")):
 		return h.validateV128(ctx, msg)
-	case version.GTE(semver.MustParse("1.121.0")):
-		return h.validateV121(ctx, msg)
-	case version.GTE(semver.MustParse("1.111.0")):
-		return h.validateV111(ctx, msg)
-	case version.GTE(semver.MustParse("1.108.0")):
-		return h.validateV108(ctx, msg)
-	case version.GTE(semver.MustParse("1.107.0")):
-		return h.validateV107(ctx, msg)
 	default:
 		return errBadVersion
 	}
@@ -170,52 +162,6 @@ func (h LoanOpenHandler) handle(ctx cosmos.Context, msg MsgLoanOpen) error {
 	switch {
 	case version.GTE(semver.MustParse("1.113.0")):
 		return h.handleV113(ctx, msg)
-	case version.GTE(semver.MustParse("1.111.0")):
-		return h.handleV111(ctx, msg)
-	case version.GTE(semver.MustParse("1.108.0")):
-		return h.handleV108(ctx, msg)
-	case version.GTE(semver.MustParse("1.107.0")):
-		return h.handleV107(ctx, msg)
-	default:
-		return errBadVersion
-	}
-}
-
-func (h LoanOpenHandler) openLoan(ctx cosmos.Context, msg MsgLoanOpen) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.121.0")):
-		return h.openLoanV121(ctx, msg)
-	case version.GTE(semver.MustParse("1.113.0")):
-		return h.openLoanV113(ctx, msg)
-	case version.GTE(semver.MustParse("1.112.0")):
-		return h.openLoanV112(ctx, msg)
-	case version.GTE(semver.MustParse("1.111.0")):
-		return h.openLoanV111(ctx, msg)
-	case version.GTE(semver.MustParse("1.108.0")):
-		return h.openLoanV108(ctx, msg)
-	case version.GTE(semver.MustParse("1.107.0")):
-		return h.openLoanV107(ctx, msg)
-	default:
-		return errBadVersion
-	}
-}
-
-func (h LoanOpenHandler) swap(ctx cosmos.Context, msg MsgLoanOpen) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.134.0")):
-		return h.swapV134(ctx, msg)
-	case version.GTE(semver.MustParse("1.132.0")):
-		return h.swapV132(ctx, msg)
-	case version.GTE(semver.MustParse("1.121.0")):
-		return h.swapV121(ctx, msg)
-	case version.GTE(semver.MustParse("1.113.0")):
-		return h.swapV113(ctx, msg)
-	case version.GTE(semver.MustParse("1.108.0")):
-		return h.swapV108(ctx, msg)
-	case version.GTE(semver.MustParse("1.107.0")):
-		return h.swapV107(ctx, msg)
 	default:
 		return errBadVersion
 	}
@@ -231,7 +177,7 @@ func (h LoanOpenHandler) handleV113(ctx cosmos.Context, msg MsgLoanOpen) error {
 	}
 }
 
-func (h LoanOpenHandler) openLoanV121(ctx cosmos.Context, msg MsgLoanOpen) error {
+func (h LoanOpenHandler) openLoan(ctx cosmos.Context, msg MsgLoanOpen) error {
 	var err error
 	zero := cosmos.ZeroUint()
 
@@ -262,6 +208,7 @@ func (h LoanOpenHandler) openLoanV121(ctx cosmos.Context, msg MsgLoanOpen) error
 	// TODO: on hard fork, change lending module to an actual module (created as account)
 	lendingAcc := h.mgr.Keeper().GetModuleAccAddress(LendingName)
 	collateral := common.NewCoin(msg.CollateralAsset.GetDerivedAsset(), msg.CollateralAmount)
+	// trunk-ignore(golangci-lint/govet): shadow
 	if err := h.mgr.Keeper().SendFromModuleToAccount(ctx, AsgardName, lendingAcc, common.NewCoins(collateral)); err != nil {
 		return fmt.Errorf("fail to send collateral funds: %w", err)
 	}
@@ -308,6 +255,7 @@ func (h LoanOpenHandler) openLoanV121(ctx cosmos.Context, msg MsgLoanOpen) error
 			Coin:       common.NewCoin(common.TOR, cumulativeDebt),
 			ModuleName: ModuleName,
 		}
+		// trunk-ignore(golangci-lint/govet): shadow
 		ok, err := h.mgr.TxOutStore().TryAddTxOutItem(ctx, h.mgr, toi, zero)
 		if err != nil {
 			return err
@@ -323,6 +271,7 @@ func (h LoanOpenHandler) openLoanV121(ctx cosmos.Context, msg MsgLoanOpen) error
 
 		torCoin := common.NewCoin(common.TOR, cumulativeDebt)
 
+		// trunk-ignore(golangci-lint/govet): shadow
 		if err := h.mgr.Keeper().MintToModule(ctx, ModuleName, torCoin); err != nil {
 			return fmt.Errorf("fail to mint loan tor debt: %w", err)
 		}
@@ -419,7 +368,7 @@ func (h LoanOpenHandler) calcCR(a, b cosmos.Uint, minCR, maxCR int64) cosmos.Uin
 	return cr.AddUint64(uint64(minCR))
 }
 
-func (h LoanOpenHandler) swapV134(ctx cosmos.Context, msg MsgLoanOpen) error {
+func (h LoanOpenHandler) swap(ctx cosmos.Context, msg MsgLoanOpen) error {
 	txID, ok := ctx.Value(constants.CtxLoanTxID).(common.TxID)
 	if !ok {
 		return fmt.Errorf("fail to get txid")
@@ -427,6 +376,7 @@ func (h LoanOpenHandler) swapV134(ctx cosmos.Context, msg MsgLoanOpen) error {
 	// ensure TxID does NOT have a collision with another swap, this could
 	// happen if the user submits two identical loan requests in the same
 	// block
+	// trunk-ignore(golangci-lint/govet): shadow
 	if ok := h.mgr.Keeper().HasSwapQueueItem(ctx, txID, 0); ok {
 		return fmt.Errorf("txn hash conflict")
 	}
@@ -473,16 +423,6 @@ func (h LoanOpenHandler) swapV134(ctx cosmos.Context, msg MsgLoanOpen) error {
 // handleAffiliateSwap handles the affiliate swap for the loan open and returns updated
 // collateral amount for the loan with affiliate amount deducted
 func (h LoanOpenHandler) handleAffiliateSwap(ctx cosmos.Context, msg MsgLoanOpen, collateral common.Coin) (cosmos.Uint, error) {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.132.0")):
-		return h.handleAffiliateSwapV132(ctx, msg, collateral)
-	default:
-		return cosmos.ZeroUint(), errBadVersion
-	}
-}
-
-func (h LoanOpenHandler) handleAffiliateSwapV132(ctx cosmos.Context, msg MsgLoanOpen, collateral common.Coin) (cosmos.Uint, error) {
 	// Setup affiliate swap
 	affAmt := common.GetSafeShare(
 		msg.AffiliateBasisPoints,
@@ -498,6 +438,7 @@ func (h LoanOpenHandler) handleAffiliateSwapV132(ctx cosmos.Context, msg MsgLoan
 	var affThorname *types.THORName
 	voter, err := h.mgr.Keeper().GetObservedTxInVoter(ctx, msg.TxID)
 	if err == nil {
+		// trunk-ignore(golangci-lint/govet): shadow
 		memo, err := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), voter.Tx.Tx.Memo)
 		if err != nil {
 			ctx.Logger().Error("fail to parse memo", "error", err)
@@ -508,6 +449,7 @@ func (h LoanOpenHandler) handleAffiliateSwapV132(ctx cosmos.Context, msg MsgLoan
 	// PreferredAsset set, swap to the AffiliateCollector Module + check if the
 	// preferred asset swap should be triggered
 	if affThorname != nil && !affThorname.PreferredAsset.IsEmpty() {
+		// trunk-ignore(golangci-lint/govet): shadow
 		affcol, err := h.mgr.Keeper().GetAffiliateCollector(ctx, affThorname.Owner)
 		if err != nil {
 			return collateral.Amount, err
@@ -542,6 +484,7 @@ func (h LoanOpenHandler) handleAffiliateSwapV132(ctx cosmos.Context, msg MsgLoan
 
 	// If the affiliate swap would exceed the native tx fee, add it to the queue
 	if willSwapOutputExceedLimitAndFees(ctx, h.mgr, *affiliateSwap) {
+		// trunk-ignore(golangci-lint/govet): shadow
 		if err := h.mgr.Keeper().SetSwapQueueItem(ctx, *affiliateSwap, 2); err != nil {
 			return collateral.Amount, fmt.Errorf("fail to add affiliate swap to queue: %w", err)
 		}
@@ -551,20 +494,8 @@ func (h LoanOpenHandler) handleAffiliateSwapV132(ctx cosmos.Context, msg MsgLoan
 	return collateral.Amount, nil
 }
 
-func (h LoanOpenHandler) getTotalLiquidityRUNELoanPools(ctx cosmos.Context) (cosmos.Uint, error) {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.108.0")):
-		return h.getTotalLiquidityRUNELoanPoolsV108(ctx)
-	case version.GTE(semver.MustParse("1.107.0")):
-		return h.getTotalLiquidityRUNELoanPoolsV107(ctx)
-	default:
-		return cosmos.ZeroUint(), errBadVersion
-	}
-}
-
 // getTotalLiquidityRUNE we have in all pools
-func (h LoanOpenHandler) getTotalLiquidityRUNELoanPoolsV108(ctx cosmos.Context) (cosmos.Uint, error) {
+func (h LoanOpenHandler) getTotalLiquidityRUNELoanPools(ctx cosmos.Context) (cosmos.Uint, error) {
 	pools, err := h.mgr.Keeper().GetPools(ctx)
 	if err != nil {
 		return cosmos.ZeroUint(), fmt.Errorf("fail to get pools from data store: %w", err)
@@ -583,6 +514,7 @@ func (h LoanOpenHandler) getTotalLiquidityRUNELoanPoolsV108(ctx cosmos.Context) 
 		}
 
 		key := "LENDING-" + p.Asset.GetDerivedAsset().MimirString()
+		// trunk-ignore(golangci-lint/govet): shadow
 		val, err := h.mgr.Keeper().GetMimir(ctx, key)
 		if err != nil {
 			continue

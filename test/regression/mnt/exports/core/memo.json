@@ -341,8 +341,6 @@
         "LPIncomeSplit": "9601",
         "NodeIncomeSplit": "399",
         "bond_reward_rune": "17441258",
-        "burned_bep2_rune": "0",
-        "burned_erc20_rune": "0",
         "total_bond_units": "3"
       },
       "network_fees": [

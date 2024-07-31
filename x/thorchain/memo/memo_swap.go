@@ -5,11 +5,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/blang/semver"
-
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
+	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
@@ -138,37 +137,6 @@ func (p *parser) ParseSwapMemo() (SwapMemo, error) {
 		return ParseSwapMemoV1(p.ctx, p.keeper, p.getAsset(1, true, common.EmptyAsset), p.parts)
 	}
 
-	// TODO: remove me on hard fork
-	var err error
-	if len(p.parts) > 1 {
-		_, err = common.NewAssetWithShortCodes(p.version, GetPart(p.parts, 1))
-	}
-
-	switch {
-	case p.version.GTE(semver.MustParse("1.131.0")):
-		return p.ParseSwapMemoV131()
-	case p.version.GTE(semver.MustParse("1.123.0")):
-		return p.ParseSwapMemoV123()
-	case p.version.GTE(semver.MustParse("1.116.0")):
-		return p.ParseSwapMemoV116()
-	case err != nil:
-		return SwapMemo{}, err // To resolve block 6130730 sync failure
-	case p.version.GTE(semver.MustParse("1.115.0")):
-		return ParseSwapMemoV115(p.ctx, p.keeper, p.getAsset(1, true, common.EmptyAsset), p.parts)
-	case p.version.GTE(semver.MustParse("1.112.0")):
-		return ParseSwapMemoV112(p.ctx, p.keeper, p.getAsset(1, true, common.EmptyAsset), p.parts)
-	case p.version.GTE(semver.MustParse("1.104.0")):
-		return ParseSwapMemoV104(p.ctx, p.keeper, p.getAsset(1, true, common.EmptyAsset), p.parts)
-	case p.version.GTE(semver.MustParse("1.98.0")):
-		return ParseSwapMemoV98(p.ctx, p.keeper, p.getAsset(1, true, common.EmptyAsset), p.parts)
-	case p.version.GTE(semver.MustParse("1.92.0")):
-		return ParseSwapMemoV92(p.ctx, p.keeper, p.getAsset(1, true, common.EmptyAsset), p.parts)
-	default:
-		return ParseSwapMemoV1(p.ctx, p.keeper, p.getAsset(1, true, common.EmptyAsset), p.parts)
-	}
-}
-
-func (p *parser) ParseSwapMemoV131() (SwapMemo, error) {
 	var err error
 	asset := p.getAsset(1, true, common.EmptyAsset)
 	var order types.OrderType
@@ -222,4 +190,53 @@ func (p *parser) ParseSwapMemoV131() (SwapMemo, error) {
 	tn := p.getTHORName(4, false, types.NewTHORName("", 0, nil))
 
 	return NewSwapMemo(asset, destination, slip, affAddr, affPts, dexAgg, dexTargetAddress, dexTargetLimit, order, streamQuantity, streamInterval, tn, refundAddress), p.Error()
+}
+
+func ParseSwapMemoV1(ctx cosmos.Context, keeper keeper.Keeper, asset common.Asset, parts []string) (SwapMemo, error) {
+	var err error
+	var order types.OrderType
+	if len(parts) < 2 {
+		return SwapMemo{}, fmt.Errorf("not enough parameters")
+	}
+	// DESTADDR can be empty , if it is empty , it will swap to the sender address
+	destination := common.NoAddress
+	affAddr := common.NoAddress
+	affPts := uint64(0)
+	if len(parts) > 2 {
+		if len(parts[2]) > 0 {
+			if keeper == nil {
+				destination, err = common.NewAddress(parts[2])
+			} else {
+				destination, err = FetchAddress(ctx, keeper, parts[2], asset.Chain)
+			}
+			if err != nil {
+				return SwapMemo{}, err
+			}
+		}
+	}
+	// price limit can be empty , when it is empty , there is no price protection
+	slip := cosmos.ZeroUint()
+	if len(parts) > 3 && len(parts[3]) > 0 {
+		slip, err = cosmos.ParseUint(parts[3])
+		if err != nil {
+			return SwapMemo{}, fmt.Errorf("swap price limit:%s is invalid", parts[3])
+		}
+	}
+
+	if len(parts) > 5 && len(parts[4]) > 0 && len(parts[5]) > 0 {
+		if keeper == nil {
+			affAddr, err = common.NewAddress(parts[4])
+		} else {
+			affAddr, err = FetchAddress(ctx, keeper, parts[4], common.THORChain)
+		}
+		if err != nil {
+			return SwapMemo{}, err
+		}
+		affPts, err = strconv.ParseUint(parts[5], 10, 64)
+		if err != nil {
+			return SwapMemo{}, err
+		}
+	}
+
+	return NewSwapMemo(asset, destination, slip, affAddr, cosmos.NewUint(affPts), "", "", cosmos.ZeroUint(), order, 0, 0, types.NewTHORName("", 0, nil), ""), nil
 }

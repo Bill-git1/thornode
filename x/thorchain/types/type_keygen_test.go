@@ -68,7 +68,4 @@ func (s *KeygenSuite) TestNewKeygenBlock(c *C) {
 	}
 	c.Check(len(kb.String()) > 0, Equals, true)
 	c.Check(kb.Contains(keygen), Equals, true)
-	kg1, err := NewKeygen(1024, members, KeygenType_YggdrasilKeygen)
-	c.Check(err, IsNil)
-	c.Check(kb.Contains(kg1), Equals, false)
 }

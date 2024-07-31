@@ -42,10 +42,12 @@ func (h RefundHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, er
 
 func (h RefundHandler) validate(ctx cosmos.Context, msg MsgRefundTx) error {
 	version := h.mgr.GetVersion()
-	if version.GTE(semver.MustParse("0.1.0")) {
+	switch {
+	case version.GTE(semver.MustParse("0.1.0")):
 		return h.validateV1(ctx, msg)
+	default:
+		return errBadVersion
 	}
-	return errBadVersion
 }
 
 func (h RefundHandler) validateV1(ctx cosmos.Context, msg MsgRefundTx) error {

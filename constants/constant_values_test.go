@@ -17,7 +17,6 @@ func (ConstantsTestSuite) TestConstantName_String(c *C) {
 		BlocksPerYear,
 		OutboundTransactionFee,
 		PoolCycle,
-		MinimumNodesForYggdrasil,
 		MinimumNodesForBFT,
 		DesiredValidatorSet,
 		ChurnInterval,

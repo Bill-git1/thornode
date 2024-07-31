@@ -119,32 +119,6 @@ func (cs Coins) Valid() error {
 	return nil
 }
 
-// Equals checks if two lists of coins are equal to each other - order does not matter.
-// This method has a side effect of sorting the input parameters. Since this is already
-// used, it cannot be changed without causing consensus failure.
-// TODO: Deprecated, remove on hard fork.
-func (cs Coins) Equals_deprecated(cs2 Coins) bool {
-	if len(cs) != len(cs2) {
-		return false
-	}
-
-	// sort both lists
-	sort.Slice(cs[:], func(i, j int) bool {
-		return cs[i].Asset.String() < cs[j].Asset.String()
-	})
-	sort.Slice(cs2[:], func(i, j int) bool {
-		return cs2[i].Asset.String() < cs2[j].Asset.String()
-	})
-
-	for i := range cs {
-		if !cs[i].Equals(cs2[i]) {
-			return false
-		}
-	}
-
-	return true
-}
-
 // EqualsEx Check if two lists of coins are equal to each other.
 // This method will make a copy of cs1 & cs2 , thus the original coins order will not be changed
 func (cs Coins) EqualsEx(cs2 Coins) bool {
@@ -271,46 +245,6 @@ func (oldCoins Coins) SafeSub(subCoins ...Coin) Coins {
 		}
 	}
 	return newCoins
-}
-
-// This overwrites cs by changing its slice-referenced values
-// (when and only when there is a shared Asset),
-// so it is recommended to use destination := NewCoins(source...) first.
-// NOTE: **DEPRECATED** - do not use.
-// TODO: remove usage of this on hard fork.
-func (cs Coins) Add_deprecated(coin Coin) Coins {
-	for i, c := range cs {
-		if c.Asset.Equals(coin.Asset) {
-			cs[i].Amount = cs[i].Amount.Add(coin.Amount)
-			return cs
-		}
-	}
-	return append(cs, coin)
-}
-
-// This overwrites cs by changing its slice-referenced values,
-// so it is recommended to use destination := NewCoins(source...) first.
-// NOTE: **DEPRECATED** - do not use.
-// TODO: remove usage of this on hard fork.
-func (cs Coins) SafeSub_deprecated(coin Coin) Coins {
-	for i, c := range cs {
-		if c.Asset.Equals(coin.Asset) {
-			cs[i].Amount = SafeSub(cs[i].Amount, coin.Amount)
-			return cs
-		}
-	}
-	return cs
-}
-
-// This overwrites cs by changing its slice-referenced values,
-// so it is recommended to use destination := NewCoins(source...) first.
-// NOTE: **DEPRECATED** - do not use.
-// TODO: remove usage of this on hard fork.
-func (cs Coins) Adds_deprecated(coins Coins) Coins {
-	for _, c := range coins {
-		cs = cs.Add_deprecated(c)
-	}
-	return cs
 }
 
 // HasNoneNativeRune check whether the coins contains NoneNativeRUNE

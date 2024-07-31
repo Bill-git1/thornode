@@ -17,16 +17,9 @@ func NewSendHandler(mgr Manager) BaseHandler[*MsgSend] {
 		mgr:    mgr,
 		logger: MsgSendLogger,
 		validators: NewValidators[*MsgSend]().
-			Register("1.130.0", MsgSendValidateV130).
-			Register("1.121.0", MsgSendValidateV121).
-			Register("1.87.0", MsgSendValidateV87).
-			Register("0.1.0", MsgSendValidateV1),
+			Register("1.130.0", MsgSendValidateV130),
 		handlers: NewHandlers[*MsgSend]().
-			Register("1.116.0", MsgSendHandleV116).
-			Register("1.115.0", MsgSendHandleV115).
-			Register("1.112.0", MsgSendHandleV112).
-			Register("1.108.0", MsgSendHandleV108).
-			Register("0.1.0", MsgSendHandleV1),
+			Register("1.116.0", MsgSendHandleV116),
 	}
 }
 
@@ -70,20 +63,5 @@ func MsgSendHandleV116(ctx cosmos.Context, mgr Manager, msg *MsgSend) (*cosmos.R
 // and also during deliver. Store changes will persist if this function
 // succeeds, regardless of the success of the transaction.
 func SendAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper, msg MsgSend) error {
-	// TODO remove on hard fork
-	if v.LT(semver.MustParse("1.115.0")) {
-		nativeTxFee := k.GetNativeTxFee(ctx)
-		gas := common.NewCoin(common.RuneNative, nativeTxFee)
-		gasFee, err := gas.Native()
-		if err != nil {
-			return fmt.Errorf("fail to get gas fee: %w", err)
-		}
-		totalCoins := cosmos.NewCoins(gasFee)
-		if !k.HasCoins(ctx, msg.GetSigners()[0], totalCoins) {
-			return cosmos.ErrInsufficientCoins(err, "insufficient funds")
-		}
-		return nil
-	}
-
 	return k.DeductNativeTxFeeFromAccount(ctx, msg.GetSigners()[0])
 }

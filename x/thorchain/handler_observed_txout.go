@@ -46,10 +46,12 @@ func (h ObservedTxOutHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Res
 
 func (h ObservedTxOutHandler) validate(ctx cosmos.Context, msg MsgObservedTxOut) error {
 	version := h.mgr.GetVersion()
-	if version.GTE(semver.MustParse("0.1.0")) {
+	switch {
+	case version.GTE(semver.MustParse("0.1.0")):
 		return h.validateV1(ctx, msg)
+	default:
+		return errInvalidVersion
 	}
-	return errInvalidVersion
 }
 
 func (h ObservedTxOutHandler) validateV1(ctx cosmos.Context, msg MsgObservedTxOut) error {
@@ -69,41 +71,12 @@ func (h ObservedTxOutHandler) handle(ctx cosmos.Context, msg MsgObservedTxOut) (
 	switch {
 	case version.GTE(semver.MustParse("1.129.0")):
 		return h.handleV129(ctx, msg)
-	case version.GTE(semver.MustParse("1.128.0")):
-		return h.handleV128(ctx, msg)
-	case version.GTE(semver.MustParse("1.124.0")):
-		return h.handleV124(ctx, msg)
-	case version.GTE(semver.MustParse("1.112.0")):
-		return h.handleV112(ctx, msg)
-	case version.GTE(semver.MustParse("1.109.0")):
-		return h.handleV109(ctx, msg)
-	case version.GTE(semver.MustParse("1.96.0")):
-		return h.handleV96(ctx, msg)
-	case version.GTE(semver.MustParse("1.89.0")):
-		return h.handleV89(ctx, msg)
-	case version.GTE(semver.MustParse("0.58.0")):
-		return h.handleV58(ctx, msg)
+	default:
+		return nil, errBadVersion
 	}
-	return nil, errBadVersion
 }
 
 func (h ObservedTxOutHandler) preflight(ctx cosmos.Context, voter ObservedTxVoter, nas NodeAccounts, tx ObservedTx, signer cosmos.AccAddress) (ObservedTxVoter, bool) {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.134.0")):
-		return h.preflightV134(ctx, voter, nas, tx, signer)
-	case version.GTE(semver.MustParse("1.123.0")):
-		return h.preflightV123(ctx, voter, nas, tx, signer)
-	case version.GTE(semver.MustParse("1.116.0")):
-		return h.preflightV116(ctx, voter, nas, tx, signer)
-	case version.GTE(semver.MustParse("1.89.0")):
-		return h.preflightV89(ctx, voter, nas, tx, signer)
-	default:
-		return h.preflightV1(ctx, voter, nas, tx, signer)
-	}
-}
-
-func (h ObservedTxOutHandler) preflightV134(ctx cosmos.Context, voter ObservedTxVoter, nas NodeAccounts, tx ObservedTx, signer cosmos.AccAddress) (ObservedTxVoter, bool) {
 	observeSlashPoints := h.mgr.GetConstants().GetInt64Value(constants.ObserveSlashPoints)
 	lackOfObservationPenalty := h.mgr.GetConstants().GetInt64Value(constants.LackOfObservationPenalty)
 	observeFlex := h.mgr.Keeper().GetConfigInt64(ctx, constants.ObservationDelayFlexibility)
@@ -208,7 +181,7 @@ func (h ObservedTxOutHandler) handleV129(ctx cosmos.Context, msg MsgObservedTxOu
 			}
 			toSlash := make(common.Coins, len(tx.Tx.Coins))
 			copy(toSlash, tx.Tx.Coins)
-			toSlash = toSlash.Adds_deprecated(tx.Tx.Gas.ToCoins())
+			toSlash = toSlash.Add(tx.Tx.Gas.ToCoins()...)
 
 			slashCtx := ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
 				telemetry.NewLabel("reason", "sent_extra_funds"),
@@ -228,7 +201,7 @@ func (h ObservedTxOutHandler) handleV129(ctx cosmos.Context, msg MsgObservedTxOu
 
 		txOut := voter.GetTx(activeNodeAccounts) // get consensus tx, in case our for loop is incorrect
 		txOut.Tx.Memo = tx.Tx.Memo
-		m, err := processOneTxIn(ctx, h.mgr.GetVersion(), h.mgr.Keeper(), txOut, msg.Signer)
+		m, err := processOneTxIn(ctx, h.mgr.Keeper(), txOut, msg.Signer)
 		if err != nil || tx.Tx.Chain.IsEmpty() {
 			ctx.Logger().Error("fail to process txOut",
 				"error", err,

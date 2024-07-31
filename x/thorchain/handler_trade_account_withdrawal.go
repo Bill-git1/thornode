@@ -47,8 +47,6 @@ func (h TradeAccountWithdrawalHandler) validate(ctx cosmos.Context, msg MsgTrade
 	switch {
 	case version.GTE(semver.MustParse("1.134.0")):
 		return h.validateV134(ctx, msg)
-	case version.GTE(semver.MustParse("0.1.0")):
-		return h.validateV1(ctx, msg)
 	default:
 		return errBadVersion
 	}
@@ -64,10 +62,12 @@ func (h TradeAccountWithdrawalHandler) validateV134(ctx cosmos.Context, msg MsgT
 
 func (h TradeAccountWithdrawalHandler) handle(ctx cosmos.Context, msg MsgTradeAccountWithdrawal) error {
 	version := h.mgr.GetVersion()
-	if version.GTE(semver.MustParse("0.1.0")) {
+	switch {
+	case version.GTE(semver.MustParse("0.1.0")):
 		return h.handleV1(ctx, msg)
+	default:
+		return errBadVersion
 	}
-	return errBadVersion
 }
 
 // handle process MsgTradeAccountWithdrawal

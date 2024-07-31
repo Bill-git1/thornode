@@ -25,19 +25,9 @@ func NewTssHandler(mgr Manager) BaseHandler[*MsgTssPool] {
 		mgr:    mgr,
 		logger: MsgTssPoolLogger,
 		validators: NewValidators[*MsgTssPool]().
-			Register("1.124.0", MsgTssPoolValidateV124).
-			Register("1.121.0", MsgTssPoolValidateV121).
-			Register("1.114.0", MsgTssPoolValidateV114).
-			Register("0.71.0", MsgTssPoolValidateV71),
+			Register("1.124.0", MsgTssPoolValidateV124),
 		handlers: NewHandlers[*MsgTssPool]().
-			Register("1.134.0", MsgTssPoolHandleV134).
-			Register("1.124.0", MsgTssPoolHandleV124).
-			Register("1.123.0", MsgTssPoolHandleV123).
-			Register("1.120.0", MsgTssPoolHandleV120).
-			Register("1.117.0", MsgTssPoolHandleV117).
-			Register("1.93.0", MsgTssPoolHandleV93).
-			Register("1.92.0", MsgTssPoolHandleV92).
-			Register("0.73.0", MsgTssPoolHandleV73),
+			Register("1.134.0", MsgTssPoolHandleV134),
 	}
 }
 

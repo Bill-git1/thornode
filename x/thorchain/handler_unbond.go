@@ -49,19 +49,13 @@ func (h UnBondHandler) validate(ctx cosmos.Context, msg MsgUnBond) error {
 	switch {
 	case version.GTE(semver.MustParse("1.124.0")):
 		return h.validateV124(ctx, msg)
-	case version.GTE(semver.MustParse("1.117.0")):
-		return h.validateV117(ctx, msg)
-	case version.GTE(semver.MustParse("1.88.0")):
-		return h.validateV88(ctx, msg)
-	case version.GTE(semver.MustParse("0.81.0")):
-		return h.validateV81(ctx, msg)
 	default:
 		return errBadVersion
 	}
 }
 
 func (h UnBondHandler) validateV124(ctx cosmos.Context, msg MsgUnBond) error {
-	if err := msg.ValidateBasicV117(); err != nil {
+	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
 
@@ -108,10 +102,6 @@ func (h UnBondHandler) handle(ctx cosmos.Context, msg MsgUnBond) error {
 	switch {
 	case version.GTE(semver.MustParse("1.124.0")):
 		return h.handleV124(ctx, msg)
-	case version.GTE(semver.MustParse("1.92.0")):
-		return h.handleV92(ctx, msg)
-	case version.GTE(semver.MustParse("0.81.0")):
-		return h.handleV81(ctx, msg)
 	default:
 		return errBadVersion
 	}

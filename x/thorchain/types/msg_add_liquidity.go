@@ -30,8 +30,8 @@ func (m *MsgAddLiquidity) Route() string { return RouterKey }
 // Type should return the action
 func (m MsgAddLiquidity) Type() string { return "add_liquidity" }
 
-// ValidateBasicV98 runs stateless checks on the message
-func (m *MsgAddLiquidity) ValidateBasicV98() error {
+// ValidateBasic runs stateless checks on the message
+func (m *MsgAddLiquidity) ValidateBasic() error {
 	if m.Signer.Empty() {
 		return cosmos.ErrInvalidAddress(m.Signer.String())
 	}

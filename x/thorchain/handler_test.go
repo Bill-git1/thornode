@@ -124,7 +124,7 @@ func setupManagerForTest(c *C) (cosmos.Context, *Mgrs) {
 		Commentf("version should not be stored until BeginBlock"))
 
 	c.Assert(mgr.BeginBlock(ctx), IsNil)
-	mgr.gasMgr.BeginBlock(mgr)
+	mgr.gasMgr.BeginBlock()
 
 	verStored, hasVerStored := k.GetVersionWithCtx(ctx)
 	c.Assert(hasVerStored, Equals, true,
@@ -395,7 +395,7 @@ func (HandlerSuite) TestGetMsgWithdrawFromMemo(c *C) {
 		tx.FromAddress = GetRandomTHORAddress()
 	}
 	obTx := NewObservedTx(tx, w.ctx.BlockHeight(), GetRandomPubKey(), w.ctx.BlockHeight())
-	msg, err := processOneTxIn(w.ctx, GetCurrentVersion(), w.keeper, obTx, w.activeNodeAccount.NodeAddress)
+	msg, err := processOneTxIn(w.ctx, w.keeper, obTx, w.activeNodeAccount.NodeAddress)
 	c.Assert(err, IsNil)
 	c.Assert(msg, NotNil)
 	_, isWithdraw := msg.(*MsgWithdrawLiquidity)
@@ -407,7 +407,7 @@ func (HandlerSuite) TestGetMsgMigrationFromMemo(c *C) {
 	tx := GetRandomTx()
 	tx.Memo = "migrate:10"
 	obTx := NewObservedTx(tx, w.ctx.BlockHeight(), GetRandomPubKey(), w.ctx.BlockHeight())
-	msg, err := processOneTxIn(w.ctx, GetCurrentVersion(), w.keeper, obTx, w.activeNodeAccount.NodeAddress)
+	msg, err := processOneTxIn(w.ctx, w.keeper, obTx, w.activeNodeAccount.NodeAddress)
 	c.Assert(err, IsNil)
 	c.Assert(msg, NotNil)
 	_, isMigrate := msg.(*MsgMigrate)
@@ -422,7 +422,7 @@ func (HandlerSuite) TestGetMsgBondFromMemo(c *C) {
 	}
 	tx.Memo = "bond:" + GetRandomBech32Addr().String()
 	obTx := NewObservedTx(tx, w.ctx.BlockHeight(), GetRandomPubKey(), w.ctx.BlockHeight())
-	msg, err := processOneTxIn(w.ctx, GetCurrentVersion(), w.keeper, obTx, w.activeNodeAccount.NodeAddress)
+	msg, err := processOneTxIn(w.ctx, w.keeper, obTx, w.activeNodeAccount.NodeAddress)
 	c.Assert(err, IsNil)
 	c.Assert(msg, NotNil)
 	_, isBond := msg.(*MsgBond)
@@ -437,7 +437,7 @@ func (HandlerSuite) TestGetMsgUnBondFromMemo(c *C) {
 	}
 	tx.Memo = "unbond:" + GetRandomTHORAddress().String() + ":1000"
 	obTx := NewObservedTx(tx, w.ctx.BlockHeight(), GetRandomPubKey(), w.ctx.BlockHeight())
-	msg, err := processOneTxIn(w.ctx, GetCurrentVersion(), w.keeper, obTx, w.activeNodeAccount.NodeAddress)
+	msg, err := processOneTxIn(w.ctx, w.keeper, obTx, w.activeNodeAccount.NodeAddress)
 	c.Assert(err, IsNil)
 	c.Assert(msg, NotNil)
 	_, isUnBond := msg.(*MsgUnBond)
@@ -541,7 +541,7 @@ func (HandlerSuite) TestMsgLeaveFromMemo(c *C) {
 		common.EmptyPubKey, 1024,
 	)
 
-	msg, err := processOneTxIn(w.ctx, GetCurrentVersion(), w.keeper, txin, addr)
+	msg, err := processOneTxIn(w.ctx, w.keeper, txin, addr)
 	c.Assert(err, IsNil)
 	c.Check(msg.ValidateBasic(), IsNil)
 }
@@ -563,7 +563,7 @@ func (s *HandlerSuite) TestReserveContributor(c *C) {
 		GetRandomPubKey(), 1024,
 	)
 
-	msg, err := processOneTxIn(w.ctx, GetCurrentVersion(), w.keeper, txin, addr)
+	msg, err := processOneTxIn(w.ctx, w.keeper, txin, addr)
 	c.Assert(err, IsNil)
 	c.Check(msg.ValidateBasic(), IsNil)
 	_, isReserve := msg.(*MsgReserveContributor)

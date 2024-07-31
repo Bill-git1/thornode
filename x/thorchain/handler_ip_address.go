@@ -45,12 +45,9 @@ func (h IPAddressHandler) validate(ctx cosmos.Context, msg MsgSetIPAddress) erro
 	switch {
 	case version.GTE(semver.MustParse("1.114.0")):
 		return h.validateV114(ctx, msg)
-	case version.GTE(semver.MustParse("1.112.0")):
-		return h.validateV112(ctx, msg)
-	case version.GTE(semver.MustParse("0.1.0")):
-		return h.validateV1(ctx, msg)
+	default:
+		return errBadVersion
 	}
-	return errBadVersion
 }
 
 func (h IPAddressHandler) validateV114(ctx cosmos.Context, msg MsgSetIPAddress) error {
@@ -69,13 +66,9 @@ func (h IPAddressHandler) handle(ctx cosmos.Context, msg MsgSetIPAddress) error 
 	switch {
 	case version.GTE(semver.MustParse("1.115.0")):
 		return h.handleV115(ctx, msg)
-	case version.GTE(semver.MustParse("1.112.0")):
-		return h.handleV112(ctx, msg)
-	case version.GTE(semver.MustParse("0.57.0")):
-		return h.handleV57(ctx, msg)
+	default:
+		return errBadVersion
 	}
-	ctx.Logger().Error(errInvalidVersion.Error())
-	return errBadVersion
 }
 
 func (h IPAddressHandler) handleV115(ctx cosmos.Context, msg MsgSetIPAddress) error {
@@ -99,18 +92,6 @@ func (h IPAddressHandler) handleV115(ctx cosmos.Context, msg MsgSetIPAddress) er
 }
 
 func validateIPAddressAuth(ctx cosmos.Context, k keeper.Keeper, signer cosmos.AccAddress) error {
-	version, _ := k.GetVersionWithCtx(ctx)
-	switch {
-	case version.GTE(semver.MustParse("1.115.0")):
-		return validateIPAddressAuthV115(ctx, k, signer)
-	case version.GTE(semver.MustParse("1.114.0")):
-		return validateIPAddressAuthV114(ctx, k, signer)
-	default:
-		return errBadVersion
-	}
-}
-
-func validateIPAddressAuthV115(ctx cosmos.Context, k keeper.Keeper, signer cosmos.AccAddress) error {
 	nodeAccount, err := k.GetNodeAccount(ctx, signer)
 	if err != nil {
 		ctx.Logger().Error("fail to get node account", "error", err, "address", signer.String())
@@ -135,9 +116,6 @@ func IPAddressAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper,
 	if err := validateIPAddressAuth(ctx, k, msg.Signer); err != nil {
 		return err
 	}
-	// TODO on hard fork remove version check
-	if v.GTE(semver.MustParse("1.115.0")) {
-		return k.DeductNativeTxFeeFromBond(ctx, msg.Signer)
-	}
-	return nil
+
+	return k.DeductNativeTxFeeFromBond(ctx, msg.Signer)
 }

@@ -3,8 +3,6 @@ package keeperv1
 import (
 	"fmt"
 
-	"github.com/blang/semver"
-
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper/types"
@@ -40,14 +38,13 @@ func (k KVStore) GetLiquidityProviderIterator(ctx cosmos.Context, asset common.A
 }
 
 func (k KVStore) GetTotalSupply(ctx cosmos.Context, asset common.Asset) cosmos.Uint {
-	if k.GetVersion().GTE(semver.MustParse("1.91.0")) {
-		// when pool ragnarok started , synth unit become zero
-		lay1Asset := asset.GetLayer1Asset()
-		ragStart, _ := k.GetPoolRagnarokStart(ctx, lay1Asset)
-		if ragStart > 0 {
-			return cosmos.ZeroUint()
-		}
+	// when pool ragnarok started , synth unit become zero
+	lay1Asset := asset.GetLayer1Asset()
+	ragStart, _ := k.GetPoolRagnarokStart(ctx, lay1Asset)
+	if ragStart > 0 {
+		return cosmos.ZeroUint()
 	}
+
 	coin := k.coinKeeper.GetSupply(ctx, asset.Native())
 	return cosmos.NewUint(coin.Amount.Uint64())
 }

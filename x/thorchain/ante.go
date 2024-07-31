@@ -24,29 +24,20 @@ func NewAnteDecorator(keeper keeper.Keeper) AnteDecorator {
 }
 
 func (ad AnteDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (newCtx sdk.Context, err error) {
-	version, hasVersion := ad.keeper.GetVersionWithCtx(ctx)
-	if !hasVersion || version.LT(semver.MustParse("1.106.0")) {
-		// TODO remove on hard fork
-		// skip custom ante handling before v106
-		return next(ctx, tx, simulate)
-	}
-
 	if err = ad.rejectMultipleDepositMsgs(ctx, tx.GetMsgs()); err != nil {
 		return ctx, err
 	}
 
-	// TODO remove on hard fork, when all signers will be allowed
+	// TODO remove on hard fork, when all signers will be allowed (v47+)
 	if err = ad.rejectInvalidSigners(tx); err != nil {
 		return ctx, err
 	}
 
-	// TODO on hard fork remove version check, before 114 all antes return nil
-	if version.GTE(semver.MustParse("1.114.0")) {
-		// run the message-specific ante for each msg, all must succeed
-		for _, msg := range tx.GetMsgs() {
-			if err = ad.anteHandleMessage(ctx, version, msg); err != nil {
-				return ctx, err
-			}
+	// run the message-specific ante for each msg, all must succeed
+	version, _ := ad.keeper.GetVersionWithCtx(ctx)
+	for _, msg := range tx.GetMsgs() {
+		if err = ad.anteHandleMessage(ctx, version, msg); err != nil {
+			return ctx, err
 		}
 	}
 
@@ -157,11 +148,6 @@ func NewInfiniteGasDecorator(keeper keeper.Keeper) InfiniteGasDecorator {
 }
 
 func (d InfiniteGasDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (newCtx sdk.Context, err error) {
-	version, hasVersion := d.keeper.GetVersionWithCtx(ctx)
-	if !hasVersion || version.LT(semver.MustParse("1.115.0")) {
-		// TODO remove on hard fork
-		return next(ctx, tx, simulate)
-	}
 	ctx = ctx.WithGasMeter(sdk.NewInfiniteGasMeter())
 	return next(ctx, tx, simulate)
 }

@@ -731,29 +731,12 @@ func (s *QuerierSuite) TestQueryAsgardVault(c *C) {
 	c.Assert(json.Unmarshal(result, &r), IsNil)
 }
 
-// TODO remove on hard fork
-func (s *QuerierSuite) TestQueryYggdrasilVault(c *C) {
-	vault := GetRandomVault()
-	vault.Type = YggdrasilVault
-	vault.AddFunds(common.Coins{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(common.One*100)),
-	})
-	c.Assert(s.k.SetVault(s.ctx, vault), IsNil)
-	result, err := s.querier(s.ctx, []string{
-		query.QueryVaultsYggdrasil.Key,
-	}, abci.RequestQuery{})
-	c.Assert(result, NotNil)
-	c.Assert(err, IsNil)
-	var r []openapi.YggdrasilVault
-	c.Assert(json.Unmarshal(result, &r), IsNil)
-}
-
 func (s *QuerierSuite) TestQueryVaultPubKeys(c *C) {
 	node := GetRandomValidatorNode(NodeActive)
 	c.Assert(s.k.SetNodeAccount(s.ctx, node), IsNil)
 	vault := GetRandomVault()
 	vault.PubKey = node.PubKeySet.Secp256k1
-	vault.Type = YggdrasilVault // TODO remove ygg on hardfork
+	vault.Type = AsgardVault
 	vault.AddFunds(common.Coins{
 		common.NewCoin(common.BNBAsset, cosmos.NewUint(common.One*100)),
 	})

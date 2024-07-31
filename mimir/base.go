@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blang/semver"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
@@ -81,24 +80,15 @@ func (m *mimir) key() string {
 
 func (m *mimir) FetchValue(ctx cosmos.Context, keeper keeper.Keeper) (value int64) {
 	var err error
-	version := keeper.GetVersion()
 	// fetch mimir v2
-	value = int64(-1)
-	switch {
-	case version.GTE(semver.MustParse("1.125.0")):
-		value = m.fetchValueV125(ctx, keeper)
-	case version.GTE(semver.MustParse("1.124.0")):
-		value = m.fetchValueV124(ctx, keeper)
-	}
+	value = m.fetchValue(ctx, keeper)
 	if value >= 0 {
 		return value
 	}
 	legacyKey := m.LegacyKey(m.Reference())
-	if version.GTE(semver.MustParse("1.125.0")) {
-		// return if legacy key does not exist (case of v2 only mimir)
-		if len(legacyKey) == 0 {
-			return m.DefaultValue()
-		}
+	// return if legacy key does not exist (case of v2 only mimir)
+	if len(legacyKey) == 0 {
+		return m.DefaultValue()
 	}
 	// fetch legacy mimir (v1)
 	value, err = keeper.GetMimir(ctx, legacyKey)
@@ -114,7 +104,7 @@ func (m *mimir) FetchValue(ctx cosmos.Context, keeper keeper.Keeper) (value int6
 	return m.DefaultValue()
 }
 
-func (m *mimir) fetchValueV125(ctx cosmos.Context, keeper keeper.Keeper) (value int64) {
+func (m *mimir) fetchValue(ctx cosmos.Context, keeper keeper.Keeper) (value int64) {
 	var (
 		err    error
 		active types.NodeAccounts

@@ -55,12 +55,9 @@ func (h LoanRepaymentHandler) validate(ctx cosmos.Context, msg MsgLoanRepayment)
 	switch {
 	case version.GTE(semver.MustParse("1.111.0")):
 		return h.validateV111(ctx, msg)
-	case version.GTE(semver.MustParse("1.110.0")):
-		return h.validateV110(ctx, msg)
-	case version.GTE(semver.MustParse("1.107.0")):
-		return h.validateV107(ctx, msg)
+	default:
+		return errBadVersion
 	}
-	return errBadVersion
 }
 
 func (h LoanRepaymentHandler) validateV111(ctx cosmos.Context, msg MsgLoanRepayment) error {
@@ -109,52 +106,6 @@ func (h LoanRepaymentHandler) handle(ctx cosmos.Context, msg MsgLoanRepayment) e
 	switch {
 	case version.GTE(semver.MustParse("1.113.0")):
 		return h.handleV113(ctx, msg)
-	case version.GTE(semver.MustParse("1.111.0")):
-		return h.handleV111(ctx, msg)
-	case version.GTE(semver.MustParse("1.110.0")):
-		return h.handleV110(ctx, msg)
-	case version.GTE(semver.MustParse("1.108.0")):
-		return h.handleV108(ctx, msg)
-	case version.GTE(semver.MustParse("1.107.0")):
-		return h.handleV107(ctx, msg)
-	default:
-		return errBadVersion
-	}
-}
-
-func (h LoanRepaymentHandler) repay(ctx cosmos.Context, msg MsgLoanRepayment) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.121.0")):
-		return h.repayV121(ctx, msg)
-	case version.GTE(semver.MustParse("1.113.0")):
-		return h.repayV113(ctx, msg)
-	case version.GTE(semver.MustParse("1.111.0")):
-		return h.repayV111(ctx, msg)
-	case version.GTE(semver.MustParse("1.110.0")):
-		return h.repayV110(ctx, msg)
-	case version.GTE(semver.MustParse("1.108.0")):
-		return h.repayV108(ctx, msg)
-	case version.GTE(semver.MustParse("1.107.0")):
-		return h.repayV107(ctx, msg)
-	default:
-		return errBadVersion
-	}
-}
-
-func (h LoanRepaymentHandler) swap(ctx cosmos.Context, msg MsgLoanRepayment) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.121.0")):
-		return h.swapV121(ctx, msg)
-	case version.GTE(semver.MustParse("1.113.0")):
-		return h.swapV113(ctx, msg)
-	case version.GTE(semver.MustParse("1.110.0")):
-		return h.swapV110(ctx, msg)
-	case version.GTE(semver.MustParse("1.108.0")):
-		return h.swapV108(ctx, msg)
-	case version.GTE(semver.MustParse("1.107.0")):
-		return h.swapV107(ctx, msg)
 	default:
 		return errBadVersion
 	}
@@ -170,7 +121,7 @@ func (h LoanRepaymentHandler) handleV113(ctx cosmos.Context, msg MsgLoanRepaymen
 	}
 }
 
-func (h LoanRepaymentHandler) repayV121(ctx cosmos.Context, msg MsgLoanRepayment) error {
+func (h LoanRepaymentHandler) repay(ctx cosmos.Context, msg MsgLoanRepayment) error {
 	// collect data
 	loan, err := h.mgr.Keeper().GetLoan(ctx, msg.CollateralAsset, msg.Owner)
 	if err != nil {
@@ -187,16 +138,19 @@ func (h LoanRepaymentHandler) repayV121(ctx cosmos.Context, msg MsgLoanRepayment
 	loan.LastRepayHeight = ctx.BlockHeight()
 
 	// burn TOR coins
+	// trunk-ignore(golangci-lint/govet): shadow
 	if err := h.mgr.Keeper().SendFromModuleToModule(ctx, AsgardName, ModuleName, common.NewCoins(msg.Coin)); err != nil {
 		ctx.Logger().Error("fail to move coins during loan repayment", "error", err)
 		return err
 	} else {
+		// trunk-ignore(golangci-lint/govet): shadow
 		err := h.mgr.Keeper().BurnFromModule(ctx, ModuleName, msg.Coin)
 		if err != nil {
 			ctx.Logger().Error("fail to burn coins during loan repayment", "error", err)
 			return err
 		}
 		burnEvt := NewEventMintBurn(BurnSupplyType, msg.Coin.Asset.Native(), msg.Coin.Amount, "loan_repayment")
+		// trunk-ignore(golangci-lint/govet): shadow
 		if err := h.mgr.EventMgr().EmitEvent(ctx, burnEvt); err != nil {
 			ctx.Logger().Error("fail to emit burn event", "error", err)
 		}
@@ -208,6 +162,7 @@ func (h LoanRepaymentHandler) repayV121(ctx cosmos.Context, msg MsgLoanRepayment
 
 		// emit events and metrics
 		evt := NewEventLoanRepayment(cosmos.ZeroUint(), msg.Coin.Amount, msg.CollateralAsset, msg.Owner, msg.TxID)
+		// trunk-ignore(golangci-lint/govet): shadow
 		if err := h.mgr.EventMgr().EmitEvent(ctx, evt); nil != err {
 			ctx.Logger().Error("fail to emit repayment open event", "error", err)
 		}
@@ -249,6 +204,7 @@ func (h LoanRepaymentHandler) repayV121(ctx cosmos.Context, msg MsgLoanRepayment
 	swapMsg := NewMsgSwap(tx, msg.CollateralAsset, msg.Owner, msg.MinOut, common.NoAddress, cosmos.ZeroUint(), "", "", nil, 0, 0, uint64(ssInterval), msg.Signer)
 	if ssInterval == 0 {
 		handler := NewSwapHandler(h.mgr)
+		// trunk-ignore(golangci-lint/govet): shadow
 		if _, err := handler.Run(ctx, swapMsg); err != nil {
 			ctx.Logger().Error("fail to make second swap when closing a loan", "error", err)
 			return err
@@ -272,7 +228,7 @@ func (h LoanRepaymentHandler) repayV121(ctx cosmos.Context, msg MsgLoanRepayment
 	return nil
 }
 
-func (h LoanRepaymentHandler) swapV121(ctx cosmos.Context, msg MsgLoanRepayment) error {
+func (h LoanRepaymentHandler) swap(ctx cosmos.Context, msg MsgLoanRepayment) error {
 	txID, ok := ctx.Value(constants.CtxLoanTxID).(common.TxID)
 	if !ok {
 		return fmt.Errorf("fail to get txid")

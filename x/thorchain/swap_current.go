@@ -50,7 +50,7 @@ func (s *SwapperVCUR) Swap(ctx cosmos.Context,
 	dexAggTargetAsset string,
 	dexAggLimit *cosmos.Uint,
 	swp StreamingSwap,
-	_ cosmos.Uint, synthVirtualDepthMult int64, mgr Manager,
+	synthVirtualDepthMult int64, mgr Manager,
 ) (cosmos.Uint, []*EventSwap, error) {
 	var swapEvents []*EventSwap
 
@@ -243,7 +243,7 @@ func (s *SwapperVCUR) swapOne(ctx cosmos.Context,
 		return cosmos.ZeroUint(), evt, ErrInternal(err, fmt.Sprintf("dev error: swapping with a vault(%s) is not allowed", pool.Asset))
 	}
 	synthSupply := keeper.GetTotalSupply(ctx, pool.Asset.GetSyntheticAsset())
-	pool.CalcUnits(keeper.GetVersion(), synthSupply)
+	pool.CalcUnits(synthSupply)
 
 	// pool must be available unless source is synthetic
 	// synths may be redeemed regardless of pool status
@@ -354,7 +354,7 @@ func (s *SwapperVCUR) swapOne(ctx cosmos.Context,
 	}
 	if source.IsSyntheticAsset() || target.IsSyntheticAsset() {
 		synthSupply = keeper.GetTotalSupply(ctx, pool.Asset.GetSyntheticAsset())
-		pool.CalcUnits(keeper.GetVersion(), synthSupply)
+		pool.CalcUnits(synthSupply)
 	}
 	ctx.Logger().Info("post swap", "pool", pool.Asset, "rune", pool.BalanceRune, "asset", pool.BalanceAsset, "lp units", pool.LPUnits, "synth units", pool.SynthUnits, "emit asset", emitAssets)
 

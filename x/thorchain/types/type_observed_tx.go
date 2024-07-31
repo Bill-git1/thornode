@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blang/semver"
-
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 )
@@ -53,7 +51,7 @@ func (m *ObservedTx) IsEmpty() bool {
 
 // Equals compare two ObservedTx
 func (m ObservedTx) Equals(tx2 ObservedTx) bool {
-	if !m.Tx.Equals(tx2.Tx) {
+	if !m.Tx.EqualsEx(tx2.Tx) {
 		return false
 	}
 	if !m.ObservedPubKey.Equals(tx2.ObservedPubKey) {
@@ -140,16 +138,7 @@ func (m *ObservedTx) Sign(signer cosmos.AccAddress) bool {
 }
 
 // SetDone check the ObservedTx status, update it's status to done if the outbound tx had been processed
-func (m *ObservedTx) SetDone(version semver.Version, hash common.TxID, numOuts int) {
-	switch {
-	case version.GTE(semver.MustParse("1.108.0")):
-		m.SetDoneV108(hash, numOuts)
-	default:
-		m.SetDoneV1(hash, numOuts)
-	}
-}
-
-func (m *ObservedTx) SetDoneV108(hash common.TxID, numOuts int) {
+func (m *ObservedTx) SetDone(hash common.TxID, numOuts int) {
 	// As an Asset->RUNE affiliate fee could also be RUNE,
 	// allow multiple blank TxID OutHashes.
 	// SetDone is still expected to only be called once (per ObservedTx) for each.
@@ -238,16 +227,7 @@ func (m *ObservedTxVoter) matchActionItem(outboundTx common.Tx) bool {
 // actions items , node account should be slashed for a malicious tx
 // true indicated the outbound tx matched an action item , and it has been
 // added into internal OutTxs
-func (m *ObservedTxVoter) AddOutTx(version semver.Version, in common.Tx) bool {
-	switch {
-	case version.GTE(semver.MustParse("1.108.0")):
-		return m.AddOutTxV108(version, in)
-	default:
-		return m.AddOutTxV1(version, in)
-	}
-}
-
-func (m *ObservedTxVoter) AddOutTxV108(version semver.Version, in common.Tx) bool {
+func (m *ObservedTxVoter) AddOutTx(in common.Tx) bool {
 	if !m.matchActionItem(in) {
 		// no action item match the outbound tx
 		return false
@@ -264,11 +244,11 @@ func (m *ObservedTxVoter) AddOutTxV108(version semver.Version, in common.Tx) boo
 	}
 	m.OutTxs = append(m.OutTxs, in)
 	for i := range m.Txs {
-		m.Txs[i].SetDone(version, in.ID, len(m.Actions))
+		m.Txs[i].SetDone(in.ID, len(m.Actions))
 	}
 
 	if !m.Tx.IsEmpty() {
-		m.Tx.SetDone(version, in.ID, len(m.Actions))
+		m.Tx.SetDone(in.ID, len(m.Actions))
 	}
 
 	return true

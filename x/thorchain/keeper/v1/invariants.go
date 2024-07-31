@@ -34,13 +34,13 @@ func AsgardInvariant(k KVStore) common.Invariant {
 					pool.Asset,
 					pool.BalanceAsset,
 				)
-				poolCoins = poolCoins.Add_deprecated(coin)
+				poolCoins = poolCoins.Add(coin)
 			case !pool.Asset.IsDerivedAsset():
 				coin := common.NewCoin(
 					common.RuneAsset(),
 					pool.BalanceRune.Add(pool.PendingInboundRune),
 				)
-				poolCoins = poolCoins.Add_deprecated(coin)
+				poolCoins = poolCoins.Add(coin)
 			}
 		}
 
@@ -83,11 +83,11 @@ func AsgardInvariant(k KVStore) common.Invariant {
 					// that In amount from the tx coin
 					coin.Amount = coin.Amount.Sub(ss.In)
 				}
-				swapCoins = swapCoins.Add_deprecated(coin)
+				swapCoins = swapCoins.Add(coin)
 			}
 
 			if swap.TargetAsset.IsNative() && !ss.Out.IsZero() {
-				swapCoins = swapCoins.Add_deprecated(common.NewCoin(swap.TargetAsset, ss.Out))
+				swapCoins = swapCoins.Add(common.NewCoin(swap.TargetAsset, ss.Out))
 			}
 		}
 
@@ -96,7 +96,7 @@ func AsgardInvariant(k KVStore) common.Invariant {
 		asgardCoins := k.GetBalance(ctx, asgardAddr)
 
 		// asgard balance is expected to equal sum of pool and swap coins
-		expNative, _ := poolCoins.Adds_deprecated(swapCoins).Native()
+		expNative, _ := poolCoins.Add(swapCoins...).Native()
 
 		// note: coins must be sorted for SafeSub
 		diffCoins, _ := asgardCoins.SafeSub(expNative.Sort())

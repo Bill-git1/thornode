@@ -101,12 +101,12 @@ func (s *SlashingVCURSuite) TestNodeSignSlashErrors(c *C) {
 		txOut := NewTxOut(3)
 		txOut.TxArray = append(txOut.TxArray, txOutItem)
 
-		ygg := GetRandomVault()
-		ygg.Type = YggdrasilVault
+		vault := GetRandomVault()
+		vault.Type = AsgardVault
 		keeper := &TestSlashingLackKeeper{
 			txOut:  txOut,
 			na:     na,
-			vaults: Vaults{ygg},
+			vaults: Vaults{vault},
 			voter: ObservedTxVoter{
 				Actions: []TxOutItem{txOutItem},
 			},
@@ -155,15 +155,15 @@ func (s *SlashingVCURSuite) TestNotSigningSlash(c *C) {
 	txOut := NewTxOut(3)
 	txOut.TxArray = append(txOut.TxArray, txOutItem)
 
-	ygg := GetRandomVault()
-	ygg.Type = YggdrasilVault
-	ygg.Coins = common.Coins{
+	vault := GetRandomVault()
+	vault.Type = AsgardVault
+	vault.Coins = common.Coins{
 		common.NewCoin(common.BNBAsset, cosmos.NewUint(5000000*common.One)),
 	}
 	keeper := &TestSlashingLackKeeper{
 		txOut:  txOut,
 		na:     na,
-		vaults: Vaults{ygg},
+		vaults: Vaults{vault},
 		voter: ObservedTxVoter{
 			Actions: []TxOutItem{txOutItem},
 		},
@@ -263,7 +263,7 @@ func (s *SlashingVCURSuite) TestSlashVault(c *C) {
 	c.Assert(mgr.Keeper().SetNodeAccount(ctx, node), IsNil)
 	FundModule(c, ctx, mgr.Keeper(), BondName, node.Bond.Uint64())
 	vault := GetRandomVault()
-	vault.Type = YggdrasilVault
+	vault.Type = AsgardVault
 	vault.Status = types2.VaultStatus_ActiveVault
 	vault.PubKey = node.PubKeySet.Secp256k1
 	vault.Membership = []string{
@@ -381,7 +381,7 @@ func (s *SlashingVCURSuite) TestNetworkShouldNotSlashMorethanVaultAmount(c *C) {
 	c.Assert(mgr.Keeper().SetNodeAccount(ctx, node), IsNil)
 	FundModule(c, ctx, mgr.Keeper(), BondName, node.Bond.Uint64())
 	vault := GetRandomVault()
-	vault.Type = YggdrasilVault
+	vault.Type = AsgardVault
 	vault.Status = types2.VaultStatus_ActiveVault
 	vault.PubKey = node.PubKeySet.Secp256k1
 	vault.Membership = []string{
@@ -476,7 +476,7 @@ func (s *SlashingVCURSuite) TestNetworkShouldNotSlashMorethanVaultAmount(c *C) {
 	c.Assert(mgr.Keeper().SetNodeAccount(ctx, node2), IsNil)
 	FundModule(c, ctx, mgr.Keeper(), BondName, node2.Bond.Uint64())
 
-	vault = GetRandomYggVault()
+	vault = GetRandomVault()
 	vault.Status = types2.VaultStatus_ActiveVault
 	vault.PubKey = node.PubKeySet.Secp256k1
 	vault.Membership = []string{

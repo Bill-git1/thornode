@@ -124,8 +124,6 @@ func NewQuerier(mgr *Mgrs, kbs cosmos.KeybaseStore) cosmos.Querier {
 			return queryBalanceModule(ctx, path[1:], mgr)
 		case q.QueryVaultsAsgard.Key:
 			return queryAsgardVaults(ctx, mgr)
-		case q.QueryVaultsYggdrasil.Key: // TODO remove on hard fork
-			return queryYggdrasilVaults(ctx, mgr)
 		case q.QueryVault.Key:
 			return queryVault(ctx, path[1:], mgr)
 		case q.QueryVaultPubkeys.Key:
@@ -372,73 +370,9 @@ func getVaultChainAddresses(ctx cosmos.Context, vault Vault) []openapi.VaultAddr
 	return result
 }
 
-// TODO remove on hard fork
-func queryYggdrasilVaults(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
-	vaults := make(Vaults, 0)
-	iter := mgr.Keeper().GetVaultIterator(ctx)
-	defer iter.Close()
-	for ; iter.Valid(); iter.Next() {
-		var vault Vault
-		if err := mgr.Keeper().Cdc().Unmarshal(iter.Value(), &vault); err != nil {
-			ctx.Logger().Error("fail to unmarshal yggdrasil", "error", err)
-			return nil, fmt.Errorf("fail to unmarshal yggdrasil: %w", err)
-		}
-		if vault.IsYggdrasil() && vault.HasFunds() {
-			vaults = append(vaults, vault)
-		}
-	}
-
-	respVaults := make([]openapi.YggdrasilVault, len(vaults))
-	for i, vault := range vaults {
-		totalValue := cosmos.ZeroUint()
-
-		// find the bond of this node account
-		na, err := mgr.Keeper().GetNodeAccountByPubKey(ctx, vault.PubKey)
-		if err != nil {
-			ctx.Logger().Error("fail to get node account by pubkey", "error", err)
-			continue
-		}
-
-		// calculate the total value of this yggdrasil vault
-		for _, coin := range vault.Coins {
-			if coin.Asset.IsRune() {
-				totalValue = totalValue.Add(coin.Amount)
-			} else {
-				pool, err := mgr.Keeper().GetPool(ctx, coin.Asset)
-				if err != nil {
-					ctx.Logger().Error("fail to get pool", "error", err)
-					continue
-				}
-				totalValue = totalValue.Add(pool.AssetValueInRune(coin.Amount))
-			}
-		}
-
-		respVaults[i] = openapi.YggdrasilVault{
-			BlockHeight:           wrapInt64(vault.BlockHeight),
-			PubKey:                wrapString(vault.PubKey.String()),
-			Coins:                 castCoins(vault.Coins...),
-			Type:                  wrapString(vault.Type.String()),
-			StatusSince:           wrapInt64(vault.StatusSince),
-			Membership:            vault.Membership,
-			Chains:                vault.Chains,
-			InboundTxCount:        wrapInt64(vault.InboundTxCount),
-			OutboundTxCount:       wrapInt64(vault.OutboundTxCount),
-			PendingTxBlockHeights: vault.PendingTxBlockHeights,
-			Routers:               castVaultRouters(vault.Routers),
-			Status:                na.Status.String(),
-			Bond:                  na.Bond.String(),
-			TotalValue:            totalValue.String(),
-			Addresses:             getVaultChainAddresses(ctx, vault),
-		}
-	}
-
-	return jsonify(ctx, respVaults)
-}
-
 func queryVaultsPubkeys(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 	var resp openapi.VaultPubkeysResponse
 	resp.Asgard = make([]openapi.VaultInfo, 0)
-	resp.Yggdrasil = make([]openapi.VaultInfo, 0) // TODO remove on hard fork
 	resp.Inactive = make([]openapi.VaultInfo, 0)
 	iter := mgr.Keeper().GetVaultIterator(ctx)
 
@@ -454,19 +388,7 @@ func queryVaultsPubkeys(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 			ctx.Logger().Error("fail to unmarshal vault", "error", err)
 			return nil, fmt.Errorf("fail to unmarshal vault: %w", err)
 		}
-		if vault.IsYggdrasil() { // TODO remove ygg on hard fork
-			na, err := mgr.Keeper().GetNodeAccountByPubKey(ctx, vault.PubKey)
-			if err != nil {
-				ctx.Logger().Error("fail to unmarshal vault", "error", err)
-				return nil, fmt.Errorf("fail to unmarshal vault: %w", err)
-			}
-			if !na.Bond.IsZero() {
-				resp.Yggdrasil = append(resp.Yggdrasil, openapi.VaultInfo{
-					PubKey:  vault.PubKey.String(),
-					Routers: castVaultRouters(vault.Routers),
-				})
-			}
-		} else if vault.IsAsgard() {
+		if vault.IsAsgard() {
 			switch vault.Status {
 			case ActiveVault, RetiringVault:
 				resp.Asgard = append(resp.Asgard, openapi.VaultInfo{
@@ -674,8 +596,6 @@ func queryNetwork(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
 		// Due to using openapi. this will be displayed in alphabetical order,
 		// so its schema (and order here) should also be in alphabetical order.
 		BondRewardRune:        data.BondRewardRune.String(),
-		BurnedBep2Rune:        data.BurnedBep2Rune.String(),  // TODO remove on hard fork
-		BurnedErc20Rune:       data.BurnedErc20Rune.String(), // TODO remove on hard fork
 		TotalBondUnits:        data.TotalBondUnits.String(),
 		EffectiveSecurityBond: effectiveSecurityBond.String(),
 		TotalReserve:          mgr.Keeper().GetRuneBalanceOfModule(ctx, ReserveName).String(),
@@ -802,7 +722,7 @@ func queryNode(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mg
 	if err != nil {
 		return nil, fmt.Errorf("fail to get bond providers: %w", err)
 	}
-	bp.Adjust(mgr.GetVersion(), nodeAcc.Bond)
+	bp.Adjust(nodeAcc.Bond)
 
 	active, err := mgr.Keeper().ListActiveValidators(ctx)
 	if err != nil {
@@ -982,7 +902,6 @@ func queryNodes(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *M
 	totalEffectiveBond, bondHardCap := getTotalEffectiveBond(active)
 
 	lastChurnHeight := vaults[0].BlockHeight
-	version := mgr.GetVersion()
 	result := make([]openapi.Node, len(nodeAccounts))
 	for i, na := range nodeAccounts {
 		if na.RequestedToLeave && na.Bond.LTE(cosmos.NewUint(common.One)) {
@@ -1070,7 +989,7 @@ func queryNodes(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *M
 		if err != nil {
 			ctx.Logger().Error("fail to get bond providers", "error", err)
 		}
-		bp.Adjust(version, na.Bond)
+		bp.Adjust(na.Bond)
 
 		var providers []openapi.NodeBondProvider
 		// Leave this nil (null rather than []) if the source is nil.
@@ -1313,8 +1232,8 @@ func queryLiquidityProvider(ctx cosmos.Context, path []string, req abci.RequestQ
 
 	if !isSavers {
 		synthSupply := mgr.Keeper().GetTotalSupply(ctx, poolAsset.GetSyntheticAsset())
-		_, runeRedeemValue := lp.GetRuneRedeemValue(mgr.GetVersion(), pool, synthSupply)
-		_, assetRedeemValue := lp.GetAssetRedeemValue(mgr.GetVersion(), pool, synthSupply)
+		_, runeRedeemValue := lp.GetRuneRedeemValue(pool, synthSupply)
+		_, assetRedeemValue := lp.GetAssetRedeemValue(pool, synthSupply)
 		_, luviDepositValue := lp.GetLuviDepositValue(pool)
 		_, luviRedeemValue := lp.GetLuviRedeemValue(runeRedeemValue, assetRedeemValue)
 
@@ -1509,10 +1428,10 @@ func queryPool(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mg
 	saversDepth := saversPool.BalanceAsset
 	saversUnits := saversPool.LPUnits
 	synthSupply := mgr.Keeper().GetTotalSupply(ctx, pool.Asset.GetSyntheticAsset())
-	pool.CalcUnits(mgr.GetVersion(), synthSupply)
+	pool.CalcUnits(synthSupply)
 
 	synthMintPausedErr := isSynthMintPaused(ctx, mgr, saversAsset, cosmos.ZeroUint())
-	synthSupplyRemaining, _ := getSynthSupplyRemainingV102(ctx, mgr, saversAsset)
+	synthSupplyRemaining, _ := getSynthSupplyRemaining(ctx, mgr, saversAsset)
 
 	maxSynthsForSaversYield := mgr.Keeper().GetConfigInt64(ctx, constants.MaxSynthsForSaversYield)
 	// Capping the synths at double the pool balance of Assets.
@@ -1609,10 +1528,10 @@ func queryPools(ctx cosmos.Context, req abci.RequestQuery, mgr *Mgrs) ([]byte, e
 		saversUnits := saversPool.LPUnits
 
 		synthSupply := mgr.Keeper().GetTotalSupply(ctx, pool.Asset.GetSyntheticAsset())
-		pool.CalcUnits(mgr.GetVersion(), synthSupply)
+		pool.CalcUnits(synthSupply)
 
 		synthMintPausedErr := isSynthMintPaused(ctx, mgr, pool.Asset, cosmos.ZeroUint())
-		synthSupplyRemaining, _ := getSynthSupplyRemainingV102(ctx, mgr, pool.Asset)
+		synthSupplyRemaining, _ := getSynthSupplyRemaining(ctx, mgr, pool.Asset)
 
 		maxSynthsForSaversYield := mgr.Keeper().GetConfigInt64(ctx, constants.MaxSynthsForSaversYield)
 		// Capping the synths at double the pool balance of Assets.

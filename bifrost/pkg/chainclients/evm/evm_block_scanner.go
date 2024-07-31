@@ -11,7 +11,6 @@ import (
 
 	_ "embed"
 
-	"github.com/blang/semver"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ecommon "github.com/ethereum/go-ethereum/common"
@@ -944,16 +943,7 @@ func (e *EVMScanner) getTxInFromSmartContract(tx *etypes.Transaction, receipt *e
 	if txGasPrice.Cmp(big.NewInt(tenGwei)) < 0 {
 		txGasPrice = big.NewInt(tenGwei)
 	}
-	// TODO: remove version check after v132
-	version, err := e.bridge.GetThorchainVersion()
-	if err != nil {
-		return nil, fmt.Errorf("fail to get thorchain version: %w", err)
-	}
-	if version.GTE(semver.MustParse("1.132.0")) {
-		txInItem.Gas = common.MakeEVMGas(e.cfg.ChainID, txGasPrice, receipt.GasUsed)
-	} else {
-		txInItem.Gas = common.MakeEVMGas(e.cfg.ChainID, txGasPrice, tx.Gas())
-	}
+	txInItem.Gas = common.MakeEVMGas(e.cfg.ChainID, txGasPrice, receipt.GasUsed)
 	if txInItem.Coins.IsEmpty() {
 		return nil, nil
 	}
@@ -984,30 +974,12 @@ func (e *EVMScanner) getTxInFromFailedTransaction(tx *etypes.Transaction, receip
 		txGasPrice = big.NewInt(tenGwei)
 	}
 	txHash := tx.Hash().Hex()[2:]
-
-	// TODO: remove version check after v132
-	version, err := e.bridge.GetThorchainVersion()
-	if err != nil {
-		e.logger.Err(err).Msg("fail to get thorchain version")
-		return nil
-	}
-	if version.GTE(semver.MustParse("1.132.0")) {
-		return &stypes.TxInItem{
-			Tx:     txHash,
-			Memo:   memo.NewOutboundMemo(common.TxID(txHash)).String(),
-			Sender: strings.ToLower(fromAddr.String()),
-			To:     strings.ToLower(tx.To().String()),
-			Coins:  common.NewCoins(common.NewCoin(e.cfg.ChainID.GetGasAsset(), cosmos.NewUint(1))),
-			Gas:    common.MakeEVMGas(e.cfg.ChainID, txGasPrice, receipt.GasUsed),
-		}
-	} else {
-		return &stypes.TxInItem{
-			Tx:     txHash,
-			Memo:   memo.NewOutboundMemo(common.TxID(txHash)).String(),
-			Sender: strings.ToLower(fromAddr.String()),
-			To:     strings.ToLower(tx.To().String()),
-			Coins:  common.NewCoins(common.NewCoin(e.cfg.ChainID.GetGasAsset(), cosmos.NewUint(1))),
-			Gas:    common.MakeEVMGas(e.cfg.ChainID, txGasPrice, tx.Gas()),
-		}
+	return &stypes.TxInItem{
+		Tx:     txHash,
+		Memo:   memo.NewOutboundMemo(common.TxID(txHash)).String(),
+		Sender: strings.ToLower(fromAddr.String()),
+		To:     strings.ToLower(tx.To().String()),
+		Coins:  common.NewCoins(common.NewCoin(e.cfg.ChainID.GetGasAsset(), cosmos.NewUint(1))),
+		Gas:    common.MakeEVMGas(e.cfg.ChainID, txGasPrice, receipt.GasUsed),
 	}
 }

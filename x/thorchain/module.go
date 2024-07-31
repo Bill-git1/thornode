@@ -162,47 +162,26 @@ func (am AppModule) BeginBlock(ctx sdk.Context, req abci.RequestBeginBlock) {
 	}
 
 	ctx.Logger().Debug("Begin Block", "height", req.Header.Height)
-	version := am.mgr.GetVersion()
-	if version.LT(semver.MustParse("1.96.0")) { // TODO: leave only the else path after hard fork
-		if version.LT(semver.MustParse("1.90.0")) {
-			_ = am.mgr.Keeper().GetLowestActiveVersion(ctx)
-		}
-
-		localVer := semver.MustParse(constants.SWVersion.String())
-		if version.Major > localVer.Major || version.Minor > localVer.Minor {
-			panic(fmt.Sprintf("Unsupported Version: update your binary (your version: %s, network consensus version: %s)", constants.SWVersion.String(), version.String()))
-		}
-
-		// Does a kvstore migration
-		smgr := newStoreMgr(am.mgr)
-		if err := smgr.Iterator(ctx); err != nil {
-			os.Exit(10) // halt the chain if unsuccessful
-		}
-
-		am.mgr.Keeper().ClearObservingAddresses(ctx)
-		if err := am.mgr.BeginBlock(ctx); err != nil {
-			ctx.Logger().Error("fail to get managers", "error", err)
-		}
-	} else {
-		// Check/Update the network version before checking the local version or checking whether to do a new-version store migration
-		if err := am.mgr.BeginBlock(ctx); err != nil {
-			ctx.Logger().Error("fail to get managers", "error", err)
-		}
-
-		localVer := semver.MustParse(constants.SWVersion.String())
-		if version.Major > localVer.Major || version.Minor > localVer.Minor {
-			panic(fmt.Sprintf("Unsupported Version: update your binary (your version: %s, network consensus version: %s)", constants.SWVersion.String(), version.String()))
-		}
-
-		// Does a kvstore migration
-		smgr := newStoreMgr(am.mgr)
-		if err := smgr.Iterator(ctx); err != nil {
-			os.Exit(10) // halt the chain if unsuccessful
-		}
-
-		am.mgr.Keeper().ClearObservingAddresses(ctx)
+	// Check/Update the network version before checking the local version or checking whether to do a new-version store migration
+	if err := am.mgr.BeginBlock(ctx); err != nil {
+		ctx.Logger().Error("fail to get managers", "error", err)
 	}
-	am.mgr.GasMgr().BeginBlock(am.mgr) // TODO: Remove (am.)mgr argument on hard fork.
+
+	version := am.mgr.GetVersion()
+	localVer := semver.MustParse(constants.SWVersion.String())
+	if version.Major > localVer.Major || version.Minor > localVer.Minor {
+		panic(fmt.Sprintf("Unsupported Version: update your binary (your version: %s, network consensus version: %s)", constants.SWVersion.String(), version.String()))
+	}
+
+	// Does a kvstore migration
+	smgr := newStoreMgr(am.mgr)
+	if err := smgr.Iterator(ctx); err != nil {
+		os.Exit(10) // halt the chain if unsuccessful
+	}
+
+	am.mgr.Keeper().ClearObservingAddresses(ctx)
+
+	am.mgr.GasMgr().BeginBlock()
 	if err := am.mgr.NetworkMgr().BeginBlock(ctx, am.mgr); err != nil {
 		ctx.Logger().Error("fail to begin network manager", "error", err)
 	}
@@ -215,23 +194,15 @@ func (am AppModule) BeginBlock(ctx sdk.Context, req abci.RequestBeginBlock) {
 // EndBlock called when a block get committed
 func (am AppModule) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) []abci.ValidatorUpdate {
 	ctx.Logger().Debug("End Block", "height", req.Height)
-	if am.mgr.GetVersion().LT(semver.MustParse("1.90.0")) {
-		_ = am.mgr.Keeper().GetLowestActiveVersion(ctx) // TODO: remove me on hard fork
-	}
+
 	if err := am.mgr.SwapQ().EndBlock(ctx, am.mgr); err != nil {
 		ctx.Logger().Error("fail to process swap queue", "error", err)
 	}
 
-	if am.mgr.GetVersion().GTE(semver.MustParse("1.98.0")) {
-		if err := am.mgr.OrderBookMgr().EndBlock(ctx, am.mgr); err != nil {
-			ctx.Logger().Error("fail to process order books", "error", err)
-		}
+	if err := am.mgr.OrderBookMgr().EndBlock(ctx, am.mgr); err != nil {
+		ctx.Logger().Error("fail to process order books", "error", err)
 	}
 
-	// TODO: remove me on hard fork
-	if err := am.mgr.Slasher().LackObserving(ctx, am.mgr.GetConstants()); err != nil {
-		ctx.Logger().Error("Unable to slash for lack of observing:", "error", err)
-	}
 	if err := am.mgr.Slasher().LackSigning(ctx, am.mgr); err != nil {
 		ctx.Logger().Error("Unable to slash for lack of signing:", "error", err)
 	}
@@ -252,16 +223,6 @@ func (am AppModule) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) []abci.V
 	}
 
 	validators := am.mgr.ValidatorMgr().EndBlock(ctx, am.mgr)
-
-	if am.mgr.GetVersion().LT(semver.MustParse("1.124.0")) {
-		// TODO remove on hard fork
-		// Fill up Yggdrasil vaults
-		// We do this AFTER validatorMgr.EndBlock, because we don't want to send
-		// funds to a yggdrasil vault that is being churned out this block.
-		if err := am.mgr.YggManager().Fund(ctx, am.mgr); err != nil {
-			ctx.Logger().Error("unable to fund yggdrasil", "error", err)
-		}
-	}
 
 	if err := am.mgr.TxOutStore().EndBlock(ctx, am.mgr); err != nil {
 		ctx.Logger().Error("fail to process txout endblock", "error", err)

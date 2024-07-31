@@ -4,39 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blang/semver"
-
 	"gitlab.com/thorchain/thornode/common/cosmos"
 )
 
-// TODO: Remove Kraken checks on next hard fork.
-const KRAKEN string = "ReleaseTheKraken"
-
 // GetMimir get a mimir value from key value store
 func (k KVStore) GetMimir(ctx cosmos.Context, key string) (int64, error) {
-	if k.GetVersion().LT(semver.MustParse("1.92.0")) {
-		// Once node mimir reach super majority  , admin mimir will be set automatically to lock in the vote
-		// thus , there is no need to check node mimir every time
-		nodeMimirs, err := k.GetNodeMimirs(ctx, key)
-		if err != nil {
-			return -1, err
-		}
-		activeNodes, err := k.ListActiveValidators(ctx)
-		if err != nil {
-			return -1, err
-		}
-		if i, ok := nodeMimirs.HasSuperMajority(key, activeNodes.GetNodeAddresses()); ok {
-			return i, nil
-		}
-	}
-
-	// TODO: Remove Kraken checks on next hard fork.
-	// The Kraken functionality has been removed, but we need to maintain
-	// the same KVStore cost accounting. So always check, but ignore the
-	// value.
-	ignored := k.haveKraken(ctx)
-	_ = ignored
-
 	record := int64(-1)
 	_, err := k.getInt64(ctx, k.GetKey(ctx, prefixMimir, key), &record)
 	return record, err
@@ -50,23 +22,8 @@ func (k KVStore) GetMimirWithRef(ctx cosmos.Context, template, ref string) (int6
 	return k.GetMimir(ctx, key)
 }
 
-// TODO: Remove Kraken checks on next hard fork.
-// haveKraken - check to see if we have "released the kraken"
-func (k KVStore) haveKraken(ctx cosmos.Context) bool {
-	record := int64(-1)
-	_, _ = k.getInt64(ctx, k.GetKey(ctx, prefixMimir, KRAKEN), &record)
-	return record >= 0
-}
-
 // SetMimir save a mimir value to key value store
 func (k KVStore) SetMimir(ctx cosmos.Context, key string, value int64) {
-	// TODO: Remove Kraken checks on next hard fork.
-	if ignored := k.haveKraken(ctx); ignored {
-		// The Kraken functionality has been removed, but we need to maintain
-		// the same KVStore cost accounting. So always check, but ignore the
-		// value.
-		_ = ignored
-	}
 	k.setInt64(ctx, k.GetKey(ctx, prefixMimir, key), value)
 }
 
@@ -146,18 +103,6 @@ func (k KVStore) SetNodePauseChain(ctx cosmos.Context, acc cosmos.AccAddress) {
 }
 
 func (k KVStore) IsOperationalMimir(key string) bool {
-	version := k.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.134.0")):
-		return isOperationalMimirV134(key)
-	case version.GTE(semver.MustParse("1.133.0")):
-		return isOperationalMimirV133(key)
-	default:
-		return false
-	}
-}
-
-func isOperationalMimirV134(key string) bool {
 	exactMatches := []string{
 		"BurnSynths",
 		"MintSynths",

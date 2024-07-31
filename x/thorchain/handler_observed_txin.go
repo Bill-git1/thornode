@@ -49,10 +49,12 @@ func (h ObservedTxInHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Resu
 
 func (h ObservedTxInHandler) validate(ctx cosmos.Context, msg MsgObservedTxIn) error {
 	version := h.mgr.GetVersion()
-	if version.GTE(semver.MustParse("0.1.0")) {
+	switch {
+	case version.GTE(semver.MustParse("0.1.0")):
 		return h.validateV1(ctx, msg)
+	default:
+		return errInvalidVersion
 	}
-	return errInvalidVersion
 }
 
 func (h ObservedTxInHandler) validateV1(ctx cosmos.Context, msg MsgObservedTxIn) error {
@@ -72,45 +74,12 @@ func (h ObservedTxInHandler) handle(ctx cosmos.Context, msg MsgObservedTxIn) (*c
 	switch {
 	case version.GTE(semver.MustParse("1.131.0")):
 		return h.handleV131(ctx, msg)
-	case version.GTE(semver.MustParse("1.129.0")):
-		return h.handleV129(ctx, msg)
-	case version.GTE(semver.MustParse("1.128.0")):
-		return h.handleV128(ctx, msg)
-	case version.GTE(semver.MustParse("1.124.0")):
-		return h.handleV124(ctx, msg)
-	case version.GTE(semver.MustParse("1.116.0")):
-		return h.handleV116(ctx, msg)
-	case version.GTE(semver.MustParse("1.113.0")):
-		return h.handleV113(ctx, msg)
-	case version.GTE(semver.MustParse("1.112.0")):
-		return h.handleV112(ctx, msg)
-	case version.GTE(semver.MustParse("1.107.0")):
-		return h.handleV107(ctx, msg)
-	case version.GTE(semver.MustParse("1.89.0")):
-		return h.handleV89(ctx, msg)
-	case version.GTE(semver.MustParse("0.78.0")):
-		return h.handleV78(ctx, msg)
+	default:
+		return nil, errBadVersion
 	}
-	return nil, errBadVersion
 }
 
 func (h ObservedTxInHandler) preflight(ctx cosmos.Context, voter ObservedTxVoter, nas NodeAccounts, tx ObservedTx, signer cosmos.AccAddress) (ObservedTxVoter, bool) {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.134.0")):
-		return h.preflightV134(ctx, voter, nas, tx, signer)
-	case version.GTE(semver.MustParse("1.123.0")):
-		return h.preflightV123(ctx, voter, nas, tx, signer)
-	case version.GTE(semver.MustParse("1.119.0")):
-		return h.preflightV119(ctx, voter, nas, tx, signer)
-	case version.GTE(semver.MustParse("1.116.0")):
-		return h.preflightV116(ctx, voter, nas, tx, signer)
-	default:
-		return h.preflightV1(ctx, voter, nas, tx, signer)
-	}
-}
-
-func (h ObservedTxInHandler) preflightV134(ctx cosmos.Context, voter ObservedTxVoter, nas NodeAccounts, tx ObservedTx, signer cosmos.AccAddress) (ObservedTxVoter, bool) {
 	observeSlashPoints := h.mgr.GetConstants().GetInt64Value(constants.ObserveSlashPoints)
 	lackOfObservationPenalty := h.mgr.GetConstants().GetInt64Value(constants.LackOfObservationPenalty)
 	observeFlex := h.mgr.Keeper().GetConfigInt64(ctx, constants.ObservationDelayFlexibility)
@@ -284,7 +253,7 @@ func (h ObservedTxInHandler) handleV131(ctx cosmos.Context, msg MsgObservedTxIn)
 		}
 
 		// construct msg from memo
-		m, txErr := processOneTxIn(ctx, h.mgr.GetVersion(), h.mgr.Keeper(), voter.Tx, msg.Signer)
+		m, txErr := processOneTxIn(ctx, h.mgr.Keeper(), voter.Tx, msg.Signer)
 		if txErr != nil {
 			ctx.Logger().Error("fail to process inbound tx", "error", txErr.Error(), "tx hash", tx.Tx.ID.String())
 			if newErr := refundTx(ctx, tx, h.mgr, CodeInvalidMemo, txErr.Error(), ""); nil != newErr {
@@ -344,18 +313,6 @@ func (h ObservedTxInHandler) handleV131(ctx cosmos.Context, msg MsgObservedTxIn)
 }
 
 func (h ObservedTxInHandler) addSwap(ctx cosmos.Context, msg MsgSwap) {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.116.0")):
-		h.addSwapV116(ctx, msg)
-	case version.GTE(semver.MustParse("1.98.0")):
-		h.addSwapV98(ctx, msg)
-	default:
-		h.addSwapV63(ctx, msg)
-	}
-}
-
-func (h ObservedTxInHandler) addSwapV116(ctx cosmos.Context, msg MsgSwap) {
 	if h.mgr.Keeper().OrderBooksEnabled(ctx) {
 		// TODO: swap to synth if layer1 asset (follow on PR)
 		// TODO: create handler to modify/cancel an order (follow on PR)
@@ -378,18 +335,6 @@ func (h ObservedTxInHandler) addSwapV116(ctx cosmos.Context, msg MsgSwap) {
 // out into its own function to allow easier maintenance of original behavior vs order
 // book behavior.
 func (h ObservedTxInHandler) addSwapDirect(ctx cosmos.Context, msg MsgSwap) {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.132.0")):
-		h.addSwapDirectV132(ctx, msg)
-	case version.GTE(semver.MustParse("1.116.0")):
-		h.addSwapDirectV116(ctx, msg)
-	default:
-		h.addSwapV63(ctx, msg)
-	}
-}
-
-func (h ObservedTxInHandler) addSwapDirectV132(ctx cosmos.Context, msg MsgSwap) {
 	if msg.Tx.Coins.IsEmpty() {
 		return
 	}
@@ -478,14 +423,6 @@ func (h ObservedTxInHandler) addSwapDirectV132(ctx cosmos.Context, msg MsgSwap) 
 			ctx.Logger().Error("fail to add swap to queue", "error", err)
 		}
 	}
-}
-
-func (h ObservedTxInHandler) isFromAsgard(ctx cosmos.Context, tx ObservedTx) (bool, error) {
-	asgardVaults, err := h.mgr.Keeper().GetAsgardVaults(ctx)
-	if err != nil {
-		return false, err
-	}
-	return asgardVaults.HasAddress(tx.Tx.Chain, tx.Tx.FromAddress)
 }
 
 // ObservedTxInAnteHandler called by the ante handler to gate mempool entry

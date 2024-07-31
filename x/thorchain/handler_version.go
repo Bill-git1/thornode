@@ -45,12 +45,9 @@ func (h VersionHandler) validate(ctx cosmos.Context, msg MsgSetVersion) error {
 	switch {
 	case version.GTE(semver.MustParse("1.114.0")):
 		return h.validateV114(ctx, msg)
-	case version.GTE(semver.MustParse("1.112.0")):
-		return h.validateV112(ctx, msg)
-	case version.GTE(semver.MustParse("0.80.0")):
-		return h.validateV80(ctx, msg)
+	default:
+		return errBadVersion
 	}
-	return errBadVersion
 }
 
 func (h VersionHandler) validateV114(ctx cosmos.Context, msg MsgSetVersion) error {
@@ -77,12 +74,6 @@ func (h VersionHandler) handle(ctx cosmos.Context, msg MsgSetVersion) error {
 	switch {
 	case version.GTE(semver.MustParse("1.115.0")):
 		return h.handleV115(ctx, msg)
-	case version.GTE(semver.MustParse("1.112.0")):
-		return h.handleV112(ctx, msg)
-	case version.GTE(semver.MustParse("1.110.0")):
-		return h.handleV110(ctx, msg)
-	case version.GTE(semver.MustParse("0.57.0")):
-		return h.handleV57(ctx, msg)
 	default:
 		return errBadVersion
 	}
@@ -121,18 +112,6 @@ func (h VersionHandler) handleV115(ctx cosmos.Context, msg MsgSetVersion) error 
 }
 
 func validateVersionAuth(ctx cosmos.Context, k keeper.Keeper, signer cosmos.AccAddress) error {
-	version, _ := k.GetVersionWithCtx(ctx)
-	switch {
-	case version.GTE(semver.MustParse("1.115.0")):
-		return validateVersionAuthV115(ctx, k, signer)
-	case version.GTE(semver.MustParse("1.114.0")):
-		return validateVersionAuthV114(ctx, k, signer)
-	default:
-		return errBadVersion
-	}
-}
-
-func validateVersionAuthV115(ctx cosmos.Context, k keeper.Keeper, signer cosmos.AccAddress) error {
 	nodeAccount, err := k.GetNodeAccount(ctx, signer)
 	if err != nil {
 		ctx.Logger().Error("fail to get node account", "error", err, "address", signer.String())
@@ -156,9 +135,6 @@ func VersionAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper, m
 	if err := validateVersionAuth(ctx, k, msg.Signer); err != nil {
 		return err
 	}
-	// TODO on hard fork remove version check
-	if v.GTE(semver.MustParse("1.115.0")) {
-		return k.DeductNativeTxFeeFromBond(ctx, msg.Signer)
-	}
-	return nil
+
+	return k.DeductNativeTxFeeFromBond(ctx, msg.Signer)
 }

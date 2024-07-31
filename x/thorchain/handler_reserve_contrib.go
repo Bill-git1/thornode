@@ -39,10 +39,12 @@ func (h ReserveContributorHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmo
 
 func (h ReserveContributorHandler) validate(ctx cosmos.Context, msg MsgReserveContributor) error {
 	version := h.mgr.GetVersion()
-	if version.GTE(semver.MustParse("0.1.0")) {
+	switch {
+	case version.GTE(semver.MustParse("0.1.0")):
 		return h.validateV1(ctx, msg)
+	default:
+		return errBadVersion
 	}
-	return errBadVersion
 }
 
 func (h ReserveContributorHandler) validateV1(ctx cosmos.Context, msg MsgReserveContributor) error {
@@ -51,10 +53,12 @@ func (h ReserveContributorHandler) validateV1(ctx cosmos.Context, msg MsgReserve
 
 func (h ReserveContributorHandler) handle(ctx cosmos.Context, msg MsgReserveContributor) error {
 	version := h.mgr.GetVersion()
-	if version.GTE(semver.MustParse("0.1.0")) {
+	switch {
+	case version.GTE(semver.MustParse("0.1.0")):
 		return h.handleV1(ctx, msg)
+	default:
+		return errBadVersion
 	}
-	return errBadVersion
 }
 
 // handle process MsgReserveContributor

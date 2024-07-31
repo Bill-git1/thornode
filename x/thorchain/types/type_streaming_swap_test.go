@@ -12,20 +12,18 @@ type StreamingSwapSuite struct{}
 var _ = Suite(&StreamingSwapSuite{})
 
 func (s *StreamingSwapSuite) TestNextSize(c *C) {
-	v := GetCurrentVersion()
-
 	swp := NewStreamingSwap(common.BlankTxID, 2, 10, cosmos.NewUint(10), cosmos.NewUint(10))
-	size, target := swp.NextSize(v)
+	size, target := swp.NextSize()
 	c.Check(size.String(), Equals, "5")
 	c.Check(target.String(), Equals, "5")
 	swp.In = cosmos.NewUint(5)
 	swp.Out = cosmos.NewUint(5)
-	size, target = swp.NextSize(v)
+	size, target = swp.NextSize()
 	c.Check(size.String(), Equals, "5")
 	c.Check(target.String(), Equals, "5")
 	swp.In = cosmos.NewUint(10)
 	swp.Out = cosmos.NewUint(10)
-	size, target = swp.NextSize(v)
+	size, target = swp.NextSize()
 	c.Check(size.String(), Equals, "0")
 	c.Check(target.String(), Equals, "0")
 
@@ -34,25 +32,25 @@ func (s *StreamingSwapSuite) TestNextSize(c *C) {
 	swp.TradeTarget = cosmos.NewUint(100)
 	swp.In = cosmos.NewUint(0)
 	swp.Out = cosmos.NewUint(0)
-	size, target = swp.NextSize(v)
+	size, target = swp.NextSize()
 	c.Check(size.String(), Equals, "10")
 	c.Check(target.String(), Equals, "10")
 
 	swp.In = cosmos.NewUint(10)
 	swp.Out = cosmos.NewUint(20)
-	size, target = swp.NextSize(v)
+	size, target = swp.NextSize()
 	c.Check(size.String(), Equals, "10")
 	c.Check(target.String(), Equals, "9")
 
 	swp.In = cosmos.NewUint(20)
 	swp.Out = cosmos.NewUint(40)
-	size, target = swp.NextSize(v)
+	size, target = swp.NextSize()
 	c.Check(size.String(), Equals, "10")
 	c.Check(target.String(), Equals, "8")
 
 	swp.In = cosmos.NewUint(30)
 	swp.Out = cosmos.NewUint(60)
-	size, target = swp.NextSize(v)
+	size, target = swp.NextSize()
 	c.Check(size.String(), Equals, "10")
 	c.Check(target.String(), Equals, "6")
 
@@ -60,7 +58,7 @@ func (s *StreamingSwapSuite) TestNextSize(c *C) {
 	swp = NewStreamingSwap(common.BlankTxID, 5, 10, cosmos.NewUint(2345), cosmos.NewUint(472659))
 	total := cosmos.ZeroUint()
 	for i := 1; i <= 5; i++ {
-		size, _ = swp.NextSize(v)
+		size, _ = swp.NextSize()
 		total = total.Add(size)
 		swp.Count += 1
 		swp.In = swp.In.Add(size)

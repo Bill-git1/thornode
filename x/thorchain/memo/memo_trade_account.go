@@ -1,9 +1,6 @@
 package thorchain
 
 import (
-	"fmt"
-
-	"github.com/blang/semver"
 	"gitlab.com/thorchain/thornode/common"
 	cosmos "gitlab.com/thorchain/thornode/common/cosmos"
 )
@@ -23,15 +20,6 @@ func NewTradeAccountDepositMemo(addr cosmos.AccAddress) TradeAccountDepositMemo 
 }
 
 func (p *parser) ParseTradeAccountDeposit() (TradeAccountDepositMemo, error) {
-	switch {
-	case p.version.GTE(semver.MustParse("1.128.0")):
-		return p.ParseTradeAccountDepositV128()
-	default:
-		return TradeAccountDepositMemo{}, fmt.Errorf("version %s is not supported", p.version)
-	}
-}
-
-func (p *parser) ParseTradeAccountDepositV128() (TradeAccountDepositMemo, error) {
 	addr := p.getAccAddress(1, true, nil)
 	return NewTradeAccountDepositMemo(addr), p.Error()
 }
@@ -53,15 +41,6 @@ func NewTradeAccountWithdrawalMemo(addr common.Address) TradeAccountWithdrawalMe
 }
 
 func (p *parser) ParseTradeAccountWithdrawal() (TradeAccountWithdrawalMemo, error) {
-	switch {
-	case p.version.GTE(semver.MustParse("1.128.0")):
-		return p.ParseTradeAccountWithdrawalV128()
-	default:
-		return TradeAccountWithdrawalMemo{}, fmt.Errorf("version %s is not supported", p.version)
-	}
-}
-
-func (p *parser) ParseTradeAccountWithdrawalV128() (TradeAccountWithdrawalMemo, error) {
 	addr := p.getAddress(1, true, common.NoAddress)
 	return NewTradeAccountWithdrawalMemo(addr), p.Error()
 }

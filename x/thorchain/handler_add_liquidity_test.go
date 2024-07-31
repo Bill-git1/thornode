@@ -611,11 +611,9 @@ func (s *HandlerAddLiquiditySuite) TestCalculateLPUnits(c *C) {
 		},
 	}
 
-	_, mgr := setupManagerForTest(c)
-	h := NewAddLiquidityHandler(mgr)
 	for _, item := range inputs {
 		c.Logf("Name: %s", item.name)
-		poolUnits, liquidityUnits, err := h.calculatePoolUnits(item.oldLPUnits, item.poolRune, item.poolAsset, item.addRune, item.addAsset)
+		poolUnits, liquidityUnits, err := calculatePoolUnits(item.oldLPUnits, item.poolRune, item.poolAsset, item.addRune, item.addAsset)
 		if item.expectedErr == nil {
 			c.Assert(err, IsNil)
 		} else {

@@ -4,21 +4,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blang/semver"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
 )
 
 func (k KVStore) GetAnchors(ctx cosmos.Context, asset common.Asset) []common.Asset {
-	isTor := false
-	// TODO: remove on hard fork
-	if k.GetVersion().GTE(semver.MustParse("1.132.0")) {
-		isTor = asset.Equals(common.TOR)
-	} else {
-		isTor = asset.GetChain().IsTHORChain()
-	}
-
+	isTor := asset.Equals(common.TOR)
 	if isTor {
 		assets := make([]common.Asset, 0)
 		pools, err := k.GetPools(ctx)

@@ -43,20 +43,22 @@ func (h ConsolidateHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Resul
 
 func (h ConsolidateHandler) validate(ctx cosmos.Context, msg MsgConsolidate) error {
 	version := h.mgr.GetVersion()
-	if version.GTE(semver.MustParse("0.1.0")) {
+	switch {
+	case version.GTE(semver.MustParse("0.1.0")):
 		return h.validateV1(ctx, msg)
+	default:
+		return errBadVersion
 	}
-	return errBadVersion
 }
 
 func (h ConsolidateHandler) validateV1(ctx cosmos.Context, msg MsgConsolidate) error {
 	return msg.ValidateBasic()
 }
 
-func (h ConsolidateHandler) slashV96(ctx cosmos.Context, tx ObservedTx) error {
+func (h ConsolidateHandler) slash(ctx cosmos.Context, tx ObservedTx) error {
 	toSlash := make(common.Coins, len(tx.Tx.Coins))
 	copy(toSlash, tx.Tx.Coins)
-	toSlash = toSlash.Adds_deprecated(tx.Tx.Gas.ToCoins())
+	toSlash = toSlash.Add(tx.Tx.Gas.ToCoins()...)
 
 	ctx = ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{ // nolint
 		telemetry.NewLabel("reason", "failed_consolidation"),
@@ -71,8 +73,6 @@ func (h ConsolidateHandler) handle(ctx cosmos.Context, msg MsgConsolidate) (*cos
 	switch {
 	case version.GTE(semver.MustParse("1.96.0")):
 		return h.handleV96(ctx, msg)
-	case version.GTE(semver.MustParse("0.1.0")):
-		return h.handleV1(ctx, msg)
 	default:
 		return nil, errBadVersion
 	}
@@ -97,8 +97,8 @@ func (h ConsolidateHandler) handleV96(ctx cosmos.Context, msg MsgConsolidate) (*
 
 	if shouldSlash {
 		ctx.Logger().Info("slash vault, invalid consolidation", "tx", msg.ObservedTx.Tx)
-		if err := h.slashV96(ctx, msg.ObservedTx); err != nil {
-			return nil, ErrInternal(err, "fail to slash account")
+		if errSlash := h.slash(ctx, msg.ObservedTx); errSlash != nil {
+			return nil, ErrInternal(errSlash, "fail to slash account")
 		}
 	}
 

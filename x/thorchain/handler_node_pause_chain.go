@@ -45,10 +45,12 @@ func (h NodePauseChainHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Re
 
 func (h NodePauseChainHandler) validate(ctx cosmos.Context, msg MsgNodePauseChain) error {
 	version := h.mgr.GetVersion()
-	if version.GTE(semver.MustParse("0.1.0")) {
+	switch {
+	case version.GTE(semver.MustParse("0.1.0")):
 		return h.validateV1(ctx, msg)
+	default:
+		return errBadVersion
 	}
-	return errBadVersion
 }
 
 func (h NodePauseChainHandler) validateV1(ctx cosmos.Context, msg MsgNodePauseChain) error {
@@ -69,10 +71,9 @@ func (h NodePauseChainHandler) handle(ctx cosmos.Context, msg MsgNodePauseChain)
 	switch {
 	case version.GTE(semver.MustParse("1.87.0")):
 		return h.handleV87(ctx, msg)
-	case version.GTE(semver.MustParse("0.1.0")):
-		return h.handleV1(ctx, msg)
+	default:
+		return errBadVersion
 	}
-	return nil
 }
 
 func (h NodePauseChainHandler) handleV87(ctx cosmos.Context, msg MsgNodePauseChain) error {

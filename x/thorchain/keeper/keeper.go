@@ -432,5 +432,4 @@ type KeeperAnchors interface {
 	AnchorMedian(ctx cosmos.Context, assets []common.Asset) cosmos.Uint
 	DollarsPerRune(ctx cosmos.Context) cosmos.Uint
 	RunePerDollar(ctx cosmos.Context) cosmos.Uint
-	DollarInRune(ctx cosmos.Context) cosmos.Uint // TODO: remove me on hard fork
 }

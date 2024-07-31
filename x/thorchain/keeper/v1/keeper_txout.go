@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/blang/semver"
-
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 )
@@ -71,16 +69,6 @@ func (k KVStore) GetTxOut(ctx cosmos.Context, height int64) (*TxOut, error) {
 }
 
 func (k KVStore) GetTxOutValue(ctx cosmos.Context, height int64) (cosmos.Uint, cosmos.Uint, error) {
-	version := k.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.128.0")):
-		return k.GetTxOutValueV128(ctx, height)
-	default:
-		return k.GetTxOutValueV1(ctx, height)
-	}
-}
-
-func (k KVStore) GetTxOutValueV128(ctx cosmos.Context, height int64) (cosmos.Uint, cosmos.Uint, error) {
 	txout, err := k.GetTxOut(ctx, height)
 	if err != nil {
 		return cosmos.ZeroUint(), cosmos.ZeroUint(), err

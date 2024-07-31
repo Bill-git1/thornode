@@ -14,10 +14,7 @@ import (
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 )
 
-var (
-	mimirValidKey    = regexp.MustCompile(`^[a-zA-Z-]+$`).MatchString
-	mimirValidKeyV95 = regexp.MustCompile(constants.MimirKeyRegex).MatchString
-)
+var mimirValidKey = regexp.MustCompile(constants.MimirKeyRegex).MatchString
 
 // MimirHandler is to handle admin messages
 type MimirHandler struct {
@@ -54,12 +51,6 @@ func (h MimirHandler) validate(ctx cosmos.Context, msg MsgMimir) error {
 	switch {
 	case version.GTE(semver.MustParse("1.114.0")):
 		return h.validateV114(ctx, msg)
-	case version.GTE(semver.MustParse("1.106.0")):
-		return h.validateV106(ctx, msg)
-	case version.GTE(semver.MustParse("1.95.0")):
-		return h.validateV95(ctx, msg)
-	case version.GTE(semver.MustParse("0.78.0")):
-		return h.validateV78(ctx, msg)
 	default:
 		return errBadVersion
 	}
@@ -69,7 +60,7 @@ func (h MimirHandler) validateV114(ctx cosmos.Context, msg MsgMimir) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
-	if !mimirValidKeyV95(msg.Key) || len(msg.Key) > 64 {
+	if !mimirValidKey(msg.Key) || len(msg.Key) > 64 {
 		return cosmos.ErrUnknownRequest("invalid mimir key")
 	}
 	if err := validateMimirAuth(ctx, h.mgr.Keeper(), msg); err != nil {
@@ -84,21 +75,10 @@ func (h MimirHandler) handle(ctx cosmos.Context, msg MsgMimir) error {
 	switch {
 	case version.GTE(semver.MustParse("1.133.0")):
 		return h.handleV133(ctx, msg)
-	case version.GTE(semver.MustParse("1.125.0")):
-		return h.handleV125(ctx, msg)
-	case version.GTE(semver.MustParse("1.124.0")):
-		return h.handleV124(ctx, msg)
-	case version.GTE(semver.MustParse("1.112.0")):
-		return h.handleV112(ctx, msg)
-	case version.GTE(semver.MustParse("1.92.0")):
-		return h.handleV92(ctx, msg)
-	case version.GTE(semver.MustParse("1.87.0")):
-		return h.handleV87(ctx, msg)
-	case version.GTE(semver.MustParse("0.81.0")):
-		return h.handleV81(ctx, msg)
+	default:
+		ctx.Logger().Error(errInvalidVersion.Error())
+		return errBadVersion
 	}
-	ctx.Logger().Error(errInvalidVersion.Error())
-	return errBadVersion
 }
 
 func (h MimirHandler) handleV133(ctx cosmos.Context, msg MsgMimir) error {
@@ -107,7 +87,7 @@ func (h MimirHandler) handleV133(ctx cosmos.Context, msg MsgMimir) error {
 	// Here, an error is assumed to mean the Mimir key is currently unset.
 
 	if isAdmin(msg.Signer) {
-		return h.handleAdminV133(ctx, msg, currentMimirValue)
+		return h.handleAdmin(ctx, msg, currentMimirValue)
 	}
 
 	// Cost and emitting of SetNodeMimir, even if a duplicate
@@ -219,7 +199,7 @@ func MimirAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper, msg
 	return validateMimirAuth(ctx, k, msg)
 }
 
-func (h MimirHandler) handleAdminV133(ctx cosmos.Context, msg MsgMimir, currentMimirValue int64) error {
+func (h MimirHandler) handleAdmin(ctx cosmos.Context, msg MsgMimir, currentMimirValue int64) error {
 	// If the Mimir key is already the submitted value, don't do anything further.
 	if msg.Value == currentMimirValue {
 		return nil

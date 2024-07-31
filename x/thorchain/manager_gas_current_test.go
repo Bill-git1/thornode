@@ -19,7 +19,7 @@ func (GasManagerTestSuiteVCUR) TestGasManagerVCUR(c *C) {
 	gasMgr := newGasMgrVCUR(constAccessor, k)
 	gasEvent := gasMgr.gasEvent
 	c.Assert(gasMgr, NotNil)
-	gasMgr.BeginBlock(mgr)
+	gasMgr.BeginBlock()
 	c.Assert(gasEvent != gasMgr.gasEvent, Equals, true)
 
 	pool := NewPool()
@@ -51,7 +51,7 @@ func (GasManagerTestSuiteVCUR) TestGetAssetOutboundFee(c *C) {
 	k := mgr.Keeper()
 	constAccessor := constants.GetConstantValues(GetCurrentVersion())
 	gasMgr := newGasMgrVCUR(constAccessor, k)
-	gasMgr.BeginBlock(mgr)
+	gasMgr.BeginBlock()
 
 	// when there is no network fee available, 0 fee and nil error should be returned
 	fee, err := gasMgr.GetAssetOutboundFee(ctx, common.AVAXAsset, true)
@@ -220,7 +220,7 @@ func (GasManagerTestSuiteVCUR) TestDifferentValidations(c *C) {
 	k := mgr.Keeper()
 	constAccessor := constants.GetConstantValues(GetCurrentVersion())
 	gasMgr := newGasMgrVCUR(constAccessor, k)
-	gasMgr.BeginBlock(mgr)
+	gasMgr.BeginBlock()
 	helper := newGasManagerTestHelper(k)
 	eventMgr := NewDummyEventMgr()
 	gasMgr.EndBlock(ctx, helper, eventMgr)

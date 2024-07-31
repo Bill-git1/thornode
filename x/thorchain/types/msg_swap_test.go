@@ -140,25 +140,25 @@ func (MsgSwapSuite) TestMsgSwap(c *C) {
 		)
 
 		m = NewMsgSwap(tx, item.target, item.destination, item.targetPrice, common.NoAddress, cosmos.ZeroUint(), "", "", nil, 0, 0, 0, item.signer)
-		c.Assert(m.ValidateBasicV63(), NotNil)
+		c.Assert(m.ValidateBasic(), NotNil)
 	}
 
 	// happy path
 	m = NewMsgSwap(tx, common.BNBAsset, GetRandomBNBAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "123", "0x123456", nil, 0, 10, 20, addr)
-	c.Assert(m.ValidateBasicV63(), IsNil)
+	c.Assert(m.ValidateBasic(), IsNil)
 	c.Check(m.Aggregator, Equals, "123")
 	c.Check(m.AggregatorTargetAddress, Equals, "0x123456")
 	c.Check(m.AggregatorTargetLimit, IsNil)
 
 	// test address and synth swapping fails when appropriate
 	m = NewMsgSwap(tx, common.BNBAsset, GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, 0, 0, 0, addr)
-	c.Assert(m.ValidateBasicV63(), NotNil)
+	c.Assert(m.ValidateBasic(), NotNil)
 	m = NewMsgSwap(tx, common.BNBAsset.GetSyntheticAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, 0, 0, 0, addr)
-	c.Assert(m.ValidateBasicV63(), IsNil)
+	c.Assert(m.ValidateBasic(), IsNil)
 	m = NewMsgSwap(tx, common.BNBAsset.GetSyntheticAsset(), GetRandomBNBAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, 0, 0, 0, addr)
-	c.Assert(m.ValidateBasicV63(), NotNil)
+	c.Assert(m.ValidateBasic(), NotNil)
 
 	// affiliate fee basis point larger than 1000 should be rejected
 	m = NewMsgSwap(tx, common.BNBAsset, GetRandomBNBAddress(), cosmos.ZeroUint(), GetRandomTHORAddress(), cosmos.NewUint(1024), "", "", nil, 0, 0, 0, addr)
-	c.Assert(m.ValidateBasicV63(), NotNil)
+	c.Assert(m.ValidateBasic(), NotNil)
 }

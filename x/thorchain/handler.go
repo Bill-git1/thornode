@@ -23,24 +23,18 @@ type MsgHandler interface {
 // NewExternalHandler returns a handler for "thorchain" type messages.
 func NewExternalHandler(mgr Manager) cosmos.Handler {
 	return func(ctx cosmos.Context, msg cosmos.Msg) (_ *cosmos.Result, err error) {
-		// TODO: remove the outer if-check on hard fork, always add deferred recover
-		if mgr.GetVersion().GTE(semver.MustParse("1.106.0")) {
-			defer func() {
-				if r := recover(); r != nil {
-					// print stack
-					stack := make([]byte, 1024)
-					length := runtime.Stack(stack, true)
-					ctx.Logger().Error("panic", "msg", msg)
-					fmt.Println(string(stack[:length]))
-					err = fmt.Errorf("panic: %v", r)
-				}
-			}()
-		}
+		defer func() {
+			if r := recover(); r != nil {
+				// print stack
+				stack := make([]byte, 1024)
+				length := runtime.Stack(stack, true)
+				ctx.Logger().Error("panic", "msg", msg)
+				fmt.Println(string(stack[:length]))
+				err = fmt.Errorf("panic: %v", r)
+			}
+		}()
 
 		ctx = ctx.WithEventManager(cosmos.NewEventManager())
-		if mgr.GetVersion().LT(semver.MustParse("1.90.0")) {
-			_ = mgr.Keeper().GetLowestActiveVersion(ctx) // TODO: remove me on hard fork
-		}
 		handlerMap := getHandlerMapping(mgr)
 		legacyMsg, ok := msg.(legacytx.LegacyMsg)
 		if !ok {
@@ -53,12 +47,9 @@ func NewExternalHandler(mgr Manager) cosmos.Handler {
 		}
 		result, err := h.Run(ctx, msg)
 		if err != nil {
-			// TODO: remove version condition on hard fork
-			if mgr.GetVersion().GTE(semver.MustParse("1.132.0")) {
-				if _, code, _ := sdkerrs.ABCIInfo(err, false); code == 1 {
-					// This would be redacted, so wrap it.
-					err = sdkerrs.Wrap(errInternal, err.Error())
-				}
+			if _, code, _ := sdkerrs.ABCIInfo(err, false); code == 1 {
+				// This would be redacted, so wrap it.
+				err = sdkerrs.Wrap(errInternal, err.Error())
 			}
 			return nil, err
 		}
@@ -107,10 +98,6 @@ func getHandlerMappingV65(mgr Manager) map[string]MsgHandler {
 // NewInternalHandler returns a handler for "thorchain" internal type messages.
 func NewInternalHandler(mgr Manager) cosmos.Handler {
 	return func(ctx cosmos.Context, msg cosmos.Msg) (*cosmos.Result, error) {
-		version := mgr.GetVersion()
-		if version.LT(semver.MustParse("1.90.0")) {
-			version = mgr.Keeper().GetLowestActiveVersion(ctx) // TODO remove me on hard fork
-		}
 		handlerMap := getInternalHandlerMapping(mgr)
 		legacyMsg, ok := msg.(legacytx.LegacyMsg)
 		if !ok {
@@ -121,42 +108,24 @@ func NewInternalHandler(mgr Manager) cosmos.Handler {
 			errMsg := fmt.Sprintf("Unrecognized thorchain Msg type: %v", legacyMsg.Type())
 			return nil, cosmos.ErrUnknownRequest(errMsg)
 		}
-		// TODO: remove if-check on hardfork. Always use CacheContext.
-		if version.GTE(semver.MustParse("1.88.1")) {
-			// CacheContext() returns a context which caches all changes and only forwards
-			// to the underlying context when commit() is called. Call commit() only when
-			// the handler succeeds, otherwise return error and the changes will be discarded.
-			// On commit, cached events also have to be explicitly emitted.
-			cacheCtx, commit := ctx.CacheContext()
-			res, err := h.Run(cacheCtx, msg)
-			if err == nil {
-				// Success, commit the cached changes and events
-				commit()
-				ctx.EventManager().EmitEvents(cacheCtx.EventManager().Events())
-			}
-			return res, err
+
+		// CacheContext() returns a context which caches all changes and only forwards
+		// to the underlying context when commit() is called. Call commit() only when
+		// the handler succeeds, otherwise return error and the changes will be discarded.
+		// On commit, cached events also have to be explicitly emitted.
+		cacheCtx, commit := ctx.CacheContext()
+		res, err := h.Run(cacheCtx, msg)
+		if err == nil {
+			// Success, commit the cached changes and events
+			commit()
+			ctx.EventManager().EmitEvents(cacheCtx.EventManager().Events())
 		}
-		return h.Run(ctx, msg)
+
+		return res, err
 	}
 }
 
 func getInternalHandlerMapping(mgr Manager) map[string]MsgHandler {
-	version := mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.134.0")):
-		return getInternalHandlerMappingV134(mgr)
-	case version.GTE(semver.MustParse("1.128.0")):
-		return getInternalHandlerMappingV128(mgr)
-	case version.GTE(semver.MustParse("1.124.0")):
-		return getInternalHandlerMappingV124(mgr)
-	case version.GTE(semver.MustParse("1.117.0")):
-		return getInternalHandlerMappingV117(mgr)
-	default:
-		return getInternalHandlerMappingV116(mgr)
-	}
-}
-
-func getInternalHandlerMappingV134(mgr Manager) map[string]MsgHandler {
 	// New arch handlers
 	m := make(map[string]MsgHandler)
 	m[MsgOutboundTx{}.Type()] = NewOutboundTxHandler(mgr)
@@ -248,16 +217,6 @@ func getMsgLeaveFromMemo(memo LeaveMemo, tx ObservedTx, signer cosmos.AccAddress
 }
 
 func getMsgLoanOpenFromMemo(ctx cosmos.Context, keeper keeper.Keeper, memo LoanOpenMemo, tx ObservedTx, signer cosmos.AccAddress, txid common.TxID) (cosmos.Msg, error) {
-	version := keeper.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.120.0")):
-		return getMsgLoanOpenFromMemoV120(ctx, keeper, memo, tx, signer, txid)
-	default:
-		return getMsgLoanOpenFromMemoV1(memo, tx, signer, txid)
-	}
-}
-
-func getMsgLoanOpenFromMemoV120(ctx cosmos.Context, keeper keeper.Keeper, memo LoanOpenMemo, tx ObservedTx, signer cosmos.AccAddress, txid common.TxID) (cosmos.Msg, error) {
 	memo.TargetAsset = fuzzyAssetMatch(ctx, keeper, memo.TargetAsset)
 	return NewMsgLoanOpen(tx.Tx.FromAddress, tx.Tx.Coins[0].Asset, tx.Tx.Coins[0].Amount, memo.TargetAddress, memo.TargetAsset, memo.GetMinOut(), memo.GetAffiliateAddress(), memo.GetAffiliateBasisPoints(), memo.GetDexAggregator(), memo.GetDexTargetAddress(), memo.DexTargetLimit, signer, txid), nil
 }
@@ -282,27 +241,7 @@ func getMsgManageTHORNameFromMemo(memo ManageTHORNameMemo, tx ObservedTx, signer
 	return NewMsgManageTHORName(memo.Name, memo.Chain, memo.Address, tx.Tx.Coins[0], memo.Expire, memo.PreferredAsset, memo.Owner, signer), nil
 }
 
-func processOneTxIn(ctx cosmos.Context, version semver.Version, keeper keeper.Keeper, tx ObservedTx, signer cosmos.AccAddress) (cosmos.Msg, error) {
-	switch {
-	case version.GTE(semver.MustParse("1.134.0")):
-		return processOneTxInV134(ctx, keeper, tx, signer)
-	case version.GTE(semver.MustParse("1.128.0")):
-		return processOneTxInV128(ctx, keeper, tx, signer)
-	case version.GTE(semver.MustParse("1.124.0")):
-		return processOneTxInV124(ctx, keeper, tx, signer)
-	case version.GTE(semver.MustParse("1.120.0")):
-		return processOneTxInV120(ctx, keeper, tx, signer)
-	case version.GTE(semver.MustParse("1.117.0")):
-		return processOneTxInV117(ctx, keeper, tx, signer)
-	case version.GTE(semver.MustParse("1.107.0")):
-		return processOneTxInV107(ctx, keeper, tx, signer)
-	case version.GTE(semver.MustParse("0.63.0")):
-		return processOneTxInV63(ctx, keeper, tx, signer)
-	}
-	return nil, errBadVersion
-}
-
-func processOneTxInV134(ctx cosmos.Context, keeper keeper.Keeper, tx ObservedTx, signer cosmos.AccAddress) (cosmos.Msg, error) {
+func processOneTxIn(ctx cosmos.Context, keeper keeper.Keeper, tx ObservedTx, signer cosmos.AccAddress) (cosmos.Msg, error) {
 	if len(tx.Tx.Coins) != 1 {
 		return nil, cosmos.ErrInvalidCoins("only send 1 coins per message")
 	}
@@ -357,10 +296,7 @@ func processOneTxInV134(ctx cosmos.Context, keeper keeper.Keeper, tx ObservedTx,
 		newMsg, err = getMsgLoanOpenFromMemo(ctx, keeper, m, tx, signer, tx.Tx.ID)
 	case LoanRepaymentMemo:
 		m.Asset = fuzzyAssetMatch(ctx, keeper, m.Asset)
-		from := common.NoAddress
-		if keeper.GetVersion().GTE(semver.MustParse("1.110.0")) {
-			from = tx.Tx.FromAddress
-		}
+		from := tx.Tx.FromAddress
 		newMsg, err = getMsgLoanRepaymentFromMemo(m, from, tx.Tx.Coins[0], signer, tx.Tx.ID)
 	case TradeAccountDepositMemo:
 		coin := tx.Tx.Coins[0]
@@ -379,38 +315,10 @@ func processOneTxInV134(ctx cosmos.Context, keeper keeper.Keeper, tx ObservedTx,
 	if err != nil {
 		return newMsg, err
 	}
-	// MsgAddLiquidity & MsgSwap has a new version of validateBasic
-	switch m := newMsg.(type) {
-	case *MsgAddLiquidity:
-		switch {
-		case keeper.GetVersion().GTE(semver.MustParse("1.98.0")):
-			return newMsg, m.ValidateBasicV98()
-		case keeper.GetVersion().GTE(semver.MustParse("1.93.0")):
-			return newMsg, m.ValidateBasicV93()
-		default:
-			return newMsg, m.ValidateBasicV63()
-		}
-	case *MsgSwap:
-		return newMsg, m.ValidateBasicV63()
-	}
 	return newMsg, newMsg.ValidateBasic()
 }
 
-func fuzzyAssetMatch(ctx cosmos.Context, keeper keeper.Keeper, asset common.Asset) common.Asset {
-	version := keeper.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.126.0")):
-		return fuzzyAssetMatchV126(ctx, keeper, asset)
-	case version.GTE(semver.MustParse("1.103.0")):
-		return fuzzyAssetMatchV103(ctx, keeper, asset)
-	case version.GTE(semver.MustParse("1.83.0")):
-		return fuzzyAssetMatchV83(ctx, keeper, asset)
-	default:
-		return fuzzyAssetMatchV1(ctx, keeper, asset)
-	}
-}
-
-func fuzzyAssetMatchV126(ctx cosmos.Context, keeper keeper.Keeper, origAsset common.Asset) common.Asset {
+func fuzzyAssetMatch(ctx cosmos.Context, keeper keeper.Keeper, origAsset common.Asset) common.Asset {
 	asset := origAsset.GetLayer1Asset()
 	// if it's already an exact match with successfully-added liquidity, return it immediately
 	pool, err := keeper.GetPool(ctx, asset)
@@ -471,19 +379,6 @@ func fuzzyAssetMatchV126(ctx cosmos.Context, keeper keeper.Keeper, origAsset com
 }
 
 func externalAssetMatch(version semver.Version, chain common.Chain, hint string) string {
-	switch {
-	case version.GTE(semver.MustParse("1.126.0")):
-		return externalAssetMatchV126(version, chain, hint)
-	case version.GTE(semver.MustParse("1.95.0")):
-		return externalAssetMatchV95(version, chain, hint)
-	case version.GTE(semver.MustParse("1.93.0")):
-		return externalAssetMatchV93(version, chain, hint)
-	default:
-		return hint
-	}
-}
-
-func externalAssetMatchV126(version semver.Version, chain common.Chain, hint string) string {
 	if len(hint) == 0 {
 		return hint
 	}

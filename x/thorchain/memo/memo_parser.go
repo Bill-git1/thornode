@@ -28,9 +28,7 @@ func newParser(ctx cosmos.Context, keeper keeper.Keeper, version semver.Version,
 	if len(memo) == 0 {
 		return parser{}, fmt.Errorf("memo can't be empty")
 	}
-	if version.GTE(semver.MustParse("1.115.0")) {
-		memo = strings.Split(memo, "|")[0]
-	}
+	memo = strings.Split(memo, "|")[0]
 	parts := strings.Split(memo, ":")
 	memoType, err := StringToTxType(parts[0])
 	if err != nil {
@@ -78,9 +76,6 @@ func (p *parser) parse() (mem Memo, err error) {
 	case TxRunePoolWithdraw:
 		return p.ParseRunePoolWithdrawMemo()
 	case TxSwap, TxLimitOrder:
-		if p.getType() == TxLimitOrder && p.version.LT(semver.MustParse("1.98.0")) {
-			return EmptyMemo, fmt.Errorf("TxType not supported: %s", p.getType().String())
-		}
 		return p.ParseSwapMemo()
 	case TxOutbound:
 		return p.ParseOutboundMemo()
@@ -110,23 +105,6 @@ func (p *parser) parse() (mem Memo, err error) {
 		return p.ParseTradeAccountDeposit()
 	case TxTradeAccountWithdrawal:
 		return p.ParseTradeAccountWithdrawal()
-
-	case TxSwitch: // TODO remove on hard fork
-		if p.version.GTE(semver.MustParse("1.117.0")) {
-			return EmptyMemo, fmt.Errorf("TxType not supported: %s", p.getType().String())
-		}
-		return p.ParseSwitchMemo()
-	case TxYggdrasilFund: // TODO remove on hard fork
-		if p.version.GTE(semver.MustParse("1.124.0")) {
-			return EmptyMemo, fmt.Errorf("TxType not supported: %s", p.getType().String())
-		}
-		return p.ParseYggdrasilFundMemo()
-	case TxYggdrasilReturn: // TODO remove on hard fork
-		if p.version.GTE(semver.MustParse("1.124.0")) {
-			return EmptyMemo, fmt.Errorf("TxType not supported: %s", p.getType().String())
-		}
-		return p.ParseYggdrasilReturnMemo()
-
 	default:
 		return EmptyMemo, fmt.Errorf("TxType not supported: %s", p.getType().String())
 	}
@@ -316,10 +294,6 @@ func (p *parser) getAsset(idx int, required bool, def common.Asset) common.Asset
 	if err != nil && (required || p.get(idx) != "") {
 		p.addErr(fmt.Errorf("cannot parse '%s' as an asset: %w", p.get(idx), err))
 		return def
-	}
-	if value.IsTradeAsset() && p.version.LT(semver.MustParse("1.128.0")) {
-		p.addErr(fmt.Errorf("trade assets are not yet supported: %s", p.get(idx)))
-		return common.EmptyAsset
 	}
 	return value
 }

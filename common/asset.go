@@ -90,8 +90,6 @@ func NewAssetWithShortCodes(version semver.Version, input string) (Asset, error)
 	switch {
 	case version.GTE(semver.MustParse("1.124.0")):
 		return NewAssetWithShortCodesV124(input)
-	case version.GTE(semver.MustParse("1.115.0")):
-		return NewAssetWithShortCodesV115(input)
 	default:
 		return NewAsset(input)
 	}

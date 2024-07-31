@@ -70,6 +70,5 @@ func (m DummyMgr) ObMgr() ObserverManager                   { return m.obMgr }
 func (m DummyMgr) PoolMgr() PoolManager                     { return m.poolMgr }
 func (m DummyMgr) SwapQ() SwapQueue                         { return m.swapQ }
 func (m DummyMgr) Slasher() Slasher                         { return m.slasher }
-func (m DummyMgr) YggManager() YggManager                   { return nil } // TODO remove on hard fork
 func (m DummyMgr) OrderBookMgr() OrderBook                  { return m.orderBook }
 func (m DummyMgr) TradeAccountManager() TradeAccountManager { return m.tradeMgr }

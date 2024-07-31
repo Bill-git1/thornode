@@ -41,10 +41,12 @@ func (h ErrataTxHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, 
 
 func (h ErrataTxHandler) validate(ctx cosmos.Context, msg MsgErrataTx) error {
 	version := h.mgr.GetVersion()
-	if version.GTE(semver.MustParse("0.1.0")) {
+	switch {
+	case version.GTE(semver.MustParse("0.1.0")):
 		return h.validateV1(ctx, msg)
+	default:
+		return errBadVersion
 	}
-	return errBadVersion
 }
 
 func (h ErrataTxHandler) validateV1(ctx cosmos.Context, msg MsgErrataTx) error {
@@ -65,10 +67,6 @@ func (h ErrataTxHandler) handle(ctx cosmos.Context, msg MsgErrataTx) (*cosmos.Re
 	switch {
 	case version.GTE(semver.MustParse("1.134.0")):
 		return h.handleV134(ctx, msg)
-	case version.GTE(semver.MustParse("1.123.0")):
-		return h.handleV123(ctx, msg)
-	case version.GTE(semver.MustParse("0.58.0")):
-		return h.handleV58(ctx, msg)
 	default:
 		ctx.Logger().Error(errInvalidVersion.Error())
 		return nil, errBadVersion
@@ -154,11 +152,13 @@ func (h ErrataTxHandler) handleV134(ctx cosmos.Context, msg MsgErrataTx) (*cosmo
 		vaultPubKey := observedVoter.Tx.ObservedPubKey
 		if !vaultPubKey.IsEmpty() {
 			// try to deduct the asset from asgard
+			// trunk-ignore(golangci-lint/govet): shadow
 			vault, err := h.mgr.Keeper().GetVault(ctx, vaultPubKey)
 			if err != nil {
 				return nil, fmt.Errorf("fail to get active asgard vaults: %w", err)
 			}
 			vault.SubFunds(tx.Coins)
+			// trunk-ignore(golangci-lint/govet): shadow
 			if err := h.mgr.Keeper().SetVault(ctx, vault); err != nil {
 				return nil, fmt.Errorf("fail to save vault, err: %w", err)
 			}
@@ -208,6 +208,7 @@ func (h ErrataTxHandler) handleV134(ctx cosmos.Context, msg MsgErrataTx) (*cosmo
 	pool.BalanceRune = common.SafeSub(pool.BalanceRune, runeCoin.Amount)
 	pool.BalanceAsset = common.SafeSub(pool.BalanceAsset, assetCoin.Amount)
 	if memo.IsType(TxAdd) {
+		// trunk-ignore(golangci-lint/govet): shadow
 		lp, err := h.mgr.Keeper().GetLiquidityProvider(ctx, pool.Asset, tx.FromAddress)
 		if err != nil {
 			return nil, fmt.Errorf("fail to get liquidity provider: %w", err)
@@ -221,6 +222,7 @@ func (h ErrataTxHandler) handleV134(ctx cosmos.Context, msg MsgErrataTx) (*cosmo
 		h.mgr.Keeper().SetLiquidityProvider(ctx, lp)
 	}
 
+	// trunk-ignore(golangci-lint/govet): shadow
 	if err := h.mgr.Keeper().SetPool(ctx, pool); err != nil {
 		ctx.Logger().Error("fail to save pool", "error", err)
 	}
@@ -237,22 +239,9 @@ func (h ErrataTxHandler) handleV134(ctx cosmos.Context, msg MsgErrataTx) (*cosmo
 	return &cosmos.Result{}, nil
 }
 
-func (h ErrataTxHandler) processErrataOutboundTx(ctx cosmos.Context, msg MsgErrataTx) (*cosmos.Result, error) {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.134.0")):
-		return h.processErrataOutboundTxV134(ctx, msg)
-	case version.GTE(semver.MustParse("1.124.0")):
-		return h.processErrataOutboundTxV124(ctx, msg)
-	case version.GTE(semver.MustParse("0.65.0")):
-		return h.processErrataOutboundTxV65(ctx, msg)
-	}
-	return nil, errBadVersion
-}
-
 // processErrataOutboundTx when the network detect an outbound tx which previously had been sent out to customer , however it get re-org , and it doesn't
 // exist on the external chain anymore , then it will need to reschedule the tx
-func (h ErrataTxHandler) processErrataOutboundTxV134(ctx cosmos.Context, msg MsgErrataTx) (*cosmos.Result, error) {
+func (h ErrataTxHandler) processErrataOutboundTx(ctx cosmos.Context, msg MsgErrataTx) (*cosmos.Result, error) {
 	txOutVoter, err := h.mgr.Keeper().GetObservedTxOutVoter(ctx, msg.GetTxID())
 	if err != nil {
 		return nil, fmt.Errorf("fail to get observed tx out voter for tx (%s) : %w", msg.GetTxID(), err)
@@ -277,6 +266,7 @@ func (h ErrataTxHandler) processErrataOutboundTxV134(ctx cosmos.Context, msg Msg
 	}
 	vaultPubKey := txOutVoter.Tx.ObservedPubKey
 	if !vaultPubKey.IsEmpty() {
+		// trunk-ignore(golangci-lint/govet): shadow
 		v, err := h.mgr.Keeper().GetVault(ctx, vaultPubKey)
 		if err != nil {
 			return nil, fmt.Errorf("fail to get vault with pubkey %s: %w", vaultPubKey, err)
@@ -294,6 +284,7 @@ func (h ErrataTxHandler) processErrataOutboundTxV134(ctx cosmos.Context, msg Msg
 		}
 
 		if !v.IsEmpty() {
+			// trunk-ignore(golangci-lint/govet): shadow
 			if err := h.mgr.Keeper().SetVault(ctx, v); err != nil {
 				return nil, fmt.Errorf("fail to save vault: %w", err)
 			}
@@ -304,6 +295,7 @@ func (h ErrataTxHandler) processErrataOutboundTxV134(ctx cosmos.Context, msg Msg
 					// it is using native rune, so outbound can't be RUNE
 					continue
 				}
+				// trunk-ignore(golangci-lint/govet): shadow
 				p, err := h.mgr.Keeper().GetPool(ctx, coin.Asset)
 				if err != nil {
 					return nil, fmt.Errorf("fail to get pool(%s): %w", coin.Asset, err)
@@ -311,11 +303,13 @@ func (h ErrataTxHandler) processErrataOutboundTxV134(ctx cosmos.Context, msg Msg
 				runeValue := p.AssetValueInRune(coin.Amount)
 				p.BalanceRune = p.BalanceRune.Add(runeValue)
 				p.BalanceAsset = common.SafeSub(p.BalanceAsset, coin.Amount)
+				// trunk-ignore(golangci-lint/govet): shadow
 				if err := h.mgr.Keeper().SendFromModuleToModule(ctx, ReserveName, AsgardName, common.Coins{
 					common.NewCoin(common.RuneAsset(), runeValue),
 				}); err != nil {
 					return nil, fmt.Errorf("fail to send fund from reserve to asgard: %w", err)
 				}
+				// trunk-ignore(golangci-lint/govet): shadow
 				if err := h.mgr.Keeper().SetPool(ctx, p); err != nil {
 					return nil, fmt.Errorf("fail to save pool (%s) : %w", p.Asset, err)
 				}
@@ -325,6 +319,7 @@ func (h ErrataTxHandler) processErrataOutboundTxV134(ctx cosmos.Context, msg Msg
 				}
 
 				eventErrata := NewEventErrata(msg.TxID, mods)
+				// trunk-ignore(golangci-lint/govet): shadow
 				if err := h.mgr.EventMgr().EmitEvent(ctx, eventErrata); err != nil {
 					return nil, ErrInternal(err, "fail to emit errata event")
 				}
@@ -334,6 +329,7 @@ func (h ErrataTxHandler) processErrataOutboundTxV134(ctx cosmos.Context, msg Msg
 
 	// emit security event
 	event := NewEventSecurity(tx, "outbound errata")
+	// trunk-ignore(golangci-lint/govet): shadow
 	if err := h.mgr.EventMgr().EmitEvent(ctx, event); err != nil {
 		return nil, ErrInternal(err, "fail to emit security event")
 	}

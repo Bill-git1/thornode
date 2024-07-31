@@ -3,7 +3,6 @@ package thorchain
 import (
 	"fmt"
 
-	"github.com/blang/semver"
 	"gitlab.com/thorchain/thornode/common"
 )
 
@@ -28,15 +27,6 @@ func NewRefundMemo(txID common.TxID) RefundMemo {
 }
 
 func (p *parser) ParseRefundMemo() (RefundMemo, error) {
-	switch {
-	case p.version.GTE(semver.MustParse("1.116.0")):
-		return p.ParseRefundMemoV116()
-	default:
-		return ParseRefundMemoV1(p.parts)
-	}
-}
-
-func (p *parser) ParseRefundMemoV116() (RefundMemo, error) {
 	txID := p.getTxID(1, true, common.BlankTxID)
 	return NewRefundMemo(txID), p.Error()
 }

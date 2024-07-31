@@ -51,14 +51,6 @@ func (h BondHandler) validate(ctx cosmos.Context, msg MsgBond) error {
 	switch {
 	case version.GTE(semver.MustParse("1.134.0")):
 		return h.validateV134(ctx, msg)
-	case version.GTE(semver.MustParse("1.96.0")):
-		return h.validateV96(ctx, msg)
-	case version.GTE(semver.MustParse("1.95.0")):
-		return h.validateV95(ctx, msg)
-	case version.GTE(semver.MustParse("1.88.0")):
-		return h.validateV88(ctx, msg)
-	case version.GTE(semver.MustParse("0.81.0")):
-		return h.validateV81(ctx, msg)
 	default:
 		return errBadVersion
 	}
@@ -80,11 +72,9 @@ func (h BondHandler) validateV134(ctx cosmos.Context, msg MsgBond) error {
 		return ErrInternal(err, "cannot add bond while node is ready status")
 	}
 
-	if h.mgr.GetVersion().GTE(semver.MustParse("1.88.1")) {
-		bondPause := h.mgr.Keeper().GetConfigInt64(ctx, constants.PauseBond)
-		if bondPause > 0 {
-			return ErrInternal(err, "bonding has been paused")
-		}
+	bondPause := h.mgr.Keeper().GetConfigInt64(ctx, constants.PauseBond)
+	if bondPause > 0 {
+		return ErrInternal(err, "bonding has been paused")
 	}
 
 	bond := msg.Bond.Add(nodeAccount.Bond)
@@ -139,20 +129,9 @@ func (h BondHandler) handle(ctx cosmos.Context, msg MsgBond) error {
 	switch {
 	case version.GTE(semver.MustParse("1.105.0")):
 		return h.handleV105(ctx, msg)
-	case version.GTE(semver.MustParse("1.103.0")):
-		return h.handleV103(ctx, msg)
-	case version.GTE(semver.MustParse("1.95.0")):
-		return h.handleV95(ctx, msg)
-	case version.GTE(semver.MustParse("1.88.0")):
-		return h.handleV88(ctx, msg)
-	case version.GTE(semver.MustParse("1.87.0")):
-		return h.handleV87(ctx, msg)
-	case version.GTE(semver.MustParse("1.86.0")):
-		return h.handleV86(ctx, msg)
-	case version.GTE(semver.MustParse("0.81.0")):
-		return h.handleV81(ctx, msg)
+	default:
+		return errBadVersion
 	}
-	return errBadVersion
 }
 
 func (h BondHandler) handleV105(ctx cosmos.Context, msg MsgBond) error {
@@ -185,7 +164,7 @@ func (h BondHandler) handleV105(ctx cosmos.Context, msg MsgBond) error {
 		return err
 	}
 	// Re-distribute current bond if needed
-	bp.Adjust(h.mgr.GetVersion(), nodeAccount.Bond)
+	bp.Adjust(nodeAccount.Bond)
 
 	nodeAccount.Bond = nodeAccount.Bond.Add(msg.Bond)
 
@@ -195,6 +174,7 @@ func (h BondHandler) handleV105(ctx cosmos.Context, msg MsgBond) error {
 	// so as the node address will be created on THORChain otherwise node account won't be able to send tx
 	if acct == nil && nodeAccount.Bond.GTE(cosmos.NewUint(common.One)) {
 		coin := common.NewCoin(common.RuneNative, cosmos.NewUint(common.One))
+		// trunk-ignore(golangci-lint/govet): shadow
 		if err := h.mgr.Keeper().SendFromModuleToAccount(ctx, BondName, msg.NodeAddress, common.NewCoins(coin)); err != nil {
 			ctx.Logger().Error("fail to send one RUNE to node address", "error", err)
 			nodeAccount.Status = NodeUnknown
@@ -205,6 +185,7 @@ func (h BondHandler) handleV105(ctx cosmos.Context, msg MsgBond) error {
 		tx.ID = common.BlankTxID
 		tx.ToAddress = common.Address(nodeAccount.String())
 		bondEvent := NewEventBond(cosmos.NewUint(common.One), BondCost, tx)
+		// trunk-ignore(golangci-lint/govet): shadow
 		if err := h.mgr.EventMgr().EmitEvent(ctx, bondEvent); err != nil {
 			ctx.Logger().Error("fail to emit bond event", "error", err)
 		}
@@ -212,6 +193,7 @@ func (h BondHandler) handleV105(ctx cosmos.Context, msg MsgBond) error {
 
 	// if bonder is node operator, add additional bonding address
 	if msg.BondAddress.Equals(nodeAccount.BondAddress) && !msg.BondProviderAddress.Empty() {
+		// trunk-ignore(golangci-lint/govet): shadow
 		max, err := h.mgr.Keeper().GetMimir(ctx, constants.MaxBondProviders.String())
 		if err != nil || max < 0 {
 			max = h.mgr.GetConstants().GetInt64Value(constants.MaxBondProviders)

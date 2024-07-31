@@ -3,7 +3,6 @@ package thorchain
 import (
 	"strings"
 
-	"github.com/blang/semver"
 	"gitlab.com/thorchain/thornode/common"
 	cosmos "gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
@@ -35,15 +34,6 @@ func NewRunePoolDepositMemo() RunePoolDepositMemo {
 }
 
 func (p *parser) ParseRunePoolDepositMemo() (RunePoolDepositMemo, error) {
-	switch {
-	case p.version.GTE(semver.MustParse("1.134.0")):
-		return p.ParseRunePoolDepositMemoV134()
-	default:
-		return RunePoolDepositMemo{}, nil
-	}
-}
-
-func (p *parser) ParseRunePoolDepositMemoV134() (RunePoolDepositMemo, error) {
 	return NewRunePoolDepositMemo(), nil
 }
 
@@ -81,15 +71,6 @@ func NewRunePoolWithdrawMemo(basisPoints cosmos.Uint, affAddr common.Address, af
 }
 
 func (p *parser) ParseRunePoolWithdrawMemo() (RunePoolWithdrawMemo, error) {
-	switch {
-	case p.version.GTE(semver.MustParse("1.134.0")):
-		return p.ParseRunePoolWithdrawMemoV134()
-	default:
-		return RunePoolWithdrawMemo{}, nil
-	}
-}
-
-func (p *parser) ParseRunePoolWithdrawMemoV134() (RunePoolWithdrawMemo, error) {
 	basisPoints := p.getUint(1, true, cosmos.ZeroInt().Uint64())
 	affiliateAddress := p.getAddressWithKeeper(2, false, common.NoAddress, common.THORChain)
 	tn := p.getTHORName(2, false, types.NewTHORName("", 0, nil))

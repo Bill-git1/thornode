@@ -119,7 +119,7 @@ func (k KVStore) RemoveLowBondValidatorAccounts(ctx cosmos.Context) error {
 				continue
 			}
 
-			bps.Adjust(k.GetVersion(), na.Bond)
+			bps.Adjust(na.Bond)
 			totalSent := cosmos.ZeroUint()
 			for _, provider := range bps.Providers {
 				if provider.Bond.IsZero() || provider.BondAddress.Empty() {
@@ -149,10 +149,6 @@ func (k KVStore) RemoveLowBondValidatorAccounts(ctx cosmos.Context) error {
 
 // GetMinJoinVersion - get min version to join. Min version is the most popular version
 func (k KVStore) GetMinJoinVersion(ctx cosmos.Context) semver.Version {
-	return k.getMinJoinVersionV1(ctx)
-}
-
-func (k KVStore) getMinJoinVersionV1(ctx cosmos.Context) semver.Version {
 	type tmpVersionInfo struct {
 		version semver.Version
 		count   int
@@ -284,25 +280,14 @@ func (k KVStore) EnsureNodeKeysUnique(ctx cosmos.Context, consensusPubKey string
 			return dbError(ctx, "", fmt.Errorf("%s already exist", na.ValidatorConsPubKey))
 		}
 
-		v, _ := k.GetVersionWithCtx(ctx)
-		if v.GTE(semver.MustParse("1.115.0")) {
-			if pubKeys.IsEmpty() {
-				return dbError(ctx, "", errors.New("PubKeySet cannot be empty"))
-			}
-			if na.PubKeySet.Contains(pubKeys.Secp256k1) {
-				return dbError(ctx, "", fmt.Errorf("%s already exist", pubKeys))
-			}
-			if na.PubKeySet.Contains(pubKeys.Ed25519) {
-				return dbError(ctx, "", fmt.Errorf("%s already exist", pubKeys))
-			}
-		} else {
-			// TODO remove on hard fork
-			if pubKeys.Equals(common.EmptyPubKeySet) {
-				return dbError(ctx, "", errors.New("PubKeySet cannot be empty"))
-			}
-			if na.PubKeySet.Equals(pubKeys) {
-				return dbError(ctx, "", fmt.Errorf("%s already exist", pubKeys))
-			}
+		if pubKeys.IsEmpty() {
+			return dbError(ctx, "", errors.New("PubKeySet cannot be empty"))
+		}
+		if na.PubKeySet.Contains(pubKeys.Secp256k1) {
+			return dbError(ctx, "", fmt.Errorf("%s already exist", pubKeys))
+		}
+		if na.PubKeySet.Contains(pubKeys.Ed25519) {
+			return dbError(ctx, "", fmt.Errorf("%s already exist", pubKeys))
 		}
 	}
 

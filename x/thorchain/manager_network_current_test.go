@@ -373,7 +373,7 @@ func (s *NetworkManagerVCURTestSuite) TestSaverYieldFunc(c *C) {
 	pool.BalanceRune = cosmos.NewUint(100 * common.One)
 	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
 	pool.LPUnits = cosmos.NewUint(100)
-	pool.CalcUnits(mgr.GetVersion(), coin.Amount)
+	pool.CalcUnits(coin.Amount)
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
 
 	c.Assert(net.paySaverYield(ctx, common.BTCAsset, cosmos.NewUint(50*common.One)), IsNil)
@@ -405,7 +405,7 @@ func (s *NetworkManagerVCURTestSuite) TestSaverYieldCall(c *C) {
 	pool.BalanceRune = cosmos.NewUint(100 * common.One)
 	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
 	pool.LPUnits = cosmos.NewUint(100)
-	pool.CalcUnits(mgr.GetVersion(), coin.Amount)
+	pool.CalcUnits(coin.Amount)
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
 
 	// Vault for getVaultsLiquidityRune.
@@ -790,7 +790,7 @@ func (*NetworkManagerVCURTestSuite) TestFairMergePOLCycle(c *C) {
 
 	// synth liability should be 10%
 	synthSupply := mgr.Keeper().GetTotalSupply(ctx, pool.Asset.GetSyntheticAsset())
-	pool.CalcUnits(mgr.GetVersion(), synthSupply)
+	pool.CalcUnits(synthSupply)
 	liability := common.GetUncappedShare(pool.SynthUnits, pool.GetPoolUnits(), cosmos.NewUint(10_000))
 	c.Assert(liability.String(), Equals, "1000")
 
@@ -806,7 +806,7 @@ func (*NetworkManagerVCURTestSuite) TestFairMergePOLCycle(c *C) {
 
 	// synth liability should still be 10%
 	synthSupply = mgr.Keeper().GetTotalSupply(ctx, pool.Asset.GetSyntheticAsset())
-	pool.CalcUnits(mgr.GetVersion(), synthSupply)
+	pool.CalcUnits(synthSupply)
 	liability = common.GetUncappedShare(pool.SynthUnits, pool.GetPoolUnits(), cosmos.NewUint(10_000))
 	c.Assert(liability.String(), Equals, "1000")
 
@@ -828,7 +828,7 @@ func (*NetworkManagerVCURTestSuite) TestFairMergePOLCycle(c *C) {
 
 	// synth liability should still be 10%
 	synthSupply = mgr.Keeper().GetTotalSupply(ctx, pool.Asset.GetSyntheticAsset())
-	pool.CalcUnits(mgr.GetVersion(), synthSupply)
+	pool.CalcUnits(synthSupply)
 	liability = common.GetUncappedShare(pool.SynthUnits, pool.GetPoolUnits(), cosmos.NewUint(10_000))
 	c.Assert(liability.String(), Equals, "1000")
 
@@ -843,12 +843,12 @@ func (*NetworkManagerVCURTestSuite) TestFairMergePOLCycle(c *C) {
 
 	// synth liability should still be 10%
 	synthSupply = mgr.Keeper().GetTotalSupply(ctx, pool.Asset.GetSyntheticAsset())
-	pool.CalcUnits(mgr.GetVersion(), synthSupply)
+	pool.CalcUnits(synthSupply)
 	liability = common.GetUncappedShare(pool.SynthUnits, pool.GetPoolUnits(), cosmos.NewUint(10_000))
 	c.Assert(liability.String(), Equals, "1000")
 
 	synthSupply = mgr.Keeper().GetTotalSupply(ctx, btcPool.Asset.GetSyntheticAsset())
-	btcPool.CalcUnits(mgr.GetVersion(), synthSupply)
+	btcPool.CalcUnits(synthSupply)
 	liability = common.GetUncappedShare(btcPool.SynthUnits, btcPool.GetPoolUnits(), cosmos.NewUint(10_000))
 	c.Assert(liability.String(), Equals, "1000")
 

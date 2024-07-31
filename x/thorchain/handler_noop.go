@@ -41,10 +41,12 @@ func (h NoOpHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, erro
 
 func (h NoOpHandler) validate(ctx cosmos.Context, msg MsgNoOp) error {
 	version := h.mgr.GetVersion()
-	if version.GTE(semver.MustParse("0.1.0")) {
+	switch {
+	case version.GTE(semver.MustParse("0.1.0")):
 		return h.validateV1(ctx, msg)
+	default:
+		return errBadVersion
 	}
-	return errBadVersion
 }
 
 func (h NoOpHandler) validateV1(ctx cosmos.Context, msg MsgNoOp) error {
@@ -55,10 +57,12 @@ func (h NoOpHandler) validateV1(ctx cosmos.Context, msg MsgNoOp) error {
 // it simply increase the pool asset/RUNE balance but without taking any of the pool units
 func (h NoOpHandler) handle(ctx cosmos.Context, msg MsgNoOp) error {
 	version := h.mgr.GetVersion()
-	if version.GTE(semver.MustParse("0.1.0")) {
+	switch {
+	case version.GTE(semver.MustParse("0.1.0")):
 		return h.handleV1(ctx, msg)
+	default:
+		return errBadVersion
 	}
-	return errBadVersion
 }
 
 func (h NoOpHandler) handleV1(ctx cosmos.Context, msg MsgNoOp) error {

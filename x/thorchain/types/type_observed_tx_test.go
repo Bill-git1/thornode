@@ -257,11 +257,10 @@ func (TypeObservedTxSuite) TestSetTxToComplete(c *C) {
 		GasRate:     1,
 	}
 	voter.Actions = append(voter.Actions, toi)
-	version := GetCurrentVersion()
-	c.Assert(voter.AddOutTx(version, tx), Equals, true)
+	c.Assert(voter.AddOutTx(tx), Equals, true)
 	// add it again should return true, but without any real action
-	c.Assert(voter.AddOutTx(version, tx), Equals, true)
-	c.Assert(voter.AddOutTx(version, GetRandomTx()), Equals, false)
+	c.Assert(voter.AddOutTx(tx), Equals, true)
+	c.Assert(voter.AddOutTx(GetRandomTx()), Equals, false)
 	c.Assert(voter.Tx.Status, Equals, Status_done)
 	c.Assert(voter.Tx.OutHashes[0], Equals, tx.ID.String())
 
@@ -319,11 +318,10 @@ func (TypeObservedTxSuite) TestAddOutTx(c *C) {
 		},
 	}
 	voter.Actions = append(voter.Actions, toi)
-	version := GetCurrentVersion()
-	c.Assert(voter.AddOutTx(version, tx), Equals, true)
+	c.Assert(voter.AddOutTx(tx), Equals, true)
 	// add it again should return true, but without any real action
-	c.Assert(voter.AddOutTx(version, tx), Equals, true)
-	c.Assert(voter.AddOutTx(version, GetRandomTx()), Equals, false)
+	c.Assert(voter.AddOutTx(tx), Equals, true)
+	c.Assert(voter.AddOutTx(GetRandomTx()), Equals, false)
 	if !voter.Tx.IsEmpty() {
 		c.Assert(voter.Tx.Status, Equals, Status_done)
 		c.Assert(voter.Tx.OutHashes[0], Equals, tx.ID.String())
@@ -452,9 +450,8 @@ func (TypeObservedTxSuite) TestObservedTxVote(c *C) {
 	observedTx1 := NewObservedTx(observedTx.Tx, 1024, GetRandomPubKey(), 1024)
 	c.Assert(observedTx.Equals(observedTx1), Equals, false)
 	txID := GetRandomTxHash()
-	version := GetCurrentVersion()
-	observedTx1.SetDone(version, txID, 2)
-	observedTx1.SetDone(version, txID, 2)
+	observedTx1.SetDone(txID, 2)
+	observedTx1.SetDone(txID, 2)
 	c.Check(observedTx1.IsDone(2), Equals, false)
 }
 
@@ -621,7 +618,7 @@ func (TypeObservedTxSuite) TestNewGetConsensusTx(c *C) {
 	c.Assert(voter.HasConsensus(trusts4), Equals, true)
 	tx := voter.GetTx(trusts4)
 
-	c.Assert(tx.Tx.Equals(tx1), Equals, true)
+	c.Assert(tx.Tx.EqualsEx(tx1), Equals, true)
 	c.Assert(voter.Add(obTx3, acc2), Equals, true)
 	c.Assert(voter.Add(obTx3, acc3), Equals, true)
 	c.Assert(voter.Add(obTx3, acc4), Equals, true)

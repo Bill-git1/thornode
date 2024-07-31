@@ -412,35 +412,32 @@ func (k KVStore) BurnFromModule(ctx cosmos.Context, module string, coin common.C
 }
 
 func (k KVStore) MintToModule(ctx cosmos.Context, module string, coin common.Coin) error {
-	version := k.GetVersion()
-	if version.GTE(semver.MustParse("1.111.0")) {
-		// circuit breaker
-		// mint new rune coins until we hit the cap (500m). Once we do, borrow
-		// from the reserve instead of minting new tokens
-		maxAmt, _ := k.GetMimir(ctx, constants.MaxRuneSupply.String())
-		if coin.Asset.IsNativeRune() && maxAmt > 0 {
-			currentSupply := k.GetTotalSupply(ctx, common.RuneAsset())  // current circulating supply of rune
-			maxSupply := cosmos.NewUint(uint64(maxAmt))                 // max supply of rune (ie 500m)
-			availableSupply := common.SafeSub(maxSupply, currentSupply) // available supply to be mint
-			// if available supply is less than the coin.Amount, we need to
-			// borrow from the reserve
-			if availableSupply.LT(coin.Amount) {
-				// Never mint an amount that would exceed MaxRuneSupply.
-				borrowReserveAmt := common.SafeSub(coin.Amount, availableSupply) // to borrow from reserve
-				coin.Amount = common.SafeSub(coin.Amount, borrowReserveAmt)      // to mint later in this func
+	// circuit breaker
+	// mint new rune coins until we hit the cap (500m). Once we do, borrow
+	// from the reserve instead of minting new tokens
+	maxAmt, _ := k.GetMimir(ctx, constants.MaxRuneSupply.String())
+	if coin.Asset.IsNativeRune() && maxAmt > 0 {
+		currentSupply := k.GetTotalSupply(ctx, common.RuneAsset())  // current circulating supply of rune
+		maxSupply := cosmos.NewUint(uint64(maxAmt))                 // max supply of rune (ie 500m)
+		availableSupply := common.SafeSub(maxSupply, currentSupply) // available supply to be mint
+		// if available supply is less than the coin.Amount, we need to
+		// borrow from the reserve
+		if availableSupply.LT(coin.Amount) {
+			// Never mint an amount that would exceed MaxRuneSupply.
+			borrowReserveAmt := common.SafeSub(coin.Amount, availableSupply) // to borrow from reserve
+			coin.Amount = common.SafeSub(coin.Amount, borrowReserveAmt)      // to mint later in this func
 
-				reserveCoin := common.NewCoin(common.RuneAsset(), borrowReserveAmt)
-				if err := k.SendFromModuleToModule(ctx, ReserveName, module, common.NewCoins(reserveCoin)); err != nil {
-					// If unable to move the needed surplus coin from the Reserve, error out without any minting.
-					ctx.Logger().Error("fail to move coins during circuit breaker", "error", err)
-					return err
-				}
+			reserveCoin := common.NewCoin(common.RuneAsset(), borrowReserveAmt)
+			if err := k.SendFromModuleToModule(ctx, ReserveName, module, common.NewCoins(reserveCoin)); err != nil {
+				// If unable to move the needed surplus coin from the Reserve, error out without any minting.
+				ctx.Logger().Error("fail to move coins during circuit breaker", "error", err)
+				return err
 			}
 		}
-		if coin.Amount.IsZero() {
-			// Don't proceed if the remaining amount to mint is zero.
-			return nil
-		}
+	}
+	if coin.Amount.IsZero() {
+		// Don't proceed if the remaining amount to mint is zero.
+		return nil
 	}
 
 	coinToMint, err := coin.Native()
@@ -453,19 +450,17 @@ func (k KVStore) MintToModule(ctx cosmos.Context, module string, coin common.Coi
 		return fmt.Errorf("fail to mint assets: %w", err)
 	}
 
-	if version.GTE(semver.MustParse("1.95.0")) {
-		// check if we've exceeded max rune supply cap. If we have, there could
-		// be an issue (infinite mint bug/exploit), or maybe runway rune
-		// hyperinflation. In any case, pause everything and allow the
-		// community time to find a solution to the issue.
-		coin := k.coinKeeper.GetSupply(ctx, common.RuneAsset().Native())
-		maxAmt, _ := k.GetMimir(ctx, "MaxRuneSupply")
-		if maxAmt > 0 && coin.Amount.GT(cosmos.NewInt(maxAmt)) {
-			k.SetMimir(ctx, "HaltTrading", 1)
-			k.SetMimir(ctx, "HaltChainGlobal", 1)
-			k.SetMimir(ctx, "PauseLP", 1)
-			k.SetMimir(ctx, "HaltTHORChain", 1)
-		}
+	// check if we've exceeded max rune supply cap. If we have, there could
+	// be an issue (infinite mint bug/exploit), or maybe runway rune
+	// hyperinflation. In any case, pause everything and allow the
+	// community time to find a solution to the issue.
+	coin2 := k.coinKeeper.GetSupply(ctx, common.RuneAsset().Native())
+	maxAmt, _ = k.GetMimir(ctx, "MaxRuneSupply")
+	if maxAmt > 0 && coin2.Amount.GT(cosmos.NewInt(maxAmt)) {
+		k.SetMimir(ctx, "HaltTrading", 1)
+		k.SetMimir(ctx, "HaltChainGlobal", 1)
+		k.SetMimir(ctx, "PauseLP", 1)
+		k.SetMimir(ctx, "HaltTHORChain", 1)
 	}
 
 	return nil
@@ -532,12 +527,6 @@ func (k KVStore) DollarConfigInRune(ctx cosmos.Context, value constants.Constant
 	if !runeUSDPrice.IsZero() {
 		runeValue := usd.MulUint64(common.One).Quo(runeUSDPrice)
 
-		// TODO on hard fork remove version check
-		version, hasVersion := k.GetVersionWithCtx(ctx)
-		if !hasVersion || version.LT(semver.MustParse("1.116.0")) {
-			return runeValue
-		}
-
 		// round to the first 2 significant digits of the USD price
 		return cosmos.NewUint(common.RoundSignificantFigures(runeValue.Uint64(), k.GetConfigInt64(ctx, constants.FeeUSDRoundSignificantDigits)))
 	}
@@ -545,11 +534,6 @@ func (k KVStore) DollarConfigInRune(ctx cosmos.Context, value constants.Constant
 }
 
 func (k KVStore) usdFeesEnabled(ctx cosmos.Context) bool {
-	// TODO on hard fork remove version check
-	version, hasVersion := k.GetVersionWithCtx(ctx)
-	if !hasVersion || version.LT(semver.MustParse("1.114.0")) {
-		return false
-	}
 	usdFees, _ := k.GetMimir(ctx, constants.EnableUSDFees.String())
 	return usdFees > 0
 }

@@ -112,11 +112,11 @@ func (s AssetSuite) TestAsset(c *C) {
 	c.Check(err.Error(), Equals, "trade assets cannot be synth assets")
 
 	// test shorts
-	asset, err = NewAssetWithShortCodes(semver.MustParse("1.115.0"), "b")
+	asset, err = NewAssetWithShortCodes(semver.MustParse("999.0.0"), "b")
 	c.Assert(err, IsNil)
 	c.Check(asset.Valid(), IsNil)
 	c.Check(asset.String(), Equals, "BTC.BTC")
-	asset, err = NewAssetWithShortCodes(semver.MustParse("1.115.0"), "BLAH.BLAH")
+	asset, err = NewAssetWithShortCodes(semver.MustParse("999.0.0"), "BLAH.BLAH")
 	c.Assert(err, IsNil)
 	c.Check(asset.Valid(), IsNil)
 	c.Check(asset.String(), Equals, "BLAH.BLAH")

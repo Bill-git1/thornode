@@ -247,7 +247,7 @@ func (s *SwapVCURSuite) TestSwap(c *C) {
 		mgr.K = poolStorage
 		mgr.txOutStore = NewTxStoreDummy()
 
-		amount, evts, err := newSwapperVCUR().Swap(ctx, poolStorage, tx, item.target, item.destination, item.tradeTarget, "", "", nil, StreamingSwap{}, cosmos.NewUint(1000_000), 20_000, mgr)
+		amount, evts, err := newSwapperVCUR().Swap(ctx, poolStorage, tx, item.target, item.destination, item.tradeTarget, "", "", nil, StreamingSwap{}, 20_000, mgr)
 		if item.expectedErr == nil {
 			c.Assert(err, IsNil)
 			c.Assert(evts, HasLen, item.events)
@@ -328,7 +328,7 @@ func (s *SwapVCURSuite) TestSynthSwap_RuneSynthRune(c *C) {
 		expectedRuneBalance := initialBalanceRune.Add(swapAmt).Sub(runeDisbursement)
 		expectedSynthSupply := swapResult.Sub(assetFee)
 
-		amount, _, err := newSwapperVCUR().Swap(ctx, mgr.Keeper(), tx, common.BNBAsset.GetSyntheticAsset(), addr, cosmos.ZeroUint(), "", "", nil, StreamingSwap{}, cosmos.NewUint(1000_000), 20_000, mgr)
+		amount, _, err := newSwapperVCUR().Swap(ctx, mgr.Keeper(), tx, common.BNBAsset.GetSyntheticAsset(), addr, cosmos.ZeroUint(), "", "", nil, StreamingSwap{}, 20_000, mgr)
 		c.Assert(err, IsNil)
 		c.Check(amount.Uint64(), Equals, swapResult.Uint64(),
 			Commentf("Actual: %d Exp: %d", amount.Uint64(), swapResult.Uint64()))
@@ -339,7 +339,7 @@ func (s *SwapVCURSuite) TestSynthSwap_RuneSynthRune(c *C) {
 		totalSynthSupply := mgr.Keeper().GetTotalSupply(ctx, pool.Asset.GetSyntheticAsset())
 		c.Check(totalSynthSupply.Uint64(), Equals, expectedSynthSupply.Uint64(),
 			Commentf("Actual: %d Exp: %d", totalSynthSupply.Uint64(), expectedSynthSupply.Uint64()))
-		pool.CalcUnits(mgr.GetVersion(), totalSynthSupply)
+		pool.CalcUnits(totalSynthSupply)
 		c.Check(pool.BalanceAsset.Uint64(), Equals, newBalanceAsset.Uint64())
 		c.Check(pool.BalanceRune.Uint64(), Equals, expectedRuneBalance.Uint64(),
 			Commentf("Actual: %d Exp: %d", pool.BalanceRune.Uint64(), expectedRuneBalance.Uint64()))
@@ -395,7 +395,7 @@ func (s *SwapVCURSuite) TestSynthSwap_RuneSynthRune(c *C) {
 		poolUnitsBefore2 := pool.GetPoolUnits().Mul(pool.GetPoolUnits())
 		luviBefore2 := pool.BalanceRune.Mul(pool.BalanceAsset).Quo(poolUnitsBefore2)
 
-		amount, _, err := newSwapperVCUR().Swap(ctx, mgr.Keeper(), tx, common.RuneAsset(), addr, cosmos.ZeroUint(), "", "", nil, StreamingSwap{}, cosmos.NewUint(1000_000), 20_000, mgr)
+		amount, _, err := newSwapperVCUR().Swap(ctx, mgr.Keeper(), tx, common.RuneAsset(), addr, cosmos.ZeroUint(), "", "", nil, StreamingSwap{}, 20_000, mgr)
 		c.Assert(err, IsNil)
 		c.Check(amount.Uint64(), Equals, swapResult.Uint64(),
 			Commentf("Actual: %d Exp: %d", amount.Uint64(), swapResult.Uint64()))
@@ -408,7 +408,7 @@ func (s *SwapVCURSuite) TestSynthSwap_RuneSynthRune(c *C) {
 		// expectedSynthSupply := mgr.Keeper().GetTotalSupply(ctx, pool.Asset.GetSyntheticAsset()).Sub(swapAmt)
 		// c.Check(totalSynthSupply.Uint64(), Equals, expectedSynthSupply.Uint64(),
 		//   Commentf("Actual: %d Exp: %d", totalSynthSupply.Uint64(), expectedSynthSupply.Uint64()))
-		pool.CalcUnits(mgr.GetVersion(), totalSynthSupply)
+		pool.CalcUnits(totalSynthSupply)
 		c.Check(pool.BalanceAsset.Uint64(), Equals, expBalanceAsset.Uint64(),
 			Commentf("Actual: %d Exp: %d", pool.BalanceAsset.Uint64(), expBalanceAsset.Uint64()))
 		c.Check(pool.BalanceRune.Uint64(), Equals, expBalanceRune.Uint64(),
@@ -490,7 +490,7 @@ func (s *SwapVCURSuite) TestSynthSwap_AssetSynth(c *C) {
 	poolUnitsBefore2 := pool.GetPoolUnits().Mul(pool.GetPoolUnits())
 	luviBefore2 := pool.BalanceRune.Mul(pool.BalanceAsset).Quo(poolUnitsBefore2)
 
-	amount, _, err := newSwapperVCUR().Swap(ctx, mgr.Keeper(), tx, common.BNBAsset.GetSyntheticAsset(), addr, cosmos.ZeroUint(), "", "", nil, StreamingSwap{}, cosmos.NewUint(1000_000), 20_000, mgr)
+	amount, _, err := newSwapperVCUR().Swap(ctx, mgr.Keeper(), tx, common.BNBAsset.GetSyntheticAsset(), addr, cosmos.ZeroUint(), "", "", nil, StreamingSwap{}, 20_000, mgr)
 	c.Assert(err, IsNil)
 	c.Check(amount.Uint64(), Equals, swapResult2.Uint64(),
 		Commentf("Actual: %d Exp: %d", amount.Uint64(), swapResult2.Uint64()))
@@ -505,7 +505,7 @@ func (s *SwapVCURSuite) TestSynthSwap_AssetSynth(c *C) {
 	totalSynthSupply := mgr.Keeper().GetTotalSupply(ctx, pool.Asset.GetSyntheticAsset())
 	c.Check(totalSynthSupply.Uint64(), Equals, expectedSynthSupply.Uint64(),
 		Commentf("Actual: %d Exp: %d", totalSynthSupply.Uint64(), expectedSynthSupply.Uint64()))
-	pool.CalcUnits(mgr.GetVersion(), totalSynthSupply)
+	pool.CalcUnits(totalSynthSupply)
 	c.Check(pool.LPUnits.Uint64(), Equals, expLPUnits.Uint64(), Commentf("%d", pool.LPUnits.Uint64()))
 	// We don't check pool.SynthUnits to not duplicate the calculation here,
 	// but we did check BalanceAsset, LPUnits, and totalSynthSupply, the
@@ -535,7 +535,7 @@ func (s *SwapVCURSuite) TestSynthSwap_AssetSynth(c *C) {
 	btcPool.SynthUnits = cosmos.ZeroUint()
 	c.Assert(mgr.Keeper().SetPool(ctx, btcPool), IsNil)
 
-	amount, _, err = newSwapperVCUR().Swap(ctx, mgr.Keeper(), tx1, common.BTCAsset, addr, cosmos.ZeroUint(), "", "", nil, StreamingSwap{}, cosmos.NewUint(1000_000_000_000), 20_000, mgr)
+	amount, _, err = newSwapperVCUR().Swap(ctx, mgr.Keeper(), tx1, common.BTCAsset, addr, cosmos.ZeroUint(), "", "", nil, StreamingSwap{}, 20_000, mgr)
 	c.Assert(err, NotNil)
 	c.Check(amount.IsZero(), Equals, true)
 	pool, err = mgr.Keeper().GetPool(ctx, common.BTCAsset)
@@ -545,7 +545,7 @@ func (s *SwapVCURSuite) TestSynthSwap_AssetSynth(c *C) {
 		Commentf("%d", totalSynthSupply.Uint64()))
 	c.Check(pool.BalanceAsset.Uint64(), Equals, uint64(common.One))
 	c.Check(pool.BalanceRune.Uint64(), Equals, uint64(10*common.One), Commentf("%d", pool.BalanceRune.Uint64()))
-	pool.CalcUnits(mgr.GetVersion(), totalSynthSupply)
+	pool.CalcUnits(totalSynthSupply)
 	c.Check(pool.LPUnits.Uint64(), Equals, uint64(100), Commentf("%d", pool.LPUnits.Uint64()))
 	// We don't check pool.SynthUnits to not duplicate the calculation here,
 	// but we did check BalanceAsset, LPUnits, and totalSynthSupply, the

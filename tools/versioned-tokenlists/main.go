@@ -30,7 +30,7 @@ func check(chain common.Chain) {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 
-	version, err := semver.Parse("1.93.0") // TODO: bump on hard fork
+	version, err := semver.Parse("2.135.0") // TODO: bump on hard fork
 	if err != nil {
 		panic(err)
 	}

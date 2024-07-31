@@ -40,10 +40,12 @@ func (h DonateHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, er
 
 func (h DonateHandler) validate(ctx cosmos.Context, msg MsgDonate) error {
 	version := h.mgr.GetVersion()
-	if version.GTE(semver.MustParse("0.80.0")) {
+	switch {
+	case version.GTE(semver.MustParse("0.80.0")):
 		return h.validateV80(ctx, msg)
+	default:
+		return errBadVersion
 	}
-	return errBadVersion
 }
 
 func (h DonateHandler) validateV80(ctx cosmos.Context, msg MsgDonate) error {
@@ -61,10 +63,12 @@ func (h DonateHandler) validateV80(ctx cosmos.Context, msg MsgDonate) error {
 // it simply increase the pool asset/RUNE balance but without taking any of the pool units
 func (h DonateHandler) handle(ctx cosmos.Context, msg MsgDonate) error {
 	version := h.mgr.GetVersion()
-	if version.GTE(semver.MustParse("0.1.0")) {
+	switch {
+	case version.GTE(semver.MustParse("0.1.0")):
 		return h.handleV1(ctx, msg)
+	default:
+		return errBadVersion
 	}
-	return errBadVersion
 }
 
 func (h DonateHandler) handleV1(ctx cosmos.Context, msg MsgDonate) error {

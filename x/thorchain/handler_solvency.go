@@ -45,10 +45,13 @@ func (h SolvencyHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, 
 
 func (h SolvencyHandler) validate(ctx cosmos.Context, msg MsgSolvency) error {
 	version := h.mgr.GetVersion()
-	if version.GTE(semver.MustParse("0.70.0")) {
+	switch {
+	case version.GTE(semver.MustParse("0.70.0")):
 		return h.validateV70(ctx, msg)
+	default:
+		ctx.Logger().Error(errInvalidVersion.Error())
+		return errBadVersion
 	}
-	return errBadVersion
 }
 
 func (h SolvencyHandler) validateV70(ctx cosmos.Context, msg MsgSolvency) error {
@@ -75,19 +78,9 @@ func (h SolvencyHandler) handle(ctx cosmos.Context, msg MsgSolvency) (*cosmos.Re
 	switch {
 	case version.GTE(semver.MustParse("1.134.0")):
 		return h.handleV134(ctx, msg)
-	case version.GTE(semver.MustParse("1.128.0")):
-		return h.handleV128(ctx, msg)
-	case version.GTE(semver.MustParse("1.123.0")):
-		return h.handleV123(ctx, msg)
-	case version.GTE(semver.MustParse("1.110.0")):
-		return h.handleV110(ctx, msg)
-	case version.GTE(semver.MustParse("1.87.0")):
-		return h.handleV87(ctx, msg)
-	case version.GTE(semver.MustParse("0.79.0")):
-		return h.handleV79(ctx, msg)
+	default:
+		return nil, errBadVersion
 	}
-	ctx.Logger().Error(errInvalidVersion.Error())
-	return nil, errBadVersion
 }
 
 // handleCurrent is the logic to process MsgSolvency, the feature works like this
@@ -199,7 +192,7 @@ func (h SolvencyHandler) handleV134(ctx cosmos.Context, msg MsgSolvency) (*cosmo
 		return &cosmos.Result{}, nil
 	}
 
-	isInsolvent := h.insolvencyCheckV79(ctx, vault, voter.Coins, voter.Chain)
+	isInsolvent := h.insolvencyCheck(ctx, vault, voter.Coins, voter.Chain)
 
 	// If insolvent and already halted, leave the Mimir key unchanged as a record of since when it's been insolvent.
 	// If insolvent and unhalted, halt the chain.
@@ -231,7 +224,7 @@ func (h SolvencyHandler) handleV134(ctx cosmos.Context, msg MsgSolvency) (*cosmo
 // insolvencyCheck compare the coins in vault against the coins report by solvency message
 // insolvent usually means vault has more coins than wallet
 // return true means the vault is insolvent , the network should halt , otherwise false
-func (h SolvencyHandler) insolvencyCheckV79(ctx cosmos.Context, vault Vault, coins common.Coins, chain common.Chain) bool {
+func (h SolvencyHandler) insolvencyCheck(ctx cosmos.Context, vault Vault, coins common.Coins, chain common.Chain) bool {
 	adjustVault, err := h.excludePendingOutboundFromVault(ctx, vault)
 	if err != nil {
 		return false

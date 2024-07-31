@@ -1,7 +1,6 @@
 package thorchain
 
 import (
-	"github.com/blang/semver"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 )
@@ -34,15 +33,6 @@ func NewManageTHORNameMemo(name string, chain common.Chain, addr common.Address,
 }
 
 func (p *parser) ParseManageTHORNameMemo() (ManageTHORNameMemo, error) {
-	switch {
-	case p.version.GTE(semver.MustParse("1.116.0")):
-		return p.ParseManageTHORNameMemoV116()
-	default:
-		return ParseManageTHORNameMemoV1(p.parts)
-	}
-}
-
-func (p *parser) ParseManageTHORNameMemoV116() (ManageTHORNameMemo, error) {
 	chain := p.getChain(2, true, common.EmptyChain)
 	addr := p.getAddress(3, true, common.NoAddress)
 	owner := p.getAccAddress(4, false, nil)

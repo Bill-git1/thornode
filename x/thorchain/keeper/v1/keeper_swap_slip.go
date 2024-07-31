@@ -3,7 +3,6 @@ package keeperv1
 import (
 	"fmt"
 
-	"github.com/blang/semver"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper/types"
@@ -138,18 +137,14 @@ func (k KVStore) RollupSwapSlip(ctx cosmos.Context, targetCount int64, asset com
 		currCount--
 		k.DeletePoolSwapSlip(ctx, ctx.BlockHeight()-targetCount, asset)
 
-		if k.GetVersion().GTE(semver.MustParse("1.121.0")) {
-			if targetCount > 0 && ctx.BlockHeight()%targetCount == 0 {
-				k.SetSwapSlipSnapShot(ctx, asset, ctx.BlockHeight(), currRollup)
-			}
+		if targetCount > 0 && ctx.BlockHeight()%targetCount == 0 {
+			k.SetSwapSlipSnapShot(ctx, asset, ctx.BlockHeight(), currRollup)
 		}
 	}
 
-	if k.GetVersion().GTE(semver.MustParse("1.129.0")) {
-		// slip rollup should never be negative
-		if currRollup < 0 {
-			currRollup = 0
-		}
+	// slip rollup should never be negative
+	if currRollup < 0 {
+		currRollup = 0
 	}
 
 	k.setInt64(ctx, currCountKey, currCount)

@@ -1,10 +1,6 @@
 package thorchain
 
 import (
-	"fmt"
-
-	"github.com/blang/semver"
-
 	"gitlab.com/thorchain/thornode/common/cosmos"
 )
 
@@ -28,17 +24,6 @@ func NewUnbondMemo(addr, additional cosmos.AccAddress, amt cosmos.Uint) UnbondMe
 }
 
 func (p *parser) ParseUnbondMemo() (UnbondMemo, error) {
-	switch {
-	case p.version.GTE(semver.MustParse("1.116.0")):
-		return p.ParseUnbondMemoV116()
-	case p.version.GTE(semver.MustParse("0.81.0")):
-		return ParseUnbondMemoV81(p.parts)
-	default:
-		return UnbondMemo{}, fmt.Errorf("invalid version(%s)", p.version.String())
-	}
-}
-
-func (p *parser) ParseUnbondMemoV116() (UnbondMemo, error) {
 	addr := p.getAccAddress(1, true, nil)
 	amt := p.getUint(2, true, 0)
 	additional := p.getAccAddress(3, false, nil)

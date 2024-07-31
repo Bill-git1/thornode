@@ -44,8 +44,6 @@ func (h TradeAccountDepositHandler) validate(ctx cosmos.Context, msg MsgTradeAcc
 	switch {
 	case version.GTE(semver.MustParse("1.134.0")):
 		return h.validateV134(ctx, msg)
-	case version.GTE(semver.MustParse("0.1.0")):
-		return h.validateV1(ctx, msg)
 	default:
 		return errBadVersion
 	}
@@ -61,10 +59,12 @@ func (h TradeAccountDepositHandler) validateV134(ctx cosmos.Context, msg MsgTrad
 
 func (h TradeAccountDepositHandler) handle(ctx cosmos.Context, msg MsgTradeAccountDeposit) error {
 	version := h.mgr.GetVersion()
-	if version.GTE(semver.MustParse("0.1.0")) {
+	switch {
+	case version.GTE(semver.MustParse("0.1.0")):
 		return h.handleV1(ctx, msg)
+	default:
+		return errBadVersion
 	}
-	return errBadVersion
 }
 
 // handle process MsgTradeAccountDeposit

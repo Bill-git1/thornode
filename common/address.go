@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/blang/semver"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/bech32"
@@ -184,46 +183,6 @@ func getBCHAddress(address bchutil.Address, cfg *bchchaincfg.Params) (Address, e
 	return NoAddress, fmt.Errorf("invalid address type")
 }
 
-// ConvertToNewBCHAddressFormatV83 convert the given BCH to new address format
-func ConvertToNewBCHAddressFormatV83(addr Address) (Address, error) {
-	if !addr.IsChain(BCHChain) {
-		return NoAddress, fmt.Errorf("address(%s) is not BCH chain", addr)
-	}
-	network := CurrentChainNetwork
-	var param *bchchaincfg.Params
-	switch network {
-	case MockNet:
-		param = &bchchaincfg.RegressionNetParams
-	case MainNet:
-		param = &bchchaincfg.MainNetParams
-	case StageNet:
-		param = &bchchaincfg.MainNetParams
-	}
-	bchAddr, err := bchutil.DecodeAddress(addr.String(), param)
-	if err != nil {
-		return NoAddress, fmt.Errorf("fail to decode address(%s), %w", addr, err)
-	}
-	return getBCHAddressV83(bchAddr, param)
-}
-
-func getBCHAddressV83(address bchutil.Address, cfg *bchchaincfg.Params) (Address, error) {
-	switch address.(type) {
-	case *bchutil.LegacyAddressPubKeyHash, *bchutil.AddressPubKeyHash:
-		h, err := bchutil.NewAddressPubKeyHash(address.ScriptAddress(), cfg)
-		if err != nil {
-			return NoAddress, fmt.Errorf("fail to convert to new pubkey hash address: %w", err)
-		}
-		return NewAddress(h.String())
-	case *bchutil.LegacyAddressScriptHash, *bchutil.AddressScriptHash:
-		h, err := bchutil.NewAddressScriptHashFromHash(address.ScriptAddress(), cfg)
-		if err != nil {
-			return NoAddress, fmt.Errorf("fail to convert to new address script hash address: %w", err)
-		}
-		return NewAddress(h.String())
-	}
-	return NoAddress, fmt.Errorf("invalid address type")
-}
-
 // Note that this can have false positives, such as being unable to distinguish between ETH and AVAX.
 func (addr Address) IsChain(chain Chain) bool {
 	if chain.IsEVM() {
@@ -326,7 +285,7 @@ func (addr Address) GetChain() Chain {
 	return EmptyChain
 }
 
-func (addr Address) GetNetwork(ver semver.Version, chain Chain) ChainNetwork {
+func (addr Address) GetNetwork(chain Chain) ChainNetwork {
 	currentNetwork := CurrentChainNetwork
 	mainNetPredicate := func() ChainNetwork {
 		if currentNetwork == StageNet {
@@ -435,12 +394,7 @@ func (addr Address) GetNetwork(ver semver.Version, chain Chain) ChainNetwork {
 			return MockNet
 		}
 	}
-	switch {
-	case ver.GTE(semver.MustParse("1.93.0")):
-		return currentNetwork
-	default:
-		return MockNet
-	}
+	return currentNetwork
 }
 
 func (addr Address) AccAddress() (cosmos.AccAddress, error) {

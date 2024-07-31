@@ -1,12 +1,13 @@
 package thorchain
 
 import (
+	"strconv"
 	"strings"
 
-	"github.com/blang/semver"
 	"gitlab.com/thorchain/thornode/common"
 	cosmos "gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
+	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 )
 
 type AddLiquidityMemo struct {
@@ -56,19 +57,7 @@ func (p *parser) ParseAddLiquidityMemo() (AddLiquidityMemo, error) {
 	if p.keeper == nil {
 		return ParseAddLiquidityMemoV1(p.ctx, p.keeper, p.getAsset(1, true, common.EmptyAsset), p.parts)
 	}
-	switch {
-	case p.version.GTE(semver.MustParse("1.128.0")):
-		return p.ParseAddLiquidityMemoV128()
-	case p.version.GTE(semver.MustParse("1.116.0")):
-		return p.ParseAddLiquidityMemoV116()
-	case p.version.GTE(semver.MustParse("1.104.0")):
-		return ParseAddLiquidityMemoV104(p.ctx, p.keeper, p.getAsset(1, true, common.EmptyAsset), p.parts)
-	default:
-		return ParseAddLiquidityMemoV1(p.ctx, p.keeper, p.getAsset(1, true, common.EmptyAsset), p.parts)
-	}
-}
 
-func (p *parser) ParseAddLiquidityMemoV128() (AddLiquidityMemo, error) {
 	asset := p.getAsset(1, true, common.EmptyAsset)
 	addr := p.getAddressWithKeeper(2, false, common.NoAddress, asset.Chain)
 	affChain := common.THORChain
@@ -80,4 +69,37 @@ func (p *parser) ParseAddLiquidityMemoV128() (AddLiquidityMemo, error) {
 	affAddr := p.getAddressWithKeeper(3, false, common.NoAddress, affChain)
 	affPts := p.getUintWithMaxValue(4, false, 0, constants.MaxBasisPts)
 	return NewAddLiquidityMemo(asset, addr, affAddr, affPts), p.Error()
+}
+
+func ParseAddLiquidityMemoV1(ctx cosmos.Context, keeper keeper.Keeper, asset common.Asset, parts []string) (AddLiquidityMemo, error) {
+	var err error
+	addr := common.NoAddress
+	affAddr := common.NoAddress
+	affPts := uint64(0)
+	if len(parts) >= 3 && len(parts[2]) > 0 {
+		if keeper == nil {
+			addr, err = common.NewAddress(parts[2])
+		} else {
+			addr, err = FetchAddress(ctx, keeper, parts[2], asset.Chain)
+		}
+		if err != nil {
+			return AddLiquidityMemo{}, err
+		}
+	}
+
+	if len(parts) > 4 && len(parts[3]) > 0 && len(parts[4]) > 0 {
+		if keeper == nil {
+			affAddr, err = common.NewAddress(parts[3])
+		} else {
+			affAddr, err = FetchAddress(ctx, keeper, parts[3], common.THORChain)
+		}
+		if err != nil {
+			return AddLiquidityMemo{}, err
+		}
+		affPts, err = strconv.ParseUint(parts[4], 10, 64)
+		if err != nil {
+			return AddLiquidityMemo{}, err
+		}
+	}
+	return NewAddLiquidityMemo(asset, addr, affAddr, cosmos.NewUint(affPts)), nil
 }

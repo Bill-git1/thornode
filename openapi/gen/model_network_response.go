@@ -18,10 +18,6 @@ import (
 type NetworkResponse struct {
 	// total amount of RUNE awarded to node operators
 	BondRewardRune string `json:"bond_reward_rune"`
-	// total of burned BEP2 RUNE
-	BurnedBep2Rune string `json:"burned_bep_2_rune"`
-	// total of burned ERC20 RUNE
-	BurnedErc20Rune string `json:"burned_erc_20_rune"`
 	// total bonded RUNE
 	TotalBondUnits string `json:"total_bond_units"`
 	// effective security bond used to determine maximum pooled RUNE
@@ -54,11 +50,9 @@ type NetworkResponse struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewNetworkResponse(bondRewardRune string, burnedBep2Rune string, burnedErc20Rune string, totalBondUnits string, effectiveSecurityBond string, totalReserve string, vaultsMigrating bool, gasSpentRune string, gasWithheldRune string, nativeOutboundFeeRune string, nativeTxFeeRune string, tnsRegisterFeeRune string, tnsFeePerBlockRune string, runePriceInTor string, torPriceInRune string) *NetworkResponse {
+func NewNetworkResponse(bondRewardRune string, totalBondUnits string, effectiveSecurityBond string, totalReserve string, vaultsMigrating bool, gasSpentRune string, gasWithheldRune string, nativeOutboundFeeRune string, nativeTxFeeRune string, tnsRegisterFeeRune string, tnsFeePerBlockRune string, runePriceInTor string, torPriceInRune string) *NetworkResponse {
 	this := NetworkResponse{}
 	this.BondRewardRune = bondRewardRune
-	this.BurnedBep2Rune = burnedBep2Rune
-	this.BurnedErc20Rune = burnedErc20Rune
 	this.TotalBondUnits = totalBondUnits
 	this.EffectiveSecurityBond = effectiveSecurityBond
 	this.TotalReserve = totalReserve
@@ -104,54 +98,6 @@ func (o *NetworkResponse) GetBondRewardRuneOk() (*string, bool) {
 // SetBondRewardRune sets field value
 func (o *NetworkResponse) SetBondRewardRune(v string) {
 	o.BondRewardRune = v
-}
-
-// GetBurnedBep2Rune returns the BurnedBep2Rune field value
-func (o *NetworkResponse) GetBurnedBep2Rune() string {
-	if o == nil {
-		var ret string
-		return ret
-	}
-
-	return o.BurnedBep2Rune
-}
-
-// GetBurnedBep2RuneOk returns a tuple with the BurnedBep2Rune field value
-// and a boolean to check if the value has been set.
-func (o *NetworkResponse) GetBurnedBep2RuneOk() (*string, bool) {
-	if o == nil {
-		return nil, false
-	}
-	return &o.BurnedBep2Rune, true
-}
-
-// SetBurnedBep2Rune sets field value
-func (o *NetworkResponse) SetBurnedBep2Rune(v string) {
-	o.BurnedBep2Rune = v
-}
-
-// GetBurnedErc20Rune returns the BurnedErc20Rune field value
-func (o *NetworkResponse) GetBurnedErc20Rune() string {
-	if o == nil {
-		var ret string
-		return ret
-	}
-
-	return o.BurnedErc20Rune
-}
-
-// GetBurnedErc20RuneOk returns a tuple with the BurnedErc20Rune field value
-// and a boolean to check if the value has been set.
-func (o *NetworkResponse) GetBurnedErc20RuneOk() (*string, bool) {
-	if o == nil {
-		return nil, false
-	}
-	return &o.BurnedErc20Rune, true
-}
-
-// SetBurnedErc20Rune sets field value
-func (o *NetworkResponse) SetBurnedErc20Rune(v string) {
-	o.BurnedErc20Rune = v
 }
 
 // GetTotalBondUnits returns the TotalBondUnits field value
@@ -478,12 +424,6 @@ func (o NetworkResponse) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["bond_reward_rune"] = o.BondRewardRune
-	}
-	if true {
-		toSerialize["burned_bep_2_rune"] = o.BurnedBep2Rune
-	}
-	if true {
-		toSerialize["burned_erc_20_rune"] = o.BurnedErc20Rune
 	}
 	if true {
 		toSerialize["total_bond_units"] = o.TotalBondUnits

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/blang/semver"
 	"github.com/cosmos/cosmos-sdk/codec"
 
 	"gitlab.com/thorchain/thornode/common"
@@ -40,7 +39,7 @@ func (lp LiquidityProvider) Key() string {
 	return fmt.Sprintf("%s/%s", lp.Asset.String(), lp.GetAddress().String())
 }
 
-func (lp LiquidityProvider) GetRuneRedeemValue(version semver.Version, pool Pool, synthSupply cosmos.Uint) (error, cosmos.Uint) {
+func (lp LiquidityProvider) GetRuneRedeemValue(pool Pool, synthSupply cosmos.Uint) (error, cosmos.Uint) {
 	if !lp.Asset.Equals(pool.Asset) {
 		return fmt.Errorf("LP and Pool assets do not match (%s, %s)", lp.Asset.String(), pool.Asset.String()), cosmos.ZeroUint()
 	}
@@ -50,7 +49,7 @@ func (lp LiquidityProvider) GetRuneRedeemValue(version semver.Version, pool Pool
 	poolRuneDepth := pool.BalanceRune.BigInt()
 	num := bigInt.Mul(lpUnits, poolRuneDepth)
 
-	pool.CalcUnits(version, synthSupply)
+	pool.CalcUnits(synthSupply)
 	denom := pool.GetPoolUnits().BigInt()
 	if len(denom.Bits()) == 0 {
 		return nil, cosmos.ZeroUint()
@@ -59,7 +58,7 @@ func (lp LiquidityProvider) GetRuneRedeemValue(version semver.Version, pool Pool
 	return nil, cosmos.NewUintFromBigInt(result)
 }
 
-func (lp LiquidityProvider) GetAssetRedeemValue(version semver.Version, pool Pool, synthSupply cosmos.Uint) (error, cosmos.Uint) {
+func (lp LiquidityProvider) GetAssetRedeemValue(pool Pool, synthSupply cosmos.Uint) (error, cosmos.Uint) {
 	if !lp.Asset.Equals(pool.Asset) {
 		return fmt.Errorf("LP and Pool assets do not match (%s, %s)", lp.Asset.String(), pool.Asset.String()), cosmos.ZeroUint()
 	}
@@ -69,7 +68,7 @@ func (lp LiquidityProvider) GetAssetRedeemValue(version semver.Version, pool Poo
 	poolAssetDepth := pool.BalanceAsset.BigInt()
 	num := bigInt.Mul(lpUnits, poolAssetDepth)
 
-	pool.CalcUnits(version, synthSupply)
+	pool.CalcUnits(synthSupply)
 	denom := pool.GetPoolUnits().BigInt()
 	if len(denom.Bits()) == 0 {
 		return nil, cosmos.ZeroUint()

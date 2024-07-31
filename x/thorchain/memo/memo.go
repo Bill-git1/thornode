@@ -28,13 +28,10 @@ const (
 	TxBond
 	TxUnbond
 	TxLeave
-	TxYggdrasilFund   // TODO remove on hard fork
-	TxYggdrasilReturn // TODO remove on hard fork
 	TxReserve
 	TxRefund
 	TxMigrate
 	TxRagnarok
-	TxSwitch // TODO remove on hard fork
 	TxNoOp
 	TxConsolidate
 	TxTHORName
@@ -80,11 +77,6 @@ var stringToTxTypeMap = map[string]TxType{
 	"trade-":      TxTradeAccountWithdrawal,
 	"pool+":       TxRunePoolDeposit,
 	"pool-":       TxRunePoolWithdraw,
-
-	// TODO remove on hard fork
-	"switch":     TxSwitch,
-	"yggdrasil+": TxYggdrasilFund,
-	"yggdrasil-": TxYggdrasilReturn,
 }
 
 var txToStringMap = map[TxType]string{
@@ -108,11 +100,6 @@ var txToStringMap = map[TxType]string{
 	TxLoanRepayment:          "$-",
 	TxTradeAccountDeposit:    "trade+",
 	TxTradeAccountWithdrawal: "trade-",
-
-	// TODO remove on hard fork
-	TxSwitch:          "switch",
-	TxYggdrasilFund:   "yggdrasil+",
-	TxYggdrasilReturn: "yggdrasil-",
 }
 
 // converts a string into a txType
@@ -129,8 +116,6 @@ func StringToTxType(s string) (TxType, error) {
 func (tx TxType) IsInbound() bool {
 	switch tx {
 	case TxAdd, TxWithdraw, TxTradeAccountDeposit, TxRunePoolDeposit, TxRunePoolWithdraw, TxSwap, TxLimitOrder, TxDonate, TxBond, TxUnbond, TxLeave, TxReserve, TxNoOp, TxTHORName, TxLoanOpen, TxLoanRepayment:
-		return true
-	case TxSwitch: // TODO remove on hard fork
 		return true
 	default:
 		return false
@@ -150,8 +135,6 @@ func (tx TxType) IsInternal() bool {
 	switch tx {
 	case TxMigrate, TxConsolidate:
 		return true
-	case TxYggdrasilFund, TxYggdrasilReturn: // TODO remove on hard fork
-		return true
 	default:
 		return false
 	}
@@ -161,8 +144,6 @@ func (tx TxType) IsInternal() bool {
 func (tx TxType) HasOutbound() bool {
 	switch tx {
 	case TxAdd, TxBond, TxTradeAccountDeposit, TxRunePoolDeposit, TxDonate, TxReserve, TxMigrate, TxRagnarok:
-		return false
-	case TxYggdrasilReturn, TxSwitch: // TODO remove on hard fork
 		return false
 	default:
 		return true
@@ -235,10 +216,7 @@ func (m MemoBase) GetRefundAddress() common.Address      { return common.NoAddre
 func ParseMemo(version semver.Version, memo string) (mem Memo, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			// TODO:  Remove conditional on hard fork, keeping the EmptyMemo setting.
-			if version.LT(semver.MustParse("1.116.0")) || version.GTE(semver.MustParse("1.122.0")) {
-				mem = EmptyMemo
-			}
+			mem = EmptyMemo
 			err = fmt.Errorf("panicked parsing memo(%s), err: %s", memo, r)
 		}
 	}()
@@ -254,11 +232,7 @@ func ParseMemo(version semver.Version, memo string) (mem Memo, err error) {
 func ParseMemoWithTHORNames(ctx cosmos.Context, keeper keeper.Keeper, memo string) (mem Memo, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			// TODO:  Remove conditional on hard fork, keeping the EmptyMemo setting.
-			version := keeper.GetVersion()
-			if version.LT(semver.MustParse("1.116.0")) || version.GTE(semver.MustParse("1.122.0")) {
-				mem = EmptyMemo
-			}
+			mem = EmptyMemo
 			err = fmt.Errorf("panicked parsing memo(%s), err: %s", memo, r)
 		}
 	}()

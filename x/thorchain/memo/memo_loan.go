@@ -3,7 +3,6 @@ package thorchain
 import (
 	"strings"
 
-	"github.com/blang/semver"
 	"gitlab.com/thorchain/thornode/common"
 	cosmos "gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
@@ -97,19 +96,6 @@ func NewLoanOpenMemo(targetAsset common.Asset, targetAddr common.Address, minOut
 }
 
 func (p *parser) ParseLoanOpenMemo() (LoanOpenMemo, error) {
-	switch {
-	case p.version.GTE(semver.MustParse("1.132.0")):
-		return p.ParseLoanOpenMemoV132()
-	case p.version.GTE(semver.MustParse("1.116.0")):
-		return p.ParseLoanOpenMemoV116()
-	case p.version.GTE(semver.MustParse("1.112.0")):
-		return ParseLoanOpenMemoV112(p.ctx, p.keeper, p.getAsset(1, true, common.EmptyAsset), p.parts)
-	default:
-		return ParseLoanOpenMemoV1(p.ctx, p.keeper, p.getAsset(1, true, common.EmptyAsset), p.parts)
-	}
-}
-
-func (p *parser) ParseLoanOpenMemoV132() (LoanOpenMemo, error) {
 	targetAsset := p.getAsset(1, true, common.EmptyAsset)
 	targetAddress := p.getAddressWithKeeper(2, true, common.NoAddress, targetAsset.GetChain())
 	minOut := p.getUintWithScientificNotation(3, false, 0)
@@ -147,17 +133,6 @@ func NewLoanRepaymentMemo(asset common.Asset, owner common.Address, minOut cosmo
 }
 
 func (p *parser) ParseLoanRepaymentMemo() (LoanRepaymentMemo, error) {
-	switch {
-	case p.version.GTE(semver.MustParse("1.116.0")):
-		return p.ParseLoanRepaymentMemoV116()
-	case p.version.GTE(semver.MustParse("1.112.0")):
-		return ParseLoanRepaymentMemoV112(p.ctx, p.keeper, p.getAsset(1, true, common.EmptyAsset), p.parts)
-	default:
-		return ParseLoanRepaymentMemoV1(p.ctx, p.keeper, p.getAsset(1, true, common.EmptyAsset), p.parts)
-	}
-}
-
-func (p *parser) ParseLoanRepaymentMemoV116() (LoanRepaymentMemo, error) {
 	asset := p.getAsset(1, true, common.EmptyAsset)
 	owner := p.getAddressWithKeeper(2, true, common.NoAddress, asset.Chain)
 	minOut := p.getUintWithScientificNotation(3, false, 0)

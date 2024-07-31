@@ -321,8 +321,7 @@ func (ob *OrderBookVCUR) checkFeelessSwap(pools Pools, pair tradePair, indexRati
 func (ob *OrderBookVCUR) checkWithFeeSwap(ctx cosmos.Context, pools Pools, msg MsgSwap) bool {
 	swapper, err := GetSwapper(ob.k.GetVersion())
 	if err != nil {
-		ctx.Logger().Error("fail to load swapper", "error", err)
-		swapper = newSwapperV92()
+		panic(err)
 	}
 
 	// account for affiliate fee
@@ -701,8 +700,7 @@ func (ob *OrderBookVCUR) getLiquidityFeeAndSlip(ctx cosmos.Context, pool Pool, s
 
 	swapper, err := GetSwapper(ob.k.GetVersion())
 	if err != nil {
-		ctx.Logger().Error("fail to fetch swapper", "error", err)
-		swapper = newSwapperV92()
+		panic(err)
 	}
 	fee := swapper.CalcLiquidityFee(X, x, Y)
 	if sourceCoin.Asset.IsRune() {

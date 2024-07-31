@@ -303,16 +303,7 @@ func (bp *BondProviders) Remove(acc cosmos.AccAddress) bool {
 }
 
 // realigns the bond providers relative to the node bond
-func (bp *BondProviders) Adjust(version semver.Version, nodeBond cosmos.Uint) {
-	switch {
-	case version.GTE(semver.MustParse("1.108.0")):
-		bp.AdjustV108(nodeBond)
-	default:
-		bp.AdjustV1(nodeBond)
-	}
-}
-
-func (bp *BondProviders) AdjustV108(nodeBond cosmos.Uint) {
+func (bp *BondProviders) Adjust(nodeBond cosmos.Uint) {
 	totalBond := cosmos.ZeroUint()
 	if len(bp.Providers) == 0 {
 		// no adjustment needed

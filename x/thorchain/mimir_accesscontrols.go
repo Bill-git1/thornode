@@ -9,12 +9,10 @@ import (
 
 var adminMimirDenyList = []*re.Regexp{
 	re.MustCompile("(?i)EmissionCurve"),
-	re.MustCompile("(?i)IncentiveCurve"),
 	re.MustCompile("(?i)BlocksPerYear"),
 	re.MustCompile("(?i)MinimumBondInRune"),
 	re.MustCompile("(?i)NumberOfNewNodesPerChurn"),
 	re.MustCompile("(?i)AsgardSize"),
-	re.MustCompile("(?i)FullImpLossProtectionBlocks"), // TODO: remove on hard fork
 	re.MustCompile("(?i)DesiredValidatorSet"),
 	re.MustCompile("(?i)MinimumNodesForBFT"),
 	re.MustCompile("(?i)ObserveSlashPoints"),

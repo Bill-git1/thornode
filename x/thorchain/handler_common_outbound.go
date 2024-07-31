@@ -33,7 +33,7 @@ func NewCommonOutboundTxHandler(mgr Manager) CommonOutboundTxHandler {
 func (h CommonOutboundTxHandler) slashV96(ctx cosmos.Context, tx ObservedTx) error {
 	toSlash := make(common.Coins, len(tx.Tx.Coins))
 	copy(toSlash, tx.Tx.Coins)
-	toSlash = toSlash.Adds_deprecated(tx.Tx.Gas.ToCoins())
+	toSlash = toSlash.Add(tx.Tx.Gas.ToCoins()...)
 
 	ctx = ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{ // nolint
 		telemetry.NewLabel("reason", "failed_outbound"),
@@ -48,28 +48,9 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 	switch {
 	case version.GTE(semver.MustParse("1.127.0")):
 		return h.handleV127(ctx, tx, inTxID)
-	case version.GTE(semver.MustParse("1.125.0")):
-		return h.handleV125(ctx, tx, inTxID)
-	case version.GTE(semver.MustParse("1.118.0")):
-		return h.handleV118(ctx, tx, inTxID)
-	case version.GTE(semver.MustParse("1.98.0")):
-		return h.handleV98(ctx, tx, inTxID)
-	case version.GTE(semver.MustParse("1.96.0")):
-		return h.handleV96(ctx, tx, inTxID)
-	case version.GTE(semver.MustParse("1.94.0")):
-		return h.handleV94(ctx, tx, inTxID)
-	case version.GTE(semver.MustParse("1.92.0")):
-		return h.handleV92(ctx, tx, inTxID)
-	case version.GTE(semver.MustParse("1.88.0")):
-		return h.handleV88(ctx, tx, inTxID)
-	case version.GTE(semver.MustParse("1.87.0")):
-		return h.handleV87(ctx, tx, inTxID)
-	case version.GTE(semver.MustParse("1.85.0")):
-		return h.handleV85(ctx, tx, inTxID)
-	case version.GTE(semver.MustParse("0.69.0")):
-		return h.handleV69(ctx, tx, inTxID)
+	default:
+		return nil, errBadVersion
 	}
-	return nil, errBadVersion
 }
 
 func (h CommonOutboundTxHandler) handleV127(ctx cosmos.Context, tx ObservedTx, inTxID common.TxID) (*cosmos.Result, error) {
@@ -79,7 +60,8 @@ func (h CommonOutboundTxHandler) handleV127(ctx cosmos.Context, tx ObservedTx, i
 	if err != nil {
 		return nil, ErrInternal(err, "fail to get observed tx voter")
 	}
-	if voter.AddOutTx(h.mgr.GetVersion(), tx.Tx) {
+	if voter.AddOutTx(tx.Tx) {
+		// trunk-ignore(golangci-lint/govet): shadow
 		if err := h.mgr.EventMgr().EmitEvent(ctx, NewEventOutbound(inTxID, tx.Tx)); err != nil {
 			return nil, ErrInternal(err, "fail to emit outbound event")
 		}
@@ -108,6 +90,7 @@ func (h CommonOutboundTxHandler) handleV127(ctx cosmos.Context, tx ObservedTx, i
 	}
 	for height := ctx.BlockHeight(); height >= earliestHeight; height-- {
 		// update txOut record with our TxID that sent funds out of the pool
+		// trunk-ignore(golangci-lint/govet): shadow
 		txOut, err := h.mgr.Keeper().GetTxOut(ctx, height)
 		if err != nil {
 			ctx.Logger().Error("unable to get txOut record", "error", err)
@@ -135,6 +118,7 @@ func (h CommonOutboundTxHandler) handleV127(ctx cosmos.Context, tx ObservedTx, i
 				matchCoin := tx.Tx.Coins.EqualsEx(common.Coins{txOutItem.Coin})
 				if !matchCoin {
 					// In case the mismatch is caused by decimals , round the tx out item's amount , and compare it again
+					// trunk-ignore(golangci-lint/govet): shadow
 					p, err := h.mgr.Keeper().GetPool(ctx, txOutItem.Coin.Asset)
 					if err != nil {
 						ctx.Logger().Error("fail to get pool", "error", err)
@@ -157,6 +141,7 @@ func (h CommonOutboundTxHandler) handleV127(ctx cosmos.Context, tx ObservedTx, i
 						ctx.Logger().Info("override match coin", "intend to spend", intendToSpend, "actual spend", actualSpend, "max_gas", maxGasAmt, "actual gas", realGasAmt)
 						if maxGasAmt.GT(realGasAmt) {
 							// Don't reimburse gas difference if the outbound is from an InactiveVault.
+							// trunk-ignore(golangci-lint/govet): shadow
 							vault, err := h.mgr.Keeper().GetVault(ctx, tx.ObservedPubKey)
 							if err != nil {
 								ctx.Logger().Error("fail to get vault", "error", err)
@@ -190,6 +175,7 @@ func (h CommonOutboundTxHandler) handleV127(ctx cosmos.Context, tx ObservedTx, i
 				}
 				txOut.TxArray[i].OutHash = tx.Tx.ID
 				shouldSlash = false
+				// trunk-ignore(golangci-lint/govet): shadow
 				if err := h.mgr.Keeper().SetTxOut(ctx, txOut); err != nil {
 					ctx.Logger().Error("fail to save tx out", "error", err)
 				}
@@ -202,6 +188,7 @@ func (h CommonOutboundTxHandler) handleV127(ctx cosmos.Context, tx ObservedTx, i
 					if err != nil {
 						ctx.Logger().Error("fail to get swapper clout destination address", "error", err)
 					}
+					// trunk-ignore(golangci-lint/govet): shadow
 					voter, err := h.mgr.Keeper().GetObservedTxInVoter(ctx, outTxn.InHash)
 					if err != nil {
 						ctx.Logger().Error("fail to get txin for clout calculation", "error", err)
@@ -215,12 +202,14 @@ func (h CommonOutboundTxHandler) handleV127(ctx cosmos.Context, tx ObservedTx, i
 
 					cloutIn.Reclaim(clout1)
 					cloutIn.LastReclaimHeight = ctx.BlockHeight()
+					// trunk-ignore(golangci-lint/govet): shadow
 					if err := h.mgr.Keeper().SetSwapperClout(ctx, cloutIn); err != nil {
 						ctx.Logger().Error("fail to save swapper clout in", "error", err)
 					}
 
 					cloutOut.Reclaim(clout2)
 					cloutOut.LastReclaimHeight = ctx.BlockHeight()
+					// trunk-ignore(golangci-lint/govet): shadow
 					if err := h.mgr.Keeper().SetSwapperClout(ctx, cloutOut); err != nil {
 						ctx.Logger().Error("fail to save swapper clout out", "error", err)
 					}
@@ -243,6 +232,7 @@ func (h CommonOutboundTxHandler) handleV127(ctx cosmos.Context, tx ObservedTx, i
 		// send security alert for events that are not evm burn
 		if !isOutboundFakeGasTX(tx) {
 			msg := fmt.Sprintf("missing tx out in=%s", inTxID)
+			// trunk-ignore(golangci-lint/govet): shadow
 			if err := h.mgr.EventMgr().EmitEvent(ctx, NewEventSecurity(tx.Tx, msg)); err != nil {
 				ctx.Logger().Error("fail to emit security event", "error", err)
 			}

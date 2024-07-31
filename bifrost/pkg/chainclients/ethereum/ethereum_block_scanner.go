@@ -235,8 +235,8 @@ func (e *ETHScanner) FetchTxs(height, chainHeight int64) (stypes.TxIn, error) {
 	return txIn, nil
 }
 
-// updateGasPriceV3 records base fee + 25th percentile priority fee, rounded up 10 gwei.
-func (e *ETHScanner) updateGasPriceV3(baseFee *big.Int, priorityFees []*big.Int) {
+// updateGasPrice records base fee + 25th percentile priority fee, rounded up 10 gwei.
+func (e *ETHScanner) updateGasPrice(baseFee *big.Int, priorityFees []*big.Int) {
 	// skip empty blocks
 	if len(priorityFees) == 0 {
 		return
@@ -317,7 +317,7 @@ func (e *ETHScanner) processBlock(block *etypes.Block) (stypes.TxIn, error) {
 		}
 		priorityFees = append(priorityFees, tipCap)
 	}
-	e.updateGasPriceV3(block.BaseFee(), priorityFees)
+	e.updateGasPrice(block.BaseFee(), priorityFees)
 
 	reorgedTxIns, err := e.processReorg(block.Header())
 	if err != nil {
@@ -853,16 +853,7 @@ func (e *ETHScanner) getTxInFromTransaction(tx *etypes.Transaction, receipt *ety
 	if txGasPrice.Cmp(big.NewInt(tenGwei)) < 0 {
 		txGasPrice = big.NewInt(tenGwei)
 	}
-	// TODO: remove version check after v132
-	version, err := e.bridge.GetThorchainVersion()
-	if err != nil {
-		return nil, fmt.Errorf("fail to get thorchain version: %w", err)
-	}
-	if version.GTE(semver.MustParse("1.132.0")) {
-		txInItem.Gas = common.MakeEVMGas(common.ETHChain, txGasPrice, receipt.GasUsed)
-	} else {
-		txInItem.Gas = common.MakeEVMGas(common.ETHChain, txGasPrice, tx.Gas())
-	}
+	txInItem.Gas = common.MakeEVMGas(common.ETHChain, txGasPrice, receipt.GasUsed)
 	if txInItem.Coins.IsEmpty() {
 		if txInItem.Sender == txInItem.To {
 			// When the Sender and To is the same then there's no balance chance whatever the Coins,
@@ -959,30 +950,12 @@ func (e *ETHScanner) getTxInFromFailedTransaction(tx *etypes.Transaction, receip
 		txGasPrice = big.NewInt(tenGwei)
 	}
 	txHash := tx.Hash().Hex()[2:]
-
-	// TODO: remove version check after v132
-	version, err := e.bridge.GetThorchainVersion()
-	if err != nil {
-		e.logger.Err(err).Msg("fail to get thorchain version")
-		return nil
-	}
-	if version.GTE(semver.MustParse("1.132.0")) {
-		return &stypes.TxInItem{
-			Tx:     txHash,
-			Memo:   memo.NewOutboundMemo(common.TxID(txHash)).String(),
-			Sender: strings.ToLower(fromAddr.String()),
-			To:     strings.ToLower(tx.To().String()),
-			Coins:  common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1))),
-			Gas:    common.MakeEVMGas(common.ETHChain, txGasPrice, receipt.GasUsed),
-		}
-	} else {
-		return &stypes.TxInItem{
-			Tx:     txHash,
-			Memo:   memo.NewOutboundMemo(common.TxID(txHash)).String(),
-			Sender: strings.ToLower(fromAddr.String()),
-			To:     strings.ToLower(tx.To().String()),
-			Coins:  common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1))),
-			Gas:    common.MakeEVMGas(common.ETHChain, txGasPrice, tx.Gas()),
-		}
+	return &stypes.TxInItem{
+		Tx:     txHash,
+		Memo:   memo.NewOutboundMemo(common.TxID(txHash)).String(),
+		Sender: strings.ToLower(fromAddr.String()),
+		To:     strings.ToLower(tx.To().String()),
+		Coins:  common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1))),
+		Gas:    common.MakeEVMGas(common.ETHChain, txGasPrice, receipt.GasUsed),
 	}
 }

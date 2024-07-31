@@ -37,11 +37,6 @@ func (s *SlasherVCUR) BeginBlock(ctx cosmos.Context, req abci.RequestBeginBlock,
 	// Slash any validators (and since-unbonded liquidity within the unbonding period)
 	// who contributed to valid infractions
 	for _, evidence := range req.ByzantineValidators {
-		// TODO: Remove on next hard fork.
-		// The consensus failure occurred at block 7971846 and we give a few block buffer.
-		if evidence.Height > 7971840 && evidence.Height < 7971850 {
-			continue
-		}
 		switch evidence.Type {
 		case abci.EvidenceType_DUPLICATE_VOTE:
 			doubleSignEvidence = append(doubleSignEvidence, evidence)
@@ -162,9 +157,6 @@ func (s *SlasherVCUR) HandleMissingSign(ctx cosmos.Context, addr crypto.Address,
 	return fmt.Errorf("could not find active node account with validator address: %s", addr)
 }
 
-// TODO: remove me on hard fork
-func (_ *SlasherVCUR) LackObserving(_ cosmos.Context, _ constants.ConstantValues) error { return nil }
-
 // LackSigning slash account that fail to sign tx
 func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 	var resultErr error
@@ -190,7 +182,7 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 	}
 
 	for i, toi := range txs.TxArray {
-		if !common.CurrentChainNetwork.SoftEquals(toi.ToAddress.GetNetwork(mgr.GetVersion(), toi.Chain)) {
+		if !common.CurrentChainNetwork.SoftEquals(toi.ToAddress.GetNetwork(toi.Chain)) {
 			continue // skip this transaction
 		}
 		if toi.OutHash.IsEmpty() {

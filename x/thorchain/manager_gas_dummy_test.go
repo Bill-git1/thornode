@@ -13,7 +13,7 @@ func NewDummyGasManager() *DummyGasManager {
 	return &DummyGasManager{}
 }
 
-func (m *DummyGasManager) BeginBlock(mgr Manager) {}
+func (m *DummyGasManager) BeginBlock() {}
 func (m *DummyGasManager) EndBlock(ctx cosmos.Context, keeper keeper.Keeper, eventManager EventManager) {
 }
 func (m *DummyGasManager) AddGasAsset(_ common.Asset, gas common.Gas, increaseTxCount bool) {}

@@ -50,11 +50,9 @@ func getKeygenTypeFromString(t string) KeygenType {
 	switch {
 	case strings.EqualFold(t, "asgardKeygen"):
 		return KeygenType_AsgardKeygen
-	// TODO remove on hard fork
-	case strings.EqualFold(t, "yggdrasilKeygen"):
-		return KeygenType_YggdrasilKeygen
+	default:
+		return KeygenType_UnknownKeygen
 	}
-	return KeygenType_UnknownKeygen
 }
 
 // MarshalJSON marshal keygen type to JSON in string form

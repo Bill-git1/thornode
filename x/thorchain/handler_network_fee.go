@@ -43,10 +43,12 @@ func (h NetworkFeeHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result
 
 func (h NetworkFeeHandler) validate(ctx cosmos.Context, msg MsgNetworkFee) error {
 	version := h.mgr.GetVersion()
-	if version.GTE(semver.MustParse("0.1.0")) {
+	switch {
+	case version.GTE(semver.MustParse("0.1.0")):
 		return h.validateV1(ctx, msg)
+	default:
+		return errBadVersion
 	}
-	return errBadVersion
 }
 
 func (h NetworkFeeHandler) validateV1(ctx cosmos.Context, msg MsgNetworkFee) error {
@@ -65,10 +67,6 @@ func (h NetworkFeeHandler) handle(ctx cosmos.Context, msg MsgNetworkFee) (*cosmo
 	switch {
 	case version.GTE(semver.MustParse("1.134.0")):
 		return h.handleV134(ctx, msg)
-	case version.GTE(semver.MustParse("1.123.0")):
-		return h.handleV123(ctx, msg)
-	case version.GTE(semver.MustParse("0.47.0")):
-		return h.handleV47(ctx, msg)
 	default:
 		return nil, errBadVersion
 	}

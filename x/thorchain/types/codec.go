@@ -49,10 +49,6 @@ func RegisterCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&MsgManageTHORName{}, "thorchain/MsgManageTHORName", nil)
 	cdc.RegisterConcrete(&MsgTradeAccountDeposit{}, "thorchain/MsgTradeAccountDeposit", nil)
 	cdc.RegisterConcrete(&MsgTradeAccountWithdrawal{}, "thorchain/MsgTradeAccountWithdrawal", nil)
-
-	// TODO remove on hard fork
-	cdc.RegisterConcrete(&MsgSwitch{}, "thorchain/MsgSwitch", nil)
-	cdc.RegisterConcrete(&MsgYggdrasil{}, "thorchain/MsgYggdrasil", nil)
 }
 
 // RegisterInterfaces register the types
@@ -88,8 +84,4 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	registry.RegisterImplementations((*cosmos.Msg)(nil), &MsgSolvency{})
 	registry.RegisterImplementations((*cosmos.Msg)(nil), &MsgTradeAccountDeposit{})
 	registry.RegisterImplementations((*cosmos.Msg)(nil), &MsgTradeAccountWithdrawal{})
-
-	// TODO remove on hard fork
-	registry.RegisterImplementations((*cosmos.Msg)(nil), &MsgSwitch{})
-	registry.RegisterImplementations((*cosmos.Msg)(nil), &MsgYggdrasil{})
 }

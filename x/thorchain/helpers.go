@@ -2,13 +2,11 @@ package thorchain
 
 import (
 	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"sort"
 	"strings"
 
 	"github.com/armon/go-metrics"
-	"github.com/blang/semver"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	"github.com/hashicorp/go-multierror"
 
@@ -20,26 +18,6 @@ import (
 )
 
 func refundTx(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uint32, refundReason, sourceModuleName string) error {
-	version := mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.132.0")):
-		return refundTxV132(ctx, tx, mgr, refundCode, refundReason, sourceModuleName)
-	case version.GTE(semver.MustParse("1.124.0")):
-		return refundTxV124(ctx, tx, mgr, refundCode, refundReason, sourceModuleName)
-	case version.GTE(semver.MustParse("1.117.0")):
-		return refundTxV117(ctx, tx, mgr, refundCode, refundReason, sourceModuleName)
-	case version.GTE(semver.MustParse("1.110.0")):
-		return refundTxV110(ctx, tx, mgr, refundCode, refundReason, sourceModuleName)
-	case version.GTE(semver.MustParse("1.108.0")):
-		return refundTxV108(ctx, tx, mgr, refundCode, refundReason, sourceModuleName)
-	case version.GTE(semver.MustParse("0.47.0")):
-		return refundTxV47(ctx, tx, mgr, refundCode, refundReason, sourceModuleName)
-	default:
-		return errBadVersion
-	}
-}
-
-func refundTxV132(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uint32, refundReason, sourceModuleName string) error {
 	// If THORNode recognize one of the coins, and therefore able to refund
 	// withholding fees, refund all coins.
 
@@ -111,17 +89,6 @@ func refundTxV132(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uin
 // native coin besides rune: burn
 // non-native coin: donate to its pool
 func unrefundableCoinCleanup(ctx cosmos.Context, mgr Manager, toi TxOutItem, burnReason string) {
-	// TODO: remove on hardfork
-	version := mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.131.0")):
-		unrefundableCoinCleanupV131(ctx, mgr, toi, burnReason)
-	default:
-		unrefundableCoinCleanupV124(ctx, mgr, toi, burnReason)
-	}
-}
-
-func unrefundableCoinCleanupV131(ctx cosmos.Context, mgr Manager, toi TxOutItem, burnReason string) {
 	coin := toi.Coin
 
 	if coin.Asset.IsTradeAsset() {
@@ -171,20 +138,6 @@ func unrefundableCoinCleanupV131(ctx cosmos.Context, mgr Manager, toi TxOutItem,
 }
 
 func getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsset common.Asset, swp StreamingSwap) (uint64, error) {
-	version := mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.121.0")):
-		return getMaxSwapQuantityV121(ctx, mgr, sourceAsset, targetAsset, swp)
-	case version.GTE(semver.MustParse("1.116.0")):
-		return getMaxSwapQuantityV116(ctx, mgr, sourceAsset, targetAsset, swp)
-	case version.GTE(semver.MustParse("1.115.0")):
-		return getMaxSwapQuantityV115(ctx, mgr, sourceAsset, targetAsset, swp)
-	default:
-		return 0, errBadVersion
-	}
-}
-
-func getMaxSwapQuantityV121(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsset common.Asset, swp StreamingSwap) (uint64, error) {
 	if swp.Interval == 0 {
 		return 0, nil
 	}
@@ -306,26 +259,6 @@ func getMaxSwapQuantityV121(ctx cosmos.Context, mgr Manager, sourceAsset, target
 }
 
 func refundBond(ctx cosmos.Context, tx common.Tx, acc cosmos.AccAddress, amt cosmos.Uint, nodeAcc *NodeAccount, mgr Manager) error {
-	version := mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.134.0")):
-		return refundBondV134(ctx, tx, acc, amt, nodeAcc, mgr)
-	case version.GTE(semver.MustParse("1.124.0")):
-		return refundBondV124(ctx, tx, acc, amt, nodeAcc, mgr)
-	case version.GTE(semver.MustParse("1.103.0")):
-		return refundBondV103(ctx, tx, acc, amt, nodeAcc, mgr)
-	case version.GTE(semver.MustParse("1.92.0")):
-		return refundBondV92(ctx, tx, acc, amt, nodeAcc, mgr)
-	case version.GTE(semver.MustParse("1.88.0")):
-		return refundBondV88(ctx, tx, acc, amt, nodeAcc, mgr)
-	case version.GTE(semver.MustParse("0.81.0")):
-		return refundBondV81(ctx, tx, acc, amt, nodeAcc, mgr)
-	default:
-		return errBadVersion
-	}
-}
-
-func refundBondV134(ctx cosmos.Context, tx common.Tx, acc cosmos.AccAddress, amt cosmos.Uint, nodeAcc *NodeAccount, mgr Manager) error {
 	if nodeAcc.Status == NodeActive {
 		ctx.Logger().Info("node still active, cannot refund bond", "node address", nodeAcc.NodeAddress, "node pub key", nodeAcc.PubKeySet.Secp256k1)
 		return nil
@@ -352,7 +285,7 @@ func refundBondV134(ctx cosmos.Context, tx common.Tx, acc cosmos.AccAddress, amt
 		return err
 	}
 
-	bp.Adjust(mgr.GetVersion(), nodeAcc.Bond) // redistribute node bond amongst bond providers
+	bp.Adjust(nodeAcc.Bond) // redistribute node bond amongst bond providers
 	provider := bp.Get(acc)
 
 	if !provider.IsEmpty() && !provider.Bond.IsZero() {
@@ -448,20 +381,8 @@ func wrapError(ctx cosmos.Context, err error, wrap string) error {
 	return multierror.Append(errInternal, err)
 }
 
-func addGasFees(ctx cosmos.Context, mgr Manager, tx ObservedTx) error {
-	version := mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.124.0")):
-		return addGasFeesV124(ctx, mgr, tx)
-	case version.GTE(semver.MustParse("0.1.0")):
-		return addGasFeesV1(ctx, mgr, tx)
-	default:
-		return errBadVersion
-	}
-}
-
 // addGasFees to gas manager and deduct from vault
-func addGasFeesV124(ctx cosmos.Context, mgr Manager, tx ObservedTx) error {
+func addGasFees(ctx cosmos.Context, mgr Manager, tx ObservedTx) error {
 	// If there's no gas, then nothing to do.
 	if tx.Tx.Gas.IsEmpty() {
 		return nil
@@ -516,7 +437,7 @@ func emitPoolBalanceChangedEvent(ctx cosmos.Context, poolMod PoolMod, reason str
 	}
 }
 
-func getSynthSupplyRemainingV102(ctx cosmos.Context, mgr Manager, asset common.Asset) (cosmos.Uint, error) {
+func getSynthSupplyRemaining(ctx cosmos.Context, mgr Manager, asset common.Asset) (cosmos.Uint, error) {
 	maxSynths, err := mgr.Keeper().GetMimir(ctx, constants.MaxSynthPerPoolDepth.String())
 	if maxSynths < 0 || err != nil {
 		maxSynths = mgr.GetConstants().GetInt64Value(constants.MaxSynthPerPoolDepth)
@@ -542,24 +463,6 @@ func getSynthSupplyRemainingV102(ctx cosmos.Context, mgr Manager, asset common.A
 
 // isSynthMintPaused fails validation if synth supply is already too high, relative to pool depth
 func isSynthMintPaused(ctx cosmos.Context, mgr Manager, targetAsset common.Asset, outputAmt cosmos.Uint) error {
-	version := mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.128.0")):
-		return isSynthMintPausedV128(ctx, mgr, targetAsset, outputAmt)
-	case version.GTE(semver.MustParse("1.116.0")):
-		return isSynthMintPausedV116(ctx, mgr, targetAsset, outputAmt)
-	case version.GTE(semver.MustParse("1.103.0")):
-		return isSynthMintPausedV103(ctx, mgr, targetAsset, outputAmt)
-	case version.GTE(semver.MustParse("1.102.0")):
-		return isSynthMintPausedV102(ctx, mgr, targetAsset, outputAmt)
-	case version.GTE(semver.MustParse("1.99.0")):
-		return isSynthMintPausedV99(ctx, mgr, targetAsset, outputAmt)
-	default:
-		return nil
-	}
-}
-
-func isSynthMintPausedV128(ctx cosmos.Context, mgr Manager, targetAsset common.Asset, outputAmt cosmos.Uint) error {
 	// check if the pool is in ragnarok
 	k := "RAGNAROK-" + targetAsset.MimirString()
 	v, err := mgr.Keeper().GetMimir(ctx, k)
@@ -570,16 +473,21 @@ func isSynthMintPausedV128(ctx cosmos.Context, mgr Manager, targetAsset common.A
 		return fmt.Errorf("pool is in ragnarok")
 	}
 
-	return isSynthMintPausedV116(ctx, mgr, targetAsset, outputAmt)
-}
-
-func isSynthMintPausedV116(ctx cosmos.Context, mgr Manager, targetAsset common.Asset, outputAmt cosmos.Uint) error {
 	mintHeight := mgr.Keeper().GetConfigInt64(ctx, constants.MintSynths)
 	if mintHeight > 0 && ctx.BlockHeight() > mintHeight {
 		return fmt.Errorf("minting synthetics has been disabled")
 	}
 
-	return isSynthMintPausedV102(ctx, mgr, targetAsset, outputAmt)
+	remaining, err := getSynthSupplyRemaining(ctx, mgr, targetAsset)
+	if err != nil {
+		return err
+	}
+
+	if remaining.LT(outputAmt) {
+		return fmt.Errorf("insufficient synth capacity: want=%d have=%d", outputAmt.Uint64(), remaining.Uint64())
+	}
+
+	return nil
 }
 
 func telem(input cosmos.Uint) float32 {
@@ -614,8 +522,6 @@ func emitEndBlockTelemetry(ctx cosmos.Context, mgr Manager) error {
 
 	telemetry.SetGauge(telem(network.BondRewardRune), "thornode", "network", "bond_reward_rune")
 	telemetry.SetGauge(float32(network.TotalBondUnits.Uint64()), "thornode", "network", "total_bond_units")
-	telemetry.SetGauge(telem(network.BurnedBep2Rune), "thornode", "network", "rune", "burned", "bep2")   // TODO remove on hard fork
-	telemetry.SetGauge(telem(network.BurnedErc20Rune), "thornode", "network", "rune", "burned", "erc20") // TODO remove on hard fork
 
 	// emit protocol owned liquidity data
 	pol, err := mgr.Keeper().GetPOL(ctx)
@@ -647,19 +553,11 @@ func emitEndBlockTelemetry(ctx cosmos.Context, mgr Manager) error {
 	}
 
 	// emit node metrics
-	yggs := make(Vaults, 0) // TODO remove on hard fork
 	nodes, err := mgr.Keeper().ListValidatorsWithBond(ctx)
 	if err != nil {
 		return err
 	}
 	for _, node := range nodes {
-		if node.Status == NodeActive {
-			ygg, err := mgr.Keeper().GetVault(ctx, node.PubKeySet.Secp256k1)
-			if err != nil {
-				continue
-			}
-			yggs = append(yggs, ygg)
-		}
 		telemetry.SetGaugeWithLabels(
 			[]string{"thornode", "node", "bond"},
 			telem(cosmos.NewUint(node.Bond.Uint64())),
@@ -687,14 +585,7 @@ func emitEndBlockTelemetry(ctx cosmos.Context, mgr Manager) error {
 	}
 
 	// get 1 RUNE price in USD
-	var runeUSDPrice float32
-	version := mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.113.0")):
-		runeUSDPrice = telem(mgr.Keeper().DollarsPerRune(ctx))
-	default:
-		runeUSDPrice = telem(mgr.Keeper().DollarInRune(ctx).QuoUint64(constants.DollarMulti))
-	}
+	runeUSDPrice := telem(mgr.Keeper().DollarsPerRune(ctx))
 	telemetry.SetGauge(runeUSDPrice, "thornode", "price", "usd", "thor", "rune")
 
 	// emit pool metrics
@@ -714,7 +605,7 @@ func emitEndBlockTelemetry(ctx cosmos.Context, mgr Manager) error {
 		telemetry.SetGaugeWithLabels([]string{"thornode", "pool", "pending", "rune"}, telem(pool.PendingInboundRune), labels)
 		telemetry.SetGaugeWithLabels([]string{"thornode", "pool", "pending", "asset"}, telem(pool.PendingInboundAsset), labels)
 
-		telemetry.SetGaugeWithLabels([]string{"thornode", "pool", "units", "pool"}, telem(pool.CalcUnits(mgr.GetVersion(), synthSupply)), labels)
+		telemetry.SetGaugeWithLabels([]string{"thornode", "pool", "units", "pool"}, telem(pool.CalcUnits(synthSupply)), labels)
 		telemetry.SetGaugeWithLabels([]string{"thornode", "pool", "units", "lp"}, telem(pool.LPUnits), labels)
 		telemetry.SetGaugeWithLabels([]string{"thornode", "pool", "units", "synth"}, telem(pool.SynthUnits), labels)
 
@@ -737,7 +628,7 @@ func emitEndBlockTelemetry(ctx cosmos.Context, mgr Manager) error {
 
 	// emit vault metrics
 	asgards, _ := mgr.Keeper().GetAsgardVaults(ctx)
-	for _, vault := range append(asgards, yggs...) {
+	for _, vault := range asgards {
 		if vault.Status != ActiveVault && vault.Status != RetiringVault {
 			continue
 		}
@@ -908,21 +799,6 @@ func getNonSigners(nas []NodeAccount, signers []cosmos.AccAddress) []cosmos.AccA
 // Update the ObservedTxVoter so the network can still match the outbound with
 // the observed inbound
 func updateTxOutGas(ctx cosmos.Context, keeper keeper.Keeper, txOut types.TxOutItem, gas common.Gas) error {
-	version := keeper.GetVersion()
-	if keeper.GetVersion().LT(semver.MustParse("1.90.0")) {
-		version = keeper.GetLowestActiveVersion(ctx) // TODO remove me on hard fork
-	}
-	switch {
-	case version.GTE(semver.MustParse("1.88.0")):
-		return updateTxOutGasV88(ctx, keeper, txOut, gas)
-	case version.GTE(semver.MustParse("0.1.0")):
-		return updateTxOutGasV1(ctx, keeper, txOut, gas)
-	default:
-		return fmt.Errorf("updateTxOutGas: invalid version")
-	}
-}
-
-func updateTxOutGasV88(ctx cosmos.Context, keeper keeper.Keeper, txOut types.TxOutItem, gas common.Gas) error {
 	// When txOut.InHash is 0000000000000000000000000000000000000000000000000000000000000000 , which means the outbound is trigger by the network internally
 	// For example , migration, etc. there is no related inbound observation , thus doesn't need to try to find it and update anything
 	if txOut.InHash == common.BlankTxID {
@@ -947,11 +823,6 @@ func updateTxOutGasV88(ctx cosmos.Context, keeper keeper.Keeper, txOut types.TxO
 		return fmt.Errorf("fail to find tx out in ObservedTxVoter %s", txOut.InHash)
 	}
 
-	return nil
-}
-
-// No-op
-func updateTxOutGasV1(ctx cosmos.Context, keeper keeper.Keeper, txOut types.TxOutItem, gas common.Gas) error {
 	return nil
 }
 
@@ -1004,41 +875,9 @@ func passiveBackfill(ctx cosmos.Context, mgr Manager, nodeAccount NodeAccount, b
 	return nil
 }
 
-// storeContextTxID stores the current transaction id at the provided context key.
-func storeContextTxID(ctx cosmos.Context, key interface{}) (cosmos.Context, error) {
-	if ctx.Value(key) == nil {
-		hash := sha256.New()
-		_, err := hash.Write(ctx.TxBytes())
-		if err != nil {
-			return ctx, fmt.Errorf("fail to get txid: %w", err)
-		}
-		txid := hex.EncodeToString(hash.Sum(nil))
-		txID, err := common.NewTxID(txid)
-		if err != nil {
-			return ctx, fmt.Errorf("fail to get txid: %w", err)
-		}
-		ctx = ctx.WithValue(key, txID)
-	}
-	return ctx, nil
-}
-
 // atTVLCap - returns bool on if we've hit the TVL hard cap. Coins passed in
 // are included in the calculation
 func atTVLCap(ctx cosmos.Context, coins common.Coins, mgr Manager) bool {
-	version := mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.118.0")):
-		return atTVLCapV118(ctx, coins, mgr)
-	case version.GTE(semver.MustParse("1.117.0")):
-		return atTVLCapV117(ctx, coins, mgr)
-	case version.GTE(semver.MustParse("1.116.0")):
-		return atTVLCapV116(ctx, coins, mgr)
-	default:
-		return false
-	}
-}
-
-func atTVLCapV118(ctx cosmos.Context, coins common.Coins, mgr Manager) bool {
 	vaults, err := mgr.Keeper().GetAsgardVaults(ctx)
 	if err != nil {
 		ctx.Logger().Error("fail to get vaults for atTVLCap", "error", err)
@@ -1049,7 +888,7 @@ func atTVLCapV118(ctx cosmos.Context, coins common.Coins, mgr Manager) bool {
 	coins = coins.Copy()
 	for _, vault := range vaults {
 		if vault.IsAsgard() && (vault.IsActive() || vault.IsRetiring()) {
-			coins = coins.Adds_deprecated(vault.Coins)
+			coins = coins.Add(vault.Coins...)
 		}
 	}
 
@@ -1094,6 +933,7 @@ func atTVLCapV118(ctx cosmos.Context, coins common.Coins, mgr Manager) bool {
 	return false
 }
 
+// trunk-ignore(golangci-lint/unused): used by store helper
 func isActionsItemDangling(voter ObservedTxVoter, i int) bool {
 	if i < 0 || i > len(voter.Actions)-1 {
 		// No such Actions item exists in the voter.
@@ -1126,20 +966,6 @@ func isActionsItemDangling(voter ObservedTxVoter, i int) bool {
 }
 
 func triggerPreferredAssetSwap(ctx cosmos.Context, mgr Manager, affiliateAddress common.Address, txID common.TxID, tn THORName, affcol AffiliateFeeCollector, queueIndex int) error {
-	version := mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.121.0")):
-		return triggerPreferredAssetSwapV121(ctx, mgr, affiliateAddress, txID, tn, affcol, queueIndex)
-	case version.GTE(semver.MustParse("1.120.0")):
-		return triggerPreferredAssetSwapV120(ctx, mgr, affiliateAddress, txID, tn, affcol, queueIndex)
-	case version.GTE(semver.MustParse("1.116.0")):
-		return triggerPreferredAssetSwapV116(ctx, mgr, affiliateAddress, txID, tn, affcol, queueIndex)
-	default:
-		return fmt.Errorf("bad version (%s) for triggerPreferredAssetSwap", version.String())
-	}
-}
-
-func triggerPreferredAssetSwapV121(ctx cosmos.Context, mgr Manager, affiliateAddress common.Address, txID common.TxID, tn THORName, affcol AffiliateFeeCollector, queueIndex int) error {
 	// Check that the THORName has an address alias for the PreferredAsset, if not skip
 	// the swap
 	alias := tn.GetAlias(tn.PreferredAsset.GetChain())
@@ -1149,8 +975,7 @@ func triggerPreferredAssetSwapV121(ctx cosmos.Context, mgr Manager, affiliateAdd
 
 	// Sanity check: don't swap 0 amount
 	if affcol.RuneAmount.IsZero() {
-		// trunk-ignore(codespell)
-		return fmt.Errorf("can't execute preferred asset swap, accured RUNE amount is zero")
+		return fmt.Errorf("can't execute preferred asset swap, accrued RUNE amount is zero")
 	}
 	// Sanity check: ensure the swap amount isn't more than the entire AffiliateCollector module
 	acBalance := mgr.Keeper().GetRuneBalanceOfModule(ctx, AffiliateCollectorName)
@@ -1238,16 +1063,6 @@ func triggerPreferredAssetSwapV121(ctx cosmos.Context, mgr Manager, affiliateAdd
 }
 
 func IsModuleAccAddress(keeper keeper.Keeper, accAddr cosmos.AccAddress) bool {
-	version := keeper.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.121.0")):
-		return IsModuleAccAddressV121(keeper, accAddr)
-	default:
-		return false
-	}
-}
-
-func IsModuleAccAddressV121(keeper keeper.Keeper, accAddr cosmos.AccAddress) bool {
 	return accAddr.Equals(keeper.GetModuleAccAddress(AsgardName)) ||
 		accAddr.Equals(keeper.GetModuleAccAddress(BondName)) ||
 		accAddr.Equals(keeper.GetModuleAccAddress(ReserveName)) ||
@@ -1257,16 +1072,6 @@ func IsModuleAccAddressV121(keeper keeper.Keeper, accAddr cosmos.AccAddress) boo
 }
 
 func NewSwapMemo(ctx cosmos.Context, mgr Manager, targetAsset common.Asset, destination common.Address, limit cosmos.Uint, affiliate string, affiliateBps cosmos.Uint) string {
-	version := mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("1.132.0")):
-		return NewSwapMemoV132(targetAsset, destination, limit, affiliate, affiliateBps)
-	default:
-		panic("invalid version")
-	}
-}
-
-func NewSwapMemoV132(targetAsset common.Asset, destination common.Address, limit cosmos.Uint, affiliate string, affiliateBps cosmos.Uint) string {
 	return fmt.Sprintf("=:%s:%s:%s:%s:%s", targetAsset, destination, limit.String(), affiliate, affiliateBps.String())
 }
 
@@ -1429,7 +1234,7 @@ func polPoolValue(ctx cosmos.Context, mgr Manager) (cosmos.Uint, error) {
 			continue
 		}
 		synthSupply := mgr.Keeper().GetTotalSupply(ctx, pool.Asset.GetSyntheticAsset())
-		pool.CalcUnits(mgr.GetVersion(), synthSupply)
+		pool.CalcUnits(synthSupply)
 		lp, err := mgr.Keeper().GetLiquidityProvider(ctx, pool.Asset, polAddress)
 		if err != nil {
 			return total, err

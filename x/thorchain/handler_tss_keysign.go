@@ -52,12 +52,9 @@ func (h TssKeysignHandler) validate(ctx cosmos.Context, msg MsgTssKeysignFail) e
 	switch {
 	case version.GTE(semver.MustParse("1.114.0")):
 		return h.validateV114(ctx, msg)
-	case version.GTE(semver.MustParse("1.109.0")):
-		return h.validateV109(ctx, msg)
-	case version.GTE(semver.MustParse("0.70.0")):
-		return h.validateV70(ctx, msg)
+	default:
+		return errBadVersion
 	}
-	return errBadVersion
 }
 
 func (h TssKeysignHandler) validateV114(ctx cosmos.Context, msg MsgTssKeysignFail) error {
@@ -97,12 +94,9 @@ func (h TssKeysignHandler) handle(ctx cosmos.Context, msg MsgTssKeysignFail) (*c
 	switch {
 	case version.GTE(semver.MustParse("1.110.0")):
 		return h.handleV110(ctx, msg)
-	case version.GTE(semver.MustParse("1.109.0")):
-		return h.handleV109(ctx, msg)
-	case version.GTE(semver.MustParse("0.1.0")):
-		return h.handleV1(ctx, msg)
+	default:
+		return nil, errBadVersion
 	}
-	return nil, errBadVersion
 }
 
 func (h TssKeysignHandler) handleV110(ctx cosmos.Context, msg MsgTssKeysignFail) (*cosmos.Result, error) {

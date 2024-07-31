@@ -133,13 +133,6 @@ func (tx Tx) Hash(version semver.Version, blockHeight int64) string {
 	return fmt.Sprintf("%X", sha256.Sum256([]byte(str)))
 }
 
-// TODO: Remove on hard fork.
-// Hash_deprecated calculates a hash only based on from address and to address
-func (tx Tx) Hash_deprecated() string {
-	str := fmt.Sprintf("%s|%s", tx.FromAddress, tx.ToAddress)
-	return fmt.Sprintf("%X", sha256.Sum256([]byte(str)))
-}
-
 // String implement fmt.Stringer return a string representation of the tx
 func (tx Tx) String() string {
 	return fmt.Sprintf("%s: %s ==> %s (Memo: %s) %s (gas: %s)", tx.ID, tx.FromAddress, tx.ToAddress, tx.Memo, tx.Coins, tx.Gas)
@@ -148,35 +141,6 @@ func (tx Tx) String() string {
 // IsEmpty check whether the ID field is empty or not
 func (tx Tx) IsEmpty() bool {
 	return tx.ID.IsEmpty()
-}
-
-// Equals compares two Txs to see whether they represent the same Tx. This method has a
-// side effect of sorting the input parameters. Since this is already used, it cannot be
-// changed without causing consensus failure.
-// TODO: Deprecated, remove on hard fork.
-func (tx Tx) Equals(tx2 Tx) bool {
-	if !tx.ID.Equals(tx2.ID) {
-		return false
-	}
-	if !tx.Chain.Equals(tx2.Chain) {
-		return false
-	}
-	if !tx.FromAddress.Equals(tx2.FromAddress) {
-		return false
-	}
-	if !tx.ToAddress.Equals(tx2.ToAddress) {
-		return false
-	}
-	if !tx.Coins.Equals_deprecated(tx2.Coins) {
-		return false
-	}
-	if !tx.Gas.Equals(tx2.Gas) {
-		return false
-	}
-	if !strings.EqualFold(tx.Memo, tx2.Memo) {
-		return false
-	}
-	return true
 }
 
 // EqualsEx compare two Tx to see whether they represent the same Tx

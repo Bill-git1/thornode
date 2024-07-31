@@ -31,7 +31,7 @@ func (MsgUnBondSuite) TestMsgUnBond(c *C) {
 	c.Assert(len(msgApply.GetSigners()), Equals, 1)
 	c.Assert(msgApply.GetSigners()[0].Equals(signerAddr), Equals, true)
 	c.Assert(NewMsgUnBond(txin, cosmos.AccAddress{}, cosmos.NewUint(common.One), bondAddr, nil, signerAddr).ValidateBasic(), NotNil)
-	c.Assert(NewMsgUnBond(txin, nodeAddr, cosmos.ZeroUint(), bondAddr, nil, signerAddr).ValidateBasic(), NotNil)
+	c.Assert(NewMsgUnBond(txin, nodeAddr, cosmos.ZeroUint(), bondAddr, nil, signerAddr).ValidateBasic(), IsNil)
 	c.Assert(NewMsgUnBond(txinNoID, nodeAddr, cosmos.NewUint(common.One), bondAddr, nil, signerAddr).ValidateBasic(), NotNil)
 	c.Assert(NewMsgUnBond(txin, nodeAddr, cosmos.NewUint(common.One), "", nil, signerAddr).ValidateBasic(), NotNil)
 	c.Assert(NewMsgUnBond(txin, nodeAddr, cosmos.NewUint(common.One), bondAddr, nil, cosmos.AccAddress{}).ValidateBasic(), NotNil)

@@ -8,10 +8,8 @@ import (
 // NewNetwork create a new instance Network it is empty though
 func NewNetwork() Network {
 	return Network{
-		BondRewardRune:  cosmos.ZeroUint(),
-		TotalBondUnits:  cosmos.ZeroUint(),
-		BurnedBep2Rune:  cosmos.ZeroUint(), // TODO remove on hard fork
-		BurnedErc20Rune: cosmos.ZeroUint(), // TODO remove on hard fork
+		BondRewardRune: cosmos.ZeroUint(),
+		TotalBondUnits: cosmos.ZeroUint(),
 	}
 }
 

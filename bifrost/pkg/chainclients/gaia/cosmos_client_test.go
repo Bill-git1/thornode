@@ -113,14 +113,14 @@ func (s *CosmosTestSuite) TestGetAddress(c *C) {
 	c.Assert(err, IsNil)
 	c.Check(acc.AccountNumber, Equals, int64(3530305))
 	c.Check(acc.Sequence, Equals, int64(3))
-	c.Check(acc.Coins.Equals_deprecated(expectedCoins), Equals, true)
+	c.Check(acc.Coins.EqualsEx(expectedCoins), Equals, true)
 
 	pk := common.PubKey("sthorpub1addwnpepqf72ur2e8zk8r5augtrly40cuy94f7e663zh798tyms6pu2k8qdswf4es66")
 	acc, err = cc.GetAccount(pk, big.NewInt(0))
 	c.Assert(err, IsNil)
 	c.Check(acc.AccountNumber, Equals, int64(3530305))
 	c.Check(acc.Sequence, Equals, int64(3))
-	c.Check(acc.Coins.Equals_deprecated(expectedCoins), Equals, true)
+	c.Check(acc.Coins.EqualsEx(expectedCoins), Equals, true)
 
 	resultAddr := cc.GetAddress(pk)
 

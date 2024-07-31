@@ -32,11 +32,9 @@ func init() {
 		JailTimeKeysign:                     10,
 		AsgardSize:                          6,
 		StreamingSwapMinBPFee:               100,
-		MinimumNodesForYggdrasil:            4, // TODO remove on hard fork
 		VirtualMultSynthsBasisPoints:        20_000,
 		MinTxOutVolumeThreshold:             2000000_00000000,
 		TxOutDelayRate:                      2000000_00000000,
-		PoolDepthForYggFundingMin:           500_000_00000000, // TODO remove on hard fork
 		MaxSynthPerPoolDepth:                3_500,
 		MaxSynthsForSaversYield:             5000,
 		PauseLoans:                          0,
