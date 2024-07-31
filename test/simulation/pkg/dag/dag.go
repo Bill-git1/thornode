@@ -124,7 +124,10 @@ func Execute(c *OpConfig, root *Actor, parallelism int) {
 			// tee the actor logs to a buffer that we dump if it fails
 			buf := new(bytes.Buffer)
 			teeWriter := zerolog.MultiLevelWriter(buf, os.Stdout)
-			a.SetLogger(a.Log().Output(zerolog.ConsoleWriter{Out: teeWriter}))
+			a.SetLogger(a.Log().Output(zerolog.ConsoleWriter{
+				Out:        teeWriter,
+				TimeFormat: time.TimeOnly,
+			}))
 
 			err = a.Execute(c)
 			if err != nil {

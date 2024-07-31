@@ -51,7 +51,10 @@ var liteClientConstructors = map[common.Chain]LiteChainClientConstructor{
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func init() {
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout}).With().Caller().Logger()
+	log.Logger = log.Output(zerolog.ConsoleWriter{
+		Out:        os.Stdout,
+		TimeFormat: time.TimeOnly,
+	}).With().Caller().Logger()
 
 	// init prefixes
 	ccfg := cosmos.GetConfig()

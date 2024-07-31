@@ -228,11 +228,7 @@ cli-mocknet:
 	@docker compose -f build/docker/docker-compose.yml run --rm cli
 
 run-mocknet:
-	@BTC_MASTER_ADDR="bcrt1qf4l5dlqhaujgkxxqmug4stfvmvt58vx2h44c39" \
-		BCH_MASTER_ADDR="qpxh73huzlhjfzcccr03zkpd9nd3wsasegmrreet72" \
-		DOGE_MASTER_ADDR="mnaioCtEGdw6bd6rWJ13Mbre1kN5rPa2Mo" \
-		LTC_MASTER_ADDR="rltc1qf4l5dlqhaujgkxxqmug4stfvmvt58vx2fc03xm" \
-		docker compose -f build/docker/docker-compose.yml \
+	@docker compose -f build/docker/docker-compose.yml \
 		--profile mocknet --profile midgard up -d
 
 stop-mocknet:
@@ -268,7 +264,8 @@ reset-mocknet-fork-%: stop-mocknet
 # ------------------------------ Multi Node Mocknet ------------------------------
 
 run-mocknet-cluster:
-	@docker compose -f build/docker/docker-compose.yml --profile mocknet-cluster --profile midgard up -d
+	@docker compose -f build/docker/docker-compose.yml --profile mocknet-cluster \
+		--profile midgard up -d
 
 stop-mocknet-cluster:
 	@docker compose -f build/docker/docker-compose.yml --profile mocknet-cluster --profile midgard down -v

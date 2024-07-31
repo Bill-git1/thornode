@@ -2,6 +2,7 @@ package features
 
 import (
 	"fmt"
+	"strings"
 	"sync/atomic"
 
 	"gitlab.com/thorchain/thornode/common"
@@ -221,8 +222,8 @@ func (a *SaverEjectActor) setMimir(config *OpConfig, key string, value int64) bo
 		return false
 	}
 
-	// skip if already set
-	if mimir, ok := mimirs[key]; (ok && mimir == value) || (!ok && value == -1) {
+	// skip once set
+	if mimir, ok := mimirs[strings.ToUpper(key)]; (ok && mimir == value) || (!ok && value == -1) {
 		return true
 	}
 
@@ -245,7 +246,7 @@ func (a *SaverEjectActor) setMimir(config *OpConfig, key string, value int64) bo
 		Str("txid", txid.String()).
 		Msg("broadcasted mimir")
 
-	return true
+	return false // continue will occur after the mimir is observed set on next retry
 }
 
 func (a *SaverEjectActor) verifySaverEject(config *OpConfig) OpResult {

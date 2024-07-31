@@ -396,7 +396,7 @@ services:
     image: registry.gitlab.com/thorchain/devops/node-launcher:bitcoin-daemon-26.2
     restart: unless-stopped
     environment:
-      BTC_MASTER_ADDR: ${BTC_MASTER_ADDR:-bcrt1qj08ys4ct2hzzc2hcz6h2hgrvlmsjynawhcf2xa}
+      BTC_MASTER_ADDR: ${BTC_MASTER_ADDR:-bcrt1qf4l5dlqhaujgkxxqmug4stfvmvt58vx2h44c39}
       BLOCK_TIME: ${BLOCK_TIME:-1}
     ports:
       - 18443:18443
@@ -414,7 +414,7 @@ services:
     restart: unless-stopped
     environment:
       RPC_PORT: "28443"
-      BTC_MASTER_ADDR: ${BCH_MASTER_ADDR:-bchreg:qzfuujzhpd2ugtp2lqt2a2aqdnlwzgj04cwqq36m3u}
+      BTC_MASTER_ADDR: ${BCH_MASTER_ADDR:-qpxh73huzlhjfzcccr03zkpd9nd3wsasegmrreet72}
       BLOCK_TIME: ${BLOCK_TIME:-1}
     ports:
       - 28443:28443
@@ -431,7 +431,7 @@ services:
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-1}
-      DOGE_MASTER_ADDR: ${DOGE_MASTER_ADDR:-mtzUk1zTJzTdyC8Pz6PPPyCHTEL5RLVyDJ}
+      DOGE_MASTER_ADDR: ${DOGE_MASTER_ADDR:-mnaioCtEGdw6bd6rWJ13Mbre1kN5rPa2Mo}
     ports:
       - 18332:18332
     entrypoint: "/scripts/entrypoint-mock.sh"
@@ -445,7 +445,7 @@ services:
     image: registry.gitlab.com/thorchain/devops/node-launcher:litecoin-daemon-0.21.3
     restart: unless-stopped
     environment:
-      BTC_MASTER_ADDR: ${LTC_MASTER_ADDR:-rltc1qj08ys4ct2hzzc2hcz6h2hgrvlmsjynawf4nr3r}
+      BTC_MASTER_ADDR: ${LTC_MASTER_ADDR:-rltc1qf4l5dlqhaujgkxxqmug4stfvmvt58vx2fc03xm}
       RPC_PORT: "38443"
     ports:
       - 38443:38443
