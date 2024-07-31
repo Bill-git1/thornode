@@ -998,7 +998,6 @@ github.com/cockroachdb/redact v1.1.5/go.mod h1:BVNblN9mBWFyMyqK1k3AAiSxhvhfK2oOZ
 github.com/cockroachdb/tokenbucket v0.0.0-20230807174530-cc333fc44b06 h1:zuQyyAKVxetITBuuhv3BI9cMrmStnpT18zmgmTxunpo=
 github.com/cockroachdb/tokenbucket v0.0.0-20230807174530-cc333fc44b06/go.mod h1:7nc4anLGjupUW/PeY5qiNYsdNXj7zopG+eqsS7To5IQ=
 github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd/go.mod h1:sE/e/2PUdi/liOCUjSTXgM1o87ZssimdTWN964YiIeI=
-github.com/coinbase/rosetta-sdk-go v0.6.10/go.mod h1:J/JFMsfcePrjJZkwQFLh+hJErkAmdm9Iyy3D5Y0LfXo=
 github.com/coinbase/rosetta-sdk-go v0.7.0 h1:lmTO/JEpCvZgpbkOITL95rA80CPKb5CtMzLaqF2mCNg=
 github.com/coinbase/rosetta-sdk-go v0.7.0/go.mod h1:7nD3oBPIiHqhRprqvMgPoGxe/nyq3yftRmpsy29coWE=
 github.com/cometbft/cometbft v0.38.6 h1:QSgpCzrGWJ2KUq1qpw+FCfASRpE27T6LQbfEHscdyOk=
@@ -1030,7 +1029,6 @@ github.com/coreos/pkg v0.0.0-20160727233714-3ac0863d7acf/go.mod h1:E3G3o1h8I7cfc
 github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f/go.mod h1:E3G3o1h8I7cfcXa63jLwjI0eiQQMgzzUDFVpN/nH/eA=
 github.com/cosmos/btcutil v1.0.4 h1:n7C2ngKXo7UC9gNyMNLbzqz7Asuf+7Qv4gnX/rOdQ44=
 github.com/cosmos/btcutil v1.0.4/go.mod h1:Ffqc8Hn6TJUdDgHBwIZLtrLQC1KdJ9jGJl/TvgUaxbU=
-github.com/cosmos/cosmos-sdk v0.44.5/go.mod h1:maUA6m2TBxOJZkbwl0eRtEBgTX37kcaiOWU5t1HEGaY=
 github.com/cosmos/cosmos-sdk v0.45.1 h1:PY79YxPea5qlRLExRnzg8/rT1Scc8GGgRs22p7DX99Q=
 github.com/cosmos/cosmos-sdk v0.45.1/go.mod h1:XXS/asyCqWNWkx2rW6pSuen+EVcpAFxq6khrhnZgHaQ=
 github.com/cosmos/go-bip39 v0.0.0-20180819234021-555e2067c45d/go.mod h1:tSxLoYXyBmiFeKpvmq4dzayMdCjCnu8uqmCysIGBT2Y=
