@@ -18,6 +18,8 @@ type MockAccountServiceClient interface {
 	Account(ctx context.Context, in *atypes.QueryAccountRequest, opts ...grpc.CallOption) (*atypes.QueryAccountResponse, error)
 	// Params queries all parameters.
 	Params(ctx context.Context, in *atypes.QueryParamsRequest, opts ...grpc.CallOption) (*atypes.QueryParamsResponse, error)
+
+	ModuleAccountByName(ctx context.Context, in *atypes.QueryModuleAccountByNameRequest, opts ...grpc.CallOption) (*atypes.QueryModuleAccountByNameResponse, error)
 }
 
 type mockAccountServiceClient struct{}
@@ -40,5 +42,9 @@ func (c *mockAccountServiceClient) Accounts(ctx context.Context, in *atypes.Quer
 }
 
 func (c *mockAccountServiceClient) Params(ctx context.Context, in *atypes.QueryParamsRequest, opts ...grpc.CallOption) (*atypes.QueryParamsResponse, error) {
+	return nil, nil
+}
+
+func (c *mockAccountServiceClient) ModuleAccountByName(ctx context.Context, in *atypes.QueryModuleAccountByNameRequest, opts ...grpc.CallOption) (*atypes.QueryModuleAccountByNameResponse, error) {
 	return nil, nil
 }

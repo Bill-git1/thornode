@@ -128,6 +128,7 @@
           "events": [
             {
               "fee": "",
+              "fee_payer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "type": "tx"
             },
             {
@@ -256,6 +257,7 @@
           "events": [
             {
               "fee": "",
+              "fee_payer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "type": "tx"
             },
             {
@@ -444,6 +446,7 @@
           "events": [
             {
               "fee": "",
+              "fee_payer": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
               "type": "tx"
             },
             {

@@ -253,6 +253,10 @@
         }
       ]
     },
+    "capability": {
+      "index": "1",
+      "owners": []
+    },
     "genutil": {
       "gen_txs": []
     },
@@ -372,7 +376,8 @@
           "type": "AsgardVault"
         }
       ]
-    }
+    },
+    "upgrade": {}
   },
   "chain_id": "thorchain",
   "consensus_params": {

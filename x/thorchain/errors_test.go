@@ -23,26 +23,22 @@ func (ErrorsTestSuite) TestErrInternal(c *C) {
 	codelessErr := fmt.Errorf("codeless error")
 	_, code, log = se.ABCIInfo(codelessErr, false)
 	c.Check(int(code), Equals, 1)
-	c.Check(strings.Contains(log, "codeless error"), Equals, false) // Redacted error.
-	c.Check(log, Equals, "internal")
+	c.Check(strings.Contains(log, "codeless error"), Equals, true)
 
 	internalErr := ErrInternal(codeErr, codelessErr.Error())
 	_, code, log = se.ABCIInfo(internalErr, false)
 	c.Check(int(code), Equals, 1)
-	c.Check(strings.Contains(log, "codeless error"), Equals, false) // Redacted error.
-	c.Check(log, Equals, "internal")
+	c.Check(strings.Contains(log, "codeless error"), Equals, true)
 
 	appendedError := multierror.Append(codeErr, codelessErr)
 	_, code, log = se.ABCIInfo(appendedError, false)
 	c.Check(int(code), Equals, 1)
-	c.Check(strings.Contains(log, "codeless error"), Equals, false) // Redacted error.
-	c.Check(log, Equals, "internal")
+	c.Check(strings.Contains(log, "codeless error"), Equals, true)
 
 	joinedError := errors.Join(codeErr, codelessErr)
 	_, code, log = se.ABCIInfo(joinedError, false)
 	c.Check(int(code), Equals, 1)
-	c.Check(strings.Contains(log, "codeless error"), Equals, false) // Redacted error.
-	c.Check(log, Equals, "internal")
+	c.Check(strings.Contains(log, "codeless error"), Equals, true)
 
 	wrappedErr := se.Wrap(codeErr, codelessErr.Error())
 	_, code, log = se.ABCIInfo(wrappedErr, false)
