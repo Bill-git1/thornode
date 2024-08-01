@@ -247,6 +247,7 @@ func Init() {
 	assert(viper.BindEnv("bifrost.chains.LTC.disabled", "LTC_DISABLED"))
 	assert(viper.BindEnv("bifrost.chains.AVAX.disabled", "AVAX_DISABLED"))
 	assert(viper.BindEnv("bifrost.chains.AVAX.block_scanner.gas_cache_size", "AVAX_GAS_CACHE_SIZE"))
+	assert(viper.BindEnv("thor.cosmos.halt_height", "HARDFORK_BLOCK_HEIGHT"))
 
 	// always override from environment
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
