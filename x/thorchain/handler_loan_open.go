@@ -68,7 +68,7 @@ func (h LoanOpenHandler) validateV128(ctx cosmos.Context, msg MsgLoanOpen) error
 		return err
 	}
 
-	pauseLoans := fetchConfigInt64(ctx, h.mgr, constants.PauseLoans)
+	pauseLoans := h.mgr.Keeper().GetConfigInt64(ctx, constants.PauseLoans)
 	if pauseLoans > 0 {
 		return fmt.Errorf("loans are currently paused")
 	}
@@ -79,7 +79,7 @@ func (h LoanOpenHandler) validateV128(ctx cosmos.Context, msg MsgLoanOpen) error
 
 	// ensure that while derived assets are disabled, borrower cannot receive a
 	// derived asset as their debt
-	enableDerived := fetchConfigInt64(ctx, h.mgr, constants.EnableDerivedAssets)
+	enableDerived := h.mgr.Keeper().GetConfigInt64(ctx, constants.EnableDerivedAssets)
 	if enableDerived == 0 && msg.TargetAsset.IsDerivedAsset() {
 		return fmt.Errorf("cannot receive derived asset")
 	}
@@ -94,7 +94,7 @@ func (h LoanOpenHandler) validateV128(ctx cosmos.Context, msg MsgLoanOpen) error
 
 	// Circuit Breaker: check if we're hit the max supply
 	supply := h.mgr.Keeper().GetTotalSupply(ctx, common.RuneAsset())
-	maxAmt := fetchConfigInt64(ctx, h.mgr, constants.MaxRuneSupply)
+	maxAmt := h.mgr.Keeper().GetConfigInt64(ctx, constants.MaxRuneSupply)
 	if maxAmt <= 0 {
 		return fmt.Errorf("no max supply set")
 	}
@@ -137,7 +137,7 @@ func (h LoanOpenHandler) validateV128(ctx cosmos.Context, msg MsgLoanOpen) error
 	if totalRune.IsZero() {
 		return fmt.Errorf("no liquidity, lending unavailable")
 	}
-	lever := fetchConfigInt64(ctx, h.mgr, constants.LendingLever)
+	lever := h.mgr.Keeper().GetConfigInt64(ctx, constants.LendingLever)
 	runeBurnt := common.SafeSub(cosmos.NewUint(uint64(maxAmt)), supply)
 	totalAvailableRuneForProtocol := common.GetSafeShare(cosmos.NewUint(uint64(lever)), cosmos.NewUint(10_000), runeBurnt) // calculate how much of that rune is available for loans
 	if totalAvailableRuneForProtocol.IsZero() {
@@ -214,7 +214,7 @@ func (h LoanOpenHandler) openLoan(ctx cosmos.Context, msg MsgLoanOpen) error {
 	}
 
 	// get configs
-	enableDerived := fetchConfigInt64(ctx, h.mgr, constants.EnableDerivedAssets)
+	enableDerived := h.mgr.Keeper().GetConfigInt64(ctx, constants.EnableDerivedAssets)
 
 	// calculate CR
 	cr, err := h.getPoolCR(ctx, pool, msg.CollateralAmount)
@@ -322,12 +322,12 @@ func (h LoanOpenHandler) openLoan(ctx cosmos.Context, msg MsgLoanOpen) error {
 }
 
 func (h LoanOpenHandler) getPoolCR(ctx cosmos.Context, pool Pool, collateralAmount cosmos.Uint) (cosmos.Uint, error) {
-	minCR := fetchConfigInt64(ctx, h.mgr, constants.MinCR)
-	maxCR := fetchConfigInt64(ctx, h.mgr, constants.MaxCR)
-	lever := fetchConfigInt64(ctx, h.mgr, constants.LendingLever)
+	minCR := h.mgr.Keeper().GetConfigInt64(ctx, constants.MinCR)
+	maxCR := h.mgr.Keeper().GetConfigInt64(ctx, constants.MaxCR)
+	lever := h.mgr.Keeper().GetConfigInt64(ctx, constants.LendingLever)
 
 	currentRuneSupply := h.mgr.Keeper().GetTotalSupply(ctx, common.RuneAsset())
-	maxRuneSupply := fetchConfigInt64(ctx, h.mgr, constants.MaxRuneSupply)
+	maxRuneSupply := h.mgr.Keeper().GetConfigInt64(ctx, constants.MaxRuneSupply)
 	if maxRuneSupply <= 0 {
 		return cosmos.ZeroUint(), fmt.Errorf("no max supply set")
 	}
@@ -528,10 +528,10 @@ func (h LoanOpenHandler) getTotalLiquidityRUNELoanPools(ctx cosmos.Context) (cos
 }
 
 func (h LoanOpenHandler) GetLoanCollateralRemainingForPool(ctx cosmos.Context, pool Pool) (cosmos.Uint, error) {
-	lever := fetchConfigInt64(ctx, h.mgr, constants.LendingLever)
+	lever := h.mgr.Keeper().GetConfigInt64(ctx, constants.LendingLever)
 
 	currentRuneSupply := h.mgr.Keeper().GetTotalSupply(ctx, common.RuneAsset())
-	maxRuneSupply := fetchConfigInt64(ctx, h.mgr, constants.MaxRuneSupply)
+	maxRuneSupply := h.mgr.Keeper().GetConfigInt64(ctx, constants.MaxRuneSupply)
 	if maxRuneSupply <= 0 {
 		return cosmos.ZeroUint(), fmt.Errorf("no max supply set")
 	}

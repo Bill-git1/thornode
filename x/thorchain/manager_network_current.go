@@ -849,10 +849,10 @@ func (vm *NetworkMgrVCUR) paySaverYield(ctx cosmos.Context, asset common.Asset, 
 }
 
 func (vm *NetworkMgrVCUR) POLCycle(ctx cosmos.Context, mgr Manager) error {
-	maxDeposit := fetchConfigInt64(ctx, mgr, constants.POLMaxNetworkDeposit)
-	movement := fetchConfigInt64(ctx, mgr, constants.POLMaxPoolMovement)
-	target := fetchConfigInt64(ctx, mgr, constants.POLTargetSynthPerPoolDepth)
-	buf := fetchConfigInt64(ctx, mgr, constants.POLBuffer)
+	maxDeposit := mgr.Keeper().GetConfigInt64(ctx, constants.POLMaxNetworkDeposit)
+	movement := mgr.Keeper().GetConfigInt64(ctx, constants.POLMaxPoolMovement)
+	target := mgr.Keeper().GetConfigInt64(ctx, constants.POLTargetSynthPerPoolDepth)
+	buf := mgr.Keeper().GetConfigInt64(ctx, constants.POLBuffer)
 	targetSynthPerPoolDepth := cosmos.NewUint(uint64(target))
 	maxMovement := cosmos.NewUint(uint64(movement))
 	buffer := cosmos.NewUint(uint64(buf))

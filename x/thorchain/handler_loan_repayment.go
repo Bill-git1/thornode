@@ -73,7 +73,7 @@ func (h LoanRepaymentHandler) validateV111(ctx cosmos.Context, msg MsgLoanRepaym
 		return fmt.Errorf("address %s does not match input coin %s", msg.From.String(), msg.Coin.String())
 	}
 
-	pauseLoans := fetchConfigInt64(ctx, h.mgr, constants.PauseLoans)
+	pauseLoans := h.mgr.Keeper().GetConfigInt64(ctx, constants.PauseLoans)
 	if pauseLoans > 0 {
 		return fmt.Errorf("loans are currently paused")
 	}
@@ -93,7 +93,7 @@ func (h LoanRepaymentHandler) validateV111(ctx cosmos.Context, msg MsgLoanRepaym
 		return fmt.Errorf("loan contains no collateral to redeem")
 	}
 
-	maturity := fetchConfigInt64(ctx, h.mgr, constants.LoanRepaymentMaturity)
+	maturity := h.mgr.Keeper().GetConfigInt64(ctx, constants.LoanRepaymentMaturity)
 	if loan.LastOpenHeight+maturity > ctx.BlockHeight() {
 		return fmt.Errorf("loan repayment is unavailable: loan hasn't reached maturity")
 	}

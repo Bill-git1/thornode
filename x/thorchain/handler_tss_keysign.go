@@ -79,7 +79,7 @@ func (h TssKeysignHandler) validateV114(ctx cosmos.Context, msg MsgTssKeysignFai
 		return wrapError(ctx, err, "fail to get list of active node accounts")
 	}
 
-	allowWideBlame := fetchConfigInt64(ctx, h.mgr, constants.AllowWideBlame)
+	allowWideBlame := h.mgr.Keeper().GetConfigInt64(ctx, constants.AllowWideBlame)
 	if allowWideBlame == 0 && !HasSimpleMajority(len(active)-len(msg.Blame.BlameNodes), len(active)) {
 		ctx.Logger().Error("blame cast too wide", "blame", len(msg.Blame.BlameNodes))
 		return fmt.Errorf("blame cast too wide: %d/%d", len(msg.Blame.BlameNodes), len(active))

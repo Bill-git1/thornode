@@ -120,7 +120,7 @@ func (h SwapHandler) validateV129(ctx cosmos.Context, msg MsgSwap) error {
 	}
 
 	if msg.IsStreaming() {
-		pausedStreaming := fetchConfigInt64(ctx, h.mgr, constants.StreamingSwapPause)
+		pausedStreaming := h.mgr.Keeper().GetConfigInt64(ctx, constants.StreamingSwapPause)
 		if pausedStreaming > 0 {
 			return fmt.Errorf("streaming swaps are paused")
 		}
@@ -297,7 +297,7 @@ func (h SwapHandler) handleV133(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result
 		// for first swap only, override interval and quantity (if needed)
 		if swp.Count == 0 {
 			// ensure interval is never larger than max length, override if so
-			maxLength := fetchConfigInt64(ctx, h.mgr, constants.StreamingSwapMaxLength)
+			maxLength := h.mgr.Keeper().GetConfigInt64(ctx, constants.StreamingSwapMaxLength)
 			if uint64(maxLength) < swp.Interval {
 				swp.Interval = uint64(maxLength)
 			}
