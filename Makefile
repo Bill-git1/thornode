@@ -42,7 +42,7 @@ TEST_DIR?="./..."
 BUILD_FLAGS := -ldflags '$(ldflags)' -tags ${TAG} -trimpath
 TEST_BUILD_FLAGS := -parallel=1 -tags=mocknet
 GOBIN?=${GOPATH}/bin
-BINARIES=./cmd/thornode ./cmd/bifrost
+BINARIES=./cmd/thornode ./cmd/bifrost ./tools/recover-keyshare-backup
 
 # docker tty args are disabled in CI
 ifndef CI
@@ -108,6 +108,7 @@ install:
 tools:
 	go install -tags ${TAG} ./tools/pubkey2address
 	go install -tags ${TAG} ./tools/p2p-check
+	go install -tags ${TAG} ./tools/recover-keyshare-backup
 
 # ------------------------------ Gitlab CI ------------------------------
 
