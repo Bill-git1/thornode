@@ -40,6 +40,9 @@ import (
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/cosmos/cosmos-sdk/x/upgrade"
+	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
+	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	appparams "gitlab.com/thorchain/thornode/app/params"
 	"gitlab.com/thorchain/thornode/x/thorchain"
 	thorchainkeeper "gitlab.com/thorchain/thornode/x/thorchain/keeper"
@@ -62,6 +65,7 @@ var (
 		bank.AppModuleBasic{},
 		mint.AppModuleBasic{},
 		params.AppModuleBasic{},
+		upgrade.AppModuleBasic{},
 		thorchain.AppModuleBasic{},
 	)
 
@@ -111,6 +115,7 @@ type THORChainApp struct {
 	BankKeeper    bankkeeper.Keeper
 	StakingKeeper stakingkeeper.Keeper
 	MintKeeper    mintkeeper.Keeper
+	UpgradeKeeper upgradekeeper.Keeper
 	ParamsKeeper  paramskeeper.Keeper
 
 	thorchainKeeper thorchainkeeper.Keeper
@@ -137,6 +142,7 @@ func New(
 	keys := sdk.NewKVStoreKeys(
 		authtypes.StoreKey, banktypes.StoreKey, stakingtypes.StoreKey,
 		minttypes.StoreKey,
+		upgradetypes.StoreKey,
 		paramstypes.StoreKey,
 		thorchaintypes.StoreKey,
 	)
@@ -177,6 +183,8 @@ func New(
 		app.AccountKeeper, app.BankKeeper, authtypes.FeeCollectorName,
 	)
 
+	app.UpgradeKeeper = upgradekeeper.NewKeeper(skipUpgradeHeights, keys[upgradetypes.StoreKey], appCodec, homePath, app.BaseApp)
+
 	app.thorchainKeeper = thorchainkeeperv1.NewKeeper(
 		appCodec, app.BankKeeper, app.AccountKeeper, keys[thorchaintypes.StoreKey],
 	)
@@ -191,6 +199,7 @@ func New(
 		),
 		auth.NewAppModule(appCodec, app.AccountKeeper, nil),
 		bank.NewAppModule(appCodec, app.BankKeeper, app.AccountKeeper),
+		upgrade.NewAppModule(app.UpgradeKeeper),
 		params.NewAppModule(app.ParamsKeeper),
 		thorchain.NewAppModule(app.thorchainKeeper, appCodec, app.BankKeeper, app.AccountKeeper, keys[thorchaintypes.StoreKey], telemetryEnabled),
 	)
@@ -202,6 +211,7 @@ func New(
 		banktypes.ModuleName,
 		paramstypes.ModuleName,
 		genutiltypes.ModuleName,
+		upgradetypes.ModuleName,
 		thorchain.ModuleName,
 	)
 

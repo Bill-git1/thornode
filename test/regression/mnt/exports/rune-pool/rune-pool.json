@@ -572,7 +572,8 @@
           "type": "AsgardVault"
         }
       ]
-    }
+    },
+    "upgrade": {}
   },
   "chain_id": "thorchain",
   "consensus_params": {
