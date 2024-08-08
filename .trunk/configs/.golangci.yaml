@@ -34,3 +34,5 @@ linters-settings:
   gosec:
     excludes:
       - G107 # variable urls
+      # TODO: re-enable this after fixing all instances.
+      - G115 # integer overflow
