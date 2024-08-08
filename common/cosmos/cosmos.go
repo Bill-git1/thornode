@@ -16,7 +16,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/bech32/legacybech32" // nolint SA1019 deprecated
 	se "github.com/cosmos/cosmos-sdk/types/errors"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	"github.com/hashicorp/go-multierror"
 	log "github.com/rs/zerolog/log"
 )
 
@@ -115,10 +114,6 @@ func ErrInvalidCoins(msg string) error {
 
 func ErrUnauthorized(msg string) error {
 	return se.Wrap(se.ErrUnauthorized, msg)
-}
-
-func ErrInsufficientCoins(err error, msg string) error {
-	return se.Wrap(multierror.Append(se.ErrInsufficientFunds, err), msg)
 }
 
 // RoundToDecimal round the given amt to the desire decimals

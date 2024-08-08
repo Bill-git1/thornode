@@ -272,15 +272,6 @@ func FetchAddress(ctx cosmos.Context, keeper keeper.Keeper, name string, chain c
 	return common.NoAddress, fmt.Errorf("%s is not recognizable", name)
 }
 
-// Safe accessor for split memo parts - always returns empty
-// string for indices that are out of bounds.
-func GetPart(parts []string, idx int) string {
-	if len(parts) <= idx {
-		return ""
-	}
-	return parts[idx]
-}
-
 func parseTradeTarget(limit string) (cosmos.Uint, error) {
 	f, _, err := big.ParseFloat(limit, 10, 0, big.ToZero)
 	if err != nil {

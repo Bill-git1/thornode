@@ -130,12 +130,10 @@ func GetRandomBech32ConsensusPubKey() string {
 	return result
 }
 
-// GetRandomRUNEAddress will just create a random rune address used for test purpose
 func GetRandomRUNEAddress() common.Address {
 	return GetRandomTHORAddress()
 }
 
-// GetRandomTHORAddress will just create a random thor address used for test purpose
 func GetRandomTHORAddress() common.Address {
 	name := common.RandHexString(10)
 	str, _ := common.ConvertAndEncode(cmd.Bech32PrefixAccAddr, crypto.AddressHash([]byte(name)))
@@ -143,7 +141,6 @@ func GetRandomTHORAddress() common.Address {
 	return thor
 }
 
-// GetRandomBNBAddress will just create a random bnb address used for test purpose
 func GetRandomBNBAddress() common.Address {
 	name := common.RandHexString(10)
 	str, _ := common.ConvertAndEncode("tbnb", crypto.AddressHash([]byte(name)))
@@ -151,7 +148,6 @@ func GetRandomBNBAddress() common.Address {
 	return bnb
 }
 
-// GetRandomTERRAAddress will just create a random terra address used for test purpose
 func GetRandomTERRAAddress() common.Address {
 	name := common.RandHexString(10)
 	str, _ := common.ConvertAndEncode("terra", crypto.AddressHash([]byte(name)))
@@ -159,14 +155,12 @@ func GetRandomTERRAAddress() common.Address {
 	return terra
 }
 
-// GetRandomETHAddress get a random ETH address for test purpose
 func GetRandomETHAddress() common.Address {
 	pKey := GetRandomPubKey()
 	addr, _ := pKey.GetAddress(common.ETHChain)
 	return addr
 }
 
-// GetRandomGAIAAddress will just create a random terra address used for test purpose
 func GetRandomGAIAAddress() common.Address {
 	name := common.RandHexString(10)
 	str, _ := common.ConvertAndEncode("cosmos", crypto.AddressHash([]byte(name)))
@@ -183,12 +177,6 @@ func GetRandomBTCAddress() common.Address {
 func GetRandomLTCAddress() common.Address {
 	pubKey := GetRandomPubKey()
 	addr, _ := pubKey.GetAddress(common.LTCChain)
-	return addr
-}
-
-func GetRandomDOGEAddress() common.Address {
-	pubKey := GetRandomPubKey()
-	addr, _ := pubKey.GetAddress(common.DOGEChain)
 	return addr
 }
 

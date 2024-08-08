@@ -19,10 +19,6 @@ type StdSignature struct {
 	Sequence           uint64                          `json:"sequence"`
 }
 
-func NewStdSignature(pk cryptotypes.PubKey, sig []byte) StdSignature {
-	return StdSignature{PubKey: pk, Signature: sig}
-}
-
 // GetSignature returns the raw signature bytes.
 func (ss StdSignature) GetSignature() []byte {
 	return ss.Signature

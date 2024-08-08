@@ -28,14 +28,6 @@ type StdFee struct {
 	Gas    uint64    `json:"gas" yaml:"gas"`
 }
 
-// Deprecated: NewStdFee returns a new instance of StdFee
-func NewStdFee(gas uint64, amount sdk.Coins) StdFee {
-	return StdFee{
-		Amount: amount,
-		Gas:    gas,
-	}
-}
-
 // GetGas returns the fee's (wanted) gas.
 func (fee StdFee) GetGas() uint64 {
 	return fee.Gas
@@ -78,16 +70,6 @@ type StdTx struct {
 	Signatures    []StdSignature `json:"signatures" yaml:"signatures"`
 	Memo          string         `json:"memo" yaml:"memo"`
 	TimeoutHeight uint64         `json:"timeout_height" yaml:"timeout_height"`
-}
-
-// Deprecated
-func NewStdTx(msgs []sdk.Msg, fee StdFee, sigs []StdSignature, memo string) StdTx {
-	return StdTx{
-		Msgs:       msgs,
-		Fee:        fee,
-		Signatures: sigs,
-		Memo:       memo,
-	}
 }
 
 // GetMsgs returns the all the transaction's messages.
