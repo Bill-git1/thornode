@@ -507,8 +507,11 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 	for ; iterVault.Valid(); iterVault.Next() {
 		var vault Vault
 		k.Cdc().MustUnmarshal(iterVault.Value(), &vault)
+		if !vault.IsAsgard() {
+			continue // filter non-asgard vault types
+		}
 		if vault.Status == types.VaultStatus_InactiveVault || vault.Status == types.VaultStatus_InitVault {
-			continue
+			continue // filter abandoned vaults
 		}
 		vaults = append(vaults, vault)
 	}
