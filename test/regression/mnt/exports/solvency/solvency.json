@@ -261,6 +261,7 @@
         "total_bond_units": "0"
       },
       "network_fees": [],
+      "nodeMimirs": [],
       "node_accounts": [
         {
           "active_block_height": "1",

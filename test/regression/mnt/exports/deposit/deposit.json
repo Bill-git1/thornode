@@ -252,6 +252,7 @@
         "total_bond_units": "0"
       },
       "network_fees": [],
+      "nodeMimirs": [],
       "node_accounts": [
         {
           "bond": "2499996000000",

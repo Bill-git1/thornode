@@ -351,6 +351,7 @@
           "transaction_size": "80000"
         }
       ],
+      "nodeMimirs": [],
       "node_accounts": [
         {
           "active_block_height": "1",

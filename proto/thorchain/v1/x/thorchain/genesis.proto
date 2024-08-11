@@ -14,6 +14,7 @@ import "thorchain/v1/x/thorchain/types/type_pol.proto";
 import "thorchain/v1/x/thorchain/types/type_reserve_contributor.proto";
 import "thorchain/v1/x/thorchain/types/type_vault.proto";
 import "thorchain/v1/x/thorchain/types/type_tx_out.proto";
+import "thorchain/v1/x/thorchain/types/type_mimir.proto";
 import "thorchain/v1/x/thorchain/types/type_node_account.proto";
 import "thorchain/v1/x/thorchain/types/type_observed_tx.proto";
 import "thorchain/v1/x/thorchain/types/type_liquidity_provider.proto";
@@ -34,6 +35,7 @@ message mimir{
   string key = 1;
   int64 value = 2;
 }
+
 message GenesisState {
   repeated types.Pool pools = 1 [(gogoproto.nullable) = false];
   repeated types.LiquidityProvider liquidity_providers = 2 [(gogoproto.castrepeated) = "gitlab.com/thorchain/thornode/x/thorchain/types.LiquidityProviders", (gogoproto.nullable) = false];
@@ -68,4 +70,5 @@ message GenesisState {
   repeated common.Coin outbound_fee_spent_rune = 35 [(gogoproto.castrepeated) = "gitlab.com/thorchain/thornode/common.Coins", (gogoproto.nullable) = false];
   repeated types.RUNEProvider rune_providers = 36 [(gogoproto.nullable) = false];
   types.RUNEPool rune_pool = 37 [(gogoproto.nullable) = false];
+  repeated types.NodeMimir nodeMimirs = 38 [(gogoproto.nullable) = false];
 }

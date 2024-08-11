@@ -6,6 +6,7 @@ package constants
 func init() {
 	int64Overrides = map[ConstantName]int64{
 		ChurnInterval:            432000,
+		OperationalVotesMin:      1,
 		MinRunePoolDepth:         1_00000000,
 		MinimumBondInRune:        200_000_00000000,
 		PoolCycle:                720,

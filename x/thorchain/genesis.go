@@ -128,6 +128,8 @@ func DefaultGenesisState() GenesisState {
 		ObservedTxOutVoters:     make(ObservedTxVoters, 0),
 		LastSignedHeight:        0,
 		LastChainHeights:        make([]LastChainHeight, 0),
+		Mimirs:                  make([]Mimir, 0),
+		NodeMimirs:              make([]NodeMimir, 0),
 		Network:                 NewNetwork(),
 		OutboundFeeWithheldRune: common.Coins{},
 		OutboundFeeSpentRune:    common.Coins{},
@@ -324,6 +326,16 @@ func initGenesis(ctx cosmos.Context, keeper keeper.Keeper, data GenesisState) []
 		}
 		keeper.SetMimir(ctx, item.Key, item.Value)
 	}
+
+	for _, item := range data.NodeMimirs {
+		if len(item.Key) == 0 {
+			continue
+		}
+		if err := keeper.SetNodeMimir(ctx, item.Key, item.Value, item.Signer); err != nil {
+			panic(err)
+		}
+	}
+
 	keeper.SetStoreVersion(ctx, data.StoreVersion)
 	reserveAddr, _ := keeper.GetModuleAddress(ReserveName)
 	ctx.Logger().Info("Reserve Module", "address", reserveAddr.String())
@@ -569,21 +581,27 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		k.Cdc().MustUnmarshal(iterNames.Value(), &n)
 		names = append(names, n)
 	}
+
 	mimirs := make([]Mimir, 0)
 	mimirIter := k.GetMimirIterator(ctx)
 	defer mimirIter.Close()
 	for ; mimirIter.Valid(); mimirIter.Next() {
 		value := types.ProtoInt64{}
-		if err = k.Cdc().Unmarshal(mimirIter.Value(), &value); err != nil {
-			ctx.Logger().Error("fail to unmarshal mimir value", "error", err)
-			continue
-		}
+		k.Cdc().MustUnmarshal(mimirIter.Value(), &value)
 		mimirs = append(mimirs, Mimir{
 			Key:   strings.ReplaceAll(string(mimirIter.Key()), "mimir//", ""),
 			Value: value.GetValue(),
 		})
 	}
-	storeVersion := k.GetStoreVersion(ctx)
+
+	nodeMimirs := make([]NodeMimir, 0)
+	nodeMimirIter := k.GetNodeMimirIterator(ctx)
+	defer nodeMimirIter.Close()
+	for ; nodeMimirIter.Valid(); nodeMimirIter.Next() {
+		value := NodeMimirs{}
+		k.Cdc().MustUnmarshal(nodeMimirIter.Value(), &value)
+		nodeMimirs = append(nodeMimirs, value.GetMimirs()...)
+	}
 
 	// collect all assets
 	seenAssets := make(map[common.Asset]bool)
@@ -716,10 +734,11 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		THORNames:               names,
 		Loans:                   loans,
 		Mimirs:                  mimirs,
+		NodeMimirs:              nodeMimirs,
 		SwapperClout:            clouts,
 		TradeAccounts:           tradeAccts,
 		TradeUnits:              tradeUnits,
-		StoreVersion:            storeVersion,
+		StoreVersion:            k.GetStoreVersion(ctx),
 		RuneProviders:           runeProviders,
 		RunePool:                runePool,
 	}

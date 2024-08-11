@@ -381,6 +381,28 @@
           "transaction_size": "80000"
         }
       ],
+      "nodeMimirs": [
+        {
+          "key": "REGRESSIONTEST",
+          "signer": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
+          "value": "2"
+        },
+        {
+          "key": "REGRESSIONTEST",
+          "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
+          "value": "2"
+        },
+        {
+          "key": "REGRESSIONTEST",
+          "signer": "tthor12e7ngn5h22su4hecdf0h8aw7hvnly5tchrfd43",
+          "value": "2"
+        },
+        {
+          "key": "REGRESSIONTEST",
+          "signer": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
+          "value": "2"
+        }
+      ],
       "node_accounts": [
         {
           "active_block_height": "1",
