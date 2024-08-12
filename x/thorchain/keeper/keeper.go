@@ -375,11 +375,6 @@ type KeeperMimir interface {
 	GetNodePauseChain(ctx cosmos.Context, acc cosmos.AccAddress) int64
 	SetNodePauseChain(ctx cosmos.Context, acc cosmos.AccAddress)
 	IsOperationalMimir(key string) bool
-	GetNodeMimirsV2(ctx cosmos.Context, key string) (NodeMimirs, error)
-	SetNodeMimirV2(_ cosmos.Context, key string, value int64, acc cosmos.AccAddress) error
-	GetNodeMimirIteratorV2(ctx cosmos.Context) cosmos.Iterator
-	SetMimirV2(ctx cosmos.Context, key string, value int64)
-	GetMimirV2(ctx cosmos.Context, key string) (int64, error)
 }
 
 type KeeperNetworkFee interface {

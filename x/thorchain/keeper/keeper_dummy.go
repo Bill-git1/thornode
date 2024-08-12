@@ -574,18 +574,6 @@ func (k KVStoreDummy) IsOperationalMimir(key string) bool {
 	return strings.Contains(key, "HALT") || strings.Contains(key, "PAUSE")
 }
 
-func (k KVStoreDummy) GetNodeMimirsV2(ctx cosmos.Context, key string) (NodeMimirs, error) {
-	return NodeMimirs{}, kaboom
-}
-
-func (k KVStoreDummy) SetNodeMimirV2(_ cosmos.Context, key string, value int64, acc cosmos.AccAddress) error {
-	return kaboom
-}
-func (k KVStoreDummy) GetNodeMimirIteratorV2(ctx cosmos.Context) cosmos.Iterator { return nil }
-
-func (k KVStoreDummy) SetMimirV2(ctx cosmos.Context, key string, value int64)   {}
-func (k KVStoreDummy) GetMimirV2(ctx cosmos.Context, key string) (int64, error) { return -1, kaboom }
-
 func (k KVStoreDummy) GetNetworkFee(ctx cosmos.Context, chain common.Chain) (NetworkFee, error) {
 	return NetworkFee{}, kaboom
 }
