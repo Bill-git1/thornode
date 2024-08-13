@@ -18,7 +18,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types/bech32/legacybech32"
 	crypto2 "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
-	"gitlab.com/thorchain/binance-sdk/common/types"
+	"gitlab.com/thorchain/thornode/common/cosmos"
 
 	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/messages"
 )
@@ -147,10 +147,10 @@ func isOnCurve(x, y *big.Int) bool {
 	return curve.IsOnCurve(x, y)
 }
 
-func GetTssPubKey(pubKeyPoint *crypto.ECPoint) (string, types.AccAddress, error) {
+func GetTssPubKey(pubKeyPoint *crypto.ECPoint) (string, cosmos.AccAddress, error) {
 	// we check whether the point is on curve according to Kudelski report
 	if pubKeyPoint == nil || !isOnCurve(pubKeyPoint.X(), pubKeyPoint.Y()) {
-		return "", types.AccAddress{}, errors.New("invalid points")
+		return "", cosmos.AccAddress{}, errors.New("invalid points")
 	}
 	tssPubKey := btcec.PublicKey{
 		Curve: btcec.S256(),
@@ -163,7 +163,7 @@ func GetTssPubKey(pubKeyPoint *crypto.ECPoint) (string, types.AccAddress, error)
 	}
 
 	pubKey, err := sdk.MarshalPubKey(sdk.AccPK, &compressedPubkey)
-	addr := types.AccAddress(compressedPubkey.Address().Bytes())
+	addr := cosmos.AccAddress(compressedPubkey.Address().Bytes())
 	return pubKey, addr, err
 }
 

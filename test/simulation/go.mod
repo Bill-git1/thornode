@@ -3,7 +3,7 @@ module gitlab.com/thorchain/thornode/test/simulation
 go 1.22
 
 require (
-	github.com/btcsuite/btcd v0.23.0
+	github.com/btcsuite/btcd v0.22.1
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.0.1
 	github.com/cosmos/cosmos-sdk v0.45.16
 	github.com/eager7/dogd v0.0.0-20200427085516-2caf59f59dbb
@@ -34,7 +34,9 @@ require (
 	github.com/cosmos/cosmos-db v0.0.0-20221226095112-f3c38ecb5e32 // indirect
 	github.com/cosmos/cosmos-proto v1.0.0-beta.1 // indirect
 	github.com/getsentry/sentry-go v0.18.0 // indirect
+	github.com/hashicorp/go-uuid v1.0.1 // indirect
 	github.com/linxGnu/grocksdb v1.7.10 // indirect
+	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/tidwall/btree v1.5.0 // indirect
 )
 
@@ -257,7 +259,6 @@ require (
 	github.com/whyrusleeping/multiaddr-filter v0.0.0-20160516205228-e903e4adabd7 // indirect
 	github.com/zondax/hid v0.9.2 // indirect
 	github.com/zondax/ledger-go v0.14.3 // indirect
-	gitlab.com/thorchain/binance-sdk v1.2.3 // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect

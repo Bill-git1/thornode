@@ -4,7 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 
-	"gitlab.com/thorchain/binance-sdk/common/uuid"
+	"github.com/google/uuid"
 
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/sha3"
@@ -63,7 +63,7 @@ func exportKeyStore(privKey []byte, password string) (*EncryptedKey, error) {
 	}
 	mac := hasher.Sum(nil)
 
-	id, err := uuid.NewV4()
+	id, err := uuid.NewRandom()
 	if err != nil {
 		return nil, err
 	}

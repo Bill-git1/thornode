@@ -29,7 +29,7 @@ RUN make protob install
 FROM registry.gitlab.com/thorchain/thornode:runner-base-v1@sha256:8fc433efa3e853b59cafe920654705e37c94228ae99cba6892933a61594c11f3
 
 # Copy the compiled binaries over.
-COPY --from=build /go/bin/generate /go/bin/thornode /go/bin/bifrost /usr/bin/
+COPY --from=build /go/bin/thornode /go/bin/bifrost /usr/bin/
 
 COPY build/scripts /scripts
 
