@@ -100,7 +100,6 @@ func isPubkeyHash(pops []parsedOpcode) bool {
 		pops[2].opcode.value == OP_DATA_20 &&
 		pops[3].opcode.value == OP_EQUALVERIFY &&
 		pops[4].opcode.value == OP_CHECKSIG
-
 }
 
 // isMultiSig returns true if the passed script is a multisig transaction, false
@@ -255,7 +254,6 @@ type ScriptInfo struct {
 // be analysed, i.e. if they do not parse or the pkScript is not a push-only
 // script
 func CalcScriptInfo(sigScript, pkScript []byte, scriptFlags ScriptFlags) (*ScriptInfo, error) {
-
 	sigPops, err := parseScript(sigScript)
 	if err != nil {
 		return nil, err

@@ -211,13 +211,15 @@ func parseExpectedResult(expected string) ([]ErrorCode, error) {
 	case "PUBKEYTYPE":
 		return []ErrorCode{ErrPubKeyType}, nil
 	case "SIG_DER":
-		return []ErrorCode{ErrSigTooShort, ErrSigTooLong,
+		return []ErrorCode{
+			ErrSigTooShort, ErrSigTooLong,
 			ErrSigInvalidSeqID, ErrSigInvalidDataLen, ErrSigMissingSTypeID,
 			ErrSigMissingSLen, ErrSigInvalidSLen,
 			ErrSigInvalidRIntID, ErrSigZeroRLen, ErrSigNegativeR,
 			ErrSigTooMuchRPadding, ErrSigInvalidSIntID,
 			ErrSigZeroSLen, ErrSigNegativeS, ErrSigTooMuchSPadding,
-			ErrInvalidSigHashType}, nil
+			ErrInvalidSigHashType,
+		}, nil
 	case "EVAL_FALSE":
 		return []ErrorCode{ErrEvalFalse, ErrEmptyStack}, nil
 	case "EQUALVERIFY":
@@ -237,8 +239,10 @@ func parseExpectedResult(expected string) ([]ErrorCode, error) {
 	case "BAD_OPCODE":
 		return []ErrorCode{ErrReservedOpcode, ErrMalformedPush}, nil
 	case "UNBALANCED_CONDITIONAL":
-		return []ErrorCode{ErrUnbalancedConditional,
-			ErrInvalidStackOperation}, nil
+		return []ErrorCode{
+			ErrUnbalancedConditional,
+			ErrInvalidStackOperation,
+		}, nil
 	case "OP_RETURN":
 		return []ErrorCode{ErrEarlyReturn}, nil
 	case "VERIFY":
@@ -294,8 +298,8 @@ func parseExpectedResult(expected string) ([]ErrorCode, error) {
 // createSpendTx generates a basic spending transaction given the passed
 // signature, witness and public key scripts.
 func createSpendingTx(witness [][]byte, sigScript, pkScript []byte,
-	outputValue int64) *wire.MsgTx {
-
+	outputValue int64,
+) *wire.MsgTx {
 	coinbaseTx := wire.NewMsgTx(wire.TxVersion)
 
 	outPoint := wire.NewOutPoint(&chainhash.Hash{}, ^uint32(0))

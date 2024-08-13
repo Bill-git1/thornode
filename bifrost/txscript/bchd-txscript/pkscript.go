@@ -34,11 +34,9 @@ const (
 	maxLen = pubKeyHashSigScriptLen
 )
 
-var (
-	// ErrUnsupportedScriptType is an error returned when we attempt to
-	// parse/re-compute an output script into a PkScript struct.
-	ErrUnsupportedScriptType = errors.New("unsupported script type")
-)
+// ErrUnsupportedScriptType is an error returned when we attempt to
+// parse/re-compute an output script into a PkScript struct.
+var ErrUnsupportedScriptType = errors.New("unsupported script type")
 
 // PkScript is a wrapper struct around a byte array, allowing it to be used
 // as a map index.

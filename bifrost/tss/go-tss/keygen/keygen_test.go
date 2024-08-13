@@ -94,7 +94,7 @@ func (s *TssKeygenTestSuite) SetUpSuite(c *C) {
 }
 
 func (s *TssKeygenTestSuite) TearDownSuite(c *C) {
-	for i, _ := range s.comms {
+	for i := range s.comms {
 		tempFilePath := path.Join(os.TempDir(), strconv.Itoa(i))
 		err := os.RemoveAll(tempFilePath)
 		c.Assert(err, IsNil)

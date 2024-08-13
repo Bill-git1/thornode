@@ -319,7 +319,7 @@ func DisasmString(buf []byte) (string, error) {
 	return disbuf.String(), err
 }
 
-// removeOpcode will remove any opcode matching ``opcode'' from the opcode
+// removeOpcode will remove any opcode matching “opcode” from the opcode
 // stream in pkscript
 func removeOpcode(pkscript []parsedOpcode, opcode byte) []parsedOpcode {
 	retScript := make([]parsedOpcode, 0, len(pkscript))
@@ -367,7 +367,6 @@ func removeOpcodeByData(pkscript []parsedOpcode, data []byte) []parsedOpcode {
 		}
 	}
 	return retScript
-
 }
 
 // calcHashPrevOuts calculates a single hash of all the previous outputs
@@ -436,8 +435,8 @@ func calcHashOutputs(tx *wire.MsgTx) chainhash.Hash {
 // wallet if fed an invalid input amount, the real sighash will differ causing
 // the produced signature to be invalid.
 func calcWitnessSignatureHash(subScript []parsedOpcode, sigHashes *TxSigHashes,
-	hashType SigHashType, tx *wire.MsgTx, idx int, amt int64) ([]byte, error) {
-
+	hashType SigHashType, tx *wire.MsgTx, idx int, amt int64,
+) ([]byte, error) {
 	// As a sanity check, ensure the passed input index for the transaction
 	// is valid.
 	if idx > len(tx.TxIn)-1 {
@@ -543,8 +542,8 @@ func calcWitnessSignatureHash(subScript []parsedOpcode, sigHashes *TxSigHashes,
 // CalcWitnessSigHash computes the sighash digest for the specified input of
 // the target transaction observing the desired sig hash type.
 func CalcWitnessSigHash(script []byte, sigHashes *TxSigHashes, hType SigHashType,
-	tx *wire.MsgTx, idx int, amt int64) ([]byte, error) {
-
+	tx *wire.MsgTx, idx int, amt int64,
+) ([]byte, error) {
 	parsedScript, err := parseScript(script)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse output script: %v", err)

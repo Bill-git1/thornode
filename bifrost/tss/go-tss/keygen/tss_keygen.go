@@ -42,7 +42,8 @@ func NewTssKeyGen(localP2PID string,
 	msgID string,
 	stateManager storage.LocalStateManager,
 	privateKey tcrypto.PrivKey,
-	p2pComm *p2p.Communication) *TssKeyGen {
+	p2pComm *p2p.Communication,
+) *TssKeyGen {
 	return &TssKeyGen{
 		logger: log.With().
 			Str("module", "keygen").
@@ -145,7 +146,8 @@ func (tKeyGen *TssKeyGen) GenerateNewKey(keygenReq Request) (*bcrypto.ECPoint, e
 func (tKeyGen *TssKeyGen) processKeyGen(errChan chan struct{},
 	outCh <-chan btss.Message,
 	endCh <-chan bkg.LocalPartySaveData,
-	keyGenLocalStateItem storage.KeygenLocalState) (*bcrypto.ECPoint, error) {
+	keyGenLocalStateItem storage.KeygenLocalState,
+) (*bcrypto.ECPoint, error) {
 	defer tKeyGen.logger.Debug().Msg("finished keygen process")
 	tKeyGen.logger.Debug().Msg("start to read messages from local party")
 	tssConf := tKeyGen.tssCommonStruct.GetConf()

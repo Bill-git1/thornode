@@ -17,8 +17,8 @@ import (
 // RawTxInECDSASignature returns the serialized ECDSA signature for the input idx of
 // the given transaction, with hashType appended to it.
 func RawTxInECDSASignature(tx *wire.MsgTx, idx int, subScript []byte,
-	hashType SigHashType, signable Signable, amt int64) ([]byte, error) {
-
+	hashType SigHashType, signable Signable, amt int64,
+) ([]byte, error) {
 	// If the forkID was not passed in with the hashtype then add it here
 	if hashType&SigHashForkID != SigHashForkID {
 		hashType |= SigHashForkID
@@ -40,8 +40,8 @@ func RawTxInECDSASignature(tx *wire.MsgTx, idx int, subScript []byte,
 // RawTxInSchnorrSignature returns the serialized Schnorr signature for the input idx of
 // the given transaction, with hashType appended to it.
 func RawTxInSchnorrSignature(tx *wire.MsgTx, idx int, subScript []byte,
-	hashType SigHashType, signable Signable, amt int64) ([]byte, error) {
-
+	hashType SigHashType, signable Signable, amt int64,
+) ([]byte, error) {
 	// If the forkID was not passed in with the hashtype then add it here
 	if hashType&SigHashForkID != SigHashForkID {
 		hashType |= SigHashForkID
@@ -63,8 +63,8 @@ func RawTxInSchnorrSignature(tx *wire.MsgTx, idx int, subScript []byte,
 // LegacyTxInSignature generates a signature using the pre-uahf signature
 // hashing algorithm
 func LegacyTxInSignature(tx *wire.MsgTx, idx int, subScript []byte,
-	hashType SigHashType, signable Signable) ([]byte, error) {
-
+	hashType SigHashType, signable Signable,
+) ([]byte, error) {
 	script, _ := parseScript(subScript)
 	hash, err := calcLegacySignatureHash(script, hashType, tx, idx)
 	if err != nil {
@@ -87,7 +87,8 @@ func LegacyTxInSignature(tx *wire.MsgTx, idx int, subScript []byte,
 // uncompressed format based on compress. This format must match the same format
 // used to generate the payment address, or the script validation will fail.
 func SignatureScript(tx *wire.MsgTx, idx int, amt int64, subscript []byte,
-	hashType SigHashType, signable Signable, compress bool) ([]byte, error) {
+	hashType SigHashType, signable Signable, compress bool,
+) ([]byte, error) {
 	sig, err := RawTxInSchnorrSignature(tx, idx, subscript, hashType, signable, amt)
 	if err != nil {
 		return nil, err
@@ -107,7 +108,8 @@ func SignatureScript(tx *wire.MsgTx, idx int, amt int64, subscript []byte,
 // LegacySignatureScript is the same as SignatureScript except it uses the legacy
 // signature hashing algorithm.
 func LegacySignatureScript(tx *wire.MsgTx, idx int, subscript []byte,
-	hashType SigHashType, signable Signable, compress bool) ([]byte, error) {
+	hashType SigHashType, signable Signable, compress bool,
+) ([]byte, error) {
 	sig, err := LegacyTxInSignature(tx, idx, subscript, hashType, signable)
 	if err != nil {
 		return nil, err
@@ -125,7 +127,8 @@ func LegacySignatureScript(tx *wire.MsgTx, idx int, subscript []byte,
 }
 
 func p2pkSignatureScript(tx *wire.MsgTx, idx int, amt int64, subScript []byte,
-	hashType SigHashType, signable Signable) ([]byte, error) {
+	hashType SigHashType, signable Signable,
+) ([]byte, error) {
 	sig, err := RawTxInSchnorrSignature(tx, idx, subScript, hashType, signable, amt)
 	if err != nil {
 		return nil, err
@@ -140,7 +143,8 @@ func p2pkSignatureScript(tx *wire.MsgTx, idx int, amt int64, subScript []byte,
 // legal to not be able to sign any of the outputs, no error is returned.
 
 func signMultiSig(tx *wire.MsgTx, idx int, amt int64, subScript []byte, hashType SigHashType,
-	addresses []bchutil.Address, nRequired int, kdb KeyDB) ([]byte, bool) {
+	addresses []bchutil.Address, nRequired int, kdb KeyDB,
+) ([]byte, bool) {
 	// We start with a single OP_FALSE to work around the (now standard)
 	// but in the reference implementation that causes a spurious pop at
 	// the end of OP_CHECKMULTISIG.
@@ -170,8 +174,8 @@ func signMultiSig(tx *wire.MsgTx, idx int, amt int64, subScript []byte, hashType
 
 func sign(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int, amt int64,
 	subScript []byte, hashType SigHashType, kdb KeyDB, sdb ScriptDB) ([]byte,
-	ScriptClass, []bchutil.Address, int, error) {
-
+	ScriptClass, []bchutil.Address, int, error,
+) {
 	class, addresses, nrequired, err := ExtractPkScriptAddrs(subScript,
 		chainParams)
 	if err != nil {
@@ -235,8 +239,8 @@ func sign(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int, amt int64,
 // an error and results in undefined behaviour.
 func mergeScripts(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 	amt int64, pkScript []byte, class ScriptClass, addresses []bchutil.Address, nRequired int,
-	sigScript, prevScript []byte) ([]byte, error) {
-
+	sigScript, prevScript []byte,
+) ([]byte, error) {
 	// TODO: the scripthash and multisig paths here are overly
 	// inefficient in that they will recompute already known data.
 	// some internal refactoring could probably make this avoid needless
@@ -259,8 +263,7 @@ func mergeScripts(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 		script := sigPops[len(sigPops)-1].data
 
 		// We already know this information somewhere up the stack.
-		class, addresses, nrequired, _ :=
-			ExtractPkScriptAddrs(script, chainParams)
+		class, addresses, nrequired, _ := ExtractPkScriptAddrs(script, chainParams)
 
 		// regenerate scripts.
 		sigScript, _ := unparseScript(sigPops)
@@ -304,8 +307,8 @@ func mergeScripts(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 // have come from other functions internally and thus are all consistent with
 // each other, behaviour is undefined if this contract is broken.
 func mergeMultiSig(tx *wire.MsgTx, idx int, amt int64, addresses []bchutil.Address,
-	nRequired int, pkScript, sigScript, prevScript []byte) ([]byte, error) {
-
+	nRequired int, pkScript, sigScript, prevScript []byte,
+) ([]byte, error) {
 	// This is an internal only function and we already parsed this script
 	// as ok for multisig (this is how we got here), so if this fails then
 	// all assumptions are broken and who knows which way is up?
@@ -427,7 +430,8 @@ type KeyClosure func(bchutil.Address) (*bchec.PrivateKey, bool, error)
 
 // GetKey implements KeyDB by returning the result of calling the closure.
 func (kc KeyClosure) GetKey(address bchutil.Address) (*bchec.PrivateKey,
-	bool, error) {
+	bool, error,
+) {
 	return kc(address)
 }
 
@@ -454,8 +458,8 @@ func (sc ScriptClosure) GetScript(address bchutil.Address) ([]byte, error) {
 // signature script.
 func SignTxOutput(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 	amt int64, pkScript []byte, hashType SigHashType, kdb KeyDB, sdb ScriptDB,
-	previousScript []byte) ([]byte, error) {
-
+	previousScript []byte,
+) ([]byte, error) {
 	sigScript, class, addresses, nrequired, err := sign(chainParams, tx, idx, amt, pkScript, hashType, kdb, sdb)
 	if err != nil {
 		return nil, err

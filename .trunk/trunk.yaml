@@ -38,6 +38,9 @@ lint:
       paths:
         - openapi/gen
         - "**/*gen.go"
+        # TODO: fix all lint errors in imported repos and enable lint for these.
+        - bifrost/tss/go-tss
+        - bifrost/txscript
     - linters:
         - prettier
         - yamllint

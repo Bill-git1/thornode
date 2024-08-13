@@ -65,7 +65,6 @@ func (m *Metric) Enable() {
 
 func NewMetric() *Metric {
 	metrics := Metric{
-
 		keygenCounter: prometheus.NewCounterVec(
 
 			prometheus.CounterOpts{

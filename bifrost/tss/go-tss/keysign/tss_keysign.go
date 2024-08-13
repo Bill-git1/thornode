@@ -38,7 +38,8 @@ type TssKeySign struct {
 func NewTssKeySign(localP2PID string,
 	conf common.TssConfig,
 	broadcastChan chan *messages.BroadcastMsgChan,
-	stopChan chan struct{}, msgID string, privKey tcrypto.PrivKey, p2pComm *p2p.Communication, stateManager storage.LocalStateManager, msgNum int) *TssKeySign {
+	stopChan chan struct{}, msgID string, privKey tcrypto.PrivKey, p2pComm *p2p.Communication, stateManager storage.LocalStateManager, msgNum int,
+) *TssKeySign {
 	logItems := []string{"keySign", msgID}
 	return &TssKeySign{
 		logger:          log.With().Strs("module", logItems).Logger(),

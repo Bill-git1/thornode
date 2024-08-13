@@ -30,7 +30,6 @@ func init() {
 // scriptTestName returns a descriptive test name for the given reference script
 // test data.
 func scriptTestName(test []interface{}) (string, error) {
-
 	// The test must consist of at least a signature script, public key script,
 	// flags, and expected error.  Finally, it may optionally contain a comment.
 	if len(test) < 4 || len(test) > 5 {
@@ -216,13 +215,15 @@ func parseExpectedResult(expected string) ([]ErrorCode, error) {
 	case "PUBKEYTYPE", "NONCOMPRESSED_PUBKEY":
 		return []ErrorCode{ErrPubKeyType}, nil
 	case "SIG_DER", "SIG_BADLENGTH", "MISSING_FORKID":
-		return []ErrorCode{ErrSigTooShort, ErrSigTooLong,
+		return []ErrorCode{
+			ErrSigTooShort, ErrSigTooLong,
 			ErrSigInvalidSeqID, ErrSigInvalidDataLen, ErrSigMissingSTypeID,
 			ErrSigMissingSLen, ErrSigInvalidSLen,
 			ErrSigInvalidRIntID, ErrSigZeroRLen, ErrSigNegativeR,
 			ErrSigTooMuchRPadding, ErrSigInvalidSIntID,
 			ErrSigZeroSLen, ErrSigNegativeS, ErrSigTooMuchSPadding,
-			ErrInvalidSigHashType}, nil
+			ErrInvalidSigHashType,
+		}, nil
 	case "ILLEGAL_FORKID":
 		return []ErrorCode{ErrInvalidSigHashType}, nil
 	case "EVAL_FALSE":
@@ -244,8 +245,10 @@ func parseExpectedResult(expected string) ([]ErrorCode, error) {
 	case "BAD_OPCODE":
 		return []ErrorCode{ErrReservedOpcode, ErrMalformedPush}, nil
 	case "UNBALANCED_CONDITIONAL":
-		return []ErrorCode{ErrUnbalancedConditional,
-			ErrInvalidStackOperation}, nil
+		return []ErrorCode{
+			ErrUnbalancedConditional,
+			ErrInvalidStackOperation,
+		}, nil
 	case "OP_RETURN":
 		return []ErrorCode{ErrEarlyReturn}, nil
 	case "VERIFY":
@@ -299,8 +302,8 @@ func parseExpectedResult(expected string) ([]ErrorCode, error) {
 // createSpendTx generates a basic spending transaction given the passed
 // signature, witness and public key scripts.
 func createSpendingTx(sigScript, pkScript []byte,
-	outputValue int64) *wire.MsgTx {
-
+	outputValue int64,
+) *wire.MsgTx {
 	coinbaseTx := wire.NewMsgTx(wire.TxVersion)
 
 	outPoint := wire.NewOutPoint(&chainhash.Hash{}, ^uint32(0))

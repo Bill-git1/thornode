@@ -18,7 +18,8 @@ import (
 func TestOpcodeDisabled(t *testing.T) {
 	t.Parallel()
 
-	tests := []byte{OP_CAT, OP_SUBSTR, OP_LEFT, OP_RIGHT, OP_INVERT,
+	tests := []byte{
+		OP_CAT, OP_SUBSTR, OP_LEFT, OP_RIGHT, OP_INVERT,
 		OP_AND, OP_OR, OP_2MUL, OP_2DIV, OP_MUL, OP_DIV, OP_MOD,
 		OP_LSHIFT, OP_RSHIFT,
 	}
@@ -46,7 +47,8 @@ func TestOpcodeDisasm(t *testing.T) {
 	// than manually listing them here.
 	oneBytes := []byte{0x01}
 	oneStr := "01"
-	expectedStrings := [256]string{0x00: "0", 0x4f: "-1",
+	expectedStrings := [256]string{
+		0x00: "0", 0x4f: "-1",
 		0x50: "OP_RESERVED", 0x61: "OP_NOP", 0x62: "OP_VER",
 		0x63: "OP_IF", 0x64: "OP_NOTIF", 0x65: "OP_VERIF",
 		0x66: "OP_VERNOTIF", 0x67: "OP_ELSE", 0x68: "OP_ENDIF",

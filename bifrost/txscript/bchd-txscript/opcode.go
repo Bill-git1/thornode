@@ -10,11 +10,10 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
+	"hash"
 	"math/bits"
 
 	"golang.org/x/crypto/ripemd160"
-
-	"hash"
 
 	"github.com/gcash/bchd/bchec"
 	"github.com/gcash/bchd/chaincfg/chainhash"

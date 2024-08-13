@@ -12,8 +12,7 @@ import (
 // Hook up gocheck into the "go test" runner.
 func Test(t *testing.T) { TestingT(t) }
 
-type PeerStatusTestSuite struct {
-}
+type PeerStatusTestSuite struct{}
 
 var _ = Suite(&PeerStatusTestSuite{})
 

@@ -6,8 +6,7 @@ import (
 )
 
 // MockLocalStateManager is a mock use for test purpose
-type MockLocalStateManager struct {
-}
+type MockLocalStateManager struct{}
 
 func (s *MockLocalStateManager) SaveLocalState(state KeygenLocalState) error {
 	return nil

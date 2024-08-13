@@ -16,8 +16,7 @@ import (
 
 func TestPackage(t *testing.T) { TestingT(t) }
 
-type TssHttpServerTestSuite struct {
-}
+type TssHttpServerTestSuite struct{}
 
 var _ = Suite(&TssHttpServerTestSuite{})
 

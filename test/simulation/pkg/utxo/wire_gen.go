@@ -3,16 +3,16 @@
 package utxo
 
 import (
-  "github.com/btcsuite/btcd/wire"
-  "github.com/btcsuite/btcd/chaincfg/chainhash"
-  bchwire "github.com/gcash/bchd/wire"
-  bchchainhash "github.com/gcash/bchd/chaincfg/chainhash"
-  btcwire "github.com/btcsuite/btcd/wire"
-  btcchainhash "github.com/btcsuite/btcd/chaincfg/chainhash"
-  dogewire "github.com/eager7/dogd/wire"
-  dogechainhash "github.com/eager7/dogd/chaincfg/chainhash"
-  ltcwire "github.com/ltcsuite/ltcd/wire"
-  ltcchainhash "github.com/ltcsuite/ltcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	btcchainhash "github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/wire"
+	btcwire "github.com/btcsuite/btcd/wire"
+	dogechainhash "github.com/eager7/dogd/chaincfg/chainhash"
+	dogewire "github.com/eager7/dogd/wire"
+	bchchainhash "github.com/gcash/bchd/chaincfg/chainhash"
+	bchwire "github.com/gcash/bchd/wire"
+	ltcchainhash "github.com/ltcsuite/ltcd/chaincfg/chainhash"
+	ltcwire "github.com/ltcsuite/ltcd/wire"
 )
 
 func wireToBCH(tx *wire.MsgTx) *bchwire.MsgTx {

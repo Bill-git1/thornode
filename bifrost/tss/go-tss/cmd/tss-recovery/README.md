@@ -1,5 +1,4 @@
-TSS Recovery
-============
+# TSS Recovery
 
 This tool is intended to generate the private key of a TSS pubkey, by
 combining the secrets between each TSS member.

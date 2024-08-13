@@ -28,12 +28,12 @@ import (
 	"gitlab.com/thorchain/thornode/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/bifrost/tss"
+	gotss "gitlab.com/thorchain/thornode/bifrost/tss/go-tss/tss"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/config"
 	"gitlab.com/thorchain/thornode/constants"
 	mem "gitlab.com/thorchain/thornode/x/thorchain/memo"
-	gotss "gitlab.com/thorchain/thornode/bifrost/tss/go-tss/tss"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////

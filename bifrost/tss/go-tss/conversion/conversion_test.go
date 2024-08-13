@@ -89,7 +89,6 @@ func (p *ConversionTestSuite) TestGetParties(c *C) {
 	c.Assert(err, NotNil)
 }
 
-//
 func (p *ConversionTestSuite) TestGetPeerIDFromPartyID(c *C) {
 	_, localParty, err := GetParties(p.testPubKeys, p.testPubKeys[0])
 	c.Assert(err, IsNil)
