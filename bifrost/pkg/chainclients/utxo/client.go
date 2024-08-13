@@ -33,7 +33,7 @@ import (
 	"gitlab.com/thorchain/thornode/config"
 	"gitlab.com/thorchain/thornode/constants"
 	mem "gitlab.com/thorchain/thornode/x/thorchain/memo"
-	gotss "gitlab.com/thorchain/tss/go-tss/tss"
+	gotss "gitlab.com/thorchain/thornode/bifrost/tss/go-tss/tss"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////

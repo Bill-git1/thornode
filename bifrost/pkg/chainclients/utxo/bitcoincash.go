@@ -6,7 +6,7 @@ import (
 	bchec "github.com/gcash/bchd/bchec"
 	bchchaincfg "github.com/gcash/bchd/chaincfg"
 	bchwire "github.com/gcash/bchd/wire"
-	bchtxscript "gitlab.com/thorchain/bifrost/bchd-txscript"
+	bchtxscript "gitlab.com/thorchain/thornode/bifrost/txscript/bchd-txscript"
 
 	stypes "gitlab.com/thorchain/thornode/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/common"

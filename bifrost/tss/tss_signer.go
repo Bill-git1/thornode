@@ -18,7 +18,7 @@ import (
 	"github.com/tendermint/btcd/btcec"
 	"github.com/tendermint/tendermint/crypto"
 	"gitlab.com/thorchain/binance-sdk/types/tx"
-	"gitlab.com/thorchain/tss/go-tss/keysign"
+	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/keysign"
 
 	"gitlab.com/thorchain/thornode/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/common"

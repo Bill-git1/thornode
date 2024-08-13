@@ -26,7 +26,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/tendermint/tendermint/crypto"
-	tssp "gitlab.com/thorchain/tss/go-tss/tss"
+	tssp "gitlab.com/thorchain/thornode/bifrost/tss/go-tss/tss"
 
 	"gitlab.com/thorchain/thornode/bifrost/blockscanner"
 	"gitlab.com/thorchain/thornode/bifrost/metrics"

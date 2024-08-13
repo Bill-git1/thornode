@@ -12,16 +12,16 @@ import (
 	"github.com/btcsuite/btcd/wire"
 
 	"github.com/eager7/dogutil"
-	dogetxscript "gitlab.com/thorchain/bifrost/dogd-txscript"
+	dogetxscript "gitlab.com/thorchain/thornode/bifrost/txscript/dogd-txscript"
 
 	"github.com/gcash/bchutil"
-	bchtxscript "gitlab.com/thorchain/bifrost/bchd-txscript"
+	bchtxscript "gitlab.com/thorchain/thornode/bifrost/txscript/bchd-txscript"
 
 	"github.com/ltcsuite/ltcutil"
-	ltctxscript "gitlab.com/thorchain/bifrost/ltcd-txscript"
+	ltctxscript "gitlab.com/thorchain/thornode/bifrost/txscript/ltcd-txscript"
 
 	"github.com/btcsuite/btcutil"
-	btctxscript "gitlab.com/thorchain/bifrost/txscript"
+	btctxscript "gitlab.com/thorchain/thornode/bifrost/txscript/txscript"
 
 	stypes "gitlab.com/thorchain/thornode/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/common"

@@ -23,7 +23,7 @@ import (
 	ttypes "gitlab.com/thorchain/binance-sdk/types"
 	"gitlab.com/thorchain/binance-sdk/types/msg"
 	btx "gitlab.com/thorchain/binance-sdk/types/tx"
-	tssp "gitlab.com/thorchain/tss/go-tss/tss"
+	tssp "gitlab.com/thorchain/thornode/bifrost/tss/go-tss/tss"
 
 	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/runners"
 	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/signercache"

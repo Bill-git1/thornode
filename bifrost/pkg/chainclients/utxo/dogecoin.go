@@ -6,7 +6,7 @@ import (
 	dogeec "github.com/eager7/dogd/btcec"
 	dogechaincfg "github.com/eager7/dogd/chaincfg"
 	dogewire "github.com/eager7/dogd/wire"
-	dogetxscript "gitlab.com/thorchain/bifrost/dogd-txscript"
+	dogetxscript "gitlab.com/thorchain/thornode/bifrost/txscript/dogd-txscript"
 
 	stypes "gitlab.com/thorchain/thornode/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/common"

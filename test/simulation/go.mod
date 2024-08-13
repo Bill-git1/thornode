@@ -15,10 +15,6 @@ require (
 	github.com/ltcsuite/ltcd v0.20.1-beta.0.20201210074626-c807bfe31ef0
 	github.com/ltcsuite/ltcutil v1.0.2-beta
 	github.com/rs/zerolog v1.29.0
-	gitlab.com/thorchain/bifrost/bchd-txscript v0.0.0-20221030141659-2c0aa3290779
-	gitlab.com/thorchain/bifrost/dogd-txscript v0.0.0-20221115151937-74db6a9d3c92
-	gitlab.com/thorchain/bifrost/ltcd-txscript v0.0.0-20221030141522-6ec18ecc4447
-	gitlab.com/thorchain/bifrost/txscript v0.0.0-20221115150551-993a3adacf25
 	gitlab.com/thorchain/thornode v0.0.0-00010101000000-000000000000
 	google.golang.org/grpc v1.60.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
@@ -262,7 +258,6 @@ require (
 	github.com/zondax/hid v0.9.2 // indirect
 	github.com/zondax/ledger-go v0.14.3 // indirect
 	gitlab.com/thorchain/binance-sdk v1.2.3 // indirect
-	gitlab.com/thorchain/tss/go-tss v1.6.4 // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect

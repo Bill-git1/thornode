@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.com/thorchain/tss/go-tss/blame"
-	"gitlab.com/thorchain/tss/go-tss/common"
-	"gitlab.com/thorchain/tss/go-tss/conversion"
-	"gitlab.com/thorchain/tss/go-tss/keygen"
-	"gitlab.com/thorchain/tss/go-tss/keysign"
-	"gitlab.com/thorchain/tss/go-tss/tss"
+	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/blame"
+	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/common"
+	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/conversion"
+	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/keygen"
+	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/keysign"
+	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/tss"
 	. "gopkg.in/check.v1"
 )
 

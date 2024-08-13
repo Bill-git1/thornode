@@ -28,7 +28,7 @@ import (
 	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/signercache"
 	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/utxo"
 
-	tssp "gitlab.com/thorchain/tss/go-tss/tss"
+	tssp "gitlab.com/thorchain/thornode/bifrost/tss/go-tss/tss"
 
 	"gitlab.com/thorchain/thornode/bifrost/blockscanner"
 	"gitlab.com/thorchain/thornode/bifrost/metrics"

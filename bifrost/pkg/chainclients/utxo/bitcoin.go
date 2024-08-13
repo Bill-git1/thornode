@@ -7,7 +7,7 @@ import (
 	btcjson "github.com/btcsuite/btcd/btcjson"
 	btcchaincfg "github.com/btcsuite/btcd/chaincfg"
 	btcwire "github.com/btcsuite/btcd/wire"
-	btctxscript "gitlab.com/thorchain/bifrost/txscript"
+	btctxscript "gitlab.com/thorchain/thornode/bifrost/txscript/txscript"
 
 	stypes "gitlab.com/thorchain/thornode/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/common"

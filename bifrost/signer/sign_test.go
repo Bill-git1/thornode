@@ -19,9 +19,9 @@ import (
 	cKeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/rs/zerolog/log"
 	"github.com/tendermint/tendermint/crypto"
-	"gitlab.com/thorchain/tss/go-tss/blame"
-	"gitlab.com/thorchain/tss/go-tss/keysign"
-	tssMessages "gitlab.com/thorchain/tss/go-tss/messages"
+	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/blame"
+	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/keysign"
+	tssMessages "gitlab.com/thorchain/thornode/bifrost/tss/go-tss/messages"
 
 	. "gopkg.in/check.v1"
 

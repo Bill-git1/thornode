@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
-	"gitlab.com/thorchain/tss/go-tss/tss"
+	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/tss"
 
 	"gitlab.com/thorchain/thornode/bifrost/metrics"
 	"gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/binance"

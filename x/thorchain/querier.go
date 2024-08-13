@@ -19,7 +19,7 @@ import (
 	"github.com/rs/zerolog/log"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmhttp "github.com/tendermint/tendermint/rpc/client/http"
-	"gitlab.com/thorchain/tss/go-tss/conversion"
+	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/conversion"
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"

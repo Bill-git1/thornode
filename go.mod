@@ -42,12 +42,7 @@ require (
 	github.com/tendermint/go-amino v0.16.0
 	github.com/tendermint/tendermint v0.34.27
 	github.com/tendermint/tm-db v0.6.6
-	gitlab.com/thorchain/bifrost/bchd-txscript v0.0.0-20221030141659-2c0aa3290779
-	gitlab.com/thorchain/bifrost/dogd-txscript v0.0.0-20221115151937-74db6a9d3c92
-	gitlab.com/thorchain/bifrost/ltcd-txscript v0.0.0-20221030141522-6ec18ecc4447
-	gitlab.com/thorchain/bifrost/txscript v0.0.0-20221115150551-993a3adacf25
 	gitlab.com/thorchain/binance-sdk v1.2.3
-	gitlab.com/thorchain/tss/go-tss v1.6.4
 	go.uber.org/atomic v1.10.0
 	golang.org/x/oauth2 v0.15.0
 	golang.org/x/sync v0.7.0
@@ -70,7 +65,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/speakeasy v0.1.1-0.20220910012023-760eaf8b6816 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2 // indirect
-	github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f // indirect
+	github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/coinbase/rosetta-sdk-go v0.7.9 // indirect
@@ -80,10 +75,10 @@ require (
 	github.com/cosmos/iavl v0.19.5 // indirect
 	github.com/cosmos/ledger-cosmos-go v0.12.2 // indirect
 	github.com/danieljoos/wincred v1.1.2 // indirect
-	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/dchest/siphash v1.2.2 // indirect
-	github.com/deckarep/golang-set v1.8.0 // indirect
+	github.com/deckarep/golang-set v1.8.0
 	github.com/decred/dcrd/dcrec/edwards/v2 v2.0.0 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
 	github.com/desertbit/timer v0.0.0-20180107155436-c41aec40b27f // indirect
@@ -92,17 +87,17 @@ require (
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/dvsekhvalnov/jose2go v1.5.0 // indirect
-	github.com/eager7/doglog v0.0.0-20200427040431-a0db59f0a792 // indirect
+	github.com/eager7/doglog v0.0.0-20200427040431-a0db59f0a792
 	github.com/felixge/httpsnoop v1.0.2 // indirect
 	github.com/flynn/noise v0.0.0-20180327030543-2492fe189ae6 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
-	github.com/gcash/bchlog v0.0.0-20180913005452-b4f036f92fa6 // indirect
+	github.com/gcash/bchlog v0.0.0-20180913005452-b4f036f92fa6
 	github.com/go-kit/kit v0.12.0 // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/godbus/dbus v0.0.0-20190726142602-4481cbc300e2 // indirect
 	github.com/gogo/gateway v1.1.0 // indirect
-	github.com/golang/protobuf v1.5.4 // indirect
+	github.com/golang/protobuf v1.5.4
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb // indirect
 	github.com/google/btree v1.1.2 // indirect
 	github.com/google/gopacket v1.1.18 // indirect
@@ -151,14 +146,14 @@ require (
 	github.com/libp2p/go-libp2p-blankhost v0.2.0 // indirect
 	github.com/libp2p/go-libp2p-circuit v0.3.1 // indirect
 	github.com/libp2p/go-libp2p-core v0.6.1
-	github.com/libp2p/go-libp2p-discovery v0.5.0 // indirect
+	github.com/libp2p/go-libp2p-discovery v0.5.0
 	github.com/libp2p/go-libp2p-kad-dht v0.10.0
 	github.com/libp2p/go-libp2p-kbucket v0.4.7 // indirect
 	github.com/libp2p/go-libp2p-loggables v0.1.0 // indirect
 	github.com/libp2p/go-libp2p-mplex v0.2.4 // indirect
 	github.com/libp2p/go-libp2p-nat v0.0.6 // indirect
 	github.com/libp2p/go-libp2p-noise v0.1.1 // indirect
-	github.com/libp2p/go-libp2p-peerstore v0.2.6 // indirect
+	github.com/libp2p/go-libp2p-peerstore v0.2.6
 	github.com/libp2p/go-libp2p-pnet v0.2.0 // indirect
 	github.com/libp2p/go-libp2p-record v0.1.3 // indirect
 	github.com/libp2p/go-libp2p-swarm v0.2.8 // indirect
@@ -198,13 +193,13 @@ require (
 	github.com/multiformats/go-multihash v0.0.14 // indirect
 	github.com/multiformats/go-multistream v0.1.2 // indirect
 	github.com/multiformats/go-varint v0.0.6 // indirect
-	github.com/olekukonko/tablewriter v0.0.5 // indirect
+	github.com/olekukonko/tablewriter v0.0.5
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/otiai10/primes v0.0.0-20180210170552-f6d2a1ba97c4 // indirect
 	github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/prometheus/client_model v0.4.0 // indirect
+	github.com/prometheus/client_model v0.4.0
 	github.com/prometheus/common v0.42.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
@@ -232,22 +227,25 @@ require (
 	golang.org/x/net v0.24.0 // indirect
 	golang.org/x/sys v0.19.0 // indirect
 	golang.org/x/term v0.19.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/text v0.14.0
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
-	google.golang.org/protobuf v1.33.0 // indirect
+	google.golang.org/protobuf v1.33.0
 	gopkg.in/yaml.v3 v3.0.1
 	nhooyr.io/websocket v1.8.6 // indirect
 )
 
 require (
 	filippo.io/age v1.0.0-rc.3
+	github.com/binance-chain/tss-lib v0.0.0-20201118045712-70b2cb4bf916
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.0.1
 	github.com/cometbft/cometbft v0.38.6
+	github.com/decred/dcrd/dcrec/secp256k1 v1.0.4
 	github.com/google/go-cmp v0.6.0
 	github.com/itchio/lzma v0.0.0-20190703113020-d3e24e3e3d49
 	github.com/jinzhu/copier v0.3.5
 	github.com/kzahedi/goent v0.0.0-20190403094137-49773660fa36
+	github.com/libp2p/go-libp2p-testing v0.2.0
 	golang.org/x/tools v0.20.0
 )
 
@@ -257,7 +255,6 @@ require (
 	cosmossdk.io/depinject v1.0.0-alpha.3 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
-	github.com/binance-chain/tss-lib v0.0.0-20201118045712-70b2cb4bf916 // indirect
 	github.com/bits-and-blooms/bitset v1.10.0 // indirect
 	github.com/cockroachdb/errors v1.11.1 // indirect
 	github.com/cockroachdb/logtags v0.0.0-20230118201751-21c54148d20b // indirect
@@ -274,6 +271,7 @@ require (
 	github.com/crate-crypto/go-kzg-4844 v1.0.0 // indirect
 	github.com/creachadair/taskgroup v0.3.2 // indirect
 	github.com/deckarep/golang-set/v2 v2.1.0 // indirect
+	github.com/decred/dcrd/dcrec/secp256k1/v2 v2.0.0 // indirect
 	github.com/ethereum/c-kzg-4844 v1.0.0 // indirect
 	github.com/gballet/go-verkle v0.1.1-0.20231031103413-a67434b50f46 // indirect
 	github.com/getsentry/sentry-go v0.18.0 // indirect
@@ -282,6 +280,7 @@ require (
 	github.com/golang/glog v1.1.2 // indirect
 	github.com/hdevalence/ed25519consensus v0.0.0-20220222234857-c00d1f31bab3 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
+	github.com/libp2p/go-libp2p-netutil v0.1.0 // indirect
 	github.com/linxGnu/grocksdb v1.7.10 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mmcloughlin/addchain v0.4.0 // indirect

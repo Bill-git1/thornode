@@ -14,8 +14,8 @@ import (
 	"github.com/rs/zerolog/log"
 	flag "github.com/spf13/pflag"
 
-	"gitlab.com/thorchain/tss/go-tss/common"
-	"gitlab.com/thorchain/tss/go-tss/tss"
+	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/common"
+	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/tss"
 
 	"gitlab.com/thorchain/thornode/app"
 	"gitlab.com/thorchain/thornode/bifrost/metrics"

@@ -35,7 +35,7 @@ import (
 	"gitlab.com/thorchain/thornode/constants"
 	"gitlab.com/thorchain/thornode/x/thorchain/aggregators"
 	mem "gitlab.com/thorchain/thornode/x/thorchain/memo"
-	tssp "gitlab.com/thorchain/tss/go-tss/tss"
+	tssp "gitlab.com/thorchain/thornode/bifrost/tss/go-tss/tss"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////

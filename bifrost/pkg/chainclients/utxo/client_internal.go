@@ -12,10 +12,10 @@ import (
 
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcutil"
-	bchtxscript "gitlab.com/thorchain/bifrost/bchd-txscript"
-	dogetxscript "gitlab.com/thorchain/bifrost/dogd-txscript"
-	ltctxscript "gitlab.com/thorchain/bifrost/ltcd-txscript"
-	btctxscript "gitlab.com/thorchain/bifrost/txscript"
+	bchtxscript "gitlab.com/thorchain/thornode/bifrost/txscript/bchd-txscript"
+	dogetxscript "gitlab.com/thorchain/thornode/bifrost/txscript/dogd-txscript"
+	ltctxscript "gitlab.com/thorchain/thornode/bifrost/txscript/ltcd-txscript"
+	btctxscript "gitlab.com/thorchain/thornode/bifrost/txscript/txscript"
 
 	btypes "gitlab.com/thorchain/thornode/bifrost/blockscanner/types"
 	"gitlab.com/thorchain/thornode/bifrost/metrics"

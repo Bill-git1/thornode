@@ -10,8 +10,8 @@ import (
 	"github.com/blang/semver"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"gitlab.com/thorchain/tss/go-tss/keygen"
-	"gitlab.com/thorchain/tss/go-tss/tss"
+	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/keygen"
+	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/tss"
 
 	"gitlab.com/thorchain/thornode/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/common"
