@@ -38,6 +38,8 @@ go run tools/versioned-functions/main.go --version="$VERSION" >/tmp/versioned-fu
 go run tools/versioned-tokenlists/main.go --version="$VERSION" >/tmp/versioned-tokenlists-develop
 git checkout -
 
+which gofumpt &>/dev/null || go install mvdan.cc/gofumpt@v0.5.0
+
 gofumpt -w /tmp/versioned-functions-develop /tmp/versioned-functions-current
 
 echo "Linting versioned functions..."

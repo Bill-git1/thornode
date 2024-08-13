@@ -1,4 +1,4 @@
-image: registry.gitlab.com/thorchain/thornode:builder-v5@sha256:33a2345924750d45a7e9060f429f66ddc1888482e6ef73e2358a23024dc41f01
+image: golang:1.22.2
 
 workflow:
   rules:
@@ -94,6 +94,8 @@ lint:
     - if: $CI == "true"
       when: on_success
   stage: test
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends jq
   script:
     - make lint-ci
 

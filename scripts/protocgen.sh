@@ -5,6 +5,7 @@ set -euo pipefail
 # Delete any existing protobuf generated files.
 find . -name "*.pb.go" -delete
 
+which protoc &>/dev/null || (apt-get update && apt-get install -y --no-install-recommends protobuf-compiler)
 go install github.com/regen-network/cosmos-proto/protoc-gen-gocosmos
 
 # shellcheck disable=SC2038

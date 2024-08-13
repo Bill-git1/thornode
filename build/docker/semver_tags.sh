@@ -7,4 +7,7 @@
 # mainnet-1.2
 # mainnet-1.2.3
 
-echo " -t $1:$2 -t $1:$2-$(echo "$3" | awk -F '.' '{print $1}') -t $1:$2-$(echo "$3" | awk -F '.' '{print $1"."$2}') -t $1:$2-$3 "
+# Convert any '/' in branch names to underscores for use in docker tags
+TAG_BASE=$(echo "$2" | tr '/' '_')
+
+echo " -t $1:${TAG_BASE} -t $1:${TAG_BASE}-$(echo "$3" | awk -F '.' '{print $1}') -t $1:${TAG_BASE}-$(echo "$3" | awk -F '.' '{print $1"."$2}') -t $1:${TAG_BASE}-$3 "

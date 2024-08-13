@@ -67,8 +67,7 @@ protob:
 	@./scripts/protocgen.sh
 
 protob-docker:
-	@docker run --rm -v $(shell pwd):/app -w /app \
-		registry.gitlab.com/thorchain/thornode:builder-v5@sha256:33a2345924750d45a7e9060f429f66ddc1888482e6ef73e2358a23024dc41f01 \
+	@docker run --rm -v $(shell pwd):/app -w /app golang:1.22.2 \
 		make protob
 
 openapi:
