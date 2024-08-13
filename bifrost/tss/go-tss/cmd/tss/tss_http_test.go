@@ -11,7 +11,7 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"gitlab.com/thorchain/tss/go-tss/keygen"
+	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/keygen"
 )
 
 func TestPackage(t *testing.T) { TestingT(t) }
