@@ -25,7 +25,7 @@ Halt flags are Boolean. For clarity `0` = false, no issues and `> 0` = true (usu
 Each chain has granular control allowing each chain to be halted or resumed on a specific chain as required. Network-level halting is also possible.
 
 1. **Specific Chain Signing Halt** - Allows inbound transactions but stops the signing of outbound transactions. Outbound transactions are [queued](https://thornode.ninerealms.com/thorchain/queue). This is the least impactful halt.
-   1. Mimir setting is `HALTSIGNING[Chain]`, e.g. `HALTSIGNINGBNB`
+   1. Mimir setting is `HALTSIGNING[Chain]`, e.g. `HALTSIGNINGETH`
 2. **Specific Chain Liquidity Provider Pause -** addition and withdrawal of liquidity are suspended but swaps and other transactions are processed.
    1. Mimir setting is `PAUSELP[Chain]`, e,g, `PAUSELPBCH` for BCH
 3. **Specific Chain Trading Halt** - Transactions on external chains are observed but not processed, only [refunds](memos.md#refunds) are given. THORNode's Bifrost is running, nodes are synced to the tip therefore trading resumption can happen very quickly.

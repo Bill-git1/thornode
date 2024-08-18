@@ -14,7 +14,7 @@ func (MsgManageTHORNameSuite) TestMsgManageTHORNameSuite(c *C) {
 	owner := GetRandomBech32Addr()
 	signer := GetRandomBech32Addr()
 	coin := common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One))
-	msg := NewMsgManageTHORName("myname", common.BNBChain, GetRandomBNBAddress(), coin, 0, common.BNBAsset, owner, signer)
+	msg := NewMsgManageTHORName("myname", common.ETHChain, GetRandomETHAddress(), coin, 0, common.ETHAsset, owner, signer)
 	c.Assert(msg.Route(), Equals, RouterKey)
 	c.Assert(msg.Type(), Equals, "manage_thorname")
 	c.Assert(msg.ValidateBasic(), IsNil)
@@ -23,14 +23,14 @@ func (MsgManageTHORNameSuite) TestMsgManageTHORNameSuite(c *C) {
 	c.Assert(msg.GetSigners()[0].String(), Equals, signer.String())
 
 	// unhappy paths
-	msg = NewMsgManageTHORName("myname", common.BNBChain, GetRandomBNBAddress(), coin, 0, common.BNBAsset, owner, cosmos.AccAddress{})
+	msg = NewMsgManageTHORName("myname", common.ETHChain, GetRandomETHAddress(), coin, 0, common.ETHAsset, owner, cosmos.AccAddress{})
 	c.Assert(msg.ValidateBasic(), NotNil)
-	msg = NewMsgManageTHORName("myname", common.EmptyChain, GetRandomBNBAddress(), coin, 0, common.BNBAsset, owner, signer)
+	msg = NewMsgManageTHORName("myname", common.EmptyChain, GetRandomETHAddress(), coin, 0, common.ETHAsset, owner, signer)
 	c.Assert(msg.ValidateBasic(), NotNil)
-	msg = NewMsgManageTHORName("myname", common.BNBChain, common.NoAddress, coin, 0, common.BNBAsset, owner, signer)
+	msg = NewMsgManageTHORName("myname", common.ETHChain, common.NoAddress, coin, 0, common.ETHAsset, owner, signer)
 	c.Assert(msg.ValidateBasic(), NotNil)
-	msg = NewMsgManageTHORName("myname", common.BNBChain, GetRandomBTCAddress(), coin, 0, common.BNBAsset, owner, signer)
+	msg = NewMsgManageTHORName("myname", common.ETHChain, GetRandomBTCAddress(), coin, 0, common.ETHAsset, owner, signer)
 	c.Assert(msg.ValidateBasic(), NotNil)
-	msg = NewMsgManageTHORName("myname", common.BNBChain, GetRandomBNBAddress(), common.NewCoin(common.BNBAsset, cosmos.NewUint(10*common.One)), 0, common.BNBAsset, owner, signer)
+	msg = NewMsgManageTHORName("myname", common.ETHChain, GetRandomETHAddress(), common.NewCoin(common.ETHAsset, cosmos.NewUint(10*common.One)), 0, common.ETHAsset, owner, signer)
 	c.Assert(msg.ValidateBasic(), NotNil)
 }

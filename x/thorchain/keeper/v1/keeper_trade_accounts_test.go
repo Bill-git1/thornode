@@ -17,7 +17,7 @@ func (mas *KeeperTradeAccountSuite) SetUpSuite(c *C) {
 
 func (s *KeeperTradeAccountSuite) TestTradeAccount(c *C) {
 	ctx, k := setupKeeperForTest(c)
-	asset := common.BNBAsset
+	asset := common.ETHAsset
 	addr := GetRandomBech32Addr()
 
 	tr, err := k.GetTradeAccount(ctx, addr, asset)

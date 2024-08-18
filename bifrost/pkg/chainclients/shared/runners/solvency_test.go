@@ -43,7 +43,7 @@ func (s *SolvencyTestSuite) SetUpSuite(c *C) {
 		ListenPort:   9090,
 		ReadTimeout:  time.Second,
 		WriteTimeout: time.Second,
-		Chains:       common.Chains{common.BNBChain},
+		Chains:       common.Chains{common.ETHChain},
 	})
 	s.m = m
 
@@ -65,8 +65,8 @@ func (s *SolvencyTestSuite) SetUpSuite(c *C) {
 
 func (s *SolvencyTestSuite) TestSolvencyCheck(c *C) {
 	mimirMap := map[string]int{
-		"HaltBNBChain":         0,
-		"SolvencyHaltBNBChain": 0,
+		"HaltETHChain":         0,
+		"SolvencyHaltETHChain": 0,
 	}
 
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -103,38 +103,38 @@ func (s *SolvencyTestSuite) TestSolvencyCheck(c *C) {
 	// Happy path, shouldn't check solvency if nothing halted (chain clients will report solvency)
 	s.sp.ResetChecks()
 	wg.Add(1)
-	go SolvencyCheckRunner(common.BNBChain, s.sp, bridge, stopchan, wg, constants.ThorchainBlockTime)
+	go SolvencyCheckRunner(common.ETHChain, s.sp, bridge, stopchan, wg, constants.ThorchainBlockTime)
 	time.Sleep(time.Second * 6)
 
 	c.Assert(s.sp.ShouldReportSolvencyRan, Equals, false)
 	c.Assert(s.sp.ReportSolvencyRun, Equals, false)
 
 	// Admin halted, still don't check solvency
-	mimirMap["HaltBNBChain"] = 1
+	mimirMap["HaltETHChain"] = 1
 	s.sp.ResetChecks()
 	wg.Add(1)
-	go SolvencyCheckRunner(common.BNBChain, s.sp, bridge, stopchan, wg, constants.ThorchainBlockTime)
+	go SolvencyCheckRunner(common.ETHChain, s.sp, bridge, stopchan, wg, constants.ThorchainBlockTime)
 	time.Sleep(time.Second * 6)
 
 	c.Assert(s.sp.ShouldReportSolvencyRan, Equals, false)
 	c.Assert(s.sp.ReportSolvencyRun, Equals, false)
 
 	// Double-spend check halted chain client, check solvency here
-	mimirMap["HaltBNBChain"] = 10
+	mimirMap["HaltETHChain"] = 10
 	s.sp.ResetChecks()
 	wg.Add(1)
-	go SolvencyCheckRunner(common.BNBChain, s.sp, bridge, stopchan, wg, constants.ThorchainBlockTime)
+	go SolvencyCheckRunner(common.ETHChain, s.sp, bridge, stopchan, wg, constants.ThorchainBlockTime)
 	time.Sleep(time.Second * 6)
 
 	c.Assert(s.sp.ShouldReportSolvencyRan, Equals, true)
 	c.Assert(s.sp.ReportSolvencyRun, Equals, true)
-	mimirMap["HaltBNBChain"] = 0
+	mimirMap["HaltETHChain"] = 0
 
 	// Solvency halted chain, need to report solvency here as chain client is paused
-	mimirMap["SolvencyHaltBNBChain"] = 1
+	mimirMap["SolvencyHaltETHChain"] = 1
 	s.sp.ResetChecks()
 	wg.Add(1)
-	go SolvencyCheckRunner(common.BNBChain, s.sp, bridge, stopchan, wg, constants.ThorchainBlockTime)
+	go SolvencyCheckRunner(common.ETHChain, s.sp, bridge, stopchan, wg, constants.ThorchainBlockTime)
 	time.Sleep(time.Second * 6)
 
 	c.Assert(s.sp.ShouldReportSolvencyRan, Equals, true)

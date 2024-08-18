@@ -23,24 +23,24 @@ func (s *HandlerManageTHORNameSuite) TestValidator(c *C) {
 	mgr.Keeper().SetTHORName(ctx, name)
 
 	// set pool for preferred asset
-	pool, err := mgr.Keeper().GetPool(ctx, common.BNBAsset)
+	pool, err := mgr.Keeper().GetPool(ctx, common.ETHAsset)
 	c.Assert(err, IsNil)
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.ETHAsset
 	err = mgr.Keeper().SetPool(ctx, pool)
 	c.Assert(err, IsNil)
 
 	// happy path
-	msg := NewMsgManageTHORName("I-am_the_99th_walrus+", common.THORChain, addr, coin, 0, common.BNBAsset, acc, acc)
+	msg := NewMsgManageTHORName("I-am_the_99th_walrus+", common.THORChain, addr, coin, 0, common.ETHAsset, acc, acc)
 	c.Assert(handler.validate(ctx, *msg), IsNil)
 
 	// fail: address is wrong chain
-	msg.Chain = common.BNBChain
+	msg.Chain = common.ETHChain
 	c.Assert(handler.validate(ctx, *msg), NotNil)
 
 	// fail: address is wrong network
-	mainnetBNBAddr, err := common.NewAddress("bnb1j08ys4ct2hzzc2hcz6h2hgrvlmsjynawtf2n0y")
+	mainnetBTCAddr, err := common.NewAddress("bc1qy0tj9fh0u6fgz0mejjp6776z6kugych0zwrkwr")
 	c.Assert(err, IsNil)
-	msg.Address = mainnetBNBAddr
+	msg.Address = mainnetBTCAddr
 	c.Assert(handler.validate(ctx, *msg), NotNil)
 
 	// restore to happy path
@@ -98,30 +98,30 @@ func (s *HandlerManageTHORNameSuite) TestHandler(c *C) {
 	c.Check(name.ExpireBlockHeight, Equals, ctx.BlockHeight()+blocksPerYear+(int64(coin.Amount.Uint64())-registrationFee)/feePerBlock)
 
 	// happy path, set alt chain address
-	bnbAddr := GetRandomBNBAddress()
-	msg = NewMsgManageTHORName(tnName, common.BNBChain, bnbAddr, coin, 0, common.RuneAsset(), acc, acc)
+	ethAddr := GetRandomETHAddress()
+	msg = NewMsgManageTHORName(tnName, common.ETHChain, ethAddr, coin, 0, common.RuneAsset(), acc, acc)
 	_, err = handler.handle(ctx, *msg)
 	c.Assert(err, IsNil)
 	name, err = mgr.Keeper().GetTHORName(ctx, tnName)
 	c.Assert(err, IsNil)
-	c.Check(name.GetAlias(common.BNBChain).Equals(bnbAddr), Equals, true)
+	c.Check(name.GetAlias(common.ETHChain).Equals(ethAddr), Equals, true)
 
 	// happy path, update alt chain address
-	bnbAddr = GetRandomBNBAddress()
-	msg = NewMsgManageTHORName(tnName, common.BNBChain, bnbAddr, coin, 0, common.RuneAsset(), acc, acc)
+	ethAddr = GetRandomETHAddress()
+	msg = NewMsgManageTHORName(tnName, common.ETHChain, ethAddr, coin, 0, common.RuneAsset(), acc, acc)
 	_, err = handler.handle(ctx, *msg)
 	c.Assert(err, IsNil)
 	name, err = mgr.Keeper().GetTHORName(ctx, tnName)
 	c.Assert(err, IsNil)
-	c.Check(name.GetAlias(common.BNBChain).Equals(bnbAddr), Equals, true)
+	c.Check(name.GetAlias(common.ETHChain).Equals(ethAddr), Equals, true)
 
 	// update preferred asset
-	msg = NewMsgManageTHORName(tnName, common.BNBChain, bnbAddr, coin, 0, common.BNBAsset, acc, acc)
+	msg = NewMsgManageTHORName(tnName, common.ETHChain, ethAddr, coin, 0, common.ETHAsset, acc, acc)
 	_, err = handler.handle(ctx, *msg)
 	c.Assert(err, IsNil)
 	name, err = mgr.Keeper().GetTHORName(ctx, tnName)
 	c.Assert(err, IsNil)
-	c.Check(name.GetPreferredAsset(), Equals, common.BNBAsset)
+	c.Check(name.GetPreferredAsset(), Equals, common.ETHAsset)
 
 	// transfer thorname to new owner, should reset preferred asset/external aliases
 	addr2 := GetRandomTHORAddress()

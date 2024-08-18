@@ -13,7 +13,7 @@ var _ = Suite(&TypeErrataTxSuite{})
 func (s *TypeErrataTxSuite) TestVoter(c *C) {
 	errata := NewErrataTxVoter(
 		GetRandomTxHash(),
-		common.BNBChain,
+		common.ETHChain,
 	)
 	c.Check(errata.Empty(), Equals, false)
 	c.Check(errata.String() != "", Equals, true)

@@ -163,8 +163,8 @@ func (s *BitcoinSignerSuite) TestGetBTCPrivateKey(c *C) {
 
 func (s *BitcoinSignerSuite) TestSignTx(c *C) {
 	txOutItem := stypes.TxOutItem{
-		Chain:       common.BNBChain,
-		ToAddress:   types2.GetRandomBNBAddress(),
+		Chain:       common.ETHChain,
+		ToAddress:   types2.GetRandomETHAddress(),
 		VaultPubKey: types2.GetRandomPubKey(),
 		Coins: common.Coins{
 			common.NewCoin(common.BTCAsset, cosmos.NewUint(10000000000)),
@@ -285,8 +285,8 @@ func (s *BitcoinSignerSuite) TestSignTxWithoutPredefinedMaxGas(c *C) {
 
 func (s *BitcoinSignerSuite) TestBroadcastTx(c *C) {
 	txOutItem := stypes.TxOutItem{
-		Chain:       common.BNBChain,
-		ToAddress:   types2.GetRandomBNBAddress(),
+		Chain:       common.ETHChain,
+		ToAddress:   types2.GetRandomETHAddress(),
 		VaultPubKey: types2.GetRandomPubKey(),
 		Coins: common.Coins{
 			common.NewCoin(common.BTCAsset, cosmos.NewUint(10)),

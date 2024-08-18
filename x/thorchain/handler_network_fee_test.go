@@ -53,7 +53,7 @@ func (*HandlerObserveNetworkFeeSuite) testHandlerObserveNetworkFeeWithVersion(c 
 	activeNodeAccount := GetRandomValidatorNode(NodeActive)
 	c.Assert(keeper.SetNodeAccount(ctx, activeNodeAccount), IsNil)
 	handler := NewNetworkFeeHandler(NewDummyMgrWithKeeper(keeper))
-	msg := NewMsgNetworkFee(1024, common.BNBChain, 256, 100, activeNodeAccount.NodeAddress)
+	msg := NewMsgNetworkFee(1024, common.ETHChain, 256, 100, activeNodeAccount.NodeAddress)
 	result, err := handler.Run(ctx, msg)
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
@@ -64,7 +64,7 @@ func (*HandlerObserveNetworkFeeSuite) testHandlerObserveNetworkFeeWithVersion(c 
 	c.Assert(result, NotNil)
 
 	// already processed
-	msg1 := NewMsgNetworkFee(1024, common.BNBChain, 256, 100, activeNodeAccount.NodeAddress)
+	msg1 := NewMsgNetworkFee(1024, common.ETHChain, 256, 100, activeNodeAccount.NodeAddress)
 	result, err = handler.Run(ctx, msg1)
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
@@ -99,7 +99,7 @@ func (*HandlerObserveNetworkFeeSuite) testHandlerObserveNetworkFeeWithVersion(c 
 			errFailSaveNetworkFee: true,
 		}),
 	)
-	msg2 := NewMsgNetworkFee(2056, common.BNBChain, 200, 102, activeNodeAccount.NodeAddress)
+	msg2 := NewMsgNetworkFee(2056, common.ETHChain, 200, 102, activeNodeAccount.NodeAddress)
 	result, err = handler3.Run(ctx, msg2)
 	c.Assert(err, NotNil)
 	c.Assert(result, IsNil)
@@ -142,7 +142,7 @@ func (s *HandlerObserveNetworkFeeSuite) TestObservingSlashing(c *C) {
 		c.Assert(mgr.Keeper().SetNodeAccount(ctx, item), IsNil)
 	}
 
-	msg := NewMsgNetworkFee(1024, common.BNBChain, 256, 100, cosmos.AccAddress{})
+	msg := NewMsgNetworkFee(1024, common.ETHChain, 256, 100, cosmos.AccAddress{})
 	handler := NewNetworkFeeHandler(mgr)
 
 	broadcast := func(c *C, ctx cosmos.Context, na NodeAccount, msg *MsgNetworkFee) {

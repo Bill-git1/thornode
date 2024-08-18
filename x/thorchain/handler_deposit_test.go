@@ -28,7 +28,7 @@ func (s *HandlerDepositSuite) TestValidate(c *C) {
 	coins := common.Coins{
 		common.NewCoin(common.RuneNative, cosmos.NewUint(200*common.One)),
 	}
-	msg := NewMsgDeposit(coins, fmt.Sprintf("ADD:BNB.BNB:%s", GetRandomRUNEAddress()), addr)
+	msg := NewMsgDeposit(coins, fmt.Sprintf("ADD:DOGE.DOGE:%s", GetRandomRUNEAddress()), addr)
 
 	handler := NewDepositHandler(NewDummyMgrWithKeeper(k))
 	err := handler.validate(ctx, *msg)
@@ -58,12 +58,12 @@ func (s *HandlerDepositSuite) TestHandle(c *C) {
 	err = k.AddCoins(ctx, addr, cosmos.NewCoins(funds))
 	c.Assert(err, IsNil)
 	pool := NewPool()
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.DOGEAsset
 	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
 	pool.BalanceRune = cosmos.NewUint(100 * common.One)
 	pool.Status = PoolAvailable
 	c.Assert(k.SetPool(ctx, pool), IsNil)
-	msg := NewMsgDeposit(coins, "ADD:BNB.BNB", addr)
+	msg := NewMsgDeposit(coins, "ADD:DOGE.DOGE", addr)
 
 	_, err = handler.handle(ctx, *msg)
 	c.Assert(err, IsNil)
@@ -107,7 +107,7 @@ func (s *HandlerDepositSuite) TestDifferentValidation(c *C) {
 		{
 			name: "invalid message should result an error",
 			messageProvider: func(c *C, ctx cosmos.Context, helper *HandlerDepositTestHelper) cosmos.Msg {
-				return NewMsgNetworkFee(ctx.BlockHeight(), common.BNBChain, 1, bnbSingleTxFee.Uint64(), GetRandomBech32Addr())
+				return NewMsgNetworkFee(ctx.BlockHeight(), common.DOGEChain, 1, 10000, GetRandomBech32Addr())
 			},
 			validator: func(c *C, ctx cosmos.Context, result *cosmos.Result, err error, helper *HandlerDepositTestHelper, name string) {
 				c.Check(err, NotNil, Commentf(name))
@@ -119,7 +119,7 @@ func (s *HandlerDepositSuite) TestDifferentValidation(c *C) {
 			name: "coin is not on THORChain should result in an error",
 			messageProvider: func(c *C, ctx cosmos.Context, helper *HandlerDepositTestHelper) cosmos.Msg {
 				return NewMsgDeposit(common.Coins{
-					common.NewCoin(common.BNBAsset, cosmos.NewUint(100)),
+					common.NewCoin(common.DOGEAsset, cosmos.NewUint(100)),
 				}, "hello", GetRandomBech32Addr())
 			},
 			validator: func(c *C, ctx cosmos.Context, result *cosmos.Result, err error, helper *HandlerDepositTestHelper, name string) {
@@ -156,7 +156,7 @@ func (s *HandlerDepositSuite) TestDifferentValidation(c *C) {
 			name: "invalid memo should err",
 			messageProvider: func(c *C, ctx cosmos.Context, helper *HandlerDepositTestHelper) cosmos.Msg {
 				FundAccount(c, ctx, helper.Keeper, acctAddr, 100)
-				vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BNBChain, common.THORChain}.Strings(), []ChainContract{})
+				vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.DOGEChain, common.THORChain}.Strings(), []ChainContract{})
 				c.Check(helper.Keeper.SetVault(ctx, vault), IsNil)
 				return NewMsgDeposit(common.Coins{
 					common.NewCoin(common.RuneNative, cosmos.NewUint(2*common.One)),
@@ -190,7 +190,7 @@ func (s *HandlerDepositSuite) TestAddSwap(c *C) {
 		GetRandomTHORAddress(),
 		common.Coins{common.NewCoin(common.RuneNative, cosmos.NewUint(common.One))},
 		common.Gas{
-			{Asset: common.BNBAsset, Amount: cosmos.NewUint(37500)},
+			{Asset: common.DOGEAsset, Amount: cosmos.NewUint(37500)},
 		},
 		// memo is only used for getting the affiliate thorname but must be
 		// valid in order for addSwap to complete successfully

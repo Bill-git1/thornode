@@ -44,7 +44,7 @@ func (s *HandlerMimirSuite) TestMimirHandle(c *C) {
 	c.Assert(err, IsNil)
 	c.Check(val, Equals, int64(55))
 
-	invalidMsg := NewMsgNetworkFee(ctx.BlockHeight(), common.BNBChain, 1, bnbSingleTxFee.Uint64(), GetRandomBech32Addr())
+	invalidMsg := NewMsgNetworkFee(ctx.BlockHeight(), common.ETHChain, 1, 10000, GetRandomBech32Addr())
 	result, err := handler.Run(ctx, invalidMsg)
 	c.Check(err, NotNil)
 	c.Check(result, IsNil)

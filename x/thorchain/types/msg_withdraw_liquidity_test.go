@@ -15,17 +15,17 @@ func (s *MsgWithdrawSuite) TestMsgWithdrawLiquidity(c *C) {
 	txID := GetRandomTxHash()
 	tx := common.NewTx(
 		txID,
-		GetRandomBNBAddress(),
-		GetRandomBNBAddress(),
+		GetRandomETHAddress(),
+		GetRandomETHAddress(),
 		common.Coins{
 			common.NewCoin(common.BTCAsset, cosmos.NewUint(100000000)),
 		},
-		BNBGasFeeSingleton,
+		common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))},
 		"",
 	)
 	runeAddr := GetRandomRUNEAddress()
 	acc1 := GetRandomBech32Addr()
-	m := NewMsgWithdrawLiquidity(tx, runeAddr, cosmos.NewUint(10000), common.BNBAsset, common.EmptyAsset, acc1)
+	m := NewMsgWithdrawLiquidity(tx, runeAddr, cosmos.NewUint(10000), common.ETHAsset, common.EmptyAsset, acc1)
 	EnsureMsgBasicCorrect(m, c)
 	c.Check(m.Type(), Equals, "withdraw")
 
@@ -40,21 +40,21 @@ func (s *MsgWithdrawSuite) TestMsgWithdrawLiquidity(c *C) {
 			tx:                  GetRandomTx(),
 			publicAddress:       common.NoAddress,
 			withdrawBasisPoints: cosmos.NewUint(10000),
-			asset:               common.BNBAsset,
+			asset:               common.ETHAsset,
 			signer:              acc1,
 		},
 		{
 			tx:                  common.Tx{},
 			publicAddress:       runeAddr,
 			withdrawBasisPoints: cosmos.NewUint(12000),
-			asset:               common.BNBAsset,
+			asset:               common.ETHAsset,
 			signer:              acc1,
 		},
 		{
 			tx:                  GetRandomTx(),
 			publicAddress:       runeAddr,
 			withdrawBasisPoints: cosmos.ZeroUint(),
-			asset:               common.BNBAsset,
+			asset:               common.ETHAsset,
 			signer:              acc1,
 		},
 		{
@@ -68,14 +68,14 @@ func (s *MsgWithdrawSuite) TestMsgWithdrawLiquidity(c *C) {
 			tx:                  GetRandomTx(),
 			publicAddress:       runeAddr,
 			withdrawBasisPoints: cosmos.NewUint(10000),
-			asset:               common.BNBAsset,
+			asset:               common.ETHAsset,
 			signer:              cosmos.AccAddress{},
 		},
 		{
 			tx:                  GetRandomTx(),
 			publicAddress:       runeAddr,
 			withdrawBasisPoints: cosmos.NewUint(12000),
-			asset:               common.BNBAsset,
+			asset:               common.ETHAsset,
 			signer:              acc1,
 		},
 	}

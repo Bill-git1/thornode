@@ -277,11 +277,7 @@ func (gm *GasMgrVCUR) GetMaxGas(ctx cosmos.Context, chain common.Chain) (common.
 	if err != nil {
 		return common.NoCoin, fmt.Errorf("fail to get network fee for chain(%s): %w", chain, err)
 	}
-	if chain.IsBNB() {
-		amount = cosmos.NewUint(nf.TransactionSize * nf.TransactionFeeRate)
-	} else {
-		amount = cosmos.NewUint(nf.TransactionSize * nf.TransactionFeeRate).MulUint64(3).QuoUint64(2)
-	}
+	amount = cosmos.NewUint(nf.TransactionSize * nf.TransactionFeeRate).MulUint64(3).QuoUint64(2)
 	gasCoin := common.NewCoin(gasAsset, amount)
 	chainGasAssetPrecision := chain.GetGasAssetDecimal()
 	gasCoin.Amount = cosmos.RoundToDecimal(amount, chainGasAssetPrecision)

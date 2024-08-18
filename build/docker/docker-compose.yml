@@ -33,7 +33,6 @@ services:
       args:
         TAG: mocknet
     environment: &thorchain-environment
-      NET: mocknet
       CHAIN_ID: thorchain
       SIGNER_NAME: thorchain
       SIGNER_PASSWD: password
@@ -139,7 +138,6 @@ services:
       - bifrost
       - validator
     depends_on:
-      - binance
       - bitcoin
       - bitcoin-cash
       - dogecoin
@@ -153,7 +151,6 @@ services:
       SIGNER_SEED_PHRASE: "dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog fossil"
       CHAIN_API: thornode:1317
       CHAIN_RPC: thornode:26657
-      BINANCE_HOST: ${BINANCE_HOST:-http://binance:26660}
       BTC_HOST: ${BTC_HOST:-bitcoin:18443}
       DOGE_HOST: ${DOGE_HOST:-dogecoin:18332}
       BCH_HOST: ${BCH_HOST:-bitcoin-cash:28443}
@@ -172,7 +169,6 @@ services:
       BIFROST_SIGNER_KEYSIGN_TIMEOUT: 30s
       BIFROST_CHAINS_AVAX_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS: "5"
       BIFROST_CHAINS_BCH_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS: "5"
-      BIFROST_CHAINS_BNB_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS: "5"
       BIFROST_CHAINS_BTC_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS: "5"
       BIFROST_CHAINS_DOGE_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS: "5"
       BIFROST_CHAINS_ETH_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS: "5"
@@ -358,16 +354,6 @@ services:
   ######################################################################################
   # Mock Clients
   ######################################################################################
-
-  # ------------------------------ binance ------------------------------
-
-  binance:
-    profiles:
-      - mocknet
-      - mocknet-cluster
-    image: registry.gitlab.com/thorchain/bepswap/mock-binance
-    ports:
-      - 26660:26660
 
   # ------------------------------ gaia ------------------------------
 

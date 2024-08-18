@@ -73,8 +73,8 @@ var (
 	GetRandomTx                = types.GetRandomTx
 	GetRandomValidatorNode     = types.GetRandomValidatorNode
 	GetRandomVaultNode         = types.GetRandomVaultNode
-	GetRandomBNBAddress        = types.GetRandomBNBAddress
 	GetRandomBTCAddress        = types.GetRandomBTCAddress
+	GetRandomETHAddress        = types.GetRandomETHAddress
 	GetRandomBCHAddress        = types.GetRandomBCHAddress
 	GetRandomRUNEAddress       = types.GetRandomRUNEAddress
 	GetRandomTHORAddress       = types.GetRandomTHORAddress

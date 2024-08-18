@@ -76,7 +76,7 @@ func (s *HandlerErrataTxSuite) TestValidate(c *C) {
 
 	handler := NewErrataTxHandler(NewDummyMgrWithKeeper(keeper))
 	// happy path
-	msg := NewMsgErrataTx(GetRandomTxHash(), common.BNBChain, keeper.na.NodeAddress)
+	msg := NewMsgErrataTx(GetRandomTxHash(), common.ETHChain, keeper.na.NodeAddress)
 	err := handler.validate(ctx, *msg)
 	c.Assert(err, IsNil)
 
@@ -91,17 +91,17 @@ func (s *HandlerErrataTxSuite) TestErrataHandlerHappyPath(c *C) {
 
 	txID := GetRandomTxHash()
 	na := GetRandomValidatorNode(NodeActive)
-	addr := GetRandomBNBAddress()
+	addr := GetRandomETHAddress()
 	totalUnits := cosmos.NewUint(1600)
 	observedTx := ObservedTx{
 		Tx: common.Tx{
 			ID:          txID,
-			Chain:       common.BNBChain,
+			Chain:       common.ETHChain,
 			FromAddress: addr,
 			Coins: common.Coins{
 				common.NewCoin(common.RuneAsset(), cosmos.NewUint(30*common.One)),
 			},
-			Memo: fmt.Sprintf("ADD:BNB.BNB:%s", GetRandomRUNEAddress()),
+			Memo: fmt.Sprintf("ADD:ETH.ETH:%s", GetRandomRUNEAddress()),
 		},
 	}
 	keeper := &TestErrataTxKeeper{
@@ -112,7 +112,7 @@ func (s *HandlerErrataTxSuite) TestErrataHandlerHappyPath(c *C) {
 			Height: 1024,
 		},
 		pool: Pool{
-			Asset:        common.BNBAsset,
+			Asset:        common.ETHAsset,
 			LPUnits:      totalUnits,
 			BalanceRune:  cosmos.NewUint(100 * common.One),
 			BalanceAsset: cosmos.NewUint(100 * common.One),
@@ -125,7 +125,7 @@ func (s *HandlerErrataTxSuite) TestErrataHandlerHappyPath(c *C) {
 				PendingRune:   cosmos.ZeroUint(),
 			},
 			{
-				RuneAddress:   GetRandomBNBAddress(),
+				RuneAddress:   GetRandomETHAddress(),
 				LastAddHeight: 10,
 				Units:         totalUnits.QuoUint64(2),
 				PendingRune:   cosmos.ZeroUint(),
@@ -135,7 +135,7 @@ func (s *HandlerErrataTxSuite) TestErrataHandlerHappyPath(c *C) {
 	mgr.K = keeper
 
 	handler := NewErrataTxHandler(mgr)
-	msg := NewMsgErrataTx(txID, common.BNBChain, na.NodeAddress)
+	msg := NewMsgErrataTx(txID, common.ETHChain, na.NodeAddress)
 	_, err := handler.handle(ctx, *msg)
 	c.Assert(err, IsNil)
 	c.Check(keeper.pool.BalanceRune.Equal(cosmos.NewUint(70*common.One)), Equals, true)
@@ -211,7 +211,7 @@ func (s *HandlerErrataTxSuite) TestErrataHandlerDifferentError(c *C) {
 		{
 			name: "invalid message should return an error",
 			messageProvider: func(ctx cosmos.Context, helper *ErrataTxHandlerTestHelper) cosmos.Msg {
-				return NewMsgNetworkFee(1024, common.BNBChain, 1, bnbSingleTxFee.Uint64(), GetRandomBech32Addr())
+				return NewMsgNetworkFee(1024, common.ETHChain, 1, 10000, GetRandomBech32Addr())
 			},
 			validator: func(c *C, ctx cosmos.Context, result *cosmos.Result, err error, helper *ErrataTxHandlerTestHelper, name string) {
 				c.Check(result, IsNil, Commentf(name))
@@ -385,7 +385,7 @@ func (s *HandlerErrataTxSuite) TestErrataHandlerDifferentError(c *C) {
 				c.Assert(helper.SetNodeAccount(ctx, nodeAccount), IsNil)
 				observedTx := GetRandomObservedTx()
 				observedTx.Tx.Chain = common.BTCChain
-				observedTx.Tx.Memo = "swap:BNB"
+				observedTx.Tx.Memo = "swap:ETH"
 				helper.failGetPool = true
 				voter := ObservedTxVoter{
 					TxID:   observedTx.Tx.ID,
@@ -412,7 +412,7 @@ func (s *HandlerErrataTxSuite) TestErrataHandlerDifferentError(c *C) {
 				observedTx.Tx.Memo = "add:BTC:" + observedTx.Tx.FromAddress.String()
 				lp := LiquidityProvider{
 					Asset:         common.BTCAsset,
-					AssetAddress:  GetRandomBNBAddress(),
+					AssetAddress:  GetRandomETHAddress(),
 					LastAddHeight: 1024,
 					RuneAddress:   observedTx.Tx.FromAddress,
 				}
@@ -541,7 +541,7 @@ func (*HandlerErrataTxSuite) TestProcessErrataOutboundTx(c *C) {
 	asgardVault := NewVault(1, types.VaultStatus_ActiveVault, AsgardVault, observedPubKey, []string{
 		common.LTCChain.String(),
 		common.BTCChain.String(),
-		common.BNBChain.String(),
+		common.ETHChain.String(),
 	}, []ChainContract{})
 	c.Assert(helper.Keeper.SetVault(ctx, asgardVault), IsNil)
 	result, err = handler.processErrataOutboundTx(ctx, *msg)
@@ -637,13 +637,13 @@ func (*HandlerErrataTxSuite) TestProcessErrortaOutboundTx_EnsureMigrateTxWillSet
 	inactiveVault := NewVault(1, types.VaultStatus_InactiveVault, AsgardVault, retiredPubKey, []string{
 		common.LTCChain.String(),
 		common.BTCChain.String(),
-		common.BNBChain.String(),
+		common.ETHChain.String(),
 	}, []ChainContract{})
 
 	activeVault := NewVault(1, types.VaultStatus_ActiveVault, AsgardVault, activePubKey, []string{
 		common.LTCChain.String(),
 		common.BTCChain.String(),
-		common.BNBChain.String(),
+		common.ETHChain.String(),
 	}, []ChainContract{})
 	c.Assert(helper.Keeper.SetVault(ctx, inactiveVault), IsNil)
 	c.Assert(helper.Keeper.SetVault(ctx, activeVault), IsNil)
@@ -744,18 +744,18 @@ func (s *HandlerErrataTxSuite) TestObservingSlashing(c *C) {
 	}
 
 	txID := GetRandomTxHash()
-	addr := GetRandomBNBAddress()
+	addr := GetRandomETHAddress()
 	totalUnits := cosmos.NewUint(1600)
 
 	observedTx := ObservedTx{
 		Tx: common.Tx{
 			ID:          txID,
-			Chain:       common.BNBChain,
+			Chain:       common.ETHChain,
 			FromAddress: addr,
 			Coins: common.Coins{
 				common.NewCoin(common.RuneAsset(), cosmos.NewUint(30*common.One)),
 			},
-			Memo: fmt.Sprintf("ADD:BNB.BNB:%s", GetRandomRUNEAddress()),
+			Memo: fmt.Sprintf("ADD:ETH.ETH:%s", GetRandomRUNEAddress()),
 		},
 		BlockHeight:    1024,
 		FinaliseHeight: 1024,
@@ -770,7 +770,7 @@ func (s *HandlerErrataTxSuite) TestObservingSlashing(c *C) {
 	mgr.Keeper().SetObservedTxInVoter(ctx, voter)
 
 	pool := Pool{
-		Asset:        common.BNBAsset,
+		Asset:        common.ETHAsset,
 		LPUnits:      totalUnits,
 		BalanceRune:  cosmos.NewUint(100 * common.One),
 		BalanceAsset: cosmos.NewUint(100 * common.One),
@@ -786,7 +786,7 @@ func (s *HandlerErrataTxSuite) TestObservingSlashing(c *C) {
 	}
 	mgr.Keeper().SetLiquidityProvider(ctx, lp)
 	lp = LiquidityProvider{
-		RuneAddress:   GetRandomBNBAddress(),
+		RuneAddress:   GetRandomETHAddress(),
 		LastAddHeight: 10,
 		Units:         totalUnits.QuoUint64(2),
 		PendingRune:   cosmos.ZeroUint(),

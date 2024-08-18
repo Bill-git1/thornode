@@ -41,7 +41,6 @@ genesis:
             - BTC
             - LTC
             - BCH
-            - BNB
             - ETH
             - DOGE
             - TERRA
@@ -63,7 +62,6 @@ genesis:
             - BTC
             - LTC
             - BCH
-            - BNB
             - ETH
             - DOGE
             - TERRA

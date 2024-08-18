@@ -15,7 +15,7 @@ func (MsgAddLiquiditySuite) TestMsgAddLiquidity(c *C) {
 	addr := GetRandomBech32Addr()
 	c.Check(addr.Empty(), Equals, false)
 	runeAddress := GetRandomRUNEAddress()
-	assetAddress := GetRandomBNBAddress()
+	assetAddress := GetRandomETHAddress()
 	txID := GetRandomTxHash()
 	c.Check(txID.IsEmpty(), Equals, false)
 	tx := common.NewTx(
@@ -25,10 +25,10 @@ func (MsgAddLiquiditySuite) TestMsgAddLiquidity(c *C) {
 		common.Coins{
 			common.NewCoin(common.BTCAsset, cosmos.NewUint(100000000)),
 		},
-		BNBGasFeeSingleton,
+		common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))},
 		"",
 	)
-	m := NewMsgAddLiquidity(tx, common.BNBAsset, cosmos.NewUint(100000000), cosmos.NewUint(100000000), runeAddress, assetAddress, common.NoAddress, cosmos.ZeroUint(), addr)
+	m := NewMsgAddLiquidity(tx, common.ETHAsset, cosmos.NewUint(100000000), cosmos.NewUint(100000000), runeAddress, assetAddress, common.NoAddress, cosmos.ZeroUint(), addr)
 	EnsureMsgBasicCorrect(m, c)
 	c.Check(m.Type(), Equals, "add_liquidity")
 
@@ -51,7 +51,7 @@ func (MsgAddLiquiditySuite) TestMsgAddLiquidity(c *C) {
 			signer:    addr,
 		},
 		{
-			asset:     common.BNBAsset,
+			asset:     common.ETHAsset,
 			r:         cosmos.NewUint(100000000),
 			amt:       cosmos.NewUint(100000000),
 			runeAddr:  common.NoAddress,
@@ -60,7 +60,7 @@ func (MsgAddLiquiditySuite) TestMsgAddLiquidity(c *C) {
 			signer:    addr,
 		},
 		{
-			asset:     common.BNBAsset,
+			asset:     common.ETHAsset,
 			r:         cosmos.NewUint(100000000),
 			amt:       cosmos.NewUint(100000000),
 			runeAddr:  runeAddress,
@@ -69,7 +69,7 @@ func (MsgAddLiquiditySuite) TestMsgAddLiquidity(c *C) {
 			signer:    addr,
 		},
 		{
-			asset:     common.BNBAsset,
+			asset:     common.ETHAsset,
 			r:         cosmos.NewUint(100000000),
 			amt:       cosmos.NewUint(100000000),
 			runeAddr:  runeAddress,
@@ -82,21 +82,21 @@ func (MsgAddLiquiditySuite) TestMsgAddLiquidity(c *C) {
 		tx = common.NewTx(
 			item.txHash,
 			GetRandomRUNEAddress(),
-			GetRandomBNBAddress(),
+			GetRandomETHAddress(),
 			common.Coins{
 				common.NewCoin(item.asset, item.r),
 			},
-			BNBGasFeeSingleton,
+			common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))},
 			"",
 		)
 		m = NewMsgAddLiquidity(tx, item.asset, item.r, item.amt, item.runeAddr, item.assetAddr, common.NoAddress, cosmos.ZeroUint(), item.signer)
 		c.Assert(m.ValidateBasic(), NotNil, Commentf("%d) %s\n", i, m))
 	}
 	// If affiliate fee basis point is more than 1000 , the message should be rejected
-	m1 := NewMsgAddLiquidity(tx, common.BNBAsset, cosmos.NewUint(100*common.One), cosmos.NewUint(100*common.One), GetRandomTHORAddress(), GetRandomBNBAddress(), GetRandomTHORAddress(), cosmos.NewUint(1024), GetRandomBech32Addr())
+	m1 := NewMsgAddLiquidity(tx, common.ETHAsset, cosmos.NewUint(100*common.One), cosmos.NewUint(100*common.One), GetRandomTHORAddress(), GetRandomETHAddress(), GetRandomTHORAddress(), cosmos.NewUint(1024), GetRandomBech32Addr())
 	c.Assert(m1.ValidateBasic(), NotNil)
 
 	// check that we can have zero asset and zero rune amounts
-	m1 = NewMsgAddLiquidity(tx, common.BNBAsset, cosmos.ZeroUint(), cosmos.ZeroUint(), GetRandomTHORAddress(), GetRandomBNBAddress(), GetRandomTHORAddress(), cosmos.ZeroUint(), GetRandomBech32Addr())
+	m1 = NewMsgAddLiquidity(tx, common.ETHAsset, cosmos.ZeroUint(), cosmos.ZeroUint(), GetRandomTHORAddress(), GetRandomETHAddress(), GetRandomTHORAddress(), cosmos.ZeroUint(), GetRandomBech32Addr())
 	c.Assert(m1.ValidateBasic(), IsNil)
 }

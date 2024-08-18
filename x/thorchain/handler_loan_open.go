@@ -120,7 +120,7 @@ func (h LoanOpenHandler) validateV128(ctx cosmos.Context, msg MsgLoanOpen) error
 
 	// convert collateral asset back to layer1 asset
 	// NOTE: if the symbol of a derived asset isn't the chain, this won't work
-	// (ie TERRA.LUNA)
+	// (ie GAIA.ATOM)
 	msg.CollateralAsset.Chain, err = common.NewChain(msg.CollateralAsset.Symbol.String())
 	if err != nil {
 		return err
@@ -183,7 +183,7 @@ func (h LoanOpenHandler) openLoan(ctx cosmos.Context, msg MsgLoanOpen) error {
 
 	// convert collateral asset back to layer1 asset
 	// NOTE: if the symbol of a derived asset isn't the chain, this won't work
-	// (ie TERRA.LUNA)
+	// (ie GAIA.ATOM)
 	msg.CollateralAsset.Chain, err = common.NewChain(msg.CollateralAsset.Symbol.String())
 	if err != nil {
 		return err

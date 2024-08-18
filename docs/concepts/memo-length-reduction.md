@@ -34,7 +34,6 @@ Native asset names can be shortened to reduce the length of the memo. The exact 
 | c             | BCH.BCH        |
 | e             | ETH.ETH        |
 | g             | GAIA.ATOM      |
-| n             | BNB.BNB        |
 | s             | BSC.BNB        |
 | d             | DOGE.DOGE      |
 | e             | ETH.ETH        |

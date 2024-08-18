@@ -131,18 +131,6 @@ func Init() {
 		"CHAIN_RPC",
 	))
 	assert(viper.BindEnv(
-		"bifrost.chains.bnb.rpc_host",
-		"BINANCE_HOST",
-	))
-	assert(viper.BindEnv(
-		"bifrost.chains.bnb.block_scanner.rpc_host",
-		"BINANCE_HOST",
-	))
-	assert(viper.BindEnv(
-		"bifrost.chains.bnb.block_scanner.start_block_height",
-		"BINANCE_START_BLOCK_HEIGHT",
-	))
-	assert(viper.BindEnv(
 		"bifrost.chains.BTC.rpc_host",
 		"BTC_HOST",
 	))
@@ -500,7 +488,6 @@ type Bifrost struct {
 	Chains    struct {
 		AVAX BifrostChainConfiguration `mapstructure:"avax"`
 		BCH  BifrostChainConfiguration `mapstructure:"bch"`
-		BNB  BifrostChainConfiguration `mapstructure:"bnb"`
 		BSC  BifrostChainConfiguration `mapstructure:"bsc"`
 		BTC  BifrostChainConfiguration `mapstructure:"btc"`
 		DOGE BifrostChainConfiguration `mapstructure:"doge"`
@@ -516,7 +503,6 @@ func (b Bifrost) GetChains() map[common.Chain]BifrostChainConfiguration {
 	return map[common.Chain]BifrostChainConfiguration{
 		common.AVAXChain: b.Chains.AVAX,
 		common.BCHChain:  b.Chains.BCH,
-		common.BNBChain:  b.Chains.BNB,
 		common.BSCChain:  b.Chains.BSC,
 		common.BTCChain:  b.Chains.BTC,
 		common.DOGEChain: b.Chains.DOGE,

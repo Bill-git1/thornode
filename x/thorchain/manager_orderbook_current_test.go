@@ -30,7 +30,7 @@ func (s OrderBookVCURSuite) TestScoreMsgs(c *C) {
 	ctx, k := setupKeeperForTest(c)
 
 	pool := NewPool()
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.ETHAsset
 	pool.BalanceRune = cosmos.NewUint(143166 * common.One)
 	pool.BalanceAsset = cosmos.NewUint(1000 * common.One)
 	c.Assert(k.SetPool(ctx, pool), IsNil)
@@ -47,42 +47,42 @@ func (s OrderBookVCURSuite) TestScoreMsgs(c *C) {
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("5E1DF027321F1FE37CA19B9ECB11C2B4ABEC0D8322199D335D9CE4C39F85F115"),
 			Coins: common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(2*common.One))},
-		}, common.BNBAsset, GetRandomBNBAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+		}, common.ETHAsset, GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			MarketOrder,
 			0, 0, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("53C1A22436B385133BDD9157BB365DB7AAC885910D2FA7C9DC3578A04FFD4ADC"),
-			Coins: common.Coins{common.NewCoin(common.BNBAsset, cosmos.NewUint(50*common.One))},
-		}, common.RuneAsset(), GetRandomBNBAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(50*common.One))},
+		}, common.RuneAsset(), GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			MarketOrder,
 			0, 0, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("6A470EB9AFE82981979A5EEEED3296E1E325597794BD5BFB3543A372CAF435E5"),
 			Coins: common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(1*common.One))},
-		}, common.BNBAsset, GetRandomBNBAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+		}, common.ETHAsset, GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			MarketOrder,
 			0, 0, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("5EE9A7CCC55A3EBAFA0E542388CA1B909B1E3CE96929ED34427B96B7CCE9F8E8"),
 			Coins: common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(100*common.One))},
-		}, common.BNBAsset, GetRandomBNBAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+		}, common.ETHAsset, GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			MarketOrder,
 			0, 0, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("0FF2A521FB11FFEA4DFE3B7AD4066FF0A33202E652D846F8397EFC447C97A91B"),
 			Coins: common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One))},
-		}, common.BNBAsset, GetRandomBNBAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+		}, common.ETHAsset, GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			MarketOrder,
 			0, 0, GetRandomBech32Addr()),
 
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000001"),
-			Coins: common.Coins{common.NewCoin(common.BNBAsset, cosmos.NewUint(150*common.One))},
+			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(150*common.One))},
 		}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			MarketOrder,
@@ -90,7 +90,7 @@ func (s OrderBookVCURSuite) TestScoreMsgs(c *C) {
 
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000002"),
-			Coins: common.Coins{common.NewCoin(common.BNBAsset, cosmos.NewUint(151*common.One))},
+			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(151*common.One))},
 		}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			MarketOrder,
@@ -111,7 +111,7 @@ func (s OrderBookVCURSuite) TestScoreMsgs(c *C) {
 	c.Check(swaps, HasLen, 7)
 	c.Check(swaps[0].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(151*common.One)), Equals, true, Commentf("%d", swaps[0].msg.Tx.Coins[0].Amount.Uint64()))
 	c.Check(swaps[1].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(150*common.One)), Equals, true, Commentf("%d", swaps[1].msg.Tx.Coins[0].Amount.Uint64()))
-	// 50 BNB is worth more than 100 RUNE
+	// 50 ETH is worth more than 100 RUNE
 	c.Check(swaps[2].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(50*common.One)), Equals, true, Commentf("%d", swaps[2].msg.Tx.Coins[0].Amount.Uint64()))
 	c.Check(swaps[3].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(100*common.One)), Equals, true, Commentf("%d", swaps[3].msg.Tx.Coins[0].Amount.Uint64()))
 	c.Check(swaps[4].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(10*common.One)), Equals, true, Commentf("%d", swaps[4].msg.Tx.Coins[0].Amount.Uint64()))
@@ -124,71 +124,71 @@ func (s OrderBookVCURSuite) TestScoreMsgs(c *C) {
 	msgs = []*MsgSwap{
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000003"),
-			Coins: common.Coins{common.NewCoin(common.BNBAsset, cosmos.NewUint(2*common.One))},
-		}, common.RuneAsset(), GetRandomBNBAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(2*common.One))},
+		}, common.RuneAsset(), GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			MarketOrder,
 			0, 0, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000004"),
-			Coins: common.Coins{common.NewCoin(common.BNBAsset, cosmos.NewUint(50*common.One))},
-		}, common.RuneAsset(), GetRandomBNBAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(50*common.One))},
+		}, common.RuneAsset(), GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			MarketOrder,
 			0, 0, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000005"),
-			Coins: common.Coins{common.NewCoin(common.BNBAsset, cosmos.NewUint(1*common.One))},
-		}, common.RuneAsset(), GetRandomBNBAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(1*common.One))},
+		}, common.RuneAsset(), GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			MarketOrder,
 			0, 0, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000009"),
-			Coins: common.Coins{common.NewCoin(common.BNBAsset, cosmos.NewUint(100*common.One))},
-		}, common.RuneAsset(), GetRandomBNBAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One))},
+		}, common.RuneAsset(), GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			MarketOrder,
 			0, 0, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000007"),
-			Coins: common.Coins{common.NewCoin(common.BNBAsset, cosmos.NewUint(10*common.One))},
-		}, common.RuneAsset(), GetRandomBNBAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(10*common.One))},
+		}, common.RuneAsset(), GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			MarketOrder,
 			0, 0, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000008"),
 			Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(2*common.One))},
-		}, common.RuneAsset(), GetRandomBNBAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+		}, common.RuneAsset(), GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			MarketOrder,
 			0, 0, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000006"),
 			Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(50*common.One))},
-		}, common.RuneAsset(), GetRandomBNBAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+		}, common.RuneAsset(), GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			MarketOrder,
 			0, 0, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000010"),
 			Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1*common.One))},
-		}, common.RuneAsset(), GetRandomBNBAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+		}, common.RuneAsset(), GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			MarketOrder,
 			0, 0, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000013"),
 			Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(100*common.One))},
-		}, common.RuneAsset(), GetRandomBNBAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+		}, common.RuneAsset(), GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			MarketOrder,
 			0, 0, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000012"),
 			Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(10*common.One))},
-		}, common.RuneAsset(), GetRandomBNBAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+		}, common.RuneAsset(), GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			MarketOrder,
 			0, 0, GetRandomBech32Addr()),
@@ -196,7 +196,7 @@ func (s OrderBookVCURSuite) TestScoreMsgs(c *C) {
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000011"),
 			Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(10*common.One))},
-		}, common.BNBAsset, GetRandomBNBAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+		}, common.ETHAsset, GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
 			MarketOrder,
 			0, 0, GetRandomBech32Addr()),
@@ -225,28 +225,28 @@ func (s OrderBookVCURSuite) TestScoreMsgs(c *C) {
 	c.Check(swaps[2].msg.Tx.Coins[0].Asset.Equals(common.BTCAsset), Equals, true)
 
 	c.Check(swaps[3].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(100*common.One)), Equals, true, Commentf("%d", swaps[3].msg.Tx.Coins[0].Amount.Uint64()))
-	c.Check(swaps[3].msg.Tx.Coins[0].Asset.Equals(common.BNBAsset), Equals, true)
+	c.Check(swaps[3].msg.Tx.Coins[0].Asset.Equals(common.ETHAsset), Equals, true)
 
 	c.Check(swaps[4].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(50*common.One)), Equals, true, Commentf("%d", swaps[4].msg.Tx.Coins[0].Amount.Uint64()))
-	c.Check(swaps[4].msg.Tx.Coins[0].Asset.Equals(common.BNBAsset), Equals, true)
+	c.Check(swaps[4].msg.Tx.Coins[0].Asset.Equals(common.ETHAsset), Equals, true)
 
 	c.Check(swaps[5].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(10*common.One)), Equals, true, Commentf("%d", swaps[5].msg.Tx.Coins[0].Amount.Uint64()))
 	c.Check(swaps[5].msg.Tx.Coins[0].Asset.Equals(common.BTCAsset), Equals, true)
 
 	c.Check(swaps[6].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(10*common.One)), Equals, true, Commentf("%d", swaps[6].msg.Tx.Coins[0].Amount.Uint64()))
-	c.Check(swaps[6].msg.Tx.Coins[0].Asset.Equals(common.BNBAsset), Equals, true)
+	c.Check(swaps[6].msg.Tx.Coins[0].Asset.Equals(common.ETHAsset), Equals, true)
 
 	c.Check(swaps[7].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(2*common.One)), Equals, true, Commentf("%d", swaps[7].msg.Tx.Coins[0].Amount.Uint64()))
 	c.Check(swaps[7].msg.Tx.Coins[0].Asset.Equals(common.BTCAsset), Equals, true)
 
 	c.Check(swaps[8].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(2*common.One)), Equals, true, Commentf("%d", swaps[8].msg.Tx.Coins[0].Amount.Uint64()))
-	c.Check(swaps[8].msg.Tx.Coins[0].Asset.Equals(common.BNBAsset), Equals, true)
+	c.Check(swaps[8].msg.Tx.Coins[0].Asset.Equals(common.ETHAsset), Equals, true)
 
 	c.Check(swaps[9].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(1*common.One)), Equals, true, Commentf("%d", swaps[9].msg.Tx.Coins[0].Amount.Uint64()))
 	c.Check(swaps[9].msg.Tx.Coins[0].Asset.Equals(common.BTCAsset), Equals, true)
 
 	c.Check(swaps[10].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(1*common.One)), Equals, true, Commentf("%d", swaps[10].msg.Tx.Coins[0].Amount.Uint64()))
-	c.Check(swaps[10].msg.Tx.Coins[0].Asset.Equals(common.BNBAsset), Equals, true)
+	c.Check(swaps[10].msg.Tx.Coins[0].Asset.Equals(common.ETHAsset), Equals, true)
 }
 
 func (s OrderBookVCURSuite) TestFetchQueue(c *C) {
@@ -254,7 +254,7 @@ func (s OrderBookVCURSuite) TestFetchQueue(c *C) {
 	book := newOrderBookVCUR(mgr.Keeper())
 
 	pool := NewPool()
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.ETHAsset
 	pool.BalanceAsset = cosmos.NewUint(2088519094783)
 	pool.BalanceRune = cosmos.NewUint(199019591474591)
 	pool.Status = PoolAvailable
@@ -270,14 +270,14 @@ func (s OrderBookVCURSuite) TestFetchQueue(c *C) {
 	market := NewMsgSwap(common.Tx{
 		ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000014"),
 		Coins: common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(2*common.One))},
-	}, common.BNBAsset, GetRandomBNBAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
+	}, common.ETHAsset, GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 		"", "", nil,
 		MarketOrder,
 		0, 0, GetRandomBech32Addr())
 	limit1 := NewMsgSwap(common.Tx{
 		ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000015"),
 		Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1*common.One))},
-	}, common.BNBAsset, GetRandomBNBAddress(), cosmos.NewUint(80*common.One), common.NoAddress, cosmos.ZeroUint(),
+	}, common.ETHAsset, GetRandomETHAddress(), cosmos.NewUint(80*common.One), common.NoAddress, cosmos.ZeroUint(),
 		"", "", nil,
 		LimitOrder,
 		0, 0, GetRandomBech32Addr())
@@ -285,7 +285,7 @@ func (s OrderBookVCURSuite) TestFetchQueue(c *C) {
 	limit2 := NewMsgSwap(common.Tx{
 		ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000016"),
 		Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1*common.One))},
-	}, common.BNBAsset, GetRandomBNBAddress(), cosmos.NewUint(100*common.One), common.NoAddress, cosmos.ZeroUint(),
+	}, common.ETHAsset, GetRandomETHAddress(), cosmos.NewUint(100*common.One), common.NoAddress, cosmos.ZeroUint(),
 		"", "", nil,
 		LimitOrder,
 		0, 0, GetRandomBech32Addr())
@@ -311,7 +311,7 @@ func (s OrderBookVCURSuite) TestgetAssetPairs(c *C) {
 	pool := NewPool()
 	pool.Asset = common.BTCAsset
 	c.Assert(k.SetPool(ctx, pool), IsNil)
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.ETHAsset
 	c.Assert(k.SetPool(ctx, pool), IsNil)
 
 	pairs, pools := book.getAssetPairs(ctx)
@@ -321,23 +321,23 @@ func (s OrderBookVCURSuite) TestgetAssetPairs(c *C) {
 
 func (s OrderBookVCURSuite) TestTradePairsTodo(c *C) {
 	pairs := tradePairs{
-		{common.RuneAsset(), common.BNBAsset},
-		{common.BNBAsset, common.RuneAsset()},
+		{common.RuneAsset(), common.ETHAsset},
+		{common.ETHAsset, common.RuneAsset()},
 		{common.RuneAsset(), common.BTCAsset},
 		{common.BTCAsset, common.RuneAsset()},
-		{common.BNBAsset, common.BTCAsset},
-		{common.BTCAsset, common.BNBAsset},
+		{common.ETHAsset, common.BTCAsset},
+		{common.BTCAsset, common.ETHAsset},
 	}
 
-	// RUNE --> BNB
+	// RUNE --> ETH
 	todo := make(tradePairs, 0)
-	todo = todo.findMatchingTrades(genTradePair(common.RuneAsset(), common.BNBAsset), pairs)
+	todo = todo.findMatchingTrades(genTradePair(common.RuneAsset(), common.ETHAsset), pairs)
 	c.Check(todo, HasLen, 2, Commentf("%d", len(todo)))
-	c.Check(todo[0].Equals(genTradePair(common.BNBAsset, common.RuneAsset())), Equals, true, Commentf("%s", todo[0]))
-	c.Check(todo[1].Equals(genTradePair(common.BNBAsset, common.BTCAsset)), Equals, true, Commentf("%s", todo[1]))
+	c.Check(todo[0].Equals(genTradePair(common.ETHAsset, common.RuneAsset())), Equals, true, Commentf("%s", todo[0]))
+	c.Check(todo[1].Equals(genTradePair(common.ETHAsset, common.BTCAsset)), Equals, true, Commentf("%s", todo[1]))
 
 	// ensure we don't duplicate
-	todo = todo.findMatchingTrades(genTradePair(common.RuneAsset(), common.BNBAsset), pairs)
+	todo = todo.findMatchingTrades(genTradePair(common.RuneAsset(), common.ETHAsset), pairs)
 	c.Check(todo, HasLen, 2, Commentf("%d", len(todo)))
 
 	// BTC --> RUNE
@@ -345,27 +345,27 @@ func (s OrderBookVCURSuite) TestTradePairsTodo(c *C) {
 	todo = todo.findMatchingTrades(genTradePair(common.BTCAsset, common.RuneAsset()), pairs)
 	c.Check(todo, HasLen, 2, Commentf("%d", len(todo)))
 	c.Check(todo[0].Equals(genTradePair(common.RuneAsset(), common.BTCAsset)), Equals, true, Commentf("%s", todo[0]))
-	c.Check(todo[1].Equals(genTradePair(common.BNBAsset, common.BTCAsset)), Equals, true, Commentf("%s", todo[1]))
+	c.Check(todo[1].Equals(genTradePair(common.ETHAsset, common.BTCAsset)), Equals, true, Commentf("%s", todo[1]))
 
-	// BTC --> BNB
+	// BTC --> ETH
 	todo = make(tradePairs, 0)
-	todo = todo.findMatchingTrades(genTradePair(common.BTCAsset, common.BNBAsset), pairs)
+	todo = todo.findMatchingTrades(genTradePair(common.BTCAsset, common.ETHAsset), pairs)
 	c.Check(todo, HasLen, 3, Commentf("%d", len(todo)))
-	c.Check(todo[0].Equals(genTradePair(common.BNBAsset, common.RuneAsset())), Equals, true, Commentf("%s", todo[0]))
+	c.Check(todo[0].Equals(genTradePair(common.ETHAsset, common.RuneAsset())), Equals, true, Commentf("%s", todo[0]))
 	c.Check(todo[1].Equals(genTradePair(common.RuneAsset(), common.BTCAsset)), Equals, true, Commentf("%s", todo[1]))
-	c.Check(todo[2].Equals(genTradePair(common.BNBAsset, common.BTCAsset)), Equals, true, Commentf("%s", todo[2]))
+	c.Check(todo[2].Equals(genTradePair(common.ETHAsset, common.BTCAsset)), Equals, true, Commentf("%s", todo[2]))
 }
 
 func (s OrderBookVCURSuite) TestConvertProc(c *C) {
 	_, k := setupKeeperForTest(c)
 
 	pairs := tradePairs{
-		{common.RuneAsset(), common.BNBAsset},
-		{common.BNBAsset, common.RuneAsset()},
+		{common.RuneAsset(), common.ETHAsset},
+		{common.ETHAsset, common.RuneAsset()},
 		{common.RuneAsset(), common.BTCAsset},
 		{common.BTCAsset, common.RuneAsset()},
-		{common.BNBAsset, common.BTCAsset},
-		{common.BTCAsset, common.BNBAsset},
+		{common.ETHAsset, common.BTCAsset},
+		{common.BTCAsset, common.ETHAsset},
 	}
 
 	book := newOrderBookVCUR(k)
@@ -394,7 +394,7 @@ func (s OrderBookVCURSuite) TestConvertProc(c *C) {
 		c.Assert(ok, Equals, true)
 	}
 
-	proc := book.convertAssetArraysToProc(tradePairs{pairs[0], genTradePair(common.BNBAsset, common.ETHAsset)}, pairs)
+	proc := book.convertAssetArraysToProc(tradePairs{pairs[0], genTradePair(common.ETHAsset, common.ETHAsset)}, pairs)
 	result, ok = book.convertProcToAssetArrays(proc, pairs)
 	c.Assert(result, DeepEquals, tradePairs{pairs[0]})
 	c.Assert(ok, Equals, true)
@@ -415,7 +415,7 @@ func (s OrderBookVCURSuite) TestEndBlock(c *C) {
 	book := newOrderBookVCUR(mgr.Keeper())
 
 	pool := NewPool()
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.ETHAsset
 	pool.BalanceAsset = cosmos.NewUint(2088519094783)
 	pool.BalanceRune = cosmos.NewUint(199019591474591)
 	pool.Status = PoolAvailable
@@ -431,21 +431,21 @@ func (s OrderBookVCURSuite) TestEndBlock(c *C) {
 	affilAddr := GetRandomTHORAddress()
 
 	tx := GetRandomTx()
-	bnbAddr := GetRandomBNBAddress()
-	tx.Memo = fmt.Sprintf("swap:BNB.BNB:%s", bnbAddr)
+	ethAddr := GetRandomETHAddress()
+	tx.Memo = fmt.Sprintf("swap:ETH.ETH:%s", ethAddr)
 	tx.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(2*common.One)))
 	market := NewMsgSwap(
-		tx, common.BNBAsset, bnbAddr, cosmos.ZeroUint(),
+		tx, common.ETHAsset, ethAddr, cosmos.ZeroUint(),
 		affilAddr, cosmos.NewUint(1_000),
 		"", "", nil,
 		MarketOrder,
 		0, 0, GetRandomBech32Addr())
 
 	tx = GetRandomTx()
-	tx.Memo = fmt.Sprintf("swap:BNB.BNB:%s", bnbAddr)
+	tx.Memo = fmt.Sprintf("swap:ETH.ETH:%s", ethAddr)
 	tx.Coins = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(1*common.One)))
 	limit1 := NewMsgSwap(
-		tx, common.BNBAsset, bnbAddr, cosmos.NewUint(856815149),
+		tx, common.ETHAsset, ethAddr, cosmos.NewUint(856815149),
 		affilAddr, cosmos.NewUint(1_000),
 		"", "", nil,
 		LimitOrder,
@@ -465,5 +465,5 @@ func (s OrderBookVCURSuite) TestEndBlock(c *C) {
 
 	proc, err := mgr.Keeper().GetOrderBookProcessor(ctx)
 	c.Assert(err, IsNil)
-	c.Check(proc, DeepEquals, []bool{false, true, true, true, false, false}, Commentf("%+v", proc))
+	c.Check(proc, DeepEquals, []bool{true, false, false, false, true, true}, Commentf("%+v", proc))
 }

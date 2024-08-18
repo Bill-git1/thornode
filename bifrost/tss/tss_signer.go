@@ -2,7 +2,6 @@ package tss
 
 import (
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"math/big"
 	"sort"
@@ -10,19 +9,15 @@ import (
 	"time"
 
 	"github.com/blang/semver"
-	"github.com/cosmos/cosmos-sdk/crypto/codec"
 	sdkTypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/tendermint/btcd/btcec"
 	"github.com/tendermint/tendermint/crypto"
-	"gitlab.com/thorchain/binance-sdk/types/tx"
 	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/keysign"
 
 	"gitlab.com/thorchain/thornode/bifrost/thorclient"
-	"gitlab.com/thorchain/thornode/common"
-	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
@@ -99,58 +94,6 @@ func (s *KeySign) Stop() {
 
 func (s *KeySign) Sign(msg legacytx.StdSignMsg) ([]byte, error) {
 	return nil, nil
-}
-
-// makeSignatures makes a BNB beacon chain signature (TODO: remove after ragnarok)
-func (s *KeySign) makeSignature(msg tx.StdSignMsg, poolPubKey string) (sig tx.StdSignature, err error) {
-	var stdSignature tx.StdSignature
-	pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeAccPub, poolPubKey)
-	if err != nil {
-		return stdSignature, fmt.Errorf("fail to get pub key: %w", err)
-	}
-	hashedMsg := crypto.Sha256(msg.Bytes())
-	signPack, _, err := s.RemoteSign(hashedMsg, poolPubKey)
-	if err != nil {
-		return stdSignature, fmt.Errorf("fail to TSS sign: %w", err)
-	}
-
-	if signPack == nil {
-		return stdSignature, nil
-	}
-	if pk.VerifySignature(msg.Bytes(), signPack) {
-		s.logger.Info().Msg("we can successfully verify the bytes")
-	} else {
-		s.logger.Error().Msg("Oops! we cannot verify the bytes")
-	}
-
-	// this convert the protobuf based pubkey back to the old version tendermint pubkey
-	tmPubKey, err := codec.ToTmPubKeyInterface(pk)
-	if err != nil {
-		return
-	}
-	return tx.StdSignature{
-		AccountNumber: msg.AccountNumber,
-		Sequence:      msg.Sequence,
-		PubKey:        tmPubKey,
-		Signature:     signPack,
-	}, nil
-}
-
-// SignWithPool signs a BNB beacon chain message (TODO: remove after ragnarok)
-func (s *KeySign) SignWithPool(msg tx.StdSignMsg, poolPubKey common.PubKey) ([]byte, error) {
-	sig, err := s.makeSignature(msg, poolPubKey.String())
-	if err != nil {
-		return nil, err
-	}
-	if len(sig.Signature) == 0 {
-		return nil, errors.New("fail to make signature")
-	}
-	newTx := tx.NewStdTx(msg.Msgs, []tx.StdSignature{sig}, msg.Memo, msg.Source, msg.Data)
-	bz, err := tx.Cdc.MarshalBinaryLengthPrefixed(&newTx)
-	if err != nil {
-		return nil, err
-	}
-	return bz, nil
 }
 
 // RemoteSign send the request to local task queue

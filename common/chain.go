@@ -15,7 +15,6 @@ import (
 
 const (
 	EmptyChain = Chain("")
-	BNBChain   = Chain("BNB")
 	BSCChain   = Chain("BSC")
 	ETHChain   = Chain("ETH")
 	BTCChain   = Chain("BTC")
@@ -23,7 +22,6 @@ const (
 	BCHChain   = Chain("BCH")
 	DOGEChain  = Chain("DOGE")
 	THORChain  = Chain("THOR")
-	TERRAChain = Chain("TERRA")
 	GAIAChain  = Chain("GAIA")
 	AVAXChain  = Chain("AVAX")
 
@@ -32,7 +30,6 @@ const (
 )
 
 var AllChains = [...]Chain{
-	BNBChain,
 	BSCChain,
 	ETHChain,
 	BTCChain,
@@ -40,7 +37,6 @@ var AllChains = [...]Chain{
 	BCHChain,
 	DOGEChain,
 	THORChain,
-	TERRAChain,
 	GAIAChain,
 	AVAXChain,
 }
@@ -138,11 +134,6 @@ func (c Chain) String() string {
 	return strings.ToUpper(string(c))
 }
 
-// IsBNB determinate whether it is BNBChain
-func (c Chain) IsBNB() bool {
-	return c.Equals(BNBChain)
-}
-
 // GetSigningAlgo get the signing algorithm for the given chain
 func (c Chain) GetSigningAlgo() SigningAlgo {
 	// Only SigningAlgoSecp256k1 is supported for now
@@ -154,8 +145,6 @@ func (c Chain) GetGasAsset() Asset {
 	switch c {
 	case THORChain:
 		return RuneNative
-	case BNBChain:
-		return BNBAsset
 	case BSCChain:
 		return BNBBEP20Asset
 	case BTCChain:
@@ -168,8 +157,6 @@ func (c Chain) GetGasAsset() Asset {
 		return DOGEAsset
 	case ETHChain:
 		return ETHAsset
-	case TERRAChain:
-		return LUNAAsset
 	case AVAXChain:
 		return AVAXAsset
 	case GAIAChain:
@@ -184,8 +171,6 @@ func (c Chain) GetGasUnits() string {
 	switch c {
 	case AVAXChain:
 		return "nAVAX"
-	case BNBChain:
-		return "ubnb"
 	case BTCChain:
 		return "satsperbyte"
 	case BCHChain:
@@ -203,12 +188,12 @@ func (c Chain) GetGasUnits() string {
 	}
 }
 
-// GetGasAssetDecimal for the gas asset of given chain , what kind of precision it is using
-// TERRA and GAIA are using 1E6, all other gas asset so far using 1E8
-// THORChain is using 1E8, if an external chain's gas asset is larger than 1E8, just return cosmos.DefaultCoinDecimals
+// GetGasAssetDecimal returns decimals for the gas asset of the given chain. Currently
+// Gaia is 1e6 and all others are 1e8. If an external chain's gas asset is larger than
+// 1e8, just return cosmos.DefaultCoinDecimals.
 func (c Chain) GetGasAssetDecimal() int64 {
 	switch c {
-	case TERRAChain, GAIAChain:
+	case GAIAChain:
 		return 6
 	default:
 		return cosmos.DefaultCoinDecimals
@@ -231,10 +216,6 @@ func (c Chain) AddressPrefix(cn ChainNetwork) string {
 	switch cn {
 	case MockNet:
 		switch c {
-		case BNBChain:
-			return "tbnb"
-		case TERRAChain:
-			return "terra"
 		case GAIAChain:
 			return "cosmos"
 		case THORChain:
@@ -249,10 +230,6 @@ func (c Chain) AddressPrefix(cn ChainNetwork) string {
 		}
 	case MainNet, StageNet:
 		switch c {
-		case BNBChain:
-			return "bnb"
-		case TERRAChain:
-			return "terra"
 		case GAIAChain:
 			return "cosmos"
 		case THORChain:
@@ -280,7 +257,7 @@ func (c Chain) DustThreshold() cosmos.Uint {
 		return cosmos.NewUint(10_000)
 	case DOGEChain:
 		return cosmos.NewUint(100_000_000)
-	case ETHChain, AVAXChain, GAIAChain, BNBChain, BSCChain:
+	case ETHChain, AVAXChain, GAIAChain, BSCChain:
 		return cosmos.NewUint(0)
 	default:
 		return cosmos.NewUint(0)
@@ -331,8 +308,6 @@ func (c Chain) ApproximateBlockMilliseconds() int64 {
 		return 12_000
 	case AVAXChain:
 		return 3_000
-	case BNBChain:
-		return 500
 	case BSCChain:
 		return 3_000
 	case GAIAChain:
@@ -350,7 +325,7 @@ func (c Chain) InboundNotes() string {
 		return "First output should be to inbound_address, second output should be change back to self, third output should be OP_RETURN, limited to 80 bytes. Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats (P2WSH with Bech32 address format preferred)."
 	case ETHChain, AVAXChain, BSCChain:
 		return "Base Asset: Send the inbound_address the asset with the memo encoded in hex in the data field. Tokens: First approve router to spend tokens from user: asset.approve(router, amount). Then call router.depositWithExpiry(inbound_address, asset, amount, memo, expiry). Asset is the token contract address. Amount should be in native asset decimals (eg 1e18 for most tokens). Do not send to or from contract addresses."
-	case BNBChain, GAIAChain:
+	case GAIAChain:
 		return "Transfer the inbound_address the asset with the memo. Do not use multi-in, multi-out transactions."
 	case THORChain:
 		return "Broadcast a MsgDeposit to the THORChain network with the appropriate memo. Do not use multi-in, multi-out transactions."

@@ -214,7 +214,7 @@ func (nas NodeAccounts) IsNodeKeys(addr cosmos.AccAddress) bool {
 	return false
 }
 
-// Less sort interface , it will sort by StatusSince field, and then by SignerBNBAddress
+// Less is used for sorting - first by status, then by node address.
 func (nas NodeAccounts) Less(i, j int) bool {
 	if nas[i].StatusSince < nas[j].StatusSince {
 		return true

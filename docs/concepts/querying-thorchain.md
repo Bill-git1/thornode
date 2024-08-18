@@ -8,7 +8,6 @@ Below are the list of supported Address Formats. Not using this risks loss of fu
 | ---------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | BTC              | P2WSH /w Bech32 (preferred), P2WPKH /w Bech32, P2PKH, P2SH | Do not send to/from with P2TR. Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats |
 | ETH              | EIP-55                                                     | Do not send to or from contract addresses.                                                                                     |
-| BNB              | Bech32                                                     |                                                                                                                                |
 | BSC              | EIP-55                                                     | Do not send to or from contract addresses.                                                                                     |
 | AVAX             | EIP-55                                                     | Do not send to or from contract addresses.                                                                                     |
 | DOGE             | Bech32                                                     |                                                                                                                                |
@@ -96,18 +95,29 @@ Use the `/pools` [endpoint](https://midgard.thorchain.info/v2/pools) of Midgard 
 
 ```json
 {
-  "asset": "BNB.BTCB-1DE",
-  "assetDepth": "11262499812",
-  "assetPrice": "11205.698400479405",
-  "assetPriceUSD": "38316.644098172634",
-  "liquidityUnits": "61816750778660",
-  "poolAPY": "0.24483254735655713",
-  "runeDepth": "126204176128728",
+  "annualPercentageRate": "0.26851741838417964",
+  "asset": "ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48",
+  "assetDepth": "704918488993385",
+  "assetPrice": "0.27957103705024305",
+  "assetPriceUSD": "1",
+  "earnings": "1806133325329",
+  "earningsAnnualAsPercentOfDepth": "0.23893708202900793",
+  "liquidityUnits": "30358099575031",
+  "lpLuvi": "-0.21236440724172345",
+  "nativeDecimal": "6",
+  "poolAPY": "0.26851741838417964",
+  "runeDepth": "197074793003771",
+  "saversAPR": "0.02920836798030401",
+  "saversDepth": "368446044075677",
+  "saversUnits": "338062015741477",
+  "saversYieldShare": "0.27977160028361103",
   "status": "available",
-  "synthSupply": "0",
-  "synthUnits": "0",
-  "units": "61816750778660",
-  "volume24h": "67544420820530"
+  "synthSupply": "458398271824424",
+  "synthUnits": "14626376130101",
+  "totalCollateral": "0",
+  "totalDebtTor": "0",
+  "units": "44984475705132",
+  "volume24h": "265009796099941"
 }
 ```
 
@@ -122,7 +132,7 @@ Make sure to manually add Native $RUNE as a swappable asset.
 ```admonish info
 `"assetPrice" tells you the asset's price in RUNE (RUNE Depth/AssetDepth ). In the above example`
 
-`1 BNB.BTCB-1DE = 11,205 RUNE`
+`1 ETH.USDC = 0.279571 RUNE`
 ```
 
 ### Decimals and Base Units

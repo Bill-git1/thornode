@@ -52,16 +52,16 @@ func (s *PubKeyMgrSuite) TestPubkeyMgr(c *C) {
 	pubkeyMgr.RemovePubKey(pk2)
 	c.Check(pubkeyMgr.HasPubKey(pk2), Equals, false)
 
-	addr, err := pk1.GetAddress(common.BNBChain)
+	addr, err := pk1.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
-	ok, _ := pubkeyMgr.IsValidPoolAddress(addr.String(), common.BNBChain)
+	ok, _ := pubkeyMgr.IsValidPoolAddress(addr.String(), common.ETHChain)
 	c.Assert(ok, Equals, true)
 
-	addr, err = pk3.GetAddress(common.BNBChain)
+	addr, err = pk3.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
 	pubkeyMgr.AddNodePubKey(pk4)
 	c.Check(pubkeyMgr.GetNodePubKey().String(), Equals, pk4.String())
-	ok, _ = pubkeyMgr.IsValidPoolAddress(addr.String(), common.BNBChain)
+	ok, _ = pubkeyMgr.IsValidPoolAddress(addr.String(), common.ETHChain)
 	c.Assert(ok, Equals, false)
 }
 

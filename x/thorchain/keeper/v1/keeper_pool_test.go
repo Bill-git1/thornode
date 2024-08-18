@@ -17,14 +17,14 @@ func (s *KeeperPoolSuite) TestPool(c *C) {
 	c.Check(k.SetPool(ctx, Pool{}), NotNil) // empty asset should error
 
 	pool := NewPool()
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.ETHAsset
 
 	err := k.SetPool(ctx, pool)
 	c.Assert(err, IsNil)
 	pool, err = k.GetPool(ctx, pool.Asset)
 	c.Assert(err, IsNil)
-	c.Check(pool.Asset.Equals(common.BNBAsset), Equals, true)
-	c.Check(k.PoolExist(ctx, common.BNBAsset), Equals, true)
+	c.Check(pool.Asset.Equals(common.ETHAsset), Equals, true)
+	c.Check(k.PoolExist(ctx, common.ETHAsset), Equals, true)
 	c.Check(k.PoolExist(ctx, common.BTCAsset), Equals, false)
 
 	pools, err := k.GetPools(ctx)

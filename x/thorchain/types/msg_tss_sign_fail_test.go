@@ -39,7 +39,7 @@ func (s MsgTssKeysignFailSuite) TestMsgTssKeysignFail(c *C) {
 	c.Assert(m, NotNil)
 	c.Assert(err, IsNil)
 	m, err = NewMsgTssKeysignFail(1, b, "hello", common.Coins{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(100)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100)),
 		common.NewCoin(common.EmptyAsset, cosmos.ZeroUint()),
 	}, GetRandomBech32Addr(), GetRandomPubKey())
 	c.Assert(m, NotNil)

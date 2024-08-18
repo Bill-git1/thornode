@@ -24,7 +24,7 @@ For wallets/interfaces to interact with THORChain, they need to:
 
 ### [Native Swaps Guide](swap-guide/quickstart-guide.md)
 
-Frontend developers can use THORChain to access decentralised layer1 swaps between BTC, ETH, BNB, ATOM and more.
+Frontend developers can use THORChain to access decentralised layer1 swaps between BTC, ETH, ATOM and more.
 
 ### [Native Savings Guide](saving-guide/quickstart-guide.md)
 

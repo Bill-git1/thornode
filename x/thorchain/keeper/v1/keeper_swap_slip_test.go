@@ -18,14 +18,14 @@ func (s *KeeperSwapSlipSuite) TestSwapSlip(c *C) {
 	height := ctx.BlockHeight()
 	err := k.AddToSwapSlip(ctx, common.BTCAsset, cosmos.NewInt(200))
 	c.Assert(err, IsNil)
-	err = k.AddToSwapSlip(ctx, common.BNBAsset, cosmos.NewInt(300))
+	err = k.AddToSwapSlip(ctx, common.ETHAsset, cosmos.NewInt(300))
 	c.Assert(err, IsNil)
 
 	i, err := k.GetPoolSwapSlip(ctx, height, common.BTCAsset)
 	c.Assert(err, IsNil)
 	c.Check(i.Int64(), Equals, int64(200), Commentf("%d", i.Int64()))
 
-	i, err = k.GetPoolSwapSlip(ctx, height, common.BNBAsset)
+	i, err = k.GetPoolSwapSlip(ctx, height, common.ETHAsset)
 	c.Assert(err, IsNil)
 	c.Check(i.Int64(), Equals, int64(300), Commentf("%d", i.Int64()))
 }
@@ -34,7 +34,7 @@ func (s *KeeperSwapSlipSuite) TestRollupSwapSlip(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	ctx = ctx.WithBlockHeight(10)
 
-	asset := common.BNBAsset
+	asset := common.ETHAsset
 	targetCount := int64(5)
 
 	for i := int64(1); i <= targetCount+1; i++ {

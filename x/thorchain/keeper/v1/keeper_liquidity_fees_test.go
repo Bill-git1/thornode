@@ -20,7 +20,7 @@ func (s *KeeperLiquidityFeesSuite) TestLiquidityFees(c *C) {
 	c.Assert(err, IsNil)
 	err = k.AddToLiquidityFees(ctx, common.BTCAsset, cosmos.NewUint(100))
 	c.Assert(err, IsNil)
-	err = k.AddToLiquidityFees(ctx, common.BNBAsset, cosmos.NewUint(300))
+	err = k.AddToLiquidityFees(ctx, common.ETHAsset, cosmos.NewUint(300))
 	c.Assert(err, IsNil)
 
 	i, err := k.GetTotalLiquidityFees(ctx, height)
@@ -35,11 +35,11 @@ func (s *KeeperLiquidityFeesSuite) TestLiquidityFees(c *C) {
 	c.Assert(err, IsNil)
 	c.Check(rolling, Equals, uint64(200), Commentf("%d", rolling))
 
-	i, err = k.GetPoolLiquidityFees(ctx, height, common.BNBAsset)
+	i, err = k.GetPoolLiquidityFees(ctx, height, common.ETHAsset)
 	c.Assert(err, IsNil)
 	c.Check(i.Uint64(), Equals, uint64(300), Commentf("%d", i.Uint64()))
 
-	rolling, err = k.GetRollingPoolLiquidityFee(ctx, common.BNBAsset)
+	rolling, err = k.GetRollingPoolLiquidityFee(ctx, common.ETHAsset)
 	c.Assert(err, IsNil)
 	c.Check(rolling, Equals, uint64(300), Commentf("%d", rolling))
 }

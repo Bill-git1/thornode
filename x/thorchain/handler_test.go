@@ -104,17 +104,24 @@ func setupManagerForTest(c *C) (cosmos.Context, *Mgrs) {
 	FundModule(c, ctx, k, ModuleName, 10000*common.One)
 	FundModule(c, ctx, k, AsgardName, common.One)
 	FundModule(c, ctx, k, ReserveName, 10000*common.One)
-	c.Assert(k.SaveNetworkFee(ctx, common.BNBChain, NetworkFee{
-		Chain:              common.BNBChain,
+	c.Assert(k.SaveNetworkFee(ctx, common.ETHChain, NetworkFee{
+		Chain:              common.ETHChain,
 		TransactionSize:    1,
 		TransactionFeeRate: 37500,
 	}), IsNil)
 
-	c.Assert(k.SaveNetworkFee(ctx, common.TERRAChain, NetworkFee{
-		Chain:              common.TERRAChain,
+	c.Assert(k.SaveNetworkFee(ctx, common.BTCChain, NetworkFee{
+		Chain:              common.BTCChain,
 		TransactionSize:    1,
 		TransactionFeeRate: 6423600,
 	}), IsNil)
+
+	c.Assert(k.SaveNetworkFee(ctx, common.DOGEChain, NetworkFee{
+		Chain:              common.DOGEChain,
+		TransactionSize:    1,
+		TransactionFeeRate: 37500,
+	}), IsNil)
+
 	os.Setenv("NET", "mocknet")
 	mgr := NewManagers(k, marshaler, bk, ak, keyThorchain)
 	constants.SWVersion = GetCurrentVersion()
@@ -176,14 +183,14 @@ func setupKeeperForTest(c *C) (cosmos.Context, keeper.Keeper) {
 	FundModule(c, ctx, k, ModuleName, 1000000*common.One)
 	FundModule(c, ctx, k, AsgardName, common.One)
 	FundModule(c, ctx, k, ReserveName, 10000*common.One)
-	err = k.SaveNetworkFee(ctx, common.BNBChain, NetworkFee{
-		Chain:              common.BNBChain,
+	err = k.SaveNetworkFee(ctx, common.ETHChain, NetworkFee{
+		Chain:              common.ETHChain,
 		TransactionSize:    1,
 		TransactionFeeRate: 37500,
 	})
 	c.Assert(err, IsNil)
-	err = k.SaveNetworkFee(ctx, common.TERRAChain, NetworkFee{
-		Chain:              common.TERRAChain,
+	err = k.SaveNetworkFee(ctx, common.BTCChain, NetworkFee{
+		Chain:              common.BTCChain,
 		TransactionSize:    1,
 		TransactionFeeRate: 6423600,
 	})
@@ -200,7 +207,7 @@ type handlerTestWrapper struct {
 	notActiveNodeAccount NodeAccount
 }
 
-func getHandlerTestWrapper(c *C, height int64, withActiveNode, withActieBNBPool bool) handlerTestWrapper {
+func getHandlerTestWrapper(c *C, height int64, withActiveNode, withActieDOGEPool bool) handlerTestWrapper {
 	ctx, mgr := setupManagerForTest(c)
 	ctx = ctx.WithBlockHeight(height)
 	acc1 := GetRandomValidatorNode(NodeActive)
@@ -208,10 +215,10 @@ func getHandlerTestWrapper(c *C, height int64, withActiveNode, withActieBNBPool 
 	if withActiveNode {
 		c.Assert(mgr.Keeper().SetNodeAccount(ctx, acc1), IsNil)
 	}
-	if withActieBNBPool {
-		p, err := mgr.Keeper().GetPool(ctx, common.BNBAsset)
+	if withActieDOGEPool {
+		p, err := mgr.Keeper().GetPool(ctx, common.DOGEAsset)
 		c.Assert(err, IsNil)
-		p.Asset = common.BNBAsset
+		p.Asset = common.DOGEAsset
 		p.Status = PoolAvailable
 		p.BalanceRune = cosmos.NewUint(100 * common.One)
 		p.BalanceAsset = cosmos.NewUint(100 * common.One)
@@ -237,14 +244,14 @@ func (HandlerSuite) TestHandleTxInWithdrawLiquidityMemo(c *C) {
 
 	vault := GetRandomVault()
 	vault.Coins = common.Coins{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(100*common.One)),
+		common.NewCoin(common.DOGEAsset, cosmos.NewUint(100*common.One)),
 		common.NewCoin(common.RuneAsset(), cosmos.NewUint(100*common.One)),
 	}
 	c.Assert(w.keeper.SetVault(w.ctx, vault), IsNil)
-	vaultAddr, err := vault.PubKey.GetAddress(common.BNBChain)
+	vaultAddr, err := vault.PubKey.GetAddress(common.ETHChain)
 
 	pool := NewPool()
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.DOGEAsset
 	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
 	pool.BalanceRune = cosmos.NewUint(100 * common.One)
 	pool.LPUnits = cosmos.NewUint(100)
@@ -252,9 +259,9 @@ func (HandlerSuite) TestHandleTxInWithdrawLiquidityMemo(c *C) {
 
 	runeAddr := GetRandomRUNEAddress()
 	lp := LiquidityProvider{
-		Asset:        common.BNBAsset,
+		Asset:        common.DOGEAsset,
 		RuneAddress:  runeAddr,
-		AssetAddress: GetRandomBNBAddress(),
+		AssetAddress: GetRandomDOGEAddress(),
 		PendingRune:  cosmos.ZeroUint(),
 		Units:        cosmos.NewUint(100),
 	}
@@ -262,37 +269,39 @@ func (HandlerSuite) TestHandleTxInWithdrawLiquidityMemo(c *C) {
 
 	tx := common.Tx{
 		ID:    GetRandomTxHash(),
-		Chain: common.BNBChain,
+		Chain: common.ETHChain,
 		Coins: common.Coins{
 			common.NewCoin(common.RuneAsset(), cosmos.NewUint(1*common.One)),
 		},
-		Memo:        "withdraw:BNB.BNB",
+		Memo:        "withdraw:DOGE.DOGE",
 		FromAddress: lp.RuneAddress,
 		ToAddress:   vaultAddr,
-		Gas:         BNBGasFeeSingleton,
+		Gas: common.Gas{
+			common.NewCoin(common.DOGEAsset, cosmos.NewUint(10000)),
+		},
 	}
 
-	msg := NewMsgWithdrawLiquidity(tx, lp.RuneAddress, cosmos.NewUint(uint64(MaxWithdrawBasisPoints)), common.BNBAsset, common.EmptyAsset, w.activeNodeAccount.NodeAddress)
+	msg := NewMsgWithdrawLiquidity(tx, lp.RuneAddress, cosmos.NewUint(uint64(MaxWithdrawBasisPoints)), common.DOGEAsset, common.EmptyAsset, w.activeNodeAccount.NodeAddress)
 	c.Assert(err, IsNil)
 
 	handler := NewInternalHandler(w.mgr)
 
 	FundModule(c, w.ctx, w.keeper, AsgardName, 500)
-	c.Assert(w.keeper.SaveNetworkFee(w.ctx, common.BNBChain, NetworkFee{
-		Chain:              common.BNBChain,
+	c.Assert(w.keeper.SaveNetworkFee(w.ctx, common.DOGEChain, NetworkFee{
+		Chain:              common.DOGEChain,
 		TransactionSize:    1,
-		TransactionFeeRate: bnbSingleTxFee.Uint64(),
+		TransactionFeeRate: 10000,
 	}), IsNil)
 
 	_, err = handler(w.ctx, msg)
 	c.Assert(err, IsNil)
-	pool, err = w.keeper.GetPool(w.ctx, common.BNBAsset)
+	pool, err = w.keeper.GetPool(w.ctx, common.DOGEAsset)
 	c.Assert(err, IsNil)
 	c.Assert(pool.IsEmpty(), Equals, false)
 	c.Check(pool.Status, Equals, PoolStaged)
 	c.Check(pool.LPUnits.Uint64(), Equals, uint64(0), Commentf("%d", pool.LPUnits.Uint64()))
 	c.Check(pool.BalanceRune.Uint64(), Equals, uint64(0), Commentf("%d", pool.BalanceRune.Uint64()))
-	remainGas := uint64(37500)
+	remainGas := uint64(15000)
 	c.Check(pool.BalanceAsset.Uint64(), Equals, remainGas, Commentf("%d", pool.BalanceAsset.Uint64())) // leave a little behind for gas
 }
 
@@ -300,7 +309,7 @@ func (HandlerSuite) TestRefund(c *C) {
 	w := getHandlerTestWrapper(c, 1, true, false)
 
 	pool := Pool{
-		Asset:        common.BNBAsset,
+		Asset:        common.DOGEAsset,
 		BalanceRune:  cosmos.NewUint(100 * common.One),
 		BalanceAsset: cosmos.NewUint(100 * common.One),
 	}
@@ -312,14 +321,16 @@ func (HandlerSuite) TestRefund(c *C) {
 	txin := NewObservedTx(
 		common.Tx{
 			ID:    GetRandomTxHash(),
-			Chain: common.BNBChain,
+			Chain: common.DOGEChain,
 			Coins: common.Coins{
-				common.NewCoin(common.BNBAsset, cosmos.NewUint(100*common.One)),
+				common.NewCoin(common.DOGEAsset, cosmos.NewUint(100*common.One)),
 			},
-			Memo:        "withdraw:BNB.BNB",
-			FromAddress: GetRandomBNBAddress(),
-			ToAddress:   GetRandomBNBAddress(),
-			Gas:         BNBGasFeeSingleton,
+			Memo:        "withdraw:DOGE.DOGE",
+			FromAddress: GetRandomDOGEAddress(),
+			ToAddress:   GetRandomDOGEAddress(),
+			Gas: common.Gas{
+				common.NewCoin(common.DOGEAsset, cosmos.NewUint(10000)),
+			},
 		},
 		1024,
 		vault.PubKey, 1024,
@@ -332,7 +343,7 @@ func (HandlerSuite) TestRefund(c *C) {
 
 	// check THORNode DONT create a refund transaction when THORNode don't have a pool for
 	// the asset sent.
-	lokiAsset, _ := common.NewAsset("BNB.LOKI")
+	lokiAsset, _ := common.NewAsset("DOGE.LOKI")
 	txin.Tx.Coins = common.Coins{
 		common.NewCoin(lokiAsset, cosmos.NewUint(100*common.One)),
 	}
@@ -358,7 +369,7 @@ func (HandlerSuite) TestRefund(c *C) {
 }
 
 func (HandlerSuite) TestGetMsgSwapFromMemo(c *C) {
-	m, err := ParseMemo(GetCurrentVersion(), "swap:BNB.BNB")
+	m, err := ParseMemo(GetCurrentVersion(), "swap:DOGE.DOGE")
 	swapMemo, ok := m.(SwapMemo)
 	c.Assert(ok, Equals, true)
 	c.Assert(err, IsNil)
@@ -366,7 +377,7 @@ func (HandlerSuite) TestGetMsgSwapFromMemo(c *C) {
 	txin := types.NewObservedTx(
 		common.Tx{
 			ID:    GetRandomTxHash(),
-			Chain: common.BNBChain,
+			Chain: common.ETHChain,
 			Coins: common.Coins{
 				common.NewCoin(
 					common.RuneAsset(),
@@ -374,9 +385,11 @@ func (HandlerSuite) TestGetMsgSwapFromMemo(c *C) {
 				),
 			},
 			Memo:        m.String(),
-			FromAddress: GetRandomBNBAddress(),
-			ToAddress:   GetRandomBNBAddress(),
-			Gas:         BNBGasFeeSingleton,
+			FromAddress: GetRandomDOGEAddress(),
+			ToAddress:   GetRandomDOGEAddress(),
+			Gas: common.Gas{
+				common.NewCoin(common.DOGEAsset, cosmos.NewUint(10000)),
+			},
 		},
 		1024,
 		common.EmptyPubKey, 1024,
@@ -446,12 +459,12 @@ func (HandlerSuite) TestGetMsgUnBondFromMemo(c *C) {
 
 func (HandlerSuite) TestGetMsgLiquidityFromMemo(c *C) {
 	w := getHandlerTestWrapper(c, 1, true, false)
-	// provide BNB, however THORNode send T-CAN as coin , which is incorrect, should result in an error
-	m, err := ParseMemo(GetCurrentVersion(), fmt.Sprintf("add:BNB.BNB:%s", GetRandomRUNEAddress()))
+	// provide DOGE, however THORNode send T-CAN as coin , which is incorrect, should result in an error
+	m, err := ParseMemo(GetCurrentVersion(), fmt.Sprintf("add:DOGE.DOGE:%s", GetRandomRUNEAddress()))
 	c.Assert(err, IsNil)
 	lpMemo, ok := m.(AddLiquidityMemo)
 	c.Assert(ok, Equals, true)
-	tcanAsset, err := common.NewAsset("BNB.TCAN-014")
+	tcanAsset, err := common.NewAsset("DOGE.TCAN-014")
 	c.Assert(err, IsNil)
 	runeAsset := common.RuneAsset()
 	c.Assert(err, IsNil)
@@ -459,7 +472,7 @@ func (HandlerSuite) TestGetMsgLiquidityFromMemo(c *C) {
 	txin := types.NewObservedTx(
 		common.Tx{
 			ID:    GetRandomTxHash(),
-			Chain: common.BNBChain,
+			Chain: common.ETHChain,
 			Coins: common.Coins{
 				common.NewCoin(tcanAsset,
 					cosmos.NewUint(100*common.One)),
@@ -467,9 +480,11 @@ func (HandlerSuite) TestGetMsgLiquidityFromMemo(c *C) {
 					cosmos.NewUint(100*common.One)),
 			},
 			Memo:        m.String(),
-			FromAddress: GetRandomBNBAddress(),
-			ToAddress:   GetRandomBNBAddress(),
-			Gas:         BNBGasFeeSingleton,
+			FromAddress: GetRandomDOGEAddress(),
+			ToAddress:   GetRandomDOGEAddress(),
+			Gas: common.Gas{
+				common.NewCoin(common.DOGEAsset, cosmos.NewUint(10000)),
+			},
 		},
 		1024,
 		common.EmptyPubKey, 1024,
@@ -490,19 +505,19 @@ func (HandlerSuite) TestGetMsgLiquidityFromMemo(c *C) {
 	c.Assert(msg1, NotNil)
 	c.Assert(err1, IsNil)
 
-	bnbAsset, err := common.NewAsset("BNB.BNB")
+	dogeAsset, err := common.NewAsset("DOGE.DOGE")
 	c.Assert(err, IsNil)
 	txin.Tx.Coins = common.Coins{
-		common.NewCoin(bnbAsset,
+		common.NewCoin(dogeAsset,
 			cosmos.NewUint(100*common.One)),
 	}
 
-	// provide only token(BNB) should be fine
+	// provide only token(DOGE) should be fine
 	msg2, err2 := getMsgAddLiquidityFromMemo(w.ctx, lpMemo, txin, GetRandomBech32Addr())
 	c.Assert(msg2, NotNil)
 	c.Assert(err2, IsNil)
 
-	lokiAsset, _ := common.NewAsset("BNB.LOKI")
+	lokiAsset, _ := common.NewAsset("DOGE.LOKI")
 	// Make sure the RUNE Address and Asset Address set correctly
 	txin.Tx.Coins = common.Coins{
 		common.NewCoin(runeAsset,
@@ -512,7 +527,7 @@ func (HandlerSuite) TestGetMsgLiquidityFromMemo(c *C) {
 	}
 
 	runeAddr := GetRandomRUNEAddress()
-	lokiAddLiquidityMemo, err := ParseMemo(GetCurrentVersion(), fmt.Sprintf("add:BNB.LOKI:%s", runeAddr))
+	lokiAddLiquidityMemo, err := ParseMemo(GetCurrentVersion(), fmt.Sprintf("add:DOGE.LOKI:%s", runeAddr))
 	c.Assert(err, IsNil)
 	msg4, err4 := getMsgAddLiquidityFromMemo(w.ctx, lokiAddLiquidityMemo.(AddLiquidityMemo), txin, GetRandomBech32Addr())
 	c.Assert(err4, IsNil)
@@ -530,12 +545,14 @@ func (HandlerSuite) TestMsgLeaveFromMemo(c *C) {
 	txin := types.NewObservedTx(
 		common.Tx{
 			ID:          GetRandomTxHash(),
-			Chain:       common.BNBChain,
+			Chain:       common.ETHChain,
 			Coins:       common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(1))},
 			Memo:        fmt.Sprintf("LEAVE:%s", addr.String()),
-			FromAddress: GetRandomBNBAddress(),
-			ToAddress:   GetRandomBNBAddress(),
-			Gas:         BNBGasFeeSingleton,
+			FromAddress: GetRandomDOGEAddress(),
+			ToAddress:   GetRandomDOGEAddress(),
+			Gas: common.Gas{
+				common.NewCoin(common.DOGEAsset, cosmos.NewUint(10000)),
+			},
 		},
 		1024,
 		common.EmptyPubKey, 1024,
@@ -552,12 +569,14 @@ func (s *HandlerSuite) TestReserveContributor(c *C) {
 	txin := types.NewObservedTx(
 		common.Tx{
 			ID:          GetRandomTxHash(),
-			Chain:       common.BNBChain,
+			Chain:       common.ETHChain,
 			Coins:       common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(1))},
 			Memo:        "reserve",
-			FromAddress: GetRandomBNBAddress(),
-			ToAddress:   GetRandomBNBAddress(),
-			Gas:         BNBGasFeeSingleton,
+			FromAddress: GetRandomDOGEAddress(),
+			ToAddress:   GetRandomDOGEAddress(),
+			Gas: common.Gas{
+				common.NewCoin(common.DOGEAsset, cosmos.NewUint(10000)),
+			},
 		},
 		1024,
 		GetRandomPubKey(), 1024,
@@ -574,7 +593,7 @@ func (s *HandlerSuite) TestExternalHandler(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	handler := NewExternalHandler(mgr)
 	ctx = ctx.WithBlockHeight(1024)
-	msg := NewMsgNetworkFee(1024, common.BNBChain, 1, bnbSingleTxFee.Uint64(), GetRandomBech32Addr())
+	msg := NewMsgNetworkFee(1024, common.ETHChain, 1, 10000, GetRandomBech32Addr())
 	result, err := handler(ctx, msg)
 	c.Check(err, NotNil)
 	c.Check(errors.Is(err, se.ErrUnauthorized), Equals, true)
@@ -591,7 +610,7 @@ func (s *HandlerSuite) TestFuzzyMatching(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	k := mgr.Keeper()
 	p1 := NewPool()
-	p1.Asset = common.BNBAsset
+	p1.Asset = common.DOGEAsset
 	p1.BalanceRune = cosmos.NewUint(10 * common.One)
 	c.Assert(k.SetPool(ctx, p1), IsNil)
 
@@ -653,10 +672,10 @@ func (s *HandlerSuite) TestMemoFetchAddress(c *C) {
 	name := NewTHORName("hello", 50, []THORNameAlias{{Chain: common.THORChain, Address: thorAddr}})
 	k.SetTHORName(ctx, name)
 
-	bnbAddr := GetRandomBNBAddress()
-	addr, err := FetchAddress(ctx, k, bnbAddr.String(), common.BNBChain)
+	dogeAddr := GetRandomDOGEAddress()
+	addr, err := FetchAddress(ctx, k, dogeAddr.String(), common.ETHChain)
 	c.Assert(err, IsNil)
-	c.Check(addr.Equals(bnbAddr), Equals, true)
+	c.Check(addr.Equals(dogeAddr), Equals, true)
 
 	addr, err = FetchAddress(ctx, k, "hello", common.THORChain)
 	c.Assert(err, IsNil)

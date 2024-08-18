@@ -27,7 +27,7 @@ All clients implement these functions. While most can use the same code, some ha
 - Get Transactions - returns a simplified array of recent transactions for an address.
 - Get Transaction Data - returns transaction information from the transaction ID/hash.
 
-See below for a Bitcoin example. Also see [Ethereum](https://replit.com/@thorchain/xchain-ethereum#index.ts), [Binance](https://replit.com/@thorchain/xchain-binance#index.ts), [THORChain](https://replit.com/@thorchain/xchain-thorchain), [Cosmos](https://replit.com/@thorchain/xchain-cosmos#index.ts), and [Avalanche](https://replit.com/@thorchain/xchain-avax) examples.
+See below for a Bitcoin example. Also see [Ethereum](https://replit.com/@thorchain/xchain-ethereum#index.ts), [THORChain](https://replit.com/@thorchain/xchain-thorchain), [Cosmos](https://replit.com/@thorchain/xchain-cosmos#index.ts), and [Avalanche](https://replit.com/@thorchain/xchain-avax) examples.
 
 <iframe width="100%" height="600" src="https://replit.com/@thorchain/xchain-bitcoin?embed=true" ></iframe>
 Some chains require address history to query balances and Txs

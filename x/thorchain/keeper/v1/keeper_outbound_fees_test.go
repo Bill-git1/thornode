@@ -49,14 +49,14 @@ func (s *KeeperOutboundFeesSuite) TestOutboundRuneRecords(c *C) {
 	c.Check(feeSpentRune.String(), Equals, "400")
 
 	// Set values are distinct by Asset.
-	feeWithheldRune, err = k.GetOutboundFeeWithheldRune(ctx, common.BNBAsset)
+	feeWithheldRune, err = k.GetOutboundFeeWithheldRune(ctx, common.ETHAsset)
 	c.Assert(err, IsNil)
-	feeSpentRune, err = k.GetOutboundFeeSpentRune(ctx, common.BNBAsset)
+	feeSpentRune, err = k.GetOutboundFeeSpentRune(ctx, common.ETHAsset)
 	c.Assert(err, IsNil)
 	c.Check(feeWithheldRune.String(), Equals, "0")
 	c.Check(feeSpentRune.String(), Equals, "0")
 
-	err = k.AddToOutboundFeeWithheldRune(ctx, common.BNBAsset, cosmos.NewUint(uint64(50)))
+	err = k.AddToOutboundFeeWithheldRune(ctx, common.ETHAsset, cosmos.NewUint(uint64(50)))
 	c.Assert(err, IsNil)
 	err = k.AddToOutboundFeeSpentRune(ctx, common.BTCAsset, cosmos.NewUint(uint64(30)))
 	c.Assert(err, IsNil)
@@ -68,9 +68,9 @@ func (s *KeeperOutboundFeesSuite) TestOutboundRuneRecords(c *C) {
 	c.Check(feeWithheldRune.String(), Equals, "600")
 	c.Check(feeSpentRune.String(), Equals, "430")
 
-	feeWithheldRune, err = k.GetOutboundFeeWithheldRune(ctx, common.BNBAsset)
+	feeWithheldRune, err = k.GetOutboundFeeWithheldRune(ctx, common.ETHAsset)
 	c.Assert(err, IsNil)
-	feeSpentRune, err = k.GetOutboundFeeSpentRune(ctx, common.BNBAsset)
+	feeSpentRune, err = k.GetOutboundFeeSpentRune(ctx, common.ETHAsset)
 	c.Assert(err, IsNil)
 	c.Check(feeWithheldRune.String(), Equals, "50")
 	c.Check(feeSpentRune.String(), Equals, "0")

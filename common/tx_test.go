@@ -32,10 +32,10 @@ func (s TxSuite) TestTx(c *C) {
 	c.Assert(err, IsNil)
 	tx := NewTx(
 		id,
-		Address("bnb1lejrrtta9cgr49fuh7ktu3sddhe0ff7wenlpn6"),
-		Address("bnb1lejrrtta9cgr49fuh7ktu3sddhe0ff7wenlpn6"),
-		Coins{NewCoin(BNBAsset, cosmos.NewUint(5*One))},
-		BNBGasFeeSingleton,
+		Address("0x90f2b1ae50e6018230e90a33f98c7844a0ab635a"),
+		Address("0x90f2b1ae50e6018230e90a33f98c7844a0ab635a"),
+		Coins{NewCoin(ETHAsset, cosmos.NewUint(5*One))},
+		Gas{NewCoin(ETHAsset, cosmos.NewUint(10000))},
 		"hello memo",
 	)
 	c.Check(tx.ID.Equals(id), Equals, true)
@@ -43,6 +43,6 @@ func (s TxSuite) TestTx(c *C) {
 	c.Check(tx.FromAddress.IsEmpty(), Equals, false)
 	c.Check(tx.ToAddress.IsEmpty(), Equals, false)
 	c.Assert(tx.Coins, HasLen, 1)
-	c.Check(tx.Coins[0].Equals(NewCoin(BNBAsset, cosmos.NewUint(5*One))), Equals, true)
+	c.Check(tx.Coins[0].Equals(NewCoin(ETHAsset, cosmos.NewUint(5*One))), Equals, true)
 	c.Check(tx.Memo, Equals, "hello memo")
 }

@@ -24,7 +24,6 @@ import (
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/config"
 	"gitlab.com/thorchain/thornode/constants"
-	mem "gitlab.com/thorchain/thornode/x/thorchain/memo"
 	stypes "gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
@@ -170,7 +169,6 @@ func (o *Observer) sendDeck() {
 		// retried txIn will be filtered already, doesn't need to filter it again
 		if !deck.Filtered {
 			deck.TxArray = o.filterObservations(deck.Chain, deck.TxArray, deck.MemPool)
-			deck.TxArray = o.filterBinanceMemoFlag(deck.Chain, deck.TxArray)
 			deck.ConfirmationRequired = chainClient.GetConfirmationCount(deck)
 		}
 		newTxIn := types.TxIn{
@@ -260,8 +258,7 @@ func (o *Observer) processTxIns() {
 				if in.Filtered != txIn.Filtered {
 					continue
 				}
-				// at the moment BNB chain has very short block time , so allow multiple BNB block to bundle together , but not BTC
-				if !in.Chain.Equals(common.BNBChain) && len(in.TxArray) > 0 && len(txIn.TxArray) > 0 {
+				if len(in.TxArray) > 0 && len(txIn.TxArray) > 0 {
 					if in.TxArray[0].BlockHeight != txIn.TxArray[0].BlockHeight {
 						continue
 					}
@@ -332,88 +329,6 @@ func (o *Observer) filterObservations(chain common.Chain, items []types.TxInItem
 		// internal tx means both from & to addresses belongs to the network. for example migrate/consolidate
 		if ok, cpi := o.pubkeyMgr.IsValidPoolAddress(txInItem.To, chain); ok && (!memPool || isInternal) {
 			txInItem.ObservedVaultPubKey = cpi.PubKey
-			txs = append(txs, txInItem)
-		}
-	}
-	return
-}
-
-// filterBinanceMemoFlag - on Binance chain , BEP12(https://github.com/binance-chain/BEPs/blob/master/BEP12.md#memo-check-script-for-transfer)
-// it allow account to enable memo check flag, with the flag enabled , if a tx doesn't have memo, or doesn't have correct memo will be rejected by the chain ,
-// unfortunately THORChain won't be able to deal with these accounts , as THORChain will not know what kind of memo it required to send the tx through
-// given that Bifrost have to filter out those txes
-// the logic has to be here as THORChain is chain agnostic , customer can swap from BTC/ETH to BNB
-func (o *Observer) filterBinanceMemoFlag(chain common.Chain, items []types.TxInItem) (txs []types.TxInItem) {
-	// finds the destination address, and supports THORNames
-	fetchAddr := func(memo string, bridge thorclient.ThorchainBridge) common.Address {
-		m, err := mem.ParseMemo(common.LatestVersion, memo)
-		if err != nil {
-			o.logger.Debug().Err(err).Msgf("fail to parse memo: %s", memo)
-			// don't return yet, in case a thorname destination or affiliate caused the error
-		}
-		if !m.GetDestination().IsEmpty() {
-			return m.GetDestination()
-		}
-
-		// could not find an address, check THORNames
-		var raw string
-		parts := strings.Split(memo, ":")
-		switch m.(type) {
-		case mem.AddLiquidityMemo:
-			if len(parts) > 2 {
-				raw = parts[2]
-			}
-		case mem.SwapMemo:
-			if len(parts) > 2 {
-				raw = parts[2]
-			}
-		}
-		if len(raw) == 0 {
-			return common.NoAddress
-		}
-
-		// if raw dest is a valid address, return it if BNB
-		addr, err := common.NewAddress(raw)
-		if err == nil {
-			if addr.IsChain(common.BNBChain) {
-				return addr
-			}
-			return common.NoAddress
-		}
-
-		// attempt to resolve the dest as a thorname
-		name, _ := bridge.GetTHORName(raw)
-		return name.GetAlias(common.BNBChain)
-	}
-
-	bnbClient, ok := o.chains[common.BNBChain]
-	if !ok {
-		txs = items
-		return
-	}
-	for _, txInItem := range items {
-		var addressesToCheck []string
-		addr := fetchAddr(txInItem.Memo, o.thorchainBridge)
-		if !addr.IsEmpty() && addr.IsChain(common.BNBChain) {
-			addressesToCheck = append(addressesToCheck, addr.String())
-		}
-		// if it BNB chain let's check the from address as well
-		if chain.Equals(common.BNBChain) {
-			addressesToCheck = append(addressesToCheck, txInItem.Sender)
-		}
-		skip := false
-		for _, item := range addressesToCheck {
-			account, err := bnbClient.GetAccountByAddress(item, nil)
-			if err != nil {
-				o.logger.Error().Err(err).Msgf("fail to check account for %s", item)
-				continue
-			}
-			if account.HasMemoFlag {
-				skip = true
-				break
-			}
-		}
-		if !skip {
 			txs = append(txs, txInItem)
 		}
 	}

@@ -87,6 +87,11 @@ type Txs []Tx
 
 // GetRagnarokTx return a tx used for ragnarok
 func GetRagnarokTx(chain Chain, fromAddr, toAddr Address) Tx {
+	blankAsset := Asset{
+		Chain:  chain,
+		Symbol: "BLANK",
+		Ticker: "BLANK",
+	}
 	return Tx{
 		Chain:       chain,
 		ID:          BlankTxID,
@@ -94,11 +99,11 @@ func GetRagnarokTx(chain Chain, fromAddr, toAddr Address) Tx {
 		ToAddress:   toAddr,
 		Coins: Coins{
 			// used for ragnarok, so doesn't really matter
-			NewCoin(BNBAsset, cosmos.OneUint()),
+			NewCoin(blankAsset, cosmos.OneUint()),
 		},
 		Gas: Gas{
 			// used for ragnarok, so doesn't really matter
-			NewCoin(BNBAsset, cosmos.OneUint()),
+			NewCoin(blankAsset, cosmos.OneUint()),
 		},
 		Memo: "Ragnarok",
 	}

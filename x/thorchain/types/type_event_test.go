@@ -13,13 +13,13 @@ var _ = Suite(&EventSuite{})
 
 func (s EventSuite) TestSwapEvent(c *C) {
 	evt := NewEventSwap(
-		common.BNBAsset,
+		common.ETHAsset,
 		cosmos.NewUint(5),
 		cosmos.NewUint(5),
 		cosmos.NewUint(5),
 		cosmos.ZeroUint(),
 		GetRandomTx(),
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(100)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100)),
 		cosmos.NewUint(5),
 	)
 	c.Check(evt.Type(), Equals, "swap")
@@ -30,14 +30,14 @@ func (s EventSuite) TestSwapEvent(c *C) {
 
 func (s EventSuite) TestAddLiqudityEvent(c *C) {
 	evt := NewEventAddLiquidity(
-		common.BNBAsset,
+		common.ETHAsset,
 		cosmos.NewUint(5),
 		GetRandomRUNEAddress(),
 		cosmos.NewUint(5),
 		cosmos.NewUint(5),
 		GetRandomTxHash(),
 		GetRandomTxHash(),
-		GetRandomBNBAddress(),
+		GetRandomETHAddress(),
 	)
 	c.Check(evt.Type(), Equals, "add_liquidity")
 	events, err := evt.Events()
@@ -47,7 +47,7 @@ func (s EventSuite) TestAddLiqudityEvent(c *C) {
 
 func (s EventSuite) TestWithdrawEvent(c *C) {
 	evt := NewEventWithdraw(
-		common.BNBAsset,
+		common.ETHAsset,
 		cosmos.NewUint(6),
 		5000,
 		cosmos.NewDec(0),
@@ -63,9 +63,9 @@ func (s EventSuite) TestWithdrawEvent(c *C) {
 }
 
 func (s EventSuite) TestPool(c *C) {
-	evt := NewEventPool(common.BNBAsset, PoolStatus_Available)
+	evt := NewEventPool(common.ETHAsset, PoolStatus_Available)
 	c.Check(evt.Type(), Equals, "pool")
-	c.Check(evt.Pool.String(), Equals, common.BNBAsset.String())
+	c.Check(evt.Pool.String(), Equals, common.ETHAsset.String())
 	c.Check(evt.Status.String(), Equals, PoolStatus_Available.String())
 	events, err := evt.Events()
 	c.Check(err, IsNil)
@@ -74,13 +74,13 @@ func (s EventSuite) TestPool(c *C) {
 
 func (s EventSuite) TestReward(c *C) {
 	evt := NewEventRewards(cosmos.NewUint(300), []PoolAmt{
-		{common.BNBAsset, 30},
+		{common.ETHAsset, 30},
 		{common.BTCAsset, 40},
 	})
 	c.Check(evt.Type(), Equals, "rewards")
 	c.Check(evt.BondReward.String(), Equals, "300")
 	c.Assert(evt.PoolRewards, HasLen, 2)
-	c.Check(evt.PoolRewards[0].Asset.Equals(common.BNBAsset), Equals, true)
+	c.Check(evt.PoolRewards[0].Asset.Equals(common.ETHAsset), Equals, true)
 	c.Check(evt.PoolRewards[0].Amount, Equals, int64(30))
 	c.Check(evt.PoolRewards[1].Asset.Equals(common.BTCAsset), Equals, true)
 	c.Check(evt.PoolRewards[1].Amount, Equals, int64(40))
@@ -90,14 +90,14 @@ func (s EventSuite) TestReward(c *C) {
 }
 
 func (s EventSuite) TestSlash(c *C) {
-	evt := NewEventSlash(common.BNBAsset, []PoolAmt{
-		{common.BNBAsset, -20},
+	evt := NewEventSlash(common.ETHAsset, []PoolAmt{
+		{common.ETHAsset, -20},
 		{common.RuneAsset(), 30},
 	})
 	c.Check(evt.Type(), Equals, "slash")
-	c.Check(evt.Pool, Equals, common.BNBAsset)
+	c.Check(evt.Pool, Equals, common.ETHAsset)
 	c.Assert(evt.SlashAmount, HasLen, 2)
-	c.Check(evt.SlashAmount[0].Asset, Equals, common.BNBAsset)
+	c.Check(evt.SlashAmount[0].Asset, Equals, common.ETHAsset)
 	c.Check(evt.SlashAmount[0].Amount, Equals, int64(-20))
 	c.Check(evt.SlashAmount[1].Asset, Equals, common.RuneAsset())
 	c.Check(evt.SlashAmount[1].Amount, Equals, int64(30))
@@ -110,22 +110,22 @@ func (s EventSuite) TestEventGas(c *C) {
 	eg := NewEventGas()
 	c.Assert(eg, NotNil)
 	eg.UpsertGasPool(GasPool{
-		Asset:    common.BNBAsset,
+		Asset:    common.ETHAsset,
 		AssetAmt: cosmos.NewUint(1000),
 		RuneAmt:  cosmos.ZeroUint(),
 	})
 	c.Assert(eg.Pools, HasLen, 1)
-	c.Assert(eg.Pools[0].Asset, Equals, common.BNBAsset)
+	c.Assert(eg.Pools[0].Asset, Equals, common.ETHAsset)
 	c.Assert(eg.Pools[0].RuneAmt.Equal(cosmos.ZeroUint()), Equals, true)
 	c.Assert(eg.Pools[0].AssetAmt.Equal(cosmos.NewUint(1000)), Equals, true)
 
 	eg.UpsertGasPool(GasPool{
-		Asset:    common.BNBAsset,
+		Asset:    common.ETHAsset,
 		AssetAmt: cosmos.NewUint(1234),
 		RuneAmt:  cosmos.NewUint(1024),
 	})
 	c.Assert(eg.Pools, HasLen, 1)
-	c.Assert(eg.Pools[0].Asset, Equals, common.BNBAsset)
+	c.Assert(eg.Pools[0].Asset, Equals, common.ETHAsset)
 	c.Assert(eg.Pools[0].RuneAmt.Equal(cosmos.NewUint(1024)), Equals, true)
 	c.Assert(eg.Pools[0].AssetAmt.Equal(cosmos.NewUint(2234)), Equals, true)
 
@@ -168,7 +168,7 @@ func (s EventSuite) TestEventGas(c *C) {
 func (s EventSuite) TestEventFee(c *C) {
 	event := NewEventFee(GetRandomTxHash(), common.Fee{
 		Coins: common.Coins{
-			common.NewCoin(common.BNBAsset, cosmos.NewUint(1024)),
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(1024)),
 		},
 		PoolDeduct: cosmos.NewUint(1023),
 	}, cosmos.NewUint(5))
@@ -179,7 +179,7 @@ func (s EventSuite) TestEventFee(c *C) {
 }
 
 func (s EventSuite) TestEventDonate(c *C) {
-	e := NewEventDonate(common.BNBAsset, GetRandomTx())
+	e := NewEventDonate(common.ETHAsset, GetRandomTx())
 	c.Check(e.Type(), Equals, "donate")
 	events, err := e.Events()
 	c.Check(err, IsNil)
@@ -188,7 +188,7 @@ func (s EventSuite) TestEventDonate(c *C) {
 
 func (EventSuite) TestEventRefund(c *C) {
 	e := NewEventRefund(1, "refund", GetRandomTx(), common.NewFee(common.Coins{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(100)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100)),
 	}, cosmos.ZeroUint()))
 	c.Check(e.Type(), Equals, "refund")
 	events, err := e.Events()
@@ -206,7 +206,7 @@ func (EventSuite) TestEventBond(c *C) {
 
 func (EventSuite) TestEventReserve(c *C) {
 	e := NewEventReserve(ReserveContributor{
-		Address: GetRandomBNBAddress(),
+		Address: GetRandomETHAddress(),
 		Amount:  cosmos.NewUint(100),
 	}, GetRandomTx())
 	c.Check(e.Type(), Equals, "reserve")
@@ -217,7 +217,7 @@ func (EventSuite) TestEventReserve(c *C) {
 
 func (EventSuite) TestEventErrata(c *C) {
 	e := NewEventErrata(GetRandomTxHash(), PoolMods{
-		NewPoolMod(common.BNBAsset, cosmos.NewUint(100), true, cosmos.NewUint(200), true),
+		NewPoolMod(common.ETHAsset, cosmos.NewUint(100), true, cosmos.NewUint(200), true),
 	})
 	c.Check(e.Type(), Equals, "errata")
 	events, err := e.Events()

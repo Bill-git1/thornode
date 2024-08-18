@@ -38,21 +38,23 @@ func (HandlerRagnarokSuite) TestRagnarok(c *C) {
 	handler := NewRagnarokHandler(NewDummyMgrWithKeeper(keeper))
 
 	// invalid message should result errors
-	msg := NewMsgNetworkFee(ctx.BlockHeight(), common.BNBChain, 1, bnbSingleTxFee.Uint64(), GetRandomBech32Addr())
+	msg := NewMsgNetworkFee(ctx.BlockHeight(), common.ETHChain, 1, 10000, GetRandomBech32Addr())
 	result, err := handler.Run(ctx, msg)
 	c.Check(result, IsNil, Commentf("invalid message should result an error"))
 	c.Check(err, NotNil, Commentf("invalid message should result an error"))
-	addr, err := keeper.vault.PubKey.GetAddress(common.BNBChain)
+	addr, err := keeper.vault.PubKey.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
 
 	tx := NewObservedTx(common.Tx{
 		ID:          GetRandomTxHash(),
-		Chain:       common.BNBChain,
-		Coins:       common.Coins{common.NewCoin(common.BNBAsset, cosmos.NewUint(1*common.One))},
+		Chain:       common.ETHChain,
+		Coins:       common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(1*common.One))},
 		Memo:        "",
-		FromAddress: GetRandomBNBAddress(),
+		FromAddress: GetRandomETHAddress(),
 		ToAddress:   addr,
-		Gas:         BNBGasFeeSingleton,
+		Gas: common.Gas{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
+		},
 	}, 12, GetRandomPubKey(), 12)
 
 	msgRagnarok := NewMsgRagnarok(tx, 1, keeper.activeNodeAccount.NodeAddress)
@@ -124,19 +126,19 @@ func (HandlerRagnarokSuite) TestRagnarokHappyPath(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	retireVault := GetRandomVault()
 	vaultCoins := common.Coins{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(2*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(2*common.One)),
 	}
 	retireVault.AddFunds(vaultCoins)
 	newVault := GetRandomVault()
 	txout := NewTxOut(1)
-	newVaultAddr, err := newVault.PubKey.GetAddress(common.BNBChain)
+	newVaultAddr, err := newVault.PubKey.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
 	txout.TxArray = append(txout.TxArray, TxOutItem{
-		Chain:       common.BNBChain,
+		Chain:       common.ETHChain,
 		InHash:      common.BlankTxID,
 		ToAddress:   newVaultAddr,
 		VaultPubKey: retireVault.PubKey,
-		Coin:        common.NewCoin(common.BNBAsset, cosmos.NewUint(1024)),
+		Coin:        common.NewCoin(common.ETHAsset, cosmos.NewUint(1024)),
 		Memo:        NewRagnarokMemo(1).String(),
 	})
 	keeper := &TestRagnarokKeeperHappyPath{
@@ -146,19 +148,21 @@ func (HandlerRagnarokSuite) TestRagnarokHappyPath(c *C) {
 		retireVault:       retireVault,
 		txout:             txout,
 	}
-	addr, err := keeper.retireVault.PubKey.GetAddress(common.BNBChain)
+	addr, err := keeper.retireVault.PubKey.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
 	handler := NewRagnarokHandler(NewDummyMgrWithKeeper(keeper))
 	tx := NewObservedTx(common.Tx{
 		ID:    GetRandomTxHash(),
-		Chain: common.BNBChain,
+		Chain: common.ETHChain,
 		Coins: common.Coins{
-			common.NewCoin(common.BNBAsset, cosmos.NewUint(1024)),
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(1024)),
 		},
 		Memo:        NewRagnarokMemo(1).String(),
 		FromAddress: addr,
 		ToAddress:   newVaultAddr,
-		Gas:         BNBGasFeeSingleton,
+		Gas: common.Gas{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
+		},
 	}, 1, retireVault.PubKey, 1)
 
 	msgRagnarok := NewMsgRagnarok(tx, 1, keeper.activeNodeAccount.NodeAddress)
@@ -177,16 +181,16 @@ func (HandlerRagnarokSuite) TestSlash(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	retireVault := GetRandomVault()
 	vaultCoins := common.Coins{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(2*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(2*common.One)),
 	}
 	retireVault.AddFunds(vaultCoins)
 	newVault := GetRandomVault()
 	txout := NewTxOut(1)
-	newVaultAddr, err := newVault.PubKey.GetAddress(common.BNBChain)
+	newVaultAddr, err := newVault.PubKey.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
 
 	pool := NewPool()
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.ETHAsset
 	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
 	pool.BalanceRune = cosmos.NewUint(100 * common.One)
 	na := GetRandomValidatorNode(NodeActive)
@@ -202,7 +206,7 @@ func (HandlerRagnarokSuite) TestSlash(c *C) {
 		txout:             txout,
 		pool:              pool,
 	}
-	addr, err := keeper.retireVault.PubKey.GetAddress(common.BNBChain)
+	addr, err := keeper.retireVault.PubKey.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
 
 	mgr := NewDummyMgrWithKeeper(keeper)
@@ -211,18 +215,20 @@ func (HandlerRagnarokSuite) TestSlash(c *C) {
 
 	tx := NewObservedTx(common.Tx{
 		ID:    GetRandomTxHash(),
-		Chain: common.BNBChain,
+		Chain: common.ETHChain,
 		Coins: common.Coins{
-			common.NewCoin(common.BNBAsset, cosmos.NewUint(1024)),
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(1024)),
 		},
 		Memo:        NewRagnarokMemo(1).String(),
 		FromAddress: addr,
 		ToAddress:   newVaultAddr,
-		Gas:         BNBGasFeeSingleton,
+		Gas: common.Gas{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
+		},
 	}, 1, retireVault.PubKey, 1)
 
 	msgRagnarok := NewMsgRagnarok(tx, 1, keeper.activeNodeAccount.NodeAddress)
 	_, err = handler.handle(ctx, *msgRagnarok)
 	c.Assert(err, IsNil)
-	c.Assert(keeper.activeNodeAccount.Bond, DeepEquals, cosmos.NewUint(9999942214))
+	c.Assert(keeper.activeNodeAccount.Bond, DeepEquals, cosmos.NewUint(9999983464))
 }

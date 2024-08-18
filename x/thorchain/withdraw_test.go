@@ -17,6 +17,8 @@ type WithdrawSuite struct{}
 
 var _ = Suite(&WithdrawSuite{})
 
+var ethSingleTxFee = cosmos.NewUint(37500)
+
 type WithdrawTestKeeper struct {
 	keeper.KVStoreDummy
 	store       map[string]interface{}
@@ -38,7 +40,7 @@ func getWithdrawTestKeeper2(c *C, ctx cosmos.Context, k keeper.Keeper, runeAddre
 	pool := Pool{
 		BalanceRune:  cosmos.NewUint(100 * common.One),
 		BalanceAsset: cosmos.NewUint(100 * common.One),
-		Asset:        common.BNBAsset,
+		Asset:        common.ETHAsset,
 		LPUnits:      cosmos.NewUint(200 * common.One),
 		SynthUnits:   cosmos.ZeroUint(),
 		Status:       PoolAvailable,
@@ -56,11 +58,11 @@ func getWithdrawTestKeeper2(c *C, ctx cosmos.Context, k keeper.Keeper, runeAddre
 }
 
 func (k *WithdrawTestKeeper) PoolExist(ctx cosmos.Context, asset common.Asset) bool {
-	return !asset.Equals(common.Asset{Chain: common.BNBChain, Symbol: "NOTEXIST", Ticker: "NOTEXIST"})
+	return !asset.Equals(common.Asset{Chain: common.ETHChain, Symbol: "NOTEXIST", Ticker: "NOTEXIST"})
 }
 
 func (k *WithdrawTestKeeper) GetPool(ctx cosmos.Context, asset common.Asset) (types.Pool, error) {
-	if asset.Equals(common.Asset{Chain: common.BNBChain, Symbol: "NOTEXIST", Ticker: "NOTEXIST"}) {
+	if asset.Equals(common.Asset{Chain: common.ETHChain, Symbol: "NOTEXIST", Ticker: "NOTEXIST"}) {
 		return types.Pool{}, nil
 	}
 	if val, ok := k.store[asset.String()]; ok {
@@ -87,7 +89,7 @@ func (k *WithdrawTestKeeper) GetGas(ctx cosmos.Context, asset common.Asset) ([]c
 }
 
 func (k *WithdrawTestKeeper) GetLiquidityProvider(ctx cosmos.Context, asset common.Asset, addr common.Address) (LiquidityProvider, error) {
-	if asset.Equals(common.Asset{Chain: common.BNBChain, Symbol: "NOTEXISTSTICKER", Ticker: "NOTEXISTSTICKER"}) {
+	if asset.Equals(common.Asset{Chain: common.ETHChain, Symbol: "NOTEXISTSTICKER", Ticker: "NOTEXISTSTICKER"}) {
 		return types.LiquidityProvider{}, errors.New("you asked for it")
 	}
 	if notExistLiquidityProviderAsset.Equals(asset) {
@@ -116,9 +118,9 @@ func (s *WithdrawSuite) SetUpSuite(c *C) {
 // TestValidateWithdraw is to test validateWithdraw function
 func (s WithdrawSuite) TestValidateWithdraw(c *C) {
 	accountAddr := GetRandomValidatorNode(NodeWhiteListed).NodeAddress
-	runeAddress, err := common.NewAddress("bnb1g0xakzh03tpa54khxyvheeu92hwzypkdce77rm")
+	runeAddress, err := common.NewAddress("0x90f2b1ae50e6018230e90a33f98c7844a0ab635a")
 	if err != nil {
-		c.Error("fail to create new BNB Address")
+		c.Error("fail to create new address")
 	}
 	inputs := []struct {
 		name          string
@@ -130,7 +132,7 @@ func (s WithdrawSuite) TestValidateWithdraw(c *C) {
 			msg: MsgWithdrawLiquidity{
 				WithdrawAddress: "",
 				BasisPoints:     cosmos.NewUint(10000),
-				Asset:           common.BNBAsset,
+				Asset:           common.ETHAsset,
 				Tx:              common.Tx{ID: "28B40BF105A112389A339A64BD1A042E6140DC9082C679586C6CF493A9FDE3FE"},
 				Signer:          accountAddr,
 			},
@@ -141,7 +143,7 @@ func (s WithdrawSuite) TestValidateWithdraw(c *C) {
 			msg: MsgWithdrawLiquidity{
 				WithdrawAddress: runeAddress,
 				BasisPoints:     cosmos.ZeroUint(),
-				Asset:           common.BNBAsset,
+				Asset:           common.ETHAsset,
 				Tx:              common.Tx{ID: "28B40BF105A112389A339A64BD1A042E6140DC9082C679586C6CF493A9FDE3FE"},
 				Signer:          accountAddr,
 			},
@@ -152,7 +154,7 @@ func (s WithdrawSuite) TestValidateWithdraw(c *C) {
 			msg: MsgWithdrawLiquidity{
 				WithdrawAddress: runeAddress,
 				BasisPoints:     cosmos.NewUint(10000),
-				Asset:           common.BNBAsset,
+				Asset:           common.ETHAsset,
 				Tx:              common.Tx{},
 				Signer:          accountAddr,
 			},
@@ -174,7 +176,7 @@ func (s WithdrawSuite) TestValidateWithdraw(c *C) {
 			msg: MsgWithdrawLiquidity{
 				WithdrawAddress: runeAddress,
 				BasisPoints:     cosmos.NewUint(10001),
-				Asset:           common.BNBAsset,
+				Asset:           common.ETHAsset,
 				Tx:              common.Tx{ID: "28B40BF105A112389A339A64BD1A042E6140DC9082C679586C6CF493A9FDE3FE"},
 				Signer:          accountAddr,
 			},
@@ -185,18 +187,18 @@ func (s WithdrawSuite) TestValidateWithdraw(c *C) {
 			msg: MsgWithdrawLiquidity{
 				WithdrawAddress: runeAddress,
 				BasisPoints:     cosmos.NewUint(10000),
-				Asset:           common.Asset{Chain: common.BNBChain, Ticker: "NOTEXIST", Symbol: "NOTEXIST"},
+				Asset:           common.Asset{Chain: common.ETHChain, Ticker: "NOTEXIST", Symbol: "NOTEXIST"},
 				Tx:              common.Tx{ID: "28B40BF105A112389A339A64BD1A042E6140DC9082C679586C6CF493A9FDE3FE"},
 				Signer:          accountAddr,
 			},
-			expectedError: errors.New("pool-BNB.NOTEXIST doesn't exist"),
+			expectedError: errors.New("pool-ETH.NOTEXIST doesn't exist"),
 		},
 		{
 			name: "all-good",
 			msg: MsgWithdrawLiquidity{
 				WithdrawAddress: runeAddress,
 				BasisPoints:     cosmos.NewUint(10000),
-				Asset:           common.BNBAsset,
+				Asset:           common.ETHAsset,
 				Tx:              common.Tx{ID: "28B40BF105A112389A339A64BD1A042E6140DC9082C679586C6CF493A9FDE3FE"},
 				Signer:          accountAddr,
 			},
@@ -342,7 +344,7 @@ func (WithdrawSuite) TestWithdraw(c *C) {
 	ps := NewWithdrawTestKeeper(mgr.Keeper())
 	ps2 := getWithdrawTestKeeper(c, ctx, mgr.Keeper(), runeAddress)
 
-	remainGas := uint64(37500)
+	remainGas := uint64(56250)
 	testCases := []struct {
 		name          string
 		msg           MsgWithdrawLiquidity
@@ -356,7 +358,7 @@ func (WithdrawSuite) TestWithdraw(c *C) {
 			msg: MsgWithdrawLiquidity{
 				WithdrawAddress: "",
 				BasisPoints:     cosmos.NewUint(10000),
-				Asset:           common.BNBAsset,
+				Asset:           common.ETHAsset,
 				Tx:              common.Tx{ID: "28B40BF105A112389A339A64BD1A042E6140DC9082C679586C6CF493A9FDE3FE"},
 				Signer:          accountAddr,
 			},
@@ -370,7 +372,7 @@ func (WithdrawSuite) TestWithdraw(c *C) {
 			msg: MsgWithdrawLiquidity{
 				WithdrawAddress: runeAddress,
 				BasisPoints:     cosmos.NewUint(10000),
-				Asset:           common.BNBAsset,
+				Asset:           common.ETHAsset,
 				Tx:              common.Tx{},
 				Signer:          accountAddr,
 			},
@@ -398,7 +400,7 @@ func (WithdrawSuite) TestWithdraw(c *C) {
 			msg: MsgWithdrawLiquidity{
 				WithdrawAddress: runeAddress,
 				BasisPoints:     cosmos.NewUint(10001),
-				Asset:           common.BNBAsset,
+				Asset:           common.ETHAsset,
 				Tx:              common.Tx{ID: "28B40BF105A112389A339A64BD1A042E6140DC9082C679586C6CF493A9FDE3FE"},
 				Signer:          accountAddr,
 			},
@@ -412,21 +414,21 @@ func (WithdrawSuite) TestWithdraw(c *C) {
 			msg: MsgWithdrawLiquidity{
 				WithdrawAddress: runeAddress,
 				BasisPoints:     cosmos.NewUint(10000),
-				Asset:           common.Asset{Chain: common.BNBChain, Ticker: "NOTEXIST", Symbol: "NOTEXIST"},
+				Asset:           common.Asset{Chain: common.ETHChain, Ticker: "NOTEXIST", Symbol: "NOTEXIST"},
 				Tx:              common.Tx{ID: "28B40BF105A112389A339A64BD1A042E6140DC9082C679586C6CF493A9FDE3FE"},
 				Signer:          accountAddr,
 			},
 			ps:            ps,
 			runeAmount:    cosmos.ZeroUint(),
 			assetAmount:   cosmos.ZeroUint(),
-			expectedError: errors.New("pool-BNB.NOTEXIST doesn't exist"),
+			expectedError: errors.New("pool-ETH.NOTEXIST doesn't exist"),
 		},
 		{
 			name: "invalid-pool-liquidity-provider-notexist",
 			msg: MsgWithdrawLiquidity{
 				WithdrawAddress: runeAddress,
 				BasisPoints:     cosmos.NewUint(10000),
-				Asset:           common.Asset{Chain: common.BNBChain, Ticker: "NOTEXISTSTICKER", Symbol: "NOTEXISTSTICKER"},
+				Asset:           common.Asset{Chain: common.ETHChain, Ticker: "NOTEXISTSTICKER", Symbol: "NOTEXISTSTICKER"},
 				Tx:              common.Tx{ID: "28B40BF105A112389A339A64BD1A042E6140DC9082C679586C6CF493A9FDE3FE"},
 				Signer:          accountAddr,
 			},
@@ -440,7 +442,7 @@ func (WithdrawSuite) TestWithdraw(c *C) {
 			msg: MsgWithdrawLiquidity{
 				WithdrawAddress: runeAddress,
 				BasisPoints:     cosmos.ZeroUint(),
-				Asset:           common.BNBAsset,
+				Asset:           common.ETHAsset,
 				Tx:              common.Tx{ID: "28B40BF105A112389A339A64BD1A042E6140DC9082C679586C6CF493A9FDE3FE"},
 				Signer:          accountAddr,
 			},
@@ -454,7 +456,7 @@ func (WithdrawSuite) TestWithdraw(c *C) {
 			msg: MsgWithdrawLiquidity{
 				WithdrawAddress: runeAddress,
 				BasisPoints:     cosmos.NewUint(5000),
-				Asset:           common.BNBAsset,
+				Asset:           common.ETHAsset,
 				Tx:              common.Tx{ID: "28B40BF105A112389A339A64BD1A042E6140DC9082C679586C6CF493A9FDE3FE"},
 				Signer:          accountAddr,
 			},
@@ -468,7 +470,7 @@ func (WithdrawSuite) TestWithdraw(c *C) {
 			msg: MsgWithdrawLiquidity{
 				WithdrawAddress: runeAddress,
 				BasisPoints:     cosmos.NewUint(10000),
-				Asset:           common.BNBAsset,
+				Asset:           common.ETHAsset,
 				Tx:              common.Tx{ID: "28B40BF105A112389A339A64BD1A042E6140DC9082C679586C6CF493A9FDE3FE"},
 				Signer:          accountAddr,
 			},
@@ -481,10 +483,10 @@ func (WithdrawSuite) TestWithdraw(c *C) {
 	for _, tc := range testCases {
 		c.Logf("name:%s", tc.name)
 		mgr.K = tc.ps
-		c.Assert(tc.ps.SaveNetworkFee(ctx, common.BNBChain, NetworkFee{
-			Chain:              common.BNBChain,
+		c.Assert(tc.ps.SaveNetworkFee(ctx, common.ETHChain, NetworkFee{
+			Chain:              common.ETHChain,
 			TransactionSize:    1,
-			TransactionFeeRate: bnbSingleTxFee.Uint64(),
+			TransactionFeeRate: ethSingleTxFee.Uint64(),
 		}), IsNil)
 		r, asset, _, _, err := withdraw(ctx, tc.msg, mgr)
 		if tc.expectedError != nil {
@@ -516,7 +518,7 @@ func (WithdrawSuite) TestWithdrawAsym(c *C) {
 			msg: MsgWithdrawLiquidity{
 				WithdrawAddress: runeAddress,
 				BasisPoints:     cosmos.NewUint(10000),
-				Asset:           common.BNBAsset,
+				Asset:           common.ETHAsset,
 				Tx:              common.Tx{ID: "28B40BF105A112389A339A64BD1A042E6140DC9082C679586C6CF493A9FDE3FE"},
 				WithdrawalAsset: common.RuneAsset(),
 				Signer:          accountAddr,
@@ -530,9 +532,9 @@ func (WithdrawSuite) TestWithdrawAsym(c *C) {
 			msg: MsgWithdrawLiquidity{
 				WithdrawAddress: runeAddress,
 				BasisPoints:     cosmos.NewUint(10000),
-				Asset:           common.BNBAsset,
+				Asset:           common.ETHAsset,
 				Tx:              common.Tx{ID: "28B40BF105A112389A339A64BD1A042E6140DC9082C679586C6CF493A9FDE3FE"},
-				WithdrawalAsset: common.BNBAsset,
+				WithdrawalAsset: common.ETHAsset,
 				Signer:          accountAddr,
 			},
 			runeAmount:    cosmos.ZeroUint(),
@@ -545,10 +547,10 @@ func (WithdrawSuite) TestWithdrawAsym(c *C) {
 		ctx, mgr := setupManagerForTest(c)
 		ps := getWithdrawTestKeeper2(c, ctx, mgr.Keeper(), runeAddress)
 		mgr.K = ps
-		c.Assert(ps.SaveNetworkFee(ctx, common.BNBChain, NetworkFee{
-			Chain:              common.BNBChain,
+		c.Assert(ps.SaveNetworkFee(ctx, common.ETHChain, NetworkFee{
+			Chain:              common.ETHChain,
 			TransactionSize:    1,
-			TransactionFeeRate: bnbSingleTxFee.Uint64(),
+			TransactionFeeRate: ethSingleTxFee.Uint64(),
 		}), IsNil)
 		r, asset, _, _, err := withdraw(ctx, tc.msg, mgr)
 		if tc.expectedError != nil {
@@ -570,15 +572,15 @@ func (WithdrawSuite) TestWithdrawPendingRuneOrAsset(c *C) {
 	pool := Pool{
 		BalanceRune:  cosmos.NewUint(100 * common.One),
 		BalanceAsset: cosmos.NewUint(100 * common.One),
-		Asset:        common.BNBAsset,
+		Asset:        common.ETHAsset,
 		LPUnits:      cosmos.NewUint(200 * common.One),
 		Status:       PoolAvailable,
 	}
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
 	lp := LiquidityProvider{
-		Asset:              common.BNBAsset,
+		Asset:              common.ETHAsset,
 		RuneAddress:        GetRandomRUNEAddress(),
-		AssetAddress:       GetRandomBNBAddress(),
+		AssetAddress:       GetRandomETHAddress(),
 		LastAddHeight:      1024,
 		LastWithdrawHeight: 0,
 		Units:              cosmos.ZeroUint(),
@@ -590,9 +592,9 @@ func (WithdrawSuite) TestWithdrawPendingRuneOrAsset(c *C) {
 	msg := MsgWithdrawLiquidity{
 		WithdrawAddress: lp.RuneAddress,
 		BasisPoints:     cosmos.NewUint(10000),
-		Asset:           common.BNBAsset,
+		Asset:           common.ETHAsset,
 		Tx:              common.Tx{ID: "28B40BF105A112389A339A64BD1A042E6140DC9082C679586C6CF493A9FDE3FE"},
-		WithdrawalAsset: common.BNBAsset,
+		WithdrawalAsset: common.ETHAsset,
 		Signer:          accountAddr,
 	}
 	runeAmt, assetAmt, unitsLeft, gas, err := withdraw(ctx, msg, mgr)
@@ -603,9 +605,9 @@ func (WithdrawSuite) TestWithdrawPendingRuneOrAsset(c *C) {
 	c.Assert(gas.IsZero(), Equals, true)
 
 	lp1 := LiquidityProvider{
-		Asset:              common.BNBAsset,
+		Asset:              common.ETHAsset,
 		RuneAddress:        GetRandomRUNEAddress(),
-		AssetAddress:       GetRandomBNBAddress(),
+		AssetAddress:       GetRandomETHAddress(),
 		LastAddHeight:      1024,
 		LastWithdrawHeight: 0,
 		Units:              cosmos.ZeroUint(),
@@ -617,9 +619,9 @@ func (WithdrawSuite) TestWithdrawPendingRuneOrAsset(c *C) {
 	msg1 := MsgWithdrawLiquidity{
 		WithdrawAddress: lp1.RuneAddress,
 		BasisPoints:     cosmos.NewUint(10000),
-		Asset:           common.BNBAsset,
+		Asset:           common.ETHAsset,
 		Tx:              common.Tx{ID: "28B40BF105A112389A339A64BD1A042E6140DC9082C679586C6CF493A9FDE3FE"},
-		WithdrawalAsset: common.BNBAsset,
+		WithdrawalAsset: common.ETHAsset,
 		Signer:          accountAddr,
 	}
 	runeAmt, assetAmt, unitsLeft, gas, err = withdraw(ctx, msg1, mgr)
@@ -636,7 +638,7 @@ func (s *WithdrawSuite) TestWithdrawPendingLiquidityShouldRoundToPoolDecimals(c 
 	pool := Pool{
 		BalanceRune:  cosmos.NewUint(100 * common.One),
 		BalanceAsset: cosmos.NewUint(100 * common.One),
-		Asset:        common.LUNAAsset,
+		Asset:        common.ETHAsset,
 		LPUnits:      cosmos.NewUint(200 * common.One),
 		Status:       PoolAvailable,
 		Decimals:     int64(6),
@@ -648,7 +650,7 @@ func (s *WithdrawSuite) TestWithdrawPendingLiquidityShouldRoundToPoolDecimals(c 
 	// create a LP record that has pending asset
 	lpAddr := GetRandomTHORAddress()
 	c.Assert(addHandler.addLiquidity(ctx,
-		common.LUNAAsset,
+		common.ETHAsset,
 		cosmos.ZeroUint(),
 		cosmos.NewUint(339448125567),
 		lpAddr,
@@ -661,9 +663,9 @@ func (s *WithdrawSuite) TestWithdrawPendingLiquidityShouldRoundToPoolDecimals(c 
 	msg2 := MsgWithdrawLiquidity{
 		WithdrawAddress: lpAddr,
 		BasisPoints:     cosmos.NewUint(10000),
-		Asset:           common.LUNAAsset,
+		Asset:           common.ETHAsset,
 		Tx:              common.Tx{ID: "28B40BF105A112389A339A64BD1A042E6140DC9082C679586C6CF493A9FDE3FE"},
-		WithdrawalAsset: common.LUNAAsset,
+		WithdrawalAsset: common.ETHAsset,
 		Signer:          accountAddr,
 	}
 	runeAmt, assetAmt, unitsClaimed, _, err := withdraw(newctx, msg2, mgr)
@@ -678,7 +680,7 @@ func getWithdrawTestKeeper(c *C, ctx cosmos.Context, k keeper.Keeper, runeAddres
 	pool := Pool{
 		BalanceRune:  cosmos.NewUint(100 * common.One),
 		BalanceAsset: cosmos.NewUint(100 * common.One),
-		Asset:        common.BNBAsset,
+		Asset:        common.ETHAsset,
 		LPUnits:      cosmos.NewUint(100 * common.One),
 		SynthUnits:   cosmos.ZeroUint(),
 		Status:       PoolAvailable,

@@ -14,13 +14,6 @@ import (
 
 func TestPackage(t *testing.T) { TestingT(t) }
 
-var bnbSingleTxFee = cosmos.NewUint(37500)
-
-// Gas Fees
-var BNBGasFeeSingleton = common.Gas{
-	{Asset: common.BNBAsset, Amount: bnbSingleTxFee},
-}
-
 type ThorchainSuite struct{}
 
 var _ = Suite(&ThorchainSuite{})
@@ -29,54 +22,54 @@ func (s *ThorchainSuite) TestLiquidityProvision(c *C) {
 	var err error
 	ctx, keeper := setupKeeperForTest(c)
 	user1rune := GetRandomRUNEAddress()
-	user1asset := GetRandomBNBAddress()
+	user1asset := GetRandomETHAddress()
 	user2rune := GetRandomRUNEAddress()
-	user2asset := GetRandomBNBAddress()
+	user2asset := GetRandomETHAddress()
 	txID := GetRandomTxHash()
 	constAccessor := constants.GetConstantValues(GetCurrentVersion())
 	c.Assert(err, IsNil)
 
-	// create bnb pool
+	// create eth pool
 	pool := NewPool()
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.ETHAsset
 	c.Assert(keeper.SetPool(ctx, pool), IsNil)
 	addHandler := NewAddLiquidityHandler(NewDummyMgrWithKeeper(keeper))
 	// liquidity provider for user1
-	err = addHandler.addLiquidity(ctx, common.BNBAsset, cosmos.NewUint(100*common.One), cosmos.NewUint(100*common.One), user1rune, user1asset, txID, false, constAccessor)
+	err = addHandler.addLiquidity(ctx, common.ETHAsset, cosmos.NewUint(100*common.One), cosmos.NewUint(100*common.One), user1rune, user1asset, txID, false, constAccessor)
 	c.Assert(err, IsNil)
-	err = addHandler.addLiquidity(ctx, common.BNBAsset, cosmos.NewUint(100*common.One), cosmos.NewUint(100*common.One), user1rune, user1asset, txID, false, constAccessor)
+	err = addHandler.addLiquidity(ctx, common.ETHAsset, cosmos.NewUint(100*common.One), cosmos.NewUint(100*common.One), user1rune, user1asset, txID, false, constAccessor)
 	c.Assert(err, IsNil)
-	lp1, err := keeper.GetLiquidityProvider(ctx, common.BNBAsset, user1rune)
+	lp1, err := keeper.GetLiquidityProvider(ctx, common.ETHAsset, user1rune)
 	c.Assert(err, IsNil)
 	c.Check(lp1.Units.IsZero(), Equals, false)
 
 	// liquidity provider for user2
-	err = addHandler.addLiquidity(ctx, common.BNBAsset, cosmos.NewUint(75*common.One), cosmos.NewUint(75*common.One), user2rune, user2asset, txID, false, constAccessor)
+	err = addHandler.addLiquidity(ctx, common.ETHAsset, cosmos.NewUint(75*common.One), cosmos.NewUint(75*common.One), user2rune, user2asset, txID, false, constAccessor)
 	c.Assert(err, IsNil)
-	err = addHandler.addLiquidity(ctx, common.BNBAsset, cosmos.NewUint(75*common.One), cosmos.NewUint(75*common.One), user2rune, user2asset, txID, false, constAccessor)
+	err = addHandler.addLiquidity(ctx, common.ETHAsset, cosmos.NewUint(75*common.One), cosmos.NewUint(75*common.One), user2rune, user2asset, txID, false, constAccessor)
 	c.Assert(err, IsNil)
-	lp2, err := keeper.GetLiquidityProvider(ctx, common.BNBAsset, user2rune)
+	lp2, err := keeper.GetLiquidityProvider(ctx, common.ETHAsset, user2rune)
 	c.Assert(err, IsNil)
 	c.Check(lp2.Units.IsZero(), Equals, false)
 
 	// withdraw for user1
-	msg := NewMsgWithdrawLiquidity(GetRandomTx(), user1rune, cosmos.NewUint(10000), common.BNBAsset, common.EmptyAsset, GetRandomBech32Addr())
+	msg := NewMsgWithdrawLiquidity(GetRandomTx(), user1rune, cosmos.NewUint(10000), common.ETHAsset, common.EmptyAsset, GetRandomBech32Addr())
 	_, _, _, _, err = withdraw(ctx, *msg, NewDummyMgrWithKeeper(keeper))
 	c.Assert(err, IsNil)
-	lp1, err = keeper.GetLiquidityProvider(ctx, common.BNBAsset, user1rune)
+	lp1, err = keeper.GetLiquidityProvider(ctx, common.ETHAsset, user1rune)
 	c.Assert(err, IsNil)
 	c.Check(lp1.Units.IsZero(), Equals, true)
 
 	// withdraw for user2
-	msg = NewMsgWithdrawLiquidity(GetRandomTx(), user2rune, cosmos.NewUint(10000), common.BNBAsset, common.EmptyAsset, GetRandomBech32Addr())
+	msg = NewMsgWithdrawLiquidity(GetRandomTx(), user2rune, cosmos.NewUint(10000), common.ETHAsset, common.EmptyAsset, GetRandomBech32Addr())
 	_, _, _, _, err = withdraw(ctx, *msg, NewDummyMgrWithKeeper(keeper))
 	c.Assert(err, IsNil)
-	lp2, err = keeper.GetLiquidityProvider(ctx, common.BNBAsset, user2rune)
+	lp2, err = keeper.GetLiquidityProvider(ctx, common.ETHAsset, user2rune)
 	c.Assert(err, IsNil)
 	c.Check(lp2.Units.IsZero(), Equals, true)
 
 	// check pool is now empty
-	pool, err = keeper.GetPool(ctx, common.BNBAsset)
+	pool, err = keeper.GetPool(ctx, common.ETHAsset)
 	c.Assert(err, IsNil)
 	c.Check(pool.BalanceRune.IsZero(), Equals, true)
 	remainGas := uint64(37500)
@@ -84,16 +77,16 @@ func (s *ThorchainSuite) TestLiquidityProvision(c *C) {
 	c.Check(pool.LPUnits.IsZero(), Equals, true)
 
 	// liquidity provider for user1, again
-	err = addHandler.addLiquidity(ctx, common.BNBAsset, cosmos.NewUint(100*common.One), cosmos.NewUint(100*common.One), user1rune, user1asset, txID, false, constAccessor)
+	err = addHandler.addLiquidity(ctx, common.ETHAsset, cosmos.NewUint(100*common.One), cosmos.NewUint(100*common.One), user1rune, user1asset, txID, false, constAccessor)
 	c.Assert(err, IsNil)
-	err = addHandler.addLiquidity(ctx, common.BNBAsset, cosmos.NewUint(100*common.One), cosmos.NewUint(100*common.One), user1rune, user1asset, txID, false, constAccessor)
+	err = addHandler.addLiquidity(ctx, common.ETHAsset, cosmos.NewUint(100*common.One), cosmos.NewUint(100*common.One), user1rune, user1asset, txID, false, constAccessor)
 	c.Assert(err, IsNil)
-	lp1, err = keeper.GetLiquidityProvider(ctx, common.BNBAsset, user1rune)
+	lp1, err = keeper.GetLiquidityProvider(ctx, common.ETHAsset, user1rune)
 	c.Assert(err, IsNil)
 	c.Check(lp1.Units.IsZero(), Equals, false)
 
 	// check pool is NOT empty
-	pool, err = keeper.GetPool(ctx, common.BNBAsset)
+	pool, err = keeper.GetPool(ctx, common.ETHAsset)
 	c.Assert(err, IsNil)
 	c.Check(pool.BalanceRune.Equal(cosmos.NewUint(200*common.One)), Equals, true)
 	c.Check(pool.BalanceAsset.Equal(cosmos.NewUint(20000000000+remainGas)), Equals, true, Commentf("%d", pool.BalanceAsset.Uint64()))
@@ -108,17 +101,17 @@ func (s *ThorchainSuite) TestChurn(c *C) {
 	vault := GetRandomVault()
 	vault.AddFunds(common.Coins{
 		common.NewCoin(common.RuneAsset(), cosmos.NewUint(100*common.One)),
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(79*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(79*common.One)),
 	})
-	c.Assert(mgr.Keeper().SaveNetworkFee(ctx, common.BNBChain, NetworkFee{
-		Chain:              common.BNBChain,
+	c.Assert(mgr.Keeper().SaveNetworkFee(ctx, common.ETHChain, NetworkFee{
+		Chain:              common.ETHChain,
 		TransactionSize:    1,
-		TransactionFeeRate: 37500,
+		TransactionFeeRate: 25000,
 	}), IsNil)
 	c.Assert(mgr.Keeper().SetPool(ctx, Pool{
 		BalanceRune:  cosmos.NewUint(common.One),
 		BalanceAsset: cosmos.NewUint(common.One),
-		Asset:        common.BNBAsset,
+		Asset:        common.ETHAsset,
 		LPUnits:      cosmos.NewUint(common.One),
 		Status:       PoolAvailable,
 	}), IsNil)
@@ -254,10 +247,10 @@ func (s *ThorchainSuite) TestRagnarok(c *C) {
 	ctx = ctx.WithBlockHeight(10)
 	ver := GetCurrentVersion()
 	consts := constants.GetConstantValues(ver)
-	c.Assert(mgr.Keeper().SaveNetworkFee(ctx, common.BNBChain, NetworkFee{
-		Chain:              common.BNBChain,
+	c.Assert(mgr.Keeper().SaveNetworkFee(ctx, common.ETHChain, NetworkFee{
+		Chain:              common.ETHChain,
 		TransactionSize:    1,
-		TransactionFeeRate: bnbSingleTxFee.Uint64(),
+		TransactionFeeRate: 10000,
 	}), IsNil)
 
 	// create active asgard vault
@@ -266,10 +259,10 @@ func (s *ThorchainSuite) TestRagnarok(c *C) {
 
 	// create pools
 	pool := NewPool()
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.ETHAsset
 	pool.Status = PoolAvailable
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
-	boltAsset, err := common.NewAsset("BNB.BOLT-123")
+	boltAsset, err := common.NewAsset("ETH.BOLT-123")
 	c.Assert(err, IsNil)
 	pool.Asset = boltAsset
 	pool.Status = PoolAvailable
@@ -281,20 +274,20 @@ func (s *ThorchainSuite) TestRagnarok(c *C) {
 	addHandler := NewAddLiquidityHandler(mgr)
 	// add liquidity providers
 	lp1 := GetRandomRUNEAddress() // LiquidityProvider1
-	lp1asset := GetRandomBNBAddress()
-	err = addHandler.addLiquidity(ctx, common.BNBAsset, cosmos.NewUint(100*common.One), cosmos.NewUint(10*common.One), lp1, lp1asset, GetRandomTxHash(), false, consts)
+	lp1asset := GetRandomETHAddress()
+	err = addHandler.addLiquidity(ctx, common.ETHAsset, cosmos.NewUint(100*common.One), cosmos.NewUint(10*common.One), lp1, lp1asset, GetRandomTxHash(), false, consts)
 	c.Assert(err, IsNil)
 	err = addHandler.addLiquidity(ctx, boltAsset, cosmos.NewUint(50*common.One), cosmos.NewUint(11*common.One), lp1, lp1asset, GetRandomTxHash(), false, consts)
 	c.Assert(err, IsNil)
 	lp2 := GetRandomRUNEAddress() // liquidity provider 2
-	lp2asset := GetRandomBNBAddress()
-	err = addHandler.addLiquidity(ctx, common.BNBAsset, cosmos.NewUint(155*common.One), cosmos.NewUint(15*common.One), lp2, lp2asset, GetRandomTxHash(), false, consts)
+	lp2asset := GetRandomETHAddress()
+	err = addHandler.addLiquidity(ctx, common.ETHAsset, cosmos.NewUint(155*common.One), cosmos.NewUint(15*common.One), lp2, lp2asset, GetRandomTxHash(), false, consts)
 	c.Assert(err, IsNil)
 	err = addHandler.addLiquidity(ctx, boltAsset, cosmos.NewUint(20*common.One), cosmos.NewUint(4*common.One), lp2, lp2asset, GetRandomTxHash(), false, consts)
 	c.Assert(err, IsNil)
 	lp3 := GetRandomRUNEAddress() // liquidity provider 3
-	lp3asset := GetRandomBNBAddress()
-	err = addHandler.addLiquidity(ctx, common.BNBAsset, cosmos.NewUint(155*common.One), cosmos.NewUint(15*common.One), lp3, lp3asset, GetRandomTxHash(), false, consts)
+	lp3asset := GetRandomETHAddress()
+	err = addHandler.addLiquidity(ctx, common.ETHAsset, cosmos.NewUint(155*common.One), cosmos.NewUint(15*common.One), lp3, lp3asset, GetRandomTxHash(), false, consts)
 	c.Assert(err, IsNil)
 
 	lp4 := GetRandomTHORAddress() // liquidity provider 4 , BTC
@@ -376,26 +369,26 @@ func (s *ThorchainSuite) TestRagnarokNoOneLeave(c *C) {
 
 	// create pools
 	pool := NewPool()
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.ETHAsset
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
-	boltAsset, err := common.NewAsset("BNB.BOLT-123")
+	boltAsset, err := common.NewAsset("ETH.BOLT-123")
 	c.Assert(err, IsNil)
 	pool.Asset = boltAsset
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
 	addHandler := NewAddLiquidityHandler(NewDummyMgrWithKeeper(mgr.Keeper()))
 	// add liquidity providers
 	lp1 := GetRandomRUNEAddress() // LiquidityProvider1
-	err = addHandler.addLiquidity(ctx, common.BNBAsset, cosmos.NewUint(100*common.One), cosmos.NewUint(10*common.One), lp1, lp1, GetRandomTxHash(), false, consts)
+	err = addHandler.addLiquidity(ctx, common.ETHAsset, cosmos.NewUint(100*common.One), cosmos.NewUint(10*common.One), lp1, lp1, GetRandomTxHash(), false, consts)
 	c.Assert(err, IsNil)
 	err = addHandler.addLiquidity(ctx, boltAsset, cosmos.NewUint(50*common.One), cosmos.NewUint(11*common.One), lp1, lp1, GetRandomTxHash(), false, consts)
 	c.Assert(err, IsNil)
 	lp2 := GetRandomRUNEAddress() // liquidity provider 2
-	err = addHandler.addLiquidity(ctx, common.BNBAsset, cosmos.NewUint(155*common.One), cosmos.NewUint(15*common.One), lp2, lp2, GetRandomTxHash(), false, consts)
+	err = addHandler.addLiquidity(ctx, common.ETHAsset, cosmos.NewUint(155*common.One), cosmos.NewUint(15*common.One), lp2, lp2, GetRandomTxHash(), false, consts)
 	c.Assert(err, IsNil)
 	err = addHandler.addLiquidity(ctx, boltAsset, cosmos.NewUint(20*common.One), cosmos.NewUint(4*common.One), lp2, lp2, GetRandomTxHash(), false, consts)
 	c.Assert(err, IsNil)
 	lp3 := GetRandomRUNEAddress() // liquidity provider 3
-	err = addHandler.addLiquidity(ctx, common.BNBAsset, cosmos.NewUint(155*common.One), cosmos.NewUint(15*common.One), lp3, lp3, GetRandomTxHash(), false, consts)
+	err = addHandler.addLiquidity(ctx, common.ETHAsset, cosmos.NewUint(155*common.One), cosmos.NewUint(15*common.One), lp3, lp3, GetRandomTxHash(), false, consts)
 	c.Assert(err, IsNil)
 	lps := []common.Address{
 		lp1, lp2, lp3,
@@ -421,8 +414,8 @@ func (s *ThorchainSuite) TestRagnarokNoOneLeave(c *C) {
 	}
 
 	// Add reserve contributors
-	contrib1 := GetRandomBNBAddress()
-	contrib2 := GetRandomBNBAddress()
+	contrib1 := GetRandomETHAddress()
+	contrib2 := GetRandomETHAddress()
 	reserves := ReserveContributors{
 		NewReserveContributor(contrib1, cosmos.NewUint(400_000_000*common.One)),
 		NewReserveContributor(contrib2, cosmos.NewUint(100_000*common.One)),

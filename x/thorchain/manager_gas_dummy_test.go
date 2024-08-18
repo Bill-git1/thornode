@@ -33,11 +33,10 @@ func (m *DummyGasManager) CalcOutboundFeeMultiplier(ctx cosmos.Context, targetSu
 }
 
 func (m *DummyGasManager) GetMaxGas(ctx cosmos.Context, chain common.Chain) (common.Coin, error) {
-	if chain.Equals(common.BNBChain) {
-		return common.NewCoin(common.BNBAsset, bnbSingleTxFee), nil
-	}
 	if chain.Equals(common.BTCChain) {
 		return common.NewCoin(common.BTCAsset, cosmos.NewUint(1000)), nil
+	} else if chain.Equals(common.ETHChain) {
+		return common.NewCoin(common.ETHAsset, cosmos.NewUint(37500)), nil
 	}
 	return common.NoCoin, errKaboom
 }

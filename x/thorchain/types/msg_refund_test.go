@@ -14,14 +14,14 @@ var _ = Suite(&MsgRefundTxSuite{})
 func (MsgRefundTxSuite) TestMsgRefundTx(c *C) {
 	txID := GetRandomTxHash()
 	inTxID := GetRandomTxHash()
-	bnb := GetRandomBNBAddress()
+	eth := GetRandomETHAddress()
 	acc1 := GetRandomBech32Addr()
 	tx := NewObservedTx(common.NewTx(
 		txID,
-		bnb,
-		GetRandomBNBAddress(),
-		common.Coins{common.NewCoin(common.BNBAsset, cosmos.OneUint())},
-		BNBGasFeeSingleton,
+		eth,
+		GetRandomETHAddress(),
+		common.Coins{common.NewCoin(common.ETHAsset, cosmos.OneUint())},
+		common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))},
 		"",
 	), 12, GetRandomPubKey(), 12)
 	m := NewMsgRefundTx(tx, inTxID, acc1)
@@ -37,13 +37,13 @@ func (MsgRefundTxSuite) TestMsgRefundTx(c *C) {
 		{
 			txID:   common.TxID(""),
 			inTxID: inTxID,
-			sender: bnb,
+			sender: eth,
 			signer: acc1,
 		},
 		{
 			txID:   txID,
 			inTxID: common.TxID(""),
-			sender: bnb,
+			sender: eth,
 			signer: acc1,
 		},
 		{
@@ -55,7 +55,7 @@ func (MsgRefundTxSuite) TestMsgRefundTx(c *C) {
 		{
 			txID:   txID,
 			inTxID: inTxID,
-			sender: bnb,
+			sender: eth,
 			signer: cosmos.AccAddress{},
 		},
 	}
@@ -64,9 +64,9 @@ func (MsgRefundTxSuite) TestMsgRefundTx(c *C) {
 		tx = NewObservedTx(common.NewTx(
 			item.txID,
 			item.sender,
-			GetRandomBNBAddress(),
-			common.Coins{common.NewCoin(common.BNBAsset, cosmos.OneUint())},
-			BNBGasFeeSingleton,
+			GetRandomETHAddress(),
+			common.Coins{common.NewCoin(common.ETHAsset, cosmos.OneUint())},
+			common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))},
 			"",
 		), 12, GetRandomPubKey(), 12)
 		m = NewMsgRefundTx(tx, item.inTxID, item.signer)

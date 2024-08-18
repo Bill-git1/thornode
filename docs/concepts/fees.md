@@ -199,12 +199,6 @@ Keep in mind the `outbound_fee` is priced in the gas asset of each chain. For ch
 
 The THORChain blockchain has a set 0.02 RUNE fee. This is set within the THORChain [Constants](https://thornode.ninerealms.com/thorchain/constants) by `NativeTransactionFee`. As THORChain is 1e8, `2000000 TOR = 0.02 RUNE`
 
-### Binance Chain
-
-THORChain uses the gas_rate as the flat Binance Chain transaction fee.
-
-E.g. If the `gas_rate` = 11250 then fee is 0.0011250 BNB.
-
 ### UTXO Chains like Bitcoin
 
 For UXTO chains link Bitcoin, `gas_rate`is denoted in Satoshis. The `gas_rate` is calculated by looking at the average previous block fee seen by the THORNodes.

@@ -15,7 +15,7 @@ type MsgReserveContributorSuite struct{}
 var _ = Suite(&MsgReserveContributorSuite{})
 
 func (s *MsgReserveContributorSuite) TestMsgReserveContributor(c *C) {
-	addr := GetRandomBNBAddress()
+	addr := GetRandomETHAddress()
 	amt := cosmos.NewUint(378 * common.One)
 	res := NewReserveContributor(addr, amt)
 	signer := GetRandomBech32Addr()

@@ -15,17 +15,17 @@ func (s *HandlerLoanRepaymentSuite) TestLoanValidate(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 
 	pool := NewPool()
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.ETHAsset
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
 
 	pool = NewPool()
 	pool.Asset = common.BTCAsset
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
 
-	owner := GetRandomBNBAddress()
+	owner := GetRandomETHAddress()
 	signer := GetRandomBech32Addr()
 
-	loan := NewLoan(owner, common.BNBAsset, 0)
+	loan := NewLoan(owner, common.ETHAsset, 0)
 	loan.DebtIssued = cosmos.NewUint(10 * common.One)
 	loan.CollateralDeposited = cosmos.NewUint(10 * common.One)
 	mgr.Keeper().SetLoan(ctx, loan)
@@ -34,7 +34,7 @@ func (s *HandlerLoanRepaymentSuite) TestLoanValidate(c *C) {
 	txid, _ := common.NewTxID("000000000")
 
 	// happy path
-	msg := NewMsgLoanRepayment(owner, common.BNBAsset, cosmos.OneUint(), owner, common.NewCoin(common.TOR, cosmos.NewUint(10*common.One)), signer, txid)
+	msg := NewMsgLoanRepayment(owner, common.ETHAsset, cosmos.OneUint(), owner, common.NewCoin(common.TOR, cosmos.NewUint(10*common.One)), signer, txid)
 	c.Check(handler.validate(ctx.WithBlockHeight(14400000), *msg), IsNil)
 
 	// unhappy path: loan hasn't matured
@@ -123,9 +123,9 @@ func (s *HandlerLoanRepaymentSuite) TestLoanRepaymentHandleWithSwap(c *C) {
 	pool.Decimals = 8
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
 
-	mgr.Keeper().SetMimir(ctx, "TorAnchor-BNB-BUSD-BD1", 1) // enable BUSD pool as a TOR anchor
+	mgr.Keeper().SetMimir(ctx, "TorAnchor-ETH-BUSD-BD1", 1) // enable BUSD pool as a TOR anchor
 	busd := NewPool()
-	busd.Asset, _ = common.NewAsset("BNB.BUSD-BD1")
+	busd.Asset, _ = common.NewAsset("ETH.BUSD-BD1")
 	busd.Status = PoolAvailable
 	busd.BalanceRune = cosmos.NewUint(433267688964312)
 	busd.BalanceAsset = cosmos.NewUint(314031308608965)

@@ -9,9 +9,9 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
+	"testing"
 	"time"
 
 	"github.com/blang/semver"
@@ -40,6 +40,8 @@ import (
 	"gitlab.com/thorchain/thornode/x/thorchain"
 	types2 "gitlab.com/thorchain/thornode/x/thorchain/types"
 )
+
+func TestPackage(t *testing.T) { TestingT(t) }
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // Mocks
@@ -228,8 +230,9 @@ func (b *MockChainClient) GetHeight() (int64, error) {
 }
 
 func (b *MockChainClient) GetGasFee(count uint64) common.Gas {
-	coins := make(common.Coins, count)
-	return common.CalcBinanceGasPrice(common.Tx{Coins: coins}, common.BNBAsset, []cosmos.Uint{cosmos.NewUint(37500), cosmos.NewUint(30000)})
+	return common.Gas{
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
+	}
 }
 
 func (b *MockChainClient) CheckIsTestNet() (string, bool) {
@@ -237,7 +240,7 @@ func (b *MockChainClient) CheckIsTestNet() (string, bool) {
 }
 
 func (b *MockChainClient) GetChain() common.Chain {
-	return common.BNBChain
+	return common.ETHChain
 }
 
 func (b *MockChainClient) GetBlockScannerHeight() (int64, error) {
@@ -305,7 +308,7 @@ func GetMetricForTest(c *C) *metrics.Metrics {
 			ListenPort:   9000,
 			ReadTimeout:  time.Second,
 			WriteTimeout: time.Second,
-			Chains:       common.Chains{common.BNBChain},
+			Chains:       common.Chains{common.ETHChain},
 		})
 		c.Assert(m, NotNil)
 		c.Assert(err, IsNil)
@@ -314,10 +317,9 @@ func GetMetricForTest(c *C) *metrics.Metrics {
 }
 
 type SignSuite struct {
-	thordir  string
 	thorKeys *thorclient.Keys
 	bridge   thorclient.ThorchainBridge
-	m        *metrics.Metrics
+	metrics  *metrics.Metrics
 	rpcHost  string
 	storage  *SignerStore
 }
@@ -326,74 +328,42 @@ var _ = Suite(&SignSuite{})
 
 func (s *SignSuite) SetUpSuite(c *C) {
 	thorchain.SetupConfigForTest()
-	s.m = GetMetricForTest(c)
-	c.Assert(s.m, NotNil)
-	ns := strconv.Itoa(time.Now().Nanosecond())
-	types2.SetupConfigForTest()
-	c.Assert(os.Setenv("NET", "mocknet"), IsNil)
+	s.metrics = GetMetricForTest(c)
+	c.Assert(s.metrics, NotNil)
 
-	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		c.Logf("requestUri:%s", req.RequestURI)
-		if strings.HasPrefix(req.RequestURI, "/txs") { // nolint
-			_, err := rw.Write([]byte(`{ "jsonrpc": "2.0", "id": "", "result": { "height": "1", "txhash": "AAAA000000000000000000000000000000000000000000000000000000000000", "logs": [{"success": "true", "log": ""}] } }`))
-			c.Assert(err, IsNil)
-		} else if strings.HasPrefix(req.RequestURI, "/thorchain/lastblock/BNB") {
-			_, err := rw.Write([]byte(`{ "jsonrpc": "2.0", "id": "", "result": { "chain": "BNB", "lastobservedin": "0", "lastsignedout": "0", "thorchain": "0" } }`))
-			c.Assert(err, IsNil)
-		} else if strings.HasPrefix(req.RequestURI, "/thorchain/lastblock") {
-			_, err := rw.Write([]byte(`{ "jsonrpc": "2.0", "id": "", "result": { "chain": "ThorChain", "lastobservedin": "0", "lastsignedout": "0", "thorchain": "0" } }`))
-			c.Assert(err, IsNil)
-		} else if strings.HasPrefix(req.RequestURI, "/auth/accounts/") {
-			_, err := rw.Write([]byte(`{ "jsonrpc": "2.0", "id": "", "result": { "height": "0", "result": { "value": { "account_number": "0", "sequence": "0" } } } }`))
-			c.Assert(err, IsNil)
-		} else if strings.HasPrefix(req.RequestURI, "/thorchain/vaults/pubkeys") {
-			_, err := rw.Write([]byte(`{ "jsonrpc": "2.0", "id": "", "result": { "asgard": ["tthorpub1addwnpepq2jgpsw2lalzuk7sgtmyakj7l6890f5cfpwjyfp8k4y4t7cw2vk8v2ch5uz"] } }`))
-			c.Assert(err, IsNil)
-		} else if strings.HasPrefix(req.RequestURI, "/thorchain/keysign") {
-			_, err := rw.Write([]byte(`{
-			"chains": {
-				"BNB": {
-					"chain": "BNB",
-					"hash": "",
-					"height": "1",
-					"tx_array": [
-						{
-							"chain": "BNB",
-							"coin": {
-								"amount": "10000000000",
-								"asset": "BNB.BNB"
-							},
-							"in_hash": "ENULZOBGZHEKFOIBYRLLBELKFZVGXOBLTRQGTOWNDHMPZQMBLGJETOXJLHPVQIKY",
-							"memo": "",
-							"out_hash": "",
-							"to": "tbnb145wcuncewfkuc4v6an0r9laswejygcul43c3wu",
-							"vault_pubkey": "thorpub1addwnpepqfgfxharps79pqv8fv9ndqh90smw8c3slrtrssn58ryc5g3p9sx856x07yn"
-						}
-					]
-				}
+	server := httptest.NewServer(
+		http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			c.Logf("requestUri:%s", req.RequestURI)
+			switch {
+			case strings.HasPrefix(req.RequestURI, thorclient.MimirEndpoint):
+				buf, err := os.ReadFile("../../test/fixtures/endpoints/mimir/mimir.json")
+				c.Assert(err, IsNil)
+				_, err = rw.Write(buf)
+				c.Assert(err, IsNil)
+			case strings.HasPrefix(req.RequestURI, "/thorchain/lastblock"):
+				_, err := rw.Write([]byte(`[
+          {
+            "chain": "NOOP",
+            "lastobservedin": 0,
+            "lastsignedout": 0,
+            "thorchain": 0
+          }
+        ]`))
+				c.Assert(err, IsNil)
+			case strings.HasPrefix(req.RequestURI, "/thorchain/keysign"):
+				// unused since tests override signer storage, but must return valid json
+				_, err := rw.Write([]byte(`{}`))
+				c.Assert(err, IsNil)
 			}
-		}
-	`))
-			c.Assert(err, IsNil)
-		} else if strings.HasSuffix(req.RequestURI, "/signers") {
-			_, err := rw.Write([]byte(`[
-  "tthorpub1addwnpepqflvfv08t6qt95lmttd6wpf3ss8wx63e9vf6fvyuj2yy6nnyna576rfzjks",
-  "tthorpub1addwnpepq2flfr96skc5lkwdv0n5xjsnhmuju20x3zndgu42zd8dtkrud9m2vajhww6",
-  "tthorpub1addwnpepqwhnus6xs4208d4ynm05lv493amz3fexfjfx4vptntedd7k0ajlcunlfxxs"
-]`))
-			c.Assert(err, IsNil)
-		}
-	}))
+		}))
 
-	s.thordir = filepath.Join(os.TempDir(), ns, ".thorcli")
 	split := strings.SplitAfter(server.URL, ":")
 	s.rpcHost = split[len(split)-1]
 	cfg := config.BifrostClientConfiguration{
-		ChainID:         "thorchain",
-		ChainHost:       "localhost:" + s.rpcHost,
-		SignerName:      "bob",
-		SignerPasswd:    "password",
-		ChainHomeFolder: s.thordir,
+		ChainID:      "thorchain",
+		ChainHost:    "localhost:" + s.rpcHost,
+		SignerName:   "bob",
+		SignerPasswd: "password",
 	}
 
 	kb := cKeys.NewInMemory()
@@ -401,30 +371,10 @@ func (s *SignSuite) SetUpSuite(c *C) {
 	c.Assert(err, IsNil)
 	s.thorKeys = thorclient.NewKeysWithKeybase(kb, cfg.SignerName, cfg.SignerPasswd)
 	c.Assert(err, IsNil)
-	s.bridge, err = thorclient.NewThorchainBridge(cfg, s.m, s.thorKeys)
+	s.bridge, err = thorclient.NewThorchainBridge(cfg, s.metrics, s.thorKeys)
 	c.Assert(err, IsNil)
 	s.storage, err = NewSignerStore("", config.LevelDBOptions{}, "")
 	c.Assert(err, IsNil)
-}
-
-func (s *SignSuite) TearDownSuite(c *C) {
-	c.Assert(os.Unsetenv("NET"), IsNil)
-
-	if err := os.RemoveAll(s.thordir); err != nil {
-		c.Error(err)
-	}
-
-	if err := os.RemoveAll("signer_data"); err != nil {
-		c.Error(err)
-	}
-	tempPath := filepath.Join(os.TempDir(), "/var/data/bifrost/signer")
-	if err := os.RemoveAll(tempPath); err != nil {
-		c.Error(err)
-	}
-
-	if err := os.RemoveAll("signer/var"); err != nil {
-		c.Error(err)
-	}
 }
 
 func (s *SignSuite) TestProcess(c *C) {
@@ -443,17 +393,17 @@ func (s *SignSuite) TestProcess(c *C) {
 	}
 
 	chains := map[common.Chain]chainclients.ChainClient{
-		common.BNBChain: &MockChainClient{
+		common.ETHChain: &MockChainClient{
 			account: common.Account{
 				Coins: common.Coins{
-					common.NewCoin(common.BNBAsset, cosmos.NewUint(1000000)),
+					common.NewCoin(common.ETHAsset, cosmos.NewUint(1000000)),
 					common.NewCoin(common.RuneAsset(), cosmos.NewUint(1000000)),
 				},
 			},
 		},
 	}
 
-	blockScan, err := NewThorchainBlockScan(cfg.BlockScanner, s.storage, s.bridge, s.m, pubkeymanager.NewMockPoolAddressValidator())
+	blockScan, err := NewThorchainBlockScan(cfg.BlockScanner, s.storage, s.bridge, s.metrics, pubkeymanager.NewMockPoolAddressValidator())
 	c.Assert(err, IsNil)
 
 	blockScanner, err := blockscanner.NewBlockScanner(cfg.BlockScanner, s.storage, m, s.bridge, blockScan)
@@ -467,9 +417,9 @@ func (s *SignSuite) TestProcess(c *C) {
 		blockScanner:          blockScanner,
 		thorchainBlockScanner: blockScan,
 		chains:                chains,
-		m:                     s.m,
+		m:                     s.metrics,
 		storage:               s.storage,
-		errCounter:            s.m.GetCounterVec(metrics.SignerError),
+		errCounter:            s.metrics.GetCounterVec(metrics.SignerError),
 		pubkeyMgr:             pubkeymanager.NewMockPoolAddressValidator(),
 		thorchainBridge:       s.bridge,
 	}
@@ -497,7 +447,7 @@ func (s *SignSuite) TestBroadcastRetry(c *C) {
 	cc := &MockChainClient{ks: ks, broadcastFailCount: 2}
 	sign := &Signer{
 		chains: map[common.Chain]chainclients.ChainClient{
-			common.BNBChain: cc,
+			common.ETHChain: cc,
 		},
 		pubkeyMgr:           pubkeymanager.NewMockPoolAddressValidator(),
 		stopChan:            make(chan struct{}),
@@ -513,12 +463,12 @@ func (s *SignSuite) TestBroadcastRetry(c *C) {
 	c.Assert(err, IsNil)
 	err = sign.storage.Set(TxOutStoreItem{
 		TxOutItem: types.TxOutItem{
-			Chain:       common.BNBChain,
-			ToAddress:   "tbnb1yycn4mh6ffwpjf584t8lpp7c27ghu03gpvqkfj",
+			Chain:       common.ETHChain,
+			ToAddress:   "0x90f2b1ae50e6018230e90a33f98c7844a0ab635a",
 			Memo:        msg,
 			VaultPubKey: vaultPubKey,
 			Coins: common.Coins{ // must be set or signer overrides memo
-				common.NewCoin(common.BNBAsset, cosmos.NewUint(1000000)),
+				common.NewCoin(common.ETHAsset, cosmos.NewUint(1000000)),
 			},
 		},
 	})
@@ -580,7 +530,7 @@ func (s *SignSuite) TestRound7Retry(c *C) {
 	cc := &MockChainClient{ks: ks}
 	sign := &Signer{
 		chains: map[common.Chain]chainclients.ChainClient{
-			common.BNBChain: cc,
+			common.ETHChain: cc,
 		},
 		pubkeyMgr:           pubkeymanager.NewMockPoolAddressValidator(),
 		stopChan:            make(chan struct{}),
@@ -596,36 +546,36 @@ func (s *SignSuite) TestRound7Retry(c *C) {
 	c.Assert(err, IsNil)
 	err = sign.storage.Set(TxOutStoreItem{
 		TxOutItem: types.TxOutItem{
-			Chain:       common.BNBChain,
-			ToAddress:   "tbnb1yycn4mh6ffwpjf584t8lpp7c27ghu03gpvqkfj",
+			Chain:       common.ETHChain,
+			ToAddress:   "0x90f2b1ae50e6018230e90a33f98c7844a0ab635a",
 			Memo:        msg,
 			VaultPubKey: vaultPubKey,
 			Coins: common.Coins{ // must be set or signer overrides memo
-				common.NewCoin(common.BNBAsset, cosmos.NewUint(1000000)),
+				common.NewCoin(common.ETHAsset, cosmos.NewUint(1000000)),
 			},
 		},
 	})
 	c.Assert(err, IsNil)
 	err = sign.storage.Set(TxOutStoreItem{
 		TxOutItem: types.TxOutItem{
-			Chain:       common.BNBChain,
-			ToAddress:   "tbnb145wcuncewfkuc4v6an0r9laswejygcul43c3wu",
+			Chain:       common.ETHChain,
+			ToAddress:   "0xe3c64974c78f5693bd2bc68b3221d58df5c6e877",
 			Memo:        msg,
 			VaultPubKey: vaultPubKey,
 			Coins: common.Coins{ // must be set or signer overrides memo
-				common.NewCoin(common.BNBAsset, cosmos.NewUint(1000000)),
+				common.NewCoin(common.ETHAsset, cosmos.NewUint(1000000)),
 			},
 		},
 	})
 	c.Assert(err, IsNil)
 	err = sign.storage.Set(TxOutStoreItem{
 		TxOutItem: types.TxOutItem{
-			Chain:       common.BNBChain,
-			ToAddress:   "tbnb1yxfyeda8pnlxlmx0z3cwx74w9xevspwdpzdxpj",
+			Chain:       common.ETHChain,
+			ToAddress:   "0xd58610f89265a2fb637ac40edf59141ff873b266",
 			Memo:        msg,
 			VaultPubKey: vaultPubKey,
 			Coins: common.Coins{ // must be set or signer overrides memo
-				common.NewCoin(common.BNBAsset, cosmos.NewUint(1000000)),
+				common.NewCoin(common.ETHAsset, cosmos.NewUint(1000000)),
 			},
 		},
 	})
@@ -634,12 +584,12 @@ func (s *SignSuite) TestRound7Retry(c *C) {
 	// this will be ignored entirely since the vault pubkey is different
 	err = sign.storage.Set(TxOutStoreItem{
 		TxOutItem: types.TxOutItem{
-			Chain:       common.BNBChain,
-			ToAddress:   "tbnb145wcuncewfkuc4v6an0r9laswejygcul43c3wu",
+			Chain:       common.ETHChain,
+			ToAddress:   "0x90f2b1ae50e6018230e90a33f98c7844a0ab635a",
 			Memo:        msg,
 			VaultPubKey: "tthorpub1addwnpepqfup3y8p0egd7ml7vrnlxgl3wvnp89mpn0tjpj0p2nm2gh0n9hlrvrtylay",
 			Coins: common.Coins{ // must be set or signer overrides memo
-				common.NewCoin(common.BNBAsset, cosmos.NewUint(1000000)),
+				common.NewCoin(common.ETHAsset, cosmos.NewUint(1000000)),
 			},
 		},
 	})
@@ -678,7 +628,7 @@ func (s *SignSuite) TestRound7Retry(c *C) {
 	c.Assert(cc2.broadcastCount, Equals, 1)
 	c.Assert(tssServer2.counter, Equals, 1)
 
-	// all bnb txs should be remaining, first marked round 7
+	// all eth txs should be remaining, first marked round 7
 	tois := sign.storage.List()
 	c.Assert(len(tois), Equals, 3)
 	c.Assert(tois[0].Round7Retry, Equals, true)
@@ -693,7 +643,7 @@ func (s *SignSuite) TestRound7Retry(c *C) {
 		sign.pipeline.Wait()
 	}
 
-	// first bnb tx should have been retried 3 times, no broadcast yet
+	// first tx should have been retried 3 times, no broadcast yet
 	c.Assert(cc.signCount, Equals, 4)
 	c.Assert(cc.broadcastCount, Equals, 0)
 	c.Assert(tssServer.counter, Equals, 4)

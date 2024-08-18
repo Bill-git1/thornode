@@ -11,8 +11,8 @@ type CoinSuite struct{}
 var _ = Suite(&CoinSuite{})
 
 func (s CoinSuite) TestCoin(c *C) {
-	coin := NewCoin(BNBAsset, cosmos.NewUint(230000000))
-	c.Check(coin.Asset.Equals(BNBAsset), Equals, true)
+	coin := NewCoin(DOGEAsset, cosmos.NewUint(230000000))
+	c.Check(coin.Asset.Equals(DOGEAsset), Equals, true)
 	c.Check(coin.Amount.Uint64(), Equals, uint64(230000000))
 	c.Check(coin.Valid(), IsNil)
 	c.Check(coin.IsEmpty(), Equals, false)
@@ -31,8 +31,8 @@ func (s CoinSuite) TestCoin(c *C) {
 
 func (s CoinSuite) TestDistinct(c *C) {
 	coins := Coins{
-		NewCoin(BNBAsset, cosmos.NewUint(1000)),
-		NewCoin(BNBAsset, cosmos.NewUint(1000)),
+		NewCoin(DOGEAsset, cosmos.NewUint(1000)),
+		NewCoin(DOGEAsset, cosmos.NewUint(1000)),
 		NewCoin(BTCAsset, cosmos.NewUint(1000)),
 		NewCoin(BTCAsset, cosmos.NewUint(1000)),
 	}
@@ -42,11 +42,11 @@ func (s CoinSuite) TestDistinct(c *C) {
 
 func (s CoinSuite) TestAdds(c *C) {
 	oldCoins := Coins{
-		NewCoin(BNBAsset, cosmos.NewUint(1000)),
+		NewCoin(DOGEAsset, cosmos.NewUint(1000)),
 		NewCoin(BCHAsset, cosmos.NewUint(1000)),
 	}
 	newCoins := oldCoins.Add(NewCoins(
-		NewCoin(BNBAsset, cosmos.NewUint(1000)),
+		NewCoin(DOGEAsset, cosmos.NewUint(1000)),
 		NewCoin(BTCAsset, cosmos.NewUint(1000)),
 	)...)
 
@@ -54,32 +54,32 @@ func (s CoinSuite) TestAdds(c *C) {
 	c.Assert(len(oldCoins), Equals, 2)
 	// oldCoins asset types are unchanged, while newCoins has all types.
 
-	c.Check(newCoins.GetCoin(BNBAsset).Amount.Uint64(), Equals, uint64(2000))
+	c.Check(newCoins.GetCoin(DOGEAsset).Amount.Uint64(), Equals, uint64(2000))
 	c.Check(newCoins.GetCoin(BCHAsset).Amount.Uint64(), Equals, uint64(1000))
 	c.Check(newCoins.GetCoin(BTCAsset).Amount.Uint64(), Equals, uint64(1000))
 	// For newCoins, the amount adding works as expected.
 
-	c.Check(oldCoins.GetCoin(BNBAsset).Amount.Uint64(), Equals, uint64(1000))
+	c.Check(oldCoins.GetCoin(DOGEAsset).Amount.Uint64(), Equals, uint64(1000))
 
 	newerCoins := make(Coins, len(oldCoins))
 	copy(newerCoins, oldCoins)
 	newerCoins = newerCoins.Add(NewCoins(
-		NewCoin(BNBAsset, cosmos.NewUint(4000)),
+		NewCoin(DOGEAsset, cosmos.NewUint(4000)),
 	)...)
-	c.Check(newerCoins.GetCoin(BNBAsset).Amount.Uint64(), Equals, uint64(5000))
-	c.Check(oldCoins.GetCoin(BNBAsset).Amount.Uint64(), Equals, uint64(1000))
+	c.Check(newerCoins.GetCoin(DOGEAsset).Amount.Uint64(), Equals, uint64(5000))
+	c.Check(oldCoins.GetCoin(DOGEAsset).Amount.Uint64(), Equals, uint64(1000))
 	// Having used make(Coins, len()) and copy(), oldCoins is unchanged.
 
-	newAmount := oldCoins.GetCoin(BNBAsset).Amount.Add(NewCoin(BNBAsset, cosmos.NewUint(7000)).Amount)
+	newAmount := oldCoins.GetCoin(DOGEAsset).Amount.Add(NewCoin(DOGEAsset, cosmos.NewUint(7000)).Amount)
 	c.Check(newAmount.Uint64(), Equals, uint64(8000))
-	c.Check(oldCoins.GetCoin(BNBAsset).Amount.Uint64(), Equals, uint64(1000))
+	c.Check(oldCoins.GetCoin(DOGEAsset).Amount.Uint64(), Equals, uint64(1000))
 	// When Add alone is used with .Amount and no sanitisation,
 	// the newAmount is as expected while the oldCoins amount is unaffected.
 }
 
 func (s CoinSuite) TestNoneEmpty(c *C) {
 	coins := Coins{
-		NewCoin(BNBAsset, cosmos.NewUint(1000)),
+		NewCoin(DOGEAsset, cosmos.NewUint(1000)),
 		NewCoin(ETHAsset, cosmos.ZeroUint()),
 	}
 	newCoins := coins.NoneEmpty()
@@ -89,14 +89,14 @@ func (s CoinSuite) TestNoneEmpty(c *C) {
 }
 
 func (s CoinSuite) TestHasSynthetic(c *C) {
-	bnbSynthAsset, _ := NewAsset("BNB/BNB")
+	dogeSynthAsset, _ := NewAsset("DOGE/DOGE")
 	coins := Coins{
-		NewCoin(bnbSynthAsset, cosmos.NewUint(1000)),
+		NewCoin(dogeSynthAsset, cosmos.NewUint(1000)),
 		NewCoin(ETHAsset, cosmos.ZeroUint()),
 	}
 	c.Assert(coins.HasSynthetic(), Equals, true)
 	coins = Coins{
-		NewCoin(BNBAsset, cosmos.NewUint(1000)),
+		NewCoin(DOGEAsset, cosmos.NewUint(1000)),
 		NewCoin(ETHAsset, cosmos.ZeroUint()),
 	}
 	c.Assert(coins.HasSynthetic(), Equals, false)

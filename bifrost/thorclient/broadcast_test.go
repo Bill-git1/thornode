@@ -27,7 +27,7 @@ func (s *BroadcastSuite) SetUpSuite(c *C) {
 		case strings.HasPrefix(req.RequestURI, AuthAccountEndpoint):
 			httpTestHandler(c, rw, "../../test/fixtures/endpoints/auth/accounts/template.json")
 		case strings.HasPrefix(req.RequestURI, LastBlockEndpoint):
-			httpTestHandler(c, rw, "../../test/fixtures/endpoints/lastblock/bnb.json")
+			httpTestHandler(c, rw, "../../test/fixtures/endpoints/lastblock/eth.json")
 		case strings.HasPrefix(req.RequestURI, BroadcastTxsEndpoint):
 			httpTestHandler(c, rw, s.fixture)
 		}
@@ -54,7 +54,7 @@ func (s *BroadcastSuite) TearDownSuite(c *C) {
 
 func (s *BroadcastSuite) TestBroadcast(c *C) {
 	s.fixture = "../../test/fixtures/endpoints/txs/success.json"
-	msg := types.NewMsgNetworkFee(1, common.BNBChain, 1, 37500, types.GetRandomBech32Addr())
+	msg := types.NewMsgNetworkFee(1, common.ETHChain, 1, 37500, types.GetRandomBech32Addr())
 	// the message get broadcast doesn't really matter
 	txID, err := s.bridge.Broadcast(msg)
 	c.Assert(err, IsNil)

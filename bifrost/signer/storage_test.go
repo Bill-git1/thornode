@@ -40,12 +40,12 @@ func (s *StorageSuite) TestStorage(c *C) {
 
 	pk := common.PubKey("tthorpub1addwnpepqfup3y8p0egd7ml7vrnlxgl3wvnp89mpn0tjpj0p2nm2gh0n9hlrvrtylay")
 
-	spent := NewTxOutStoreItem(10, types.TxOutItem{Chain: common.BNBChain, VaultPubKey: pk, Memo: "spent"}, 0)
+	spent := NewTxOutStoreItem(10, types.TxOutItem{Chain: common.ETHChain, VaultPubKey: pk, Memo: "spent"}, 0)
 	spent.Status = TxSpent
 	items = []TxOutStoreItem{
 		NewTxOutStoreItem(12, types.TxOutItem{Chain: common.BTCChain, VaultPubKey: pk, Memo: "foo"}, 0),
-		NewTxOutStoreItem(12, types.TxOutItem{Chain: common.BNBChain, VaultPubKey: pk, Memo: "bar"}, 1),
-		NewTxOutStoreItem(13, types.TxOutItem{Chain: common.BNBChain, VaultPubKey: pk, Memo: "baz"}, 2),
+		NewTxOutStoreItem(12, types.TxOutItem{Chain: common.ETHChain, VaultPubKey: pk, Memo: "bar"}, 1),
+		NewTxOutStoreItem(13, types.TxOutItem{Chain: common.ETHChain, VaultPubKey: pk, Memo: "baz"}, 2),
 		NewTxOutStoreItem(10, types.TxOutItem{Chain: common.BTCChain, VaultPubKey: pk, Memo: "boo"}, 3),
 		spent,
 	}
@@ -62,8 +62,8 @@ func (s *StorageSuite) TestStorage(c *C) {
 	c.Assert(ordered, HasLen, 2, Commentf("%+v", ordered))
 	c.Check(ordered[fmt.Sprintf("BTC-%s", pk.String())][0].TxOutItem.Memo, Equals, "boo")
 	c.Check(ordered[fmt.Sprintf("BTC-%s", pk.String())][1].TxOutItem.Memo, Equals, "foo", Commentf("%s", items[1].TxOutItem.Memo))
-	c.Check(ordered[fmt.Sprintf("BNB-%s", pk.String())][0].TxOutItem.Memo, Equals, "bar", Commentf("%s", items[2].TxOutItem.Memo))
-	c.Check(ordered[fmt.Sprintf("BNB-%s", pk.String())][1].TxOutItem.Memo, Equals, "baz")
+	c.Check(ordered[fmt.Sprintf("ETH-%s", pk.String())][0].TxOutItem.Memo, Equals, "bar", Commentf("%s", items[2].TxOutItem.Memo))
+	c.Check(ordered[fmt.Sprintf("ETH-%s", pk.String())][1].TxOutItem.Memo, Equals, "baz")
 
 	c.Check(store.Close(), IsNil)
 }

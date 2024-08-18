@@ -23,18 +23,18 @@ func (GasManagerTestSuiteVCUR) TestGasManagerVCUR(c *C) {
 	c.Assert(gasEvent != gasMgr.gasEvent, Equals, true)
 
 	pool := NewPool()
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.ETHAsset
 	c.Assert(k.SetPool(ctx, pool), IsNil)
 	pool.Asset = common.BTCAsset
 	c.Assert(k.SetPool(ctx, pool), IsNil)
 
 	gasMgr.AddGasAsset(common.EmptyAsset, common.Gas{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(37500)),
+		common.NewCoin(common.ATOMAsset, cosmos.NewUint(37500)),
 		common.NewCoin(common.BTCAsset, cosmos.NewUint(1000)),
 	}, true)
 	c.Assert(gasMgr.GetGas(), HasLen, 2)
 	gasMgr.AddGasAsset(common.EmptyAsset, common.Gas{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(38500)),
+		common.NewCoin(common.ATOMAsset, cosmos.NewUint(38500)),
 		common.NewCoin(common.BTCAsset, cosmos.NewUint(2000)),
 	}, true)
 	c.Assert(gasMgr.GetGas(), HasLen, 2)
@@ -139,7 +139,7 @@ func (GasManagerTestSuiteVCUR) TestGetAssetOutboundFee(c *C) {
 	c.Assert(runeFee.Equal(tradeAssetFee), Equals, false)
 
 	// when MinimumL1OutboundFeeUSD set to something higher, it should override the network fee
-	busdAsset, err := common.NewAsset("BNB.BUSD-BD1")
+	busdAsset, err := common.NewAsset("BSC.BUSD-BD1")
 	c.Assert(err, IsNil)
 	c.Assert(k.SetPool(ctx, Pool{
 		BalanceRune:  cosmos.NewUint(500 * common.One),
@@ -149,7 +149,7 @@ func (GasManagerTestSuiteVCUR) TestGetAssetOutboundFee(c *C) {
 		Status:       PoolAvailable,
 	}), IsNil)
 	k.SetMimir(ctx, constants.MinimumL1OutboundFeeUSD.String(), 1_0000_0000)
-	k.SetMimir(ctx, "TorAnchor-BNB-BUSD-BD1", 1) // enable BUSD pool as a TOR anchor
+	k.SetMimir(ctx, "TorAnchor-BSC-BUSD-BD1", 1) // enable BUSD pool as a TOR anchor
 
 	fee, _ = gasMgr.GetAssetOutboundFee(ctx, common.BTCAsset, false)
 	c.Assert(fee.Uint64(), Equals, uint64(20000000), Commentf("%d", fee.Uint64()))
@@ -231,7 +231,7 @@ func (GasManagerTestSuiteVCUR) TestDifferentValidations(c *C) {
 
 	helper.failGetPool = true
 	gasMgr.AddGasAsset(common.EmptyAsset, common.Gas{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(37500)),
+		common.NewCoin(common.ATOMAsset, cosmos.NewUint(37500)),
 		common.NewCoin(common.BTCAsset, cosmos.NewUint(1000)),
 		common.NewCoin(common.ETHAsset, cosmos.ZeroUint()),
 	}, true)
@@ -239,13 +239,13 @@ func (GasManagerTestSuiteVCUR) TestDifferentValidations(c *C) {
 	helper.failGetPool = false
 	helper.failSetPool = true
 	p := NewPool()
-	p.Asset = common.BNBAsset
+	p.Asset = common.ATOMAsset
 	p.BalanceAsset = cosmos.NewUint(common.One * 100)
 	p.BalanceRune = cosmos.NewUint(common.One * 100)
 	p.Status = PoolAvailable
 	c.Assert(helper.Keeper.SetPool(ctx, p), IsNil)
 	gasMgr.AddGasAsset(common.EmptyAsset, common.Gas{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(37500)),
+		common.NewCoin(common.ATOMAsset, cosmos.NewUint(37500)),
 	}, true)
 	gasMgr.EndBlock(ctx, helper, eventMgr)
 }
@@ -254,20 +254,20 @@ func (GasManagerTestSuiteVCUR) TestGetMaxGas(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	constAccessor := constants.GetConstantValues(GetCurrentVersion())
 	gasMgr := newGasMgrVCUR(constAccessor, k)
-	gasCoin, err := gasMgr.GetMaxGas(ctx, common.BTCChain)
+	gasCoin, err := gasMgr.GetMaxGas(ctx, common.GAIAChain)
 	c.Assert(err, IsNil)
 	c.Assert(gasCoin.Amount.IsZero(), Equals, true)
-	networkFee := NewNetworkFee(common.BTCChain, 1000, 127)
-	c.Assert(k.SaveNetworkFee(ctx, common.BTCChain, networkFee), IsNil)
-	gasCoin, err = gasMgr.GetMaxGas(ctx, common.BTCChain)
+	networkFee := NewNetworkFee(common.GAIAChain, 1000, 127)
+	c.Assert(k.SaveNetworkFee(ctx, common.GAIAChain, networkFee), IsNil)
+	gasCoin, err = gasMgr.GetMaxGas(ctx, common.GAIAChain)
 	c.Assert(err, IsNil)
 	c.Assert(gasCoin.Amount.Uint64(), Equals, uint64(127*1000*3/2))
 
-	networkFee = NewNetworkFee(common.TERRAChain, 123, 127)
-	c.Assert(k.SaveNetworkFee(ctx, common.TERRAChain, networkFee), IsNil)
-	gasCoin, err = gasMgr.GetMaxGas(ctx, common.TERRAChain)
+	networkFee = NewNetworkFee(common.ETHChain, 123, 127)
+	c.Assert(k.SaveNetworkFee(ctx, common.ETHChain, networkFee), IsNil)
+	gasCoin, err = gasMgr.GetMaxGas(ctx, common.ETHChain)
 	c.Assert(err, IsNil)
-	c.Assert(gasCoin.Amount.Uint64(), Equals, uint64(23400))
+	c.Assert(gasCoin.Amount.Uint64(), Equals, uint64(23431))
 }
 
 func (GasManagerTestSuiteVCUR) TestOutboundFeeMultiplier(c *C) {

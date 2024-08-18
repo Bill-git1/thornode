@@ -438,7 +438,7 @@ func (s *HandlerTssSuite) TestTssHandler(c *C) {
 					voter.PubKeys = m.PubKeys
 				}
 				addr, _ := helper.members[3].GetThorAddress()
-				voter.Sign(addr, common.Chains{common.BNBChain}.Strings())
+				voter.Sign(addr, common.Chains{common.ETHChain}.Strings())
 				helper.keeper.SetTssVoter(helper.ctx, voter)
 				return handler.Run(helper.ctx, msg)
 			},

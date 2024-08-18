@@ -1,12 +1,5 @@
 [
   {
-    "chain": "BNB",
-    "pub_key": "tthorpub1addwnpepq2mza4j4vplyjw295pkq8j2dan627lz6vufeu22pjx5vnnyjted5vwq3e3d",
-    "address": "tbnb1az3stfwl2xcn8nk7l32qgqpx0uxse5leuuue3g",
-    "router": "",
-    "halted": false
-  },
-  {
     "chain": "BTC",
     "pub_key": "tthorpub1addwnpepq2mza4j4vplyjw295pkq8j2dan627lz6vufeu22pjx5vnnyjted5vwq3e3d",
     "address": "tb1qaz3stfwl2xcn8nk7l32qgqpx0uxse5lev30f0f",

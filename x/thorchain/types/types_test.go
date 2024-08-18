@@ -11,23 +11,23 @@ import (
 
 func TestPackage(t *testing.T) { TestingT(t) }
 
-var (
-	bnbSingleTxFee = cosmos.NewUint(37500)
-	bnbMultiTxFee  = cosmos.NewUint(30000)
-)
-
-// Gas Fees
-var BNBGasFeeSingleton = common.Gas{
-	{Asset: common.BNBAsset, Amount: bnbSingleTxFee},
-}
-
-var BNBGasFeeMulti = common.Gas{
-	{Asset: common.BNBAsset, Amount: bnbMultiTxFee},
-}
-
 type TypesSuite struct{}
 
 var _ = Suite(&TypesSuite{})
+
+var (
+	ethSingleTxFee = cosmos.NewUint(37500)
+	ethMultiTxFee  = cosmos.NewUint(30000)
+)
+
+// Gas Fees
+var ETHGasFeeSingleton = common.Gas{
+	{Asset: common.ETHAsset, Amount: ethSingleTxFee},
+}
+
+var ETHGasFeeMulti = common.Gas{
+	{Asset: common.ETHAsset, Amount: ethMultiTxFee},
+}
 
 func (s TypesSuite) TestHasSuperMajority(c *C) {
 	// happy path

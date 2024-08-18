@@ -44,7 +44,7 @@ func (s *GasSuite) TestETHGasFee(c *C) {
 
 func (s *GasSuite) TestIsEmpty(c *C) {
 	gas1 := Gas{
-		{Asset: BNBAsset, Amount: cosmos.NewUint(11 * One)},
+		{Asset: DOGEAsset, Amount: cosmos.NewUint(11 * One)},
 	}
 	c.Check(gas1.IsEmpty(), Equals, false)
 	c.Check(Gas{}.IsEmpty(), Equals, true)
@@ -52,10 +52,10 @@ func (s *GasSuite) TestIsEmpty(c *C) {
 
 func (s *GasSuite) TestCombineGas(c *C) {
 	gas1 := Gas{
-		{Asset: BNBAsset, Amount: cosmos.NewUint(11 * One)},
+		{Asset: DOGEAsset, Amount: cosmos.NewUint(11 * One)},
 	}
 	gas2 := Gas{
-		{Asset: BNBAsset, Amount: cosmos.NewUint(14 * One)},
+		{Asset: DOGEAsset, Amount: cosmos.NewUint(14 * One)},
 		{Asset: BTCAsset, Amount: cosmos.NewUint(20 * One)},
 	}
 	gas := gas1.Add(gas2...)
@@ -66,7 +66,7 @@ func (s *GasSuite) TestCombineGas(c *C) {
 	c.Assert(gas, HasLen, 2)
 
 	// Check gas contents.
-	c.Check(gas[0].Asset.Equals(BNBAsset), Equals, true)
+	c.Check(gas[0].Asset.Equals(DOGEAsset), Equals, true)
 	c.Check(gas[0].Amount.Equal(cosmos.NewUint(25*One)), Equals, true, Commentf("%d", gas[0].Amount.Uint64()))
 	c.Check(gas[1].Asset.Equals(BTCAsset), Equals, true)
 	c.Check(gas[1].Amount.Equal(cosmos.NewUint(20*One)), Equals, true)
@@ -94,26 +94,4 @@ func (s *GasSuite) TestCombineGas(c *C) {
 	c.Check(gas[0].Amount.Equal(cosmos.NewUint(50*One)), Equals, true, Commentf("%d", gas[0].Amount.Uint64()))
 	c.Check(gas[1].Amount.Equal(cosmos.NewUint(40*One)), Equals, true, Commentf("%d", gas[0].Amount.Uint64()))
 	// gas is unaffected, as it should be.
-}
-
-func (s *GasSuite) TestCalcGasPrice(c *C) {
-	gasInfo := []cosmos.Uint{cosmos.NewUint(37500), cosmos.NewUint(30000)}
-	tx := Tx{
-		Coins: Coins{
-			NewCoin(BNBAsset, cosmos.NewUint(80808080)),
-		},
-	}
-
-	gas := CalcBinanceGasPrice(tx, BNBAsset, gasInfo)
-	c.Check(gas.Equals(Gas{NewCoin(BNBAsset, cosmos.NewUint(37500))}), Equals, true)
-
-	tx = Tx{
-		Coins: Coins{
-			NewCoin(BNBAsset, cosmos.NewUint(80808080)),
-			NewCoin(BNBAsset, cosmos.NewUint(80808080)),
-		},
-	}
-
-	gas = CalcBinanceGasPrice(tx, BNBAsset, gasInfo)
-	c.Check(gas.Equals(Gas{NewCoin(BNBAsset, cosmos.NewUint(60000))}), Equals, true)
 }

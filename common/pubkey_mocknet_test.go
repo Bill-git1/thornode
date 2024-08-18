@@ -36,10 +36,6 @@ func (s *PubKeyTestSuite) TestPubKeyGetAddress(c *C) {
 		c.Assert(err, IsNil)
 		c.Assert(addrETH.String(), Equals, d.addrETH.mocknet)
 
-		addrBNB, err := pk.GetAddress(BNBChain)
-		c.Assert(err, IsNil)
-		c.Assert(addrBNB.String(), Equals, d.addrBNB.mocknet)
-
 		addrBTC, err := pk.GetAddress(BTCChain)
 		c.Assert(err, IsNil)
 		c.Assert(addrBTC.String(), Equals, d.addrBTC.mocknet)

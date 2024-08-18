@@ -155,7 +155,6 @@ The `dust_threshold` for each chain are defined as:
 - DOGE: 100,000,000 sats
 - ETH,AVAX: 0 wei
 - ATOM: 0 uatom
-- BNB: 0 nbnb
 
 ```admonish info
 Transactions with asset amounts equal to or below the `dust_threshold` for the chain will be ignored to prevent dust attacks. Ensure you are converting the “human readable” amount (1 BTC) to the correct gas units (100,000,000 sats)

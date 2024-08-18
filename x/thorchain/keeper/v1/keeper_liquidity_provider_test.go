@@ -17,7 +17,7 @@ func (mas *KeeperLiquidityProviderSuite) SetUpSuite(c *C) {
 
 func (s *KeeperLiquidityProviderSuite) TestLiquidityProvider(c *C) {
 	ctx, k := setupKeeperForTest(c)
-	asset := common.BNBAsset
+	asset := common.ETHAsset
 
 	lp, err := k.GetLiquidityProvider(ctx, asset, GetRandomRUNEAddress())
 	c.Assert(err, IsNil)
@@ -35,7 +35,7 @@ func (s *KeeperLiquidityProviderSuite) TestLiquidityProvider(c *C) {
 	c.Assert(err, IsNil)
 	c.Check(lp.Asset.Equals(asset), Equals, true)
 	c.Check(lp.Units.Equal(cosmos.NewUint(12)), Equals, true)
-	iter := k.GetLiquidityProviderIterator(ctx, common.BNBAsset)
+	iter := k.GetLiquidityProviderIterator(ctx, common.ETHAsset)
 	c.Check(iter, NotNil)
 	iter.Close()
 	k.RemoveLiquidityProvider(ctx, lp)

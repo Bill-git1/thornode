@@ -44,7 +44,7 @@ func NewAddress(address string) (Address, error) {
 		return Address(address), nil
 	}
 
-	// Check bech32 addresses, would succeed any string bech32 encoded (e.g. BNB, TERRA, ATOM)
+	// Check bech32 addresses, would succeed any string bech32 encoded (e.g. GAIA)
 	_, _, err := bech32.Decode(address)
 	if err == nil {
 		return Address(address), nil
@@ -189,13 +189,6 @@ func (addr Address) IsChain(chain Chain) bool {
 		return strings.HasPrefix(addr.String(), "0x")
 	}
 	switch chain {
-	case BNBChain:
-		prefix, _, _ := bech32.Decode(addr.String())
-		return prefix == "bnb" || prefix == "tbnb"
-	case TERRAChain:
-		// Note: Terra does not use a special prefix for testnet
-		prefix, _, _ := bech32.Decode(addr.String())
-		return prefix == "terra"
 	case GAIAChain:
 		// Note: Gaia does not use a special prefix for testnet
 		prefix, _, _ := bech32.Decode(addr.String())
@@ -277,7 +270,7 @@ func (addr Address) IsChain(chain Chain) bool {
 // Note that this will always return ETHChain for an AVAXChain address,
 // so perhaps only use it when determining a network (e.g. mainnet/testnet).
 func (addr Address) GetChain() Chain {
-	for _, chain := range []Chain{ETHChain, BNBChain, THORChain, BTCChain, LTCChain, BCHChain, DOGEChain, TERRAChain, GAIAChain, AVAXChain} {
+	for _, chain := range []Chain{ETHChain, THORChain, BTCChain, LTCChain, BCHChain, DOGEChain, GAIAChain, AVAXChain} {
 		if addr.IsChain(chain) {
 			return chain
 		}
@@ -298,16 +291,6 @@ func (addr Address) GetNetwork(chain Chain) ChainNetwork {
 		return currentNetwork
 	}
 	switch chain {
-	case BNBChain:
-		prefix, _, _ := bech32.Decode(addr.String())
-		if strings.EqualFold(prefix, "bnb") {
-			return mainNetPredicate()
-		}
-		if strings.EqualFold(prefix, "tbnb") {
-			return MockNet
-		}
-	case TERRAChain:
-		return currentNetwork
 	case THORChain:
 		prefix, _, _ := bech32.Decode(addr.String())
 		if strings.EqualFold(prefix, "thor") {

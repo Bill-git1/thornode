@@ -22,9 +22,9 @@ func (s *KeeperVaultSuite) TestVault(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(asgards, HasLen, 0)
 	pubKey := GetRandomPubKey()
-	asgard := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, pubKey, common.Chains{common.BNBChain}.Strings(), []ChainContract{})
+	asgard := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, pubKey, common.Chains{common.ETHChain}.Strings(), []ChainContract{})
 	c.Assert(k.SetVault(ctx, asgard), IsNil)
-	asgard2 := NewVault(ctx.BlockHeight(), InactiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BNBChain}.Strings(), []ChainContract{})
+	asgard2 := NewVault(ctx.BlockHeight(), InactiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
 	c.Assert(k.SetVault(ctx, asgard2), IsNil)
 	asgards, err = k.GetAsgardVaultsByStatus(ctx, ActiveVault)
 	c.Assert(err, IsNil)
@@ -37,9 +37,9 @@ func (s *KeeperVaultSuite) TestVault(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(asgards, HasLen, 0)
 
-	vault1 := NewVault(1024, ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BNBChain}.Strings(), []ChainContract{})
+	vault1 := NewVault(1024, ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
 	vault1.AddFunds(common.Coins{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(common.One*100)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One*100)),
 	})
 	c.Check(k.SetVault(ctx, vault1), IsNil)
 	c.Check(k.DeleteVault(ctx, vault1.PubKey), NotNil)
@@ -70,13 +70,13 @@ func (s *KeeperVaultSuite) TestVaultSorBySecurity(c *C) {
 
 	// Create Pools
 	pool1 := NewPool()
-	pool1.Asset = common.BNBAsset
+	pool1.Asset = common.ETHAsset
 	pool1.BalanceRune = cosmos.NewUint(common.One * 100)
 	pool1.BalanceAsset = cosmos.NewUint(common.One * 100)
 	c.Assert(k.SetPool(ctx, pool1), IsNil)
 
 	// Create three vaults
-	vault1 := NewVault(1024, ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BNBChain}.Strings(), []ChainContract{})
+	vault1 := NewVault(1024, ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
 	vault1.AddFunds(common.Coins{
 		common.NewCoin(common.RuneAsset(), cosmos.NewUint(common.One*200)),
 	})
@@ -86,9 +86,9 @@ func (s *KeeperVaultSuite) TestVaultSorBySecurity(c *C) {
 	}
 	c.Check(k.SetVault(ctx, vault1), IsNil)
 
-	vault2 := NewVault(1024, ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BNBChain}.Strings(), []ChainContract{})
+	vault2 := NewVault(1024, ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
 	vault2.AddFunds(common.Coins{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(common.One*1000)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One*1000)),
 	})
 	vault2.Membership = []string{
 		na2.PubKeySet.Secp256k1.String(),
@@ -96,9 +96,9 @@ func (s *KeeperVaultSuite) TestVaultSorBySecurity(c *C) {
 	}
 	c.Check(k.SetVault(ctx, vault2), IsNil)
 
-	vault3 := NewVault(1024, ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BNBChain}.Strings(), []ChainContract{})
+	vault3 := NewVault(1024, ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
 	vault3.AddFunds(common.Coins{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(common.One*100)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One*100)),
 	})
 	vault3.Membership = []string{
 		na3.PubKeySet.Secp256k1.String(),
@@ -129,19 +129,19 @@ func (s *KeeperVaultSuite) TestGetMostSecureStrict(c *C) {
 	na2.Bond = cosmos.NewUint(4 * common.One)
 	c.Assert(k.SetNodeAccount(ctx, na1), IsNil)
 
-	v0 := NewVault(1, ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BNBChain}.Strings(), []ChainContract{})
+	v0 := NewVault(1, ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
 	v0.Membership = []string{
 		na0.PubKeySet.Secp256k1.String(),
 		na1.PubKeySet.Secp256k1.String(),
 	}
 
-	v1 := NewVault(1, ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BNBChain}.Strings(), []ChainContract{})
+	v1 := NewVault(1, ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
 	v1.Membership = []string{
 		na2.PubKeySet.Secp256k1.String(),
 	}
 
 	pool := NewPool()
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.ETHAsset
 	pool.BalanceRune = cosmos.NewUint(common.One * 100)
 	pool.BalanceAsset = cosmos.NewUint(common.One * 100)
 	c.Assert(k.SetPool(ctx, pool), IsNil)
@@ -161,10 +161,10 @@ func (s *KeeperVaultSuite) TestGetMostSecureStrict(c *C) {
 
 	// vaults funds being equal, lowest bond wins
 	vaults[0].AddFunds(common.Coins{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(common.One*50)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One*50)),
 	})
 	vaults[1].AddFunds(common.Coins{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(common.One*50)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One*50)),
 	})
 	vault = k.GetMostSecureStrict(ctx, vaults, signingPeriod)
 	c.Assert(vault.String(), Equals, vaults[0].String())

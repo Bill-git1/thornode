@@ -16,7 +16,7 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/inbound_addresses
 asserts:
-  - .|length == 10
+  - .|length == 8
   - .[0].chain == "BTC"
   - .[0].outbound_tx_size == "3"
   - .[0].outbound_fee == "42"
@@ -39,7 +39,7 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/inbound_addresses
 asserts:
-  - .|length == 10
+  - .|length == 8
   - .[0].chain == "BTC"
   - .[0].outbound_tx_size == "3"
   - .[0].outbound_fee == "42"

@@ -25,7 +25,7 @@ func (s *TypeTssSuite) TestVoter(c *C) {
 	c.Check(tss.IsEmpty(), Equals, false)
 	c.Check(tss.String(), Equals, "hello")
 
-	chains := []string{common.BNBChain.String(), common.BTCChain.String()}
+	chains := []string{common.ETHChain.String(), common.BTCChain.String()}
 
 	addr, err := common.PubKey(pks[0]).GetThorAddress()
 	c.Assert(err, IsNil)
@@ -55,15 +55,15 @@ func (s *TypeTssSuite) TestChainConsensus(c *C) {
 			GetRandomPubKey().String(),
 		},
 		Chains: []string{
-			common.BNBChain.String(), // 4 BNB chains
-			common.BNBChain.String(),
-			common.BNBChain.String(),
-			common.BNBChain.String(),
+			common.ETHChain.String(), // 4 ETH chains
+			common.ETHChain.String(),
+			common.ETHChain.String(),
+			common.ETHChain.String(),
 			common.BTCChain.String(), // 3 BTC chains
 			common.BTCChain.String(),
 			common.BTCChain.String(),
-			common.ETHChain.String(), // 2 ETH chains
-			common.ETHChain.String(),
+			common.GAIAChain.String(), // 2 GAIA chains
+			common.GAIAChain.String(),
 			common.THORChain.String(), // 1 THOR chain and partridge in a pear tree
 		},
 	}
@@ -72,5 +72,5 @@ func (s *TypeTssSuite) TestChainConsensus(c *C) {
 	sort.Slice(chains, func(i, j int) bool {
 		return chains[i].String() < chains[j].String()
 	})
-	c.Check(chains, DeepEquals, common.Chains{common.BNBChain, common.BTCChain})
+	c.Check(chains, DeepEquals, common.Chains{common.BTCChain, common.ETHChain})
 }

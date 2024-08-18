@@ -165,7 +165,7 @@ func (s *LitecoinSignerSuite) TestGetLTCPrivateKey(c *C) {
 func (s *LitecoinSignerSuite) TestSignTx(c *C) {
 	txOutItem := stypes.TxOutItem{
 		Chain:       common.LTCChain,
-		ToAddress:   types2.GetRandomBNBAddress(),
+		ToAddress:   types2.GetRandomETHAddress(),
 		VaultPubKey: types2.GetRandomPubKey(),
 		Coins: common.Coins{
 			common.NewCoin(common.LTCAsset, cosmos.NewUint(10000000000)),
@@ -287,7 +287,7 @@ func (s *LitecoinSignerSuite) TestSignTxWithoutPredefinedMaxGas(c *C) {
 func (s *LitecoinSignerSuite) TestBroadcastTx(c *C) {
 	txOutItem := stypes.TxOutItem{
 		Chain:       common.LTCChain,
-		ToAddress:   types2.GetRandomBNBAddress(),
+		ToAddress:   types2.GetRandomETHAddress(),
 		VaultPubKey: types2.GetRandomPubKey(),
 		Coins: common.Coins{
 			common.NewCoin(common.LTCAsset, cosmos.NewUint(10)),

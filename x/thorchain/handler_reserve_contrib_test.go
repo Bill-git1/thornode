@@ -66,7 +66,7 @@ func newReserveContributorHandlerHelper(c *C) reserveContributorHandlerHelper {
 	constAccessor := constants.GetConstantValues(version)
 
 	reserveContributor := ReserveContributor{
-		Address: GetRandomBNBAddress(),
+		Address: GetRandomETHAddress(),
 		Amount:  cosmos.NewUint(100 * common.One),
 	}
 	return reserveContributorHandlerHelper{
@@ -124,7 +124,7 @@ func (h HandlerReserveContributorSuite) TestReserveContributorHandler(c *C) {
 			name: "empty contributor amount should return an error",
 			messageCreator: func(helper reserveContributorHandlerHelper) cosmos.Msg {
 				return NewMsgReserveContributor(GetRandomTx(), ReserveContributor{
-					Address: GetRandomBNBAddress(),
+					Address: GetRandomETHAddress(),
 					Amount:  cosmos.ZeroUint(),
 				}, helper.nodeAccount.NodeAddress)
 			},

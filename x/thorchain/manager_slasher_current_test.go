@@ -79,23 +79,23 @@ func (s *SlashingVCURSuite) TestNodeSignSlashErrors(c *C) {
 		na := GetRandomValidatorNode(NodeActive)
 		inTx := common.NewTx(
 			GetRandomTxHash(),
-			GetRandomBNBAddress(),
-			GetRandomBNBAddress(),
+			GetRandomETHAddress(),
+			GetRandomETHAddress(),
 			common.Coins{
-				common.NewCoin(common.BNBAsset, cosmos.NewUint(320000000)),
+				common.NewCoin(common.ETHAsset, cosmos.NewUint(320000000)),
 				common.NewCoin(common.RuneAsset(), cosmos.NewUint(420000000)),
 			},
 			nil,
-			"SWAP:BNB.BNB",
+			"SWAP:ETH.ETH",
 		)
 
 		txOutItem := TxOutItem{
-			Chain:       common.BNBChain,
+			Chain:       common.ETHChain,
 			InHash:      inTx.ID,
 			VaultPubKey: na.PubKeySet.Secp256k1,
-			ToAddress:   GetRandomBNBAddress(),
+			ToAddress:   GetRandomETHAddress(),
 			Coin: common.NewCoin(
-				common.BNBAsset, cosmos.NewUint(3980500*common.One),
+				common.ETHAsset, cosmos.NewUint(3980500*common.One),
 			),
 		}
 		txOut := NewTxOut(3)
@@ -133,23 +133,23 @@ func (s *SlashingVCURSuite) TestNotSigningSlash(c *C) {
 	na := GetRandomValidatorNode(NodeActive)
 	inTx := common.NewTx(
 		GetRandomTxHash(),
-		GetRandomBNBAddress(),
-		GetRandomBNBAddress(),
+		GetRandomETHAddress(),
+		GetRandomETHAddress(),
 		common.Coins{
-			common.NewCoin(common.BNBAsset, cosmos.NewUint(320000000)),
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(320000000)),
 			common.NewCoin(common.RuneAsset(), cosmos.NewUint(420000000)),
 		},
 		nil,
-		"SWAP:BNB.BNB",
+		"SWAP:ETH.ETH",
 	)
 
 	txOutItem := TxOutItem{
-		Chain:       common.BNBChain,
+		Chain:       common.ETHChain,
 		InHash:      inTx.ID,
 		VaultPubKey: na.PubKeySet.Secp256k1,
-		ToAddress:   GetRandomBNBAddress(),
+		ToAddress:   GetRandomETHAddress(),
 		Coin: common.NewCoin(
-			common.BNBAsset, cosmos.NewUint(3980500*common.One),
+			common.ETHAsset, cosmos.NewUint(3980500*common.One),
 		),
 	}
 	txOut := NewTxOut(3)
@@ -158,7 +158,7 @@ func (s *SlashingVCURSuite) TestNotSigningSlash(c *C) {
 	vault := GetRandomVault()
 	vault.Type = AsgardVault
 	vault.Coins = common.Coins{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(5000000*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(5000000*common.One)),
 	}
 	keeper := &TestSlashingLackKeeper{
 		txOut:  txOut,

@@ -157,9 +157,7 @@ func (h SolvencyHandler) handleV134(ctx cosmos.Context, msg MsgSolvency) (*cosmo
 	if stopSolvencyCheck > 0 && stopSolvencyCheck < ctx.BlockHeight() {
 		return &cosmos.Result{}, nil
 	}
-	// stop solvency checker per chain
-	// this allows the network to stop solvency checker for ETH chain for example , while other chains like BNB/BTC chains
-	// their solvency checker are still active
+	// stop solvency checker can be chain specific
 	stopSolvencyCheckChain, err := h.mgr.Keeper().GetMimir(ctx, fmt.Sprintf(StopSolvencyCheckKey+voter.Chain.String()))
 	if err != nil {
 		ctx.Logger().Error("fail to get mimir", "key", StopSolvencyCheckKey+voter.Chain.String(), "error", err)

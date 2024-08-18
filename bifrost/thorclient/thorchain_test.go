@@ -43,7 +43,7 @@ func (s *ThorchainSuite) SetUpTest(c *C) {
 		case strings.HasPrefix(req.RequestURI, NodeAccountEndpoint):
 			httpTestHandler(c, rw, s.nodeAccountFixture)
 		case strings.HasPrefix(req.RequestURI, LastBlockEndpoint):
-			httpTestHandler(c, rw, "../../test/fixtures/endpoints/lastblock/bnb.json")
+			httpTestHandler(c, rw, "../../test/fixtures/endpoints/lastblock/eth.json")
 		case strings.HasPrefix(req.RequestURI, StatusEndpoint):
 			httpTestHandler(c, rw, "../../test/fixtures/endpoints/status/status.json")
 		case strings.HasPrefix(req.RequestURI, KeysignEndpoint):
@@ -121,16 +121,16 @@ func (s *ThorchainSuite) TestGet(c *C) {
 
 func (s *ThorchainSuite) TestGetObservationStdTx_OutboundShouldHaveNotConfirmationCounting(c *C) {
 	pk := stypes.GetRandomPubKey()
-	vaultAddr, err := pk.GetAddress(common.BNBChain)
+	vaultAddr, err := pk.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
 	tx := stypes.NewObservedTx(
 		common.Tx{
 			Coins: common.Coins{
-				common.NewCoin(common.BNBAsset, cosmos.NewUint(123400000)),
+				common.NewCoin(common.ETHAsset, cosmos.NewUint(123400000)),
 			},
 			Memo:        "This is my memo!",
 			FromAddress: vaultAddr,
-			ToAddress:   "bnb1ntqj0v0sv62ut0ehxt7jqh7lenfrd3hmfws0aq",
+			ToAddress:   "0xd58610f89265a2fb637ac40edf59141ff873b266",
 		},
 		1,
 		pk,
@@ -147,16 +147,16 @@ func (s *ThorchainSuite) TestGetObservationStdTx_OutboundShouldHaveNotConfirmati
 
 func (s *ThorchainSuite) TestSign(c *C) {
 	pk := stypes.GetRandomPubKey()
-	vaultAddr, err := pk.GetAddress(common.BNBChain)
+	vaultAddr, err := pk.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
 	tx := stypes.NewObservedTx(
 		common.Tx{
 			Coins: common.Coins{
-				common.NewCoin(common.BNBAsset, cosmos.NewUint(123400000)),
+				common.NewCoin(common.ETHAsset, cosmos.NewUint(123400000)),
 			},
 			Memo:        "This is my memo!",
 			FromAddress: vaultAddr,
-			ToAddress:   common.Address("bnb1ntqj0v0sv62ut0ehxt7jqh7lenfrd3hmfws0aq"),
+			ToAddress:   common.Address("0xd58610f89265a2fb637ac40edf59141ff873b266"),
 		},
 		1,
 		pk,
@@ -272,7 +272,7 @@ func (s *ThorchainSuite) TestGetPubKeys(c *C) {
 
 func (s *ThorchainSuite) TestPostNetworkFee(c *C) {
 	s.authAccountFixture = "../../test/fixtures/endpoints/auth/accounts/template.json"
-	txid, err := s.bridge.PostNetworkFee(1024, common.BNBChain, 100, 100)
+	txid, err := s.bridge.PostNetworkFee(1024, common.ETHChain, 100, 100)
 	c.Assert(err, IsNil)
 	c.Assert(txid.IsEmpty(), Equals, false)
 }
@@ -296,7 +296,7 @@ func (s *ThorchainSuite) TestGetThorchainVersion(c *C) {
 }
 
 func (s *ThorchainSuite) TestGetMimir(c *C) {
-	result, err := s.bridge.GetMimir("HaltBNBChain")
+	result, err := s.bridge.GetMimir("HaltETHChain")
 	c.Assert(err, IsNil)
 	c.Assert(result, Equals, int64(10))
 }

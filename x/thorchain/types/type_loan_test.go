@@ -14,10 +14,10 @@ func (mas *TypeLoanSuite) SetUpSuite(c *C) {
 }
 
 func (TypeLoanSuite) TestLoan(c *C) {
-	addr := common.Address("bnb1xw3mrgcvfmcrxc3uec3hyn2v3f56pvz569tf7c")
-	loan := NewLoan(addr, common.BNBAsset, 25)
+	addr := common.Address("0x90f2b1ae50e6018230e90a33f98c7844a0ab635a")
+	loan := NewLoan(addr, common.ETHAsset, 25)
 
-	c.Check(loan.Key(), Equals, "BNB.BNB/bnb1xw3mrgcvfmcrxc3uec3hyn2v3f56pvz569tf7c")
+	c.Check(loan.Key(), Equals, "ETH.ETH/0x90f2b1ae50e6018230e90a33f98c7844a0ab635a")
 
 	// happy path
 	c.Check(loan.Valid(), IsNil)

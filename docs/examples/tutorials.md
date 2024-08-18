@@ -116,9 +116,9 @@ Any address can be used with this endpoint, e.g. bc1q0kmdagyqhkzw4sgs7f0vycxw7jh
 
 Actions within THORChain can be obtained from Midgard which will list the actions taken by any given address.
 
-**Request**: _List actions by the address bnb1hsmrred449qcmhg9sa42deejr8nurwsqgu9ga4_
+**Request**: _List actions by the address bc1qn9esxuw8ca7ts8l6w66kdh800s09msvutydc46_
 
-[https://midgard.ninerealms.com/v2/actions?address=bnb1hsmrred449qcmhg9sa42deejr8nurwsqgu9ga4](https://midgard.ninerealms.com/v2/actions?address=bnb1hsmrred449qcmhg9sa42deejr8nurwsqgu9ga4)
+[https://midgard.ninerealms.com/v2/actions?address=bc1qn9esxuw8ca7ts8l6w66kdh800s09msvutydc46](https://midgard.ninerealms.com/v2/actions?address=bc1qn9esxuw8ca7ts8l6w66kdh800s09msvutydc46)
 
 **Response:**
 
@@ -140,11 +140,11 @@ Actions within THORChain can be obtained from Midgard which will list the action
           "txID": "ED1384012BA129B889CCF3285A1FB73B127101A0924F49B64FE58A6939FA47C4"
         },
         {
-          "address": "bnb1hsmrred449qcmhg9sa42deejr8nurwsqgu9ga4",
+          "address": "bc1qn9esxuw8ca7ts8l6w66kdh800s09msvutydc46",
           "coins": [
             {
               "amount": "541348102046",
-              "asset": "BNB.BUSD-BD1"
+              "asset": "BTC.BTC"
             }
           ],
           "txID": "F8CEAF2EA762D08AE22CC173BC4B2781B082927990C4F623D2629C4EE2BEC93F"
@@ -157,7 +157,7 @@ Actions within THORChain can be obtained from Midgard which will list the action
       },
       "out": [],
       "pools": [
-        "BNB.BUSD-BD1"
+        "BTC.BTC"
       ],
       "status": "success",
       "type": "addLiquidity"

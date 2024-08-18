@@ -61,7 +61,7 @@ func (k KVStore) GetTxOutIterator(ctx cosmos.Context) cosmos.Iterator {
 	return k.getIterator(ctx, prefixTxOut)
 }
 
-// GetTxOut - write the given txout information to key values tore
+// GetTxOut - write the given txout information to key value store
 func (k KVStore) GetTxOut(ctx cosmos.Context, height int64) (*TxOut, error) {
 	record := NewTxOut(height)
 	_, err := k.getTxOut(ctx, k.GetKey(ctx, prefixTxOut, strconv.FormatInt(height, 10)), record)

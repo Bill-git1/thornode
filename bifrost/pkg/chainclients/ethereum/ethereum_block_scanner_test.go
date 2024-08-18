@@ -176,7 +176,7 @@ func (s *BlockScannerTestSuite) TestProcessBlock(c *C) {
 		case strings.HasPrefix(req.RequestURI, thorclient.NodeAccountEndpoint):
 			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/nodeaccount/template.json")
 		case strings.HasPrefix(req.RequestURI, thorclient.LastBlockEndpoint):
-			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/lastblock/bnb.json")
+			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/lastblock/eth.json")
 		case strings.HasPrefix(req.RequestURI, thorclient.AuthAccountEndpoint):
 			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/auth/accounts/template.json")
 		default:

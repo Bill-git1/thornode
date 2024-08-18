@@ -24,7 +24,7 @@ func (ObserverManagerTestSuite) TestObserverManager(c *C) {
 	a1 := GetRandomBech32Addr()
 	a2 := GetRandomBech32Addr()
 	a3 := GetRandomBech32Addr()
-	mgr.AppendObserver(common.BNBChain, []cosmos.AccAddress{
+	mgr.AppendObserver(common.ETHChain, []cosmos.AccAddress{
 		a1, a2, a3,
 	})
 	c.Check(mgr.List(), HasLen, 3)

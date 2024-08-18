@@ -81,28 +81,6 @@ set_bsc_contract() {
   mv /tmp/genesis.json ~/.thord/config/genesis.json
 }
 
-gen_bnb_address() {
-  if [ ! -f ~/.bond/private_key.txt ]; then
-    echo "Generating BNB address"
-    mkdir -p ~/.bond
-    # because the generate command can get API rate limited, THORNode may need to retry
-    n=0
-    until [ $n -ge 60 ]; do
-      generate >/tmp/bnb && break
-      n=$((n + 1))
-      sleep 1
-    done
-    ADDRESS=$(grep </tmp/bnb MASTER= | awk -F= '{print $NF}')
-    echo "$ADDRESS" >~/.bond/address.txt
-    BINANCE_PRIVATE_KEY=$(grep </tmp/bnb MASTER_KEY= | awk -F= '{print $NF}')
-    echo "$BINANCE_PRIVATE_KEY" >/root/.bond/private_key.txt
-    PUBKEY=$(grep </tmp/bnb MASTER_PUBKEY= | awk -F= '{print $NF}')
-    echo "$PUBKEY" >/root/.bond/pubkey.txt
-    MNEMONIC=$(grep </tmp/bnb MASTER_MNEMONIC= | awk -F= '{print $NF}')
-    echo "$MNEMONIC" >/root/.bond/mnemonic.txt
-  fi
-}
-
 # set external ip to localhost in mocknet
 if [ "$NET" = "mocknet" ]; then
   EXTERNAL_IP="$(hostname -i)"

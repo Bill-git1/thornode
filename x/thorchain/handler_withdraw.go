@@ -162,11 +162,7 @@ func (h WithdrawLiquidityHandler) handleV129(ctx cosmos.Context, msg MsgWithdraw
 		}
 		if !gasAsset.IsZero() {
 			// TODO: chain specific logic should be in a single location
-			if msg.Asset.IsBNB() {
-				toi.MaxGas = common.Gas{
-					common.NewCoin(common.RuneAsset().GetChain().GetGasAsset(), gasAsset.QuoUint64(2)),
-				}
-			} else if msg.Asset.GetChain().GetGasAsset().Equals(msg.Asset) {
+			if msg.Asset.GetChain().GetGasAsset().Equals(msg.Asset) {
 				toi.MaxGas = common.Gas{
 					common.NewCoin(msg.Asset.GetChain().GetGasAsset(), gasAsset),
 				}

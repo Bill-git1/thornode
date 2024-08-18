@@ -2483,25 +2483,25 @@ components:
     LiquidityProviderSummary:
       example:
         pending_asset: "242000000"
-        asset_address: bnb1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        asset_address: bc1qn9esxuw8ca7ts8l6w66kdh800s09msvutydc46
         last_withdraw_height: 82745
         pending_tx_id: C4C876802xxxxxxxxxxBC408829878446A37011EBBA0C5CAA3DD64A548879CB228
         rune_address: thor1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         units: "0"
         pending_rune: "0"
-        asset: BNB.BNB
+        asset: BTC.BTC
         asset_deposit_value: "0"
         last_add_height: 82745
         rune_deposit_value: "0"
       properties:
         asset:
-          example: BNB.BNB
+          example: BTC.BTC
           type: string
         rune_address:
           example: thor1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
           type: string
         asset_address:
-          example: bnb1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+          example: bc1qn9esxuw8ca7ts8l6w66kdh800s09msvutydc46
           type: string
         last_add_height:
           example: 82745
@@ -2548,22 +2548,22 @@ components:
         rune_deposit_value: "0"
         rune_redeem_value: "0"
         pending_asset: "242000000"
-        asset_address: bnb1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        asset_address: bc1qn9esxuw8ca7ts8l6w66kdh800s09msvutydc46
         last_withdraw_height: 82745
         luvi_growth_pct: "0"
         rune_address: thor1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         pending_rune: "0"
         luvi_deposit_value: "0"
-        asset: BNB.BNB
+        asset: BTC.BTC
       properties:
         asset:
-          example: BNB.BNB
+          example: BTC.BTC
           type: string
         rune_address:
           example: thor1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
           type: string
         asset_address:
-          example: bnb1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+          example: bc1qn9esxuw8ca7ts8l6w66kdh800s09msvutydc46
           type: string
         last_add_height:
           example: 82745
@@ -2617,19 +2617,19 @@ components:
     Saver:
       example:
         asset_redeem_value: "0"
-        asset_address: bnb1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        asset_address: bc1qn9esxuw8ca7ts8l6w66kdh800s09msvutydc46
         last_withdraw_height: 82745
         units: "0"
-        asset: BNB.BNB
+        asset: BTC.BTC
         asset_deposit_value: "0"
         last_add_height: 82745
         growth_pct: "0.02"
       properties:
         asset:
-          example: BNB.BNB
+          example: BTC.BTC
           type: string
         asset_address:
-          example: bnb1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+          example: bc1qn9esxuw8ca7ts8l6w66kdh800s09msvutydc46
           type: string
         last_add_height:
           example: 82745
@@ -2661,22 +2661,22 @@ components:
       type: object
     Borrower:
       example:
-        owner: bnb1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        owner: bc1qn9esxuw8ca7ts8l6w66kdh800s09msvutydc46
         last_repay_height: 82745
         collateral_current: "123456"
         collateral_withdrawn: "123456"
         debt_issued: "123456"
         debt_current: "123456"
         collateral_deposited: "123456"
-        asset: BNB.BNB
+        asset: BTC.BTC
         debt_repaid: "123456"
         last_open_height: 82745
       properties:
         owner:
-          example: bnb1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+          example: bc1qn9esxuw8ca7ts8l6w66kdh800s09msvutydc46
           type: string
         asset:
-          example: BNB.BNB
+          example: BTC.BTC
           type: string
         debt_issued:
           example: "123456"

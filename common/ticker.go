@@ -7,7 +7,7 @@ import (
 
 type (
 	// Ticker The trading 'symbol' or shortened name (typically in capital
-	// letters) that refer to a coin on a trading platform. For example: BNB
+	// letters) that refer to a coin on a trading platform. For example: ETH
 	Ticker string
 	// Tickers a list of ticker
 	Tickers []Ticker

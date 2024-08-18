@@ -17,7 +17,7 @@ func (mas *KeeperLoanSuite) SetUpSuite(c *C) {
 
 func (s *KeeperLoanSuite) TestLoan(c *C) {
 	ctx, k := setupKeeperForTest(c)
-	asset := common.BNBAsset
+	asset := common.ETHAsset
 
 	loan, err := k.GetLoan(ctx, asset, GetRandomRUNEAddress())
 	c.Assert(err, IsNil)
@@ -30,7 +30,7 @@ func (s *KeeperLoanSuite) TestLoan(c *C) {
 	c.Assert(err, IsNil)
 	c.Check(loan.Asset.Equals(asset), Equals, true)
 	c.Check(loan.DebtIssued.Equal(cosmos.NewUint(12)), Equals, true)
-	iter := k.GetLoanIterator(ctx, common.BNBAsset)
+	iter := k.GetLoanIterator(ctx, common.ETHAsset)
 	c.Check(iter, NotNil)
 	iter.Close()
 	k.RemoveLoan(ctx, loan)
@@ -38,7 +38,7 @@ func (s *KeeperLoanSuite) TestLoan(c *C) {
 
 func (s *KeeperLoanSuite) TestLoanTotalCollateral(c *C) {
 	ctx, k := setupKeeperForTest(c)
-	asset := common.BNBAsset
+	asset := common.ETHAsset
 
 	amt := cosmos.NewUint(104)
 	k.SetTotalCollateral(ctx, asset, amt)

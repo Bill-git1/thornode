@@ -26,9 +26,7 @@ func Bootstrap() *Actor {
 	// bootstrap pools for all chains
 	count := 0
 	for _, chain := range common.AllChains {
-		// skip thorchain and deprecated chains
-		switch chain {
-		case common.THORChain, common.BNBChain, common.TERRAChain:
+		if chain == common.THORChain {
 			continue
 		}
 		count++

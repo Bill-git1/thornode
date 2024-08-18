@@ -12,7 +12,7 @@ type RservesSuite struct{}
 var _ = Suite(&RservesSuite{})
 
 func (s *RservesSuite) TestReserveContributors(c *C) {
-	addr := GetRandomBNBAddress()
+	addr := GetRandomETHAddress()
 	res := NewReserveContributor(
 		addr,
 		cosmos.NewUint(32*common.One),
@@ -23,7 +23,7 @@ func (s *RservesSuite) TestReserveContributors(c *C) {
 	reses := ReserveContributors{res}
 
 	res = NewReserveContributor(
-		GetRandomBNBAddress(),
+		GetRandomETHAddress(),
 		cosmos.NewUint(10*common.One),
 	)
 

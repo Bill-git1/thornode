@@ -16,7 +16,7 @@ var _ = Suite(&PoolTestSuite{})
 func (PoolTestSuite) TestPool(c *C) {
 	p := NewPool()
 	c.Check(p.IsEmpty(), Equals, true)
-	p.Asset = common.BNBAsset
+	p.Asset = common.ETHAsset
 	c.Check(p.IsEmpty(), Equals, false)
 	p.BalanceRune = cosmos.NewUint(100 * common.One)
 	p.BalanceAsset = cosmos.NewUint(50 * common.One)
@@ -24,20 +24,20 @@ func (PoolTestSuite) TestPool(c *C) {
 	c.Check(p.RuneValueInAsset(cosmos.NewUint(50*common.One)).Equal(cosmos.NewUint(25*common.One)), Equals, true)
 
 	signer := GetRandomBech32Addr()
-	bnbAddress := GetRandomBNBAddress()
+	ethAddress := GetRandomETHAddress()
 	txID := GetRandomTxHash()
 
 	tx := common.NewTx(
 		txID,
-		GetRandomBNBAddress(),
-		GetRandomBNBAddress(),
+		GetRandomETHAddress(),
+		GetRandomETHAddress(),
 		common.Coins{
-			common.NewCoin(common.BNBAsset, cosmos.NewUint(1)),
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(1)),
 		},
-		BNBGasFeeSingleton,
+		common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))},
 		"",
 	)
-	m := NewMsgSwap(tx, common.BNBAsset, bnbAddress, cosmos.NewUint(2), common.NoAddress, cosmos.ZeroUint(), "", "", nil, 0, 0, 0, signer)
+	m := NewMsgSwap(tx, common.ETHAsset, ethAddress, cosmos.NewUint(2), common.NoAddress, cosmos.ZeroUint(), "", "", nil, 0, 0, 0, signer)
 
 	c.Check(p.EnsureValidPoolStatus(m), IsNil)
 	msgNoop := NewMsgNoOp(GetRandomObservedTx(), signer, "")
@@ -51,7 +51,7 @@ func (PoolTestSuite) TestPool(c *C) {
 	c.Check(p.EnsureValidPoolStatus(msgNoop), NotNil)
 	p1 := NewPool()
 	c.Check(p1.Valid(), NotNil)
-	p1.Asset = common.BNBAsset
+	p1.Asset = common.ETHAsset
 	c.Check(p1.AssetValueInRune(cosmos.NewUint(100)).Uint64(), Equals, cosmos.ZeroUint().Uint64())
 	c.Check(p1.RuneValueInAsset(cosmos.NewUint(100)).Uint64(), Equals, cosmos.ZeroUint().Uint64())
 	p1.BalanceRune = cosmos.NewUint(100 * common.One)
@@ -63,7 +63,7 @@ func (PoolTestSuite) TestPool(c *C) {
 	// When Pool is in staged status, it can't swap
 	p2 := NewPool()
 	p2.Status = PoolStatus_Staged
-	msgSwap := NewMsgSwap(GetRandomTx(), common.BNBAsset, GetRandomBNBAddress(), cosmos.NewUint(1000), common.NoAddress, cosmos.ZeroUint(), "", "", nil, 0, 0, 0, GetRandomBech32Addr())
+	msgSwap := NewMsgSwap(GetRandomTx(), common.ETHAsset, GetRandomETHAddress(), cosmos.NewUint(1000), common.NoAddress, cosmos.ZeroUint(), "", "", nil, 0, 0, 0, GetRandomBech32Addr())
 	c.Check(p2.EnsureValidPoolStatus(msgSwap), NotNil)
 	c.Check(p2.EnsureValidPoolStatus(msgNoop), IsNil)
 }
@@ -90,19 +90,19 @@ func (PoolTestSuite) TestPoolStatus(c *C) {
 
 func (PoolTestSuite) TestPools(c *C) {
 	pools := make(Pools, 0)
-	bnb := NewPool()
-	bnb.Asset = common.BNBAsset
+	eth := NewPool()
+	eth.Asset = common.ETHAsset
 	btc := NewPool()
 	btc.Asset = common.BTCAsset
 	btc.BalanceRune = cosmos.NewUint(10)
 
-	pools = pools.Set(bnb)
+	pools = pools.Set(eth)
 	pools = pools.Set(btc)
 	c.Assert(pools, HasLen, 2)
 
-	pool, ok := pools.Get(common.BNBAsset)
+	pool, ok := pools.Get(common.ETHAsset)
 	c.Check(ok, Equals, true)
-	c.Check(pool.Asset.Equals(common.BNBAsset), Equals, true)
+	c.Check(pool.Asset.Equals(common.ETHAsset), Equals, true)
 
 	pool, ok = pools.Get(common.BTCAsset)
 	c.Check(ok, Equals, true)
@@ -119,7 +119,7 @@ func (PoolTestSuite) TestPools(c *C) {
 
 func (PoolTestSuite) TestCalcUnits(c *C) {
 	pool := NewPool()
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.ETHAsset
 	pool.LPUnits = cosmos.NewUint(100)
 
 	// no asset balance
@@ -151,7 +151,7 @@ func (PoolTestSuite) TestCalcUnits(c *C) {
 func (PoolTestSuite) TestReimbursementAndDisbursement(c *C) {
 	p := NewPool()
 	c.Check(p.IsEmpty(), Equals, true)
-	p.Asset = common.BNBAsset
+	p.Asset = common.ETHAsset
 	c.Check(p.IsEmpty(), Equals, false)
 	p.BalanceRune = cosmos.NewUint(100 * common.One)
 	p.BalanceAsset = cosmos.NewUint(50 * common.One)

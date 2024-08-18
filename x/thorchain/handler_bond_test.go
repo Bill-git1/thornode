@@ -52,12 +52,14 @@ func (HandlerBondSuite) TestBondHandler_ValidateActive(c *C) {
 
 	txIn := common.NewTx(
 		GetRandomTxHash(),
-		GetRandomBNBAddress(),
-		GetRandomBNBAddress(),
+		GetRandomETHAddress(),
+		GetRandomETHAddress(),
 		common.Coins{
 			common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One)),
 		},
-		BNBGasFeeSingleton,
+		common.Gas{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
+		},
 		"bond",
 	)
 	msg := NewMsgBond(txIn, activeNodeAccount.NodeAddress, cosmos.NewUint(10*common.One), activeNodeAccount.BondAddress, nil, activeNodeAccount.NodeAddress, -1)
@@ -95,7 +97,9 @@ func (HandlerBondSuite) TestBondHandler_Run(c *C) {
 		common.Coins{
 			common.NewCoin(common.RuneAsset(), cosmos.NewUint(uint64(minimumBondInRune+common.One))),
 		},
-		BNBGasFeeSingleton,
+		common.Gas{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
+		},
 		"bond",
 	)
 	FundModule(c, ctx, k1, BondName, uint64(minimumBondInRune))
@@ -138,7 +142,9 @@ func (HandlerBondSuite) TestBondHandlerFailValidation(c *C) {
 		common.Coins{
 			common.NewCoin(common.RuneAsset(), cosmos.NewUint(uint64(minimumBondInRune))),
 		},
-		BNBGasFeeSingleton,
+		common.Gas{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
+		},
 		"apply",
 	)
 	txInNoTxID := txIn
@@ -175,7 +181,7 @@ func (HandlerBondSuite) TestBondHandlerFailValidation(c *C) {
 		},
 		{
 			name:        "active node",
-			msg:         NewMsgBond(txIn, GetRandomValidatorNode(NodeActive).NodeAddress, cosmos.NewUint(uint64(minimumBondInRune)), GetRandomBNBAddress(), nil, cosmos.AccAddress{}, -1),
+			msg:         NewMsgBond(txIn, GetRandomValidatorNode(NodeActive).NodeAddress, cosmos.NewUint(uint64(minimumBondInRune)), GetRandomETHAddress(), nil, cosmos.AccAddress{}, -1),
 			expectedErr: se.ErrInvalidAddress,
 		},
 	}
@@ -217,8 +223,8 @@ func (HandlerBondSuite) TestBondProvider_Validate(c *C) {
 	err = handler.validate(ctx, *msg)
 	c.Assert(err, IsNil)
 
-	// try to bond with a bnb address
-	msg = NewMsgBond(txIn, standbyNA, amt, GetRandomBNBAddress(), nil, activeNA, -1)
+	// try to bond with an eth address
+	msg = NewMsgBond(txIn, standbyNA, amt, GetRandomETHAddress(), nil, activeNA, -1)
 	err = handler.validate(ctx, *msg)
 	errCheck(c, err, "bonding address is NOT a THORChain address")
 

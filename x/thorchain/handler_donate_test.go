@@ -44,14 +44,14 @@ func (h *HandlerDonateTestHelper) SetPool(ctx cosmos.Context, p Pool) error {
 func (HandlerDonateSuite) TestDonate(c *C) {
 	w := getHandlerTestWrapper(c, 1, true, true)
 	// happy path
-	prePool, err := w.keeper.GetPool(w.ctx, common.BNBAsset)
+	prePool, err := w.keeper.GetPool(w.ctx, common.DOGEAsset)
 	c.Assert(err, IsNil)
 	mgr := NewDummyMgrWithKeeper(w.keeper)
 	donateHandler := NewDonateHandler(mgr)
-	msg := NewMsgDonate(GetRandomTx(), common.BNBAsset, cosmos.NewUint(common.One*5), cosmos.NewUint(common.One*5), w.activeNodeAccount.NodeAddress)
+	msg := NewMsgDonate(GetRandomTx(), common.DOGEAsset, cosmos.NewUint(common.One*5), cosmos.NewUint(common.One*5), w.activeNodeAccount.NodeAddress)
 	_, err = donateHandler.Run(w.ctx, msg)
 	c.Assert(err, IsNil)
-	afterPool, err := w.keeper.GetPool(w.ctx, common.BNBAsset)
+	afterPool, err := w.keeper.GetPool(w.ctx, common.DOGEAsset)
 	c.Assert(err, IsNil)
 	c.Assert(afterPool.BalanceRune.String(), Equals, prePool.BalanceRune.Add(msg.RuneAmount).String())
 	c.Assert(afterPool.BalanceAsset.String(), Equals, prePool.BalanceAsset.Add(msg.AssetAmount).String())
@@ -88,7 +88,7 @@ func (HandlerDonateSuite) TestHandleMsgDonateValidation(c *C) {
 	}{
 		{
 			name:        "invalid signer address should fail",
-			msg:         NewMsgDonate(GetRandomTx(), common.BNBAsset, cosmos.NewUint(common.One*5), cosmos.NewUint(common.One*5), cosmos.AccAddress{}),
+			msg:         NewMsgDonate(GetRandomTx(), common.ETHAsset, cosmos.NewUint(common.One*5), cosmos.NewUint(common.One*5), cosmos.AccAddress{}),
 			expectedErr: se.ErrInvalidAddress,
 		},
 		{
@@ -98,12 +98,12 @@ func (HandlerDonateSuite) TestHandleMsgDonateValidation(c *C) {
 		},
 		{
 			name:        "pool doesn't exist should fail",
-			msg:         NewMsgDonate(GetRandomTx(), common.BNBAsset, cosmos.NewUint(common.One*5), cosmos.NewUint(common.One*5), w.activeNodeAccount.NodeAddress),
+			msg:         NewMsgDonate(GetRandomTx(), common.ETHAsset, cosmos.NewUint(common.One*5), cosmos.NewUint(common.One*5), w.activeNodeAccount.NodeAddress),
 			expectedErr: se.ErrUnknownRequest,
 		},
 		{
 			name:        "synth asset should fail",
-			msg:         NewMsgDonate(GetRandomTx(), common.BNBAsset.GetSyntheticAsset(), cosmos.NewUint(common.One*5), cosmos.NewUint(common.One*5), w.activeNodeAccount.NodeAddress),
+			msg:         NewMsgDonate(GetRandomTx(), common.ETHAsset.GetSyntheticAsset(), cosmos.NewUint(common.One*5), cosmos.NewUint(common.One*5), w.activeNodeAccount.NodeAddress),
 			expectedErr: errInvalidMessage,
 		},
 	}

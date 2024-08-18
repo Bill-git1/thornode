@@ -18,7 +18,6 @@ type KeyDataAddr struct {
 type KeyData struct {
 	priv     string
 	pub      string
-	addrBNB  KeyDataAddr
 	addrBTC  KeyDataAddr
 	addrLTC  KeyDataAddr
 	addrBCH  KeyDataAddr
@@ -40,10 +39,6 @@ func (s *PubKeyTestSuite) SetUpSuite(_ *C) {
 			addrETH: KeyDataAddr{
 				mainnet: "0x3fd2d4ce97b082d4bce3f9fee2a3d60668d2f473",
 				mocknet: "0x3fd2d4ce97b082d4bce3f9fee2a3d60668d2f473",
-			},
-			addrBNB: KeyDataAddr{
-				mainnet: "bnb1j08ys4ct2hzzc2hcz6h2hgrvlmsjynawtf2n0y",
-				mocknet: "tbnb1j08ys4ct2hzzc2hcz6h2hgrvlmsjynaw9urh04",
 			},
 			addrBTC: KeyDataAddr{
 				mainnet: "bc1qj08ys4ct2hzzc2hcz6h2hgrvlmsjynawlht528",
@@ -69,10 +64,6 @@ func (s *PubKeyTestSuite) SetUpSuite(_ *C) {
 				mainnet: "0x970e8128ab834e8eac17ab8e3812f010678cf791",
 				mocknet: "0x970e8128ab834e8eac17ab8e3812f010678cf791",
 			},
-			addrBNB: KeyDataAddr{
-				mainnet: "bnb1zupk5lmc84r2dh738a9g3zscavannjy3nkkcrl",
-				mocknet: "tbnb1zupk5lmc84r2dh738a9g3zscavannjy3arlurw",
-			},
 			addrBTC: KeyDataAddr{
 				mainnet: "bc1qzupk5lmc84r2dh738a9g3zscavannjy38ghlxu",
 				mocknet: "bcrt1qzupk5lmc84r2dh738a9g3zscavannjy3084p2x",
@@ -96,10 +87,6 @@ func (s *PubKeyTestSuite) SetUpSuite(_ *C) {
 			addrETH: KeyDataAddr{
 				mainnet: "0xf6da288748ec4c77642f6c5543717539b3ae001b",
 				mocknet: "0xf6da288748ec4c77642f6c5543717539b3ae001b",
-			},
-			addrBNB: KeyDataAddr{
-				mainnet: "bnb1qqnde7kqe5sf96j6zf8jpzwr44dh4gkddg5yfw",
-				mocknet: "tbnb1qqnde7kqe5sf96j6zf8jpzwr44dh4gkdraaqfl",
 			},
 			addrBTC: KeyDataAddr{
 				mainnet: "bc1qqqnde7kqe5sf96j6zf8jpzwr44dh4gkdek4rvd",
@@ -125,10 +112,6 @@ func (s *PubKeyTestSuite) SetUpSuite(_ *C) {
 				mainnet: "0xfabb9cc6ec839b1214bb11c53377a56a6ed81762",
 				mocknet: "0xfabb9cc6ec839b1214bb11c53377a56a6ed81762",
 			},
-			addrBNB: KeyDataAddr{
-				mainnet: "bnb10s4mg25tu6termrk8egltfyme4q7sg3hm84ayj",
-				mocknet: "tbnb10s4mg25tu6termrk8egltfyme4q7sg3h4jueyr",
-			},
 			addrBTC: KeyDataAddr{
 				mainnet: "bc1q0s4mg25tu6termrk8egltfyme4q7sg3h0e56p3",
 				mocknet: "bcrt1q0s4mg25tu6termrk8egltfyme4q7sg3h8kkydt",
@@ -152,10 +135,6 @@ func (s *PubKeyTestSuite) SetUpSuite(_ *C) {
 			addrETH: KeyDataAddr{
 				mainnet: "0x1f30a82340f08177aba70e6f48054917c74d7d38",
 				mocknet: "0x1f30a82340f08177aba70e6f48054917c74d7d38",
-			},
-			addrBNB: KeyDataAddr{
-				mainnet: "bnb1jw8h4l3dtz5xxc7uyh5ys70qkezspgfuh4nh0z",
-				mocknet: "tbnb1jw8h4l3dtz5xxc7uyh5ys70qkezspgfueq6n0n",
 			},
 			addrBTC: KeyDataAddr{
 				mainnet: "bc1qjw8h4l3dtz5xxc7uyh5ys70qkezspgfurtjs2p",

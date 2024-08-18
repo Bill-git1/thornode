@@ -13,14 +13,14 @@ var _ = Suite(&MsgRagnarokSuite{})
 
 func (MsgRagnarokSuite) TestMsgRagnarokSuite(c *C) {
 	txID := GetRandomTxHash()
-	bnb := GetRandomBNBAddress()
+	eth := GetRandomETHAddress()
 	acc1 := GetRandomBech32Addr()
 	tx := NewObservedTx(common.NewTx(
 		txID,
-		bnb,
-		GetRandomBNBAddress(),
-		common.Coins{common.NewCoin(common.BNBAsset, cosmos.OneUint())},
-		BNBGasFeeSingleton,
+		eth,
+		GetRandomETHAddress(),
+		common.Coins{common.NewCoin(common.ETHAsset, cosmos.OneUint())},
+		common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))},
 		"ragnarok:10",
 	), 12, GetRandomPubKey(), 12)
 	m := NewMsgRagnarok(tx, 10, acc1)
@@ -36,13 +36,13 @@ func (MsgRagnarokSuite) TestMsgRagnarokSuite(c *C) {
 		{
 			txID:        common.TxID(""),
 			blockHeight: 1,
-			sender:      bnb,
+			sender:      eth,
 			signer:      acc1,
 		},
 		{
 			txID:        txID,
 			blockHeight: 0,
-			sender:      bnb,
+			sender:      eth,
 			signer:      acc1,
 		},
 		{
@@ -54,7 +54,7 @@ func (MsgRagnarokSuite) TestMsgRagnarokSuite(c *C) {
 		{
 			txID:        txID,
 			blockHeight: 1,
-			sender:      bnb,
+			sender:      eth,
 			signer:      cosmos.AccAddress{},
 		},
 	}
@@ -63,9 +63,9 @@ func (MsgRagnarokSuite) TestMsgRagnarokSuite(c *C) {
 		tx = NewObservedTx(common.NewTx(
 			item.txID,
 			item.sender,
-			GetRandomBNBAddress(),
-			common.Coins{common.NewCoin(common.BNBAsset, cosmos.OneUint())},
-			BNBGasFeeSingleton,
+			GetRandomETHAddress(),
+			common.Coins{common.NewCoin(common.ETHAsset, cosmos.OneUint())},
+			common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))},
 			"",
 		), 12, GetRandomPubKey(), 12)
 		m = NewMsgRagnarok(tx, item.blockHeight, item.signer)

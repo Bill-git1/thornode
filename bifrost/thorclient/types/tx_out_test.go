@@ -11,56 +11,54 @@ type TxOutTestSuite struct{}
 var _ = Suite(&TxOutTestSuite{})
 
 func (TxOutTestSuite) TestTxOutItemHash(c *C) {
-	// WARNING if those tests are breaking after a change,
-	// we need to update Heimdall as well to replicate the changes
 	item := TxOutItem{
-		Chain:       "BNB",
-		ToAddress:   "tbnb1yxfyeda8pnlxlmx0z3cwx74w9xevspwdpzdxpj",
+		Chain:       "ETH",
+		ToAddress:   "0x90f2b1ae50e6018230e90a33f98c7844a0ab635a",
 		VaultPubKey: "",
 		Coins: common.Coins{
-			common.NewCoin(common.BNBAsset, cosmos.NewUint(194765912)),
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(194765912)),
 		},
 		Memo:   "REFUND:9999A5A08D8FCF942E1AAAA01AB1E521B699BA3A009FA0591C011DC1FFDC5E68",
 		InHash: "9999A5A08D8FCF942E1AAAA01AB1E521B699BA3A009FA0591C011DC1FFDC5E68",
 	}
-	c.Check(item.Hash(), Equals, "C373A22362891F3B35F4B624E36B2984C33C84C43CA8352ACE085F417307673D")
+	c.Check(item.Hash(), Equals, "D3F7241B1D046E5D0AC236366069947D135840A998675FCC69FF4F26CEFB1B5C")
 
 	item = TxOutItem{
-		Chain:       "BNB",
-		ToAddress:   "tbnb1yxfyeda8pnlxlmx0z3cwx74w9xevspwdpzdxpj",
+		Chain:       "ETH",
+		ToAddress:   "0x90f2b1ae50e6018230e90a33f98c7844a0ab635a",
 		VaultPubKey: "",
 		Memo:        "REFUND:9999A5A08D8FCF942E1AAAA01AB1E521B699BA3A009FA0591C011DC1FFDC5E68",
 		InHash:      "9999A5A08D8FCF942E1AAAA01AB1E521B699BA3A009FA0591C011DC1FFDC5E68",
 	}
-	c.Check(item.Hash(), Equals, "5037BD52845B23EEA538248622F0F9625536192A066FDCED91494171BD1EF43D")
+	c.Check(item.Hash(), Equals, "F5FD1B7F57CB0CDFE5A39A896C8D7C8FA8B3C1C0177474E402990A0A3671FB0B")
 
 	item = TxOutItem{
-		Chain:       "BNB",
-		ToAddress:   "tbnb1yxfyeda8pnlxlmx0z3cwx74w9xevspwdpzdxpj",
+		Chain:       "ETH",
+		ToAddress:   "0x90f2b1ae50e6018230e90a33f98c7844a0ab635a",
 		VaultPubKey: "thorpub1addwnpepqv7kdf473gc4jyls7hlx4rg",
 		Memo:        "REFUND:9999A5A08D8FCF942E1AAAA01AB1E521B699BA3A009FA0591C011DC1FFDC5E68",
 		InHash:      "9999A5A08D8FCF942E1AAAA01AB1E521B699BA3A009FA0591C011DC1FFDC5E68",
 	}
-	c.Check(item.Hash(), Equals, "0D920B69BC43443CF58A382BE9714FC67516CD87DD89212A2F2989566E2E632B")
+	c.Check(item.Hash(), Equals, "7947BD11B6ADC5861B6FFCFA4346786E7C708B1F1A67454F68403A3A647D506B")
 }
 
 func (TxOutTestSuite) TestTxOutItemEqualsShouldIgnoreHeight(c *C) {
 	item1 := TxOutItem{
-		Chain:       "BNB",
-		ToAddress:   "tbnb1yxfyeda8pnlxlmx0z3cwx74w9xevspwdpzdxpj",
+		Chain:       "ETH",
+		ToAddress:   "0x90f2b1ae50e6018230e90a33f98c7844a0ab635a",
 		VaultPubKey: "",
 		Coins: common.Coins{
-			common.NewCoin(common.BNBAsset, cosmos.NewUint(194765912)),
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(194765912)),
 		},
 		Memo:   "REFUND:9999A5A08D8FCF942E1AAAA01AB1E521B699BA3A009FA0591C011DC1FFDC5E68",
 		InHash: "9999A5A08D8FCF942E1AAAA01AB1E521B699BA3A009FA0591C011DC1FFDC5E68",
 	}
 	item2 := TxOutItem{
-		Chain:       "BNB",
-		ToAddress:   "tbnb1yxfyeda8pnlxlmx0z3cwx74w9xevspwdpzdxpj",
+		Chain:       "ETH",
+		ToAddress:   "0x90f2b1ae50e6018230e90a33f98c7844a0ab635a",
 		VaultPubKey: "",
 		Coins: common.Coins{
-			common.NewCoin(common.BNBAsset, cosmos.NewUint(194765912)),
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(194765912)),
 		},
 		Memo:   "REFUND:9999A5A08D8FCF942E1AAAA01AB1E521B699BA3A009FA0591C011DC1FFDC5E68",
 		InHash: "9999A5A08D8FCF942E1AAAA01AB1E521B699BA3A009FA0591C011DC1FFDC5E68",

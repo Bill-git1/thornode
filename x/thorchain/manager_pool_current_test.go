@@ -19,7 +19,7 @@ func (s *PoolMgrVCURSuite) TestEnableNextPool(c *C) {
 	mgr := NewDummyMgrWithKeeper(k)
 	c.Assert(err, IsNil)
 	pool := NewPool()
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.ETHAsset
 	pool.Status = PoolAvailable
 	pool.BalanceRune = cosmos.NewUint(100 * common.One)
 	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
@@ -32,10 +32,10 @@ func (s *PoolMgrVCURSuite) TestEnableNextPool(c *C) {
 	pool.BalanceAsset = cosmos.NewUint(50 * common.One)
 	c.Assert(k.SetPool(ctx, pool), IsNil)
 
-	ethAsset, err := common.NewAsset("BNB.ETH")
+	usdcAsset, err := common.NewAsset("ETH.USDC-0X9999999999999999999999999999999999999999")
 	c.Assert(err, IsNil)
 	pool = NewPool()
-	pool.Asset = ethAsset
+	pool.Asset = usdcAsset
 	pool.Status = PoolStaged
 	pool.BalanceRune = cosmos.NewUint(40 * common.One)
 	pool.BalanceAsset = cosmos.NewUint(40 * common.One)
@@ -51,7 +51,7 @@ func (s *PoolMgrVCURSuite) TestEnableNextPool(c *C) {
 	c.Assert(k.SetPool(ctx, pool), IsNil)
 
 	// usdAsset
-	usdAsset, err := common.NewAsset("BNB.TUSDB")
+	usdAsset, err := common.NewAsset("ETH.TUSDB")
 	c.Assert(err, IsNil)
 	pool = NewPool()
 	pool.Asset = usdAsset
@@ -70,7 +70,7 @@ func (s *PoolMgrVCURSuite) TestEnableNextPool(c *C) {
 
 	// should enable ETH
 	c.Assert(poolMgr.cyclePools(ctx, 100, 1, 0, mgr), IsNil)
-	pool, err = k.GetPool(ctx, ethAsset)
+	pool, err = k.GetPool(ctx, usdcAsset)
 	c.Assert(err, IsNil)
 	c.Check(pool.Status, Equals, PoolAvailable)
 
@@ -86,7 +86,7 @@ func (s *PoolMgrVCURSuite) TestEnableNextPool(c *C) {
 func (s *PoolMgrVCURSuite) TestAbandonPool(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	mgr := NewDummyMgrWithKeeper(k)
-	usdAsset, err := common.NewAsset("BNB.TUSDB")
+	usdAsset, err := common.NewAsset("ETH.TUSDB")
 	c.Assert(err, IsNil)
 	pool := NewPool()
 	pool.Asset = usdAsset
@@ -98,16 +98,16 @@ func (s *PoolMgrVCURSuite) TestAbandonPool(c *C) {
 	vault := GetRandomVault()
 	vault.Coins = common.Coins{
 		common.NewCoin(usdAsset, cosmos.NewUint(100*common.One)),
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(100*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
 	}
 	c.Assert(k.SetVault(ctx, vault), IsNil)
 
 	runeAddr := GetRandomRUNEAddress()
-	bnbAddr := GetRandomBNBAddress()
+	ethAddr := GetRandomETHAddress()
 	lp := LiquidityProvider{
 		Asset:        usdAsset,
 		RuneAddress:  runeAddr,
-		AssetAddress: bnbAddr,
+		AssetAddress: ethAddr,
 		Units:        cosmos.ZeroUint(),
 		PendingRune:  cosmos.ZeroUint(),
 		PendingAsset: cosmos.ZeroUint(),
@@ -128,7 +128,7 @@ func (s *PoolMgrVCURSuite) TestAbandonPool(c *C) {
 
 	// check withdraw event (keys must exist with empty values for midgard)
 	expected := map[string]string{
-		"pool":                     "BNB.TUSDB",
+		"pool":                     "ETH.TUSDB",
 		"liquidity_provider_units": "0",
 		"basis_points":             "10000",
 		"asymmetry":                "0.000000000000000000",
@@ -177,7 +177,7 @@ func (s *PoolMgrVCURSuite) TestAbandonPool(c *C) {
 func (s *PoolMgrVCURSuite) TestDemotePoolWithLowLiquidityFees(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	mgr := NewDummyMgrWithKeeper(k)
-	usdAsset, err := common.NewAsset("BNB.TUSDB")
+	usdAsset, err := common.NewAsset("ETH.TUSDB")
 	c.Assert(err, IsNil)
 	pool := NewPool()
 	pool.Asset = usdAsset
@@ -186,35 +186,35 @@ func (s *PoolMgrVCURSuite) TestDemotePoolWithLowLiquidityFees(c *C) {
 	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
 	c.Assert(k.SetPool(ctx, pool), IsNil)
 
-	poolBNB := NewPool()
-	poolBNB.Asset = common.BNBAsset
-	poolBNB.Status = PoolAvailable
-	poolBNB.BalanceRune = cosmos.NewUint(100000 * common.One)
-	poolBNB.BalanceAsset = cosmos.NewUint(100000 * common.One)
-	c.Assert(k.SetPool(ctx, poolBNB), IsNil)
+	poolETH := NewPool()
+	poolETH.Asset = common.ETHAsset
+	poolETH.Status = PoolAvailable
+	poolETH.BalanceRune = cosmos.NewUint(100000 * common.One)
+	poolETH.BalanceAsset = cosmos.NewUint(100000 * common.One)
+	c.Assert(k.SetPool(ctx, poolETH), IsNil)
 
-	bnbETH, err := common.NewAsset("BNB.ETH-1C9")
+	ethUsdc, err := common.NewAsset("ETH.USDC-0X9999999999999999999999999999999999999999")
 	c.Assert(err, IsNil)
-	poolLoki := NewPool()
-	poolLoki.Asset = bnbETH
-	poolLoki.Status = PoolAvailable
-	poolLoki.BalanceRune = cosmos.NewUint(100000 * common.One)
-	poolLoki.BalanceAsset = cosmos.NewUint(100000 * common.One)
-	c.Assert(k.SetPool(ctx, poolLoki), IsNil)
+	poolUsdc := NewPool()
+	poolUsdc.Asset = ethUsdc
+	poolUsdc.Status = PoolAvailable
+	poolUsdc.BalanceRune = cosmos.NewUint(100000 * common.One)
+	poolUsdc.BalanceAsset = cosmos.NewUint(100000 * common.One)
+	c.Assert(k.SetPool(ctx, poolUsdc), IsNil)
 
 	vault := GetRandomVault()
 	vault.Coins = common.Coins{
 		common.NewCoin(usdAsset, cosmos.NewUint(100*common.One)),
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(100*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
 	}
 	c.Assert(k.SetVault(ctx, vault), IsNil)
 
 	runeAddr := GetRandomRUNEAddress()
-	bnbAddr := GetRandomBNBAddress()
+	ethAddr := GetRandomETHAddress()
 	lp := LiquidityProvider{
 		Asset:        usdAsset,
 		RuneAddress:  runeAddr,
-		AssetAddress: bnbAddr,
+		AssetAddress: ethAddr,
 		Units:        cosmos.ZeroUint(),
 		PendingRune:  cosmos.ZeroUint(),
 		PendingAsset: cosmos.ZeroUint(),
@@ -247,12 +247,12 @@ func (s *PoolMgrVCURSuite) TestDemotePoolWithLowLiquidityFees(c *C) {
 		count++
 	}
 	c.Assert(count, Equals, 0)
-	afterBNBPool, err := k.GetPool(ctx, common.BNBAsset)
+	afterETHPool, err := k.GetPool(ctx, common.ETHAsset)
 	c.Assert(err, IsNil)
-	c.Assert(afterBNBPool.Status == PoolAvailable, Equals, true)
-	afterBNBEth, err := k.GetPool(ctx, bnbETH)
+	c.Assert(afterETHPool.Status == PoolAvailable, Equals, true)
+	afterETHEth, err := k.GetPool(ctx, ethUsdc)
 	c.Assert(err, IsNil)
-	c.Assert(afterBNBEth.Status == PoolStaged, Equals, true)
+	c.Assert(afterETHEth.Status == PoolStaged, Equals, true)
 }
 
 func (s *PoolMgrVCURSuite) TestPoolMeetTradingVolumeCriteria(c *C) {
@@ -299,7 +299,7 @@ func (s *PoolMgrVCURSuite) TestRemoveAssetFromVault(c *C) {
 	v0 := GetRandomVault()
 	v0.Coins = common.Coins{
 		common.NewCoin(common.ETHAsset, cosmos.NewUint(1*common.One)),
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(10*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(10*common.One)),
 	}
 	c.Assert(k.SetVault(ctx, v0), IsNil)
 	c.Assert(v0.HasAsset(asset), Equals, false,

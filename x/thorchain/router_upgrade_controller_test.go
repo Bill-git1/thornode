@@ -55,11 +55,11 @@ func (s *RouterUpgradeControllerTestSuite) TestUpgradeProcess(c *C) {
 		common.NewCoin(common.BTCAsset, cosmos.NewUint(100*common.One)),
 		common.NewCoin(common.BCHAsset, cosmos.NewUint(100*common.One)),
 		common.NewCoin(common.LTCAsset, cosmos.NewUint(100*common.One)),
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(100*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
 	}
 
 	activeVault := NewVault(ctx.BlockHeight(), types.VaultStatus_ActiveVault, AsgardVault, GetRandomPubKey(), []string{
-		common.ETHChain.String(), common.BNBChain.String(), common.BTCChain.String(),
+		common.ETHChain.String(), common.ETHChain.String(), common.BTCChain.String(),
 		common.BCHChain.String(), common.LTCChain.String(), common.AVAXChain.String(),
 	}, []ChainContract{oldChainContract})
 	activeVault.AddFunds(funds)

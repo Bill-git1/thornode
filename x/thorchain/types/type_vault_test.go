@@ -19,61 +19,61 @@ func (s *VaultSuite) TestVault(c *C) {
 	c.Check(vault.IsEmpty(), Equals, true)
 	c.Check(vault.Valid(), NotNil)
 
-	vault = NewVault(12, VaultStatus_ActiveVault, VaultType_AsgardVault, pk, common.Chains{common.BNBChain}.Strings(), []ChainContract{})
+	vault = NewVault(12, VaultStatus_ActiveVault, VaultType_AsgardVault, pk, common.Chains{common.ETHChain}.Strings(), []ChainContract{})
 	c.Check(vault.PubKey.Equals(pk), Equals, true)
 	c.Check(vault.HasFunds(), Equals, false)
 	c.Check(vault.IsEmpty(), Equals, false)
 	c.Check(vault.Valid(), IsNil)
 
 	coins := common.Coins{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(500*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(500*common.One)),
 		common.NewCoin(common.BTCAsset, cosmos.NewUint(400*common.One)),
 	}
 
 	vault.AddFunds(coins)
 	c.Check(vault.HasFunds(), Equals, true)
-	c.Check(vault.HasFundsForChain(common.BNBChain), Equals, true)
-	c.Check(vault.HasFundsForChain(common.ETHChain), Equals, false)
+	c.Check(vault.HasFundsForChain(common.ETHChain), Equals, true)
+	c.Check(vault.HasFundsForChain(common.GAIAChain), Equals, false)
 	c.Check(vault.Coins, HasLen, 2)
-	c.Check(vault.GetCoin(common.BNBAsset).Amount.Equal(cosmos.NewUint(500*common.One)), Equals, true)
+	c.Check(vault.GetCoin(common.ETHAsset).Amount.Equal(cosmos.NewUint(500*common.One)), Equals, true)
 	c.Check(vault.GetCoin(common.BTCAsset).Amount.Equal(cosmos.NewUint(400*common.One)), Equals, true)
-	c.Check(vault.HasAsset(common.BNBAsset), Equals, true)
+	c.Check(vault.HasAsset(common.ETHAsset), Equals, true)
 	vault.AddFunds(coins)
 	c.Check(vault.Coins, HasLen, 2)
-	c.Check(vault.GetCoin(common.BNBAsset).Amount.Equal(cosmos.NewUint(1000*common.One)), Equals, true)
+	c.Check(vault.GetCoin(common.ETHAsset).Amount.Equal(cosmos.NewUint(1000*common.One)), Equals, true)
 	c.Check(vault.GetCoin(common.BTCAsset).Amount.Equal(cosmos.NewUint(800*common.One)), Equals, true, Commentf("%+v", vault.GetCoin(common.BTCAsset).Amount))
 	vault.SubFunds(coins)
 	c.Check(vault.Coins, HasLen, 2)
-	c.Check(vault.GetCoin(common.BNBAsset).Amount.Equal(cosmos.NewUint(500*common.One)), Equals, true)
+	c.Check(vault.GetCoin(common.ETHAsset).Amount.Equal(cosmos.NewUint(500*common.One)), Equals, true)
 	c.Check(vault.GetCoin(common.BTCAsset).Amount.Equal(cosmos.NewUint(400*common.One)), Equals, true)
 	vault.SubFunds(coins)
 	c.Check(vault.Coins, HasLen, 2)
-	c.Check(vault.GetCoin(common.BNBAsset).Amount.Equal(cosmos.ZeroUint()), Equals, true)
+	c.Check(vault.GetCoin(common.ETHAsset).Amount.Equal(cosmos.ZeroUint()), Equals, true)
 	c.Check(vault.GetCoin(common.BTCAsset).Amount.Equal(cosmos.ZeroUint()), Equals, true)
 	c.Check(vault.HasFunds(), Equals, false)
 	vault.SubFunds(coins)
-	c.Check(vault.GetCoin(common.BNBAsset).Amount.Equal(cosmos.ZeroUint()), Equals, true)
+	c.Check(vault.GetCoin(common.ETHAsset).Amount.Equal(cosmos.ZeroUint()), Equals, true)
 	c.Check(vault.GetCoin(common.BTCAsset).Amount.Equal(cosmos.ZeroUint()), Equals, true)
 	c.Check(vault.HasFunds(), Equals, false)
 	vault.AddFunds(common.Coins{
 		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
 	})
-	c.Assert(vault.GetChains().Has(common.BNBChain), Equals, true)
+	c.Assert(vault.GetChains().Has(common.ETHChain), Equals, true)
 	c.Assert(vault.GetChains().Has(common.ETHChain), Equals, true)
 	c.Assert(vault.GetChains().Has(common.BTCChain), Equals, true)
 
-	vault1 := NewVault(1024, VaultStatus_ActiveVault, VaultType_AsgardVault, pk, common.Chains{common.BNBChain, common.BTCChain, common.ETHChain}.Strings(), []ChainContract{})
+	vault1 := NewVault(1024, VaultStatus_ActiveVault, VaultType_AsgardVault, pk, common.Chains{common.ETHChain, common.BTCChain, common.ETHChain}.Strings(), []ChainContract{})
 	vault1.Membership = append(vault.Membership, pk.String()) // nolint
 	c.Check(vault1.IsType(VaultType_AsgardVault), Equals, true)
 	c.Check(vault1.IsAsgard(), Equals, true)
 	c.Check(vault1.Contains(pk), Equals, true)
 	vault1.UpdateStatus(VaultStatus_RetiringVault, 10000)
 	c.Check(vault1.CoinLength(), Equals, 0)
-	c.Check(vault1.HasAsset(common.BNBAsset), Equals, false)
+	c.Check(vault1.HasAsset(common.ETHAsset), Equals, false)
 }
 
 func (s *VaultSuite) TestGetTssSigners(c *C) {
-	vault := NewVault(12, VaultStatus_ActiveVault, VaultType_AsgardVault, GetRandomPubKey(), common.Chains{common.BNBChain}.Strings(), []ChainContract{})
+	vault := NewVault(12, VaultStatus_ActiveVault, VaultType_AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
 	nodeAccounts := NodeAccounts{}
 	memberShip := make([]string, 0)
 	for i := 0; i < 10; i++ {
@@ -94,7 +94,7 @@ func (s *VaultSuite) TestGetTssSigners(c *C) {
 }
 
 func (s *VaultSuite) TestPendingTxBlockHeights(c *C) {
-	vault := NewVault(12, VaultStatus_ActiveVault, VaultType_AsgardVault, GetRandomPubKey(), common.Chains{common.BNBChain}.Strings(), []ChainContract{})
+	vault := NewVault(12, VaultStatus_ActiveVault, VaultType_AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
 
 	version := GetCurrentVersion()
 	constAccessor := constants.GetConstantValues(version)
@@ -117,38 +117,38 @@ func (s *VaultSuite) TestVaultSort(c *C) {
 	vault := NewVault(1024, VaultStatus_ActiveVault, VaultType_AsgardVault, GetRandomPubKey(),
 		common.Chains{
 			common.BTCChain,
-			common.BNBChain,
 			common.ETHChain,
+			common.GAIAChain,
 		}.Strings(), []ChainContract{})
 	vault.AddFunds(common.Coins{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(common.One*100)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One*100)),
 		common.NewCoin(common.BTCAsset, cosmos.NewUint(common.One*50)),
-		common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One*10)),
+		common.NewCoin(common.ATOMAsset, cosmos.NewUint(common.One*10)),
 	})
 	vault1 := NewVault(1024, VaultStatus_ActiveVault, VaultType_AsgardVault, GetRandomPubKey(),
 		common.Chains{
 			common.BTCChain,
-			common.BNBChain,
 			common.ETHChain,
+			common.GAIAChain,
 		}.Strings(), []ChainContract{})
 	vault1.AddFunds(common.Coins{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(common.One*90)),
-		common.NewCoin(common.BTCAsset, cosmos.NewUint(common.One*90)),
 		common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One*90)),
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(common.One*90)),
+		common.NewCoin(common.ATOMAsset, cosmos.NewUint(common.One*90)),
 	})
 	vaults := Vaults{
 		vault, vault1,
 	}
 	vaults1 := vaults.SortBy(common.BTCAsset)
 	c.Check(vaults1[0].PubKey.Equals(vault1.PubKey), Equals, true)
-	bnbVault := vaults.SelectByMaxCoin(common.BNBAsset)
-	c.Check(bnbVault.PubKey.Equals(vault.PubKey), Equals, true)
+	atomVault := vaults.SelectByMaxCoin(common.ATOMAsset)
+	c.Check(atomVault.PubKey.Equals(vault1.PubKey), Equals, true)
 
 	ethVault := vaults.SelectByMinCoin(common.ETHAsset)
-	c.Check(ethVault.PubKey.Equals(vault.PubKey), Equals, true)
-	addr, err := vault.PubKey.GetAddress(common.BNBChain)
+	c.Check(ethVault.PubKey.Equals(vault1.PubKey), Equals, true)
+	addr, err := vault.PubKey.GetAddress(common.ETHChain)
 	c.Check(err, IsNil)
-	result, err := vaults.HasAddress(common.BNBChain, addr)
+	result, err := vaults.HasAddress(common.ETHChain, addr)
 	c.Check(err, IsNil)
 	c.Check(result, Equals, true)
 	result1, err1 := vaults.HasAddress(common.BTCChain, GetRandomBTCAddress())

@@ -40,7 +40,7 @@ func (s *NetworkManagerVCURTestSuite) TestUpdateNetwork(c *C) {
 	c.Assert(networkMgr.UpdateNetwork(ctx, constAccessor, mgr.GasMgr(), mgr.EventMgr()), IsNil)
 
 	p := NewPool()
-	p.Asset = common.BNBAsset
+	p.Asset = common.ETHAsset
 	p.BalanceRune = cosmos.NewUint(common.One * 100)
 	p.BalanceAsset = cosmos.NewUint(common.One * 100)
 	p.Status = PoolAvailable
@@ -54,7 +54,7 @@ func (s *NetworkManagerVCURTestSuite) TestUpdateNetwork(c *C) {
 	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
 
 	// with liquidity fee , and bonds
-	c.Assert(helper.Keeper.AddToLiquidityFees(ctx, common.BNBAsset, cosmos.NewUint(50*common.One)), IsNil)
+	c.Assert(helper.Keeper.AddToLiquidityFees(ctx, common.ETHAsset, cosmos.NewUint(50*common.One)), IsNil)
 
 	c.Assert(networkMgr.UpdateNetwork(ctx, constAccessor, mgr.GasMgr(), mgr.EventMgr()), IsNil)
 	// add bond
@@ -277,7 +277,7 @@ func (*NetworkManagerVCURTestSuite) TestGetAvailablePoolsRune(c *C) {
 	mgr.K = helper
 	networkMgr := newNetworkMgrVCUR(helper, mgr.TxOutStore(), mgr.EventMgr())
 	p := NewPool()
-	p.Asset = common.BNBAsset
+	p.Asset = common.ETHAsset
 	p.BalanceRune = cosmos.NewUint(common.One * 100)
 	p.BalanceAsset = cosmos.NewUint(common.One * 100)
 	p.Status = PoolAvailable
@@ -294,7 +294,7 @@ func (*NetworkManagerVCURTestSuite) TestPayPoolRewards(c *C) {
 	mgr.K = helper
 	networkMgr := newNetworkMgrVCUR(helper, mgr.TxOutStore(), mgr.EventMgr())
 	p := NewPool()
-	p.Asset = common.BNBAsset
+	p.Asset = common.ETHAsset
 	p.BalanceRune = cosmos.NewUint(common.One * 100)
 	p.BalanceAsset = cosmos.NewUint(common.One * 100)
 	p.Status = PoolAvailable
@@ -312,7 +312,7 @@ func (s *NetworkManagerVCURTestSuite) TestRecoverPoolDeficit(c *C) {
 
 	pools := Pools{
 		Pool{
-			Asset:        common.BNBAsset,
+			Asset:        common.ETHAsset,
 			BalanceRune:  cosmos.NewUint(common.One * 2000),
 			BalanceAsset: cosmos.NewUint(common.One * 2000),
 			Status:       PoolAvailable,
@@ -321,7 +321,7 @@ func (s *NetworkManagerVCURTestSuite) TestRecoverPoolDeficit(c *C) {
 	c.Assert(helper.Keeper.SetPool(ctx, pools[0]), IsNil)
 
 	totalLiquidityFees := cosmos.NewUint(50 * common.One)
-	c.Assert(helper.Keeper.AddToLiquidityFees(ctx, common.BNBAsset, totalLiquidityFees), IsNil)
+	c.Assert(helper.Keeper.AddToLiquidityFees(ctx, common.ETHAsset, totalLiquidityFees), IsNil)
 
 	lpDeficit := cosmos.NewUint(totalLiquidityFees.Uint64())
 
@@ -345,7 +345,7 @@ func (s *NetworkManagerVCURTestSuite) TestRecoverPoolDeficit(c *C) {
 	c.Assert(reserveAfter.String(), Equals, reserveBefore.Add(lpDeficit).String())
 
 	// deficit rune is deducted from the pool record
-	pool, err := helper.Keeper.GetPool(ctx, common.BNBAsset)
+	pool, err := helper.Keeper.GetPool(ctx, common.ETHAsset)
 	c.Assert(err, IsNil)
 	c.Assert(pool.BalanceRune.String(), Equals, pools[0].BalanceRune.Sub(lpDeficit).String())
 }
@@ -447,11 +447,11 @@ func (s *NetworkManagerVCURTestSuite) TestRagnarokPool(c *C) {
 	activeVault := GetRandomVault()
 	activeVault.StatusSince = ctx.BlockHeight() - 10
 	activeVault.Coins = common.Coins{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(100*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
 	}
 	c.Assert(k.SetVault(ctx, activeVault), IsNil)
 	retireVault := GetRandomVault()
-	retireVault.Chains = common.Chains{common.BNBChain, common.BTCChain}.Strings()
+	retireVault.Chains = common.Chains{common.ETHChain, common.BTCChain}.Strings()
 	btcPool := NewPool()
 	btcPool.Asset = common.BTCAsset
 	btcPool.BalanceRune = cosmos.NewUint(1000 * common.One)
@@ -459,13 +459,13 @@ func (s *NetworkManagerVCURTestSuite) TestRagnarokPool(c *C) {
 	btcPool.LPUnits = cosmos.NewUint(1600)
 	btcPool.Status = PoolAvailable
 	c.Assert(k.SetPool(ctx, btcPool), IsNil)
-	bnbPool := NewPool()
-	bnbPool.Asset = common.BNBAsset
-	bnbPool.BalanceRune = cosmos.NewUint(1000 * common.One)
-	bnbPool.BalanceAsset = cosmos.NewUint(10 * common.One)
-	bnbPool.LPUnits = cosmos.NewUint(1600)
-	bnbPool.Status = PoolAvailable
-	c.Assert(k.SetPool(ctx, bnbPool), IsNil)
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceRune = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceAsset = cosmos.NewUint(10 * common.One)
+	ethPool.LPUnits = cosmos.NewUint(1600)
+	ethPool.Status = PoolAvailable
+	c.Assert(k.SetPool(ctx, ethPool), IsNil)
 	addr := GetRandomRUNEAddress()
 	lps := LiquidityProviders{
 		{
@@ -500,7 +500,7 @@ func (s *NetworkManagerVCURTestSuite) TestRagnarokPool(c *C) {
 	// block height not correct , doesn't take any actions
 	err := networkMgr.checkPoolRagnarok(ctx, mgr)
 	c.Assert(err, IsNil)
-	for _, a := range []common.Asset{common.BTCAsset, common.BNBAsset} {
+	for _, a := range []common.Asset{common.BTCAsset, common.ETHAsset} {
 		tempPool, err := k.GetPool(ctx, a)
 		c.Assert(err, IsNil)
 		c.Assert(tempPool.Status, Equals, PoolAvailable)
@@ -540,38 +540,38 @@ func (s *NetworkManagerVCURTestSuite) TestRagnarokPool(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(tempPool.Status, Equals, PoolSuspended)
 
-	tempPool, err = k.GetPool(ctx, common.BNBAsset)
+	tempPool, err = k.GetPool(ctx, common.ETHAsset)
 	c.Assert(err, IsNil)
 	c.Assert(tempPool.Status, Equals, PoolAvailable)
 
 	// when there are none gas token pool , and it is active , gas asset token pool should not be ragnarok
-	busdPool := NewPool()
-	busdAsset, err := common.NewAsset("BNB.BUSD-BD1")
+	usdcPool := NewPool()
+	usdcAsset, err := common.NewAsset("ETH.USDC-0X9999999999999999999999999999999999999999")
 	c.Assert(err, IsNil)
-	busdPool.Asset = busdAsset
-	busdPool.BalanceRune = cosmos.NewUint(1000 * common.One)
-	busdPool.BalanceAsset = cosmos.NewUint(10 * common.One)
-	busdPool.LPUnits = cosmos.NewUint(1600)
-	busdPool.Status = PoolAvailable
-	c.Assert(k.SetPool(ctx, busdPool), IsNil)
+	usdcPool.Asset = usdcAsset
+	usdcPool.BalanceRune = cosmos.NewUint(1000 * common.One)
+	usdcPool.BalanceAsset = cosmos.NewUint(10 * common.One)
+	usdcPool.LPUnits = cosmos.NewUint(1600)
+	usdcPool.Status = PoolAvailable
+	c.Assert(k.SetPool(ctx, usdcPool), IsNil)
 
-	networkMgr.k.SetMimir(ctx, "RAGNAROK-BNB-BNB", 1)
+	networkMgr.k.SetMimir(ctx, "RAGNAROK-ETH-ETH", 1)
 	err = networkMgr.checkPoolRagnarok(ctx, mgr)
 	c.Assert(err, IsNil)
-	tempPool, err = k.GetPool(ctx, common.BNBAsset)
+	tempPool, err = k.GetPool(ctx, common.ETHAsset)
 	c.Assert(err, IsNil)
 	c.Assert(tempPool.Status, Equals, PoolAvailable)
 }
 
 func (s *NetworkManagerVCURTestSuite) TestCleanupAsgardIndex(c *C) {
 	ctx, k := setupKeeperForTest(c)
-	vault1 := NewVault(1024, ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BNBChain}.Strings(), []ChainContract{})
+	vault1 := NewVault(1024, ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
 	c.Assert(k.SetVault(ctx, vault1), IsNil)
-	vault2 := NewVault(1024, RetiringVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BNBChain}.Strings(), []ChainContract{})
+	vault2 := NewVault(1024, RetiringVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
 	c.Assert(k.SetVault(ctx, vault2), IsNil)
-	vault3 := NewVault(1024, InitVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BNBChain}.Strings(), []ChainContract{})
+	vault3 := NewVault(1024, InitVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
 	c.Assert(k.SetVault(ctx, vault3), IsNil)
-	vault4 := NewVault(1024, InactiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BNBChain}.Strings(), []ChainContract{})
+	vault4 := NewVault(1024, InactiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
 	c.Assert(k.SetVault(ctx, vault4), IsNil)
 	mgr := NewDummyMgrWithKeeper(k)
 	networkMgr := newNetworkMgrVCUR(k, mgr.TxOutStore(), mgr.EventMgr())
@@ -672,7 +672,7 @@ func (*NetworkManagerVCURTestSuite) TestPOLLiquidityWithdraw(c *C) {
 	lps := LiquidityProviders{
 		{
 			Asset:             btcPool.Asset,
-			RuneAddress:       GetRandomBNBAddress(),
+			RuneAddress:       GetRandomETHAddress(),
 			AssetAddress:      GetRandomBTCAddress(),
 			LastAddHeight:     5,
 			Units:             btcPool.LPUnits.QuoUint64(2),
@@ -741,9 +741,9 @@ func (*NetworkManagerVCURTestSuite) TestFairMergePOLCycle(c *C) {
 	err = net.POLCycle(ctx, mgr)
 	c.Assert(err, ErrorMatches, "dev err: no active node accounts")
 
-	// create dummy bnb pool
+	// create dummy eth pool
 	pool := NewPool()
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.ETHAsset
 	pool.BalanceRune = cosmos.NewUint(100 * common.One)
 	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
 	pool.Status = PoolAvailable
@@ -767,7 +767,7 @@ func (*NetworkManagerVCURTestSuite) TestFairMergePOLCycle(c *C) {
 	c.Assert(err, ErrorMatches, "no POL pools")
 
 	// cycle should silently succeed when there is a pool enabled
-	mgr.Keeper().SetMimir(ctx, "POL-BNB-BNB", 1)
+	mgr.Keeper().SetMimir(ctx, "POL-ETH-ETH", 1)
 	mgr.Keeper().SetMimir(ctx, "POL-BTC-BTC", 1)
 	err = net.POLCycle(ctx, mgr)
 	c.Assert(err, IsNil)
@@ -780,7 +780,7 @@ func (*NetworkManagerVCURTestSuite) TestFairMergePOLCycle(c *C) {
 
 	// add some synths
 	coins := cosmos.NewCoins(
-		cosmos.NewCoin("bnb/bnb", cosmos.NewInt(20*common.One)),
+		cosmos.NewCoin("eth/eth", cosmos.NewInt(20*common.One)),
 		cosmos.NewCoin("btc/btc", cosmos.NewInt(20*common.One)),
 	) // 20% utilization, 10% liability
 	err = mgr.coinKeeper.MintCoins(ctx, ModuleName, coins)
@@ -822,7 +822,7 @@ func (*NetworkManagerVCURTestSuite) TestFairMergePOLCycle(c *C) {
 	c.Assert(pol.RuneWithdrawn.String(), Equals, "0")
 
 	// there needs to be one vault or the withdraw handler fails
-	vault := NewVault(0, ActiveVault, types.VaultType_AsgardVault, GetRandomPubKey(), []string{"BNB", "BTC"}, nil)
+	vault := NewVault(0, ActiveVault, types.VaultType_AsgardVault, GetRandomPubKey(), []string{"ETH", "BTC"}, nil)
 	err = mgr.Keeper().SetVault(ctx, vault)
 	c.Assert(err, IsNil)
 
@@ -936,24 +936,24 @@ func (s *NetworkManagerVCURTestSuite) TestSpawnDerivedAssets(c *C) {
 	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
 
 	mgr.Keeper().SetMimir(ctx, "DerivedDepthBasisPts", 10_000)
-	mgr.Keeper().SetMimir(ctx, "TorAnchor-BNB-BUSD-BD1", 1) // enable BUSD pool as a TOR anchor
+	mgr.Keeper().SetMimir(ctx, "TorAnchor-ETH-BUSD-BD1", 1) // enable BUSD pool as a TOR anchor
 	maxAnchorSlip := mgr.Keeper().GetConfigInt64(ctx, constants.MaxAnchorSlip)
-	busd, err := common.NewAsset("BNB.BUSD-BD1")
+	ethBusd, err := common.NewAsset("ETH.BUSD-BD1")
 	c.Assert(err, IsNil)
 
 	pool := NewPool()
-	pool.Asset = busd
+	pool.Asset = ethBusd
 	pool.Status = PoolAvailable
 	pool.BalanceRune = cosmos.NewUint(187493559385369)
 	pool.BalanceAsset = cosmos.NewUint(925681680182301)
 	pool.Decimals = 8
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
 
-	bnb, err := common.NewAsset("BNB.BNB")
+	eth, err := common.NewAsset("ETH.ETH")
 	c.Assert(err, IsNil)
 
 	pool = NewPool()
-	pool.Asset = bnb
+	pool.Asset = eth
 	pool.Status = PoolAvailable
 	pool.BalanceRune = cosmos.NewUint(110119961610327)
 	pool.BalanceAsset = cosmos.NewUint(2343330836117)
@@ -982,12 +982,12 @@ func (s *NetworkManagerVCURTestSuite) TestSpawnDerivedAssets(c *C) {
 	dbnb, _ := common.NewAsset("THOR.BNB")
 	bnbPool, err := mgr.Keeper().GetPool(ctx, dbnb)
 	c.Assert(err, IsNil)
-	c.Check(bnbPool.BalanceAsset.Uint64(), Equals, uint64(2343330836117), Commentf("%d", bnbPool.BalanceAsset.Uint64()))
-	c.Check(bnbPool.BalanceRune.Uint64(), Equals, uint64(110119961610327), Commentf("%d", bnbPool.BalanceRune.Uint64()))
+	c.Check(bnbPool.BalanceAsset.Uint64(), Equals, uint64(4343330836117), Commentf("%d", bnbPool.BalanceAsset.Uint64()))
+	c.Check(bnbPool.BalanceRune.Uint64(), Equals, uint64(510119961610327), Commentf("%d", bnbPool.BalanceRune.Uint64()))
 
 	// happy path, but some trade volume triggers a lower pool depth
 	newctx := ctx.WithBlockHeight(ctx.BlockHeight() - 1)
-	err = mgr.Keeper().AddToSwapSlip(newctx, busd, cosmos.NewInt(maxAnchorSlip/4))
+	err = mgr.Keeper().AddToSwapSlip(newctx, ethBusd, cosmos.NewInt(maxAnchorSlip/4))
 	c.Assert(err, IsNil)
 	err = nmgr.spawnDerivedAssets(ctx, mgr)
 	c.Assert(err, IsNil)
@@ -998,7 +998,7 @@ func (s *NetworkManagerVCURTestSuite) TestSpawnDerivedAssets(c *C) {
 	c.Check(usd.BalanceRune.Uint64(), Equals, uint64(140620169539027), Commentf("%d", usd.BalanceRune.Uint64()))
 
 	// unhappy path, too much liquidity fees collected in the anchor pools, goes to 1% depth
-	err = mgr.Keeper().AddToSwapSlip(newctx, busd, cosmos.NewInt(10_000))
+	err = mgr.Keeper().AddToSwapSlip(newctx, ethBusd, cosmos.NewInt(10_000))
 	c.Assert(err, IsNil)
 	err = nmgr.spawnDerivedAssets(ctx, mgr)
 	c.Assert(err, IsNil)
@@ -1008,7 +1008,7 @@ func (s *NetworkManagerVCURTestSuite) TestSpawnDerivedAssets(c *C) {
 	c.Assert(usd.BalanceAsset.Uint64(), Equals, uint64(9256816801824), Commentf("%d", usd.BalanceAsset.Uint64()))
 	c.Assert(usd.BalanceRune.Uint64(), Equals, uint64(1874935593854), Commentf("%d", usd.BalanceRune.Uint64()))
 	// ensure layer1 bnb pool is NOT suspended
-	bnbPool, err = mgr.Keeper().GetPool(ctx, busd)
+	bnbPool, err = mgr.Keeper().GetPool(ctx, ethBusd)
 	c.Assert(err, IsNil)
 	c.Assert(bnbPool.Status.String(), Equals, "Available")
 	c.Assert(bnbPool.BalanceAsset.Uint64(), Equals, uint64(925681680182301), Commentf("%d", bnbPool.BalanceAsset.Uint64()))
@@ -1023,12 +1023,12 @@ func (s *NetworkManagerVCURTestSuite) TestSpawnDerivedAssetsBasisPoints(c *C) {
 	vault := GetRandomVault()
 	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
 
-	mgr.Keeper().SetMimir(ctx, "TorAnchor-BNB-BUSD-BD1", 1) // enable BUSD pool as a TOR anchor
-	busd, err := common.NewAsset("BNB.BUSD-BD1")
+	mgr.Keeper().SetMimir(ctx, "TorAnchor-ETH-BUSD-BD1", 1) // enable ETH.BUSD pool as a TOR anchor
+	ethBusd, err := common.NewAsset("ETH.BUSD-BD1")
 	c.Assert(err, IsNil)
 
 	pool := NewPool()
-	pool.Asset = busd
+	pool.Asset = ethBusd
 	pool.Status = PoolAvailable
 	pool.BalanceRune = cosmos.NewUint(187493559385369)
 	pool.BalanceAsset = cosmos.NewUint(925681680182301)

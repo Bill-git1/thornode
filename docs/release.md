@@ -24,15 +24,15 @@ Patch version, is backward compatible, usually changes only in bifrost
 1. Sanity check the following features work:
    - [ ] Genesis node start up successfully
    - [ ] Bifrost startup correctly, and start to observe all chains
-   - [ ] Create pools for BNB/BTC/BCH/LTC/ETH/USDT
-   - [ ] Add liquidity to BNB/BTC/BCH/LTC/ETH/USDT pools
+   - [ ] Create pools for BTC/BCH/LTC/ETH/USDT
+   - [ ] Add liquidity to BTC/BCH/LTC/ETH/USDT pools
    - [ ] Bond new validator
    - [ ] Set version
    - [ ] Set node keys
    - [ ] Set IP Address
    - [ ] Churn successful, cluster grow from 1 genesis node to 4 nodes
    - [ ] Fund migration successfully
-   - [ ] Some swaps, RUNE -> BTC, BTC -> BNB etc.
+   - [ ] Some swaps, RUNE -> BTC, BTC -> ETH etc.
    - [ ] Mocknet grow from four nodes -> five nodes, which include keygen, migration
    - [ ] Node can leave
 1. Identify unexpected log / behaviour, and investigate it.

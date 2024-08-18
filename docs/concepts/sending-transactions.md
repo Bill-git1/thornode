@@ -143,7 +143,7 @@ If you are using Javascript, [CosmJS](https://github.com/cosmos/cosmjs) is the r
        { registry: myRegistry },
      );
 
-     const memo = `=:BNB/BNB:${signerAddr}`; // THORChain memo
+     const memo = `=:ETH/ETH:${signerAddr}`; // THORChain memo
 
      const msg = {
        coins: [

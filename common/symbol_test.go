@@ -12,7 +12,6 @@ func (s SymbolSuite) TestSymbol(c *C) {
 	sym, err := NewSymbol("RUNE-67C")
 	c.Assert(err, IsNil)
 	c.Check(sym.Valid(), IsNil)
-	c.Check(sym.Equals(Rune67CSymbol), Equals, true)
 	c.Check(sym.IsEmpty(), Equals, false)
 	c.Check(sym.String(), Equals, "RUNE-67C")
 	c.Check(sym.Ticker().Equals(Ticker("RUNE")), Equals, true)
@@ -28,7 +27,7 @@ func (s SymbolSuite) TestSymbol(c *C) {
 	c.Check(sym.Valid(), IsNil)
 	c.Assert(sym.IsMiniToken(), Equals, false)
 
-	sym, err = NewSymbol("tbnb.bnb")
+	sym, err = NewSymbol("eth.steth")
 	c.Assert(err, IsNil)
 	c.Check(sym.Valid(), IsNil)
 

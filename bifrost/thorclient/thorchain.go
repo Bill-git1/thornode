@@ -337,7 +337,7 @@ func (b *thorchainBridge) GetObservationsStdTx(txIns stypes.ObservedTxs) ([]cosm
 
 	// spilt our txs into inbound vs outbound txs
 	for _, tx := range txIns {
-		chain := common.BNBChain
+		chain := common.EmptyChain
 		if len(tx.Tx.Coins) > 0 {
 			chain = tx.Tx.Coins[0].Asset.Chain
 		}

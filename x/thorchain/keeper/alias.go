@@ -27,7 +27,6 @@ var (
 	RegisterCodec          = types.RegisterCodec
 	GetRandomVault         = types.GetRandomVault
 	GetRandomValidatorNode = types.GetRandomValidatorNode
-	GetRandomBNBAddress    = types.GetRandomBNBAddress
 	GetRandomTxHash        = types.GetRandomTxHash
 	GetRandomBech32Addr    = types.GetRandomBech32Addr
 	GetRandomPubKey        = types.GetRandomPubKey

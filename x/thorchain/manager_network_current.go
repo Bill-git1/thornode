@@ -61,10 +61,8 @@ func (vm *NetworkMgrVCUR) processGenesisSetup(ctx cosmos.Context) error {
 			common.BTCChain,
 			common.LTCChain,
 			common.BCHChain,
-			common.BNBChain,
 			common.ETHChain,
 			common.DOGEChain,
-			common.TERRAChain,
 			common.AVAXChain,
 			common.GAIAChain,
 			common.BSCChain,
@@ -206,26 +204,9 @@ func (vm *NetworkMgrVCUR) spawnDerivedAssets(ctx cosmos.Context, mgr Manager) er
 	// TODO: if a gas asset is removed from the network, this pool needs to be
 	// removed
 
-	// TODO: cleanup after BNB is removed from the network
-	bnbAvailable := false
-	bnb, err := mgr.Keeper().GetPool(ctx, common.BNBAsset)
-	if err == nil && bnb.Status == PoolAvailable {
-		bnbAvailable = true
-	}
-
 	// get assets to create derived pools
 	layer1Assets := []common.Asset{common.TOR}
 	for _, chain := range active[0].GetChains() {
-		// skip BSC chain to avoid THOR.BNB overwrite if BNB pool is available
-		if bnbAvailable && chain.IsBSCChain() {
-			continue
-		}
-
-		// skip BNB chain to avoid THOR.BNB overwrite if BNB pool is unavailable
-		if !bnbAvailable && chain.Equals(common.BNBChain) {
-			continue
-		}
-
 		// no derived asset for thorchain
 		if chain.IsTHORChain() {
 			continue
@@ -262,7 +243,7 @@ func (vm *NetworkMgrVCUR) SpawnDerivedAsset(ctx cosmos.Context, asset common.Ass
 	layer1Asset := asset
 	if layer1Asset.IsDerivedAsset() && !asset.Equals(common.TOR) {
 		// NOTE: if the symbol of a derived asset isn't the chain, this won't work
-		// (ie TERRA.LUNA or GAIA.ATOM)
+		// (ie GAIA.ATOM)
 		layer1Asset.Chain, err = common.NewChain(layer1Asset.Symbol.String())
 		if err != nil {
 			return

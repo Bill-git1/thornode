@@ -145,7 +145,7 @@ func (m Vault) CoinLength() (count int) {
 func (m Vault) CoinLengthByChain(c common.Chain) int {
 	total := 0
 	for _, coin := range m.Coins {
-		if coin.Asset.IsRune() && !coin.Asset.Equals(common.BEP2RuneAsset()) {
+		if coin.Asset.IsRune() {
 			continue
 		}
 		if coin.Asset.GetChain().Equals(c) && !coin.Amount.IsZero() {

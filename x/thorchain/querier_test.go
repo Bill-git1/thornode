@@ -63,14 +63,14 @@ func (s *QuerierSuite) TestQueryKeysign(c *C) {
 	ctx = ctx.WithBlockHeight(12)
 
 	pk := GetRandomPubKey()
-	toAddr := GetRandomBNBAddress()
+	toAddr := GetRandomETHAddress()
 	txOut := NewTxOut(1)
 	txOutItem := TxOutItem{
-		Chain:       common.BNBChain,
+		Chain:       common.ETHChain,
 		VaultPubKey: pk,
 		ToAddress:   toAddr,
 		InHash:      GetRandomTxHash(),
-		Coin:        common.NewCoin(common.BNBAsset, cosmos.NewUint(100*common.One)),
+		Coin:        common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
 	}
 	txOut.TxArray = append(txOut.TxArray, txOutItem)
 	keeper := &TestQuerierKeeper{
@@ -97,18 +97,18 @@ func (s *QuerierSuite) TestQueryPool(c *C) {
 	path := []string{"pools"}
 
 	pubKey := GetRandomPubKey()
-	asgard := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, pubKey, common.Chains{common.BNBChain}.Strings(), []ChainContract{})
+	asgard := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, pubKey, common.Chains{common.ETHChain}.Strings(), []ChainContract{})
 	c.Assert(mgr.Keeper().SetVault(ctx, asgard), IsNil)
 
-	poolBNB := NewPool()
-	poolBNB.Asset = common.BNBAsset
-	poolBNB.LPUnits = cosmos.NewUint(100)
+	poolETH := NewPool()
+	poolETH.Asset = common.ETHAsset
+	poolETH.LPUnits = cosmos.NewUint(100)
 
 	poolBTC := NewPool()
 	poolBTC.Asset = common.BTCAsset
 	poolBTC.LPUnits = cosmos.NewUint(0)
 
-	err := mgr.Keeper().SetPool(ctx, poolBNB)
+	err := mgr.Keeper().SetPool(ctx, poolETH)
 	c.Assert(err, IsNil)
 
 	err = mgr.Keeper().SetPool(ctx, poolBTC)
@@ -134,7 +134,7 @@ func (s *QuerierSuite) TestQueryPool(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(len(out), Equals, 2)
 
-	result, err := s.querier(s.ctx, []string{query.QueryPool.Key, "BNB.BNB"}, abci.RequestQuery{})
+	result, err := s.querier(s.ctx, []string{query.QueryPool.Key, "ETH.ETH"}, abci.RequestQuery{})
 	c.Assert(result, HasLen, 0)
 	c.Assert(err, NotNil)
 }
@@ -145,18 +145,18 @@ func (s *QuerierSuite) TestVaultss(c *C) {
 	path := []string{"pools"}
 
 	pubKey := GetRandomPubKey()
-	asgard := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, pubKey, common.Chains{common.BNBChain}.Strings(), nil)
+	asgard := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, pubKey, common.Chains{common.ETHChain}.Strings(), nil)
 	c.Assert(mgr.Keeper().SetVault(ctx, asgard), IsNil)
 
-	poolBNB := NewPool()
-	poolBNB.Asset = common.BNBAsset
-	poolBNB.LPUnits = cosmos.NewUint(100)
+	poolETH := NewPool()
+	poolETH.Asset = common.ETHAsset
+	poolETH.LPUnits = cosmos.NewUint(100)
 
 	poolBTC := NewPool()
 	poolBTC.Asset = common.BTCAsset
 	poolBTC.LPUnits = cosmos.NewUint(0)
 
-	err := mgr.Keeper().SetPool(ctx, poolBNB)
+	err := mgr.Keeper().SetPool(ctx, poolETH)
 	c.Assert(err, IsNil)
 
 	err = mgr.Keeper().SetPool(ctx, poolBTC)
@@ -181,7 +181,7 @@ func (s *QuerierSuite) TestVaultss(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(len(out), Equals, 2)
 
-	result, err := s.querier(s.ctx, []string{query.QueryPool.Key, "BNB.BNB"}, abci.RequestQuery{})
+	result, err := s.querier(s.ctx, []string{query.QueryPool.Key, "ETH.ETH"}, abci.RequestQuery{})
 	c.Assert(result, HasLen, 0)
 	c.Assert(err, NotNil)
 }
@@ -191,9 +191,9 @@ func (s *QuerierSuite) TestSaverPools(c *C) {
 	querier := NewQuerier(mgr, s.kb)
 	path := []string{"pools"}
 
-	poolBNB := NewPool()
-	poolBNB.Asset = common.BNBAsset.GetSyntheticAsset()
-	poolBNB.LPUnits = cosmos.NewUint(100)
+	poolDOGE := NewPool()
+	poolDOGE.Asset = common.DOGEAsset.GetSyntheticAsset()
+	poolDOGE.LPUnits = cosmos.NewUint(100)
 
 	poolBTC := NewPool()
 	poolBTC.Asset = common.BTCAsset
@@ -203,7 +203,7 @@ func (s *QuerierSuite) TestSaverPools(c *C) {
 	poolETH.Asset = common.ETHAsset.GetSyntheticAsset()
 	poolETH.LPUnits = cosmos.NewUint(100)
 
-	err := mgr.Keeper().SetPool(ctx, poolBNB)
+	err := mgr.Keeper().SetPool(ctx, poolDOGE)
 	c.Assert(err, IsNil)
 
 	err = mgr.Keeper().SetPool(ctx, poolBTC)
@@ -312,18 +312,18 @@ func (s *QuerierSuite) TestQueryLiquidityProviders(c *C) {
 		Prove:  false,
 	}
 	// test liquidity providers
-	result, err := s.querier(s.ctx, []string{query.QueryLiquidityProviders.Key, "BNB.BNB"}, req)
+	result, err := s.querier(s.ctx, []string{query.QueryLiquidityProviders.Key, "ETH.ETH"}, req)
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
 	s.k.SetLiquidityProvider(s.ctx, LiquidityProvider{
-		Asset:              common.BNBAsset,
-		RuneAddress:        GetRandomBNBAddress(),
-		AssetAddress:       GetRandomBNBAddress(),
+		Asset:              common.ETHAsset,
+		RuneAddress:        GetRandomETHAddress(),
+		AssetAddress:       GetRandomETHAddress(),
 		LastAddHeight:      1024,
 		LastWithdrawHeight: 0,
 		Units:              cosmos.NewUint(10),
 	})
-	result, err = s.querier(s.ctx, []string{query.QueryLiquidityProviders.Key, "BNB.BNB"}, req)
+	result, err = s.querier(s.ctx, []string{query.QueryLiquidityProviders.Key, "ETH.ETH"}, req)
 	c.Assert(err, IsNil)
 	var lps LiquidityProviders
 	c.Assert(json.Unmarshal(result, &lps), IsNil)
@@ -337,8 +337,8 @@ func (s *QuerierSuite) TestQueryLiquidityProviders(c *C) {
 	}
 
 	s.k.SetLiquidityProvider(s.ctx, LiquidityProvider{
-		Asset:              common.BNBAsset.GetSyntheticAsset(),
-		RuneAddress:        GetRandomBNBAddress(),
+		Asset:              common.ETHAsset.GetSyntheticAsset(),
+		RuneAddress:        GetRandomETHAddress(),
 		AssetAddress:       GetRandomRUNEAddress(),
 		LastAddHeight:      1024,
 		LastWithdrawHeight: 0,
@@ -346,7 +346,7 @@ func (s *QuerierSuite) TestQueryLiquidityProviders(c *C) {
 	})
 
 	// Query Savers from SaversPool
-	result, err = s.querier(s.ctx, []string{query.QuerySavers.Key, "BNB.BNB"}, req)
+	result, err = s.querier(s.ctx, []string{query.QuerySavers.Key, "ETH.ETH"}, req)
 	c.Assert(err, IsNil)
 	var savers LiquidityProviders
 	c.Assert(json.Unmarshal(result, &savers), IsNil)
@@ -738,7 +738,7 @@ func (s *QuerierSuite) TestQueryVaultPubKeys(c *C) {
 	vault.PubKey = node.PubKeySet.Secp256k1
 	vault.Type = AsgardVault
 	vault.AddFunds(common.Coins{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(common.One*100)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One*100)),
 	})
 	vault.Routers = []types.ChainContract{
 		{
@@ -781,7 +781,7 @@ func (s *QuerierSuite) TestQueryVault(c *C) {
 	// Not enough argument
 	result, err := s.querier(s.ctx, []string{
 		query.QueryVault.Key,
-		"BNB",
+		"ETH",
 	}, abci.RequestQuery{})
 
 	c.Assert(result, IsNil)

@@ -110,14 +110,7 @@ func withdrawV129(ctx cosmos.Context, msg MsgWithdrawLiquidity, mgr Manager) (co
 		}
 		// minus gas costs for our transactions
 		// TODO: chain specific logic should be in a single location
-		if pool.Asset.IsBNB() && !common.RuneAsset().Chain.Equals(common.THORChain) {
-			originalAsset := withDrawAsset
-			withDrawAsset = common.SafeSub(
-				withDrawAsset,
-				maxGas.Amount.MulUint64(2), // RUNE asset is on binance chain
-			)
-			gasAsset = originalAsset.Sub(withDrawAsset)
-		} else if pool.Asset.GetChain().GetGasAsset().Equals(pool.Asset) {
+		if pool.Asset.GetChain().GetGasAsset().Equals(pool.Asset) {
 			gasAsset = maxGas.Amount
 			if gasAsset.GT(withDrawAsset) {
 				gasAsset = withDrawAsset

@@ -23,11 +23,11 @@ type TestSwapKeeper struct {
 }
 
 func (k *TestSwapKeeper) PoolExist(ctx cosmos.Context, asset common.Asset) bool {
-	return !asset.Equals(common.Asset{Chain: common.BNBChain, Symbol: "NOTEXIST", Ticker: "NOTEXIST"})
+	return !asset.Equals(common.Asset{Chain: common.ETHChain, Symbol: "NOTEXIST", Ticker: "NOTEXIST"})
 }
 
 func (k *TestSwapKeeper) GetPool(ctx cosmos.Context, asset common.Asset) (thorchaintypes.Pool, error) {
-	if asset.Equals(common.Asset{Chain: common.BNBChain, Symbol: "NOTEXIST", Ticker: "NOTEXIST"}) {
+	if asset.Equals(common.Asset{Chain: common.ETHChain, Symbol: "NOTEXIST", Ticker: "NOTEXIST"}) {
 		return thorchaintypes.Pool{}, nil
 	}
 	if asset.Equals(common.BCHAsset) {
@@ -53,7 +53,7 @@ func (k *TestSwapKeeper) GetPool(ctx cosmos.Context, asset common.Asset) (thorch
 func (k *TestSwapKeeper) SetPool(ctx cosmos.Context, ps thorchaintypes.Pool) error { return nil }
 
 func (k *TestSwapKeeper) GetLiquidityProvider(ctx cosmos.Context, asset common.Asset, addr common.Address) (thorchaintypes.LiquidityProvider, error) {
-	if asset.Equals(common.Asset{Chain: common.BNBChain, Symbol: "NOTEXISTSTICKER", Ticker: "NOTEXISTSTICKER"}) {
+	if asset.Equals(common.Asset{Chain: common.ETHChain, Symbol: "NOTEXISTSTICKER", Ticker: "NOTEXISTSTICKER"}) {
 		return thorchaintypes.LiquidityProvider{}, errors.New("you asked for it")
 	}
 	return LiquidityProvider{
@@ -89,7 +89,7 @@ func (k *TestSwapKeeper) GetGas(ctx cosmos.Context, _ common.Asset) ([]cosmos.Ui
 func (k *TestSwapKeeper) GetAsgardVaultsByStatus(ctx cosmos.Context, status VaultStatus) (Vaults, error) {
 	vault := GetRandomVault()
 	vault.Coins = common.Coins{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(10000*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(10000*common.One)),
 	}
 	return Vaults{
 		vault,
@@ -123,9 +123,9 @@ func (k TestSwapKeeper) SortBySecurity(_ cosmos.Context, vaults Vaults, _ int64)
 }
 func (k *TestSwapKeeper) AppendTxOut(_ cosmos.Context, _ int64, _ TxOutItem) error { return nil }
 func (k *TestSwapKeeper) GetNetworkFee(ctx cosmos.Context, chain common.Chain) (NetworkFee, error) {
-	if chain.Equals(common.BNBChain) {
+	if chain.Equals(common.ETHChain) {
 		return NetworkFee{
-			Chain:              common.BNBChain,
+			Chain:              common.ETHChain,
 			TransactionSize:    1,
 			TransactionFeeRate: 37500,
 		}, nil

@@ -12,26 +12,24 @@ type ChainSuite struct{}
 var _ = Suite(&ChainSuite{})
 
 func (s ChainSuite) TestChain(c *C) {
-	bnbChain, err := NewChain("bnb")
+	ethChain, err := NewChain("eth")
 	c.Assert(err, IsNil)
-	c.Check(bnbChain.Equals(BNBChain), Equals, true)
-	c.Check(bnbChain.IsBNB(), Equals, true)
-	c.Check(bnbChain.IsEmpty(), Equals, false)
-	c.Check(bnbChain.String(), Equals, "BNB")
+	c.Check(ethChain.Equals(ETHChain), Equals, true)
+	c.Check(ethChain.IsEmpty(), Equals, false)
+	c.Check(ethChain.String(), Equals, "ETH")
 
 	_, err = NewChain("B") // too short
 	c.Assert(err, NotNil)
 
-	chains := Chains{"BNB", "BNB", "BTC"}
+	chains := Chains{"DOGE", "DOGE", "BTC"}
 	c.Check(chains.Has("BTC"), Equals, true)
 	c.Check(chains.Has("ETH"), Equals, false)
 	uniq := chains.Distinct()
 	c.Assert(uniq, HasLen, 2)
 
-	algo := bnbChain.GetSigningAlgo()
+	algo := ETHChain.GetSigningAlgo()
 	c.Assert(algo, Equals, SigningAlgoSecp256k1)
 
-	c.Assert(BNBChain.GetGasAsset(), Equals, BNBAsset)
 	c.Assert(BTCChain.GetGasAsset(), Equals, BTCAsset)
 	c.Assert(ETHChain.GetGasAsset(), Equals, ETHAsset)
 	c.Assert(LTCChain.GetGasAsset(), Equals, LTCAsset)

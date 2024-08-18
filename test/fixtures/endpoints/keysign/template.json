@@ -3,19 +3,19 @@
     "height": 1718,
     "tx_array": [
       {
-        "chain": "BNB",
+        "chain": "ETH",
         "coin": {
           "amount": "10000000000",
-          "asset": "BNB.BNB"
+          "asset": "ETH.ETH"
         },
         "in_hash": "ENULZOBGZHEKFOIBYRLLBELKFZVGXOBLTRQGTOWNDHMPZQMBLGJETOXJLHPVQIKY",
         "memo": "",
         "out_hash": "",
-        "to_address": "tbnb145wcuncewfkuc4v6an0r9laswejygcul43c3wu",
+        "to_address": "0x90f2b1ae50e6018230e90a33f98c7844a0ab635a",
         "vault_pub_key": "tthorpub1addwnpepqfgpnhk4z80fglgp4cget35dsdzpfxdkudtzw09pm2t0wv6rvhds2flawm6",
         "gas_rate": 1
       }
     ]
   },
-  "signature": "J4KpopwXY7JXzJ1WCvK7n4Yr/fcoEn9+Zcsx3vAmCqkfzYOlvRXufj8fncjkX9tUp60O8zFZaPot29C5jFaPew=="
+  "signature": "wlH4M4kGO3GL5C7HW1gLp1A+hlG/P687xGpBxee+NMsn3LB/qtV/BzDL9HdH1KJDXIn9sromfdKZMYf3xNxdYQ=="
 }

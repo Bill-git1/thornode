@@ -6,15 +6,6 @@ import (
 	"strings"
 )
 
-const (
-	// BNBSymbol BNB
-	BNBSymbol = Symbol("BNB")
-	// Rune67CSymbol RUNE on binance testnet
-	Rune67CSymbol = Symbol("RUNE-67C")
-	// RuneB1ASymbol RUNE on binance mainnet
-	RuneB1ASymbol = Symbol("RUNE-B1A")
-)
-
 var isAlphaNumeric = regexp.MustCompile(`^[A-Za-z0-9-._]+$`).MatchString
 
 // Symbol represent an asset

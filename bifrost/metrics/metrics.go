@@ -150,7 +150,7 @@ var (
 			Namespace: "observer",
 			Subsystem: "thorchain",
 			Name:      "send_to_thorchain_duration",
-			Help:      "how long it takes to sign and broadcast to binance",
+			Help:      "how long it takes to sign and broadcast to thorchain",
 		}),
 	}
 

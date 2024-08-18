@@ -19,7 +19,7 @@ func (MsgApplySuite) TestMsgApply(c *C) {
 	txId := GetRandomTxHash()
 	c.Check(txId.IsEmpty(), Equals, false)
 	signerAddr := GetRandomBech32Addr()
-	bondAddr := GetRandomBNBAddress()
+	bondAddr := GetRandomETHAddress()
 	txin := GetRandomTx()
 	txin.Coins[0] = common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One))
 	txinNoID := txin

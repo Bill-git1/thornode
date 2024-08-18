@@ -19,9 +19,7 @@ func Swaps() *Actor {
 	// gather all pools we expect to swap through
 	swapPools := []common.Asset{}
 	for _, chain := range common.AllChains {
-		// skip thorchain and deprecated chains
-		switch chain {
-		case common.THORChain, common.BNBChain, common.TERRAChain:
+		if chain == common.THORChain {
 			continue
 		}
 

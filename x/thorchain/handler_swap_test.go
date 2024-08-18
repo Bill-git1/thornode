@@ -31,19 +31,21 @@ func (s *HandlerSwapSuite) TestValidate(c *C) {
 	handler := NewSwapHandler(NewDummyMgrWithKeeper(keeper))
 
 	txID := GetRandomTxHash()
-	signerBNBAddr := GetRandomBNBAddress()
+	signerDOGEAddr := GetRandomDOGEAddress()
 	observerAddr := keeper.activeNodeAccount.NodeAddress
 	tx := common.NewTx(
 		txID,
-		signerBNBAddr,
-		signerBNBAddr,
+		signerDOGEAddr,
+		signerDOGEAddr,
 		common.Coins{
 			common.NewCoin(common.RuneAsset(), cosmos.OneUint()),
 		},
-		BNBGasFeeSingleton,
+		common.Gas{
+			common.NewCoin(common.DOGEAsset, cosmos.NewUint(10000)),
+		},
 		"",
 	)
-	msg := NewMsgSwap(tx, common.BNBAsset, signerBNBAddr, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 0, 0, observerAddr)
+	msg := NewMsgSwap(tx, common.DOGEAsset, signerDOGEAddr, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 0, 0, observerAddr)
 	err := handler.validate(ctx, *msg)
 	c.Assert(err, IsNil)
 
@@ -161,7 +163,7 @@ func (k *TestSwapHandleKeeper) GetModuleAddress(_ string) (common.Address, error
 func (s *HandlerSwapSuite) TestValidation(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	pool := NewPool()
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.DOGEAsset
 	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
 	pool.BalanceRune = cosmos.NewUint(100 * common.One)
 	pools := make(map[common.Asset]Pool)
@@ -177,19 +179,21 @@ func (s *HandlerSwapSuite) TestValidation(c *C) {
 	handler := NewSwapHandler(mgr)
 
 	txID := GetRandomTxHash()
-	signerBNBAddr := GetRandomBNBAddress()
+	signerDOGEAddr := GetRandomDOGEAddress()
 	observerAddr := keeper.activeNodeAccount.NodeAddress
 	tx := common.NewTx(
 		txID,
-		signerBNBAddr,
-		signerBNBAddr,
+		signerDOGEAddr,
+		signerDOGEAddr,
 		common.Coins{
 			common.NewCoin(common.RuneAsset(), cosmos.NewUint(common.One*100)),
 		},
-		BNBGasFeeSingleton,
+		common.Gas{
+			common.NewCoin(common.DOGEAsset, cosmos.NewUint(10000)),
+		},
 		"",
 	)
-	msg := NewMsgSwap(tx, common.BNBAsset.GetSyntheticAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 0, 0, observerAddr)
+	msg := NewMsgSwap(tx, common.DOGEAsset.GetSyntheticAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 0, 0, observerAddr)
 	err := handler.validate(ctx, *msg)
 	c.Assert(err, IsNil)
 
@@ -201,7 +205,7 @@ func (s *HandlerSwapSuite) TestValidation(c *C) {
 	keeper.derivedAssets = true
 	err = handler.validate(ctx, *msg)
 	c.Assert(err, IsNil)
-	msg.TargetAsset = common.BNBAsset.GetSyntheticAsset()
+	msg.TargetAsset = common.DOGEAsset.GetSyntheticAsset()
 
 	// check that minting synths halts after hitting pool limit
 	keeper.synthSupply = cosmos.NewUint(common.One * 200)
@@ -215,7 +219,7 @@ func (s *HandlerSwapSuite) TestValidationWithStreamingSwap(c *C) {
 	mgr.Keeper().SetMimir(ctx, "MaxStreamingSwapLength", 3850)
 	mgr.Keeper().SetMimir(ctx, "MinBPStreamingSwap", 4)
 	pool := NewPool()
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.DOGEAsset
 	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
 	pool.BalanceRune = cosmos.NewUint(100 * common.One)
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
@@ -227,21 +231,23 @@ func (s *HandlerSwapSuite) TestValidationWithStreamingSwap(c *C) {
 	handler := NewSwapHandler(mgr)
 
 	txID := GetRandomTxHash()
-	signerBNBAddr := GetRandomBNBAddress()
+	signerDOGEAddr := GetRandomDOGEAddress()
 	observerAddr := na.NodeAddress
 	tx := common.NewTx(
 		txID,
-		signerBNBAddr,
-		signerBNBAddr,
+		signerDOGEAddr,
+		signerDOGEAddr,
 		common.Coins{
 			common.NewCoin(common.RuneAsset(), cosmos.NewUint(common.One*100)),
 		},
-		BNBGasFeeSingleton,
+		common.Gas{
+			common.NewCoin(common.DOGEAsset, cosmos.NewUint(10000)),
+		},
 		"",
 	)
 
 	// happy path
-	msg := NewMsgSwap(tx, common.BNBAsset.GetSyntheticAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 10, 20, observerAddr)
+	msg := NewMsgSwap(tx, common.DOGEAsset.GetSyntheticAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 10, 20, observerAddr)
 	err := handler.validate(ctx, *msg)
 	c.Assert(err, IsNil)
 
@@ -278,23 +284,25 @@ func (s *HandlerSwapSuite) TestHandle(c *C) {
 	c.Check(errors.Is(err, errInvalidMessage), Equals, true)
 
 	txID := GetRandomTxHash()
-	signerBNBAddr := GetRandomBNBAddress()
+	signerDOGEAddr := GetRandomDOGEAddress()
 	observerAddr := keeper.activeNodeAccount.NodeAddress
 	// no pool
 	tx := common.NewTx(
 		txID,
-		signerBNBAddr,
-		signerBNBAddr,
+		signerDOGEAddr,
+		signerDOGEAddr,
 		common.Coins{
 			common.NewCoin(common.RuneAsset(), cosmos.OneUint()),
 		},
-		BNBGasFeeSingleton,
+		common.Gas{
+			common.NewCoin(common.DOGEAsset, cosmos.NewUint(10000)),
+		},
 		"",
 	)
-	msg := NewMsgSwap(tx, common.BNBAsset, signerBNBAddr, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 0, 0, observerAddr)
+	msg := NewMsgSwap(tx, common.DOGEAsset, signerDOGEAddr, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 0, 0, observerAddr)
 
 	pool := NewPool()
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.DOGEAsset
 	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
 	pool.BalanceRune = cosmos.NewUint(100 * common.One)
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
@@ -305,36 +313,40 @@ func (s *HandlerSwapSuite) TestHandle(c *C) {
 
 	tx = common.NewTx(
 		txID,
-		signerBNBAddr,
-		signerBNBAddr,
+		signerDOGEAddr,
+		signerDOGEAddr,
 		common.Coins{
 			common.NewCoin(common.RuneAsset(), cosmos.NewUint(2*common.One)),
 		},
-		BNBGasFeeSingleton,
+		common.Gas{
+			common.NewCoin(common.DOGEAsset, cosmos.NewUint(10000)),
+		},
 		"",
 	)
-	msgSwapPriceProtection := NewMsgSwap(tx, common.BNBAsset, signerBNBAddr, cosmos.NewUint(2*common.One), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 0, 0, observerAddr)
+	msgSwapPriceProtection := NewMsgSwap(tx, common.DOGEAsset, signerDOGEAddr, cosmos.NewUint(2*common.One), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 0, 0, observerAddr)
 	result, err = handler.handle(ctx, *msgSwapPriceProtection)
 	c.Assert(err.Error(), Equals, errors.New("emit asset 192233756 less than price limit 200000000").Error())
 	c.Assert(result, IsNil)
 
 	poolTCAN := NewPool()
-	tCanAsset, err := common.NewAsset("BNB.TCAN-014")
+	tCanAsset, err := common.NewAsset("DOGE.TCAN-014")
 	c.Assert(err, IsNil)
 	poolTCAN.Asset = tCanAsset
 	poolTCAN.BalanceAsset = cosmos.NewUint(334850000)
 	poolTCAN.BalanceRune = cosmos.NewUint(2349500000)
 	c.Assert(mgr.Keeper().SetPool(ctx, poolTCAN), IsNil)
-	bnbAddr := GetRandomBNBAddress()
-	m, err := ParseMemo(mgr.GetVersion(), "swap:BNB.BNB:"+bnbAddr.String()+":121893238")
+	dogeAddr := GetRandomDOGEAddress()
+	m, err := ParseMemo(mgr.GetVersion(), "swap:DOGE.DOGE:"+dogeAddr.String()+":121893238")
 	c.Assert(err, IsNil)
 	txIn := NewObservedTx(
-		common.NewTx(GetRandomTxHash(), signerBNBAddr, GetRandomBNBAddress(),
+		common.NewTx(GetRandomTxHash(), signerDOGEAddr, GetRandomDOGEAddress(),
 			common.Coins{
 				common.NewCoin(tCanAsset, cosmos.NewUint(20000000)),
 			},
-			BNBGasFeeSingleton,
-			"swap:BNB.BNB:"+signerBNBAddr.String()+":121893238",
+			common.Gas{
+				common.NewCoin(common.DOGEAsset, cosmos.NewUint(10000)),
+			},
+			"swap:DOGE.DOGE:"+signerDOGEAddr.String()+":121893238",
 		),
 		1,
 		GetRandomPubKey(), 1,
@@ -355,22 +367,9 @@ func (s *HandlerSwapSuite) TestHandle(c *C) {
 	result, err = handler.Run(ctx, msgSwapFromTxIn)
 	c.Assert(err, NotNil)
 	c.Assert(result, IsNil)
-	msgSwap := NewMsgSwap(GetRandomTx(), common.EmptyAsset, GetRandomBNBAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 0, 0, GetRandomBech32Addr())
+	msgSwap := NewMsgSwap(GetRandomTx(), common.EmptyAsset, GetRandomDOGEAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 0, 0, GetRandomBech32Addr())
 	result, err = handler.Run(ctx, msgSwap)
 	c.Assert(err, NotNil)
-	c.Assert(result, IsNil)
-
-	// add RUNE-67C pool
-	pool = NewPool()
-	pool.Asset = common.Rune67CAsset
-	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
-	pool.BalanceRune = cosmos.NewUint(100 * common.One)
-	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
-
-	msgSwap2 := NewMsgSwap(GetRandomTx(), common.Rune67CAsset, GetRandomBNBAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 0, 0, GetRandomBech32Addr())
-	result, err = handler.Run(ctx, msgSwap2)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, fmt.Sprintf("target asset can't be %s", msgSwap2.TargetAsset.String()))
 	c.Assert(result, IsNil)
 
 	// When chain is halted , swap should respect it
@@ -386,7 +385,7 @@ func (s *HandlerSwapSuite) TestHandleStreamingSwap(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 
 	pool := NewPool()
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.DOGEAsset
 	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
 	pool.BalanceRune = cosmos.NewUint(100 * common.One)
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
@@ -398,19 +397,21 @@ func (s *HandlerSwapSuite) TestHandleStreamingSwap(c *C) {
 	handler := NewSwapHandler(mgr)
 
 	txID := GetRandomTxHash()
-	signerBNBAddr := GetRandomBNBAddress()
+	signerDOGEAddr := GetRandomDOGEAddress()
 	// no pool
 	tx := common.NewTx(
 		txID,
-		signerBNBAddr,
-		signerBNBAddr,
+		signerDOGEAddr,
+		signerDOGEAddr,
 		common.Coins{
 			common.NewCoin(common.RuneAsset(), cosmos.NewUint(2_123400000)),
 		},
-		BNBGasFeeSingleton,
-		fmt.Sprintf("=:BNB.BNB:%s", signerBNBAddr),
+		common.Gas{
+			common.NewCoin(common.DOGEAsset, cosmos.NewUint(10000)),
+		},
+		fmt.Sprintf("=:DOGE.DOGE:%s", signerDOGEAddr),
 	)
-	msg := NewMsgSwap(tx, common.BNBAsset, signerBNBAddr, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 3, 5, na.NodeAddress)
+	msg := NewMsgSwap(tx, common.DOGEAsset, signerDOGEAddr, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 3, 5, na.NodeAddress)
 	swp := msg.GetStreamingSwap()
 	swp.Deposit = tx.Coins[0].Amount
 	mgr.Keeper().SetStreamingSwap(ctx, swp)
@@ -472,11 +473,13 @@ func (s *HandlerSwapSuite) TestSwapSynthERC20(c *C) {
 	c.Assert(ok, Equals, true)
 	swapM.Asset = fuzzyAssetMatch(ctx, mgr.K, swapM.Asset)
 	txIn := NewObservedTx(
-		common.NewTx("832B575FC2E92057BE1E1D69277B5AF690ADDF3E98E76FFC67232F846D87CB45", "bnb1psc68r72zlj6uhqyqda6hl8l8028u3c7jnk6lp", "bnb1tsqqch9ak73e44aumfeqda6d2vhusple4ffydk",
+		common.NewTx("832B575FC2E92057BE1E1D69277B5AF690ADDF3E98E76FFC67232F846D87CB45", "0xd58610f89265a2fb637ac40edf59141ff873b266", "0x90f2b1ae50e6018230e90a33f98c7844a0ab635a",
 			common.Coins{
-				common.NewCoin(common.BNBAsset, cosmos.NewUint(20000000)),
+				common.NewCoin(common.ETHAsset, cosmos.NewUint(20000000)),
 			},
-			BNBGasFeeSingleton,
+			common.Gas{
+				common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
+			},
 			"=:ETH/AAVE-0X7FC66:thor1x0jkvqdh2hlpeztd5zyyk70n3efx6mhudkmnn2::thor1a427q3v96psuj4fnughdw8glt5r7j38lj7rkp8:100",
 		),
 		1,
@@ -502,32 +505,34 @@ func (s *HandlerSwapSuite) TestDoubleSwap(c *C) {
 	handler := NewSwapHandler(mgr)
 
 	pool := NewPool()
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.DOGEAsset
 	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
 	pool.BalanceRune = cosmos.NewUint(100 * common.One)
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
 
 	poolTCAN := NewPool()
-	tCanAsset, err := common.NewAsset("BNB.TCAN-014")
+	tCanAsset, err := common.NewAsset("DOGE.TCAN-014")
 	c.Assert(err, IsNil)
 	poolTCAN.Asset = tCanAsset
 	poolTCAN.BalanceAsset = cosmos.NewUint(334850000)
 	poolTCAN.BalanceRune = cosmos.NewUint(2349500000)
 	c.Assert(mgr.Keeper().SetPool(ctx, poolTCAN), IsNil)
 
-	signerBNBAddr := GetRandomBNBAddress()
+	signerDOGEAddr := GetRandomDOGEAddress()
 	observerAddr := keeper.activeNodeAccount.NodeAddress
 
 	// double swap - happy path
-	m, err := ParseMemo(mgr.GetVersion(), "swap:BNB.BNB:"+signerBNBAddr.String())
+	m, err := ParseMemo(mgr.GetVersion(), "swap:DOGE.DOGE:"+signerDOGEAddr.String())
 	c.Assert(err, IsNil)
 	txIn := NewObservedTx(
-		common.NewTx(GetRandomTxHash(), signerBNBAddr, GetRandomBNBAddress(),
+		common.NewTx(GetRandomTxHash(), signerDOGEAddr, GetRandomDOGEAddress(),
 			common.Coins{
 				common.NewCoin(tCanAsset, cosmos.NewUint(20000000)),
 			},
-			BNBGasFeeSingleton,
-			"swap:BNB.BNB:"+signerBNBAddr.String(),
+			common.Gas{
+				common.NewCoin(common.DOGEAsset, cosmos.NewUint(10000)),
+			},
+			"swap:DOGE.DOGE:"+signerDOGEAddr.String(),
 		),
 		1,
 		GetRandomPubKey(), 1,
@@ -546,16 +551,18 @@ func (s *HandlerSwapSuite) TestDoubleSwap(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(items, HasLen, 1)
 	// double swap , RUNE not enough to pay for transaction fee
-	testnetBNBAddr := GetRandomBNBAddress()
-	m1, err := ParseMemo(mgr.GetVersion(), "swap:BNB.BNB:"+testnetBNBAddr.String())
+	testnetDOGEAddr := GetRandomDOGEAddress()
+	m1, err := ParseMemo(mgr.GetVersion(), "swap:DOGE.DOGE:"+testnetDOGEAddr.String())
 	c.Assert(err, IsNil)
 	txIn1 := NewObservedTx(
-		common.NewTx(GetRandomTxHash(), signerBNBAddr, GetRandomBNBAddress(),
+		common.NewTx(GetRandomTxHash(), signerDOGEAddr, GetRandomDOGEAddress(),
 			common.Coins{
 				common.NewCoin(tCanAsset, cosmos.NewUint(10000)),
 			},
-			BNBGasFeeSingleton,
-			"swap:BNB.BNB:"+testnetBNBAddr.String(),
+			common.Gas{
+				common.NewCoin(common.DOGEAsset, cosmos.NewUint(10000)),
+			},
+			"swap:DOGE.DOGE:"+testnetDOGEAddr.String(),
 		),
 		1,
 		GetRandomPubKey(), 1,
@@ -673,7 +680,7 @@ func (s *HandlerSwapSuite) TestSwapOutDexIntegration(c *C) {
 	// when aggregator target address and target chain doesn't match , don't care
 	swapM, ok = m.(SwapMemo)
 	c.Assert(ok, Equals, true)
-	swapM.DexTargetAddress = GetRandomBNBAddress().String()
+	swapM.DexTargetAddress = GetRandomDOGEAddress().String()
 	msgSwapFromTxIn, err = getMsgSwapFromMemo(swapM, txIn, observerAddr)
 	c.Assert(err, IsNil)
 	res, err = handler.Run(ctx, msgSwapFromTxIn)

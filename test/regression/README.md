@@ -54,7 +54,7 @@ The simplest of test structures may look something like:
 
 In order to preserve the human-readability of test cases, the harness will populate embedded variables at runtime for addresses and transaction IDs. These values will be expressed as Go template functions and can be used in the test cases like:
 
-- `{{ addr_bnb_dog }}` (the bnb address for the "dog" mnemonic)
+- `{{ addr_eth_dog }}` (the eth address for the "dog" mnemonic)
 - `{{ observe_txid 1 }}` (deterministic tx id for first observed tx)
 - `{{ native_txid 1 }}` (the txid of the first native transaction)
 - `{{ native_txid -1 }}` (the txid of the most recent native transaction)

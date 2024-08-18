@@ -19,7 +19,7 @@ func (mas *MsgDonateSuite) TestMsgDonate(c *C) {
 	tx := GetRandomTx()
 	addr := GetRandomBech32Addr()
 	c.Check(addr.Empty(), Equals, false)
-	ma := NewMsgDonate(tx, common.BNBAsset, cosmos.NewUint(100000000), cosmos.NewUint(100000000), addr)
+	ma := NewMsgDonate(tx, common.ETHAsset, cosmos.NewUint(100000000), cosmos.NewUint(100000000), addr)
 	c.Check(ma.Route(), Equals, RouterKey)
 	c.Check(ma.Type(), Equals, "donate")
 	err := ma.ValidateBasic()
@@ -46,14 +46,14 @@ func (mas *MsgDonateSuite) TestMsgDonate(c *C) {
 			signer: addr,
 		},
 		{
-			ticker: common.BNBAsset,
+			ticker: common.ETHAsset,
 			rune:   cosmos.NewUint(100000000),
 			asset:  cosmos.NewUint(100000000),
 			txHash: common.TxID(""),
 			signer: addr,
 		},
 		{
-			ticker: common.BNBAsset,
+			ticker: common.ETHAsset,
 			rune:   cosmos.NewUint(100000000),
 			asset:  cosmos.NewUint(100000000),
 			txHash: tx.ID,

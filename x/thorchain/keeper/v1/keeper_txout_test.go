@@ -16,10 +16,10 @@ func (KeeperTxOutSuite) TestKeeperTxOut(c *C) {
 	txOut := NewTxOut(1)
 	spent := cosmos.NewUint(100)
 	txOutItem := TxOutItem{
-		Chain:       common.BNBChain,
-		ToAddress:   GetRandomBNBAddress(),
+		Chain:       common.ETHChain,
+		ToAddress:   GetRandomETHAddress(),
 		VaultPubKey: GetRandomPubKey(),
-		Coin:        common.NewCoin(common.BNBAsset, cosmos.NewUint(100*common.One)),
+		Coin:        common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
 		Memo:        "hello",
 		CloutSpent:  &spent,
 	}
@@ -27,7 +27,7 @@ func (KeeperTxOutSuite) TestKeeperTxOut(c *C) {
 	c.Assert(k.SetTxOut(ctx, txOut), IsNil)
 
 	pool := NewPool()
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.ETHAsset
 	pool.BalanceRune = cosmos.NewUint(92419747020392)
 	pool.BalanceAsset = cosmos.NewUint(1402011488988)
 	err := k.SetPool(ctx, pool)

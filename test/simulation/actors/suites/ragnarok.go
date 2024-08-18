@@ -18,9 +18,7 @@ func Ragnarok() *Actor {
 
 	// ragnarok all gas asset pools (should apply to tokens implicitly)
 	for _, chain := range common.AllChains {
-		// skip thorchain and deprecated chains
-		switch chain {
-		case common.THORChain, common.BNBChain, common.TERRAChain:
+		if chain == common.THORChain {
 			continue
 		}
 		a.Children[core.NewRagnarokPoolActor(chain.GetGasAsset())] = true

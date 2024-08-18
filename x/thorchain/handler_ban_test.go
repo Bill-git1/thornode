@@ -242,7 +242,7 @@ func (s *HandlerBanSuite) TestBanHandlerValidation(c *C) {
 		{
 			name: "invalid msg should return an error",
 			messageProvider: func(ctx cosmos.Context, helper *TestBanKeeperHelper) cosmos.Msg {
-				return NewMsgNetworkFee(1024, common.BNBChain, 1, bnbSingleTxFee.Uint64(), GetRandomBech32Addr())
+				return NewMsgNetworkFee(1024, common.ETHChain, 1, 10000, GetRandomBech32Addr())
 			},
 			validator: func(c *C, result *cosmos.Result, err error, helper *TestBanKeeperHelper, name string) {
 				c.Check(err, NotNil, Commentf(name))

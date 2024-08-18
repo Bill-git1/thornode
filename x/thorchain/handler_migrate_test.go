@@ -39,17 +39,19 @@ func (HandlerMigrateSuite) TestMigrate(c *C) {
 
 	handler := NewMigrateHandler(NewDummyMgrWithKeeper(keeper))
 
-	addr, err := keeper.vault.PubKey.GetAddress(common.BNBChain)
+	addr, err := keeper.vault.PubKey.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
 
 	tx := NewObservedTx(common.Tx{
 		ID:          GetRandomTxHash(),
-		Chain:       common.BNBChain,
-		Coins:       common.Coins{common.NewCoin(common.BNBAsset, cosmos.NewUint(1*common.One))},
+		Chain:       common.ETHChain,
+		Coins:       common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(1*common.One))},
 		Memo:        "",
-		FromAddress: GetRandomBNBAddress(),
+		FromAddress: GetRandomETHAddress(),
 		ToAddress:   addr,
-		Gas:         BNBGasFeeSingleton,
+		Gas: common.Gas{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
+		},
 	}, 12, GetRandomPubKey(), 12)
 
 	msgMigrate := NewMsgMigrate(tx, 1, keeper.activeNodeAccount.NodeAddress)
@@ -120,14 +122,14 @@ func (HandlerMigrateSuite) TestMigrateHappyPath(c *C) {
 
 	newVault := GetRandomVault()
 	txout := NewTxOut(1)
-	newVaultAddr, err := newVault.PubKey.GetAddress(common.BNBChain)
+	newVaultAddr, err := newVault.PubKey.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
 	txout.TxArray = append(txout.TxArray, TxOutItem{
-		Chain:       common.BNBChain,
+		Chain:       common.ETHChain,
 		InHash:      common.BlankTxID,
 		ToAddress:   newVaultAddr,
 		VaultPubKey: retireVault.PubKey,
-		Coin:        common.NewCoin(common.BNBAsset, cosmos.NewUint(1024)),
+		Coin:        common.NewCoin(common.ETHAsset, cosmos.NewUint(1024)),
 		Memo:        NewMigrateMemo(1).String(),
 	})
 	keeper := &TestMigrateKeeperHappyPath{
@@ -137,19 +139,21 @@ func (HandlerMigrateSuite) TestMigrateHappyPath(c *C) {
 		retireVault:       retireVault,
 		txout:             txout,
 	}
-	addr, err := keeper.retireVault.PubKey.GetAddress(common.BNBChain)
+	addr, err := keeper.retireVault.PubKey.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
 	handler := NewMigrateHandler(NewDummyMgrWithKeeper(keeper))
 	tx := NewObservedTx(common.Tx{
 		ID:    GetRandomTxHash(),
-		Chain: common.BNBChain,
+		Chain: common.ETHChain,
 		Coins: common.Coins{
-			common.NewCoin(common.BNBAsset, cosmos.NewUint(1024)),
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(1024)),
 		},
 		Memo:        NewMigrateMemo(1).String(),
 		FromAddress: addr,
 		ToAddress:   newVaultAddr,
-		Gas:         BNBGasFeeSingleton,
+		Gas: common.Gas{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
+		},
 	}, 1, retireVault.PubKey, 1)
 
 	msgMigrate := NewMsgMigrate(tx, 1, keeper.activeNodeAccount.NodeAddress)
@@ -163,15 +167,15 @@ func (HandlerMigrateSuite) TestSlash(c *C) {
 	retireVault := GetRandomVault()
 	newVault := GetRandomVault()
 	vaultCoins := common.Coins{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(2*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(2*common.One)),
 	}
 	retireVault.AddFunds(vaultCoins)
 	txout := NewTxOut(1)
-	newVaultAddr, err := newVault.PubKey.GetAddress(common.BNBChain)
+	newVaultAddr, err := newVault.PubKey.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
 
 	pool := NewPool()
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.ETHAsset
 	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
 	pool.BalanceRune = cosmos.NewUint(100 * common.One)
 	na := GetRandomValidatorNode(NodeActive)
@@ -187,34 +191,36 @@ func (HandlerMigrateSuite) TestSlash(c *C) {
 		txout:             txout,
 		pool:              pool,
 	}
-	addr, err := keeper.retireVault.PubKey.GetAddress(common.BNBChain)
+	addr, err := keeper.retireVault.PubKey.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
 	mgr := NewDummyMgrWithKeeper(keeper)
 	mgr.slasher = newSlasherVCUR(keeper, NewDummyEventMgr())
 	handler := NewMigrateHandler(mgr)
 	tx := NewObservedTx(common.Tx{
 		ID:    GetRandomTxHash(),
-		Chain: common.BNBChain,
+		Chain: common.ETHChain,
 		Coins: common.Coins{
-			common.NewCoin(common.BNBAsset, cosmos.NewUint(1024)),
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(1024)),
 		},
 		Memo:        NewMigrateMemo(1).String(),
 		FromAddress: addr,
 		ToAddress:   newVaultAddr,
-		Gas:         BNBGasFeeSingleton,
+		Gas: common.Gas{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
+		},
 	}, 1, retireVault.PubKey, 1)
 
 	msgMigrate := NewMsgMigrate(tx, 1, keeper.activeNodeAccount.NodeAddress)
 	_, err = handler.handle(ctx, *msgMigrate)
 	c.Assert(err, IsNil)
-	c.Assert(keeper.activeNodeAccount.Bond, DeepEquals, cosmos.NewUint(9999942214))
+	c.Assert(keeper.activeNodeAccount.Bond, DeepEquals, cosmos.NewUint(9999983464))
 }
 
 func (HandlerMigrateSuite) TestHandlerMigrateValidation(c *C) {
 	// invalid message should return an error
 	ctx, mgr := setupManagerForTest(c)
 	h := NewMigrateHandler(mgr)
-	result, err := h.Run(ctx, NewMsgNetworkFee(ctx.BlockHeight(), common.BNBChain, 1, bnbSingleTxFee.Uint64(), GetRandomBech32Addr()))
+	result, err := h.Run(ctx, NewMsgNetworkFee(ctx.BlockHeight(), common.ETHChain, 1, 10000, GetRandomBech32Addr()))
 	c.Check(err, NotNil)
 	c.Check(result, IsNil)
 	c.Check(errors.Is(err, errInvalidMessage), Equals, true)

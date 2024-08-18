@@ -12,7 +12,7 @@ type MsgNetworkFeeSuite struct{}
 var _ = Suite(&MsgNetworkFeeSuite{})
 
 func (MsgNetworkFeeSuite) TestMsgNetworkFee(c *C) {
-	msg := NewMsgNetworkFee(1024, common.BNBChain, 1, 37500, GetRandomBech32Addr())
+	msg := NewMsgNetworkFee(1024, common.ETHChain, 1, 37500, GetRandomBech32Addr())
 	c.Assert(msg.Type(), Equals, "set_network_fee")
 	EnsureMsgBasicCorrect(msg, c)
 
@@ -37,7 +37,7 @@ func (MsgNetworkFeeSuite) TestMsgNetworkFee(c *C) {
 		{
 			name:               "invalid transaction size should return error",
 			blockHeight:        1024,
-			chain:              common.BNBChain,
+			chain:              common.ETHChain,
 			transactionSize:    0,
 			transactionFeeRate: 100,
 			signer:             GetRandomBech32Addr(),
@@ -46,7 +46,7 @@ func (MsgNetworkFeeSuite) TestMsgNetworkFee(c *C) {
 		{
 			name:               "invalid transaction fee rate should return error",
 			blockHeight:        1024,
-			chain:              common.BNBChain,
+			chain:              common.ETHChain,
 			transactionSize:    100,
 			transactionFeeRate: 0,
 			signer:             GetRandomBech32Addr(),
@@ -55,7 +55,7 @@ func (MsgNetworkFeeSuite) TestMsgNetworkFee(c *C) {
 		{
 			name:               "empty signer should return error",
 			blockHeight:        1024,
-			chain:              common.BNBChain,
+			chain:              common.ETHChain,
 			transactionSize:    100,
 			transactionFeeRate: 100,
 			signer:             cosmos.AccAddress(""),
@@ -64,7 +64,7 @@ func (MsgNetworkFeeSuite) TestMsgNetworkFee(c *C) {
 		{
 			name:               "negative block height should return error",
 			blockHeight:        -1024,
-			chain:              common.BNBChain,
+			chain:              common.ETHChain,
 			transactionSize:    100,
 			transactionFeeRate: 100,
 			signer:             GetRandomBech32Addr(),
@@ -73,7 +73,7 @@ func (MsgNetworkFeeSuite) TestMsgNetworkFee(c *C) {
 		{
 			name:               "happy path",
 			blockHeight:        1024,
-			chain:              common.BNBChain,
+			chain:              common.ETHChain,
 			transactionSize:    100,
 			transactionFeeRate: 100,
 			signer:             GetRandomBech32Addr(),

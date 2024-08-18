@@ -17,7 +17,7 @@ func (s *EventManagerTestSuite) TestEmitPoolEvent(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(eventMgr, NotNil)
 	ctx = ctx.WithBlockHeight(1024)
-	c.Assert(eventMgr.EmitEvent(ctx, NewEventPool(common.BNBAsset, PoolAvailable)), IsNil)
+	c.Assert(eventMgr.EmitEvent(ctx, NewEventPool(common.ETHAsset, PoolAvailable)), IsNil)
 }
 
 func (s *EventManagerTestSuite) TestEmitErrataEvent(c *C) {
@@ -27,7 +27,7 @@ func (s *EventManagerTestSuite) TestEmitErrataEvent(c *C) {
 	ctx = ctx.WithBlockHeight(1024)
 	errataEvent := NewEventErrata(GetRandomTxHash(), PoolMods{
 		PoolMod{
-			Asset:    common.BNBAsset,
+			Asset:    common.ETHAsset,
 			RuneAmt:  cosmos.ZeroUint(),
 			RuneAdd:  false,
 			AssetAmt: cosmos.NewUint(100),
@@ -45,7 +45,7 @@ func (s *EventManagerTestSuite) TestEmitGasEvent(c *C) {
 	ctx = ctx.WithBlockHeight(1024)
 	gasEvent := NewEventGas()
 	gasEvent.Pools = append(gasEvent.Pools, GasPool{
-		Asset:    common.BNBAsset,
+		Asset:    common.ETHAsset,
 		AssetAmt: cosmos.ZeroUint(),
 		RuneAmt:  cosmos.NewUint(1024),
 		Count:    1,

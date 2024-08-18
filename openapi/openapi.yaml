@@ -1646,13 +1646,13 @@ components:
       properties:
         asset:
           type: string
-          example: "BNB.BNB"
+          example: "BTC.BTC"
         rune_address:
           type: string
           example: "thor1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
         asset_address:
           type: string
-          example: "bnb1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          example: "bc1qn9esxuw8ca7ts8l6w66kdh800s09msvutydc46"
         last_add_height:
           type: integer
           format: int64
@@ -1692,13 +1692,13 @@ components:
       properties:
         asset:
           type: string
-          example: "BNB.BNB"
+          example: "BTC.BTC"
         rune_address:
           type: string
           example: "thor1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
         asset_address:
           type: string
-          example: "bnb1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          example: "bc1qn9esxuw8ca7ts8l6w66kdh800s09msvutydc46"
         last_add_height:
           type: integer
           format: int64
@@ -1753,10 +1753,10 @@ components:
       properties:
         asset:
           type: string
-          example: "BNB.BNB"
+          example: "BTC.BTC"
         asset_address:
           type: string
-          example: "bnb1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          example: "bc1qn9esxuw8ca7ts8l6w66kdh800s09msvutydc46"
         last_add_height:
           type: integer
           format: int64
@@ -1794,10 +1794,10 @@ components:
       properties:
         owner:
           type: string
-          example: "bnb1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          example: "bc1qn9esxuw8ca7ts8l6w66kdh800s09msvutydc46"
         asset:
           type: string
-          example: "BNB.BNB"
+          example: "BTC.BTC"
         debt_issued:
           type: string
           example: "123456"

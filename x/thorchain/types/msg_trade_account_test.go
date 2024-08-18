@@ -11,7 +11,7 @@ type MsgTradeAccountSuite struct{}
 var _ = Suite(&MsgTradeAccountSuite{})
 
 func (MsgTradeAccountSuite) TestDeposit(c *C) {
-	asset := common.BNBAsset
+	asset := common.ETHAsset
 	amt := cosmos.NewUint(100)
 	signer := GetRandomBech32Addr()
 	dummyTx := common.Tx{ID: "test"}
@@ -31,23 +31,23 @@ func (MsgTradeAccountSuite) TestDeposit(c *C) {
 }
 
 func (MsgTradeAccountSuite) TestWithdrawal(c *C) {
-	asset := common.BNBAsset.GetTradeAsset()
+	asset := common.ETHAsset.GetTradeAsset()
 	amt := cosmos.NewUint(100)
-	bnbAddr := GetRandomBNBAddress()
+	ethAddr := GetRandomETHAddress()
 	signer := GetRandomBech32Addr()
 	dummyTx := common.Tx{ID: "test"}
 
-	m := NewMsgTradeAccountWithdrawal(asset, amt, bnbAddr, signer, dummyTx)
+	m := NewMsgTradeAccountWithdrawal(asset, amt, ethAddr, signer, dummyTx)
 	EnsureMsgBasicCorrect(m, c)
 	c.Check(m.Type(), Equals, "set_trade_account_withdrawal")
 
-	m = NewMsgTradeAccountWithdrawal(common.EmptyAsset, amt, bnbAddr, signer, dummyTx)
+	m = NewMsgTradeAccountWithdrawal(common.EmptyAsset, amt, ethAddr, signer, dummyTx)
 	c.Check(m.ValidateBasic(), NotNil)
 
-	m = NewMsgTradeAccountWithdrawal(common.RuneAsset(), amt, bnbAddr, signer, dummyTx)
+	m = NewMsgTradeAccountWithdrawal(common.RuneAsset(), amt, ethAddr, signer, dummyTx)
 	c.Check(m.ValidateBasic(), NotNil)
 
-	m = NewMsgTradeAccountWithdrawal(asset, cosmos.ZeroUint(), bnbAddr, signer, dummyTx)
+	m = NewMsgTradeAccountWithdrawal(asset, cosmos.ZeroUint(), ethAddr, signer, dummyTx)
 	c.Check(m.ValidateBasic(), NotNil)
 
 	m = NewMsgTradeAccountWithdrawal(asset, cosmos.ZeroUint(), GetRandomTHORAddress(), signer, dummyTx)

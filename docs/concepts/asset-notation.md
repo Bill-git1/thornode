@@ -21,9 +21,6 @@ There are three kinds of assets within THORChain:
 | Bitcoin       | BTC~BTC (Trade BTC)                                 |
 | Ethereum      | ETH.ETH                                             |
 | USDT          | ETH.USDT-0xdac17f958d2ee523a2206206994597c13d831ec7 |
-| BNB           | BNB.BNB (Native)                                    |
-| BNB           | BNB/BNB (Synth)                                     |
-| RUNE (BEP2)   | BNB.RUNE-B1A                                        |
 | RUNE (NATIVE) | THOR.RUNE                                           |
 
 ### Layer 1 Assets
@@ -31,7 +28,6 @@ There are three kinds of assets within THORChain:
 - Layer 1 (L1) chains are always denoted as `CHAIN.ASSET`, e.g. BTC.BTC.
 - As two tokens can live on different blockchains, the chain can be used to distinguish them. Example: USDC is on the Ethereum Chain and Avalanche Chain and is denoted as `ETH.USDC` and `AVAX.USDC` respectively; note the contract address (ticker) was removed for simplicity.
 - Tickers are added to denote assets and are required in the full name. For EVM based Chains, the ticker is the ERC20 Contract address, e.g. `ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48`. This ensures the asset is specific to the contract address. The [pools list](https://midgard.ninerealms.com/v2/pools)shows assets using the full notation.
-- IDs are required for the Binance Beacon chain as BNB.RUNE is not sufficient to distinguish between Mainnet and Testnet assets. For example, `BNB.RUNE-B1A` denoted Mainnet RUNE and `BNB.RUNE-67C` denoted Testnet RUNE.
 
 ```admonish danger
 THOR.RUNE is the only RUNE asset in use. All other RUNE assets on other chains are no longer in use and have no value within THORChain.

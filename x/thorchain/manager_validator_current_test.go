@@ -38,7 +38,7 @@ func (vts *ValidatorMgrVCURTestSuite) TestChurnWithChainHalt(c *C) {
 
 	// set mimir to halt btc chain
 	mgr.Keeper().SetMimir(ctx, "HaltBTCChain", 1)
-	mgr.Keeper().SetMimir(ctx, "HaltBNBChain", 1) // ignored since not in active vault
+	mgr.Keeper().SetMimir(ctx, "HaltETHChain", 1) // ignored since not in active vault
 
 	// should not start churn with chain halted
 	c.Assert(networkMgr.BeginBlock(ctx, mgr, nil), IsNil)
@@ -123,7 +123,7 @@ func (vts *ValidatorMgrVCURTestSuite) TestRagnarokForMainnet(c *C) {
 	// trigger ragnarok
 	ctx = ctx.WithBlockHeight(1024)
 	c.Assert(networkMgr.BeginBlock(ctx, mgr, nil), IsNil)
-	vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BNBChain}.Strings(), []ChainContract{})
+	vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
 	for _, item := range nodeAccounts {
 		vault.Membership = append(vault.Membership, item.PubKeySet.Secp256k1.String())
 	}
@@ -414,7 +414,7 @@ func (vts *ValidatorMgrVCURTestSuite) TestGetChangedNodes(c *C) {
 	disabledNode.Bond = cosmos.ZeroUint()
 	c.Assert(mgr.Keeper().SetNodeAccount(ctx, disabledNode), IsNil)
 
-	vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BNBChain}.Strings(), []ChainContract{})
+	vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain}.Strings(), []ChainContract{})
 	vault.Membership = append(vault.Membership, activeNode.PubKeySet.Secp256k1.String())
 	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
 

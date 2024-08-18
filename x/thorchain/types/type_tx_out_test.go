@@ -13,18 +13,18 @@ var _ = Suite(&TxOutTestSuite{})
 
 func (TxOutTestSuite) TestTxOut(c *C) {
 	pk := GetRandomPubKey()
-	toAddr := GetRandomBNBAddress()
+	toAddr := GetRandomETHAddress()
 	txOut := NewTxOut(1)
 	c.Assert(txOut, NotNil)
 	c.Assert(txOut.TxArray, HasLen, 0)
 	c.Assert(txOut.IsEmpty(), Equals, true)
 	c.Assert(txOut.Valid(), IsNil)
 	txOutItem := TxOutItem{
-		Chain:       common.BNBChain,
+		Chain:       common.ETHChain,
 		VaultPubKey: pk,
 		ToAddress:   toAddr,
 		InHash:      GetRandomTxHash(),
-		Coin:        common.NewCoin(common.BNBAsset, cosmos.NewUint(100*common.One)),
+		Coin:        common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
 		GasRate:     1,
 	}
 	txOut.TxArray = append(txOut.TxArray, txOutItem)
@@ -38,7 +38,7 @@ func (TxOutTestSuite) TestTxOut(c *C) {
 	txOut1 := NewTxOut(2)
 	txOut1.TxArray = append(txOut1.TxArray, txOutItem)
 	txOut1.TxArray = append(txOut1.TxArray, TxOutItem{
-		Chain:       common.BNBChain,
+		Chain:       common.ETHChain,
 		InHash:      GetRandomTxHash(),
 		ToAddress:   toAddr,
 		VaultPubKey: pk,
@@ -49,21 +49,21 @@ func (TxOutTestSuite) TestTxOut(c *C) {
 
 	txOut2 := NewTxOut(3)
 	txOut2.TxArray = append(txOut2.TxArray, TxOutItem{
-		Chain:       common.BNBChain,
+		Chain:       common.ETHChain,
 		InHash:      GetRandomTxHash(),
 		ToAddress:   "",
 		VaultPubKey: pk,
-		Coin:        common.NewCoin(common.BNBAsset, cosmos.NewUint(100*common.One)),
+		Coin:        common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
 		GasRate:     1,
 	})
 	c.Assert(txOut2.Valid(), NotNil)
 	txOut3 := NewTxOut(4)
 	txOut3.TxArray = append(txOut3.TxArray, TxOutItem{
-		Chain:       common.BNBChain,
+		Chain:       common.ETHChain,
 		InHash:      GetRandomTxHash(),
 		ToAddress:   toAddr,
 		VaultPubKey: common.EmptyPubKey,
-		Coin:        common.NewCoin(common.BNBAsset, cosmos.NewUint(100*common.One)),
+		Coin:        common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
 		GasRate:     1,
 	})
 	c.Assert(txOut3.Valid(), NotNil)
@@ -71,16 +71,16 @@ func (TxOutTestSuite) TestTxOut(c *C) {
 
 func (TxOutTestSuite) TestTxOutItem(c *C) {
 	txOutItem := TxOutItem{
-		Chain:       common.BNBChain,
-		ToAddress:   GetRandomBNBAddress(),
+		Chain:       common.ETHChain,
+		ToAddress:   GetRandomETHAddress(),
 		VaultPubKey: GetRandomPubKey(),
 		Coin: common.Coin{
-			Asset:  common.BNBAsset,
+			Asset:  common.ETHAsset,
 			Amount: cosmos.NewUint(100),
 		},
 		Memo: "something memo",
 		MaxGas: common.Gas{
-			common.NewCoin(common.BNBAsset, bnbSingleTxFee),
+			common.NewCoin(common.ETHAsset, ethSingleTxFee),
 		},
 		GasRate: 1,
 		InHash:  GetRandomTxHash(),

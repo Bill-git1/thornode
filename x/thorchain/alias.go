@@ -193,11 +193,11 @@ var (
 	GetRandomVaultNode             = types.GetRandomVaultNode
 	GetRandomTHORAddress           = types.GetRandomTHORAddress
 	GetRandomRUNEAddress           = types.GetRandomRUNEAddress
-	GetRandomBNBAddress            = types.GetRandomBNBAddress
-	GetRandomTERRAAddress          = types.GetRandomTERRAAddress
+	GetRandomETHAddress            = types.GetRandomETHAddress
 	GetRandomGAIAAddress           = types.GetRandomGAIAAddress
 	GetRandomBTCAddress            = types.GetRandomBTCAddress
 	GetRandomLTCAddress            = types.GetRandomLTCAddress
+	GetRandomDOGEAddress           = types.GetRandomDOGEAddress
 	GetRandomTxHash                = types.GetRandomTxHash
 	GetRandomBech32Addr            = types.GetRandomBech32Addr
 	GetRandomBech32ConsensusPubKey = types.GetRandomBech32ConsensusPubKey

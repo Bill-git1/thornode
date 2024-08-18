@@ -41,7 +41,7 @@ func (s *PoolManagerTestSuite) SetUpSuite(c *C) {
 func (s *PoolManagerTestSuite) TestGetPrice(c *C) {
 	poolMgr := NewPoolMgr(s.bridge)
 	c.Assert(poolMgr, NotNil)
-	value, err := poolMgr.GetValue(common.BNBAsset, common.ETHAsset, cosmos.NewUint(1000))
+	value, err := poolMgr.GetValue(common.BTCAsset, common.ETHAsset, cosmos.NewUint(1000))
 	c.Assert(err, NotNil)
 	c.Assert(value.IsZero(), Equals, true)
 	asset, err := common.NewAsset("ETH.TKN-0X3B7FA4DD21C6F9BA3CA375217EAD7CAB9D6BF483")

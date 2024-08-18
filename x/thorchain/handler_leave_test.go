@@ -33,9 +33,11 @@ func (HandlerLeaveSuite) TestLeaveHandler_NotActiveNodeLeave(c *C) {
 	tx := common.NewTx(
 		txID,
 		acc2.BondAddress,
-		GetRandomBNBAddress(),
+		GetRandomETHAddress(),
 		common.Coins{common.NewCoin(common.RuneAsset(), cosmos.ZeroUint())},
-		BNBGasFeeSingleton,
+		common.Gas{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
+		},
 		"LEAVE",
 	)
 	msgLeave := NewMsgLeave(tx, acc2.NodeAddress, w.activeNodeAccount.NodeAddress)
@@ -57,9 +59,11 @@ func (HandlerLeaveSuite) TestLeaveHandler_ActiveNodeLeave(c *C) {
 	tx := common.NewTx(
 		txID,
 		acc2.BondAddress,
-		GetRandomBNBAddress(),
+		GetRandomETHAddress(),
 		common.Coins{common.NewCoin(common.RuneAsset(), cosmos.OneUint())},
-		BNBGasFeeSingleton,
+		common.Gas{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
+		},
 		"",
 	)
 	msgLeave := NewMsgLeave(tx, acc2.NodeAddress, w.activeNodeAccount.NodeAddress)
@@ -88,9 +92,11 @@ func (HandlerLeaveSuite) TestLeaveJail(c *C) {
 	tx := common.NewTx(
 		txID,
 		acc2.BondAddress,
-		GetRandomBNBAddress(),
+		GetRandomETHAddress(),
 		common.Coins{common.NewCoin(common.RuneAsset(), cosmos.OneUint())},
-		BNBGasFeeSingleton,
+		common.Gas{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
+		},
 		"LEAVE",
 	)
 	msgLeave := NewMsgLeave(tx, acc2.NodeAddress, w.activeNodeAccount.NodeAddress)
@@ -109,14 +115,14 @@ func (HandlerLeaveSuite) TestLeaveValidation(c *C) {
 			name: "empty from address should fail",
 			msgLeave: NewMsgLeave(common.Tx{
 				ID:          GetRandomTxHash(),
-				Chain:       common.BNBChain,
+				Chain:       common.ETHChain,
 				FromAddress: "",
-				ToAddress:   GetRandomBNBAddress(),
+				ToAddress:   GetRandomETHAddress(),
 				Coins: common.Coins{
-					common.NewCoin(common.BNBAsset, cosmos.NewUint(common.One)),
+					common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One)),
 				},
 				Gas: common.Gas{
-					common.NewCoin(common.BNBAsset, cosmos.NewUint(common.One)),
+					common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One)),
 				},
 				Memo: "",
 			}, w.activeNodeAccount.NodeAddress, w.activeNodeAccount.NodeAddress),
@@ -126,14 +132,14 @@ func (HandlerLeaveSuite) TestLeaveValidation(c *C) {
 			name: "non-matching from address should fail",
 			msgLeave: NewMsgLeave(common.Tx{
 				ID:          GetRandomTxHash(),
-				Chain:       common.BNBChain,
-				FromAddress: GetRandomBNBAddress(),
-				ToAddress:   GetRandomBNBAddress(),
+				Chain:       common.ETHChain,
+				FromAddress: GetRandomETHAddress(),
+				ToAddress:   GetRandomETHAddress(),
 				Coins: common.Coins{
-					common.NewCoin(common.BNBAsset, cosmos.NewUint(common.One)),
+					common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One)),
 				},
 				Gas: common.Gas{
-					common.NewCoin(common.BNBAsset, cosmos.NewUint(common.One)),
+					common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One)),
 				},
 				Memo: "",
 			}, w.activeNodeAccount.NodeAddress, w.activeNodeAccount.NodeAddress),
@@ -143,14 +149,14 @@ func (HandlerLeaveSuite) TestLeaveValidation(c *C) {
 			name: "empty tx id should fail",
 			msgLeave: NewMsgLeave(common.Tx{
 				ID:          common.TxID(""),
-				Chain:       common.BNBChain,
+				Chain:       common.ETHChain,
 				FromAddress: w.activeNodeAccount.BondAddress,
-				ToAddress:   GetRandomBNBAddress(),
+				ToAddress:   GetRandomETHAddress(),
 				Coins: common.Coins{
-					common.NewCoin(common.BNBAsset, cosmos.NewUint(common.One)),
+					common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One)),
 				},
 				Gas: common.Gas{
-					common.NewCoin(common.BNBAsset, cosmos.NewUint(common.One)),
+					common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One)),
 				},
 				Memo: "",
 			}, w.activeNodeAccount.NodeAddress, w.activeNodeAccount.NodeAddress),
@@ -160,14 +166,14 @@ func (HandlerLeaveSuite) TestLeaveValidation(c *C) {
 			name: "empty signer should fail",
 			msgLeave: NewMsgLeave(common.Tx{
 				ID:          GetRandomTxHash(),
-				Chain:       common.BNBChain,
+				Chain:       common.ETHChain,
 				FromAddress: w.activeNodeAccount.BondAddress,
-				ToAddress:   GetRandomBNBAddress(),
+				ToAddress:   GetRandomETHAddress(),
 				Coins: common.Coins{
-					common.NewCoin(common.BNBAsset, cosmos.NewUint(common.One)),
+					common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One)),
 				},
 				Gas: common.Gas{
-					common.NewCoin(common.BNBAsset, cosmos.NewUint(common.One)),
+					common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One)),
 				},
 				Memo: "",
 			}, w.activeNodeAccount.NodeAddress, cosmos.AccAddress{}),
@@ -225,7 +231,7 @@ func (HandlerLeaveSuite) TestLeaveDifferentValidations(c *C) {
 		{
 			name: "invalid message type should return an error",
 			messageProvider: func(ctx cosmos.Context, helper *LeaveHandlerTestHelper) cosmos.Msg {
-				return NewMsgNetworkFee(1024, common.BTCChain, 1, bnbSingleTxFee.Uint64(), GetRandomBech32Addr())
+				return NewMsgNetworkFee(1024, common.BTCChain, 1, 10000, GetRandomBech32Addr())
 			},
 			validator: func(c *C, ctx cosmos.Context, result *cosmos.Result, err error, helper *LeaveHandlerTestHelper, name string, msg cosmos.Msg) {
 				c.Check(err, NotNil, Commentf(name))
@@ -314,7 +320,7 @@ func (HandlerLeaveSuite) TestLeaveDifferentValidations(c *C) {
 				c.Assert(helper.Keeper.SetNodeAccount(ctx, nodeAccount), IsNil)
 				tx := GetRandomTx()
 				tx.FromAddress = nodeAccount.BondAddress
-				asgardVault := NewVault(1024, ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BNBChain, common.BTCChain}.Strings(), []ChainContract{})
+				asgardVault := NewVault(1024, ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain, common.BTCChain}.Strings(), []ChainContract{})
 				c.Assert(helper.Keeper.SetVault(ctx, asgardVault), IsNil)
 				helper.failSetNodeAccount = true
 				return NewMsgLeave(tx, nodeAccount.NodeAddress, GetRandomBech32Addr())
@@ -354,10 +360,10 @@ func (HandlerLeaveSuite) TestLeaveDifferentValidations(c *C) {
 				c.Assert(helper.Keeper.SetNodeAccount(ctx, nodeAccount), IsNil)
 				tx := GetRandomTx()
 				tx.FromAddress = nodeAccount.BondAddress
-				asgardVault := NewVault(1024, ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BNBChain, common.BTCChain}.Strings(), []ChainContract{})
+				asgardVault := NewVault(1024, ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain, common.BTCChain}.Strings(), []ChainContract{})
 				c.Assert(helper.Keeper.SetVault(ctx, asgardVault), IsNil)
 
-				retiringVault := NewVault(1000, RetiringVault, AsgardVault, GetRandomPubKey(), common.Chains{common.BNBChain, common.BTCChain}.Strings(), []ChainContract{})
+				retiringVault := NewVault(1000, RetiringVault, AsgardVault, GetRandomPubKey(), common.Chains{common.ETHChain, common.BTCChain}.Strings(), []ChainContract{})
 				retiringVault.Membership = common.PubKeys{
 					nodeAccount.PubKeySet.Secp256k1,
 					GetRandomPubKey(),

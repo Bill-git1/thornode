@@ -92,7 +92,7 @@ func (s *HandlerObservedTxInSuite) TestFailure(c *C) {
 
 	keeper := &TestObservedTxInFailureKeeper{
 		pool: Pool{
-			Asset:        common.BNBAsset,
+			Asset:        common.ETHAsset,
 			BalanceRune:  cosmos.NewUint(200),
 			BalanceAsset: cosmos.NewUint(300),
 		},
@@ -233,7 +233,7 @@ func (s *HandlerObservedTxInSuite) testHandleWithConfirmation(c *C) {
 		},
 		vault: vault,
 		pool: Pool{
-			Asset:        common.BNBAsset,
+			Asset:        common.ETHAsset,
 			BalanceRune:  cosmos.NewUint(200),
 			BalanceAsset: cosmos.NewUint(300),
 		},
@@ -278,8 +278,8 @@ func (s *HandlerObservedTxInSuite) testHandleWithConfirmation(c *C) {
 	c.Assert(voter.UpdatedVault, Equals, false)
 	c.Assert(voter.FinalisedHeight, Equals, int64(0))
 	c.Check(keeper.height, Equals, int64(12))
-	bnbCoin := keeper.vault.Coins.GetCoin(common.BNBAsset)
-	c.Assert(bnbCoin.Amount.Equal(cosmos.ZeroUint()), Equals, true)
+	ethCoin := keeper.vault.Coins.GetCoin(common.ETHAsset)
+	c.Assert(ethCoin.Amount.Equal(cosmos.ZeroUint()), Equals, true)
 	// make sure the logic has not been processed , as tx has not been finalised , still waiting for confirmation
 	c.Check(keeper.msg.Tx.ID.Equals(tx.ID), Equals, false)
 
@@ -293,8 +293,8 @@ func (s *HandlerObservedTxInSuite) testHandleWithConfirmation(c *C) {
 	c.Assert(voter.UpdatedVault, Equals, false)
 	c.Assert(voter.FinalisedHeight, Equals, int64(0))
 	c.Check(keeper.height, Equals, int64(12))
-	bnbCoin = keeper.vault.Coins.GetCoin(common.BNBAsset)
-	c.Assert(bnbCoin.Amount.Equal(cosmos.ZeroUint()), Equals, true)
+	ethCoin = keeper.vault.Coins.GetCoin(common.ETHAsset)
+	c.Assert(ethCoin.Amount.Equal(cosmos.ZeroUint()), Equals, true)
 	c.Check(keeper.msg.Tx.ID.Equals(tx.ID), Equals, false)
 
 	//  first finalised message
@@ -307,8 +307,8 @@ func (s *HandlerObservedTxInSuite) testHandleWithConfirmation(c *C) {
 	c.Assert(voter.UpdatedVault, Equals, false)
 	c.Assert(voter.FinalisedHeight, Equals, int64(0))
 	c.Assert(voter.Height, Equals, int64(18))
-	bnbCoin = keeper.vault.Coins.GetCoin(common.BNBAsset)
-	c.Assert(bnbCoin.Amount.Equal(cosmos.ZeroUint()), Equals, true)
+	ethCoin = keeper.vault.Coins.GetCoin(common.ETHAsset)
+	c.Assert(ethCoin.Amount.Equal(cosmos.ZeroUint()), Equals, true)
 	c.Check(keeper.msg.Tx.ID.Equals(tx.ID), Equals, false)
 
 	// second finalised message
@@ -320,8 +320,8 @@ func (s *HandlerObservedTxInSuite) testHandleWithConfirmation(c *C) {
 	c.Assert(voter.UpdatedVault, Equals, false)
 	c.Assert(voter.FinalisedHeight, Equals, int64(0))
 	c.Assert(voter.Height, Equals, int64(18))
-	bnbCoin = keeper.vault.Coins.GetCoin(common.BNBAsset)
-	c.Assert(bnbCoin.Amount.Equal(cosmos.ZeroUint()), Equals, true)
+	ethCoin = keeper.vault.Coins.GetCoin(common.ETHAsset)
+	c.Assert(ethCoin.Amount.Equal(cosmos.ZeroUint()), Equals, true)
 	c.Check(keeper.msg.Tx.ID.Equals(tx.ID), Equals, false)
 
 	// third finalised message
@@ -334,8 +334,8 @@ func (s *HandlerObservedTxInSuite) testHandleWithConfirmation(c *C) {
 	c.Assert(voter.FinalisedHeight, Equals, int64(18))
 	c.Assert(voter.Height, Equals, int64(18))
 	// make sure fund has been credit to vault correctly
-	bnbCoin = keeper.vault.Coins.GetCoin(common.BNBAsset)
-	c.Assert(bnbCoin.Amount.Equal(cosmos.OneUint()), Equals, true)
+	ethCoin = keeper.vault.Coins.GetCoin(common.ETHAsset)
+	c.Assert(ethCoin.Amount.Equal(cosmos.OneUint()), Equals, true)
 	c.Check(keeper.msg.Tx.ID.Equals(tx.ID), Equals, true)
 
 	// third finalised message
@@ -348,8 +348,8 @@ func (s *HandlerObservedTxInSuite) testHandleWithConfirmation(c *C) {
 	c.Assert(voter.FinalisedHeight, Equals, int64(18))
 	c.Assert(voter.Height, Equals, int64(18))
 	// make sure fund has not been doubled
-	bnbCoin = keeper.vault.Coins.GetCoin(common.BNBAsset)
-	c.Assert(bnbCoin.Amount.Equal(cosmos.OneUint()), Equals, true)
+	ethCoin = keeper.vault.Coins.GetCoin(common.ETHAsset)
+	c.Assert(ethCoin.Amount.Equal(cosmos.OneUint()), Equals, true)
 	c.Check(keeper.msg.Tx.ID.Equals(tx.ID), Equals, true)
 }
 
@@ -372,7 +372,7 @@ func (s *HandlerObservedTxInSuite) testHandleWithVersion(c *C) {
 		voter: NewObservedTxVoter(tx.ID, make(ObservedTxs, 0)),
 		vault: vault,
 		pool: Pool{
-			Asset:        common.BNBAsset,
+			Asset:        common.ETHAsset,
 			BalanceRune:  cosmos.NewUint(200),
 			BalanceAsset: cosmos.NewUint(300),
 		},
@@ -389,8 +389,8 @@ func (s *HandlerObservedTxInSuite) testHandleWithVersion(c *C) {
 	c.Check(keeper.msg.Tx.ID.Equals(tx.ID), Equals, true)
 	c.Check(keeper.observing, HasLen, 1)
 	c.Check(keeper.height, Equals, int64(12))
-	bnbCoin := keeper.vault.Coins.GetCoin(common.BNBAsset)
-	c.Assert(bnbCoin.Amount.Equal(cosmos.OneUint()), Equals, true)
+	ethCoin := keeper.vault.Coins.GetCoin(common.ETHAsset)
+	c.Assert(ethCoin.Amount.Equal(cosmos.OneUint()), Equals, true)
 }
 
 // Test migrate memo
@@ -399,31 +399,33 @@ func (s *HandlerObservedTxInSuite) TestMigrateMemo(c *C) {
 	ctx, _ := setupKeeperForTest(c)
 
 	vault := GetRandomVault()
-	addr, err := vault.PubKey.GetAddress(common.BNBChain)
+	addr, err := vault.PubKey.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
 	newVault := GetRandomVault()
 	txout := NewTxOut(12)
-	newVaultAddr, err := newVault.PubKey.GetAddress(common.BNBChain)
+	newVaultAddr, err := newVault.PubKey.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
 
 	txout.TxArray = append(txout.TxArray, TxOutItem{
-		Chain:       common.BNBChain,
+		Chain:       common.ETHChain,
 		InHash:      common.BlankTxID,
 		ToAddress:   newVaultAddr,
 		VaultPubKey: vault.PubKey,
-		Coin:        common.NewCoin(common.BNBAsset, cosmos.NewUint(1024)),
+		Coin:        common.NewCoin(common.ETHAsset, cosmos.NewUint(1024)),
 		Memo:        NewMigrateMemo(1).String(),
 	})
 	tx := NewObservedTx(common.Tx{
 		ID:    GetRandomTxHash(),
-		Chain: common.BNBChain,
+		Chain: common.ETHChain,
 		Coins: common.Coins{
-			common.NewCoin(common.BNBAsset, cosmos.NewUint(1024)),
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(1024)),
 		},
 		Memo:        NewMigrateMemo(12).String(),
 		FromAddress: addr,
 		ToAddress:   newVaultAddr,
-		Gas:         BNBGasFeeSingleton,
+		Gas: common.Gas{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
+		},
 	}, 13, vault.PubKey, 13)
 
 	txs := ObservedTxs{tx}
@@ -432,7 +434,7 @@ func (s *HandlerObservedTxInSuite) TestMigrateMemo(c *C) {
 		voter: NewObservedTxVoter(tx.Tx.ID, make(ObservedTxs, 0)),
 		vault: vault,
 		pool: Pool{
-			Asset:        common.BNBAsset,
+			Asset:        common.ETHAsset,
 			BalanceRune:  cosmos.NewUint(200),
 			BalanceAsset: cosmos.NewUint(300),
 		},
@@ -503,7 +505,7 @@ func setupAnLegitObservedTx(ctx cosmos.Context, helper *ObservedTxInHandlerTestH
 	pk := GetRandomPubKey()
 	tx := GetRandomTx()
 	tx.Coins = common.Coins{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(common.One*3)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One*3)),
 	}
 	tx.Memo = "SWAP:RUNE"
 	addr, err := pk.GetAddress(tx.Coins[0].Asset.Chain)
@@ -518,7 +520,7 @@ func setupAnLegitObservedTx(ctx cosmos.Context, helper *ObservedTxInHandlerTestH
 	c.Assert(helper.Keeper.SetNodeAccount(ctx, activeNodeAccount), IsNil)
 	c.Assert(helper.SetVault(ctx, vault), IsNil)
 	p := NewPool()
-	p.Asset = common.BNBAsset
+	p.Asset = common.ETHAsset
 	p.BalanceRune = cosmos.NewUint(100 * common.One)
 	p.BalanceAsset = cosmos.NewUint(100 * common.One)
 	p.Status = PoolAvailable
@@ -537,7 +539,7 @@ func (HandlerObservedTxInSuite) TestObservedTxHandler_validations(c *C) {
 		{
 			name: "invalid message should return an error",
 			messageProvider: func(c *C, ctx cosmos.Context, helper *ObservedTxInHandlerTestHelper) cosmos.Msg {
-				return NewMsgNetworkFee(ctx.BlockHeight(), common.BNBChain, 1, bnbSingleTxFee.Uint64(), GetRandomBech32Addr())
+				return NewMsgNetworkFee(ctx.BlockHeight(), common.ETHChain, 1, 10000, GetRandomBech32Addr())
 			},
 			validator: func(c *C, ctx cosmos.Context, result *cosmos.Result, err error, helper *ObservedTxInHandlerTestHelper, name string) {
 				c.Check(err, NotNil, Commentf(name))
@@ -696,7 +698,7 @@ func (HandlerObservedTxInSuite) TestObservedTxHandler_validations(c *C) {
 			name: "normal provision, it should success",
 			messageProvider: func(c *C, ctx cosmos.Context, helper *ObservedTxInHandlerTestHelper) cosmos.Msg {
 				m := setupAnLegitObservedTx(ctx, helper, c)
-				m.Txs[0].Tx.Memo = "add:BNB.BNB"
+				m.Txs[0].Tx.Memo = "add:ETH.ETH"
 				return m
 			},
 			validator: func(c *C, ctx cosmos.Context, result *cosmos.Result, err error, helper *ObservedTxInHandlerTestHelper, name string) {
@@ -730,12 +732,14 @@ func (s HandlerObservedTxInSuite) TestSwapWithAffiliate(c *C) {
 
 	msg := NewMsgSwap(common.Tx{
 		ID:          common.TxID("5E1DF027321F1FE37CA19B9ECB11C2B4ABEC0D8322199D335D9CE4C39F85F115"),
-		FromAddress: GetRandomBNBAddress(),
-		ToAddress:   GetRandomBNBAddress(),
-		Gas:         BNBGasFeeSingleton,
-		Chain:       common.BNBChain,
-		Coins:       common.Coins{common.NewCoin(common.BNBAsset, cosmos.NewUint(2*common.One))},
-	}, common.BNBAsset, GetRandomBNBAddress(), cosmos.ZeroUint(), GetRandomTHORAddress(), cosmos.NewUint(1000),
+		FromAddress: GetRandomETHAddress(),
+		ToAddress:   GetRandomETHAddress(),
+		Gas: common.Gas{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
+		},
+		Chain: common.ETHChain,
+		Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(2*common.One))},
+	}, common.ETHAsset, GetRandomETHAddress(), cosmos.ZeroUint(), GetRandomTHORAddress(), cosmos.NewUint(1000),
 		"",
 		"", nil,
 		MarketOrder,

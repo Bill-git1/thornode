@@ -189,7 +189,7 @@ func (s *HandlerSetNodeKeysSuite) TestHandle(c *C) {
 
 	// add observer
 	bepConsPubKey := GetRandomBech32ConsensusPubKey()
-	bondAddr := GetRandomBNBAddress()
+	bondAddr := GetRandomETHAddress()
 	pubKeys := GetRandomPubKeySet()
 	emptyPubKeySet := common.PubKeySet{}
 

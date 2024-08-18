@@ -131,7 +131,7 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "5CF7FDEDC08545C8E781DC630BFA55CEDD42BF77CD66134F5AAC0524DB8CD7A0",
+      "app_hash": "9656F726BDF2306F62138365D65245AD863DEC665262F5146DB53E9EC3FA53B8",
       "last_results_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
@@ -366,7 +366,7 @@
           "data": "\n\u0018\n\u0016/types.MsgObservedTxIn",
           "log": "[{\"events\":[{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_observed_txin\"}]}]}]",
           "gas_wanted": "0",
-          "gas_used": "199927",
+          "gas_used": "199531",
           "events": [
             {
               "fee": "",
@@ -418,8 +418,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "024E1BCED6A67CBA6FC369A3650E0520B24B2227C7AA26C88693A42A11702CA8",
-      "last_results_hash": "DE81F89624F5103FDE83E66093E8AE1C06360422AED03567CF37C839979F8885",
+      "app_hash": "B527E62177EEEC73BC421FC59AEAE34E118810E38B761FBF5A0F48D91467C6E4",
+      "last_results_hash": "118805756A11A8EFD40D917C75496EAEF0BBB22EA49183E64E3E68CEF649E25F",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -601,7 +601,7 @@
           "data": "\n\u0019\n\u0017/types.MsgObservedTxOut",
           "log": "[{\"events\":[{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_observed_txout\"}]}]}]",
           "gas_wanted": "0",
-          "gas_used": "247017",
+          "gas_used": "246225",
           "events": [
             {
               "fee": "",

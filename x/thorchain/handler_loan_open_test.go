@@ -35,7 +35,7 @@ func (s *HandlerLoanSuite) TestLoanValidate(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 
 	pool := NewPool()
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.ETHAsset
 	pool.BalanceAsset = cosmos.NewUint(1483635061994)
 	pool.BalanceRune = cosmos.NewUint(271672185683320)
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
@@ -52,29 +52,29 @@ func (s *HandlerLoanSuite) TestLoanValidate(c *C) {
 	supply := mgr.Keeper().GetTotalSupply(ctx, common.RuneAsset())
 	max := supply.Add(cosmos.NewUint(15_000_000_00000000))
 	mgr.Keeper().SetMimir(ctx, "MaxRuneSupply", int64(max.Uint64()))
-	mgr.Keeper().SetMimir(ctx, "LENDING-THOR-BNB", 1)
+	mgr.Keeper().SetMimir(ctx, "LENDING-THOR-ETH", 1)
 	mgr.Keeper().SetMimir(ctx, "LENDING-THOR-BTC", 1)
-	owner := GetRandomBNBAddress()
+	owner := GetRandomETHAddress()
 
 	handler := NewLoanOpenHandler(mgr)
 
 	// happy path
-	msg := NewMsgLoanOpen(owner, common.BNBAsset, cosmos.NewUint(100), GetRandomBTCAddress(), common.BTCAsset, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), GetRandomBech32Addr(), txid)
+	msg := NewMsgLoanOpen(owner, common.ETHAsset, cosmos.NewUint(100), GetRandomBTCAddress(), common.BTCAsset, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), GetRandomBech32Addr(), txid)
 	c.Assert(handler.validate(ctx, *msg), IsNil)
 
 	// not supported collateral asset
-	msg = NewMsgLoanOpen(owner, common.RuneERC20Asset, cosmos.NewUint(100), GetRandomBTCAddress(), common.BTCAsset, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), GetRandomBech32Addr(), txid)
+	msg = NewMsgLoanOpen(owner, common.DOGEAsset, cosmos.NewUint(100), GetRandomBTCAddress(), common.BTCAsset, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), GetRandomBech32Addr(), txid)
 	c.Assert(handler.validate(ctx, *msg), NotNil)
 
 	// target asset doesn't have a pool
-	msg = NewMsgLoanOpen(owner, common.BNBAsset, cosmos.NewUint(100), GetRandomBTCAddress(), common.RuneERC20Asset, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), GetRandomBech32Addr(), txid)
+	msg = NewMsgLoanOpen(owner, common.ETHAsset, cosmos.NewUint(100), GetRandomBTCAddress(), common.LTCAsset, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), GetRandomBech32Addr(), txid)
 	c.Assert(handler.validate(ctx, *msg), NotNil)
 }
 
 func (s *HandlerLoanSuite) TestLoanOpenHandleToBTC(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	ctx = ctx.WithBlockHeight(128)
-	mgr.Keeper().SetMimir(ctx, "LENDING-THOR-BNB", 1)
+	mgr.Keeper().SetMimir(ctx, "LENDING-THOR-ETH", 1)
 	mgr.Keeper().SetMimir(ctx, "LENDING-THOR-BTC", 1)
 
 	pool := NewPool()
@@ -88,7 +88,7 @@ func (s *HandlerLoanSuite) TestLoanOpenHandleToBTC(c *C) {
 	pool.Asset = pool.Asset.GetDerivedAsset()
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
 
-	busd, err := common.NewAsset("BNB.BUSD-BD1")
+	busd, err := common.NewAsset("ETH.BUSD-BD1")
 	c.Assert(err, IsNil)
 	busdPool := NewPool()
 	busdPool.Asset = busd
@@ -97,7 +97,7 @@ func (s *HandlerLoanSuite) TestLoanOpenHandleToBTC(c *C) {
 	busdPool.BalanceRune = cosmos.NewUint(314031308608965)
 	busdPool.Decimals = 8
 	c.Assert(mgr.Keeper().SetPool(ctx, busdPool), IsNil)
-	mgr.Keeper().SetMimir(ctx, "TorAnchor-BNB-BUSD-BD1", 1) // enable BUSD pool as a TOR anchor
+	mgr.Keeper().SetMimir(ctx, "TorAnchor-ETH-BUSD-BD1", 1) // enable BUSD pool as a TOR anchor
 	mgr.Keeper().SetMimir(ctx, "DerivedDepthBasisPts", 10_000)
 
 	// reduce the supply of rune
@@ -158,7 +158,7 @@ func (s *HandlerLoanSuite) TestLoanOpenHandleToTOR(c *C) {
 	pool.Decimals = 8
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
 
-	busd, err := common.NewAsset("BNB.BUSD-BD1")
+	busd, err := common.NewAsset("ETH.BUSD-BD1")
 	c.Assert(err, IsNil)
 	busdPool := NewPool()
 	busdPool.Asset = busd
@@ -167,10 +167,10 @@ func (s *HandlerLoanSuite) TestLoanOpenHandleToTOR(c *C) {
 	busdPool.BalanceRune = cosmos.NewUint(314031308608965)
 	busdPool.Decimals = 8
 	c.Assert(mgr.Keeper().SetPool(ctx, busdPool), IsNil)
-	mgr.Keeper().SetMimir(ctx, "TorAnchor-BNB-BUSD-BD1", 1) // enable BUSD pool as a TOR anchor
+	mgr.Keeper().SetMimir(ctx, "TorAnchor-ETH-BUSD-BD1", 1) // enable BUSD pool as a TOR anchor
 	mgr.Keeper().SetMimir(ctx, "EnableDerivedAssets", 1)    // enable derived assets
 	mgr.Keeper().SetMimir(ctx, "DerivedDepthBasisPts", 10_000)
-	mgr.Keeper().SetMimir(ctx, "LENDING-THOR-BNB", 1)
+	mgr.Keeper().SetMimir(ctx, "LENDING-THOR-ETH", 1)
 	mgr.Keeper().SetMimir(ctx, "LENDING-THOR-BTC", 1)
 
 	// reduce the supply of rune
@@ -227,7 +227,7 @@ func (s *HandlerLoanSuite) TestLoanSwapFails(c *C) {
 	pool.Asset = pool.Asset.GetDerivedAsset()
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
 
-	busd, err := common.NewAsset("BNB.BUSD-BD1")
+	busd, err := common.NewAsset("ETH.BUSD-BD1")
 	c.Assert(err, IsNil)
 	busdPool := NewPool()
 	busdPool.Asset = busd
@@ -236,9 +236,9 @@ func (s *HandlerLoanSuite) TestLoanSwapFails(c *C) {
 	busdPool.BalanceRune = cosmos.NewUint(314031308608965)
 	busdPool.Decimals = 8
 	c.Assert(mgr.Keeper().SetPool(ctx, busdPool), IsNil)
-	mgr.Keeper().SetMimir(ctx, "TorAnchor-BNB-BUSD-BD1", 1) // enable BUSD pool as a TOR anchor
+	mgr.Keeper().SetMimir(ctx, "TorAnchor-ETH-BUSD-BD1", 1) // enable BUSD pool as a TOR anchor
 	mgr.Keeper().SetMimir(ctx, "DerivedDepthBasisPts", 0)
-	mgr.Keeper().SetMimir(ctx, "LENDING-THOR-BNB", 1)
+	mgr.Keeper().SetMimir(ctx, "LENDING-THOR-ETH", 1)
 	mgr.Keeper().SetMimir(ctx, "LENDING-THOR-BTC", 1)
 
 	vault := GetRandomVault()

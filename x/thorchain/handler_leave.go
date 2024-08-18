@@ -12,7 +12,7 @@ import (
 
 // LeaveHandler a handler to process leave request
 // if an operator of THORChain node would like to leave and get their bond back , they have to
-// send a Leave request through Binance Chain
+// send a Leave request through THORChain
 type LeaveHandler struct {
 	mgr Manager
 }

@@ -21,10 +21,10 @@ func (*MsgLeaveSuite) SetupSuite(c *C) {
 func (MsgLeaveSuite) TestMsgLeave(c *C) {
 	nodeAddr := GetRandomBech32Addr()
 	txID := GetRandomTxHash()
-	senderBNBAddr := GetRandomBNBAddress()
+	senderETHAddr := GetRandomETHAddress()
 	tx := GetRandomTx()
 	tx.ID = txID
-	tx.FromAddress = senderBNBAddr
+	tx.FromAddress = senderETHAddr
 	msgLeave := NewMsgLeave(tx, nodeAddr, nodeAddr)
 	EnsureMsgBasicCorrect(msgLeave, c)
 	c.Assert(msgLeave.ValidateBasic(), IsNil)
@@ -32,7 +32,7 @@ func (MsgLeaveSuite) TestMsgLeave(c *C) {
 
 	msgLeave1 := NewMsgLeave(tx, nodeAddr, nodeAddr)
 	c.Assert(msgLeave1.ValidateBasic(), IsNil)
-	msgLeave2 := NewMsgLeave(common.Tx{ID: "", FromAddress: senderBNBAddr}, nodeAddr, nodeAddr)
+	msgLeave2 := NewMsgLeave(common.Tx{ID: "", FromAddress: senderETHAddr}, nodeAddr, nodeAddr)
 	c.Assert(msgLeave2.ValidateBasic(), NotNil)
 	msgLeave3 := NewMsgLeave(tx, nodeAddr, cosmos.AccAddress{})
 	c.Assert(msgLeave3.ValidateBasic(), NotNil)

@@ -24,12 +24,8 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-// NetworkFee represent the fee rate and typical transaction size outbound from
-// THORNode This is to keep the information reported by bifrost For BTC chain,
-// TransactionFeeRate should be sats/vbyte For Binance chain , given fee is
-// fixed , thus for single coin , transaction size will be 1, and the rate
-// should be 37500, for multiple coin , Transaction size should the number of
-// coins
+// NetworkFee represents the fee rate and typical outbound transaction size. Some chains
+// may have simplifid usage to report the fee as the "fee_rate" and set size to 1.
 type NetworkFee struct {
 	Chain              gitlab_com_thorchain_thornode_common.Chain `protobuf:"bytes,1,opt,name=chain,proto3,casttype=gitlab.com/thorchain/thornode/common.Chain" json:"chain,omitempty"`
 	TransactionSize    uint64                                     `protobuf:"varint,2,opt,name=transaction_size,json=transactionSize,proto3" json:"transaction_size,omitempty"`

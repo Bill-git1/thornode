@@ -34,7 +34,7 @@ func (MsgLoanSuite) TestMsgLoanOpenSuite(c *C) {
 	c.Assert(msg.ValidateBasic(), NotNil)
 	msg = NewMsgLoanOpen(owner, colA, cosmos.ZeroUint(), targetA, colA, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), acc, common.TxID("test_tx_id"))
 	c.Assert(msg.ValidateBasic(), NotNil)
-	msg = NewMsgLoanOpen(owner, colA, units, GetRandomBNBAddress(), colA, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), acc, common.TxID("test_tx_id"))
+	msg = NewMsgLoanOpen(owner, colA, units, GetRandomETHAddress(), colA, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), acc, common.TxID("test_tx_id"))
 	c.Assert(msg.ValidateBasic(), NotNil)
 	msg = NewMsgLoanOpen(owner, colA, units, common.NoAddress, colA, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), acc, common.TxID("test_tx_id"))
 	c.Assert(msg.ValidateBasic(), NotNil)
@@ -47,9 +47,9 @@ func (MsgLoanSuite) TestMsgLoanOpenSuite(c *C) {
 func (MsgLoanSuite) TestMsgLoanRepaySuite(c *C) {
 	acc := GetRandomBech32Addr()
 
-	owner := GetRandomBNBAddress()
+	owner := GetRandomETHAddress()
 	colA := common.BTCAsset
-	coin := common.NewCoin(common.BNBAsset, cosmos.NewUint(90*common.One))
+	coin := common.NewCoin(common.ETHAsset, cosmos.NewUint(90*common.One))
 	msg := NewMsgLoanRepayment(owner, colA, cosmos.OneUint(), owner, coin, acc, common.TxID("test_tx_id"))
 	c.Assert(msg.Route(), Equals, RouterKey)
 	c.Assert(msg.Type(), Equals, "loan_repayment")

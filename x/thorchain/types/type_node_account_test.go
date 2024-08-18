@@ -19,7 +19,7 @@ func (NodeAccountSuite) TestNodeAccount(c *C) {
 	c.Check(addr.Empty(), Equals, false)
 	bepConsPubKey := GetRandomBech32ConsensusPubKey()
 	nodeAddress := GetRandomBech32Addr()
-	bondAddr := GetRandomBNBAddress()
+	bondAddr := GetRandomETHAddress()
 	pubKeys := common.PubKeySet{
 		Secp256k1: GetRandomPubKey(),
 		Ed25519:   GetRandomPubKey(),
@@ -103,7 +103,7 @@ func (NodeAccountSuite) TestNodeAccountUpdateStatusAndSort(c *C) {
 }
 
 func (NodeAccountSuite) TestTryAddSignerPubKey(c *C) {
-	na := NewNodeAccount(GetRandomBech32Addr(), NodeStatus_Active, GetRandomPubKeySet(), GetRandomBech32ConsensusPubKey(), cosmos.NewUint(100*common.One), GetRandomBNBAddress(), 1)
+	na := NewNodeAccount(GetRandomBech32Addr(), NodeStatus_Active, GetRandomPubKeySet(), GetRandomBech32ConsensusPubKey(), cosmos.NewUint(100*common.One), GetRandomETHAddress(), 1)
 	pk := GetRandomPubKey()
 	emptyPK := common.EmptyPubKey
 	// make sure it get added

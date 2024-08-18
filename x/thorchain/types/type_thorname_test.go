@@ -16,7 +16,7 @@ func (THORNameSuite) TestTHORName(c *C) {
 	c.Check(n.Valid(), IsNil)
 
 	// unhappy path
-	n1 := NewTHORName("", 0, []THORNameAlias{{Chain: common.BNBChain, Address: GetRandomTHORAddress()}})
+	n1 := NewTHORName("", 0, []THORNameAlias{{Chain: common.ETHChain, Address: GetRandomTHORAddress()}})
 	c.Check(n1.Valid(), NotNil)
 	n2 := NewTHORName("hello", 0, []THORNameAlias{{Chain: common.EmptyChain, Address: GetRandomTHORAddress()}})
 	c.Check(n2.Valid(), NotNil)

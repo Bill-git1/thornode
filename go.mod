@@ -39,7 +39,7 @@ require (
 	github.com/spf13/viper v1.18.1
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	github.com/tendermint/btcd v0.1.1
-	github.com/tendermint/go-amino v0.16.0
+	github.com/tendermint/go-amino v0.16.0 // indirect
 	github.com/tendermint/tendermint v0.34.27
 	github.com/tendermint/tm-db v0.6.6
 	gitlab.com/thorchain/binance-sdk v1.2.3
@@ -238,6 +238,7 @@ require (
 require (
 	filippo.io/age v1.0.0-rc.3
 	github.com/binance-chain/tss-lib v0.0.0-20201118045712-70b2cb4bf916
+	github.com/btcsuite/btcd/btcutil v1.1.3
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.0.1
 	github.com/cometbft/cometbft v0.38.6
 	github.com/decred/dcrd/dcrec/secp256k1 v1.0.4

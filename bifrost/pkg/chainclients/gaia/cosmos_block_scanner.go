@@ -248,7 +248,7 @@ func (c *CosmosBlockScanner) updateGasFees(height int64) error {
 		// transaction size 1 to ensure the MaxGas in the generated TxOut contains the
 		// correct fee. We cannot pass the proper size and rate without a deeper change to
 		// Thornode, as the rate on Cosmos chains is less than 1 and cannot be represented
-		// by the uint. This follows the pattern set in the BNB chain client.
+		// by the uint.
 		feeTx, err := c.bridge.PostNetworkFee(height, c.cfg.ChainID, 1, gasFee.Uint64())
 		if err != nil {
 			return err

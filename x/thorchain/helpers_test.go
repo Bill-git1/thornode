@@ -128,8 +128,8 @@ func (s *HelperSuite) TestRefundBondDisableRequestToLeaveNode(c *C) {
 func (s *HelperSuite) TestDollarsPerRune(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	mgr := NewDummyMgrWithKeeper(k)
-	mgr.Keeper().SetMimir(ctx, "TorAnchor-BNB-BUSD-BD1", 1) // enable BUSD pool as a TOR anchor
-	busd, err := common.NewAsset("BNB.BUSD-BD1")
+	mgr.Keeper().SetMimir(ctx, "TorAnchor-ETH-BUSD-BD1", 1) // enable BUSD pool as a TOR anchor
+	busd, err := common.NewAsset("ETH.BUSD-BD1")
 	c.Assert(err, IsNil)
 	pool := NewPool()
 	pool.Asset = busd
@@ -217,7 +217,7 @@ func newAddGasFeeTestHelper(c *C) addGasFeeTestHelper {
 	keeper := newAddGasFeesKeeperHelper(mgr.Keeper())
 	mgr.K = keeper
 	pool := NewPool()
-	pool.Asset = common.BNBAsset
+	pool.Asset = common.ETHAsset
 	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
 	pool.BalanceRune = cosmos.NewUint(100 * common.One)
 	pool.Status = PoolAvailable
@@ -232,7 +232,7 @@ func newAddGasFeeTestHelper(c *C) addGasFeeTestHelper {
 
 	na := GetRandomValidatorNode(NodeActive)
 	c.Assert(mgr.Keeper().SetNodeAccount(ctx, na), IsNil)
-	vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, na.PubKeySet.Secp256k1, common.Chains{common.BNBChain}.Strings(), []ChainContract{})
+	vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, na.PubKeySet.Secp256k1, common.Chains{common.ETHChain}.Strings(), []ChainContract{})
 	// TODO:  Perhaps make this vault entirely unrelated to the NodeAccount pubkey, such as with an addGasFeeTestHelper 'vault' field.
 	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
 	version := GetCurrentVersion()
@@ -262,20 +262,20 @@ func (s *HelperSuite) TestAddGasFees(c *C) {
 			expectError: false,
 		},
 		{
-			name: "normal BNB gas",
+			name: "normal ETH gas",
 			txCreator: func(helper addGasFeeTestHelper) ObservedTx {
 				tx := ObservedTx{
 					Tx: common.Tx{
 						ID:          GetRandomTxHash(),
-						Chain:       common.BNBChain,
-						FromAddress: GetRandomBNBAddress(),
-						ToAddress:   GetRandomBNBAddress(),
+						Chain:       common.ETHChain,
+						FromAddress: GetRandomETHAddress(),
+						ToAddress:   GetRandomETHAddress(),
 						Coins: common.Coins{
-							common.NewCoin(common.BNBAsset, cosmos.NewUint(5*common.One)),
+							common.NewCoin(common.ETHAsset, cosmos.NewUint(5*common.One)),
 							common.NewCoin(common.RuneAsset(), cosmos.NewUint(8*common.One)),
 						},
 						Gas: common.Gas{
-							common.NewCoin(common.BNBAsset, BNBGasFeeSingleton[0].Amount),
+							common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
 						},
 						Memo: "",
 					},
@@ -292,7 +292,7 @@ func (s *HelperSuite) TestAddGasFees(c *C) {
 			},
 			expectError: false,
 			validator: func(helper addGasFeeTestHelper, c *C) {
-				expected := common.NewCoin(common.BNBAsset, BNBGasFeeSingleton[0].Amount)
+				expected := common.NewCoin(common.ETHAsset, cosmos.NewUint(10000))
 				c.Assert(helper.mgr.GasMgr().GetGas(), HasLen, 1)
 				c.Assert(helper.mgr.GasMgr().GetGas()[0].Equals(expected), Equals, true)
 			},
@@ -417,7 +417,7 @@ func (s *HelperSuite) TestUpdateTxOutGas(c *C) {
 	mgr.Keeper().SetObservedTxInVoter(ctx, txVoter)
 
 	// Try to set new gas, should return error as TxOut InHash doesn't match
-	newGas := common.Gas{common.NewCoin(common.LUNAAsset, cosmos.NewUint(2000000))}
+	newGas := common.Gas{common.NewCoin(common.DOGEAsset, cosmos.NewUint(2000000))}
 	err := updateTxOutGas(ctx, mgr.K, txOut, newGas)
 	c.Assert(err.Error(), Equals, fmt.Sprintf("fail to find tx out in ObservedTxVoter %s", txOut.InHash))
 
@@ -506,7 +506,7 @@ func (s *HelperSuite) TestPOLPoolValue(c *C) {
 	lps := LiquidityProviders{
 		{
 			Asset:             btcPool.Asset,
-			RuneAddress:       GetRandomBNBAddress(),
+			RuneAddress:       GetRandomRUNEAddress(),
 			AssetAddress:      GetRandomBTCAddress(),
 			LastAddHeight:     5,
 			Units:             btcPool.LPUnits.QuoUint64(2),

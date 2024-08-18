@@ -143,8 +143,7 @@ func (b *BlockScanner) scanMempool() {
 				case b.globalTxsQueue <- txInMemPool:
 				}
 			} else {
-				// nothing in the mempool or for some chain like BNB & ETH, which doesn't need to scan
-				// mempool , back off here
+				// backoff between mempool scans (some chain clients always return nothing)
 				time.Sleep(constants.ThorchainBlockTime)
 			}
 		}

@@ -67,7 +67,6 @@ genesis:
             - BTC
             - LTC
             - BCH
-            - BNB
             - ETH
             - DOGE
             - TERRA
@@ -96,7 +95,7 @@ value: 6000
 signer: {{ addr_thor_dog }}
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_provider/{{ addr_thor_wolf}}
+endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_provider/{{ addr_thor_wolf }}
 asserts:
   - .asset_redeem_value == ("50_00000000" | gsub("_";""))
   - .rune_redeem_value == ("50_000_00000000" | gsub("_";""))

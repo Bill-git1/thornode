@@ -13,7 +13,7 @@ var _ = Suite(&TypeObservedTxSuite{})
 
 func (s TypeObservedTxSuite) TestVoter(c *C) {
 	txID := GetRandomTxHash()
-	bnb := GetRandomBNBAddress()
+	eth := GetRandomETHAddress()
 	acc1 := GetRandomBech32Addr()
 	acc2 := GetRandomBech32Addr()
 	acc3 := GetRandomBech32Addr()
@@ -154,7 +154,7 @@ func (s TypeObservedTxSuite) TestVoter(c *C) {
 
 	thorchainCoins := common.Coins{
 		common.NewCoin(common.RuneAsset(), cosmos.NewUint(100)),
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(100)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100)),
 	}
 	inputs := []struct {
 		coins           common.Coins
@@ -166,14 +166,14 @@ func (s TypeObservedTxSuite) TestVoter(c *C) {
 		{
 			coins:           nil,
 			memo:            "test",
-			sender:          bnb,
+			sender:          eth,
 			observePoolAddr: observePoolAddr,
 			blockHeight:     1024,
 		},
 		{
 			coins:           common.Coins{},
 			memo:            "test",
-			sender:          bnb,
+			sender:          eth,
 			observePoolAddr: observePoolAddr,
 			blockHeight:     1024,
 		},
@@ -187,14 +187,14 @@ func (s TypeObservedTxSuite) TestVoter(c *C) {
 		{
 			coins:           thorchainCoins,
 			memo:            "test",
-			sender:          bnb,
+			sender:          eth,
 			observePoolAddr: common.EmptyPubKey,
 			blockHeight:     1024,
 		},
 		{
 			coins:           thorchainCoins,
 			memo:            "test",
-			sender:          bnb,
+			sender:          eth,
 			observePoolAddr: observePoolAddr,
 			blockHeight:     0,
 		},
@@ -203,11 +203,11 @@ func (s TypeObservedTxSuite) TestVoter(c *C) {
 	for _, item := range inputs {
 		tx := common.Tx{
 			ID:          GetRandomTxHash(),
-			Chain:       common.BNBChain,
+			Chain:       common.ETHChain,
 			FromAddress: item.sender,
-			ToAddress:   GetRandomBNBAddress(),
+			ToAddress:   GetRandomETHAddress(),
 			Coins:       item.coins,
-			Gas:         BNBGasFeeSingleton,
+			Gas:         common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))},
 			Memo:        item.memo,
 		}
 		txIn := NewObservedTx(tx, item.blockHeight, item.observePoolAddr, item.blockHeight)
@@ -245,7 +245,7 @@ func (TypeObservedTxSuite) TestSetTxToComplete(c *C) {
 	c.Assert(voter.Tx.IsEmpty(), Equals, false)
 
 	tx := GetRandomTx()
-	addr, err := observePoolAddr.GetAddress(common.BNBChain)
+	addr, err := observePoolAddr.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
 	tx.FromAddress = addr
 	toi := TxOutItem{
@@ -292,8 +292,8 @@ func (TypeObservedTxSuite) TestAddOutTx(c *C) {
 
 	tx := common.NewTx(
 		GetRandomTxHash(),
-		GetRandomBNBAddress(),
-		GetRandomBNBAddress(),
+		GetRandomETHAddress(),
+		GetRandomETHAddress(),
 		common.Coins{
 			common.NewCoin(common.BTCAsset, cosmos.NewUint(100010000)),
 		},
@@ -302,7 +302,7 @@ func (TypeObservedTxSuite) TestAddOutTx(c *C) {
 		},
 		"",
 	)
-	addr, err := observePoolAddr.GetAddress(common.BNBChain)
+	addr, err := observePoolAddr.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
 	tx.FromAddress = addr
 
@@ -334,23 +334,23 @@ func (TypeObservedTxSuite) TestAddOutTx(c *C) {
 
 func (TypeObservedTxSuite) TestObservedTxEquals(c *C) {
 	coins1 := common.Coins{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(100*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
 		common.NewCoin(common.RuneAsset(), cosmos.NewUint(100*common.One)),
 	}
 	coins2 := common.Coins{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(100*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
 	}
 	coins3 := common.Coins{
-		common.NewCoin(common.BNBAsset, cosmos.NewUint(200*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(200*common.One)),
 		common.NewCoin(common.RuneAsset(), cosmos.NewUint(100*common.One)),
 	}
 	coins4 := common.Coins{
 		common.NewCoin(common.RuneAsset(), cosmos.NewUint(100*common.One)),
 		common.NewCoin(common.RuneAsset(), cosmos.NewUint(100*common.One)),
 	}
-	bnb, err := common.NewAddress("bnb1xlvns0n2mxh77mzaspn2hgav4rr4m8eerfju38")
+	eth, err := common.NewAddress("0x90f2b1ae50e6018230e90a33f98c7844a0ab635a")
 	c.Assert(err, IsNil)
-	bnb1, err := common.NewAddress("bnb1yk882gllgv3rt2rqrsudf6kn2agr94etnxu9a7")
+	eth1, err := common.NewAddress("0xd58610f89265a2fb637ac40edf59141ff873b266")
 	c.Assert(err, IsNil)
 	observePoolAddr := GetRandomPubKey()
 	observePoolAddr1 := GetRandomPubKey()
@@ -360,38 +360,38 @@ func (TypeObservedTxSuite) TestObservedTxEquals(c *C) {
 		equal bool
 	}{
 		{
-			tx:    NewObservedTx(common.Tx{FromAddress: bnb, ToAddress: GetRandomBNBAddress(), Coins: coins1, Memo: "memo", Gas: BNBGasFeeSingleton}, 0, observePoolAddr, 0),
-			tx1:   NewObservedTx(common.Tx{FromAddress: bnb, ToAddress: GetRandomBNBAddress(), Coins: coins1, Memo: "memo1", Gas: BNBGasFeeSingleton}, 0, observePoolAddr, 0),
+			tx:    NewObservedTx(common.Tx{FromAddress: eth, ToAddress: GetRandomETHAddress(), Coins: coins1, Memo: "memo", Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
+			tx1:   NewObservedTx(common.Tx{FromAddress: eth, ToAddress: GetRandomETHAddress(), Coins: coins1, Memo: "memo1", Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
 			equal: false,
 		},
 		{
-			tx:    NewObservedTx(common.Tx{FromAddress: bnb, ToAddress: GetRandomBNBAddress(), Coins: coins1, Memo: "memo", Gas: BNBGasFeeSingleton}, 0, observePoolAddr, 0),
-			tx1:   NewObservedTx(common.Tx{FromAddress: bnb1, ToAddress: GetRandomBNBAddress(), Coins: coins1, Memo: "memo", Gas: BNBGasFeeSingleton}, 0, observePoolAddr, 0),
+			tx:    NewObservedTx(common.Tx{FromAddress: eth, ToAddress: GetRandomETHAddress(), Coins: coins1, Memo: "memo", Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
+			tx1:   NewObservedTx(common.Tx{FromAddress: eth1, ToAddress: GetRandomETHAddress(), Coins: coins1, Memo: "memo", Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
 			equal: false,
 		},
 		{
-			tx:    NewObservedTx(common.Tx{Coins: coins2, Memo: "memo", FromAddress: bnb, ToAddress: GetRandomBNBAddress(), Gas: BNBGasFeeSingleton}, 0, observePoolAddr, 0),
-			tx1:   NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: bnb, ToAddress: GetRandomBNBAddress(), Gas: BNBGasFeeSingleton}, 0, observePoolAddr, 0),
+			tx:    NewObservedTx(common.Tx{Coins: coins2, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
+			tx1:   NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
 			equal: false,
 		},
 		{
-			tx:    NewObservedTx(common.Tx{Coins: coins3, Memo: "memo", FromAddress: bnb, ToAddress: GetRandomBNBAddress(), Gas: BNBGasFeeSingleton}, 0, observePoolAddr, 0),
-			tx1:   NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: bnb, ToAddress: GetRandomBNBAddress(), Gas: BNBGasFeeSingleton}, 0, observePoolAddr, 0),
+			tx:    NewObservedTx(common.Tx{Coins: coins3, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
+			tx1:   NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
 			equal: false,
 		},
 		{
-			tx:    NewObservedTx(common.Tx{Coins: coins4, Memo: "memo", FromAddress: bnb, ToAddress: GetRandomBNBAddress(), Gas: BNBGasFeeSingleton}, 0, observePoolAddr, 0),
-			tx1:   NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: bnb, ToAddress: GetRandomBNBAddress(), Gas: BNBGasFeeSingleton}, 0, observePoolAddr, 0),
+			tx:    NewObservedTx(common.Tx{Coins: coins4, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
+			tx1:   NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
 			equal: false,
 		},
 		{
-			tx:    NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: bnb, ToAddress: GetRandomBNBAddress(), Gas: BNBGasFeeSingleton}, 0, observePoolAddr, 0),
-			tx1:   NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: bnb, ToAddress: GetRandomBNBAddress(), Gas: BNBGasFeeSingleton}, 0, observePoolAddr1, 0),
+			tx:    NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
+			tx1:   NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr1, 0),
 			equal: false,
 		},
 		{
-			tx:    NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: bnb, ToAddress: GetRandomBNBAddress(), Gas: BNBGasFeeSingleton}, 0, observePoolAddr, 0),
-			tx1:   NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: bnb, ToAddress: GetRandomBNBAddress(), Gas: BNBGasFeeSingleton}, 0, observePoolAddr, 0),
+			tx:    NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
+			tx1:   NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
 			equal: false,
 		},
 	}
@@ -400,14 +400,14 @@ func (TypeObservedTxSuite) TestObservedTxEquals(c *C) {
 	}
 
 	// test aggregator scenarios
-	addr := GetRandomBNBAddress()
-	tx1 := NewObservedTx(common.Tx{FromAddress: bnb, ToAddress: addr, Coins: coins1, Memo: "memo", Gas: BNBGasFeeSingleton}, 0, observePoolAddr, 0)
-	tx2 := NewObservedTx(common.Tx{FromAddress: bnb, ToAddress: addr, Coins: coins1, Memo: "memo", Gas: BNBGasFeeSingleton}, 0, observePoolAddr, 0)
+	addr := GetRandomETHAddress()
+	tx1 := NewObservedTx(common.Tx{FromAddress: eth, ToAddress: addr, Coins: coins1, Memo: "memo", Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0)
+	tx2 := NewObservedTx(common.Tx{FromAddress: eth, ToAddress: addr, Coins: coins1, Memo: "memo", Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0)
 	c.Assert(tx1.Equals(tx2), Equals, true)
 
-	tx1.Aggregator = GetRandomBNBAddress().String()
+	tx1.Aggregator = GetRandomETHAddress().String()
 	c.Assert(tx1.Equals(tx2), Equals, false)
-	tx2.Aggregator = GetRandomBNBAddress().String()
+	tx2.Aggregator = GetRandomETHAddress().String()
 	c.Assert(tx1.Equals(tx2), Equals, false)
 	tx2.Aggregator = tx1.Aggregator
 	c.Assert(tx1.Equals(tx2), Equals, true)

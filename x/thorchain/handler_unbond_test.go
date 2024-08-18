@@ -102,11 +102,13 @@ func (HandlerUnBondSuite) TestUnBondHandler_Run(c *C) {
 	txIn := common.NewTx(
 		GetRandomTxHash(),
 		standbyNodeAccount.BondAddress,
-		GetRandomBNBAddress(),
+		GetRandomETHAddress(),
 		common.Coins{
 			common.NewCoin(common.RuneAsset(), cosmos.NewUint(uint64(1))),
 		},
-		BNBGasFeeSingleton,
+		common.Gas{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
+		},
 		"unbond me please",
 	)
 	msg := NewMsgUnBond(txIn, standbyNodeAccount.NodeAddress, cosmos.NewUint(uint64(5*common.One)), standbyNodeAccount.BondAddress, nil, activeNodeAccount.NodeAddress)
@@ -138,13 +140,13 @@ func (HandlerUnBondSuite) TestUnBondHandler_Run(c *C) {
 	handler = NewUnBondHandler(mgr)
 
 	// simulate fail to get node account
-	msg = NewMsgUnBond(txIn, k.failGetNodeAccount.NodeAddress, cosmos.NewUint(uint64(1)), GetRandomBNBAddress(), nil, activeNodeAccount.NodeAddress)
+	msg = NewMsgUnBond(txIn, k.failGetNodeAccount.NodeAddress, cosmos.NewUint(uint64(1)), GetRandomETHAddress(), nil, activeNodeAccount.NodeAddress)
 	_, err = handler.Run(ctx, msg)
 	c.Assert(errors.Is(err, errInternal), Equals, true)
 
 	// simulate fail to get vault
 	k.vault = GetRandomVault()
-	msg = NewMsgUnBond(txIn, activeNodeAccount.NodeAddress, cosmos.NewUint(uint64(1)), GetRandomBNBAddress(), nil, activeNodeAccount.NodeAddress)
+	msg = NewMsgUnBond(txIn, activeNodeAccount.NodeAddress, cosmos.NewUint(uint64(1)), GetRandomETHAddress(), nil, activeNodeAccount.NodeAddress)
 	result, err := handler.Run(ctx, msg)
 	c.Assert(err, NotNil)
 	c.Assert(result, IsNil)
@@ -153,13 +155,13 @@ func (HandlerUnBondSuite) TestUnBondHandler_Run(c *C) {
 		Type:   AsgardVault,
 		PubKey: standbyNodeAccount.PubKeySet.Secp256k1,
 	}
-	msg = NewMsgUnBond(txIn, standbyNodeAccount.NodeAddress, cosmos.NewUint(uint64(1)), GetRandomBNBAddress(), nil, standbyNodeAccount.NodeAddress)
+	msg = NewMsgUnBond(txIn, standbyNodeAccount.NodeAddress, cosmos.NewUint(uint64(1)), GetRandomETHAddress(), nil, standbyNodeAccount.NodeAddress)
 	result, err = handler.Run(ctx, msg)
 	c.Assert(err, NotNil)
 	c.Assert(result, IsNil)
 
 	// simulate jail nodeAccount can't unbound
-	msg = NewMsgUnBond(txIn, k.jailNodeAccount.NodeAddress, cosmos.NewUint(uint64(1)), GetRandomBNBAddress(), nil, k.jailNodeAccount.NodeAddress)
+	msg = NewMsgUnBond(txIn, k.jailNodeAccount.NodeAddress, cosmos.NewUint(uint64(1)), GetRandomETHAddress(), nil, k.jailNodeAccount.NodeAddress)
 	result, err = handler.Run(ctx, msg)
 	c.Assert(err, NotNil)
 	c.Assert(result, IsNil)
@@ -178,11 +180,13 @@ func (HandlerUnBondSuite) TestUnBondHandlerFailValidation(c *C) {
 	txIn := common.NewTx(
 		GetRandomTxHash(),
 		activeNodeAccount.BondAddress,
-		GetRandomBNBAddress(),
+		GetRandomETHAddress(),
 		common.Coins{
 			common.NewCoin(common.RuneAsset(), cosmos.NewUint(uint64(1))),
 		},
-		BNBGasFeeSingleton,
+		common.Gas{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
+		},
 		"unbond it",
 	)
 	txInNoTxID := txIn
@@ -244,7 +248,7 @@ func (HandlerUnBondSuite) TestUnBondHanlder_retiringvault(c *C) {
 	}
 	c.Assert(k1.SetVault(ctx, vault), IsNil)
 	retiringVault := NewVault(12, RetiringVault, AsgardVault, GetRandomPubKey(), []string{
-		common.BNBChain.String(), common.BTCChain.String(), common.ETHChain.String(), common.LTCChain.String(), common.BCHChain.String(),
+		common.BTCChain.String(), common.ETHChain.String(), common.LTCChain.String(), common.BCHChain.String(),
 	}, []ChainContract{})
 	retiringVault.Membership = []string{
 		activeNodeAccount.PubKeySet.Secp256k1.String(),
@@ -258,11 +262,13 @@ func (HandlerUnBondSuite) TestUnBondHanlder_retiringvault(c *C) {
 	txIn := common.NewTx(
 		GetRandomTxHash(),
 		standbyNodeAccount.BondAddress,
-		GetRandomBNBAddress(),
+		GetRandomETHAddress(),
 		common.Coins{
 			common.NewCoin(common.RuneAsset(), cosmos.NewUint(uint64(1))),
 		},
-		BNBGasFeeSingleton,
+		common.Gas{
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
+		},
 		"unbond me please",
 	)
 	msg := NewMsgUnBond(txIn, standbyNodeAccount.NodeAddress, cosmos.NewUint(uint64(5*common.One)), standbyNodeAccount.BondAddress, nil, activeNodeAccount.NodeAddress)

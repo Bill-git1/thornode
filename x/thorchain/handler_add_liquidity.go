@@ -108,7 +108,7 @@ func (h AddLiquidityHandler) validateV131(ctx cosmos.Context, msg MsgAddLiquidit
 
 	// Check if user is trying to deposit into savers
 	// At present, savers are authorized for:
-	// * layer 1 assets  (BTC, ETH, BNB, etc.)
+	// * layer 1 assets  (BTC, ETH, etc.)
 	// * stable pools (as determined by TOR anchor pool settings)
 	if msg.Asset.IsVaultAsset() {
 		// Check if the asset is in the anchor pools

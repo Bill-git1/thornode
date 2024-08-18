@@ -162,8 +162,8 @@ func (s *DogecoinSignerSuite) TestGetDOGEPrivateKey(c *C) {
 
 func (s *DogecoinSignerSuite) TestSignTx(c *C) {
 	txOutItem := stypes.TxOutItem{
-		Chain:       common.BNBChain,
-		ToAddress:   types2.GetRandomBNBAddress(),
+		Chain:       common.ETHChain,
+		ToAddress:   types2.GetRandomETHAddress(),
 		VaultPubKey: types2.GetRandomPubKey(),
 		Coins: common.Coins{
 			common.NewCoin(common.DOGEAsset, cosmos.NewUint(10000000000)),
@@ -285,7 +285,7 @@ func (s *DogecoinSignerSuite) TestSignTxWithoutPredefinedMaxGas(c *C) {
 func (s *DogecoinSignerSuite) TestBroadcastTx(c *C) {
 	txOutItem := stypes.TxOutItem{
 		Chain:       common.DOGEChain,
-		ToAddress:   types2.GetRandomBNBAddress(),
+		ToAddress:   types2.GetRandomETHAddress(),
 		VaultPubKey: types2.GetRandomPubKey(),
 		Coins: common.Coins{
 			common.NewCoin(common.DOGEAsset, cosmos.NewUint(10)),

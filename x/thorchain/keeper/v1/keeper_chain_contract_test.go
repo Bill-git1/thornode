@@ -13,7 +13,7 @@ var _ = Suite(&KeeperChainContractSuite{})
 func (s *KeeperChainContractSuite) TestChainContractVoter(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	chain := common.ETHChain
-	addr := GetRandomBNBAddress()
+	addr := GetRandomETHAddress()
 	cc := NewChainContract(chain, addr)
 	k.SetChainContract(ctx, cc)
 	cc, err := k.GetChainContract(ctx, chain)

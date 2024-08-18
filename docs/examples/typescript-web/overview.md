@@ -25,7 +25,6 @@ For every blockchain connected to THORChain with a common interface.
 Current clients implemented are**:**
 
 - xchain-avax
-- xchain-binance
 - xchain-bitcoin
 - xchain-bitcoincash
 - xchain-cosmos

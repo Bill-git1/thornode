@@ -13,12 +13,8 @@ import (
 var (
 	// EmptyAsset empty asset, not valid
 	EmptyAsset = Asset{Chain: EmptyChain, Symbol: "", Ticker: "", Synth: false}
-	// LUNAAsset LUNA
-	LUNAAsset = Asset{Chain: TERRAChain, Symbol: "LUNA", Ticker: "LUNA", Synth: false}
 	// ATOMAsset ATOM
 	ATOMAsset = Asset{Chain: GAIAChain, Symbol: "ATOM", Ticker: "ATOM", Synth: false}
-	// BNBAsset BNB
-	BNBAsset = Asset{Chain: BNBChain, Symbol: "BNB", Ticker: "BNB", Synth: false}
 	// BNBBEP20Asset BNB
 	BNBBEP20Asset = Asset{Chain: BSCChain, Symbol: "BNB", Ticker: "BNB", Synth: false}
 	// BTCAsset BTC
@@ -33,12 +29,9 @@ var (
 	ETHAsset = Asset{Chain: ETHChain, Symbol: "ETH", Ticker: "ETH", Synth: false}
 	// AVAXAsset AVAX
 	AVAXAsset = Asset{Chain: AVAXChain, Symbol: "AVAX", Ticker: "AVAX", Synth: false}
-	// Rune67CAsset RUNE on Binance test net
-	Rune67CAsset = Asset{Chain: BNBChain, Symbol: "RUNE-67C", Ticker: "RUNE", Synth: false} // mocknet asset on binance ganges
-	// RuneB1AAsset RUNE on Binance main net
-	RuneB1AAsset = Asset{Chain: BNBChain, Symbol: "RUNE-B1A", Ticker: "RUNE", Synth: false} // mainnet
 	// RuneNative RUNE on thorchain
-	RuneNative            = Asset{Chain: THORChain, Symbol: "RUNE", Ticker: "RUNE", Synth: false}
+	RuneNative = Asset{Chain: THORChain, Symbol: "RUNE", Ticker: "RUNE", Synth: false}
+	// TODO: remove these RUNE ERC20 assets
 	RuneERC20Asset        = Asset{Chain: ETHChain, Symbol: "RUNE-0x3155ba85d5f96b2d030a4966af206230e46849cb", Ticker: "RUNE", Synth: false}
 	RuneERC20MocknetAsset = Asset{Chain: ETHChain, Symbol: "RUNE-0xd601c6A3a36721320573885A8d8420746dA3d7A0", Ticker: "RUNE", Synth: false}
 	TOR                   = Asset{Chain: THORChain, Symbol: "TOR", Ticker: "TOR", Synth: false}
@@ -101,7 +94,6 @@ func NewAssetWithShortCodesV124(input string) (Asset, error) {
 	shorts[ATOMAsset.ShortCode()] = ATOMAsset.String()
 	shorts[AVAXAsset.ShortCode()] = AVAXAsset.String()
 	shorts[BCHAsset.ShortCode()] = BCHAsset.String()
-	shorts[BNBAsset.ShortCode()] = BNBAsset.String()
 	shorts[BNBBEP20Asset.ShortCode()] = BNBBEP20Asset.String()
 	shorts[BTCAsset.ShortCode()] = BTCAsset.String()
 	shorts[DOGEAsset.ShortCode()] = DOGEAsset.String()
@@ -253,8 +245,6 @@ func (a Asset) ShortCode() string {
 		return "b"
 	case "ETH.ETH":
 		return "e"
-	case "BNB.BNB":
-		return "n"
 	case "GAIA.ATOM":
 		return "g"
 	case "DOGE.DOGE":
@@ -283,7 +273,7 @@ func (a Asset) IsGasAsset() bool {
 
 // IsRune is a helper function ,return true only when the asset represent RUNE
 func (a Asset) IsRune() bool {
-	return a.Equals(BEP2RuneAsset()) || a.Equals(RuneNative) || a.Equals(ERC20RuneAsset())
+	return a.Equals(RuneNative) || a.Equals(ERC20RuneAsset())
 }
 
 // IsNativeRune is a helper function, return true only when the asset represent NATIVE RUNE
@@ -295,11 +285,6 @@ func (a Asset) IsNativeRune() bool {
 // asset to THORChain (ie rune, a synth, etc)
 func (a Asset) IsNative() bool {
 	return a.GetChain().IsTHORChain()
-}
-
-// IsBNB is a helper function, return true only when the asset represent BNB
-func (a Asset) IsBNB() bool {
-	return a.Equals(BNBAsset)
 }
 
 // MarshalJSON implement Marshaler interface
@@ -335,14 +320,6 @@ func (a *Asset) UnmarshalJSONPB(unmarshal *jsonpb.Unmarshaler, content []byte) e
 // RuneAsset return RUNE Asset depends on different environment
 func RuneAsset() Asset {
 	return RuneNative
-}
-
-// BEP2RuneAsset is RUNE on BEP2
-func BEP2RuneAsset() Asset {
-	if strings.EqualFold(os.Getenv("NET"), "mocknet") {
-		return Rune67CAsset
-	}
-	return RuneB1AAsset
 }
 
 // ERC20RuneAsset is RUNE on ETH

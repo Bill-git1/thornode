@@ -27,11 +27,11 @@ func (s AssetSuite) TestAsset(c *C) {
 	c.Check(err, NotNil)
 	c.Check(err.Error(), Equals, "synth asset cannot have chain THOR: THOR/RUNE")
 
-	asset, err = NewAsset("BNB.SWIPE.B-DC0")
+	asset, err = NewAsset("ETH.SWIPE.B-DC0")
 	c.Assert(err, IsNil)
 	c.Check(asset.Valid(), IsNil)
-	c.Check(asset.String(), Equals, "BNB.SWIPE.B-DC0")
-	c.Check(asset.Chain.Equals(BNBChain), Equals, true)
+	c.Check(asset.String(), Equals, "ETH.SWIPE.B-DC0")
+	c.Check(asset.Chain.Equals(ETHChain), Equals, true)
 	c.Check(asset.Symbol.Equals(Symbol("SWIPE.B-DC0")), Equals, true)
 	c.Check(asset.Ticker.Equals(Ticker("SWIPE.B")), Equals, true)
 

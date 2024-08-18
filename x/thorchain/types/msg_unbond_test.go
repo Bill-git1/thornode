@@ -19,7 +19,7 @@ func (MsgUnBondSuite) TestMsgUnBond(c *C) {
 	txId := GetRandomTxHash()
 	c.Check(txId.IsEmpty(), Equals, false)
 	signerAddr := GetRandomBech32Addr()
-	bondAddr := GetRandomBNBAddress()
+	bondAddr := GetRandomETHAddress()
 	txin := GetRandomTx()
 	txinNoID := txin
 	txinNoID.ID = ""
