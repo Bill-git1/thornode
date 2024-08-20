@@ -162,11 +162,10 @@ func initGenesis(ctx cosmos.Context, keeper keeper.Keeper, data GenesisState) []
 		keeper.SetLiquidityProvider(ctx, lp)
 	}
 
-	// TODO: Uncomment this on hard fork, as before then breaks thorchain-mainnet-v1 AppHash backwards compatibility.
-	// for _, rp := range data.RuneProviders {
-	// 	keeper.SetRUNEProvider(ctx, rp)
-	// }
-	// keeper.SetRUNEPool(ctx, data.RunePool)
+	for _, rp := range data.RuneProviders {
+		keeper.SetRUNEProvider(ctx, rp)
+	}
+	keeper.SetRUNEPool(ctx, data.RunePool)
 
 	validators := make([]abci.ValidatorUpdate, 0, len(data.NodeAccounts))
 	for _, nodeAccount := range data.NodeAccounts {
