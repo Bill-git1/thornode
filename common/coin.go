@@ -87,6 +87,11 @@ func (c Coin) IsNative() bool {
 	return c.Asset.GetChain().Equals(THORChain)
 }
 
+// IsRune checks whether the coin's Asset is RUNE.
+func (c Coin) IsRune() bool {
+	return c.Asset.IsRune()
+}
+
 // Native create a new instance of cosmos.Coin
 func (c Coin) Native() (cosmos.Coin, error) {
 	if !c.IsNative() {
@@ -245,18 +250,6 @@ func (oldCoins Coins) SafeSub(subCoins ...Coin) Coins {
 		}
 	}
 	return newCoins
-}
-
-// HasNoneNativeRune check whether the coins contains NoneNativeRUNE
-//
-//	At the moment, there are BEP2 RUNE, ERC20 RUNE and Native RUNE
-func (cs Coins) HasNoneNativeRune() bool {
-	for _, c := range cs {
-		if c.Asset.IsRune() && !c.IsNative() {
-			return true
-		}
-	}
-	return false
 }
 
 // HasSynthetic check whether the coins contains synth coin

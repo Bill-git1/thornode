@@ -367,7 +367,7 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 			}
 
 			// if a pool with the asset name doesn't exist, skip rescheduling
-			if !toi.Coin.Asset.IsRune() && !s.keeper.PoolExist(ctx, toi.Coin.Asset) {
+			if !toi.Coin.IsRune() && !s.keeper.PoolExist(ctx, toi.Coin.Asset) {
 				ctx.Logger().Error("fail to add outbound to queue", "error", "coin is not rune and does not have an associated pool")
 				continue
 			}

@@ -693,5 +693,5 @@ func (h AddLiquidityHandler) getTotalLiquidityRUNE(ctx cosmos.Context) (cosmos.U
 }
 
 func (h AddLiquidityHandler) needsSwap(msg MsgAddLiquidity) bool {
-	return len(msg.Tx.Coins) == 1 && !msg.Tx.Coins[0].Asset.IsNativeRune() && !msg.Asset.Equals(msg.Tx.Coins[0].Asset)
+	return len(msg.Tx.Coins) == 1 && !msg.Tx.Coins[0].IsRune() && !msg.Asset.Equals(msg.Tx.Coins[0].Asset)
 }

@@ -3,7 +3,6 @@ package common
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/blang/semver"
@@ -31,11 +30,8 @@ var (
 	AVAXAsset = Asset{Chain: AVAXChain, Symbol: "AVAX", Ticker: "AVAX", Synth: false}
 	// RuneNative RUNE on thorchain
 	RuneNative = Asset{Chain: THORChain, Symbol: "RUNE", Ticker: "RUNE", Synth: false}
-	// TODO: remove these RUNE ERC20 assets
-	RuneERC20Asset        = Asset{Chain: ETHChain, Symbol: "RUNE-0x3155ba85d5f96b2d030a4966af206230e46849cb", Ticker: "RUNE", Synth: false}
-	RuneERC20MocknetAsset = Asset{Chain: ETHChain, Symbol: "RUNE-0xd601c6A3a36721320573885A8d8420746dA3d7A0", Ticker: "RUNE", Synth: false}
-	TOR                   = Asset{Chain: THORChain, Symbol: "TOR", Ticker: "TOR", Synth: false}
-	THORBTC               = Asset{Chain: THORChain, Symbol: "BTC", Ticker: "BTC", Synth: false}
+	TOR        = Asset{Chain: THORChain, Symbol: "TOR", Ticker: "TOR", Synth: false}
+	THORBTC    = Asset{Chain: THORChain, Symbol: "BTC", Ticker: "BTC", Synth: false}
 )
 
 // NewAsset parse the given input into Asset object
@@ -273,12 +269,7 @@ func (a Asset) IsGasAsset() bool {
 
 // IsRune is a helper function ,return true only when the asset represent RUNE
 func (a Asset) IsRune() bool {
-	return a.Equals(RuneNative) || a.Equals(ERC20RuneAsset())
-}
-
-// IsNativeRune is a helper function, return true only when the asset represent NATIVE RUNE
-func (a Asset) IsNativeRune() bool {
-	return a.IsRune() && a.Chain.IsTHORChain()
+	return RuneAsset().Equals(a)
 }
 
 // IsNative is a helper function, returns true when the asset is a native
@@ -320,24 +311,6 @@ func (a *Asset) UnmarshalJSONPB(unmarshal *jsonpb.Unmarshaler, content []byte) e
 // RuneAsset return RUNE Asset depends on different environment
 func RuneAsset() Asset {
 	return RuneNative
-}
-
-// ERC20RuneAsset is RUNE on ETH
-func ERC20RuneAsset() Asset {
-	if strings.EqualFold(os.Getenv("NET"), "mocknet") {
-		// On mocknet, return  ERC20_RUNE_CONTRACT if it is explicitly set
-		if os.Getenv("ERC20_RUNE_CONTRACT") != "" {
-			return Asset{
-				Chain:  ETHChain,
-				Symbol: Symbol(fmt.Sprintf("RUNE-%s", os.Getenv("ERC20_RUNE_CONTRACT"))),
-				Ticker: "RUNE",
-				Synth:  false,
-			}
-		}
-		// Default to hardcoded address
-		return RuneERC20MocknetAsset
-	}
-	return RuneERC20Asset
 }
 
 // Replace pool name "." with a "-" for Mimir key checking.

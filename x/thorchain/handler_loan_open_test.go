@@ -67,7 +67,12 @@ func (s *HandlerLoanSuite) TestLoanValidate(c *C) {
 	c.Assert(handler.validate(ctx, *msg), NotNil)
 
 	// target asset doesn't have a pool
-	msg = NewMsgLoanOpen(owner, common.ETHAsset, cosmos.NewUint(100), GetRandomBTCAddress(), common.LTCAsset, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), GetRandomBech32Addr(), txid)
+	// TODO: Check TargetAsset pool existence when validating MsgLoanOpen (Issue #1957)
+	msg = NewMsgLoanOpen(owner, common.ETHAsset, cosmos.NewUint(100), GetRandomBTCAddress(), common.DOGEAsset, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), GetRandomBech32Addr(), txid)
+	c.Assert(handler.validate(ctx, *msg), IsNil)
+
+	// target asset has a pool, but the destination address isn't valid for the target asset's chain
+	msg = NewMsgLoanOpen(owner, common.ETHAsset, cosmos.NewUint(100), GetRandomRUNEAddress(), common.DOGEAsset, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), GetRandomBech32Addr(), txid)
 	c.Assert(handler.validate(ctx, *msg), NotNil)
 }
 

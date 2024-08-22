@@ -33,7 +33,7 @@ func (s *SwapperVCUR) validateMessage(tx common.Tx, target common.Asset, destina
 	if tx.Coins[0].Asset.IsTradeAsset() && !target.IsTradeAsset() && !target.IsRune() {
 		return errors.New("swaps from trade asset to L1 incur slip, use trade-")
 	}
-	if target.IsTradeAsset() && !tx.Coins[0].Asset.IsTradeAsset() && !tx.Coins[0].Asset.IsRune() {
+	if target.IsTradeAsset() && !tx.Coins[0].Asset.IsTradeAsset() && !tx.Coins[0].IsRune() {
 		return errors.New("swaps from L1 to trade asset incur slip, use trade+")
 	}
 

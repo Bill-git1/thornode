@@ -31,7 +31,7 @@ func (m *MsgRunePoolDeposit) ValidateBasic() error {
 	if !m.Tx.Coins[0].Asset.Chain.IsTHORChain() {
 		return cosmos.ErrInvalidCoins("coin chain must be THORChain")
 	}
-	if !m.Tx.Coins[0].Asset.IsNativeRune() {
+	if !m.Tx.Coins[0].IsRune() {
 		return cosmos.ErrInvalidCoins("coin must be RUNE")
 	}
 	if m.Signer.Empty() {

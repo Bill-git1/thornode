@@ -311,7 +311,7 @@ func quoteSimulateSwap(ctx cosmos.Context, mgr *Mgrs, amount sdk.Uint, msg *MsgS
 		liquidityFee = liquidityFee.Add(sdk.NewUintFromString(s["liquidity_fee_in_rune"]))
 	}
 	var targetPool types.Pool
-	if !msg.TargetAsset.IsNativeRune() {
+	if !msg.TargetAsset.IsRune() {
 		targetPool, err = mgr.Keeper().GetPool(ctx, msg.TargetAsset.GetLayer1Asset())
 		if err != nil {
 			return nil, sdk.ZeroUint(), sdk.ZeroUint(), fmt.Errorf("unable to get pool: %w", err)
@@ -324,7 +324,7 @@ func quoteSimulateSwap(ctx cosmos.Context, mgr *Mgrs, amount sdk.Uint, msg *MsgS
 	affiliateFee := sdk.ZeroUint()
 	if msg.AffiliateAddress != common.NoAddress && !msg.AffiliateBasisPoints.IsZero() {
 		inAsset := msg.Tx.Coins[0].Asset.GetLayer1Asset()
-		if !inAsset.IsNativeRune() {
+		if !inAsset.IsRune() {
 			pool, err := mgr.Keeper().GetPool(ctx, msg.Tx.Coins[0].Asset.GetLayer1Asset())
 			if err != nil {
 				return nil, sdk.ZeroUint(), sdk.ZeroUint(), fmt.Errorf("unable to get pool: %w", err)
@@ -332,7 +332,7 @@ func quoteSimulateSwap(ctx cosmos.Context, mgr *Mgrs, amount sdk.Uint, msg *MsgS
 			amount = pool.AssetValueInRune(amount)
 		}
 		affiliateFee = common.GetUncappedShare(msg.AffiliateBasisPoints, cosmos.NewUint(10_000), amount)
-		if !msg.TargetAsset.IsNativeRune() {
+		if !msg.TargetAsset.IsRune() {
 			affiliateFee = targetPool.RuneValueInAsset(affiliateFee)
 		}
 	}
@@ -599,7 +599,7 @@ func queryQuoteSwap(ctx cosmos.Context, path []string, req abci.RequestQuery, mg
 
 	// simulate/validate the affiliate swap
 	if affAmt.GT(sdk.ZeroUint()) {
-		if fromAsset.IsNativeRune() {
+		if fromAsset.IsRune() {
 			fee := mgr.Keeper().GetNativeTxFee(ctx)
 			if affAmt.LTE(fee) {
 				return quoteErrorResponse(fmt.Errorf("affiliate amount must be greater than native fee %s", fee))
@@ -1601,7 +1601,7 @@ func quoteSimulateCloseLoan(ctx cosmos.Context, mgr *Mgrs, msg *MsgLoanRepayment
 			case coin.Asset.Equals(common.TOR):
 				repaymentEmit = coin
 				repaymentLiquidityFee = repaymentLiquidityFee.Add(sdk.NewUintFromString(em["liquidity_fee_in_rune"]))
-			case !coin.Asset.IsNativeRune():
+			case !coin.IsRune():
 				outboundEmit = coin
 				outboundLiquidityFee = outboundLiquidityFee.Add(sdk.NewUintFromString(em["liquidity_fee_in_rune"]))
 			default:

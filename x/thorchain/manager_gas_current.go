@@ -98,7 +98,7 @@ func (gm *GasMgrVCUR) GetAssetOutboundFee(ctx cosmos.Context, asset common.Asset
 	thorchainOutboundFee := gm.keeper.GetOutboundTxFee(ctx)
 
 	// If the asset is native RUNE, return the default native outbound fee.
-	if asset.IsNativeRune() {
+	if asset.IsRune() {
 		return thorchainOutboundFee, nil
 	}
 

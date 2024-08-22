@@ -558,7 +558,7 @@ func (vm *NetworkMgrVCUR) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 					continue
 				}
 				// ERC20 RUNE will be burned when it reach router contract
-				if coin.Asset.IsRune() && coin.Asset.GetChain().Equals(common.ETHChain) {
+				if coin.IsRune() && coin.Asset.GetChain().Equals(common.ETHChain) {
 					continue
 				}
 
@@ -1644,7 +1644,7 @@ func (vm *NetworkMgrVCUR) getVaultsLiquidityRune(ctx cosmos.Context) (cosmos.Uin
 		}
 
 		for _, coin := range vaults[i].Coins {
-			if coin.Asset.IsRune() {
+			if coin.IsRune() {
 				vaultsLiquidityRune = vaultsLiquidityRune.Add(coin.Amount)
 				continue
 			}

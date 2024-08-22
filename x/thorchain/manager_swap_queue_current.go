@@ -341,7 +341,7 @@ func (vm *SwapQueueVCUR) getLiquidityFeeAndSlip(ctx cosmos.Context, pool Pool, s
 	// Get our X, x, Y values
 	var X, x, Y cosmos.Uint
 	x = sourceCoin.Amount
-	if sourceCoin.Asset.IsRune() {
+	if sourceCoin.IsRune() {
 		X = pool.BalanceRune
 		Y = pool.BalanceAsset
 	} else {
@@ -358,7 +358,7 @@ func (vm *SwapQueueVCUR) getLiquidityFeeAndSlip(ctx cosmos.Context, pool Pool, s
 	}
 
 	fee := swapper.CalcLiquidityFee(X, x, Y)
-	if sourceCoin.Asset.IsRune() {
+	if sourceCoin.IsRune() {
 		fee = pool.AssetValueInRune(fee)
 	}
 	slip := swapper.CalcSwapSlip(X, x)

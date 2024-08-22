@@ -73,9 +73,6 @@ func (m *MsgSwap) ValidateBasic() error {
 			return cosmos.ErrUnknownRequest("swap Source and Target cannot be the same.")
 		}
 	}
-	if m.Tx.Coins.HasNoneNativeRune() {
-		return cosmos.ErrUnknownRequest("only NATIVE RUNE can be used for swap")
-	}
 	if m.Destination.IsEmpty() {
 		return cosmos.ErrUnknownRequest("swap Destination cannot be empty")
 	}

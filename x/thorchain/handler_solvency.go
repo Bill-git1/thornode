@@ -236,10 +236,6 @@ func (h SolvencyHandler) insolvencyCheck(ctx cosmos.Context, vault Vault, coins 
 		if !c.Asset.Chain.Equals(chain) {
 			continue
 		}
-		// ETH.RUNE will be burned on the way in , so the wallet will not have any, thus exclude it from solvency check
-		if c.Asset.IsRune() {
-			continue
-		}
 		if c.IsEmpty() {
 			continue
 		}

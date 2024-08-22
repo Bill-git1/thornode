@@ -184,7 +184,7 @@ func (h ErrataTxHandler) handleV134(ctx cosmos.Context, msg MsgErrataTx) (*cosmo
 	runeCoin := common.NoCoin
 	assetCoin := common.NoCoin
 	for _, coin := range tx.Coins {
-		if coin.Asset.IsRune() {
+		if coin.IsRune() {
 			runeCoin = coin
 		} else {
 			assetCoin = coin
@@ -291,7 +291,7 @@ func (h ErrataTxHandler) processErrataOutboundTx(ctx cosmos.Context, msg MsgErra
 		}
 		if compensate {
 			for _, coin := range tx.Coins {
-				if coin.Asset.IsRune() {
+				if coin.IsRune() {
 					// it is using native rune, so outbound can't be RUNE
 					continue
 				}

@@ -360,10 +360,10 @@ type MockWithdrawTxOutStore struct {
 }
 
 func (store *MockWithdrawTxOutStore) TryAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem, _ cosmos.Uint) (bool, error) {
-	if toi.Coin.Asset.IsNativeRune() && store.errRune != nil {
+	if toi.Coin.IsRune() && store.errRune != nil {
 		return false, store.errRune
 	}
-	if !toi.Coin.Asset.IsNativeRune() && store.errAsset != nil {
+	if !toi.Coin.IsRune() && store.errAsset != nil {
 		return false, store.errAsset
 	}
 	return true, nil

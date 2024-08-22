@@ -532,7 +532,7 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 		// Deduct OutboundTransactionFee from TOI and add to Reserve
 		memo, err := ParseMemoWithTHORNames(ctx, tos.keeper, outputs[i].Memo)
 		if err == nil && !memo.IsType(TxMigrate) && !memo.IsType(TxRagnarok) && !toi.ToAddress.Equals(lendAddr) {
-			if outputs[i].Coin.Asset.IsRune() {
+			if outputs[i].Coin.IsRune() {
 				if outputs[i].Coin.Amount.LTE(transactionFee) {
 					runeFee = outputs[i].Coin.Amount // Fee is the full amount
 				}
@@ -682,7 +682,7 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 		}
 	}
 	if !finalRuneFee.IsZero() {
-		if toi.Coin.Asset.IsNativeRune() {
+		if toi.Coin.IsRune() {
 			// If the source module is the Reserve, leave the fee in the Reserve without a transfer.
 			if toi.ModuleName != ReserveName {
 				sourceModule := toi.GetModuleName() // Ensure that non-"".

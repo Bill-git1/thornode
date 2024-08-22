@@ -281,7 +281,7 @@ func (h DepositHandler) addSwapDirect(ctx cosmos.Context, msg MsgSwap) {
 		affThorname := memo.GetAffiliateTHORName()
 
 		// PreferredAsset set, update the AffiliateCollector module
-		if affThorname != nil && !affThorname.PreferredAsset.IsEmpty() && swapSourceAsset.IsNativeRune() {
+		if affThorname != nil && !affThorname.PreferredAsset.IsEmpty() && swapSourceAsset.IsRune() {
 			h.updateAffiliateCollector(ctx, coin, msg, affThorname)
 			return
 		}

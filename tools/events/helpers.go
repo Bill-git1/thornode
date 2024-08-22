@@ -131,7 +131,7 @@ func USDValue(height int64, coin common.Coin) float64 {
 		return float64(coin.Amount.Uint64()) / common.One
 	}
 
-	if coin.Asset.IsRune() {
+	if coin.IsRune() {
 		network := openapi.NetworkResponse{}
 		err := ThornodeCachedRetryGet("thorchain/network", height, &network)
 		if err != nil {
