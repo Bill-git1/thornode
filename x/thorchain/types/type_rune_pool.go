@@ -6,8 +6,10 @@ import (
 
 func NewRUNEPool() RUNEPool {
 	return RUNEPool{
-		ReserveUnits: cosmos.ZeroUint(),
-		PoolUnits:    cosmos.ZeroUint(),
+		ReserveUnits:  cosmos.ZeroUint(),
+		PoolUnits:     cosmos.ZeroUint(),
+		RuneDeposited: cosmos.ZeroUint(),
+		RuneWithdrawn: cosmos.ZeroUint(),
 	}
 }
 
