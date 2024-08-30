@@ -154,7 +154,7 @@ endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .txs[0].result.events[-1].type == "rune_pool_withdraw"
   - .txs[0].result.events[-1].rune_address == "{{ addr_thor_fox }}"
-  - .txs[0].result.events[-1].rune_amoumt == "333850000000"
+  - .txs[0].result.events[-1].rune_amount == "333850000000"
   - .txs[0].result.events[-1].basis_points == "10000"
   - .txs[0].result.events[-1].units == "333850000000"
   - .txs[0].result.events[-1].affiliate_address == "{{ addr_thor_cat }}"

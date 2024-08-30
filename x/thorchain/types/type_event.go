@@ -973,7 +973,7 @@ func (m *EventRUNEPoolWithdraw) Events() (cosmos.Events, error) {
 	evt := cosmos.NewEvent(m.Type(),
 		cosmos.NewAttribute("rune_address", m.RuneAddress.String()),
 		cosmos.NewAttribute("basis_points", strconv.FormatInt(m.BasisPoints, 10)),
-		cosmos.NewAttribute("rune_amoumt", m.RuneAmount.String()),
+		cosmos.NewAttribute("rune_amount", m.RuneAmount.String()),
 		cosmos.NewAttribute("units", m.Units.String()),
 		cosmos.NewAttribute("tx_id", m.TxId.String()),
 		cosmos.NewAttribute("affiliate_address", m.AffiliateAddress.String()),
@@ -1006,7 +1006,7 @@ func (m *EventRUNEPoolDeposit) Type() string {
 func (m *EventRUNEPoolDeposit) Events() (cosmos.Events, error) {
 	evt := cosmos.NewEvent(m.Type(),
 		cosmos.NewAttribute("rune_address", m.RuneAddress.String()),
-		cosmos.NewAttribute("rune_amoumt", m.RuneAmount.String()),
+		cosmos.NewAttribute("rune_amount", m.RuneAmount.String()),
 		cosmos.NewAttribute("units", m.Units.String()),
 		cosmos.NewAttribute("tx_id", m.TxId.String()),
 	)
