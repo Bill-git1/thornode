@@ -280,6 +280,7 @@ bifrost:
 thor:
   node_relay_url: https://node-relay-bot.herokuapp.com
   vault_pubkeys_cutoff_blocks: 1_000_000
+  seed_nodes_endpoint: https://thornode.ninerealms.com/thorchain/nodes
 
   log_filter:
     modules:
@@ -350,10 +351,9 @@ thor:
       timeout_precommit_delta: 500ms
     state_sync:
       enable: false
-      # The thorchain.info RPC is unreliable, so Nine Realms will be the trusted source
-      # until someone from the community hosts another. This must be an archive node for
-      # historical height verification.
-      rpc_servers: https://rpc-v1.ninerealms.com:443,https://rpc-v1.ninerealms.com:443
+      # Nine Realms will be the trusted source by default. These must be an archive
+      # nodes for historical height verification.
+      rpc_servers: https://rpc-v2.ninerealms.com:443,https://rpc-v2.ninerealms.com:443
       trust_height: 0
       trust_hash: ""
       trust_period: 360h0m0s

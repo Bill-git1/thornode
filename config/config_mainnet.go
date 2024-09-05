@@ -5,10 +5,13 @@ package config
 
 import (
 	"encoding/json"
+	"math/rand/v2"
 	"net/http"
 	"os"
 
 	"github.com/rs/zerolog/log"
+
+	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
 const (
@@ -17,22 +20,39 @@ const (
 )
 
 func getSeedAddrs() (addrs []string) {
-	// fetch seeds
-	res, err := http.Get("https://api.ninerealms.com/thorchain/seeds")
+	// get nodes
+	res, err := http.Get(config.Thornode.SeedNodesEndpoint)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to get seeds")
-		return
+		log.Fatal().Err(err).Msg("failed to get thorchain nodes")
 	}
 
-	// unmarshal seeds response
-	var seedsResponse []string
-	dec := json.NewDecoder(res.Body)
-	err = dec.Decode(&seedsResponse)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to unmarshal seeds response")
+	// parse nodes
+	var nodes []types.NodeAccount
+	if err = json.NewDecoder(res.Body).Decode(&nodes); err != nil {
+		log.Fatal().Err(err).Msg("failed to decode thorchain nodes")
+	}
+	res.Body.Close()
+
+	// include active nodes with an ip address
+	var seeds []string
+	for _, node := range nodes {
+		if node.Status != types.NodeStatus_Active {
+			continue
+		}
+		if node.IPAddress == "" || node.IPAddress == "0.0.0.0" {
+			continue
+		}
+		seeds = append(seeds, node.IPAddress)
 	}
 
-	return seedsResponse
+	// randomly shuffle seeds
+	rand.Shuffle(len(seeds), func(i, j int) {
+		seeds[i], seeds[j] = seeds[j], seeds[i]
+	})
+
+	log.Info().Msgf("found %d thorchain seeds", len(seeds))
+
+	return seeds
 }
 
 func assertBifrostHasSeeds() {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"embed"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"text/template"
@@ -31,8 +33,8 @@ import (
 // -------------------------------------------------------------------------------------
 
 const (
-	MaxSeedRetries   = 3
-	SeedRetryBackoff = time.Second * 5
+	MaxRetries   = 3
+	RetryBackoff = time.Second * 5
 )
 
 var (
@@ -371,6 +373,10 @@ type Thornode struct {
 	// included in the vaults pubkeys response. Vaults older than this age will not be
 	// observed by bifrost.
 	VaultPubkeysCutoffBlocks int64 `mapstructure:"vault_pubkeys_cutoff_blocks"`
+
+	// SeedNodesEndpoint is the full URL to a /thorchain/nodes endpoint for finding active
+	// validators to seed genesis and peers.
+	SeedNodesEndpoint string `mapstructure:"seed_nodes_endpoint"`
 
 	// LogFilter will drop logs matching the modules and messages when not in debug level.
 	LogFilter struct {
@@ -883,7 +889,7 @@ func thornodeSeeds() (seedAddrs, tmSeeds []string) {
 	wg := sync.WaitGroup{}
 	mu := sync.Mutex{}
 
-	for try := 0; try < MaxSeedRetries; try++ {
+	for try := 0; try < MaxRetries; try++ {
 		for _, seed := range seedAddrs {
 			wg.Add(1)
 			go func(seedIP string) {
@@ -935,7 +941,7 @@ func thornodeSeeds() (seedAddrs, tmSeeds []string) {
 			break
 		}
 		log.Info().Msg("retrying to fetch seeds...")
-		time.Sleep(SeedRetryBackoff)
+		time.Sleep(RetryBackoff)
 	}
 
 	log.Info().Msgf("found %d p2p seeds", len(tmSeeds))
@@ -1002,53 +1008,100 @@ func thornodeFetchGenesis(seeds []string) {
 	}
 
 	// iterate peers until we succeed in fetching genesis
-	for try := 0; try < MaxSeedRetries; try++ {
+	for peerRetry := 0; peerRetry < MaxRetries; peerRetry++ {
 		for _, seed := range seeds {
-			// use the default http client to avoid the short timeout
-			res, err := http.Get(fmt.Sprintf("http://%s:%d/genesis", seed, rpcPort))
-			if err != nil || res.StatusCode != http.StatusOK {
-				log.Error().Err(err).Str("seed", seed).Msg("failed to fetch genesis")
-				continue
-			}
-
-			// decode genesis response
-			type genesisResponse struct {
-				Result struct {
-					Genesis interface{} `json:"genesis"`
-				} `json:"result"`
-			}
-			var g genesisResponse
-			dec := json.NewDecoder(res.Body)
-			err = dec.Decode(&g)
-			if err != nil {
-				log.Error().Err(err).Str("seed", seed).Msg("failed to decode genesis")
-				continue
-			}
-
-			// open genesis file
-			err = os.MkdirAll(filepath.Dir(genesisPath), 0o755)
+			// initialize empty genesis
+			err := os.MkdirAll(filepath.Dir(genesisPath), 0o755)
 			if err != nil {
 				log.Fatal().Err(err).Msg("failed to create genesis directory")
 			}
+
 			f, err := os.OpenFile(genesisPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 			if err != nil {
 				log.Fatal().Err(err).Msg("failed to create genesis file")
 			}
+			defer f.Close()
 
-			// encode back to file
-			enc := json.NewEncoder(f)
-			err = enc.Encode(g.Result.Genesis)
-			if err != nil {
-				log.Fatal().Err(err).Msg("failed to write genesis file")
+			// fetch genesis file in chunks
+			for chunkID := 0; ; chunkID++ {
+				for chunkRetry := 0; chunkRetry < MaxRetries; chunkRetry++ {
+					clog := log.With().
+						Str("seed", seed).
+						Int("chunk", chunkID).
+						Int("retry", chunkRetry).
+						Logger()
+
+					url := fmt.Sprintf("http://%s:%d/genesis_chunked?chunk=%d", seed, rpcPort, chunkID)
+					var res *http.Response
+					res, err = http.Get(url)
+					if err != nil || res.StatusCode != http.StatusOK {
+						clog.Err(err).Msg("failed to fetch genesis chunk")
+						time.Sleep(RetryBackoff)
+						continue
+					}
+
+					// decode the json response which contains the base64 encoded chunk
+					type chunkResponse struct {
+						Result struct {
+							Data  string `json:"data"`
+							Chunk string `json:"chunk"`
+							Total string `json:"total"`
+						} `json:"result"`
+					}
+
+					var response chunkResponse
+					dec := json.NewDecoder(res.Body)
+					err = dec.Decode(&response)
+					res.Body.Close()
+					if err != nil {
+						clog.Err(err).Msg("failed to decode genesis chunk")
+						time.Sleep(RetryBackoff)
+						continue
+					}
+
+					// decode the base64 chunk
+					var chunkData []byte
+					chunkData, err = base64.StdEncoding.DecodeString(response.Result.Data)
+					if err != nil {
+						clog.Err(err).Msg("failed to decode base64 genesis chunk")
+						time.Sleep(RetryBackoff)
+						continue
+					}
+
+					// write the decoded chunk to the file
+					_, err = f.Write(chunkData)
+					if err != nil {
+						clog.Fatal().Err(err).Msg("failed to write genesis chunk to file")
+					}
+
+					// convert chunk and total to int
+					var chunk, total int
+					chunk, err = strconv.Atoi(response.Result.Chunk)
+					if err != nil {
+						clog.Err(err).Msg("failed to convert chunk to int")
+						time.Sleep(RetryBackoff)
+						continue
+					}
+					total, err = strconv.Atoi(response.Result.Total)
+					if err != nil {
+						clog.Err(err).Msg("failed to convert total to int")
+						time.Sleep(RetryBackoff)
+						continue
+					}
+
+					// done if the current chunk is the last one
+					if chunk == total-1 {
+						clog.Info().Msg("genesis file successfully fetched")
+						return
+					}
+
+					// break chunk retry on success
+					break
+				}
 			}
-
-			// success
-			f.Close()
-			log.Info().Msg("genesis file fetched")
-			return
 		}
 
-		time.Sleep(SeedRetryBackoff)
+		time.Sleep(RetryBackoff)
 		log.Info().Msg("retrying to fetch genesis...")
 	}
 }
