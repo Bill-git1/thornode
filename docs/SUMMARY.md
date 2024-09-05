@@ -2,6 +2,8 @@
 
 - [Introduction](README.md)
 
+  - [FAQs](./technical-faq.md)
+
 - [Swap Guide](swap-guide/quickstart-guide.md)
 
   - [Quickstart Guide](swap-guide/quickstart-guide.md)
