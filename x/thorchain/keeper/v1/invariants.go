@@ -76,7 +76,9 @@ func AsgardInvariant(k KVStore) common.Invariant {
 				}
 			}
 
-			if coin.IsNative() {
+			// Trade Assets do not correspond to Module balance coins and panic on .Native(),
+			// so do not include them in swapCoins.
+			if coin.IsNative() && !coin.Asset.IsTradeAsset() {
 				if !ss.In.IsZero() {
 					// adjust for stream swap amount, the amount In has been added
 					// to the pool but not deducted from the tx or module, so deduct
@@ -86,7 +88,7 @@ func AsgardInvariant(k KVStore) common.Invariant {
 				swapCoins = swapCoins.Add(coin)
 			}
 
-			if swap.TargetAsset.IsNative() && !ss.Out.IsZero() {
+			if swap.TargetAsset.IsNative() && !swap.TargetAsset.IsTradeAsset() && !ss.Out.IsZero() {
 				swapCoins = swapCoins.Add(common.NewCoin(swap.TargetAsset, ss.Out))
 			}
 		}

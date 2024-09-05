@@ -539,6 +539,23 @@ func checkInvariants(routine int) error {
 				mu.Unlock()
 				return
 			}
+
+			// If for instance the endpoint panics, report the error
+			// rather than treating it as no broken invariants.
+			if resp.StatusCode != http.StatusOK {
+				defer resp.Body.Close()
+				var body []byte
+				body, err = io.ReadAll(resp.Body)
+				mu.Lock()
+				if err == nil {
+					returnErr = multierror.Append(returnErr, fmt.Errorf("invariant %s status code %d response: %s", inv, resp.StatusCode, string(body)))
+				} else {
+					returnErr = multierror.Append(returnErr, fmt.Errorf("invariant %s status code %d error: %s", inv, resp.StatusCode, err.Error()))
+				}
+				mu.Unlock()
+				return
+			}
+
 			invRes := struct {
 				Broken    bool
 				Invariant string
