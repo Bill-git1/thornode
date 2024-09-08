@@ -46,7 +46,7 @@ func (s *RouterUpgradeControllerTestSuite) TestUpgradeProcess(c *C) {
 		Router: oldContractAddr,
 	}
 	mgr.Keeper().SetChainContract(ctx, oldChainContract)
-	usdtAsset, err := common.NewAsset(ethUSDTAsset)
+	usdtAsset, err := common.NewAsset("ETH.USDT-0XA3910454BF2CB59B8B3A401589A3BACC5CA42306")
 	c.Assert(err, IsNil)
 
 	funds := common.Coins{

@@ -145,7 +145,6 @@ func (h WithdrawLiquidityHandler) handleV129(ctx cosmos.Context, msg MsgWithdraw
 			msg.Tx,
 			assetAmt,
 			runeAmt,
-			cosmos.ZeroUint(),
 		)
 		if err := h.mgr.EventMgr().EmitEvent(ctx, withdrawEvt); err != nil {
 			return nil, multierror.Append(errFailSaveEvent, err)

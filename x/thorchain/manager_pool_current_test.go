@@ -134,7 +134,6 @@ func (s *PoolMgrVCURSuite) TestAbandonPool(c *C) {
 		"asymmetry":                "0.000000000000000000",
 		"emit_asset":               "0",
 		"emit_rune":                "0",
-		"imp_loss_protection":      "0",
 		"id":                       "0000000000000000000000000000000000000000000000000000000000000000",
 		"chain":                    "THOR",
 		"from":                     runeAddr.String(),

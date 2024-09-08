@@ -280,7 +280,6 @@ func (pm *PoolMgrVCUR) removeLiquidityProviders(ctx cosmos.Context, asset common
 			},
 			cosmos.ZeroUint(),
 			cosmos.ZeroUint(),
-			cosmos.ZeroUint(),
 		)
 		if err := mgr.EventMgr().EmitEvent(ctx, withdrawEvt); err != nil {
 			ctx.Logger().Error("fail to emit pool withdraw event", "error", err)

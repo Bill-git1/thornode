@@ -1466,7 +1466,7 @@
         "result": {
           "code": 0,
           "data": "\n\u0018\n\u0016/types.MsgObservedTxIn",
-          "log": "[{\"events\":[{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_observed_txin\"}]},{\"type\":\"withdraw\",\"attributes\":[{\"key\":\"pool\",\"value\":\"ETH/USDC-0X9999999999999999999999999999999999999999\"},{\"key\":\"liquidity_provider_units\",\"value\":\"990087500\"},{\"key\":\"basis_points\",\"value\":\"10000\"},{\"key\":\"asymmetry\",\"value\":\"0.000000000000000000\"},{\"key\":\"emit_asset\",\"value\":\"990123631\"},{\"key\":\"emit_rune\",\"value\":\"0\"},{\"key\":\"imp_loss_protection\",\"value\":\"0\"},{\"key\":\"id\",\"value\":\"0000000000000000000000000000000000000000000000000000000000000004\"},{\"key\":\"chain\",\"value\":\"ETH\"},{\"key\":\"from\",\"value\":\"0xdd99304abf262d653e2eb6722d874c2b86efdcea\"},{\"key\":\"to\",\"value\":\"0xd58610f89265a2fb637ac40edf59141ff873b266\"},{\"key\":\"coin\",\"value\":\"10000 ETH.ETH\"},{\"key\":\"memo\",\"value\":\"-:ETH/USDC-0X9999999999999999999999999999999999999999:10000\"}]}]}]",
+          "log": "[{\"events\":[{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_observed_txin\"}]},{\"type\":\"withdraw\",\"attributes\":[{\"key\":\"pool\",\"value\":\"ETH/USDC-0X9999999999999999999999999999999999999999\"},{\"key\":\"liquidity_provider_units\",\"value\":\"990087500\"},{\"key\":\"basis_points\",\"value\":\"10000\"},{\"key\":\"asymmetry\",\"value\":\"0.000000000000000000\"},{\"key\":\"emit_asset\",\"value\":\"990123631\"},{\"key\":\"emit_rune\",\"value\":\"0\"},{\"key\":\"id\",\"value\":\"0000000000000000000000000000000000000000000000000000000000000004\"},{\"key\":\"chain\",\"value\":\"ETH\"},{\"key\":\"from\",\"value\":\"0xdd99304abf262d653e2eb6722d874c2b86efdcea\"},{\"key\":\"to\",\"value\":\"0xd58610f89265a2fb637ac40edf59141ff873b266\"},{\"key\":\"coin\",\"value\":\"10000 ETH.ETH\"},{\"key\":\"memo\",\"value\":\"-:ETH/USDC-0X9999999999999999999999999999999999999999:10000\"}]}]}]",
           "gas_wanted": "0",
           "gas_used": "237579",
           "events": [
@@ -1496,7 +1496,6 @@
               "emit_rune": "0",
               "from": "0xdd99304abf262d653e2eb6722d874c2b86efdcea",
               "id": "0000000000000000000000000000000000000000000000000000000000000004",
-              "imp_loss_protection": "0",
               "liquidity_provider_units": "990087500",
               "memo": "-:ETH/USDC-0X9999999999999999999999999999999999999999:10000",
               "pool": "ETH/USDC-0X9999999999999999999999999999999999999999",
