@@ -6,108 +6,28 @@
 
 # THORChain
 
----
-
-> **Mirror**
->
-> This repo mirrors from THORChain Gitlab to Github.
-> To contribute, please contact the team and commit to the Gitlab repo:
->
-> https://gitlab.com/thorchain/thornode
-
----
-
-======================================
-
-THORChain is a decentralised liquidity network built with [CosmosSDK](https://cosmos.network).
+THORChain is a decentralised liquidity network built with [CosmosSDK](https://cosmos.network) and [TSS-lib](https://github.com/bnb-chain/tss-lib)
 
 ## THORNodes
 
-The THORNode software allows a node to join and service the network, which will run with a minimum of four nodes. The only limitation to the number of nodes that can participate is set by the `minimumBondAmount`, which is the minimum amount of capital required to join. Nodes are not permissioned; any node that can bond the required amount of capital can be scheduled to churn in.
+Learn how to be a Node Operator:
+https://docs.thorchain.org/thornodes/overview
 
-THORChain comes to consensus about events observed on external networks via witness transactions from nodes. Swap and liquidity provision logic is then applied to these finalised events. Each event causes a state change in THORChain, and some events generate an output transaction which require assets to be moved (outgoing swaps or bond/liquidity withdrawals). These output transactions are then batched, signed by a threshold signature scheme protocol and broadcast back to the respective external network. The final gas fee on the network is then accounted for and the transaction complete.
+## Features
 
-This is described as a "1-way state peg", where only state enters the system, derived from external networks. There are no pegged tokens or 2-way pegs, because they are not necessary. On-chain Bitcoin can be swapped with on-chain Ethereum in the time it takes to finalise the confirmed event.
+THORChain offers various features that wallets, exchanges, services and individuals can interact with.
+There is no frontend to THORChain; THORChain responds only to layer-1 transactions posted to the following addresses, which churn regularly:
+https://thornode.ninerealms.com/thorchain/inbound_addresses
 
-All funds in the system are fully accounted for and can be audited. All logic is fully transparent.
+## Integrations
 
-## Churn
+Learn how to integrate THORChain here:
+https://dev.thorchain.org/
 
-THORChain actively churns its validator set to prevent stagnation and capture, and ensure liveness in signing committees. Churning is also the mechanism by which the THORNode software can safely facilitate non-contentious upgrades.
+## Ecosystem
 
-Every 50000 blocks (3 days) THORChain will schedule the oldest and the most unreliable node to leave, and rotate in two new nodes. The next two nodes chosen are simply the nodes with the highest bond.
-
-During a churn event the following happens:
-
-- The incoming nodes participate in a TSS key-generation event to create new Asgard vault addresses
-- When successful, the new vault is tested with a on-chain challenge-response.
-- If successful, the vaults are rolled forward, moving all assets from the old vault to the new vault.
-- The outgoing nodes are refunded their bond and removed from the system.
-
-## Bifröst
-
-The Bifröst facilitates connections with external networks, such as Binance Smart Chain, Ethereum and Bitcoin. The Bifröst is generally well-abstracted, needing only minor changes between different chains. The Bifröst handles observations of incoming transactions, which are passed into THORChain via special witness transactions. The Bifröst also handles multi-party computation to sign outgoing transactions via a Genarro-Goldfeder TSS scheme. Only 2/3rds of nodes are required to be in each signing ceremony on a first-come-first-serve basis, and there is no log of who is present. In this way, each node maintains plausible deniability around involvement with every transaction.
-
-### Adding a New Chain
-
-To add a new chain, the process and guidelines defined in [this doc](docs/chains/README.md) must be followed.
-
-### Removing a Chain
-
-To remove a chain, nodes can stop witnessing it. If a super-majority of nodes do not promptly follow suit, the non-witnessing nodes will attract penalties during the time they do not witness it. If a super-majority of nodes stop witnessing a chain it will invoke a chain-specific Ragnörok, where all funds attributed to that chain will be returned and the chain delisted.
-
-## Transactions
-
-The THORChain facilitates the following transactions, which are made on external networks and replayed into the THORChain via witness transactions:
-
-- **ADD LIQUIDITY**: Anyone can provide assets in pools. If the asset hasn't been seen before, a new pool is created.
-- **WITHDRAW LIQUIDITY**: Anyone who is providing liquidity can withdraw their claim on the pool.
-- **SWAP**: Anyone can send in assets and swap to another, including sending to a destination address, and including optional price protection.
-- **BOND**: Anyone can bond assets and attempt to become a Node. Bonds must be greater than the `minimumBondAmount`, else they will be refunded.
-- **LEAVE**: Nodes can voluntarily leave the system and their bond and rewards will be paid out. Leaving takes 6 hours.
-- **RESERVE**: Anyone can add assets to the Protocol Reserve, which pays out to Nodes and Liquidity Providers. 220,447,472 Rune will be funded in this way.
-
-## Continuous Liquidity Pools
-
-The Provision of liquidity logic is based on the `CLP` Continuous Liquidity Pool algorithm.
-
-**Swaps**
-The algorithm for processing assets swaps is given by:
-`y = (x * Y * X) / (x + X)^2`, where `x = input, X = Input Asset, Y = Output Asset, y = output`
-
-The fee paid by the trader is given by:
-`fee = ( x^2 * Y ) / ( x + X )^2 `
-
-The slip-based fee model has the following benefits:
-
-- Resistant to manipulation
-- A proxy for demand of liquidity
-- Asymptotes to zero over time, ensuring pool prices match reference prices
-
-**Provide Liquidity**
-The liquidity units awarded to a liquidity provider is given by:
-`liquidityUnits = P * ((rA + Ra + 2ra) / (rA + Ra + 2RA))`<br/>
-Where: `r = rune deposited, a = asset deposited, R = total Rune Balance (before deposit), A = total Asset Balance (before deposit), P = total Pool Units (before deposit)`<br/>
-Code reference: ([x\thorchain\handler_add_liquidity.go](https://gitlab.com/thorchain/thornode/-/blob/develop/x\thorchain\handler_add_liquidity.go#L427-461))
-
-This allows them to provide liquidity asymmetrically since it has no opinion on price.
-
-## Incentives
-
-The system is safest and most capital-efficient when 67% of Rune is bonded and 33% is provided liquidity in pools. At this point, nodes will be paid 67% of the System Income, and liquidity providers will be paid 33% of the income. The System Income is the block rewards (`blockReward = totalReserve / 6 / 6311390`) plus the liquidity fees collected in that block.
-
-An Incentive Pendulum ensures that liquidity providers receive 100% of the income when 0% is provided liquidity (inefficient), and 0% of the income when `totalLiquidity >= totalBonded` (unsafe).
-The Total Reserve accumulates the `transactionFee`, which pays for outgoing gas fees and stabilises long-term value accrual.
-
-## Governance
-
-There is strictly minimal governance possible through THORNode software. Each THORNode can only generate valid blocks that is fully-compliant with the binary run by the super-majority.
-
-The best way to apply changes to the system is to submit a THORChain Improvement Proposal (TIP) for testing, validation and discussion among the THORChain developer community. If the change is beneficial to the network, it can be merged into the binary. New nodes may opt to run this updated binary, signalling via a `semver` versioning scheme. Once the super-majority are on the same binary, the system will update automatically. Schema and logic changes can be applied via this approach.
-
-Changes to the Bifröst may not need coordination, as long as the changes don't impact THORChain schema or logic, such as adding new chains.
-
-Emergency changes to the protocol may be difficult to coordinate, since there is no ability to communicate with any of the nodes. The best way to handle an emergency is to invoke Ragnarök, simply by leaving the system. When the system falls below 4 nodes all funds are paid out and the system can be shut-down.
+Learn about the ecosystem here:
+https://thorchain.org/ecosystem
 
 ======================================
 
@@ -255,10 +175,14 @@ go build -tags cgo,ledger
 ./thornode keys add ledger1 --ledger
 ```
 
-### How to contribute
+=====================
+
+# Contributions
+
+## Devs
 
 - Create an issue or find an existing issue on https://gitlab.com/thorchain/thornode/-/issues
-- About to work on an issue? Start a conversation at #thornode-dev channel on [discord](https://discord.gg/BpnPh4tW5c)
+- About to work on an issue? Start a conversation at #thornode-dev channel on [discord](https://discord.gg/qrnnXqnWYt)
 - Assign the issue to yourself
 - Create a branch using the issue id, for example if the issue you are working on is 600, then create a branch call `600-issue`, this way, GitLab will link your PR with the issue
 - Raise a PR, Once your PR is ready for review, post a message in #thornode-dev channel in discord, tag `@thornode-team` for review
@@ -268,17 +192,26 @@ go build -tags cgo,ledger
 
 Current active branch is `develop`, so when you open PR, make sure your target branch is `develop`
 
-### Vulnerabilities and Bug Bounties
+## ADRs
+
+THORChain follows a Architectural Decisison Record process outlined here:
+https://gitlab.com/thorchain/thornode/-/blob/develop/docs/architecture/PROCESS.md?ref_type=heads
+
+## Upgrades
+
+The network soft-forks once a month (asynchronous upgrades), and hard-forks once a year (synchronous upgrade).
+
+## Vulnerabilities and Bug Bounties
 
 If you find a vulnerability in THORNode, please submit it for a bounty according to these [guidelines](bugbounty.md).
 
-### the semantic version and release
+## the semantic version and release
 
 THORNode manage changelog entry the same way like Gitlab, refer to (https://docs.gitlab.com/ee/development/changelog.html) for more detail. Once a merge request get merged into master branch,
 if the merge request upgrades the [version](https://gitlab.com/thorchain/thornode/-/blob/develop/version), then a new release will be created automatically, and the repository will be tagged with
 the new version by the release tool.
 
-## New Chain Integration
+## New Chain Integrations
 
 The process to integrate a new chain into THORChain is multifaceted. As it requires changes to multiple repos in multiple languages (`golang`, `python`, and `javascript`).
 
