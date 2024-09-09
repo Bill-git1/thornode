@@ -108,7 +108,7 @@ _Functionality to be tested:_
 - Inbound addresses returned correctly
 - Insolvency on the chain halts the chain
 - Unauthorised tx on the chain (double-spend) halts the chain
-- Chain client does not sign outbound when `HaltSigning<Chain>` is enabled
+- Chain client does not sign outbound when `HaltSigning<Chain>` is set non-zero (and lower than the THORChain height)
 
 _Usage requirements:_
 

@@ -513,7 +513,7 @@ func (s *Signer) signAndBroadcast(item TxOutStoreItem) ([]byte, *types.TxInItem,
 		s.logger.Err(err).Msgf("fail to get %s", mimirKey)
 		return nil, nil, err
 	}
-	if haltSigningGlobalMimir > 0 {
+	if haltSigningGlobalMimir > 0 && haltSigningGlobalMimir < blockHeight {
 		s.logger.Info().Msg("signing has been halted globally")
 		return nil, nil, nil
 	}
@@ -523,7 +523,7 @@ func (s *Signer) signAndBroadcast(item TxOutStoreItem) ([]byte, *types.TxInItem,
 		s.logger.Err(err).Msgf("fail to get %s", mimirKey)
 		return nil, nil, err
 	}
-	if haltSigningMimir > 0 {
+	if haltSigningMimir > 0 && haltSigningMimir < blockHeight {
 		s.logger.Info().Msgf("signing for %s is halted", tx.Chain)
 		return nil, nil, nil
 	}
