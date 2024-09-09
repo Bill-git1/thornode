@@ -53,20 +53,10 @@ func (smgr *StoreMgr) migrate(ctx cosmos.Context, i uint64) error {
 	// add the logic to migrate store here when it is needed
 
 	switch i {
-	case 235:
-		migrateStoreV235(ctx, smgr.mgr)
-	default:
-		// nothing to do
+	case 136:
+		migrateStoreV136(ctx, smgr.mgr)
 	}
 
 	smgr.mgr.Keeper().SetStoreVersion(ctx, int64(i))
 	return nil
-}
-
-func migrateStoreV235(ctx cosmos.Context, mgr *Mgrs) {
-	defer func() {
-		if err := recover(); err != nil {
-			ctx.Logger().Error("fail to migrate store to v235", "error", err)
-		}
-	}()
 }

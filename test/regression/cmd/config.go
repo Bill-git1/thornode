@@ -45,6 +45,20 @@ func init() {
 
 	// initialize the codec
 	encodingConfig = app.MakeEncodingConfig()
+
+	// Having set the prefixes, derive the module addresses.
+	ModuleAddrTransfer = authtypes.NewModuleAddress("transfer").String() // "tthor1yl6hdjhmkf37639730gffanpzndzdpmhv07zme"
+	// "transfer" is special, as http://localhost:1317/auth/accounts/tthor1yl6hdjhmkf37639730gffanpzndzdpmhv07zme
+	// gets the name from the address, but no address from name from http://localhost:1317/thorchain/balance/module/transfer
+	ModuleAddrThorchain = authtypes.NewModuleAddress("thorchain").String()                    // "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp"
+	ModuleAddrAsgard = authtypes.NewModuleAddress("asgard").String()                          // "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2"
+	ModuleAddrBond = authtypes.NewModuleAddress("bond").String()                              // "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff"
+	ModuleAddrReserve = authtypes.NewModuleAddress("reserve").String()                        // "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw"
+	ModuleAddrFeeCollector = authtypes.NewModuleAddress("fee_collector").String()             // "tthor17xpfvakm2amg962yls6f84z3kell8c5ljftt88"
+	ModuleAddrLending = authtypes.NewModuleAddress("lending").String()                        // "tthor1x0kgm82cnj0vtmzdvz4avk3e7sj427t0al8wky"
+	ModuleAddrAffiliateCollector = authtypes.NewModuleAddress("affiliate_collector").String() // "tthor1dl7un46w7l7f3ewrnrm6nq58nerjtp0d82uzjg"
+	ModuleAddrTreasury = authtypes.NewModuleAddress("treasury").String()                      // "tthor1vmafl8f3s6uuzwnxkqz0eza47v6ecn0ttstnny"
+	ModuleAddrRUNEPool = authtypes.NewModuleAddress("rune_pool").String()                     // "tthor1rzqfv62dzu585607s5awqtgnvvwz5rzhfuaw80"
 }
 
 func clientContextAndFactory(routine int) (client.Context, tx.Factory) {
@@ -132,15 +146,18 @@ var httpClient = &http.Client{
 // Thorchain Module Addresses
 ////////////////////////////////////////////////////////////////////////////////////////
 
-// TODO: determine how to return these programmatically without keeper
-const (
-	ModuleAddrThorchain    = "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp"
-	ModuleAddrAsgard       = "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2"
-	ModuleAddrBond         = "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff"
-	ModuleAddrTransfer     = "tthor1yl6hdjhmkf37639730gffanpzndzdpmhv07zme"
-	ModuleAddrReserve      = "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw"
-	ModuleAddrFeeCollector = "tthor17xpfvakm2amg962yls6f84z3kell8c5ljftt88"
-	ModuleAddrLending      = "tthor1x0kgm82cnj0vtmzdvz4avk3e7sj427t0al8wky"
+var (
+	// Set these in `init` after the address prefix has been set.
+	ModuleAddrTransfer           string
+	ModuleAddrThorchain          string
+	ModuleAddrAsgard             string
+	ModuleAddrBond               string
+	ModuleAddrReserve            string
+	ModuleAddrFeeCollector       string
+	ModuleAddrLending            string
+	ModuleAddrAffiliateCollector string
+	ModuleAddrTreasury           string
+	ModuleAddrRUNEPool           string
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////

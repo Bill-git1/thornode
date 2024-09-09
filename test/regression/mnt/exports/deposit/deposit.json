@@ -225,6 +225,7 @@
         "rune_withdrawn": "0"
       },
       "THORNames": [],
+      "affiliate_collectors": null,
       "bond_providers": [
         {
           "node_address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",

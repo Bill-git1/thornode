@@ -147,6 +147,7 @@ func DefaultGenesisState() GenesisState {
 		TradeUnits:              make([]TradeUnit, 0),
 		RuneProviders:           make([]RUNEProvider, 0),
 		RunePool:                NewRUNEPool(),
+		AffiliateCollectors:     []AffiliateFeeCollector{},
 	}
 }
 
@@ -334,6 +335,10 @@ func initGenesis(ctx cosmos.Context, keeper keeper.Keeper, data GenesisState) []
 		if err := keeper.SetNodeMimir(ctx, item.Key, item.Value, item.Signer); err != nil {
 			panic(err)
 		}
+	}
+
+	for _, item := range data.AffiliateCollectors {
+		keeper.SetAffiliateCollector(ctx, item)
 	}
 
 	keeper.SetStoreVersion(ctx, data.StoreVersion)
@@ -712,6 +717,11 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		outboundFeeSpentRune = append(outboundFeeSpentRune, common.NewCoin(asset, amount))
 	}
 
+	affiliateCollectors, err := k.GetAffiliateCollectors(ctx)
+	if err != nil {
+		panic(err)
+	}
+
 	return GenesisState{
 		Pools:                   pools,
 		LiquidityProviders:      liquidityProviders,
@@ -741,5 +751,6 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		StoreVersion:            k.GetStoreVersion(ctx),
 		RuneProviders:           runeProviders,
 		RunePool:                runePool,
+		AffiliateCollectors:     affiliateCollectors,
 	}
 }

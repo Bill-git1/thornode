@@ -1,0 +1,151 @@
+{{ template "default-state.yaml" }}
+---
+{{ template "btc-pool-state.yaml" }}
+---
+type: state
+genesis:
+  app_state:
+    bank:
+      balances:
+        - address: {{ addr_module_affiliate_collector }}
+          coins:
+            - amount: "${OVERSOLVENT_COLLECTOR_RUNE=6789165444}"
+              denom: rune
+        - address: {{ addr_module_asgard }}
+          coins:
+            - amount: "${OVERSOLVENT_BNB=1588356075}"
+              denom: bnb/bnb
+            - amount: "${OVERSOLVENT_LTC=5973894700}"
+              denom: ltc/ltc
+            - amount: "127251950916"
+              denom: rune
+    thorchain:
+      store_version: "135"
+      node_accounts:
+        - active_block_height: "0"
+          bond: "5000000000000"
+          ip_address: 1.1.1.1
+          node_address: {{ addr_thor_dog }}
+          bond_address: {{ addr_thor_dog }}
+          pub_key_set:
+            secp256k1: "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
+            ed25519: "tthorpub1zcjduepqfan43w2emjhfv45gspf98squqlnl2rcchc3e4dx7z2nxr27edflsy2e8ql"
+          signer_membership: []
+          status: Active
+          # matches the priv_validator_key.json mounted in the test container
+          validator_cons_pub_key: tthorcpub1zcjduepqq75h7uy6qhesh9d3a9tuk0mzrnc46u8rye44ze6peua3zmpfh23q8z37sz
+          version: "2.135.0"
+
+---
+type: create-blocks
+count: 1
+skip_invariants: true
+---
+########################################################################################
+# Check the initial broken invariants
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/invariant/affiliate_collector
+asserts:
+  - .broken == true
+  - .msg | length == 1
+  - .msg[0] | contains("oversolvent") and contains("${OVERSOLVENT_COLLECTOR_RUNE}rune")
+---
+type: check
+endpoint: http://localhost:1317/thorchain/balance/module/affiliate_collector
+asserts:
+  - .coins | length == 1
+  - .coins[0].denom == "rune"
+  - .coins[0].amount == "${OVERSOLVENT_COLLECTOR_RUNE}"
+---
+type: check
+endpoint: http://localhost:1317/thorchain/pools
+asserts:
+  - .| length == 1
+  - .[0].pending_inbound_rune == "0"
+  - .[0].balance_rune == "${POOL_RUNE=100001087646}" # Including rewards.
+---
+type: check
+endpoint: http://localhost:1317/thorchain/balance/module/asgard
+asserts:
+  - .coins | length == 3
+  - .coins[] | select(.denom == "bnb/bnb").amount == "${OVERSOLVENT_BNB}"
+  - .coins[] | select(.denom == "ltc/ltc").amount == "${OVERSOLVENT_LTC}"
+  - .coins[] | select(.denom == "rune").amount == "${POOL_MODULE_RUNE=127253038562}"
+---
+type: check
+endpoint: http://localhost:1317/cosmos/bank/v1beta1/supply
+asserts:
+  - .supply | length == ${SUPPLY_COINS=4}
+  - .supply[] | select(.denom == "bnb/bnb").amount == "${OVERSOLVENT_BNB}"
+  - .supply[] | select(.denom == "ltc/ltc").amount == "${OVERSOLVENT_LTC}"
+  - .supply[] | select(.denom == "rune").amount == "${RUNE_SUPPLY=50134041116360}"
+  - .supply[] | select(.denom == "thor.mimir").amount == "400000000000"
+---
+type: check
+endpoint: http://localhost:1317/thorchain/invariant/asgard
+asserts:
+  - .broken == true
+  - .msg | length == 3
+  - .msg[0] | contains("oversolvent") and contains("${OVERSOLVENT_BNB}bnb/bnb")
+  - .msg[1] | contains("oversolvent") and contains("${OVERSOLVENT_LTC}ltc/ltc")
+  - .msg[2] | contains("oversolvent") and contains("${OVERSOLVENT_POOL_MODULE_RUNE=27251950916}rune")
+  - ${OVERSOLVENT_POOL_MODULE_RUNE} == ${POOL_MODULE_RUNE} - ${POOL_RUNE}
+---
+########################################################################################
+# Do the store migration and check the fixed invariants.
+########################################################################################
+type: tx-version
+signer: {{ addr_thor_dog }}
+version: "2.136.0"
+---
+type: create-blocks
+count: 2 # One block to process the message, one block to carry out the store migration.
+skip_invariants: true
+---
+type: check
+endpoint: http://localhost:1317/thorchain/invariant/affiliate_collector
+asserts:
+  - .broken == false
+---
+type: check
+endpoint: http://localhost:1317/thorchain/invariant/asgard
+asserts:
+  - .broken == false
+---
+type: check
+endpoint: http://localhost:1317/thorchain/balance/module/affiliate_collector
+asserts:
+  - .coins | length == 1
+  - .coins[0].denom == "rune"
+  - .coins[0].amount == "${OVERSOLVENT_COLLECTOR_RUNE}"
+  # RUNE still present, but now associated with an Owner.
+---
+type: check
+endpoint: http://localhost:1317/cosmos/bank/v1beta1/supply
+asserts:
+  - .supply | length == ${SUPPLY_COINS} - 1 # BNB/BNB burnt
+  - .supply[] | select(.denom == "ltc/ltc").amount == "${OVERSOLVENT_LTC}"
+  - .supply[] | select(.denom == "rune").amount == "${RUNE_SUPPLY}"
+  # LTC/LTC and RUNE supply unchanged.
+---
+type: check
+endpoint: http://localhost:1317/thorchain/balance/module/reserve
+asserts:
+  - .coins | length == 2
+  - .coins[] | select(.denom == "ltc/ltc").amount == "${OVERSOLVENT_LTC}"
+  # Oversolvent LTC/LTC transferred to the Reserve Module for later processing.
+---
+type: check
+endpoint: http://localhost:1317/thorchain/pools
+asserts:
+  - .| length == 1
+  - .[0].pending_inbound_rune == "0"
+  - .[0].balance_rune == "${POOL_RUNE=100003263784}" # Including rewards.
+---
+type: check
+endpoint: http://localhost:1317/thorchain/balance/module/asgard
+asserts:
+  - .coins | length == 1
+  - .coins[0].denom == "rune"
+  - .coins[0].amount == "${POOL_RUNE}"

@@ -8,6 +8,7 @@ import "thorchain/v1/x/thorchain/types/type_pool.proto";
 import "thorchain/v1/x/thorchain/types/type_chain_contract.proto";
 import "thorchain/v1/x/thorchain/types/type_network_fee.proto";
 import "thorchain/v1/x/thorchain/types/msg_swap.proto";
+import "thorchain/v1/x/thorchain/types/type_affiliate_fee_collector.proto";
 import "thorchain/v1/x/thorchain/types/type_streaming_swap.proto";
 import "thorchain/v1/x/thorchain/types/type_network.proto";
 import "thorchain/v1/x/thorchain/types/type_pol.proto";
@@ -71,4 +72,5 @@ message GenesisState {
   repeated types.RUNEProvider rune_providers = 36 [(gogoproto.nullable) = false];
   types.RUNEPool rune_pool = 37 [(gogoproto.nullable) = false];
   repeated types.NodeMimir nodeMimirs = 38 [(gogoproto.nullable) = false];
+  repeated types.AffiliateFeeCollector affiliate_collectors = 39 [(gogoproto.nullable) = false];
 }

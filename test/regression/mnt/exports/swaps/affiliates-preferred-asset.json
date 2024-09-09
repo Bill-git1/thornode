@@ -305,6 +305,12 @@
           "preferred_asset": "BTC.BTC"
         }
       ],
+      "affiliate_collectors": [
+        {
+          "owner_address": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+          "rune_amount": "4755972390"
+        }
+      ],
       "bond_providers": [
         {
           "node_address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",

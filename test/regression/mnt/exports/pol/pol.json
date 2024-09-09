@@ -249,6 +249,7 @@
         "rune_withdrawn": "76316877188"
       },
       "THORNames": [],
+      "affiliate_collectors": null,
       "bond_providers": [
         {
           "node_address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
