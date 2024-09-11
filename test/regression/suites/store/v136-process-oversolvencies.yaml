@@ -104,6 +104,14 @@ count: 2 # One block to process the message, one block to carry out the store mi
 skip_invariants: true
 ---
 type: check
+endpoint: http://localhost:1317/thorchain/block
+asserts:
+  - .|[..|select(.type? and .type == "transfer" and .sender == "{{ addr_module_reserve }}")] | length == 45
+  - .|[..|select(.type? and .type == "transfer" and .sender == "{{ addr_module_reserve }}" and .recipient == "{{ addr_module_asgard }}")] | length == 1
+  - .|[..|select(.type? and .type == "transfer" and .sender == "{{ addr_module_reserve }}" and .recipient == "{{ addr_module_bond }}")] | length == 1
+  # Issue 2012's 43 store migration transfers, one bond reward transfer, one pool reward transfer.
+---
+type: check
 endpoint: http://localhost:1317/thorchain/invariant/affiliate_collector
 asserts:
   - .broken == false
@@ -141,7 +149,7 @@ endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .| length == 1
   - .[0].pending_inbound_rune == "0"
-  - .[0].balance_rune == "${POOL_RUNE=100003263784}" # Including rewards.
+  - .[0].balance_rune == "${POOL_RUNE=100003196196}" # Including rewards.
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/balance/module/asgard

@@ -5,6 +5,13 @@
       "accounts": [
         {
           "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "40",
+          "address": "tthor1p8as4v08l6t04tahqgajgw5ycj2a5k3yvuxje6",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
           "account_number": "6",
           "address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
           "pub_key": {
@@ -12,6 +19,34 @@
             "key": "AmF4AUTWZEUSBtgqiR5n2Lgic/Yrr1mWupMo5TAubNRO"
           },
           "sequence": "1"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "21",
+          "address": "tthor1zl6el90vw3ncjzh28mcautrkjn9jagreuz0dp0",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "46",
+          "address": "tthor1rpu6ndvg0r25y6xqdl2svqlwglc3yhh32m0zuf",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "53",
+          "address": "tthor1rzxvqhepnqqcn7973jp4y0ygasr709gpkd0pxt",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "15",
+          "address": "tthor1rgdhwaj3nr937ftlnrh7sdw38d9ene6ymz595u",
+          "pub_key": null,
+          "sequence": "0"
         },
         {
           "@type": "/cosmos.auth.v1beta1.ModuleAccount",
@@ -29,6 +64,13 @@
         },
         {
           "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "51",
+          "address": "tthor19pkfd9ygch6dfa067ddn0fwul8g3x0syryhr4x",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
           "account_number": "10",
           "address": "tthor19pkncem64gajdwrd5kasspyj0t75hhkpy9zyej",
           "pub_key": null,
@@ -36,8 +78,29 @@
         },
         {
           "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "19",
+          "address": "tthor19gu67axrmeeknl2k2tf38h92vek3suwnkpzytz",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "49",
+          "address": "tthor196svmy67vm4ya3rnlfnjq4sc9u5c5sku80vrsq",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
           "account_number": "9",
           "address": "tthor1xghvhe4p50aqh5zq2t2vls938as0dkr2l4e33j",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "37",
+          "address": "tthor1x4d5g75v67affmr9qjuu75swjsgme4jsu3rwc6",
           "pub_key": null,
           "sequence": "0"
         },
@@ -54,8 +117,71 @@
         },
         {
           "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "22",
+          "address": "tthor1fq9sculy0ej2p9sa52e304m0hq96edgq4he4d7",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "18",
+          "address": "tthor1fq3vlugshpg90lewgcf44nux2qrxk855pfjqcs",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "41",
+          "address": "tthor1fptyt9rkukvn80sda7q8e446ft2lp6jkhlxhc7",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
           "account_number": "11",
           "address": "tthor1f4l5dlqhaujgkxxqmug4stfvmvt58vx2tspx4g",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "23",
+          "address": "tthor12z9pwgw50pepl7mazv4nf2868c6ke882edv77r",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "30",
+          "address": "tthor125rz8fe8spjhjsknfmejddtxfh44v9jntpw8pr",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "27",
+          "address": "tthor1tp8l7ygmnhmny9dknjjj8d65x49t28nuq0yfg0",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "14",
+          "address": "tthor1tcr7q0tmj3863d03w6yfc2w5ghzfqup6s97gnq",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "48",
+          "address": "tthor1tu9xulcjw76mp7ky7v9l2hrwk2chvgla9n4g6c",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "42",
+          "address": "tthor1vqd6djdqn4hlrquxuwz2na3mac8qm8qg27dwc4",
           "pub_key": null,
           "sequence": "0"
         },
@@ -74,6 +200,20 @@
           ]
         },
         {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "12",
+          "address": "tthor1vsnj373g9uqke6z5fdpps8p8udrls3a8lf9m7l",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "50",
+          "address": "tthor1dsk8smfqt6xxjs8lzuy4hpxrh0wfklf50er89u",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
           "@type": "/cosmos.auth.v1beta1.ModuleAccount",
           "base_account": {
             "account_number": "3",
@@ -86,6 +226,48 @@
         },
         {
           "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "38",
+          "address": "tthor1dmgdpkqngg3amua5hffjcharngzdp4wv4jvjt4",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "44",
+          "address": "tthor1wudr3yyc0d436k8cml7c8dvtqxwsvwlz0mes74",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "31",
+          "address": "tthor10rthwfd27zhs3lrk2ck8gv2yx3zgz3wtcm60qz",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "32",
+          "address": "tthor10j3d4dgq0sekw3vywtt8kgeeympujsmchvnlwc",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "28",
+          "address": "tthor1s9cv0mcp80lehzyjhjtkcaq2yjc4ez369s38g5",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "54",
+          "address": "tthor1sth9gz5asawsvfrq08ag7wzwqqlrjxl0alhva7",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
           "account_number": "8",
           "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "pub_key": null,
@@ -93,8 +275,113 @@
         },
         {
           "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "16",
+          "address": "tthor13uw2awf9k2nqnmzqz8ugckfljtwzngqfqd8gwv",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "45",
+          "address": "tthor1j47es49m8llprlpcxrt3a2hqyhperwc702txf7",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "36",
+          "address": "tthor1nc8kha8hn74h0w7zdyclncq5h039wecga76rak",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "43",
+          "address": "tthor155cljp4fcarppqupzh9s3uvu6525hd5g0p67k5",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "47",
+          "address": "tthor140dy78lz5vv84gknn2wdwv7ed4nhs2kacer4h0",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "33",
+          "address": "tthor1kv4jdrnekdfqcajez78d2drvhp3ep6akzdk2dh",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "13",
+          "address": "tthor1hkyzhmf85kfl87mgjdh42yplgumj7gsrmmr50q",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "17",
+          "address": "tthor1er9ys0ymy9lt4tet77ztaexh6dp3xdw5lfjxch",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "26",
+          "address": "tthor1eyvhjlezafz36cz3vev60u6p2zn24dhuplalhv",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "24",
+          "address": "tthor1mq8mzl9272dzhee3flkndyz2lux9nvzqr4zlsm",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "35",
+          "address": "tthor1mge35algk7x6r4gygauvxcwn5nhqcchme24vax",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
           "account_number": "7",
           "address": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "25",
+          "address": "tthor1uunxme33cufhtcm00ygkfx6th3vvjmatgs6d26",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "52",
+          "address": "tthor1a8m2shzvyya0ckvq76fxsnd5800hm0uxz9d5gd",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "20",
+          "address": "tthor1afs68s095v58tc6e560w2xfmzfy4tdznqrq6uu",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "39",
+          "address": "tthor1atev7k3xzsqsenrwjht3k3r70t9mtz0pss3rrg",
           "pub_key": null,
           "sequence": "0"
         },
@@ -119,6 +406,20 @@
           },
           "name": "bond",
           "permissions": []
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "29",
+          "address": "tthor17kq48hspxnaku6pd4crj9hnywjcpehvx5w2efx",
+          "pub_key": null,
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "account_number": "34",
+          "address": "tthor1l7p2rlckkclsgauall0v4hfy94rdpk2jr6z4ek",
+          "pub_key": null,
+          "sequence": "0"
         }
       ],
       "params": {
@@ -131,6 +432,15 @@
     },
     "bank": {
       "balances": [
+        {
+          "address": "tthor1p8as4v08l6t04tahqgajgw5ycj2a5k3yvuxje6",
+          "coins": [
+            {
+              "amount": "28083870141",
+              "denom": "rune"
+            }
+          ]
+        },
         {
           "address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
           "coins": [
@@ -145,11 +455,74 @@
           ]
         },
         {
+          "address": "tthor1zl6el90vw3ncjzh28mcautrkjn9jagreuz0dp0",
+          "coins": [
+            {
+              "amount": "1154715724",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1rpu6ndvg0r25y6xqdl2svqlwglc3yhh32m0zuf",
+          "coins": [
+            {
+              "amount": "41040827546",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1rzxvqhepnqqcn7973jp4y0ygasr709gpkd0pxt",
+          "coins": [
+            {
+              "amount": "312191389293",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1rgdhwaj3nr937ftlnrh7sdw38d9ene6ymz595u",
+          "coins": [
+            {
+              "amount": "3677532492",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor19pkfd9ygch6dfa067ddn0fwul8g3x0syryhr4x",
+          "coins": [
+            {
+              "amount": "1106152983",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
           "address": "tthor19pkncem64gajdwrd5kasspyj0t75hhkpy9zyej",
           "coins": [
             {
               "amount": "100000000000",
               "denom": "thor.mimir"
+            }
+          ]
+        },
+        {
+          "address": "tthor19gu67axrmeeknl2k2tf38h92vek3suwnkpzytz",
+          "coins": [
+            {
+              "amount": "1890543217",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor196svmy67vm4ya3rnlfnjq4sc9u5c5sku80vrsq",
+          "coins": [
+            {
+              "amount": "1275639579",
+              "denom": "rune"
             }
           ]
         },
@@ -163,10 +536,46 @@
           ]
         },
         {
+          "address": "tthor1x4d5g75v67affmr9qjuu75swjsgme4jsu3rwc6",
+          "coins": [
+            {
+              "amount": "117441744148",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "100003263784",
+              "amount": "100003196196",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1fq9sculy0ej2p9sa52e304m0hq96edgq4he4d7",
+          "coins": [
+            {
+              "amount": "1100925415",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1fq3vlugshpg90lewgcf44nux2qrxk855pfjqcs",
+          "coins": [
+            {
+              "amount": "2277559930",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1fptyt9rkukvn80sda7q8e446ft2lp6jkhlxhc7",
+          "coins": [
+            {
+              "amount": "23353164702",
               "denom": "rune"
             }
           ]
@@ -181,6 +590,78 @@
           ]
         },
         {
+          "address": "tthor12z9pwgw50pepl7mazv4nf2868c6ke882edv77r",
+          "coins": [
+            {
+              "amount": "808502228779",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor125rz8fe8spjhjsknfmejddtxfh44v9jntpw8pr",
+          "coins": [
+            {
+              "amount": "23263527044",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1tp8l7ygmnhmny9dknjjj8d65x49t28nuq0yfg0",
+          "coins": [
+            {
+              "amount": "65516063210",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1tcr7q0tmj3863d03w6yfc2w5ghzfqup6s97gnq",
+          "coins": [
+            {
+              "amount": "4440625518",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1tu9xulcjw76mp7ky7v9l2hrwk2chvgla9n4g6c",
+          "coins": [
+            {
+              "amount": "1288358184",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1vqd6djdqn4hlrquxuwz2na3mac8qm8qg27dwc4",
+          "coins": [
+            {
+              "amount": "17746077327",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1vsnj373g9uqke6z5fdpps8p8udrls3a8lf9m7l",
+          "coins": [
+            {
+              "amount": "11716154162",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1dsk8smfqt6xxjs8lzuy4hpxrh0wfklf50er89u",
+          "coins": [
+            {
+              "amount": "1116636690",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
@@ -188,7 +669,16 @@
               "denom": "ltc/ltc"
             },
             {
-              "amount": "35027250620523",
+              "amount": "32852275238835",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1dmgdpkqngg3amua5hffjcharngzdp4wv4jvjt4",
+          "coins": [
+            {
+              "amount": "44782043380",
               "denom": "rune"
             }
           ]
@@ -203,10 +693,154 @@
           ]
         },
         {
+          "address": "tthor1wudr3yyc0d436k8cml7c8dvtqxwsvwlz0mes74",
+          "coins": [
+            {
+              "amount": "1329048855",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor10rthwfd27zhs3lrk2ck8gv2yx3zgz3wtcm60qz",
+          "coins": [
+            {
+              "amount": "14739474681",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor10j3d4dgq0sekw3vywtt8kgeeympujsmchvnlwc",
+          "coins": [
+            {
+              "amount": "12822773036",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1s9cv0mcp80lehzyjhjtkcaq2yjc4ez369s38g5",
+          "coins": [
+            {
+              "amount": "50404959208",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1sth9gz5asawsvfrq08ag7wzwqqlrjxl0alhva7",
+          "coins": [
+            {
+              "amount": "1361005139",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
           "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "coins": [
             {
               "amount": "2500000000000",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor13uw2awf9k2nqnmzqz8ugckfljtwzngqfqd8gwv",
+          "coins": [
+            {
+              "amount": "2531525404",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1j47es49m8llprlpcxrt3a2hqyhperwc702txf7",
+          "coins": [
+            {
+              "amount": "46008641784",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1nc8kha8hn74h0w7zdyclncq5h039wecga76rak",
+          "coins": [
+            {
+              "amount": "1136748510",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor155cljp4fcarppqupzh9s3uvu6525hd5g0p67k5",
+          "coins": [
+            {
+              "amount": "4493133386",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor140dy78lz5vv84gknn2wdwv7ed4nhs2kacer4h0",
+          "coins": [
+            {
+              "amount": "3634392367",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1kv4jdrnekdfqcajez78d2drvhp3ep6akzdk2dh",
+          "coins": [
+            {
+              "amount": "15960846102",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1hkyzhmf85kfl87mgjdh42yplgumj7gsrmmr50q",
+          "coins": [
+            {
+              "amount": "4701295785",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1er9ys0ymy9lt4tet77ztaexh6dp3xdw5lfjxch",
+          "coins": [
+            {
+              "amount": "2385425454",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1eyvhjlezafz36cz3vev60u6p2zn24dhuplalhv",
+          "coins": [
+            {
+              "amount": "69322921547",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1mq8mzl9272dzhee3flkndyz2lux9nvzqr4zlsm",
+          "coins": [
+            {
+              "amount": "230920778872",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1mge35algk7x6r4gygauvxcwn5nhqcchme24vax",
+          "coins": [
+            {
+              "amount": "2142333731",
               "denom": "rune"
             }
           ]
@@ -221,10 +855,64 @@
           ]
         },
         {
+          "address": "tthor1uunxme33cufhtcm00ygkfx6th3vvjmatgs6d26",
+          "coins": [
+            {
+              "amount": "117358353467",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1a8m2shzvyya0ckvq76fxsnd5800hm0uxz9d5gd",
+          "coins": [
+            {
+              "amount": "1046501504",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1afs68s095v58tc6e560w2xfmzfy4tdznqrq6uu",
+          "coins": [
+            {
+              "amount": "1852327786",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1atev7k3xzsqsenrwjht3k3r70t9mtz0pss3rrg",
+          "coins": [
+            {
+              "amount": "35558585112",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "4999998066609",
+              "amount": "4999998065229",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor17kq48hspxnaku6pd4crj9hnywjcpehvx5w2efx",
+          "coins": [
+            {
+              "amount": "39003121809",
+              "denom": "rune"
+            }
+          ]
+        },
+        {
+          "address": "tthor1l7p2rlckkclsgauall0v4hfy94rdpk2jr6z4ek",
+          "coins": [
+            {
+              "amount": "3295477653",
               "denom": "rune"
             }
           ]
@@ -293,7 +981,7 @@
       "network": {
         "LPIncomeSplit": "9800",
         "NodeIncomeSplit": "200",
-        "bond_reward_rune": "66609",
+        "bond_reward_rune": "65229",
         "total_bond_units": "3"
       },
       "network_fees": [
@@ -329,7 +1017,7 @@
           "LP_units": "100000000000",
           "asset": "BTC.BTC",
           "balance_asset": "100000000",
-          "balance_rune": "100003263784",
+          "balance_rune": "100003196196",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",

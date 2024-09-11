@@ -106,4 +106,92 @@ func migrateStoreV136(ctx cosmos.Context, mgr *Mgrs) {
 			}
 		}
 	}
+
+	// #2012, refund of BNB Ragnarok synth-burn Reserve RUNE as per ADR-015.
+	// Amounts are floored to 1e-8 precision.
+	// Of the 46 specified addresses, the two identical
+	// thor1kv4jdrnekdfqcajez78d2drvhp3ep6akx6865j
+	// amounts are merged as specified (BNB/BTCB and BNB/ETH),
+	// and the Pool Module address's 2,443.07558984 RUNE for stuck synths is removed
+	// ( thor1g98cy3n9mmjrpn0sxmn63lztelera37n8n67c0 ),
+	// leaving 43 distinct transfers of 21,749.75450656 RUNE total.
+	refundDetails := []struct {
+		AddressString string
+		AmountUint64  uint64
+	}{
+		{"thor1vsnj373g9uqke6z5fdpps8p8udrls3a8m75t86", 11716154162},
+		{"thor1hkyzhmf85kfl87mgjdh42yplgumj7gsrlvjyk9", 4701295785},
+		{"thor1tcr7q0tmj3863d03w6yfc2w5ghzfqup65j0c29", 4440625518},
+		{"thor1rgdhwaj3nr937ftlnrh7sdw38d9ene6yl494de", 3677532492},
+		{"thor13uw2awf9k2nqnmzqz8ugckfljtwzngqfy6kchf", 2531525404},
+		{"thor1er9ys0ymy9lt4tet77ztaexh6dp3xdw5m7rkpj", 2385425454},
+		{"thor1fq3vlugshpg90lewgcf44nux2qrxk85597rsp4", 2277559930},
+		{"thor19gu67axrmeeknl2k2tf38h92vek3suwnjkn5j8", 1890543217},
+		{"thor1afs68s095v58tc6e560w2xfmzfy4tdzny5329e", 1852327786},
+		{"thor1zl6el90vw3ncjzh28mcautrkjn9jagrec47ac2", 1154715724},
+		{"thor1fq9sculy0ej2p9sa52e304m0hq96edgq3qg95m", 1100925415},
+		{"thor12z9pwgw50pepl7mazv4nf2868c6ke882a6aw8x", 808502228779},
+		{"thor1mq8mzl9272dzhee3flkndyz2lux9nvzq8zn0f7", 230920778872},
+		{"thor1uunxme33cufhtcm00ygkfx6th3vvjmatv8tanl", 117358353467},
+		{"thor1eyvhjlezafz36cz3vev60u6p2zn24dhu9gv0wf", 69322921547},
+		{"thor1tp8l7ygmnhmny9dknjjj8d65x49t28nuyc4e32", 65516063210},
+		{"thor1s9cv0mcp80lehzyjhjtkcaq2yjc4ez36p8qh33", 50404959208},
+		{"thor17kq48hspxnaku6pd4crj9hnywjcpehvxsemfsr", 39003121809},
+		{"thor125rz8fe8spjhjsknfmejddtxfh44v9jn0klhcx", 23263527044},
+		{"thor10rthwfd27zhs3lrk2ck8gv2yx3zgz3wtuvtle8", 14739474681},
+		{"thor10j3d4dgq0sekw3vywtt8kgeeympujsmcnmz0ha", 12822773036},
+		{"thor1kv4jdrnekdfqcajez78d2drvhp3ep6akx6865j", 15960846102},
+		{"thor1l7p2rlckkclsgauall0v4hfy94rdpk2j8dn9qn", 3295477653},
+		{"thor1mge35algk7x6r4gygauvxcwn5nhqcchmaayuyr", 2142333731},
+		{"thor1nc8kha8hn74h0w7zdyclncq5h039wecgeftnyn", 1136748510},
+		{"thor1x4d5g75v67affmr9qjuu75swjsgme4jscxj7pl", 117441744148},
+		{"thor1dmgdpkqngg3amua5hffjcharngzdp4wv39azjs", 44782043380},
+		{"thor1atev7k3xzsqsenrwjht3k3r70t9mtz0p58qn6d", 35558585112},
+		{"thor1p8as4v08l6t04tahqgajgw5ycj2a5k3ygthzql", 28083870141},
+		{"thor1fptyt9rkukvn80sda7q8e446ft2lp6jkngh8pm", 23353164702},
+		{"thor1vqd6djdqn4hlrquxuwz2na3mac8qm8qgwfu7ps", 17746077327},
+		{"thor155cljp4fcarppqupzh9s3uvu6525hd5gtktw03", 4493133386},
+		{"thor1wudr3yyc0d436k8cml7c8dvtqxwsvwlztvgq8s", 1329048855},
+		{"thor1j47es49m8llprlpcxrt3a2hqyhperwc7ta6ksm", 46008641784},
+		{"thor1rpu6ndvg0r25y6xqdl2svqlwglc3yhh3wv7j9v", 41040827546},
+		{"thor140dy78lz5vv84gknn2wdwv7ed4nhs2kauwj9w2", 3634392367},
+		{"thor1tu9xulcjw76mp7ky7v9l2hrwk2chvglapyycra", 1288358184},
+		{"thor196svmy67vm4ya3rnlfnjq4sc9u5c5skurcanf9", 1275639579},
+		{"thor1dsk8smfqt6xxjs8lzuy4hpxrh0wfklf5twjhue", 1116636690},
+		{"thor19pkfd9ygch6dfa067ddn0fwul8g3x0sy8nxnvr", 1106152983},
+		{"thor1a8m2shzvyya0ckvq76fxsnd5800hm0uxxjuy3g", 1046501504},
+		{"thor1rzxvqhepnqqcn7973jp4y0ygasr709gpj673lw", 312191389293},
+		{"thor1sth9gz5asawsvfrq08ag7wzwqqlrjxl0egxuym", 1361005139},
+	}
+
+	// Sanity checks.
+	var sum uint64
+	ok := true
+	for i := range refundDetails {
+		sum += refundDetails[i].AmountUint64
+	}
+	if len(refundDetails) != 43 {
+		ctx.Logger().Error("store migration recipient number was not 46", "number", len(refundDetails))
+		ok = false
+	}
+	// ~24,192.83 RUNE minus the Pool Module's ~2,443.08 RUNE ~= 21,749.75 RUNE
+	if sum != 2174975450656 {
+		ctx.Logger().Error("store migration recipient sum was not 2174975450656", "sum", sum)
+		ok = false
+	}
+
+	if ok {
+		for i := range refundDetails {
+			recipient, err := cosmos.AccAddressFromBech32(refundDetails[i].AddressString)
+			if err != nil {
+				ctx.Logger().Error("error parsing address in store migration", "error", err)
+				continue
+			}
+			amount := cosmos.NewUint(refundDetails[i].AmountUint64)
+			refundCoins := common.NewCoins(common.NewCoin(common.RuneAsset(), amount))
+			if err := mgr.Keeper().SendFromModuleToAccount(ctx, ReserveName, recipient, refundCoins); err != nil {
+				ctx.Logger().Error("fail to store migration transfer RUNE from Reserve to recipient", "error", err, "recipient", recipient, "amount", amount)
+			}
+		}
+	}
 }
