@@ -13,6 +13,7 @@ params:
 asserts:
   - .expected_amount_out == "15981"
   - .fees.liquidity == "8"
+  - .fees.slippage_bps == 2
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
 ---
 # before fee floor
@@ -169,6 +170,29 @@ params:
 asserts:
   - .expected_amount_out == "14476"
   - .fees.liquidity == "1498"
+  - .fees.slippage_bps == 499
+  - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
+---
+type: check
+endpoint: http://localhost:1317/thorchain/quote/swap
+params:
+  from_asset: ETH.ETH
+  to_asset: BTC.BTC
+  amount: 1000000
+  destination: {{ addr_btc_fox }}
+asserts:
+  - .fees.slippage_bps == 975
+  - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
+---
+type: check
+endpoint: http://localhost:1317/thorchain/quote/swap
+params:
+  from_asset: ETH/ETH
+  to_asset: BTC.BTC
+  amount: 1000000
+  destination: {{ addr_btc_fox }}
+asserts:
+  - .fees.slippage_bps == 504
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
 ---
 type: tx-deposit
@@ -196,4 +220,3 @@ asserts:
   - .end_block_events[] | select(.type == "swap") | .liquidity_fee == "1498"
   - .end_block_events[] | select(.type == "swap") | .liquidity_fee_in_rune == "1498834"
   - .end_block_events[] | select(.type == "swap") | .emit_asset == "28476 BTC.BTC"
-

@@ -189,12 +189,13 @@ func (s *SwapperVCUR) swapOne(ctx cosmos.Context,
 	ctx.Logger().Info("swapping", "from", tx.FromAddress, "coins", tx.Coins[0], "target", target, "to", destination)
 
 	// Set asset to our pool asset
-	var poolAsset common.Asset
+	var minSlipAsset common.Asset
 	if source.IsRune() {
-		poolAsset = target.GetLayer1Asset()
+		minSlipAsset = target
 	} else {
-		poolAsset = source.GetLayer1Asset()
+		minSlipAsset = source
 	}
+	poolAsset := minSlipAsset.GetLayer1Asset()
 
 	if source.IsTradeAsset() {
 		if tradeAccountsEnabled <= 0 {
@@ -278,7 +279,10 @@ func (s *SwapperVCUR) swapOne(ctx cosmos.Context,
 
 	swapSlipBps := s.CalcSwapSlip(X, x)
 	swapEvt.PoolSlip = swapSlipBps
-	minSlipBps := s.MinSlipBps(ctx, mgr.Keeper(), target.IsSyntheticAsset(), target.IsTradeAsset())
+
+	// the non-RUNE asset is used to determine which min slip to use
+	minSlipBps := getMinSlipBps(ctx, mgr.Keeper(), minSlipAsset)
+
 	var (
 		emitAssets   cosmos.Uint
 		liquidityFee cosmos.Uint
@@ -484,24 +488,4 @@ func (s *SwapperVCUR) GetSwapCalc(X, x, Y, slipBps, minSlipBps cosmos.Uint) (emi
 		slip = slipBps
 	}
 	return
-}
-
-// MinSlipBps returns artificial slip floor, expressed in basis points (10000)
-func (s *SwapperVCUR) MinSlipBps(
-	ctx cosmos.Context,
-	k keeper.Keeper,
-	isSynth bool,
-	isTradeAccount bool,
-) cosmos.Uint {
-	var ref constants.ConstantName
-	switch {
-	case isSynth:
-		ref = constants.SynthSlipMinBps
-	case isTradeAccount:
-		ref = constants.TradeAccountsSlipMinBps
-	default:
-		ref = constants.L1SlipMinBps
-	}
-	minFeeMimir := k.GetConfigInt64(ctx, ref)
-	return cosmos.SafeUintFromInt64(minFeeMimir)
 }

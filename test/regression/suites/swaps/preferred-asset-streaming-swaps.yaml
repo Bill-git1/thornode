@@ -1,3 +1,7 @@
+type: env
+key: L1_SLIP_MIN_BPS
+value: 50
+---
 {{ template "default-state.yaml" }}
 ---
 {{ template "btc-eth-3usd-pool-state.yaml" }}
@@ -208,7 +212,7 @@ count: 2
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
-  - .affiliate_collector_rune == "145869646"
+  - .affiliate_collector_rune == "145349743"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/swap/streaming/{{ observe_txid 3 }}
@@ -218,7 +222,7 @@ asserts:
   - .count == 3
   - .interval == 1
   - .quantity == 5
-  - .out == "1633187300"
+  - .out == "1633192400"
   - .last_height == 11
   - .trade_target == "0"
   - .failed_swaps|length == 0
@@ -238,7 +242,7 @@ asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ observe_txid 3 }}"
   - .[0]|.coin.asset == "ETH.USDY-0X9999999999999999999999999999999999999999"
-  - .[0]|.coin.amount == "2549692900"
+  - .[0]|.coin.amount == "2549702200"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -249,7 +253,7 @@ txs:
       from_address: {{ addr_eth_dog }}
       to_address: {{ addr_eth_fox }}
       coins:
-        - amount: "2549692900"
+        - amount: "2549702200"
           asset: "ETH.USDY-0X9999999999999999999999999999999999999999"
       gas:
         - amount: "960000"

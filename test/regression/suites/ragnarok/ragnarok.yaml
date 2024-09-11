@@ -1,3 +1,7 @@
+type: env
+key: SYNTH_SLIP_MIN_BPS
+value: 50
+---
 {{ template "default-state.yaml" }}
 ---
 type: create-blocks

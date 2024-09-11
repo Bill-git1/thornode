@@ -31,6 +31,7 @@ const MaxBasisPts = uint64(10_000)
 // MaxMemoSize Maximum Memo Size
 const MaxMemoSize = 250
 
+// TODO: remove on hard fork.
 // StreamingSwapMinBPFee multiplier. This is used to allow decimal points for
 // streaming swap math
 const StreamingSwapMinBPFeeMulti = int64(100)

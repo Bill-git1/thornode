@@ -415,6 +415,7 @@ func (s *HandlerSwapSuite) TestHandleStreamingSwap(c *C) {
 	swp := msg.GetStreamingSwap()
 	swp.Deposit = tx.Coins[0].Amount
 	mgr.Keeper().SetStreamingSwap(ctx, swp)
+	mgr.Keeper().SetMimir(ctx, constants.L1SlipMinBps.String(), 1)
 	_, err = handler.handle(ctx, *msg)
 	c.Assert(err, IsNil)
 

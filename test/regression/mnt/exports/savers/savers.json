@@ -166,11 +166,11 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "19880706",
+              "amount": "19840523",
               "denom": "btc/btc"
             },
             {
-              "amount": "63420567811",
+              "amount": "63420467238",
               "denom": "rune"
             }
           ]
@@ -188,7 +188,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "34999976327659",
+              "amount": "34999976327620",
               "denom": "rune"
             }
           ]
@@ -197,7 +197,7 @@
           "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "coins": [
             {
-              "amount": "2535211879987",
+              "amount": "2535211781929",
               "denom": "rune"
             }
           ]
@@ -215,7 +215,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "5001391224543",
+              "amount": "5001391423213",
               "denom": "rune"
             }
           ]
@@ -228,7 +228,7 @@
       },
       "supply": [
         {
-          "amount": "19880706",
+          "amount": "19840523",
           "denom": "btc/btc"
         },
         {
@@ -282,12 +282,12 @@
         {
           "asset": "BTC/BTC",
           "asset_address": "bcrt1qqk8c8sfrmfm0tkncs0zxeutc8v5mx3pjw22g33",
-          "asset_deposit_value": "19880199",
+          "asset_deposit_value": "19839959",
           "last_add_height": "24",
           "pending_asset": "0",
           "pending_rune": "0",
           "rune_deposit_value": "0",
-          "units": "19880199"
+          "units": "19839959"
         }
       ],
       "loans": [],
@@ -303,7 +303,7 @@
       "network": {
         "LPIncomeSplit": "9873",
         "NodeIncomeSplit": "127",
-        "bond_reward_rune": "1391224543",
+        "bond_reward_rune": "1391423213",
         "total_bond_units": "26"
       },
       "network_fees": [
@@ -334,13 +334,13 @@
       "orderbook_items": [],
       "outbound_fee_spent_rune": [
         {
-          "amount": "3550753",
+          "amount": "3550634",
           "asset": "BTC.BTC"
         }
       ],
       "outbound_fee_withheld_rune": [
         {
-          "amount": "4734313",
+          "amount": "4734155",
           "asset": "BTC.BTC"
         }
       ],
@@ -348,18 +348,18 @@
         {
           "LP_units": "100000000000",
           "asset": "BTC.BTC",
-          "balance_asset": "1121307571",
-          "balance_rune": "63420567811",
+          "balance_asset": "1121410046",
+          "balance_rune": "63420467238",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
           "status": "Available",
-          "synth_units": "894402594"
+          "synth_units": "892493761"
         },
         {
-          "LP_units": "19880199",
+          "LP_units": "19839959",
           "asset": "BTC/BTC",
-          "balance_asset": "19880706",
+          "balance_asset": "19840523",
           "balance_rune": "0",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -381,19 +381,19 @@
         {
           "address": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
           "reclaimed": "0",
-          "score": "42536277711",
+          "score": "42536011918",
           "spent": "0"
         },
         {
           "address": "bcrt1qqk8c8sfrmfm0tkncs0zxeutc8v5mx3pjw22g33",
           "reclaimed": "0",
-          "score": "197821805",
+          "score": "206572999",
           "spent": "0"
         },
         {
           "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "reclaimed": "0",
-          "score": "42536277713",
+          "score": "42536011919",
           "spent": "0"
         }
       ],
@@ -415,7 +415,7 @@
           ],
           "coins": [
             {
-              "amount": "1121307571",
+              "amount": "1121410046",
               "asset": "BTC.BTC",
               "decimals": "8"
             }

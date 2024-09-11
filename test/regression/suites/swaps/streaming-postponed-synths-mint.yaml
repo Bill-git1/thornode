@@ -1,3 +1,7 @@
+type: env
+key: SYNTH_SLIP_MIN_BPS
+value: "50"
+---
 {{ template "default-state.yaml" }}
 ---
 # Fox and cat start with identical positions in the BTC.BTC and ETH.ETH pools; here cat can represent POL.

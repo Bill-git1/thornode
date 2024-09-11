@@ -113,6 +113,7 @@ func NewConstantValue() *ConstantVals {
 			L1SlipMinBps:                        0,
 			TradeAccountsSlipMinBps:             0,
 			SynthSlipMinBps:                     0,
+			DerivedSlipMinBps:                   0,
 			RUNEPoolEnabled:                     0,                  // enable/disable RUNE Pool
 			RUNEPoolDepositMaturityBlocks:       14400 * 90,         // blocks from last deposit to allow withdraw
 			RUNEPoolMaxReserveBackstop:          5_000_000_00000000, // 5 million RUNE

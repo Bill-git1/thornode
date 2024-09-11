@@ -442,8 +442,10 @@ func GetSlasher(version semver.Version, keeper keeper.Keeper, eventMgr EventMana
 // GetSwapper return an implementation of Swapper
 func GetSwapper(version semver.Version) (Swapper, error) {
 	switch {
-	case version.GTE(semver.MustParse("1.134.0")):
+	case version.GTE(semver.MustParse("2.136.0")):
 		return newSwapperVCUR(), nil
+	case version.GTE(semver.MustParse("1.134.0")):
+		return newSwapperV134(), nil
 	default:
 		return nil, errInvalidVersion
 	}

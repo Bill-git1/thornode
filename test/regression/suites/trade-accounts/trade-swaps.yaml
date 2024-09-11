@@ -1,3 +1,7 @@
+type: env
+key: TRADE_ACCOUNTS_SLIP_MIN_BPS
+value: "50"
+---
 # set synth multiplier to 1x for accurate comparison against synth swaps
 type: env
 key: VIRTUAL_MULT_SYNTHS_BASIS_POINTS
@@ -264,8 +268,8 @@ params:
   destination: {{ addr_thor_fox }}
   amount: 10000
 asserts:
-  - .expected_amount_out|tonumber == 98903
-  - .fees.total_bps == 1
+  - .expected_amount_out|tonumber == 97936
+  - .fees.total_bps == 99
 ---
 type: tx-mimir
 signer: {{ addr_thor_cat }}
@@ -298,8 +302,9 @@ params:
   destination: {{ addr_thor_fox }}
   amount: 10000
 asserts:
-  - .expected_amount_out|tonumber == 89022
-  - .fees.total_bps == 1000
+  - .expected_amount_out|tonumber == 80129
+  - .fees.slippage_bps == 1900
+  - .fees.total_bps == 1900
 ---
 ########################################################################################
 # try obtaining THOR.BTC with EnabledDerivedAssets 0
@@ -415,7 +420,7 @@ endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
 asserts:
   - .result | length == 1
   - .result[0].denom == "rune"
-  - .result[0].amount|tonumber == ${INITIAL_RUNE=2500960512608}
+  - .result[0].amount|tonumber == ${INITIAL_RUNE=2500871965631}
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/network

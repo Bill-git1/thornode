@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/armon/go-metrics"
+	"github.com/blang/semver"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	"github.com/hashicorp/go-multierror"
 
@@ -138,9 +139,20 @@ func unrefundableCoinCleanup(ctx cosmos.Context, mgr Manager, toi TxOutItem, bur
 }
 
 func getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsset common.Asset, swp StreamingSwap) (uint64, error) {
+	version := mgr.GetVersion()
+	switch {
+	case version.GTE(semver.MustParse("2.136.0")):
+		return getMaxSwapQuantityV136(ctx, mgr, sourceAsset, targetAsset, swp)
+	default:
+		return getMaxSwapQuantityV1(ctx, mgr, sourceAsset, targetAsset, swp)
+	}
+}
+
+func getMaxSwapQuantityV136(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsset common.Asset, swp StreamingSwap) (uint64, error) {
 	if swp.Interval == 0 {
 		return 0, nil
 	}
+
 	// collect pools involved in this swap
 	var pools Pools
 	totalRuneDepth := cosmos.ZeroUint()
@@ -190,15 +202,25 @@ func getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsse
 		// recalculated to be the asset side
 		virtualDepth = common.GetUncappedShare(virtualDepth, pools[0].BalanceRune, pools[0].BalanceAsset)
 	}
-	// we multiply by 100 to ensure we can support decimal points (ie 2.5bps / 2 == 1.25)
-	minBP := mgr.Keeper().GetConfigInt64(ctx, constants.StreamingSwapMinBPFee) * constants.StreamingSwapMinBPFeeMulti
-	minBP /= int64(len(pools)) // since multiple swaps are executed, then minBP should be adjusted
-	if minBP == 0 {
-		return 0, fmt.Errorf("streaming swaps are not allows with a min BP of zero")
+
+	// determine lowest min slip for the swap assets, which results in highest quantity
+	minMinSlip := cosmos.ZeroUint()
+	for _, asset := range []common.Asset{sourceAsset, targetAsset} {
+		if asset.IsRune() {
+			continue
+		}
+		minSlip := getMinSlipBps(ctx, mgr.Keeper(), asset)
+		if minSlip.IsZero() {
+			continue
+		}
+		if minMinSlip.IsZero() || minSlip.LT(minMinSlip) {
+			minMinSlip = minSlip
+		}
 	}
-	// constants.StreamingSwapMinBPFee is in 10k basis point x 10, so we add an
-	// addition zero here (_0)
-	minSize := common.GetSafeShare(cosmos.SafeUintFromInt64(minBP), cosmos.SafeUintFromInt64(10_000*constants.StreamingSwapMinBPFeeMulti), virtualDepth)
+	if minMinSlip.IsZero() {
+		return 0, fmt.Errorf("streaming swaps are not allowed with a min slip of zero")
+	}
+	minSize := common.GetSafeShare(minMinSlip, cosmos.NewUint(constants.MaxBasisPts), virtualDepth)
 	if minSize.IsZero() {
 		return 1, nil
 	}
@@ -256,6 +278,27 @@ func getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsse
 	}
 
 	return maxSwapQuantity.Uint64(), nil
+}
+
+// getMinSlipBps returns artificial slip floor, expressed in basis points (10000).
+func getMinSlipBps(
+	ctx cosmos.Context,
+	k keeper.Keeper,
+	asset common.Asset,
+) cosmos.Uint {
+	var ref constants.ConstantName
+	switch {
+	case asset.IsSyntheticAsset():
+		ref = constants.SynthSlipMinBps
+	case asset.IsTradeAsset():
+		ref = constants.TradeAccountsSlipMinBps
+	case asset.IsDerivedAsset():
+		ref = constants.DerivedSlipMinBps
+	default:
+		ref = constants.L1SlipMinBps
+	}
+	minFeeMimir := k.GetConfigInt64(ctx, ref)
+	return cosmos.SafeUintFromInt64(minFeeMimir)
 }
 
 func refundBond(ctx cosmos.Context, tx common.Tx, acc cosmos.AccAddress, amt cosmos.Uint, nodeAcc *NodeAccount, mgr Manager) error {

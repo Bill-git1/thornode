@@ -83,7 +83,7 @@ const (
 	TNSFeeOnSale
 	TNSFeePerBlock
 	StreamingSwapPause
-	StreamingSwapMinBPFee
+	StreamingSwapMinBPFee // TODO: remove on hard fork
 	StreamingSwapMaxLength
 	StreamingSwapMaxLengthNative
 	MinCR
@@ -130,6 +130,7 @@ const (
 	L1SlipMinBps
 	SynthSlipMinBps
 	TradeAccountsSlipMinBps
+	DerivedSlipMinBps
 	TradeAccountsEnabled
 	EVMDisableContractWhitelist
 	OperationalVotesMin

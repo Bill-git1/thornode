@@ -12,7 +12,7 @@ import (
 )
 
 func camelToSnakeUpper(s string) string {
-	re := regexp.MustCompile(`([a-z])([A-Z])`)
+	re := regexp.MustCompile(`([a-z0-9])([A-Z])`)
 	snake := re.ReplaceAllString(s, `${1}_${2}`)
 	return strings.ToUpper(snake)
 }
@@ -31,7 +31,7 @@ func init() {
 		JailTimeKeygen:                      10,
 		JailTimeKeysign:                     10,
 		AsgardSize:                          6,
-		StreamingSwapMinBPFee:               100,
+		StreamingSwapMinBPFee:               100, // TODO: remove on hard fork
 		VirtualMultSynthsBasisPoints:        20_000,
 		MinTxOutVolumeThreshold:             2000000_00000000,
 		TxOutDelayRate:                      2000000_00000000,

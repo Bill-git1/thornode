@@ -1,3 +1,11 @@
+type: env
+key: L1_SLIP_MIN_BPS
+value: "50"
+---
+type: env
+key: SYNTH_SLIP_MIN_BPS
+value: "50"
+---
 {{ template "default-state.yaml" }}
 ---
 {{ template "btc-eth-pool-state.yaml" }}
@@ -67,7 +75,7 @@ asserts:
   - .tx_id == "0000000000000000000000000000000000000000000000000000000000000001"
   - .interval == ${INTERVAL}
   - .target_asset == "${OUTPUT_ASSET}"
-  - .out == "4901721"
+  - .out == "4901358"
   - .destination == "${DESTINATION}"
   - .last_height == 2
   - .trade_target == "0"
@@ -93,7 +101,7 @@ asserts:
   - .|length == 1
   - .[0]|.in_hash == "${INBOUND_TXID}"
   - .[0]|.coin.asset == "${OUTPUT_ASSET}"
-  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=43762861}"
+  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=43741070}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -197,7 +205,7 @@ asserts:
   - .|length == 1
   - .[0]|.in_hash == "${INBOUND_TXID}"
   - .[0]|.coin.asset == "${OUTPUT_ASSET}"
-  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=43058884}"
+  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=43049961}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -267,8 +275,8 @@ asserts:
   - .|length == 2
   - .[0]|.in_hash == "${INBOUND_TXID}"
   - .[0]|.coin.asset == "${OUTPUT_ASSET}"
-  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=6500709}"
   - .[0]|.memo == "OUT:${INBOUND_TXID}"
+  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=6501021}"
   - .[1]|.in_hash == "${INBOUND_TXID}"
   - .[1]|.coin.asset == "${INPUT_ASSET}"
   - .[1]|.coin.amount == "${REFUND_AMOUNT=4786000}"
@@ -363,7 +371,7 @@ asserts:
   - .|length == 1
   - .[0]|.in_hash == "${INBOUND_TXID}"
   - .[0]|.coin.asset == "${OUTPUT_ASSET}"
-  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=33882026}"
+  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=33863474}"
   - .[0]|.memo == "OUT:${INBOUND_TXID}"
 ---
 type: create-blocks
@@ -434,7 +442,7 @@ asserts:
   - .|length == 1
   - .[0]|.in_hash == "${INBOUND_TXID}"
   - .[0]|.coin.asset == "${OUTPUT_ASSET}"
-  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=327667}"
+  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=318733}"
   - .[0]|.memo == "OUT:${INBOUND_TXID}"
 ---
 type: create-blocks
@@ -583,14 +591,14 @@ asserts:
   ###
   - .[1].asset == "BTC.BTC"
   - .[1].outbound_fee == "14000"
-  - .[1].fee_withheld_rune == "11128679"
-  - .[1].fee_spent_rune == "8345557"
-  - .[1].surplus_rune == "2783122"
+  - .[1].fee_withheld_rune == "11128711"
+  - .[1].fee_spent_rune == "8345580"
+  - .[1].surplus_rune == "2783131"
   - .[1].dynamic_multiplier_basis_points == "20000"
   ###
   - .[2].asset == "ETH.ETH"
   - .[2].outbound_fee == "1279936"
-  - .[2].fee_withheld_rune == "790587448"
-  - .[2].fee_spent_rune == "592115949"
-  - .[2].surplus_rune == "198471499"
+  - .[2].fee_withheld_rune == "790549629"
+  - .[2].fee_spent_rune == "592087792"
+  - .[2].surplus_rune == "198461837"
   - .[2].dynamic_multiplier_basis_points == "19999"

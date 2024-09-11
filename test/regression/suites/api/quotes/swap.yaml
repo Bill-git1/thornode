@@ -544,6 +544,14 @@ asserts:
 ########################################################################################
 # quote and swap a streaming swap
 ########################################################################################
+type: tx-mimir
+key: L1SlipMinBps
+value: 50
+signer: {{ addr_thor_dog }}
+---
+type: create-blocks
+count: 1
+---
 type: check
 endpoint: http://localhost:1317/thorchain/quote/swap
 params:
@@ -644,12 +652,12 @@ params:
   amount: 1000000000000
   destination: {{ addr_btc_fox }}
 asserts:
-  - .fees.liquidity == "100553053"
+  - .fees.liquidity == "100553463"
   - .fees.outbound == "14000"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
   - .fees.slippage_bps == 9989
   - .fees.total_bps == 9989
-  - .expected_amount_out == "88358"
+  - .expected_amount_out == "87949"
 ---
 ########################################################################################
 # from ETH - affiliate swap fails, should return error

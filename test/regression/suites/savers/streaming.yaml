@@ -1,3 +1,11 @@
+type: env
+key: SYNTH_SLIP_MIN_BPS
+value: "50"
+---
+type: env
+key: L1_SLIP_MIN_BPS
+value: "50"
+---
 {{ template "default-state.yaml" }}
 ---
 {{ template "btc-eth-3usdx-pool-state.yaml" }}
@@ -45,13 +53,13 @@ params:
   amount: 10000000
 asserts:
   - .inbound_address == "{{ addr_btc_dog }}"
-  - .expected_amount_deposit|tonumber == 9949990
+  - .expected_amount_deposit|tonumber == 9924870
   - .dust_threshold|tonumber == 10000
-  - .fees.liquidity|tonumber == 74000
+  - .fees.liquidity|tonumber == 98880
   - .fees.outbound|tonumber == 2010
-  - .fees.slippage_bps|tonumber == 73
-  - .fees.total|tonumber == 76010
-  - .fees.total_bps|tonumber == 75
+  - .fees.slippage_bps|tonumber == 98
+  - .fees.total|tonumber == 100890
+  - .fees.total_bps|tonumber == 100
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
 ---
 ########################################################################################
@@ -84,7 +92,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
   - .|length == 1
-  - .[0].asset_deposit_value|tonumber == 9952391
+  - .[0].asset_deposit_value|tonumber == 9923757
 ---
 ########################################################################################
 # streaming savers withdraw (quote)
@@ -99,12 +107,12 @@ asserts:
   - .inbound_address == "{{ addr_btc_dog }}"
   - .dust_amount|tonumber == 20000
   - .dust_threshold|tonumber == 10000
-  - .expected_amount_out|tonumber == 9839092
-  - .fees.liquidity|tonumber == 74160
+  - .expected_amount_out|tonumber == 9786568
+  - .fees.liquidity|tonumber == 98244
   - .fees.outbound|tonumber == 14000
-  - .fees.slippage_bps|tonumber == 74
-  - .fees.total|tonumber == 88160
-  - .fees.total_bps|tonumber == 88
+  - .fees.slippage_bps|tonumber == 99
+  - .fees.total|tonumber == 112244
+  - .fees.total_bps|tonumber == 113
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
 ---
 ########################################################################################
@@ -361,7 +369,7 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/saver/{{ addr_btc_fish }}
 asserts:
-  - .units == "${SAVER_UNITS=148982}" # Successful Savers add for the Affiliate BTC address.
+  - .units == "${SAVER_UNITS=148736}" # Successful Savers add for the Affiliate BTC address.
 ---
 ###########################################################################
 type: tx-observed-in

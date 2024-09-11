@@ -1,3 +1,11 @@
+type: env
+key: L1_SLIP_MIN_BPS
+value: "50"
+---
+type: env
+key: DERIVED_SLIP_MIN_BPS
+value: "50"
+---
 {{ template "default-state.yaml" }}
 ---
 {{ template "btc-eth-3usdx-pool-state.yaml" }}
@@ -187,7 +195,7 @@ asserts:
   - .[0]|.debt_issued == "${DEBT_ISSUED}"
   - .[0]|.owner == "{{ addr_btc_fox }}"
   - .[0]|.collateral_withdrawn == "${COLLATERAL_DEPOSITED}" # should now be fully repaid
-  - .[0]|.debt_repaid == "${DEBT_REPAID=975565975}" # over repaid
+  - .[0]|.debt_repaid == "${DEBT_REPAID=975469878}" # over repaid
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
@@ -204,7 +212,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "955979"
+        - amount: "955821"
           asset: "BTC.BTC"
           decimals: 8
       gas:
