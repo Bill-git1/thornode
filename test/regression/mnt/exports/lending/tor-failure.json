@@ -592,7 +592,62 @@
       "rune_providers": [],
       "streaming_swaps": [],
       "swap_queue_items": [],
-      "swapper_clout": [],
+      "swapper_clout": [
+        {
+          "address": "0xe3c64974c78f5693bd2bc68b3221d58df5c6e877",
+          "reclaimed": "0",
+          "score": "25000000000",
+          "spent": "0"
+        },
+        {
+          "address": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
+          "reclaimed": "0",
+          "score": "2456423",
+          "spent": "0"
+        },
+        {
+          "address": "bcrt1qp3pm60jxtqvr6zvlw97l2ef5rm6cn8nflwl5fa",
+          "reclaimed": "0",
+          "score": "2350368",
+          "spent": "0"
+        },
+        {
+          "address": "bcrt1qqk8c8sfrmfm0tkncs0zxeutc8v5mx3pjw22g33",
+          "reclaimed": "0",
+          "score": "7064792",
+          "spent": "0"
+        },
+        {
+          "address": "bcrt1qyqz8q00jlvn4r4hycvkg555ak7lxtxx6wtflyl",
+          "reclaimed": "0",
+          "score": "2384760",
+          "spent": "0"
+        },
+        {
+          "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
+          "reclaimed": "0",
+          "score": "25024008697",
+          "spent": "0"
+        },
+        {
+          "address": "tthor1p3pm60jxtqvr6zvlw97l2ef5rm6cn8nfrtt2ds",
+          "reclaimed": "0",
+          "score": "1121955",
+          "spent": "0"
+        },
+        {
+          "address": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+          "reclaimed": "0",
+          "score": "20606188",
+          "spent": "0"
+        },
+        {
+          "address": "tthor1yqz8q00jlvn4r4hycvkg555ak7lxtxx6jwapqj",
+          "reclaimed": "0",
+          "score": "234287",
+          "spent": "0"
+        }
+      ],
       "trade_accounts": [],
       "trade_units": [],
       "tx_outs": null,

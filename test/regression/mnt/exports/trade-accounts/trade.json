@@ -376,7 +376,14 @@
       "rune_providers": [],
       "streaming_swaps": [],
       "swap_queue_items": [],
-      "swapper_clout": [],
+      "swapper_clout": [
+        {
+          "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
+          "reclaimed": "0",
+          "score": "456459898",
+          "spent": "0"
+        }
+      ],
       "trade_accounts": [
         {
           "asset": "BTC~BTC",

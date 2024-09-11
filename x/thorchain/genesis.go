@@ -633,7 +633,7 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 	}
 
 	clouts := make([]SwapperClout, 0)
-	iterClouts := k.GetSwapQueueIterator(ctx)
+	iterClouts := k.GetSwapperCloutIterator(ctx)
 	defer iterClouts.Close()
 	for ; iterClouts.Valid(); iterClouts.Next() {
 		var addr common.Address

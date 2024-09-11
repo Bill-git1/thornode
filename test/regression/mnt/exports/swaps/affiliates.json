@@ -387,7 +387,26 @@
       "rune_providers": [],
       "streaming_swaps": [],
       "swap_queue_items": [],
-      "swapper_clout": [],
+      "swapper_clout": [
+        {
+          "address": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
+          "reclaimed": "0",
+          "score": "6727861998",
+          "spent": "0"
+        },
+        {
+          "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
+          "reclaimed": "0",
+          "score": "6714720818",
+          "spent": "0"
+        },
+        {
+          "address": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+          "reclaimed": "0",
+          "score": "13141181",
+          "spent": "0"
+        }
+      ],
       "trade_accounts": [],
       "trade_units": [],
       "tx_outs": null,

@@ -413,7 +413,14 @@
       "rune_providers": [],
       "streaming_swaps": [],
       "swap_queue_items": [],
-      "swapper_clout": [],
+      "swapper_clout": [
+        {
+          "address": "0xdd99304abf262d653e2eb6722d874c2b86efdcea",
+          "reclaimed": "0",
+          "score": "21314283",
+          "spent": "0"
+        }
+      ],
       "trade_accounts": [],
       "trade_units": [],
       "tx_outs": null,
