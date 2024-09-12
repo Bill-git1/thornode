@@ -250,6 +250,7 @@
         }
       ],
       "liquidity_providers": null,
+      "loan_total_collateral": [],
       "loans": [],
       "mimirs": [
         {

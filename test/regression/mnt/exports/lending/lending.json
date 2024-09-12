@@ -375,6 +375,12 @@
           "units": "100000000000"
         }
       ],
+      "loan_total_collateral": [
+        {
+          "amount": "1971188",
+          "asset": "BTC.BTC"
+        }
+      ],
       "loans": [
         {
           "asset": "BTC.BTC",

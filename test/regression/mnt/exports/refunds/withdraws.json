@@ -365,6 +365,7 @@
           "units": "656249999"
         }
       ],
+      "loan_total_collateral": [],
       "loans": [],
       "mimirs": [],
       "network": {

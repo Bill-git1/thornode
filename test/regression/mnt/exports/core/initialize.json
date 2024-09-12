@@ -242,6 +242,7 @@
       "chain_contracts": [],
       "last_chain_heights": [],
       "liquidity_providers": null,
+      "loan_total_collateral": [],
       "loans": [],
       "mimirs": [],
       "network": {

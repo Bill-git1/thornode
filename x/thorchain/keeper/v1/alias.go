@@ -13,6 +13,7 @@ const (
 	TreasuryName           = types.TreasuryName
 	RUNEPoolName           = types.RUNEPoolName
 	BondName               = types.BondName
+	LendingName            = types.LendingName
 	StoreKey               = types.StoreKey
 
 	// Vaults

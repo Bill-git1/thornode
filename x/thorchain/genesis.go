@@ -142,6 +142,7 @@ func DefaultGenesisState() GenesisState {
 		THORNames:               make([]THORName, 0),
 		StoreVersion:            38, // refer to func `GetStoreVersion` , let's keep it consistent
 		Loans:                   make([]Loan, 0),
+		LoanTotalCollateral:     make([]common.Coin, 0),
 		SwapperClout:            make([]SwapperClout, 0),
 		TradeAccounts:           make([]TradeAccount, 0),
 		TradeUnits:              make([]TradeUnit, 0),
@@ -279,6 +280,10 @@ func initGenesis(ctx cosmos.Context, keeper keeper.Keeper, data GenesisState) []
 
 	for _, loan := range data.Loans {
 		keeper.SetLoan(ctx, loan)
+	}
+
+	for _, c := range data.LoanTotalCollateral {
+		keeper.SetTotalCollateral(ctx, c.Asset, c.Amount)
 	}
 
 	for _, clout := range data.SwapperClout {
@@ -632,6 +637,18 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		}
 	}
 
+	loanTotalCollateral := make([]common.Coin, 0)
+	for _, asset := range assets {
+		amount, errTotalCol := k.GetTotalCollateral(ctx, asset)
+		if errTotalCol != nil {
+			panic(errTotalCol)
+		}
+		if !amount.IsZero() {
+			coin := common.NewCoin(asset, amount)
+			loanTotalCollateral = append(loanTotalCollateral, coin)
+		}
+	}
+
 	clouts := make([]SwapperClout, 0)
 	iterClouts := k.GetSwapperCloutIterator(ctx)
 	defer iterClouts.Close()
@@ -743,6 +760,7 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		ChainContracts:          chainContracts,
 		THORNames:               names,
 		Loans:                   loans,
+		LoanTotalCollateral:     loanTotalCollateral,
 		Mimirs:                  mimirs,
 		NodeMimirs:              nodeMimirs,
 		SwapperClout:            clouts,

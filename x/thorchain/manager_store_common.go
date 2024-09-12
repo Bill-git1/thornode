@@ -425,3 +425,19 @@ func changeLPOwnership(ctx cosmos.Context, mgr *Mgrs, oldOwner common.Address, n
 		}
 	}
 }
+
+func restoreTotalCollateral(ctx cosmos.Context, mgr *Mgrs) {
+	assets := []common.Asset{common.BTCAsset, common.ETHAsset}
+	for _, asset := range assets {
+		total := cosmos.ZeroUint()
+		it := mgr.Keeper().GetLoanIterator(ctx, asset)
+		defer it.Close()
+		for ; it.Valid(); it.Next() {
+			var loan Loan
+			mgr.Keeper().Cdc().MustUnmarshal(it.Value(), &loan)
+			total = total.Add(loan.CollateralDeposited)
+			total = common.SafeSub(total, loan.CollateralWithdrawn)
+		}
+		mgr.Keeper().SetTotalCollateral(ctx, asset, total)
+	}
+}

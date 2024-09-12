@@ -257,6 +257,7 @@
       ],
       "last_signed_height": "11",
       "liquidity_providers": null,
+      "loan_total_collateral": [],
       "loans": [],
       "mimirs": [
         {

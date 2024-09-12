@@ -2,9 +2,11 @@ package keeperv1
 
 import (
 	"fmt"
+	"strings"
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/x/thorchain/keeper/types"
 )
 
 // InvariantRoutes return the keeper's invariant routes
@@ -17,6 +19,7 @@ func (k KVStore) InvariantRoutes() []common.InvariantRoute {
 		common.NewInvariantRoute("pools", PoolsInvariant(k)),
 		common.NewInvariantRoute("streaming_swaps", StreamingSwapsInvariant(k)),
 		common.NewInvariantRoute("runepool", RUNEPoolInvariant(k)),
+		common.NewInvariantRoute("lending", LendingInvariant(k)),
 	}
 }
 
@@ -160,7 +163,7 @@ func BondInvariant(k KVStore) common.Invariant {
 // THORChainInvariant the thorchain module should never hold a balance
 func THORChainInvariant(k KVStore) common.Invariant {
 	return func(ctx cosmos.Context) (msg []string, broken bool) {
-		// module balance of theorchain
+		// module balance of thorchain
 		tcAddr := k.GetModuleAccAddress(ModuleName)
 		tcCoins := k.GetBalance(ctx, tcAddr)
 
@@ -375,6 +378,109 @@ func RUNEPoolInvariant(k KVStore) common.Invariant {
 			)
 			msg = append(msg, m)
 			broken = true
+		}
+
+		return msg, broken
+	}
+}
+
+// LendingInvariant ensures stored total collateral value matches the sum
+// of collateral for all loans and the module balances match the totals
+func LendingInvariant(k KVStore) common.Invariant {
+	return func(ctx cosmos.Context) (msg []string, broken bool) {
+		assetToTotal := make(map[string]cosmos.Uint)
+		key := k.GetKey(ctx, prefixLoan, "")
+		it := k.getIterator(ctx, types.DbPrefix(key))
+		defer it.Close()
+		for ; it.Valid(); it.Next() {
+			var loan Loan
+			k.Cdc().MustUnmarshal(it.Value(), &loan)
+			parts := strings.SplitN(string(it.Key()), "/", 4)
+			asset, _ := common.NewAsset(parts[2])
+			total, ok := assetToTotal[asset.String()]
+			if !ok {
+				total = cosmos.ZeroUint()
+			}
+			if loan.CollateralWithdrawn.GT(loan.CollateralDeposited) {
+				broken = true
+				msg = append(msg, fmt.Sprintf(
+					"collateral withdrawn %s > %s deposited: %s %s",
+					loan.CollateralWithdrawn.String(),
+					loan.CollateralDeposited.String(),
+					asset.String(),
+					loan.Owner.String(),
+				))
+			}
+			total = total.Add(loan.CollateralDeposited)
+			total = common.SafeSub(total, loan.CollateralWithdrawn)
+			assetToTotal[asset.String()] = total
+		}
+
+		// ensure stored total collateral equals sum of loans
+		keyTotal := k.GetKey(ctx, prefixLoanTotalCollateral, "")
+		itTotal := k.getIterator(ctx, types.DbPrefix(keyTotal))
+		defer itTotal.Close()
+		for ; itTotal.Valid(); itTotal.Next() {
+			var totalCol ProtoUint64
+			k.Cdc().MustUnmarshal(itTotal.Value(), &totalCol)
+			parts := strings.SplitN(string(itTotal.Key()), "/", 3)
+			asset, _ := common.NewAsset(parts[2])
+			storedTotal := cosmos.NewUint(totalCol.Value)
+			total, ok := assetToTotal[asset.String()]
+			if !ok {
+				total = cosmos.ZeroUint()
+			}
+			if storedTotal.GT(total) {
+				diff := storedTotal.Sub(total)
+				broken = true
+				msg = append(msg, fmt.Sprintf(
+					"oversolvent collateral: %s %s",
+					diff.String(),
+					asset.String(),
+				))
+			} else if storedTotal.LT(total) {
+				diff := total.Sub(storedTotal)
+				broken = true
+				msg = append(msg, fmt.Sprintf(
+					"insolvent collateral: %s %s",
+					diff.String(),
+					asset.String(),
+				))
+			}
+
+			// ensure module balance of derived asset equals total
+			derivedNative := asset.GetDerivedAsset().Native()
+			modBalance := k.GetBalanceOfModule(ctx, LendingName, derivedNative)
+			if modBalance.GT(storedTotal) {
+				diff := modBalance.Sub(storedTotal)
+				broken = true
+				msg = append(msg, fmt.Sprintf(
+					"oversolvent balance: %s %s",
+					diff.String(),
+					asset.String(),
+				))
+			} else if modBalance.LT(storedTotal) {
+				diff := storedTotal.Sub(modBalance)
+				broken = true
+				msg = append(msg, fmt.Sprintf(
+					"insolvent collateral: %s %s",
+					diff.String(),
+					asset.String(),
+				))
+				msg = append(msg, fmt.Sprintf(
+					"insolvent balance: %s %s",
+					diff.String(),
+					asset.String(),
+				))
+			}
+		}
+
+		// ensure no coins exist on module not counted above
+		modAddr := k.GetModuleAccAddress(LendingName)
+		modCoins := k.GetBalance(ctx, modAddr)
+		if len(modCoins) > len(assetToTotal) {
+			broken = true
+			msg = append(msg, "extra coins on module")
 		}
 
 		return msg, broken

@@ -7,6 +7,12 @@ import (
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 )
 
+// const values used to emit events
+const (
+	EventTypeActiveVault   = "ActiveVault"
+	EventTypeInactiveVault = "InactiveVault"
+)
+
 func getTotalActiveNodeWithBond(ctx cosmos.Context, k keeper.Keeper) (int64, error) {
 	nas, err := k.ListActiveValidators(ctx)
 	if err != nil {

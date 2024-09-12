@@ -73,4 +73,5 @@ message GenesisState {
   types.RUNEPool rune_pool = 37 [(gogoproto.nullable) = false];
   repeated types.NodeMimir nodeMimirs = 38 [(gogoproto.nullable) = false];
   repeated types.AffiliateFeeCollector affiliate_collectors = 39 [(gogoproto.nullable) = false];
+  repeated common.Coin loan_total_collateral = 40 [(gogoproto.castrepeated) = "gitlab.com/thorchain/thornode/common.Coins", (gogoproto.nullable) = false];
 }

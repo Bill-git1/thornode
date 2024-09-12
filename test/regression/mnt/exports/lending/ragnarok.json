@@ -170,15 +170,6 @@
           ]
         },
         {
-          "address": "tthor1x0kgm82cnj0vtmzdvz4avk3e7sj427t0al8wky",
-          "coins": [
-            {
-              "amount": "4545945",
-              "denom": "thor.btc"
-            }
-          ]
-        },
-        {
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
@@ -244,10 +235,6 @@
           "denom": "rune"
         },
         {
-          "amount": "4545945",
-          "denom": "thor.btc"
-        },
-        {
           "amount": "400000000000",
           "denom": "thor.mimir"
         }
@@ -302,6 +289,7 @@
           "units": "100000000000"
         }
       ],
+      "loan_total_collateral": [],
       "loans": [],
       "mimirs": [
         {

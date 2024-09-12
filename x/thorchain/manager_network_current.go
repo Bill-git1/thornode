@@ -14,12 +14,6 @@ import (
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 )
 
-// const values used to emit events
-const (
-	EventTypeActiveVault   = "ActiveVault"
-	EventTypeInactiveVault = "InactiveVault"
-)
-
 // NetworkMgrVCUR is going to manage the vaults
 type NetworkMgrVCUR struct {
 	k          keeper.Keeper
@@ -1461,6 +1455,25 @@ func (vm *NetworkMgrVCUR) withdrawLiquidity(ctx cosmos.Context, pool Pool, na No
 		vm.k.Cdc().MustUnmarshal(iterator.Value(), &loan)
 		ctx.Logger().Info("removing loan", "loan", loan.Key())
 		vm.k.RemoveLoan(ctx, loan)
+	}
+
+	// zero loan collateral
+	vm.k.SetTotalCollateral(ctx, pool.Asset, cosmos.ZeroUint())
+
+	// burn coin from the lending module
+	derivedAsset := pool.Asset.GetDerivedAsset()
+	balance := vm.k.GetBalanceOfModule(ctx, LendingName, derivedAsset.Native())
+	if !balance.IsZero() {
+		coins := []common.Coin{common.NewCoin(derivedAsset, balance)}
+		if err := vm.k.SendFromModuleToModule(ctx, LendingName, ModuleName, coins); err != nil {
+			ctx.Logger().Error("failed to send derived asset to minter for burning", "error", err)
+		} else {
+			for i := range coins {
+				if err := mgr.Keeper().BurnFromModule(ctx, ModuleName, coins[i]); err != nil {
+					ctx.Logger().Error("failed to burn derived asset from minter module", "error", err, "coin", coins[i].String())
+				}
+			}
+		}
 	}
 
 	// remove synth and derived asset pools
