@@ -3,9 +3,7 @@
 - [Introduction](README.md)
 
   - [FAQs](./technical-faq.md)
-
-- [Swap Guide](swap-guide/quickstart-guide.md)
-
+  - [Swap Guide](swap-guide/quickstart-guide.md)
   - [Quickstart Guide](swap-guide/quickstart-guide.md)
   - [Fees and Wait Times](swap-guide/fees-and-wait-times.md)
   - [Streaming Swaps](swap-guide/streaming-swaps.md)
@@ -91,6 +89,7 @@
     - [ADR 016: Affiliate Rev Share](architecture/adr-016-aff-rev-share.md)
     - [ADR 017: Burn System Income Lever](architecture/adr-017-burn-system-income-lever.md)
     - [ADR 018: Core Protocol Sustainability](architecture/adr-018-core-protocol-sustainability.md)
+    - [ADR 019: AutoBond](architecture/adr-019-auto-bond.md)
 
 - [Protocol Development](protocol-development/adding-new-chains.md)
   - [Adding New Chains](protocol-development/adding-new-chains.md)

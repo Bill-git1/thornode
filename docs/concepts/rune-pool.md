@@ -2,10 +2,6 @@
 
 RUNEPool aims to enhance liquidity provision, attract a broader market, and maintain dominance in TVL across the crypto ecosystem.
 
-```admonish info
-RUNEPool is currently under development.
-```
-
 ## Overview
 
 ### What is RUNEPool?
@@ -108,6 +104,7 @@ The `/thorchain/rune_provider/{thor_addr}` endpoint will return a single provide
 
 ## References
 
+- [RUNEPool Dashboard](https://thorchain.network/runepool/)
 - [Original Issue](https://gitlab.com/thorchain/thornode/-/issues/1841)
 - [[ADD] RUNEPool MR](https://gitlab.com/thorchain/thornode/-/merge_requests/3612/)
 - [RUNEPool Implementation MR](https://gitlab.com/thorchain/thornode/-/merge_requests/3631)

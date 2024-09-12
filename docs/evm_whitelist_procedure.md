@@ -1,5 +1,9 @@
 # EVM Whitelist Procedure
 
+```admonish info
+Whitelists have been removed. See [here](https://github.com/code-423n4/2024-06-thorchain?tab=readme-ov-file#whitelist-removal) for more information.
+```
+
 ## Overview
 
 Ecosystem devs can ask for tokens/contracts to be added/removed from any THORNode Whitelists using this procedure.
@@ -8,11 +12,10 @@ Ecosystem devs can ask for tokens/contracts to be added/removed from any THORNod
 
 THORNode maintains whitelists to prevent attacks on the network. There are a significant number of degrees of freedom when dealing with the EVM (event spoofing, re-entrancies, self-destructs), as well as economic attacks (zombie tokens, infinite mints etc). Maintaining a standard and whitelist nueters this attack surface.
 
-There are 3 EVM Whitelists
+There are 2 EVM Whitelists
 
-1. Pool Token Whitelist - allows to be a pool on THORChain
-2. DEX Token Whitelist - allows to be swapped to using DEX Aggregation
-3. Aggregator Whitelist - allows to be an Aggregator to call into, or be called from, the router
+1. DEX Token Whitelist - allows to be swapped to using DEX Aggregation
+2. Aggregator Whitelist - allows to be an Aggregator to call into, or be called from, the router
 
 ## Procedure
 

@@ -16,9 +16,7 @@ For wallets/interfaces to interact with THORChain, they need to:
 2. Construct transactions with the correct memos.
 3. Send the transactions to THORChain Inbound Vaults.
 
-```admonish info
-[Front-end](./#front-end-development-guides) guides have been developed for fast and simple implementation.
-```
+See this [THORChain Development Guide](https://youtu.be/Qowrasst2UQ) video for more information or check out the [Front-end](./#front-end-development-guides) guides below for fast and simple implementation.
 
 ## Front-end Development Guides
 

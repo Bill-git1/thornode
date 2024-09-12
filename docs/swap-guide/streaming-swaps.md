@@ -13,6 +13,8 @@ Once all swaps are executed and the streaming swap is completed, the target toke
 
 Streaming Swaps is similar to a Time Weighted Average Price (TWAP) trade however it is restricted to 24 hours (Mimir `STREAMINGSWAPMAXLENGTH = 14400` blocks).
 
+Streaming Swaps is used by default within Savers and Lending with a 5bps fee.
+
 ## Using Streaming Swaps
 
 To utilise a streaming swap, use the following within a [Memo](../concepts/memos.md#swap):

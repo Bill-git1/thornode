@@ -44,7 +44,7 @@ Example: `~:ODIN:BTC:bc1Address:thorAddress:BTC.BTC`
 This will register a new THORName called `ODIN` with a Bitcoin alias of `bc1Address` owner of `thorAddress` and preferred asset of BTC.BTC.
 
 ```admonish info
-You can use [Asgardex](https://github.com/thorchain/asgardex-electron) to post a MsgDeposit with a custom memo. Load your wallet, then open your THORChain wallet page > Deposit > Custom.;
+You can use [Asgardex](https://github.com/asgardex/asgardex-desktop) to post a MsgDeposit with a custom memo. Load your wallet, then open your THORChain wallet page > Deposit > Custom.;
 ```
 
 ```admonish info

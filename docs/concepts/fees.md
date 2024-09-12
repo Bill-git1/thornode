@@ -18,7 +18,7 @@ There are 4 different fees the user should know about.
 - **swapAmount**, as a function of poolDepth
 - **affiliateFee**: optional fee set by interface in basis points
 
-## Fees Detail
+## Fees Details
 
 ### Inbound Fee
 
@@ -30,6 +30,8 @@ $$
 
 ```admonish success
 THORChain calculates and posts fee rates at [`https://thornode.ninerealms.com/thorchain/inbound_addresses`](https://thornode.ninerealms.com/thorchain/inbound_addresses)
+
+Gas Rate is calculated by taking the highest gas rate over the last 10 blocks then times 1.5.
 ```
 
 ```admonish warning
@@ -50,28 +52,34 @@ $$
 
 ### Affiliate Fee
 
-In the swap transaction you build for your users you can include an affiliate fee for your exchange (accepted in $RUNE or a synthetic asset, so you will need a $RUNE address).
+Within the transactions you build for your users you can include an affiliate for your exchange.
 
-- The affiliate fee is in basis points (0-10,000) and will be deducted from the inbound swap amount from the user.
-- If the inbound swap asset is a native THORChain asset ($RUNE or synth) the affiliate fee amount will be deducted directly from the transaction amount.
+- Affiliate fees are possible for: swaps, saving despoit, lending addition, RUNEPool withdrawal.
+- The affiliate fee is in basis points (0-10,000) and will be deducted from the inbound or outbound transaction amount.
+- A THORName is required to collect affiliate address. See a guide on creating THORNames [here](../affiliate-guide/thorname-guide.md).
+- Affiliates are paid in $RUNE by default however a [preferred asset](../affiliate-guide/thorname-guide.md#preferred-asset-for-affiliate-fees) can be specified within the THORName.
+
+$$
+affliateFee = \frac{feeInBasisPoints * txAmount}{10000}
+$$
+
+### Affiliate Fee Taking Process
+
+- If the inbound swap asset is a native THORChain asset ($RUNE, synth or trade asset) the affiliate fee amount will be deducted directly from the transaction amount.
 - If the inbound swap asset is on any other chain the network will submit a swap to $RUNE with the destination address as your affiliate fee address.
 - If the affiliate is added to an ADDLP tx, then the affiliate is included in the network as an LP.
-
-`SWAP:CHAIN.ASSET:DESTINATION:LIMIT:AFFILIATE:FEE`
+- If the affiliate is added as a lending or a savers deposit, it is taken from the transaction amount.
+- If the affiliate is added as a RUNEPool withdraw, it is deducted from the profit amount (positive PnL), not the principle.
 
 Read [https://medium.com/thorchain/affiliate-fees-on-thorchain-17cbc176a11b](https://medium.com/thorchain/affiliate-fees-on-thorchain-17cbc176a11b) for more information.
 
-$$
-affliateFee = \frac{feeInBasisPoints * swapAmount}{10000}
-$$
-
 ### Preferred Asset for Affiliate Fees
 
-Affiliates can collect their fees in the asset of their choice (choosing from the assets that have a pool on THORChain). In order to collect fees in a preferred asset, affiliates must use a [THORName](../affiliate-guide/thorname-guide.md) in their swap [memos](memos.md#swap).
+Affiliates can collect their fees in the asset of their choice (choosing from the assets that have a pool on THORChain). In order to collect fees in a preferred asset, affiliates must use a [THORName](../affiliate-guide/thorname-guide.md#preferred-asset-for-affiliate-fees) in the [memos](memos.md).
 
 ### How it Works
 
-If an affiliate's THORName has the proper preferred asset configuration set, the network will begin collecting their affiliate fees in $RUNE in the [AffiliateCollector module](https://thornode.ninerealms.com/thorchain/balance/module/affiliate_collector). Once the accrued RUNE in the module is greater than [`PreferredAssetOutboundFeeMultiplier`](https://gitlab.com/thorchain/thornode/-/blob/develop/constants/constants_v1.go#L107)`* outbound_fee` of the preferred asset's chain, the network initiates a swap from $RUNE -> Preferred Asset on behalf of the affiliate. At the time of writing, `PreferredAssetOutboundFeeMultiplier` is set to `100`, so the preferred asset swap happens when the outbound fee is 1% of the accrued $RUNE.
+If an affiliate's THORName has the proper preferred asset configuration set, the network will begin collecting their affiliate fees in $RUNE in the [AffiliateCollector module](https://thornode.ninerealms.com/thorchain/balance/module/affiliate_collector). Once the accrued RUNE in the module is greater than [`PreferredAssetOutboundFeeMultiplier`](../mimir.md#fee-management)`* outbound_fee` of the preferred asset's chain, the network initiates a swap from $RUNE -> Preferred Asset on behalf of the affiliate. At the time of writing, `PreferredAssetOutboundFeeMultiplier` is set to `100`, so the preferred asset swap happens when the outbound fee is 1% of the accrued $RUNE.
 
 **Configuring a Preferred Asset for a THORName.**
 
@@ -92,7 +100,7 @@ For example, if you wanted to be paid out in USDC you would:
    > `~:ac-test:ETH:0x6621d872f17109d6601c49edba526ebcfd332d5d:thor1dl7un46w7l7f3ewrnrm6nq58nerjtp0dradjtd:ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48`
 
 ```admonish info
-You can use [Asgardex](https://github.com/thorchain/asgardex-electron) to post a MsgDeposit with a custom memo. Load your wallet, then open your THORChain wallet page > Deposit > Custom.
+You can use [Asgardex](https://github.com/asgardex/asgardex-desktop) to post a MsgDeposit with a custom memo. Load your wallet, then open your THORChain wallet page > Deposit > Custom.
 ```
 
 ```admonish info

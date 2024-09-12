@@ -27,46 +27,53 @@ Only available pools can be used. (`where 'status' == Available)`
 All amounts are 1e8. Multiply native asset amounts by 100000000 when dealing with amounts in THORChain. 1 BTC = 100,000,000.
 ```
 
-**Request**: _Swap 1 BTC to ETH and send the ETH to_ `0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430`.
+**Request**: _Swap 1 BTC to ETH and send the ETH to_ `0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430` using [Streaming Swaps](./streaming-swaps.md), swapping every block (`streaming_interval=1`) and allowing THORNode to work out the optimal amount of blocks (`streaming_quantity=0`).
 
-[https://thornode.ninerealms.com/thorchain/quote/swap?from_asset=BTC.BTC\&to_asset=ETH.ETH\&amount=100000000\&destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1](https://thornode.ninerealms.com/thorchain/quote/swap?from_asset=BTC.BTC&to_asset=ETH.ETH&amount=100000000&destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1)
+[https://thornode.ninerealms.com/thorchain/quote/swap?from_asset=BTC.BTC&to_asset=ETH.ETH&amount=100000000&destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1&streaming_interval=1&streaming_quantity=0](https://thornode.ninerealms.com/thorchain/quote/swap?from_asset=BTC.BTC&to_asset=ETH.ETH&amount=100000000&destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1&streaming_interval=1&streaming_quantity=0)
 
 **Response**:
 
 ```json
 {
-  "dust_threshold": "10000",
-  "expected_amount_out": "1619355520",
-  "expiry": 1689143119,
-  "fees": {
-    "affiliate": "0",
-    "asset": "ETH.ETH",
-    "outbound": "240000"
-  },
-  "inbound_address": "bc1qpzs9rm82m08u48842ka59hyxu36wsgzqlt6e3t",
+  "inbound_address": "bc1qt9723ak9t7lu7a97lt9kelq4gnrlmyvk4yhzwr",
   "inbound_confirmation_blocks": 1,
   "inbound_confirmation_seconds": 600,
-  "max_streaming_quantity": 0,
-  "memo": "=:ETH.ETH:0x86d526d6624AbC0178cF7296cD538Ecc080A95F1",
+  "outbound_delay_blocks": 179,
+  "outbound_delay_seconds": 1074,
+  "fees": {
+    "asset": "ETH.ETH",
+    "affiliate": "0",
+    "outbound": "54840",
+    "liquidity": "2037232",
+    "total": "2092072",
+    "slippage_bps": 9,
+    "total_bps": 10
+  },
+  "slippage_bps": 41,
+  "streaming_slippage_bps": 9,
+  "expiry": 1722575316,
+  "warning": "Do not cache this response. Do not send funds after the expiry.",
   "notes": "First output should be to inbound_address, second output should be change back to self, third output should be OP_RETURN, limited to 80 bytes. Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats (P2WSH with Bech32 address format preferred).",
-  "outbound_delay_blocks": 305,
-  "outbound_delay_seconds": 1830,
-  "recommended_min_amount_in": "60000",
-  "slippage_bps": 49,
-  "streaming_swap_blocks": 0,
-  "total_swap_seconds": 2430,
-  "warning": "Do not cache this response. Do not send funds after the expiry."
-}
+  "dust_threshold": "10000",
+  "recommended_min_amount_in": "10760",
+  "recommended_gas_rate": "4",
+  "gas_rate_units": "satsperbyte",
+  "memo": "=:ETH.ETH:0x86d526d6624AbC0178cF7296cD538Ecc080A95F1:0/1/0",
+  "expected_amount_out": "2035299208",
+  "expected_amount_out_streaming": "2035299208",
+  "max_streaming_quantity": 8,
+  "streaming_swap_blocks": 7,
+  "streaming_swap_seconds": 42,
+  "total_swap_seconds": 1674
 ```
 
-_If you send 1 BTC to `bc1qlccxv985m20qvd8g5yp6g9lc0wlc70v6zlalz8` with the memo `=:ETH.ETH:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430`, you can expect to receive `13.4493552` ETH._
+_If you send 1 BTC to `bc1qlccxv985m20qvd8g5yp6g9lc0wlc70v6zlalz8` with the memo `=:ETH.ETH:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430`, you can expect to receive `20.35299208` ETH._
 
-_For security reasons, your inbound transaction will be delayed by 600 seconds (1 BTC Block) and 2040 seconds (or 136 native THORChain blocks) for the outbound transaction,_ 2640 seconds all up*. You will pay an outbound gas fee of 0.0048 ETH and will incur 41 basis points (0.41%) of slippage.*
+_For security reasons, your inbound transaction will be delayed by 600 seconds (1 BTC Block) and 1074 seconds (or 179 native THORChain blocks) for the outbound transaction,_ 2640 seconds all up*. You will pay an outbound gas fee of 0.0054 ETH and will incur 9 basis points (0.09%) of slippage due to streaming swaps, would be 41 bps without StreamingSwaps.*
+The swap will be conduced over 7 blocks taking 42 seconds for the streaming swap to complete.
 
 ```admonish info
 Full quote swap endpoint specification can be found here: [https://thornode.ninerealms.com/thorchain/doc/](https://thornode.ninerealms.com/thorchain/doc/).
-
-See an example implementation [here.](https://replit.com/@thorchain/quoteSwap#index.js)
 ```
 
 If you'd prefer to calculate the swap yourself, see the [Fees](fees-and-wait-times.md) section to understand what fees need to be accounted for in the output amount. Also, review the [Transaction Memos](../concepts/memos.md) section to understand how to create the swap memos.
@@ -75,11 +82,9 @@ If you'd prefer to calculate the swap yourself, see the [Fees](fees-and-wait-tim
 
 Construct, sign and broadcast a transaction on the BTC network with the following parameters:
 
-Amount => `1.0`
-
-Recipient => `bc1qlccxv985m20qvd8g5yp6g9lc0wlc70v6zlalz8`
-
-Memo => `=:ETH.ETH:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430`
+- Amount => `1.0`
+- Recipient => `bc1qlccxv985m20qvd8g5yp6g9lc0wlc70v6zlalz8`
+- Memo => `=:ETH.ETH:0x86d526d6624AbC0178cF7296cD538Ecc080A95F1:0/1/0`
 
 ```admonish warning
 Never cache inbound addresses! Quotes should only be considered valid for 10 minutes. Sending funds to an old inbound address will result in loss of funds.
@@ -127,37 +132,46 @@ Memo format:
 
 Quote example:
 
-[https://thornode.ninerealms.com/thorchain/quote/swap?amount=100000000\&from_asset=BTC.BTC\&to_asset=ETH.ETH\&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430\&affiliate=thorname\&affiliate_bps=10](https://thornode.ninerealms.com/thorchain/quote/swap?amount=100000000&from_asset=BTC.BTC&to_asset=ETH.ETH&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430&affiliate=thorname&affiliate_bps=10)
+[https://thornode.ninerealms.com/thorchain/quote/swap?amount=100000000\&from_asset=BTC.BTC\&to_asset=ETH.ETH\&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430\&affiliate=dx\&affiliate_bps=10](https://thornode.ninerealms.com/thorchain/quote/swap?amount=100000000&from_asset=BTC.BTC&to_asset=ETH.ETH&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430&affiliate=dx&affiliate_bps=10)
 
 ```json
 {
-  "dust_threshold": "10000",
-  "expected_amount_out": "1603383828",
-  "expiry": 1688973775,
-  "fees": {
-    "affiliate": "1605229",
-    "asset": "ETH.ETH",
-    "outbound": "240000"
-  },
-  "inbound_address": "bc1qhkutxeluztncm5pq0ckpm75hztrv7m7nhhh94d",
+{
+  "inbound_address": "bc1qt9723ak9t7lu7a97lt9kelq4gnrlmyvk4yhzwr",
   "inbound_confirmation_blocks": 1,
   "inbound_confirmation_seconds": 600,
-  "max_streaming_quantity": 0,
-  "memo": "=:ETH.ETH:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430::thorname:10",
+  "outbound_delay_blocks": 177,
+  "outbound_delay_seconds": 1062,
+  "fees": {
+    "asset": "ETH.ETH",
+    "affiliate": "2036420",
+    "outbound": "54840",
+    "liquidity": "8303006",
+    "total": "10394266",
+    "slippage_bps": 40,
+    "total_bps": 51
+  },
+  "slippage_bps": 40,
+  "streaming_slippage_bps": 40,
+  "expiry": 1722575770,
+  "warning": "Do not cache this response. Do not send funds after the expiry.",
   "notes": "First output should be to inbound_address, second output should be change back to self, third output should be OP_RETURN, limited to 80 bytes. Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats (P2WSH with Bech32 address format preferred).",
-  "outbound_delay_blocks": 303,
-  "outbound_delay_seconds": 1818,
-  "recommended_min_amount_in": "72000",
-  "slippage_bps": 49,
+  "dust_threshold": "10000",
+  "recommended_min_amount_in": "242563",
+  "recommended_gas_rate": "4",
+  "gas_rate_units": "satsperbyte",
+  "memo": "=:ETH.ETH:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430::dx:10",
+  "expected_amount_out": "2017703535",
+  "expected_amount_out_streaming": "",
+  "max_streaming_quantity": 0,
   "streaming_swap_blocks": 0,
-  "total_swap_seconds": 2418,
-  "warning": "Do not cache this response. Do not send funds after the expiry."
+  "total_swap_seconds": 1662
 }
 ```
 
-Notice how `thorname:10` has been appended to the end of the memo. This instructs THORChain to skim 10 basis points from the swap. The user should still expect to receive the _expected_amount_out,_ meaning the affiliate fee has already been subtracted from this number.
+Notice how `dx:10` has been appended to the end of the memo. This instructs THORChain to skim 10 basis points from the swap. The user should still expect to receive the _expected_amount_out,_ meaning the affiliate fee has already been subtracted from this number.
 
-For more information on affiliate fees: [fees.md](../concepts/fees.md "mention").
+For more information on affiliate fees: [fees.md](../concepts/fees.md#affiliate-fee").
 
 ### Streaming Swaps
 
@@ -177,33 +191,37 @@ Quote example:
 
 ```json
 {
-  "approx_streaming_savings": 0.99930555,
-  "dust_threshold": "10000",
-  "expected_amount_out": "145448080",
-  "expiry": 1689117597,
-  "fees": {
-    "affiliate": "0",
-    "asset": "ETH.ETH",
-    "outbound": "480000"
-  },
-  "inbound_address": "bc1qk2z8luw2afwuugndynegn72dkv45av5hyjrtm8",
+  "inbound_address": "bc1qjqrzsszkr6g0autrveuv7vjryytk0pkqdwhuz2",
   "inbound_confirmation_blocks": 1,
   "inbound_confirmation_seconds": 600,
-  "max_streaming_quantity": 1440,
-  "memo": "=:ETH.ETH:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430:0/10/1440",
+  "outbound_delay_blocks": 720,
+  "outbound_delay_seconds": 4320,
+  "fees": {
+    "asset": "ETH.ETH",
+    "affiliate": "0",
+    "outbound": "285660",
+    "liquidity": "3228480",
+    "total": "3514140",
+    "slippage_bps": 21,
+    "total_bps": 22
+  },
+  "expiry": 1722575809,
+  "warning": "Do not cache this response. Do not send funds after the expiry.",
   "notes": "First output should be to inbound_address, second output should be change back to self, third output should be OP_RETURN, limited to 80 bytes. Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats (P2WSH with Bech32 address format preferred).",
-  "outbound_delay_blocks": 76,
-  "outbound_delay_seconds": 456,
-  "recommended_min_amount_in": "158404",
-  "slippage_bps": 8176,
-  "streaming_swap_blocks": 14400,
-  "streaming_swap_seconds": 86400,
-  "total_swap_seconds": 87456,
-  "warning": "Do not cache this response. Do not send funds after the expiry."
+  "dust_threshold": "10000",
+  "recommended_min_amount_in": "74260",
+  "recommended_gas_rate": "4",
+  "gas_rate_units": "satsperbyte",
+  "memo": "=:ETH.ETH:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430:0/10/0",
+  "expected_amount_out": "1531908900",
+  "max_streaming_quantity": 1440,
+  "streaming_swap_blocks": 14390,
+  "streaming_swap_seconds": 86340,
+  "total_swap_seconds": 86940
 }
 ```
 
-Notice how `approx_streaming_savings` shows the savings by using streaming swaps. `total_swap_seconds` also shows the amount of time the swap will take.
+Notice how `slippage_bps` shows the savings by using streaming swaps. `streaming_swap_seconds` also shows the amount of time the swap will take.
 
 ### Custom Refund Address
 
@@ -248,4 +266,4 @@ _Bound checks are made on both `affiliate_bps` and `tolerance_bps`._
 
 ### Support
 
-Developers experiencing issues with these APIs can go to the [Developer Discord](https://discord.gg/2Vw3RsQ7) for assistance. Interface developers should subscribe to the #interface-alerts channel for information pertinent to the endpoints and functionality discussed here.
+Developers experiencing issues with these APIs can go to the THORChain Dev Discord for assistance. Interface developers should subscribe to the #interface-alerts channel for information pertinent to the endpoints and functionality discussed here.

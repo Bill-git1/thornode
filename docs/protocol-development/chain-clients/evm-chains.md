@@ -27,7 +27,7 @@ The V3 Router uses solidity `.Send()` to transfer ETH assets outbound. When an o
 ```
 
 ```admonish warning
-The Router does not accept deposits from Smart Contracts. Deposits from Smart Contracts are ignored.&#x20;
+The Router does not accept deposits from Smart Contracts. Deposits from Smart Contracts are ignored.
 ```
 
 ### Scanning Blocks

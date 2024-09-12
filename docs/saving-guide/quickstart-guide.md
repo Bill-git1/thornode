@@ -26,41 +26,41 @@ Savers Quote endpoints have been created to simplify the implementation process.
 
 ```json
 {
-  "dust_threshold": "10000",
-  "expected_amount_deposit": "99932291",
-  "expected_amount_out": "99932291",
-  "expiry": 1700263119,
-  "fees": {
-    "affiliate": "0",
-    "asset": "BTC/BTC",
-    "liquidity": "67672",
-    "outbound": "355",
-    "slippage_bps": 6,
-    "total": "68027",
-    "total_bps": 6
-  },
-  "inbound_address": "bc1qe7lfmet2l5j7ypsd6ln300jt8mg3dt2q3darj8",
+  "inbound_address": "bc1qt9723ak9t7lu7a97lt9kelq4gnrlmyvk4yhzwr",
   "inbound_confirmation_blocks": 1,
   "inbound_confirmation_seconds": 600,
-  "memo": "+:BTC/BTC",
+  "fees": {
+    "asset": "BTC/BTC",
+    "affiliate": "0",
+    "outbound": "121",
+    "liquidity": "76425",
+    "total": "76546",
+    "slippage_bps": 7,
+    "total_bps": 7
+  },
+  "slippage_bps": 26,
+  "expiry": 1722576106,
+  "warning": "Do not cache this response. Do not send funds after the expiry.",
   "notes": "First output should be to inbound_address, second output should be change back to self, third output should be OP_RETURN, limited to 80 bytes. Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats (P2WSH with Bech32 address format preferred).",
+  "dust_threshold": "10000",
   "recommended_min_amount_in": "10000",
-  "slippage_bps": 13,
-  "warning": "Do not cache this response. Do not send funds after the expiry."
+  "recommended_gas_rate": "4",
+  "gas_rate_units": "satsperbyte",
+  "memo": "+:BTC/BTC",
+  "expected_amount_out": "99923545",
+  "expected_amount_deposit": "99923545
 }
 ```
 
-_If you send 1 BTC to_ bc1quuf5sr444km2zlgrg654mjdfgkuzayfs7nqrfm*with the memo* `+:BTC/BTC`_, you can expect `0.99932` BTC will and will incur 13 basis points (0.13%) of slippage._
+_If you send 1 BTC to_ bc1quuf5sr444km2zlgrg654mjdfgkuzayfs7nqrfm*with the memo* `+:BTC/BTC`_, you can expect `0.99923545` BTC will be deposited and will incur 7 basis points (0.07%) of slippage._
 
 ```admonish danger
 The `Inbound_Address` changes regularly, do not cache!
 ```
 
 ```admonish danger
-Inbound transactions should not be delayed for any reason else there is risk funds will be sent to an unreachable address. Use standard transactions, check the `inbound address` before sending and use the recommended [`gas rate`](../concepts/querying-thorchain.md#getting-the-asgard-vault) to ensure transactions are confirmed in the next block to the latest `Inbound_Address`.
+Inbound transactions should not be delayed for any reason else there is risk funds will be sent to an unreachable address.
 ```
-
-_For security reasons, your inbound transaction will be delayed by 1 BTC Block._
 
 ```admonish info
 Full quote saving endpoint specification can be found here: [https://thornode.ninerealms.com/thorchain/doc/](https://thornode.ninerealms.com/thorchain/doc/).
@@ -113,8 +113,6 @@ Users can add assets to a vault by sending assets directly to the chain’s vaul
 
 [`https://thornode.ninerealms.com/thorchain/inbound_addresses`](https://thornode.ninerealms.com/thorchain/inbound_addresses)
 
-Example:
-
 ```text
 curl -SL https://thornode.ninerealms.com/thorchain/inbound_addresses | jq '.[] | select(.chain == "BTC") | .address'
 => “bc1q556ljv5y4rkdt4p46usx86esljs3xqjxyntlyd”
@@ -135,7 +133,7 @@ Both Saver **Deposit** and **Withdraw** transactions can be done without memos _
 To **deposit**, users should send any amount of asset they wish (avoiding dust amounts). The network will read the deposit and user address, then add them into the Saver Vault automatically.
 
 To **withdraw**, the user should send a specific dust amount of asset (avoiding the dust threshold), from an amount 0 units above the dust threshold, to an amount 10,000 units above the threshold. \
-10000 units is read as “withdraw 10000 basis points”, which is 100%.
+10,000 units is read as “withdraw 10000 basis points”, which is 100%.
 
 ```admonish info
 The dust threshold is the point at which the network will ignore the amount sent to stop dust attacks (widely seen on UTXO chains).
@@ -195,13 +193,11 @@ saverUnits => curl -SL https://thornode.ninerealms.com/thorchain/pools | jq '.[]
 saverDepth => curl -SL https://thornode.ninerealms.com/thorchain/pools | jq '.[] | select(.asset == "BTC.BTC") | .savers_depth'
 ```
 
+See Asset APYs at [THORChain.net](https://thorchain.net/thorfi/savers)
+
 #### Past Performance
 
 The easy way to determine lifetime performance of the savers vault is to look back 7 days, find the saver value, then compare it with the current saver value.
-
-Example code:\
-
-<iframe width="100%" height="600" src="https://replit.com/@thorchain/THORChain-Savers-Tracker?embed=true" ></iframe>
 
 ```admonish info
 [https://thornode.ninerealms.com/thorchain/pool/BTC.BTC/savers](https://thornode.ninerealms.com/thorchain/pool/BTC.BTC/savers) will show all BTC Savers
@@ -209,4 +205,4 @@ Example code:\
 
 ### Support
 
-Developers experiencing issues with these APIs can go to the [Developer Discord](https://discord.gg/2Vw3RsQ7) for assistance. Interface developers should subscribe to the #interface-alerts channel for information pertinent to the endpoints and functionality discussed here.
+Developers experiencing issues with these APIs can go to the THORChain Dev Discord for assistance. Interface developers should subscribe to the #interface-alerts channel for information pertinent to the endpoints and functionality discussed here.
