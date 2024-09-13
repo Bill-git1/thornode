@@ -58,6 +58,7 @@ generate:
   <<: *use_dind
   before_script:
     - apk -U add bash curl findutils git go jq make protoc sed wget python3
+    - echo "$DOCKER_HUB_PASSWD" | docker login -u thornode --password-stdin
   script:
     - |
       export PATH="$PATH:/root/go/bin"
@@ -121,6 +122,7 @@ build-thornode:
           sleep 1s
       done
     - apk -U add make git jq curl protoc
+    - echo "$DOCKER_HUB_PASSWD" | docker login -u thornode --password-stdin
     - make docker-gitlab-login
   script:
     - make docker-gitlab-build
@@ -209,6 +211,7 @@ test-simulation:
     name: integration
   before_script:
     - apk -U add git make protoc bash
+    - echo "$DOCKER_HUB_PASSWD" | docker login -u thornode --password-stdin
     - |
       PLUGIN="$HOME/.docker/cli-plugins/docker-compose"
       mkdir -p $(dirname $PLUGIN)
@@ -238,6 +241,7 @@ test-regression:
     FAIL_FAST: "true"
   before_script:
     - apk -U add make git bash
+    - echo "$DOCKER_HUB_PASSWD" | docker login -u thornode --password-stdin
   script:
     - make test-regression
 
