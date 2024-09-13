@@ -58,6 +58,7 @@ const (
 	WitnessV0ScriptHashTy                    // Pay to witness script hash.
 	MultiSigTy                               // Multi signature.
 	NullDataTy                               // Empty data-only (provably prunable).
+	WitnessV1TaprootTy                       // Taproot output
 )
 
 // scriptClassToName houses the human-readable strings which describe each
@@ -71,6 +72,7 @@ var scriptClassToName = []string{
 	WitnessV0ScriptHashTy: "witness_v0_scripthash",
 	MultiSigTy:            "multisig",
 	NullDataTy:            "nulldata",
+	WitnessV1TaprootTy:    "witness_v1_taproot",
 }
 
 // String implements the Stringer interface by returning the name of
@@ -168,6 +170,8 @@ func typeOfScript(pops []parsedOpcode) ScriptClass {
 		return ScriptHashTy
 	} else if isWitnessScriptHash(pops) {
 		return WitnessV0ScriptHashTy
+	} else if isWitnessTaprootScript(pops) {
+		return WitnessV1TaprootTy
 	} else if isMultiSig(pops) {
 		return MultiSigTy
 	} else if isNullData(pops) {
@@ -409,6 +413,12 @@ func payToWitnessScriptHashScript(scriptHash []byte) ([]byte, error) {
 	return NewScriptBuilder().AddOp(OP_0).AddData(scriptHash).Script()
 }
 
+// payToWitnessTaprootScript creates a new script to pay to a version 1
+// (taproot) witness program. The passed hash is expected to be valid.
+func payToWitnessTaprootScript(rawKey []byte) ([]byte, error) {
+	return NewScriptBuilder().AddOp(OP_1).AddData(rawKey).Script()
+}
+
 // payToPubkeyScript creates a new script to pay a transaction output to a
 // public key. It is expected that the input is a valid pubkey.
 func payToPubKeyScript(serializedPubKey []byte) ([]byte, error) {
@@ -455,6 +465,12 @@ func PayToAddrScript(addr btcutil.Address) ([]byte, error) {
 				nilAddrErrStr)
 		}
 		return payToWitnessScriptHashScript(addr.ScriptAddress())
+	case *btcutil.AddressTaproot:
+		if addr == nil {
+			return nil, scriptError(ErrUnsupportedAddress,
+				nilAddrErrStr)
+		}
+		return payToWitnessTaprootScript(addr.ScriptAddress())
 	}
 
 	str := fmt.Sprintf("unable to generate payment script for unsupported "+
@@ -514,6 +530,21 @@ func PushedData(script []byte) ([][]byte, error) {
 		}
 	}
 	return data, nil
+}
+
+// extractWitnessV1KeyBytes extracts the raw public key bytes script if it is
+// standard pay-to-witness-script-hash v1 script. It will return nil otherwise.
+func extractWitnessV1KeyBytes(script []byte) []byte {
+	// A pay-to-witness-script-hash script is of the form:
+	//   OP_1 OP_DATA_32 <32-byte-hash>
+	if len(script) == witnessV1TaprootLen &&
+		script[0] == OP_1 &&
+		script[1] == OP_DATA_32 {
+
+		return script[2:34]
+	}
+
+	return nil
 }
 
 // ExtractPkScriptAddrs returns the type of script, addresses and required
@@ -606,6 +637,17 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		for i := 0; i < numPubKeys; i++ {
 			addr, err := btcutil.NewAddressPubKey(pops[i+1].data,
 				chainParams)
+			if err == nil {
+				addrs = append(addrs, addr)
+			}
+		}
+	case WitnessV1TaprootTy:
+		// Attempt to parse taproot script
+		// A pay-to-witness-script-hash script is of the form:
+		// 	OP_1 OP_DATA_32 <32-byte-hash>
+		requiredSigs = 1
+		if rawKey := extractWitnessV1KeyBytes(pkScript); rawKey != nil {
+			addr, err := btcutil.NewAddressTaproot(rawKey, chainParams)
 			if err == nil {
 				addrs = append(addrs, addr)
 			}

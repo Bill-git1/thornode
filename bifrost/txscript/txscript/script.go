@@ -78,6 +78,14 @@ func isWitnessScriptHash(pops []parsedOpcode) bool {
 		pops[1].opcode.value == OP_DATA_32
 }
 
+// isWitnessTaprootScript returns true if the passed script is a
+// pay-to-taproot transaction, false otherwise.
+func isWitnessTaprootScript(pops []parsedOpcode) bool {
+	return len(pops) == 2 &&
+		pops[0].opcode.value == OP_1 &&
+		pops[1].opcode.value == OP_DATA_32
+}
+
 // IsPayToWitnessScriptHash returns true if the is in the standard
 // pay-to-witness-script-hash (P2WSH) format, false otherwise.
 func IsPayToWitnessScriptHash(script []byte) bool {

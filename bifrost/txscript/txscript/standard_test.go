@@ -70,6 +70,20 @@ func newAddressScriptHash(scriptHash []byte) btcutil.Address {
 	return addr
 }
 
+// newAddressTaproot returns a new btcutil.AddressTaproot from the
+// provided hash.  It panics if an error occurs.  This is only used in the tests
+// as a helper since the only way it can fail is if there is an error in the
+// test source code.
+func newAddressTaproot(scriptHash []byte) btcutil.Address {
+	addr, err := btcutil.NewAddressTaproot(scriptHash,
+		&chaincfg.MainNetParams)
+	if err != nil {
+		panic("invalid script hash in test source")
+	}
+
+	return addr
+}
+
 // TestExtractPkScriptAddrs ensures that extracting the type, addresses, and
 // number of required signatures from PkScripts works as intended.
 func TestExtractPkScriptAddrs(t *testing.T) {
@@ -325,6 +339,16 @@ func TestExtractPkScriptAddrs(t *testing.T) {
 			addrs:   []btcutil.Address{},
 			reqSigs: 1,
 			class:   MultiSigTy,
+		},
+		{
+			name: "v1 p2tr witness-script-hash",
+			script: hexToBytes("51201a82f7457a9ba6ab1074e9f50" +
+				"053eefc637f8b046e389b636766bdc7d1f676f8"),
+			addrs: []btcutil.Address{newAddressTaproot(
+				hexToBytes("1a82f7457a9ba6ab1074e9f50053eefc6" +
+					"37f8b046e389b636766bdc7d1f676f8"))},
+			reqSigs: 1,
+			class:   WitnessV1TaprootTy,
 		},
 		{
 			name:    "empty script",
@@ -640,6 +664,13 @@ func TestPayToAddrScript(t *testing.T) {
 	// keep the horizontal test size shorter.
 	errUnsupportedAddress := scriptError(ErrUnsupportedAddress, "")
 
+	p2tr, err := btcutil.NewAddressTaproot(hexToBytes("3a8e170b546c3b122ab9c175e"+
+		"ff36fb344db2684fe96497eb51b440e75232709"), &chaincfg.MainNetParams)
+	if err != nil {
+		t.Fatalf("Unable to create p2tr address: %v",
+			err)
+	}
+
 	tests := []struct {
 		in       btcutil.Address
 		expected string
@@ -680,6 +711,13 @@ func TestPayToAddrScript(t *testing.T) {
 				"97b1482ecad7b148a6909a5cb2e0eaddfb84ccf97444" +
 				"64f82e160bfa9b8b64f9d4c03f999b8643f656b412a3 " +
 				"CHECKSIG",
+			nil,
+		},
+		// pay-to-taproot address on mainnet.
+		{
+			p2tr,
+			"OP_1 DATA_32 0x3a8e170b546c3b122ab9c175eff36fb344db2684" +
+				"fe96497eb51b440e75232709",
 			nil,
 		},
 
