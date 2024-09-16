@@ -157,3 +157,40 @@ asserts:
   - .coins | length == 1
   - .coins[0].denom == "rune"
   - .coins[0].amount == "${POOL_RUNE}"
+---
+# Check first, near-first, near-last, and last swapper clout migrations.
+type: check
+endpoint: http://localhost:1317/thorchain/clout/swap/thor1t2pfscuq3ctgtf5h3x7p6zrjd7e0jcvuszyvt5
+asserts:
+  - .score == "352044432741542"
+  - .reclaimed == "0"
+  - .spent == "0"
+  - has("last_spent_height") | not
+  - has("last_reclaim_height") | not
+---
+type: check
+endpoint: http://localhost:1317/thorchain/clout/swap/thor166n4w5039meulfa3p6ydg60ve6ueac7tlt0jws
+asserts:
+  - .score == "178366059242694"
+  - .reclaimed == "10764504192405132"
+  - .spent == "10764504192405132"
+  - .last_spent_height == 17559229
+  - .last_reclaim_height == 17559234
+---
+type: check
+endpoint: http://localhost:1317/thorchain/clout/swap/0xe6948c8486209b0c727d0ff9f0cbc076c5327488
+asserts:
+  - .score == "100365168672"
+  - .reclaimed == "1306488513340"
+  - .spent == "1306488513340"
+  - .last_spent_height == 17544926
+  - .last_reclaim_height == 17545149
+---
+type: check
+endpoint: http://localhost:1317/thorchain/clout/swap/0x5a816b2fa84240d1712cc475d9a06a5e953de1c9
+asserts:
+  - .score == "100007861893"
+  - .reclaimed == "0"
+  - .spent == "0"
+  - has("last_spent_height") | not
+  - has("last_reclaim_height") | not

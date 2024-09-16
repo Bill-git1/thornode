@@ -4,9 +4,18 @@
 package thorchain
 
 import (
+	_ "embed"
+	"encoding/json"
+
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 )
+
+// (No thor -> tthor conversion necessary for regression test performance check only,
+// since many of the addresses are for external chains anyway.)
+//
+//go:embed manager_store_v136_clout.json
+var jsonV136Clouts []byte
 
 func migrateStoreV136(ctx cosmos.Context, mgr *Mgrs) {
 	defer func() {
@@ -176,6 +185,47 @@ func migrateStoreV136(ctx cosmos.Context, mgr *Mgrs) {
 			if err := mgr.Keeper().SendFromModuleToAccount(ctx, ReserveName, recipient, refundCoins); err != nil {
 				ctx.Logger().Error("fail to store migration transfer RUNE from Reserve to recipient", "error", err, "recipient", recipient, "amount", amount)
 			}
+		}
+	}
+
+	// #2065, export of dropped clouts over 1000 RUNE from the end of thorchain-mainnet-v1
+
+	var clouts []SwapperClout
+	if err := json.Unmarshal(jsonV136Clouts, &clouts); err != nil {
+		ctx.Logger().Error("error on unmarshal of clouts json", "error", err)
+		return
+	}
+
+	cloutsLength := len(clouts)
+	if cloutsLength != 1895 {
+		ctx.Logger().Error("clouts not the expected number of 1895", "length", cloutsLength)
+		return
+	}
+
+	for i := range clouts {
+		if cosmos.NewUint(1000 * common.One).GTE(clouts[i].Score) {
+			ctx.Logger().Error("json clout not over 1000 rune score", "clout", clouts[i].String())
+			continue
+		}
+
+		clout, err := mgr.Keeper().GetSwapperClout(ctx, clouts[i].Address)
+		if err != nil {
+			ctx.Logger().Error("error on get swapper clout", "error", err)
+			continue
+		}
+
+		if clouts[i].LastSpentHeight > clout.LastSpentHeight {
+			clout.LastSpentHeight = clouts[i].LastSpentHeight
+		}
+		if clouts[i].LastReclaimHeight > clout.LastReclaimHeight {
+			clout.LastReclaimHeight = clouts[i].LastReclaimHeight
+		}
+		clout.Score = clout.Score.Add(clouts[i].Score)
+		clout.Reclaimed = clout.Reclaimed.Add(clouts[i].Reclaimed)
+		clout.Spent = clout.Spent.Add(clouts[i].Spent)
+
+		if err := mgr.Keeper().SetSwapperClout(ctx, clout); err != nil {
+			ctx.Logger().Error("error on set swapper clout", "error", err)
 		}
 	}
 }
