@@ -38,12 +38,6 @@
     "last_reclaim_height": 17560244
   },
   {
-    "address": "bnb177kuwn6n9fv83txq04y2tkcsp97s4yclz9k7dh",
-    "score": "36391015992586",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor14mh37ua4vkyur0l5ra297a4la6tmf95mt96a55",
     "score": "34404097906287",
     "reclaimed": "7192859195549728",
@@ -84,14 +78,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb10gh0p6thzjz54jqy9lg0rv733fnl0vqmc789pp",
-    "score": "15910759023198",
-    "reclaimed": "845508588816",
-    "spent": "845508588816",
-    "last_spent_height": 14690024,
-    "last_reclaim_height": 14690028
-  },
-  {
     "address": "0x53b8021dad6dc1ca045488b399113b9083bc0988",
     "score": "13178675519166",
     "reclaimed": "0",
@@ -116,18 +102,6 @@
   {
     "address": "thor1yep703ewakef0h2l9qel93xh96tvkm004pesq7",
     "score": "12518297751530",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb145agzsdf7gl8lq94x2e7s9lyaul0dcqdtgc8ct",
-    "score": "11788562206402",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1rv89nkw2x5ksvhf6jtqwqpke4qhh7jmudpvqmj",
-    "score": "11140353477422",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -220,14 +194,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1hdu33ph8zzkkm7x3sfcnmpq0arujlc28hmytuc",
-    "score": "5467504464585",
-    "reclaimed": "1663503469077",
-    "spent": "1663503469077",
-    "last_spent_height": 14891643,
-    "last_reclaim_height": 14891647
-  },
-  {
     "address": "bc1qevy6dv3pjm5yej27wy9j0m3dphn5pudacp0tqp",
     "score": "4903195724434",
     "reclaimed": "0",
@@ -240,12 +206,6 @@
     "spent": "629034711786575",
     "last_spent_height": 17382363,
     "last_reclaim_height": 17382368
-  },
-  {
-    "address": "bnb1vk2u6t0x9aump097y4k9fzrz4wq26953f0svg2",
-    "score": "4834238212204",
-    "reclaimed": "0",
-    "spent": "0"
   },
   {
     "address": "bc1qevp0cdu64nj2gqgske3zkjlgq3zunqpvf4tzrv",
@@ -286,12 +246,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb183yxxf6vn2lz96q5clj73v045cg0prlpyu60v3",
-    "score": "4004867449451",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0xdF2ECCE524612Bd7Da21F38562D2Df8053eBb4fD",
     "score": "3976931672788",
     "reclaimed": "0",
@@ -316,22 +270,8 @@
     "spent": "0"
   },
   {
-    "address": "bnb1tkzpsflc6w2nk75t34d8tdr3xla8ayamu96ppc",
-    "score": "3785736879634",
-    "reclaimed": "109978188634058",
-    "spent": "109979940178943",
-    "last_spent_height": 15208562,
-    "last_reclaim_height": 15208635
-  },
-  {
     "address": "thor1rcer505h9fchx98smljrpvje7a2v4naazyh7fh",
     "score": "3609064600011",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1gyefh5z5ay3ndvnz4q9jajmdcmfyg2sx4j2gly",
-    "score": "3504376188959",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -394,12 +334,6 @@
     "last_reclaim_height": 14744092
   },
   {
-    "address": "bnb1fx6fsev97atsm5j62kgecpslv6vx2nffv0qq2q",
-    "score": "3068130226083",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1q8f8sdtfavnk4mwpc4c0s7s295ela2mxeac96ln",
     "score": "3020874069597",
     "reclaimed": "0",
@@ -414,18 +348,6 @@
   {
     "address": "thor1k67m74kxlyue98dr77hcrjpq5jyz79udg402fw",
     "score": "2990108522781",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1j4h7pcmns3uav6ye64u3c5dgfnclhuat5pz642",
-    "score": "2957429482319",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1mdqaqt9mh9l7gtz54yh5l0avyqwgpgf24cr2nk",
-    "score": "2923246987949",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -470,12 +392,6 @@
   {
     "address": "thor1w638745zyrwwx9qw0sr2d93rxmjpmrayvxapgm",
     "score": "2563380240479",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb15tz86dxd6p8p32euxr5jlxwy9d56slrjalffgg",
-    "score": "2559892862088",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -556,26 +472,8 @@
     "spent": "0"
   },
   {
-    "address": "bnb1lk2ny33ssthudhfs4t6ka7gm5py6ygzfxekggt",
-    "score": "2158770494081",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qnjwqgstpzfkmv8mh0vacamdqe09wsvstqdugqr",
     "score": "2157934876211",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "terra1rs5q6f2l8k97uye3ukw7tjq24a2npa7ddeh32s",
-    "score": "2140210455137",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1q7ycxjdk254xehslnram9gxdqxjnldlkryj5r3",
-    "score": "2124309765271",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -612,14 +510,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1wtcxs9qrrsyksgtlgauusdw5nq74rpw8uu8mwa",
-    "score": "2070605333871",
-    "reclaimed": "5347178386738",
-    "spent": "5347178386738",
-    "last_spent_height": 15212567,
-    "last_reclaim_height": 15212571
-  },
-  {
     "address": "0x1a25a5b70dc3ce8398c04091b0a6c61c984b80f5",
     "score": "2069098839618",
     "reclaimed": "2065635057211",
@@ -630,12 +520,6 @@
   {
     "address": "thor1t2wpechtxcvmdefxrtyfe6vhkpf6csphrnwcxd",
     "score": "2056289981423",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1046n0khuw0eq3wv79svdygphm8sawx4m9u5guy",
-    "score": "2035201474964",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -738,12 +622,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb19277plvhd64uzvtmx8y03gtftz4cvll5nxygyx",
-    "score": "1854487178395",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0xe17b6d88ceace88eb548bc3d3bfaaefba0bb6ad3",
     "score": "1836647938192",
     "reclaimed": "0",
@@ -800,40 +678,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1wj07ju6gl7uy9xlrfyusm9hymhh3e545unv2z8",
-    "score": "1779428324473",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1gsr5zn4ppakluhrcmehwljr6fvgwu687cnh4sd",
-    "score": "1772386607474",
-    "reclaimed": "1792946849",
-    "spent": "1792946849",
-    "last_spent_height": 14715439,
-    "last_reclaim_height": 14715746
-  },
-  {
-    "address": "bnb1mq7x4f0wyw496vvggwxxth2v8a8znavdljr2fq",
-    "score": "1752136136366",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb16z5ve9jgwupkugupqmkafefpmu0cq46zm6cgrk",
-    "score": "1736211306070",
-    "reclaimed": "2414797405367",
-    "spent": "2414797405367",
-    "last_spent_height": 15176684,
-    "last_reclaim_height": 15176688
-  },
-  {
-    "address": "bnb1asa52s6ttrqgclc93ly0r0hsz2f9p7pfgv30j6",
-    "score": "1727232580943",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qehp4juhu3mhez4qdkr37c75ne2t9nfhhs2mavx",
     "score": "1727232580943",
     "reclaimed": "0",
@@ -864,12 +708,6 @@
     "spent": "110853781208",
     "last_spent_height": 15965269,
     "last_reclaim_height": 15965274
-  },
-  {
-    "address": "bnb1cr455j5karf6qswh7pufscty9kc6e3nadgg4vr",
-    "score": "1625266497525",
-    "reclaimed": "0",
-    "spent": "0"
   },
   {
     "address": "bc1qgyas3hquzt53mj7srkdzl7eu2fm3hruxwtaanv",
@@ -904,12 +742,6 @@
   {
     "address": "thor1fqv4smsy2mrju6pamf0l8w5zrduu6dujezwn49",
     "score": "1595996885302",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1qyat46tl2welq4lpdx0xx0tmja3uh45j8rgdkn",
-    "score": "1589880239879",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -972,12 +804,6 @@
     "last_reclaim_height": 15572945
   },
   {
-    "address": "bnb1txkchpyjr305kxp7jrysatp3shsyhcm26ls2za",
-    "score": "1500739751509",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0x7e28862217Ae1dcfcc224D342414c7F568E8bB8A",
     "score": "1500739751509",
     "reclaimed": "0",
@@ -988,14 +814,6 @@
     "score": "1494251746415",
     "reclaimed": "0",
     "spent": "0"
-  },
-  {
-    "address": "bnb1jykg2mktae3k2q75e0uec8em33l9ted6jq2gry",
-    "score": "1484109934475",
-    "reclaimed": "26409810522",
-    "spent": "26409810522",
-    "last_spent_height": 14902677,
-    "last_reclaim_height": 14902681
   },
   {
     "address": "bc1q7vlr7p38gj6y59x706ftytf5krt7nctn24qqnh",
@@ -1042,26 +860,8 @@
     "last_reclaim_height": 16683281
   },
   {
-    "address": "bnb1jqr0mljptuhcx5fulw6fuwq2s6h5dl2gvfak9e",
-    "score": "1424297689696",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1w6ng4sq773vnhvsgfz77t5pz25x0gngsqcn83d",
-    "score": "1400211520626",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor10m42f2ruz8vkrxx4kfs9p7fqg6qy5s9fcu5zuz",
     "score": "1400008015155",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb17p79th26j2a4m8wr0rhthpx2m6f2znhp3l56ha",
-    "score": "1398284829220",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -1092,12 +892,6 @@
   {
     "address": "thor1k3drgjuekwe4e82cs6mp87932ejvk2m25jcsgj",
     "score": "1373327718933",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1hw384c8y4hl6vnm303zev6zuc0mq49j7d9mf8s",
-    "score": "1341303377388",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -1136,12 +930,6 @@
   {
     "address": "0x8d5803c9ae9832743088753c905708e29c799ffc",
     "score": "1282093044665",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1l254dzthgsnukavwv4mvkcys76nthe9egazmer",
-    "score": "1272825607008",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -1216,12 +1004,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1n9aywqt30llgtxmyt02y2unhxw0ua9e5qnyz0g",
-    "score": "1200654136141",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0x9671db71548017a3907b1bc9b19418446904950d",
     "score": "1190126475438",
     "reclaimed": "213470742675",
@@ -1230,20 +1012,8 @@
     "last_reclaim_height": 15172241
   },
   {
-    "address": "bnb1lw32gzhsejdgxfeagymt7vvtspe7s5hpudz5gr",
-    "score": "1175064157352",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qxf3npn2nunzynaawd2ncvscn3853xjvvrnxvxw",
     "score": "1175064157352",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1t0q9me2gqlty3dmryn5r33mvkg079yzn2wxz9h",
-    "score": "1158165987515",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -1290,18 +1060,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1stx4gnfxu03qank4ee8jdau9mdznvh4pkd7kgm",
-    "score": "1085547219952",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1zn8c782lncq527zflyghh3jf3anqgf8rwmwtv4",
-    "score": "1083656450120",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0x881227bd05d3fd72b123c0201299409712bc39b4",
     "score": "1077970383616",
     "reclaimed": "0",
@@ -1338,20 +1096,8 @@
     "spent": "0"
   },
   {
-    "address": "bnb1u6wux4sfhcaj0atsz6j9mkh4px2z96ulvf8c34",
-    "score": "1025922497158",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0xC7fc9C6D1C7928484E91F37B074A50c103CF3CAA",
     "score": "1025922497158",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb12splwpg8jenr9pjw3dwc5rr35t8792y8pc4mtf",
-    "score": "1020680090715",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -1398,12 +1144,6 @@
     "last_reclaim_height": 16997080
   },
   {
-    "address": "bnb1m96vgqz9hujppjmact32mklaw5ffduyhsfdp28",
-    "score": "1007553974844",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qa42lupazl7n3g5hqajcw3s5axf9mtq3kms9xa3",
     "score": "1003144211510",
     "reclaimed": "0",
@@ -1430,12 +1170,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb16n836k42hngzje57hfp27tht9njxw9skx3ha25",
-    "score": "998234240370",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0xc2d6ff219898b9fab5a8ba4d7bf5e7e0b0d35593",
     "score": "998234240370",
     "reclaimed": "0",
@@ -1448,20 +1182,8 @@
     "spent": "0"
   },
   {
-    "address": "bnb1p4yhvl4mayylqrw4kh9re6m8t7364rsfsd00zj",
-    "score": "993210504681",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor150jthvjl90kp5n5phkna7sg8hg97kpjpnvthnh",
     "score": "988712572721",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1ajrn6uqwp90jtq0eepm3gdjastspt8na8c6agu",
-    "score": "988684062178",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -1512,12 +1234,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1nfw4fuezphxxacx03w60rcs352urssas3ppwm8",
-    "score": "967461801173",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1q8vl0xvl8778djvkj3hu6hxdxrjqy4c98j9066u",
     "score": "961167837466",
     "reclaimed": "0",
@@ -1554,12 +1270,6 @@
     "last_reclaim_height": 15012440
   },
   {
-    "address": "bnb10ep98ypfx85g4zgyfvyyhpqunkeprl8q8rzcrn",
-    "score": "944361135656",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor1hyarrh5hslcg3q5pgvl6mp6gmw92c4tpzdsjqg",
     "score": "943408367910",
     "reclaimed": "0",
@@ -1574,12 +1284,6 @@
     "last_reclaim_height": 17448874
   },
   {
-    "address": "bnb12x6tynm7u8xpj5dd3adn8g2hdk5e6wk7cs5p5l",
-    "score": "941037983004",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0xf8d3b37a25f33efaaeb47d4ff3a1fddb60dc2784",
     "score": "940848619263",
     "reclaimed": "0",
@@ -1588,12 +1292,6 @@
   {
     "address": "thor1mfdkkcf0uj3fn6s78ezywy2a24sjele8ssaezy",
     "score": "935125823021",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1z3s7lqa96pw0netgzgge476xy8wp5eavg5vxv5",
-    "score": "931355533543",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -1634,12 +1332,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1q0m0vh3wfqhjhhz66vzevdn35uscg98yyr9x93",
-    "score": "899602465227",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0x879f0791a482767e8428612debfd840724e8c32a",
     "score": "899254904799",
     "reclaimed": "0",
@@ -1652,12 +1344,6 @@
     "spent": "4363979571231",
     "last_spent_height": 17518782,
     "last_reclaim_height": 17518788
-  },
-  {
-    "address": "terra14wyac9m9qnrt0sx2a77rfppvzzfx07t5w65wtq",
-    "score": "883652119151",
-    "reclaimed": "0",
-    "spent": "0"
   },
   {
     "address": "bc1qsq4c34mxl8cn00tqmqwjgshh352jsmep6x9ujh",
@@ -1690,12 +1376,6 @@
     "last_reclaim_height": 15019560
   },
   {
-    "address": "bnb12xufpsysr6r0tankhqdaams9zee0tzxy006qns",
-    "score": "844935448470",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qrju865r3glwjcxv8kjhpjzs3wl9g4kftlgwnw2",
     "score": "843024834607",
     "reclaimed": "0",
@@ -1708,12 +1388,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1tdnmq5hdy0pgescqav4y8klgrrvqmf6jwpp2n2",
-    "score": "839513020335",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor1g0s3e9g6y4ne5t5yh6t6zr84hmpa6ryeewundj",
     "score": "839404813997",
     "reclaimed": "0",
@@ -1722,12 +1396,6 @@
   {
     "address": "0xaadd5f9d0fa1411f612d75336eee5eb87092f1f0",
     "score": "837257226231",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1t8fx77wzp3c67wds6e2lylg0vvxklwlrldj0vq",
-    "score": "834555491918",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -1776,12 +1444,6 @@
     "last_reclaim_height": 17448874
   },
   {
-    "address": "bnb1l4ww5fe2nqurwh4ncee3vdmetglxknwczppcah",
-    "score": "804893911583",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1q5dx2535y5yg0x8wr2dktqagjzrk2lfclzqvs06",
     "score": "801998495086",
     "reclaimed": "0",
@@ -1794,20 +1456,8 @@
     "spent": "0"
   },
   {
-    "address": "bnb12k7vvyw5p4k879s809tnllq566fqn6m7789pyu",
-    "score": "796933343831",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "ltc1qxjxhyxw0j2gk4vp7wzqz3mkhey4rg4872szudc",
     "score": "794341186915",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1hw5cl2vfrxnqzxsennw6txdca2lvkqsgp6vxcf",
-    "score": "792174388513",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -1820,12 +1470,6 @@
   {
     "address": "0x7BDa40392b5ee2A83Df9F0FE133B24fcb60cB609",
     "score": "790934054474",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1232rkk7sw3qfzwvw4v73wraz58w27uqfxyza24",
-    "score": "790364296577",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -1862,12 +1506,6 @@
     "spent": "56475592004",
     "last_spent_height": 16885211,
     "last_reclaim_height": 16885217
-  },
-  {
-    "address": "bnb16vgg4hcwqwemc2y8s78x7ulzcj8f276czhu7ml",
-    "score": "754913969048",
-    "reclaimed": "0",
-    "spent": "0"
   },
   {
     "address": "bc1qul989hj0unwtdlqeyxjhrpp6lv225y8aclf0dy",
@@ -1942,12 +1580,6 @@
     "spent": "0"
   },
   {
-    "address": "terra1cfdgxpehzyac662dlh4kjaadt8ed8p8ymzjzsf",
-    "score": "700152176925",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor157nyg72mle2nlus5k0mvl099zkehx57l7430gj",
     "score": "689328173466",
     "reclaimed": "273942200",
@@ -1958,12 +1590,6 @@
   {
     "address": "thor1s6guvx6fhrx2ud3598geksjq20gayl50fpfvz0",
     "score": "688318724150",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1evxh3cyts0e2w00l2s03t6k3854rxxarjvwrce",
-    "score": "679462670993",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -2031,12 +1657,6 @@
   },
   {
     "address": "thor1h5kwrwsuqm0kn2g62yvn2q8ffvacafqwpr5u5h",
-    "score": "656111806480",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1cx8l6lggsztm0098hcj6ytdjr2l29uzu5wjlpq",
     "score": "656111806480",
     "reclaimed": "0",
     "spent": "0"
@@ -2144,12 +1764,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb10srcwfczn39nkpq20sg4k63t4mt8dkrjaf2cm2",
-    "score": "623937982578",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0xFc73B27B4acad79bc718e9099A1ba082811F7961",
     "score": "623853604919",
     "reclaimed": "0",
@@ -2184,14 +1798,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb174tpe0wfz9xagdcdvnz9j49pnj7jaaj7axl28z",
-    "score": "615130142357",
-    "reclaimed": "615130142357",
-    "spent": "615130142357",
-    "last_spent_height": 15264001,
-    "last_reclaim_height": 15264725
-  },
-  {
     "address": "0xa24b888120eaad594dfff733c5a3feb95546024a",
     "score": "614508371146",
     "reclaimed": "0",
@@ -2214,24 +1820,12 @@
     "last_reclaim_height": 16863243
   },
   {
-    "address": "bnb1jn8dxw8qvpphkyu7572p57t3r3de2h8lha2me4",
-    "score": "606012686512",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0x7bbcb8b7ae13ad8f74cff87692092b2e8c4ab893",
     "score": "605945034005",
     "reclaimed": "40948814410909",
     "spent": "40948814410909",
     "last_spent_height": 16869418,
     "last_reclaim_height": 16869422
-  },
-  {
-    "address": "bnb1m4q0letvdy0n74rqauzwula9f2d3ac5vw7he9a",
-    "score": "604037080605",
-    "reclaimed": "0",
-    "spent": "0"
   },
   {
     "address": "bc1qlfwzwzjt4klxc6rxw34r29svecgymz25a94rnh",
@@ -2292,12 +1886,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1k9kp6g9vxghelcx03h0lp07lwtqsyg3ltha0lm",
-    "score": "583720319061",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor1acl4qwt5vlxy50pdqppwst9rkq87jnqz3mynje",
     "score": "583650407094",
     "reclaimed": "0",
@@ -2330,26 +1918,8 @@
     "spent": "0"
   },
   {
-    "address": "bnb1ywh2q9xz65hmtm08439cz8uuq0ah0vuv47w4rw",
-    "score": "579529980295",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "ltc1qknl6rwygdrfchar54wc5qgphu2557t0e06aj49",
     "score": "573090364827",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1mkrcljunt7qsaw752dgkdzr98m7784ddtt4g4s",
-    "score": "572239838565",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1rnvg2k57wnm2tux3l8n4dvru6qgdetnkw9dsh4",
-    "score": "568737952487",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -2432,26 +2002,8 @@
     "spent": "0"
   },
   {
-    "address": "terra190x7qppqkfj6q7pjdkvkh7amxsuc6wtg6rehhx",
-    "score": "533016140841",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1vhhatkl5fwl3jkzna5dcds6ct8nqumxh9j2p8e",
-    "score": "530781624102",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor1euglpjve78ny2kzp9qn4yzj99uacqcmd838xyd",
     "score": "528224494085",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1e7d89r9gp3ghwzuqjtjd59vfstlfysc8zdvn2n",
-    "score": "527123133354",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -2506,20 +2058,8 @@
     "spent": "0"
   },
   {
-    "address": "bnb1r2jdmfgnrlh4dcezdw62l479pk44u0wdnel7nk",
-    "score": "519417711927",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qv4e5thgvwmzprxkpf989wn8slxc0e5fceh7z9j",
     "score": "519417711927",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb173mra2em8zx8t5frf8t39jdmh0fgtcgnauea9g",
-    "score": "517775281921",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -2600,12 +2140,6 @@
   {
     "address": "0x72fda12f5faaa56a1fc85e93cefa25b8cd39149e",
     "score": "502858113628",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1fpe9sspnj0x6pytayuxq7a00aeu5gze43jlmpx",
-    "score": "502398109911",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -2836,12 +2370,6 @@
     "spent": "0"
   },
   {
-    "address": "terra1evhpfj0yycqtw242h3afjnl9pfz0lpq9lpxkxa",
-    "score": "466882100627",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0x70cced0c105b6f0ff892445c76acbe957508386c",
     "score": "466749134649",
     "reclaimed": "0",
@@ -2874,12 +2402,6 @@
     "spent": "3600887668568",
     "last_spent_height": 15117295,
     "last_reclaim_height": 15117841
-  },
-  {
-    "address": "bnb180vl9alxnfxfz4dm4q9ff7smje3npel9xy3n2z",
-    "score": "453513247545",
-    "reclaimed": "0",
-    "spent": "0"
   },
   {
     "address": "bc1qdyfje86gy86z9daylws57syn6xlal0h3mv3rwk",
@@ -2978,12 +2500,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1cnes6vmeza6x60mhzd2y2ec7hzznqtucyzz0qa",
-    "score": "438116867363",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor1l79jkuyskqr768z39mked8dls95kqnq54pgltr",
     "score": "438042163711",
     "reclaimed": "1702104469091",
@@ -3006,12 +2522,6 @@
   {
     "address": "0x58cb5b26f862f93e2f1dc706b014bbb2aa2530e7",
     "score": "436542665144",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1s5r467cvrnlkd9pszhvqxghvadcw3xauvjfhda",
-    "score": "436249654266",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -3192,14 +2702,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1rrgwd4ptnp0h30p5hjd67v0xrfsms8av4e9xre",
-    "score": "421487163041",
-    "reclaimed": "1641284239",
-    "spent": "1641284239",
-    "last_spent_height": 15263862,
-    "last_reclaim_height": 15263866
-  },
-  {
     "address": "bc1q85j9ud6cqw2jzyu7w8vgnreheac5rsqqg4j9ex",
     "score": "421438576081",
     "reclaimed": "0",
@@ -3214,12 +2716,6 @@
   {
     "address": "thor1gv3k7rx2u7xajfvvrfpvlnj0um8l0uhcltrcsn",
     "score": "418247965014",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1sxez67rc6e57ld9yec4j2akm67qk7fdw3jzxs6",
-    "score": "414013206210",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -3352,20 +2848,8 @@
     "last_reclaim_height": 17471897
   },
   {
-    "address": "bnb1rk2a5jv76cam0utca8spuj62hx2gl4q3rj54mp",
-    "score": "398040549712",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qy8sh5ava8u686vhzwcukwdkpehekrp672xd2jz",
     "score": "398040549712",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1wajzq2lrrm6qlx4c38w2cpc6xrckzl4hap39he",
-    "score": "397971454432",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -3408,12 +2892,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1tel566az93u7g6sc0jg49rxwdvk4yqz96ggnad",
-    "score": "392463946189",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0x8ab324f41d55cea1c1bf17d91b7772782eb30787",
     "score": "391972627542",
     "reclaimed": "1490623012304",
@@ -3424,12 +2902,6 @@
   {
     "address": "0xc8ee1a10410fb0f957d425b0f78828801170644a",
     "score": "391859309552",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1gvseqzvyzpu7p4n5fzyvk4k9dcrsr5ykyxhuwp",
-    "score": "391068522250",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -3448,12 +2920,6 @@
   {
     "address": "thor1sc5k6hvyuhtz9eq08k3fvgw2kcsex20mtph7rp",
     "score": "388289206588",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1h8qtj3p6l9p73njeq2xuw8h4tzh2zhq0ylfzxy",
-    "score": "386601501998",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -3478,20 +2944,8 @@
     "last_reclaim_height": 15252937
   },
   {
-    "address": "bnb185f2h2vu4xufth96p5r46gw0p0t89mljr00xen",
-    "score": "385807432915",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor10nc5hzrx80xvn9hfk4vg4cjv3rhej9vh3j990j",
     "score": "385670469599",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "terra1cg6c83vdzed86hrjaftk2cgkszxhsq5k2hzv4e",
-    "score": "384391483860",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -3510,12 +2964,6 @@
   {
     "address": "0xdef70396f20c44651e544541fb38d0731e4dcefa",
     "score": "380941206294",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1t4t7v2lfqn9hj3uh69jx7uuq4n967pkynntah4",
-    "score": "380504874422",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -3572,14 +3020,6 @@
     "last_reclaim_height": 17418631
   },
   {
-    "address": "bnb197se9p9k397tsleucjxq89ydp6vpxh3xwx8qg0",
-    "score": "376367081004",
-    "reclaimed": "6694342807",
-    "spent": "6694342807",
-    "last_spent_height": 15056077,
-    "last_reclaim_height": 15056082
-  },
-  {
     "address": "bc1q86dtggt3hv574ujn0klcx7y65ldwq4t8f99mhh",
     "score": "375483068728",
     "reclaimed": "0",
@@ -3618,20 +3058,8 @@
     "spent": "0"
   },
   {
-    "address": "bnb12wk0f395l7s07yf38g9ac84284kd47rfczxfv9",
-    "score": "369129424371",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0x35d8e83df60fae2e2cd042545561f9516867f747",
     "score": "368100855187",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1s4rdy2rygnmq0wy86z2nsl8qn0sqv66as8qlgt",
-    "score": "367865786868",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -3734,12 +3162,6 @@
     "spent": "0"
   },
   {
-    "address": "terra1gvs7mwzraqgx0zhh8pgcwsvwx99s4j5d4k8k4p",
-    "score": "356375978847",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qqsmhft3vd45awlvxkcc0v9mglxvpppv8kpaqar",
     "score": "354755793914",
     "reclaimed": "0",
@@ -3802,12 +3224,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1etglrzyvlfjtptjv8fruvmvajw60wh3xsjscwn",
-    "score": "351048147232",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qfpvm8y9kz89x9j0sglzhhatqyfu29avwmhlw0f",
     "score": "351048147232",
     "reclaimed": "0",
@@ -3858,12 +3274,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1uw5jgsm904e5hczpm7lhrlmy9lq05hjjrv4xqx",
-    "score": "343280993955",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0x37cb339aad4ba220bca12aab0e3d4eeece8e65f1",
     "score": "341176658766",
     "reclaimed": "0",
@@ -3882,20 +3292,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1pa6hpjs7qv0vkd5ks5tqa2xtt2gk5n08yw7v7f",
-    "score": "339362943248",
-    "reclaimed": "676782254721",
-    "spent": "676782254721",
-    "last_spent_height": 14465351,
-    "last_reclaim_height": 14465356
-  },
-  {
-    "address": "bnb1qt7f2zyrc08ps49mcz9fw03fq394w42ege6anv",
-    "score": "339337108949",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qtca32u32g3hz6pm7a57y7g3m8w4dhyt630l8ln",
     "score": "339041173883",
     "reclaimed": "0",
@@ -3904,12 +3300,6 @@
   {
     "address": "0xd61C0A0157ef718C27d410ebeFA3d8773c061B36",
     "score": "339041173883",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1k22kxdmlkyvffm2uc49zqczgmmwgx39fsy4rfw",
-    "score": "338598438650",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -3932,12 +3322,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1p2he2fr43tq40mmp3kg4zed4ucmzn4ycmpx4st",
-    "score": "337158808362",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "qp49fnmx2lzastjj7dsf5ur676f3hhppccpqc4tcqc",
     "score": "337142260689",
     "reclaimed": "491605065157",
@@ -3952,18 +3336,6 @@
     "spent": "491603032883",
     "last_spent_height": 15652733,
     "last_reclaim_height": 15652738
-  },
-  {
-    "address": "bnb10rmkahneyp7xzcjehmftrfxsd96tg7lmqvv7at",
-    "score": "336588903971",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1j6xu5rnfvv4gyf9yf8xh3r59sz3rhwsdn5qxe4",
-    "score": "335324856637",
-    "reclaimed": "0",
-    "spent": "0"
   },
   {
     "address": "bc1qztul7lmwe69rr8fggnmunquuyzacw4xq7850lt",
@@ -4046,12 +3418,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb16ng4736f57dkxv9rcv0pgleck96qe8m63nz7uu",
-    "score": "331403004949",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0x37B1B132ff8B9e04dd6073e8Db6C42Ec0C565004",
     "score": "330996942445",
     "reclaimed": "0",
@@ -4060,12 +3426,6 @@
   {
     "address": "thor1wtt3fc4r7qy4kkguf29g492c8n0lmlh4r2uwy3",
     "score": "330776457560",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1j58t2fssycedgt7d29usw05t4qpypghgn37mcg",
-    "score": "330591335016",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -4122,12 +3482,6 @@
     "last_reclaim_height": 16174066
   },
   {
-    "address": "terra139txuun97hm9vq40f5ehlsyrtulrszyz5e7ee0",
-    "score": "327841059931",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor1zdz8peqck7fwutmpk2wgd8llgnea4sgfvjx5cm",
     "score": "326894925631",
     "reclaimed": "0",
@@ -4160,12 +3514,6 @@
   {
     "address": "0x7db9d0be0ff312221a6a5a83be78df541bad57a3",
     "score": "324437592515",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1slcxuyvs5rga3v4a52s48ugv255yvyefk92e5y",
-    "score": "324165758060",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -4220,12 +3568,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1thjw948ktfyglq9hydj964x9gs6c32ug3t5cly",
-    "score": "317424635647",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1q7a547m5qutrn0wdqw87xscxzc98f80kdpeqsfs",
     "score": "317007271219",
     "reclaimed": "9464694570700",
@@ -4254,12 +3596,6 @@
   {
     "address": "thor1gz653td5lqjgzlaffhdrecgxtj8km2m473npgh",
     "score": "313436468705",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1g59hhdgwy309hsklr0exjuyf49f2s7npp30hqq",
-    "score": "313383734528",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -4364,22 +3700,8 @@
     "last_reclaim_height": 15639780
   },
   {
-    "address": "bnb1nsx9qtlppuatauqn8svcakdna75sna3ek4qc73",
-    "score": "307690494144",
-    "reclaimed": "307690494144",
-    "spent": "307690494144",
-    "last_spent_height": 15264001,
-    "last_reclaim_height": 15264726
-  },
-  {
     "address": "0xaa292ea5719e25f2bf2dea042529e9e098b04fec",
     "score": "307532229630",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb13h88jdmfgu5mrd4yu9q23gtg6lt4nytwyaqdtk",
-    "score": "307511973500",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -4408,12 +3730,6 @@
   {
     "address": "bc1q65tx7rvv0fd4rgvfzm9ayg63n0gg6g24r2ywh4",
     "score": "302247203702",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb15tvctjvt5an335dwwtgjkhzkpe7t39ztvme467",
-    "score": "302134508697",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -4452,18 +3768,6 @@
     "last_reclaim_height": 16752844
   },
   {
-    "address": "bnb18hw988x43e0yn9a6kp0yd0pl06xfa2lhykl4ue",
-    "score": "297705870394",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb19adaeyju4zr6p4lyrep05s3zkzae7a7qmyrqjx",
-    "score": "297047284017",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor144yn24ejfacuccqfcwnn7nsxkgzyuyuuff4yde",
     "score": "295210687704",
     "reclaimed": "252971387",
@@ -4478,12 +3782,6 @@
     "spent": "394094791789",
     "last_spent_height": 15679253,
     "last_reclaim_height": 15679258
-  },
-  {
-    "address": "bnb1v26t0skhy3rx2ta9vkl772wcag994yrl8nxjae",
-    "score": "294094039460",
-    "reclaimed": "0",
-    "spent": "0"
   },
   {
     "address": "thor1c2xaumtxellhwhdlksydyk5pamvp6fhl7eupeh",
@@ -4536,12 +3834,6 @@
   {
     "address": "0x6a8353dc30a1DFc9Bcf6bAbb27f1D228170C4BEF",
     "score": "290966440532",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb19hpq0avx6ce80wt4wlxyz65cdkwhfluyekd63c",
-    "score": "290362390444",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -4624,12 +3916,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb15als2pwy0uy3qsh8tw2nc3vj5mnxfakklh5f3r",
-    "score": "285584028552",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0x8c7991d3b3d0676a0018ae5258807bd1019d747c",
     "score": "285112863751",
     "reclaimed": "285112863751",
@@ -4644,12 +3930,6 @@
     "spent": "236708620",
     "last_spent_height": 16518910,
     "last_reclaim_height": 16518913
-  },
-  {
-    "address": "bnb1629kaqd63a9eu7uz0p4lck70n5evcyqz8t788a",
-    "score": "284543841389",
-    "reclaimed": "0",
-    "spent": "0"
   },
   {
     "address": "bc1qxpstn6h0wq5axwagdf0h06yrsdtl335s6xjnhm",
@@ -4692,20 +3972,8 @@
     "spent": "0"
   },
   {
-    "address": "terra10n5vuruzqay4nkhmayuxlrw7j6nnxtd5wqpts2",
-    "score": "282684197353",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor16ky9nz35fxclpvz8yv6vcv0m4z6wd4yrhlk4nj",
     "score": "282267066755",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb16vk3pfqt688ku46kjjyjxevg6t0ru37rp2rqj2",
-    "score": "281009817605",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -4752,12 +4020,6 @@
   {
     "address": "thor1uc7aqxpfgez08v695lgsk2jynkdqlalqupezyv",
     "score": "279248616716",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb13pwwnlg93t9g5q295d2558g2tkqwr4wq623fuu",
-    "score": "279167440434",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -4824,12 +4086,6 @@
   {
     "address": "0x4A2F89BF04f94ac602eCdE9e0594C028CAF5F9c3",
     "score": "276259999544",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb194u0v8zrjndqe04zl8kqua2m4pax0exgyjc79u",
-    "score": "276259573657",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -4976,12 +4232,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb10p43724k99lkqa05jf5ajlpmkrr4g5pr4dhhkp",
-    "score": "266100994768",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor1gpl6fnyktkqvu33nsjdkl9crmeayumqxd0guj5",
     "score": "265941610005",
     "reclaimed": "0",
@@ -5002,18 +4252,6 @@
   {
     "address": "0x8d2e7cab1747f98a7e1fa767c9ef62132e4c31db",
     "score": "265662242455",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1kq3x7h4tl6qrtgyvngzyynfl2825c5ejcjkzhg",
-    "score": "265657220339",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1x239n2sf2tv5x4hn866un00gvy2zz4n7645ku5",
-    "score": "265276330486",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -5056,12 +4294,6 @@
     "last_reclaim_height": 14830620
   },
   {
-    "address": "bnb1mk6cc2hyv6v92yrwkx5uw8ula3dfvwnmjv8efz",
-    "score": "263015420296",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qn2c4p6npgwf632405s7a7h4z9jqmz7gmhrenjv",
     "score": "262358220634",
     "reclaimed": "0",
@@ -5070,12 +4302,6 @@
   {
     "address": "0xc2b80c124314d4e27071f835d150831e62d7aa07",
     "score": "262358220634",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1evchnk7fahnrwet2rp35gp2xn78dwafvxp3lxk",
-    "score": "262282437127",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -5106,20 +4332,6 @@
   {
     "address": "bc1qavuu3h6xy48ypwarrsyu74kj3p9afjumtjnf49",
     "score": "260546188915",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1s204t2qr00vrlzlvkuarwcx0rd0cw5zwx4dkcv",
-    "score": "260482422054",
-    "reclaimed": "260482422054",
-    "spent": "260482422054",
-    "last_spent_height": 15208561,
-    "last_reclaim_height": 15208750
-  },
-  {
-    "address": "bnb1h2lk78ep237rv8p459kc4vkant6ezdt68dnkdx",
-    "score": "260237429779",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -5162,12 +4374,6 @@
   {
     "address": "0x3e7e326682bb3339edbda5602c97f141c27d96c0",
     "score": "258398830867",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1uewdxntnk9pgdh84vdth05z5fhcs0gzs05ek5w",
-    "score": "258157607543",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -5370,12 +4576,6 @@
     "spent": "0"
   },
   {
-    "address": "terra1e5vdw96wjv6422sen7mcp5xj3fegk2trtxf5vg",
-    "score": "248307826540",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qmz88apm0zhzww7l9uk7k6vxhtxwjs4x7ss0qxc",
     "score": "248226889342",
     "reclaimed": "0",
@@ -5394,12 +4594,6 @@
     "spent": "6784262615",
     "last_spent_height": 14887193,
     "last_reclaim_height": 14887202
-  },
-  {
-    "address": "bnb12hw0gjqz3reqlc8qux7s32ssmme440rkrdu9am",
-    "score": "247835052329",
-    "reclaimed": "0",
-    "spent": "0"
   },
   {
     "address": "bc1q2nlv2rde90crnt88feny2agu86agdkrg9p0fgw",
@@ -5490,12 +4684,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1avnu2rawqg2jmagwxvul662pgmjve49y7eh893",
-    "score": "245820110024",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "cosmos1lety3vjvrqy47347mkxgr95jnsyh4hv28cwy3a",
     "score": "245451743048",
     "reclaimed": "0",
@@ -5504,12 +4692,6 @@
   {
     "address": "bc1quxjlu0eh6sjtj26d9w8xkz0m6252alndlesdrj",
     "score": "245451743048",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1fx4rp0065d6e2ayjf3r4e2579s4zljxjdnxpaf",
-    "score": "245008599430",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -5558,12 +4740,6 @@
     "spent": "25661079524530",
     "last_spent_height": 17559357,
     "last_reclaim_height": 17559362
-  },
-  {
-    "address": "bnb132pdfva5yzxlakxnd5hcf6m2pj5lw5m5ranrh4",
-    "score": "241915672043",
-    "reclaimed": "0",
-    "spent": "0"
   },
   {
     "address": "0xe1e347d5c26a5c9657d817576d25083a2380b60d",
@@ -5660,12 +4836,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1usgjr7wa0pwjva3qmwklndaeay00tngaazpfkf",
-    "score": "237644924350",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0x734cfad81e9fb9e368bc6996ce37be9d03ba1a2c",
     "score": "237635396819",
     "reclaimed": "0",
@@ -5752,18 +4922,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1rt6s3whtpfkkkcsm0ynkgnz5my07drc4xqfh0r",
-    "score": "233291927546",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1dnhtfy6lv9xg205njn4ysg6ll5ypqghfaq0meh",
-    "score": "233245848201",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1q5c54vngsaafegcs0y897888u57d5vldu5s4cpr",
     "score": "233002408864",
     "reclaimed": "0",
@@ -5798,12 +4956,6 @@
   {
     "address": "thor17pgj5ah5r3amwfyvp06xd2z6v9hs96a77d9s25",
     "score": "232046809236",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1pz00q2ytkzzm0qgz9mu5hqye6jy228r4aa2q4h",
-    "score": "231742371886",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -5864,14 +5016,6 @@
     "score": "229182935440",
     "reclaimed": "0",
     "spent": "0"
-  },
-  {
-    "address": "bnb1cl3lmqk62k9ted6t7ujvf9phey7w3pl9ha4y9y",
-    "score": "228497104258",
-    "reclaimed": "14191848774851",
-    "spent": "14191848774851",
-    "last_spent_height": 15206193,
-    "last_reclaim_height": 15206199
   },
   {
     "address": "bc1qk0zrww0gaam9wy3g0svgu935nd2lje99yku5g5",
@@ -5936,12 +5080,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1rh8ynp6c9agm7fktcmjgvelgt7j5h7py39m5xl",
-    "score": "224460029384",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qa6kh06rypwmkz503a6x49qp8s4d0wj5umrz8yd",
     "score": "224408098647",
     "reclaimed": "0",
@@ -5956,18 +5094,6 @@
   {
     "address": "thor1pj80qdqedm7m340getwupg45mcmsvfz7s7knwh",
     "score": "223936351174",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1u4uzqp0jfm2ljyskjh6mz32xhavrdzdf6sdw6n",
-    "score": "223677662441",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1kj7vw5js0wrf0cvkm47t5arnjcnnzg057hwn6d",
-    "score": "223429099491",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -6046,12 +5172,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1rcsdlrk4re7xadhhzt2lqqtn0yxxyz42yjk7p5",
-    "score": "219050816717",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor16xk44uk78lug8dwu4eq7e7dxa8l2g55x9sft7g",
     "score": "219002624453",
     "reclaimed": "428240859079",
@@ -6118,12 +5238,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1l7lu4ycwsnn6lzckx67lxtwx40p25dret9eg34",
-    "score": "217061826345",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor1hkxlzsu67nnsw22j7l9k2jsj9rtp3fsfrnq88y",
     "score": "216845016339",
     "reclaimed": "0",
@@ -6178,12 +5292,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1w2ldzvu8q6ny0watdvcwfw230tah3g3jpwes7f",
-    "score": "214947313138",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0xa56197b0bEd8c64B38C21d4Af85a5D60186a0E47",
     "score": "214916387338",
     "reclaimed": "0",
@@ -6210,12 +5318,6 @@
     "spent": "0"
   },
   {
-    "address": "terra1fsvv43cqcupuf4g7ny3flrzyyqxgzjzsqggunq",
-    "score": "214002544558",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor1fhsx4q5s9f3nhp8uh3ll9m5dhcts24nt0x3jes",
     "score": "213728712237",
     "reclaimed": "638121180817",
@@ -6226,12 +5328,6 @@
   {
     "address": "bc1qpehfalm3vmeu6x2hzufakaw4vjadxa95n9qrz5",
     "score": "213433825999",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1g6kd73mkfu56sh0e5cx20rpqjmlfp8hwyny7md",
-    "score": "213282758656",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -6256,14 +5352,6 @@
     "last_reclaim_height": 15432092
   },
   {
-    "address": "bnb1d2lly8mnl8egy69uhgnyjspdgh0294vgp7lp50",
-    "score": "212204751331",
-    "reclaimed": "52741487834",
-    "spent": "52741487834",
-    "last_spent_height": 14462835,
-    "last_reclaim_height": 14462839
-  },
-  {
     "address": "bc1qq9uy48qynasrmgvszyadm4c86tdlaw93th0v8g",
     "score": "211828613174",
     "reclaimed": "0",
@@ -6272,18 +5360,6 @@
   {
     "address": "0xe492f4532b1dd5ddef8bce978b7951f2c8318cb9",
     "score": "211828613174",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1ft3fntnm90agjag54850j9u9erlqs732w6t89p",
-    "score": "211632115917",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb126e8udpmgcmqyxzvn6a7yk6gwnwtl7l352dac0",
-    "score": "211257457840",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -6300,12 +5376,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb14xaxysw8pktadeau73s5zvlc43s9xzg8c2e2ly",
-    "score": "210346209945",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0x9aA7D984ebA43a0b47503e657D32bd087036F9E1",
     "score": "210181221824",
     "reclaimed": "0",
@@ -6314,12 +5384,6 @@
   {
     "address": "thor1kq99956tr3f3m0wk9g9k9c086ak8selk88n0u6",
     "score": "209985411974",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1v7tvx3nugx3v8fzs5y8aqjetys44g70tnfuekc",
-    "score": "209985402761",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -6338,12 +5402,6 @@
   {
     "address": "thor18ttdfwrckgvhnlhwxc69g28c367ecj8nj7p5u4",
     "score": "209515809053",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb156xhnqvlsad7hsztpza7xm4nsld57hf90zv2e4",
-    "score": "209234544281",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -6384,18 +5442,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1n0zjgj9000zfpt8g4mazzez3vjyd4clhw20yq5",
-    "score": "207450284412",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "terra1ccjq5vfazrazyfyz30plq3v0qjjdmk834dyakk",
-    "score": "207315987686",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0xea371a2fed8c0250a734dad4464d4914f89ec90f",
     "score": "207184225401",
     "reclaimed": "0",
@@ -6430,40 +5476,12 @@
     "last_reclaim_height": 16249421
   },
   {
-    "address": "bnb1ah03lr23rqdkea6ky4pln6v2yeumxtxuhryl5p",
-    "score": "206058019857",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1xlwwgm2m8hak6na0zqstfqst2l7ekmljfzy2hh",
-    "score": "206002954919",
-    "reclaimed": "2735299998",
-    "spent": "2735299998",
-    "last_spent_height": 14506708,
-    "last_reclaim_height": 14506831
-  },
-  {
     "address": "0x1309c007567a71b393094c21e70bd2647356a352",
     "score": "205464446911",
     "reclaimed": "6577469291343",
     "spent": "6577469291343",
     "last_spent_height": 16710931,
     "last_reclaim_height": 16710937
-  },
-  {
-    "address": "bnb1ydu26ssyx48x258qawtrrgwhpj28mhqhake57p",
-    "score": "204842529974",
-    "reclaimed": "470817124671",
-    "spent": "470817124671",
-    "last_spent_height": 14780977,
-    "last_reclaim_height": 14780982
-  },
-  {
-    "address": "bnb14l5my2zrthkas7ufcspptm9nvq8v6u87hun6ms",
-    "score": "204686017114",
-    "reclaimed": "0",
-    "spent": "0"
   },
   {
     "address": "bc1q8z28pwnz5k6qhqmcz34zdyg23aagm900d6ff9a",
@@ -6473,12 +5491,6 @@
   },
   {
     "address": "thor1pdt7l832aphvdr3qsrk22ks52fy3v2zhy8v988",
-    "score": "204532276040",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1x4jnv00elwx7cluwf6kr77efevzf5xsv65chy8",
     "score": "204532276040",
     "reclaimed": "0",
     "spent": "0"
@@ -6510,14 +5522,6 @@
     "score": "203709706285",
     "reclaimed": "0",
     "spent": "0"
-  },
-  {
-    "address": "bnb1e0558yj9wunag2nwes4vjf64gdw946u47h77ta",
-    "score": "203017176855",
-    "reclaimed": "12392953463",
-    "spent": "12392953463",
-    "last_spent_height": 14582201,
-    "last_reclaim_height": 14582207
   },
   {
     "address": "0x68cc13a43da1e1ba7de3002df8a07665ea8b5f5f",
@@ -6554,26 +5558,6 @@
   {
     "address": "bc1qvv72wv76uaxp4e4fthqa4ffy2p4urpzqlx4t5g",
     "score": "201725845172",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1m8wuq0kqq5cju704fhp94eth436v6zpvfl0ylw",
-    "score": "201652479394",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb107esllvflu9wdgw9deg00fy2gxemyhnnxckmqw",
-    "score": "201491643923",
-    "reclaimed": "28241884567844",
-    "spent": "28241884567844",
-    "last_spent_height": 15213315,
-    "last_reclaim_height": 15213319
-  },
-  {
-    "address": "bnb1qz0grtc9qsh2ur43cphl8sm2t2nsya2xa9qtc6",
-    "score": "201389495795",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -6682,12 +5666,6 @@
   {
     "address": "0x5187352998ba7cc3de87037885bd1f410ca4715f",
     "score": "198539619662",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "terra1v05c8ajy5ard5ya6zqxfcjuaa8yprn78awcls5",
-    "score": "197733310618",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -6802,12 +5780,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1sazznru4f92v92vqnfcxc4589z6evgf8mz0thh",
-    "score": "195056749206",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qxnvnp47605ph7udsd45c49ya4xespq4nppr9gf",
     "score": "194757632650",
     "reclaimed": "0",
@@ -6832,18 +5804,6 @@
   {
     "address": "ltc1qc0a8auvlnjxrn4tcyrlr08u5wqm4hlj9tfrqqu",
     "score": "193901231519",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb12dnyq8p80qyyjysf4e6f4j39uxqky5s8cwtv2y",
-    "score": "193465612132",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1f0kxq029tgac6zhx83q4gppsn857rqvwdzsw76",
-    "score": "193362269358",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -6890,12 +5850,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1t2zkh2cyu5s5c330aw95wr5j9xgwlcktqre4wt",
-    "score": "191882712755",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor1j8hdpseryvp4akumcr5vhw4j887wcd7c24zu7l",
     "score": "191510409307",
     "reclaimed": "0",
@@ -6938,14 +5892,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb134fu24f6lr9ch0nfjsjpls7n0sggmnz3dj03hj",
-    "score": "190033852164",
-    "reclaimed": "900306099",
-    "spent": "900306099",
-    "last_spent_height": 14744121,
-    "last_reclaim_height": 14744126
-  },
-  {
     "address": "thor10xgrknu44d83qr4s4uw56cqxg0hsev5e7swgu8",
     "score": "189134693982",
     "reclaimed": "0",
@@ -6958,12 +5904,6 @@
     "spent": "643750354637",
     "last_spent_height": 16846041,
     "last_reclaim_height": 16846046
-  },
-  {
-    "address": "bnb1dcmdqzq75ayqs32y5qhqfsaur9kguuac2k9kl0",
-    "score": "187899789714",
-    "reclaimed": "0",
-    "spent": "0"
   },
   {
     "address": "0xd0674364Ee0a3FF295c76D95C34122feF0407bd8",
@@ -7128,12 +6068,6 @@
     "last_reclaim_height": 17232099
   },
   {
-    "address": "bnb1cl23e752wmxfeq83ts47xpje93g62e0t2xxaug",
-    "score": "182148387155",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor1tr2sql9lsv5xugk2e7tmdj9cvk94f4lpztdajf",
     "score": "181835042024",
     "reclaimed": "0",
@@ -7154,12 +6088,6 @@
   {
     "address": "thor187l28lzhar2dccmrjd90ttgy8wltgh5qp6skv2",
     "score": "180706121386",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "terra1hyhmxr000c0p6wmxgfy7gtamjq2lugah5fuyea",
-    "score": "179815367939",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -7214,24 +6142,10 @@
     "spent": "0"
   },
   {
-    "address": "bnb12espnytuggcnr85rkpjz5pdyqf6azksry33lcc",
-    "score": "177939051604",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0x349ca44d8aefbf79050ad9d2ece34d670dfbe8ce",
     "score": "177518344275",
     "reclaimed": "0",
     "spent": "0"
-  },
-  {
-    "address": "bnb1gycukvc607qw8aw3z44vptna7fkzhxtqx0rvzp",
-    "score": "177314997398",
-    "reclaimed": "347033975089",
-    "spent": "347033975089",
-    "last_spent_height": 15215360,
-    "last_reclaim_height": 15215364
   },
   {
     "address": "qzy4ulgzjrp9r73a6p27uxdacn0elsy66vnj9pq6mq",
@@ -7316,20 +6230,8 @@
     "spent": "0"
   },
   {
-    "address": "bnb1cyzjmrgyysdy4phgnjhz80mjsgfj556wjqkljr",
-    "score": "174860236916",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0xc0fbcd288d7372acf5a797ec90b558a7ab59c6a8",
     "score": "174706348299",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb159d2xmfewn42mm2lwh3q866d5s2vuq87j6fvga",
-    "score": "174405396281",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -7400,12 +6302,6 @@
     "spent": "0"
   },
   {
-    "address": "terra196slqhydhakgsqs34n4fhnvjf9ksh8lwn3mrd3",
-    "score": "172190450927",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qw27z5sa9lm5763mqdg6eg5qu0cv56a25dwhqr9",
     "score": "172119485494",
     "reclaimed": "356969896207",
@@ -7462,12 +6358,6 @@
   {
     "address": "0x646048cd8b914626b355e9e301c7bb2a77b07483",
     "score": "171230859539",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1gmenuk88j7wx0w3fujdeu4fzdcq0d78kn4zwd0",
-    "score": "171011956908",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -7540,12 +6430,6 @@
     "last_reclaim_height": 17033748
   },
   {
-    "address": "bnb1zz9jwd9j3ct2l5kauat3jv5qw42swpxnf7wu78",
-    "score": "169530036321",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor1xgy3wczd47vqhdckc7fnzadrrgya2wqyfjvhav",
     "score": "169288996573",
     "reclaimed": "49949886410",
@@ -7572,12 +6456,6 @@
     "spent": "95934327820",
     "last_spent_height": 14493511,
     "last_reclaim_height": 14493516
-  },
-  {
-    "address": "bnb1g5v5d26fpw7n3w7v5z2cg947kh82erqwmmzyzh",
-    "score": "168384875765",
-    "reclaimed": "0",
-    "spent": "0"
   },
   {
     "address": "0xFD74b46Fbf014342505628ed43820F03E995dC35",
@@ -7622,14 +6500,6 @@
     "spent": "318538834640",
     "last_spent_height": 17436787,
     "last_reclaim_height": 17436793
-  },
-  {
-    "address": "bnb12hgcj4z88sm9raqsarxy0g49ujj448x0peua4l",
-    "score": "167316475303",
-    "reclaimed": "2502551693456",
-    "spent": "2502551693456",
-    "last_spent_height": 15044976,
-    "last_reclaim_height": 15044981
   },
   {
     "address": "0x2f8256b67828031c61af789124f2c4f642461de0",
@@ -7708,12 +6578,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1wq5s7wnn9tkymehpj98au6lgsduvd2ezndmgrv",
-    "score": "164362025079",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qfaswzmwuyrnv2r5za8lq8nkged7kj7zw5cwkpu",
     "score": "164362025079",
     "reclaimed": "0",
@@ -7738,20 +6602,8 @@
     "spent": "0"
   },
   {
-    "address": "bnb14v0uhqces5jh926uj38483jda3a22rxtxze6v0",
-    "score": "164149994705",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor1z6nmt4z2nc3r6yq4rawjv0rt9hzhgul2dz8rj8",
     "score": "164082534631",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "terra1utzvqu0x9dmsc8g0ugexucvcyta25qph998z7t",
-    "score": "164080084662",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -7774,12 +6626,6 @@
   {
     "address": "0xbe81af4eed47d6439552a6a21528b5b59fe229f1",
     "score": "163629261133",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1sw9px6fry3cvd8dexcsqqkhjvyp69azkeway9c",
-    "score": "163588815137",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -7874,14 +6720,6 @@
     "last_reclaim_height": 14955924
   },
   {
-    "address": "bnb1sznp92nwv9jenndl4j7dvmt97kexpgnvs3zwgq",
-    "score": "162298171854",
-    "reclaimed": "4392764031",
-    "spent": "4392764031",
-    "last_spent_height": 14689947,
-    "last_reclaim_height": 14689951
-  },
-  {
     "address": "thor1hptvqw7v5h4shpsygz8w0d3h402yn54fr45tjk",
     "score": "162255328717",
     "reclaimed": "0",
@@ -7894,12 +6732,6 @@
     "spent": "162252227168",
     "last_spent_height": 14332848,
     "last_reclaim_height": 14333573
-  },
-  {
-    "address": "bnb19ayfjullrwx6wxuw9z82dep7pzv0weanjqpkm2",
-    "score": "162244261904",
-    "reclaimed": "0",
-    "spent": "0"
   },
   {
     "address": "thor17sd55hl9lndlhzetruh3lgl6m7nsy4pys2v5s6",
@@ -7946,20 +6778,8 @@
     "spent": "0"
   },
   {
-    "address": "bnb1yw7lnfkvfp3sw0smlp4a8p0u5f5l6wt40kxkkc",
-    "score": "161633006676",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor135f22wsurcmtezufsndextk0gmdu6dg9rzw97t",
     "score": "161614265078",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "terra1axkec29j63vtvc559ze27puy2yvnfxeu0fjyd9",
-    "score": "161459979698",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -7970,20 +6790,8 @@
     "spent": "0"
   },
   {
-    "address": "terra1t9xe4z3jp0uwuv69kwprhzu6dmgcqjyua00rt5",
-    "score": "161163657302",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1q8lufvv80uzeky4u0strqxlv63uf0ltanjc70pk",
     "score": "161137460530",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1awx8s0m4s8z7ppa90503t07mkfp74shm4xs2gw",
-    "score": "160764770412",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -8022,12 +6830,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1xqtphmcjhcztp0dvj9hum879tlyd72mkgugcdk",
-    "score": "160190167364",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1q4nagjccprgnfatjwt4cjyl70reu7cwjerqnu8n",
     "score": "160077062125",
     "reclaimed": "0",
@@ -8042,12 +6844,6 @@
   {
     "address": "0xdDcfcd0d38165d859Ba5b18C80A8b0e954CeB4E8",
     "score": "160058412424",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1jng3mcwsu922zqxuzcwvvvd7g60s52kzs9hnjy",
-    "score": "159870683929",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -8214,12 +7010,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1r8kyvxz59vhrz0fq9w5zr2n0mu3wtfmr7etpmw",
-    "score": "155329698574",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qsfsrefmcy76hdq692f3rlmkcz7h3zz2jzssrwx",
     "score": "155329698574",
     "reclaimed": "0",
@@ -8234,12 +7024,6 @@
   {
     "address": "0xfebd5143e121d0822f328c8b8d5bc6694a5890dd",
     "score": "155247402581",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1hkc0gva8xyqppuchzk3wtrtmdt3grhkyh4rkqg",
-    "score": "155193044103",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -8260,12 +7044,6 @@
   {
     "address": "thor1y63qrgzehku0wxfnzx8j7a8vgalvz6cyw6y8nv",
     "score": "154709793450",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1t396ttvyslwpnjz0z90p0nnczx8md7l9qwzqxv",
-    "score": "154630078411",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -8480,20 +7258,8 @@
     "spent": "0"
   },
   {
-    "address": "bnb1c2hnez0c4t87s9y22l0m5c56ycq4qmtgtlnf92",
-    "score": "149999634087",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1q3hd72xrm4lws9juvelld40rggm0egla3lzutxu",
     "score": "149999634087",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1flc2xyu77jku3meld3jgp90ywyjcsh4vwq6g2y",
-    "score": "149975623876",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -8572,12 +7338,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1adqz3f9jqr4e379kxdka8mw27gsdkzy2rm5r44",
-    "score": "147672324297",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0x050A65d9a0A29eCB47018F316185466eBEceE071",
     "score": "147298014413",
     "reclaimed": "0",
@@ -8598,12 +7358,6 @@
   {
     "address": "0x77a00A744aD229dd7221C4d90D90f5C2E12F53F4",
     "score": "146876151725",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1k8jpksxly5tmv3s902y866rfys5fkj390f6t7x",
-    "score": "146742886934",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -8686,12 +7440,6 @@
     "last_reclaim_height": 15181460
   },
   {
-    "address": "bnb1pjwdfln4rh00x9p99atz5ndrt8mkggue0x0uek",
-    "score": "143346619386",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor1ma0n3l0eaf8cy3gnszcftg32v076sekkzqm8m2",
     "score": "143345931930",
     "reclaimed": "0",
@@ -8728,14 +7476,6 @@
     "score": "142788124088",
     "reclaimed": "0",
     "spent": "0"
-  },
-  {
-    "address": "bnb1sqeujfjf0a8yxs7tde7sx24xfyrt5n28m5vr02",
-    "score": "142661613967",
-    "reclaimed": "2699612297",
-    "spent": "2699612297",
-    "last_spent_height": 14887157,
-    "last_reclaim_height": 14887171
   },
   {
     "address": "0x66553f9adcd3662d46c939f0d06ce996fac37df7",
@@ -8828,12 +7568,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1ax495hyt2l2fafe4vjvq3e6gszz7yncl9tu5xg",
-    "score": "140435327174",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qy7yxaun8hzmue5ggktqqy3dw2tt8yppf3qaxt0",
     "score": "140394102972",
     "reclaimed": "839038532457",
@@ -8856,28 +7590,8 @@
     "last_reclaim_height": 17485447
   },
   {
-    "address": "bnb1p45950exmcxx6h5r7t3y9f8wzupvyngd92hhp7",
-    "score": "140250760468",
-    "reclaimed": "418367563343",
-    "spent": "418367563343",
-    "last_spent_height": 14725260,
-    "last_reclaim_height": 14725268
-  },
-  {
-    "address": "bnb1u4j7xtfmvh0gwrp2v72z502fnu2nk3pfa8x2z8",
-    "score": "139924906898",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qznjectv7fw754ddvdr692ykelzvvshz2hc5xln",
     "score": "139812078788",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb10m6wxe0fl60hxe52dwwpvcshtwp5n5mmldfn2e",
-    "score": "139810454887",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -8906,12 +7620,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb137xvx6ceqpxe34xr46y3ax350fr2q4zymw5l94",
-    "score": "139009935480",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qah7jkhpjc50dlswmaywrds4evvguf6sdrjjavn",
     "score": "138952435882",
     "reclaimed": "0",
@@ -8920,12 +7628,6 @@
   {
     "address": "0xdb8cf8e2cde1090b06f29482ec4fbd425f84575e",
     "score": "138952435882",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1skdtxw9el3mj50y3jqqf6yqxfz8qj7sjeykcd9",
-    "score": "138945165245",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -8970,12 +7672,6 @@
   {
     "address": "0x445922f4ba10a5ece3bd1309cd122faf2678f30a",
     "score": "138296695404",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1ps0kss9napg85lsmc0r8ayskyg05mw8lv5zu0d",
-    "score": "138287646923",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -9040,12 +7736,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1yg2w0hyagg26xgldrm3g5r6ym663mp7ufyjgfc",
-    "score": "136336238890",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qwlx3d2hzgxydg77att8ydxxaexvzjxk0dmv754",
     "score": "136287390327",
     "reclaimed": "0",
@@ -9104,12 +7794,6 @@
     "spent": "595023267617",
     "last_spent_height": 17235935,
     "last_reclaim_height": 17235941
-  },
-  {
-    "address": "terra15lv6f8359lk2rkxlnmp9z5gdfa8tsacku9quhx",
-    "score": "135259180264",
-    "reclaimed": "0",
-    "spent": "0"
   },
   {
     "address": "ltc1qsmd2yph73rylq59x4r5jauxgghxnhvmnvrq2yf",
@@ -9244,20 +7928,8 @@
     "last_reclaim_height": 17466232
   },
   {
-    "address": "bnb1a3a672u6slhah9gjjac79akrd90ra8vxk65j8g",
-    "score": "132925782618",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0x2324a8cc9694c10d02db16da11bfd456e99f0098",
     "score": "132552076819",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1nk2kg4x3kcya05r8d93cyl7ex25k7hnfqt0803",
-    "score": "132548118702",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -9334,12 +8006,6 @@
     "spent": "131522093346",
     "last_spent_height": 17465423,
     "last_reclaim_height": 17465428
-  },
-  {
-    "address": "bnb1ulq6n5eqaarhuqrh0tuv7wu72jhagdtmvdf7uq",
-    "score": "131464302304",
-    "reclaimed": "0",
-    "spent": "0"
   },
   {
     "address": "0x535cb152123071c91459d6e7b4bcf8175942ea09",
@@ -9442,12 +8108,6 @@
     "last_reclaim_height": 17459951
   },
   {
-    "address": "terra13dmfusqfkmj7lm6yt3uk35lfnqlz0jmdzsr8xk",
-    "score": "129543125771",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0xb1959C3Eb4F92faC104875267C67e06258C18249",
     "score": "129460495450",
     "reclaimed": "129460495450",
@@ -9462,12 +8122,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1v9u4gfkw0qep5r5jetmqk5l00fvhsyj8z66zpx",
-    "score": "129209804202",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qt5tenjpn0ccq2vz8xkt6r482h4gcuycg20kcqc",
     "score": "129074303218",
     "reclaimed": "386514109199",
@@ -9478,12 +8132,6 @@
   {
     "address": "0xf5d7c99e23194ec4f9b9ae47d070cbaa82201028",
     "score": "128801431977",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb16w8vvvwefxnrstrrarq64wexfx4en645qfxd9e",
-    "score": "128794243939",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -9538,12 +8186,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb13q89z7j2gg7fc5qrhyrdwehfpsz0dey74d5aek",
-    "score": "127898397372",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0xad340092c302d97f55190378971d6fa4f0b676a9",
     "score": "127898397372",
     "reclaimed": "0",
@@ -9566,19 +8208,7 @@
     "last_reclaim_height": 14692775
   },
   {
-    "address": "bnb1zafypy4sz8rnrhejvqds5s088w3cmqa53qcl0q",
-    "score": "127818802885",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "ltc1qn77vzn6t00rvlpx4dcpca2daqv43n0837ljk5y",
-    "score": "127540585156",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1ha3zephe5jndlx2yxvf42cjw0qm8ev3gk0xndq",
     "score": "127540585156",
     "reclaimed": "0",
     "spent": "0"
@@ -9638,12 +8268,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1msy8dw3pu6takquqe4dptdmg5lv2e45w3dys36",
-    "score": "125323197094",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor1qefmyzkgkvu2kz57yv5x5r6k9tvr65v3uany68",
     "score": "125184361713",
     "reclaimed": "4087980164889",
@@ -9664,12 +8288,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1j69g6dvex2mu3pz3w3cucyex99mlr8jy2n00dd",
-    "score": "125130536070",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0xa877a062B928A0Dc12Ca474b005BfA9f58bdbdEf",
     "score": "125010569470",
     "reclaimed": "0",
@@ -9682,12 +8300,6 @@
     "spent": "201958938315",
     "last_spent_height": 17128463,
     "last_reclaim_height": 17129186
-  },
-  {
-    "address": "bnb1f7duh8223rqjfcxn2cmj0jsk3pehft8g0zn4pu",
-    "score": "124974481296",
-    "reclaimed": "0",
-    "spent": "0"
   },
   {
     "address": "bc1qzn9zrf2yy8rc055d4fgfyklrermnljgknmv3xq",
@@ -9710,12 +8322,6 @@
     "spent": "869045595718",
     "last_spent_height": 17251384,
     "last_reclaim_height": 17251395
-  },
-  {
-    "address": "bnb1tez4z8ea307jtym2pelvjqgtc4zy2rrhx8lwqw",
-    "score": "124760466709",
-    "reclaimed": "0",
-    "spent": "0"
   },
   {
     "address": "thor1s2crk4thx8nu5lexhfpvs383pngs6zr6fzx0xz",
@@ -9818,12 +8424,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb19pxcth4u09wk4er68y00rnc46gh4tuf8gwvkcf",
-    "score": "123536739667",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0x4748c6d9b5db06940028d523ca536ea4c582fb12",
     "score": "123515501940",
     "reclaimed": "0",
@@ -9916,12 +8516,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1306ptwqtd55k2smysfkqyua6csqzplu8j7fgy3",
-    "score": "122326688076",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qd8rntqqnwx0z44axu97cvdpez4d82462p2ntr8",
     "score": "122196033187",
     "reclaimed": "0",
@@ -9944,12 +8538,6 @@
   {
     "address": "0x2c6c3aa69ffd16c2fd3a1752a80a6e6700637d72",
     "score": "122122431676",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1x5p2446ru7e730w8stl7kzrlwxpqvqz5auuqxy",
-    "score": "121979055863",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -9994,30 +8582,12 @@
     "last_reclaim_height": 17029975
   },
   {
-    "address": "bnb125t4c0hrlaku9049lprz73yn6k4ul9vfu72dtp",
-    "score": "121462275544",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1dv7wf5k4u0lq0hry9ac93yggqqljxmehhv2gk7",
-    "score": "121235365144",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qpfryk7m06ckc9mcaepul9p70t7pymedenpf3uv",
     "score": "121233457312",
     "reclaimed": "121233457312",
     "spent": "121233457312",
     "last_spent_height": 17321675,
     "last_reclaim_height": 17322384
-  },
-  {
-    "address": "bnb1fs05tqd8fxn2l5c8slrnyx99jx6x776ldgeeu2",
-    "score": "121127514956",
-    "reclaimed": "0",
-    "spent": "0"
   },
   {
     "address": "bc1q2k0htwkh7hds838e3vdder6y490v4mav7ev8xm",
@@ -10056,32 +8626,14 @@
     "spent": "0"
   },
   {
-    "address": "bnb1fxzfrv0c9hul6mjzsjxl73j2fsn07qwjhjqjrx",
-    "score": "120736614295",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor1z25vn868cl2l85d8n9ezqsfk26vjp2g7y32jny",
     "score": "120661737535",
     "reclaimed": "0",
     "spent": "0"
   },
   {
-    "address": "bnb18xhvhxznzeqeagd29dghc5snkcj6e7csmgyns4",
-    "score": "120407227972",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qeh6uzdlwkntm7f4f7lsp2tjmru6upd4vu9jt93",
     "score": "120407227972",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1hywva8fhy79lk7qfjhwrquwn56dxvlq2ufsgkx",
-    "score": "120402980215",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -10106,12 +8658,6 @@
   {
     "address": "bc1qt7c4hlxhhpw3729zwkds4dxq4jtgp56070gmr3",
     "score": "120253168978",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1mzl9u0cv5hu89pc4gzdhqhqpxtdrs0xa6pj54m",
-    "score": "120198632112",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -10184,12 +8730,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1ulme3yq0maztzg9u4gkcp3ve4xszcy2e6066jm",
-    "score": "119411490183",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor140zzrmn7apkcvm43t3ckwf87fck3n0upd0mpa4",
     "score": "119362547463",
     "reclaimed": "0",
@@ -10198,12 +8738,6 @@
   {
     "address": "ltc1qm0czevx7ju65rcqcdqwwpdwueagngs80hu496t",
     "score": "119252063721",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1z48stek2x9y297yfk83h2mflxz7320la9w2d9a",
-    "score": "119196172119",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -10236,12 +8770,6 @@
   {
     "address": "0x834f34df09302540e568d0c5641cb40c6f099e1c",
     "score": "118870421115",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1ycxr8na895hzmcnltyqshgf8gnrcwugznxwnr2",
-    "score": "118866163922",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -10280,18 +8808,6 @@
     "spent": "118357394620",
     "last_spent_height": 14332848,
     "last_reclaim_height": 14333573
-  },
-  {
-    "address": "bnb1s6zsj373mpufaj4vvmpp47runlr2mk55htzlyy",
-    "score": "118168403374",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1lw6j90gnxdnneedqzw9vy6yeqxwpfzv07mnw0e",
-    "score": "118161091915",
-    "reclaimed": "0",
-    "spent": "0"
   },
   {
     "address": "ltc1qsmhu469hujrdktzllj6hpwkmwzamgl3hvy7m59",
@@ -10368,12 +8884,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb15leyr8h3qawrz9kqw2shclhyp64pft53fkaj44",
-    "score": "117297287777",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor19myw3v9skyy66ku6fl3th360xru6lecjcxvhyu",
     "score": "117128613700",
     "reclaimed": "0",
@@ -10388,12 +8898,6 @@
   {
     "address": "thor1u6q9rxuh4rzkf7gwk0pal63kpscut29vng5rk0",
     "score": "117046896226",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1yfv8qe2zs9v2xu5f3kt7jsw9ga6xazv5galjc9",
-    "score": "116860527518",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -10484,12 +8988,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb156caz8rkfxa99cha6tcygc2vpey7ucmhvyuf9f",
-    "score": "115713078298",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1q83xz50mvju7j076a6rge6xway0hvav5xfw99pq",
     "score": "115574912694",
     "reclaimed": "0",
@@ -10518,12 +9016,6 @@
   {
     "address": "thor1djw53rcntd66nvm622ptgd7g5qfng3y7vsp0hu",
     "score": "115078998302",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1ucrs0j5nquqa54xen2cnwn03wrvh49t94f58x5",
-    "score": "115074995239",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -10576,32 +9068,14 @@
     "spent": "0"
   },
   {
-    "address": "terra1yg97a3r6647jpa0ynyxkd8m6wke4cnkzy68z2m",
-    "score": "114564292066",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor1q8kkgcepekelqvmmj5ypcms0rs6v6mpltlfjqf",
     "score": "114563752554",
     "reclaimed": "0",
     "spent": "0"
   },
   {
-    "address": "bnb13tenwkvdcpv3dzpvn4l6zmk9u0hndkfqj945cs",
-    "score": "114553658529",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor1ghsfuemwr875fk429287g3nm5tzv04cvjq9p8v",
     "score": "114522976792",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1lxsqd0ys7lvdjntg6vvfxfnnrhcchle4xk4s65",
-    "score": "114520615579",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -10664,12 +9138,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1ev7x3gtswckr7cv9dgg7t5gq932sdy58kp7l8v",
-    "score": "113693784511",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor1gfd0yftyf4ejg9eu926ncxk68r4psg2a3s78kh",
     "score": "113682046603",
     "reclaimed": "6021260395",
@@ -10686,12 +9154,6 @@
     "last_reclaim_height": 17281810
   },
   {
-    "address": "bnb1ve3xjvdtezqj8t5eruda8p7rtygqx54t0z9ept",
-    "score": "113661384813",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor1fkt9vvd8atxyqgpr8wzprwudtk38xhnwzzuqk7",
     "score": "113628715100",
     "reclaimed": "0",
@@ -10704,12 +9166,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb12hatfu5d6dp4xhtnp40h00ywd9yzhf9h59439f",
-    "score": "113486288415",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qpaszjswlsxglfy47cwy0mjclrdklc0dxwtue9v",
     "score": "113486288415",
     "reclaimed": "0",
@@ -10718,12 +9174,6 @@
   {
     "address": "0x7b65fD2b9eE404cE22602c5F62F5a6c0c0978422",
     "score": "113410984665",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1uzdghza3k79tgl6tc3xupdfd3jthrf5h0rfftt",
-    "score": "113315973038",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -10788,12 +9238,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb10k63sqjh9x2dd3trm9z0nw083rcs3uevlxpdvl",
-    "score": "112192477310",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0x80ef01d233e82ba91d2789e49dbd90077102c226",
     "score": "111982214472",
     "reclaimed": "0",
@@ -10807,12 +9251,6 @@
   },
   {
     "address": "thor1fklsnglshkghycem2237076vtxg6mmtzml6nk8",
-    "score": "111969184546",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1d8jdl9w00jex5xc4gukepcn6rwzvcfjkzqdyq4",
     "score": "111969184546",
     "reclaimed": "0",
     "spent": "0"
@@ -10887,12 +9325,6 @@
   },
   {
     "address": "thor18xavxtj4vmj45yw4epkqr55e6nxrzt8ss7c6jm",
-    "score": "110845127692",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1skp2q4a05ed8ven2gn6f4fj30cl4ew9wy0ay3r",
     "score": "110845127692",
     "reclaimed": "0",
     "spent": "0"
@@ -10990,12 +9422,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1zrlw7lw3ejmtfz0xl7l7czzwgr3uwm43vdnwud",
-    "score": "109957010134",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor1ssvm4f86wfu5x03gpvxkzfmfv6tsafac5aj2dz",
     "score": "109888166550",
     "reclaimed": "25279113594",
@@ -11072,12 +9498,6 @@
   {
     "address": "thor1f2v8ljr6xnxmkdwt9m558jnmqej64erruam8zk",
     "score": "109487031153",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1keluv5z9adulc5mc7xr55rfzdhu6q4l5k5aj0s",
-    "score": "109384097683",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -11178,14 +9598,6 @@
     "last_reclaim_height": 17398906
   },
   {
-    "address": "bnb1h2w4chemf5xzh083995wm8gzmtm26vmpqeves2",
-    "score": "108419162418",
-    "reclaimed": "444054638",
-    "spent": "444054638",
-    "last_spent_height": 15208592,
-    "last_reclaim_height": 15208597
-  },
-  {
     "address": "0xbdc2399471528e168f07567b7835bd6afcf90585",
     "score": "108402822197",
     "reclaimed": "0",
@@ -11276,12 +9688,6 @@
   {
     "address": "thor167cpt5sr9zhnvnqn9gxclvy4js8pch3fv0yzq0",
     "score": "107517893646",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1kyprlcv6960a6anw2snq6twzleuycpmxwgasnq",
-    "score": "107517862916",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -11380,12 +9786,6 @@
     "last_reclaim_height": 17337879
   },
   {
-    "address": "bnb1q0q8qfzvstufewecwjr26j24dx0s670luaaj29",
-    "score": "106727922383",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0x7f1bACF918B43E6689e8DF98abf19c45Ebe21CCD",
     "score": "106671032159",
     "reclaimed": "106671032159",
@@ -11396,18 +9796,6 @@
   {
     "address": "bc1q68c6d8qy3nxgw3q7vlhvpzdlsz6apv2tp52u9a",
     "score": "106653224340",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1k7u8mfu9aajq68mnkw53z9uzdsgdpnmvyn63ud",
-    "score": "106586362549",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb198d9y263myw7egtuz3uqukmwg0mmzda5x5rjal",
-    "score": "106581582490",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -11552,12 +9940,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1n8pxhlpn4fh2trdz89hwzqzkej6tzcpauhuc7p",
-    "score": "105433386611",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qcpeyykwslz4g869e6surl5uwwfkgkgg73f2pul",
     "score": "105407472513",
     "reclaimed": "105400599648",
@@ -11616,12 +9998,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1mmg2q7mh7ahhug6v5ve3fu3ujqfw455gs05eua",
-    "score": "104870960809",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "qzu03q5fg4h2q62nekcagqjdp8jd4e6gm5wc8jkmaf",
     "score": "104826623203",
     "reclaimed": "427814486588",
@@ -11662,38 +10038,14 @@
     "last_reclaim_height": 15517104
   },
   {
-    "address": "bnb1z7qglhnw43ykphpnleaxljcju4f80pg9pumrhv",
-    "score": "104625324588",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qvjsxmcpucvw7sxwt360u6k6m98jhs4grhxnha6",
     "score": "104592675889",
     "reclaimed": "0",
     "spent": "0"
   },
   {
-    "address": "bnb1glwuvxygj0fud4hv4wj5zahrjtfhljly55uvy0",
-    "score": "104467915744",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1xwdjrr35k7wyx7kth5pk0ychy4nc5dg4azspyz",
-    "score": "104376065646",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qspegchr6q8alrtks00sfeq0rv97qy2lee3s64j",
     "score": "104376065646",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1wzwxgtqepyag25a6epjphrj2tly7ul2ta9s764",
-    "score": "104368975122",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -11722,20 +10074,8 @@
     "spent": "0"
   },
   {
-    "address": "bnb1wkt7q2daz60jtxsrhslrdyyw7nmt8z24202u5n",
-    "score": "104314778943",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qgnlhrk8tz75c37a48mqctmrexr893jfahml4n5",
     "score": "104314778943",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1n6xrk0ypflgcvxkx09z43qwt2dcn8v67k4aafm",
-    "score": "104292217399",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -11822,12 +10162,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb14tpe3m48znyxrx09smz62czs8gcda9wl2ly4tu",
-    "score": "103582053597",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "0xa0d79c8c98e7e5b7c3cf98530775225510eb7240",
     "score": "103349474768",
     "reclaimed": "0",
@@ -11848,12 +10182,6 @@
   {
     "address": "0xec1e23990e7d6b1a7a7fef00c10e28b26188bc5a",
     "score": "103093191223",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1g9uur00qa3lf3kclnn0l5gprfq9cepf2zml58h",
-    "score": "102915791604",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -11902,12 +10230,6 @@
     "spent": "0"
   },
   {
-    "address": "bnb1r08g4e3plkf58rx2c4mmajdny8zv40y7532pnt",
-    "score": "102664474897",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor1r70yvpg90t7fuuz2lgh7jmwxlaurrd8vte2kgc",
     "score": "102663696080",
     "reclaimed": "0",
@@ -11934,18 +10256,6 @@
     "spent": "86853746748",
     "last_spent_height": 17322860,
     "last_reclaim_height": 17322866
-  },
-  {
-    "address": "bnb168zc8yetu428ykw94lvg28g248dyqq2rwpt56c",
-    "score": "102376375368",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1smg8dl3xtgd9jetrax3vzwwktuawvsdu26e2zy",
-    "score": "102268002412",
-    "reclaimed": "0",
-    "spent": "0"
   },
   {
     "address": "thor1xshj0tckef7tptefhdvt8ltmyjt6qfwvayudc5",
@@ -12040,12 +10350,6 @@
     "last_reclaim_height": 16648253
   },
   {
-    "address": "bnb1h6jyatqzvykaz69h0m3a5xzgvgj4n9v4l06zr2",
-    "score": "101944043854",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "bc1qj9rregkj40crspr6pxcheuup9j74fer43v4gvw",
     "score": "101866266447",
     "reclaimed": "1173449812841",
@@ -12062,18 +10366,6 @@
   {
     "address": "0xc14BBd84A35151402D45F7Fe4B53094e9cD86182",
     "score": "101758291406",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1k5ufnmukaty7d3uqpcz7768vf6jm00r6e5p7aq",
-    "score": "101696419466",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
-    "address": "bnb1jy6sy5nhfc34hgv56kt54p7wn86pfpa35nhp8u",
-    "score": "101669229498",
     "reclaimed": "0",
     "spent": "0"
   },
@@ -12112,24 +10404,12 @@
     "last_reclaim_height": 14390539
   },
   {
-    "address": "bnb15xt8fcflgr2u2r34ufnv72zj3727p93xh99lf8",
-    "score": "101149581479",
-    "reclaimed": "0",
-    "spent": "0"
-  },
-  {
     "address": "thor1kss4px5h9aeggyzzgvlgsjenfsl4t8z9j6j08q",
     "score": "101085074037",
     "reclaimed": "490753592777",
     "spent": "490753592777",
     "last_spent_height": 16819587,
     "last_reclaim_height": 16819620
-  },
-  {
-    "address": "bnb1k5n845pmcdqpm5m5kl5k67lye60u9yxee23ydf",
-    "score": "100880626783",
-    "reclaimed": "0",
-    "spent": "0"
   },
   {
     "address": "0x447b6Edd83315264019AA5b861f8661429022D2e",
@@ -12144,12 +10424,6 @@
     "spent": "1512641656800",
     "last_spent_height": 15294060,
     "last_reclaim_height": 15294768
-  },
-  {
-    "address": "bnb1rjrc0pzwn3jtfpu073t4pq92unc9ctlsu77ywm",
-    "score": "100739105950",
-    "reclaimed": "0",
-    "spent": "0"
   },
   {
     "address": "0x27292B08768A2945eBFFE5e873f1581ddC8c131C",
