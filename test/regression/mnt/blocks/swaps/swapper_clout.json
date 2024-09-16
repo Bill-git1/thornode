@@ -98,6 +98,8 @@
         "BTC.BTC": "532724",
         "ETH.ETH": "532724",
         "bond_reward": "44394",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -202,6 +204,8 @@
         "BTC.BTC": "532724",
         "ETH.ETH": "532724",
         "bond_reward": "44394",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -461,6 +465,8 @@
         "BTC.BTC": "-8875712",
         "ETH.ETH": "-7367154",
         "bond_reward": "17352713",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -669,6 +675,8 @@
         "BTC.BTC": "508943",
         "ETH.ETH": "556567",
         "bond_reward": "44337",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       },
       {
@@ -914,6 +922,8 @@
         "BTC.BTC": "508653",
         "ETH.ETH": "556808",
         "bond_reward": "44383",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -1173,6 +1183,8 @@
         "BTC.BTC": "-7590339",
         "ETH.ETH": "-5845321",
         "bond_reward": "14545508",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -1381,6 +1393,8 @@
         "BTC.BTC": "486163",
         "ETH.ETH": "577594",
         "bond_reward": "46091",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -1485,6 +1499,8 @@
         "BTC.BTC": "486163",
         "ETH.ETH": "577594",
         "bond_reward": "46091",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -1589,6 +1605,8 @@
         "BTC.BTC": "486163",
         "ETH.ETH": "577593",
         "bond_reward": "46092",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -1693,6 +1711,8 @@
         "BTC.BTC": "486163",
         "ETH.ETH": "577593",
         "bond_reward": "46092",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -1797,6 +1817,8 @@
         "BTC.BTC": "486163",
         "ETH.ETH": "577593",
         "bond_reward": "46092",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -1901,6 +1923,8 @@
         "BTC.BTC": "486163",
         "ETH.ETH": "577593",
         "bond_reward": "46092",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -2005,6 +2029,8 @@
         "BTC.BTC": "486162",
         "ETH.ETH": "577593",
         "bond_reward": "46093",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -2109,6 +2135,8 @@
         "BTC.BTC": "486162",
         "ETH.ETH": "577593",
         "bond_reward": "46093",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -2213,6 +2241,8 @@
         "BTC.BTC": "486162",
         "ETH.ETH": "577593",
         "bond_reward": "46093",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -2317,6 +2347,8 @@
         "BTC.BTC": "486162",
         "ETH.ETH": "577593",
         "bond_reward": "46093",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -2500,6 +2532,8 @@
         "BTC.BTC": "-6815668",
         "ETH.ETH": "-4899743",
         "bond_reward": "12825264",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -2708,6 +2742,8 @@
         "BTC.BTC": "466419",
         "ETH.ETH": "597587",
         "bond_reward": "45847",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       },
       {
@@ -2953,6 +2989,8 @@
         "BTC.BTC": "466810",
         "ETH.ETH": "598727",
         "bond_reward": "44312",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       },
       {
@@ -3238,6 +3276,8 @@
       {
         "ETH.ETH": "-33324718",
         "bond_reward": "34434569",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],

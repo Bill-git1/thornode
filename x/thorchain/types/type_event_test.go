@@ -72,10 +72,12 @@ func (s EventSuite) TestPool(c *C) {
 }
 
 func (s EventSuite) TestReward(c *C) {
-	evt := NewEventRewards(cosmos.NewUint(300), []PoolAmt{
-		{common.ETHAsset, 30},
-		{common.BTCAsset, 40},
-	})
+	evt := NewEventRewards(
+		cosmos.NewUint(300),
+		[]PoolAmt{{common.ETHAsset, 30}, {common.BTCAsset, 40}},
+		cosmos.NewUint(50),
+		cosmos.NewUint(60),
+	)
 	c.Check(evt.Type(), Equals, "rewards")
 	c.Check(evt.BondReward.String(), Equals, "300")
 	c.Assert(evt.PoolRewards, HasLen, 2)
@@ -83,6 +85,8 @@ func (s EventSuite) TestReward(c *C) {
 	c.Check(evt.PoolRewards[0].Amount, Equals, int64(30))
 	c.Check(evt.PoolRewards[1].Asset.Equals(common.BTCAsset), Equals, true)
 	c.Check(evt.PoolRewards[1].Amount, Equals, int64(40))
+	c.Check(evt.DevFundReward.String(), Equals, "50")
+	c.Check(evt.IncomeBurn.String(), Equals, "60")
 	events, err := evt.Events()
 	c.Check(err, IsNil)
 	c.Check(events, NotNil)

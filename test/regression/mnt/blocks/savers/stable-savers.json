@@ -119,6 +119,8 @@
         "ETH.ETH": "347751",
         "ETH.USDC-0X9999999999999999999999999999999999999999": "347751",
         "bond_reward": "66591",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -244,6 +246,8 @@
         "ETH.ETH": "347785",
         "ETH.USDC-0X9999999999999999999999999999999999999999": "347340",
         "bond_reward": "66938",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -527,6 +531,8 @@
         "ETH.ETH": "347910",
         "ETH.USDC-0X9999999999999999999999999999999999999999": "347465",
         "bond_reward": "66563",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       },
       {
@@ -793,6 +799,8 @@
         "ETH.ETH": "347912",
         "ETH.USDC-0X9999999999999999999999999999999999999999": "347464",
         "bond_reward": "66563",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -1080,6 +1088,8 @@
       {
         "ETH.USDC-0X9999999999999999999999999999999999999999": "170491",
         "bond_reward": "939356",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -1383,6 +1393,8 @@
       {
         "ETH.USDC-0X9999999999999999999999999999999999999999": "196804",
         "bond_reward": "913047",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -1627,6 +1639,8 @@
         "ETH.ETH": "348078",
         "ETH.USDC-0X9999999999999999999999999999999999999999": "347185",
         "bond_reward": "66514",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       },
       {

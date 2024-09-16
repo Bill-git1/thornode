@@ -114,6 +114,8 @@
       {
         "BTC.BTC": "1109799",
         "bond_reward": "44",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],

@@ -138,6 +138,9 @@ const (
 	RUNEPoolDepositMaturityBlocks
 	RUNEPoolMaxReserveBackstop
 	SaversEjectInterval
+	SystemIncomeBurnRateBps
+	DevFundSystemIncomeBps
+	DevFundAddress
 )
 
 // ConstantValues define methods used to get constant values

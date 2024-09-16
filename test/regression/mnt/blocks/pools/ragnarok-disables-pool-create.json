@@ -114,6 +114,8 @@
       {
         "ETH.ETH": "1109799",
         "bond_reward": "44",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -442,6 +444,8 @@
       {
         "ETH.ETH": "1109798",
         "bond_reward": "45",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -601,6 +605,8 @@
       {
         "ETH.ETH": "1109798",
         "bond_reward": "45",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -799,6 +805,8 @@
       {
         "ETH.ETH": "1109798",
         "bond_reward": "45",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -995,6 +1003,8 @@
       {
         "ETH.ETH": "1109798",
         "bond_reward": "45",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -1154,6 +1164,8 @@
       {
         "ETH.ETH": "1109797",
         "bond_reward": "46",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],

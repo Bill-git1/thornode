@@ -1578,7 +1578,7 @@ func (vm *NetworkMgrV134) UpdateNetwork(ctx cosmos.Context, constAccessor consta
 	}
 	network.BondRewardRune = network.BondRewardRune.Add(bondReward) // Add here for individual Node collection later
 
-	rewardEvt := NewEventRewards(bondReward, evtPools)
+	rewardEvt := NewEventRewards(bondReward, evtPools, cosmos.ZeroUint(), cosmos.ZeroUint())
 	if err := eventMgr.EmitEvent(ctx, rewardEvt); err != nil {
 		return fmt.Errorf("fail to emit reward event: %w", err)
 	}

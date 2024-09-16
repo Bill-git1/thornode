@@ -118,12 +118,15 @@ func NewConstantValue() *ConstantVals {
 			RUNEPoolDepositMaturityBlocks:       14400 * 90,         // blocks from last deposit to allow withdraw
 			RUNEPoolMaxReserveBackstop:          5_000_000_00000000, // 5 million RUNE
 			SaversEjectInterval:                 0,                  // number of blocks for savers check, disabled if zero
+			SystemIncomeBurnRateBps:             1,                  // burn 1bps (0.01%) RUNE of all system income per ADR 17
+			DevFundSystemIncomeBps:              500,                // allocate 500bps (5%) RUNE of all system income to dev fund per ADR 18
 		},
 		boolValues: map[ConstantName]bool{
 			StrictBondLiquidityRatio: true,
 		},
 		stringValues: map[ConstantName]string{
 			DefaultPoolStatus: "Staged",
+			DevFundAddress:    "thor1d8c0wv4y72kmlytegjmgx825xwumt9qt5xe07k", // dev fund address for ADR 18,  initially set via to address pre-funded 1M by TC treasury
 		},
 	}
 }

@@ -98,6 +98,8 @@
         "BTC.BTC": "532724",
         "ETH.ETH": "532724",
         "bond_reward": "44394",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -202,6 +204,8 @@
         "BTC.BTC": "532724",
         "ETH.ETH": "532724",
         "bond_reward": "44394",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -420,6 +424,8 @@
         "BTC.BTC": "532724",
         "ETH.ETH": "532724",
         "bond_reward": "44394",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -745,6 +751,8 @@
       {
         "BTC.BTC": "-540618521",
         "bond_reward": "541728364",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -1060,6 +1068,8 @@
       {
         "ETH.ETH": "-539154212",
         "bond_reward": "540264055",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -1348,6 +1358,8 @@
         "BTC.BTC": "525233",
         "ETH.ETH": "525017",
         "bond_reward": "59594",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -1690,6 +1702,8 @@
         "BTC.BTC": "532962",
         "ETH.ETH": "532743",
         "bond_reward": "44139",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       },
       {
@@ -2015,6 +2029,8 @@
         "BTC.BTC": "525264",
         "ETH.ETH": "524991",
         "bond_reward": "59589",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -2357,6 +2373,8 @@
         "BTC.BTC": "532992",
         "ETH.ETH": "532715",
         "bond_reward": "44137",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       },
       {
@@ -2682,6 +2700,8 @@
         "BTC.BTC": "525294",
         "ETH.ETH": "524966",
         "bond_reward": "59584",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -3024,6 +3044,8 @@
         "BTC.BTC": "533021",
         "ETH.ETH": "532688",
         "bond_reward": "44135",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       },
       {
@@ -3349,6 +3371,8 @@
         "BTC.BTC": "525325",
         "ETH.ETH": "524941",
         "bond_reward": "59579",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -3691,6 +3715,8 @@
         "BTC.BTC": "533051",
         "ETH.ETH": "532661",
         "bond_reward": "44133",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       },
       {
@@ -4016,6 +4042,8 @@
         "BTC.BTC": "525356",
         "ETH.ETH": "524916",
         "bond_reward": "59573",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -4358,6 +4386,8 @@
         "BTC.BTC": "533080",
         "ETH.ETH": "532634",
         "bond_reward": "44131",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       },
       {
@@ -4683,6 +4713,8 @@
         "BTC.BTC": "532988",
         "ETH.ETH": "532711",
         "bond_reward": "44145",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -4959,6 +4991,8 @@
         "BTC.BTC": "532987",
         "ETH.ETH": "532711",
         "bond_reward": "44146",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -5259,6 +5293,8 @@
         "BTC.BTC": "532987",
         "ETH.ETH": "532711",
         "bond_reward": "44146",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],
@@ -5535,6 +5571,8 @@
         "BTC.BTC": "532987",
         "ETH.ETH": "532711",
         "bond_reward": "44146",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
         "type": "rewards"
       }
     ],

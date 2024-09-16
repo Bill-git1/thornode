@@ -107,6 +107,8 @@ message PoolAmt {
 message EventRewards {
   string bond_reward = 1 [(gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Uint", (gogoproto.nullable) = false];
   repeated PoolAmt pool_rewards = 2 [(gogoproto.nullable) = false];
+  string dev_fund_reward = 3 [(gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Uint", (gogoproto.nullable) = false];
+  string income_burn = 4 [(gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Uint", (gogoproto.nullable) = false];
 }
 
 message EventRefund {

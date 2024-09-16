@@ -49,12 +49,15 @@ func init() {
 		RUNEPoolDepositMaturityBlocks:       0,
 		RUNEPoolMaxReserveBackstop:          0,
 		SaversEjectInterval:                 60,
+		SystemIncomeBurnRateBps:             0,
+		DevFundSystemIncomeBps:              0,
 	}
 	boolOverrides = map[ConstantName]bool{
 		StrictBondLiquidityRatio: false,
 	}
 	stringOverrides = map[ConstantName]string{
 		DefaultPoolStatus: "Available",
+		DevFundAddress:    "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u", // addr_thor_pig in regtest
 	}
 
 	v1Values := NewConstantValue()
