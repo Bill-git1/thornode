@@ -20,8 +20,6 @@ func (ConstantsTestSuite) TestConstantName_String(c *C) {
 		MinimumNodesForBFT,
 		DesiredValidatorSet,
 		ChurnInterval,
-		ValidatorsChangeWindow,
-		LeaveProcessPerBlockHeight,
 		LackOfObservationPenalty,
 		SigningTransactionPeriod,
 		DoubleSignMaxAge,
