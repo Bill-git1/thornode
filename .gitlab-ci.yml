@@ -156,6 +156,18 @@ chain-ethereum:
     - yarn install --non-interactive
     - yarn hardhat test
 
+go-tss:
+  rules:
+    - changes:
+        paths:
+          - bifrost/tss/go-tss/**/*
+  stage: test
+  before_script:
+    - apk -U add make git bash
+    - echo "$DOCKER_HUB_PASSWD" | docker login -u thornode --password-stdin
+  script:
+    - make test-go-tss
+
 pages:
   rules:
     - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH

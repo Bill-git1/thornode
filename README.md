@@ -149,6 +149,18 @@ Run tests
 make test
 ```
 
+By default, computationally-expensive tests like those for `go-tss` are excluded from this target. To fully test the _entire_ codebase, leverage:
+
+```bash
+make test-all
+```
+
+To tests _only_ `go-tss` run:
+
+```bash
+make test-go-tss
+```
+
 ### Regression Tests
 
 We expose a testing framework that allows the definition of test cases and suites using a DSL in YAML. Providing a regular expression to the `RUN` environment variable will match against files in `test/regression/suites` to filter tests to run.
