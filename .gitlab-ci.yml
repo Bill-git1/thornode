@@ -162,8 +162,9 @@ go-tss:
         paths:
           - bifrost/tss/go-tss/**/*
   stage: test
+  <<: *use_dind
   before_script:
-    - apk -U add make git bash
+    - apk -U add make git bash go
     - echo "$DOCKER_HUB_PASSWD" | docker login -u thornode --password-stdin
   script:
     - make test-go-tss
