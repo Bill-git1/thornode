@@ -9,6 +9,38 @@
   "keywords": ["1inch", "default", "list"],
   "tokens": [
     {
+      "address": "0x77E06c9eCCf2E797fd462A92B6D7642EF85b0A44",
+      "chainId": 1,
+      "name": "Wrapped TAO",
+      "symbol": "wTAO",
+      "decimals": 18,
+      "logoURI": "https://etherscan.io/token/images/wrappedtao_32.png"
+    },
+    {
+      "address": "0x58cB30368ceB2d194740b144EAB4c2da8a917Dcb",
+      "chainId": 1,
+      "name": "ZynCoin",
+      "symbol": "ZYN",
+      "decimals": 18,
+      "logoURI": "https://etherscan.io/token/images/zyncoin_32.png"
+    },
+    {
+      "address": "0xba386A4Ca26B85FD057ab1Ef86e3DC7BdeB5ce70",
+      "chainId": 1,
+      "name": "Jesus Coin",
+      "symbol": "JESUS",
+      "decimals": 18,
+      "logoURI": "https://etherscan.io/token/images/jesuscoin_32.png"
+    },
+    {
+      "address": "0xaaeE1A9723aaDB7afA2810263653A34bA2C21C7a",
+      "chainId": 1,
+      "name": "Mog Coin",
+      "symbol": "Mog",
+      "decimals": 18,
+      "logoURI": "https://etherscan.io/token/images/mogcoin_32.png"
+    },
+    {
       "address": "0xa6C0c097741D55ECd9a3A7DeF3A8253fD022ceB9",
       "chainId": 1,
       "name": "AVA",
