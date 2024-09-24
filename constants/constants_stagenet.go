@@ -16,4 +16,7 @@ func init() {
 		BurnSynths:               1,
 		MaxRuneSupply:            500_000_000_00000000,
 	}
+	stringOverrides = map[ConstantName]string{
+		DevFundAddress: "sthor1gdq9qejfy33jctztqdrg5v4hvxnytmvjhduacc",
+	}
 }
