@@ -15,6 +15,8 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
+	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
+	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	"github.com/tendermint/tendermint/libs/log"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
@@ -68,6 +70,7 @@ func setupManagerForTest(c *C) (cosmos.Context, *Mgrs) {
 	keyBank := cosmos.NewKVStoreKey(banktypes.StoreKey)
 	keyParams := cosmos.NewKVStoreKey(paramstypes.StoreKey)
 	tkeyParams := cosmos.NewTransientStoreKey(paramstypes.TStoreKey)
+	keyUpgrade := cosmos.NewKVStoreKey(upgradetypes.StoreKey)
 
 	db := dbm.NewMemDB()
 	ms := store.NewCommitMultiStore(db)
@@ -100,7 +103,8 @@ func setupManagerForTest(c *C) (cosmos.Context, *Mgrs) {
 	c.Assert(bk.MintCoins(ctx, ModuleName, cosmos.Coins{
 		cosmos.NewCoin(common.RuneAsset().Native(), cosmos.NewInt(200_000_000_00000000)),
 	}), IsNil)
-	k := kv1.NewKeeper(marshaler, bk, ak, keyThorchain)
+	uk := upgradekeeper.NewKeeper(nil, keyUpgrade, marshaler, c.MkDir(), nil)
+	k := kv1.NewKeeper(marshaler, bk, ak, uk, keyThorchain)
 	FundModule(c, ctx, k, ModuleName, 10000*common.One)
 	FundModule(c, ctx, k, AsgardName, common.One)
 	FundModule(c, ctx, k, ReserveName, 10000*common.One)
@@ -123,7 +127,7 @@ func setupManagerForTest(c *C) (cosmos.Context, *Mgrs) {
 	}), IsNil)
 
 	os.Setenv("NET", "mocknet")
-	mgr := NewManagers(k, marshaler, bk, ak, keyThorchain)
+	mgr := NewManagers(k, marshaler, bk, ak, uk, keyThorchain)
 	constants.SWVersion = GetCurrentVersion()
 
 	_, hasVerStored := k.GetVersionWithCtx(ctx)
@@ -149,6 +153,7 @@ func setupKeeperForTest(c *C) (cosmos.Context, keeper.Keeper) {
 	keyBank := cosmos.NewKVStoreKey(banktypes.StoreKey)
 	keyParams := cosmos.NewKVStoreKey(paramstypes.StoreKey)
 	tkeyParams := cosmos.NewTransientStoreKey(paramstypes.TStoreKey)
+	keyUpgrade := cosmos.NewKVStoreKey(upgradetypes.StoreKey)
 
 	db := dbm.NewMemDB()
 	ms := store.NewCommitMultiStore(db)
@@ -179,7 +184,8 @@ func setupKeeperForTest(c *C) (cosmos.Context, keeper.Keeper) {
 	c.Assert(bk.MintCoins(ctx, ModuleName, cosmos.Coins{
 		cosmos.NewCoin(common.RuneAsset().Native(), cosmos.NewInt(200_000_000_00000000)),
 	}), IsNil)
-	k := kv1.NewKVStore(marshaler, bk, ak, keyThorchain, GetCurrentVersion())
+	uk := upgradekeeper.NewKeeper(nil, keyUpgrade, marshaler, c.MkDir(), nil)
+	k := kv1.NewKVStore(marshaler, bk, ak, uk, keyThorchain, GetCurrentVersion())
 	FundModule(c, ctx, k, ModuleName, 1000000*common.One)
 	FundModule(c, ctx, k, AsgardName, common.One)
 	FundModule(c, ctx, k, ReserveName, 10000*common.One)

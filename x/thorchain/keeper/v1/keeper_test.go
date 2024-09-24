@@ -17,6 +17,8 @@ import (
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
+	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	"github.com/tendermint/tendermint/libs/log"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
@@ -51,7 +53,7 @@ var keyThorchain = cosmos.NewKVStoreKey(StoreKey)
 func setupKeeperForTest(c *C) (cosmos.Context, KVStore) {
 	SetupConfigForTest()
 	keys := cosmos.NewKVStoreKeys(
-		authtypes.StoreKey, banktypes.StoreKey, stakingtypes.StoreKey, paramstypes.StoreKey,
+		authtypes.StoreKey, banktypes.StoreKey, stakingtypes.StoreKey, paramstypes.StoreKey, upgradetypes.StoreKey,
 	)
 	tkeyParams := cosmos.NewTransientStoreKey(paramstypes.TStoreKey)
 
@@ -60,6 +62,7 @@ func setupKeeperForTest(c *C) (cosmos.Context, KVStore) {
 	ms.MountStoreWithDB(keys[authtypes.StoreKey], cosmos.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(keys[paramstypes.StoreKey], cosmos.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(keys[banktypes.StoreKey], cosmos.StoreTypeIAVL, db)
+	ms.MountStoreWithDB(keys[upgradetypes.StoreKey], cosmos.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(keyThorchain, cosmos.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(tkeyParams, cosmos.StoreTypeTransient, db)
 	err := ms.LoadLatestVersion()
@@ -87,8 +90,9 @@ func setupKeeperForTest(c *C) (cosmos.Context, KVStore) {
 	pk := paramskeeper.NewKeeper(marshaler, legacyCodec, keys[paramstypes.StoreKey], tkeyParams)
 	ak := authkeeper.NewAccountKeeper(marshaler, keys[authtypes.StoreKey], pk.Subspace(authtypes.ModuleName), authtypes.ProtoBaseAccount, maccPerms)
 	bk := bankkeeper.NewBaseKeeper(marshaler, keys[banktypes.StoreKey], ak, pk.Subspace(banktypes.ModuleName), nil)
+	uk := upgradekeeper.NewKeeper(nil, keys[upgradetypes.StoreKey], marshaler, c.MkDir(), nil)
 
-	k := NewKVStore(marshaler, bk, ak, keyThorchain, GetCurrentVersion())
+	k := NewKVStore(marshaler, bk, ak, uk, keyThorchain, GetCurrentVersion())
 
 	FundModule(c, ctx, k, AsgardName, common.One)
 

@@ -32,13 +32,13 @@ func (k KVStore) getChainContract(ctx cosmos.Context, key string, record *ChainC
 
 // SetChainContract - save chain contract address
 func (k KVStore) SetChainContract(ctx cosmos.Context, cc ChainContract) {
-	k.setChainContract(ctx, k.GetKey(ctx, prefixChainContract, cc.Chain.String()), cc)
+	k.setChainContract(ctx, k.GetKey(prefixChainContract, cc.Chain.String()), cc)
 }
 
 // GetChainContract - gets chain contract
 func (k KVStore) GetChainContract(ctx cosmos.Context, chain common.Chain) (ChainContract, error) {
 	var record ChainContract
-	_, err := k.getChainContract(ctx, k.GetKey(ctx, prefixChainContract, chain.String()), &record)
+	_, err := k.getChainContract(ctx, k.GetKey(prefixChainContract, chain.String()), &record)
 	return record, err
 }
 

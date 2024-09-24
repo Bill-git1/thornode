@@ -13,6 +13,8 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
+	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
+	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	"github.com/tendermint/tendermint/libs/log"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
@@ -41,6 +43,7 @@ func (s *MemoSuite) SetUpSuite(c *C) {
 	keyParams := cosmos.NewKVStoreKey(paramstypes.StoreKey)
 	tkeyParams := cosmos.NewTransientStoreKey(paramstypes.TStoreKey)
 	keyThorchain := cosmos.NewKVStoreKey(types.StoreKey)
+	keyUpgrade := cosmos.NewKVStoreKey(upgradetypes.StoreKey)
 
 	db := dbm.NewMemDB()
 	ms := store.NewCommitMultiStore(db)
@@ -71,7 +74,8 @@ func (s *MemoSuite) SetUpSuite(c *C) {
 	c.Assert(bk.MintCoins(ctx, types.ModuleName, cosmos.Coins{
 		cosmos.NewCoin(common.RuneAsset().Native(), cosmos.NewInt(200_000_000_00000000)),
 	}), IsNil)
-	s.k = kv1.NewKVStore(marshaler, bk, ak, keyThorchain, types.GetCurrentVersion())
+	uk := upgradekeeper.NewKeeper(nil, keyUpgrade, marshaler, c.MkDir(), nil)
+	s.k = kv1.NewKVStore(marshaler, bk, ak, uk, keyThorchain, types.GetCurrentVersion())
 }
 
 func (s *MemoSuite) TestTxType(c *C) {

@@ -17,14 +17,14 @@ func (k KVStore) SetLastSignedHeight(ctx cosmos.Context, height int64) error {
 		ctx.Logger().Debug("cannot set past height", "last", lastHeight, "current", height)
 		return nil
 	}
-	k.setInt64(ctx, k.GetKey(ctx, prefixLastSignedHeight, ""), height)
+	k.setInt64(ctx, k.GetKey(prefixLastSignedHeight, ""), height)
 	return nil
 }
 
 // GetLastSignedHeight get last signed height from key value store
 func (k KVStore) GetLastSignedHeight(ctx cosmos.Context) (int64, error) {
 	var record int64
-	_, err := k.getInt64(ctx, k.GetKey(ctx, prefixLastSignedHeight, ""), &record)
+	_, err := k.getInt64(ctx, k.GetKey(prefixLastSignedHeight, ""), &record)
 	return record, err
 }
 
@@ -35,19 +35,19 @@ func (k KVStore) SetLastChainHeight(ctx cosmos.Context, chain common.Chain, heig
 		err := fmt.Errorf("last block height %d is larger than %d, block height can't go backward ", lastHeight, height)
 		return dbError(ctx, "", err)
 	}
-	k.setInt64(ctx, k.GetKey(ctx, prefixLastChainHeight, chain.String()), height)
+	k.setInt64(ctx, k.GetKey(prefixLastChainHeight, chain.String()), height)
 	return nil
 }
 
 // ForceSetLastChainHeight force sets the last chain height.
 func (k KVStore) ForceSetLastChainHeight(ctx cosmos.Context, chain common.Chain, height int64) {
-	k.setInt64(ctx, k.GetKey(ctx, prefixLastChainHeight, chain.String()), height)
+	k.setInt64(ctx, k.GetKey(prefixLastChainHeight, chain.String()), height)
 }
 
 // GetLastChainHeight get last chain height
 func (k KVStore) GetLastChainHeight(ctx cosmos.Context, chain common.Chain) (int64, error) {
 	var record int64
-	_, err := k.getInt64(ctx, k.GetKey(ctx, prefixLastChainHeight, chain.String()), &record)
+	_, err := k.getInt64(ctx, k.GetKey(prefixLastChainHeight, chain.String()), &record)
 	return record, err
 }
 
@@ -73,7 +73,7 @@ func (k KVStore) GetLastChainHeights(ctx cosmos.Context) (map[common.Chain]int64
 // SetLastObserveHeight save the last observe height into key value store
 func (k KVStore) SetLastObserveHeight(ctx cosmos.Context, chain common.Chain, address cosmos.AccAddress, height int64) error {
 	var lastHeight int64
-	key := k.GetKey(ctx, prefixLastObserveHeight, address.String()) + "/" + chain.String()
+	key := k.GetKey(prefixLastObserveHeight, address.String()) + "/" + chain.String()
 	exist, err := k.getInt64(ctx, key, &lastHeight)
 	if err != nil {
 		ctx.Logger().Error("fail to get last observe height", "error", err)
@@ -89,13 +89,13 @@ func (k KVStore) SetLastObserveHeight(ctx cosmos.Context, chain common.Chain, ad
 
 // ForceSetLastObserveHeight force sets the observe height.
 func (k KVStore) ForceSetLastObserveHeight(ctx cosmos.Context, chain common.Chain, address cosmos.AccAddress, height int64) {
-	key := k.GetKey(ctx, prefixLastObserveHeight, address.String()) + "/" + chain.String()
+	key := k.GetKey(prefixLastObserveHeight, address.String()) + "/" + chain.String()
 	k.setInt64(ctx, key, height)
 }
 
 // GetLastObserveHeight retrieve last observe height of a given node account from key value store
 func (k KVStore) GetLastObserveHeight(ctx cosmos.Context, address cosmos.AccAddress) (map[common.Chain]int64, error) {
-	prefixKey := k.GetKey(ctx, prefixLastObserveHeight, address.String()) + "/"
+	prefixKey := k.GetKey(prefixLastObserveHeight, address.String()) + "/"
 	iter := k.getIterator(ctx, types.DbPrefix(prefixKey))
 	result := make(map[common.Chain]int64)
 	defer iter.Close()

@@ -43,7 +43,7 @@ func (k KVStore) SetOrderBookItem(ctx cosmos.Context, msg MsgSwap) error {
 	if err := k.SetOrderBookIndex(ctx, msg); err != nil {
 		return err
 	}
-	k.setMsgSwap(ctx, k.GetKey(ctx, prefixOrderBookItem, msg.Tx.ID.String()), msg)
+	k.setMsgSwap(ctx, k.GetKey(prefixOrderBookItem, msg.Tx.ID.String()), msg)
 	return nil
 }
 
@@ -55,7 +55,7 @@ func (k KVStore) GetOrderBookItemIterator(ctx cosmos.Context) cosmos.Iterator {
 // GetOrderBookItem - read the given order book item information from key values store
 func (k KVStore) GetOrderBookItem(ctx cosmos.Context, txID common.TxID) (MsgSwap, error) {
 	record := MsgSwap{}
-	ok, err := k.getMsgSwap(ctx, k.GetKey(ctx, prefixOrderBookItem, txID.String()), &record)
+	ok, err := k.getMsgSwap(ctx, k.GetKey(prefixOrderBookItem, txID.String()), &record)
 	if !ok {
 		return record, errors.New("not found")
 	}
@@ -65,7 +65,7 @@ func (k KVStore) GetOrderBookItem(ctx cosmos.Context, txID common.TxID) (MsgSwap
 // HasOrderBookItem - checks if order book item already exists
 func (k KVStore) HasOrderBookItem(ctx cosmos.Context, txID common.TxID) bool {
 	record := MsgSwap{}
-	ok, _ := k.getMsgSwap(ctx, k.GetKey(ctx, prefixOrderBookItem, txID.String()), &record)
+	ok, _ := k.getMsgSwap(ctx, k.GetKey(prefixOrderBookItem, txID.String()), &record)
 	return ok
 }
 
@@ -77,7 +77,7 @@ func (k KVStore) RemoveOrderBookItem(ctx cosmos.Context, txID common.TxID) error
 	} else {
 		err = k.RemoveOrderBookIndex(ctx, msg)
 	}
-	k.del(ctx, k.GetKey(ctx, prefixOrderBookItem, txID.String()))
+	k.del(ctx, k.GetKey(prefixOrderBookItem, txID.String()))
 	return err
 }
 
@@ -88,14 +88,14 @@ func (k KVStore) RemoveOrderBookItem(ctx cosmos.Context, txID common.TxID) error
 
 // SetOrderBookProcessor - writes a list of pairs to process
 func (k KVStore) SetOrderBookProcessor(ctx cosmos.Context, record []bool) error {
-	key := k.GetKey(ctx, prefixOrderBookProcessor, "")
+	key := k.GetKey(prefixOrderBookProcessor, "")
 	k.setBools(ctx, key, record)
 	return nil
 }
 
 // GetOrderBookProcessor - get a list of asset pairs to process
 func (k KVStore) GetOrderBookProcessor(ctx cosmos.Context) ([]bool, error) {
-	key := k.GetKey(ctx, prefixOrderBookProcessor, "")
+	key := k.GetKey(prefixOrderBookProcessor, "")
 	var record []bool
 	_, err := k.getBools(ctx, key, &record)
 	return record, err
@@ -131,7 +131,7 @@ func (k KVStore) GetOrderBookIndexIterator(ctx cosmos.Context, order types.Order
 	store := ctx.KVStore(k.storeKey)
 	switch order {
 	case types.OrderType_limit:
-		prefix := k.GetKey(ctx, prefixOrderBookLimitIndex, fmt.Sprintf("%s>%s/", source, target))
+		prefix := k.GetKey(prefixOrderBookLimitIndex, fmt.Sprintf("%s>%s/", source, target))
 		return cosmos.KVStoreReversePrefixIterator(store, []byte(prefix))
 	case types.OrderType_market:
 		return nil
@@ -211,9 +211,9 @@ func (k KVStore) getOrderBookIndexKey(ctx cosmos.Context, msg MsgSwap) string {
 		ra := rewriteRatio(ratioLength, getRatio(msg.Tx.Coins[0].Amount, msg.TradeTarget))
 		f := msg.Tx.Coins[0].Asset
 		t := msg.TargetAsset
-		return k.GetKey(ctx, prefixOrderBookLimitIndex, fmt.Sprintf("%s>%s/%s/", f.String(), t.String(), ra))
+		return k.GetKey(prefixOrderBookLimitIndex, fmt.Sprintf("%s>%s/%s/", f.String(), t.String(), ra))
 	case types.OrderType_market:
-		return k.GetKey(ctx, prefixOrderBookMarketIndex, "")
+		return k.GetKey(prefixOrderBookMarketIndex, "")
 	default:
 		return ""
 	}

@@ -32,7 +32,7 @@ func (k KVStore) getKeygenBlock(ctx cosmos.Context, key string, record *KeygenBl
 
 // SetKeygenBlock save the KeygenBlock to kv store
 func (k KVStore) SetKeygenBlock(ctx cosmos.Context, keygen KeygenBlock) {
-	k.setKeygenBlock(ctx, k.GetKey(ctx, prefixKeygen, strconv.FormatInt(keygen.Height, 10)), keygen)
+	k.setKeygenBlock(ctx, k.GetKey(prefixKeygen, strconv.FormatInt(keygen.Height, 10)), keygen)
 }
 
 // GetKeygenBlockIterator return an iterator
@@ -43,6 +43,6 @@ func (k KVStore) GetKeygenBlockIterator(ctx cosmos.Context) cosmos.Iterator {
 // GetKeygenBlock from a given height
 func (k KVStore) GetKeygenBlock(ctx cosmos.Context, height int64) (KeygenBlock, error) {
 	record := NewKeygenBlock(height)
-	_, err := k.getKeygenBlock(ctx, k.GetKey(ctx, prefixKeygen, strconv.FormatInt(height, 10)), &record)
+	_, err := k.getKeygenBlock(ctx, k.GetKey(prefixKeygen, strconv.FormatInt(height, 10)), &record)
 	return record, err
 }

@@ -9,7 +9,7 @@ import (
 // majority
 func (k KVStore) GetObservingAddresses(ctx cosmos.Context) ([]cosmos.AccAddress, error) {
 	record := make([]cosmos.AccAddress, 0)
-	_, err := k.getAccAddresses(ctx, k.GetKey(ctx, prefixObservingAddresses, ""), &record)
+	_, err := k.getAccAddresses(ctx, k.GetKey(prefixObservingAddresses, ""), &record)
 	return record, err
 }
 
@@ -37,11 +37,11 @@ func (k KVStore) AddObservingAddresses(ctx cosmos.Context, inAddresses []cosmos.
 		}
 	}
 
-	k.setAccAddresses(ctx, k.GetKey(ctx, prefixObservingAddresses, ""), uniq)
+	k.setAccAddresses(ctx, k.GetKey(prefixObservingAddresses, ""), uniq)
 	return nil
 }
 
 // ClearObservingAddresses - clear all observing addresses
 func (k KVStore) ClearObservingAddresses(ctx cosmos.Context) {
-	k.del(ctx, k.GetKey(ctx, prefixObservingAddresses, ""))
+	k.del(ctx, k.GetKey(prefixObservingAddresses, ""))
 }

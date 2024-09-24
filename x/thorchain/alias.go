@@ -177,6 +177,9 @@ var (
 	NewMsgBan                      = types.NewMsgBan
 	NewMsgLeave                    = types.NewMsgLeave
 	NewMsgSetVersion               = types.NewMsgSetVersion
+	NewMsgProposeUpgrade           = types.NewMsgProposeUpgrade
+	NewMsgApproveUpgrade           = types.NewMsgApproveUpgrade
+	NewMsgRejectUpgrade            = types.NewMsgRejectUpgrade
 	NewMsgSetIPAddress             = types.NewMsgSetIPAddress
 	NewMsgNetworkFee               = types.NewMsgNetworkFee
 	NewNetworkFee                  = types.NewNetworkFee
@@ -249,6 +252,9 @@ type (
 	MsgBan                    = types.MsgBan
 	MsgSwap                   = types.MsgSwap
 	MsgSetVersion             = types.MsgSetVersion
+	MsgProposeUpgrade         = types.MsgProposeUpgrade
+	MsgApproveUpgrade         = types.MsgApproveUpgrade
+	MsgRejectUpgrade          = types.MsgRejectUpgrade
 	MsgSetIPAddress           = types.MsgSetIPAddress
 	MsgSetNodeKeys            = types.MsgSetNodeKeys
 	MsgLeave                  = types.MsgLeave

@@ -71,6 +71,9 @@ var (
 	QueryVaultPubkeys        = Query{Key: "vaultpubkeys", EndpointTemplate: "/%s/vaults/pubkeys"}
 	QueryConstantValues      = Query{Key: "constants", EndpointTemplate: "/%s/constants"}
 	QueryVersion             = Query{Key: "version", EndpointTemplate: "/%s/version"}
+	QueryUpgradeProposals    = Query{Key: "upgradeproposals", EndpointTemplate: "/%s/upgrade_proposals"}
+	QueryUpgradeProposal     = Query{Key: "upgradeproposal", EndpointTemplate: "/%s/upgrade_proposal/{%s}"}
+	QueryUpgradeVotes        = Query{Key: "upgradevotes", EndpointTemplate: "/%s/upgrade_votes/{%s}"}
 	QueryMimirValues         = Query{Key: "mimirs", EndpointTemplate: "/%s/mimir"}
 	QueryMimirWithKey        = Query{Key: "mimirwithkey", EndpointTemplate: "/%s/mimir/key/{%s}"}
 	QueryMimirAdminValues    = Query{Key: "adminmimirs", EndpointTemplate: "/%s/mimir/admin"}
@@ -146,6 +149,9 @@ var Queries = []Query{
 	QueryKeygensPubkey,
 	QueryConstantValues,
 	QueryVersion,
+	QueryUpgradeProposals,
+	QueryUpgradeProposal,
+	QueryUpgradeVotes,
 	QueryMimirValues,
 	QueryMimirWithKey,
 	QueryMimirAdminValues,

@@ -464,7 +464,7 @@ func (p *AddLiquidityTestKeeper) GetLiquidityProvider(ctx cosmos.Context, asset 
 		RuneDepositValue:  cosmos.ZeroUint(),
 		AssetDepositValue: cosmos.ZeroUint(),
 	}
-	key := p.GetKey(ctx, "lp/", lp.Key())
+	key := p.GetKey("lp/", lp.Key())
 	if res, ok := p.store[key]; ok {
 		lp, ok := res.(LiquidityProvider)
 		if !ok {
@@ -477,7 +477,7 @@ func (p *AddLiquidityTestKeeper) GetLiquidityProvider(ctx cosmos.Context, asset 
 }
 
 func (p *AddLiquidityTestKeeper) SetLiquidityProvider(ctx cosmos.Context, lp LiquidityProvider) {
-	key := p.GetKey(ctx, "lp/", lp.Key())
+	key := p.GetKey("lp/", lp.Key())
 	p.store[key] = lp
 }
 

@@ -33,7 +33,7 @@ func (k KVStore) getLiquidityProvider(ctx cosmos.Context, key string, record *Li
 
 // GetLiquidityProviderIterator iterate liquidity providers
 func (k KVStore) GetLiquidityProviderIterator(ctx cosmos.Context, asset common.Asset) cosmos.Iterator {
-	key := k.GetKey(ctx, prefixLiquidityProvider, (&LiquidityProvider{Asset: asset}).Key())
+	key := k.GetKey(prefixLiquidityProvider, (&LiquidityProvider{Asset: asset}).Key())
 	return k.getIterator(ctx, types.DbPrefix(key))
 }
 
@@ -65,7 +65,7 @@ func (k KVStore) GetLiquidityProvider(ctx cosmos.Context, asset common.Asset, ad
 		record.RuneAddress = common.NoAddress
 	}
 
-	_, err := k.getLiquidityProvider(ctx, k.GetKey(ctx, prefixLiquidityProvider, record.Key()), &record)
+	_, err := k.getLiquidityProvider(ctx, k.GetKey(prefixLiquidityProvider, record.Key()), &record)
 	if err != nil {
 		return record, err
 	}
@@ -75,10 +75,10 @@ func (k KVStore) GetLiquidityProvider(ctx cosmos.Context, asset common.Asset, ad
 
 // SetLiquidityProvider save the liquidity provider to kv store
 func (k KVStore) SetLiquidityProvider(ctx cosmos.Context, lp LiquidityProvider) {
-	k.setLiquidityProvider(ctx, k.GetKey(ctx, prefixLiquidityProvider, lp.Key()), lp)
+	k.setLiquidityProvider(ctx, k.GetKey(prefixLiquidityProvider, lp.Key()), lp)
 }
 
 // RemoveLiquidityProvider remove the liquidity provider to kv store
 func (k KVStore) RemoveLiquidityProvider(ctx cosmos.Context, lp LiquidityProvider) {
-	k.del(ctx, k.GetKey(ctx, prefixLiquidityProvider, lp.Key()))
+	k.del(ctx, k.GetKey(prefixLiquidityProvider, lp.Key()))
 }

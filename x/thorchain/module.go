@@ -14,6 +14,7 @@ import (
 	sdkRest "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
+	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
@@ -100,14 +101,22 @@ type AppModule struct {
 }
 
 // NewAppModule creates a new AppModule Object
-func NewAppModule(k keeper.Keeper, cdc codec.Codec, coinKeeper bankkeeper.Keeper, accountKeeper authkeeper.AccountKeeper, storeKey cosmos.StoreKey, telemetryEnabled bool) AppModule {
+func NewAppModule(
+	k keeper.Keeper,
+	cdc codec.Codec,
+	coinKeeper bankkeeper.Keeper,
+	accountKeeper authkeeper.AccountKeeper,
+	upgradeKeeper upgradekeeper.Keeper,
+	storeKey cosmos.StoreKey,
+	telemetryEnabled bool,
+) AppModule {
 	kb, err := cosmos.GetKeybase(os.Getenv(cosmos.EnvChainHome))
 	if err != nil {
 		panic(err)
 	}
 	return AppModule{
 		AppModuleBasic:   AppModuleBasic{},
-		mgr:              NewManagers(k, cdc, coinKeeper, accountKeeper, storeKey),
+		mgr:              NewManagers(k, cdc, coinKeeper, accountKeeper, upgradeKeeper, storeKey),
 		keybaseStore:     kb,
 		telemetryEnabled: telemetryEnabled,
 	}
@@ -188,6 +197,9 @@ func (am AppModule) BeginBlock(ctx sdk.Context, req abci.RequestBeginBlock) {
 	am.mgr.Slasher().BeginBlock(ctx, req, am.mgr.GetConstants())
 	if err := am.mgr.ValidatorMgr().BeginBlock(ctx, am.mgr, existingValidators); err != nil {
 		ctx.Logger().Error("Fail to begin block on validator", "error", err)
+	}
+	if err := am.mgr.Keeper().RemoveExpiredUpgradeProposals(ctx); err != nil {
+		ctx.Logger().Error("Failed to remove expired upgrade proposals", "error", err)
 	}
 }
 

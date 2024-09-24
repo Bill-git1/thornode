@@ -100,6 +100,9 @@ Class | Method | HTTP request | Description
 *NetworkApi* | [**OutboundFeeAsset**](docs/NetworkApi.md#outboundfeeasset) | **Get** /thorchain/outbound_fee/{asset} | 
 *NetworkApi* | [**OutboundFees**](docs/NetworkApi.md#outboundfees) | **Get** /thorchain/outbound_fees | 
 *NetworkApi* | [**Ragnarok**](docs/NetworkApi.md#ragnarok) | **Get** /thorchain/ragnarok | 
+*NetworkApi* | [**UpgradeProposal**](docs/NetworkApi.md#upgradeproposal) | **Get** /thorchain/upgrade_proposal/{name} | 
+*NetworkApi* | [**UpgradeProposals**](docs/NetworkApi.md#upgradeproposals) | **Get** /thorchain/upgrade_proposals | 
+*NetworkApi* | [**UpgradeVotes**](docs/NetworkApi.md#upgradevotes) | **Get** /thorchain/upgrade_votes/{name} | 
 *NetworkApi* | [**Version**](docs/NetworkApi.md#version) | **Get** /thorchain/version | 
 *NodesApi* | [**Node**](docs/NodesApi.md#node) | **Get** /thorchain/node/{address} | 
 *NodesApi* | [**Nodes**](docs/NodesApi.md#nodes) | **Get** /thorchain/nodes | 
@@ -229,6 +232,8 @@ Class | Method | HTTP request | Description
  - [TxSignersResponse](docs/TxSignersResponse.md)
  - [TxStagesResponse](docs/TxStagesResponse.md)
  - [TxStatusResponse](docs/TxStatusResponse.md)
+ - [UpgradeProposal](docs/UpgradeProposal.md)
+ - [UpgradeVote](docs/UpgradeVote.md)
  - [Vault](docs/Vault.md)
  - [VaultAddress](docs/VaultAddress.md)
  - [VaultInfo](docs/VaultInfo.md)

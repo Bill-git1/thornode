@@ -381,29 +381,39 @@ func isSignedByActiveNodeAccounts(ctx cosmos.Context, k keeper.Keeper, signers [
 		if signer.Equals(k.GetModuleAccAddress(AsgardName)) {
 			continue
 		}
-		nodeAccount, err := k.GetNodeAccount(ctx, signer)
-		if err != nil {
-			ctx.Logger().Error("unauthorized account", "address", signer.String(), "error", err)
-			return false
-		}
-		if nodeAccount.IsEmpty() {
-			ctx.Logger().Error("unauthorized account", "address", signer.String())
-			return false
-		}
-		if nodeAccount.Status != NodeActive {
-			ctx.Logger().Error("unauthorized account, node account not active",
-				"address", signer.String(),
-				"status", nodeAccount.Status)
-			return false
-		}
-		if nodeAccount.Type != NodeTypeValidator {
-			ctx.Logger().Error("unauthorized account, node account must be a validator",
-				"address", signer.String(),
-				"type", nodeAccount.Type)
+		if err := signedByActiveNodeAccount(ctx, k, signer); err != nil {
+			ctx.Logger().Error("unauthorized account", "error", err)
 			return false
 		}
 	}
 	return true
+}
+
+// signedByActiveNodeAccounts returns an error unless all signers are active validator nodes
+func signedByActiveNodeAccount(ctx cosmos.Context, k keeper.Keeper, signer cosmos.AccAddress) error {
+	nodeAccount, err := k.GetNodeAccount(ctx, signer)
+	if err != nil {
+		return fmt.Errorf("error fetching node account: %s: %w", signer.String(), err)
+	}
+	if nodeAccount.IsEmpty() {
+		return fmt.Errorf("node account is unexpectedly empty: %s", signer.String())
+	}
+	if nodeAccount.Status != NodeActive {
+		return fmt.Errorf(
+			"node account %s not active: %s",
+			signer.String(),
+			nodeAccount.Status,
+		)
+	}
+	if nodeAccount.Type != NodeTypeValidator {
+		return fmt.Errorf(
+			"node account %s must be a validator: %s",
+			signer.String(),
+			nodeAccount.Type,
+		)
+	}
+
+	return nil
 }
 
 func wrapError(ctx cosmos.Context, err error, wrap string) error {

@@ -32,7 +32,7 @@ func (k KVStore) getErrataTxVoter(ctx cosmos.Context, key string, record *Errata
 
 // SetErrataTxVoter - save a errata voter object
 func (k KVStore) SetErrataTxVoter(ctx cosmos.Context, errata ErrataTxVoter) {
-	k.setErrataTxVoter(ctx, k.GetKey(ctx, prefixErrataTx, errata.String()), errata)
+	k.setErrataTxVoter(ctx, k.GetKey(prefixErrataTx, errata.String()), errata)
 }
 
 // GetErrataTxVoterIterator iterate errata tx voter
@@ -43,6 +43,6 @@ func (k KVStore) GetErrataTxVoterIterator(ctx cosmos.Context) cosmos.Iterator {
 // GetErrataTxVoter - gets information of errata tx voter
 func (k KVStore) GetErrataTxVoter(ctx cosmos.Context, txID common.TxID, chain common.Chain) (ErrataTxVoter, error) {
 	record := NewErrataTxVoter(txID, chain)
-	_, err := k.getErrataTxVoter(ctx, k.GetKey(ctx, prefixErrataTx, record.String()), &record)
+	_, err := k.getErrataTxVoter(ctx, k.GetKey(prefixErrataTx, record.String()), &record)
 	return record, err
 }

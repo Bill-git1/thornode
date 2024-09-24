@@ -1,0 +1,164 @@
+{{ template "5-validators-btc-eth-pool-state.yaml" }}
+---
+type: create-blocks
+count: 2
+---
+type: check
+endpoint: http://localhost:1317/thorchain/upgrade_proposals
+asserts:
+  - .|length == 0
+---
+type: tx-propose-upgrade
+signer: {{ addr_thor_fox }}
+name: 1.2.3
+upgrade:
+  height: 100
+  info: "upgrade to version 1.2.3"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/auth/accounts/{{ addr_thor_fox }}
+asserts:
+  - .result.value.sequence == "1"
+---
+type: check
+endpoint: http://localhost:1317/thorchain/upgrade_proposals
+asserts:
+  - .|length == 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/upgrade_proposal/1.2.3
+asserts:
+  - .name == "1.2.3"
+  - .height == 100
+  - .info == "upgrade to version 1.2.3"
+  - .approved == false
+  - .approved_percent == "0.2"
+  - .validators_to_quorum == 3
+---
+type: tx-approve-upgrade
+signer: {{ addr_thor_cat }}
+name: 1.2.3
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/upgrade_proposal/1.2.3
+asserts:
+  - .approved == false
+  - .approved_percent == "0.4"
+  - .validators_to_quorum == 2
+---
+type: check
+endpoint: http://localhost:1317/cosmos/upgrade/v1beta1/current_plan
+asserts:
+- .plan == null
+---
+type: tx-approve-upgrade
+signer: {{ addr_thor_pig }}
+name: 1.2.3
+---
+type: tx-approve-upgrade
+signer: {{ addr_thor_frog }}
+name: 1.2.3
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/upgrade_proposal/1.2.3
+asserts:
+  - .approved == true
+  - .approved_percent == "0.8"
+  - .validators_to_quorum == 0
+---
+type: check
+endpoint: http://localhost:1317/cosmos/upgrade/v1beta1/current_plan
+asserts:
+- .plan.name == "1.2.3"
+- .plan.info == "upgrade to version 1.2.3"
+- .plan.height == "100"
+---
+# Propose different upgrade to ensure it cannot be scheduled over the current one
+type: tx-propose-upgrade
+signer: {{ addr_thor_pig }}
+name: 1.2.3-expedited
+upgrade:
+  height: 90
+  info: "upgrade to version 1.2.3"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/auth/accounts/{{ addr_thor_pig }}
+asserts:
+  - .result.value.sequence == "2"
+---
+type: check
+endpoint: http://localhost:1317/thorchain/upgrade_proposals
+asserts:
+  - .|length == 2
+---
+type: tx-approve-upgrade
+signer: {{ addr_thor_cat }}
+name: 1.2.3-expedited
+---
+type: tx-approve-upgrade
+signer: {{ addr_thor_fox }}
+name: 1.2.3-expedited
+---
+# Should fail because 1.2.3 is already approved and scheduled
+type: tx-approve-upgrade
+signer: {{ addr_thor_frog }}
+name: 1.2.3-expedited
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/upgrade_proposal/1.2.3-expedited
+asserts:
+  - .approved == false
+  - .approved_percent == "0.6"
+  - .validators_to_quorum == 1
+---
+# will bring 1.2.3 below quorum, clearing the upgrade
+type: tx-reject-upgrade
+signer: {{ addr_thor_frog }}
+name: 1.2.3
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/upgrade_proposal/1.2.3
+asserts:
+  - .approved == false
+  - .approved_percent == "0.6"
+  - .validators_to_quorum == 1
+---
+# Should succeed now because another upgrade is not scheduled
+type: tx-approve-upgrade
+signer: {{ addr_thor_frog }}
+name: 1.2.3-expedited
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/upgrade_proposal/1.2.3-expedited
+asserts:
+  - .approved == true
+  - .approved_percent == "0.8"
+  - .validators_to_quorum == 0
+---
+type: check
+endpoint: http://localhost:1317/cosmos/upgrade/v1beta1/current_plan
+asserts:
+- .plan.name == "1.2.3-expedited"
+- .plan.info == "upgrade to version 1.2.3"
+- .plan.height == "90"

@@ -389,7 +389,7 @@ func RUNEPoolInvariant(k KVStore) common.Invariant {
 func LendingInvariant(k KVStore) common.Invariant {
 	return func(ctx cosmos.Context) (msg []string, broken bool) {
 		assetToTotal := make(map[string]cosmos.Uint)
-		key := k.GetKey(ctx, prefixLoan, "")
+		key := k.GetKey(prefixLoan, "")
 		it := k.getIterator(ctx, types.DbPrefix(key))
 		defer it.Close()
 		for ; it.Valid(); it.Next() {
@@ -417,7 +417,7 @@ func LendingInvariant(k KVStore) common.Invariant {
 		}
 
 		// ensure stored total collateral equals sum of loans
-		keyTotal := k.GetKey(ctx, prefixLoanTotalCollateral, "")
+		keyTotal := k.GetKey(prefixLoanTotalCollateral, "")
 		itTotal := k.getIterator(ctx, types.DbPrefix(keyTotal))
 		defer itTotal.Close()
 		for ; itTotal.Valid(); itTotal.Next() {

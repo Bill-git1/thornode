@@ -33,7 +33,7 @@ func (k KVStore) getObservedNetworkFeeVoter(ctx cosmos.Context, key string, reco
 // SetObservedNetworkFeeVoter - save a observed network fee voter object
 func (k KVStore) SetObservedNetworkFeeVoter(ctx cosmos.Context, networkFeeVoter ObservedNetworkFeeVoter) {
 	key := networkFeeVoter.ID()
-	k.setObservedNetworkFeeVoter(ctx, k.GetKey(ctx, prefixNetworkFeeVoter, key), networkFeeVoter)
+	k.setObservedNetworkFeeVoter(ctx, k.GetKey(prefixNetworkFeeVoter, key), networkFeeVoter)
 }
 
 // GetObservedNetworkFeeVoterIterator iterate tx in voters
@@ -51,6 +51,6 @@ func (k KVStore) GetObservedNetworkFeeVoter(ctx cosmos.Context, height int64, ch
 		record.TransactionSize = size
 	}
 	key := record.ID()
-	_, err := k.getObservedNetworkFeeVoter(ctx, k.GetKey(ctx, prefixNetworkFeeVoter, key), &record)
+	_, err := k.getObservedNetworkFeeVoter(ctx, k.GetKey(prefixNetworkFeeVoter, key), &record)
 	return record, err
 }

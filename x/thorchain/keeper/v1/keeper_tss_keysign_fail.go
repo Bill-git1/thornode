@@ -31,7 +31,7 @@ func (k KVStore) getTssKeysignFailVoter(ctx cosmos.Context, key string, record *
 
 // SetTssKeysignFailVoter - save a tss keysign fail voter object
 func (k KVStore) SetTssKeysignFailVoter(ctx cosmos.Context, tss TssKeysignFailVoter) {
-	k.setTssKeysignFailVoter(ctx, k.GetKey(ctx, prefixTssKeysignFailure, tss.String()), tss)
+	k.setTssKeysignFailVoter(ctx, k.GetKey(prefixTssKeysignFailure, tss.String()), tss)
 }
 
 // GetTssKeysignFailVoterIterator iterate tx in voters
@@ -42,6 +42,6 @@ func (k KVStore) GetTssKeysignFailVoterIterator(ctx cosmos.Context) cosmos.Itera
 // GetTssKeysignFailVoter - gets information of a tss keysign failure voter object
 func (k KVStore) GetTssKeysignFailVoter(ctx cosmos.Context, id string) (TssKeysignFailVoter, error) {
 	record := TssKeysignFailVoter{ID: id}
-	_, err := k.getTssKeysignFailVoter(ctx, k.GetKey(ctx, prefixTssKeysignFailure, id), &record)
+	_, err := k.getTssKeysignFailVoter(ctx, k.GetKey(prefixTssKeysignFailure, id), &record)
 	return record, err
 }

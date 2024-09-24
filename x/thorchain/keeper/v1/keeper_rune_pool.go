@@ -12,7 +12,7 @@ import (
 
 func (k KVStore) GetRUNEPool(ctx cosmos.Context) (RUNEPool, error) {
 	record := NewRUNEPool()
-	key := k.GetKey(ctx, prefixRUNEPool, "")
+	key := k.GetKey(prefixRUNEPool, "")
 
 	store := ctx.KVStore(k.storeKey)
 	if !store.Has([]byte(key)) {
@@ -28,7 +28,7 @@ func (k KVStore) GetRUNEPool(ctx cosmos.Context) (RUNEPool, error) {
 
 func (k KVStore) SetRUNEPool(ctx cosmos.Context, pool RUNEPool) {
 	store := ctx.KVStore(k.storeKey)
-	key := k.GetKey(ctx, prefixRUNEPool, "")
+	key := k.GetKey(prefixRUNEPool, "")
 	buf := k.cdc.MustMarshal(&pool)
 	store.Set([]byte(key), buf)
 }
@@ -74,16 +74,16 @@ func (k KVStore) GetRUNEProvider(ctx cosmos.Context, addr cosmos.AccAddress) (RU
 		Units:          cosmos.ZeroUint(),
 	}
 
-	_, err := k.getRUNEProvider(ctx, k.GetKey(ctx, prefixRUNEProvider, record.Key()), &record)
+	_, err := k.getRUNEProvider(ctx, k.GetKey(prefixRUNEProvider, record.Key()), &record)
 	return record, err
 }
 
 // SetRUNEProvider save the RUNE provider to kv store
 func (k KVStore) SetRUNEProvider(ctx cosmos.Context, rp RUNEProvider) {
-	k.setRUNEProvider(ctx, k.GetKey(ctx, prefixRUNEProvider, rp.Key()), rp)
+	k.setRUNEProvider(ctx, k.GetKey(prefixRUNEProvider, rp.Key()), rp)
 }
 
 // RemoveRUNEProvider remove the RUNE provider from the kv store
 func (k KVStore) RemoveRUNEProvider(ctx cosmos.Context, rp RUNEProvider) {
-	k.del(ctx, k.GetKey(ctx, prefixRUNEProvider, rp.Key()))
+	k.del(ctx, k.GetKey(prefixRUNEProvider, rp.Key()))
 }

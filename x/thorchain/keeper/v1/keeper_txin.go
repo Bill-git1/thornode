@@ -20,7 +20,7 @@ func (k KVStore) SetObservedTxOutVoter(ctx cosmos.Context, tx ObservedTxVoter) {
 
 func (k KVStore) setObservedTxVoter(ctx cosmos.Context, prefix types.DbPrefix, tx ObservedTxVoter) {
 	store := ctx.KVStore(k.storeKey)
-	key := k.GetKey(ctx, prefix, tx.String())
+	key := k.GetKey(prefix, tx.String())
 	buf := k.cdc.MustMarshal(&tx)
 	if buf == nil {
 		store.Delete([]byte(key))
@@ -55,7 +55,7 @@ func (k KVStore) GetObservedTxOutVoter(ctx cosmos.Context, hash common.TxID) (Ob
 
 func (k KVStore) getObservedTxVoter(ctx cosmos.Context, prefix types.DbPrefix, hash common.TxID) (ObservedTxVoter, error) {
 	record := ObservedTxVoter{TxID: hash}
-	key := k.GetKey(ctx, prefix, hash.String())
+	key := k.GetKey(prefix, hash.String())
 	store := ctx.KVStore(k.storeKey)
 	if !store.Has([]byte(key)) {
 		return record, nil
@@ -73,7 +73,7 @@ func (k KVStore) SetObservedLink(ctx cosmos.Context, inhash, outhash common.TxID
 }
 
 func (k KVStore) setObservedLink(ctx cosmos.Context, inhash, outhash common.TxID) {
-	key := k.GetKey(ctx, prefixObservedLink, inhash.String())
+	key := k.GetKey(prefixObservedLink, inhash.String())
 	record := make([]string, 0)
 	_, _ = k.getStrings(ctx, key, &record)
 	for _, s := range record {
@@ -90,7 +90,7 @@ func (k KVStore) GetObservedLink(ctx cosmos.Context, inhash common.TxID) []commo
 	hashes := make([]common.TxID, 0)
 	strs := make([]string, 0)
 
-	key := k.GetKey(ctx, prefixObservedLink, inhash.String())
+	key := k.GetKey(prefixObservedLink, inhash.String())
 	_, _ = k.getStrings(ctx, key, &strs)
 
 	for _, s := range strs {

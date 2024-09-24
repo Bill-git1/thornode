@@ -31,7 +31,7 @@ func (k KVStore) getSwapperClout(ctx cosmos.Context, key string, record *Swapper
 }
 
 func (k KVStore) SetSwapperClout(ctx cosmos.Context, record SwapperClout) error {
-	k.setSwapperClout(ctx, k.GetKey(ctx, prefixSwapperClout, record.Address.String()), record)
+	k.setSwapperClout(ctx, k.GetKey(prefixSwapperClout, record.Address.String()), record)
 	return nil
 }
 
@@ -40,7 +40,7 @@ func (k KVStore) GetSwapperClout(ctx cosmos.Context, addr common.Address) (Swapp
 	if addr.IsEmpty() {
 		return record, nil
 	}
-	_, err := k.getSwapperClout(ctx, k.GetKey(ctx, prefixSwapperClout, addr.String()), &record)
+	_, err := k.getSwapperClout(ctx, k.GetKey(prefixSwapperClout, addr.String()), &record)
 	return record, err
 }
 

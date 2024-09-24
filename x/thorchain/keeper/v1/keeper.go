@@ -8,6 +8,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
+	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
@@ -89,6 +90,8 @@ const (
 	prefixAffiliateCollector      types.DbPrefix = "affcol/"
 	prefixRollingPoolLiquidityFee types.DbPrefix = "rolling_pool_liquidity_fee/"
 	prefixVersion                 types.DbPrefix = "version/"
+	prefixUpgradeProposals        types.DbPrefix = "upgr_props/"
+	prefixUpgradeVotes            types.DbPrefix = "upgr_votes/"
 )
 
 func dbError(ctx cosmos.Context, wrapper string, err error) error {
@@ -102,16 +105,18 @@ type KVStore struct {
 	cdc           codec.BinaryCodec
 	coinKeeper    bankkeeper.Keeper
 	accountKeeper authkeeper.AccountKeeper
+	upgradeKeeper upgradekeeper.Keeper
 	storeKey      cosmos.StoreKey // Unexposed key to access store from cosmos.Context
 	version       semver.Version
 	constAccessor constants.ConstantValues
 }
 
 // NewKVStore creates new instances of the thorchain Keeper
-func NewKVStore(cdc codec.BinaryCodec, coinKeeper bankkeeper.Keeper, accountKeeper authkeeper.AccountKeeper, storeKey cosmos.StoreKey, version semver.Version) KVStore {
+func NewKVStore(cdc codec.BinaryCodec, coinKeeper bankkeeper.Keeper, accountKeeper authkeeper.AccountKeeper, upgradeKeeper upgradekeeper.Keeper, storeKey cosmos.StoreKey, version semver.Version) KVStore {
 	return KVStore{
 		coinKeeper:    coinKeeper,
 		accountKeeper: accountKeeper,
+		upgradeKeeper: upgradeKeeper,
 		storeKey:      storeKey,
 		cdc:           cdc,
 		version:       version,
@@ -120,9 +125,9 @@ func NewKVStore(cdc codec.BinaryCodec, coinKeeper bankkeeper.Keeper, accountKeep
 }
 
 // NewKeeper creates new instances of the thorchain Keeper
-func NewKeeper(cdc codec.BinaryCodec, coinKeeper bankkeeper.Keeper, accountKeeper authkeeper.AccountKeeper, storeKey cosmos.StoreKey) keeper.Keeper {
+func NewKeeper(cdc codec.BinaryCodec, coinKeeper bankkeeper.Keeper, accountKeeper authkeeper.AccountKeeper, upgradeKeeper upgradekeeper.Keeper, storeKey cosmos.StoreKey) keeper.Keeper {
 	version := semver.MustParse("0.0.0")
-	return NewKVStore(cdc, coinKeeper, accountKeeper, storeKey, version)
+	return NewKVStore(cdc, coinKeeper, accountKeeper, upgradeKeeper, storeKey, version)
 }
 
 // Cdc return the amino codec
@@ -140,13 +145,13 @@ func (k *KVStore) SetVersion(ver semver.Version) {
 }
 
 // GetKey return a key that can be used to store into key value store
-func (k KVStore) GetKey(ctx cosmos.Context, prefix types.DbPrefix, key string) string {
+func (k KVStore) GetKey(prefix types.DbPrefix, key string) string {
 	return fmt.Sprintf("%s/%s", prefix, strings.ToUpper(key))
 }
 
 // SetStoreVersion save the store version
 func (k KVStore) SetStoreVersion(ctx cosmos.Context, value int64) {
-	key := k.GetKey(ctx, prefixStoreVersion, "")
+	key := k.GetKey(prefixStoreVersion, "")
 	store := ctx.KVStore(k.storeKey)
 	ver := ProtoInt64{Value: value}
 	store.Set([]byte(key), k.cdc.MustMarshal(&ver))
@@ -154,7 +159,7 @@ func (k KVStore) SetStoreVersion(ctx cosmos.Context, value int64) {
 
 // GetStoreVersion get the current key value store version
 func (k KVStore) GetStoreVersion(ctx cosmos.Context) int64 {
-	key := k.GetKey(ctx, prefixStoreVersion, "")
+	key := k.GetKey(prefixStoreVersion, "")
 	store := ctx.KVStore(k.storeKey)
 	if !store.Has([]byte(key)) {
 		// thornode start at version 0.38.0, thus when there is no store version , it return 38

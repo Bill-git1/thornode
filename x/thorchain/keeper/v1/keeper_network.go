@@ -32,13 +32,13 @@ func (k KVStore) getNetwork(ctx cosmos.Context, key string, record *Network) (bo
 // GetNetwork retrieve network data from key value store
 func (k KVStore) GetNetwork(ctx cosmos.Context) (Network, error) {
 	record := NewNetwork()
-	_, err := k.getNetwork(ctx, k.GetKey(ctx, prefixNetwork, ""), &record)
+	_, err := k.getNetwork(ctx, k.GetKey(prefixNetwork, ""), &record)
 	return record, err
 }
 
 // SetNetwork save the given network data to key value store, it will overwrite existing vault
 func (k KVStore) SetNetwork(ctx cosmos.Context, data Network) error {
-	k.setNetwork(ctx, k.GetKey(ctx, prefixNetwork, ""), data)
+	k.setNetwork(ctx, k.GetKey(prefixNetwork, ""), data)
 	return nil
 }
 
@@ -68,12 +68,12 @@ func (k KVStore) getPOL(ctx cosmos.Context, key string, record *ProtocolOwnedLiq
 // GetPOL retrieve network data from key value store
 func (k KVStore) GetPOL(ctx cosmos.Context) (ProtocolOwnedLiquidity, error) {
 	record := NewProtocolOwnedLiquidity()
-	_, err := k.getPOL(ctx, k.GetKey(ctx, prefixPOL, ""), &record)
+	_, err := k.getPOL(ctx, k.GetKey(prefixPOL, ""), &record)
 	return record, err
 }
 
 // SetPOL save the given network data to key value store, it will overwrite existing vault
 func (k KVStore) SetPOL(ctx cosmos.Context, data ProtocolOwnedLiquidity) error {
-	k.setPOL(ctx, k.GetKey(ctx, prefixPOL, ""), data)
+	k.setPOL(ctx, k.GetKey(prefixPOL, ""), data)
 	return nil
 }

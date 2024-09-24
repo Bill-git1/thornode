@@ -10,6 +10,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/simapp"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
+	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	"github.com/tendermint/tendermint/libs/log"
 
 	"gitlab.com/thorchain/thornode/common"
@@ -41,7 +42,45 @@ func (k KVStoreDummy) GetMinJoinLast(ctx cosmos.Context) (semver.Version, int64)
 }
 func (k KVStoreDummy) SetMinJoinLast(ctx cosmos.Context) {}
 
-func (k KVStoreDummy) GetKey(_ cosmos.Context, prefix kvTypes.DbPrefix, key string) string {
+func (k KVStoreDummy) ProposeUpgrade(ctx cosmos.Context, name string, upgrade Upgrade) error {
+	return kaboom
+}
+
+func (k KVStoreDummy) GetProposedUpgrade(ctx cosmos.Context, name string) (*Upgrade, error) {
+	return nil, kaboom
+}
+
+func (k KVStoreDummy) ApproveUpgrade(ctx cosmos.Context, addr cosmos.AccAddress, name string) {
+	panic(kaboom)
+}
+
+func (k KVStoreDummy) RejectUpgrade(ctx cosmos.Context, addr cosmos.AccAddress, name string) {
+	panic(kaboom)
+}
+
+func (k KVStoreDummy) GetUpgradePlan(ctx cosmos.Context) (upgradetypes.Plan, bool) {
+	return upgradetypes.Plan{}, false
+}
+
+func (k KVStoreDummy) ScheduleUpgrade(ctx cosmos.Context, plan upgradetypes.Plan) error {
+	return kaboom
+}
+
+func (k KVStoreDummy) GetUpgradeProposalIterator(_ cosmos.Context) cosmos.Iterator {
+	return nil
+}
+
+func (k KVStoreDummy) GetUpgradeVoteIterator(_ cosmos.Context, _ string) cosmos.Iterator {
+	return nil
+}
+
+func (k KVStoreDummy) RemoveExpiredUpgradeProposals(_ cosmos.Context) error {
+	return nil
+}
+
+func (k KVStoreDummy) ClearUpgradePlan(ctx cosmos.Context) {}
+
+func (k KVStoreDummy) GetKey(prefix kvTypes.DbPrefix, key string) string {
 	return fmt.Sprintf("%s/1/%s", prefix, key)
 }
 

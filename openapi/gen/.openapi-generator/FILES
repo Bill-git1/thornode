@@ -132,6 +132,8 @@ docs/TxResponse.md
 docs/TxSignersResponse.md
 docs/TxStagesResponse.md
 docs/TxStatusResponse.md
+docs/UpgradeProposal.md
+docs/UpgradeVote.md
 docs/Vault.md
 docs/VaultAddress.md
 docs/VaultInfo.md
@@ -224,6 +226,8 @@ model_tx_response.go
 model_tx_signers_response.go
 model_tx_stages_response.go
 model_tx_status_response.go
+model_upgrade_proposal.go
+model_upgrade_vote.go
 model_vault.go
 model_vault_address.go
 model_vault_info.go

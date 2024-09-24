@@ -288,6 +288,128 @@ func (s *QuerierSuite) TestQueryNodeAccounts(c *C) {
 	c.Assert(len(out), Equals, 1)
 }
 
+func (s *QuerierSuite) TestQueryUpgradeProposals(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	querier := NewQuerier(mgr, s.kb)
+
+	k := mgr.Keeper()
+
+	// Add node accounts
+	na1 := GetRandomValidatorNode(NodeActive)
+	na1.Bond = cosmos.NewUint(100 * common.One)
+	c.Assert(k.SetNodeAccount(ctx, na1), IsNil)
+	na2 := GetRandomValidatorNode(NodeActive)
+	na2.Bond = cosmos.NewUint(200 * common.One)
+	c.Assert(k.SetNodeAccount(ctx, na2), IsNil)
+	na3 := GetRandomValidatorNode(NodeActive)
+	na3.Bond = cosmos.NewUint(300 * common.One)
+	c.Assert(k.SetNodeAccount(ctx, na3), IsNil)
+	na4 := GetRandomValidatorNode(NodeActive)
+	na4.Bond = cosmos.NewUint(400 * common.One)
+	c.Assert(k.SetNodeAccount(ctx, na4), IsNil)
+	na5 := GetRandomValidatorNode(NodeActive)
+	na5.Bond = cosmos.NewUint(500 * common.One)
+	c.Assert(k.SetNodeAccount(ctx, na5), IsNil)
+	na6 := GetRandomValidatorNode(NodeActive)
+	na6.Bond = cosmos.NewUint(600 * common.One)
+	c.Assert(k.SetNodeAccount(ctx, na6), IsNil)
+
+	const (
+		upgradeName = "1.2.3"
+		upgradeInfo = "scheduled upgrade"
+	)
+
+	upgradeHeight := ctx.BlockHeight() + 100
+
+	// propose upgrade
+	c.Assert(k.ProposeUpgrade(ctx, upgradeName, types.Upgrade{
+		Height: upgradeHeight,
+		Info:   upgradeInfo,
+	}), IsNil)
+
+	k.ApproveUpgrade(ctx, na1.NodeAddress, upgradeName)
+	k.ApproveUpgrade(ctx, na2.NodeAddress, upgradeName)
+	k.ApproveUpgrade(ctx, na3.NodeAddress, upgradeName)
+
+	res, err := querier(ctx, []string{query.QueryUpgradeProposals.Key}, abci.RequestQuery{})
+	c.Assert(err, IsNil)
+	var proposals []openapi.UpgradeProposal
+
+	err = json.Unmarshal(res, &proposals)
+	c.Assert(err, IsNil)
+
+	c.Assert(len(proposals), Equals, 1)
+	p := proposals[0]
+	c.Assert(p.Name, Equals, upgradeName)
+	c.Assert(p.Info, Equals, upgradeInfo)
+	c.Assert(p.Height, Equals, upgradeHeight)
+
+	res, err = querier(ctx, []string{query.QueryUpgradeProposal.Key, upgradeName}, abci.RequestQuery{})
+	c.Assert(err, IsNil)
+	err = json.Unmarshal(res, &p)
+	c.Assert(err, IsNil)
+
+	c.Assert(p.Name, Equals, upgradeName)
+	c.Assert(p.Info, Equals, upgradeInfo)
+	c.Assert(p.Height, Equals, upgradeHeight)
+	c.Assert(*p.Approved, Equals, false)
+	c.Assert(*p.ValidatorsToQuorum, Equals, int64(1))
+	c.Assert(*p.ApprovedPercent, Equals, "0.5")
+
+	k.ApproveUpgrade(ctx, na4.NodeAddress, upgradeName)
+
+	res, err = querier(ctx, []string{query.QueryUpgradeProposal.Key, upgradeName}, abci.RequestQuery{})
+	c.Assert(err, IsNil)
+	err = json.Unmarshal(res, &p)
+	c.Assert(err, IsNil)
+
+	c.Assert(*p.Approved, Equals, true)
+	c.Assert(*p.ValidatorsToQuorum, Equals, int64(0))
+	c.Assert(*p.ApprovedPercent, Equals, "0.6666666666666666")
+
+	k.RejectUpgrade(ctx, na2.NodeAddress, upgradeName)
+
+	res, err = querier(ctx, []string{query.QueryUpgradeProposal.Key, upgradeName}, abci.RequestQuery{})
+	c.Assert(err, IsNil)
+	err = json.Unmarshal(res, &p)
+	c.Assert(err, IsNil)
+
+	c.Assert(*p.Approved, Equals, false)
+	c.Assert(*p.ValidatorsToQuorum, Equals, int64(1))
+	c.Assert(*p.ApprovedPercent, Equals, "0.5")
+
+	var votes []openapi.UpgradeVote
+	res, err = querier(ctx, []string{query.QueryUpgradeVotes.Key, upgradeName}, abci.RequestQuery{})
+	c.Assert(err, IsNil)
+	err = json.Unmarshal(res, &votes)
+	c.Assert(err, IsNil)
+	c.Assert(len(votes), Equals, 4)
+
+	foundVote := make(map[string]bool)
+	for _, v := range votes {
+		if _, ok := foundVote[v.NodeAddress]; ok {
+			c.Log("duplicate vote", v.NodeAddress)
+			c.Fail()
+		}
+		foundVote[v.NodeAddress] = true
+		switch v.NodeAddress {
+		case na1.NodeAddress.String():
+			c.Assert(v.Vote, Equals, "approve")
+		case na2.NodeAddress.String():
+			c.Assert(v.Vote, Equals, "reject")
+		case na3.NodeAddress.String():
+			c.Assert(v.Vote, Equals, "approve")
+		case na4.NodeAddress.String():
+			c.Assert(v.Vote, Equals, "approve")
+		case na5.NodeAddress.String():
+			c.Assert(v.Vote, Equals, "approve")
+		default:
+			c.Log("unexpected voter address", v.NodeAddress)
+			c.Fail()
+		}
+	}
+}
+
 func (s *QuerierSuite) TestQuerierRagnarokInProgress(c *C) {
 	req := abci.RequestQuery{
 		Data:   nil,

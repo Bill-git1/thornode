@@ -9,7 +9,7 @@ import (
 // GetVersionWithCtx returns the version with the given context,
 // and returns true if the version was found in the store
 func (k KVStore) GetVersionWithCtx(ctx cosmos.Context) (semver.Version, bool) {
-	key := k.GetKey(ctx, prefixVersion, "")
+	key := k.GetKey(prefixVersion, "")
 	store := ctx.KVStore(k.storeKey)
 	val := store.Get([]byte(key))
 	if val == nil {
@@ -20,14 +20,14 @@ func (k KVStore) GetVersionWithCtx(ctx cosmos.Context) (semver.Version, bool) {
 
 // SetVersionWithCtx stores the version
 func (k KVStore) SetVersionWithCtx(ctx cosmos.Context, v semver.Version) {
-	key := k.GetKey(ctx, prefixVersion, "")
+	key := k.GetKey(prefixVersion, "")
 	store := ctx.KVStore(k.storeKey)
 	store.Set([]byte(key), []byte(v.String()))
 }
 
 // getMinJoinLast returns the last stored MinJoinVersion
 func (k KVStore) getMinJoinLast(ctx cosmos.Context) MinJoinLast {
-	key := k.GetKey(ctx, prefixMinJoinLast, "")
+	key := k.GetKey(prefixMinJoinLast, "")
 	store := ctx.KVStore(k.storeKey)
 	minJoinLastBytes := store.Get([]byte(key))
 	record := MinJoinLast{}
@@ -40,7 +40,7 @@ func (k KVStore) getMinJoinLast(ctx cosmos.Context) MinJoinLast {
 
 // setMinJoinLast stores the MinJoinVersion
 func (k KVStore) setMinJoinLast(ctx cosmos.Context, record MinJoinLast) {
-	key := k.GetKey(ctx, prefixMinJoinLast, "")
+	key := k.GetKey(prefixMinJoinLast, "")
 	store := ctx.KVStore(k.storeKey)
 	buf := k.cdc.MustMarshal(&record)
 	if buf == nil {

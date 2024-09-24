@@ -37,7 +37,7 @@ func (k KVStore) GetTHORNameIterator(ctx cosmos.Context) cosmos.Iterator {
 
 // SetTHORName save the THORName object to store
 func (k KVStore) SetTHORName(ctx cosmos.Context, name THORName) {
-	k.setTHORName(ctx, k.GetKey(ctx, prefixTHORName, name.Key()), name)
+	k.setTHORName(ctx, k.GetKey(prefixTHORName, name.Key()), name)
 }
 
 // THORNameExists check whether the given name exists
@@ -45,7 +45,7 @@ func (k KVStore) THORNameExists(ctx cosmos.Context, name string) bool {
 	record := THORName{
 		Name: name,
 	}
-	if k.has(ctx, k.GetKey(ctx, prefixTHORName, record.Key())) {
+	if k.has(ctx, k.GetKey(prefixTHORName, record.Key())) {
 		record, _ = k.GetTHORName(ctx, name)
 		return record.ExpireBlockHeight >= ctx.BlockHeight()
 	}
@@ -57,7 +57,7 @@ func (k KVStore) GetTHORName(ctx cosmos.Context, name string) (THORName, error) 
 	record := THORName{
 		Name: name,
 	}
-	ok, err := k.getTHORName(ctx, k.GetKey(ctx, prefixTHORName, record.Key()), &record)
+	ok, err := k.getTHORName(ctx, k.GetKey(prefixTHORName, record.Key()), &record)
 	if !ok {
 		return record, fmt.Errorf("THORName doesn't exist: %s", name)
 	}
@@ -70,7 +70,7 @@ func (k KVStore) GetTHORName(ctx cosmos.Context, name string) (THORName, error) 
 // DeleteTHORName remove the given THORName from data store
 func (k KVStore) DeleteTHORName(ctx cosmos.Context, name string) error {
 	n := THORName{Name: name}
-	k.del(ctx, k.GetKey(ctx, prefixTHORName, n.Key()))
+	k.del(ctx, k.GetKey(prefixTHORName, n.Key()))
 	return nil
 }
 
@@ -101,7 +101,7 @@ func (k KVStore) getAffilateCollector(ctx cosmos.Context, key string, record *Af
 }
 
 func (k KVStore) SetAffiliateCollector(ctx cosmos.Context, collector AffiliateFeeCollector) {
-	k.setAffiliateCollector(ctx, k.GetKey(ctx, prefixAffiliateCollector, collector.OwnerAddress.String()), collector)
+	k.setAffiliateCollector(ctx, k.GetKey(prefixAffiliateCollector, collector.OwnerAddress.String()), collector)
 }
 
 func (k KVStore) GetAffiliateCollector(ctx cosmos.Context, acc cosmos.AccAddress) (AffiliateFeeCollector, error) {
@@ -109,7 +109,7 @@ func (k KVStore) GetAffiliateCollector(ctx cosmos.Context, acc cosmos.AccAddress
 		OwnerAddress: acc,
 		RuneAmount:   cosmos.ZeroUint(),
 	}
-	_, err := k.getAffilateCollector(ctx, k.GetKey(ctx, prefixAffiliateCollector, record.OwnerAddress.String()), &record)
+	_, err := k.getAffilateCollector(ctx, k.GetKey(prefixAffiliateCollector, record.OwnerAddress.String()), &record)
 	return record, err
 }
 

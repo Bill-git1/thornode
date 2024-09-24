@@ -13,6 +13,9 @@ Method | HTTP request | Description
 [**OutboundFeeAsset**](NetworkApi.md#OutboundFeeAsset) | **Get** /thorchain/outbound_fee/{asset} | 
 [**OutboundFees**](NetworkApi.md#OutboundFees) | **Get** /thorchain/outbound_fees | 
 [**Ragnarok**](NetworkApi.md#Ragnarok) | **Get** /thorchain/ragnarok | 
+[**UpgradeProposal**](NetworkApi.md#UpgradeProposal) | **Get** /thorchain/upgrade_proposal/{name} | 
+[**UpgradeProposals**](NetworkApi.md#UpgradeProposals) | **Get** /thorchain/upgrade_proposals | 
+[**UpgradeVotes**](NetworkApi.md#UpgradeVotes) | **Get** /thorchain/upgrade_votes/{name} | 
 [**Version**](NetworkApi.md#Version) | **Get** /thorchain/version | 
 
 
@@ -614,6 +617,216 @@ Name | Type | Description  | Notes
 ### Return type
 
 **bool**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## UpgradeProposal
+
+> UpgradeProposal UpgradeProposal(ctx, name).Height(height).Execute()
+
+
+
+
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    name := "v3.137.0" // string | 
+    height := int64(789) // int64 | optional block height, defaults to current tip (optional)
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.NetworkApi.UpgradeProposal(context.Background(), name).Height(height).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `NetworkApi.UpgradeProposal``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `UpgradeProposal`: UpgradeProposal
+    fmt.Fprintf(os.Stdout, "Response from `NetworkApi.UpgradeProposal`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**name** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiUpgradeProposalRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+ **height** | **int64** | optional block height, defaults to current tip | 
+
+### Return type
+
+[**UpgradeProposal**](UpgradeProposal.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## UpgradeProposals
+
+> []UpgradeProposal UpgradeProposals(ctx).Height(height).Execute()
+
+
+
+
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    height := int64(789) // int64 | optional block height, defaults to current tip (optional)
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.NetworkApi.UpgradeProposals(context.Background()).Height(height).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `NetworkApi.UpgradeProposals``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `UpgradeProposals`: []UpgradeProposal
+    fmt.Fprintf(os.Stdout, "Response from `NetworkApi.UpgradeProposals`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiUpgradeProposalsRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **height** | **int64** | optional block height, defaults to current tip | 
+
+### Return type
+
+[**[]UpgradeProposal**](UpgradeProposal.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## UpgradeVotes
+
+> []UpgradeVote UpgradeVotes(ctx, name).Height(height).Execute()
+
+
+
+
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    name := "v3.137.0" // string | 
+    height := int64(789) // int64 | optional block height, defaults to current tip (optional)
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.NetworkApi.UpgradeVotes(context.Background(), name).Height(height).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `NetworkApi.UpgradeVotes``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `UpgradeVotes`: []UpgradeVote
+    fmt.Fprintf(os.Stdout, "Response from `NetworkApi.UpgradeVotes`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**name** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiUpgradeVotesRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+ **height** | **int64** | optional block height, defaults to current tip | 
+
+### Return type
+
+[**[]UpgradeVote**](UpgradeVote.md)
 
 ### Authorization
 

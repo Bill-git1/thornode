@@ -31,13 +31,13 @@ func (k KVStore) getBanVoter(ctx cosmos.Context, key string, record *BanVoter) (
 
 // SetBanVoter - save a ban voter object
 func (k KVStore) SetBanVoter(ctx cosmos.Context, ban BanVoter) {
-	k.setBanVoter(ctx, k.GetKey(ctx, prefixBanVoter, ban.String()), ban)
+	k.setBanVoter(ctx, k.GetKey(prefixBanVoter, ban.String()), ban)
 }
 
 // GetBanVoter - gets information of ban voter
 func (k KVStore) GetBanVoter(ctx cosmos.Context, addr cosmos.AccAddress) (BanVoter, error) {
 	record := NewBanVoter(addr)
-	_, err := k.getBanVoter(ctx, k.GetKey(ctx, prefixBanVoter, record.String()), &record)
+	_, err := k.getBanVoter(ctx, k.GetKey(prefixBanVoter, record.String()), &record)
 	return record, err
 }
 

@@ -31,6 +31,9 @@ func GetTxCmd() *cobra.Command {
 
 	cmd.AddCommand(GetCmdSetNodeKeys())
 	cmd.AddCommand(GetCmdSetVersion())
+	cmd.AddCommand(GetCmdProposeUpgrade())
+	cmd.AddCommand(GetCmdApproveUpgrade())
+	cmd.AddCommand(GetCmdRejectUpgrade())
 	cmd.AddCommand(GetCmdSetIPAddress())
 	cmd.AddCommand(GetCmdBan())
 	cmd.AddCommand(GetCmdMimir())
@@ -241,6 +244,90 @@ func GetCmdSetVersion() *cobra.Command {
 			if err = msg.ValidateBasic(); err != nil {
 				return err
 			}
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+}
+
+// GetCmdProposeUpgrade command to propose an upgrade as a validator
+func GetCmdProposeUpgrade() *cobra.Command {
+	const flagInfo = "info"
+
+	cmd := &cobra.Command{
+		Use:   "propose-upgrade [name] [height]",
+		Short: "propose an upgrade for vote by other active validators",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			name, heightStr := args[0], args[1]
+			info, _ := cmd.Flags().GetString(flagInfo)
+
+			height, err := strconv.ParseInt(heightStr, 10, 64)
+			if err != nil {
+				return fmt.Errorf("failed to parse height: %w", err)
+			}
+
+			msg := types.NewMsgProposeUpgrade(name, height, info, clientCtx.GetFromAddress())
+			if err = msg.ValidateBasic(); err != nil {
+				return err
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	cmd.Flags().String(flagInfo, "", "info to be included in the on-chain upgrade plan")
+
+	return cmd
+}
+
+// GetCmdApproveUpgrade command to approve an upgrade as a validator
+func GetCmdApproveUpgrade() *cobra.Command {
+	return &cobra.Command{
+		Use:   "approve-upgrade [name]",
+		Short: "approve an upgrade that has been proposed for vote by another active validator",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			name := args[0]
+
+			msg := types.NewMsgApproveUpgrade(name, clientCtx.GetFromAddress())
+			if err = msg.ValidateBasic(); err != nil {
+				return err
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+}
+
+// GetCmdRejectUpgrade command to reject an upgrade as a validator
+func GetCmdRejectUpgrade() *cobra.Command {
+	return &cobra.Command{
+		Use:   "reject-upgrade [name]",
+		Short: "reject an upgrade that has been proposed for vote by another active validator",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			name := args[0]
+
+			msg := types.NewMsgRejectUpgrade(name, clientCtx.GetFromAddress())
+			if err = msg.ValidateBasic(); err != nil {
+				return err
+			}
+
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
 		},
 	}

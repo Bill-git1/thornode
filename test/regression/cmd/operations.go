@@ -114,6 +114,12 @@ func NewOperation(opMap map[string]any) Operation {
 		op = &OpTxVersion{}
 	case "fail-export-invariants":
 		op = &OpFailExportInvariants{}
+	case "tx-propose-upgrade":
+		op = &OpTxProposeUpgrade{}
+	case "tx-approve-upgrade":
+		op = &OpTxApproveUpgrade{}
+	case "tx-reject-upgrade":
+		op = &OpTxRejectUpgrade{}
 	default:
 		log.Fatal().Str("type", t).Msg("unknown operation type")
 	}
@@ -145,6 +151,9 @@ func NewOperation(opMap map[string]any) Operation {
 		*OpTxSetIPAddress,
 		*OpTxSetNodeKeys,
 		*OpTxVersion,
+		*OpTxProposeUpgrade,
+		*OpTxApproveUpgrade,
+		*OpTxRejectUpgrade,
 		*OpTxTssKeysign,
 		*OpTxTssPool:
 		// encode as json
@@ -832,6 +841,45 @@ type OpTxVersion struct {
 
 func (op *OpTxVersion) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
 	return sendMsg(out, routine, &op.MsgSetVersion, op.Signer, op.Sequence, op.Gas, op, logs)
+}
+
+// ------------------------------ OpTxProposeUpgrade ------------------------------
+
+type OpTxProposeUpgrade struct {
+	OpBase                  `yaml:",inline"`
+	types.MsgProposeUpgrade `yaml:",inline"`
+	Sequence                *int64 `json:"sequence"`
+	Gas                     *int64 `json:"gas"`
+}
+
+func (op *OpTxProposeUpgrade) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
+	return sendMsg(out, routine, &op.MsgProposeUpgrade, op.Signer, op.Sequence, op.Gas, op, logs)
+}
+
+// ------------------------------ OpTxApproveUpgrade ------------------------------
+
+type OpTxApproveUpgrade struct {
+	OpBase                  `yaml:",inline"`
+	types.MsgApproveUpgrade `yaml:",inline"`
+	Sequence                *int64 `json:"sequence"`
+	Gas                     *int64 `json:"gas"`
+}
+
+func (op *OpTxApproveUpgrade) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
+	return sendMsg(out, routine, &op.MsgApproveUpgrade, op.Signer, op.Sequence, op.Gas, op, logs)
+}
+
+// ------------------------------ OpTxRejectUpgrade ------------------------------
+
+type OpTxRejectUpgrade struct {
+	OpBase                 `yaml:",inline"`
+	types.MsgRejectUpgrade `yaml:",inline"`
+	Sequence               *int64 `json:"sequence"`
+	Gas                    *int64 `json:"gas"`
+}
+
+func (op *OpTxRejectUpgrade) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
+	return sendMsg(out, routine, &op.MsgRejectUpgrade, op.Signer, op.Sequence, op.Gas, op, logs)
 }
 
 // ------------------------------ OpFailExportInvariants ------------------------------

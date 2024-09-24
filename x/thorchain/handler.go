@@ -64,6 +64,9 @@ func NewExternalHandler(mgr Manager) cosmos.Handler {
 }
 
 func getHandlerMapping(mgr Manager) map[string]MsgHandler {
+	if mgr.GetVersion().GTE(semver.MustParse("2.136.0")) {
+		return getHandlerMappingV136(mgr)
+	}
 	return getHandlerMappingV65(mgr)
 }
 
@@ -92,6 +95,15 @@ func getHandlerMappingV65(mgr Manager) map[string]MsgHandler {
 	// native handlers (non-consensus)
 	m[MsgSend{}.Type()] = NewSendHandler(mgr)
 	m[MsgDeposit{}.Type()] = NewDepositHandler(mgr)
+	return m
+}
+
+func getHandlerMappingV136(mgr Manager) map[string]MsgHandler {
+	m := getHandlerMappingV65(mgr)
+	m[MsgProposeUpgrade{}.Type()] = NewProposeUpgradeHandler(mgr)
+	m[MsgApproveUpgrade{}.Type()] = NewApproveUpgradeHandler(mgr)
+	m[MsgRejectUpgrade{}.Type()] = NewRejectUpgradeHandler(mgr)
+
 	return m
 }
 

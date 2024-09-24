@@ -992,6 +992,94 @@ paths:
           description: OK
       tags:
       - Network
+  /thorchain/upgrade_proposals:
+    get:
+      description: Returns the current upgrade proposals.
+      operationId: upgradeProposals
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpgradeProposalsResponse'
+          description: OK
+      tags:
+      - Network
+  /thorchain/upgrade_proposal/{name}:
+    get:
+      description: Returns the upgrade proposal for the provided name.
+      operationId: upgradeProposal
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      - explode: false
+        in: path
+        name: name
+        required: true
+        schema:
+          example: v3.137.0
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpgradeProposalResponse'
+          description: OK
+      tags:
+      - Network
+  /thorchain/upgrade_votes/{name}:
+    get:
+      description: Returns the upgrade votes for the provided name.
+      operationId: upgradeVotes
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      - explode: false
+        in: path
+        name: name
+        required: true
+        schema:
+          example: v3.137.0
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpgradeVotesResponse'
+          description: OK
+      tags:
+      - Network
   /thorchain/constants:
     get:
       description: "Returns constant configuration, can be overridden by mimir."
@@ -2160,6 +2248,15 @@ components:
         minimum: 0
         type: integer
       style: form
+    name:
+      explode: false
+      in: path
+      name: name
+      required: true
+      schema:
+        example: v3.137.0
+        type: string
+      style: simple
     pathHeight:
       explode: false
       in: path
@@ -3817,6 +3914,72 @@ components:
       - result
       - tx
       type: object
+    UpgradeProposal:
+      example:
+        approved: true
+        validators_to_quorum: 20
+        name: scheduled upgrade 1
+        height: 1234
+        info: "{\"binaries\":{\"linux/amd64\":\"https://link.to.binary.amd64\",\"\
+          linux/arm64\":\"https://link.to.binary.arm64\"}}"
+        approved_percent: "0.8"
+      properties:
+        name:
+          description: the name of the upgrade
+          example: scheduled upgrade 1
+          type: string
+        height:
+          description: the block height at which the upgrade will occur
+          example: 1234
+          format: int64
+          type: integer
+        info:
+          description: "the description of the upgrade, typically json with URLs to\
+            \ binaries for use with automation tools"
+          example: "{\"binaries\":{\"linux/amd64\":\"https://link.to.binary.amd64\"\
+            ,\"linux/arm64\":\"https://link.to.binary.arm64\"}}"
+          type: string
+        approved:
+          description: whether the upgrade has been approved by the active validators
+          example: true
+          type: boolean
+        approved_percent:
+          description: the percentage of active validators that have approved the
+            upgrade
+          example: "0.8"
+          type: string
+        validators_to_quorum:
+          description: the amount of additional active validators required to reach
+            quorum for the upgrade
+          example: 20
+          format: int64
+          type: integer
+      required:
+      - height
+      - info
+      - name
+      type: object
+    UpgradeVote:
+      example:
+        node_address: thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+        vote: approve
+      properties:
+        node_address:
+          description: the node address of the voter
+          example: thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+          type: string
+        vote:
+          description: the vote cast by the node
+          enum:
+          - approve
+          - reject
+          example: approve
+          type: string
+      required:
+      - height
+      - node_address
+      - vote
+      type: object
     PoolResponse:
       $ref: '#/components/schemas/Pool'
     PoolsResponse:
@@ -4820,6 +4983,16 @@ components:
       - next
       - querier
       type: object
+    UpgradeProposalsResponse:
+      items:
+        $ref: '#/components/schemas/UpgradeProposal'
+      type: array
+    UpgradeProposalResponse:
+      $ref: '#/components/schemas/UpgradeProposal'
+    UpgradeVotesResponse:
+      items:
+        $ref: '#/components/schemas/UpgradeVote'
+      type: array
     ConstantsResponse:
       example:
         bool_values:

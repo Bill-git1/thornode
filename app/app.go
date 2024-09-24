@@ -186,7 +186,7 @@ func New(
 	app.UpgradeKeeper = upgradekeeper.NewKeeper(skipUpgradeHeights, keys[upgradetypes.StoreKey], appCodec, homePath, app.BaseApp)
 
 	app.thorchainKeeper = thorchainkeeperv1.NewKeeper(
-		appCodec, app.BankKeeper, app.AccountKeeper, keys[thorchaintypes.StoreKey],
+		appCodec, app.BankKeeper, app.AccountKeeper, app.UpgradeKeeper, keys[thorchaintypes.StoreKey],
 	)
 
 	// NOTE: Any module instantiated in the module manager that is later modified
@@ -201,7 +201,24 @@ func New(
 		bank.NewAppModule(appCodec, app.BankKeeper, app.AccountKeeper),
 		upgrade.NewAppModule(app.UpgradeKeeper),
 		params.NewAppModule(app.ParamsKeeper),
-		thorchain.NewAppModule(app.thorchainKeeper, appCodec, app.BankKeeper, app.AccountKeeper, keys[thorchaintypes.StoreKey], telemetryEnabled),
+		thorchain.NewAppModule(
+			app.thorchainKeeper,
+			appCodec,
+			app.BankKeeper,
+			app.AccountKeeper,
+			app.UpgradeKeeper,
+			keys[thorchaintypes.StoreKey],
+			telemetryEnabled,
+		),
+	)
+
+	app.mm.SetOrderBeginBlockers(
+		upgradetypes.ModuleName, // NOTE: upgrade module must be first
+		genutiltypes.ModuleName,
+		authtypes.ModuleName,
+		banktypes.ModuleName,
+		paramstypes.ModuleName,
+		thorchain.ModuleName,
 	)
 
 	// NOTE: The genutils module must occur after staking so that pools are

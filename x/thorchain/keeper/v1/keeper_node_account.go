@@ -13,6 +13,7 @@ import (
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
+	"gitlab.com/thorchain/thornode/x/thorchain/keeper/types"
 )
 
 func (k KVStore) setNodeAccount(ctx cosmos.Context, key string, record NodeAccount) {
@@ -138,7 +139,7 @@ func (k KVStore) RemoveLowBondValidatorAccounts(ctx cosmos.Context) error {
 			}
 
 			// remove bond providers
-			k.del(ctx, k.GetKey(ctx, prefixBondProviders, na.NodeAddress.String()))
+			k.del(ctx, k.GetKey(prefixBondProviders, na.NodeAddress.String()))
 		}
 	}
 	for _, naKey := range lowBondValidators {
@@ -231,7 +232,7 @@ func (k KVStore) GetNodeAccount(ctx cosmos.Context, addr cosmos.AccAddress) (Nod
 		Ed25519:   common.EmptyPubKey,
 	}
 	record := NewNodeAccount(addr, NodeUnknown, emptyPubKeySet, "", cosmos.ZeroUint(), "", ctx.BlockHeight())
-	_, err := k.getNodeAccount(ctx, k.GetKey(ctx, prefixNodeAccount, addr.String()), &record)
+	_, err := k.getNodeAccount(ctx, k.GetKey(prefixNodeAccount, addr.String()), &record)
 	return record, err
 }
 
@@ -259,7 +260,7 @@ func (k KVStore) SetNodeAccount(ctx cosmos.Context, na NodeAccount) error {
 		}
 	}
 
-	k.setNodeAccount(ctx, k.GetKey(ctx, prefixNodeAccount, na.NodeAddress.String()), na)
+	k.setNodeAccount(ctx, k.GetKey(prefixNodeAccount, na.NodeAddress.String()), na)
 	return nil
 }
 
@@ -299,11 +300,25 @@ func (k KVStore) GetNodeAccountIterator(ctx cosmos.Context) cosmos.Iterator {
 	return k.getIterator(ctx, prefixNodeAccount)
 }
 
+// GetUpgradeProposalIterator to iterate upgrade proposals.
+func (k KVStore) GetUpgradeProposalIterator(ctx cosmos.Context) cosmos.Iterator {
+	return k.getIterator(ctx, prefixUpgradeProposals)
+}
+
+// GetUpgradeVoteIterator to iterate upgrade votes for a named proposal.
+func (k KVStore) GetUpgradeVoteIterator(ctx cosmos.Context, name string) cosmos.Iterator {
+	return k.getIterator(ctx, types.DbPrefix(VotePrefix(name)))
+}
+
+func VotePrefix(name string) string {
+	return fmt.Sprintf("%s%s/", prefixUpgradeVotes, name)
+}
+
 // GetNodeAccountSlashPoints - get the slash points associated with the given
 // node address
 func (k KVStore) GetNodeAccountSlashPoints(ctx cosmos.Context, addr cosmos.AccAddress) (int64, error) {
 	record := int64(0)
-	_, err := k.getInt64(ctx, k.GetKey(ctx, prefixNodeSlashPoints, addr.String()), &record)
+	_, err := k.getInt64(ctx, k.GetKey(prefixNodeSlashPoints, addr.String()), &record)
 	return record, err
 }
 
@@ -314,13 +329,13 @@ func (k KVStore) SetNodeAccountSlashPoints(ctx cosmos.Context, addr cosmos.AccAd
 	if pts < 0 {
 		pts = 0
 	}
-	k.setInt64(ctx, k.GetKey(ctx, prefixNodeSlashPoints, addr.String()), pts)
+	k.setInt64(ctx, k.GetKey(prefixNodeSlashPoints, addr.String()), pts)
 }
 
 // ResetNodeAccountSlashPoints - reset the slash points to zero for associated
 // with the given node address
 func (k KVStore) ResetNodeAccountSlashPoints(ctx cosmos.Context, addr cosmos.AccAddress) {
-	k.del(ctx, k.GetKey(ctx, prefixNodeSlashPoints, addr.String()))
+	k.del(ctx, k.GetKey(prefixNodeSlashPoints, addr.String()))
 }
 
 // IncNodeAccountSlashPoints - increments the slash points associated with the
@@ -398,7 +413,7 @@ func (k KVStore) getJail(ctx cosmos.Context, key string, record *Jail) (bool, er
 // GetNodeAccountJail - gets jail details for a given node address
 func (k KVStore) GetNodeAccountJail(ctx cosmos.Context, addr cosmos.AccAddress) (Jail, error) {
 	record := NewJail(addr)
-	_, err := k.getJail(ctx, k.GetKey(ctx, prefixNodeJail, addr.String()), &record)
+	_, err := k.getJail(ctx, k.GetKey(prefixNodeJail, addr.String()), &record)
 	return record, err
 }
 
@@ -415,7 +430,7 @@ func (k KVStore) SetNodeAccountJail(ctx cosmos.Context, addr cosmos.AccAddress, 
 	jail.ReleaseHeight = height
 	jail.Reason = reason
 
-	k.setJail(ctx, k.GetKey(ctx, prefixNodeJail, addr.String()), jail)
+	k.setJail(ctx, k.GetKey(prefixNodeJail, addr.String()), jail)
 	return nil
 }
 
@@ -427,7 +442,7 @@ func (k KVStore) ReleaseNodeAccountFromJail(ctx cosmos.Context, addr cosmos.AccA
 	}
 	jail.ReleaseHeight = ctx.BlockHeight()
 	jail.Reason = ""
-	k.setJail(ctx, k.GetKey(ctx, prefixNodeJail, addr.String()), jail)
+	k.setJail(ctx, k.GetKey(prefixNodeJail, addr.String()), jail)
 	return nil
 }
 
@@ -457,13 +472,13 @@ func (k KVStore) getBondProviders(ctx cosmos.Context, key string, record *BondPr
 // GetBondProviders - gets bond providers for a node account
 func (k KVStore) GetBondProviders(ctx cosmos.Context, addr cosmos.AccAddress) (BondProviders, error) {
 	record := NewBondProviders(addr)
-	_, err := k.getBondProviders(ctx, k.GetKey(ctx, prefixBondProviders, addr.String()), &record)
+	_, err := k.getBondProviders(ctx, k.GetKey(prefixBondProviders, addr.String()), &record)
 	return record, err
 }
 
 // SetBondProviders - update the bond providers of a node account
 func (k KVStore) SetBondProviders(ctx cosmos.Context, record BondProviders) error {
-	k.setBondProviders(ctx, k.GetKey(ctx, prefixBondProviders, record.NodeAddress.String()), record)
+	k.setBondProviders(ctx, k.GetKey(prefixBondProviders, record.NodeAddress.String()), record)
 	return nil
 }
 

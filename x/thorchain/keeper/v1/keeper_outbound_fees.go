@@ -17,7 +17,7 @@ func (k KVStore) GetOutboundTxFee(ctx cosmos.Context) cosmos.Uint {
 // GetOutboundFeeWithheldRune - record of RUNE collected by the Reserve for an Asset's outbound fees
 func (k KVStore) GetOutboundFeeWithheldRune(ctx cosmos.Context, outAsset common.Asset) (cosmos.Uint, error) {
 	var record uint64
-	_, err := k.getUint64(ctx, k.GetKey(ctx, prefixOutboundFeeWithheldRune, outAsset.String()), &record)
+	_, err := k.getUint64(ctx, k.GetKey(prefixOutboundFeeWithheldRune, outAsset.String()), &record)
 	return cosmos.NewUint(record), err
 }
 
@@ -29,7 +29,7 @@ func (k KVStore) AddToOutboundFeeWithheldRune(ctx cosmos.Context, outAsset commo
 	}
 
 	outboundFeeWithheldRune = outboundFeeWithheldRune.Add(withheld)
-	k.setUint64(ctx, k.GetKey(ctx, prefixOutboundFeeWithheldRune, outAsset.String()), outboundFeeWithheldRune.Uint64())
+	k.setUint64(ctx, k.GetKey(prefixOutboundFeeWithheldRune, outAsset.String()), outboundFeeWithheldRune.Uint64())
 	return nil
 }
 
@@ -42,7 +42,7 @@ func (k KVStore) GetOutboundFeeWithheldRuneIterator(ctx cosmos.Context) cosmos.I
 // GetOutboundFeeSpentRune - record of RUNE spent by the Reserve for an Asset's outbounds' gas costs
 func (k KVStore) GetOutboundFeeSpentRune(ctx cosmos.Context, outAsset common.Asset) (cosmos.Uint, error) {
 	var record uint64
-	_, err := k.getUint64(ctx, k.GetKey(ctx, prefixOutboundFeeSpentRune, outAsset.String()), &record)
+	_, err := k.getUint64(ctx, k.GetKey(prefixOutboundFeeSpentRune, outAsset.String()), &record)
 	return cosmos.NewUint(record), err
 }
 
@@ -54,7 +54,7 @@ func (k KVStore) AddToOutboundFeeSpentRune(ctx cosmos.Context, outAsset common.A
 	}
 
 	outboundFeeSpentRune = outboundFeeSpentRune.Add(spent)
-	k.setUint64(ctx, k.GetKey(ctx, prefixOutboundFeeSpentRune, outAsset.String()), outboundFeeSpentRune.Uint64())
+	k.setUint64(ctx, k.GetKey(prefixOutboundFeeSpentRune, outAsset.String()), outboundFeeSpentRune.Uint64())
 	return nil
 }
 

@@ -260,13 +260,13 @@ func (k KVStore) SetVault(ctx cosmos.Context, vault Vault) error {
 		}
 	}
 
-	k.setVault(ctx, k.GetKey(ctx, prefixVault, vault.PubKey.String()), vault)
+	k.setVault(ctx, k.GetKey(prefixVault, vault.PubKey.String()), vault)
 	return nil
 }
 
 // VaultExists check whether the given pubkey is associated with a vault
 func (k KVStore) VaultExists(ctx cosmos.Context, pk common.PubKey) bool {
-	return k.has(ctx, k.GetKey(ctx, prefixVault, pk.String()))
+	return k.has(ctx, k.GetKey(prefixVault, pk.String()))
 }
 
 // GetVault get Vault with the given pubkey from data store
@@ -275,7 +275,7 @@ func (k KVStore) GetVault(ctx cosmos.Context, pk common.PubKey) (Vault, error) {
 		BlockHeight: ctx.BlockHeight(),
 		PubKey:      pk,
 	}
-	ok, err := k.getVault(ctx, k.GetKey(ctx, prefixVault, pk.String()), &record)
+	ok, err := k.getVault(ctx, k.GetKey(prefixVault, pk.String()), &record)
 	if !ok {
 		return record, fmt.Errorf("vault with pubkey(%s) doesn't exist: %w", pk, kvTypes.ErrVaultNotFound)
 	}
@@ -303,7 +303,7 @@ func (k KVStore) HasValidVaultPools(ctx cosmos.Context) (bool, error) {
 
 func (k KVStore) getAsgardIndex(ctx cosmos.Context) (common.PubKeys, error) {
 	record := make([]string, 0)
-	_, err := k.getStrings(ctx, k.GetKey(ctx, prefixVaultAsgardIndex, ""), &record)
+	_, err := k.getStrings(ctx, k.GetKey(prefixVaultAsgardIndex, ""), &record)
 	if err != nil {
 		return nil, err
 	}
@@ -328,7 +328,7 @@ func (k KVStore) addAsgardIndex(ctx cosmos.Context, pubkey common.PubKey) error 
 		}
 	}
 	pks = append(pks, pubkey)
-	k.setStrings(ctx, k.GetKey(ctx, prefixVaultAsgardIndex, ""), pks.Strings())
+	k.setStrings(ctx, k.GetKey(prefixVaultAsgardIndex, ""), pks.Strings())
 	return nil
 }
 
@@ -345,7 +345,7 @@ func (k KVStore) RemoveFromAsgardIndex(ctx cosmos.Context, pubkey common.PubKey)
 		}
 	}
 
-	k.setStrings(ctx, k.GetKey(ctx, prefixVaultAsgardIndex, ""), newPks.Strings())
+	k.setStrings(ctx, k.GetKey(prefixVaultAsgardIndex, ""), newPks.Strings())
 	return nil
 }
 
@@ -408,6 +408,6 @@ func (k KVStore) DeleteVault(ctx cosmos.Context, pubkey common.PubKey) error {
 		}
 	}
 	// delete the actual vault
-	k.del(ctx, k.GetKey(ctx, prefixVault, vault.PubKey.String()))
+	k.del(ctx, k.GetKey(prefixVault, vault.PubKey.String()))
 	return nil
 }

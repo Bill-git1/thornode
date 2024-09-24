@@ -1,11 +1,13 @@
 package thorchain
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 	"sync"
@@ -27,6 +29,7 @@ import (
 	"gitlab.com/thorchain/thornode/constants"
 	openapi "gitlab.com/thorchain/thornode/openapi/gen"
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
+	keeperv1 "gitlab.com/thorchain/thornode/x/thorchain/keeper/v1"
 	q "gitlab.com/thorchain/thornode/x/thorchain/query"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
@@ -132,6 +135,12 @@ func NewQuerier(mgr *Mgrs, kbs cosmos.KeybaseStore) cosmos.Querier {
 			return queryConstantValues(ctx, path[1:], req, mgr)
 		case q.QueryVersion.Key:
 			return queryVersion(ctx, path[1:], req, mgr)
+		case q.QueryUpgradeProposals.Key:
+			return queryUpgradeProposals(ctx, mgr)
+		case q.QueryUpgradeProposal.Key:
+			return queryUpgradeProposal(ctx, path[1:], req, mgr)
+		case q.QueryUpgradeVotes.Key:
+			return queryUpgradeVotes(ctx, path[1:], req, mgr)
 		case q.QueryMimirValues.Key:
 			return queryMimirValues(ctx, path[1:], req, mgr)
 		case q.QueryMimirWithKey.Key:
@@ -2543,6 +2552,110 @@ func queryVersion(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr 
 		Querier:         constants.SWVersion.String(),
 	}
 	return jsonify(ctx, ver)
+}
+
+func queryUpgradeProposals(ctx cosmos.Context, mgr *Mgrs) ([]byte, error) {
+	res := make([]openapi.UpgradeProposal, 0)
+
+	k := mgr.Keeper()
+	iter := k.GetUpgradeProposalIterator(ctx)
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		key, value := iter.Key(), iter.Value()
+
+		nameSplit := strings.Split(string(key), "/")
+		name := nameSplit[len(nameSplit)-1]
+
+		var upgrade types.Upgrade
+		if err := k.Cdc().Unmarshal(value, &upgrade); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal proposed upgrade: %w", err)
+		}
+
+		p := openapi.UpgradeProposal{
+			Name:   name,
+			Height: upgrade.Height,
+			Info:   upgrade.Info,
+		}
+
+		res = append(res, p)
+	}
+
+	return jsonify(ctx, res)
+}
+
+func queryUpgradeProposal(ctx cosmos.Context, path []string, _ abci.RequestQuery, mgr *Mgrs) ([]byte, error) {
+	if len(path) == 0 {
+		return nil, errors.New("upgrade name not provided")
+	}
+
+	k := mgr.Keeper()
+
+	name := path[0]
+
+	proposal, err := k.GetProposedUpgrade(ctx, name)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get upgrade proposal: %w", err)
+	}
+
+	if proposal == nil {
+		return nil, fmt.Errorf("upgrade proposal not found: %s", name)
+	}
+
+	uq, err := keeperv1.UpgradeApprovedByMajority(ctx, k, name)
+	if err != nil {
+		return nil, fmt.Errorf("fail to check upgrade approval: %w", err)
+	}
+
+	approval := big.NewRat(int64(uq.ApprovingVals), int64(uq.TotalActive))
+	approvalFlt, _ := approval.Float64()
+	approvalStr := strconv.FormatFloat(approvalFlt, 'f', -1, 64)
+
+	vtq := int64(uq.NeededForQuorum)
+
+	res := openapi.UpgradeProposal{
+		Name:               name,
+		Height:             proposal.Height,
+		Info:               proposal.Info,
+		Approved:           &uq.Approved,
+		ApprovedPercent:    &approvalStr,
+		ValidatorsToQuorum: &vtq,
+	}
+
+	return jsonify(ctx, res)
+}
+
+func queryUpgradeVotes(ctx cosmos.Context, path []string, _ abci.RequestQuery, mgr *Mgrs) ([]byte, error) {
+	if len(path) == 0 {
+		return nil, errors.New("upgrade name not provided")
+	}
+
+	name := path[0]
+	prefix := []byte(keeperv1.VotePrefix(name))
+	res := make([]openapi.UpgradeVote, 0)
+
+	iter := mgr.Keeper().GetUpgradeVoteIterator(ctx, name)
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		key, value := iter.Key(), iter.Value()
+
+		addr := cosmos.AccAddress(bytes.TrimPrefix(key, prefix))
+
+		var vote string
+		if bytes.Equal(value, []byte{0x1}) {
+			vote = "approve"
+		} else {
+			vote = "reject"
+		}
+
+		v := openapi.UpgradeVote{
+			NodeAddress: addr.String(),
+			Vote:        vote,
+		}
+
+		res = append(res, v)
+	}
+
+	return jsonify(ctx, res)
 }
 
 func queryMimirWithKey(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {

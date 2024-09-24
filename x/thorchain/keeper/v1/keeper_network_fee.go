@@ -37,7 +37,7 @@ func (k KVStore) GetNetworkFee(ctx cosmos.Context, chain common.Chain) (NetworkF
 		TransactionSize:    0,
 		TransactionFeeRate: 0,
 	}
-	_, err := k.getNetworkFee(ctx, k.GetKey(ctx, prefixNetworkFee, chain.String()), &record)
+	_, err := k.getNetworkFee(ctx, k.GetKey(prefixNetworkFee, chain.String()), &record)
 	return record, err
 }
 
@@ -46,7 +46,7 @@ func (k KVStore) SaveNetworkFee(ctx cosmos.Context, chain common.Chain, networkF
 	if err := networkFee.Valid(); err != nil {
 		return err
 	}
-	k.setNetworkFee(ctx, k.GetKey(ctx, prefixNetworkFee, chain.String()), networkFee)
+	k.setNetworkFee(ctx, k.GetKey(prefixNetworkFee, chain.String()), networkFee)
 	return nil
 }
 

@@ -10,7 +10,7 @@ import (
 // GetMimir get a mimir value from key value store
 func (k KVStore) GetMimir(ctx cosmos.Context, key string) (int64, error) {
 	record := int64(-1)
-	_, err := k.getInt64(ctx, k.GetKey(ctx, prefixMimir, key), &record)
+	_, err := k.getInt64(ctx, k.GetKey(prefixMimir, key), &record)
 	return record, err
 }
 
@@ -24,7 +24,7 @@ func (k KVStore) GetMimirWithRef(ctx cosmos.Context, template, ref string) (int6
 
 // SetMimir save a mimir value to key value store
 func (k KVStore) SetMimir(ctx cosmos.Context, key string, value int64) {
-	k.setInt64(ctx, k.GetKey(ctx, prefixMimir, key), value)
+	k.setInt64(ctx, k.GetKey(prefixMimir, key), value)
 }
 
 // GetNodeMimirs get node mimirs value from key value store
@@ -32,10 +32,10 @@ func (k KVStore) GetNodeMimirs(ctx cosmos.Context, key string) (NodeMimirs, erro
 	key = strings.ToUpper(key)
 	record := NodeMimirs{}
 	store := ctx.KVStore(k.storeKey)
-	if !store.Has([]byte(k.GetKey(ctx, prefixNodeMimir, key))) {
+	if !store.Has([]byte(k.GetKey(prefixNodeMimir, key))) {
 		return record, nil
 	}
-	bz := store.Get([]byte(k.GetKey(ctx, prefixNodeMimir, key)))
+	bz := store.Get([]byte(k.GetKey(prefixNodeMimir, key)))
 	if err := k.cdc.Unmarshal(bz, &record); err != nil {
 		return NodeMimirs{}, dbError(ctx, fmt.Sprintf("Unmarshal kvstore: (%T) %s", record, key), err)
 	}
@@ -45,7 +45,7 @@ func (k KVStore) GetNodeMimirs(ctx cosmos.Context, key string) (NodeMimirs, erro
 // SetNodeMimir save a mimir value to key value store for a specific node
 func (k KVStore) SetNodeMimir(ctx cosmos.Context, key string, value int64, acc cosmos.AccAddress) error {
 	key = strings.ToUpper(key)
-	kvkey := k.GetKey(ctx, prefixNodeMimir, key)
+	kvkey := k.GetKey(prefixNodeMimir, key)
 	record, err := k.GetNodeMimirs(ctx, key)
 	if err != nil {
 		return err
@@ -63,7 +63,7 @@ func (k KVStore) SetNodeMimir(ctx cosmos.Context, key string, value int64, acc c
 
 // DeleteNodeMimirs deletes all node mimir votes for a given key
 func (k KVStore) DeleteNodeMimirs(ctx cosmos.Context, key string) {
-	k.del(ctx, k.GetKey(ctx, prefixNodeMimir, key))
+	k.del(ctx, k.GetKey(prefixNodeMimir, key))
 }
 
 func (k KVStore) PurgeOperationalNodeMimirs(ctx cosmos.Context) {
@@ -88,18 +88,18 @@ func (k KVStore) GetNodeMimirIterator(ctx cosmos.Context) cosmos.Iterator {
 }
 
 func (k KVStore) DeleteMimir(ctx cosmos.Context, key string) error {
-	k.del(ctx, k.GetKey(ctx, prefixMimir, key))
+	k.del(ctx, k.GetKey(prefixMimir, key))
 	return nil
 }
 
 func (k KVStore) GetNodePauseChain(ctx cosmos.Context, acc cosmos.AccAddress) int64 {
 	record := int64(-1)
-	_, _ = k.getInt64(ctx, k.GetKey(ctx, prefixNodePauseChain, acc.String()), &record)
+	_, _ = k.getInt64(ctx, k.GetKey(prefixNodePauseChain, acc.String()), &record)
 	return record
 }
 
 func (k KVStore) SetNodePauseChain(ctx cosmos.Context, acc cosmos.AccAddress) {
-	k.setInt64(ctx, k.GetKey(ctx, prefixNodePauseChain, acc.String()), ctx.BlockHeight())
+	k.setInt64(ctx, k.GetKey(prefixNodePauseChain, acc.String()), ctx.BlockHeight())
 }
 
 func (k KVStore) IsOperationalMimir(key string) bool {

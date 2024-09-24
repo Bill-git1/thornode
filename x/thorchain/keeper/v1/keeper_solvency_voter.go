@@ -33,13 +33,13 @@ func (k KVStore) getSolvencyVoter(ctx cosmos.Context, key string, record *Solven
 // SetSolvencyVoter - save a solvency voter object
 func (k KVStore) SetSolvencyVoter(ctx cosmos.Context, solvencyVoter SolvencyVoter) {
 	key := fmt.Sprintf("%s-%s", solvencyVoter.Chain, solvencyVoter.Id)
-	k.setSolvencyVoter(ctx, k.GetKey(ctx, prefixSolvencyVoter, key), solvencyVoter)
+	k.setSolvencyVoter(ctx, k.GetKey(prefixSolvencyVoter, key), solvencyVoter)
 }
 
 // GetSolvencyVoter - gets information of solvency voter
 func (k KVStore) GetSolvencyVoter(ctx cosmos.Context, txID common.TxID, chain common.Chain) (SolvencyVoter, error) {
 	key := fmt.Sprintf("%s-%s", chain, txID)
 	var solvencyVoter SolvencyVoter
-	_, err := k.getSolvencyVoter(ctx, k.GetKey(ctx, prefixSolvencyVoter, key), &solvencyVoter)
+	_, err := k.getSolvencyVoter(ctx, k.GetKey(prefixSolvencyVoter, key), &solvencyVoter)
 	return solvencyVoter, err
 }

@@ -43,7 +43,7 @@ func (k KVStore) AppendTxOut(ctx cosmos.Context, height int64, item TxOutItem) e
 
 // ClearTxOut - remove the txout of the given height from key value  store
 func (k KVStore) ClearTxOut(ctx cosmos.Context, height int64) error {
-	k.del(ctx, k.GetKey(ctx, prefixTxOut, strconv.FormatInt(height, 10)))
+	k.del(ctx, k.GetKey(prefixTxOut, strconv.FormatInt(height, 10)))
 	return nil
 }
 
@@ -52,7 +52,7 @@ func (k KVStore) SetTxOut(ctx cosmos.Context, blockOut *TxOut) error {
 	if blockOut == nil || blockOut.IsEmpty() {
 		return nil
 	}
-	k.setTxOut(ctx, k.GetKey(ctx, prefixTxOut, strconv.FormatInt(blockOut.Height, 10)), *blockOut)
+	k.setTxOut(ctx, k.GetKey(prefixTxOut, strconv.FormatInt(blockOut.Height, 10)), *blockOut)
 	return nil
 }
 
@@ -64,7 +64,7 @@ func (k KVStore) GetTxOutIterator(ctx cosmos.Context) cosmos.Iterator {
 // GetTxOut - write the given txout information to key value store
 func (k KVStore) GetTxOut(ctx cosmos.Context, height int64) (*TxOut, error) {
 	record := NewTxOut(height)
-	_, err := k.getTxOut(ctx, k.GetKey(ctx, prefixTxOut, strconv.FormatInt(height, 10)), record)
+	_, err := k.getTxOut(ctx, k.GetKey(prefixTxOut, strconv.FormatInt(height, 10)), record)
 	return record, err
 }
 
