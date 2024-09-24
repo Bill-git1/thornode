@@ -676,10 +676,7 @@ func (s *Signer) processTransaction(item TxOutStoreItem) {
 			}
 		}
 
-		if errors.Is(err, context.DeadlineExceeded) {
-			panic(fmt.Errorf("tx out item: %+v , keysign timeout : %w", item.TxOutItem, err))
-		}
-		s.logger.Error().Err(err).Msg("fail to sign and broadcast tx out store item")
+		s.logger.Error().Interface("tx", item.TxOutItem).Err(err).Msg("fail to sign and broadcast tx out store item")
 		cancel()
 		return
 		// The 'item' for loop should not be items[0],
