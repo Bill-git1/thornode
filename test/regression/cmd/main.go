@@ -20,6 +20,8 @@ import (
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func main() {
+	cleanExports()
+
 	// parse the regex in the RUN environment variable to determine which tests to run
 	runRegex := regexp.MustCompile(".*")
 	if len(os.Getenv("RUN")) > 0 {
@@ -53,7 +55,7 @@ func main() {
 	// sort the files descending by the number of blocks created (so long tests run first)
 	counts := make(map[string]int)
 	for _, file := range files {
-		ops, _, _ := parseOps(log.Output(io.Discard), file, template.Must(templates.Clone()), []string{})
+		ops, _, _, _ := parseOps(log.Output(io.Discard), file, template.Must(templates.Clone()), []string{})
 		counts[file] = blockCount(ops)
 	}
 	sort.Slice(files, func(i, j int) bool {

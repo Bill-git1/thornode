@@ -52,7 +52,7 @@ func opFuncMap(routine int) template.FuncMap {
 ////////////////////////////////////////////////////////////////////////////////////////
 
 type Operation interface {
-	Execute(out io.Writer, path string, routine int, thornode *os.Process, logs chan string) error
+	Execute(out io.Writer, path string, line, routine int, thornode *os.Process, logs chan string) error
 	OpType() string
 }
 
@@ -195,7 +195,7 @@ type OpEnv struct {
 	Value  string `json:"value"`
 }
 
-func (op *OpEnv) Execute(_ io.Writer, _ string, _ int, _ *os.Process, _ chan string) error {
+func (op *OpEnv) Execute(_ io.Writer, _ string, _, _ int, _ *os.Process, _ chan string) error {
 	return nil
 }
 
@@ -208,7 +208,7 @@ type OpState struct {
 	Genesis map[string]any `json:"genesis"`
 }
 
-func (op *OpState) Execute(_ io.Writer, _ string, routine int, _ *os.Process, _ chan string) error {
+func (op *OpState) Execute(_ io.Writer, _ string, _, routine int, _ *os.Process, _ chan string) error {
 	// extract HOME from command environment
 	home := fmt.Sprintf("/%d", routine)
 
@@ -306,8 +306,13 @@ func (op *OpCheck) prefetch(routine int) {
 	op.prefetchResp, op.prefetchErr = httpClient.Do(req)
 }
 
-func (op *OpCheck) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
+func (op *OpCheck) Execute(out io.Writer, path string, line, routine int, _ *os.Process, logs chan string) error {
 	localLog := consoleLogger(out)
+
+	// in AUTO_UPDATE mode prefetch is not run
+	if os.Getenv("AUTO_UPDATE") != "" {
+		op.prefetch(routine)
+	}
 
 	if op.prefetchErr != nil {
 		localLog.Err(op.prefetchErr).Msg("prefetch check failed")
@@ -345,6 +350,9 @@ func (op *OpCheck) Execute(out io.Writer, _ string, routine int, _ *os.Process, 
 		return fmt.Errorf("empty response")
 	}
 
+	updates := make(map[string][2]string)
+	failedAsserts := make([]string, 0)
+
 	// pipe response to jq for assertions
 	for _, a := range op.Asserts {
 		// render the assert expression (used for native_txid)
@@ -361,27 +369,115 @@ func (op *OpCheck) Execute(out io.Writer, _ string, routine int, _ *os.Process, 
 		var cmdOut []byte
 		cmdOut, err = cmd.CombinedOutput()
 		if err != nil {
-			if cmd.ProcessState.ExitCode() == 1 && os.Getenv("DEBUG") == "" {
-				// dump process logs if the assert expression failed
-				_, _ = out.Write([]byte(ColorPurple + "\nLogs:" + ColorReset + "\n"))
-				dumpLogs(out, logs)
-			}
+			failedAsserts = append(failedAsserts, a)
 
-			// dump pretty output for debugging
-			_, _ = out.Write([]byte(ColorPurple + "\nOperation:" + ColorReset + "\n"))
-			_ = yaml.NewEncoder(out).Encode(op)
-			_, _ = out.Write([]byte(ColorPurple + "\nFailed Assert: " + ColorReset + expr.String() + "\n"))
-			_, _ = out.Write([]byte(ColorPurple + "\nEndpoint Response:" + ColorReset + "\n"))
-			_, _ = out.Write([]byte(string(buf) + "\n"))
+			// attempt to auto update values if configured
+			if os.Getenv("AUTO_UPDATE") != "" {
+				if !strings.Contains(a, "==") {
+					continue
+				}
+
+				// extract expression and value on last ==
+				lastIdx := strings.LastIndex(a, "==")
+				expr := a[:lastIdx-1]
+				value := a[lastIdx+2:]
+
+				// evaluate the expression
+				evalCmd := exec.Command("jq", "-r", expr)
+				evalCmd.Stdin = bytes.NewReader(buf)
+				var evalOut []byte
+				evalOut, err = evalCmd.CombinedOutput()
+				if err != nil {
+					localLog.Err(err).Msg("failed to evaluate expression")
+					continue
+				}
+
+				// record the mapping and continue
+				value = strings.Trim(strings.TrimSpace(value), `"`)
+				updates[expr] = [2]string{value, strings.TrimSpace(string(evalOut))}
+				continue
+			}
 
 			// log fatal on syntax errors and skip logs
 			if cmd.ProcessState.ExitCode() != 1 {
 				drainLogs(logs)
 				_, _ = out.Write([]byte(ColorRed + string(cmdOut) + ColorReset + "\n"))
 			}
+		}
+	}
 
+	if len(failedAsserts) > 0 {
+		// dump process logs if an assert failed
+		_, _ = out.Write([]byte(ColorPurple + "\nLogs:" + ColorReset + "\n"))
+		dumpLogs(out, logs)
+
+		// dump pretty output for debugging
+		_, _ = out.Write([]byte(ColorPurple + "\nOperation:" + ColorReset + "\n\n"))
+		_ = yaml.NewEncoder(out).Encode(op)
+		_, _ = out.Write([]byte("\n"))
+		for _, a := range failedAsserts {
+			_, _ = out.Write([]byte(ColorPurple + "Failed Assert: " + ColorReset + a + "\n"))
+		}
+		_, _ = out.Write([]byte(ColorPurple + "\nEndpoint Response:" + ColorReset + "\n"))
+		_, _ = out.Write([]byte(string(buf) + "\n"))
+
+		if os.Getenv("IGNORE_FAILURES") == "" && os.Getenv("AUTO_UPDATE") == "" {
+			return fmt.Errorf("%d failed asserts", len(failedAsserts))
+		}
+	}
+
+	// update the test with new values
+	if len(updates) > 0 {
+		// load the test file
+		var data []byte
+		data, err = os.ReadFile(path)
+		if err != nil {
 			return err
 		}
+		dataStr := string(data)
+
+		// now find the assert that matches
+		lines := strings.Split(dataStr, "\n")
+
+		// update the values
+		for expr, vals := range updates {
+			oldVal := vals[0]
+			newVal := vals[1]
+
+			found := false
+			for i := line; i < len(lines); i++ {
+				if strings.Contains(lines[i], expr) && strings.Contains(lines[i], oldVal) {
+					found = true
+					clog := localLog.With().
+						Int("line", i).
+						Str("expr", expr).
+						Str("old", oldVal).
+						Str("new", newVal).
+						Logger()
+
+					// report error and skip if the new value is null or empty
+					switch {
+					case newVal == "" || newVal == "null":
+						clog.Error().Msg("skipping auto update on null value")
+					case strings.HasSuffix(expr, "length"):
+						clog.Warn().Msg("skipping auto update on length")
+					default:
+						clog.Info().Msg("auto updating value")
+						lines[i] = strings.ReplaceAll(lines[i], oldVal, newVal)
+					}
+					break
+				}
+			}
+			if !found {
+				localLog.Warn().
+					Str("expr", expr).
+					Str("old", oldVal).
+					Str("new", newVal).
+					Msg("failed to find assertion to update")
+			}
+		}
+
+		return os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0o600)
 	}
 
 	return nil
@@ -398,7 +494,7 @@ type OpCreateBlocks struct {
 	Exit           *int `json:"exit"`
 }
 
-func (op *OpCreateBlocks) Execute(out io.Writer, path string, routine int, p *os.Process, logs chan string) error {
+func (op *OpCreateBlocks) Execute(out io.Writer, path string, _, routine int, p *os.Process, logs chan string) error {
 	localLog := consoleLogger(out)
 
 	// clear existing log output
@@ -604,7 +700,7 @@ type OpTxBan struct {
 	Gas         *int64         `json:"gas"`
 }
 
-func (op *OpTxBan) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxBan) Execute(out io.Writer, _ string, _, routine int, _ *os.Process, logs chan string) error {
 	msg := types.NewMsgBan(op.NodeAddress, op.Signer)
 	return sendMsg(out, routine, msg, op.Signer, op.Sequence, op.Gas, op, logs)
 }
@@ -620,7 +716,7 @@ type OpTxErrataTx struct {
 	Gas      *int64         `json:"gas"`
 }
 
-func (op *OpTxErrataTx) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxErrataTx) Execute(out io.Writer, _ string, _, routine int, _ *os.Process, logs chan string) error {
 	msg := types.NewMsgErrataTx(op.TxID, op.Chain, op.Signer)
 	return sendMsg(out, routine, msg, op.Signer, op.Sequence, op.Gas, op, logs)
 }
@@ -638,7 +734,7 @@ type OpTxNetworkFee struct {
 	Gas             *int64         `json:"gas"`
 }
 
-func (op *OpTxNetworkFee) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxNetworkFee) Execute(out io.Writer, _ string, _, routine int, _ *os.Process, logs chan string) error {
 	msg := types.NewMsgNetworkFee(op.BlockHeight, op.Chain, op.TransactionSize, op.TransactionRate, op.Signer)
 	return sendMsg(out, routine, msg, op.Signer, op.Sequence, op.Gas, op, logs)
 }
@@ -653,7 +749,7 @@ type OpTxNodePauseChain struct {
 	Gas      *int64         `json:"gas"`
 }
 
-func (op *OpTxNodePauseChain) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxNodePauseChain) Execute(out io.Writer, _ string, _, routine int, _ *os.Process, logs chan string) error {
 	msg := types.NewMsgNodePauseChain(op.Value, op.Signer)
 	return sendMsg(out, routine, msg, op.Signer, op.Sequence, op.Gas, op, logs)
 }
@@ -668,7 +764,7 @@ type OpTxObservedIn struct {
 	Gas      *int64             `json:"gas"`
 }
 
-func (op *OpTxObservedIn) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxObservedIn) Execute(out io.Writer, _ string, _, routine int, _ *os.Process, logs chan string) error {
 	msg := types.NewMsgObservedTxIn(op.Txs, op.Signer)
 	return sendMsg(out, routine, msg, op.Signer, op.Sequence, op.Gas, op, logs)
 }
@@ -683,7 +779,7 @@ type OpTxObservedOut struct {
 	Gas      *int64             `json:"gas"`
 }
 
-func (op *OpTxObservedOut) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxObservedOut) Execute(out io.Writer, _ string, _, routine int, _ *os.Process, logs chan string) error {
 	// render the memos (used for native_txid)
 	for i := range op.Txs {
 		tx := &op.Txs[i]
@@ -710,7 +806,7 @@ type OpTxSetIPAddress struct {
 	Gas       *int64         `json:"gas"`
 }
 
-func (op *OpTxSetIPAddress) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxSetIPAddress) Execute(out io.Writer, _ string, _, routine int, _ *os.Process, logs chan string) error {
 	msg := types.NewMsgSetIPAddress(op.IPAddress, op.Signer)
 	return sendMsg(out, routine, msg, op.Signer, op.Sequence, op.Gas, op, logs)
 }
@@ -728,7 +824,7 @@ type OpTxSolvency struct {
 	Gas      *int64         `json:"gas"`
 }
 
-func (op *OpTxSolvency) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxSolvency) Execute(out io.Writer, _ string, _, routine int, _ *os.Process, logs chan string) error {
 	msg, err := types.NewMsgSolvency(op.Chain, op.PubKey, op.Coins, op.Height, op.Signer)
 	if err != nil {
 		return err
@@ -747,7 +843,7 @@ type OpTxSetNodeKeys struct {
 	Gas                 *int64           `json:"gas"`
 }
 
-func (op *OpTxSetNodeKeys) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxSetNodeKeys) Execute(out io.Writer, _ string, _, routine int, _ *os.Process, logs chan string) error {
 	msg := types.NewMsgSetNodeKeys(op.PubKeySet, op.ValidatorConsPubKey, op.Signer)
 	return sendMsg(out, routine, msg, op.Signer, op.Sequence, op.Gas, op, logs)
 }
@@ -762,7 +858,7 @@ type OpTxTssKeysign struct {
 	Gas      *int64 `json:"gas"`
 }
 
-func (op *OpTxTssKeysign) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxTssKeysign) Execute(out io.Writer, _ string, _, routine int, _ *os.Process, logs chan string) error {
 	return sendMsg(out, routine, &op.MsgTssKeysignFail, op.MsgTssKeysignFail.Signer, op.Sequence, op.Gas, op, logs)
 }
 
@@ -783,7 +879,7 @@ type OpTxTssPool struct {
 	Gas             *int64           `json:"gas"`
 }
 
-func (op *OpTxTssPool) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxTssPool) Execute(out io.Writer, _ string, _, routine int, _ *os.Process, logs chan string) error {
 	msg, err := types.NewMsgTssPool(op.PubKeys, op.PoolPubKey, op.KeysharesBackup, op.KeygenType, op.Height, op.Blame, op.Chains, op.Signer, op.KeygenTime)
 	if err != nil {
 		return err
@@ -800,7 +896,7 @@ type OpTxDeposit struct {
 	Gas              *int64 `json:"gas"`
 }
 
-func (op *OpTxDeposit) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxDeposit) Execute(out io.Writer, _ string, _, routine int, _ *os.Process, logs chan string) error {
 	return sendMsg(out, routine, &op.MsgDeposit, op.Signer, op.Sequence, op.Gas, op, logs)
 }
 
@@ -813,7 +909,7 @@ type OpTxMimir struct {
 	Gas            *int64 `json:"gas"`
 }
 
-func (op *OpTxMimir) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxMimir) Execute(out io.Writer, _ string, _, routine int, _ *os.Process, logs chan string) error {
 	return sendMsg(out, routine, &op.MsgMimir, op.Signer, op.Sequence, op.Gas, op, logs)
 }
 
@@ -826,7 +922,7 @@ type OpTxSend struct {
 	Gas           *int64 `json:"gas"`
 }
 
-func (op *OpTxSend) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxSend) Execute(out io.Writer, _ string, _, routine int, _ *os.Process, logs chan string) error {
 	return sendMsg(out, routine, &op.MsgSend, op.FromAddress, op.Sequence, op.Gas, op, logs)
 }
 
@@ -839,7 +935,7 @@ type OpTxVersion struct {
 	Gas                 *int64 `json:"gas"`
 }
 
-func (op *OpTxVersion) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxVersion) Execute(out io.Writer, _ string, _, routine int, _ *os.Process, logs chan string) error {
 	return sendMsg(out, routine, &op.MsgSetVersion, op.Signer, op.Sequence, op.Gas, op, logs)
 }
 
@@ -852,7 +948,7 @@ type OpTxProposeUpgrade struct {
 	Gas                     *int64 `json:"gas"`
 }
 
-func (op *OpTxProposeUpgrade) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxProposeUpgrade) Execute(out io.Writer, _ string, _, routine int, _ *os.Process, logs chan string) error {
 	return sendMsg(out, routine, &op.MsgProposeUpgrade, op.Signer, op.Sequence, op.Gas, op, logs)
 }
 
@@ -865,7 +961,7 @@ type OpTxApproveUpgrade struct {
 	Gas                     *int64 `json:"gas"`
 }
 
-func (op *OpTxApproveUpgrade) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxApproveUpgrade) Execute(out io.Writer, _ string, _, routine int, _ *os.Process, logs chan string) error {
 	return sendMsg(out, routine, &op.MsgApproveUpgrade, op.Signer, op.Sequence, op.Gas, op, logs)
 }
 
@@ -878,7 +974,7 @@ type OpTxRejectUpgrade struct {
 	Gas                    *int64 `json:"gas"`
 }
 
-func (op *OpTxRejectUpgrade) Execute(out io.Writer, _ string, routine int, _ *os.Process, logs chan string) error {
+func (op *OpTxRejectUpgrade) Execute(out io.Writer, _ string, _, routine int, _ *os.Process, logs chan string) error {
 	return sendMsg(out, routine, &op.MsgRejectUpgrade, op.Signer, op.Sequence, op.Gas, op, logs)
 }
 
@@ -888,7 +984,7 @@ type OpFailExportInvariants struct {
 	OpBase `yaml:",inline"`
 }
 
-func (op *OpFailExportInvariants) Execute(out io.Writer, _ string, _ int, _ *os.Process, _ chan string) error {
+func (op *OpFailExportInvariants) Execute(out io.Writer, _ string, _, _ int, _ *os.Process, _ chan string) error {
 	return fmt.Errorf("fail-export-invariants should only be the last operation")
 }
 

@@ -47,7 +47,7 @@ func run(out io.Writer, path string, routine int) (failExportInvariants bool, er
 		"CHAIN_HOME_FOLDER=" + thornodePath,
 		"THOR_TENDERMINT_INSTRUMENTATION_PROMETHEUS=false",
 		// block time should be short, but all consecutive checks must complete within timeout
-		fmt.Sprintf("THOR_TENDERMINT_CONSENSUS_TIMEOUT_COMMIT=%s", time.Second*getTimeFactor()),
+		fmt.Sprintf("THOR_TENDERMINT_CONSENSUS_TIMEOUT_COMMIT=%s", time.Second*3/2*getTimeFactor()),
 		// all ports will be offset by the routine number
 		fmt.Sprintf("THOR_COSMOS_API_ADDRESS=tcp://0.0.0.0:%d", 1317+routine),
 		fmt.Sprintf("THOR_TENDERMINT_RPC_LISTEN_ADDRESS=tcp://0.0.0.0:%d", 26657+routine),
@@ -104,7 +104,7 @@ func run(out io.Writer, path string, routine int) (failExportInvariants bool, er
 		log.Fatal().Msgf("test name collision: %s", filepath.Base(path))
 	}
 
-	ops, opLines, env := parseOps(localLog, path, tmpls, env)
+	ops, opLines, env, failExportInvariants := parseOps(localLog, path, tmpls, env)
 
 	// warn if no operations found
 	if len(ops) == 0 {
@@ -120,18 +120,12 @@ func run(out io.Writer, path string, routine int) (failExportInvariants bool, er
 	blocksPath = strings.TrimSuffix(blocksPath, ".yaml")
 	_ = os.RemoveAll(blocksPath)
 
-	// extract fail-export operation from end if provided
-	if _, ok := ops[len(ops)-1].(*OpFailExportInvariants); ok {
-		failExportInvariants = true
-		ops = ops[:len(ops)-1]
-	}
-
 	// execute all state operations
 	stateOpCount := 0
 	for i, op := range ops {
 		if _, ok := op.(*OpState); ok {
 			localLog.Info().Int("line", opLines[i]).Msgf(">>> [%d] %s", i+1, op.OpType())
-			err = op.Execute(out, path, routine, cmd.Process, nil)
+			err = op.Execute(out, path, opLines[i], routine, cmd.Process, nil)
 			if err != nil {
 				log.Fatal().Err(err).Msg("failed to execute state operation")
 			}
@@ -236,8 +230,8 @@ func run(out io.Writer, path string, routine int) (failExportInvariants bool, er
 	localLog.Info().Msgf("Executing %d operations", len(ops))
 	for i, op := range ops {
 
-		// prefetch if this is the first of a sequence of check operations
-		if op.OpType() == "check" && ops[i-1].OpType() != "check" {
+		// prefetch sequences of check operations
+		if os.Getenv("AUTO_UPDATE") == "" && op.OpType() == "check" && ops[i-1].OpType() != "check" {
 			wg := sync.WaitGroup{}
 			for j := i; j < len(ops); j++ {
 				if ops[j].OpType() != "check" {
@@ -254,7 +248,7 @@ func run(out io.Writer, path string, routine int) (failExportInvariants bool, er
 		}
 
 		localLog.Info().Int("line", opLines[i]).Msgf(">>> [%d] %s", stateOpCount+i+1, op.OpType())
-		returnErr = op.Execute(out, path, routine, thornode.Process, stderrLines)
+		returnErr = op.Execute(out, path, opLines[i], routine, thornode.Process, stderrLines)
 		if returnErr != nil {
 			localLog.Error().Err(returnErr).
 				Int("line", opLines[i]).
@@ -264,6 +258,16 @@ func run(out io.Writer, path string, routine int) (failExportInvariants bool, er
 				Msg("operation failed")
 			dumpLogs(out, stderrLines)
 			break
+		}
+
+		// if in AUTO_UPDATE and the operation was a check, re-render future operations
+		if os.Getenv("AUTO_UPDATE") != "" && op.OpType() == "check" {
+			newOps, _, _, _ := parseOps(localLog, path, tmpls, env)
+			remainingOps := len(ops) - i - 1
+			newOps = newOps[len(newOps)-remainingOps:]
+			for j, newOp := range newOps {
+				ops[i+j+1] = newOp
+			}
 		}
 	}
 

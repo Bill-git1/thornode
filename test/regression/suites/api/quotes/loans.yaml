@@ -171,4 +171,4 @@ asserts:
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)+(.fees.affiliate|tonumber)
   - .recommended_gas_rate == "10"
   - .gas_rate_units == "satsperbyte"
----
+

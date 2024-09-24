@@ -92,7 +92,6 @@ asserts:
 ########################################################################################
 # attempt send to lending module
 ########################################################################################
----
 type: check
 endpoint: http://localhost:1317/thorchain/balance/module/lending
 asserts:

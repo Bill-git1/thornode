@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 	"text/template"
 	"time"
 
@@ -117,7 +119,7 @@ func consoleLogger(w io.Writer) zerolog.Logger {
 
 var reSetVar = regexp.MustCompile(`\$\{([A-Z0-9_]+)=([^}]+)\}`)
 
-func parseOps(localLog zerolog.Logger, path string, tmpls *template.Template, env []string) (ops []Operation, opLines []int, newEnv []string) {
+func parseOps(localLog zerolog.Logger, path string, tmpls *template.Template, env []string) (ops []Operation, opLines []int, newEnv []string, failExportInvariants bool) {
 	// read the file
 	f, err := os.Open(path)
 	if err != nil {
@@ -192,7 +194,7 @@ func parseOps(localLog zerolog.Logger, path string, tmpls *template.Template, en
 
 		// warn empty operations
 		if len(op) == 0 {
-			localLog.Warn().Msg("empty operation, line numbers may be wrong")
+			log.Fatal().Str("path", path).Msg("empty operation not allowed")
 			continue
 		}
 
@@ -222,7 +224,13 @@ func parseOps(localLog zerolog.Logger, path string, tmpls *template.Template, en
 	// remove env operations from op lines so numbers are correct
 	opLines = opLines[envAdded:]
 
-	return ops, opLines, env
+	// extract fail-export operation from end if provided
+	if _, ok := ops[len(ops)-1].(*OpFailExportInvariants); ok {
+		failExportInvariants = true
+		ops = ops[:len(ops)-1]
+	}
+
+	return ops, opLines, env, failExportInvariants
 }
 
 func blockCount(ops []Operation) int {
@@ -233,4 +241,47 @@ func blockCount(ops []Operation) int {
 		}
 	}
 	return blocks
+}
+
+func pathExists(path string) bool {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true
+	}
+	if os.IsNotExist(err) {
+		return false
+	}
+	return false
+}
+
+var reBlockExport = regexp.MustCompile(`^/mnt/blocks/.*/[0-9]+\.json$`)
+
+// cleanExports will remove all block and export files without a corresponding test.
+func cleanExports() {
+	for _, dir := range []string{"/mnt/exports", "/mnt/blocks"} {
+		_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if info.IsDir() {
+				return nil
+			}
+
+			// skip the gitignored single block exports
+			if reBlockExport.MatchString(path) {
+				return nil
+			}
+
+			// check if the test exists
+			testPath := path[:len(path)-5]
+			testPath = strings.TrimPrefix(testPath, dir)
+			testPath = "suites" + testPath + ".yaml"
+			if !pathExists(testPath) {
+				log.Info().Str("path", path).Msg("removing dead export")
+				return os.Remove(path)
+			}
+
+			return nil
+		})
+	}
 }
