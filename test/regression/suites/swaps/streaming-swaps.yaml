@@ -338,7 +338,7 @@ txs:
       from_address: {{ addr_btc_fox }}
       to_address: {{ addr_btc_dog }}
       coins:
-        - amount: "${INPUT_AMOUNT=6000000}"
+        - amount: "${INPUT_AMOUNT=5500000}"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -371,7 +371,7 @@ asserts:
   - .|length == 1
   - .[0]|.in_hash == "${INBOUND_TXID}"
   - .[0]|.coin.asset == "${OUTPUT_ASSET}"
-  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=33863474}"
+  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=31186277}"
   - .[0]|.memo == "OUT:${INBOUND_TXID}"
 ---
 type: create-blocks
@@ -442,7 +442,7 @@ asserts:
   - .|length == 1
   - .[0]|.in_hash == "${INBOUND_TXID}"
   - .[0]|.coin.asset == "${OUTPUT_ASSET}"
-  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=318733}"
+  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=342185}"
   - .[0]|.memo == "OUT:${INBOUND_TXID}"
 ---
 type: create-blocks
@@ -598,7 +598,7 @@ asserts:
   ###
   - .[2].asset == "ETH.ETH"
   - .[2].outbound_fee == "1279936"
-  - .[2].fee_withheld_rune == "790549629"
-  - .[2].fee_spent_rune == "592087792"
-  - .[2].surplus_rune == "198461837"
+  - .[2].fee_withheld_rune == "788471065"
+  - .[2].fee_spent_rune == "590532239"
+  - .[2].surplus_rune == "197938826"
   - .[2].dynamic_multiplier_basis_points == "19999"

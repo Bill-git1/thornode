@@ -141,6 +141,8 @@ func unrefundableCoinCleanup(ctx cosmos.Context, mgr Manager, toi TxOutItem, bur
 func getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsset common.Asset, swp StreamingSwap) (uint64, error) {
 	version := mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("2.137.0")):
+		return getMaxSwapQuantityV137(ctx, mgr, sourceAsset, targetAsset, swp)
 	case version.GTE(semver.MustParse("2.136.0")):
 		return getMaxSwapQuantityV136(ctx, mgr, sourceAsset, targetAsset, swp)
 	default:
@@ -148,83 +150,52 @@ func getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsse
 	}
 }
 
-func getMaxSwapQuantityV136(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsset common.Asset, swp StreamingSwap) (uint64, error) {
+func getMaxSwapQuantityV137(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsset common.Asset, swp StreamingSwap) (uint64, error) {
 	if swp.Interval == 0 {
 		return 0, nil
 	}
 
 	// collect pools involved in this swap
-	var pools Pools
-	totalRuneDepth := cosmos.ZeroUint()
-	for _, asset := range []common.Asset{sourceAsset, targetAsset} {
+	minSwapSize := cosmos.ZeroUint()
+	var sourceAssetPool types.Pool
+	for i, asset := range []common.Asset{sourceAsset, targetAsset} {
 		if asset.IsRune() {
 			continue
 		}
 
+		// get the asset pool
 		pool, err := mgr.Keeper().GetPool(ctx, asset.GetLayer1Asset())
 		if err != nil {
 			ctx.Logger().Error("fail to fetch pool", "error", err)
 			return 0, err
 		}
-		pools = append(pools, pool)
-		totalRuneDepth = totalRuneDepth.Add(pool.BalanceRune)
-	}
-	if len(pools) == 0 {
-		return 0, fmt.Errorf("dev error: no pools selected during a streaming swap")
-	}
-	var virtualDepth cosmos.Uint
-	switch len(pools) {
-	case 1:
-		// single swap, virtual depth is the same size as the single pool
-		virtualDepth = totalRuneDepth
-	case 2:
-		// double swap, dynamically calculate a virtual pool that is between the
-		// depth of pool1 and pool2. This calculation should result in a
-		// consistent swap fee (in bps) no matter the depth of the pools. The
-		// larger the difference between the pools, the more the virtual pool
-		// skews towards the smaller pool. This results in less rewards given
-		// to the larger pool, and more rewards given to the smaller pool.
 
-		// (2*r1*r2) / (r1+r2)
-		r1 := pools[0].BalanceRune
-		r2 := pools[1].BalanceRune
-		num := r1.Mul(r2).MulUint64(2)
-		denom := r1.Add(r2)
-		if denom.IsZero() {
-			return 0, fmt.Errorf("dev error: both pools have no rune balance")
+		// store the source asset pool for later conversion of RUNE to asset
+		if i == 0 {
+			sourceAssetPool = pool
 		}
-		virtualDepth = num.Quo(denom)
-	default:
-		return 0, fmt.Errorf("dev error: unsupported number of pools in a streaming swap: %d", len(pools))
-	}
-	if !sourceAsset.IsRune() {
-		// since the inbound asset is not rune, the virtual depth needs to be
-		// recalculated to be the asset side
-		virtualDepth = common.GetUncappedShare(virtualDepth, pools[0].BalanceRune, pools[0].BalanceAsset)
-	}
 
-	// determine lowest min slip for the swap assets, which results in highest quantity
-	minMinSlip := cosmos.ZeroUint()
-	for _, asset := range []common.Asset{sourceAsset, targetAsset} {
-		if asset.IsRune() {
-			continue
-		}
+		// get the configured min slip for this asset
 		minSlip := getMinSlipBps(ctx, mgr.Keeper(), asset)
 		if minSlip.IsZero() {
 			continue
 		}
-		if minMinSlip.IsZero() || minSlip.LT(minMinSlip) {
-			minMinSlip = minSlip
+
+		// compute the minimum rune swap size for this leg of the swap
+		minRuneSwapSize := common.GetSafeShare(minSlip, cosmos.NewUint(constants.MaxBasisPts), pool.BalanceRune)
+		if minSwapSize.IsZero() || minRuneSwapSize.LT(minSwapSize) {
+			minSwapSize = minRuneSwapSize
 		}
 	}
-	if minMinSlip.IsZero() {
-		return 0, fmt.Errorf("streaming swaps are not allowed with a min slip of zero")
+
+	// calculate the max swap quantity
+	if !sourceAsset.IsRune() {
+		minSwapSize = sourceAssetPool.RuneValueInAsset(minSwapSize)
 	}
-	minSize := common.GetSafeShare(minMinSlip, cosmos.NewUint(constants.MaxBasisPts), virtualDepth)
-	if minSize.IsZero() {
+	if minSwapSize.IsZero() {
 		return 1, nil
 	}
-	maxSwapQuantity := swp.Deposit.Quo(minSize)
+	maxSwapQuantity := swp.Deposit.Quo(minSwapSize)
 
 	// make sure maxSwapQuantity doesn't infringe on max length that a
 	// streaming swap can exist
