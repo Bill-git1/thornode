@@ -12,8 +12,9 @@ if ! grep "^  version: ${version}" openapi/openapi.yaml; then
   die "docs version (openapi/openapi.yaml) does not match version file ${version}"
 fi
 
+# format golang
+which gofumpt &>/dev/null || go install mvdan.cc/gofumpt@v0.5.0
 FILTER=(-e '^docs/' -e '.pb.go$' -e '^openapi/gen' -e '_gen.go')
-
 if [ -n "$(git ls-files '*.go' | grep -v "${FILTER[@]}" | xargs gofumpt -l 2>/dev/null)" ]; then
   git ls-files '*.go' | grep -v "${FILTER[@]}" | xargs gofumpt -d 2>/dev/null
   die "Go formatting errors"

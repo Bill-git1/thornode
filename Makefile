@@ -119,7 +119,8 @@ gitlab-trigger-ci:
 # ------------------------------ Housekeeping ------------------------------
 
 format:
-	@git ls-files '*.go' | grep -v -e '^docs/' | xargs gofumpt -w
+	@git ls-files '*.go' | grep -v -e '^docs/' -e '.pb.go$$' -e '^openapi/gen' -e '_gen.go$$' |\
+		xargs gofumpt -w
 
 lint:
 	@./scripts/lint.sh
