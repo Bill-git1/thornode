@@ -525,7 +525,7 @@ func (h SwapHandler) getTotalLiquidityRUNE(ctx cosmos.Context) (cosmos.Uint, err
 		if p.Status == PoolSuspended {
 			continue
 		}
-		if p.Asset.IsVaultAsset() {
+		if p.Asset.IsSyntheticAsset() {
 			continue
 		}
 		if p.Asset.IsDerivedAsset() {

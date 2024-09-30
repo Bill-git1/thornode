@@ -195,10 +195,6 @@ func (a Asset) IsTradeAsset() bool {
 	return a.Trade
 }
 
-func (a Asset) IsVaultAsset() bool {
-	return a.IsSyntheticAsset()
-}
-
 // Check if asset is a derived asset
 func (a Asset) IsDerivedAsset() bool {
 	return !a.Synth && !a.Trade && a.GetChain().IsTHORChain() && !a.IsRune()

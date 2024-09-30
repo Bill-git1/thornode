@@ -506,7 +506,7 @@ func (h LoanOpenHandler) getTotalLiquidityRUNELoanPools(ctx cosmos.Context) (cos
 		if p.Status == PoolSuspended {
 			continue
 		}
-		if p.Asset.IsVaultAsset() {
+		if p.Asset.IsSyntheticAsset() {
 			continue
 		}
 		if p.Asset.IsDerivedAsset() {

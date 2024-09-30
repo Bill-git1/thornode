@@ -110,7 +110,7 @@ func (h AddLiquidityHandler) validateV131(ctx cosmos.Context, msg MsgAddLiquidit
 	// At present, savers are authorized for:
 	// * layer 1 assets  (BTC, ETH, etc.)
 	// * stable pools (as determined by TOR anchor pool settings)
-	if msg.Asset.IsVaultAsset() {
+	if msg.Asset.IsSyntheticAsset() {
 		// Check if the asset is in the anchor pools
 		isAnchorAsset := false
 		for _, asset := range h.mgr.Keeper().GetAnchors(ctx, common.TOR) {
@@ -157,7 +157,7 @@ func (h AddLiquidityHandler) validateV131(ctx cosmos.Context, msg MsgAddLiquidit
 
 	// check if swap meets standards
 	if h.needsSwap(msg) {
-		if !msg.Asset.IsVaultAsset() {
+		if !msg.Asset.IsSyntheticAsset() {
 			return fmt.Errorf("swap & add liquidity is only available for synthetic pools")
 		}
 		if !msg.Asset.GetLayer1Asset().Equals(msg.Tx.Coins[0].Asset) {
@@ -180,7 +180,7 @@ func (h AddLiquidityHandler) validateV131(ctx cosmos.Context, msg MsgAddLiquidit
 
 	ensureLiquidityNoLargerThanBond := h.mgr.GetConstants().GetBoolValue(constants.StrictBondLiquidityRatio)
 	// if the pool is THORChain no need to check economic security
-	if msg.Asset.IsVaultAsset() || !ensureLiquidityNoLargerThanBond {
+	if msg.Asset.IsSyntheticAsset() || !ensureLiquidityNoLargerThanBond {
 		return nil
 	}
 
@@ -240,7 +240,7 @@ func (h AddLiquidityHandler) handleV121(ctx cosmos.Context, msg MsgAddLiquidity)
 		defaultPoolStatus := PoolAvailable.String()
 		// only set the pool to default pool status if not for gas asset on the chain
 		if !pool.Asset.Equals(pool.Asset.GetChain().GetGasAsset()) &&
-			!pool.Asset.IsVaultAsset() {
+			!pool.Asset.IsSyntheticAsset() {
 			defaultPoolStatus = h.mgr.GetConstants().GetStringValue(constants.DefaultPoolStatus)
 		}
 		pool.Status = GetPoolStatus(defaultPoolStatus)
@@ -270,7 +270,7 @@ func (h AddLiquidityHandler) handleV121(ctx cosmos.Context, msg MsgAddLiquidity)
 	// transaction to commit all funds atomically. For pools of native assets
 	// only, stage is always false
 	stage := false
-	if !msg.Asset.IsVaultAsset() && !msg.Tx.ID.IsBlank() {
+	if !msg.Asset.IsSyntheticAsset() && !msg.Tx.ID.IsBlank() {
 		if !msg.AssetAddress.IsEmpty() && msg.AssetAmount.IsZero() {
 			stage = true
 		}
@@ -504,7 +504,7 @@ func (h AddLiquidityHandler) addLiquidity(ctx cosmos.Context,
 			}
 		}
 
-		if asset.IsVaultAsset() {
+		if asset.IsSyntheticAsset() {
 			// new SU, by default, places the thor address to the rune address,
 			// but here we want it to be on the asset address only
 			su.AssetAddress = assetAddr
@@ -520,7 +520,7 @@ func (h AddLiquidityHandler) addLiquidity(ctx cosmos.Context,
 		}
 	}
 
-	if asset.IsVaultAsset() {
+	if asset.IsSyntheticAsset() {
 		if su.AssetAddress.IsEmpty() || !su.AssetAddress.IsChain(asset.GetLayer1Asset().GetChain()) {
 			return errAddLiquidityMismatchAddr
 		}
@@ -590,7 +590,7 @@ func (h AddLiquidityHandler) addLiquidity(ctx cosmos.Context,
 
 	oldPoolUnits := pool.GetPoolUnits()
 	var newPoolUnits, liquidityUnits cosmos.Uint
-	if asset.IsVaultAsset() {
+	if asset.IsSyntheticAsset() {
 		pendingRuneAmt = cosmos.ZeroUint() // sanity check
 		newPoolUnits, liquidityUnits = calculateVaultUnits(oldPoolUnits, balanceAsset, pendingAssetAmt)
 	} else {
@@ -607,7 +607,7 @@ func (h AddLiquidityHandler) addLiquidity(ctx cosmos.Context,
 	pool.BalanceRune = poolRune
 	pool.BalanceAsset = poolAsset
 	ctx.Logger().Info("post add liquidity", "pool", pool.Asset, "rune", pool.BalanceRune, "asset", pool.BalanceAsset, "LP units", pool.LPUnits, "synth units", pool.SynthUnits, "add liquidity units", liquidityUnits)
-	if (pool.BalanceRune.IsZero() && !asset.IsVaultAsset()) || pool.BalanceAsset.IsZero() {
+	if (pool.BalanceRune.IsZero() && !asset.IsSyntheticAsset()) || pool.BalanceAsset.IsZero() {
 		return ErrInternal(err, "pool cannot have zero rune or asset balance")
 	}
 
@@ -681,7 +681,7 @@ func (h AddLiquidityHandler) getTotalLiquidityRUNE(ctx cosmos.Context) (cosmos.U
 		if p.Status == PoolSuspended {
 			continue
 		}
-		if p.Asset.IsVaultAsset() {
+		if p.Asset.IsSyntheticAsset() {
 			continue
 		}
 		if p.Asset.IsDerivedAsset() {

@@ -239,7 +239,7 @@ func (s *SwapperV134) swapOne(ctx cosmos.Context,
 	}
 	// sanity check: ensure we're never swapping with the vault
 	// (technically is actually the yield bearing synth vault)
-	if pool.Asset.IsVaultAsset() {
+	if pool.Asset.IsSyntheticAsset() {
 		return cosmos.ZeroUint(), evt, ErrInternal(err, fmt.Sprintf("dev error: swapping with a vault(%s) is not allowed", pool.Asset))
 	}
 	synthSupply := keeper.GetTotalSupply(ctx, pool.Asset.GetSyntheticAsset())

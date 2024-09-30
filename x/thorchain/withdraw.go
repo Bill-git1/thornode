@@ -84,7 +84,7 @@ func withdrawV129(ctx cosmos.Context, msg MsgWithdrawLiquidity, mgr Manager) (co
 	}
 
 	var withdrawRune, withDrawAsset, unitAfter cosmos.Uint
-	if pool.Asset.IsVaultAsset() {
+	if pool.Asset.IsSyntheticAsset() {
 		withdrawRune, withDrawAsset, unitAfter = calculateVaultWithdraw(pool.GetPoolUnits(), poolAsset, originalLiquidityProviderUnits, msg.BasisPoints)
 	} else {
 		withdrawRune, withDrawAsset, unitAfter, err = calculateWithdraw(pool.GetPoolUnits(), poolRune, poolAsset, originalLiquidityProviderUnits, msg.BasisPoints, assetToWithdraw)
@@ -93,7 +93,7 @@ func withdrawV129(ctx cosmos.Context, msg MsgWithdrawLiquidity, mgr Manager) (co
 			return cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), errWithdrawFail
 		}
 	}
-	if !pool.Asset.IsVaultAsset() {
+	if !pool.Asset.IsSyntheticAsset() {
 		if (withdrawRune.Equal(poolRune) && !withDrawAsset.Equal(poolAsset)) || (!withdrawRune.Equal(poolRune) && withDrawAsset.Equal(poolAsset)) {
 			ctx.Logger().Error("fail to withdraw: cannot withdraw 100% of only one side of the pool")
 			return cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), errWithdrawFail
@@ -139,7 +139,7 @@ func withdrawV129(ctx cosmos.Context, msg MsgWithdrawLiquidity, mgr Manager) (co
 	}
 
 	// Create a pool event if THORNode have no rune or assets
-	if (pool.BalanceAsset.IsZero() || pool.BalanceRune.IsZero()) && !pool.Asset.IsVaultAsset() {
+	if (pool.BalanceAsset.IsZero() || pool.BalanceRune.IsZero()) && !pool.Asset.IsSyntheticAsset() {
 		poolEvt := NewEventPool(pool.Asset, PoolStaged)
 		if err := mgr.EventMgr().EmitEvent(ctx, poolEvt); nil != err {
 			ctx.Logger().Error("fail to emit pool event", "error", err)

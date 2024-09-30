@@ -216,7 +216,7 @@ func quoteReverseFuzzyAsset(ctx cosmos.Context, mgr *Mgrs, asset common.Asset) (
 	// (without exactly matching the symbol)
 	addressMatches := []string{}
 	for _, p := range pools {
-		if p.IsAvailable() && !p.IsEmpty() && !p.Asset.IsVaultAsset() &&
+		if p.IsAvailable() && !p.IsEmpty() && !p.Asset.IsSyntheticAsset() &&
 			!p.Asset.Symbol.Equals(asset.Symbol) &&
 			p.Asset.Chain.Equals(asset.Chain) && p.Asset.Ticker.Equals(asset.Ticker) {
 			pSplit := strings.Split(p.Asset.Symbol.String(), "-")

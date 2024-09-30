@@ -75,7 +75,7 @@ func (m *Pool) CalcUnits(s cosmos.Uint) cosmos.Uint {
 	// Calculate synth units
 	// (L*S)/(2*A-S)
 	// S := k.GetTotalSupply(ctx, p.Asset.GetSyntheticAsset())
-	if m.BalanceAsset.IsZero() || m.Asset.IsVaultAsset() {
+	if m.BalanceAsset.IsZero() || m.Asset.IsSyntheticAsset() {
 		m.SynthUnits = cosmos.ZeroUint()
 	} else {
 		numerator := m.LPUnits.Mul(s)

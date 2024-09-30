@@ -1142,9 +1142,9 @@ func queryLiquidityProviders(ctx cosmos.Context, path []string, req abci.Request
 	if asset.IsDerivedAsset() {
 		return nil, fmt.Errorf("must not be a derived asset")
 	}
-	if isSavers && !asset.IsVaultAsset() {
+	if isSavers && !asset.IsSyntheticAsset() {
 		return nil, fmt.Errorf("invalid request: requested pool is not a SaversPool")
-	} else if !isSavers && asset.IsVaultAsset() {
+	} else if !isSavers && asset.IsSyntheticAsset() {
 		return nil, fmt.Errorf("invalid request: requested pool is a SaversPool")
 	}
 
@@ -1211,9 +1211,9 @@ func queryLiquidityProvider(ctx cosmos.Context, path []string, req abci.RequestQ
 		return nil, fmt.Errorf("must not be a derived asset")
 	}
 
-	if isSavers && !asset.IsVaultAsset() {
+	if isSavers && !asset.IsSyntheticAsset() {
 		return nil, fmt.Errorf("invalid request: requested pool is not a SaversPool")
-	} else if !isSavers && asset.IsVaultAsset() {
+	} else if !isSavers && asset.IsSyntheticAsset() {
 		return nil, fmt.Errorf("invalid request: requested pool is a SaversPool")
 	}
 
@@ -1517,7 +1517,7 @@ func queryPools(ctx cosmos.Context, req abci.RequestQuery, mgr *Mgrs) ([]byte, e
 		}
 
 		// Ignore synth asset pool (savers). Info will be on the L1 pool
-		if pool.Asset.IsVaultAsset() {
+		if pool.Asset.IsSyntheticAsset() {
 			continue
 		}
 
@@ -1987,7 +1987,7 @@ func checkPending(ctx cosmos.Context, keeper keeper.Keeper, voter ObservedTxVote
 
 	memoType := memo.GetType()
 	// If the memo asset is a synth, as with Savers add liquidity or withdraw, a swap is assumed to be involved.
-	if memoType == TxSwap || memoType == TxLimitOrder || memo.GetAsset().IsVaultAsset() {
+	if memoType == TxSwap || memoType == TxLimitOrder || memo.GetAsset().IsSyntheticAsset() {
 		isSwap = true
 		// Only check the KVStore when the inbound transaction has already been finalised
 		// and when there haven't been any Actions planned.
