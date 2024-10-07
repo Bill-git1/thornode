@@ -57,10 +57,6 @@ ETH is `0x0000000000000000000000000000000000000000`
 ETH is sent and received as an internal transaction. Your wallet may not be set to read internal balances and transactions.
 ```
 
-```admonish danger
-Do not send assets from a smart contract (including smart contract wallets) without adding your contract to the whitelist. As a security measure, Thorchain ignores transactions coming from unknown smart contracts, resulting in a loss of funds.
-```
-
 ### BFT Chains
 
 - [ ] Send the transaction to the Asgard vault
