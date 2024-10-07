@@ -41,13 +41,28 @@ func CoinToCommon(coin openapi.Coin) common.Coin {
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func FormatDuration(d time.Duration) string {
+	str := ""
+	days := d / (24 * time.Hour)
+	if days > 0 {
+		str += fmt.Sprintf("%dd ", days)
+	}
+	d -= days * (24 * time.Hour)
 	hours := d / time.Hour
+	if hours > 0 {
+		str += fmt.Sprintf("%dh ", hours)
+	}
 	d -= hours * time.Hour
 	minutes := d / time.Minute
+	if minutes > 0 {
+		str += fmt.Sprintf("%dm ", minutes)
+	}
 	d -= minutes * time.Minute
 	seconds := d / time.Second
+	if seconds > 0 || str == "" {
+		str += fmt.Sprintf("%ds", seconds)
+	}
 
-	return fmt.Sprintf("%02dh %02dm %02ds", hours, minutes, seconds)
+	return strings.TrimSpace(str)
 }
 
 var reStripMarkdownLinks = regexp.MustCompile(`\[[0-9a-zA-Z_ ]+\]\((.+?)\)`)

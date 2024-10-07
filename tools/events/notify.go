@@ -21,14 +21,17 @@ func Notify(w Webhooks, title string, lines []string, tag bool, fields *OrderedM
 
 	// if in console mode only print
 	if config.Console {
-		console(title, lines, fields)
+		console(w.Category, title, lines, fields)
 	}
+
+	// copy lines to avoid modifying the original slice
+	linesCopy := append([]string{}, lines...)
 
 	// send slack
 	if w.Slack != "" {
 		err := Retry(
 			config.MaxRetries,
-			func() error { return slack(w.Slack, title, lines, tag, fields) },
+			func() error { return slack(w.Slack, title, linesCopy, tag, fields) },
 		)
 		if err != nil {
 			log.Panic().Err(err).Msg("unable to send slack notification")
@@ -36,10 +39,11 @@ func Notify(w Webhooks, title string, lines []string, tag bool, fields *OrderedM
 	}
 
 	// send discord
+	copy(linesCopy, lines)
 	if w.Discord != "" {
 		err := Retry(
 			config.MaxRetries,
-			func() error { return discord(w.Discord, title, lines, tag, fields) },
+			func() error { return discord(w.Discord, title, linesCopy, tag, fields) },
 		)
 		if err != nil {
 			log.Panic().Err(err).Msg("unable to send discord notification")
@@ -47,10 +51,11 @@ func Notify(w Webhooks, title string, lines []string, tag bool, fields *OrderedM
 	}
 
 	// send pagerduty
+	copy(linesCopy, lines)
 	if w.PagerDuty != "" {
 		err := Retry(
 			config.MaxRetries,
-			func() error { return pagerduty(w.PagerDuty, title, lines, fields) },
+			func() error { return pagerduty(w.PagerDuty, title, linesCopy, fields) },
 		)
 		if err != nil {
 			log.Panic().Err(err).Msg("unable to send pagerduty notification")
@@ -66,7 +71,7 @@ func Notify(w Webhooks, title string, lines []string, tag bool, fields *OrderedM
 var reLinkMdToSlack = regexp.MustCompile(`\[(.*?)\]\((.*?)\)`)
 
 // match urls
-var reURL = regexp.MustCompile(`https?://\S+`)
+var reURL = regexp.MustCompile(`https?://[^\s()]+`)
 
 func slack(webhook, title string, lines []string, tag bool, fields *OrderedMap) error {
 	if title != "" {
@@ -92,8 +97,14 @@ func slack(webhook, title string, lines []string, tag bool, fields *OrderedMap) 
 	// join the lines into a single message
 	message := strings.Join(lines, "\n")
 
+	// add stagenet params
+	message = stagenetQueryParams(message)
+
 	// replace markdown links with slack links
 	message = reLinkMdToSlack.ReplaceAllString(message, "<$2|$1>")
+
+	// map bold formatting to slack version
+	message = strings.ReplaceAll(message, "**", "*")
 
 	// build the request
 	data := map[string]string{
@@ -127,7 +138,7 @@ func slack(webhook, title string, lines []string, tag bool, fields *OrderedMap) 
 
 func discord(webhook, title string, lines []string, tag bool, fields *OrderedMap) error {
 	if title != "" {
-		lines = append([]string{fmt.Sprintf("*%s*", title)}, lines...)
+		lines = append([]string{fmt.Sprintf("### %s", title)}, lines...)
 	}
 
 	// add fields to the message
@@ -141,6 +152,11 @@ func discord(webhook, title string, lines []string, tag bool, fields *OrderedMap
 		lines = append(lines, "@here")
 	}
 
+	// wrap urls in <> to prevent previews
+	for i, line := range lines {
+		lines[i] = reURL.ReplaceAllString(line, "<$0>")
+	}
+
 	// format lines of the message as a quote
 	for i, line := range lines {
 		lines[i] = "> " + line
@@ -149,8 +165,8 @@ func discord(webhook, title string, lines []string, tag bool, fields *OrderedMap
 	// join the lines into a single message
 	message := strings.Join(lines, "\n")
 
-	// wrap urls in <> to prevent previews
-	message = reURL.ReplaceAllString(message, "<$0>")
+	// add stagenet params
+	message = stagenetQueryParams(message)
 
 	// build the request
 	data := map[string]string{
@@ -182,7 +198,7 @@ func discord(webhook, title string, lines []string, tag bool, fields *OrderedMap
 	return nil
 }
 
-func console(title string, lines []string, fields *OrderedMap) {
+func console(category, title string, lines []string, fields *OrderedMap) {
 	// ansi escape codes
 	boldStart := "\033[1m"
 	italicStart := "\033[3m"
@@ -202,10 +218,13 @@ func console(title string, lines []string, fields *OrderedMap) {
 	}
 
 	fmt.Println()
-	fmt.Println("--------------------------------------------------")
+	fmt.Printf("------------------------- %s -------------------------\n", category)
 	for _, line := range lines {
 		// strip markdown line formatting
 		line = StripMarkdownLinks(line)
+
+		// add stagenet params
+		line = stagenetQueryParams(line)
 
 		// replace emojis
 		line = strings.ReplaceAll(line, EmojiMoneybag, "💰")
@@ -238,4 +257,16 @@ func console(title string, lines []string, fields *OrderedMap) {
 func pagerduty(webhook, title string, lines []string, fields *OrderedMap) error {
 	log.Error().Msg("pagerduty not yet implemented")
 	return nil
+}
+
+// stagenetQueryParam adds ?network=stagenet to explorer and tracker links.
+func stagenetQueryParams(msg string) string {
+	if config.Network == "stagenet" {
+		reExplorer := regexp.MustCompile(fmt.Sprintf(`%s[^\s()]+`, config.Links.Explorer))
+		reTracker := regexp.MustCompile(fmt.Sprintf(`%s[^\s()]+`, config.Links.Track))
+
+		msg = reExplorer.ReplaceAllString(msg, "$0?network=stagenet")
+		msg = reTracker.ReplaceAllString(msg, "$0?network=stagenet")
+	}
+	return msg
 }

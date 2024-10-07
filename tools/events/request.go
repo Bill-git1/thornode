@@ -63,8 +63,12 @@ func ThornodeCachedRetryGet(path string, height int64, result interface{}) error
 		if !ok {
 			log.Panic().Msg("unreachable: failed to cast cache value to []byte")
 		}
-		return json.Unmarshal(bytes, result)
+		if len(bytes) > 0 {
+			return json.Unmarshal(bytes, result)
+		}
 	}
+
+	var body []byte
 
 	// attempt to populate the cache
 	err := Retry(config.MaxRetries, func() error {
@@ -88,10 +92,11 @@ func ThornodeCachedRetryGet(path string, height int64, result interface{}) error
 
 		// populate the cache
 		defer res.Body.Close()
-		body, err := io.ReadAll(res.Body)
+		body, err = io.ReadAll(res.Body)
 		if err != nil {
 			return err
 		}
+
 		cache.Add(url, body)
 
 		return nil
@@ -100,16 +105,5 @@ func ThornodeCachedRetryGet(path string, height int64, result interface{}) error
 		return err
 	}
 
-	// check the cache again
-	if val, ok := cache.Get(url); ok {
-		var bytes []byte
-		bytes, ok = val.([]byte)
-		if !ok {
-			log.Panic().Msg("unreachable: failed to cast cache value to []byte")
-		}
-		return json.Unmarshal(bytes, result)
-	}
-
-	// return an error if the cache is still empty
-	return fmt.Errorf("unreachable: response not found in cache")
+	return json.Unmarshal(body, result)
 }

@@ -15,7 +15,7 @@ import (
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// ScanInfo
+// Scan Info
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func ScanInfo(block *thorscan.BlockResponse) {
@@ -26,7 +26,7 @@ func ScanInfo(block *thorscan.BlockResponse) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// SetMimir
+// Set Mimir
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func SetMimir(block *thorscan.BlockResponse) {
@@ -68,7 +68,7 @@ func SetMimir(block *thorscan.BlockResponse) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// SetNodeMimir
+// Set Node Mimir
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func SetNodeMimir(block *thorscan.BlockResponse) {
@@ -98,9 +98,14 @@ func KeygenFailure(block *thorscan.BlockResponse) {
 				continue
 			}
 
-			// get nodes
+			// get nodes at keygen height
+			heightStr := event["height"]
+			height, err := strconv.ParseInt(heightStr, 10, 64)
+			if err != nil {
+				log.Panic().Err(err).Str("height", heightStr).Msg("failed to parse keygen height")
+			}
 			nodes := []openapi.Node{}
-			err := ThornodeCachedRetryGet("thorchain/nodes", block.Header.Height, &nodes)
+			err = ThornodeCachedRetryGet("thorchain/nodes", height, &nodes)
 			if err != nil {
 				log.Panic().Err(err).Msg("failed to get nodes")
 			}
@@ -247,55 +252,53 @@ func Churn(block *thorscan.BlockResponse) {
 	for _, tx := range block.Txs {
 		for _, event := range tx.Result.Events {
 			switch event["type"] {
-			case types.TSSKeygenMetricEventType, thorchain.EventTypeActiveVault:
+			case types.TSSKeygenMetricEventType: // check for keygen started
+				if info.State == ChurnStateComplete {
+					info.State = ChurnStateKeygen
+					err = Store("churn", info)
+					if err != nil {
+						log.Panic().Err(err).Msg("failed to save churn state")
+					}
+					title := fmt.Sprintf("`[%d]` Keygen Started", block.Header.Height)
+					Notify(config.Notifications.Info, title, nil, false, nil)
+				}
+			case thorchain.EventTypeActiveVault: // check for active vault (keygens complete)
+				if info.State == ChurnStateKeygen {
+					info.State = ChurnStateMigrating
+					err = Store("churn", info)
+					if err != nil {
+						log.Panic().Err(err).Msg("failed to save churn state")
+					}
+					notifyChurnStarted(block.Header.Height, info.KeyshareBackups)
+				}
 			default:
 				continue
-			}
-
-			// check for keygen started
-			if info.State == ChurnStateComplete && event["type"] == types.TSSKeygenMetricEventType {
-				info.State = ChurnStateKeygen
-				err = Store("churn", info)
-				if err != nil {
-					log.Panic().Err(err).Msg("failed to save churn state")
-				}
-				title := fmt.Sprintf("[%d] Keygen Started", block.Header.Height)
-				Notify(config.Notifications.Info, title, nil, false, nil)
-			}
-
-			// check for active vault (all keygens complete)
-			if info.State == ChurnStateKeygen && event["type"] == thorchain.EventTypeActiveVault {
-				info.State = ChurnStateMigrating
-				err = Store("churn", info)
-				if err != nil {
-					log.Panic().Err(err).Msg("failed to save churn state")
-				}
-				notifyChurnStarted(block.Header.Height, info.KeyshareBackups)
 			}
 		}
 	}
 
 	// if migrating, check for completion on every block
-	if info.State == ChurnStateMigrating {
-		network := openapi.NetworkResponse{}
-		err = ThornodeCachedRetryGet("thorchain/network", block.Header.Height, &network)
+	if info.State == ChurnStateMigrating && !vaultsMigrating(block.Header.Height) {
+		// reset churn info for next churn
+		info.State = ChurnStateComplete
+		info.KeyshareBackups = make(map[string]map[string]bool)
+
+		err = Store("churn", info)
 		if err != nil {
-			log.Panic().Err(err).Msg("failed to get network")
+			log.Panic().Err(err).Msg("failed to save churn state")
 		}
-
-		if !network.VaultsMigrating {
-			// reset churn info for next churn
-			info.State = ChurnStateComplete
-			info.KeyshareBackups = make(map[string]map[string]bool)
-
-			err = Store("churn", info)
-			if err != nil {
-				log.Panic().Err(err).Msg("failed to save churn state")
-			}
-			title := fmt.Sprintf("[%d] Churn Complete", block.Header.Height)
-			Notify(config.Notifications.Info, title, nil, false, nil)
-		}
+		title := fmt.Sprintf("`[%d]` Churn Complete", block.Header.Height)
+		Notify(config.Notifications.Info, title, nil, false, nil)
 	}
+}
+
+func vaultsMigrating(height int64) bool {
+	network := openapi.NetworkResponse{}
+	err := ThornodeCachedRetryGet("thorchain/network", height, &network)
+	if err != nil {
+		log.Panic().Err(err).Msg("failed to get network")
+	}
+	return network.VaultsMigrating
 }
 
 func notifyChurnStarted(height int64, keyshareBackups map[string]map[string]bool) {
@@ -351,40 +354,52 @@ func notifyChurnStarted(height int64, keyshareBackups map[string]map[string]bool
 		}
 	}
 
+	// standby nodes
+	standbyNodes := []string{}
+
 	// find worst removed
-	worstIdx := 0
-	for i, node := range removed {
-		if node.SlashPoints > removed[worstIdx].SlashPoints {
-			worstIdx = i
+	if len(removed) > 0 {
+		worstIdx := 0
+		for i, node := range removed {
+			if node.SlashPoints > removed[worstIdx].SlashPoints {
+				worstIdx = i
+			}
 		}
+		worst := removed[worstIdx]
+		removed = append(removed[:worstIdx], removed[worstIdx+1:]...)
+		standbyNodes = append(standbyNodes, fmt.Sprintf("`%s` (worst)", worst.NodeAddress[len(worst.NodeAddress)-4:]))
 	}
-	worst := removed[worstIdx]
-	removed = append(removed[:worstIdx], removed[worstIdx+1:]...)
 
 	// find lowest bond
-	lowestIdx := 0
-	for i, node := range removed {
-		if cosmos.NewUintFromString(node.TotalBond).LT(cosmos.NewUintFromString(removed[lowestIdx].TotalBond)) {
-			lowestIdx = i
+	if len(removed) > 0 {
+		lowestIdx := 0
+		for i, node := range removed {
+			if cosmos.NewUintFromString(node.TotalBond).LT(cosmos.NewUintFromString(removed[lowestIdx].TotalBond)) {
+				lowestIdx = i
+			}
 		}
+		lowest := removed[lowestIdx]
+		removed = append(removed[:lowestIdx], removed[lowestIdx+1:]...)
+		standbyNodes = append(standbyNodes, fmt.Sprintf("`%s` (lowest bond)", lowest.NodeAddress[len(lowest.NodeAddress)-4:]))
 	}
-	lowest := removed[lowestIdx]
-	removed = append(removed[:lowestIdx], removed[lowestIdx+1:]...)
 
 	// find oldest removed
-	oldestIdx := 0
-	for i, node := range removed {
-		if node.ActiveBlockHeight < removed[oldestIdx].ActiveBlockHeight {
-			oldestIdx = i
+	if len(removed) > 0 {
+		oldestIdx := 0
+		for i, node := range removed {
+			if node.ActiveBlockHeight < removed[oldestIdx].ActiveBlockHeight {
+				oldestIdx = i
+			}
 		}
+		oldest := removed[oldestIdx]
+		removed = append(removed[:oldestIdx], removed[oldestIdx+1:]...)
+		standbyNodes = append(standbyNodes, fmt.Sprintf("`%s` (oldest)", oldest.NodeAddress[len(oldest.NodeAddress)-4:]))
 	}
-	oldest := removed[oldestIdx]
-	removed = append(removed[:oldestIdx], removed[oldestIdx+1:]...)
 
 	title := fmt.Sprintf("[%d] Churn Started", height)
 
 	// compute the keyshare backups counts for new vault members
-	lines := []string{"> _Keyshare Backups_"}
+	lines := []string{"_Keyshare Backups_"}
 	vaults := []openapi.Vault{}
 	err = ThornodeCachedRetryGet("thorchain/vaults/asgard", height, &vaults)
 	if err != nil {
@@ -397,12 +412,13 @@ func notifyChurnStarted(height int64, keyshareBackups map[string]map[string]bool
 		pk := *vault.PubKey
 		lines = append(lines,
 			fmt.Sprintf(
-				"> `%s`: %d/%d (%.2f%%)",
+				"`%s`: %d/%d (%.2f%%)",
 				pk[len(pk)-4:], len(keyshareBackups[pk]), len(vault.Membership),
 				100*float64(len(keyshareBackups[pk]))/float64(len(vault.Membership)),
 			),
 		)
 	}
+	lines = append(lines, "")
 
 	fields := NewOrderedMap()
 
@@ -416,11 +432,6 @@ func notifyChurnStarted(height int64, keyshareBackups map[string]map[string]bool
 	}
 
 	// standby nodes
-	standbyNodes := []string{
-		fmt.Sprintf("`%s` (worst)", worst.NodeAddress[len(worst.NodeAddress)-4:]),
-		fmt.Sprintf("`%s` (lowest bond)", lowest.NodeAddress[len(lowest.NodeAddress)-4:]),
-		fmt.Sprintf("`%s` (oldest)", oldest.NodeAddress[len(oldest.NodeAddress)-4:]),
-	}
 	for _, node := range left {
 		standbyNodes = append(standbyNodes, fmt.Sprintf("`%s` (leave)", node.NodeAddress[len(node.NodeAddress)-4:]))
 	}
@@ -533,19 +544,19 @@ func formatNodeMimirMessage(height int64, node, key, value string) string {
 
 	// base message
 	msg := fmt.Sprintf(
-		"`[%d]` Node `%s` Vote - **%s**: %d (%.2f%%)",
+		"`[%d]` Node `%s` Vote - **%s**=%d (%.2f%%)",
 		height, node[len(node)-4:], key, valueInt, votePercent,
 	)
 	if previous != nil {
 		msg = fmt.Sprintf(
-			"`[%d]` Node `%s` Vote - **%s**: %d -> %d (%.2f%%)",
-			height, node[len(node)-4:], key, *previous, valueInt, votePercent,
+			"`[%d]` Node `%s` Vote - **%s**=%d (_change from `%d`_) (%.2f%%)",
+			height, node[len(node)-4:], key, valueInt, *previous, votePercent,
 		)
 	}
 
 	// add the votes and validator count
 	for vote, count := range votes {
-		msg += fmt.Sprintf(" | _`%d`_: %d votes", vote, count)
+		msg += fmt.Sprintf(" | `%d`: %d votes", vote, count)
 	}
 	msg += fmt.Sprintf(" | Validators: %d", len(activeNodes))
 

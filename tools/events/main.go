@@ -2,12 +2,14 @@ package main
 
 import (
 	"os"
+	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"gitlab.com/thorchain/thornode/cmd"
+	"gitlab.com/thorchain/thornode/constants"
 	"gitlab.com/thorchain/thornode/tools/thorscan"
 )
 
@@ -94,6 +96,12 @@ func main() {
 	InitNetwork()
 	thorscan.APIEndpoint = config.Endpoints.Thornode
 
+	// prune local storage
+	Prune("scheduled-outbound")
+	Prune("seen-inactive-inbound")
+	Prune("seen-large-unconfirmed-inbound")
+	Prune("seen-large-streaming-swap")
+
 	// load the last scanned height from storage
 	height := -1
 	err := Load("height", &height)
@@ -117,6 +125,14 @@ func main() {
 	}
 
 	for block := range thorscan.Scan(height, config.Scan.Stop) {
+		// trail by one block to avoid race with downstream midgard use
+		var blockTime time.Time
+		blockTime, err = time.Parse(time.RFC3339, block.Header.Time)
+		if err != nil {
+			log.Fatal().Err(err).Msg("unable to parse block time")
+		}
+		time.Sleep(time.Until(blockTime.Add(constants.ThorchainBlockTime)))
+
 		ScanBlock(block)
 
 		err = Store("height", block.Header.Height)

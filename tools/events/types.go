@@ -46,6 +46,9 @@ func (om *OrderedMap) Delete(key string) {
 }
 
 func (om *OrderedMap) Keys() []string {
+	if om == nil {
+		return []string{}
+	}
 	return om.keys
 }
 

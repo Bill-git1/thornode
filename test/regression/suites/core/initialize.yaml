@@ -28,3 +28,9 @@ asserts:
   - .[]|select(.chain == "BSC")|.address == "{{ addr_bsc_dog }}"
   # the pubkey on all inbound addresses should be the dog public key
   - '[.[]|select(.pub_key == "{{ pubkey_dog }}")]|length == 8'
+---
+type: check
+endpoint: http://localhost:1317/thorchain/network?height=1000
+status: 404
+asserts:
+  - .error|test("cannot query with height in the future")

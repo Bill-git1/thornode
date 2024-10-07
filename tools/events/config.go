@@ -25,6 +25,7 @@ const (
 ////////////////////////////////////////////////////////////////////////////////////////
 
 type Webhooks struct {
+	Category  string `mapstructure:"name"`
 	Slack     string `mapstructure:"slack"`
 	Discord   string `mapstructure:"discord"`
 	PagerDuty string `mapstructure:"pagerduty"`
@@ -129,6 +130,13 @@ func init() {
 	config.Endpoints.CacheSize = 100
 	config.Endpoints.Thornode = "https://thornode.ninerealms.com"
 	config.Endpoints.Midgard = "https://midgard.ninerealms.com"
+
+	// notifications
+	config.Notifications.Activity.Category = "Activity"
+	config.Notifications.Info.Category = "Info"
+	config.Notifications.Lending.Category = "Lending"
+	config.Notifications.Security.Category = "Security"
+	config.Notifications.Reschedules.Category = "Reschedules"
 
 	// retries
 	config.MaxRetries = 10

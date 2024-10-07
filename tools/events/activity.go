@@ -18,7 +18,7 @@ import (
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// ScanActivity
+// Scan Activity
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func ScanActivity(block *thorscan.BlockResponse) {
@@ -27,10 +27,13 @@ func ScanActivity(block *thorscan.BlockResponse) {
 	ScheduledOutbounds(block)
 	LargeTransfers(block)
 	InactiveVaultInbounds(block)
+	NewNode(block)
+	Bond(block)
+	FailedTransactions(block)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// LargeUnconfirmedInbounds
+// Large Unconfirmed Inbounds
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func LargeUnconfirmedInbounds(block *thorscan.BlockResponse) {
@@ -56,6 +59,11 @@ func LargeUnconfirmedInbounds(block *thorscan.BlockResponse) {
 			for _, tx := range msgObservedTxIn.Txs {
 				// skip migrate inbounds
 				if reMemoMigration.MatchString(tx.Tx.Memo) {
+					continue
+				}
+
+				// skip consolidate inbounds
+				if tx.Tx.Memo == "consolidate" {
 					continue
 				}
 
@@ -122,7 +130,7 @@ func LargeUnconfirmedInbounds(block *thorscan.BlockResponse) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// LargeStreamingSwap
+// Large Streaming Swap
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func LargeStreamingSwaps(block *thorscan.BlockResponse) {
@@ -244,7 +252,7 @@ func LargeStreamingSwaps(block *thorscan.BlockResponse) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// ScheduledOutbounds
+// Scheduled Outbounds
 ////////////////////////////////////////////////////////////////////////////////////////
 
 // rescheduledOutbounds alerts on rescheduled outbounds and returns true if rescheduled.
@@ -328,7 +336,7 @@ func rescheduledOutbounds(height int64, event map[string]string) bool {
 		var memoType memo.TxType
 		memoType, err = memo.StringToTxType(memoParts[0])
 		if err != nil {
-			log.Panic().Err(err).Msg("failed to parse memo type")
+			log.Error().Err(err).Str("txid", event["in_hash"]).Msg("failed to parse memo type")
 		}
 		if memoType == thorchain.TxSwap {
 			links = append(links, fmt.Sprintf("[Track](%s/%s)", config.Links.Track, event["in_hash"]))
@@ -359,31 +367,39 @@ func rescheduledOutbounds(height int64, event map[string]string) bool {
 	return true
 }
 
-// scheduledOutbound is called for scheduled_outbound block and tx events.
-func scheduledOutbound(height int64, event map[string]string) {
+// scheduledOutbound is called for scheduled_outbound block and tx events. It assumes
+// all events are for multi-output outbounds corresponding to the same inbound.
+func scheduledOutbound(height int64, events []map[string]string) {
 	// skip migrate outbounds
-	if reMemoMigration.MatchString(event["memo"]) {
+	if reMemoMigration.MatchString(events[0]["memo"]) {
 		return
 	}
 
 	// check for reschedule
-	rescheduled := rescheduledOutbounds(height, event)
+	rescheduled := rescheduledOutbounds(height, events[0])
 
 	// skip ragnarok transactions
-	if reMemoRagnarok.MatchString(event["memo"]) {
+	if reMemoRagnarok.MatchString(events[0]["memo"]) {
 		return
 	}
 
 	// extract memo and coins
-	asset, err := common.NewAsset(event["coin_asset"])
-	if err != nil {
-		log.Panic().Str("asset", event["coin_asset"]).Err(err).Msg("unable to parse asset")
+	var coins []common.Coin
+	for _, event := range events {
+		asset, err := common.NewAsset(event["coin_asset"])
+		if err != nil {
+			log.Panic().Str("asset", event["coin_asset"]).Err(err).Msg("unable to parse asset")
+		}
+		amount := cosmos.NewUintFromString(event["coin_amount"])
+		coin := common.NewCoin(asset, amount)
+		coins = append(coins, coin)
 	}
-	amount := cosmos.NewUintFromString(event["coin_amount"])
-	coin := common.NewCoin(asset, amount)
 
 	// skip small outbounds, delta value is lower, but only fires if percent threshold met
-	usdValue := USDValue(height, coin)
+	usdValue := 0.0
+	for _, coin := range coins {
+		usdValue += USDValue(height, coin)
+	}
 	if uint64(usdValue) < config.Thresholds.USDValue && uint64(usdValue) < config.Thresholds.Delta.USDValue {
 		return
 	}
@@ -398,13 +414,13 @@ func scheduledOutbound(height int64, event map[string]string) {
 	}
 
 	// get the inbound status
-	statusURL := fmt.Sprintf("thorchain/tx/status/%s", event["in_hash"])
+	statusURL := fmt.Sprintf("thorchain/tx/status/%s", events[0]["in_hash"])
 	status := openapi.TxStatusResponse{}
-	err = ThornodeCachedRetryGet(statusURL, height, &status)
+	err := ThornodeCachedRetryGet(statusURL, height, &status)
 	if err != nil {
 		log.Panic().
 			Err(err).
-			Str("txid", event["in_hash"]).
+			Str("txid", events[0]["in_hash"]).
 			Int64("height", height).
 			Msg("failed to get transaction status")
 	}
@@ -419,6 +435,16 @@ func scheduledOutbound(height int64, event map[string]string) {
 
 	// build the notification
 	title := fmt.Sprintf("`[%d]` Scheduled Outbound", height)
+	if len(events) > 1 {
+		title = fmt.Sprintf("`[%d]` Scheduled Outbounds (%d)", height, len(events))
+		for _, event := range events {
+			if reMemoRefund.MatchString(event["memo"]) {
+				title += " _(partial fill)_"
+				break
+			}
+		}
+	}
+
 	lines := []string{}
 	if uint64(usdValue) > config.Styles.USDPerMoneyBag {
 		lines = append(lines, Moneybags(uint64(usdValue)))
@@ -428,8 +454,13 @@ func scheduledOutbound(height int64, event map[string]string) {
 		fields.Set("Inbound Memo", fmt.Sprintf("`%s`", *status.Tx.Memo))
 	}
 
+	links := []string{
+		fmt.Sprintf("[Explorer](%s/tx/%s)", config.Links.Explorer, events[0]["in_hash"]),
+		fmt.Sprintf("[Live Outbounds](%s)", config.Links.Track),
+	}
+
 	// add the inbound coins for inbound swap or outbound refund
-	if memoType == thorchain.TxSwap || reMemoRefund.MatchString(event["memo"]) {
+	if memoType == thorchain.TxSwap || reMemoRefund.MatchString(events[0]["memo"]) {
 		inboundCoin := CoinToCommon(status.Tx.Coins[0])
 		inboundUSDValue := USDValue(height, inboundCoin)
 		fields.Set("Inbound Amount", fmt.Sprintf(
@@ -449,12 +480,12 @@ func scheduledOutbound(height int64, event map[string]string) {
 		}
 
 		// skip if delta below threshold and below the broader usd value threshold
-		if uint64(deltaPercent) < config.Thresholds.Delta.Percent &&
+		if deltaPercent < float64(config.Thresholds.Delta.Percent) &&
 			uint64(inboundUSDValue) < config.Thresholds.USDValue {
 			return
 		}
 
-		if uint64(deltaPercent) > config.Thresholds.Delta.Percent {
+		if deltaPercent > float64(config.Thresholds.Delta.Percent) {
 			// rotating light and tag @here if delta
 			deltaStr = EmojiRotatingLight + " " + deltaStr + " " + EmojiRotatingLight
 			tag = true
@@ -465,28 +496,64 @@ func scheduledOutbound(height int64, event map[string]string) {
 		return
 	}
 
+	// extra fields for streaming swap alerts
+	if memoType == thorchain.TxSwap {
+		links = append(links, fmt.Sprintf("[Track](%s/%s)", config.Links.Track, events[0]["in_hash"]))
+
+		// add streaming swap durations
+		lastStatus := openapi.TxStatusResponse{}
+		err = ThornodeCachedRetryGet(statusURL, height-1, &lastStatus)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to get last transaction status")
+		} else if lastStatus.Stages.SwapStatus != nil &&
+			lastStatus.Stages.SwapStatus.Streaming != nil &&
+			lastStatus.Stages.SwapStatus.Streaming.Interval > 0 &&
+			lastStatus.Stages.SwapStatus.Streaming.Quantity > 0 {
+
+			interval := lastStatus.Stages.SwapStatus.Streaming.Interval
+			quantity := lastStatus.Stages.SwapStatus.Streaming.Quantity
+			ms := quantity * interval * common.THORChain.ApproximateBlockMilliseconds()
+			swapDuration := time.Duration(ms) * time.Millisecond
+			fields.Set("Stream Duration", FormatDuration(swapDuration))
+
+			// add the price delta for both swap assets
+			inCoin := CoinToCommon(status.Tx.Coins[0])
+			outCoin := coins[0]
+			beginHeight := height - quantity*interval
+			beginInValue := USDValue(beginHeight, inCoin)
+			beginOutValue := USDValue(beginHeight, outCoin)
+			endInValue := USDValue(height, inCoin)
+			endOutValue := USDValue(height, outCoin)
+			deltaIn := 1 - beginInValue/endInValue
+			deltaOut := 1 - beginOutValue/endOutValue
+			key := fmt.Sprintf("Stream Price Shift (%s)", strings.Split(inCoin.Asset.String(), "-")[0])
+			fields.Set(key, fmt.Sprintf("%.02f%%", deltaIn*100))
+			key = fmt.Sprintf("Stream Price Shift (%s)", strings.Split(outCoin.Asset.String(), "-")[0])
+			fields.Set(key, fmt.Sprintf("%.02f%%", deltaOut*100))
+		}
+	}
+
 	// add the outbound data
-	fields.Set("Outbound Amount", fmt.Sprintf(
-		"%f %s (%s)",
-		float64(coin.Amount.Uint64())/common.One,
-		coin.Asset,
-		USDValueString(height, coin),
-	))
-	fields.Set("Outbound Memo", fmt.Sprintf("`%s`", event["memo"]))
+	for i, coin := range coins {
+		amountField := "Outbound Amount"
+		memoField := "Outbound Memo"
+		if len(coins) > 1 {
+			amountField = fmt.Sprintf("Outbound %d Amount", i+1)
+			memoField = fmt.Sprintf("Outbound %d Memo", i+1)
+		}
+		fields.Set(amountField, fmt.Sprintf(
+			"%f %s (%s)",
+			float64(coin.Amount.Uint64())/common.One,
+			coin.Asset,
+			USDValueString(height, coin),
+		))
+		fields.Set(memoField, fmt.Sprintf("`%s`", events[i]["memo"]))
+	}
 
 	// determine the expected delay
 	outboundDelay := status.Stages.GetOutboundDelay()
 	delayDuration := time.Duration((&outboundDelay).GetRemainingDelaySeconds()) * time.Second
 	fields.Set("Expected Delay", FormatDuration(delayDuration))
-
-	// add links
-	links := []string{
-		fmt.Sprintf("[Explorer](%s/tx/%s)", config.Links.Explorer, event["in_hash"]),
-		fmt.Sprintf("[Live Outbounds](%s)", config.Links.Track),
-	}
-	if memoType == thorchain.TxSwap {
-		links = append(links, fmt.Sprintf("[Track](%s/%s)", config.Links.Track, event["in_hash"]))
-	}
 	fields.Set("Links", strings.Join(links, " | "))
 
 	// send notifications
@@ -497,32 +564,47 @@ func scheduledOutbound(height int64, event map[string]string) {
 }
 
 func ScheduledOutbounds(block *thorscan.BlockResponse) {
-	// check block events
+	events := []map[string]string{}
+
+	// gather block events
 	for _, event := range block.EndBlockEvents {
 		if event["type"] != types.ScheduledOutboundEventType {
 			continue
 		}
-		scheduledOutbound(block.Header.Height, event)
+		events = append(events, event)
 	}
 
-	// check transaction events
+	// gather transaction events
 	for _, tx := range block.Txs {
 		// skip failed decode transactions
 		if tx.Tx == nil {
 			continue
 		}
-
 		for _, event := range tx.Result.Events {
 			if event["type"] != types.ScheduledOutboundEventType {
 				continue
 			}
-			scheduledOutbound(block.Header.Height, event)
+			events = append(events, event)
 		}
+	}
+
+	// coalesce scheduled outbounds by inbound hash
+	scheduledOutbounds := map[string][]map[string]string{}
+	for _, event := range events {
+		if _, ok := scheduledOutbounds[event["in_hash"]]; !ok {
+			scheduledOutbounds[event["in_hash"]] = []map[string]string{}
+		}
+		scheduledOutbounds[event["in_hash"]] = append(scheduledOutbounds[event["in_hash"]], event)
+	}
+
+	// send notifications for each in hash scheduled outbounds
+	for _, events := range scheduledOutbounds {
+		scheduledOutbound(block.Header.Height, events)
 	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// LargeTransfers
+// Large Transfers
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func LargeTransfers(block *thorscan.BlockResponse) {
@@ -608,14 +690,20 @@ func LargeTransfers(block *thorscan.BlockResponse) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// InactiveVaultInbounds
+// Inactive Vault Inbounds
 ////////////////////////////////////////////////////////////////////////////////////////
 
-var (
-	activeVaults   map[string]bool
-	retiringVaults map[string]bool
-	retiringHeight int64
-)
+type Vaults struct {
+	Active   map[string]bool
+	Retiring map[string]bool
+	Height   int64
+}
+
+var vaults *Vaults
+
+func init() {
+	_ = Load("vaults", vaults)
+}
 
 func InactiveVaultInbounds(block *thorscan.BlockResponse) {
 	// update our active vault set any time there is an active vault event
@@ -628,23 +716,30 @@ func InactiveVaultInbounds(block *thorscan.BlockResponse) {
 			}
 		}
 	}
-	if activeVaults == nil || update {
-		activeVaults = make(map[string]bool)
-		retiringVaults = make(map[string]bool)
-		vaults := []openapi.Vault{}
-		err := ThornodeCachedRetryGet("thorchain/vaults/asgard", block.Header.Height, &vaults)
+
+	if vaults == nil || update {
+		vaults = &Vaults{
+			Active:   make(map[string]bool),
+			Retiring: make(map[string]bool),
+			Height:   block.Header.Height,
+		}
+		vaultsRes := []openapi.Vault{}
+		err := ThornodeCachedRetryGet("thorchain/vaults/asgard", block.Header.Height, &vaultsRes)
 		if err != nil {
 			log.Panic().Err(err).Msg("failed to get vaults")
 		}
-		for _, vault := range vaults {
+		for _, vault := range vaultsRes {
 			if vault.Status == types.VaultStatus_ActiveVault.String() {
-				activeVaults[*vault.PubKey] = true
+				vaults.Active[*vault.PubKey] = true
 			}
 			if vault.Status == types.VaultStatus_RetiringVault.String() {
-				retiringVaults[*vault.PubKey] = true
+				vaults.Retiring[*vault.PubKey] = true
 			}
 		}
-		retiringHeight = block.Header.Height
+		err = Store("vaults", vaults)
+		if err != nil {
+			log.Panic().Err(err).Msg("failed to store vaults")
+		}
 	}
 
 	// check for inactive vault inbounds
@@ -664,12 +759,13 @@ func InactiveVaultInbounds(block *thorscan.BlockResponse) {
 			// the observed tx in can have multiple transactions
 			for _, tx := range msgObservedTxIn.Txs {
 				// skip inbounds to active vaults
-				if activeVaults[tx.ObservedPubKey.String()] {
+				if vaults.Active[tx.ObservedPubKey.String()] {
 					continue
 				}
 
-				// skip inbounds to retiring vaults within 2 hours
-				if retiringVaults[tx.ObservedPubKey.String()] && block.Header.Height-retiringHeight < 1200 {
+				// skip inbounds to retiring vaults within 12 hours
+				if vaults.Retiring[tx.ObservedPubKey.String()] &&
+					block.Header.Height-vaults.Height < 7200 {
 					continue
 				}
 
@@ -681,6 +777,16 @@ func InactiveVaultInbounds(block *thorscan.BlockResponse) {
 					log.Debug().Err(err).Msg("unable to load seen inactive inbound")
 				}
 				if seen {
+					continue
+				}
+
+				// skip finalized inbounds
+				stages := openapi.TxStagesResponse{}
+				err = ThornodeCachedRetryGet(fmt.Sprintf("thorchain/tx/stages/%s", tx.Tx.ID), block.Header.Height, &stages)
+				if err != nil {
+					log.Panic().Err(err).Msg("failed to get tx stages")
+				}
+				if stages.InboundFinalised != nil && stages.InboundFinalised.Completed {
 					continue
 				}
 
@@ -709,5 +815,163 @@ func InactiveVaultInbounds(block *thorscan.BlockResponse) {
 				Notify(config.Notifications.Activity, title, nil, false, fields)
 			}
 		}
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+// New Node
+////////////////////////////////////////////////////////////////////////////////////////
+
+func NewNode(block *thorscan.BlockResponse) {
+	for _, tx := range block.Txs {
+		for _, event := range tx.Result.Events {
+			if event["type"] != "new_node" {
+				continue
+			}
+
+			for _, msg := range tx.Tx.GetMsgs() {
+				// skip anything other than deposit
+				msgDeposit, ok := msg.(*thorchain.MsgDeposit)
+				if !ok {
+					continue
+				}
+				amount := uint64(0)
+				for _, coin := range msgDeposit.Coins {
+					if coin.Asset.Equals(common.RuneAsset()) {
+						amount = coin.Amount.Uint64()
+					}
+				}
+
+				title := fmt.Sprintf("`[%d]` New Node", block.Header.Height)
+				fields := NewOrderedMap()
+				operator := msgDeposit.Signer.String()
+				operator = operator[len(operator)-4:]
+				fields.Set("Hash", tx.Hash)
+				fields.Set("Operator", fmt.Sprintf("`%s`", operator))
+				fields.Set("Node", fmt.Sprintf("`%s`", event["address"][len(event["address"])-4:]))
+				fields.Set("Amount", fmt.Sprintf("%sᚱ", FormatLocale(float64(amount)/common.One)))
+				Notify(config.Notifications.Activity, title, nil, false, fields)
+			}
+		}
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+// Bond
+////////////////////////////////////////////////////////////////////////////////////////
+
+func Bond(block *thorscan.BlockResponse) {
+txs:
+	for _, tx := range block.Txs {
+		for _, event := range tx.Result.Events {
+			// skip if this was an initial node bond (picked up by new node alert)
+			if event["type"] == "new_node" {
+				continue txs
+			}
+
+			if event["type"] != types.BondEventType {
+				continue
+			}
+
+			for _, msg := range tx.Tx.GetMsgs() {
+				// skip anything other than deposit
+				msgDeposit, ok := msg.(*thorchain.MsgDeposit)
+				if !ok {
+					continue
+				}
+				amount := uint64(0)
+				for _, coin := range msgDeposit.Coins {
+					if coin.Asset.Equals(common.RuneAsset()) {
+						amount = coin.Amount.Uint64()
+					}
+				}
+
+				title := fmt.Sprintf("`[%d]` Bond", block.Header.Height)
+				fields := NewOrderedMap()
+				provider := msgDeposit.Signer.String()
+				provider = provider[len(provider)-4:]
+				fields.Set("Hash", tx.Hash)
+				fields.Set("Provider", fmt.Sprintf("`%s`", provider))
+				fields.Set("Memo", fmt.Sprintf("`%s`", msgDeposit.Memo))
+				fields.Set("Amount", fmt.Sprintf("%sᚱ", FormatLocale(float64(amount)/common.One)))
+
+				// extract node address from memo
+				m, err := thorchain.ParseMemo(common.LatestVersion, msgDeposit.Memo)
+				if err != nil {
+					log.Panic().Str("memo", msgDeposit.Memo).Err(err).Msg("failed to parse memo")
+				}
+
+				addNodeInfo := func(nodeAddress string) {
+					fields.Set("Node", fmt.Sprintf("`%s`", nodeAddress[len(nodeAddress)-4:]))
+
+					// lookup node to determine operator
+					nodes := []openapi.Node{}
+					err = ThornodeCachedRetryGet("thorchain/nodes", block.Header.Height, &nodes)
+					if err != nil {
+						log.Panic().Err(err).Msg("failed to get nodes")
+					}
+					for _, node := range nodes {
+						if node.NodeAddress == nodeAddress {
+							fields.Set("Operator", fmt.Sprintf("`%s`", node.NodeOperatorAddress[len(node.NodeOperatorAddress)-4:]))
+							break
+						}
+					}
+				}
+
+				switch memo := m.(type) {
+				case thorchain.BondMemo:
+					addNodeInfo(memo.NodeAddress.String())
+				case thorchain.UnbondMemo:
+					addNodeInfo(memo.NodeAddress.String())
+					unbondAmount := cosmos.NewUintFromString(event["amount"]).Uint64()
+					fields.Set("Unbond Amount", FormatLocale(float64(unbondAmount)/common.One))
+				}
+
+				Notify(config.Notifications.Activity, title, nil, false, fields)
+			}
+		}
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+// Failed Transactions
+////////////////////////////////////////////////////////////////////////////////////////
+
+func FailedTransactions(block *thorscan.BlockResponse) {
+	for _, tx := range block.Txs {
+		// skip successful transactions and failed gas or sequence
+		switch *tx.Result.Code {
+		case 0: // success
+			continue
+		case 5: // insufficient funds
+			continue
+		case 32: // bad sequence
+			continue
+		case 99: // internal, avoid noise
+			continue
+		}
+
+		// alert fields
+		fields := NewOrderedMap()
+		fields.Set("Code", fmt.Sprintf("%d", *tx.Result.Code))
+		fields.Set(
+			"Transaction",
+			fmt.Sprintf("%s/cosmos/tx/v1beta1/txs/%s", config.Links.Thornode, tx.BlockTx.Hash),
+		)
+
+		// determine if the transaction failed to decode
+		if tx.Tx == nil {
+			fields.Set("Failed Decode", "true")
+		}
+		if tx.Result.Codespace != nil {
+			fields.Set("Codespace", fmt.Sprintf("`%s`", *tx.Result.Codespace))
+		}
+		if tx.Result.Log != nil {
+			fields.Set("Log", fmt.Sprintf("`%s`", *tx.Result.Log))
+		}
+
+		// notify failed transaction
+		title := fmt.Sprintf("`[%d]` Failed Transaction", block.Header.Height)
+		Notify(config.Notifications.Activity, title, nil, false, fields)
 	}
 }

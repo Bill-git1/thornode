@@ -5,22 +5,24 @@ import (
 	"fmt"
 
 	"github.com/rs/zerolog/log"
+	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/tools/thorscan"
+	"gitlab.com/thorchain/thornode/x/thorchain"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// ScanSecurity
+// Scan Security
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func ScanSecurity(block *thorscan.BlockResponse) {
 	SecurityEvents(block)
-	FailedTransactions(block)
 	ErrataTransactions(block)
+	Round7Failures(block)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// SecurityEvents
+// Security Events
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func SecurityEvents(block *thorscan.BlockResponse) {
@@ -66,50 +68,7 @@ func SecurityEvents(block *thorscan.BlockResponse) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// FailedTransactions
-////////////////////////////////////////////////////////////////////////////////////////
-
-func FailedTransactions(block *thorscan.BlockResponse) {
-	for _, tx := range block.Txs {
-		// skip successful transactions and failed gas or sequence
-		switch *tx.Result.Code {
-		case 0: // success
-			continue
-		case 5: // insufficient funds
-			continue
-		case 32: // bad sequence
-			continue
-		case 99: // internal, avoid noise
-			continue
-		}
-
-		// alert fields
-		fields := NewOrderedMap()
-		fields.Set("Code", fmt.Sprintf("%d", *tx.Result.Code))
-		fields.Set(
-			"Transaction",
-			fmt.Sprintf("%s/cosmos/tx/v1beta1/txs/%s", config.Links.Thornode, tx.BlockTx.Hash),
-		)
-
-		// determine if the transaction failed to decode
-		if tx.Tx == nil {
-			fields.Set("Failed Decode", "true")
-		}
-		if tx.Result.Codespace != nil {
-			fields.Set("Codespace", fmt.Sprintf("`%s`", *tx.Result.Codespace))
-		}
-		if tx.Result.Log != nil {
-			fields.Set("Log", fmt.Sprintf("`%s`", *tx.Result.Log))
-		}
-
-		// notify failed transaction
-		title := fmt.Sprintf("`[%d]` Failed Transaction", block.Header.Height)
-		Notify(config.Notifications.Security, title, nil, false, fields)
-	}
-}
-
-////////////////////////////////////////////////////////////////////////////////////////
-// ErrataTransactions
+// Errata Transactions
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func ErrataTransactions(block *thorscan.BlockResponse) {
@@ -129,6 +88,58 @@ func ErrataTransactions(block *thorscan.BlockResponse) {
 
 			// notify errata transaction
 			Notify(config.Notifications.Security, title, nil, false, fields)
+		}
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+// Round 7 Failures
+////////////////////////////////////////////////////////////////////////////////////////
+
+func Round7Failures(block *thorscan.BlockResponse) {
+	for _, tx := range block.Txs {
+		for _, msg := range tx.Tx.GetMsgs() {
+			if msgKeysignFail, ok := msg.(*thorchain.MsgTssKeysignFail); ok {
+				// skip migrate transactions
+				if reMemoMigration.MatchString(msgKeysignFail.Memo) {
+					continue
+				}
+
+				// skip failures except for round 7
+				if msgKeysignFail.Blame.Round != "SignRound7Message" {
+					continue
+				}
+
+				// skip seen round 7 failures
+				seen := map[string]bool{}
+				err := Load("round7", &seen)
+				if err != nil {
+					log.Error().Err(err).Msg("unable to load round 7 failures")
+				}
+				if seen[msgKeysignFail.Memo] {
+					continue
+				}
+
+				// build the notification
+				title := fmt.Sprintf("`[%d]` Round 7 Failure", block.Header.Height)
+				fields := NewOrderedMap()
+				fields.Set("Amount", fmt.Sprintf(
+					"%f %s (%s)",
+					float64(msgKeysignFail.Coins[0].Amount.Uint64())/common.One,
+					msgKeysignFail.Coins[0].Asset,
+					USDValueString(block.Header.Height, msgKeysignFail.Coins[0]),
+				))
+				fields.Set("Memo", msgKeysignFail.Memo)
+				fields.Set("Transaction", fmt.Sprintf("%s/cosmos/tx/v1beta1/txs/%s", config.Links.Thornode, tx.Hash))
+				Notify(config.Notifications.Security, title, nil, false, fields)
+
+				// save seen round 7 failures
+				seen[msgKeysignFail.Memo] = true
+				err = Store("round7", seen)
+				if err != nil {
+					log.Error().Err(err).Msg("unable to save round 7 failures")
+				}
+			}
 		}
 	}
 }
