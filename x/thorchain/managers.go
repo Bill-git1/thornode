@@ -155,6 +155,7 @@ type Swapper interface {
 	CalcAssetEmission(X, x, Y cosmos.Uint) cosmos.Uint
 	CalcLiquidityFee(X, x, Y cosmos.Uint) cosmos.Uint
 	CalcSwapSlip(Xi, xi cosmos.Uint) cosmos.Uint
+	GetSwapCalc(X, x, Y, slipBps, minSlipBps cosmos.Uint) (emitAssets, liquidityFee, slip cosmos.Uint)
 }
 
 // Mgrs is an implementation of Manager interface

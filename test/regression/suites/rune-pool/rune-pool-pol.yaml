@@ -366,11 +366,11 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/runepool
 asserts:
-  - .pol.current_deposit|tonumber == 2*${POL_DEPOSIT}+9875438-1081622244
+  - .pol.current_deposit|tonumber == 2*${POL_DEPOSIT}+9875438-1082973836
   - .pol.rune_deposited|tonumber == 2*${POL_DEPOSIT}+9875438
-  - .pol.rune_withdrawn|tonumber == 1081622244
-  - .pol.value|tonumber == ${POL_VALUE}+${POL_DEPOSIT_2}-910232-1619315894
-  - .pol.pnl|tonumber == ${POL_PNL}-910232-537693650
+  - .pol.rune_withdrawn|tonumber == 1082973836
+  - .pol.value|tonumber == ${POL_VALUE}+${POL_DEPOSIT_2}-910232-1619330530
+  - .pol.pnl|tonumber == ${POL_PNL}-910232-536356694
   - .reserve.units|tonumber == ${RESERVE_UNITS}+${POL_DEPOSIT}-1253791297
   - .providers.units|tonumber == ${POL_DEPOSIT}
   - .providers.pending_units|tonumber == 0
@@ -419,8 +419,8 @@ asserts:
   - .units|tonumber == ${POL_DEPOSIT}
   - .last_deposit_height == 8
   - .last_withdraw_height == 10
-  - .value|tonumber == ${POL_VALUE}-271888233
-  - .pnl|tonumber == -271888233-605512/2
+  - .value|tonumber == ${POL_VALUE}-271907868
+  - .pnl|tonumber == -271907868-605512/2
 ---
 ########################################################################################
 # RUNEPool withdraw remaining from pending
@@ -439,7 +439,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/runepool
 asserts:
   - .pol.value|tonumber == 0
-  - .pol.pnl|tonumber == -550554816
+  - .pol.pnl|tonumber == -546504497
   - .reserve.units|tonumber == 0
   - .reserve.value|tonumber == 0
   - .providers.units|tonumber == 0
@@ -454,9 +454,9 @@ endpoint: http://localhost:1317/thorchain/rune_provider/{{ addr_thor_fox }}
 asserts:
   - .rune_address == "{{ addr_thor_fox }}"
   - .deposit_amount|tonumber == 3*${POL_VALUE}
-  - .withdraw_amount|tonumber == 3*${POL_VALUE}-272190989
+  - .withdraw_amount|tonumber == 3*${POL_VALUE}-272210624
   - .units|tonumber == 0
   - .last_deposit_height == 8
   - .last_withdraw_height == 15
   - .value|tonumber == 0
-  - .pnl|tonumber == -271888233-605512/2
+  - .pnl|tonumber == -271907868-605512/2

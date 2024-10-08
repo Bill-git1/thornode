@@ -114,7 +114,7 @@ asserts:
   - .reserve.units|tonumber == ${POL_DEPOSIT}
   - .providers.units|tonumber == 0
   - .providers.pending_units|tonumber == 0
-  - 'all(.providers|.[]; . == "0")'
+  - 'all(.providers[]; . == "0")'
 ---
 ########################################################################################
 # RUNEPool deposit acquires POL ownership from reserve
@@ -201,15 +201,19 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/runepool
 asserts:
-  - .pol.rune_withdrawn|tonumber == ${POL_WITHDRAWN=1697283667}
+  - .pol.rune_withdrawn|tonumber == ${POL_WITHDRAWN=1699405481}
   - .pol.current_deposit|tonumber == ${POL_DEPOSIT} - ${POL_WITHDRAWN}
   - .pol.rune_deposited|tonumber == ${POL_DEPOSIT}
-  - .pol.value|tonumber == 898826956
-  - .pol.pnl|tonumber == ${POL_PNL=621022977}
+  - .pol.value|tonumber == 898821324
+  - .pol.pnl|tonumber == ${POL_PNL=623139159}
+  - .providers.pnl|tonumber == ${PROVIDERS_PNL=313002005}
+  - .reserve.pnl|tonumber + ${PROVIDERS_PNL} == ${POL_PNL}
   - .reserve.units|tonumber == 0
   - .reserve.value|tonumber == 0
   - .providers.units|tonumber == 987543823
-  - .providers.pending_units|tonumber == 304275435
+  - .providers.pending_units|tonumber == 304276754
+  - (.providers.value|tonumber) > (.pol.value|tonumber)
+  # Because the .pol.value value is 0 and so the .providers.value is the .pol.value plus the undeposited RUNEPool balance.
 ---
 ########################################################################################
 # Withdraw RUNEPool with affiliate
@@ -227,8 +231,8 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/rune_provider/{{ addr_thor_fox }}
 asserts:
-  - .pnl|tonumber == ${POL_PNL=313007637}
-  - .value|tonumber == ${POL_VALUE}/2+${POL_PNL}
+  - .pnl|tonumber == ${PROVIDERS_PNL}
+  - .value|tonumber == ${POL_VALUE}/2+${PROVIDERS_PNL}
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
@@ -243,9 +247,9 @@ count: 1
 type: check # Check pooler balance after withdraw
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
 asserts:
-  - .result[] | select(.denom == "rune")|.amount|tonumber == ${POOLER_INITIAL_BALANCE}+${POL_VALUE}/2+${POL_PNL}/2-${GAS=2000000}+${ROUNDING=0.5}
+  - .result[] | select(.denom == "rune")|.amount|tonumber == ${POOLER_INITIAL_BALANCE}+${POL_VALUE}/2+${PROVIDERS_PNL}/2-${GAS=2000000}+${ROUNDING=0.5}
 ---
 type: check # Check affiliate balance after withdraw
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
 asserts:
-  - .result[] | select(.denom == "rune")|.amount|tonumber == ${POL_PNL}/2-${ROUNDING=0.5} # 50% of PNL
+  - .result[] | select(.denom == "rune")|.amount|tonumber == ${PROVIDERS_PNL}/2-${ROUNDING=0.5} # 50% of PNL

@@ -839,7 +839,8 @@ func (*NetworkManagerVCURTestSuite) TestFairMergePOLCycle(c *C) {
 	pol, err = mgr.Keeper().GetPOL(ctx)
 	c.Assert(err, IsNil)
 	c.Assert(pol.RuneDeposited.String(), Equals, "200000000")
-	c.Assert(pol.RuneWithdrawn.String(), Equals, "198903482") // minus slip
+	c.Assert(pol.RuneWithdrawn.String(), Equals, "199395540")
+	// only XYK constant-depths-product withdraw slip, no implicit slip fee
 
 	// synth liability should still be 10%
 	synthSupply = mgr.Keeper().GetTotalSupply(ctx, pool.Asset.GetSyntheticAsset())
@@ -858,8 +859,8 @@ func (*NetworkManagerVCURTestSuite) TestFairMergePOLCycle(c *C) {
 	c.Assert(err, IsNil)
 	pol, err = mgr.Keeper().GetPOL(ctx)
 	c.Assert(err, IsNil)
-	c.Assert(pol.RuneDeposited.String(), Equals, "400010966")
-	c.Assert(pol.RuneWithdrawn.String(), Equals, "198903482")
+	c.Assert(pol.RuneDeposited.String(), Equals, "400006044")
+	c.Assert(pol.RuneWithdrawn.String(), Equals, "199395540")
 
 	// withdraw entire pol position 1 basis point of rune depth at a time
 	mgr.Keeper().SetMimir(ctx, constants.POLTargetSynthPerPoolDepth.String(), 10000)
@@ -868,15 +869,15 @@ func (*NetworkManagerVCURTestSuite) TestFairMergePOLCycle(c *C) {
 	c.Assert(err, IsNil)
 	pol, err = mgr.Keeper().GetPOL(ctx)
 	c.Assert(err, IsNil)
-	c.Assert(pol.RuneDeposited.String(), Equals, "400010966")
-	c.Assert(pol.RuneWithdrawn.String(), Equals, "198923472")
+	c.Assert(pol.RuneDeposited.String(), Equals, "400006044")
+	c.Assert(pol.RuneWithdrawn.String(), Equals, "199415528")
 	// another basis point
 	err = net.POLCycle(ctx, mgr)
 	c.Assert(err, IsNil)
 	pol, err = mgr.Keeper().GetPOL(ctx)
 	c.Assert(err, IsNil)
-	c.Assert(pol.RuneDeposited.String(), Equals, "400010966")
-	c.Assert(pol.RuneWithdrawn.String(), Equals, "198943458")
+	c.Assert(pol.RuneDeposited.String(), Equals, "400006044")
+	c.Assert(pol.RuneWithdrawn.String(), Equals, "199435514")
 
 	// set the buffer to 100% to stop any movement
 	mgr.Keeper().SetMimir(ctx, constants.POLBuffer.String(), 10000)
@@ -884,8 +885,8 @@ func (*NetworkManagerVCURTestSuite) TestFairMergePOLCycle(c *C) {
 	c.Assert(err, IsNil)
 	pol, err = mgr.Keeper().GetPOL(ctx)
 	c.Assert(err, IsNil)
-	c.Assert(pol.RuneDeposited.String(), Equals, "400010966")
-	c.Assert(pol.RuneWithdrawn.String(), Equals, "198943458")
+	c.Assert(pol.RuneDeposited.String(), Equals, "400006044")
+	c.Assert(pol.RuneWithdrawn.String(), Equals, "199435514")
 
 	// current liability is at 10%, so buffer at 40% and target of 50% should still not move
 	mgr.Keeper().SetMimir(ctx, constants.POLBuffer.String(), 4000)
@@ -894,8 +895,8 @@ func (*NetworkManagerVCURTestSuite) TestFairMergePOLCycle(c *C) {
 	c.Assert(err, IsNil)
 	pol, err = mgr.Keeper().GetPOL(ctx)
 	c.Assert(err, IsNil)
-	c.Assert(pol.RuneDeposited.String(), Equals, "400010966")
-	c.Assert(pol.RuneWithdrawn.String(), Equals, "198943458")
+	c.Assert(pol.RuneDeposited.String(), Equals, "400006044")
+	c.Assert(pol.RuneWithdrawn.String(), Equals, "199435514")
 
 	// any smaller buffer should withdraw one basis point of rune
 	mgr.Keeper().SetMimir(ctx, constants.POLBuffer.String(), 3999)
@@ -903,8 +904,8 @@ func (*NetworkManagerVCURTestSuite) TestFairMergePOLCycle(c *C) {
 	c.Assert(err, IsNil)
 	pol, err = mgr.Keeper().GetPOL(ctx)
 	c.Assert(err, IsNil)
-	c.Assert(pol.RuneDeposited.String(), Equals, "400010966")
-	c.Assert(pol.RuneWithdrawn.String(), Equals, "198963444")
+	c.Assert(pol.RuneDeposited.String(), Equals, "400006044")
+	c.Assert(pol.RuneWithdrawn.String(), Equals, "199455500")
 
 	// withdraw everything
 	mgr.Keeper().SetMimir(ctx, constants.POLTargetSynthPerPoolDepth.String(), 10000)
@@ -914,16 +915,16 @@ func (*NetworkManagerVCURTestSuite) TestFairMergePOLCycle(c *C) {
 	c.Assert(err, IsNil)
 	pol, err = mgr.Keeper().GetPOL(ctx)
 	c.Assert(err, IsNil)
-	c.Assert(pol.RuneDeposited.String(), Equals, "400010966")
-	c.Assert(pol.RuneWithdrawn.String(), Equals, "397818194")
+	c.Assert(pol.RuneDeposited.String(), Equals, "400006044")
+	c.Assert(pol.RuneWithdrawn.String(), Equals, "398797134")
 
 	// should be nothing left to withdraw again
 	err = net.POLCycle(ctx, mgr)
 	c.Assert(err, IsNil)
 	pol, err = mgr.Keeper().GetPOL(ctx)
 	c.Assert(err, IsNil)
-	c.Assert(pol.RuneDeposited.String(), Equals, "400010966")
-	c.Assert(pol.RuneWithdrawn.String(), Equals, "397818194")
+	c.Assert(pol.RuneDeposited.String(), Equals, "400006044")
+	c.Assert(pol.RuneWithdrawn.String(), Equals, "398797134")
 }
 
 func (s *NetworkManagerVCURTestSuite) TestSpawnDerivedAssets(c *C) {
