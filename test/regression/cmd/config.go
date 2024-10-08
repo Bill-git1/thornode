@@ -64,7 +64,7 @@ func init() {
 func clientContextAndFactory(routine int) (client.Context, tx.Factory) {
 	// create new rpc client
 	node := fmt.Sprintf("http://localhost:%d", 26657+routine)
-	rpcClient, err := tmhttp.New(node, "/websocket")
+	rpcClient, err := tmhttp.NewWithTimeout(node, "/websocket", 5)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create tendermint client")
 	}
@@ -118,11 +118,11 @@ func init() {
 const (
 	ColorReset  = "\033[0m"
 	ColorRed    = "\033[31m"
+	ColorYellow = "\033[33m"
 	ColorGreen  = "\033[32m"
 	ColorPurple = "\033[35m"
 
 	// save for later
-	// ColorYellow = "\033[33m"
 	// ColorBlue   = "\033[34m"
 	// ColorCyan   = "\033[36m"
 	// ColorGray   = "\033[37m"

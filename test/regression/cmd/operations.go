@@ -569,7 +569,7 @@ func (op *OpCreateBlocks) Execute(out io.Writer, path string, _, routine int, p 
 
 		// get the block response
 		url := fmt.Sprintf("http://localhost:%d/thorchain/block?height=%d", 1317+routine, height)
-		res, err := http.Get(url)
+		res, err := httpClient.Get(url)
 		if err != nil {
 			localLog.Err(err).Msg("failed to get block")
 			return err

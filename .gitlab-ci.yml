@@ -250,7 +250,7 @@ test-regression:
   variables:
     DOCKER_BUILDKIT: "1"
     TIME_FACTOR: "2"
-    PARALLELISM: "4"
+    PARALLELISM: "6"
     FAIL_FAST: "true"
   before_script:
     - apk -U add make git bash

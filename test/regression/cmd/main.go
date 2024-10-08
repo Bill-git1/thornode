@@ -188,6 +188,10 @@ func main() {
 	for _, file := range succeeded {
 		fmt.Printf("- %s\n", file)
 	}
+	fmt.Printf("%sRetried:%s %d\n", ColorYellow, ColorReset, len(retryCount))
+	for file, count := range retryCount {
+		fmt.Printf("- %s: %d\n", file, count)
+	}
 	fmt.Printf("%sFailed:%s %d\n", ColorRed, ColorReset, len(failed))
 	for _, file := range failed {
 		fmt.Printf("- %s\n", file)

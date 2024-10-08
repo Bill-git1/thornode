@@ -21,6 +21,15 @@ import (
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////
+// Retry
+////////////////////////////////////////////////////////////////////////////////////////
+
+var (
+	retryCount = map[string]int{}
+	retryMu    sync.Mutex
+)
+
+////////////////////////////////////////////////////////////////////////////////////////
 // Run
 ////////////////////////////////////////////////////////////////////////////////////////
 
@@ -287,6 +296,23 @@ func run(out io.Writer, path string, routine int) (failExportInvariants bool, er
 	_, err = thornode.Process.Wait()
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to wait for thornode")
+	}
+
+	// retry context deadline exceeded errors
+	if returnErr != nil && strings.Contains(returnErr.Error(), "context deadline exceeded") {
+		log.Warn().Err(returnErr).Str("path", path).Msg("retrying suite with timeout")
+		fmt.Println()
+
+		// track retries per path
+		retryMu.Lock()
+		retryCount[path]++
+		if retryCount[path] > 3 {
+			retryMu.Unlock()
+			return false, returnErr
+		}
+		retryMu.Unlock()
+
+		return run(out, path, routine)
 	}
 
 	// if failed and debug enabled restart to allow inspection

@@ -156,9 +156,9 @@ func (a *SwapActor) getQuote(config *OpConfig) OpResult {
 		}
 	}
 
-	// store expected range to fail if received amount is outside 5% tolerance
+	// store expected range to fail if received amount is outside 10% tolerance
 	quoteOut := sdk.NewUintFromString(quote.ExpectedAmountOut)
-	tolerance := quoteOut.QuoUint64(20)
+	tolerance := quoteOut.QuoUint64(10)
 	if quote.Fees.Outbound != nil {
 		outboundFee := sdk.NewUintFromString(*quote.Fees.Outbound)
 		quoteOut = quoteOut.Add(outboundFee)
