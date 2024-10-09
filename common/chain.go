@@ -282,11 +282,11 @@ func (c Chain) MaxMemoLength() int {
 func (c Chain) DefaultCoinbase() float64 {
 	switch c {
 	case BTCChain:
-		return 6.25
+		return 3.125
 	case LTCChain:
-		return 12.5
-	case BCHChain:
 		return 6.25
+	case BCHChain:
+		return 3.125
 	case DOGEChain:
 		return 10000
 	default:
