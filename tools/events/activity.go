@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/constants"
 	openapi "gitlab.com/thorchain/thornode/openapi/gen"
 	"gitlab.com/thorchain/thornode/tools/thorscan"
 	"gitlab.com/thorchain/thornode/x/thorchain"
@@ -30,6 +31,7 @@ func ScanActivity(block *thorscan.BlockResponse) {
 	NewNode(block)
 	Bond(block)
 	FailedTransactions(block)
+	THORNameRegistrations(block)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -649,7 +651,7 @@ func LargeTransfers(block *thorscan.BlockResponse) {
 			matches := reMemoMigration.FindStringSubmatch(txWithMemo.GetMemo())
 			if len(matches) > 0 {
 				title := fmt.Sprintf(
-					"`[%d]` External Migration `%s` (%sᚱ)",
+					"`[%d]` External Migration `%s` (%s RUNE)",
 					block.Header.Height, txWithMemo.GetMemo(), FormatLocale(amount/common.One),
 				)
 				fields.Set(
@@ -662,7 +664,7 @@ func LargeTransfers(block *thorscan.BlockResponse) {
 
 			// otherwise this is just a large transfer
 			title := fmt.Sprintf(
-				"`[%d]` Large Transfer >> %sᚱ (%s)",
+				"`[%d]` Large Transfer >> %s RUNE (%s)",
 				block.Header.Height,
 				FormatLocale(amount/common.One),
 				USDValueString(block.Header.Height, common.NewCoin(common.RuneAsset(), cosmos.NewUint(amount))),
@@ -849,7 +851,7 @@ func NewNode(block *thorscan.BlockResponse) {
 				fields.Set("Hash", tx.Hash)
 				fields.Set("Operator", fmt.Sprintf("`%s`", operator))
 				fields.Set("Node", fmt.Sprintf("`%s`", event["address"][len(event["address"])-4:]))
-				fields.Set("Amount", fmt.Sprintf("%sᚱ", FormatLocale(float64(amount)/common.One)))
+				fields.Set("Amount", fmt.Sprintf("%s RUNE", FormatLocale(float64(amount)/common.One)))
 				Notify(config.Notifications.Activity, title, nil, false, fields)
 			}
 		}
@@ -893,7 +895,7 @@ txs:
 				fields.Set("Hash", tx.Hash)
 				fields.Set("Provider", fmt.Sprintf("`%s`", provider))
 				fields.Set("Memo", fmt.Sprintf("`%s`", msgDeposit.Memo))
-				fields.Set("Amount", fmt.Sprintf("%sᚱ", FormatLocale(float64(amount)/common.One)))
+				fields.Set("Amount", FormatLocale(float64(amount)/common.One))
 
 				// extract node address from memo
 				m, err := thorchain.ParseMemo(common.LatestVersion, msgDeposit.Memo)
@@ -973,5 +975,47 @@ func FailedTransactions(block *thorscan.BlockResponse) {
 		// notify failed transaction
 		title := fmt.Sprintf("`[%d]` Failed Transaction", block.Header.Height)
 		Notify(config.Notifications.Activity, title, nil, false, fields)
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+// THORName Registrations
+////////////////////////////////////////////////////////////////////////////////////////
+
+func THORNameRegistrations(block *thorscan.BlockResponse) {
+	for _, tx := range block.Txs {
+		for _, event := range tx.Result.Events {
+			if event["type"] != types.THORNameEventType {
+				continue
+			}
+
+			// extract values
+			registrationFee := cosmos.NewUintFromString(event["registration_fee"]).Uint64()
+			fundAmount := cosmos.NewUintFromString(event["fund_amount"]).Uint64()
+			expire := cosmos.NewUintFromString(event["expire"]).Uint64()
+			expireDuration := time.Duration(expire-uint64(block.Header.Height)) * constants.ThorchainBlockTime
+
+			// alert fields
+			fields := NewOrderedMap()
+			fields.Set("THORName", fmt.Sprintf("`%s`", event["name"]))
+			fields.Set("Expiration", fmt.Sprintf("`%d` (%s)", expire, FormatDuration(expireDuration)))
+			fields.Set("Registration Fee", FormatLocale(float64(registrationFee)/common.One))
+			fields.Set("Fund Amount", FormatLocale(float64(fundAmount)/common.One))
+
+			for _, msg := range tx.Tx.GetMsgs() {
+				if msgDeposit, ok := msg.(*thorchain.MsgDeposit); ok {
+					fields.Set("Memo", fmt.Sprintf("`%s`", msgDeposit.Memo))
+				}
+			}
+
+			fields.Set(
+				"Transaction",
+				fmt.Sprintf("%s/cosmos/tx/v1beta1/txs/%s", config.Links.Thornode, tx.BlockTx.Hash),
+			)
+
+			// notify thorname registration
+			title := fmt.Sprintf("`[%d]` THORName Registration", block.Header.Height)
+			Notify(config.Notifications.Activity, title, nil, false, fields)
+		}
 	}
 }

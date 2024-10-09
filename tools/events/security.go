@@ -98,6 +98,9 @@ func ErrataTransactions(block *thorscan.BlockResponse) {
 
 func Round7Failures(block *thorscan.BlockResponse) {
 	for _, tx := range block.Txs {
+		if tx.Tx == nil { // transaction failed decode
+			continue
+		}
 		for _, msg := range tx.Tx.GetMsgs() {
 			if msgKeysignFail, ok := msg.(*thorchain.MsgTssKeysignFail); ok {
 				// skip migrate transactions
