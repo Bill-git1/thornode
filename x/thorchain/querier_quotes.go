@@ -958,6 +958,12 @@ func queryQuoteSaverDeposit(ctx cosmos.Context, path []string, req abci.RequestQ
 		q.Add("streaming_quantity", fmt.Sprintf("%d", 0))
 	}
 
+	// Here in queryQuoteSaverDeposit,
+	// queryQuoteSwap uses a swap memo to evaluate the result of an add liquidity memo,
+	// so unset ManualSwapsToSynth in the local context tp prevent an error
+	// (and panic from nil pointer at the later sdk.ParseUint(*swapRes.Fees.Outbound) ).
+	mgr.Keeper().SetMimir(ctx, constants.ManualSwapsToSynthDisabled.String(), 0)
+
 	swapReq := abci.RequestQuery{Data: []byte("/thorchain/quote/swap?" + q.Encode())}
 	swapResRaw, err := queryQuoteSwap(ctx, nil, swapReq, mgr)
 	if err != nil {

@@ -684,6 +684,25 @@ signer: {{ addr_thor_dog }}
 type: create-blocks
 count: 1
 ---
+# Testing whether the Saver deposit quote still works.
+type: check
+endpoint: http://localhost:1317/thorchain/quote/saver/deposit
+params:
+  asset: BTC.BTC
+  amount: ${ADD=200000}
+asserts:
+  - .expected_amount_deposit == "198022"
+  - .memo == "+:BTC/BTC"
+  - .inbound_address == "{{ addr_btc_dog }}"
+  - .recommended_min_amount_in == "10000"
+  - .fees.liquidity == "1994"
+  - .fees.outbound == "35370"
+  - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
+  - .fees.slippage_bps == 99
+  - .fees.total_bps == 1587
+  - .recommended_gas_rate == "10"
+  - .gas_rate_units == "satsperbyte"
+---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
 txs:
@@ -693,7 +712,7 @@ txs:
       from_address: {{ addr_btc_pig }}
       to_address: {{ addr_btc_dog }}
       coins:
-        - amount: "${ADD=200000}"
+        - amount: "${ADD}"
           asset: "BTC.BTC"
           decimals: 8
       gas:
