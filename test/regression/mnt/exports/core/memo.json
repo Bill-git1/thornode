@@ -166,7 +166,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "199950888734",
+              "amount": "199951609637",
               "denom": "rune"
             }
           ]
@@ -184,7 +184,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35000031670008",
+              "amount": "35000031669681",
               "denom": "rune"
             }
           ]
@@ -211,7 +211,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "5000017441258",
+              "amount": "5000016720682",
               "denom": "rune"
             }
           ]
@@ -287,9 +287,9 @@
       "loans": [],
       "mimirs": [],
       "network": {
-        "LPIncomeSplit": "9601",
-        "NodeIncomeSplit": "399",
-        "bond_reward_rune": "17441258",
+        "LPIncomeSplit": "9600",
+        "NodeIncomeSplit": "400",
+        "bond_reward_rune": "16720682",
         "total_bond_units": "3"
       },
       "network_fees": [
@@ -325,7 +325,7 @@
       "orderbook_items": [],
       "outbound_fee_spent_rune": [
         {
-          "amount": "104413602",
+          "amount": "104413929",
           "asset": "ETH.ETH"
         }
       ],
@@ -340,7 +340,7 @@
           "LP_units": "100000000000",
           "asset": "BTC.BTC",
           "balance_asset": "105000000",
-          "balance_rune": "95456994504",
+          "balance_rune": "95457388256",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -351,7 +351,7 @@
           "LP_units": "100000000000",
           "asset": "ETH.ETH",
           "balance_asset": "958818220",
-          "balance_rune": "104493894230",
+          "balance_rune": "104494221381",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",

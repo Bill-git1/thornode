@@ -151,12 +151,12 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/runepool
 asserts:
-  - .pol.pnl == "17092178"
+  - .pol.pnl == "17096694"
   - .pol.rune_withdrawn == "0" # no rune withdrawn
   - .reserve.units == "0" # provider owns all pol
   - .reserve.value == "0"
   - .reserve.pnl == "${RESERVE_PNL}" # reserve has same loss
-  - .providers.pnl == "${PROVIDER_PNL=20003748}" # provider has profit
+  - .providers.pnl == "${PROVIDER_PNL=20008264}" # provider has profit
   - (.reserve.pnl|tonumber)+(.providers.pnl|tonumber) == (.pol.pnl|tonumber)
   - (.reserve.value|tonumber)+(.providers.value|tonumber)-(.providers.pending_rune|tonumber) == (.pol.value|tonumber)
   - (.reserve.current_deposit|tonumber)+(.providers.current_deposit|tonumber)-(.providers.pending_rune|tonumber) == (.pol.current_deposit|tonumber)
@@ -206,12 +206,12 @@ asserts:
   - .last_deposit_height == 4
   - .last_withdraw_height == 7
   - .units == "0"
-  - .pnl == "20003748"
+  - .pnl == "20008264"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/runepool
 asserts:
-  - .pol.pnl == "17092178"
+  - .pol.pnl == "17096694"
   - .reserve.units == "${POL_DEPOSIT}"
   - .reserve.pnl == "${RESERVE_PNL}" # reserve has same loss
   - .providers.units == "0"

@@ -195,7 +195,7 @@ asserts:
   - .[0]|.debt_issued == "${DEBT_ISSUED}"
   - .[0]|.owner == "{{ addr_btc_fox }}"
   - .[0]|.collateral_withdrawn == "${COLLATERAL_DEPOSITED}" # should now be fully repaid
-  - .[0]|.debt_repaid == "${DEBT_REPAID=975469878}" # over repaid
+  - .[0]|.debt_repaid == "${DEBT_REPAID=975469882}" # over repaid
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound

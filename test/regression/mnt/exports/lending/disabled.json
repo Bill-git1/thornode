@@ -176,7 +176,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "299996306638",
+              "amount": "299996308711",
               "denom": "rune"
             }
           ]
@@ -194,7 +194,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35000001376001",
+              "amount": "35000001376003",
               "denom": "rune"
             }
           ]
@@ -203,7 +203,7 @@
           "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "coins": [
             {
-              "amount": "2499975175493",
+              "amount": "2499975175495",
               "denom": "rune"
             }
           ]
@@ -221,7 +221,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "5000002487576",
+              "amount": "5000002485501",
               "denom": "rune"
             }
           ]
@@ -234,7 +234,7 @@
       },
       "supply": [
         {
-          "amount": "50299975345708",
+          "amount": "50299975345710",
           "denom": "rune"
         },
         {
@@ -311,7 +311,7 @@
           "collateral_deposited": "495050",
           "collateral_withdrawn": "495050",
           "debt_issued": "489900000",
-          "debt_repaid": "494989521",
+          "debt_repaid": "494989518",
           "last_open_height": "25",
           "last_repay_height": "30",
           "owner": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw"
@@ -341,7 +341,7 @@
       "network": {
         "LPIncomeSplit": "9400",
         "NodeIncomeSplit": "600",
-        "bond_reward_rune": "2487576",
+        "bond_reward_rune": "2485501",
         "total_bond_units": "33"
       },
       "network_fees": [
@@ -377,7 +377,7 @@
       "orderbook_items": [],
       "outbound_fee_spent_rune": [
         {
-          "amount": "83958019",
+          "amount": "83958020",
           "asset": "BTC.BTC"
         }
       ],
@@ -392,7 +392,7 @@
           "LP_units": "100000000000",
           "asset": "BTC.BTC",
           "balance_asset": "100042699",
-          "balance_rune": "99974740584",
+          "balance_rune": "99974741699",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -403,7 +403,7 @@
           "LP_units": "100000000000",
           "asset": "ETH.ETH",
           "balance_asset": "1000000000",
-          "balance_rune": "100010783027",
+          "balance_rune": "100010783506",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -414,7 +414,7 @@
           "LP_units": "100000000000",
           "asset": "ETH.USDC-0X9999999999999999999999999999999999999999",
           "balance_asset": "100000000000",
-          "balance_rune": "100010783027",
+          "balance_rune": "100010783506",
           "decimals": "6",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -425,7 +425,7 @@
           "LP_units": "0",
           "asset": "THOR.BTC",
           "balance_asset": "93439880",
-          "balance_rune": "93376082984",
+          "balance_rune": "93376084026",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
           "status": "Available",
@@ -435,8 +435,8 @@
         {
           "LP_units": "0",
           "asset": "THOR.ETH",
-          "balance_asset": "1000000000",
-          "balance_rune": "100010435234",
+          "balance_asset": "999999999",
+          "balance_rune": "100010435713",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
           "status": "Available",
@@ -447,7 +447,7 @@
           "LP_units": "0",
           "asset": "THOR.TOR",
           "balance_asset": "99999999999",
-          "balance_rune": "100010435234",
+          "balance_rune": "100010435713",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
           "status": "Available",

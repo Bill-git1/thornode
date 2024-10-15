@@ -1015,17 +1015,17 @@
         "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
       },
       {
-        "amount": "4965143rune",
+        "amount": "4478061rune",
         "spender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_spent"
       },
       {
-        "amount": "4965143rune",
+        "amount": "4478061rune",
         "receiver": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_received"
       },
       {
-        "amount": "4965143rune",
+        "amount": "4478061rune",
         "recipient": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "transfer"
@@ -1035,17 +1035,17 @@
         "type": "message"
       },
       {
-        "amount": "6074986rune",
+        "amount": "5587904rune",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_spent"
       },
       {
-        "amount": "6074986rune",
+        "amount": "5587904rune",
         "receiver": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
         "type": "coin_received"
       },
       {
-        "amount": "6074986rune",
+        "amount": "5587904rune",
         "recipient": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "transfer"
@@ -1055,8 +1055,8 @@
         "type": "message"
       },
       {
-        "BTC.BTC": "-4965143",
-        "bond_reward": "6074986",
+        "BTC.BTC": "-4478061",
+        "bond_reward": "5587904",
         "dev_fund_reward": "0",
         "income_burn": "0",
         "type": "rewards"

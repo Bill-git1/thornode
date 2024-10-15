@@ -463,6 +463,15 @@ endpoint: http://localhost:1317/thorchain/pool/ETH.ETH
 asserts:
   - .status == "Staged"
 ---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - length == 5
+  - .[0].coin.amount == "${OUTPUT_AMOUNT_1=8838815}"
+  - .[1].coin.amount == "${OUTPUT_AMOUNT_2=8774453}"
+  - .[2].coin.amount == "${OUTPUT_AMOUNT_3=30917273}"
+  - .[3].coin.amount == "${OUTPUT_AMOUNT_4=8643424}"
+---
 # observe outbounds for saver withdrawals and the synth swap
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -473,7 +482,7 @@ txs:
       from_address: {{ addr_eth_dog }}
       to_address: {{ addr_eth_pig }}
       coins:
-        - amount: "8838815"
+        - amount: "${OUTPUT_AMOUNT_1}"
           asset: "ETH.ETH"
           decimals: 8
       gas:
@@ -489,7 +498,7 @@ txs:
       from_address: {{ addr_eth_dog }}
       to_address: {{ addr_eth_cat }}
       coins:
-        - amount: "8774453"
+        - amount: "${OUTPUT_AMOUNT_2}"
           asset: "ETH.ETH"
           decimals: 8
       gas:
@@ -505,7 +514,7 @@ txs:
       from_address: {{ addr_eth_dog }}
       to_address: {{ addr_eth_fox }}
       coins:
-        - amount: "8643424"
+        - amount: "${OUTPUT_AMOUNT_4}"
           asset: "ETH.ETH"
           decimals: 8
       gas:
@@ -521,7 +530,7 @@ txs:
       from_address: {{ addr_eth_dog }}
       to_address: {{ addr_eth_fox }}
       coins:
-        - amount: "30917274"
+        - amount: "${OUTPUT_AMOUNT_3}"
           asset: "ETH.ETH"
           decimals: 8
       gas:
@@ -543,7 +552,8 @@ skip_invariants: true # last withdraw failed, but LP was removed
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
-  - .|length == 1
+  - length == 1
+  - .[0].coin.amount == "${OUTPUT_AMOUNT=86390518}"
 ---
 # observe lp outbound
 type: tx-observed-out
@@ -555,7 +565,7 @@ txs:
       from_address: {{ addr_eth_dog }}
       to_address: {{ addr_eth_fox }}
       coins:
-        - amount: "86390517"
+        - amount: "${OUTPUT_AMOUNT}"
           asset: "ETH.ETH"
           decimals: 8
       gas:

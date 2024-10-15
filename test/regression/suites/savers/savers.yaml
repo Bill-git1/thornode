@@ -375,8 +375,8 @@ type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
   - .|length == 1
-  - .[0].asset_deposit_value|tonumber == 19845527
-  - .[0].asset_redeem_value|tonumber == 19845850
+  - .[0].asset_deposit_value|tonumber == 19845526
+  - .[0].asset_redeem_value|tonumber == 19845849
 ---
 ########################################################################################
 # swap btc to rune and back to generate yield
@@ -408,9 +408,9 @@ type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
   - .|length == 1
-  - .[0].asset_deposit_value|tonumber == 19845527
-  - .[0].asset_redeem_value|tonumber == 21114645
-  - .[0].growth_pct|tonumber == 0.063949826074157668
+  - .[0].asset_deposit_value|tonumber == 19845526
+  - .[0].asset_redeem_value|tonumber == 21114644
+  - .[0].growth_pct|tonumber == 0.06394982929653767
 ---
 ########################################################################################
 # withdraw savers should use streaming swaps
@@ -441,7 +441,7 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/swap/streaming/{{ observe_txid 9 }}
 asserts:
-  - .deposit == "21114645"
+  - .deposit == "21114644"
   - .count == 1
   - .tx_id == "{{ observe_txid 9 }}"
   - .interval == 1
@@ -456,12 +456,12 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/swap/streaming/{{ observe_txid 9 }}
 asserts:
-  - .deposit == "21114645"
+  - .deposit == "21114644"
   - .count == 2
   - .tx_id == "{{ observe_txid 9 }}"
   - .interval == 1
   - .quantity == 3
-  - .in == "14076430"
+  - .in == "14076428"
 ---
 type: create-blocks
 count: 1
@@ -478,7 +478,8 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
-  - .[0]|.in_hash == "{{ observe_txid 9 }}"
+  - .[0].in_hash == "{{ observe_txid 9 }}"
+  - .[0].coin.amount == "${OUTPUT_AMOUNT=20797891}"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
@@ -494,7 +495,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_pig }}
       coins:
-        - amount: "20797892"
+        - amount: "${OUTPUT_AMOUNT}"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -618,8 +619,8 @@ type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
   - .|length == 1
-  - .[0].asset_deposit_value|tonumber == 19839959
-  - .[0].asset_redeem_value|tonumber == 19840439
+  - .[0].asset_deposit_value == "19839959"
+  - .[0].asset_redeem_value == "19840439"
   - .[0].last_add_height == 24
 ---
 ########################################################################################

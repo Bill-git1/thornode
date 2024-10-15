@@ -309,12 +309,12 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/balance/module/affiliate_collector
 asserts:
-  - .coins[]|select(.denom == "rune")|.amount == "3395952522"
+  - .coins[]|select(.denom == "rune")|.amount == "3395952535"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
-  - .affiliate_collector_rune == "3395952522"
+  - .affiliate_collector_rune == "3395952535"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -384,9 +384,11 @@ type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .|[.end_block_events[]|select(.type == "scheduled_outbound")]|length == 2
-  - .|[.end_block_events[]|select(.type == "scheduled_outbound")]|.[1].to_address == "{{ addr_btc_pig }}"
-  - .|[.end_block_events[]|select(.type == "scheduled_outbound")]|.[1].coin_amount == "25300900"
-  - .|[.end_block_events[]|select(.type == "scheduled_outbound")]|.[1].coin_asset == "BTC.BTC"
+  - .|[.end_block_events[]|select(.type == "scheduled_outbound")][1].to_address == "{{ addr_btc_pig }}"
+  - .|[.end_block_events[]|select(.type == "scheduled_outbound")][1].coin_asset == "BTC.BTC"
+  - .|[.end_block_events[]|select(.type == "scheduled_outbound")][1].coin_amount == "${BTC_OUTPUT_AMOUNT=25234610}"
+  - .|[.end_block_events[]|select(.type == "scheduled_outbound")][0].coin_asset == "ETH.USDX-0X9999999999999999999999999999999999999999"
+  - .|[.end_block_events[]|select(.type == "scheduled_outbound")][0].coin_amount == "${USDX_OUTPUT_AMOUNT=46328400}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -397,7 +399,7 @@ txs:
       from_address: {{ addr_eth_dog }}
       to_address: {{ addr_eth_fox }}
       coins:
-        - amount: "45885100"
+        - amount: "${USDX_OUTPUT_AMOUNT}"
           asset: "ETH.USDX-0X9999999999999999999999999999999999999999"
           decimals: 8
       gas:
@@ -413,13 +415,13 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_pig }}
       coins:
-        - amount: "25300900"
+        - amount: "${BTC_OUTPUT_AMOUNT}"
           asset: "BTC.BTC"
           decimals: 8
       gas:
         - amount: "10500"
           asset: "BTC.BTC"
-      memo: "OUT:09A62B1151856574DF9D80D0CA6AB1DCDBA9934E70A5B7E27246D0192CD6B894"
+      memo: "OUT:762B61BA75DB2C85A7037F43AE58085F847FFCA0A3A0CE31C773450C3F0916B1"
     block_height: 14
     finalise_height: 14
     observed_pub_key: {{ pubkey_dog }}
@@ -461,12 +463,12 @@ count: 1
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
 asserts:
-  - .result[]|select(.denom == "rune")|.amount == "10061754427"
+  - .result[]|select(.denom == "rune")|.amount == "10061930808"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/balance/module/affiliate_collector
 asserts:
-  - .coins[]|select(.denom == "rune")|.amount == "1346568"
+  - .coins[]|select(.denom == "rune")|.amount == "1355392"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound

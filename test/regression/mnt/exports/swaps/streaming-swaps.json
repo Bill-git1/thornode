@@ -169,7 +169,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "207711571708",
+              "amount": "207711875918",
               "denom": "rune"
             }
           ]
@@ -187,7 +187,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35000133252357",
+              "amount": "35000133252612",
               "denom": "rune"
             }
           ]
@@ -196,11 +196,11 @@
           "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "coins": [
             {
-              "amount": "26984687",
+              "amount": "26983998",
               "denom": "eth/eth"
             },
             {
-              "amount": "2491862274256",
+              "amount": "2491862363797",
               "denom": "rune"
             }
           ]
@@ -218,7 +218,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "5000292901679",
+              "amount": "5000292507673",
               "denom": "rune"
             }
           ]
@@ -231,7 +231,7 @@
       },
       "supply": [
         {
-          "amount": "26984687",
+          "amount": "26983998",
           "denom": "eth/eth"
         },
         {
@@ -304,7 +304,7 @@
       "network": {
         "LPIncomeSplit": "9585",
         "NodeIncomeSplit": "415",
-        "bond_reward_rune": "292901679",
+        "bond_reward_rune": "292507673",
         "total_bond_units": "68"
       },
       "network_fees": [
@@ -341,21 +341,21 @@
       "orderbook_items": [],
       "outbound_fee_spent_rune": [
         {
-          "amount": "8345580",
+          "amount": "8345595",
           "asset": "BTC.BTC"
         },
         {
-          "amount": "590532239",
+          "amount": "590533059",
           "asset": "ETH.ETH"
         }
       ],
       "outbound_fee_withheld_rune": [
         {
-          "amount": "11128711",
+          "amount": "11128729",
           "asset": "BTC.BTC"
         },
         {
-          "amount": "788471065",
+          "amount": "788472135",
           "asset": "ETH.ETH"
         }
       ],
@@ -364,7 +364,7 @@
           "LP_units": "100000000000",
           "asset": "BTC.BTC",
           "balance_asset": "118003500",
-          "balance_rune": "84842689844",
+          "balance_rune": "84842877964",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -374,13 +374,13 @@
         {
           "LP_units": "100000000000",
           "asset": "ETH.ETH",
-          "balance_asset": "870379486",
-          "balance_rune": "122868881864",
+          "balance_asset": "870379466",
+          "balance_rune": "122868997954",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
           "status": "Available",
-          "synth_units": "1574576490"
+          "synth_units": "1574535691"
         }
       ],
       "reserve_contributors": null,
@@ -397,19 +397,19 @@
         {
           "address": "0xe3c64974c78f5693bd2bc68b3221d58df5c6e877",
           "reclaimed": "0",
-          "score": "82413068",
+          "score": "82413148",
           "spent": "0"
         },
         {
           "address": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
           "reclaimed": "0",
-          "score": "82413033",
+          "score": "82413117",
           "spent": "0"
         },
         {
           "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "reclaimed": "0",
-          "score": "5666114744",
+          "score": "5666113627",
           "spent": "0"
         }
       ],
@@ -436,7 +436,7 @@
               "decimals": "8"
             },
             {
-              "amount": "870379486",
+              "amount": "870379466",
               "asset": "ETH.ETH",
               "decimals": "8"
             }

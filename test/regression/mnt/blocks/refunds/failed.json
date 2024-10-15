@@ -1262,17 +1262,17 @@
         "type": "message"
       },
       {
-        "amount": "529966rune",
+        "amount": "529967rune",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_spent"
       },
       {
-        "amount": "529966rune",
+        "amount": "529967rune",
         "receiver": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_received"
       },
       {
-        "amount": "529966rune",
+        "amount": "529967rune",
         "recipient": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "transfer"
@@ -1282,17 +1282,17 @@
         "type": "message"
       },
       {
-        "amount": "44617rune",
+        "amount": "44616rune",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_spent"
       },
       {
-        "amount": "44617rune",
+        "amount": "44616rune",
         "receiver": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
         "type": "coin_received"
       },
       {
-        "amount": "44617rune",
+        "amount": "44616rune",
         "recipient": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "transfer"
@@ -1303,8 +1303,8 @@
       },
       {
         "BTC.BTC": "535260",
-        "ETH.ETH": "529966",
-        "bond_reward": "44617",
+        "ETH.ETH": "529967",
+        "bond_reward": "44616",
         "dev_fund_reward": "0",
         "income_burn": "0",
         "type": "rewards"

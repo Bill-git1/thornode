@@ -73,7 +73,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/outbound_fee/${OUT_ASSET}
 asserts:
   - .[0].fee_withheld_rune == "${FEE_WITHHELD}"
-  - .[0].fee_spent_rune == "${FEE_SPENT=12582593}"
+  - .[0].fee_spent_rune == "${FEE_SPENT=12582968}"
   - .[0].surplus_rune|tonumber == ${FEE_WITHHELD} - ${FEE_SPENT}
 ---
 type: tx-observed-in
@@ -103,7 +103,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2495385582428
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2495385742829
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/outbound_fees

@@ -120,6 +120,9 @@ func NewConstantValue() *ConstantVals {
 			SaversEjectInterval:                 0,                  // number of blocks for savers check, disabled if zero
 			SystemIncomeBurnRateBps:             1,                  // burn 1bps (0.01%) RUNE of all system income per ADR 17
 			DevFundSystemIncomeBps:              500,                // allocate 500bps (5%) RUNE of all system income to dev fund per ADR 18
+			PendulumAssetsBasisPoints:           10_000,             // Incentive curve adjustment lever to proportionally underestimate or overestimate Assets needing to be secured.
+			PendulumUseEffectiveSecurity:        0,                  // If 1, use the effective security bond (the bond sacrificable to seize L1 Assets) as the securing bond for which to target double the value of the secured Assets. If 0, instead use the whole (rewards-receiving) total effective bond.
+			PendulumUseVaultAssets:              0,                  // If 1. use the L1 Assets in the vaults (the Assets seizable by the lower-bond 2/3rds of nodes in each vault) as the Assets to be secured.  If 0, instead use only the L1 Assets in pools, ignoring the L1 Assets in for instance streaming swaps, oversolvencies, and Trade/Bridge Assets.
 		},
 		boolValues: map[ConstantName]bool{
 			StrictBondLiquidityRatio: true,

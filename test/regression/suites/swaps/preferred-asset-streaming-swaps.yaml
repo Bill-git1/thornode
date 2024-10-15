@@ -137,7 +137,7 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
-  - .affiliate_collector_rune == "1467062409"
+  - .affiliate_collector_rune == "1467114979"
 ---
 ########################################################################################
 # streaming swap to trigger preferred asset swap
@@ -183,9 +183,9 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
-  - .[0]|.in_hash == "${IN_HASH=1937E2A32B07C36D1198C3C8FAB8605A40140E40B2AE35FB496A886FF7906474}"
+  - .[0]|.in_hash == "${IN_HASH=72414C2C0D933800E0C9111F79C6703905DAFD7132B6A4EA157DB0505140FF16}"
   - .[0]|.coin.asset == "ETH.USDX-0X9999999999999999999999999999999999999999"
-  - .[0]|.coin.amount == "${OUT_AMOUNT=1301979400}"
+  - .[0]|.coin.amount == "${OUT_AMOUNT=1302029100}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -242,7 +242,7 @@ asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ observe_txid 3 }}"
   - .[0]|.coin.asset == "ETH.USDY-0X9999999999999999999999999999999999999999"
-  - .[0]|.coin.amount == "2549702200"
+  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=2549702300}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -253,7 +253,7 @@ txs:
       from_address: {{ addr_eth_dog }}
       to_address: {{ addr_eth_fox }}
       coins:
-        - amount: "2549702200"
+        - amount: "${OUTPUT_AMOUNT}"
           asset: "ETH.USDY-0X9999999999999999999999999999999999999999"
       gas:
         - amount: "960000"

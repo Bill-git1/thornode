@@ -101,7 +101,7 @@ asserts:
   - .|length == 1
   - .[0]|.in_hash == "${INBOUND_TXID}"
   - .[0]|.coin.asset == "${OUTPUT_ASSET}"
-  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=43741070}"
+  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=43741071}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -205,7 +205,7 @@ asserts:
   - .|length == 1
   - .[0]|.in_hash == "${INBOUND_TXID}"
   - .[0]|.coin.asset == "${OUTPUT_ASSET}"
-  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=43049961}"
+  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=43049966}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -276,7 +276,7 @@ asserts:
   - .[0]|.in_hash == "${INBOUND_TXID}"
   - .[0]|.coin.asset == "${OUTPUT_ASSET}"
   - .[0]|.memo == "OUT:${INBOUND_TXID}"
-  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=6501021}"
+  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=6501023}"
   - .[1]|.in_hash == "${INBOUND_TXID}"
   - .[1]|.coin.asset == "${INPUT_ASSET}"
   - .[1]|.coin.amount == "${REFUND_AMOUNT=4786000}"
@@ -371,7 +371,7 @@ asserts:
   - .|length == 1
   - .[0]|.in_hash == "${INBOUND_TXID}"
   - .[0]|.coin.asset == "${OUTPUT_ASSET}"
-  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=31186277}"
+  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=31186288}"
   - .[0]|.memo == "OUT:${INBOUND_TXID}"
 ---
 type: create-blocks
@@ -442,7 +442,7 @@ asserts:
   - .|length == 1
   - .[0]|.in_hash == "${INBOUND_TXID}"
   - .[0]|.coin.asset == "${OUTPUT_ASSET}"
-  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=342185}"
+  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=342186}"
   - .[0]|.memo == "OUT:${INBOUND_TXID}"
 ---
 type: create-blocks
@@ -591,14 +591,14 @@ asserts:
   ###
   - .[1].asset == "BTC.BTC"
   - .[1].outbound_fee == "14000"
-  - .[1].fee_withheld_rune == "11128711"
-  - .[1].fee_spent_rune == "8345580"
-  - .[1].surplus_rune == "2783131"
+  - .[1].fee_withheld_rune == "11128729"
+  - .[1].fee_spent_rune == "8345595"
+  - .[1].surplus_rune == "2783134"
   - .[1].dynamic_multiplier_basis_points == "20000"
   ###
   - .[2].asset == "ETH.ETH"
   - .[2].outbound_fee == "1279936"
-  - .[2].fee_withheld_rune == "788471065"
-  - .[2].fee_spent_rune == "590532239"
-  - .[2].surplus_rune == "197938826"
+  - .[2].fee_withheld_rune == "788472135"
+  - .[2].fee_spent_rune == "590533059"
+  - .[2].surplus_rune == "197939076"
   - .[2].dynamic_multiplier_basis_points == "19999"
