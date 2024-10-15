@@ -211,7 +211,7 @@ func get(url string, target interface{}) error {
 	errResp := ErrorResponse{}
 	err = json.Unmarshal(buf, &errResp)
 	if err == nil && errResp.Error != "" {
-		return fmt.Errorf(errResp.Error)
+		return fmt.Errorf("%s", errResp.Error)
 	}
 
 	// decode response

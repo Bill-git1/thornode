@@ -243,7 +243,7 @@ func Churn(block *thorscan.BlockResponse) {
 			}
 
 			// track keyshare backups
-			if msgTssPool.KeysharesBackup != nil && len(msgTssPool.KeysharesBackup) > 1 {
+			if len(msgTssPool.KeysharesBackup) > 1 {
 				pk := string(msgTssPool.PoolPubKey)
 				if info.KeyshareBackups == nil {
 					info.KeyshareBackups = make(map[string]map[string]bool)

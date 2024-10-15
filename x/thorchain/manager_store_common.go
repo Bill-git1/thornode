@@ -138,7 +138,7 @@ func refundDroppedSwapOutFromRUNE(ctx cosmos.Context, mgr *Mgrs, droppedTx Dropp
 	inboundRUNE := inboundCoins[0]
 	swapperRUNEAddr := inboundTx.FromAddress
 
-	if txVoter.Actions == nil || len(txVoter.Actions) == 0 {
+	if len(txVoter.Actions) == 0 {
 		return fmt.Errorf("Tx Voter has empty Actions")
 	}
 

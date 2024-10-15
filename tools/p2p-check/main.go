@@ -250,7 +250,7 @@ func fetchPeerId(addr, peerID string) (string, error) {
 		if resp != nil {
 			msg = fmt.Sprintf("%s: %s", resp.Status, err.Error())
 		}
-		return "", fmt.Errorf(msg)
+		return "", fmt.Errorf("%s", msg)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode > 300 {

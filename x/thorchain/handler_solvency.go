@@ -158,7 +158,7 @@ func (h SolvencyHandler) handleV134(ctx cosmos.Context, msg MsgSolvency) (*cosmo
 		return &cosmos.Result{}, nil
 	}
 	// stop solvency checker can be chain specific
-	stopSolvencyCheckChain, err := h.mgr.Keeper().GetMimir(ctx, fmt.Sprintf(StopSolvencyCheckKey+voter.Chain.String()))
+	stopSolvencyCheckChain, err := h.mgr.Keeper().GetMimir(ctx, fmt.Sprintf("%s%s", StopSolvencyCheckKey, voter.Chain.String()))
 	if err != nil {
 		ctx.Logger().Error("fail to get mimir", "key", StopSolvencyCheckKey+voter.Chain.String(), "error", err)
 	}

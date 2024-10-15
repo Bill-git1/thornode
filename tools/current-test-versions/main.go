@@ -32,6 +32,7 @@ func main() {
 	flag.Parse()
 
 	fset := token.NewFileSet()
+	// trunk-ignore(golangci-lint/staticcheck): deprecated
 	pkgs := []*ast.Package{}
 
 	// parse all subdirectories with go files
