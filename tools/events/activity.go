@@ -32,6 +32,7 @@ func ScanActivity(block *thorscan.BlockResponse) {
 	Bond(block)
 	FailedTransactions(block)
 	THORNameRegistrations(block)
+	LargeHighSlipSwaps(block)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -1017,5 +1018,62 @@ func THORNameRegistrations(block *thorscan.BlockResponse) {
 			title := fmt.Sprintf("`[%d]` THORName Registration", block.Header.Height)
 			Notify(config.Notifications.Activity, title, nil, false, fields)
 		}
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+// Large High Slip Swaps
+////////////////////////////////////////////////////////////////////////////////////////
+
+func LargeHighSlipSwaps(block *thorscan.BlockResponse) {
+	for _, event := range block.EndBlockEvents {
+		if event["type"] != types.SwapEventType {
+			continue
+		}
+
+		// skip swap events below the slip threshold
+		poolSlip := cosmos.NewUintFromString(event["pool_slip"]).Uint64()
+		swapSlip := cosmos.NewUintFromString(event["swap_slip"]).Uint64()
+		if swapSlip < config.Thresholds.Slip && poolSlip < config.Thresholds.Slip {
+			continue
+		}
+
+		// check first the approximate USD value before fetching the inbound
+		coin, err := common.ParseCoin(event["coin"])
+		if err != nil {
+			log.Panic().Str("coin", event["coin"]).Err(err).Msg("unable to parse streaming swap coin")
+		}
+		usdValue := USDValue(block.Header.Height, coin)
+		if uint64(usdValue) < config.Thresholds.USDValue {
+			continue
+		}
+
+		// build notification
+		title := fmt.Sprintf("`[%d]` High Slip Swap", block.Header.Height)
+		lines := []string{}
+		if uint64(usdValue) > config.Styles.USDPerMoneyBag {
+			lines = append(lines, Moneybags(uint64(usdValue)))
+		}
+		fields := NewOrderedMap()
+		fields.Set("Chain", event["chain"])
+		fields.Set("Hash", event["id"])
+		fields.Set("Amount", fmt.Sprintf(
+			"%f %s (%s)",
+			float64(coin.Amount.Uint64())/common.One,
+			coin.Asset,
+			USDValueString(block.Header.Height, coin),
+		))
+		fields.Set("Memo", fmt.Sprintf("`%s`", event["memo"]))
+		fields.Set("Swap Slip", fmt.Sprintf("%.2f%%", float64(swapSlip)/100))
+		fields.Set("Pool Slip", fmt.Sprintf("%.2f%%", float64(poolSlip)/100))
+
+		links := []string{
+			fmt.Sprintf("[Tracker](%s/%s)", config.Links.Track, event["id"]),
+			fmt.Sprintf("[Transaction](%s/tx/%s)", config.Links.Explorer, event["id"]),
+		}
+		fields.Set("Links", strings.Join(links, " | "))
+
+		// notify
+		Notify(config.Notifications.Activity, title, lines, false, fields)
 	}
 }

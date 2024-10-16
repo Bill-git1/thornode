@@ -105,6 +105,8 @@ type Config struct {
 		Security struct {
 			USDValue uint64 `mapstructure:"usd_value"`
 		} `mapstructure:"security"`
+
+		Slip uint64 `mapstructure:"slip"`
 	} `mapstructure:"thresholds"`
 
 	// Styles contain various styling for alerts.
@@ -155,6 +157,7 @@ func init() {
 	config.Thresholds.Delta.USDValue = 50_000
 	config.Thresholds.Delta.Percent = 5
 	config.Thresholds.Security.USDValue = 3_000_000
+	config.Thresholds.Slip = 100
 
 	// styles
 	config.Styles.USDPerMoneyBag = 100_000
