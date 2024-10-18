@@ -298,7 +298,7 @@ test-sync-mainnet:
 
 test-sync-stagenet:
 	@BUILDTAG=stagenet BRANCH=stagenet $(MAKE) docker-gitlab-build
-	@docker run --rm -e CHAIN_ID=thorchain-stagenet-2 -e NET=stagenet registry.gitlab.com/thorchain/thornode:stagenet
+	@docker run --rm -e CHAIN_ID=thorchain-stagenet-2 -e NET=stagenet -e THOR_SEED_NODES_ENDPOINT=https://stagenet-thornode.ninerealms.com/thorchain/nodes registry.gitlab.com/thorchain/thornode:stagenet
 
 # ------------------------------ Docker Build ------------------------------
 

@@ -3,7 +3,12 @@
 
 package thorchain
 
+import "gitlab.com/thorchain/thornode/config"
+
 // ADMINS hard coded admin address
-var ADMINS = []string{
-	"sthor1gdq9qejfy33jctztqdrg5v4hvxnytmvjhduacc",
+var ADMINS = []string{}
+
+func init() {
+	config.Init()
+	ADMINS = config.GetThornode().StagenetAdminAddresses
 }

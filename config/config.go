@@ -378,6 +378,12 @@ type Thornode struct {
 	// validators to seed genesis and peers.
 	SeedNodesEndpoint string `mapstructure:"seed_nodes_endpoint"`
 
+	// StagenetAdminAddresses is only leveraged in stagenet builds to allow for running
+	// independent stagenet networks with their own admin addresses. This must remain
+	// constant in the configuration for the lifetime of the stagenet instance to avoid
+	// consensus failure on sync from genesis.
+	StagenetAdminAddresses []string `mapstructure:"stagenet_admin_addresses"`
+
 	// LogFilter will drop logs matching the modules and messages when not in debug level.
 	LogFilter struct {
 		// Modules is a list of modules to filter.
