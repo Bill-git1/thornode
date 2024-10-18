@@ -50,6 +50,12 @@ $$
 fee =slip * swapAmount
 $$
 
+See more information in the [Liquidity Section]
+
+```admonish warning
+A minimum swap fee in basis points (bps) applies for different asset types, governed by the [mimir network settings](../mimir.md#swapping).
+```
+
 ### Affiliate Fee
 
 Within the transactions you build for your users you can include an affiliate for your exchange.

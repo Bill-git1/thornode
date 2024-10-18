@@ -91,7 +91,7 @@ If you connect to a public Midgard, you must be conscious of the fact that you c
 
 ### Displaying available pairs
 
-Use the `/pools` [endpoint](https://midgard.thorchain.info/v2/pools) of Midgard to retrieve all swappable assets on THORChain. The response will be an array of objects like this:
+Use the `/pools` [endpoint](https://midgard.ninerealms.com/v2/pools) of Midgard to retrieve all swappable assets on THORChain. The response will be an array of objects like this:
 
 ```json
 {

@@ -40,7 +40,7 @@ const defaultMidgardConfig: Record<Network, MidgardConfig> = {
     apiRetries: 3,
     midgardBaseUrls: [
       'https://midgard.ninerealms.com',
-      'https://midgard.thorchain.info',
+      'https://midgard.ninerealms.com',
       'https://midgard.thorswap.net',
     ],
   },
@@ -87,7 +87,7 @@ const defaultThornodeConfig: Record<Network, ThornodeConfig> = {
     thornodeBaseUrls: [
       `https://thornode.ninerealms.com`,
       `https://thornode.thorswap.net`,
-      `https://thornode.thorchain.info`,
+      `https://thornode.ninerealms.com/`,
     ],
   },
   ...

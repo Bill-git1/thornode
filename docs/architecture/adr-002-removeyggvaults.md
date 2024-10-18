@@ -19,7 +19,46 @@ This is primarily a result of TSS limitations. During the initial build of THORC
 
 Key extract from [TSS Benchmark 2020] (https://github.com/thorchain/Resources/blob/master/Whitepapers/THORChain-TSS-Benchmark-July2020.pdf)
 
-![image.png](./image.png)
+```json
+[
+  {
+    "chain": "BCH",
+    "pub_key": "thorpubladdwnpepqddacd9hr968v0p5au9xkhxn6p73dpsccqqklnd39elt468z70dskcfvfqa",
+    "address": "bnbla3lncy759wqfd3e3g9w3px8azzhqw0vypzapyt",
+    "halted": false,
+    "gas_rate": "11250"
+  },
+  {
+    "chain": "BTC",
+    "pub_key": "thorpubladdwnpepqddacd9hr968v0p5au9xkhxn6p73dpsccqqklnd39elt468z70dskcfvfqa",
+    "address": "bc1qa3lncy759wqfd3e3g9w3px8azzhqw0vy4uuxpg",
+    "halted": false,
+    "gas_rate": "7"
+  },
+  {
+    "chain": "DOGE",
+    "pub_key": "thorpubladdwnpepqddacd9hr968v0p5au9xkhxn6p73dpsccqqklnd39elt468z70dskcfvfqa",
+    "address": "DShaRx6jsYKZWXWgYUnuZAYKPqqxaBwAQP",
+    "halted": false,
+    "gas_rate": "538887"
+  },
+  {
+    "chain": "ETH",
+    "pub_key": "thorpubladdwnpepqddacd9hr968v0p5au9xkhxn6p73dpsccqqklnd39elt468z70dskcfvfqa",
+    "address": "0x1ed61d04a58d58e7ad936a6c347f62ce57631dc3",
+    "router": "0x3624525075b88B24ecc29CE226b0CEc1fFcB6976",
+    "halted": false,
+    "gas_rate": "70"
+  },
+  {
+    "chain": "LTC",
+    "pub_key": "thorpubladdwnpepqddacd9hr968v0p5au9xkhxn6p73dpsccqqklnd39elt468z70dskcfvfqa",
+    "address": "ltc1qa3lncy759wqfd3e3g9w3px8azzhqw0vy3qxzec",
+    "halted": false,
+    "gas_rate": "60"
+  }
+]
+```
 
 Thus each node retains a 1of1 key to fast-sign outbounds. If they fail to sign, they are slashed and the tx re-delegated to an Asgard. THORChain with 100 nodes can do 100 outbounds a sec due to 100 ygg vaults. The vault funds are secured via economic security, but the following are outstanding (managed) problems:
 

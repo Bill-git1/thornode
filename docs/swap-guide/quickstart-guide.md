@@ -7,7 +7,7 @@ THORChain allows native L1 Swaps. On-chain [Memos](../concepts/memos.md) are use
 Let's demonstrate decentralized, non-custodial cross-chain swaps. In this example, we will build a transaction that instructs THORChain to swap native Bitcoin to native Ethereum in one transaction.
 
 ```admonish info
-The following examples use a free, hosted API provided by [Nine Realms](https://twitter.com/ninerealms_cap). If you want to run your own full node, please see [connecting-to-thorchain.md](../concepts/connecting-to-thorchain.md "mention").
+The following examples use a free, hosted API provided by [Nine Realms](https://twitter.com/ninerealms_cap). If you want to run your own full node, please see [connecting-to-thorchain.md](../concepts/connecting-to-thorchain.md).
 ```
 
 ### 1. Determine the correct asset name
@@ -76,7 +76,7 @@ The swap will be conduced over 7 blocks taking 42 seconds for the streaming swap
 Full quote swap endpoint specification can be found here: [https://thornode.ninerealms.com/thorchain/doc/](https://thornode.ninerealms.com/thorchain/doc/).
 ```
 
-If you'd prefer to calculate the swap yourself, see the [Fees](fees-and-wait-times.md) section to understand what fees need to be accounted for in the output amount. Also, review the [Transaction Memos](../concepts/memos.md) section to understand how to create the swap memos.
+If you'd prefer to calculate the swap yourself, see the [Fees](fees-and-wait-times.md) section to understand what fees need to be accounted for in the output amount. Also, review the [Transaction Memos](../concepts/memos.md#swap) section to understand how to create the swap memos.
 
 ### 3. Sign and send transactions on the from_asset chain
 
@@ -86,7 +86,7 @@ Construct, sign and broadcast a transaction on the BTC network with the followin
 - Recipient => `bc1qlccxv985m20qvd8g5yp6g9lc0wlc70v6zlalz8`
 - Memo => `=:ETH.ETH:0x86d526d6624AbC0178cF7296cD538Ecc080A95F1:0/1/0`
 
-```admonish warning
+```admonish error
 Never cache inbound addresses! Quotes should only be considered valid for 10 minutes. Sending funds to an old inbound address will result in loss of funds.
 ```
 
@@ -118,7 +118,7 @@ Specify _tolerance_bps_ to give users control over the maximum slip they are wil
 
 Notice how a minimum amount (1342846539 / \~13.42 ETH) has been appended to the end of the memo. This tells THORChain to revert the transaction if the transacted amount is more than 100 basis points less than what the _expected_amount_out_ returns.
 
-### Affiliate Fees
+### [Affiliate Fees](../concepts/fees.md#affiliate-fee)
 
 Specify `affiliate` and `affiliate_bps` to skim a percentage of the swap as an affiliate fee. When a valid affiliate address and affiliate basis points are present in the memo, the protocol will skim affiliate_bps from the inbound swap amount and swap this to $RUNE with the affiliate address as the destination address.
 
@@ -135,7 +135,6 @@ Quote example:
 [https://thornode.ninerealms.com/thorchain/quote/swap?amount=100000000\&from_asset=BTC.BTC\&to_asset=ETH.ETH\&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430\&affiliate=dx\&affiliate_bps=10](https://thornode.ninerealms.com/thorchain/quote/swap?amount=100000000&from_asset=BTC.BTC&to_asset=ETH.ETH&destination=0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430&affiliate=dx&affiliate_bps=10)
 
 ```json
-{
 {
   "inbound_address": "bc1qt9723ak9t7lu7a97lt9kelq4gnrlmyvk4yhzwr",
   "inbound_confirmation_blocks": 1,
@@ -175,7 +174,7 @@ For more information on affiliate fees: [fees.md](../concepts/fees.md#affiliate-
 
 ### Streaming Swaps
 
-[_Streaming Swaps_](streaming-swaps.md) _can be used to break up the trade to reduce slip fees._
+[_Streaming Swaps_](streaming-swaps.md) _is the recommended default which breaks up the trade to reduce slip fees._
 
 Params:
 
@@ -247,22 +246,108 @@ Quote example:
 
 ### Error Handling
 
-The quote swap endpoint simulates all of the logic of an actual swap transaction. It ships with comprehensive error handling.
+The quote swap endpoint simulates all of the logic of an actual swap transaction and includes comprehensive error handling. Below are specific examples of errors that can occur:
 
-![Price Tolerance Error](../.gitbook/assets/image (6).png)
-_This error means the swap cannot be completed given your price tolerance._
+#### Price Tolerance Error
 
-![Destination Address Error](../.gitbook/assets/image (1).png)
-_This error ensures the destination address is for the chain specified by `to_asset`._
+Description: This error means the swap cannot be completed given your price tolerance. [Click here to view request URL](https://thornode.ninerealms.com/thorchain/quote/swap?from_asset=BTC.BTC&to_asset=ETH.ETH&amount=100000000&destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1&streaming_interval=1&streaming_quantity=0&tolerance_bps=1).
 
-![Affiliate Address Length Error](../.gitbook/assets/image (4).png)
-_This error is due to the fact the affiliate address is too long given the source chain's memo length requirements. Try registering a THORName to shorten the memo._
+Request URL:
 
-![Asset Not Found Error](../.gitbook/assets/image (2).png)
-_This error means the requested asset does not exist._
+```json
+https://thornode.ninerealms.com/thorchain/quote/swap \
+from_asset=BTC.BTC \
+to_asset=ETH.ETH \
+amount=100000000 \
+destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1 \
+streaming_interval=1 \
+streaming_quantity=0 \
+tolerance_bps=1
+```
 
-![Bound Checks Error](../.gitbook/assets/image (3).png)
-_Bound checks are made on both `affiliate_bps` and `tolerance_bps`._
+Response:
+`{"error":"failed to simulate swap: emit asset 2539447439 less than price limit 2560671431"}`
+
+#### Destination Address Error
+
+Description: This error ensures the destination address is for the chain specified by `to_asset`. [Click here to view request URL](https://thornode.ninerealms.com/thorchain/quote/swap?from_asset=BTC.BTC&to_asset=ETH.ETH&amount=100000000&destination=bc1qyl7wjm2ldfezgnjk2c78adqlk7dvtm8sd7gn0q&streaming_interval=1).
+
+Request URL:
+
+```json
+https://thornode.ninerealms.com/thorchain/quote/swap \
+from_asset=BTC.BTC \
+to_asset=ETH.ETH \
+amount=100000000 \
+destination=bc1qyl7wjm2ldfezgnjk2c78adqlk7dvtm8sd7gn0q \
+streaming_interval=1
+```
+
+Response:
+`{"error":"failed to simulate swap: failed validate: swap destination address is not the same chain as the target asset: unknown request"}`
+
+#### Affiliate Address Length Error
+
+Description: This error is due to the fact the affiliate address is too long given the source chain's memo length requirements. Try registering a [THORName](../affiliate-guide/thorname-guide.md) to shorten the memo. [Click here to view request URL](https://thornode.ninerealms.com/thorchain/quote/swap?from_asset=BTC.BTC&to_asset=ETH.ETH&amount=100000000&destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1&streaming_interval=1&tolerance_bps=100&affiliate=thor1rr6rahhd4sy76a7rdxkjaen2q4k4pw2g06w7qp&affiliate_bps=10).
+
+Request URL:
+
+```json
+https://thornode.ninerealms.com/thorchain/quote/swap \
+from_asset=BTC.BTC \
+to_asset=ETH.ETH \
+amount=100000000 \
+destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1 \
+streaming_interval=1 \
+tolerance_bps=100 \
+affiliate=thor1rr6rahhd4sy76a7rdxkjaen2q4k4pw2g06w7qp \
+affiliate_bps=10
+```
+
+Response:
+`{"error":"generated memo too long for source chain"}`
+
+#### Asset Not Found Error
+
+This error means the requested asset does not exist. [Click here to view request URL](https://thornode.ninerealms.com/thorchain/quote/swap?from_asset=BTC.BTC&to_asset=<20bf>&amount=100000000&destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1&streaming_interval=1&tolerance_bps=100&affiliate=thor1rr6rahhd4sy76a7rdxkjaen2q4k4pw2g06w7qp&affiliate_bps=10).
+
+Request URL:
+
+```json
+https://thornode.ninerealms.com/thorchain/quote/swap \
+from_asset=BTC.BTC \
+to_asset=<20bf> \
+amount=100000000 \
+destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1 \
+streaming_interval=1 \
+tolerance_bps=100 \
+affiliate=thor1rr6rahhd4sy76a7rdxkjaen2q4k4pw2g06w7qp \
+affiliate_bps=10
+```
+
+Response:
+`{"error":"bad from asset: invalid symbol"}`
+
+#### Bound Checks Error
+
+Bound checks are made on both `affiliate_bps` and `tolerance_bps`. [Click here to view request URL](https://thornode.ninerealms.com/thorchain/quote/swap?from_asset=BTC.BTC&to_asset=<20bf>&amount=100000000&destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1&streaming_interval=1&tolerance_bps=100&affiliate=thor1rr6rahhd4sy76a7rdxkjaen2q4k4pw2g06w7qp&affiliate_bps=10).
+
+Request URL:
+
+```json
+https://thornode.ninerealms.com/thorchain/quote/swap \
+from_asset=BTC.BTC \
+to_asset=ETH.ETH \
+amount=100000000 \
+destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1 \
+streaming_interval=1 \
+tolerance_bps=10015 \
+affiliate=dx \
+affiliate_bps=1
+```
+
+Response:
+`{"error":"tolerance basis points must be less than 10000"}`
 
 ### Support
 
