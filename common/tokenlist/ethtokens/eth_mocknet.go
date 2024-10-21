@@ -10,5 +10,5 @@ import (
 //go:embed eth_mocknet_latest.json
 var ETHTokenListRawV137 []byte
 
-//go:embed eth_mocknet_V133.json
+//go:embed eth_mocknet_latest.json
 var ETHTokenListRawV133 []byte

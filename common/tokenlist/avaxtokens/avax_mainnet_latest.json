@@ -10,6 +10,24 @@
   "tokens": [
     {
       "chainId": 43114,
+      "address": "0xc891eb4cbdeff6e073e859e987815ed1505c2acd",
+      "decimals": 6,
+      "name": "Euro Coin",
+      "symbol": "EURC",
+      "tags": ["Stablecoins"],
+      "logoURI": "https://raw.githubusercontent.com/traderjoe-xyz/joe-tokenlists/main/logos/0xC891EB4cbdEFf6e073e859e987815Ed1505c2ACD/logo.png"
+    },
+    {
+      "chainId": 43114,
+      "address": "0xD24C2Ad096400B6FBcd2ad8B24E7acBc21A1da64",
+      "decimals": 18,
+      "name": "Frax",
+      "symbol": "FRAX",
+      "tags": ["Stablecoins"],
+      "logoURI": "https://raw.githubusercontent.com/traderjoe-xyz/joe-tokenlists/main/logos/0xD24C2Ad096400B6FBcd2ad8B24E7acBc21A1da64/logo.png"
+    },
+    {
+      "chainId": 43114,
       "address": "0x47c3118Ad183712Acd42648e9E522e13690f29a0",
       "decimals": 6,
       "name": "Meat",

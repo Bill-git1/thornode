@@ -8,4 +8,7 @@ import (
 )
 
 //go:embed avax_mocknet_latest.json
+var AVAXTokenListRawV137 []byte
+
+//go:embed avax_mocknet_latest.json
 var AVAXTokenListRawV131 []byte

@@ -9,11 +9,51 @@
   "keywords": ["1inch", "default", "list"],
   "tokens": [
     {
+      "address": "0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c",
+      "chainId": 1,
+      "name": "Euro Coin",
+      "symbol": "EURC",
+      "decimals": 6,
+      "logoURI": "https://etherscan.io/token/images/circleeurcoin_32.png"
+    },
+    {
+      "address": "0x6c3ea9036406852006290770BEdFcAbA0e23A0e8",
+      "chainId": 1,
+      "name": "PayPal USD",
+      "symbol": "PYUSD",
+      "decimals": 6,
+      "logoURI": "https://etherscan.io/token/images/paypalusd_32.png"
+    },
+    {
+      "address": "0x8DB2350D78aBc13f5673A411D4700BCF87864dDE",
+      "chainId": 1,
+      "name": "swBTC",
+      "symbol": "swBTC",
+      "decimals": 8,
+      "logoURI": "https://etherscan.io/token/images/swellbtc_32.png"
+    },
+    {
+      "address": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+      "chainId": 1,
+      "name": "Coinbase Wrapped BTC",
+      "symbol": "cbBTC",
+      "decimals": 8,
+      "logoURI": "https://etherscan.io/token/images/cbbtc_32.png"
+    },
+    {
+      "address": "0x73E0C0d45E048D25Fc26Fa3159b0aA04BfA4Db98",
+      "chainId": 1,
+      "name": "Kraken Wrapped Bitcoin",
+      "symbol": "kBTC",
+      "decimals": 8,
+      "logoURI": "https://etherscan.io/token/images/krakeeth_32.png"
+    },
+    {
       "address": "0x77E06c9eCCf2E797fd462A92B6D7642EF85b0A44",
       "chainId": 1,
       "name": "Wrapped TAO",
       "symbol": "wTAO",
-      "decimals": 18,
+      "decimals": 9,
       "logoURI": "https://etherscan.io/token/images/wrappedtao_32.png"
     },
     {
