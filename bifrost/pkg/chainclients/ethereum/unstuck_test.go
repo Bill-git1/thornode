@@ -131,6 +131,7 @@ func (s *UnstuckTestSuite) SetUpTest(c *C) {
 							"cumulativeGasUsed": "0x1",
 							"from": "` + vaultAddr.String() + `",
 							"gasUsed": "0x1",
+							"effectiveGasPrice":"0x2540be400",
 							"logs": [],
 							"logsBloom": "0x` + strings.Repeat("00", 256) + `",
 							"status": "0x1",
