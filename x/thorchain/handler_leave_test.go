@@ -2,13 +2,16 @@ package thorchain
 
 import (
 	"errors"
+	"strings"
 
 	se "github.com/cosmos/cosmos-sdk/types/errors"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/constants"
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
+	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
 type HandlerLeaveSuite struct{}
@@ -102,6 +105,70 @@ func (HandlerLeaveSuite) TestLeaveJail(c *C) {
 	msgLeave := NewMsgLeave(tx, acc2.NodeAddress, w.activeNodeAccount.NodeAddress)
 	_, err := leaveHandler.Run(w.ctx, msgLeave)
 	c.Assert(err, NotNil)
+}
+
+func (HandlerLeaveSuite) TestLeaveBondProvider(c *C) {
+	var err error
+	w := getHandlerTestWrapper(c, 1, true, false)
+	leaveHandler := NewLeaveHandler(NewDummyMgrWithKeeper(w.keeper))
+	acc := GetRandomValidatorNode(NodeActive)
+	acc.Bond = cosmos.NewUint(100 * common.One)
+	minBond := w.keeper.GetConfigInt64(w.ctx, constants.MinimumBondInRune)
+
+	bpBelowMin := GetRandomTHORAddress()
+	bpBelowMinAccAddress, err := bpBelowMin.AccAddress()
+	c.Assert(err, IsNil)
+	bp1 := types.NewBondProvider(bpBelowMinAccAddress)
+	// bpBelowMin bonds 0.000001 RUNE (below min bond)
+	bp1.Bond = cosmos.NewUint(100)
+
+	bpAboveMin := GetRandomTHORAddress()
+	bpAboveMinAccAddress, err := bpAboveMin.AccAddress()
+	c.Assert(err, IsNil)
+	bp2 := types.NewBondProvider(bpAboveMinAccAddress)
+	// bpAboveMin bonds exactly min bond
+	bp2.Bond = cosmos.NewUint(uint64(minBond))
+
+	bps := types.BondProviders{
+		NodeAddress:     acc.NodeAddress,
+		NodeOperatorFee: cosmos.NewUint(5),
+		Providers:       []BondProvider{bp1, bp2},
+	}
+
+	c.Assert(w.keeper.SetBondProviders(w.ctx, bps), IsNil)
+	c.Assert(w.keeper.SetNodeAccount(w.ctx, acc), IsNil)
+
+	// try to leave with bond proivder under min bond
+	txID := GetRandomTxHash()
+	tx := common.NewTx(
+		txID,
+		bpBelowMin,
+		GetRandomTHORAddress(),
+		common.Coins{common.NewCoin(common.RuneAsset(), cosmos.OneUint())},
+		common.Gas{},
+		"",
+	)
+	msgLeave := NewMsgLeave(tx, acc.NodeAddress, bpBelowMinAccAddress)
+	_, err = leaveHandler.Run(w.ctx, msgLeave)
+	c.Assert(strings.Contains(err.Error(), "not authorized to manage"), Equals, true)
+
+	// try to leave with bond proivder above min bond
+	txID = GetRandomTxHash()
+	tx = common.NewTx(
+		txID,
+		bpAboveMin,
+		GetRandomTHORAddress(),
+		common.Coins{common.NewCoin(common.RuneAsset(), cosmos.OneUint())},
+		common.Gas{},
+		"",
+	)
+	msgLeave = NewMsgLeave(tx, acc.NodeAddress, bpAboveMinAccAddress)
+	_, err = leaveHandler.Run(w.ctx, msgLeave)
+	c.Assert(err, IsNil)
+
+	// acc, err = w.keeper.GetNodeAccount(w.ctx, acc.NodeAddress)
+	// c.Assert(err, IsNil)
+	// c.Check(acc.Bond.Equal(cosmos.NewUint(10000000001)), Equals, true, Commentf("Bond:%d\n", acc.Bond.Uint64()))
 }
 
 func (HandlerLeaveSuite) TestLeaveValidation(c *C) {

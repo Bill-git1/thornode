@@ -76,6 +76,8 @@ func (h LeaveHandler) validateV1(ctx cosmos.Context, msg MsgLeave) error {
 func (h LeaveHandler) handle(ctx cosmos.Context, msg MsgLeave) error {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("2.137.0")):
+		return h.handleV137(ctx, msg)
 	case version.GTE(semver.MustParse("1.134.0")):
 		return h.handleV134(ctx, msg)
 	default:
@@ -83,7 +85,7 @@ func (h LeaveHandler) handle(ctx cosmos.Context, msg MsgLeave) error {
 	}
 }
 
-func (h LeaveHandler) handleV134(ctx cosmos.Context, msg MsgLeave) error {
+func (h LeaveHandler) handleV137(ctx cosmos.Context, msg MsgLeave) error {
 	nodeAcc, err := h.mgr.Keeper().GetNodeAccount(ctx, msg.NodeAddress)
 	if err != nil {
 		return ErrInternal(err, "fail to get node account by bond address")
@@ -92,7 +94,35 @@ func (h LeaveHandler) handleV134(ctx cosmos.Context, msg MsgLeave) error {
 		return cosmos.ErrUnknownRequest("node account doesn't exist")
 	}
 	if !nodeAcc.BondAddress.Equals(msg.Tx.FromAddress) {
-		return cosmos.ErrUnauthorized(fmt.Sprintf("%s are not authorized to manage %s", msg.Tx.FromAddress, msg.NodeAddress))
+		// the msg was not sent from the node operator address
+		// allow bond providers > minBond to issue leave
+		// but first, make sure the node is active
+		if nodeAcc.Status != NodeActive {
+			return cosmos.ErrUnauthorized(fmt.Sprintf("%s is not authorized to manage %s when it is not Active", msg.Tx.FromAddress, msg.NodeAddress))
+		}
+		// check if message was sent by a bond provider with bond > minBond
+		minBond := h.mgr.Keeper().GetConfigInt64(ctx, constants.MinimumBondInRune)
+		minBondUint := cosmos.NewUint(uint64(minBond))
+		var bondProviders BondProviders
+		bondProviders, err = h.mgr.Keeper().GetBondProviders(ctx, msg.NodeAddress)
+		if err != nil {
+			return ErrInternal(err, "fail to get bond providers")
+		}
+		allowed := false
+		for _, bondProvider := range bondProviders.Providers {
+			var bpAccAddress cosmos.AccAddress
+			bpAccAddress, err = msg.Tx.FromAddress.AccAddress()
+			if err != nil {
+				return ErrInternal(err, "fail to resolve bond provider AccAddress")
+			}
+			if bondProvider.BondAddress.Equals(bpAccAddress) && bondProvider.Bond.GTE(minBondUint) {
+				allowed = true
+				break
+			}
+		}
+		if !allowed {
+			return cosmos.ErrUnauthorized(fmt.Sprintf("%s are not authorized to manage %s", msg.Tx.FromAddress, msg.NodeAddress))
+		}
 	}
 	// THORNode add the node to leave queue
 
