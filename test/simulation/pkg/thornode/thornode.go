@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"gitlab.com/thorchain/thornode/common"
 	sdk "gitlab.com/thorchain/thornode/common/cosmos"
@@ -193,8 +195,17 @@ func GetMimirs() (map[string]int64, error) {
 // Internal
 ////////////////////////////////////////////////////////////////////////////////////////
 
+var httpClient = &http.Client{
+	Transport: &http.Transport{
+		Dial: (&net.Dialer{
+			Timeout: 5 * time.Second,
+		}).Dial,
+	},
+	Timeout: 5 * time.Second,
+}
+
 func get(url string, target interface{}) error {
-	resp, err := http.Get(url)
+	resp, err := httpClient.Get(url)
 	if err != nil {
 		return err
 	}

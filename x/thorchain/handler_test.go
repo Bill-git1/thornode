@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"testing"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/simapp"
@@ -17,7 +18,8 @@ import (
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	"github.com/tendermint/tendermint/libs/log"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
 	. "gopkg.in/check.v1"
@@ -25,6 +27,7 @@ import (
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
+	thorlog "gitlab.com/thorchain/thornode/log"
 
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
 	kv1 "gitlab.com/thorchain/thornode/x/thorchain/keeper/v1"
@@ -32,6 +35,21 @@ import (
 )
 
 var errKaboom = errors.New("kaboom")
+
+func logger() thorlog.TendermintLogWrapper {
+	// disable log output unless -v was provided to the test command
+	level := zerolog.Disabled
+	if testing.Verbose() {
+		level = zerolog.DebugLevel
+	}
+	return thorlog.TendermintLogWrapper{
+		Logger: log.Logger.
+			Level(level).
+			Output(zerolog.ConsoleWriter{Out: os.Stdout}).
+			With().
+			CallerWithSkipFrameCount(3).Logger(),
+	}
+}
 
 type HandlerSuite struct{}
 
@@ -82,7 +100,7 @@ func setupManagerForTest(c *C) (cosmos.Context, *Mgrs) {
 	err := ms.LoadLatestVersion()
 	c.Assert(err, IsNil)
 
-	ctx := cosmos.NewContext(ms, tmproto.Header{ChainID: "thorchain"}, false, log.NewNopLogger())
+	ctx := cosmos.NewContext(ms, tmproto.Header{ChainID: "thorchain"}, false, logger())
 	ctx = ctx.WithBlockHeight(18)
 	legacyCodec := makeTestCodec()
 	marshaler := simapp.MakeTestEncodingConfig().Marshaler
@@ -165,7 +183,7 @@ func setupKeeperForTest(c *C) (cosmos.Context, keeper.Keeper) {
 	err := ms.LoadLatestVersion()
 	c.Assert(err, IsNil)
 
-	ctx := cosmos.NewContext(ms, tmproto.Header{ChainID: "thorchain"}, false, log.NewNopLogger())
+	ctx := cosmos.NewContext(ms, tmproto.Header{ChainID: "thorchain"}, false, logger())
 	ctx = ctx.WithBlockHeight(18)
 	legacyCodec := makeTestCodec()
 	marshaler := simapp.MakeTestEncodingConfig().Marshaler

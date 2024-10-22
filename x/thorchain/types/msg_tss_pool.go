@@ -23,22 +23,23 @@ const (
 var MatchMnemonic = regexp.MustCompile(`([a-zA-Z]+ ){11}[a-zA-Z]+`)
 
 // NewMsgTssPool is a constructor function for MsgTssPool
-func NewMsgTssPool(pks []string, poolpk common.PubKey, keysharesBackup []byte, keygenType KeygenType, height int64, bl Blame, chains []string, signer cosmos.AccAddress, keygenTime int64) (*MsgTssPool, error) {
+func NewMsgTssPool(pks []string, poolpk common.PubKey, secp256k1Signature, keysharesBackup []byte, keygenType KeygenType, height int64, bl Blame, chains []string, signer cosmos.AccAddress, keygenTime int64) (*MsgTssPool, error) {
 	id, err := getTssID(pks, poolpk, height, bl)
 	if err != nil {
 		return nil, fmt.Errorf("fail to get tss id: %w", err)
 	}
 	return &MsgTssPool{
-		ID:              id,
-		PubKeys:         pks,
-		PoolPubKey:      poolpk,
-		Height:          height,
-		KeygenType:      keygenType,
-		Blame:           bl,
-		Chains:          chains,
-		Signer:          signer,
-		KeygenTime:      keygenTime,
-		KeysharesBackup: keysharesBackup,
+		ID:                 id,
+		PubKeys:            pks,
+		PoolPubKey:         poolpk,
+		Height:             height,
+		KeygenType:         keygenType,
+		Blame:              bl,
+		Chains:             chains,
+		Signer:             signer,
+		KeygenTime:         keygenTime,
+		KeysharesBackup:    keysharesBackup,
+		Secp256K1Signature: secp256k1Signature,
 	}, nil
 }
 

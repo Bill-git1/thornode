@@ -60,7 +60,7 @@
         }
       },
       "last_commit_hash": "",
-      "data_hash": "A6EC88DEF8689EF2D9489942809B89EDEFF3E19BA73CC9355820DB96CF93FCCB",
+      "data_hash": "35E2C110F0DE6440B40191303A1961C14C645BA66B0AA73FEFD0342BC8D26437",
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
@@ -73,7 +73,7 @@
     "end_block_events": [],
     "txs": [
       {
-        "hash": "0D9FF6C49FB46CC50FDD2D490E5D44AD727AAB8BDBFBE18FFF6755BA764519C7",
+        "hash": "62321E61FA41C5B2BE9F9C33369C0603EEF4F84949C44B342F6ED957BCB471AD",
         "tx": {
           "auth_info": {
             "fee": {
@@ -115,13 +115,14 @@
                 "height": "0",
                 "id": "d87ba3871b60ec3caf52184943ea7e8797aadeb0880565f7935a7be41d1b7c0a",
                 "keygen_time": "0",
-                "keygen_type": "UnknownKeygen",
+                "keygen_type": "AsgardKeygen",
                 "keyshares_backup": null,
                 "pool_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
                 "pub_keys": [
                   "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
                   "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
                 ],
+                "secp256k1_signature": null,
                 "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m"
               }
             ],
@@ -129,14 +130,14 @@
             "timeout_height": "0"
           },
           "signatures": [
-            "xKHVK8htA5CM/79dgnev9UZ6skPZqgIxpApIn12UU9YVry1Nc1FwQRXxw3b81T8ktio2TV0oNgW2v7TR9kernA=="
+            "MKKPmVvr0Qe+hO9uX9mwEylCEqygBxm1LqS+nqo9gOsK7GJinGp0bJICztcMfySXJ8OtI3RWKb2tEYDNw7jGYA=="
           ]
         },
         "result": {
-          "code": 99,
-          "log": "failed to execute message; message index: 0: only asgard vaults allowed for tss: internal error",
+          "code": 4,
+          "log": "failed to execute message; message index: 0: not authorized: unauthorized",
           "gas_wanted": "0",
-          "gas_used": "54836",
+          "gas_used": "56856",
           "events": [
             {
               "fee": "",
@@ -148,7 +149,7 @@
               "type": "tx"
             },
             {
-              "signature": "xKHVK8htA5CM/79dgnev9UZ6skPZqgIxpApIn12UU9YVry1Nc1FwQRXxw3b81T8ktio2TV0oNgW2v7TR9kernA==",
+              "signature": "MKKPmVvr0Qe+hO9uX9mwEylCEqygBxm1LqS+nqo9gOsK7GJinGp0bJICztcMfySXJ8OtI3RWKb2tEYDNw7jGYA==",
               "type": "tx"
             }
           ]
@@ -185,7 +186,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "5AA4C4F2E6AD4C2268C5B6A56D1B233750B208D296E34C7035769EA57CC923AE",
-      "last_results_hash": "5F6C646F2337A5AB2E7517CED7B16F1872093217E0FEDE37C8E670B038526F06",
+      "last_results_hash": "CCB3D1F292DEE6309FD587E83B21765C7BD4A14F5FC87EF1FD208B26C5D9266B",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },

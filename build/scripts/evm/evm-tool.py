@@ -10,6 +10,7 @@ from contextlib import closing
 from urllib.parse import urlparse
 
 import requests
+import retry
 from eth_typing.evm import ChecksumAddress
 from web3 import HTTPProvider, Web3
 from web3.middleware.geth_poa import geth_poa_middleware
@@ -102,11 +103,14 @@ class EVMSetupTool:
         self.deploy_token()
         self.deploy_router()
 
+    @retry.retry(Exception, delay=1, backoff=2, tries=3)
     def deploy_token(self):
         print("deploying token contract...")
         tx_hash = self.token_contract().constructor().transact()
         receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
         print(f"Token Contract Address: {receipt.contractAddress}")
+        if receipt.status != 1:
+            raise Exception(f"failed: {receipt}")
 
         # send half the balance to simulation master
         token = self.token_contract(address=receipt.contractAddress)
@@ -115,13 +119,18 @@ class EVMSetupTool:
         ).transact()
         receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
         print(f"Transfer to Simulation Master Receipt: {receipt}")
+        if receipt.status != 1:
+            raise Exception(f"failed: {receipt}")
 
+    @retry.retry(Exception, delay=1, backoff=2, tries=3)
     def deploy_router(self):
         print("deploying router contract...")
         router, args = self.router_contract()
         tx_hash = router.constructor(*args).transact()
         receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
         print(f"Router Contract Address: {receipt.contractAddress}")
+        if receipt.status != 1:
+            raise Exception(f"failed: {receipt}")
 
     def deploy_dex(self):
         print("deploying dex contract...")

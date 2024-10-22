@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
 	"os"
 	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
 
+	"github.com/btcsuite/btcd/btcec"
 	"github.com/cenkalti/backoff"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
@@ -45,6 +47,7 @@ type Signer struct {
 	m                     *metrics.Metrics
 	errCounter            *prometheus.CounterVec
 	tssKeygen             *tss.KeyGen
+	tssServer             *tssp.TssServer
 	pubkeyMgr             pubkeymanager.PubKeyValidator
 	constantsProvider     *ConstantsProvider
 	localPubKey           common.PubKey
@@ -124,6 +127,7 @@ func NewSigner(cfg config.BifrostSignerConfiguration,
 		pubkeyMgr:             pubkeyMgr,
 		thorchainBridge:       thorchainBridge,
 		tssKeygen:             kg,
+		tssServer:             tssServer,
 		constantsProvider:     constantProvider,
 		localPubKey:           na.PubKeySet.Secp256k1,
 		tssKeysignMetricMgr:   tssKeysignMetricMgr,
@@ -375,7 +379,10 @@ func (s *Signer) processKeygenBlock(keygenBlock ttypes.KeygenBlock) {
 			s.logger.Error().Interface("keygenBlock", keygenBlock).Msg("done with keygen retries")
 		}
 
-		if err = s.sendKeygenToThorchain(keygenBlock.Height, pubKey.Secp256k1, blame, keygenReq.GetMembers(), keygenReq.Type, keygenTime); err != nil {
+		// generate a verification signature to ensure we can sign with the new key
+		secp256k1Sig := s.secp256k1VerificationSignature(pubKey.Secp256k1)
+
+		if err = s.sendKeygenToThorchain(keygenBlock.Height, pubKey.Secp256k1, secp256k1Sig, blame, keygenReq.GetMembers(), keygenReq.Type, keygenTime); err != nil {
 			s.errCounter.WithLabelValues("fail_to_broadcast_keygen", "").Inc()
 			s.logger.Error().Err(err).Msg("fail to broadcast keygen")
 		}
@@ -390,7 +397,49 @@ func (s *Signer) processKeygenBlock(keygenBlock ttypes.KeygenBlock) {
 	}
 }
 
-func (s *Signer) sendKeygenToThorchain(height int64, poolPk common.PubKey, blame ttypes.Blame, input common.PubKeys, keygenType ttypes.KeygenType, keygenTime int64) error {
+// secp256k1VerificationSignature will make a best effort to sign the public key with
+// its own private key as a sanity check to ensure parties are able to sign. The
+// signature will be included in the TssPool message if successful, and verified by
+// THORNode before the keygen is accepted.
+func (s *Signer) secp256k1VerificationSignature(pk common.PubKey) []byte {
+	// create keysign instance
+	ks, err := tss.NewKeySign(s.tssServer, s.thorchainBridge)
+	if err != nil {
+		s.logger.Error().Err(err).Msg("fail to create keysign for secp256k1 check signing")
+		return nil
+	}
+	ks.Start()
+	defer ks.Stop()
+
+	// sign the public key with its own private key
+	data := []byte(pk.String())
+	sigBytes, _, err := ks.RemoteSign(data, pk.String())
+	if err != nil {
+		// this is expected in some cases if we were not in the signing party
+		s.logger.Info().Err(err).Msg("fail secp256k1 check signing")
+		return nil
+	}
+
+	// build the signature
+	r := new(big.Int).SetBytes(sigBytes[:32])
+	ss := new(big.Int).SetBytes(sigBytes[32:])
+	signature := &btcec.Signature{R: r, S: ss}
+
+	// verify the signature (thornode will also verify and reject if invalid)
+	spk, err := pk.Secp256K1()
+	if err != nil {
+		s.logger.Error().Err(err).Msg("fail to get secp256k1 pubkey")
+	}
+	if !signature.Verify(data, spk) {
+		s.logger.Error().Msg("secp256k1 check signature verification failed")
+	} else {
+		s.logger.Info().Msg("secp256k1 check signature verified")
+	}
+
+	return sigBytes
+}
+
+func (s *Signer) sendKeygenToThorchain(height int64, poolPk common.PubKey, secp256k1Signature []byte, blame ttypes.Blame, input common.PubKeys, keygenType ttypes.KeygenType, keygenTime int64) error {
 	// collect supported chains in the configuration
 	chains := common.Chains{
 		common.THORChain,
@@ -414,7 +463,7 @@ func (s *Signer) sendKeygenToThorchain(height int64, poolPk common.PubKey, blame
 		}
 	}
 
-	keygenMsg, err := s.thorchainBridge.GetKeygenStdTx(poolPk, keyshares, blame, input, keygenType, chains, height, keygenTime)
+	keygenMsg, err := s.thorchainBridge.GetKeygenStdTx(poolPk, secp256k1Signature, keyshares, blame, input, keygenType, chains, height, keygenTime)
 	if err != nil {
 		return fmt.Errorf("fail to get keygen id: %w", err)
 	}

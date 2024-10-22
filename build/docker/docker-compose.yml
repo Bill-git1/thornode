@@ -126,6 +126,12 @@ services:
     command:
       - thornode
       - start
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:26657/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 10s
 
   # ------------------------------ bifrost ------------------------------
 
@@ -244,6 +250,9 @@ services:
     <<: *thornode
     profiles:
       - mocknet-cluster
+    depends_on:
+      thornode:
+        condition: service_healthy
     ports: []
     hostname: thornode-cat
     environment:
@@ -261,6 +270,9 @@ services:
     <<: *thornode
     profiles:
       - mocknet-cluster
+    depends_on:
+      thornode:
+        condition: service_healthy
     ports: []
     hostname: thornode-fox
     environment:
@@ -278,6 +290,9 @@ services:
     <<: *thornode
     profiles:
       - mocknet-cluster
+    depends_on:
+      thornode:
+        condition: service_healthy
     ports: []
     hostname: thornode-pig
     environment:
@@ -297,6 +312,9 @@ services:
     <<: *bifrost
     profiles:
       - mocknet-cluster
+    depends_on:
+      thornode:
+        condition: service_healthy
     environment:
       <<: *bifrost-environment
       PEER: bifrost
@@ -316,6 +334,9 @@ services:
     <<: *bifrost
     profiles:
       - mocknet-cluster
+    depends_on:
+      thornode:
+        condition: service_healthy
     environment:
       <<: *bifrost-environment
       PEER: bifrost
@@ -335,6 +356,9 @@ services:
     <<: *bifrost
     profiles:
       - mocknet-cluster
+    depends_on:
+      thornode:
+        condition: service_healthy
     environment:
       <<: *bifrost-environment
       PEER: bifrost

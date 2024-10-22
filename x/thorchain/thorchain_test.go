@@ -166,12 +166,13 @@ func (s *ThorchainSuite) TestChurn(c *C) {
 	signer, err := common.PubKey(keygen.Members[0]).GetThorAddress()
 	c.Assert(err, IsNil)
 	keygenTime := int64(1024)
-	msg, err := NewMsgTssPool(keygen.Members, newVaultPk, nil, AsgardKeygen, ctx.BlockHeight(), Blame{}, common.Chains{common.RuneAsset().Chain}.Strings(), signer, keygenTime)
+	msg, err := NewMsgTssPool(keygen.Members, newVaultPk, []byte("fakeSignature"), nil, AsgardKeygen, ctx.BlockHeight(), Blame{}, common.Chains{common.RuneAsset().Chain}.Strings(), signer, keygenTime)
 	c.Assert(err, IsNil)
 	tssHandler := NewTssHandler(mgr)
 
 	voter := NewTssVoter(msg.ID, msg.PubKeys, msg.PoolPubKey)
 	signers := make([]string, len(msg.PubKeys)-1)
+	signatures := make([]string, len(msg.PubKeys)-1)
 	for i, pk := range msg.PubKeys {
 		if i == 0 {
 			continue
@@ -180,8 +181,10 @@ func (s *ThorchainSuite) TestChurn(c *C) {
 		sig, err := common.PubKey(pk).GetThorAddress()
 		c.Assert(err, IsNil)
 		signers[i-1] = sig.String()
+		signatures[i-1] = "fakeSignature"
 	}
 	voter.Signers = signers // ensure we have consensus, so handler is properly executed
+	voter.Secp256K1Signatures = signatures
 	mgr.Keeper().SetTssVoter(ctx, voter)
 
 	_, err = tssHandler.Run(ctx, msg)

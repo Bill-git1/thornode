@@ -63,7 +63,7 @@ func (m *TssVoter) HasSigned(signer cosmos.AccAddress) bool {
 }
 
 // Sign this voter with given signer address
-func (m *TssVoter) Sign(signer cosmos.AccAddress, chains []string) bool {
+func (m *TssVoter) Sign(signer cosmos.AccAddress, chains []string, secp256k1Signature string) bool {
 	if m.HasSigned(signer) {
 		return false
 	}
@@ -72,6 +72,9 @@ func (m *TssVoter) Sign(signer cosmos.AccAddress, chains []string) bool {
 		if addr.Equals(signer) && err == nil {
 			m.Signers = append(m.Signers, signer.String())
 			m.Chains = append(m.Chains, chains...)
+			if len(secp256k1Signature) > 0 {
+				m.Secp256K1Signatures = append(m.Secp256K1Signatures, secp256k1Signature)
+			}
 			return true
 		}
 	}
@@ -107,6 +110,27 @@ func (m *TssVoter) ConsensusChains() common.Chains {
 // HasCompleteConsensus return true only when all signers vote
 func (m *TssVoter) HasCompleteConsensus() bool {
 	return len(m.Signers) == len(m.PubKeys)
+}
+
+// ConsensusCheckSignature return true only when a consensus of members have provided
+// an identical check signature.
+func (m *TssVoter) ConsensusCheckSignature() (string, bool) {
+	counts := make(map[string]int)
+	for _, sig := range m.Secp256K1Signatures {
+		if _, ok := counts[sig]; !ok {
+			counts[sig] = 0
+		}
+		counts[sig]++
+	}
+
+	// analyze-ignore(map-iteration)
+	for sig, count := range counts {
+		if HasSuperMajority(count, len(m.PubKeys)) {
+			return sig, true
+		}
+	}
+
+	return "", false
 }
 
 // HasConsensus determine if this tss pool has enough signers
