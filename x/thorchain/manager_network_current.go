@@ -490,7 +490,7 @@ func (vm *NetworkMgrVCUR) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 		vaultsAvailableCoins[vault.PubKey] = common.NewCoins(vault.Coins...)
 	}
 
-	migrationRounds := mgr.GetConstants().GetInt64Value(constants.ChurnMigrateRounds)
+	migrationRounds := mgr.Keeper().GetConfigInt64(ctx, constants.ChurnMigrateRounds)
 	signingTransactionPeriod := mgr.GetConstants().GetInt64Value(constants.SigningTransactionPeriod)
 	startHeight := ctx.BlockHeight() - signingTransactionPeriod
 	if startHeight < 1 {

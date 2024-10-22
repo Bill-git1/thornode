@@ -216,7 +216,8 @@ fi
 MIMIR=$(curl -sL --fail -m 10 "$API/thorchain/mimir")
 CONSTANTS=$(curl -sL --fail -m 10 "$API/thorchain/constants")
 VAULTS=$(curl -sL --fail -m 10 "$API/thorchain/vaults/asgard")
-CHURN_MIGRATE_ROUNDS=$(echo "$CONSTANTS" | jq -r ".int_64_values.ChurnMigrateRounds")
+CHURN_MIGRATE_ROUNDS=$(echo "$MIMIR" | jq -r ".CHURNMIGRATEROUNDS // empty")
+CHURN_MIGRATE_ROUNDS=${CHURN_MIGRATE_ROUNDS:-$(echo "$CONSTANTS" | jq -r ".int_64_values.ChurnMigrateRounds")}
 FUND_MIGRATION_INTERVAL=$(echo "$MIMIR" | jq -r ".FUNDMIGRATIONINTERVAL")
 CHURN_INTERVAL=$(echo "$MIMIR" | jq -r ".CHURNINTERVAL")
 
