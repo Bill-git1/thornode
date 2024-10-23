@@ -578,7 +578,7 @@ func (vm *ValidatorMgrVCUR) payNodeAccountBondAward(ctx cosmos.Context, lastChur
 	tx := common.Tx{}
 	tx.ID = common.BlankTxID
 	tx.ToAddress = na.BondAddress
-	bondRewardEvent := NewEventBond(reward, BondReward, tx)
+	bondRewardEvent := NewEventBond(reward, BondReward, tx, &na, nil)
 	if err := mgr.EventMgr().EmitEvent(ctx, bondRewardEvent); err != nil {
 		ctx.Logger().Error("fail to emit bond event", "error", err)
 	}
@@ -602,7 +602,7 @@ func (vm *ValidatorMgrVCUR) payNodeAccountBondAward(ctx cosmos.Context, lastChur
 		fakeTx.ID = common.BlankTxID
 		fakeTx.FromAddress = fromAddress
 		fakeTx.ToAddress = na.BondAddress
-		bondReturnedEvent := NewEventBond(nodeOperatorFees, BondReturned, fakeTx)
+		bondReturnedEvent := NewEventBond(nodeOperatorFees, BondReturned, fakeTx, &na, nodeOperatorAccAddr)
 		if err := mgr.EventMgr().EmitEvent(ctx, bondReturnedEvent); err != nil {
 			ctx.Logger().Error("fail to emit bond event", "error", err)
 		}
@@ -764,7 +764,7 @@ func (vm *ValidatorMgrVCUR) ragnarokBond(ctx cosmos.Context, nth int64, mgr Mana
 		return err
 	}
 	// nth * 10 == the amount of the bond we want to send
-	for _, na := range nas {
+	for i, na := range nas {
 		if na.Bond.IsZero() {
 			continue
 		}
@@ -809,7 +809,7 @@ func (vm *ValidatorMgrVCUR) ragnarokBond(ctx cosmos.Context, nth int64, mgr Mana
 		tx := common.Tx{}
 		tx.ID = common.BlankTxID
 		tx.FromAddress = na.BondAddress
-		bondEvent := NewEventBond(amt, BondCost, tx)
+		bondEvent := NewEventBond(amt, BondCost, tx, &nas[i], nil)
 		if err := mgr.EventMgr().EmitEvent(ctx, bondEvent); err != nil {
 			return fmt.Errorf("fail to emit bond event: %w", err)
 		}

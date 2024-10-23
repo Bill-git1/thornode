@@ -148,12 +148,14 @@
             },
             {
               "amount": "2000000",
-              "bond_type": "\u0003",
+              "bond_address": "",
+              "bond_type": "bond_cost",
               "chain": "",
               "coin": "",
               "from": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
               "id": "0000000000000000000000000000000000000000000000000000000000000000",
               "memo": "",
+              "node_address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
               "to": "",
               "type": "bond"
             },
@@ -267,7 +269,7 @@
         "result": {
           "code": 0,
           "data": "\n\u0013\n\u0011/types.MsgDeposit",
-          "log": "[{\"events\":[{\"type\":\"bond\",\"attributes\":[{\"key\":\"amount\",\"value\":\"1\"},{\"key\":\"bond_type\",\"value\":\"\\u0000\"},{\"key\":\"id\",\"value\":\"893391923B473BDBA815A291E04C0AF84DD6C75FF8D9615774444576258FFB1E\"},{\"key\":\"chain\",\"value\":\"THOR\"},{\"key\":\"from\",\"value\":\"tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\"},{\"key\":\"to\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"coin\",\"value\":\"1 THOR.RUNE\"},{\"key\":\"memo\",\"value\":\"BOND:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\"}]},{\"type\":\"coin_received\",\"attributes\":[{\"key\":\"receiver\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"amount\",\"value\":\"1rune\"}]},{\"type\":\"coin_spent\",\"attributes\":[{\"key\":\"spender\",\"value\":\"tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\"},{\"key\":\"amount\",\"value\":\"1rune\"}]},{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"deposit\"},{\"key\":\"sender\",\"value\":\"tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\"}]},{\"type\":\"new_node\",\"attributes\":[{\"key\":\"address\",\"value\":\"tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\"}]},{\"type\":\"transfer\",\"attributes\":[{\"key\":\"recipient\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"sender\",\"value\":\"tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\"},{\"key\":\"amount\",\"value\":\"1rune\"}]}]}]",
+          "log": "[{\"events\":[{\"type\":\"bond\",\"attributes\":[{\"key\":\"amount\",\"value\":\"1\"},{\"key\":\"bond_type\",\"value\":\"bond_paid\"},{\"key\":\"node_address\",\"value\":\"tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\"},{\"key\":\"bond_address\",\"value\":\"tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\"},{\"key\":\"id\",\"value\":\"893391923B473BDBA815A291E04C0AF84DD6C75FF8D9615774444576258FFB1E\"},{\"key\":\"chain\",\"value\":\"THOR\"},{\"key\":\"from\",\"value\":\"tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\"},{\"key\":\"to\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"coin\",\"value\":\"1 THOR.RUNE\"},{\"key\":\"memo\",\"value\":\"BOND:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\"}]},{\"type\":\"coin_received\",\"attributes\":[{\"key\":\"receiver\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"amount\",\"value\":\"1rune\"}]},{\"type\":\"coin_spent\",\"attributes\":[{\"key\":\"spender\",\"value\":\"tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\"},{\"key\":\"amount\",\"value\":\"1rune\"}]},{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"deposit\"},{\"key\":\"sender\",\"value\":\"tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\"}]},{\"type\":\"new_node\",\"attributes\":[{\"key\":\"address\",\"value\":\"tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\"}]},{\"type\":\"transfer\",\"attributes\":[{\"key\":\"recipient\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"sender\",\"value\":\"tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\"},{\"key\":\"amount\",\"value\":\"1rune\"}]}]}]",
           "gas_wanted": "0",
           "gas_used": "147932",
           "events": [
@@ -334,12 +336,14 @@
             },
             {
               "amount": "1",
-              "bond_type": "\u0000",
+              "bond_address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
+              "bond_type": "bond_paid",
               "chain": "THOR",
               "coin": "1 THOR.RUNE",
               "from": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "id": "893391923B473BDBA815A291E04C0AF84DD6C75FF8D9615774444576258FFB1E",
               "memo": "BOND:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
+              "node_address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "to": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
               "type": "bond"
             }

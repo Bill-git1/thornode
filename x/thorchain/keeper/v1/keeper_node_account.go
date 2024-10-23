@@ -511,7 +511,7 @@ func (k KVStore) DeductNativeTxFeeFromBond(ctx cosmos.Context, nodeAddr cosmos.A
 	tx := common.Tx{}
 	tx.ID = common.BlankTxID
 	tx.FromAddress = na.BondAddress
-	bondEvent := NewEventBond(fee, BondCost, tx)
+	bondEvent := NewEventBond(fee, BondCost, tx, &na, nil)
 	events, err := bondEvent.Events()
 	if err != nil {
 		return fmt.Errorf("fail to get events: %w", err)

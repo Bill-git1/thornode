@@ -200,7 +200,7 @@ func (EventSuite) TestEventRefund(c *C) {
 }
 
 func (EventSuite) TestEventBond(c *C) {
-	e := NewEventBond(cosmos.NewUint(100), BondType_bond_paid, GetRandomTx())
+	e := NewEventBond(cosmos.NewUint(100), BondType_bond_paid, GetRandomTx(), &NodeAccount{}, nil)
 	c.Check(e.Type(), Equals, "bond")
 	events, err := e.Events()
 	c.Check(err, IsNil)

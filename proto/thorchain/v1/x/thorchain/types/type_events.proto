@@ -129,6 +129,8 @@ message EventBond {
   string amount = 1 [(gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Uint", (gogoproto.nullable) = false];
   BondType bond_type = 2;
   common.Tx tx_in = 3 [(gogoproto.nullable) = false];
+  bytes node_address = 4 [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
+  bytes bond_address = 5 [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
 }
 
 message GasPool {

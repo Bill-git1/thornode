@@ -123,7 +123,7 @@ func (h MimirHandler) handleV133(ctx cosmos.Context, msg MsgMimir) error {
 	tx := common.Tx{}
 	tx.ID = common.BlankTxID
 	tx.ToAddress = common.Address(nodeAccount.String())
-	bondEvent := NewEventBond(cost, BondCost, tx)
+	bondEvent := NewEventBond(cost, BondCost, tx, &nodeAccount, nil)
 	if err := h.mgr.EventMgr().EmitEvent(ctx, bondEvent); err != nil {
 		ctx.Logger().Error("fail to emit bond event", "error", err)
 		return err

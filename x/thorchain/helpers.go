@@ -319,7 +319,7 @@ func refundBond(ctx cosmos.Context, tx common.Tx, acc cosmos.AccAddress, amt cos
 			return ErrInternal(err, "fail to send unbonded RUNE to bond address")
 		}
 
-		bondEvent := NewEventBond(amt, BondReturned, tx)
+		bondEvent := NewEventBond(amt, BondReturned, tx, nodeAcc, provider.BondAddress)
 		if err := mgr.EventMgr().EmitEvent(ctx, bondEvent); err != nil {
 			ctx.Logger().Error("fail to emit bond event", "error", err)
 		}

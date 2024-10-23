@@ -364,7 +364,7 @@ func MsgTssPoolHandleV137(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) (*co
 					tx := common.Tx{}
 					tx.ID = common.BlankTxID
 					tx.FromAddress = na.BondAddress
-					bondEvent := NewEventBond(slashBond, BondCost, tx)
+					bondEvent := NewEventBond(slashBond, BondCost, tx, &na, nil)
 					if err := mgr.EventMgr().EmitEvent(ctx, bondEvent); err != nil {
 						return nil, fmt.Errorf("fail to emit bond event: %w", err)
 					}

@@ -524,7 +524,7 @@ func (s SlasherVCUR) slashAndUpdateNodeAccount(ctx cosmos.Context, na types.Node
 	tx := common.Tx{}
 	tx.ID = common.BlankTxID
 	tx.FromAddress = na.BondAddress
-	bondEvent := NewEventBond(slashAmountRune, BondCost, tx)
+	bondEvent := NewEventBond(slashAmountRune, BondCost, tx, &na, nil)
 	if err := s.eventMgr.EmitEvent(ctx, bondEvent); err != nil {
 		ctx.Logger().Error("fail to emit bond event", "error", err)
 	}

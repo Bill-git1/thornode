@@ -244,12 +244,14 @@
             },
             {
               "amount": "2000000",
-              "bond_type": "\u0003",
+              "bond_address": "",
+              "bond_type": "bond_cost",
               "chain": "",
               "coin": "",
               "from": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
               "id": "0000000000000000000000000000000000000000000000000000000000000000",
               "memo": "",
+              "node_address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
               "to": "",
               "type": "bond"
             },

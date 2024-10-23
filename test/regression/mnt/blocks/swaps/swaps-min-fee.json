@@ -1075,7 +1075,7 @@
         "result": {
           "code": 0,
           "data": "\n\u0011\n\u000f/types.MsgMimir",
-          "log": "[{\"events\":[{\"type\":\"bond\",\"attributes\":[{\"key\":\"amount\",\"value\":\"2000000\"},{\"key\":\"bond_type\",\"value\":\"\\u0003\"},{\"key\":\"id\",\"value\":\"0000000000000000000000000000000000000000000000000000000000000000\"},{\"key\":\"chain\"},{\"key\":\"from\"},{\"key\":\"to\",\"value\":\"node:tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej\\nstatus:Active\\nnode pubkeys:\\n\\tsecp256k1: tthorpub1addwnpepqwlkdxcyz8fnxk3xp0eqt89g6cxau2c4zp89yr2x2dy56s2zgu2jx3pmacu\\n\\ted25519: \\n\\nvalidator consensus pub key:tthorcpub1zcjduepqq75h7uy6qhesh9d3a9tuk0mzrnc46u8rye44ze6peua3zmpfh23q8z37sz\\nbond:2499998000000\\nversion:9.999.0\\nbond address:tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej\\nrequested to leave:false\\n\"},{\"key\":\"coin\"},{\"key\":\"memo\"}]},{\"type\":\"coin_received\",\"attributes\":[{\"key\":\"receiver\",\"value\":\"tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]},{\"type\":\"coin_spent\",\"attributes\":[{\"key\":\"spender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]},{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_mimir_attr\"},{\"key\":\"sender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"}]},{\"type\":\"set_node_mimir\",\"attributes\":[{\"key\":\"key\",\"value\":\"L1SLIPMINBPS\"},{\"key\":\"value\",\"value\":\"500\"},{\"key\":\"address\",\"value\":\"tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej\"}]},{\"type\":\"transfer\",\"attributes\":[{\"key\":\"recipient\",\"value\":\"tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw\"},{\"key\":\"sender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]}]}]",
+          "log": "[{\"events\":[{\"type\":\"bond\",\"attributes\":[{\"key\":\"amount\",\"value\":\"2000000\"},{\"key\":\"bond_type\",\"value\":\"bond_cost\"},{\"key\":\"node_address\",\"value\":\"tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej\"},{\"key\":\"bond_address\"},{\"key\":\"id\",\"value\":\"0000000000000000000000000000000000000000000000000000000000000000\"},{\"key\":\"chain\"},{\"key\":\"from\"},{\"key\":\"to\",\"value\":\"node:tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej\\nstatus:Active\\nnode pubkeys:\\n\\tsecp256k1: tthorpub1addwnpepqwlkdxcyz8fnxk3xp0eqt89g6cxau2c4zp89yr2x2dy56s2zgu2jx3pmacu\\n\\ted25519: \\n\\nvalidator consensus pub key:tthorcpub1zcjduepqq75h7uy6qhesh9d3a9tuk0mzrnc46u8rye44ze6peua3zmpfh23q8z37sz\\nbond:2499998000000\\nversion:9.999.0\\nbond address:tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej\\nrequested to leave:false\\n\"},{\"key\":\"coin\"},{\"key\":\"memo\"}]},{\"type\":\"coin_received\",\"attributes\":[{\"key\":\"receiver\",\"value\":\"tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]},{\"type\":\"coin_spent\",\"attributes\":[{\"key\":\"spender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]},{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_mimir_attr\"},{\"key\":\"sender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"}]},{\"type\":\"set_node_mimir\",\"attributes\":[{\"key\":\"key\",\"value\":\"L1SLIPMINBPS\"},{\"key\":\"value\",\"value\":\"500\"},{\"key\":\"address\",\"value\":\"tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej\"}]},{\"type\":\"transfer\",\"attributes\":[{\"key\":\"recipient\",\"value\":\"tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw\"},{\"key\":\"sender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]}]}]",
           "gas_wanted": "0",
           "gas_used": "94987",
           "events": [
@@ -1124,12 +1124,14 @@
             },
             {
               "amount": "2000000",
-              "bond_type": "\u0003",
+              "bond_address": "",
+              "bond_type": "bond_cost",
               "chain": "",
               "coin": "",
               "from": "",
               "id": "0000000000000000000000000000000000000000000000000000000000000000",
               "memo": "",
+              "node_address": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
               "to": "node:tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej\nstatus:Active\nnode pubkeys:\n\tsecp256k1: tthorpub1addwnpepqwlkdxcyz8fnxk3xp0eqt89g6cxau2c4zp89yr2x2dy56s2zgu2jx3pmacu\n\ted25519: \n\nvalidator consensus pub key:tthorcpub1zcjduepqq75h7uy6qhesh9d3a9tuk0mzrnc46u8rye44ze6peua3zmpfh23q8z37sz\nbond:2499998000000\nversion:9.999.0\nbond address:tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej\nrequested to leave:false\n",
               "type": "bond"
             }
@@ -1182,7 +1184,7 @@
         "result": {
           "code": 0,
           "data": "\n\u0011\n\u000f/types.MsgMimir",
-          "log": "[{\"events\":[{\"type\":\"bond\",\"attributes\":[{\"key\":\"amount\",\"value\":\"2000000\"},{\"key\":\"bond_type\",\"value\":\"\\u0003\"},{\"key\":\"id\",\"value\":\"0000000000000000000000000000000000000000000000000000000000000000\"},{\"key\":\"chain\"},{\"key\":\"from\"},{\"key\":\"to\",\"value\":\"node:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u\\nstatus:Active\\nnode pubkeys:\\n\\tsecp256k1: tthorpub1addwnpepqg0rpnr9y7csa6rzy73w7ldfhlf5kthmn77xzeqx68mueh9pest9vlvs93k\\n\\ted25519: \\n\\nvalidator consensus pub key:tthorcpub1zcjduepqg5jpnfqky744drn57zju056ye7c3vkage67kztdfct4jrx5p50uqyqfkts\\nbond:2499998000000\\nversion:9.999.0\\nbond address:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u\\nrequested to leave:false\\n\"},{\"key\":\"coin\"},{\"key\":\"memo\"}]},{\"type\":\"coin_received\",\"attributes\":[{\"key\":\"receiver\",\"value\":\"tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]},{\"type\":\"coin_spent\",\"attributes\":[{\"key\":\"spender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]},{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_mimir_attr\"},{\"key\":\"sender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"}]},{\"type\":\"set_node_mimir\",\"attributes\":[{\"key\":\"key\",\"value\":\"L1SLIPMINBPS\"},{\"key\":\"value\",\"value\":\"500\"},{\"key\":\"address\",\"value\":\"tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u\"}]},{\"type\":\"transfer\",\"attributes\":[{\"key\":\"recipient\",\"value\":\"tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw\"},{\"key\":\"sender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]}]}]",
+          "log": "[{\"events\":[{\"type\":\"bond\",\"attributes\":[{\"key\":\"amount\",\"value\":\"2000000\"},{\"key\":\"bond_type\",\"value\":\"bond_cost\"},{\"key\":\"node_address\",\"value\":\"tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u\"},{\"key\":\"bond_address\"},{\"key\":\"id\",\"value\":\"0000000000000000000000000000000000000000000000000000000000000000\"},{\"key\":\"chain\"},{\"key\":\"from\"},{\"key\":\"to\",\"value\":\"node:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u\\nstatus:Active\\nnode pubkeys:\\n\\tsecp256k1: tthorpub1addwnpepqg0rpnr9y7csa6rzy73w7ldfhlf5kthmn77xzeqx68mueh9pest9vlvs93k\\n\\ted25519: \\n\\nvalidator consensus pub key:tthorcpub1zcjduepqg5jpnfqky744drn57zju056ye7c3vkage67kztdfct4jrx5p50uqyqfkts\\nbond:2499998000000\\nversion:9.999.0\\nbond address:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u\\nrequested to leave:false\\n\"},{\"key\":\"coin\"},{\"key\":\"memo\"}]},{\"type\":\"coin_received\",\"attributes\":[{\"key\":\"receiver\",\"value\":\"tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]},{\"type\":\"coin_spent\",\"attributes\":[{\"key\":\"spender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]},{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_mimir_attr\"},{\"key\":\"sender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"}]},{\"type\":\"set_node_mimir\",\"attributes\":[{\"key\":\"key\",\"value\":\"L1SLIPMINBPS\"},{\"key\":\"value\",\"value\":\"500\"},{\"key\":\"address\",\"value\":\"tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u\"}]},{\"type\":\"transfer\",\"attributes\":[{\"key\":\"recipient\",\"value\":\"tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw\"},{\"key\":\"sender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]}]}]",
           "gas_wanted": "0",
           "gas_used": "97532",
           "events": [
@@ -1231,12 +1233,14 @@
             },
             {
               "amount": "2000000",
-              "bond_type": "\u0003",
+              "bond_address": "",
+              "bond_type": "bond_cost",
               "chain": "",
               "coin": "",
               "from": "",
               "id": "0000000000000000000000000000000000000000000000000000000000000000",
               "memo": "",
+              "node_address": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
               "to": "node:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u\nstatus:Active\nnode pubkeys:\n\tsecp256k1: tthorpub1addwnpepqg0rpnr9y7csa6rzy73w7ldfhlf5kthmn77xzeqx68mueh9pest9vlvs93k\n\ted25519: \n\nvalidator consensus pub key:tthorcpub1zcjduepqg5jpnfqky744drn57zju056ye7c3vkage67kztdfct4jrx5p50uqyqfkts\nbond:2499998000000\nversion:9.999.0\nbond address:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u\nrequested to leave:false\n",
               "type": "bond"
             }
@@ -1289,7 +1293,7 @@
         "result": {
           "code": 0,
           "data": "\n\u0011\n\u000f/types.MsgMimir",
-          "log": "[{\"events\":[{\"type\":\"bond\",\"attributes\":[{\"key\":\"amount\",\"value\":\"2000000\"},{\"key\":\"bond_type\",\"value\":\"\\u0003\"},{\"key\":\"id\",\"value\":\"0000000000000000000000000000000000000000000000000000000000000000\"},{\"key\":\"chain\"},{\"key\":\"from\"},{\"key\":\"to\",\"value\":\"node:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\\nstatus:Active\\nnode pubkeys:\\n\\tsecp256k1: tthorpub1addwnpepqv8lvvqmczr893yf7zyf7xtffccf032aprl8z09y3e3nfruedew85n306k5\\n\\ted25519: \\n\\nvalidator consensus pub key:tthorcpub1zcjduepqsukty8qkyj4wfrpc8he2hl9fc8m06cfz8ex3ddspzzufw93xxhqqec5sp0\\nbond:2499998000000\\nversion:9.999.0\\nbond address:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\\nrequested to leave:false\\n\"},{\"key\":\"coin\"},{\"key\":\"memo\"}]},{\"type\":\"coin_received\",\"attributes\":[{\"key\":\"receiver\",\"value\":\"tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]},{\"type\":\"coin_spent\",\"attributes\":[{\"key\":\"spender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]},{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_mimir_attr\"},{\"key\":\"sender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"}]},{\"type\":\"set_node_mimir\",\"attributes\":[{\"key\":\"key\",\"value\":\"L1SLIPMINBPS\"},{\"key\":\"value\",\"value\":\"500\"},{\"key\":\"address\",\"value\":\"tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\"}]},{\"type\":\"transfer\",\"attributes\":[{\"key\":\"recipient\",\"value\":\"tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw\"},{\"key\":\"sender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]}]}]",
+          "log": "[{\"events\":[{\"type\":\"bond\",\"attributes\":[{\"key\":\"amount\",\"value\":\"2000000\"},{\"key\":\"bond_type\",\"value\":\"bond_cost\"},{\"key\":\"node_address\",\"value\":\"tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\"},{\"key\":\"bond_address\"},{\"key\":\"id\",\"value\":\"0000000000000000000000000000000000000000000000000000000000000000\"},{\"key\":\"chain\"},{\"key\":\"from\"},{\"key\":\"to\",\"value\":\"node:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\\nstatus:Active\\nnode pubkeys:\\n\\tsecp256k1: tthorpub1addwnpepqv8lvvqmczr893yf7zyf7xtffccf032aprl8z09y3e3nfruedew85n306k5\\n\\ted25519: \\n\\nvalidator consensus pub key:tthorcpub1zcjduepqsukty8qkyj4wfrpc8he2hl9fc8m06cfz8ex3ddspzzufw93xxhqqec5sp0\\nbond:2499998000000\\nversion:9.999.0\\nbond address:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\\nrequested to leave:false\\n\"},{\"key\":\"coin\"},{\"key\":\"memo\"}]},{\"type\":\"coin_received\",\"attributes\":[{\"key\":\"receiver\",\"value\":\"tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]},{\"type\":\"coin_spent\",\"attributes\":[{\"key\":\"spender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]},{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_mimir_attr\"},{\"key\":\"sender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"}]},{\"type\":\"set_node_mimir\",\"attributes\":[{\"key\":\"key\",\"value\":\"L1SLIPMINBPS\"},{\"key\":\"value\",\"value\":\"500\"},{\"key\":\"address\",\"value\":\"tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\"}]},{\"type\":\"transfer\",\"attributes\":[{\"key\":\"recipient\",\"value\":\"tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw\"},{\"key\":\"sender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]}]}]",
           "gas_wanted": "0",
           "gas_used": "102050",
           "events": [
@@ -1338,12 +1342,14 @@
             },
             {
               "amount": "2000000",
-              "bond_type": "\u0003",
+              "bond_address": "",
+              "bond_type": "bond_cost",
               "chain": "",
               "coin": "",
               "from": "",
               "id": "0000000000000000000000000000000000000000000000000000000000000000",
               "memo": "",
+              "node_address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "to": "node:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\nstatus:Active\nnode pubkeys:\n\tsecp256k1: tthorpub1addwnpepqv8lvvqmczr893yf7zyf7xtffccf032aprl8z09y3e3nfruedew85n306k5\n\ted25519: \n\nvalidator consensus pub key:tthorcpub1zcjduepqsukty8qkyj4wfrpc8he2hl9fc8m06cfz8ex3ddspzzufw93xxhqqec5sp0\nbond:2499998000000\nversion:9.999.0\nbond address:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\nrequested to leave:false\n",
               "type": "bond"
             }
@@ -1396,7 +1402,7 @@
         "result": {
           "code": 0,
           "data": "\n\u0011\n\u000f/types.MsgMimir",
-          "log": "[{\"events\":[{\"type\":\"bond\",\"attributes\":[{\"key\":\"amount\",\"value\":\"2000000\"},{\"key\":\"bond_type\",\"value\":\"\\u0003\"},{\"key\":\"id\",\"value\":\"0000000000000000000000000000000000000000000000000000000000000000\"},{\"key\":\"chain\"},{\"key\":\"from\"},{\"key\":\"to\",\"value\":\"node:tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm\\nstatus:Active\\nnode pubkeys:\\n\\tsecp256k1: tthorpub1addwnpepqvfnccxa3hw35m7mx6mavxdp93jjw2jhdw0tv45dlmlelcsctu335w2yw3u\\n\\ted25519: \\n\\nvalidator consensus pub key:tthorcpub1zcjduepqe4ek6z27scfutp6whq5ug2plglertjw7z473nny2yu46r7gxp07s92jckg\\nbond:2499998000000\\nversion:9.999.0\\nbond address:tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm\\nrequested to leave:false\\n\"},{\"key\":\"coin\"},{\"key\":\"memo\"}]},{\"type\":\"coin_received\",\"attributes\":[{\"key\":\"receiver\",\"value\":\"tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]},{\"type\":\"coin_spent\",\"attributes\":[{\"key\":\"spender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]},{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_mimir_attr\"},{\"key\":\"sender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"}]},{\"type\":\"set_mimir\",\"attributes\":[{\"key\":\"key\",\"value\":\"L1SLIPMINBPS\"},{\"key\":\"value\",\"value\":\"500\"}]},{\"type\":\"set_node_mimir\",\"attributes\":[{\"key\":\"key\",\"value\":\"L1SLIPMINBPS\"},{\"key\":\"value\",\"value\":\"500\"},{\"key\":\"address\",\"value\":\"tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm\"}]},{\"type\":\"transfer\",\"attributes\":[{\"key\":\"recipient\",\"value\":\"tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw\"},{\"key\":\"sender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]}]}]",
+          "log": "[{\"events\":[{\"type\":\"bond\",\"attributes\":[{\"key\":\"amount\",\"value\":\"2000000\"},{\"key\":\"bond_type\",\"value\":\"bond_cost\"},{\"key\":\"node_address\",\"value\":\"tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm\"},{\"key\":\"bond_address\"},{\"key\":\"id\",\"value\":\"0000000000000000000000000000000000000000000000000000000000000000\"},{\"key\":\"chain\"},{\"key\":\"from\"},{\"key\":\"to\",\"value\":\"node:tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm\\nstatus:Active\\nnode pubkeys:\\n\\tsecp256k1: tthorpub1addwnpepqvfnccxa3hw35m7mx6mavxdp93jjw2jhdw0tv45dlmlelcsctu335w2yw3u\\n\\ted25519: \\n\\nvalidator consensus pub key:tthorcpub1zcjduepqe4ek6z27scfutp6whq5ug2plglertjw7z473nny2yu46r7gxp07s92jckg\\nbond:2499998000000\\nversion:9.999.0\\nbond address:tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm\\nrequested to leave:false\\n\"},{\"key\":\"coin\"},{\"key\":\"memo\"}]},{\"type\":\"coin_received\",\"attributes\":[{\"key\":\"receiver\",\"value\":\"tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]},{\"type\":\"coin_spent\",\"attributes\":[{\"key\":\"spender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]},{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_mimir_attr\"},{\"key\":\"sender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"}]},{\"type\":\"set_mimir\",\"attributes\":[{\"key\":\"key\",\"value\":\"L1SLIPMINBPS\"},{\"key\":\"value\",\"value\":\"500\"}]},{\"type\":\"set_node_mimir\",\"attributes\":[{\"key\":\"key\",\"value\":\"L1SLIPMINBPS\"},{\"key\":\"value\",\"value\":\"500\"},{\"key\":\"address\",\"value\":\"tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm\"}]},{\"type\":\"transfer\",\"attributes\":[{\"key\":\"recipient\",\"value\":\"tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw\"},{\"key\":\"sender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]}]}]",
           "gas_wanted": "0",
           "gas_used": "103144",
           "events": [
@@ -1445,12 +1451,14 @@
             },
             {
               "amount": "2000000",
-              "bond_type": "\u0003",
+              "bond_address": "",
+              "bond_type": "bond_cost",
               "chain": "",
               "coin": "",
               "from": "",
               "id": "0000000000000000000000000000000000000000000000000000000000000000",
               "memo": "",
+              "node_address": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
               "to": "node:tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm\nstatus:Active\nnode pubkeys:\n\tsecp256k1: tthorpub1addwnpepqvfnccxa3hw35m7mx6mavxdp93jjw2jhdw0tv45dlmlelcsctu335w2yw3u\n\ted25519: \n\nvalidator consensus pub key:tthorcpub1zcjduepqe4ek6z27scfutp6whq5ug2plglertjw7z473nny2yu46r7gxp07s92jckg\nbond:2499998000000\nversion:9.999.0\nbond address:tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm\nrequested to leave:false\n",
               "type": "bond"
             },

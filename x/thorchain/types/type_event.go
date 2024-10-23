@@ -351,11 +351,13 @@ func (m *EventRefund) Events() (cosmos.Events, error) {
 }
 
 // NewEventBond create a new Bond Events
-func NewEventBond(amount cosmos.Uint, bondType BondType, txIn common.Tx) *EventBond {
+func NewEventBond(amount cosmos.Uint, bondType BondType, txIn common.Tx, nodeAccount *NodeAccount, bondAddress cosmos.AccAddress) *EventBond {
 	return &EventBond{
-		Amount:   amount,
-		BondType: bondType,
-		TxIn:     txIn,
+		Amount:      amount,
+		BondType:    bondType,
+		TxIn:        txIn,
+		NodeAddress: nodeAccount.NodeAddress,
+		BondAddress: bondAddress,
 	}
 }
 
@@ -368,7 +370,9 @@ func (m *EventBond) Type() string {
 func (m *EventBond) Events() (cosmos.Events, error) {
 	evt := cosmos.NewEvent(m.Type(),
 		cosmos.NewAttribute("amount", m.Amount.String()),
-		cosmos.NewAttribute("bond_type", string(m.BondType)))
+		cosmos.NewAttribute("bond_type", m.BondType.String()),
+		cosmos.NewAttribute("node_address", m.NodeAddress.String()),
+		cosmos.NewAttribute("bond_address", m.BondAddress.String()))
 	evt = evt.AppendAttributes(m.TxIn.ToAttributes()...)
 	return cosmos.Events{evt}, nil
 }

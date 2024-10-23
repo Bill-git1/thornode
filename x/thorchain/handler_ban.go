@@ -142,7 +142,7 @@ func (h BanHandler) handleV1(ctx cosmos.Context, msg MsgBan) (*cosmos.Result, er
 		tx := common.Tx{}
 		tx.ID = common.BlankTxID
 		tx.FromAddress = banner.BondAddress
-		bondEvent := NewEventBond(slashAmount, BondCost, tx)
+		bondEvent := NewEventBond(slashAmount, BondCost, tx, &banner, nil)
 		// trunk-ignore(golangci-lint/govet): shadow
 		if err := h.mgr.EventMgr().EmitEvent(ctx, bondEvent); err != nil {
 			return nil, fmt.Errorf("fail to emit bond event: %w", err)

@@ -184,8 +184,8 @@ func (h BondHandler) handleV105(ctx cosmos.Context, msg MsgBond) error {
 		tx := common.Tx{}
 		tx.ID = common.BlankTxID
 		tx.ToAddress = common.Address(nodeAccount.String())
-		bondEvent := NewEventBond(cosmos.NewUint(common.One), BondCost, tx)
 		// trunk-ignore(golangci-lint/govet): shadow
+		bondEvent := NewEventBond(cosmos.NewUint(common.One), BondCost, tx, &nodeAccount, nil)
 		if err := h.mgr.EventMgr().EmitEvent(ctx, bondEvent); err != nil {
 			ctx.Logger().Error("fail to emit bond event", "error", err)
 		}
@@ -227,7 +227,7 @@ func (h BondHandler) handleV105(ctx cosmos.Context, msg MsgBond) error {
 		return ErrInternal(err, fmt.Sprintf("fail to save bond providers(%s)", bp.NodeAddress.String()))
 	}
 
-	bondEvent := NewEventBond(msg.Bond, BondPaid, msg.TxIn)
+	bondEvent := NewEventBond(msg.Bond, BondPaid, msg.TxIn, &nodeAccount, from)
 	if err := h.mgr.EventMgr().EmitEvent(ctx, bondEvent); err != nil {
 		ctx.Logger().Error("fail to emit bond event", "error", err)
 	}
