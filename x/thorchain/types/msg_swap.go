@@ -76,6 +76,7 @@ func (m *MsgSwap) ValidateBasic() error {
 	if m.Destination.IsEmpty() {
 		return cosmos.ErrUnknownRequest("swap Destination cannot be empty")
 	}
+	// TODO: remove this check on hardfork
 	if m.AffiliateAddress.IsEmpty() && !m.AffiliateBasisPoints.IsZero() {
 		return cosmos.ErrUnknownRequest("swap affiliate address is empty while affiliate basis points is non-zero")
 	}
@@ -105,4 +106,12 @@ func (m *MsgSwap) GetSignBytes() []byte {
 // GetSigners defines whose signature is required
 func (m *MsgSwap) GetSigners() []cosmos.AccAddress {
 	return []cosmos.AccAddress{m.Signer}
+}
+
+func (m *MsgSwap) GetTotalAffiliateFee() cosmos.Uint {
+	return common.GetSafeShare(
+		m.AffiliateBasisPoints,
+		cosmos.NewUint(10000),
+		m.Tx.Coins[0].Amount,
+	)
 }

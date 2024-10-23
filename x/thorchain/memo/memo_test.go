@@ -142,6 +142,50 @@ func (s *MemoSuite) TestParseWithAbbreviated(c *C) {
 	_, err = ParseMemoWithTHORNames(ctx, k, fmt.Sprintf("=:b:/%s:87e7", refundAddr.String()))
 	c.Assert(err, NotNil)
 
+	// test multiple affiliates
+	ms := "=:e:0x90f2b1ae50e6018230e90a33f98c7844a0ab635a::t/t1/t2:10/20/30"
+	memo, err = ParseMemoWithTHORNames(ctx, k, ms)
+	c.Assert(err, IsNil)
+	c.Check(len(memo.GetAffiliates()), Equals, 3)
+	c.Check(len(memo.GetAffiliatesBasisPoints()), Equals, 3)
+	c.Check(memo.GetAffiliates()[0], Equals, "t")
+	c.Check(memo.GetAffiliatesBasisPoints()[0].Uint64(), Equals, uint64(10))
+	c.Check(memo.GetAffiliates()[1], Equals, "t1")
+	c.Check(memo.GetAffiliatesBasisPoints()[1].Uint64(), Equals, uint64(20))
+	c.Check(memo.GetAffiliates()[2], Equals, "t2")
+	c.Check(memo.GetAffiliatesBasisPoints()[2].Uint64(), Equals, uint64(30))
+
+	// thornames + rune addrs
+	affRune := types.GetRandomTHORAddress()
+	ms = fmt.Sprintf("=:e:0x90f2b1ae50e6018230e90a33f98c7844a0ab635a::t/%s/t2:10/20/30", affRune.String())
+	memo, err = ParseMemoWithTHORNames(ctx, k, ms)
+	c.Assert(err, IsNil)
+	c.Check(memo.GetAffiliatesBasisPoints()[0].Uint64(), Equals, uint64(10))
+	c.Check(memo.GetAffiliates()[1], Equals, affRune.String())
+	c.Check(memo.GetAffiliatesBasisPoints()[1].Uint64(), Equals, uint64(20))
+	c.Check(memo.GetAffiliates()[2], Equals, "t2")
+	c.Check(memo.GetAffiliatesBasisPoints()[2].Uint64(), Equals, uint64(30))
+
+	// one affiliate bps defined, should apply to all affiliates
+	ms = "=:e:0x90f2b1ae50e6018230e90a33f98c7844a0ab635a::t/t1/t2:10"
+	memo, err = ParseMemoWithTHORNames(ctx, k, ms)
+	c.Assert(err, IsNil)
+	c.Check(memo.GetAffiliatesBasisPoints()[0].Uint64(), Equals, uint64(10))
+	c.Check(memo.GetAffiliatesBasisPoints()[1].Uint64(), Equals, uint64(10))
+	c.Check(memo.GetAffiliatesBasisPoints()[2].Uint64(), Equals, uint64(10))
+
+	// affiliates + bps mismatch
+	ms = "=:e:0x90f2b1ae50e6018230e90a33f98c7844a0ab635a::t/t1/t2:10/20"
+	_, err = ParseMemoWithTHORNames(ctx, k, ms)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "affiliate thornames and affiliate fee bps count mismatch")
+
+	// total affiliate fee too high
+	ms = "=:e:0x90f2b1ae50e6018230e90a33f98c7844a0ab635a::t/t1/t2:10000/10000/10000"
+	_, err = ParseMemoWithTHORNames(ctx, k, ms)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "total affiliate fee basis points can't be more than 10000")
+
 	// test streaming swap
 	memo, err = ParseMemoWithTHORNames(ctx, k, "=:"+common.RuneAsset().String()+":0x90f2b1ae50e6018230e90a33f98c7844a0ab635a:1200/10/20")
 	c.Assert(err, IsNil)
@@ -370,14 +414,16 @@ func (s *MemoSuite) TestParse(c *C) {
 	c.Check(memo.IsType(TxWithdraw), Equals, true, Commentf("MEMO: %+v", memo))
 	c.Check(memo.GetAmount().Equal(cosmos.NewUint(25)), Equals, true, Commentf("%d", memo.GetAmount().Uint64()))
 
-	memo, err = ParseMemoWithTHORNames(ctx, k, "SWAP:"+common.RuneAsset().String()+":0x90f2b1ae50e6018230e90a33f98c7844a0ab635a:870000000:hello:0")
+	memo, err = ParseMemoWithTHORNames(ctx, k, "SWAP:"+common.RuneAsset().String()+":0x90f2b1ae50e6018230e90a33f98c7844a0ab635a:870000000:hello:100")
 	c.Assert(err, IsNil)
 	c.Check(memo.GetAsset().String(), Equals, common.RuneAsset().String())
 	c.Check(memo.IsType(TxSwap), Equals, true, Commentf("MEMO: %+v", memo))
 	c.Check(memo.GetDestination().String(), Equals, "0x90f2b1ae50e6018230e90a33f98c7844a0ab635a")
 	c.Check(memo.GetSlipLimit().Equal(cosmos.NewUint(870000000)), Equals, true)
-	c.Check(memo.GetAffiliateTHORName(), NotNil)
-	c.Check(memo.GetAffiliateTHORName().Owner.Equals(thorAccAddr), Equals, true)
+	c.Check(len(memo.GetAffiliates()), Equals, 1)
+	c.Check(len(memo.GetAffiliatesBasisPoints()), Equals, 1)
+	c.Check(memo.GetAffiliates()[0], Equals, "hello")
+	c.Check(memo.GetAffiliatesBasisPoints()[0].Uint64(), Equals, uint64(100))
 
 	memo, err = ParseMemoWithTHORNames(ctx, k, "SWAP:"+common.RuneAsset().String()+":0x90f2b1ae50e6018230e90a33f98c7844a0ab635a")
 	c.Assert(err, IsNil)

@@ -21,7 +21,7 @@
             "@type": "/cosmos.crypto.secp256k1.PubKey",
             "key": "AmF4AUTWZEUSBtgqiR5n2Lgic/Yrr1mWupMo5TAubNRO"
           },
-          "sequence": "7"
+          "sequence": "9"
         },
         {
           "@type": "/cosmos.auth.v1beta1.ModuleAccount",
@@ -157,7 +157,7 @@
           "address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
           "coins": [
             {
-              "amount": "5000000000000",
+              "amount": "4997995999998",
               "denom": "rune"
             },
             {
@@ -188,7 +188,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "197406980050",
+              "amount": "197409112253",
               "denom": "rune"
             }
           ]
@@ -206,7 +206,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35001018785069",
+              "amount": "35003020565225",
               "denom": "rune"
             }
           ]
@@ -237,7 +237,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "5000011776555",
+              "amount": "5000011864198",
               "denom": "rune"
             }
           ]
@@ -283,6 +283,30 @@
           "expire_block_height": "5256011",
           "name": "xx",
           "owner": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+          "preferred_asset": "."
+        },
+        {
+          "aliases": [
+            {
+              "address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+              "chain": "THOR"
+            }
+          ],
+          "expire_block_height": "5256016",
+          "name": "zz",
+          "owner": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+          "preferred_asset": "."
+        },
+        {
+          "aliases": [
+            {
+              "address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+              "chain": "THOR"
+            }
+          ],
+          "expire_block_height": "5256015",
+          "name": "yy",
+          "owner": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
           "preferred_asset": "."
         }
       ],
@@ -341,8 +365,8 @@
       "network": {
         "LPIncomeSplit": "9605",
         "NodeIncomeSplit": "395",
-        "bond_reward_rune": "11776555",
-        "total_bond_units": "14"
+        "bond_reward_rune": "11864198",
+        "total_bond_units": "16"
       },
       "network_fees": [
         {
@@ -392,7 +416,7 @@
           "LP_units": "100000000000",
           "asset": "BTC.BTC",
           "balance_asset": "102078056",
-          "balance_rune": "99345765583",
+          "balance_rune": "99346838622",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -403,7 +427,7 @@
           "LP_units": "100000000000",
           "asset": "ETH.ETH",
           "balance_asset": "1020000000",
-          "balance_rune": "98061214467",
+          "balance_rune": "98062273631",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -508,5 +532,5 @@
     },
     "version": {}
   },
-  "initial_height": "15"
+  "initial_height": "17"
 }

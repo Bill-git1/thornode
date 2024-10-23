@@ -345,7 +345,7 @@
           "data": "\n\u0018\n\u0016/types.MsgObservedTxIn",
           "log": "[{\"events\":[{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_observed_txin\"}]}]}]",
           "gas_wanted": "0",
-          "gas_used": "207221",
+          "gas_used": "209221",
           "events": [
             {
               "fee": "",
@@ -398,7 +398,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "496788DD6B735F0523FA0526A4F2EA59435BBE08340B3F328AE712260C412CBC",
-      "last_results_hash": "6AFB1AD77A2F7D6494876CAF6EAB028D5AA455E8DF60875CBA2DC7D421BD3E5D",
+      "last_results_hash": "2BDECE41F156B224CE17F4E3FEF5560AE618F834C4B78692914636F85F3A40D0",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -856,7 +856,7 @@
           "data": "\n\u0018\n\u0016/types.MsgObservedTxIn",
           "log": "[{\"events\":[{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_observed_txin\"}]}]}]",
           "gas_wanted": "0",
-          "gas_used": "198943",
+          "gas_used": "200943",
           "events": [
             {
               "fee": "",
@@ -909,7 +909,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "282AF72313F4CAC480BD87438FBC773A23086A73F60CEC611DD27062AB13C6CE",
-      "last_results_hash": "3AC7E1221BA3638707A833F7A1275DA25D618C163809EFCA1FEDD497D27EB960",
+      "last_results_hash": "5290D381EC77885357101905CF7EC00682AACFF49C62B578F7B96DFA12DD9106",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -1367,7 +1367,7 @@
           "data": "\n\u0018\n\u0016/types.MsgObservedTxIn",
           "log": "[{\"events\":[{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_observed_txin\"}]}]}]",
           "gas_wanted": "0",
-          "gas_used": "196863",
+          "gas_used": "198863",
           "events": [
             {
               "fee": "",
@@ -1420,7 +1420,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "90BA009573774934890A5831A01722B42E26F53FC6138B41218F3D9E94F26A8E",
-      "last_results_hash": "44A47CE6A60DFE8AB97A392C013208C9D36DD5856B9ADE77A66F9C5E0706781A",
+      "last_results_hash": "2273C0E64F607D7B50A46CFB04F906C6ECD4F3EACE90A58A161CBAEB506924C6",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -1878,7 +1878,7 @@
           "data": "\n\u0018\n\u0016/types.MsgObservedTxIn",
           "log": "[{\"events\":[{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_observed_txin\"}]}]}]",
           "gas_wanted": "0",
-          "gas_used": "203583",
+          "gas_used": "205583",
           "events": [
             {
               "fee": "",
@@ -1931,7 +1931,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "EA86A2B54755070C2B0D32B90570E221005D470FAA9E7997F514B054F70601F4",
-      "last_results_hash": "E365ACA3BA0E9698B1BE02F515255756CA515101C5346001FF48B2600B5452D4",
+      "last_results_hash": "D114052F6D0578534E2244ECD73F8D11791E3C75CA10AE80454740498CC7AF19",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },

@@ -120,7 +120,7 @@ Notice how a minimum amount (1342846539 / \~13.42 ETH) has been appended to the 
 
 ### [Affiliate Fees](../concepts/fees.md#affiliate-fee)
 
-Specify `affiliate` and `affiliate_bps` to skim a percentage of the swap as an affiliate fee. When a valid affiliate address and affiliate basis points are present in the memo, the protocol will skim affiliate_bps from the inbound swap amount and swap this to $RUNE with the affiliate address as the destination address.
+Specify `affiliate` and `affiliate_bps` to skim a percentage of the swap as an affiliate fee. When a valid affiliate address and affiliate basis points are present in the memo, the protocol will skim affiliate_bps from the inbound swap amount and swap this to $RUNE with the affiliate address as the destination address. Affiliates may either be a RUNE address or a registered & un-expired THORName with a THORChain alias defined. If the THORName has a preferred asset set it must also have an alias for the preferred asset's chain. If an invalid, improperly configured, or expired THORName, or an invalid RUNE address is provided as an affiliate, the affiliate fee will be skipped.
 
 Params:
 
@@ -171,6 +171,20 @@ Quote example:
 Notice how `dx:10` has been appended to the end of the memo. This instructs THORChain to skim 10 basis points from the swap. The user should still expect to receive the _expected_amount_out,_ meaning the affiliate fee has already been subtracted from this number.
 
 For more information on affiliate fees: [fees.md](../concepts/fees.md#affiliate-fee").
+
+### Multiple Affiliates
+
+Interfaces can define up to 5 valid affiliate and affiliate basis points pairs in a swap memo and the network will attempt to skim an affiliate fee for each. Alternatively, up to 5 valid affiliates and exactly one valid basis points can be defined, and the network will attempt to skim the same basis points fee for each affiliate.
+
+Valid memo examples:
+
+- `=:ETH.ETH:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430::t1/t2/t3/t4/t5:10` (Will skim 10 basis points for each of the affiliates)
+- `=:ETH.ETH:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430::t1/thor1t2hav42urasnsvwa6x6fyezaex9f953plh72pq/t3:10/20/30` (Will skim 10 basis points for `t1`, 20 basis points for `thor1t2hav42urasnsvwa6x6fyezaex9f953plh72pq`, and 30 basis points for `t3`)
+
+Invalid memo examples:
+
+- `=:ETH.ETH:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430::t1/t2/t3/t4/t5:10/20` (5 affiliates defined, but only 2 affiliate basis points)
+- `=:ETH.ETH:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430::t1/t2/t3/t4/t5/t6:10` (Too many affiliates defined)
 
 ### Streaming Swaps
 

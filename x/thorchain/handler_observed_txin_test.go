@@ -336,7 +336,7 @@ func (s *HandlerObservedTxInSuite) testHandleWithConfirmation(c *C) {
 	// make sure fund has been credit to vault correctly
 	ethCoin = keeper.vault.Coins.GetCoin(common.ETHAsset)
 	c.Assert(ethCoin.Amount.Equal(cosmos.OneUint()), Equals, true)
-	c.Check(keeper.msg.Tx.ID.Equals(tx.ID), Equals, true)
+	c.Check(keeper.msg.Tx.ID.String(), Equals, tx.ID.String())
 
 	// third finalised message
 	fMsg3 := NewMsgObservedTxIn(txs, keeper.nas[3].NodeAddress)
@@ -350,7 +350,7 @@ func (s *HandlerObservedTxInSuite) testHandleWithConfirmation(c *C) {
 	// make sure fund has not been doubled
 	ethCoin = keeper.vault.Coins.GetCoin(common.ETHAsset)
 	c.Assert(ethCoin.Amount.Equal(cosmos.OneUint()), Equals, true)
-	c.Check(keeper.msg.Tx.ID.Equals(tx.ID), Equals, true)
+	c.Check(keeper.msg.Tx.ID.String(), Equals, tx.ID.String())
 }
 
 func (s *HandlerObservedTxInSuite) testHandleWithVersion(c *C) {
@@ -386,7 +386,7 @@ func (s *HandlerObservedTxInSuite) testHandleWithVersion(c *C) {
 	_, err = handler.handle(ctx, *msg)
 	c.Assert(err, IsNil)
 	mgr.ObMgr().EndBlock(ctx, keeper)
-	c.Check(keeper.msg.Tx.ID.Equals(tx.ID), Equals, true)
+	c.Check(keeper.msg.Tx.ID.String(), Equals, tx.ID.String())
 	c.Check(keeper.observing, HasLen, 1)
 	c.Check(keeper.height, Equals, int64(12))
 	ethCoin := keeper.vault.Coins.GetCoin(common.ETHAsset)
@@ -730,6 +730,8 @@ func (s HandlerObservedTxInSuite) TestSwapWithAffiliate(c *C) {
 	queue := newSwapQueueVCUR(mgr.Keeper())
 	handler := NewObservedTxInHandler(mgr)
 
+	affAddr := GetRandomTHORAddress()
+
 	msg := NewMsgSwap(common.Tx{
 		ID:          common.TxID("5E1DF027321F1FE37CA19B9ECB11C2B4ABEC0D8322199D335D9CE4C39F85F115"),
 		FromAddress: GetRandomETHAddress(),
@@ -739,7 +741,8 @@ func (s HandlerObservedTxInSuite) TestSwapWithAffiliate(c *C) {
 		},
 		Chain: common.ETHChain,
 		Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(2*common.One))},
-	}, common.ETHAsset, GetRandomETHAddress(), cosmos.ZeroUint(), GetRandomTHORAddress(), cosmos.NewUint(1000),
+		Memo:  "=:ETH.ETH:" + GetRandomETHAddress().String() + "::" + affAddr.String() + ":1000",
+	}, common.ETHAsset, GetRandomETHAddress(), cosmos.ZeroUint(), affAddr, cosmos.NewUint(1000),
 		"",
 		"", nil,
 		MarketOrder,

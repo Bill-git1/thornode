@@ -370,7 +370,7 @@
           "data": "\n\u0018\n\u0016/types.MsgObservedTxIn",
           "log": "[{\"events\":[{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_observed_txin\"}]}]}]",
           "gas_wanted": "0",
-          "gas_used": "197611",
+          "gas_used": "199611",
           "events": [
             {
               "fee": "",
@@ -423,7 +423,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "7128D3AAB0579EF84388C03B37BD4D40DEEF80844B274443FA0252A5B6DEF49B",
-      "last_results_hash": "BF7FF9FC9B23442147F902A6FDE30A49676423073BF252EFDAE165DEAE020A6A",
+      "last_results_hash": "64F6A9EFC05064A5021BFF440FAFC841067712ABF43A711E14953DF55018F2DE",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -547,7 +547,7 @@
           "data": "\n\u0014\n\u0012/types.MsgErrataTx",
           "log": "[{\"events\":[{\"type\":\"errata\",\"attributes\":[{\"key\":\"in_tx_id\",\"value\":\"0000000000000000000000000000000000000000000000000000000000000001\"},{\"key\":\"asset\",\"value\":\"BTC.BTC\"},{\"key\":\"rune_amt\",\"value\":\"0\"},{\"key\":\"rune_add\",\"value\":\"false\"},{\"key\":\"asset_amt\",\"value\":\"5000000\"},{\"key\":\"asset_add\",\"value\":\"false\"}]},{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"errata_tx\"}]}]}]",
           "gas_wanted": "0",
-          "gas_used": "151878",
+          "gas_used": "152878",
           "events": [
             {
               "fee": "",
@@ -609,7 +609,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "B780B5940C2006E7DBB46BB19334B10B92A560DFC11DEB4D88DD8E42A5FF25F1",
-      "last_results_hash": "870EB3DDDED09172E991EF47F6DE5298142AF5CB89033D4F260128DEC02CDB65",
+      "last_results_hash": "940D077344092F5EE3AD02ADBBF2489B22B48B1F0992B0C5D839CC7F003528A3",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },

@@ -60,3 +60,20 @@ func (m *THORName) Key() string {
 	// key is Base64 endoded
 	return b64.StdEncoding.EncodeToString([]byte(strings.ToLower(m.Name)))
 }
+
+// CanReceiveAffiliateFee - returns true if the THORName can receive an affiliate fee.
+// Conditions: - Must have an owner
+//   - If no preferred asset, must have an alias for THORChain (since fee will be sent in RUNE)
+//   - If preferred asset, can receive affiliate fee (since fee is collected in AC module)
+func (m *THORName) CanReceiveAffiliateFee() bool {
+	if m.Owner.Empty() {
+		return false
+	}
+	if m.PreferredAsset.IsEmpty() {
+		// If no preferred asset set, must have a rune alias to receive rune fees
+		return !m.GetAlias(common.THORChain).IsEmpty()
+	}
+
+	// If preferred asset set, must have an alias for the preferred asset chain
+	return !m.GetAlias(m.PreferredAsset.GetChain()).IsEmpty()
+}

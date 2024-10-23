@@ -12,8 +12,8 @@ import (
 )
 
 func camelToSnakeUpper(s string) string {
-	re := regexp.MustCompile(`([a-z0-9])([A-Z])`)
-	snake := re.ReplaceAllString(s, `${1}_${2}`)
+	re := regexp.MustCompile(`([a-z0-9])([A-Z])|([A-Z]+)([A-Z][a-z])`)
+	snake := re.ReplaceAllString(s, `${1}${3}_${2}${4}`)
 	return strings.ToUpper(snake)
 }
 
@@ -51,6 +51,7 @@ func init() {
 		SaversEjectInterval:                 60,
 		SystemIncomeBurnRateBps:             0,
 		DevFundSystemIncomeBps:              0,
+		MultipleAffiliatesMaxCount:          5,
 	}
 	boolOverrides = map[ConstantName]bool{
 		StrictBondLiquidityRatio: false,

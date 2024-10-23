@@ -100,7 +100,7 @@ func (p *parser) ParseLoanOpenMemo() (LoanOpenMemo, error) {
 	targetAddress := p.getAddressWithKeeper(2, true, common.NoAddress, targetAsset.GetChain())
 	minOut := p.getUintWithScientificNotation(3, false, 0)
 	affAddr := p.getAddressWithKeeper(4, false, common.NoAddress, common.THORChain)
-	tn := p.getTHORName(4, false, types.NewTHORName("", 0, nil))
+	tn := p.getTHORName(4, false, types.NewTHORName("", 0, nil), -1)
 	affPts := p.getUintWithMaxValue(5, false, 0, constants.MaxBasisPts)
 	dexAgg := p.get(6)
 	dexTargetAddr := p.get(7)

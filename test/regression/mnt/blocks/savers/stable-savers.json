@@ -1480,7 +1480,7 @@
           "data": "\n\u0018\n\u0016/types.MsgObservedTxIn",
           "log": "[{\"events\":[{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_observed_txin\"}]},{\"type\":\"withdraw\",\"attributes\":[{\"key\":\"pool\",\"value\":\"ETH/USDC-0X9999999999999999999999999999999999999999\"},{\"key\":\"liquidity_provider_units\",\"value\":\"990087500\"},{\"key\":\"basis_points\",\"value\":\"10000\"},{\"key\":\"asymmetry\",\"value\":\"0.000000000000000000\"},{\"key\":\"emit_asset\",\"value\":\"990123631\"},{\"key\":\"emit_rune\",\"value\":\"0\"},{\"key\":\"id\",\"value\":\"0000000000000000000000000000000000000000000000000000000000000004\"},{\"key\":\"chain\",\"value\":\"ETH\"},{\"key\":\"from\",\"value\":\"0xdd99304abf262d653e2eb6722d874c2b86efdcea\"},{\"key\":\"to\",\"value\":\"0xd58610f89265a2fb637ac40edf59141ff873b266\"},{\"key\":\"coin\",\"value\":\"10000 ETH.ETH\"},{\"key\":\"memo\",\"value\":\"-:ETH/USDC-0X9999999999999999999999999999999999999999:10000\"}]}]}]",
           "gas_wanted": "0",
-          "gas_used": "237579",
+          "gas_used": "238579",
           "events": [
             {
               "fee": "",
@@ -1548,7 +1548,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "E90511A50538140E0B856ECA408A75C73C12CFA0D3A705EF81104B29344DD6F0",
-      "last_results_hash": "8F4C6D64850B0E423252AFBF316D32C5576E8F4B8DBD64C0B2BF01D04FB61715",
+      "last_results_hash": "474CED88CF6649576F8F6FE7467F335D0835927CF8E427D8CEBD961A17D061CF",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },

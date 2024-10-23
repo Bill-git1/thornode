@@ -1108,7 +1108,7 @@
         "id": "0000000000000000000000000000000000000000000000000000000000000001",
         "liquidity_fee": "542367",
         "liquidity_fee_in_rune": "542367",
-        "memo": "=:THOR.RUNE:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr::test:500",
+        "memo": "=:THOR.RUNE:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u:0:test:0",
         "pool": "BTC.BTC",
         "pool_slip": "24",
         "streaming_swap_count": "1",
@@ -1304,7 +1304,7 @@
           "data": "\n\u0018\n\u0016/types.MsgObservedTxIn",
           "log": "[{\"events\":[{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_observed_txin\"}]}]}]",
           "gas_wanted": "0",
-          "gas_used": "270670",
+          "gas_used": "279696",
           "events": [
             {
               "fee": "",
@@ -1357,7 +1357,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "DF0DA9C6F9C6552C05C99F46107B72A35A809DE5AD332AF70523E1D1B9932EF4",
-      "last_results_hash": "4EF7970A65B309298DA8034A7D6CF89DAFD0A57C20B9A0EFAC2842A6665F279E",
+      "last_results_hash": "BFF196C2720DD52B7E4AAF8F260B2F17ABFDC433C416A86D85E35D6F53715347",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -1527,7 +1527,7 @@
           "data": "\n\u0013\n\u0011/types.MsgDeposit",
           "log": "[{\"events\":[{\"type\":\"coin_received\",\"attributes\":[{\"key\":\"receiver\",\"value\":\"tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2\"},{\"key\":\"amount\",\"value\":\"5000000000rune\"},{\"key\":\"receiver\",\"value\":\"tthor1dl7un46w7l7f3ewrnrm6nq58nerjtp0d82uzjg\"},{\"key\":\"amount\",\"value\":\"250000000rune\"}]},{\"type\":\"coin_spent\",\"attributes\":[{\"key\":\"spender\",\"value\":\"tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej\"},{\"key\":\"amount\",\"value\":\"5000000000rune\"},{\"key\":\"spender\",\"value\":\"tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2\"},{\"key\":\"amount\",\"value\":\"250000000rune\"}]},{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"deposit\"},{\"key\":\"sender\",\"value\":\"tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej\"},{\"key\":\"sender\",\"value\":\"tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2\"}]},{\"type\":\"transfer\",\"attributes\":[{\"key\":\"recipient\",\"value\":\"tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2\"},{\"key\":\"sender\",\"value\":\"tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej\"},{\"key\":\"amount\",\"value\":\"5000000000rune\"},{\"key\":\"recipient\",\"value\":\"tthor1dl7un46w7l7f3ewrnrm6nq58nerjtp0d82uzjg\"},{\"key\":\"sender\",\"value\":\"tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2\"},{\"key\":\"amount\",\"value\":\"250000000rune\"}]}]}]",
           "gas_wanted": "0",
-          "gas_used": "212020",
+          "gas_used": "221076",
           "events": [
             {
               "fee": "",
@@ -1640,7 +1640,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "53CD20416F8C71DD302C40FCF517256DCA7AF5CDBA0EDE17371D774D7C4E9C41",
-      "last_results_hash": "B91C383AFC63B97102B01A20EC022422377D20F311746571075E6491AB2107CE",
+      "last_results_hash": "FD418249CAAF22774540A755DCF2BE4BAABB14E172DBAF75DCD59BBE026B19B5",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -2138,7 +2138,7 @@
           "data": "\n\u0013\n\u0011/types.MsgDeposit",
           "log": "[{\"events\":[{\"type\":\"coin_received\",\"attributes\":[{\"key\":\"receiver\",\"value\":\"tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2\"},{\"key\":\"amount\",\"value\":\"50000000000rune\"},{\"key\":\"receiver\",\"value\":\"tthor1dl7un46w7l7f3ewrnrm6nq58nerjtp0d82uzjg\"},{\"key\":\"amount\",\"value\":\"2500000000rune\"}]},{\"type\":\"coin_spent\",\"attributes\":[{\"key\":\"spender\",\"value\":\"tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej\"},{\"key\":\"amount\",\"value\":\"50000000000rune\"},{\"key\":\"spender\",\"value\":\"tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2\"},{\"key\":\"amount\",\"value\":\"2500000000rune\"}]},{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"deposit\"},{\"key\":\"sender\",\"value\":\"tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej\"},{\"key\":\"sender\",\"value\":\"tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2\"}]},{\"type\":\"transfer\",\"attributes\":[{\"key\":\"recipient\",\"value\":\"tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2\"},{\"key\":\"sender\",\"value\":\"tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej\"},{\"key\":\"amount\",\"value\":\"50000000000rune\"},{\"key\":\"recipient\",\"value\":\"tthor1dl7un46w7l7f3ewrnrm6nq58nerjtp0d82uzjg\"},{\"key\":\"sender\",\"value\":\"tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2\"},{\"key\":\"amount\",\"value\":\"2500000000rune\"}]}]}]",
           "gas_wanted": "0",
-          "gas_used": "244159",
+          "gas_used": "253215",
           "events": [
             {
               "fee": "",
@@ -2251,7 +2251,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "2C15FFB9034B793AA88D80FC07BE2A26E4F1238FCFEA679F3C6F6A3510BF5DEF",
-      "last_results_hash": "A95C5ED3D92CC1AC22B148A2A7EFDBE307F66EA45C6D6B4F148F90009AC8A27D",
+      "last_results_hash": "9E63B413AB0442DD3C987B6FA9AC644809A4A970B86D047AEACE768B4A4633D5",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -2833,7 +2833,7 @@
         "id": "0000000000000000000000000000000000000000000000000000000000000005",
         "liquidity_fee": "1322956",
         "liquidity_fee_in_rune": "1322956",
-        "memo": "=:THOR.RUNE:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr::test:500",
+        "memo": "=:THOR.RUNE:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u:0:test:0",
         "pool": "BTC.BTC",
         "pool_slip": "31",
         "streaming_swap_count": "1",
@@ -3029,7 +3029,7 @@
           "data": "\n\u0018\n\u0016/types.MsgObservedTxIn",
           "log": "[{\"events\":[{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_observed_txin\"}]}]}]",
           "gas_wanted": "0",
-          "gas_used": "270760",
+          "gas_used": "279786",
           "events": [
             {
               "fee": "",
@@ -3082,7 +3082,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "A468A872C6FDE724ED55DABE83E17124043884B1931F1F1A2FEBA3A9ADC00EFB",
-      "last_results_hash": "01B98F04BA1D5C538B75B2269E4F687FF366C527A9858BE42CA3ECDDBBD329AA",
+      "last_results_hash": "36A972C73A463813503B9F4C56A2EC40EC57899102AB8EB8338CC043A929CA96",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -3352,7 +3352,7 @@
         "id": "0000000000000000000000000000000000000000000000000000000000000006",
         "liquidity_fee": "46887372",
         "liquidity_fee_in_rune": "46887372",
-        "memo": "=:THOR.RUNE:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr::test:500",
+        "memo": "=:THOR.RUNE:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u:0:test:0",
         "pool": "ETH.ETH",
         "pool_slip": "250",
         "streaming_swap_count": "1",
@@ -3548,7 +3548,7 @@
           "data": "\n\u0018\n\u0016/types.MsgObservedTxIn",
           "log": "[{\"events\":[{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_observed_txin\"}]}]}]",
           "gas_wanted": "0",
-          "gas_used": "268249",
+          "gas_used": "277275",
           "events": [
             {
               "fee": "",
@@ -3601,7 +3601,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "CCF9F31C9CCACF2C723A55ADE8A59F72BCE1F14F510A0052F3E9E9257C19A512",
-      "last_results_hash": "179D713571FAE95408FBE94A588C880E1A5EA504E827A6A5EB0C0461DEA99663",
+      "last_results_hash": "5DA79D4274993D314518AC010CD6C67CE9CF1D289307C608759E444E42F78A5C",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -3771,7 +3771,7 @@
           "data": "\n\u0013\n\u0011/types.MsgDeposit",
           "log": "[{\"events\":[{\"type\":\"coin_received\",\"attributes\":[{\"key\":\"receiver\",\"value\":\"tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2\"},{\"key\":\"amount\",\"value\":\"50000000000rune\"},{\"key\":\"receiver\",\"value\":\"tthor1dl7un46w7l7f3ewrnrm6nq58nerjtp0d82uzjg\"},{\"key\":\"amount\",\"value\":\"2500000000rune\"}]},{\"type\":\"coin_spent\",\"attributes\":[{\"key\":\"spender\",\"value\":\"tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej\"},{\"key\":\"amount\",\"value\":\"50000000000rune\"},{\"key\":\"spender\",\"value\":\"tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2\"},{\"key\":\"amount\",\"value\":\"2500000000rune\"}]},{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"deposit\"},{\"key\":\"sender\",\"value\":\"tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej\"},{\"key\":\"sender\",\"value\":\"tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2\"}]},{\"type\":\"transfer\",\"attributes\":[{\"key\":\"recipient\",\"value\":\"tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2\"},{\"key\":\"sender\",\"value\":\"tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej\"},{\"key\":\"amount\",\"value\":\"50000000000rune\"},{\"key\":\"recipient\",\"value\":\"tthor1dl7un46w7l7f3ewrnrm6nq58nerjtp0d82uzjg\"},{\"key\":\"sender\",\"value\":\"tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2\"},{\"key\":\"amount\",\"value\":\"2500000000rune\"}]}]}]",
           "gas_wanted": "0",
-          "gas_used": "243893",
+          "gas_used": "252949",
           "events": [
             {
               "fee": "",

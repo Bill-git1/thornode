@@ -143,6 +143,19 @@ func (p *parser) get(idx int) string {
 	return p.parts[idx]
 }
 
+// Safe accessor for split memo parts - always returns empty string for indices that are
+// out of bounds. Returns the sub-index of a split part (with separator "/").
+func (p *parser) getSubIndex(idx, subIdx int) string {
+	if idx < 0 || len(p.parts) <= idx {
+		return ""
+	}
+	subParts := strings.Split(p.parts[idx], "/")
+	if subIdx < 0 || len(subParts) <= subIdx {
+		return ""
+	}
+	return subParts[subIdx]
+}
+
 func (p *parser) getInt64(idx int, required bool, def int64) int64 {
 	p.incRequired(required)
 	value, err := strconv.ParseInt(p.get(idx), 10, 64)
@@ -231,6 +244,36 @@ func (p *parser) getAddressWithKeeper(idx int, required bool, def common.Address
 	return addr
 }
 
+func (p *parser) getStringArrayBySeparator(idx int, required bool, separator string) []string {
+	p.incRequired(required)
+	value := p.get(idx)
+	if value == "" {
+		return []string{}
+	}
+	return strings.Split(value, separator)
+}
+
+func (p *parser) getUintArrayBySeparator(idx int, required bool, separator string) []cosmos.Uint {
+	p.incRequired(required)
+	value := p.get(idx)
+	if value == "" {
+		return []cosmos.Uint{}
+	}
+	strArray := strings.Split(value, separator)
+	result := make([]cosmos.Uint, 0, len(strArray))
+	for _, str := range strArray {
+		u, err := cosmos.ParseUint(str)
+		if err != nil {
+			if required || str != "" {
+				p.addErr(fmt.Errorf("cannot parse '%s' as an uint: %w", str, err))
+			}
+			return []cosmos.Uint{}
+		}
+		result = append(result, u)
+	}
+	return result
+}
+
 func (p *parser) getAddressAndRefundAddressWithKeeper(idx int, required bool, def common.Address, chain common.Chain) (common.Address, common.Address) {
 	p.incRequired(required)
 
@@ -310,9 +353,12 @@ func (p *parser) getTxID(idx int, required bool, def common.TxID) common.TxID {
 	return value
 }
 
-func (p *parser) getTHORName(idx int, required bool, def types.THORName) types.THORName {
+func (p *parser) getTHORName(idx int, required bool, def types.THORName, subIndex int) types.THORName {
 	p.incRequired(required)
 	name := p.get(idx)
+	if subIndex >= 0 {
+		name = p.getSubIndex(idx, subIndex)
+	}
 	if p.keeper == nil {
 		return def
 	}
