@@ -134,7 +134,7 @@ func (h BondHandler) handle(ctx cosmos.Context, msg MsgBond) error {
 	}
 }
 
-func (h BondHandler) handleV105(ctx cosmos.Context, msg MsgBond) error {
+func (h BondHandler) handleV105(ctx cosmos.Context, msg MsgBond) (err error) {
 	nodeAccount, err := h.mgr.Keeper().GetNodeAccount(ctx, msg.NodeAddress)
 	if err != nil {
 		return ErrInternal(err, fmt.Sprintf("fail to get node account(%s)", msg.NodeAddress))
@@ -174,8 +174,7 @@ func (h BondHandler) handleV105(ctx cosmos.Context, msg MsgBond) error {
 	// so as the node address will be created on THORChain otherwise node account won't be able to send tx
 	if acct == nil && nodeAccount.Bond.GTE(cosmos.NewUint(common.One)) {
 		coin := common.NewCoin(common.RuneNative, cosmos.NewUint(common.One))
-		// trunk-ignore(golangci-lint/govet): shadow
-		if err := h.mgr.Keeper().SendFromModuleToAccount(ctx, BondName, msg.NodeAddress, common.NewCoins(coin)); err != nil {
+		if err = h.mgr.Keeper().SendFromModuleToAccount(ctx, BondName, msg.NodeAddress, common.NewCoins(coin)); err != nil {
 			ctx.Logger().Error("fail to send one RUNE to node address", "error", err)
 			nodeAccount.Status = NodeUnknown
 		}
@@ -184,9 +183,8 @@ func (h BondHandler) handleV105(ctx cosmos.Context, msg MsgBond) error {
 		tx := common.Tx{}
 		tx.ID = common.BlankTxID
 		tx.ToAddress = common.Address(nodeAccount.String())
-		// trunk-ignore(golangci-lint/govet): shadow
 		bondEvent := NewEventBond(cosmos.NewUint(common.One), BondCost, tx, &nodeAccount, nil)
-		if err := h.mgr.EventMgr().EmitEvent(ctx, bondEvent); err != nil {
+		if err = h.mgr.EventMgr().EmitEvent(ctx, bondEvent); err != nil {
 			ctx.Logger().Error("fail to emit bond event", "error", err)
 		}
 	}
@@ -219,16 +217,16 @@ func (h BondHandler) handleV105(ctx cosmos.Context, msg MsgBond) error {
 		bp.NodeOperatorFee = cosmos.NewUint(uint64(msg.OperatorFee))
 	}
 
-	if err := h.mgr.Keeper().SetNodeAccount(ctx, nodeAccount); err != nil {
+	if err = h.mgr.Keeper().SetNodeAccount(ctx, nodeAccount); err != nil {
 		return ErrInternal(err, fmt.Sprintf("fail to save node account(%s)", nodeAccount.String()))
 	}
 
-	if err := h.mgr.Keeper().SetBondProviders(ctx, bp); err != nil {
+	if err = h.mgr.Keeper().SetBondProviders(ctx, bp); err != nil {
 		return ErrInternal(err, fmt.Sprintf("fail to save bond providers(%s)", bp.NodeAddress.String()))
 	}
 
 	bondEvent := NewEventBond(msg.Bond, BondPaid, msg.TxIn, &nodeAccount, from)
-	if err := h.mgr.EventMgr().EmitEvent(ctx, bondEvent); err != nil {
+	if err = h.mgr.EventMgr().EmitEvent(ctx, bondEvent); err != nil {
 		ctx.Logger().Error("fail to emit bond event", "error", err)
 	}
 
