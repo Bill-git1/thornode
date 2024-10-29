@@ -671,6 +671,9 @@ func queryQuoteSwap(ctx cosmos.Context, path []string, req abci.RequestQuery, mg
 		}
 		// Attempt each affiliate swap
 		for i, affiliate := range affiliates {
+			if affiliateBps[i].IsZero() {
+				continue
+			}
 			affAmt := common.GetSafeShare(affiliateBps[i], cosmos.NewUint(1000), amount)
 			if fromAsset.IsRune() {
 				fee := mgr.Keeper().GetNativeTxFee(ctx)

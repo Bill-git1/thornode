@@ -738,3 +738,15 @@ params:
   destination: {{ addr_eth_fox }}
 asserts:
   - .memo == "=:ETH.ETH:{{ addr_eth_fox }}::xx/yy/zz:10/20/30"
+---
+type: check
+endpoint: http://localhost:1317/thorchain/quote/swap
+params:
+  from_asset: THOR.RUNE
+  to_asset: ETH.ETH
+  amount: 1000000000
+  affiliate: xx
+  affiliate_bps: 0
+  destination: {{ addr_eth_fox }}
+asserts:
+  - .memo == "=:ETH.ETH:{{ addr_eth_fox }}::xx:0"
