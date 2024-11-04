@@ -347,20 +347,16 @@ docker-gitlab-build:
 
 thorscan-build:
 	@docker build tools/thorscan -f tools/thorscan/Dockerfile \
-		-t registry.gitlab.com/thorchain/thornode:thorscan-${GITREF} \
-		-t registry.gitlab.com/thorchain/thornode:thorscan
+		$(shell sh ./build/docker/semver_tags.sh registry.gitlab.com/thorchain/thornode thorscan-${BRANCH} $(shell cat version))
 
-thorscan-gitlab-push:
-	@docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
-	@docker push registry.gitlab.com/thorchain/thornode:thorscan-${GITREF}
-	@docker push registry.gitlab.com/thorchain/thornode:thorscan
+thorscan-gitlab-push: docker-gitlab-login
+	@./build/docker/semver_tags.sh registry.gitlab.com/thorchain/thornode thorscan-${BRANCH} $(shell cat version) \
+		| xargs -n1 | grep registry | xargs -n1 docker push
 
 events-build:
 	@docker build . -f tools/events/Dockerfile \
-		-t registry.gitlab.com/thorchain/thornode:events-${GITREF} \
-		-t registry.gitlab.com/thorchain/thornode:events
+		$(shell sh ./build/docker/semver_tags.sh registry.gitlab.com/thorchain/thornode events-${BRANCH} $(shell cat version))
 
-events-gitlab-push:
-	@docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
-	@docker push registry.gitlab.com/thorchain/thornode:events-${GITREF}
-	@docker push registry.gitlab.com/thorchain/thornode:events
+events-gitlab-push: docker-gitlab-login
+	@./build/docker/semver_tags.sh registry.gitlab.com/thorchain/thornode events-${BRANCH} $(shell cat version) \
+		| xargs -n1 | grep registry | xargs -n1 docker push

@@ -103,7 +103,7 @@ lint:
     - make lint-ci
 
 build-thornode:
-  rules:
+  rules: &build-thornode-rules
     - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH
       when: never
     - if: $CI_COMMIT_BRANCH == "develop"
@@ -186,11 +186,7 @@ pages:
     - make docs-generate
 
 build-thorscan:
-  rules:
-    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH
-      when: never
-    - if: $CI_COMMIT_BRANCH == "develop"
-      when: always
+  rules: *build-thornode-rules
   stage: build
   <<: *use_dind
   script:
@@ -199,11 +195,7 @@ build-thorscan:
     - make thorscan-gitlab-push
 
 build-events:
-  rules:
-    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH
-      when: never
-    - if: $CI_COMMIT_BRANCH == "develop"
-      when: always
+  rules: *build-thornode-rules
   stage: build
   image: docker:20.10.12
   services:
