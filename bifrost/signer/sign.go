@@ -380,8 +380,7 @@ func (s *Signer) processKeygenBlock(keygenBlock ttypes.KeygenBlock) {
 		}
 
 		// generate a verification signature to ensure we can sign with the new key
-		// TODO uncomment verification in v138
-		secp256k1Sig := make([]byte, 0) // s.secp256k1VerificationSignature(pubKey.Secp256k1)
+		secp256k1Sig := s.secp256k1VerificationSignature(pubKey.Secp256k1)
 
 		if err = s.sendKeygenToThorchain(keygenBlock.Height, pubKey.Secp256k1, secp256k1Sig, blame, keygenReq.GetMembers(), keygenReq.Type, keygenTime); err != nil {
 			s.errCounter.WithLabelValues("fail_to_broadcast_keygen", "").Inc()
@@ -418,6 +417,11 @@ func (s *Signer) secp256k1VerificationSignature(pk common.PubKey) []byte {
 	if err != nil {
 		// this is expected in some cases if we were not in the signing party
 		s.logger.Info().Err(err).Msg("fail secp256k1 check signing")
+		return nil
+
+	} else if sigBytes == nil {
+		// This is expected in other cases when not in the signing party,
+		// when RemoteSign's len(resp.R) and len(resp.S) are both nil.
 		return nil
 	}
 
