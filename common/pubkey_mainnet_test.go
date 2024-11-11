@@ -8,8 +8,8 @@ import (
 
 	. "gopkg.in/check.v1"
 
+	"github.com/cometbft/cometbft/crypto/secp256k1"
 	"github.com/cosmos/cosmos-sdk/crypto/codec"
-	"github.com/tendermint/tendermint/crypto/secp256k1"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 )
 
@@ -24,7 +24,7 @@ func (s *PubKeyTestSuite) TestPubKeyGetAddress(c *C) {
 
 		c.Assert(hex.EncodeToString(pub), Equals, hex.EncodeToString(pubB))
 
-		tmp, err := codec.FromTmPubKeyInterface(pubKey)
+		tmp, err := codec.FromCmtPubKeyInterface(pubKey)
 		c.Assert(err, IsNil)
 		pubBech32, err := cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeAccPub, tmp)
 		c.Assert(err, IsNil)

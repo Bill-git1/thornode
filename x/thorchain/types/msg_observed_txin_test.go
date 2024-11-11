@@ -24,7 +24,6 @@ func (s *MsgObservedTxInSuite) TestMsgObservedTxIn(c *C) {
 
 	m := NewMsgObservedTxIn(ObservedTxs{tx}, acc)
 	EnsureMsgBasicCorrect(m, c)
-	c.Check(m.Type(), Equals, "set_observed_txin")
 
 	m1 := NewMsgObservedTxIn(nil, acc)
 	c.Assert(m1.ValidateBasic(), NotNil)

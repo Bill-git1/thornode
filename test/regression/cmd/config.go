@@ -8,13 +8,13 @@ import (
 	"strings"
 	"time"
 
+	tmhttp "github.com/cometbft/cometbft/rpc/client/http"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	tmhttp "github.com/tendermint/tendermint/rpc/client/http"
 
 	"gitlab.com/thorchain/thornode/app"
 	"gitlab.com/thorchain/thornode/app/params"
@@ -33,7 +33,10 @@ import (
 // Cosmos
 ////////////////////////////////////////////////////////////////////////////////////////
 
-var encodingConfig params.EncodingConfig
+var (
+	encodingConfig params.EncodingConfig
+	keyRing        keyring.Keyring
+)
 
 func init() {
 	// initialize the bech32 prefix for mocknet
@@ -45,6 +48,7 @@ func init() {
 
 	// initialize the codec
 	encodingConfig = app.MakeEncodingConfig()
+	keyRing = keyring.NewInMemory(encodingConfig.Codec)
 
 	// Having set the prefixes, derive the module addresses.
 	ModuleAddrTransfer = authtypes.NewModuleAddress("transfer").String() // "tthor1yl6hdjhmkf37639730gffanpzndzdpmhv07zme"
@@ -73,8 +77,7 @@ func clientContextAndFactory(routine int) (client.Context, tx.Factory) {
 	clientCtx := client.Context{
 		Client:            rpcClient,
 		ChainID:           "thorchain",
-		JSONCodec:         encodingConfig.Marshaler,
-		Codec:             encodingConfig.Marshaler,
+		Codec:             encodingConfig.Codec,
 		InterfaceRegistry: encodingConfig.InterfaceRegistry,
 		Keyring:           keyRing,
 		BroadcastMode:     flags.BroadcastSync,
@@ -178,7 +181,6 @@ func init() {
 ////////////////////////////////////////////////////////////////////////////////////////
 
 var (
-	keyRing            = keyring.NewInMemory()
 	addressToName      = map[string]string{} // thor...->dog, 0x...->dog
 	templateAddress    = map[string]string{} // addr_thor_dog->thor..., addr_eth_dog->0x...
 	templatePubKey     = map[string]string{} // pubkey_dog->thorpub...

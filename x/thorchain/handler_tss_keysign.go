@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/armon/go-metrics"
 	"github.com/blang/semver"
 	"github.com/cosmos/cosmos-sdk/telemetry"
+	"github.com/hashicorp/go-metrics"
 	tssMessages "gitlab.com/thorchain/thornode/bifrost/tss/go-tss/messages"
 
 	"gitlab.com/thorchain/thornode/common"
@@ -58,9 +58,11 @@ func (h TssKeysignHandler) validate(ctx cosmos.Context, msg MsgTssKeysignFail) e
 }
 
 func (h TssKeysignHandler) validateV114(ctx cosmos.Context, msg MsgTssKeysignFail) error {
+	// ValidateBasic is also executed in message service router's handler and isn't versioned there
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
+
 	m, err := NewMsgTssKeysignFail(msg.Height, msg.Blame, msg.Memo, msg.Coins, msg.Signer, msg.PubKey)
 	if err != nil {
 		ctx.Logger().Error("fail to reconstruct keysign fail msg", "error", err)

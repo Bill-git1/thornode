@@ -104,7 +104,7 @@ func AsgardInvariant(k KVStore) common.Invariant {
 		expNative, _ := poolCoins.Add(swapCoins...).Native()
 
 		// note: coins must be sorted for SafeSub
-		diffCoins, _ := asgardCoins.SafeSub(expNative.Sort())
+		diffCoins, _ := asgardCoins.SafeSub(expNative.Sort()...)
 		if !diffCoins.IsZero() {
 			broken = true
 			for _, coin := range diffCoins {

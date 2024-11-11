@@ -31,6 +31,6 @@ asserts:
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/network?height=1000
-status: 404
+status: 500
 asserts:
-  - .error|test("cannot query with height in the future")
+  - .message|test("cannot query with height in the future")

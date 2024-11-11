@@ -95,9 +95,6 @@ func main() {
 	cfg.SetCoinType(cmd.THORChainCoinType)
 	cfg.SetPurpose(cmd.THORChainCoinPurpose)
 	cfg.Seal()
-	types.SetCoinDenomRegex(func() string {
-		return cmd.DenomRegex
-	})
 
 	// prompt for thornode endpoint
 	reader := bufio.NewReader(os.Stdin)

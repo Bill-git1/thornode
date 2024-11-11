@@ -17,8 +17,8 @@ message Asset {
 }
 
 message Coin {
-    Asset asset = 1 [(gogoproto.nullable) = false];
-    string amount = 2 [(gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Uint", (gogoproto.nullable) = false];
+    Asset asset = 1 [(gogoproto.jsontag) = "asset", (gogoproto.nullable) = false, (gogoproto.customtype) = "Asset"];
+    string amount = 2 [(gogoproto.jsontag) = "amount", (gogoproto.customtype) = "cosmossdk.io/math.Uint", (gogoproto.nullable) = false];
     int64 decimals = 3;
 }
 
@@ -33,17 +33,17 @@ message Tx {
     string chain = 2 [(gogoproto.casttype) = "Chain"];
     string from_address = 3 [(gogoproto.casttype) = "Address"];
     string to_address = 4 [(gogoproto.casttype) = "Address"];
-    repeated Coin coins = 5 [(gogoproto.castrepeated) = "Coins", (gogoproto.nullable) = false];
-    repeated Coin gas = 6 [(gogoproto.castrepeated) = "Gas", (gogoproto.nullable) = false];
+    repeated Coin coins = 5 [(gogoproto.jsontag) = "coins", (gogoproto.castrepeated) = "Coins", (gogoproto.nullable) = false];
+    repeated Coin gas = 6 [(gogoproto.jsontag) = "gas", (gogoproto.castrepeated) = "Gas", (gogoproto.nullable) = false];
     string memo = 7;
 }
 
 message Fee {
     repeated Coin coins = 1 [(gogoproto.castrepeated) = "Coins", (gogoproto.nullable) = false];
-    string pool_deduct = 2 [(gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Uint", (gogoproto.nullable) = false];
+    string pool_deduct = 2 [(gogoproto.customtype) = "cosmossdk.io/math.Uint", (gogoproto.nullable) = false];
 }
 
 message ProtoUint {
     option (gogoproto.stringer) = true;
-    string value = 1 [(gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Uint", (gogoproto.nullable) = false];
+    string value = 1 [(gogoproto.customtype) = "cosmossdk.io/math.Uint", (gogoproto.nullable) = false];
 }

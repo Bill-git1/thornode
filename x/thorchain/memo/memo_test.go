@@ -4,20 +4,23 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/cosmos/cosmos-sdk/simapp"
-	"github.com/cosmos/cosmos-sdk/store"
+	"cosmossdk.io/log"
+	"cosmossdk.io/store"
+	storemetrics "cosmossdk.io/store/metrics"
+	upgradekeeper "cosmossdk.io/x/upgrade/keeper"
+	upgradetypes "cosmossdk.io/x/upgrade/types"
+	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	dbm "github.com/cosmos/cosmos-db"
+	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/module/testutil"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	"github.com/cosmos/cosmos-sdk/x/bank"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
-	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
-	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
-	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	"github.com/tendermint/tendermint/libs/log"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
-	dbm "github.com/tendermint/tm-db"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/common"
@@ -40,42 +43,61 @@ func (s *MemoSuite) SetUpSuite(c *C) {
 	types.SetupConfigForTest()
 	keyAcc := cosmos.NewKVStoreKey(authtypes.StoreKey)
 	keyBank := cosmos.NewKVStoreKey(banktypes.StoreKey)
-	keyParams := cosmos.NewKVStoreKey(paramstypes.StoreKey)
-	tkeyParams := cosmos.NewTransientStoreKey(paramstypes.TStoreKey)
 	keyThorchain := cosmos.NewKVStoreKey(types.StoreKey)
 	keyUpgrade := cosmos.NewKVStoreKey(upgradetypes.StoreKey)
 
 	db := dbm.NewMemDB()
-	ms := store.NewCommitMultiStore(db)
+	ms := store.NewCommitMultiStore(db, log.NewNopLogger(), storemetrics.NewNoOpMetrics())
 	ms.MountStoreWithDB(keyAcc, cosmos.StoreTypeIAVL, db)
-	ms.MountStoreWithDB(keyParams, cosmos.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(keyThorchain, cosmos.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(keyBank, cosmos.StoreTypeIAVL, db)
-	ms.MountStoreWithDB(tkeyParams, cosmos.StoreTypeTransient, db)
 	err := ms.LoadLatestVersion()
 	c.Assert(err, IsNil)
 
 	ctx := cosmos.NewContext(ms, tmproto.Header{ChainID: "thorchain"}, false, log.NewNopLogger())
 	s.ctx = ctx.WithBlockHeight(18)
 
-	legacyCodec := types.MakeTestCodec()
-	marshaler := simapp.MakeTestEncodingConfig().Marshaler
+	encodingConfig := testutil.MakeTestEncodingConfig(
+		bank.AppModuleBasic{},
+		auth.AppModuleBasic{},
+	)
 
-	pk := paramskeeper.NewKeeper(marshaler, legacyCodec, keyParams, tkeyParams)
-	ak := authkeeper.NewAccountKeeper(marshaler, keyAcc, pk.Subspace(authtypes.ModuleName), authtypes.ProtoBaseAccount, map[string][]string{
-		types.ModuleName:  {authtypes.Minter, authtypes.Burner},
-		types.AsgardName:  {},
-		types.BondName:    {},
-		types.ReserveName: {},
-		types.LendingName: {},
-	})
+	ak := authkeeper.NewAccountKeeper(
+		encodingConfig.Codec,
+		runtime.NewKVStoreService(keyAcc),
+		authtypes.ProtoBaseAccount,
+		map[string][]string{
+			types.ModuleName:  {authtypes.Minter, authtypes.Burner},
+			types.AsgardName:  {},
+			types.BondName:    {},
+			types.ReserveName: {},
+			types.LendingName: {},
+		},
+		authcodec.NewBech32Codec(sdk.GetConfig().GetBech32AccountAddrPrefix()),
+		sdk.GetConfig().GetBech32AccountAddrPrefix(),
+		authtypes.NewModuleAddress(types.ModuleName).String(),
+	)
 
-	bk := bankkeeper.NewBaseKeeper(marshaler, keyBank, ak, pk.Subspace(banktypes.ModuleName), nil)
+	bk := bankkeeper.NewBaseKeeper(
+		encodingConfig.Codec,
+		runtime.NewKVStoreService(keyBank),
+		ak,
+		nil,
+		authtypes.NewModuleAddress(types.ModuleName).String(),
+		log.NewNopLogger(),
+	)
 	c.Assert(bk.MintCoins(ctx, types.ModuleName, cosmos.Coins{
 		cosmos.NewCoin(common.RuneAsset().Native(), cosmos.NewInt(200_000_000_00000000)),
 	}), IsNil)
-	uk := upgradekeeper.NewKeeper(nil, keyUpgrade, marshaler, c.MkDir(), nil)
-	s.k = kv1.NewKVStore(marshaler, bk, ak, uk, keyThorchain, types.GetCurrentVersion())
+	uk := upgradekeeper.NewKeeper(
+		nil,
+		runtime.NewKVStoreService(keyUpgrade),
+		encodingConfig.Codec,
+		c.MkDir(),
+		nil,
+		authtypes.NewModuleAddress(types.ModuleName).String(),
+	)
+	s.k = kv1.NewKVStore(encodingConfig.Codec, bk, ak, uk, keyThorchain, types.GetCurrentVersion())
 }
 
 func (s *MemoSuite) TestTxType(c *C) {

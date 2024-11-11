@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/cenkalti/backoff"
 	"github.com/prometheus/client_golang/prometheus"
@@ -76,7 +78,12 @@ func NewSigner(cfg config.BifrostSignerConfiguration,
 	}
 	var na *ttypes.NodeAccount
 	for i := 0; i < 300; i++ { // wait for 5 min before timing out
-		na, err = thorchainBridge.GetNodeAccount(thorKeys.GetSignerInfo().GetAddress().String())
+		var signerAddr sdktypes.AccAddress
+		signerAddr, err = thorKeys.GetSignerInfo().GetAddress()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get address from thorKeys signer: %w", err)
+		}
+		na, err = thorchainBridge.GetNodeAccount(signerAddr.String())
 		if err != nil {
 			return nil, fmt.Errorf("fail to get node account from thorchain,err:%w", err)
 		}
@@ -460,7 +467,7 @@ func (s *Signer) sendKeygenToThorchain(height int64, poolPk common.PubKey, secp2
 	var err error
 	if s.cfg.BackupKeyshares && !poolPk.IsEmpty() {
 		keyshares, err = tss.EncryptKeyshares(
-			filepath.Join(app.DefaultNodeHome(), fmt.Sprintf("localstate-%s.json", poolPk)),
+			filepath.Join(app.DefaultNodeHome, fmt.Sprintf("localstate-%s.json", poolPk)),
 			os.Getenv("SIGNER_SEED_PHRASE"),
 		)
 		if err != nil {

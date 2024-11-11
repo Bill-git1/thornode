@@ -10,7 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/crypto/codec"
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	cKeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/prometheus/client_golang/prometheus/testutil"
@@ -168,7 +170,10 @@ func (s *ObserverSuite) SetUpSuite(c *C) {
 		SignerPasswd: "password",
 	}
 
-	kb := cKeys.NewInMemory()
+	registry := codectypes.NewInterfaceRegistry()
+	cryptocodec.RegisterInterfaces(registry)
+	cdc := codec.NewProtoCodec(registry)
+	kb := cKeys.NewInMemory(cdc)
 	_, _, err = kb.NewMnemonic(cfg.SignerName, cKeys.English, cmd.THORChainHDPath, cfg.SignerPasswd, hd.Secp256k1)
 	c.Assert(err, IsNil)
 	s.thorKeys = thorclient.NewKeysWithKeybase(kb, cfg.SignerName, cfg.SignerPasswd)
@@ -179,7 +184,7 @@ func (s *ObserverSuite) SetUpSuite(c *C) {
 	c.Assert(err, IsNil)
 	priv, err := s.thorKeys.GetPrivateKey()
 	c.Assert(err, IsNil)
-	tmp, err := codec.ToTmPubKeyInterface(priv.PubKey())
+	tmp, err := cryptocodec.ToCmtPubKeyInterface(priv.PubKey())
 	c.Assert(err, IsNil)
 	_, err = common.NewPubKeyFromCrypto(tmp)
 	c.Assert(err, IsNil)

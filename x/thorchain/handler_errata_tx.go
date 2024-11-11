@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/armon/go-metrics"
 	"github.com/blang/semver"
 	"github.com/cosmos/cosmos-sdk/telemetry"
+	"github.com/hashicorp/go-metrics"
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
@@ -50,6 +50,7 @@ func (h ErrataTxHandler) validate(ctx cosmos.Context, msg MsgErrataTx) error {
 }
 
 func (h ErrataTxHandler) validateV1(ctx cosmos.Context, msg MsgErrataTx) error {
+	// ValidateBasic is also executed in message service router's handler and isn't versioned there
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}

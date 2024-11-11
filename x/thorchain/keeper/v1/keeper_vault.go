@@ -282,6 +282,10 @@ func (k KVStore) GetVault(ctx cosmos.Context, pk common.PubKey) (Vault, error) {
 	if record.PubKey.IsEmpty() {
 		record.PubKey = pk
 	}
+	// Maintains pre-sdk v0.50 behavior where the current block height is set if the vault's block height is 0
+	if record.BlockHeight == 0 {
+		record.BlockHeight = ctx.BlockHeight()
+	}
 	return record, err
 }
 

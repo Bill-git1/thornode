@@ -3,11 +3,16 @@ package gaia
 import (
 	"fmt"
 
+	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	cKeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	ctypes "github.com/cosmos/cosmos-sdk/types"
 	btypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+
+	protov2 "google.golang.org/protobuf/proto"
 
 	"github.com/rs/zerolog/log"
 	"gitlab.com/thorchain/thornode/bifrost/metrics"
@@ -23,6 +28,8 @@ import (
 // Mock FeeTx
 // -------------------------------------------------------------------------------------
 
+var _ ctypes.FeeTx = &MockFeeTx{}
+
 type MockFeeTx struct {
 	fee ctypes.Coins
 	gas uint64
@@ -30,6 +37,10 @@ type MockFeeTx struct {
 
 func (m *MockFeeTx) GetMsgs() []ctypes.Msg {
 	return nil
+}
+
+func (m *MockFeeTx) GetMsgsV2() ([]protov2.Message, error) {
+	return nil, nil
 }
 
 func (m *MockFeeTx) ValidateBasic() error {
@@ -44,11 +55,11 @@ func (m *MockFeeTx) GetFee() ctypes.Coins {
 	return m.fee
 }
 
-func (m *MockFeeTx) FeePayer() ctypes.AccAddress {
+func (m *MockFeeTx) FeePayer() []byte {
 	return nil
 }
 
-func (m *MockFeeTx) FeeGranter() ctypes.AccAddress {
+func (m *MockFeeTx) FeeGranter() []byte {
 	return nil
 }
 
@@ -75,7 +86,10 @@ func (s *BlockScannerTestSuite) SetUpSuite(c *C) {
 		ChainHomeFolder: "",
 	}
 
-	kb := cKeys.NewInMemory()
+	registry := codectypes.NewInterfaceRegistry()
+	cryptocodec.RegisterInterfaces(registry)
+	cdc := codec.NewProtoCodec(registry)
+	kb := cKeys.NewInMemory(cdc)
 	_, _, err := kb.NewMnemonic(cfg.SignerName, cKeys.English, cmd.THORChainHDPath, cfg.SignerPasswd, hd.Secp256k1)
 	c.Assert(err, IsNil)
 	thorKeys := thorclient.NewKeysWithKeybase(kb, cfg.SignerName, cfg.SignerPasswd)
@@ -93,14 +107,14 @@ func (s *BlockScannerTestSuite) TestCalculateAverageGasFees(c *C) {
 
 	blockScanner.updateGasCache(&MockFeeTx{
 		gas: GasLimit / 2,
-		fee: ctypes.Coins{ctypes.NewCoin("uatom", ctypes.NewInt(10000))},
+		fee: ctypes.Coins{ctypes.NewCoin("uatom", sdkmath.NewInt(10000))},
 	})
 	c.Check(len(blockScanner.feeCache), Equals, 1)
 	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(20000*atomToThorchain)))
 
 	blockScanner.updateGasCache(&MockFeeTx{
 		gas: GasLimit / 2,
-		fee: ctypes.Coins{ctypes.NewCoin("uatom", ctypes.NewInt(10000))},
+		fee: ctypes.Coins{ctypes.NewCoin("uatom", sdkmath.NewInt(10000))},
 	})
 	c.Check(len(blockScanner.feeCache), Equals, 2)
 	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(20000*atomToThorchain)))
@@ -108,11 +122,11 @@ func (s *BlockScannerTestSuite) TestCalculateAverageGasFees(c *C) {
 	// two blocks at half fee should average to 75% of last
 	blockScanner.updateGasCache(&MockFeeTx{
 		gas: GasLimit,
-		fee: ctypes.Coins{ctypes.NewCoin("uatom", ctypes.NewInt(10000))},
+		fee: ctypes.Coins{ctypes.NewCoin("uatom", sdkmath.NewInt(10000))},
 	})
 	blockScanner.updateGasCache(&MockFeeTx{
 		gas: GasLimit,
-		fee: ctypes.Coins{ctypes.NewCoin("uatom", ctypes.NewInt(10000))},
+		fee: ctypes.Coins{ctypes.NewCoin("uatom", sdkmath.NewInt(10000))},
 	})
 	c.Check(len(blockScanner.feeCache), Equals, 4)
 	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(15000*atomToThorchain)))
@@ -121,8 +135,8 @@ func (s *BlockScannerTestSuite) TestCalculateAverageGasFees(c *C) {
 	blockScanner.updateGasCache(&MockFeeTx{
 		gas: GasLimit,
 		fee: ctypes.Coins{
-			ctypes.NewCoin("uatom", ctypes.NewInt(10000)),
-			ctypes.NewCoin("uusd", ctypes.NewInt(10000)),
+			ctypes.NewCoin("uatom", sdkmath.NewInt(10000)),
+			ctypes.NewCoin("uusd", sdkmath.NewInt(10000)),
 		},
 	})
 	c.Check(len(blockScanner.feeCache), Equals, 4)
@@ -132,7 +146,7 @@ func (s *BlockScannerTestSuite) TestCalculateAverageGasFees(c *C) {
 	blockScanner.updateGasCache(&MockFeeTx{
 		gas: GasLimit,
 		fee: ctypes.Coins{
-			ctypes.NewCoin("uusd", ctypes.NewInt(10000)),
+			ctypes.NewCoin("uusd", sdkmath.NewInt(10000)),
 		},
 	})
 	c.Check(len(blockScanner.feeCache), Equals, 4)
@@ -142,7 +156,7 @@ func (s *BlockScannerTestSuite) TestCalculateAverageGasFees(c *C) {
 	blockScanner.updateGasCache(&MockFeeTx{
 		gas: GasLimit,
 		fee: ctypes.Coins{
-			ctypes.NewCoin("uusd", ctypes.NewInt(0)),
+			ctypes.NewCoin("uusd", sdkmath.NewInt(0)),
 		},
 	})
 	c.Check(len(blockScanner.feeCache), Equals, 4)
@@ -153,7 +167,7 @@ func (s *BlockScannerTestSuite) TestCalculateAverageGasFees(c *C) {
 		blockScanner.updateGasCache(&MockFeeTx{
 			gas: GasLimit,
 			fee: ctypes.Coins{
-				ctypes.NewCoin("uatom", ctypes.NewInt(10000)),
+				ctypes.NewCoin("uatom", sdkmath.NewInt(10000)),
 			},
 		})
 	}

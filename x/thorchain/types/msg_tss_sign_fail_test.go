@@ -27,7 +27,6 @@ func (s MsgTssKeysignFailSuite) TestMsgTssKeysignFail(c *C) {
 	}
 	msg, err := NewMsgTssKeysignFail(1, b, "hello", coins, GetRandomBech32Addr(), GetRandomPubKey())
 	c.Assert(err, IsNil)
-	c.Check(msg.Type(), Equals, "set_tss_keysign_fail")
 	EnsureMsgBasicCorrect(msg, c)
 	m, err := NewMsgTssKeysignFail(1, Blame{}, "hello", coins, GetRandomBech32Addr(), GetRandomPubKey())
 	c.Assert(m, NotNil)

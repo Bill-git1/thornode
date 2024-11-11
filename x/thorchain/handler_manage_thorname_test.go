@@ -121,7 +121,7 @@ func (s *HandlerManageTHORNameSuite) TestHandler(c *C) {
 	c.Assert(err, IsNil)
 	name, err = mgr.Keeper().GetTHORName(ctx, tnName)
 	c.Assert(err, IsNil)
-	c.Check(name.GetPreferredAsset(), Equals, common.ETHAsset)
+	c.Check(name.PreferredAsset, Equals, common.ETHAsset)
 
 	// transfer thorname to new owner, should reset preferred asset/external aliases
 	addr2 := GetRandomTHORAddress()
@@ -132,7 +132,7 @@ func (s *HandlerManageTHORNameSuite) TestHandler(c *C) {
 	name, err = mgr.Keeper().GetTHORName(ctx, tnName)
 	c.Assert(err, IsNil)
 	c.Check(len(name.GetAliases()), Equals, 0)
-	c.Check(name.GetPreferredAsset().IsEmpty(), Equals, true)
+	c.Check(name.PreferredAsset.IsEmpty(), Equals, true)
 	c.Check(name.GetOwner().Equals(acc2), Equals, true)
 
 	// happy path, release thorname back into the wild

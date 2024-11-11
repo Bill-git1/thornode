@@ -64,7 +64,7 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "0CDB0576E72B53B4840095C201E3D92749BB2B5689DA42B8D412147CD770BF0D",
+      "app_hash": "88B203769A746A5D9737DC5426C8AFE29252EDB7688E5C3BCFC1D42314D3EA03",
       "last_results_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
@@ -95,7 +95,8 @@
                 },
                 "sequence": "0"
               }
-            ]
+            ],
+            "tip": null
           },
           "body": {
             "extension_options": [],
@@ -122,9 +123,9 @@
         },
         "result": {
           "code": 5,
-          "log": "failed to execute message; message index: 0: 2499998000000rune is smaller than 2500000000000rune: insufficient funds",
-          "gas_wanted": "0",
-          "gas_used": "69431",
+          "log": "failed to execute message; message index: 0: spendable balance 2499998000000rune is smaller than 2500000000000rune: insufficient funds",
+          "gas_wanted": "-1",
+          "gas_used": "69323",
           "events": [
             {
               "fee": "",
@@ -192,8 +193,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "4228A4C3BC9BB3EBF635073FA80F4E6CB7AC299165FD2349004A5DA8F25DD3D4",
-      "last_results_hash": "811119645F8390B4FA861B662EC325C93DFFE93DC19A772AB023F73D01D83174",
+      "app_hash": "903A2BC92BB5E2E5A737C3C25D434E8965E658656F3392B4451C3BC8D92451DE",
+      "last_results_hash": "A0BB4A6875EF0E4DE109900F62E0CA73B2537688D5E0C5DA70B8ED78CCD6311F",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -223,7 +224,8 @@
                 },
                 "sequence": "1"
               }
-            ]
+            ],
+            "tip": null
           },
           "body": {
             "extension_options": [],
@@ -250,10 +252,8 @@
         },
         "result": {
           "code": 0,
-          "data": "\n\u0010\n\u000e/types.MsgSend",
-          "log": "[{\"events\":[{\"type\":\"coin_received\",\"attributes\":[{\"key\":\"receiver\",\"value\":\"tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7\"},{\"key\":\"amount\",\"value\":\"2499996000000rune\"}]},{\"type\":\"coin_spent\",\"attributes\":[{\"key\":\"spender\",\"value\":\"tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\"},{\"key\":\"amount\",\"value\":\"2499996000000rune\"}]},{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"send\"},{\"key\":\"sender\",\"value\":\"tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\"}]},{\"type\":\"transfer\",\"attributes\":[{\"key\":\"recipient\",\"value\":\"tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7\"},{\"key\":\"sender\",\"value\":\"tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\"},{\"key\":\"amount\",\"value\":\"2499996000000rune\"}]}]}]",
-          "gas_wanted": "0",
-          "gas_used": "78156",
+          "gas_wanted": "-1",
+          "gas_used": "79976",
           "events": [
             {
               "fee": "",
@@ -289,26 +289,33 @@
               "type": "tx"
             },
             {
-              "action": "send",
+              "action": "/types.MsgSend",
+              "module": "MsgSend",
+              "msg_index": "0",
+              "sender": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "type": "message"
             },
             {
               "amount": "2499996000000rune",
+              "msg_index": "0",
               "spender": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "type": "coin_spent"
             },
             {
               "amount": "2499996000000rune",
+              "msg_index": "0",
               "receiver": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
               "type": "coin_received"
             },
             {
               "amount": "2499996000000rune",
+              "msg_index": "0",
               "recipient": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
               "sender": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "type": "transfer"
             },
             {
+              "msg_index": "0",
               "sender": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "type": "message"
             }
@@ -345,8 +352,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "1ED0AC98B5E73CA82DF25E0C434412CBB35D08E0C18CAA17440915A3088FD491",
-      "last_results_hash": "BDD438B3C571F01DA711111F80B9320A4DA81C820AAC26CBB71D4BA1475A740D",
+      "app_hash": "8CDFE8EC4B8DE1260EFCAAFD83224A85CBCD08734BFF18CB261ED97BCEE60016",
+      "last_results_hash": "49DFF72881CC6B25352505F3724B34FF3EEEED64579DB47B06B10C47828CCC2D",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -382,7 +389,7 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "422BEC7EAAB69B6E4EC075573D87C7F9A12B7570190F55102EAF626563818AA8",
+      "app_hash": "B7A72D2F0DC7CC1DA619E748C749B947FBEC9841D2B9F8013888AE3AB5713789",
       "last_results_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
@@ -413,7 +420,8 @@
                 },
                 "sequence": "0"
               }
-            ]
+            ],
+            "tip": null
           },
           "body": {
             "extension_options": [],
@@ -441,8 +449,8 @@
         "result": {
           "code": 99,
           "log": "failed to execute message; message index: 0: cannot use MsgSend for Module transactions, use MsgDeposit instead: internal error",
-          "gas_wanted": "0",
-          "gas_used": "62633",
+          "gas_wanted": "-1",
+          "gas_used": "62549",
           "events": [
             {
               "fee": "",

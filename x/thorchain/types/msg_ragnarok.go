@@ -1,7 +1,15 @@
 package types
 
 import (
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"gitlab.com/thorchain/thornode/common/cosmos"
+)
+
+var (
+	_ sdk.Msg              = &MsgRagnarok{}
+	_ sdk.HasValidateBasic = &MsgRagnarok{}
+	_ sdk.LegacyMsg        = &MsgRagnarok{}
 )
 
 // NewMsgRagnarok is a constructor function for MsgRagnarok
@@ -12,12 +20,6 @@ func NewMsgRagnarok(tx ObservedTx, blockHeight int64, signer cosmos.AccAddress) 
 		Signer:      signer,
 	}
 }
-
-// Route should return the name of the module
-func (m *MsgRagnarok) Route() string { return RouterKey }
-
-// Type should return the action
-func (m MsgRagnarok) Type() string { return "ragnarok" }
 
 // ValidateBasic runs stateless checks on the message
 func (m *MsgRagnarok) ValidateBasic() error {
@@ -31,11 +33,6 @@ func (m *MsgRagnarok) ValidateBasic() error {
 		return cosmos.ErrUnknownRequest(err.Error())
 	}
 	return nil
-}
-
-// GetSignBytes encodes the message for signing
-func (m *MsgRagnarok) GetSignBytes() []byte {
-	return cosmos.MustSortJSON(ModuleCdc.MustMarshalJSON(m))
 }
 
 // GetSigners defines whose signature is required

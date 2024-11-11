@@ -8,6 +8,70 @@ info:
 servers:
 - url: /
 paths:
+  /auth/accounts/{address}:
+    get:
+      description: Returns account information for the provided address.
+      operationId: account
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      - explode: false
+        in: path
+        name: address
+        required: true
+        schema:
+          example: thor1zupk5lmc84r2dh738a9g3zscavannjy3nzplwt
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+          description: OK
+      tags:
+      - Auth
+  /bank/balances/{address}:
+    get:
+      description: Returns balances for the provided address.
+      operationId: balances
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      - explode: false
+        in: path
+        name: address
+        required: true
+        schema:
+          example: thor1zupk5lmc84r2dh738a9g3zscavannjy3nzplwt
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BalancesResponse'
+          description: OK
+      tags:
+      - Bank
   /thorchain/ping:
     get:
       operationId: ping
@@ -2235,6 +2299,19 @@ paths:
           description: OK
       tags:
       - Block
+  /thorchain/export:
+    get:
+      description: Returns genesis export
+      operationId: export
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportResponse'
+          description: OK
+      tags:
+      - Export
 components:
   parameters:
     queryHeight:
@@ -3980,6 +4057,70 @@ components:
       - node_address
       - vote
       type: object
+    Account:
+      example:
+        sequence: 1234
+        account_number: 1234
+        address: thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+        type: /cosmos.auth.v1beta1.BaseAccount
+        pubkey: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
+      properties:
+        type:
+          example: /cosmos.auth.v1beta1.BaseAccount
+          type: string
+        address:
+          example: thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+          type: string
+        pubkey:
+          example: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
+          type: string
+        sequence:
+          example: 1234
+          format: int64
+          type: integer
+        account_number:
+          example: 1234
+          format: int64
+          type: integer
+      type: object
+    Amount:
+      example:
+        amount: amount
+        denom: denom
+      properties:
+        denom:
+          type: string
+        amount:
+          type: string
+      required:
+      - amount
+      - denom
+      type: object
+    AccountResponse:
+      example:
+        result:
+          value:
+            sequence: 1234
+            account_number: 1234
+            address: thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+            type: /cosmos.auth.v1beta1.BaseAccount
+            pubkey: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
+      properties:
+        result:
+          $ref: '#/components/schemas/AccountResponse_result'
+      type: object
+    BalancesResponse:
+      example:
+        result:
+        - amount: amount
+          denom: denom
+        - amount: amount
+          denom: denom
+      properties:
+        result:
+          items:
+            $ref: '#/components/schemas/Amount'
+          type: array
     PoolResponse:
       $ref: '#/components/schemas/Pool'
     PoolsResponse:
@@ -5360,6 +5501,8 @@ components:
             $ref: '#/components/schemas/MimirVote'
           type: array
       type: object
+    ExportResponse:
+      type: object
     BlockResponse:
       example:
         begin_block_events:
@@ -6365,6 +6508,18 @@ components:
         codespace:
           example: ibc
           type: string
+      type: object
+    AccountResponse_result:
+      example:
+        value:
+          sequence: 1234
+          account_number: 1234
+          address: thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+          type: /cosmos.auth.v1beta1.BaseAccount
+          pubkey: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
+      properties:
+        value:
+          $ref: '#/components/schemas/Account'
       type: object
     PoolSlipResponse_inner:
       example:

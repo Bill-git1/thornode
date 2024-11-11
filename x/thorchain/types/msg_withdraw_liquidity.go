@@ -1,12 +1,20 @@
 package types
 
 import (
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 )
 
 // MaxWithdrawBasisPoints basis points for withdrawals
 const MaxWithdrawBasisPoints = 10_000
+
+var (
+	_ sdk.Msg              = &MsgWithdrawLiquidity{}
+	_ sdk.HasValidateBasic = &MsgWithdrawLiquidity{}
+	_ sdk.LegacyMsg        = &MsgWithdrawLiquidity{}
+)
 
 // NewMsgWithdrawLiquidity is a constructor function for MsgWithdrawLiquidity
 func NewMsgWithdrawLiquidity(tx common.Tx, withdrawAddress common.Address, withdrawBasisPoints cosmos.Uint, asset, withdrawalAsset common.Asset, signer cosmos.AccAddress) *MsgWithdrawLiquidity {
@@ -19,12 +27,6 @@ func NewMsgWithdrawLiquidity(tx common.Tx, withdrawAddress common.Address, withd
 		Signer:          signer,
 	}
 }
-
-// Route should return the route key of the module
-func (m *MsgWithdrawLiquidity) Route() string { return RouterKey }
-
-// Type should return the action
-func (m MsgWithdrawLiquidity) Type() string { return "withdraw" }
 
 // ValidateBasic runs stateless checks on the message
 func (m *MsgWithdrawLiquidity) ValidateBasic() error {
@@ -55,11 +57,6 @@ func (m *MsgWithdrawLiquidity) ValidateBasic() error {
 		return cosmos.ErrUnknownRequest("withdrawal asset must be empty, rune, or pool asset")
 	}
 	return nil
-}
-
-// GetSignBytes encodes the message for signing
-func (m *MsgWithdrawLiquidity) GetSignBytes() []byte {
-	return cosmos.MustSortJSON(ModuleCdc.MustMarshalJSON(m))
 }
 
 // GetSigners defines whose signature is required

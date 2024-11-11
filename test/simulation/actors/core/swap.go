@@ -6,7 +6,8 @@ import (
 	"strings"
 	"time"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkmath "cosmossdk.io/math"
+
 	ecommon "github.com/ethereum/go-ethereum/common"
 
 	"gitlab.com/thorchain/thornode/common"
@@ -30,14 +31,14 @@ type SwapActor struct {
 	fromAddress common.Address
 	to          common.Asset
 	toAddress   common.Address
-	toBalance   sdk.Uint
+	toBalance   sdkmath.Uint
 
-	swapAmount sdk.Uint
+	swapAmount sdkmath.Uint
 	swapTxID   string
 
 	// expected range for received amount, including outbound fee
-	minExpected sdk.Uint
-	maxExpected sdk.Uint
+	minExpected sdkmath.Uint
+	maxExpected sdkmath.Uint
 }
 
 func NewSwapActor(from, to common.Asset) *Actor {
@@ -78,7 +79,7 @@ func (a *SwapActor) acquireUser(config *OpConfig) OpResult {
 			Continue: false,
 		}
 	}
-	a.swapAmount = sdk.NewUintFromString(pool.BalanceAsset).QuoUint64(200)
+	a.swapAmount = sdkmath.NewUintFromString(pool.BalanceAsset).QuoUint64(200)
 
 	for _, user := range config.Users {
 		// skip users already being used
@@ -156,11 +157,11 @@ func (a *SwapActor) getQuote(config *OpConfig) OpResult {
 		}
 	}
 
-	// store expected range to fail if received amount is outside 10% tolerance
-	quoteOut := sdk.NewUintFromString(quote.ExpectedAmountOut)
+	// store expected range to fail if received amount is outside 5% tolerance
+	quoteOut := sdkmath.NewUintFromString(quote.ExpectedAmountOut)
 	tolerance := quoteOut.QuoUint64(10)
 	if quote.Fees.Outbound != nil {
-		outboundFee := sdk.NewUintFromString(*quote.Fees.Outbound)
+		outboundFee := sdkmath.NewUintFromString(*quote.Fees.Outbound)
 		quoteOut = quoteOut.Add(outboundFee)
 
 		// handle 2x gas rate fluctuation (add 1x outbound fee to tolerance)
@@ -379,7 +380,7 @@ func (a *SwapActor) verifyOutbound(config *OpConfig) OpResult {
 	if maxGas.Asset == a.to.String() {
 		outAmountPlusMaxGas = outAmountPlusMaxGas.Add(cosmos.NewUintFromString(maxGas.Amount))
 	} else {
-		var maxGasAssetValue sdk.Uint
+		var maxGasAssetValue sdkmath.Uint
 		maxGasAssetValue, err = thornode.ConvertAssetAmount(maxGas, a.to.String())
 		if err != nil {
 			a.Log().Warn().Err(err).Msg("failed to convert asset")

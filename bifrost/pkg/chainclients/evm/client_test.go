@@ -10,7 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/crypto/codec"
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	cKeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	. "gopkg.in/check.v1"
@@ -71,7 +73,7 @@ func (s *EVMSuite) SetUpTest(c *C) {
 			c.Assert(err, IsNil)
 		case thorclient.PubKeysEndpoint:
 			priKey, _ := s.thorKeys.GetPrivateKey()
-			tm, _ := codec.ToTmPubKeyInterface(priKey.PubKey())
+			tm, _ := cryptocodec.ToCmtPubKeyInterface(priKey.PubKey())
 			pk, err := common.NewPubKeyFromCrypto(tm)
 			c.Assert(err, IsNil)
 			content, err := os.ReadFile("../../../../test/fixtures/endpoints/vaults/pubKeys.json")
@@ -206,7 +208,10 @@ func (s *EVMSuite) SetUpTest(c *C) {
 		ChainHomeFolder: s.thordir,
 	}
 
-	kb := cKeys.NewInMemory()
+	registry := codectypes.NewInterfaceRegistry()
+	cryptocodec.RegisterInterfaces(registry)
+	cdc := codec.NewProtoCodec(registry)
+	kb := cKeys.NewInMemory(cdc)
 	_, _, err := kb.NewMnemonic(cfg.SignerName, cKeys.English, cmd.THORChainHDPath, cfg.SignerPasswd, hd.Secp256k1)
 	c.Assert(err, IsNil)
 	s.thorKeys = thorclient.NewKeysWithKeybase(kb, cfg.SignerName, cfg.SignerPasswd)

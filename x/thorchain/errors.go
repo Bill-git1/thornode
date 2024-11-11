@@ -3,7 +3,7 @@ package thorchain
 import (
 	"fmt"
 
-	se "github.com/cosmos/cosmos-sdk/types/errors"
+	errorsmod "cosmossdk.io/errors"
 	"github.com/hashicorp/go-multierror"
 )
 
@@ -44,28 +44,28 @@ const (
 var (
 	errNotAuthorized                = fmt.Errorf("not authorized")
 	errInvalidVersion               = fmt.Errorf("bad version")
-	errBadVersion                   = se.Register(DefaultCodespace, CodeBadVersion, errInvalidVersion.Error())
-	errInvalidMessage               = se.Register(DefaultCodespace, CodeInvalidMessage, "invalid message")
-	errInvalidMemo                  = se.Register(DefaultCodespace, CodeInvalidMemo, "invalid memo")
-	errFailSaveEvent                = se.Register(DefaultCodespace, CodeFailSaveEvent, "fail to save add events")
-	errAddLiquidityFailValidation   = se.Register(DefaultCodespace, CodeAddLiquidityFailValidation, "fail to validate add liquidity")
-	errAddLiquidityRUNEOverLimit    = se.Register(DefaultCodespace, CodeAddLiquidityRUNEOverLimit, "add liquidity rune is over limit")
-	errAddLiquidityRUNEMoreThanBond = se.Register(DefaultCodespace, CodeAddLiquidityRUNEMoreThanBond, "add liquidity rune is more than bond")
-	errInvalidPoolStatus            = se.Register(DefaultCodespace, CodeInvalidPoolStatus, "invalid pool status")
-	errFailAddOutboundTx            = se.Register(DefaultCodespace, CodeFailAddOutboundTx, "prepare outbound tx not successful")
-	errWithdrawFailValidation       = se.Register(DefaultCodespace, CodeWithdrawFailValidation, "fail to validate withdraw")
-	errFailGetLiquidityProvider     = se.Register(DefaultCodespace, CodeFailGetLiquidityProvider, "fail to get liquidity provider")
-	errAddLiquidityMismatchAddr     = se.Register(DefaultCodespace, CodeAddLiquidityMismatchAddr, "memo paired address must be non-empty and together with origin address match the liquidity provider record")
-	errSwapFailInvalidAmount        = se.Register(DefaultCodespace, CodeSwapFailInvalidAmount, "fail swap, invalid amount")
-	errSwapFailInvalidBalance       = se.Register(DefaultCodespace, CodeSwapFailInvalidBalance, "fail swap, invalid balance")
-	errSwapFailNotEnoughBalance     = se.Register(DefaultCodespace, CodeSwapFailNotEnoughBalance, "fail swap, not enough balance")
-	errNoLiquidityUnitLeft          = se.Register(DefaultCodespace, CodeNoLiquidityUnitLeft, "nothing to withdraw")
-	errWithdrawLockup               = se.Register(DefaultCodespace, CodeWithdrawLockup, "last add within lockup blocks")
-	errWithdrawFail                 = se.Register(DefaultCodespace, CodeWithdrawFail, "fail to withdraw")
-	errInternal                     = se.Register(DefaultCodespace, CodeInternalError, "internal error")
+	errBadVersion                   = errorsmod.Register(DefaultCodespace, CodeBadVersion, errInvalidVersion.Error())
+	errInvalidMessage               = errorsmod.Register(DefaultCodespace, CodeInvalidMessage, "invalid message")
+	errInvalidMemo                  = errorsmod.Register(DefaultCodespace, CodeInvalidMemo, "invalid memo")
+	errFailSaveEvent                = errorsmod.Register(DefaultCodespace, CodeFailSaveEvent, "fail to save add events")
+	errAddLiquidityFailValidation   = errorsmod.Register(DefaultCodespace, CodeAddLiquidityFailValidation, "fail to validate add liquidity")
+	errAddLiquidityRUNEOverLimit    = errorsmod.Register(DefaultCodespace, CodeAddLiquidityRUNEOverLimit, "add liquidity rune is over limit")
+	errAddLiquidityRUNEMoreThanBond = errorsmod.Register(DefaultCodespace, CodeAddLiquidityRUNEMoreThanBond, "add liquidity rune is more than bond")
+	errInvalidPoolStatus            = errorsmod.Register(DefaultCodespace, CodeInvalidPoolStatus, "invalid pool status")
+	errFailAddOutboundTx            = errorsmod.Register(DefaultCodespace, CodeFailAddOutboundTx, "prepare outbound tx not successful")
+	errWithdrawFailValidation       = errorsmod.Register(DefaultCodespace, CodeWithdrawFailValidation, "fail to validate withdraw")
+	errFailGetLiquidityProvider     = errorsmod.Register(DefaultCodespace, CodeFailGetLiquidityProvider, "fail to get liquidity provider")
+	errAddLiquidityMismatchAddr     = errorsmod.Register(DefaultCodespace, CodeAddLiquidityMismatchAddr, "memo paired address must be non-empty and together with origin address match the liquidity provider record")
+	errSwapFailInvalidAmount        = errorsmod.Register(DefaultCodespace, CodeSwapFailInvalidAmount, "fail swap, invalid amount")
+	errSwapFailInvalidBalance       = errorsmod.Register(DefaultCodespace, CodeSwapFailInvalidBalance, "fail swap, invalid balance")
+	errSwapFailNotEnoughBalance     = errorsmod.Register(DefaultCodespace, CodeSwapFailNotEnoughBalance, "fail swap, not enough balance")
+	errNoLiquidityUnitLeft          = errorsmod.Register(DefaultCodespace, CodeNoLiquidityUnitLeft, "nothing to withdraw")
+	errWithdrawLockup               = errorsmod.Register(DefaultCodespace, CodeWithdrawLockup, "last add within lockup blocks")
+	errWithdrawFail                 = errorsmod.Register(DefaultCodespace, CodeWithdrawFail, "fail to withdraw")
+	errInternal                     = errorsmod.Register(DefaultCodespace, CodeInternalError, "internal error")
 )
 
 // ErrInternal return an error  of errInternal with additional message
 func ErrInternal(err error, msg string) error {
-	return se.Wrap(multierror.Append(errInternal, err), msg)
+	return errorsmod.Wrap(multierror.Append(errInternal, err), msg)
 }

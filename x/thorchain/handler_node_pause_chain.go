@@ -54,6 +54,7 @@ func (h NodePauseChainHandler) validate(ctx cosmos.Context, msg MsgNodePauseChai
 }
 
 func (h NodePauseChainHandler) validateV1(ctx cosmos.Context, msg MsgNodePauseChain) error {
+	// ValidateBasic is also executed in message service router's handler and isn't versioned there
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
@@ -124,7 +125,7 @@ func (h NodePauseChainHandler) handleV87(ctx cosmos.Context, msg MsgNodePauseCha
 	key := "NodePauseChainGlobal"
 	h.mgr.Keeper().SetMimir(ctx, key, pauseHeight)
 	mimirEvent := NewEventSetMimir(strings.ToUpper(key), strconv.FormatInt(pauseHeight, 10))
-	if err := h.mgr.EventMgr().EmitEvent(ctx, mimirEvent); err != nil {
+	if err = h.mgr.EventMgr().EmitEvent(ctx, mimirEvent); err != nil {
 		ctx.Logger().Error("fail to emit set_mimir event", "error", err)
 	}
 

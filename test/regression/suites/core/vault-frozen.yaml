@@ -32,9 +32,9 @@ count: 1
 ########################################################################################
 type: tx-tss-keysign
 signer: {{ addr_thor_dog }}
-pub_key: "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
-id: "43919a6ec98353bac5030b4db64e36abe299f91ab26c2c8442a42595a772c280"
-memo: "OUT:D96B553D63BCC6DB749B184F566BF0B37B595B026E9AA7B35B5C7D654237C965"
+pub_key: tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4
+id: 43919a6ec98353bac5030b4db64e36abe299f91ab26c2c8442a42595a772c280
+memo: OUT:D96B553D63BCC6DB749B184F566BF0B37B595B026E9AA7B35B5C7D654237C965
 coins:
   - amount: "8250426"
     asset: "BTC.BTC"

@@ -15,6 +15,9 @@ import (
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/btcjson"
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	cKeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
@@ -47,7 +50,10 @@ type LitecoinSignerSuite struct {
 var _ = Suite(&LitecoinSignerSuite{})
 
 func (s *LitecoinSignerSuite) SetUpSuite(c *C) {
-	kb := cKeys.NewInMemory()
+	registry := codectypes.NewInterfaceRegistry()
+	cryptocodec.RegisterInterfaces(registry)
+	cdc := codec.NewProtoCodec(registry)
+	kb := cKeys.NewInMemory(cdc)
 	_, _, err := kb.NewMnemonic(bob, cKeys.English, cmd.THORChainHDPath, password, hd.Secp256k1)
 	c.Assert(err, IsNil)
 	s.keys = thorclient.NewKeysWithKeybase(kb, bob, password)

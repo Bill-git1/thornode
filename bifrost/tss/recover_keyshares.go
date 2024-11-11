@@ -8,11 +8,11 @@ import (
 	"os"
 	"path/filepath"
 
+	coretypes "github.com/cometbft/cometbft/rpc/core/types"
 	ctypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 	"github.com/itchio/lzma"
 	"github.com/rs/zerolog/log"
-	coretypes "github.com/tendermint/tendermint/rpc/core/types"
 
 	"gitlab.com/thorchain/thornode/app"
 	"gitlab.com/thorchain/thornode/bifrost/thorclient"
@@ -42,7 +42,7 @@ func RecoverKeyShares(conf config.Bifrost, thorchain thorclient.ThorchainBridge)
 		return fmt.Errorf("fail to get signer membership")
 	}
 	vault := membership[len(membership)-1]
-	keysharesPath := filepath.Join(app.DefaultNodeHome(), fmt.Sprintf("localstate-%s.json", vault))
+	keysharesPath := filepath.Join(app.DefaultNodeHome, fmt.Sprintf("localstate-%s.json", vault))
 
 	// skip recovery if keyshares for the nodes current vault already exist
 	if _, err = os.Stat(keysharesPath); !os.IsNotExist(err) {

@@ -1,8 +1,7 @@
 package thorchain
 
 import (
-	"github.com/cosmos/cosmos-sdk/codec"
-
+	proto "github.com/cosmos/gogoproto/proto"
 	"gitlab.com/thorchain/thornode/x/thorchain/aggregators"
 	mem "gitlab.com/thorchain/thornode/x/thorchain/memo"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
@@ -163,7 +162,7 @@ var (
 	NewMsgMigrate                  = types.NewMsgMigrate
 	NewMsgRagnarok                 = types.NewMsgRagnarok
 	ModuleCdc                      = types.ModuleCdc
-	RegisterCodec                  = types.RegisterCodec
+	RegisterLegacyAminoCodec       = types.RegisterLegacyAminoCodec
 	RegisterInterfaces             = types.RegisterInterfaces
 	NewBondProviders               = types.NewBondProviders
 	NewBondProvider                = types.NewBondProvider
@@ -371,4 +370,4 @@ type (
 	ProtoInt64   = types.ProtoInt64
 )
 
-var _ codec.ProtoMarshaler = &types.LiquidityProvider{}
+var _ proto.Message = &types.LiquidityProvider{}

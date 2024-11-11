@@ -25,7 +25,6 @@ func (MsgMigrateSuite) TestMsgMigrateSuite(c *C) {
 	), 12, GetRandomPubKey(), 12)
 	m := NewMsgMigrate(tx, 10, acc1)
 	EnsureMsgBasicCorrect(m, c)
-	c.Check(m.Type(), Equals, "migrate")
 
 	inputs := []struct {
 		txID        common.TxID

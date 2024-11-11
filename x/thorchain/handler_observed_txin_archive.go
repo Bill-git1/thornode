@@ -58,6 +58,7 @@ func (h ObservedTxInHandler) addSwapDirectV136(ctx cosmos.Context, msg MsgSwap) 
 		// PreferredAsset set, swap to the AffiliateCollector Module + check if the
 		// preferred asset swap should be triggered
 		if affThorname != nil && !affThorname.PreferredAsset.IsEmpty() {
+			// trunk-ignore(golangci-lint/govet): shadow
 			affcol, err := h.mgr.Keeper().GetAffiliateCollector(ctx, affThorname.Owner)
 			if err != nil {
 				ctx.Logger().Error("failed to get affiliate collector for thorname", "thorname", affThorname.Name, "error", err)
@@ -95,6 +96,7 @@ func (h ObservedTxInHandler) addSwapDirectV136(ctx cosmos.Context, msg MsgSwap) 
 			affiliateSwap.Tx.Coins[0].Amount = amt
 		}
 
+		// trunk-ignore(golangci-lint/govet): shadow
 		if err := h.mgr.Keeper().SetSwapQueueItem(ctx, *affiliateSwap, 1); err != nil {
 			ctx.Logger().Error("fail to add swap to queue", "error", err)
 		}

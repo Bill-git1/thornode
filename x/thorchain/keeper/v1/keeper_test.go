@@ -5,23 +5,26 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/simapp"
-	"github.com/cosmos/cosmos-sdk/store"
+	"cosmossdk.io/log"
+	"cosmossdk.io/store"
+	storemetrics "cosmossdk.io/store/metrics"
+	upgradekeeper "cosmossdk.io/x/upgrade/keeper"
+	upgradetypes "cosmossdk.io/x/upgrade/types"
+	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	dbm "github.com/cosmos/cosmos-db"
+	"github.com/cosmos/cosmos-sdk/runtime"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/module/testutil"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	"github.com/cosmos/cosmos-sdk/x/bank"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
-	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
-	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
-	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	"github.com/tendermint/tendermint/libs/log"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
-	dbm "github.com/tendermint/tm-db"
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
@@ -37,41 +40,30 @@ func FundModule(c *C, ctx cosmos.Context, k KVStore, name string, amt uint64) {
 	c.Assert(err, IsNil)
 }
 
-// create a codec used only for testing
-func makeTestCodec() *codec.LegacyAmino {
-	cdc := codec.NewLegacyAmino()
-	banktypes.RegisterLegacyAminoCodec(cdc)
-	authtypes.RegisterLegacyAminoCodec(cdc)
-	RegisterCodec(cdc)
-	cosmos.RegisterCodec(cdc)
-	// codec.RegisterLegacyAminoCodec(cdc)
-	return cdc
-}
-
 var keyThorchain = cosmos.NewKVStoreKey(StoreKey)
 
 func setupKeeperForTest(c *C) (cosmos.Context, KVStore) {
 	SetupConfigForTest()
 	keys := cosmos.NewKVStoreKeys(
-		authtypes.StoreKey, banktypes.StoreKey, stakingtypes.StoreKey, paramstypes.StoreKey, upgradetypes.StoreKey,
+		authtypes.StoreKey, banktypes.StoreKey, stakingtypes.StoreKey, upgradetypes.StoreKey,
 	)
-	tkeyParams := cosmos.NewTransientStoreKey(paramstypes.TStoreKey)
 
 	db := dbm.NewMemDB()
-	ms := store.NewCommitMultiStore(db)
+	ms := store.NewCommitMultiStore(db, log.NewNopLogger(), storemetrics.NewNoOpMetrics())
 	ms.MountStoreWithDB(keys[authtypes.StoreKey], cosmos.StoreTypeIAVL, db)
-	ms.MountStoreWithDB(keys[paramstypes.StoreKey], cosmos.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(keys[banktypes.StoreKey], cosmos.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(keys[upgradetypes.StoreKey], cosmos.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(keyThorchain, cosmos.StoreTypeIAVL, db)
-	ms.MountStoreWithDB(tkeyParams, cosmos.StoreTypeTransient, db)
 	err := ms.LoadLatestVersion()
 	c.Assert(err, IsNil)
 
 	ctx := cosmos.NewContext(ms, tmproto.Header{ChainID: "thorchain"}, false, log.NewNopLogger())
 	ctx = ctx.WithBlockHeight(18)
-	legacyCodec := makeTestCodec()
-	marshaler := simapp.MakeTestEncodingConfig().Marshaler
+
+	encodingConfig := testutil.MakeTestEncodingConfig(
+		bank.AppModuleBasic{},
+		auth.AppModuleBasic{},
+	)
 
 	maccPerms := map[string][]string{
 		authtypes.FeeCollectorName:     nil,
@@ -86,13 +78,35 @@ func setupKeeperForTest(c *C) (cosmos.Context, KVStore) {
 		RUNEPoolName:                   {},
 		BondName:                       {authtypes.Staking},
 	}
+	ak := authkeeper.NewAccountKeeper(
+		encodingConfig.Codec,
+		runtime.NewKVStoreService(keys[authtypes.StoreKey]),
+		authtypes.ProtoBaseAccount,
+		maccPerms,
+		authcodec.NewBech32Codec(sdk.GetConfig().GetBech32AccountAddrPrefix()),
+		sdk.GetConfig().GetBech32AccountAddrPrefix(),
+		authtypes.NewModuleAddress(ModuleName).String(),
+	)
 
-	pk := paramskeeper.NewKeeper(marshaler, legacyCodec, keys[paramstypes.StoreKey], tkeyParams)
-	ak := authkeeper.NewAccountKeeper(marshaler, keys[authtypes.StoreKey], pk.Subspace(authtypes.ModuleName), authtypes.ProtoBaseAccount, maccPerms)
-	bk := bankkeeper.NewBaseKeeper(marshaler, keys[banktypes.StoreKey], ak, pk.Subspace(banktypes.ModuleName), nil)
-	uk := upgradekeeper.NewKeeper(nil, keys[upgradetypes.StoreKey], marshaler, c.MkDir(), nil)
+	bk := bankkeeper.NewBaseKeeper(
+		encodingConfig.Codec,
+		runtime.NewKVStoreService(keys[banktypes.StoreKey]),
+		ak,
+		nil,
+		authtypes.NewModuleAddress(ModuleName).String(),
+		log.NewNopLogger(),
+	)
 
-	k := NewKVStore(marshaler, bk, ak, uk, keyThorchain, GetCurrentVersion())
+	uk := upgradekeeper.NewKeeper(
+		nil,
+		runtime.NewKVStoreService(keys[upgradetypes.StoreKey]),
+		encodingConfig.Codec,
+		c.MkDir(),
+		nil,
+		authtypes.NewModuleAddress(ModuleName).String(),
+	)
+
+	k := NewKVStore(encodingConfig.Codec, bk, ak, uk, keyThorchain, GetCurrentVersion())
 
 	FundModule(c, ctx, k, AsgardName, common.One)
 

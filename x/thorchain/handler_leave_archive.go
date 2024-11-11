@@ -78,7 +78,6 @@ func (h LeaveHandler) handleV134(ctx cosmos.Context, msg MsgLeave) error {
 		}
 	}
 	nodeAcc.RequestedToLeave = true
-	// trunk-ignore(golangci-lint/govet): shadow
 	if err := h.mgr.Keeper().SetNodeAccount(ctx, nodeAcc); err != nil {
 		return ErrInternal(err, "fail to save node account to key value store")
 	}

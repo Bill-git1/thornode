@@ -1,7 +1,20 @@
 package types
 
 import (
+	"fmt"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"google.golang.org/protobuf/proto"
+
+	"gitlab.com/thorchain/thornode/api/types"
 	"gitlab.com/thorchain/thornode/common/cosmos"
+)
+
+var (
+	_ sdk.Msg              = &MsgObservedTxOut{}
+	_ sdk.HasValidateBasic = &MsgObservedTxOut{}
+	_ sdk.LegacyMsg        = &MsgObservedTxOut{}
 )
 
 // NewMsgObservedTxOut is a constructor function for MsgObservedTxOut
@@ -12,13 +25,10 @@ func NewMsgObservedTxOut(txs ObservedTxs, signer cosmos.AccAddress) *MsgObserved
 	}
 }
 
-// Route should return the route key of the module
-func (m *MsgObservedTxOut) Route() string { return RouterKey }
-
-// Type should return the action
-func (m MsgObservedTxOut) Type() string { return "set_observed_txout" }
-
-// ValidateBasic runs stateless checks on the message
+// ValidateBasic implements HasValidateBasic
+// ValidateBasic is now ran in the message service router handler for messages that
+// used to be routed using the external handler and only when HasValidateBasic is implemented.
+// No versioning is used there.
 func (m *MsgObservedTxOut) ValidateBasic() error {
 	if m.Signer.Empty() {
 		return cosmos.ErrInvalidAddress(m.Signer.String())
@@ -50,12 +60,15 @@ func (m *MsgObservedTxOut) ValidateBasic() error {
 	return nil
 }
 
-// GetSignBytes encodes the message for signing
-func (m *MsgObservedTxOut) GetSignBytes() []byte {
-	return cosmos.MustSortJSON(ModuleCdc.MustMarshalJSON(m))
-}
-
 // GetSigners defines whose signature is required
 func (m *MsgObservedTxOut) GetSigners() []cosmos.AccAddress {
 	return []cosmos.AccAddress{m.Signer}
+}
+
+func MsgObservedTxOutCustomGetSigners(m proto.Message) ([][]byte, error) {
+	msg, ok := m.(*types.MsgObservedTxOut)
+	if !ok {
+		return nil, fmt.Errorf("can't cast as MsgObservedTxOut: %T", m)
+	}
+	return [][]byte{msg.Signer}, nil
 }

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/cosmos/cosmos-sdk/types"
+	sdkmath "cosmossdk.io/math"
 
 	"github.com/blang/semver"
 	"gitlab.com/thorchain/thornode/common"
@@ -13,7 +13,7 @@ import (
 	thorchaintypes "gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
-func QuoUint(num, denom types.Uint) types.Dec {
+func QuoUint(num, denom sdkmath.Uint) sdkmath.LegacyDec {
 	res := cosmos.NewDecFromBigInt(num.BigInt()).Quo(cosmos.NewDecFromBigInt(denom.BigInt()))
 	return res
 }

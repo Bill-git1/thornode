@@ -24,7 +24,6 @@ func (s *MsgObservedTxOutSuite) TestMsgObservedTxOut(c *C) {
 
 	m := NewMsgObservedTxOut(ObservedTxs{tx}, acc)
 	EnsureMsgBasicCorrect(m, c)
-	c.Check(m.Type(), Equals, "set_observed_txout")
 
 	m1 := NewMsgObservedTxOut(nil, acc)
 	c.Assert(m1.ValidateBasic(), NotNil)

@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/armon/go-metrics"
 	"github.com/blang/semver"
 	"github.com/cosmos/cosmos-sdk/telemetry"
+	"github.com/hashicorp/go-metrics"
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
@@ -55,9 +55,11 @@ func (h SolvencyHandler) validate(ctx cosmos.Context, msg MsgSolvency) error {
 }
 
 func (h SolvencyHandler) validateV70(ctx cosmos.Context, msg MsgSolvency) error {
+	// ValidateBasic is also executed in message service router's handler and isn't versioned there
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
+
 	m, err := NewMsgSolvency(msg.Chain, msg.PubKey, msg.Coins, msg.Height, msg.Signer)
 	if err != nil {
 		ctx.Logger().Error("fail to reconstruct msg solvency", "error", err)

@@ -28,7 +28,6 @@ func (MsgLeaveSuite) TestMsgLeave(c *C) {
 	msgLeave := NewMsgLeave(tx, nodeAddr, nodeAddr)
 	EnsureMsgBasicCorrect(msgLeave, c)
 	c.Assert(msgLeave.ValidateBasic(), IsNil)
-	c.Assert(msgLeave.Type(), Equals, "leave")
 
 	msgLeave1 := NewMsgLeave(tx, nodeAddr, nodeAddr)
 	c.Assert(msgLeave1.ValidateBasic(), IsNil)

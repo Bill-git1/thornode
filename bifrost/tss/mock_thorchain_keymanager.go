@@ -3,17 +3,12 @@ package tss
 import (
 	"encoding/base64"
 
+	"github.com/cometbft/cometbft/crypto"
 	ctypes "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
-	"github.com/tendermint/tendermint/crypto"
 )
 
 // MockThorchainKeymanager is to mock the TSS , so as we could test it
 type MockThorchainKeyManager struct{}
-
-func (k *MockThorchainKeyManager) Sign(legacytx.StdSignMsg) ([]byte, error) {
-	return nil, nil
-}
 
 func (k *MockThorchainKeyManager) GetPrivKey() crypto.PrivKey {
 	return nil

@@ -1,7 +1,7 @@
 package types
 
 import (
-	coretypes "github.com/tendermint/tendermint/rpc/core/types"
+	coretypes "github.com/cometbft/cometbft/rpc/core/types"
 )
 
 type BroadcastResult struct {

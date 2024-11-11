@@ -15,7 +15,7 @@ RUN go mod download
 
 COPY . .
 ARG TAG=mainnet
-RUN make protob && go install -tags $TAG ./tools/events
+RUN go install -tags $TAG ./tools/events
 
 ########################################################################################
 # Deploy

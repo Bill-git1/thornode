@@ -1,8 +1,16 @@
 package types
 
 import (
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
+)
+
+var (
+	_ sdk.Msg              = &MsgReserveContributor{}
+	_ sdk.HasValidateBasic = &MsgReserveContributor{}
+	_ sdk.LegacyMsg        = &MsgReserveContributor{}
 )
 
 // NewMsgReserveContributor is a constructor function for MsgReserveContributor
@@ -13,12 +21,6 @@ func NewMsgReserveContributor(tx common.Tx, contrib ReserveContributor, signer c
 		Signer:      signer,
 	}
 }
-
-// Route return the route key of module
-func (m *MsgReserveContributor) Route() string { return RouterKey }
-
-// Type return a unique action
-func (m MsgReserveContributor) Type() string { return "set_reserve_contributor" }
 
 // ValidateBasic runs stateless checks on the message
 func (m *MsgReserveContributor) ValidateBasic() error {
@@ -32,11 +34,6 @@ func (m *MsgReserveContributor) ValidateBasic() error {
 		return cosmos.ErrUnknownRequest(err.Error())
 	}
 	return nil
-}
-
-// GetSignBytes encodes the message for signing
-func (m *MsgReserveContributor) GetSignBytes() []byte {
-	return cosmos.MustSortJSON(ModuleCdc.MustMarshalJSON(m))
 }
 
 // GetSigners defines whose signature is required

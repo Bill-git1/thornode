@@ -23,7 +23,6 @@ func (MsgConsolidateSuite) TestMsgConsolidate(c *C) {
 	}
 	m := NewMsgConsolidate(tx, addr)
 	c.Check(m.ValidateBasic(), IsNil)
-	c.Check(m.Type(), Equals, "consolidate")
 	EnsureMsgBasicCorrect(m, c)
 	mEmpty := NewMsgConsolidate(tx, cosmos.AccAddress{})
 	c.Assert(mEmpty.ValidateBasic(), NotNil)

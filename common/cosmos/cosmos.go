@@ -10,12 +10,16 @@ import (
 	"path/filepath"
 	"strings"
 
+	sdkmath "cosmossdk.io/math"
+	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/client/input"
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	ckeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/bech32/legacybech32" // nolint SA1019 deprecated
 	se "github.com/cosmos/cosmos-sdk/types/errors"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	log "github.com/rs/zerolog/log"
 )
 
@@ -29,48 +33,46 @@ const (
 
 var (
 	KeyringServiceName           = sdk.KeyringServiceName
-	NewRoute                     = sdk.NewRoute
-	NewKVStoreKeys               = sdk.NewKVStoreKeys
-	NewUint                      = sdk.NewUint
-	ParseUint                    = sdk.ParseUint
-	NewInt                       = sdk.NewInt
-	NewDec                       = sdk.NewDec
-	ZeroInt                      = sdk.ZeroInt
-	ZeroUint                     = sdk.ZeroUint
-	ZeroDec                      = sdk.ZeroDec
-	OneUint                      = sdk.OneUint
+	NewKVStoreKeys               = storetypes.NewKVStoreKeys
+	NewUint                      = sdkmath.NewUint
+	ParseUint                    = sdkmath.ParseUint
+	NewInt                       = sdkmath.NewInt
+	NewDec                       = sdkmath.LegacyNewDec
+	ZeroInt                      = sdkmath.ZeroInt
+	ZeroUint                     = sdkmath.ZeroUint
+	ZeroDec                      = sdkmath.LegacyZeroDec
+	OneUint                      = sdkmath.OneUint
 	NewCoin                      = sdk.NewCoin
 	NewCoins                     = sdk.NewCoins
 	ParseCoins                   = sdk.ParseCoinsNormalized
-	NewDecWithPrec               = sdk.NewDecWithPrec
-	NewDecFromBigInt             = sdk.NewDecFromBigInt
-	NewIntFromBigInt             = sdk.NewIntFromBigInt
-	NewUintFromBigInt            = sdk.NewUintFromBigInt
+	NewDecWithPrec               = sdkmath.LegacyNewDecWithPrec
+	NewDecFromBigInt             = sdkmath.LegacyNewDecFromBigInt
+	NewIntFromBigInt             = sdkmath.NewIntFromBigInt
+	NewUintFromBigInt            = sdkmath.NewUintFromBigInt
 	AccAddressFromBech32         = sdk.AccAddressFromBech32
 	VerifyAddressFormat          = sdk.VerifyAddressFormat
 	GetFromBech32                = sdk.GetFromBech32
 	NewAttribute                 = sdk.NewAttribute
-	NewDecFromStr                = sdk.NewDecFromStr
+	NewDecFromStr                = sdkmath.LegacyNewDecFromStr
 	GetConfig                    = sdk.GetConfig
 	NewEvent                     = sdk.NewEvent
-	RegisterCodec                = sdk.RegisterLegacyAminoCodec
+	RegisterLegacyAminoCodec     = sdk.RegisterLegacyAminoCodec
 	NewEventManager              = sdk.NewEventManager
 	EventTypeMessage             = sdk.EventTypeMessage
 	AttributeKeyModule           = sdk.AttributeKeyModule
-	KVStorePrefixIterator        = sdk.KVStorePrefixIterator
-	KVStoreReversePrefixIterator = sdk.KVStoreReversePrefixIterator
-	NewKVStoreKey                = sdk.NewKVStoreKey
-	NewTransientStoreKey         = sdk.NewTransientStoreKey
-	StoreTypeTransient           = sdk.StoreTypeTransient
-	StoreTypeIAVL                = sdk.StoreTypeIAVL
+	KVStorePrefixIterator        = storetypes.KVStorePrefixIterator
+	KVStoreReversePrefixIterator = storetypes.KVStoreReversePrefixIterator
+	NewKVStoreKey                = storetypes.NewKVStoreKey
+	NewTransientStoreKey         = storetypes.NewTransientStoreKey
+	StoreTypeTransient           = storetypes.StoreTypeTransient
+	StoreTypeIAVL                = storetypes.StoreTypeIAVL
 	NewContext                   = sdk.NewContext
-	NewUintFromString            = sdk.NewUintFromString
+	NewUintFromString            = sdkmath.NewUintFromString
 
 	GetPubKeyFromBech32     = legacybech32.UnmarshalPubKey // nolint SA1019 deprecated
 	Bech32ifyPubKey         = legacybech32.MarshalPubKey   // nolint SA1019 deprecated
 	Bech32PubKeyTypeConsPub = legacybech32.ConsPK
 	Bech32PubKeyTypeAccPub  = legacybech32.AccPK
-	Wrapf                   = se.Wrapf
 	MustSortJSON            = sdk.MustSortJSON
 	CodeUnauthorized        = uint32(4)
 	CodeInsufficientFunds   = uint32(5)
@@ -78,9 +80,8 @@ var (
 
 type (
 	Context    = sdk.Context
-	Route      = sdk.Route
-	Uint       = sdk.Uint
-	Int        = sdk.Int
+	Uint       = sdkmath.Uint
+	Int        = sdkmath.Int
 	Coin       = sdk.Coin
 	Coins      = sdk.Coins
 	AccAddress = sdk.AccAddress
@@ -88,32 +89,33 @@ type (
 	Result     = sdk.Result
 	Event      = sdk.Event
 	Events     = sdk.Events
-	Dec        = sdk.Dec
+	Dec        = sdkmath.LegacyDec
 	Msg        = sdk.Msg
-	Iterator   = sdk.Iterator
-	Handler    = sdk.Handler
-	StoreKey   = sdk.StoreKey
-	Querier    = sdk.Querier
+	Iterator   = storetypes.Iterator
+	StoreKey   = storetypes.StoreKey
 	TxResponse = sdk.TxResponse
-	Account    = authtypes.AccountI
+	Account    = sdk.AccountI
 )
+
+// Handler defines the core of the state transition function of an application.
+type Handler func(ctx Context, msg Msg) (*Result, error)
 
 var _ sdk.Address = AccAddress{}
 
 func ErrUnknownRequest(msg string) error {
-	return se.Wrap(se.ErrUnknownRequest, msg)
+	return se.ErrUnknownRequest.Wrap(msg)
 }
 
 func ErrInvalidAddress(addr string) error {
-	return se.Wrap(se.ErrInvalidAddress, addr)
+	return se.ErrInvalidAddress.Wrap(addr)
 }
 
 func ErrInvalidCoins(msg string) error {
-	return se.Wrap(se.ErrInvalidCoins, msg)
+	return se.ErrInvalidCoins.Wrap(msg)
 }
 
 func ErrUnauthorized(msg string) error {
-	return se.Wrap(se.ErrUnauthorized, msg)
+	return se.ErrUnauthorized.Wrap(msg)
 }
 
 // RoundToDecimal round the given amt to the desire decimals
@@ -123,7 +125,7 @@ func RoundToDecimal(amt Uint, dec int64) Uint {
 		if prec == 0 { // sanity check
 			return amt
 		}
-		precisionAdjust := sdk.NewUintFromBigInt(big.NewInt(0).Exp(big.NewInt(10), big.NewInt(prec), nil))
+		precisionAdjust := sdkmath.NewUintFromBigInt(big.NewInt(0).Exp(big.NewInt(10), big.NewInt(prec), nil))
 		amt = amt.Quo(precisionAdjust).Mul(precisionAdjust)
 	}
 	return amt
@@ -171,7 +173,11 @@ func GetKeybase(thorchainHome string) (KeybaseStore, error) {
 		cliDir = filepath.Join(usr.HomeDir, ".thornode")
 	}
 
-	kb, err := ckeys.New(KeyringServiceName(), ckeys.BackendFile, cliDir, buf)
+	// Should we pass in the cdc?
+	registry := codectypes.NewInterfaceRegistry()
+	cryptocodec.RegisterInterfaces(registry)
+	cdc := codec.NewProtoCodec(registry)
+	kb, err := ckeys.New(KeyringServiceName(), ckeys.BackendFile, cliDir, buf, cdc)
 	return KeybaseStore{
 		SignerName:   username,
 		SignerPasswd: password,

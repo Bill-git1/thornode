@@ -145,7 +145,7 @@ func (s *PoolMgrVCURSuite) TestAbandonPool(c *C) {
 		if e.Type == "withdraw" {
 			actual := make(map[string]string)
 			for _, attr := range e.Attributes {
-				actual[string(attr.Key)] = string(attr.Value)
+				actual[attr.Key] = attr.Value
 			}
 			c.Assert(actual, DeepEquals, expected)
 		}

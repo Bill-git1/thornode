@@ -200,7 +200,7 @@ func checkExportInvariants(out io.Writer, genesis map[string]any) error {
 
 	// unmarshal json to genesis state
 	genesisState := &thorchain.GenesisState{}
-	err = encodingConfig.Marshaler.UnmarshalJSON(buf.Bytes(), genesisState)
+	err = encodingConfig.Codec.UnmarshalJSON(buf.Bytes(), genesisState)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to decode genesis state")
 	}

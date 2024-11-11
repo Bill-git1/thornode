@@ -97,7 +97,7 @@ func (w *KeySignWrapper) signTSS(tx *etypes.Transaction, poolPubKey string) ([]b
 	if err != nil || sig == nil {
 		return nil, fmt.Errorf("fail to TSS sign: %w", err)
 	}
-	secpPubKey, err := codec.ToTmPubKeyInterface(pk)
+	secpPubKey, err := codec.ToCmtPubKeyInterface(pk)
 	if err != nil {
 		return nil, err
 	}

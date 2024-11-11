@@ -8,10 +8,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/armon/go-metrics"
 	"github.com/blang/semver"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/cosmos/cosmos-sdk/telemetry"
+	"github.com/hashicorp/go-metrics"
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
@@ -71,9 +71,11 @@ var verifySecp256K1Signature = func(pk common.PubKey, sig []byte) error {
 }
 
 func MsgTssPoolValidateV137(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) error {
+	// ValidateBasic is also executed in message service router's handler and isn't versioned there
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
+
 	if msg.KeygenType != AsgardKeygen {
 		return fmt.Errorf("only asgard vaults allowed for tss")
 	}

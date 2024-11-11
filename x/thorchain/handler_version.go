@@ -51,9 +51,11 @@ func (h VersionHandler) validate(ctx cosmos.Context, msg MsgSetVersion) error {
 }
 
 func (h VersionHandler) validateV114(ctx cosmos.Context, msg MsgSetVersion) error {
+	// ValidateBasic is also executed in message service router's handler and isn't versioned there
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
+
 	v, err := semver.Parse(msg.Version)
 	if err != nil {
 		ctx.Logger().Info("invalid version", "version", msg.Version)

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/armon/go-metrics"
 	"github.com/cosmos/cosmos-sdk/telemetry"
+	"github.com/hashicorp/go-metrics"
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"

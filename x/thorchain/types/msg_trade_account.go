@@ -1,8 +1,20 @@
 package types
 
 import (
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
+)
+
+var (
+	_ sdk.Msg              = &MsgTradeAccountDeposit{}
+	_ sdk.HasValidateBasic = &MsgTradeAccountDeposit{}
+	_ sdk.LegacyMsg        = &MsgTradeAccountDeposit{}
+
+	_ sdk.Msg              = &MsgTradeAccountWithdrawal{}
+	_ sdk.HasValidateBasic = &MsgTradeAccountWithdrawal{}
+	_ sdk.LegacyMsg        = &MsgTradeAccountWithdrawal{}
 )
 
 // NewMsgTradeAccountDeposit is a constructor function for MsgTradeAccountDeposit
@@ -15,12 +27,6 @@ func NewMsgTradeAccountDeposit(asset common.Asset, amount cosmos.Uint, acc, sign
 		Signer:  signer,
 	}
 }
-
-// Route should return the pooldata of the module
-func (m *MsgTradeAccountDeposit) Route() string { return RouterKey }
-
-// Type should return the action
-func (m MsgTradeAccountDeposit) Type() string { return "set_trade_account_deposit" }
 
 // ValidateBasic runs stateless checks on the message
 func (m *MsgTradeAccountDeposit) ValidateBasic() error {
@@ -45,11 +51,6 @@ func (m *MsgTradeAccountDeposit) ValidateBasic() error {
 	return nil
 }
 
-// GetSignBytes encodes the message for signing
-func (m *MsgTradeAccountDeposit) GetSignBytes() []byte {
-	return cosmos.MustSortJSON(ModuleCdc.MustMarshalJSON(m))
-}
-
 // GetSigners defines whose signature is required
 func (m *MsgTradeAccountDeposit) GetSigners() []cosmos.AccAddress {
 	return []cosmos.AccAddress{m.Signer}
@@ -65,12 +66,6 @@ func NewMsgTradeAccountWithdrawal(asset common.Asset, amount cosmos.Uint, addr c
 		Tx:           tx,
 	}
 }
-
-// Route should return the pooldata of the module
-func (m *MsgTradeAccountWithdrawal) Route() string { return RouterKey }
-
-// Type should return the action
-func (m MsgTradeAccountWithdrawal) Type() string { return "set_trade_account_withdrawal" }
 
 // ValidateBasic runs stateless checks on the message
 func (m *MsgTradeAccountWithdrawal) ValidateBasic() error {
@@ -96,11 +91,6 @@ func (m *MsgTradeAccountWithdrawal) ValidateBasic() error {
 		return cosmos.ErrUnknownRequest("txID cannot be empty")
 	}
 	return nil
-}
-
-// GetSignBytes encodes the message for signing
-func (m *MsgTradeAccountWithdrawal) GetSignBytes() []byte {
-	return cosmos.MustSortJSON(ModuleCdc.MustMarshalJSON(m))
 }
 
 // GetSigners defines whose signature is required

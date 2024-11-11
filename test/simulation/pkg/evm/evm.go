@@ -10,8 +10,9 @@ import (
 
 	_ "embed"
 
+	sdkmath "cosmossdk.io/math"
+
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ecommon "github.com/ethereum/go-ethereum/common"
@@ -154,7 +155,7 @@ func NewClient(chain common.Chain, host string, keys *thorclient.Keys) (LiteChai
 	}
 
 	// derive the public key
-	pk, err := cryptocodec.ToTmPubKeyInterface(privateKey.PubKey())
+	pk, err := cryptocodec.ToCmtPubKeyInterface(privateKey.PubKey())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tm pub key: %w", err)
 	}
@@ -213,8 +214,8 @@ func (c *Client) GetAccount(pk *common.PubKey) (*common.Account, error) {
 	}
 
 	// get amount
-	amount := sdk.NewUintFromBigInt(balance)
-	amount = amount.Quo(sdk.NewUint(1e10)) // 1e18 -> 1e8
+	amount := sdkmath.NewUintFromBigInt(balance)
+	amount = amount.Quo(sdkmath.NewUint(1e10)) // 1e18 -> 1e8
 
 	// add gas asset to coins
 	coins := common.Coins{
@@ -249,7 +250,7 @@ func (c *Client) GetAccount(pk *common.PubKey) (*common.Account, error) {
 		balance.Div(balance, big.NewInt(1).Exp(big.NewInt(10), big.NewInt(int64(token.Decimals)), nil))
 
 		// add to coins
-		coins = append(coins, common.NewCoin(asset, sdk.NewUintFromBigInt(balance)))
+		coins = append(coins, common.NewCoin(asset, sdkmath.NewUintFromBigInt(balance)))
 	}
 
 	// create account
@@ -271,8 +272,8 @@ func (c *Client) SignTx(tx SimTx) ([]byte, error) {
 	txData := &etypes.LegacyTx{
 		To:    &toAddress,
 		Data:  []byte(tx.Memo),
-		Gas:   21000 + 3000,                                   // standard transfer + memo
-		Value: tx.Coin.Amount.Mul(sdk.NewUint(1e10)).BigInt(), // 1e8 -> 1e18,
+		Gas:   21000 + 3000,                                       // standard transfer + memo
+		Value: tx.Coin.Amount.Mul(sdkmath.NewUint(1e10)).BigInt(), // 1e8 -> 1e18,
 	}
 
 	return c.signTx(txData)

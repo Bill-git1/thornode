@@ -1,8 +1,16 @@
 package types
 
 import (
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
+)
+
+var (
+	_ sdk.Msg              = &MsgBond{}
+	_ sdk.HasValidateBasic = &MsgBond{}
+	_ sdk.LegacyMsg        = &MsgBond{}
 )
 
 // NewMsgBond create new MsgBond message
@@ -17,12 +25,6 @@ func NewMsgBond(txin common.Tx, nodeAddr cosmos.AccAddress, bond cosmos.Uint, bo
 		OperatorFee:         operatorFee,
 	}
 }
-
-// Route should return the router key of the module
-func (m *MsgBond) Route() string { return RouterKey }
-
-// Type should return the action
-func (m MsgBond) Type() string { return "bond" }
 
 // ValidateBasic runs stateless checks on the message
 func (m *MsgBond) ValidateBasic() error {
@@ -54,11 +56,6 @@ func (m *MsgBond) ValidateBasic() error {
 		return cosmos.ErrUnknownRequest("operator fee must be 0-10000")
 	}
 	return nil
-}
-
-// GetSignBytes encodes the message for signing
-func (m *MsgBond) GetSignBytes() []byte {
-	return cosmos.MustSortJSON(ModuleCdc.MustMarshalJSON(m))
 }
 
 // GetSigners defines whose signature is required

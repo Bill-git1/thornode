@@ -1,7 +1,7 @@
 package keeperv1
 
 import (
-	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+	upgradetypes "cosmossdk.io/x/upgrade/types"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
@@ -89,8 +89,8 @@ func (s *KeeperUpgradeSuite) TestUpgrade(c *C) {
 		Info:   upgradeInfo,
 	}), IsNil)
 
-	plan, ok := k.GetUpgradePlan(ctx)
-	c.Assert(ok, Equals, true)
+	plan, err := k.GetUpgradePlan(ctx)
+	c.Assert(err, Equals, nil)
 	c.Assert(plan.Name, Equals, upgradeName)
 	c.Assert(plan.Height, Equals, upgradeHeight)
 	c.Assert(plan.Info, Equals, upgradeInfo)
@@ -114,8 +114,8 @@ func (s *KeeperUpgradeSuite) TestUpgrade(c *C) {
 	k.RejectUpgrade(ctx, na1.NodeAddress, upgradeName)
 
 	k.ClearUpgradePlan(ctx)
-	_, ok = k.GetUpgradePlan(ctx)
-	c.Assert(ok, Equals, false)
+	_, err = k.GetUpgradePlan(ctx)
+	c.Assert(err, Equals, upgradetypes.ErrNoUpgradePlanFound)
 
 	uq, err = UpgradeApprovedByMajority(ctx, k, upgradeName)
 	c.Assert(err, IsNil)

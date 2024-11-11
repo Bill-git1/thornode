@@ -3,9 +3,9 @@ package thorchain
 import (
 	"context"
 
-	"github.com/armon/go-metrics"
 	"github.com/blang/semver"
 	"github.com/cosmos/cosmos-sdk/telemetry"
+	"github.com/hashicorp/go-metrics"
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
@@ -120,7 +120,7 @@ func (h MigrateHandler) handleV96(ctx cosmos.Context, msg MsgMigrate) (*cosmos.R
 			txOut.TxArray[i].OutHash = msg.Tx.Tx.ID
 			shouldSlash = false
 
-			if err := h.mgr.Keeper().SetTxOut(ctx, txOut); nil != err {
+			if err = h.mgr.Keeper().SetTxOut(ctx, txOut); nil != err {
 				return nil, ErrInternal(err, "fail to save tx out")
 			}
 			break
@@ -130,12 +130,12 @@ func (h MigrateHandler) handleV96(ctx cosmos.Context, msg MsgMigrate) (*cosmos.R
 
 	if shouldSlash {
 		ctx.Logger().Info("slash node account,migration has no matched txout", "outbound tx", msg.Tx.Tx)
-		if err := h.slash(ctx, msg.Tx); err != nil {
+		if err = h.slash(ctx, msg.Tx); err != nil {
 			return nil, ErrInternal(err, "fail to slash account")
 		}
 	}
 
-	if err := h.mgr.Keeper().SetLastSignedHeight(ctx, msg.BlockHeight); err != nil {
+	if err = h.mgr.Keeper().SetLastSignedHeight(ctx, msg.BlockHeight); err != nil {
 		ctx.Logger().Info("fail to update last signed height", "error", err)
 	}
 

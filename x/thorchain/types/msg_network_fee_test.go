@@ -13,7 +13,6 @@ var _ = Suite(&MsgNetworkFeeSuite{})
 
 func (MsgNetworkFeeSuite) TestMsgNetworkFee(c *C) {
 	msg := NewMsgNetworkFee(1024, common.ETHChain, 1, 37500, GetRandomBech32Addr())
-	c.Assert(msg.Type(), Equals, "set_network_fee")
 	EnsureMsgBasicCorrect(msg, c)
 
 	testCases := []struct {

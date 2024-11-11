@@ -18,7 +18,6 @@ func (MsgTradeAccountSuite) TestDeposit(c *C) {
 
 	m := NewMsgTradeAccountDeposit(asset, amt, signer, signer, dummyTx)
 	EnsureMsgBasicCorrect(m, c)
-	c.Check(m.Type(), Equals, "set_trade_account_deposit")
 
 	m = NewMsgTradeAccountDeposit(common.EmptyAsset, amt, signer, signer, dummyTx)
 	c.Check(m.ValidateBasic(), NotNil)
@@ -39,7 +38,6 @@ func (MsgTradeAccountSuite) TestWithdrawal(c *C) {
 
 	m := NewMsgTradeAccountWithdrawal(asset, amt, ethAddr, signer, dummyTx)
 	EnsureMsgBasicCorrect(m, c)
-	c.Check(m.Type(), Equals, "set_trade_account_withdrawal")
 
 	m = NewMsgTradeAccountWithdrawal(common.EmptyAsset, amt, ethAddr, signer, dummyTx)
 	c.Check(m.ValidateBasic(), NotNil)

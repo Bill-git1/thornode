@@ -19,10 +19,7 @@ func (MsgLoanSuite) TestMsgLoanOpenSuite(c *C) {
 	units := cosmos.NewUint(100)
 	targetA := GetRandomBTCAddress()
 	msg := NewMsgLoanOpen(owner, colA, units, targetA, colA, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), acc, common.TxID("test_tx_id"))
-	c.Assert(msg.Route(), Equals, RouterKey)
-	c.Assert(msg.Type(), Equals, "loan_open")
 	c.Assert(msg.ValidateBasic(), IsNil)
-	c.Assert(len(msg.GetSignBytes()) > 0, Equals, true)
 	c.Assert(msg.GetSigners(), NotNil)
 	c.Assert(msg.GetSigners()[0].String(), Equals, acc.String())
 
@@ -51,10 +48,7 @@ func (MsgLoanSuite) TestMsgLoanRepaySuite(c *C) {
 	colA := common.BTCAsset
 	coin := common.NewCoin(common.ETHAsset, cosmos.NewUint(90*common.One))
 	msg := NewMsgLoanRepayment(owner, colA, cosmos.OneUint(), owner, coin, acc, common.TxID("test_tx_id"))
-	c.Assert(msg.Route(), Equals, RouterKey)
-	c.Assert(msg.Type(), Equals, "loan_repayment")
 	c.Assert(msg.ValidateBasic(), IsNil)
-	c.Assert(len(msg.GetSignBytes()) > 0, Equals, true)
 	c.Assert(msg.GetSigners(), NotNil)
 	c.Assert(msg.GetSigners()[0].String(), Equals, acc.String())
 

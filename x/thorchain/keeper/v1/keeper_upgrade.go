@@ -7,7 +7,7 @@ import (
 	"math/big"
 	"strings"
 
-	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+	upgradetypes "cosmossdk.io/x/upgrade/types"
 
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
@@ -15,7 +15,7 @@ import (
 )
 
 // GetUpgradePlan proxies through to the upgrade keeper
-func (k KVStore) GetUpgradePlan(ctx cosmos.Context) (upgradetypes.Plan, bool) {
+func (k KVStore) GetUpgradePlan(ctx cosmos.Context) (upgradetypes.Plan, error) {
 	return k.upgradeKeeper.GetUpgradePlan(ctx)
 }
 
@@ -26,7 +26,9 @@ func (k KVStore) ScheduleUpgrade(ctx cosmos.Context, plan upgradetypes.Plan) err
 
 // ClearUpgradePlan proxies through to the upgrade keeper
 func (k KVStore) ClearUpgradePlan(ctx cosmos.Context) {
-	k.upgradeKeeper.ClearUpgradePlan(ctx)
+	if err := k.upgradeKeeper.ClearUpgradePlan(ctx); err != nil {
+		ctx.Logger().Error("failed to clear upgrade plan", "error", err)
+	}
 }
 
 // ProposeUpgrade proposes an upgrade by name
@@ -196,4 +198,25 @@ func UpgradeApprovedByMajority(ctx cosmos.Context, k keeper.Keeper, name string)
 		TotalActive:     totalActive,
 		NeededForQuorum: int(valsToQuorum),
 	}, nil
+}
+
+// UpdateActiveValidatorVersions updates the active validator versions to the given version
+func UpdateActiveValidatorVersions(
+	ctx cosmos.Context,
+	thorchainKeeper keeper.Keeper,
+	version string,
+) error {
+	activeVals, err := thorchainKeeper.ListActiveValidators(ctx)
+	if err != nil {
+		return fmt.Errorf("fail to get active validators: %w", err)
+	}
+
+	for _, v := range activeVals {
+		v.Version = version
+		if err = thorchainKeeper.SetNodeAccount(ctx, v); err != nil {
+			return fmt.Errorf("fail to save node account: %w", err)
+		}
+	}
+
+	return nil
 }

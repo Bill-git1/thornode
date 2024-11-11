@@ -36,61 +36,73 @@
     "end_block_events": [
       {
         "amount": "546043rune",
+        "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_spent"
       },
       {
         "amount": "546043rune",
+        "mode": "EndBlock",
         "receiver": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_received"
       },
       {
         "amount": "546043rune",
+        "mode": "EndBlock",
         "recipient": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "transfer"
       },
       {
+        "mode": "EndBlock",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "message"
       },
       {
         "amount": "546043rune",
+        "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_spent"
       },
       {
         "amount": "546043rune",
+        "mode": "EndBlock",
         "receiver": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_received"
       },
       {
         "amount": "546043rune",
+        "mode": "EndBlock",
         "recipient": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "transfer"
       },
       {
+        "mode": "EndBlock",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "message"
       },
       {
         "amount": "17757rune",
+        "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_spent"
       },
       {
         "amount": "17757rune",
+        "mode": "EndBlock",
         "receiver": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
         "type": "coin_received"
       },
       {
         "amount": "17757rune",
+        "mode": "EndBlock",
         "recipient": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "transfer"
       },
       {
+        "mode": "EndBlock",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "message"
       },
@@ -100,6 +112,7 @@
         "bond_reward": "17757",
         "dev_fund_reward": "0",
         "income_burn": "0",
+        "mode": "EndBlock",
         "type": "rewards"
       }
     ],
@@ -133,7 +146,7 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "BF06278E7ADC5F11C280F046BC855D78DB52786B6CBCAC6EDC456283AFA40281",
+      "app_hash": "399C7A4D3C948F38D3DD33DA21381D7E459486FDF278F20FDF7D40BD5C7613C5",
       "last_results_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
@@ -142,61 +155,73 @@
     "end_block_events": [
       {
         "amount": "546042rune",
+        "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_spent"
       },
       {
         "amount": "546042rune",
+        "mode": "EndBlock",
         "receiver": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_received"
       },
       {
         "amount": "546042rune",
+        "mode": "EndBlock",
         "recipient": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "transfer"
       },
       {
+        "mode": "EndBlock",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "message"
       },
       {
         "amount": "546042rune",
+        "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_spent"
       },
       {
         "amount": "546042rune",
+        "mode": "EndBlock",
         "receiver": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_received"
       },
       {
         "amount": "546042rune",
+        "mode": "EndBlock",
         "recipient": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "transfer"
       },
       {
+        "mode": "EndBlock",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "message"
       },
       {
         "amount": "17758rune",
+        "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_spent"
       },
       {
         "amount": "17758rune",
+        "mode": "EndBlock",
         "receiver": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
         "type": "coin_received"
       },
       {
         "amount": "17758rune",
+        "mode": "EndBlock",
         "recipient": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "transfer"
       },
       {
+        "mode": "EndBlock",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "message"
       },
@@ -206,6 +231,7 @@
         "bond_reward": "17758",
         "dev_fund_reward": "0",
         "income_burn": "0",
+        "mode": "EndBlock",
         "type": "rewards"
       }
     ],
@@ -233,7 +259,8 @@
                 },
                 "sequence": "0"
               }
-            ]
+            ],
+            "tip": null
           },
           "body": {
             "extension_options": [],
@@ -255,10 +282,8 @@
         },
         "result": {
           "code": 0,
-          "data": "\n\u0011\n\u000f/types.MsgMimir",
-          "log": "[{\"events\":[{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_mimir_attr\"}]},{\"type\":\"set_mimir\",\"attributes\":[{\"key\":\"key\",\"value\":\"REGRESSIONTEST\"},{\"key\":\"value\",\"value\":\"1\"}]}]}]",
-          "gas_wanted": "0",
-          "gas_used": "59975",
+          "gas_wanted": "-1",
+          "gas_used": "54799",
           "events": [
             {
               "fee": "",
@@ -274,11 +299,15 @@
               "type": "tx"
             },
             {
-              "action": "set_mimir_attr",
+              "action": "/types.MsgMimir",
+              "module": "MsgMimir",
+              "msg_index": "0",
+              "sender": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
               "type": "message"
             },
             {
               "key": "REGRESSIONTEST",
+              "msg_index": "0",
               "type": "set_mimir",
               "value": "1"
             }
@@ -315,8 +344,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "A81CC8E9F5383957651D192DA0DFA9BB26E0106B418A15A86DEC07905666F698",
-      "last_results_hash": "1BA7DC53A1CF113377D229C9C9CA8E6EFCADD0D8C4F0D343F33D413691175420",
+      "app_hash": "D090B33075638806AB31E01715D9A10CB2612270CD1A878EF8384718050C4836",
+      "last_results_hash": "36D36A9CB376A431243DBFCC9CD89D4FDDCBFFE6C4C93E03C05EE3BCEC30D268",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -324,61 +353,73 @@
     "end_block_events": [
       {
         "amount": "546042rune",
+        "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_spent"
       },
       {
         "amount": "546042rune",
+        "mode": "EndBlock",
         "receiver": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_received"
       },
       {
         "amount": "546042rune",
+        "mode": "EndBlock",
         "recipient": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "transfer"
       },
       {
+        "mode": "EndBlock",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "message"
       },
       {
         "amount": "546042rune",
+        "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_spent"
       },
       {
         "amount": "546042rune",
+        "mode": "EndBlock",
         "receiver": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_received"
       },
       {
         "amount": "546042rune",
+        "mode": "EndBlock",
         "recipient": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "transfer"
       },
       {
+        "mode": "EndBlock",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "message"
       },
       {
         "amount": "17758rune",
+        "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_spent"
       },
       {
         "amount": "17758rune",
+        "mode": "EndBlock",
         "receiver": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
         "type": "coin_received"
       },
       {
         "amount": "17758rune",
+        "mode": "EndBlock",
         "recipient": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "transfer"
       },
       {
+        "mode": "EndBlock",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "message"
       },
@@ -388,6 +429,7 @@
         "bond_reward": "17758",
         "dev_fund_reward": "0",
         "income_burn": "0",
+        "mode": "EndBlock",
         "type": "rewards"
       }
     ],
@@ -415,7 +457,8 @@
                 },
                 "sequence": "0"
               }
-            ]
+            ],
+            "tip": null
           },
           "body": {
             "extension_options": [],
@@ -437,10 +480,8 @@
         },
         "result": {
           "code": 0,
-          "data": "\n\u0011\n\u000f/types.MsgMimir",
-          "log": "[{\"events\":[{\"type\":\"bond\",\"attributes\":[{\"key\":\"amount\",\"value\":\"2000000\"},{\"key\":\"bond_type\",\"value\":\"bond_cost\"},{\"key\":\"node_address\",\"value\":\"tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej\"},{\"key\":\"bond_address\"},{\"key\":\"id\",\"value\":\"0000000000000000000000000000000000000000000000000000000000000000\"},{\"key\":\"chain\"},{\"key\":\"from\"},{\"key\":\"to\",\"value\":\"node:tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej\\nstatus:Active\\nnode pubkeys:\\n\\tsecp256k1: tthorpub1addwnpepqwlkdxcyz8fnxk3xp0eqt89g6cxau2c4zp89yr2x2dy56s2zgu2jx3pmacu\\n\\ted25519: \\n\\nvalidator consensus pub key:tthorcpub1zcjduepqq75h7uy6qhesh9d3a9tuk0mzrnc46u8rye44ze6peua3zmpfh23q8z37sz\\nbond:2499998000000\\nversion:9.999.0\\nbond address:tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej\\nrequested to leave:false\\n\"},{\"key\":\"coin\"},{\"key\":\"memo\"}]},{\"type\":\"coin_received\",\"attributes\":[{\"key\":\"receiver\",\"value\":\"tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]},{\"type\":\"coin_spent\",\"attributes\":[{\"key\":\"spender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]},{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_mimir_attr\"},{\"key\":\"sender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"}]},{\"type\":\"set_node_mimir\",\"attributes\":[{\"key\":\"key\",\"value\":\"REGRESSIONTEST\"},{\"key\":\"value\",\"value\":\"2\"},{\"key\":\"address\",\"value\":\"tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej\"}]},{\"type\":\"transfer\",\"attributes\":[{\"key\":\"recipient\",\"value\":\"tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw\"},{\"key\":\"sender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]}]}]",
-          "gas_wanted": "0",
-          "gas_used": "102993",
+          "gas_wanted": "-1",
+          "gas_used": "102909",
           "events": [
             {
               "fee": "",
@@ -456,32 +497,40 @@
               "type": "tx"
             },
             {
-              "action": "set_mimir_attr",
+              "action": "/types.MsgMimir",
+              "module": "MsgMimir",
+              "msg_index": "0",
+              "sender": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
               "type": "message"
             },
             {
               "amount": "2000000rune",
+              "msg_index": "0",
               "spender": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
               "type": "coin_spent"
             },
             {
               "amount": "2000000rune",
+              "msg_index": "0",
               "receiver": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
               "type": "coin_received"
             },
             {
               "amount": "2000000rune",
+              "msg_index": "0",
               "recipient": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
               "sender": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
               "type": "transfer"
             },
             {
+              "msg_index": "0",
               "sender": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
               "type": "message"
             },
             {
               "address": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
               "key": "REGRESSIONTEST",
+              "msg_index": "0",
               "type": "set_node_mimir",
               "value": "2"
             },
@@ -494,6 +543,7 @@
               "from": "",
               "id": "0000000000000000000000000000000000000000000000000000000000000000",
               "memo": "",
+              "msg_index": "0",
               "node_address": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
               "to": "node:tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej\nstatus:Active\nnode pubkeys:\n\tsecp256k1: tthorpub1addwnpepqwlkdxcyz8fnxk3xp0eqt89g6cxau2c4zp89yr2x2dy56s2zgu2jx3pmacu\n\ted25519: \n\nvalidator consensus pub key:tthorcpub1zcjduepqq75h7uy6qhesh9d3a9tuk0mzrnc46u8rye44ze6peua3zmpfh23q8z37sz\nbond:2499998000000\nversion:9.999.0\nbond address:tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej\nrequested to leave:false\n",
               "type": "bond"
@@ -531,8 +581,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "142588AC3852251FD10D0C1DB1D264447C608863659BB266E924DA9F61008EAA",
-      "last_results_hash": "2AA22B6BB4B257287796352BD324E3D9AD6080CEA6CB9C4DAE6FC4D3EA8C7EC6",
+      "app_hash": "2AF6DC4188759EB3C23ADC106513122A245A4E6437E8E6400893C48FF37015BA",
+      "last_results_hash": "EF4C4F5AF809608FDAE0A42AA318CCD9EBB28FCB566E6C4ECEE699D743987A81",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -540,61 +590,73 @@
     "end_block_events": [
       {
         "amount": "546042rune",
+        "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_spent"
       },
       {
         "amount": "546042rune",
+        "mode": "EndBlock",
         "receiver": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_received"
       },
       {
         "amount": "546042rune",
+        "mode": "EndBlock",
         "recipient": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "transfer"
       },
       {
+        "mode": "EndBlock",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "message"
       },
       {
         "amount": "546042rune",
+        "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_spent"
       },
       {
         "amount": "546042rune",
+        "mode": "EndBlock",
         "receiver": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_received"
       },
       {
         "amount": "546042rune",
+        "mode": "EndBlock",
         "recipient": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "transfer"
       },
       {
+        "mode": "EndBlock",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "message"
       },
       {
         "amount": "17758rune",
+        "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_spent"
       },
       {
         "amount": "17758rune",
+        "mode": "EndBlock",
         "receiver": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
         "type": "coin_received"
       },
       {
         "amount": "17758rune",
+        "mode": "EndBlock",
         "recipient": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "transfer"
       },
       {
+        "mode": "EndBlock",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "message"
       },
@@ -604,6 +666,7 @@
         "bond_reward": "17758",
         "dev_fund_reward": "0",
         "income_burn": "0",
+        "mode": "EndBlock",
         "type": "rewards"
       }
     ],
@@ -631,7 +694,8 @@
                 },
                 "sequence": "0"
               }
-            ]
+            ],
+            "tip": null
           },
           "body": {
             "extension_options": [],
@@ -653,10 +717,8 @@
         },
         "result": {
           "code": 0,
-          "data": "\n\u0011\n\u000f/types.MsgMimir",
-          "log": "[{\"events\":[{\"type\":\"bond\",\"attributes\":[{\"key\":\"amount\",\"value\":\"2000000\"},{\"key\":\"bond_type\",\"value\":\"bond_cost\"},{\"key\":\"node_address\",\"value\":\"tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\"},{\"key\":\"bond_address\"},{\"key\":\"id\",\"value\":\"0000000000000000000000000000000000000000000000000000000000000000\"},{\"key\":\"chain\"},{\"key\":\"from\"},{\"key\":\"to\",\"value\":\"node:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\\nstatus:Active\\nnode pubkeys:\\n\\tsecp256k1: tthorpub1addwnpepqv8lvvqmczr893yf7zyf7xtffccf032aprl8z09y3e3nfruedew85n306k5\\n\\ted25519: \\n\\nvalidator consensus pub key:tthorcpub1zcjduepqsukty8qkyj4wfrpc8he2hl9fc8m06cfz8ex3ddspzzufw93xxhqqec5sp0\\nbond:2499998000000\\nversion:9.999.0\\nbond address:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\\nrequested to leave:false\\n\"},{\"key\":\"coin\"},{\"key\":\"memo\"}]},{\"type\":\"coin_received\",\"attributes\":[{\"key\":\"receiver\",\"value\":\"tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]},{\"type\":\"coin_spent\",\"attributes\":[{\"key\":\"spender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]},{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_mimir_attr\"},{\"key\":\"sender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"}]},{\"type\":\"set_node_mimir\",\"attributes\":[{\"key\":\"key\",\"value\":\"REGRESSIONTEST\"},{\"key\":\"value\",\"value\":\"2\"},{\"key\":\"address\",\"value\":\"tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\"}]},{\"type\":\"transfer\",\"attributes\":[{\"key\":\"recipient\",\"value\":\"tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw\"},{\"key\":\"sender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]}]}]",
-          "gas_wanted": "0",
-          "gas_used": "108622",
+          "gas_wanted": "-1",
+          "gas_used": "108538",
           "events": [
             {
               "fee": "",
@@ -672,32 +734,40 @@
               "type": "tx"
             },
             {
-              "action": "set_mimir_attr",
+              "action": "/types.MsgMimir",
+              "module": "MsgMimir",
+              "msg_index": "0",
+              "sender": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "type": "message"
             },
             {
               "amount": "2000000rune",
+              "msg_index": "0",
               "spender": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
               "type": "coin_spent"
             },
             {
               "amount": "2000000rune",
+              "msg_index": "0",
               "receiver": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
               "type": "coin_received"
             },
             {
               "amount": "2000000rune",
+              "msg_index": "0",
               "recipient": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
               "sender": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
               "type": "transfer"
             },
             {
+              "msg_index": "0",
               "sender": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
               "type": "message"
             },
             {
               "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "key": "REGRESSIONTEST",
+              "msg_index": "0",
               "type": "set_node_mimir",
               "value": "2"
             },
@@ -710,6 +780,7 @@
               "from": "",
               "id": "0000000000000000000000000000000000000000000000000000000000000000",
               "memo": "",
+              "msg_index": "0",
               "node_address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "to": "node:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\nstatus:Active\nnode pubkeys:\n\tsecp256k1: tthorpub1addwnpepqv8lvvqmczr893yf7zyf7xtffccf032aprl8z09y3e3nfruedew85n306k5\n\ted25519: \n\nvalidator consensus pub key:tthorcpub1zcjduepqsukty8qkyj4wfrpc8he2hl9fc8m06cfz8ex3ddspzzufw93xxhqqec5sp0\nbond:2499998000000\nversion:9.999.0\nbond address:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\nrequested to leave:false\n",
               "type": "bond"
@@ -740,7 +811,8 @@
                 },
                 "sequence": "0"
               }
-            ]
+            ],
+            "tip": null
           },
           "body": {
             "extension_options": [],
@@ -762,10 +834,8 @@
         },
         "result": {
           "code": 0,
-          "data": "\n\u0011\n\u000f/types.MsgMimir",
-          "log": "[{\"events\":[{\"type\":\"bond\",\"attributes\":[{\"key\":\"amount\",\"value\":\"2000000\"},{\"key\":\"bond_type\",\"value\":\"bond_cost\"},{\"key\":\"node_address\",\"value\":\"tthor12e7ngn5h22su4hecdf0h8aw7hvnly5tchrfd43\"},{\"key\":\"bond_address\"},{\"key\":\"id\",\"value\":\"0000000000000000000000000000000000000000000000000000000000000000\"},{\"key\":\"chain\"},{\"key\":\"from\"},{\"key\":\"to\",\"value\":\"node:tthor12e7ngn5h22su4hecdf0h8aw7hvnly5tchrfd43\\nstatus:Active\\nnode pubkeys:\\n\\tsecp256k1: tthorpub1addwnpepq0pj32xkm74ndx0wme5hjmk6hmg5w78zdnz02jlmr337vg8mhtjszk9mhev\\n\\ted25519: \\n\\nvalidator consensus pub key:tthorcpub1zcjduepqy52lzz52l3e557ker8ucmuzzjppdq6sjzxg7pxu2rkc9f5sk3khq4qjmag\\nbond:2499998000000\\nversion:9.999.0\\nbond address:tthor12e7ngn5h22su4hecdf0h8aw7hvnly5tchrfd43\\nrequested to leave:false\\n\"},{\"key\":\"coin\"},{\"key\":\"memo\"}]},{\"type\":\"coin_received\",\"attributes\":[{\"key\":\"receiver\",\"value\":\"tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]},{\"type\":\"coin_spent\",\"attributes\":[{\"key\":\"spender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]},{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_mimir_attr\"},{\"key\":\"sender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"}]},{\"type\":\"set_node_mimir\",\"attributes\":[{\"key\":\"key\",\"value\":\"REGRESSIONTEST\"},{\"key\":\"value\",\"value\":\"2\"},{\"key\":\"address\",\"value\":\"tthor12e7ngn5h22su4hecdf0h8aw7hvnly5tchrfd43\"}]},{\"type\":\"transfer\",\"attributes\":[{\"key\":\"recipient\",\"value\":\"tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw\"},{\"key\":\"sender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]}]}]",
-          "gas_wanted": "0",
-          "gas_used": "107092",
+          "gas_wanted": "-1",
+          "gas_used": "107008",
           "events": [
             {
               "fee": "",
@@ -781,32 +851,40 @@
               "type": "tx"
             },
             {
-              "action": "set_mimir_attr",
+              "action": "/types.MsgMimir",
+              "module": "MsgMimir",
+              "msg_index": "0",
+              "sender": "tthor12e7ngn5h22su4hecdf0h8aw7hvnly5tchrfd43",
               "type": "message"
             },
             {
               "amount": "2000000rune",
+              "msg_index": "0",
               "spender": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
               "type": "coin_spent"
             },
             {
               "amount": "2000000rune",
+              "msg_index": "0",
               "receiver": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
               "type": "coin_received"
             },
             {
               "amount": "2000000rune",
+              "msg_index": "0",
               "recipient": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
               "sender": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
               "type": "transfer"
             },
             {
+              "msg_index": "0",
               "sender": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
               "type": "message"
             },
             {
               "address": "tthor12e7ngn5h22su4hecdf0h8aw7hvnly5tchrfd43",
               "key": "REGRESSIONTEST",
+              "msg_index": "0",
               "type": "set_node_mimir",
               "value": "2"
             },
@@ -819,6 +897,7 @@
               "from": "",
               "id": "0000000000000000000000000000000000000000000000000000000000000000",
               "memo": "",
+              "msg_index": "0",
               "node_address": "tthor12e7ngn5h22su4hecdf0h8aw7hvnly5tchrfd43",
               "to": "node:tthor12e7ngn5h22su4hecdf0h8aw7hvnly5tchrfd43\nstatus:Active\nnode pubkeys:\n\tsecp256k1: tthorpub1addwnpepq0pj32xkm74ndx0wme5hjmk6hmg5w78zdnz02jlmr337vg8mhtjszk9mhev\n\ted25519: \n\nvalidator consensus pub key:tthorcpub1zcjduepqy52lzz52l3e557ker8ucmuzzjppdq6sjzxg7pxu2rkc9f5sk3khq4qjmag\nbond:2499998000000\nversion:9.999.0\nbond address:tthor12e7ngn5h22su4hecdf0h8aw7hvnly5tchrfd43\nrequested to leave:false\n",
               "type": "bond"
@@ -849,7 +928,8 @@
                 },
                 "sequence": "0"
               }
-            ]
+            ],
+            "tip": null
           },
           "body": {
             "extension_options": [],
@@ -871,10 +951,8 @@
         },
         "result": {
           "code": 0,
-          "data": "\n\u0011\n\u000f/types.MsgMimir",
-          "log": "[{\"events\":[{\"type\":\"bond\",\"attributes\":[{\"key\":\"amount\",\"value\":\"2000000\"},{\"key\":\"bond_type\",\"value\":\"bond_cost\"},{\"key\":\"node_address\",\"value\":\"tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm\"},{\"key\":\"bond_address\"},{\"key\":\"id\",\"value\":\"0000000000000000000000000000000000000000000000000000000000000000\"},{\"key\":\"chain\"},{\"key\":\"from\"},{\"key\":\"to\",\"value\":\"node:tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm\\nstatus:Active\\nnode pubkeys:\\n\\tsecp256k1: tthorpub1addwnpepqvfnccxa3hw35m7mx6mavxdp93jjw2jhdw0tv45dlmlelcsctu335w2yw3u\\n\\ted25519: \\n\\nvalidator consensus pub key:tthorcpub1zcjduepqe4ek6z27scfutp6whq5ug2plglertjw7z473nny2yu46r7gxp07s92jckg\\nbond:2499998000000\\nversion:9.999.0\\nbond address:tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm\\nrequested to leave:false\\n\"},{\"key\":\"coin\"},{\"key\":\"memo\"}]},{\"type\":\"coin_received\",\"attributes\":[{\"key\":\"receiver\",\"value\":\"tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]},{\"type\":\"coin_spent\",\"attributes\":[{\"key\":\"spender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]},{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_mimir_attr\"},{\"key\":\"sender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"}]},{\"type\":\"set_mimir\",\"attributes\":[{\"key\":\"key\",\"value\":\"REGRESSIONTEST\"},{\"key\":\"value\",\"value\":\"2\"}]},{\"type\":\"set_node_mimir\",\"attributes\":[{\"key\":\"key\",\"value\":\"REGRESSIONTEST\"},{\"key\":\"value\",\"value\":\"2\"},{\"key\":\"address\",\"value\":\"tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm\"}]},{\"type\":\"transfer\",\"attributes\":[{\"key\":\"recipient\",\"value\":\"tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw\"},{\"key\":\"sender\",\"value\":\"tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff\"},{\"key\":\"amount\",\"value\":\"2000000rune\"}]}]}]",
-          "gas_wanted": "0",
-          "gas_used": "111294",
+          "gas_wanted": "-1",
+          "gas_used": "111210",
           "events": [
             {
               "fee": "",
@@ -890,32 +968,40 @@
               "type": "tx"
             },
             {
-              "action": "set_mimir_attr",
+              "action": "/types.MsgMimir",
+              "module": "MsgMimir",
+              "msg_index": "0",
+              "sender": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
               "type": "message"
             },
             {
               "amount": "2000000rune",
+              "msg_index": "0",
               "spender": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
               "type": "coin_spent"
             },
             {
               "amount": "2000000rune",
+              "msg_index": "0",
               "receiver": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
               "type": "coin_received"
             },
             {
               "amount": "2000000rune",
+              "msg_index": "0",
               "recipient": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
               "sender": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
               "type": "transfer"
             },
             {
+              "msg_index": "0",
               "sender": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
               "type": "message"
             },
             {
               "address": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
               "key": "REGRESSIONTEST",
+              "msg_index": "0",
               "type": "set_node_mimir",
               "value": "2"
             },
@@ -928,12 +1014,14 @@
               "from": "",
               "id": "0000000000000000000000000000000000000000000000000000000000000000",
               "memo": "",
+              "msg_index": "0",
               "node_address": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
               "to": "node:tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm\nstatus:Active\nnode pubkeys:\n\tsecp256k1: tthorpub1addwnpepqvfnccxa3hw35m7mx6mavxdp93jjw2jhdw0tv45dlmlelcsctu335w2yw3u\n\ted25519: \n\nvalidator consensus pub key:tthorcpub1zcjduepqe4ek6z27scfutp6whq5ug2plglertjw7z473nny2yu46r7gxp07s92jckg\nbond:2499998000000\nversion:9.999.0\nbond address:tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm\nrequested to leave:false\n",
               "type": "bond"
             },
             {
               "key": "REGRESSIONTEST",
+              "msg_index": "0",
               "type": "set_mimir",
               "value": "2"
             }

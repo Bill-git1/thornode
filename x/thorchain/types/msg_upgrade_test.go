@@ -18,10 +18,7 @@ func (MsgProposeUpgradeSuite) TestMsgProposeUpgradeSuite(c *C) {
 	acc := GetRandomBech32Addr()
 	c.Assert(acc.Empty(), Equals, false)
 	msg := NewMsgProposeUpgrade("1.2.3", 100000, "proposed upgrade", acc)
-	c.Assert(msg.Route(), Equals, RouterKey)
-	c.Assert(msg.Type(), Equals, "propose_upgrade")
 	c.Assert(msg.ValidateBasic(), IsNil)
-	c.Assert(len(msg.GetSignBytes()) > 0, Equals, true)
 	c.Assert(msg.GetSigners(), NotNil)
 	c.Assert(msg.GetSigners()[0].String(), Equals, acc.String())
 
@@ -71,10 +68,7 @@ func (MsgApproveUpgradeSuite) TestMsgApproveUpgradeSuite(c *C) {
 	acc := GetRandomBech32Addr()
 	c.Assert(acc.Empty(), Equals, false)
 	msg := NewMsgApproveUpgrade("1.2.3", acc)
-	c.Assert(msg.Route(), Equals, RouterKey)
-	c.Assert(msg.Type(), Equals, "approve_upgrade")
 	c.Assert(msg.ValidateBasic(), IsNil)
-	c.Assert(len(msg.GetSignBytes()) > 0, Equals, true)
 	c.Assert(msg.GetSigners(), NotNil)
 	c.Assert(msg.GetSigners()[0].String(), Equals, acc.String())
 
@@ -98,10 +92,7 @@ func (MsgRejectUpgradeSuite) TestMsgRejectUpgradeSuite(c *C) {
 	acc := GetRandomBech32Addr()
 	c.Assert(acc.Empty(), Equals, false)
 	msg := NewMsgRejectUpgrade("1.2.3", acc)
-	c.Assert(msg.Route(), Equals, RouterKey)
-	c.Assert(msg.Type(), Equals, "reject_upgrade")
 	c.Assert(msg.ValidateBasic(), IsNil)
-	c.Assert(len(msg.GetSignBytes()) > 0, Equals, true)
 	c.Assert(msg.GetSigners(), NotNil)
 	c.Assert(msg.GetSigners()[0].String(), Equals, acc.String())
 

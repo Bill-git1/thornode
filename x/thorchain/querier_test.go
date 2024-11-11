@@ -6,9 +6,11 @@ import (
 
 	"github.com/blang/semver"
 
-	abci "github.com/tendermint/tendermint/abci/types"
 	. "gopkg.in/check.v1"
 
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	ckeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	types2 "github.com/cosmos/cosmos-sdk/types"
@@ -18,16 +20,52 @@ import (
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	openapi "gitlab.com/thorchain/thornode/openapi/gen"
 	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
-	"gitlab.com/thorchain/thornode/x/thorchain/query"
 	"gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
+// Note: coverage lacking for these queries in this file
+//   check whether there is coverage elsewhere to add openapi conformance verification
+// QueryBlockResponse
+// QueryBorrowerResponse
+// QueryBorrowersResponse
+// QueryDerivedPoolResponse
+// QueryDerivedPoolsResponse
+// QueryLiquidityProviderResponse
+// QueryMimirAdminValuesResponse
+// QueryMimirNodesAllValuesResponse
+// QueryMimirNodesValuesResponse
+// QueryMimirWithKeyResponse
+// QueryOutboundFeesResponse
+// QueryOutboundResponse
+// QueryPoolSlipsResponse
+// QueryQuoteLoanCloseResponse
+// QueryQuoteLoanOpenResponse
+// QueryQuoteSaverDepositResponse
+// QueryQuoteSaverWithdrawResponse
+// QueryQuoteSwapResponse
+// QueryRuneProviderResponse
+// QueryRuneProvidersResponse
+// QuerySaverResponse
+// QueryStreamingSwapResponse
+// QueryStreamingSwapsResponse
+// SwapperClout
+// QuerySwapQueueResponse
+// QueryThornameResponse
+// QueryTradeAccountsResponse
+// QueryTradeUnitsResponse
+// QueryTssKeygenMetricResponse
+// QueryTssMetricResponse
+// QueryInvariantResponse
+// QueryInvariantsResponse
+// QueryRunePoolResponse
+// QueryTradeUnitResponse
+
 type QuerierSuite struct {
-	kb      cosmos.KeybaseStore
-	mgr     *Mgrs
-	k       keeper.Keeper
-	querier cosmos.Querier
-	ctx     cosmos.Context
+	kb          cosmos.KeybaseStore
+	mgr         *Mgrs
+	k           keeper.Keeper
+	queryServer types.QueryServer
+	ctx         cosmos.Context
 }
 
 var _ = Suite(&QuerierSuite{})
@@ -42,7 +80,10 @@ func (k *TestQuerierKeeper) GetTxOut(_ cosmos.Context, _ int64) (*TxOut, error) 
 }
 
 func (s *QuerierSuite) SetUpTest(c *C) {
-	kb := ckeys.NewInMemory()
+	registry := codectypes.NewInterfaceRegistry()
+	cryptocodec.RegisterInterfaces(registry)
+	cdc := codec.NewProtoCodec(registry)
+	kb := ckeys.NewInMemory(cdc)
 	username := "thorchain"
 	password := "password"
 
@@ -55,7 +96,7 @@ func (s *QuerierSuite) SetUpTest(c *C) {
 	}
 	s.ctx, s.mgr = setupManagerForTest(c)
 	s.k = s.mgr.Keeper()
-	s.querier = NewQuerier(s.mgr, s.kb)
+	s.queryServer = NewQueryServerImpl(s.mgr, s.kb)
 }
 
 func (s *QuerierSuite) TestQueryKeysign(c *C) {
@@ -79,22 +120,30 @@ func (s *QuerierSuite) TestQueryKeysign(c *C) {
 
 	_, mgr := setupManagerForTest(c)
 	mgr.K = keeper
-	querier := NewQuerier(mgr, s.kb)
+	queryServer := NewQueryServerImpl(mgr, s.kb)
 
-	path := []string{
-		"keysign",
-		"5",
-		pk.String(),
-	}
-	res, err := querier(ctx, path, abci.RequestQuery{})
+	queryKeysignResp, err := queryServer.KeysignPubkey(ctx, &types.QueryKeysignPubkeyRequest{
+		Height: "5",
+		PubKey: pk.String(),
+	})
 	c.Assert(err, IsNil)
-	c.Assert(res, NotNil)
+	c.Assert(queryKeysignResp, NotNil)
+
+	// Verify conformance to openapi spec
+	result, err := queryKeysignResp.MarshalJSONPB(nil)
+	c.Assert(err, IsNil)
+
+	var openapiKeysignResp openapi.KeysignResponse
+	err = json.Unmarshal(result, &openapiKeysignResp)
+	c.Assert(err, IsNil)
+	c.Assert(openapiKeysignResp.Signature, Equals, queryKeysignResp.Signature)
+	c.Assert(*openapiKeysignResp.Keysign.Height, Equals, queryKeysignResp.Keysign.Height)
+	c.Assert(len(openapiKeysignResp.Keysign.TxArray), Equals, len(queryKeysignResp.Keysign.TxArray))
 }
 
 func (s *QuerierSuite) TestQueryPool(c *C) {
 	ctx, mgr := setupManagerForTest(c)
-	querier := NewQuerier(mgr, s.kb)
-	path := []string{"pools"}
+	queryServer := NewQueryServerImpl(mgr, s.kb)
 
 	pubKey := GetRandomPubKey()
 	asgard := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, pubKey, common.Chains{common.ETHChain}.Strings(), []ChainContract{})
@@ -114,7 +163,9 @@ func (s *QuerierSuite) TestQueryPool(c *C) {
 	err = mgr.Keeper().SetPool(ctx, poolBTC)
 	c.Assert(err, IsNil)
 
-	res, err := querier(ctx, path, abci.RequestQuery{})
+	queryPoolsResp, err := queryServer.Pools(ctx, &types.QueryPoolsRequest{})
+	c.Assert(err, IsNil)
+	res, err := queryPoolsResp.MarshalJSONPB(nil)
 	c.Assert(err, IsNil)
 
 	var out Pools
@@ -127,22 +178,26 @@ func (s *QuerierSuite) TestQueryPool(c *C) {
 	err = mgr.Keeper().SetPool(ctx, poolBTC)
 	c.Assert(err, IsNil)
 
-	res, err = querier(ctx, path, abci.RequestQuery{})
+	queryPoolsResp, err = queryServer.Pools(ctx, &types.QueryPoolsRequest{})
+	c.Assert(err, IsNil)
+	res, err = queryPoolsResp.MarshalJSONPB(nil)
 	c.Assert(err, IsNil)
 
 	err = json.Unmarshal(res, &out)
 	c.Assert(err, IsNil)
 	c.Assert(len(out), Equals, 2)
 
-	result, err := s.querier(s.ctx, []string{query.QueryPool.Key, "ETH.ETH"}, abci.RequestQuery{})
-	c.Assert(result, HasLen, 0)
+	// Query pool with asset ETH.ETH from different context
+	queryPoolResp, err := queryServer.Pool(s.ctx, &types.QueryPoolRequest{
+		Asset: "ETH.ETH",
+	})
+	c.Assert(queryPoolResp, IsNil)
 	c.Assert(err, NotNil)
 }
 
 func (s *QuerierSuite) TestVaultss(c *C) {
 	ctx, mgr := setupManagerForTest(c)
-	querier := NewQuerier(mgr, s.kb)
-	path := []string{"pools"}
+	queryServer := NewQueryServerImpl(mgr, s.kb)
 
 	pubKey := GetRandomPubKey()
 	asgard := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, pubKey, common.Chains{common.ETHChain}.Strings(), nil)
@@ -162,7 +217,9 @@ func (s *QuerierSuite) TestVaultss(c *C) {
 	err = mgr.Keeper().SetPool(ctx, poolBTC)
 	c.Assert(err, IsNil)
 
-	res, err := querier(ctx, path, abci.RequestQuery{})
+	queryPoolsResp, err := queryServer.Pools(ctx, &types.QueryPoolsRequest{})
+	c.Assert(err, IsNil)
+	res, err := queryPoolsResp.MarshalJSONPB(nil)
 	c.Assert(err, IsNil)
 
 	var out Pools
@@ -174,22 +231,26 @@ func (s *QuerierSuite) TestVaultss(c *C) {
 	err = mgr.Keeper().SetPool(ctx, poolBTC)
 	c.Assert(err, IsNil)
 
-	res, err = querier(ctx, path, abci.RequestQuery{})
+	queryPoolsResp, err = queryServer.Pools(ctx, &types.QueryPoolsRequest{})
+	c.Assert(err, IsNil)
+	res, err = queryPoolsResp.MarshalJSONPB(nil)
 	c.Assert(err, IsNil)
 
 	err = json.Unmarshal(res, &out)
 	c.Assert(err, IsNil)
 	c.Assert(len(out), Equals, 2)
 
-	result, err := s.querier(s.ctx, []string{query.QueryPool.Key, "ETH.ETH"}, abci.RequestQuery{})
-	c.Assert(result, HasLen, 0)
+	// Query pool with asset ETH.ETH from different context
+	queryPoolResp, err := queryServer.Pool(s.ctx, &types.QueryPoolRequest{
+		Asset: "ETH.ETH",
+	})
+	c.Assert(queryPoolResp, IsNil)
 	c.Assert(err, NotNil)
 }
 
 func (s *QuerierSuite) TestSaverPools(c *C) {
 	ctx, mgr := setupManagerForTest(c)
-	querier := NewQuerier(mgr, s.kb)
-	path := []string{"pools"}
+	queryServer := NewQueryServerImpl(mgr, s.kb)
 
 	poolDOGE := NewPool()
 	poolDOGE.Asset = common.DOGEAsset.GetSyntheticAsset()
@@ -212,7 +273,9 @@ func (s *QuerierSuite) TestSaverPools(c *C) {
 	err = mgr.Keeper().SetPool(ctx, poolETH)
 	c.Assert(err, IsNil)
 
-	res, err := querier(ctx, path, abci.RequestQuery{})
+	queryPoolsResp, err := queryServer.Pools(ctx, &types.QueryPoolsRequest{})
+	c.Assert(err, IsNil)
+	res, err := queryPoolsResp.MarshalJSONPB(nil)
 	c.Assert(err, IsNil)
 
 	var out []openapi.Pool
@@ -225,8 +288,7 @@ func (s *QuerierSuite) TestQueryNodeAccounts(c *C) {
 	ctx, keeper := setupKeeperForTest(c)
 
 	_, mgr := setupManagerForTest(c)
-	querier := NewQuerier(mgr, s.kb)
-	path := []string{"nodes"}
+	queryServer := NewQueryServerImpl(mgr, s.kb)
 
 	nodeAccount := GetRandomValidatorNode(NodeActive)
 	c.Assert(keeper.SetNodeAccount(ctx, nodeAccount), IsNil)
@@ -234,7 +296,11 @@ func (s *QuerierSuite) TestQueryNodeAccounts(c *C) {
 	vault.Status = ActiveVault
 	vault.BlockHeight = 1
 	c.Assert(keeper.SetVault(ctx, vault), IsNil)
-	res, err := querier(ctx, path, abci.RequestQuery{})
+	queryNodesResp, err := queryServer.Nodes(ctx, &types.QueryNodesRequest{})
+	c.Assert(err, IsNil)
+
+	// marshal output so we can verify it unmarshals as expected
+	res, err := queryNodesResp.MarshalJSONPB(nil)
 	c.Assert(err, IsNil)
 
 	var out types.NodeAccounts
@@ -246,7 +312,7 @@ func (s *QuerierSuite) TestQueryNodeAccounts(c *C) {
 	nodeAccount2.Bond = cosmos.NewUint(common.One * 3000)
 	c.Assert(keeper.SetNodeAccount(ctx, nodeAccount2), IsNil)
 
-	/* Check Bond-weighted rewards estimation works*/
+	// Check Bond-weighted rewards estimation works
 	var nodeAccountResp []openapi.Node
 
 	// Add bond rewards + set min bond for bond-weighted system
@@ -255,7 +321,11 @@ func (s *QuerierSuite) TestQueryNodeAccounts(c *C) {
 	c.Assert(keeper.SetNetwork(ctx, network), IsNil)
 	keeper.SetMimir(ctx, "MinimumBondInRune", common.One*1000)
 
-	res, err = querier(ctx, path, abci.RequestQuery{})
+	queryNodesResp, err = queryServer.Nodes(ctx, &types.QueryNodesRequest{})
+	c.Assert(err, IsNil)
+
+	// marshal output so we can verify it unmarshals as expected
+	res, err = queryNodesResp.MarshalJSONPB(nil)
 	c.Assert(err, IsNil)
 
 	err1 = json.Unmarshal(res, &nodeAccountResp)
@@ -276,11 +346,15 @@ func (s *QuerierSuite) TestQueryNodeAccounts(c *C) {
 		c.Fail()
 	}
 
-	/* Check querier only returns nodes with bond */
+	// Check querier only returns nodes with bond
 	nodeAccount2.Bond = cosmos.NewUint(0)
 	c.Assert(keeper.SetNodeAccount(ctx, nodeAccount2), IsNil)
 
-	res, err = querier(ctx, path, abci.RequestQuery{})
+	queryNodesResp, err = queryServer.Nodes(ctx, &types.QueryNodesRequest{})
+	c.Assert(err, IsNil)
+
+	// marshal output so we can verify it unmarshals as expected
+	res, err = queryNodesResp.MarshalJSONPB(nil)
 	c.Assert(err, IsNil)
 
 	err1 = json.Unmarshal(res, &out)
@@ -290,7 +364,7 @@ func (s *QuerierSuite) TestQueryNodeAccounts(c *C) {
 
 func (s *QuerierSuite) TestQueryUpgradeProposals(c *C) {
 	ctx, mgr := setupManagerForTest(c)
-	querier := NewQuerier(mgr, s.kb)
+	queryServer := NewQueryServerImpl(mgr, s.kb)
 
 	k := mgr.Keeper()
 
@@ -331,8 +405,11 @@ func (s *QuerierSuite) TestQueryUpgradeProposals(c *C) {
 	k.ApproveUpgrade(ctx, na2.NodeAddress, upgradeName)
 	k.ApproveUpgrade(ctx, na3.NodeAddress, upgradeName)
 
-	res, err := querier(ctx, []string{query.QueryUpgradeProposals.Key}, abci.RequestQuery{})
+	queryUpgradeProposalsResp, err := queryServer.UpgradeProposals(ctx, &types.QueryUpgradeProposalsRequest{})
 	c.Assert(err, IsNil)
+	res, err := queryUpgradeProposalsResp.MarshalJSONPB(nil)
+	c.Assert(err, IsNil)
+
 	var proposals []openapi.UpgradeProposal
 
 	err = json.Unmarshal(res, &proposals)
@@ -344,7 +421,11 @@ func (s *QuerierSuite) TestQueryUpgradeProposals(c *C) {
 	c.Assert(p.Info, Equals, upgradeInfo)
 	c.Assert(p.Height, Equals, upgradeHeight)
 
-	res, err = querier(ctx, []string{query.QueryUpgradeProposal.Key, upgradeName}, abci.RequestQuery{})
+	queryUpgradeProposalResp, err := queryServer.UpgradeProposal(ctx, &types.QueryUpgradeProposalRequest{
+		Name: upgradeName,
+	})
+	c.Assert(err, IsNil)
+	res, err = queryUpgradeProposalResp.MarshalJSONPB(nil)
 	c.Assert(err, IsNil)
 	err = json.Unmarshal(res, &p)
 	c.Assert(err, IsNil)
@@ -358,7 +439,11 @@ func (s *QuerierSuite) TestQueryUpgradeProposals(c *C) {
 
 	k.ApproveUpgrade(ctx, na4.NodeAddress, upgradeName)
 
-	res, err = querier(ctx, []string{query.QueryUpgradeProposal.Key, upgradeName}, abci.RequestQuery{})
+	queryUpgradeProposalResp, err = queryServer.UpgradeProposal(ctx, &types.QueryUpgradeProposalRequest{
+		Name: upgradeName,
+	})
+	c.Assert(err, IsNil)
+	res, err = queryUpgradeProposalResp.MarshalJSONPB(nil)
 	c.Assert(err, IsNil)
 	err = json.Unmarshal(res, &p)
 	c.Assert(err, IsNil)
@@ -369,7 +454,11 @@ func (s *QuerierSuite) TestQueryUpgradeProposals(c *C) {
 
 	k.RejectUpgrade(ctx, na2.NodeAddress, upgradeName)
 
-	res, err = querier(ctx, []string{query.QueryUpgradeProposal.Key, upgradeName}, abci.RequestQuery{})
+	queryUpgradeProposalResp, err = queryServer.UpgradeProposal(ctx, &types.QueryUpgradeProposalRequest{
+		Name: upgradeName,
+	})
+	c.Assert(err, IsNil)
+	res, err = queryUpgradeProposalResp.MarshalJSONPB(nil)
 	c.Assert(err, IsNil)
 	err = json.Unmarshal(res, &p)
 	c.Assert(err, IsNil)
@@ -379,7 +468,11 @@ func (s *QuerierSuite) TestQueryUpgradeProposals(c *C) {
 	c.Assert(*p.ApprovedPercent, Equals, "0.5")
 
 	var votes []openapi.UpgradeVote
-	res, err = querier(ctx, []string{query.QueryUpgradeVotes.Key, upgradeName}, abci.RequestQuery{})
+	queryUpgradeVotesResp, err := queryServer.UpgradeVotes(ctx, &types.QueryUpgradeVotesRequest{
+		Name: upgradeName,
+	})
+	c.Assert(err, IsNil)
+	res, err = queryUpgradeVotesResp.MarshalJSONPB(nil)
 	c.Assert(err, IsNil)
 	err = json.Unmarshal(res, &votes)
 	c.Assert(err, IsNil)
@@ -411,30 +504,28 @@ func (s *QuerierSuite) TestQueryUpgradeProposals(c *C) {
 }
 
 func (s *QuerierSuite) TestQuerierRagnarokInProgress(c *C) {
-	req := abci.RequestQuery{
-		Data:   nil,
-		Path:   query.QueryRagnarok.Key,
-		Height: s.ctx.BlockHeight(),
-		Prove:  false,
-	}
 	// test ragnarok
-	result, err := s.querier(s.ctx, []string{query.QueryRagnarok.Key}, req)
-	c.Assert(result, NotNil)
+	queryRagnarokResp, err := s.queryServer.Ragnarok(s.ctx, &types.QueryRagnarokRequest{})
 	c.Assert(err, IsNil)
+
+	// marshal output so we can verify it unmarshals as expected
+	result, err := queryRagnarokResp.MarshalJSONPB(nil)
+	c.Assert(err, IsNil)
+	c.Assert(result, NotNil)
 	var ragnarok bool
 	c.Assert(json.Unmarshal(result, &ragnarok), IsNil)
 	c.Assert(ragnarok, Equals, false)
 }
 
 func (s *QuerierSuite) TestQueryLiquidityProviders(c *C) {
-	req := abci.RequestQuery{
-		Data:   nil,
-		Path:   query.QueryLiquidityProviders.Key,
-		Height: s.ctx.BlockHeight(),
-		Prove:  false,
-	}
 	// test liquidity providers
-	result, err := s.querier(s.ctx, []string{query.QueryLiquidityProviders.Key, "ETH.ETH"}, req)
+	queryLPsResp, err := s.queryServer.LiquidityProviders(s.ctx, &types.QueryLiquidityProvidersRequest{
+		Asset: "ETH.ETH",
+	})
+	c.Assert(err, IsNil)
+
+	// marshal output so we can verify it unmarshals as expected
+	result, err := queryLPsResp.MarshalJSONPB(nil)
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
 	s.k.SetLiquidityProvider(s.ctx, LiquidityProvider{
@@ -445,18 +536,18 @@ func (s *QuerierSuite) TestQueryLiquidityProviders(c *C) {
 		LastWithdrawHeight: 0,
 		Units:              cosmos.NewUint(10),
 	})
-	result, err = s.querier(s.ctx, []string{query.QueryLiquidityProviders.Key, "ETH.ETH"}, req)
+	queryLPsResp, err = s.queryServer.LiquidityProviders(s.ctx, &types.QueryLiquidityProvidersRequest{
+		Asset: "ETH.ETH",
+	})
+	c.Assert(err, IsNil)
+
+	// marshal output so we can verify it unmarshals as expected
+	result, err = queryLPsResp.MarshalJSONPB(nil)
+	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
 	var lps LiquidityProviders
 	c.Assert(json.Unmarshal(result, &lps), IsNil)
 	c.Assert(lps, HasLen, 1)
-
-	req = abci.RequestQuery{
-		Data:   nil,
-		Path:   query.QuerySavers.Key,
-		Height: s.ctx.BlockHeight(),
-		Prove:  false,
-	}
 
 	s.k.SetLiquidityProvider(s.ctx, LiquidityProvider{
 		Asset:              common.ETHAsset.GetSyntheticAsset(),
@@ -468,28 +559,38 @@ func (s *QuerierSuite) TestQueryLiquidityProviders(c *C) {
 	})
 
 	// Query Savers from SaversPool
-	result, err = s.querier(s.ctx, []string{query.QuerySavers.Key, "ETH.ETH"}, req)
+	querySaversResp, err := s.queryServer.Savers(s.ctx, &types.QuerySaversRequest{
+		Asset: "ETH.ETH",
+	})
 	c.Assert(err, IsNil)
+
+	// marshal output so we can verify it unmarshals as expected
+	result, err = querySaversResp.MarshalJSONPB(nil)
+	c.Assert(err, IsNil)
+	c.Assert(result, NotNil)
 	var savers LiquidityProviders
 	c.Assert(json.Unmarshal(result, &savers), IsNil)
 	c.Assert(lps, HasLen, 1)
 }
 
 func (s *QuerierSuite) TestQueryTxInVoter(c *C) {
-	req := abci.RequestQuery{
-		Data:   nil,
-		Path:   query.QueryTxVoter.Key,
-		Height: s.ctx.BlockHeight(),
-		Prove:  false,
-	}
 	tx := GetRandomTx()
 	// test getTxInVoter
-	result, err := s.querier(s.ctx, []string{query.QueryTxVoter.Key, tx.ID.String()}, req)
-	c.Assert(result, IsNil)
+	queryTxVoterResp, err := s.queryServer.TxVoters(s.ctx, &types.QueryTxVotersRequest{
+		TxId: tx.ID.String(),
+	})
 	c.Assert(err, NotNil)
+	c.Assert(queryTxVoterResp, IsNil)
+
 	observedTxInVote := NewObservedTxVoter(tx.ID, []ObservedTx{NewObservedTx(tx, s.ctx.BlockHeight(), GetRandomPubKey(), s.ctx.BlockHeight())})
 	s.k.SetObservedTxInVoter(s.ctx, observedTxInVote)
-	result, err = s.querier(s.ctx, []string{query.QueryTxVoter.Key, tx.ID.String()}, req)
+	queryTxVoterResp, err = s.queryServer.TxVoters(s.ctx, &types.QueryTxVotersRequest{
+		TxId: tx.ID.String(),
+	})
+	c.Assert(err, IsNil)
+
+	// marshal output so we can verify it unmarshals as expected
+	result, err := queryTxVoterResp.MarshalJSONPB(nil)
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
 	var voter openapi.TxDetailsResponse
@@ -511,62 +612,99 @@ func (s *QuerierSuite) TestQueryTxInVoter(c *C) {
 }
 
 func (s *QuerierSuite) TestQueryTxStages(c *C) {
-	req := abci.RequestQuery{
-		Data:   nil,
-		Path:   query.QueryTxStages.Key,
-		Height: s.ctx.BlockHeight(),
-		Prove:  false,
-	}
 	tx := GetRandomTx()
 	// test getTxInVoter
-	result, err := s.querier(s.ctx, []string{query.QueryTxStages.Key, tx.ID.String()}, req)
+	queryTxStagesResp, err := s.queryServer.TxStages(s.ctx, &types.QueryTxStagesRequest{
+		TxId: tx.ID.String(),
+	})
+	c.Assert(err, IsNil) // Expecting no error for an unobserved hash.
+
+	// marshal output so we can verify it unmarshals as expected
+	result, err := queryTxStagesResp.MarshalJSONPB(nil)
 	c.Assert(result, NotNil) // Expecting a not-started Observation stage.
 	c.Assert(err, IsNil)     // Expecting no error for an unobserved hash.
 	observedTxInVote := NewObservedTxVoter(tx.ID, []ObservedTx{NewObservedTx(tx, s.ctx.BlockHeight(), GetRandomPubKey(), s.ctx.BlockHeight())})
 	s.k.SetObservedTxInVoter(s.ctx, observedTxInVote)
-	result, err = s.querier(s.ctx, []string{query.QueryTxStages.Key, tx.ID.String()}, req)
+	queryTxStagesResp, err = s.queryServer.TxStages(s.ctx, &types.QueryTxStagesRequest{
+		TxId: tx.ID.String(),
+	})
+	c.Assert(err, IsNil) // Expecting no error for an unobserved hash.
+
+	// marshal output so we can verify it unmarshals as expected
+	result, err = queryTxStagesResp.MarshalJSONPB(nil)
+	c.Assert(result, NotNil) // Expecting a not-started Observation stage.
+	c.Assert(err, IsNil)     // Expecting no error for an unobserved hash.
+
+	// Verify conformance to openapi spec
+	var openapiTxStagesResp openapi.TxStagesResponse
+	err = json.Unmarshal(result, &openapiTxStagesResp)
 	c.Assert(err, IsNil)
-	c.Assert(result, NotNil)
+
+	c.Assert(*openapiTxStagesResp.InboundObserved.Started, Equals, queryTxStagesResp.InboundObserved.Started)
 }
 
 func (s *QuerierSuite) TestQueryTxStatus(c *C) {
-	req := abci.RequestQuery{
-		Data:   nil,
-		Path:   query.QueryTxStatus.Key,
-		Height: s.ctx.BlockHeight(),
-		Prove:  false,
-	}
 	tx := GetRandomTx()
 	// test getTxInVoter
-	result, err := s.querier(s.ctx, []string{query.QueryTxStatus.Key, tx.ID.String()}, req)
+	queryTxStatusResp, err := s.queryServer.TxStatus(s.ctx, &types.QueryTxStatusRequest{
+		TxId: tx.ID.String(),
+	})
+	c.Assert(err, IsNil) // Expecting no error for an unobserved hash.
+
+	// marshal output so we can verify it unmarshals as expected
+	result, err := queryTxStatusResp.MarshalJSONPB(nil)
 	c.Assert(result, NotNil) // Expecting a not-started Observation stage.
 	c.Assert(err, IsNil)     // Expecting no error for an unobserved hash.
 	observedTxInVote := NewObservedTxVoter(tx.ID, []ObservedTx{NewObservedTx(tx, s.ctx.BlockHeight(), GetRandomPubKey(), s.ctx.BlockHeight())})
 	s.k.SetObservedTxInVoter(s.ctx, observedTxInVote)
-	result, err = s.querier(s.ctx, []string{query.QueryTxStatus.Key, tx.ID.String()}, req)
+	queryTxStatusResp, err = s.queryServer.TxStatus(s.ctx, &types.QueryTxStatusRequest{
+		TxId: tx.ID.String(),
+	})
+	c.Assert(err, IsNil) // Expecting no error for an unobserved hash.
+
+	// marshal output so we can verify it unmarshals as expected
+	result, err = queryTxStatusResp.MarshalJSONPB(nil)
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
+
+	// Verify conformance to openapi spec
+	var openapiTxStatusresp openapi.TxStatusResponse
+	err = json.Unmarshal(result, &openapiTxStatusresp)
+	c.Assert(err, IsNil)
+
+	c.Assert(*openapiTxStatusresp.Tx.Id, Equals, queryTxStatusResp.Tx.ID.String())
+	c.Assert(*openapiTxStatusresp.Tx.Chain, Equals, queryTxStatusResp.Tx.Chain.String())
+	c.Assert(*openapiTxStatusresp.Tx.FromAddress, Equals, queryTxStatusResp.Tx.FromAddress.String())
+	c.Assert(*openapiTxStatusresp.Tx.ToAddress, Equals, queryTxStatusResp.Tx.ToAddress.String())
+	c.Assert(openapiTxStatusresp.Tx.Coins[0].Asset, Equals, queryTxStatusResp.Tx.Coins[0].Asset.String())
+	c.Assert(openapiTxStatusresp.Tx.Coins[0].Amount, Equals, queryTxStatusResp.Tx.Coins[0].Amount.String())
+	c.Assert(openapiTxStatusresp.Tx.Gas[0].Asset, Equals, queryTxStatusResp.Tx.Gas[0].Asset.String())
+	c.Assert(openapiTxStatusresp.Tx.Gas[0].Amount, Equals, queryTxStatusResp.Tx.Gas[0].Amount.String())
+	c.Assert(openapiTxStatusresp.OutTxs, IsNil)
+	c.Assert(*openapiTxStatusresp.Stages.InboundObserved.Started, Equals, queryTxStatusResp.Stages.InboundObserved.Started)
 }
 
 func (s *QuerierSuite) TestQueryTx(c *C) {
-	req := abci.RequestQuery{
-		Data:   nil,
-		Path:   query.QueryTx.Key,
-		Height: s.ctx.BlockHeight(),
-		Prove:  false,
-	}
 	tx := GetRandomTx()
 	// test get tx in
-	result, err := s.querier(s.ctx, []string{query.QueryTx.Key, tx.ID.String()}, req)
-	c.Assert(result, IsNil)
+	queryTxResp, err := s.queryServer.Tx(s.ctx, &types.QueryTxRequest{
+		TxId: tx.ID.String(),
+	})
 	c.Assert(err, NotNil)
+	c.Assert(queryTxResp, IsNil)
+
 	nodeAccount := GetRandomValidatorNode(NodeActive)
 	c.Assert(s.k.SetNodeAccount(s.ctx, nodeAccount), IsNil)
 	voter, err := s.k.GetObservedTxInVoter(s.ctx, tx.ID)
 	c.Assert(err, IsNil)
 	voter.Add(NewObservedTx(tx, s.ctx.BlockHeight(), nodeAccount.PubKeySet.Secp256k1, s.ctx.BlockHeight()), nodeAccount.NodeAddress)
 	s.k.SetObservedTxInVoter(s.ctx, voter)
-	result, err = s.querier(s.ctx, []string{query.QueryTx.Key, tx.ID.String()}, req)
+	queryTxResp, err = s.queryServer.Tx(s.ctx, &types.QueryTxRequest{
+		TxId: tx.ID.String(),
+	})
+	c.Assert(err, IsNil)
+
+	result, err := queryTxResp.MarshalJSONPB(nil)
 	c.Assert(err, IsNil)
 	var newTx struct {
 		openapi.ObservedTx `json:"observed_tx"`
@@ -588,102 +726,113 @@ func (s *QuerierSuite) TestQueryTx(c *C) {
 }
 
 func (s *QuerierSuite) TestQueryKeyGen(c *C) {
-	req := abci.RequestQuery{
-		Data:   nil,
-		Path:   query.QueryKeygensPubkey.Key,
-		Height: s.ctx.BlockHeight(),
-		Prove:  false,
-	}
-
-	result, err := s.querier(s.ctx, []string{
-		query.QueryKeygensPubkey.Key,
-		"whatever",
-	}, req)
-
-	c.Assert(result, IsNil)
+	queryKeygensPubkeyResp, err := s.queryServer.Keygen(s.ctx, &types.QueryKeygenRequest{
+		Height: "whatever",
+	})
+	c.Assert(queryKeygensPubkeyResp, IsNil)
 	c.Assert(err, NotNil)
 
-	result, err = s.querier(s.ctx, []string{
-		query.QueryKeygensPubkey.Key,
-		"10000",
-	}, req)
-
-	c.Assert(result, IsNil)
+	queryKeygensPubkeyResp, err = s.queryServer.Keygen(s.ctx, &types.QueryKeygenRequest{
+		Height: "10000",
+	})
+	c.Assert(queryKeygensPubkeyResp, IsNil)
 	c.Assert(err, NotNil)
 
-	result, err = s.querier(s.ctx, []string{
-		query.QueryKeygensPubkey.Key,
-		strconv.FormatInt(s.ctx.BlockHeight(), 10),
-	}, req)
+	queryKeygensPubkeyResp, err = s.queryServer.Keygen(s.ctx, &types.QueryKeygenRequest{
+		Height: strconv.FormatInt(s.ctx.BlockHeight(), 10),
+	})
+	c.Assert(queryKeygensPubkeyResp, NotNil)
 	c.Assert(err, IsNil)
-	c.Assert(result, NotNil)
 
-	result, err = s.querier(s.ctx, []string{
-		query.QueryKeygensPubkey.Key,
-		strconv.FormatInt(s.ctx.BlockHeight(), 10),
-		GetRandomPubKey().String(),
-	}, req)
-	c.Assert(result, NotNil)
+	queryKeygensPubkeyResp, err = s.queryServer.Keygen(s.ctx, &types.QueryKeygenRequest{
+		Height: strconv.FormatInt(s.ctx.BlockHeight(), 10),
+		PubKey: GetRandomPubKey().String(),
+	})
+	c.Assert(queryKeygensPubkeyResp, NotNil)
 	c.Assert(err, IsNil)
+
+	result, err := queryKeygensPubkeyResp.MarshalJSONPB(nil)
+	c.Assert(err, IsNil)
+
+	// Verify conformance to openapi spec
+	var openapiKeygensPubkeyResp openapi.KeygenResponse
+	err = json.Unmarshal(result, &openapiKeygensPubkeyResp)
+	c.Assert(err, IsNil)
+
+	c.Assert(*openapiKeygensPubkeyResp.KeygenBlock.Height, Equals, queryKeygensPubkeyResp.KeygenBlock.Height)
+	c.Assert(openapiKeygensPubkeyResp.KeygenBlock.Keygens, IsNil)
+	c.Assert(openapiKeygensPubkeyResp.Signature, Equals, queryKeygensPubkeyResp.Signature)
 }
 
 func (s *QuerierSuite) TestQueryQueue(c *C) {
-	result, err := s.querier(s.ctx, []string{
-		query.QueryQueue.Key,
-		strconv.FormatInt(s.ctx.BlockHeight(), 10),
-	}, abci.RequestQuery{})
+	queryQueueResp, err := s.queryServer.Queue(s.ctx, &types.QueryQueueRequest{})
+	c.Assert(err, IsNil)
+
+	// marshal output so we can verify it unmarshals as expected
+	result, err := queryQueueResp.MarshalJSONPB(nil)
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
 	var q openapi.QueueResponse
 	c.Assert(json.Unmarshal(result, &q), IsNil)
+
+	// Verify conformance to openapi spec
+	c.Assert(q.ScheduledOutboundClout, Equals, queryQueueResp.ScheduledOutboundClout)
+	c.Assert(q.ScheduledOutboundValue, Equals, queryQueueResp.ScheduledOutboundValue)
 }
 
 func (s *QuerierSuite) TestQueryHeights(c *C) {
-	result, err := s.querier(s.ctx, []string{
-		query.QueryHeights.Key,
-		strconv.FormatInt(s.ctx.BlockHeight(), 10),
-	}, abci.RequestQuery{})
-	c.Assert(result, IsNil)
+	queryChainsLastBlockResp, err := s.queryServer.ChainsLastBlock(s.ctx, &types.QueryChainsLastBlockRequest{
+		Chain: strconv.FormatInt(s.ctx.BlockHeight(), 10),
+	})
+	c.Assert(queryChainsLastBlockResp, IsNil)
 	c.Assert(err, NotNil)
 
-	result, err = s.querier(s.ctx, []string{
-		query.QueryHeights.Key,
-	}, abci.RequestQuery{})
+	queryLastBlocksResp, err := s.queryServer.LastBlocks(s.ctx, &types.QueryLastBlocksRequest{})
+	c.Assert(err, IsNil)
+
+	// marshal output so we can verify it unmarshals as expected
+	result, err := queryLastBlocksResp.MarshalJSONPB(nil)
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
 	var q []openapi.LastBlock
 	c.Assert(json.Unmarshal(result, &q), IsNil)
 
-	result, err = s.querier(s.ctx, []string{
-		query.QueryHeights.Key,
-		"BTC",
-	}, abci.RequestQuery{})
+	queryChainsLastBlockResp, err = s.queryServer.ChainsLastBlock(s.ctx, &types.QueryChainsLastBlockRequest{
+		Chain: "BTC",
+	})
+	c.Assert(err, IsNil)
+
+	result, err = queryChainsLastBlockResp.MarshalJSONPB(nil)
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
 	c.Assert(json.Unmarshal(result, &q), IsNil)
 
-	result, err = s.querier(s.ctx, []string{
-		query.QueryChainHeights.Key,
-		"BTC",
-	}, abci.RequestQuery{})
-	c.Assert(result, NotNil)
-	c.Assert(err, IsNil)
-	c.Assert(json.Unmarshal(result, &q), IsNil)
+	// Verify conformance to openapi spec
+	c.Assert(q[0].Chain, Equals, queryChainsLastBlockResp.LastBlocks[0].Chain)
+	c.Assert(q[0].Thorchain, Equals, queryChainsLastBlockResp.LastBlocks[0].Thorchain)
 }
 
 func (s *QuerierSuite) TestQueryConstantValues(c *C) {
-	result, err := s.querier(s.ctx, []string{
-		query.QueryConstantValues.Key,
-	}, abci.RequestQuery{})
-	c.Assert(result, NotNil)
+	queryConstantValResp, err := s.queryServer.ConstantValues(s.ctx, &types.QueryConstantValuesRequest{})
+	c.Assert(queryConstantValResp, NotNil)
 	c.Assert(err, IsNil)
+
+	_, err = queryConstantValResp.MarshalJSONPB(nil)
+	c.Assert(err, IsNil)
+
+	// Note: openapi conformance isn't followed here nor legacy versions
+	// openapi's ConstantsResponse
+	//   int_64_values are map[string]string while map[string]int64 is actually returned
+	//   bool_values are map[string]string while map[string]bool is actually returned
 }
 
 func (s *QuerierSuite) TestQueryMimir(c *C) {
 	s.k.SetMimir(s.ctx, "hello", 111)
-	result, err := s.querier(s.ctx, []string{
-		query.QueryMimirValues.Key,
-	}, abci.RequestQuery{})
+	queryMimirResp, err := s.queryServer.MimirValues(s.ctx, &types.QueryMimirValuesRequest{})
+	c.Assert(err, IsNil)
+
+	// marshal output so we can verify it unmarshals as expected
+	result, err := queryMimirResp.MarshalJSONPB(nil)
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
 	var m map[string]int64
@@ -693,39 +842,42 @@ func (s *QuerierSuite) TestQueryMimir(c *C) {
 }
 
 func (s *QuerierSuite) TestQueryBan(c *C) {
-	result, err := s.querier(s.ctx, []string{
-		query.QueryBan.Key,
-	}, abci.RequestQuery{})
-	c.Assert(result, IsNil)
+	queryBanResp, err := s.queryServer.Ban(s.ctx, &types.QueryBanRequest{})
+	c.Assert(queryBanResp, IsNil)
 	c.Assert(err, NotNil)
 
-	result, err = s.querier(s.ctx, []string{
-		query.QueryBan.Key,
-		"Whatever",
-	}, abci.RequestQuery{})
-	c.Assert(result, IsNil)
+	queryBanResp, err = s.queryServer.Ban(s.ctx, &types.QueryBanRequest{
+		Address: "Whatever",
+	})
+	c.Assert(queryBanResp, IsNil)
 	c.Assert(err, NotNil)
 
-	result, err = s.querier(s.ctx, []string{
-		query.QueryBan.Key,
-		GetRandomBech32Addr().String(),
-	}, abci.RequestQuery{})
-	c.Assert(result, NotNil)
+	queryBanResp, err = s.queryServer.Ban(s.ctx, &types.QueryBanRequest{
+		Address: GetRandomBech32Addr().String(),
+	})
+	c.Assert(queryBanResp, NotNil)
 	c.Assert(err, IsNil)
+
+	result, err := queryBanResp.MarshalJSONPB(nil)
+	c.Assert(err, IsNil)
+
+	var openapiBanResp openapi.BanResponse
+	err = json.Unmarshal(result, &openapiBanResp)
+	c.Assert(err, IsNil)
+
+	// Verify conformance to openapi spec
+	c.Assert(*openapiBanResp.NodeAddress, Equals, queryBanResp.NodeAddress.String())
 }
 
 func (s *QuerierSuite) TestQueryNodeAccount(c *C) {
-	result, err := s.querier(s.ctx, []string{
-		query.QueryNode.Key,
-	}, abci.RequestQuery{})
-	c.Assert(result, IsNil)
+	queryNodeAccount, err := s.queryServer.Node(s.ctx, &types.QueryNodeRequest{})
+	c.Assert(queryNodeAccount, IsNil)
 	c.Assert(err, NotNil)
 
-	result, err = s.querier(s.ctx, []string{
-		query.QueryNode.Key,
-		"Whatever",
-	}, abci.RequestQuery{})
-	c.Assert(result, IsNil)
+	queryNodeAccount, err = s.queryServer.Node(s.ctx, &types.QueryNodeRequest{
+		Address: "Whatever",
+	})
+	c.Assert(queryNodeAccount, IsNil)
 	c.Assert(err, NotNil)
 
 	na := GetRandomValidatorNode(NodeActive)
@@ -734,16 +886,19 @@ func (s *QuerierSuite) TestQueryNodeAccount(c *C) {
 	vault.Status = ActiveVault
 	vault.BlockHeight = 1
 	c.Assert(s.k.SetVault(s.ctx, vault), IsNil)
-	result, err = s.querier(s.ctx, []string{
-		query.QueryNode.Key,
-		na.NodeAddress.String(),
-	}, abci.RequestQuery{})
+	queryNodeAccount, err = s.queryServer.Node(s.ctx, &types.QueryNodeRequest{
+		Address: na.NodeAddress.String(),
+	})
+	c.Assert(queryNodeAccount, NotNil)
+	c.Assert(err, IsNil)
+
+	result, err := queryNodeAccount.MarshalJSONPB(nil)
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
 	var r openapi.Node
 	c.Assert(json.Unmarshal(result, &r), IsNil)
 
-	/* Check bond-weighted rewards estimation works */
+	// Check bond-weighted rewards estimation works
 
 	// Add another node with 75% of the bond
 	nodeAccount2 := GetRandomValidatorNode(NodeActive)
@@ -757,10 +912,13 @@ func (s *QuerierSuite) TestQueryNodeAccount(c *C) {
 	s.k.SetMimir(s.ctx, "MinimumBondInRune", common.One*1000)
 
 	// Get first node
-	result, err = s.querier(s.ctx, []string{
-		query.QueryNode.Key,
-		na.NodeAddress.String(),
-	}, abci.RequestQuery{})
+	queryNodeAccount, err = s.queryServer.Node(s.ctx, &types.QueryNodeRequest{
+		Address: na.NodeAddress.String(),
+	})
+	c.Assert(queryNodeAccount, NotNil)
+	c.Assert(err, IsNil)
+
+	result, err = queryNodeAccount.MarshalJSONPB(nil)
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
 	var r2 openapi.Node
@@ -771,10 +929,13 @@ func (s *QuerierSuite) TestQueryNodeAccount(c *C) {
 	c.Assert(r2.CurrentAward, Equals, cosmos.NewUint(common.One*250).String())
 
 	// Get second node
-	result, err = s.querier(s.ctx, []string{
-		query.QueryNode.Key,
-		nodeAccount2.NodeAddress.String(),
-	}, abci.RequestQuery{})
+	queryNodeAccount, err = s.queryServer.Node(s.ctx, &types.QueryNodeRequest{
+		Address: nodeAccount2.NodeAddress.String(),
+	})
+	c.Assert(queryNodeAccount, NotNil)
+	c.Assert(err, IsNil)
+
+	result, err = queryNodeAccount.MarshalJSONPB(nil)
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
 	var r3 openapi.Node
@@ -788,10 +949,10 @@ func (s *QuerierSuite) TestQueryNodeAccount(c *C) {
 func (s *QuerierSuite) TestQueryPoolAddresses(c *C) {
 	na := GetRandomValidatorNode(NodeActive)
 	c.Assert(s.k.SetNodeAccount(s.ctx, na), IsNil)
-	result, err := s.querier(s.ctx, []string{
-		query.QueryInboundAddresses.Key,
-		na.NodeAddress.String(),
-	}, abci.RequestQuery{})
+	queryInboundAddrResp, err := s.queryServer.InboundAddresses(s.ctx, &types.QueryInboundAddressesRequest{})
+	c.Assert(err, IsNil)
+
+	result, err := queryInboundAddrResp.MarshalJSONPB(nil)
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
 
@@ -804,53 +965,97 @@ func (s *QuerierSuite) TestQueryPoolAddresses(c *C) {
 		} `json:"current"`
 	}
 	c.Assert(json.Unmarshal(result, &resp), IsNil)
+
+	// TODO: verify resp unmarshaling contains thorchain module once BankSend support is added
 }
 
 func (s *QuerierSuite) TestQueryKeysignArrayPubKey(c *C) {
 	na := GetRandomValidatorNode(NodeActive)
 	c.Assert(s.k.SetNodeAccount(s.ctx, na), IsNil)
-	result, err := s.querier(s.ctx, []string{
-		query.QueryKeysignArrayPubkey.Key,
-	}, abci.RequestQuery{})
-	c.Assert(result, IsNil)
+	queryKeysignPubkeyResp, err := s.queryServer.KeysignPubkey(s.ctx, &types.QueryKeysignPubkeyRequest{})
+	c.Assert(queryKeysignPubkeyResp, IsNil)
 	c.Assert(err, NotNil)
 
-	result, err = s.querier(s.ctx, []string{
-		query.QueryKeysignArrayPubkey.Key,
-		"asdf",
-	}, abci.RequestQuery{})
-	c.Assert(result, IsNil)
+	queryKeysignPubkeyResp, err = s.queryServer.KeysignPubkey(s.ctx, &types.QueryKeysignPubkeyRequest{
+		Height: "asdf",
+	})
+	c.Assert(queryKeysignPubkeyResp, IsNil)
 	c.Assert(err, NotNil)
 
-	result, err = s.querier(s.ctx, []string{
-		query.QueryKeysignArrayPubkey.Key,
-		strconv.FormatInt(s.ctx.BlockHeight(), 10),
-	}, abci.RequestQuery{})
+	queryKeysignPubkeyResp, err = s.queryServer.KeysignPubkey(s.ctx, &types.QueryKeysignPubkeyRequest{
+		Height: strconv.FormatInt(s.ctx.BlockHeight(), 10),
+	})
+	c.Assert(queryKeysignPubkeyResp, NotNil)
+	c.Assert(err, IsNil)
+
+	// marshal output so we can verify it unmarshals as expected
+	result, err := queryKeysignPubkeyResp.MarshalJSONPB(nil)
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
 	var r openapi.KeysignResponse
 	c.Assert(json.Unmarshal(result, &r), IsNil)
+
+	// Verify conformance to openapi spec
+	c.Assert(*r.Keysign.Height, Equals, queryKeysignPubkeyResp.Keysign.Height)
+	c.Assert(len(r.Keysign.TxArray), Equals, 0)
+	c.Assert(r.Signature, Equals, queryKeysignPubkeyResp.Signature)
 }
 
 func (s *QuerierSuite) TestQueryNetwork(c *C) {
-	result, err := s.querier(s.ctx, []string{
-		query.QueryNetwork.Key,
-	}, abci.RequestQuery{})
+	queryNetworkResp, err := s.queryServer.Network(s.ctx, &types.QueryNetworkRequest{})
+	c.Assert(err, IsNil)
+
+	// QueryNetworkResponse does not require JSONPBMarshaler implementation
+	result, err := json.Marshal(queryNetworkResp)
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
-	var r Network
+	var r Network // unsure why we were unmarshaling to this type, but leaving in
 	c.Assert(json.Unmarshal(result, &r), IsNil)
+
+	// Verify conformance to openapi spec
+	var openapiNetworkResponse openapi.NetworkResponse
+	c.Assert(json.Unmarshal(result, &openapiNetworkResponse), IsNil)
+
+	c.Assert(openapiNetworkResponse.BondRewardRune, Equals, queryNetworkResp.BondRewardRune)
+	c.Assert(openapiNetworkResponse.EffectiveSecurityBond, Equals, queryNetworkResp.EffectiveSecurityBond)
+	c.Assert(openapiNetworkResponse.GasSpentRune, Equals, queryNetworkResp.GasSpentRune)
+	c.Assert(openapiNetworkResponse.GasWithheldRune, Equals, queryNetworkResp.GasWithheldRune)
+	c.Assert(openapiNetworkResponse.NativeOutboundFeeRune, Equals, queryNetworkResp.NativeOutboundFeeRune)
+	c.Assert(openapiNetworkResponse.NativeTxFeeRune, Equals, queryNetworkResp.NativeTxFeeRune)
+	c.Assert(*openapiNetworkResponse.OutboundFeeMultiplier, Equals, queryNetworkResp.OutboundFeeMultiplier)
+	c.Assert(openapiNetworkResponse.RunePriceInTor, Equals, queryNetworkResp.RunePriceInTor)
+	c.Assert(openapiNetworkResponse.TnsFeePerBlockRune, Equals, queryNetworkResp.TnsFeePerBlockRune)
+	c.Assert(openapiNetworkResponse.TnsRegisterFeeRune, Equals, queryNetworkResp.TnsRegisterFeeRune)
+	c.Assert(openapiNetworkResponse.TorPriceInRune, Equals, queryNetworkResp.TorPriceInRune)
+	c.Assert(openapiNetworkResponse.TotalBondUnits, Equals, queryNetworkResp.TotalBondUnits)
+	c.Assert(openapiNetworkResponse.TotalReserve, Equals, queryNetworkResp.TotalReserve)
+	c.Assert(openapiNetworkResponse.VaultsMigrating, Equals, queryNetworkResp.VaultsMigrating)
 }
 
 func (s *QuerierSuite) TestQueryAsgardVault(c *C) {
 	c.Assert(s.k.SetVault(s.ctx, GetRandomVault()), IsNil)
-	result, err := s.querier(s.ctx, []string{
-		query.QueryVaultsAsgard.Key,
-	}, abci.RequestQuery{})
+	queryAsgardVaultResp, err := s.queryServer.AsgardVaults(s.ctx, &types.QueryAsgardVaultsRequest{})
+	c.Assert(err, IsNil)
+
+	// marshal output so we can verify it unmarshals as expected
+	result, err := queryAsgardVaultResp.MarshalJSONPB(nil)
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
 	var r Vaults
 	c.Assert(json.Unmarshal(result, &r), IsNil)
+
+	// Verify conformance to openapi spec
+	var openapiVaults []openapi.Vault
+	err = json.Unmarshal(result, &openapiVaults)
+	c.Assert(err, IsNil)
+
+	c.Assert(len(openapiVaults[0].Addresses), Equals, len(queryAsgardVaultResp.AsgardVaults[0].Addresses))
+	c.Assert(*openapiVaults[0].BlockHeight, Equals, queryAsgardVaultResp.AsgardVaults[0].BlockHeight)
+	c.Assert(*openapiVaults[0].PubKey, Equals, queryAsgardVaultResp.AsgardVaults[0].PubKey)
+	c.Assert(*openapiVaults[0].Type, Equals, queryAsgardVaultResp.AsgardVaults[0].Type)
+	c.Assert(openapiVaults[0].Status, Equals, queryAsgardVaultResp.AsgardVaults[0].Status)
+	c.Assert(*openapiVaults[0].StatusSince, Equals, queryAsgardVaultResp.AsgardVaults[0].StatusSince)
+	c.Assert(len(openapiVaults[0].Chains), Equals, len(queryAsgardVaultResp.AsgardVaults[0].Chains))
 }
 
 func (s *QuerierSuite) TestQueryVaultPubKeys(c *C) {
@@ -872,21 +1077,31 @@ func (s *QuerierSuite) TestQueryVaultPubKeys(c *C) {
 	vault1 := GetRandomVault()
 	vault1.Routers = vault.Routers
 	c.Assert(s.k.SetVault(s.ctx, vault1), IsNil)
-	result, err := s.querier(s.ctx, []string{
-		query.QueryVaultPubkeys.Key,
-	}, abci.RequestQuery{})
+	queryVaultPubkeys, err := s.queryServer.VaultsPubkeys(s.ctx, &types.QueryVaultsPubkeysRequest{})
+	c.Assert(err, IsNil)
+
+	// QueryVaultsPubkeysResponse does not require JSONPBMarshaler implementation
+	result, err := json.Marshal(queryVaultPubkeys)
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
 	var r openapi.VaultPubkeysResponse
 	c.Assert(json.Unmarshal(result, &r), IsNil)
+
+	// Verify conformance to openapi spec
+	c.Assert(r.Asgard[0].PubKey, Equals, queryVaultPubkeys.Asgard[0].PubKey)
+	c.Assert(*r.Asgard[0].Routers[0].Chain, Equals, queryVaultPubkeys.Asgard[0].Routers[0].Chain)
+	c.Assert(*r.Asgard[0].Routers[0].Router, Equals, queryVaultPubkeys.Asgard[0].Routers[0].Router)
 }
 
 func (s *QuerierSuite) TestQueryBalanceModule(c *C) {
 	c.Assert(s.k.SetVault(s.ctx, GetRandomVault()), IsNil)
-	result, err := s.querier(s.ctx, []string{
-		query.QueryBalanceModule.Key,
-		"asgard",
-	}, abci.RequestQuery{})
+	queryBalanceModulesResp, err := s.queryServer.BalanceModule(s.ctx, &types.QueryBalanceModuleRequest{
+		Name: "asgard",
+	})
+	c.Assert(err, IsNil)
+
+	// marshal output so we can verify it unmarshals as expected
+	result, err := queryBalanceModulesResp.MarshalJSONPB(nil)
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
 	var r struct {
@@ -895,25 +1110,31 @@ func (s *QuerierSuite) TestQueryBalanceModule(c *C) {
 		Coins   types2.Coins      `json:"coins"`
 	}
 	c.Assert(json.Unmarshal(result, &r), IsNil)
+
+	// Verify conformance to legacy output
+	c.Assert(r.Address.String(), Equals, queryBalanceModulesResp.Address.String())
+	c.Assert(r.Coins[0].Amount.String(), Equals, queryBalanceModulesResp.Coins[0].Amount.String())
+	c.Assert(r.Coins[0].Denom, Equals, queryBalanceModulesResp.Coins[0].Denom)
+	c.Assert(r.Name, Equals, queryBalanceModulesResp.Name)
 }
 
 func (s *QuerierSuite) TestQueryVault(c *C) {
 	vault := GetRandomVault()
 
-	// Not enough argument
-	result, err := s.querier(s.ctx, []string{
-		query.QueryVault.Key,
-		"ETH",
-	}, abci.RequestQuery{})
-
-	c.Assert(result, IsNil)
+	queryVaultResp, err := s.queryServer.Vault(s.ctx, &types.QueryVaultRequest{
+		PubKey: "ETH",
+	})
+	c.Assert(queryVaultResp, IsNil)
 	c.Assert(err, NotNil)
 
 	c.Assert(s.k.SetVault(s.ctx, vault), IsNil)
-	result, err = s.querier(s.ctx, []string{
-		query.QueryVault.Key,
-		vault.PubKey.String(),
-	}, abci.RequestQuery{})
+	queryVaultResp, err = s.queryServer.Vault(s.ctx, &types.QueryVaultRequest{
+		PubKey: vault.PubKey.String(),
+	})
+	c.Assert(err, IsNil)
+
+	// marshal output so we can verify it unmarshals as expected
+	result, err := queryVaultResp.MarshalJSONPB(nil)
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
 	var returnVault Vault
@@ -925,9 +1146,10 @@ func (s *QuerierSuite) TestQueryVault(c *C) {
 }
 
 func (s *QuerierSuite) TestQueryVersion(c *C) {
-	result, err := s.querier(s.ctx, []string{
-		query.QueryVersion.Key,
-	}, abci.RequestQuery{})
+	queryVersionResp, err := s.queryServer.Version(s.ctx, &types.QueryVersionRequest{})
+	c.Assert(err, IsNil)
+
+	result, err := queryVersionResp.MarshalJSONPB(nil)
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
 	var r openapi.VersionResponse
@@ -940,9 +1162,10 @@ func (s *QuerierSuite) TestQueryVersion(c *C) {
 	// override the version computed in BeginBlock
 	s.k.SetVersionWithCtx(s.ctx, semver.MustParse("4.5.6"))
 
-	result, err = s.querier(s.ctx, []string{
-		query.QueryVersion.Key,
-	}, abci.RequestQuery{})
+	queryVersionResp, err = s.queryServer.Version(s.ctx, &types.QueryVersionRequest{})
+	c.Assert(err, IsNil)
+
+	result, err = queryVersionResp.MarshalJSONPB(nil)
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
 	c.Assert(json.Unmarshal(result, &r), IsNil)

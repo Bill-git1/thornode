@@ -26,7 +26,6 @@ func (MsgRefundTxSuite) TestMsgRefundTx(c *C) {
 	), 12, GetRandomPubKey(), 12)
 	m := NewMsgRefundTx(tx, inTxID, acc1)
 	EnsureMsgBasicCorrect(m, c)
-	c.Check(m.Type(), Equals, "set_tx_refund")
 
 	inputs := []struct {
 		txID   common.TxID

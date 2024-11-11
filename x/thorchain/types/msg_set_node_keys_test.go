@@ -20,10 +20,7 @@ func (MsgSetNodeKeysSuite) TestMsgSetNodeKeys(c *C) {
 		Ed25519:   GetRandomPubKey(),
 	}
 	msgSetNodeKeys := NewMsgSetNodeKeys(pubKeys, consensPubKey, acc1)
-	c.Assert(msgSetNodeKeys.Route(), Equals, RouterKey)
-	c.Assert(msgSetNodeKeys.Type(), Equals, "set_node_keys")
 	c.Assert(msgSetNodeKeys.ValidateBasic(), IsNil)
-	c.Assert(len(msgSetNodeKeys.GetSignBytes()) > 0, Equals, true)
 	c.Assert(msgSetNodeKeys.GetSigners(), NotNil)
 	c.Assert(msgSetNodeKeys.GetSigners()[0].String(), Equals, acc1.String())
 	msgUpdateNodeAccount1 := NewMsgSetNodeKeys(pubKeys, "", acc1)

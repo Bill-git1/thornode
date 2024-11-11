@@ -3,11 +3,17 @@ package types
 import (
 	"fmt"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 )
 
-var _ cosmos.Msg = &MsgAddLiquidity{}
+var (
+	_ sdk.Msg              = &MsgAddLiquidity{}
+	_ sdk.HasValidateBasic = &MsgAddLiquidity{}
+	_ sdk.LegacyMsg        = &MsgAddLiquidity{}
+)
 
 // NewMsgAddLiquidity is a constructor function for MsgAddLiquidity
 func NewMsgAddLiquidity(tx common.Tx, asset common.Asset, r, amount cosmos.Uint, runeAddr, assetAddr, affAddr common.Address, affPts cosmos.Uint, signer cosmos.AccAddress) *MsgAddLiquidity {
@@ -23,12 +29,6 @@ func NewMsgAddLiquidity(tx common.Tx, asset common.Asset, r, amount cosmos.Uint,
 		Signer:               signer,
 	}
 }
-
-// Route should return the route key of the module
-func (m *MsgAddLiquidity) Route() string { return RouterKey }
-
-// Type should return the action
-func (m MsgAddLiquidity) Type() string { return "add_liquidity" }
 
 // ValidateBasic runs stateless checks on the message
 func (m *MsgAddLiquidity) ValidateBasic() error {
@@ -62,11 +62,6 @@ func (m *MsgAddLiquidity) ValidateBasic() error {
 		return cosmos.ErrUnknownRequest(fmt.Sprintf("affiliate fee basis points can't be more than %d", MaxAffiliateFeeBasisPoints))
 	}
 	return nil
-}
-
-// GetSignBytes encodes the message for signing
-func (m *MsgAddLiquidity) GetSignBytes() []byte {
-	return cosmos.MustSortJSON(ModuleCdc.MustMarshalJSON(m))
 }
 
 // GetSigners defines whose signature is required

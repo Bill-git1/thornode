@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/99designs/keyring"
+	"github.com/cometbft/cometbft/crypto/ed25519"
 	"github.com/cosmos/cosmos-sdk/client/input"
 	"github.com/cosmos/cosmos-sdk/crypto/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -19,7 +20,6 @@ import (
 	"github.com/cosmos/go-bip39"
 	"github.com/decred/dcrd/dcrec/edwards"
 	"github.com/spf13/cobra"
-	"github.com/tendermint/tendermint/crypto/ed25519"
 
 	"gitlab.com/thorchain/thornode/app"
 )
@@ -49,7 +49,7 @@ func ed25519Keys(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	db, err := keyring.Open(getKeyringConfig(sdk.KeyringServiceName(), app.DefaultNodeHome(), password))
+	db, err := keyring.Open(getKeyringConfig(sdk.KeyringServiceName(), app.DefaultNodeHome, password))
 	if err != nil {
 		return fmt.Errorf("fail to open key store: %w", err)
 	}
@@ -76,7 +76,7 @@ func ed25519Keys(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("fail to parse private key")
 	}
 	pkey := ed25519.PubKey(pk.Serialize())
-	tmp, err := codec.FromTmPubKeyInterface(pkey)
+	tmp, err := codec.FromCmtPubKeyInterface(pkey)
 	if err != nil {
 		return fmt.Errorf("fail to get ED25519 key : %w", err)
 	}

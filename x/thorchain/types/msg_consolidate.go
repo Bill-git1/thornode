@@ -1,7 +1,15 @@
 package types
 
 import (
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"gitlab.com/thorchain/thornode/common/cosmos"
+)
+
+var (
+	_ sdk.Msg              = &MsgConsolidate{}
+	_ sdk.HasValidateBasic = &MsgConsolidate{}
+	_ sdk.LegacyMsg        = &MsgConsolidate{}
 )
 
 // NewMsgConsolidate is a constructor function for MsgConsolidate
@@ -12,12 +20,6 @@ func NewMsgConsolidate(observedTx ObservedTx, signer cosmos.AccAddress) *MsgCons
 	}
 }
 
-// Route should return the pooldata of the module
-func (m *MsgConsolidate) Route() string { return RouterKey }
-
-// Type should return the action
-func (m MsgConsolidate) Type() string { return "consolidate" }
-
 // ValidateBasic runs stateless checks on the message
 func (m *MsgConsolidate) ValidateBasic() error {
 	if err := m.ObservedTx.Valid(); err != nil {
@@ -27,11 +29,6 @@ func (m *MsgConsolidate) ValidateBasic() error {
 		return cosmos.ErrInvalidAddress(m.Signer.String())
 	}
 	return nil
-}
-
-// GetSignBytes encodes the message for signing
-func (m *MsgConsolidate) GetSignBytes() []byte {
-	return cosmos.MustSortJSON(ModuleCdc.MustMarshalJSON(m))
 }
 
 // GetSigners defines whose signature is required

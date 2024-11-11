@@ -4,31 +4,24 @@
 package thorchain
 
 import (
+	"encoding/json"
 	"fmt"
 
-	abci "github.com/tendermint/tendermint/abci/types"
-
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"gitlab.com/thorchain/thornode/common/cosmos"
-	q "gitlab.com/thorchain/thornode/x/thorchain/query"
 )
 
 func init() {
-	initManager = func(mgr *Mgrs, ctx cosmos.Context) {
+	initManager = func(ctx cosmos.Context, mgr *Mgrs) {
 		_ = mgr.BeginBlock(ctx)
 	}
 
-	optionalQuery = func(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {
-		switch path[0] {
-		case q.QueryExport.Key:
-			return queryExport(ctx, path[1:], req, mgr)
-		default:
-			return nil, cosmos.ErrUnknownRequest(
-				fmt.Sprintf("unknown thorchain query endpoint: %s", path[0]),
-			)
+	queryExport = func(ctx sdk.Context, mgr *Mgrs) ([]byte, error) {
+		contentBz := ExportGenesis(ctx, mgr.Keeper())
+		res, err := json.Marshal(contentBz)
+		if err != nil {
+			return nil, fmt.Errorf("fail to marshal response to json: %w", err)
 		}
+		return res, nil
 	}
-}
-
-func queryExport(ctx cosmos.Context, path []string, req abci.RequestQuery, mgr *Mgrs) ([]byte, error) {
-	return jsonify(ctx, ExportGenesis(ctx, mgr.Keeper()))
 }

@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	errorsmod "cosmossdk.io/errors"
+	"github.com/cometbft/cometbft/crypto"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -19,13 +21,12 @@ import (
 	grpctypes "github.com/cosmos/cosmos-sdk/types/grpc"
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 	signingtypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
-	"github.com/cosmos/cosmos-sdk/x/auth/signing"
-	"github.com/cosmos/cosmos-sdk/x/auth/tx"
+	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	atypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	btypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/tendermint/tendermint/crypto"
 	tssp "gitlab.com/thorchain/thornode/bifrost/tss/go-tss/tss"
 
 	"gitlab.com/thorchain/thornode/bifrost/blockscanner"
@@ -47,7 +48,7 @@ import (
 // CosmosSuccessCodes a transaction is considered successful if it returns 0
 // or if tx is unauthorized or already in the mempool (another Bifrost already sent it)
 var CosmosSuccessCodes = map[uint32]bool{
-	errortypes.SuccessABCICode:                true,
+	errorsmod.SuccessABCICode:                 true,
 	errortypes.ErrTxInMempoolCache.ABCICode(): true,
 	errortypes.ErrWrongSequence.ABCICode():    true,
 }
@@ -94,7 +95,7 @@ func NewCosmosClient(
 		return nil, fmt.Errorf("fail to get private key: %w", err)
 	}
 
-	temp, err := cryptocodec.ToTmPubKeyInterface(priv.PubKey())
+	temp, err := cryptocodec.ToCmtPubKeyInterface(priv.PubKey())
 	if err != nil {
 		return nil, fmt.Errorf("fail to get tm pub key: %w", err)
 	}
@@ -120,7 +121,7 @@ func NewCosmosClient(
 	interfaceRegistry := codectypes.NewInterfaceRegistry()
 	interfaceRegistry.RegisterImplementations((*ctypes.Msg)(nil), &btypes.MsgSend{})
 	marshaler := codec.NewProtoCodec(interfaceRegistry)
-	txConfig := tx.NewTxConfig(marshaler, []signingtypes.SignMode{signingtypes.SignMode_SIGN_MODE_DIRECT})
+	txConfig := authtx.NewTxConfig(marshaler, []signingtypes.SignMode{signingtypes.SignMode_SIGN_MODE_DIRECT})
 
 	// CHANGEME: each THORNode network (e.g. mainnet, mocknet, etc.) may connect to a Cosmos chain with a different chain ID
 	// Implement the logic here for determinine which chain ID to use.
@@ -461,15 +462,17 @@ func (c *CosmosClient) signMsg(
 	}
 
 	modeHandler := c.txConfig.SignModeHandler()
-	signingData := signing.SignerData{
+	signingData := authsigning.SignerData{
 		ChainID:       c.chainID,
 		AccountNumber: account,
 		Sequence:      sequence,
 	}
 
-	signBytes, err := modeHandler.GetSignBytes(signingtypes.SignMode_SIGN_MODE_DIRECT, signingData, txBuilder.GetTx())
+	signBytes, err := authsigning.GetSignBytesAdapter(
+		context.Background(), modeHandler, signingtypes.SignMode_SIGN_MODE_DIRECT, signingData, txBuilder.GetTx(),
+	)
 	if err != nil {
-		return nil, fmt.Errorf("unable to GetSignBytes on modeHandler: %w", err)
+		return nil, fmt.Errorf("fail GetSignBytesAdapter(): %w", err)
 	}
 
 	sigData := &signingtypes.SingleSignatureData{
@@ -537,7 +540,7 @@ func (c *CosmosClient) BroadcastTx(tx stypes.TxOutItem, txBytes []byte) (string,
 	c.accts.SeqInc(tx.VaultPubKey)
 	// Only add the transaction to signer cache when it is sure the transaction has been broadcast successfully.
 	// So for other scenario , like transaction already in mempool , invalid account sequence # , the transaction can be rescheduled , and retried
-	if broadcastRes.TxResponse.Code == errortypes.SuccessABCICode {
+	if broadcastRes.TxResponse.Code == errorsmod.SuccessABCICode {
 		if err = c.signerCacheManager.SetSigned(tx.CacheHash(), tx.CacheVault(c.GetChain()), broadcastRes.TxResponse.TxHash); err != nil {
 			c.logger.Err(err).Msg("fail to set signer cache")
 		}

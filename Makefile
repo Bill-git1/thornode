@@ -25,6 +25,9 @@ BRANCH?=$(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
 GITREF?=$(shell git rev-parse --short HEAD 2>/dev/null)
 BUILDTAG?=$(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
 
+# for dockerized protobuf tools
+DOCKER := $(shell which docker)
+
 # compiler flags
 VERSION:=$(shell cat version)
 TAG?=mocknet
@@ -50,26 +53,21 @@ ifndef CI
 DOCKER_TTY_ARGS=-it
 endif
 
+HTTPS_GIT := gitlab.com/thorchain/thornode.git
+
 ########################################################################################
 # Targets
 ########################################################################################
 
 # ------------------------------ Generate ------------------------------
 
-generate: go-generate openapi protob-docker
+generate: go-generate openapi proto-gen
 	@./scripts/generate.py
 	@cd test/simulation && go mod tidy
 
 go-generate:
 	@go install golang.org/x/tools/cmd/stringer@v0.15.0
 	@go generate ./...
-
-protob:
-	@./scripts/protocgen.sh
-
-protob-docker:
-	@docker run --rm -v $(shell pwd):/app -w /app golang:1.22.2 \
-		make protob
 
 openapi:
 	@docker run --rm \
@@ -80,6 +78,31 @@ openapi:
 	@rm openapi/gen/go.mod openapi/gen/go.sum
 	@find ./openapi/gen -type f | xargs sed -i '/^[- ]*API version.*$(shell cat version)/d;/APIClient.*$(shell cat version)/d'
 	@find ./openapi/gen -type f | grep model | xargs sed -i 's/MarshalJSON(/MarshalJSON_deprecated(/'
+
+protoVer=0.13.2
+protoImageName=ghcr.io/cosmos/proto-builder:$(protoVer)
+protoImage=$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace $(protoImageName)
+
+proto-all: proto-format proto-lint proto-gen format
+
+proto-gen:
+	@echo "Generating bifrost protobuf files"
+	@docker run --rm -v $(shell pwd):/app -w /app golang:1.22.2 make bifrost-protosh
+	@echo "Generating Protobuf files"
+	@$(protoImage) sh ./scripts/protocgen.sh
+
+proto-format:
+	@echo "Formatting Protobuf files"
+	@$(protoImage) find ./ -name "*.proto" -exec clang-format -i {} \;
+
+proto-lint:
+	@$(protoImage) buf lint --error-format=json
+
+proto-check-breaking:
+	@$(protoImage) buf breaking --against $(HTTPS_GIT)#branch=develop
+
+bifrost-protosh:
+	@./scripts/bifrostprotocgen.sh
 
 # ------------------------------ Docs ------------------------------
 
@@ -119,7 +142,7 @@ gitlab-trigger-ci:
 # ------------------------------ Housekeeping ------------------------------
 
 format:
-	@git ls-files '*.go' | grep -v -e '^docs/' -e '.pb.go$$' -e '^openapi/gen' -e '_gen.go$$' |\
+	@git ls-files '*.go' | grep -v -e '^docs/' -e '^api/' -e '^openapi/gen/' -e '.pb.go$$' -e '.pb.gw.go$$' -e '_gen.go$$' -e 'wire_gen.go$$' |\
 		xargs gofumpt -w
 
 lint:
@@ -246,7 +269,7 @@ stop-mocknet:
 halt-mocknet:
 	@docker compose -f build/docker/docker-compose.yml --profile mocknet --profile midgard down
 
-build-mocknet:
+build-mocknet: proto-gen
 	@docker compose -f build/docker/docker-compose.yml --profile mocknet --profile midgard build \
 		--build-arg COMMIT=$(COMMIT)
 

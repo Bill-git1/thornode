@@ -31,7 +31,6 @@ func (MsgSwapSuite) TestMsgSwap(c *C) {
 
 	m := NewMsgSwap(tx, common.ETHAsset, ethAddress, cosmos.NewUint(200000000), common.NoAddress, cosmos.ZeroUint(), "", "", nil, 0, 0, 0, addr)
 	EnsureMsgBasicCorrect(m, c)
-	c.Check(m.Type(), Equals, "swap")
 
 	inputs := []struct {
 		requestTxHash         common.TxID

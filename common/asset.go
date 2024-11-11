@@ -7,6 +7,8 @@ import (
 
 	"github.com/blang/semver"
 	"github.com/gogo/protobuf/jsonpb"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 var (
@@ -33,6 +35,8 @@ var (
 	TOR        = Asset{Chain: THORChain, Symbol: "TOR", Ticker: "TOR", Synth: false}
 	THORBTC    = Asset{Chain: THORChain, Symbol: "BTC", Ticker: "BTC", Synth: false}
 )
+
+var _ sdk.CustomProtobufType = (*Asset)(nil)
 
 // NewAsset parse the given input into Asset object
 func NewAsset(input string) (Asset, error) {

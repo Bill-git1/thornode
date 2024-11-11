@@ -4,7 +4,7 @@ import (
 	"github.com/btcsuite/btcd/btcec"
 	btcjson "github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcutil"
-	"github.com/tendermint/tendermint/crypto/secp256k1"
+	"github.com/cometbft/cometbft/crypto/secp256k1"
 
 	"gitlab.com/thorchain/thornode/common"
 )

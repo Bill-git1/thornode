@@ -1,8 +1,16 @@
 package types
 
 import (
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
+)
+
+var (
+	_ sdk.Msg              = &MsgLeave{}
+	_ sdk.HasValidateBasic = &MsgLeave{}
+	_ sdk.LegacyMsg        = &MsgLeave{}
 )
 
 // NewMsgLeave create a new instance of MsgLeave
@@ -13,12 +21,6 @@ func NewMsgLeave(tx common.Tx, addr, signer cosmos.AccAddress) *MsgLeave {
 		Signer:      signer,
 	}
 }
-
-// Route should return the router key of the module
-func (m *MsgLeave) Route() string { return RouterKey }
-
-// Type should return the action
-func (m MsgLeave) Type() string { return "leave" }
 
 // ValidateBasic runs stateless checks on the message
 func (m *MsgLeave) ValidateBasic() error {
@@ -37,11 +39,6 @@ func (m *MsgLeave) ValidateBasic() error {
 		return cosmos.ErrInvalidAddress("node address cannot be empty")
 	}
 	return nil
-}
-
-// GetSignBytes encodes the message for signing
-func (m *MsgLeave) GetSignBytes() []byte {
-	return cosmos.MustSortJSON(ModuleCdc.MustMarshalJSON(m))
 }
 
 // GetSigners defines whose signature is required

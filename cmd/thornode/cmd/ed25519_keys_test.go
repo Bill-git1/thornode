@@ -3,10 +3,10 @@ package cmd
 import (
 	"testing"
 
+	"github.com/cometbft/cometbft/crypto/ed25519"
 	"github.com/cosmos/cosmos-sdk/crypto/codec"
 	bech32 "github.com/cosmos/cosmos-sdk/types/bech32/legacybech32" // nolint SA1019 deprecated
 	"github.com/decred/dcrd/dcrec/edwards"
-	"github.com/tendermint/tendermint/crypto/ed25519"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/x/thorchain"
@@ -31,7 +31,7 @@ func (*ED25519TestSuite) TestGetEd25519Keys(c *C) {
 	_, pk, err := edwards.PrivKeyFromScalar(edwards.Edwards(), result)
 	c.Assert(err, IsNil)
 	pkey := ed25519.PubKey(pk.Serialize())
-	tmp, err := codec.FromTmPubKeyInterface(pkey)
+	tmp, err := codec.FromCmtPubKeyInterface(pkey)
 	c.Assert(err, IsNil)
 	// nolint
 	pubKey, err := bech32.MarshalPubKey(bech32.AccPK, tmp)

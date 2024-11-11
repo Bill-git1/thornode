@@ -11,7 +11,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	abci "github.com/tendermint/tendermint/abci/types"
 )
 
 var (
@@ -39,13 +38,13 @@ func init() {
 	}()
 }
 
-func (app *THORChainApp) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
+func (app *THORChainApp) BeginBlocker(ctx sdk.Context) (sdk.BeginBlock, error) {
 	<-begin
-	return app.mm.BeginBlock(ctx, req)
+	return app.ModuleManager.BeginBlock(ctx)
 }
 
 // EndBlocker application updates every end block
-func (app *THORChainApp) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
+func (app *THORChainApp) EndBlocker(ctx sdk.Context) (sdk.EndBlock, error) {
 	defer func() { end <- struct{}{} }()
-	return app.mm.EndBlock(ctx, req)
+	return app.ModuleManager.EndBlock(ctx)
 }

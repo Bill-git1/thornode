@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/armon/go-metrics"
 	"github.com/blang/semver"
 	"github.com/cosmos/cosmos-sdk/telemetry"
+	"github.com/hashicorp/go-metrics"
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
@@ -55,6 +55,7 @@ func (h ObservedTxOutHandler) validate(ctx cosmos.Context, msg MsgObservedTxOut)
 }
 
 func (h ObservedTxOutHandler) validateV1(ctx cosmos.Context, msg MsgObservedTxOut) error {
+	// ValidateBasic is also executed in message service router's handler and isn't versioned there
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
@@ -145,6 +146,7 @@ func (h ObservedTxOutHandler) handleV129(ctx cosmos.Context, msg MsgObservedTxOu
 			continue
 		}
 		if tx.KeysignMs > 0 {
+			// trunk-ignore(golangci-lint/govet): shadow
 			keysignMetric, err := h.mgr.Keeper().GetTssKeysignMetric(ctx, tx.Tx.ID)
 			if err != nil {
 				ctx.Logger().Error("fail to get keysign metric", "error", err)

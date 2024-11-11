@@ -9,12 +9,11 @@ import (
 	"time"
 
 	"github.com/blang/semver"
+	"github.com/cometbft/cometbft/crypto"
 	sdkTypes "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/tendermint/btcd/btcec"
-	"github.com/tendermint/tendermint/crypto"
 	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/keysign"
 
 	"gitlab.com/thorchain/thornode/bifrost/thorclient"
@@ -90,10 +89,6 @@ func (s *KeySign) Stop() {
 	close(s.done)
 	s.wg.Wait()
 	close(s.taskQueue)
-}
-
-func (s *KeySign) Sign(msg legacytx.StdSignMsg) ([]byte, error) {
-	return nil, nil
 }
 
 // RemoteSign send the request to local task queue

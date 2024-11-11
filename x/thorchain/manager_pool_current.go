@@ -3,9 +3,10 @@ package thorchain
 import (
 	"fmt"
 
-	"github.com/armon/go-metrics"
+	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/telemetry"
-	"github.com/cosmos/cosmos-sdk/types"
+	"github.com/hashicorp/go-metrics"
+
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
@@ -371,7 +372,7 @@ func (pm *PoolMgrVCUR) checkSaversUtilization(ctx cosmos.Context, mgr Manager) e
 
 	var (
 		synthPool           Pool
-		maxUtilizationRatio = types.ZeroUint()
+		maxUtilizationRatio = sdkmath.ZeroUint()
 		handler             = NewInternalHandler(mgr)
 		signer              = nodeAccounts[0].NodeAddress
 		synthCap            = mgr.Keeper().GetConfigInt64(ctx, constants.MaxSynthPerPoolDepth)
@@ -414,7 +415,7 @@ func (pm *PoolMgrVCUR) checkSaversUtilization(ctx cosmos.Context, mgr Manager) e
 
 		maxSynth := common.GetUncappedShare(cosmos.NewUint(uint64(synthCap)), cosmos.NewUint(constants.MaxBasisPts), l1Pool.BalanceAsset.MulUint64(2))
 		if synthSupply.GT(maxSynth) {
-			utilizationRatio := common.GetUncappedShare(maxSynth, synthSupply, types.NewUint(constants.MaxBasisPts))
+			utilizationRatio := common.GetUncappedShare(maxSynth, synthSupply, sdkmath.NewUint(constants.MaxBasisPts))
 			if synthPool.IsEmpty() || utilizationRatio.GT(maxUtilizationRatio) {
 				synthPool = pool
 				maxUtilizationRatio = utilizationRatio

@@ -27,7 +27,6 @@ func (s *MsgWithdrawSuite) TestMsgWithdrawLiquidity(c *C) {
 	acc1 := GetRandomBech32Addr()
 	m := NewMsgWithdrawLiquidity(tx, runeAddr, cosmos.NewUint(10000), common.ETHAsset, common.EmptyAsset, acc1)
 	EnsureMsgBasicCorrect(m, c)
-	c.Check(m.Type(), Equals, "withdraw")
 
 	inputs := []struct {
 		tx                  common.Tx

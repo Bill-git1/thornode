@@ -156,7 +156,7 @@ func (h ManageTHORNameHandler) handleV116(ctx cosmos.Context, msg MsgManageTHORN
 	// check if user is trying to extend expiration
 	if !msg.Coin.Amount.IsZero() {
 		// check that THORName is still valid, can't top up an invalid THORName
-		if err := h.validateName(msg.Name); err != nil {
+		if err = h.validateName(msg.Name); err != nil {
 			return nil, err
 		}
 		var addBlocks int64
@@ -199,7 +199,7 @@ func (h ManageTHORNameHandler) handleV116(ctx cosmos.Context, msg MsgManageTHORN
 	h.mgr.Keeper().SetTHORName(ctx, tn)
 
 	evt := NewEventTHORName(tn.Name, msg.Chain, msg.Address, registrationFeePaid, fundPaid, tn.ExpireBlockHeight, tn.Owner)
-	if err := h.mgr.EventMgr().EmitEvent(ctx, evt); nil != err {
+	if err = h.mgr.EventMgr().EmitEvent(ctx, evt); nil != err {
 		ctx.Logger().Error("fail to emit THORName event", "error", err)
 	}
 

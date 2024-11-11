@@ -3,6 +3,7 @@ package thorchain
 import (
 	"strconv"
 
+	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/types"
 	. "gopkg.in/check.v1"
 
@@ -479,7 +480,7 @@ func (s *ValidatorMgrVCURTestSuite) TestSplitNext_SingleNodeAccount(c *C) {
 	var vm ValidatorMgrVCUR
 	ctx, _ := setupKeeperForTest(c)
 
-	nodeAcc := NodeAccount{NodeAddress: types.AccAddress("addr1"), Bond: types.NewUint(50), BondAddress: common.Address("bondAddr1")}
+	nodeAcc := NodeAccount{NodeAddress: types.AccAddress("addr1"), Bond: sdkmath.NewUint(50), BondAddress: common.Address("bondAddr1")}
 
 	groups := vm.splitNext(ctx, NodeAccounts{nodeAcc}, 1)
 
@@ -491,10 +492,10 @@ func (s *ValidatorMgrVCURTestSuite) TestSplitNext_AllSameBondAddress(c *C) {
 	var vm ValidatorMgrVCUR
 	ctx, _ := setupKeeperForTest(c)
 
-	nodeAcc1 := NodeAccount{NodeAddress: types.AccAddress("addr1"), Bond: types.NewUint(50), BondAddress: common.Address("bondAddr1")}
-	nodeAcc2 := NodeAccount{NodeAddress: types.AccAddress("addr2"), Bond: types.NewUint(60), BondAddress: common.Address("bondAddr1")}
-	nodeAcc3 := NodeAccount{NodeAddress: types.AccAddress("addr3"), Bond: types.NewUint(70), BondAddress: common.Address("bondAddr1")}
-	nodeAcc4 := NodeAccount{NodeAddress: types.AccAddress("addr4"), Bond: types.NewUint(80), BondAddress: common.Address("bondAddr1")}
+	nodeAcc1 := NodeAccount{NodeAddress: types.AccAddress("addr1"), Bond: sdkmath.NewUint(50), BondAddress: common.Address("bondAddr1")}
+	nodeAcc2 := NodeAccount{NodeAddress: types.AccAddress("addr2"), Bond: sdkmath.NewUint(60), BondAddress: common.Address("bondAddr1")}
+	nodeAcc3 := NodeAccount{NodeAddress: types.AccAddress("addr3"), Bond: sdkmath.NewUint(70), BondAddress: common.Address("bondAddr1")}
+	nodeAcc4 := NodeAccount{NodeAddress: types.AccAddress("addr4"), Bond: sdkmath.NewUint(80), BondAddress: common.Address("bondAddr1")}
 
 	groups := vm.splitNext(ctx, NodeAccounts{nodeAcc1, nodeAcc2, nodeAcc3, nodeAcc4}, 2)
 
@@ -513,10 +514,10 @@ func (s *ValidatorMgrVCURTestSuite) TestSplitNext_DifferentBondAddresses(c *C) {
 	var vm ValidatorMgrVCUR
 	ctx, _ := setupKeeperForTest(c)
 
-	nodeAcc1 := NodeAccount{NodeAddress: types.AccAddress("addr1"), Bond: types.NewUint(50), BondAddress: common.Address("bondAddr1")}
-	nodeAcc2 := NodeAccount{NodeAddress: types.AccAddress("addr2"), Bond: types.NewUint(60), BondAddress: common.Address("bondAddr2")}
-	nodeAcc3 := NodeAccount{NodeAddress: types.AccAddress("addr3"), Bond: types.NewUint(70), BondAddress: common.Address("bondAddr3")}
-	nodeAcc4 := NodeAccount{NodeAddress: types.AccAddress("addr4"), Bond: types.NewUint(80), BondAddress: common.Address("bondAddr4")}
+	nodeAcc1 := NodeAccount{NodeAddress: types.AccAddress("addr1"), Bond: sdkmath.NewUint(50), BondAddress: common.Address("bondAddr1")}
+	nodeAcc2 := NodeAccount{NodeAddress: types.AccAddress("addr2"), Bond: sdkmath.NewUint(60), BondAddress: common.Address("bondAddr2")}
+	nodeAcc3 := NodeAccount{NodeAddress: types.AccAddress("addr3"), Bond: sdkmath.NewUint(70), BondAddress: common.Address("bondAddr3")}
+	nodeAcc4 := NodeAccount{NodeAddress: types.AccAddress("addr4"), Bond: sdkmath.NewUint(80), BondAddress: common.Address("bondAddr4")}
 
 	groups := vm.splitNext(ctx, NodeAccounts{nodeAcc1, nodeAcc2, nodeAcc3, nodeAcc4}, 2)
 
@@ -535,8 +536,8 @@ func (s *ValidatorMgrVCURTestSuite) TestSplitNext_SameBondSameAddress(c *C) {
 	var vm ValidatorMgrVCUR
 	ctx, _ := setupKeeperForTest(c)
 
-	nodeAcc1 := NodeAccount{NodeAddress: types.AccAddress("addr1"), Bond: types.NewUint(50), BondAddress: common.Address("bondAddr1")}
-	nodeAcc2 := NodeAccount{NodeAddress: types.AccAddress("addr2"), Bond: types.NewUint(50), BondAddress: common.Address("bondAddr1")}
+	nodeAcc1 := NodeAccount{NodeAddress: types.AccAddress("addr1"), Bond: sdkmath.NewUint(50), BondAddress: common.Address("bondAddr1")}
+	nodeAcc2 := NodeAccount{NodeAddress: types.AccAddress("addr2"), Bond: sdkmath.NewUint(50), BondAddress: common.Address("bondAddr1")}
 
 	groups := vm.splitNext(ctx, NodeAccounts{nodeAcc1, nodeAcc2}, 2)
 
@@ -552,7 +553,7 @@ func (s *ValidatorMgrVCURTestSuite) TestSplitNext_ZeroAsgardSize(c *C) {
 	var vm ValidatorMgrVCUR
 	ctx, _ := setupKeeperForTest(c)
 
-	nodeAcc := NodeAccount{NodeAddress: types.AccAddress("addr1"), Bond: types.NewUint(50), BondAddress: common.Address("bondAddr1")}
+	nodeAcc := NodeAccount{NodeAddress: types.AccAddress("addr1"), Bond: sdkmath.NewUint(50), BondAddress: common.Address("bondAddr1")}
 
 	groups := vm.splitNext(ctx, NodeAccounts{nodeAcc}, 0)
 
@@ -563,7 +564,7 @@ func (s *ValidatorMgrVCURTestSuite) TestSplitNext_NegativeAsgardSize(c *C) {
 	var vm ValidatorMgrVCUR
 	ctx, _ := setupKeeperForTest(c)
 
-	nodeAcc := NodeAccount{NodeAddress: types.AccAddress("addr1"), Bond: types.NewUint(50), BondAddress: common.Address("bondAddr1")}
+	nodeAcc := NodeAccount{NodeAddress: types.AccAddress("addr1"), Bond: sdkmath.NewUint(50), BondAddress: common.Address("bondAddr1")}
 
 	groups := vm.splitNext(ctx, NodeAccounts{nodeAcc}, -1)
 
@@ -574,8 +575,8 @@ func (s *ValidatorMgrVCURTestSuite) TestSplitNext_AsgardSizeLargerThanLen(c *C) 
 	var vm ValidatorMgrVCUR
 	ctx, _ := setupKeeperForTest(c)
 
-	nodeAcc1 := NodeAccount{NodeAddress: types.AccAddress("addr1"), Bond: types.NewUint(50), BondAddress: common.Address("bondAddr1")}
-	nodeAcc2 := NodeAccount{NodeAddress: types.AccAddress("addr2"), Bond: types.NewUint(60), BondAddress: common.Address("bondAddr1")}
+	nodeAcc1 := NodeAccount{NodeAddress: types.AccAddress("addr1"), Bond: sdkmath.NewUint(50), BondAddress: common.Address("bondAddr1")}
+	nodeAcc2 := NodeAccount{NodeAddress: types.AccAddress("addr2"), Bond: sdkmath.NewUint(60), BondAddress: common.Address("bondAddr1")}
 
 	groups := vm.splitNext(ctx, NodeAccounts{nodeAcc1, nodeAcc2}, 3)
 
@@ -590,10 +591,10 @@ func (s *ValidatorMgrVCURTestSuite) TestSplitNext_MultipleDuplicates(c *C) {
 	var vm ValidatorMgrVCUR
 	ctx, _ := setupKeeperForTest(c)
 
-	nodeAcc1 := NodeAccount{NodeAddress: types.AccAddress("addr1"), Bond: types.NewUint(50), BondAddress: common.Address("bondAddr1")}
-	nodeAcc2 := NodeAccount{NodeAddress: types.AccAddress("addr2"), Bond: types.NewUint(60), BondAddress: common.Address("bondAddr1")}
-	nodeAcc3 := NodeAccount{NodeAddress: types.AccAddress("addr3"), Bond: types.NewUint(70), BondAddress: common.Address("bondAddr2")}
-	nodeAcc4 := NodeAccount{NodeAddress: types.AccAddress("addr4"), Bond: types.NewUint(80), BondAddress: common.Address("bondAddr2")}
+	nodeAcc1 := NodeAccount{NodeAddress: types.AccAddress("addr1"), Bond: sdkmath.NewUint(50), BondAddress: common.Address("bondAddr1")}
+	nodeAcc2 := NodeAccount{NodeAddress: types.AccAddress("addr2"), Bond: sdkmath.NewUint(60), BondAddress: common.Address("bondAddr1")}
+	nodeAcc3 := NodeAccount{NodeAddress: types.AccAddress("addr3"), Bond: sdkmath.NewUint(70), BondAddress: common.Address("bondAddr2")}
+	nodeAcc4 := NodeAccount{NodeAddress: types.AccAddress("addr4"), Bond: sdkmath.NewUint(80), BondAddress: common.Address("bondAddr2")}
 
 	groups := vm.splitNext(ctx, NodeAccounts{nodeAcc1, nodeAcc2, nodeAcc3, nodeAcc4}, 2)
 
@@ -612,13 +613,13 @@ func (s *ValidatorMgrVCURTestSuite) TestSplitNext_MultipleDuplicatesOfDiffSizes(
 	var vm ValidatorMgrVCUR
 	ctx, _ := setupKeeperForTest(c)
 
-	nodeAcc1 := NodeAccount{NodeAddress: types.AccAddress("addr1"), Bond: types.NewUint(200), BondAddress: common.Address("bondAddr0")}
-	nodeAcc2 := NodeAccount{NodeAddress: types.AccAddress("addr2"), Bond: types.NewUint(60), BondAddress: common.Address("bondAddr1")}
-	nodeAcc3 := NodeAccount{NodeAddress: types.AccAddress("addr3"), Bond: types.NewUint(70), BondAddress: common.Address("bondAddr2")}
-	nodeAcc4 := NodeAccount{NodeAddress: types.AccAddress("addr4"), Bond: types.NewUint(80), BondAddress: common.Address("bondAddr2")}
-	nodeAcc5 := NodeAccount{NodeAddress: types.AccAddress("addr5"), Bond: types.NewUint(85), BondAddress: common.Address("bondAddr3")}
-	nodeAcc6 := NodeAccount{NodeAddress: types.AccAddress("addr6"), Bond: types.NewUint(100), BondAddress: common.Address("bondAddr3")}
-	nodeAcc7 := NodeAccount{NodeAddress: types.AccAddress("addr7"), Bond: types.NewUint(90), BondAddress: common.Address("bondAddr3")}
+	nodeAcc1 := NodeAccount{NodeAddress: types.AccAddress("addr1"), Bond: sdkmath.NewUint(200), BondAddress: common.Address("bondAddr0")}
+	nodeAcc2 := NodeAccount{NodeAddress: types.AccAddress("addr2"), Bond: sdkmath.NewUint(60), BondAddress: common.Address("bondAddr1")}
+	nodeAcc3 := NodeAccount{NodeAddress: types.AccAddress("addr3"), Bond: sdkmath.NewUint(70), BondAddress: common.Address("bondAddr2")}
+	nodeAcc4 := NodeAccount{NodeAddress: types.AccAddress("addr4"), Bond: sdkmath.NewUint(80), BondAddress: common.Address("bondAddr2")}
+	nodeAcc5 := NodeAccount{NodeAddress: types.AccAddress("addr5"), Bond: sdkmath.NewUint(85), BondAddress: common.Address("bondAddr3")}
+	nodeAcc6 := NodeAccount{NodeAddress: types.AccAddress("addr6"), Bond: sdkmath.NewUint(100), BondAddress: common.Address("bondAddr3")}
+	nodeAcc7 := NodeAccount{NodeAddress: types.AccAddress("addr7"), Bond: sdkmath.NewUint(90), BondAddress: common.Address("bondAddr3")}
 
 	groups := vm.splitNext(ctx, NodeAccounts{nodeAcc7, nodeAcc3, nodeAcc2, nodeAcc4, nodeAcc5, nodeAcc6, nodeAcc1}, 4)
 

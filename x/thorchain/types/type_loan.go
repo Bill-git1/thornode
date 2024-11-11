@@ -4,12 +4,12 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/cosmos/cosmos-sdk/codec"
+	proto "github.com/cosmos/gogoproto/proto"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 )
 
-var _ codec.ProtoMarshaler = &Loan{}
+var _ proto.Message = &Loan{}
 
 // Loans a list of loans
 type Loans []Loan

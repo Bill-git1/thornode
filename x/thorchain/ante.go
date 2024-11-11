@@ -3,6 +3,7 @@ package thorchain
 import (
 	"github.com/blang/semver"
 
+	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256r1"
 	"github.com/cosmos/cosmos-sdk/crypto/types/multisig"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -124,7 +125,11 @@ func (ad AnteDecorator) anteHandleMessage(ctx sdk.Context, version semver.Versio
 		return VersionAnteHandler(ctx, version, ad.keeper, *m)
 	case *types.MsgProposeUpgrade, *types.MsgApproveUpgrade, *types.MsgRejectUpgrade:
 		if version.GTE(semver.MustParse("2.136.0")) {
-			return ActiveValidatorAnteHandler(ctx, version, ad.keeper, m.GetSigners()[0])
+			legacyMsg, ok := msg.(sdk.LegacyMsg)
+			if !ok {
+				return cosmos.ErrUnknownRequest("invalid message type")
+			}
+			return ActiveValidatorAnteHandler(ctx, version, ad.keeper, legacyMsg.GetSigners()[0])
 		}
 		return cosmos.ErrUnknownRequest("invalid message type")
 
@@ -153,6 +158,6 @@ func NewInfiniteGasDecorator(keeper keeper.Keeper) InfiniteGasDecorator {
 }
 
 func (d InfiniteGasDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (newCtx sdk.Context, err error) {
-	ctx = ctx.WithGasMeter(sdk.NewInfiniteGasMeter())
+	ctx = ctx.WithGasMeter(storetypes.NewInfiniteGasMeter())
 	return next(ctx, tx, simulate)
 }

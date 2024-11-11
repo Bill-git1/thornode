@@ -5,9 +5,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/armon/go-metrics"
 	"github.com/blang/semver"
 	"github.com/cosmos/cosmos-sdk/telemetry"
+	"github.com/hashicorp/go-metrics"
 	"github.com/hashicorp/go-multierror"
 
 	"gitlab.com/thorchain/thornode/common"

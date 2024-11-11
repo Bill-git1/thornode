@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strings"
 
+	upgradekeeper "cosmossdk.io/x/upgrade/keeper"
 	"github.com/blang/semver"
 	"github.com/cosmos/cosmos-sdk/codec"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
-	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
@@ -105,14 +105,14 @@ type KVStore struct {
 	cdc           codec.BinaryCodec
 	coinKeeper    bankkeeper.Keeper
 	accountKeeper authkeeper.AccountKeeper
-	upgradeKeeper upgradekeeper.Keeper
+	upgradeKeeper *upgradekeeper.Keeper
 	storeKey      cosmos.StoreKey // Unexposed key to access store from cosmos.Context
 	version       semver.Version
 	constAccessor constants.ConstantValues
 }
 
 // NewKVStore creates new instances of the thorchain Keeper
-func NewKVStore(cdc codec.BinaryCodec, coinKeeper bankkeeper.Keeper, accountKeeper authkeeper.AccountKeeper, upgradeKeeper upgradekeeper.Keeper, storeKey cosmos.StoreKey, version semver.Version) KVStore {
+func NewKVStore(cdc codec.BinaryCodec, coinKeeper bankkeeper.Keeper, accountKeeper authkeeper.AccountKeeper, upgradeKeeper *upgradekeeper.Keeper, storeKey cosmos.StoreKey, version semver.Version) KVStore {
 	return KVStore{
 		coinKeeper:    coinKeeper,
 		accountKeeper: accountKeeper,
@@ -125,7 +125,7 @@ func NewKVStore(cdc codec.BinaryCodec, coinKeeper bankkeeper.Keeper, accountKeep
 }
 
 // NewKeeper creates new instances of the thorchain Keeper
-func NewKeeper(cdc codec.BinaryCodec, coinKeeper bankkeeper.Keeper, accountKeeper authkeeper.AccountKeeper, upgradeKeeper upgradekeeper.Keeper, storeKey cosmos.StoreKey) keeper.Keeper {
+func NewKeeper(cdc codec.BinaryCodec, coinKeeper bankkeeper.Keeper, accountKeeper authkeeper.AccountKeeper, upgradeKeeper *upgradekeeper.Keeper, storeKey cosmos.StoreKey) keeper.Keeper {
 	version := semver.MustParse("0.0.0")
 	return NewKVStore(cdc, coinKeeper, accountKeeper, upgradeKeeper, storeKey, version)
 }

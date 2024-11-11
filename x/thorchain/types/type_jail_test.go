@@ -3,12 +3,13 @@ package types
 import (
 	. "gopkg.in/check.v1"
 
-	"github.com/cosmos/cosmos-sdk/store"
+	"cosmossdk.io/log"
+	"cosmossdk.io/store"
+	storemetrics "cosmossdk.io/store/metrics"
+	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	dbm "github.com/cosmos/cosmos-db"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
-	"github.com/tendermint/tendermint/libs/log"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
-	dbm "github.com/tendermint/tm-db"
 	cosmos "gitlab.com/thorchain/thornode/common/cosmos"
 )
 
@@ -33,7 +34,7 @@ func (s JailSuite) TestIsJailed(c *C) {
 	tkeyParams := cosmos.NewTransientStoreKey(paramstypes.TStoreKey)
 
 	db := dbm.NewMemDB()
-	ms := store.NewCommitMultiStore(db)
+	ms := store.NewCommitMultiStore(db, log.NewNopLogger(), storemetrics.NewNoOpMetrics())
 	ms.MountStoreWithDB(keyAcc, cosmos.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(keyParams, cosmos.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(cosmos.NewKVStoreKey("thorchain"), cosmos.StoreTypeIAVL, db)

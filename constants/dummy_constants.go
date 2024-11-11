@@ -42,3 +42,7 @@ func (dc *DummyConstants) GetStringValue(name ConstantName) string {
 func (dc *DummyConstants) String() string {
 	return ""
 }
+
+func (dc *DummyConstants) GetConstantValsByKeyname() ConstantValsByKeyname {
+	return ConstantValsByKeyname{}
+}

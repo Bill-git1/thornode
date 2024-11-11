@@ -85,7 +85,7 @@ genesis_init() {
 
   echo "Genesis content"
   cat ~/.thornode/config/genesis.json
-  thornode validate-genesis --trace
+  thornode genesis validate --trace
 }
 
 ########################################################################################

@@ -77,10 +77,13 @@ All URIs are relative to *http://localhost*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
+*AuthApi* | [**Account**](docs/AuthApi.md#account) | **Get** /auth/accounts/{address} | 
+*BankApi* | [**Balances**](docs/BankApi.md#balances) | **Get** /bank/balances/{address} | 
 *BlockApi* | [**Block**](docs/BlockApi.md#block) | **Get** /thorchain/block | 
 *BorrowersApi* | [**Borrower**](docs/BorrowersApi.md#borrower) | **Get** /thorchain/pool/{asset}/borrower/{address} | 
 *BorrowersApi* | [**Borrowers**](docs/BorrowersApi.md#borrowers) | **Get** /thorchain/pool/{asset}/borrowers | 
 *CloutApi* | [**SwapperClout**](docs/CloutApi.md#swapperclout) | **Get** /thorchain/clout/swap/{address} | 
+*ExportApi* | [**Export**](docs/ExportApi.md#export) | **Get** /thorchain/export | 
 *HealthApi* | [**Ping**](docs/HealthApi.md#ping) | **Get** /thorchain/ping | 
 *InvariantsApi* | [**Invariant**](docs/InvariantsApi.md#invariant) | **Get** /thorchain/invariant/{invariant} | 
 *InvariantsApi* | [**Invariants**](docs/InvariantsApi.md#invariants) | **Get** /thorchain/invariants | 
@@ -151,6 +154,11 @@ Class | Method | HTTP request | Description
 
 ## Documentation For Models
 
+ - [Account](docs/Account.md)
+ - [AccountResponse](docs/AccountResponse.md)
+ - [AccountResponseResult](docs/AccountResponseResult.md)
+ - [Amount](docs/Amount.md)
+ - [BalancesResponse](docs/BalancesResponse.md)
  - [BanResponse](docs/BanResponse.md)
  - [BaseQuoteResponse](docs/BaseQuoteResponse.md)
  - [BlockResponse](docs/BlockResponse.md)

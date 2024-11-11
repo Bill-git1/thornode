@@ -13,6 +13,9 @@ import (
 	"time"
 
 	"github.com/btcsuite/btcd/btcjson"
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	cKeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	. "gopkg.in/check.v1"
@@ -41,7 +44,10 @@ var _ = Suite(&BitcoinCashSuite{})
 
 func (s *BitcoinCashSuite) SetUpSuite(c *C) {
 	ttypes.SetupConfigForTest()
-	kb := cKeys.NewInMemory()
+	registry := codectypes.NewInterfaceRegistry()
+	cryptocodec.RegisterInterfaces(registry)
+	cdc := codec.NewProtoCodec(registry)
+	kb := cKeys.NewInMemory(cdc)
 	_, _, err := kb.NewMnemonic(bob, cKeys.English, cmd.THORChainHDPath, password, hd.Secp256k1)
 	c.Assert(err, IsNil)
 	s.keys = thorclient.NewKeysWithKeybase(kb, bob, password)

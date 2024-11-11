@@ -1,8 +1,7 @@
 package thorchain
 
 import (
-	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/crypto"
+	"github.com/cometbft/cometbft/crypto"
 	"gitlab.com/thorchain/thornode/common"
 	cosmos "gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
@@ -18,7 +17,7 @@ func NewDummySlasher() *DummySlasher {
 	}
 }
 
-func (d DummySlasher) BeginBlock(ctx cosmos.Context, req abci.RequestBeginBlock, constAccessor constants.ConstantValues) {
+func (d DummySlasher) BeginBlock(ctx cosmos.Context, constAccessor constants.ConstantValues) {
 }
 
 func (d DummySlasher) HandleDoubleSign(ctx cosmos.Context, addr crypto.Address, infractionHeight int64, constAccessor constants.ConstantValues) error {

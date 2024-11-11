@@ -306,9 +306,6 @@ thor:
       # NOTE: These are peers for auto state sync on mainnet only.
       - c3613862c2608b3e861406ad02146f41cf5124e6@statesync-seed.ninerealms.com:27146
       - dbd1730bff1e8a21aad93bc6083209904d483185@statesync-seed-2.ninerealms.com:27146
-  api:
-    limit_count: 180
-    limit_duration: 1m
   cosmos:
     pruning: nothing
     halt_height: 0

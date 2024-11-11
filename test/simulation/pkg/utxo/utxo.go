@@ -6,10 +6,10 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/cometbft/cometbft/crypto/secp256k1"
 	"github.com/hashicorp/go-multierror"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/tendermint/tendermint/crypto/secp256k1"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/btcjson"
@@ -101,7 +101,7 @@ func NewClient(chain common.Chain, host string, keys *thorclient.Keys) (LiteChai
 	}
 
 	// import address to wallet, rescan if master account
-	if keys.GetSignerInfo().GetName() == "master" {
+	if keys.GetSignerInfo().Name == "master" {
 		err = rpc.ImportAddressRescan(address.String())
 	} else {
 		err = rpc.ImportAddress(address.String())

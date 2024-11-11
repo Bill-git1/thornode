@@ -82,13 +82,13 @@ func (h DonateHandler) handleV1(ctx cosmos.Context, msg MsgDonate) error {
 	pool.BalanceAsset = pool.BalanceAsset.Add(msg.AssetAmount)
 	pool.BalanceRune = pool.BalanceRune.Add(msg.RuneAmount)
 
-	if err := h.mgr.Keeper().SetPool(ctx, pool); err != nil {
+	if err = h.mgr.Keeper().SetPool(ctx, pool); err != nil {
 		return ErrInternal(err, fmt.Sprintf("fail to set pool(%s)", pool))
 	}
 	// emit event
 	donateEvt := NewEventDonate(pool.Asset, msg.Tx)
-	if err := h.mgr.EventMgr().EmitEvent(ctx, donateEvt); err != nil {
-		return cosmos.Wrapf(errFailSaveEvent, "fail to save donate events: %w", err)
+	if err = h.mgr.EventMgr().EmitEvent(ctx, donateEvt); err != nil {
+		return errFailSaveEvent.Wrapf("fail to save donate events: %s", err)
 	}
 	return nil
 }

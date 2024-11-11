@@ -69,12 +69,16 @@ asserts:
 # thor.tor should not be available in the pool querier
 type: check
 endpoint: http://localhost:1317/thorchain/pool/thor.tor
-status: 404
+status: 400
+asserts:
+  - .message|test("thor.tor is a derived asset")
 ---
 # layer 1 assets should not be available in the dpool querier
 type: check
 endpoint: http://localhost:1317/thorchain/dpool/btc.btc
-status: 404
+status: 400
+asserts:
+  - .message|test("asset is not a derived asset")
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/dpool/thor.btc

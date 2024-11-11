@@ -64,10 +64,10 @@ count: 1
 type: check
 endpoint: http://localhost:1317/auth/accounts/{{ addr_thor_fox }}
 asserts:
-  - .result.value.sequence|length == 0
+  - .result.value.sequence == "0"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/tx/{{ observe_txid 2 }}
-status: 404
+status: 400
 asserts:
-- .error|length > 0
+- .message|test("doesn't exist")

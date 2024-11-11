@@ -62,9 +62,6 @@ func InitNetwork() {
 	cfg.SetCoinType(cmd.THORChainCoinType)
 	cfg.SetPurpose(cmd.THORChainCoinPurpose)
 	cfg.Seal()
-	sdk.SetCoinDenomRegex(func() string {
-		return cmd.DenomRegex
-	})
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////

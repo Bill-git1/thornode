@@ -11,7 +11,6 @@ const (
 	TreasuryName = types.TreasuryName
 	RUNEPoolName = types.RUNEPoolName
 	BondName     = types.BondName
-	RouterKey    = types.RouterKey
 	StoreKey     = types.StoreKey
 
 	ActiveVault = types.VaultStatus_ActiveVault
@@ -21,15 +20,15 @@ const (
 )
 
 var (
-	NewPool                = types.NewPool
-	NewJail                = types.NewJail
-	ModuleCdc              = types.ModuleCdc
-	RegisterCodec          = types.RegisterCodec
-	GetRandomVault         = types.GetRandomVault
-	GetRandomValidatorNode = types.GetRandomValidatorNode
-	GetRandomTxHash        = types.GetRandomTxHash
-	GetRandomBech32Addr    = types.GetRandomBech32Addr
-	GetRandomPubKey        = types.GetRandomPubKey
+	NewPool                  = types.NewPool
+	NewJail                  = types.NewJail
+	ModuleCdc                = types.ModuleCdc
+	RegisterLegacyAminoCodec = types.RegisterLegacyAminoCodec
+	GetRandomVault           = types.GetRandomVault
+	GetRandomValidatorNode   = types.GetRandomValidatorNode
+	GetRandomTxHash          = types.GetRandomTxHash
+	GetRandomBech32Addr      = types.GetRandomBech32Addr
+	GetRandomPubKey          = types.GetRandomPubKey
 )
 
 type (

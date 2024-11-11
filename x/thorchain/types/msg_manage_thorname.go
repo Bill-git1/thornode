@@ -1,8 +1,16 @@
 package types
 
 import (
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"gitlab.com/thorchain/thornode/common"
 	cosmos "gitlab.com/thorchain/thornode/common/cosmos"
+)
+
+var (
+	_ sdk.Msg              = &MsgManageTHORName{}
+	_ sdk.HasValidateBasic = &MsgManageTHORName{}
+	_ sdk.LegacyMsg        = &MsgManageTHORName{}
 )
 
 // NewMsgManageTHORName create a new instance of MsgManageTHORName
@@ -18,12 +26,6 @@ func NewMsgManageTHORName(name string, chain common.Chain, addr common.Address, 
 		Signer:            signer,
 	}
 }
-
-// Route should return the Route of the module
-func (m *MsgManageTHORName) Route() string { return RouterKey }
-
-// Type should return the action
-func (m MsgManageTHORName) Type() string { return "manage_thorname" }
 
 // ValidateBasic runs stateless checks on the message
 func (m *MsgManageTHORName) ValidateBasic() error {
@@ -44,11 +46,6 @@ func (m *MsgManageTHORName) ValidateBasic() error {
 		return cosmos.ErrUnknownRequest("coin must be native rune")
 	}
 	return nil
-}
-
-// GetSignBytes encodes the message for signing
-func (m *MsgManageTHORName) GetSignBytes() []byte {
-	return cosmos.MustSortJSON(ModuleCdc.MustMarshalJSON(m))
 }
 
 // GetSigners defines whose signature is required

@@ -21,7 +21,7 @@ COPY . .
 ARG TAG=mainnet
 ARG COMMIT=unknown
 
-RUN make protob install
+RUN make install
 
 #
 # Main

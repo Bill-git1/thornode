@@ -25,7 +25,6 @@ func (MsgRagnarokSuite) TestMsgRagnarokSuite(c *C) {
 	), 12, GetRandomPubKey(), 12)
 	m := NewMsgRagnarok(tx, 10, acc1)
 	EnsureMsgBasicCorrect(m, c)
-	c.Check(m.Type(), Equals, "ragnarok")
 
 	inputs := []struct {
 		txID        common.TxID

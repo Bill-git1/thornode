@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 
+	upgradetypes "cosmossdk.io/x/upgrade/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	se "github.com/cosmos/cosmos-sdk/types/errors"
-	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/common/cosmos"
@@ -97,11 +97,11 @@ func (k *TestUpgradeKeeper) ClearUpgradePlan(_ cosmos.Context) {
 	k.scheduled = false
 }
 
-func (k *TestUpgradeKeeper) GetUpgradePlan(_ cosmos.Context) (upgradetypes.Plan, bool) {
+func (k *TestUpgradeKeeper) GetUpgradePlan(_ cosmos.Context) (upgradetypes.Plan, error) {
 	if k.scheduled {
-		return upgradetypes.Plan{Name: "1.2.3"}, true
+		return upgradetypes.Plan{Name: "1.2.3"}, nil
 	}
-	return upgradetypes.Plan{}, false
+	return upgradetypes.Plan{}, upgradetypes.ErrNoUpgradePlanFound
 }
 
 var _ = Suite(&HandlerUpgradeSuite{})

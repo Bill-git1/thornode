@@ -3,8 +3,8 @@ package thorchain
 import (
 	"fmt"
 
+	errorsmod "cosmossdk.io/errors"
 	"github.com/blang/semver"
-	se "github.com/cosmos/cosmos-sdk/types/errors"
 
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
@@ -48,6 +48,7 @@ func (h BanHandler) validate(ctx cosmos.Context, msg MsgBan) error {
 }
 
 func (h BanHandler) validateV1(ctx cosmos.Context, msg MsgBan) error {
+	// ValidateBasic is also executed in message service router's handler and isn't versioned there
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
@@ -90,7 +91,7 @@ func (h BanHandler) handleV1(ctx cosmos.Context, msg MsgBan) (*cosmos.Result, er
 	case NodeActive, NodeStandby:
 		// we can ban an active or standby node
 	default:
-		return nil, se.Wrap(errInternal, "cannot ban a node account that is not currently active or standby")
+		return nil, errorsmod.Wrap(errInternal, "cannot ban a node account that is not currently active or standby")
 	}
 
 	banner, err := h.mgr.Keeper().GetNodeAccount(ctx, msg.Signer)

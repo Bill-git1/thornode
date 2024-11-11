@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	sdkmath "cosmossdk.io/math"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	ecommon "github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
@@ -199,24 +201,24 @@ func InitConfig(parallelism int, seed bool) *OpConfig {
 	for _, chain := range common.AllChains {
 
 		// determine the amount to seed
-		chainSeedAmount := sdk.ZeroUint()
+		chainSeedAmount := sdkmath.ZeroUint()
 		switch chain {
 		case common.BTCChain, common.ETHChain, common.LTCChain, common.BCHChain:
-			chainSeedAmount = sdk.NewUint(10 * common.One)
+			chainSeedAmount = sdkmath.NewUint(10 * common.One)
 		case common.BSCChain:
-			chainSeedAmount = sdk.NewUint(100 * common.One)
+			chainSeedAmount = sdkmath.NewUint(100 * common.One)
 		case common.GAIAChain:
-			chainSeedAmount = sdk.NewUint(1000 * common.One)
+			chainSeedAmount = sdkmath.NewUint(1000 * common.One)
 		case common.AVAXChain:
-			chainSeedAmount = sdk.NewUint(10000 * common.One) // more since local gas is high
+			chainSeedAmount = sdkmath.NewUint(10000 * common.One) // more since local gas is high
 		case common.DOGEChain:
-			chainSeedAmount = sdk.NewUint(100000 * common.One)
+			chainSeedAmount = sdkmath.NewUint(100000 * common.One)
 		default:
 			continue // all other chains currently unsupported
 		}
 
 		wg.Add(1)
-		go func(chain common.Chain, amount sdk.Uint) {
+		go func(chain common.Chain, amount sdkmath.Uint) {
 			defer wg.Done()
 			fundUserChainAccounts(master, funded, chain, chainSeedAmount)
 		}(chain, chainSeedAmount)
@@ -231,13 +233,15 @@ func InitConfig(parallelism int, seed bool) *OpConfig {
 // Helpers
 ////////////////////////////////////////////////////////////////////////////////////////
 
-func fundUserChainAccounts(master *User, users []*User, chain common.Chain, amount sdk.Uint) {
+// nolint:typecheck
+func fundUserChainAccounts(master *User, users []*User, chain common.Chain, amount sdkmath.Uint) {
 	for _, user := range users {
 		fundUserChainAccount(master, user, chain, amount)
 	}
 }
 
-func fundUserChainAccount(master, user *User, chain common.Chain, amount sdk.Uint) {
+// nolint:typecheck
+func fundUserChainAccount(master, user *User, chain common.Chain, amount sdkmath.Uint) {
 	// build tx
 	addr, err := user.PubKey().GetAddress(chain)
 	if err != nil {
@@ -281,8 +285,8 @@ func fundUserChainAccount(master, user *User, chain common.Chain, amount sdk.Uin
 	for asset, token := range evm.Tokens(chain) {
 		// convert funding amount to token decimals
 		factor := big.NewInt(1).Exp(big.NewInt(10), big.NewInt(int64(token.Decimals)), nil)
-		tokenAmount := amount.Mul(sdk.NewUintFromBigInt(factor))
-		tokenAmount = tokenAmount.Quo(sdk.NewUint(common.One))
+		tokenAmount := amount.Mul(sdkmath.NewUintFromBigInt(factor))
+		tokenAmount = tokenAmount.Quo(sdkmath.NewUint(common.One))
 
 		tokenTx := SimContractTx{
 			Chain:    chain,
@@ -337,7 +341,7 @@ func fundUserThorAccount(master, user *User) bool {
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to get user thor address")
 	}
-	seedAmount := sdk.NewInt(1000 * common.One)
+	seedAmount := sdkmath.NewInt(1000 * common.One)
 	seedAmountFloat := float64(seedAmount.Uint64()) / float64(common.One)
 	tx := &ttypes.MsgSend{
 		FromAddress: masterThorAddress,

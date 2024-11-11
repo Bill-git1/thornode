@@ -999,7 +999,11 @@ func sendMsg(out io.Writer, routine int, msg sdk.Msg, signer sdk.AccAddress, seq
 	log := log.Output(zerolog.ConsoleWriter{Out: out})
 
 	// check that message is valid
-	err := msg.ValidateBasic()
+	msgV, ok := msg.(sdk.HasValidateBasic)
+	if !ok {
+		log.Fatal().Msg("message does not implement HasValidateBasic")
+	}
+	err := msgV.ValidateBasic()
 	if err != nil {
 		enc := json.NewEncoder(out) // json instead of yaml to encode amount
 		enc.SetIndent("", "  ")
@@ -1018,11 +1022,11 @@ func sendMsg(out io.Writer, routine int, msg sdk.Msg, signer sdk.AccAddress, seq
 	// override the sequence if provided
 	txf := txFactory
 	if seq != nil {
-		txf = txFactory.WithSequence(uint64(*seq))
+		txf = txf.WithSequence(uint64(*seq))
 	}
 	// override the cosmos gas if provided
 	if gas != nil {
-		txf = txFactory.WithGas(uint64(*gas))
+		txf = txf.WithGas(uint64(*gas))
 	}
 
 	// send message
@@ -1037,12 +1041,16 @@ func sendMsg(out io.Writer, routine int, msg sdk.Msg, signer sdk.AccAddress, seq
 		return err
 	}
 
+	res := buf.Bytes()
+
 	// extract txhash from output json
 	var txRes sdk.TxResponse
-	err = encodingConfig.Marshaler.UnmarshalJSON(buf.Bytes(), &txRes)
+	err = encodingConfig.Codec.UnmarshalJSON(res, &txRes)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to unmarshal tx response")
 	}
+
+	log.Debug().Str("tx", string(res)).Msg("tx sent")
 
 	// fail if tx did not send, otherwise add to out native tx ids
 	if txRes.Code != 0 {

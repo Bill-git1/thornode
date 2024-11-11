@@ -1,35 +1,63 @@
 package app
 
 import (
+	"encoding/json"
+	"fmt"
 	"io"
+	"net/http"
 	"os"
+	"sort"
+	"sync"
 
+	"github.com/gorilla/mux"
+
+	autocliv1 "cosmossdk.io/api/cosmos/autocli/v1"
+	reflectionv1 "cosmossdk.io/api/cosmos/reflection/v1"
+	"cosmossdk.io/client/v2/autocli"
+	"cosmossdk.io/core/appmodule"
+	"cosmossdk.io/log"
+	storetypes "cosmossdk.io/store/types"
+	"cosmossdk.io/x/upgrade"
+	upgradekeeper "cosmossdk.io/x/upgrade/keeper"
+	upgradetypes "cosmossdk.io/x/upgrade/types"
+	abci "github.com/cometbft/cometbft/abci/types"
+	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
-	"github.com/cosmos/cosmos-sdk/client/rpc"
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/client/grpc/cmtservice"
+	nodeservice "github.com/cosmos/cosmos-sdk/client/grpc/node"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/types"
+	"github.com/cosmos/cosmos-sdk/runtime"
+	runtimeservices "github.com/cosmos/cosmos-sdk/runtime/services"
+	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/server/api"
 	"github.com/cosmos/cosmos-sdk/server/config"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
+	"github.com/cosmos/cosmos-sdk/std"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	"github.com/cosmos/cosmos-sdk/types/msgservice"
+	signingtype "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
-	authrest "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
+	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
+	"github.com/cosmos/cosmos-sdk/x/auth/posthandler"
+	authsims "github.com/cosmos/cosmos-sdk/x/auth/simulation"
+	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+	txmodule "github.com/cosmos/cosmos-sdk/x/auth/tx/config"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/libs/log"
-	tmos "github.com/tendermint/tendermint/libs/os"
-	dbm "github.com/tendermint/tm-db"
-
+	"github.com/cosmos/cosmos-sdk/x/consensus"
+	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
+	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	"github.com/cosmos/cosmos-sdk/x/mint"
@@ -40,241 +68,504 @@ import (
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/cosmos/cosmos-sdk/x/upgrade"
-	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
-	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+	"github.com/cosmos/gogoproto/proto"
+	"github.com/spf13/cast"
+
 	appparams "gitlab.com/thorchain/thornode/app/params"
+	"gitlab.com/thorchain/thornode/openapi"
 	"gitlab.com/thorchain/thornode/x/thorchain"
 	thorchainkeeper "gitlab.com/thorchain/thornode/x/thorchain/keeper"
 	thorchainkeeperv1 "gitlab.com/thorchain/thornode/x/thorchain/keeper/v1"
 	thorchaintypes "gitlab.com/thorchain/thornode/x/thorchain/types"
 )
 
-var (
-	// DefaultNodeHome default home directories for the application daemon
-	DefaultNodeHome = func() string {
-		return os.ExpandEnv("$HOME/.thornode")
-	}
-
-	// ModuleBasics defines the module BasicManager is in charge of setting up basic,
-	// non-dependant module elements, such as codec registration
-	// and genesis verification.
-	ModuleBasics = module.NewBasicManager(
-		auth.AppModuleBasic{},
-		genutil.AppModuleBasic{},
-		bank.AppModuleBasic{},
-		mint.AppModuleBasic{},
-		params.AppModuleBasic{},
-		upgrade.AppModuleBasic{},
-		thorchain.AppModuleBasic{},
-	)
-
-	// module account permissions
-	maccPerms = map[string][]string{
-		authtypes.FeeCollectorName:       nil,
-		minttypes.ModuleName:             {authtypes.Minter},
-		stakingtypes.BondedPoolName:      {authtypes.Burner, authtypes.Staking},
-		stakingtypes.NotBondedPoolName:   {authtypes.Burner, authtypes.Staking},
-		thorchain.ModuleName:             {authtypes.Minter, authtypes.Burner},
-		thorchain.AsgardName:             {},
-		thorchain.BondName:               {},
-		thorchain.ReserveName:            {},
-		thorchain.LendingName:            {},
-		thorchain.AffiliateCollectorName: {},
-		thorchain.TreasuryName:           {},
-		thorchain.RUNEPoolName:           {},
-	}
-
-	// module accounts that are allowed to receive tokens
-	allowedReceivingModAcc = map[string]bool{
-		thorchain.LendingName:  true,
-		thorchain.TreasuryName: true,
-	}
+const (
+	appName = "thornode"
+	NodeDir = ".thornode"
 )
 
+// These constants are derived from the above variables.
+// These are the ones we will want to use in the code, based on
+// any overrides above
 var (
-	_ App                     = (*THORChainApp)(nil)
+	// DefaultNodeHome default home directories for appd
+	DefaultNodeHome = os.ExpandEnv("$HOME/") + NodeDir
+)
+
+// module account permissions
+var maccPerms = map[string][]string{
+	authtypes.FeeCollectorName:       nil,
+	minttypes.ModuleName:             {authtypes.Minter},
+	stakingtypes.BondedPoolName:      {authtypes.Burner, authtypes.Staking},
+	stakingtypes.NotBondedPoolName:   {authtypes.Burner, authtypes.Staking},
+	thorchain.ModuleName:             {authtypes.Minter, authtypes.Burner},
+	thorchain.AsgardName:             {},
+	thorchain.BondName:               {},
+	thorchain.ReserveName:            {},
+	thorchain.LendingName:            {},
+	thorchain.AffiliateCollectorName: {},
+	thorchain.TreasuryName:           {},
+	thorchain.RUNEPoolName:           {},
+}
+
+var (
+	_ runtime.AppI            = (*THORChainApp)(nil)
 	_ servertypes.Application = (*THORChainApp)(nil)
 )
 
-// THORChainApp extends an ABCI application
+// ChainApp extended ABCI application
 type THORChainApp struct {
 	*baseapp.BaseApp
-	appName           string
-	cdc               *codec.LegacyAmino
+	legacyAmino       *codec.LegacyAmino
 	appCodec          codec.Codec
+	txConfig          client.TxConfig
 	interfaceRegistry types.InterfaceRegistry
-	invCheckPeriod    uint
+
 	// keys to access the substores
-	keys    map[string]*sdk.KVStoreKey
-	tkeys   map[string]*sdk.TransientStoreKey
-	memKeys map[string]*sdk.MemoryStoreKey
+	keys  map[string]*storetypes.KVStoreKey
+	tkeys map[string]*storetypes.TransientStoreKey
 
 	// keepers
-	AccountKeeper authkeeper.AccountKeeper
-	BankKeeper    bankkeeper.Keeper
-	StakingKeeper stakingkeeper.Keeper
-	MintKeeper    mintkeeper.Keeper
-	UpgradeKeeper upgradekeeper.Keeper
-	ParamsKeeper  paramskeeper.Keeper
+	AccountKeeper         authkeeper.AccountKeeper
+	BankKeeper            bankkeeper.BaseKeeper
+	StakingKeeper         *stakingkeeper.Keeper
+	MintKeeper            mintkeeper.Keeper
+	UpgradeKeeper         *upgradekeeper.Keeper
+	ParamsKeeper          paramskeeper.Keeper
+	ConsensusParamsKeeper consensusparamkeeper.Keeper
 
-	thorchainKeeper thorchainkeeper.Keeper
+	ThorchainKeeper thorchainkeeper.Keeper
 
 	// the module manager
-	mm *module.Manager
+	ModuleManager      *module.Manager
+	BasicModuleManager module.BasicManager
+
+	// simulation manager
+	sm *module.SimulationManager
+
+	// module configurator
+	configurator module.Configurator
+	once         sync.Once
 }
 
-// New returns a reference to an initialized thornode application.
-func New(
-	appName string, logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest bool, skipUpgradeHeights map[int64]bool,
-	homePath string, invCheckPeriod uint, encodingConfig appparams.EncodingConfig, telemetryEnabled bool, baseAppOptions ...func(*baseapp.BaseApp),
+// NewChainApp returns a reference to an initialized ChainApp.
+func NewChainApp(
+	logger log.Logger,
+	db dbm.DB,
+	traceStore io.Writer,
+	loadLatest bool,
+	appOpts servertypes.AppOptions,
+	baseAppOptions ...func(*baseapp.BaseApp),
 ) *THORChainApp {
-	appCodec := encodingConfig.Marshaler
-	cdc := encodingConfig.Amino
-	interfaceRegistry := encodingConfig.InterfaceRegistry
+	ec := appparams.MakeEncodingConfig()
 
-	bApp := baseapp.NewBaseApp(appName, logger, db, encodingConfig.TxConfig.TxDecoder(), baseAppOptions...)
+	std.RegisterLegacyAminoCodec(ec.Amino)
+	std.RegisterInterfaces(ec.InterfaceRegistry)
+
+	// Below we could construct and set an application specific mempool and
+	// ABCI 1.0 PrepareProposal and ProcessProposal handlers. These defaults are
+	// already set in the SDK's BaseApp, this shows an example of how to override
+	// them.
+	//
+	// Example:
+	//
+	// bApp := baseapp.NewBaseApp(...)
+	// nonceMempool := mempool.NewSenderNonceMempool()
+	// abciPropHandler := NewDefaultProposalHandler(nonceMempool, bApp)
+	//
+	// bApp.SetMempool(nonceMempool)
+	// bApp.SetPrepareProposal(abciPropHandler.PrepareProposalHandler())
+	// bApp.SetProcessProposal(abciPropHandler.ProcessProposalHandler())
+	//
+	// Alternatively, you can construct BaseApp options, append those to
+	// baseAppOptions and pass them to NewBaseApp.
+	//
+	// Example:
+	//
+	// prepareOpt = func(app *baseapp.BaseApp) {
+	// 	abciPropHandler := baseapp.NewDefaultProposalHandler(nonceMempool, app)
+	// 	app.SetPrepareProposal(abciPropHandler.PrepareProposalHandler())
+	// }
+	// baseAppOptions = append(baseAppOptions, prepareOpt)
+
+	// create and set dummy vote extension handler
+	// voteExtOp := func(bApp *baseapp.BaseApp) {
+	//	voteExtHandler := NewVoteExtensionHandler()
+	//	voteExtHandler.SetHandlers(bApp)
+	// }
+	// baseAppOptions = append(baseAppOptions, voteExtOp)
+
+	bApp := baseapp.NewBaseApp(appName, logger, db, ec.TxConfig.TxDecoder(), baseAppOptions...)
 	bApp.SetCommitMultiStoreTracer(traceStore)
 	bApp.SetVersion(version.Version)
-	bApp.SetInterfaceRegistry(interfaceRegistry)
-	// bApp.GRPCQueryRouter().RegisterSimulateService(bApp.Simulate, interfaceRegistry)
+	bApp.SetInterfaceRegistry(ec.InterfaceRegistry)
 
-	keys := sdk.NewKVStoreKeys(
-		authtypes.StoreKey, banktypes.StoreKey, stakingtypes.StoreKey,
+	bApp.SetTxEncoder(ec.TxConfig.TxEncoder())
+
+	keys := storetypes.NewKVStoreKeys(
+		authtypes.StoreKey, banktypes.StoreKey,
+		stakingtypes.StoreKey,
 		minttypes.StoreKey,
-		upgradetypes.StoreKey,
 		paramstypes.StoreKey,
+		consensusparamtypes.StoreKey,
+		upgradetypes.StoreKey,
+		// non sdk store keys
 		thorchaintypes.StoreKey,
 	)
-	tkeys := sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
-	memKeys := sdk.NewMemoryStoreKeys()
+
+	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey)
+
+	// register streaming services
+	if err := bApp.RegisterStreamingServices(appOpts, keys); err != nil {
+		panic(err)
+	}
 
 	app := &THORChainApp{
 		BaseApp:           bApp,
-		appName:           appName,
-		cdc:               cdc,
-		appCodec:          appCodec,
-		interfaceRegistry: interfaceRegistry,
-		invCheckPeriod:    invCheckPeriod,
+		legacyAmino:       ec.Amino,
+		appCodec:          ec.Codec,
+		txConfig:          ec.TxConfig,
+		interfaceRegistry: ec.InterfaceRegistry,
 		keys:              keys,
 		tkeys:             tkeys,
-		memKeys:           memKeys,
 	}
 
-	app.ParamsKeeper = initParamsKeeper(appCodec, cdc, keys[paramstypes.StoreKey], tkeys[paramstypes.TStoreKey])
+	app.ParamsKeeper = initParamsKeeper(
+		app.appCodec,
+		app.legacyAmino,
+		keys[paramstypes.StoreKey],
+		tkeys[paramstypes.TStoreKey],
+	)
 
 	// set the BaseApp's parameter store
-	bApp.SetParamStore(app.ParamsKeeper.Subspace(baseapp.Paramspace).WithKeyTable(paramskeeper.ConsensusParamsKeyTable()))
+	app.ConsensusParamsKeeper = consensusparamkeeper.NewKeeper(
+		app.appCodec,
+		runtime.NewKVStoreService(keys[consensusparamtypes.StoreKey]),
+		authtypes.NewModuleAddress(thorchain.ModuleName).String(),
+		runtime.EventService{},
+	)
+	bApp.SetParamStore(app.ConsensusParamsKeeper.ParamsStore)
 
 	// add keepers
+
 	app.AccountKeeper = authkeeper.NewAccountKeeper(
-		appCodec, keys[authtypes.StoreKey], app.GetSubspace(authtypes.ModuleName), authtypes.ProtoBaseAccount, maccPerms,
+		app.appCodec,
+		runtime.NewKVStoreService(keys[authtypes.StoreKey]),
+		authtypes.ProtoBaseAccount,
+		maccPerms,
+		authcodec.NewBech32Codec(sdk.GetConfig().GetBech32AccountAddrPrefix()),
+		sdk.GetConfig().GetBech32AccountAddrPrefix(),
+		authtypes.NewModuleAddress(thorchain.ModuleName).String(),
 	)
 	app.BankKeeper = bankkeeper.NewBaseKeeper(
-		appCodec, keys[banktypes.StoreKey], app.AccountKeeper, app.GetSubspace(banktypes.ModuleName), app.BlockedAddrs(),
+		app.appCodec,
+		runtime.NewKVStoreService(keys[banktypes.StoreKey]),
+		app.AccountKeeper,
+		BlockedAddresses(),
+		authtypes.NewModuleAddress(thorchain.ModuleName).String(),
+		logger,
 	)
 
-	stakingKeeper := stakingkeeper.NewKeeper(
-		appCodec, keys[stakingtypes.StoreKey], app.AccountKeeper, app.BankKeeper, app.GetSubspace(stakingtypes.ModuleName),
+	// enable sign mode textual by overwriting the default tx config (after setting the bank keeper)
+	enabledSignModes := tx.DefaultSignModes
+	enabledSignModes = append(enabledSignModes, signingtype.SignMode_SIGN_MODE_TEXTUAL)
+	txSigningOptions, err := tx.NewDefaultSigningOptions()
+	if err != nil {
+		panic(err)
+	}
+	thorchain.DefineCustomGetSigners(txSigningOptions)
+	txConfigOpts := tx.ConfigOptions{
+		EnabledSignModes:           enabledSignModes,
+		TextualCoinMetadataQueryFn: txmodule.NewBankKeeperCoinMetadataQueryFn(app.BankKeeper),
+		SigningOptions:             txSigningOptions,
+	}
+	txConfig, err := tx.NewTxConfigWithOptions(
+		app.appCodec,
+		txConfigOpts,
 	)
+	if err != nil {
+		panic(err)
+	}
+	app.txConfig = txConfig
 
+	app.StakingKeeper = stakingkeeper.NewKeeper(
+		app.appCodec,
+		runtime.NewKVStoreService(keys[stakingtypes.StoreKey]),
+		app.AccountKeeper,
+		app.BankKeeper,
+		authtypes.NewModuleAddress(thorchain.ModuleName).String(),
+		authcodec.NewBech32Codec(sdk.GetConfig().GetBech32ValidatorAddrPrefix()),
+		authcodec.NewBech32Codec(sdk.GetConfig().GetBech32ConsensusAddrPrefix()),
+	)
 	app.MintKeeper = mintkeeper.NewKeeper(
-		appCodec, keys[minttypes.StoreKey], app.GetSubspace(minttypes.ModuleName), &stakingKeeper,
-		app.AccountKeeper, app.BankKeeper, authtypes.FeeCollectorName,
+		app.appCodec,
+		runtime.NewKVStoreService(keys[minttypes.StoreKey]),
+		app.StakingKeeper,
+		app.AccountKeeper,
+		app.BankKeeper,
+		authtypes.FeeCollectorName,
+		authtypes.NewModuleAddress(thorchain.ModuleName).String(),
 	)
 
-	app.UpgradeKeeper = upgradekeeper.NewKeeper(skipUpgradeHeights, keys[upgradetypes.StoreKey], appCodec, homePath, app.BaseApp)
-
-	app.thorchainKeeper = thorchainkeeperv1.NewKeeper(
-		appCodec, app.BankKeeper, app.AccountKeeper, app.UpgradeKeeper, keys[thorchaintypes.StoreKey],
+	// get skipUpgradeHeights from the app options
+	skipUpgradeHeights := map[int64]bool{}
+	for _, h := range cast.ToIntSlice(appOpts.Get(server.FlagUnsafeSkipUpgrades)) {
+		skipUpgradeHeights[int64(h)] = true
+	}
+	homePath := cast.ToString(appOpts.Get(flags.FlagHome))
+	// set the governance module account as the authority for conducting upgrades
+	app.UpgradeKeeper = upgradekeeper.NewKeeper(
+		skipUpgradeHeights,
+		runtime.NewKVStoreService(keys[upgradetypes.StoreKey]),
+		app.appCodec,
+		homePath,
+		app.BaseApp,
+		authtypes.NewModuleAddress(thorchain.ModuleName).String(),
 	)
+
+	app.ThorchainKeeper = thorchainkeeperv1.NewKeeper(
+		app.appCodec, app.BankKeeper, app.AccountKeeper, app.UpgradeKeeper, keys[thorchaintypes.StoreKey],
+	)
+
+	// --- Module Options ---
+	telemetryEnabled := cast.ToBool(appOpts.Get("telemetry.enabled"))
+	testApp := cast.ToBool(appOpts.Get(TestApp))
 
 	// NOTE: Any module instantiated in the module manager that is later modified
 	// must be passed by reference here.
+	authModule := auth.NewAppModule(app.appCodec, app.AccountKeeper, authsims.RandomGenesisAccounts, app.GetSubspace(authtypes.ModuleName))
+	bankModule := bank.NewAppModule(app.appCodec, app.BankKeeper, app.AccountKeeper, app.GetSubspace(banktypes.ModuleName))
+	consensusModule := consensus.NewAppModule(app.appCodec, app.ConsensusParamsKeeper)
+	genutilModule := genutil.NewAppModule(app.AccountKeeper, app.StakingKeeper, app, txConfig)
+	paramsModule := params.NewAppModule(app.ParamsKeeper)
+	thorchainModule := thorchain.NewAppModule(app.ThorchainKeeper, app.appCodec, app.BankKeeper, app.AccountKeeper, app.UpgradeKeeper, keys[thorchaintypes.StoreKey], telemetryEnabled, testApp)
+	upgradeModule := upgrade.NewAppModule(app.UpgradeKeeper, app.AccountKeeper.AddressCodec())
 
-	app.mm = module.NewManager(
-		genutil.NewAppModule(
-			app.AccountKeeper, app.StakingKeeper, app.BaseApp.DeliverTx,
-			encodingConfig.TxConfig,
-		),
-		auth.NewAppModule(appCodec, app.AccountKeeper, nil),
-		bank.NewAppModule(appCodec, app.BankKeeper, app.AccountKeeper),
-		upgrade.NewAppModule(app.UpgradeKeeper),
-		params.NewAppModule(app.ParamsKeeper),
-		thorchain.NewAppModule(
-			app.thorchainKeeper,
-			appCodec,
-			app.BankKeeper,
-			app.AccountKeeper,
-			app.UpgradeKeeper,
-			keys[thorchaintypes.StoreKey],
-			telemetryEnabled,
-		),
+	app.ModuleManager = module.NewManager(
+		genutilModule,
+		authModule,
+		bankModule,
+		upgradeModule,
+		paramsModule,
+		consensusModule,
+		// non sdk modules
+		thorchainModule,
 	)
 
-	app.mm.SetOrderBeginBlockers(
-		upgradetypes.ModuleName, // NOTE: upgrade module must be first
+	// BasicModuleManager defines the module BasicManager is in charge of setting up basic,
+	// non-dependant module elements, such as codec registration and genesis verification.
+	// By default it is composed of all the module from the module manager.
+	// Additionally, app module basics can be overwritten by passing them as argument.
+	app.BasicModuleManager = module.NewBasicManager(
+		genutil.NewAppModuleBasic(genutiltypes.DefaultMessageValidator),
+		authModule,
+		bankModule,
+		upgradeModule,
+		paramsModule,
+		consensusModule,
+		mint.NewAppModule(app.appCodec, app.MintKeeper, app.AccountKeeper, nil, app.GetSubspace(minttypes.ModuleName)),
+		// non sdk modules
+		thorchainModule,
+	)
+	app.BasicModuleManager.RegisterLegacyAminoCodec(app.legacyAmino)
+	app.BasicModuleManager.RegisterInterfaces(app.interfaceRegistry)
+
+	// NOTE: upgrade module is required to be prioritized
+	app.ModuleManager.SetOrderPreBlockers(
+		upgradetypes.ModuleName,
+	)
+	// NOTE: staking module is required if HistoricalEntries param > 0
+	// NOTE: capability module's beginblocker must come before any modules using capabilities (e.g. IBC)
+	app.ModuleManager.SetOrderBeginBlockers(
 		genutiltypes.ModuleName,
-		authtypes.ModuleName,
-		banktypes.ModuleName,
-		paramstypes.ModuleName,
-		thorchain.ModuleName,
+		// additional non simd modules
+		thorchaintypes.ModuleName,
+	)
+
+	app.ModuleManager.SetOrderEndBlockers(
+		genutiltypes.ModuleName,
+		// additional non simd modules
+		thorchaintypes.ModuleName,
 	)
 
 	// NOTE: The genutils module must occur after staking so that pools are
 	// properly initialized with tokens from genesis accounts.
-	app.mm.SetOrderInitGenesis(
+	// NOTE: The genutils module must also occur after auth so that it can access the params from auth.
+	// NOTE: Capability module must occur first so that it can initialize any capabilities
+	// so that other modules that want to create or claim capabilities afterwards in InitChain
+	// can do so safely.
+	// NOTE: wasm module should be at the end as it can call other module functionality direct or via message dispatching during
+	// genesis phase. For example bank transfer, auth account check, staking, ...
+	genesisModuleOrder := []string{
+		// simd modules
 		authtypes.ModuleName,
 		banktypes.ModuleName,
-		paramstypes.ModuleName,
 		genutiltypes.ModuleName,
+		paramstypes.ModuleName,
 		upgradetypes.ModuleName,
-		thorchain.ModuleName,
-	)
+		consensusparamtypes.ModuleName,
+		thorchaintypes.ModuleName,
+	}
+	app.ModuleManager.SetOrderInitGenesis(genesisModuleOrder...)
+	app.ModuleManager.SetOrderExportGenesis(genesisModuleOrder...)
 
-	app.mm.RegisterRoutes(app.Router(), app.QueryRouter(), encodingConfig.Amino)
-	app.mm.RegisterServices(module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter()))
+	// Uncomment if you want to set a custom migration order here.
+	// app.ModuleManager.SetOrderMigrations(custom order)
+
+	app.configurator = module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter())
+	err = app.ModuleManager.RegisterServices(app.configurator)
+	if err != nil {
+		panic(err)
+	}
+
+	// RegisterUpgradeHandlers is used for registering any on-chain upgrades.
+	// Make sure it's called after `app.ModuleManager` and `app.configurator` are set.
+	app.RegisterUpgradeHandlers()
+
+	autocliv1.RegisterQueryServer(app.GRPCQueryRouter(), runtimeservices.NewAutoCLIQueryService(app.ModuleManager.Modules))
+
+	reflectionSvc, err := runtimeservices.NewReflectionService()
+	if err != nil {
+		panic(err)
+	}
+	reflectionv1.RegisterReflectionServiceServer(app.GRPCQueryRouter(), reflectionSvc)
+
+	// add test gRPC service for testing gRPC queries in isolation
+	// testdata_pulsar.RegisterQueryServer(app.GRPCQueryRouter(), testdata_pulsar.QueryImpl{})
+
+	// create the simulation manager and define the order of the modules for deterministic simulations
+	//
+	// NOTE: this is not required apps that don't use the simulator for fuzz testing
+	// transactions
+	overrideModules := map[string]module.AppModuleSimulation{
+		authtypes.ModuleName: auth.NewAppModule(app.appCodec, app.AccountKeeper, authsims.RandomGenesisAccounts, app.GetSubspace(authtypes.ModuleName)),
+	}
+	app.sm = module.NewSimulationManagerFromAppModules(app.ModuleManager.Modules, overrideModules)
+
+	app.sm.RegisterStoreDecoders()
 
 	// initialize stores
 	app.MountKVStores(keys)
 	app.MountTransientStores(tkeys)
-	app.MountMemoryStores(memKeys)
 
 	// initialize BaseApp
 	app.SetInitChainer(app.InitChainer)
+	app.SetPreBlocker(app.PreBlocker)
 	app.SetBeginBlocker(app.BeginBlocker)
-
-	anteHandler, err := NewAnteHandler(AnteHandlerOptions{
-		AccountKeeper:   app.AccountKeeper,
-		BankKeeper:      app.BankKeeper,
-		SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
-		SignModeHandler: encodingConfig.TxConfig.SignModeHandler(),
-		THORChainKeeper: app.thorchainKeeper,
-	})
-	if err != nil {
-		tmos.Exit(err.Error())
-	}
-
-	app.SetAnteHandler(anteHandler)
 	app.SetEndBlocker(app.EndBlocker)
+
+	anteHandler, err := NewAnteHandler(
+		HandlerOptions{
+			HandlerOptions: ante.HandlerOptions{
+				AccountKeeper:   app.AccountKeeper,
+				BankKeeper:      app.BankKeeper,
+				SignModeHandler: txConfig.SignModeHandler(),
+				SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
+			},
+			THORChainKeeper: app.ThorchainKeeper,
+		},
+	)
+	if err != nil {
+		panic(fmt.Errorf("failed to create AnteHandler: %s", err))
+	}
+	app.SetAnteHandler(anteHandler)
+
+	// In v0.46, the SDK introduces _postHandlers_. PostHandlers are like
+	// antehandlers, but are run _after_ the `runMsgs` execution. They are also
+	// defined as a chain, and have the same signature as antehandlers.
+	//
+	// In baseapp, postHandlers are run in the same store branch as `runMsgs`,
+	// meaning that both `runMsgs` and `postHandler` state will be committed if
+	// both are successful, and both will be reverted if any of the two fails.
+	//
+	// The SDK exposes a default postHandlers chain
+	//
+	// Please note that changing any of the anteHandler or postHandler chain is
+	// likely to be a state-machine breaking change, which needs a coordinated
+	// upgrade.
+	app.setPostHandler()
+
+	// At startup, after all modules have been registered, check that all proto
+	// annotations are correct.
+	protoFiles, err := proto.MergedRegistry()
+	if err != nil {
+		panic(err)
+	}
+	err = msgservice.ValidateProtoAnnotations(protoFiles)
+	if err != nil {
+		// Once we switch to using protoreflect-based antehandlers, we might
+		// want to panic here instead of logging a warning.
+		_, _ = fmt.Fprintln(os.Stderr, err.Error())
+	}
 
 	if loadLatest {
 		if err = app.LoadLatestVersion(); err != nil {
-			tmos.Exit(err.Error())
+			panic(fmt.Errorf("error loading last version: %w", err))
 		}
+
+		ctx := app.BaseApp.NewUncachedContext(true, tmproto.Header{})
+		_ = ctx
 	}
 
 	return app
 }
 
+func (app *THORChainApp) FinalizeBlock(req *abci.RequestFinalizeBlock) (*abci.ResponseFinalizeBlock, error) {
+	// when skipping sdk 47 for sdk 50, the upgrade handler is called too late in BaseApp
+	// this is a hack to ensure that the migration is executed when needed and not panics
+	app.once.Do(func() {
+		ctx := app.NewUncachedContext(false, tmproto.Header{})
+		if _, err := app.ConsensusParamsKeeper.Params(ctx, &consensusparamtypes.QueryParamsRequest{}); err != nil {
+			// prevents panic: consensus key is nil: collections: not found: key 'no_key' of type github.com/cosmos/gogoproto/tendermint.types.ConsensusParams
+			// sdk 47:
+			// Migrate Tendermint consensus parameters from x/params module to a dedicated x/consensus module.
+			// see https://github.com/cosmos/cosmos-sdk/blob/v0.47.0/simapp/upgrades.go#L66
+			baseAppLegacySS := app.GetSubspace(baseapp.Paramspace).WithKeyTable(paramstypes.ConsensusParamsKeyTable())
+			err = baseapp.MigrateParams(sdk.UnwrapSDKContext(ctx), baseAppLegacySS, app.ConsensusParamsKeeper.ParamsStore)
+			if err != nil {
+				panic(err)
+			}
+		}
+	})
+
+	return app.BaseApp.FinalizeBlock(req)
+}
+
+func (app *THORChainApp) setPostHandler() {
+	postHandler, err := posthandler.NewPostHandler(
+		posthandler.HandlerOptions{},
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	app.SetPostHandler(postHandler)
+}
+
 // Name returns the name of the App
 func (app *THORChainApp) Name() string { return app.BaseApp.Name() }
 
+// PreBlocker application updates every pre block
+func (app *THORChainApp) PreBlocker(ctx sdk.Context, req *abci.RequestFinalizeBlock) (*sdk.ResponsePreBlock, error) {
+	return app.ModuleManager.PreBlock(ctx)
+}
+
+func (a *THORChainApp) Configurator() module.Configurator {
+	return a.configurator
+}
+
 // InitChainer application update at chain initialization
-func (app *THORChainApp) InitChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
+func (app *THORChainApp) InitChainer(ctx sdk.Context, req *abci.RequestInitChain) (*abci.ResponseInitChain, error) {
 	var genesisState GenesisState
-	app.cdc.MustUnmarshalJSON(req.AppStateBytes, &genesisState)
-	return app.mm.InitGenesis(ctx, app.appCodec, genesisState)
+	if err := json.Unmarshal(req.AppStateBytes, &genesisState); err != nil {
+		panic(err)
+	}
+	err := app.UpgradeKeeper.SetModuleVersionMap(ctx, app.ModuleManager.GetVersionMap())
+	if err != nil {
+		panic(err)
+	}
+	response, err := app.ModuleManager.InitGenesis(ctx, app.appCodec, genesisState)
+	return response, err
 }
 
 // LoadHeight loads a particular height
@@ -282,33 +573,12 @@ func (app *THORChainApp) LoadHeight(height int64) error {
 	return app.LoadVersion(height)
 }
 
-// ModuleAccountAddrs returns all the app's module account addresses.
-func (app *THORChainApp) ModuleAccountAddrs() map[string]bool {
-	modAccAddrs := make(map[string]bool)
-	for acc := range maccPerms {
-		modAccAddrs[authtypes.NewModuleAddress(acc).String()] = true
-	}
-
-	return modAccAddrs
-}
-
-// BlockedAddrs returns all the app's module account addresses that are not
-// allowed to receive external tokens.
-func (app *THORChainApp) BlockedAddrs() map[string]bool {
-	blockedAddrs := make(map[string]bool)
-	for acc := range maccPerms {
-		blockedAddrs[authtypes.NewModuleAddress(acc).String()] = !allowedReceivingModAcc[acc]
-	}
-
-	return blockedAddrs
-}
-
-// LegacyAmino returns the app's amino codec.
+// LegacyAmino returns legacy amino codec.
 //
 // NOTE: This is solely to be used for testing purposes as it may be desirable
 // for modules to register their own custom testing types.
 func (app *THORChainApp) LegacyAmino() *codec.LegacyAmino {
-	return app.cdc
+	return app.legacyAmino
 }
 
 // AppCodec returns app codec.
@@ -319,30 +589,66 @@ func (app *THORChainApp) AppCodec() codec.Codec {
 	return app.appCodec
 }
 
-// InterfaceRegistry returns InterfaceRegistry
+// InterfaceRegistry returns ChainApp's InterfaceRegistry
 func (app *THORChainApp) InterfaceRegistry() types.InterfaceRegistry {
 	return app.interfaceRegistry
+}
+
+// TxConfig returns ChainApp's TxConfig
+func (app *THORChainApp) TxConfig() client.TxConfig {
+	return app.txConfig
+}
+
+// AutoCliOpts returns the autocli options for the app.
+func (app *THORChainApp) AutoCliOpts() autocli.AppOptions {
+	modules := make(map[string]appmodule.AppModule, 0)
+	for _, m := range app.ModuleManager.Modules {
+		if moduleWithName, ok := m.(module.HasName); ok {
+			moduleName := moduleWithName.Name()
+			if appModule, ok2 := moduleWithName.(appmodule.AppModule); ok2 {
+				modules[moduleName] = appModule
+			}
+		}
+	}
+
+	return autocli.AppOptions{
+		Modules:               modules,
+		ModuleOptions:         runtimeservices.ExtractAutoCLIOptions(app.ModuleManager.Modules),
+		AddressCodec:          authcodec.NewBech32Codec(sdk.GetConfig().GetBech32AccountAddrPrefix()),
+		ValidatorAddressCodec: authcodec.NewBech32Codec(sdk.GetConfig().GetBech32ValidatorAddrPrefix()),
+		ConsensusAddressCodec: authcodec.NewBech32Codec(sdk.GetConfig().GetBech32ConsensusAddrPrefix()),
+	}
+}
+
+// DefaultGenesis returns a default genesis from the registered AppModuleBasic's.
+func (a *THORChainApp) DefaultGenesis() map[string]json.RawMessage {
+	return a.BasicModuleManager.DefaultGenesis(a.appCodec)
 }
 
 // GetKey returns the KVStoreKey for the provided store key.
 //
 // NOTE: This is solely to be used for testing purposes.
-func (app *THORChainApp) GetKey(storeKey string) *sdk.KVStoreKey {
+func (app *THORChainApp) GetKey(storeKey string) *storetypes.KVStoreKey {
 	return app.keys[storeKey]
+}
+
+// GetStoreKeys returns all the stored store keys.
+func (app *THORChainApp) GetStoreKeys() []storetypes.StoreKey {
+	keys := make([]storetypes.StoreKey, 0, len(app.keys))
+	for _, key := range app.keys {
+		keys = append(keys, key)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i].Name() < keys[j].Name()
+	})
+	return keys
 }
 
 // GetTKey returns the TransientStoreKey for the provided store key.
 //
 // NOTE: This is solely to be used for testing purposes.
-func (app *THORChainApp) GetTKey(storeKey string) *sdk.TransientStoreKey {
+func (app *THORChainApp) GetTKey(storeKey string) *storetypes.TransientStoreKey {
 	return app.tkeys[storeKey]
-}
-
-// GetMemKey returns the MemStoreKey for the provided mem key.
-//
-// NOTE: This is solely used for testing purposes.
-func (app *THORChainApp) GetMemKey(storeKey string) *sdk.MemoryStoreKey {
-	return app.memKeys[storeKey]
 }
 
 // GetSubspace returns a param subspace for a given module name.
@@ -353,36 +659,111 @@ func (app *THORChainApp) GetSubspace(moduleName string) paramstypes.Subspace {
 	return subspace
 }
 
+// SimulationManager implements the SimulationApp interface
+func (app *THORChainApp) SimulationManager() *module.SimulationManager {
+	return app.sm
+}
+
 // RegisterAPIRoutes registers all application module routes with the provided
 // API server.
 func (app *THORChainApp) RegisterAPIRoutes(apiSvr *api.Server, apiConfig config.APIConfig) {
 	clientCtx := apiSvr.ClientCtx
-	rpc.RegisterRoutes(clientCtx, apiSvr.Router)
-	authrest.RegisterTxRoutes(clientCtx, apiSvr.Router)
+
+	// Must call this before registering any GRPC gateway routes
+	thorchain.CustomGRPCGatewayRouter(apiSvr)
 
 	// Register new tx routes from grpc-gateway.
 	authtx.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
-	// Register new tendermint queries routes from grpc-gateway.
-	tmservice.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
 
-	// Register legacy and grpc-gateway routes for all modules.
-	ModuleBasics.RegisterRESTRoutes(clientCtx, apiSvr.Router)
-	ModuleBasics.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
+	// Register new CometBFT queries routes from grpc-gateway.
+	cmtservice.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
+
+	// Register node gRPC service for grpc-gateway.
+	nodeservice.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
+
+	// Register grpc-gateway routes for all modules.
+	app.BasicModuleManager.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
+
+	// register swagger API from root so that other applications can override easily
+	if err := RegisterSwaggerAPI(apiSvr.Router, apiConfig.Swagger); err != nil {
+		panic(err)
+	}
 }
 
-// RegisterTendermintService implements the Application.RegisterTendermintService method.
-func (app *THORChainApp) RegisterTendermintService(ctx client.Context) {
-	tmservice.RegisterTendermintService(app.BaseApp.GRPCQueryRouter(), ctx, app.interfaceRegistry)
+// RegisterSwaggerAPI provides a common function which registers swagger route with API Server
+func RegisterSwaggerAPI(rtr *mux.Router, swaggerEnabled bool) error {
+	// Health Check Endpoint
+	rtr.HandleFunc(
+		fmt.Sprintf("/%s/ping", thorchain.ModuleName),
+		func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprintf(w, `{"ping":"pong"}`)
+		},
+	).Methods(http.MethodGet, http.MethodOptions)
+
+	if !swaggerEnabled {
+		return nil
+	}
+
+	// api doc handlers
+	rtr.HandleFunc(fmt.Sprintf("/%s/doc/openapi.yaml", thorchain.ModuleName), openapi.HandleSpecYAML)
+	rtr.HandleFunc(fmt.Sprintf("/%s/doc/openapi.json", thorchain.ModuleName), openapi.HandleSpecJSON)
+	rtr.HandleFunc(fmt.Sprintf("/%s/doc", thorchain.ModuleName), openapi.HandleSwaggerUI)
+	rtr.HandleFunc(fmt.Sprintf("/%s/doc/", thorchain.ModuleName), openapi.HandleSwaggerUI)
+
+	return nil
 }
 
 // RegisterTxService implements the Application.RegisterTxService method.
-func (app *THORChainApp) RegisterTxService(ctx client.Context) {
-	authtx.RegisterTxService(app.BaseApp.GRPCQueryRouter(), ctx, app.BaseApp.Simulate, app.interfaceRegistry)
+func (app *THORChainApp) RegisterTxService(clientCtx client.Context) {
+	authtx.RegisterTxService(app.BaseApp.GRPCQueryRouter(), clientCtx, app.BaseApp.Simulate, app.interfaceRegistry)
 }
 
-// initParamsKeeper init params keeper and its subspaces
-func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino, key, tkey sdk.StoreKey) paramskeeper.Keeper {
+// RegisterTendermintService implements the Application.RegisterTendermintService method.
+func (app *THORChainApp) RegisterTendermintService(clientCtx client.Context) {
+	cmtApp := server.NewCometABCIWrapper(app)
+	cmtservice.RegisterTendermintService(
+		clientCtx,
+		app.BaseApp.GRPCQueryRouter(),
+		app.interfaceRegistry,
+		cmtApp.Query,
+	)
+}
+
+func (app *THORChainApp) RegisterNodeService(clientCtx client.Context, cfg config.Config) {
+	nodeservice.RegisterNodeService(clientCtx, app.GRPCQueryRouter(), cfg)
+}
+
+// GetMaccPerms returns a copy of the module account permissions
+//
+// NOTE: This is solely to be used for testing purposes.
+func GetMaccPerms() map[string][]string {
+	dupMaccPerms := make(map[string][]string)
+	for k, v := range maccPerms {
+		dupMaccPerms[k] = v
+	}
+
+	return dupMaccPerms
+}
+
+// BlockedAddresses returns all the app's blocked account addresses.
+func BlockedAddresses() map[string]bool {
+	modAccAddrs := make(map[string]bool)
+	for acc := range GetMaccPerms() {
+		modAccAddrs[authtypes.NewModuleAddress(acc).String()] = true
+	}
+
+	// Allow lending and treasury to receive funds
+	delete(modAccAddrs, authtypes.NewModuleAddress(thorchaintypes.LendingName).String())
+	delete(modAccAddrs, authtypes.NewModuleAddress(thorchaintypes.TreasuryName).String())
+
+	return modAccAddrs
+}
+
+func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino, key, tkey storetypes.StoreKey) paramskeeper.Keeper {
 	paramsKeeper := paramskeeper.NewKeeper(appCodec, legacyAmino, key, tkey)
+
+	// required for testing finalized block migration
+	paramsKeeper.Subspace(baseapp.Paramspace)
 
 	paramsKeeper.Subspace(authtypes.ModuleName)
 	paramsKeeper.Subspace(banktypes.ModuleName)

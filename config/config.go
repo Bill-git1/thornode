@@ -18,12 +18,12 @@ import (
 	"text/template"
 	"time"
 
+	tmhttp "github.com/cometbft/cometbft/rpc/client/http"
 	maddr "github.com/multiformats/go-multiaddr"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 	"github.com/syndtr/goleveldb/leveldb/filter"
 	"github.com/syndtr/goleveldb/leveldb/opt"
-	tmhttp "github.com/tendermint/tendermint/rpc/client/http"
 
 	"gitlab.com/thorchain/thornode/common"
 )
@@ -409,11 +409,6 @@ type Thornode struct {
 		// that are known statesync providers.
 		Peers []string `mapstructure:"peers"`
 	} `mapstructure:"auto_state_sync"`
-
-	API struct {
-		LimitCount    float64       `mapstructure:"limit_count"`
-		LimitDuration time.Duration `mapstructure:"limit_duration"`
-	} `mapstructure:"api"`
 
 	// Cosmos contains values used in templating the Cosmos app.toml.
 	Cosmos struct {

@@ -15,10 +15,13 @@ import (
 	"time"
 
 	"github.com/blang/semver"
+	"github.com/cometbft/cometbft/crypto"
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	cKeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/rs/zerolog/log"
-	"github.com/tendermint/tendermint/crypto"
 	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/blame"
 	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/keysign"
 	tssMessages "gitlab.com/thorchain/thornode/bifrost/tss/go-tss/messages"
@@ -366,7 +369,10 @@ func (s *SignSuite) SetUpSuite(c *C) {
 		SignerPasswd: "password",
 	}
 
-	kb := cKeys.NewInMemory()
+	registry := codectypes.NewInterfaceRegistry()
+	cryptocodec.RegisterInterfaces(registry)
+	cdc := codec.NewProtoCodec(registry)
+	kb := cKeys.NewInMemory(cdc)
 	_, _, err := kb.NewMnemonic(cfg.SignerName, cKeys.English, cmd.THORChainHDPath, cfg.SignerPasswd, hd.Secp256k1)
 	c.Assert(err, IsNil)
 	s.thorKeys = thorclient.NewKeysWithKeybase(kb, cfg.SignerName, cfg.SignerPasswd)

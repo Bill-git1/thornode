@@ -62,17 +62,13 @@ asserts:
   - .balances[]|select(.denom == "rune")|.amount|tonumber == 2499996000000
 ---
 type: check
-endpoint: http://localhost:1317/txs?tx.height=3
+endpoint: http://localhost:1317/thorchain/block?height=3
 asserts:
   - .txs|length == 1
-  - .txs[0]|.logs|length == 1
-  - .txs[0]|.logs[0]|.events|length == 4
-  - .txs[0]|.logs[0]|.events[2].type == "message"
-  - .txs[0]|.logs[0]|.events[2].attributes|length == 2
-  - .txs[0]|.logs[0]|.events[2].attributes[0]|.key == "action"
-  - .txs[0]|.logs[0]|.events[2].attributes[0]|.value == "send"
-  - .txs[0]|.logs[0]|.events[2].attributes[1]|.key == "sender"
-  - .txs[0]|.logs[0]|.events[2].attributes[1]|.value == "{{ addr_thor_fox }}"
+  - .txs[0]|.result.events|length == 12
+  - .txs[0]|.result.events[4].type == "message"
+  - .txs[0]|.result.events[4].sender == "{{ addr_thor_fox }}"
+  - .txs[0]|.result.events[7].action == "/types.MsgSend"
 ---
 type: tx-send
 from_address: {{ addr_thor_fox }}

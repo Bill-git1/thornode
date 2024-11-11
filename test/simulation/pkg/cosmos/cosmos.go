@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	sdkmath "cosmossdk.io/math"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -12,8 +14,8 @@ import (
 	ctypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
-	txsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
-	"github.com/cosmos/cosmos-sdk/x/auth/signing"
+	signingtypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
+	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 	atypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	btypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -67,7 +69,7 @@ func NewClient(chain common.Chain, host string, keys *thorclient.Keys) (LiteChai
 	}
 
 	// derive the public key
-	pk, err := cryptocodec.ToTmPubKeyInterface(privKey.PubKey())
+	pk, err := cryptocodec.ToCmtPubKeyInterface(privKey.PubKey())
 	if err != nil {
 		return nil, fmt.Errorf("fail to get tm pub key: %w", err)
 	}
@@ -83,7 +85,7 @@ func NewClient(chain common.Chain, host string, keys *thorclient.Keys) (LiteChai
 	}
 
 	// dial rpc
-	grpc, err := grpc.Dial(host, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	grpc, err := grpc.NewClient(host, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("fail to dial rpc: %w", err)
 	}
@@ -92,7 +94,7 @@ func NewClient(chain common.Chain, host string, keys *thorclient.Keys) (LiteChai
 	interfaceRegistry := codectypes.NewInterfaceRegistry()
 	interfaceRegistry.RegisterImplementations((*sdk.Msg)(nil), &btypes.MsgSend{})
 	marshaler := codec.NewProtoCodec(interfaceRegistry)
-	signTypes := []txsigning.SignMode{txsigning.SignMode_SIGN_MODE_DIRECT}
+	signTypes := []signingtypes.SignMode{signingtypes.SignMode_SIGN_MODE_DIRECT}
 	txConfig := tx.NewTxConfig(marshaler, signTypes)
 
 	return &Client{
@@ -118,8 +120,8 @@ func (c *Client) GetAccount(pk *common.PubKey) (*common.Account, error) {
 	nativeCoins := make([]common.Coin, 0)
 	for _, coin := range balances.Balances {
 		if coin.Denom == "uatom" {
-			amount := coin.Amount.Mul(sdk.NewInt(100)) // 1e6 -> 1e8
-			amountUint := sdk.NewUintFromBigInt(amount.BigInt())
+			amount := coin.Amount.Mul(sdkmath.NewInt(100)) // 1e6 -> 1e8
+			amountUint := sdkmath.NewUintFromBigInt(amount.BigInt())
 			nativeCoins = append(nativeCoins, common.NewCoin(common.ATOMAsset, amountUint))
 		}
 	}
@@ -157,8 +159,8 @@ func (c *Client) SignTx(tx SimTx) ([]byte, error) {
 	}
 
 	// create message
-	amount := tx.Coin.Amount.Quo(sdk.NewUint(100)) // 1e8 -> 1e6
-	coins := []sdk.Coin{sdk.NewCoin("uatom", sdk.NewIntFromBigInt(amount.BigInt()))}
+	amount := tx.Coin.Amount.Quo(sdkmath.NewUint(100)) // 1e8 -> 1e6
+	coins := []sdk.Coin{sdk.NewCoin("uatom", sdkmath.NewIntFromBigInt(amount.BigInt()))}
 	msg := &btypes.MsgSend{
 		FromAddress: c.address.String(),
 		ToAddress:   tx.ToAddress.String(),
@@ -172,18 +174,18 @@ func (c *Client) SignTx(tx SimTx) ([]byte, error) {
 		return nil, fmt.Errorf("fail to set messages: %w", err)
 	}
 	txBuilder.SetMemo(tx.Memo)
-	txBuilder.SetFeeAmount(sdk.NewCoins(sdk.NewCoin("uatom", sdk.NewInt(2000))))
+	txBuilder.SetFeeAmount(sdk.NewCoins(sdk.NewCoin("uatom", sdkmath.NewInt(2000))))
 	txBuilder.SetGasLimit(100_000)
 
 	// configure signing
-	sigData := &txsigning.SingleSignatureData{
-		SignMode: c.txConfig.SignModeHandler().DefaultMode(),
+	sigData := &signingtypes.SingleSignatureData{
+		SignMode: signingtypes.SignMode_SIGN_MODE_DIRECT,
 	}
 	cpk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeAccPub, c.pubKey.String())
 	if err != nil {
 		return nil, fmt.Errorf("fail to get cosmoos pubkey: %w", err)
 	}
-	sig := txsigning.SignatureV2{
+	sig := signingtypes.SignatureV2{
 		PubKey:   cpk,
 		Data:     sigData,
 		Sequence: uint64(account.Sequence),
@@ -194,16 +196,17 @@ func (c *Client) SignTx(tx SimTx) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to initial SetSignatures on txBuilder: %w", err)
 	}
-	signable := txBuilder.GetTx()
 
 	// sign transaction
 	modeHandler := c.txConfig.SignModeHandler()
-	signingData := signing.SignerData{
+	signingData := authsigning.SignerData{
 		ChainID:       "localgaia",
 		AccountNumber: uint64(account.AccountNumber),
 		Sequence:      uint64(account.Sequence),
 	}
-	signBytes, err := modeHandler.GetSignBytes(modeHandler.DefaultMode(), signingData, signable)
+	signBytes, err := authsigning.GetSignBytesAdapter(
+		context.Background(), modeHandler, signingtypes.SignMode_SIGN_MODE_DIRECT, signingData, txBuilder.GetTx(),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("fail to get sign bytes: %w", err)
 	}

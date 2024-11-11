@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/cosmos/cosmos-sdk/codec"
-
+	proto "github.com/cosmos/gogoproto/proto"
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 )
 
-var _ codec.ProtoMarshaler = &LiquidityProvider{}
+var _ proto.Message = &LiquidityProvider{}
 
 // LiquidityProviders a list of liquidity providers
 type LiquidityProviders []LiquidityProvider

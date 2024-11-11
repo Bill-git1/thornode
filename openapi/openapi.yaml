@@ -11,6 +11,42 @@ info:
 ########################################################################################
 
 paths:
+  # ------------------------------ auth ------------------------------
+  /auth/accounts/{address}:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+      - $ref: "#/components/parameters/address"
+    get:
+      description: Returns account information for the provided address.
+      operationId: account
+      tags:
+        - Auth
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountResponse"
+
+  # ------------------------------ bank --------------------------------
+  /bank/balances/{address}:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+      - $ref: "#/components/parameters/address"
+    get:
+      description: Returns balances for the provided address.
+      operationId: balances
+      tags:
+        - Bank
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BalancesResponse"
+
   # ------------------------------ health ------------------------------
 
   /thorchain/ping:
@@ -1396,6 +1432,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/BlockResponse"
 
+  /thorchain/export:
+    get:
+      description: Returns genesis export
+      operationId: export
+      tags:
+        - Export
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExportResponse"
 ########################################################################################
 # Components
 ########################################################################################
@@ -2791,7 +2840,54 @@ components:
           example: "approve"
           description: the vote cast by the node
 
+    Account:
+      type: object
+      properties:
+        type:
+          type: string
+          example: "/cosmos.auth.v1beta1.BaseAccount"
+        address:
+          type: string
+          example: "thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5"
+        pubkey:
+          type: string
+          example: "thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe"
+        sequence:
+          type: integer
+          format: int64
+          example: 1234
+        account_number:
+          type: integer
+          format: int64
+          example: 1234
+
+    Amount:
+      type: object
+      required:
+        - denom
+        - amount
+      properties:
+        denom:
+          type: string
+        amount:
+          type: string
+
     # ------------------------------ responses ------------------------------
+    AccountResponse:
+      type: object
+      properties:
+        result:
+          type: object
+          properties:
+            value:
+              $ref: "#/components/schemas/Account"
+
+    BalancesResponse:
+      properties:
+        result:
+          type: array
+          items:
+            $ref: "#/components/schemas/Amount"
 
     PoolResponse:
       $ref: "#/components/schemas/Pool"
@@ -3691,6 +3787,9 @@ components:
                 format: int64
               signer:
                 type: string
+
+    ExportResponse:
+      type: object
 
     BlockResponse:
       type: object

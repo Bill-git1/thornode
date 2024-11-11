@@ -9,12 +9,24 @@ import (
 	"strings"
 	"time"
 
+	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	ctypes "github.com/cosmos/cosmos-sdk/types"
 	signingtypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
-	btypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+
+	upgradetypes "cosmossdk.io/x/upgrade/types"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	authvesting "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	distribtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
+	govv1types "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	govv1beta1types "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
+	paramsproptypes "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -75,8 +87,8 @@ type CosmosBlockScanner struct {
 	// gas price paid in each observed transaction multiplied by the default GasLimit.
 	// Fees are stored at 100x the values on the observed chain due to compensate for the
 	// difference in base chain decimals (thorchain:1e8, gaia:1e6).
-	feeCache []ctypes.Uint
-	lastFee  ctypes.Uint
+	feeCache []sdkmath.Uint
+	lastFee  sdkmath.Uint
 }
 
 // NewCosmosBlockScanner create a new instance of BlockScan
@@ -98,15 +110,24 @@ func NewCosmosBlockScanner(cfg config.BifrostBlockScannerConfiguration,
 	// Bifrost only supports an "RPCHost" in its configuration.
 	// We also need to access GRPC for Cosmos chains
 
-	// Registry for decoding txs
-	registry := bridge.GetContext().InterfaceRegistry
-
-	btypes.RegisterInterfaces(registry)
+	// Registry for decoding gaia txs
+	// Note: we register gaia's cosmos sdk types
+	// don't use thorchain's codec as it is a smaller subset of codecs
+	registry := codectypes.NewInterfaceRegistry()
+	authtypes.RegisterInterfaces(registry)
+	banktypes.RegisterInterfaces(registry)
+	authvesting.RegisterInterfaces(registry)
+	stakingtypes.RegisterInterfaces(registry)
+	cryptocodec.RegisterInterfaces(registry)
+	govv1types.RegisterInterfaces(registry)
+	govv1beta1types.RegisterInterfaces(registry)
+	paramsproptypes.RegisterInterfaces(registry)
+	upgradetypes.RegisterInterfaces(registry)
+	distribtypes.RegisterInterfaces(registry)
 	cdc := codec.NewProtoCodec(registry)
 
 	// Registry for encoding txs
-	marshaler := codec.NewProtoCodec(registry)
-	txConfig := tx.NewTxConfig(marshaler, []signingtypes.SignMode{signingtypes.SignMode_SIGN_MODE_DIRECT})
+	txConfig := tx.NewTxConfig(cdc, []signingtypes.SignMode{signingtypes.SignMode_SIGN_MODE_DIRECT})
 	rpcClient, err := rpcclienthttp.New(cfg.RPCHost, "/websocket")
 	if err != nil {
 		logger.Fatal().Err(err).Msg("fail to create tendemrint rpcclient")
@@ -119,8 +140,8 @@ func NewCosmosBlockScanner(cfg config.BifrostBlockScannerConfiguration,
 		cdc:              cdc,
 		txConfig:         txConfig,
 		rpc:              rpcClient,
-		feeCache:         make([]ctypes.Uint, 0),
-		lastFee:          ctypes.NewUint(0),
+		feeCache:         make([]sdkmath.Uint, 0),
+		lastFee:          sdkmath.NewUint(0),
 		bridge:           bridge,
 		solvencyReporter: solvencyReporter,
 	}, nil
@@ -190,10 +211,10 @@ func (c *CosmosBlockScanner) updateGasCache(tx ctypes.FeeTx) {
 
 	// TODO: This conversion could be broken into a separate function for additional testing.
 	// add the fee to our cache
-	amount := coin.Amount.Mul(ctypes.NewUint(GasPriceFactor)) // multiply to handle price < 1
-	price := amount.Quo(ctypes.NewUint(tx.GetGas()))          // divide by gas to get the price
-	fee := price.Mul(ctypes.NewUint(GasLimit))                // tx fee for default gas limit
-	fee = fee.Quo(ctypes.NewUint(GasPriceFactor))             // unroll the multiple
+	amount := coin.Amount.Mul(sdkmath.NewUint(GasPriceFactor)) // multiply to handle price < 1
+	price := amount.Quo(sdkmath.NewUint(tx.GetGas()))          // divide by gas to get the price
+	fee := price.Mul(sdkmath.NewUint(GasLimit))                // tx fee for default gas limit
+	fee = fee.Quo(sdkmath.NewUint(GasPriceFactor))             // unroll the multiple
 	c.feeCache = append(c.feeCache, fee)
 
 	// truncate gas prices older than our max cached transactions
@@ -202,27 +223,27 @@ func (c *CosmosBlockScanner) updateGasCache(tx ctypes.FeeTx) {
 	}
 }
 
-func (c *CosmosBlockScanner) averageFee() ctypes.Uint {
+func (c *CosmosBlockScanner) averageFee() sdkmath.Uint {
 	// avoid divide by zero
 	if len(c.feeCache) == 0 {
-		return ctypes.NewUint(0)
+		return sdkmath.NewUint(0)
 	}
 
 	// compute mean
-	sum := ctypes.NewUint(0)
+	sum := sdkmath.NewUint(0)
 	for _, val := range c.feeCache {
 		sum = sum.Add(val)
 	}
-	mean := sum.Quo(ctypes.NewUint(uint64(len(c.feeCache))))
+	mean := sum.Quo(sdkmath.NewUint(uint64(len(c.feeCache))))
 
 	// round the price up to avoid fee noise
-	resolution := ctypes.NewUint(uint64(c.cfg.GasPriceResolution))
+	resolution := sdkmath.NewUint(uint64(c.cfg.GasPriceResolution))
 	if mean.LTE(resolution) {
 		return resolution
 	}
-	mean = mean.Sub(ctypes.NewUint(1))
+	mean = mean.Sub(sdkmath.NewUint(1))
 	mean = mean.Quo(resolution)
-	mean = mean.Add(ctypes.NewUint(1))
+	mean = mean.Add(sdkmath.NewUint(1))
 	mean = mean.Mul(resolution)
 
 	return mean
@@ -239,8 +260,8 @@ func (c *CosmosBlockScanner) updateGasFees(height int64) error {
 		}
 
 		// skip fee if less than 1 resolution away from the last
-		feeDelta := ctypes.MaxUint(c.lastFee, gasFee).Sub(ctypes.MinUint(c.lastFee, gasFee))
-		if feeDelta.LTE(ctypes.NewUint(uint64(c.cfg.GasPriceResolution))) {
+		feeDelta := sdkmath.MaxUint(c.lastFee, gasFee).Sub(sdkmath.MinUint(c.lastFee, gasFee))
+		if feeDelta.LTE(sdkmath.NewUint(uint64(c.cfg.GasPriceResolution))) {
 			return nil
 		}
 
@@ -303,7 +324,7 @@ func (c *CosmosBlockScanner) processTxs(height int64, rawTxs []tmtypes.Tx) ([]ty
 		c.updateGasCache(feeTx)
 
 		for _, msg := range tx.GetMsgs() {
-			if msg, isMsgSend := msg.(*btypes.MsgSend); isMsgSend {
+			if msg, isMsgSend := msg.(*banktypes.MsgSend); isMsgSend {
 				// Transaction contains a relevant MsgSend, check if the transaction was successful...
 				if blockResults.TxsResults[i].Code != 0 {
 					c.logger.Warn().Str("txhash", hash).Int64("height", height).Msg("inbound tx has non-zero response code, ignoring...")

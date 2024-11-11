@@ -1,7 +1,15 @@
 package types
 
 import (
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"gitlab.com/thorchain/thornode/common/cosmos"
+)
+
+var (
+	_ sdk.Msg              = &MsgMigrate{}
+	_ sdk.HasValidateBasic = &MsgMigrate{}
+	_ sdk.LegacyMsg        = &MsgMigrate{}
 )
 
 // NewMsgMigrate is a constructor function for MsgMigrate
@@ -12,12 +20,6 @@ func NewMsgMigrate(tx ObservedTx, blockHeight int64, signer cosmos.AccAddress) *
 		Signer:      signer,
 	}
 }
-
-// Route should return the name of the module
-func (m *MsgMigrate) Route() string { return RouterKey }
-
-// Type should return the action
-func (m MsgMigrate) Type() string { return "migrate" }
 
 // ValidateBasic runs stateless checks on the message
 func (m *MsgMigrate) ValidateBasic() error {
@@ -31,11 +33,6 @@ func (m *MsgMigrate) ValidateBasic() error {
 		return cosmos.ErrUnknownRequest(err.Error())
 	}
 	return nil
-}
-
-// GetSignBytes encodes the message for signing
-func (m *MsgMigrate) GetSignBytes() []byte {
-	return cosmos.MustSortJSON(ModuleCdc.MustMarshalJSON(m))
 }
 
 // GetSigners defines whose signature is required

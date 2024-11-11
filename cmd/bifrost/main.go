@@ -138,7 +138,7 @@ func main() {
 		cfg.TSS.P2PPort,
 		tmPrivateKey,
 		cfg.TSS.Rendezvous,
-		app.DefaultNodeHome(),
+		app.DefaultNodeHome,
 		common.TssConfig{
 			EnableMonitor:   true,
 			KeyGenTimeout:   cfg.Signer.KeygenTimeout,

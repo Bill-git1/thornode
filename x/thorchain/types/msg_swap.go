@@ -3,6 +3,8 @@ package types
 import (
 	"fmt"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 )
@@ -10,7 +12,11 @@ import (
 // MaxAffiliateFeeBasisPoints basis points for withdrawals
 const MaxAffiliateFeeBasisPoints = 1_000
 
-var _ cosmos.Msg = &MsgSwap{}
+var (
+	_ sdk.Msg              = &MsgSwap{}
+	_ sdk.HasValidateBasic = &MsgSwap{}
+	_ sdk.LegacyMsg        = &MsgSwap{}
+)
 
 // NewMsgSwap is a constructor function for MsgSwap
 func NewMsgSwap(tx common.Tx, target common.Asset, destination common.Address, tradeTarget cosmos.Uint, affAddr common.Address, affPts cosmos.Uint, agg, aggregatorTargetAddr string, aggregatorTargetLimit *cosmos.Uint, otype OrderType, quan, interval uint64, signer cosmos.AccAddress) *MsgSwap {
@@ -44,12 +50,6 @@ func (m *MsgSwap) GetStreamingSwap() StreamingSwap {
 		m.Tx.Coins[0].Amount,
 	)
 }
-
-// Route should return the route key of the module
-func (m *MsgSwap) Route() string { return RouterKey }
-
-// Type should return the action
-func (m MsgSwap) Type() string { return "swap" }
 
 // ValidateBasic runs stateless checks on the message
 func (m *MsgSwap) ValidateBasic() error {
@@ -96,11 +96,6 @@ func (m *MsgSwap) ValidateBasic() error {
 		return cosmos.ErrUnknownRequest("aggregator is empty")
 	}
 	return nil
-}
-
-// GetSignBytes encodes the message for signing
-func (m *MsgSwap) GetSignBytes() []byte {
-	return cosmos.MustSortJSON(ModuleCdc.MustMarshalJSON(m))
 }
 
 // GetSigners defines whose signature is required

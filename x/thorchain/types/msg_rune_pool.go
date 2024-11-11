@@ -1,9 +1,21 @@
 package types
 
 import (
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
 	"gitlab.com/thorchain/thornode/constants"
+)
+
+var (
+	_ sdk.Msg              = &MsgRunePoolDeposit{}
+	_ sdk.HasValidateBasic = &MsgRunePoolDeposit{}
+	_ sdk.LegacyMsg        = &MsgRunePoolDeposit{}
+
+	_ sdk.Msg              = &MsgRunePoolWithdraw{}
+	_ sdk.HasValidateBasic = &MsgRunePoolWithdraw{}
+	_ sdk.LegacyMsg        = &MsgRunePoolWithdraw{}
 )
 
 // NewMsgRunePoolDeposit create new MsgRunePoolDeposit message
@@ -13,12 +25,6 @@ func NewMsgRunePoolDeposit(signer cosmos.AccAddress, tx common.Tx) *MsgRunePoolD
 		Tx:     tx,
 	}
 }
-
-// Route should return the router key of the module
-func (m *MsgRunePoolDeposit) Route() string { return RouterKey }
-
-// Type should return the action
-func (m MsgRunePoolDeposit) Type() string { return "rune_pool_deposit" }
 
 // ValidateBasic runs stateless checks on the message
 func (m *MsgRunePoolDeposit) ValidateBasic() error {
@@ -43,11 +49,6 @@ func (m *MsgRunePoolDeposit) ValidateBasic() error {
 	return nil
 }
 
-// GetSignBytes encodes the message for signing
-func (m *MsgRunePoolDeposit) GetSignBytes() []byte {
-	return cosmos.MustSortJSON(ModuleCdc.MustMarshalJSON(m))
-}
-
 // GetSigners defines whose signature is required
 func (m *MsgRunePoolDeposit) GetSigners() []cosmos.AccAddress {
 	return []cosmos.AccAddress{m.Signer}
@@ -63,12 +64,6 @@ func NewMsgRunePoolWithdraw(signer cosmos.AccAddress, tx common.Tx, basisPoints 
 		AffiliateBasisPoints: affBps,
 	}
 }
-
-// Route should return the router key of the module
-func (m *MsgRunePoolWithdraw) Route() string { return RouterKey }
-
-// Type should return the action
-func (m MsgRunePoolWithdraw) Type() string { return "rune_pool_withdraw" }
 
 // ValidateBasic runs stateless checks on the message
 func (m *MsgRunePoolWithdraw) ValidateBasic() error {
@@ -89,11 +84,6 @@ func (m *MsgRunePoolWithdraw) ValidateBasic() error {
 	}
 
 	return nil
-}
-
-// GetSignBytes encodes the message for signing
-func (m *MsgRunePoolWithdraw) GetSignBytes() []byte {
-	return cosmos.MustSortJSON(ModuleCdc.MustMarshalJSON(m))
 }
 
 // GetSigners defines whose signature is required

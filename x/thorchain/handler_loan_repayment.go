@@ -138,20 +138,16 @@ func (h LoanRepaymentHandler) repay(ctx cosmos.Context, msg MsgLoanRepayment) er
 	loan.LastRepayHeight = ctx.BlockHeight()
 
 	// burn TOR coins
-	// trunk-ignore(golangci-lint/govet): shadow
-	if err := h.mgr.Keeper().SendFromModuleToModule(ctx, AsgardName, ModuleName, common.NewCoins(msg.Coin)); err != nil {
+	if err = h.mgr.Keeper().SendFromModuleToModule(ctx, AsgardName, ModuleName, common.NewCoins(msg.Coin)); err != nil {
 		ctx.Logger().Error("fail to move coins during loan repayment", "error", err)
 		return err
 	} else {
-		// trunk-ignore(golangci-lint/govet): shadow
-		err := h.mgr.Keeper().BurnFromModule(ctx, ModuleName, msg.Coin)
-		if err != nil {
+		if err = h.mgr.Keeper().BurnFromModule(ctx, ModuleName, msg.Coin); err != nil {
 			ctx.Logger().Error("fail to burn coins during loan repayment", "error", err)
 			return err
 		}
 		burnEvt := NewEventMintBurn(BurnSupplyType, msg.Coin.Asset.Native(), msg.Coin.Amount, "loan_repayment")
-		// trunk-ignore(golangci-lint/govet): shadow
-		if err := h.mgr.EventMgr().EmitEvent(ctx, burnEvt); err != nil {
+		if err = h.mgr.EventMgr().EmitEvent(ctx, burnEvt); err != nil {
 			ctx.Logger().Error("fail to emit burn event", "error", err)
 		}
 	}
@@ -162,8 +158,7 @@ func (h LoanRepaymentHandler) repay(ctx cosmos.Context, msg MsgLoanRepayment) er
 
 		// emit events and metrics
 		evt := NewEventLoanRepayment(cosmos.ZeroUint(), msg.Coin.Amount, msg.CollateralAsset, msg.Owner, msg.TxID)
-		// trunk-ignore(golangci-lint/govet): shadow
-		if err := h.mgr.EventMgr().EmitEvent(ctx, evt); nil != err {
+		if err = h.mgr.EventMgr().EmitEvent(ctx, evt); nil != err {
 			ctx.Logger().Error("fail to emit repayment open event", "error", err)
 		}
 
@@ -204,13 +199,12 @@ func (h LoanRepaymentHandler) repay(ctx cosmos.Context, msg MsgLoanRepayment) er
 	swapMsg := NewMsgSwap(tx, msg.CollateralAsset, msg.Owner, msg.MinOut, common.NoAddress, cosmos.ZeroUint(), "", "", nil, 0, 0, uint64(ssInterval), msg.Signer)
 	if ssInterval == 0 {
 		handler := NewSwapHandler(h.mgr)
-		// trunk-ignore(golangci-lint/govet): shadow
-		if _, err := handler.Run(ctx, swapMsg); err != nil {
+		if _, err = handler.Run(ctx, swapMsg); err != nil {
 			ctx.Logger().Error("fail to make second swap when closing a loan", "error", err)
 			return err
 		}
 	} else {
-		if err := h.mgr.Keeper().SetSwapQueueItem(ctx, *swapMsg, 1); err != nil {
+		if err = h.mgr.Keeper().SetSwapQueueItem(ctx, *swapMsg, 1); err != nil {
 			ctx.Logger().Error("fail to add swap to queue", "error", err)
 			return err
 		}
@@ -222,7 +216,7 @@ func (h LoanRepaymentHandler) repay(ctx cosmos.Context, msg MsgLoanRepayment) er
 
 	// emit events and metrics
 	evt := NewEventLoanRepayment(redeem, msg.Coin.Amount, msg.CollateralAsset, msg.Owner, msg.TxID)
-	if err := h.mgr.EventMgr().EmitEvent(ctx, evt); nil != err {
+	if err = h.mgr.EventMgr().EmitEvent(ctx, evt); nil != err {
 		ctx.Logger().Error("fail to emit loan repayment event", "error", err)
 	}
 	return nil

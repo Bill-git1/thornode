@@ -15,10 +15,7 @@ func (MsgManageTHORNameSuite) TestMsgManageTHORNameSuite(c *C) {
 	signer := GetRandomBech32Addr()
 	coin := common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One))
 	msg := NewMsgManageTHORName("myname", common.ETHChain, GetRandomETHAddress(), coin, 0, common.ETHAsset, owner, signer)
-	c.Assert(msg.Route(), Equals, RouterKey)
-	c.Assert(msg.Type(), Equals, "manage_thorname")
 	c.Assert(msg.ValidateBasic(), IsNil)
-	c.Assert(len(msg.GetSignBytes()) > 0, Equals, true)
 	c.Assert(msg.GetSigners(), NotNil)
 	c.Assert(msg.GetSigners()[0].String(), Equals, signer.String())
 

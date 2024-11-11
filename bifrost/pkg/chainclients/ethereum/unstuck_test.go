@@ -10,7 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/crypto/codec"
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	cKeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	ctypes "github.com/ethereum/go-ethereum/core/types"
@@ -50,7 +52,10 @@ func (s *UnstuckTestSuite) SetUpTest(c *C) {
 		SignerPasswd: "password",
 	}
 
-	kb := cKeys.NewInMemory()
+	registry := codectypes.NewInterfaceRegistry()
+	cryptocodec.RegisterInterfaces(registry)
+	cdc := codec.NewProtoCodec(registry)
+	kb := cKeys.NewInMemory(cdc)
 	_, _, err := kb.NewMnemonic(cfg.SignerName, cKeys.English, cmd.THORChainHDPath, cfg.SignerPasswd, hd.Secp256k1)
 	c.Assert(err, IsNil)
 	s.thorKeys = thorclient.NewKeysWithKeybase(kb, cfg.SignerName, cfg.SignerPasswd)
@@ -58,7 +63,7 @@ func (s *UnstuckTestSuite) SetUpTest(c *C) {
 	// get public key
 	priv, err := s.thorKeys.GetPrivateKey()
 	c.Assert(err, IsNil)
-	temp, err := codec.ToTmPubKeyInterface(priv.PubKey())
+	temp, err := cryptocodec.ToCmtPubKeyInterface(priv.PubKey())
 	c.Assert(err, IsNil)
 	pubkey, err := common.NewPubKeyFromCrypto(temp)
 	c.Assert(err, IsNil)

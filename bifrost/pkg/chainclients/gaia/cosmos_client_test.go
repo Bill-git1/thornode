@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
@@ -20,6 +21,7 @@ import (
 	signingtypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 	btypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+
 	"gitlab.com/thorchain/thornode/bifrost/metrics"
 	"gitlab.com/thorchain/thornode/bifrost/thorclient"
 	stypes "gitlab.com/thorchain/thornode/bifrost/thorclient/types"
@@ -77,7 +79,10 @@ func (s *CosmosTestSuite) SetUpSuite(c *C) {
 		ChainHomeFolder: s.thordir,
 	}
 
-	kb := cKeys.NewInMemory()
+	registry := codectypes.NewInterfaceRegistry()
+	cryptocodec.RegisterInterfaces(registry)
+	cdc := codec.NewProtoCodec(registry)
+	kb := cKeys.NewInMemory(cdc)
 	_, _, err := kb.NewMnemonic(cfg.SignerName, cKeys.English, cmd.THORChainHDPath, cfg.SignerPasswd, hd.Secp256k1)
 	c.Assert(err, IsNil)
 	s.thorKeys = thorclient.NewKeysWithKeybase(kb, cfg.SignerName, cfg.SignerPasswd)
@@ -183,7 +188,7 @@ func (s *CosmosTestSuite) TestSign(c *C) {
 	priv, err := s.thorKeys.GetPrivateKey()
 	c.Assert(err, IsNil)
 
-	temp, err := cryptocodec.ToTmPubKeyInterface(priv.PubKey())
+	temp, err := cryptocodec.ToCmtPubKeyInterface(priv.PubKey())
 	c.Assert(err, IsNil)
 
 	pk, err := common.NewPubKeyFromCrypto(temp)
@@ -241,7 +246,7 @@ func (s *CosmosTestSuite) TestSign(c *C) {
 	c.Check(meta.AccountNumber, Equals, int64(0))
 	c.Check(meta.SeqNumber, Equals, int64(0))
 
-	gas := types.NewCoins(types.NewCoin("uatom", types.NewInt(100)))
+	gas := types.NewCoins(types.NewCoin("uatom", sdkmath.NewInt(100)))
 
 	txb, err := buildUnsigned(
 		txConfig,
@@ -254,7 +259,7 @@ func (s *CosmosTestSuite) TestSign(c *C) {
 	)
 	c.Assert(err, IsNil)
 
-	c.Check(txb.GetTx().GetFee().IsEqual(gas), Equals, true)
+	c.Check(txb.GetTx().GetFee().Equal(gas), Equals, true)
 	c.Check(txb.GetTx().GetMemo(), Equals, "memo")
 	pks, err := txb.GetTx().GetPubKeys()
 	c.Assert(err, IsNil)

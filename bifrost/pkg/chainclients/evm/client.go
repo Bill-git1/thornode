@@ -96,7 +96,7 @@ func NewEVMClient(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get private key: %w", err)
 	}
-	temp, err := codec.ToTmPubKeyInterface(priv.PubKey())
+	temp, err := codec.ToCmtPubKeyInterface(priv.PubKey())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tm pub key: %w", err)
 	}

@@ -20,8 +20,8 @@ import (
 	bchchaincfg "github.com/gcash/bchd/chaincfg"
 	"github.com/gcash/bchutil"
 
+	"github.com/cometbft/cometbft/crypto"
 	eth "github.com/ethereum/go-ethereum/crypto"
-	"github.com/tendermint/tendermint/crypto"
 
 	"gitlab.com/thorchain/thornode/common/cosmos"
 )
@@ -61,7 +61,7 @@ func NewPubKey(key string) (PubKey, error) {
 
 // NewPubKeyFromCrypto
 func NewPubKeyFromCrypto(pk crypto.PubKey) (PubKey, error) {
-	tmp, err := codec.FromTmPubKeyInterface(pk)
+	tmp, err := codec.FromCmtPubKeyInterface(pk)
 	if err != nil {
 		return EmptyPubKey, fmt.Errorf("fail to create PubKey from crypto.PubKey,err:%w", err)
 	}

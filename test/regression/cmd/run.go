@@ -146,10 +146,11 @@ func run(out io.Writer, path string, routine int) (failExportInvariants bool, er
 
 	// validate genesis
 	localLog.Debug().Msg("Validating genesis")
-	cmd = exec.Command("thornode", "validate-genesis")
+	cmd = exec.Command("thornode", "genesis", "validate")
 	cmd.Env = env
 	cmdOut, err = cmd.CombinedOutput()
 	if err != nil {
+		cmdErr := err
 		// dump the genesis
 		fmt.Println(ColorPurple + "Genesis:" + ColorReset)
 		var f *os.File
@@ -165,7 +166,7 @@ func run(out io.Writer, path string, routine int) (failExportInvariants bool, er
 
 		// dump error and exit
 		fmt.Println(string(cmdOut))
-		log.Fatal().Err(err).Msg("genesis validation failed")
+		log.Fatal().Err(cmdErr).Msg("genesis validation failed")
 	}
 
 	// render config

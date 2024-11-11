@@ -1,30 +1,38 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -e
 
-# Delete any existing protobuf generated files.
-find . -name "*.pb.go" -delete
+GO_MOD_PACKAGE="gitlab.com/thorchain/thornode"
 
-which protoc &>/dev/null || (apt-get update && apt-get install -y --no-install-recommends protobuf-compiler)
-go install github.com/regen-network/cosmos-proto/protoc-gen-gocosmos
-
-# shellcheck disable=SC2038
-find proto/ -path -prune -o -name '*.proto' -printf '%h\n' | sort | uniq |
-  while read -r DIR; do
-    find "$DIR" -maxdepth 1 -name '*.proto' |
-      xargs protoc \
-        -I "proto" \
-        -I "third_party/proto" \
-        --gocosmos_out=plugins=interfacetype+grpc,Mgoogle/protobuf/any.proto=github.com/cosmos/cosmos-sdk/codec/types:.
+echo "Generating gogo proto code"
+cd proto/thorchain/v1
+proto_dirs=$(find . -path -prune -o -name '*.proto' -print0 | xargs -0 -n1 dirname | sort | uniq)
+for dir in $proto_dirs; do
+  # shellcheck disable=SC2044
+  for file in $(find "${dir}" -maxdepth 1 -name '*.proto'); do
+    # this regex checks if a proto file has its go_package set to github.com/strangelove-ventures/poa/...
+    # gogo proto files SHOULD ONLY be generated if this is false
+    # we don't want gogo proto to run for proto files which are natively built for google.golang.org/protobuf
+    if grep -q "option go_package" "$file" && grep -H -o -c "option go_package.*$GO_MOD_PACKAGE/api" "$file" | grep -q ':0$'; then
+      echo "$file"
+      buf generate --template buf.gen.gogo.yaml "$file"
+    fi
   done
+done
 
-# Move proto files to the right places.
-cp -r gitlab.com/thorchain/thornode/* ./
+echo "Generating pulsar proto code"
+buf generate --template buf.gen.pulsar.yaml
+
+cd ..
+
+cp -r $GO_MOD_PACKAGE/* ../../.
 rm -rf gitlab.com
 
-# Generate proto files for go-tss.
-echo "Generating proto files for go-tss"
-go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.34.2
-pushd bifrost/tss/go-tss
-protoc --go_out=module=gitlab.com/thorchain/thornode/bifrost/tss/go-tss:. ./messages/*.proto
-popd
+# Copy files over for dep injection
+rm -rf ../../api && mkdir ../../api
+mv thorchain ../../api/.
+mv types ../../api/.
+mv common ../../api/.
+
+# Remove below line once pulsar generated files are re-added
+rm -rf ../../api

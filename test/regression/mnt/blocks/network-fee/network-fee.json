@@ -64,7 +64,7 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "0CDB0576E72B53B4840095C201E3D92749BB2B5689DA42B8D412147CD770BF0D",
+      "app_hash": "88B203769A746A5D9737DC5426C8AFE29252EDB7688E5C3BCFC1D42314D3EA03",
       "last_results_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
@@ -95,7 +95,8 @@
                 },
                 "sequence": "0"
               }
-            ]
+            ],
+            "tip": null
           },
           "body": {
             "extension_options": [],
@@ -119,10 +120,8 @@
         },
         "result": {
           "code": 0,
-          "data": "\n\u0016\n\u0014/types.MsgNetworkFee",
-          "log": "[{\"events\":[{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"set_network_fee\"}]}]}]",
-          "gas_wanted": "0",
-          "gas_used": "80706",
+          "gas_wanted": "-1",
+          "gas_used": "75530",
           "events": [
             {
               "fee": "",
@@ -138,7 +137,10 @@
               "type": "tx"
             },
             {
-              "action": "set_network_fee",
+              "action": "/types.MsgNetworkFee",
+              "module": "MsgNetworkFee",
+              "msg_index": "0",
+              "sender": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
               "type": "message"
             }
           ]
@@ -174,8 +176,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "22177DB517090DF1A4366098B9AFD633BE977107DFFB814245FB457408C968D4",
-      "last_results_hash": "631A830C6E42B9CFA75B56FBDBEA808C4E9E11B1DA6E0AF76E977DD31A554590",
+      "app_hash": "B4B0D4C2FC17B6B6ECDAC1AB523348B00F90D4AA5B721C270E354161740F3695",
+      "last_results_hash": "B0D3C2A1B2AC18E36F98FB24FBC5DC2E1D030C60F402297A20FAF000CAC50CBB",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },

@@ -96,8 +96,9 @@ params:
   to_asset: ETH.ETH
   destination: {{ addr_eth_fox }}
   min_out: 1000000000000000000
+status: 400
 asserts:
-  - .error|test("less than price limit")
+  - .message|test("less than price limit")
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/pool/btc.btc

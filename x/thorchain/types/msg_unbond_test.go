@@ -25,9 +25,6 @@ func (MsgUnBondSuite) TestMsgUnBond(c *C) {
 	txinNoID.ID = ""
 	msgApply := NewMsgUnBond(txin, nodeAddr, cosmos.NewUint(common.One), bondAddr, nil, signerAddr)
 	c.Assert(msgApply.ValidateBasic(), IsNil)
-	c.Assert(msgApply.Route(), Equals, RouterKey)
-	c.Assert(msgApply.Type(), Equals, "unbond")
-	c.Assert(msgApply.GetSignBytes(), NotNil)
 	c.Assert(len(msgApply.GetSigners()), Equals, 1)
 	c.Assert(msgApply.GetSigners()[0].Equals(signerAddr), Equals, true)
 	c.Assert(NewMsgUnBond(txin, cosmos.AccAddress{}, cosmos.NewUint(common.One), bondAddr, nil, signerAddr).ValidateBasic(), NotNil)

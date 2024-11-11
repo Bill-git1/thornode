@@ -3,8 +3,20 @@ package types
 import (
 	"fmt"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"gitlab.com/thorchain/thornode/common"
 	"gitlab.com/thorchain/thornode/common/cosmos"
+)
+
+var (
+	_ sdk.Msg              = &MsgLoanOpen{}
+	_ sdk.HasValidateBasic = &MsgLoanOpen{}
+	_ sdk.LegacyMsg        = &MsgLoanOpen{}
+
+	_ sdk.Msg              = &MsgLoanRepayment{}
+	_ sdk.HasValidateBasic = &MsgLoanRepayment{}
+	_ sdk.LegacyMsg        = &MsgLoanRepayment{}
 )
 
 // NewMsgLoanOpen create new MsgLoan message
@@ -25,12 +37,6 @@ func NewMsgLoanOpen(owner common.Address, colAsset common.Asset, colAmount cosmo
 		TxID:                    tx,
 	}
 }
-
-// Route should return the router key of the module
-func (m *MsgLoanOpen) Route() string { return RouterKey }
-
-// Type should return the action
-func (m MsgLoanOpen) Type() string { return "loan_open" }
 
 // ValidateBasic runs stateless checks on the message
 func (m *MsgLoanOpen) ValidateBasic() error {
@@ -67,11 +73,6 @@ func (m *MsgLoanOpen) ValidateBasic() error {
 	return nil
 }
 
-// GetSignBytes encodes the message for signing
-func (m *MsgLoanOpen) GetSignBytes() []byte {
-	return cosmos.MustSortJSON(ModuleCdc.MustMarshalJSON(m))
-}
-
 // GetSigners defines whose signature is required
 func (m *MsgLoanOpen) GetSigners() []cosmos.AccAddress {
 	return []cosmos.AccAddress{m.Signer}
@@ -90,12 +91,6 @@ func NewMsgLoanRepayment(owner common.Address, asset common.Asset, minOut cosmos
 	}
 }
 
-// Route should return the router key of the module
-func (m *MsgLoanRepayment) Route() string { return RouterKey }
-
-// Type should return the action
-func (m MsgLoanRepayment) Type() string { return "loan_repayment" }
-
 // ValidateBasic runs stateless checks on the message
 func (m *MsgLoanRepayment) ValidateBasic() error {
 	if m.Owner.IsEmpty() {
@@ -111,11 +106,6 @@ func (m *MsgLoanRepayment) ValidateBasic() error {
 		return cosmos.ErrInvalidAddress("empty signer address")
 	}
 	return nil
-}
-
-// GetSignBytes encodes the message for signing
-func (m *MsgLoanRepayment) GetSignBytes() []byte {
-	return cosmos.MustSortJSON(ModuleCdc.MustMarshalJSON(m))
 }
 
 // GetSigners defines whose signature is required
