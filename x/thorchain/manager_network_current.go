@@ -491,6 +491,12 @@ func (vm *NetworkMgrVCUR) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 	}
 
 	migrationRounds := mgr.Keeper().GetConfigInt64(ctx, constants.ChurnMigrateRounds)
+	// If vault number increases then a single migration round would not provide each gas asset to all vaults,
+	// and during vault migrations all user outbounds would fail and be swallowed from insufficient funds.
+	if migrationRounds < 2 {
+		migrationRounds = 2
+	}
+
 	signingTransactionPeriod := mgr.GetConstants().GetInt64Value(constants.SigningTransactionPeriod)
 	startHeight := ctx.BlockHeight() - signingTransactionPeriod
 	if startHeight < 1 {

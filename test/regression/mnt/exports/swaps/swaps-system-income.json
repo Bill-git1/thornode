@@ -453,7 +453,7 @@
     },
     "upgrade": {}
   },
-  "app_version": "2.137.0",
+  "app_version": "2.138.0",
   "chain_id": "thorchain",
   "consensus": {
     "params": {
