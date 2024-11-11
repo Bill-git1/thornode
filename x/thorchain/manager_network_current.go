@@ -478,6 +478,11 @@ func (vm *NetworkMgrVCUR) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 		}
 	}
 
+	// if we have no retiring asgards to move funds from, don't do anything further
+	if len(retiring) == 0 {
+		return nil
+	}
+
 	vaultsAvailableCoins := map[common.PubKey]common.Coins{}
 	for _, vault := range retiring {
 		if vault.LenPendingTxBlockHeights(ctx.BlockHeight(), mgr.GetConstants().GetInt64Value(constants.SigningTransactionPeriod)) > 0 {
