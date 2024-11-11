@@ -42,12 +42,16 @@ func (k KVStoreDummy) GetMinJoinLast(ctx cosmos.Context) (semver.Version, int64)
 }
 func (k KVStoreDummy) SetMinJoinLast(ctx cosmos.Context) {}
 
-func (k KVStoreDummy) ProposeUpgrade(ctx cosmos.Context, name string, upgrade Upgrade) error {
+func (k KVStoreDummy) ProposeUpgrade(ctx cosmos.Context, name string, upgrade types.UpgradeProposal) error {
 	return kaboom
 }
 
-func (k KVStoreDummy) GetProposedUpgrade(ctx cosmos.Context, name string) (*Upgrade, error) {
+func (k KVStoreDummy) GetProposedUpgrade(ctx cosmos.Context, name string) (*types.UpgradeProposal, error) {
 	return nil, kaboom
+}
+
+func (k KVStoreDummy) GetUpgradeVote(_ cosmos.Context, _ cosmos.AccAddress, _ string) (bool, error) {
+	return false, kaboom
 }
 
 func (k KVStoreDummy) ApproveUpgrade(ctx cosmos.Context, addr cosmos.AccAddress, name string) {

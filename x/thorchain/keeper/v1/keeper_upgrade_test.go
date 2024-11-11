@@ -43,7 +43,7 @@ func (s *KeeperUpgradeSuite) TestUpgrade(c *C) {
 	upgradeHeight := ctx.BlockHeight() + 100
 
 	// propose upgrade
-	c.Assert(k.ProposeUpgrade(ctx, upgradeName, types.Upgrade{
+	c.Assert(k.ProposeUpgrade(ctx, upgradeName, types.UpgradeProposal{
 		Height: upgradeHeight,
 		Info:   upgradeInfo,
 	}), IsNil)

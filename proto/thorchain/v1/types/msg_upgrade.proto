@@ -11,6 +11,13 @@ message Upgrade {
   string info = 2;
 }
 
+// UpgradeProposal is the storage format for the upgrade proposal.
+message UpgradeProposal {
+  int64 height = 1;
+  string info = 2;
+  bytes proposer = 3  [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
+}
+
 message MsgProposeUpgrade {
   string name = 1;
   Upgrade upgrade = 2 [(gogoproto.nullable) = false];
