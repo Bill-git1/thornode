@@ -757,3 +757,19 @@ params:
   destination: {{ addr_eth_fox }}
 asserts:
   - .memo == "=:ETH.ETH:{{ addr_eth_fox }}::xx:0"
+---
+########################################################################################
+# Trade Asset swap quote with affiliate
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/quote/swap
+params:
+  from_asset: BTC~BTC
+  to_asset: THOR.RUNE
+  amount: 1000000
+  affiliate: xx
+  affiliate_bps: 10
+  destination: {{ addr_thor_fox }}
+asserts:
+  - .memo == "=:THOR.RUNE:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr::xx:10"
+

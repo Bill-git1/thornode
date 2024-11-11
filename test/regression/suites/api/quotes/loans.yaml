@@ -171,4 +171,23 @@ asserts:
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)+(.fees.affiliate|tonumber)
   - .recommended_gas_rate == "10"
   - .gas_rate_units == "satsperbyte"
-
+---
+########################################################################################
+# Trade Asset loan open quote with affiliate
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/quote/loan/open
+status: 400
+params:
+  from_asset: BTC~BTC
+  amount: 500000
+  to_asset: RUNE
+  destination: {{ addr_thor_fox }}
+  affiliate: test
+  affiliate_bps: 50
+asserts:
+  - .message|contains("unsupported collateral pool")
+  # This ValidateBasic error is because the Trade Asset is seemingly neither gas asset nor derived asset;
+  # while it is the gas asset (just not the L1 gas asset), this is consistent with
+  # only allowing Trade Asswet swaps to Trade Asset or RUNE,
+  # not allowing swaps to L1 or Derived Asset types in a single transaction.
