@@ -664,6 +664,11 @@ type BifrostChainConfiguration struct {
 		// fee rate, since overpaid fees may be rejected by the chain daemon.
 		MaxSatsPerVByte int64 `mapstructure:"max_sats_per_vbyte"`
 
+		// MinSatsPerVByte is the minimum fee rate in sats per vbyte. It is used floor the
+		// fee rate in order to prevent inbound transactions from being stuck in the
+		// mempool.
+		MinSatsPerVByte int64 `mapstructure:"min_sats_per_vbyte"`
+
 		// MinUTXOConfirmations is the minimum number of confirmations required for a UTXO to
 		// be considered for spending from an asgard vault.
 		MinUTXOConfirmations int64 `mapstructure:"min_utxo_confirmations"`

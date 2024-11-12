@@ -283,8 +283,9 @@ func (c *Client) sendNetworkFee(height int64) error {
 			feeRate++
 		}
 	}
-	if c.cfg.ChainID.Equals(common.BCHChain) && feeRate < 2 {
-		feeRate = 2
+
+	if feeRate < uint64(c.cfg.UTXO.MinSatsPerVByte) {
+		feeRate = uint64(c.cfg.UTXO.MinSatsPerVByte)
 	}
 
 	// if gas cache blocks are set, use the max gas over that window

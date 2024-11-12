@@ -91,6 +91,7 @@ bifrost:
         default_min_relay_fee_sats: 1000
         default_sats_per_vbyte: 25
         max_sats_per_vbyte: 9765 # backwards compatible with 1e8/10/1024
+        min_sats_per_vbyte: 2
         min_utxo_confirmations: 1
         max_utxos_to_spend: 10
       block_scanner: &default-block-scanner
@@ -228,6 +229,7 @@ bifrost:
         block_cache_count: 1440
         default_sats_per_vbyte: 25
         max_sats_per_vbyte: 976562 # backwards compatible with 1e8*10/1024
+        min_sats_per_vbyte: 2
 
     gaia:
       <<: *default-chain
@@ -255,6 +257,7 @@ bifrost:
         <<: *utxo
         block_cache_count: 600
         max_sats_per_vbyte: 9765 # backwards compatible with 1e8/10/1024
+        min_sats_per_vbyte: 2
         estimated_average_tx_size: 250
 
     bch:
@@ -271,6 +274,7 @@ bifrost:
         <<: *utxo
         block_cache_count: 144
         max_sats_per_vbyte: 9765 # backwards compatible with 1e8/10/1024
+        min_sats_per_vbyte: 2
         estimated_average_tx_size: 1500
 
 ########################################################################################
