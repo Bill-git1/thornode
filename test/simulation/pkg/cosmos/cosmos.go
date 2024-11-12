@@ -175,7 +175,7 @@ func (c *Client) SignTx(tx SimTx) ([]byte, error) {
 	}
 	txBuilder.SetMemo(tx.Memo)
 	txBuilder.SetFeeAmount(sdk.NewCoins(sdk.NewCoin("uatom", sdkmath.NewInt(2000))))
-	txBuilder.SetGasLimit(100_000)
+	txBuilder.SetGasLimit(150_000)
 
 	// configure signing
 	sigData := &signingtypes.SingleSignatureData{
