@@ -156,7 +156,7 @@ func run(out io.Writer, path string, routine int) (failExportInvariants bool, er
 		var f *os.File
 		f, err = os.OpenFile(filepath.Join(home, ".thornode/config/genesis.json"), os.O_RDWR, 0o644)
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to open genesis file")
+			log.Fatal().Err(err).Str("path", path).Msg("failed to open genesis file")
 		}
 		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {

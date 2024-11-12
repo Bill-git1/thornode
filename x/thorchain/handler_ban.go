@@ -64,6 +64,8 @@ func (h BanHandler) handle(ctx cosmos.Context, msg MsgBan) (*cosmos.Result, erro
 	ctx.Logger().Info("handleMsgBan request", "node address", msg.NodeAddress.String())
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("2.138.0")):
+		return h.handleV138(ctx, msg)
 	case version.GTE(semver.MustParse("0.1.0")):
 		return h.handleV1(ctx, msg)
 	default:
@@ -72,7 +74,7 @@ func (h BanHandler) handle(ctx cosmos.Context, msg MsgBan) (*cosmos.Result, erro
 	}
 }
 
-func (h BanHandler) handleV1(ctx cosmos.Context, msg MsgBan) (*cosmos.Result, error) {
+func (h BanHandler) handleV138(ctx cosmos.Context, msg MsgBan) (*cosmos.Result, error) {
 	toBan, err := h.mgr.Keeper().GetNodeAccount(ctx, msg.NodeAddress)
 	if err != nil {
 		err = wrapError(ctx, err, "fail to get to ban node account")
@@ -115,43 +117,9 @@ func (h BanHandler) handleV1(ctx cosmos.Context, msg MsgBan) (*cosmos.Result, er
 		return nil, err
 	}
 
-	if !voter.HasSigned(msg.Signer) && voter.BlockHeight == 0 {
-		// take 0.1% of the minimum bond, and put it into the reserve
-		// trunk-ignore(golangci-lint/govet): shadow
-		minBond, err := h.mgr.Keeper().GetMimir(ctx, constants.MinimumBondInRune.String())
-		if minBond < 0 || err != nil {
-			minBond = h.mgr.GetConstants().GetInt64Value(constants.MinimumBondInRune)
-		}
-		slashAmount := cosmos.NewUint(uint64(minBond)).QuoUint64(1000)
-		if slashAmount.GT(banner.Bond) {
-			slashAmount = banner.Bond
-		}
-		banner.Bond = common.SafeSub(banner.Bond, slashAmount)
-
-		coin := common.NewCoin(common.RuneNative, slashAmount)
-		// trunk-ignore(golangci-lint/govet): shadow
-		if err := h.mgr.Keeper().SendFromModuleToModule(ctx, BondName, ReserveName, common.NewCoins(coin)); err != nil {
-			ctx.Logger().Error("fail to transfer funds from bond to reserve", "error", err)
-			return nil, err
-		}
-
-		// trunk-ignore(golangci-lint/govet): shadow
-		if err := h.mgr.Keeper().SetNodeAccount(ctx, banner); err != nil {
-			return nil, fmt.Errorf("fail to save node account: %w", err)
-		}
-
-		tx := common.Tx{}
-		tx.ID = common.BlankTxID
-		tx.FromAddress = banner.BondAddress
-		bondEvent := NewEventBond(slashAmount, BondCost, tx, &banner, nil)
-		// trunk-ignore(golangci-lint/govet): shadow
-		if err := h.mgr.EventMgr().EmitEvent(ctx, bondEvent); err != nil {
-			return nil, fmt.Errorf("fail to emit bond event: %w", err)
-		}
-	}
-
 	voter.Sign(msg.Signer)
 	h.mgr.Keeper().SetBanVoter(ctx, voter)
+
 	// doesn't have consensus yet
 	if !voter.HasConsensus(active) {
 		ctx.Logger().Info("not having consensus yet, return")
@@ -168,6 +136,31 @@ func (h BanHandler) handleV1(ctx cosmos.Context, msg MsgBan) (*cosmos.Result, er
 
 	toBan.ForcedToLeave = true
 	toBan.LeaveScore = 1 // Set Leave Score to 1, which means the nodes is bad
+
+	// slash the bond of the banned node
+	slash := h.mgr.Keeper().GetConfigInt64(ctx, constants.BondSlashBan)
+	if slash > 0 {
+		// compute slash and decrement banned node bond
+		slashAmt := cosmos.NewUint(uint64(slash))
+		if slashAmt.GT(toBan.Bond) {
+			slashAmt = toBan.Bond
+		}
+		toBan.Bond = common.SafeSub(toBan.Bond, slashAmt)
+
+		// transfer the slash amount from bond to reserve
+		coin := common.NewCoin(common.RuneNative, slashAmt)
+		if err = h.mgr.Keeper().SendFromModuleToModule(ctx, BondName, ReserveName, common.NewCoins(coin)); err != nil {
+			ctx.Logger().Error("fail to transfer funds from bond to reserve", "error", err)
+			return nil, err
+		}
+
+		// emit bond slash event
+		bondEvent := NewEventBond(slashAmt, BondCost, common.Tx{}, &toBan, nil)
+		if err = h.mgr.EventMgr().EmitEvent(ctx, bondEvent); err != nil {
+			return nil, fmt.Errorf("fail to emit bond event: %w", err)
+		}
+	}
+
 	if err := h.mgr.Keeper().SetNodeAccount(ctx, toBan); err != nil {
 		err = fmt.Errorf("fail to save node account: %w", err)
 		return nil, err

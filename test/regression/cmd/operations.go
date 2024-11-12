@@ -226,7 +226,7 @@ func (op *OpState) Execute(_ io.Writer, _ string, _, routine int, _ *os.Process,
 	}
 
 	// merge updates into genesis
-	genesis := deepMerge(genesisMap, op.Genesis, "address")
+	genesis := deepMerge(genesisMap, op.Genesis, "address", "denom")
 
 	// reset file
 	err = f.Truncate(0)

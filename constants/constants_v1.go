@@ -124,6 +124,7 @@ func NewConstantValue() *ConstantVals {
 			PendulumUseEffectiveSecurity:        0,                  // If 1, use the effective security bond (the bond sacrificable to seize L1 Assets) as the securing bond for which to target double the value of the secured Assets. If 0, instead use the whole (rewards-receiving) total effective bond.
 			PendulumUseVaultAssets:              0,                  // If 1. use the L1 Assets in the vaults (the Assets seizable by the lower-bond 2/3rds of nodes in each vault) as the Assets to be secured.  If 0, instead use only the L1 Assets in pools, ignoring the L1 Assets in for instance streaming swaps, oversolvencies, and Trade/Bridge Assets.
 			MultipleAffiliatesMaxCount:          5,                  // maximum number of nested affiliates
+			BondSlashBan:                        5_000_00000000,     // 5000 RUNE - amount to slash bond of banned nodes
 		},
 		boolValues: map[ConstantName]bool{
 			StrictBondLiquidityRatio: true,
