@@ -43,6 +43,7 @@ TEST_DIR?=${TEST_PATHS}
 BUILD_FLAGS := -ldflags '$(ldflags) -extldflags=-static' -tags ${TAG} -trimpath
 TEST_BUILD_FLAGS := -parallel=1 -tags=mocknet
 BINARIES?=./cmd/thornode ./cmd/bifrost ./tools/recover-keyshare-backup
+GOVERSION=$(shell awk '($$1 == "go") { print $$2 }' go.mod)
 
 # CGO must be disabled for static linking, so disable it across the board for consistency.
 export CGO_ENABLED=0
@@ -65,7 +66,7 @@ generate: go-generate openapi proto-gen
 	@cd test/simulation && go mod tidy
 
 go-generate:
-	@go install golang.org/x/tools/cmd/stringer@v0.15.0
+	@go install golang.org/x/tools/cmd/stringer@v0.28.0
 	@go generate ./...
 
 openapi:
@@ -86,7 +87,7 @@ proto-all: proto-format proto-lint proto-gen format
 
 proto-gen:
 	@echo "Generating bifrost protobuf files"
-	@docker run --rm -v $(shell pwd):/app -w /app golang:1.22.2 make bifrost-protosh
+	@docker run --rm -v $(shell pwd):/app -w /app golang:$(GOVERSION) make bifrost-protosh
 	@echo "Generating Protobuf files"
 	@$(protoImage) sh ./scripts/protocgen.sh
 

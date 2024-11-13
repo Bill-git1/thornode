@@ -2,7 +2,7 @@
 # Build
 ########################################################################################
 
-FROM golang:1.22.2-bullseye AS build
+FROM golang:1.23.4-bullseye AS build
 
 WORKDIR /app
 COPY go.mod go.sum ./

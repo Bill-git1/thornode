@@ -1,6 +1,6 @@
 module gitlab.com/thorchain/thornode/v3/test/simulation
 
-go 1.22.2
+go 1.23.4
 
 require (
 	cosmossdk.io/math v1.4.0

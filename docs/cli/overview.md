@@ -9,7 +9,7 @@
 
 ### GoLang
 
-Install Go v1.22.8: [https://go.dev/dl](https://go.dev/dl)
+Install Go: [https://go.dev/dl](https://go.dev/dl)
 
 ```shell
 # Set Go PATH

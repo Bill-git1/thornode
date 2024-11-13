@@ -1,4 +1,4 @@
-image: golang:1.22.2
+image: golang:1.23.4
 
 workflow:
   rules:
@@ -18,9 +18,9 @@ variables:
   SAST_EXCLUDED_PATHS: spec, test, tests, tmp, .cache
 
 .use_dind: &use_dind
-  image: docker:27.0
+  image: docker:27.5.0
   services:
-    - docker:27.0-dind
+    - docker:27.5.0-dind
 
 stages:
   - fork
@@ -197,9 +197,7 @@ build-thorscan:
 build-events:
   rules: *build-thornode-rules
   stage: build
-  image: docker:20.10.12
-  services:
-    - docker:20.10.12-dind
+  <<: *use_dind
   script:
     - apk -U add make
     - make events-build
