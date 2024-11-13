@@ -161,6 +161,7 @@ func (h BanHandler) handleV138(ctx cosmos.Context, msg MsgBan) (*cosmos.Result, 
 		}
 	}
 
+	// trunk-ignore(golangci-lint/govet): shadow
 	if err := h.mgr.Keeper().SetNodeAccount(ctx, toBan); err != nil {
 		err = fmt.Errorf("fail to save node account: %w", err)
 		return nil, err
