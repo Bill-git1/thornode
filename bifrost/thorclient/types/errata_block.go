@@ -1,6 +1,6 @@
 package types
 
-import "gitlab.com/thorchain/thornode/common"
+import "gitlab.com/thorchain/thornode/v3/common"
 
 type ErrataBlock struct {
 	Height int64

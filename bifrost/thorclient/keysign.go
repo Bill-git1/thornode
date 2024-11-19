@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"net/http"
 
-	btypes "gitlab.com/thorchain/thornode/bifrost/blockscanner/types"
-	"gitlab.com/thorchain/thornode/bifrost/thorclient/types"
+	btypes "gitlab.com/thorchain/thornode/v3/bifrost/blockscanner/types"
+	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
 )
 
 var ErrNotFound = fmt.Errorf("not found")

@@ -6,10 +6,10 @@ import (
 	ltcec "github.com/ltcsuite/ltcd/btcec"
 	ltcchaincfg "github.com/ltcsuite/ltcd/chaincfg"
 	ltcwire "github.com/ltcsuite/ltcd/wire"
-	ltctxscript "gitlab.com/thorchain/thornode/bifrost/txscript/ltcd-txscript"
+	ltctxscript "gitlab.com/thorchain/thornode/v3/bifrost/txscript/ltcd-txscript"
 
-	stypes "gitlab.com/thorchain/thornode/bifrost/thorclient/types"
-	"gitlab.com/thorchain/thornode/common"
+	stypes "gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
+	"gitlab.com/thorchain/thornode/v3/common"
 )
 
 func (c *Client) getChainCfgLTC() *ltcchaincfg.Params {

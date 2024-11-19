@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sort"
 
-	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
 func Max[T int | uint | int64 | uint64](a, b T) T {

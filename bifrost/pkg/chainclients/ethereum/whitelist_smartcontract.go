@@ -1,7 +1,7 @@
 package ethereum
 
 import (
-	"gitlab.com/thorchain/thornode/common"
+	"gitlab.com/thorchain/thornode/v3/common"
 )
 
 var whitelistSmartContractAddress = append(

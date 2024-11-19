@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strconv"
 
-	"gitlab.com/thorchain/thornode/common/cosmos"
-	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
-	keeperv1 "gitlab.com/thorchain/thornode/x/thorchain/keeper/v1"
-	"gitlab.com/thorchain/thornode/x/thorchain/types"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
+	keeperv1 "gitlab.com/thorchain/thornode/v3/x/thorchain/keeper/v1"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	"github.com/blang/semver"

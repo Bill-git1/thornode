@@ -1,7 +1,7 @@
 syntax = "proto3";
 package types;
 
-option go_package = "gitlab.com/thorchain/thornode/x/thorchain/types";
+option go_package = "gitlab.com/thorchain/thornode/v3/x/thorchain/types";
 option (gogoproto.goproto_getters_all) = false;
 
 import "common/common.proto";
@@ -22,8 +22,8 @@ enum VaultStatus {
 
 message Vault {
   int64 block_height = 1;
-  string pub_key = 2 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/common.PubKey"];
-  repeated common.Coin coins = 3 [(gogoproto.castrepeated) = "gitlab.com/thorchain/thornode/common.Coins", (gogoproto.nullable) = false];
+  string pub_key = 2 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.PubKey"];
+  repeated common.Coin coins = 3 [(gogoproto.castrepeated) = "gitlab.com/thorchain/thornode/v3/common.Coins", (gogoproto.nullable) = false];
   VaultType type = 4;
   VaultStatus status = 5;
   int64 status_since = 6;

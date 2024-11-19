@@ -2,7 +2,7 @@
 
 set -e
 
-GO_MOD_PACKAGE="gitlab.com/thorchain/thornode"
+GO_MOD_PACKAGE="gitlab.com/thorchain/thornode/v3"
 
 echo "Generating gogo proto code"
 cd proto/thorchain/v1

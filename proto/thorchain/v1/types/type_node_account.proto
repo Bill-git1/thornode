@@ -1,7 +1,7 @@
 syntax = "proto3";
 package types;
 
-option go_package = "gitlab.com/thorchain/thornode/x/thorchain/types";
+option go_package = "gitlab.com/thorchain/thornode/v3/x/thorchain/types";
 option (gogoproto.goproto_stringer_all) = false;
 option (gogoproto.stringer_all)         = false;
 option (gogoproto.goproto_getters_all) = false;
@@ -34,7 +34,7 @@ message NodeAccount {
   string validator_cons_pub_key = 4;
   string bond = 5 [(gogoproto.customtype) = "cosmossdk.io/math.Uint", (gogoproto.nullable) = false];
   int64 active_block_height = 6;
-  string bond_address = 7 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/common.Address"];
+  string bond_address = 7 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.Address"];
   int64 status_since = 8;
   repeated string signer_membership = 9;
   bool requested_to_leave = 10;

@@ -9,7 +9,8 @@ import (
 	"syscall"
 
 	svrcmd "github.com/cosmos/cosmos-sdk/server/cmd"
-	"gitlab.com/thorchain/thornode/app"
+
+	"gitlab.com/thorchain/thornode/v3/app"
 )
 
 func main() {

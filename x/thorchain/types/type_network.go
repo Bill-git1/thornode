@@ -1,8 +1,8 @@
 package types
 
 import (
-	"gitlab.com/thorchain/thornode/common"
-	cosmos "gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/common"
+	cosmos "gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
 // NewNetwork create a new instance Network it is empty though

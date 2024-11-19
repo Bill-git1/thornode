@@ -1,7 +1,7 @@
 package types
 
 import (
-	"gitlab.com/thorchain/thornode/common"
+	"gitlab.com/thorchain/thornode/v3/common"
 )
 
 // Solvency structure is to hold all the information necessary to report solvency to THORNode

@@ -5,9 +5,9 @@ import (
 	"os"
 	"strings"
 
-	"gitlab.com/thorchain/thornode/common"
-	"gitlab.com/thorchain/thornode/common/tokenlist"
-	"gitlab.com/thorchain/thornode/config"
+	"gitlab.com/thorchain/thornode/v3/common"
+	"gitlab.com/thorchain/thornode/v3/common/tokenlist"
+	"gitlab.com/thorchain/thornode/v3/config"
 )
 
 func main() {

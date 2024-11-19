@@ -6,14 +6,14 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.com/thorchain/thornode/common"
-	"gitlab.com/thorchain/thornode/common/cosmos"
-	"gitlab.com/thorchain/thornode/constants"
-	openapi "gitlab.com/thorchain/thornode/openapi/gen"
-	. "gitlab.com/thorchain/thornode/test/simulation/actors/common"
-	"gitlab.com/thorchain/thornode/test/simulation/pkg/thornode"
-	. "gitlab.com/thorchain/thornode/test/simulation/pkg/types"
-	"gitlab.com/thorchain/thornode/x/thorchain/types"
+	"gitlab.com/thorchain/thornode/v3/common"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/constants"
+	openapi "gitlab.com/thorchain/thornode/v3/openapi/gen"
+	. "gitlab.com/thorchain/thornode/v3/test/simulation/actors/common"
+	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/thornode"
+	. "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/types"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////

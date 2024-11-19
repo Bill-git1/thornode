@@ -14,9 +14,9 @@ import (
   dogeec "github.com/eager7/dogd/btcec"
   ltcec "github.com/ltcsuite/ltcd/btcec"
 
-	"gitlab.com/thorchain/thornode/bifrost/tss"
-	"gitlab.com/thorchain/thornode/common"
-	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss"
+	"gitlab.com/thorchain/thornode/v3/common"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
 type tssSignableBCH struct {

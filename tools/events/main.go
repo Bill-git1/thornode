@@ -8,9 +8,9 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"gitlab.com/thorchain/thornode/cmd"
-	"gitlab.com/thorchain/thornode/constants"
-	"gitlab.com/thorchain/thornode/tools/thorscan"
+	"gitlab.com/thorchain/thornode/v3/cmd"
+	"gitlab.com/thorchain/thornode/v3/constants"
+	"gitlab.com/thorchain/thornode/v3/tools/thorscan"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////

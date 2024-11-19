@@ -14,9 +14,9 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/rs/zerolog/log"
-	"gitlab.com/thorchain/thornode/common"
-	openapi "gitlab.com/thorchain/thornode/openapi/gen"
-	"gitlab.com/thorchain/thornode/x/thorchain"
+	"gitlab.com/thorchain/thornode/v3/common"
+	openapi "gitlab.com/thorchain/thornode/v3/openapi/gen"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////

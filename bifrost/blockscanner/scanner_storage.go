@@ -6,8 +6,8 @@ import (
 
 	"github.com/syndtr/goleveldb/leveldb"
 
-	"gitlab.com/thorchain/thornode/bifrost/db"
-	"gitlab.com/thorchain/thornode/config"
+	"gitlab.com/thorchain/thornode/v3/bifrost/db"
+	"gitlab.com/thorchain/thornode/v3/config"
 )
 
 // ScannerStorage define the method need to be used by scanner

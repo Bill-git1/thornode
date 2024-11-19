@@ -5,7 +5,7 @@ import (
 	"sync"
 	"text/template"
 
-	"gitlab.com/thorchain/thornode/constants"
+	"gitlab.com/thorchain/thornode/v3/constants"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////

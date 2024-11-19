@@ -3,9 +3,9 @@ package thorchain
 import (
 	"sort"
 
-	"gitlab.com/thorchain/thornode/common"
-	cosmos "gitlab.com/thorchain/thornode/common/cosmos"
-	keeper "gitlab.com/thorchain/thornode/x/thorchain/keeper"
+	"gitlab.com/thorchain/thornode/v3/common"
+	cosmos "gitlab.com/thorchain/thornode/v3/common/cosmos"
+	keeper "gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
 )
 
 // ObserverMgrVCUR implement a ObserverManager which will store the

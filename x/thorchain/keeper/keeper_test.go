@@ -3,8 +3,8 @@ package keeper
 import (
 	. "gopkg.in/check.v1"
 
-	"gitlab.com/thorchain/thornode/common"
-	cosmos "gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/common"
+	cosmos "gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
 func FundModule(c *C, ctx cosmos.Context, k Keeper, name string, amt uint64) {

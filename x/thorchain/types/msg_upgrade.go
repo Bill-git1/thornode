@@ -8,8 +8,9 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/blang/semver"
-	"gitlab.com/thorchain/thornode/api/types"
-	"gitlab.com/thorchain/thornode/common/cosmos"
+
+	"gitlab.com/thorchain/thornode/v3/api/types"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
 var (

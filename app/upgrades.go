@@ -5,13 +5,13 @@ import (
 
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 
-	"gitlab.com/thorchain/thornode/app/upgrades"
-	"gitlab.com/thorchain/thornode/app/upgrades/noop"
-	v137 "gitlab.com/thorchain/thornode/app/upgrades/v137"
+	"gitlab.com/thorchain/thornode/v3/app/upgrades"
+	"gitlab.com/thorchain/thornode/v3/app/upgrades/noop"
+	v3 "gitlab.com/thorchain/thornode/v3/app/upgrades/v3"
 )
 
 // Upgrades list of chain upgrades
-var Upgrades = []upgrades.Upgrade{v137.NewUpgrade()}
+var Upgrades = []upgrades.Upgrade{v3.NewUpgrade()}
 
 // RegisterUpgradeHandlers registers the chain upgrade handlers
 func (app *THORChainApp) RegisterUpgradeHandlers() {

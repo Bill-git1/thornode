@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.com/thorchain/thornode/common"
-	sdk "gitlab.com/thorchain/thornode/common/cosmos"
-	"gitlab.com/thorchain/thornode/config"
-	openapi "gitlab.com/thorchain/thornode/openapi/gen"
+	"gitlab.com/thorchain/thornode/v3/common"
+	sdk "gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/config"
+	openapi "gitlab.com/thorchain/thornode/v3/openapi/gen"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////

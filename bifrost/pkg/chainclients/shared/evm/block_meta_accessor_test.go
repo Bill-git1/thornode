@@ -9,8 +9,8 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/storage"
 	. "gopkg.in/check.v1"
 
-	evmtypes "gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/evm/types"
-	stypes "gitlab.com/thorchain/thornode/bifrost/thorclient/types"
+	evmtypes "gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/evm/types"
+	stypes "gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
 )
 
 // PrefixTxStorage declares prefix to use in leveldb to avoid conflicts

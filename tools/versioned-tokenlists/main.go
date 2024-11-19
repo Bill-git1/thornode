@@ -7,8 +7,8 @@ import (
 	"os"
 
 	"github.com/blang/semver"
-	"gitlab.com/thorchain/thornode/common"
-	"gitlab.com/thorchain/thornode/common/tokenlist"
+	"gitlab.com/thorchain/thornode/v3/common"
+	"gitlab.com/thorchain/thornode/v3/common/tokenlist"
 )
 
 // -------------------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 syntax = "proto3";
 package types;
 
-option go_package = "gitlab.com/thorchain/thornode/x/thorchain/types";
+option go_package = "gitlab.com/thorchain/thornode/v3/x/thorchain/types";
 option (gogoproto.goproto_stringer_all) = false;
 option (gogoproto.stringer_all)         = false;
 option (gogoproto.goproto_getters_all) = false;
@@ -22,7 +22,7 @@ message ObservedTx {
   repeated string out_hashes = 3;
   int64 block_height = 4;
   repeated string signers = 5;
-  string observed_pub_key = 6 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/common.PubKey"];
+  string observed_pub_key = 6 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.PubKey"];
   int64 keysign_ms = 7;
   int64 finalise_height = 8;
   string aggregator = 9;
@@ -31,12 +31,12 @@ message ObservedTx {
 }
 
 message ObservedTxVoter {
-  string tx_id = 1 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/common.TxID", (gogoproto.customname) = "TxID"];
+  string tx_id = 1 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.TxID", (gogoproto.customname) = "TxID"];
   ObservedTx tx = 2 [(gogoproto.nullable) = false];
   int64 height = 3;
   repeated ObservedTx txs = 4 [(gogoproto.castrepeated) = "ObservedTxs", (gogoproto.nullable) = false];
   repeated TxOutItem actions = 5 [(gogoproto.nullable) = false];
-  repeated common.Tx out_txs = 6 [(gogoproto.castrepeated) = "gitlab.com/thorchain/thornode/common.Txs", (gogoproto.nullable) = false];
+  repeated common.Tx out_txs = 6 [(gogoproto.castrepeated) = "gitlab.com/thorchain/thornode/v3/common.Txs", (gogoproto.nullable) = false];
   int64 finalised_height = 7;
   bool updated_vault = 8;
   bool reverted = 9;

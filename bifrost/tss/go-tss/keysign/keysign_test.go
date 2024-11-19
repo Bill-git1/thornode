@@ -21,7 +21,7 @@ import (
 	"github.com/libp2p/go-libp2p-peerstore/addr"
 	zlog "github.com/rs/zerolog/log"
 
-	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/conversion"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/conversion"
 
 	tcrypto "github.com/cometbft/cometbft/crypto"
 	"github.com/cometbft/cometbft/crypto/secp256k1"
@@ -29,10 +29,10 @@ import (
 	maddr "github.com/multiformats/go-multiaddr"
 	. "gopkg.in/check.v1"
 
-	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/common"
-	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/messages"
-	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/p2p"
-	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/storage"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/common"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/messages"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/p2p"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/storage"
 )
 
 var (

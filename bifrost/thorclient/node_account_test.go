@@ -7,7 +7,7 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"gitlab.com/thorchain/thornode/config"
+	"gitlab.com/thorchain/thornode/v3/config"
 )
 
 type NodeAccountSuite struct {

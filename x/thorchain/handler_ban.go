@@ -6,10 +6,10 @@ import (
 	errorsmod "cosmossdk.io/errors"
 	"github.com/blang/semver"
 
-	"gitlab.com/thorchain/thornode/common"
-	"gitlab.com/thorchain/thornode/common/cosmos"
-	"gitlab.com/thorchain/thornode/constants"
-	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
+	"gitlab.com/thorchain/thornode/v3/common"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/constants"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
 )
 
 // BanHandler is to handle Ban message
@@ -64,17 +64,17 @@ func (h BanHandler) handle(ctx cosmos.Context, msg MsgBan) (*cosmos.Result, erro
 	ctx.Logger().Info("handleMsgBan request", "node address", msg.NodeAddress.String())
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("2.138.0")):
-		return h.handleV138(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.handleV3_0_0(ctx, msg)
 	case version.GTE(semver.MustParse("0.1.0")):
-		return h.handleV1(ctx, msg)
+		return h.handleV0_1_0(ctx, msg)
 	default:
 		ctx.Logger().Error(errInvalidVersion.Error())
 		return nil, errBadVersion
 	}
 }
 
-func (h BanHandler) handleV138(ctx cosmos.Context, msg MsgBan) (*cosmos.Result, error) {
+func (h BanHandler) handleV3_0_0(ctx cosmos.Context, msg MsgBan) (*cosmos.Result, error) {
 	toBan, err := h.mgr.Keeper().GetNodeAccount(ctx, msg.NodeAddress)
 	if err != nil {
 		err = wrapError(ctx, err, "fail to get to ban node account")

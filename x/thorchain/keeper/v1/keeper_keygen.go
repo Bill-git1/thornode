@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	cosmos "gitlab.com/thorchain/thornode/common/cosmos"
+	cosmos "gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
 func (k KVStore) setKeygenBlock(ctx cosmos.Context, key string, record KeygenBlock) {

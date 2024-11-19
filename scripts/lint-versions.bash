@@ -14,6 +14,22 @@ if git merge-base --is-ancestor "$(git rev-parse HEAD)" "$(git rev-parse origin/
   exit 0
 fi
 
+# skip for module path version updates
+cp go.mod go.mod.current
+git checkout origin/develop go.mod
+if [ "$(head -n1 go.mod))" != "$(head -n1 go.mod.current)" ]; then
+  echo "Detected module path change"
+  rm -f go.mod.current && git reset go.mod && git restore go.mod
+  if [[ $CI_MERGE_REQUEST_TITLE == *"#check-lint-warning"* ]]; then
+    echo "Skipping version lint for module path change."
+    exit 0
+  else
+    echo 'Add "#check-lint-warning" to the PR title to mark this as intentional.'
+    exit 1
+  fi
+fi
+rm -f go.mod.current && git reset go.mod && git restore go.mod
+
 FAILED=false
 
 echo -n "Checking unversioned tests for versioned managers... "

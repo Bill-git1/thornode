@@ -21,15 +21,15 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	"github.com/rs/zerolog/log"
-	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/conversion"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/conversion"
 
-	"gitlab.com/thorchain/thornode/common"
-	"gitlab.com/thorchain/thornode/common/cosmos"
-	"gitlab.com/thorchain/thornode/config"
-	"gitlab.com/thorchain/thornode/constants"
-	"gitlab.com/thorchain/thornode/x/thorchain/keeper"
-	keeperv1 "gitlab.com/thorchain/thornode/x/thorchain/keeper/v1"
-	"gitlab.com/thorchain/thornode/x/thorchain/types"
+	"gitlab.com/thorchain/thornode/v3/common"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/config"
+	"gitlab.com/thorchain/thornode/v3/constants"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
+	keeperv1 "gitlab.com/thorchain/thornode/v3/x/thorchain/keeper/v1"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 var (
@@ -2020,7 +2020,7 @@ func newTxStagesResponse(ctx cosmos.Context, voter ObservedTxVoter, isSwap, isPe
 		// Only fill in BlocksSinceScheduled if the outbound delay is complete.
 		if currentHeight >= scheduledHeight {
 			sinceScheduled := currentHeight - scheduledHeight
-			outSigned.XBlocksSinceScheduled = &types.OutboundSignedStage_BlocksSinceScheduled{BlocksSinceScheduled: sinceScheduled}
+			outSigned.BlocksSinceScheduled = &types.ProtoInt64{Value: sinceScheduled}
 		}
 	}
 

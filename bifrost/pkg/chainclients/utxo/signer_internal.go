@@ -12,22 +12,22 @@ import (
 	"github.com/btcsuite/btcd/wire"
 
 	"github.com/eager7/dogutil"
-	dogetxscript "gitlab.com/thorchain/thornode/bifrost/txscript/dogd-txscript"
+	dogetxscript "gitlab.com/thorchain/thornode/v3/bifrost/txscript/dogd-txscript"
 
 	"github.com/gcash/bchutil"
-	bchtxscript "gitlab.com/thorchain/thornode/bifrost/txscript/bchd-txscript"
+	bchtxscript "gitlab.com/thorchain/thornode/v3/bifrost/txscript/bchd-txscript"
 
 	"github.com/ltcsuite/ltcutil"
-	ltctxscript "gitlab.com/thorchain/thornode/bifrost/txscript/ltcd-txscript"
+	ltctxscript "gitlab.com/thorchain/thornode/v3/bifrost/txscript/ltcd-txscript"
 
 	"github.com/btcsuite/btcutil"
-	btctxscript "gitlab.com/thorchain/thornode/bifrost/txscript/txscript"
+	btctxscript "gitlab.com/thorchain/thornode/v3/bifrost/txscript/txscript"
 
-	stypes "gitlab.com/thorchain/thornode/bifrost/thorclient/types"
-	"gitlab.com/thorchain/thornode/common"
-	"gitlab.com/thorchain/thornode/common/cosmos"
-	mem "gitlab.com/thorchain/thornode/x/thorchain/memo"
-	"gitlab.com/thorchain/thornode/x/thorchain/types"
+	stypes "gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
+	"gitlab.com/thorchain/thornode/v3/common"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	mem "gitlab.com/thorchain/thornode/v3/x/thorchain/memo"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////

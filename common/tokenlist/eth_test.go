@@ -2,7 +2,7 @@ package tokenlist
 
 import (
 	"github.com/blang/semver"
-	"gitlab.com/thorchain/thornode/constants"
+	"gitlab.com/thorchain/thornode/v3/constants"
 	. "gopkg.in/check.v1"
 )
 

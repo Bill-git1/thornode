@@ -3,8 +3,8 @@ package thorchain
 import (
 	"fmt"
 
-	"gitlab.com/thorchain/thornode/common/cosmos"
-	"gitlab.com/thorchain/thornode/constants"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/constants"
 )
 
 // StoreManager define the method as the entry point for store upgrade

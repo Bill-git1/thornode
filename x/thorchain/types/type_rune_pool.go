@@ -1,7 +1,7 @@
 package types
 
 import (
-	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
 func NewRUNEPool() RUNEPool {

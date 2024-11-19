@@ -4,7 +4,7 @@
 package aggregators
 
 import (
-	"gitlab.com/thorchain/thornode/common"
+	"gitlab.com/thorchain/thornode/v3/common"
 )
 
 func DexAggregatorsV136() []Aggregator {

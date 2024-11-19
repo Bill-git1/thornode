@@ -3,7 +3,7 @@ package watchers
 import (
 	"strings"
 
-	"gitlab.com/thorchain/thornode/config"
+	"gitlab.com/thorchain/thornode/v3/config"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////

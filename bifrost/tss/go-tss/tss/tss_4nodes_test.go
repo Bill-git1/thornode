@@ -19,10 +19,10 @@ import (
 	maddr "github.com/multiformats/go-multiaddr"
 	. "gopkg.in/check.v1"
 
-	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/common"
-	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/conversion"
-	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/keygen"
-	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/keysign"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/common"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/conversion"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/keygen"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/keysign"
 )
 
 const (

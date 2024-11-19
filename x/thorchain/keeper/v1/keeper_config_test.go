@@ -3,7 +3,7 @@ package keeperv1
 import (
 	. "gopkg.in/check.v1"
 
-	"gitlab.com/thorchain/thornode/constants"
+	"gitlab.com/thorchain/thornode/v3/constants"
 )
 
 type KeeperConfigSuite struct{}

@@ -3,7 +3,7 @@ package blame
 import (
 	"sync"
 
-	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/messages"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/messages"
 )
 
 type RoundInfo struct {

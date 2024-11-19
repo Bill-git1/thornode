@@ -3,7 +3,7 @@ package thorchain
 import (
 	"fmt"
 
-	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
 // EmitEventItem define the method all event need to implement

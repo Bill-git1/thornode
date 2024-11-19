@@ -3,7 +3,7 @@ package types
 import (
 	"fmt"
 
-	"gitlab.com/thorchain/thornode/common"
+	"gitlab.com/thorchain/thornode/v3/common"
 )
 
 // NewChainContract create a new instance of ChainContract

@@ -2,7 +2,7 @@ version: v1
 managed:
   enabled: true
   go_package_prefix:
-    default: gitlab.com/thorchain/thornode/api
+    default: gitlab.com/thorchain/thornode/v3/api
     except:
       - buf.build/googleapis/googleapis
       - buf.build/cosmos/gogo-proto

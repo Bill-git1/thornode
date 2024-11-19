@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/itchio/lzma"
-	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/storage"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/storage"
 	. "gopkg.in/check.v1"
 )
 

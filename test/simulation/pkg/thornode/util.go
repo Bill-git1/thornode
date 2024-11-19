@@ -3,8 +3,8 @@ package thornode
 import (
 	"fmt"
 
-	"gitlab.com/thorchain/thornode/common/cosmos"
-	openapi "gitlab.com/thorchain/thornode/openapi/gen"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	openapi "gitlab.com/thorchain/thornode/v3/openapi/gen"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////

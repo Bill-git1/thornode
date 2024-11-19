@@ -1,7 +1,7 @@
 package keeperv1
 
 import (
-	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
 // GetObservingAddresses - get list of observed addresses. This is a list of

@@ -8,7 +8,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/storage"
 	"github.com/syndtr/goleveldb/leveldb/util"
 
-	"gitlab.com/thorchain/thornode/config"
+	"gitlab.com/thorchain/thornode/v3/config"
 )
 
 func NewLevelDB(path string, opts config.LevelDBOptions) (*leveldb.DB, error) {

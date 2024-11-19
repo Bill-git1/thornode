@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "gitlab.com/thorchain/thornode/bifrost/tss/go-tss/messages";
+option go_package = "gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/messages";
 
 package messages;
 

@@ -14,7 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"gitlab.com/thorchain/thornode/app"
+	"gitlab.com/thorchain/thornode/v3/app"
 
 	"cosmossdk.io/log"
 	"cosmossdk.io/store"
@@ -45,11 +45,11 @@ import (
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 
-	"gitlab.com/thorchain/thornode/cmd/thornode/cmd"
-	"gitlab.com/thorchain/thornode/config"
-	thorlog "gitlab.com/thorchain/thornode/log"
+	"gitlab.com/thorchain/thornode/v3/cmd/thornode/cmd"
+	"gitlab.com/thorchain/thornode/v3/config"
+	thorlog "gitlab.com/thorchain/thornode/v3/log"
 
-	"gitlab.com/thorchain/thornode/x/thorchain/client/cli"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/client/cli"
 )
 
 // initCometBFTConfig helps to override default CometBFT Config values.

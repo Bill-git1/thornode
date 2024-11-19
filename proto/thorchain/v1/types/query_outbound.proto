@@ -1,7 +1,7 @@
 syntax = "proto3";
 package types;
 
-option go_package = "gitlab.com/thorchain/thornode/x/thorchain/types";
+option go_package = "gitlab.com/thorchain/thornode/v3/x/thorchain/types";
 
 import "gogoproto/gogo.proto";
 import "common/common.proto";
@@ -26,7 +26,7 @@ message QueryTxOutItem{
   string vault_pub_key = 3;
   common.Coin coin = 4 [(gogoproto.jsontag) = "coin"];
   string memo = 5;
-  repeated common.Coin max_gas = 6 [(gogoproto.castrepeated) = "gitlab.com/thorchain/thornode/common.Gas", (gogoproto.nullable) = false, (gogoproto.jsontag) = "max_gas"];
+  repeated common.Coin max_gas = 6 [(gogoproto.castrepeated) = "gitlab.com/thorchain/thornode/v3/common.Gas", (gogoproto.nullable) = false, (gogoproto.jsontag) = "max_gas"];
   int64 gas_rate = 7;
   string in_hash = 8;
   string out_hash = 9;

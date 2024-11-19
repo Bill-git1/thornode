@@ -11,8 +11,8 @@ import (
 
 	stypes "github.com/cosmos/cosmos-sdk/types"
 
-	"gitlab.com/thorchain/thornode/bifrost/metrics"
-	"gitlab.com/thorchain/thornode/common"
+	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
+	"gitlab.com/thorchain/thornode/v3/common"
 )
 
 // Broadcast Broadcasts tx to thorchain

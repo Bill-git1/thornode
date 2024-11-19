@@ -1,4 +1,4 @@
-module gitlab.com/thorchain/thornode/test/simulation
+module gitlab.com/thorchain/thornode/v3/test/simulation
 
 go 1.22.2
 
@@ -17,7 +17,7 @@ require (
 	github.com/ltcsuite/ltcd v0.20.1-beta.0.20201210074626-c807bfe31ef0
 	github.com/ltcsuite/ltcutil v1.0.2-beta
 	github.com/rs/zerolog v1.33.0
-	gitlab.com/thorchain/thornode v0.0.0-00010101000000-000000000000
+	gitlab.com/thorchain/thornode/v3 v3.0.0-00010101000000-000000000000
 	google.golang.org/grpc v1.65.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
 )
@@ -98,7 +98,7 @@ require (
 	github.com/rs/cors v1.11.1 // indirect
 	github.com/tidwall/btree v1.7.0 // indirect
 	github.com/ulikunitz/xz v0.5.11 // indirect
-	gitlab.com/thorchain/thornode/api v0.0.0-20241015194849-630f6eda4eed // indirect
+	gitlab.com/thorchain/thornode/v3/api v0.0.0-20241115175556-643fb85c32e8 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.49.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.49.0 // indirect
 	go.opentelemetry.io/otel v1.24.0 // indirect
@@ -119,7 +119,7 @@ replace (
 	github.com/btcsuite/btcd => github.com/btcsuite/btcd v0.22.1
 	github.com/cosmos/ledger-cosmos-go => gitlab.com/thorchain/ledger-thorchain-go v1.0.3
 	github.com/tendermint/go-amino => github.com/binance-chain/bnc-go-amino v0.14.1-binance.1
-	gitlab.com/thorchain/thornode => ../..
+	gitlab.com/thorchain/thornode/v3 => ../..
 )
 
 require (

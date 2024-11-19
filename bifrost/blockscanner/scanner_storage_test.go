@@ -1,7 +1,7 @@
 package blockscanner
 
 import (
-	"gitlab.com/thorchain/thornode/config"
+	"gitlab.com/thorchain/thornode/v3/config"
 	. "gopkg.in/check.v1"
 )
 

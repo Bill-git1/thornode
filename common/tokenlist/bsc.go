@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/blang/semver"
-	"gitlab.com/thorchain/thornode/common/tokenlist/bsctokens"
+	"gitlab.com/thorchain/thornode/v3/common/tokenlist/bsctokens"
 )
 
 var (

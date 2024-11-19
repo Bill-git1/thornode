@@ -2,8 +2,8 @@ package types
 
 import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"gitlab.com/thorchain/thornode/bifrost/thorclient"
-	"gitlab.com/thorchain/thornode/common"
+	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
+	"gitlab.com/thorchain/thornode/v3/common"
 )
 
 // SimTx is a struct used for simulation transactions.

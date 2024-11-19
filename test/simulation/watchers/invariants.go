@@ -10,9 +10,9 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	keeperv1 "gitlab.com/thorchain/thornode/x/thorchain/keeper/v1"
+	keeperv1 "gitlab.com/thorchain/thornode/v3/x/thorchain/keeper/v1"
 
-	. "gitlab.com/thorchain/thornode/test/simulation/pkg/types"
+	. "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/types"
 )
 
 var httpClient = &http.Client{

@@ -11,9 +11,9 @@ import (
 	"reflect"
 	"testing"
 
-	"gitlab.com/thorchain/thornode/common"
-	gen "gitlab.com/thorchain/thornode/openapi/gen"
-	types "gitlab.com/thorchain/thornode/x/thorchain/types"
+	"gitlab.com/thorchain/thornode/v3/common"
+	gen "gitlab.com/thorchain/thornode/v3/openapi/gen"
+	types "gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 
 	. "gopkg.in/check.v1"
 )

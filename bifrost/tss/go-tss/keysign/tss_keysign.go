@@ -17,12 +17,12 @@ import (
 	"github.com/rs/zerolog/log"
 	"go.uber.org/atomic"
 
-	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/blame"
-	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/common"
-	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/conversion"
-	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/messages"
-	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/p2p"
-	"gitlab.com/thorchain/thornode/bifrost/tss/go-tss/storage"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/blame"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/common"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/conversion"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/messages"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/p2p"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/storage"
 )
 
 type TssKeySign struct {

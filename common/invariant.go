@@ -1,7 +1,7 @@
 package common
 
 import (
-	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
 // borrowed and modified from cosmos types

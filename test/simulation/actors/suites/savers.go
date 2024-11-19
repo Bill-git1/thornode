@@ -1,9 +1,9 @@
 package suites
 
 import (
-	"gitlab.com/thorchain/thornode/common"
-	"gitlab.com/thorchain/thornode/test/simulation/actors/core"
-	. "gitlab.com/thorchain/thornode/test/simulation/pkg/types"
+	"gitlab.com/thorchain/thornode/v3/common"
+	"gitlab.com/thorchain/thornode/v3/test/simulation/actors/core"
+	. "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/types"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////

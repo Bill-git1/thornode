@@ -1,7 +1,7 @@
 syntax = "proto3";
 package types;
 
-option go_package = "gitlab.com/thorchain/thornode/x/thorchain/types";
+option go_package = "gitlab.com/thorchain/thornode/v3/x/thorchain/types";
 
 import "gogoproto/gogo.proto";
 import "common/common.proto";
@@ -16,7 +16,7 @@ message QueryVaultRequest{
 message QueryVaultResponse{
   int64 block_height = 1;
   string pub_key = 2;
-  repeated common.Coin coins = 3 [(gogoproto.castrepeated) = "gitlab.com/thorchain/thornode/common.Coins", (gogoproto.nullable) = false, (gogoproto.jsontag) = "coins"];
+  repeated common.Coin coins = 3 [(gogoproto.castrepeated) = "gitlab.com/thorchain/thornode/v3/common.Coins", (gogoproto.nullable) = false, (gogoproto.jsontag) = "coins"];
   string type = 4;
   string status = 5 [(gogoproto.jsontag) = "status"];
   int64 status_since = 6;

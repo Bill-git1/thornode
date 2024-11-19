@@ -5,7 +5,7 @@ import (
 
 	sdklog "cosmossdk.io/log"
 	"github.com/rs/zerolog"
-	"gitlab.com/thorchain/thornode/config"
+	"gitlab.com/thorchain/thornode/v3/config"
 )
 
 var _ sdklog.Logger = (*SdkLogWrapper)(nil)

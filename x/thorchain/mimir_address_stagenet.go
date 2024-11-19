@@ -3,7 +3,7 @@
 
 package thorchain
 
-import "gitlab.com/thorchain/thornode/config"
+import "gitlab.com/thorchain/thornode/v3/config"
 
 // ADMINS hard coded admin address
 var ADMINS = []string{}

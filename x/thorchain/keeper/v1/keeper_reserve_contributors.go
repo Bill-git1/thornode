@@ -1,8 +1,8 @@
 package keeperv1
 
 import (
-	"gitlab.com/thorchain/thornode/common"
-	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/common"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
 // AddPoolFeeToReserve add fee to reserve, the fee is always in RUNE

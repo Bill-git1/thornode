@@ -6,7 +6,7 @@ import (
 
 	b64 "encoding/base64"
 
-	"gitlab.com/thorchain/thornode/common"
+	"gitlab.com/thorchain/thornode/v3/common"
 )
 
 // NewTHORName create a new instance of THORName

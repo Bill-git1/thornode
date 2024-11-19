@@ -11,7 +11,7 @@ import (
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
-	thorchainKeeper "gitlab.com/thorchain/thornode/x/thorchain/keeper"
+	thorchainKeeper "gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
 )
 
 type AppKeepers struct {

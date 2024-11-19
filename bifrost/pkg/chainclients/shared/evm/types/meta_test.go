@@ -7,7 +7,7 @@ import (
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	. "gopkg.in/check.v1"
 
-	stypes "gitlab.com/thorchain/thornode/bifrost/thorclient/types"
+	stypes "gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
 )
 
 func Test(t *testing.T) { TestingT(t) }

@@ -7,9 +7,9 @@ import (
 
 	"github.com/syndtr/goleveldb/leveldb"
 
-	"gitlab.com/thorchain/thornode/bifrost/db"
-	"gitlab.com/thorchain/thornode/bifrost/thorclient/types"
-	"gitlab.com/thorchain/thornode/config"
+	"gitlab.com/thorchain/thornode/v3/bifrost/db"
+	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
+	"gitlab.com/thorchain/thornode/v3/config"
 )
 
 // ObserverStorage save the ondeck tx in item to key value store , in case bifrost restart

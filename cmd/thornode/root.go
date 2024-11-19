@@ -19,10 +19,10 @@ import (
 	txmodule "github.com/cosmos/cosmos-sdk/x/auth/tx/config"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
-	"gitlab.com/thorchain/thornode/app"
-	"gitlab.com/thorchain/thornode/app/params"
-	prefix "gitlab.com/thorchain/thornode/cmd"
-	thorconfig "gitlab.com/thorchain/thornode/config"
+	"gitlab.com/thorchain/thornode/v3/app"
+	"gitlab.com/thorchain/thornode/v3/app/params"
+	prefix "gitlab.com/thorchain/thornode/v3/cmd"
+	thorconfig "gitlab.com/thorchain/thornode/v3/config"
 )
 
 // NewRootCmd creates a new root command for chain app. It is called once in the

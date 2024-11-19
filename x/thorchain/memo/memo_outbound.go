@@ -3,7 +3,7 @@ package thorchain
 import (
 	"fmt"
 
-	"gitlab.com/thorchain/thornode/common"
+	"gitlab.com/thorchain/thornode/v3/common"
 )
 
 type OutboundMemo struct {

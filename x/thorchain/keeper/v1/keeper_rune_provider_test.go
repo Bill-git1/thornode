@@ -3,7 +3,7 @@ package keeperv1
 import (
 	. "gopkg.in/check.v1"
 
-	cosmos "gitlab.com/thorchain/thornode/common/cosmos"
+	cosmos "gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
 type KeeperRUNEProviderSuite struct{}

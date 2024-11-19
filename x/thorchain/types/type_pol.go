@@ -1,7 +1,7 @@
 package types
 
 import (
-	cosmos "gitlab.com/thorchain/thornode/common/cosmos"
+	cosmos "gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
 // NewProtocolOwnedLiquidity create a new instance ProtocolOwnedLiquidity it is empty though

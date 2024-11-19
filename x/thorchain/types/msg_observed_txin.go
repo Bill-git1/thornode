@@ -7,8 +7,8 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	"gitlab.com/thorchain/thornode/api/types"
-	cosmos "gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/api/types"
+	cosmos "gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
 var (

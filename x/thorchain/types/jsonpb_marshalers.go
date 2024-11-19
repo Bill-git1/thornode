@@ -8,8 +8,8 @@ import (
 
 	"github.com/cosmos/gogoproto/jsonpb"
 
-	"gitlab.com/thorchain/thornode/common"
-	openapi "gitlab.com/thorchain/thornode/openapi/gen"
+	"gitlab.com/thorchain/thornode/v3/common"
+	openapi "gitlab.com/thorchain/thornode/v3/openapi/gen"
 )
 
 // Implementation of JSONPBMarshaler for all query types that require it
@@ -725,9 +725,9 @@ func castTxStagesResponse(in QueryTxStagesResponse) (result openapi.TxStagesResp
 		}
 		if !in.OutboundSigned.Completed {
 			result.OutboundSigned.ScheduledOutboundHeight = &in.OutboundSigned.ScheduledOutboundHeight
-			if in.OutboundSigned.XBlocksSinceScheduled != nil {
+			if in.OutboundSigned.BlocksSinceScheduled != nil {
 				blocksSinceScheduled := in.OutboundSigned.GetBlocksSinceScheduled()
-				result.OutboundSigned.BlocksSinceScheduled = &blocksSinceScheduled
+				result.OutboundSigned.BlocksSinceScheduled = &blocksSinceScheduled.Value
 			}
 		}
 	}

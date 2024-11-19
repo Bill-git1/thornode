@@ -3,7 +3,7 @@ package types
 import (
 	"github.com/ethereum/go-ethereum/core/types"
 
-	stypes "gitlab.com/thorchain/thornode/bifrost/thorclient/types"
+	stypes "gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
 )
 
 type SignedTxItem struct {

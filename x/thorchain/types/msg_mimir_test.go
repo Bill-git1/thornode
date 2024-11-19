@@ -5,7 +5,7 @@ import (
 
 	se "github.com/cosmos/cosmos-sdk/types/errors"
 
-	cosmos "gitlab.com/thorchain/thornode/common/cosmos"
+	cosmos "gitlab.com/thorchain/thornode/v3/common/cosmos"
 
 	. "gopkg.in/check.v1"
 )

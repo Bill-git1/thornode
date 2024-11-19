@@ -16,11 +16,11 @@ import (
 	"github.com/itchio/lzma"
 	"github.com/rs/zerolog/log"
 
-	"gitlab.com/thorchain/thornode/bifrost/tss"
-	"gitlab.com/thorchain/thornode/cmd"
-	openapi "gitlab.com/thorchain/thornode/openapi/gen"
-	"gitlab.com/thorchain/thornode/tools/thorscan"
-	"gitlab.com/thorchain/thornode/x/thorchain"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss"
+	"gitlab.com/thorchain/thornode/v3/cmd"
+	openapi "gitlab.com/thorchain/thornode/v3/openapi/gen"
+	"gitlab.com/thorchain/thornode/v3/tools/thorscan"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////

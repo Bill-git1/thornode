@@ -3,7 +3,7 @@ package thorchain
 import (
 	"fmt"
 
-	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
 type TypedHandler[M cosmos.Msg] interface {

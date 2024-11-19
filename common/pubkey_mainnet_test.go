@@ -10,7 +10,7 @@ import (
 
 	"github.com/cometbft/cometbft/crypto/secp256k1"
 	"github.com/cosmos/cosmos-sdk/crypto/codec"
-	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
 func (s *PubKeyTestSuite) TestPubKeyGetAddress(c *C) {

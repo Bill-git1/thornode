@@ -3,7 +3,7 @@ package keeperv1
 import (
 	"fmt"
 
-	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
 func (k KVStore) setNetwork(ctx cosmos.Context, key string, record Network) {

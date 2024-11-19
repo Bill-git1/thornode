@@ -12,10 +12,10 @@ import (
 	"time"
 
 	ctypes "github.com/cosmos/cosmos-sdk/types"
-	"gitlab.com/thorchain/thornode/app"
-	"gitlab.com/thorchain/thornode/app/params"
-	"gitlab.com/thorchain/thornode/constants"
-	openapi "gitlab.com/thorchain/thornode/openapi/gen"
+	"gitlab.com/thorchain/thornode/v3/app"
+	"gitlab.com/thorchain/thornode/v3/app/params"
+	"gitlab.com/thorchain/thornode/v3/constants"
+	openapi "gitlab.com/thorchain/thornode/v3/openapi/gen"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"

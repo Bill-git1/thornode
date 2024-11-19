@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sync"
 
-	"gitlab.com/thorchain/thornode/bifrost/thorclient"
-	"gitlab.com/thorchain/thornode/constants"
+	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
+	"gitlab.com/thorchain/thornode/v3/constants"
 )
 
 // ConstantsProvider which will query thorchain to get the constants value per request

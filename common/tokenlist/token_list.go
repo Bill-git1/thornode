@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/blang/semver"
-	"gitlab.com/thorchain/thornode/common"
+	"gitlab.com/thorchain/thornode/v3/common"
 )
 
 // ERC20Token is a struct to represent the token

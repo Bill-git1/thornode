@@ -70,13 +70,12 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/cosmos/gogoproto/proto"
 	"github.com/spf13/cast"
-
-	appparams "gitlab.com/thorchain/thornode/app/params"
-	"gitlab.com/thorchain/thornode/openapi"
-	"gitlab.com/thorchain/thornode/x/thorchain"
-	thorchainkeeper "gitlab.com/thorchain/thornode/x/thorchain/keeper"
-	thorchainkeeperv1 "gitlab.com/thorchain/thornode/x/thorchain/keeper/v1"
-	thorchaintypes "gitlab.com/thorchain/thornode/x/thorchain/types"
+	appparams "gitlab.com/thorchain/thornode/v3/app/params"
+	"gitlab.com/thorchain/thornode/v3/openapi"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain"
+	thorchainkeeper "gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
+	thorchainkeeperv1 "gitlab.com/thorchain/thornode/v3/x/thorchain/keeper/v1"
+	thorchaintypes "gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 const (

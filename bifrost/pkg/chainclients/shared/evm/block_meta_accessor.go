@@ -1,7 +1,7 @@
 package evm
 
 import (
-	evmtypes "gitlab.com/thorchain/thornode/bifrost/pkg/chainclients/shared/evm/types"
+	evmtypes "gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/evm/types"
 )
 
 // BlockMetaAccessor define methods need to access block meta storage

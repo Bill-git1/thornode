@@ -3,7 +3,7 @@ package gaia
 import (
 	"sync"
 
-	"gitlab.com/thorchain/thornode/common"
+	"gitlab.com/thorchain/thornode/v3/common"
 )
 
 type CosmosMetadata struct {

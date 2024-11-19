@@ -7,8 +7,8 @@ import (
 	_ "embed"
 	"encoding/json"
 
-	"gitlab.com/thorchain/thornode/common"
-	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/common"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
 // (No thor -> tthor conversion necessary for regression test performance check only,

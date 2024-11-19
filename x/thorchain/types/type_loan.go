@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	proto "github.com/cosmos/gogoproto/proto"
-	"gitlab.com/thorchain/thornode/common"
-	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/common"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
 var _ proto.Message = &Loan{}

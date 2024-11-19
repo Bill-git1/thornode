@@ -1,4 +1,4 @@
-package v137
+package v3
 
 import (
 	"context"
@@ -15,12 +15,12 @@ import (
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	"gitlab.com/thorchain/thornode/app/upgrades"
-	keeperv1 "gitlab.com/thorchain/thornode/x/thorchain/keeper/v1"
+	"gitlab.com/thorchain/thornode/v3/app/upgrades"
+	keeperv1 "gitlab.com/thorchain/thornode/v3/x/thorchain/keeper/v1"
 )
 
 // UpgradeName is the name of this specific software upgrade used on-chain.
-const UpgradeName = "2.137.0"
+const UpgradeName = "3.0.0"
 
 // NewUpgrade constructor
 func NewUpgrade() upgrades.Upgrade {

@@ -15,12 +15,12 @@ import (
 	protov2 "google.golang.org/protobuf/proto"
 
 	"github.com/rs/zerolog/log"
-	"gitlab.com/thorchain/thornode/bifrost/metrics"
-	"gitlab.com/thorchain/thornode/bifrost/thorclient"
-	"gitlab.com/thorchain/thornode/common"
-	"gitlab.com/thorchain/thornode/config"
+	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
+	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
+	"gitlab.com/thorchain/thornode/v3/common"
+	"gitlab.com/thorchain/thornode/v3/config"
 
-	"gitlab.com/thorchain/thornode/cmd"
+	"gitlab.com/thorchain/thornode/v3/cmd"
 	. "gopkg.in/check.v1"
 )
 

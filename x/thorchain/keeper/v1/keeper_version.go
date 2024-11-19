@@ -3,7 +3,7 @@ package keeperv1
 import (
 	"github.com/blang/semver"
 
-	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
 // GetVersionWithCtx returns the version with the given context,

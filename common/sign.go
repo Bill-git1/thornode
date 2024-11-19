@@ -5,8 +5,7 @@ import (
 	"os"
 
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
-
-	"gitlab.com/thorchain/thornode/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
 // Sign an array of bytes.

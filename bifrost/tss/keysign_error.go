@@ -3,9 +3,9 @@ package tss
 import (
 	"fmt"
 
-	tssMessages "gitlab.com/thorchain/thornode/bifrost/tss/go-tss/messages"
+	tssMessages "gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/messages"
 
-	"gitlab.com/thorchain/thornode/x/thorchain/types"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 // KeysignError is a custom error create to include which party to blame

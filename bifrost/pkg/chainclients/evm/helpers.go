@@ -10,7 +10,7 @@ import (
 	ecore "github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/txpool"
 	ethclient "github.com/ethereum/go-ethereum/ethclient"
-	"gitlab.com/thorchain/thornode/common"
+	"gitlab.com/thorchain/thornode/v3/common"
 )
 
 func isAcceptableError(err error) bool {

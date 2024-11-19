@@ -10,7 +10,7 @@ import (
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 
-	"gitlab.com/thorchain/thornode/app/params"
+	"gitlab.com/thorchain/thornode/v3/app/params"
 )
 
 const (

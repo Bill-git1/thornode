@@ -16,7 +16,10 @@ import (
 	"golang.org/x/tools/go/ast/inspector"
 )
 
-var reVersionedName = regexp.MustCompile(`.*V([0-9]+)$`)
+// [1] == major || minor (legacy)
+// [3]? == minor (new)
+// [4]? == patch (new)
+var reVersionedName = regexp.MustCompile(`.*V([0-9]+)(_([0-9]+)_([0-9]+))?$`)
 
 // -------------------------------------------------------------------------------------
 // MapIteration
@@ -135,13 +138,16 @@ func VersionSwitch(pass *analysis.Pass) (interface{}, error) {
 				continue
 			}
 
+			version = strings.Trim(version, "\"")
+
 			// ensure version switch is using GTE
 			if cmpFn != "GTE" {
 				pass.Reportf(parent.Pos(), "must use GTE in version switch")
 			}
 
 			// extract the minor version
-			minor := strings.Split(version, ".")[1]
+			sVer := strings.Split(version, ".")
+			major, minor, patch := sVer[0], sVer[1], sVer[2]
 
 			// extract versioned functions called in the case body
 			for _, s := range n.Body {
@@ -163,8 +169,29 @@ func VersionSwitch(pass *analysis.Pass) (interface{}, error) {
 
 						// verify function versions match
 						v := reVersionedName.FindStringSubmatch(vFn)
-						if len(v) == 2 && v[1] != minor {
-							pass.Reportf(e.Pos(), "bad version switch body: %s != %s", v[1], minor)
+
+						if len(v) == 5 {
+							if v[2] == "" {
+								// legacy
+								vMinor := v[1]
+								fmt.Printf("v: %s, %s, %s\n", vFn, vMinor, minor)
+								if vMinor != minor {
+									pass.Reportf(e.Pos(), "legacy minor version does not match for versioned handler: %s != %s", vMinor, minor)
+								}
+								fmt.Printf("legacy good version switch body: %s, %s\n", vFn, v[1])
+							} else {
+								// new
+								vMajor, vMinor, vPatch := v[1], v[3], v[4]
+								if vMajor != major {
+									pass.Reportf(e.Pos(), "major version does not match for versioned handler: %s != %s", vMajor, major)
+								}
+								if vMinor != minor {
+									pass.Reportf(e.Pos(), "minor version does not match for versioned handler: %s != %s", vMinor, minor)
+								}
+								if vPatch != patch {
+									pass.Reportf(e.Pos(), "patch version does not match for versioned handler: %s != %s", vPatch, patch)
+								}
+							}
 						}
 					}
 					return true
