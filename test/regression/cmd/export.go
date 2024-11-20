@@ -35,7 +35,7 @@ func export(out io.Writer, path string, routine int, failExportInvariants bool) 
 
 	// export state
 	localLog.Debug().Msg("Exporting state")
-	cmd := exec.Command("thornode", "export")
+	cmd := exec.Command("thornode", "export", "--log_level=disabled")
 	cmd.Env = append(os.Environ(), "HOME="+home)
 	exportOut, err := cmd.CombinedOutput()
 	if err != nil {
