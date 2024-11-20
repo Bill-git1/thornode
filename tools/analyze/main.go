@@ -16,7 +16,7 @@ import (
 	"golang.org/x/tools/go/ast/inspector"
 )
 
-// [1] == major || minor (legacy)
+// [1] == major(new) || minor (legacy)
 // [3]? == minor (new)
 // [4]? == patch (new)
 var reVersionedName = regexp.MustCompile(`.*V([0-9]+)(_([0-9]+)_([0-9]+))?$`)
@@ -174,11 +174,9 @@ func VersionSwitch(pass *analysis.Pass) (interface{}, error) {
 							if v[2] == "" {
 								// legacy
 								vMinor := v[1]
-								fmt.Printf("v: %s, %s, %s\n", vFn, vMinor, minor)
 								if vMinor != minor {
 									pass.Reportf(e.Pos(), "legacy minor version does not match for versioned handler: %s != %s", vMinor, minor)
 								}
-								fmt.Printf("legacy good version switch body: %s, %s\n", vFn, v[1])
 							} else {
 								// new
 								vMajor, vMinor, vPatch := v[1], v[3], v[4]

@@ -5,7 +5,7 @@ set -euo pipefail
 # This script compares versioned functions to the develop branch to ensure no logic
 # changes in historical versions that would cause consensus failure.
 
-VERSION=$(awk -F. '{ print $2 }' version)
+VERSION=$(cat version)
 CI_MERGE_REQUEST_TITLE=${CI_MERGE_REQUEST_TITLE-}
 
 # skip for develop
@@ -17,7 +17,7 @@ fi
 # skip for module path version updates
 cp go.mod go.mod.current
 git checkout origin/develop go.mod
-if [ "$(head -n1 go.mod))" != "$(head -n1 go.mod.current)" ]; then
+if [ "$(head -n1 go.mod)" != "$(head -n1 go.mod.current)" ]; then
   echo "Detected module path change"
   rm -f go.mod.current && git reset go.mod && git restore go.mod
   if [[ $CI_MERGE_REQUEST_TITLE == *"#check-lint-warning"* ]]; then

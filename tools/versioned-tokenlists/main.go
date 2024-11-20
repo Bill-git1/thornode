@@ -15,10 +15,10 @@ import (
 // Flags
 // -------------------------------------------------------------------------------------
 
-var flagVersion *int
+var flagVersion *string
 
 func init() {
-	flagVersion = flag.Int("version", 0, "current version allowing changes")
+	flagVersion = flag.String("version", "", "current version allowing changes")
 }
 
 // -------------------------------------------------------------------------------------
@@ -35,6 +35,11 @@ func check(chain common.Chain) {
 		panic(err)
 	}
 
+	currentVersion, err := semver.Parse(*flagVersion)
+	if err != nil {
+		panic(err)
+	}
+
 	for {
 		fmt.Println("Check:", chain, version)
 
@@ -46,7 +51,12 @@ func check(chain common.Chain) {
 
 		// iterate versions up to current
 		version.Minor++
-		if version.Minor >= uint64(*flagVersion) {
+		if version.Major == 2 && version.Minor == 137 {
+			// go to v3
+			version.Major++
+			version.Minor = 0
+		}
+		if version.GTE(currentVersion) {
 			break
 		}
 	}
@@ -58,7 +68,7 @@ func check(chain common.Chain) {
 
 func main() {
 	flag.Parse()
-	if *flagVersion == 0 {
+	if *flagVersion == "" {
 		panic("version is required")
 	}
 

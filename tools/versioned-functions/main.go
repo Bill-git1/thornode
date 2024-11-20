@@ -14,7 +14,6 @@ import (
 	"reflect"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 )
 
@@ -22,10 +21,10 @@ import (
 // Flags
 // -------------------------------------------------------------------------------------
 
-var flagVersion *int
+var flagVersion *string
 
 func init() {
-	flagVersion = flag.Int("version", 0, "current version allowing changes")
+	flagVersion = flag.String("version", "", "current version allowing changes")
 }
 
 // -------------------------------------------------------------------------------------
@@ -33,8 +32,11 @@ func init() {
 // -------------------------------------------------------------------------------------
 
 var (
-	reCurrentVersionName   = regexp.MustCompile(`.*VCUR$`)
-	reVersionedName        = regexp.MustCompile(`.*V([0-9]+)$`)
+	reCurrentVersionName = regexp.MustCompile(`.*VCUR$`)
+	// [1] == major(new) || minor (legacy)
+	// [3]? == minor (new)
+	// [4]? == patch (new)
+	reVersionedName        = regexp.MustCompile(`.*V([0-9]+)(_([0-9]+)_([0-9]+))?$`)
 	reNonMainnetBuildFlags = regexp.MustCompile(`([^!](test|mock|stage)net|[^!]regtest)`)
 	currentManagerVersions = map[string]string{}
 	skipRootPackages       = map[string]bool{
@@ -48,17 +50,18 @@ var (
 	}
 )
 
-func isVersionedFunction(node ast.Node, fset *token.FileSet) (bool, int) {
+func isVersionedFunction(node ast.Node, fset *token.FileSet) (bool, string) {
 	n, ok := node.(*ast.FuncDecl)
-	var version string
+	var version []string
 
 	switch {
 	case !ok:
-		return false, 0
+		return false, ""
 
 	case reVersionedName.MatchString(n.Name.Name):
+		submatch := reVersionedName.FindStringSubmatch(n.Name.Name)
 		// extract the version from the function name
-		version = reVersionedName.FindStringSubmatch(n.Name.Name)[1]
+		version = []string{submatch[1], submatch[3], submatch[4]}
 
 	case reCurrentVersionName.MatchString(n.Name.Name):
 		// if this is a current version get the mapping from managers.go
@@ -66,11 +69,13 @@ func isVersionedFunction(node ast.Node, fset *token.FileSet) (bool, int) {
 		if strings.HasPrefix(manager, "new") {
 			manager = strings.TrimPrefix(n.Name.Name, "new")
 		}
-		version, ok = currentManagerVersions[manager]
+		// trunk-ignore(golangci-lint/govet): shadow
+		v, ok := currentManagerVersions[manager]
 		if !ok {
 			fmt.Println("Error: could not find current version for", n.Name.Name)
 			os.Exit(1)
 		}
+		version = strings.Split(v, ".")
 
 	case !reVersionedName.MatchString(n.Name.Name) && !reCurrentVersionName.MatchString(n.Name.Name):
 		// search receiver for a versioned struct name
@@ -81,30 +86,36 @@ func isVersionedFunction(node ast.Node, fset *token.FileSet) (bool, int) {
 
 				// extract the version from the struct type
 				if reVersionedName.MatchString(buf.String()) {
-					version = reVersionedName.FindStringSubmatch(buf.String())[1]
+					submatch := reVersionedName.FindStringSubmatch(buf.String())
+					version = []string{submatch[1], submatch[3], submatch[4]}
 					break
 				}
 
 				// if this is a current version get the mapping from managers.go
 				if reCurrentVersionName.MatchString(buf.String()) {
-					version, ok = currentManagerVersions[strings.TrimPrefix(buf.String(), "*")]
+					// trunk-ignore(golangci-lint/govet): shadow
+					v, ok := currentManagerVersions[strings.TrimPrefix(buf.String(), "*")]
 					if !ok {
 						fmt.Println("Error: could not find current version for", buf.String())
 						os.Exit(1)
 					}
+					version = strings.Split(v, ".")
 					break
 				}
 			}
 		}
 
 		// if version was not found in receivers it is not versioned
-		if version == "" {
-			return false, 0
+		if len(version) == 0 {
+			return false, ""
 		}
 	}
 
-	fnVersion, _ := strconv.Atoi(version)
-	return true, fnVersion
+	if len(version) == 1 {
+		return true, fmt.Sprintf("2.%s.0", version[0])
+	}
+
+	return true, fmt.Sprintf("%s.%s.%s", version[0], version[1], version[2])
 }
 
 func hasBuildFlags(file *ast.File) bool {
