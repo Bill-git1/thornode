@@ -1,9 +1,8 @@
-#!/bin/sh
+#!/bin/bash
 
 set -o pipefail
 
 # default ulimit is set too low for thornode in some environments
-# trunk-ignore(shellcheck/SC3045): alpine sh ulimit supports -n
 ulimit -n 65535
 
 PORT_P2P=26656

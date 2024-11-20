@@ -84,24 +84,12 @@ func Tokens(chain common.Chain) map[common.Asset]tokenlist.ERC20Token {
 	tokenMap := make(map[common.Asset]tokenlist.ERC20Token)
 
 	// gather the available tokens
-	var tokens []tokenlist.ERC20Token
-	switch chain {
-	case common.ETHChain, common.BSCChain:
-		tokens = []tokenlist.ERC20Token{
-			{
-				Address:  "0x52C84043CD9c865236f11d9Fc9F56aa003c1f922",
-				Symbol:   "TKN",
-				Decimals: 18,
-			},
-		}
-	case common.AVAXChain:
-		tokens = []tokenlist.ERC20Token{
-			{
-				Address:  "0x17aB05351fC94a1a67Bf3f56DdbB941aE6c63E25",
-				Symbol:   "TKN",
-				Decimals: 18,
-			},
-		}
+	tokens := []tokenlist.ERC20Token{
+		{
+			Address:  "0x17aB05351fC94a1a67Bf3f56DdbB941aE6c63E25",
+			Symbol:   "TKN",
+			Decimals: 18,
+		},
 	}
 
 	// create mapping of asset to token

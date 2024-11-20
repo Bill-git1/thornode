@@ -13,7 +13,7 @@ import requests
 import retry
 from eth_typing.evm import ChecksumAddress
 from web3 import HTTPProvider, Web3
-from web3.middleware.geth_poa import geth_poa_middleware
+from web3.middleware import ExtraDataToPOAMiddleware, SignAndSendRawMiddlewareBuilder
 from web3.types import TxParams, Wei
 
 ########################################################################################
@@ -29,7 +29,9 @@ class EVMSetupTool:
 
     default_gas = 65000
     gas_per_byte = 68
-    zero_address = Web3.toChecksumAddress("0x0000000000000000000000000000000000000000")
+    zero_address = Web3.to_checksum_address(
+        "0x0000000000000000000000000000000000000000"
+    )
     headers = {"content-type": "application/json", "cache-control": "no-cache"}
     admin_key = "56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027"
     simulation_master = "0xEE4eaA642b992412F628fF4Cec1C96cf2Fd0eA4D"
@@ -40,37 +42,32 @@ class EVMSetupTool:
         self.chain = chain
         self.rpc_url = url
         self.web3 = Web3(HTTPProvider(self.rpc_url))
-        self.web3.middleware_onion.inject(geth_poa_middleware, layer=0)
-
-        # on AVAX the admin key is the local network funded account
-        if chain == "AVAX" and len(self.web3.geth.personal.list_accounts()) == 0:
-            self.web3.geth.personal.import_raw_key(self.admin_key, "")
-
-        # fund simulation account with 1m ETH
-        coinbase_addr = self.web3.geth.personal.list_accounts()[0]
-        self.fund_account(coinbase_addr, self.simulation_master, int(1000000e18))
+        self.web3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
 
         # get admin account address
-        self.addr = self.web3.eth.account.privateKeyToAccount(self.admin_key).address
+        self.account = self.web3.eth.account.from_key(self.admin_key)
+        self.addr = self.account.address
+
+        # fund admin admin account with 10M ETH
+        if self.chain != "AVAX":
+            coinbase_addr = self.web3.eth.accounts[0]
+            self.fund_account(coinbase_addr, self.addr, int(10000000e18))  # 10M ETH
+
+        # setup default account signing
+        self.web3.eth.default_account = self.addr
+        self.web3.middleware_onion.inject(
+            SignAndSendRawMiddlewareBuilder.build(self.account), layer=0
+        )
+
+        # fund simulation account with 1m ETH
+        self.fund_account(self.addr, self.simulation_master, int(1000000e18))
 
         # done if this is hardhat
         if self.web3.net.version == "31337":
             return
 
-        # check if account already exists
-        if self.addr not in self.web3.geth.personal.list_accounts():
-            print("importing admin key...")
-            self.web3.geth.personal.import_raw_key(self.admin_key, "")
-
-        # fund admin account on chains other than AVAX since coinbase is random
-        if self.chain != "AVAX" and self.web3.eth.getBalance(self.addr) == 0:
-            self.fund_account(coinbase_addr, self.addr, int(1000e18))  # 1k ETH
-
-        balance = self.web3.eth.getBalance(self.addr)
+        balance = self.web3.eth.get_balance(self.addr)
         print(f"{self.addr} balance: {balance}")
-
-        self.web3.eth.defaultAccount = self.addr
-        self.web3.geth.personal.unlock_account(self.addr, "")
 
     def gas_asset(self):
         if self.chain == "AVAX":
@@ -85,15 +82,15 @@ class EVMSetupTool:
     def fund_account(self, from_address, to_address, amount):
         print(f"funding account: {from_address} -> {to_address} {amount}")
         tx: TxParams = {
-            "from": Web3.toChecksumAddress(from_address),
-            "to": Web3.toChecksumAddress(to_address),
+            "from": Web3.to_checksum_address(from_address),
+            "to": Web3.to_checksum_address(to_address),
             "value": amount,
             "gas": self.calculate_gas(""),
         }
 
         # wait for the transaction to be mined
-        tx_hash = self.web3.geth.personal.send_transaction(tx, "")
-        receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
+        tx_hash = self.web3.eth.send_transaction(tx)
+        receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
         print(f"fund account tx receipt: {receipt}")
 
     def calculate_gas(self, msg) -> Wei:
@@ -107,19 +104,19 @@ class EVMSetupTool:
     def deploy_token(self):
         print("deploying token contract...")
         tx_hash = self.token_contract().constructor().transact()
-        receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
-        print(f"Token Contract Address: {receipt.contractAddress}")
-        if receipt.status != 1:
+        receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
+        print(f"Token Contract Address: {receipt.get('contractAddress')}")
+        if receipt.get("status") != 1:
             raise Exception(f"failed: {receipt}")
 
         # send half the balance to simulation master
-        token = self.token_contract(address=receipt.contractAddress)
+        token = self.token_contract(address=receipt.get("contractAddress"))
         tx_hash = token.functions.transfer(
-            Web3.toChecksumAddress(self.simulation_master), int(500_000e18)
+            Web3.to_checksum_address(self.simulation_master), int(500_000e18)
         ).transact()
-        receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
+        receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
         print(f"Transfer to Simulation Master Receipt: {receipt}")
-        if receipt.status != 1:
+        if receipt.get("status") != 1:
             raise Exception(f"failed: {receipt}")
 
     @retry.retry(Exception, delay=1, backoff=2, tries=3)
@@ -127,17 +124,17 @@ class EVMSetupTool:
         print("deploying router contract...")
         router, args = self.router_contract()
         tx_hash = router.constructor(*args).transact()
-        receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
-        print(f"Router Contract Address: {receipt.contractAddress}")
-        if receipt.status != 1:
+        receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
+        print(f"Router Contract Address: {receipt.get('contractAddress')}")
+        if receipt.get("status") != 1:
             raise Exception(f"failed: {receipt}")
 
     def deploy_dex(self):
         print("deploying dex contract...")
         dex, args = self.dex_contract()
         tx_hash = dex.constructor(*args).transact()
-        receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
-        print(f"Dex Contract Address: {receipt.contractAddress}")
+        receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
+        print(f"Dex Contract Address: {receipt.get('contractAddress')}")
 
     # --------------------------------- helpers ---------------------------------
 
@@ -186,7 +183,7 @@ class EVMSetupTool:
         data = requests.get("http://localhost:1317/thorchain/inbound_addresses").json()
         for vault in data:
             if vault["chain"] == self.chain:
-                return Web3.toChecksumAddress(vault["address"])
+                return Web3.to_checksum_address(vault["address"])
 
         raise ValueError(f"could not find {self.chain} vault")
 
@@ -195,7 +192,7 @@ class EVMSetupTool:
         data = requests.get("http://localhost:1317/thorchain/inbound_addresses").json()
         for vault in data:
             if vault["chain"] == self.chain:
-                return Web3.toChecksumAddress(vault["router"])
+                return Web3.to_checksum_address(vault["router"])
 
         raise ValueError(f"could not find {self.chain} router")
 
@@ -205,8 +202,12 @@ class EVMSetupTool:
         if args.token_address is None:
             raise ValueError("token-address is required")
 
-        token = self.token_contract(address=Web3.toChecksumAddress(args.token_address))
-        balance = token.functions.balanceOf(Web3.toChecksumAddress(args.address)).call()
+        token = self.token_contract(
+            address=Web3.to_checksum_address(args.token_address)
+        )
+        balance = token.functions.balanceOf(
+            Web3.to_checksum_address(args.address)
+        ).call()
         print(f"Token Balance: {balance}")
 
     def swap_in(self, args):
@@ -223,63 +224,65 @@ class EVMSetupTool:
         agg = self.web3.eth.contract(address=args.agg_address, abi=abi)
 
         # approve spending
-        token = self.token_contract(address=Web3.toChecksumAddress(args.token_address))
+        token = self.token_contract(
+            address=Web3.to_checksum_address(args.token_address)
+        )
         approve_tx_hash = token.functions.approve(
             agg.functions.tokenTransferProxy().call(), args.amount
         ).transact()
-        approve_receipt = self.web3.eth.waitForTransactionReceipt(approve_tx_hash)
+        approve_receipt = self.web3.eth.wait_for_transaction_receipt(approve_tx_hash)
         print(f"Approve Spending Receipt: {approve_receipt}")
 
         # swap in
         tx_hash = agg.functions.swapIn(
-            Web3.toChecksumAddress(self.get_router_addr()),
-            Web3.toChecksumAddress(self.get_vault_addr()),
+            Web3.to_checksum_address(self.get_router_addr()),
+            Web3.to_checksum_address(self.get_vault_addr()),
             f"SWAP:THOR.RUNE:{args.thor_address}",
-            Web3.toChecksumAddress(args.token_address),
+            Web3.to_checksum_address(args.token_address),
             args.amount,
             0,
             9999999999,
         ).transact()
 
-        receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
+        receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
         print(f"Swap-In Receipt: {receipt}")
 
     def deposit(self, args):
         router, _ = self.router_contract(address=self.get_router_addr())
         memo = args.memo or f"ADD:{self.gas_asset()}:{args.thor_address}"
         tx_hash = router.functions.deposit(
-            Web3.toChecksumAddress(self.get_vault_addr()),
+            Web3.to_checksum_address(self.get_vault_addr()),
             self.zero_address,
             0,
             memo,
         ).transact({"value": Wei(args.amount)})
-        receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
+        receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
         print(f"Deposit Receipt: {receipt}")
 
     def deposit_from_dex(self, args):
         dex, _ = self.dex_contract(address=args.dex_address)
         memo = args.memo or f"=:THOR.RUNE:{args.thor_address}"
         tx_hash = dex.functions.callDeposit(
-            Web3.toChecksumAddress(self.get_router_addr()),
-            Web3.toChecksumAddress(self.get_vault_addr()),
+            Web3.to_checksum_address(self.get_router_addr()),
+            Web3.to_checksum_address(self.get_vault_addr()),
             self.zero_address,
             0,
             memo,
         ).transact({"value": Wei(args.amount)})
-        receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
+        receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
         print(f"Deposit from DEX Receipt: {receipt}")
 
     def deposit_from_dex_with_logs(self, args):
         dex, _ = self.dex_contract(address=args.dex_address)
         memo = args.memo or f"=:THOR.RUNE:{args.thor_address}"
         tx_hash = dex.functions.callDepositWithLogs(
-            Web3.toChecksumAddress(self.get_router_addr()),
-            Web3.toChecksumAddress(self.get_vault_addr()),
+            Web3.to_checksum_address(self.get_router_addr()),
+            Web3.to_checksum_address(self.get_vault_addr()),
             self.zero_address,
             0,
             memo,
         ).transact({"value": Wei(args.amount)})
-        receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
+        receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
         print(f"Deposit from DEX Receipt: {receipt}")
 
     def deposit_token(self, args):
@@ -290,11 +293,13 @@ class EVMSetupTool:
 
         router, _ = self.router_contract(address=self.get_router_addr())
 
-        token = self.token_contract(address=Web3.toChecksumAddress(args.token_address))
+        token = self.token_contract(
+            address=Web3.to_checksum_address(args.token_address)
+        )
         tx_hash = token.functions.approve(
             self.get_router_addr(), args.amount
         ).transact()
-        receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
+        receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
         print(f"Approve Receipt: {receipt}")
 
         memo = (
@@ -303,11 +308,11 @@ class EVMSetupTool:
         )
         tx_hash = router.functions.deposit(
             self.get_vault_addr(),
-            Web3.toChecksumAddress(args.token_address),
+            Web3.to_checksum_address(args.token_address),
             args.amount,
             memo,
         ).transact()
-        receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
+        receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
         print(f"Deposit Receipt: {receipt}")
 
     def vault_allowance(self, args):
@@ -317,7 +322,7 @@ class EVMSetupTool:
         router, _ = self.router_contract(address=self.get_router_addr())
         result = router.functions.vaultAllowance(
             self.get_vault_addr(),
-            Web3.toChecksumAddress(args.token_address),
+            Web3.to_checksum_address(args.token_address),
         ).call()
         print(f"Vault Allowance Result: {result}")
 

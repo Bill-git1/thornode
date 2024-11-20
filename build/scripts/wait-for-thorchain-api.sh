@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # https://docs.docker.com/compose/startup-order/
 
