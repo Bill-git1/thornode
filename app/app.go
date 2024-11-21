@@ -135,6 +135,7 @@ type THORChainApp struct {
 
 	ThorchainKeeper thorchainkeeper.Keeper
 
+	msgServiceRouter *MsgServiceRouter // router for redirecting Msg service messages
 	// the module manager
 	ModuleManager      *module.Manager
 	BasicModuleManager module.BasicManager
@@ -157,9 +158,10 @@ func NewChainApp(
 	baseAppOptions ...func(*baseapp.BaseApp),
 ) *THORChainApp {
 	ec := appparams.MakeEncodingConfig()
+	interfaceRegistry := ec.InterfaceRegistry
 
 	std.RegisterLegacyAminoCodec(ec.Amino)
-	std.RegisterInterfaces(ec.InterfaceRegistry)
+	std.RegisterInterfaces(interfaceRegistry)
 
 	// Below we could construct and set an application specific mempool and
 	// ABCI 1.0 PrepareProposal and ProcessProposal handlers. These defaults are
@@ -197,7 +199,6 @@ func NewChainApp(
 	bApp := baseapp.NewBaseApp(appName, logger, db, ec.TxConfig.TxDecoder(), baseAppOptions...)
 	bApp.SetCommitMultiStoreTracer(traceStore)
 	bApp.SetVersion(version.Version)
-	bApp.SetInterfaceRegistry(ec.InterfaceRegistry)
 
 	bApp.SetTxEncoder(ec.TxConfig.TxEncoder())
 
@@ -224,10 +225,12 @@ func NewChainApp(
 		legacyAmino:       ec.Amino,
 		appCodec:          ec.Codec,
 		txConfig:          ec.TxConfig,
-		interfaceRegistry: ec.InterfaceRegistry,
+		interfaceRegistry: interfaceRegistry,
 		keys:              keys,
 		tkeys:             tkeys,
+		msgServiceRouter:  NewMsgServiceRouter(bApp.MsgServiceRouter()),
 	}
+	app.SetInterfaceRegistry(interfaceRegistry)
 
 	app.ParamsKeeper = initParamsKeeper(
 		app.appCodec,
@@ -330,6 +333,11 @@ func NewChainApp(
 	telemetryEnabled := cast.ToBool(appOpts.Get("telemetry.enabled"))
 	testApp := cast.ToBool(appOpts.Get(TestApp))
 
+	mgrs := thorchain.NewManagers(app.ThorchainKeeper, app.appCodec, app.BankKeeper, app.AccountKeeper, app.UpgradeKeeper, keys[thorchaintypes.StoreKey])
+	app.msgServiceRouter.AddCustomRoute("cosmos.bank.v1beta1.Msg", thorchain.NewBankSendHandler(thorchain.NewSendHandler(mgrs)))
+
+	thorchainModule := thorchain.NewAppModule(mgrs, telemetryEnabled, testApp)
+
 	// NOTE: Any module instantiated in the module manager that is later modified
 	// must be passed by reference here.
 	authModule := auth.NewAppModule(app.appCodec, app.AccountKeeper, authsims.RandomGenesisAccounts, app.GetSubspace(authtypes.ModuleName))
@@ -337,7 +345,6 @@ func NewChainApp(
 	consensusModule := consensus.NewAppModule(app.appCodec, app.ConsensusParamsKeeper)
 	genutilModule := genutil.NewAppModule(app.AccountKeeper, app.StakingKeeper, app, txConfig)
 	paramsModule := params.NewAppModule(app.ParamsKeeper)
-	thorchainModule := thorchain.NewAppModule(app.ThorchainKeeper, app.appCodec, app.BankKeeper, app.AccountKeeper, app.UpgradeKeeper, keys[thorchaintypes.StoreKey], telemetryEnabled, testApp)
 	upgradeModule := upgrade.NewAppModule(app.UpgradeKeeper, app.AccountKeeper.AddressCodec())
 
 	app.ModuleManager = module.NewManager(
@@ -367,7 +374,7 @@ func NewChainApp(
 		thorchainModule,
 	)
 	app.BasicModuleManager.RegisterLegacyAminoCodec(app.legacyAmino)
-	app.BasicModuleManager.RegisterInterfaces(app.interfaceRegistry)
+	app.BasicModuleManager.RegisterInterfaces(interfaceRegistry)
 
 	// NOTE: upgrade module is required to be prioritized
 	app.ModuleManager.SetOrderPreBlockers(
@@ -411,7 +418,7 @@ func NewChainApp(
 	// Uncomment if you want to set a custom migration order here.
 	// app.ModuleManager.SetOrderMigrations(custom order)
 
-	app.configurator = module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter())
+	app.configurator = module.NewConfigurator(app.appCodec, app.msgServiceRouter, app.GRPCQueryRouter())
 	err = app.ModuleManager.RegisterServices(app.configurator)
 	if err != nil {
 		panic(err)
@@ -756,6 +763,18 @@ func BlockedAddresses() map[string]bool {
 	delete(modAccAddrs, authtypes.NewModuleAddress(thorchaintypes.TreasuryName).String())
 
 	return modAccAddrs
+}
+
+// MsgServiceRouter returns the MsgServiceRouter.
+func (app *THORChainApp) MsgServiceRouter() *MsgServiceRouter {
+	return app.msgServiceRouter
+}
+
+// SetInterfaceRegistry sets the InterfaceRegistry.
+func (app *THORChainApp) SetInterfaceRegistry(registry types.InterfaceRegistry) {
+	app.interfaceRegistry = registry
+	app.msgServiceRouter.SetInterfaceRegistry(registry)
+	app.BaseApp.SetInterfaceRegistry(registry)
 }
 
 func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino, key, tkey storetypes.StoreKey) paramskeeper.Keeper {

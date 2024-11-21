@@ -8,11 +8,14 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/types/multisig"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
+
+const ContextKeyTxMemo = "tx_memo"
 
 type AnteDecorator struct {
 	keeper keeper.Keeper
@@ -25,13 +28,17 @@ func NewAnteDecorator(keeper keeper.Keeper) AnteDecorator {
 }
 
 func (ad AnteDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (newCtx sdk.Context, err error) {
-	if err = ad.rejectMultipleDepositMsgs(ctx, tx.GetMsgs()); err != nil {
+	if err = ad.rejectMultipleDepositOrSendMsgs(tx.GetMsgs()); err != nil {
 		return ctx, err
 	}
 
 	// TODO remove on hard fork, when all signers will be allowed (v47+)
 	if err = ad.rejectInvalidSigners(tx); err != nil {
 		return ctx, err
+	}
+
+	if mTx, ok := tx.(sdk.TxWithMemo); ok {
+		ctx = ctx.WithValue(ContextKeyTxMemo, mTx.GetMemo())
 	}
 
 	// run the message-specific ante for each msg, all must succeed
@@ -72,13 +79,13 @@ func (ad AnteDecorator) rejectInvalidSigners(tx sdk.Tx) error {
 }
 
 // rejectMultipleDepositMsgs only one deposit msg allowed per tx
-func (ad AnteDecorator) rejectMultipleDepositMsgs(ctx cosmos.Context, msgs []cosmos.Msg) error {
+func (ad AnteDecorator) rejectMultipleDepositOrSendMsgs(msgs []cosmos.Msg) error {
 	hasDeposit := false
 	for _, msg := range msgs {
 		switch msg.(type) {
-		case *types.MsgDeposit:
+		case *types.MsgDeposit, *types.MsgSend, *banktypes.MsgSend:
 			if hasDeposit {
-				return cosmos.ErrUnknownRequest("only one deposit msg per tx")
+				return cosmos.ErrUnknownRequest("only one deposit or send msg per tx")
 			}
 			hasDeposit = true
 		default:
@@ -136,8 +143,8 @@ func (ad AnteDecorator) anteHandleMessage(ctx sdk.Context, version semver.Versio
 	// native handlers (non-consensus)
 	case *types.MsgDeposit:
 		return DepositAnteHandler(ctx, version, ad.keeper, *m)
-	case *types.MsgSend:
-		return SendAnteHandler(ctx, version, ad.keeper, *m)
+	case *types.MsgSend, *banktypes.MsgSend:
+		return SendAnteHandler(ctx, version, ad.keeper, m)
 
 	default:
 		return cosmos.ErrUnknownRequest("invalid message type")

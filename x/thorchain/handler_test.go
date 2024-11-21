@@ -265,7 +265,7 @@ func setupKeeperForTest(c *C) (cosmos.Context, keeper.Keeper) {
 	})
 	c.Assert(err, IsNil)
 	os.Setenv("NET", "mocknet")
-	return ctx, k
+	return ctx, &k
 }
 
 type handlerTestWrapper struct {

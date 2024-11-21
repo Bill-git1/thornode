@@ -348,7 +348,8 @@ func GetKeeper(
 	storeKey cosmos.StoreKey,
 ) (keeper.Keeper, error) {
 	if version.GTE(semver.MustParse("0.1.0")) {
-		return kv1.NewKVStore(cdc, coinKeeper, accountKeeper, upgradeKeeper, storeKey, version), nil
+		kvs := kv1.NewKVStore(cdc, coinKeeper, accountKeeper, upgradeKeeper, storeKey, version)
+		return &kvs, nil
 	}
 	return nil, errInvalidVersion
 }

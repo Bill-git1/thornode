@@ -463,12 +463,14 @@ func (qs queryServer) queryInboundAddresses(ctx cosmos.Context, _ *types.QueryIn
 	var resp []*types.QueryInboundAddressResponse
 	constAccessor := qs.mgr.GetConstants()
 	signingTransactionPeriod := constAccessor.GetInt64Value(constants.SigningTransactionPeriod)
-	if qs.mgr.Keeper() == nil {
+
+	k := qs.mgr.Keeper()
+	if k == nil {
 		ctx.Logger().Error("keeper is nil, can't fulfill query")
 		return nil, errors.New("keeper is nil, can't fulfill query")
 	}
 	// select vault that is most secure
-	vault := qs.mgr.Keeper().GetMostSecure(ctx, active, signingTransactionPeriod)
+	vault := k.GetMostSecure(ctx, active, signingTransactionPeriod)
 
 	chains := vault.GetChains()
 
@@ -476,7 +478,20 @@ func (qs queryServer) queryInboundAddresses(ctx cosmos.Context, _ *types.QueryIn
 		chains = common.Chains{common.RuneAsset().Chain}
 	}
 
-	isGlobalTradingPaused := qs.mgr.Keeper().IsGlobalTradingHalted(ctx)
+	isGlobalTradingPaused := k.IsGlobalTradingHalted(ctx)
+
+	thorModuleAddr := k.GetModuleAccAddress(ModuleName)
+	outboundTxFee := k.GetOutboundTxFee(ctx)
+
+	bankMsgSendDepositAddr := &types.QueryInboundAddressResponse{
+		Chain:               common.THORChain.String(),
+		Address:             thorModuleAddr.String(),
+		Halted:              k.IsChainHalted(ctx, common.THORChain),
+		GlobalTradingPaused: isGlobalTradingPaused,
+		OutboundFee:         outboundTxFee.String(),
+	}
+
+	resp = append(resp, bankMsgSendDepositAddr)
 
 	for _, chain := range chains {
 		// tx send to thorchain doesn't need an address , thus here skip it
@@ -484,8 +499,8 @@ func (qs queryServer) queryInboundAddresses(ctx cosmos.Context, _ *types.QueryIn
 			continue
 		}
 
-		isChainTradingPaused := qs.mgr.Keeper().IsChainTradingHalted(ctx, chain)
-		isChainLpPaused := qs.mgr.Keeper().IsLPPaused(ctx, chain)
+		isChainTradingPaused := k.IsChainTradingHalted(ctx, chain)
+		isChainLpPaused := k.IsLPPaused(ctx, chain)
 
 		vaultAddress, err := vault.PubKey.GetAddress(chain)
 		if err != nil {

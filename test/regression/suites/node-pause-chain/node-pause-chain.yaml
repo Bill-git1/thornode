@@ -6,7 +6,7 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/inbound_addresses
 asserts:
-- .[0].halted == false
+- .[1].halted == false
 ---
 type: tx-node-pause-chain
 signer: {{ addr_thor_dog }}
@@ -18,7 +18,7 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/inbound_addresses
 asserts:
-- .[0].halted == true
+- .[1].halted == true
 ---
 type: tx-node-pause-chain
 signer: {{ addr_thor_fox }}

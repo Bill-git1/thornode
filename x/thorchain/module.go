@@ -11,7 +11,6 @@ import (
 
 	"cosmossdk.io/core/appmodule"
 	"cosmossdk.io/x/tx/signing"
-	upgradekeeper "cosmossdk.io/x/upgrade/keeper"
 	"github.com/blang/semver"
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -21,8 +20,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkgrpc "github.com/cosmos/cosmos-sdk/types/grpc"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
-	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	gateway "github.com/cosmos/gogogateway"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
@@ -32,7 +29,6 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/client/cli"
-	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
@@ -112,12 +108,7 @@ type AppModule struct {
 
 // NewAppModule creates a new AppModule Object
 func NewAppModule(
-	k keeper.Keeper,
-	cdc codec.Codec,
-	coinKeeper bankkeeper.Keeper,
-	accountKeeper authkeeper.AccountKeeper,
-	upgradeKeeper *upgradekeeper.Keeper,
-	storeKey cosmos.StoreKey,
+	mgr *Mgrs,
 	telemetryEnabled bool,
 	testApp bool,
 ) AppModule {
@@ -129,7 +120,6 @@ func NewAppModule(
 			panic(err)
 		}
 	}
-	mgr := NewManagers(k, cdc, coinKeeper, accountKeeper, upgradeKeeper, storeKey)
 	return AppModule{
 		AppModuleBasic:   AppModuleBasic{},
 		mgr:              mgr,

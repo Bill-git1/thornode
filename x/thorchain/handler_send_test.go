@@ -26,7 +26,11 @@ func (s *HandlerSendSuiteV87) TestValidate(c *C) {
 	err := handler.validate(ctx, msg)
 	c.Assert(err, IsNil)
 
-	for _, moduleName := range []string{AsgardName, BondName, ReserveName, ModuleName} {
+	msg.ToAddress = k.GetModuleAccAddress(ModuleName)
+	err = handler.validate(ctx, msg)
+	c.Assert(err, IsNil, Commentf("sending to module address: %s indicates a memo will be attached for MsgDeposit", ModuleName))
+
+	for _, moduleName := range []string{AsgardName, BondName, ReserveName} {
 		msg.ToAddress = k.GetModuleAccAddress(moduleName)
 		err := handler.validate(ctx, msg)
 		c.Assert(err, NotNil, Commentf("cannot send to module: %s", moduleName))

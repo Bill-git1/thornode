@@ -18,30 +18,35 @@ type AnteTestSuite struct {
 
 var _ = Suite(&AnteTestSuite{})
 
-func (s *AnteTestSuite) TestRejectMutlipleDepositMsgs(c *C) {
-	ctx, k := setupKeeperForTest(c)
+func (s *AnteTestSuite) TestRejectMutlipleDepositOrSendMsgs(c *C) {
+	_, k := setupKeeperForTest(c)
 
 	ad := AnteDecorator{
 		keeper: k,
 	}
 
-	msgs := []cosmos.Msg{
-		&types.MsgSend{},
-		&types.MsgBan{},
-	}
-
-	// no deposit msgs is ok
-	err := ad.rejectMultipleDepositMsgs(ctx, msgs)
+	// no deposit or send msgs is ok
+	err := ad.rejectMultipleDepositOrSendMsgs([]cosmos.Msg{&types.MsgBan{}, &types.MsgBond{}})
 	c.Assert(err, IsNil)
 
-	// one deposit msgs is ok
-	msgs = append(msgs, &types.MsgDeposit{})
-	err = ad.rejectMultipleDepositMsgs(ctx, msgs)
+	// one deposit msg is ok
+	err = ad.rejectMultipleDepositOrSendMsgs([]cosmos.Msg{&types.MsgBan{}, &types.MsgBond{}, &types.MsgDeposit{}})
+	c.Assert(err, IsNil)
+
+	// one send msg is ok
+	err = ad.rejectMultipleDepositOrSendMsgs([]cosmos.Msg{&types.MsgBan{}, &types.MsgBond{}, &types.MsgSend{}})
 	c.Assert(err, IsNil)
 
 	// two deposit msgs is not ok
-	msgs = append(msgs, &types.MsgDeposit{})
-	err = ad.rejectMultipleDepositMsgs(ctx, msgs)
+	err = ad.rejectMultipleDepositOrSendMsgs([]cosmos.Msg{&types.MsgBan{}, &types.MsgBond{}, &types.MsgDeposit{}, &types.MsgDeposit{}})
+	c.Assert(err, NotNil)
+
+	// two send msgs is not ok
+	err = ad.rejectMultipleDepositOrSendMsgs([]cosmos.Msg{&types.MsgBan{}, &types.MsgBond{}, &types.MsgSend{}, &types.MsgSend{}})
+	c.Assert(err, NotNil)
+
+	// one deposit and one send is not ok
+	err = ad.rejectMultipleDepositOrSendMsgs([]cosmos.Msg{&types.MsgBan{}, &types.MsgBond{}, &types.MsgDeposit{}, &types.MsgSend{}})
 	c.Assert(err, NotNil)
 }
 
@@ -72,8 +77,16 @@ func (s *AnteTestSuite) TestAnteHandleMessage(c *C) {
 	err = ad.anteHandleMessage(ctx, version, &goodMsg)
 	c.Assert(err, IsNil)
 
-	// non-thorchain msgs should be rejected
-	badMsg := banktypes.MsgSend{}
+	// bank sends are allowed
+	bankSendMsg := banktypes.MsgSend{
+		FromAddress: fromAddr.String(),
+		ToAddress:   toAddr.String(),
+	}
+	err = ad.anteHandleMessage(ctx, version, &bankSendMsg)
+	c.Assert(err, IsNil)
+
+	// other non-thorchain msgs should be rejected
+	badMsg := banktypes.MsgMultiSend{}
 	err = ad.anteHandleMessage(ctx, version, &badMsg)
 	c.Assert(err, NotNil)
 }

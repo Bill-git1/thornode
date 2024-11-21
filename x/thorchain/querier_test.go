@@ -956,17 +956,15 @@ func (s *QuerierSuite) TestQueryPoolAddresses(c *C) {
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
 
-	var resp struct {
-		Current []struct {
-			Chain   common.Chain   `json:"chain"`
-			PubKey  common.PubKey  `json:"pub_key"`
-			Address common.Address `json:"address"`
-			Halted  bool           `json:"halted"`
-		} `json:"current"`
-	}
-	c.Assert(json.Unmarshal(result, &resp), IsNil)
+	resp := []struct {
+		Chain   common.Chain   `json:"chain"`
+		PubKey  common.PubKey  `json:"pub_key"`
+		Address common.Address `json:"address"`
+		Halted  bool           `json:"halted"`
+	}{}
 
-	// TODO: verify resp unmarshaling contains thorchain module once BankSend support is added
+	c.Assert(json.Unmarshal(result, &resp), IsNil)
+	c.Assert(len(resp), Equals, 1)
 }
 
 func (s *QuerierSuite) TestQueryKeysignArrayPubKey(c *C) {

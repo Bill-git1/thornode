@@ -1,61 +1,180 @@
 package thorchain
 
 import (
+	"context"
 	"fmt"
 
+	math "cosmossdk.io/math"
 	"github.com/blang/semver"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/bank/types"
+	bank "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
 )
 
+var _ types.MsgServer = (*BankSendHandler)(nil)
+
+// BankSendHandler is a wrapper handler used to override msg routing for cosmos bank sends.
+type BankSendHandler struct {
+	h BaseHandler[sdk.Msg]
+}
+
+// NewBankSendHandler create a new instance of BankSendHandler
+func NewBankSendHandler(h BaseHandler[sdk.Msg]) BankSendHandler {
+	return BankSendHandler{h: h}
+}
+
+// Send is the entrypoint for bank MsgSend, passing through to the thorchain handler.
+func (h BankSendHandler) Send(goCtx context.Context, msg *bank.MsgSend) (*bank.MsgSendResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	if _, err := h.h.Run(ctx, msg); err != nil {
+		return nil, err
+	}
+
+	return &bank.MsgSendResponse{}, nil
+}
+
+// MultiSend not allowed by ante handler, but necessary to satisfy MsgServer interface for bank send bank.MsgMultiSend.
+func (h BankSendHandler) MultiSend(ctx context.Context, msg *bank.MsgMultiSend) (*bank.MsgMultiSendResponse, error) {
+	return &bank.MsgMultiSendResponse{}, nil
+}
+
+// UpdateParams defines a governance operation for updating the x/bank module parameters.
+// The authority is defined in the keeper.
+//
+// Since: cosmos-sdk 0.47
+func (h BankSendHandler) UpdateParams(context.Context, *bank.MsgUpdateParams) (*bank.MsgUpdateParamsResponse, error) {
+	return &bank.MsgUpdateParamsResponse{}, nil
+}
+
+// SetSendEnabled is a governance operation for setting the SendEnabled flag
+// on any number of Denoms. Only the entries to add or update should be
+// included. Entries that already exist in the store, but that aren't
+// included in this message, will be left unchanged.
+//
+// Since: cosmos-sdk 0.47
+func (h BankSendHandler) SetSendEnabled(context.Context, *bank.MsgSetSendEnabled) (*bank.MsgSetSendEnabledResponse, error) {
+	return &bank.MsgSetSendEnabledResponse{}, nil
+}
+
 // NewSendHandler create a new instance of SendHandler
-func NewSendHandler(mgr Manager) BaseHandler[*MsgSend] {
-	return BaseHandler[*MsgSend]{
+func NewSendHandler(mgr Manager) BaseHandler[sdk.Msg] {
+	return BaseHandler[sdk.Msg]{
 		mgr:    mgr,
 		logger: MsgSendLogger,
-		validators: NewValidators[*MsgSend]().
-			Register("1.130.0", MsgSendValidateV130),
-		handlers: NewHandlers[*MsgSend]().
-			Register("1.116.0", MsgSendHandleV116),
+		validators: NewValidators[sdk.Msg]().
+			Register("3.0.0", MsgSendValidateV3_0_0),
+		handlers: NewHandlers[sdk.Msg]().
+			Register("3.0.0", MsgSendHandleV3_0_0),
 	}
 }
 
-func MsgSendValidateV130(ctx cosmos.Context, mgr Manager, msg *MsgSend) error {
-	// ValidateBasic is also executed in message service router's handler and isn't versioned there
+func MsgSendLogger(ctx cosmos.Context, m sdk.Msg) {
+	msg, err := getThorSend(m)
+	if err != nil {
+		return
+	}
+
+	ctx.Logger().Info("receive MsgSend", "from", msg.FromAddress, "to", msg.ToAddress, "coins", msg.Amount)
+}
+
+// getThorSend returns a thor MsgSend from either a thor MsgSend or a x/bank MsgSend
+func getThorSend(msg sdk.Msg) (*MsgSend, error) {
+	switch msg := msg.(type) {
+	case *MsgSend:
+		return msg, nil
+	case *bank.MsgSend:
+		fromAddress, err := cosmos.AccAddressFromBech32(msg.FromAddress)
+		if err != nil {
+			return nil, fmt.Errorf("fail to parse from address: %s", msg.FromAddress)
+		}
+
+		toAddress, err := cosmos.AccAddressFromBech32(msg.ToAddress)
+		if err != nil {
+			return nil, fmt.Errorf("fail to parse to address: %s", msg.ToAddress)
+		}
+
+		return &MsgSend{
+			FromAddress: fromAddress,
+			ToAddress:   toAddress,
+			Amount:      msg.Amount,
+		}, nil
+	default:
+		return nil, fmt.Errorf("not a supported send message type: %T", msg)
+	}
+}
+
+// SendAnteHandler called by the ante handler to gate mempool entry
+// and also during deliver. Store changes will persist if this function
+// succeeds, regardless of the success of the transaction.
+func SendAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper, m sdk.Msg) error {
+	msg, err := getThorSend(m)
+	if err != nil {
+		return err
+	}
+	return k.DeductNativeTxFeeFromAccount(ctx, msg.GetSigners()[0])
+}
+
+func MsgSendValidateV3_0_0(ctx cosmos.Context, mgr Manager, m sdk.Msg) error {
+	msg, err := getThorSend(m)
+	if err != nil {
+		return err
+	}
+
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
 
-	// disallow sends to modules, they should only be interacted with via deposit messages
-	if IsModuleAccAddress(mgr.Keeper(), msg.ToAddress) {
+	k := mgr.Keeper()
+	isThorModAddr := msg.ToAddress.Equals(k.GetModuleAccAddress(ModuleName))
+
+	// disallow sends to modules, they should only be interacted with via deposit messages.
+	// the exception is a MsgSend with memo-based MsgDeposit is allowed to the thor module address
+	if !isThorModAddr && IsModuleAccAddress(k, msg.ToAddress) {
 		return fmt.Errorf("cannot use MsgSend for Module transactions, use MsgDeposit instead")
 	}
 
 	return nil
 }
 
-func MsgSendLogger(ctx cosmos.Context, msg *MsgSend) {
-	ctx.Logger().Info("receive MsgSend", "from", msg.FromAddress, "to", msg.ToAddress, "coins", msg.Amount)
-}
-
-func MsgSendHandleV116(ctx cosmos.Context, mgr Manager, msg *MsgSend) (*cosmos.Result, error) {
-	if mgr.Keeper().IsChainHalted(ctx, common.THORChain) {
-		return nil, fmt.Errorf("unable to use MsgSend while THORChain is halted")
-	}
-
-	err := mgr.Keeper().SendCoins(ctx, msg.FromAddress, msg.ToAddress, msg.Amount)
+func MsgSendHandleV3_0_0(ctx cosmos.Context, mgr Manager, m sdk.Msg) (*cosmos.Result, error) {
+	msg, err := getThorSend(m)
 	if err != nil {
 		return nil, err
 	}
 
-	return &cosmos.Result{}, nil
-}
+	k := mgr.Keeper()
 
-// SendAnteHandler called by the ante handler to gate mempool entry
-// and also during deliver. Store changes will persist if this function
-// succeeds, regardless of the success of the transaction.
-func SendAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper, msg MsgSend) error {
-	return k.DeductNativeTxFeeFromAccount(ctx, msg.GetSigners()[0])
+	if k.IsChainHalted(ctx, common.THORChain) {
+		return nil, fmt.Errorf("unable to use MsgSend while THORChain is halted")
+	}
+
+	// MsgSend to the thorchain module address is treated as a MsgDeposit for client compatibility reasons.
+	// In this case, the memo will be used like in any other MsgDeposit.
+	if msg.ToAddress.Equals(k.GetModuleAccAddress(ModuleName)) {
+		var memo string
+		ctxTxMemo := ctx.Context().Value(ContextKeyTxMemo)
+		if ctxTxMemo != nil {
+			if m, ok := ctxTxMemo.(string); ok {
+				memo = m
+			}
+		}
+
+		coinSdk := msg.Amount[0]
+		thorAssetDenom, err := common.NewAsset(coinSdk.Denom)
+		if err != nil {
+			return nil, err
+		}
+
+		coin := common.NewCoin(thorAssetDenom, math.NewUintFromBigInt(coinSdk.Amount.BigInt()))
+		msgDeposit := NewMsgDeposit(common.Coins{coin}, memo, msg.GetSigners()[0])
+		return NewDepositHandler(mgr).handle(ctx, *msgDeposit)
+	} else if err := k.SendCoins(ctx, msg.FromAddress, msg.ToAddress, msg.Amount); err != nil {
+		return nil, err
+	}
+
+	return &cosmos.Result{}, nil
 }

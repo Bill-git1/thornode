@@ -66,8 +66,8 @@ endpoint: http://localhost:1317/thorchain/block?height=3
 asserts:
   - .txs|length == 1
   - .txs[0]|.result.events|length == 12
-  - .txs[0]|.result.events[4].type == "message"
-  - .txs[0]|.result.events[4].sender == "{{ addr_thor_fox }}"
+  - .txs[0]|.result.events[7].type == "message"
+  - .txs[0]|.result.events[7].sender == "{{ addr_thor_fox }}"
   - .txs[0]|.result.events[7].action == "/types.MsgSend"
 ---
 type: tx-send
