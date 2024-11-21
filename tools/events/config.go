@@ -1,6 +1,7 @@
 package main
 
 import (
+	"reflect"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -106,7 +107,12 @@ type Config struct {
 			USDValue uint64 `mapstructure:"usd_value"`
 		} `mapstructure:"security"`
 
-		Slip uint64 `mapstructure:"slip"`
+		// SwapSlipBasisPoints defines the slip threshold that will trigger a swap alert.
+		SwapSlipBasisPoints uint64 `mapstructure:"swap_slip_basis_points"`
+
+		// TORAnchorDriftBasisPoints defines the threshold for the drift of a single TOR
+		// anchor asset that will trigger an alert.
+		TORAnchorDriftBasisPoints uint64 `mapstructure:"tor_anchor_drift_basis_points"`
 	} `mapstructure:"thresholds"`
 
 	// Styles contain various styling for alerts.
@@ -123,6 +129,33 @@ type Config struct {
 ////////////////////////////////////////////////////////////////////////////////////////
 
 var config = Config{}
+
+// TODO: remove this hack if viper is updated to 1.18+
+func hackBindEnv(i any, parentKey ...string) {
+	v := reflect.ValueOf(i)
+	v = v.Elem()
+	t := v.Type()
+
+	for j := 0; j < t.NumField(); j++ {
+		field := t.Field(j)
+		fieldValue := v.Field(j)
+
+		// get the "mapstructure" tag to use as the environment variable key
+		key := field.Tag.Get("mapstructure")
+
+		// Create the full environment key including parent keys if applicable
+		if len(parentKey) > 0 {
+			key = parentKey[0] + "." + key
+		}
+
+		// recurse into it structs
+		if fieldValue.Kind() == reflect.Struct {
+			hackBindEnv(fieldValue.Addr().Interface(), key)
+		} else {
+			_ = viper.BindEnv(key)
+		}
+	}
+}
 
 func init() {
 	// storage path
@@ -157,7 +190,8 @@ func init() {
 	config.Thresholds.Delta.USDValue = 50_000
 	config.Thresholds.Delta.Percent = 5
 	config.Thresholds.Security.USDValue = 3_000_000
-	config.Thresholds.Slip = 100
+	config.Thresholds.SwapSlipBasisPoints = 100
+	config.Thresholds.TORAnchorDriftBasisPoints = 500
 
 	// styles
 	config.Styles.USDPerMoneyBag = 100_000
@@ -189,6 +223,7 @@ func init() {
 	}
 
 	// setup viper and bind to config
+	hackBindEnv(&config)
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
 	viper.AllowEmptyEnv(true)

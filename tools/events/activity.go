@@ -1034,7 +1034,7 @@ func LargeHighSlipSwaps(block *thorscan.BlockResponse) {
 		// skip swap events below the slip threshold
 		poolSlip := cosmos.NewUintFromString(event["pool_slip"]).Uint64()
 		swapSlip := cosmos.NewUintFromString(event["swap_slip"]).Uint64()
-		if swapSlip < config.Thresholds.Slip && poolSlip < config.Thresholds.Slip {
+		if swapSlip < config.Thresholds.SwapSlipBasisPoints && poolSlip < config.Thresholds.SwapSlipBasisPoints {
 			continue
 		}
 

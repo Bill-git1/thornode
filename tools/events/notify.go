@@ -21,7 +21,7 @@ func Notify(w Webhooks, title string, lines []string, tag bool, fields *OrderedM
 
 	// if in console mode only print
 	if config.Console {
-		console(w.Category, title, lines, fields)
+		console(w.Category, title, lines, tag, fields)
 	}
 
 	// copy lines to avoid modifying the original slice
@@ -198,12 +198,17 @@ func discord(webhook, title string, lines []string, tag bool, fields *OrderedMap
 	return nil
 }
 
-func console(category, title string, lines []string, fields *OrderedMap) {
+func console(category, title string, lines []string, tag bool, fields *OrderedMap) {
 	// ansi escape codes
 	boldStart := "\033[1m"
 	italicStart := "\033[3m"
 	blue := "\033[34m"
 	reset := "\033[0m"
+
+	// add alert tag for @here tags in console mode
+	if tag {
+		category = "🚨 " + category + " 🚨"
+	}
 
 	if title != "" {
 		lines = append([]string{fmt.Sprintf("%s%s%s", boldStart, title, reset)}, lines...)

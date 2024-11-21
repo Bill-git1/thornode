@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -9,7 +10,9 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/constants"
 	openapi "gitlab.com/thorchain/thornode/v3/openapi/gen"
 	"gitlab.com/thorchain/thornode/v3/tools/thorscan"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain"
@@ -26,6 +29,7 @@ func ScanInfo(block *thorscan.BlockResponse) {
 	SetNodeMimir(block)
 	SetMimir(block)
 	KeygenFailure(block)
+	TORAnchorDrift(block)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -581,4 +585,98 @@ func formatNodeMimirMessage(height int64, node, key, value string) string {
 	msg += fmt.Sprintf(" | Validators: %d", len(activeNodes))
 
 	return msg
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+// TOR Anchor Drift
+////////////////////////////////////////////////////////////////////////////////////////
+
+func TORAnchorDrift(block *thorscan.BlockResponse) {
+	// run every 10 blocks (1 minute)
+	if block.Header.Height%10 != 0 {
+		return
+	}
+
+	// get mimirs
+	mimirs := map[string]int64{}
+	err := ThornodeCachedRetryGet("thorchain/mimir", block.Header.Height, &mimirs)
+	if err != nil {
+		log.Panic().Err(err).Msg("failed to get mimirs")
+	}
+
+	// get pools
+	pools := []openapi.Pool{}
+	err = ThornodeCachedRetryGet("thorchain/pools", block.Header.Height, &pools)
+	if err != nil {
+		log.Panic().Err(err).Msg("failed to get pools")
+	}
+
+	// find all TOR pools
+	torPools := []openapi.Pool{}
+	minPrice := cosmos.NewUint(common.One)
+	maxPrice := cosmos.NewUint(common.One)
+	for _, pool := range pools {
+		var asset common.Asset
+		asset, err = common.NewAsset(pool.Asset)
+		if err != nil {
+			log.Panic().Err(err).Msg("failed to parse pool asset")
+		}
+		if mimirs[fmt.Sprintf("TORANCHOR-%s", asset.MimirString())] > 0 {
+			price := cosmos.NewUintFromString(pool.AssetTorPrice)
+			if price.LT(minPrice) {
+				minPrice = price
+			}
+			if price.GT(maxPrice) {
+				maxPrice = price
+			}
+			torPools = append(torPools, pool)
+		}
+	}
+
+	// skip if not over the drift threshold
+	driftBPS := maxPrice.Sub(minPrice).MulUint64(constants.MaxBasisPts).Quo(maxPrice)
+	if driftBPS.LT(cosmos.NewUint(config.Thresholds.TORAnchorDriftBasisPoints)) {
+		return
+	}
+
+	// sort tor pools by price
+	sort.Slice(torPools, func(i, j int) bool {
+		iPrice := cosmos.NewUintFromString(torPools[i].AssetTorPrice)
+		jPrice := cosmos.NewUintFromString(torPools[j].AssetTorPrice)
+		return iPrice.LT(jPrice)
+	})
+
+	// build notification
+	fields := NewOrderedMap()
+	maxFieldLenth := 0
+	for _, pool := range torPools {
+		shortAsset := strings.Split(pool.Asset, "-")[0]
+		if len(shortAsset) > maxFieldLenth {
+			maxFieldLenth = len(shortAsset)
+		}
+	}
+	for _, pool := range torPools {
+		shortAsset := strings.Split(pool.Asset, "-")[0]
+		if len(shortAsset) < maxFieldLenth {
+			shortAsset = strings.Repeat(" ", maxFieldLenth-len(shortAsset)) + shortAsset
+		}
+		price := float64(cosmos.NewUintFromString(pool.AssetTorPrice).Uint64()) / common.One
+		fields.Set(shortAsset, FormatUSD(price))
+	}
+
+	// alert @here with 10 minute cooldown
+	lastTaggedHeight := int64(0)
+	lastTaggedKey := "tor-anchor-drift-last-tag-height"
+	err = Load(lastTaggedKey, &lastTaggedHeight)
+	if err != nil {
+		log.Debug().Err(err).Msg("failed to load last anchor drift tag height")
+	}
+	tag := block.Header.Height-lastTaggedHeight > 100
+	err = Store(lastTaggedKey, block.Header.Height)
+	if err != nil {
+		log.Debug().Err(err).Msg("failed to store last anchor drift tag height")
+	}
+
+	title := fmt.Sprintf("`[%d]` TOR Anchor Drift (%.02f%%)", block.Header.Height, float64(driftBPS.Uint64())/100)
+	Notify(config.Notifications.Info, title, nil, tag, fields)
 }

@@ -28,7 +28,6 @@ import (
 const (
 	// ---------- environment keys ----------
 
-	EnvRPCEndpoint = "RPC_ENDPOINT"
 	EnvAPIEndpoint = "API_ENDPOINT"
 	EnvParallelism = "PARALLELISM"
 )
@@ -111,7 +110,7 @@ func getBlock(height int64) (*BlockResponse, error) {
 
 var (
 	Parallelism = 4
-	APIEndpoint = "https://thornode-v1.ninerealms.com"
+	APIEndpoint = "https://thornode-archive.ninerealms.com"
 
 	encodingConfig params.EncodingConfig
 )
