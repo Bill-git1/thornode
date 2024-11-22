@@ -41,6 +41,7 @@
   - [Swapper Clout](./concepts/swapper-clout.md)
   - [Trade Accounts](./concepts/trade-accounts.md)
   - [RUNE Pool](./concepts/rune-pool.md)
+  - [Incentive Pendulum](./concepts/incentive-pendulum.md)
   - [Network Halts](concepts/network-halts.md)
   - [Fees](concepts/fees.md)
   - [Delays](concepts/delays.md)

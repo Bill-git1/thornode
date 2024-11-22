@@ -83,6 +83,20 @@ Read [https://medium.com/thorchain/affiliate-fees-on-thorchain-17cbc176a11b](htt
 
 Affiliates can collect their fees in the asset of their choice (choosing from the assets that have a pool on THORChain). In order to collect fees in a preferred asset, affiliates must use a [THORName](../affiliate-guide/thorname-guide.md#preferred-asset-for-affiliate-fees) in the [memos](memos.md).
 
+### Multiple Affiliates
+
+Interfaces can define up to (set by [MultipleAffiliatesMaxCount](../mimir.md)) valid affiliate and affiliate basis points pairs in a swap memo and the network will attempt to skim an affiliate fee for each. Alternatively, up to 5 valid affiliates and exactly one valid basis points can be defined, and the network will attempt to skim the same basis points fee for each affiliate.
+
+Valid memo examples:
+
+- `=:ETH.ETH:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430::t1/t2/t3/t4/t5:10` (Will skim 10 basis points for each of the affiliates)
+- `=:ETH.ETH:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430::t1/thor1t2hav42urasnsvwa6x6fyezaex9f953plh72pq/t3:10/20/30` (Will skim 10 basis points for `t1`, 20 basis points for `thor1t2hav42urasnsvwa6x6fyezaex9f953plh72pq`, and 30 basis points for `t3`)
+
+Invalid memo examples:
+
+- `=:ETH.ETH:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430::t1/t2/t3/t4/t5:10/20` (5 affiliates defined, but only 2 affiliate basis points)
+- `=:ETH.ETH:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430::t1/t2/t3/t4/t5/t6:10` (Too many affiliates defined)
+
 ### How it Works
 
 If an affiliate's THORName has the proper preferred asset configuration set, the network will begin collecting their affiliate fees in $RUNE in the [AffiliateCollector module](https://thornode.ninerealms.com/thorchain/balance/module/affiliate_collector). Once the accrued RUNE in the module is greater than [`PreferredAssetOutboundFeeMultiplier`](../mimir.md#fee-management)`* outbound_fee` of the preferred asset's chain, the network initiates a swap from $RUNE -> Preferred Asset on behalf of the affiliate. At the time of writing, `PreferredAssetOutboundFeeMultiplier` is set to `100`, so the preferred asset swap happens when the outbound fee is 1% of the accrued $RUNE.
@@ -181,19 +195,23 @@ _Remember, if the swap limit is not met or the swap is otherwise refunded the ou
 
 ### Understanding gas_rate
 
-THORNode keeps track of current gas prices. Access these at the `/inbound_addresses` endpoint of the [THORNode API](https://dev.thorchain.org/thorchain-dev/wallets/connecting-to-thorchain#thornode). The response is an array of objects like this:
+THORNode keeps track of current gas prices. Access these at the `/inbound_addresses` endpoint of the [THORNode API](./connecting-to-thorchain.md#thornode). The response is an array of objects like this:
 
 ```json
 {
     "chain": "ETH",
-    "pub_key": "thorpub1addwnpepqdlx0avvuax3x9skwcpvmvsvhdtnw6hr5a0398vkcvn9nk2ytpdx5cpp70n",
-    "address": "0x74ce1c3556a6d864de82575b36c3d1fb9c303a80",
-    "router": "0x3624525075b88B24ecc29CE226b0CEc1fFcB6976",
+    "pub_key": "thorpub1addwnpepqfzafst6y2f33pdvheq6qe25xyzrwy542m4tq0nfnh6cn67d56n3g3lfwej",
+    "address": "0x215520b3943c89e4fa501902ef7b76fdd199023b",
+    "router": "0xD37BbE5744D730a1d98d8DC97c42F0Ca46aD7146",
     "halted": false,
-    "gas_rate": "10"
-    "gas_rate_units": "satsperbyte",
-    "outbound_fee": "30000",
-    "outbound_tx_size": "1000",
+    "global_trading_paused": false,
+    "chain_trading_paused": false,
+    "chain_lp_actions_paused": false,
+    "gas_rate": "60",
+    "gas_rate_units": "gwei",
+    "outbound_tx_size": "100000",
+    "outbound_fee": "180200",
+    "dust_threshold": "0
 }
 ```
 
@@ -205,7 +223,7 @@ The `outbound_tx_size` is what THORChain internally budgets as a typical transac
 
 The `outbound_fee` is `gas_rate * outbound_tx_size * OFM` and developers can use this to budget for the fee to be charged to the user. The current Outbound Fee Multiplier (OFM) can be found on the [Network Endpoint](https://thornode.ninerealms.com/thorchain/network).
 
-Keep in mind the `outbound_fee` is priced in the gas asset of each chain. For chains with tokens, be sure to convert the `outbound_fee` to the outbound token to determine how much will be taken from the outbound amount. To do this, use the `getValueOfAsset1InAsset2` formula described in the [`Math`](https://dev.thorchain.org/thorchain-dev/interface-guide/math#example-1) section.
+Keep in mind the `outbound_fee` is priced in the gas asset of each chain. For chains with tokens, be sure to convert the `outbound_fee` to the outbound token to determine how much will be taken from the outbound amount. To do this, use the `getValueOfAsset1InAsset2` formula described in the [`Math`](./math.md#example) section.
 
 ## Fee Calculation by Chain
 

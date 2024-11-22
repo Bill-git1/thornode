@@ -15,7 +15,7 @@ Mimir setting can be created and changed without a corresponding Constant.
 ### Key
 
 - No Star or Hash - Constant only, no Mimir override.
-- Star (\*) indicates a Mimir override of a Constant
+- Star (\*) indicates a Mimir override of a Constant.
 - Hash (#) indicates Mimir with no Constant.
 
 ## Outbound Transactions
@@ -40,8 +40,11 @@ Mimir setting can be created and changed without a corresponding Constant.
 - `EnableDerivedAssets`: Enable/disable derived asset swapping (excludes lending)
 - `StreamingSwapMinBPFee`\*: Minimum swap fee (in basis points) for a streaming swap trade
 - `StreamingSwapMaxLength`: Maximum number of blocks a streaming swap can trade for
-- `StreamingSwapMaxLengthNative`: Maximum number of blocks native streaming swaps can trade over
+- `StreamingSwapMaxLengthNative`\*: Maximum number of blocks native streaming swaps can trade over
 - `TradeAccountsEnabled`: Enable/disable trade account
+- `CloutReset`: The number of blocks before clout spent gets reset
+- `CloutLimit`\*: Max clout allowed to spend
+- `MultipleAffiliatesMaxCount`: Maximum number of nested affiliates
 
 ## Synths
 
@@ -55,6 +58,7 @@ Mimir setting can be created and changed without a corresponding Constant.
 
 - `MaxSynthsForSaversYield`\*: The percentage (in basis points) synth per pool where synth yield reaches 0%
 - `SaversStreamingSwapsInterval`\*: For Savers deposits and withdraws, the streaming swaps interval to use for the Native <> Synth swap
+- `SaversEjectInterval`: The number of blocks for savers check, disabled if zero.
 
 ### POL Management
 
@@ -89,6 +93,7 @@ Mimir setting can be created and changed without a corresponding Constant.
 - `MaximumLiquidityRune`#: Maximum RUNE capped on the pools known as the ‘soft cap’
 - `LiquidityLockUpBlocks`: The number of blocks LP can withdraw after their liquidity
 - `PendingLiquidityAgeLimit`: The number of blocks the network waits before initiating pending liquidity cleanup. Cleanup of all pools lasts for the same duration.
+- `PauseAsymWithdrawal-<Chain>`#: Forces dual-address liquidity providers to withdraw symmetrically rather than asymmetrically.
 
 ## RunePool
 
@@ -101,11 +106,14 @@ Mimir setting can be created and changed without a corresponding Constant.
 - `HaltChainGlobal`#: Pause observations on all chains (chain clients)
 - `HaltTrading`: Stops swaps and additions, if done, will result in refunds. Observations still occur.
 - `Halt<chain>Chain`#: Pause a specific blockchain
+- `SolvencyHalt<Chain>`# Halts a chain if the solvancy checker for that chain fails.
 - `NodePauseChainGlobal`#: Individual node controlled means to pause all chains
 - `NodePauseChainBlocks`: Number of block a node operator can pause/resume the chains for
 - `BlocksPerYear`: Blocks in a year
 - `MaxUTXOsToSpend`#: Max UTXOs to be spent in one block
 - `MinimumNodesForBFT`: Minimum node count to keep the network running. Below this, Ragnarök is performed
+- `MaxConfirmations-<Chain>`# : The maximum number of conformations for a chain
+- `ConfMultiplierBasisPoints-<Chain>`#: Increases or decrease the inbound confirmation count block requirement for a chain
 
 ### Fee Management
 
@@ -155,6 +163,7 @@ Mimir setting can be created and changed without a corresponding Constant.
 - `ObservationDelayFlexibility`: Number of blocks of flexibility for a validator to get their slash points taken off for making an observation
 - `JailTimeKeygen`: Blocks a node account is jailed for failing to keygen. DO NOT drop below TSS timeout
 - `JailTimeKeysign`: Blocks a node account is jailed for failing to keysign. DO NOT drop below TSS timeout
+- `BondSlashBan`: RUNE amount to slash bond of banned node
 
 ### Churning
 
@@ -163,17 +172,17 @@ Mimir setting can be created and changed without a corresponding Constant.
 - `BondLockupPeriod`: Lockout period that a node must wait before being allowed to unbond
 - `ChurnInterval`\*: Number of blocks between each churn
 - `HaltChurning`: Pause churning
-- `DesiredValidatorSet`: Maximum number of validators
+- `DesiredValidatorSet`\*: Maximum number of validators
 - `FundMigrationInterval`\*: Number of blocks between attempts to migrate funds between asgard vaults during a migration
 - `NumberOfNewNodesPerChurn`#: Number of targeted additional nodes added to the validator set each churn
 - `BadValidatorRedline`\*: Redline multiplier to find a multitude of bad actors
 - `LowBondValidatorRate`: Rate to mark a validator to be rotated out for low bond
 - `MaxNodeToChurnOutForLowVersion`\*: Maximum number of validators to churn out for low version each churn
+- `MigrationVaultSecurityBps`: Vault bond must be greater than bps of funds value in rune to receive migrations
 
 ## Economics
 
 - `EmissionCurve`\*: How quickly rune is emitted from the reserve in block rewards
-- `IncentiveCurve`\*: The split between nodes and LPs while the balance is optimal
 - `MaxAvailablePools`: Maximum number of pools allowed on the network. Gas pools (native pools) are excluded from this.
 - `MinRunePoolDepth`\*: Minimum number of RUNE to be considered to become active
 - `PoolCycle`\*: Number of blocks the network will churn the pools (add/remove new available pools)
@@ -182,6 +191,9 @@ Mimir setting can be created and changed without a corresponding Constant.
 - `KillSwitchDuration`: Duration (in blocks) until switching is deprecated
 - `MinimumPoolLiquidityFee`: Minimum liquidity fee an active pool should accumulate to avoid being demoted, set to 0 to disable demote pool based on liquidity fee
 - `MaxRuneSupply`\*: Maximum supply of RUNE
+- `PendulumUseEffectiveSecurity`: Determines the [Incentive Pendulum](./concepts/incentive-pendulum.md) perception of the `securing`. If set to 1, `Effective Security Bond` is used; otherwise `Total Effective Bond` is applied.
+- `PendulumUseVaultAssets`: Determines the [Incentive Pendulum](./concepts/incentive-pendulum.md) perception of the `securing`. If set to 1, `Total Pooled` is used; otherwise `Vaulted Assets` is applied.
+- `PendulumAssetsBasisPoints`: Scales the Incentive Pendulum perception of the `secured` L1 asset size, where values above 100% overestimate and values below 100% underestimate the amount of `secured` assets.
 
 ## Miscellaneous
 

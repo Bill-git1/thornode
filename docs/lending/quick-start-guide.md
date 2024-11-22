@@ -3,7 +3,7 @@
 [Lending](https://docs.thorchain.org/thorchain-finance/lending) allows users to deposit native collateral, and then create a debt at a collateralization ratio `CR` (collateralization ratio). The debt is always denominated in USD (aka `TOR`) regardless of what L1 asset the user receives.
 
 ```admonish info
-[Streaming Swaps](../swap-guide/streaming-swaps.md) is enabled for lending.
+Lending will be moved to the App Layer; new loans within THORChain can no longer be opened.
 ```
 
 ## Open a Loan Quote

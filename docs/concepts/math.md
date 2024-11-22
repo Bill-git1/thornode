@@ -2,11 +2,9 @@
 
 ## ​Math Library
 
-The following libraries implement the math below.
-
-{{#embed <https://gitlab.com/thorchain/asgardex-common/asgardex-util/-/tree/master/src/calc> }}
-
-{{#embed <https://github.com/xchainjs/xchainjs-lib/blob/master/packages/xchain-thorchain-query/src/utils/swap.ts> }}
+```admonish warning
+A minimum swap fee in basis points (bps) applies for different asset types, governed by the [mimir network settings](../mimir.md#swapping).
+```
 
 ### Example Data
 
@@ -44,7 +42,7 @@ All the examples below use the following snapshotted BTC and BUSD Pool data
 ## Prices
 
 $$
-price = \frac{quoteBalance}{baseBalance}=\frac{USD}{RUNE} = $RUNE
+price = \frac{quoteBalance}{baseBalance} = \frac{USD}{RUNE} = RUNE
 $$
 
 Prices of all assets on THORChain are in ratios of each other, based on the depths of the pools. The quote asset is the "pricing" asset, and the base asset is the asset to be quoted. Ie, for the $ value of RUNE, the quote asset is USD and the base asset is RUNE.
