@@ -33,6 +33,3 @@ rm -rf ../../api && mkdir ../../api
 mv thorchain ../../api/.
 mv types ../../api/.
 mv common ../../api/.
-
-# Remove below line once pulsar generated files are re-added
-rm -rf ../../api

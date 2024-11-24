@@ -2322,8 +2322,6 @@ github.com/zondax/ledger-go v0.14.3/go.mod h1:IKKaoxupuB43g4NxeQmbLXv7T9AlQyie1U
 github.com/zquestz/grab v0.0.0-20190224022517-abcee96e61b1/go.mod h1:bslhAiUxakrA6z6CHmVyvkfpnxx18RJBwVyx2TluJWw=
 gitlab.com/thorchain/ledger-thorchain-go v1.0.3 h1:pnAKxDd1rGocZS7lOErGxMpROINtK/HPiBBR24L5WvA=
 gitlab.com/thorchain/ledger-thorchain-go v1.0.3/go.mod h1:1zH1LiTMqQmAqPp5vah+AuDs7E++LmqUOn+p1nZOgys=
-gitlab.com/thorchain/thornode/v3/api v0.0.0-20241115175556-643fb85c32e8 h1:rxDR7Sz/v/xQ7DrbCs+XebGzzRw8nvTBG1vI+fFxSfU=
-gitlab.com/thorchain/thornode/v3/api v0.0.0-20241115175556-643fb85c32e8/go.mod h1:9hLnx3Ao3FIap7KbGqwIeZqsfPR11DQ+AYgk64G30yY=
 gitlab.com/thorchain/tss/tss-lib v0.1.5 h1:L9MD+E3B4lJmadso69lTIP6s2Iks24fS7Ancs62LTZo=
 gitlab.com/thorchain/tss/tss-lib v0.1.5/go.mod h1:pEM3W/1inIzmdQn9IY9pA0MkG1bTGKhsSivxizeyyt4=
 go.etcd.io/bbolt v1.3.3/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
