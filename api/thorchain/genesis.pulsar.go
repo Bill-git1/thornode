@@ -2328,6 +2328,57 @@ func (x *_GenesisState_40_list) IsValid() bool {
 	return x.list != nil
 }
 
+var _ protoreflect.List = (*_GenesisState_41_list)(nil)
+
+type _GenesisState_41_list struct {
+	list *[]*types.SecuredAsset
+}
+
+func (x *_GenesisState_41_list) Len() int {
+	if x.list == nil {
+		return 0
+	}
+	return len(*x.list)
+}
+
+func (x *_GenesisState_41_list) Get(i int) protoreflect.Value {
+	return protoreflect.ValueOfMessage((*x.list)[i].ProtoReflect())
+}
+
+func (x *_GenesisState_41_list) Set(i int, value protoreflect.Value) {
+	valueUnwrapped := value.Message()
+	concreteValue := valueUnwrapped.Interface().(*types.SecuredAsset)
+	(*x.list)[i] = concreteValue
+}
+
+func (x *_GenesisState_41_list) Append(value protoreflect.Value) {
+	valueUnwrapped := value.Message()
+	concreteValue := valueUnwrapped.Interface().(*types.SecuredAsset)
+	*x.list = append(*x.list, concreteValue)
+}
+
+func (x *_GenesisState_41_list) AppendMutable() protoreflect.Value {
+	v := new(types.SecuredAsset)
+	*x.list = append(*x.list, v)
+	return protoreflect.ValueOfMessage(v.ProtoReflect())
+}
+
+func (x *_GenesisState_41_list) Truncate(n int) {
+	for i := n; i < len(*x.list); i++ {
+		(*x.list)[i] = nil
+	}
+	*x.list = (*x.list)[:n]
+}
+
+func (x *_GenesisState_41_list) NewElement() protoreflect.Value {
+	v := new(types.SecuredAsset)
+	return protoreflect.ValueOfMessage(v.ProtoReflect())
+}
+
+func (x *_GenesisState_41_list) IsValid() bool {
+	return x.list != nil
+}
+
 var (
 	md_GenesisState                            protoreflect.MessageDescriptor
 	fd_GenesisState_pools                      protoreflect.FieldDescriptor
@@ -2363,6 +2414,7 @@ var (
 	fd_GenesisState_nodeMimirs                 protoreflect.FieldDescriptor
 	fd_GenesisState_affiliate_collectors       protoreflect.FieldDescriptor
 	fd_GenesisState_loan_total_collateral      protoreflect.FieldDescriptor
+	fd_GenesisState_secured_assets             protoreflect.FieldDescriptor
 )
 
 func init() {
@@ -2401,6 +2453,7 @@ func init() {
 	fd_GenesisState_nodeMimirs = md_GenesisState.Fields().ByName("nodeMimirs")
 	fd_GenesisState_affiliate_collectors = md_GenesisState.Fields().ByName("affiliate_collectors")
 	fd_GenesisState_loan_total_collateral = md_GenesisState.Fields().ByName("loan_total_collateral")
+	fd_GenesisState_secured_assets = md_GenesisState.Fields().ByName("secured_assets")
 }
 
 var _ protoreflect.Message = (*fastReflection_GenesisState)(nil)
@@ -2666,6 +2719,12 @@ func (x *fastReflection_GenesisState) Range(f func(protoreflect.FieldDescriptor,
 			return
 		}
 	}
+	if len(x.SecuredAssets) != 0 {
+		value := protoreflect.ValueOfList(&_GenesisState_41_list{list: &x.SecuredAssets})
+		if !f(fd_GenesisState_secured_assets, value) {
+			return
+		}
+	}
 }
 
 // Has reports whether a field is populated.
@@ -2747,6 +2806,8 @@ func (x *fastReflection_GenesisState) Has(fd protoreflect.FieldDescriptor) bool 
 		return len(x.AffiliateCollectors) != 0
 	case "thorchain.GenesisState.loan_total_collateral":
 		return len(x.LoanTotalCollateral) != 0
+	case "thorchain.GenesisState.secured_assets":
+		return len(x.SecuredAssets) != 0
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: thorchain.GenesisState"))
@@ -2829,6 +2890,8 @@ func (x *fastReflection_GenesisState) Clear(fd protoreflect.FieldDescriptor) {
 		x.AffiliateCollectors = nil
 	case "thorchain.GenesisState.loan_total_collateral":
 		x.LoanTotalCollateral = nil
+	case "thorchain.GenesisState.secured_assets":
+		x.SecuredAssets = nil
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: thorchain.GenesisState"))
@@ -3025,6 +3088,12 @@ func (x *fastReflection_GenesisState) Get(descriptor protoreflect.FieldDescripto
 		}
 		listValue := &_GenesisState_40_list{list: &x.LoanTotalCollateral}
 		return protoreflect.ValueOfList(listValue)
+	case "thorchain.GenesisState.secured_assets":
+		if len(x.SecuredAssets) == 0 {
+			return protoreflect.ValueOfList(&_GenesisState_41_list{})
+		}
+		listValue := &_GenesisState_41_list{list: &x.SecuredAssets}
+		return protoreflect.ValueOfList(listValue)
 	default:
 		if descriptor.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: thorchain.GenesisState"))
@@ -3165,6 +3234,10 @@ func (x *fastReflection_GenesisState) Set(fd protoreflect.FieldDescriptor, value
 		lv := value.List()
 		clv := lv.(*_GenesisState_40_list)
 		x.LoanTotalCollateral = *clv.list
+	case "thorchain.GenesisState.secured_assets":
+		lv := value.List()
+		clv := lv.(*_GenesisState_41_list)
+		x.SecuredAssets = *clv.list
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: thorchain.GenesisState"))
@@ -3362,6 +3435,12 @@ func (x *fastReflection_GenesisState) Mutable(fd protoreflect.FieldDescriptor) p
 		}
 		value := &_GenesisState_40_list{list: &x.LoanTotalCollateral}
 		return protoreflect.ValueOfList(value)
+	case "thorchain.GenesisState.secured_assets":
+		if x.SecuredAssets == nil {
+			x.SecuredAssets = []*types.SecuredAsset{}
+		}
+		value := &_GenesisState_41_list{list: &x.SecuredAssets}
+		return protoreflect.ValueOfList(value)
 	case "thorchain.GenesisState.reserve":
 		panic(fmt.Errorf("field reserve of message thorchain.GenesisState is not mutable"))
 	case "thorchain.GenesisState.last_signed_height":
@@ -3477,6 +3556,9 @@ func (x *fastReflection_GenesisState) NewField(fd protoreflect.FieldDescriptor) 
 	case "thorchain.GenesisState.loan_total_collateral":
 		list := []*common.Coin{}
 		return protoreflect.ValueOfList(&_GenesisState_40_list{list: &list})
+	case "thorchain.GenesisState.secured_assets":
+		list := []*types.SecuredAsset{}
+		return protoreflect.ValueOfList(&_GenesisState_41_list{list: &list})
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: thorchain.GenesisState"))
@@ -3729,6 +3811,12 @@ func (x *fastReflection_GenesisState) ProtoMethods() *protoiface.Methods {
 				n += 2 + l + runtime.Sov(uint64(l))
 			}
 		}
+		if len(x.SecuredAssets) > 0 {
+			for _, e := range x.SecuredAssets {
+				l = options.Size(e)
+				n += 2 + l + runtime.Sov(uint64(l))
+			}
+		}
 		if x.unknownFields != nil {
 			n += len(x.unknownFields)
 		}
@@ -3757,6 +3845,24 @@ func (x *fastReflection_GenesisState) ProtoMethods() *protoiface.Methods {
 		if x.unknownFields != nil {
 			i -= len(x.unknownFields)
 			copy(dAtA[i:], x.unknownFields)
+		}
+		if len(x.SecuredAssets) > 0 {
+			for iNdEx := len(x.SecuredAssets) - 1; iNdEx >= 0; iNdEx-- {
+				encoded, err := options.Marshal(x.SecuredAssets[iNdEx])
+				if err != nil {
+					return protoiface.MarshalOutput{
+						NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+						Buf:               input.Buf,
+					}, err
+				}
+				i -= len(encoded)
+				copy(dAtA[i:], encoded)
+				i = runtime.EncodeVarint(dAtA, i, uint64(len(encoded)))
+				i--
+				dAtA[i] = 0x2
+				i--
+				dAtA[i] = 0xca
+			}
 		}
 		if len(x.LoanTotalCollateral) > 0 {
 			for iNdEx := len(x.LoanTotalCollateral) - 1; iNdEx >= 0; iNdEx-- {
@@ -5421,6 +5527,40 @@ func (x *fastReflection_GenesisState) ProtoMethods() *protoiface.Methods {
 					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, err
 				}
 				iNdEx = postIndex
+			case 41:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field SecuredAssets", wireType)
+				}
+				var msglen int
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					msglen |= int(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				if msglen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + msglen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.SecuredAssets = append(x.SecuredAssets, &types.SecuredAsset{})
+				if err := options.Unmarshal(dAtA[iNdEx:postIndex], x.SecuredAssets[len(x.SecuredAssets)-1]); err != nil {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, err
+				}
+				iNdEx = postIndex
 			default:
 				iNdEx = preIndex
 				skippy, err := runtime.Skip(dAtA[iNdEx:])
@@ -5593,6 +5733,7 @@ type GenesisState struct {
 	NodeMimirs              []*types.NodeMimir             `protobuf:"bytes,38,rep,name=nodeMimirs,proto3" json:"nodeMimirs,omitempty"`
 	AffiliateCollectors     []*types.AffiliateFeeCollector `protobuf:"bytes,39,rep,name=affiliate_collectors,json=affiliateCollectors,proto3" json:"affiliate_collectors,omitempty"`
 	LoanTotalCollateral     []*common.Coin                 `protobuf:"bytes,40,rep,name=loan_total_collateral,json=loanTotalCollateral,proto3" json:"loan_total_collateral,omitempty"`
+	SecuredAssets           []*types.SecuredAsset          `protobuf:"bytes,41,rep,name=secured_assets,json=securedAssets,proto3" json:"secured_assets,omitempty"`
 }
 
 func (x *GenesisState) Reset() {
@@ -5846,6 +5987,13 @@ func (x *GenesisState) GetLoanTotalCollateral() []*common.Coin {
 	return nil
 }
 
+func (x *GenesisState) GetSecuredAssets() []*types.SecuredAsset {
+	if x != nil {
+		return x.SecuredAssets
+	}
+	return nil
+}
+
 var File_thorchain_genesis_proto protoreflect.FileDescriptor
 
 var file_thorchain_genesis_proto_rawDesc = []byte{
@@ -5890,7 +6038,9 @@ var file_thorchain_genesis_proto_rawDesc = []byte{
 	0x65, 0x73, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x5f, 0x72, 0x75, 0x6e, 0x65, 0x5f, 0x70, 0x72, 0x6f,
 	0x76, 0x69, 0x64, 0x65, 0x72, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x1a, 0x74, 0x79, 0x70,
 	0x65, 0x73, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x5f, 0x72, 0x75, 0x6e, 0x65, 0x5f, 0x70, 0x6f, 0x6f,
-	0x6c, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x14, 0x67, 0x6f, 0x67, 0x6f, 0x70, 0x72, 0x6f,
+	0x6c, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x1e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2f, 0x74,
+	0x79, 0x70, 0x65, 0x5f, 0x73, 0x65, 0x63, 0x75, 0x72, 0x65, 0x64, 0x5f, 0x61, 0x73, 0x73, 0x65,
+	0x74, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x14, 0x67, 0x6f, 0x67, 0x6f, 0x70, 0x72, 0x6f,
 	0x74, 0x6f, 0x2f, 0x67, 0x6f, 0x67, 0x6f, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x3f, 0x0a,
 	0x0f, 0x6c, 0x61, 0x73, 0x74, 0x43, 0x68, 0x61, 0x69, 0x6e, 0x48, 0x65, 0x69, 0x67, 0x68, 0x74,
 	0x12, 0x14, 0x0a, 0x05, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
@@ -5899,7 +6049,7 @@ var file_thorchain_genesis_proto_rawDesc = []byte{
 	0x0a, 0x05, 0x6d, 0x69, 0x6d, 0x69, 0x72, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01,
 	0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c,
 	0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x22,
-	0xda, 0x14, 0x0a, 0x0c, 0x47, 0x65, 0x6e, 0x65, 0x73, 0x69, 0x73, 0x53, 0x74, 0x61, 0x74, 0x65,
+	0x9c, 0x15, 0x0a, 0x0c, 0x47, 0x65, 0x6e, 0x65, 0x73, 0x69, 0x73, 0x53, 0x74, 0x61, 0x74, 0x65,
 	0x12, 0x27, 0x0a, 0x05, 0x70, 0x6f, 0x6f, 0x6c, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32,
 	0x0b, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x50, 0x6f, 0x6f, 0x6c, 0x42, 0x04, 0xc8, 0xde,
 	0x1f, 0x00, 0x52, 0x05, 0x70, 0x6f, 0x6f, 0x6c, 0x73, 0x12, 0x98, 0x01, 0x0a, 0x13, 0x6c, 0x69,
@@ -6062,19 +6212,23 @@ var file_thorchain_genesis_proto_rawDesc = []byte{
 	0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33,
 	0x2f, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x43, 0x6f, 0x69, 0x6e, 0x73, 0x52, 0x13, 0x6c,
 	0x6f, 0x61, 0x6e, 0x54, 0x6f, 0x74, 0x61, 0x6c, 0x43, 0x6f, 0x6c, 0x6c, 0x61, 0x74, 0x65, 0x72,
-	0x61, 0x6c, 0x4a, 0x04, 0x08, 0x09, 0x10, 0x0a, 0x4a, 0x04, 0x08, 0x0e, 0x10, 0x0f, 0x4a, 0x04,
-	0x08, 0x0f, 0x10, 0x10, 0x4a, 0x04, 0x08, 0x10, 0x10, 0x11, 0x4a, 0x04, 0x08, 0x11, 0x10, 0x12,
-	0x4a, 0x04, 0x08, 0x12, 0x10, 0x13, 0x4a, 0x04, 0x08, 0x15, 0x10, 0x16, 0x42, 0x91, 0x01, 0x0a,
-	0x0d, 0x63, 0x6f, 0x6d, 0x2e, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x42, 0x0c,
-	0x47, 0x65, 0x6e, 0x65, 0x73, 0x69, 0x73, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x2e,
-	0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63,
-	0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33,
-	0x2f, 0x61, 0x70, 0x69, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0xa2, 0x02,
-	0x03, 0x54, 0x58, 0x58, 0xaa, 0x02, 0x09, 0x54, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e,
-	0xca, 0x02, 0x09, 0x54, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0xe2, 0x02, 0x15, 0x54,
-	0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61,
-	0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x09, 0x54, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e,
-	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x61, 0x6c, 0x12, 0x40, 0x0a, 0x0e, 0x73, 0x65, 0x63, 0x75, 0x72, 0x65, 0x64, 0x5f, 0x61, 0x73,
+	0x73, 0x65, 0x74, 0x73, 0x18, 0x29, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x74, 0x79, 0x70,
+	0x65, 0x73, 0x2e, 0x53, 0x65, 0x63, 0x75, 0x72, 0x65, 0x64, 0x41, 0x73, 0x73, 0x65, 0x74, 0x42,
+	0x04, 0xc8, 0xde, 0x1f, 0x00, 0x52, 0x0d, 0x73, 0x65, 0x63, 0x75, 0x72, 0x65, 0x64, 0x41, 0x73,
+	0x73, 0x65, 0x74, 0x73, 0x4a, 0x04, 0x08, 0x09, 0x10, 0x0a, 0x4a, 0x04, 0x08, 0x0e, 0x10, 0x0f,
+	0x4a, 0x04, 0x08, 0x0f, 0x10, 0x10, 0x4a, 0x04, 0x08, 0x10, 0x10, 0x11, 0x4a, 0x04, 0x08, 0x11,
+	0x10, 0x12, 0x4a, 0x04, 0x08, 0x12, 0x10, 0x13, 0x4a, 0x04, 0x08, 0x15, 0x10, 0x16, 0x42, 0x91,
+	0x01, 0x0a, 0x0d, 0x63, 0x6f, 0x6d, 0x2e, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e,
+	0x42, 0x0c, 0x47, 0x65, 0x6e, 0x65, 0x73, 0x69, 0x73, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01,
+	0x5a, 0x2e, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f,
+	0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f,
+	0x76, 0x33, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e,
+	0xa2, 0x02, 0x03, 0x54, 0x58, 0x58, 0xaa, 0x02, 0x09, 0x54, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61,
+	0x69, 0x6e, 0xca, 0x02, 0x09, 0x54, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0xe2, 0x02,
+	0x15, 0x54, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65,
+	0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x09, 0x54, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61,
+	0x69, 0x6e, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -6118,6 +6272,7 @@ var file_thorchain_genesis_proto_goTypes = []interface{}{
 	(*types.RUNEPool)(nil),               // 24: types.RUNEPool
 	(*types.NodeMimir)(nil),              // 25: types.NodeMimir
 	(*types.AffiliateFeeCollector)(nil),  // 26: types.AffiliateFeeCollector
+	(*types.SecuredAsset)(nil),           // 27: types.SecuredAsset
 }
 var file_thorchain_genesis_proto_depIdxs = []int32{
 	3,  // 0: thorchain.GenesisState.pools:type_name -> types.Pool
@@ -6150,11 +6305,12 @@ var file_thorchain_genesis_proto_depIdxs = []int32{
 	25, // 27: thorchain.GenesisState.nodeMimirs:type_name -> types.NodeMimir
 	26, // 28: thorchain.GenesisState.affiliate_collectors:type_name -> types.AffiliateFeeCollector
 	22, // 29: thorchain.GenesisState.loan_total_collateral:type_name -> common.Coin
-	30, // [30:30] is the sub-list for method output_type
-	30, // [30:30] is the sub-list for method input_type
-	30, // [30:30] is the sub-list for extension type_name
-	30, // [30:30] is the sub-list for extension extendee
-	0,  // [0:30] is the sub-list for field type_name
+	27, // 30: thorchain.GenesisState.secured_assets:type_name -> types.SecuredAsset
+	31, // [31:31] is the sub-list for method output_type
+	31, // [31:31] is the sub-list for method input_type
+	31, // [31:31] is the sub-list for extension type_name
+	31, // [31:31] is the sub-list for extension extendee
+	0,  // [0:31] is the sub-list for field type_name
 }
 
 func init() { file_thorchain_genesis_proto_init() }

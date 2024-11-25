@@ -65,6 +65,7 @@ var (
 	_ jsonpb.JSONPBMarshaler = &QueryThornameResponse{}
 	_ jsonpb.JSONPBMarshaler = &QueryTradeAccountsResponse{}
 	_ jsonpb.JSONPBMarshaler = &QueryTradeUnitsResponse{}
+	_ jsonpb.JSONPBMarshaler = &QuerySecuredAssetsResponse{}
 	_ jsonpb.JSONPBMarshaler = &QueryTssKeygenMetricResponse{}
 	_ jsonpb.JSONPBMarshaler = &QueryTssMetricResponse{}
 	_ jsonpb.JSONPBMarshaler = &QueryTxResponse{}
@@ -408,6 +409,10 @@ func (m *QueryTradeAccountsResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte,
 
 func (m *QueryTradeUnitsResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, error) {
 	return jsonify(m.TradeUnits)
+}
+
+func (m *QuerySecuredAssetsResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, error) {
+	return jsonify(m.Assets)
 }
 
 func (m *QueryTssKeygenMetricResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, error) {

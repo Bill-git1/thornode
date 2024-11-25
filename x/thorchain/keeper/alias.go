@@ -73,6 +73,7 @@ type (
 	SwapperClout             = types.SwapperClout
 	TradeAccount             = types.TradeAccount
 	TradeUnit                = types.TradeUnit
+	SecuredAsset             = types.SecuredAsset
 	RUNEProvider             = types.RUNEProvider
 	RUNEPool                 = types.RUNEPool
 	Upgrade                  = types.Upgrade

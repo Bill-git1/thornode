@@ -122,6 +122,10 @@ func (h SwapHandler) validateV136(ctx cosmos.Context, msg MsgSwap) error {
 		return errors.New("swapping to a trade asset of a native coin is not allowed")
 	}
 
+	if target.IsSecuredAsset() && target.GetLayer1Asset().IsNative() {
+		return errors.New("swapping to a secured asset of a native coin is not allowed")
+	}
+
 	var sourceCoin common.Coin
 	if len(msg.Tx.Coins) > 0 {
 		sourceCoin = msg.Tx.Coins[0]

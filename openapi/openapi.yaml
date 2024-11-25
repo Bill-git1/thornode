@@ -864,6 +864,41 @@ paths:
               schema:
                 $ref: "#/components/schemas/TradeAccountsResponse"
 
+  # ------------------------------ secured assets ------------------------------
+
+  /thorchain/securedasset/{asset}:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+      - $ref: "#/components/parameters/asset"
+    get:
+      description: Returns the total size and ratio of a secured asset
+      operationId: secured_asset
+      tags:
+        - SecuredAsset
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecuredAssetResponse"
+
+  /thorchain/securedassets:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+    get:
+      description: Returns the total size and ratio of all secured asset
+      operationId: secured_assets
+      tags:
+        - SecuredAssets
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecuredAssetsResponse"
+
   # ------------------------------ queue ------------------------------
 
   /thorchain/queue:
@@ -3732,6 +3767,29 @@ components:
       type: array
       items:
         $ref: "#/components/schemas/TradeAccountResponse"
+
+    SecuredAssetResponse:
+      type: object
+      required:
+        - asset
+        - supply
+        - depth
+      properties:
+        asset:
+          type: string
+          example: "BTC-BTC"
+          description: secured account asset with "-" separator
+        supply:
+          type: string
+          description: total share tokens issued for the asset
+        depth:
+          type: string
+          description: total deposits of the asset
+
+    SecuredAssetsResponse:
+      type: array
+      items:
+        $ref: "#/components/schemas/SecuredAssetResponse"
 
     MimirResponse:
       type: object

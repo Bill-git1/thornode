@@ -49,3 +49,9 @@ THOR.RUNE is the only RUNE asset in use. All other RUNE assets on other chains a
 - Derived Assets, currently specific to Lending, are denoted as `THOR.ASSET.` E.g. `THOR.BTC` is Derived Bitcoin.
 - All Derived Assets live on the THORChain blockchain and do not have a Chain identifier.
 - Currently, Derived Assets are used internally within THORChain only.
+
+### Secured Assets
+
+- Secured Assets are accounted by the Cosmos SDK x/bank module, and are created from Layer1 assets, denoted as `CHAIN-ASSET`. The Bitcoin secured asset is `BTC-BTC`.
+- They are fungible and transferrable via a regular MsgSend, can be sent over IBC, and integrate with CosmWasm smart contracts
+- Each Secured Asset maintains a balance of the total underlying L1 tokens deposited. The x/bank native token is therefore a share token, representing an ownership of the Asset Pool (as a fraction of the total supply of the share token)

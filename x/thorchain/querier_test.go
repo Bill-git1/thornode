@@ -1180,3 +1180,47 @@ func (s *QuerierSuite) TestPeerIDFromPubKey(c *C) {
 	expectedErrorString := "fail to parse account pub key(nonsense): decoding bech32 failed: invalid separator index -1"
 	c.Assert(getPeerIDFromPubKey("nonsense"), Equals, expectedErrorString)
 }
+
+func (s *QuerierSuite) TestQuerySecuredAsset(c *C) {
+	owner := GetRandomBech32Addr()
+	addr := GetRandomBTCAddress()
+
+	_, _, err := s.mgr.SecuredAssetManager().Deposit(s.ctx, common.BTCAsset, cosmos.NewUint(1000), owner, addr, common.BlankTxID)
+	c.Assert(err, IsNil)
+
+	result, err := s.queryServer.SecuredAsset(s.ctx, &types.QuerySecuredAssetRequest{
+		Asset: "btc-btc",
+	})
+
+	c.Assert(err, IsNil)
+	c.Assert(result, NotNil)
+	c.Assert(result.Asset, Equals, "BTC-BTC")
+	c.Assert(result.Depth, Equals, "1000")
+	c.Assert(result.Supply, Equals, "1000")
+}
+
+func (s *QuerierSuite) TestQuerySecuredAssets(c *C) {
+	owner := GetRandomBech32Addr()
+	addr := GetRandomBTCAddress()
+
+	_, _, err := s.mgr.SecuredAssetManager().Deposit(s.ctx, common.BTCAsset, cosmos.NewUint(1000), owner, addr, common.BlankTxID)
+	c.Assert(err, IsNil)
+
+	_, _, err = s.mgr.SecuredAssetManager().Deposit(s.ctx, common.ETHAsset, cosmos.NewUint(2000), owner, addr, common.BlankTxID)
+	c.Assert(err, IsNil)
+
+	result, err := s.queryServer.SecuredAssets(s.ctx, &types.QuerySecuredAssetsRequest{})
+
+	c.Assert(err, IsNil)
+	c.Assert(result, NotNil)
+	c.Assert(len(result.Assets), Equals, 2)
+	asset := result.Assets[0]
+	c.Assert(asset.Asset, Equals, "BTC-BTC")
+	c.Assert(asset.Depth, Equals, "1000")
+	c.Assert(asset.Supply, Equals, "1000")
+
+	asset = result.Assets[1]
+	c.Assert(asset.Asset, Equals, "ETH-ETH")
+	c.Assert(asset.Depth, Equals, "2000")
+	c.Assert(asset.Supply, Equals, "2000")
+}

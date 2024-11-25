@@ -155,6 +155,22 @@ func (s *queryServer) TradeAccounts(c context.Context, req *types.QueryTradeAcco
 	return s.queryTradeAccounts(ctx, req)
 }
 
+func (s *queryServer) SecuredAsset(c context.Context, req *types.QuerySecuredAssetRequest) (*types.QuerySecuredAssetResponse, error) {
+	if err := checkHeightParam(req.Height); err != nil {
+		return nil, err
+	}
+	ctx := s.unwrapSdkContext(c)
+	return s.querySecuredAsset(ctx, req)
+}
+
+func (s *queryServer) SecuredAssets(c context.Context, req *types.QuerySecuredAssetsRequest) (*types.QuerySecuredAssetsResponse, error) {
+	if err := checkHeightParam(req.Height); err != nil {
+		return nil, err
+	}
+	ctx := s.unwrapSdkContext(c)
+	return s.querySecuredAssets(ctx, req)
+}
+
 func (s *queryServer) Node(c context.Context, req *types.QueryNodeRequest) (*types.QueryNodeResponse, error) {
 	if err := checkHeightParam(req.Height); err != nil {
 		return nil, err

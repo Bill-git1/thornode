@@ -109,7 +109,13 @@ func (s AssetSuite) TestAsset(c *C) {
 	asset.Synth = true
 	err = asset.Valid()
 	c.Check(err, NotNil)
-	c.Check(err.Error(), Equals, "trade assets cannot be synth assets")
+	c.Check(err.Error(), Equals, "assets can only be one of trade, synth or secured")
+
+	asset.Synth = false
+	asset.Secured = true
+	err = asset.Valid()
+	c.Check(err, NotNil)
+	c.Check(err.Error(), Equals, "assets can only be one of trade, synth or secured")
 
 	// test shorts
 	asset, err = NewAssetWithShortCodes(semver.MustParse("999.0.0"), "b")
@@ -141,4 +147,24 @@ func (s AssetSuite) TestAsset(c *C) {
 	err = asset.Valid()
 	c.Assert(err, NotNil)
 	c.Check(strings.Contains(err.Error(), "invalid symbol"), Equals, true)
+
+	asset, err = NewAsset("ETH-RUNE-0x3155ba85d5f96b2d030a4966af206230e46849cb")
+	c.Assert(err, IsNil)
+	c.Check(asset.IsNative(), Equals, true)
+	c.Check(asset.IsSecuredAsset(), Equals, true)
+	c.Check(asset.IsTradeAsset(), Equals, false)
+	c.Check(asset.IsSyntheticAsset(), Equals, false)
+	c.Assert(asset.Chain, Equals, ETHChain)
+	c.Check(asset.Symbol.Equals(Symbol("RUNE-0X3155BA85D5F96B2D030A4966AF206230E46849CB")), Equals, true)
+	c.Check(asset.Ticker.Equals(Ticker("RUNE")), Equals, true)
+
+	asset, err = NewAsset("ETH.RUNE-0x3155ba85d5f96b2d030a4966af206230e46849cb")
+	c.Assert(err, IsNil)
+	c.Check(asset.IsNative(), Equals, false)
+	c.Check(asset.IsSecuredAsset(), Equals, false)
+	c.Check(asset.IsTradeAsset(), Equals, false)
+	c.Check(asset.IsSyntheticAsset(), Equals, false)
+	c.Assert(asset.Chain, Equals, ETHChain)
+	c.Check(asset.Symbol.Equals(Symbol("RUNE-0X3155BA85D5F96B2D030A4966AF206230E46849CB")), Equals, true)
+	c.Check(asset.Ticker.Equals(Ticker("RUNE")), Equals, true)
 }

@@ -42,16 +42,17 @@ func (h TradeAccountDepositHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosm
 func (h TradeAccountDepositHandler) validate(ctx cosmos.Context, msg MsgTradeAccountDeposit) error {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("1.134.0")):
-		return h.validateV134(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.validateV3_0_0(ctx, msg)
 	default:
 		return errBadVersion
 	}
 }
 
-func (h TradeAccountDepositHandler) validateV134(ctx cosmos.Context, msg MsgTradeAccountDeposit) error {
+func (h TradeAccountDepositHandler) validateV3_0_0(ctx cosmos.Context, msg MsgTradeAccountDeposit) error {
 	tradeAccountsEnabled := h.mgr.Keeper().GetConfigInt64(ctx, constants.TradeAccountsEnabled)
-	if tradeAccountsEnabled <= 0 {
+	tradeAccountsDespositEnabled := h.mgr.Keeper().GetConfigInt64(ctx, constants.TradeAccountsDepositEnabled)
+	if tradeAccountsEnabled <= 0 || tradeAccountsDespositEnabled <= 0 {
 		return fmt.Errorf("trade accounts are disabled")
 	}
 	return msg.ValidateBasic()

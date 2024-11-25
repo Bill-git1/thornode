@@ -108,12 +108,14 @@ func NewConstantValue() *ConstantVals {
 			SaversStreamingSwapsInterval:        0,                // For Savers deposits and withdraws, the streaming swaps interval to use for the Native <> Synth swap
 			RescheduleCoalesceBlocks:            0,                // number of blocks to coalesce rescheduled outbounds
 			TradeAccountsEnabled:                0,                // enable/disable trade account
-			EVMDisableContractWhitelist:         0,                // enable/disable contract whitelist
-			OperationalVotesMin:                 3,                // Minimum node votes to set an Operational Mimir
-			L1SlipMinBps:                        0,
-			TradeAccountsSlipMinBps:             0,
-			SynthSlipMinBps:                     0,
-			DerivedSlipMinBps:                   0,
+			TradeAccountsDepositEnabled:         1,
+			EVMDisableContractWhitelist:         0,                  // enable/disable contract whitelist
+			OperationalVotesMin:                 3,                  // Minimum node votes to set an Operational Mimir
+			L1SlipMinBps:                        0,                  // Minimum L1 asset swap fee in basis points
+			TradeAccountsSlipMinBps:             0,                  // Minimum trade asset swap fee in basis points
+			SecuredAssetSlipMinBps:              5,                  // Minimum secured asset swap fee in basis points
+			SynthSlipMinBps:                     0,                  // Minimum synth asset swap fee in basis points
+			DerivedSlipMinBps:                   0,                  // Minimum derived asset swap fee in basis points
 			RUNEPoolEnabled:                     0,                  // enable/disable RUNE Pool
 			RUNEPoolDepositMaturityBlocks:       14400 * 90,         // blocks from last deposit to allow withdraw
 			RUNEPoolMaxReserveBackstop:          5_000_000_00000000, // 5 million RUNE

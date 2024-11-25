@@ -41,6 +41,8 @@ const (
 	LoanRepaymentEventType        = "loan_repayment"
 	TradeAccountDepositEventType  = "trade_account_deposit"
 	TradeAccountWithdrawEventType = "trade_account_withdraw"
+	SecuredAssetDepositEventType  = "secured_asset_deposit"
+	SecuredAssetWithdrawEventType = "secured_asset_withdraw"
 	RUNEPoolDepositEventType      = "rune_pool_deposit"
 	RUNEPoolWithdrawEventType     = "rune_pool_withdraw"
 	TSSKeygenSuccess              = "tss_keygen_success"
@@ -937,6 +939,72 @@ func (m *EventTradeAccountWithdraw) Type() string {
 
 // Events return the cosmos event
 func (m *EventTradeAccountWithdraw) Events() (cosmos.Events, error) {
+	evt := cosmos.NewEvent(m.Type(),
+		cosmos.NewAttribute("amount", m.Amount.String()),
+		cosmos.NewAttribute("asset", m.Asset.String()),
+		cosmos.NewAttribute("rune_address", m.RuneAddress.String()),
+		cosmos.NewAttribute("asset_address", m.AssetAddress.String()),
+		cosmos.NewAttribute("tx_id", m.TxID.String()))
+	return cosmos.Events{evt}, nil
+}
+
+// NewEventSecuredAssetDeposit creates a new trade account deposit event.
+func NewEventSecuredAssetDeposit(
+	amt cosmos.Uint,
+	asset common.Asset,
+	assetAddress common.Address,
+	runeAddress common.Address,
+	txID common.TxID,
+) *EventSecuredAssetDeposit {
+	return &EventSecuredAssetDeposit{
+		Amount:       amt,
+		Asset:        asset,
+		AssetAddress: assetAddress,
+		RuneAddress:  runeAddress,
+		TxID:         txID,
+	}
+}
+
+// Type return the deposit event type
+func (m *EventSecuredAssetDeposit) Type() string {
+	return SecuredAssetDepositEventType
+}
+
+// Events return the cosmos event
+func (m *EventSecuredAssetDeposit) Events() (cosmos.Events, error) {
+	evt := cosmos.NewEvent(m.Type(),
+		cosmos.NewAttribute("amount", m.Amount.String()),
+		cosmos.NewAttribute("asset", m.Asset.String()),
+		cosmos.NewAttribute("rune_address", m.RuneAddress.String()),
+		cosmos.NewAttribute("asset_address", m.AssetAddress.String()),
+		cosmos.NewAttribute("tx_id", m.TxID.String()))
+	return cosmos.Events{evt}, nil
+}
+
+// NewEventSecuredAssetWithdraw creates a new trade account withdraw event.
+func NewEventSecuredAssetWithdraw(
+	amt cosmos.Uint,
+	asset common.Asset,
+	assetAddress common.Address,
+	runeAddress common.Address,
+	txID common.TxID,
+) *EventSecuredAssetWithdraw {
+	return &EventSecuredAssetWithdraw{
+		Amount:       amt,
+		Asset:        asset,
+		AssetAddress: assetAddress,
+		RuneAddress:  runeAddress,
+		TxID:         txID,
+	}
+}
+
+// Type return the withdraw event type
+func (m *EventSecuredAssetWithdraw) Type() string {
+	return SecuredAssetWithdrawEventType
+}
+
+// Events return the cosmos event
+func (m *EventSecuredAssetWithdraw) Events() (cosmos.Events, error) {
 	evt := cosmos.NewEvent(m.Type(),
 		cosmos.NewAttribute("amount", m.Amount.String()),
 		cosmos.NewAttribute("asset", m.Asset.String()),

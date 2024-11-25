@@ -40,6 +40,7 @@
   - [Memo Length Reduction](concepts/memo-length-reduction.md)
   - [Swapper Clout](./concepts/swapper-clout.md)
   - [Trade Accounts](./concepts/trade-accounts.md)
+  - [Secured Assets](./concepts/secured-assets.md)
   - [RUNE Pool](./concepts/rune-pool.md)
   - [Incentive Pendulum](./concepts/incentive-pendulum.md)
   - [Network Halts](concepts/network-halts.md)

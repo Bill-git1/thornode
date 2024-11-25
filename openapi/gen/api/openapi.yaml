@@ -1433,6 +1433,62 @@ paths:
           description: OK
       tags:
       - TradeAccounts
+  /thorchain/securedasset/{asset}:
+    get:
+      description: Returns the total size and ratio of a secured asset
+      operationId: secured_asset
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      - explode: false
+        in: path
+        name: asset
+        required: true
+        schema:
+          example: BTC.BTC
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecuredAssetResponse'
+          description: OK
+      tags:
+      - SecuredAsset
+  /thorchain/securedassets:
+    get:
+      description: Returns the total size and ratio of all secured asset
+      operationId: secured_assets
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecuredAssetsResponse'
+          description: OK
+      tags:
+      - SecuredAssets
   /thorchain/queue:
     get:
       description: Returns queue statistics.
@@ -5438,6 +5494,31 @@ components:
     TradeAccountsResponse:
       items:
         $ref: '#/components/schemas/TradeAccountResponse'
+      type: array
+    SecuredAssetResponse:
+      example:
+        depth: depth
+        asset: BTC-BTC
+        supply: supply
+      properties:
+        asset:
+          description: secured account asset with "-" separator
+          example: BTC-BTC
+          type: string
+        supply:
+          description: total share tokens issued for the asset
+          type: string
+        depth:
+          description: total deposits of the asset
+          type: string
+      required:
+      - asset
+      - depth
+      - supply
+      type: object
+    SecuredAssetsResponse:
+      items:
+        $ref: '#/components/schemas/SecuredAssetResponse'
       type: array
     MimirResponse:
       additionalProperties:

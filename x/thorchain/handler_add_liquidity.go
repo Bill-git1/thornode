@@ -52,14 +52,14 @@ func (h AddLiquidityHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Resu
 func (h AddLiquidityHandler) validate(ctx cosmos.Context, msg MsgAddLiquidity) error {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("1.131.0")):
-		return h.validateV131(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.validateV3_0_0(ctx, msg)
 	default:
 		return errBadVersion
 	}
 }
 
-func (h AddLiquidityHandler) validateV131(ctx cosmos.Context, msg MsgAddLiquidity) error {
+func (h AddLiquidityHandler) validateV3_0_0(ctx cosmos.Context, msg MsgAddLiquidity) error {
 	if !msg.Tx.ID.IsBlank() { // don't validate tx if internal txn
 		if err := msg.ValidateBasic(); err != nil {
 			ctx.Logger().Error(err.Error())
@@ -69,6 +69,10 @@ func (h AddLiquidityHandler) validateV131(ctx cosmos.Context, msg MsgAddLiquidit
 
 	if msg.Asset.IsTradeAsset() {
 		return fmt.Errorf("asset cannot be a trade asset")
+	}
+
+	if msg.Asset.IsSecuredAsset() {
+		return fmt.Errorf("asset cannot be a secured asset")
 	}
 
 	// TODO on hard fork move network check to ValidateBasic

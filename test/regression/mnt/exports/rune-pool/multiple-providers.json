@@ -413,6 +413,7 @@
           "withdraw_amount": "1933712250"
         }
       ],
+      "secured_assets": [],
       "streaming_swaps": [],
       "swap_queue_items": [],
       "swapper_clout": [

@@ -152,6 +152,11 @@ func (k KVStoreDummy) GetBalance(ctx cosmos.Context, addr cosmos.AccAddress) cos
 	return nil
 }
 
+func (k KVStoreDummy) GetBalanceOf(ctx cosmos.Context, addr cosmos.AccAddress, asset common.Asset) cosmos.Coin {
+	native, _ := common.NewCoin(asset, cosmos.ZeroUint()).Native()
+	return native
+}
+
 func (k KVStoreDummy) HasCoins(ctx cosmos.Context, addr cosmos.AccAddress, coins cosmos.Coins) bool {
 	return false
 }
@@ -190,6 +195,12 @@ func (k KVStoreDummy) GetTradeUnit(ctx cosmos.Context, asset common.Asset) (Trad
 }
 func (k KVStoreDummy) SetTradeUnit(ctx cosmos.Context, unit TradeUnit)         {}
 func (k KVStoreDummy) GetTradeUnitIterator(ctx cosmos.Context) cosmos.Iterator { return nil }
+
+func (k KVStoreDummy) GetSecuredAsset(ctx cosmos.Context, asset common.Asset) (SecuredAsset, error) {
+	return SecuredAsset{}, kaboom
+}
+func (k KVStoreDummy) SetSecuredAsset(ctx cosmos.Context, unit SecuredAsset)      {}
+func (k KVStoreDummy) GetSecuredAssetIterator(ctx cosmos.Context) cosmos.Iterator { return nil }
 
 func (k KVStoreDummy) GetRUNEPool(ctx cosmos.Context) (RUNEPool, error) {
 	return RUNEPool{}, kaboom

@@ -230,6 +230,11 @@ func checkExportInvariants(out io.Writer, genesis map[string]any) error {
 		sumPoolAsset = sumPoolAsset.Add(coin)
 	}
 
+	for _, p := range genesisState.SecuredAssets {
+		coin := common.NewCoin(p.Asset.GetLayer1Asset(), p.Depth)
+		sumPoolAsset = sumPoolAsset.Add(coin)
+	}
+
 	// adjust vault depths to ignore streaming swap amounts
 	for _, swp := range genesisState.StreamingSwaps {
 		for _, msg := range genesisState.SwapQueueItems {

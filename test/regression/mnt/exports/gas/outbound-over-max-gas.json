@@ -508,6 +508,7 @@
         "rune_withdrawn": "0"
       },
       "rune_providers": [],
+      "secured_assets": [],
       "streaming_swaps": [],
       "swap_queue_items": [],
       "swapper_clout": [

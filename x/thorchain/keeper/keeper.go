@@ -34,6 +34,7 @@ type Keeper interface {
 	GetModuleAddress(module string) (common.Address, error)
 	GetModuleAccAddress(module string) cosmos.AccAddress
 	GetBalance(ctx cosmos.Context, addr cosmos.AccAddress) cosmos.Coins
+	GetBalanceOf(ctx cosmos.Context, addr cosmos.AccAddress, asset common.Asset) cosmos.Coin
 	HasCoins(ctx cosmos.Context, addr cosmos.AccAddress, coins cosmos.Coins) bool
 	GetAccount(ctx cosmos.Context, addr cosmos.AccAddress) cosmos.Account
 	RagnarokAccount(ctx cosmos.Context, addr cosmos.AccAddress)
@@ -90,6 +91,7 @@ type Keeper interface {
 	KeeperStreamingSwap
 	KeeperSwapperClout
 	KeeperTradeAccount
+	KeeperSecuredAsset
 	KeeperRUNEPool
 }
 
@@ -266,6 +268,12 @@ type KeeperTradeAccount interface {
 	GetTradeUnit(ctx cosmos.Context, asset common.Asset) (TradeUnit, error)
 	SetTradeUnit(ctx cosmos.Context, unit TradeUnit)
 	GetTradeUnitIterator(ctx cosmos.Context) cosmos.Iterator
+}
+
+type KeeperSecuredAsset interface {
+	GetSecuredAsset(ctx cosmos.Context, asset common.Asset) (SecuredAsset, error)
+	SetSecuredAsset(ctx cosmos.Context, unit SecuredAsset)
+	GetSecuredAssetIterator(ctx cosmos.Context) cosmos.Iterator
 }
 
 type KeeperRUNEPool interface {

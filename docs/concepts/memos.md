@@ -41,6 +41,8 @@ The following functions can be put into a memo:
 1. [**WITHDRAW** **Liquidity**](memos.md#withdraw-liquidity)
 1. [**ADD** **Trade Account**](memos.md#add-trade-account)
 1. [**WITHDRAW** **Trade Account**](memos.md#withdraw-liquidity)
+1. [**ADD** **Secured Asset**](memos.md#add-secured-asset)
+1. [**WITHDRAW** **Secured Asset**](memos.md#withdraw-secured-asset)
 1. [**BOND**, **UNBOND** & **LEAVE**](memos.md#bond-unbond-and-leave)
 1. [**DONATE** & **RESERVE**](memos.md#donate-and-reserve)
 1. [**MIGRATE**](memos.md#migrate)
@@ -257,7 +259,7 @@ A withdrawal can be either dual-sided (withdrawn based on pool's price) or entir
 
 **`TRADE+:ADDR`**
 
-Adds an L1 asset to the Trade Account.
+Adds an L1 asset to the [Trade Account](../concepts/trade-accounts.md).
 
 | Parameter | Notes                                 | Extra                                          |
 | --------- | ------------------------------------- | ---------------------------------------------- |
@@ -288,6 +290,36 @@ Note: Trade Asset and Amount are determined by the `coins` within the `MsgDeposi
   ```text
   {"body":{"messages":[{"":"/types.MsgDeposit","coins":[{"asset":"BTC~BTC","amount":"10000000","decimals":"0"}],"memo":"trade-:bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw","signer":"thor19phfqh3ce3nnjhh0cssn433nydq9shx7wfmk7k"}],"memo":"","timeout_height":"0","extension_options":[],"non_critical_extension_options":[]},"auth_info":{"signer_infos":[],"fee":{"amount":[],"gas_limit":"200000","payer":"","granter":""}},"signatures":[]}
   ```
+
+### Add Secured Asset
+
+**`SECURE+:ADDR`**
+
+Converts a L1 asset to a [Secured Asset](../concepts/secured-assets.md).
+
+| Parameter | Notes                               | Extra                                          |
+| --------- | ----------------------------------- | ---------------------------------------------- |
+| Payload   | The asset to become a Secured Asset | Must be a L1 asset and supported by THORChain. |
+| `SECURE+` | The Secured Asset handler.          |                                                |
+| `ADDR`    | Must be a thor address              | Specifies the owner and desitnation            |
+
+**Example:** `SECURE+:thor1x2whgc2nt665y0kc44uywhynazvp0l8tp0vtu6` - Converts the sent asset and amount to a Secured Asset.
+
+### Withdraw Secured Asset
+
+Converts a Secured Asset to a L1 Asset.
+
+**`SECURE-:ADDR`**
+
+| Parameter | Notes                                                                             | Extra                    |
+| --------- | --------------------------------------------------------------------------------- | ------------------------ |
+| Payload   | The [Secured Asset](./asset-notation.md#secured-assets) to be redeemed and amount | Use `MsgDeposit`.        |
+| `SECURE-` | The Secured Asset handler.                                                        |                          |
+| `ADDR`    | L1 address to which the L1 asset will be sent                                     | Cannot be a thor address |
+
+Note: Secured Assets and amount are determined by the `coins` within the `MsgDeposit`. Transaction fee in `RUNE` does apply.
+
+**Example:** `SECURE-:bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw` - Convert 0.1 BTC from a Secured Asset to a L1 and send to `bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw`
 
 ### DONATE & RESERVE
 

@@ -103,7 +103,7 @@ func (gm *GasMgrVCUR) GetAssetOutboundFee(ctx cosmos.Context, asset common.Asset
 	}
 
 	// Asset is on THORChain, but not RUNE, convert the fee to asset value.
-	if asset.IsSyntheticAsset() || asset.IsDerivedAsset() || asset.IsTradeAsset() {
+	if asset.IsSyntheticAsset() || asset.IsDerivedAsset() || asset.IsTradeAsset() || asset.IsSecuredAsset() {
 		if inRune {
 			return thorchainOutboundFee, nil
 		}
@@ -223,7 +223,7 @@ func (gm *GasMgrVCUR) CalcOutboundFeeMultiplier(ctx cosmos.Context, targetSurplu
 // getRuneInAssetValue convert the transaction fee to asset value , when the given asset is synthetic , it will need to get
 // the layer1 asset first , and then use the pool to convert
 func (gm *GasMgrVCUR) getRuneInAssetValue(ctx cosmos.Context, transactionFee cosmos.Uint, asset common.Asset) cosmos.Uint {
-	if asset.IsSyntheticAsset() || asset.IsTradeAsset() {
+	if asset.IsSyntheticAsset() || asset.IsTradeAsset() || asset.IsSecuredAsset() {
 		asset = asset.GetLayer1Asset()
 	}
 	pool, err := gm.keeper.GetPool(ctx, asset)

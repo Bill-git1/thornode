@@ -120,6 +120,8 @@ const (
 	TradeAccountsSlipMinBps
 	DerivedSlipMinBps
 	TradeAccountsEnabled
+	TradeAccountsDepositEnabled
+	SecuredAssetSlipMinBps
 	EVMDisableContractWhitelist
 	OperationalVotesMin
 	RUNEPoolEnabled

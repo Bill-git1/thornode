@@ -301,9 +301,9 @@ func quoteSimulateSwap(ctx cosmos.Context, mgr *Mgrs, amount sdkmath.Uint, msg *
 	}
 	finalSwap := swaps[len(swaps)-1]
 
-	// parse outbound fee from event (except on trade assets with no outbound fee)
+	// parse outbound fee from event (except on trade & secured assets with no outbound fee)
 	outboundFeeAmount = sdkmath.ZeroUint()
-	if !msg.TargetAsset.IsTradeAsset() {
+	if !(msg.TargetAsset.IsTradeAsset() || msg.TargetAsset.IsSecuredAsset()) {
 		outboundFeeCoin, err := common.ParseCoin(fee["coins"])
 		if err != nil {
 			return nil, sdkmath.ZeroUint(), sdkmath.ZeroUint(), fmt.Errorf("unable to parse outbound fee coin: %w", err)
@@ -607,7 +607,7 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 
 	// trade assets must have from address on the source tx
 	fromChain := fromAsset.Chain
-	if fromAsset.IsSyntheticAsset() || fromAsset.IsDerivedAsset() || fromAsset.IsTradeAsset() {
+	if fromAsset.IsSyntheticAsset() || fromAsset.IsDerivedAsset() || fromAsset.IsTradeAsset() || fromAsset.IsSecuredAsset() {
 		fromChain = common.THORChain
 	}
 	fromPubkey := types.GetRandomPubKey()
@@ -789,6 +789,18 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 		_, err = qs.mgr.TradeAccountManager().Deposit(ctx, fromAsset, amount, thorAddr, common.NoAddress, common.BlankTxID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to deposit trade asset: %w", err)
+		}
+	}
+
+	// if from asset is a secured asset, create fake balance
+	if fromAsset.IsSecuredAsset() {
+		thorAddr, err := fromPubkey.GetThorAddress()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get thor address: %w", err)
+		}
+		_, _, err = qs.mgr.SecuredAssetManager().Deposit(ctx, fromAsset, amount, thorAddr, common.NoAddress, common.BlankTxID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to deposit secured asset: %w", err)
 		}
 	}
 

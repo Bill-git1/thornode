@@ -42,6 +42,7 @@ type Manager interface {
 	OrderBookMgr() OrderBook
 	Slasher() Slasher
 	TradeAccountManager() TradeAccountManager
+	SecuredAssetManager() SecuredAssetManager
 }
 
 type TradeAccountManager interface {
@@ -49,6 +50,16 @@ type TradeAccountManager interface {
 	Deposit(_ cosmos.Context, _ common.Asset, amount cosmos.Uint, owner cosmos.AccAddress, assetAddr common.Address, _ common.TxID) (cosmos.Uint, error)
 	Withdrawal(_ cosmos.Context, _ common.Asset, amount cosmos.Uint, owner cosmos.AccAddress, assetAddr common.Address, _ common.TxID) (cosmos.Uint, error)
 	BalanceOf(_ cosmos.Context, _ common.Asset, owner cosmos.AccAddress) cosmos.Uint
+}
+
+type SecuredAssetManager interface {
+	EndBlock(ctx cosmos.Context, keeper keeper.Keeper) error
+	Deposit(_ cosmos.Context, _ common.Asset, amount cosmos.Uint, owner cosmos.AccAddress, assetAddr common.Address, _ common.TxID) (cosmos.Uint, cosmos.Uint, error)
+	Withdraw(_ cosmos.Context, _ common.Asset, amount cosmos.Uint, owner cosmos.AccAddress, assetAddr common.Address, _ common.TxID) (cosmos.Uint, cosmos.Uint, error)
+	BalanceOf(_ cosmos.Context, _ common.Asset, owner cosmos.AccAddress) cosmos.Uint
+	GetSecuredAssetStatus(_ cosmos.Context, _ common.Asset) (keeper.SecuredAsset, cosmos.Uint, error)
+	GetShareSupply(_ cosmos.Context, _ common.Asset) cosmos.Uint
+	CheckHalt(_ cosmos.Context) error
 }
 
 // GasManager define all the methods required to manage gas
@@ -173,6 +184,7 @@ type Mgrs struct {
 	orderBook      OrderBook
 	slasher        Slasher
 	tradeManager   TradeAccountManager
+	securedManager SecuredAssetManager
 
 	K             keeper.Keeper
 	cdc           codec.Codec
@@ -300,6 +312,11 @@ func (mgr *Mgrs) BeginBlock(ctx cosmos.Context) error {
 		return fmt.Errorf("fail to create trade manager: %w", err)
 	}
 
+	mgr.securedManager, err = GetSecuredAssetManager(v, mgr.K, mgr.eventMgr)
+	if err != nil {
+		return fmt.Errorf("fail to create secured manager: %w", err)
+	}
+
 	return nil
 }
 
@@ -337,6 +354,8 @@ func (mgr *Mgrs) OrderBookMgr() OrderBook { return mgr.orderBook }
 func (mgr *Mgrs) Slasher() Slasher { return mgr.slasher }
 
 func (mgr *Mgrs) TradeAccountManager() TradeAccountManager { return mgr.tradeManager }
+
+func (mgr *Mgrs) SecuredAssetManager() SecuredAssetManager { return mgr.securedManager }
 
 // GetKeeper return Keeper
 func GetKeeper(
@@ -480,6 +499,15 @@ func GetTradeAccountManager(version semver.Version, keeper keeper.Keeper, eventM
 	switch {
 	case version.GTE(semver.MustParse("1.131.0")):
 		return newTradeMgrVCUR(keeper, eventMgr), nil
+	default:
+		return nil, errInvalidVersion
+	}
+}
+
+func GetSecuredAssetManager(version semver.Version, keeper keeper.Keeper, eventMgr EventManager) (SecuredAssetManager, error) {
+	switch {
+	case version.GTE(semver.MustParse("3.0.0")):
+		return newSecuredAssetMgrVCUR(keeper, eventMgr), nil
 	default:
 		return nil, errInvalidVersion
 	}

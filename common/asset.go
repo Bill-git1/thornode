@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/blang/semver"
@@ -44,15 +45,24 @@ func NewAsset(input string) (Asset, error) {
 	var asset Asset
 	var sym string
 	var parts []string
-	switch {
-	case strings.Count(input, "~") > 0:
-		parts = strings.SplitN(input, "~", 2)
+	re := regexp.MustCompile("[~./-]")
+
+	match := re.FindString(input)
+
+	switch match {
+	case "~":
+		parts = strings.SplitN(input, match, 2)
 		asset.Trade = true
-	case strings.Count(input, "/") > 0:
-		parts = strings.SplitN(input, "/", 2)
+	case "/":
+		parts = strings.SplitN(input, match, 2)
 		asset.Synth = true
-	default:
-		parts = strings.SplitN(input, ".", 2)
+	case "-":
+		parts = strings.SplitN(input, match, 2)
+		asset.Secured = true
+	case ".":
+		parts = strings.SplitN(input, match, 2)
+	case "":
+		parts = []string{input}
 	}
 	if len(parts) == 1 {
 		asset.Chain = THORChain
@@ -116,8 +126,8 @@ func (a Asset) Valid() error {
 	if err := a.Symbol.Valid(); err != nil {
 		return fmt.Errorf("invalid symbol: %w", err)
 	}
-	if a.Synth && a.Trade {
-		return fmt.Errorf("trade assets cannot be synth assets")
+	if (a.Synth && a.Trade) || (a.Trade && a.Secured) || (a.Secured && a.Synth) {
+		return fmt.Errorf("assets can only be one of trade, synth or secured")
 	}
 	if a.Synth && a.Chain.IsTHORChain() {
 		return fmt.Errorf("synth asset cannot have chain THOR: %s", a)
@@ -125,16 +135,19 @@ func (a Asset) Valid() error {
 	if a.Trade && a.Chain.IsTHORChain() {
 		return fmt.Errorf("trade asset cannot have chain THOR: %s", a)
 	}
+	if a.Secured && a.Chain.IsTHORChain() {
+		return fmt.Errorf("secured asset cannot have chain THOR: %s", a)
+	}
 	return nil
 }
 
 // Equals determinate whether two assets are equivalent
 func (a Asset) Equals(a2 Asset) bool {
-	return a.Chain.Equals(a2.Chain) && a.Symbol.Equals(a2.Symbol) && a.Ticker.Equals(a2.Ticker) && a.Synth == a2.Synth && a.Trade == a2.Trade
+	return a.Chain.Equals(a2.Chain) && a.Symbol.Equals(a2.Symbol) && a.Ticker.Equals(a2.Ticker) && a.Synth == a2.Synth && a.Trade == a2.Trade && a.Secured == a2.Secured
 }
 
 func (a Asset) GetChain() Chain {
-	if a.Synth || a.Trade {
+	if a.Synth || a.Trade || a.Secured {
 		return THORChain
 	}
 	return a.Chain
@@ -142,15 +155,16 @@ func (a Asset) GetChain() Chain {
 
 // Get layer1 asset version
 func (a Asset) GetLayer1Asset() Asset {
-	if !a.IsSyntheticAsset() && !a.IsTradeAsset() {
+	if !a.IsSyntheticAsset() && !a.IsTradeAsset() && !a.IsSecuredAsset() {
 		return a
 	}
 	return Asset{
-		Chain:  a.Chain,
-		Symbol: a.Symbol,
-		Ticker: a.Ticker,
-		Synth:  false,
-		Trade:  false,
+		Chain:   a.Chain,
+		Symbol:  a.Symbol,
+		Ticker:  a.Ticker,
+		Synth:   false,
+		Trade:   false,
+		Secured: false,
 	}
 }
 
@@ -180,6 +194,19 @@ func (a Asset) GetTradeAsset() Asset {
 	}
 }
 
+// Get secured asset of asset
+func (a Asset) GetSecuredAsset() Asset {
+	if a.IsSecuredAsset() {
+		return a
+	}
+	return Asset{
+		Chain:   a.Chain,
+		Symbol:  a.Symbol,
+		Ticker:  a.Ticker,
+		Secured: true,
+	}
+}
+
 // Get derived asset of asset
 func (a Asset) GetDerivedAsset() Asset {
 	return Asset{
@@ -199,9 +226,17 @@ func (a Asset) IsTradeAsset() bool {
 	return a.Trade
 }
 
+func (a Asset) IsSecuredAsset() bool {
+	return a.Secured
+}
+
+func (a Asset) IsVaultAsset() bool {
+	return a.IsSyntheticAsset()
+}
+
 // Check if asset is a derived asset
 func (a Asset) IsDerivedAsset() bool {
-	return !a.Synth && !a.Trade && a.GetChain().IsTHORChain() && !a.IsRune()
+	return !a.Synth && !a.Trade && !a.Secured && a.GetChain().IsTHORChain() && !a.IsRune()
 }
 
 // Native return native asset, only relevant on THORChain
@@ -228,6 +263,9 @@ func (a Asset) String() string {
 	}
 	if a.Trade {
 		div = "~"
+	}
+	if a.Secured {
+		div = "-"
 	}
 	return fmt.Sprintf("%s%s%s", a.Chain.String(), div, a.Symbol.String())
 }

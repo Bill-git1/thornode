@@ -182,6 +182,7 @@ func (s *SwapperVCUR) swapOne(ctx cosmos.Context,
 	synthVirtualDepthMult int64,
 ) (amt cosmos.Uint, evt *EventSwap, swapErr error) {
 	tradeAccountsEnabled := mgr.Keeper().GetConfigInt64(ctx, constants.TradeAccountsEnabled)
+	tradeAccountsDepositEnabled := mgr.Keeper().GetConfigInt64(ctx, constants.TradeAccountsDepositEnabled)
 
 	source := tx.Coins[0].Asset
 	amount := tx.Coins[0].Amount
@@ -209,6 +210,21 @@ func (s *SwapperVCUR) swapOne(ctx cosmos.Context,
 		if err != nil {
 			return cosmos.ZeroUint(), evt, ErrInternal(err, "fail to withdraw from trade")
 		}
+	}
+
+	if source.IsSecuredAsset() {
+		fromAcc, err := cosmos.AccAddressFromBech32(tx.FromAddress.String())
+		if err != nil {
+			return cosmos.ZeroUint(), evt, ErrInternal(err, "fail to parse from address")
+		}
+		amount, _, err = mgr.SecuredAssetManager().Withdraw(ctx, source, amount, fromAcc, common.NoAddress, tx.ID)
+		if err != nil {
+			return cosmos.ZeroUint(), evt, ErrInternal(err, "fail to withdraw from secured asset")
+		}
+	}
+
+	if target.IsTradeAsset() && tradeAccountsDepositEnabled <= 0 {
+		return cosmos.ZeroUint(), evt, fmt.Errorf("trade accounts deposits are disabled")
 	}
 
 	swapEvt := NewEventSwap(
@@ -379,6 +395,17 @@ func (s *SwapperVCUR) swapOne(ctx cosmos.Context,
 		_, err = mgr.TradeAccountManager().Deposit(ctx, target, emitAssets, acc, common.NoAddress, tx.ID)
 		if err != nil {
 			return cosmos.ZeroUint(), evt, ErrInternal(err, "fail to deposit to trade account")
+		}
+	}
+
+	if target.IsSecuredAsset() {
+		acc, err := destination.AccAddress()
+		if err != nil {
+			return cosmos.ZeroUint(), evt, ErrInternal(err, "fail to parse destination address")
+		}
+		_, _, err = mgr.SecuredAssetManager().Deposit(ctx, target, emitAssets, acc, common.NoAddress, tx.ID)
+		if err != nil {
+			return cosmos.ZeroUint(), evt, ErrInternal(err, "fail to mint secured asset")
 		}
 	}
 

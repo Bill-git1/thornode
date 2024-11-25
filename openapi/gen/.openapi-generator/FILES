@@ -20,6 +20,8 @@ api_queue.go
 api_quote.go
 api_rune_pool.go
 api_savers.go
+api_secured_asset.go
+api_secured_assets.go
 api_streaming_swap.go
 api_thornames.go
 api_trade_account.go
@@ -117,6 +119,9 @@ docs/RUNEPoolResponseReserve.md
 docs/RUNEProvider.md
 docs/Saver.md
 docs/SaversApi.md
+docs/SecuredAssetApi.md
+docs/SecuredAssetResponse.md
+docs/SecuredAssetsApi.md
 docs/StreamingStatus.md
 docs/StreamingSwap.md
 docs/StreamingSwapApi.md
@@ -224,6 +229,7 @@ model_rune_pool_response_providers.go
 model_rune_pool_response_reserve.go
 model_rune_provider.go
 model_saver.go
+model_secured_asset_response.go
 model_streaming_status.go
 model_streaming_swap.go
 model_swap_finalised_stage.go

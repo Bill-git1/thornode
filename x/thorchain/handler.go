@@ -66,6 +66,8 @@ func getInternalHandlerMapping(mgr Manager) map[string]MsgHandler {
 	m[sdk.MsgTypeURL(&MsgLoanRepayment{})] = NewLoanRepaymentHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgTradeAccountDeposit{})] = NewTradeAccountDepositHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgTradeAccountWithdrawal{})] = NewTradeAccountWithdrawalHandler(mgr)
+	m[sdk.MsgTypeURL(&MsgSecuredAssetDeposit{})] = NewSecuredAssetDepositHandler(mgr)
+	m[sdk.MsgTypeURL(&MsgSecuredAssetWithdraw{})] = NewSecuredAssetWithdrawHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgRunePoolDeposit{})] = NewRunePoolDepositHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgRunePoolWithdraw{})] = NewRunePoolWithdrawHandler(mgr)
 	return m
@@ -223,6 +225,12 @@ func processOneTxIn(ctx cosmos.Context, keeper keeper.Keeper, tx ObservedTx, sig
 	case TradeAccountWithdrawalMemo:
 		coin := tx.Tx.Coins[0]
 		newMsg = NewMsgTradeAccountWithdrawal(coin.Asset, coin.Amount, m.GetAddress(), signer, tx.Tx)
+	case SecuredAssetDepositMemo:
+		coin := tx.Tx.Coins[0]
+		newMsg = NewMsgSecuredAssetDeposit(coin.Asset, coin.Amount, m.GetAccAddress(), signer, tx.Tx)
+	case SecuredAssetWithdrawMemo:
+		coin := tx.Tx.Coins[0]
+		newMsg = NewMsgSecuredAssetWithdraw(coin.Asset, coin.Amount, m.GetAddress(), signer, tx.Tx)
 	case RunePoolDepositMemo:
 		newMsg = NewMsgRunePoolDeposit(signer, tx.Tx)
 	case RunePoolWithdrawMemo:

@@ -56,14 +56,14 @@ func (h LoanOpenHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, 
 func (h LoanOpenHandler) validate(ctx cosmos.Context, msg MsgLoanOpen) error {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("1.128.0")):
-		return h.validateV128(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.validateV3_0_0(ctx, msg)
 	default:
 		return errBadVersion
 	}
 }
 
-func (h LoanOpenHandler) validateV128(ctx cosmos.Context, msg MsgLoanOpen) error {
+func (h LoanOpenHandler) validateV3_0_0(ctx cosmos.Context, msg MsgLoanOpen) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
@@ -75,6 +75,10 @@ func (h LoanOpenHandler) validateV128(ctx cosmos.Context, msg MsgLoanOpen) error
 
 	if msg.TargetAsset.IsTradeAsset() || msg.CollateralAsset.IsTradeAsset() {
 		return fmt.Errorf("trade assets may not be used for loans")
+	}
+
+	if msg.TargetAsset.IsSecuredAsset() || msg.CollateralAsset.IsSecuredAsset() {
+		return fmt.Errorf("secured assets may not be used for loans")
 	}
 
 	// ensure that while derived assets are disabled, borrower cannot receive a
@@ -255,7 +259,6 @@ func (h LoanOpenHandler) openLoan(ctx cosmos.Context, msg MsgLoanOpen) error {
 			Coin:       common.NewCoin(common.TOR, cumulativeDebt),
 			ModuleName: ModuleName,
 		}
-		// trunk-ignore(golangci-lint/govet): shadow
 		ok, err := h.mgr.TxOutStore().TryAddTxOutItem(ctx, h.mgr, toi, zero)
 		if err != nil {
 			return err
@@ -271,7 +274,6 @@ func (h LoanOpenHandler) openLoan(ctx cosmos.Context, msg MsgLoanOpen) error {
 
 		torCoin := common.NewCoin(common.TOR, cumulativeDebt)
 
-		// trunk-ignore(golangci-lint/govet): shadow
 		if err := h.mgr.Keeper().MintToModule(ctx, ModuleName, torCoin); err != nil {
 			return fmt.Errorf("fail to mint loan tor debt: %w", err)
 		}

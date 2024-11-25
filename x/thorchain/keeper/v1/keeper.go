@@ -50,6 +50,7 @@ const (
 	prefixPOL                     types.DbPrefix = "pol/"
 	prefixLoan                    types.DbPrefix = "loan/"
 	prefixTradeAccount            types.DbPrefix = "tr_acct/"
+	prefixSecuredAsset            types.DbPrefix = "sa/"
 	prefixRUNEProvider            types.DbPrefix = "rune_provider/"
 	prefixRUNEPool                types.DbPrefix = "rune_pool/"
 	prefixTradeUnit               types.DbPrefix = "tr_unit/"
@@ -487,6 +488,10 @@ func (k KVStore) GetModuleAccAddress(module string) cosmos.AccAddress {
 
 func (k KVStore) GetBalance(ctx cosmos.Context, addr cosmos.AccAddress) cosmos.Coins {
 	return k.coinKeeper.GetAllBalances(ctx, addr)
+}
+
+func (k KVStore) GetBalanceOf(ctx cosmos.Context, addr cosmos.AccAddress, asset common.Asset) cosmos.Coin {
+	return k.coinKeeper.GetBalance(ctx, addr, asset.Native())
 }
 
 func (k KVStore) HasCoins(ctx cosmos.Context, addr cosmos.AccAddress, coins cosmos.Coins) bool {

@@ -264,6 +264,8 @@ func getMinSlipBps(
 		ref = constants.TradeAccountsSlipMinBps
 	case asset.IsDerivedAsset():
 		ref = constants.DerivedSlipMinBps
+	case asset.IsSecuredAsset():
+		ref = constants.SecuredAssetSlipMinBps
 	default:
 		ref = constants.L1SlipMinBps
 	}

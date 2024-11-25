@@ -170,6 +170,11 @@ func (tos *TxOutStorageVCUR) cachedTryAddTxOutItem(ctx cosmos.Context, mgr Manag
 		return true, nil
 	}
 
+	if toi.Coin.Asset.IsSecuredAsset() {
+		// no outbound needed for secured assets
+		return true, nil
+	}
+
 	outputs, totalOutboundFeeRune, err := tos.prepareTxOutItem(ctx, toi)
 	if err != nil {
 		return false, fmt.Errorf("fail to prepare outbound tx: %w", err)

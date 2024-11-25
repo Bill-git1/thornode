@@ -45,6 +45,11 @@ Mimir setting can be created and changed without a corresponding Constant.
 - `CloutReset`: The number of blocks before clout spent gets reset
 - `CloutLimit`\*: Max clout allowed to spend
 - `MultipleAffiliatesMaxCount`: Maximum number of nested affiliates
+- `L1SlipMinBps`: Minimum L1 asset swap fee in basis points
+- `TradeAccountsSlipMinBps`: Minimum trade asset swap fee in basis points
+- `SecuredAssetSlipMinBps`: Minimum secured asset swap fee in basis points
+- `SynthSlipMinBps`: Minimum synth asset swap fee in basis points
+- `DerivedSlipMinBps`: Minimum derived asset swap fee in basis points
 
 ## Synths
 

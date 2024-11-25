@@ -129,6 +129,8 @@ Class | Method | HTTP request | Description
 *RUNEPoolApi* | [**RuneProviders**](docs/RUNEPoolApi.md#runeproviders) | **Get** /thorchain/rune_providers | 
 *SaversApi* | [**Saver**](docs/SaversApi.md#saver) | **Get** /thorchain/pool/{asset}/saver/{address} | 
 *SaversApi* | [**Savers**](docs/SaversApi.md#savers) | **Get** /thorchain/pool/{asset}/savers | 
+*SecuredAssetApi* | [**SecuredAsset**](docs/SecuredAssetApi.md#securedasset) | **Get** /thorchain/securedasset/{asset} | 
+*SecuredAssetsApi* | [**SecuredAssets**](docs/SecuredAssetsApi.md#securedassets) | **Get** /thorchain/securedassets | 
 *StreamingSwapApi* | [**StreamSwap**](docs/StreamingSwapApi.md#streamswap) | **Get** /thorchain/swap/streaming/{hash} | 
 *StreamingSwapApi* | [**StreamSwaps**](docs/StreamingSwapApi.md#streamswaps) | **Get** /thorchain/swaps/streaming | 
 *TSSApi* | [**KeygenPubkey**](docs/TSSApi.md#keygenpubkey) | **Get** /thorchain/keygen/{height}/{pubkey} | 
@@ -222,6 +224,7 @@ Class | Method | HTTP request | Description
  - [RUNEPoolResponseReserve](docs/RUNEPoolResponseReserve.md)
  - [RUNEProvider](docs/RUNEProvider.md)
  - [Saver](docs/Saver.md)
+ - [SecuredAssetResponse](docs/SecuredAssetResponse.md)
  - [StreamingStatus](docs/StreamingStatus.md)
  - [StreamingSwap](docs/StreamingSwap.md)
  - [SwapFinalisedStage](docs/SwapFinalisedStage.md)

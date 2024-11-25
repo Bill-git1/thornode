@@ -101,6 +101,8 @@ var (
 	NewMsgRunePoolWithdraw         = types.NewMsgRunePoolWithdraw
 	NewMsgTradeAccountDeposit      = types.NewMsgTradeAccountDeposit
 	NewMsgTradeAccountWithdrawal   = types.NewMsgTradeAccountWithdrawal
+	NewMsgSecuredAssetDeposit      = types.NewMsgSecuredAssetDeposit
+	NewMsgSecuredAssetWithdraw     = types.NewMsgSecuredAssetWithdraw
 	NewMsgLoanOpen                 = types.NewMsgLoanOpen
 	NewMsgLoanRepayment            = types.NewMsgLoanRepayment
 	NewMsgMimir                    = types.NewMsgMimir
@@ -153,6 +155,8 @@ var (
 	NewEventVersion                = types.NewEventVersion
 	NewEventTradeAccountDeposit    = types.NewEventTradeAccountDeposit
 	NewEventTradeAccountWithdraw   = types.NewEventTradeAccountWithdraw
+	NewEventSecuredAssetDeposit    = types.NewEventSecuredAssetDeposit
+	NewEventSecuredAssetWithdraw   = types.NewEventSecuredAssetWithdraw
 	NewEventRUNEPoolDeposit        = types.NewEventRUNEPoolDeposit
 	NewEventRUNEPoolWithdraw       = types.NewEventRUNEPoolWithdraw
 	NewEventLoanOpen               = types.NewEventLoanOpen
@@ -238,6 +242,8 @@ type (
 	MsgNoOp                   = types.MsgNoOp
 	MsgTradeAccountDeposit    = types.MsgTradeAccountDeposit
 	MsgTradeAccountWithdrawal = types.MsgTradeAccountWithdrawal
+	MsgSecuredAssetDeposit    = types.MsgSecuredAssetDeposit
+	MsgSecuredAssetWithdraw   = types.MsgSecuredAssetWithdraw
 	MsgConsolidate            = types.MsgConsolidate
 	MsgDonate                 = types.MsgDonate
 	MsgWithdrawLiquidity      = types.MsgWithdrawLiquidity
@@ -340,6 +346,7 @@ type (
 	SwapperClout             = types.SwapperClout
 	TradeAccount             = types.TradeAccount
 	TradeUnit                = types.TradeUnit
+	SecuredAsset             = types.SecuredAsset
 	RUNEProvider             = types.RUNEProvider
 	RUNEPool                 = types.RUNEPool
 
@@ -361,6 +368,8 @@ type (
 	ManageTHORNameMemo         = mem.ManageTHORNameMemo
 	TradeAccountDepositMemo    = mem.TradeAccountDepositMemo
 	TradeAccountWithdrawalMemo = mem.TradeAccountWithdrawalMemo
+	SecuredAssetDepositMemo    = mem.SecuredAssetDepositMemo
+	SecuredAssetWithdrawMemo   = mem.SecuredAssetWithdrawMemo
 	LoanOpenMemo               = mem.LoanOpenMemo
 	LoanRepaymentMemo          = mem.LoanRepaymentMemo
 	RunePoolDepositMemo        = mem.RunePoolDepositMemo

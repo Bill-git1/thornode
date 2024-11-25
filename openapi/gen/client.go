@@ -84,6 +84,10 @@ type APIClient struct {
 
 	SaversApi *SaversApiService
 
+	SecuredAssetApi *SecuredAssetApiService
+
+	SecuredAssetsApi *SecuredAssetsApiService
+
 	StreamingSwapApi *StreamingSwapApiService
 
 	TSSApi *TSSApiService
@@ -137,6 +141,8 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 	c.QuoteApi = (*QuoteApiService)(&c.common)
 	c.RUNEPoolApi = (*RUNEPoolApiService)(&c.common)
 	c.SaversApi = (*SaversApiService)(&c.common)
+	c.SecuredAssetApi = (*SecuredAssetApiService)(&c.common)
+	c.SecuredAssetsApi = (*SecuredAssetsApiService)(&c.common)
 	c.StreamingSwapApi = (*StreamingSwapApiService)(&c.common)
 	c.TSSApi = (*TSSApiService)(&c.common)
 	c.ThornamesApi = (*ThornamesApiService)(&c.common)

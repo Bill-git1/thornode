@@ -20,6 +20,7 @@ type DummyMgr struct {
 	orderBook     OrderBook
 	slasher       Slasher
 	tradeMgr      TradeAccountManager
+	securedMgr    SecuredAssetManager
 }
 
 func NewDummyMgrWithKeeper(k keeper.Keeper) *DummyMgr {
@@ -72,3 +73,4 @@ func (m DummyMgr) SwapQ() SwapQueue                         { return m.swapQ }
 func (m DummyMgr) Slasher() Slasher                         { return m.slasher }
 func (m DummyMgr) OrderBookMgr() OrderBook                  { return m.orderBook }
 func (m DummyMgr) TradeAccountManager() TradeAccountManager { return m.tradeMgr }
+func (m DummyMgr) SecuredAssetManager() SecuredAssetManager { return m.securedMgr }

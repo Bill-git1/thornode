@@ -47,6 +47,7 @@ import "types/query_upgrade.proto";
 import "types/query_account.proto";
 import "types/query_export.proto";
 import "types/query_bank.proto";
+import "types/query_secured_asset.proto";
 
 option (gogoproto.marshaler_all) = true;
 
@@ -123,6 +124,14 @@ service Query {
 
   rpc TradeAccounts(QueryTradeAccountsRequest) returns (QueryTradeAccountsResponse) {
     option (google.api.http).get = "/thorchain/trade/accounts/{asset}";
+  }
+
+  rpc SecuredAsset(QuerySecuredAssetRequest) returns (QuerySecuredAssetResponse) {
+    option (google.api.http).get = "/thorchain/securedasset/{asset}";
+  }
+
+  rpc SecuredAssets(QuerySecuredAssetsRequest) returns (QuerySecuredAssetsResponse) {
+    option (google.api.http).get = "/thorchain/securedassets";
   }
 
   rpc Node(QueryNodeRequest) returns (QueryNodeResponse) {

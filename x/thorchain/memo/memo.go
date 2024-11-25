@@ -39,6 +39,8 @@ const (
 	TxLoanRepayment
 	TxTradeAccountDeposit
 	TxTradeAccountWithdrawal
+	TxSecuredAssetDeposit
+	TxSecuredAssetWithdraw
 	TxRunePoolDeposit
 	TxRunePoolWithdraw
 )
@@ -75,6 +77,8 @@ var stringToTxTypeMap = map[string]TxType{
 	"loan-":       TxLoanRepayment,
 	"trade+":      TxTradeAccountDeposit,
 	"trade-":      TxTradeAccountWithdrawal,
+	"secure+":     TxSecuredAssetDeposit,
+	"secure-":     TxSecuredAssetWithdraw,
 	"pool+":       TxRunePoolDeposit,
 	"pool-":       TxRunePoolWithdraw,
 }
@@ -100,6 +104,8 @@ var txToStringMap = map[TxType]string{
 	TxLoanRepayment:          "$-",
 	TxTradeAccountDeposit:    "trade+",
 	TxTradeAccountWithdrawal: "trade-",
+	TxSecuredAssetDeposit:    "secure+",
+	TxSecuredAssetWithdraw:   "secure-",
 }
 
 // converts a string into a txType
@@ -115,7 +121,7 @@ func StringToTxType(s string) (TxType, error) {
 
 func (tx TxType) IsInbound() bool {
 	switch tx {
-	case TxAdd, TxWithdraw, TxTradeAccountDeposit, TxRunePoolDeposit, TxRunePoolWithdraw, TxSwap, TxLimitOrder, TxDonate, TxBond, TxUnbond, TxLeave, TxReserve, TxNoOp, TxTHORName, TxLoanOpen, TxLoanRepayment:
+	case TxAdd, TxWithdraw, TxTradeAccountDeposit, TxTradeAccountWithdrawal, TxSecuredAssetDeposit, TxSecuredAssetWithdraw, TxRunePoolDeposit, TxRunePoolWithdraw, TxSwap, TxLimitOrder, TxDonate, TxBond, TxUnbond, TxLeave, TxReserve, TxNoOp, TxTHORName, TxLoanOpen, TxLoanRepayment:
 		return true
 	default:
 		return false
@@ -143,7 +149,7 @@ func (tx TxType) IsInternal() bool {
 // HasOutbound whether the txtype might trigger outbound tx
 func (tx TxType) HasOutbound() bool {
 	switch tx {
-	case TxAdd, TxBond, TxTradeAccountDeposit, TxRunePoolDeposit, TxDonate, TxReserve, TxMigrate, TxRagnarok:
+	case TxAdd, TxBond, TxTradeAccountDeposit, TxSecuredAssetDeposit, TxRunePoolDeposit, TxDonate, TxReserve, TxMigrate, TxRagnarok:
 		return false
 	default:
 		return true

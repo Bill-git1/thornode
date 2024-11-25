@@ -36,6 +36,8 @@ const (
 	Query_TradeUnits_FullMethodName          = "/types.Query/TradeUnits"
 	Query_TradeAccount_FullMethodName        = "/types.Query/TradeAccount"
 	Query_TradeAccounts_FullMethodName       = "/types.Query/TradeAccounts"
+	Query_SecuredAsset_FullMethodName        = "/types.Query/SecuredAsset"
+	Query_SecuredAssets_FullMethodName       = "/types.Query/SecuredAssets"
 	Query_Node_FullMethodName                = "/types.Query/Node"
 	Query_Nodes_FullMethodName               = "/types.Query/Nodes"
 	Query_PoolSlip_FullMethodName            = "/types.Query/PoolSlip"
@@ -120,6 +122,8 @@ type QueryClient interface {
 	TradeUnits(ctx context.Context, in *QueryTradeUnitsRequest, opts ...grpc.CallOption) (*QueryTradeUnitsResponse, error)
 	TradeAccount(ctx context.Context, in *QueryTradeAccountRequest, opts ...grpc.CallOption) (*QueryTradeAccountsResponse, error)
 	TradeAccounts(ctx context.Context, in *QueryTradeAccountsRequest, opts ...grpc.CallOption) (*QueryTradeAccountsResponse, error)
+	SecuredAsset(ctx context.Context, in *QuerySecuredAssetRequest, opts ...grpc.CallOption) (*QuerySecuredAssetResponse, error)
+	SecuredAssets(ctx context.Context, in *QuerySecuredAssetsRequest, opts ...grpc.CallOption) (*QuerySecuredAssetsResponse, error)
 	Node(ctx context.Context, in *QueryNodeRequest, opts ...grpc.CallOption) (*QueryNodeResponse, error)
 	Nodes(ctx context.Context, in *QueryNodesRequest, opts ...grpc.CallOption) (*QueryNodesResponse, error)
 	PoolSlip(ctx context.Context, in *QueryPoolSlipRequest, opts ...grpc.CallOption) (*QueryPoolSlipsResponse, error)
@@ -333,6 +337,24 @@ func (c *queryClient) TradeAccount(ctx context.Context, in *QueryTradeAccountReq
 func (c *queryClient) TradeAccounts(ctx context.Context, in *QueryTradeAccountsRequest, opts ...grpc.CallOption) (*QueryTradeAccountsResponse, error) {
 	out := new(QueryTradeAccountsResponse)
 	err := c.cc.Invoke(ctx, Query_TradeAccounts_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) SecuredAsset(ctx context.Context, in *QuerySecuredAssetRequest, opts ...grpc.CallOption) (*QuerySecuredAssetResponse, error) {
+	out := new(QuerySecuredAssetResponse)
+	err := c.cc.Invoke(ctx, Query_SecuredAsset_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) SecuredAssets(ctx context.Context, in *QuerySecuredAssetsRequest, opts ...grpc.CallOption) (*QuerySecuredAssetsResponse, error) {
+	out := new(QuerySecuredAssetsResponse)
+	err := c.cc.Invoke(ctx, Query_SecuredAssets_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -869,6 +891,8 @@ type QueryServer interface {
 	TradeUnits(context.Context, *QueryTradeUnitsRequest) (*QueryTradeUnitsResponse, error)
 	TradeAccount(context.Context, *QueryTradeAccountRequest) (*QueryTradeAccountsResponse, error)
 	TradeAccounts(context.Context, *QueryTradeAccountsRequest) (*QueryTradeAccountsResponse, error)
+	SecuredAsset(context.Context, *QuerySecuredAssetRequest) (*QuerySecuredAssetResponse, error)
+	SecuredAssets(context.Context, *QuerySecuredAssetsRequest) (*QuerySecuredAssetsResponse, error)
 	Node(context.Context, *QueryNodeRequest) (*QueryNodeResponse, error)
 	Nodes(context.Context, *QueryNodesRequest) (*QueryNodesResponse, error)
 	PoolSlip(context.Context, *QueryPoolSlipRequest) (*QueryPoolSlipsResponse, error)
@@ -982,6 +1006,12 @@ func (UnimplementedQueryServer) TradeAccount(context.Context, *QueryTradeAccount
 }
 func (UnimplementedQueryServer) TradeAccounts(context.Context, *QueryTradeAccountsRequest) (*QueryTradeAccountsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method TradeAccounts not implemented")
+}
+func (UnimplementedQueryServer) SecuredAsset(context.Context, *QuerySecuredAssetRequest) (*QuerySecuredAssetResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SecuredAsset not implemented")
+}
+func (UnimplementedQueryServer) SecuredAssets(context.Context, *QuerySecuredAssetsRequest) (*QuerySecuredAssetsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SecuredAssets not implemented")
 }
 func (UnimplementedQueryServer) Node(context.Context, *QueryNodeRequest) (*QueryNodeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Node not implemented")
@@ -1466,6 +1496,42 @@ func _Query_TradeAccounts_Handler(srv interface{}, ctx context.Context, dec func
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(QueryServer).TradeAccounts(ctx, req.(*QueryTradeAccountsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_SecuredAsset_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QuerySecuredAssetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).SecuredAsset(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_SecuredAsset_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).SecuredAsset(ctx, req.(*QuerySecuredAssetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_SecuredAssets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QuerySecuredAssetsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).SecuredAssets(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_SecuredAssets_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).SecuredAssets(ctx, req.(*QuerySecuredAssetsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2552,6 +2618,14 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "TradeAccounts",
 			Handler:    _Query_TradeAccounts_Handler,
+		},
+		{
+			MethodName: "SecuredAsset",
+			Handler:    _Query_SecuredAsset_Handler,
+		},
+		{
+			MethodName: "SecuredAssets",
+			Handler:    _Query_SecuredAssets_Handler,
 		},
 		{
 			MethodName: "Node",

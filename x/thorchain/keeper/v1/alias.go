@@ -62,6 +62,7 @@ var (
 	RegisterLegacyAminoCodec   = types.RegisterLegacyAminoCodec
 	NewTradeAccount            = types.NewTradeAccount
 	NewTradeUnit               = types.NewTradeUnit
+	NewSecuredAsset            = types.NewSecuredAsset
 	NewRUNEProvider            = types.NewRUNEProvider
 	NewNodeAccount             = types.NewNodeAccount
 	NewBondProviders           = types.NewBondProviders
@@ -139,6 +140,7 @@ type (
 	SwapperClout             = types.SwapperClout
 	TradeAccount             = types.TradeAccount
 	TradeUnit                = types.TradeUnit
+	SecuredAsset             = types.SecuredAsset
 	RUNEProvider             = types.RUNEProvider
 	RUNEPool                 = types.RUNEPool
 

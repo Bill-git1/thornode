@@ -1787,6 +1787,57 @@ func (qs queryServer) queryTradeAccount(ctx cosmos.Context, req *types.QueryTrad
 	return &types.QueryTradeAccountsResponse{TradeAccounts: accounts}, nil
 }
 
+func (qs queryServer) querySecuredAssets(ctx cosmos.Context, req *types.QuerySecuredAssetsRequest) (*types.QuerySecuredAssetsResponse, error) {
+	iter := qs.mgr.Keeper().GetSecuredAssetIterator(ctx)
+	res := make([]*types.QuerySecuredAssetResponse, 0)
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		var p keeper.SecuredAsset
+		if err := qs.mgr.Keeper().Cdc().Unmarshal(iter.Value(), &p); err != nil {
+			continue
+		}
+		if p.Depth.IsZero() {
+			continue
+		}
+
+		shareSupply := qs.mgr.SecuredAssetManager().GetShareSupply(ctx, p.Asset)
+
+		pResp := types.QuerySecuredAssetResponse{
+			Asset:  p.Asset.String(),
+			Supply: shareSupply.String(),
+			Depth:  p.Depth.String(),
+		}
+		res = append(res, &pResp)
+	}
+
+	return &types.QuerySecuredAssetsResponse{
+		Assets: res,
+	}, nil
+}
+
+func (qs queryServer) querySecuredAsset(ctx cosmos.Context, req *types.QuerySecuredAssetRequest) (*types.QuerySecuredAssetResponse, error) {
+	if len(req.Asset) == 0 {
+		return nil, errors.New("asset not provided")
+	}
+	asset, err := common.NewAsset(req.Asset)
+	if err != nil {
+		ctx.Logger().Error("fail to parse asset", "error", err)
+		return nil, fmt.Errorf("could not parse asset: %w", err)
+	}
+
+	a, shareSupply, err := qs.mgr.SecuredAssetManager().GetSecuredAssetStatus(ctx, asset)
+	if err != nil {
+		ctx.Logger().Error("fail to get asset status", "error", err)
+		return nil, fmt.Errorf("could not get asset status: %w", err)
+	}
+
+	return &types.QuerySecuredAssetResponse{
+		Asset:  a.Asset.String(),
+		Supply: shareSupply.String(),
+		Depth:  a.Depth.String(),
+	}, nil
+}
+
 func extractVoter(ctx cosmos.Context, tx_id string, mgr *Mgrs) (common.TxID, ObservedTxVoter, error) {
 	if len(tx_id) == 0 {
 		return "", ObservedTxVoter{}, errors.New("tx id not provided")

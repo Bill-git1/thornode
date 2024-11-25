@@ -46,14 +46,14 @@ func (h DepositHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, e
 func (h DepositHandler) validate(ctx cosmos.Context, msg MsgDeposit) error {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("1.134.0")):
-		return h.validateV134(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.validateV3_0_0(ctx, msg)
 	default:
 		return errInvalidVersion
 	}
 }
 
-func (h DepositHandler) validateV134(ctx cosmos.Context, msg MsgDeposit) error {
+func (h DepositHandler) validateV3_0_0(ctx cosmos.Context, msg MsgDeposit) error {
 	// ValidateBasic is also executed in message service router's handler and isn't versioned there
 	if err := msg.ValidateBasic(); err != nil {
 		return err
@@ -66,24 +66,32 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit) (*cosmos.Resu
 	ctx.Logger().Info("receive MsgDeposit", "from", msg.GetSigners()[0], "coins", msg.Coins, "memo", msg.Memo)
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("1.131.0")):
-		return h.handleV131(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.handleV3_0_0(ctx, msg)
 	default:
 		return nil, errInvalidVersion
 	}
 }
 
-func (h DepositHandler) handleV131(ctx cosmos.Context, msg MsgDeposit) (*cosmos.Result, error) {
+func (h DepositHandler) handleV3_0_0(ctx cosmos.Context, msg MsgDeposit) (*cosmos.Result, error) {
 	if h.mgr.Keeper().IsChainHalted(ctx, common.THORChain) {
 		return nil, fmt.Errorf("unable to use MsgDeposit while THORChain is halted")
 	}
 
-	if msg.Coins[0].Asset.IsTradeAsset() {
-		balance := h.mgr.TradeAccountManager().BalanceOf(ctx, msg.Coins[0].Asset, msg.Signer)
+	asset := msg.Coins[0].Asset
+
+	switch {
+	case asset.IsTradeAsset():
+		balance := h.mgr.TradeAccountManager().BalanceOf(ctx, asset, msg.Signer)
 		if msg.Coins[0].Amount.GT(balance) {
 			return nil, se.ErrInsufficientFunds
 		}
-	} else {
+	case asset.IsSecuredAsset():
+		balance := h.mgr.SecuredAssetManager().BalanceOf(ctx, asset, msg.Signer)
+		if msg.Coins[0].Amount.GT(balance) {
+			return nil, se.ErrInsufficientFunds
+		}
+	default:
 		coins, err := msg.Coins.Native()
 		if err != nil {
 			return nil, ErrInternal(err, "coins are native to THORChain")
@@ -132,7 +140,7 @@ func (h DepositHandler) handleV131(ctx cosmos.Context, msg MsgDeposit) (*cosmos.
 		targetModule = AsgardName
 	}
 	coinsInMsg := msg.Coins
-	if !coinsInMsg.IsEmpty() && !coinsInMsg[0].Asset.IsTradeAsset() {
+	if !coinsInMsg.IsEmpty() && !coinsInMsg[0].Asset.IsTradeAsset() && !coinsInMsg[0].Asset.IsSecuredAsset() {
 		// send funds to target module
 		// trunk-ignore(golangci-lint/govet): shadow
 		err := h.mgr.Keeper().SendFromAccountToModule(ctx, msg.GetSigners()[0], targetModule, msg.Coins)
