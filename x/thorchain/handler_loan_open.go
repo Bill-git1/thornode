@@ -259,7 +259,7 @@ func (h LoanOpenHandler) openLoan(ctx cosmos.Context, msg MsgLoanOpen) error {
 			Coin:       common.NewCoin(common.TOR, cumulativeDebt),
 			ModuleName: ModuleName,
 		}
-		ok, err := h.mgr.TxOutStore().TryAddTxOutItem(ctx, h.mgr, toi, zero)
+		ok, err := h.mgr.TxOutStore().TryAddTxOutItem(ctx, h.mgr, toi, zero) // trunk-ignore(golangci-lint/govet): shadow
 		if err != nil {
 			return err
 		}
@@ -274,7 +274,7 @@ func (h LoanOpenHandler) openLoan(ctx cosmos.Context, msg MsgLoanOpen) error {
 
 		torCoin := common.NewCoin(common.TOR, cumulativeDebt)
 
-		if err := h.mgr.Keeper().MintToModule(ctx, ModuleName, torCoin); err != nil {
+		if err := h.mgr.Keeper().MintToModule(ctx, ModuleName, torCoin); err != nil { // trunk-ignore(golangci-lint/govet): shadow
 			return fmt.Errorf("fail to mint loan tor debt: %w", err)
 		}
 		mintEvt := NewEventMintBurn(MintSupplyType, torCoin.Asset.Native(), torCoin.Amount, "swap")
