@@ -32,8 +32,8 @@ func (m *MsgSecuredAssetDeposit) ValidateBasic() error {
 	if m.Asset.IsEmpty() {
 		return cosmos.ErrUnknownRequest("asset cannot be empty")
 	}
-	if m.Asset.GetChain().IsTHORChain() {
-		return cosmos.ErrUnknownRequest("asset cannot be THORChain asset")
+	if m.Asset.IsNative() {
+		return cosmos.ErrUnknownRequest("native assets cannot be deposited")
 	}
 	if m.Amount.IsZero() {
 		return cosmos.ErrUnknownRequest("amount cannot be zero")

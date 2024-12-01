@@ -84,7 +84,7 @@ func (h SecuredAssetDepositHandler) handle(ctx cosmos.Context, msg MsgSecuredAss
 
 // handle process MsgSecuredAssetDeposit
 func (h SecuredAssetDepositHandler) handleV3_0_0(ctx cosmos.Context, msg MsgSecuredAssetDeposit) error {
-	_, _, err := h.mgr.SecuredAssetManager().Deposit(ctx, msg.Asset, msg.Amount, msg.Address, msg.Tx.FromAddress, msg.Tx.ID)
+	_, err := h.mgr.SecuredAssetManager().Deposit(ctx, msg.Asset, msg.Amount, msg.Address, msg.Tx.FromAddress, msg.Tx.ID)
 	if err != nil {
 		ctx.Logger().Error("fail to handle Deposit", "error", err)
 		return err

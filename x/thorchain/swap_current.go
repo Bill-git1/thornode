@@ -217,10 +217,11 @@ func (s *SwapperVCUR) swapOne(ctx cosmos.Context,
 		if err != nil {
 			return cosmos.ZeroUint(), evt, ErrInternal(err, "fail to parse from address")
 		}
-		amount, _, err = mgr.SecuredAssetManager().Withdraw(ctx, source, amount, fromAcc, common.NoAddress, tx.ID)
+		withdrawAmount, err := mgr.SecuredAssetManager().Withdraw(ctx, source, amount, fromAcc, common.NoAddress, tx.ID)
 		if err != nil {
 			return cosmos.ZeroUint(), evt, ErrInternal(err, "fail to withdraw from secured asset")
 		}
+		amount = withdrawAmount.Amount
 	}
 
 	if target.IsTradeAsset() && tradeAccountsDepositEnabled <= 0 {
@@ -403,7 +404,7 @@ func (s *SwapperVCUR) swapOne(ctx cosmos.Context,
 		if err != nil {
 			return cosmos.ZeroUint(), evt, ErrInternal(err, "fail to parse destination address")
 		}
-		_, _, err = mgr.SecuredAssetManager().Deposit(ctx, target, emitAssets, acc, common.NoAddress, tx.ID)
+		_, err = mgr.SecuredAssetManager().Deposit(ctx, target.GetLayer1Asset(), emitAssets, acc, common.NoAddress, tx.ID)
 		if err != nil {
 			return cosmos.ZeroUint(), evt, ErrInternal(err, "fail to mint secured asset")
 		}

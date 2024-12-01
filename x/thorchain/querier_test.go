@@ -1185,7 +1185,7 @@ func (s *QuerierSuite) TestQuerySecuredAsset(c *C) {
 	owner := GetRandomBech32Addr()
 	addr := GetRandomBTCAddress()
 
-	_, _, err := s.mgr.SecuredAssetManager().Deposit(s.ctx, common.BTCAsset, cosmos.NewUint(1000), owner, addr, common.BlankTxID)
+	_, err := s.mgr.SecuredAssetManager().Deposit(s.ctx, common.BTCAsset, cosmos.NewUint(1000), owner, addr, common.BlankTxID)
 	c.Assert(err, IsNil)
 
 	result, err := s.queryServer.SecuredAsset(s.ctx, &types.QuerySecuredAssetRequest{
@@ -1203,10 +1203,10 @@ func (s *QuerierSuite) TestQuerySecuredAssets(c *C) {
 	owner := GetRandomBech32Addr()
 	addr := GetRandomBTCAddress()
 
-	_, _, err := s.mgr.SecuredAssetManager().Deposit(s.ctx, common.BTCAsset, cosmos.NewUint(1000), owner, addr, common.BlankTxID)
+	_, err := s.mgr.SecuredAssetManager().Deposit(s.ctx, common.BTCAsset, cosmos.NewUint(1000), owner, addr, common.BlankTxID)
 	c.Assert(err, IsNil)
 
-	_, _, err = s.mgr.SecuredAssetManager().Deposit(s.ctx, common.ETHAsset, cosmos.NewUint(2000), owner, addr, common.BlankTxID)
+	_, err = s.mgr.SecuredAssetManager().Deposit(s.ctx, common.ETHAsset, cosmos.NewUint(2000), owner, addr, common.BlankTxID)
 	c.Assert(err, IsNil)
 
 	result, err := s.queryServer.SecuredAssets(s.ctx, &types.QuerySecuredAssetsRequest{})

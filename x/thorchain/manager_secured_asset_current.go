@@ -76,22 +76,25 @@ func (s *SecuredAssetMgrVCUR) Deposit(
 	owner cosmos.AccAddress,
 	assetAddr common.Address,
 	txID common.TxID,
-) (cosmos.Uint, cosmos.Uint, error) {
+) (cosmos.Coin, error) {
 	if err := s.CheckHalt(ctx); err != nil {
-		return cosmos.ZeroUint(), cosmos.ZeroUint(), err
+		return cosmos.Coin{}, err
+	}
+	if asset.IsNative() {
+		return cosmos.Coin{}, fmt.Errorf("native assets cannot be deposited")
 	}
 
 	asset = asset.GetSecuredAsset()
 	pool, shareSupply, err := s.GetSecuredAssetStatus(ctx, asset)
 	if err != nil {
-		return cosmos.ZeroUint(), cosmos.ZeroUint(), err
+		return cosmos.Coin{}, err
 	}
 
 	mintAmt := s.calcMintAmt(shareSupply, pool.Depth, amount)
 	coin := common.NewCoin(asset, mintAmt)
 	err = s.keeper.MintAndSendToAccount(ctx, owner, coin)
 	if err != nil {
-		return cosmos.ZeroUint(), cosmos.ZeroUint(), err
+		return cosmos.Coin{}, err
 	}
 
 	pool.Depth = pool.Depth.Add(amount)
@@ -102,8 +105,12 @@ func (s *SecuredAssetMgrVCUR) Deposit(
 	if err := s.eventMgr.EmitEvent(ctx, depositEvent); err != nil {
 		ctx.Logger().Error("fail to emit secured asset deposit event", "error", err)
 	}
+	cosmosCoin, err := coin.Native()
+	if err != nil {
+		return cosmos.Coin{}, err
+	}
 
-	return amount, mintAmt, nil
+	return cosmosCoin, nil
 }
 
 func (s *SecuredAssetMgrVCUR) calcMintAmt(oldUnits, depth, add cosmos.Uint) cosmos.Uint {
@@ -123,15 +130,18 @@ func (s *SecuredAssetMgrVCUR) Withdraw(
 	owner cosmos.AccAddress,
 	assetAddr common.Address,
 	txID common.TxID,
-) (cosmos.Uint, cosmos.Uint, error) {
+) (common.Coin, error) {
 	if err := s.CheckHalt(ctx); err != nil {
-		return cosmos.ZeroUint(), cosmos.ZeroUint(), err
+		return common.NoCoin, err
 	}
 
-	asset = asset.GetSecuredAsset()
+	if !asset.IsSecuredAsset() {
+		return common.NoCoin, fmt.Errorf("only secured assets can be withdrawn")
+	}
+
 	pool, shareSupply, err := s.GetSecuredAssetStatus(ctx, asset)
 	if err != nil {
-		return cosmos.ZeroUint(), cosmos.ZeroUint(), err
+		return common.NoCoin, err
 	}
 
 	balance := s.keeper.GetBalanceOf(ctx, owner, asset)
@@ -148,7 +158,7 @@ func (s *SecuredAssetMgrVCUR) Withdraw(
 
 	err = s.keeper.SendFromAccountToModule(ctx, owner, ModuleName, coins)
 	if err != nil {
-		return cosmos.ZeroUint(), cosmos.ZeroUint(), err
+		return common.NoCoin, err
 	}
 
 	// Safely re-calculate withdraw amount from burnAmt
@@ -156,7 +166,7 @@ func (s *SecuredAssetMgrVCUR) Withdraw(
 
 	err = s.keeper.BurnFromModule(ctx, ModuleName, coin)
 	if err != nil {
-		return cosmos.ZeroUint(), cosmos.ZeroUint(), err
+		return common.NoCoin, err
 	}
 	pool.Depth = common.SafeSub(pool.Depth, tokensToClaim)
 
@@ -167,8 +177,7 @@ func (s *SecuredAssetMgrVCUR) Withdraw(
 		ctx.Logger().Error("fail to emit secured asset withdraw event", "error", err)
 	}
 
-	// Return the share units burned
-	return tokensToClaim, burnAmt, nil
+	return common.NewCoin(asset.GetLayer1Asset(), tokensToClaim), nil
 }
 
 func (h SecuredAssetMgrVCUR) CheckHalt(ctx cosmos.Context) error {

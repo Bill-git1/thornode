@@ -798,7 +798,7 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 		if err != nil {
 			return nil, fmt.Errorf("failed to get thor address: %w", err)
 		}
-		_, _, err = qs.mgr.SecuredAssetManager().Deposit(ctx, fromAsset, amount, thorAddr, common.NoAddress, common.BlankTxID)
+		_, err = qs.mgr.SecuredAssetManager().Deposit(ctx, fromAsset.GetLayer1Asset(), amount, thorAddr, common.NoAddress, common.BlankTxID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to deposit secured asset: %w", err)
 		}

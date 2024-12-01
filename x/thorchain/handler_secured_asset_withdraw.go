@@ -6,7 +6,6 @@ import (
 	"github.com/blang/semver"
 	"github.com/hashicorp/go-multierror"
 
-	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
 )
@@ -74,18 +73,16 @@ func (h SecuredAssetWithdrawHandler) handle(ctx cosmos.Context, msg MsgSecuredAs
 
 // handle process MsgSecuredAssetWithdraw
 func (h SecuredAssetWithdrawHandler) handleV3_0_0(ctx cosmos.Context, msg MsgSecuredAssetWithdraw) error {
-	withdraw, _, err := h.mgr.SecuredAssetManager().Withdraw(ctx, msg.Asset, msg.Amount, msg.Signer, msg.AssetAddress, msg.Tx.ID)
+	withdrawAmount, err := h.mgr.SecuredAssetManager().Withdraw(ctx, msg.Asset, msg.Amount, msg.Signer, msg.AssetAddress, msg.Tx.ID)
 	if err != nil {
 		return err
 	}
 
-	layer1Asset := msg.Asset.GetLayer1Asset()
-
 	toi := TxOutItem{
-		Chain:     layer1Asset.GetChain(),
+		Chain:     withdrawAmount.Asset.GetChain(),
 		InHash:    msg.Tx.ID,
 		ToAddress: msg.AssetAddress,
-		Coin:      common.NewCoin(layer1Asset, withdraw),
+		Coin:      withdrawAmount,
 	}
 
 	ok, err := h.mgr.TxOutStore().TryAddTxOutItem(ctx, h.mgr, toi, cosmos.ZeroUint())
