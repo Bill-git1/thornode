@@ -39,14 +39,14 @@ func (h MigrateHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, e
 func (h MigrateHandler) validate(ctx cosmos.Context, msg MsgMigrate) error {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("0.1.0")):
-		return h.validateV1(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.validateV3_0_0(ctx, msg)
 	default:
 		return errInvalidVersion
 	}
 }
 
-func (h MigrateHandler) validateV1(ctx cosmos.Context, msg MsgMigrate) error {
+func (h MigrateHandler) validateV3_0_0(ctx cosmos.Context, msg MsgMigrate) error {
 	if err := msg.ValidateBasic(); nil != err {
 		return err
 	}
@@ -57,8 +57,8 @@ func (h MigrateHandler) handle(ctx cosmos.Context, msg MsgMigrate) (*cosmos.Resu
 	ctx.Logger().Info("receive MsgMigrate", "request tx hash", msg.Tx.Tx.ID)
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("1.96.0")):
-		return h.handleV96(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.handleV3_0_0(ctx, msg)
 	default:
 		return nil, errBadVersion
 	}
@@ -77,7 +77,7 @@ func (h MigrateHandler) slash(ctx cosmos.Context, tx ObservedTx) error {
 	return h.mgr.Slasher().SlashVault(ctx, tx.ObservedPubKey, toSlash, h.mgr)
 }
 
-func (h MigrateHandler) handleV96(ctx cosmos.Context, msg MsgMigrate) (*cosmos.Result, error) {
+func (h MigrateHandler) handleV3_0_0(ctx cosmos.Context, msg MsgMigrate) (*cosmos.Result, error) {
 	// update txOut record with our TxID that sent funds out of the pool
 	txOut, err := h.mgr.Keeper().GetTxOut(ctx, msg.BlockHeight)
 	if err != nil {

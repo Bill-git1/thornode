@@ -56,10 +56,10 @@ func (h ProposeUpgradeHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Re
 }
 
 func (h ProposeUpgradeHandler) validate(ctx cosmos.Context, msg *MsgProposeUpgrade) error {
-	return h.validateV138(ctx, msg)
+	return h.validateV3_0_0(ctx, msg)
 }
 
-func (h ProposeUpgradeHandler) validateV138(ctx cosmos.Context, msg *MsgProposeUpgrade) error {
+func (h ProposeUpgradeHandler) validateV3_0_0(ctx cosmos.Context, msg *MsgProposeUpgrade) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
@@ -110,10 +110,10 @@ func (h ProposeUpgradeHandler) validateV138(ctx cosmos.Context, msg *MsgProposeU
 }
 
 func (h ProposeUpgradeHandler) handle(ctx cosmos.Context, msg *MsgProposeUpgrade) error {
-	return h.handleV138(ctx, msg)
+	return h.handleV3_0_0(ctx, msg)
 }
 
-func (h ProposeUpgradeHandler) handleV138(ctx cosmos.Context, msg *MsgProposeUpgrade) error {
+func (h ProposeUpgradeHandler) handleV3_0_0(ctx cosmos.Context, msg *MsgProposeUpgrade) error {
 	u := msg.Upgrade
 	name := msg.Name
 	k := h.mgr.Keeper()
@@ -186,10 +186,10 @@ func (h ApproveUpgradeHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Re
 }
 
 func (h ApproveUpgradeHandler) validate(ctx cosmos.Context, msg *MsgApproveUpgrade) error {
-	return h.validateV138(ctx, msg)
+	return h.validateV3_0_0(ctx, msg)
 }
 
-func (h ApproveUpgradeHandler) validateV138(ctx cosmos.Context, msg *MsgApproveUpgrade) error {
+func (h ApproveUpgradeHandler) validateV3_0_0(ctx cosmos.Context, msg *MsgApproveUpgrade) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
@@ -219,10 +219,10 @@ func (h ApproveUpgradeHandler) validateV138(ctx cosmos.Context, msg *MsgApproveU
 }
 
 func (h ApproveUpgradeHandler) handle(ctx cosmos.Context, msg *MsgApproveUpgrade) error {
-	return h.handleV138(ctx, msg)
+	return h.handleV3_0_0(ctx, msg)
 }
 
-func (h ApproveUpgradeHandler) handleV138(ctx cosmos.Context, msg *MsgApproveUpgrade) error {
+func (h ApproveUpgradeHandler) handleV3_0_0(ctx cosmos.Context, msg *MsgApproveUpgrade) error {
 	k := h.mgr.Keeper()
 	name := msg.Name
 
@@ -274,10 +274,10 @@ func (h RejectUpgradeHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Res
 }
 
 func (h RejectUpgradeHandler) validate(ctx cosmos.Context, msg *MsgRejectUpgrade) error {
-	return h.validateV138(ctx, msg)
+	return h.validateV3_0_0(ctx, msg)
 }
 
-func (h RejectUpgradeHandler) validateV138(ctx cosmos.Context, msg *MsgRejectUpgrade) error {
+func (h RejectUpgradeHandler) validateV3_0_0(ctx cosmos.Context, msg *MsgRejectUpgrade) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
@@ -306,10 +306,10 @@ func (h RejectUpgradeHandler) validateV138(ctx cosmos.Context, msg *MsgRejectUpg
 }
 
 func (h RejectUpgradeHandler) handle(ctx cosmos.Context, msg *MsgRejectUpgrade) error {
-	return h.handleV138(ctx, msg)
+	return h.handleV3_0_0(ctx, msg)
 }
 
-func (h RejectUpgradeHandler) handleV138(ctx cosmos.Context, msg *MsgRejectUpgrade) error {
+func (h RejectUpgradeHandler) handleV3_0_0(ctx cosmos.Context, msg *MsgRejectUpgrade) error {
 	k := h.mgr.Keeper()
 	name := msg.Name
 

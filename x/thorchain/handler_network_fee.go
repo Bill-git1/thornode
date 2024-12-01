@@ -44,14 +44,14 @@ func (h NetworkFeeHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result
 func (h NetworkFeeHandler) validate(ctx cosmos.Context, msg MsgNetworkFee) error {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("0.1.0")):
-		return h.validateV1(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.validateV3_0_0(ctx, msg)
 	default:
 		return errBadVersion
 	}
 }
 
-func (h NetworkFeeHandler) validateV1(ctx cosmos.Context, msg MsgNetworkFee) error {
+func (h NetworkFeeHandler) validateV3_0_0(ctx cosmos.Context, msg MsgNetworkFee) error {
 	// ValidateBasic is also executed in message service router's handler and isn't versioned there
 	if err := msg.ValidateBasic(); err != nil {
 		return err
@@ -67,14 +67,14 @@ func (h NetworkFeeHandler) validateV1(ctx cosmos.Context, msg MsgNetworkFee) err
 func (h NetworkFeeHandler) handle(ctx cosmos.Context, msg MsgNetworkFee) (*cosmos.Result, error) {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("1.134.0")):
-		return h.handleV134(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.handleV3_0_0(ctx, msg)
 	default:
 		return nil, errBadVersion
 	}
 }
 
-func (h NetworkFeeHandler) handleV134(ctx cosmos.Context, msg MsgNetworkFee) (*cosmos.Result, error) {
+func (h NetworkFeeHandler) handleV3_0_0(ctx cosmos.Context, msg MsgNetworkFee) (*cosmos.Result, error) {
 	active, err := h.mgr.Keeper().ListActiveValidators(ctx)
 	if err != nil {
 		err = wrapError(ctx, err, "fail to get list of active node accounts")

@@ -15,10 +15,8 @@ import (
 func withdraw(ctx cosmos.Context, msg MsgWithdrawLiquidity, mgr Manager) (cosmos.Uint, cosmos.Uint, cosmos.Uint, cosmos.Uint, error) {
 	version := mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("2.137.0")):
-		return withdrawV137(ctx, msg, mgr)
-	case version.GTE(semver.MustParse("1.129.0")):
-		return withdrawV129(ctx, msg, mgr)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return withdrawV3_0_0(ctx, msg, mgr)
 	default:
 		zero := cosmos.ZeroUint()
 		return zero, zero, zero, zero, errInvalidVersion
@@ -27,7 +25,7 @@ func withdraw(ctx cosmos.Context, msg MsgWithdrawLiquidity, mgr Manager) (cosmos
 
 // Performs the withdraw for the provided MsgWithdrawLiquidity message.
 // Returns: runeAmt, assetAmount, units, lastWithdraw, err
-func withdrawV137(ctx cosmos.Context, msg MsgWithdrawLiquidity, mgr Manager) (cosmos.Uint, cosmos.Uint, cosmos.Uint, cosmos.Uint, error) {
+func withdrawV3_0_0(ctx cosmos.Context, msg MsgWithdrawLiquidity, mgr Manager) (cosmos.Uint, cosmos.Uint, cosmos.Uint, cosmos.Uint, error) {
 	if err := validateWithdraw(ctx, mgr.Keeper(), msg); err != nil {
 		ctx.Logger().Error("msg withdraw failed validation", "error", err)
 		return cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), err
@@ -184,14 +182,14 @@ func assetToWithdraw(msg MsgWithdrawLiquidity, lp LiquidityProvider, pauseAsym i
 func calculateWithdraw(ctx cosmos.Context, keeper keeper.Keeper, poolAsset common.Asset, poolUnits, poolRuneDepth, poolAssetDepth, lpUnits, withdrawBasisPoints cosmos.Uint, withdrawalAsset common.Asset, withdrawAddress common.Address) (cosmos.Uint, cosmos.Uint, cosmos.Uint, error) {
 	version := keeper.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("2.137.0")):
-		return calculateWithdrawV137(ctx, keeper, poolAsset, poolUnits, poolRuneDepth, poolAssetDepth, lpUnits, withdrawBasisPoints, withdrawalAsset, withdrawAddress)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return calculateWithdrawV3_0_0(ctx, keeper, poolAsset, poolUnits, poolRuneDepth, poolAssetDepth, lpUnits, withdrawBasisPoints, withdrawalAsset, withdrawAddress)
 	default:
-		return calculateWithdrawV129(poolUnits, poolRuneDepth, poolAssetDepth, lpUnits, withdrawBasisPoints, withdrawalAsset)
+		return cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), errBadVersion
 	}
 }
 
-func calculateWithdrawV137(ctx cosmos.Context, keeper keeper.Keeper, poolAsset common.Asset, poolUnits, poolRuneDepth, poolAssetDepth, lpUnits, withdrawBasisPoints cosmos.Uint, withdrawalAsset common.Asset, withdrawAddress common.Address) (cosmos.Uint, cosmos.Uint, cosmos.Uint, error) {
+func calculateWithdrawV3_0_0(ctx cosmos.Context, keeper keeper.Keeper, poolAsset common.Asset, poolUnits, poolRuneDepth, poolAssetDepth, lpUnits, withdrawBasisPoints cosmos.Uint, withdrawalAsset common.Asset, withdrawAddress common.Address) (cosmos.Uint, cosmos.Uint, cosmos.Uint, error) {
 	if poolUnits.IsZero() {
 		return cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), errors.New("poolUnits can't be zero")
 	}

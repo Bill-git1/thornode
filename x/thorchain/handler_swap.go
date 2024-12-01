@@ -45,16 +45,14 @@ func (h SwapHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, erro
 func (h SwapHandler) validate(ctx cosmos.Context, msg MsgSwap) error {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("2.136.0")):
-		return h.validateV136(ctx, msg)
-	case version.GTE(semver.MustParse("1.129.0")):
-		return h.validateV129(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.validateV3_0_0(ctx, msg)
 	default:
 		return errInvalidVersion
 	}
 }
 
-func (h SwapHandler) validateV136(ctx cosmos.Context, msg MsgSwap) error {
+func (h SwapHandler) validateV3_0_0(ctx cosmos.Context, msg MsgSwap) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
@@ -257,14 +255,14 @@ func (h SwapHandler) handle(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result, er
 	ctx.Logger().Info("receive MsgSwap", "request tx hash", msg.Tx.ID, "source asset", msg.Tx.Coins[0].Asset, "target asset", msg.TargetAsset, "signer", msg.Signer.String())
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("1.133.0")):
-		return h.handleV133(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.handleV3_0_0(ctx, msg)
 	default:
 		return nil, errBadVersion
 	}
 }
 
-func (h SwapHandler) handleV133(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result, error) {
+func (h SwapHandler) handleV3_0_0(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result, error) {
 	// test that the network we are running matches the destination network
 	// Don't change msg.Destination here; this line was introduced to avoid people from swapping mainnet asset,
 	// but using mocknet address.

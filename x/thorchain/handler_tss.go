@@ -27,11 +27,9 @@ func NewTssHandler(mgr Manager) BaseHandler[*MsgTssPool] {
 		mgr:    mgr,
 		logger: MsgTssPoolLogger,
 		validators: NewValidators[*MsgTssPool]().
-			Register("2.137.0", MsgTssPoolValidateV137).
-			Register("1.124.0", MsgTssPoolValidateV124),
+			Register("3.0.0", MsgTssPoolValidateV3_0_0),
 		handlers: NewHandlers[*MsgTssPool]().
-			Register("2.137.0", MsgTssPoolHandleV137).
-			Register("1.134.0", MsgTssPoolHandleV134),
+			Register("3.0.0", MsgTssPoolHandleV3_0_0),
 	}
 }
 
@@ -70,7 +68,7 @@ var verifySecp256K1Signature = func(pk common.PubKey, sig []byte) error {
 	return nil
 }
 
-func MsgTssPoolValidateV137(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) error {
+func MsgTssPoolValidateV3_0_0(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) error {
 	// ValidateBasic is also executed in message service router's handler and isn't versioned there
 	if err := msg.ValidateBasic(); err != nil {
 		return err
@@ -153,7 +151,7 @@ func validateTssAuth(ctx cosmos.Context, k keeper.Keeper, signer cosmos.AccAddre
 	return nil
 }
 
-func MsgTssPoolHandleV137(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) (*cosmos.Result, error) {
+func MsgTssPoolHandleV3_0_0(ctx cosmos.Context, mgr Manager, msg *MsgTssPool) (*cosmos.Result, error) {
 	ctx.Logger().Info("handler tss", "current version", mgr.GetVersion())
 	blames := make([]string, 0)
 	if !msg.Blame.IsEmpty() {
@@ -532,11 +530,6 @@ func TssAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper, msg M
 	err := validateTssAuth(ctx, k, msg.Signer)
 	if err != nil {
 		return err
-	}
-
-	// reject messages with a check signature before network version 137
-	if v.LT(semver.MustParse("2.137.0")) && len(msg.Secp256K1Signature) > 0 {
-		return fmt.Errorf("check signatures not supported before version 137")
 	}
 
 	return nil

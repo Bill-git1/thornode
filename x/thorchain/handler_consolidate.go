@@ -44,14 +44,14 @@ func (h ConsolidateHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Resul
 func (h ConsolidateHandler) validate(ctx cosmos.Context, msg MsgConsolidate) error {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("0.1.0")):
-		return h.validateV1(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.validateV3_0_0(ctx, msg)
 	default:
 		return errBadVersion
 	}
 }
 
-func (h ConsolidateHandler) validateV1(ctx cosmos.Context, msg MsgConsolidate) error {
+func (h ConsolidateHandler) validateV3_0_0(ctx cosmos.Context, msg MsgConsolidate) error {
 	return msg.ValidateBasic()
 }
 
@@ -71,14 +71,14 @@ func (h ConsolidateHandler) slash(ctx cosmos.Context, tx ObservedTx) error {
 func (h ConsolidateHandler) handle(ctx cosmos.Context, msg MsgConsolidate) (*cosmos.Result, error) {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("1.96.0")):
-		return h.handleV96(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.handleV3_0_0(ctx, msg)
 	default:
 		return nil, errBadVersion
 	}
 }
 
-func (h ConsolidateHandler) handleV96(ctx cosmos.Context, msg MsgConsolidate) (*cosmos.Result, error) {
+func (h ConsolidateHandler) handleV3_0_0(ctx cosmos.Context, msg MsgConsolidate) (*cosmos.Result, error) {
 	shouldSlash := false
 
 	// ensure transaction is sending to/from same address

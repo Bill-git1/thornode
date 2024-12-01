@@ -9,10 +9,8 @@ import (
 
 func DexAggregators(version semver.Version) []Aggregator {
 	switch {
-	case version.GTE(semver.MustParse("2.136.0")):
-		return DexAggregatorsV136()
-	case version.GTE(semver.MustParse("1.134.0")):
-		return DexAggregatorsV134()
+	case version.GTE(semver.MustParse("3.0.0")):
+		return DexAggregatorsV3_0_0()
 	default:
 		return make([]Aggregator, 0)
 	}

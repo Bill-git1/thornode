@@ -131,14 +131,11 @@ func (ad AnteDecorator) anteHandleMessage(ctx sdk.Context, version semver.Versio
 	case *types.MsgSetVersion:
 		return VersionAnteHandler(ctx, version, ad.keeper, *m)
 	case *types.MsgProposeUpgrade, *types.MsgApproveUpgrade, *types.MsgRejectUpgrade:
-		if version.GTE(semver.MustParse("2.136.0")) {
-			legacyMsg, ok := msg.(sdk.LegacyMsg)
-			if !ok {
-				return cosmos.ErrUnknownRequest("invalid message type")
-			}
-			return ActiveValidatorAnteHandler(ctx, version, ad.keeper, legacyMsg.GetSigners()[0])
+		legacyMsg, ok := msg.(sdk.LegacyMsg)
+		if !ok {
+			return cosmos.ErrUnknownRequest("invalid message type")
 		}
-		return cosmos.ErrUnknownRequest("invalid message type")
+		return ActiveValidatorAnteHandler(ctx, version, ad.keeper, legacyMsg.GetSigners()[0])
 
 	// native handlers (non-consensus)
 	case *types.MsgDeposit:

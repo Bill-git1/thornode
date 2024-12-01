@@ -53,14 +53,14 @@ func (h LoanRepaymentHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Res
 func (h LoanRepaymentHandler) validate(ctx cosmos.Context, msg MsgLoanRepayment) error {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("1.111.0")):
-		return h.validateV111(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.validateV3_0_0(ctx, msg)
 	default:
 		return errBadVersion
 	}
 }
 
-func (h LoanRepaymentHandler) validateV111(ctx cosmos.Context, msg MsgLoanRepayment) error {
+func (h LoanRepaymentHandler) validateV3_0_0(ctx cosmos.Context, msg MsgLoanRepayment) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
@@ -104,14 +104,14 @@ func (h LoanRepaymentHandler) validateV111(ctx cosmos.Context, msg MsgLoanRepaym
 func (h LoanRepaymentHandler) handle(ctx cosmos.Context, msg MsgLoanRepayment) error {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("1.113.0")):
-		return h.handleV113(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.handleV3_0_0(ctx, msg)
 	default:
 		return errBadVersion
 	}
 }
 
-func (h LoanRepaymentHandler) handleV113(ctx cosmos.Context, msg MsgLoanRepayment) error {
+func (h LoanRepaymentHandler) handleV3_0_0(ctx cosmos.Context, msg MsgLoanRepayment) error {
 	// if the inbound asset is TOR, then lets repay the loan. If not, lets
 	// swap first and try again later
 	if msg.Coin.Asset.Equals(common.TOR) {

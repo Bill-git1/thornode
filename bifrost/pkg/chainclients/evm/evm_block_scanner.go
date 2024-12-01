@@ -11,7 +11,6 @@ import (
 
 	_ "embed"
 
-	"github.com/blang/semver"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ecommon "github.com/ethereum/go-ethereum/common"
@@ -834,13 +833,6 @@ func (e *EVMScanner) getTxInFromTransaction(tx *etypes.Transaction, receipt *ety
 	nativeValue := e.tokenManager.ConvertAmount(evm.NativeTokenAddr, tx.Value())
 	txInItem.Coins = append(txInItem.Coins, common.NewCoin(e.cfg.ChainID.GetGasAsset(), nativeValue))
 	txGasPrice := tx.GasPrice()
-	// TODO: remove version check after 100% v2.137.0 or higher
-	version, err := e.bridge.GetThorchainVersion()
-	if version.LT(semver.MustParse("2.137.0")) && err == nil {
-		if txGasPrice.Cmp(big.NewInt(tenGwei)) < 0 {
-			txGasPrice = big.NewInt(tenGwei)
-		}
-	}
 	txInItem.Gas = common.MakeEVMGas(e.cfg.ChainID, txGasPrice, receipt.GasUsed)
 	txInItem.Gas[0].Asset = e.cfg.ChainID.GetGasAsset()
 
@@ -945,13 +937,6 @@ func (e *EVMScanner) getTxInFromSmartContract(tx *etypes.Transaction, receipt *e
 
 	// under no circumstance EVM gas price will be less than 1 Gwei, unless it is in dev environment
 	txGasPrice := tx.GasPrice()
-	// TODO: remove version check after 100% v2.137.0 or higher
-	version, err := e.bridge.GetThorchainVersion()
-	if version.LT(semver.MustParse("2.137.0")) && err == nil {
-		if txGasPrice.Cmp(big.NewInt(tenGwei)) < 0 {
-			txGasPrice = big.NewInt(tenGwei)
-		}
-	}
 	txInItem.Gas = common.MakeEVMGas(e.cfg.ChainID, txGasPrice, receipt.GasUsed)
 	if txInItem.Coins.IsEmpty() {
 		return nil, nil
@@ -979,13 +964,6 @@ func (e *EVMScanner) getTxInFromFailedTransaction(tx *etypes.Transaction, receip
 		return nil
 	}
 	txGasPrice := tx.GasPrice()
-	// TODO: remove version check after 100% v2.137.0 or higher
-	version, err := e.bridge.GetThorchainVersion()
-	if version.LT(semver.MustParse("2.137.0")) && err == nil {
-		if txGasPrice.Cmp(big.NewInt(tenGwei)) < 0 {
-			txGasPrice = big.NewInt(tenGwei)
-		}
-	}
 	txHash := tx.Hash().Hex()[2:]
 	return &stypes.TxInItem{
 		Tx:     txHash,

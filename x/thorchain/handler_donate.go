@@ -41,14 +41,14 @@ func (h DonateHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, er
 func (h DonateHandler) validate(ctx cosmos.Context, msg MsgDonate) error {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("0.80.0")):
-		return h.validateV80(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.validateV3_0_0(ctx, msg)
 	default:
 		return errBadVersion
 	}
 }
 
-func (h DonateHandler) validateV80(ctx cosmos.Context, msg MsgDonate) error {
+func (h DonateHandler) validateV3_0_0(ctx cosmos.Context, msg MsgDonate) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
@@ -64,14 +64,14 @@ func (h DonateHandler) validateV80(ctx cosmos.Context, msg MsgDonate) error {
 func (h DonateHandler) handle(ctx cosmos.Context, msg MsgDonate) error {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("0.1.0")):
-		return h.handleV1(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.handleV3_0_0(ctx, msg)
 	default:
 		return errBadVersion
 	}
 }
 
-func (h DonateHandler) handleV1(ctx cosmos.Context, msg MsgDonate) error {
+func (h DonateHandler) handleV3_0_0(ctx cosmos.Context, msg MsgDonate) error {
 	pool, err := h.mgr.Keeper().GetPool(ctx, msg.Asset)
 	if err != nil {
 		return ErrInternal(err, fmt.Sprintf("fail to get pool for (%s)", msg.Asset))

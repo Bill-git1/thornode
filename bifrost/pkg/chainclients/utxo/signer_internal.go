@@ -6,7 +6,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/blang/semver"
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
@@ -365,14 +364,8 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 		gasAmtSats = c.minRelayFeeSats
 	}
 
-	// TODO: remove version check after v132
-	version, err := c.bridge.GetThorchainVersion()
-	if err != nil {
-		c.log.Err(err).Msg("fail to get thorchain version")
-	}
-	// TODO: after v132 remove 'var memo mem.Memo' and change 'memo, err =' to 'memo, err :='
 	var memo mem.Memo
-	if err == nil && version.GTE(semver.MustParse("1.132.0")) {
+	if err == nil {
 		// Parse the memo to be able to identify Migrate or Consolidate outbounds.
 		memo, err = mem.ParseMemo(common.LatestVersion, tx.Memo)
 		if err != nil {

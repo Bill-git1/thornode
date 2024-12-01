@@ -49,14 +49,14 @@ func (h MimirHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, err
 func (h MimirHandler) validate(ctx cosmos.Context, msg MsgMimir) error {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("1.114.0")):
-		return h.validateV114(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.validateV3_0_0(ctx, msg)
 	default:
 		return errBadVersion
 	}
 }
 
-func (h MimirHandler) validateV114(ctx cosmos.Context, msg MsgMimir) error {
+func (h MimirHandler) validateV3_0_0(ctx cosmos.Context, msg MsgMimir) error {
 	// ValidateBasic is also executed in message service router's handler and isn't versioned there
 	if err := msg.ValidateBasic(); err != nil {
 		return err
@@ -75,15 +75,15 @@ func (h MimirHandler) handle(ctx cosmos.Context, msg MsgMimir) error {
 	ctx.Logger().Info("handleMsgMimir request", "node", msg.Signer, "key", msg.Key, "value", msg.Value)
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("1.133.0")):
-		return h.handleV133(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.handleV3_0_0(ctx, msg)
 	default:
 		ctx.Logger().Error(errInvalidVersion.Error())
 		return errBadVersion
 	}
 }
 
-func (h MimirHandler) handleV133(ctx cosmos.Context, msg MsgMimir) error {
+func (h MimirHandler) handleV3_0_0(ctx cosmos.Context, msg MsgMimir) error {
 	// Get the current Mimir key value if it exists.
 	currentMimirValue, _ := h.mgr.Keeper().GetMimir(ctx, msg.Key)
 	// Here, an error is assumed to mean the Mimir key is currently unset.

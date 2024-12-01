@@ -42,14 +42,14 @@ func (h SetNodeKeysHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Resul
 func (h SetNodeKeysHandler) validate(ctx cosmos.Context, msg MsgSetNodeKeys) error {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("1.134.0")):
-		return h.validateV134(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.validateV3_0_0(ctx, msg)
 	default:
 		return errInvalidVersion
 	}
 }
 
-func (h SetNodeKeysHandler) validateV134(ctx cosmos.Context, msg MsgSetNodeKeys) error {
+func (h SetNodeKeysHandler) validateV3_0_0(ctx cosmos.Context, msg MsgSetNodeKeys) error {
 	// ValidateBasic is also executed in message service router's handler and isn't versioned there
 	if err := msg.ValidateBasic(); err != nil {
 		return err
@@ -77,14 +77,14 @@ func (h SetNodeKeysHandler) handle(ctx cosmos.Context, msg MsgSetNodeKeys) (*cos
 	ctx.Logger().Info("handleMsgSetNodeKeys request")
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("1.115.0")):
-		return h.handleV115(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.handleV3_0_0(ctx, msg)
 	default:
 		return nil, errBadVersion
 	}
 }
 
-func (h SetNodeKeysHandler) handleV115(ctx cosmos.Context, msg MsgSetNodeKeys) (*cosmos.Result, error) {
+func (h SetNodeKeysHandler) handleV3_0_0(ctx cosmos.Context, msg MsgSetNodeKeys) (*cosmos.Result, error) {
 	nodeAccount, err := h.mgr.Keeper().GetNodeAccount(ctx, msg.Signer)
 	if err != nil {
 		ctx.Logger().Error("fail to get node account", "error", err, "address", msg.Signer.String())

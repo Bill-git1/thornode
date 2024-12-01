@@ -30,7 +30,7 @@ func NewCommonOutboundTxHandler(mgr Manager) CommonOutboundTxHandler {
 	}
 }
 
-func (h CommonOutboundTxHandler) slashV96(ctx cosmos.Context, tx ObservedTx) error {
+func (h CommonOutboundTxHandler) slashV3_0_0(ctx cosmos.Context, tx ObservedTx) error {
 	toSlash := make(common.Coins, len(tx.Tx.Coins))
 	copy(toSlash, tx.Tx.Coins)
 	toSlash = toSlash.Add(tx.Tx.Gas.ToCoins()...)
@@ -46,14 +46,14 @@ func (h CommonOutboundTxHandler) slashV96(ctx cosmos.Context, tx ObservedTx) err
 func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxID common.TxID) (*cosmos.Result, error) {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("1.127.0")):
-		return h.handleV127(ctx, tx, inTxID)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.handleV3_0_0(ctx, tx, inTxID)
 	default:
 		return nil, errBadVersion
 	}
 }
 
-func (h CommonOutboundTxHandler) handleV127(ctx cosmos.Context, tx ObservedTx, inTxID common.TxID) (*cosmos.Result, error) {
+func (h CommonOutboundTxHandler) handleV3_0_0(ctx cosmos.Context, tx ObservedTx, inTxID common.TxID) (*cosmos.Result, error) {
 	// note: Outbound tx usually it is related to an inbound tx except migration
 	// thus here try to get the ObservedTxInVoter,  and set the tx out hash accordingly
 	voter, err := h.mgr.Keeper().GetObservedTxInVoter(ctx, inTxID)
@@ -238,7 +238,7 @@ func (h CommonOutboundTxHandler) handleV127(ctx cosmos.Context, tx ObservedTx, i
 			}
 		}
 
-		if err := h.slashV96(ctx, tx); err != nil {
+		if err := h.slashV3_0_0(ctx, tx); err != nil {
 			return nil, ErrInternal(err, "fail to slash account")
 		}
 	}

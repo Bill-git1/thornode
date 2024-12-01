@@ -30,7 +30,7 @@ func check(chain common.Chain) {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 
-	version, err := semver.Parse("2.135.0") // TODO: bump on hard fork
+	version, err := semver.Parse("3.0.0") // TODO: bump on hard fork
 	if err != nil {
 		panic(err)
 	}
@@ -51,11 +51,9 @@ func check(chain common.Chain) {
 
 		// iterate versions up to current
 		version.Minor++
-		if version.Major == 2 && version.Minor == 137 {
-			// go to v3
-			version.Major++
-			version.Minor = 0
-		}
+
+		// TODO bump major at last minor version at hard fork
+
 		if version.GTE(currentVersion) {
 			break
 		}

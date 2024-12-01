@@ -9,6 +9,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
@@ -152,14 +153,15 @@ func NewSwapMemo(asset common.Asset, dest common.Address, slip cosmos.Uint, affA
 
 func (p *parser) ParseSwapMemo() (SwapMemo, error) {
 	switch {
-	case p.version.GTE(semver.MustParse("2.137.0")):
-		return p.ParseSwapMemoV137()
+	case p.version.GTE(semver.MustParse("3.0.0")):
+		return p.ParseSwapMemoV3_0_0()
 	default:
-		return p.ParseSwapMemoV135()
+		return SwapMemo{}, fmt.Errorf("unsupported version: %s", p.version.String())
 	}
 }
 
-func (p *parser) ParseSwapMemoV137() (SwapMemo, error) {
+func (p *parser) ParseSwapMemoV3_0_0() (SwapMemo, error) {
+	// TODO confirm and remove this.
 	if p.keeper == nil {
 		return ParseSwapMemoV1(p.ctx, p.keeper, p.getAsset(1, true, common.EmptyAsset), p.parts)
 	}
@@ -257,4 +259,53 @@ func (p *parser) ParseSwapMemoV137() (SwapMemo, error) {
 	dexTargetLimit := p.getUintWithScientificNotation(8, false, 0)
 
 	return NewSwapMemo(asset, destination, slip, affAddr, totalAffBps, dexAgg, dexTargetAddress, dexTargetLimit, order, streamQuantity, streamInterval, tn, refundAddress, affiliates, affFeeBps), p.Error()
+}
+
+func ParseSwapMemoV1(ctx cosmos.Context, keeper keeper.Keeper, asset common.Asset, parts []string) (SwapMemo, error) {
+	var err error
+	var order types.OrderType
+	if len(parts) < 2 {
+		return SwapMemo{}, fmt.Errorf("not enough parameters")
+	}
+	// DESTADDR can be empty , if it is empty , it will swap to the sender address
+	destination := common.NoAddress
+	affAddr := common.NoAddress
+	affPts := uint64(0)
+	if len(parts) > 2 {
+		if len(parts[2]) > 0 {
+			if keeper == nil {
+				destination, err = common.NewAddress(parts[2])
+			} else {
+				destination, err = FetchAddress(ctx, keeper, parts[2], asset.Chain)
+			}
+			if err != nil {
+				return SwapMemo{}, err
+			}
+		}
+	}
+	// price limit can be empty , when it is empty , there is no price protection
+	slip := cosmos.ZeroUint()
+	if len(parts) > 3 && len(parts[3]) > 0 {
+		slip, err = cosmos.ParseUint(parts[3])
+		if err != nil {
+			return SwapMemo{}, fmt.Errorf("swap price limit:%s is invalid", parts[3])
+		}
+	}
+
+	if len(parts) > 5 && len(parts[4]) > 0 && len(parts[5]) > 0 {
+		if keeper == nil {
+			affAddr, err = common.NewAddress(parts[4])
+		} else {
+			affAddr, err = FetchAddress(ctx, keeper, parts[4], common.THORChain)
+		}
+		if err != nil {
+			return SwapMemo{}, err
+		}
+		affPts, err = strconv.ParseUint(parts[5], 10, 64)
+		if err != nil {
+			return SwapMemo{}, err
+		}
+	}
+
+	return NewSwapMemo(asset, destination, slip, affAddr, cosmos.NewUint(affPts), "", "", cosmos.ZeroUint(), order, 0, 0, types.NewTHORName("", 0, nil), "", nil, nil), nil
 }

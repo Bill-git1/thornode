@@ -812,17 +812,9 @@ func (e *ETHScanner) getTxInFromSmartContract(tx *etypes.Transaction, receipt *e
 	}
 	// under no circumstance ETH gas price will be less than 1 Gwei , unless it is in dev environment
 	txGasPrice := receipt.EffectiveGasPrice
-	// TODO: remove version check after 100% v2.137.0 or higher
-	version, err := e.bridge.GetThorchainVersion()
-	if version.LT(semver.MustParse("2.137.0")) && err == nil {
-		txGasPrice = tx.GasPrice()
-	}
+
 	e.logger.Debug().Msgf("tx: %s, gas price: %s, gas used: %d,receipt status:%d", txInItem.Tx, txGasPrice.String(), receipt.GasUsed, receipt.Status)
-	if version.LT(semver.MustParse("2.137.0")) && err == nil {
-		if txGasPrice.Cmp(big.NewInt(tenGwei)) < 0 {
-			txGasPrice = big.NewInt(tenGwei)
-		}
-	}
+
 	txInItem.Gas = common.MakeEVMGas(common.ETHChain, txGasPrice, receipt.GasUsed)
 	if txInItem.Coins.IsEmpty() {
 		e.logger.Debug().Msgf("there is no coin in this tx, ignore, %+v", txInItem)
@@ -857,14 +849,7 @@ func (e *ETHScanner) getTxInFromTransaction(tx *etypes.Transaction, receipt *ety
 	ethValue := e.convertAmount(ethToken, tx.Value())
 	txInItem.Coins = append(txInItem.Coins, common.NewCoin(asset, ethValue))
 	txGasPrice := receipt.EffectiveGasPrice
-	// TODO: remove version check after 100% v2.137.0 or higher
-	version, err := e.bridge.GetThorchainVersion()
-	if version.LT(semver.MustParse("2.137.0")) && err == nil {
-		txGasPrice = tx.GasPrice()
-		if txGasPrice.Cmp(big.NewInt(tenGwei)) < 0 {
-			txGasPrice = big.NewInt(tenGwei)
-		}
-	}
+
 	txInItem.Gas = common.MakeEVMGas(common.ETHChain, txGasPrice, receipt.GasUsed)
 	if txInItem.Coins.IsEmpty() {
 		if txInItem.Sender == txInItem.To {
@@ -958,14 +943,6 @@ func (e *ETHScanner) getTxInFromFailedTransaction(tx *etypes.Transaction, receip
 		return nil
 	}
 	txGasPrice := receipt.EffectiveGasPrice
-	// TODO: remove version check after 100% v2.137.0 or higher
-	version, err := e.bridge.GetThorchainVersion()
-	if version.LT(semver.MustParse("2.137.0")) && err == nil {
-		txGasPrice = tx.GasPrice()
-		if txGasPrice.Cmp(big.NewInt(tenGwei)) < 0 {
-			txGasPrice = big.NewInt(tenGwei)
-		}
-	}
 	txHash := tx.Hash().Hex()[2:]
 	return &stypes.TxInItem{
 		Tx:     txHash,

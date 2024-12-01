@@ -45,14 +45,14 @@ func (h TradeAccountWithdrawalHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*c
 func (h TradeAccountWithdrawalHandler) validate(ctx cosmos.Context, msg MsgTradeAccountWithdrawal) error {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("1.134.0")):
-		return h.validateV134(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.validateV3_0_0(ctx, msg)
 	default:
 		return errBadVersion
 	}
 }
 
-func (h TradeAccountWithdrawalHandler) validateV134(ctx cosmos.Context, msg MsgTradeAccountWithdrawal) error {
+func (h TradeAccountWithdrawalHandler) validateV3_0_0(ctx cosmos.Context, msg MsgTradeAccountWithdrawal) error {
 	tradeAccountsEnabled := h.mgr.Keeper().GetConfigInt64(ctx, constants.TradeAccountsEnabled)
 	if tradeAccountsEnabled <= 0 {
 		return fmt.Errorf("trade accounts are disabled")
@@ -63,15 +63,15 @@ func (h TradeAccountWithdrawalHandler) validateV134(ctx cosmos.Context, msg MsgT
 func (h TradeAccountWithdrawalHandler) handle(ctx cosmos.Context, msg MsgTradeAccountWithdrawal) error {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("0.1.0")):
-		return h.handleV1(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.handleV3_0_0(ctx, msg)
 	default:
 		return errBadVersion
 	}
 }
 
 // handle process MsgTradeAccountWithdrawal
-func (h TradeAccountWithdrawalHandler) handleV1(ctx cosmos.Context, msg MsgTradeAccountWithdrawal) error {
+func (h TradeAccountWithdrawalHandler) handleV3_0_0(ctx cosmos.Context, msg MsgTradeAccountWithdrawal) error {
 	withdraw, err := h.mgr.TradeAccountManager().Withdrawal(ctx, msg.Asset, msg.Amount, msg.Signer, msg.AssetAddress, msg.Tx.ID)
 	if err != nil {
 		return err

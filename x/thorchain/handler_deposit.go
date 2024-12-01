@@ -239,14 +239,14 @@ func (h DepositHandler) addSwap(ctx cosmos.Context, msg MsgSwap) {
 func (h DepositHandler) addSwapDirect(ctx cosmos.Context, msg MsgSwap) {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("2.137.0")):
-		h.addSwapDirectV137(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		h.addSwapDirectV3_0_0(ctx, msg)
 	default:
-		h.addSwapDirectV136(ctx, msg)
+		ctx.Logger().Error(errInvalidVersion.Error())
 	}
 }
 
-func (h DepositHandler) addSwapDirectV137(ctx cosmos.Context, msg MsgSwap) {
+func (h DepositHandler) addSwapDirectV3_0_0(ctx cosmos.Context, msg MsgSwap) {
 	if msg.Tx.Coins.IsEmpty() {
 		return
 	}

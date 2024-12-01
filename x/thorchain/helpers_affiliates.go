@@ -14,14 +14,14 @@ import (
 func triggerPreferredAssetSwap(ctx cosmos.Context, mgr Manager, affiliateAddress common.Address, txID common.TxID, tn THORName, affcol AffiliateFeeCollector, queueIndex int) error {
 	version := mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("2.137.0")):
-		return triggerPreferredAssetSwapV137(ctx, mgr, tn, affcol, queueIndex)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return triggerPreferredAssetSwapV3_0_0(ctx, mgr, tn, affcol, queueIndex)
 	default:
-		return triggerPreferredAssetSwapV136(ctx, mgr, affiliateAddress, txID, tn, affcol, queueIndex)
+		return errBadVersion
 	}
 }
 
-func triggerPreferredAssetSwapV137(ctx cosmos.Context, mgr Manager, tn THORName, affcol AffiliateFeeCollector, queueIndex int) error {
+func triggerPreferredAssetSwapV3_0_0(ctx cosmos.Context, mgr Manager, tn THORName, affcol AffiliateFeeCollector, queueIndex int) error {
 	// Check that the THORName has an address alias for the PreferredAsset, if not skip
 	// the swap
 	alias := tn.GetAlias(tn.PreferredAsset.GetChain())
@@ -315,8 +315,8 @@ func affiliateSwapToRune(ctx cosmos.Context, mgr Manager, mainTx common.Tx, sign
 func updateAffiliateCollector(ctx cosmos.Context, mgr Manager, coin common.Coin, thorname *THORName, swapIndex *int) error {
 	version := mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("2.137.0")):
-		return updateAffiliateCollectorV137(ctx, mgr, coin, thorname, swapIndex)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return updateAffiliateCollectorV3_0_0(ctx, mgr, coin, thorname, swapIndex)
 	default:
 		return fmt.Errorf("unsupported version: %s", version)
 	}
@@ -324,7 +324,7 @@ func updateAffiliateCollector(ctx cosmos.Context, mgr Manager, coin common.Coin,
 
 // updateAffiliateCollector - accrue RUNE in the AffiliateCollector module and check if
 // a PreferredAsset swap should be triggered. Returns an error if the fee distribution fails.
-func updateAffiliateCollectorV137(ctx cosmos.Context, mgr Manager, coin common.Coin, thorname *THORName, swapIndex *int) error {
+func updateAffiliateCollectorV3_0_0(ctx cosmos.Context, mgr Manager, coin common.Coin, thorname *THORName, swapIndex *int) error {
 	affcol, err := mgr.Keeper().GetAffiliateCollector(ctx, thorname.Owner)
 	if err != nil {
 		return fmt.Errorf("failed to get affiliate collector: %w", err)

@@ -12,7 +12,7 @@ import (
 // that is passed in. This should help dex agg contract devs test
 // their work without having to run a mocknet or stagenet.
 func DexAggregators(version semver.Version) []Aggregator {
-	if version.GTE(semver.MustParse("0.1.0")) {
+	if version.GTE(semver.MustParse("3.0.0")) {
 		return []Aggregator{}
 	}
 	return nil

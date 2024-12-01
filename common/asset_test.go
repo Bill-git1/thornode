@@ -127,7 +127,7 @@ func (s AssetSuite) TestAsset(c *C) {
 	c.Check(asset.Valid(), IsNil)
 	c.Check(asset.String(), Equals, "BLAH.BLAH")
 
-	asset, err = NewAssetWithShortCodes(semver.MustParse("0.0.0"), "BTC.BTC")
+	asset, err = NewAssetWithShortCodes(semver.MustParse("3.0.0"), "BTC.BTC")
 	c.Assert(err, IsNil)
 	c.Check(asset.Valid(), IsNil)
 	c.Check(asset.String(), Equals, "BTC.BTC")

@@ -7,26 +7,18 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common/tokenlist/bsctokens"
 )
 
-var (
-	bscTokenListV131 EVMTokenList
-	bscTokenListV137 EVMTokenList
-)
+var bscTokenListV3_0_0 EVMTokenList
 
 func init() {
-	if err := json.Unmarshal(bsctokens.BSCTokenListRawV131, &bscTokenListV131); err != nil {
-		panic(err)
-	}
-	if err := json.Unmarshal(bsctokens.BSCTokenListRawV137, &bscTokenListV137); err != nil {
+	if err := json.Unmarshal(bsctokens.BSCTokenListRawV3_0_0, &bscTokenListV3_0_0); err != nil {
 		panic(err)
 	}
 }
 
 func GetBSCTokenList(version semver.Version) EVMTokenList {
 	switch {
-	case version.GTE(semver.MustParse("2.137.0")):
-		return bscTokenListV137
-	case version.GTE(semver.MustParse("1.131.0")):
-		return bscTokenListV131
+	case version.GTE(semver.MustParse("3.0.0")):
+		return bscTokenListV3_0_0
 	default:
 		return EVMTokenList{}
 	}

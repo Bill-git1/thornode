@@ -46,14 +46,14 @@ func (h NodePauseChainHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Re
 func (h NodePauseChainHandler) validate(ctx cosmos.Context, msg MsgNodePauseChain) error {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("0.1.0")):
-		return h.validateV1(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.validateV3_0_0(ctx, msg)
 	default:
 		return errBadVersion
 	}
 }
 
-func (h NodePauseChainHandler) validateV1(ctx cosmos.Context, msg MsgNodePauseChain) error {
+func (h NodePauseChainHandler) validateV3_0_0(ctx cosmos.Context, msg MsgNodePauseChain) error {
 	// ValidateBasic is also executed in message service router's handler and isn't versioned there
 	if err := msg.ValidateBasic(); err != nil {
 		return err
@@ -70,14 +70,14 @@ func (h NodePauseChainHandler) handle(ctx cosmos.Context, msg MsgNodePauseChain)
 	ctx.Logger().Info("handleMsgNodePauseChain request", "node", msg.Signer, "value", msg.Value)
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("1.87.0")):
-		return h.handleV87(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.handleV3_0_0(ctx, msg)
 	default:
 		return errBadVersion
 	}
 }
 
-func (h NodePauseChainHandler) handleV87(ctx cosmos.Context, msg MsgNodePauseChain) error {
+func (h NodePauseChainHandler) handleV3_0_0(ctx cosmos.Context, msg MsgNodePauseChain) error {
 	// get block height of last churn
 	active, err := h.mgr.Keeper().GetAsgardVaultsByStatus(ctx, ActiveVault)
 	if err != nil {

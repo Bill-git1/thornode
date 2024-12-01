@@ -70,7 +70,12 @@ fi
 echo "Linting versioned tokenlists..."
 if ! diff -u -F '^Check' --color=always /tmp/versioned-tokenlists-develop /tmp/versioned-tokenlists-current; then
   echo "Detected change in versioned tokenlist."
-  FAILED=true
+  if [[ $CI_MERGE_REQUEST_TITLE == *"#check-lint-warning"* ]]; then
+    echo "Merge request is marked unsafe."
+  else
+    echo 'Correct the change, add a new versioned tokenlist, or add "#check-lint-warning" to the PR description.'
+    FAILED=true
+  fi
 fi
 
 if $FAILED; then

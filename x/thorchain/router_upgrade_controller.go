@@ -45,7 +45,7 @@ func (r *RouterUpgradeController) getChainOldAndNewRouters(chain common.Chain) (
 // getRouterChains gets the chains that have routers for the current version
 func (r *RouterUpgradeController) getRouterChains(version semver.Version) ([]common.Chain, error) {
 	switch {
-	case version.GTE(semver.MustParse("1.111.0")):
+	case version.GTE(semver.MustParse("3.0.0")):
 		return []common.Chain{common.ETHChain, common.AVAXChain, common.BSCChain}, nil
 	default:
 		return nil, fmt.Errorf("invalid version %s", version.String())

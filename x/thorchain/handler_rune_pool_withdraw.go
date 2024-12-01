@@ -55,14 +55,14 @@ func (h RunePoolWithdrawHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.
 func (h RunePoolWithdrawHandler) validate(ctx cosmos.Context, msg MsgRunePoolWithdraw) error {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("1.134.0")):
-		return h.validateV134(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.validateV3_0_0(ctx, msg)
 	default:
 		return errBadVersion
 	}
 }
 
-func (h RunePoolWithdrawHandler) validateV134(ctx cosmos.Context, msg MsgRunePoolWithdraw) error {
+func (h RunePoolWithdrawHandler) validateV3_0_0(ctx cosmos.Context, msg MsgRunePoolWithdraw) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
@@ -80,14 +80,14 @@ func (h RunePoolWithdrawHandler) validateV134(ctx cosmos.Context, msg MsgRunePoo
 func (h RunePoolWithdrawHandler) handle(ctx cosmos.Context, msg MsgRunePoolWithdraw) error {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("1.134.0")):
-		return h.handleV134(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.handleV3_0_0(ctx, msg)
 	default:
 		return errBadVersion
 	}
 }
 
-func (h RunePoolWithdrawHandler) handleV134(ctx cosmos.Context, msg MsgRunePoolWithdraw) error {
+func (h RunePoolWithdrawHandler) handleV3_0_0(ctx cosmos.Context, msg MsgRunePoolWithdraw) error {
 	accAddr, err := cosmos.AccAddressFromBech32(msg.Signer.String())
 	if err != nil {
 		return fmt.Errorf("unable to AccAddressFromBech32: %s", err)

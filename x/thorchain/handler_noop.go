@@ -42,14 +42,14 @@ func (h NoOpHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, erro
 func (h NoOpHandler) validate(ctx cosmos.Context, msg MsgNoOp) error {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("0.1.0")):
-		return h.validateV1(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.validateV3_0_0(ctx, msg)
 	default:
 		return errBadVersion
 	}
 }
 
-func (h NoOpHandler) validateV1(ctx cosmos.Context, msg MsgNoOp) error {
+func (h NoOpHandler) validateV3_0_0(ctx cosmos.Context, msg MsgNoOp) error {
 	return msg.ValidateBasic()
 }
 
@@ -58,14 +58,14 @@ func (h NoOpHandler) validateV1(ctx cosmos.Context, msg MsgNoOp) error {
 func (h NoOpHandler) handle(ctx cosmos.Context, msg MsgNoOp) error {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("0.1.0")):
-		return h.handleV1(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.handleV3_0_0(ctx, msg)
 	default:
 		return errBadVersion
 	}
 }
 
-func (h NoOpHandler) handleV1(ctx cosmos.Context, msg MsgNoOp) error {
+func (h NoOpHandler) handleV3_0_0(ctx cosmos.Context, msg MsgNoOp) error {
 	action := msg.GetAction()
 	if len(action) == 0 {
 		return nil

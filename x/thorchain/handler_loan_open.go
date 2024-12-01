@@ -164,14 +164,14 @@ func (h LoanOpenHandler) validateV3_0_0(ctx cosmos.Context, msg MsgLoanOpen) err
 func (h LoanOpenHandler) handle(ctx cosmos.Context, msg MsgLoanOpen) error {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("1.113.0")):
-		return h.handleV113(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.handleV3_0_0(ctx, msg)
 	default:
 		return errBadVersion
 	}
 }
 
-func (h LoanOpenHandler) handleV113(ctx cosmos.Context, msg MsgLoanOpen) error {
+func (h LoanOpenHandler) handleV3_0_0(ctx cosmos.Context, msg MsgLoanOpen) error {
 	// if the inbound asset is TOR, then lets repay the loan. If not, lets
 	// swap first and try again later
 	if msg.CollateralAsset.IsDerivedAsset() {

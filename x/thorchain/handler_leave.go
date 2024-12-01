@@ -48,14 +48,14 @@ func (h LeaveHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, err
 func (h LeaveHandler) validate(ctx cosmos.Context, msg MsgLeave) error {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("0.1.0")):
-		return h.validateV1(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.validateV3_0_0(ctx, msg)
 	default:
 		return errBadVersion
 	}
 }
 
-func (h LeaveHandler) validateV1(ctx cosmos.Context, msg MsgLeave) error {
+func (h LeaveHandler) validateV3_0_0(ctx cosmos.Context, msg MsgLeave) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
@@ -76,16 +76,14 @@ func (h LeaveHandler) validateV1(ctx cosmos.Context, msg MsgLeave) error {
 func (h LeaveHandler) handle(ctx cosmos.Context, msg MsgLeave) error {
 	version := h.mgr.GetVersion()
 	switch {
-	case version.GTE(semver.MustParse("2.137.0")):
-		return h.handleV137(ctx, msg)
-	case version.GTE(semver.MustParse("1.134.0")):
-		return h.handleV134(ctx, msg)
+	case version.GTE(semver.MustParse("3.0.0")):
+		return h.handleV3_0_0(ctx, msg)
 	default:
 		return errBadVersion
 	}
 }
 
-func (h LeaveHandler) handleV137(ctx cosmos.Context, msg MsgLeave) error {
+func (h LeaveHandler) handleV3_0_0(ctx cosmos.Context, msg MsgLeave) error {
 	nodeAcc, err := h.mgr.Keeper().GetNodeAccount(ctx, msg.NodeAddress)
 	if err != nil {
 		return ErrInternal(err, "fail to get node account by bond address")
