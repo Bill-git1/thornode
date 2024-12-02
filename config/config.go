@@ -424,6 +424,7 @@ type Thornode struct {
 		API struct {
 			Enable            bool   `mapstructure:"enable"`
 			EnabledUnsafeCORS bool   `mapstructure:"enabled_unsafe_cors"`
+			EnabledSwagger    bool   `mapstructure:"enabled_swagger"`
 			Address           string `mapstructure:"address"`
 		} `mapstructure:"api"`
 

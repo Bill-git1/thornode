@@ -320,6 +320,7 @@ thor:
     api:
       enable: true
       enabled_unsafe_cors: true
+      enabled_swagger: true
       address: tcp://0.0.0.0:1317
     grpc:
       enable: false
