@@ -99,7 +99,6 @@ genesis:
       params:
         send_enabled: false
     thorchain:
-      store_version: "{{ store_version }}"  # avoid store migrations
       node_accounts:
         - active_block_height: "0"
           bond: "5000000000000"

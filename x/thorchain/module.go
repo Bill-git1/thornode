@@ -134,7 +134,7 @@ func (AppModule) IsAppModule() {}
 func (AppModule) IsOnePerModuleType() {}
 
 func (AppModule) ConsensusVersion() uint64 {
-	return 1
+	return 2
 }
 
 func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
@@ -147,6 +147,11 @@ func (am AppModule) QuerierRoute() string {
 func (am AppModule) RegisterServices(cfg module.Configurator) {
 	types.RegisterMsgServer(cfg.MsgServer(), am.msgServer)
 	types.RegisterQueryServer(cfg.QueryServer(), am.queryServer)
+
+	m := NewMigrator(am.mgr)
+	if err := cfg.RegisterMigration(types.ModuleName, 1, m.Migrate1to2); err != nil {
+		panic(fmt.Sprintf("failed to migrate x/thorchain from version 1 to 2: %v", err))
+	}
 }
 
 // BeginBlock called when a block get proposed
@@ -161,8 +166,8 @@ func (am AppModule) BeginBlock(goCtx context.Context) error {
 	}
 
 	ctx.Logger().Debug("BeginBlock", "height", ctx.BlockHeight())
-	// Check/Update the network version before checking the local version or checking whether to do a new-version store migration
-	if err := am.mgr.BeginBlock(ctx); err != nil {
+	// Check/Update the network version before checking the local version
+	if err := am.mgr.LoadManagerIfNecessary(ctx); err != nil {
 		ctx.Logger().Error("fail to get managers", "error", err)
 	}
 
@@ -170,12 +175,6 @@ func (am AppModule) BeginBlock(goCtx context.Context) error {
 	localVer := semver.MustParse(constants.SWVersion.String())
 	if version.Major > localVer.Major || version.Minor > localVer.Minor {
 		panic(fmt.Sprintf("Unsupported Version: update your binary (your version: %s, network consensus version: %s)", constants.SWVersion.String(), version.String()))
-	}
-
-	// Does a kvstore migration
-	smgr := newStoreMgr(am.mgr)
-	if err := smgr.Iterator(ctx); err != nil {
-		os.Exit(10) // halt the chain if unsuccessful
 	}
 
 	am.mgr.Keeper().ClearObservingAddresses(ctx)

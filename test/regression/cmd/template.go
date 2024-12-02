@@ -33,9 +33,6 @@ var funcMap = template.FuncMap{
 	"version": func() string {
 		return constants.Version
 	},
-	"store_version": func() uint64 {
-		return constants.SWVersion.Minor
-	},
 	"addr_module_thorchain": func() string {
 		return ModuleAddrThorchain
 	},

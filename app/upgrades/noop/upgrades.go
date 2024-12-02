@@ -33,22 +33,16 @@ func CreateUpgradeHandler(
 	ak *upgrades.AppKeepers,
 ) upgradetypes.UpgradeHandler {
 	return func(goCtx context.Context, plan upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
-		// Perform SDK module migrations
-		vm, err := mm.RunMigrations(goCtx, configurator, fromVM)
-		if err != nil {
-			return vm, err
-		}
-
-		ctx := sdk.UnwrapSDKContext(goCtx)
-
 		// Active validator versions need to be updated since consensus
 		// on the new version is required to resume the chain.
 		// This is a THORChain specific upgrade step that should be
-		// done in every upgrade handler.
-		if err = keeperv1.UpdateActiveValidatorVersions(ctx, ak.ThorchainKeeper, UpgradeName); err != nil {
-			return vm, fmt.Errorf("failed to update active validator versions: %w", err)
+		// done in every upgrade handler and before any thorchain module migrations.
+		ctx := sdk.UnwrapSDKContext(goCtx)
+		if err := keeperv1.UpdateActiveValidatorVersions(ctx, ak.ThorchainKeeper, UpgradeName); err != nil {
+			return nil, fmt.Errorf("failed to update active validator versions: %w", err)
 		}
 
-		return vm, nil
+		// Perform SDK module migrations
+		return mm.RunMigrations(goCtx, configurator, fromVM)
 	}
 }

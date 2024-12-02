@@ -119,10 +119,6 @@ var _ = Suite(&KeeperTestSuit{})
 
 func (KeeperTestSuit) TestKeeperVersion(c *C) {
 	ctx, k := setupKeeperForTest(c)
-	c.Check(k.GetStoreVersion(ctx), Equals, int64(38))
-
-	k.SetStoreVersion(ctx, 2)
-	c.Check(k.GetStoreVersion(ctx), Equals, int64(2))
 
 	c.Check(k.GetRuneBalanceOfModule(ctx, AsgardName).Equal(cosmos.NewUint(100000000*common.One)), Equals, true)
 	coinsToSend := common.NewCoins(common.NewCoin(common.RuneNative, cosmos.NewUint(1*common.One)))

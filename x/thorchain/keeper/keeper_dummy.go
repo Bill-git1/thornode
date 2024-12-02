@@ -88,9 +88,6 @@ func (k KVStoreDummy) GetKey(prefix kvTypes.DbPrefix, key string) string {
 	return fmt.Sprintf("%s/1/%s", prefix, key)
 }
 
-func (k KVStoreDummy) GetStoreVersion(ctx cosmos.Context) int64      { return 1 }
-func (k KVStoreDummy) SetStoreVersion(ctx cosmos.Context, ver int64) {}
-
 func (k KVStoreDummy) GetRuneBalanceOfModule(ctx cosmos.Context, moduleName string) cosmos.Uint {
 	return cosmos.ZeroUint()
 }

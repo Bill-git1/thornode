@@ -140,7 +140,6 @@ func DefaultGenesisState() GenesisState {
 		NetworkFees:             make([]NetworkFee, 0),
 		ChainContracts:          make([]ChainContract, 0),
 		THORNames:               make([]THORName, 0),
-		StoreVersion:            38, // refer to func `GetStoreVersion` , let's keep it consistent
 		Loans:                   make([]Loan, 0),
 		LoanTotalCollateral:     make([]common.Coin, 0),
 		SwapperClout:            make([]SwapperClout, 0),
@@ -350,7 +349,6 @@ func initGenesis(ctx cosmos.Context, keeper keeper.Keeper, data GenesisState) []
 		keeper.SetAffiliateCollector(ctx, item)
 	}
 
-	keeper.SetStoreVersion(ctx, data.StoreVersion)
 	reserveAddr, _ := keeper.GetModuleAddress(ReserveName)
 	ctx.Logger().Info("Reserve Module", "address", reserveAddr.String())
 	bondAddr, _ := keeper.GetModuleAddress(BondName)
@@ -780,7 +778,6 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		TradeAccounts:           tradeAccts,
 		TradeUnits:              tradeUnits,
 		SecuredAssets:           securedAssets,
-		StoreVersion:            k.GetStoreVersion(ctx),
 		RuneProviders:           runeProviders,
 		RunePool:                runePool,
 		AffiliateCollectors:     affiliateCollectors,

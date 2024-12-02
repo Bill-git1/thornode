@@ -221,8 +221,8 @@ func (mgr *Mgrs) GetConstants() constants.ConstantValues {
 	return mgr.constAccessor
 }
 
-// BeginBlock detect whether there are new version available, if it is available then create a new version of Mgr
-func (mgr *Mgrs) BeginBlock(ctx cosmos.Context) error {
+// LoadManagerIfNecessary detect whether there are new version available, if it is available then create a new version of Mgr
+func (mgr *Mgrs) LoadManagerIfNecessary(ctx cosmos.Context) error {
 	v := mgr.K.GetLowestActiveVersion(ctx)
 	if v.Equals(mgr.GetVersion()) {
 		return nil

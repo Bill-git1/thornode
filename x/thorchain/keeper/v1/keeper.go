@@ -25,7 +25,6 @@ import (
 // Also, use underscores between words and use lowercase characters only
 
 const (
-	prefixStoreVersion            types.DbPrefix = "_ver/"
 	prefixObservedTxIn            types.DbPrefix = "observed_tx_in/"
 	prefixObservedTxOut           types.DbPrefix = "observed_tx_out/"
 	prefixObservedLink            types.DbPrefix = "ob_link/"
@@ -148,28 +147,6 @@ func (k *KVStore) SetVersion(ver semver.Version) {
 // GetKey return a key that can be used to store into key value store
 func (k KVStore) GetKey(prefix types.DbPrefix, key string) string {
 	return fmt.Sprintf("%s/%s", prefix, strings.ToUpper(key))
-}
-
-// SetStoreVersion save the store version
-func (k KVStore) SetStoreVersion(ctx cosmos.Context, value int64) {
-	key := k.GetKey(prefixStoreVersion, "")
-	store := ctx.KVStore(k.storeKey)
-	ver := ProtoInt64{Value: value}
-	store.Set([]byte(key), k.cdc.MustMarshal(&ver))
-}
-
-// GetStoreVersion get the current key value store version
-func (k KVStore) GetStoreVersion(ctx cosmos.Context) int64 {
-	key := k.GetKey(prefixStoreVersion, "")
-	store := ctx.KVStore(k.storeKey)
-	if !store.Has([]byte(key)) {
-		// thornode start at version 0.38.0, thus when there is no store version , it return 38
-		return 38
-	}
-	var ver ProtoInt64
-	buf := store.Get([]byte(key))
-	k.cdc.MustUnmarshal(buf, &ver)
-	return ver.Value
 }
 
 // getIterator - get an iterator for given prefix
