@@ -154,11 +154,80 @@ func (tos *TxOutStorageVCUR) TryAddTxOutItem(ctx cosmos.Context, mgr Manager, to
 	}
 
 	cacheCtx, commit := ctx.CacheContext()
+
+	// Deduct affiliate fee from outbound amount
+	amount, err := tos.takeAffiliateFee(cacheCtx, mgr, toi)
+	if err == nil {
+		toi.Coin.Amount = amount
+	} else {
+		ctx.Logger().Error("fail to take affiliate fee", "error", err)
+	}
+
 	success, err := tos.cachedTryAddTxOutItem(cacheCtx, mgr, toi, minOut)
 	if err == nil {
 		commit()
 	}
 	return success, err
+}
+
+// takeAffiliateFee - take affiliate fee from outbound amount using the inbound memo.
+// should not skim fees for refunds. returns the outbound amount less the affiliate
+// fee(s)
+func (tos *TxOutStorageVCUR) takeAffiliateFee(ctx cosmos.Context, mgr Manager, toi TxOutItem) (cosmos.Uint, error) {
+	// no affiliate fee for refunds or migrate txs
+	if strings.Split(toi.Memo, ":")[0] == constants.MemoPrefixRefund || strings.Split(toi.Memo, ":")[0] == constants.MemoPrefixMigrate {
+		return toi.Coin.Amount, nil
+	}
+
+	// Get inbound tx
+	inboundVoter, err := tos.keeper.GetObservedTxInVoter(ctx, toi.InHash)
+	if err != nil || inboundVoter.Tx.Tx.Memo == "" {
+		return toi.Coin.Amount, fmt.Errorf("fail to get observe tx in voter: %w", err)
+	}
+
+	memo, err := ParseMemoWithTHORNames(ctx, tos.keeper, inboundVoter.Tx.Tx.Memo)
+	if err != nil {
+		return toi.Coin.Amount, fmt.Errorf("fail to parse memo: %w", err)
+	}
+
+	// If the current outbound asset is RUNE and the original target asset is NOT RUNE, we
+	// know this is the affiliate fee outbound. In this case we should skip taking an
+	// additional fee. For swaps to RUNE the affiliate fee will be paid out as a direct
+	// RUNE transfer with no txout manager outbound, so it won't get back to this check.
+	if toi.Coin.Asset.IsRune() && !memo.GetAsset().IsRune() {
+		return toi.Coin.Amount, nil
+	}
+
+	// Only allow outbound affiliate fees for swaps that have an affiliate fee
+	if memo.IsType(TxSwap) && len(memo.GetAffiliatesBasisPoints()) > 0 {
+		tx := common.Tx{
+			ID:          toi.InHash,
+			Chain:       toi.Chain,
+			FromAddress: inboundVoter.Tx.Tx.FromAddress,
+			ToAddress:   toi.ToAddress,
+			Coins:       common.Coins{toi.Coin},
+			Gas:         common.Gas{common.NewCoin(toi.Chain.GetGasAsset(), cosmos.NewUint(1))},
+			Memo:        inboundVoter.Tx.Tx.Memo,
+		}
+
+		nodeAccounts, err := mgr.Keeper().ListActiveValidators(ctx)
+		if err != nil {
+			return toi.Coin.Amount, err
+		}
+		if len(nodeAccounts) == 0 {
+			return toi.Coin.Amount, fmt.Errorf("dev err: no active node accounts")
+		}
+		signer := nodeAccounts[0].NodeAddress
+
+		totalAffiliateFee, err := skimAffiliateFees(ctx, mgr, tx, signer, toi.Coin, inboundVoter.Tx.Tx.Memo)
+		if err != nil {
+			ctx.Logger().Error("fail to skim affiliate fees", "error", err)
+		}
+		// Deduct affiliate fee from outbound amount
+		toi.Coin.Amount = common.SafeSub(toi.Coin.Amount, totalAffiliateFee)
+	}
+
+	return toi.Coin.Amount, nil
 }
 
 // (cached)TryAddTxOutItem add an outbound tx to block

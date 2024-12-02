@@ -219,7 +219,7 @@ asserts:
   - .balances[]|select(.denom == "btc/btc")|.amount|tonumber == 1170766
 ---
 ########################################################################################
-# quote and swap rune to btc with tolerance and affiliate
+# quote and swap rune to btc with tolerance
 ########################################################################################
 type: check
 endpoint: http://localhost:1317/thorchain/quote/swap
@@ -234,6 +234,31 @@ status: 400
 asserts:
   - .message|test("total affiliate fee must not be more than 1000 bps")
 ---
+########################################################################################
+# quote and swap rune to btc with tolerance & no affiliate
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/quote/swap
+params:
+  from_asset: THOR.RUNE
+  to_asset: BTC.BTC
+  amount: 1000000000
+  tolerance_bps: 1000
+  destination: {{ addr_btc_fox }}
+asserts:
+  - .memo == "=:BTC.BTC:{{ addr_btc_fox }}:960542"
+  - .expected_amount_out|tonumber == ${AMT_OUT=1031701}
+  - .recommended_min_amount_in == "52470380"
+  - .fees.affiliate == "0"
+  - .fees.liquidity == "10728"
+  - .fees.outbound == "${OF=14000}"
+  - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)+(.fees.affiliate|tonumber)
+  - .fees.slippage_bps == 101
+  - .fees.total_bps == 231
+---
+########################################################################################
+# quote and swap rune to btc with tolerance & affiliate. affiliate is taken out of the outbound amt before outbound fee is deducted
+########################################################################################
 type: check
 endpoint: http://localhost:1317/thorchain/quote/swap
 params:
@@ -245,15 +270,15 @@ params:
   affiliate: {{ addr_thor_pig }}
   affiliate_bps: 500
 asserts:
-  - .memo == "=:BTC.BTC:{{ addr_btc_fox }}:912514:{{ addr_thor_pig }}:500"
-  - .expected_amount_out|tonumber == 980425
+  - .memo == "=:BTC.BTC:{{ addr_btc_fox }}:960542:{{ addr_thor_pig }}:500"
+  - .expected_amount_out|tonumber == ${AMT_OUT} - (${AMT_OUT} + ${OF}) * 0.05 + ${ROUNDING=0.05} # 979416
   - .recommended_min_amount_in == "80000000"
-  - .fees.affiliate == "53363"
-  - .fees.liquidity == "9692"
+  - .fees.affiliate == "52285"
+  - .fees.liquidity == "10728"
   - .fees.outbound == "14000"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)+(.fees.affiliate|tonumber)
-  - .fees.slippage_bps == 96
-  - .fees.total_bps == 719
+  - .fees.slippage_bps == 101
+  - .fees.total_bps == 685
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
@@ -280,7 +305,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "980425"
+        - amount: "979416" # 979416
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -303,7 +328,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 50000000
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 47930776
 ---
 ########################################################################################
 # quote and swap eth to btc with tolerance and affiliate
@@ -344,15 +369,15 @@ params:
   affiliate_bps: 500
   destination: {{ addr_btc_fox }}
 asserts:
-  - .memo == "=:BTC.BTC:{{ addr_btc_fox }}:895131:{{ addr_thor_pig }}:500"
-  - .expected_amount_out|tonumber == 943729
+  - .memo == "=:BTC.BTC:{{ addr_btc_fox }}:942242:{{ addr_thor_pig }}:500"
+  - .expected_amount_out|tonumber == 941854
   - .recommended_min_amount_in == "5120000"
-  - .fees.affiliate == "52347"
-  - .fees.liquidity == "18343"
+  - .fees.affiliate == "50308"
+  - .fees.liquidity == "20285"
   - .fees.outbound == "14000"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)+(.fees.affiliate|tonumber)
-  - .fees.slippage_bps == 187
-  - .fees.total_bps == 812
+  - .fees.slippage_bps == 197
+  - .fees.total_bps == 775
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -392,7 +417,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "943729"
+        - amount: "941854"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -448,15 +473,15 @@ params:
   affiliate_bps: 500
   destination: {{ addr_thor_fox }}
 asserts:
-  - .memo == "=:THOR.RUNE:{{ addr_thor_fox }}:${LIMIT=838252262}:xx:500"
-  - .expected_amount_out|tonumber == 912114319
+  - .memo == "=:THOR.RUNE:{{ addr_thor_fox }}:${LIMIT=882369254}:xx:500"
+  - .expected_amount_out|tonumber == 911216746
   - .recommended_min_amount_in == "5120000"
-  - .fees.affiliate == "49020600"
-  - .fees.liquidity == "8598104"
+  - .fees.affiliate == "48064039"
+  - .fees.liquidity == "9517631"
   - .fees.outbound == "2000000"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)+(.fees.affiliate|tonumber)
-  - .fees.slippage_bps == 93
-  - .fees.total_bps == 612
+  - .fees.slippage_bps == 98
+  - .fees.total_bps == 583
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -489,7 +514,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 95019968
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 92879502
 ---
 type: create-blocks
 count: 1
@@ -499,13 +524,13 @@ endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 2
   - .balances[]|select(.denom == "btc/btc")|.amount|tonumber == 1170766
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2501421370022
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2501420472449
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 141088304
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 140943541
 ---
 ########################################################################################
 # quote btc/btc to rune when from_address doesn't have enough btc/btc - quote should still be returned
@@ -522,11 +547,11 @@ asserts:
   - .memo == "=:THOR.RUNE:{{ addr_thor_fox }}"
   - .inbound_address == null
   - .recommended_min_amount_in == "4110"
-  - .fees.liquidity == "433225207"
+  - .fees.liquidity == "433202630"
   - .fees.outbound == "2000000"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
   - .fees.slippage_bps == 466
-  - .fees.total_bps == 469
+  - .fees.total_bps == 468
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/quote/swap
@@ -539,11 +564,11 @@ asserts:
   - .memo == "=:THOR.RUNE:{{ addr_thor_fox }}"
   - .inbound_address == null
   - .recommended_min_amount_in == "4110"
-  - .fees.liquidity == "433225207"
+  - .fees.liquidity == "433202630"
   - .fees.outbound == "2000000"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
   - .fees.slippage_bps == 466
-  - .fees.total_bps == 469
+  - .fees.total_bps == 468
 ---
 ########################################################################################
 # quote and swap a streaming swap
@@ -575,7 +600,7 @@ asserts:
   - .fees.total_bps == 115
   - .streaming_swap_seconds == 1080
   - .total_swap_seconds == 1104
-  - .expected_amount_out == "9665246"
+  - .expected_amount_out == "9665569"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/quote/swap
@@ -586,7 +611,7 @@ params:
   destination: {{ addr_btc_fox }}
 asserts:
   # same as last quote, just sanity check higher slippage without streaming
-  - .fees.liquidity == "1366743"
+  - .fees.liquidity == "1366791"
   - .fees.slippage_bps == 1629
   - .fees.total_bps == 1643
 ---
@@ -604,17 +629,17 @@ params:
   streaming_quantity: 10
   tolerance_bps: 3500
 asserts:
-  - .memo == "=:BTC.BTC:{{ addr_btc_fox }}:6420864/10/10"
+  - .memo == "=:BTC.BTC:{{ addr_btc_fox }}:6421079/10/10"
   - .max_streaming_quantity == 19
   - .streaming_swap_blocks == 90
   - .streaming_swap_seconds == 540
-  - .fees.liquidity == "185180"
+  - .fees.liquidity == "185190"
   - .fees.outbound == "14000"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
   - .fees.slippage_bps == 191
   - .fees.total_bps == 205
   - .total_swap_seconds == 564
-  - .expected_amount_out == "9492080"
+  - .expected_amount_out == "9492400"
 ---
 # necessary to avoid race to hang on block creation
 type: create-blocks
@@ -643,7 +668,7 @@ asserts:
   - .fees.slippage_bps == 101
   - .fees.total_bps == 115
   - .total_swap_seconds == 1104
-  - .expected_amount_out == "9665246"
+  - .expected_amount_out == "9665569"
 ---
 ########################################################################################
 # quote and massive swap should have accurate slippage less than 100%
@@ -656,15 +681,15 @@ params:
   amount: 1000000000000
   destination: {{ addr_btc_fox }}
 asserts:
-  - .fees.liquidity == "100553455"
+  - .fees.liquidity == "100556831"
   - .fees.outbound == "14000"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
   - .fees.slippage_bps == 9989
   - .fees.total_bps == 9989
-  - .expected_amount_out == "87949"
+  - .expected_amount_out == "87952"
 ---
 ########################################################################################
-# from ETH - affiliate swap fails, should return error
+# from ETH - affiliate swap too low, should return 0 for affiliate fee
 ########################################################################################
 type: check
 endpoint: http://localhost:1317/thorchain/quote/swap
@@ -672,31 +697,31 @@ params:
   from_asset: ETH.ETH
   to_asset: THOR.RUNE
   amount: 1000000
-  affiliate: xx
+  affiliate: tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr
   affiliate_bps: 10
   destination: {{ addr_thor_fox }}
-status: 500
+status: 200
 asserts:
-  - .message|contains("not enough asset to pay for fees")
+  - .fees.affiliate == "95565"
 ---
 ########################################################################################
-# from RUNE - affiliate swap fails, should return error
+# from RUNE - affiliate swap too low, should return 0 for affiliate fee
 ########################################################################################
 type: check
 endpoint: http://localhost:1317/thorchain/quote/swap
 params:
   from_asset: THOR.RUNE
   to_asset: ETH.ETH
-  amount: 1000000
+  amount: 1000000000
   affiliate: xx
-  affiliate_bps: 10
+  affiliate_bps: 1
   destination: {{ addr_eth_fox }}
-status: 400
+status: 200
 asserts:
-  - .message|contains("affiliate amount must be greater than native fee")
+  - .fees.affiliate == "1019"
 ---
 ########################################################################################
-# multiple affiliates - only one valid affiliate, should error
+# multiple affiliates - no valid affiliate fee, should return 0
 ########################################################################################
 type: check
 endpoint: http://localhost:1317/thorchain/quote/swap
@@ -707,9 +732,9 @@ params:
   affiliate: xx,yy,zz
   affiliate_bps: 10,20,30
   destination: {{ addr_eth_fox }}
-status: 400
+status: 200
 asserts:
-  - .message|contains("invalid affiliate provided")
+  - .fees.affiliate == "61156"
 ---
 ########################################################################################
 # multiple affiliates - 3 valid thornames
@@ -741,10 +766,11 @@ params:
   to_asset: ETH.ETH
   amount: 1000000000
   affiliate: xx,yy,zz
-  affiliate_bps: 10,20,30
+  affiliate_bps: 100,50,40
   destination: {{ addr_eth_fox }}
 asserts:
-  - .memo == "=:ETH.ETH:{{ addr_eth_fox }}::xx/yy/zz:10/20/30"
+  - .memo == "=:ETH.ETH:{{ addr_eth_fox }}::xx/yy/zz:100/50/40"
+  - .fees.affiliate == "193658"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/quote/swap
@@ -772,4 +798,18 @@ params:
   destination: {{ addr_thor_fox }}
 asserts:
   - .memo == "=:THOR.RUNE:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr::xx:10"
+---
+########################################################################################
+# Inbound below dust threshold should error
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/quote/swap
+params:
+  from_asset: BTC.BTC
+  to_asset: THOR.RUNE
+  amount: 9000
+  destination: {{ addr_thor_fox }}
+status: 400
+asserts:
+  - .message|contains("amount less than dust threshold")
 

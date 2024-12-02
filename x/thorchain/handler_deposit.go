@@ -250,17 +250,6 @@ func (h DepositHandler) addSwapDirectV3_0_0(ctx cosmos.Context, msg MsgSwap) {
 	if msg.Tx.Coins.IsEmpty() {
 		return
 	}
-	// Get total affiliate amount
-	totalAffFee := msg.GetTotalAffiliateFee()
-	if totalAffFee.GT(cosmos.ZeroUint()) {
-		// Distribute affiliate fees
-		totalAffiliateFee, err := skimAffiliateFees(ctx, h.mgr, msg.Tx, msg.Signer, msg.Tx.Coins[0], msg.Tx.Memo)
-		if err != nil {
-			ctx.Logger().Error("fail to skim affiliate fees", "error", err)
-		}
-		// Reduce main swap amount by total distributed affiliate fee
-		msg.Tx.Coins[0].Amount = common.SafeSub(msg.Tx.Coins[0].Amount, totalAffiliateFee)
-	}
 	// Queue the main swap
 	if err := h.mgr.Keeper().SetSwapQueueItem(ctx, msg, 0); err != nil {
 		ctx.Logger().Error("fail to add swap to queue", "error", err)

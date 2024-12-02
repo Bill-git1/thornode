@@ -72,12 +72,12 @@ coins:
 memo: "=:BTC.BTC:{{ addr_btc_cat }}::test:500"
 ---
 type: create-blocks
-count: 1
+count: 2
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
-  - .affiliate_collector_rune == "750000000"
+  - .affiliate_collector_rune == "722959265"
 ---
 # Observe the outbound.
 type: tx-observed-out
@@ -89,7 +89,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_cat }}
       coins:
-        - amount: "10902896"
+        - amount: "10760967"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -126,22 +126,28 @@ txs:
       gas:
         - amount: "10000"
           asset: "BTC.BTC"
-      memo: "=:THOR.RUNE:{{ addr_thor_fox }}::test:500"
+      memo: "=:THOR.RUNE:{{ addr_thor_fox }}::test:200"
     block_height: 4
     finalise_height: 4
     observed_pub_key: {{ pubkey_dog }}
 ---
 type: create-blocks
-count: 1
+count: 2
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
-  - .affiliate_collector_rune == "1467114979"
+  - .affiliate_collector_rune == "1004103429"
 ---
 ########################################################################################
-# streaming swap to trigger preferred asset swap
+# streaming swap to rune to trigger preferred asset swap
 ########################################################################################
+type: check
+endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
+asserts:
+  - .balances|length == 1
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FOX_BAL=2498772064023}
+---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
 txs:
@@ -157,7 +163,7 @@ txs:
       gas:
         - amount: "1280000"
           asset: "ETH.ETH"
-      memo: "=:ETH.USDY-0X9999999999999999999999999999999999999999:{{ addr_eth_fox }}:0/1:test:500"
+      memo: "=:r:{{ addr_thor_fox }}:0/1:test:1000"
     block_height: 8
     finalise_height: 8
     observed_pub_key: {{ pubkey_dog }}
@@ -168,24 +174,63 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/swap/streaming/{{ observe_txid 3 }}
 asserts:
-  - .deposit == "28500000"
-  - .in == "5700000"
+  - .deposit == "30000000"
+  - .in == "5000000"
   - .count == 1
   - .interval == 1
-  - .quantity == 5
-  - .out == "557258500"
-  - .last_height == 9
+  - .quantity == 6
+  - .out == "495044145"
+  - .last_height == 11
   - .trade_target == "0"
   - .failed_swaps|length == 0
   - .failed_swap_reasons|length == 0
+---
+type: create-blocks
+count: 3
+---
+type: check
+endpoint: http://localhost:1317/thorchain/swap/streaming/{{ observe_txid 3 }}
+asserts:
+  - .deposit == "30000000"
+  - .in == "20000000"
+  - .count == 4
+  - .interval == 1
+  - .quantity == 6
+  - .out == "1951138296"
+  - .last_height == 14
+  - .trade_target == "0"
+  - .failed_swaps|length == 0
+  - .failed_swap_reasons|length == 0
+---
+type: create-blocks
+count: 2
+---
+type: check
+endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
+asserts:
+  - .balances|length == 1
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FOX_BAL} + 2606530509
+---
+type: check
+endpoint: http://localhost:1317/thorchain/thorname/test
+asserts:
+  - .affiliate_collector_rune == "0"
+---
+type: check
+endpoint: http://localhost:1317/thorchain/swaps/streaming
+asserts:
+  - .|length == 0
+---
+type: create-blocks
+count: 1
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
-  - .[0]|.in_hash == "${IN_HASH=72414C2C0D933800E0C9111F79C6703905DAFD7132B6A4EA157DB0505140FF16}"
+  - .[0]|.in_hash == "${IN_HASH=0D7E59B032530EC6748090AEE72FDB95F3FDF150E854442689273603CB03D167}"
   - .[0]|.coin.asset == "ETH.USDX-0X9999999999999999999999999999999999999999"
-  - .[0]|.coin.amount == "${OUT_AMOUNT=1302029100}"
+  - .[0]|.coin.amount == "${OUT_AMOUNT=1143444500}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -204,63 +249,6 @@ txs:
       memo: "OUT:${IN_HASH}"
     block_height: 9
     finalise_height: 9
-    observed_pub_key: {{ pubkey_dog }}
----
-type: create-blocks
-count: 2
----
-type: check
-endpoint: http://localhost:1317/thorchain/thorname/test
-asserts:
-  - .affiliate_collector_rune == "145349743"
----
-type: check
-endpoint: http://localhost:1317/thorchain/swap/streaming/{{ observe_txid 3 }}
-asserts:
-  - .deposit == "28500000"
-  - .in == "17100000"
-  - .count == 3
-  - .interval == 1
-  - .quantity == 5
-  - .out == "1633192400"
-  - .last_height == 11
-  - .trade_target == "0"
-  - .failed_swaps|length == 0
-  - .failed_swap_reasons|length == 0
----
-type: create-blocks
-count: 3
----
-type: check
-endpoint: http://localhost:1317/thorchain/swaps/streaming
-asserts:
-  - .|length == 0
----
-type: check
-endpoint: http://localhost:1317/thorchain/queue/outbound
-asserts:
-  - .|length == 1
-  - .[0]|.in_hash == "{{ observe_txid 3 }}"
-  - .[0]|.coin.asset == "ETH.USDY-0X9999999999999999999999999999999999999999"
-  - .[0]|.coin.amount == "${OUTPUT_AMOUNT=2549702300}"
----
-type: tx-observed-out
-signer: {{ addr_thor_dog }}
-txs:
-  - tx:
-      id: "{{ observe_txid 3 }}"
-      chain: ETH
-      from_address: {{ addr_eth_dog }}
-      to_address: {{ addr_eth_fox }}
-      coins:
-        - amount: "${OUTPUT_AMOUNT}"
-          asset: "ETH.USDY-0X9999999999999999999999999999999999999999"
-      gas:
-        - amount: "960000"
-          asset: "ETH.ETH"
-      memo: "OUT:{{ observe_txid 3 }}"
-    block_height: 13
-    finalise_height: 13
     observed_pub_key: {{ pubkey_dog }}
 ---
 type: create-blocks

@@ -4762,30 +4762,6 @@
         "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
       },
       {
-        "amount": "3395952535rune",
-        "mode": "EndBlock",
-        "spender": "tthor1dl7un46w7l7f3ewrnrm6nq58nerjtp0d82uzjg",
-        "type": "coin_spent"
-      },
-      {
-        "amount": "3395952535rune",
-        "mode": "EndBlock",
-        "receiver": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
-        "type": "coin_received"
-      },
-      {
-        "amount": "3395952535rune",
-        "mode": "EndBlock",
-        "recipient": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
-        "sender": "tthor1dl7un46w7l7f3ewrnrm6nq58nerjtp0d82uzjg",
-        "type": "transfer"
-      },
-      {
-        "mode": "EndBlock",
-        "sender": "tthor1dl7un46w7l7f3ewrnrm6nq58nerjtp0d82uzjg",
-        "type": "message"
-      },
-      {
         "chain": "BTC",
         "coin": "25000 BTC.BTC",
         "emit_asset": "3355392 THOR.RUNE",
@@ -5033,7 +5009,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "340383",
+          "gas_used": "358606",
           "events": [
             {
               "fee": "",
@@ -5053,6 +5029,30 @@
               "module": "MsgObservedTxIn",
               "msg_index": "0",
               "sender": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+              "type": "message"
+            },
+            {
+              "amount": "3395952535rune",
+              "msg_index": "0",
+              "spender": "tthor1dl7un46w7l7f3ewrnrm6nq58nerjtp0d82uzjg",
+              "type": "coin_spent"
+            },
+            {
+              "amount": "3395952535rune",
+              "msg_index": "0",
+              "receiver": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
+              "type": "coin_received"
+            },
+            {
+              "amount": "3395952535rune",
+              "msg_index": "0",
+              "recipient": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
+              "sender": "tthor1dl7un46w7l7f3ewrnrm6nq58nerjtp0d82uzjg",
+              "type": "transfer"
+            },
+            {
+              "msg_index": "0",
+              "sender": "tthor1dl7un46w7l7f3ewrnrm6nq58nerjtp0d82uzjg",
               "type": "message"
             }
           ]
@@ -5089,7 +5089,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "BD3FEC8AA5A0896A4FCD9F27BDC3BDD60430D80C258768FA7E0DF14A1FB80FCF",
-      "last_results_hash": "FFDE1B70BBE7B2C1618AC5D841E9F13C4D4F7D55FA4EFBEC7DA0FCAC9860E109",
+      "last_results_hash": "22488EB9ECFF400CA126327549D9FE4ED8C7840DCE2D33D1D7677DBFE7B70596",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },

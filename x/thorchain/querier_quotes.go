@@ -60,60 +60,45 @@ func quoteParseAddress(ctx cosmos.Context, mgr *Mgrs, addrString string, chain c
 	return common.NoAddress, fmt.Errorf("no thorname alias for chain %s", chain)
 }
 
-// quoteHandleMultipleAffiliates - attempts to parse one or more affiliates + affiliate bps
-func quoteHandleMultipleAffiliates(ctx cosmos.Context, mgr *Mgrs, affiliateParam []string, affiliateBpsParam []string, amount sdkmath.Uint) (affAddrs []common.Address, affParams []string, affiliateBps []sdkmath.Uint, newAmount, totalBps sdkmath.Uint, err error) {
-	affAddrs = make([]common.Address, 0)
-	affParams = make([]string, 0)
-	affiliateBps = make([]sdkmath.Uint, 0)
-	totalBps = sdkmath.ZeroUint()
-	bpParams := affiliateBpsParam
+// parseMultipleAffiliateParams - attempts to parse one or more affiliates + affiliate
+// bps. skips any that are invalid
+func parseMultipleAffiliateParams(ctx cosmos.Context, mgr *Mgrs, affiliateParams []string, bpParams []string) ([]string, []sdkmath.Uint, sdkmath.Uint, error) {
+	affParams := make([]string, 0)
+	affiliateBps := make([]sdkmath.Uint, 0)
+	totalBps := sdkmath.ZeroUint()
+
 	// If there is only one bps defined, but multiple affiliates, apply the bps to all affiliates
-	if len(affiliateBpsParam) == 1 && len(affiliateParam) > 1 {
-		bpParams = make([]string, len(affiliateParam))
+	if len(bpParams) == 1 && len(affiliateParams) > 1 {
+		bpParams = make([]string, len(affiliateParams))
 		for i := range bpParams {
-			bpParams[i] = affiliateBpsParam[0]
+			bpParams[i] = bpParams[0]
 		}
 	}
 
-	if len(affiliateParam) > 0 {
-		for i, affiliateParam := range affiliateParam {
-			affiliate, err := quoteParseAddress(ctx, mgr, affiliateParam, common.THORChain)
+	if len(affiliateParams) > 0 {
+		for i, p := range affiliateParams {
+			bpParam := bpParams[i]
+			bps, err := cosmos.ParseUint(bpParam)
 			if err != nil {
-				return affAddrs, affParams, affiliateBps, amount, totalBps, fmt.Errorf("invalid affiliate provided: %s", affiliateParam)
+				continue
 			}
 
-			bpsParam := bpParams[i]
-			bps, err := cosmos.ParseUint(bpsParam)
-			if err != nil {
-				return affAddrs, affParams, affiliateBps, amount, totalBps, fmt.Errorf("invalid affiliate bps provided")
-			}
-
-			affParams = append(affParams, affiliateParam)
-			affAddrs = append(affAddrs, affiliate)
+			affParams = append(affParams, p)
 			affiliateBps = append(affiliateBps, bps)
-
-			affAmt := common.GetSafeShare(
-				bps,
-				cosmos.NewUint(10000),
-				amount,
-			)
-			amount = amount.Sub(affAmt)
 			totalBps = totalBps.Add(bps)
 		}
 	}
 
 	// If there is a mismatch between the number of affiliates and affiliateBps, return an error
 	if len(affParams) != len(affiliateBps) {
-		return affAddrs, affParams, affiliateBps, amount, totalBps, fmt.Errorf("affiliates and affiliateBps length does not match")
+		return nil, nil, sdkmath.ZeroUint(), fmt.Errorf("mismatch between number of affiliates and affiliate bps")
 	}
 
-	// Ensure total bps is not greater than 1000
 	if totalBps.GT(sdkmath.NewUint(1000)) {
-		err = fmt.Errorf("total affiliate fee must not be more than 1000 bps")
-		return
+		return nil, nil, sdkmath.ZeroUint(), fmt.Errorf("total affiliate fee must not be more than 1000 bps")
 	}
 
-	return affAddrs, affParams, affiliateBps, amount, totalBps, nil
+	return affParams, affiliateBps, totalBps, nil
 }
 
 func quoteHandleAffiliate(ctx cosmos.Context, mgr *Mgrs, affiliateParam []string, affiliateBpsParam []string, amount sdkmath.Uint) (affiliate common.Address, memo string, bps, newAmount, affiliateAmt sdkmath.Uint, err error) {
@@ -333,32 +318,13 @@ func quoteSimulateSwap(ctx cosmos.Context, mgr *Mgrs, amount sdkmath.Uint, msg *
 	}
 	liquidityFee = liquidityFee.MulUint64(streamingQuantity)
 
-	// approximate the affiliate fee in the target asset
-	affiliateFee := sdkmath.ZeroUint()
-	if msg.AffiliateAddress != common.NoAddress && !msg.AffiliateBasisPoints.IsZero() {
-		inAsset := msg.Tx.Coins[0].Asset.GetLayer1Asset()
-		if !inAsset.IsRune() {
-			pool, err := mgr.Keeper().GetPool(ctx, msg.Tx.Coins[0].Asset.GetLayer1Asset())
-			if err != nil {
-				return nil, sdkmath.ZeroUint(), sdkmath.ZeroUint(), fmt.Errorf("unable to get pool: %w", err)
-			}
-			amount = pool.AssetValueInRune(amount)
-		}
-
-		affiliateFee = common.GetUncappedShare(msg.AffiliateBasisPoints, cosmos.NewUint(10_000), amount)
-		if !msg.TargetAsset.IsRune() {
-			affiliateFee = targetPool.RuneValueInAsset(affiliateFee)
-		}
-	}
-
 	// compute slip based on emit amount instead of slip in event to handle double swap
 	slippageBps := liquidityFee.MulUint64(10000).Quo(emitAmount.Add(liquidityFee))
 
 	// build fees
-	totalFees := affiliateFee.Add(liquidityFee).Add(outboundFeeAmount)
+	totalFees := liquidityFee.Add(outboundFeeAmount)
 	fees := types.QuoteFees{
 		Asset:       msg.TargetAsset.String(),
-		Affiliate:   affiliateFee.String(),
 		Liquidity:   liquidityFee.String(),
 		Outbound:    outboundFeeAmount.String(),
 		Total:       totalFees.String(),
@@ -562,6 +528,10 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 		return nil, fmt.Errorf("bad amount: %w", err)
 	}
 
+	if amount.LT(fromAsset.Chain.DustThreshold()) {
+		return nil, fmt.Errorf("amount less than dust threshold")
+	}
+
 	// parse streaming interval
 	streamingInterval := uint64(0) // default value
 	if len(req.StreamingInterval) > 0 {
@@ -616,11 +586,6 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 		return nil, fmt.Errorf("bad from address: %w", err)
 	}
 
-	affiliates, affs, affiliateBps, newAmount, totalAffBps, err := quoteHandleMultipleAffiliates(ctx, qs.mgr, req.Affiliate, req.AffiliateBps, amount)
-	if err != nil {
-		return nil, err
-	}
-
 	// if from asset is a trade asset, create fake balance
 	if fromAsset.IsTradeAsset() {
 		thorAddr, err := fromPubkey.GetThorAddress()
@@ -630,61 +595,6 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 		_, err = qs.mgr.TradeAccountManager().Deposit(ctx, fromAsset, amount, thorAddr, common.NoAddress, common.BlankTxID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to deposit trade asset: %w", err)
-		}
-	}
-
-	if len(affiliates) > 0 && len(affiliateBps) > 0 {
-		totalAffFee := cosmos.ZeroUint()
-		nodeAccounts, err := qs.mgr.Keeper().ListActiveValidators(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("no active node accounts: %w", err)
-		}
-		// Attempt each affiliate swap
-		for i, affiliate := range affiliates {
-			if affiliateBps[i].IsZero() {
-				continue
-			}
-			affAmt := common.GetSafeShare(affiliateBps[i], cosmos.NewUint(1000), amount)
-			if fromAsset.IsRune() {
-				fee := qs.mgr.Keeper().GetNativeTxFee(ctx)
-				if affAmt.LTE(fee) {
-					return nil, fmt.Errorf("affiliate amount must be greater than native fee %s", fee)
-				}
-				totalAffFee = totalAffFee.Add(affAmt)
-			} else {
-				affSwapMsg := &types.MsgSwap{
-					Tx: common.Tx{
-						ID:          common.BlankTxID,
-						Chain:       fromAsset.Chain,
-						FromAddress: fromAddress,
-						ToAddress:   common.NoopAddress,
-						Coins: []common.Coin{
-							{
-								Asset:  fromAsset,
-								Amount: affAmt,
-							},
-						},
-						Gas: []common.Coin{{
-							Asset:  common.RuneAsset(),
-							Amount: sdkmath.NewUint(1),
-						}},
-						Memo: "",
-					},
-					TargetAsset:          common.RuneAsset(),
-					TradeTarget:          cosmos.ZeroUint(),
-					Destination:          affiliate,
-					AffiliateAddress:     common.NoAddress,
-					AffiliateBasisPoints: cosmos.ZeroUint(),
-				}
-
-				affSwapMsg.Signer = nodeAccounts[0].NodeAddress
-				// simulate the swap
-				_, err = simulateInternal(ctx, qs.mgr, affSwapMsg)
-				if err != nil {
-					return nil, fmt.Errorf("affiliate swap failed: %w", err)
-				}
-				totalAffFee = totalAffFee.Add(affAmt)
-			}
 		}
 	}
 
@@ -722,7 +632,7 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 		}
 
 		// convert to a limit of target asset amount assuming zero fees and slip
-		feelessEmit, err := quoteConvertAsset(ctx, qs.mgr, fromAsset, newAmount, toAsset)
+		feelessEmit, err := quoteConvertAsset(ctx, qs.mgr, fromAsset, amount, toAsset)
 		if err != nil {
 			return nil, err
 		}
@@ -739,9 +649,10 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 		}
 	}
 
-	affiliate := common.NoAddress
-	if len(affiliates) > 0 {
-		affiliate = affiliates[0]
+	// parse affiliate params
+	affiliates, affiliateBps, totalBps, err := parseMultipleAffiliateParams(ctx, qs.mgr, req.Affiliate, req.AffiliateBps)
+	if err != nil {
+		return nil, fmt.Errorf("bad affiliate params: %w", err)
 	}
 
 	// create the memo
@@ -752,10 +663,9 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 		},
 		Destination:           destination,
 		SlipLimit:             limit,
-		AffiliateAddress:      affiliate,
-		AffiliateBasisPoints:  totalAffBps,
-		Affiliates:            affs,
+		Affiliates:            affiliates,
 		AffiliatesBasisPoints: affiliateBps,
+		AffiliateBasisPoints:  totalBps,
 		StreamInterval:        streamingInterval,
 		StreamQuantity:        streamingQuantity,
 		RefundAddress:         refundAddress,
@@ -814,7 +724,7 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 			Coins: []common.Coin{
 				{
 					Asset:  fromAsset,
-					Amount: newAmount,
+					Amount: amount,
 				},
 			},
 			Gas: []common.Coin{{
@@ -826,8 +736,8 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 		TargetAsset:          toAsset,
 		TradeTarget:          limit,
 		Destination:          destination,
-		AffiliateAddress:     affiliate,
-		AffiliateBasisPoints: totalAffBps,
+		AffiliateAddress:     common.NoAddress,
+		AffiliateBasisPoints: cosmos.ZeroUint(),
 	}
 
 	// simulate the swap
@@ -865,6 +775,29 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 	// if err != nil {
 	//   return quoteErrorResponse(fmt.Errorf("failed to simulate swap: %w", err))
 	// }
+
+	totalAffFee := cosmos.ZeroUint()
+	// attempt each affiliate fee, skipping those that won't succeed
+	if len(affiliates) > 0 && len(affiliateBps) > 0 {
+		// Attempt each affiliate swap
+		for _, bps := range affiliateBps {
+			if bps.IsZero() {
+				continue
+			}
+			affAmt := common.GetSafeShare(bps, cosmos.NewUint(10000), emitAmount)
+			totalAffFee = totalAffFee.Add(affAmt)
+		}
+	}
+	// Update fees with affiliate fee & re-calculate total fee bps
+	res.Fees.Affiliate = totalAffFee.String()
+	totalFees, err := sdkmath.ParseUint(res.Fees.Total)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse total fees: %w", err)
+	}
+	totalFees = totalFees.Add(totalAffFee)
+	res.Fees.Total = totalFees.String()
+	res.Fees.TotalBps = totalFees.MulUint64(10000).Quo(emitAmount.Add(totalFees)).BigInt().Int64()
+	emitAmount = emitAmount.Sub(totalAffFee)
 
 	// check invariant
 	if emitAmount.LT(outboundFeeAmount) {
@@ -932,9 +865,9 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 	res.Notes = fromAsset.GetChain().InboundNotes()
 	res.Warning = quoteWarning
 	res.Expiry = time.Now().Add(quoteExpiration).Unix()
-	minSwapAmount, err := calculateMinSwapAmount(ctx, qs.mgr, fromAsset, toAsset, totalAffBps)
+	minSwapAmount, err := calculateMinSwapAmount(ctx, qs.mgr, fromAsset, toAsset, totalBps)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to calculate min amount in: %s", err.Error())
+		return nil, fmt.Errorf("failed to calculate min amount in: %s", err.Error())
 	}
 	res.RecommendedMinAmountIn = minSwapAmount.String()
 

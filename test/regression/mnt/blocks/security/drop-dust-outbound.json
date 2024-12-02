@@ -534,7 +534,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "1924197",
+          "gas_used": "1932616",
           "events": [
             {
               "fee": "",

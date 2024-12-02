@@ -135,12 +135,6 @@ make test-simulation
 make format
 ```
 
-### Build all
-
-```bash
-make all
-```
-
 ### Test
 
 Run tests

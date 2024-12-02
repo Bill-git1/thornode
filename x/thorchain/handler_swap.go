@@ -400,21 +400,14 @@ func (h SwapHandler) handleV3_0_0(ctx cosmos.Context, msg MsgSwap) (*cosmos.Resu
 		emit = swp.Out
 	}
 
-	// This is a preferred asset swap, so subtract the affiliate's RUNE from the
-	// AffiliateCollector module, and send RUNE from the module to Asgard. Then return
-	// early since there is no need to call any downstream handlers.
-	if strings.HasPrefix(msg.Tx.Memo, "THOR-PREFERRED-ASSET") && msg.Tx.FromAddress.Equals(affColAddress) {
-		err = h.processPreferredAssetSwap(ctx, msg)
-		// Failed to update the AffiliateCollector / return err to revert preferred asset swap
-		if err != nil {
-			ctx.Logger().Error("failed to update affiliate collector", "error", err)
-			return &cosmos.Result{}, err
-		}
+	// this is a preferred asset swap, so return early since there is no need to call any
+	// downstream handlers
+	if strings.HasPrefix(msg.Tx.Memo, PreferredAssetSwapMemoPrefix) && msg.Tx.FromAddress.Equals(affColAddress) {
 		return &cosmos.Result{}, nil
 	}
 
 	if parseMemoErr != nil {
-		ctx.Logger().Error("swap handler failed to parse memo", "memo", msg.Tx.Memo, "error", err)
+		ctx.Logger().Error("swap handler failed to parse memo", "memo", msg.Tx.Memo, "error", parseMemoErr)
 		return nil, err
 	}
 	switch mem.GetType() {
@@ -481,38 +474,6 @@ func (h SwapHandler) handleV3_0_0(ctx cosmos.Context, msg MsgSwap) (*cosmos.Resu
 		}
 	}
 	return &cosmos.Result{}, nil
-}
-
-// processPreferredAssetSwap - after a preferred asset swap, deduct the input RUNE
-// amount from AffiliateCollector module accounting and send appropriate amount of RUNE
-// from AffiliateCollector module to Asgard
-func (h SwapHandler) processPreferredAssetSwap(ctx cosmos.Context, msg MsgSwap) error {
-	if msg.Tx.Coins.IsEmpty() || !msg.Tx.Coins[0].IsRune() {
-		return fmt.Errorf("native RUNE not in coins: %s", msg.Tx.Coins)
-	}
-	// For preferred asset swaps, the signer of the Msg is the THORName owner
-	affCol, err := h.mgr.Keeper().GetAffiliateCollector(ctx, msg.Signer)
-	if err != nil {
-		return err
-	}
-
-	runeCoin := msg.Tx.Coins[0]
-	runeAmt := runeCoin.Amount
-
-	if affCol.RuneAmount.LT(runeAmt) {
-		return fmt.Errorf("not enough affiliate collector balance for preferred asset swap, balance: %s, needed: %s", affCol.RuneAmount.String(), runeAmt.String())
-	}
-
-	// 1. Send RUNE from the AffiliateCollector Module to Asgard for the swap
-	err = h.mgr.Keeper().SendFromModuleToModule(ctx, AffiliateCollectorName, AsgardName, common.NewCoins(runeCoin))
-	if err != nil {
-		return err
-	}
-	// 2. Subtract input RUNE amt from AffiliateCollector accounting
-	affCol.RuneAmount = affCol.RuneAmount.Sub(runeAmt)
-	h.mgr.Keeper().SetAffiliateCollector(ctx, affCol)
-
-	return nil
 }
 
 // getTotalLiquidityRUNE we have in all pools

@@ -71,7 +71,7 @@ coins:
 memo: "=:BTC.BTC:{{ addr_btc_fox }}::{{ addr_thor_pig }}/{{ addr_thor_cat }}/{{ addr_thor_fish }}:100"
 ---
 type: create-blocks
-count: 1
+count: 2
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
@@ -83,19 +83,19 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 100000000
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 96860942
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_cat }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${CAT_AFF} + 100000000
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${CAT_AFF} + 96683323
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fish }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 100000000
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 96506182
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -106,7 +106,7 @@ txs:
     from_address: {{ addr_btc_dog }}
     to_address: {{ addr_btc_fox }}
     coins:
-      - amount: "8046328"
+      - amount: "8002422"
         asset: "BTC.BTC"
         decimals: 8
     gas:
@@ -132,19 +132,19 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${PIG_AFF=100000000}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${PIG_AFF=96860942}
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_cat }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${CAT_AFF=2500100000000}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${CAT_AFF=2500096683323}
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fish }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FISH_AFF=100000000}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FISH_AFF=96506182}
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
@@ -154,7 +154,7 @@ coins:
 memo: "=:BTC.BTC:{{ addr_btc_fox }}::{{ addr_thor_pig }}/{{ addr_thor_cat }}/{{ addr_thor_fish }}:500/100/200"
 ---
 type: create-blocks
-count: 1
+count: 2
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
@@ -166,19 +166,19 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${PIG_AFF} + 500000000
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${PIG_AFF} + 489833621
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_cat }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${CAT_AFF} + 100000000
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${CAT_AFF} + 95882553
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fish }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FISH_AFF} + 200000000
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FISH_AFF} + 194088872
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -189,7 +189,7 @@ txs:
     from_address: {{ addr_btc_dog }}
     to_address: {{ addr_btc_fox }}
     coins:
-      - amount: "6551430"
+      - amount: "6466886"
         asset: "BTC.BTC"
         decimals: 8
     gas:
@@ -254,19 +254,19 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${PIG_AFF=398000000}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${PIG_AFF=384694563}
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_cat }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${CAT_AFF=2499998000000}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${CAT_AFF=2499990565876}
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fish }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FISH_AFF=300000000}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FISH_AFF=290595054}
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
@@ -276,13 +276,13 @@ coins:
 memo: "=:BTC.BTC:{{ addr_btc_fox }}::t/a/{{ addr_thor_fish }}:100"
 ---
 type: create-blocks
-count: 1
+count: 2
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${PIG_AFF} + 100000000
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${PIG_AFF} + 97138860
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_cat }}
@@ -296,13 +296,13 @@ asserts:
   - .aliases[0].address == "{{ addr_eth_cat }}"
   - .owner == "{{ addr_thor_cat }}"
   - .preferred_asset == "ETH.ETH"
-  - .affiliate_collector_rune == "100000000"
+  - .affiliate_collector_rune == "96986354"
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fish }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FISH_AFF} + 100000000
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FISH_AFF} + 96834199
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -313,7 +313,7 @@ txs:
     from_address: {{ addr_btc_dog }}
     to_address: {{ addr_btc_fox }}
     coins:
-      - amount: "5943094"
+      - amount: "5923755"
         asset: "BTC.BTC"
         decimals: 8
     gas:
@@ -362,7 +362,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${PIG_AFF=872053827}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${PIG_AFF=786384125}
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_cat }}
@@ -376,10 +376,32 @@ asserts:
   - .aliases[0].address == "{{ addr_eth_cat }}"
   - .owner == "{{ addr_thor_cat }}"
   - .preferred_asset == "ETH.ETH"
-  - .affiliate_collector_rune == "285304053"
+  - .affiliate_collector_rune == "249261705"
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fish }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FISH_AFF=1155917775}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FISH_AFF=996530657}
+---
+type: check
+endpoint: http://localhost:1317/thorchain/block
+asserts:
+  - .end_block_events[13].asset == "THOR.RUNE" # pig affiliate
+  - .end_block_events[13].rune_address == "{{ addr_thor_pig }}"
+  - .end_block_events[13].fee_bps == "100"
+  - .end_block_events[13].fee_amount == "304550702"
+  - .end_block_events[13].gross_amount == "30455070199"
+  - .end_block_events[13].thorname == "t"
+  - .end_block_events[14].asset == "THOR.RUNE" # fish affiliate
+  - .end_block_events[14].rune_address == "{{ addr_thor_fish }}"
+  - .end_block_events[14].fee_bps == "200"
+  - .end_block_events[14].fee_amount == "609101404"
+  - .end_block_events[14].gross_amount == "30455070199"
+  - .end_block_events[14].thorname == ""
+  - .end_block_events[15].asset == "THOR.RUNE" # cat affiliate
+  - .end_block_events[15].rune_address == "{{ addr_thor_cat }}"
+  - .end_block_events[15].fee_bps == "50"
+  - .end_block_events[15].fee_amount == "152275351"
+  - .end_block_events[15].gross_amount == "30455070199"
+  - .end_block_events[15].thorname == "a"

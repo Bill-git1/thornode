@@ -52,6 +52,17 @@ message EventSwap {
   string pool_slip = 12 [(gogoproto.customtype) = "cosmossdk.io/math.Uint", (gogoproto.nullable) = false];
 }
 
+message EventAffiliateFee {
+  string tx_id = 1 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.TxID", (gogoproto.customname) = "TxID"];
+  string memo = 2;
+  string thorname = 3;
+  string rune_address = 4 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.Address"];
+  common.Asset asset = 5 [(gogoproto.nullable) = false, (gogoproto.customtype) = "gitlab.com/thorchain/thornode/v3/common.Asset"];
+  string gross_amount = 6 [(gogoproto.customtype) = "cosmossdk.io/math.Uint", (gogoproto.nullable) = false];
+  uint64 fee_bps = 7;
+  string fee_amount = 8 [(gogoproto.customtype) = "cosmossdk.io/math.Uint", (gogoproto.nullable) = false];
+}
+
 message EventAddLiquidity {
   common.Asset pool = 1 [(gogoproto.nullable) = false, (gogoproto.customtype) = "gitlab.com/thorchain/thornode/v3/common.Asset"];
   string provider_units = 2 [(gogoproto.customtype) = "cosmossdk.io/math.Uint", (gogoproto.nullable) = false];

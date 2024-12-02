@@ -34,6 +34,7 @@ const (
 	SlashPointEventType           = "slash_points"
 	StreamingSwapEventType        = "streaming_swap"
 	SwapEventType                 = "swap"
+	AffiliateFeeEventType         = "affiliate_fee"
 	LimitOrderEventType           = "limit_order"
 	MintBurnType                  = "mint_burn"
 	THORNameEventType             = "thorname"
@@ -174,6 +175,38 @@ func (m *EventStreamingSwap) Events() (cosmos.Events, error) {
 		cosmos.NewAttribute("failed_swap_reasons", strings.Join(m.FailedSwapReasons, "\n ")),
 	)
 	return cosmos.Events{evt}, nil
+}
+
+func NewEventAffiliateFee(txId common.TxID, memo, thorname string, runeAddr common.Address, asset common.Asset, feeBps uint64, grossAmount, feeAmt cosmos.Uint) *EventAffiliateFee {
+	return &EventAffiliateFee{
+		TxID:        txId,
+		Memo:        memo,
+		Thorname:    thorname,
+		RuneAddress: runeAddr,
+		Asset:       asset,
+		GrossAmount: grossAmount,
+		FeeBps:      feeBps,
+		FeeAmount:   feeAmt,
+	}
+}
+
+func (m *EventAffiliateFee) Type() string {
+	return AffiliateFeeEventType
+}
+
+func (m *EventAffiliateFee) Events() (cosmos.Events, error) {
+	return cosmos.Events{
+		cosmos.NewEvent(m.Type(),
+			cosmos.NewAttribute("tx_id", m.TxID.String()),
+			cosmos.NewAttribute("memo", m.Memo),
+			cosmos.NewAttribute("thorname", m.Thorname),
+			cosmos.NewAttribute("rune_address", m.RuneAddress.String()),
+			cosmos.NewAttribute("asset", m.Asset.String()),
+			cosmos.NewAttribute("gross_amount", m.GrossAmount.String()),
+			cosmos.NewAttribute("fee_bps", strconv.FormatUint(m.FeeBps, 10)),
+			cosmos.NewAttribute("fee_amount", m.FeeAmount.String()),
+		),
+	}, nil
 }
 
 // NewEventAddLiquidity create a new add liquidity event

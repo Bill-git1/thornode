@@ -748,12 +748,12 @@ func (s HandlerObservedTxInSuite) TestSwapWithAffiliate(c *C) {
 		MarketOrder,
 		0, 0, GetRandomBech32Addr(),
 	)
+	// no affiliate fees
 	handler.addSwap(ctx, *msg)
 	swaps, err := queue.FetchQueue(ctx)
 	c.Assert(err, IsNil)
-	c.Assert(swaps, HasLen, 2, Commentf("%d", len(swaps)))
-	c.Check(swaps[0].msg.Tx.Coins[0].Amount.Uint64(), Equals, uint64(180000000))
-	c.Check(swaps[1].msg.Tx.Coins[0].Amount.Uint64(), Equals, uint64(20000000))
+	c.Assert(swaps, HasLen, 1, Commentf("%d", len(swaps)))
+	c.Check(swaps[0].msg.Tx.Coins[0].Amount.Uint64(), Equals, uint64(200000000))
 }
 
 func (s *HandlerObservedTxInSuite) TestVaultStatus(c *C) {

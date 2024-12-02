@@ -221,7 +221,7 @@ func (s *HandlerDepositSuite) TestAddSwap(c *C) {
 	// Check balance after swap, should be the same
 	c.Assert(acct.AmountOf(common.RuneNative.Native()).String(), Equals, "0")
 
-	// normal affiliate fee
+	// affiliate fee not taken on deposit
 	tx.Memo = fmt.Sprintf("=:BTC.BTC:%s::%s:1000", GetRandomBTCAddress().String(), affAddr.String())
 	tx.Coins[0].Amount = cosmos.NewUint(common.One)
 	msg2 := NewMsgSwap(tx, common.BTCAsset, GetRandomBTCAddress(), cosmos.ZeroUint(), affAddr, cosmos.NewUint(1000), "", "", nil, MarketOrder, 0, 0, GetRandomBech32Addr())
@@ -229,12 +229,12 @@ func (s *HandlerDepositSuite) TestAddSwap(c *C) {
 	swap, err = mgr.Keeper().GetSwapQueueItem(ctx, tx.ID, 0)
 	c.Assert(err, IsNil)
 	c.Assert(swap.Tx.Coins[0].Amount.IsZero(), Equals, false)
-	c.Assert(swap.Tx.Coins[0].Amount.String(), Equals, cosmos.NewUint(common.One/10*9).String())
+	c.Assert(swap.Tx.Coins[0].Amount.String(), Equals, cosmos.NewUint(common.One).String())
 
 	affiliateFeeAddr2, err := msg2.GetAffiliateAddress().AccAddress()
 	c.Assert(err, IsNil)
 	acct2 := mgr.Keeper().GetBalance(ctx, affiliateFeeAddr2)
-	c.Assert(acct2.AmountOf(common.RuneNative.Native()).String(), Equals, strconv.FormatInt(common.One/10, 10))
+	c.Assert(acct2.AmountOf(common.RuneNative.Native()).String(), Equals, strconv.FormatInt(0, 10))
 
 	// NONE RUNE , synth asset should be handled correctly
 
@@ -258,13 +258,13 @@ func (s *HandlerDepositSuite) TestAddSwap(c *C) {
 	swap, err = mgr.Keeper().GetSwapQueueItem(ctx, tx1.ID, 0)
 	c.Assert(err, IsNil)
 	c.Assert(swap.Tx.Coins[0].Amount.IsZero(), Equals, false)
-	c.Assert(swap.Tx.Coins[0].Amount.Equal(cosmos.NewUint(common.One/10*9)), Equals, true)
+	c.Assert(swap.Tx.Coins[0].Amount.String(), Equals, cosmos.NewUint(common.One).String())
 
-	// Synth swap affiliate fees will be swapped to RUNE
+	// affiliate fee not taken on deposit
 	affiliateFeeAddr3, err := msg3.GetAffiliateAddress().AccAddress()
 	c.Assert(err, IsNil)
 	acct3 := mgr.Keeper().GetBalance(ctx, affiliateFeeAddr3)
-	c.Assert(acct3.AmountOf(common.RuneNative.Native()).String(), Equals, strconv.FormatInt(common.One/10, 10))
+	c.Assert(acct3.AmountOf(common.RuneNative.Native()).String(), Equals, strconv.FormatInt(0, 10))
 }
 
 func (s *HandlerDepositSuite) TestTargetModule(c *C) {

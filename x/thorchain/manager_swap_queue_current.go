@@ -1,6 +1,7 @@
 package thorchain
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -9,6 +10,8 @@ import (
 	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
 )
+
+const PreferredAssetSwapMemoPrefix = "THOR-PREFERRED-ASSET"
 
 // SwapQueueVCUR is going to manage the swaps queue
 type SwapQueueVCUR struct {
@@ -154,8 +157,14 @@ func (vm *SwapQueueVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 					ctx.Logger().Error("failed to retrieve AffiliateCollector module address", "error", err)
 				}
 
-				if strings.HasPrefix(pick.msg.Tx.Memo, "THOR-PREFERRED-ASSET") && pick.msg.Tx.FromAddress.Equals(affColAddress) {
+				if strings.HasPrefix(pick.msg.Tx.Memo, PreferredAssetSwapMemoPrefix) && pick.msg.Tx.FromAddress.Equals(affColAddress) {
 					triggerRefund = false
+					// clean up failed preferred asset swap
+					runeAmt := pick.msg.Tx.Coins[0].Amount
+					memo := pick.msg.Tx.Memo
+					if err := vm.cleanupFailedPreferredAssetSwap(ctx, mgr, memo, runeAmt); err != nil {
+						ctx.Logger().Error("failed to cleanup failed preferred asset swap", "error", err)
+					}
 				}
 			}
 
@@ -253,6 +262,33 @@ func (vm *SwapQueueVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 			vm.k.RemoveSwapQueueItem(ctx, pick.msg.Tx.ID, pick.index)
 		}
 	}
+	return nil
+}
+
+func (vm *SwapQueueVCUR) cleanupFailedPreferredAssetSwap(ctx cosmos.Context, mgr Manager, memo string, runeAmt cosmos.Uint) error {
+	ctx.Logger().Info("preferred asset swap failed, send rune back to affiliate collector", "runeAmt", runeAmt.String(), "memo", memo)
+	// get the preferred asset swap's thorname
+	name, ok := strings.CutPrefix(memo, fmt.Sprintf("%s-", PreferredAssetSwapMemoPrefix))
+	if !ok {
+		return fmt.Errorf("failed to get thorname from memo: %s", memo)
+	}
+	if tn, err := vm.k.GetTHORName(ctx, name); err == nil {
+		affCol, err := mgr.Keeper().GetAffiliateCollector(ctx, tn.Owner)
+		if err != nil {
+			return fmt.Errorf("failed to get affiliate collector record: %w", err)
+		} else {
+			affCol.RuneAmount = affCol.RuneAmount.Add(runeAmt)
+			mgr.Keeper().SetAffiliateCollector(ctx, affCol)
+		}
+	} else {
+		return fmt.Errorf("failed to get thorname: %w", err)
+	}
+
+	// send rune back to affiliate collector
+	if err := mgr.Keeper().SendFromModuleToModule(ctx, AsgardName, AffiliateCollectorName, common.NewCoins(common.NewCoin(common.RuneAsset(), runeAmt))); err != nil {
+		return fmt.Errorf("failed to send rune back to affiliate collector: %w", err)
+	}
+
 	return nil
 }
 

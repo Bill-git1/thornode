@@ -22,6 +22,7 @@ type AppKeepers struct {
 	Codec                 codec.Codec
 	GetStoreKey           func(storeKey string) *storetypes.KVStoreKey
 }
+
 type ModuleManager interface {
 	RunMigrations(ctx context.Context, cfg module.Configurator, fromVM module.VersionMap) (module.VersionMap, error)
 	GetVersionMap() module.VersionMap

@@ -127,6 +127,7 @@ var (
 	NewEventPool                   = types.NewEventPool
 	NewEventDonate                 = types.NewEventDonate
 	NewEventSwap                   = types.NewEventSwap
+	NewEventAffiliateFee           = types.NewEventAffiliateFee
 	NewEventStreamingSwap          = types.NewEventStreamingSwap
 	NewEventLimitOrder             = types.NewEventLimitOrder
 	NewEventAddLiquidity           = types.NewEventAddLiquidity
@@ -300,6 +301,7 @@ type (
 	Keygen                   = types.Keygen
 	KeygenBlock              = types.KeygenBlock
 	EventSwap                = types.EventSwap
+	EventAffiliateFee        = types.EventAffiliateFee
 	EventAddLiquidity        = types.EventAddLiquidity
 	EventWithdraw            = types.EventWithdraw
 	EventDonate              = types.EventDonate
