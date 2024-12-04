@@ -1,9 +1,11 @@
 package thorscan
 
 import (
+	"bytes"
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -69,7 +71,8 @@ func getBlock(height int64) (*BlockResponse, error) {
 	req.Header.Set("Accept-Encoding", "gzip")
 
 	// send request
-	res, err := httpClient.Do(req)
+	var res *http.Response
+	res, err = httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -90,6 +93,14 @@ func getBlock(height int64) (*BlockResponse, error) {
 	case http.StatusOK:
 	case http.StatusNotFound:
 		return nil, fmt.Errorf("block not found")
+	case http.StatusInternalServerError:
+		// attempt to read the body
+		var body []byte
+		body, err = io.ReadAll(res.Body)
+		if err == nil && bytes.Contains(body, []byte("cannot query with height in the future")) {
+			return nil, fmt.Errorf("block not found")
+		}
+		fallthrough
 	default:
 		return nil, fmt.Errorf("bad status code: %d", res.StatusCode)
 	}
