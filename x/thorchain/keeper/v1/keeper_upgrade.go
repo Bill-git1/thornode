@@ -230,5 +230,8 @@ func UpdateActiveValidatorVersions(
 		}
 	}
 
+	// update min join version to the fork version
+	thorchainKeeper.SetMinJoinLast(ctx)
+
 	return nil
 }
