@@ -419,7 +419,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: registry.gitlab.com/thorchain/devops/node-launcher:bitcoin-cash-daemon-27.1.0
+    image: registry.gitlab.com/thorchain/devops/node-launcher:bitcoin-cash-daemon-28.0.0
     restart: unless-stopped
     environment:
       RPC_PORT: "28443"
@@ -436,7 +436,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: registry.gitlab.com/thorchain/devops/node-launcher:dogecoin-daemon-1.14.8
+    image: registry.gitlab.com/thorchain/devops/node-launcher:dogecoin-daemon-1.14.9
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-1}
@@ -503,7 +503,7 @@ services:
       - mocknet
       - mocknet-cluster
     restart: unless-stopped
-    image: registry.gitlab.com/thorchain/devops/node-launcher:avalanche-daemon-1.11.13
+    image: registry.gitlab.com/thorchain/devops/node-launcher:avalanche-daemon-1.12.0
     volumes:
       - "./mocknet/avax:/mocknet"
     command:
