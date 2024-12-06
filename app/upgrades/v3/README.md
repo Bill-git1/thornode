@@ -23,12 +23,14 @@ There are several ways integrators can scan blocks today:
    - As of V3.0.0, `key` and `value` are automatically decoded human-readable strings.
    - Formerly, finalized events (e.g. `coin_recevied`, `coin_spent`, etc.) are returned in `.end_block_events[]`.
    - As of V3.0.0, finalized events are returned in `.finalize_block_events[]`, and their `key` and `value` are automatically decoded to human-readable strings.
+1. (**BREAKING CHANGES**) The `/blocks/latest` API is renamed to `cosmos/base/tendermint/v1beta1/blocks/latest`.
 
 ### Transaction Lookup
 
 1. (**UNCHANGED**) Native transactions, such as `MsgDeposit`, and their most common use case, swap transactions, can be looked up using the native `/thorchain/tx/details/{hash}` endpoint (e.g. https://thornode.ninerealms.com/thorchain/tx/details/B129DA601753D4880800EBF505B74E6DD1DEC2B17DA3895CEF762D948A5A2399). This contains useful information such as outbound `tx_outs` and `actions`, which are not otherwise available on the built-in Cosmos transaction lookup endpoints. NOTE: this endpoint only works for swaps and other native transaction types. It does not index `MsgSend` and other built-in Cosmos types.
 1. (**UNCHANGED**) Using the built-in `cosmos/tx/v1beta1/txs/{hash}` (e.g. https://thornode.ninerealms.com/cosmos/tx/v1beta1/txs/793E68139BCEB01A8B17E3A1DCD2AC86386018AB0E2A18C3CEFAD251D19DCFC2) endpoint. This is a commonly-used endpoint for looking up details of standard Cosmos built-in transactions. Note: as per above, this does not included detailed information about the intent or side effects of a transaction.
 1. (**BREAKING CHANGES**) The `/txs/{hash}` endpoint formerly proxied to the above URL (`/cosmos/tx/v1beta1/txs/{hash}`). This endpoint is deprecated and no longer available. Please use the fully qualified URL.
+1. (**BREAKING CHANGES**) The `/txs?events=` API query key is renamed to `/txs?query=`.
 
 ### New Transaction Types
 
@@ -38,4 +40,4 @@ There are several ways integrators can scan blocks today:
 
 ### Message Signing / Broadcasting
 
-No breaking changes. Build, sign and broadcast transactions using your usual method.
+1. (**BREAKING CHANGES**) CLI transaction submission with `--broadcast-mode=block` is no longer available. Use `--broadcast-mode=sync` or `--broadcast-mode=async` instead.
