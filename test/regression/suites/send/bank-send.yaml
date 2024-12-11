@@ -141,3 +141,38 @@ type: check
 endpoint: http://localhost:1317/thorchain/node/{{ addr_thor_wolf }}
 asserts:
   - .total_bond == "50000"
+---
+type: check
+endpoint: http://localhost:1317/thorchain/mimir
+asserts:
+  - .|length == 0
+---
+type: tx-mimir
+key: BankSendEnabled
+value: 0
+signer: {{ addr_thor_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/mimir
+asserts:
+  - .BANKSENDENABLED == 0
+---
+# Attempt to send when disabled
+type: tx-bank-send
+from_address: {{ addr_thor_wolf }}
+to_address: {{ addr_thor_fox }}
+amount:
+  - denom: rune
+    amount: "1"
+---
+type: create-blocks
+count: 1
+---
+# Transaction should not have been processed by the chain.
+type: check
+endpoint: http://localhost:1317/auth/accounts/{{ addr_thor_wolf }}
+asserts:
+  - .result.value.sequence == "2"

@@ -52,6 +52,7 @@ func init() {
 		SystemIncomeBurnRateBps:             0,
 		DevFundSystemIncomeBps:              0,
 		MultipleAffiliatesMaxCount:          5,
+		BankSendEnabled:                     1,
 	}
 	boolOverrides = map[ConstantName]bool{
 		StrictBondLiquidityRatio: false,

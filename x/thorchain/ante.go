@@ -11,6 +11,7 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
@@ -141,6 +142,13 @@ func (ad AnteDecorator) anteHandleMessage(ctx sdk.Context, version semver.Versio
 	case *types.MsgDeposit:
 		return DepositAnteHandler(ctx, version, ad.keeper, *m)
 	case *types.MsgSend, *banktypes.MsgSend:
+		_, ok := m.(*banktypes.MsgSend)
+		if ok {
+			enabled := ad.keeper.GetConfigInt64(ctx, constants.BankSendEnabled)
+			if enabled <= 0 {
+				return cosmos.ErrUnknownRequest("bank sends are disabled")
+			}
+		}
 		return SendAnteHandler(ctx, version, ad.keeper, m)
 
 	default:

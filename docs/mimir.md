@@ -211,6 +211,7 @@ Mimir setting can be created and changed without a corresponding Constant.
 - `HALTSIGNING<chain>`#: Halt signing in a specific chain
 - `HALTSIGNING#`: Halt signing globally
 - `Ragnarok-<Asset>`#: Ragnaroks a specific pool
+- `BankSendEnabled`: Enable/Disable cosmos bank send messages
 
 ### Router Upgrading (DO NOT TOUCH!)
 

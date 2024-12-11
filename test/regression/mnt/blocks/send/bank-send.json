@@ -125,7 +125,7 @@
           "code": 5,
           "log": "failed to execute message; message index: 0: spendable balance 2499998000000rune is smaller than 2500000000000rune: insufficient funds",
           "gas_wanted": "-1",
-          "gas_used": "69963",
+          "gas_used": "70963",
           "events": [
             {
               "fee": "",
@@ -194,7 +194,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "8856280A6175F836AF1E10A7BBB87432FC5209075D686D70589FE0B04D602373",
-      "last_results_hash": "083C631E24CB661AC830F7C8B25F098DFFEFB568A7BDCFC2D6A846868D3192F2",
+      "last_results_hash": "E8282BC2B44AD0A2A10DCF82C331184D73407509AF0A0E3C5723EE2E6FD434B2",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -253,7 +253,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "80616",
+          "gas_used": "81616",
           "events": [
             {
               "fee": "",
@@ -353,7 +353,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "98D14D12172D5B0DF0B6CD3C58BE7A400BF55217A2E074C81B0FAB905EAEF407",
-      "last_results_hash": "32494EBB2C52781BDBD357BAAF2ABA5AF0FBF8570A3B20172FBAF5502A12432B",
+      "last_results_hash": "897D52FAFDC2413F587A656C4975DD7CEACEB30CE291E3B716301BC3F24D79E3",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -450,7 +450,7 @@
           "code": 1,
           "log": "failed to execute message; message index: 0: cannot use MsgSend for Module transactions, use MsgDeposit instead",
           "gas_wanted": "-1",
-          "gas_used": "63189",
+          "gas_used": "64189",
           "events": [
             {
               "fee": "",
@@ -519,7 +519,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "7CF5AD4B60D0D77DF4BA9A6CB37D7FC53603CD810B6F01BC69E15CC3AF489EA2",
-      "last_results_hash": "AEBB6B0120920E0F11EB7EA9A86F9FD5864963CBC298C7FDBAAD380AF18D57FE",
+      "last_results_hash": "F76B8B476EC23DB5080EDE40C7CC5424633097D4BD7943F84DF8D87F804178BF",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -578,7 +578,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "146263",
+          "gas_used": "147263",
           "events": [
             {
               "fee": "",
@@ -667,5 +667,158 @@
         }
       }
     ]
+  },
+  {
+    "id": {
+      "hash": "",
+      "parts": {
+        "total": 0,
+        "hash": ""
+      }
+    },
+    "header": {
+      "version": {
+        "block": "11",
+        "app": "0"
+      },
+      "chain_id": "thorchain",
+      "height": 7,
+      "time": "",
+      "last_block_id": {
+        "hash": "",
+        "parts": {
+          "total": 0,
+          "hash": ""
+        }
+      },
+      "last_commit_hash": "",
+      "data_hash": "B889373AFD7A033D0A9C33F66C01461D90E1FEE51EC9135561A4AF389C29E250",
+      "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
+      "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
+      "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
+      "app_hash": "3BDA1D6212004052F3CE25488A3F5DF573CCA05051BD320BAEA69DDFFA7C6ECB",
+      "last_results_hash": "423ABC51ED9B4B173095B92574439C87C7BF5662A3E8805FD9F3034DFFFD47CD",
+      "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+      "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
+    },
+    "begin_block_events": [],
+    "end_block_events": [],
+    "txs": [
+      {
+        "hash": "17ABA3FF3DAE0D369AF7C8F9506D219F983B4E5583E6D49BAABC9C5C4A5F746A",
+        "tx": {
+          "auth_info": {
+            "fee": {
+              "amount": [],
+              "gas_limit": "0",
+              "granter": "",
+              "payer": ""
+            },
+            "signer_infos": [
+              {
+                "mode_info": {
+                  "single": {
+                    "mode": "SIGN_MODE_DIRECT"
+                  }
+                },
+                "public_key": {
+                  "@type": "/cosmos.crypto.secp256k1.PubKey",
+                  "key": "AmF4AUTWZEUSBtgqiR5n2Lgic/Yrr1mWupMo5TAubNRO"
+                },
+                "sequence": "0"
+              }
+            ],
+            "tip": null
+          },
+          "body": {
+            "extension_options": [],
+            "memo": "",
+            "messages": [
+              {
+                "@type": "/types.MsgMimir",
+                "key": "BankSendEnabled",
+                "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+                "value": "0"
+              }
+            ],
+            "non_critical_extension_options": [],
+            "timeout_height": "0"
+          },
+          "signatures": [
+            "4NOVGte0yHPzYJ77/vS9xWaC6ii6BJugBsW/OxdOdzkUD9Pgn5Fy1PHX7WdzMnhs1mADOAQ8enFZIsws3GKp6A=="
+          ]
+        },
+        "result": {
+          "code": 0,
+          "gas_wanted": "-1",
+          "gas_used": "49284",
+          "events": [
+            {
+              "fee": "",
+              "fee_payer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+              "type": "tx"
+            },
+            {
+              "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/0",
+              "type": "tx"
+            },
+            {
+              "signature": "4NOVGte0yHPzYJ77/vS9xWaC6ii6BJugBsW/OxdOdzkUD9Pgn5Fy1PHX7WdzMnhs1mADOAQ8enFZIsws3GKp6A==",
+              "type": "tx"
+            },
+            {
+              "action": "/types.MsgMimir",
+              "module": "MsgMimir",
+              "msg_index": "0",
+              "sender": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+              "type": "message"
+            },
+            {
+              "key": "BANKSENDENABLED",
+              "msg_index": "0",
+              "type": "set_mimir",
+              "value": "0"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": {
+      "hash": "",
+      "parts": {
+        "total": 0,
+        "hash": ""
+      }
+    },
+    "header": {
+      "version": {
+        "block": "11",
+        "app": "0"
+      },
+      "chain_id": "thorchain",
+      "height": 8,
+      "time": "",
+      "last_block_id": {
+        "hash": "",
+        "parts": {
+          "total": 0,
+          "hash": ""
+        }
+      },
+      "last_commit_hash": "",
+      "data_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+      "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
+      "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
+      "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
+      "app_hash": "C939CFB894E65D44263E113EB0E097A90C9E9AD434DCFDD8C4203775C08547A4",
+      "last_results_hash": "848D69BB3F2560AA40108E24E7666B7353B02A286926C3DA84F667C7D069EAC2",
+      "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+      "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
+    },
+    "begin_block_events": [],
+    "end_block_events": [],
+    "txs": []
   }
 ]

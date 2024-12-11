@@ -8,8 +8,11 @@
           "@type": "/cosmos.auth.v1beta1.BaseAccount",
           "account_number": "6",
           "address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
-          "pub_key": null,
-          "sequence": "0"
+          "pub_key": {
+            "@type": "/cosmos.crypto.secp256k1.PubKey",
+            "key": "AmF4AUTWZEUSBtgqiR5n2Lgic/Yrr1mWupMo5TAubNRO"
+          },
+          "sequence": "1"
         },
         {
           "@type": "/cosmos.auth.v1beta1.ModuleAccount",
@@ -268,7 +271,11 @@
       "liquidity_providers": null,
       "loan_total_collateral": [],
       "loans": [],
-      "mimirs": [],
+      "mimirs": [
+        {
+          "key": "BANKSENDENABLED"
+        }
+      ],
       "network": {
         "bond_reward_rune": "0",
         "total_bond_units": "0"
@@ -372,5 +379,5 @@
       }
     }
   },
-  "initial_height": 7
+  "initial_height": 9
 }
