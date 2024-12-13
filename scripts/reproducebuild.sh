@@ -8,6 +8,7 @@ TAG="mainnet"
 
 read -r -p "Commit [$COMMIT]: " COMMIT_
 read -r -p "Build tag [$TAG]: " TAG_
+read -r -p "Docker image hash (optional) []: " IMAGE_HASH_
 
 COMMIT=${COMMIT_:-$COMMIT}
 TAG=${TAG_:-$TAG}
@@ -44,3 +45,9 @@ cat <<EOF
     $HASH
 
 EOF
+
+if [ -n "$IMAGE_HASH_" ]; then
+  DOCKER_IMAGE="registry.gitlab.com/thorchain/thornode@sha256:${IMAGE_HASH_}"
+  echo -en "Binary in $DOCKER_IMAGE:\n\n    "
+  docker run --entrypoint /bin/sh --rm -it "$DOCKER_IMAGE" -c "sha256sum /usr/bin/thornode"
+fi
