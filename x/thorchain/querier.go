@@ -446,7 +446,7 @@ func (qs queryServer) queryNetwork(ctx cosmos.Context, _ *types.QueryNetworkRequ
 		NativeOutboundFeeRune: qs.mgr.Keeper().GetOutboundTxFee(ctx).String(),
 		TnsRegisterFeeRune:    qs.mgr.Keeper().GetTHORNameRegisterFee(ctx).String(),
 		TnsFeePerBlockRune:    qs.mgr.Keeper().GetTHORNamePerBlockFee(ctx).String(),
-		RunePriceInTor:        qs.mgr.Keeper().DollarsPerRune(ctx).String(),
+		RunePriceInTor:        dollarsPerRuneIgnoreHalt(ctx, qs.mgr.Keeper()).String(),
 		TorPriceInRune:        qs.mgr.Keeper().RunePerDollar(ctx).String(),
 	}
 
@@ -1398,7 +1398,7 @@ func (qs queryServer) queryPool(ctx cosmos.Context, req *types.QueryPoolRequest)
 	p.LoanCr = cr.String()
 
 	if !pool.BalanceAsset.IsZero() && !pool.BalanceRune.IsZero() {
-		dollarsPerRune := qs.mgr.Keeper().DollarsPerRune(ctx)
+		dollarsPerRune := dollarsPerRuneIgnoreHalt(ctx, qs.mgr.Keeper())
 		p.AssetTorPrice = dollarsPerRune.Mul(pool.BalanceRune).Quo(pool.BalanceAsset).String()
 	}
 
@@ -1406,7 +1406,7 @@ func (qs queryServer) queryPool(ctx cosmos.Context, req *types.QueryPoolRequest)
 }
 
 func (qs queryServer) queryPools(ctx cosmos.Context, _ *types.QueryPoolsRequest) (*types.QueryPoolsResponse, error) {
-	dollarsPerRune := qs.mgr.Keeper().DollarsPerRune(ctx)
+	dollarsPerRune := dollarsPerRuneIgnoreHalt(ctx, qs.mgr.Keeper())
 	pools := make([]*types.QueryPoolResponse, 0)
 	iterator := qs.mgr.Keeper().GetPoolIterator(ctx)
 	for ; iterator.Valid(); iterator.Next() {
@@ -3339,4 +3339,48 @@ func simulate(ctx cosmos.Context, mgr Manager, msg sdk.Msg) (sdk.Events, error) 
 	}
 
 	return em.Events(), nil
+}
+
+// dollarsPerRuneIgnoreHalt mirrors keeper.DollarsPerRune, but ignoring halts if all
+// anchor chains are unavailable with them. This is used for the TOR price on pools to
+// ensure a best effort price is returned whenever possible instead of zero.
+func dollarsPerRuneIgnoreHalt(ctx cosmos.Context, k keeper.Keeper) cosmos.Uint {
+	// check for mimir override
+	dollarsPerRune, err := k.GetMimir(ctx, "DollarsPerRune")
+	if err == nil && dollarsPerRune > 0 {
+		return cosmos.NewUint(uint64(dollarsPerRune))
+	}
+
+	usdAssets := k.GetAnchors(ctx, common.TOR)
+
+	// if all anchor chains have trading halt, then ignore trading halt
+	ignoreHalt := true
+	for _, asset := range usdAssets {
+		if !k.IsChainTradingHalted(ctx, asset.Chain) {
+			ignoreHalt = false
+			break
+		}
+	}
+
+	p := make([]cosmos.Uint, 0)
+	for _, asset := range usdAssets {
+		if !ignoreHalt && k.IsChainTradingHalted(ctx, asset.Chain) {
+			continue
+		}
+		pool, err := k.GetPool(ctx, asset)
+		if err != nil {
+			ctx.Logger().Error("fail to get usd pool", "asset", asset.String(), "error", err)
+			continue
+		}
+		if !pool.IsAvailable() {
+			continue
+		}
+		// value := common.GetUncappedShare(pool.BalanceAsset, pool.BalanceRune, cosmos.NewUint(common.One))
+		value := pool.RuneValueInAsset(cosmos.NewUint(constants.DollarMulti * common.One))
+
+		if !value.IsZero() {
+			p = append(p, value)
+		}
+	}
+	return common.GetMedianUint(p).QuoUint64(constants.DollarMulti)
 }
