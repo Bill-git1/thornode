@@ -7,7 +7,9 @@ import (
 	"time"
 
 	ctypes "github.com/cosmos/cosmos-sdk/types"
+	bank "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/rs/zerolog/log"
+
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
@@ -65,9 +67,20 @@ func LargeUnconfirmedInbounds(block *thorscan.BlockResponse) {
 					continue
 				}
 
-				// skip consolidate inbounds
-				if tx.Tx.Memo == "consolidate" {
-					continue
+				// skip consolidate inbounds and trade/secured asset deposits
+				if tx.Tx.Memo != "" { // saver deposits have empty memo
+					memoParts := strings.Split(tx.Tx.Memo, ":")
+					memoType, err := memo.StringToTxType(memoParts[0])
+					if err != nil {
+						log.Error().Err(err).
+							Int64("height", block.Header.Height).
+							Str("memo", tx.Tx.Memo).
+							Msg("failed to parse memo type")
+					}
+					switch memoType {
+					case memo.TxConsolidate, memo.TxTradeAccountDeposit, memo.TxSecuredAssetDeposit:
+						continue
+					}
 				}
 
 				// since this is checked often, only update cached price every 10 blocks
@@ -76,6 +89,13 @@ func LargeUnconfirmedInbounds(block *thorscan.BlockResponse) {
 				// skip if below usd threshold
 				usdValue := USDValue(priceHeight, tx.Tx.Coins[0])
 				if uint64(usdValue) < config.Thresholds.USDValue {
+					continue
+				}
+
+				// check threshold with clout
+				fromClout := Clout(priceHeight, tx.Tx.FromAddress.String())
+				fromCloutUSD := USDValue(priceHeight, fromClout)
+				if uint64(usdValue) < config.Thresholds.USDValue+uint64(fromCloutUSD) {
 					continue
 				}
 
@@ -117,6 +137,13 @@ func LargeUnconfirmedInbounds(block *thorscan.BlockResponse) {
 					tx.Tx.Coins[0].Asset,
 					USDValueString(priceHeight, tx.Tx.Coins[0]),
 				),
+				)
+				fields.Set(fmt.Sprintf("Clout (%s)", tx.Tx.FromAddress),
+					fmt.Sprintf(
+						"%f RUNE (%s)",
+						float64(fromClout.Amount.Uint64())/common.One,
+						FormatUSD(fromCloutUSD),
+					),
 				)
 
 				// notify
@@ -189,6 +216,36 @@ func LargeStreamingSwaps(block *thorscan.BlockResponse) {
 			log.Panic().Err(err).Msg("failed to get tx")
 		}
 
+		cloutFields := NewOrderedMap()
+		fromClout := Clout(block.Header.Height, event["from"])
+		fromCloutUSD := USDValue(block.Header.Height, fromClout)
+		totalCloutUSD := uint64(fromCloutUSD)
+		cloutFields.Set(
+			fmt.Sprintf("Clout (%s)", event["from"]),
+			fmt.Sprintf(
+				"%f RUNE (%s)",
+				float64(fromClout.Amount.Uint64())/common.One,
+				FormatUSD(fromCloutUSD),
+			),
+		)
+
+		// get to address from memo ("to" field in event is asgard)
+		if event["memo"] != "noop" { // streaming loans send "noop"
+			memoParts := strings.Split(event["memo"], ":")
+			toAddress := memoParts[2]
+			toClout := Clout(block.Header.Height, toAddress)
+			toCloutUSD := USDValue(block.Header.Height, toClout)
+			totalCloutUSD += uint64(toCloutUSD)
+			cloutFields.Set(
+				fmt.Sprintf("Clout (%s)", toAddress),
+				fmt.Sprintf(
+					"%f RUNE (%s)",
+					float64(toClout.Amount.Uint64())/common.One,
+					FormatUSD(toCloutUSD),
+				),
+			)
+		}
+
 		// verify precise amount
 		coinStr := fmt.Sprintf("%s %s", tx.ObservedTx.Tx.Coins[0].Amount, tx.ObservedTx.Tx.Coins[0].Asset)
 		coin, err = common.ParseCoin(coinStr)
@@ -196,7 +253,7 @@ func LargeStreamingSwaps(block *thorscan.BlockResponse) {
 			log.Panic().Str("coin", coinStr).Err(err).Msg("unable to parse coin")
 		}
 		usdValue = USDValue(block.Header.Height, coin)
-		if uint64(usdValue) < config.Thresholds.USDValue {
+		if uint64(usdValue) < config.Thresholds.USDValue+totalCloutUSD {
 			continue
 		}
 
@@ -241,6 +298,12 @@ func LargeStreamingSwaps(block *thorscan.BlockResponse) {
 				fields.Set("Interval", fmt.Sprintf("%d blocks", interval))
 				fields.Set("Expected Swap Time", FormatDuration(swapDuration))
 			}
+		}
+
+		// add clout fields
+		for _, field := range cloutFields.keys {
+			val, _ := cloutFields.Get(field)
+			fields.Set(field, val)
 		}
 
 		links := []string{
@@ -329,9 +392,14 @@ func rescheduledOutbounds(height int64, event map[string]string) bool {
 				Msg("failed to get transaction status")
 		}
 
-		// set age field
+		// skip if older than the max reschedule age
 		blockAge := status.Stages.OutboundSigned.GetBlocksSinceScheduled()
 		ageDuration := time.Duration(blockAge*common.THORChain.ApproximateBlockMilliseconds()) * time.Millisecond
+		if ageDuration > config.Thresholds.MaxRescheduledAge {
+			return true
+		}
+
+		// set age field
 		fields.Set("Age", fmt.Sprintf("%s (%d blocks)", FormatDuration(ageDuration), blockAge))
 
 		// add track link for swaps
@@ -388,6 +456,7 @@ func scheduledOutbound(height int64, events []map[string]string) {
 
 	// extract memo and coins
 	var coins []common.Coin
+	toAddresses := []string{}
 	for _, event := range events {
 		asset, err := common.NewAsset(event["coin_asset"])
 		if err != nil {
@@ -396,14 +465,35 @@ func scheduledOutbound(height int64, events []map[string]string) {
 		amount := cosmos.NewUintFromString(event["coin_amount"])
 		coin := common.NewCoin(asset, amount)
 		coins = append(coins, coin)
+		toAddresses = append(toAddresses, event["to_address"])
 	}
 
-	// skip small outbounds, delta value is lower, but only fires if percent threshold met
+	// skip small outbounds, delta value is lower, but only fires if basis points threshold met
 	usdValue := 0.0
 	for _, coin := range coins {
 		usdValue += USDValue(height, coin)
 	}
-	if uint64(usdValue) < config.Thresholds.USDValue && uint64(usdValue) < config.Thresholds.Delta.USDValue {
+	if uint64(usdValue) < config.Thresholds.USDValue && uint64(usdValue) < config.Thresholds.SwapDelta.USDValue {
+		return
+	}
+
+	// get to address clout and skip if below threshold with clout
+	cloutFields := NewOrderedMap()
+	totalCloutUSD := uint64(0)
+	for _, addr := range toAddresses {
+		clout := Clout(height, addr)
+		cloutUSD := USDValue(height, clout)
+		totalCloutUSD += uint64(cloutUSD)
+		cloutFields.Set(
+			fmt.Sprintf("Clout (%s)", addr),
+			fmt.Sprintf(
+				"%f RUNE (%s)",
+				float64(clout.Amount.Uint64())/common.One,
+				FormatUSD(cloutUSD),
+			),
+		)
+	}
+	if uint64(usdValue) < config.Thresholds.USDValue+totalCloutUSD && uint64(usdValue) < config.Thresholds.SwapDelta.USDValue {
 		return
 	}
 
@@ -434,6 +524,25 @@ func scheduledOutbound(height int64, events []map[string]string) {
 		if err != nil {
 			log.Panic().Err(err).Msg("failed to parse memo type")
 		}
+	}
+
+	// consider from address clout for swaps and trade/secured asset withdraws
+	switch memoType {
+	case memo.TxSwap, memo.TxTradeAccountWithdrawal, memo.TxSecuredAssetWithdraw:
+		clout := Clout(height, *status.Tx.FromAddress)
+		cloutUSD := USDValue(height, clout)
+		totalCloutUSD += uint64(cloutUSD)
+		cloutFields.Set(
+			fmt.Sprintf("Clout (%s)", *status.Tx.FromAddress),
+			fmt.Sprintf(
+				"%f RUNE (%s)",
+				float64(clout.Amount.Uint64())/common.One,
+				FormatUSD(cloutUSD),
+			),
+		)
+	}
+	if uint64(usdValue) < config.Thresholds.USDValue+totalCloutUSD && uint64(usdValue) < config.Thresholds.SwapDelta.USDValue {
+		return
 	}
 
 	// build the notification
@@ -475,31 +584,31 @@ func scheduledOutbound(height int64, events []map[string]string) {
 
 		// add the delta
 		delta := usdValue - inboundUSDValue
-		deltaPercent := float64(delta) / inboundUSDValue * 100
-		deltaStr := fmt.Sprintf("%s (%.02f%%)", FormatUSD(delta), deltaPercent)
+		deltaBasisPoints := float64(delta) / inboundUSDValue * 10000
+		deltaStr := fmt.Sprintf("%s (%.02f%%)", FormatUSD(delta), deltaBasisPoints/100)
 		if delta > 0 {
 			// red triangle if perceived value increased
 			deltaStr = EmojiSmallRedTriangle + " " + deltaStr
 		}
 
 		// skip if delta below threshold and below the broader usd value threshold
-		if deltaPercent < float64(config.Thresholds.Delta.Percent) &&
-			uint64(inboundUSDValue) < config.Thresholds.USDValue {
+		if deltaBasisPoints < float64(config.Thresholds.SwapDelta.BasisPoints) &&
+			uint64(inboundUSDValue) < config.Thresholds.USDValue+totalCloutUSD {
 			return
 		}
 
-		if deltaPercent > float64(config.Thresholds.Delta.Percent) {
+		if deltaBasisPoints > float64(config.Thresholds.SwapDelta.BasisPoints) {
 			// rotating light and tag @here if delta
 			deltaStr = EmojiRotatingLight + " " + deltaStr + " " + EmojiRotatingLight
 			tag = true
 		}
 		fields.Set("Delta", deltaStr)
-	} else if uint64(usdValue) < config.Thresholds.USDValue {
+	} else if uint64(usdValue) < config.Thresholds.USDValue+totalCloutUSD {
 		// skip when no delta and below the broader usd value threshold
 		return
 	}
 
-	// extra fields for streaming swap alerts
+	// extra fields for swap alerts
 	if memoType == thorchain.TxSwap {
 		links = append(links, fmt.Sprintf("[Track](%s/%s)", config.Links.Track, events[0]["in_hash"]))
 
@@ -551,6 +660,12 @@ func scheduledOutbound(height int64, events []map[string]string) {
 			USDValueString(height, coin),
 		))
 		fields.Set(memoField, fmt.Sprintf("`%s`", events[i]["memo"]))
+	}
+
+	// add clout fields
+	for _, field := range cloutFields.keys {
+		val, _ := cloutFields.Get(field)
+		fields.Set(field, val)
 	}
 
 	// determine the expected delay
@@ -623,22 +738,31 @@ func LargeTransfers(block *thorscan.BlockResponse) {
 		}
 
 		for _, msg := range tx.Tx.GetMsgs() {
-			// skip anything other than send
-			msgSend, ok := msg.(*thorchain.MsgSend)
-			if !ok {
+			amount := uint64(0)
+			var fromAddr, toAddr string
+			switch m := msg.(type) {
+			case *thorchain.MsgSend:
+				for _, coin := range m.Amount {
+					if coin.Denom == "rune" {
+						amount = coin.Amount.Uint64()
+					}
+				}
+				fromAddr = m.FromAddress.String()
+				toAddr = m.ToAddress.String()
+			case *bank.MsgSend:
+				for _, coin := range m.Amount {
+					if coin.Denom == "rune" {
+						amount = coin.Amount.Uint64()
+					}
+				}
+				fromAddr = m.FromAddress
+				toAddr = m.ToAddress
+			default:
 				continue
 			}
 
-			// find rune value
-			amount := uint64(0)
-			for _, coin := range msgSend.Amount {
-				if coin.Denom == "rune" {
-					amount = coin.Amount.Uint64()
-				}
-			}
-
 			// skip small transfers
-			if amount < config.Thresholds.RuneValue*common.One {
+			if amount < config.Thresholds.RuneTransferValue*common.One {
 				continue
 			}
 
@@ -670,18 +794,21 @@ func LargeTransfers(block *thorscan.BlockResponse) {
 				FormatLocale(amount/common.One),
 				USDValueString(block.Header.Height, common.NewCoin(common.RuneAsset(), cosmos.NewUint(amount))),
 			)
-			fromAddr := config.LabeledAddresses[msgSend.FromAddress.String()]
-			if fromAddr == "" {
-				fromAddr = msgSend.FromAddress.String()
+
+			// use known address labels in alert
+			fromAddrLabel := fromAddr
+			toAddrLabel := toAddr
+			if _, ok = config.LabeledAddresses[fromAddr]; ok {
+				fromAddrLabel = config.LabeledAddresses[fromAddr]
 			}
-			toAddr := config.LabeledAddresses[msgSend.ToAddress.String()]
-			if toAddr == "" {
-				toAddr = msgSend.ToAddress.String()
+			if _, ok = config.LabeledAddresses[toAddr]; ok {
+				toAddrLabel = config.LabeledAddresses[toAddr]
 			}
+
 			links := []string{
 				fmt.Sprintf("[Transaction](%s/tx/%s)", config.Links.Explorer, tx.BlockTx.Hash),
-				fmt.Sprintf("[%s](%s/address/%s)", fromAddr, config.Links.Explorer, msgSend.FromAddress.String()),
-				fmt.Sprintf("[%s](%s/address/%s)", toAddr, config.Links.Explorer, msgSend.ToAddress.String()),
+				fmt.Sprintf("[%s](%s/address/%s)", fromAddrLabel, config.Links.Explorer, fromAddr),
+				fmt.Sprintf("[%s](%s/address/%s)", toAddrLabel, config.Links.Explorer, toAddr),
 			}
 			fields.Set("Hash", tx.BlockTx.Hash)
 			fields.Set("From", fromAddr)
@@ -833,21 +960,45 @@ func NewNode(block *thorscan.BlockResponse) {
 			}
 
 			for _, msg := range tx.Tx.GetMsgs() {
-				// skip anything other than deposit
-				msgDeposit, ok := msg.(*thorchain.MsgDeposit)
-				if !ok {
-					continue
-				}
 				amount := uint64(0)
-				for _, coin := range msgDeposit.Coins {
-					if coin.Asset.Equals(common.RuneAsset()) {
-						amount = coin.Amount.Uint64()
+				operator := ""
+				switch msg := msg.(type) {
+				case *thorchain.MsgDeposit:
+					for _, coin := range msg.Coins {
+						if coin.Asset.Equals(common.RuneAsset()) {
+							amount = coin.Amount.Uint64()
+						}
 					}
+					operator = msg.Signer.String()
+				case *thorchain.MsgSend:
+					if !IsThorchainModule(msg.ToAddress.String()) {
+						continue
+					}
+
+					for _, coin := range msg.Amount {
+						if coin.Denom == "rune" {
+							amount = coin.Amount.Uint64()
+						}
+					}
+					operator = msg.FromAddress.String()
+
+				case *bank.MsgSend:
+					if !IsThorchainModule(msg.ToAddress) {
+						continue
+					}
+
+					for _, coin := range msg.Amount {
+						if coin.Denom == "rune" {
+							amount = coin.Amount.Uint64()
+						}
+					}
+					operator = msg.FromAddress
+				default:
+					continue
 				}
 
 				title := fmt.Sprintf("`[%d]` New Node", block.Header.Height)
 				fields := NewOrderedMap()
-				operator := msgDeposit.Signer.String()
 				operator = operator[len(operator)-4:]
 				fields.Set("Hash", tx.Hash)
 				fields.Set("Operator", fmt.Sprintf("`%s`", operator))
@@ -877,31 +1028,66 @@ txs:
 			}
 
 			for _, msg := range tx.Tx.GetMsgs() {
-				// skip anything other than deposit
-				msgDeposit, ok := msg.(*thorchain.MsgDeposit)
-				if !ok {
-					continue
-				}
 				amount := uint64(0)
-				for _, coin := range msgDeposit.Coins {
-					if coin.Asset.Equals(common.RuneAsset()) {
-						amount = coin.Amount.Uint64()
+				provider := ""
+				memo := ""
+				switch msg := msg.(type) {
+				case *thorchain.MsgDeposit:
+					for _, coin := range msg.Coins {
+						if coin.Asset.Equals(common.RuneAsset()) {
+							amount = coin.Amount.Uint64()
+						}
 					}
+					provider = msg.Signer.String()
+					memo = msg.Memo
+				case *thorchain.MsgSend:
+					if !IsThorchainModule(msg.ToAddress.String()) {
+						continue
+					}
+
+					for _, coin := range msg.Amount {
+						if coin.Denom == "rune" {
+							amount = coin.Amount.Uint64()
+						}
+					}
+					provider = msg.FromAddress.String()
+					if mTx, ok := tx.Tx.(ctypes.TxWithMemo); ok {
+						memo = mTx.GetMemo()
+					} else {
+						log.Panic().Msg("failed to cast tx to TxWithMemo")
+					}
+				case *bank.MsgSend:
+					if !IsThorchainModule(msg.ToAddress) {
+						continue
+					}
+
+					for _, coin := range msg.Amount {
+						if coin.Denom == "rune" {
+							amount = coin.Amount.Uint64()
+						}
+					}
+					provider = msg.FromAddress
+					if mTx, ok := tx.Tx.(ctypes.TxWithMemo); ok {
+						memo = mTx.GetMemo()
+					} else {
+						log.Panic().Msg("failed to cast tx to TxWithMemo")
+					}
+				default:
+					continue
 				}
 
 				title := fmt.Sprintf("`[%d]` Bond", block.Header.Height)
 				fields := NewOrderedMap()
-				provider := msgDeposit.Signer.String()
 				provider = provider[len(provider)-4:]
 				fields.Set("Hash", tx.Hash)
 				fields.Set("Provider", fmt.Sprintf("`%s`", provider))
-				fields.Set("Memo", fmt.Sprintf("`%s`", msgDeposit.Memo))
+				fields.Set("Memo", fmt.Sprintf("`%s`", memo))
 				fields.Set("Amount", FormatLocale(float64(amount)/common.One))
 
 				// extract node address from memo
-				m, err := thorchain.ParseMemo(common.LatestVersion, msgDeposit.Memo)
+				m, err := thorchain.ParseMemo(common.LatestVersion, memo)
 				if err != nil {
-					log.Panic().Str("memo", msgDeposit.Memo).Err(err).Msg("failed to parse memo")
+					log.Panic().Str("memo", memo).Err(err).Msg("failed to parse memo")
 				}
 
 				addNodeInfo := func(nodeAddress string) {
@@ -1004,8 +1190,29 @@ func THORNameRegistrations(block *thorscan.BlockResponse) {
 			fields.Set("Fund Amount", FormatLocale(float64(fundAmount)/common.One))
 
 			for _, msg := range tx.Tx.GetMsgs() {
-				if msgDeposit, ok := msg.(*thorchain.MsgDeposit); ok {
-					fields.Set("Memo", fmt.Sprintf("`%s`", msgDeposit.Memo))
+				switch m := msg.(type) {
+				case *thorchain.MsgDeposit:
+					fields.Set("Memo", fmt.Sprintf("`%s`", m.Memo))
+				case *thorchain.MsgSend:
+					if !IsThorchainModule(m.ToAddress.String()) {
+						continue
+					}
+
+					if mTx, ok := tx.Tx.(ctypes.TxWithMemo); ok {
+						fields.Set("Memo", fmt.Sprintf("`%s`", mTx.GetMemo()))
+					} else {
+						log.Panic().Msg("failed to cast tx to TxWithMemo")
+					}
+				case *bank.MsgSend:
+					if !IsThorchainModule(m.ToAddress) {
+						continue
+					}
+
+					if mTx, ok := tx.Tx.(ctypes.TxWithMemo); ok {
+						fields.Set("Memo", fmt.Sprintf("`%s`", mTx.GetMemo()))
+					} else {
+						log.Panic().Msg("failed to cast tx to TxWithMemo")
+					}
 				}
 			}
 

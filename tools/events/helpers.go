@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -216,4 +217,39 @@ func ExternalUSDValue(coin common.Coin) float64 {
 func USDValueString(height int64, coin common.Coin) string {
 	value := USDValue(height, coin)
 	return FormatUSD(value)
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+// Clout
+////////////////////////////////////////////////////////////////////////////////////////
+
+func Clout(height int64, address string) common.Coin {
+	cloutScore := cosmos.ZeroUint()
+
+	// retrieve address clout
+	clout := openapi.SwapperCloutResponse{}
+	err := ThornodeCachedRetryGet("thorchain/clout/swap/"+address, height, &clout, http.StatusNotFound)
+	if err != nil {
+		log.Error().Err(err).
+			Str("address", address).
+			Int64("height", height).
+			Msg("failed to get clout")
+	}
+	if clout.Score != nil {
+		cloutScore = cosmos.NewUintFromString(*clout.Score)
+	}
+
+	return common.NewCoin(common.RuneNative, cloutScore)
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+// Address Checks
+////////////////////////////////////////////////////////////////////////////////////////
+
+func IsThorchainModule(address string) bool {
+	thorchainModulesAddresses := map[string]bool{
+		"thor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38cg2q6y":  true,
+		"sthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38v3kkv6": true,
+	}
+	return thorchainModulesAddresses[address]
 }

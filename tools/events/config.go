@@ -3,6 +3,7 @@ package main
 import (
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
@@ -91,17 +92,25 @@ type Config struct {
 		Thornode string `mapstructure:"thornode"`
 	} `mapstructure:"explorers"`
 
+	// TORAnchorCheckBlocks is the number of blocks to check for TOR anchor drift.
+	TORAnchorCheckBlocks int64 `mapstructure:"tor_anchor_check_blocks"`
+
 	// Thresholds contain various thresholds for alerts.
 	Thresholds struct {
-		USDValue  uint64 `mapstructure:"usd_value"`
-		RuneValue uint64 `mapstructure:"rune_value"`
+		// USDValue is the threshold for inbounds, outbounds, and swaps that trigger an
+		// alert. The threshold is also increased by the clout value of corresponding
+		// addresses to avoid noise from addresses with a history of trust.
+		USDValue uint64 `mapstructure:"usd_value"`
 
-		// Delta contains thresholds for USD value and percent change. The alert will fire
-		// if both thresholds are met.
-		Delta struct {
-			USDValue uint64 `mapstructure:"usd_value"`
-			Percent  uint64 `mapstructure:"percent"`
-		} `mapstructure:"delta"`
+		// RuneTransferValue is the threshold for a RUNE transfer that triggers an alert.
+		RuneTransferValue uint64 `mapstructure:"rune_value"`
+
+		// SwapDelta contains thresholds for USD value and percent change of a swap. The
+		// alert will fire if both thresholds are met.
+		SwapDelta struct {
+			USDValue    uint64 `mapstructure:"usd_value"`
+			BasisPoints uint64 `mapstructure:"basis_points"`
+		} `mapstructure:"swap_delta"`
 
 		Security struct {
 			USDValue uint64 `mapstructure:"usd_value"`
@@ -113,6 +122,10 @@ type Config struct {
 		// TORAnchorDriftBasisPoints defines the threshold for the drift of a single TOR
 		// anchor asset that will trigger an alert.
 		TORAnchorDriftBasisPoints uint64 `mapstructure:"tor_anchor_drift_basis_points"`
+
+		// MaxRescheduledAge is the maximum age of a rescheduled outbound that will trigger
+		// an alert. This avoids ongoing noise from known stuck outbounds.
+		MaxRescheduledAge time.Duration `mapstructure:"max_rescheduled_age"`
 	} `mapstructure:"thresholds"`
 
 	// Styles contain various styling for alerts.
@@ -184,14 +197,17 @@ func init() {
 	config.Links.Explorer = "https://runescan.io"
 	config.Links.Thornode = "https://thornode.ninerealms.com"
 
+	config.TORAnchorCheckBlocks = 300 // 30 minutes
+
 	// thresholds
-	config.Thresholds.USDValue = 100_000
-	config.Thresholds.RuneValue = 1_000_000
-	config.Thresholds.Delta.USDValue = 50_000
-	config.Thresholds.Delta.Percent = 5
+	config.Thresholds.USDValue = 150_000
+	config.Thresholds.RuneTransferValue = 1_000_000
+	config.Thresholds.SwapDelta.USDValue = 50_000
+	config.Thresholds.SwapDelta.BasisPoints = 500
 	config.Thresholds.Security.USDValue = 3_000_000
 	config.Thresholds.SwapSlipBasisPoints = 100
 	config.Thresholds.TORAnchorDriftBasisPoints = 500
+	config.Thresholds.MaxRescheduledAge = 3 * 24 * time.Hour
 
 	// styles
 	config.Styles.USDPerMoneyBag = 100_000

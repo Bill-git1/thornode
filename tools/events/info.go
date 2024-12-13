@@ -30,6 +30,7 @@ func ScanInfo(block *thorscan.BlockResponse) {
 	SetMimir(block)
 	KeygenFailure(block)
 	TORAnchorDrift(block)
+	UpgradeProposalAndApproval(block)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -592,8 +593,7 @@ func formatNodeMimirMessage(height int64, node, key, value string) string {
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func TORAnchorDrift(block *thorscan.BlockResponse) {
-	// run every 10 blocks (1 minute)
-	if block.Header.Height%10 != 0 {
+	if block.Header.Height%config.TORAnchorCheckBlocks != 0 {
 		return
 	}
 
@@ -664,19 +664,54 @@ func TORAnchorDrift(block *thorscan.BlockResponse) {
 		fields.Set(shortAsset, FormatUSD(price))
 	}
 
-	// alert @here with 10 minute cooldown
-	lastTaggedHeight := int64(0)
-	lastTaggedKey := "tor-anchor-drift-last-tag-height"
-	err = Load(lastTaggedKey, &lastTaggedHeight)
-	if err != nil {
-		log.Debug().Err(err).Msg("failed to load last anchor drift tag height")
-	}
-	tag := block.Header.Height-lastTaggedHeight > 100
-	err = Store(lastTaggedKey, block.Header.Height)
-	if err != nil {
-		log.Debug().Err(err).Msg("failed to store last anchor drift tag height")
-	}
-
 	title := fmt.Sprintf("`[%d]` TOR Anchor Drift (%.02f%%)", block.Header.Height, float64(driftBPS.Uint64())/100)
-	Notify(config.Notifications.Info, title, nil, tag, fields)
+	Notify(config.Notifications.Info, title, nil, false, fields)
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+// Upgrade Proposal and Approval
+////////////////////////////////////////////////////////////////////////////////////////
+
+func UpgradeProposalAndApproval(block *thorscan.BlockResponse) {
+	for _, tx := range block.Txs {
+		for _, event := range tx.Result.Events {
+
+			fields := NewOrderedMap()
+			tag := false
+			var title string
+			switch event["type"] {
+			case "propose_upgrade":
+				title = fmt.Sprintf("`[%d]` Upgrade Proposed: `%s`", block.Header.Height, event["name"])
+				tag = true
+				fields.Set("Height", fmt.Sprintf("`%s`", event["height"]))
+				fields.Set("Info", event["info"])
+			case "approve_upgrade":
+				title = fmt.Sprintf("`[%d]` Upgrade Approved: `%s`", block.Header.Height, event["name"])
+
+				// fetch proposal stats
+				proposal := openapi.UpgradeProposal{}
+				path := fmt.Sprintf("thorchain/upgrade_proposal/%s", event["name"])
+				err := ThornodeCachedRetryGet(path, block.Header.Height, &proposal)
+				if err != nil {
+					log.Panic().Err(err).Msg("failed to get upgrade proposal")
+				}
+				if proposal.ApprovedPercent == nil || proposal.ValidatorsToQuorum == nil {
+					break
+				}
+
+				// add progress fields
+				percent, err := strconv.ParseFloat(*proposal.ApprovedPercent, 64)
+				if err != nil {
+					log.Panic().Err(err).Msg("failed to parse approved percent")
+				}
+				fields.Set("Approval Percent", fmt.Sprintf("`%.2f%%`", percent*100))
+				fields.Set("Remaining Votes Required", fmt.Sprintf("`%d`", *proposal.ValidatorsToQuorum))
+			default:
+				continue
+			}
+
+			fields.Set("Node", fmt.Sprintf("`%s`", event["thor_address"]))
+			Notify(config.Notifications.Info, title, nil, tag, fields)
+		}
+	}
 }

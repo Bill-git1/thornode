@@ -53,7 +53,7 @@ func InitCache() {
 
 // ThornodeCachedRetryGet fetches the Thornode API response at the provided height with
 // retry. Responses at a specific height are assumed immutable and cached indefinitely.
-func ThornodeCachedRetryGet(path string, height int64, result interface{}) error {
+func ThornodeCachedRetryGet(path string, height int64, result interface{}, allowStatus ...int) error {
 	url := fmt.Sprintf("%s/%s?height=%d", config.Endpoints.Thornode, path, height)
 
 	// check the cache first
