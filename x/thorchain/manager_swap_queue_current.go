@@ -186,7 +186,7 @@ func (vm *SwapQueueVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 		}
 
 		if pick.msg.IsStreaming() {
-			swp, err := vm.k.GetStreamingSwap(ctx, pick.msg.Tx.ID)
+			swp, err = vm.k.GetStreamingSwap(ctx, pick.msg.Tx.ID)
 			if err != nil {
 				ctx.Logger().Error("fail to fetch streaming swap", "error", err)
 				return err

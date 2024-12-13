@@ -11,7 +11,6 @@ linters:
     - ineffassign
     - misspell
     - promlinter
-    - revive
     - staticcheck
     - typecheck
     - unconvert
@@ -36,3 +35,8 @@ linters-settings:
       - G107 # variable urls
       # TODO: re-enable this after fixing all instances.
       - G115 # integer overflow
+issues:
+  exclude-rules:
+    - linters:
+        - govet
+      text: 'declaration of "err" shadows declaration'

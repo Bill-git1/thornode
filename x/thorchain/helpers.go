@@ -661,12 +661,12 @@ func emitEndBlockTelemetry(ctx cosmos.Context, mgr Manager) error {
 		telemetry.SetGaugeWithLabels([]string{"thornode", "vault", "total_value"}, telem(totalValue), labels)
 
 		for _, coin := range vault.Coins {
-			labels := []metrics.Label{
+			vaultCoinLabel := []metrics.Label{
 				telemetry.NewLabel("vault_type", vault.Type.String()),
 				telemetry.NewLabel("pubkey", vault.PubKey.String()),
 				telemetry.NewLabel("asset", coin.Asset.String()),
 			}
-			telemetry.SetGaugeWithLabels([]string{"thornode", "vault", "balance"}, telem(coin.Amount), labels)
+			telemetry.SetGaugeWithLabels([]string{"thornode", "vault", "balance"}, telem(coin.Amount), vaultCoinLabel)
 		}
 	}
 

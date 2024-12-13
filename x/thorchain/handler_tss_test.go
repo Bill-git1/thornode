@@ -689,8 +689,8 @@ func (s *HandlerTssSuite) TestKeygenSuccessHandler(c *C) {
 			for _, m := range helper.members[idx+1:] {
 				slashThorAddr, err := m.GetThorAddress()
 				c.Assert(err, IsNil)
-				points, ok := dummySlasher.pts[slashThorAddr.String()]
-				c.Assert(ok, Equals, true)
+				points, pointsOk := dummySlasher.pts[slashThorAddr.String()]
+				c.Assert(pointsOk, Equals, true)
 				c.Assert(points == failKeyGenSlashPoints+lackOfObservationPenalty, Equals, true)
 				j, err := helper.keeper.GetNodeAccountJail(helper.ctx, slashThorAddr)
 				c.Assert(err, IsNil)
@@ -702,8 +702,8 @@ func (s *HandlerTssSuite) TestKeygenSuccessHandler(c *C) {
 	for _, item := range helper.members {
 		thorAddr, err := item.GetThorAddress()
 		c.Assert(err, IsNil)
-		points, ok := dummySlasher.pts[thorAddr.String()]
-		c.Assert(ok, Equals, true)
+		points, pointsOk := dummySlasher.pts[thorAddr.String()]
+		c.Assert(pointsOk, Equals, true)
 		c.Assert(points == 0, Equals, true)
 		j, err := helper.keeper.GetNodeAccountJail(helper.ctx, thorAddr)
 		c.Assert(err, IsNil)

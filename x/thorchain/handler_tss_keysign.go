@@ -180,7 +180,6 @@ func (h TssKeysignHandler) handleV3_0_0(ctx cosmos.Context, msg MsgTssKeysignFai
 	// the vault and the number of nodes required to maliciously prevent freeze - we err
 	// on the side of over-freezing.
 	if voter.Round7Count > 1 || (voter.Round7Count > 0 && len(voter.Signers) <= 2) {
-		vault, err := h.mgr.Keeper().GetVault(ctx, msg.PubKey)
 		if err != nil {
 			ctx.Logger().Error("fail to fetch vault", "pubkey", msg.PubKey, "error", err)
 		}

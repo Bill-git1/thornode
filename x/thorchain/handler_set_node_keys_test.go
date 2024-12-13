@@ -287,10 +287,10 @@ func (s *HandlerSetNodeKeysSuite) TestHandle(c *C) {
 		if common.RuneAsset().Native() != "" && tc.skipForNativeRune {
 			continue
 		}
-		ctx, mgr := setupManagerForTest(c)
-		helper := NewTestSetNodeKeysHandleKeeper(mgr.Keeper())
+		ctx, mgr = setupManagerForTest(c)
+		helper = NewTestSetNodeKeysHandleKeeper(mgr.Keeper())
 		mgr.K = helper
-		handler := NewSetNodeKeysHandler(mgr)
+		handler = NewSetNodeKeysHandler(mgr)
 		msg := tc.messageProvider(c, ctx, helper)
 		result, err := handler.Run(ctx, msg)
 		tc.validator(c, ctx, result, err, helper, tc.name)

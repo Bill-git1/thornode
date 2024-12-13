@@ -547,8 +547,8 @@ func (vm *NetworkMgrVCUR) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 			continue
 		}
 
-		availableCoins, ok := vaultsAvailableCoins[vault.PubKey]
-		if !ok {
+		availableCoins, vaultsAvailableCoinOk := vaultsAvailableCoins[vault.PubKey]
+		if !vaultsAvailableCoinOk {
 			// This should never happen.
 			ctx.Logger().Error("RetiringVault Coins not found in map", "vault_pubkey", vault.PubKey)
 			continue

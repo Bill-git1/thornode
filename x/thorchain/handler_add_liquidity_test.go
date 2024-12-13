@@ -425,8 +425,8 @@ var notExistLiquidityProviderAsset, _ = common.NewAsset("ETH.NotExistLiquidityPr
 
 func (p *AddLiquidityTestKeeper) GetPool(ctx cosmos.Context, asset common.Asset) (Pool, error) {
 	if p, ok := p.store[asset.String()]; ok {
-		pool, ok := p.(Pool)
-		if !ok {
+		pool, poolOk := p.(Pool)
+		if !poolOk {
 			return pool, fmt.Errorf("dev error: failed to cast pool")
 		}
 		return pool, nil
@@ -466,7 +466,7 @@ func (p *AddLiquidityTestKeeper) GetLiquidityProvider(ctx cosmos.Context, asset 
 	}
 	key := p.GetKey("lp/", lp.Key())
 	if res, ok := p.store[key]; ok {
-		lp, ok := res.(LiquidityProvider)
+		lp, ok = res.(LiquidityProvider)
 		if !ok {
 			return lp, fmt.Errorf("dev error: failed to cast liquidity provider")
 		}
