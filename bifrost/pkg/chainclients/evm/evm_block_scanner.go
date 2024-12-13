@@ -355,6 +355,11 @@ func (e *EVMScanner) getTxInOptimized(method string, block *etypes.Block) (stype
 			continue
 		}
 
+		// skip blob transactions
+		if tx.Type() == etypes.BlobTxType {
+			continue
+		}
+
 		// best effort remove the tx from the signed txs (ok if it does not exist)
 		if err := e.blockMetaAccessor.RemoveSignedTxItem(tx.Hash().String()); err != nil {
 			e.logger.Err(err).Str("tx hash", tx.Hash().String()).Msg("failed to remove signed tx item")
@@ -451,6 +456,11 @@ func (e *EVMScanner) getTxIn(block *etypes.Block) (stypes.TxIn, error) {
 	batch := []*etypes.Transaction{}
 	for _, tx := range block.Transactions() {
 		if tx == nil || tx.To() == nil {
+			continue
+		}
+
+		// skip blob transactions
+		if tx.Type() == etypes.BlobTxType {
 			continue
 		}
 
