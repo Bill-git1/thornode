@@ -36,6 +36,7 @@ type TssServer struct {
 	preParams         *bkeygen.LocalPreParams
 	tssKeyGenLocker   *sync.Mutex
 	stopChan          chan struct{}
+	joinPartyChan     chan struct{}
 	partyCoordinator  *p2p.PartyCoordinator
 	stateManager      storage.LocalStateManager
 	signatureNotifier *keysign.SignatureNotifier
@@ -133,7 +134,7 @@ func NewTss(
 
 // Start Tss server
 func (t *TssServer) Start() error {
-	log.Info().Msg("Starting the TSS servers")
+	t.logger.Info().Msg("starting the tss servers")
 	return nil
 }
 
@@ -146,7 +147,21 @@ func (t *TssServer) Stop() {
 		t.logger.Error().Msgf("error in shutdown the p2p server")
 	}
 	t.partyCoordinator.Stop()
-	log.Info().Msg("The Tss and p2p server has been stopped successfully")
+	t.logger.Info().Msg("The tss and p2p server has been stopped successfully")
+}
+
+func (t *TssServer) setJoinPartyChan(jpc chan struct{}) {
+	t.joinPartyChan = jpc
+}
+
+func (t *TssServer) unsetJoinPartyChan() {
+	t.joinPartyChan = nil
+}
+
+func (t *TssServer) notifyJoinPartyChan() {
+	if t.joinPartyChan != nil {
+		t.joinPartyChan <- struct{}{}
+	}
 }
 
 func (t *TssServer) requestToMsgId(request interface{}) (string, error) {
