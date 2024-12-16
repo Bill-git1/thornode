@@ -29,7 +29,7 @@ const (
 
 var alphaNumRegex = regexp.MustCompile("^[:A-Za-z0-9]*$")
 
-// NewAddress create a new Address. Supports Binance, Bitcoin, and Ethereum
+// NewAddress create a new Address. Supports ETH/bech2/BTC/LTC/BCH/DOGE.
 func NewAddress(address string) (Address, error) {
 	if len(address) == 0 {
 		return NoAddress, nil
@@ -50,67 +50,8 @@ func NewAddress(address string) (Address, error) {
 		return Address(address), nil
 	}
 
-	// Check other BTC address formats with mainnet
-	_, err = btcutil.DecodeAddress(address, &chaincfg.MainNetParams)
-	if err == nil {
-		return Address(address), nil
-	}
-
-	// Check BTC address formats with testnet
-	_, err = btcutil.DecodeAddress(address, &chaincfg.TestNet3Params)
-	if err == nil {
-		return Address(address), nil
-	}
-
-	// Check other LTC address formats with mainnet
-	_, err = ltcutil.DecodeAddress(address, &ltcchaincfg.MainNetParams)
-	if err == nil {
-		return Address(address), nil
-	}
-
-	// Check LTC address formats with testnet
-	_, err = ltcutil.DecodeAddress(address, &ltcchaincfg.TestNet4Params)
-	if err == nil {
-		return Address(address), nil
-	}
-
-	// Check BCH address formats with mainnet
-	_, err = bchutil.DecodeAddress(address, &bchchaincfg.MainNetParams)
-	if err == nil {
-		return Address(address), nil
-	}
-
-	// Check BCH address formats with testnet
-	_, err = bchutil.DecodeAddress(address, &bchchaincfg.TestNet3Params)
-	if err == nil {
-		return Address(address), nil
-	}
-
-	// Check BCH address formats with mocknet
-	_, err = bchutil.DecodeAddress(address, &bchchaincfg.RegressionNetParams)
-	if err == nil {
-		return Address(address), nil
-	}
-
-	// Check DOGE address formats with mainnet
-	_, err = dogutil.DecodeAddress(address, &dogchaincfg.MainNetParams)
-	if err == nil {
-		return Address(address), nil
-	}
-
-	// Check DOGE address formats with testnet
-	_, err = dogutil.DecodeAddress(address, &dogchaincfg.TestNet3Params)
-	if err == nil {
-		return Address(address), nil
-	}
-
-	// Check DOGE address formats with mocknet
-	_, err = dogutil.DecodeAddress(address, &dogchaincfg.RegressionNetParams)
-	if err == nil {
-		return Address(address), nil
-	}
-
-	return NoAddress, fmt.Errorf("address format not supported: %s", address)
+	// Network-specific (with build tags) address checking.
+	return newAddress(address)
 }
 
 // IsValidBCHAddress determinate whether the address is a valid new BCH address format

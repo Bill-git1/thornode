@@ -332,3 +332,34 @@ memo: "~:"
 type: create-blocks
 count: 1
 # Invariant checks are implicit in the regression test.
+---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - length == 0
+---
+########################################################################################
+# Test of UTXO AddressPubKey destination
+########################################################################################
+type: tx-deposit
+signer: {{ addr_thor_fox }}
+coins:
+  - amount: "5000000000"
+    asset: "rune"
+memo: "=:BTC.BTC:${ADDRESS_PUB_KEY=030755a8fc0b7a7f61256518cf3ab786b28a10ef48c0ac966b3059ce8f8362c624}"
+# The destination is Issue #2109's BTC AddressPubKey
+# (Mainnet, but no distinction between Mainnet and Testnet for AddressPubKey).
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/block
+asserts:
+  - .|[..|select(.type? == "refund")] | length == 0 # No refund event.
+  - .txs | length == 1
+  - .txs[0].code != 0 # Rejected transaction.
+  - .txs[0].result.log | contains("cannot parse '${ADDRESS_PUB_KEY}' as an Address")
+  # As UTXO SignTx cannot sign for AddressPubKey destinations,
+  # these are not accepted as valid addresses
+  # (which would then get stuck in the outbound queue).
