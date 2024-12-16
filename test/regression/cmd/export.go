@@ -52,6 +52,7 @@ func export(out io.Writer, path string, routine int, failExportInvariants bool) 
 	}
 
 	// ignore genesis time and version for comparison
+	delete(export, "app_version")
 	delete(export, "genesis_time")
 	appState, _ := export["app_state"].(map[string]any)
 	thorchain, _ := appState["thorchain"].(map[string]any)
