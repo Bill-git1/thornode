@@ -26,6 +26,7 @@ bifrost:
       - GAIA
       - LTC
       - BSC
+      - BASE
   thorchain:
     chain_id: thorchain
     chain_host: localhost:1317
@@ -80,6 +81,7 @@ bifrost:
       min_confirmations: 0
       max_rpc_retries: 9 # about 1 min
       max_pending_nonces: 0
+      authorization_bearer: ""
       max_gas_tip_percentage: 0
       token_max_gas_multiplier: 0
       aggregator_max_gas_multiplier: 0
@@ -150,6 +152,28 @@ bifrost:
         observation_flexibility_blocks: 20
         max_gas_limit: 100000
         max_contract_tx_logs: 50
+      mempool_tx_id_cache_size: 0
+      scanner_leveldb: *default-leveldb
+
+    base:
+      <<: *default-chain
+      chain_id: BASE
+      solvency_blocks: 100
+      max_pending_nonces: 3
+      max_gas_tip_percentage: 20
+      token_max_gas_multiplier: 3
+      aggregator_max_gas_multiplier: 10
+      block_scanner:
+        <<: *default-block-scanner
+        gas_cache_blocks: 40
+        concurrency: 1
+        chain_id: BASE
+        observation_flexibility_blocks: 20
+        max_gas_limit: 100000
+        max_contract_tx_logs: 50
+        whitelist_tokens:
+          - 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 # USDC
+          - 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf # cbBTC
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
 

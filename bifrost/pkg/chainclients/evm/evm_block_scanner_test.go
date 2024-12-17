@@ -165,7 +165,7 @@ func (s *BlockScannerTestSuite) TestNewBlockScanner(c *C) {
 	c.Assert(err, IsNil)
 	ethClient, err := ethclient.Dial(server.URL)
 	c.Assert(err, IsNil)
-	rpcClient, err := evm.NewEthRPC(server.URL, time.Second, "AVAX")
+	rpcClient, err := evm.NewEthRPC(ethClient, time.Second, "AVAX")
 	c.Assert(err, IsNil)
 	pubKeyManager, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
 	c.Assert(err, IsNil)
@@ -271,6 +271,13 @@ func (s *BlockScannerTestSuite) TestProcessBlock(c *C) {
 		case strings.HasPrefix(req.RequestURI, thorclient.AuthAccountEndpoint):
 			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/auth/accounts/template.json")
 		default:
+			// return -1 for all unset mimirs
+			if strings.HasPrefix(req.RequestURI, thorclient.MimirEndpoint+"/key") {
+				_, err = rw.Write([]byte(`-1`))
+				c.Assert(err, IsNil)
+				return
+			}
+
 			// trunk-ignore(golangci-lint/govet): shadow
 			body, err := io.ReadAll(req.Body)
 			c.Assert(err, IsNil)
@@ -287,7 +294,7 @@ func (s *BlockScannerTestSuite) TestProcessBlock(c *C) {
 	ethClient, err := ethclient.Dial(server.URL)
 	c.Assert(err, IsNil)
 	c.Assert(ethClient, NotNil)
-	rpcClient, err := evm.NewEthRPC(server.URL, time.Second, "AVAX")
+	rpcClient, err := evm.NewEthRPC(ethClient, time.Second, "AVAX")
 	c.Assert(err, IsNil)
 	storage, err := blockscanner.NewBlockScannerStorage("", config.LevelDBOptions{})
 	c.Assert(err, IsNil)
@@ -355,6 +362,13 @@ func (s *BlockScannerTestSuite) TestGetTxInItem(c *C) {
 		case strings.HasPrefix(req.RequestURI, thorclient.NodeAccountEndpoint):
 			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/nodeaccount/template.json")
 		default:
+			// return -1 for all unset mimirs
+			if strings.HasPrefix(req.RequestURI, thorclient.MimirEndpoint+"/key") {
+				_, err := rw.Write([]byte(`-1`))
+				c.Assert(err, IsNil)
+				return
+			}
+
 			body, err := io.ReadAll(req.Body)
 			c.Assert(err, IsNil)
 			type RPCRequest struct {
@@ -423,7 +437,7 @@ func (s *BlockScannerTestSuite) TestGetTxInItem(c *C) {
 	ethClient, err := ethclient.Dial(server.URL)
 	c.Assert(err, IsNil)
 	c.Assert(ethClient, NotNil)
-	rpcClient, err := evm.NewEthRPC(server.URL, time.Second, "AVAX")
+	rpcClient, err := evm.NewEthRPC(ethClient, time.Second, "AVAX")
 	c.Assert(err, IsNil)
 	storage, err := blockscanner.NewBlockScannerStorage("", config.LevelDBOptions{})
 	c.Assert(err, IsNil)
@@ -626,7 +640,7 @@ func (s *BlockScannerTestSuite) TestProcessReOrg(c *C) {
 	defer func() {
 		c.Assert(pkeyMgr.Stop(), IsNil)
 	}()
-	rpcClient, err := evm.NewEthRPC(server.URL, time.Second, "BSC")
+	rpcClient, err := evm.NewEthRPC(ethClient, time.Second, "BSC")
 	c.Assert(err, IsNil)
 	cfg := getConfigForTest(server.URL)
 	cfg.ChainID = thorcommon.BSCChain // re-org on BSC only
@@ -689,7 +703,7 @@ func (s *BlockScannerTestSuite) TestUpdateGasPrice(c *C) {
 	c.Assert(err, IsNil)
 	ethClient, err := ethclient.Dial(server.URL)
 	c.Assert(err, IsNil)
-	rpcClient, err := evm.NewEthRPC(server.URL, time.Second, "AVAX")
+	rpcClient, err := evm.NewEthRPC(ethClient, time.Second, "AVAX")
 	c.Assert(err, IsNil)
 	pubKeyManager, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
 	c.Assert(err, IsNil)

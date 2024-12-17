@@ -128,11 +128,11 @@ func (h RagnarokHandler) handleV3_0_0(ctx cosmos.Context, msg MsgRagnarok) (*cos
 				}
 				txOut.TxArray[i].OutHash = msg.Tx.Tx.ID
 				shouldSlash = false
-				if err := h.mgr.Keeper().SetTxOut(ctx, txOut); nil != err {
+				if err := h.mgr.Keeper().SetTxOut(ctx, txOut); nil != err { // trunk-ignore(golangci-lint/govet): shadow
 					return nil, ErrInternal(err, "fail to save tx out")
 				}
 				if !decrementedPendingRagnarok {
-					pending, err := h.mgr.Keeper().GetRagnarokPending(ctx)
+					pending, err := h.mgr.Keeper().GetRagnarokPending(ctx) // trunk-ignore(golangci-lint/govet): shadow
 					if err != nil {
 						ctx.Logger().Error("fail to get ragnarok pending", "error", err)
 					} else {

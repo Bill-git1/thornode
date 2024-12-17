@@ -98,7 +98,17 @@ func (s *UnstuckTestSuite) SetUpTest(c *C) {
 			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/vaults/asgard.json")
 		case thorclient.NodeAccountEndpoint:
 			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/nodeaccount/template.json")
+		case thorclient.ChainVersionEndpoint:
+			_, err = rw.Write([]byte(`{"current":"` + types2.GetCurrentVersion().String() + `"}`))
+			c.Assert(err, IsNil)
 		default:
+			// return -1 for all unset mimirs
+			if strings.HasPrefix(req.RequestURI, thorclient.MimirEndpoint+"/key") {
+				_, err = rw.Write([]byte(`-1`))
+				c.Assert(err, IsNil)
+				return
+			}
+
 			var body []byte
 			body, err = io.ReadAll(req.Body)
 			c.Assert(err, IsNil)
@@ -124,7 +134,7 @@ func (s *UnstuckTestSuite) SetUpTest(c *C) {
 				c.Assert(params[0], Equals, lastBroadcastTx)
 				_, err = rw.Write([]byte(`[{
 						"jsonrpc": "2.0",
-						"id": 5,
+						"id": 6,
 						"result": {
 							"blockHash": "0x96395fbdb39e33293999dc1a0a3b87c8a9e51185e177760d1482c2155bb35b87",
 							"blockNumber": "0x1",

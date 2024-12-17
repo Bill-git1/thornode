@@ -60,6 +60,7 @@ func (vm *NetworkMgrVCUR) processGenesisSetup(ctx cosmos.Context) error {
 			common.AVAXChain,
 			common.GAIAChain,
 			common.BSCChain,
+			common.BASEChain,
 		}
 		vault := NewVault(0, ActiveVault, AsgardVault, active[0].PubKeySet.Secp256k1, supportChains.Strings(), vm.k.GetChainContracts(ctx, supportChains))
 		vault.Membership = common.PubKeys{active[0].PubKeySet.Secp256k1}.Strings()
@@ -203,6 +204,11 @@ func (vm *NetworkMgrVCUR) spawnDerivedAssets(ctx cosmos.Context, mgr Manager) er
 	for _, chain := range active[0].GetChains() {
 		// no derived asset for thorchain
 		if chain.IsTHORChain() {
+			continue
+		}
+
+		// skip any ethereum L2s with ETH as the gas asset
+		if !chain.Equals(common.ETHChain) && chain.GetGasAsset().Symbol.Equals("ETH") {
 			continue
 		}
 

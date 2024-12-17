@@ -29,6 +29,8 @@ var (
 	DOGEAsset = Asset{Chain: DOGEChain, Symbol: "DOGE", Ticker: "DOGE", Synth: false}
 	// ETHAsset ETH
 	ETHAsset = Asset{Chain: ETHChain, Symbol: "ETH", Ticker: "ETH", Synth: false}
+	// BaseAsset ETH
+	BaseETHAsset = Asset{Chain: BASEChain, Symbol: "ETH", Ticker: "ETH", Synth: false}
 	// AVAXAsset AVAX
 	AVAXAsset = Asset{Chain: AVAXChain, Symbol: "AVAX", Ticker: "AVAX", Synth: false}
 	// RuneNative RUNE on thorchain
@@ -110,6 +112,7 @@ func NewAssetWithShortCodesV3_0_0(input string) (Asset, error) {
 	shorts[ETHAsset.ShortCode()] = ETHAsset.String()
 	shorts[LTCAsset.ShortCode()] = LTCAsset.String()
 	shorts[RuneNative.ShortCode()] = RuneNative.String()
+	shorts[BaseETHAsset.ShortCode()] = BaseETHAsset.String()
 
 	long, ok := shorts[input]
 	if ok {
@@ -291,6 +294,8 @@ func (a Asset) ShortCode() string {
 		return "a"
 	case "BSC.BNB":
 		return "s"
+	case "BASE.ETH":
+		return "f"
 	default:
 		return ""
 	}

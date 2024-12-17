@@ -40,7 +40,7 @@ func LoadChains(thorKeys *thorclient.Keys,
 		switch chain.ChainID {
 		case common.ETHChain:
 			return ethereum.NewClient(thorKeys, chain, server, thorchainBridge, m, pubKeyValidator, poolMgr)
-		case common.AVAXChain, common.BSCChain:
+		case common.AVAXChain, common.BSCChain, common.BASEChain:
 			return evm.NewEVMClient(thorKeys, chain, server, thorchainBridge, m, pubKeyValidator, poolMgr)
 		case common.GAIAChain:
 			return gaia.NewCosmosClient(thorKeys, chain, server, thorchainBridge, m)

@@ -76,6 +76,8 @@ class EVMSetupTool:
             return "ETH.ETH"
         elif self.chain == "BSC":
             return "BSC.BNB"
+        elif self.chain == "BASE":
+            return "BASE.ETH"
         else:
             logging.fatal(f"unknown chain: {self.chain}")
 
@@ -351,6 +353,7 @@ def main():
         "AVAX": "http://avalanche:9650/ext/bc/C/rpc",
         "ETH": "http://ethereum:8545",
         "BSC": "http://binance-smart:8545",
+        "BASE": "http://base:8545",
     }
 
     # parse args

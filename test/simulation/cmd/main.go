@@ -44,6 +44,7 @@ var liteClientConstructors = map[common.Chain]LiteChainClientConstructor{
 	common.BSCChain:  evm.NewConstructor(chainRPCs[common.BSCChain]),
 	common.AVAXChain: evm.NewConstructor(chainRPCs[common.AVAXChain]),
 	common.GAIAChain: pkgcosmos.NewConstructor(chainRPCs[common.GAIAChain]),
+	common.BASEChain: evm.NewConstructor(chainRPCs[common.BASEChain]),
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////

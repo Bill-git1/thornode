@@ -111,4 +111,5 @@ DOGE Address: mnaioCtEGdw6bd6rWJ13Mbre1kN5rPa2Mo
 THOR Address: tthor1f4l5dlqhaujgkxxqmug4stfvmvt58vx2tspx4g
 GAIA Address: cosmos1f4l5dlqhaujgkxxqmug4stfvmvt58vx2fqfdej
 AVAX Address: 0xee4eaa642b992412f628ff4cec1c96cf2fd0ea4d
+BASE Address: 0xee4eaa642b992412f628ff4cec1c96cf2fd0ea4d
 ```

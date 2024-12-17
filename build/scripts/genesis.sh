@@ -82,6 +82,10 @@ genesis_init() {
     echo "BSC Contract Address: $BSC_CONTRACT"
     set_bsc_contract "$BSC_CONTRACT"
   fi
+  if [ -n "${BASE_CONTRACT+x}" ]; then
+    echo "BASE Contract Address: $BASE_CONTRACT"
+    set_base_contract "$BASE_CONTRACT"
+  fi
 
   echo "Genesis content"
   cat ~/.thornode/config/genesis.json

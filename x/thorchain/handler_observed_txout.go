@@ -155,7 +155,7 @@ func (h ObservedTxOutHandler) handleV3_0_0(ctx cosmos.Context, msg MsgObservedTx
 				h.mgr.Keeper().SetTssKeysignMetric(ctx, keysignMetric)
 			}
 		}
-		voter, err := h.mgr.Keeper().GetObservedTxOutVoter(ctx, tx.Tx.ID)
+		voter, err := h.mgr.Keeper().GetObservedTxOutVoter(ctx, tx.Tx.ID) // trunk-ignore(golangci-lint/govet): shadow
 		if err != nil {
 			ctx.Logger().Error("fail to get tx out voter", "error", err)
 			continue
@@ -176,7 +176,7 @@ func (h ObservedTxOutHandler) handleV3_0_0(ctx cosmos.Context, msg MsgObservedTx
 		// if memo isn't valid or its an inbound memo, slash the vault
 		memo, _ := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), tx.Tx.Memo)
 		if memo.IsEmpty() || memo.IsInbound() {
-			vault, err := h.mgr.Keeper().GetVault(ctx, tx.ObservedPubKey)
+			vault, err := h.mgr.Keeper().GetVault(ctx, tx.ObservedPubKey) // trunk-ignore(golangci-lint/govet): shadow
 			if err != nil {
 				ctx.Logger().Error("fail to get vault", "error", err)
 				continue
@@ -190,11 +190,11 @@ func (h ObservedTxOutHandler) handleV3_0_0(ctx cosmos.Context, msg MsgObservedTx
 				telemetry.NewLabel("chain", string(tx.Tx.Chain)),
 			}))
 
-			if err := h.mgr.Slasher().SlashVault(slashCtx, tx.ObservedPubKey, toSlash, h.mgr); err != nil {
+			if err := h.mgr.Slasher().SlashVault(slashCtx, tx.ObservedPubKey, toSlash, h.mgr); err != nil { // trunk-ignore(golangci-lint/govet): shadow
 				ctx.Logger().Error("fail to slash account for sending extra fund", "error", err)
 			}
 			vault.SubFunds(toSlash)
-			if err := h.mgr.Keeper().SetVault(ctx, vault); err != nil {
+			if err := h.mgr.Keeper().SetVault(ctx, vault); err != nil { // trunk-ignore(golangci-lint/govet): shadow
 				ctx.Logger().Error("fail to save vault", "error", err)
 			}
 
@@ -212,7 +212,7 @@ func (h ObservedTxOutHandler) handleV3_0_0(ctx cosmos.Context, msg MsgObservedTx
 		}
 
 		// Apply Gas fees
-		if err := addGasFees(ctx, h.mgr, tx); err != nil {
+		if err := addGasFees(ctx, h.mgr, tx); err != nil { // trunk-ignore(golangci-lint/govet): shadow
 			ctx.Logger().Error("fail to add gas fee", "error", err)
 			continue
 		}
@@ -223,12 +223,12 @@ func (h ObservedTxOutHandler) handleV3_0_0(ctx cosmos.Context, msg MsgObservedTx
 
 		// emit tss keysign metrics
 		if tx.KeysignMs > 0 {
-			keysignMetric, err := h.mgr.Keeper().GetTssKeysignMetric(ctx, tx.Tx.ID)
+			keysignMetric, err := h.mgr.Keeper().GetTssKeysignMetric(ctx, tx.Tx.ID) // trunk-ignore(golangci-lint/govet): shadow
 			if err != nil {
 				ctx.Logger().Error("fail to get tss keysign metric", "error", err, "hash", tx.Tx.ID)
 			} else {
 				evt := NewEventTssKeysignMetric(keysignMetric.TxID, keysignMetric.GetMedianTime())
-				if err := h.mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
+				if err := h.mgr.EventMgr().EmitEvent(ctx, evt); err != nil { // trunk-ignore(golangci-lint/govet): shadow
 					ctx.Logger().Error("fail to emit tss metric event", "error", err)
 				}
 			}

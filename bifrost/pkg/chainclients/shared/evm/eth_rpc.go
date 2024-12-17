@@ -10,6 +10,7 @@ import (
 	ecommon "github.com/ethereum/go-ethereum/common"
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	btypes "gitlab.com/thorchain/thornode/v3/bifrost/blockscanner/types"
@@ -17,21 +18,14 @@ import (
 
 // EthRPC is a struct that interacts with an ETH RPC compatible blockchain
 type EthRPC struct {
-	host    string
 	client  *ethclient.Client
 	timeout time.Duration
 	logger  zerolog.Logger
 }
 
-func NewEthRPC(host string, timeout time.Duration, chain string) (*EthRPC, error) {
-	ethClient, err := ethclient.Dial(host)
-	if err != nil {
-		return nil, fmt.Errorf("fail to dial ETH rpc host(%s): %w", host, err)
-	}
-
+func NewEthRPC(client *ethclient.Client, timeout time.Duration, chain string) (*EthRPC, error) {
 	return &EthRPC{
-		host:    host,
-		client:  ethClient,
+		client:  client,
 		timeout: timeout,
 		logger:  log.Logger.With().Str("module", "eth_rpc").Str("chain", chain).Logger(),
 	}, nil
@@ -75,6 +69,17 @@ func (e *EthRPC) GetBlockHeight() (int64, error) {
 		return -1, fmt.Errorf("fail to get block height: %w", err)
 	}
 	return int64(height), nil
+}
+
+func (e *EthRPC) GetBlockHeightLatest() (int64, error) {
+	ctx, cancel := e.getContext()
+	defer cancel()
+	block, err := e.client.BlockByNumber(ctx, big.NewInt(rpc.LatestBlockNumber.Int64()))
+	if err != nil {
+		e.logger.Info().Err(err).Msg("failed to get block")
+		return -1, fmt.Errorf("fail to get block: %w", err)
+	}
+	return block.Number().Int64(), nil
 }
 
 func (e *EthRPC) GetBlock(height int64) (*etypes.Block, error) {

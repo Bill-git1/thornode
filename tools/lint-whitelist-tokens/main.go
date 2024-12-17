@@ -29,6 +29,8 @@ func main() {
 			tl = tokenlist.GetAVAXTokenList(common.LatestVersion)
 		case common.BSCChain.String():
 			tl = tokenlist.GetBSCTokenList(common.LatestVersion)
+		case common.BASEChain.String():
+			tl = tokenlist.GetBASETokenList(common.LatestVersion)
 		default:
 			fmt.Printf("unsupported chain %s\n", chain)
 			os.Exit(1)

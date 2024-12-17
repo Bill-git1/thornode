@@ -502,6 +502,7 @@ type Bifrost struct {
 		ETH  BifrostChainConfiguration `mapstructure:"eth"`
 		GAIA BifrostChainConfiguration `mapstructure:"gaia"`
 		LTC  BifrostChainConfiguration `mapstructure:"ltc"`
+		BASE BifrostChainConfiguration `mapstructure:"base"`
 	} `mapstructure:"chains"`
 	TSS             BifrostTSSConfiguration `mapstructure:"tss"`
 	ObserverLevelDB LevelDBOptions          `mapstructure:"observer_leveldb"`
@@ -517,6 +518,7 @@ func (b Bifrost) GetChains() map[common.Chain]BifrostChainConfiguration {
 		common.ETHChain:  b.Chains.ETH,
 		common.GAIAChain: b.Chains.GAIA,
 		common.LTCChain:  b.Chains.LTC,
+		common.BASEChain: b.Chains.BASE,
 	}
 }
 
@@ -631,6 +633,10 @@ type BifrostChainConfiguration struct {
 	// MaxPendingNonces is the maximum number of pending nonces to allow before aborting
 	// new signing attempts.
 	MaxPendingNonces uint64 `mapstructure:"max_pending_nonces"`
+
+	// AuthorizationBearer can be set to configure the RPC client with an API token that
+	// will be provided to the backend in an Authorization header.
+	AuthorizationBearer string `mapstructure:"authorization_bearer"`
 
 	// UTXO contains UTXO chain specific configuration.
 	UTXO struct {

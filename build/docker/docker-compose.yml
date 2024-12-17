@@ -113,6 +113,7 @@ services:
       FUND_MIGRATION_INTERVAL: 10
       AVAX_HOST: ${AVAX_HOST:-http://avalanche:9650/ext/bc/C/rpc}
       ETH_HOST: ${ETH_HOST:-http://ethereum:8545}
+      BASE_HOST: ${BASE_HOST:-http://base:8545}
       BSC_HOST: ${BSC_HOST:-http://binance-smart:8545}
     ports:
       - 26657:26657
@@ -179,25 +180,34 @@ services:
       BIFROST_CHAINS_ETH_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS: "5"
       BIFROST_CHAINS_GAIA_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS: "5"
       BIFROST_CHAINS_LTC_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS: "5"
+      BIFROST_CHAINS_BASE_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS: "5"
 
       # maintain historical gas behavior for hard-coded smoke test values
       BIFROST_CHAINS_ETH_BLOCK_SCANNER_MAX_GAS_LIMIT: 80000
       BIFROST_CHAINS_AVAX_BLOCK_SCANNER_MAX_GAS_LIMIT: 80000
       BIFROST_CHAINS_BSC_BLOCK_SCANNER_MAX_GAS_LIMIT: 80000
+      BIFROST_CHAINS_BASE_BLOCK_SCANNER_MAX_GAS_LIMIT: 80000
 
       # enable bsc
       BIFROST_CHAINS_BSC_DISABLED: "false"
       BIFROST_CHAINS_BSC_RPC_HOST: ${BSC_HOST:-http://binance-smart:8545}
       BIFROST_CHAINS_BSC_BLOCK_SCANNER_RPC_HOST: ${BSC_HOST:-http://binance-smart:8545}
 
+      # enable base
+      BIFROST_CHAINS_BASE_DISABLED: "false"
+      BIFROST_CHAINS_BASE_RPC_HOST: http://base:8545
+      BIFROST_CHAINS_BASE_BLOCK_SCANNER_RPC_HOST: http://base:8545
+
       # set fixed gas rate for evm chains
       BIFROST_CHAINS_ETH_BLOCK_SCANNER_FIXED_GAS_RATE: 20_000_000_000 # 20 gwei
       BIFROST_CHAINS_AVAX_BLOCK_SCANNER_FIXED_GAS_RATE: 100_000_000_000 # 100 navax
       BIFROST_CHAINS_BSC_BLOCK_SCANNER_FIXED_GAS_RATE: 50_000_000_000 # 50 gwei
+      BIFROST_CHAINS_BASE_BLOCK_SCANNER_FIXED_GAS_RATE: 20_000_000_000 # 20 gwei
 
       # override bifrost whitelist tokens
       BIFROST_CHAINS_AVAX_BLOCK_SCANNER_WHITELIST_TOKENS: "0x52C84043CD9c865236f11d9Fc9F56aa003c1f922,0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E,0x17aB05351fC94a1a67Bf3f56DdbB941aE6c63E25"
       BIFROST_CHAINS_BSC_BLOCK_SCANNER_WHITELIST_TOKENS: "0x52C84043CD9c865236f11d9Fc9F56aa003c1f922,0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d,0x17aB05351fC94a1a67Bf3f56DdbB941aE6c63E25"
+      BIFROST_CHAINS_BASE_BLOCK_SCANNER_WHITELIST_TOKENS: "0x52C84043CD9c865236f11d9Fc9F56aa003c1f922,0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913,0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf,0x17aB05351fC94a1a67Bf3f56DdbB941aE6c63E25"
 
     ports:
       - 5040:5040
@@ -476,6 +486,23 @@ services:
       - 8545:8545
       - 30301:30301
       - 30303:30303
+    volumes:
+      - "../scripts:/docker/scripts"
+    entrypoint: /docker/scripts/mock/start-eth.sh
+
+  # ------------------------------ base ------------------------------
+
+  base:
+    profiles:
+      - mocknet
+      - mocknet-cluster
+    image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101411.1
+    restart: unless-stopped
+    environment:
+      BLOCK_TIME: ${BLOCK_TIME:-5}
+      OP_NODE_L1_ETH_RPC: ${ETH_HOST:-http://ethereum:8545}
+    ports:
+      - 8547:8545
     volumes:
       - "../scripts:/docker/scripts"
     entrypoint: /docker/scripts/mock/start-eth.sh

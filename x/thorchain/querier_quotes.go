@@ -406,6 +406,7 @@ func quoteInboundInfo(ctx cosmos.Context, mgr *Mgrs, amount sdkmath.Uint, chain 
 	confFloor := map[common.Chain]int64{
 		common.ETHChain:  2,
 		common.DOGEChain: 2,
+		common.BASEChain: 12, // NOTE: additional inconsistent lag since we scan the "safe" block
 	}
 	if floor := confFloor[chain]; confirmations < floor {
 		confirmations = floor

@@ -3,10 +3,12 @@ package evm
 import (
 	"context"
 	_ "embed"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -16,6 +18,7 @@ import (
 	ecommon "github.com/ethereum/go-ethereum/common"
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	ethclient "github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/hashicorp/go-multierror"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -109,14 +112,62 @@ func NewEVMClient(
 		return nil, err
 	}
 
-	// create rpc clients
-	rpcClient, err := evm.NewEthRPC(cfg.RPCHost, cfg.BlockScanner.HTTPRequestTimeout, cfg.ChainID.String())
+	clog := log.With().Str("module", "evm").Stringer("chain", cfg.ChainID).Logger()
+
+	// create rpc client based on what authentication config is set
+	var ethClient *ethclient.Client
+	switch {
+	case cfg.AuthorizationBearer != "":
+
+		clog.Info().Msg("initializing evm client with bearer token")
+		authFn := func(h http.Header) error {
+			h.Set("Authorization", fmt.Sprintf("Bearer %s", cfg.AuthorizationBearer))
+			return nil
+		}
+		var rpcClient *rpc.Client
+		rpcClient, err = rpc.DialOptions(
+			context.Background(),
+			cfg.RPCHost,
+			rpc.WithHTTPAuth(authFn),
+		)
+		if err != nil {
+			return nil, err
+		}
+		ethClient = ethclient.NewClient(rpcClient)
+
+	case cfg.UserName != "" && cfg.Password != "":
+		clog.Info().Msg("initializing evm client with http basic auth")
+
+		authFn := func(h http.Header) error {
+			auth := base64.StdEncoding.EncodeToString([]byte(cfg.UserName + ":" + cfg.Password))
+			h.Set("Authorization", fmt.Sprintf("Basic %s", auth))
+			return nil
+		}
+		var rpcClient *rpc.Client
+		rpcClient, err = rpc.DialOptions(
+			context.Background(),
+			cfg.RPCHost,
+			rpc.WithHTTPAuth(authFn),
+		)
+		if err != nil {
+			return nil, err
+		}
+		ethClient = ethclient.NewClient(rpcClient)
+
+	default:
+		ethClient, err = ethclient.Dial(cfg.RPCHost)
+		if err != nil {
+			return nil, fmt.Errorf("fail to dial ETH rpc host(%s): %w", cfg.RPCHost, err)
+		}
+	}
+
+	rpcClient, err := evm.NewEthRPC(
+		ethClient,
+		cfg.BlockScanner.HTTPRequestTimeout,
+		cfg.ChainID.String(),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("fail to create ETH rpc host(%s): %w", cfg.RPCHost, err)
-	}
-	ethClient, err := ethclient.Dial(cfg.RPCHost)
-	if err != nil {
-		return nil, fmt.Errorf("fail to dial ETH rpc host(%s): %w", cfg.RPCHost, err)
 	}
 
 	// get chain id
@@ -144,7 +195,7 @@ func NewEVMClient(
 	pubkeyMgr.GetPubKeys()
 
 	c := &EVMClient{
-		logger:       log.With().Str("module", "evm").Stringer("chain", cfg.ChainID).Logger(),
+		logger:       clog,
 		cfg:          cfg,
 		ethClient:    ethClient,
 		localPubKey:  pk,
@@ -825,6 +876,8 @@ func (c *EVMClient) GetConfirmationCount(txIn stypes.TxIn) int64 {
 	switch c.cfg.ChainID {
 	case common.AVAXChain: // instant finality
 		return 0
+	case common.BASEChain:
+		return 12 // ~2 Ethereum blocks for parity with the 2 block minimum in eth client
 	case common.BSCChain:
 		return 3 // round up from 2.5 blocks required for finality
 	default:
@@ -846,6 +899,9 @@ func (c *EVMClient) ConfirmationCountReady(txIn stypes.TxIn) bool {
 		confirm := txIn.ConfirmationRequired
 		c.logger.Info().Msgf("confirmation required: %d", confirm)
 		return (c.evmScanner.currentBlockHeight - blockHeight) >= confirm
+	case common.BASEChain:
+		// block is already finalized(settled to l1)
+		return true
 	default:
 		c.logger.Fatal().Msgf("unsupported chain: %s", c.cfg.ChainID)
 		return false

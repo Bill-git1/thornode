@@ -206,15 +206,6 @@ func (e *EVMScanner) GetGasPrice() *big.Int {
 	return e.gasPrice
 }
 
-// GetHeight returns the current block height.
-func (e *EVMScanner) GetHeight() (int64, error) {
-	height, err := e.ethRpc.GetBlockHeight()
-	if err != nil {
-		return -1, err
-	}
-	return height, nil
-}
-
 // GetNonce returns the nonce (including pending) for the given address.
 func (e *EVMScanner) GetNonce(addr string) (uint64, error) {
 	return e.ethRpc.GetNonce(addr)
@@ -430,19 +421,11 @@ func (e *EVMScanner) getTxInOptimized(method string, block *etypes.Block) (stype
 func (e *EVMScanner) getTxIn(block *etypes.Block) (stypes.TxIn, error) {
 	// CHANGEME: if an EVM chain supports some way of fetching all transaction receipts
 	// within a block, register it here.
-	// switch e.cfg.ChainID {
-	// case common.BSCChain:
-	// return e.getTxInOptimized("eth_getTransactionReceiptsByBlockNumber", block)
-	// TODO: add ETH chain after giving BSC some time to bake on mainnet
-	// case common.ETHChain:
-	// 	return e.getTxInOptimized("eth_getBlockReceipts", block)
-	// TODO: add AVAX chain when supported
-	// case common.AVAXChain:
-	// 	return e.getTxIn("TBD", block)
-	// }
-
-	if e.cfg.ChainID.IsBSCChain() {
+	switch e.cfg.ChainID {
+	case common.BSCChain:
 		return e.getTxInOptimized("eth_getTransactionReceiptsByBlockNumber", block)
+	case common.BASEChain:
+		return e.getTxInOptimized("eth_getBlockReceipts", block)
 	}
 
 	txInbound := stypes.TxIn{
