@@ -6,19 +6,20 @@ import (
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 
 	"gitlab.com/thorchain/thornode/v3/app/upgrades"
-	"gitlab.com/thorchain/thornode/v3/app/upgrades/noop"
-	v3 "gitlab.com/thorchain/thornode/v3/app/upgrades/v3"
+	"gitlab.com/thorchain/thornode/v3/app/upgrades/standard"
 )
 
 // Upgrades list of chain upgrades
-var Upgrades = []upgrades.Upgrade{v3.NewUpgrade()}
+var Upgrades = []upgrades.Upgrade{
+	// register non-standard upgrades here
+}
 
 // RegisterUpgradeHandlers registers the chain upgrade handlers
 func (app *THORChainApp) RegisterUpgradeHandlers() {
 	// setupLegacyKeyTables(&app.ParamsKeeper)
 	if len(Upgrades) == 0 {
 		// always have a unique upgrade registered for the current version to test in system tests
-		Upgrades = append(Upgrades, noop.NewUpgrade(app.Version()))
+		Upgrades = append(Upgrades, standard.NewUpgrade(app.Version()))
 	}
 
 	keepers := upgrades.AppKeepers{
