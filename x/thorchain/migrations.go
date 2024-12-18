@@ -2,6 +2,7 @@ package thorchain
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"gitlab.com/thorchain/thornode/v3/common"
 	v2 "gitlab.com/thorchain/thornode/v3/x/thorchain/migrations/v2"
 )
 
@@ -24,4 +25,25 @@ func (m Migrator) Migrate1to2(ctx sdk.Context) error {
 		return err
 	}
 	return v2.MigrateStore(ctx, m.mgr.storeKey)
+}
+
+// Migrate2to3 migrates from version 2 to 3.
+func (m Migrator) Migrate2to3(ctx sdk.Context) error {
+	// Loads the manager for this migration (we are in the x/upgrade's preblock)
+	// Note, we do not require the manager loaded for this migration, but it is okay
+	// to load it earlier and this is the pattern for migrations to follow.
+	if err := m.mgr.LoadManagerIfNecessary(ctx); err != nil {
+		return err
+	}
+
+	// TX with outbound that was scheduled in the past
+	txId, err := common.NewTxID("A9AF3ED203079BB246CEE0ACD837FBA024BC846784DE488D5BE70044D8877C52")
+	if err != nil {
+		return err
+	}
+
+	txIds := []common.TxID{txId}
+	requeueDanglingActions(ctx, m.mgr, txIds)
+
+	return nil
 }
