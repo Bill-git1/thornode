@@ -13,8 +13,6 @@ import (
 	keeperv1 "gitlab.com/thorchain/thornode/v3/x/thorchain/keeper/v1"
 )
 
-const UpgradeName = "0.0.0"
-
 // NewUpgrade constructor
 func NewUpgrade(semver string) upgrades.Upgrade {
 	return upgrades.Upgrade{
@@ -38,7 +36,7 @@ func CreateUpgradeHandler(
 		// This is a THORChain specific upgrade step that should be
 		// done in every upgrade handler and before any thorchain module migrations.
 		ctx := sdk.UnwrapSDKContext(goCtx)
-		if err := keeperv1.UpdateActiveValidatorVersions(ctx, ak.ThorchainKeeper, UpgradeName); err != nil {
+		if err := keeperv1.UpdateActiveValidatorVersions(ctx, ak.ThorchainKeeper, plan.Name); err != nil {
 			return nil, fmt.Errorf("failed to update active validator versions: %w", err)
 		}
 
