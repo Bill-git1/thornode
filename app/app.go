@@ -276,15 +276,7 @@ func NewChainApp(
 		panic(err)
 	}
 	thorchain.DefineCustomGetSigners(txSigningOptions)
-	txConfigOpts := tx.ConfigOptions{
-		EnabledSignModes:           enabledSignModes,
-		TextualCoinMetadataQueryFn: txmodule.NewBankKeeperCoinMetadataQueryFn(app.BankKeeper),
-		SigningOptions:             txSigningOptions,
-	}
-	txConfig, err := tx.NewTxConfigWithOptions(
-		app.appCodec,
-		txConfigOpts,
-	)
+	txConfig, err := appparams.TxConfig(app.appCodec, txmodule.NewBankKeeperCoinMetadataQueryFn(app.BankKeeper))
 	if err != nil {
 		panic(err)
 	}

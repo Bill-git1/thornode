@@ -42,14 +42,7 @@ func MakeEncodingConfig() EncodingConfig {
 		panic(err)
 	}
 	thorchain.DefineCustomGetSigners(txSigningOptions)
-	txConfigOpts := tx.ConfigOptions{
-		EnabledSignModes: tx.DefaultSignModes,
-		SigningOptions:   txSigningOptions,
-	}
-	txCfg, err := tx.NewTxConfigWithOptions(
-		marshaler,
-		txConfigOpts,
-	)
+	txCfg, err := TxConfig(marshaler, nil)
 	if err != nil {
 		panic(err)
 	}

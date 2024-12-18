@@ -13,14 +13,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/server"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/version"
-	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 	txmodule "github.com/cosmos/cosmos-sdk/x/auth/tx/config"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
 	"gitlab.com/thorchain/thornode/v3/app"
 	"gitlab.com/thorchain/thornode/v3/app/params"
+	appparams "gitlab.com/thorchain/thornode/v3/app/params"
 	prefix "gitlab.com/thorchain/thornode/v3/cmd"
 	thorconfig "gitlab.com/thorchain/thornode/v3/config"
 )
@@ -84,16 +83,7 @@ func NewRootCmd() *cobra.Command {
 			// sets the RPC client needed for SIGN_MODE_TEXTUAL. This sign mode
 			// is only available if the client is online.
 			if !initClientCtx.Offline {
-				enabledSignModes := tx.DefaultSignModes
-				enabledSignModes = append(enabledSignModes, signing.SignMode_SIGN_MODE_TEXTUAL)
-				txConfigOpts := tx.ConfigOptions{
-					EnabledSignModes:           enabledSignModes,
-					TextualCoinMetadataQueryFn: txmodule.NewGRPCCoinMetadataQueryFn(initClientCtx),
-				}
-				txConfig, err2 := tx.NewTxConfigWithOptions(
-					initClientCtx.Codec,
-					txConfigOpts,
-				)
+				txConfig, err2 := appparams.TxConfig(initClientCtx.Codec, txmodule.NewGRPCCoinMetadataQueryFn(initClientCtx))
 				if err2 != nil {
 					return err2
 				}

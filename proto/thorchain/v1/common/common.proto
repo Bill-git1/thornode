@@ -6,6 +6,7 @@ option (gogoproto.goproto_stringer_all) = false;
 option (gogoproto.stringer_all)         = false;
 option (gogoproto.goproto_getters_all)  = false;
 
+import "amino/amino.proto";
 import "gogoproto/gogo.proto";
 
 message Asset {
@@ -18,7 +19,7 @@ message Asset {
 }
 
 message Coin {
-    Asset asset = 1 [(gogoproto.jsontag) = "asset", (gogoproto.nullable) = false, (gogoproto.customtype) = "Asset"];
+    Asset asset = 1 [(gogoproto.jsontag) = "asset", (gogoproto.nullable) = false, (gogoproto.customtype) = "Asset", (amino.encoding) = "asset"];
     string amount = 2 [(gogoproto.jsontag) = "amount", (gogoproto.customtype) = "cosmossdk.io/math.Uint", (gogoproto.nullable) = false];
     int64 decimals = 3;
 }
