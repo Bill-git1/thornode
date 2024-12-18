@@ -106,13 +106,23 @@ func (qs queryServer) queryTHORName(ctx cosmos.Context, req *types.QueryThorname
 		})
 	}
 
+	threshold := cosmos.ZeroUint()
+	if !name.PreferredAsset.IsEmpty() {
+		paOf, err := qs.mgr.gasMgr.GetAssetOutboundFee(ctx, name.PreferredAsset, true)
+		if err == nil {
+			multiplier := qs.mgr.Keeper().GetConfigInt64(ctx, constants.PreferredAssetOutboundFeeMultiplier)
+			threshold = paOf.MulUint64(uint64(multiplier))
+		}
+	}
+
 	resp := types.QueryThornameResponse{
-		Name:                   name.Name,
-		ExpireBlockHeight:      name.ExpireBlockHeight,
-		Owner:                  name.Owner.String(),
-		PreferredAsset:         name.PreferredAsset.String(),
-		Aliases:                aliases,
-		AffiliateCollectorRune: affRune.String(),
+		Name:                            name.Name,
+		ExpireBlockHeight:               name.ExpireBlockHeight,
+		Owner:                           name.Owner.String(),
+		PreferredAsset:                  name.PreferredAsset.String(),
+		Aliases:                         aliases,
+		AffiliateCollectorRune:          affRune.String(),
+		PreferredAssetSwapThresholdRune: threshold.String(),
 	}
 
 	return &resp, nil

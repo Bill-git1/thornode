@@ -20,6 +20,8 @@ message QueryThornameResponse{
 	// Amount of RUNE currently accrued by this thorname in affiliate fees waiting to be swapped to preferred asset.
   string affiliate_collector_rune = 5;
   repeated ThornameAlias aliases = 6 [(gogoproto.jsontag) = "aliases"];
+  // Amount of RUNE currently needed to trigger a preferred asset swap.
+  string preferred_asset_swap_threshold_rune = 7;
 }
 
 message ThornameAlias{
