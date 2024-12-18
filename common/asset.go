@@ -92,15 +92,10 @@ func NewAsset(input string) (Asset, error) {
 }
 
 func NewAssetWithShortCodes(version semver.Version, input string) (Asset, error) {
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return NewAssetWithShortCodesV3_0_0(input)
-	default:
-		return Asset{}, fmt.Errorf("unsupported version: %s", version)
-	}
+	return NewAssetWithShortCodesV3_1_0(input)
 }
 
-func NewAssetWithShortCodesV3_0_0(input string) (Asset, error) {
+func NewAssetWithShortCodesV3_1_0(input string) (Asset, error) {
 	shorts := make(map[string]string)
 
 	shorts[ATOMAsset.ShortCode()] = ATOMAsset.String()

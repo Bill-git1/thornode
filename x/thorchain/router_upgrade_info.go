@@ -16,4 +16,8 @@ var (
 	// BSC Router
 	bscOldRouter = ``
 	bscNewRouter = `0xb30ec53f98ff5947ede720d32ac2da7e52a5f56b`
+
+	// BASE Router
+	baseOldRouter = ``
+	baseNewRouter = `0x8D7fF86dc4C7480a4525d56233582B3448329580`
 )

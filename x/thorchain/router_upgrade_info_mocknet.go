@@ -15,4 +15,7 @@ var (
 	// BSC Router
 	bscOldRouter = ``
 	bscNewRouter = ``
+
+	baseOldRouter = ``
+	baseNewRouter = ``
 )
