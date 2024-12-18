@@ -75,6 +75,20 @@ asserts:
   - .approved_percent == "0.8"
   - .validators_to_quorum == 0
 ---
+type: tx-approve-upgrade
+signer: {{ addr_thor_goat }}
+name: 1.2.3
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/upgrade_proposal/1.2.3
+asserts:
+  - .approved == true
+  - .approved_percent == "1"
+  - .validators_to_quorum == 0
+---
 type: check
 endpoint: http://localhost:1317/cosmos/upgrade/v1beta1/current_plan
 asserts:
@@ -129,6 +143,10 @@ asserts:
 # will bring 1.2.3 below quorum, clearing the upgrade
 type: tx-reject-upgrade
 signer: {{ addr_thor_frog }}
+name: 1.2.3
+---
+type: tx-reject-upgrade
+signer: {{ addr_thor_goat }}
 name: 1.2.3
 ---
 type: create-blocks

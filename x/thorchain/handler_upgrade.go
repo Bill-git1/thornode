@@ -327,7 +327,7 @@ func (h RejectUpgradeHandler) handleV3_0_0(ctx cosmos.Context, msg *MsgRejectUpg
 
 func scheduleUpgradeIfNecessary(ctx cosmos.Context, k keeper.Keeper, name string) error {
 	upgradePlan, upgradePlanErr := k.GetUpgradePlan(ctx)
-	if upgradePlanErr != nil && upgradePlan.Name == name {
+	if upgradePlanErr == nil && upgradePlan.Name == name {
 		// already scheduled
 		return nil
 	}
