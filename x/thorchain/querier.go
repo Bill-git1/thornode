@@ -903,7 +903,7 @@ func (qs queryServer) queryBorrowers(ctx cosmos.Context, req *types.QueryBorrowe
 			CollateralWithdrawn: loan.CollateralWithdrawn.String(),
 			CollateralCurrent:   loan.Collateral().String(),
 			LastOpenHeight:      loan.LastOpenHeight,
-			LastReplayHeight:    loan.LastRepayHeight,
+			LastRepayHeight:     loan.LastRepayHeight,
 		}
 	}
 
@@ -946,7 +946,7 @@ func (qs queryServer) queryBorrower(ctx cosmos.Context, req *types.QueryBorrower
 		CollateralWithdrawn: loan.CollateralWithdrawn.String(),
 		CollateralCurrent:   loan.Collateral().String(),
 		LastOpenHeight:      loan.LastOpenHeight,
-		LastReplayHeight:    loan.LastRepayHeight,
+		LastRepayHeight:     loan.LastRepayHeight,
 	}
 
 	return &borrower, nil

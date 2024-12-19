@@ -23,7 +23,7 @@ message QueryBorrowerResponse{
   string collateral_withdrawn = 7 [(gogoproto.jsontag) = "collateral_withdrawn"];
   string collateral_current = 8 [(gogoproto.jsontag) = "collateral_current"];
   int64  last_open_height = 9 [(gogoproto.jsontag) = "last_open_height"];
-  int64  last_replay_height = 10 [(gogoproto.jsontag) = "last_replay_height"];
+  int64  last_repay_height = 10 [(gogoproto.jsontag) = "last_repay_height"];
 }
 
 message QueryBorrowersRequest{
