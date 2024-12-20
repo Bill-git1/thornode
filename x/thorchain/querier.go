@@ -490,19 +490,6 @@ func (qs queryServer) queryInboundAddresses(ctx cosmos.Context, _ *types.QueryIn
 
 	isGlobalTradingPaused := k.IsGlobalTradingHalted(ctx)
 
-	thorModuleAddr := k.GetModuleAccAddress(ModuleName)
-	outboundTxFee := k.GetOutboundTxFee(ctx)
-
-	bankMsgSendDepositAddr := &types.QueryInboundAddressResponse{
-		Chain:               common.THORChain.String(),
-		Address:             thorModuleAddr.String(),
-		Halted:              k.IsChainHalted(ctx, common.THORChain),
-		GlobalTradingPaused: isGlobalTradingPaused,
-		OutboundFee:         outboundTxFee.String(),
-	}
-
-	resp = append(resp, bankMsgSendDepositAddr)
-
 	for _, chain := range chains {
 		// tx send to thorchain doesn't need an address , thus here skip it
 		if chain == common.THORChain {

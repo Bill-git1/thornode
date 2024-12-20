@@ -195,7 +195,7 @@ func (s *QuerierSuite) TestQueryPool(c *C) {
 	c.Assert(err, NotNil)
 }
 
-func (s *QuerierSuite) TestVaultss(c *C) {
+func (s *QuerierSuite) TestVaults(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	queryServer := NewQueryServerImpl(mgr, s.kb)
 
@@ -947,11 +947,15 @@ func (s *QuerierSuite) TestQueryNodeAccount(c *C) {
 }
 
 func (s *QuerierSuite) TestQueryPoolAddresses(c *C) {
-	na := GetRandomValidatorNode(NodeActive)
-	c.Assert(s.k.SetNodeAccount(s.ctx, na), IsNil)
-	queryInboundAddrResp, err := s.queryServer.InboundAddresses(s.ctx, &types.QueryInboundAddressesRequest{})
-	c.Assert(err, IsNil)
+	ctx, mgr := setupManagerForTest(c)
 
+	pubKey := GetRandomPubKey()
+	asgard := NewVault(ctx.BlockHeight()-1, ActiveVault, AsgardVault, pubKey, common.Chains{common.ETHChain}.Strings(), nil)
+	c.Assert(mgr.Keeper().SetVault(ctx, asgard), IsNil)
+
+	queryServer := NewQueryServerImpl(mgr, s.kb)
+	queryInboundAddrResp, err := queryServer.InboundAddresses(ctx, &types.QueryInboundAddressesRequest{})
+	c.Assert(err, IsNil)
 	result, err := queryInboundAddrResp.MarshalJSONPB(nil)
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
@@ -965,6 +969,8 @@ func (s *QuerierSuite) TestQueryPoolAddresses(c *C) {
 
 	c.Assert(json.Unmarshal(result, &resp), IsNil)
 	c.Assert(len(resp), Equals, 1)
+	c.Assert(resp[0].Chain, Equals, common.ETHChain)
+	c.Assert(resp[0].PubKey, Equals, pubKey)
 }
 
 func (s *QuerierSuite) TestQueryKeysignArrayPubKey(c *C) {
