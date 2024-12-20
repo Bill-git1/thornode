@@ -11,8 +11,6 @@ import (
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
 )
 
-const PreferredAssetSwapMemoPrefix = "THOR-PREFERRED-ASSET"
-
 // SwapQueueVCUR is going to manage the swaps queue
 type SwapQueueVCUR struct {
 	k       keeper.Keeper
@@ -248,7 +246,7 @@ func (vm *SwapQueueVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 					refundCoinTx := pick.msg.Tx
 					refundCoinTx.Coins = common.NewCoins(refundCoin)
 					// As this is a streaming swap's partial refund, the vault context may have changed, so do vault selection.
-					if refundErr := refundTx(ctx, ObservedTx{Tx: refundCoinTx}, mgr, CodeSwapFail, handleErr.Error(), ""); refundErr != nil {
+					if refundErr := refundTx(ctx, ObservedTx{Tx: refundCoinTx}, mgr, CodeSwapFail, "streaming partial-refund", ""); refundErr != nil {
 						ctx.Logger().Error("fail to partial-refund swap", "error", refundErr)
 					}
 				}

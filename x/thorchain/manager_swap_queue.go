@@ -6,6 +6,8 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
+const PreferredAssetSwapMemoPrefix = "THOR-PREFERRED-ASSET"
+
 type swapItem struct {
 	index int
 	msg   MsgSwap

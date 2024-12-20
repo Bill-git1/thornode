@@ -5736,7 +5736,7 @@
         "id": "0000000000000000000000000000000000000000000000000000000000000005",
         "memo": "=:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877:38666695/1/5",
         "mode": "EndBlock",
-        "reason": "emit asset 26896699 less than price limit 30885672",
+        "reason": "streaming partial-refund",
         "to": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk",
         "type": "refund"
       },
