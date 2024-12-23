@@ -40,7 +40,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/types/msgservice"
-	signingtype "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
@@ -268,9 +267,6 @@ func NewChainApp(
 		logger,
 	)
 
-	// enable sign mode textual by overwriting the default tx config (after setting the bank keeper)
-	enabledSignModes := tx.DefaultSignModes
-	enabledSignModes = append(enabledSignModes, signingtype.SignMode_SIGN_MODE_TEXTUAL)
 	txSigningOptions, err := tx.NewDefaultSigningOptions()
 	if err != nil {
 		panic(err)
