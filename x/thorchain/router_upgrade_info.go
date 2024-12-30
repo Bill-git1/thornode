@@ -19,5 +19,5 @@ var (
 
 	// BASE Router
 	baseOldRouter = ``
-	baseNewRouter = `0x8D7fF86dc4C7480a4525d56233582B3448329580`
+	baseNewRouter = `0x68208d99746b805a1ae41421950a47b711e35681`
 )
