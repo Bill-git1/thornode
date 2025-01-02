@@ -84,7 +84,6 @@ func (s *ObserverSuite) ResetMockClient(c *C) {
 		config.BifrostChainConfiguration{
 			RPCHost: mockEvmRPC.URL,
 			BlockScanner: config.BifrostBlockScannerConfiguration{
-				RPCHost:             mockEvmRPC.URL,
 				HTTPRequestTimeout:  httpRequestTimeout,
 				BlockScanProcessors: 1,
 				ChainID:             common.AVAXChain,

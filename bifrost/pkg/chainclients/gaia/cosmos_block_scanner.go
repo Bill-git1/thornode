@@ -92,7 +92,8 @@ type CosmosBlockScanner struct {
 }
 
 // NewCosmosBlockScanner create a new instance of BlockScan
-func NewCosmosBlockScanner(cfg config.BifrostBlockScannerConfiguration,
+func NewCosmosBlockScanner(rpcHost string,
+	cfg config.BifrostBlockScannerConfiguration,
 	scanStorage blockscanner.ScannerStorage,
 	bridge thorclient.ThorchainBridge,
 	m *metrics.Metrics,
@@ -128,7 +129,7 @@ func NewCosmosBlockScanner(cfg config.BifrostBlockScannerConfiguration,
 
 	// Registry for encoding txs
 	txConfig := tx.NewTxConfig(cdc, []signingtypes.SignMode{signingtypes.SignMode_SIGN_MODE_DIRECT})
-	rpcClient, err := rpcclienthttp.New(cfg.RPCHost, "/websocket")
+	rpcClient, err := rpcclienthttp.New(rpcHost, "/websocket")
 	if err != nil {
 		logger.Fatal().Err(err).Msg("fail to create tendemrint rpcclient")
 	}

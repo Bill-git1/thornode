@@ -260,7 +260,6 @@ func (s *EVMSuite) TestConvertSigningAmount(c *C) {
 	a, err := NewEVMClient(s.thorKeys, config.BifrostChainConfiguration{
 		RPCHost: "http://" + s.server.Listener.Addr().String(),
 		BlockScanner: config.BifrostBlockScannerConfiguration{
-			RPCHost:            "http://" + s.server.Listener.Addr().String(),
 			StartBlockHeight:   1, // avoids querying thorchain for block height
 			HTTPRequestTimeout: time.Second,
 		},
@@ -283,7 +282,6 @@ func (s *EVMSuite) TestGetTokenAddressFromAsset(c *C) {
 		ChainID: common.AVAXChain,
 		RPCHost: "http://" + s.server.Listener.Addr().String(),
 		BlockScanner: config.BifrostBlockScannerConfiguration{
-			RPCHost:            "http://" + s.server.Listener.Addr().String(),
 			StartBlockHeight:   1, // avoids querying thorchain for block height
 			HTTPRequestTimeout: time.Second,
 		},
@@ -309,7 +307,6 @@ func (s *EVMSuite) TestClient(c *C) {
 		ChainID: common.AVAXChain,
 		RPCHost: "http://" + s.server.Listener.Addr().String(),
 		BlockScanner: config.BifrostBlockScannerConfiguration{
-			RPCHost:            "http://" + s.server.Listener.Addr().String(),
 			StartBlockHeight:   1, // avoids querying thorchain for block height
 			HTTPRequestTimeout: time.Second,
 		},
@@ -398,7 +395,6 @@ func (s *EVMSuite) TestGetAccount(c *C) {
 		ChainID: common.AVAXChain,
 		RPCHost: "http://" + s.server.Listener.Addr().String(),
 		BlockScanner: config.BifrostBlockScannerConfiguration{
-			RPCHost:            "http://" + s.server.Listener.Addr().String(),
 			StartBlockHeight:   1, // avoids querying thorchain for block height
 			HTTPRequestTimeout: time.Second,
 		},
@@ -423,7 +419,6 @@ func (s *EVMSuite) TestSignEVMTx(c *C) {
 		ChainID: common.AVAXChain,
 		RPCHost: "http://" + s.server.Listener.Addr().String(),
 		BlockScanner: config.BifrostBlockScannerConfiguration{
-			RPCHost:            "http://" + s.server.Listener.Addr().String(),
 			StartBlockHeight:   1, // avoids querying thorchain for block height
 			HTTPRequestTimeout: time.Second,
 			MaxGasLimit:        80000,

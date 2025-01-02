@@ -120,10 +120,9 @@ func (s *BlockScannerTestSuite) SetUpSuite(c *C) {
 	c.Assert(err, IsNil)
 }
 
-func getConfigForTest(rpcHost string) config.BifrostBlockScannerConfiguration {
+func getConfigForTest() config.BifrostBlockScannerConfiguration {
 	return config.BifrostBlockScannerConfiguration{
 		ChainID:                    thorcommon.AVAXChain,
-		RPCHost:                    rpcHost,
 		StartBlockHeight:           1, // avoids querying thorchain for block height
 		BlockScanProcessors:        1,
 		HTTPRequestTimeout:         time.Second,
@@ -172,23 +171,23 @@ func (s *BlockScannerTestSuite) TestNewBlockScanner(c *C) {
 	solvencyReporter := func(height int64) error {
 		return nil
 	}
-	bs, err := NewEVMScanner(getConfigForTest(""), nil, big.NewInt(int64(Mainnet)), ethClient, rpcClient, s.bridge, s.m, pubKeyManager, solvencyReporter, nil)
+	bs, err := NewEVMScanner(getConfigForTest(), nil, big.NewInt(int64(Mainnet)), ethClient, rpcClient, s.bridge, s.m, pubKeyManager, solvencyReporter, nil)
 	c.Assert(err, NotNil)
 	c.Assert(bs, IsNil)
 
-	bs, err = NewEVMScanner(getConfigForTest("http://"+server.Listener.Addr().String()), storage, big.NewInt(int64(Mainnet)), ethClient, rpcClient, s.bridge, nil, pubKeyManager, solvencyReporter, nil)
+	bs, err = NewEVMScanner(getConfigForTest(), storage, big.NewInt(int64(Mainnet)), ethClient, rpcClient, s.bridge, nil, pubKeyManager, solvencyReporter, nil)
 	c.Assert(err, NotNil)
 	c.Assert(bs, IsNil)
 
-	bs, err = NewEVMScanner(getConfigForTest("http://"+server.Listener.Addr().String()), storage, big.NewInt(int64(Mainnet)), nil, rpcClient, s.bridge, s.m, pubKeyManager, solvencyReporter, nil)
+	bs, err = NewEVMScanner(getConfigForTest(), storage, big.NewInt(int64(Mainnet)), nil, rpcClient, s.bridge, s.m, pubKeyManager, solvencyReporter, nil)
 	c.Assert(err, NotNil)
 	c.Assert(bs, IsNil)
 
-	bs, err = NewEVMScanner(getConfigForTest("http://"+server.Listener.Addr().String()), storage, big.NewInt(int64(Mainnet)), ethClient, rpcClient, s.bridge, s.m, nil, solvencyReporter, nil)
+	bs, err = NewEVMScanner(getConfigForTest(), storage, big.NewInt(int64(Mainnet)), ethClient, rpcClient, s.bridge, s.m, nil, solvencyReporter, nil)
 	c.Assert(err, NotNil)
 	c.Assert(bs, IsNil)
 
-	bs, err = NewEVMScanner(getConfigForTest("http://"+server.Listener.Addr().String()), storage, big.NewInt(int64(Mainnet)), ethClient, rpcClient, s.bridge, s.m, pubKeyManager, solvencyReporter, nil)
+	bs, err = NewEVMScanner(getConfigForTest(), storage, big.NewInt(int64(Mainnet)), ethClient, rpcClient, s.bridge, s.m, pubKeyManager, solvencyReporter, nil)
 	c.Assert(err, IsNil)
 	c.Assert(bs, NotNil)
 }
@@ -315,7 +314,7 @@ func (s *BlockScannerTestSuite) TestProcessBlock(c *C) {
 		c.Assert(pubKeyMgr.Stop(), IsNil)
 	}()
 
-	config := getConfigForTest(server.URL)
+	config := getConfigForTest()
 	bs, err := NewEVMScanner(config, storage, big.NewInt(43112), ethClient, rpcClient, bridge, s.m, pubKeyMgr, func(height int64) error {
 		return nil
 	}, nil)
@@ -461,7 +460,7 @@ func (s *BlockScannerTestSuite) TestGetTxInItem(c *C) {
 		c.Assert(pkeyMgr.Stop(), IsNil)
 	}()
 	c.Assert(err, IsNil)
-	config := getConfigForTest(server.URL)
+	config := getConfigForTest()
 	bs, err := NewEVMScanner(config, storage, big.NewInt(int64(Mainnet)), ethClient, rpcClient, bridge, s.m, pkeyMgr, func(height int64) error {
 		return nil
 	}, nil)
@@ -642,7 +641,7 @@ func (s *BlockScannerTestSuite) TestProcessReOrg(c *C) {
 	}()
 	rpcClient, err := evm.NewEthRPC(ethClient, time.Second, "BSC")
 	c.Assert(err, IsNil)
-	cfg := getConfigForTest(server.URL)
+	cfg := getConfigForTest()
 	cfg.ChainID = thorcommon.BSCChain // re-org on BSC only
 	bs, err := NewEVMScanner(cfg, storage, big.NewInt(int64(Mainnet)), ethClient, rpcClient, s.bridge, s.m, pkeyMgr, func(height int64) error {
 		return nil
@@ -710,7 +709,7 @@ func (s *BlockScannerTestSuite) TestUpdateGasPrice(c *C) {
 	solvencyReporter := func(height int64) error {
 		return nil
 	}
-	conf := getConfigForTest("http://" + server.Listener.Addr().String())
+	conf := getConfigForTest()
 	bs, err := NewEVMScanner(conf, storage, big.NewInt(int64(Mainnet)), ethClient, rpcClient, s.bridge, s.m, pubKeyManager, solvencyReporter, nil)
 	c.Assert(err, IsNil)
 	c.Assert(bs, NotNil)

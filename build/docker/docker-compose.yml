@@ -191,12 +191,10 @@ services:
       # enable bsc
       BIFROST_CHAINS_BSC_DISABLED: "false"
       BIFROST_CHAINS_BSC_RPC_HOST: ${BSC_HOST:-http://binance-smart:8545}
-      BIFROST_CHAINS_BSC_BLOCK_SCANNER_RPC_HOST: ${BSC_HOST:-http://binance-smart:8545}
 
       # enable base
       BIFROST_CHAINS_BASE_DISABLED: "false"
       BIFROST_CHAINS_BASE_RPC_HOST: http://base:8545
-      BIFROST_CHAINS_BASE_BLOCK_SCANNER_RPC_HOST: http://base:8545
 
       # set fixed gas rate for evm chains
       BIFROST_CHAINS_ETH_BLOCK_SCANNER_FIXED_GAS_RATE: 20_000_000_000 # 20 gwei

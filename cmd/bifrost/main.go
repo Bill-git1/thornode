@@ -171,14 +171,6 @@ func main() {
 		if !strings.HasPrefix(chainCfg.RPCHost, "http") {
 			chainCfg.RPCHost = fmt.Sprintf("http://%s", chainCfg.RPCHost)
 		}
-
-		if len(chainCfg.BlockScanner.RPCHost) == 0 {
-			log.Fatal().Err(err).Msg("missing chain RPC host")
-			return
-		}
-		if !strings.HasPrefix(chainCfg.BlockScanner.RPCHost, "http") {
-			chainCfg.BlockScanner.RPCHost = fmt.Sprintf("http://%s", chainCfg.BlockScanner.RPCHost)
-		}
 	}
 	poolMgr := thorclient.NewPoolMgr(thorchainBridge)
 	chains, restart := chainclients.LoadChains(k, cfgChains, tssIns, thorchainBridge, m, pubkeyMgr, poolMgr)

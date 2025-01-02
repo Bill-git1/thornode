@@ -148,7 +148,6 @@ func (s *CosmosTestSuite) TestProcessOutboundTx(c *C) {
 		RPCHost:        server.URL,
 		CosmosGRPCHost: fakeGRPCHost,
 		BlockScanner: config.BifrostBlockScannerConfiguration{
-			RPCHost:          server.URL,
 			CosmosGRPCHost:   fakeGRPCHost,
 			StartBlockHeight: 1, // avoids querying thorchain for block height
 		},

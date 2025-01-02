@@ -77,19 +77,16 @@ func (s *BlockScannerTestSuite) TearDownSuite(c *C) {
 func (s *BlockScannerTestSuite) TestNewBlockScanner(c *C) {
 	mss := NewMockScannerStorage()
 	cbs, err := NewBlockScanner(config.BifrostBlockScannerConfiguration{
-		RPCHost:          "",
 		StartBlockHeight: 1, // avoids querying thorchain for block height
 	}, mss, nil, nil, DummyFetcher{})
 	c.Check(cbs, IsNil)
 	c.Check(err, NotNil)
 	cbs, err = NewBlockScanner(config.BifrostBlockScannerConfiguration{
-		RPCHost:          "localhost",
 		StartBlockHeight: 1, // avoids querying thorchain for block height
 	}, mss, nil, nil, DummyFetcher{})
 	c.Check(cbs, IsNil)
 	c.Check(err, NotNil)
 	cbs, err = NewBlockScanner(config.BifrostBlockScannerConfiguration{
-		RPCHost:          "localhost",
 		StartBlockHeight: 1, // avoids querying thorchain for block height
 	}, mss, m, s.bridge, DummyFetcher{})
 	c.Check(cbs, NotNil)
@@ -136,7 +133,6 @@ func (s *BlockScannerTestSuite) TestBlockScanner(c *C) {
 	c.Assert(err, IsNil)
 
 	cbs, err := NewBlockScanner(config.BifrostBlockScannerConfiguration{
-		RPCHost:                    server.URL,
 		StartBlockHeight:           1, // avoids querying thorchain for block height
 		BlockScanProcessors:        1,
 		HTTPRequestTimeout:         time.Second,
@@ -190,7 +186,6 @@ func (s *BlockScannerTestSuite) TestBadBlock(c *C) {
 	}, s.m, s.keys)
 	c.Assert(err, IsNil)
 	cbs, err := NewBlockScanner(config.BifrostBlockScannerConfiguration{
-		RPCHost:                    server.URL,
 		StartBlockHeight:           1, // avoids querying thorchain for block height
 		BlockScanProcessors:        1,
 		HTTPRequestTimeout:         time.Second,
@@ -231,7 +226,6 @@ func (s *BlockScannerTestSuite) TestBadConnection(c *C) {
 	c.Assert(err, IsNil)
 
 	cbs, err := NewBlockScanner(config.BifrostBlockScannerConfiguration{
-		RPCHost:                    "localhost:23450",
 		StartBlockHeight:           1, // avoids querying thorchain for block height
 		BlockScanProcessors:        1,
 		HTTPRequestTimeout:         time.Second,
@@ -293,7 +287,6 @@ func (s *BlockScannerTestSuite) TestIsChainPaused(c *C) {
 	c.Assert(err, IsNil)
 
 	cbs, err := NewBlockScanner(config.BifrostBlockScannerConfiguration{
-		RPCHost:                    server.URL,
 		StartBlockHeight:           1, // avoids querying thorchain for block height
 		BlockScanProcessors:        1,
 		HTTPRequestTimeout:         time.Second,

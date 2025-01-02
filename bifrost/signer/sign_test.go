@@ -387,7 +387,6 @@ func (s *SignSuite) TestProcess(c *C) {
 	cfg := config.BifrostSignerConfiguration{
 		SignerDbPath: filepath.Join(os.TempDir(), "/var/data/bifrost/signer"),
 		BlockScanner: config.BifrostBlockScannerConfiguration{
-			RPCHost:                    "127.0.0.1:" + s.rpcHost,
 			ChainID:                    "ThorChain",
 			StartBlockHeight:           1,
 			EnforceBlockHeight:         true,

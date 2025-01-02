@@ -129,15 +129,7 @@ func Init() {
 		"CHAIN_RPC",
 	))
 	assert(viper.BindEnv(
-		"bifrost.signer.block_scanner.rpc_host",
-		"CHAIN_RPC",
-	))
-	assert(viper.BindEnv(
 		"bifrost.chains.BTC.rpc_host",
-		"BTC_HOST",
-	))
-	assert(viper.BindEnv(
-		"bifrost.chains.BTC.block_scanner.rpc_host",
 		"BTC_HOST",
 	))
 	assert(viper.BindEnv(
@@ -149,19 +141,11 @@ func Init() {
 		"ETH_HOST",
 	))
 	assert(viper.BindEnv(
-		"bifrost.chains.ETH.block_scanner.rpc_host",
-		"ETH_HOST",
-	))
-	assert(viper.BindEnv(
 		"bifrost.chains.ETH.block_scanner.start_block_height",
 		"ETH_START_BLOCK_HEIGHT",
 	))
 	assert(viper.BindEnv(
 		"bifrost.chains.AVAX.rpc_host",
-		"AVAX_HOST",
-	))
-	assert(viper.BindEnv(
-		"bifrost.chains.AVAX.block_scanner.rpc_host",
 		"AVAX_HOST",
 	))
 	assert(viper.BindEnv(
@@ -173,19 +157,11 @@ func Init() {
 		"DOGE_HOST",
 	))
 	assert(viper.BindEnv(
-		"bifrost.chains.DOGE.block_scanner.rpc_host",
-		"DOGE_HOST",
-	))
-	assert(viper.BindEnv(
 		"bifrost.chains.DOGE.block_scanner.start_block_height",
 		"DOGE_START_BLOCK_HEIGHT",
 	))
 	assert(viper.BindEnv(
 		"bifrost.chains.GAIA.rpc_host",
-		"GAIA_HOST",
-	))
-	assert(viper.BindEnv(
-		"bifrost.chains.GAIA.block_scanner.rpc_host",
 		"GAIA_HOST",
 	))
 	assert(viper.BindEnv(
@@ -197,19 +173,11 @@ func Init() {
 		"LTC_HOST",
 	))
 	assert(viper.BindEnv(
-		"bifrost.chains.LTC.block_scanner.rpc_host",
-		"LTC_HOST",
-	))
-	assert(viper.BindEnv(
 		"bifrost.chains.LTC.block_scanner.start_block_height",
 		"LTC_START_BLOCK_HEIGHT",
 	))
 	assert(viper.BindEnv(
 		"bifrost.chains.BCH.rpc_host",
-		"BCH_HOST",
-	))
-	assert(viper.BindEnv(
-		"bifrost.chains.BCH.block_scanner.rpc_host",
 		"BCH_HOST",
 	))
 	assert(viper.BindEnv(
@@ -693,7 +661,6 @@ func (b *BifrostChainConfiguration) Validate() {
 }
 
 type BifrostBlockScannerConfiguration struct {
-	RPCHost                    string        `mapstructure:"rpc_host"`
 	StartBlockHeight           int64         `mapstructure:"start_block_height"`
 	BlockScanProcessors        int           `mapstructure:"block_scan_processors"`
 	HTTPRequestTimeout         time.Duration `mapstructure:"http_request_timeout"`
@@ -772,12 +739,6 @@ type BifrostBlockScannerConfiguration struct {
 
 	// MaxReorgRescanBlocks is the maximum number of blocks to rescan during a reorg.
 	MaxReorgRescanBlocks int64 `mapstructure:"max_reorg_rescan_blocks"`
-}
-
-func (b *BifrostBlockScannerConfiguration) Validate() {
-	if b.RPCHost == "" {
-		log.Fatal().Str("chain", b.ChainID.String()).Msg("rpc host is required")
-	}
 }
 
 type BifrostClientConfiguration struct {
