@@ -119,7 +119,7 @@ func main() {
 
 	// get nodes at vault height
 	nodes := []openapi.Node{}
-	nodesUrl := fmt.Sprintf("%s/thorchain/nodes?height=%d", thornode, *vaultResponse.BlockHeight)
+	nodesUrl := fmt.Sprintf("%s/thorchain/nodes?height=%d", thornode, *vaultResponse.StatusSince)
 	err = get(nodesUrl, &nodes)
 	check(err, "Failed to get nodes")
 
