@@ -239,6 +239,11 @@ func (s *SwapperVCUR) swapOne(ctx cosmos.Context,
 		cosmos.ZeroUint(),
 	)
 
+	// Update swap event input with source and amount details,
+	// notably for if the Trade/Secured amount withdrawn is less than the transaction-specified amount.
+	// For streaming swaps, InTx already only represents the sub-swap amount, not the original inbound.
+	swapEvt.InTx.Coins = common.NewCoins(common.NewCoin(source, amount))
+
 	if poolAsset.IsDerivedAsset() {
 		// regenerate derived virtual pool
 		mgr.NetworkMgr().SpawnDerivedAsset(ctx, poolAsset, mgr)

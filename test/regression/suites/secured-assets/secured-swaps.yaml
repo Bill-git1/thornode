@@ -424,3 +424,162 @@ asserts:
   - .result[0].amount|tonumber == ${INITIAL_UNITS} + 915235
   - .result[1].denom == "rune"
   - .result[1].amount|tonumber == ${INITIAL_RUNE} - 1000000000 - ${NATIVE_TX_FEE_RUNE}
+---
+########################################################################################
+# check the result of streaming swap double-spend attempt (swap to RUNE)
+########################################################################################
+type: tx-mimir
+signer: {{ addr_thor_cat }}
+key: "SecuredAssetSlipMinBps"
+value: 10
+---
+type: tx-mimir
+signer: {{ addr_thor_pig }}
+key: "SecuredAssetSlipMinBps"
+value: 10
+---
+type: tx-mimir
+signer: {{ addr_thor_frog }}
+key: "SecuredAssetSlipMinBps"
+value: 10
+---
+type: tx-mimir
+signer: {{ addr_thor_goat }}
+key: "SecuredAssetSlipMinBps"
+value: 10
+# Lower SecuredAssetSlipMinBps to allow multiple sub-swaps.
+---
+type: check
+endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fish }}
+asserts:
+  - .result | length == 0 # An empty balance to start with.
+---
+type: check
+endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
+asserts:
+  - .result | length == 2
+  - .result[0].denom == "btc-btc"
+  - .result[0].amount == "${TOTAL_INPUT=9359961}"
+  # TOTAL_INPUT must be the full amount so that overspending is not possible without double-spending.
+---
+type: tx-deposit
+signer: {{ addr_thor_fox }}
+coins:
+  - amount: "${TOTAL_INPUT}"
+    asset: "BTC-BTC"
+memo: "=:THOR.RUNE:{{ addr_thor_fish }}:0/${INTERVAL=2}/${QUANTITY=2}"
+# Interval 2 and Quantity 2 so that there will be two sub-swaps with a no-sub-swap block between them.
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/block
+asserts:
+  - .|[..|select(.type? == "swap")] | length == 1
+  - ..|select(.type? == "swap").id == "{{ native_txid -1 }}"
+  - ..|select(.type? == "swap").coin == "${INPUT_1=4679980} BTC-BTC"
+  - ..|select(.type? == "swap").emit_asset == "${OUTPUT_1=4240366399} THOR.RUNE"
+  - ..|select(.type? == "swap").streaming_swap_count == "1"
+  - ..|select(.type? == "swap").streaming_swap_quantity == "${QUANTITY}"
+  ##
+  - .|[..|select(.type? == "secured_asset_withdraw")] | length == 1
+  - ..|select(.type? == "secured_asset_withdraw").amount == "${INPUT_1}"
+  ##
+  - .|[..|select(.type? == "streaming_swap")] | length == 0
+  - .|[..|select(.type? == "fee")] | length == 0
+  - .|[..|select(.type? == "outbound")] | length == 0
+  # No outbound or completed streaming swap yet.
+  ##
+  - ${TOTAL_INPUT} / 4 | floor == ${INPUT_2=2339990} # Prepare the double-spend attempts's input amount.
+---
+# Now, the double-spend attempt.
+type: tx-deposit
+signer: {{ addr_thor_fox }}
+coins:
+  - amount: "${INPUT_2}"
+    asset: "BTC-BTC"
+memo: "=:THOR.RUNE:{{ addr_thor_fish }}"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/block
+asserts:
+  - .|[..|select(.type? == "swap")] | length == 1
+  - ..|select(.type? == "swap").id == "{{ native_txid -1 }}"
+  - ..|select(.type? == "swap").coin == "${INPUT_2} BTC-BTC"
+  - ..|select(.type? == "swap").emit_asset == "${OUTPUT_2=2033170659} THOR.RUNE"
+  - ..|select(.type? == "swap").streaming_swap_count == "1"
+  - ..|select(.type? == "swap").streaming_swap_quantity == "1" # This is the non-streaming swap.
+  ##
+  - .|[..|select(.type? == "secured_asset_withdraw")] | length == 1
+  - ..|select(.type? == "secured_asset_withdraw").amount == "${INPUT_2}"
+  ##
+  - .|[..|select(.type? == "streaming_swap")] | length == 0
+  # No completed streaming swap yet.
+  ##
+  - .|[..|select(.type? == "fee")] | length == 1
+  - ..|select(.type? == "fee").coins == "${FEE=2000000} THOR.RUNE"
+  - ..|select(.type? == "fee").pool_deduct != "${FEE}"
+  - ..|select(.type? == "fee").pool_deduct == "0"
+  # TODO:  This (native) outbound_fee_in_rune Amount should always be consistent with the value of the Coins.
+  # (#1334/!2374)
+  ##
+  - .|[..|select(.type? == "outbound")] | length == 1
+  - ..|select(.type? == "outbound").in_tx_id == "{{ native_txid -1 }}"
+  - ..|select(.type? == "outbound").coin == "${OUTBOUND_1=2031170659} THOR.RUNE"
+  - ${OUTBOUND_1} == ${OUTPUT_2} - ${FEE} # As it should be.
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
+asserts:
+  - .result | length == 1
+  - .result[0].denom == "rune" # All BTC-BTC has been used.
+---
+type: check
+endpoint: http://localhost:1317/thorchain/block
+asserts:
+  - .|[..|select(.type? == "swap")] | length == 1
+  - ..|select(.type? == "swap").id == "{{ native_txid -2 }}"
+  - ..|select(.type? == "swap").coin == "${INPUT_3=2339991} BTC-BTC"
+  - ..|select(.type? == "swap").emit_asset == "${OUTPUT_3=1948538383} THOR.RUNE"
+  - ..|select(.type? == "swap").streaming_swap_count == "${QUANTITY}" # Final sub-swap.
+  - ..|select(.type? == "swap").streaming_swap_quantity == "${QUANTITY}"
+  ##
+  - .|[..|select(.type? == "secured_asset_withdraw")] | length == 1
+  - ..|select(.type? == "secured_asset_withdraw").amount == "${INPUT_3}"
+  - ${INPUT_1} + ${INPUT_2} + ${INPUT_3} == ${TOTAL_INPUT} # As it should be.
+  ##
+  - ${OUTPUT_1} / ${INPUT_1} | floor == 906
+  - ${OUTPUT_2} / ${INPUT_2} | floor == 868
+  - ${OUTPUT_3} / ${INPUT_3} | floor == 832
+  # The output ratios are consistent, going down as the input depth increases and the output depth decreases.
+  ##
+  - .|[..|select(.type? == "streaming_swap")] | length == 1
+  - ..|select(.type? == "streaming_swap").deposit == "${TOTAL_INPUT} BTC-BTC"
+  - ..|select(.type? == "streaming_swap").in == "${TOTAL_INPUT} BTC-BTC"
+  # The streaming swap reflects the initial attempted amount, rather than the post-withdraw input sum;
+  # this is perhaps consistent with that any non-Deposit In is treated as to be refunded from failed sub-swaps.
+  # TODO:  Perhaps revisit this in future.
+  - ${OUTPUT_1} + ${OUTPUT_3} == ${TOTAL_STREAMING_OUTPUT=6188904782}
+  - ..|select(.type? == "streaming_swap").out == "${TOTAL_STREAMING_OUTPUT} THOR.RUNE" # As it should be.
+  ##
+  - .|[..|select(.type? == "fee")] | length == 1
+  - ..|select(.type? == "fee").coins == "${FEE} THOR.RUNE"
+  ##
+  - .|[..|select(.type? == "outbound")] | length == 1
+  - ..|select(.type? == "outbound").in_tx_id == "{{ native_txid -2 }}"
+  - ..|select(.type? == "outbound").coin == "${OUTBOUND_2=6186904782} THOR.RUNE"
+  - ${OUTBOUND_2} == ${OUTPUT_1} + ${OUTPUT_3} - ${FEE} # As it should be.
+---
+type: check
+endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fish }}
+asserts:
+  - .result | length == 1
+  - .result[0].denom == "rune"
+  - .result[0].amount | tonumber == ${OUTBOUND_1} + ${OUTBOUND_2} # No extra output.
