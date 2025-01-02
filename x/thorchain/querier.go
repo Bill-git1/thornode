@@ -2500,13 +2500,12 @@ func (qs queryServer) queryUpgradeProposals(ctx cosmos.Context, req *types.Query
 			return nil, fmt.Errorf("failed to unmarshal proposed upgrade: %w", err)
 		}
 
-		p := types.QueryUpgradeProposalResponse{
-			Name:   name,
-			Height: upgrade.Height,
-			Info:   upgrade.Info,
+		p, err := qs.queryUpgradeProposal(ctx, &types.QueryUpgradeProposalRequest{Name: name})
+		if err != nil {
+			return nil, fmt.Errorf("failed to query upgrade proposal: %w", err)
 		}
 
-		res = append(res, &p)
+		res = append(res, p)
 	}
 
 	return &types.QueryUpgradeProposalsResponse{UpgradeProposals: res}, nil
@@ -2535,7 +2534,7 @@ func (qs queryServer) queryUpgradeProposal(ctx cosmos.Context, req *types.QueryU
 
 	approval := big.NewRat(int64(uq.ApprovingVals), int64(uq.TotalActive))
 	approvalFlt, _ := approval.Float64()
-	approvalStr := strconv.FormatFloat(approvalFlt, 'f', -1, 64)
+	approvalStr := fmt.Sprintf("%.2f", approvalFlt*100)
 
 	vtq := int64(uq.NeededForQuorum)
 

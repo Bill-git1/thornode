@@ -704,7 +704,7 @@ func UpgradeProposalAndApproval(block *thorscan.BlockResponse) {
 				if err != nil {
 					log.Panic().Err(err).Msg("failed to parse approved percent")
 				}
-				fields.Set("Approval Percent", fmt.Sprintf("`%.2f%%`", percent*100))
+				fields.Set("Approval Percent", fmt.Sprintf("`%.2f%%`", percent))
 				fields.Set("Remaining Votes Required", fmt.Sprintf("`%d`", *proposal.ValidatorsToQuorum))
 			default:
 				continue

@@ -27,6 +27,12 @@ type: check
 endpoint: http://localhost:1317/thorchain/upgrade_proposals
 asserts:
   - .|length == 1
+  - .[0].name == "1.2.3"
+  - .[0].height == 100
+  - .[0].info == "upgrade to version 1.2.3"
+  - .[0].approved == false
+  - .[0].approved_percent == "20.00"
+  - .[0].validators_to_quorum == 3
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/upgrade_proposal/1.2.3
@@ -35,7 +41,7 @@ asserts:
   - .height == 100
   - .info == "upgrade to version 1.2.3"
   - .approved == false
-  - .approved_percent == "0.2"
+  - .approved_percent == "20.00"
   - .validators_to_quorum == 3
 ---
 type: tx-approve-upgrade
@@ -49,13 +55,13 @@ type: check
 endpoint: http://localhost:1317/thorchain/upgrade_proposal/1.2.3
 asserts:
   - .approved == false
-  - .approved_percent == "0.4"
+  - .approved_percent == "40.00"
   - .validators_to_quorum == 2
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/upgrade/v1beta1/current_plan
 asserts:
-- .plan == null
+  - .plan == null
 ---
 type: tx-approve-upgrade
 signer: {{ addr_thor_pig }}
@@ -72,7 +78,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/upgrade_proposal/1.2.3
 asserts:
   - .approved == true
-  - .approved_percent == "0.8"
+  - .approved_percent == "80.00"
   - .validators_to_quorum == 0
 ---
 type: tx-approve-upgrade
@@ -86,15 +92,15 @@ type: check
 endpoint: http://localhost:1317/thorchain/upgrade_proposal/1.2.3
 asserts:
   - .approved == true
-  - .approved_percent == "1"
+  - .approved_percent == "100.00"
   - .validators_to_quorum == 0
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/upgrade/v1beta1/current_plan
 asserts:
-- .plan.name == "1.2.3"
-- .plan.info == "upgrade to version 1.2.3"
-- .plan.height == "100"
+  - .plan.name == "1.2.3"
+  - .plan.info == "upgrade to version 1.2.3"
+  - .plan.height == "100"
 ---
 # Propose different upgrade to ensure it cannot be scheduled over the current one
 type: tx-propose-upgrade
@@ -137,7 +143,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/upgrade_proposal/1.2.3-expedited
 asserts:
   - .approved == false
-  - .approved_percent == "0.6"
+  - .approved_percent == "60.00"
   - .validators_to_quorum == 1
 ---
 # will bring 1.2.3 below quorum, clearing the upgrade
@@ -156,7 +162,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/upgrade_proposal/1.2.3
 asserts:
   - .approved == false
-  - .approved_percent == "0.6"
+  - .approved_percent == "60.00"
   - .validators_to_quorum == 1
 ---
 # Should succeed now because another upgrade is not scheduled
@@ -171,12 +177,12 @@ type: check
 endpoint: http://localhost:1317/thorchain/upgrade_proposal/1.2.3-expedited
 asserts:
   - .approved == true
-  - .approved_percent == "0.8"
+  - .approved_percent == "80.00"
   - .validators_to_quorum == 0
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/upgrade/v1beta1/current_plan
 asserts:
-- .plan.name == "1.2.3-expedited"
-- .plan.info == "upgrade to version 1.2.3"
-- .plan.height == "90"
+  - .plan.name == "1.2.3-expedited"
+  - .plan.info == "upgrade to version 1.2.3"
+  - .plan.height == "90"
