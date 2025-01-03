@@ -720,7 +720,7 @@ func castTxStagesResponse(in QueryTxStagesResponse) (result openapi.TxStagesResp
 		}
 		if !in.OutboundDelay.Completed {
 			result.OutboundDelay.RemainingDelayBlocks = &in.OutboundDelay.RemainingDelayBlocks
-			result.OutboundDelay.RemainingDelaySeconds = &in.OutboundDelay.RemainingDelayBlocks
+			result.OutboundDelay.RemainingDelaySeconds = &in.OutboundDelay.RemainingDelaySeconds
 		}
 	}
 
