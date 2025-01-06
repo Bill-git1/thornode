@@ -13,9 +13,9 @@ calc_progress() {
   if [ "$1" = "$2" ]; then
     [ "$1" = "0" ] && echo "0.000%" || echo "100.000%"
   elif [ -n "$3" ]; then
-    progress="$(echo "scale=6; $3 * 100" | bc 2>/dev/null)" 2>/dev/null && printf "%.3f%%" "$progress" || echo "Error"
+    progress="$(echo "$3 100" | awk '{printf "%.6f", $1 * $2}' 2>/dev/null)" && printf "%.3f%%" "$progress" || echo "Error"
   else
-    progress="$(echo "scale=6; $1/$2 * 100" | bc 2>/dev/null)" 2>/dev/null && printf "%.3f%%" "$progress" || echo "Error"
+    progress="$(echo "$1 $2" | awk '{printf "%.6f", ($1/$2) * 100}' 2>/dev/null)" && printf "%.3f%%" "$progress" || echo "Error"
   fi
 }
 
