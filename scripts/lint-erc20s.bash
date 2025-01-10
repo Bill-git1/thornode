@@ -39,5 +39,6 @@ check_token_list() {
 check_token_list common/tokenlist/ethtokens/eth_mainnet_latest.json
 check_token_list common/tokenlist/avaxtokens/avax_mainnet_latest.json
 check_token_list common/tokenlist/bsctokens/bsc_mainnet_latest.json
+check_token_list common/tokenlist/basetokens/base_mainnet_latest.json
 
 echo "OK"
