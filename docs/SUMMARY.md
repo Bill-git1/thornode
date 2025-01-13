@@ -20,6 +20,7 @@
 - [Affiliate Guide](affiliate-guide/thorname-guide.md)
 
   - [THORName Guide](affiliate-guide/thorname-guide.md)
+  - [Affiliate Guide](affiliate-guide/affiliate-fee-guide.md)
 
 - [Examples](examples/tutorials.md)
 
