@@ -29,7 +29,7 @@ func NewAnteDecorator(keeper keeper.Keeper) AnteDecorator {
 }
 
 func (ad AnteDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (newCtx sdk.Context, err error) {
-	if err = ad.rejectMultipleDepositOrSendMsgs(tx.GetMsgs()); err != nil {
+	if err = ad.rejectMultipleDepositMsgs(tx.GetMsgs()); err != nil {
 		return ctx, err
 	}
 
@@ -80,20 +80,31 @@ func (ad AnteDecorator) rejectInvalidSigners(tx sdk.Tx) error {
 }
 
 // rejectMultipleDepositMsgs only one deposit msg allowed per tx
-func (ad AnteDecorator) rejectMultipleDepositOrSendMsgs(msgs []cosmos.Msg) error {
+func (ad AnteDecorator) rejectMultipleDepositMsgs(msgs []cosmos.Msg) error {
 	hasDeposit := false
 	for _, msg := range msgs {
-		switch msg.(type) {
-		case *types.MsgDeposit, *types.MsgSend, *banktypes.MsgSend:
+		if ad.isDeposit(msg) {
 			if hasDeposit {
-				return cosmos.ErrUnknownRequest("only one deposit or send msg per tx")
+				return cosmos.ErrUnknownRequest("only one deposit msg per tx")
 			}
 			hasDeposit = true
-		default:
-			continue
 		}
 	}
 	return nil
+}
+
+// isDeposit returns true if the msg is a deposit
+func (ad AnteDecorator) isDeposit(msg cosmos.Msg) bool {
+	switch m := msg.(type) {
+	case *types.MsgDeposit:
+		return true
+	case *types.MsgSend:
+		return m.ToAddress.Equals(ad.keeper.GetModuleAccAddress(ModuleName))
+	case *banktypes.MsgSend:
+		return m.ToAddress == ad.keeper.GetModuleAccAddress(ModuleName).String()
+	default:
+		return false
+	}
 }
 
 // anteHandleMessage calls the msg-specific ante handling for a given msg

@@ -18,7 +18,7 @@ type AnteTestSuite struct {
 
 var _ = Suite(&AnteTestSuite{})
 
-func (s *AnteTestSuite) TestRejectMutlipleDepositOrSendMsgs(c *C) {
+func (s *AnteTestSuite) TestRejectMutlipleDepositMsgs(c *C) {
 	_, k := setupKeeperForTest(c)
 
 	ad := AnteDecorator{
@@ -26,28 +26,59 @@ func (s *AnteTestSuite) TestRejectMutlipleDepositOrSendMsgs(c *C) {
 	}
 
 	// no deposit or send msgs is ok
-	err := ad.rejectMultipleDepositOrSendMsgs([]cosmos.Msg{&types.MsgBan{}, &types.MsgBond{}})
+	err := ad.rejectMultipleDepositMsgs([]cosmos.Msg{&types.MsgBan{}, &types.MsgBond{}})
 	c.Assert(err, IsNil)
 
 	// one deposit msg is ok
-	err = ad.rejectMultipleDepositOrSendMsgs([]cosmos.Msg{&types.MsgBan{}, &types.MsgBond{}, &types.MsgDeposit{}})
+	err = ad.rejectMultipleDepositMsgs([]cosmos.Msg{&types.MsgBan{}, &types.MsgBond{}, &types.MsgDeposit{}})
 	c.Assert(err, IsNil)
 
 	// one send msg is ok
-	err = ad.rejectMultipleDepositOrSendMsgs([]cosmos.Msg{&types.MsgBan{}, &types.MsgBond{}, &types.MsgSend{}})
+	err = ad.rejectMultipleDepositMsgs([]cosmos.Msg{&types.MsgBan{}, &types.MsgBond{}, &types.MsgSend{}})
 	c.Assert(err, IsNil)
 
 	// two deposit msgs is not ok
-	err = ad.rejectMultipleDepositOrSendMsgs([]cosmos.Msg{&types.MsgBan{}, &types.MsgBond{}, &types.MsgDeposit{}, &types.MsgDeposit{}})
+	err = ad.rejectMultipleDepositMsgs([]cosmos.Msg{&types.MsgBan{}, &types.MsgBond{}, &types.MsgDeposit{}, &types.MsgDeposit{}})
 	c.Assert(err, NotNil)
 
-	// two send msgs is not ok
-	err = ad.rejectMultipleDepositOrSendMsgs([]cosmos.Msg{&types.MsgBan{}, &types.MsgBond{}, &types.MsgSend{}, &types.MsgSend{}})
+	// one deposit and one send is ok
+	err = ad.rejectMultipleDepositMsgs([]cosmos.Msg{&types.MsgBan{}, &types.MsgBond{}, &types.MsgDeposit{}, &types.MsgSend{}})
+	c.Assert(err, IsNil)
+
+	// two bank sends is ok
+	err = ad.rejectMultipleDepositMsgs([]cosmos.Msg{&banktypes.MsgSend{}, &banktypes.MsgSend{}})
+	c.Assert(err, IsNil)
+
+	bankSendDeposit := banktypes.MsgSend{
+		ToAddress: k.GetModuleAccAddress(ModuleName).String(),
+	}
+	// one bank send to module account is ok
+	err = ad.rejectMultipleDepositMsgs([]cosmos.Msg{&bankSendDeposit})
+	c.Assert(err, IsNil)
+
+	// two bank sends to module account is not ok
+	err = ad.rejectMultipleDepositMsgs([]cosmos.Msg{&bankSendDeposit, &bankSendDeposit})
 	c.Assert(err, NotNil)
 
-	// one deposit and one send is not ok
-	err = ad.rejectMultipleDepositOrSendMsgs([]cosmos.Msg{&types.MsgBan{}, &types.MsgBond{}, &types.MsgDeposit{}, &types.MsgSend{}})
+	// one deposit and one send is ok
+	err = ad.rejectMultipleDepositMsgs([]cosmos.Msg{&types.MsgBan{}, &types.MsgBond{}, &types.MsgDeposit{}, &types.MsgSend{}})
+	c.Assert(err, IsNil)
+
+	// two bank sends is ok
+	err = ad.rejectMultipleDepositMsgs([]cosmos.Msg{&banktypes.MsgSend{}, &banktypes.MsgSend{}})
+	c.Assert(err, IsNil)
+
+	// one bank send to module account is ok
+	err = ad.rejectMultipleDepositMsgs([]cosmos.Msg{&bankSendDeposit})
+	c.Assert(err, IsNil)
+
+	// two bank sends to module account is not ok
+	err = ad.rejectMultipleDepositMsgs([]cosmos.Msg{&bankSendDeposit, &bankSendDeposit})
 	c.Assert(err, NotNil)
+
+	// one normal bank send and one bank send to module account is ok
+	err = ad.rejectMultipleDepositMsgs([]cosmos.Msg{&banktypes.MsgSend{}, &bankSendDeposit})
+	c.Assert(err, IsNil)
 }
 
 func (s *AnteTestSuite) TestAnteHandleMessage(c *C) {
