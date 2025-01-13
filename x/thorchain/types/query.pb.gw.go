@@ -7605,7 +7605,7 @@ var (
 
 	pattern_Query_TssKeygenMetric_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"thorchain", "metric", "keygen", "pub_key"}, "", runtime.AssumeColonVerbOpt(false)))
 
-	pattern_Query_TssMetric_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"thorchain", "metric"}, "", runtime.AssumeColonVerbOpt(false)))
+	pattern_Query_TssMetric_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"thorchain", "metrics"}, "", runtime.AssumeColonVerbOpt(false)))
 
 	pattern_Query_Keysign_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"thorchain", "keysign", "height"}, "", runtime.AssumeColonVerbOpt(false)))
 

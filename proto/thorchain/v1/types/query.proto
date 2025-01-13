@@ -331,7 +331,7 @@ service Query {
   }
 
   rpc TssMetric(QueryTssMetricRequest) returns (QueryTssMetricResponse) {
-    option (google.api.http).get = "/thorchain/metric";
+    option (google.api.http).get = "/thorchain/metrics";
   }
 
   rpc Keysign(QueryKeysignRequest) returns (QueryKeysignResponse) {
