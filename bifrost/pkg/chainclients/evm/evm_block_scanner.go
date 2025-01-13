@@ -826,7 +826,7 @@ func (e *EVMScanner) getTxInFromTransaction(tx *etypes.Transaction, receipt *ety
 	nativeValue := e.tokenManager.ConvertAmount(evm.NativeTokenAddr, tx.Value())
 	txInItem.Coins = append(txInItem.Coins, common.NewCoin(e.cfg.ChainID.GetGasAsset(), nativeValue))
 	txGasPrice := tx.GasPrice()
-	txInItem.Gas = common.MakeEVMGas(e.cfg.ChainID, txGasPrice, receipt.GasUsed)
+	txInItem.Gas = common.MakeEVMGas(e.cfg.ChainID, txGasPrice, receipt.GasUsed, receipt.L1Fee)
 	txInItem.Gas[0].Asset = e.cfg.ChainID.GetGasAsset()
 
 	if txInItem.Coins.IsEmpty() {
@@ -930,7 +930,7 @@ func (e *EVMScanner) getTxInFromSmartContract(tx *etypes.Transaction, receipt *e
 
 	// under no circumstance EVM gas price will be less than 1 Gwei, unless it is in dev environment
 	txGasPrice := tx.GasPrice()
-	txInItem.Gas = common.MakeEVMGas(e.cfg.ChainID, txGasPrice, receipt.GasUsed)
+	txInItem.Gas = common.MakeEVMGas(e.cfg.ChainID, txGasPrice, receipt.GasUsed, receipt.L1Fee)
 	if txInItem.Coins.IsEmpty() {
 		return nil, nil
 	}
@@ -964,6 +964,6 @@ func (e *EVMScanner) getTxInFromFailedTransaction(tx *etypes.Transaction, receip
 		Sender: strings.ToLower(fromAddr.String()),
 		To:     strings.ToLower(tx.To().String()),
 		Coins:  common.NewCoins(common.NewCoin(e.cfg.ChainID.GetGasAsset(), cosmos.NewUint(1))),
-		Gas:    common.MakeEVMGas(e.cfg.ChainID, txGasPrice, receipt.GasUsed),
+		Gas:    common.MakeEVMGas(e.cfg.ChainID, txGasPrice, receipt.GasUsed, receipt.L1Fee),
 	}
 }

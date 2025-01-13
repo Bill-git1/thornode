@@ -20,7 +20,7 @@ func (s *GasSuite) TestETHGasFee(c *C) {
 		true,
 		Commentf("%d", amt.Uint64()),
 	)
-	gas = MakeEVMGas(ETHChain, big.NewInt(20), 10000000000) // 10 GWEI
+	gas = MakeEVMGas(ETHChain, big.NewInt(20), 10000000000, nil) // 10 GWEI
 	amt = gas[0].Amount
 	c.Check(
 		amt.Equal(cosmos.NewUint(20)),
@@ -29,12 +29,25 @@ func (s *GasSuite) TestETHGasFee(c *C) {
 		Commentf("%d", amt.Uint64()),
 	)
 	// ETH TxID b89d5eb71765b42117bb1fa30d3a22f6d2bfdba9214da60d26f028bd94bcdb0c example
-	gas = MakeEVMGas(ETHChain, big.NewInt(18000803458), 63707)
+	gas = MakeEVMGas(ETHChain, big.NewInt(18000803458), 63707, nil)
 	// 18000803458 Wei gasPrice, 63,707 gas
 	amt = gas[0].Amount
 	c.Check(
 		amt.Equal(cosmos.NewUint(114678)),
 		// Should be rounded up to 114678, not down to 114677,
+		// to increase rather than decrease solvency.
+		Equals,
+		true,
+		Commentf("%d", amt.Uint64()),
+	)
+
+	// BASE TxID 11684ba4a65f16c0445aba5894bd0639dd782f341f53f353bb9a8a28d8ebe316 example
+	gas = MakeEVMGas(BASEChain, big.NewInt(10000000000), 83481, big.NewInt(56570492588))
+	// 10000000000 Wei gasPrice, 83,481 gas, 0.000000056570492588 BASE.ETH L1 fee
+	amt = gas[0].Amount
+	c.Check(
+		amt.Equal(cosmos.NewUint(83487)),
+		// Should be rounded up to 83487, not down to 83486,
 		// to increase rather than decrease solvency.
 		Equals,
 		true,

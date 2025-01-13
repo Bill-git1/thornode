@@ -688,7 +688,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		chainHeight = c.ethScanner.currentBlockHeight
 	}
 	coin := tx.Coins[0]
-	gas := common.MakeEVMGas(c.GetChain(), createdTx.GasPrice(), createdTx.Gas())
+	gas := common.MakeEVMGas(c.GetChain(), createdTx.GasPrice(), createdTx.Gas(), nil)
 	// This is the maximum gas, using the gas limit for instant-observation
 	// rather than the GasUsed which can only be gotten from the receipt when scanning.
 

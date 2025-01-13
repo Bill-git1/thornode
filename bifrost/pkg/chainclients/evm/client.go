@@ -757,9 +757,15 @@ func (c *EVMClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 	}
 
 	coin := tx.Coins[0]
-	gas := common.MakeEVMGas(c.GetChain(), outboundTx.GasPrice(), outboundTx.Gas())
+	gas := common.MakeEVMGas(c.GetChain(), outboundTx.GasPrice(), outboundTx.Gas(), nil)
 	// This is the maximum gas, using the gas limit for instant-observation
 	// rather than the GasUsed which can only be gotten from the receipt when scanning.
+
+	// TODO:  For BASEChain MaxGas, what to do about the L1Fee not reflected in the GasPrice(),
+	// but which THORChain needs to allow enough for?
+	// (Not urgent as long as L1Fee is observed and the Dynamic Outbound Fee Multiplier
+	//  keeps total outbound fees inflow equal to total gas reimbursements outflow?
+	//  However, careful regarding any bond slashing for higher-gas-cost-than-permitted observed txouts.)
 
 	signedTx := &etypes.Transaction{}
 	if err = signedTx.UnmarshalJSON(rawTx); err != nil {
