@@ -228,6 +228,10 @@ func UpdateActiveValidatorVersions(
 		if err = thorchainKeeper.SetNodeAccount(ctx, v); err != nil {
 			return fmt.Errorf("fail to save node account: %w", err)
 		}
+		ctx.EventManager().EmitEvent(
+			cosmos.NewEvent("set_version",
+				cosmos.NewAttribute("thor_address", v.NodeAddress.String()),
+				cosmos.NewAttribute("version", version)))
 	}
 
 	// update min join version to the fork version
