@@ -176,7 +176,7 @@ func (gm *GasMgrVCUR) GetAssetOutboundFee(ctx cosmos.Context, asset common.Asset
 		return fee, nil
 	}
 
-	if gasPool.BalanceAsset.Equal(cosmos.ZeroUint()) || gasPool.BalanceRune.Equal(cosmos.ZeroUint()) {
+	if gasPool.BalanceAsset.IsZero() || gasPool.BalanceRune.IsZero() {
 		ctx.Logger().Error("fail to calculate fee as gas pool balance is zero, returning 0 fee", "pool", gasPool.Asset.String(), "rune", gasPool.BalanceRune.String(), "asset", gasPool.BalanceAsset.String())
 		return cosmos.ZeroUint(), nil
 	}
@@ -192,8 +192,8 @@ func (gm *GasMgrVCUR) GetAssetOutboundFee(ctx cosmos.Context, asset common.Asset
 	if err != nil {
 		return cosmos.ZeroUint(), err
 	}
-	if assetPool.BalanceAsset.Equal(cosmos.ZeroUint()) || assetPool.BalanceRune.Equal(cosmos.ZeroUint()) {
-		ctx.Logger().Error("fail to calculate fee as asset pool balance is zero, returning 0 fee", "pool", gasPool.Asset.String(), "rune", gasPool.BalanceRune.String(), "asset", gasPool.BalanceAsset.String())
+	if assetPool.BalanceAsset.IsZero() || assetPool.BalanceRune.IsZero() {
+		ctx.Logger().Error("fail to calculate fee as asset pool balance is zero, returning 0 fee", "pool", assetPool.Asset.String(), "rune", assetPool.BalanceRune.String(), "asset", assetPool.BalanceAsset.String())
 		return cosmos.ZeroUint(), nil
 	}
 
