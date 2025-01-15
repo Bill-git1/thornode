@@ -318,12 +318,7 @@ reset-mocknet-cluster: stop-mocknet-cluster build-mocknet-cluster run-mocknet-cl
 # ------------------------------ Test Sync ------------------------------
 
 test-sync-mainnet:
-	@BUILDTAG=mainnet BRANCH=mainnet $(MAKE) docker-gitlab-build
-	@docker run --rm -e CHAIN_ID=thorchain-1 -e NET=mainnet registry.gitlab.com/thorchain/thornode:mainnet
-
-test-sync-stagenet:
-	@BUILDTAG=stagenet BRANCH=stagenet $(MAKE) docker-gitlab-build
-	@docker run --rm -e CHAIN_ID=thorchain-stagenet-2 -e NET=stagenet -e THOR_SEED_NODES_ENDPOINT=https://stagenet-thornode.ninerealms.com/thorchain/nodes registry.gitlab.com/thorchain/thornode:stagenet
+	@./scripts/test-sync.sh
 
 # ------------------------------ Docker Build ------------------------------
 

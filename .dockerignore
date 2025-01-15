@@ -11,6 +11,7 @@ docs
 midgard
 semgrep
 test
+tmp
 tools
 !tools/events
 !tools/generate
