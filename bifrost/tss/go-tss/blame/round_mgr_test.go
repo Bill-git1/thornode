@@ -10,7 +10,7 @@ type RoundMgrSuite struct{}
 
 var _ = Suite(&RoundMgrSuite{})
 
-func (ShareMgrSuite) TestTssRoundMgr(c *C) {
+func (RoundMgrSuite) TestTssRoundMgr(c *C) {
 	mgr := NewTssRoundMgr()
 	w1 := messages.WireMessage{
 		Routing:   nil,

@@ -11,10 +11,7 @@ import (
 
 	"github.com/blang/semver"
 	"github.com/cometbft/cometbft/crypto"
-	"github.com/cosmos/cosmos-sdk/codec"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	"gitlab.com/thorchain/thornode/v3/cmd"
 	"gitlab.com/thorchain/thornode/v3/common"
@@ -209,17 +206,6 @@ func SetupConfigForTest() {
 	config.SetBech32PrefixForConsensusNode(cmd.Bech32PrefixConsAddr, cmd.Bech32PrefixConsPub)
 	config.SetCoinType(cmd.THORChainCoinType)
 	config.SetPurpose(cmd.THORChainCoinPurpose)
-}
-
-// create a codec used only for testing
-func MakeTestCodec() *codec.LegacyAmino {
-	cdc := codec.NewLegacyAmino()
-	banktypes.RegisterLegacyAminoCodec(cdc)
-	authtypes.RegisterLegacyAminoCodec(cdc)
-	RegisterLegacyAminoCodec(cdc)
-	cosmos.RegisterLegacyAminoCodec(cdc)
-	// codec.RegisterCrypto(cdc)
-	return cdc
 }
 
 // GetCurrentVersion - intended for unit tests, fetches the current version of

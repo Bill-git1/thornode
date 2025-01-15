@@ -2,7 +2,6 @@ package app
 
 import (
 	"os"
-	"testing"
 
 	"cosmossdk.io/log"
 	dbm "github.com/cosmos/cosmos-db"
@@ -16,21 +15,6 @@ import (
 const (
 	TestApp = "testApp"
 )
-
-// MakeEncodingConfig creates a new EncodingConfig with all modules registered. For testing only
-func MakeTestEncodingConfig(t testing.TB) params.EncodingConfig {
-	t.Helper()
-	// we "pre"-instantiate the application for getting the injected/configured encoding configuration
-	// note, this is not necessary when using app wiring, as depinject can be directly used (see root_v2.go)
-	tempApp := NewChainApp(
-		log.NewNopLogger(),
-		dbm.NewMemDB(),
-		nil,
-		true,
-		NewTestAppOptionsWithFlagHome(t.TempDir()),
-	)
-	return makeEncodingConfig(tempApp)
-}
 
 // MakeEncodingConfig creates a new EncodingConfig with all modules registered. For testing only
 func MakeEncodingConfig() params.EncodingConfig {

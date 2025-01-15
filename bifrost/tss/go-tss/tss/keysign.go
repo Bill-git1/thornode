@@ -323,15 +323,6 @@ func (t *TssServer) broadcastKeysignFailure(messageID string, peers []peer.ID) {
 	}
 }
 
-func (t *TssServer) isPartOfKeysignParty(parties []string) bool {
-	for _, item := range parties {
-		if t.localNodePubKey == item {
-			return true
-		}
-	}
-	return false
-}
-
 func (t *TssServer) batchSignatures(sigs []*tsslibcommon.ECSignature, msgsToSign [][]byte) keysign.Response {
 	var signatures []keysign.Signature
 	for i, sig := range sigs {

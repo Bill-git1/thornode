@@ -20,7 +20,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/std"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
@@ -153,16 +152,6 @@ func MakeCodec() codec.ProtoCodecMarshaler {
 	std.RegisterInterfaces(interfaceRegistry)
 	stypes.RegisterInterfaces(interfaceRegistry)
 	return codec.NewProtoCodec(interfaceRegistry)
-}
-
-// MakeLegacyCodec creates codec
-func MakeLegacyCodec() *codec.LegacyAmino {
-	cdc := codec.NewLegacyAmino()
-	banktypes.RegisterLegacyAminoCodec(cdc)
-	authtypes.RegisterLegacyAminoCodec(cdc)
-	cosmos.RegisterLegacyAminoCodec(cdc)
-	stypes.RegisterLegacyAminoCodec(cdc)
-	return cdc
 }
 
 // GetContext return a valid context with all relevant values set

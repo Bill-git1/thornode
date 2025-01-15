@@ -81,12 +81,6 @@ func (scp *SmartContractLogParser) parseDeposit(log etypes.Log) (vaultDepositEve
 	return event, nil
 }
 
-// RouterCoin represent the coins transfer between vault
-type RouterCoin struct {
-	Asset  ecommon.Address
-	Amount *big.Int
-}
-
 func (scp *SmartContractLogParser) unpackVaultLog(out interface{}, event string, log etypes.Log) error {
 	if len(log.Topics) == 0 {
 		return errors.New("topics field in event log is empty")

@@ -2,8 +2,6 @@
 # Config
 ########################################################################################
 
-version: "3.9"
-
 # trunk-ignore-all(yamllint/empty-values)
 
 volumes:

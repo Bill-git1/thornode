@@ -25,9 +25,6 @@ BRANCH?=$(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
 GITREF?=$(shell git rev-parse --short HEAD 2>/dev/null)
 BUILDTAG?=$(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
 
-# for dockerized protobuf tools
-DOCKER := $(shell which docker)
-
 # compiler flags
 VERSION:=$(shell cat version)
 TAG?=mocknet
@@ -45,7 +42,6 @@ TEST_PATHS=$(shell go list ./... | grep -v bifrost/tss/go-tss) # Skip compute-in
 TEST_DIR?=${TEST_PATHS}
 BUILD_FLAGS := -ldflags '$(ldflags)' -tags ${TAG} -trimpath
 TEST_BUILD_FLAGS := -parallel=1 -tags=mocknet
-GOBIN?=${GOPATH}/bin
 BINARIES?=./cmd/thornode ./cmd/bifrost ./tools/recover-keyshare-backup
 
 # docker tty args are disabled in CI
@@ -81,7 +77,7 @@ openapi:
 
 protoVer=0.13.2
 protoImageName=ghcr.io/cosmos/proto-builder:$(protoVer)
-protoImage=$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace $(protoImageName)
+protoImage=docker run --rm -v $(CURDIR):/workspace --workdir /workspace $(protoImageName)
 
 proto-all: proto-format proto-lint proto-gen format
 

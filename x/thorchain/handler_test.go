@@ -13,7 +13,6 @@ import (
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	dbm "github.com/cosmos/cosmos-db"
-	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	se "github.com/cosmos/cosmos-sdk/types/errors"
@@ -79,11 +78,6 @@ func FundAccount(c *C, ctx cosmos.Context, k keeper.Keeper, addr cosmos.AccAddre
 	c.Assert(err, IsNil)
 	err = k.SendFromModuleToAccount(ctx, ModuleName, addr, common.NewCoins(coin))
 	c.Assert(err, IsNil)
-}
-
-// create a codec used only for testing
-func makeTestCodec() *codec.LegacyAmino {
-	return types.MakeTestCodec()
 }
 
 var keyThorchain = cosmos.NewKVStoreKey(StoreKey)

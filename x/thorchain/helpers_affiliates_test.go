@@ -14,7 +14,7 @@ type HelperAffiliateSuite struct{}
 
 var _ = Suite(&HelperAffiliateSuite{})
 
-func (HandlerSuite) TestSkimAffiliateFees(c *C) {
+func (HelperAffiliateSuite) TestSkimAffiliateFees(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	affAddr1 := GetRandomTHORAddress()
 	affAddr2 := GetRandomTHORAddress()
