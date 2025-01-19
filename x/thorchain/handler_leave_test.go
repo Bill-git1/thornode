@@ -27,7 +27,7 @@ func (HandlerLeaveSuite) TestLeaveHandler_NotActiveNodeLeave(c *C) {
 	acc2.Bond = cosmos.NewUint(100 * common.One)
 	c.Assert(w.keeper.SetNodeAccount(w.ctx, acc2), IsNil)
 
-	FundModule(c, w.ctx, w.keeper, BondName, 100)
+	FundModule(c, w.ctx, w.keeper, BondName, 100*common.One)
 
 	// The following tx is only to be used by the leave handler,
 	// not the deposit handler which would have sent its Coins to BondName,
@@ -89,7 +89,7 @@ func (HandlerLeaveSuite) TestLeaveJail(c *C) {
 
 	c.Assert(w.keeper.SetNodeAccountJail(w.ctx, acc2.NodeAddress, w.ctx.BlockHeight()+100, "test it"), IsNil)
 
-	FundModule(c, w.ctx, w.keeper, BondName, 100)
+	FundModule(c, w.ctx, w.keeper, BondName, 100*common.One)
 
 	txID := GetRandomTxHash()
 	tx := common.NewTx(
@@ -452,7 +452,7 @@ func (HandlerLeaveSuite) TestLeaveDifferentValidations(c *C) {
 
 	for _, tc := range testCases {
 		ctx, mgr := setupManagerForTest(c)
-		FundModule(c, ctx, mgr.Keeper(), BondName, 1000)
+		FundModule(c, ctx, mgr.Keeper(), BondName, 1000*common.One)
 		helper := NewLeaveHandlerTestHelper(mgr.Keeper())
 		mgr.K = helper
 		handler := NewLeaveHandler(mgr)

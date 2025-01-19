@@ -48,10 +48,7 @@ func (s *HandlerSendSuiteV87) TestHandle(c *C) {
 	addr1 := GetRandomBech32Addr()
 	addr2 := GetRandomBech32Addr()
 
-	funds, err := common.NewCoin(common.RuneNative, cosmos.NewUint(200*common.One)).Native()
-	c.Assert(err, IsNil)
-	err = k.AddCoins(ctx, addr1, cosmos.NewCoins(funds))
-	c.Assert(err, IsNil)
+	FundAccount(c, ctx, k, addr1, 200*common.One)
 
 	coin, err := common.NewCoin(common.RuneNative, cosmos.NewUint(12*common.One)).Native()
 	c.Assert(err, IsNil)

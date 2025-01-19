@@ -338,7 +338,7 @@ func (s *ThorchainSuite) TestRagnarok(c *C) {
 		BondRewardRune: cosmos.NewUint(1000_000 * common.One),
 		TotalBondUnits: cosmos.NewUint(3 * 1014), // block height * node count
 	}
-	FundModule(c, ctx, mgr.Keeper(), ReserveName, cosmos.NewUint(400_100_000*common.One).Uint64())
+	FundModule(c, ctx, mgr.Keeper(), ReserveName, 400_100_000*common.One)
 	c.Assert(mgr.Keeper().SetNetwork(ctx, network), IsNil)
 	ctx = ctx.WithBlockHeight(1024)
 

@@ -93,10 +93,7 @@ func (s *AnteTestSuite) TestAnteHandleMessage(c *C) {
 	toAddr := GetRandomBech32Addr()
 
 	// fund an addr so it can pass the fee deduction ante
-	funds, err := common.NewCoin(common.RuneNative, cosmos.NewUint(200*common.One)).Native()
-	c.Assert(err, IsNil)
-	err = k.AddCoins(ctx, fromAddr, cosmos.NewCoins(funds))
-	c.Assert(err, IsNil)
+	FundAccount(c, ctx, k, fromAddr, 200*common.One)
 	coin, err := common.NewCoin(common.RuneNative, cosmos.NewUint(1*common.One)).Native()
 	c.Assert(err, IsNil)
 

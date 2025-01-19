@@ -395,7 +395,7 @@ func (s *HandlerOutboundTxSuite) TestOuboundTxHandlerSendExtraFundShouldBeSlashe
 		},
 	}, helper.ctx.BlockHeight(), helper.nodeAccount.PubKeySet.Secp256k1, helper.ctx.BlockHeight())
 	expectedBond := cosmos.NewUint(9999985039)
-	expectedVaultTotalReserve := cosmos.NewUint(7766279631465077623)
+	expectedVaultTotalReserve := cosmos.NewUint(10000000012835703)
 	// valid outbound message, with event, with txout
 	outMsg := NewMsgOutboundTx(tx, helper.inboundTx.Tx.ID, helper.nodeAccount.NodeAddress)
 	_, err = handler.Run(helper.ctx, outMsg)
@@ -459,7 +459,7 @@ func (s *HandlerOutboundTxSuite) TestOutboundTxHandlerInvalidObservedTxVoterShou
 	expectedBond := cosmos.NewUint(9850369713)
 
 	// expected 0.5 slashed RUNE be added to reserve
-	expectedVaultTotalReserve := cosmos.NewUint(7766279631514949398)
+	expectedVaultTotalReserve := cosmos.NewUint(10000000062707478)
 	pool, err := helper.keeper.GetPool(helper.ctx, common.BTCAsset)
 	c.Assert(err, IsNil)
 	poolBTC := common.SafeSub(pool.BalanceAsset, cosmos.NewUint(common.One).AddUint64(10000))

@@ -33,7 +33,7 @@ import (
 func TestPackage(t *testing.T) { TestingT(t) }
 
 func FundModule(c *C, ctx cosmos.Context, k KVStore, name string, amt uint64) {
-	coin := common.NewCoin(common.RuneNative, cosmos.NewUint(amt*common.One))
+	coin := common.NewCoin(common.RuneNative, cosmos.NewUint(amt))
 	err := k.MintToModule(ctx, ModuleName, coin)
 	c.Assert(err, IsNil)
 	err = k.SendFromModuleToModule(ctx, ModuleName, name, common.NewCoins(coin))
@@ -108,7 +108,7 @@ func setupKeeperForTest(c *C) (cosmos.Context, KVStore) {
 
 	k := NewKVStore(encodingConfig.Codec, bk, ak, uk, keyThorchain, GetCurrentVersion())
 
-	FundModule(c, ctx, k, AsgardName, common.One)
+	FundModule(c, ctx, k, AsgardName, 100_000_000*common.One)
 
 	return ctx, k
 }

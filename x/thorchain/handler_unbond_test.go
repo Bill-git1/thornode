@@ -96,7 +96,7 @@ func (HandlerUnBondSuite) TestUnBondHandler_Run(c *C) {
 
 	// Fund the Bond Module with the sum of the node bonds so that unbonding is possible.
 	bondSum := activeNodeAccount.Bond.Add(standbyNodeAccount.Bond)
-	FundModule(c, ctx, k1, BondName, bondSum.QuoUint64(common.One).Uint64())
+	FundModule(c, ctx, k1, BondName, bondSum.Uint64())
 
 	handler := NewUnBondHandler(NewDummyMgrWithKeeper(k1))
 	txIn := common.NewTx(
@@ -319,7 +319,7 @@ func (HandlerUnBondSuite) TestBondProviders_Handler(c *C) {
 
 	// Fund the Bond Module with the sum of the node bonds so that unbonding is possible.
 	bondSum := activeNodeAccount.Bond.Add(standbyNodeAccount.Bond)
-	FundModule(c, ctx, k, BondName, bondSum.QuoUint64(common.One).Uint64())
+	FundModule(c, ctx, k, BondName, bondSum.Uint64())
 
 	// happy path
 	msg := NewMsgUnBond(txIn, standbyNodeAccount.NodeAddress, cosmos.NewUint(5*common.One), standbyNodeAccount.BondAddress, nil, activeNodeAccount.NodeAddress)

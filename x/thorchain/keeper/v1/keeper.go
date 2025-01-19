@@ -356,10 +356,6 @@ func (k KVStore) SendCoins(ctx cosmos.Context, from, to cosmos.AccAddress, coins
 	return k.coinKeeper.SendCoins(ctx, from, to, coins)
 }
 
-func (k KVStore) AddCoins(ctx cosmos.Context, addr cosmos.AccAddress, coins cosmos.Coins) error {
-	return k.coinKeeper.SendCoinsFromModuleToAccount(ctx, ModuleName, addr, coins)
-}
-
 // SendFromAccountToModule transfer fund from one account to a module
 func (k KVStore) SendFromAccountToModule(ctx cosmos.Context, from cosmos.AccAddress, to string, coins common.Coins) error {
 	cosmosCoins := make(cosmos.Coins, len(coins))

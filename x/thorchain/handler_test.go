@@ -65,7 +65,7 @@ func (s *HandlerSuite) SetUpSuite(*C) {
 }
 
 func FundModule(c *C, ctx cosmos.Context, k keeper.Keeper, name string, amt uint64) {
-	coin := common.NewCoin(common.RuneNative, cosmos.NewUint(amt*common.One))
+	coin := common.NewCoin(common.RuneNative, cosmos.NewUint(amt))
 	err := k.MintToModule(ctx, ModuleName, coin)
 	c.Assert(err, IsNil)
 	err = k.SendFromModuleToModule(ctx, ModuleName, name, common.NewCoins(coin))
@@ -73,7 +73,7 @@ func FundModule(c *C, ctx cosmos.Context, k keeper.Keeper, name string, amt uint
 }
 
 func FundAccount(c *C, ctx cosmos.Context, k keeper.Keeper, addr cosmos.AccAddress, amt uint64) {
-	coin := common.NewCoin(common.RuneNative, cosmos.NewUint(amt*common.One))
+	coin := common.NewCoin(common.RuneNative, cosmos.NewUint(amt))
 	err := k.MintToModule(ctx, ModuleName, coin)
 	c.Assert(err, IsNil)
 	err = k.SendFromModuleToAccount(ctx, ModuleName, addr, common.NewCoins(coin))
@@ -142,9 +142,9 @@ func setupManagerForTest(c *C) (cosmos.Context, *Mgrs) {
 		authtypes.NewModuleAddress(ModuleName).String(),
 	)
 	k := kv1.NewKeeper(encodingConfig.Codec, bk, ak, uk, keyThorchain)
-	FundModule(c, ctx, k, ModuleName, 10000*common.One)
-	FundModule(c, ctx, k, AsgardName, common.One)
-	FundModule(c, ctx, k, ReserveName, 10000*common.One)
+	FundModule(c, ctx, k, ModuleName, 10_000*common.One)
+	FundModule(c, ctx, k, AsgardName, 100_000_000*common.One)
+	FundModule(c, ctx, k, ReserveName, 100_000_000*common.One)
 	c.Assert(k.SaveNetworkFee(ctx, common.ETHChain, NetworkFee{
 		Chain:              common.ETHChain,
 		TransactionSize:    1,
@@ -234,6 +234,9 @@ func setupKeeperForTest(c *C) (cosmos.Context, keeper.Keeper) {
 	c.Assert(bk.MintCoins(ctx, ModuleName, cosmos.Coins{
 		cosmos.NewCoin(common.RuneAsset().Native(), cosmos.NewInt(200_000_000_00000000)),
 	}), IsNil)
+	c.Assert(bk.BurnCoins(ctx, ModuleName, cosmos.Coins{
+		cosmos.NewCoin(common.RuneAsset().Native(), cosmos.NewInt(200_000_000_00000000)),
+	}), IsNil)
 	uk := upgradekeeper.NewKeeper(
 		nil,
 		runtime.NewKVStoreService(keyUpgrade),
@@ -243,7 +246,6 @@ func setupKeeperForTest(c *C) (cosmos.Context, keeper.Keeper) {
 		authtypes.NewModuleAddress(ModuleName).String(),
 	)
 	k := kv1.NewKVStore(encodingConfig.Codec, bk, ak, uk, keyThorchain, GetCurrentVersion())
-	FundModule(c, ctx, k, ModuleName, 1000000*common.One)
 	FundModule(c, ctx, k, AsgardName, common.One)
 	FundModule(c, ctx, k, ReserveName, 10000*common.One)
 	err = k.SaveNetworkFee(ctx, common.ETHChain, NetworkFee{
@@ -289,7 +291,7 @@ func getHandlerTestWrapper(c *C, height int64, withActiveNode, withActieDOGEPool
 		c.Assert(mgr.Keeper().SetPool(ctx, p), IsNil)
 	}
 
-	FundModule(c, ctx, mgr.Keeper(), AsgardName, 100000000)
+	FundModule(c, ctx, mgr.Keeper(), AsgardName, common.One)
 
 	c.Assert(mgr.ValidatorMgr().BeginBlock(ctx, mgr, nil), IsNil)
 
@@ -349,7 +351,7 @@ func (HandlerSuite) TestHandleTxInWithdrawLiquidityMemo(c *C) {
 
 	handler := NewInternalHandler(w.mgr)
 
-	FundModule(c, w.ctx, w.keeper, AsgardName, 500)
+	FundModule(c, w.ctx, w.keeper, AsgardName, 500*common.One)
 	c.Assert(w.keeper.SaveNetworkFee(w.ctx, common.DOGEChain, NetworkFee{
 		Chain:              common.DOGEChain,
 		TransactionSize:    1,

@@ -179,7 +179,7 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItem(c *C) {
 	c.Assert(msgs[0].ToAddress.String(), Equals, "qzg5mkh7rkw3y8kw47l3rrnvhmenvctmd5yg6hxe64")
 
 	// outbound originating from a pool should pay fee from asgard to reserve
-	FundModule(c, w.ctx, w.keeper, AsgardName, 1000_00000000)
+	FundModule(c, w.ctx, w.keeper, AsgardName, 1000*common.One)
 	testAndCheckModuleBalances(c, w.ctx, w.keeper,
 		func() {
 			item = TxOutItem{
@@ -203,7 +203,7 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItem(c *C) {
 	)
 
 	// outbound originating from bond should pay fee from bond to reserve
-	FundModule(c, w.ctx, w.keeper, BondName, 1000_00000000)
+	FundModule(c, w.ctx, w.keeper, BondName, 1000*common.One)
 	testAndCheckModuleBalances(c, w.ctx, w.keeper,
 		func() {
 			item = TxOutItem{

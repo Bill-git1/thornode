@@ -53,10 +53,7 @@ func (s *HandlerDepositSuite) TestHandle(c *C) {
 		common.NewCoin(common.RuneNative, cosmos.NewUint(200*common.One)),
 	}
 
-	funds, err := common.NewCoin(common.RuneNative, cosmos.NewUint(300*common.One)).Native()
-	c.Assert(err, IsNil)
-	err = k.AddCoins(ctx, addr, cosmos.NewCoins(funds))
-	c.Assert(err, IsNil)
+	FundAccount(c, ctx, k, addr, 300*common.One)
 	pool := NewPool()
 	pool.Asset = common.DOGEAsset
 	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
@@ -65,7 +62,7 @@ func (s *HandlerDepositSuite) TestHandle(c *C) {
 	c.Assert(k.SetPool(ctx, pool), IsNil)
 	msg := NewMsgDeposit(coins, "ADD:DOGE.DOGE", addr)
 
-	_, err = handler.handle(ctx, *msg)
+	_, err := handler.handle(ctx, *msg)
 	c.Assert(err, IsNil)
 	// ensure observe tx had been saved
 	hash := tmtypes.Tx(ctx.TxBytes()).Hash()
@@ -76,8 +73,7 @@ func (s *HandlerDepositSuite) TestHandle(c *C) {
 	c.Assert(voter.Tx.IsEmpty(), Equals, false)
 	c.Assert(voter.Tx.Status, Equals, types.Status_done)
 
-	err = k.AddCoins(ctx, addr, cosmos.NewCoins(funds))
-	c.Assert(err, IsNil)
+	FundAccount(c, ctx, k, addr, 300*common.One)
 	// do it again, make sure the transaction get rejected
 	_, err = handler.handle(ctx, *msg)
 	c.Assert(err, NotNil)
@@ -155,7 +151,7 @@ func (s *HandlerDepositSuite) TestDifferentValidation(c *C) {
 		{
 			name: "invalid memo should err",
 			messageProvider: func(c *C, ctx cosmos.Context, helper *HandlerDepositTestHelper) cosmos.Msg {
-				FundAccount(c, ctx, helper.Keeper, acctAddr, 100)
+				FundAccount(c, ctx, helper.Keeper, acctAddr, 100*common.One)
 				vault := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, GetRandomPubKey(), common.Chains{common.DOGEChain, common.THORChain}.Strings(), []ChainContract{})
 				c.Check(helper.Keeper.SetVault(ctx, vault), IsNil)
 				return NewMsgDeposit(common.Coins{

@@ -39,7 +39,6 @@ type Keeper interface {
 
 	// passthrough funcs
 	SendCoins(ctx cosmos.Context, from, to cosmos.AccAddress, coins cosmos.Coins) error
-	AddCoins(ctx cosmos.Context, addr cosmos.AccAddress, coins cosmos.Coins) error
 
 	InvariantRoutes() []common.InvariantRoute
 

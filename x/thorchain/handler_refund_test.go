@@ -331,7 +331,7 @@ func (s *HandlerRefundSuite) TestRefundTxHandlerSendExtraFundShouldBeSlashed(c *
 	}, helper.ctx.BlockHeight(), helper.nodeAccount.PubKeySet.Secp256k1, helper.ctx.BlockHeight())
 	// expectedBond := helper.nodeAccount.Bond.Sub(ETHGasFeeSingleton[0].Amount).MulUint64(3).QuoUint64(2)
 	expectedBond := cosmos.NewUint(9999985000)
-	expectedVaultTotalReserve := cosmos.NewUint(7766279631452321919)
+	expectedVaultTotalReserve := cosmos.NewUint(1000000079999)
 	// valid outbound message, with event, with txout
 	outMsg := NewMsgRefundTx(tx, helper.inboundTx.Tx.ID, helper.nodeAccount.NodeAddress)
 	_, err = handler.Run(helper.ctx, outMsg)
@@ -395,7 +395,7 @@ func (s *HandlerRefundSuite) TestOutboundTxHandlerInvalidObservedTxVoterShouldSl
 
 	expectedBond := cosmos.NewUint(9849987250)
 	// expected 0.5 slashed RUNE be added to reserve
-	expectedVaultTotalReserve := cosmos.NewUint(7766279631502321169)
+	expectedVaultTotalReserve := cosmos.NewUint(1000050079249)
 	pool, err := helper.keeper.GetPool(helper.ctx, common.ETHAsset)
 	c.Assert(err, IsNil)
 	poolETH := common.SafeSub(pool.BalanceAsset, cosmos.NewUint(common.One).AddUint64(10000))

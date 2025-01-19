@@ -104,10 +104,6 @@ func (k KVStoreDummy) SendCoins(ctx cosmos.Context, from, to cosmos.AccAddress, 
 	return kaboom
 }
 
-func (k KVStoreDummy) AddCoins(ctx cosmos.Context, _ cosmos.AccAddress, coins cosmos.Coins) error {
-	return kaboom
-}
-
 func (k KVStoreDummy) SendFromAccountToModule(ctx cosmos.Context, from cosmos.AccAddress, to string, coins common.Coins) error {
 	return kaboom
 }
