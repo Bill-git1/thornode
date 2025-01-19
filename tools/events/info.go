@@ -1,12 +1,14 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/rs/zerolog/log"
+	"gopkg.in/yaml.v2"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -14,6 +16,9 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
 	openapi "gitlab.com/thorchain/thornode/v3/openapi/gen"
+	"gitlab.com/thorchain/thornode/v3/tools/events/pkg/config"
+	"gitlab.com/thorchain/thornode/v3/tools/events/pkg/notify"
+	"gitlab.com/thorchain/thornode/v3/tools/events/pkg/util"
 	"gitlab.com/thorchain/thornode/v3/tools/thorscan"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
@@ -40,8 +45,8 @@ func ScanInfo(block *thorscan.BlockResponse) {
 func Version(block *thorscan.BlockResponse) {
 	for _, event := range block.BeginBlockEvents {
 		if event["type"] == types.VersionEventType {
-			msg := fmt.Sprintf("`[%d]` Network Version Upgraded: `%s`", block.Header.Height, event["version"])
-			Notify(config.Notifications.Info, msg, nil, false, nil)
+			msg := fmt.Sprintf("Network Version Upgraded: `%s`", event["version"])
+			notify.Notify(config.Get().Notifications.Info, msg, block.Header.Height, nil, notify.Success, nil)
 		}
 	}
 }
@@ -76,14 +81,15 @@ func SetMimir(block *thorscan.BlockResponse) {
 			}
 
 			var msg string
+			level := notify.Success
 			switch event["key"] {
 			case "NODEPAUSECHAINGLOBAL":
-				msg = formatNodePauseMessage(block.Header.Height, tx, event)
+				msg, level = formatNodePauseMessage(block.Header.Height, tx, event)
 			default:
 				msg = formatMimirMessage(block.Header.Height, source, event["key"], event["value"])
 			}
 
-			Notify(config.Notifications.Info, msg, nil, false, nil)
+			notify.Notify(config.Get().Notifications.Info, msg, block.Header.Height, nil, level, nil)
 		}
 	}
 }
@@ -96,8 +102,8 @@ func SetNodeMimir(block *thorscan.BlockResponse) {
 	for _, tx := range block.Txs {
 		for _, event := range tx.Result.Events {
 			if event["type"] == types.SetNodeMimirEventType {
-				msg := formatNodeMimirMessage(block.Header.Height, event["address"], event["key"], event["value"])
-				Notify(config.Notifications.Info, "", []string{msg}, false, nil)
+				title, fields := formatNodeMimirMessage(block.Header.Height, event["address"], event["key"], event["value"])
+				notify.Notify(config.Get().Notifications.Info, title, block.Header.Height, nil, notify.Info, fields)
 			}
 		}
 	}
@@ -126,7 +132,7 @@ func KeygenFailure(block *thorscan.BlockResponse) {
 				log.Panic().Err(err).Str("height", heightStr).Msg("failed to parse keygen height")
 			}
 			nodes := []openapi.Node{}
-			err = ThornodeCachedRetryGet("thorchain/nodes", height, &nodes)
+			err = util.ThornodeCachedRetryGet("thorchain/nodes", height, &nodes)
 			if err != nil {
 				log.Panic().Err(err).Msg("failed to get nodes")
 			}
@@ -197,15 +203,15 @@ func KeygenFailure(block *thorscan.BlockResponse) {
 			}
 
 			// build the fields
-			fields := NewOrderedMap()
+			fields := util.NewOrderedMap()
 			fields.Set("Keygen Height", event["height"])
 			fields.Set("Reason", event["reason"])
 			fields.Set("Blame", strings.Join(blameStrs, ", "))
 			fields.Set("Others", fmt.Sprintf("`%s`", strings.Join(othersStrs, ", ")))
 
 			// notify
-			title := fmt.Sprintf("`[%d]` Keygen Failure", block.Header.Height)
-			Notify(config.Notifications.Info, title, nil, false, fields)
+			title := "Keygen Failure"
+			notify.Notify(config.Get().Notifications.Info, title, block.Header.Height, nil, notify.Error, fields)
 		}
 	}
 }
@@ -230,7 +236,7 @@ type ChurnInfo struct {
 func Churn(block *thorscan.BlockResponse) {
 	// get the current state
 	info := ChurnInfo{}
-	err := Load("churn", &info)
+	err := util.Load("churn", &info)
 	if err != nil {
 		log.Debug().Err(err).Msg("failed to load churn state")
 	}
@@ -264,7 +270,7 @@ func Churn(block *thorscan.BlockResponse) {
 		}
 	}
 	if updated {
-		err = Store("churn", info)
+		err = util.Store("churn", info)
 		if err != nil {
 			log.Panic().Err(err).Msg("failed to save churn state")
 		}
@@ -276,17 +282,17 @@ func Churn(block *thorscan.BlockResponse) {
 			case types.TSSKeygenMetricEventType: // check for keygen started
 				if info.State == ChurnStateComplete {
 					info.State = ChurnStateKeygen
-					err = Store("churn", info)
+					err = util.Store("churn", info)
 					if err != nil {
 						log.Panic().Err(err).Msg("failed to save churn state")
 					}
-					title := fmt.Sprintf("`[%d]` Keygen Started", block.Header.Height)
-					Notify(config.Notifications.Info, title, nil, false, nil)
+					title := "Keygen Started"
+					notify.Notify(config.Get().Notifications.Info, title, block.Header.Height, nil, notify.Info, nil)
 				}
 			case thorchain.EventTypeActiveVault: // check for active vault (keygens complete)
 				if info.State == ChurnStateKeygen {
 					info.State = ChurnStateMigrating
-					err = Store("churn", info)
+					err = util.Store("churn", info)
 					if err != nil {
 						log.Panic().Err(err).Msg("failed to save churn state")
 					}
@@ -304,18 +310,18 @@ func Churn(block *thorscan.BlockResponse) {
 		info.State = ChurnStateComplete
 		info.KeyshareBackups = make(map[string]map[string]bool)
 
-		err = Store("churn", info)
+		err = util.Store("churn", info)
 		if err != nil {
 			log.Panic().Err(err).Msg("failed to save churn state")
 		}
-		title := fmt.Sprintf("`[%d]` Churn Complete", block.Header.Height)
-		Notify(config.Notifications.Info, title, nil, false, nil)
+		title := "Churn Complete"
+		notify.Notify(config.Get().Notifications.Info, title, block.Header.Height, nil, notify.Success, nil)
 	}
 }
 
 func vaultsMigrating(height int64) bool {
 	network := openapi.NetworkResponse{}
-	err := ThornodeCachedRetryGet("thorchain/network", height, &network)
+	err := util.ThornodeCachedRetryGet("thorchain/network", height, &network)
 	if err != nil {
 		log.Panic().Err(err).Msg("failed to get network")
 	}
@@ -326,11 +332,11 @@ func notifyChurnStarted(height int64, keyshareBackups map[string]map[string]bool
 	// get nodes at current and previous height
 	oldNodes := []openapi.Node{}
 	newNodes := []openapi.Node{}
-	err := ThornodeCachedRetryGet("thorchain/nodes", height-1, &oldNodes)
+	err := util.ThornodeCachedRetryGet("thorchain/nodes", height-1, &oldNodes)
 	if err != nil {
 		log.Panic().Err(err).Int64("height", height-1).Msg("failed to get old nodes")
 	}
-	err = ThornodeCachedRetryGet("thorchain/nodes", height, &newNodes)
+	err = util.ThornodeCachedRetryGet("thorchain/nodes", height, &newNodes)
 	if err != nil {
 		log.Panic().Err(err).Int64("height", height).Msg("failed to get new nodes")
 	}
@@ -417,12 +423,12 @@ func notifyChurnStarted(height int64, keyshareBackups map[string]map[string]bool
 		standbyNodes = append(standbyNodes, fmt.Sprintf("`%s` (oldest)", oldest.NodeAddress[len(oldest.NodeAddress)-4:]))
 	}
 
-	title := fmt.Sprintf("[%d] Churn Started", height)
+	title := "Churn Started"
 
 	// compute the keyshare backups counts for new vault members
-	lines := []string{"_Keyshare Backups_"}
+	keyshareBackupLines := []string{}
 	vaults := []openapi.Vault{}
-	err = ThornodeCachedRetryGet("thorchain/vaults/asgard", height, &vaults)
+	err = util.ThornodeCachedRetryGet("thorchain/vaults/asgard", height, &vaults)
 	if err != nil {
 		log.Panic().Err(err).Msg("failed to get vaults")
 	}
@@ -431,7 +437,7 @@ func notifyChurnStarted(height int64, keyshareBackups map[string]map[string]bool
 			continue
 		}
 		pk := *vault.PubKey
-		lines = append(lines,
+		keyshareBackupLines = append(keyshareBackupLines,
 			fmt.Sprintf(
 				"`%s`: %d/%d (%.2f%%)",
 				pk[len(pk)-4:], len(keyshareBackups[pk]), len(vault.Membership),
@@ -439,9 +445,9 @@ func notifyChurnStarted(height int64, keyshareBackups map[string]map[string]bool
 			),
 		)
 	}
-	lines = append(lines, "")
 
-	fields := NewOrderedMap()
+	fields := util.NewOrderedMap()
+	fields.Set("Keyshare Backups", strings.Join(keyshareBackupLines, "\n"))
 
 	// active nodes
 	if len(added) > 0 {
@@ -461,14 +467,14 @@ func notifyChurnStarted(height int64, keyshareBackups map[string]map[string]bool
 	}
 	fields.Set("Standby", strings.Join(standbyNodes, ", "))
 
-	Notify(config.Notifications.Info, title, lines, false, fields)
+	notify.Notify(config.Get().Notifications.Info, title, height, nil, notify.Success, fields)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // Helpers
 ////////////////////////////////////////////////////////////////////////////////////////
 
-func formatNodePauseMessage(height int64, tx thorscan.BlockTx, event map[string]string) string {
+func formatNodePauseMessage(height int64, tx thorscan.BlockTx, event map[string]string) (string, notify.Level) {
 	legacyMsg, ok := tx.Tx.GetMsgs()[0].(sdk.LegacyMsg)
 	if !ok {
 		log.Panic().Msg("failed to cast to legacy message")
@@ -480,28 +486,33 @@ func formatNodePauseMessage(height int64, tx thorscan.BlockTx, event map[string]
 	}
 
 	action := fmt.Sprintf("**Node `%s` Unpaused**", signer[len(signer)-4:])
+	level := notify.Success
 	if height <= pauseHeight {
+		level = notify.Danger
 		action = fmt.Sprintf("**Node `%s` Paused**: %d blocks", signer[len(signer)-4:], pauseHeight-height)
 	}
 
-	return fmt.Sprintf("`[%d]` %s", height, action)
+	return action, level
 }
 
 func formatMimirMessage(height int64, source, key, value string) string {
 	// get value at previous height
 	mimirs := make(map[string]int64)
-	err := ThornodeCachedRetryGet("thorchain/mimir", height-1, &mimirs)
+	err := util.ThornodeCachedRetryGet("thorchain/mimir", height-1, &mimirs)
 	if err != nil {
 		log.Panic().Int64("height", height-1).Err(err).Msg("failed to get mimirs")
 	}
 
 	if previous, ok := mimirs[key]; ok {
-		return fmt.Sprintf("`[%d]` **%s**: %d -> %s (%s)", height, key, previous, value, source)
+		return fmt.Sprintf(
+			"Mimir **`%s`** Changed: %d -> %s (%s)",
+			key, previous, value, source,
+		)
 	}
-	return fmt.Sprintf("`[%d]` **%s**: %s (%s)", height, key, value, source)
+	return fmt.Sprintf("Mimir **`%s`** Set: %s (%s)", key, value, source)
 }
 
-func formatNodeMimirMessage(height int64, node, key, value string) string {
+func formatNodeMimirMessage(height int64, node, key, value string) (string, *util.OrderedMap) {
 	// convert value to int64
 	valueInt, err := strconv.ParseInt(value, 10, 64)
 	if err != nil {
@@ -510,7 +521,7 @@ func formatNodeMimirMessage(height int64, node, key, value string) string {
 
 	// get all active nodes at current height
 	nodes := []openapi.Node{}
-	err = ThornodeCachedRetryGet("thorchain/nodes", height, &nodes)
+	err = util.ThornodeCachedRetryGet("thorchain/nodes", height, &nodes)
 	if err != nil {
 		log.Panic().Int64("height", height).Err(err).Msg("failed to get active nodes")
 	}
@@ -523,7 +534,7 @@ func formatNodeMimirMessage(height int64, node, key, value string) string {
 
 	// get value at previous height
 	mimirs := openapi.MimirNodesResponse{}
-	err = ThornodeCachedRetryGet("thorchain/mimir/nodes_all", height-1, &mimirs)
+	err = util.ThornodeCachedRetryGet("thorchain/mimir/nodes_all", height-1, &mimirs)
 	if err != nil {
 		log.Panic().Int64("height", height-1).Err(err).Msg("failed to get node mimirs")
 	}
@@ -564,28 +575,25 @@ func formatNodeMimirMessage(height int64, node, key, value string) string {
 	// add the new vote
 	votes[valueInt]++
 
-	// compute the percent voted for the node vote value
-	votePercent := 100 * float64(votes[valueInt]) / float64(len(activeNodes))
-
-	// base message
-	msg := fmt.Sprintf(
-		"`[%d]` Node `%s` Vote - **%s**=%d (%.2f%%)",
-		height, node[len(node)-4:], key, valueInt, votePercent,
-	)
+	fields := util.NewOrderedMap()
+	title := fmt.Sprintf("Node Mimir: `%s`", key)
+	fields.Set("Node", fmt.Sprintf("`%s`", node[len(node)-4:]))
+	valueStr := fmt.Sprintf("%d", valueInt)
 	if previous != nil {
-		msg = fmt.Sprintf(
-			"`[%d]` Node `%s` Vote - **%s**=%d (_change from `%d`_) (%.2f%%)",
-			height, node[len(node)-4:], key, valueInt, *previous, votePercent,
-		)
+		valueStr += fmt.Sprintf(" (change from `%d`)", *previous)
 	}
+	fields.Set("Value", valueStr)
 
 	// add the votes and validator count
+	votesLines := []string{}
 	for vote, count := range votes {
-		msg += fmt.Sprintf(" | `%d`: %d votes", vote, count)
+		percentage := float64(count) / float64(len(activeNodes)) * 100
+		line := fmt.Sprintf("**`%d`**: %d/%d (%.1f%%)", vote, count, len(activeNodes), percentage)
+		votesLines = append(votesLines, line)
 	}
-	msg += fmt.Sprintf(" | Validators: %d", len(activeNodes))
+	fields.Set("Votes", strings.Join(votesLines, "\n"))
 
-	return msg
+	return title, fields
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -593,20 +601,20 @@ func formatNodeMimirMessage(height int64, node, key, value string) string {
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func TORAnchorDrift(block *thorscan.BlockResponse) {
-	if block.Header.Height%config.TORAnchorCheckBlocks != 0 {
+	if block.Header.Height%config.Get().TORAnchorCheckBlocks != 0 {
 		return
 	}
 
 	// get mimirs
 	mimirs := map[string]int64{}
-	err := ThornodeCachedRetryGet("thorchain/mimir", block.Header.Height, &mimirs)
+	err := util.ThornodeCachedRetryGet("thorchain/mimir", block.Header.Height, &mimirs)
 	if err != nil {
 		log.Panic().Err(err).Msg("failed to get mimirs")
 	}
 
 	// get pools
 	pools := []openapi.Pool{}
-	err = ThornodeCachedRetryGet("thorchain/pools", block.Header.Height, &pools)
+	err = util.ThornodeCachedRetryGet("thorchain/pools", block.Header.Height, &pools)
 	if err != nil {
 		log.Panic().Err(err).Msg("failed to get pools")
 	}
@@ -635,7 +643,7 @@ func TORAnchorDrift(block *thorscan.BlockResponse) {
 
 	// skip if not over the drift threshold
 	driftBPS := maxPrice.Sub(minPrice).MulUint64(constants.MaxBasisPts).Quo(maxPrice)
-	if driftBPS.LT(cosmos.NewUint(config.Thresholds.TORAnchorDriftBasisPoints)) {
+	if driftBPS.LT(cosmos.NewUint(config.Get().Thresholds.TORAnchorDriftBasisPoints)) {
 		return
 	}
 
@@ -647,7 +655,7 @@ func TORAnchorDrift(block *thorscan.BlockResponse) {
 	})
 
 	// build notification
-	fields := NewOrderedMap()
+	fields := util.NewOrderedMap()
 	maxFieldLenth := 0
 	for _, pool := range torPools {
 		shortAsset := strings.Split(pool.Asset, "-")[0]
@@ -661,11 +669,11 @@ func TORAnchorDrift(block *thorscan.BlockResponse) {
 			shortAsset = strings.Repeat(" ", maxFieldLenth-len(shortAsset)) + shortAsset
 		}
 		price := float64(cosmos.NewUintFromString(pool.AssetTorPrice).Uint64()) / common.One
-		fields.Set(shortAsset, FormatUSD(price))
+		fields.Set(shortAsset, util.FormatUSD(price))
 	}
 
-	title := fmt.Sprintf("`[%d]` TOR Anchor Drift (%.02f%%)", block.Header.Height, float64(driftBPS.Uint64())/100)
-	Notify(config.Notifications.Info, title, nil, false, fields)
+	title := fmt.Sprintf("TOR Anchor Drift (%.02f%%)", float64(driftBPS.Uint64())/100)
+	notify.Notify(config.Get().Notifications.Info, title, block.Header.Height, nil, notify.Warning, fields)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -676,27 +684,47 @@ func UpgradeProposalAndApproval(block *thorscan.BlockResponse) {
 	for _, tx := range block.Txs {
 		for _, event := range tx.Result.Events {
 
-			fields := NewOrderedMap()
-			tag := false
+			fields := util.NewOrderedMap()
+			lines := []string{}
+			level := notify.Info
 			var title string
 			switch event["type"] {
 			case "propose_upgrade":
-				title = fmt.Sprintf("`[%d]` Upgrade Proposed: `%s`", block.Header.Height, event["name"])
-				tag = true
-				fields.Set("Height", fmt.Sprintf("`%s`", event["height"]))
-				fields.Set("Info", event["info"])
+				title = fmt.Sprintf("Upgrade Proposed: `%s`", event["name"])
+				level = notify.Broadcast
+				fields.Set("Height", fmt.Sprintf("[`%s`](%s/block/%s)", event["height"], config.Get().Links.Explorer, event["height"]))
+
+				// decode info into yaml for notification
+				rawInfo := event["info"]
+				rawInfo = strings.ReplaceAll(rawInfo, "\\", "") // remove escapes
+				info := map[string]any{}
+				err := json.Unmarshal([]byte(rawInfo), &info)
+				if err != nil {
+					log.Error().Err(err).Msg("failed to decode event info")
+					break
+				}
+				yamlInfo, err := yaml.Marshal(info)
+				if err != nil {
+					log.Error().Err(err).Msg("failed to marshal event info")
+					break
+				}
+				lines = []string{fmt.Sprintf("```yaml\n%s\n```", yamlInfo)}
+
 			case "approve_upgrade":
-				title = fmt.Sprintf("`[%d]` Upgrade Approved: `%s`", block.Header.Height, event["name"])
+				title = fmt.Sprintf("Upgrade Approved: `%s`", event["name"])
 
 				// fetch proposal stats
 				proposal := openapi.UpgradeProposal{}
 				path := fmt.Sprintf("thorchain/upgrade_proposal/%s", event["name"])
-				err := ThornodeCachedRetryGet(path, block.Header.Height, &proposal)
+				err := util.ThornodeCachedRetryGet(path, block.Header.Height, &proposal)
 				if err != nil {
 					log.Panic().Err(err).Msg("failed to get upgrade proposal")
 				}
 				if proposal.ApprovedPercent == nil || proposal.ValidatorsToQuorum == nil {
 					break
+				}
+				if *proposal.ValidatorsToQuorum == 0 {
+					level = notify.Success
 				}
 
 				// add progress fields
@@ -704,14 +732,14 @@ func UpgradeProposalAndApproval(block *thorscan.BlockResponse) {
 				if err != nil {
 					log.Panic().Err(err).Msg("failed to parse approved percent")
 				}
-				fields.Set("Approval Percent", fmt.Sprintf("`%.2f%%`", percent))
-				fields.Set("Remaining Votes Required", fmt.Sprintf("`%d`", *proposal.ValidatorsToQuorum))
+				fields.Set("Approval Percent", fmt.Sprintf("%.1f%%", percent))
+				fields.Set("Approvals Required", fmt.Sprintf("%d", *proposal.ValidatorsToQuorum))
 			default:
 				continue
 			}
 
-			fields.Set("Node", fmt.Sprintf("`%s`", event["thor_address"]))
-			Notify(config.Notifications.Info, title, nil, tag, fields)
+			fields.Set("Node", fmt.Sprintf("`%s`", event["thor_address"][len(event["thor_address"])-4:]))
+			notify.Notify(config.Get().Notifications.Info, title, block.Header.Height, lines, level, fields)
 		}
 	}
 }

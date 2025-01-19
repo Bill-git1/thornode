@@ -1,4 +1,4 @@
-package main
+package util
 
 import (
 	"gitlab.com/thorchain/thornode/v3/common"

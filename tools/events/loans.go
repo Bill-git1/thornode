@@ -9,6 +9,9 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	openapi "gitlab.com/thorchain/thornode/v3/openapi/gen"
+	"gitlab.com/thorchain/thornode/v3/tools/events/pkg/config"
+	"gitlab.com/thorchain/thornode/v3/tools/events/pkg/notify"
+	"gitlab.com/thorchain/thornode/v3/tools/events/pkg/util"
 	"gitlab.com/thorchain/thornode/v3/tools/thorscan"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
@@ -32,8 +35,8 @@ func LoanOpen(block *thorscan.BlockResponse) {
 			continue
 		}
 
-		title := fmt.Sprintf("`[%d]` Loan Open", block.Header.Height)
-		fields := NewOrderedMap()
+		title := "Loan Open"
+		fields := util.NewOrderedMap()
 		lines := []string{}
 
 		// extract event data
@@ -46,14 +49,14 @@ func LoanOpen(block *thorscan.BlockResponse) {
 
 		// collateral
 		collateralCoin := common.NewCoin(collateralAsset, collateralAmount)
-		collateralUSDValue := USDValue(block.Header.Height, collateralCoin)
-		collateralExternalUSDValue := ExternalUSDValue(collateralCoin)
+		collateralUSDValue := util.USDValue(block.Header.Height, collateralCoin)
+		collateralExternalUSDValue := util.ExternalUSDValue(collateralCoin)
 		fields.Set("Collateral", fmt.Sprintf(
 			"%s (%s) _(External: %s)_",
-			collateralCoin, FormatUSD(collateralUSDValue), FormatUSD(collateralExternalUSDValue),
+			collateralCoin, util.FormatUSD(collateralUSDValue), util.FormatUSD(collateralExternalUSDValue),
 		))
-		if uint64(collateralUSDValue) > config.Styles.USDPerMoneyBag {
-			lines = append(lines, Moneybags(uint64(collateralUSDValue)))
+		if uint64(collateralUSDValue) > config.Get().Styles.USDPerMoneyBag {
+			lines = append(lines, util.Moneybags(uint64(collateralUSDValue)))
 		}
 
 		// collateralization ratio
@@ -66,8 +69,10 @@ func LoanOpen(block *thorscan.BlockResponse) {
 		fields.Set("CR", crStr)
 
 		// debt
-		debtStr := FormatUSD(float64(debtInTOR.Uint64()) / common.One)
+		level := notify.Info
+		debtStr := util.FormatUSD(float64(debtInTOR.Uint64()) / common.One)
 		if debtInTOR.GT(cosmos.NewUint(uint64(collateralUSDValue * common.One))) {
+			level = notify.Warning
 			debtStr = fmt.Sprintf(":rotating_light: %s :rotating_light:", debtStr)
 		}
 		fields.Set("Debt", debtStr)
@@ -81,14 +86,14 @@ func LoanOpen(block *thorscan.BlockResponse) {
 
 		// links
 		links := []string{
-			fmt.Sprintf("[Owner](%s/address/%s?tab=loans)", config.Links.Explorer, event["owner"]),
-			fmt.Sprintf("[Transaction](%s/tx/%s)", config.Links.Explorer, event["tx_id"]),
+			fmt.Sprintf("[Owner](%s/address/%s?tab=loans)", config.Get().Links.Explorer, event["owner"]),
+			fmt.Sprintf("[Transaction](%s/tx/%s)", config.Get().Links.Explorer, event["tx_id"]),
 			"[Lending Dashboard](https://dashboards.ninerealms.com/#lending)",
 		}
 		fields.Set("Links", strings.Join(links, " | "))
 
 		// notify
-		Notify(config.Notifications.Lending, title, lines, false, fields)
+		notify.Notify(config.Get().Notifications.Lending, title, block.Header.Height, lines, level, fields)
 	}
 }
 
@@ -102,8 +107,8 @@ func LoanRepayment(block *thorscan.BlockResponse) {
 			continue
 		}
 
-		title := fmt.Sprintf("`[%d]` Loan Repayment", block.Header.Height)
-		fields := NewOrderedMap()
+		title := "Loan Repayment"
+		fields := util.NewOrderedMap()
 		lines := []string{}
 
 		// extract event data
@@ -114,26 +119,26 @@ func LoanRepayment(block *thorscan.BlockResponse) {
 		}
 		debtRepaid := cosmos.NewUintFromString(event["debt_repaid"])
 		fields.Set("Owner", event["owner"])
-		fields.Set("Debt Repaid", FormatUSD(float64(debtRepaid.Uint64())/common.One))
+		fields.Set("Debt Repaid", util.FormatUSD(float64(debtRepaid.Uint64())/common.One))
 
 		// withdrawn
 		withdrawnCoin := common.NewCoin(collateralAsset, collateralWithdrawn)
 		withdrawnStr := fmt.Sprintf("%f %s", float64(collateralWithdrawn.Uint64())/common.One, collateralAsset)
 		if !collateralWithdrawn.IsZero() {
-			usdValue := USDValue(block.Header.Height, withdrawnCoin)
-			withdrawnStr += fmt.Sprintf(" (%s)", FormatUSD(usdValue))
-			withdrawnStr += fmt.Sprintf(" _(External: %s)_", FormatUSD(ExternalUSDValue(withdrawnCoin)))
-			if uint64(usdValue) > config.Styles.USDPerMoneyBag {
-				lines = append(lines, Moneybags(uint64(usdValue)))
+			usdValue := util.USDValue(block.Header.Height, withdrawnCoin)
+			withdrawnStr += fmt.Sprintf(" (%s)", util.FormatUSD(usdValue))
+			withdrawnStr += fmt.Sprintf(" _(External: %s)_", util.FormatUSD(util.ExternalUSDValue(withdrawnCoin)))
+			if uint64(usdValue) > config.Get().Styles.USDPerMoneyBag {
+				lines = append(lines, util.Moneybags(uint64(usdValue)))
 			}
-			title += fmt.Sprintf(" %s", EmojiMoneyWithWings)
+			title += fmt.Sprintf(" %s", config.EmojiMoneyWithWings)
 		}
 		fields.Set("Collateral Withdrawn", withdrawnStr)
 
 		// loan status
 		borrower := openapi.Borrower{}
-		url := fmt.Sprintf("%s/thorchain/pool/%s/borrower/%s", config.Endpoints.Thornode, collateralAsset.String(), event["owner"])
-		err = RetryGet(url, &borrower)
+		url := fmt.Sprintf("%s/thorchain/pool/%s/borrower/%s", config.Get().Endpoints.Thornode, collateralAsset.String(), event["owner"])
+		err = util.RetryGet(url, &borrower)
 		if err != nil {
 			log.Panic().Str("borrower", event["owner"]).Err(err).Msg("failed to get borrower")
 		}
@@ -150,46 +155,46 @@ func LoanRepayment(block *thorscan.BlockResponse) {
 			"%f %s (%s)",
 			float64(borrowerCollateralDeposited.Uint64())/common.One,
 			collateralAsset,
-			USDValueString(block.Header.Height, common.NewCoin(collateralAsset, borrowerCollateralDeposited)),
+			util.USDValueString(block.Header.Height, common.NewCoin(collateralAsset, borrowerCollateralDeposited)),
 		)
 		collateralWithdrawnStr := fmt.Sprintf(
 			"%f %s (%s)",
 			float64(borrowerCollateralWithdrawn.Uint64())/common.One,
 			collateralAsset,
-			USDValueString(block.Header.Height, common.NewCoin(collateralAsset, borrowerCollateralWithdrawn)),
+			util.USDValueString(block.Header.Height, common.NewCoin(collateralAsset, borrowerCollateralWithdrawn)),
 		)
 		collateralRemainingStr := fmt.Sprintf(
 			"%f %s (%s)",
 			float64(borrowerCollateralCurrent.Uint64())/common.One,
 			collateralAsset,
-			USDValueString(block.Header.Height, common.NewCoin(collateralAsset, borrowerCollateralCurrent)),
+			util.USDValueString(block.Header.Height, common.NewCoin(collateralAsset, borrowerCollateralCurrent)),
 		)
 		fields.Set("Collateral", fmt.Sprintf(
-			"%s deposited | %s withdrawn | %s remaining",
+			"%s deposited\n%s withdrawn\n%s remaining",
 			collateralDepositedStr, collateralWithdrawnStr, collateralRemainingStr,
 		))
 		fields.Set("Total Debt", fmt.Sprintf(
-			"%s issued | %s repaid | %s remaining",
-			FormatUSD(float64(borrowerDebtIssued.Uint64())/common.One),
-			FormatUSD(float64(borrowerDebtRepaid.Uint64())/common.One),
-			FormatUSD(float64(borrowerDebtCurrent.Uint64())/common.One),
+			"%s issued\n%s repaid\n%s remaining",
+			util.FormatUSD(float64(borrowerDebtIssued.Uint64())/common.One),
+			util.FormatUSD(float64(borrowerDebtRepaid.Uint64())/common.One),
+			util.FormatUSD(float64(borrowerDebtCurrent.Uint64())/common.One),
 		))
 		ageDuration := time.Duration(blockAge*common.THORChain.ApproximateBlockMilliseconds()) * time.Millisecond
-		fields.Set("Age", fmt.Sprintf("%d blocks (%s)", blockAge, FormatDuration(ageDuration)))
+		fields.Set("Age", fmt.Sprintf("%d blocks (%s)", blockAge, util.FormatDuration(ageDuration)))
 
 		// collect swap fees from midgard
 		setMidgardLoanFees(block.Header.Height, fields, event["tx_id"])
 
 		// links
 		links := []string{
-			fmt.Sprintf("[Owner](%s/address/%s?tab=loans)", config.Links.Explorer, event["owner"]),
-			fmt.Sprintf("[Transaction](%s/tx/%s)", config.Links.Explorer, event["tx_id"]),
+			fmt.Sprintf("[Owner](%s/address/%s?tab=loans)", config.Get().Links.Explorer, event["owner"]),
+			fmt.Sprintf("[Transaction](%s/tx/%s)", config.Get().Links.Explorer, event["tx_id"]),
 			"[Lending Dashboard](https://dashboards.ninerealms.com/#lending)",
 		}
 		fields.Set("Links", strings.Join(links, " | "))
 
 		// notify
-		Notify(config.Notifications.Lending, title, lines, false, fields)
+		notify.Notify(config.Get().Notifications.Lending, title, block.Header.Height, lines, notify.Info, fields)
 	}
 }
 
@@ -197,14 +202,14 @@ func LoanRepayment(block *thorscan.BlockResponse) {
 // Helpers
 ////////////////////////////////////////////////////////////////////////////////////////
 
-func setMidgardLoanFees(height int64, fields *OrderedMap, txid string) {
+func setMidgardLoanFees(height int64, fields *util.OrderedMap, txid string) {
 	// sleep to reduce race before collecting fees from midgard
 	time.Sleep(time.Duration(common.THORChain.ApproximateBlockMilliseconds()) * time.Millisecond)
 
 	// get actions
-	actions := MidgardActionsResponse{}
-	url := fmt.Sprintf("%s/v2/actions?txid=%s", config.Endpoints.Midgard, txid)
-	err := RetryGet(url, &actions)
+	actions := util.MidgardActionsResponse{}
+	url := fmt.Sprintf("%s/v2/actions?txid=%s", config.Get().Endpoints.Midgard, txid)
+	err := util.RetryGet(url, &actions)
 	if err != nil {
 		log.Panic().
 			Err(err).
@@ -225,7 +230,7 @@ func setMidgardLoanFees(height int64, fields *OrderedMap, txid string) {
 				"%f %s (%s)",
 				float64(fee.Amount.Uint64())/common.One,
 				fee.Asset,
-				USDValueString(height, common.NewCoin(fee.Asset, fee.Amount)),
+				util.USDValueString(height, common.NewCoin(fee.Asset, fee.Amount)),
 			))
 		}
 	}
@@ -234,7 +239,7 @@ func setMidgardLoanFees(height int64, fields *OrderedMap, txid string) {
 	fields.Set("Liquidity Fee", fmt.Sprintf(
 		"%f RUNE (%s)",
 		float64(liquidityFee.Uint64())/common.One,
-		FormatUSD(float64(liquidityFee.Uint64())/common.One),
+		util.FormatUSD(float64(liquidityFee.Uint64())/common.One),
 	))
 	fields.Set("Outbound Fees", strings.Join(outboundFees, " | "))
 }

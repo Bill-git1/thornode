@@ -1,4 +1,4 @@
-package main
+package util
 
 import (
 	"encoding/json"
@@ -8,6 +8,8 @@ import (
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/rs/zerolog/log"
+
+	"gitlab.com/thorchain/thornode/v3/tools/events/pkg/config"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -15,7 +17,7 @@ import (
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func RetryGet(url string, result interface{}) error {
-	return Retry(config.MaxRetries, func() error {
+	return Retry(config.Get().MaxRetries, func() error {
 		// make the request
 		res, err := http.DefaultClient.Get(url)
 		if err != nil {
@@ -41,7 +43,7 @@ var cache *lru.Cache
 
 func InitCache() {
 	var err error
-	cache, err = lru.New(config.Endpoints.CacheSize)
+	cache, err = lru.New(config.Get().Endpoints.CacheSize)
 	if err != nil {
 		log.Panic().Err(err).Msg("failed to initialize cache")
 	}
@@ -54,7 +56,7 @@ func InitCache() {
 // ThornodeCachedRetryGet fetches the Thornode API response at the provided height with
 // retry. Responses at a specific height are assumed immutable and cached indefinitely.
 func ThornodeCachedRetryGet(path string, height int64, result interface{}, allowStatus ...int) error {
-	url := fmt.Sprintf("%s/%s?height=%d", config.Endpoints.Thornode, path, height)
+	url := fmt.Sprintf("%s/%s?height=%d", config.Get().Endpoints.Thornode, path, height)
 
 	// check the cache first
 	if val, ok := cache.Get(url); ok {
@@ -71,7 +73,7 @@ func ThornodeCachedRetryGet(path string, height int64, result interface{}, allow
 	var body []byte
 
 	// attempt to populate the cache
-	err := Retry(config.MaxRetries, func() error {
+	err := Retry(config.Get().MaxRetries, func() error {
 		// create the request and self-identify
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"regexp"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -10,7 +11,19 @@ import (
 
 	"gitlab.com/thorchain/thornode/v3/cmd"
 	"gitlab.com/thorchain/thornode/v3/constants"
+	"gitlab.com/thorchain/thornode/v3/tools/events/pkg/config"
+	"gitlab.com/thorchain/thornode/v3/tools/events/pkg/util"
 	"gitlab.com/thorchain/thornode/v3/tools/thorscan"
+)
+
+////////////////////////////////////////////////////////////////////////////////////////
+// Regexes
+////////////////////////////////////////////////////////////////////////////////////////
+
+var (
+	reMemoMigration = regexp.MustCompile(`MIGRATE:(\d+)`)
+	reMemoRagnarok  = regexp.MustCompile(`RAGNAROK:(\d+)`)
+	reMemoRefund    = regexp.MustCompile(`REFUND:(.+)`)
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -25,7 +38,7 @@ func InitNetwork() {
 	var bech32PrefixConsAddr string
 	var bech32PrefixConsPub string
 
-	switch config.Network {
+	switch config.Get().Network {
 	case "mainnet":
 		bech32PrefixAccAddr = "thor"
 		bech32PrefixAccPub = "thorpub"
@@ -51,7 +64,7 @@ func InitNetwork() {
 		bech32PrefixConsPub = "tthorcpub"
 
 	default:
-		log.Fatal().Str("network", config.Network).Msg("unknown network")
+		log.Fatal().Str("network", config.Get().Network).Msg("unknown network")
 	}
 
 	// initialize the bech32 prefixes
@@ -89,19 +102,19 @@ func main() {
 	log.Logger = log.With().Caller().Logger()
 
 	// initialize
-	InitCache()
+	util.InitCache()
 	InitNetwork()
-	thorscan.APIEndpoint = config.Endpoints.Thornode
+	thorscan.APIEndpoint = config.Get().Endpoints.Thornode
 
 	// prune local storage
-	Prune("scheduled-outbound")
-	Prune("seen-inactive-inbound")
-	Prune("seen-large-unconfirmed-inbound")
-	Prune("seen-large-streaming-swap")
+	util.Prune("scheduled-outbound")
+	util.Prune("seen-inactive-inbound")
+	util.Prune("seen-large-unconfirmed-inbound")
+	util.Prune("seen-large-streaming-swap")
 
 	// load the last scanned height from storage
 	height := -1
-	err := Load("height", &height)
+	err := util.Load("height", &height)
 	if err != nil {
 		log.Warn().Err(err).Msg("unable to load height")
 	} else {
@@ -110,18 +123,18 @@ func main() {
 	}
 
 	// override with config
-	if config.Scan.Start != 0 {
-		height = config.Scan.Start
+	if config.Get().Scan.Start != 0 {
+		height = config.Get().Scan.Start
 		log.Info().Int("height", height).Msg("overriding start height")
 	}
 
 	// if in console mode set log level to error
-	if config.Console {
+	if config.Get().Console {
 		log.Info().Msg("console mode enabled")
 		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 	}
 
-	for block := range thorscan.Scan(height, config.Scan.Stop) {
+	for block := range thorscan.Scan(height, config.Get().Scan.Stop) {
 		// trail by one block to avoid race with downstream midgard use
 		var blockTime time.Time
 		blockTime, err = time.Parse(time.RFC3339, block.Header.Time)
@@ -132,7 +145,7 @@ func main() {
 
 		ScanBlock(block)
 
-		err = Store("height", block.Header.Height)
+		err = util.Store("height", block.Header.Height)
 		if err != nil {
 			log.Fatal().Err(err).Int64("height", block.Header.Height).Msg("unable to store height")
 		}

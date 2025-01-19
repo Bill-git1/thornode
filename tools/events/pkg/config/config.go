@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"reflect"
@@ -37,6 +37,12 @@ type Webhooks struct {
 // Config
 ////////////////////////////////////////////////////////////////////////////////////////
 
+// Get returns the global configuration.
+func Get() Config {
+	return config
+}
+
+// Config contains all configuration for the application.
 type Config struct {
 	// StoragePath is parent directory for any persisted state.
 	StoragePath string `mapstructure:"storage_path"`
@@ -244,6 +250,6 @@ func init() {
 	viper.AutomaticEnv()
 	viper.AllowEmptyEnv(true)
 	if err := viper.Unmarshal(&config); err != nil {
-		log.Panic().Err(err).Msg("failed to unmarshal config")
+		log.Panic().Err(err).Msg("failed to unmarshal config.")
 	}
 }

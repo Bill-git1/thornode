@@ -6,6 +6,9 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"gitlab.com/thorchain/thornode/v3/common"
+	"gitlab.com/thorchain/thornode/v3/tools/events/pkg/config"
+	"gitlab.com/thorchain/thornode/v3/tools/events/pkg/notify"
+	"gitlab.com/thorchain/thornode/v3/tools/events/pkg/util"
 	"gitlab.com/thorchain/thornode/v3/tools/thorscan"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
@@ -34,19 +37,19 @@ func SecurityEvents(block *thorscan.BlockResponse) {
 			}
 
 			// notify security event
-			title := fmt.Sprintf("`[%d]` Security Event", block.Header.Height)
+			title := "Security Event"
 			data, err := json.MarshalIndent(event, "", "  ")
 			if err != nil {
 				log.Error().Err(err).Msg("unable to marshal security event")
 			}
 			lines := []string{"```" + string(data) + "```"}
-			fields := NewOrderedMap()
+			fields := util.NewOrderedMap()
 			fields.Set("Hash", tx.Hash)
 			fields.Set(
 				"Links",
-				fmt.Sprintf("[Explorer](%s/tx/%s)", config.Links.Explorer, tx.BlockTx.Hash),
+				fmt.Sprintf("[Explorer](%s/tx/%s)", config.Get().Links.Explorer, tx.BlockTx.Hash),
 			)
-			Notify(config.Notifications.Security, title, lines, false, fields)
+			notify.Notify(config.Get().Notifications.Security, title, block.Header.Height, lines, notify.Warning, fields)
 		}
 	}
 
@@ -57,13 +60,13 @@ func SecurityEvents(block *thorscan.BlockResponse) {
 		}
 
 		// notify security event
-		title := fmt.Sprintf("`[%d]` Security Event", block.Header.Height)
+		title := "Security Event"
 		data, err := json.MarshalIndent(event, "", "  ")
 		if err != nil {
 			log.Error().Err(err).Msg("unable to marshal security event")
 		}
 		lines := []string{"```" + string(data) + "```"}
-		Notify(config.Notifications.Security, title, lines, false, nil)
+		notify.Notify(config.Get().Notifications.Security, title, block.Header.Height, lines, notify.Warning, nil)
 	}
 }
 
@@ -79,15 +82,15 @@ func ErrataTransactions(block *thorscan.BlockResponse) {
 			}
 
 			// build the notification
-			title := fmt.Sprintf("`[%d]` Errata", block.Header.Height)
-			fields := NewOrderedMap()
+			title := "Errata Tx"
+			fields := util.NewOrderedMap()
 			fields.Set(
 				"Links",
-				fmt.Sprintf("[Details](%s/thorchain/tx/details/%s)", config.Links.Thornode, event["tx_id"]),
+				fmt.Sprintf("[Details](%s/thorchain/tx/details/%s)", config.Get().Links.Thornode, event["tx_id"]),
 			)
 
 			// notify errata transaction
-			Notify(config.Notifications.Security, title, nil, false, fields)
+			notify.Notify(config.Get().Notifications.Security, title, block.Header.Height, nil, notify.Warning, fields)
 		}
 	}
 }
@@ -115,7 +118,7 @@ func Round7Failures(block *thorscan.BlockResponse) {
 
 				// skip seen round 7 failures
 				seen := map[string]bool{}
-				err := Load("round7", &seen)
+				err := util.Load("round7", &seen)
 				if err != nil {
 					log.Error().Err(err).Msg("unable to load round 7 failures")
 				}
@@ -124,21 +127,21 @@ func Round7Failures(block *thorscan.BlockResponse) {
 				}
 
 				// build the notification
-				title := fmt.Sprintf("`[%d]` Round 7 Failure", block.Header.Height)
-				fields := NewOrderedMap()
+				title := "Round 7 Failure"
+				fields := util.NewOrderedMap()
 				fields.Set("Amount", fmt.Sprintf(
 					"%f %s (%s)",
 					float64(msgKeysignFail.Coins[0].Amount.Uint64())/common.One,
 					msgKeysignFail.Coins[0].Asset,
-					USDValueString(block.Header.Height, msgKeysignFail.Coins[0]),
+					util.USDValueString(block.Header.Height, msgKeysignFail.Coins[0]),
 				))
 				fields.Set("Memo", msgKeysignFail.Memo)
-				fields.Set("Transaction", fmt.Sprintf("%s/cosmos/tx/v1beta1/txs/%s", config.Links.Thornode, tx.Hash))
-				Notify(config.Notifications.Security, title, nil, false, fields)
+				fields.Set("Transaction", fmt.Sprintf("%s/cosmos/tx/v1beta1/txs/%s", config.Get().Links.Thornode, tx.Hash))
+				notify.Notify(config.Get().Notifications.Security, title, block.Header.Height, nil, notify.Warning, fields)
 
 				// save seen round 7 failures
 				seen[msgKeysignFail.Memo] = true
-				err = Store("round7", seen)
+				err = util.Store("round7", seen)
 				if err != nil {
 					log.Error().Err(err).Msg("unable to save round 7 failures")
 				}

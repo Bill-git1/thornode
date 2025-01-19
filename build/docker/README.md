@@ -6,7 +6,7 @@ The default image will start a fullnode:
 
 ```bash
 docker run \
-  -e CHAIN_ID=thorchain-mainnet-v1 \
+  -e CHAIN_ID=thorchain-1 \
   -e NET=mainnet \
   registry.gitlab.com/thorchain/thornode:mainnet
 ```
@@ -17,7 +17,7 @@ The above command will result in syncing chain state to ephemeral storage within
 mkdir thornode-data
 docker run \
   -v $(pwd)/thornode-data:/root/.thornode \
-  -e CHAIN_ID=thorchain-mainnet-v1 \
+  -e CHAIN_ID=thorchain-1 \
   -e NET=mainnet \
   registry.gitlab.com/thorchain/thornode:mainnet
 ```
@@ -55,7 +55,7 @@ while true; do
 do
 ```
 
-The above commands also apply to `stagenet` by simply using the respective image (in these cases `-e NET=...` is not required):
+The above commands also apply to `stagenet` by simply using the respective image and chain ID (in these cases `-e NET=...` is not required):
 
 ```code
 stagenet => registry.gitlab.com/thorchain/thornode:stagenet

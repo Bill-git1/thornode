@@ -26,7 +26,7 @@ FROM debian:bullseye-20241111-slim@sha256:60a596681410bd31a48e5975806a24cd78328f
 COPY --from=build /go/bin/events /usr/bin/
 
 RUN apt-get update && \
-  apt-get install -y --no-install-recommends ca-certificates=20210119 && \
+  apt-get install -y --no-install-recommends curl=7.74.0-1.3+deb11u14 ca-certificates=20210119 && \
   rm -rf /var/lib/apt/lists/*
 
 CMD ["events"]

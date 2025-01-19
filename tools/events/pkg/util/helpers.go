@@ -1,4 +1,4 @@
-package main
+package util
 
 import (
 	"fmt"
@@ -9,19 +9,11 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	openapi "gitlab.com/thorchain/thornode/v3/openapi/gen"
-)
-
-////////////////////////////////////////////////////////////////////////////////////////
-// Regexes
-////////////////////////////////////////////////////////////////////////////////////////
-
-var (
-	reMemoMigration = regexp.MustCompile(`MIGRATE:(\d+)`)
-	reMemoRagnarok  = regexp.MustCompile(`RAGNAROK:(\d+)`)
-	reMemoRefund    = regexp.MustCompile(`REFUND:(.+)`)
+	"gitlab.com/thorchain/thornode/v3/tools/events/pkg/config"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -134,8 +126,8 @@ func FormatUSD(value float64) string {
 }
 
 func Moneybags(usdValue uint64) string {
-	count := int(usdValue / config.Styles.USDPerMoneyBag)
-	return strings.Repeat(EmojiMoneybag, count)
+	count := int(usdValue / config.Get().Styles.USDPerMoneyBag)
+	return strings.Repeat(config.EmojiMoneybag, count)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
