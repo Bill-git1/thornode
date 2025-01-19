@@ -209,12 +209,6 @@ func (a *SaverEjectActor) setMimirs(config *OpConfig) OpResult {
 }
 
 func (a *SaverEjectActor) setMimir(config *OpConfig, key string, value int64) bool {
-	// wait to acquire the admin user
-	if !config.AdminUser.Acquire() {
-		return false
-	}
-	defer config.AdminUser.Release()
-
 	// get mimir
 	mimirs, err := thornode.GetMimirs()
 	if err != nil {
@@ -228,23 +222,31 @@ func (a *SaverEjectActor) setMimir(config *OpConfig, key string, value int64) bo
 	}
 
 	// set mimirs to trigger eject
-	accAddr, err := config.AdminUser.PubKey().GetThorAddress()
-	if err != nil {
-		a.Log().Error().Err(err).Msg("failed to get thor address")
-		return false
-	}
-	mimir := types.NewMsgMimir(key, value, accAddr)
-	txid, err := config.AdminUser.Thorchain.Broadcast(mimir)
-	if err != nil {
-		a.Log().Error().Err(err).Msg("failed to broadcast mimir")
-		return false
-	}
+	for _, node := range config.NodeUsers {
+		// wait to acquire the node user
+		if !node.Acquire() {
+			return false
+		}
+		// Release all the node users at the end of the function.
+		defer node.Release()
 
-	a.Log().Info().
-		Str("key", key).
-		Int64("value", value).
-		Str("txid", txid.String()).
-		Msg("broadcasted mimir")
+		accAddr, err := node.PubKey().GetThorAddress()
+		if err != nil {
+			a.Log().Error().Err(err).Msg("failed to get thor address")
+			return false
+		}
+		mimir := types.NewMsgMimir(key, value, accAddr)
+		txid, err := node.Thorchain.Broadcast(mimir)
+		if err != nil {
+			a.Log().Error().Err(err).Msg("failed to broadcast mimir")
+			return false
+		}
+		a.Log().Info().
+			Str("key", key).
+			Int64("value", value).
+			Str("txid", txid.String()).
+			Msg("broadcasted mimir")
+	}
 
 	return false // continue will occur after the mimir is observed set on next retry
 }

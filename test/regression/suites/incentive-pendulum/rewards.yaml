@@ -179,7 +179,7 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
-  - .|[.[].balance_rune|tonumber] | add == ${TOTAL_POOLED_RUNE=191200602934}
+  - .|[.[].balance_rune|tonumber] | add == ${TOTAL_POOLED_RUNE=191200602783}
   - 100 * ${TOTAL_POOLED_RUNE} / ${BOND} | round == ${SECURED_PROPORTION=38} # (%)
 ---
 type: check
@@ -187,7 +187,7 @@ endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .|[..|select(.type?=="swap").liquidity_fee_in_rune|tonumber] | add == ${LIQ_FEES=197058573}
   - .|[..|select(.type?=="rewards")] | length == 1
-  - ..|select(.type?=="rewards").bond_reward == "${BOND_REWARD=37706351}"
-  - ..|select(.type?=="rewards") | ([.[]|tonumber?] | add) - (.bond_reward|tonumber) == ${POOL_REWARDS=-37595367}
-  - ${POOL_REWARDS} + ${LIQ_FEES} == ${POOL_EARNINGS=159463206}
+  - ..|select(.type?=="rewards").bond_reward == "${BOND_REWARD=37706502}"
+  - ..|select(.type?=="rewards") | ([.[]|tonumber?] | add) - (.bond_reward|tonumber) == ${POOL_REWARDS=-37595518}
+  - ${POOL_REWARDS} + ${LIQ_FEES} == ${POOL_EARNINGS=159463055}
   - (100 * ${BOND_REWARD} / (${BOND_REWARD} + ${POOL_EARNINGS}) | round) == (${SECURED_PROPORTION} * ${ASSETS_BPS}/10000 | round)

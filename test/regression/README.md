@@ -70,7 +70,7 @@ fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox 
 pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig quick
 ```
 
-The `dog` mnemonic is a special case and will be used as the mnemonic for the default simulation validator, and as the mimir admin.
+The `dog` mnemonic is a special case and will be used as the mnemonic for the default simulation validator.
 
 ### Variables
 

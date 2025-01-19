@@ -142,8 +142,8 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
-  - .balance_asset|tonumber == 3968731019
-  - .balance_rune|tonumber == 3968761303
+  - .balance_asset|tonumber == 3968730971
+  - .balance_rune|tonumber == 3968761255
   - .derived_depth_bps|tonumber == 100 # squash to 1%
 ---
 type: tx-observed-in
@@ -190,7 +190,7 @@ params:
   to_asset: RUNE
   destination: {{ addr_thor_fox }}
 asserts:
-  - .expected_amount_out|tonumber == ${INITIAL_EXPECTED_OUT=989943538}
+  - .expected_amount_out|tonumber == ${INITIAL_EXPECTED_OUT=989943526}
   - .expected_debt_issued|tonumber == 4095920000
 ---
 type: tx-deposit
@@ -253,8 +253,8 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
-  - .balance_asset|tonumber == 1884944291
-  - .balance_rune|tonumber == 4932678459
+  - .balance_asset|tonumber == 1884944304
+  - .balance_rune|tonumber == 4932678355
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -292,15 +292,15 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
-  - .balance_asset|tonumber == 1884944291
-  - .balance_rune|tonumber == 4932678459
+  - .balance_asset|tonumber == 1884944304
+  - .balance_rune|tonumber == 4932678355
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - '[.end_block_events[]|select(.type=="outbound" and .to=="{{ addr_thor_pig }}")]|length == 1'
   # use this amount later to pay back the loan after anchor repegs
-  - .end_block_events[]|select(.type=="outbound" and .to=="{{ addr_thor_pig }}")|.coin == "${RUNE_BORROWED=400166516} THOR.RUNE"
+  - .end_block_events[]|select(.type=="outbound" and .to=="{{ addr_thor_pig }}")|.coin == "${RUNE_BORROWED=400166505} THOR.RUNE"
 ---
 ########################################################################################
 # 2/3 of tor anchor pools depeg and attacker prevents swaps for max anchor blocks
@@ -318,7 +318,7 @@ params:
   to_asset: RUNE
   destination: {{ addr_thor_fox }}
 asserts:
-  - .expected_amount_out|tonumber == 1219164077
+  - .expected_amount_out|tonumber == 1219164051
   - .expected_debt_issued|tonumber == 1546380000
 ---
 type: create-blocks
@@ -334,14 +334,14 @@ params:
 asserts:
   # anchor blocks must be set sufficiently high, otherwise debt can be manipulated with
   # no penalty on the debt outbound from the contracted virtual pool
-  - .expected_amount_out|tonumber == 3991253558
+  - .expected_amount_out|tonumber == 3991253445
   - .expected_debt_issued|tonumber == 1551170000
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
-  - .balance_asset|tonumber == 188494429131
-  - .balance_rune|tonumber == 493269889107
+  - .balance_asset|tonumber == 188494430502
+  - .balance_rune|tonumber == 493269878759
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -382,13 +382,13 @@ asserts:
 type: tx-mimir
 signer: {{ addr_thor_dog }}
 key: TorAnchor-ETH-USDY-0X9999999999999999999999999999999999999999
-value: -1
+value: 0
 sequence: 10
 ---
 type: tx-mimir
 signer: {{ addr_thor_dog }}
 key: TorAnchor-ETH-USDZ-0X9999999999999999999999999999999999999999
-value: -1
+value: 0
 sequence: 11
 ---
 type: create-blocks
@@ -397,14 +397,14 @@ count: 2 # 2 blocks required to update tor pool
 type: check
 endpoint: http://localhost:1317/thorchain/mimir
 asserts:
-  - ."TORANCHOR-ETH-USDY-0X9999999999999999999999999999999999999999" == null
-  - ."TORANCHOR-ETH-USDZ-0X9999999999999999999999999999999999999999" == null
+  - ."TORANCHOR-ETH-USDY-0X9999999999999999999999999999999999999999" == 0
+  - ."TORANCHOR-ETH-USDZ-0X9999999999999999999999999999999999999999" == 0
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
   - .balance_asset|tonumber == 99999999999
-  - .balance_rune|tonumber == 100001591652
+  - .balance_rune|tonumber == 100001591651
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -447,7 +447,7 @@ endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances[]|select(.denom == "rune")|.amount == "${RUNE_BORROWED}"
   # Prepare repay amount.
-  - ${RUNE_BORROWED} - 2000000 == ${REPAY_AMOUNT=398166516}
+  - ${RUNE_BORROWED} - 2000000 == ${REPAY_AMOUNT=398166505}
 ---
 type: tx-deposit
 signer: {{ addr_thor_pig }}
@@ -471,7 +471,7 @@ asserts:
   - .[2].collateral_deposited   == "494905"
   - .[2].collateral_withdrawn == "494905"
   - .[2].debt_issued   == "185400000"
-  - .[2].debt_repaid == "395008384"
+  - .[2].debt_repaid == "395008373"
   - .[2]| (.debt_repaid|tonumber) > 2 * (.debt_issued|tonumber) # over 2x the repaid debt
   - .[2].owner == "{{ addr_btc_pig }}"
 ---
@@ -515,7 +515,7 @@ asserts:
 type: tx-mimir
 signer: {{ addr_thor_dog }}
 key: TorAnchor-ETH-USDX-0X9999999999999999999999999999999999999999
-value: -1
+value: 0
 sequence: 14
 ---
 type: create-blocks
@@ -524,7 +524,7 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/mimir
 asserts:
-  - ."TORANCHOR-ETH-USDX-0X9999999999999999999999999999999999999999" == null
+  - ."TORANCHOR-ETH-USDX-0X9999999999999999999999999999999999999999" == 0
 ---
 ########################################################################################
 # attempt to open on existing loan with all tor anchors removed

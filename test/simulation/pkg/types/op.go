@@ -12,9 +12,6 @@ import (
 
 // OpConfig is the configuration passed to each operation during execution.
 type OpConfig struct {
-	// AdminUser is the client for the mimir admin account.
-	AdminUser *User
-
 	// NodeUsers is a slice clients for simulation validator keys.
 	NodeUsers []*User
 

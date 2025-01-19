@@ -82,7 +82,7 @@ signer: {{ addr_thor_dog }}
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/supply
 asserts:
-  - .supply|length == 3
+  - .supply|length == 2
   - .supply[]|select(.denom == "btc/btc")|.amount|tonumber == 4763021
 ---
 type: create-blocks

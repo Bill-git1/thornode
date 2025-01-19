@@ -17,7 +17,7 @@
         {
           "@type": "/cosmos.auth.v1beta1.ModuleAccount",
           "base_account": {
-            "account_number": "12",
+            "account_number": "9",
             "address": "tthor1rzqfv62dzu585607s5awqtgnvvwz5rzhfuaw80",
             "pub_key": null,
             "sequence": "0"
@@ -40,20 +40,6 @@
           ]
         },
         {
-          "@type": "/cosmos.auth.v1beta1.BaseAccount",
-          "account_number": "10",
-          "address": "tthor19pkncem64gajdwrd5kasspyj0t75hhkpy9zyej",
-          "pub_key": null,
-          "sequence": "0"
-        },
-        {
-          "@type": "/cosmos.auth.v1beta1.BaseAccount",
-          "account_number": "9",
-          "address": "tthor1xghvhe4p50aqh5zq2t2vls938as0dkr2l4e33j",
-          "pub_key": null,
-          "sequence": "0"
-        },
-        {
           "@type": "/cosmos.auth.v1beta1.ModuleAccount",
           "base_account": {
             "account_number": "1",
@@ -63,13 +49,6 @@
           },
           "name": "asgard",
           "permissions": []
-        },
-        {
-          "@type": "/cosmos.auth.v1beta1.BaseAccount",
-          "account_number": "11",
-          "address": "tthor1f4l5dlqhaujgkxxqmug4stfvmvt58vx2tspx4g",
-          "pub_key": null,
-          "sequence": "0"
         },
         {
           "@type": "/cosmos.auth.v1beta1.ModuleAccount",
@@ -155,28 +134,6 @@
             {
               "amount": "5000000000000",
               "denom": "rune"
-            },
-            {
-              "amount": "100000000000",
-              "denom": "thor.mimir"
-            }
-          ]
-        },
-        {
-          "address": "tthor19pkncem64gajdwrd5kasspyj0t75hhkpy9zyej",
-          "coins": [
-            {
-              "amount": "100000000000",
-              "denom": "thor.mimir"
-            }
-          ]
-        },
-        {
-          "address": "tthor1xghvhe4p50aqh5zq2t2vls938as0dkr2l4e33j",
-          "coins": [
-            {
-              "amount": "100000000000",
-              "denom": "thor.mimir"
             }
           ]
         },
@@ -184,17 +141,8 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "319221834271",
+              "amount": "319221817636",
               "denom": "rune"
-            }
-          ]
-        },
-        {
-          "address": "tthor1f4l5dlqhaujgkxxqmug4stfvmvt58vx2tspx4g",
-          "coins": [
-            {
-              "amount": "100000000000",
-              "denom": "thor.mimir"
             }
           ]
         },
@@ -202,7 +150,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "34998120731142",
+              "amount": "34998138731240",
               "denom": "rune"
             }
           ]
@@ -215,7 +163,7 @@
               "denom": "btc/btc"
             },
             {
-              "amount": "2299955536174",
+              "amount": "2299955536170",
               "denom": "rune"
             }
           ]
@@ -224,7 +172,7 @@
           "address": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
           "coins": [
             {
-              "amount": "2477117925663",
+              "amount": "2477117922157",
               "denom": "rune"
             }
           ]
@@ -233,7 +181,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "5005583972750",
+              "amount": "5005565992797",
               "denom": "rune"
             }
           ]
@@ -253,10 +201,6 @@
         {
           "amount": "50100000000000",
           "denom": "rune"
-        },
-        {
-          "amount": "400000000000",
-          "denom": "thor.mimir"
         }
       ]
     },
@@ -265,7 +209,7 @@
     },
     "thorchain": {
       "POL": {
-        "rune_deposited": "1975087646",
+        "rune_deposited": "1975087556",
         "rune_withdrawn": "0"
       },
       "THORNames": [],
@@ -287,7 +231,7 @@
           "pending_asset": "0",
           "pending_rune": "0",
           "rune_address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
-          "rune_deposit_value": "986088038",
+          "rune_deposit_value": "986087993",
           "units": "397377002"
         },
         {
@@ -344,7 +288,7 @@
       ],
       "network": {
         "NodeIncomeSplit": "10000",
-        "bond_reward_rune": "5583972750",
+        "bond_reward_rune": "5583992797",
         "total_bond_units": "8"
       },
       "network_fees": [
@@ -354,11 +298,57 @@
           "transaction_size": "1000"
         }
       ],
-      "nodeMimirs": [],
+      "nodeMimirs": [
+        {
+          "key": "EMISSIONCURVE",
+          "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+          "value": "1000000000000"
+        },
+        {
+          "key": "MAXSYNTHPERPOOLDEPTH",
+          "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+          "value": "5000"
+        },
+        {
+          "key": "POL-BTC-BTC",
+          "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+          "value": "1"
+        },
+        {
+          "key": "POLBUFFER",
+          "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+          "value": "1000"
+        },
+        {
+          "key": "POLMAXNETWORKDEPOSIT",
+          "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+          "value": "1000000000"
+        },
+        {
+          "key": "POLMAXPOOLMOVEMENT",
+          "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+          "value": "5000"
+        },
+        {
+          "key": "POLTARGETSYNTHPERPOOLDEPTH",
+          "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+          "value": "2500"
+        },
+        {
+          "key": "RUNEPOOLENABLED",
+          "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+          "value": "1"
+        },
+        {
+          "key": "RUNEPOOLMAXRESERVEBACKSTOP",
+          "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+          "value": "1000000000"
+        }
+      ],
       "node_accounts": [
         {
           "active_block_height": "1",
-          "bond": "5000000000000",
+          "bond": "4999982000000",
           "bond_address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
           "ip_address": "1.1.1.1",
           "node_address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
@@ -380,7 +370,7 @@
           "LP_units": "100397377002",
           "asset": "BTC.BTC",
           "balance_asset": "100000000",
-          "balance_rune": "319221834271",
+          "balance_rune": "319221817636",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -391,26 +381,26 @@
       "reserve_contributors": null,
       "rune_pool": {
         "pool_units": "0",
-        "reserve_units": "1935800814",
-        "rune_deposited": "3944352152",
-        "rune_withdrawn": "3867424500"
+        "reserve_units": "1935800720",
+        "rune_deposited": "3944351972",
+        "rune_withdrawn": "3867424312"
       },
       "rune_providers": [
         {
-          "deposit_amount": "1972176076",
+          "deposit_amount": "1972175986",
           "last_deposit_height": "4",
           "last_withdraw_height": "7",
           "rune_address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "units": "0",
-          "withdraw_amount": "1933712250"
+          "withdraw_amount": "1933712156"
         },
         {
-          "deposit_amount": "1972176076",
+          "deposit_amount": "1972175986",
           "last_deposit_height": "5",
           "last_withdraw_height": "8",
           "rune_address": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
           "units": "0",
-          "withdraw_amount": "1933712250"
+          "withdraw_amount": "1933712156"
         }
       ],
       "secured_assets": [],
@@ -426,7 +416,7 @@
         {
           "address": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
           "reclaimed": "0",
-          "score": "21693694936",
+          "score": "21693694507",
           "spent": "0"
         }
       ],

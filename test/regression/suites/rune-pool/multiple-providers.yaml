@@ -95,7 +95,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/runepool
 asserts:
   - .pol.pnl == "${RESERVE_PNL=-2911570}"
-  - .pol.value == "${POL_VALUE=1972176076}"
+  - .pol.value == "${POL_VALUE=1972175986}"
   - .reserve.pnl == "${RESERVE_PNL}"
   - .reserve.value == "${POL_VALUE}"
   - 'all(.providers|.[]; . == "0")'
@@ -103,7 +103,7 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/balance/module/reserve
 asserts:
-  - .coins[0].amount == "${RESERVE_BALANCE=34998031803490}"
+  - .coins[0].amount == "${RESERVE_BALANCE=34998049803580}"
 ---
 ########################################################################################
 # RUNEPool deposit acquires POL ownership from reserve
@@ -134,7 +134,7 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/runepool
 asserts:
-  - .providers.units|tonumber == 2*${POL_VALUE=1975087646}
+  - .providers.units|tonumber == 2*${POL_VALUE=1975087556}
   - .providers.pending_units == "${POL_VALUE}"
   - .providers.value == .providers.current_deposit
   - .providers.pnl == "0"
@@ -200,7 +200,7 @@ asserts:
   - .[0].deposit_amount == .[1].deposit_amount # same deposit
   - .[0].withdraw_amount == .[1].withdraw_amount # same withdraw
   - .[0].pnl == .[1].pnl # same pnl
-  - .[0].pnl == "-${PROVIDER_PNL=38463826}"
+  - .[0].pnl == "-${PROVIDER_PNL=38463830}"
 ---
 ########################################################################################
 # reserve owns the POL with loss, but balance increased by sum of provider loss

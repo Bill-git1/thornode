@@ -446,12 +446,12 @@ count: 2
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
-  - .affiliate_collector_rune == "6556873224"
+  - .affiliate_collector_rune == "${TEST_THORNAME_RUNE=6556873213}"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/balance/module/affiliate_collector
 asserts:
-  - .coins[]|select(.denom == "rune")|.amount == "6556873224"
+  - .coins[]|select(.denom == "rune")|.amount == "${TEST_THORNAME_RUNE}"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound

@@ -386,7 +386,7 @@ asserts:
   - .|[.end_block_events[]|select(.type == "scheduled_outbound")]|length == 2
   - .|[.end_block_events[]|select(.type == "scheduled_outbound")][1].to_address == "{{ addr_btc_pig }}"
   - .|[.end_block_events[]|select(.type == "scheduled_outbound")][1].coin_asset == "BTC.BTC"
-  - .|[.end_block_events[]|select(.type == "scheduled_outbound")][1].coin_amount == "${BTC_OUTPUT_AMOUNT=25234610}"
+  - .|[.end_block_events[]|select(.type == "scheduled_outbound")][1].coin_amount == "${BTC_OUTPUT_AMOUNT=25234612}"
   - .|[.end_block_events[]|select(.type == "scheduled_outbound")][0].coin_asset == "ETH.USDX-0X9999999999999999999999999999999999999999"
   - .|[.end_block_events[]|select(.type == "scheduled_outbound")][0].coin_amount == "${USDX_OUTPUT_AMOUNT=46328400}"
 ---
@@ -463,7 +463,7 @@ count: 1
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
 asserts:
-  - .result[]|select(.denom == "rune")|.amount == "10061930808"
+  - .result[]|select(.denom == "rune")|.amount == "10061930803"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/balance/module/affiliate_collector
@@ -474,4 +474,3 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
-

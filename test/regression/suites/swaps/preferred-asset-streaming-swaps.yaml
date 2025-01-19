@@ -77,7 +77,7 @@ count: 2
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
-  - .affiliate_collector_rune == "722959265"
+  - .affiliate_collector_rune == "722959264"
 ---
 # Observe the outbound.
 type: tx-observed-out
@@ -137,7 +137,7 @@ count: 2
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
-  - .affiliate_collector_rune == "1004103429"
+  - .affiliate_collector_rune == "1004103428"
 ---
 ########################################################################################
 # streaming swap to rune to trigger preferred asset swap
@@ -146,7 +146,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FOX_BAL=2498772064023}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FOX_BAL=2498772064015}
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -228,7 +228,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
-  - .[0]|.in_hash == "${IN_HASH=0D7E59B032530EC6748090AEE72FDB95F3FDF150E854442689273603CB03D167}"
+  - .[0]|.in_hash == "${IN_HASH=C2C82F607C6518FAF646C3D4F39A64DB470A0A68BB8BBC0CAE2A13CA51062C16}"
   - .[0]|.coin.asset == "ETH.USDX-0X9999999999999999999999999999999999999999"
   - .[0]|.coin.amount == "${OUT_AMOUNT=1143444500}"
 ---

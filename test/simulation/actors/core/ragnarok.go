@@ -46,22 +46,25 @@ func NewRagnarokPoolActor(asset common.Asset) *Actor {
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func (a *RagnarokPoolActor) sendMimir(config *OpConfig) OpResult {
-	accAddr, err := config.AdminUser.PubKey().GetThorAddress()
-	if err != nil {
-		a.Log().Error().Err(err).Msg("failed to get thor address")
-		return OpResult{
-			Continue: false,
+	// Send from all NodeUsers.
+	for _, node := range config.NodeUsers {
+		accAddr, err := node.PubKey().GetThorAddress()
+		if err != nil {
+			a.Log().Error().Err(err).Msg("failed to get thor address")
+			return OpResult{
+				Continue: false,
+			}
 		}
-	}
-	mimir := types.NewMsgMimir(fmt.Sprintf("RAGNAROK-%s", a.asset.MimirString()), 1, accAddr)
-	txid, err := config.AdminUser.Thorchain.Broadcast(mimir)
-	if err != nil {
-		a.Log().Error().Err(err).Msg("failed to broadcast mimir")
-		return OpResult{
-			Continue: false,
+		mimir := types.NewMsgMimir(fmt.Sprintf("RAGNAROK-%s", a.asset.MimirString()), 1, accAddr)
+		txid, err := node.Thorchain.Broadcast(mimir)
+		if err != nil {
+			a.Log().Error().Err(err).Msg("failed to broadcast mimir")
+			return OpResult{
+				Continue: false,
+			}
 		}
+		a.Log().Info().Str("txid", txid.String()).Msg("broadcasted mimir")
 	}
-	a.Log().Info().Str("txid", txid.String()).Msg("broadcasted mimir")
 	return OpResult{
 		Continue: true,
 	}

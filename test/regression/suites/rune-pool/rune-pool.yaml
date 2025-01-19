@@ -6,7 +6,22 @@ count: 1
 type: tx-mimir
 key: RUNEPoolEnabled
 value: 1
-signer: {{ addr_thor_dog }}
+signer: {{ addr_thor_cat }}
+---
+type: tx-mimir
+key: RUNEPoolEnabled
+value: 1
+signer: {{ addr_thor_pig }}
+---
+type: tx-mimir
+key: RUNEPoolEnabled
+value: 1
+signer: {{ addr_thor_frog }}
+---
+type: tx-mimir
+key: RUNEPoolEnabled
+value: 1
+signer: {{ addr_thor_goat }}
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/pools
@@ -44,6 +59,11 @@ count: 1
 ########################################################################################
 # check balances after deposit
 ########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/mimir/key/RUNEPoolEnabled
+asserts:
+  - . == 1
+---
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
 asserts:
@@ -169,7 +189,22 @@ asserts:
 type: tx-mimir
 key: MaxAffiliateFeeBasisPoints
 value: 10
-signer: {{ addr_thor_dog }}
+signer: {{ addr_thor_cat }}
+---
+type: tx-mimir
+key: MaxAffiliateFeeBasisPoints
+value: 10
+signer: {{ addr_thor_pig }}
+---
+type: tx-mimir
+key: MaxAffiliateFeeBasisPoints
+value: 10
+signer: {{ addr_thor_frog }}
+---
+type: tx-mimir
+key: MaxAffiliateFeeBasisPoints
+value: 10
+signer: {{ addr_thor_goat }}
 ---
 type: create-blocks
 count: 1
@@ -183,6 +218,11 @@ memo: "pool-:10000:{{ addr_thor_cat }}:11"
 ---
 type: create-blocks
 count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/mimir/key/MaxAffiliateFeeBasisPoints
+asserts:
+  - . == 10
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block
@@ -203,7 +243,22 @@ asserts:
 type: tx-mimir
 key: RUNEPoolDepositMaturityBlocks
 value: 2
-signer: {{ addr_thor_dog }}
+signer: {{ addr_thor_cat }}
+---
+type: tx-mimir
+key: RUNEPoolDepositMaturityBlocks
+value: 2
+signer: {{ addr_thor_pig }}
+---
+type: tx-mimir
+key: RUNEPoolDepositMaturityBlocks
+value: 2
+signer: {{ addr_thor_frog }}
+---
+type: tx-mimir
+key: RUNEPoolDepositMaturityBlocks
+value: 2
+signer: {{ addr_thor_goat }}
 ---
 type: create-blocks
 count: 1

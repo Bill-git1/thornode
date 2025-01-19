@@ -4,7 +4,7 @@ type: create-blocks
 count: 1
 ---
 ########################################################################################
-# set admin mimir value
+# 1/5th of nodes cannot set economic mimir
 ########################################################################################
 type: tx-mimir
 key: RegressionTest
@@ -17,10 +17,10 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/mimir
 asserts:
-  - .REGRESSIONTEST == 1
+  - .REGRESSIONTEST == null
 ---
 ########################################################################################
-# 1/3 of nodes cannot override admin
+# 2/5 of nodes cannot set economic mimir
 ########################################################################################
 type: tx-mimir
 key: RegressionTest
@@ -33,10 +33,10 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/mimir
 asserts:
-  - .REGRESSIONTEST == 1
+  - .REGRESSIONTEST == null
 ---
 ########################################################################################
-# 2/3 nodes should override admin
+# 5/5 of nodes (> 2/3) should set economic mimir
 ########################################################################################
 type: tx-mimir
 key: RegressionTest

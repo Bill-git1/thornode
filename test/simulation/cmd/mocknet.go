@@ -180,9 +180,6 @@ func InitConfig(parallelism int, seed bool) *OpConfig {
 		}
 	}
 
-	// master user is also mimir admin
-	c.AdminUser = master
-
 	// return if not seeding accounts
 	if !seed {
 		return c

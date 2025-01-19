@@ -102,8 +102,8 @@ type: check
 endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
   - .derived_depth_bps|tonumber == 8913
-  - .balance_asset|tonumber == 271723169139 # median still ~1:1
-  - .balance_rune|tonumber == 271724797620
+  - .balance_asset|tonumber == 271723169098 # median still ~1:1
+  - .balance_rune|tonumber == 271724797579
 ---
 ########################################################################################
 # swap to USDY should reduce depth
@@ -132,8 +132,8 @@ type: check
 endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
   - .derived_depth_bps|tonumber == 7853
-  - .balance_asset|tonumber == 221717424459 # price shift with affected median
-  - .balance_rune|tonumber == 243219374177
+  - .balance_asset|tonumber == 221717424492 # price shift with affected median
+  - .balance_rune|tonumber == 243219374104
 ---
 ########################################################################################
 # enable the dynamic anchor to target 95% and compute every block

@@ -18,9 +18,24 @@ asserts:
   - .|length == 2
 ---
 type: tx-mimir
+signer: {{ addr_thor_cat }}
 key: TradeAccountsEnabled
 value: 1
-signer: {{ addr_thor_dog }}
+---
+type: tx-mimir
+signer: {{ addr_thor_pig }}
+key: TradeAccountsEnabled
+value: 1
+---
+type: tx-mimir
+signer: {{ addr_thor_fox }}
+key: TradeAccountsEnabled
+value: 1
+---
+type: tx-mimir
+signer: {{ addr_thor_goat }}
+key: TradeAccountsEnabled
+value: 1
 ---
 type: create-blocks
 count: 1
@@ -315,22 +330,74 @@ asserts:
   - .result | length == 1
   - .result[0].denom == "rune"
 ---
+  # Confirming the sequence before two MsgMimirs (per signer) in the same block.
 type: check
-endpoint: http://localhost:1317/auth/accounts/{{ addr_thor_dog }}
+endpoint: http://localhost:1317/auth/accounts/{{ addr_thor_cat }}
 asserts:
-  - .result.value.sequence == "1"
+  - .result.value.sequence == "3"
+---
+type: check
+endpoint: http://localhost:1317/auth/accounts/{{ addr_thor_pig }}
+asserts:
+  - .result.value.sequence == "3"
+---
+type: check
+endpoint: http://localhost:1317/auth/accounts/{{ addr_thor_fox }}
+asserts:
+  - .result.value.sequence == "6"
+---
+type: check
+endpoint: http://localhost:1317/auth/accounts/{{ addr_thor_goat }}
+asserts:
+  - .result.value.sequence == "3"
 ---
 type: tx-mimir
+signer: {{ addr_thor_cat }}
 key: EnableDerivedAssets
 value: 0
-signer: {{ addr_thor_dog }}
-sequence: 1
+sequence: 3
 ---
 type: tx-mimir
+signer: {{ addr_thor_pig }}
+key: EnableDerivedAssets
+value: 0
+sequence: 3
+---
+type: tx-mimir
+signer: {{ addr_thor_fox }}
+key: EnableDerivedAssets
+value: 0
+sequence: 6
+---
+type: tx-mimir
+signer: {{ addr_thor_goat }}
+key: EnableDerivedAssets
+value: 0
+sequence: 3
+---
+type: tx-mimir
+signer: {{ addr_thor_cat }}
 key: DerivedDepthBasisPts
 value: 10000
-signer: {{ addr_thor_dog }}
-sequence: 2
+sequence: 4
+---
+type: tx-mimir
+signer: {{ addr_thor_pig }}
+key: DerivedDepthBasisPts
+value: 10000
+sequence: 4
+---
+type: tx-mimir
+signer: {{ addr_thor_fox }}
+key: DerivedDepthBasisPts
+value: 10000
+sequence: 7
+---
+type: tx-mimir
+signer: {{ addr_thor_goat }}
+key: DerivedDepthBasisPts
+value: 10000
+sequence: 4
 ---
 type: create-blocks
 count: 2 # One block to set the Mimirs by the end, one to spawn the THOR.BTC pool at the beginning.

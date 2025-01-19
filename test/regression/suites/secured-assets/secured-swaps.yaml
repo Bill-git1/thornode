@@ -311,16 +311,48 @@ asserts:
   - .result[1].denom == "rune"
 ---
 type: tx-mimir
-key: EnableDerivedAssets
+signer: {{ addr_thor_cat }}
+key: "EnableDerivedAssets"
 value: 0
-signer: {{ addr_thor_dog }}
-sequence: 0
 ---
 type: tx-mimir
-key: DerivedDepthBasisPts
+signer: {{ addr_thor_pig }}
+key: "EnableDerivedAssets"
+value: 0
+---
+type: tx-mimir
+signer: {{ addr_thor_fox }}
+key: "EnableDerivedAssets"
+value: 0
+---
+type: tx-mimir
+signer: {{ addr_thor_goat }}
+key: "EnableDerivedAssets"
+value: 0
+---
+# A block between the Mimirs to not have to track the different account sequences.
+type: create-blocks
+count: 1
+---
+type: tx-mimir
+signer: {{ addr_thor_cat }}
+key: "DerivedDepthBasisPts"
 value: 10000
-signer: {{ addr_thor_dog }}
-sequence: 1
+---
+type: tx-mimir
+signer: {{ addr_thor_pig }}
+key: "DerivedDepthBasisPts"
+value: 10000
+---
+type: tx-mimir
+signer: {{ addr_thor_fox }}
+key: "DerivedDepthBasisPts"
+value: 10000
+---
+type: tx-mimir
+signer: {{ addr_thor_goat }}
+key: "DerivedDepthBasisPts"
+value: 10000
 ---
 type: create-blocks
 count: 2 # One block to set the Mimirs by the end, one to spawn the THOR.BTC pool at the beginning.
@@ -387,7 +419,7 @@ asserts:
   - .balances[0].denom == "btc-btc"
   - .balances[0].amount|tonumber == ${INITIAL_UNITS} - 1000000 
   - .balances[1].denom == "rune"
-  - .balances[1].amount|tonumber == ${INITIAL_RUNE} + 879995183 
+  - .balances[1].amount|tonumber == ${INITIAL_RUNE} + 880000010 
 ---
 ########################################################################################
 # swap from RUNE
@@ -399,7 +431,7 @@ asserts:
   - .balances[0].denom == "btc-btc"
   - .balances[0].amount|tonumber == ${INITIAL_UNITS=8444726}
   - .balances[1].denom == "rune"
-  - .balances[1].amount|tonumber == ${INITIAL_RUNE=2500871995183}
+  - .balances[1].amount|tonumber == ${INITIAL_RUNE=2500872000010}
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/network
@@ -421,7 +453,7 @@ endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
 asserts:
   - .result | length == 2
   - .result[0].denom == "btc-btc"
-  - .result[0].amount|tonumber == ${INITIAL_UNITS} + 915235
+  - .result[0].amount|tonumber == ${INITIAL_UNITS} + 915229
   - .result[1].denom == "rune"
   - .result[1].amount|tonumber == ${INITIAL_RUNE} - 1000000000 - ${NATIVE_TX_FEE_RUNE}
 ---
@@ -459,7 +491,7 @@ endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
 asserts:
   - .result | length == 2
   - .result[0].denom == "btc-btc"
-  - .result[0].amount == "${TOTAL_INPUT=9359961}"
+  - .result[0].amount == "${TOTAL_INPUT=9359955}"
   # TOTAL_INPUT must be the full amount so that overspending is not possible without double-spending.
 ---
 type: tx-deposit
@@ -478,8 +510,8 @@ endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .|[..|select(.type? == "swap")] | length == 1
   - ..|select(.type? == "swap").id == "{{ native_txid -1 }}"
-  - ..|select(.type? == "swap").coin == "${INPUT_1=4679980} BTC-BTC"
-  - ..|select(.type? == "swap").emit_asset == "${OUTPUT_1=4240366399} THOR.RUNE"
+  - ..|select(.type? == "swap").coin == "${INPUT_1=4679977} BTC-BTC"
+  - ..|select(.type? == "swap").emit_asset == "${OUTPUT_1=4240386612} THOR.RUNE"
   - ..|select(.type? == "swap").streaming_swap_count == "1"
   - ..|select(.type? == "swap").streaming_swap_quantity == "${QUANTITY}"
   ##
@@ -491,7 +523,7 @@ asserts:
   - .|[..|select(.type? == "outbound")] | length == 0
   # No outbound or completed streaming swap yet.
   ##
-  - ${TOTAL_INPUT} / 4 | floor == ${INPUT_2=2339990} # Prepare the double-spend attempts's input amount.
+  - ${TOTAL_INPUT} / 4 | floor == ${INPUT_2=2339988} # Prepare the double-spend attempts's input amount.
 ---
 # Now, the double-spend attempt.
 type: tx-deposit
@@ -510,7 +542,7 @@ asserts:
   - .|[..|select(.type? == "swap")] | length == 1
   - ..|select(.type? == "swap").id == "{{ native_txid -1 }}"
   - ..|select(.type? == "swap").coin == "${INPUT_2} BTC-BTC"
-  - ..|select(.type? == "swap").emit_asset == "${OUTPUT_2=2033170659} THOR.RUNE"
+  - ..|select(.type? == "swap").emit_asset == "${OUTPUT_2=2033179989} THOR.RUNE"
   - ..|select(.type? == "swap").streaming_swap_count == "1"
   - ..|select(.type? == "swap").streaming_swap_quantity == "1" # This is the non-streaming swap.
   ##
@@ -529,7 +561,7 @@ asserts:
   ##
   - .|[..|select(.type? == "outbound")] | length == 1
   - ..|select(.type? == "outbound").in_tx_id == "{{ native_txid -1 }}"
-  - ..|select(.type? == "outbound").coin == "${OUTBOUND_1=2031170659} THOR.RUNE"
+  - ..|select(.type? == "outbound").coin == "${OUTBOUND_1=2031179989} THOR.RUNE"
   - ${OUTBOUND_1} == ${OUTPUT_2} - ${FEE} # As it should be.
 ---
 type: create-blocks
@@ -546,8 +578,8 @@ endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .|[..|select(.type? == "swap")] | length == 1
   - ..|select(.type? == "swap").id == "{{ native_txid -2 }}"
-  - ..|select(.type? == "swap").coin == "${INPUT_3=2339991} BTC-BTC"
-  - ..|select(.type? == "swap").emit_asset == "${OUTPUT_3=1948538383} THOR.RUNE"
+  - ..|select(.type? == "swap").coin == "${INPUT_3=2339990} BTC-BTC"
+  - ..|select(.type? == "swap").emit_asset == "${OUTPUT_3=1948548190} THOR.RUNE"
   - ..|select(.type? == "swap").streaming_swap_count == "${QUANTITY}" # Final sub-swap.
   - ..|select(.type? == "swap").streaming_swap_quantity == "${QUANTITY}"
   ##
@@ -566,7 +598,7 @@ asserts:
   # The streaming swap reflects the initial attempted amount, rather than the post-withdraw input sum;
   # this is perhaps consistent with that any non-Deposit In is treated as to be refunded from failed sub-swaps.
   # TODO:  Perhaps revisit this in future.
-  - ${OUTPUT_1} + ${OUTPUT_3} == ${TOTAL_STREAMING_OUTPUT=6188904782}
+  - ${OUTPUT_1} + ${OUTPUT_3} == ${TOTAL_STREAMING_OUTPUT=6188934802}
   - ..|select(.type? == "streaming_swap").out == "${TOTAL_STREAMING_OUTPUT} THOR.RUNE" # As it should be.
   ##
   - .|[..|select(.type? == "fee")] | length == 1
@@ -574,7 +606,7 @@ asserts:
   ##
   - .|[..|select(.type? == "outbound")] | length == 1
   - ..|select(.type? == "outbound").in_tx_id == "{{ native_txid -2 }}"
-  - ..|select(.type? == "outbound").coin == "${OUTBOUND_2=6186904782} THOR.RUNE"
+  - ..|select(.type? == "outbound").coin == "${OUTBOUND_2=6186934802} THOR.RUNE"
   - ${OUTBOUND_2} == ${OUTPUT_1} + ${OUTPUT_3} - ${FEE} # As it should be.
 ---
 type: check

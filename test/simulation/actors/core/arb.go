@@ -98,31 +98,35 @@ func (a *ArbActor) acquireUser(config *OpConfig) OpResult {
 }
 
 func (a *ArbActor) enableTradeAssets(config *OpConfig) OpResult {
-	// wait to acquire the admin user
-	if !config.AdminUser.Acquire() {
-		return OpResult{
-			Continue: false,
+	for _, node := range config.NodeUsers {
+		// wait to acquire the node user
+		if !node.Acquire() {
+			return OpResult{
+				Continue: false,
+			}
 		}
-	}
-	defer config.AdminUser.Release()
+		// Release all the node users at the end of the function.
+		defer node.Release()
 
-	// enable trade assets
-	accAddr, err := config.AdminUser.PubKey().GetThorAddress()
-	if err != nil {
-		a.Log().Error().Err(err).Msg("failed to get thor address")
-		return OpResult{
-			Continue: false,
+		accAddr, err := node.PubKey().GetThorAddress()
+		if err != nil {
+			a.Log().Error().Err(err).Msg("failed to get thor address")
+			return OpResult{
+				Continue: false,
+			}
 		}
+		mimirMsg := types.NewMsgMimir("TradeAccountsEnabled", 1, accAddr)
+		txid, err := node.Thorchain.Broadcast(mimirMsg)
+		if err != nil {
+			a.Log().Error().Err(err).Msg("failed to broadcast tx")
+			return OpResult{
+				Continue: false,
+			}
+		}
+		a.Log().Info().
+			Stringer("txid", txid).
+			Msg("broadcasted admin mimir tx to enable trade assets")
 	}
-	mimirMsg := types.NewMsgMimir("TradeAccountsEnabled", 1, accAddr)
-	txid, err := config.AdminUser.Thorchain.Broadcast(mimirMsg)
-	if err != nil {
-		a.Log().Fatal().Err(err).Msg("failed to broadcast tx")
-	}
-
-	a.Log().Info().
-		Stringer("txid", txid).
-		Msg("broadcasted admin mimir tx to enable trade assets")
 
 	return OpResult{
 		Continue: true,
