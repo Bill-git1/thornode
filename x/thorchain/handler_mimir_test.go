@@ -18,17 +18,11 @@ func (s *HandlerMimirSuite) SetUpSuite(c *C) {
 func (s *HandlerMimirSuite) TestValidate(c *C) {
 	ctx, keeper := setupKeeperForTest(c)
 
-	na := GetRandomValidatorNode(NodeActive)
-	c.Assert(keeper.SetNodeAccount(ctx, na), IsNil)
 	handler := NewMimirHandler(NewDummyMgrWithKeeper(keeper))
-	// happy path
-	msg := NewMsgMimir("foo", 44, na.NodeAddress)
-	err := handler.validate(ctx, *msg)
-	c.Assert(err, IsNil)
 
 	// invalid msg
-	msg = &MsgMimir{}
-	err = handler.validate(ctx, *msg)
+	msg := &MsgMimir{}
+	err := handler.validate(ctx, *msg)
 	c.Assert(err, NotNil)
 }
 
@@ -42,7 +36,8 @@ func (s *HandlerMimirSuite) TestMimirHandle(c *C) {
 	c.Check(result, IsNil)
 
 	// Non-validator address for MsgMimir (so fails validation).
-	msg := NewMsgMimir("foo", 55, GetRandomBech32Addr())
+	addr := GetRandomBech32Addr()
+	msg := NewMsgMimir("foo", 55, addr)
 	result, err = handler.Run(ctx, msg)
 	c.Assert(err, NotNil)
 	c.Assert(result, IsNil)

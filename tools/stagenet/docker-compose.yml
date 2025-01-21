@@ -31,9 +31,8 @@ services:
       SIGNER_PASSWD: password
       THOR_SEED_NODES_ENDPOINT: ""
 
-      # "dog" mnemonic addresses for both faucet and admin mimir
+      # "dog" mnemonic addresses for faucet
       FAUCET: sthor1zf3gsk7edzwl9syyefvfhle37cjtql3585mpmq
-      THOR_STAGENET_ADMIN_ADDRESSES: sthor1zf3gsk7edzwl9syyefvfhle37cjtql3585mpmq
 
       # reuse 9R stagenet router contract deployments, or deploy your own new ones
       ETH_CONTRACT: "0xB11a1735C2e3BCC5FC8c1d147fb64629d3d0caC5"

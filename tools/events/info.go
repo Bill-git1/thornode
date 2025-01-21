@@ -65,18 +65,11 @@ func SetMimir(block *thorscan.BlockResponse) {
 			// if the transaction does not contain mimir message it auto triggered
 			source := "auto"
 
-		msgs: // determine if this is an admin or node mimir
+			// determine if this is a node mimir
 			for _, msg := range tx.Tx.GetMsgs() {
-				if msgMimir, ok := msg.(*thorchain.MsgMimir); ok {
-					signer := msgMimir.Signer.String()
-					for _, admin := range thorchain.ADMINS {
-						if admin == signer {
-							source = "admin"
-							break msgs
-						}
-					}
-
+				if _, ok := msg.(*thorchain.MsgMimir); ok {
 					source = "node"
+					break
 				}
 			}
 

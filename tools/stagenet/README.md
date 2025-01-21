@@ -68,7 +68,7 @@ thornode tx thorchain mimir HaltChurning --from dog --chain-id thorchain --node 
 ## Options
 
 - Use custom seed phrases on any of the nodes by setting `SIGNER_SEED_PHRASE`.
-- Use a custom faucet / admin mimir wallet and update `FAUCET`/`THOR_STAGENET_ADMIN_ADDRESSES`.
+- Use a custom faucet wallet and update `FAUCET`
 - Add environment variables in `thornode`/`bifrost` services to override anything in `config/default.yaml`.
 - Build and use your own custom `stagenet` image with local changes.
 - Deploy custom router contracts and override the corresponding environment variables.

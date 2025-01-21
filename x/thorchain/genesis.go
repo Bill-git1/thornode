@@ -313,22 +313,6 @@ func initGenesis(ctx cosmos.Context, keeper keeper.Keeper, data GenesisState) []
 		}
 	}
 
-	for _, admin := range ADMINS {
-		addr, err := cosmos.AccAddressFromBech32(admin)
-		if err != nil {
-			panic(err)
-		}
-		mimir, _ := common.NewAsset("THOR.MIMIR")
-		coin := common.NewCoin(mimir, cosmos.NewUint(1000*common.One))
-		// mint some gas asset
-		err = keeper.MintToModule(ctx, ModuleName, coin)
-		if err != nil {
-			panic(err)
-		}
-		if err = keeper.SendFromModuleToAccount(ctx, ModuleName, addr, common.NewCoins(coin)); err != nil {
-			panic(err)
-		}
-	}
 	for _, item := range data.Mimirs {
 		if len(item.Key) == 0 {
 			continue
