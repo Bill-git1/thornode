@@ -13,9 +13,10 @@ The `init.js` script is run during initialization of the EVM fork and uses imper
 
 ```javascript
 const usdTokens = {
-  ETH: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // ETH.USDC
   AVAX: "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E", // AVAX.USDC
+  BASE: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // BASE.USDC
   BSC: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", // BSC.USDC
+  ETH: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // ETH.USDC
 };
 ```
 
@@ -30,6 +31,10 @@ The following instructions will be performed for Ethereum, but apply in the same
 ```bash
 make reset-mocknet-fork-eth
 ```
+
+The provided Ankr RPC links no longer support the required archival features for forking. You need to provide your API key or replace the RPC links with your own.
+
+If using Node version 18+, you may need to use the `--openssl-legacy-provider` flag depending on your setup and RPC provider.
 
 2. Watch logs and wait until Bifrost startup:
 

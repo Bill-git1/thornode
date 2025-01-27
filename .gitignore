@@ -87,3 +87,6 @@ preparam.data
 
 coverage.xml
 report.xml
+
+# hardhat cache
+**/evm/cache/*

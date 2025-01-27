@@ -1,7 +1,10 @@
 /** @type import('hardhat/config').HardhatUserConfig */
 
-require("@nomiclabs/hardhat-web3");
 require("@nomiclabs/hardhat-ethers");
+
+const apiKey = process.env.ALCHEMY_API_KEY;
+// its suggested to pin to a recent block number to improve caching
+const fromBlockNumber = 21663500;
 
 module.exports = {
   solidity: "0.8.18",
@@ -11,6 +14,10 @@ module.exports = {
 
   networks: {
     hardhat: {
+      // forking: {
+      //   url: `https://eth-mainnet.g.alchemy.com/v2/${apiKey}`,
+      //   blockNumber: fromBlockNumber
+      // },
       // Accounts correspond to those created by smoke tests and evm-tool.py.
       accounts: [
         {
