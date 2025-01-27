@@ -764,3 +764,43 @@ endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .|[..|select(.type?=="refund")] | length == 1
   - ..|select(.type?=="refund").reason | contains("use trade assets instead")
+---
+########################################################################################
+# disable burn synths and try to withdraw
+########################################################################################
+type: tx-mimir
+key: BurnSynths
+value: 1
+signer: {{ addr_thor_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: tx-observed-in
+signer: {{ addr_thor_dog }}
+txs:
+  - tx:
+      id: "{{ observe_txid 12 }}"
+      chain: BTC
+      from_address: {{ addr_btc_pig }}
+      to_address: {{ addr_btc_dog }}
+      coins:
+        - amount: "100000"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "10000"
+          asset: "BTC.BTC"
+      memo: "-:BTC/BTC:10000"
+    block_height: 33
+    finalise_height: 33
+    observed_pub_key: {{ pubkey_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/block
+asserts:
+  - .|[..|select(.type?=="refund")] | length == 1
+  - ..|select(.type?=="refund").reason | contains("burning synths is disabled")

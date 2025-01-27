@@ -60,6 +60,13 @@ func (h WithdrawLiquidityHandler) validateV3_0_0(ctx cosmos.Context, msg MsgWith
 		return errWithdrawFailValidation
 	}
 
+	if msg.Asset.IsSyntheticAsset() {
+		if h.mgr.Keeper().GetConfigInt64(ctx, constants.BurnSynths) > 0 {
+			// Burning synths is disabled (purposeful inconsistency of int64 vs. other mimirs)
+			return fmt.Errorf("burning synths is disabled, unable to withdraw to savers")
+		}
+	}
+
 	if msg.Asset.IsDerivedAsset() {
 		return fmt.Errorf("cannot withdraw from a derived asset virtual pool")
 	}
