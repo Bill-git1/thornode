@@ -104,7 +104,6 @@ func (k KVStore) SetNodePauseChain(ctx cosmos.Context, acc cosmos.AccAddress) {
 
 func (k KVStore) IsOperationalMimir(key string) bool {
 	exactMatches := []string{
-		"BurnSynths",
 		"MintSynths",
 		"TradeAccountsEnabled",
 		"RUNEPoolEnabled",
@@ -114,6 +113,15 @@ func (k KVStore) IsOperationalMimir(key string) bool {
 	for i := range exactMatches {
 		if strings.EqualFold(key, exactMatches[i]) {
 			return true
+		}
+	}
+
+	exactUnmatches := []string{
+		"PauseLoans",
+	}
+	for i := range exactUnmatches {
+		if strings.EqualFold(key, exactUnmatches[i]) {
+			return false
 		}
 	}
 
