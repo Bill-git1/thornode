@@ -176,7 +176,7 @@ thornode tx thorchain deposit 10000000000 rune ADD:ETH.TKN-0X52C84043CD9C865236F
 
 ## Local Mainnet Fork of EVM Chain
 
-There are scripts for creation of a mocknet using forked mainnet EVM chains for testing of aggregator contracts. See `[tools/evm/README.md](../../tools/evm/README.md)` for documentation.
+There are scripts for creation of a mocknet using forked mainnet EVM chains for testing of aggregator contracts. See [tools/evm/README.md](../../tools/evm/README.md) for documentation.
 
 ## Bootstrap Mocknet Data
 

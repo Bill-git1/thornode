@@ -62,7 +62,7 @@ brew install homebrew/cask/docker
 git clone https://gitlab.com/thorchain/thornode
 # Docker must be started...
 make openapi
-make protob-docker
+make proto-gen
 make install
 ```
 

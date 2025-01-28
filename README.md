@@ -52,6 +52,12 @@ brew install golang coreutils binutils diffutils findutils gnu-tar gnu-sed gawk 
 export PATH=/opt/homebrew/opt/make/libexec/gnubin:/opt/homebrew/opt/gnu-sed/libexec/gnubin:opt/homebrew/opt/libpq/bin:/opt/homebrew/opt/findutils/libexec/gnubin:$GOPATH/bin:/usr/local/bin:$PATH
 ```
 
+On recent Mac machines, you may need to set a higher-priority path to replace `awk` with `gawk`:
+
+```bash
+ln -sf $(which gawk) /usr/local/bin/awk
+```
+
 Install [Docker and Docker Compose V2](https://docs.docker.com/engine/install/).
 
 Ensure you have a recent version of go ([scripts/check-env.sh](https://gitlab.com/thorchain/thornode/-/blob/develop/scripts/check-env.sh#L46-48)) and enabled go modules.<br/>
@@ -73,7 +79,7 @@ cd thornode
 Install via this `make` command.
 
 ```bash
-make go-generate openapi protob-docker install
+make go-generate openapi proto-gen install
 ```
 
 Once you've installed `thornode`, check that they are there.
@@ -103,7 +109,7 @@ make cli-mocknet
 > thornode tx thorchain mimir CHURNINTERVAL 1000 --from dog $TX_FLAGS
 
 # bootstrap vaults from simulation test add liquidity transactions
-make mocknet-bootstrap
+make bootstrap-mocknet
 
 # verify vault balances
 curl -s localhost:1317/thorchain/vaults/asgard | jq '.[0].coins'
@@ -200,7 +206,7 @@ Current active branch is `develop`, so when you open PR, make sure your target b
 
 ## ADRs
 
-THORChain follows a Architectural Decisison Record process outlined here:
+THORChain follows a Architectural Decision Record process outlined here:
 https://gitlab.com/thorchain/thornode/-/blob/develop/docs/architecture/PROCESS.md?ref_type=heads
 
 ## Upgrades
