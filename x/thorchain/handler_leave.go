@@ -48,6 +48,8 @@ func (h LeaveHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, err
 func (h LeaveHandler) validate(ctx cosmos.Context, msg MsgLeave) error {
 	version := h.mgr.GetVersion()
 	switch {
+	case version.GTE(semver.MustParse("3.2.0")):
+		return h.validateV3_2_0(ctx, msg)
 	case version.GTE(semver.MustParse("3.0.0")):
 		return h.validateV3_0_0(ctx, msg)
 	default:
@@ -55,9 +57,13 @@ func (h LeaveHandler) validate(ctx cosmos.Context, msg MsgLeave) error {
 	}
 }
 
-func (h LeaveHandler) validateV3_0_0(ctx cosmos.Context, msg MsgLeave) error {
+func (h LeaveHandler) validateV3_2_0(ctx cosmos.Context, msg MsgLeave) error {
 	if err := msg.ValidateBasic(); err != nil {
 		return err
+	}
+
+	if !msg.Tx.Coins.IsEmpty() {
+		return cosmos.ErrUnknownRequest("leave message cannot have a non-zero coin amount")
 	}
 
 	jail, err := h.mgr.Keeper().GetNodeAccountJail(ctx, msg.NodeAddress)

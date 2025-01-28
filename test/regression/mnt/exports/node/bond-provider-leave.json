@@ -148,7 +148,7 @@
           "address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
           "coins": [
             {
-              "amount": "4999997999999",
+              "amount": "4999998000000",
               "denom": "rune"
             }
           ]
@@ -211,7 +211,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "6000050110985",
+              "amount": "6000050110984",
               "denom": "rune"
             }
           ]
@@ -321,7 +321,7 @@
       "node_accounts": [
         {
           "active_block_height": "1",
-          "bond": "3500050000001",
+          "bond": "3500050000000",
           "bond_address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "ip_address": "1.1.1.1",
           "leave_score": "300000000",

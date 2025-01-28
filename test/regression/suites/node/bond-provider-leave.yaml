@@ -276,7 +276,7 @@ asserts:
 type: tx-deposit
 signer: {{ addr_thor_goat }}
 coins:
-  - amount: "1"
+  - amount: "0"
     asset: "rune"
 memo: "LEAVE:{{ addr_thor_fox }}"
 ---
@@ -296,7 +296,7 @@ asserts:
 type: tx-deposit
 signer: {{ addr_thor_dog }}
 coins:
-  - amount: "1"
+  - amount: "0"
     asset: "rune"
 memo: "LEAVE:{{ addr_thor_fox }}"
 ---

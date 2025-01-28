@@ -104,7 +104,7 @@ func (HandlerUnBondSuite) TestUnBondHandler_Run(c *C) {
 		standbyNodeAccount.BondAddress,
 		GetRandomETHAddress(),
 		common.Coins{
-			common.NewCoin(common.RuneAsset(), cosmos.NewUint(uint64(1))),
+			common.NewCoin(common.RuneAsset(), cosmos.ZeroUint()),
 		},
 		common.Gas{
 			common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
@@ -116,7 +116,7 @@ func (HandlerUnBondSuite) TestUnBondHandler_Run(c *C) {
 	c.Assert(err, IsNil)
 	na, err := k1.GetNodeAccount(ctx, standbyNodeAccount.NodeAddress)
 	c.Assert(err, IsNil)
-	c.Assert(na.Bond.Equal(cosmos.NewUint(95*common.One+1)), Equals, true, Commentf("%d", na.Bond.Uint64()))
+	c.Assert(na.Bond.Equal(cosmos.NewUint(95*common.One)), Equals, true, Commentf("%d", na.Bond.Uint64()))
 
 	// test unbonding for 1 rune, should fail, and NOT increase bond with inbound rune
 	mgrBad := NewDummyMgr()
@@ -127,7 +127,7 @@ func (HandlerUnBondSuite) TestUnBondHandler_Run(c *C) {
 	c.Assert(err, NotNil)
 	na, err = k1.GetNodeAccount(ctx, standbyNodeAccount.NodeAddress)
 	c.Assert(err, IsNil)
-	c.Check(na.Bond.Equal(cosmos.NewUint(95*common.One+1)), Equals, true, Commentf("%d", na.Bond.Uint64()))
+	c.Check(na.Bond.Equal(cosmos.NewUint(95*common.One)), Equals, true, Commentf("%d", na.Bond.Uint64()))
 	handler.mgr = NewDummyMgr()
 
 	k := &TestUnBondKeeper{
@@ -182,15 +182,23 @@ func (HandlerUnBondSuite) TestUnBondHandlerFailValidation(c *C) {
 		activeNodeAccount.BondAddress,
 		GetRandomETHAddress(),
 		common.Coins{
-			common.NewCoin(common.RuneAsset(), cosmos.NewUint(uint64(1))),
+			common.NewCoin(common.RuneAsset(), cosmos.ZeroUint()),
 		},
 		common.Gas{
 			common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
 		},
 		"unbond it",
 	)
+
 	txInNoTxID := txIn
 	txInNoTxID.ID = ""
+
+	txInNonZeroCoinAmount := txIn
+	txInNonZeroCoinAmount.Coins[0].Amount = cosmos.NewUint(uint64(1))
+
+	zeroCoinRandomTx := GetRandomTx()
+	zeroCoinRandomTx.Coins[0].Amount = cosmos.ZeroUint()
+
 	testCases := []struct {
 		name        string
 		msg         *MsgUnBond
@@ -222,8 +230,13 @@ func (HandlerUnBondSuite) TestUnBondHandlerFailValidation(c *C) {
 			expectedErr: se.ErrUnknownRequest,
 		},
 		{
+			name:        "non-zero coin amount",
+			msg:         NewMsgUnBond(txInNonZeroCoinAmount, GetRandomBech32Addr(), cosmos.NewUint(uint64(1)), activeNodeAccount.BondAddress, nil, activeNodeAccount.NodeAddress),
+			expectedErr: se.ErrUnknownRequest,
+		},
+		{
 			name:        "request not from original bond address should not be accepted",
-			msg:         NewMsgUnBond(GetRandomTx(), GetRandomBech32Addr(), cosmos.NewUint(uint64(1)), activeNodeAccount.BondAddress, nil, activeNodeAccount.NodeAddress),
+			msg:         NewMsgUnBond(zeroCoinRandomTx, GetRandomBech32Addr(), cosmos.NewUint(uint64(1)), activeNodeAccount.BondAddress, nil, activeNodeAccount.NodeAddress),
 			expectedErr: se.ErrUnauthorized,
 		},
 	}
@@ -286,9 +299,16 @@ func (HandlerUnBondSuite) TestBondProviders_Validate(c *C) {
 	txIn.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(100*common.One)))
 	handler := NewUnBondHandler(NewDummyMgrWithKeeper(k))
 
-	// happy path
+	// cannot unbond with a message that has non-zero coin amount
 	msg := NewMsgUnBond(txIn, standbyNodeAccount.NodeAddress, cosmos.NewUint(5*common.One), standbyNodeAccount.BondAddress, nil, activeNodeAccount.NodeAddress)
 	err := handler.validate(ctx, *msg)
+	c.Assert(err, NotNil)
+
+	txIn.Coins[0].Amount = cosmos.ZeroUint()
+
+	// happy path
+	msg = NewMsgUnBond(txIn, standbyNodeAccount.NodeAddress, cosmos.NewUint(5*common.One), standbyNodeAccount.BondAddress, nil, activeNodeAccount.NodeAddress)
+	err = handler.validate(ctx, *msg)
 	c.Assert(err, IsNil)
 
 	// cannot unbond an active node
