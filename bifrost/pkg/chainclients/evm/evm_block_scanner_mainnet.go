@@ -13,7 +13,7 @@ func (e *EVMScanner) GetHeight() (int64, error) {
 	)
 	switch e.cfg.ChainID {
 	case common.BASEChain:
-		height, err = e.ethRpc.GetBlockHeightLatest()
+		height, err = e.ethRpc.GetBlockHeightSafe()
 	default:
 		height, err = e.ethRpc.GetBlockHeight()
 	}
