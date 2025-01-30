@@ -54,11 +54,15 @@ option (gogoproto.marshaler_all) = true;
 // Query defines the gRPC querier service.
 service Query {
   // Account returns account details for a given address.
+  // As this path does not start with /thorchain/ , it requires an exception in CustomGRPCGatewayRouter
+  // to not drop the height parameter.
   rpc Account(QueryAccountRequest) returns (QueryAccountResponse) {
     option (google.api.http).get = "/auth/accounts/{address}";
   }
 
   // Balances returns the bank module balances for a given address.
+  // As this path does not start with /thorchain/ , it requires an exception in CustomGRPCGatewayRouter
+  // to not drop the height parameter.
   rpc Balances(QueryBalancesRequest) returns (QueryBalancesResponse) {
     option (google.api.http).get = "/bank/balances/{address}";
   }

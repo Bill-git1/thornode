@@ -200,8 +200,12 @@ const _ = grpc.SupportPackageIsVersion4
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type QueryClient interface {
 	// Account returns account details for a given address.
+	// As this path does not start with /thorchain/ , it requires an exception in CustomGRPCGatewayRouter
+	// to not drop the height parameter.
 	Account(ctx context.Context, in *QueryAccountRequest, opts ...grpc.CallOption) (*QueryAccountResponse, error)
 	// Balances returns the bank module balances for a given address.
+	// As this path does not start with /thorchain/ , it requires an exception in CustomGRPCGatewayRouter
+	// to not drop the height parameter.
 	Balances(ctx context.Context, in *QueryBalancesRequest, opts ...grpc.CallOption) (*QueryBalancesResponse, error)
 	// Export returns the content of the export file (regression test only).
 	Export(ctx context.Context, in *QueryExportRequest, opts ...grpc.CallOption) (*QueryExportResponse, error)
@@ -967,8 +971,12 @@ func (c *queryClient) UpgradeVotes(ctx context.Context, in *QueryUpgradeVotesReq
 // QueryServer is the server API for Query service.
 type QueryServer interface {
 	// Account returns account details for a given address.
+	// As this path does not start with /thorchain/ , it requires an exception in CustomGRPCGatewayRouter
+	// to not drop the height parameter.
 	Account(context.Context, *QueryAccountRequest) (*QueryAccountResponse, error)
 	// Balances returns the bank module balances for a given address.
+	// As this path does not start with /thorchain/ , it requires an exception in CustomGRPCGatewayRouter
+	// to not drop the height parameter.
 	Balances(context.Context, *QueryBalancesRequest) (*QueryBalancesResponse, error)
 	// Export returns the content of the export file (regression test only).
 	Export(context.Context, *QueryExportRequest) (*QueryExportResponse, error)
