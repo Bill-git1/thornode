@@ -251,7 +251,17 @@ func processOneTxIn(ctx cosmos.Context, keeper keeper.Keeper, tx ObservedTx, sig
 	return newMsg, newMsgV.ValidateBasic()
 }
 
-func fuzzyAssetMatch(ctx cosmos.Context, keeper keeper.Keeper, origAsset common.Asset) common.Asset {
+func fuzzyAssetMatch(ctx cosmos.Context, keeper keeper.Keeper, asset common.Asset) common.Asset {
+	version := keeper.GetVersion()
+	switch {
+	case version.GTE(semver.MustParse("3.2.0")):
+		return fuzzyAssetMatchV3_2_0(ctx, keeper, asset)
+	default:
+		return fuzzyAssetMatchV3_0_0(ctx, keeper, asset)
+	}
+}
+
+func fuzzyAssetMatchV3_2_0(ctx cosmos.Context, keeper keeper.Keeper, origAsset common.Asset) common.Asset {
 	asset := origAsset.GetLayer1Asset()
 	// if it's already an exact match with successfully-added liquidity, return it immediately
 	pool, err := keeper.GetPool(ctx, asset)
@@ -307,8 +317,10 @@ func fuzzyAssetMatch(ctx cosmos.Context, keeper keeper.Keeper, origAsset common.
 			continue
 		}
 	}
-	winner.Asset.Synth = origAsset.Synth
-	return winner.Asset
+	// Since the Chain and Ticker must already match, replace just the Symbol with the winner's,
+	// keeping other fields like Synth and Trade the same as the original.
+	origAsset.Symbol = winner.Asset.Symbol
+	return origAsset
 }
 
 func externalAssetMatch(version semver.Version, chain common.Chain, hint string) string {

@@ -674,7 +674,7 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 
 	// if from asset chain has memo length restrictions use a prefix
 	memoString := memo.String()
-	if !fromAsset.Synth && len(memoString) > fromAsset.Chain.MaxMemoLength() {
+	if !fromAsset.IsNative() && len(memoString) > fromAsset.GetChain().MaxMemoLength() {
 		if len(memo.ShortString()) < len(memoString) { // use short codes if available
 			memoString = memo.ShortString()
 		} else { // otherwise attempt to shorten
