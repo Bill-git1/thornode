@@ -128,6 +128,8 @@ func NewConstantValue() *ConstantVals {
 			MultipleAffiliatesMaxCount:          5,                  // maximum number of nested affiliates
 			BondSlashBan:                        5_000_00000000,     // 5000 RUNE - amount to slash bond of banned nodes
 			BankSendEnabled:                     0,                  // enable/disable cosmos bank send messages
+			RUNEPoolHaltDeposit:                 0,                  // enable/disable RUNEPool deposit (block height)
+			RUNEPoolHaltWithdraw:                0,                  // enable/disable RUNEPool withdraw (block height)
 		},
 		boolValues: map[ConstantName]bool{
 			StrictBondLiquidityRatio: true,

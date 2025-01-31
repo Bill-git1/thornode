@@ -12,7 +12,7 @@
             "@type": "/cosmos.crypto.secp256k1.PubKey",
             "key": "Ah4wzGUnsQ7oYiei732pv9NLLvufvGFkBtH3zNyhzBZW"
           },
-          "sequence": "6"
+          "sequence": "8"
         },
         {
           "@type": "/cosmos.auth.v1beta1.BaseAccount",
@@ -54,7 +54,7 @@
             "@type": "/cosmos.crypto.secp256k1.PubKey",
             "key": "AxM8YN2N3Rpv2za31hmhLGUnKldrnrZWjf7/n+IYXyMa"
           },
-          "sequence": "3"
+          "sequence": "7"
         },
         {
           "@type": "/cosmos.auth.v1beta1.ModuleAccount",
@@ -159,7 +159,7 @@
           "address": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
           "coins": [
             {
-              "amount": "2499994000000",
+              "amount": "2499990000000",
               "denom": "rune"
             }
           ]
@@ -186,7 +186,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "200010920850",
+              "amount": "200017473354",
               "denom": "rune"
             }
           ]
@@ -204,7 +204,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35000026901571",
+              "amount": "35000032242513",
               "denom": "rune"
             }
           ]
@@ -231,7 +231,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "12499976177579",
+              "amount": "12499968284133",
               "denom": "rune"
             }
           ]
@@ -327,13 +327,19 @@
         {
           "key": "RUNEPOOLENABLED",
           "value": "1"
+        },
+        {
+          "key": "RUNEPOOLHALTDEPOSIT"
+        },
+        {
+          "key": "RUNEPOOLHALTWITHDRAW"
         }
       ],
       "network": {
         "LPIncomeSplit": "9840",
         "NodeIncomeSplit": "160",
-        "bond_reward_rune": "177579",
-        "total_bond_units": "50"
+        "bond_reward_rune": "284133",
+        "total_bond_units": "80"
       },
       "network_fees": [
         {
@@ -407,6 +413,14 @@
           "key": "RUNEPOOLENABLED",
           "signer": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
           "value": "1"
+        },
+        {
+          "key": "RUNEPOOLHALTDEPOSIT",
+          "signer": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm"
+        },
+        {
+          "key": "RUNEPOOLHALTWITHDRAW",
+          "signer": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm"
         }
       ],
       "node_accounts": [
@@ -472,7 +486,7 @@
         },
         {
           "active_block_height": "1",
-          "bond": "2499994000000",
+          "bond": "2499986000000",
           "bond_address": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
           "ip_address": "1.1.1.1",
           "node_address": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
@@ -496,7 +510,7 @@
           "LP_units": "100000000000",
           "asset": "BTC.BTC",
           "balance_asset": "100000000",
-          "balance_rune": "100005460425",
+          "balance_rune": "100008736677",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -507,7 +521,7 @@
           "LP_units": "100000000000",
           "asset": "ETH.ETH",
           "balance_asset": "1000000000",
-          "balance_rune": "100005460425",
+          "balance_rune": "100008736677",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -533,8 +547,8 @@
         },
         {
           "deposit_amount": "10",
-          "last_deposit_height": "8",
-          "last_withdraw_height": "10",
+          "last_deposit_height": "11",
+          "last_withdraw_height": "16",
           "rune_address": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
           "units": "0",
           "withdraw_amount": "10"
@@ -614,5 +628,5 @@
       }
     }
   },
-  "initial_height": 11
+  "initial_height": 17
 }

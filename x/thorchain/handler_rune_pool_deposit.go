@@ -69,6 +69,10 @@ func (h RunePoolDepositHandler) validateV3_0_0(ctx cosmos.Context, msg MsgRunePo
 	if runePoolEnabled <= 0 {
 		return fmt.Errorf("RUNEPool disabled")
 	}
+	runePoolDepositPaused := h.mgr.Keeper().GetConfigInt64(ctx, constants.RUNEPoolHaltDeposit)
+	if runePoolDepositPaused > 0 && ctx.BlockHeight() >= runePoolDepositPaused {
+		return fmt.Errorf("RUNEPool deposit paused")
+	}
 	return nil
 }
 

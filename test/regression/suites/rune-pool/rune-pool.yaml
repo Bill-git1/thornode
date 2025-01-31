@@ -268,6 +268,38 @@ endpoint: http://localhost:1317/thorchain/mimir
 asserts:
   - .RUNEPOOLDEPOSITMATURITYBLOCKS == 2
 ---
+type: tx-mimir
+key: RUNEPoolHaltDeposit
+value: 1
+signer: {{ addr_thor_goat }}
+---
+type: create-blocks
+count: 1
+---
+type: tx-deposit
+signer: {{ addr_thor_pig }}
+coins:
+  - amount: "10"
+    asset: "THOR.RUNE"
+memo: "pool+"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/block
+asserts:
+  - >
+    select(.txs[0].result.log | contains("RUNEPool deposit paused"))
+---
+type: tx-mimir
+key: RUNEPoolHaltDeposit
+value: 0
+signer: {{ addr_thor_goat }}
+---
+type: create-blocks
+count: 1
+---
 type: tx-deposit
 signer: {{ addr_thor_pig }}
 coins:
@@ -283,7 +315,7 @@ endpoint: http://localhost:1317/thorchain/rune_provider/{{ addr_thor_pig }}
 asserts:
   - .rune_address == "{{ addr_thor_pig }}"
   - .deposit_amount == "10"
-  - .last_deposit_height == 8
+  - .last_deposit_height == 11
   - .last_withdraw_height == 0
 ---
 type: check
@@ -315,7 +347,7 @@ endpoint: http://localhost:1317/thorchain/rune_provider/{{ addr_thor_pig }}
 asserts:
   - .rune_address == "{{ addr_thor_pig }}"
   - .deposit_amount == "10" # no change
-  - .last_deposit_height == 8 # no change
+  - .last_deposit_height == 11 # no change
   - .last_withdraw_height == 0
 ---
 type: check
@@ -327,6 +359,38 @@ asserts:
 ########################################################################################
 # withdraw after maturity
 ########################################################################################
+type: tx-mimir
+key: RUNEPoolHaltWithdraw
+value: 1
+signer: {{ addr_thor_goat }}
+---
+type: create-blocks
+count: 1
+---
+type: tx-deposit
+signer: {{ addr_thor_pig }}
+coins:
+  - amount: "0"
+    asset: "THOR.RUNE"
+memo: "pool-:10000"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/block
+asserts:
+  - >
+    select(.txs[0].result.log | contains("RUNEPool withdraw paused"))
+---
+type: tx-mimir
+key: RUNEPoolHaltWithdraw
+value: 0
+signer: {{ addr_thor_goat }}
+---
+type: create-blocks
+count: 1
+---
 type: tx-deposit
 signer: {{ addr_thor_pig }}
 coins:
@@ -344,8 +408,8 @@ asserts:
   - .value == "0"
   - .withdraw_amount == "10"
   - .deposit_amount == "10" # no change
-  - .last_deposit_height == 8 # no change
-  - .last_withdraw_height == 10
+  - .last_deposit_height == 11 # no change
+  - .last_withdraw_height == 16
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/runepool

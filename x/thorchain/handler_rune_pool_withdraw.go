@@ -70,6 +70,10 @@ func (h RunePoolWithdrawHandler) validateV3_0_0(ctx cosmos.Context, msg MsgRuneP
 	if runePoolEnabled <= 0 {
 		return fmt.Errorf("RUNEPool disabled")
 	}
+	runePoolWithdrawPaused := h.mgr.Keeper().GetConfigInt64(ctx, constants.RUNEPoolHaltWithdraw)
+	if runePoolWithdrawPaused > 0 && ctx.BlockHeight() >= runePoolWithdrawPaused {
+		return fmt.Errorf("RUNEPool withdraw paused")
+	}
 	maxAffBasisPts := h.mgr.Keeper().GetConfigInt64(ctx, constants.MaxAffiliateFeeBasisPoints)
 	if !msg.AffiliateBasisPoints.IsZero() && msg.AffiliateBasisPoints.GT(cosmos.NewUint(uint64(maxAffBasisPts))) {
 		return fmt.Errorf("invalid affiliate basis points, max: %d, request: %d", maxAffBasisPts, msg.AffiliateBasisPoints.Uint64())
