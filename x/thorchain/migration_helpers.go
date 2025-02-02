@@ -9,6 +9,66 @@ import (
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
+// unsafeAddRefundOutbound - schedules a REFUND outbound to destAddr with coin amount
+// - inHash: the tx hash being refunded
+// - destAddr: the address to refund to
+// - coin: the amount to refund
+// - height: the block height to schedule the outbound
+func unsafeAddRefundOutbound(ctx cosmos.Context, mgr *Mgrs, inHash string, destAddr string, coin common.Coin, height int64) error {
+	if coin.IsEmpty() || coin.IsNative() {
+		return fmt.Errorf("coin must be an external asset")
+	}
+
+	// tx details
+	dest, err := common.NewAddress(destAddr)
+	if err != nil {
+		return err
+	}
+	inTxId, err := common.NewTxID(inHash)
+	if err != nil {
+		return err
+	}
+	memo := fmt.Sprintf("REFUND:%s", inTxId.String())
+
+	// choose an asgard with enough balance
+	var asg Vault
+	activeAsgards, err := mgr.Keeper().GetAsgardVaultsByStatus(ctx, types.VaultStatus_ActiveVault)
+	if err != nil || len(activeAsgards) == 0 {
+		return fmt.Errorf("fail to get active asgard vaults: %w", err)
+	}
+	for _, v := range activeAsgards {
+		if v.GetCoin(coin.Asset).Amount.GTE(coin.Amount) {
+			asg = v
+			break
+		}
+	}
+	if asg.IsEmpty() {
+		return fmt.Errorf("no asgard with enough balance")
+	}
+
+	maxGasCoin, err := mgr.GasMgr().GetMaxGas(ctx, coin.Asset.GetChain())
+	if err != nil {
+		return fmt.Errorf("fail to get max gas: %w", err)
+	}
+
+	txOut := TxOutItem{
+		Chain:       coin.Asset.GetChain(),
+		InHash:      inTxId,
+		ToAddress:   dest,
+		VaultPubKey: asg.PubKey,
+		Coin:        coin,
+		MaxGas:      common.Gas{maxGasCoin},
+		Memo:        memo,
+	}
+
+	err = mgr.TxOutStore().UnSafeAddTxOutItem(ctx, mgr, txOut, height)
+	if err != nil {
+		return fmt.Errorf("fail to add outbound tx: %w", err)
+	}
+
+	return nil
+}
+
 // When an ObservedTxInVoter has dangling Actions items swallowed by the vaults, requeue
 // them. This can happen when a TX has multiple outbounds scheduled and one of them is
 // erroneously scheduled for the past.
