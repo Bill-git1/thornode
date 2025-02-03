@@ -88,6 +88,7 @@ func (h ObservedTxInHandler) preflight(ctx cosmos.Context, voter ObservedTxVoter
 		telemetry.NewLabel("reason", "failed_observe_txin"),
 		telemetry.NewLabel("chain", string(tx.Tx.Chain)),
 	}))
+	slashCtx = ctx.WithContext(context.WithValue(slashCtx.Context(), constants.CtxObservedTx, tx.Tx.ID.String()))
 
 	ok := false
 	if err := h.mgr.Keeper().SetLastObserveHeight(ctx, tx.Tx.Chain, signer, tx.BlockHeight); err != nil {

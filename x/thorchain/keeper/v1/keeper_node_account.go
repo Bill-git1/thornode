@@ -12,6 +12,7 @@ import (
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/config"
 	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper/types"
 )
@@ -357,6 +358,10 @@ func (k KVStore) IncNodeAccountSlashPoints(ctx cosmos.Context, addr cosmos.AccAd
 		),
 	)
 
+	if config.GetThornode().Telemetry.SlashPoints {
+		slashTelemetry(ctx, pts, addr, "IncSlashPoints")
+	}
+
 	return nil
 }
 
@@ -383,6 +388,10 @@ func (k KVStore) DecNodeAccountSlashPoints(ctx cosmos.Context, addr cosmos.AccAd
 			telemetry.NewLabel("address", addr.String()),
 		),
 	)
+
+	if config.GetThornode().Telemetry.SlashPoints {
+		slashTelemetry(ctx, -pts, addr, "DecSlashPoints")
+	}
 
 	return nil
 }

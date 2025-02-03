@@ -352,6 +352,14 @@ type Thornode struct {
 	// consensus failure on sync from genesis.
 	StagenetAdminAddresses []string `mapstructure:"stagenet_admin_addresses"`
 
+	// Telemetry contains THORnode-specific telemetry configuration.
+	Telemetry struct {
+		// SlashPoints enables slash point telemetry. This creates a file in the node home
+		// directory with JSON events for all slash increments and decrements. This feature
+		// should not be enabled on production nodes.
+		SlashPoints bool `mapstructure:"slash_points"`
+	} `mapstructure:"telemetry"`
+
 	// LogFilter will drop logs matching the modules and messages when not in debug level.
 	LogFilter struct {
 		// Modules is a list of modules to filter.

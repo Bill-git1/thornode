@@ -49,6 +49,7 @@ const (
 	CtxMetricLabels  contextKey = "metricLabels"
 	CtxLoanTxID      contextKey = "loan-txid"
 	CtxLoanToAddress contextKey = "loan-toaddress"
+	CtxObservedTx    contextKey = "observed-tx"
 )
 
 const MimirKeyRegex = `^[a-zA-Z0-9-]+$`

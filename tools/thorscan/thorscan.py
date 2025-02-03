@@ -19,8 +19,8 @@ import retry
 
 BLOCK_SECONDS = 6
 
-API_ENDPOINT = os.getenv("API_ENDPOINT", "https://thornode-v1.ninerealms.com")
-RPC_ENDPOINT = os.getenv("RPC_ENDPOINT", "https://rpc-v1.ninerealms.com")
+API_ENDPOINT = os.getenv("API_ENDPOINT", "https://thornode-v2.ninerealms.com")
+RPC_ENDPOINT = os.getenv("RPC_ENDPOINT", "https://rpc-v2.ninerealms.com")
 PARALLELISM = int(os.getenv("PARALLELISM", 4))
 
 logging.basicConfig(
@@ -149,6 +149,8 @@ last_scan_block_time = 0
 
 def signal_handler(signal, frame):
     global stop_scan
+    if stop_scan:  # double ctrl-c
+        sys.exit(0)
     stop_scan = True
 
 
@@ -188,7 +190,7 @@ def _fetch_block(height: int) -> Optional[Dict[str, Any]]:
         if stop_scan:
             return None
         res = _get(f"{API_ENDPOINT}/thorchain/block", params={"height": height})
-        if res.status_code == 404:
+        if res.status_code in {404, 429, 500, 503}:
             time.sleep(BLOCK_SECONDS / 2)
             continue  # expected near tip
         res.raise_for_status()
