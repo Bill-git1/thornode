@@ -21,6 +21,10 @@ func Ragnarok() *Actor {
 		if chain == common.THORChain {
 			continue
 		}
+		// BSC not compatible with sim tests
+		if chain.Equals(common.BSCChain) {
+			continue
+		}
 		a.Children[core.NewRagnarokPoolActor(chain.GetGasAsset())] = true
 	}
 

@@ -18,6 +18,10 @@ func Savers() *Actor {
 		if chain == common.THORChain {
 			continue
 		}
+		// BSC not compatible with sim tests
+		if chain.Equals(common.BSCChain) {
+			continue
+		}
 
 		// add saver
 		saver := core.NewSaverActor(chain.GetGasAsset(), 500) // 5% of asset depth

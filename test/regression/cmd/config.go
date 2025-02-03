@@ -257,7 +257,6 @@ func init() {
 		}
 
 		for _, chain := range common.AllChains {
-
 			// register template address for all chains
 			var addr common.Address
 			addr, err = common.PubKey(ecdsaPubKey).GetAddress(chain)

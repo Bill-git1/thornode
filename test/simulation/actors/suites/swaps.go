@@ -22,6 +22,10 @@ func Swaps() *Actor {
 		if chain == common.THORChain {
 			continue
 		}
+		// BSC not compatible with sim tests
+		if chain.Equals(common.BSCChain) {
+			continue
+		}
 
 		swapPools = append(swapPools, chain.GetGasAsset())
 

@@ -32,7 +32,6 @@ var chainRPCs = map[common.Chain]string{
 	common.BCHChain:  "http://localhost:28443",
 	common.DOGEChain: "http://localhost:18332",
 	common.ETHChain:  "http://localhost:8545",
-	common.BSCChain:  "http://localhost:8546",
 	common.AVAXChain: "http://localhost:9650/ext/bc/C/rpc",
 	common.GAIAChain: "localhost:9091",
 	common.BASEChain: "http://localhost:8547",
@@ -197,14 +196,16 @@ func InitConfig(parallelism int, seed bool) *OpConfig {
 	// fund user accounts with one goroutine per chain
 	wg = &sync.WaitGroup{}
 	for _, chain := range common.AllChains {
+		// BSC not compatible with simtests
+		if chain.Equals(common.BSCChain) {
+			continue
+		}
 
 		// determine the amount to seed
 		chainSeedAmount := sdkmath.ZeroUint()
 		switch chain {
 		case common.BTCChain, common.ETHChain, common.LTCChain, common.BCHChain, common.BASEChain:
 			chainSeedAmount = sdkmath.NewUint(10 * common.One)
-		case common.BSCChain:
-			chainSeedAmount = sdkmath.NewUint(100 * common.One)
 		case common.GAIAChain:
 			chainSeedAmount = sdkmath.NewUint(1000 * common.One)
 		case common.AVAXChain:

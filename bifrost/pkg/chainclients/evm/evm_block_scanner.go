@@ -422,9 +422,7 @@ func (e *EVMScanner) getTxIn(block *etypes.Block) (stypes.TxIn, error) {
 	// CHANGEME: if an EVM chain supports some way of fetching all transaction receipts
 	// within a block, register it here.
 	switch e.cfg.ChainID {
-	case common.BSCChain:
-		return e.getTxInOptimized("eth_getTransactionReceiptsByBlockNumber", block)
-	case common.BASEChain:
+	case common.BASEChain, common.BSCChain:
 		return e.getTxInOptimized("eth_getBlockReceipts", block)
 	}
 

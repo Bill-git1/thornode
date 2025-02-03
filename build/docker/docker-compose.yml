@@ -509,7 +509,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: registry.gitlab.com/thorchain/devops/node-launcher:binance-smart-daemon-1.2.13
+    image: registry.gitlab.com/thorchain/devops/node-launcher:binance-smart-daemon-1.4.17
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-5}

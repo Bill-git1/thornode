@@ -29,6 +29,10 @@ func Bootstrap() *Actor {
 		if chain == common.THORChain {
 			continue
 		}
+		// BSC not compatible with sim tests
+		if chain.Equals(common.BSCChain) {
+			continue
+		}
 		count++
 
 		a.Children[core.NewDualLPActor(chain.GetGasAsset())] = true
@@ -38,6 +42,10 @@ func Bootstrap() *Actor {
 	tokenPools := NewActor("Bootstrap-TokenPools")
 	for _, chain := range common.AllChains {
 		if !chain.IsEVM() {
+			continue
+		}
+		// BSC not compatible with sim tests
+		if chain.Equals(common.BSCChain) {
 			continue
 		}
 		count++
