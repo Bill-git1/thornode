@@ -117,7 +117,9 @@ func (k KVStore) IsOperationalMimir(key string) bool {
 	}
 
 	exactUnmatches := []string{
+		"NodePauseChainBlocks",
 		"PauseLoans",
+		"PauseOnSlashThreshold",
 	}
 	for i := range exactUnmatches {
 		if strings.EqualFold(key, exactUnmatches[i]) {
