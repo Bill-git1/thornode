@@ -397,12 +397,7 @@ func GetEventManager(version semver.Version) (EventManager, error) {
 // GetTxOutStore will return an implementation of the txout store that
 func GetTxOutStore(version semver.Version, keeper keeper.Keeper, eventMgr EventManager, gasManager GasManager) (TxOutStore, error) {
 	constAccessor := constants.GetConstantValues(version)
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return newTxOutStorageVCUR(keeper, constAccessor, eventMgr, gasManager), nil
-	default:
-		return nil, errInvalidVersion
-	}
+	return newTxOutStorageVCUR(keeper, constAccessor, eventMgr, gasManager), nil
 }
 
 // GetNetworkManager  retrieve a NetworkManager that is compatible with the given version

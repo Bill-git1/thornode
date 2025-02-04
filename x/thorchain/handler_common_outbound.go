@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	sdkmath "cosmossdk.io/math"
-	"github.com/blang/semver"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	"github.com/hashicorp/go-metrics"
 
@@ -30,7 +29,7 @@ func NewCommonOutboundTxHandler(mgr Manager) CommonOutboundTxHandler {
 	}
 }
 
-func (h CommonOutboundTxHandler) slashV3_0_0(ctx cosmos.Context, tx ObservedTx) error {
+func (h CommonOutboundTxHandler) slash(ctx cosmos.Context, tx ObservedTx) error {
 	toSlash := make(common.Coins, len(tx.Tx.Coins))
 	copy(toSlash, tx.Tx.Coins)
 	toSlash = toSlash.Add(tx.Tx.Gas.ToCoins()...)
@@ -44,16 +43,6 @@ func (h CommonOutboundTxHandler) slashV3_0_0(ctx cosmos.Context, tx ObservedTx) 
 }
 
 func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxID common.TxID) (*cosmos.Result, error) {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.handleV3_0_0(ctx, tx, inTxID)
-	default:
-		return nil, errBadVersion
-	}
-}
-
-func (h CommonOutboundTxHandler) handleV3_0_0(ctx cosmos.Context, tx ObservedTx, inTxID common.TxID) (*cosmos.Result, error) {
 	// note: Outbound tx usually it is related to an inbound tx except migration
 	// thus here try to get the ObservedTxInVoter,  and set the tx out hash accordingly
 	voter, err := h.mgr.Keeper().GetObservedTxInVoter(ctx, inTxID)
@@ -207,6 +196,10 @@ func (h CommonOutboundTxHandler) handleV3_0_0(ctx cosmos.Context, tx ObservedTx,
 						ctx.Logger().Error("fail to save swapper clout in", "error", err)
 					}
 
+					if cloutIn.Address.Equals(cloutOut.Address) {
+						// cloutOut is about to overwrite cloutIn, so reincrement with clout1.
+						cloutOut.Reclaim(clout1)
+					}
 					cloutOut.Reclaim(clout2)
 					cloutOut.LastReclaimHeight = ctx.BlockHeight()
 					// trunk-ignore(golangci-lint/govet): shadow
@@ -238,7 +231,7 @@ func (h CommonOutboundTxHandler) handleV3_0_0(ctx cosmos.Context, tx ObservedTx,
 			}
 		}
 
-		if err := h.slashV3_0_0(ctx, tx); err != nil {
+		if err := h.slash(ctx, tx); err != nil {
 			return nil, ErrInternal(err, "fail to slash account")
 		}
 	}

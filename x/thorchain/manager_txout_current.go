@@ -859,6 +859,10 @@ func (tos *TxOutStorageVCUR) calcClout(ctx cosmos.Context, runeValue cosmos.Uint
 	}
 
 	if !clout2.IsZero() {
+		if cloutIn.Address.Equals(cloutOut.Address) {
+			// cloutOut is about to overwrite cloutIn, so reincrement with clout1.
+			cloutOut.Spent = cloutOut.Spent.Add(clout1)
+		}
 		cloutOut.Spent = cloutOut.Spent.Add(clout2)
 		cloutOut.LastSpentHeight = ctx.BlockHeight()
 		if err := tos.keeper.SetSwapperClout(ctx, cloutOut); err != nil {

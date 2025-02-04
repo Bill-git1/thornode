@@ -25,10 +25,10 @@ func (ManagersTestSuite) TestManagers(c *C) {
 	c.Assert(err, NotNil)
 	c.Assert(errors.Is(err, errInvalidVersion), Equals, true)
 
+	// Versioning has been removed from GetTxOutStore.
 	txOutStore, err := GetTxOutStore(ver, mgr.Keeper(), mgr.EventMgr(), gasMgr)
-	c.Assert(txOutStore, IsNil)
-	c.Assert(err, NotNil)
-	c.Assert(errors.Is(err, errInvalidVersion), Equals, true)
+	c.Assert(txOutStore, NotNil)
+	c.Assert(err, IsNil)
 
 	vaultMgr, err := GetNetworkManager(ver, mgr.Keeper(), mgr.TxOutStore(), mgr.EventMgr())
 	c.Assert(vaultMgr, IsNil)
