@@ -28,7 +28,7 @@ Native asset names can be shortened to reduce the length of the memo. The exact 
 
 | Shorten Asset | Asset Notation |
 | ------------- | -------------- |
-| r             | THOR.RUNE      |
+| r or rune     | THOR.RUNE      |
 | a             | AVAX.AVAX      |
 | b             | BTC.BTC        |
 | c             | BCH.BCH        |
@@ -38,6 +38,7 @@ Native asset names can be shortened to reduce the length of the memo. The exact 
 | d             | DOGE.DOGE      |
 | e             | ETH.ETH        |
 | l             | LTC.LTC        |
+| f             | BASE.ETH       |
 
 **Example Swaps**:
 
