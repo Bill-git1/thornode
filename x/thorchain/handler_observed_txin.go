@@ -47,16 +47,6 @@ func (h ObservedTxInHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Resu
 }
 
 func (h ObservedTxInHandler) validate(ctx cosmos.Context, msg MsgObservedTxIn) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.validateV3_0_0(ctx, msg)
-	default:
-		return errInvalidVersion
-	}
-}
-
-func (h ObservedTxInHandler) validateV3_0_0(ctx cosmos.Context, msg MsgObservedTxIn) error {
 	// ValidateBasic is also executed in message service router's handler and isn't versioned there
 	if err := msg.ValidateBasic(); err != nil {
 		return err
@@ -67,16 +57,6 @@ func (h ObservedTxInHandler) validateV3_0_0(ctx cosmos.Context, msg MsgObservedT
 	}
 
 	return nil
-}
-
-func (h ObservedTxInHandler) handle(ctx cosmos.Context, msg MsgObservedTxIn) (*cosmos.Result, error) {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.handleV3_0_0(ctx, msg)
-	default:
-		return nil, errBadVersion
-	}
 }
 
 func (h ObservedTxInHandler) preflight(ctx cosmos.Context, voter ObservedTxVoter, nas NodeAccounts, tx ObservedTx, signer cosmos.AccAddress) (ObservedTxVoter, bool) {
@@ -94,32 +74,33 @@ func (h ObservedTxInHandler) preflight(ctx cosmos.Context, voter ObservedTxVoter
 	if err := h.mgr.Keeper().SetLastObserveHeight(ctx, tx.Tx.Chain, signer, tx.BlockHeight); err != nil {
 		ctx.Logger().Error("fail to save last observe height", "error", err, "signer", signer, "chain", tx.Tx.Chain)
 	}
+
+	// As an observation requires processing by all nodes no matter what,
+	// any observation should increment ObserveSlashPoints,
+	// to be decremented only if contributing to or within ObservationDelayFlexibility of consensus.
+	h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, signer)
+
 	if !voter.Add(tx, signer) {
-		// Slash for the network having to handle the extra message/s.
-		h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, signer)
+		// A duplicate message, so do nothing further.
 		return voter, ok
 	}
-	if !voter.HasFinalised(nas) {
-		// Before consensus, slash until consensus.
-		h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, signer)
-	} else {
+	if voter.HasFinalised(nas) {
 		if voter.FinalisedHeight == 0 {
 			ok = true
 			voter.Height = ctx.BlockHeight() // Always record the consensus height of the finalised Tx
 			voter.FinalisedHeight = ctx.BlockHeight()
 			voter.Tx = voter.GetTx(nas)
 
-			// This signer brings the voter to consensus; increment the signer's slash points like the before-consensus signers,
-			// then decrement all the signers' slash points and increment the non-signers' slash points.
-			h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, signer)
+			// This signer brings the voter to consensus;
+			// decrement all the signers' slash points and increment the non-signers' slash points.
 			signers := voter.GetConsensusSigners()
 			nonSigners := getNonSigners(nas, signers)
 			h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints, signers...)
 			h.mgr.Slasher().IncSlashPoints(slashCtx, lackOfObservationPenalty, nonSigners...)
-		} else if ctx.BlockHeight() <= (voter.FinalisedHeight+observeFlex) && voter.Tx.Equals(tx) {
+		} else if ctx.BlockHeight() <= (voter.FinalisedHeight+observeFlex) && voter.Tx.IsFinal() == tx.IsFinal() && voter.Tx.Tx.EqualsEx(tx.Tx) {
 			// event the tx had been processed , given the signer just a bit late , so still take away their slash points
 			// but only when the tx signer are voting is the tx that already reached consensus
-			h.mgr.Slasher().DecSlashPoints(slashCtx, lackOfObservationPenalty, signer)
+			h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints+lackOfObservationPenalty, signer)
 		}
 	}
 	if !ok && voter.HasConsensus(nas) && !tx.IsFinal() && voter.FinalisedHeight == 0 {
@@ -129,17 +110,16 @@ func (h ObservedTxInHandler) preflight(ctx cosmos.Context, voter ObservedTxVoter
 			// this is the tx that has consensus
 			voter.Tx = voter.GetTx(nas)
 
-			// This signer brings the voter to consensus; increment the signer's slash points like the before-consensus signers,
-			// then decrement all the signers' slash points and increment the non-signers' slash points.
-			h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, signer)
+			// This signer brings the voter to consensus;
+			// decrement all the signers' slash points and increment the non-signers' slash points.
 			signers := voter.GetConsensusSigners()
 			nonSigners := getNonSigners(nas, signers)
 			h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints, signers...)
 			h.mgr.Slasher().IncSlashPoints(slashCtx, lackOfObservationPenalty, nonSigners...)
-		} else if ctx.BlockHeight() <= (voter.Height+observeFlex) && voter.Tx.Equals(tx) {
+		} else if ctx.BlockHeight() <= (voter.Height+observeFlex) && voter.Tx.IsFinal() == tx.IsFinal() && voter.Tx.Tx.EqualsEx(tx.Tx) {
 			// event the tx had been processed , given the signer just a bit late , so still take away their slash points
 			// but only when the tx signer are voting is the tx that already reached consensus
-			h.mgr.Slasher().DecSlashPoints(slashCtx, lackOfObservationPenalty, signer)
+			h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints+lackOfObservationPenalty, signer)
 		}
 	}
 
@@ -149,7 +129,7 @@ func (h ObservedTxInHandler) preflight(ctx cosmos.Context, voter ObservedTxVoter
 	return voter, ok
 }
 
-func (h ObservedTxInHandler) handleV3_0_0(ctx cosmos.Context, msg MsgObservedTxIn) (*cosmos.Result, error) {
+func (h ObservedTxInHandler) handle(ctx cosmos.Context, msg MsgObservedTxIn) (*cosmos.Result, error) {
 	activeNodeAccounts, err := h.mgr.Keeper().ListActiveValidators(ctx)
 	if err != nil {
 		return nil, wrapError(ctx, err, "fail to get list of active node accounts")
@@ -338,19 +318,6 @@ func (h ObservedTxInHandler) addSwap(ctx cosmos.Context, msg MsgSwap) {
 // out into its own function to allow easier maintenance of original behavior vs order
 // book behavior.
 func (h ObservedTxInHandler) addSwapDirect(ctx cosmos.Context, msg MsgSwap) {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		h.addSwapDirectV3_0_0(ctx, msg)
-	default:
-		ctx.Logger().Error(errInvalidVersion.Error())
-	}
-}
-
-// addSwapDirect adds the swap directly to the swap queue (no order book) - segmented
-// out into its own function to allow easier maintenance of original behavior vs order
-// book behavior.
-func (h ObservedTxInHandler) addSwapDirectV3_0_0(ctx cosmos.Context, msg MsgSwap) {
 	if msg.Tx.Coins.IsEmpty() {
 		return
 	}

@@ -45,16 +45,6 @@ func (h ObservedTxOutHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Res
 }
 
 func (h ObservedTxOutHandler) validate(ctx cosmos.Context, msg MsgObservedTxOut) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.validateV3_0_0(ctx, msg)
-	default:
-		return errInvalidVersion
-	}
-}
-
-func (h ObservedTxOutHandler) validateV3_0_0(ctx cosmos.Context, msg MsgObservedTxOut) error {
 	// ValidateBasic is also executed in message service router's handler and isn't versioned there
 	if err := msg.ValidateBasic(); err != nil {
 		return err
@@ -65,16 +55,6 @@ func (h ObservedTxOutHandler) validateV3_0_0(ctx cosmos.Context, msg MsgObserved
 	}
 
 	return nil
-}
-
-func (h ObservedTxOutHandler) handle(ctx cosmos.Context, msg MsgObservedTxOut) (*cosmos.Result, error) {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.handleV3_0_0(ctx, msg)
-	default:
-		return nil, errBadVersion
-	}
 }
 
 func (h ObservedTxOutHandler) preflight(ctx cosmos.Context, voter ObservedTxVoter, nas NodeAccounts, tx ObservedTx, signer cosmos.AccAddress) (ObservedTxVoter, bool) {
@@ -92,9 +72,14 @@ func (h ObservedTxOutHandler) preflight(ctx cosmos.Context, voter ObservedTxVote
 	if err := h.mgr.Keeper().SetLastObserveHeight(ctx, tx.Tx.Chain, signer, tx.BlockHeight); err != nil {
 		ctx.Logger().Error("fail to save last observe height", "error", err, "signer", signer, "chain", tx.Tx.Chain)
 	}
+
+	// As an observation requires processing by all nodes no matter what,
+	// any observation should increment ObserveSlashPoints,
+	// to be decremented only if contributing to or within ObservationDelayFlexibility of consensus.
+	h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, signer)
+
 	if !voter.Add(tx, signer) {
-		// Slash for the network having to handle the extra message/s.
-		h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, signer)
+		// A duplicate message, so do nothing further.
 		return voter, ok
 	}
 	parts := strings.Split(tx.Tx.Memo, ":")
@@ -104,25 +89,21 @@ func (h ObservedTxOutHandler) preflight(ctx cosmos.Context, voter ObservedTxVote
 			h.mgr.Keeper().SetObservedLink(ctx, inhash, tx.Tx.ID)
 		}
 	}
-	if !voter.HasFinalised(nas) {
-		// Before consensus, slash until consensus.
-		h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, signer)
-	} else {
+	if voter.HasFinalised(nas) {
 		if voter.FinalisedHeight == 0 {
 			ok = true
 			voter.FinalisedHeight = ctx.BlockHeight()
 			voter.Tx = voter.GetTx(nas)
 
-			// This signer brings the voter to consensus; increment the signer's slash points like the before-consensus signers,
-			// then decrement all the signers' slash points and increment the non-signers' slash points.
-			h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, signer)
+			// This signer brings the voter to consensus;
+			// decrement all the signers' slash points and increment the non-signers' slash points.
 			signers := voter.GetConsensusSigners()
 			nonSigners := getNonSigners(nas, signers)
 			h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints, signers...)
 			h.mgr.Slasher().IncSlashPoints(slashCtx, lackOfObservationPenalty, nonSigners...)
-		} else if ctx.BlockHeight() <= (voter.FinalisedHeight+observeFlex) && voter.Tx.Equals(tx) {
+		} else if ctx.BlockHeight() <= (voter.FinalisedHeight+observeFlex) && voter.Tx.IsFinal() == tx.IsFinal() && voter.Tx.Tx.EqualsEx(tx.Tx) {
 			// event the tx had been processed , given the signer just a bit late , so we still take away their slash points
-			h.mgr.Slasher().DecSlashPoints(slashCtx, lackOfObservationPenalty, signer)
+			h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints+lackOfObservationPenalty, signer)
 		}
 	}
 	h.mgr.Keeper().SetObservedTxOutVoter(ctx, voter)
@@ -132,7 +113,7 @@ func (h ObservedTxOutHandler) preflight(ctx cosmos.Context, voter ObservedTxVote
 }
 
 // Handle a message to observe outbound tx
-func (h ObservedTxOutHandler) handleV3_0_0(ctx cosmos.Context, msg MsgObservedTxOut) (*cosmos.Result, error) {
+func (h ObservedTxOutHandler) handle(ctx cosmos.Context, msg MsgObservedTxOut) (*cosmos.Result, error) {
 	activeNodeAccounts, err := h.mgr.Keeper().ListActiveValidators(ctx)
 	if err != nil {
 		return nil, wrapError(ctx, err, "fail to get list of active node accounts")
