@@ -254,12 +254,6 @@ func quoteSimulateSwap(ctx cosmos.Context, mgr *Mgrs, amount sdkmath.Uint, msg *
 
 	msg.Tx.Coins[0].Amount = msg.Tx.Coins[0].Amount.QuoUint64(streamingQuantity)
 
-	// if the generated memo is too long for the source chain send error
-	maxMemoLength := msg.Tx.Coins[0].Asset.Chain.MaxMemoLength()
-	if !msg.Tx.Coins[0].Asset.Synth && len(msg.Tx.Memo) > maxMemoLength {
-		return nil, sdkmath.ZeroUint(), sdkmath.ZeroUint(), fmt.Errorf("generated memo too long for source chain")
-	}
-
 	// use the first active node account as the signer
 	nodeAccounts, err := mgr.Keeper().ListActiveValidators(ctx)
 	if err != nil {
@@ -511,6 +505,10 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 		return nil, fmt.Errorf("missing Amount parameter")
 	}
 
+	if len(req.ToleranceBps) > 0 && len(req.LiquidityToleranceBps) > 0 {
+		return nil, fmt.Errorf("must only include one of: tolerance_bps or liquidity_tolerance_bps")
+	}
+
 	// parse assets
 	fromAsset, err := common.NewAssetWithShortCodes(qs.mgr.GetVersion(), req.FromAsset)
 	if err != nil {
@@ -622,6 +620,7 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 
 	// parse tolerance basis points
 	limit := sdkmath.ZeroUint()
+	liquidityToleranceBps := sdkmath.ZeroUint()
 	if len(req.ToleranceBps) > 0 {
 		// validate tolerance basis points
 		toleranceBasisPoints, err := sdkmath.ParseUint(req.ToleranceBps)
@@ -639,6 +638,14 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 		}
 
 		limit = feelessEmit.MulUint64(10000 - toleranceBasisPoints.Uint64()).QuoUint64(10000)
+	} else if len(req.LiquidityToleranceBps) > 0 {
+		liquidityToleranceBps, err = sdkmath.ParseUint(req.LiquidityToleranceBps)
+		if err != nil {
+			return nil, fmt.Errorf("bad liquidity tolerance basis points: %w", err)
+		}
+		if liquidityToleranceBps.GTE(sdkmath.NewUint(10000)) {
+			return nil, fmt.Errorf("liquidity tolerance basis points must be less than 10000")
+		}
 	}
 
 	// custom refund addr
@@ -671,25 +678,7 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 		StreamQuantity:        streamingQuantity,
 		RefundAddress:         refundAddress,
 	}
-
-	// if from asset chain has memo length restrictions use a prefix
 	memoString := memo.String()
-	if !fromAsset.IsNative() && len(memoString) > fromAsset.GetChain().MaxMemoLength() {
-		if len(memo.ShortString()) < len(memoString) { // use short codes if available
-			memoString = memo.ShortString()
-		} else { // otherwise attempt to shorten
-			fuzzyAsset, err := quoteReverseFuzzyAsset(ctx, qs.mgr, toAsset)
-			if err == nil {
-				memo.Asset = fuzzyAsset
-				memoString = memo.String()
-			}
-		}
-
-		// this is the shortest we can make it
-		if len(memoString) > fromAsset.Chain.MaxMemoLength() {
-			return nil, fmt.Errorf("generated memo too long for source chain")
-		}
-	}
 
 	// if from asset is a trade asset, create fake balance
 	if fromAsset.IsTradeAsset() {
@@ -807,6 +796,32 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 
 	// the amount out will deduct the outbound fee
 	res.ExpectedAmountOut = emitAmount.Sub(outboundFeeAmount).String()
+
+	// add liquidty_tolerance_bps to the memo
+	if liquidityToleranceBps.GT(sdkmath.ZeroUint()) {
+		outputLimit := emitAmount.Sub(outboundFeeAmount).MulUint64(10000 - liquidityToleranceBps.Uint64()).QuoUint64(10000)
+		memo.SlipLimit = outputLimit
+		memoString = memo.String()
+	}
+
+	// shorten the memo if necessary
+	memoShortString := memo.ShortString()
+	if !fromAsset.IsNative() && len(memoString) > fromAsset.GetChain().MaxMemoLength() {
+		if len(memoShortString) < len(memoString) { // use short codes if available
+			memoString = memoShortString
+		} else { // otherwise attempt to shorten
+			fuzzyAsset, err := quoteReverseFuzzyAsset(ctx, qs.mgr, toAsset)
+			if err == nil {
+				memo.Asset = fuzzyAsset
+				memoString = memo.String()
+			}
+		}
+
+		// this is the shortest we can make it
+		if len(memoString) > fromAsset.GetChain().MaxMemoLength() {
+			return nil, fmt.Errorf("generated memo too long for source chain")
+		}
+	}
 
 	maxQ := int64(maxSwapQuantity)
 	res.MaxStreamingQuantity = maxQ

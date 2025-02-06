@@ -1993,6 +1993,17 @@ paths:
           format: int64
           type: integer
         style: form
+      - description: the maximum basis points of tolerance for pool price movements
+          to set the limit in the generated memo
+        explode: true
+        in: query
+        name: liquidity_tolerance_bps
+        required: false
+        schema:
+          example: 100
+          format: int64
+          type: integer
+        style: form
       - description: the affiliate fee in basis points
         explode: true
         in: query

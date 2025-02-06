@@ -339,7 +339,7 @@ params:
   from_asset: BTC.BTC
   to_asset: ETH.ETH
   amount: 5000000
-  tolerance_bps: 1000
+  tolerance_bps: 5000
   affiliate: {{ addr_thor_pig }}
   affiliate_bps: 1000
 status: 400
@@ -812,4 +812,65 @@ params:
 status: 400
 asserts:
   - .message|contains("amount less than dust threshold")
+---
+########################################################################################
+# liquidity_tolerance_bps too high
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/quote/swap
+params:
+  from_asset: BTC.BTC
+  to_asset: THOR.RUNE
+  amount: 1000000
+  destination: {{ addr_thor_fox }}
+  liquidity_tolerance_bps: 10001
+status: 400
+asserts:
+  - .message|contains("liquidity tolerance basis points must be less than 10000")
+---
+########################################################################################
+# both liquidity_tolerance_bps and tolerance_bps
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/quote/swap
+params:
+  from_asset: BTC.BTC
+  to_asset: THOR.RUNE
+  amount: 1000000
+  destination: {{ addr_thor_fox }}
+  liquidity_tolerance_bps: 100
+  tolerance_bps: 100
+status: 400
+asserts:
+  - .message|contains("must only include one of")
+---
+########################################################################################
+# valid liquidity_tolerance_bps should update the limit in the memo
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/quote/swap
+params:
+  from_asset: ETH.ETH
+  to_asset: THOR.RUNE
+  amount: 10000000
+  affiliate: xx
+  affiliate_bps: 500
+  destination: {{ addr_thor_fox }}
+asserts:
+  - .memo == "=:THOR.RUNE:{{ addr_thor_fox }}::xx:500"
+  - .expected_amount_out|tonumber == 893683046
+---
+type: check
+endpoint: http://localhost:1317/thorchain/quote/swap
+params:
+  from_asset: ETH.ETH
+  to_asset: THOR.RUNE
+  amount: 10000000
+  affiliate: xx
+  affiliate_bps: 500
+  destination: {{ addr_thor_fox }}
+  liquidity_tolerance_bps: 100
+asserts:
+  - .memo == "=:THOR.RUNE:{{ addr_thor_fox }}:884746215:xx:500"
+  - .expected_amount_out|tonumber == 893683046
 

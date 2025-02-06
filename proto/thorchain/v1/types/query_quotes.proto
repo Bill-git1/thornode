@@ -19,6 +19,7 @@ message QueryQuoteSwapRequest{
   repeated string affiliate = 9;
   repeated string affiliate_bps = 10;
   string height = 11;
+  string liquidity_tolerance_bps = 12;
 }
 
 message QueryQuoteSwapResponse{

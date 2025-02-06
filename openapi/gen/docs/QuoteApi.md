@@ -312,7 +312,7 @@ No authorization required
 
 ## Quoteswap
 
-> QuoteSwapResponse Quoteswap(ctx).Height(height).FromAsset(fromAsset).ToAsset(toAsset).Amount(amount).Destination(destination).RefundAddress(refundAddress).StreamingInterval(streamingInterval).StreamingQuantity(streamingQuantity).ToleranceBps(toleranceBps).AffiliateBps(affiliateBps).Affiliate(affiliate).Execute()
+> QuoteSwapResponse Quoteswap(ctx).Height(height).FromAsset(fromAsset).ToAsset(toAsset).Amount(amount).Destination(destination).RefundAddress(refundAddress).StreamingInterval(streamingInterval).StreamingQuantity(streamingQuantity).ToleranceBps(toleranceBps).LiquidityToleranceBps(liquidityToleranceBps).AffiliateBps(affiliateBps).Affiliate(affiliate).Execute()
 
 
 
@@ -340,12 +340,13 @@ func main() {
     streamingInterval := int64(10) // int64 | the interval in which streaming swaps are swapped (optional)
     streamingQuantity := int64(10) // int64 | the quantity of swaps within a streaming swap (optional)
     toleranceBps := int64(100) // int64 | the maximum basis points from the current feeless swap price to set the limit in the generated memo (optional)
+    liquidityToleranceBps := int64(100) // int64 | the maximum basis points of tolerance for pool price movements to set the limit in the generated memo (optional)
     affiliateBps := int64(100) // int64 | the affiliate fee in basis points (optional)
     affiliate := "t" // string | the affiliate (address or thorname) (optional)
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.QuoteApi.Quoteswap(context.Background()).Height(height).FromAsset(fromAsset).ToAsset(toAsset).Amount(amount).Destination(destination).RefundAddress(refundAddress).StreamingInterval(streamingInterval).StreamingQuantity(streamingQuantity).ToleranceBps(toleranceBps).AffiliateBps(affiliateBps).Affiliate(affiliate).Execute()
+    resp, r, err := apiClient.QuoteApi.Quoteswap(context.Background()).Height(height).FromAsset(fromAsset).ToAsset(toAsset).Amount(amount).Destination(destination).RefundAddress(refundAddress).StreamingInterval(streamingInterval).StreamingQuantity(streamingQuantity).ToleranceBps(toleranceBps).LiquidityToleranceBps(liquidityToleranceBps).AffiliateBps(affiliateBps).Affiliate(affiliate).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `QuoteApi.Quoteswap``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -375,6 +376,7 @@ Name | Type | Description  | Notes
  **streamingInterval** | **int64** | the interval in which streaming swaps are swapped | 
  **streamingQuantity** | **int64** | the quantity of swaps within a streaming swap | 
  **toleranceBps** | **int64** | the maximum basis points from the current feeless swap price to set the limit in the generated memo | 
+ **liquidityToleranceBps** | **int64** | the maximum basis points of tolerance for pool price movements to set the limit in the generated memo | 
  **affiliateBps** | **int64** | the affiliate fee in basis points | 
  **affiliate** | **string** | the affiliate (address or thorname) | 
 

@@ -640,6 +640,7 @@ type ApiQuoteswapRequest struct {
 	streamingInterval *int64
 	streamingQuantity *int64
 	toleranceBps *int64
+	liquidityToleranceBps *int64
 	affiliateBps *int64
 	affiliate *string
 }
@@ -695,6 +696,12 @@ func (r ApiQuoteswapRequest) StreamingQuantity(streamingQuantity int64) ApiQuote
 // the maximum basis points from the current feeless swap price to set the limit in the generated memo
 func (r ApiQuoteswapRequest) ToleranceBps(toleranceBps int64) ApiQuoteswapRequest {
 	r.toleranceBps = &toleranceBps
+	return r
+}
+
+// the maximum basis points of tolerance for pool price movements to set the limit in the generated memo
+func (r ApiQuoteswapRequest) LiquidityToleranceBps(liquidityToleranceBps int64) ApiQuoteswapRequest {
+	r.liquidityToleranceBps = &liquidityToleranceBps
 	return r
 }
 
@@ -776,6 +783,9 @@ func (a *QuoteApiService) QuoteswapExecute(r ApiQuoteswapRequest) (*QuoteSwapRes
 	}
 	if r.toleranceBps != nil {
 		localVarQueryParams.Add("tolerance_bps", parameterToString(*r.toleranceBps, ""))
+	}
+	if r.liquidityToleranceBps != nil {
+		localVarQueryParams.Add("liquidity_tolerance_bps", parameterToString(*r.liquidityToleranceBps, ""))
 	}
 	if r.affiliateBps != nil {
 		localVarQueryParams.Add("affiliate_bps", parameterToString(*r.affiliateBps, ""))
