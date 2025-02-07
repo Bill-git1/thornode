@@ -40,13 +40,10 @@ ldflags = -X gitlab.com/thorchain/thornode/v3/constants.Version=$(VERSION) \
 # golang settings
 TEST_PATHS=$(shell go list ./... | grep -v bifrost/tss/go-tss) # Skip compute-intensive tests by default
 TEST_DIR?=${TEST_PATHS}
-BUILD_FLAGS := -ldflags '$(ldflags) -extldflags=-static' -tags ${TAG} -trimpath
+BUILD_FLAGS := -ldflags '$(ldflags)' -tags ${TAG} -trimpath
 TEST_BUILD_FLAGS := -parallel=1 -tags=mocknet
 BINARIES?=./cmd/thornode ./cmd/bifrost ./tools/recover-keyshare-backup
 GOVERSION=$(shell awk '($$1 == "go") { print $$2 }' go.mod)
-
-# CGO must be disabled for static linking, so disable it across the board for consistency.
-export CGO_ENABLED=0
 
 # docker tty args are disabled in CI
 ifndef CI
@@ -168,23 +165,21 @@ test-coverage-sum: test-network-specific
 	@go tool cover -html=coverage.txt -o coverage.html
 
 test: test-network-specific
-	@go test ${TEST_BUILD_FLAGS} ${TEST_DIR}
+	@CGO_ENABLED=0 go test ${TEST_BUILD_FLAGS} ${TEST_DIR}
 
 test-all: test-network-specific
-	@go test ${TEST_BUILD_FLAGS} "./..."
+	@CGO_ENABLED=0 go test ${TEST_BUILD_FLAGS} "./..."
 
-# Only enable CGO in cases where "-race" is used.
 test-go-tss:
-	@CGO_ENABLED=1 go test ${TEST_BUILD_FLAGS} --race "./bifrost/tss/go-tss/..."
+	@go test ${TEST_BUILD_FLAGS} --race "./bifrost/tss/go-tss/..."
 
 test-network-specific:
-	@go test -tags stagenet ./common
-	@go test -tags mainnet ./common ./bifrost/pkg/chainclients/utxo/...
-	@go test -tags mocknet ./common ./bifrost/pkg/chainclients/utxo/...
+	@CGO_ENABLED=0 go test -tags stagenet ./common
+	@CGO_ENABLED=0 go test -tags mainnet ./common ./bifrost/pkg/chainclients/utxo/...
+	@CGO_ENABLED=0 go test -tags mocknet ./common ./bifrost/pkg/chainclients/utxo/...
 
-# Only enable CGO in cases where "-race" is used.
 test-race:
-	@CGO_ENABLED=1 go test -race ${TEST_BUILD_FLAGS} ${TEST_DIR}
+	@go test -race ${TEST_BUILD_FLAGS} ${TEST_DIR}
 
 # ------------------------------ Regression Tests ------------------------------
 
