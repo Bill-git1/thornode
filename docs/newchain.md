@@ -87,8 +87,6 @@ type ChainClient interface {
 
 // BlockScannerFetcher define the methods a block scanner need to implement
 type BlockScannerFetcher interface {
-    // FetchMemPool scan the mempool
-    FetchMemPool(height int64) (types.TxIn, error)
     // FetchTxs scan block with the given height
     FetchTxs(height int64) (types.TxIn, error)
     // GetHeight return current block height

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"math/rand"
 	"strconv"
 	"sync"
 	"time"
@@ -496,117 +495,6 @@ func (c *Client) FetchTxs(height, chainHeight int64) (types.TxIn, error) {
 
 	txIn.Count = strconv.Itoa(len(txIn.TxArray))
 	return txIn, nil
-}
-
-////////////////////////////////////////////////////////////////////////////////////////
-// Client - Fetch Mempool
-////////////////////////////////////////////////////////////////////////////////////////
-
-// FetchMemPool retrieves txs from mempool
-func (c *Client) FetchMemPool(height int64) (types.TxIn, error) {
-	hashes, err := c.rpc.GetRawMempool()
-	if err != nil {
-		return types.TxIn{}, fmt.Errorf("fail to get tx hashes from mempool: %w", err)
-	}
-	txIn := types.TxIn{
-		Chain:   c.GetChain(),
-		MemPool: true,
-	}
-
-	// shuffle to distribute observations when mempool is large
-	rand.Shuffle(len(hashes), func(i, j int) {
-		hashes[i], hashes[j] = hashes[j], hashes[i]
-	})
-
-	// create batches
-	batches := [][]string{}
-	batch := []string{}
-	for _, h := range hashes {
-		// skip transactions we have already processed
-		if !c.tryAddToMemPoolCache(h) {
-			c.log.Debug().Msgf("ignoring processed tx %s", h)
-			continue
-		}
-
-		// only process up to the batch size at once
-		batch = append(batch, h)
-		if len(batch) >= c.cfg.UTXO.TransactionBatchSize {
-			batches = append(batches, batch)
-			batch = []string{}
-		}
-
-		// if we have enough batches, stop
-		if len(batches) >= c.cfg.UTXO.MaxMempoolBatches {
-			break
-		}
-	}
-	if len(batch) > 0 {
-		batches = append(batches, batch)
-	}
-
-	// clear mempool cache for batches i or later in case of error
-	clearMemPoolCache := func(i int) {
-		for j := i; j < len(batches); j++ {
-			for _, h := range batches[j] {
-				c.removeFromMemPoolCache(h)
-			}
-		}
-	}
-
-	var returnErr error
-	errCount := 0
-	for i, batch := range batches {
-		// fetch the batch of results
-		var results []*btcjson.TxRawResult
-		var errs []error
-		results, errs, err = c.rpc.BatchGetRawTransactionVerbose(batch)
-		if err != nil { // clear mempool cache for unprocessed batches and return error
-			clearMemPoolCache(i)
-			returnErr = fmt.Errorf("fail to get raw transactions from mempool: %w", err)
-			break
-		}
-
-		// process the batch results
-		for i := range results {
-			result := results[i]
-			err = errs[i]
-			// the transaction could have been removed, regardless safe to continue
-			if err != nil {
-				errCount++
-				c.removeFromMemPoolCache(batch[i]) // remove from mempool cache so it will retry
-				c.log.Err(err).Str("hash", batch[i]).Msg("fail to get raw transaction verbose")
-				continue
-			}
-
-			// filter transactions
-			var txInItem types.TxInItem
-			txInItem, err = c.getTxIn(result, height, true, nil)
-			if err != nil {
-				c.log.Debug().Err(err).Msg("fail to get TxInItem")
-				continue
-			}
-			if txInItem.IsEmpty() {
-				continue
-			}
-			if txInItem.Coins.IsEmpty() {
-				continue
-			}
-
-			txIn.TxArray = append(txIn.TxArray, txInItem)
-		}
-	}
-
-	// log some info if we observed or had errors
-	if len(txIn.TxArray) > 0 || errCount > 0 {
-		c.log.Info().
-			Int("batch", len(batch)).
-			Int("txins", len(txIn.TxArray)).
-			Int("errors", errCount).
-			Msg("retrieved mempool batch")
-	}
-
-	txIn.Count = strconv.Itoa(len(txIn.TxArray))
-	return txIn, returnErr
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////

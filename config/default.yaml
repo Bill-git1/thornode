@@ -70,7 +70,6 @@ bifrost:
       password: password
       http_post_mode: 1
       disable_tls: 1
-      parallel_mempool_scan: 5
       mempool_tx_id_cache_size: 1_000_000
       scanner_leveldb:
         <<: *default-leveldb
@@ -87,7 +86,6 @@ bifrost:
       utxo: &utxo
         block_cache_count: 144
         transaction_batch_size: 500
-        max_mempool_batches: 10
         estimated_average_tx_size: 1000
         default_min_relay_fee_sats: 1000
         default_sats_per_vbyte: 25
@@ -108,7 +106,6 @@ bifrost:
         http_request_write_timeout: 30s
         max_http_request_retry: 10
         db_path: /var/data/bifrost/observer
-        scan_mempool: true
         max_contract_tx_logs: 0
 
         # the following defaults must be defined to override with environment
@@ -248,7 +245,6 @@ bifrost:
         chain_id: DOGE
         gas_price_resolution: 500_000 # sats
         gas_cache_blocks: 10
-        scan_mempool: false
       mempool_tx_id_cache_size: 1_000_000
       scanner_leveldb: *default-leveldb
       min_confirmations: 2

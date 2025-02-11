@@ -22,8 +22,6 @@ import (
 
 // BlockScannerFetcher define the methods a block scanner need to implement
 type BlockScannerFetcher interface {
-	// FetchMemPool scan the mempool
-	FetchMemPool(height int64) (types.TxIn, error)
 	// FetchTxs scan block with the given height
 	FetchTxs(fetchHeight, chainHeight int64) (types.TxIn, error)
 	// GetHeight return current block height
@@ -108,46 +106,8 @@ func (b *BlockScanner) Start(globalTxsQueue chan types.TxIn) {
 	} else if currentPos > b.previousBlock {
 		b.previousBlock = currentPos
 	}
-	b.wg.Add(2)
+	b.wg.Add(1)
 	go b.scanBlocks()
-	go b.scanMempool()
-}
-
-func (b *BlockScanner) scanMempool() {
-	b.logger.Info().Msg("start to scan mempool")
-	defer b.logger.Info().Msg("stop scan mempool")
-	defer b.wg.Done()
-
-	if !b.cfg.ScanMemPool {
-		b.logger.Info().Msg("mempool scan is disabled")
-		return
-	}
-
-	for {
-		select {
-		case <-b.stopChan:
-			return
-		default:
-			// mempool scan will continue even the chain get halted , thus the network can still aware of outbound transaction
-			// during chain halt
-			preBlockHeight := atomic.LoadInt64(&b.previousBlock)
-			currentBlock := preBlockHeight + 1
-			txInMemPool, err := b.chainScanner.FetchMemPool(currentBlock)
-			if err != nil {
-				b.logger.Error().Err(err).Msg("fail to fetch MemPool")
-			}
-			if len(txInMemPool.TxArray) > 0 {
-				select {
-				case <-b.stopChan:
-					return
-				case b.globalTxsQueue <- txInMemPool:
-				}
-			} else {
-				// backoff between mempool scans (some chain clients always return nothing)
-				time.Sleep(constants.ThorchainBlockTime)
-			}
-		}
-	}
 }
 
 // Checks current mimir settings to determine if the current chain is paused

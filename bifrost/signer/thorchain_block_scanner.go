@@ -67,10 +67,6 @@ func (b *ThorchainBlockScan) GetHeight() (int64, error) {
 	return b.thorchain.GetBlockHeight()
 }
 
-func (c *ThorchainBlockScan) FetchMemPool(height int64) (types.TxIn, error) {
-	return types.TxIn{}, nil
-}
-
 func (b *ThorchainBlockScan) FetchTxs(height, _ int64) (types.TxIn, error) {
 	if err := b.processTxOutBlock(height); err != nil {
 		return types.TxIn{}, err

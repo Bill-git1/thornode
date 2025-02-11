@@ -163,11 +163,6 @@ func (c *CosmosBlockScanner) GetHeight() (int64, error) {
 	return resultBlock.Block.Header.Height - 1, nil
 }
 
-// FetchMemPool returns nothing since we are only concerned about finalized transactions in Cosmos
-func (c *CosmosBlockScanner) FetchMemPool(height int64) (types.TxIn, error) {
-	return types.TxIn{}, nil
-}
-
 // GetBlock returns a Tendermint block as a reference to a ResultBlock for a
 // given height. As noted above, this is not necessarily the final state of transactions
 // and must be checked again for success by getting the BlockResults in FetchTxs
