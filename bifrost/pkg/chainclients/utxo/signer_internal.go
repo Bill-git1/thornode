@@ -273,6 +273,10 @@ func (c *Client) getGasCoin(tx stypes.TxOutItem, vSize int64) common.Coin {
 }
 
 func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx, map[string]int64, error) {
+	// lock calls to listunspent to avoid race with consolidate transactions using the same UTXOs
+	c.listUnspentLock.Lock()
+	defer c.listUnspentLock.Unlock()
+
 	txes, err := c.getUtxoToSpend(tx.VaultPubKey, c.getPaymentAmount(tx))
 	if err != nil {
 		return nil, nil, fmt.Errorf("fail to get unspent UTXO")
@@ -485,6 +489,11 @@ func (c *Client) consolidateUTXOs() {
 		c.log.Err(err).Msg("fail to get current asgards")
 		return
 	}
+
+	// lock calls to listunspent to avoid race with outbounds using the same UTXOs
+	c.listUnspentLock.Lock()
+	defer c.listUnspentLock.Unlock()
+
 	utxosToSpend := c.getMaximumUtxosToSpend()
 	for _, vault := range vaults {
 		if !vault.Contains(c.nodePubKey) {
