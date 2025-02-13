@@ -16,6 +16,10 @@ message QueryNetworkResponse{
   string bond_reward_rune = 1 [(gogoproto.jsontag) = "bond_reward_rune"];
   // total bonded RUNE
   string total_bond_units = 2 [(gogoproto.jsontag) = "total_bond_units"];
+  // RUNE in Available pools (equal in value to the Assets in those pools)
+  string available_pools_rune = 15 [(gogoproto.jsontag) = "available_pools_rune"];
+  // RUNE value of Layer 1 Assets in vaults
+  string vaults_liquidity_rune = 16 [(gogoproto.jsontag) = "vaults_liquidity_rune"];
   // effective security bond used to determine maximum pooled RUNE
   string effective_security_bond = 3 [(gogoproto.jsontag) = "effective_security_bond"];
   // total reserve RUNE

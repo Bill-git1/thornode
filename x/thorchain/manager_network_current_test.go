@@ -536,7 +536,7 @@ func (*NetworkManagerVCURTestSuite) TestGetAvailablePoolsRune(c *C) {
 	p.BalanceAsset = cosmos.NewUint(common.One * 100)
 	p.Status = PoolAvailable
 	c.Assert(helper.SetPool(ctx, p), IsNil)
-	pools, totalLiquidity, err := networkMgr.getAvailablePoolsRune(ctx)
+	pools, totalLiquidity, err := getAvailablePoolsRune(ctx, networkMgr.k)
 	c.Assert(err, IsNil)
 	c.Assert(pools, HasLen, 1)
 	c.Assert(totalLiquidity.Equal(p.BalanceRune), Equals, true)

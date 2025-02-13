@@ -734,6 +734,73 @@ func emitEndBlockTelemetry(ctx cosmos.Context, mgr Manager) error {
 	return nil
 }
 
+func getAvailablePoolsRune(ctx cosmos.Context, keeper keeper.Keeper) (Pools, cosmos.Uint, error) {
+	// Get Available layer 1 pools and sum their RUNE balances.
+	availablePoolsRune := cosmos.ZeroUint()
+	var availablePools Pools
+	iterator := keeper.GetPoolIterator(ctx)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		var pool Pool
+		if err := keeper.Cdc().Unmarshal(iterator.Value(), &pool); err != nil {
+			return nil, cosmos.ZeroUint(), fmt.Errorf("fail to unmarshal pool: %w", err)
+		}
+		if !pool.IsAvailable() {
+			continue
+		}
+		if pool.Asset.IsNative() {
+			continue
+		}
+		if pool.BalanceRune.IsZero() {
+			continue
+		}
+		availablePoolsRune = availablePoolsRune.Add(pool.BalanceRune)
+		availablePools = append(availablePools, pool)
+	}
+	return availablePools, availablePoolsRune, nil
+}
+
+func getVaultsLiquidityRune(ctx cosmos.Context, keeper keeper.Keeper) (cosmos.Uint, error) {
+	// Sum the RUNE values of non-Inactive vault Coins.
+	vaultsLiquidityRune := cosmos.ZeroUint()
+	poolCache := map[common.Asset]Pool{}
+	vaults, err := keeper.GetAsgardVaults(ctx)
+	if err != nil {
+		return cosmos.ZeroUint(), fmt.Errorf("fail to get vaults: %w", err)
+	}
+	for i := range vaults {
+		// cleanupAsgardIndex removes InactiveVaults from the index on churn,
+		// but RetiringVaults which become InactiveVaults and later receive inbounds
+		// are not cleared from the index until the next churn,
+		// so check nevertheless.
+		// Similarly, an InactiveVault inbound (to be automatically refunded)
+		// re-adds that InactiveVault to the Asgard Index with SetVault
+		// until cleared again in the next churn.
+		if vaults[i].Status == InactiveVault {
+			continue
+		}
+
+		for _, coin := range vaults[i].Coins {
+			if coin.IsRune() {
+				vaultsLiquidityRune = vaultsLiquidityRune.Add(coin.Amount)
+				continue
+			}
+
+			pool, ok := poolCache[coin.Asset]
+			if !ok {
+				pool, err = keeper.GetPool(ctx, coin.Asset)
+				if err != nil {
+					return cosmos.ZeroUint(), fmt.Errorf("fail to get pool for asset %s, err:%w", coin.Asset, err)
+				}
+				poolCache[coin.Asset] = pool
+			}
+
+			vaultsLiquidityRune = vaultsLiquidityRune.Add(pool.AssetValueInRune(coin.Amount))
+		}
+	}
+	return vaultsLiquidityRune, nil
+}
+
 // get the total bond of the bottom 2/3rds active nodes
 func getEffectiveSecurityBond(nas NodeAccounts) cosmos.Uint {
 	amt := cosmos.ZeroUint()

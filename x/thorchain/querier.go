@@ -434,6 +434,14 @@ func (qs queryServer) queryNetwork(ctx cosmos.Context, _ *types.QueryNetworkRequ
 		return nil, fmt.Errorf("fail to get active validators: %w", err)
 	}
 
+	_, availablePoolsRune, err := getAvailablePoolsRune(ctx, qs.mgr.Keeper())
+	if err != nil {
+		return nil, fmt.Errorf("fail to get available pools rune: %w", err)
+	}
+	vaultsLiquidityRune, err := getVaultsLiquidityRune(ctx, qs.mgr.Keeper())
+	if err != nil {
+		return nil, fmt.Errorf("fail to get vaults liquidity rune: %w", err)
+	}
 	effectiveSecurityBond := getEffectiveSecurityBond(nodeAccounts)
 
 	targetOutboundFeeSurplus := qs.mgr.Keeper().GetConfigInt64(ctx, constants.TargetOutboundFeeSurplusRune)
@@ -446,6 +454,8 @@ func (qs queryServer) queryNetwork(ctx cosmos.Context, _ *types.QueryNetworkRequ
 		// so its schema (and order here) should also be in alphabetical order.
 		BondRewardRune:        data.BondRewardRune.String(),
 		TotalBondUnits:        data.TotalBondUnits.String(),
+		AvailablePoolsRune:    availablePoolsRune.String(),
+		VaultsLiquidityRune:   vaultsLiquidityRune.String(),
 		EffectiveSecurityBond: effectiveSecurityBond.String(),
 		TotalReserve:          qs.mgr.Keeper().GetRuneBalanceOfModule(ctx, ReserveName).String(),
 		VaultsMigrating:       vaultsMigrating,

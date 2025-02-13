@@ -5062,6 +5062,7 @@ components:
         native_tx_fee_rune: "100000000"
         bond_reward_rune: "857134475040"
         effective_security_bond: "0"
+        available_pools_rune: "4785723312627752"
         total_bond_units: "0"
         gas_withheld_rune: "1500000000"
         outbound_fee_multiplier: "15000"
@@ -5072,6 +5073,7 @@ components:
         rune_price_in_tor: "10"
         tns_register_fee_rune: "1000000000"
         tor_price_in_rune: "10"
+        vaults_liquidity_rune: "5792105087034476"
         vaults_migrating: false
       properties:
         bond_reward_rune:
@@ -5081,6 +5083,15 @@ components:
         total_bond_units:
           description: total bonded RUNE
           example: "0"
+          type: string
+        available_pools_rune:
+          description: RUNE in Available pools (equal in value to the Assets in those
+            pools)
+          example: "4785723312627752"
+          type: string
+        vaults_liquidity_rune:
+          description: RUNE value of Layer 1 Assets in vaults
+          example: "5792105087034476"
           type: string
         effective_security_bond:
           description: effective security bond used to determine maximum pooled RUNE
@@ -5136,6 +5147,7 @@ components:
           example: "10"
           type: string
       required:
+      - available_pools_rune
       - bond_reward_rune
       - effective_security_bond
       - gas_spent_rune
@@ -5148,6 +5160,7 @@ components:
       - tor_price_in_rune
       - total_bond_units
       - total_reserve
+      - vaults_liquidity_rune
       - vaults_migrating
       type: object
     OutboundFeesResponse:
