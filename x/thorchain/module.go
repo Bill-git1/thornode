@@ -317,9 +317,9 @@ func CustomGRPCGatewayRouter(apiSvr *api.Server) {
 					return md
 				}
 			}
-			// Only extract the height query param from thorchain module endpoints
-			// and the two non-/thorchain/ custom THORNode endpoints.
+			// The following checked endpoint prefixes have the height query parameter extracted.
 			if strings.HasPrefix(req.URL.Path, "/thorchain/") ||
+				strings.HasPrefix(req.URL.Path, "/cosmos/") ||
 				strings.HasPrefix(req.URL.Path, "/bank/balances/") ||
 				strings.HasPrefix(req.URL.Path, "/auth/accounts/") {
 				heightStr, ok := req.URL.Query()["height"]
