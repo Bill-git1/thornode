@@ -16,7 +16,6 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/actors/core"
-	"gitlab.com/thorchain/thornode/v3/test/simulation/actors/features"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/actors/suites"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/cli"
 	pkgcosmos "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/cosmos"
@@ -76,10 +75,8 @@ func main() {
 	stages := []cli.Option{
 		{Name: "seed", Default: true},
 		{Name: "bootstrap", Default: true},
-		{Name: "savers", Default: true},
 		{Name: "arb", Default: true},
 		{Name: "swaps", Default: true},
-		{Name: "feature-saver-eject", Default: true},
 		{Name: "ragnarok", Default: true},
 	}
 	if os.Getenv("STAGES") != "" {
@@ -120,10 +117,8 @@ func main() {
 		}
 	}
 	appendIfEnabled("bootstrap", suites.Bootstrap)
-	appendIfEnabled("savers", suites.Savers)
 	appendIfEnabled("arb", core.NewArbActor)
 	appendIfEnabled("swaps", suites.Swaps)
-	appendIfEnabled("feature-saver-eject", features.SaverEject)
 	appendIfEnabled("ragnarok", suites.Ragnarok)
 
 	// gather config from the environment

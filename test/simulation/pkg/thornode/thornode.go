@@ -114,13 +114,6 @@ func GetLiquidityProviders(asset common.Asset) ([]openapi.LiquidityProvider, err
 	return liquidityProviders, err
 }
 
-func GetSavers(asset common.Asset) ([]openapi.Saver, error) {
-	url := fmt.Sprintf("%s/thorchain/pool/%s/savers", thornodeURL, asset.GetLayer1Asset().String())
-	var savers []openapi.Saver
-	err := get(url, &savers)
-	return savers, err
-}
-
 func GetPools() ([]openapi.Pool, error) {
 	url := fmt.Sprintf("%s/thorchain/pools", thornodeURL)
 	var pools []openapi.Pool
@@ -149,23 +142,6 @@ func GetSwapQuote(from, to common.Asset, amount sdk.Uint) (openapi.QuoteSwapResp
 	url := parsedURL.String()
 
 	var quote openapi.QuoteSwapResponse
-	err = get(url, &quote)
-	return quote, err
-}
-
-func GetSaverDepositQuote(asset common.Asset, amount sdk.Uint) (openapi.QuoteSaverDepositResponse, error) {
-	baseURL := fmt.Sprintf("%s/thorchain/quote/saver/deposit", thornodeURL)
-	parsedURL, err := url.Parse(baseURL)
-	if err != nil {
-		return openapi.QuoteSaverDepositResponse{}, err
-	}
-	params := url.Values{}
-	params.Add("asset", asset.String())
-	params.Add("amount", amount.String())
-	parsedURL.RawQuery = params.Encode()
-	url := parsedURL.String()
-
-	var quote openapi.QuoteSaverDepositResponse
 	err = get(url, &quote)
 	return quote, err
 }
