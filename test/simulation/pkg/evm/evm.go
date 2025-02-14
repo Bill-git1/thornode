@@ -257,10 +257,11 @@ func (c *Client) SignTx(tx SimTx) ([]byte, error) {
 	toAddress := ecommon.HexToAddress(tx.ToAddress.String())
 
 	// create a standard transfer tx
+	gasPerByte := uint64(40) // https://eips.ethereum.org/EIPS/eip-7623
 	txData := &etypes.LegacyTx{
 		To:    &toAddress,
 		Data:  []byte(tx.Memo),
-		Gas:   21000 + 3000,                                       // standard transfer + memo
+		Gas:   21000 + uint64(len(tx.Memo))*gasPerByte,            // transfer + memo
 		Value: tx.Coin.Amount.Mul(sdkmath.NewUint(1e10)).BigInt(), // 1e8 -> 1e18,
 	}
 
