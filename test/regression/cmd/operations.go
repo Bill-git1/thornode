@@ -418,14 +418,14 @@ func (op *OpCheck) Execute(out io.Writer, path string, line, routine int, _ *os.
 		dumpLogs(out, logs)
 
 		// dump pretty output for debugging
-		_, _ = out.Write([]byte(ColorPurple + "\nOperation:" + ColorReset + "\n\n"))
+		_, _ = out.Write([]byte(ColorPurple + "\nOperation:" + ColorReset + "\n"))
 		_ = yaml.NewEncoder(out).Encode(op)
-		_, _ = out.Write([]byte("\n"))
+		_, _ = out.Write([]byte(ColorPurple + "\nEndpoint Response:" + ColorReset + "\n"))
+		_, _ = out.Write([]byte(string(buf) + "\n\n"))
 		for _, a := range failedAsserts {
 			_, _ = out.Write([]byte(ColorPurple + "Failed Assert: " + ColorReset + a + "\n"))
 		}
-		_, _ = out.Write([]byte(ColorPurple + "\nEndpoint Response:" + ColorReset + "\n"))
-		_, _ = out.Write([]byte(string(buf) + "\n"))
+		_, _ = out.Write([]byte("\n"))
 
 		if os.Getenv("IGNORE_FAILURES") == "" && os.Getenv("AUTO_UPDATE") == "" {
 			return fmt.Errorf("%d failed asserts", len(failedAsserts))

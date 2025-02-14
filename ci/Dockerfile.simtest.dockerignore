@@ -12,4 +12,5 @@ test/regression/mnt
 test/regression/suites
 test/regression/templates
 tools/hardhat
+tmp
 .git

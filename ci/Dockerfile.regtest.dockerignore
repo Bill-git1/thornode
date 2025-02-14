@@ -11,3 +11,4 @@ semgrep
 test/regression/mnt
 test/regression/suites
 test/regression/templates
+tmp
