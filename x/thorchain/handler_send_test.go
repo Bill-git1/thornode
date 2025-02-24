@@ -1,6 +1,7 @@
 package thorchain
 
 import (
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"gitlab.com/thorchain/thornode/v3/common"
 	cosmos "gitlab.com/thorchain/thornode/v3/common/cosmos"
 
@@ -39,6 +40,60 @@ func (s *HandlerSendSuiteV87) TestValidate(c *C) {
 	// invalid msg
 	msg = &MsgSend{}
 	err = handler.validate(ctx, msg)
+	c.Assert(err, NotNil)
+}
+
+func (s *HandlerSendSuiteV87) TestValidateMultiple(c *C) {
+	// Verify that multiple coins can be sent, except to module address
+	ctx, k := setupKeeperForTest(c)
+
+	addr1 := GetRandomBech32Addr()
+	addr2 := GetRandomBech32Addr()
+	handler := NewSendHandler(NewDummyMgrWithKeeper(k))
+	moduleAddress := k.GetModuleAccAddress(ModuleName)
+
+	msg := &MsgSend{
+		FromAddress: addr1,
+		ToAddress:   addr2,
+		Amount: cosmos.NewCoins(
+			cosmos.NewCoin("foo", cosmos.NewInt(10)),
+			cosmos.NewCoin("bar", cosmos.NewInt(20)),
+		),
+	}
+	err := handler.validate(ctx, msg)
+	c.Assert(err, IsNil)
+
+	bank := &banktypes.MsgSend{
+		FromAddress: addr1.String(),
+		ToAddress:   addr2.String(),
+		Amount: cosmos.NewCoins(
+			cosmos.NewCoin("foo", cosmos.NewInt(10)),
+			cosmos.NewCoin("bar", cosmos.NewInt(20)),
+		),
+	}
+	err = handler.validate(ctx, bank)
+	c.Assert(err, IsNil)
+
+	msg = &MsgSend{
+		FromAddress: addr1,
+		ToAddress:   moduleAddress,
+		Amount: cosmos.NewCoins(
+			cosmos.NewCoin("foo", cosmos.NewInt(10)),
+			cosmos.NewCoin("bar", cosmos.NewInt(20)),
+		),
+	}
+	err = handler.validate(ctx, msg)
+	c.Assert(err, NotNil)
+
+	bank = &banktypes.MsgSend{
+		FromAddress: addr1.String(),
+		ToAddress:   moduleAddress.String(),
+		Amount: cosmos.NewCoins(
+			cosmos.NewCoin("foo", cosmos.NewInt(10)),
+			cosmos.NewCoin("bar", cosmos.NewInt(20)),
+		),
+	}
+	err = handler.validate(ctx, bank)
 	c.Assert(err, NotNil)
 }
 

@@ -107,6 +107,29 @@ func getThorSend(msg sdk.Msg) (*MsgSend, error) {
 	}
 }
 
+func getDeposit(ctx cosmos.Context, fromAddress sdk.AccAddress, sdkCoins sdk.Coins) (*MsgDeposit, error) {
+	var memo string
+	ctxTxMemo := ctx.Context().Value(ContextKeyTxMemo)
+	if ctxTxMemo != nil {
+		if m, ok := ctxTxMemo.(string); ok {
+			memo = m
+		}
+	}
+	coins := make(common.Coins, len(sdkCoins))
+	for i, coin := range sdkCoins {
+		asset, err := common.NewAsset(coin.Denom)
+		if err != nil {
+			return nil, err
+		}
+
+		coins[i] = common.Coin{
+			Asset:  asset,
+			Amount: math.NewUintFromBigInt(coin.Amount.BigInt()),
+		}
+	}
+	return NewMsgDeposit(coins, memo, fromAddress), nil
+}
+
 // SendAnteHandler called by the ante handler to gate mempool entry
 // and also during deliver. Store changes will persist if this function
 // succeeds, regardless of the success of the transaction.
@@ -131,12 +154,18 @@ func MsgSendValidateV3_0_0(ctx cosmos.Context, mgr Manager, m sdk.Msg) error {
 	k := mgr.Keeper()
 	isThorModAddr := msg.ToAddress.Equals(k.GetModuleAccAddress(ModuleName))
 
-	// disallow sends to modules, they should only be interacted with via deposit messages.
-	// the exception is a MsgSend with memo-based MsgDeposit is allowed to the thor module address
-	if !isThorModAddr && IsModuleAccAddress(k, msg.ToAddress) {
+	// Allow MsgSend with memo-based MsgDeposit is allowed to the thor module address
+	if isThorModAddr {
+		msgDeposit, err := getDeposit(ctx, msg.GetSigners()[0], msg.Amount)
+		if err != nil {
+			return err
+		}
+		return NewDepositHandler(mgr).validate(ctx, *msgDeposit)
+	}
+	// disallow sends to other modules, they should only be interacted with via deposit messages.
+	if IsModuleAccAddress(k, msg.ToAddress) {
 		return fmt.Errorf("cannot use MsgSend for Module transactions, use MsgDeposit instead")
 	}
-
 	return nil
 }
 
@@ -155,22 +184,11 @@ func MsgSendHandleV3_0_0(ctx cosmos.Context, mgr Manager, m sdk.Msg) (*cosmos.Re
 	// MsgSend to the thorchain module address is treated as a MsgDeposit for client compatibility reasons.
 	// In this case, the memo will be used like in any other MsgDeposit.
 	if msg.ToAddress.Equals(k.GetModuleAccAddress(ModuleName)) {
-		var memo string
-		ctxTxMemo := ctx.Context().Value(ContextKeyTxMemo)
-		if ctxTxMemo != nil {
-			if m, ok := ctxTxMemo.(string); ok {
-				memo = m
-			}
-		}
-
-		coinSdk := msg.Amount[0]
-		thorAssetDenom, err := common.NewAsset(coinSdk.Denom)
+		msgDeposit, err := getDeposit(ctx, msg.FromAddress, msg.Amount)
 		if err != nil {
 			return nil, err
 		}
 
-		coin := common.NewCoin(thorAssetDenom, math.NewUintFromBigInt(coinSdk.Amount.BigInt()))
-		msgDeposit := NewMsgDeposit(common.Coins{coin}, memo, msg.GetSigners()[0])
 		return NewDepositHandler(mgr).handle(ctx, *msgDeposit)
 	} else if err := k.SendCoins(ctx, msg.FromAddress, msg.ToAddress, msg.Amount); err != nil {
 		return nil, err

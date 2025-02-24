@@ -43,11 +43,6 @@ func (m *MsgSend) ValidateBasic() error {
 		return cosmos.ErrInvalidCoins("coins must be positive")
 	}
 
-	// send only allowed with one coin
-	if len(m.Amount) != 1 {
-		return errors.New("only one coin is allowed")
-	}
-
 	return nil
 }
 
