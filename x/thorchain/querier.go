@@ -3047,9 +3047,12 @@ func (qs queryServer) queryInvariant(ctx cosmos.Context, req *types.QueryInvaria
 	return nil, fmt.Errorf("invariant not registered: %s", req.Path)
 }
 
-func (qs queryServer) queryBlock(ctx cosmos.Context, _ *types.QueryBlockRequest) (*types.QueryBlockResponse, error) {
+func (qs queryServer) queryBlock(ctx cosmos.Context, req *types.QueryBlockRequest) (*types.QueryBlockResponse, error) {
 	initTendermintOnce.Do(initTendermint)
 	height := ctx.BlockHeight()
+	if parsed, err := strconv.ParseInt(req.Height, 10, 64); err == nil {
+		height = parsed
+	}
 
 	// get the block and results from tendermint rpc
 	block, err := tendermintClient.Block(ctx.Context(), &height)
