@@ -1945,7 +1945,7 @@ func checkPending(ctx cosmos.Context, keeper keeper.Keeper, voter ObservedTxVote
 
 // Get the largest number of signers for a not-final (pre-confirmation-counting) and final Txs respectively.
 func countSigners(voter ObservedTxVoter) (int64, int64) {
-	var notFinalCount, finalCount int64
+	var notFinalCount, finalCount int
 	for i, refTx := range voter.Txs {
 		signersMap := make(map[string]bool)
 		final := refTx.IsFinal()
@@ -1967,13 +1967,13 @@ func countSigners(voter ObservedTxVoter) (int64, int64) {
 				signersMap[signer.String()] = true
 			}
 		}
-		if final && int64(len(signersMap)) > finalCount {
-			finalCount = int64(len(signersMap))
-		} else if int64(len(signersMap)) > notFinalCount {
-			notFinalCount = int64(len(signersMap))
+		if final && len(signersMap) > finalCount {
+			finalCount = len(signersMap)
+		} else if !final && len(signersMap) > notFinalCount {
+			notFinalCount = len(signersMap)
 		}
 	}
-	return notFinalCount, finalCount
+	return int64(notFinalCount), int64(finalCount)
 }
 
 // Call newTxStagesResponse from both queryTxStatus (which includes the stages) and queryTxStages.
