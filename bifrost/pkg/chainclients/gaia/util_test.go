@@ -5,19 +5,31 @@ import (
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/config"
 	. "gopkg.in/check.v1"
 )
 
-type UtilTestSuite struct{}
+type UtilTestSuite struct {
+	scanner CosmosBlockScanner
+}
 
 var _ = Suite(&UtilTestSuite{})
 
-func (s *UtilTestSuite) SetUpSuite(c *C) {}
+func (s *UtilTestSuite) SetUpSuite(c *C) {
+	cfg := config.BifrostBlockScannerConfiguration{
+		ChainID:            common.GAIAChain,
+		GasPriceResolution: 100_000,
+		WhitelistCosmosAssets: []config.WhitelistCosmosAsset{
+			{Denom: "uatom", Decimals: 6, THORChainSymbol: "ATOM"},
+		},
+	}
+	s.scanner = CosmosBlockScanner{cfg: cfg}
+}
 
 func (s *UtilTestSuite) TestFromCosmosToThorchain(c *C) {
 	// 5 ATOM, 6 decimals
 	cosmosCoin := cosmos.NewCoin("uatom", sdkmath.NewInt(5000000))
-	thorchainCoin, err := fromCosmosToThorchain(cosmosCoin)
+	thorchainCoin, err := s.scanner.fromCosmosToThorchain(cosmosCoin)
 	c.Assert(err, IsNil)
 
 	// 5 ATOM, 8 decimals
@@ -38,7 +50,7 @@ func (s *UtilTestSuite) TestFromThorchainToCosmos(c *C) {
 		Amount:   cosmos.NewUint(600000000),
 		Decimals: 6,
 	}
-	cosmosCoin, err := fromThorchainToCosmos(thorchainCoin)
+	cosmosCoin, err := s.scanner.fromThorchainToCosmos(thorchainCoin)
 	c.Assert(err, IsNil)
 
 	// 6 uatom, 6 decimals

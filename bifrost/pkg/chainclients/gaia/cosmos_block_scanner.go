@@ -193,7 +193,7 @@ func (c *CosmosBlockScanner) updateGasCache(tx ctypes.FeeTx) {
 	}
 
 	// only consider transactions with fee paid in uatom
-	coin, err := fromCosmosToThorchain(fees[0])
+	coin, err := c.fromCosmosToThorchain(fees[0])
 	if err != nil || !coin.Asset.Equals(c.cfg.ChainID.GetGasAsset()) {
 		return
 	}
@@ -336,7 +336,7 @@ func (c *CosmosBlockScanner) processTxs(height int64, rawTxs []tmtypes.Tx) ([]ty
 				coins := common.Coins{}
 				for _, coin := range msg.Amount {
 					var cCoin common.Coin
-					cCoin, err = fromCosmosToThorchain(coin)
+					cCoin, err = c.fromCosmosToThorchain(coin)
 					if err != nil {
 						c.logger.Debug().Err(err).Interface("coins", c).Msg("unable to convert coin, not whitelisted. skipping...")
 						continue
@@ -353,7 +353,7 @@ func (c *CosmosBlockScanner) processTxs(height int64, rawTxs []tmtypes.Tx) ([]ty
 				gasFees := common.Gas{}
 				for _, fee := range fees {
 					var cCoin common.Coin
-					cCoin, err = fromCosmosToThorchain(fee)
+					cCoin, err = c.fromCosmosToThorchain(fee)
 					if err != nil {
 						c.logger.Debug().Err(err).Interface("fees", fees).Msg("unable to convert coin, not whitelisted. skipping...")
 						continue

@@ -112,6 +112,8 @@ func (p *parser) parse() (mem Memo, err error) {
 		return p.ParseSecuredAssetWithdraw()
 	case TxExec:
 		return p.ParseExecMemo()
+	case TxSwitch:
+		return p.ParseSwitch()
 	default:
 		return EmptyMemo, fmt.Errorf("TxType not supported: %s", p.getType().String())
 	}

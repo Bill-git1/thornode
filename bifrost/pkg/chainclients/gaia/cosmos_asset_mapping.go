@@ -1,6 +1,8 @@
 package gaia
 
-import "strings"
+import (
+	"strings"
+)
 
 type CosmosAssetMapping struct {
 	CosmosDenom     string
@@ -8,29 +10,27 @@ type CosmosAssetMapping struct {
 	THORChainSymbol string
 }
 
-// CosmosAssetMappings maps a Cosmos denom to a THORChain symbol and provides the asset decimals
-// CHANGEME: define assets that should be observed by THORChain here. This also acts a whitelist.
-var CosmosAssetMappings = []CosmosAssetMapping{
-	{
-		CosmosDenom:     "uatom",
-		CosmosDecimals:  6,
-		THORChainSymbol: "ATOM",
-	},
-}
-
-func GetAssetByCosmosDenom(denom string) (CosmosAssetMapping, bool) {
-	for _, asset := range CosmosAssetMappings {
-		if strings.EqualFold(asset.CosmosDenom, denom) {
-			return asset, true
+func (c *CosmosBlockScanner) GetAssetByCosmosDenom(denom string) (CosmosAssetMapping, bool) {
+	for _, asset := range c.cfg.WhitelistCosmosAssets {
+		if strings.EqualFold(asset.Denom, denom) {
+			return CosmosAssetMapping{
+				CosmosDenom:     asset.Denom,
+				CosmosDecimals:  asset.Decimals,
+				THORChainSymbol: asset.THORChainSymbol,
+			}, true
 		}
 	}
 	return CosmosAssetMapping{}, false
 }
 
-func GetAssetByThorchainSymbol(symbol string) (CosmosAssetMapping, bool) {
-	for _, asset := range CosmosAssetMappings {
+func (c *CosmosBlockScanner) GetAssetByThorchainSymbol(symbol string) (CosmosAssetMapping, bool) {
+	for _, asset := range c.cfg.WhitelistCosmosAssets {
 		if strings.EqualFold(asset.THORChainSymbol, symbol) {
-			return asset, true
+			return CosmosAssetMapping{
+				CosmosDenom:     asset.Denom,
+				CosmosDecimals:  asset.Decimals,
+				THORChainSymbol: asset.THORChainSymbol,
+			}, true
 		}
 	}
 	return CosmosAssetMapping{}, false

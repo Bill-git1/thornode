@@ -100,7 +100,13 @@ func (s *BlockScannerTestSuite) SetUpSuite(c *C) {
 }
 
 func (s *BlockScannerTestSuite) TestCalculateAverageGasFees(c *C) {
-	cfg := config.BifrostBlockScannerConfiguration{ChainID: common.GAIAChain, GasPriceResolution: 100_000}
+	cfg := config.BifrostBlockScannerConfiguration{
+		ChainID:            common.GAIAChain,
+		GasPriceResolution: 100_000,
+		WhitelistCosmosAssets: []config.WhitelistCosmosAsset{
+			{Denom: "uatom", Decimals: 6, THORChainSymbol: "ATOM"},
+		},
+	}
 	blockScanner := CosmosBlockScanner{cfg: cfg}
 
 	atomToThorchain := int64(100)
@@ -190,7 +196,12 @@ func (s *BlockScannerTestSuite) TestGetBlock(c *C) {
 }
 
 func (s *BlockScannerTestSuite) TestProcessTxs(c *C) {
-	cfg := config.BifrostBlockScannerConfiguration{ChainID: common.GAIAChain}
+	cfg := config.BifrostBlockScannerConfiguration{
+		ChainID: common.GAIAChain,
+		WhitelistCosmosAssets: []config.WhitelistCosmosAsset{
+			{Denom: "uatom", Decimals: 6, THORChainSymbol: "ATOM"},
+		},
+	}
 	registry := s.bridge.GetContext().InterfaceRegistry
 	btypes.RegisterInterfaces(registry)
 	cdc := codec.NewProtoCodec(registry)

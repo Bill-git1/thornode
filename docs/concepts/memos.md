@@ -44,6 +44,7 @@ The following functions can be put into a memo:
 1. [**ADD Secured Asset**](memos.md#add-secured-asset)
 1. [**WITHDRAW Secured Asset**](memos.md#withdraw-secured-asset)
 1. [**EXECUTE Smart Contract**](memos.md#execute)
+1. [**SWITCH Asset**](memos.md#switch)
 1. [**BOND**, **UNBOND** & **LEAVE**](memos.md#bond-unbond-and-leave)
 1. [**DONATE** & **RESERVE**](memos.md#donate-and-reserve)
 1. [**MIGRATE**](memos.md#migrate)
@@ -344,6 +345,16 @@ The above example creates a `MsgWasmExec` object for a smart contract execution 
 3. Msg Payload: The arguments provided in the MSG field (AA== in the example, decoded into the expected input for the smart contract).
 4. Funds: The Layer 1 asset (e.g., BTC amount sent in) is converted into a Secured Asset and included in the smart contract call.
 5. The smart contract will be executed via the following Cosmos SDK function: `ExecuteContract(ctx, contractAddr, senderAddr, msg.Msg, msg.Funds)`
+
+### Switch
+
+One way switch for external tokens to be a native THORChain asset. Supported Assets are listed in a switchMap within the `SwitchManager`.
+
+| Parameter | Notes                              | Extra                                |
+| --------- | ---------------------------------- | ------------------------------------ |
+| Payload   | The asset to become a Native Asset | Must be a L1 supported on THORChain. |
+| `switch`  | The Secured Asset handler.         |                                      |
+| `ADDR`    | The thor address for native asset  | Must be a thor address               |
 
 ### DONATE & RESERVE
 

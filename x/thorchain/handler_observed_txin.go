@@ -272,6 +272,18 @@ func (h ObservedTxInHandler) handle(ctx cosmos.Context, msg MsgObservedTxIn) (*c
 			mCtx = mCtx.WithValue(constants.CtxLoanToAddress, tx.Tx.ToAddress)
 		}
 
+		// Check and block switch assets
+		// Check is independent of the mimir to enable the handler in order to support
+		// bifrost & switch whitelisting prior to switching commencing
+		_, isSwitch := m.(*MsgSwitch)
+		if !isSwitch && h.mgr.SwitchManager().IsSwitch(ctx, tx.Tx.Coins[0].Asset) {
+			if err = refundTx(ctx, tx, h.mgr, CodeTxFail, "asset is a switch asset", ""); err != nil {
+				ctx.Logger().Error("fail to refund", "error", err)
+			}
+
+			continue
+		}
+
 		_, err = handler(mCtx, m)
 		if err != nil {
 			if err = refundTx(ctx, tx, h.mgr, CodeTxFail, err.Error(), ""); err != nil {

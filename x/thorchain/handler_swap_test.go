@@ -139,8 +139,8 @@ func (k *TestSwapHandleKeeper) GetMimir(ctx cosmos.Context, key string) (int64, 
 	return k.haltChain, nil
 }
 
-func (k *TestSwapHandleKeeper) GetMimirWithRef(ctx cosmos.Context, template, ref string) (int64, error) {
-	key := fmt.Sprintf(template, ref)
+func (k *TestSwapHandleKeeper) GetMimirWithRef(ctx cosmos.Context, template string, ref ...any) (int64, error) {
+	key := fmt.Sprintf(template, ref...)
 	return k.GetMimir(ctx, key)
 }
 

@@ -22,6 +22,7 @@ type DummyMgr struct {
 	tradeMgr      TradeAccountManager
 	securedMgr    SecuredAssetManager
 	wasmMgr       WasmManager
+	switchMgr     SwitchManager
 }
 
 func NewDummyMgrWithKeeper(k keeper.Keeper) *DummyMgr {
@@ -38,6 +39,8 @@ func NewDummyMgrWithKeeper(k keeper.Keeper) *DummyMgr {
 		slasher:       NewDummySlasher(),
 		tradeMgr:      NewDummyTradeAccountManager(),
 		wasmMgr:       NewDummyWasmManager(),
+		switchMgr:     NewDummySwitchManager(),
+
 		// TODO add dummy swap queue
 		// TODO add dummy order book
 	}
@@ -57,6 +60,7 @@ func NewDummyMgr() *DummyMgr {
 		slasher:       NewDummySlasher(),
 		tradeMgr:      NewDummyTradeAccountManager(),
 		wasmMgr:       NewDummyWasmManager(),
+		switchMgr:     NewDummySwitchManager(),
 		// TODO add dummy swap queue
 		// TODO add dummy order book
 	}
@@ -78,3 +82,4 @@ func (m DummyMgr) OrderBookMgr() OrderBook                  { return m.orderBook
 func (m DummyMgr) TradeAccountManager() TradeAccountManager { return m.tradeMgr }
 func (m DummyMgr) SecuredAssetManager() SecuredAssetManager { return m.securedMgr }
 func (m DummyMgr) WasmManager() WasmManager                 { return m.wasmMgr }
+func (m DummyMgr) SwitchManager() SwitchManager             { return m.switchMgr }

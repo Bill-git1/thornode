@@ -44,6 +44,7 @@ const (
 	TradeAccountWithdrawEventType = "trade_account_withdraw"
 	SecuredAssetDepositEventType  = "secured_asset_deposit"
 	SecuredAssetWithdrawEventType = "secured_asset_withdraw"
+	SwitchEventType               = "switch"
 	RUNEPoolDepositEventType      = "rune_pool_deposit"
 	RUNEPoolWithdrawEventType     = "rune_pool_withdraw"
 	TSSKeygenSuccess              = "tss_keygen_success"
@@ -1206,5 +1207,38 @@ func (m *EventVersion) Events() (cosmos.Events, error) {
 	evt := cosmos.NewEvent(m.Type(),
 		cosmos.NewAttribute("version", m.Version),
 	)
+	return cosmos.Events{evt}, nil
+}
+
+// NewEventSwitch creates a new switch event.
+func NewEventSwitch(
+	amt cosmos.Uint,
+	asset common.Asset,
+	assetAddress common.Address,
+	runeAddress common.Address,
+	txID common.TxID,
+) *EventSwitch {
+	return &EventSwitch{
+		Amount:       amt,
+		Asset:        asset,
+		AssetAddress: assetAddress,
+		RuneAddress:  runeAddress,
+		TxID:         txID,
+	}
+}
+
+// Type return the deposit event type
+func (m *EventSwitch) Type() string {
+	return SwitchEventType
+}
+
+// Events return the cosmos event
+func (m *EventSwitch) Events() (cosmos.Events, error) {
+	evt := cosmos.NewEvent(m.Type(),
+		cosmos.NewAttribute("amount", m.Amount.String()),
+		cosmos.NewAttribute("asset", m.Asset.String()),
+		cosmos.NewAttribute("rune_address", m.RuneAddress.String()),
+		cosmos.NewAttribute("asset_address", m.AssetAddress.String()),
+		cosmos.NewAttribute("tx_id", m.TxID.String()))
 	return cosmos.Events{evt}, nil
 }

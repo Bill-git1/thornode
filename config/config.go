@@ -725,6 +725,8 @@ type BifrostBlockScannerConfiguration struct {
 	// tokens are ignored.
 	WhitelistTokens []string `mapstructure:"whitelist_tokens"`
 
+	WhitelistCosmosAssets []WhitelistCosmosAsset `mapstructure:"whitelist_cosmos_assets"`
+
 	// MaxResumeBlockLag is the max duration to lag behind the latest current consensus
 	// inbound height upon startup. If there is a local scanner position we will start
 	// from that height up to this threshold. The local scanner height is compared to the
@@ -774,6 +776,12 @@ type BifrostTSSConfiguration struct {
 	InfoAddress                  string   `mapstructure:"info_address"`
 	ExternalIP                   string   `mapstructure:"external_ip"`
 	MaxKeyshareRecoverScanBlocks int64    `mapstructure:"max_keyshare_recover_scan_blocks"`
+}
+
+type WhitelistCosmosAsset struct {
+	Denom           string `mapstructure:"denom"`
+	Decimals        int    `mapstructure:"decimals"`
+	THORChainSymbol string `mapstructure:"symbol"`
 }
 
 // GetBootstrapPeers return the internal bootstrap peers in a slice of maddr.Multiaddr

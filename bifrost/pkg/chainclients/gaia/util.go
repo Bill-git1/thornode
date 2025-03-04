@@ -64,8 +64,8 @@ func buildUnsigned(
 	return txBuilder, nil
 }
 
-func fromCosmosToThorchain(c cosmos.Coin) (common.Coin, error) {
-	cosmosAsset, exists := GetAssetByCosmosDenom(c.Denom)
+func (c *CosmosBlockScanner) fromCosmosToThorchain(coin cosmos.Coin) (common.Coin, error) {
+	cosmosAsset, exists := c.GetAssetByCosmosDenom(coin.Denom)
 	if !exists {
 		return common.NoCoin, fmt.Errorf("asset does not exist / not whitelisted by client")
 	}
@@ -76,7 +76,7 @@ func fromCosmosToThorchain(c cosmos.Coin) (common.Coin, error) {
 	}
 
 	decimals := cosmosAsset.CosmosDecimals
-	amount := c.Amount.BigInt()
+	amount := coin.Amount.BigInt()
 	var exp big.Int
 	// Decimals are more than native THORChain, so divide...
 	if decimals > common.THORChainDecimals {
@@ -94,8 +94,8 @@ func fromCosmosToThorchain(c cosmos.Coin) (common.Coin, error) {
 	}, nil
 }
 
-func fromThorchainToCosmos(coin common.Coin) (cosmos.Coin, error) {
-	asset, exists := GetAssetByThorchainSymbol(coin.Asset.Symbol.String())
+func (c *CosmosBlockScanner) fromThorchainToCosmos(coin common.Coin) (cosmos.Coin, error) {
+	asset, exists := c.GetAssetByThorchainSymbol(coin.Asset.Symbol.String())
 	if !exists {
 		return cosmos.Coin{}, fmt.Errorf("asset does not exist / not whitelisted by client")
 	}

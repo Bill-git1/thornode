@@ -269,7 +269,7 @@ func (c *CosmosClient) GetAccountByAddress(address string, height *big.Int) (com
 	nativeCoins := make([]common.Coin, 0)
 	for _, balance := range balances.Balances {
 		var coin common.Coin
-		coin, err = fromCosmosToThorchain(balance)
+		coin, err = c.cosmosScanner.fromCosmosToThorchain(balance)
 		if err != nil {
 			c.logger.Err(err).Interface("balances", balances.Balances).Msg("wasn't able to convert coins that passed whitelist")
 			continue
@@ -309,7 +309,7 @@ func (c *CosmosClient) processOutboundTx(tx stypes.TxOutItem, thorchainHeight in
 	for _, coin := range tx.Coins {
 		// convert to cosmos coin
 		var cosmosCoin ctypes.Coin
-		cosmosCoin, err = fromThorchainToCosmos(coin)
+		cosmosCoin, err = c.cosmosScanner.fromThorchainToCosmos(coin)
 		if err != nil {
 			c.logger.Warn().Err(err).Interface("tx", tx).Msg("unable to convert coin fromThorchainToCosmos")
 			continue
@@ -416,7 +416,7 @@ func (c *CosmosClient) SignTx(tx stypes.TxOutItem, thorchainHeight int64) (signe
 		c.logger.Err(err).Interface("coin", gasCoins[0]).Msg(err.Error())
 		return nil, nil, nil, err
 	}
-	cCoin, err := fromThorchainToCosmos(gasCoins[0])
+	cCoin, err := c.cosmosScanner.fromThorchainToCosmos(gasCoins[0])
 	if err != nil {
 		err = errors.New("gas coin is not defined in cosmos_assets.go, unable to pay fee")
 		c.logger.Err(err).Msg(err.Error())

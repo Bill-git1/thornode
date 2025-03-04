@@ -122,6 +122,7 @@ var (
 	NewKeygenBlock                 = types.NewKeygenBlock
 	NewMsgSetNodeKeys              = types.NewMsgSetNodeKeys
 	NewMsgManageTHORName           = types.NewMsgManageTHORName
+	NewMsgSwitch                   = types.NewMsgSwitch
 	NewTxOut                       = types.NewTxOut
 	NewEventRewards                = types.NewEventRewards
 	NewEventPool                   = types.NewEventPool
@@ -162,6 +163,7 @@ var (
 	NewEventRUNEPoolWithdraw       = types.NewEventRUNEPoolWithdraw
 	NewEventLoanOpen               = types.NewEventLoanOpen
 	NewEventLoanRepayment          = types.NewEventLoanRepayment
+	NewEventSwitch                 = types.NewEventSwitch
 	NewPoolMod                     = types.NewPoolMod
 	NewMsgRefundTx                 = types.NewMsgRefundTx
 	NewMsgOutboundTx               = types.NewMsgOutboundTx
@@ -279,6 +281,7 @@ type (
 	MsgRunePoolDeposit        = types.MsgRunePoolDeposit
 	MsgRunePoolWithdraw       = types.MsgRunePoolWithdraw
 	MsgWasmExec               = types.MsgWasmExec
+	MsgSwitch                 = types.MsgSwitch
 
 	// Keeper structs
 	PoolStatus               = types.PoolStatus
@@ -379,6 +382,7 @@ type (
 	RunePoolDepositMemo        = mem.RunePoolDepositMemo
 	RunePoolWithdrawMemo       = mem.RunePoolWithdrawMemo
 	ExecMemo                   = mem.ExecMemo
+	SwitchMemo                 = mem.SwitchMemo
 
 	// Proto
 	ProtoStrings = types.ProtoStrings

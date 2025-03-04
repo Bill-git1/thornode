@@ -102,10 +102,17 @@ func (s *CosmosTestSuite) TestGetAddress(c *C) {
 	mockBankServiceClient := NewMockBankServiceClient()
 	mockAccountServiceClient := NewMockAccountServiceClient()
 
+	cfg := config.BifrostBlockScannerConfiguration{
+		WhitelistCosmosAssets: []config.WhitelistCosmosAsset{
+			{Denom: "uatom", Decimals: 6, THORChainSymbol: "ATOM"},
+		},
+	}
+
 	cc := CosmosClient{
 		cfg:           config.BifrostChainConfiguration{ChainID: common.GAIAChain},
 		bankClient:    mockBankServiceClient,
 		accountClient: mockAccountServiceClient,
+		cosmosScanner: &CosmosBlockScanner{cfg: cfg},
 	}
 
 	addr := "cosmos10tjz4ave7znpctgd2rfu6v2r6zkeup2dlmqtuz"
@@ -150,6 +157,9 @@ func (s *CosmosTestSuite) TestProcessOutboundTx(c *C) {
 		BlockScanner: config.BifrostBlockScannerConfiguration{
 			CosmosGRPCHost:   fakeGRPCHost,
 			StartBlockHeight: 1, // avoids querying thorchain for block height
+			WhitelistCosmosAssets: []config.WhitelistCosmosAsset{
+				{Denom: "uatom", Decimals: 6, THORChainSymbol: "ATOM"},
+			},
 		},
 	}, nil, s.bridge, s.m)
 	c.Assert(err, IsNil)

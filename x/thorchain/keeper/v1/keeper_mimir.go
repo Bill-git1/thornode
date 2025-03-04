@@ -15,10 +15,10 @@ func (k KVStore) GetMimir(ctx cosmos.Context, key string) (int64, error) {
 }
 
 // GetMimirWithRef is a helper function to more readably insert references (such as Asset MimirString or Chain) into Mimir key templates.
-func (k KVStore) GetMimirWithRef(ctx cosmos.Context, template, ref string) (int64, error) {
+func (k KVStore) GetMimirWithRef(ctx cosmos.Context, template string, ref ...any) (int64, error) {
 	// 'template' should be something like "Halt%sChain" (to halt an arbitrary specified chain)
 	// or "Ragnarok-%s" (to halt the pool of an arbitrary specified Asset (MimirString used for Assets to join Chain and Symbol with a hyphen).
-	key := fmt.Sprintf(template, ref)
+	key := fmt.Sprintf(template, ref...)
 	return k.GetMimir(ctx, key)
 }
 

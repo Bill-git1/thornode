@@ -117,6 +117,7 @@ bifrost:
         cosmos_grpc_tls: false
         gas_cache_blocks: 0
         whitelist_tokens: []
+        whitelist_cosmos_assets: []
         concurrency: 0
         max_gas_limit: 0
         fixed_gas_rate: 0
@@ -261,6 +262,38 @@ bifrost:
         chain_id: GAIA
         gas_price_resolution: 100_000 # uatom
         observation_flexibility_blocks: 40
+        whitelist_cosmos_assets:
+          - symbol: ATOM
+            decimals: 6
+            denom: uatom
+          - symbol: KUJI
+            decimals: 6
+            denom: ibc/4CC44260793F84006656DD868E017578F827A492978161DA31D7572BCB3F4289
+          - symbol: RKUJI
+            decimals: 6
+            denom: ibc/50A69DC508ACCADE2DAC4B8B09AA6D9C9062FCBFA72BB4C6334367DECD972B06
+          - symbol: FUZN
+            decimals: 6
+            denom: ibc/6BBBB4B63C51648E9B8567F34505A9D5D8BAAC4C31D768971998BE8C18431C26
+          - symbol: WINK
+            decimals: 6
+            denom: ibc/4363FD2EF60A7090E405B79A6C4337C5E9447062972028F5A99FB041B9571942
+          - symbol: NSTK
+            decimals: 6
+            denom: ibc/0B99C4EFF1BD05E56DEDEE1D88286DB79680C893724E0E7573BC369D79B5DDF3
+          - symbol: LVN
+            decimals: 6
+            denom: ibc/6C95083ADD352D5D47FB4BA427015796E5FEF17A829463AD05ECD392EB38D889
+          - symbol: NAMI
+            decimals: 6
+            denom: ibc/4622E82B845FFC6AA8B45C1EB2F507133A9E876A5FEA1BA64585D5F564405453
+          - symbol: AUTO
+            decimals: 6
+            denom: ibc/7D20C448700E7C56DC4577DA46666BA7993AEC6BFA223E67FA23CC4333B28745
+          - symbol: LQDY
+            decimals: 6
+            denom: ibc/CF52BFC8A11248F05151BFEC0FB033C3531E40C7BAFC72E277F49346EF76E981
+
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
 

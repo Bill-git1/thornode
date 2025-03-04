@@ -598,7 +598,7 @@ func (k KVStoreDummy) GetOrderBookProcessor(ctx cosmos.Context) ([]bool, error) 
 }
 
 func (k KVStoreDummy) GetMimir(_ cosmos.Context, key string) (int64, error) { return 0, kaboom }
-func (k KVStoreDummy) GetMimirWithRef(_ cosmos.Context, template, key string) (int64, error) {
+func (k KVStoreDummy) GetMimirWithRef(_ cosmos.Context, template string, key ...any) (int64, error) {
 	return 0, kaboom
 }
 func (k KVStoreDummy) SetMimir(_ cosmos.Context, key string, value int64) {}

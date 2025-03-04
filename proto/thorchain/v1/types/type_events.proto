@@ -333,3 +333,11 @@ message EventSetNodeMimir {
 message EventVersion {
   string version = 1;
 }
+
+message EventSwitch {
+  string amount = 1 [(gogoproto.customtype) = "cosmossdk.io/math.Uint", (gogoproto.nullable) = false];
+  common.Asset asset = 2 [(gogoproto.nullable) = false];
+  string asset_address = 3 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.Address"];
+  string rune_address = 4 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.Address"];
+  string tx_id = 5 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.TxID", (gogoproto.customname) = "TxID"];
+}
