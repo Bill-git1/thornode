@@ -70,6 +70,7 @@ func getInternalHandlerMapping(mgr Manager) map[string]MsgHandler {
 	m[sdk.MsgTypeURL(&MsgSecuredAssetWithdraw{})] = NewSecuredAssetWithdrawHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgRunePoolDeposit{})] = NewRunePoolDepositHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgRunePoolWithdraw{})] = NewRunePoolWithdrawHandler(mgr)
+	m[sdk.MsgTypeURL(&MsgWasmExec{})] = NewWasmExecHandler(mgr)
 	return m
 }
 
@@ -235,6 +236,13 @@ func processOneTxIn(ctx cosmos.Context, keeper keeper.Keeper, tx ObservedTx, sig
 		newMsg = NewMsgRunePoolDeposit(signer, tx.Tx)
 	case RunePoolWithdrawMemo:
 		newMsg = NewMsgRunePoolWithdraw(signer, tx.Tx, m.GetBasisPts(), m.GetAffiliateAddress(), m.GetAffiliateBasisPoints())
+	case ExecMemo:
+		coin := tx.Tx.Coins[0]
+		sender, err := tx.Tx.FromAddress.MappedAccAddress()
+		if err != nil {
+			return nil, err
+		}
+		newMsg = NewMsgWasmExec(coin.Asset, coin.Amount, m.ContractAddress, sender, signer, m.Msg, tx.Tx)
 	default:
 		return nil, errInvalidMemo
 	}

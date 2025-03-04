@@ -34,6 +34,7 @@ const (
 var (
 	KeyringServiceName           = sdk.KeyringServiceName
 	NewKVStoreKeys               = storetypes.NewKVStoreKeys
+	NewMemoryStoreKeys           = storetypes.NewMemoryStoreKeys
 	NewUint                      = sdkmath.NewUint
 	ParseUint                    = sdkmath.ParseUint
 	NewInt                       = sdkmath.NewInt
@@ -50,6 +51,8 @@ var (
 	NewIntFromBigInt             = sdkmath.NewIntFromBigInt
 	NewUintFromBigInt            = sdkmath.NewUintFromBigInt
 	AccAddressFromBech32         = sdk.AccAddressFromBech32
+	MustAccAddressFromBech32     = sdk.MustAccAddressFromBech32
+	AccAddressFromHexUnsafe      = sdk.AccAddressFromHexUnsafe
 	VerifyAddressFormat          = sdk.VerifyAddressFormat
 	GetFromBech32                = sdk.GetFromBech32
 	NewAttribute                 = sdk.NewAttribute
@@ -63,6 +66,7 @@ var (
 	KVStorePrefixIterator        = storetypes.KVStorePrefixIterator
 	KVStoreReversePrefixIterator = storetypes.KVStoreReversePrefixIterator
 	NewKVStoreKey                = storetypes.NewKVStoreKey
+	NewMemoryStoreKey            = storetypes.NewMemoryStoreKey
 	NewTransientStoreKey         = storetypes.NewTransientStoreKey
 	StoreTypeTransient           = storetypes.StoreTypeTransient
 	StoreTypeIAVL                = storetypes.StoreTypeIAVL

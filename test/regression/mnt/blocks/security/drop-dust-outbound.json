@@ -121,7 +121,7 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "D6BB3839D5D1C3223C4181F8052EB851D40FA8174D34B26DD1D062ED1904AEB0",
+      "app_hash": "8A96C9B23D425D17180174C5EA824609E77F7AE7BD9CA0EA65CB8C5B7EC718B8",
       "last_results_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
@@ -317,13 +317,8 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "145378",
+          "gas_used": "147456",
           "events": [
-            {
-              "fee": "",
-              "fee_payer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
-              "type": "tx"
-            },
             {
               "amount": "2000000rune",
               "spender": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
@@ -416,8 +411,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "3CC6DDF54D5CFF2BA21C64A38BA1EF02E55858C95A4A862F877B2F749FEBF9F8",
-      "last_results_hash": "0959253CC83F7BEDE49F952CC7294978B51E4E8E101B4A2BE5BA9FB19C1B62C2",
+      "app_hash": "211BDFBA24CFE2C08CEC1687E8B522784918F959CF629A3838BF11E8D947A2C5",
+      "last_results_hash": "8C93339CB080D8DABCF4BA04C360C287553B975C2A104F1D1367322A1E15802B",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -534,13 +529,8 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "1932616",
+          "gas_used": "1934730",
           "events": [
-            {
-              "fee": "",
-              "fee_payer": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
-              "type": "tx"
-            },
             {
               "amount": "2000000rune",
               "spender": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",

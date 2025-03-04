@@ -65,7 +65,7 @@ func (h MimirHandler) validateV3_0_0(ctx cosmos.Context, msg MsgMimir) error {
 	if !mimirValidKey(msg.Key) || len(msg.Key) > 64 {
 		return cosmos.ErrUnknownRequest("invalid mimir key")
 	}
-	if err := validateMimirAuth(ctx, h.mgr.Keeper(), msg); err != nil {
+	if _, err := validateMimirAuth(ctx, h.mgr.Keeper(), msg); err != nil {
 		return err
 	}
 	return nil
@@ -178,16 +178,13 @@ func (h MimirHandler) handleV3_0_0(ctx cosmos.Context, msg MsgMimir) error {
 	return nil
 }
 
-func validateMimirAuth(ctx cosmos.Context, k keeper.Keeper, msg MsgMimir) error {
-	if !isSignedByActiveNodeAccounts(ctx, k, msg.GetSigners()) {
-		return cosmos.ErrUnauthorized(fmt.Sprintf("%s is not authorized", msg.Signer))
-	}
-	return nil
+func validateMimirAuth(ctx cosmos.Context, k keeper.Keeper, msg MsgMimir) (cosmos.Context, error) {
+	return activeNodeAccountsSignerPriority(ctx, k, msg.GetSigners())
 }
 
 // MimirAnteHandler called by the ante handler to gate mempool entry
 // and also during deliver. Store changes will persist if this function
 // succeeds, regardless of the success of the transaction.
-func MimirAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper, msg MsgMimir) error {
+func MimirAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper, msg MsgMimir) (cosmos.Context, error) {
 	return validateMimirAuth(ctx, k, msg)
 }

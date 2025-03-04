@@ -1,6 +1,9 @@
 package thorchain
 
 import (
+	math "math"
+
+	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	"github.com/blang/semver"
 
 	storetypes "cosmossdk.io/store/types"
@@ -16,7 +19,10 @@ import (
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
-const ContextKeyTxMemo = "tx_memo"
+const (
+	ContextKeyTxMemo   = "tx_memo"
+	ActiveNodePriority = int64(math.MaxInt64)
+)
 
 type AnteDecorator struct {
 	keeper keeper.Keeper
@@ -45,12 +51,13 @@ func (ad AnteDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, ne
 	// run the message-specific ante for each msg, all must succeed
 	version, _ := ad.keeper.GetVersionWithCtx(ctx)
 	for _, msg := range tx.GetMsgs() {
-		if err = ad.anteHandleMessage(ctx, version, msg); err != nil {
+		newCtx, err = ad.anteHandleMessage(ctx, version, msg)
+		if err != nil {
 			return ctx, err
 		}
 	}
 
-	return next(ctx, tx, simulate)
+	return next(newCtx, tx, simulate)
 }
 
 // rejectInvalidSigners reject txs if they are signed with secp256r1 keys
@@ -108,7 +115,7 @@ func (ad AnteDecorator) isDeposit(msg cosmos.Msg) bool {
 }
 
 // anteHandleMessage calls the msg-specific ante handling for a given msg
-func (ad AnteDecorator) anteHandleMessage(ctx sdk.Context, version semver.Version, msg cosmos.Msg) error {
+func (ad AnteDecorator) anteHandleMessage(ctx sdk.Context, version semver.Version, msg cosmos.Msg) (sdk.Context, error) {
 	// ideally each handler would impl an ante func and we could instantiate
 	// handlers and call ante, but handlers require mgr which is unavailable
 	switch m := msg.(type) {
@@ -145,7 +152,7 @@ func (ad AnteDecorator) anteHandleMessage(ctx sdk.Context, version semver.Versio
 	case *types.MsgProposeUpgrade, *types.MsgApproveUpgrade, *types.MsgRejectUpgrade:
 		legacyMsg, ok := msg.(sdk.LegacyMsg)
 		if !ok {
-			return cosmos.ErrUnknownRequest("invalid message type")
+			return ctx, cosmos.ErrUnknownRequest("invalid message type")
 		}
 		return ActiveValidatorAnteHandler(ctx, version, ad.keeper, legacyMsg.GetSigners()[0])
 
@@ -157,13 +164,19 @@ func (ad AnteDecorator) anteHandleMessage(ctx sdk.Context, version semver.Versio
 		if ok {
 			enabled := ad.keeper.GetConfigInt64(ctx, constants.BankSendEnabled)
 			if enabled <= 0 {
-				return cosmos.ErrUnknownRequest("bank sends are disabled")
+				return ctx, cosmos.ErrUnknownRequest("bank sends are disabled")
 			}
 		}
 		return SendAnteHandler(ctx, version, ad.keeper, m)
-
+	case *wasmtypes.MsgStoreCode,
+		*wasmtypes.MsgInstantiateContract,
+		*wasmtypes.MsgInstantiateContract2,
+		*wasmtypes.MsgExecuteContract,
+		*wasmtypes.MsgMigrateContract,
+		*wasmtypes.MsgSudoContract:
+		return ctx, nil
 	default:
-		return cosmos.ErrUnknownRequest("invalid message type")
+		return ctx, cosmos.ErrUnknownRequest("invalid message type")
 	}
 }
 
@@ -174,7 +187,7 @@ type InfiniteGasDecorator struct {
 	keeper keeper.Keeper
 }
 
-func NewInfiniteGasDecorator(keeper keeper.Keeper) InfiniteGasDecorator {
+func NewGasDecorator(keeper keeper.Keeper) InfiniteGasDecorator {
 	return InfiniteGasDecorator{
 		keeper: keeper,
 	}

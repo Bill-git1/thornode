@@ -8,7 +8,6 @@ RUN apt-get update \
 
 ENV GOBIN=/go/bin
 ENV GOPATH=/go
-ENV CGO_ENABLED=0
 ENV GOOS=linux
 
 RUN mkdir /regtest

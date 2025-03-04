@@ -114,10 +114,10 @@ func validateIPAddressAuth(ctx cosmos.Context, k keeper.Keeper, signer cosmos.Ac
 // IPAddressAnteHandler called by the ante handler to gate mempool entry
 // and also during deliver. Store changes will persist if this function
 // succeeds, regardless of the success of the transaction.
-func IPAddressAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper, msg MsgSetIPAddress) error {
+func IPAddressAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper, msg MsgSetIPAddress) (cosmos.Context, error) {
 	if err := validateIPAddressAuth(ctx, k, msg.Signer); err != nil {
-		return err
+		return ctx, err
 	}
 
-	return k.DeductNativeTxFeeFromBond(ctx, msg.Signer)
+	return ctx, k.DeductNativeTxFeeFromBond(ctx, msg.Signer)
 }

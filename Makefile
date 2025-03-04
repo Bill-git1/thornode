@@ -165,18 +165,18 @@ test-coverage-sum: test-network-specific
 	@go tool cover -html=coverage.txt -o coverage.html
 
 test: test-network-specific
-	@CGO_ENABLED=0 go test ${TEST_BUILD_FLAGS} ${TEST_DIR}
+	@go test ${TEST_BUILD_FLAGS} ${TEST_DIR}
 
 test-all: test-network-specific
-	@CGO_ENABLED=0 go test ${TEST_BUILD_FLAGS} "./..."
+	@go test ${TEST_BUILD_FLAGS} "./..."
 
 test-go-tss:
 	@go test ${TEST_BUILD_FLAGS} --race "./bifrost/tss/go-tss/..."
 
 test-network-specific:
-	@CGO_ENABLED=0 go test -tags stagenet ./common
-	@CGO_ENABLED=0 go test -tags mainnet ./common ./bifrost/pkg/chainclients/utxo/...
-	@CGO_ENABLED=0 go test -tags mocknet ./common ./bifrost/pkg/chainclients/utxo/...
+	@go test -tags stagenet ./common
+	@go test -tags mainnet ./common ./bifrost/pkg/chainclients/utxo/...
+	@go test -tags mocknet ./common ./bifrost/pkg/chainclients/utxo/...
 
 test-race:
 	@go test -race ${TEST_BUILD_FLAGS} ${TEST_DIR}

@@ -8,6 +8,7 @@ package types
 
 import (
 	context "context"
+	types "github.com/CosmWasm/wasmd/x/wasm/types"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -19,24 +20,30 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Msg_Ban_FullMethodName            = "/types.Msg/Ban"
-	Msg_Deposit_FullMethodName        = "/types.Msg/Deposit"
-	Msg_ErrataTx_FullMethodName       = "/types.Msg/ErrataTx"
-	Msg_Mimir_FullMethodName          = "/types.Msg/Mimir"
-	Msg_NetworkFee_FullMethodName     = "/types.Msg/NetworkFee"
-	Msg_NodePauseChain_FullMethodName = "/types.Msg/NodePauseChain"
-	Msg_ObservedTxIn_FullMethodName   = "/types.Msg/ObservedTxIn"
-	Msg_ObservedTxOut_FullMethodName  = "/types.Msg/ObservedTxOut"
-	Msg_ThorSend_FullMethodName       = "/types.Msg/ThorSend"
-	Msg_SetIPAddress_FullMethodName   = "/types.Msg/SetIPAddress"
-	Msg_SetNodeKeys_FullMethodName    = "/types.Msg/SetNodeKeys"
-	Msg_Solvency_FullMethodName       = "/types.Msg/Solvency"
-	Msg_TssKeysignFail_FullMethodName = "/types.Msg/TssKeysignFail"
-	Msg_TssPool_FullMethodName        = "/types.Msg/TssPool"
-	Msg_SetVersion_FullMethodName     = "/types.Msg/SetVersion"
-	Msg_ProposeUpgrade_FullMethodName = "/types.Msg/ProposeUpgrade"
-	Msg_ApproveUpgrade_FullMethodName = "/types.Msg/ApproveUpgrade"
-	Msg_RejectUpgrade_FullMethodName  = "/types.Msg/RejectUpgrade"
+	Msg_Ban_FullMethodName                  = "/types.Msg/Ban"
+	Msg_Deposit_FullMethodName              = "/types.Msg/Deposit"
+	Msg_ErrataTx_FullMethodName             = "/types.Msg/ErrataTx"
+	Msg_Mimir_FullMethodName                = "/types.Msg/Mimir"
+	Msg_NetworkFee_FullMethodName           = "/types.Msg/NetworkFee"
+	Msg_NodePauseChain_FullMethodName       = "/types.Msg/NodePauseChain"
+	Msg_ObservedTxIn_FullMethodName         = "/types.Msg/ObservedTxIn"
+	Msg_ObservedTxOut_FullMethodName        = "/types.Msg/ObservedTxOut"
+	Msg_ThorSend_FullMethodName             = "/types.Msg/ThorSend"
+	Msg_SetIPAddress_FullMethodName         = "/types.Msg/SetIPAddress"
+	Msg_SetNodeKeys_FullMethodName          = "/types.Msg/SetNodeKeys"
+	Msg_Solvency_FullMethodName             = "/types.Msg/Solvency"
+	Msg_TssKeysignFail_FullMethodName       = "/types.Msg/TssKeysignFail"
+	Msg_TssPool_FullMethodName              = "/types.Msg/TssPool"
+	Msg_SetVersion_FullMethodName           = "/types.Msg/SetVersion"
+	Msg_ProposeUpgrade_FullMethodName       = "/types.Msg/ProposeUpgrade"
+	Msg_ApproveUpgrade_FullMethodName       = "/types.Msg/ApproveUpgrade"
+	Msg_RejectUpgrade_FullMethodName        = "/types.Msg/RejectUpgrade"
+	Msg_StoreCode_FullMethodName            = "/types.Msg/StoreCode"
+	Msg_InstantiateContract_FullMethodName  = "/types.Msg/InstantiateContract"
+	Msg_InstantiateContract2_FullMethodName = "/types.Msg/InstantiateContract2"
+	Msg_ExecuteContract_FullMethodName      = "/types.Msg/ExecuteContract"
+	Msg_MigrateContract_FullMethodName      = "/types.Msg/MigrateContract"
+	Msg_SudoContract_FullMethodName         = "/types.Msg/SudoContract"
 )
 
 // MsgClient is the client API for Msg service.
@@ -61,6 +68,13 @@ type MsgClient interface {
 	ProposeUpgrade(ctx context.Context, in *MsgProposeUpgrade, opts ...grpc.CallOption) (*MsgEmpty, error)
 	ApproveUpgrade(ctx context.Context, in *MsgApproveUpgrade, opts ...grpc.CallOption) (*MsgEmpty, error)
 	RejectUpgrade(ctx context.Context, in *MsgRejectUpgrade, opts ...grpc.CallOption) (*MsgEmpty, error)
+	// CosmWasm interface cloned in order so that we can register the x/thorchain message server as the server for x/wasm messages, and route through version control
+	StoreCode(ctx context.Context, in *types.MsgStoreCode, opts ...grpc.CallOption) (*types.MsgStoreCodeResponse, error)
+	InstantiateContract(ctx context.Context, in *types.MsgInstantiateContract, opts ...grpc.CallOption) (*types.MsgInstantiateContractResponse, error)
+	InstantiateContract2(ctx context.Context, in *types.MsgInstantiateContract2, opts ...grpc.CallOption) (*types.MsgInstantiateContract2Response, error)
+	ExecuteContract(ctx context.Context, in *types.MsgExecuteContract, opts ...grpc.CallOption) (*types.MsgExecuteContractResponse, error)
+	MigrateContract(ctx context.Context, in *types.MsgMigrateContract, opts ...grpc.CallOption) (*types.MsgMigrateContractResponse, error)
+	SudoContract(ctx context.Context, in *types.MsgSudoContract, opts ...grpc.CallOption) (*types.MsgSudoContractResponse, error)
 }
 
 type msgClient struct {
@@ -233,6 +247,60 @@ func (c *msgClient) RejectUpgrade(ctx context.Context, in *MsgRejectUpgrade, opt
 	return out, nil
 }
 
+func (c *msgClient) StoreCode(ctx context.Context, in *types.MsgStoreCode, opts ...grpc.CallOption) (*types.MsgStoreCodeResponse, error) {
+	out := new(types.MsgStoreCodeResponse)
+	err := c.cc.Invoke(ctx, Msg_StoreCode_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) InstantiateContract(ctx context.Context, in *types.MsgInstantiateContract, opts ...grpc.CallOption) (*types.MsgInstantiateContractResponse, error) {
+	out := new(types.MsgInstantiateContractResponse)
+	err := c.cc.Invoke(ctx, Msg_InstantiateContract_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) InstantiateContract2(ctx context.Context, in *types.MsgInstantiateContract2, opts ...grpc.CallOption) (*types.MsgInstantiateContract2Response, error) {
+	out := new(types.MsgInstantiateContract2Response)
+	err := c.cc.Invoke(ctx, Msg_InstantiateContract2_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) ExecuteContract(ctx context.Context, in *types.MsgExecuteContract, opts ...grpc.CallOption) (*types.MsgExecuteContractResponse, error) {
+	out := new(types.MsgExecuteContractResponse)
+	err := c.cc.Invoke(ctx, Msg_ExecuteContract_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) MigrateContract(ctx context.Context, in *types.MsgMigrateContract, opts ...grpc.CallOption) (*types.MsgMigrateContractResponse, error) {
+	out := new(types.MsgMigrateContractResponse)
+	err := c.cc.Invoke(ctx, Msg_MigrateContract_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) SudoContract(ctx context.Context, in *types.MsgSudoContract, opts ...grpc.CallOption) (*types.MsgSudoContractResponse, error) {
+	out := new(types.MsgSudoContractResponse)
+	err := c.cc.Invoke(ctx, Msg_SudoContract_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MsgServer is the server API for Msg service.
 // All implementations must embed UnimplementedMsgServer
 // for forward compatibility
@@ -255,6 +323,13 @@ type MsgServer interface {
 	ProposeUpgrade(context.Context, *MsgProposeUpgrade) (*MsgEmpty, error)
 	ApproveUpgrade(context.Context, *MsgApproveUpgrade) (*MsgEmpty, error)
 	RejectUpgrade(context.Context, *MsgRejectUpgrade) (*MsgEmpty, error)
+	// CosmWasm interface cloned in order so that we can register the x/thorchain message server as the server for x/wasm messages, and route through version control
+	StoreCode(context.Context, *types.MsgStoreCode) (*types.MsgStoreCodeResponse, error)
+	InstantiateContract(context.Context, *types.MsgInstantiateContract) (*types.MsgInstantiateContractResponse, error)
+	InstantiateContract2(context.Context, *types.MsgInstantiateContract2) (*types.MsgInstantiateContract2Response, error)
+	ExecuteContract(context.Context, *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error)
+	MigrateContract(context.Context, *types.MsgMigrateContract) (*types.MsgMigrateContractResponse, error)
+	SudoContract(context.Context, *types.MsgSudoContract) (*types.MsgSudoContractResponse, error)
 	mustEmbedUnimplementedMsgServer()
 }
 
@@ -315,6 +390,24 @@ func (UnimplementedMsgServer) ApproveUpgrade(context.Context, *MsgApproveUpgrade
 }
 func (UnimplementedMsgServer) RejectUpgrade(context.Context, *MsgRejectUpgrade) (*MsgEmpty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RejectUpgrade not implemented")
+}
+func (UnimplementedMsgServer) StoreCode(context.Context, *types.MsgStoreCode) (*types.MsgStoreCodeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StoreCode not implemented")
+}
+func (UnimplementedMsgServer) InstantiateContract(context.Context, *types.MsgInstantiateContract) (*types.MsgInstantiateContractResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InstantiateContract not implemented")
+}
+func (UnimplementedMsgServer) InstantiateContract2(context.Context, *types.MsgInstantiateContract2) (*types.MsgInstantiateContract2Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InstantiateContract2 not implemented")
+}
+func (UnimplementedMsgServer) ExecuteContract(context.Context, *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ExecuteContract not implemented")
+}
+func (UnimplementedMsgServer) MigrateContract(context.Context, *types.MsgMigrateContract) (*types.MsgMigrateContractResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MigrateContract not implemented")
+}
+func (UnimplementedMsgServer) SudoContract(context.Context, *types.MsgSudoContract) (*types.MsgSudoContractResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SudoContract not implemented")
 }
 func (UnimplementedMsgServer) mustEmbedUnimplementedMsgServer() {}
 
@@ -653,6 +746,114 @@ func _Msg_RejectUpgrade_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Msg_StoreCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(types.MsgStoreCode)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).StoreCode(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_StoreCode_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).StoreCode(ctx, req.(*types.MsgStoreCode))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_InstantiateContract_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(types.MsgInstantiateContract)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).InstantiateContract(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_InstantiateContract_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).InstantiateContract(ctx, req.(*types.MsgInstantiateContract))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_InstantiateContract2_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(types.MsgInstantiateContract2)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).InstantiateContract2(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_InstantiateContract2_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).InstantiateContract2(ctx, req.(*types.MsgInstantiateContract2))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_ExecuteContract_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(types.MsgExecuteContract)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).ExecuteContract(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_ExecuteContract_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).ExecuteContract(ctx, req.(*types.MsgExecuteContract))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_MigrateContract_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(types.MsgMigrateContract)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).MigrateContract(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_MigrateContract_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).MigrateContract(ctx, req.(*types.MsgMigrateContract))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_SudoContract_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(types.MsgSudoContract)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).SudoContract(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_SudoContract_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).SudoContract(ctx, req.(*types.MsgSudoContract))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Msg_ServiceDesc is the grpc.ServiceDesc for Msg service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -731,6 +932,30 @@ var Msg_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RejectUpgrade",
 			Handler:    _Msg_RejectUpgrade_Handler,
+		},
+		{
+			MethodName: "StoreCode",
+			Handler:    _Msg_StoreCode_Handler,
+		},
+		{
+			MethodName: "InstantiateContract",
+			Handler:    _Msg_InstantiateContract_Handler,
+		},
+		{
+			MethodName: "InstantiateContract2",
+			Handler:    _Msg_InstantiateContract2_Handler,
+		},
+		{
+			MethodName: "ExecuteContract",
+			Handler:    _Msg_ExecuteContract_Handler,
+		},
+		{
+			MethodName: "MigrateContract",
+			Handler:    _Msg_MigrateContract_Handler,
+		},
+		{
+			MethodName: "SudoContract",
+			Handler:    _Msg_SudoContract_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

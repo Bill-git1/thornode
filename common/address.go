@@ -8,6 +8,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/bech32"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	dogchaincfg "github.com/eager7/dogd/chaincfg"
 	"github.com/eager7/dogutil"
 	eth "github.com/ethereum/go-ethereum/common"
@@ -339,4 +340,19 @@ func (addr Address) IsNoop() bool {
 
 func (addr Address) String() string {
 	return string(addr)
+}
+
+func (addr Address) MappedAccAddress() (cosmos.AccAddress, error) {
+	// TODO: Add support to map EVM addresses -> bech32.
+	// Will require new PubKey type to validate.
+	_, data, err := bech32.Decode(addr.String())
+	if err != nil {
+		return nil, err
+	}
+	encoded, err := bech32.Encode(sdk.GetConfig().GetBech32AccountAddrPrefix(), data)
+	if err != nil {
+		return nil, err
+	}
+
+	return cosmos.AccAddressFromBech32(encoded)
 }

@@ -9,6 +9,7 @@ import (
 
 	cmtcfg "github.com/cometbft/cometbft/config"
 	dbm "github.com/cosmos/cosmos-db"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
@@ -50,6 +51,11 @@ import (
 	thorlog "gitlab.com/thorchain/thornode/v3/log"
 
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/client/cli"
+
+	"github.com/CosmWasm/wasmd/x/wasm"
+	wasmcli "github.com/CosmWasm/wasmd/x/wasm/client/cli"
+	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
+	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 )
 
 // initCometBFTConfig helps to override default CometBFT Config values.
@@ -71,6 +77,7 @@ func initAppConfig() (string, interface{}) {
 
 	type CustomAppConfig struct {
 		serverconfig.Config
+		Wasm wasmtypes.WasmConfig `mapstructure:"wasm"`
 	}
 
 	// Optionally allow the chain developer to overwrite the SDK's default
@@ -93,9 +100,11 @@ func initAppConfig() (string, interface{}) {
 
 	customAppConfig := CustomAppConfig{
 		Config: *srvCfg,
+		Wasm:   wasmtypes.DefaultWasmConfig(),
 	}
 
 	customAppTemplate := serverconfig.DefaultConfigTemplate
+	customAppTemplate += wasmtypes.DefaultConfigTemplate()
 
 	return customAppTemplate, customAppConfig
 }
@@ -123,6 +132,7 @@ func initRootCmd(
 	)
 
 	server.AddCommands(rootCmd, app.DefaultNodeHome, newApp, appExport, addModuleInitFlags)
+	wasmcli.ExtendUnsafeResetAllCmd(rootCmd)
 
 	// add keybase, auxiliary RPC, query, genesis, and tx child commands
 	rootCmd.AddCommand(
@@ -156,6 +166,7 @@ func addModuleInitFlags(startCmd *cobra.Command) {
 		}
 		return nil
 	}
+	wasm.AddModuleInitFlags(startCmd)
 }
 
 func renderConfigCommand() *cobra.Command {
@@ -253,9 +264,15 @@ func newApp(
 ) servertypes.Application {
 	baseappOptions := DefaultBaseappOptions(appOpts)
 
+	var wasmOpts []wasmkeeper.Option
+	if cast.ToBool(appOpts.Get("telemetry.enabled")) {
+		wasmOpts = append(wasmOpts, wasmkeeper.WithVMCacheMetrics(prometheus.DefaultRegisterer))
+	}
+
 	return app.NewChainApp(
 		logger, db, traceStore, true,
 		appOpts,
+		wasmOpts,
 		baseappOptions...,
 	)
 }
@@ -287,6 +304,7 @@ func appExport(
 	// overwrite the FlagInvCheckPeriod
 	viperAppOpts.Set(server.FlagInvCheckPeriod, 1)
 	appOpts = viperAppOpts
+	var emptyWasmOpts []wasmkeeper.Option
 
 	chainApp = app.NewChainApp(
 		logger,
@@ -294,6 +312,7 @@ func appExport(
 		traceStore,
 		height == -1,
 		appOpts,
+		emptyWasmOpts,
 	)
 
 	if height != -1 {

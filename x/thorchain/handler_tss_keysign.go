@@ -72,7 +72,7 @@ func (h TssKeysignHandler) validateV3_0_0(ctx cosmos.Context, msg MsgTssKeysignF
 		return cosmos.ErrUnknownRequest("invalid keysign fail message")
 	}
 
-	if err := validateKeysignAuth(ctx, h.mgr.Keeper(), msg.GetSigners()); err != nil {
+	if _, err := validateKeysignAuth(ctx, h.mgr.Keeper(), msg.GetSigners()); err != nil {
 		return err
 	}
 
@@ -240,20 +240,20 @@ func (h TssKeysignHandler) handleV3_0_0(ctx cosmos.Context, msg MsgTssKeysignFai
 	return &cosmos.Result{}, nil
 }
 
-func validateKeysignAuth(ctx cosmos.Context, k keeper.Keeper, signers []cosmos.AccAddress) error {
+func validateKeysignAuth(ctx cosmos.Context, k keeper.Keeper, signers []cosmos.AccAddress) (cosmos.Context, error) {
 	if isSignedByActiveNodeAccounts(ctx, k, signers) {
-		return nil
+		return ctx.WithPriority(ActiveNodePriority), nil
 	}
 	shouldAccept := false
 	vaults, err := k.GetAsgardVaultsByStatus(ctx, RetiringVault)
 	if err != nil {
-		return ErrInternal(err, "fail to get retiring vaults")
+		return ctx, ErrInternal(err, "fail to get retiring vaults")
 	}
 	if len(vaults) > 0 {
 		for _, signer := range signers {
 			nodeAccount, err := k.GetNodeAccount(ctx, signer)
 			if err != nil {
-				return ErrInternal(err, "fail to get node account")
+				return ctx, ErrInternal(err, "fail to get node account")
 			}
 			for _, v := range vaults {
 				if v.GetMembership().Contains(nodeAccount.PubKeySet.Secp256k1) {
@@ -267,14 +267,14 @@ func validateKeysignAuth(ctx cosmos.Context, k keeper.Keeper, signers []cosmos.A
 		}
 	}
 	if !shouldAccept {
-		return cosmos.ErrUnauthorized("not authorized")
+		return ctx, cosmos.ErrUnauthorized("not authorized")
 	}
-	return nil
+	return ctx, nil
 }
 
 // TssKeysignAnteHandler called by the ante handler to gate mempool entry
 // and also during deliver. Store changes will persist if this function
 // succeeds, regardless of the success of the transaction.
-func TssKeysignFailAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper, msg MsgTssKeysignFail) error {
+func TssKeysignFailAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper, msg MsgTssKeysignFail) (cosmos.Context, error) {
 	return validateKeysignAuth(ctx, k, msg.GetSigners())
 }

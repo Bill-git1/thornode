@@ -5,14 +5,17 @@ import (
 	"fmt"
 
 	upgradekeeper "cosmossdk.io/x/upgrade/keeper"
+	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
 	"github.com/blang/semver"
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/common/wasmpermissions"
 	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
 	kv1 "gitlab.com/thorchain/thornode/v3/x/thorchain/keeper/v1"
@@ -43,6 +46,7 @@ type Manager interface {
 	Slasher() Slasher
 	TradeAccountManager() TradeAccountManager
 	SecuredAssetManager() SecuredAssetManager
+	WasmManager() WasmManager
 }
 
 type TradeAccountManager interface {
@@ -129,6 +133,54 @@ type PoolManager interface {
 	EndBlock(ctx cosmos.Context, mgr Manager) error
 }
 
+type WasmManager interface {
+	// StoreCode to submit Wasm code to the system
+	StoreCode(ctx cosmos.Context,
+		creator cosmos.AccAddress,
+		wasmCode []byte,
+	) (codeID uint64, checksum []byte, err error)
+	//  InstantiateContract creates a new smart contract instance for the given
+	//  code id.
+	InstantiateContract(ctx cosmos.Context,
+		codeID uint64,
+		creator, admin sdk.AccAddress,
+		initMsg []byte,
+		label string,
+		deposit sdk.Coins,
+	) (cosmos.AccAddress, []byte, error)
+	//  InstantiateContract2 creates a new smart contract instance for the given
+	//  code id with a predictable address
+	InstantiateContract2(ctx cosmos.Context,
+		codeID uint64,
+		creator, admin sdk.AccAddress,
+		initMsg []byte,
+		label string,
+		deposit sdk.Coins,
+		salt []byte,
+		fixMsg bool,
+	) (sdk.AccAddress, []byte, error)
+	// Execute submits the given message data to a smart contract
+	ExecuteContract(ctx cosmos.Context,
+		contractAddr, senderAddr cosmos.AccAddress,
+		msg []byte,
+		coins cosmos.Coins,
+	) ([]byte, error)
+	// Migrate runs a code upgrade/ downgrade for a smart contract
+	MigrateContract(ctx cosmos.Context,
+		contractAddress, caller sdk.AccAddress,
+		newCodeID uint64,
+		msg []byte,
+	) ([]byte, error)
+	// SudoContract defines an operation for calling sudo
+	// on a contract. The authority is verified against deployer permissions.
+	//
+	// Since: 0.40
+	SudoContract(ctx cosmos.Context,
+		contractAddress, caller sdk.AccAddress,
+		msg []byte,
+	) ([]byte, error)
+}
+
 // SwapQueue interface define the contract of Swap Queue
 type SwapQueue interface {
 	EndBlock(ctx cosmos.Context, mgr Manager) error
@@ -185,12 +237,14 @@ type Mgrs struct {
 	slasher        Slasher
 	tradeManager   TradeAccountManager
 	securedManager SecuredAssetManager
+	wasmManager    WasmManager
 
 	K             keeper.Keeper
 	cdc           codec.Codec
 	coinKeeper    bankkeeper.Keeper
 	accountKeeper authkeeper.AccountKeeper
 	upgradeKeeper *upgradekeeper.Keeper
+	wasmKeeper    wasmkeeper.Keeper
 	storeKey      cosmos.StoreKey
 }
 
@@ -201,6 +255,7 @@ func NewManagers(
 	coinKeeper bankkeeper.Keeper,
 	accountKeeper authkeeper.AccountKeeper,
 	upgradeKeeper *upgradekeeper.Keeper,
+	wasmKeeper wasmkeeper.Keeper,
 	storeKey cosmos.StoreKey,
 ) *Mgrs {
 	return &Mgrs{
@@ -209,6 +264,7 @@ func NewManagers(
 		coinKeeper:    coinKeeper,
 		accountKeeper: accountKeeper,
 		upgradeKeeper: upgradeKeeper,
+		wasmKeeper:    wasmKeeper,
 		storeKey:      storeKey,
 	}
 }
@@ -317,6 +373,11 @@ func (mgr *Mgrs) LoadManagerIfNecessary(ctx cosmos.Context) error {
 		return fmt.Errorf("fail to create secured manager: %w", err)
 	}
 
+	mgr.wasmManager, err = GetWasmManager(ctx, mgr.K, mgr.wasmKeeper, mgr.eventMgr)
+	if err != nil {
+		return fmt.Errorf("fail to create wasm manager: %w", err)
+	}
+
 	return nil
 }
 
@@ -356,6 +417,8 @@ func (mgr *Mgrs) Slasher() Slasher { return mgr.slasher }
 func (mgr *Mgrs) TradeAccountManager() TradeAccountManager { return mgr.tradeManager }
 
 func (mgr *Mgrs) SecuredAssetManager() SecuredAssetManager { return mgr.securedManager }
+
+func (mgr *Mgrs) WasmManager() WasmManager { return mgr.wasmManager }
 
 // GetKeeper return Keeper
 func GetKeeper(
@@ -498,4 +561,8 @@ func GetSecuredAssetManager(version semver.Version, keeper keeper.Keeper, eventM
 	default:
 		return nil, errInvalidVersion
 	}
+}
+
+func GetWasmManager(ctx cosmos.Context, keeper keeper.Keeper, wasmKeeper wasmkeeper.Keeper, eventMgr EventManager) (WasmManager, error) {
+	return newWasmMgrVCUR(ctx, keeper, wasmKeeper, wasmpermissions.GetWasmPermissions(), eventMgr)
 }

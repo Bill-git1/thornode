@@ -257,6 +257,6 @@ func (h DepositHandler) addSwapDirectV3_0_0(ctx cosmos.Context, msg MsgSwap) {
 // DepositAnteHandler called by the ante handler to gate mempool entry
 // and also during deliver. Store changes will persist if this function
 // succeeds, regardless of the success of the transaction.
-func DepositAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper, msg MsgDeposit) error {
-	return k.DeductNativeTxFeeFromAccount(ctx, msg.GetSigners()[0])
+func DepositAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper, msg MsgDeposit) (cosmos.Context, error) {
+	return ctx, k.DeductNativeTxFeeFromAccount(ctx, msg.GetSigners()[0])
 }

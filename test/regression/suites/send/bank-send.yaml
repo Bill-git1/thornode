@@ -74,11 +74,11 @@ type: check
 endpoint: http://localhost:1317/thorchain/block?height=3
 asserts:
  - .txs|length == 1
- - .txs[0]|.result.events|length == 12
- - .txs[0]|.result.events[7].type == "message"
- - .txs[0]|.result.events[7].sender == "{{ addr_thor_fox }}"
- - .txs[0]|.result.events[7].action == "/cosmos.bank.v1beta1.MsgSend"
- - .txs[0]|.result.events[7].module == "bank"
+ - .txs[0]|.result.events|length == 11
+ - .txs[0]|.result.events[6].type == "message"
+ - .txs[0]|.result.events[6].sender == "{{ addr_thor_fox }}"
+ - .txs[0]|.result.events[6].action == "/cosmos.bank.v1beta1.MsgSend"
+ - .txs[0]|.result.events[6].module == "bank"
 ---
 # Attempt to send any funds to wolf. Should fail and not land on-chain due to insufficient funds for the gas fee.
 type: tx-bank-send

@@ -171,7 +171,7 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "1EA543141C0A8D8F77A4105CC343AE9C2279AEB7223CC103E02AC0A674F2C2EE",
+      "app_hash": "99581F7E9AADFCA770FFBFA5E71DCAF207C4AD0903544DE540179AB95E08D166",
       "last_results_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
@@ -333,13 +333,8 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "104337",
+          "gas_used": "106415",
           "events": [
-            {
-              "fee": "",
-              "fee_payer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
-              "type": "tx"
-            },
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/0",
               "type": "tx"
@@ -456,13 +451,8 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "86697",
+          "gas_used": "88589",
           "events": [
-            {
-              "fee": "",
-              "fee_payer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
-              "type": "tx"
-            },
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/1",
               "type": "tx"
@@ -562,8 +552,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "DDE94B1D0232901435DFB1B6BB433BADCDAB1338BD1EA0DECC4292BE02C05CC9",
-      "last_results_hash": "C5D636787DEC6F03F726B6BE95B2859D1584D2DBEAD2DB08817AA0D0727D7607",
+      "app_hash": "E799121FAE8A74647E4A0195D93EBE49A633845982F56D7F5597B9EF3A87B5C3",
+      "last_results_hash": "248D3FE561A3C46F43863358CE02070FCF62A06B2A8A63D1013466136DAE0936",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -755,7 +745,7 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "324B86719BC0C62815EEEB228B063834EAB68281986049C4FAA81DCCBA2A56C3",
+      "app_hash": "4BC71BB8D89D14047C86B1E1EDD97D90F7FB3FA62DAF07EFDBA403395843E245",
       "last_results_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
@@ -1042,13 +1032,8 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "187681",
+          "gas_used": "189573",
           "events": [
-            {
-              "fee": "",
-              "fee_payer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
-              "type": "tx"
-            },
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/2",
               "type": "tx"
@@ -1097,8 +1082,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "E525D7AF4710988CE44D6E599DFDA42CEA08B7BF3047CB89F41F71019E5854A7",
-      "last_results_hash": "097910160434D3C0A59DB47ACB161B1201D9011976C0C0A5367498718605C040",
+      "app_hash": "108AA3C9938941320D90DEF096FF3AD0E40988BD603B3BF5F65FBE1A0A2B0231",
+      "last_results_hash": "CA3FE8195B7078F53DB72FEA069B10E5688917B1F08B58012AD32104BB360780",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -1355,13 +1340,8 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "258550",
+          "gas_used": "260442",
           "events": [
-            {
-              "fee": "",
-              "fee_payer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
-              "type": "tx"
-            },
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/3",
               "type": "tx"
@@ -1421,8 +1401,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "3670D087C933B9703F477B1E70AA84C1EF25ABD70B849760E091CE90DF40C6C0",
-      "last_results_hash": "A67BC43924B271AC27D388645A88E2208CA6866A73402757B6E254160E62CEB8",
+      "app_hash": "5B0DF5324E07EFA74FA7A3D562F4ED1E399BE44C28FEA447959887DD6981441F",
+      "last_results_hash": "26D6257158973905CFDE198B5E56EE4417549A970CF2253E15518F27E5DFFBA3",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -1614,13 +1594,8 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "86320",
+          "gas_used": "88212",
           "events": [
-            {
-              "fee": "",
-              "fee_payer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
-              "type": "tx"
-            },
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/4",
               "type": "tx"
@@ -1720,8 +1695,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "C87D5DD0B2030609ACD3843CC9C224C1C07F22C87BB934DAC79EFA92A3DA1BE9",
-      "last_results_hash": "C5C40F7B6CD6126A76BCE2BAACDB858CB20188681A09F0D0114F1251A70F6A53",
+      "app_hash": "F76FF09B4E1651E982A692BCBFF4356E6596C0F3ECA48F01CE812F3E12940443",
+      "last_results_hash": "CCEBBEA57B8232402070886C98F28005976B291C40FE2D0F272540368F46B1B3",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -1946,13 +1921,8 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "1109498",
+          "gas_used": "1111390",
           "events": [
-            {
-              "fee": "",
-              "fee_payer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
-              "type": "tx"
-            },
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/5",
               "type": "tx"
@@ -2062,8 +2032,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "C3B549240488CCD5B2DE379671718A8C94CF6422679C8F2522014CE3E2E3AFEC",
-      "last_results_hash": "0910FC3207F12CBE66BB2A15AA7BDC9CA4AF5500DD5C8960C453EC546C07EAD8",
+      "app_hash": "60868FCE17C1EE7F8ECC52FC7D48D0A0C9360DF9084931780CC76CD8AEE421E4",
+      "last_results_hash": "120FA68ACACFF5AA142EEDF1BB9E055E4F7EE9CCE5A558E9EF6073AEB5871330",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -2320,13 +2290,8 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "260404",
+          "gas_used": "262296",
           "events": [
-            {
-              "fee": "",
-              "fee_payer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
-              "type": "tx"
-            },
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/6",
               "type": "tx"
@@ -2386,8 +2351,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "D45CA054B768F3B0F379681073FD3707B16D00C0390871DDC31C85BC8333B2AA",
-      "last_results_hash": "9A29B999E083909838455CA93F75935B7312AADF67F7755922DB10D5B698341F",
+      "app_hash": "176211641BE9BB2DDF6853852AD1A3A91BC2B46D6348E66559A8C4FF20ED058F",
+      "last_results_hash": "2ACBFAD85A50F579C5D751A683D30512A21B0CBD96F30A51FF8C7B609D7368DE",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -2624,13 +2589,8 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "185407",
+          "gas_used": "187299",
           "events": [
-            {
-              "fee": "",
-              "fee_payer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
-              "type": "tx"
-            },
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/7",
               "type": "tx"

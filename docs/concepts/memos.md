@@ -37,12 +37,13 @@ The following functions can be put into a memo:
 1. [**REPAY Loan**](memos.md#repay-loan)
 1. [**DEPOSIT RUNEPool**](memos.md#deposit-runepool)
 1. [**WITHDRAW RUNEPool**](memos.md#withdraw-runepool)
-1. [**ADD** **Liquidity**](memos.md#add-liquidity)
-1. [**WITHDRAW** **Liquidity**](memos.md#withdraw-liquidity)
-1. [**ADD** **Trade Account**](memos.md#add-trade-account)
-1. [**WITHDRAW** **Trade Account**](memos.md#withdraw-liquidity)
-1. [**ADD** **Secured Asset**](memos.md#add-secured-asset)
-1. [**WITHDRAW** **Secured Asset**](memos.md#withdraw-secured-asset)
+1. [**ADD Liquidity**](memos.md#add-liquidity)
+1. [**WITHDRAW Liquidity**](memos.md#withdraw-liquidity)
+1. [**ADD Trade Account**](memos.md#add-trade-account)
+1. [**WITHDRAW Trade Account**](memos.md#withdraw-liquidity)
+1. [**ADD Secured Asset**](memos.md#add-secured-asset)
+1. [**WITHDRAW Secured Asset**](memos.md#withdraw-secured-asset)
+1. [**EXECUTE Smart Contract**](memos.md#execute)
 1. [**BOND**, **UNBOND** & **LEAVE**](memos.md#bond-unbond-and-leave)
 1. [**DONATE** & **RESERVE**](memos.md#donate-and-reserve)
 1. [**MIGRATE**](memos.md#migrate)
@@ -320,6 +321,29 @@ Converts a Secured Asset to a L1 Asset.
 Note: Secured Assets and amount are determined by the `coins` within the `MsgDeposit`. Transaction fee in `RUNE` does apply.
 
 **Example:** `SECURE-:bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw` - Convert 0.1 BTC from a Secured Asset to a L1 and send to `bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw`
+
+### Execute
+
+Execute a Smart Contract from a base layer transaction.
+
+**`X:ADDR:PAYLOAD`**
+
+| Parameter | Notes                                                                                                                          | Extra                                            |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
+| Payload   | The asset to sent to the smart contract. L1 asset will be converted into a [Secured Asset](./asset-notation.md#secured-assets) | [Dust thresholds](#dust-thresholds) must be met. |
+| `x`       | The Wasm Execute handler. Also `exec`.                                                                                         | Must be a THORChain address                      |
+| `ADDR`    | The THORChain Wasm smart contract address                                                                                      | Must be a thor address                           |
+| `MSG`     | Payload send as `msg` to the Smart Contract, encoded as a base64 byte string.                                                  |                                                  |
+
+Example: `x:tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f:AA==`
+
+The above example creates a `MsgWasmExec` object for a smart contract execution and calls the contract with the following parameters:
+
+1. Contract Address: The address specified in the ADDR field `tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f`.
+2. Sender Address: Derived from the Layer 1 transaction's sender (e.g., the Bitcoin address).
+3. Msg Payload: The arguments provided in the MSG field (AA== in the example, decoded into the expected input for the smart contract).
+4. Funds: The Layer 1 asset (e.g., BTC amount sent in) is converted into a Secured Asset and included in the smart contract call.
+5. The smart contract will be executed via the following Cosmos SDK function: `ExecuteContract(ctx, contractAddr, senderAddr, msg.Msg, msg.Funds)`
 
 ### DONATE & RESERVE
 

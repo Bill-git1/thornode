@@ -359,6 +359,13 @@ func isSignedByActiveNodeAccounts(ctx cosmos.Context, k keeper.Keeper, signers [
 	return true
 }
 
+func activeNodeAccountsSignerPriority(ctx cosmos.Context, k keeper.Keeper, signers []cosmos.AccAddress) (cosmos.Context, error) {
+	if isSignedByActiveNodeAccounts(ctx, k, signers) {
+		return ctx.WithPriority(ActiveNodePriority), nil
+	}
+	return ctx, cosmos.ErrUnauthorized(fmt.Sprintf("%+v are not authorized", signers))
+}
+
 // signedByActiveNodeAccounts returns an error unless all signers are active validator nodes
 func signedByActiveNodeAccount(ctx cosmos.Context, k keeper.Keeper, signer cosmos.AccAddress) error {
 	nodeAccount, err := k.GetNodeAccount(ctx, signer)

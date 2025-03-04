@@ -330,9 +330,6 @@ func (h ObservedTxInHandler) addSwapDirect(ctx cosmos.Context, msg MsgSwap) {
 // ObservedTxInAnteHandler called by the ante handler to gate mempool entry
 // and also during deliver. Store changes will persist if this function
 // succeeds, regardless of the success of the transaction.
-func ObservedTxInAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper, msg MsgObservedTxIn) error {
-	if !isSignedByActiveNodeAccounts(ctx, k, msg.GetSigners()) {
-		return cosmos.ErrUnauthorized(fmt.Sprintf("%+v are not authorized", msg.GetSigners()))
-	}
-	return nil
+func ObservedTxInAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper, msg MsgObservedTxIn) (cosmos.Context, error) {
+	return activeNodeAccountsSignerPriority(ctx, k, msg.GetSigners())
 }

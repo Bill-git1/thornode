@@ -1,6 +1,8 @@
 package thorchain
 
 import (
+	math "math"
+
 	"github.com/stretchr/testify/suite"
 
 	. "gopkg.in/check.v1"
@@ -102,19 +104,33 @@ func (s *AnteTestSuite) TestAnteHandleMessage(c *C) {
 		ToAddress:   toAddr,
 		Amount:      cosmos.NewCoins(coin),
 	}
-	err = ad.anteHandleMessage(ctx, version, &goodMsg)
+	newCtx, err := ad.anteHandleMessage(ctx, version, &goodMsg)
 	c.Assert(err, IsNil)
+	c.Assert(newCtx.Priority(), Equals, int64(0))
 
 	// bank sends are allowed
 	bankSendMsg := banktypes.MsgSend{
 		FromAddress: fromAddr.String(),
 		ToAddress:   toAddr.String(),
 	}
-	err = ad.anteHandleMessage(ctx, version, &bankSendMsg)
+	_, err = ad.anteHandleMessage(ctx, version, &bankSendMsg)
 	c.Assert(err, IsNil)
 
 	// other non-thorchain msgs should be rejected
 	badMsg := banktypes.MsgMultiSend{}
-	err = ad.anteHandleMessage(ctx, version, &badMsg)
+	_, err = ad.anteHandleMessage(ctx, version, &badMsg)
 	c.Assert(err, NotNil)
+
+	activeNodeAccount := GetRandomValidatorNode(NodeActive)
+	c.Assert(k.SetNodeAccount(ctx, activeNodeAccount), IsNil)
+
+	// Node-signed msgs should have priority
+	priorityMsg := types.MsgMimir{
+		Key:    "",
+		Value:  0,
+		Signer: activeNodeAccount.NodeAddress,
+	}
+	newCtx, err = ad.anteHandleMessage(ctx, version, &priorityMsg)
+	c.Assert(err, IsNil)
+	c.Assert(newCtx.Priority(), Equals, int64(math.MaxInt64))
 }

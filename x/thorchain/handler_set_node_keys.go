@@ -136,10 +136,10 @@ func validateNodeKeysAuth(ctx cosmos.Context, k keeper.Keeper, signer cosmos.Acc
 // SetNodeKeysAnteHandler called by the ante handler to gate mempool entry
 // and also during deliver. Store changes will persist if this function
 // succeeds, regardless of the success of the transaction.
-func SetNodeKeysAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper, msg MsgSetNodeKeys) error {
+func SetNodeKeysAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper, msg MsgSetNodeKeys) (cosmos.Context, error) {
 	if err := validateNodeKeysAuth(ctx, k, msg.Signer); err != nil {
-		return err
+		return ctx, err
 	}
 
-	return k.DeductNativeTxFeeFromBond(ctx, msg.Signer)
+	return ctx, k.DeductNativeTxFeeFromBond(ctx, msg.Signer)
 }

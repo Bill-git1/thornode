@@ -4,6 +4,8 @@ deps:
   - buf.build/cosmos/cosmos-proto
   - buf.build/cosmos/gogo-proto
   - buf.build/googleapis/googleapis
+  - buf.build/cosmwasm/wasmd
+
 lint:
   use:
     - DEFAULT

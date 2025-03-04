@@ -526,11 +526,11 @@ func judgeLateSigner(ctx cosmos.Context, mgr Manager, msg *MsgTssPool, voter Tss
 // TssAnteHandler called by the ante handler to gate mempool entry
 // and also during deliver. Store changes will persist if this function
 // succeeds, regardless of the success of the transaction.
-func TssAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper, msg MsgTssPool) error {
+func TssAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper, msg MsgTssPool) (cosmos.Context, error) {
 	err := validateTssAuth(ctx, k, msg.Signer)
 	if err != nil {
-		return err
+		return ctx.WithPriority(ActiveNodePriority), err
 	}
 
-	return nil
+	return ctx, nil
 }

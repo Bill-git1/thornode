@@ -133,12 +133,12 @@ func getDeposit(ctx cosmos.Context, fromAddress sdk.AccAddress, sdkCoins sdk.Coi
 // SendAnteHandler called by the ante handler to gate mempool entry
 // and also during deliver. Store changes will persist if this function
 // succeeds, regardless of the success of the transaction.
-func SendAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper, m sdk.Msg) error {
+func SendAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper, m sdk.Msg) (cosmos.Context, error) {
 	msg, err := getThorSend(m)
 	if err != nil {
-		return err
+		return ctx, err
 	}
-	return k.DeductNativeTxFeeFromAccount(ctx, msg.GetSigners()[0])
+	return ctx, k.DeductNativeTxFeeFromAccount(ctx, msg.GetSigners()[0])
 }
 
 func MsgSendValidateV3_0_0(ctx cosmos.Context, mgr Manager, m sdk.Msg) error {

@@ -343,9 +343,6 @@ func (h ErrataTxHandler) processErrataOutboundTx(ctx cosmos.Context, msg MsgErra
 // ErrataTxAnteHandler called by the ante handler to gate mempool entry
 // and also during deliver. Store changes will persist if this function
 // succeeds, regardless of the success of the transaction.
-func ErrataTxAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper, msg MsgErrataTx) error {
-	if !isSignedByActiveNodeAccounts(ctx, k, msg.GetSigners()) {
-		return cosmos.ErrUnauthorized(errNotAuthorized.Error())
-	}
-	return nil
+func ErrataTxAnteHandler(ctx cosmos.Context, v semver.Version, k keeper.Keeper, msg MsgErrataTx) (cosmos.Context, error) {
+	return activeNodeAccountsSignerPriority(ctx, k, msg.GetSigners())
 }

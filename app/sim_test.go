@@ -20,6 +20,7 @@ import (
 	"cosmossdk.io/store"
 	storetypes "cosmossdk.io/store/types"
 
+	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/server"
@@ -147,6 +148,7 @@ func TestAppImportExport(t *testing.T) {
 			stakingtypes.HistoricalInfoKey, stakingtypes.UnbondingIDKey, stakingtypes.UnbondingIndexKey,
 			stakingtypes.UnbondingTypeKey, stakingtypes.ValidatorUpdatesKey,
 		},
+		wasmtypes.StoreKey: {wasmtypes.TXCounterPrefix},
 	}
 
 	storeKeys := app.GetStoreKeys()
