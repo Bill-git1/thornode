@@ -776,7 +776,7 @@ func (c *EVMClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 
 	if err == nil {
 		txIn = stypes.NewTxInItem(
-			chainHeight+1,
+			chainHeight,
 			signedTx.Hash().Hex()[2:],
 			tx.Memo,
 			fromAddr.String(),

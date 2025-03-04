@@ -701,7 +701,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 
 	if err == nil {
 		txIn = stypes.NewTxInItem(
-			chainHeight+1,
+			chainHeight,
 			signedTx.Hash().Hex()[2:],
 			tx.Memo,
 			fromAddr.String(),
