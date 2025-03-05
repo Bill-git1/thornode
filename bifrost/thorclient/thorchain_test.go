@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/blang/semver"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
@@ -64,7 +63,8 @@ func (s *ThorchainSuite) SetUpTest(c *C) {
 		case strings.HasPrefix(req.RequestURI, RagnarokEndpoint):
 			httpTestHandler(c, rw, "../../test/fixtures/endpoints/ragnarok/ragnarok.json")
 		case strings.HasPrefix(req.RequestURI, ChainVersionEndpoint):
-			httpTestHandler(c, rw, "../../test/fixtures/endpoints/version/version.json")
+			_, err := rw.Write([]byte(`{"current":"` + stypes.GetCurrentVersion().String() + `"}`))
+			c.Assert(err, IsNil)
 		case strings.HasPrefix(req.RequestURI, MimirEndpoint):
 			httpTestHandler(c, rw, "../../test/fixtures/endpoints/mimir/mimir.json")
 		case strings.HasPrefix(req.RequestURI, InboundAddressesEndpoint):
@@ -122,7 +122,7 @@ func (s *ThorchainSuite) TestGet(c *C) {
 	c.Assert(buf, NotNil)
 }
 
-func (s *ThorchainSuite) TestGetObservationStdTx_OutboundShouldHaveNotConfirmationCounting(c *C) {
+func (s *ThorchainSuite) TestGetObservationsStdTx_OutboundShouldHaveConfirmationCounting(c *C) {
 	pk := stypes.GetRandomPubKey()
 	vaultAddr, err := pk.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
@@ -145,7 +145,7 @@ func (s *ThorchainSuite) TestGetObservationStdTx_OutboundShouldHaveNotConfirmati
 	c.Assert(err, IsNil)
 	m, ok := signedMsg[0].(*stypes.MsgObservedTxOut)
 	c.Assert(ok, Equals, true)
-	c.Assert(m.Txs[0].FinaliseHeight == m.Txs[0].BlockHeight, Equals, true)
+	c.Assert(m.Txs[0].FinaliseHeight > m.Txs[0].BlockHeight, Equals, true)
 }
 
 func (s *ThorchainSuite) TestSign(c *C) {
@@ -298,7 +298,7 @@ func (s *ThorchainSuite) TestGetRagnarok(c *C) {
 func (s *ThorchainSuite) TestGetThorchainVersion(c *C) {
 	result, err := s.bridge.GetThorchainVersion()
 	c.Assert(err, IsNil)
-	c.Assert(result.EQ(semver.MustParse("0.11.0")), Equals, true)
+	c.Assert(result.EQ(stypes.GetCurrentVersion()), Equals, true)
 }
 
 func (s *ThorchainSuite) TestGetMimir(c *C) {

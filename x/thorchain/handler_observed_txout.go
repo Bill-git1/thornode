@@ -91,7 +91,11 @@ func (h ObservedTxOutHandler) preflight(ctx cosmos.Context, voter ObservedTxVote
 	}
 	if voter.HasFinalised(nas) {
 		if voter.FinalisedHeight == 0 {
-			ok = true
+			if voter.Height == 0 {
+				ok = true
+				// Record the consensus height at which outbound consensus actions are taken.
+				voter.Height = ctx.BlockHeight()
+			}
 			voter.FinalisedHeight = ctx.BlockHeight()
 			voter.Tx = voter.GetTx(nas)
 
@@ -106,6 +110,28 @@ func (h ObservedTxOutHandler) preflight(ctx cosmos.Context, voter ObservedTxVote
 			h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints+lackOfObservationPenalty, signer)
 		}
 	}
+	if !ok && voter.HasConsensus(nas) && !tx.IsFinal() && voter.FinalisedHeight == 0 {
+		if voter.Height == 0 {
+			ok = true
+			// Record the consensus height at which outbound consensus actions are taken,
+			// even if not yet Finalised.
+			voter.Height = ctx.BlockHeight()
+			// this is the tx that has consensus
+			voter.Tx = voter.GetTx(nas)
+
+			// This signer brings the voter to consensus;
+			// decrement all the signers' slash points and increment the non-signers' slash points.
+			signers := voter.GetConsensusSigners()
+			nonSigners := getNonSigners(nas, signers)
+			h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints, signers...)
+			h.mgr.Slasher().IncSlashPoints(slashCtx, lackOfObservationPenalty, nonSigners...)
+		} else if ctx.BlockHeight() <= (voter.Height+observeFlex) && voter.Tx.IsFinal() == tx.IsFinal() && voter.Tx.Tx.EqualsEx(tx.Tx) {
+			// event the tx had been processed , given the signer just a bit late , so still take away their slash points
+			// but only when the tx signer are voting is the tx that already reached consensus
+			h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints+lackOfObservationPenalty, signer)
+		}
+	}
+
 	h.mgr.Keeper().SetObservedTxOutVoter(ctx, voter)
 
 	// Check to see if we have enough identical observations to process the transaction
@@ -146,7 +172,7 @@ func (h ObservedTxOutHandler) handle(ctx cosmos.Context, msg MsgObservedTxOut) (
 		// check whether the tx has consensus
 		voter, ok := h.preflight(ctx, voter, activeNodeAccounts, tx, msg.Signer)
 		if !ok {
-			if voter.FinalisedHeight == ctx.BlockHeight() {
+			if voter.Height == ctx.BlockHeight() {
 				// we've already process the transaction, but we should still
 				// update the observing addresses
 				h.mgr.ObMgr().AppendObserver(tx.Tx.Chain, msg.GetSigners())

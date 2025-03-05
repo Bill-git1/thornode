@@ -541,6 +541,11 @@ asserts:
 ########################################################################################
 # unfinalized outbound - slash non-observers on consensus
 ########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - length == 1
+---
 type: tx-observed-out
 signer: {{ addr_thor_frog }}
 txs:
@@ -564,16 +569,22 @@ txs:
 type: create-blocks
 count: 1
 ---
+# Being an outbound (to avoid apparent insolvency),
+# unfinalised consensus is sufficient for internal handler action.
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - length == 0
+---
 type: check
 endpoint: http://localhost:1317/thorchain/nodes
 asserts:
-  # TODO: uncomment after fix
-  # - .[] | select(.node_address == "{{ addr_thor_cat }}") | .slash_points == 2
-  # - .[] | select(.node_address == "{{ addr_thor_fox }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_pig }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_frog }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_goat }}") | .slash_points == 2
-  # - .[] | select(.node_address == "{{ addr_thor_hawk }}") | .slash_points == 8
+ - .[] | select(.node_address == "{{ addr_thor_cat }}") | .slash_points == 2
+ - .[] | select(.node_address == "{{ addr_thor_fox }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_pig }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_frog }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_goat }}") | .slash_points == 2
+ - .[] | select(.node_address == "{{ addr_thor_hawk }}") | .slash_points == 8
 ---
 ########################################################################################
 # unfinalized outbound - unslash late observers within flexibility window
@@ -604,13 +615,12 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/nodes
 asserts:
-  # TODO: uncomment after fix
-  # - .[] | select(.node_address == "{{ addr_thor_cat }}") | .slash_points == 2
-  # - .[] | select(.node_address == "{{ addr_thor_fox }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_pig }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_frog }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_goat }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_hawk }}") | .slash_points == 8
+ - .[] | select(.node_address == "{{ addr_thor_cat }}") | .slash_points == 2
+ - .[] | select(.node_address == "{{ addr_thor_fox }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_pig }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_frog }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_goat }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_hawk }}") | .slash_points == 8
 ---
 ########################################################################################
 # unfinalized outbound - slash late observers after flexibility window
@@ -641,13 +651,12 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/nodes
 asserts:
-  # TODO: uncomment after fix
-  # - .[] | select(.node_address == "{{ addr_thor_cat }}") | .slash_points == 2
-  # - .[] | select(.node_address == "{{ addr_thor_fox }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_pig }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_frog }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_goat }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_hawk }}") | .slash_points == 9
+ - .[] | select(.node_address == "{{ addr_thor_cat }}") | .slash_points == 2
+ - .[] | select(.node_address == "{{ addr_thor_fox }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_pig }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_frog }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_goat }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_hawk }}") | .slash_points == 9
 ---
 ########################################################################################
 # unfinalized outbound - slash duplicate observations
@@ -678,13 +687,12 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/nodes
 asserts:
-  # TODO: uncomment after fix
-  # - .[] | select(.node_address == "{{ addr_thor_cat }}") | .slash_points == 3
-  # - .[] | select(.node_address == "{{ addr_thor_fox }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_pig }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_frog }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_goat }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_hawk }}") | .slash_points == 9
+ - .[] | select(.node_address == "{{ addr_thor_cat }}") | .slash_points == 3
+ - .[] | select(.node_address == "{{ addr_thor_fox }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_pig }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_frog }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_goat }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_hawk }}") | .slash_points == 9
 ---
 ########################################################################################
 # finalized outbound - slash early observers
@@ -755,13 +763,12 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/nodes
 asserts:
-  # TODO: uncomment after fix
-  # - .[] | select(.node_address == "{{ addr_thor_cat }}") | .slash_points == 4
-  # - .[] | select(.node_address == "{{ addr_thor_fox }}") | .slash_points == 1
-  # - .[] | select(.node_address == "{{ addr_thor_pig }}") | .slash_points == 1
-  # - .[] | select(.node_address == "{{ addr_thor_frog }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_goat }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_hawk }}") | .slash_points == 9
+ - .[] | select(.node_address == "{{ addr_thor_cat }}") | .slash_points == 4
+ - .[] | select(.node_address == "{{ addr_thor_fox }}") | .slash_points == 1
+ - .[] | select(.node_address == "{{ addr_thor_pig }}") | .slash_points == 1
+ - .[] | select(.node_address == "{{ addr_thor_frog }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_goat }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_hawk }}") | .slash_points == 9
 ---
 ########################################################################################
 # finalized outbound - slash non-observers on consensus
@@ -769,7 +776,7 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
-  - length == 1
+  - length == 0
 ---
 type: tx-observed-out
 signer: {{ addr_thor_frog }}
@@ -797,13 +804,12 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/nodes
 asserts:
-  # TODO: uncomment after fix
-  # - .[] | select(.node_address == "{{ addr_thor_cat }}") | .slash_points == 3
-  # - .[] | select(.node_address == "{{ addr_thor_fox }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_pig }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_frog }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_goat }}") | .slash_points == 2
-  # - .[] | select(.node_address == "{{ addr_thor_hawk }}") | .slash_points == 11
+ - .[] | select(.node_address == "{{ addr_thor_cat }}") | .slash_points == 3
+ - .[] | select(.node_address == "{{ addr_thor_fox }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_pig }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_frog }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_goat }}") | .slash_points == 2
+ - .[] | select(.node_address == "{{ addr_thor_hawk }}") | .slash_points == 11
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
@@ -839,13 +845,12 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/nodes
 asserts:
-  # TODO: uncomment after fix
-  # - .[] | select(.node_address == "{{ addr_thor_cat }}") | .slash_points == 3
-  # - .[] | select(.node_address == "{{ addr_thor_fox }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_pig }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_frog }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_goat }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_hawk }}") | .slash_points == 11
+ - .[] | select(.node_address == "{{ addr_thor_cat }}") | .slash_points == 3
+ - .[] | select(.node_address == "{{ addr_thor_fox }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_pig }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_frog }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_goat }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_hawk }}") | .slash_points == 11
 ---
 ########################################################################################
 # finalized outbound - slash late observers after flexibility window
@@ -876,13 +881,12 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/nodes
 asserts:
-  # TODO: uncomment after fix
-  # - .[] | select(.node_address == "{{ addr_thor_cat }}") | .slash_points == 3
-  # - .[] | select(.node_address == "{{ addr_thor_fox }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_pig }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_frog }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_goat }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_hawk }}") | .slash_points == 12
+ - .[] | select(.node_address == "{{ addr_thor_cat }}") | .slash_points == 3
+ - .[] | select(.node_address == "{{ addr_thor_fox }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_pig }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_frog }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_goat }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_hawk }}") | .slash_points == 12
 ---
 ########################################################################################
 # finalized outbound - slash duplicate observations
@@ -913,10 +917,9 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/nodes
 asserts:
-  # TODO: uncomment after fix
-  # - .[] | select(.node_address == "{{ addr_thor_cat }}") | .slash_points == 4
-  # - .[] | select(.node_address == "{{ addr_thor_fox }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_pig }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_frog }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_goat }}") | .slash_points == 0
-  # - .[] | select(.node_address == "{{ addr_thor_hawk }}") | .slash_points == 12
+ - .[] | select(.node_address == "{{ addr_thor_cat }}") | .slash_points == 4
+ - .[] | select(.node_address == "{{ addr_thor_fox }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_pig }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_frog }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_goat }}") | .slash_points == 0
+ - .[] | select(.node_address == "{{ addr_thor_hawk }}") | .slash_points == 12

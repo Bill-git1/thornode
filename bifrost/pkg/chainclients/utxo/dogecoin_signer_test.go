@@ -91,8 +91,9 @@ func (s *DogecoinSignerSuite) SetUpTest(c *C) {
 			c.Assert(err, IsNil)
 		} else if strings.HasPrefix(req.RequestURI, "/thorchain/vaults") && strings.HasSuffix(req.RequestURI, "/signers") {
 			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/tss/keysign_party.json")
-		} else if req.RequestURI == "/thorchain/version" {
-			httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/version/version.json")
+		} else if req.RequestURI == thorclient.ChainVersionEndpoint {
+			_, err := rw.Write([]byte(`{"current":"` + types2.GetCurrentVersion().String() + `"}`))
+			c.Assert(err, IsNil)
 		} else {
 			r := struct {
 				Method string `json:"method"`

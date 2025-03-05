@@ -378,8 +378,6 @@ func (b *thorchainBridge) GetObservationsStdTx(txIns stypes.ObservedTxs) ([]cosm
 		case vaultToAddress && !inInboundArray:
 			inbound = append(inbound, tx)
 		case vaultFromAddress && !inOutboundArray:
-			// for outbound transaction , there is no need to do confirmation counting
-			tx.FinaliseHeight = tx.BlockHeight
 			outbound = append(outbound, tx)
 		case inInboundArray && inOutboundArray:
 			// It's already in both arrays, so drop it.
