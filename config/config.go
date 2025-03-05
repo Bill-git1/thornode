@@ -221,6 +221,8 @@ func Init() {
 	if err := viper.Unmarshal(&config); err != nil {
 		log.Fatal().Err(err).Msg("failed to unmarshal config")
 	}
+	// set back to toml for cometbft config
+	viper.SetConfigType("toml")
 
 	// dynamically set rpc listen address
 	if config.Thornode.Tendermint.RPC.ListenAddress == "" {
