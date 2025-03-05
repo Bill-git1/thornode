@@ -461,6 +461,24 @@ endpoint: http://localhost:1317/thorchain/thorname/xx
 asserts:
   - .aliases[0].address == "{{ addr_thor_pig }}"
   - .owner == "{{ addr_thor_pig }}"
+  # Also confirm full THORName response format.
+  - |
+    . == {
+      "name": "xx",
+      "expire_block_height": 5256011,
+      "owner": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+      "preferred_asset": ".",
+      "preferred_asset_swap_threshold_rune": "0",
+      "affiliate_collector_rune": "0",
+      "aliases": [
+        {
+          "chain": "THOR",
+          "address": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u"
+        }
+      ]
+    }
+  # The field preferred_asset is required, and even when EmptyAsset is displayed as ".";
+  # the _rune fields are displayed as "0" rather than omitted when zero.
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/quote/swap

@@ -8,6 +8,7 @@ Name | Type | Description | Notes
 **ExpireBlockHeight** | Pointer to **int64** |  | [optional] 
 **Owner** | Pointer to **string** |  | [optional] 
 **PreferredAsset** | **string** |  | 
+**PreferredAssetSwapThresholdRune** | Pointer to **string** | Amount of RUNE currently needed to trigger a preferred asset swap. | [optional] 
 **AffiliateCollectorRune** | Pointer to **string** | Amount of RUNE currently accrued by this thorname in affiliate fees waiting to be swapped to preferred asset. | [optional] 
 **Aliases** | [**[]ThornameAlias**](ThornameAlias.md) |  | 
 
@@ -124,6 +125,31 @@ and a boolean to check if the value has been set.
 
 SetPreferredAsset sets PreferredAsset field to given value.
 
+
+### GetPreferredAssetSwapThresholdRune
+
+`func (o *Thorname) GetPreferredAssetSwapThresholdRune() string`
+
+GetPreferredAssetSwapThresholdRune returns the PreferredAssetSwapThresholdRune field if non-nil, zero value otherwise.
+
+### GetPreferredAssetSwapThresholdRuneOk
+
+`func (o *Thorname) GetPreferredAssetSwapThresholdRuneOk() (*string, bool)`
+
+GetPreferredAssetSwapThresholdRuneOk returns a tuple with the PreferredAssetSwapThresholdRune field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetPreferredAssetSwapThresholdRune
+
+`func (o *Thorname) SetPreferredAssetSwapThresholdRune(v string)`
+
+SetPreferredAssetSwapThresholdRune sets PreferredAssetSwapThresholdRune field to given value.
+
+### HasPreferredAssetSwapThresholdRune
+
+`func (o *Thorname) HasPreferredAssetSwapThresholdRune() bool`
+
+HasPreferredAssetSwapThresholdRune returns a boolean if a field has been set.
 
 ### GetAffiliateCollectorRune
 

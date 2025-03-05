@@ -20,6 +20,8 @@ type Thorname struct {
 	ExpireBlockHeight *int64 `json:"expire_block_height,omitempty"`
 	Owner *string `json:"owner,omitempty"`
 	PreferredAsset string `json:"preferred_asset"`
+	// Amount of RUNE currently needed to trigger a preferred asset swap.
+	PreferredAssetSwapThresholdRune *string `json:"preferred_asset_swap_threshold_rune,omitempty"`
 	// Amount of RUNE currently accrued by this thorname in affiliate fees waiting to be swapped to preferred asset.
 	AffiliateCollectorRune *string `json:"affiliate_collector_rune,omitempty"`
 	Aliases []ThornameAlias `json:"aliases"`
@@ -164,6 +166,38 @@ func (o *Thorname) SetPreferredAsset(v string) {
 	o.PreferredAsset = v
 }
 
+// GetPreferredAssetSwapThresholdRune returns the PreferredAssetSwapThresholdRune field value if set, zero value otherwise.
+func (o *Thorname) GetPreferredAssetSwapThresholdRune() string {
+	if o == nil || o.PreferredAssetSwapThresholdRune == nil {
+		var ret string
+		return ret
+	}
+	return *o.PreferredAssetSwapThresholdRune
+}
+
+// GetPreferredAssetSwapThresholdRuneOk returns a tuple with the PreferredAssetSwapThresholdRune field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *Thorname) GetPreferredAssetSwapThresholdRuneOk() (*string, bool) {
+	if o == nil || o.PreferredAssetSwapThresholdRune == nil {
+		return nil, false
+	}
+	return o.PreferredAssetSwapThresholdRune, true
+}
+
+// HasPreferredAssetSwapThresholdRune returns a boolean if a field has been set.
+func (o *Thorname) HasPreferredAssetSwapThresholdRune() bool {
+	if o != nil && o.PreferredAssetSwapThresholdRune != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetPreferredAssetSwapThresholdRune gets a reference to the given string and assigns it to the PreferredAssetSwapThresholdRune field.
+func (o *Thorname) SetPreferredAssetSwapThresholdRune(v string) {
+	o.PreferredAssetSwapThresholdRune = &v
+}
+
 // GetAffiliateCollectorRune returns the AffiliateCollectorRune field value if set, zero value otherwise.
 func (o *Thorname) GetAffiliateCollectorRune() string {
 	if o == nil || o.AffiliateCollectorRune == nil {
@@ -233,6 +267,9 @@ func (o Thorname) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if true {
 		toSerialize["preferred_asset"] = o.PreferredAsset
+	}
+	if o.PreferredAssetSwapThresholdRune != nil {
+		toSerialize["preferred_asset_swap_threshold_rune"] = o.PreferredAssetSwapThresholdRune
 	}
 	if o.AffiliateCollectorRune != nil {
 		toSerialize["affiliate_collector_rune"] = o.AffiliateCollectorRune

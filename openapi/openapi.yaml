@@ -2738,6 +2738,10 @@ components:
         preferred_asset:
           type: string
           example: "BTC.BTC"
+        preferred_asset_swap_threshold_rune:
+          type: string
+          example: "500"
+          description: Amount of RUNE currently needed to trigger a preferred asset swap.
         affiliate_collector_rune:
           type: string
           example: "100"

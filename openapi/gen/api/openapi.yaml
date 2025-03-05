@@ -3953,6 +3953,7 @@ components:
           address: bc1qn9esxuw8ca7ts8l6w66kdh800s09msvutydc46
         - chain: BTC
           address: bc1qn9esxuw8ca7ts8l6w66kdh800s09msvutydc46
+        preferred_asset_swap_threshold_rune: "500"
         name: thor
         affiliate_collector_rune: "100"
         expire_block_height: 1234
@@ -3969,6 +3970,11 @@ components:
           type: string
         preferred_asset:
           example: BTC.BTC
+          type: string
+        preferred_asset_swap_threshold_rune:
+          description: Amount of RUNE currently needed to trigger a preferred asset
+            swap.
+          example: "500"
           type: string
         affiliate_collector_rune:
           description: Amount of RUNE currently accrued by this thorname in affiliate

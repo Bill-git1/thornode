@@ -554,9 +554,9 @@ var (
 	fd_QueryThornameResponse_expire_block_height                 protoreflect.FieldDescriptor
 	fd_QueryThornameResponse_owner                               protoreflect.FieldDescriptor
 	fd_QueryThornameResponse_preferred_asset                     protoreflect.FieldDescriptor
+	fd_QueryThornameResponse_preferred_asset_swap_threshold_rune protoreflect.FieldDescriptor
 	fd_QueryThornameResponse_affiliate_collector_rune            protoreflect.FieldDescriptor
 	fd_QueryThornameResponse_aliases                             protoreflect.FieldDescriptor
-	fd_QueryThornameResponse_preferred_asset_swap_threshold_rune protoreflect.FieldDescriptor
 )
 
 func init() {
@@ -566,9 +566,9 @@ func init() {
 	fd_QueryThornameResponse_expire_block_height = md_QueryThornameResponse.Fields().ByName("expire_block_height")
 	fd_QueryThornameResponse_owner = md_QueryThornameResponse.Fields().ByName("owner")
 	fd_QueryThornameResponse_preferred_asset = md_QueryThornameResponse.Fields().ByName("preferred_asset")
+	fd_QueryThornameResponse_preferred_asset_swap_threshold_rune = md_QueryThornameResponse.Fields().ByName("preferred_asset_swap_threshold_rune")
 	fd_QueryThornameResponse_affiliate_collector_rune = md_QueryThornameResponse.Fields().ByName("affiliate_collector_rune")
 	fd_QueryThornameResponse_aliases = md_QueryThornameResponse.Fields().ByName("aliases")
-	fd_QueryThornameResponse_preferred_asset_swap_threshold_rune = md_QueryThornameResponse.Fields().ByName("preferred_asset_swap_threshold_rune")
 }
 
 var _ protoreflect.Message = (*fastReflection_QueryThornameResponse)(nil)
@@ -660,6 +660,12 @@ func (x *fastReflection_QueryThornameResponse) Range(f func(protoreflect.FieldDe
 			return
 		}
 	}
+	if x.PreferredAssetSwapThresholdRune != "" {
+		value := protoreflect.ValueOfString(x.PreferredAssetSwapThresholdRune)
+		if !f(fd_QueryThornameResponse_preferred_asset_swap_threshold_rune, value) {
+			return
+		}
+	}
 	if x.AffiliateCollectorRune != "" {
 		value := protoreflect.ValueOfString(x.AffiliateCollectorRune)
 		if !f(fd_QueryThornameResponse_affiliate_collector_rune, value) {
@@ -669,12 +675,6 @@ func (x *fastReflection_QueryThornameResponse) Range(f func(protoreflect.FieldDe
 	if len(x.Aliases) != 0 {
 		value := protoreflect.ValueOfList(&_QueryThornameResponse_6_list{list: &x.Aliases})
 		if !f(fd_QueryThornameResponse_aliases, value) {
-			return
-		}
-	}
-	if x.PreferredAssetSwapThresholdRune != "" {
-		value := protoreflect.ValueOfString(x.PreferredAssetSwapThresholdRune)
-		if !f(fd_QueryThornameResponse_preferred_asset_swap_threshold_rune, value) {
 			return
 		}
 	}
@@ -701,12 +701,12 @@ func (x *fastReflection_QueryThornameResponse) Has(fd protoreflect.FieldDescript
 		return x.Owner != ""
 	case "types.QueryThornameResponse.preferred_asset":
 		return x.PreferredAsset != ""
+	case "types.QueryThornameResponse.preferred_asset_swap_threshold_rune":
+		return x.PreferredAssetSwapThresholdRune != ""
 	case "types.QueryThornameResponse.affiliate_collector_rune":
 		return x.AffiliateCollectorRune != ""
 	case "types.QueryThornameResponse.aliases":
 		return len(x.Aliases) != 0
-	case "types.QueryThornameResponse.preferred_asset_swap_threshold_rune":
-		return x.PreferredAssetSwapThresholdRune != ""
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryThornameResponse"))
@@ -731,12 +731,12 @@ func (x *fastReflection_QueryThornameResponse) Clear(fd protoreflect.FieldDescri
 		x.Owner = ""
 	case "types.QueryThornameResponse.preferred_asset":
 		x.PreferredAsset = ""
+	case "types.QueryThornameResponse.preferred_asset_swap_threshold_rune":
+		x.PreferredAssetSwapThresholdRune = ""
 	case "types.QueryThornameResponse.affiliate_collector_rune":
 		x.AffiliateCollectorRune = ""
 	case "types.QueryThornameResponse.aliases":
 		x.Aliases = nil
-	case "types.QueryThornameResponse.preferred_asset_swap_threshold_rune":
-		x.PreferredAssetSwapThresholdRune = ""
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryThornameResponse"))
@@ -765,6 +765,9 @@ func (x *fastReflection_QueryThornameResponse) Get(descriptor protoreflect.Field
 	case "types.QueryThornameResponse.preferred_asset":
 		value := x.PreferredAsset
 		return protoreflect.ValueOfString(value)
+	case "types.QueryThornameResponse.preferred_asset_swap_threshold_rune":
+		value := x.PreferredAssetSwapThresholdRune
+		return protoreflect.ValueOfString(value)
 	case "types.QueryThornameResponse.affiliate_collector_rune":
 		value := x.AffiliateCollectorRune
 		return protoreflect.ValueOfString(value)
@@ -774,9 +777,6 @@ func (x *fastReflection_QueryThornameResponse) Get(descriptor protoreflect.Field
 		}
 		listValue := &_QueryThornameResponse_6_list{list: &x.Aliases}
 		return protoreflect.ValueOfList(listValue)
-	case "types.QueryThornameResponse.preferred_asset_swap_threshold_rune":
-		value := x.PreferredAssetSwapThresholdRune
-		return protoreflect.ValueOfString(value)
 	default:
 		if descriptor.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryThornameResponse"))
@@ -805,14 +805,14 @@ func (x *fastReflection_QueryThornameResponse) Set(fd protoreflect.FieldDescript
 		x.Owner = value.Interface().(string)
 	case "types.QueryThornameResponse.preferred_asset":
 		x.PreferredAsset = value.Interface().(string)
+	case "types.QueryThornameResponse.preferred_asset_swap_threshold_rune":
+		x.PreferredAssetSwapThresholdRune = value.Interface().(string)
 	case "types.QueryThornameResponse.affiliate_collector_rune":
 		x.AffiliateCollectorRune = value.Interface().(string)
 	case "types.QueryThornameResponse.aliases":
 		lv := value.List()
 		clv := lv.(*_QueryThornameResponse_6_list)
 		x.Aliases = *clv.list
-	case "types.QueryThornameResponse.preferred_asset_swap_threshold_rune":
-		x.PreferredAssetSwapThresholdRune = value.Interface().(string)
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryThornameResponse"))
@@ -847,10 +847,10 @@ func (x *fastReflection_QueryThornameResponse) Mutable(fd protoreflect.FieldDesc
 		panic(fmt.Errorf("field owner of message types.QueryThornameResponse is not mutable"))
 	case "types.QueryThornameResponse.preferred_asset":
 		panic(fmt.Errorf("field preferred_asset of message types.QueryThornameResponse is not mutable"))
-	case "types.QueryThornameResponse.affiliate_collector_rune":
-		panic(fmt.Errorf("field affiliate_collector_rune of message types.QueryThornameResponse is not mutable"))
 	case "types.QueryThornameResponse.preferred_asset_swap_threshold_rune":
 		panic(fmt.Errorf("field preferred_asset_swap_threshold_rune of message types.QueryThornameResponse is not mutable"))
+	case "types.QueryThornameResponse.affiliate_collector_rune":
+		panic(fmt.Errorf("field affiliate_collector_rune of message types.QueryThornameResponse is not mutable"))
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryThornameResponse"))
@@ -872,13 +872,13 @@ func (x *fastReflection_QueryThornameResponse) NewField(fd protoreflect.FieldDes
 		return protoreflect.ValueOfString("")
 	case "types.QueryThornameResponse.preferred_asset":
 		return protoreflect.ValueOfString("")
+	case "types.QueryThornameResponse.preferred_asset_swap_threshold_rune":
+		return protoreflect.ValueOfString("")
 	case "types.QueryThornameResponse.affiliate_collector_rune":
 		return protoreflect.ValueOfString("")
 	case "types.QueryThornameResponse.aliases":
 		list := []*ThornameAlias{}
 		return protoreflect.ValueOfList(&_QueryThornameResponse_6_list{list: &list})
-	case "types.QueryThornameResponse.preferred_asset_swap_threshold_rune":
-		return protoreflect.ValueOfString("")
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryThornameResponse"))
@@ -963,6 +963,10 @@ func (x *fastReflection_QueryThornameResponse) ProtoMethods() *protoiface.Method
 		if l > 0 {
 			n += 1 + l + runtime.Sov(uint64(l))
 		}
+		l = len(x.PreferredAssetSwapThresholdRune)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
 		l = len(x.AffiliateCollectorRune)
 		if l > 0 {
 			n += 1 + l + runtime.Sov(uint64(l))
@@ -972,10 +976,6 @@ func (x *fastReflection_QueryThornameResponse) ProtoMethods() *protoiface.Method
 				l = options.Size(e)
 				n += 1 + l + runtime.Sov(uint64(l))
 			}
-		}
-		l = len(x.PreferredAssetSwapThresholdRune)
-		if l > 0 {
-			n += 1 + l + runtime.Sov(uint64(l))
 		}
 		if x.unknownFields != nil {
 			n += len(x.unknownFields)
@@ -1226,6 +1226,38 @@ func (x *fastReflection_QueryThornameResponse) ProtoMethods() *protoiface.Method
 				}
 				x.PreferredAsset = string(dAtA[iNdEx:postIndex])
 				iNdEx = postIndex
+			case 7:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field PreferredAssetSwapThresholdRune", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.PreferredAssetSwapThresholdRune = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
 			case 5:
 				if wireType != 2 {
 					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field AffiliateCollectorRune", wireType)
@@ -1291,38 +1323,6 @@ func (x *fastReflection_QueryThornameResponse) ProtoMethods() *protoiface.Method
 				if err := options.Unmarshal(dAtA[iNdEx:postIndex], x.Aliases[len(x.Aliases)-1]); err != nil {
 					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, err
 				}
-				iNdEx = postIndex
-			case 7:
-				if wireType != 2 {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field PreferredAssetSwapThresholdRune", wireType)
-				}
-				var stringLen uint64
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
-					}
-					if iNdEx >= l {
-						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					stringLen |= uint64(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				intStringLen := int(stringLen)
-				if intStringLen < 0 {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
-				}
-				postIndex := iNdEx + intStringLen
-				if postIndex < 0 {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
-				}
-				if postIndex > l {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
-				}
-				x.PreferredAssetSwapThresholdRune = string(dAtA[iNdEx:postIndex])
 				iNdEx = postIndex
 			default:
 				iNdEx = preIndex
@@ -1908,11 +1908,11 @@ type QueryThornameResponse struct {
 	ExpireBlockHeight int64  `protobuf:"varint,2,opt,name=expire_block_height,json=expireBlockHeight,proto3" json:"expire_block_height,omitempty"`
 	Owner             string `protobuf:"bytes,3,opt,name=owner,proto3" json:"owner,omitempty"`
 	PreferredAsset    string `protobuf:"bytes,4,opt,name=preferred_asset,json=preferredAsset,proto3" json:"preferred_asset,omitempty"`
+	// Amount of RUNE currently needed to trigger a preferred asset swap.
+	PreferredAssetSwapThresholdRune string `protobuf:"bytes,7,opt,name=preferred_asset_swap_threshold_rune,json=preferredAssetSwapThresholdRune,proto3" json:"preferred_asset_swap_threshold_rune,omitempty"`
 	// Amount of RUNE currently accrued by this thorname in affiliate fees waiting to be swapped to preferred asset.
 	AffiliateCollectorRune string           `protobuf:"bytes,5,opt,name=affiliate_collector_rune,json=affiliateCollectorRune,proto3" json:"affiliate_collector_rune,omitempty"`
 	Aliases                []*ThornameAlias `protobuf:"bytes,6,rep,name=aliases,proto3" json:"aliases,omitempty"`
-	// Amount of RUNE currently needed to trigger a preferred asset swap.
-	PreferredAssetSwapThresholdRune string `protobuf:"bytes,7,opt,name=preferred_asset_swap_threshold_rune,json=preferredAssetSwapThresholdRune,proto3" json:"preferred_asset_swap_threshold_rune,omitempty"`
 }
 
 func (x *QueryThornameResponse) Reset() {
@@ -1963,6 +1963,13 @@ func (x *QueryThornameResponse) GetPreferredAsset() string {
 	return ""
 }
 
+func (x *QueryThornameResponse) GetPreferredAssetSwapThresholdRune() string {
+	if x != nil {
+		return x.PreferredAssetSwapThresholdRune
+	}
+	return ""
+}
+
 func (x *QueryThornameResponse) GetAffiliateCollectorRune() string {
 	if x != nil {
 		return x.AffiliateCollectorRune
@@ -1975,13 +1982,6 @@ func (x *QueryThornameResponse) GetAliases() []*ThornameAlias {
 		return x.Aliases
 	}
 	return nil
-}
-
-func (x *QueryThornameResponse) GetPreferredAssetSwapThresholdRune() string {
-	if x != nil {
-		return x.PreferredAssetSwapThresholdRune
-	}
-	return ""
 }
 
 type ThornameAlias struct {
@@ -2049,19 +2049,19 @@ var file_types_query_thorname_proto_rawDesc = []byte{
 	0x73, 0x73, 0x65, 0x74, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x42, 0x13, 0xea, 0xde, 0x1f, 0x0f,
 	0x70, 0x72, 0x65, 0x66, 0x65, 0x72, 0x72, 0x65, 0x64, 0x5f, 0x61, 0x73, 0x73, 0x65, 0x74, 0x52,
 	0x0e, 0x70, 0x72, 0x65, 0x66, 0x65, 0x72, 0x72, 0x65, 0x64, 0x41, 0x73, 0x73, 0x65, 0x74, 0x12,
-	0x38, 0x0a, 0x18, 0x61, 0x66, 0x66, 0x69, 0x6c, 0x69, 0x61, 0x74, 0x65, 0x5f, 0x63, 0x6f, 0x6c,
-	0x6c, 0x65, 0x63, 0x74, 0x6f, 0x72, 0x5f, 0x72, 0x75, 0x6e, 0x65, 0x18, 0x05, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x16, 0x61, 0x66, 0x66, 0x69, 0x6c, 0x69, 0x61, 0x74, 0x65, 0x43, 0x6f, 0x6c, 0x6c,
-	0x65, 0x63, 0x74, 0x6f, 0x72, 0x52, 0x75, 0x6e, 0x65, 0x12, 0x3b, 0x0a, 0x07, 0x61, 0x6c, 0x69,
-	0x61, 0x73, 0x65, 0x73, 0x18, 0x06, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x14, 0x2e, 0x74, 0x79, 0x70,
-	0x65, 0x73, 0x2e, 0x54, 0x68, 0x6f, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x41, 0x6c, 0x69, 0x61, 0x73,
-	0x42, 0x0b, 0xea, 0xde, 0x1f, 0x07, 0x61, 0x6c, 0x69, 0x61, 0x73, 0x65, 0x73, 0x52, 0x07, 0x61,
-	0x6c, 0x69, 0x61, 0x73, 0x65, 0x73, 0x12, 0x4c, 0x0a, 0x23, 0x70, 0x72, 0x65, 0x66, 0x65, 0x72,
-	0x72, 0x65, 0x64, 0x5f, 0x61, 0x73, 0x73, 0x65, 0x74, 0x5f, 0x73, 0x77, 0x61, 0x70, 0x5f, 0x74,
-	0x68, 0x72, 0x65, 0x73, 0x68, 0x6f, 0x6c, 0x64, 0x5f, 0x72, 0x75, 0x6e, 0x65, 0x18, 0x07, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x1f, 0x70, 0x72, 0x65, 0x66, 0x65, 0x72, 0x72, 0x65, 0x64, 0x41, 0x73,
-	0x73, 0x65, 0x74, 0x53, 0x77, 0x61, 0x70, 0x54, 0x68, 0x72, 0x65, 0x73, 0x68, 0x6f, 0x6c, 0x64,
-	0x52, 0x75, 0x6e, 0x65, 0x22, 0x3f, 0x0a, 0x0d, 0x54, 0x68, 0x6f, 0x72, 0x6e, 0x61, 0x6d, 0x65,
+	0x4c, 0x0a, 0x23, 0x70, 0x72, 0x65, 0x66, 0x65, 0x72, 0x72, 0x65, 0x64, 0x5f, 0x61, 0x73, 0x73,
+	0x65, 0x74, 0x5f, 0x73, 0x77, 0x61, 0x70, 0x5f, 0x74, 0x68, 0x72, 0x65, 0x73, 0x68, 0x6f, 0x6c,
+	0x64, 0x5f, 0x72, 0x75, 0x6e, 0x65, 0x18, 0x07, 0x20, 0x01, 0x28, 0x09, 0x52, 0x1f, 0x70, 0x72,
+	0x65, 0x66, 0x65, 0x72, 0x72, 0x65, 0x64, 0x41, 0x73, 0x73, 0x65, 0x74, 0x53, 0x77, 0x61, 0x70,
+	0x54, 0x68, 0x72, 0x65, 0x73, 0x68, 0x6f, 0x6c, 0x64, 0x52, 0x75, 0x6e, 0x65, 0x12, 0x38, 0x0a,
+	0x18, 0x61, 0x66, 0x66, 0x69, 0x6c, 0x69, 0x61, 0x74, 0x65, 0x5f, 0x63, 0x6f, 0x6c, 0x6c, 0x65,
+	0x63, 0x74, 0x6f, 0x72, 0x5f, 0x72, 0x75, 0x6e, 0x65, 0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x16, 0x61, 0x66, 0x66, 0x69, 0x6c, 0x69, 0x61, 0x74, 0x65, 0x43, 0x6f, 0x6c, 0x6c, 0x65, 0x63,
+	0x74, 0x6f, 0x72, 0x52, 0x75, 0x6e, 0x65, 0x12, 0x3b, 0x0a, 0x07, 0x61, 0x6c, 0x69, 0x61, 0x73,
+	0x65, 0x73, 0x18, 0x06, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x14, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73,
+	0x2e, 0x54, 0x68, 0x6f, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x41, 0x6c, 0x69, 0x61, 0x73, 0x42, 0x0b,
+	0xea, 0xde, 0x1f, 0x07, 0x61, 0x6c, 0x69, 0x61, 0x73, 0x65, 0x73, 0x52, 0x07, 0x61, 0x6c, 0x69,
+	0x61, 0x73, 0x65, 0x73, 0x22, 0x3f, 0x0a, 0x0d, 0x54, 0x68, 0x6f, 0x72, 0x6e, 0x61, 0x6d, 0x65,
 	0x41, 0x6c, 0x69, 0x61, 0x73, 0x12, 0x14, 0x0a, 0x05, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x18, 0x01,
 	0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x12, 0x18, 0x0a, 0x07, 0x61,
 	0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x61, 0x64,

@@ -17,11 +17,11 @@ message QueryThornameResponse{
   int64 expire_block_height = 2;
   string owner = 3;
   string preferred_asset = 4 [(gogoproto.jsontag) = "preferred_asset"];
-	// Amount of RUNE currently accrued by this thorname in affiliate fees waiting to be swapped to preferred asset.
-  string affiliate_collector_rune = 5;
-  repeated ThornameAlias aliases = 6 [(gogoproto.jsontag) = "aliases"];
   // Amount of RUNE currently needed to trigger a preferred asset swap.
   string preferred_asset_swap_threshold_rune = 7;
+  // Amount of RUNE currently accrued by this thorname in affiliate fees waiting to be swapped to preferred asset.
+  string affiliate_collector_rune = 5;
+  repeated ThornameAlias aliases = 6 [(gogoproto.jsontag) = "aliases"];
 }
 
 message ThornameAlias{

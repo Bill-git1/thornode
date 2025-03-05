@@ -447,6 +447,26 @@ type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
   - .affiliate_collector_rune == "${TEST_THORNAME_RUNE=6556873213}"
+  # Also confirm full THORName response format.
+  - |
+    . == {
+      "name": "test",
+      "expire_block_height": 455256004,
+      "owner": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+      "preferred_asset": "BTC.BTC",
+      "preferred_asset_swap_threshold_rune": "2166339200",
+      "affiliate_collector_rune": "6556873213",
+      "aliases": [
+        {
+          "chain": "THOR",
+          "address": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u"
+        },
+        {
+          "chain": "BTC",
+          "address": "bcrt1qqk8c8sfrmfm0tkncs0zxeutc8v5mx3pjw22g33"
+        }
+      ]
+    }
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/balance/module/affiliate_collector
