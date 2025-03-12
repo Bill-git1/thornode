@@ -329,9 +329,9 @@
       "params": {
         "code_upload_access": {
           "addresses": [],
-          "permission": "Nobody"
+          "permission": "Everybody"
         },
-        "instantiate_default_permission": "Nobody"
+        "instantiate_default_permission": "Everybody"
       },
       "sequences": [
         {

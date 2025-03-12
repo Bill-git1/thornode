@@ -578,7 +578,7 @@ func GetSecuredAssetManager(version semver.Version, keeper keeper.Keeper, eventM
 }
 
 func GetWasmManager(ctx cosmos.Context, keeper keeper.Keeper, wasmKeeper wasmkeeper.Keeper, eventMgr EventManager) (WasmManager, error) {
-	return newWasmMgrVCUR(ctx, keeper, wasmKeeper, wasmpermissions.GetWasmPermissions(), eventMgr)
+	return newWasmMgrVCUR(keeper, wasmKeeper, wasmpermissions.GetWasmPermissions(), eventMgr)
 }
 
 func GetSwitchManager(version semver.Version, keeper keeper.Keeper, eventMgr EventManager) (SwitchManager, error) {

@@ -5,7 +5,7 @@ count: 1
 ---
 type: tx-mimir
 key: WasmPermissionless
-value: 0
+value: 1
 signer: {{ addr_thor_dog }}
 ---
 type: create-blocks
@@ -42,7 +42,7 @@ count: 1
 type: tx-execute-contract
 sender: {{ addr_thor_dog }}
 contract: "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"
-msg: {"increment": {}}
+msg: { "increment": {}}
 gas: 100000
 fees: 100rune
 ---

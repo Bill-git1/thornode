@@ -231,7 +231,8 @@
       "loans": [],
       "mimirs": [
         {
-          "key": "ENABLESWITCH-GAIA-KUJI"
+          "key": "ENABLESWITCH-GAIA-KUJI",
+          "value": "1"
         }
       ],
       "network": {
@@ -249,7 +250,8 @@
       "nodeMimirs": [
         {
           "key": "ENABLESWITCH-GAIA-KUJI",
-          "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m"
+          "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+          "value": "1"
         }
       ],
       "node_accounts": [
@@ -459,9 +461,9 @@
       "params": {
         "code_upload_access": {
           "addresses": [],
-          "permission": "Nobody"
+          "permission": "Everybody"
         },
-        "instantiate_default_permission": "Nobody"
+        "instantiate_default_permission": "Everybody"
       },
       "sequences": [
         {

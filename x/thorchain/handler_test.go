@@ -146,6 +146,12 @@ func setupManagerForTest(c *C) (cosmos.Context, *Mgrs) {
 		authtypes.NewModuleAddress(ModuleName).String(),
 	)
 
+	err = wk.SetParams(ctx, wasmtypes.Params{
+		CodeUploadAccess:             wasmtypes.AllowNobody,
+		InstantiateDefaultPermission: wasmtypes.AccessTypeNobody,
+	})
+	c.Assert(err, IsNil)
+
 	c.Assert(bk.MintCoins(ctx, ModuleName, cosmos.Coins{
 		cosmos.NewCoin(common.RuneAsset().Native(), cosmos.NewInt(200_000_000_00000000)),
 	}), IsNil)

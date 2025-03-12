@@ -29,25 +29,11 @@ type WasmMgrVCUR struct {
 
 // newWasmMgrVCUR create a new instance of Slasher
 func newWasmMgrVCUR(
-	ctx cosmos.Context,
 	keeper keeper.Keeper,
 	wasmKeeper wasmkeeper.Keeper,
 	permissions wasmpermissions.WasmPermissions,
 	eventMgr EventManager,
 ) (*WasmMgrVCUR, error) {
-	// We don't use wasmtypes.Params for permissioning.
-	// This just ensures that there is data available for wasmkeeper.Keeper.GetParams to retrieve
-	err := wasmKeeper.SetParams(ctx, wasmtypes.Params{
-		CodeUploadAccess: wasmtypes.AccessConfig{
-			Permission: 1,
-			Addresses:  []string{},
-		},
-		InstantiateDefaultPermission: 1,
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	return &WasmMgrVCUR{
 		keeper:      keeper,
 		wasmKeeper:  wasmKeeper,
@@ -72,7 +58,6 @@ func (m WasmMgrVCUR) StoreCode(
 		wasmCode,
 		nil,
 	)
-
 	if err != nil {
 		return 0, nil, err
 	}
@@ -284,7 +269,7 @@ func (m WasmMgrVCUR) checkHalt(ctx cosmos.Context) error {
 	if err != nil {
 		return err
 	}
-	if v != -1 && ctx.BlockHeight() > v {
+	if v > 0 && ctx.BlockHeight() > v {
 		return errorsmod.Wrap(errors.ErrUnauthorized, "wasm halted")
 	}
 	return nil
@@ -298,7 +283,7 @@ func (m WasmMgrVCUR) checkContractHalt(ctx cosmos.Context, address sdk.AccAddres
 	if err != nil {
 		return err
 	}
-	if v != -1 && ctx.BlockHeight() > v {
+	if v > 0 && ctx.BlockHeight() > v {
 		return errorsmod.Wrap(errors.ErrUnauthorized, "contract halted")
 	}
 	return nil
@@ -312,7 +297,7 @@ func (m WasmMgrVCUR) checkChecksumHalt(ctx cosmos.Context, checksum []byte) erro
 	if err != nil {
 		return err
 	}
-	if v != -1 && ctx.BlockHeight() > v {
+	if v > 0 && ctx.BlockHeight() > v {
 		return errorsmod.Wrap(errors.ErrUnauthorized, "checksum halted")
 	}
 	return nil
@@ -327,7 +312,7 @@ func (m WasmMgrVCUR) checkAuthorization(ctx cosmos.Context, actor cosmos.AccAddr
 	if err != nil {
 		return err
 	}
-	if v != -1 && ctx.BlockHeight() > v {
+	if v > 0 && ctx.BlockHeight() > v {
 		return nil
 	}
 
@@ -343,7 +328,7 @@ func (m WasmMgrVCUR) checkContractAuthorization(ctx cosmos.Context, contractInfo
 	// Check this against the admin value that is stored on instantiation, as is default x/wasm behaviour
 	// Current limitations of x/wasm mean we can't access the storage for ContractInfo to support updating of this value
 	policy := wasmkeeper.DefaultAuthorizationPolicy{}
-	if v != -1 && ctx.BlockHeight() > v {
+	if v > 0 && ctx.BlockHeight() > v {
 		if policy.CanModifyContract(
 			contractInfo.AdminAddr(),
 			actor,

@@ -234,7 +234,8 @@
           "value": "1"
         },
         {
-          "key": "WASMPERMISSIONLESS"
+          "key": "WASMPERMISSIONLESS",
+          "value": "1"
         }
       ],
       "network": {
@@ -260,7 +261,8 @@
         },
         {
           "key": "WASMPERMISSIONLESS",
-          "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m"
+          "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+          "value": "1"
         }
       ],
       "node_accounts": [
@@ -336,7 +338,7 @@
             "creator": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
             "instantiate_config": {
               "addresses": [],
-              "permission": "Nobody"
+              "permission": "Everybody"
             }
           },
           "pinned": true
@@ -349,7 +351,7 @@
             "creator": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
             "instantiate_config": {
               "addresses": [],
-              "permission": "Nobody"
+              "permission": "Everybody"
             }
           },
           "pinned": true
@@ -488,9 +490,9 @@
       "params": {
         "code_upload_access": {
           "addresses": [],
-          "permission": "Nobody"
+          "permission": "Everybody"
         },
-        "instantiate_default_permission": "Nobody"
+        "instantiate_default_permission": "Everybody"
       },
       "sequences": [
         {

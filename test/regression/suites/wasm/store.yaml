@@ -23,15 +23,7 @@ asserts:
 ---
 type: tx-mimir
 key: WasmPermissionless
-value: 0
-signer: {{ addr_thor_dog }}
----
-type: create-blocks
-count: 1
----
-type: tx-mimir
-key: WasmPermissionless
-value: 0
+value: 1
 signer: {{ addr_thor_dog }}
 ---
 type: create-blocks
@@ -62,3 +54,4 @@ asserts:
   - .code_infos[0].code_id == "1"
   - .code_infos[0].creator == "{{ addr_thor_dog }}"
   - .code_infos[0].data_hash == "F9B2EFCE508AB3594D41AD0D7BD645014B1E145DF64083308D37C780DE7390B0"
+

@@ -18,7 +18,7 @@ var _ = Suite(&WasmManagerVCURSuite{})
 
 func (s WasmManagerVCURSuite) TestStoreCode(c *C) {
 	ctx, mgr := setupManagerForTest(c)
-	mgr.K.SetMimir(ctx, constants.MimirKeyWasmPermissionless, 0)
+	mgr.K.SetMimir(ctx, constants.MimirKeyWasmPermissionless, 1)
 
 	_, _, err := mgr.WasmManager().StoreCode(ctx,
 		GetRandomBech32Addr(),
@@ -30,7 +30,7 @@ func (s WasmManagerVCURSuite) TestStoreCode(c *C) {
 func (s WasmManagerVCURSuite) TestInstantiateContract(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	ctx = ctx.WithBlockTime(time.Unix(1, 0))
-	mgr.K.SetMimir(ctx, constants.MimirKeyWasmPermissionless, 0)
+	mgr.K.SetMimir(ctx, constants.MimirKeyWasmPermissionless, 1)
 
 	_, _, err := mgr.WasmManager().StoreCode(ctx,
 		GetRandomBech32Addr(),
@@ -88,7 +88,7 @@ func (s WasmManagerVCURSuite) TestInstantiateContract(c *C) {
 func (s WasmManagerVCURSuite) TestMigrateCode(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	ctx = ctx.WithBlockTime(time.Unix(1, 0))
-	mgr.K.SetMimir(ctx, constants.MimirKeyWasmPermissionless, 0)
+	mgr.K.SetMimir(ctx, constants.MimirKeyWasmPermissionless, 1)
 
 	_, _, err := mgr.WasmManager().StoreCode(ctx,
 		GetRandomBech32Addr(),

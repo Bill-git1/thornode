@@ -5,7 +5,7 @@ count: 1
 ---
 type: tx-mimir
 key: WasmPermissionless
-value: 0
+value: 1
 signer: {{ addr_thor_dog }}
 ---
 type: create-blocks
@@ -28,7 +28,7 @@ gas: 2000000
 type: create-blocks
 count: 1
 ---
-# 2 Instantiations of each 
+# 2 Instantiations of each
 type: tx-instantiate-contract
 code_id: 1
 msg: {}
@@ -85,7 +85,7 @@ asserts:
 type: tx-execute-contract
 sender: {{ addr_thor_dog }}
 contract: "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"
-msg: {"increment": {}}
+msg: { "increment": {}}
 gas: 100000
 ---
 type: create-blocks
@@ -100,7 +100,7 @@ asserts:
 type: tx-execute-contract
 sender: {{ addr_thor_dog }}
 contract: "tthor1suhgf5svhu4usrurvxzlgn54ksxmn8gljarjtxqnapv8kjnp4nrs3ptfdq"
-msg: {"increment": {}}
+msg: { "increment": {}}
 gas: 100000
 ---
 type: create-blocks
@@ -115,7 +115,7 @@ asserts:
 type: tx-execute-contract
 sender: {{ addr_thor_dog }}
 contract: "tthor1xr3rq8yvd7qplsw5yx90ftsr2zdhg4e9z60h5duusgxpv72hud3swxdzfd"
-msg: {"increment": {}}
+msg: { "increment": {}}
 gas: 100000
 ---
 type: create-blocks
@@ -130,7 +130,7 @@ asserts:
 type: tx-execute-contract
 sender: {{ addr_thor_dog }}
 contract: "tthor1aakfpghcanxtc45gpqlx8j3rq0zcpyf49qmhm9mdjrfx036h4z5sc68ary"
-msg: {"increment": {}}
+msg: { "increment": {}}
 gas: 100000
 ---
 type: create-blocks
@@ -161,7 +161,7 @@ asserts:
 type: tx-execute-contract
 sender: {{ addr_thor_dog }}
 contract: "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"
-msg: {"increment": {}}
+msg: { "increment": {}}
 gas: 100000
 ---
 type: create-blocks
@@ -175,7 +175,7 @@ asserts:
 type: tx-execute-contract
 sender: {{ addr_thor_dog }}
 contract: "tthor1suhgf5svhu4usrurvxzlgn54ksxmn8gljarjtxqnapv8kjnp4nrs3ptfdq"
-msg: {"increment": {}}
+msg: { "increment": {}}
 gas: 100000
 ---
 type: create-blocks
@@ -190,7 +190,7 @@ asserts:
 type: tx-execute-contract
 sender: {{ addr_thor_dog }}
 contract: "tthor1xr3rq8yvd7qplsw5yx90ftsr2zdhg4e9z60h5duusgxpv72hud3swxdzfd"
-msg: {"increment": {}}
+msg: { "increment": {}}
 gas: 100000
 ---
 type: create-blocks
@@ -205,7 +205,7 @@ asserts:
 type: tx-execute-contract
 sender: {{ addr_thor_dog }}
 contract: "tthor1aakfpghcanxtc45gpqlx8j3rq0zcpyf49qmhm9mdjrfx036h4z5sc68ary"
-msg: {"increment": {}}
+msg: { "increment": {}}
 gas: 100000
 ---
 type: create-blocks
@@ -236,7 +236,7 @@ asserts:
 type: tx-execute-contract
 sender: {{ addr_thor_dog }}
 contract: "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"
-msg: {"increment": {}}
+msg: { "increment": {}}
 gas: 100000
 ---
 type: create-blocks
@@ -250,7 +250,7 @@ asserts:
 type: tx-execute-contract
 sender: {{ addr_thor_dog }}
 contract: "tthor1suhgf5svhu4usrurvxzlgn54ksxmn8gljarjtxqnapv8kjnp4nrs3ptfdq"
-msg: {"increment": {}}
+msg: { "increment": {}}
 gas: 100000
 ---
 type: create-blocks
@@ -265,7 +265,7 @@ asserts:
 type: tx-execute-contract
 sender: {{ addr_thor_dog }}
 contract: "tthor1xr3rq8yvd7qplsw5yx90ftsr2zdhg4e9z60h5duusgxpv72hud3swxdzfd"
-msg: {"increment": {}}
+msg: { "increment": {}}
 gas: 100000
 ---
 type: create-blocks
@@ -279,7 +279,7 @@ asserts:
 type: tx-execute-contract
 sender: {{ addr_thor_dog }}
 contract: "tthor1aakfpghcanxtc45gpqlx8j3rq0zcpyf49qmhm9mdjrfx036h4z5sc68ary"
-msg: {"increment": {}}
+msg: { "increment": {}}
 gas: 100000
 ---
 type: create-blocks
@@ -309,7 +309,7 @@ asserts:
 type: tx-execute-contract
 sender: {{ addr_thor_dog }}
 contract: "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"
-msg: {"increment": {}}
+msg: { "increment": {}}
 gas: 100000
 ---
 type: create-blocks
@@ -323,7 +323,7 @@ asserts:
 type: tx-execute-contract
 sender: {{ addr_thor_dog }}
 contract: "tthor1suhgf5svhu4usrurvxzlgn54ksxmn8gljarjtxqnapv8kjnp4nrs3ptfdq"
-msg: {"increment": {}}
+msg: { "increment": {}}
 gas: 100000
 ---
 type: create-blocks
@@ -337,7 +337,7 @@ asserts:
 type: tx-execute-contract
 sender: {{ addr_thor_dog }}
 contract: "tthor1xr3rq8yvd7qplsw5yx90ftsr2zdhg4e9z60h5duusgxpv72hud3swxdzfd"
-msg: {"increment": {}}
+msg: { "increment": {}}
 gas: 100000
 ---
 type: create-blocks
@@ -351,7 +351,7 @@ asserts:
 type: tx-execute-contract
 sender: {{ addr_thor_dog }}
 contract: "tthor1aakfpghcanxtc45gpqlx8j3rq0zcpyf49qmhm9mdjrfx036h4z5sc68ary"
-msg: {"increment": {}}
+msg: { "increment": {}}
 gas: 100000
 ---
 type: create-blocks

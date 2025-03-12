@@ -328,7 +328,7 @@ func NewChainApp(
 		app.appCodec, app.BankKeeper, app.AccountKeeper, app.UpgradeKeeper, keys[thorchaintypes.StoreKey],
 	)
 
-	wasmDir := filepath.Join(homePath, "wasm")
+	wasmDir := filepath.Join(homePath, "data") // "wasm" subdirectory created here
 	wasmConfig, err := wasm.ReadWasmConfig(appOpts)
 	if err != nil {
 		panic(fmt.Sprintf("error while reading wasm config: %s", err))

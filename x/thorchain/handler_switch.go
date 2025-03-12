@@ -78,7 +78,7 @@ func (h SwitchHandler) checkEnabled(ctx cosmos.Context, asset common.Asset) erro
 	if err != nil {
 		return err
 	}
-	if m < 0 || m >= ctx.BlockHeight() {
+	if m <= 0 || m >= ctx.BlockHeight() {
 		return fmt.Errorf("%s switching is not enabled", asset.String())
 	}
 	return nil

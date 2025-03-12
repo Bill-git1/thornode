@@ -5,7 +5,7 @@ count: 1
 ---
 type: tx-mimir
 key: EnableSwitch-GAIA-KUJI
-value: 0
+value: 1
 signer: {{ addr_thor_dog }}
 ---
 type: create-blocks
@@ -14,7 +14,7 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/mimir
 asserts:
-  - ."ENABLESWITCH-GAIA-KUJI" == 0
+  - ."ENABLESWITCH-GAIA-KUJI" == 1
 ---
 ########################################################################################
 # Set up ATOM vaults

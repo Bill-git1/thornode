@@ -1,8 +1,7 @@
 {{ template "default-state.yaml" }}
 ---
 {{ template "btc-pool-state.yaml" }}
-
-# The following tests use the `bindings.wasm` contract, which implements these following interfaces. 
+# The following tests use the `bindings.wasm` contract, which implements these following interfaces.
 # Messages and query results are simply passed through the contract layer for testing
 
 # pub fn execute(
@@ -27,7 +26,7 @@ count: 1
 ---
 type: tx-mimir
 key: WasmPermissionless
-value: 0
+value: 1
 signer: {{ addr_thor_dog }}
 ---
 type: create-blocks
@@ -75,7 +74,14 @@ count: 1
 # memo: bond:tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m
 type: tx-execute-contract
 contract: "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"
-msg: {"any": {"type_url": "/types.MsgDeposit", "value": "CiMKEgoEVEhPUhIEUlVORRoEUlVORRINMjUwMDAwMDAwMDAwMBIxYm9uZDp0dGhvcjF6ZjNnc2s3ZWR6d2w5c3l5ZWZ2ZmhsZTM3Y2p0cWwzNWg2azg1bRogreSl9YA6Q5g1xjY5Wo1kje5XsvyQ2Y3Bf6iHFZtpY4s="}}
+msg:
+  {
+    "any":
+      {
+        "type_url": "/types.MsgDeposit",
+        "value": "CiMKEgoEVEhPUhIEUlVORRoEUlVORRINMjUwMDAwMDAwMDAwMBIxYm9uZDp0dGhvcjF6ZjNnc2s3ZWR6d2w5c3l5ZWZ2ZmhsZTM3Y2p0cWwzNWg2azg1bRogreSl9YA6Q5g1xjY5Wo1kje5XsvyQ2Y3Bf6iHFZtpY4s=",
+      },
+  }
 funds:
   - amount: "2500000000000"
     denom: "rune"
@@ -87,7 +93,7 @@ count: 1
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block
-asserts: 
+asserts:
   - .txs[0].result.events[3].type == "message"
   - .txs[0].result.events[3].action == "/cosmwasm.wasm.v1.MsgExecuteContract"
   # 2.5m RUNE sent to the contract
@@ -119,19 +125,26 @@ asserts:
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/node/{{ addr_thor_dog }}
-asserts: 
+asserts:
   - .bond_providers.providers[1].bond_address == "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"
   - .bond_providers.providers[1].bond == "2500000000000"
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/auth/v1beta1/module_accounts/bond
-asserts: 
-  - .account.base_account.address == "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff"  
+asserts:
+  - .account.base_account.address == "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff"
 ---
 # Check that the subMsgs can't sent to blocked module accounts
 type: tx-execute-contract
 contract: "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"
-msg: {"any": {"type_url": "/cosmos.bank.v1beta1.MsgSend", "value": "CkB0dGhvcjE0aGoydGF2cThmcGVzZHd4eGN1NDRydHkzaGg5MHZodWpydmNtc3RsNHpyM3R4bWZ2dzlzdzU4dTlmEix0dGhvcjE3Z3c3NWF4Y25yODc0N3BrYW55ZTQ1cG5yd2s3cDljM3VoemdmZhoRCgRydW5lEgkxMDAwMDAwMDA="}}
+msg:
+  {
+    "any":
+      {
+        "type_url": "/cosmos.bank.v1beta1.MsgSend",
+        "value": "CkB0dGhvcjE0aGoydGF2cThmcGVzZHd4eGN1NDRydHkzaGg5MHZodWpydmNtc3RsNHpyM3R4bWZ2dzlzdzU4dTlmEix0dGhvcjE3Z3c3NWF4Y25yODc0N3BrYW55ZTQ1cG5yd2s3cDljM3VoemdmZhoRCgRydW5lEgkxMDAwMDAwMDA=",
+      },
+  }
 funds:
   - amount: "10000000"
     denom: "rune"
@@ -143,5 +156,5 @@ count: 1
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block
-asserts: 
+asserts:
   - .txs[0].result.log|match("cannot use MsgSend for Module transactions, use MsgDeposit instead")

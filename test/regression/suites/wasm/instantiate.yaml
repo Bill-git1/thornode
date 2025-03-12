@@ -5,7 +5,7 @@ count: 1
 ---
 type: tx-mimir
 key: WasmPermissionless
-value: 0
+value: 1
 signer: {{ addr_thor_dog }}
 ---
 type: create-blocks
@@ -36,7 +36,7 @@ asserts:
   - .txs[0].result.events[4]._contract_address == "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"
   - .txs[0].result.events[4].code_id == "1"
 ---
-type: check 
+type: check
 endpoint: http://localhost:1317/cosmwasm/wasm/v1/code/1/contracts
-asserts: 
+asserts:
   - .contracts|length == 1
