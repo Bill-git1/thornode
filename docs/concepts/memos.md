@@ -46,6 +46,7 @@ The following functions can be put into a memo:
 1. [**EXECUTE Smart Contract**](memos.md#execute)
 1. [**SWITCH Asset**](memos.md#switch)
 1. [**BOND**, **UNBOND** & **LEAVE**](memos.md#bond-unbond-and-leave)
+1. [**ROTATE**](memos.md#rotate)
 1. [**DONATE** & **RESERVE**](memos.md#donate-and-reserve)
 1. [**MIGRATE**](memos.md#migrate)
 1. [**NOOP**](memos.md#noop)
@@ -422,6 +423,18 @@ Perform node maintenance features. Also see [Pooled Nodes](https://docs.thorchai
 - `BOND:thor19m4kqulyqvya339jfja84h6qp8tkjgxuxa4n4a`
 - `UNBOND:thor1x2whgc2nt665y0kc44uywhynazvp0l8tp0vtu6:750000000000`
 - `LEAVE:thor1hlhdm0ngr2j4lt8tt8wuvqxz6aus58j57nxnps`
+
+### Rotate
+
+**`ROTATE:NEWOPADDR`**
+
+The operator address can send a `ROTATE` memo to change the operator address for all their nodes.
+
+| Parameter    | Notes                     | Extra             |
+| ------------ | ------------------------- | ----------------- |
+| Payload      | None required.            | Use `MsgDeposit`. |
+| `ROTATE`     | The rotate handler.       |                   |
+| `:NEWOPADDR` | The new operator address. |                   |
 
 ### MIGRATE
 

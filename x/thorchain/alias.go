@@ -81,6 +81,7 @@ const (
 	TxRefund        = mem.TxRefund
 	TxUnBond        = mem.TxUnbond
 	TxLeave         = mem.TxLeave
+	TxRotate        = mem.TxRotate
 	TxWithdraw      = mem.TxWithdraw
 	TxTHORName      = mem.TxTHORName
 	TxLoanOpen      = mem.TxLoanOpen
@@ -123,6 +124,7 @@ var (
 	NewMsgSetNodeKeys              = types.NewMsgSetNodeKeys
 	NewMsgManageTHORName           = types.NewMsgManageTHORName
 	NewMsgSwitch                   = types.NewMsgSwitch
+	NewMsgRotate                   = types.NewMsgRotate
 	NewTxOut                       = types.NewTxOut
 	NewEventRewards                = types.NewEventRewards
 	NewEventPool                   = types.NewEventPool
@@ -164,6 +166,7 @@ var (
 	NewEventLoanOpen               = types.NewEventLoanOpen
 	NewEventLoanRepayment          = types.NewEventLoanRepayment
 	NewEventSwitch                 = types.NewEventSwitch
+	NewEventRotate                 = types.NewEventRotate
 	NewPoolMod                     = types.NewPoolMod
 	NewMsgRefundTx                 = types.NewMsgRefundTx
 	NewMsgOutboundTx               = types.NewMsgOutboundTx
@@ -282,6 +285,7 @@ type (
 	MsgRunePoolWithdraw       = types.MsgRunePoolWithdraw
 	MsgWasmExec               = types.MsgWasmExec
 	MsgSwitch                 = types.MsgSwitch
+	MsgRotate                 = types.MsgRotate
 
 	// Keeper structs
 	PoolStatus               = types.PoolStatus
@@ -383,6 +387,7 @@ type (
 	RunePoolWithdrawMemo       = mem.RunePoolWithdrawMemo
 	ExecMemo                   = mem.ExecMemo
 	SwitchMemo                 = mem.SwitchMemo
+	RotateMemo                 = mem.RotateMemo
 
 	// Proto
 	ProtoStrings = types.ProtoStrings

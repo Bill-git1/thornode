@@ -45,6 +45,7 @@ const (
 	SecuredAssetDepositEventType  = "secured_asset_deposit"
 	SecuredAssetWithdrawEventType = "secured_asset_withdraw"
 	SwitchEventType               = "switch"
+	RotateEventType               = "rotate"
 	RUNEPoolDepositEventType      = "rune_pool_deposit"
 	RUNEPoolWithdrawEventType     = "rune_pool_withdraw"
 	TSSKeygenSuccess              = "tss_keygen_success"
@@ -1240,5 +1241,31 @@ func (m *EventSwitch) Events() (cosmos.Events, error) {
 		cosmos.NewAttribute("rune_address", m.RuneAddress.String()),
 		cosmos.NewAttribute("asset_address", m.AssetAddress.String()),
 		cosmos.NewAttribute("tx_id", m.TxID.String()))
+	return cosmos.Events{evt}, nil
+}
+
+// NewEventRotate creates a new rotate event.
+func NewEventRotate(
+	signer, nodeAddress, operatorAddress cosmos.AccAddress,
+) *EventRotate {
+	return &EventRotate{
+		Signer:          signer,
+		NodeAddress:     nodeAddress,
+		OperatorAddress: operatorAddress,
+	}
+}
+
+// Type return the rotate event type.
+func (m *EventRotate) Type() string {
+	return RotateEventType
+}
+
+// Events return the cosmos event.
+func (m *EventRotate) Events() (cosmos.Events, error) {
+	evt := cosmos.NewEvent(m.Type(),
+		cosmos.NewAttribute("signer", m.Signer.String()),
+		cosmos.NewAttribute("node_address", m.NodeAddress.String()),
+		cosmos.NewAttribute("operator_address", m.OperatorAddress.String()),
+	)
 	return cosmos.Events{evt}, nil
 }

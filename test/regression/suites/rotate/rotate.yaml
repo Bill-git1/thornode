@@ -1,0 +1,228 @@
+{{ template "5-validators-btc-eth-pool-state.yaml" }}
+---
+type: create-blocks
+count: 1
+---
+########################################################################################
+# rotate with coins fails
+########################################################################################
+type: tx-deposit
+signer: {{ addr_thor_fox }}
+coins:
+  - asset: rune
+    amount: "1"
+memo: "ROTATE:{{ addr_thor_dog }}"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/cosmos/tx/v1beta1/txs/{{ native_txid -1 }}
+asserts:
+  - .tx_response.code == 6
+  - .tx_response.raw_log | test("coin amount must be zero")
+---
+########################################################################################
+# rotate without node address fails
+########################################################################################
+type: tx-deposit
+signer: {{ addr_thor_fox }}
+coins:
+  - asset: rune
+    amount: "0"
+memo: "ROTATE"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/cosmos/tx/v1beta1/txs/{{ native_txid -1 }}
+asserts:
+  - .tx_response.code == 99
+  - .tx_response.raw_log | test("invalid memo")
+---
+type: tx-deposit
+signer: {{ addr_thor_fox }}
+coins:
+  - asset: rune
+    amount: "0"
+memo: "ROTATE:"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/cosmos/tx/v1beta1/txs/{{ native_txid -1 }}
+asserts:
+  - .tx_response.code == 99
+  - .tx_response.raw_log | test("invalid memo")
+---
+########################################################################################
+# rotate with non-THORChain address fails
+########################################################################################
+type: tx-deposit
+signer: {{ addr_thor_fox }}
+coins:
+  - asset: rune
+    amount: "0"
+memo: "ROTATE:{{ addr_gaia_fox }}"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/cosmos/tx/v1beta1/txs/{{ native_txid -1 }}
+asserts:
+  - .tx_response.code == 99
+  - .tx_response.raw_log | test("invalid memo")
+---
+########################################################################################
+# node operator should still be unchanged
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/node/{{ addr_thor_fox }}
+asserts:
+  - .node_operator_address == "{{ addr_thor_fox }}"
+  - .total_bond == "2500000000000"
+---
+########################################################################################
+# successful rotate
+########################################################################################
+type: tx-deposit
+signer: {{ addr_thor_fox }}
+coins:
+  - asset: rune
+    amount: "0"
+memo: "ROTATE:{{ addr_thor_dog }}"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/node/{{ addr_thor_fox }}
+asserts:
+  - .node_operator_address == "{{ addr_thor_dog }}"
+  - .total_bond == "2500000000000"
+  - (.total_bond|tonumber) == ([.bond_providers.providers[].bond|tonumber]|add)
+  - .bond_providers.providers|length == 1
+  - .bond_providers.providers[0].bond_address == "{{ addr_thor_dog }}"
+---
+type: check
+endpoint: http://localhost:1317/cosmos/tx/v1beta1/txs/{{ native_txid -1 }}
+asserts:
+  - .tx_response.events[]|select(.type=="rotate").attributes[]|select(.key=="signer").value == "{{ addr_thor_fox }}"
+  - .tx_response.events[]|select(.type=="rotate").attributes[]|select(.key=="node_address").value == "{{ addr_thor_fox }}"
+  - .tx_response.events[]|select(.type=="rotate").attributes[]|select(.key=="operator_address").value == "{{ addr_thor_dog }}"
+---
+########################################################################################
+# old operator can no longer control node
+########################################################################################
+type: tx-deposit
+signer: {{ addr_thor_fox }}
+coins:
+  - asset: rune
+    amount: "0"
+memo: "LEAVE:{{ addr_thor_fox }}"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/node/{{ addr_thor_fox }}
+asserts:
+  - .leave_height == 0
+---
+########################################################################################
+# new operator controls node
+########################################################################################
+type: tx-deposit
+signer: {{ addr_thor_dog }}
+coins:
+  - asset: rune
+    amount: "0"
+memo: "LEAVE:{{ addr_thor_fox }}"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/node/{{ addr_thor_fox }}
+asserts:
+  - .leave_height == 800000000
+---
+########################################################################################
+# rotate all nodes to dog
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/nodes
+asserts:
+  - '[.[]|select(.node_operator_address=="{{ addr_thor_dog }}")]|length == 1'
+  - '[.[]|select(.node_operator_address=="{{ addr_thor_fox }}")]|length == 0'
+  - '[.[]|select(.node_operator_address=="{{ addr_thor_cat }}")]|length == 1'
+  - '[.[]|select(.node_operator_address=="{{ addr_thor_pig }}")]|length == 1'
+  - '[.[]|select(.node_operator_address=="{{ addr_thor_frog }}")]|length == 1'
+  - '[.[]|select(.node_operator_address=="{{ addr_thor_goat }}")]|length == 1'
+---
+type: tx-deposit
+signer: {{ addr_thor_cat }}
+coins:
+  - asset: rune
+    amount: "0"
+memo: "ROTATE:{{ addr_thor_dog }}"
+---
+type: tx-deposit
+signer: {{ addr_thor_pig }}
+coins:
+  - asset: rune
+    amount: "0"
+memo: "ROTATE:{{ addr_thor_dog }}"
+---
+type: tx-deposit
+signer: {{ addr_thor_frog }}
+coins:
+  - asset: rune
+    amount: "0"
+memo: "ROTATE:{{ addr_thor_dog }}"
+---
+type: tx-deposit
+signer: {{ addr_thor_goat }}
+coins:
+  - asset: rune
+    amount: "0"
+memo: "ROTATE:{{ addr_thor_dog }}"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/nodes
+asserts:
+  - '[.[]|select(.node_operator_address=="{{ addr_thor_dog }}")]|length == 5'
+  - '[.[]|select(.node_operator_address=="{{ addr_thor_fox }}")]|length == 0'
+  - '[.[]|select(.node_operator_address=="{{ addr_thor_cat }}")]|length == 0'
+  - '[.[]|select(.node_operator_address=="{{ addr_thor_pig }}")]|length == 0'
+  - '[.[]|select(.node_operator_address=="{{ addr_thor_frog }}")]|length == 0'
+  - '[.[]|select(.node_operator_address=="{{ addr_thor_goat }}")]|length == 0'
+---
+########################################################################################
+# rotate all nodes to cat
+########################################################################################
+type: tx-deposit
+signer: {{ addr_thor_dog }}
+coins:
+  - asset: rune
+    amount: "0"
+memo: "ROTATE:{{ addr_thor_cat }}"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/nodes
+asserts:
+  - '[.[]|select(.node_operator_address=="{{ addr_thor_cat }}")]|length == 5'
+  - '[.[]|select(.node_operator_address=="{{ addr_thor_dog }}")]|length == 0'
+  - '[.[]|select(.node_operator_address=="{{ addr_thor_fox }}")]|length == 0'
+  - '[.[]|select(.node_operator_address=="{{ addr_thor_pig }}")]|length == 0'
+  - '[.[]|select(.node_operator_address=="{{ addr_thor_frog }}")]|length == 0'
+  - '[.[]|select(.node_operator_address=="{{ addr_thor_goat }}")]|length == 0'
