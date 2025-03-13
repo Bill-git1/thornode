@@ -38,7 +38,7 @@ import (
 // Signer will pull the tx out from thorchain and then forward it to chain
 type Signer struct {
 	logger                zerolog.Logger
-	cfg                   config.BifrostSignerConfiguration
+	cfg                   config.Bifrost
 	wg                    *sync.WaitGroup
 	thorchainBridge       thorclient.ThorchainBridge
 	stopChan              chan struct{}
@@ -59,7 +59,7 @@ type Signer struct {
 }
 
 // NewSigner create a new instance of signer
-func NewSigner(cfg config.BifrostSignerConfiguration,
+func NewSigner(cfg config.Bifrost,
 	thorchainBridge thorclient.ThorchainBridge,
 	thorKeys *thorclient.Keys,
 	pubkeyMgr pubkeymanager.PubKeyValidator,
@@ -69,7 +69,7 @@ func NewSigner(cfg config.BifrostSignerConfiguration,
 	tssKeysignMetricMgr *metrics.TssKeysignMetricMgr,
 	obs *observer.Observer,
 ) (*Signer, error) {
-	storage, err := NewSignerStore(cfg.SignerDbPath, cfg.LevelDB, thorchainBridge.GetConfig().SignerPasswd)
+	storage, err := NewSignerStore(cfg.Signer.SignerDbPath, cfg.Signer.LevelDB, thorchainBridge.GetConfig().SignerPasswd)
 	if err != nil {
 		return nil, fmt.Errorf("fail to create thorchain scan storage: %w", err)
 	}
@@ -102,15 +102,15 @@ func NewSigner(cfg config.BifrostSignerConfiguration,
 	}
 	pubkeyMgr.AddNodePubKey(na.PubKeySet.Secp256k1)
 
-	cfg.BlockScanner.ChainID = common.THORChain // hard code to thorchain
+	cfg.Signer.BlockScanner.ChainID = common.THORChain // hard code to thorchain
 
 	// Create pubkey manager and add our private key
-	thorchainBlockScanner, err := NewThorchainBlockScan(cfg.BlockScanner, storage, thorchainBridge, m, pubkeyMgr)
+	thorchainBlockScanner, err := NewThorchainBlockScan(cfg.Signer.BlockScanner, storage, thorchainBridge, m, pubkeyMgr)
 	if err != nil {
 		return nil, fmt.Errorf("fail to create thorchain block scan: %w", err)
 	}
 
-	blockScanner, err := blockscanner.NewBlockScanner(cfg.BlockScanner, storage, m, thorchainBridge, thorchainBlockScanner)
+	blockScanner, err := blockscanner.NewBlockScanner(cfg.Signer.BlockScanner, storage, m, thorchainBridge, thorchainBlockScanner)
 	if err != nil {
 		return nil, fmt.Errorf("fail to create block scanner: %w", err)
 	}
@@ -308,10 +308,10 @@ func (s *Signer) scheduleKeygenRetry(keygenBlock ttypes.KeygenBlock) bool {
 
 	// sanity check the retry interval is at least 1.5x the timeout
 	retryIntervalDuration := time.Duration(keygenRetryInterval) * constants.ThorchainBlockTime
-	if retryIntervalDuration <= s.cfg.KeygenTimeout*3/2 {
+	if retryIntervalDuration <= s.cfg.Signer.KeygenTimeout*3/2 {
 		s.logger.Error().
 			Stringer("retryInterval", retryIntervalDuration).
-			Stringer("keygenTimeout", s.cfg.KeygenTimeout).
+			Stringer("keygenTimeout", s.cfg.Signer.KeygenTimeout).
 			Msg("retry interval too short")
 		return false
 	}
@@ -456,16 +456,16 @@ func (s *Signer) sendKeygenToThorchain(height int64, poolPk common.PubKey, secp2
 	chains := common.Chains{
 		common.THORChain,
 	}
-	for name, chain := range s.chains {
-		if !chain.GetConfig().OptToRetire {
-			chains = append(chains, name)
+	for chain, chainCfg := range s.cfg.GetChains() {
+		if !chainCfg.OptToRetire && !chainCfg.Disabled {
+			chains = append(chains, chain)
 		}
 	}
 
 	// make a best effort to add encrypted keyshares to the message
 	var keyshares []byte
 	var err error
-	if s.cfg.BackupKeyshares && !poolPk.IsEmpty() {
+	if s.cfg.Signer.BackupKeyshares && !poolPk.IsEmpty() {
 		keyshares, err = tss.EncryptKeyshares(
 			filepath.Join(app.DefaultNodeHome, fmt.Sprintf("localstate-%s.json", poolPk)),
 			os.Getenv("SIGNER_SEED_PHRASE"),
@@ -557,7 +557,7 @@ func (s *Signer) signAndBroadcast(item TxOutStoreItem) ([]byte, *types.TxInItem,
 	// if not in round 7 retry or the round 7 retry is on an inactive vault, discard
 	// outbound if within configured blocks of reschedule
 	if !item.Round7Retry || inactiveVaultRound7Retry {
-		if blockHeight-signingTransactionPeriod > height-s.cfg.RescheduleBufferBlocks {
+		if blockHeight-signingTransactionPeriod > height-s.cfg.Signer.RescheduleBufferBlocks {
 			s.logger.Error().Msgf("tx was created at block height(%d), now it is (%d), it is older than (%d) blocks, skip it", height, blockHeight, signingTransactionPeriod)
 			return nil, nil, nil
 		}
@@ -752,7 +752,7 @@ func (s *Signer) processTransaction(item TxOutStoreItem) {
 	cancel()
 
 	// if enabled and the observation is non-nil, instant observe the outbound
-	if s.cfg.AutoObserve && obs != nil {
+	if s.cfg.Signer.AutoObserve && obs != nil {
 		s.observer.ObserveSigned(types.TxIn{
 			Count:                "1",
 			Chain:                item.TxOutItem.Chain,

@@ -416,7 +416,7 @@ func (s *SignSuite) TestProcess(c *C) {
 
 	sign := &Signer{
 		logger:                log.With().Str("module", "signer").Logger(),
-		cfg:                   cfg,
+		cfg:                   config.Bifrost{Signer: cfg},
 		wg:                    &sync.WaitGroup{},
 		stopChan:              make(chan struct{}),
 		blockScanner:          blockScanner,
