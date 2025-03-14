@@ -6,7 +6,7 @@ type: create-blocks
 count: 1
 ---
 ########################################################################################
-# test arbitrary data pass through of memo
+# successful swap passes data through on outbound memo
 ########################################################################################
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -24,8 +24,8 @@ txs:
         - amount: "10500"
           asset: "BTC.BTC"
       memo: "=:ETH.ETH:{{ addr_eth_fox }}|hello world"
-    block_height: 3
-    finalise_height: 3
+    block_height: 1
+    finalise_height: 1
     observed_pub_key: {{ pubkey_dog }}
 ---
 type: create-blocks
@@ -41,22 +41,84 @@ asserts:
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
 txs:
-- tx:
-    id: '{{ observe_txid 1 }}'
-    chain: ETH
-    from_address: {{ addr_eth_dog }}
-    to_address: {{ addr_eth_fox }}
-    coins:
-      - amount: "40221780"
-        asset: "ETH.ETH"
-        decimals: 8
-    gas:
-      - amount: "960000"
-        asset: "ETH.ETH"
-    memo: "OUT:{{ observe_txid 1 }}:hello world"
-  block_height: 5
-  finalise_height: 5
-  observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 2 }}"
+      chain: ETH
+      from_address: {{ addr_eth_dog }}
+      to_address: {{ addr_eth_fox }}
+      coins:
+        - amount: "40221780"
+          asset: "ETH.ETH"
+          decimals: 8
+      gas:
+        - amount: "960000"
+          asset: "ETH.ETH"
+      memo: "OUT:{{ observe_txid 1 }}|hello world"
+    block_height: 2
+    finalise_height: 2
+    observed_pub_key: {{ pubkey_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - .|length == 0
+---
+########################################################################################
+# refund also passes data through on outbound memo
+########################################################################################
+type: tx-observed-in
+signer: {{ addr_thor_dog }}
+txs:
+  - tx:
+      id: "{{ observe_txid 3 }}"
+      chain: BTC
+      from_address: {{ addr_btc_fox }}
+      to_address: {{ addr_btc_dog }}
+      coins:
+        - amount: "5000000"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "10500"
+          asset: "BTC.BTC"
+      memo: "=:ETH.BAR:{{ addr_eth_fox }}|hello world"
+    block_height: 3
+    finalise_height: 3
+    observed_pub_key: {{ pubkey_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - .|length == 1
+  - .[0]|.in_hash == "{{ observe_txid 3 }}"
+  - .[0]|.memo == "REFUND:{{ observe_txid 3 }}|hello wo"
+  - .[0]|.memo|length == 80 # memo is truncated to chain-specific max
+---
+type: tx-observed-out
+signer: {{ addr_thor_dog }}
+txs:
+  - tx:
+      id: "{{ observe_txid 4 }}"
+      chain: BTC
+      from_address: {{ addr_btc_dog }}
+      to_address: {{ addr_btc_fox }}
+      coins:
+        - amount: "4986000"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "10500"
+          asset: "BTC.BTC"
+      memo: "REFUND:{{ observe_txid 3 }}|hello wo" # observation with truncated memo
+    block_height: 4
+    finalise_height: 4
+    observed_pub_key: {{ pubkey_dog }}
 ---
 type: create-blocks
 count: 1

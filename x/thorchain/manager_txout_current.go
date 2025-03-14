@@ -478,8 +478,9 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 			parts := strings.SplitN(inboundVoter.Tx.Tx.Memo, "|", 2)
 			if len(parts) == 2 {
 				toi.Memo = fmt.Sprintf("%s|%s", toi.Memo, parts[1])
-				if len(toi.Memo) > constants.MaxMemoSize {
-					toi.Memo = toi.Memo[:constants.MaxMemoSize]
+				maxMemoLength := toi.Chain.MaxMemoLength()
+				if len(toi.Memo) > maxMemoLength {
+					toi.Memo = toi.Memo[:maxMemoLength]
 				}
 			}
 		}
