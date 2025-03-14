@@ -520,8 +520,13 @@ func (*HandlerErrataTxSuite) TestProcessErrataOutboundTx(c *C) {
 	c.Assert(result, IsNil)
 	txOutVoter.Add(observedTx[0], node2.NodeAddress)
 	txOutVoter.Add(observedTx[0], node3.NodeAddress)
-	tx1 := txOutVoter.GetTx(NodeAccounts{node1, node2, node3})
-	c.Assert(tx1.IsEmpty(), Equals, false)
+
+	finalisedTx := txOutVoter.GetTx(NodeAccounts{node1, node2, node3})
+	c.Assert(finalisedTx.IsEmpty(), Equals, false)
+	// voter.Tx must be explicitly updated in the handler,
+	// for instance on consensus.
+	txOutVoter.Tx = finalisedTx
+
 	helper.Keeper.SetObservedTxOutVoter(ctx, txOutVoter)
 
 	// not outbound tx , it should fail
@@ -671,10 +676,16 @@ func (*HandlerErrataTxSuite) TestProcessErrortaOutboundTx_EnsureMigrateTxWillSet
 	txOutVoter := NewObservedTxVoter(txID1, observedTx)
 	txOutVoter.Add(observedTx[0], node2.NodeAddress)
 	txOutVoter.Add(observedTx[0], node3.NodeAddress)
-	c.Assert(txOutVoter.GetTx(NodeAccounts{node1, node2, node3}), NotNil)
+
+	finalisedTx := txOutVoter.GetTx(NodeAccounts{node1, node2, node3})
+	c.Assert(finalisedTx.IsEmpty(), Equals, false)
+	// voter.Tx must be explicitly updated in the handler,
+	// for instance on consensus.
+	txOutVoter.Tx = finalisedTx
+
 	helper.Keeper.SetObservedTxOutVoter(ctx, txOutVoter)
 
-	// observed inbound tx in the active vault
+	// (identical) observed inbound tx in the same retired vault
 	observedInboundTx := []ObservedTx{
 		NewObservedTx(
 			migrateTx,
@@ -683,7 +694,12 @@ func (*HandlerErrataTxSuite) TestProcessErrortaOutboundTx_EnsureMigrateTxWillSet
 	txInVoter := NewObservedTxVoter(txID1, observedTx)
 	txInVoter.Add(observedInboundTx[0], node2.NodeAddress)
 	txInVoter.Add(observedInboundTx[0], node3.NodeAddress)
-	c.Assert(txInVoter.GetTx(NodeAccounts{node1, node2, node3}), NotNil)
+
+	finalisedTx = txInVoter.GetTx(NodeAccounts{node1, node2, node3})
+	c.Assert(finalisedTx.IsEmpty(), Equals, false)
+	// voter.Tx must be explicitly updated in the handler,
+	// for instance on consensus.
+	txInVoter.Tx = finalisedTx
 	helper.Keeper.SetObservedTxInVoter(ctx, txInVoter)
 
 	result, err := handler.processErrataOutboundTx(ctx, *internalMigrationTx)

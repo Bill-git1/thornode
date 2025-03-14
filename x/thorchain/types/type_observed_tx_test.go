@@ -231,18 +231,25 @@ func (TypeObservedTxSuite) TestSetTxToComplete(c *C) {
 	voter.Add(observedTx, activeNodes[1].NodeAddress)
 	voter.Add(observedTx, activeNodes[2].NodeAddress)
 	c.Assert(voter.HasConsensus(activeNodes), Equals, true)
+
 	consensusTx := voter.GetTx(activeNodes)
 	c.Assert(consensusTx.IsEmpty(), Equals, false)
-	c.Assert(voter.Tx.IsEmpty(), Equals, false)
+	c.Assert(voter.Tx.IsEmpty(), Equals, true)
+	// voter.Tx must be explicitly updated in the handler,
+	// for instance on consensus.
+	voter.Tx = consensusTx
 
 	observedTx = NewObservedTx(tx1, 1024, observePoolAddr, 1024)
 	voter.Add(observedTx, activeNodes[0].NodeAddress)
 	voter.Add(observedTx, activeNodes[1].NodeAddress)
 	voter.Add(observedTx, activeNodes[2].NodeAddress)
 	c.Assert(voter.HasFinalised(activeNodes), Equals, true)
+
 	finalisedTx := voter.GetTx(activeNodes)
 	c.Assert(finalisedTx.IsEmpty(), Equals, false)
-	c.Assert(voter.Tx.IsEmpty(), Equals, false)
+	// voter.Tx must be explicitly updated in the handler,
+	// for instance on consensus.
+	voter.Tx = finalisedTx
 
 	tx := GetRandomTx()
 	addr, err := observePoolAddr.GetAddress(common.ETHChain)
@@ -286,9 +293,13 @@ func (TypeObservedTxSuite) TestAddOutTx(c *C) {
 	voter.Add(observedTx, activeNodes[1].NodeAddress)
 	voter.Add(observedTx, activeNodes[2].NodeAddress)
 	c.Assert(voter.HasFinalised(activeNodes), Equals, true)
+
 	finalisedTx := voter.GetTx(activeNodes)
 	c.Assert(finalisedTx.IsEmpty(), Equals, false)
-	c.Assert(voter.Tx.IsEmpty(), Equals, false)
+	c.Assert(voter.Tx.IsEmpty(), Equals, true)
+	// voter.Tx must be explicitly updated in the handler,
+	// for instance on consensus.
+	voter.Tx = finalisedTx
 
 	tx := common.NewTx(
 		GetRandomTxHash(),

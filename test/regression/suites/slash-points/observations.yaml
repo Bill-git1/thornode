@@ -816,9 +816,10 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 0
 ---
-########################################################################################
-# finalized outbound - unslash late observers within flexibility window
-########################################################################################
+################################################################################################
+# finalized outbound - unslash late observers within flexibility window;
+# duplicate observation with different observation heights appropriately increases slash points.
+################################################################################################
 type: tx-observed-out
 signer: {{ addr_thor_goat }}
 txs:
@@ -839,13 +840,33 @@ txs:
     finalise_height: 4
     observed_pub_key: {{ pubkey_dog }}
 ---
+type: tx-observed-out
+signer: {{ addr_thor_cat }}
+txs:
+  - tx:
+      id: "{{ observe_txid 2 }}"
+      chain: BTC
+      from_address: {{ addr_btc_dog }}
+      to_address: {{ addr_btc_cat }}
+      coins:
+        - amount: "986000"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "10500"
+          asset: "BTC.BTC"
+      memo: "REFUND:{{ observe_txid 1 }}"
+    block_height: 5    # Different observation height from cat's earlier observation.
+    finalise_height: 5 # Different observation height from cat's earlier observation.
+    observed_pub_key: {{ pubkey_dog }}
+---
 type: create-blocks
 count: 1
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/nodes
 asserts:
- - .[] | select(.node_address == "{{ addr_thor_cat }}") | .slash_points == 3
+ - .[] | select(.node_address == "{{ addr_thor_cat }}") | .slash_points == 4
  - .[] | select(.node_address == "{{ addr_thor_fox }}") | .slash_points == 0
  - .[] | select(.node_address == "{{ addr_thor_pig }}") | .slash_points == 0
  - .[] | select(.node_address == "{{ addr_thor_frog }}") | .slash_points == 0
@@ -881,7 +902,7 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/nodes
 asserts:
- - .[] | select(.node_address == "{{ addr_thor_cat }}") | .slash_points == 3
+ - .[] | select(.node_address == "{{ addr_thor_cat }}") | .slash_points == 4
  - .[] | select(.node_address == "{{ addr_thor_fox }}") | .slash_points == 0
  - .[] | select(.node_address == "{{ addr_thor_pig }}") | .slash_points == 0
  - .[] | select(.node_address == "{{ addr_thor_frog }}") | .slash_points == 0
@@ -917,7 +938,7 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/nodes
 asserts:
- - .[] | select(.node_address == "{{ addr_thor_cat }}") | .slash_points == 4
+ - .[] | select(.node_address == "{{ addr_thor_cat }}") | .slash_points == 5
  - .[] | select(.node_address == "{{ addr_thor_fox }}") | .slash_points == 0
  - .[] | select(.node_address == "{{ addr_thor_pig }}") | .slash_points == 0
  - .[] | select(.node_address == "{{ addr_thor_frog }}") | .slash_points == 0

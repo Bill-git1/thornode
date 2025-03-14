@@ -309,12 +309,11 @@ func (m *ObservedTxVoter) GetTx(nodeAccounts NodeAccounts) ObservedTx {
 	}
 	finalTx := m.getConsensusTx(nodeAccounts, true)
 	if !finalTx.IsEmpty() {
-		m.Tx = finalTx
-	} else {
-		discoverTx := m.getConsensusTx(nodeAccounts, false)
-		if !discoverTx.IsEmpty() {
-			m.Tx = discoverTx
-		}
+		return finalTx
+	}
+	discoverTx := m.getConsensusTx(nodeAccounts, false)
+	if !discoverTx.IsEmpty() {
+		return discoverTx
 	}
 	return m.Tx
 }
