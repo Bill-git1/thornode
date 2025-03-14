@@ -119,7 +119,7 @@
             "@type": "/cosmos.crypto.secp256k1.PubKey",
             "key": "A79mmwQR0zNaJgvyBZyo1g3eKxUQTlINRlNJTUFCRxUj"
           },
-          "sequence": "8"
+          "sequence": "9"
         },
         {
           "@type": "/cosmos.auth.v1beta1.ModuleAccount",
