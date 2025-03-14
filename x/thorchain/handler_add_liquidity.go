@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blang/semver"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	"github.com/hashicorp/go-metrics"
 
@@ -50,16 +49,6 @@ func (h AddLiquidityHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Resu
 }
 
 func (h AddLiquidityHandler) validate(ctx cosmos.Context, msg MsgAddLiquidity) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.validateV3_0_0(ctx, msg)
-	default:
-		return errBadVersion
-	}
-}
-
-func (h AddLiquidityHandler) validateV3_0_0(ctx cosmos.Context, msg MsgAddLiquidity) error {
 	if !msg.Tx.ID.IsBlank() { // don't validate tx if internal txn
 		if err := msg.ValidateBasic(); err != nil {
 			ctx.Logger().Error(err.Error())
@@ -216,16 +205,6 @@ func (h AddLiquidityHandler) validateV3_0_0(ctx cosmos.Context, msg MsgAddLiquid
 }
 
 func (h AddLiquidityHandler) handle(ctx cosmos.Context, msg MsgAddLiquidity) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.handleV3_0_0(ctx, msg)
-	default:
-		return errBadVersion
-	}
-}
-
-func (h AddLiquidityHandler) handleV3_0_0(ctx cosmos.Context, msg MsgAddLiquidity) (errResult error) {
 	// check if we need to swap before adding asset
 	if h.needsSwap(msg) {
 		return h.swap(ctx, msg)
@@ -259,14 +238,12 @@ func (h AddLiquidityHandler) handleV3_0_0(ctx cosmos.Context, msg MsgAddLiquidit
 	// set the decimals once.
 	if pool.Decimals == 0 {
 		coin := msg.GetTx().Coins.GetCoin(pool.Asset)
-		if !coin.IsEmpty() {
-			if coin.Decimals > 0 {
-				pool.Decimals = coin.Decimals
-			}
-			ctx.Logger().Info("try update pool decimals", "asset", msg.Asset, "pool decimals", pool.Decimals)
+		if !coin.IsEmpty() && coin.Decimals > 0 {
+			pool.Decimals = coin.Decimals
 			if err = h.mgr.Keeper().SetPool(ctx, pool); err != nil {
 				return ErrInternal(err, "fail to save pool to key value store")
 			}
+			ctx.Logger().Info("update pool decimals", "asset", msg.Asset, "pool decimals", pool.Decimals)
 		}
 	}
 
