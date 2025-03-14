@@ -630,6 +630,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		scheduledMaxFee = scheduledMaxFee.Mul(scheduledMaxFee, big.NewInt(c.cfg.TokenMaxGasMultiplier))
 	}
 
+	var estimatedFee *big.Int
 	if c.cfg.BlockScanner.FixedGasRate == 0 {
 		// determine max gas units based on scheduled max gas (fee) and current rate
 		maxGasUnits := new(big.Int).Div(scheduledMaxFee, gasRate).Uint64()
@@ -646,6 +647,10 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 			return nil, nil, nil, nil
 		}
 
+		estimatedFee = big.NewInt(int64(estimatedGas))
+		totalGasRate := big.NewInt(0).Add(gasRate, tipCap)
+		estimatedFee.Mul(estimatedFee, totalGasRate)
+
 		to := ecommon.HexToAddress(contractAddr.String())
 		createdTx = etypes.NewTx(&etypes.DynamicFeeTx{
 			ChainID:   c.chainID,
@@ -660,7 +665,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 	} else {
 
 		// if over max scheduled gas, abort and let thornode reschedule
-		estimatedFee := big.NewInt(int64(estimatedGas) * gasRate.Int64())
+		estimatedFee = big.NewInt(int64(estimatedGas) * gasRate.Int64())
 		if scheduledMaxFee.Cmp(estimatedFee) < 0 {
 			c.logger.Warn().
 				Stringer("in_hash", tx.InHash).
@@ -675,6 +680,16 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		createdTx = etypes.NewTransaction(
 			nonce, ecommon.HexToAddress(contractAddr.String()), ethValue, estimatedGas, gasRate, data,
 		)
+	}
+
+	// before signing, confirm the vault has enough gas asset
+	gasBalance, err := c.GetBalance(fromAddr.String(), ethToken, nil)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("fail to get gas asset balance: %w", err)
+	}
+
+	if gasBalance.Cmp(big.NewInt(0).Add(ethValue, estimatedFee)) < 0 {
+		return nil, nil, nil, fmt.Errorf("insufficient gas asset balance: %s < %s + %s", gasBalance.String(), ethValue.String(), estimatedFee.String())
 	}
 
 	rawTx, err := c.sign(createdTx, tx.VaultPubKey, height, tx)

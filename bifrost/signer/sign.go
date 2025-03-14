@@ -641,6 +641,7 @@ func (s *Signer) signAndBroadcast(item TxOutStoreItem) ([]byte, *types.TxInItem,
 	if len(item.SignedTx) > 0 {
 		s.logger.Info().Str("memo", tx.Memo).Msg("retrying broadcast of already signed tx")
 		signedTx = item.SignedTx
+		observation = item.Observation
 	} else {
 		startKeySign := time.Now()
 		signedTx, checkpoint, observation, err = chain.SignTx(tx, height)
@@ -664,6 +665,7 @@ func (s *Signer) signAndBroadcast(item TxOutStoreItem) ([]byte, *types.TxInItem,
 
 		// store the signed tx for the next retry
 		item.SignedTx = signedTx
+		item.Observation = observation
 		if storeErr := s.storage.Set(item); storeErr != nil {
 			s.logger.Error().Err(storeErr).Msg("fail to update tx out store item with signed tx")
 		}

@@ -654,6 +654,17 @@ func (c *EVMClient) buildOutboundTx(txOutItem stypes.TxOutItem, memo mem.Memo, n
 		return nil, nil
 	}
 
+	// before signing, confirm the vault has enough gas asset
+	estimatedFee := big.NewInt(int64(estimatedGas))
+	estimatedFee.Mul(estimatedFee, gasRate)
+	gasBalance, err := c.GetBalance(fromAddr.String(), evm.NativeTokenAddr, nil)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get gas asset balance: %w", err)
+	}
+	if gasBalance.Cmp(big.NewInt(0).Add(evmValue, estimatedFee)) < 0 {
+		return nil, fmt.Errorf("insufficient gas asset balance: %s < %s + %s", gasBalance.String(), evmValue.String(), estimatedFee.String())
+	}
+
 	createdTx = etypes.NewTransaction(
 		nonce, ecommon.HexToAddress(contractAddr.String()), evmValue, maxGasUnits, gasRate, txData,
 	)
@@ -736,7 +747,7 @@ func (c *EVMClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 
 	outboundTx, err := c.buildOutboundTx(tx, memo, nonce)
 	if err != nil {
-		c.logger.Err(err).Msg("Failed to build outbound tx")
+		c.logger.Err(err).Msg("fail to build outbound tx")
 		return nil, nil, nil, err
 	}
 

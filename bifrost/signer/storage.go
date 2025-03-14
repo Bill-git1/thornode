@@ -40,6 +40,7 @@ type TxOutStoreItem struct {
 	Round7Retry  bool
 	Checkpoint   []byte
 	SignedTx     []byte
+	Observation  *types.TxInItem
 	RetrievalKey string `json:"-"`
 	// RetrievalKey is to ensure consistent KV overwrite/deletion after iterator retrieval;
 	// the json "-" tag is to not store it in the KVStore.

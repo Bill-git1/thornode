@@ -119,7 +119,7 @@ func (s *EthereumSuite) SetUpTest(c *C) {
 			err = json.Unmarshal(body, &rpcRequest)
 			c.Assert(err, IsNil)
 			if rpcRequest.Method == "eth_getBalance" {
-				_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x3b9aca00"}`))
+				_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x8ac7230489e80000"}`))
 				c.Assert(err, IsNil)
 			}
 			if rpcRequest.Method == "eth_getTransactionCount" {
@@ -312,7 +312,7 @@ func (s *EthereumSuite) TestClient(c *C) {
 	acct, err := e2.GetAccount(types2.GetRandomPubKey(), nil)
 	c.Assert(err, IsNil)
 	c.Check(acct.Sequence, Equals, int64(0))
-	c.Check(acct.Coins[0].Amount.Uint64(), Equals, uint64(0))
+	c.Check(acct.Coins[0].Amount.Uint64(), Equals, uint64(10*common.One))
 	pk := types2.GetRandomPubKey()
 	addr := e2.GetAddress(pk)
 	c.Check(len(addr), Equals, 42)
@@ -486,7 +486,7 @@ func (s *EthereumSuite) TestSignETHTx(c *C) {
 		ToAddress:   addr,
 		VaultPubKey: e.localPubKey,
 		Coins: common.Coins{
-			common.NewCoin(common.ETHAsset, cosmos.NewUint(1e18)),
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One)),
 		},
 		MaxGas: common.Gas{
 			common.NewCoin(common.ETHAsset, cosmos.NewUint(e.cfg.BlockScanner.MaxGasLimit*8)),
@@ -531,7 +531,7 @@ func (s *EthereumSuite) TestSignETHTx(c *C) {
 		ToAddress:   addr,
 		VaultPubKey: e.localPubKey,
 		Coins: common.Coins{
-			common.NewCoin(common.ETHAsset, cosmos.NewUint(1e18)),
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One)),
 		},
 		MaxGas: common.Gas{
 			common.NewCoin(common.ETHAsset, cosmos.NewUint(e.cfg.BlockScanner.MaxGasLimit*8)),
@@ -552,7 +552,7 @@ func (s *EthereumSuite) TestSignETHTx(c *C) {
 		ToAddress:   addr,
 		VaultPubKey: e.localPubKey,
 		Coins: common.Coins{
-			common.NewCoin(asset, cosmos.NewUint(1e18)),
+			common.NewCoin(asset, cosmos.NewUint(common.One)),
 		},
 		MaxGas: common.Gas{
 			common.NewCoin(common.ETHAsset, cosmos.NewUint(e.cfg.BlockScanner.MaxGasLimit*8)),
@@ -573,7 +573,7 @@ func (s *EthereumSuite) TestSignETHTx(c *C) {
 		ToAddress:   addr,
 		VaultPubKey: e.localPubKey,
 		Coins: common.Coins{
-			common.NewCoin(common.ETHAsset, cosmos.NewUint(1e18)),
+			common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One)),
 		},
 		MaxGas: common.Gas{
 			common.NewCoin(common.ETHAsset, cosmos.NewUint(e.cfg.BlockScanner.MaxGasLimit*8)),
@@ -594,7 +594,7 @@ func (s *EthereumSuite) TestSignETHTx(c *C) {
 		ToAddress:   addr,
 		VaultPubKey: e.localPubKey,
 		Coins: common.Coins{
-			common.NewCoin(asset, cosmos.NewUint(1e18)),
+			common.NewCoin(asset, cosmos.NewUint(common.One)),
 		},
 		MaxGas: common.Gas{
 			common.NewCoin(common.ETHAsset, cosmos.NewUint(e.cfg.BlockScanner.MaxGasLimit*8)),
