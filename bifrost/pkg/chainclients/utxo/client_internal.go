@@ -203,14 +203,6 @@ func (c *Client) removeFromMemPoolCache(hash string) {
 	}
 }
 
-func (c *Client) tryAddToMemPoolCache(hash string) bool {
-	added, err := c.temporalStorage.TrackMempoolTx(hash)
-	if err != nil {
-		c.log.Err(err).Str("txid", hash).Msg("fail to add to mempool cache")
-	}
-	return added
-}
-
 func (c *Client) canDeleteBlock(blockMeta *utxo.BlockMeta) bool {
 	if blockMeta == nil {
 		return true
