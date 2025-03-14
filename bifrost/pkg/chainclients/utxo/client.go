@@ -63,7 +63,6 @@ type Client struct {
 	// ---------- sync ----------
 	wg                    *sync.WaitGroup
 	signerLock            *sync.Mutex
-	listUnspentLock       *sync.Mutex
 	vaultSignerLocks      map[string]*sync.Mutex
 	consolidateInProgress *atomic.Bool
 
@@ -149,7 +148,6 @@ func NewClient(
 		tssKeySigner:          tssKeysign,
 		wg:                    &sync.WaitGroup{},
 		signerLock:            &sync.Mutex{},
-		listUnspentLock:       &sync.Mutex{},
 		vaultSignerLocks:      make(map[string]*sync.Mutex),
 		consolidateInProgress: atomic.NewBool(false),
 		stopchan:              make(chan struct{}),
