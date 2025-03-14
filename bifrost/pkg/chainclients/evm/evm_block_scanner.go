@@ -832,7 +832,7 @@ func (e *EVMScanner) getTxInFromTransaction(tx *etypes.Transaction, receipt *ety
 			// When the Sender and To is the same then there's no balance chance whatever the Coins,
 			// and for Tx-received Valid() a non-zero Amount is needed to observe
 			// the transaction fees (THORChain gas cost) of unstuck.go's cancel transactions.
-			observableAmount := e.cfg.ChainID.DustThreshold().Add(cosmos.OneUint()) // Adding 1 for if DustThreshold is 0.
+			observableAmount := e.cfg.ChainID.DustThreshold()
 			txInItem.Coins = common.NewCoins(common.NewCoin(txInItem.Gas[0].Asset, observableAmount))
 
 			// remove the outbound from signer cache so it can be re-attempted

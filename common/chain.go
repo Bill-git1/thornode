@@ -262,9 +262,9 @@ func (c Chain) DustThreshold() cosmos.Uint {
 	case DOGEChain:
 		return cosmos.NewUint(100_000_000)
 	case ETHChain, AVAXChain, GAIAChain, BSCChain, BASEChain:
-		return cosmos.NewUint(0)
+		return cosmos.OneUint()
 	default:
-		return cosmos.NewUint(0)
+		return cosmos.ZeroUint()
 	}
 }
 

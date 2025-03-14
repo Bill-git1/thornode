@@ -252,7 +252,7 @@ func (s *ObserverSuite) TestGetSaversMemo(c *C) {
 		Sender:      thorchain.GetRandomETHAddress().String(),
 		To:          thorchain.GetRandomETHAddress().String(),
 		Coins: common.Coins{
-			common.NewCoin(usdc, cosmos.NewUint(1024)),
+			common.NewCoin(usdc, cosmos.NewUint(1025)),
 		},
 		Gas:                 nil,
 		ObservedVaultPubKey: thorchain.GetRandomPubKey(),
@@ -263,7 +263,7 @@ func (s *ObserverSuite) TestGetSaversMemo(c *C) {
 	c.Assert(memo, Equals, "-:ETH/USDC-0X9999999999999999999999999999999999999999:1024")
 
 	// memo should be withdraw 1000 basis points
-	ethSaversTx.Coins = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1000)))
+	ethSaversTx.Coins = common.NewCoins(common.NewCoin(common.ETHAsset, cosmos.NewUint(1001)))
 	memo = obs.getSaversMemo(common.ETHChain, ethSaversTx)
 	c.Assert(memo, Equals, "-:ETH/ETH:1000")
 
