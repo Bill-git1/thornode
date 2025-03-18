@@ -461,7 +461,7 @@
               "memo": "",
               "msg_index": "0",
               "node_address": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
-              "to": "node:tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej\nstatus:Active\nnode pubkeys:\n\tsecp256k1: tthorpub1addwnpepqwlkdxcyz8fnxk3xp0eqt89g6cxau2c4zp89yr2x2dy56s2zgu2jx3pmacu\n\ted25519: \n\nvalidator consensus pub key:tthorcpub1zcjduepqq75h7uy6qhesh9d3a9tuk0mzrnc46u8rye44ze6peua3zmpfh23q8z37sz\nbond:2499998000000\nversion:9.999.0\nbond address:tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej\nrequested to leave:false\n",
+              "to": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
               "type": "bond"
             }
           ]
@@ -693,7 +693,7 @@
               "memo": "",
               "msg_index": "0",
               "node_address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
-              "to": "node:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\nstatus:Active\nnode pubkeys:\n\tsecp256k1: tthorpub1addwnpepqv8lvvqmczr893yf7zyf7xtffccf032aprl8z09y3e3nfruedew85n306k5\n\ted25519: \n\nvalidator consensus pub key:tthorcpub1zcjduepqsukty8qkyj4wfrpc8he2hl9fc8m06cfz8ex3ddspzzufw93xxhqqec5sp0\nbond:2499998000000\nversion:9.999.0\nbond address:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr\nrequested to leave:false\n",
+              "to": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "type": "bond"
             }
           ]
@@ -805,7 +805,7 @@
               "memo": "",
               "msg_index": "0",
               "node_address": "tthor12e7ngn5h22su4hecdf0h8aw7hvnly5tchrfd43",
-              "to": "node:tthor12e7ngn5h22su4hecdf0h8aw7hvnly5tchrfd43\nstatus:Active\nnode pubkeys:\n\tsecp256k1: tthorpub1addwnpepq0pj32xkm74ndx0wme5hjmk6hmg5w78zdnz02jlmr337vg8mhtjszk9mhev\n\ted25519: \n\nvalidator consensus pub key:tthorcpub1zcjduepqy52lzz52l3e557ker8ucmuzzjppdq6sjzxg7pxu2rkc9f5sk3khq4qjmag\nbond:2499998000000\nversion:9.999.0\nbond address:tthor12e7ngn5h22su4hecdf0h8aw7hvnly5tchrfd43\nrequested to leave:false\n",
+              "to": "tthor12e7ngn5h22su4hecdf0h8aw7hvnly5tchrfd43",
               "type": "bond"
             }
           ]
@@ -917,7 +917,7 @@
               "memo": "",
               "msg_index": "0",
               "node_address": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
-              "to": "node:tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm\nstatus:Active\nnode pubkeys:\n\tsecp256k1: tthorpub1addwnpepqvfnccxa3hw35m7mx6mavxdp93jjw2jhdw0tv45dlmlelcsctu335w2yw3u\n\ted25519: \n\nvalidator consensus pub key:tthorcpub1zcjduepqe4ek6z27scfutp6whq5ug2plglertjw7z473nny2yu46r7gxp07s92jckg\nbond:2499998000000\nversion:9.999.0\nbond address:tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm\nrequested to leave:false\n",
+              "to": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
               "type": "bond"
             },
             {

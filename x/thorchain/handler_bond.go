@@ -182,7 +182,7 @@ func (h BondHandler) handleV3_0_0(ctx cosmos.Context, msg MsgBond) (err error) {
 		msg.Bond = common.SafeSub(msg.Bond, cosmos.NewUint(common.One))
 		tx := common.Tx{}
 		tx.ID = common.BlankTxID
-		tx.ToAddress = common.Address(nodeAccount.String())
+		tx.ToAddress = common.Address(nodeAccount.NodeAddress.String())
 		bondEvent := NewEventBond(cosmos.NewUint(common.One), BondCost, tx, &nodeAccount, nil)
 		if err = h.mgr.EventMgr().EmitEvent(ctx, bondEvent); err != nil {
 			ctx.Logger().Error("fail to emit bond event", "error", err)
