@@ -236,6 +236,15 @@ func (vm *SwapQueueVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 					if _, err := mgr.TxOutStore().TryAddTxOutItem(ctx, mgr, toi, cosmos.ZeroUint()); err != nil {
 						ctx.Logger().Error("fail streaming swap outbound", "error", err)
 						unrefundableCoinCleanup(ctx, mgr, toi, "failed_outbound")
+
+						// Emit a "fail to refund" refund event to signal to explorers/interfaces what has happened to the streaming swap output.
+						refundReason := fmt.Sprintf("%s; fail to refund (%s): streaming swap output", err, toi.Coin.String())
+						// All aspects of the inbound Tx are unchanged except for the Coins, which here have become the already-swapped output Coins.
+						refundTx := common.NewTx(pick.msg.Tx.ID, pick.msg.Tx.FromAddress, pick.msg.Tx.ToAddress, common.NewCoins(toi.Coin), pick.msg.Tx.Gas, pick.msg.Tx.Memo)
+						eventRefund := NewEventRefund(CodeFailAddOutboundTx, refundReason, refundTx, common.Fee{}) // fee param not used in downstream event
+						if err := mgr.EventMgr().EmitEvent(ctx, eventRefund); err != nil {
+							ctx.Logger().Error("fail to emit refund event", "error", err)
+						}
 					}
 				}
 
