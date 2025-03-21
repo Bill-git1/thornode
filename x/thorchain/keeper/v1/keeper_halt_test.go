@@ -225,3 +225,25 @@ func (s *KeeperHaltSuite) TestIsLPPaused(c *C) {
 	// no pauses
 	c.Check(k.IsLPPaused(ctx, common.BTCChain), Equals, false)
 }
+
+func (s *KeeperHaltSuite) TestIsPoolDepositPaused(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	ctx = ctx.WithBlockHeight(10)
+
+	// deposits are not paused
+	c.Check(k.IsPoolDepositPaused(ctx, common.BTCAsset), Equals, false)
+	c.Check(k.IsPoolDepositPaused(ctx, common.ETHAsset), Equals, false)
+
+	// BTC is paused but ETH is not
+	// XXX Should be replaced with SetMimirWithRef() when available a la MR 3561
+	k.SetMimir(ctx, "PauseLPDeposit-BTC-BTC", 1)
+	c.Check(k.IsPoolDepositPaused(ctx, common.BTCAsset), Equals, true)
+	c.Check(k.IsPoolDepositPaused(ctx, common.ETHAsset), Equals, false)
+
+	// XXX Should be replaced with SetMimirWithRef() when available a la MR 3561
+	_ = k.DeleteMimir(ctx, "PauseLPDeposit-BTC-BTC")
+
+	// back to normal
+	c.Check(k.IsPoolDepositPaused(ctx, common.BTCAsset), Equals, false)
+	c.Check(k.IsPoolDepositPaused(ctx, common.ETHAsset), Equals, false)
+}

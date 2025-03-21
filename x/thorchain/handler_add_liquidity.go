@@ -170,6 +170,9 @@ func (h AddLiquidityHandler) validate(ctx cosmos.Context, msg MsgAddLiquidity) e
 	if h.mgr.Keeper().IsChainHalted(ctx, msg.Asset.Chain) || h.mgr.Keeper().IsLPPaused(ctx, msg.Asset.Chain) {
 		return fmt.Errorf("unable to add liquidity while chain has paused LP actions")
 	}
+	if h.mgr.Keeper().IsPoolDepositPaused(ctx, msg.Asset) {
+		return fmt.Errorf("unable to add liquidity, deposits are paused for asset (%s)", msg.Asset.String())
+	}
 
 	ensureLiquidityNoLargerThanBond := h.mgr.GetConstants().GetBoolValue(constants.StrictBondLiquidityRatio)
 	// if the pool is THORChain no need to check economic security

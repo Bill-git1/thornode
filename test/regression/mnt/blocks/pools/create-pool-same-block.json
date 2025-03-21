@@ -209,7 +209,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "242834",
+          "gas_used": "243834",
           "events": [
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/0",
@@ -292,7 +292,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "182206",
+          "gas_used": "183206",
           "events": [
             {
               "amount": "2000000rune",

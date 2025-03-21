@@ -32,6 +32,8 @@ Each chain has granular control allowing each chain to be halted or resumed on a
    1. Mimir setting is `HALT[Chain]TRADING`, e,g, `HALTBCHTRADING` for BCH
 4. **Specific Chain Halt** - Serious halt where transitions on that chain are no longer observed and THORNodes will not be synced to the chain tip, usually their Bifrost offline. Resumption will require a majority of nodes syncing to the tip before trading can commence.
    1. Mimir setting is `HALT[Chain]CHAIN`, e,g, `HALTBCHCHAIN` for BCH.
+5. **Specific Pool Liquidity Provider Pause** - suspends deposits into a specific Liquidity Pool
+   1. Mimir setting is `PAUSELPDEPOSIT-<Asset>`, e.g. `PAUSELPDEPOSIT-BTC-BTC` for BTC pool
 
 ```admonish warning
 Chain specific halts do occur and need to be monitored and reacted to when they occur. Users should not be able to send transactions via an interface when a halt is in effect.

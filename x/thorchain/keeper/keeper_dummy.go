@@ -731,6 +731,7 @@ func (k KVStoreDummy) IsGlobalTradingHalted(ctx cosmos.Context) bool            
 func (k KVStoreDummy) IsChainTradingHalted(ctx cosmos.Context, chain common.Chain) bool { return false }
 func (k KVStoreDummy) IsChainHalted(ctx cosmos.Context, chain common.Chain) bool        { return false }
 func (k KVStoreDummy) IsLPPaused(ctx cosmos.Context, chain common.Chain) bool           { return false }
+func (k KVStoreDummy) IsPoolDepositPaused(ctx cosmos.Context, asset common.Asset) bool  { return false }
 
 func (k KVStoreDummy) GetAnchors(ctx cosmos.Context, asset common.Asset) []common.Asset { return nil }
 func (k KVStoreDummy) AnchorMedian(ctx cosmos.Context, assets []common.Asset) cosmos.Uint {

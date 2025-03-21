@@ -99,6 +99,7 @@ Mimir setting can be created and changed without a corresponding Constant.
 - `LiquidityLockUpBlocks`: The number of blocks LP can withdraw after their liquidity
 - `PendingLiquidityAgeLimit`: The number of blocks the network waits before initiating pending liquidity cleanup. Cleanup of all pools lasts for the same duration.
 - `PauseAsymWithdrawal-<Chain>`#: Forces dual-address liquidity providers to withdraw symmetrically rather than asymmetrically.
+- `PauseLPDeposit-<Asset>`#: pauses the ability to add liquidity into that pool. E.g. `PAUSELPDEPOSIT-BTC-BTC=1` suspends deposits for the BTC pool
 
 ## RunePool
 

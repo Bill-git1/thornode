@@ -446,6 +446,7 @@ type KeeperHalt interface {
 	IsChainTradingHalted(ctx cosmos.Context, chain common.Chain) bool
 	IsChainHalted(ctx cosmos.Context, chain common.Chain) bool
 	IsLPPaused(ctx cosmos.Context, chain common.Chain) bool
+	IsPoolDepositPaused(ctx cosmos.Context, asset common.Asset) bool
 }
 
 type KeeperAnchors interface {

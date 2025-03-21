@@ -5,6 +5,7 @@ import (
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/constants"
 )
 
 func (k KVStore) IsTradingHalt(ctx cosmos.Context, msg cosmos.Msg) bool {
@@ -100,6 +101,15 @@ func (k KVStore) IsLPPaused(ctx cosmos.Context, chain common.Chain) bool {
 	pauseLP, err := k.GetMimir(ctx, fmt.Sprintf("PauseLP%s", chain))
 	if err == nil && pauseLP > 0 && pauseLP < ctx.BlockHeight() {
 		ctx.Logger().Debug("chain has paused LP actions", "chain", chain)
+		return true
+	}
+	return false
+}
+
+func (k KVStore) IsPoolDepositPaused(ctx cosmos.Context, asset common.Asset) bool {
+	// check if deposits into pool are paused
+	v, err := k.GetMimirWithRef(ctx, constants.MimirTemplatePauseLPDeposit, asset.MimirString())
+	if err == nil && v > 0 {
 		return true
 	}
 	return false

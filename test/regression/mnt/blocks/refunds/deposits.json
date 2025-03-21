@@ -3217,7 +3217,7 @@
           "code": 99,
           "log": "failed to execute message; message index: 0: fail to calculate pool unit: 2 errors occurred:\n\t* internal error\n\t* total asset in the pool is zero\n\n: internal error",
           "gas_wanted": "-1",
-          "gas_used": "126234",
+          "gas_used": "127234",
           "events": [
             {
               "amount": "2000000rune",
@@ -3281,7 +3281,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "AE34D205BE5C89A96B127BC83234582733CB2E03A64D8AD0F90F4F70886AECBD",
-      "last_results_hash": "DC286334013B153A2A8970454B59A023F63800130DD08E00302143FC95FF3DAD",
+      "last_results_hash": "C5EA408F6B1DA202ED5A290DE15DBB0811F19E827288AB018E708455BF2EC6AE",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
