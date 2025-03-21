@@ -40,6 +40,7 @@ const (
 	// Bond type
 	AsgardKeygen = types.KeygenType_AsgardKeygen
 	BondCost     = types.BondType_bond_cost
+	BondReturned = types.BondType_bond_returned
 )
 
 var (

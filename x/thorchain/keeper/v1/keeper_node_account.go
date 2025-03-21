@@ -87,6 +87,7 @@ func (k KVStore) ListActiveValidators(ctx cosmos.Context) (NodeAccounts, error) 
 }
 
 func (k KVStore) RemoveLowBondValidatorAccounts(ctx cosmos.Context) error {
+	var events cosmos.Events
 	lowBondValidators := make([][]byte, 0)
 	naIterator := k.GetNodeAccountIterator(ctx)
 	defer naIterator.Close()
@@ -117,6 +118,13 @@ func (k KVStore) RemoveLowBondValidatorAccounts(ctx cosmos.Context) error {
 				coin := common.NewCoin(common.RuneAsset(), na.Bond)
 				if err = k.SendFromModuleToAccount(ctx, BondName, to, common.NewCoins(coin)); err != nil {
 					ctx.Logger().Error("failed to return bond pool coins", "error", err)
+					continue
+				}
+				bondEvent := NewEventBond(na.Bond, BondReturned, common.Tx{}, &na, to)
+				if events, err = bondEvent.Events(); err != nil {
+					ctx.Logger().Error("fail to emit bond event", "error", err)
+				} else {
+					ctx.EventManager().EmitEvents(events)
 				}
 				continue
 			}
@@ -131,6 +139,12 @@ func (k KVStore) RemoveLowBondValidatorAccounts(ctx cosmos.Context) error {
 				if err = k.SendFromModuleToAccount(ctx, BondName, provider.BondAddress, common.NewCoins(coin)); err != nil {
 					ctx.Logger().Error("failed to return bond pool coins", "error", err)
 					continue
+				}
+				bondEvent := NewEventBond(provider.Bond, BondReturned, common.Tx{}, &na, provider.BondAddress)
+				if events, err = bondEvent.Events(); err != nil {
+					ctx.Logger().Error("fail to emit bond event", "error", err)
+				} else {
+					ctx.EventManager().EmitEvents(events)
 				}
 				totalSent = totalSent.Add(provider.Bond)
 			}
@@ -517,10 +531,7 @@ func (k KVStore) DeductNativeTxFeeFromBond(ctx cosmos.Context, nodeAddr cosmos.A
 	}
 
 	// emit bond cost event
-	tx := common.Tx{}
-	tx.ID = common.BlankTxID
-	tx.FromAddress = na.BondAddress
-	bondEvent := NewEventBond(fee, BondCost, tx, &na, nil)
+	bondEvent := NewEventBond(fee, BondCost, common.Tx{}, &na, nil)
 	events, err := bondEvent.Events()
 	if err != nil {
 		return fmt.Errorf("fail to get events: %w", err)

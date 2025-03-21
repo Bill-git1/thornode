@@ -575,10 +575,7 @@ func (vm *ValidatorMgrVCUR) payNodeAccountBondAward(ctx cosmos.Context, lastChur
 	if err := mgr.Keeper().SetBondProviders(ctx, bp); err != nil {
 		return ErrInternal(err, fmt.Sprintf("fail to save bond providers(%s)", bp.NodeAddress.String()))
 	}
-	tx := common.Tx{}
-	tx.ID = common.BlankTxID
-	tx.ToAddress = na.BondAddress
-	bondRewardEvent := NewEventBond(reward, BondReward, tx, &na, nil)
+	bondRewardEvent := NewEventBond(reward, BondReward, common.Tx{}, &na, nil)
 	if err := mgr.EventMgr().EmitEvent(ctx, bondRewardEvent); err != nil {
 		ctx.Logger().Error("fail to emit bond event", "error", err)
 	}
@@ -591,18 +588,13 @@ func (vm *ValidatorMgrVCUR) payNodeAccountBondAward(ctx cosmos.Context, lastChur
 			return errors.New(sdkErr.Error())
 		}
 
-		// The bond is being returned from the node to the node operator,
-		// so reflect that (and unambiguously identify them) with the FromAddress and ToAddress.
-		fromAddress, err := common.NewAddress(na.NodeAddress.String())
+		// TODO: Remove this NewAddress call entirely in the next version of this manager.
+		_, err := common.NewAddress(na.NodeAddress.String())
 		if err != nil {
 			return fmt.Errorf("fail to parse node address: %w", err)
 		}
 		// emit BondReturned event
-		fakeTx := common.Tx{}
-		fakeTx.ID = common.BlankTxID
-		fakeTx.FromAddress = fromAddress
-		fakeTx.ToAddress = na.BondAddress
-		bondReturnedEvent := NewEventBond(nodeOperatorFees, BondReturned, fakeTx, &na, nodeOperatorAccAddr)
+		bondReturnedEvent := NewEventBond(nodeOperatorFees, BondReturned, common.Tx{}, &na, nodeOperatorAccAddr)
 		if err := mgr.EventMgr().EmitEvent(ctx, bondReturnedEvent); err != nil {
 			ctx.Logger().Error("fail to emit bond event", "error", err)
 		}
@@ -806,10 +798,7 @@ func (vm *ValidatorMgrVCUR) ragnarokBond(ctx cosmos.Context, nth int64, mgr Mana
 			return err
 		}
 
-		tx := common.Tx{}
-		tx.ID = common.BlankTxID
-		tx.FromAddress = na.BondAddress
-		bondEvent := NewEventBond(amt, BondCost, tx, &nas[i], nil)
+		bondEvent := NewEventBond(amt, BondCost, common.Tx{}, &nas[i], nil)
 		if err := mgr.EventMgr().EmitEvent(ctx, bondEvent); err != nil {
 			return fmt.Errorf("fail to emit bond event: %w", err)
 		}

@@ -338,11 +338,11 @@
               "chain": "",
               "coin": "",
               "from": "",
-              "id": "0000000000000000000000000000000000000000000000000000000000000000",
+              "id": "",
               "memo": "",
               "msg_index": "0",
               "node_address": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
-              "to": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
+              "to": "",
               "type": "bond"
             },
             {
@@ -456,11 +456,11 @@
               "chain": "",
               "coin": "",
               "from": "",
-              "id": "0000000000000000000000000000000000000000000000000000000000000000",
+              "id": "",
               "memo": "",
               "msg_index": "0",
               "node_address": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
-              "to": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+              "to": "",
               "type": "bond"
             }
           ]
@@ -568,11 +568,11 @@
               "chain": "",
               "coin": "",
               "from": "",
-              "id": "0000000000000000000000000000000000000000000000000000000000000000",
+              "id": "",
               "memo": "",
               "msg_index": "0",
               "node_address": "tthor12e7ngn5h22su4hecdf0h8aw7hvnly5tchrfd43",
-              "to": "tthor12e7ngn5h22su4hecdf0h8aw7hvnly5tchrfd43",
+              "to": "",
               "type": "bond"
             }
           ]
@@ -680,11 +680,11 @@
               "chain": "",
               "coin": "",
               "from": "",
-              "id": "0000000000000000000000000000000000000000000000000000000000000000",
+              "id": "",
               "memo": "",
               "msg_index": "0",
               "node_address": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
-              "to": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
+              "to": "",
               "type": "bond"
             }
           ]
@@ -1559,11 +1559,11 @@
               "chain": "",
               "coin": "",
               "from": "",
-              "id": "0000000000000000000000000000000000000000000000000000000000000000",
+              "id": "",
               "memo": "",
               "msg_index": "0",
               "node_address": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
-              "to": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
+              "to": "",
               "type": "bond"
             }
           ]
@@ -1671,11 +1671,11 @@
               "chain": "",
               "coin": "",
               "from": "",
-              "id": "0000000000000000000000000000000000000000000000000000000000000000",
+              "id": "",
               "memo": "",
               "msg_index": "0",
               "node_address": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
-              "to": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+              "to": "",
               "type": "bond"
             }
           ]
@@ -1783,11 +1783,11 @@
               "chain": "",
               "coin": "",
               "from": "",
-              "id": "0000000000000000000000000000000000000000000000000000000000000000",
+              "id": "",
               "memo": "",
               "msg_index": "0",
               "node_address": "tthor12e7ngn5h22su4hecdf0h8aw7hvnly5tchrfd43",
-              "to": "tthor12e7ngn5h22su4hecdf0h8aw7hvnly5tchrfd43",
+              "to": "",
               "type": "bond"
             }
           ]
@@ -1895,11 +1895,11 @@
               "chain": "",
               "coin": "",
               "from": "",
-              "id": "0000000000000000000000000000000000000000000000000000000000000000",
+              "id": "",
               "memo": "",
               "msg_index": "0",
               "node_address": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
-              "to": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
+              "to": "",
               "type": "bond"
             },
             {
@@ -2340,11 +2340,11 @@
               "chain": "",
               "coin": "",
               "from": "",
-              "id": "0000000000000000000000000000000000000000000000000000000000000000",
+              "id": "",
               "memo": "",
               "msg_index": "0",
               "node_address": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
-              "to": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
+              "to": "",
               "type": "bond"
             }
           ]
@@ -2452,11 +2452,11 @@
               "chain": "",
               "coin": "",
               "from": "",
-              "id": "0000000000000000000000000000000000000000000000000000000000000000",
+              "id": "",
               "memo": "",
               "msg_index": "0",
               "node_address": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
-              "to": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+              "to": "",
               "type": "bond"
             }
           ]
@@ -2564,11 +2564,11 @@
               "chain": "",
               "coin": "",
               "from": "",
-              "id": "0000000000000000000000000000000000000000000000000000000000000000",
+              "id": "",
               "memo": "",
               "msg_index": "0",
               "node_address": "tthor12e7ngn5h22su4hecdf0h8aw7hvnly5tchrfd43",
-              "to": "tthor12e7ngn5h22su4hecdf0h8aw7hvnly5tchrfd43",
+              "to": "",
               "type": "bond"
             }
           ]
@@ -2676,11 +2676,11 @@
               "chain": "",
               "coin": "",
               "from": "",
-              "id": "0000000000000000000000000000000000000000000000000000000000000000",
+              "id": "",
               "memo": "",
               "msg_index": "0",
               "node_address": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
-              "to": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
+              "to": "",
               "type": "bond"
             },
             {
@@ -2914,11 +2914,11 @@
               "chain": "",
               "coin": "",
               "from": "",
-              "id": "0000000000000000000000000000000000000000000000000000000000000000",
+              "id": "",
               "memo": "",
               "msg_index": "0",
               "node_address": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
-              "to": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
+              "to": "",
               "type": "bond"
             },
             {
@@ -3359,11 +3359,11 @@
               "chain": "",
               "coin": "",
               "from": "",
-              "id": "0000000000000000000000000000000000000000000000000000000000000000",
+              "id": "",
               "memo": "",
               "msg_index": "0",
               "node_address": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
-              "to": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
+              "to": "",
               "type": "bond"
             },
             {
@@ -4073,11 +4073,11 @@
               "chain": "",
               "coin": "",
               "from": "",
-              "id": "0000000000000000000000000000000000000000000000000000000000000000",
+              "id": "",
               "memo": "",
               "msg_index": "0",
               "node_address": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
-              "to": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
+              "to": "",
               "type": "bond"
             },
             {
@@ -4518,11 +4518,11 @@
               "chain": "",
               "coin": "",
               "from": "",
-              "id": "0000000000000000000000000000000000000000000000000000000000000000",
+              "id": "",
               "memo": "",
               "msg_index": "0",
               "node_address": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
-              "to": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
+              "to": "",
               "type": "bond"
             },
             {

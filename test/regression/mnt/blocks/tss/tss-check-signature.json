@@ -41,11 +41,11 @@
         "chain": "",
         "coin": "",
         "from": "",
-        "id": "0000000000000000000000000000000000000000000000000000000000000000",
+        "id": "",
         "memo": "",
         "mode": "EndBlock",
         "node_address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
-        "to": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
+        "to": "",
         "type": "bond"
       },
       {
@@ -55,11 +55,11 @@
         "chain": "",
         "coin": "",
         "from": "",
-        "id": "0000000000000000000000000000000000000000000000000000000000000000",
+        "id": "",
         "memo": "",
         "mode": "EndBlock",
         "node_address": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
-        "to": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
+        "to": "",
         "type": "bond"
       },
       {
@@ -69,11 +69,11 @@
         "chain": "",
         "coin": "",
         "from": "",
-        "id": "0000000000000000000000000000000000000000000000000000000000000000",
+        "id": "",
         "memo": "",
         "mode": "EndBlock",
         "node_address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
-        "to": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+        "to": "",
         "type": "bond"
       },
       {
@@ -1074,11 +1074,11 @@
         "chain": "",
         "coin": "",
         "from": "",
-        "id": "0000000000000000000000000000000000000000000000000000000000000000",
+        "id": "",
         "memo": "",
         "mode": "EndBlock",
         "node_address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
-        "to": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+        "to": "",
         "type": "bond"
       },
       {

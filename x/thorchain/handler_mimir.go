@@ -118,10 +118,7 @@ func (h MimirHandler) handleV3_0_0(ctx cosmos.Context, msg MsgMimir) error {
 		ctx.Logger().Error("fail to emit set_node_mimir event", "error", err)
 		return err
 	}
-	tx := common.Tx{}
-	tx.ID = common.BlankTxID
-	tx.ToAddress = common.Address(nodeAccount.NodeAddress.String())
-	bondEvent := NewEventBond(cost, BondCost, tx, &nodeAccount, nil)
+	bondEvent := NewEventBond(cost, BondCost, common.Tx{}, &nodeAccount, nil)
 	if err = h.mgr.EventMgr().EmitEvent(ctx, bondEvent); err != nil {
 		ctx.Logger().Error("fail to emit bond event", "error", err)
 		return err
