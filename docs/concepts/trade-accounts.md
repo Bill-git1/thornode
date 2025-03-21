@@ -20,7 +20,6 @@ RUNE and Synthetics cannot be added to the Trade Account.
 As assets within the Trade Account are not held in the pools, the combined pool and trade account value (combined Layer1 asset value) could exceed the total bonded. To ensure this does not occur:
 
 1. The calculation of the [Incentive Pendulum](https://docs.thorchain.org/how-it-works/incentive-pendulum) now operates based on Layer1 assets versus bonds, rather than solely on pool depths versus bonds. This ensures there is always "space" for arbitrageurs to exist in the network and be able to arbitrage pools effectively (versus synths hitting caps).
-1. If the combined Layer1 asset value exceeds the total bonded value, trade assets are sold/liquidated (reducing liability) to buy RUNE and are deposited into the bond module (increasing security). In this scenario, a Trade Account may be subject to a negative interest rate. This safeguard effectively redistributes liquidity from all Trade Account holders to Active Node Operators and only occurs if the Incentive Pendulum reaches a fully underbonded state.
 
 ## Using Trade Accounts
 

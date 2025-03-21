@@ -60,21 +60,23 @@ Perform an asset swap.
 For the DEX aggregator-oriented variation of the `SWAP` memo, see [Aggregators Memos](../aggregators/memos.md).
 ```
 
-| Parameter    | Notes                                                                                 | Conditions                                                                                                                                      |
-| ------------ | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Payload      | Send the asset to swap.                                                               | Must be an active pool on THORChain.                                                                                                            |
-| `SWAP`       | The swap handler.                                                                     | Also `s` or `=`                                                                                                                                 |
-| `:ASSET`     | The [asset identifier](asset-notation.md).                                            | Can be shortened.                                                                                                                               |
-| `:DESTADDR`  | The destination address to send to.                                                   | Can use THORName.                                                                                                                               |
-| `:LIM`       | The trade limit, i.e., set 100000000 to get a minimum of 1 full asset, else a refund. | Optional. 1e8 or scientific notation.                                                                                                           |
-| `/INTERVAL`  | Swap interval in blocks.                                                              | Optional. If 0, do not stream.                                                                                                                  |
-| `/QUANTITY`  | Swap quantity. The interval value determines the frequency of swaps in blocks.        | Optional. If 0, network will determine the number of swaps.                                                                                     |
-| `:AFFILIATE` | The affiliate addresses.                                                              | Optional. Define up to [MultipleAffiliatesMaxCount](../mimir.md#swapping) (currently 5) THORNames or THOR Addresses, separated by `/`           |
-| `:FEE`       | The [affiliate fees](fees.md#affiliate-fee). RUNE is sent to affiliate.               | Optional. Ranges from 0 to 1000 Basis Points. Specify one fee for all affiliates, or individual fees matching the number of affiliates defined. |
+| Parameter     | Notes                                                                                 | Conditions                                                                                                                                      |
+| ------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | --- |
+| Payload       | Send the asset to swap.                                                               | Must be an active pool on THORChain.                                                                                                            |
+| `SWAP`        | The swap handler.                                                                     | Also `s` or `=`                                                                                                                                 |
+| `:ASSET`      | The [asset identifier](asset-notation.md).                                            | Can be shortened.                                                                                                                               |
+| `:DESTADDR`   | The destination address to send to.                                                   | Can use THORName.                                                                                                                               |
+| `/REFUNDADDR` | The destination address for a refund to be sent to.                                   | Optional. If provided, the refund will be sent to this address; otherwise, it will be sent to the originator’s address.                         |     |
+| `:LIM`        | The trade limit, i.e., set 100000000 to get a minimum of 1 full asset, else a refund. | Optional. 1e8 or scientific notation.                                                                                                           |
+| `/INTERVAL`   | Swap interval in blocks.                                                              | Optional. If 0, do not stream.                                                                                                                  |
+| `/QUANTITY`   | Swap quantity. The interval value determines the frequency of swaps in blocks.        | Optional. If 0, network will determine the number of swaps.                                                                                     |
+| `:AFFILIATE`  | The affiliate addresses.                                                              | Optional. Define up to [MultipleAffiliatesMaxCount](../mimir.md#swapping) (currently 5) THORNames or THOR Addresses, separated by `/`           |
+| `:FEE`        | The [affiliate fees](fees.md#affiliate-fee). RUNE is sent to affiliate.               | Optional. Ranges from 0 to 1000 Basis Points. Specify one fee for all affiliates, or individual fees matching the number of affiliates defined. |
 
 **Syntactic Examples:**
 
 - `SWAP:ASSET:DESTADDR` &mdash; simple swap
+- `SWAP:ASSET:DESTADDR/REFUNDADDR:LIM/1/0:AFFILIATE:FEE` &mdash; swap with refund address specified
 - `SWAP:ASSET:DESTADDR:LIM` &mdash; swap with trade limit
 - `SWAP:ASSET:DESTADDR:LIM/0/1` &mdash; swap with limit, do not stream swap
 - `SWAP:ASSET:DESTADDR:LIM/3/0` &mdash; swap with limit, optimise swap amount, every 3 blocks
@@ -86,15 +88,17 @@ For the DEX aggregator-oriented variation of the `SWAP` memo, see [Aggregators M
 **Real-world Examples:**
 
 - `SWAP:ETH.ETH:0xe6a30f4f3bad978910e2cbb4d97581f5b5a0ade0` &mdash; swap to Ether, send output to the specified address
+- `=:BTC.BTC:bc1q6527vxxqjpq80la2l0sw7hay3lj6dz07zs6gzl/0x7a093cebfa77403672d68e1c22d0681400a36682` &mdash; swap to Ether, send output to the specified address. If a refund, send to the other specific address. Source and refund address should be the same chain.
 - `SWAP:ETH.ETH:0xe6a30f4f3bad978910e2cbb4d97581f5b5a0ade0:10000000` &mdash; same as above except the ETH output should be more than 0.1 ETH else refund
 - `SWAP:ETH.ETH:0xe6a30f4f3bad978910e2cbb4d97581f5b5a0ade0:10000000/1/1` &mdash; same as above except do not stream the swap
 - `SWAP:ETH.ETH:0xe6a30f4f3bad978910e2cbb4d97581f5b5a0ade0:10000000/3/0` &mdash; same as above except streaming the swap, every 3 blocks, and THORChain to calculate the number of swaps required to achieve optimal price efficiency
 - `SWAP:ETH.ETH:0xe6a30f4f3bad978910e2cbb4d97581f5b5a0ade0:10000000/3/0:t:10` &mdash; same as above except sends 10 basis points from the input to affiliate `t` (THORSwap)
 - `s:ETH.ETH:0xe6a30f4f3bad978910e2cbb4d97581f5b5a0ade0:1e6/3/0:t:10` &mdash; same as above except with a reduced memo and scientific notation trade limit
 - `=:r:thor1el4ufmhll3yw7zxzszvfakrk66j7fx0tvcslym:19779138111` &mdash; swap to at least 197.79 RUNE
-- `=:ETH/USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48:thor15s4apx9ap7lazpsct42nmvf0t6am4r3w0r64f2:628197586176` &mdash; swap to at least 6281.9 Synthetic USDC
+- `=:ETH/USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48:thor15s4apx9ap7lazpsct42nmvf0t6am4r3w0r64f2:628197586176` &mdash; swap to at least 6281.9 Synthetic USDC (Synths are deprecated)
 - `=:BSC.BNB:0xe6a30f4f3bad978910e2cbb4d97581f5b5a0ade0:544e6/2/6` &mdash; swap to at least 5.4 BNB, using streaming swaps, 6 swaps, every 2 blocks
-- `=:BTC~BTC:thor1g6pnmnyeg48yc3lg796plt0uw50qpp7humfggz:1e6/1/0:dx:10` &mdash; Swap to Bitcoin Trade Asset, using a Limit, Streaming Swaps and a 10 bansis point fee to the affiliate `dx` (Asgardex)
+- `=:BTC~BTC:thor1g6pnmnyeg48yc3lg796plt0uw50qpp7humfggz:1e6/1/0:dx:10` &mdash; Swap to Bitcoin Trade Asset, using a Limit, Streaming Swaps and a 10 basis point fee to the affiliate `dx` (Asgardex)
+- `=:BTC-BTC:thor1g6pnmnyeg48yc3lg796plt0uw50qpp7humfggz:1e6/1/0:dx:10` &mdash; Swap to Bitcoin Secured Asset, using a Limit, Streaming Swaps and a 10 basis point fee to the affiliate `dx` (Asgardex)
 - `=:ETH.ETH:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430::t1/t2/t3/t4/t5:10` &mdash; Swap to Ether, will skim 10 basis points for each of the affiliates
 - `=:ETH.ETH:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430::t1/dx/ss:10/20/30` &mdash; Swap to Ether, Will skim 10 basis points for `t1`, 20 basis points for `dx`, and 30 basis points for `ss`
 
