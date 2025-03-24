@@ -1,5 +1,5 @@
-//go:build !mainnet
-// +build !mainnet
+//go:build !mainnet && !stagenet
+// +build !mainnet,!stagenet
 
 package thorchain
 
@@ -31,5 +31,10 @@ func (m Migrator) Migrate1to2(ctx sdk.Context) error {
 
 // Migrate2to3 migrates from version 2 to 3.
 func (m Migrator) Migrate2to3(ctx sdk.Context) error {
+	return nil
+}
+
+// Migrate3to4 migrates from version 3 to 4.
+func (m Migrator) Migrate3to4(ctx sdk.Context) error {
 	return nil
 }
