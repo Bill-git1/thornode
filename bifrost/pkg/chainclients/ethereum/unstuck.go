@@ -120,6 +120,10 @@ func (c *Client) unstuckTx(clog zerolog.Logger, item types.SignedTxItem) error {
 	if err != nil {
 		if errors.Is(err, ethereum.NotFound) {
 			clog.Err(err).Msg("transaction not found on chain")
+
+			// dropped from mempool or re-orged, remove from signer cache to resign
+			c.signerCacheManager.RemoveSigned(item.Hash)
+
 			return nil
 		}
 		return fmt.Errorf("fail to get transaction by hash: %s, error: %w", item.Hash, err)
