@@ -55,15 +55,6 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 		return nil, nil, nil, nil
 	}
 
-	// only one keysign per chain at a time
-	vaultSignerLock := c.getVaultSignerLock(tx.VaultPubKey.String())
-	if vaultSignerLock == nil {
-		c.log.Error().Msgf("fail to get signer lock for vault pub key: %s", tx.VaultPubKey.String())
-		return nil, nil, nil, fmt.Errorf("fail to get signer lock")
-	}
-	vaultSignerLock.Lock()
-	defer vaultSignerLock.Unlock()
-
 	sourceScript, err := c.getSourceScript(tx)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("fail to get source pay to address script: %w", err)
@@ -276,6 +267,20 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) ([]byte, []b
 	}
 
 	return signedTx.Bytes(), nil, txIn, nil
+}
+
+// GetVaultLock returns a mutex for the given vault pubkey. This is primarily used to
+// ensure transactions from the signer do not conflict with consolidate transactions.
+func (c *Client) GetVaultLock(vaultPubKey string) *sync.Mutex {
+	c.signerLock.Lock()
+	defer c.signerLock.Unlock()
+	l, ok := c.vaultLocks[vaultPubKey]
+	if !ok {
+		newLock := &sync.Mutex{}
+		c.vaultLocks[vaultPubKey] = newLock
+		return newLock
+	}
+	return l
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////

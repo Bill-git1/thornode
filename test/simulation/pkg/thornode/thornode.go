@@ -31,6 +31,10 @@ func init() {
 	}
 }
 
+func BaseURL() string {
+	return thornodeURL
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////
 // Exported
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -43,7 +47,7 @@ func GetBalances(addr common.Address) (common.Coins, error) {
 			Amount string `json:"amount"`
 		} `json:"balances"`
 	}
-	err := get(url, &balances)
+	err := Get(url, &balances)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +74,7 @@ func GetBalances(addr common.Address) (common.Coins, error) {
 func GetInboundAddress(chain common.Chain) (address common.Address, router *common.Address, err error) {
 	url := fmt.Sprintf("%s/thorchain/inbound_addresses", thornodeURL)
 	var inboundAddresses []openapi.InboundAddress
-	err = get(url, &inboundAddresses)
+	err = Get(url, &inboundAddresses)
 	if err != nil {
 		return "", nil, err
 	}
@@ -92,7 +96,7 @@ func GetInboundAddress(chain common.Chain) (address common.Address, router *comm
 func GetRouterAddress(chain common.Chain) (common.Address, error) {
 	url := fmt.Sprintf("%s/thorchain/inbound_addresses", thornodeURL)
 	var inboundAddresses []openapi.InboundAddress
-	err := get(url, &inboundAddresses)
+	err := Get(url, &inboundAddresses)
 	if err != nil {
 		return "", err
 	}
@@ -110,21 +114,21 @@ func GetRouterAddress(chain common.Chain) (common.Address, error) {
 func GetLiquidityProviders(asset common.Asset) ([]openapi.LiquidityProvider, error) {
 	url := fmt.Sprintf("%s/thorchain/pool/%s/liquidity_providers", thornodeURL, asset.String())
 	var liquidityProviders []openapi.LiquidityProvider
-	err := get(url, &liquidityProviders)
+	err := Get(url, &liquidityProviders)
 	return liquidityProviders, err
 }
 
 func GetPools() ([]openapi.Pool, error) {
 	url := fmt.Sprintf("%s/thorchain/pools", thornodeURL)
 	var pools []openapi.Pool
-	err := get(url, &pools)
+	err := Get(url, &pools)
 	return pools, err
 }
 
 func GetPool(asset common.Asset) (openapi.Pool, error) {
 	url := fmt.Sprintf("%s/thorchain/pool/%s", thornodeURL, asset.String())
 	var pool openapi.Pool
-	err := get(url, &pool)
+	err := Get(url, &pool)
 	return pool, err
 }
 
@@ -142,50 +146,51 @@ func GetSwapQuote(from, to common.Asset, amount sdk.Uint) (openapi.QuoteSwapResp
 	url := parsedURL.String()
 
 	var quote openapi.QuoteSwapResponse
-	err = get(url, &quote)
+	err = Get(url, &quote)
 	return quote, err
 }
 
 func GetTxStages(txid string) (openapi.TxStagesResponse, error) {
 	url := fmt.Sprintf("%s/thorchain/tx/stages/%s", thornodeURL, txid)
 	var stages openapi.TxStagesResponse
-	err := get(url, &stages)
+	err := Get(url, &stages)
 	return stages, err
 }
 
 func GetTxDetails(txid string) (openapi.TxDetailsResponse, error) {
 	url := fmt.Sprintf("%s/thorchain/tx/details/%s", thornodeURL, txid)
 	var details openapi.TxDetailsResponse
-	err := get(url, &details)
+	err := Get(url, &details)
 	return details, err
 }
 
 func GetMimirs() (map[string]int64, error) {
 	url := fmt.Sprintf("%s/thorchain/mimir", thornodeURL)
 	var mimirs map[string]int64
-	err := get(url, &mimirs)
+	err := Get(url, &mimirs)
 	return mimirs, err
 }
 
-////////////////////////////////////////////////////////////////////////////////////////
-// Internal
-////////////////////////////////////////////////////////////////////////////////////////
-
-var httpClient = &http.Client{
-	Transport: &http.Transport{
-		Dial: (&net.Dialer{
-			Timeout: 5 * time.Second,
-		}).Dial,
-	},
-	Timeout: 5 * time.Second,
+func GetBlock(height int64) (openapi.BlockResponse, error) {
+	url := fmt.Sprintf("%s/thorchain/block", thornodeURL)
+	if height > 0 {
+		url = fmt.Sprintf("%s?height=%d", url, height)
+	}
+	var block openapi.BlockResponse
+	err := Get(url, &block)
+	return block, err
 }
 
-func get(url string, target interface{}) error {
+func Get(url string, target interface{}) error {
 	resp, err := httpClient.Get(url)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("HTTP: %d", resp.StatusCode)
+	}
 
 	// extract error if the request failed
 	type ErrorResponse struct {
@@ -203,4 +208,17 @@ func get(url string, target interface{}) error {
 
 	// decode response
 	return json.Unmarshal(buf, target)
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+// Internal
+////////////////////////////////////////////////////////////////////////////////////////
+
+var httpClient = &http.Client{
+	Transport: &http.Transport{
+		Dial: (&net.Dialer{
+			Timeout: 5 * time.Second,
+		}).Dial,
+	},
+	Timeout: 5 * time.Second,
 }

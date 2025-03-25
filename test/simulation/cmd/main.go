@@ -16,6 +16,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/actors/core"
+	"gitlab.com/thorchain/thornode/v3/test/simulation/actors/features"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/actors/suites"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/cli"
 	pkgcosmos "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/cosmos"
@@ -76,6 +77,7 @@ func main() {
 		{Name: "seed", Default: true},
 		{Name: "bootstrap", Default: true},
 		{Name: "arb", Default: true},
+		{Name: "consolidate", Default: false},
 		{Name: "swaps", Default: true},
 		{Name: "ragnarok", Default: true},
 	}
@@ -118,6 +120,7 @@ func main() {
 	}
 	appendIfEnabled("bootstrap", suites.Bootstrap)
 	appendIfEnabled("arb", core.NewArbActor)
+	appendIfEnabled("consolidate", features.Consolidate)
 	appendIfEnabled("swaps", suites.Swaps)
 	appendIfEnabled("ragnarok", suites.Ragnarok)
 

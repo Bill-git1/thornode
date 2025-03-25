@@ -25,6 +25,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
 	"gitlab.com/thorchain/thornode/v3/bifrost/observer"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients"
+	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/utxo"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pubkeymanager"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
@@ -632,6 +633,14 @@ func (s *Signer) signAndBroadcast(item TxOutStoreItem) ([]byte, *types.TxInItem,
 			s.logger.Info().Str("tx_id", tx.OutHash.String()).Msgf("already signed. skipping...")
 			return nil, nil, nil
 		}
+	}
+
+	// If this is a UTXO chain, lock the vault around sign and broadcast to avoid
+	// consolidate transactions from using the same UTXOs.
+	if utxoClient, ok := chain.(*utxo.Client); ok {
+		lock := utxoClient.GetVaultLock(tx.VaultPubKey.String())
+		lock.Lock()
+		defer lock.Unlock()
 	}
 
 	// If SignedTx is set, we already signed and should only retry broadcast.

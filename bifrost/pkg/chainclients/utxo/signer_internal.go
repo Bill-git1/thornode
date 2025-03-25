@@ -539,17 +539,25 @@ func (c *Client) consolidateUTXOs() {
 			continue
 		}
 		var rawTx []byte
-		rawTx, _, _, err = c.SignTx(txOutItem, height)
-		if err != nil {
-			c.log.Err(err).Msg("fail to sign consolidate txout item")
-			continue
+
+		signAndBroadcast := func() {
+			lock := c.GetVaultLock(vault.PubKey.String())
+			lock.Lock()
+			defer lock.Unlock()
+
+			rawTx, _, _, err = c.SignTx(txOutItem, height)
+			if err != nil {
+				c.log.Err(err).Msg("fail to sign consolidate txout item")
+			}
+			var txID string
+			txID, err = c.BroadcastTx(txOutItem, rawTx)
+			if err != nil {
+				c.log.Err(err).Str("signed", string(rawTx)).Msg("fail to broadcast consolidate tx")
+			} else {
+				c.log.Info().Msgf("broadcast consolidate tx successfully, hash:%s", txID)
+			}
 		}
-		var txID string
-		txID, err = c.BroadcastTx(txOutItem, rawTx)
-		if err != nil {
-			c.log.Err(err).Str("signed", string(rawTx)).Msg("fail to broadcast consolidate tx")
-			continue
-		}
-		c.log.Info().Msgf("broadcast consolidate tx successfully, hash:%s", txID)
+
+		signAndBroadcast()
 	}
 }
