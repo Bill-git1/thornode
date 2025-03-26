@@ -72,7 +72,6 @@ func (h WasmInstantiateContract2Handler) handle(ctx cosmos.Context, msg wasmtype
 		msg.Salt,
 		msg.FixMsg,
 	)
-
 	if err != nil {
 		return &cosmos.Result{}, err
 	}

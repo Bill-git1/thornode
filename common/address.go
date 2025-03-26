@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 
+	xrp "github.com/Peersyst/xrpl-go/address-codec"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/bech32"
@@ -31,7 +32,7 @@ const (
 
 var alphaNumRegex = regexp.MustCompile("^[:A-Za-z0-9]*$")
 
-// NewAddress create a new Address. Supports ETH/bech2/BTC/LTC/BCH/DOGE.
+// NewAddress create a new Address. Supports ETH/bech2/BTC/LTC/BCH/DOGE/XRP.
 func NewAddress(address string) (Address, error) {
 	if len(address) == 0 {
 		return NoAddress, nil
@@ -52,8 +53,23 @@ func NewAddress(address string) (Address, error) {
 		return Address(address), nil
 	}
 
+	// Check is xrp address
+	if IsValidXRPAddress(address) {
+		return Address(address), nil
+	}
+
 	// Network-specific (with build tags) address checking.
 	return newAddress(address)
+}
+
+func IsValidXRPAddress(address string) bool {
+	// checks checksum and returns prefix (1 byte, 0x00) + account id (20 bytes)
+	decoded, err := xrp.Base58CheckDecode(address)
+	if err != nil {
+		return false
+	}
+
+	return len(decoded) == 21 && decoded[0] == 0x00
 }
 
 // IsValidBCHAddress determinate whether the address is a valid new BCH address format
@@ -132,6 +148,8 @@ func (addr Address) IsChain(chain Chain) bool {
 		return strings.HasPrefix(addr.String(), "0x")
 	}
 	switch chain {
+	case XRPChain:
+		return IsValidXRPAddress(addr.String())
 	case GAIAChain:
 		// Note: Gaia does not use a special prefix for testnet
 		prefix, _, _ := bech32.Decode(addr.String())
@@ -213,7 +231,7 @@ func (addr Address) IsChain(chain Chain) bool {
 // Note that this will always return ETHChain for an AVAXChain address,
 // so perhaps only use it when determining a network (e.g. mainnet/testnet).
 func (addr Address) GetChain() Chain {
-	for _, chain := range []Chain{ETHChain, THORChain, BTCChain, LTCChain, BCHChain, DOGEChain, GAIAChain, AVAXChain} {
+	for _, chain := range []Chain{ETHChain, THORChain, BTCChain, LTCChain, BCHChain, DOGEChain, GAIAChain, AVAXChain, XRPChain} {
 		if addr.IsChain(chain) {
 			return chain
 		}

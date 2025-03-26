@@ -25,6 +25,7 @@ const (
 	GAIAChain  = Chain("GAIA")
 	AVAXChain  = Chain("AVAX")
 	BASEChain  = Chain("BASE")
+	XRPChain   = Chain("XRP")
 
 	SigningAlgoSecp256k1 = SigningAlgo("secp256k1")
 	SigningAlgoEd25519   = SigningAlgo("ed25519")
@@ -41,6 +42,7 @@ var AllChains = [...]Chain{
 	GAIAChain,
 	AVAXChain,
 	BASEChain,
+	XRPChain,
 }
 
 type SigningAlgo string
@@ -165,6 +167,8 @@ func (c Chain) GetGasAsset() Asset {
 		return ATOMAsset
 	case BASEChain:
 		return BaseETHAsset
+	case XRPChain:
+		return XRPAsset
 	default:
 		return EmptyAsset
 	}
@@ -187,6 +191,8 @@ func (c Chain) GetGasUnits() string {
 		return "uatom"
 	case LTCChain:
 		return "satsperbyte"
+	case XRPChain:
+		return "drop"
 	default:
 		return ""
 	}
@@ -198,6 +204,8 @@ func (c Chain) GetGasUnits() string {
 func (c Chain) GetGasAssetDecimal() int64 {
 	switch c {
 	case GAIAChain:
+		return 6
+	case XRPChain:
 		return 6
 	default:
 		return cosmos.DefaultCoinDecimals
@@ -263,6 +271,14 @@ func (c Chain) DustThreshold() cosmos.Uint {
 		return cosmos.NewUint(100_000_000)
 	case ETHChain, AVAXChain, GAIAChain, BSCChain, BASEChain:
 		return cosmos.OneUint()
+	case XRPChain:
+		// XRP's dust threshold is being set to 1 XRP. This is the base reserve requirement on XRP's ledger.
+		// It is set to this value for two reasons:
+		//    1. to prevent edge cases of outbound XRP to new addresses where this is the minimum that must be transferred
+		//    2. to burn this amount on churns of each XRP vault, effectively leaving it behind as it cannot be transferred, but still transferring all other XRP
+		// On churns, we can optionally delete the account to recover an additional .8 XRP, but would increases code complexity and will remove related ledger entries
+		// Comparing to BTC, this dust threshold should be reasonable.
+		return cosmos.NewUint(One) // 1 XRP
 	default:
 		return cosmos.ZeroUint()
 	}
@@ -320,6 +336,8 @@ func (c Chain) ApproximateBlockMilliseconds() int64 {
 		return 6_000
 	case BASEChain:
 		return 2_000
+	case XRPChain:
+		return 4_000 // approx 3-5 seconds
 	default:
 		return 0
 	}
@@ -335,6 +353,8 @@ func (c Chain) InboundNotes() string {
 		return "Transfer the inbound_address the asset with the memo. Do not use multi-in, multi-out transactions."
 	case THORChain:
 		return "Broadcast a MsgDeposit to the THORChain network with the appropriate memo. Do not use multi-in, multi-out transactions."
+	case XRPChain:
+		return "Transfer the inbound_address the asset with the memo. Only a single memo is supported and only MemoData is used."
 	default:
 		return ""
 	}

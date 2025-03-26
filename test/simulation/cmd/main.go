@@ -24,6 +24,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/evm"
 	. "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/types"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/utxo"
+	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/xrp"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/watchers"
 )
 
@@ -44,6 +45,7 @@ var liteClientConstructors = map[common.Chain]LiteChainClientConstructor{
 	common.AVAXChain: evm.NewConstructor(chainRPCs[common.AVAXChain]),
 	common.GAIAChain: pkgcosmos.NewConstructor(chainRPCs[common.GAIAChain]),
 	common.BASEChain: evm.NewConstructor(chainRPCs[common.BASEChain]),
+	common.XRPChain:  xrp.NewConstructor(chainRPCs[common.XRPChain]),
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////

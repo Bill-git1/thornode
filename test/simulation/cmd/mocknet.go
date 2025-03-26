@@ -35,6 +35,7 @@ var chainRPCs = map[common.Chain]string{
 	common.AVAXChain: "http://localhost:9650/ext/bc/C/rpc",
 	common.GAIAChain: "localhost:9091",
 	common.BASEChain: "http://localhost:8547",
+	common.XRPChain:  "http://localhost:5005",
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -114,7 +115,16 @@ func InitConfig(parallelism int, seed bool) *OpConfig {
 				if err == nil {
 					break
 				}
-				log.Error().Err(err).Msg("failed to post network fee")
+				log.Error().Err(err).Msg("failed to post gaia network fee")
+				time.Sleep(5 * time.Second)
+			}
+			log.Info().Msg("posting xrp network fee")
+			for {
+				_, err := a.Thorchain.PostNetworkFee(1, common.XRPChain, 1, 1_000)
+				if err == nil {
+					break
+				}
+				log.Error().Err(err).Msg("failed to post xrp network fee")
 				time.Sleep(5 * time.Second)
 			}
 		}(mnemonic)
@@ -206,10 +216,13 @@ func InitConfig(parallelism int, seed bool) *OpConfig {
 		switch chain {
 		case common.BTCChain, common.ETHChain, common.LTCChain, common.BCHChain, common.BASEChain:
 			chainSeedAmount = sdkmath.NewUint(10 * common.One)
+		case common.BSCChain:
+			chainSeedAmount = sdkmath.NewUint(100 * common.One)
 		case common.GAIAChain:
 			chainSeedAmount = sdkmath.NewUint(1000 * common.One)
-		case common.AVAXChain:
-			chainSeedAmount = sdkmath.NewUint(10000 * common.One) // more since local gas is high
+		case common.AVAXChain, // more since local gas is high
+			common.XRPChain: // more since dust threshold is 1 XRP
+			chainSeedAmount = sdkmath.NewUint(10000 * common.One)
 		case common.DOGEChain:
 			chainSeedAmount = sdkmath.NewUint(100000 * common.One)
 		default:

@@ -61,6 +61,7 @@ func (vm *NetworkMgrVCUR) processGenesisSetup(ctx cosmos.Context) error {
 			common.GAIAChain,
 			common.BSCChain,
 			common.BASEChain,
+			common.XRPChain,
 		}
 		vault := NewVault(0, ActiveVault, AsgardVault, active[0].PubKeySet.Secp256k1, supportChains.Strings(), vm.k.GetChainContracts(ctx, supportChains))
 		vault.Membership = common.PubKeys{active[0].PubKeySet.Secp256k1}.Strings()
@@ -676,14 +677,19 @@ func (vm *NetworkMgrVCUR) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 					amt = common.SafeSub(amt, gasAmount)
 
 					// burn the remainder if amount after deducting gas is below dust threshold
-					if amt.LTE(coin.Asset.GetChain().DustThreshold()) && nth > migrationRounds {
+					dustThreshold := coin.Asset.GetChain().DustThreshold()
+					if amt.LTE(dustThreshold) && nth > migrationRounds {
 						// No migration should be attempted, but only burn dust if there are no pending outbounds.
 						// (That is, truly only dust remaining in the vault for this Coin.)
 						if !coin.Amount.Equal(vault.Coins.GetCoin(coin.Asset).Amount) {
 							continue
 						}
 
-						ctx.Logger().Info("left coin is not enough to pay for gas, thus burn it", "coin", coin, "gas", gasAmount)
+						if coin.Asset.GetChain().Equals(common.XRPChain) {
+							ctx.Logger().Info("left coin is account reserve, thus burn it", "coin", coin, "gas", gasAmount)
+						} else {
+							ctx.Logger().Info("left coin is not enough to pay for gas, thus burn it", "coin", coin, "gas", gasAmount)
+						}
 						vault.SubFunds(common.Coins{
 							coin,
 						})
@@ -711,6 +717,17 @@ func (vm *NetworkMgrVCUR) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 							"burn dust",
 							mgr)
 						continue
+					}
+
+					// on the final migration round(s), deduct amt by 1 XRP (1e8) so that we don't try to transfer any of the account reserve
+					// the account reserve balance will be burned on the next migration round
+					if nth >= migrationRounds && coin.Asset.GetChain().Equals(common.XRPChain) {
+						if amt.GT(dustThreshold) {
+							amt = common.SafeSub(amt, dustThreshold)
+						} else {
+							// if amt <= dustThreshold / XRP reserve requirement, skip the transaction
+							continue
+						}
 					}
 				}
 				toi := TxOutItem{

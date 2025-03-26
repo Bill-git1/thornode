@@ -27,6 +27,7 @@ bifrost:
       - LTC
       - BSC
       - BASE
+      - XRP
   thorchain:
     chain_id: thorchain
     chain_host: localhost:1317
@@ -295,6 +296,18 @@ bifrost:
             decimals: 6
             denom: ibc/CF52BFC8A11248F05151BFEC0FB033C3531E40C7BAFC72E277F49346EF76E981
 
+      mempool_tx_id_cache_size: 0
+      scanner_leveldb: *default-leveldb
+
+    xrp:
+      <<: *default-chain
+      chain_id: XRP
+      solvency_blocks: 10
+      block_scanner:
+        <<: *default-block-scanner
+        chain_id: XRP
+        gas_price_resolution: 10 # drop
+        observation_flexibility_blocks: 40
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
 

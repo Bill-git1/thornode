@@ -113,6 +113,7 @@ services:
       ETH_HOST: ${ETH_HOST:-http://ethereum:8545}
       BASE_HOST: ${BASE_HOST:-http://base:8545}
       BSC_HOST: ${BSC_HOST:-http://binance-smart:8545}
+      XRP_HOST: ${XRP_HOST:-http://xrp:5005}
     ports:
       - 26657:26657
       - 26656:26656
@@ -179,6 +180,7 @@ services:
       BIFROST_CHAINS_GAIA_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS: "5"
       BIFROST_CHAINS_LTC_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS: "5"
       BIFROST_CHAINS_BASE_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS: "5"
+      BIFROST_CHAINS_XRP_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS: "5"
 
       # maintain historical gas behavior for hard-coded smoke test values
       BIFROST_CHAINS_ETH_BLOCK_SCANNER_MAX_GAS_LIMIT: 80000
@@ -193,6 +195,11 @@ services:
       # enable base
       BIFROST_CHAINS_BASE_DISABLED: "false"
       BIFROST_CHAINS_BASE_RPC_HOST: http://base:8545
+
+      # enable xrp
+      BIFROST_CHAINS_XRP_DISABLED: "false"
+      BIFROST_CHAINS_XRP_RPC_HOST: http://xrp:5005
+      BIFROST_CHAINS_XRP_CHAIN_NETWORK: "1234"
 
       # set fixed gas rate for evm chains
       BIFROST_CHAINS_ETH_BLOCK_SCANNER_FIXED_GAS_RATE: 20_000_000_000 # 20 gwei
@@ -502,6 +509,22 @@ services:
     volumes:
       - "../scripts:/docker/scripts"
     entrypoint: /docker/scripts/mock/start-eth.sh
+
+  # ------------------------------ xrp ------------------------------
+
+  xrp:
+    profiles:
+      - mocknet
+      - mocknet-cluster
+    image: xrpllabsofficial/xrpld:2.3.1
+    restart: unless-stopped
+    environment:
+      BLOCK_TIME: ${BLOCK_TIME:-5}
+    ports:
+      - 5005:5005
+    volumes:
+      - "../scripts:/docker/scripts"
+    entrypoint: /docker/scripts/xrp/start-xrp.sh
 
   # ------------------------------ binance-smart ------------------------------
 
