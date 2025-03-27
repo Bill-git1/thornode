@@ -33,15 +33,15 @@ params:
   asset: BTC.BTC
   amount: 5000000
 asserts:
-  - .expected_amount_deposit|tonumber == 4759341
+  - .expected_amount_deposit|tonumber == 4770146
   - .memo == "+:BTC/BTC"
   - .inbound_address == "{{ addr_btc_dog }}"
   - .recommended_min_amount_in == "10000"
-  - .fees.liquidity == "329539"
-  - .fees.outbound == "2100"
+  - .fees.liquidity == "334678"
+  - .fees.outbound == "2107"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
-  - .fees.slippage_bps == 647
-  - .fees.total_bps == 651
+  - .fees.slippage_bps == 655
+  - .fees.total_bps == 659
   - .recommended_gas_rate == "10"
   - .gas_rate_units == "satsperbyte"
 ---
@@ -72,7 +72,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
   - .|length == 1
-  - .[0].asset_deposit_value|tonumber == 4759341
+  - .[0].asset_deposit_value|tonumber == 4770146
 ---
 type: tx-mimir #lower synth
 key: MaxSynthPerPoolDepth
@@ -83,7 +83,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/supply
 asserts:
   - .supply|length == 2
-  - .supply[]|select(.denom == "btc/btc")|.amount|tonumber == 4763021
+  - .supply[]|select(.denom == "btc/btc")|.amount|tonumber == 4777728
 ---
 type: create-blocks
 count: 1
@@ -92,17 +92,17 @@ type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
   - .|length == 1
-  - .[0].asset_deposit_value|tonumber == 4759341
+  - .[0].asset_deposit_value|tonumber == 4770146
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC
 asserts:
-  - .savers_depth|tonumber == 4763033
+  - .savers_depth|tonumber == 4777740
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/saver/{{ addr_btc_pig }}
 asserts:
-  - .units|tonumber == 4759341
+  - .units|tonumber == 4770146
 ---
 type: create-blocks
 count: 1

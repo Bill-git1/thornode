@@ -125,7 +125,7 @@ asserts:
   - .memo == "$+:THOR.RUNE:{{ addr_thor_fox }}"
   - .inbound_address == "{{ addr_btc_dog }}"
   - .expected_amount_out|tonumber == 483376169
-  - .expected_collateral_deposited|tonumber == 495049
+  - .expected_collateral_deposited|tonumber == 495061
   - .expected_collateralization_ratio|tonumber == 10000
   - .expected_debt_issued|tonumber == 490140000
   - .streaming_swap_blocks|tonumber == 3
@@ -133,9 +133,9 @@ asserts:
   - .total_open_loan_seconds|tonumber == 618
   - .recommended_min_amount_in == "56000"
   - .fees.slippage_bps|tonumber == 145
-  - .fees.total_bps|tonumber == 188
+  - .fees.total_bps|tonumber == 189
   - .fees.outbound|tonumber == 2000000
-  - .fees.liquidity|tonumber == 7291890
+  - .fees.liquidity|tonumber == 7316084
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
   - .recommended_gas_rate == "10"
   - .gas_rate_units == "satsperbyte"
@@ -156,7 +156,7 @@ asserts:
   - .memo == "$+:THOR.RUNE:{{ addr_thor_fox }}:0:test:50"
   - .inbound_address == "{{ addr_btc_dog }}"
   - .expected_amount_out|tonumber == 481022567
-  - .expected_collateral_deposited|tonumber == 492598
+  - .expected_collateral_deposited|tonumber == 492610
   - .expected_collateralization_ratio|tonumber == 10000
   - .expected_debt_issued|tonumber == 487740000
   - .streaming_swap_blocks|tonumber == 3
@@ -164,9 +164,9 @@ asserts:
   - .total_open_loan_seconds|tonumber == 618
   - .recommended_min_amount_in == "56000"
   - .fees.slippage_bps|tonumber == 144
-  - .fees.total_bps|tonumber == 237
+  - .fees.total_bps|tonumber == 238
   - .fees.outbound|tonumber == 2000000
-  - .fees.liquidity|tonumber == 7220551
+  - .fees.liquidity|tonumber == 7244391
   - .fees.affiliate|tonumber == 2499904
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)+(.fees.affiliate|tonumber)
   - .recommended_gas_rate == "10"

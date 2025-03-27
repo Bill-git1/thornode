@@ -143,7 +143,7 @@
           "address": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
           "coins": [
             {
-              "amount": "469124529",
+              "amount": "469104905",
               "denom": "rune"
             }
           ]
@@ -170,7 +170,7 @@
           "address": "tthor1yqz8q00jlvn4r4hycvkg555ak7lxtxx6jwapqj",
           "coins": [
             {
-              "amount": "459822687",
+              "amount": "459803056",
               "denom": "rune"
             }
           ]
@@ -179,7 +179,7 @@
           "address": "tthor1x0kgm82cnj0vtmzdvz4avk3e7sj427t0al8wky",
           "coins": [
             {
-              "amount": "2968507",
+              "amount": "2968578",
               "denom": "thor.btc"
             }
           ]
@@ -188,7 +188,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "298452987435",
+              "amount": "298453020607",
               "denom": "rune"
             }
           ]
@@ -197,7 +197,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35000098423723",
+              "amount": "35000098411776",
               "denom": "rune"
             }
           ]
@@ -224,7 +224,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "4999997798116",
+              "amount": "4999997801987",
               "denom": "rune"
             }
           ]
@@ -238,11 +238,11 @@
       "send_enabled": [],
       "supply": [
         {
-          "amount": "50299942415455",
+          "amount": "50299942401296",
           "denom": "rune"
         },
         {
-          "amount": "2968507",
+          "amount": "2968578",
           "denom": "thor.btc"
         }
       ]
@@ -309,23 +309,23 @@
       ],
       "loan_total_collateral": [
         {
-          "amount": "2968507",
+          "amount": "2968578",
           "asset": "BTC.BTC"
         }
       ],
       "loans": [
         {
           "asset": "BTC.BTC",
-          "collateral_deposited": "990122",
+          "collateral_deposited": "990147",
           "collateral_withdrawn": "0",
-          "debt_issued": "975480000",
+          "debt_issued": "975470000",
           "debt_repaid": "0",
           "last_open_height": "4",
           "owner": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw"
         },
         {
           "asset": "BTC.BTC",
-          "collateral_deposited": "494415",
+          "collateral_deposited": "494427",
           "collateral_withdrawn": "0",
           "debt_issued": "470650000",
           "debt_repaid": "0",
@@ -334,18 +334,18 @@
         },
         {
           "asset": "BTC.BTC",
-          "collateral_deposited": "989528",
+          "collateral_deposited": "989551",
           "collateral_withdrawn": "0",
-          "debt_issued": "955880000",
+          "debt_issued": "955860000",
           "debt_repaid": "0",
           "last_open_height": "6",
           "owner": "bcrt1qqk8c8sfrmfm0tkncs0zxeutc8v5mx3pjw22g33"
         },
         {
           "asset": "BTC.BTC",
-          "collateral_deposited": "494442",
+          "collateral_deposited": "494453",
           "collateral_withdrawn": "0",
-          "debt_issued": "466130000",
+          "debt_issued": "466110000",
           "debt_repaid": "0",
           "last_open_height": "8",
           "owner": "bcrt1qyqz8q00jlvn4r4hycvkg555ak7lxtxx6wtflyl"
@@ -372,7 +372,7 @@
       "network": {
         "LPIncomeSplit": "9403",
         "NodeIncomeSplit": "597",
-        "bond_reward_rune": "1798116",
+        "bond_reward_rune": "1801987",
         "total_bond_units": "8"
       },
       "network_fees": [
@@ -419,13 +419,13 @@
       "orderbook_items": [],
       "outbound_fee_spent_rune": [
         {
-          "amount": "293121586",
+          "amount": "293121592",
           "asset": "ETH.ETH"
         }
       ],
       "outbound_fee_withheld_rune": [
         {
-          "amount": "390424088",
+          "amount": "390412146",
           "asset": "ETH.ETH"
         }
       ],
@@ -434,7 +434,7 @@
           "LP_units": "100000000000",
           "asset": "BTC.BTC",
           "balance_asset": "103000000",
-          "balance_rune": "97104636123",
+          "balance_rune": "97104666430",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -444,8 +444,8 @@
         {
           "LP_units": "100000000000",
           "asset": "ETH.ETH",
-          "balance_asset": "986797028",
-          "balance_rune": "101346611340",
+          "balance_asset": "986797014",
+          "balance_rune": "101346614206",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -456,7 +456,7 @@
           "LP_units": "100000000000",
           "asset": "ETH.USDC-0X9999999999999999999999999999999999999999",
           "balance_asset": "100000000000",
-          "balance_rune": "100001739972",
+          "balance_rune": "100001739971",
           "decimals": "6",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -466,8 +466,8 @@
         {
           "LP_units": "0",
           "asset": "THOR.BTC",
-          "balance_asset": "88909558",
-          "balance_rune": "84757525171",
+          "balance_asset": "88909547",
+          "balance_rune": "84753519317",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
           "status": "Available",
@@ -477,8 +477,8 @@
         {
           "LP_units": "0",
           "asset": "THOR.ETH",
-          "balance_asset": "892722377",
-          "balance_rune": "91684901059",
+          "balance_asset": "892722365",
+          "balance_rune": "91684903652",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
           "status": "Available",
@@ -488,8 +488,8 @@
         {
           "LP_units": "0",
           "asset": "THOR.TOR",
-          "balance_asset": "100466129999",
-          "balance_rune": "99539917285",
+          "balance_asset": "100466109999",
+          "balance_rune": "99539936915",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
           "status": "Available",
@@ -512,37 +512,37 @@
         {
           "address": "0xdd99304abf262d653e2eb6722d874c2b86efdcea",
           "reclaimed": "0",
-          "score": "2253100",
+          "score": "2263573",
           "spent": "0"
         },
         {
           "address": "0xe3c64974c78f5693bd2bc68b3221d58df5c6e877",
           "reclaimed": "0",
-          "score": "4662626",
+          "score": "4684797",
           "spent": "0"
         },
         {
           "address": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
           "reclaimed": "0",
-          "score": "4876680",
+          "score": "4900578",
           "spent": "0"
         },
         {
           "address": "bcrt1qp3pm60jxtqvr6zvlw97l2ef5rm6cn8nflwl5fa",
           "reclaimed": "0",
-          "score": "2488844",
+          "score": "2503675",
           "spent": "0"
         },
         {
           "address": "bcrt1qqk8c8sfrmfm0tkncs0zxeutc8v5mx3pjw22g33",
           "reclaimed": "0",
-          "score": "4901219",
+          "score": "4927591",
           "spent": "0"
         },
         {
           "address": "bcrt1qyqz8q00jlvn4r4hycvkg555ak7lxtxx6wtflyl",
           "reclaimed": "0",
-          "score": "2453035",
+          "score": "2467523",
           "spent": "0"
         },
         {
@@ -554,13 +554,13 @@
         {
           "address": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
           "reclaimed": "0",
-          "score": "1120358",
+          "score": "1120264",
           "spent": "0"
         },
         {
           "address": "tthor1yqz8q00jlvn4r4hycvkg555ak7lxtxx6jwapqj",
           "reclaimed": "0",
-          "score": "1076347",
+          "score": "1076255",
           "spent": "0"
         }
       ],
@@ -587,7 +587,7 @@
               "decimals": "8"
             },
             {
-              "amount": "986797028",
+              "amount": "986797014",
               "asset": "ETH.ETH",
               "decimals": "8"
             },

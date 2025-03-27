@@ -23,13 +23,13 @@ params:
   amount: 10000000
 asserts:
   - .inbound_address == "{{ addr_btc_dog }}"
-  - .expected_amount_deposit|tonumber == 9074019
+  - .expected_amount_deposit|tonumber == 9149338
   - .dust_threshold|tonumber == 10000
-  - .fees.liquidity|tonumber == 1167318
-  - .fees.outbound|tonumber == 2200
-  - .fees.slippage_bps|tonumber == 1139
-  - .fees.total|tonumber == 1169518
-  - .fees.total_bps|tonumber == 1141
+  - .fees.liquidity|tonumber == 1201394
+  - .fees.outbound|tonumber == 2227
+  - .fees.slippage_bps|tonumber == 1160
+  - .fees.total|tonumber == 1203621
+  - .fees.total_bps|tonumber == 1162
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
 ---
 ########################################################################################
@@ -53,12 +53,12 @@ params:
   amount: 10000000
 asserts:
   - .inbound_address == "{{ addr_btc_dog }}"
-  - .expected_amount_deposit|tonumber == 9924870
+  - .expected_amount_deposit|tonumber == 9925103
   - .dust_threshold|tonumber == 10000
-  - .fees.liquidity|tonumber == 98880
+  - .fees.liquidity|tonumber == 99120
   - .fees.outbound|tonumber == 2010
   - .fees.slippage_bps|tonumber == 98
-  - .fees.total|tonumber == 100890
+  - .fees.total|tonumber == 101130
   - .fees.total_bps|tonumber == 100
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
 ---
@@ -92,7 +92,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
   - .|length == 1
-  - .[0].asset_deposit_value|tonumber == 9923757
+  - .[0].asset_deposit_value|tonumber == 9923995
 ---
 ########################################################################################
 # streaming savers withdraw (quote)
@@ -107,11 +107,11 @@ asserts:
   - .inbound_address == "{{ addr_btc_dog }}"
   - .dust_amount|tonumber == 20000
   - .dust_threshold|tonumber == 10000
-  - .expected_amount_out|tonumber == 9786568
-  - .fees.liquidity|tonumber == 98244
+  - .expected_amount_out|tonumber == 9787144
+  - .fees.liquidity|tonumber == 98730
   - .fees.outbound|tonumber == 14000
   - .fees.slippage_bps|tonumber == 99
-  - .fees.total|tonumber == 112244
+  - .fees.total|tonumber == 112730
   - .fees.total_bps|tonumber == 113
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
 ---
@@ -369,7 +369,7 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/saver/{{ addr_btc_fish }}
 asserts:
-  - .units == "${SAVER_UNITS=148736}" # Successful Savers add for the Affiliate BTC address.
+  - .units == "${SAVER_UNITS=148739}" # Successful Savers add for the Affiliate BTC address.
 ---
 ###########################################################################
 type: tx-observed-in

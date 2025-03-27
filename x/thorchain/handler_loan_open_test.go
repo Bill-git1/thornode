@@ -131,8 +131,8 @@ func (s *HandlerLoanSuite) TestLoanOpenHandleToBTC(c *C) {
 
 	loan, err := mgr.Keeper().GetLoan(ctx, common.BTCAsset, owner)
 	c.Assert(err, IsNil)
-	c.Check(loan.DebtIssued.Uint64(), Equals, uint64(1654721160000), Commentf("%d", loan.DebtIssued.Uint64()))
-	c.Check(loan.CollateralDeposited.Uint64(), Equals, uint64(99761992), Commentf("%d", loan.CollateralDeposited.Uint64()))
+	c.Check(loan.DebtIssued.Uint64(), Equals, uint64(16_547_21150000), Commentf("%d", loan.DebtIssued.Uint64()))
+	c.Check(loan.CollateralDeposited.Uint64(), Equals, uint64(99762133), Commentf("%d", loan.CollateralDeposited.Uint64()))
 	c.Check(loan.LastOpenHeight, Equals, int64(128), Commentf("%d", loan.LastOpenHeight))
 
 	items, err := mgr.TxOutStore().GetOutboundItems(ctx)
@@ -140,12 +140,12 @@ func (s *HandlerLoanSuite) TestLoanOpenHandleToBTC(c *C) {
 	c.Assert(items, HasLen, 1)
 	item := items[0]
 	c.Check(item.Coin.Asset.Equals(common.BTCAsset), Equals, true)
-	c.Check(item.Coin.Amount.Uint64(), Equals, uint64(97593068), Commentf("%d", item.Coin.Amount.Uint64()))
+	c.Check(item.Coin.Amount.Uint64(), Equals, uint64(97593206), Commentf("%d", item.Coin.Amount.Uint64()))
 	c.Check(item.ToAddress.String(), Equals, "bcrt1qdn665723epwlg8u2mk7rg4yp7n72mzwqzuv9ye")
 
 	totalCollateral, err := mgr.Keeper().GetTotalCollateral(ctx, common.BTCAsset)
 	c.Assert(err, IsNil)
-	c.Check(totalCollateral.Uint64(), Equals, uint64(99761992))
+	c.Check(totalCollateral.Uint64(), Equals, uint64(99762133), Commentf("%d", totalCollateral.Uint64()))
 }
 
 func (s *HandlerLoanSuite) TestLoanOpenHandleToTOR(c *C) {
@@ -202,19 +202,19 @@ func (s *HandlerLoanSuite) TestLoanOpenHandleToTOR(c *C) {
 
 	loan, err := mgr.Keeper().GetLoan(ctx, common.BTCAsset, owner)
 	c.Assert(err, IsNil)
-	c.Check(loan.DebtIssued.Uint64(), Equals, uint64(1654721160000), Commentf("%d", loan.DebtIssued.Uint64()))
-	c.Check(loan.CollateralDeposited.Uint64(), Equals, uint64(99761992), Commentf("%d", loan.CollateralDeposited.Uint64()))
+	c.Check(loan.DebtIssued.Uint64(), Equals, uint64(165_47_21150000), Commentf("%d", loan.DebtIssued.Uint64()))
+	c.Check(loan.CollateralDeposited.Uint64(), Equals, uint64(99762133), Commentf("%d", loan.CollateralDeposited.Uint64()))
 	c.Check(loan.LastOpenHeight, Equals, int64(128), Commentf("%d", loan.LastOpenHeight))
 
 	outs, err := mgr.txOutStore.GetOutboundItems(ctx)
 	c.Assert(err, IsNil)
 	c.Assert(outs, HasLen, 1, Commentf("Len %d", len(outs)))
 	c.Check(outs[0].Coin.Asset.Equals(common.TOR), Equals, true)
-	c.Check(outs[0].Coin.Amount.Uint64(), Equals, uint64(1654721160000), Commentf("%d", outs[0].Coin.Amount.Uint64()))
+	c.Check(outs[0].Coin.Amount.Uint64(), Equals, uint64(16_547_21150000), Commentf("%d", outs[0].Coin.Amount.Uint64()))
 
 	totalCollateral, err := mgr.Keeper().GetTotalCollateral(ctx, common.BTCAsset)
 	c.Assert(err, IsNil)
-	c.Check(totalCollateral.Uint64(), Equals, uint64(99761992))
+	c.Check(totalCollateral.Uint64(), Equals, uint64(99762133), Commentf("%d", totalCollateral.Uint64()))
 }
 
 // ensure the when the swap to derived asset fails, it causes a refund

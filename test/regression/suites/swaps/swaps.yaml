@@ -58,8 +58,9 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
-  - .|length == 1
-  - .[0]|.in_hash == "{{ native_txid -1 }}"
+  - length == 1
+  - .[0].in_hash == "{{ native_txid -1 }}"
+  - .[0].coin.amount == "${OUT_AMOUNT=8998476}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -70,7 +71,7 @@ txs:
     from_address: {{ addr_btc_dog }}
     to_address: {{ addr_btc_fox }}
     coins:
-      - amount: "8998477"
+      - amount: "${OUT_AMOUNT}"
         asset: "BTC.BTC"
         decimals: 8
     gas:
@@ -118,9 +119,9 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
-  - .|length == 1
+  - length == 1
   - .[0].in_hash == "{{ observe_txid 3 }}"
-  - .[0].coin.amount == "${OUT_AMOUNT=43749725}"
+  - .[0].coin.amount == "${OUT_AMOUNT=43747026}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}

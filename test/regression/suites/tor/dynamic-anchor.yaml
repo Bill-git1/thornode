@@ -102,8 +102,8 @@ type: check
 endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
   - .derived_depth_bps|tonumber == 8913
-  - .balance_asset|tonumber == 271723169098 # median still ~1:1
-  - .balance_rune|tonumber == 271724797579
+  - .balance_asset|tonumber == 271721142140 # median still ~1:1
+  - .balance_rune|tonumber == 271722770609
 ---
 ########################################################################################
 # swap to USDY should reduce depth
@@ -132,8 +132,8 @@ type: check
 endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
   - .derived_depth_bps|tonumber == 7853
-  - .balance_asset|tonumber == 221717424492 # price shift with affected median
-  - .balance_rune|tonumber == 243219374104
+  - .balance_asset|tonumber == 221719650611 # price shift with affected median
+  - .balance_rune|tonumber == 243215785107
 ---
 ########################################################################################
 # enable the dynamic anchor to target 95% and compute every block
@@ -224,11 +224,11 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 5
-  - .[0].coin.amount == "${OUTPUT_AMOUNTS=4418746600}"
-  - .[1].coin.amount == "${OUTPUT_AMOUNTS=4418746600}"
-  - .[2].coin.amount == "${OUTPUT_AMOUNTS=4418746600}"
-  - .[3].coin.amount == "${OUTPUT_AMOUNT_4=4045952900}"
-  - .[4].coin.amount == "${OUTPUT_AMOUNT_5=4045960700}"
+  - .[0].coin.amount == "${OUTPUT_AMOUNTS=4418469500}"
+  - .[1].coin.amount == "${OUTPUT_AMOUNTS=4418469500}"
+  - .[2].coin.amount == "${OUTPUT_AMOUNTS=4418469500}"
+  - .[3].coin.amount == "${OUTPUT_AMOUNT_4=4045813200}"
+  - .[4].coin.amount == "${OUTPUT_AMOUNT_5=4045821800}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}

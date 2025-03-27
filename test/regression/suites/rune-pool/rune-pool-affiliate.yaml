@@ -78,7 +78,7 @@ memo: "=:BTC/BTC"
 type: tx-deposit
 signer: {{ addr_thor_cat }}
 coins:
-  - amount: "100000000000"
+  - amount: "50000000000" # If too high, will hit MaxSynthPerPoolDepth capacity limit.
     asset: "rune"
 memo: "=:BTC/BTC"
 ---
@@ -88,13 +88,13 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/runepool
 asserts:
-  - .pol.current_deposit|tonumber == ${POL_DEPOSIT=1975087566}
-  - .pol.rune_deposited|tonumber == ${POL_DEPOSIT}
-  - .pol.rune_withdrawn|tonumber == 0
-  - .pol.pnl|tonumber == ${POL_PNL=-2911570}
-  - .reserve.units|tonumber == ${POL_DEPOSIT}
-  - .reserve.current_deposit|tonumber == ${POL_DEPOSIT}
-  - .reserve.pnl|tonumber == ${POL_PNL}
+  - .pol.current_deposit == "${POL_DEPOSIT=1719644313}"
+  - .pol.rune_deposited == "${POL_DEPOSIT}"
+  - .pol.rune_withdrawn == "0"
+  - .pol.pnl == "${POL_PNL=-2534941}"
+  - .reserve.units == "${POL_DEPOSIT}"
+  - .reserve.current_deposit == "${POL_DEPOSIT}"
+  - .reserve.pnl == "${POL_PNL}"
   - 'all(.providers|.[]; . == "0")'
 ---
 ########################################################################################
@@ -106,14 +106,14 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/runepool
 asserts:
-  - .pol.current_deposit|tonumber == ${POL_DEPOSIT}
-  - .pol.rune_deposited|tonumber == ${POL_DEPOSIT}
-  - .pol.rune_withdrawn|tonumber == 0
-  - .pol.value|tonumber == ${POL_VALUE=1972175996}
-  - .pol.pnl|tonumber == ${POL_PNL}
-  - .reserve.units|tonumber == ${POL_DEPOSIT}
-  - .providers.units|tonumber == 0
-  - .providers.pending_units|tonumber == 0
+  - .pol.current_deposit == "${POL_DEPOSIT}"
+  - .pol.rune_deposited == "${POL_DEPOSIT}"
+  - .pol.rune_withdrawn == "0"
+  - .pol.value == "${POL_VALUE=1717109372}"
+  - .pol.pnl == "${POL_PNL}"
+  - .reserve.units == "${POL_DEPOSIT}"
+  - .providers.units == "0"
+  - .providers.pending_units == "0"
   - 'all(.providers[]; . == "0")'
 ---
 ########################################################################################
@@ -135,9 +135,9 @@ asserts:
   - .rune_address == "{{ addr_thor_fox }}"
   - .deposit_amount == "${POL_VALUE}"
   - .last_deposit_height == 5
-  - .units|tonumber == ${POL_DEPOSIT}
-  - .value|tonumber == ${POL_VALUE}
-  - .pnl|tonumber == 0 # provider entered after loss incurred
+  - .units == "${POL_DEPOSIT}"
+  - .value == "${POL_VALUE}"
+  - .pnl == "0" # provider entered after loss incurred
 ---
 ########################################################################################
 # Withdraw with 0 pnl, affiliate should not receive fee
@@ -145,7 +145,7 @@ asserts:
 type: check # Check pooler balance before withdraw
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
 asserts:
-  - .result[] | select(.denom == "rune")|.amount|tonumber == ${POOLER_INITIAL_BALANCE=2298023824004}
+  - .result[] | select(.denom == "rune").amount == "${POOLER_INITIAL_BALANCE=2298278890628}"
 ---
 type: check # Check affiliate balance before withdraw
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
@@ -201,17 +201,17 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/runepool
 asserts:
-  - .pol.rune_withdrawn|tonumber == ${POL_WITHDRAWN=1699405034}
+  - .pol.rune_withdrawn == "${POL_WITHDRAWN=1574544839}"
   - .pol.current_deposit|tonumber == ${POL_DEPOSIT} - ${POL_WITHDRAWN}
-  - .pol.rune_deposited|tonumber == ${POL_DEPOSIT}
-  - .pol.value|tonumber == 898821088
-  - .pol.pnl|tonumber == ${POL_PNL=623138556}
-  - .providers.pnl|tonumber == ${PROVIDERS_PNL=313001704}
+  - .pol.rune_deposited == "${POL_DEPOSIT}"
+  - .pol.value == "832782216"
+  - .pol.pnl == "${POL_PNL=687682742}"
+  - .providers.pnl == "${PROVIDERS_PNL=345087294}"
   - .reserve.pnl|tonumber + ${PROVIDERS_PNL} == ${POL_PNL}
-  - .reserve.units|tonumber == 0
-  - .reserve.value|tonumber == 0
-  - .providers.units|tonumber == 987543783
-  - .providers.pending_units|tonumber == 304276741
+  - .reserve.units == "0"
+  - .reserve.value == "0"
+  - .providers.units == "859822157"
+  - .providers.pending_units == "264923829"
   - (.providers.value|tonumber) > (.pol.value|tonumber)
   # Because the .pol.value value is 0 and so the .providers.value is the .pol.value plus the undeposited RUNEPool balance.
 ---
@@ -221,7 +221,7 @@ asserts:
 type: check # Check pooler balance before withdraw
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
 asserts:
-  - .result[] | select(.denom == "rune")|.amount|tonumber == ${POOLER_INITIAL_BALANCE=2299007912002}
+  - .result[] | select(.denom == "rune").amount == "${POOLER_INITIAL_BALANCE=2299135445314}"
 ---
 type: check # Check affiliate balance before withdraw
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}

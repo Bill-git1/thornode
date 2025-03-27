@@ -120,7 +120,7 @@ count: 1
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/supply
 asserts:
-  - .supply[]|select(.denom == "eth/usdc-0x9999999999999999999999999999999999999999")|.amount|tonumber == 990123631
+  - .supply[]|select(.denom == "eth/usdc-0x9999999999999999999999999999999999999999")|.amount|tonumber == 990256389
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/pool/ETH.USDC-0X9999999999999999999999999999999999999999/savers
@@ -161,8 +161,9 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
-  - .|length == 1
+  - length == 1
   - .[0].memo == "OUT:{{ observe_txid 4 }}"
+  - .[0].coin.amount == "${OUT_AMOUNT=842789200}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -173,7 +174,7 @@ txs:
       from_address: {{ addr_eth_dog }}
       to_address: {{ addr_eth_pig }}
       coins:
-        - amount: "842633900"
+        - amount: "${OUT_AMOUNT}"
           asset: "ETH.USDC-0X9999999999999999999999999999999999999999"
       gas:
         - amount: "960000"

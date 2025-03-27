@@ -436,7 +436,7 @@ func (s *HandlerSwapSuite) TestHandleStreamingSwap(c *C) {
 	swp, err = mgr.Keeper().GetStreamingSwap(ctx, txID)
 	c.Assert(err, IsNil)
 	c.Check(swp.In.String(), Equals, "1415600000")
-	c.Check(swp.Out.String(), Equals, "1163002364")
+	c.Check(swp.Out.String(), Equals, "1165237487")
 
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 1)
 	_, err = handler.handle(ctx, *msg)
@@ -444,7 +444,7 @@ func (s *HandlerSwapSuite) TestHandleStreamingSwap(c *C) {
 	swp, err = mgr.Keeper().GetStreamingSwap(ctx, txID)
 	c.Assert(err, IsNil)
 	c.Check(swp.In.String(), Equals, "2123400000")
-	c.Check(swp.Out.String(), Equals, "1648810932")
+	c.Check(swp.Out.String(), Equals, "1654583341")
 
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 1)
 	_, err = handler.handle(ctx, *msg)
@@ -452,7 +452,7 @@ func (s *HandlerSwapSuite) TestHandleStreamingSwap(c *C) {
 	swp, err = mgr.Keeper().GetStreamingSwap(ctx, txID)
 	c.Assert(err, IsNil)
 	c.Check(swp.In.String(), Equals, "2123400000")
-	c.Check(swp.Out.String(), Equals, "1648810932")
+	c.Check(swp.Out.String(), Equals, "1654583341")
 }
 
 func (s *HandlerSwapSuite) TestSwapSynthERC20(c *C) {

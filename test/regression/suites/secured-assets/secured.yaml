@@ -142,7 +142,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/securedasset/BTC-BTC
 asserts:
   - .asset == "BTC-BTC"
-  - .supply|tonumber == ${REMAINING_UNITS=9520519}
+  - .supply|tonumber == ${REMAINING_UNITS=9520492}
   - .depth|tonumber == ${REMAINING_UNITS}
 ---
 type: check
@@ -150,11 +150,11 @@ endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 2
   - .balances[0].denom == "btc-btc"
-  - .balances[0].amount|tonumber == ${REMAINING_UNITS}
+  - .balances[0].amount == "${REMAINING_UNITS}"
   # Prepare the withdraw amount (~2/3rds of remaining units, leaving a round number).
   - ${REMAINING_UNITS} * (1/3) | log10 | floor | pow(10;.) == ${DIGITS=1000000}
   - ${REMAINING_UNITS} * (1/3) / ${DIGITS} | floor * ${DIGITS} == ${NEW_REMAINING_UNITS=3000000}
-  - ${REMAINING_UNITS} - ${NEW_REMAINING_UNITS} == ${WITHDRAW_AMOUNT=6520519}
+  - ${REMAINING_UNITS} - ${NEW_REMAINING_UNITS} == ${WITHDRAW_AMOUNT=6520492}
 ---
 ########################################################################################
 # withdraw btc
@@ -201,8 +201,8 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ native_txid -1 }}"
-  -  ${WITHDRAW_AMOUNT} - ${OUT_FEE} == ${OUT_AMOUNT=6506519}
-  - .[0].coin.amount == "${OUT_AMOUNT}"
+  - .[0].coin.amount == "${OUT_AMOUNT=6506492}"
+  -  ${WITHDRAW_AMOUNT} - ${OUT_FEE} == ${OUT_AMOUNT}
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -259,8 +259,8 @@ type: check
 endpoint: http://localhost:1317/thorchain/securedasset/BTC-BTC
 asserts:
   - .asset == "BTC-BTC"
-  - .supply|tonumber == 0
-  - .depth|tonumber == 0
+  - .supply == "0"
+  - .depth == "0"
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}

@@ -50,10 +50,30 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .end_block_events[4].type == "transfer" and .end_block_events[4].amount == "2000000rune" # 0.02 RUNE network fee from Asgard to Reserve
-  - .end_block_events[8].type == "transfer" and .end_block_events[8].amount == "4533171552rune" # Proceeds of 0.05 BTC swap to 45.3 RUNE
-  - .end_block_events[13].type == "transfer" and .end_block_events[13].amount == "7798258rune" # 0.077 RUNE system income to pools
-  - .end_block_events[17].type == "transfer" and .end_block_events[17].amount == "8908101rune" # 0.089 RUNE system income to nodes
+  - .|[..|select(.type?=="transfer")] | length == 5
+  ##
+  - .|[..|select(.type?=="transfer")][0].sender == "{{ addr_module_asgard }}"
+  - .|[..|select(.type?=="transfer")][0].recipient == "{{ addr_module_reserve }}"
+  - .|[..|select(.type?=="transfer")][0].amount == "${LIQFEE=226758577}rune" # 2.27 RUNE liquidity fee from pools to Reserve
+  ##
+  - .|[..|select(.type?=="transfer")][1].sender == "{{ addr_module_asgard }}"
+  - .|[..|select(.type?=="transfer")][1].recipient == "{{ addr_module_reserve }}"
+  - .|[..|select(.type?=="transfer")][1].amount == "2000000rune" # 0.02 RUNE native outbound fee from pools to Reserve
+  ##
+  - .|[..|select(.type?=="transfer")][2].sender == "{{ addr_module_asgard }}"
+  - .|[..|select(.type?=="transfer")][2].recipient == "{{ addr_thor_fox }}"
+  - .|[..|select(.type?=="transfer")][2].amount == "4533171552rune" # Proceeds of 0.05 BTC swap to 45.33 RUNE
+  ##
+  - .|[..|select(.type?=="transfer")][3].sender == "{{ addr_module_reserve }}"
+  - .|[..|select(.type?=="transfer")][3].recipient == "{{ addr_module_asgard }}"
+  - .|[..|select(.type?=="transfer")][3].amount == "${POOLS_REWARD=218970660}rune" # 2.19 RUNE rewards from system income (back) to pools
+  ##
+  - .|[..|select(.type?=="transfer")][4].sender == "{{ addr_module_reserve }}"
+  - .|[..|select(.type?=="transfer")][4].recipient == "{{ addr_module_bond }}"
+  - .|[..|select(.type?=="transfer")][4].amount == "${BOND_REWARD=8897767}rune" # 0.089 RUNE reward from system income to nodes
+  ##
+  - ${POOLS_REWARD} + ${BOND_REWARD} - ${LIQFEE} == ${BLOCK_REWARD_EMISSION_1=1109850} # 0.011 RUNE block reward from the Reserve's balance.
+  - .. | select(.type? == "rewards") | [.[] | tonumber?] | add - ${LIQFEE} == ${BLOCK_REWARD_EMISSION_1}
 ---
 ########################################################################################
 # enabled ${INCOME_BURN_BPS=1} bps system burn income & ${DEV_FUND_BPS=500} bps dev fund allocation, then swap
@@ -76,12 +96,12 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .. | select(.type? == "rewards") | [.[] | tonumber?] | add == ${BLOCK_REWARD_EMISSION=1109843}
+  - .. | select(.type? == "rewards") | [.[] | tonumber?] | add == ${BLOCK_REWARD_EMISSION_2=1109843} # Slightly different block reward (from rounding?).
   - .|[.. | select(.type? == "swap").liquidity_fee_in_rune | tonumber] | add // 0 | . == ${LIQFEES=0}
   - .. | select(.type? == "rewards").dev_fund_reward == "${DEV_ALLO=55492}"
-  - 10000 * ${DEV_ALLO} / (${LIQFEES} + ${BLOCK_REWARD_EMISSION}) | round == ${DEV_FUND_BPS}
+  - 10000 * ${DEV_ALLO} / (${LIQFEES} + ${BLOCK_REWARD_EMISSION_2}) | round == ${DEV_FUND_BPS}
   - .. | select(.type? == "rewards").income_burn == "${RUNE_BURNT=111}"
-  - 10000 * ${RUNE_BURNT} / (${LIQFEES} + ${BLOCK_REWARD_EMISSION}) | round == ${INCOME_BURN_BPS}
+  - 10000 * ${RUNE_BURNT} / (${LIQFEES} + ${BLOCK_REWARD_EMISSION_2}) | round == ${INCOME_BURN_BPS}
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -107,21 +127,50 @@ type: create-blocks
 count: 1
 ---
 type: check
+endpoint: http://localhost:1317/thorchain/constants
+asserts:
+  - .string_values.DevFundAddress == "${DEV_ADDR=tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u}"
+---
+type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .end_block_events[4].type == "transfer" and .end_block_events[4].amount == "2000000rune" # 0.02 RUNE network fee from Asgard to Reserve
-  - .end_block_events[8].type == "transfer" and .end_block_events[8].amount == "493042454rune" # Proceeds of 0.05 ETH to 4.93 RUNE swap
-  - .end_block_events[13].type == "transfer" and .end_block_events[13].amount == "${DEV_ALLO=179253}rune" # 0.001 RUNE to dev fund
-  - .end_block_events[17].type == "transfer" and .end_block_events[17].amount == "${RUNE_BURNT=359}rune" # Roughly the same as DEV_ALLO / 500
-  - .end_block_events[20].type == "burn" and .end_block_events[20].amount == "${RUNE_BURNT}rune" # RUNE burnt from supply
-  - .end_block_events[24].type == "transfer" and .end_block_events[24].amount == "797443rune" # system income to pools
-  - .end_block_events[28].type == "transfer" and .end_block_events[28].amount == "132788rune" # system income to nodes
-  - .end_block_events[30].type == "rewards" and .end_block_events[30].dev_fund_reward == "${DEV_ALLO}" and .end_block_events[30].income_burn # system income to nodes
-  - .. | select(.type? == "rewards") | [.[] | tonumber?] | add == ${BLOCK_REWARD_EMISSION} # Same block reward emission.
-  - .|[.. | select(.type? == "swap").liquidity_fee_in_rune | tonumber] | add // 0 | . == ${LIQFEES=2475212}
-  - 10000 * ${DEV_ALLO} / (${LIQFEES} + ${BLOCK_REWARD_EMISSION}) | round == ${DEV_FUND_BPS}
-  - 10000 * ${RUNE_BURNT} / (${LIQFEES} + ${BLOCK_REWARD_EMISSION}) | round == ${INCOME_BURN_BPS}
-  - .. | select(.type? == "rewards")["ETH.ETH"] | tonumber > 0 # Still a net transfer to the Pool Module.
+  - .|[..|select(.type?=="transfer")] | length == 7
+  ##
+  - .|[..|select(.type?=="transfer")][0].sender == "{{ addr_module_asgard }}"
+  - .|[..|select(.type?=="transfer")][0].recipient == "{{ addr_module_reserve }}"
+  - .|[..|select(.type?=="transfer")][0].amount == "${LIQFEE=2475212}rune" # 0.025 RUNE liquidity fee from pools to Reserve
+  ##
+  - .|[..|select(.type?=="transfer")][1].sender == "{{ addr_module_asgard }}"
+  - .|[..|select(.type?=="transfer")][1].recipient == "{{ addr_module_reserve }}"
+  - .|[..|select(.type?=="transfer")][1].amount == "2000000rune" # 0.02 RUNE native outbound fee from pools to Reserve
+  ##
+  - .|[..|select(.type?=="transfer")][2].sender == "{{ addr_module_asgard }}"
+  - .|[..|select(.type?=="transfer")][2].recipient == "{{ addr_thor_fox }}"
+  - .|[..|select(.type?=="transfer")][2].amount == "493042454rune" # Proceeds of 0.05 ETH swap to 4.93 RUNE
+  ##
+  - .|[..|select(.type?=="transfer")][3].sender == "{{ addr_module_reserve }}"
+  - .|[..|select(.type?=="transfer")][3].recipient == "${DEV_ADDR}"
+  - .|[..|select(.type?=="transfer")][3].amount == "${DEV_ALLO=179253}rune" # Dev fund
+  ##
+  - .|[..|select(.type?=="transfer")][4].sender == "{{ addr_module_reserve }}"
+  - .|[..|select(.type?=="transfer")][4].recipient == "{{ addr_module_thorchain }}"
+  - .|[..|select(.type?=="transfer")][4].amount == "${RUNE_BURNT=359}rune" # Income burn
+  ##
+  - .|[..|select(.type?=="transfer")][5].sender == "{{ addr_module_reserve }}"
+  - .|[..|select(.type?=="transfer")][5].recipient == "{{ addr_module_asgard }}"
+  - .|[..|select(.type?=="transfer")][5].amount == "${POOLS_REWARD=3272657}rune" # 0.033 RUNE rewards from system income (back) to pools
+  ##
+  - .|[..|select(.type?=="transfer")][6].sender == "{{ addr_module_reserve }}"
+  - .|[..|select(.type?=="transfer")][6].recipient == "{{ addr_module_bond }}"
+  - .|[..|select(.type?=="transfer")][6].amount == "${BOND_REWARD=132786}rune" # 0.0013 Bond reward from system income
+  ##
+  - ${POOLS_REWARD} + ${BOND_REWARD} + ${DEV_ALLO} + ${RUNE_BURNT} - ${LIQFEE} == ${BLOCK_REWARD_EMISSION_2} # Same 0.011 RUNE block reward from the Reserve's balance.
+  - .. | select(.type? == "rewards") | [.[] | tonumber?] | add - ${LIQFEE} == ${BLOCK_REWARD_EMISSION_2}
+  ##
+  - ..|select(.type? == "rewards")["ETH.ETH"]|tonumber > ${LIQFEE} # Still a net transfer of RUNE in the direction of the Pool Module in this block.
+  ##
+  - .|[..|select(.type?=="burn")] | length == 1
+  - ..|select(.type?=="burn").amount == "${RUNE_BURNT}rune"
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
@@ -162,10 +211,10 @@ type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .|[.. | select(.type? == "swap").liquidity_fee_in_rune | tonumber] | add // 0 | . == ${LIQFEES=223505325}
-  - .. | select(.type? == "rewards") | [.[] | tonumber?] | add == ${BLOCK_REWARD_EMISSION} # Same block reward emission.
-  - .. | select(.type? == "rewards").dev_fund_reward == "${DEV_ALLO=11230758}"
-  - 10000 * ${DEV_ALLO} / (${LIQFEES} + ${BLOCK_REWARD_EMISSION}) | round == ${DEV_FUND_BPS}
+  - .. | select(.type? == "rewards") | [.[] | tonumber?] | add - ${LIQFEES} == ${BLOCK_REWARD_EMISSION_1} # Same block reward emission.
+  - .. | select(.type? == "rewards").dev_fund_reward == "${DEV_ALLO=11230759}"
+  - 10000 * ${DEV_ALLO} / (${LIQFEES} + ${BLOCK_REWARD_EMISSION_1}) | round == ${DEV_FUND_BPS}
   - .. | select(.type? == "rewards").income_burn == "${RUNE_BURNT=22462}"
-  - 10000 * ${RUNE_BURNT} / (${LIQFEES} + ${BLOCK_REWARD_EMISSION}) | round == ${INCOME_BURN_BPS}
-  - .. | select(.type? == "rewards")["ETH.ETH"] | tonumber < 0 # Liquidity fees here large enough for the Pool Module to send some to the rest of the network.
+  - 10000 * ${RUNE_BURNT} / (${LIQFEES} + ${BLOCK_REWARD_EMISSION_1}) | round == ${INCOME_BURN_BPS}
+  - .. | select(.type? == "rewards")["ETH.ETH"] | tonumber < ${LIQFEES} # Liquidity fees here large enough for the Pool Module to send some to the rest of the network.
   

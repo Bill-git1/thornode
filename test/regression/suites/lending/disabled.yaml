@@ -683,12 +683,13 @@ endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
 asserts:
   - .|length == 1
   - .[0].debt_repaid|tonumber == 494989518
-  - .[0].collateral_withdrawn|tonumber == 495050
+  - .[0].collateral_withdrawn|tonumber == 495062
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
-  - .|length == 1
+  - length == 1
+  - .[0].coin.amount == "${OUT_AMOUNT=471312}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -699,7 +700,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "471301"
+        - amount: "${OUT_AMOUNT}"
           asset: "BTC.BTC"
           decimals: 8
       gas:

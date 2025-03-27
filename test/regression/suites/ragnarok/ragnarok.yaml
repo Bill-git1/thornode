@@ -271,7 +271,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 2
-  - .balances[]|select(.denom=="eth/eth")|.amount|tonumber == 47127015
+  - .balances[]|select(.denom=="eth/eth")|.amount|tonumber == 47122024
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_cat }}
@@ -423,10 +423,17 @@ signer: {{ addr_thor_dog }}
 ########################################################################################
 # non streaming synth exit is allowed
 ########################################################################################
+# non streaming exit should have processed
+type: check
+endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
+asserts:
+  - .|[.balances[]|select(.denom=="eth/eth")] | length == 1
+  - .balances[]|select(.denom=="eth/eth").amount == "${FOX_SYNTH=47122024}"
+---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
 coins:
-  - amount: "46216908"
+  - amount: "${FOX_SYNTH}"
     asset: "eth/eth"
 memo: "=:ETH.ETH:{{ addr_eth_fox }}"
 ---
@@ -467,10 +474,14 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 5
-  - .[0].coin.amount == "${OUTPUT_AMOUNT_1=8838815}"
-  - .[1].coin.amount == "${OUTPUT_AMOUNT_2=8774453}"
-  - .[2].coin.amount == "${OUTPUT_AMOUNT_3=30917273}"
-  - .[3].coin.amount == "${OUTPUT_AMOUNT_4=8643424}"
+  - .[0].coin.amount == "${OUTPUT_AMOUNT_1=8898578}"
+  - .[0].in_hash == "${IN_HASH_1=59F3B49705FEE999EE4B944FB3ABD8458FE284A98BAF17A9A5136E64DB5BA81A}"
+  - .[1].coin.amount == "${OUTPUT_AMOUNT_2=8836985}"
+  - .[1].in_hash == "${IN_HASH_2=03BA38020AF6B8AB2CB571104F6B6B04F3947588A707C26B5A63E1253A6A88EA}"
+  - .[2].coin.amount == "${OUTPUT_AMOUNT_3=31784670}"
+  - .[2].in_hash == "${IN_HASH_3=763237E360553D59A8E428A5F34D1273AE53905098B37620B7FF1BD65323C3EB}"
+  - .[3].coin.amount == "${OUTPUT_AMOUNT_4=8709396}"
+  - .[3].in_hash == "${IN_HASH_4=E91556161E52FC55FF96F9D3E520C1CA4716C6578D2AF3E498F8A3C3CFEDDECC}"
 ---
 # observe outbounds for saver withdrawals and the synth swap
 type: tx-observed-out
@@ -488,7 +499,7 @@ txs:
       gas:
         - amount: "15000"
           asset: "ETH.ETH"
-      memo: "OUT:59F3B49705FEE999EE4B944FB3ABD8458FE284A98BAF17A9A5136E64DB5BA81A"
+      memo: "OUT:${IN_HASH_1}"
     block_height: 2
     finalise_height: 2
     observed_pub_key: {{ pubkey_dog }}
@@ -504,7 +515,7 @@ txs:
       gas:
         - amount: "15000"
           asset: "ETH.ETH"
-      memo: "OUT:03BA38020AF6B8AB2CB571104F6B6B04F3947588A707C26B5A63E1253A6A88EA"
+      memo: "OUT:${IN_HASH_2}"
     block_height: 2
     finalise_height: 2
     observed_pub_key: {{ pubkey_dog }}
@@ -520,7 +531,7 @@ txs:
       gas:
         - amount: "15000"
           asset: "ETH.ETH"
-      memo: "OUT:E91556161E52FC55FF96F9D3E520C1CA4716C6578D2AF3E498F8A3C3CFEDDECC"
+      memo: "OUT:${IN_HASH_4}"
     block_height: 2
     finalise_height: 2
     observed_pub_key: {{ pubkey_dog }}
@@ -536,7 +547,7 @@ txs:
       gas:
         - amount: "15000"
           asset: "ETH.ETH"
-      memo: "OUT:1F0879AAE452C869F47C1B7A1310D1D4BABF75003A528741681FF878F5345038"
+      memo: "OUT:${IN_HASH_3}"
     block_height: 2
     finalise_height: 2
     observed_pub_key: {{ pubkey_dog }}
@@ -553,7 +564,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
-  - .[0].coin.amount == "${OUTPUT_AMOUNT=86390518}"
+  - .[0].coin.amount == "${OUTPUT_AMOUNT=85862686}"
 ---
 # observe lp outbound
 type: tx-observed-out

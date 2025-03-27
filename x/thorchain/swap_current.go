@@ -122,15 +122,6 @@ func (s *SwapperVCUR) Swap(ctx cosmos.Context,
 		if err := mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
 			ctx.Logger().Error("fail to emit swap event", "error", err)
 		}
-		if !evt.Pool.IsDerivedAsset() {
-			if err := keeper.AddToLiquidityFees(ctx, evt.Pool, evt.LiquidityFeeInRune); err != nil {
-				return assetAmount, swapEvents, fmt.Errorf("fail to add to liquidity fees: %w", err)
-			}
-			// use calculated floor
-			if err := keeper.AddToSwapSlip(ctx, evt.Pool, cosmos.NewInt(int64(evt.PoolSlip.Uint64()))); err != nil {
-				return assetAmount, swapEvents, fmt.Errorf("fail to add to swap slip: %w", err)
-			}
-		}
 		telemetry.IncrCounterWithLabels(
 			[]string{"thornode", "swap", "count"},
 			float32(1),
@@ -310,12 +301,6 @@ func (s *SwapperVCUR) swapOne(ctx cosmos.Context,
 		liquidityFee cosmos.Uint
 	)
 	emitAssets, liquidityFee, swapEvt.SwapSlip = s.GetSwapCalc(X, x, Y, swapSlipBps, minSlipBps)
-	if source.IsRune() {
-		swapEvt.LiquidityFeeInRune = pool.AssetValueInRune(liquidityFee)
-	} else {
-		// because the output asset is RUNE , so liquidity Fee is already in RUNE
-		swapEvt.LiquidityFeeInRune = liquidityFee
-	}
 	emitAssets = cosmos.RoundToDecimal(emitAssets, pool.Decimals)
 	swapEvt.EmitAsset = common.NewCoin(target, emitAssets)
 	swapEvt.LiquidityFee = liquidityFee
@@ -382,6 +367,39 @@ func (s *SwapperVCUR) swapOne(ctx cosmos.Context,
 		synthSupply = keeper.GetTotalSupply(ctx, pool.Asset.GetSyntheticAsset())
 		pool.CalcUnits(synthSupply)
 	}
+
+	// Now that pool depths have been adjusted to post-swap, determine LiquidityFeeInRune.
+	if target.IsRune() {
+		// Because the output asset is RUNE, liquidity Fee is already in RUNE.
+		swapEvt.LiquidityFeeInRune = swapEvt.LiquidityFee
+	} else {
+		// Momentarily deduct the liquidity fee for RuneDisbursementForAssetAdd.
+		pool.BalanceAsset = common.SafeSub(pool.BalanceAsset, swapEvt.LiquidityFee)
+		swapEvt.LiquidityFeeInRune = pool.RuneDisbursementForAssetAdd(swapEvt.LiquidityFee)
+		// Restore the BalanceAsset which is constant-depths-product swapped for the LiquidityFeeInRune.
+		pool.BalanceAsset = pool.BalanceAsset.Add(swapEvt.LiquidityFee)
+	}
+
+	if !pool.Asset.IsDerivedAsset() {
+		// Deduct LiquidityFeeInRune from the pool's RUNE depth and send it to the Reserve Module to be system income.
+		// (So that the liquidity fee isn't used for later swaps in the same block.)
+		if !swapEvt.LiquidityFeeInRune.IsZero() {
+			pool.BalanceRune = common.SafeSub(pool.BalanceRune, swapEvt.LiquidityFeeInRune)
+			liqFeeCoin := common.NewCoin(common.RuneAsset(), swapEvt.LiquidityFeeInRune)
+			if err := mgr.Keeper().SendFromModuleToModule(ctx, AsgardName, ReserveName, common.NewCoins(liqFeeCoin)); err != nil {
+				ctx.Logger().Error("fail to move liquidity fee RUNE to Reserve Module during swap", "error", err)
+				return cosmos.ZeroUint(), evt, err
+			}
+			if err := keeper.AddToLiquidityFees(ctx, pool.Asset, swapEvt.LiquidityFeeInRune); err != nil {
+				return cosmos.ZeroUint(), evt, fmt.Errorf("fail to add to liquidity fees: %w", err)
+			}
+		}
+		// use calculated floor
+		if err := keeper.AddToSwapSlip(ctx, pool.Asset, cosmos.NewInt(int64(swapEvt.PoolSlip.Uint64()))); err != nil {
+			return cosmos.ZeroUint(), evt, fmt.Errorf("fail to add to swap slip: %w", err)
+		}
+	}
+
 	ctx.Logger().Info("post swap", "pool", pool.Asset, "rune", pool.BalanceRune, "asset", pool.BalanceAsset, "lp units", pool.LPUnits, "synth units", pool.SynthUnits, "emit asset", emitAssets)
 
 	// Even for a Derived Asset pool, set the pool so the txout manager's GetFee for toi.Coin.Asset uses updated balances.

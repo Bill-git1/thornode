@@ -26,11 +26,12 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .end_block_events[1].asset == "BTC.BTC"
-  - .end_block_events[1].rune_address == "{{ addr_thor_pig }}"
-  - .end_block_events[1].fee_bps == "500"
-  - .end_block_events[1].fee_amount == "413221"
-  - .end_block_events[1].gross_amount == "8264426"
+  - .|[..|select(.type?=="affiliate_fee")] | length == 1
+  - ..|select(.type?=="affiliate_fee").asset == "BTC.BTC"
+  - ..|select(.type?=="affiliate_fee").rune_address == "{{ addr_thor_pig }}"
+  - ..|select(.type?=="affiliate_fee").fee_bps == "500"
+  - ..|select(.type?=="affiliate_fee").fee_amount == "413221"
+  - ..|select(.type?=="affiliate_fee").gross_amount == "8264426"
 ---
 type: create-blocks
 count: 1
@@ -45,7 +46,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${BAL_PIG=488761864}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${BAL_PIG=488732572}
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -102,21 +103,22 @@ type: create-blocks
 count: 1
 ---
 type: check
-endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
+endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
 asserts:
-  - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${BAL_PIG} + ${FEE_AMT=1248092505}
+  - .result|length == 1
+  - .result[]|select(.denom == "rune").amount|tonumber == ${BAL_PIG} + ${FEE_AMT=1248018013}
 ---
 type: check
-endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
+endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
 asserts:
-  - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2513709757591
+  - .result|length == 1
+  - .result[]|select(.denom == "rune").amount == "2513708342238"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .end_block_events[5].asset == "THOR.RUNE"
-  - .end_block_events[5].rune_address == "{{ addr_thor_pig }}"
-  - .end_block_events[5].fee_bps == "500"
-  - .end_block_events[5].fee_amount == "${FEE_AMT}"
+  - .|[..|select(.type?=="affiliate_fee")] | length == 1
+  - ..|select(.type?=="affiliate_fee").asset == "THOR.RUNE"
+  - ..|select(.type?=="affiliate_fee").rune_address == "{{ addr_thor_pig }}"
+  - ..|select(.type?=="affiliate_fee").fee_bps == "500"
+  - ..|select(.type?=="affiliate_fee").fee_amount == "${FEE_AMT}"

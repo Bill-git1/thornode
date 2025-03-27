@@ -146,15 +146,15 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "67292268",
+              "amount": "78177635",
               "denom": "btc/btc"
             },
             {
-              "amount": "672924547",
+              "amount": "781778902",
               "denom": "eth/eth"
             },
             {
-              "amount": "198885274803",
+              "amount": "198876519852",
               "denom": "rune"
             }
           ]
@@ -163,7 +163,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35000039981595",
+              "amount": "35000039978362",
               "denom": "rune"
             }
           ]
@@ -190,7 +190,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "5001082743602",
+              "amount": "5001091501786",
               "denom": "rune"
             }
           ]
@@ -204,11 +204,11 @@
       "send_enabled": [],
       "supply": [
         {
-          "amount": "67292268",
+          "amount": "78177635",
           "denom": "btc/btc"
         },
         {
-          "amount": "672924547",
+          "amount": "781778902",
           "denom": "eth/eth"
         },
         {
@@ -271,12 +271,12 @@
         {
           "asset": "BTC/BTC",
           "asset_address": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
-          "asset_deposit_value": "65624999",
+          "asset_deposit_value": "73469387",
           "last_add_height": "4",
           "pending_asset": "0",
           "pending_rune": "0",
           "rune_deposit_value": "0",
-          "units": "65624999"
+          "units": "73469387"
         },
         {
           "asset": "ETH.ETH",
@@ -302,12 +302,12 @@
         {
           "asset": "ETH/ETH",
           "asset_address": "0xe3c64974c78f5693bd2bc68b3221d58df5c6e877",
-          "asset_deposit_value": "656249999",
+          "asset_deposit_value": "734693877",
           "last_add_height": "5",
           "pending_asset": "0",
           "pending_rune": "0",
           "rune_deposit_value": "0",
-          "units": "656249999"
+          "units": "734693877"
         }
       ],
       "loan_total_collateral": [],
@@ -316,7 +316,7 @@
       "network": {
         "LPIncomeSplit": "9602",
         "NodeIncomeSplit": "398",
-        "bond_reward_rune": "1082743602",
+        "bond_reward_rune": "1091501786",
         "total_bond_units": "19"
       },
       "network_fees": [
@@ -352,13 +352,13 @@
       "orderbook_items": [],
       "outbound_fee_spent_rune": [
         {
-          "amount": "158941495",
+          "amount": "158934612",
           "asset": "ETH.ETH"
         }
       ],
       "outbound_fee_withheld_rune": [
         {
-          "amount": "212010122",
+          "amount": "212000940",
           "asset": "ETH.ETH"
         }
       ],
@@ -367,17 +367,17 @@
           "LP_units": "133333333333",
           "asset": "BTC.BTC",
           "balance_asset": "300000000",
-          "balance_rune": "99468441781",
+          "balance_rune": "99463991846",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
           "status": "Available",
-          "synth_units": "16374268725"
+          "synth_units": "18604650944"
         },
         {
-          "LP_units": "65624999",
+          "LP_units": "73469387",
           "asset": "BTC/BTC",
-          "balance_asset": "67292268",
+          "balance_asset": "78177635",
           "balance_rune": "0",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -388,17 +388,17 @@
           "LP_units": "133333333333",
           "asset": "ETH.ETH",
           "balance_asset": "3001600000",
-          "balance_rune": "99416833022",
+          "balance_rune": "99412528006",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
           "status": "Available",
-          "synth_units": "16374268977"
+          "synth_units": "18604651146"
         },
         {
-          "LP_units": "656249999",
+          "LP_units": "734693877",
           "asset": "ETH/ETH",
-          "balance_asset": "672924547",
+          "balance_asset": "781778902",
           "balance_rune": "0",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -421,13 +421,13 @@
         {
           "address": "0xe3c64974c78f5693bd2bc68b3221d58df5c6e877",
           "reclaimed": "0",
-          "score": "6770941529",
+          "score": "7369732282",
           "spent": "0"
         },
         {
           "address": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
           "reclaimed": "0",
-          "score": "6770941412",
+          "score": "7369732148",
           "spent": "0"
         }
       ],

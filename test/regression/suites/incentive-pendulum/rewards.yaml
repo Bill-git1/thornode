@@ -72,13 +72,13 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .|[..|select(.type?=="swap").liquidity_fee_in_rune|tonumber] | length == ${LIQ_FEES=0}
+  - .|[..|select(.type?=="swap").liquidity_fee_in_rune|tonumber] | length == 0
   # No swap events so no liquidity fees.
   - .|[..|select(.type?=="rewards")] | length == 1
   - ..|select(.type?=="rewards").bond_reward == "${BOND_REWARD=44394}"
   - ..|select(.type?=="rewards") | ([.[]|tonumber?] | add) - (.bond_reward|tonumber) == ${POOL_REWARDS=66590}
-  - ${POOL_REWARDS} + ${LIQ_FEES} == ${POOL_EARNINGS=66590}
-  - 100 * ${BOND_REWARD} / (${BOND_REWARD} + ${POOL_EARNINGS}) | round == ${SECURED_PROPORTION}
+  # Pool rewards includes the returned portion of deducted liquidity fees.
+  - 100 * ${BOND_REWARD} / (${BOND_REWARD} + ${POOL_REWARDS}) | round == ${SECURED_PROPORTION}
   # (%, securing bond gets same proportion as the secured proportion of it,
   # approaching 0% at secured 0% of securing
   # and 100% at secured 100% of securing)
@@ -113,18 +113,18 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
-  - .|[.[].balance_rune|tonumber] | add == ${TOTAL_POOLED_RUNE=195376339034}
+  - .|[.[].balance_rune|tonumber] | add == ${TOTAL_POOLED_RUNE=195376441927}
   - 100 * ${TOTAL_POOLED_RUNE} / ${BOND} | round == ${SECURED_PROPORTION=39} # (%)
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .|[..|select(.type?=="swap").liquidity_fee_in_rune|tonumber] | add == ${LIQ_FEES=226757445}
+  - .|[..|select(.type?=="swap").liquidity_fee_in_rune|tonumber] | add == 226757445
   - .|[..|select(.type?=="rewards")] | length == 1
-  - ..|select(.type?=="rewards").bond_reward == "${BOND_REWARD=88689638}"
-  - ..|select(.type?=="rewards") | ([.[]|tonumber?] | add) - (.bond_reward|tonumber) == ${POOL_REWARDS=-88578654}
-  - ${POOL_REWARDS} + ${LIQ_FEES} == ${POOL_EARNINGS=138178791}
-  - 100 * ${BOND_REWARD} / (${BOND_REWARD} + ${POOL_EARNINGS}) | round == ${SECURED_PROPORTION}
+  - ..|select(.type?=="rewards").bond_reward == "${BOND_REWARD=88586753}"
+  - ..|select(.type?=="rewards") | ([.[]|tonumber?] | add) - (.bond_reward|tonumber) == ${POOL_REWARDS=138281684}
+  # Pool rewards includes the returned portion of deducted liquidity fees.
+  - 100 * ${BOND_REWARD} / (${BOND_REWARD} + ${POOL_REWARDS}) | round == ${SECURED_PROPORTION}
   # (%, securing bond gets same proportion as the secured proportion of it,
   # approaching 0% at secured 0% of securing
   # and 100% at secured 100% of securing)
@@ -140,13 +140,13 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .|[..|select(.type?=="swap").liquidity_fee_in_rune|tonumber] | length == ${LIQ_FEES=0}
+  - .|[..|select(.type?=="swap").liquidity_fee_in_rune|tonumber] | length == 0
   # No swap events so no liquidity fees.
   - .|[..|select(.type?=="rewards")] | length == 1
   - ..|select(.type?=="rewards").bond_reward == "${BOND_REWARD=21684}"
   - ..|select(.type?=="rewards") | ([.[]|tonumber?] | add) - (.bond_reward|tonumber) == ${POOL_REWARDS=89300}
-  - ${POOL_REWARDS} + ${LIQ_FEES} == ${POOL_EARNINGS=89300}
-  - (100 * ${BOND_REWARD} / (${BOND_REWARD} + ${POOL_EARNINGS}) | round) == (${SECURED_PROPORTION} * ${ASSETS_BPS}/10000 | round)
+  # Pool rewards includes the returned portion of deducted liquidity fees.
+  - (100 * ${BOND_REWARD} / (${BOND_REWARD} + ${POOL_REWARDS}) | round) == (${SECURED_PROPORTION} * ${ASSETS_BPS}/10000 | round)
   # Because the pendulum only only perceives half the Assets, it decreases the node yield and increases the pool yield.
 ---
 ########################################################################################
@@ -179,15 +179,15 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
-  - .|[.[].balance_rune|tonumber] | add == ${TOTAL_POOLED_RUNE=191200602783}
+  - .|[.[].balance_rune|tonumber] | add == ${TOTAL_POOLED_RUNE=191200740012}
   - 100 * ${TOTAL_POOLED_RUNE} / ${BOND} | round == ${SECURED_PROPORTION=38} # (%)
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .|[..|select(.type?=="swap").liquidity_fee_in_rune|tonumber] | add == ${LIQ_FEES=197058573}
+  - .|[..|select(.type?=="swap").liquidity_fee_in_rune|tonumber] | add == 197058785
   - .|[..|select(.type?=="rewards")] | length == 1
-  - ..|select(.type?=="rewards").bond_reward == "${BOND_REWARD=37706502}"
-  - ..|select(.type?=="rewards") | ([.[]|tonumber?] | add) - (.bond_reward|tonumber) == ${POOL_REWARDS=-37595518}
-  - ${POOL_REWARDS} + ${LIQ_FEES} == ${POOL_EARNINGS=159463055}
-  - (100 * ${BOND_REWARD} / (${BOND_REWARD} + ${POOL_EARNINGS}) | round) == (${SECURED_PROPORTION} * ${ASSETS_BPS}/10000 | round)
+  - ..|select(.type?=="rewards").bond_reward == "${BOND_REWARD=37667709}"
+  - ..|select(.type?=="rewards") | ([.[]|tonumber?] | add) - (.bond_reward|tonumber) == ${POOL_REWARDS=159502067}
+  # Pool rewards includes the returned portion of deducted liquidity fees.
+  - (100 * ${BOND_REWARD} / (${BOND_REWARD} + ${POOL_REWARDS}) | round) == (${SECURED_PROPORTION} * ${ASSETS_BPS}/10000 | round)

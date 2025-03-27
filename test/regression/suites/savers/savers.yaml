@@ -29,15 +29,15 @@ params:
   asset: BTC.BTC
   amount: 5000000
 asserts:
-  - .expected_amount_deposit|tonumber == 4759341
+  - .expected_amount_deposit|tonumber == 4770146
   - .memo == "+:BTC/BTC"
   - .inbound_address == "{{ addr_btc_dog }}"
   - .recommended_min_amount_in == "10000"
-  - .fees.liquidity == "329539"
-  - .fees.outbound == "2100"
+  - .fees.liquidity == "334678"
+  - .fees.outbound == "2107"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
-  - .fees.slippage_bps == 647
-  - .fees.total_bps == 651
+  - .fees.slippage_bps == 655
+  - .fees.total_bps == 659
   - .recommended_gas_rate == "10"
   - .gas_rate_units == "satsperbyte"
 ---
@@ -68,20 +68,20 @@ type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
   - .|length == 1
-  - .[0].asset_deposit_value|tonumber == 4759341
+  - .[0].asset_deposit_value|tonumber == 4770146
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/supply
 asserts:
   - .supply|length == 2
-  - .supply[]|select(.denom == "btc/btc")|.amount|tonumber == 4763021
+  - .supply[]|select(.denom == "btc/btc")|.amount|tonumber == 4777728
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .|length == 1
-  - .[0].savers_fill_bps|tonumber == 454
-  - .[0].savers_capacity_remaining|tonumber == 100236979
+  - .[0].savers_fill_bps|tonumber == 455
+  - .[0].savers_capacity_remaining|tonumber == 100222272
 ---
 ########################################################################################
 # swap btc to rune and back to generate yield
@@ -113,7 +113,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2514340649215
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2514340637699
 ---
 ########################################################################################
 # check growth and withdraw 50%
@@ -125,14 +125,14 @@ params:
   address: {{ addr_btc_pig }}
   withdraw_bps: 5000
 asserts:
-  - .expected_amount_out|tonumber == 2795511
+  - .expected_amount_out|tonumber == 6869767
   - .memo == "-:BTC/BTC:5000"
   - .inbound_address == "{{ addr_btc_dog }}"
-  - .fees.liquidity == "28241"
+  - .fees.liquidity == "121618"
   - .fees.outbound == "14000"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
-  - .fees.slippage_bps == 99
-  - .fees.total_bps == 148
+  - .fees.slippage_bps == 173
+  - .fees.total_bps == 193
   - .recommended_gas_rate == "10"
   - .gas_rate_units == "satsperbyte"
 ---
@@ -140,9 +140,9 @@ type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
   - .|length == 1
-  - .[0].asset_deposit_value|tonumber == 4759341
-  - .[0].asset_redeem_value|tonumber == 5688981
-  - .[0].growth_pct|tonumber == 0.195329563483683981
+  - .[0].asset_deposit_value|tonumber == 4770146
+  - .[0].asset_redeem_value|tonumber == 14089561
+  - .[0].growth_pct|tonumber == 1.9536959665385505
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -170,8 +170,9 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
-  - .|length == 1
-  - .[0]|.in_hash == "{{ observe_txid 3 }}"
+  - length == 1
+  - .[0].in_hash == "{{ observe_txid 3 }}"
+  - .[0].coin.amount == "${OUT_AMOUNT=6869769}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -182,7 +183,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_pig }}
       coins:
-        - amount: "2795511"
+        - amount: "${OUT_AMOUNT}"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -211,14 +212,14 @@ params:
   address: {{ addr_btc_pig }}
   withdraw_bps: 10000
 asserts:
-  - .expected_amount_out|tonumber == 2795532
+  - .expected_amount_out == "6868657"
   - .memo == "-:BTC/BTC:10000"
   - .inbound_address == "{{ addr_btc_dog }}"
-  - .fees.liquidity == "28241"
+  - .fees.liquidity == "123024"
   - .fees.outbound == "14000"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
-  - .fees.slippage_bps == 99
-  - .fees.total_bps == 148
+  - .fees.slippage_bps == 175
+  - .fees.total_bps == 195
   - .recommended_gas_rate == "10"
   - .gas_rate_units == "satsperbyte"
 ---
@@ -226,9 +227,9 @@ type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
   - .|length == 1
-  - .[0].asset_deposit_value|tonumber == 2379671
-  - .[0].asset_redeem_value|tonumber == 2844542
-  - .[0].growth_pct|tonumber == 0.195350953976411025
+  - .[0].asset_deposit_value|tonumber == 2385073
+  - .[0].asset_redeem_value|tonumber == 7045519
+  - .[0].growth_pct|tonumber == 1.9540056006671493
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -256,8 +257,9 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
-  - .|length == 1
-  - .[0]|.in_hash == "{{ observe_txid 5 }}"
+  - length == 1
+  - .[0].in_hash == "{{ observe_txid 5 }}"
+  - .[0].coin.amount == "${OUT_AMOUNT=6869402}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -268,7 +270,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_pig }}
       coins:
-        - amount: "2795563"
+        - amount: "${OUT_AMOUNT}"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -290,9 +292,9 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
-  - .|length == 1
-  - .[0].savers_fill_bps|tonumber == 0
-  - .[0].savers_capacity_remaining|tonumber == 602198438
+  - length == 1
+  - .[0].savers_fill_bps == "0"
+  - .[0].savers_capacity_remaining == "594050341"
 ---
 ########################################################################################
 # turn on streaming swaps for savers adds (set interval to 1)
@@ -358,7 +360,7 @@ asserts:
   - .interval == 1
   - .quantity == 6
   - .in == "9999999"
-  - .out == "9922539"
+  - .out == "9922470"
 ---
 type: create-blocks
 count: 3
@@ -374,9 +376,9 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
-  - .|length == 1
-  - .[0].asset_deposit_value|tonumber == 19845526
-  - .[0].asset_redeem_value|tonumber == 19845849
+  - length == 1
+  - .[0].asset_deposit_value == "19845390"
+  - .[0].asset_redeem_value == "19845989"
 ---
 ########################################################################################
 # swap btc to rune and back to generate yield
@@ -407,10 +409,10 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
-  - .|length == 1
-  - .[0].asset_deposit_value|tonumber == 19845526
-  - .[0].asset_redeem_value|tonumber == 21114644
-  - .[0].growth_pct|tonumber == 0.06394982929653767
+  - length == 1
+  - .[0].asset_deposit_value == "19845390"
+  - .[0].asset_redeem_value == "${ASSET_REDEEM=23391167}"
+  - .[0].growth_pct == "0.178670058890251086"
 ---
 ########################################################################################
 # withdraw savers should use streaming swaps
@@ -441,30 +443,30 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/swap/streaming/{{ observe_txid 9 }}
 asserts:
-  - .deposit == "21114644"
+  - .deposit == "${ASSET_REDEEM}"
   - .count == 1
   - .tx_id == "{{ observe_txid 9 }}"
   - .interval == 1
-  - .quantity == 3
+  - .quantity == 4
 ---
 type: create-blocks
 count: 1
 ---
 ########################################################################################
-# streaming swap should be (2/3) done
+# streaming swap should be (2/4) done
 ########################################################################################
 type: check
 endpoint: http://localhost:1317/thorchain/swap/streaming/{{ observe_txid 9 }}
 asserts:
-  - .deposit == "21114644"
+  - .deposit == "${ASSET_REDEEM}"
   - .count == 2
   - .tx_id == "{{ observe_txid 9 }}"
   - .interval == 1
-  - .quantity == 3
-  - .in == "14076428"
+  - .quantity == 4
+  - .in == "11695582"
 ---
 type: create-blocks
-count: 1
+count: 2
 ---
 ########################################################################################
 # streaming swap should be done + outbound scheduled + savers position removed
@@ -477,9 +479,9 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
-  - .|length == 1
+  - length == 1
   - .[0].in_hash == "{{ observe_txid 9 }}"
-  - .[0].coin.amount == "${OUTPUT_AMOUNT=20797891}"
+  - .[0].coin.amount == "${OUTPUT_AMOUNT=23077546}"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
@@ -562,7 +564,7 @@ asserts:
   - .interval == 1
   - .quantity == 3
   - .in == "13333332"
-  - .out == "13226518"
+  - .out == "13226619"
 ---
 ########################################################################################
 # pause swaps - streaming should pause
@@ -592,7 +594,7 @@ asserts:
   - .interval == 1
   - .quantity == 3
   - .in == "13333332"
-  - .out == "13226518"
+  - .out == "13226619"
 ---
 type: tx-mimir
 key: HaltTrading
@@ -618,10 +620,10 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
-  - .|length == 1
-  - .[0].asset_deposit_value == "19839959"
-  - .[0].asset_redeem_value == "19840439"
-  - .[0].last_add_height == 24
+  - length == 1
+  - .[0].asset_deposit_value == "19840111"
+  - .[0].asset_redeem_value == "19840915"
+  - .[0].last_add_height == 25
 ---
 ########################################################################################
 # small savers add: shouldn't create streaming swap even when enabled
@@ -665,10 +667,10 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
-  - .|length == 1
-  - .[0].asset_deposit_value == "${PRE_ADD_DEPOSIT=19839959}"
-  - .[0].asset_redeem_value == "${PRE_ADD_REDEEM=19840523}"
-  - .[0].last_add_height == 24
+  - length == 1
+  - .[0].asset_deposit_value == "${PRE_ADD_DEPOSIT=19840111}"
+  - .[0].asset_redeem_value == "${PRE_ADD_REDEEM=19840998}"
+  - .[0].last_add_height == 25
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block
@@ -692,15 +694,15 @@ params:
   asset: BTC.BTC
   amount: ${ADD=200000}
 asserts:
-  - .expected_amount_deposit == "198022"
+  - .expected_amount_deposit == "198023"
   - .memo == "+:BTC/BTC"
   - .inbound_address == "{{ addr_btc_dog }}"
   - .recommended_min_amount_in == "10000"
-  - .fees.liquidity == "1994"
-  - .fees.outbound == "35370"
+  - .fees.liquidity == "1995"
+  - .fees.outbound == "34645"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
   - .fees.slippage_bps == 99
-  - .fees.total_bps == 1587
+  - .fees.total_bps == 1561
   - .recommended_gas_rate == "10"
   - .gas_rate_units == "satsperbyte"
 ---
@@ -736,13 +738,13 @@ type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
   - .|length == 1
-  - .[0].asset_deposit_value == "20037981"
+  - .[0].asset_deposit_value == "20038134"
   - .[0].asset_deposit_value | tonumber > ${PRE_ADD_DEPOSIT} + (${ADD} * 0.99)
   - .[0].asset_deposit_value | tonumber < ${PRE_ADD_DEPOSIT} + ${ADD}
-  - .[0].asset_redeem_value == "20038723"
+  - .[0].asset_redeem_value == "20039206"
   - .[0].asset_redeem_value | tonumber > ${PRE_ADD_REDEEM} + (${ADD} * 0.99)
   # Larger-than-add increase is hypothetically possible due to savers yield.
-  - .[0].last_add_height == 28
+  - .[0].last_add_height == 29
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound

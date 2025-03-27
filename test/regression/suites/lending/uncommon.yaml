@@ -95,8 +95,8 @@ type: check
 endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
 asserts:
   - .|length == 1
-  - .[0]|.collateral_deposited == "990122"
-  - .[0]|.debt_issued == "975480000"
+  - .[0]|.collateral_deposited == "990147"
+  - .[0]|.debt_issued == "975470000"
   - .[0]|.collateral_withdrawn == "0"
   - .[0]|.debt_repaid == "0"
   - .[0]|.owner == "{{ addr_btc_fox }}"
@@ -104,9 +104,11 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
-  - .|length == 2
-  - .[0]|.in_hash == "{{ observe_txid 1 }}"
-  - .[1]|.in_hash == "{{ observe_txid 2 }}"
+  - length == 2
+  - .[0].in_hash == "{{ observe_txid 1 }}"
+  - .[0].coin.amount == "${OUT_AMOUNT_1=3526927}"
+  - .[1].in_hash == "{{ observe_txid 2 }}"
+  - .[1].coin.amount == "${OUT_AMOUNT_2=3447358}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -117,7 +119,7 @@ txs:
       from_address: {{ addr_eth_dog }}
       to_address: {{ addr_eth_fox }}
       coins:
-        - amount: "3526927"
+        - amount: "${OUT_AMOUNT_1}"
           asset: "ETH.ETH"
           decimals: 8
       gas:
@@ -133,7 +135,7 @@ txs:
       from_address: {{ addr_eth_dog }}
       to_address: {{ addr_eth_fox }}
       coins:
-        - amount: "3447344"
+        - amount: "${OUT_AMOUNT_2}"
           asset: "ETH.ETH"
           decimals: 8
       gas:
@@ -198,15 +200,15 @@ type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - '[.end_block_events[]|select(.type=="outbound" and .to=="{{ addr_thor_pig }}")]|length == 1'
-  - .end_block_events[]|select(.type=="outbound" and .to=="{{ addr_thor_pig }}")|.coin == "469124529 THOR.RUNE"
+  - .end_block_events[]|select(.type=="outbound" and .to=="{{ addr_thor_pig }}")|.coin == "469104905 THOR.RUNE"
   - .end_block_events[]|select(.type=="outbound" and .to=="{{ addr_thor_pig }}")|.memo == "OUT:{{ observe_txid 4 }}"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
 asserts:
   - .|length == 2
-  - .[1]|.collateral_deposited == "989528"
-  - .[1]|.debt_issued == "955880000"
+  - .[1]|.collateral_deposited == "989551"
+  - .[1]|.debt_issued == "955860000"
   - .[1]|.collateral_withdrawn == "0"
   - .[1]|.debt_repaid == "0"
   - .[1]|.owner == "{{ addr_btc_pig }}"
@@ -214,8 +216,9 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
-  - .|length == 1
-  - .[0]|.in_hash == "{{ observe_txid 3 }}"
+  - length == 1
+  - .[0].in_hash == "{{ observe_txid 3 }}"
+  - .[0].coin.amount == "${OUT_AMOUNT=3348701}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -226,7 +229,7 @@ txs:
       from_address: {{ addr_eth_dog }}
       to_address: {{ addr_eth_pig }}
       coins:
-        - amount: "3348701"
+        - amount: "${OUT_AMOUNT}"
           asset: "ETH.ETH"
           decimals: 8
       gas:
@@ -294,5 +297,5 @@ asserts:
   - '[.end_block_events[]|select(.type=="outbound" and .to=="{{ addr_thor_bird }}")]|length == 1'
   - .end_block_events[]|select(.type=="outbound" and .to=="{{ addr_thor_deer }}")|.coin == "464258965 THOR.RUNE"
   - .end_block_events[]|select(.type=="outbound" and .to=="{{ addr_thor_deer }}")|.memo == "OUT:{{ observe_txid 6 }}"
-  - .end_block_events[]|select(.type=="outbound" and .to=="{{ addr_thor_bird }}")|.coin == "459822687 THOR.RUNE"
+  - .end_block_events[]|select(.type=="outbound" and .to=="{{ addr_thor_bird }}")|.coin == "459803056 THOR.RUNE"
   - .end_block_events[]|select(.type=="outbound" and .to=="{{ addr_thor_bird }}")|.memo == "OUT:{{ observe_txid 7 }}"

@@ -62,14 +62,14 @@ asserts:
   - .memo == "$+:BTC.BTC:{{ addr_btc_fox }}"
   - .inbound_address == "{{ addr_btc_dog }}"
   - .expected_amount_out|tonumber == 929128
-  - .expected_collateral_deposited|tonumber == 990098
+  - .expected_collateral_deposited|tonumber == 990122
   - .expected_collateralization_ratio|tonumber == 10000
   - .expected_debt_issued|tonumber == 980290000
   - .recommended_min_amount_in == "56000"
-  - .fees.slippage_bps|tonumber == 291
-  - .fees.total_bps|tonumber == 435
+  - .fees.slippage_bps|tonumber == 293
+  - .fees.total_bps|tonumber == 437
   - .fees.outbound|tonumber == 14000
-  - .fees.liquidity|tonumber == 28316
+  - .fees.liquidity|tonumber == 28538
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
 ---
 type: check
@@ -83,15 +83,15 @@ params:
 asserts:
   - .memo == "$+:BTC.BTC:{{ addr_btc_fox }}:1"
   - .inbound_address == "{{ addr_btc_dog }}"
-  - .expected_amount_out|tonumber == 929754
-  - .expected_collateral_deposited|tonumber == 980393
+  - .expected_amount_out|tonumber == 929836
+  - .expected_collateral_deposited|tonumber == 980488
   - .expected_collateralization_ratio|tonumber == 10000
-  - .expected_debt_issued|tonumber == 961170000
+  - .expected_debt_issued|tonumber == 961160000
   - .recommended_min_amount_in|tonumber == 56000
-  - .fees.slippage_bps|tonumber == 379
-  - .fees.total_bps|tonumber == 521
+  - .fees.slippage_bps|tonumber == 382
+  - .fees.total_bps|tonumber == 525
   - .fees.outbound|tonumber == 14000
-  - .fees.liquidity|tonumber == 37192
+  - .fees.liquidity|tonumber == 37549
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
 ---
 ########################################################################################
@@ -137,7 +137,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
 asserts:
   - .|length == 1
-  - .[0]|.collateral_deposited == "${COLLATERAL_DEPOSITED=989954}"
+  - .[0]|.collateral_deposited == "${COLLATERAL_DEPOSITED=989978}"
   - .[0]|.debt_issued == "${DEBT_ISSUED=970500000}"
   - .[0]|.collateral_withdrawn == "0"
   - .[0]|.debt_repaid == "0"
@@ -200,8 +200,9 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
-  - .|length == 1
-  - .[0]|.in_hash == "{{ observe_txid 6 }}"
+  - length == 1
+  - .[0].in_hash == "{{ observe_txid 6 }}"
+  - .[0].coin.amount == "${OUT_AMOUNT=955844}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -212,7 +213,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "955821"
+        - amount: "${OUT_AMOUNT}"
           asset: "BTC.BTC"
           decimals: 8
       gas:

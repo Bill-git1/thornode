@@ -65,18 +65,18 @@ type: check
 endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_btc_fox }}
 asserts:
   - .address == "{{ addr_btc_fox }}"
-  - .score|tonumber == 207489194
+  - .score|tonumber == 216016805
   - .reclaimed|tonumber == 0
-  - .spent|tonumber == 207489194
+  - .spent|tonumber == 216016805
   - .last_spent_height == 3
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_eth_fox }}
 asserts:
   - .address == "{{ addr_eth_fox }}"
-  - .score|tonumber == 207489196
+  - .score|tonumber == 216016806
   - .reclaimed|tonumber == 0
-  - .spent|tonumber == 207489196
+  - .spent|tonumber == 216016806
   - .last_spent_height == 3
 ---
 type: tx-observed-out
@@ -112,9 +112,9 @@ type: check
 endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_btc_fox }}
 asserts:
   - .address == "{{ addr_btc_fox }}"
-  - .score|tonumber == 207489194
-  - .reclaimed|tonumber == 207489194
-  - .spent|tonumber == 207489194
+  - .score|tonumber == 216016805
+  - .reclaimed|tonumber == 216016805
+  - .spent|tonumber == 216016805
   - .last_spent_height == 3
   - .last_reclaim_height == 4
 ---
@@ -122,9 +122,9 @@ type: check
 endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_eth_fox }}
 asserts:
   - .address == "{{ addr_eth_fox }}"
-  - .score|tonumber == 207489196
-  - .reclaimed|tonumber == 207489196
-  - .spent|tonumber == 207489196
+  - .score|tonumber == 216016806
+  - .reclaimed|tonumber == 216016806
+  - .spent|tonumber == 216016806
   - .last_spent_height == 3
   - .last_reclaim_height == 4
 ---
@@ -166,9 +166,9 @@ type: check
 endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_btc_fox }}
 asserts:
   - .address == "{{ addr_btc_fox }}"
-  - .score|tonumber == 382046035
-  - .reclaimed|tonumber == 207489194
-  - .spent|tonumber == 589535229
+  - .score|tonumber == 396589518
+  - .reclaimed|tonumber == 216016805
+  - .spent|tonumber == 612606323
   - .last_spent_height == 6
   - .last_reclaim_height == 4
 ---
@@ -176,9 +176,9 @@ type: check
 endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_eth_fox }}
 asserts:
   - .address == "{{ addr_eth_fox }}"
-  - .score|tonumber == 382046038
-  - .reclaimed|tonumber == 207489196
-  - .spent|tonumber == 589535234
+  - .score|tonumber == 396589521
+  - .reclaimed|tonumber == 216016806
+  - .spent|tonumber == 612606327
   - .last_spent_height == 6
   - .last_reclaim_height == 4
 ---
@@ -209,9 +209,9 @@ type: check
 endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_btc_fox }}
 asserts:
   - .address == "{{ addr_btc_fox }}"
-  - .score|tonumber == 530400992
-  - .reclaimed|tonumber == 589535229
-  - .spent|tonumber == 1119936221
+  - .score|tonumber == 549286121
+  - .reclaimed|tonumber == 612606323
+  - .spent|tonumber == 1161892444
   - .last_spent_height == 17
   - .last_reclaim_height == 4
 ---
@@ -219,9 +219,9 @@ type: check
 endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_eth_fox }}
 asserts:
   - .address == "{{ addr_eth_fox }}"
-  - .score|tonumber == 530400996
-  - .reclaimed|tonumber == 589535234
-  - .spent|tonumber == 1119936230
+  - .score|tonumber == 549286125
+  - .reclaimed|tonumber == 612606327
+  - .spent|tonumber == 1161892452
   - .last_spent_height == 17
   - .last_reclaim_height == 4
 ---
@@ -229,8 +229,8 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 2
-  - .[0].coin.amount == "${OUT_ONE=33881286}"
-  - .[1].coin.amount == "${OUT_TWO=28944289}"
+  - .[0].coin.amount == "${OUT_ONE=33881399}"
+  - .[1].coin.amount == "${OUT_TWO=28944435}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -302,7 +302,7 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
-  - .[0].coin.amount == "${OUT_AMOUNT=65816782}"
+  - .[0].coin.amount == "${OUT_AMOUNT=65817123}"
   - |
     .[0] == {
       chain: "ETH",

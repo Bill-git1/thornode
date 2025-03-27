@@ -1566,7 +1566,7 @@ func (vm *NetworkMgrVCUR) UpdateNetwork(ctx cosmos.Context, constAccessor consta
 	devFundSystemIncomeBps := vm.k.GetConfigInt64(ctx, constants.DevFundSystemIncomeBps)
 	systemIncomeBurnRateBps := vm.k.GetConfigInt64(ctx, constants.SystemIncomeBurnRateBps)
 	blocksPerYear := constAccessor.GetInt64Value(constants.BlocksPerYear)
-	bondReward, totalPoolRewards, lpDeficit, lpShare, devFundDeduct, systemIncomeBurnDeduct := vm.calcBlockRewards(ctx,
+	bondReward, totalPoolRewards, lpShare, devFundDeduct, systemIncomeBurnDeduct := vm.calcBlockRewards(ctx,
 		availablePoolsRune, vaultsLiquidityRune, effectiveSecurityBond,
 		totalEffectiveBond, totalReserve, totalLiquidityFees, emissionCurve,
 		blocksPerYear, devFundSystemIncomeBps, systemIncomeBurnRateBps)
@@ -1649,13 +1649,6 @@ func (vm *NetworkMgrVCUR) UpdateNetwork(ctx cosmos.Context, constAccessor consta
 			return err
 		}
 
-	} else { // Else deduct pool deficit
-
-		poolAmts, err := vm.deductPoolRewardDeficit(ctx, availablePools, totalLiquidityFees, lpDeficit)
-		if err != nil {
-			return err
-		}
-		evtPools = append(evtPools, poolAmts...)
 	}
 
 	if !bondReward.IsZero() {
@@ -1718,7 +1711,6 @@ func (vm *NetworkMgrVCUR) calcBlockRewards(
 	systemIncomeBurnRateBps int64) (
 	bondReward cosmos.Uint,
 	totalPoolRewards cosmos.Uint,
-	lpDeficit cosmos.Uint,
 	lpShare cosmos.Uint,
 	devFundDeduct cosmos.Uint,
 	systemIncomeBurnDeduct cosmos.Uint,
@@ -1774,18 +1766,7 @@ func (vm *NetworkMgrVCUR) calcBlockRewards(
 
 	lpShare = common.GetSafeShare(lpSplit, systemIncome, cosmos.NewUint(10_000))
 
-	lpDeficit = cosmos.ZeroUint()
-	poolReward := cosmos.ZeroUint()
-
-	if lpSplit.GTE(totalLiquidityFees) {
-		// Liquidity Providers have not been paid enough already, pay more
-		poolReward = common.SafeSub(lpSplit, totalLiquidityFees) // Get how much to divert to add to liquidity provider split
-	} else {
-		// Liquidity Providers have been paid too much, calculate deficit
-		lpDeficit = common.SafeSub(totalLiquidityFees, lpSplit) // Deduct existing income from split
-	}
-
-	return bonderSplit, poolReward, lpDeficit, lpShare, devFundDeduct, systemIncomeBurnDeduct
+	return bonderSplit, lpSplit, lpShare, devFundDeduct, systemIncomeBurnDeduct
 }
 
 // getPoolShare calculates the pool share of the total rewards. The distribution is
@@ -1840,54 +1821,6 @@ func (vm *NetworkMgrVCUR) getPoolShare(
 	// Derive the pool share according to the adjustment rewards,
 	// totalRewards being the allocation to never be exceeded.
 	return common.GetSafeShare(adjustmentPoolShare, adjustmentRewards, totalRewards)
-}
-
-// deductPoolRewardDeficit - When swap fees accrued by the pools surpass what
-// the incentive pendulum dictates, the difference (lpDeficit) is deducted from
-// the pools and sent to the reserve. The amount of RUNE deducted from each
-// pool is in proportion to the amount of fees it accrued:
-//
-// deduction = (poolFees / totalLiquidityFees) * lpDeficit
-func (vm *NetworkMgrVCUR) deductPoolRewardDeficit(ctx cosmos.Context, pools Pools, totalLiquidityFees, lpDeficit cosmos.Uint) ([]PoolAmt, error) {
-	poolAmts := make([]PoolAmt, 0)
-	for _, pool := range pools {
-		if !pool.IsAvailable() {
-			continue
-		}
-		poolFees, err := vm.k.GetPoolLiquidityFees(ctx, uint64(ctx.BlockHeight()), pool.Asset)
-		if err != nil {
-			return poolAmts, fmt.Errorf("fail to get liquidity fees for pool(%s): %w", pool.Asset, err)
-		}
-		if pool.BalanceRune.IsZero() || poolFees.IsZero() { // Safety checks
-			continue
-		}
-		poolDeficit := vm.calcPoolDeficit(lpDeficit, totalLiquidityFees, poolFees)
-		if err := vm.paySaverYield(ctx, pool.Asset, common.SafeSub(poolFees, poolDeficit)); err != nil {
-			ctx.Logger().Error("fail to pay saver yield", "error", err)
-		}
-
-		// when pool deficit is zero , the pool doesn't pay deficit
-		if poolDeficit.IsZero() {
-			continue
-		}
-		coin := common.NewCoin(common.RuneNative, poolDeficit)
-		if err := vm.k.SendFromModuleToModule(ctx, AsgardName, ReserveName, common.NewCoins(coin)); err != nil {
-			ctx.Logger().Error("fail to transfer funds from asgard to reserve", "error", err)
-			return poolAmts, fmt.Errorf("fail to transfer funds from asgard to reserve: %w", err)
-		}
-		if poolDeficit.GT(pool.BalanceRune) {
-			poolDeficit = pool.BalanceRune
-		}
-		pool.BalanceRune = common.SafeSub(pool.BalanceRune, poolDeficit)
-		if err := vm.k.SetPool(ctx, pool); err != nil {
-			return poolAmts, fmt.Errorf("fail to set pool: %w", err)
-		}
-		poolAmts = append(poolAmts, PoolAmt{
-			Asset:  pool.Asset,
-			Amount: 0 - int64(poolDeficit.Uint64()),
-		})
-	}
-	return poolAmts, nil
 }
 
 // checkPoolRagnarok iterate through all the pools to see whether there are pools need to be ragnarok

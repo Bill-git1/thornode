@@ -130,7 +130,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "189960012724",
+              "amount": "170565101860",
               "denom": "rune"
             }
           ]
@@ -139,7 +139,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "34977457781163",
+              "amount": "34982555031586",
               "denom": "rune"
             }
           ]
@@ -148,7 +148,7 @@
           "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "coins": [
             {
-              "amount": "2459237726931",
+              "amount": "2438641431891",
               "denom": "rune"
             }
           ]
@@ -157,7 +157,7 @@
           "address": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
           "coins": [
             {
-              "amount": "2465770574190",
+              "amount": "2500525234456",
               "denom": "rune"
             }
           ]
@@ -166,7 +166,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "5007573904992",
+              "amount": "5007713200207",
               "denom": "rune"
             }
           ]
@@ -190,8 +190,8 @@
     },
     "thorchain": {
       "POL": {
-        "rune_deposited": "102619014415",
-        "rune_withdrawn": "80054769917"
+        "rune_deposited": "89347125908",
+        "rune_withdrawn": "71880140583"
       },
       "THORNames": [],
       "affiliate_collectors": null,
@@ -234,7 +234,7 @@
         },
         {
           "key": "POLMAXNETWORKDEPOSIT",
-          "value": "100000000000"
+          "value": "50000000000"
         },
         {
           "key": "POLMAXPOOLMOVEMENT",
@@ -246,9 +246,9 @@
         }
       ],
       "network": {
-        "LPIncomeSplit": "9620",
-        "NodeIncomeSplit": "380",
-        "bond_reward_rune": "7589904992",
+        "LPIncomeSplit": "9659",
+        "NodeIncomeSplit": "341",
+        "bond_reward_rune": "7729200207",
         "total_bond_units": "9"
       },
       "network_fees": [
@@ -277,7 +277,7 @@
         {
           "key": "POLMAXNETWORKDEPOSIT",
           "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
-          "value": "100000000000"
+          "value": "50000000000"
         },
         {
           "key": "POLMAXPOOLMOVEMENT",
@@ -315,7 +315,7 @@
           "LP_units": "100000000000",
           "asset": "BTC.BTC",
           "balance_asset": "100000000",
-          "balance_rune": "189960012724",
+          "balance_rune": "170565101860",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -338,13 +338,13 @@
         {
           "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "reclaimed": "0",
-          "score": "89810399480",
+          "score": "184658756816",
           "spent": "0"
         },
         {
           "address": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
           "reclaimed": "0",
-          "score": "20298997472",
+          "score": "14350305119",
           "spent": "0"
         }
       ],
