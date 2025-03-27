@@ -185,6 +185,7 @@ func processOneTxIn(ctx cosmos.Context, keeper keeper.Keeper, tx ObservedTx, sig
 		newMsg, err = getMsgAddLiquidityFromMemo(ctx, m, tx, signer)
 	case WithdrawLiquidityMemo:
 		m.Asset = fuzzyAssetMatch(ctx, keeper, m.Asset)
+		m.WithdrawalAsset = fuzzyAssetMatch(ctx, keeper, m.WithdrawalAsset)
 		newMsg, err = getMsgWithdrawFromMemo(m, tx, signer)
 	case SwapMemo:
 		m.Asset = fuzzyAssetMatch(ctx, keeper, m.Asset)
