@@ -39,6 +39,22 @@ asserts:
   - .[2].dynamic_multiplier_basis_points == "20000"
 ---
 ########################################################################################
+# check 1/2 of vault block_height
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/vaults/asgard
+asserts:
+  - length == 1
+  - .[0].block_height == ${VAULT_BLOCK_HEIGHT=1}
+---
+type: check
+endpoint: http://localhost:1317/thorchain/lastblock
+asserts:
+  - .[0].thorchain == ${VAULT_BLOCK_HEIGHT}
+  # The templates set the vault block_height to 0,
+  # but that's overwritten in the querier by GetVault to the current block height.
+---
+########################################################################################
 # streaming swap to ETH.ETH (100% conversion)
 ########################################################################################
 type: tx-observed-in
@@ -130,6 +146,25 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
+---
+########################################################################################
+# check 2/2 of vault block_height
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/lastblock
+asserts:
+  - .[0].thorchain == ${HEIGHT=12}
+---
+type: check
+endpoint: http://localhost:1317/thorchain/vaults/asgard
+asserts:
+  - length == 1
+  - .[0].block_height == 2
+  - .[0].block_height < ${HEIGHT}
+  - .[0].block_height > ${VAULT_BLOCK_HEIGHT}
+  # The templates set the block_height to 0,
+  # but it was overwritten by GetVault and that overwritten height set by SetVault
+  # (in the network manager EndBlock when the vault's Routers were set).
 ---
 ########################################################################################
 # streaming swap to ETH.ETH with paused trading halfway through (partial conversion)

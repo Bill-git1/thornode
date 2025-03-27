@@ -294,7 +294,7 @@ func (s *QuerierSuite) TestQueryNodeAccounts(c *C) {
 	c.Assert(keeper.SetNodeAccount(ctx, nodeAccount), IsNil)
 	vault := GetRandomVault()
 	vault.Status = ActiveVault
-	vault.BlockHeight = 1
+	vault.StatusSince = 1
 	c.Assert(keeper.SetVault(ctx, vault), IsNil)
 	queryNodesResp, err := queryServer.Nodes(ctx, &types.QueryNodesRequest{})
 	c.Assert(err, IsNil)
@@ -884,7 +884,7 @@ func (s *QuerierSuite) TestQueryNodeAccount(c *C) {
 	c.Assert(s.k.SetNodeAccount(s.ctx, na), IsNil)
 	vault := GetRandomVault()
 	vault.Status = ActiveVault
-	vault.BlockHeight = 1
+	vault.StatusSince = 1
 	c.Assert(s.k.SetVault(s.ctx, vault), IsNil)
 	queryNodeAccount, err = s.queryServer.Node(s.ctx, &types.QueryNodeRequest{
 		Address: na.NodeAddress.String(),

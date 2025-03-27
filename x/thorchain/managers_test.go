@@ -35,10 +35,10 @@ func (ManagersTestSuite) TestManagers(c *C) {
 	c.Assert(err, NotNil)
 	c.Assert(errors.Is(err, errInvalidVersion), Equals, true)
 
+	// Versioning has been removed from GetValidatorManager.
 	validatorManager, err := GetValidatorManager(ver, mgr.Keeper(), mgr.NetworkMgr(), mgr.TxOutStore(), mgr.EventMgr())
-	c.Assert(validatorManager, IsNil)
-	c.Assert(err, NotNil)
-	c.Assert(errors.Is(err, errInvalidVersion), Equals, true)
+	c.Assert(validatorManager, NotNil)
+	c.Assert(err, IsNil)
 
 	observerMgr, err := GetObserverManager(ver)
 	c.Assert(observerMgr, IsNil)

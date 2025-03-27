@@ -997,8 +997,8 @@ func (vm *ValidatorMgrVCUR) getLastChurnHeight(ctx cosmos.Context) int64 {
 	// calculate last churn block height
 	var lastChurnHeight int64 // the last block height we had a successful churn
 	for _, vault := range vaults {
-		if vault.BlockHeight > lastChurnHeight {
-			lastChurnHeight = vault.BlockHeight
+		if vault.StatusSince > lastChurnHeight {
+			lastChurnHeight = vault.StatusSince
 		}
 	}
 	return lastChurnHeight

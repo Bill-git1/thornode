@@ -656,14 +656,7 @@ func (qs queryServer) queryNode(ctx cosmos.Context, req *types.QueryNodeRequest)
 
 		totalEffectiveBond, bondHardCap := getTotalEffectiveBond(active)
 
-		// Note that unlike actual BondRewardRune distribution in manager_validator_current.go ,
-		// this estimate treats lastChurnHeight as the block_height of the first (oldest) Asgard vault,
-		// rather than the active_block_height of the youngest active node.
-		// As an example, note from the below URLs that these are 5293728 and 5293733 respectively in block 5336942.
-		// https://thornode.ninerealms.com/thorchain/vaults/asgard?height=5336942
-		// https://thornode.ninerealms.com/thorchain/nodes?height=5336942
-		// (Nodes .cxmy and .uy3a .)
-		lastChurnHeight := vaults[0].BlockHeight
+		lastChurnHeight := vaults[0].StatusSince
 
 		reward, err := getNodeCurrentRewards(ctx, qs.mgr, nodeAcc, lastChurnHeight, network.BondRewardRune, totalEffectiveBond, bondHardCap)
 		if err != nil {
@@ -766,7 +759,7 @@ func (qs queryServer) queryNodes(ctx cosmos.Context, _ *types.QueryNodesRequest)
 
 	totalEffectiveBond, bondHardCap := getTotalEffectiveBond(active)
 
-	lastChurnHeight := vaults[0].BlockHeight
+	lastChurnHeight := vaults[0].StatusSince
 	result := make([]*types.QueryNodeResponse, len(nodeAccounts))
 	for i, na := range nodeAccounts {
 		if na.RequestedToLeave && na.Bond.LTE(cosmos.NewUint(common.One)) {
