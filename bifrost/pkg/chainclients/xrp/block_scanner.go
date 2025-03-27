@@ -114,6 +114,11 @@ func (c *XrpBlockScanner) FetchMemPool(height int64) (types.TxIn, error) {
 	return types.TxIn{}, nil
 }
 
+// GetNetworkFee returns current chain network fee according to Bifrost.
+func (c *XrpBlockScanner) GetNetworkFee() (transactionSize, transactionFeeRate uint64) {
+	return c.cfg.MaxGasLimit, c.lastFee.Uint64()
+}
+
 func (c *XrpBlockScanner) updateFeeCache(fee common.Coin) {
 	// sanity check to ensure fee is non-zero
 	err := fee.Valid()

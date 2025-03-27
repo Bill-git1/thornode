@@ -540,6 +540,7 @@ func (qs queryServer) queryInboundAddresses(ctx cosmos.Context, _ *types.QueryIn
 			GlobalTradingPaused:  isGlobalTradingPaused,
 			ChainTradingPaused:   isChainTradingPaused,
 			ChainLpActionsPaused: isChainLpPaused,
+			ObservedFeeRate:      cosmos.NewUint(networkFeeInfo.TransactionFeeRate).String(),
 			GasRate:              gasRate.String(),
 			GasRateUnits:         chain.GetGasUnits(),
 			OutboundTxSize:       cosmos.NewUint(networkFeeInfo.TransactionSize).String(),

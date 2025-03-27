@@ -96,6 +96,7 @@ type ThorchainBridge interface {
 	GetThorchainVersion() (semver.Version, error)
 	IsCatchingUp() (bool, error)
 	HasNetworkFee(chain common.Chain) (bool, error)
+	GetNetworkFee(chain common.Chain) (transactionSize, transactionFeeRate uint64, err error)
 	PostKeysignFailure(blame stypes.Blame, height int64, memo string, coins common.Coins, pubkey common.PubKey) (common.TxID, error)
 	PostNetworkFee(height int64, chain common.Chain, transactionSize, transactionRate uint64) (common.TxID, error)
 	RagnarokInProgress() (bool, error)
@@ -526,6 +527,42 @@ func (b *thorchainBridge) HasNetworkFee(chain common.Chain) (bool, error) {
 	}
 
 	return false, fmt.Errorf("no inbound address found for chain: %s", chain)
+}
+
+// GetNetworkFee get chain's network fee from THORNode.
+func (b *thorchainBridge) GetNetworkFee(chain common.Chain) (transactionSize, transactionFeeRate uint64, err error) {
+	buf, s, err := b.getWithPath(InboundAddressesEndpoint)
+	if err != nil {
+		return 0, 0, fmt.Errorf("fail to get inbound addresses: %w", err)
+	}
+	if s != http.StatusOK {
+		return 0, 0, fmt.Errorf("unexpected status code: %d", s)
+	}
+	var resp []openapi.InboundAddress
+	if err = json.Unmarshal(buf, &resp); err != nil {
+		return 0, 0, fmt.Errorf("fail to unmarshal to json: %w", err)
+	}
+
+	for _, addr := range resp {
+		if addr.Chain != nil && *addr.Chain == chain.String() {
+			// Default values if nil or unfound are 0.
+			if addr.OutboundTxSize != nil {
+				transactionSize, err = strconv.ParseUint(*addr.OutboundTxSize, 10, 64)
+				if err != nil {
+					return 0, 0, fmt.Errorf("fail to parse outbound_tx_size: %w", err)
+				}
+			}
+			if addr.ObservedFeeRate != nil {
+				transactionFeeRate, err = strconv.ParseUint(*addr.ObservedFeeRate, 10, 64)
+				if err != nil {
+					return 0, 0, fmt.Errorf("fail to parse observed_fee_rate: %w", err)
+				}
+			}
+			// Having found the chain, do not continue through the remaining chains.
+			break
+		}
+	}
+	return
 }
 
 // WaitToCatchUp wait for thorchain to catch up

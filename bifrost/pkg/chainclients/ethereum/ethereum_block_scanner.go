@@ -167,6 +167,11 @@ func (e *ETHScanner) GetHeight() (int64, error) {
 	return int64(height), nil
 }
 
+// GetNetworkFee returns current chain network fee according to Bifrost.
+func (e *ETHScanner) GetNetworkFee() (transactionSize, transactionFeeRate uint64) {
+	return e.cfg.MaxGasLimit, e.lastReportedGasPrice
+}
+
 // GetTokens return all the token meta data
 func (e *ETHScanner) GetTokens() ([]*types.TokenMeta, error) {
 	return e.tokens.GetTokens()
@@ -206,9 +211,9 @@ func (e *ETHScanner) FetchTxs(height, chainHeight int64) (stypes.TxIn, error) {
 		return txIn, nil
 	}
 
-	// gas price to 1e8
+	// gas price to 1e8 from 1e18
 	gasPrice := e.GetGasPrice()
-	tcGasPrice := new(big.Int).Div(gasPrice, big.NewInt(common.One*100)).Uint64()
+	tcGasPrice := new(big.Int).Div(gasPrice, big.NewInt(1e10)).Uint64()
 	if tcGasPrice == 0 {
 		tcGasPrice = 1
 	}

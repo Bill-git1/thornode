@@ -26,6 +26,8 @@ type BlockScannerFetcher interface {
 	FetchTxs(fetchHeight, chainHeight int64) (types.TxIn, error)
 	// GetHeight return current block height
 	GetHeight() (int64, error)
+	// GetNetworkFee returns current network fee details
+	GetNetworkFee() (transactionSize, transactionFeeRate uint64)
 }
 
 type Block struct {
@@ -201,10 +203,18 @@ func (b *BlockScanner) scanBlocks() {
 				continue
 			}
 
+			ms := b.cfg.ChainID.ApproximateBlockMilliseconds()
+
+			// determine how often we compare THORNode network fee to Bifrost network fee.
+			// General goal is about once per day.
+			mod := ((24 * 60 * 60 * 1000) + ms - 1) / ms
+			if currentBlock%mod == 0 {
+				b.updateStaleNetworkFee(currentBlock)
+			}
+
 			// determine how often we print a info log line for scanner
 			// progress. General goal is about once per minute
-			ms := b.cfg.ChainID.ApproximateBlockMilliseconds()
-			mod := (60_000 + ms - 1) / ms
+			mod = (60_000 + ms - 1) / ms
 			// enable this one , so we could see how far it is behind
 			if currentBlock%mod == 0 || !b.healthy.Load() {
 				b.logger.Info().
@@ -240,6 +250,41 @@ func (b *BlockScanner) scanBlocks() {
 			}
 		}
 	}
+}
+
+// updateStaleNetworkFee broadcasts a network fee observation if the local scanner fee
+// does not match the fee published to THORNode. This can be called periodically to
+// ensure fee changes find consensus despite raciness on the observation height.
+func (b *BlockScanner) updateStaleNetworkFee(currentBlock int64) {
+	// Only broadcast MsgNetworkFee if the chain isn't THORChain
+	// and the scanner is healthy.
+	if b.cfg.ChainID.Equals(common.THORChain) || !b.healthy.Load() {
+		return
+	}
+
+	transactionSize, transactionFeeRate := b.chainScanner.GetNetworkFee()
+	thorTransactionSize, thorTransactionFeeRate, err := b.thorchainBridge.GetNetworkFee(b.cfg.ChainID)
+	if err != nil {
+		b.logger.Error().Err(err).Msg("fail to get thornode network fee")
+		return
+	}
+	// Do not broadcast a regularly-timed network fee if the THORNode network fee is already consistent with the scanner's.
+	if thorTransactionSize == transactionSize && thorTransactionFeeRate == transactionFeeRate {
+		return
+	}
+
+	feeTxID, err := b.thorchainBridge.PostNetworkFee(currentBlock, b.cfg.ChainID, transactionSize, transactionFeeRate)
+	if err != nil {
+		b.logger.Error().Err(err).Msg("fail to send timed chain network fee to THORChain")
+		return
+	}
+
+	b.logger.Info().
+		Str("tx", feeTxID.String()).
+		Int64("height", currentBlock).
+		Uint64("size", transactionSize).
+		Uint64("rate", transactionFeeRate).
+		Msg("sent timed network fee to THORChain")
 }
 
 // FetchLastHeight determines the height to start scanning:

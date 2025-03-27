@@ -163,6 +163,11 @@ func (c *CosmosBlockScanner) GetHeight() (int64, error) {
 	return resultBlock.Block.Header.Height - 1, nil
 }
 
+// GetNetworkFee returns current chain network fee according to Bifrost.
+func (c *CosmosBlockScanner) GetNetworkFee() (transactionSize, transactionFeeRate uint64) {
+	return 1, c.lastFee.Uint64()
+}
+
 // GetBlock returns a Tendermint block as a reference to a ResultBlock for a
 // given height. As noted above, this is not necessarily the final state of transactions
 // and must be checked again for success by getting the BlockResults in FetchTxs

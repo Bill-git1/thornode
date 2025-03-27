@@ -67,6 +67,13 @@ func (b *ThorchainBlockScan) GetHeight() (int64, error) {
 	return b.thorchain.GetBlockHeight()
 }
 
+// ThorchainBlockScan's GetNetworkFee only exists to satisfy the BlockScannerFetcher interface
+// and should never be called, since broadcast network fees are for external chains' observed fees.
+func (b *ThorchainBlockScan) GetNetworkFee() (transactionSize, transactionFeeRate uint64) {
+	b.logger.Error().Msg("ThorchainBlockScan GetNetworkFee was called (which should never happen)")
+	return 0, 0
+}
+
 func (b *ThorchainBlockScan) FetchTxs(height, _ int64) (types.TxIn, error) {
 	if err := b.processTxOutBlock(height); err != nil {
 		return types.TxIn{}, err

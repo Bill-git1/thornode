@@ -209,6 +209,11 @@ func (c *Client) GetHeight() (int64, error) {
 	return c.rpc.GetBlockCount()
 }
 
+// GetNetworkFee returns current chain network fee according to Bifrost.
+func (c *Client) GetNetworkFee() (transactionSize, transactionFeeRate uint64) {
+	return c.cfg.UTXO.EstimatedAverageTxSize, c.lastFeeRate
+}
+
 // GetBlockScannerHeight returns blockscanner height
 func (c *Client) GetBlockScannerHeight() (int64, error) {
 	return c.blockScanner.PreviousHeight(), nil

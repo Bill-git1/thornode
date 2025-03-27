@@ -206,6 +206,11 @@ func (e *EVMScanner) GetGasPrice() *big.Int {
 	return e.gasPrice
 }
 
+// GetNetworkFee returns current chain network fee according to Bifrost.
+func (e *EVMScanner) GetNetworkFee() (transactionSize, transactionFeeRate uint64) {
+	return e.cfg.MaxGasLimit, e.lastReportedGasPrice
+}
+
 // GetNonce returns the nonce (including pending) for the given address.
 func (e *EVMScanner) GetNonce(addr string) (uint64, error) {
 	return e.ethRpc.GetNonce(addr)
@@ -779,8 +784,8 @@ func (e *EVMScanner) reportNetworkFee(height int64) {
 		}
 	}
 
-	// gas price to 1e8
-	tcGasPrice := new(big.Int).Div(gasPrice, big.NewInt(common.One*100))
+	// gas price to 1e8 from 1e18
+	tcGasPrice := new(big.Int).Div(gasPrice, big.NewInt(1e10))
 
 	// post to thorchain
 	if _, err := e.bridge.PostNetworkFee(height, e.cfg.ChainID, e.cfg.MaxGasLimit, tcGasPrice.Uint64()); err != nil {

@@ -14,3 +14,7 @@ func (d DummyFetcher) FetchTxs(height, _ int64) (types.TxIn, error) {
 func (d DummyFetcher) GetHeight() (int64, error) {
 	return 0, nil
 }
+
+func (d DummyFetcher) GetNetworkFee() (transactionSize, transactionFeeRate uint64) {
+	return 0, 0
+}

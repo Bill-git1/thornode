@@ -2256,6 +2256,9 @@ components:
       type: object
       required:
         - halted
+        - global_trading_paused
+        - chain_trading_paused
+        - chain_lp_actions_paused
       properties:
         chain:
           type: string
@@ -2285,9 +2288,13 @@ components:
           type: boolean
           example: false
           description: "Returns true if LP actions are paused for this chain"
+        observed_fee_rate:
+          type: string
+          example: "114"
+          description: "The chain's observed fee rate in 1e8 format, before the 1.5x that makes an outbound more likely to have a sufficient gas rate.  Used by validators to check whether they need to report a fee change."
         gas_rate:
           type: string
-          example: "214"
+          example: "216"
           description: "The minimum fee rate used by vaults to send outbound TXs. The actual fee rate may be higher. For EVM chains this is returned in gwei (1e9)."
         gas_rate_units:
           type: string
@@ -2299,8 +2306,8 @@ components:
           description: "Avg size of outbound TXs on each chain. For UTXO chains it may be larger than average, as it takes into account vault consolidation txs, which can have many vouts"
         outbound_fee:
           type: string
-          example: "428000"
-          description: "The total outbound fee charged to the user for outbound txs in the gas asset of the chain."
+          example: "216000"
+          description: "The total outbound fee charged to the user for outbound txs in the gas asset of the chain.  Can be observed_fee_rate * 1.5 * outbound_tx_size or else kept to an equivalent of Mimir key MinimumL1OutboundFeeUSD."
         dust_threshold:
           type: string
           example: "10000"
