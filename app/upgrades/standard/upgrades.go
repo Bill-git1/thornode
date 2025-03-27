@@ -6,7 +6,6 @@ import (
 
 	storetypes "cosmossdk.io/store/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
-	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 
@@ -20,9 +19,7 @@ func NewUpgrade(semver string) upgrades.Upgrade {
 		UpgradeName:          semver,
 		CreateUpgradeHandler: CreateUpgradeHandler,
 		StoreUpgrades: storetypes.StoreUpgrades{
-			Added: []string{
-				wasmtypes.ModuleName,
-			},
+			Added:   []string{},
 			Deleted: []string{},
 		},
 	}

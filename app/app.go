@@ -80,6 +80,10 @@ import (
 	thorchainkeeper "gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
 	thorchainkeeperv1 "gitlab.com/thorchain/thornode/v3/x/thorchain/keeper/v1"
 	thorchaintypes "gitlab.com/thorchain/thornode/v3/x/thorchain/types"
+
+	"gitlab.com/thorchain/thornode/v3/x/denom"
+	denomkeeper "gitlab.com/thorchain/thornode/v3/x/denom/keeper"
+	denomtypes "gitlab.com/thorchain/thornode/v3/x/denom/types"
 )
 
 const (
@@ -110,6 +114,7 @@ var maccPerms = map[string][]string{
 	thorchain.TreasuryName:           {},
 	thorchain.RUNEPoolName:           {},
 	wasmtypes.ModuleName:             {authtypes.Burner},
+	denomtypes.ModuleName:            {authtypes.Minter, authtypes.Burner},
 }
 
 var (
@@ -140,6 +145,7 @@ type THORChainApp struct {
 
 	ThorchainKeeper thorchainkeeper.Keeper
 
+	DenomKeeper      denomkeeper.Keeper
 	msgServiceRouter *MsgServiceRouter // router for redirecting Msg service messages
 	WasmKeeper       wasmkeeper.Keeper
 
@@ -221,6 +227,7 @@ func NewChainApp(
 		// non sdk store keys
 		thorchaintypes.StoreKey,
 		wasmtypes.StoreKey,
+		denomtypes.StoreKey,
 	)
 
 	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey)
@@ -363,6 +370,14 @@ func NewChainApp(
 		wasmOpts...,
 	)
 
+	app.DenomKeeper = denomkeeper.NewKeeper(
+		app.appCodec,
+		runtime.NewKVStoreService(keys[denomtypes.StoreKey]),
+		app.AccountKeeper,
+		app.BankKeeper.WithMintCoinsRestriction(denomtypes.NewDenomMintCoinsRestriction()),
+		authtypes.NewModuleAddress(thorchain.ModuleName).String(),
+	)
+
 	// --- Module Options ---
 	telemetryEnabled := cast.ToBool(appOpts.Get("telemetry.enabled"))
 	testApp := cast.ToBool(appOpts.Get(TestApp))
@@ -390,6 +405,7 @@ func NewChainApp(
 		app.GetSubspace(wasmtypes.ModuleName),
 	)
 	customWasmModule := NewCustomWasmModule(&wasmModule)
+	denomModule := denom.NewAppModule(app.appCodec, app.DenomKeeper, app.AccountKeeper, app.BankKeeper)
 
 	app.ModuleManager = module.NewManager(
 		genutilModule,
@@ -401,6 +417,7 @@ func NewChainApp(
 		// non sdk modules
 		thorchainModule,
 		customWasmModule,
+		denomModule,
 	)
 
 	// BasicModuleManager defines the module BasicManager is in charge of setting up basic,
@@ -418,6 +435,7 @@ func NewChainApp(
 		// non sdk modules
 		thorchainModule,
 		wasmModule,
+		denomModule,
 	)
 	app.BasicModuleManager.RegisterLegacyAminoCodec(app.legacyAmino)
 	app.BasicModuleManager.RegisterInterfaces(interfaceRegistry)
@@ -459,6 +477,7 @@ func NewChainApp(
 		consensusparamtypes.ModuleName,
 		thorchaintypes.ModuleName,
 		wasmtypes.ModuleName,
+		denomtypes.ModuleName,
 	}
 	app.ModuleManager.SetOrderInitGenesis(genesisModuleOrder...)
 	app.ModuleManager.SetOrderExportGenesis(genesisModuleOrder...)

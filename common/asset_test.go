@@ -167,4 +167,12 @@ func (s AssetSuite) TestAsset(c *C) {
 	c.Assert(asset.Chain, Equals, ETHChain)
 	c.Check(asset.Symbol.Equals(Symbol("RUNE-0X3155BA85D5F96B2D030A4966AF206230E46849CB")), Equals, true)
 	c.Check(asset.Ticker.Equals(Ticker("RUNE")), Equals, true)
+
+	// Ensure that x/denom assets are not interpreted as synth assets
+	asset, err = NewAsset("x/custom")
+	c.Assert(err, NotNil)
+
+	// Ensure that x/denom assets cannot be interpreted by MsgDeposit
+	asset, err = NewAsset("THOR.X/CUSTOM")
+	c.Assert(err, NotNil)
 }

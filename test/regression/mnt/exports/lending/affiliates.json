@@ -241,6 +241,9 @@
         }
       ]
     },
+    "denom": {
+      "admins": []
+    },
     "genutil": {
       "gen_txs": []
     },

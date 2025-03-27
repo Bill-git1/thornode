@@ -6,13 +6,14 @@ import (
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 
 	"gitlab.com/thorchain/thornode/v3/app/upgrades"
+	v3_4_0 "gitlab.com/thorchain/thornode/v3/app/upgrades/3.4.0"
 	"gitlab.com/thorchain/thornode/v3/app/upgrades/standard"
 )
 
 // Upgrades list of chain upgrades
 var Upgrades = []upgrades.Upgrade{
 	// register non-standard upgrades here
-	standard.NewUpgrade("3.3.0"),
+	v3_4_0.NewUpgrade(),
 }
 
 // RegisterUpgradeHandlers registers the chain upgrade handlers
