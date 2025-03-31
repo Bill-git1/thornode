@@ -134,7 +134,6 @@ func NewClient(thorKeys *thorclient.Keys,
 	if err != nil {
 		return nil, fmt.Errorf("fail to get contract abi: %w", err)
 	}
-	pubkeyMgr.GetPubKeys()
 	c := &Client{
 		logger:       log.With().Str("module", "ethereum").Logger(),
 		cfg:          cfg,

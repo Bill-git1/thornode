@@ -191,9 +191,6 @@ func NewEVMClient(
 		return nil, fmt.Errorf("fail to get contract abi: %w", err)
 	}
 
-	// TODO: Do we need to call this?
-	pubkeyMgr.GetPubKeys()
-
 	c := &EVMClient{
 		logger:       clog,
 		cfg:          cfg,
