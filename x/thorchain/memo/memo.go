@@ -45,7 +45,6 @@ const (
 	TxRunePoolWithdraw
 	TxExec
 	TxSwitch
-	TxRotate
 )
 
 var stringToTxTypeMap = map[string]TxType{
@@ -87,7 +86,6 @@ var stringToTxTypeMap = map[string]TxType{
 	"x":           TxExec,
 	"exec":        TxExec,
 	"switch":      TxSwitch,
-	"rotate":      TxRotate,
 }
 
 var txToStringMap = map[TxType]string{
@@ -115,7 +113,6 @@ var txToStringMap = map[TxType]string{
 	TxSecuredAssetWithdraw:   "secure-",
 	TxExec:                   "x",
 	TxSwitch:                 "switch",
-	TxRotate:                 "rotate",
 }
 
 // converts a string into a txType
@@ -151,8 +148,7 @@ func (tx TxType) IsInbound() bool {
 		TxLoanOpen,
 		TxLoanRepayment,
 		TxExec,
-		TxSwitch,
-		TxRotate:
+		TxSwitch:
 		return true
 	default:
 		return false

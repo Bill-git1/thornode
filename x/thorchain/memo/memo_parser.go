@@ -114,8 +114,6 @@ func (p *parser) parse() (mem Memo, err error) {
 		return p.ParseExecMemo()
 	case TxSwitch:
 		return p.ParseSwitch()
-	case TxRotate:
-		return p.ParseRotate()
 	default:
 		return EmptyMemo, fmt.Errorf("TxType not supported: %s", p.getType().String())
 	}
