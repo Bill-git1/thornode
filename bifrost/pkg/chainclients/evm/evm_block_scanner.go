@@ -221,6 +221,11 @@ func (e *EVMScanner) GetNonceFinalized(addr string) (uint64, error) {
 	return e.ethRpc.GetNonceFinalized(addr)
 }
 
+// FetchMemPool returns all transactions in the mempool.
+func (e *EVMScanner) FetchMemPool(_ int64) (stypes.TxIn, error) {
+	return stypes.TxIn{}, nil
+}
+
 // GetTokens returns all token meta data.
 func (e *EVMScanner) GetTokens() ([]*evmtypes.TokenMeta, error) {
 	return e.tokenManager.GetTokens()

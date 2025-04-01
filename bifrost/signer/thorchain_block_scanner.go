@@ -74,6 +74,10 @@ func (b *ThorchainBlockScan) GetNetworkFee() (transactionSize, transactionFeeRat
 	return 0, 0
 }
 
+func (c *ThorchainBlockScan) FetchMemPool(height int64) (types.TxIn, error) {
+	return types.TxIn{}, nil
+}
+
 func (b *ThorchainBlockScan) FetchTxs(height, _ int64) (types.TxIn, error) {
 	if err := b.processTxOutBlock(height); err != nil {
 		return types.TxIn{}, err

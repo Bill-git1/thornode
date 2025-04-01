@@ -102,6 +102,7 @@ func (s *BitcoinSuite) SetUpTest(c *C) {
 		},
 	}
 	s.cfg.UTXO.TransactionBatchSize = 500
+	s.cfg.UTXO.MaxMempoolBatches = 10
 	s.cfg.UTXO.EstimatedAverageTxSize = 1000
 	s.cfg.BlockScanner.MaxReorgRescanBlocks = 1
 	ns := strconv.Itoa(time.Now().Nanosecond())
@@ -893,6 +894,17 @@ func (s *BitcoinSuite) TestProcessReOrg(c *C) {
 	blockMeta, err = s.client.temporalStorage.GetBlockMeta(previousHeight)
 	c.Assert(err, IsNil)
 	c.Assert(blockMeta, NotNil)
+}
+
+func (s *BitcoinSuite) TestGetMemPool(c *C) {
+	txIns, err := s.client.FetchMemPool(1024)
+	c.Assert(err, IsNil)
+	c.Assert(txIns.TxArray, HasLen, 1)
+
+	// process it again , the tx will be ignored
+	txIns, err = s.client.FetchMemPool(1024)
+	c.Assert(err, IsNil)
+	c.Assert(txIns.TxArray, HasLen, 0)
 }
 
 func (s *BitcoinSuite) TestGetOutput(c *C) {

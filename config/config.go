@@ -565,20 +565,21 @@ type BifrostSignerConfiguration struct {
 }
 
 type BifrostChainConfiguration struct {
-	ChainID        common.Chain                     `mapstructure:"chain_id"`
-	ChainHost      string                           `mapstructure:"chain_host"`
-	ChainNetwork   string                           `mapstructure:"chain_network"`
-	UserName       string                           `mapstructure:"username"`
-	Password       string                           `mapstructure:"password"`
-	RPCHost        string                           `mapstructure:"rpc_host"`
-	CosmosGRPCHost string                           `mapstructure:"cosmos_grpc_host"`
-	CosmosGRPCTLS  bool                             `mapstructure:"cosmos_grpc_tls"`
-	HTTPostMode    bool                             `mapstructure:"http_post_mode"` // Bitcoin core only supports HTTP POST mode
-	DisableTLS     bool                             `mapstructure:"disable_tls"`    // Bitcoin core does not provide TLS by default
-	OptToRetire    bool                             `mapstructure:"opt_to_retire"`  // don't emit support for this chain during keygen process
-	Disabled       bool                             `mapstructure:"disabled"`
-	SolvencyBlocks int64                            `mapstructure:"solvency_blocks"`
-	BlockScanner   BifrostBlockScannerConfiguration `mapstructure:"block_scanner"`
+	ChainID             common.Chain                     `mapstructure:"chain_id"`
+	ChainHost           string                           `mapstructure:"chain_host"`
+	ChainNetwork        string                           `mapstructure:"chain_network"`
+	UserName            string                           `mapstructure:"username"`
+	Password            string                           `mapstructure:"password"`
+	RPCHost             string                           `mapstructure:"rpc_host"`
+	CosmosGRPCHost      string                           `mapstructure:"cosmos_grpc_host"`
+	CosmosGRPCTLS       bool                             `mapstructure:"cosmos_grpc_tls"`
+	HTTPostMode         bool                             `mapstructure:"http_post_mode"` // Bitcoin core only supports HTTP POST mode
+	DisableTLS          bool                             `mapstructure:"disable_tls"`    // Bitcoin core does not provide TLS by default
+	OptToRetire         bool                             `mapstructure:"opt_to_retire"`  // don't emit support for this chain during keygen process
+	ParallelMempoolScan int                              `mapstructure:"parallel_mempool_scan"`
+	Disabled            bool                             `mapstructure:"disabled"`
+	SolvencyBlocks      int64                            `mapstructure:"solvency_blocks"`
+	BlockScanner        BifrostBlockScannerConfiguration `mapstructure:"block_scanner"`
 
 	// MemPoolTxIDCacheSize is the number of transaction ids to cache in memory. This
 	// prevents read on LevelDB which may hit disk for every transaction in the mempool in
@@ -627,6 +628,10 @@ type BifrostChainConfiguration struct {
 		// in fetching block transactions for chains that do not yet support verbosity level
 		// 2 on getblock (dogecoin).
 		TransactionBatchSize int `mapstructure:"transaction_batch_size"`
+
+		// MaxMempoolBatches is the maximum number of batches to fetch from the mempool in
+		// a single scanning pass.
+		MaxMempoolBatches int `mapstructure:"max_mempool_batches"`
 
 		// NOTE: The following fields must be consistent across all validators. Otherwise,
 		// nodes can fail to sign outbounds from asgard since they may build different
@@ -679,6 +684,9 @@ type BifrostBlockScannerConfiguration struct {
 	EnforceBlockHeight         bool          `mapstructure:"enforce_block_height"`
 	DBPath                     string        `mapstructure:"db_path"`
 	ChainID                    common.Chain  `mapstructure:"chain_id"`
+
+	// ScanBlocks indicates whether mempool transactions should be scanned.
+	ScanMemPool bool `mapstructure:"scan_mempool"`
 
 	// The following configuration values apply only to a subset of chains.
 

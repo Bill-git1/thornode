@@ -172,6 +172,11 @@ func (e *ETHScanner) GetNetworkFee() (transactionSize, transactionFeeRate uint64
 	return e.cfg.MaxGasLimit, e.lastReportedGasPrice
 }
 
+// FetchMemPool get tx from mempool
+func (e *ETHScanner) FetchMemPool(_ int64) (stypes.TxIn, error) {
+	return stypes.TxIn{}, nil
+}
+
 // GetTokens return all the token meta data
 func (e *ETHScanner) GetTokens() ([]*types.TokenMeta, error) {
 	return e.tokens.GetTokens()
