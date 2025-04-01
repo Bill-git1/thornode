@@ -397,6 +397,7 @@
           "height": "6",
           "tx_array": [
             {
+              "aggregator_target_limit": "0",
               "chain": "GAIA",
               "clout_spent": "0",
               "coin": {

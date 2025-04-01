@@ -76,6 +76,7 @@ asserts:
       in_hash: "34AA325C82F0B9572B54B1AD403146200625DB5F31EF59C5F8BF9BF22F93E71A",
       aggregator: "0x69800327b38A4CeF30367Dec3f64c2f2386f3848",
       aggregator_target_asset: "0x6f67873ebc41ed88B08A9265Bd16480f819e4348",
+      aggregator_target_limit: "0",
       clout_spent: "0"
     }
-  - .signature == "R8q5YSzO0K2u7pnGaNLnZgU7aTQyx78G+V/SJGRGEEpSmaxcmX9gaGpWdTR8nk52jVRUWCPd0Wv1CkK66KeNfA=="
+  - .signature == "p5Um0zj8bVFnFsdK5suZmLu+UvqnIsivVI0xWRy56QYx+MZqnX+gF61z3Z3C318m+Zk3eTBwFwhKQQCpyU8XUQ=="

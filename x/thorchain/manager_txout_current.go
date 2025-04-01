@@ -792,6 +792,16 @@ func (tos *TxOutStorageVCUR) addToBlockOut(ctx cosmos.Context, mgr Manager, item
 		return tos.nativeTxOut(ctx, mgr, item)
 	}
 
+	// The outbound queue should never receive an item with a nil pointer field.
+	if item.AggregatorTargetLimit == nil {
+		aggregatorTargetLimit := cosmos.ZeroUint()
+		item.AggregatorTargetLimit = &aggregatorTargetLimit
+	}
+	if item.CloutSpent == nil {
+		cloutSpent := cosmos.ZeroUint()
+		item.CloutSpent = &cloutSpent
+	}
+
 	vault, err := tos.keeper.GetVault(ctx, item.VaultPubKey)
 	if err != nil {
 		ctx.Logger().Error("fail to get vault", "error", err)

@@ -439,6 +439,7 @@
             {
               "aggregator": "0x69800327b38A4CeF30367Dec3f64c2f2386f3848",
               "aggregator_target_asset": "0x6f67873ebc41ed88B08A9265Bd16480f819e4348",
+              "aggregator_target_limit": "0",
               "chain": "ETH",
               "clout_spent": "0",
               "coin": {

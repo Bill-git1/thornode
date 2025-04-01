@@ -725,6 +725,7 @@
           "height": "12",
           "tx_array": [
             {
+              "aggregator_target_limit": "0",
               "chain": "BTC",
               "clout_spent": "0",
               "coin": {
@@ -751,6 +752,7 @@
           "height": "15",
           "tx_array": [
             {
+              "aggregator_target_limit": "0",
               "chain": "BTC",
               "clout_spent": "0",
               "coin": {
@@ -777,6 +779,7 @@
           "height": "17",
           "tx_array": [
             {
+              "aggregator_target_limit": "0",
               "chain": "BTC",
               "clout_spent": "0",
               "coin": {
@@ -803,6 +806,7 @@
           "height": "18",
           "tx_array": [
             {
+              "aggregator_target_limit": "0",
               "chain": "BTC",
               "clout_spent": "0",
               "coin": {
