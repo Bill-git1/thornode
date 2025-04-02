@@ -71,6 +71,8 @@ func (m Migrator) Migrate4to5(ctx sdk.Context) error {
 		return err
 	}
 
+	// ------------------------------ TCY ------------------------------
+
 	totalTCYCoin := common.NewCoin(common.TCY, cosmos.NewUint(210_000_000_00000000))
 	err := m.mgr.Keeper().MintToModule(ctx, ModuleName, totalTCYCoin)
 	if err != nil {
@@ -105,6 +107,23 @@ func (m Migrator) Migrate4to5(ctx sdk.Context) error {
 	if err != nil {
 		return err
 	}
+
+	// ------------------------------ Bond Slash Refund ------------------------------
+
+	for _, slashRefund := range mainnetSlashRefunds4to5 {
+		recipient, err := cosmos.AccAddressFromBech32(slashRefund.address)
+		if err != nil {
+			ctx.Logger().Error("error parsing address in store migration", "error", err)
+			continue
+		}
+		amount := cosmos.NewUint(slashRefund.amount)
+		refundCoins := common.NewCoins(common.NewCoin(common.RuneAsset(), amount))
+		if err := m.mgr.Keeper().SendFromModuleToAccount(ctx, ReserveName, recipient, refundCoins); err != nil {
+			ctx.Logger().Error("fail to store migration transfer RUNE from Reserve to recipient", "error", err, "recipient", recipient, "amount", amount)
+		}
+	}
+
+	// ------------------------------ Mimir Cleanup ------------------------------
 
 	return m.ClearObsoleteMimirs(ctx)
 }
