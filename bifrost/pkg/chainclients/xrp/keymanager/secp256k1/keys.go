@@ -58,10 +58,28 @@ func (k *Keys) Verify(message, signature []byte) (bool, error) {
 		return false, fmt.Errorf("failed to parse public key: %v", err)
 	}
 
+	// Prepare signature in the format expected by VerifySignature
+	// Ensure R and S are padded to 32 bytes
+	rBytes := PaddedBytes(sig.R, 32)
+	sBytes := PaddedBytes(sig.S, 32)
+
 	// Verify the signature
 	return crypto.VerifySignature(
 		crypto.CompressPubkey(publicKey),
 		messageHash,
-		append(sig.R.Bytes(), sig.S.Bytes()...),
+		append(rBytes, sBytes...),
 	), nil
+}
+
+// Helper function to ensure byte arrays are properly padded to specified length
+func PaddedBytes(i *big.Int, length int) []byte {
+	bytes := i.Bytes()
+	if len(bytes) >= length {
+		return bytes
+	}
+
+	// Pad with zeros
+	result := make([]byte, length)
+	copy(result[length-len(bytes):], bytes)
+	return result
 }

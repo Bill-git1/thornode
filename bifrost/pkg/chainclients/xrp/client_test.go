@@ -85,7 +85,6 @@ func (s *XrpTestSuite) SetUpSuite(c *C) {
 	_, _, err := kb.NewMnemonic(cfg.SignerName, cKeys.English, cmd.THORChainHDPath, cfg.SignerPasswd, hd.Secp256k1)
 	c.Assert(err, IsNil)
 	s.thorKeys = thorclient.NewKeysWithKeybase(kb, cfg.SignerName, cfg.SignerPasswd)
-	c.Assert(err, IsNil)
 	s.bridge, err = thorclient.NewThorchainBridge(cfg, s.m, s.thorKeys)
 	c.Assert(err, IsNil)
 }
@@ -339,4 +338,21 @@ func (s *XrpTestSuite) TestSign(c *C) {
 	// Sign the message (verifies signature within)
 	_, err = client.signMsg(msg, vaultPubKey)
 	c.Assert(err, IsNil)
+}
+
+// Test signature verification with a signature that needs padding
+func (s *XrpTestSuite) TestSignatureRequiringPadding(c *C) {
+	signBytesHex := "5354580012000021000004d224000000016140000000017645e06840000000000b71b07321030cef2112503d3a56d2d48b3a0f0f6503e4353400f450f9dbf344d182e7c7069c8114d4b66bcf790babd0032c5dbfdc14ff1c643a4f488314fdffd00f2f2d215ecdad483b99be1dad2259b9c3f9ea7d046d656d6fe1f1"
+	signatureHex := "30440221008e9bc0a8d7927f1874d318bc2a57691b5321d618dd57857d64402be0e0bc0007021f4ab281ef93b0c448a9e75d6c07e9cf05ee705a3c51aafa61992510b65a03ae"
+	compressedPubKeyHex := "030cef2112503d3a56d2d48b3a0f0f6503e4353400f450f9dbf344d182e7c7069c"
+
+	signBytes, err := hex.DecodeString(signBytesHex)
+	c.Assert(err, IsNil)
+	signature, err := hex.DecodeString(signatureHex)
+	c.Assert(err, IsNil)
+	compressedPubKey, err := hex.DecodeString(compressedPubKeyHex)
+	c.Assert(err, IsNil)
+
+	verified := verifySignature(signBytes, signature, compressedPubKey)
+	c.Check(verified, Equals, true)
 }

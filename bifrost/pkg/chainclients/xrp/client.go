@@ -485,11 +485,16 @@ func verifySignature(signBytes, signature, compressedPubKey []byte) bool {
 		return false
 	}
 
+	// Prepare signature in the format expected by VerifySignature
+	// Ensure R and S are padded to 32 bytes
+	rBytes := secp256k1.PaddedBytes(sig.R, 32)
+	sBytes := secp256k1.PaddedBytes(sig.S, 32)
+
 	// Verify the signature
 	return ethcrypto.VerifySignature(
 		compressedPubKey,
 		messageHash,
-		append(sig.R.Bytes(), sig.S.Bytes()...),
+		append(rBytes, sBytes...),
 	)
 }
 
