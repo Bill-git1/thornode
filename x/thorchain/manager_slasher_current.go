@@ -270,6 +270,16 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 				pendingOutbounds := mgr.Keeper().GetPendingOutbounds(ctx, toi.Coin.Asset)
 				for i := range active {
 					active[i].DeductVaultPendingOutbounds(pendingOutbounds)
+
+					// If the currently-assigned vault is an ActiveVault and the only one with enough funds for the outbound,
+					// the item should be reassigned to the same vault rather than assigned to another vault without enough funds;
+					// this is especially important for GAIA outbounds, for which insufficient-funds failures
+					// have THORChain-unobserved gas costs (causing churn-migration-jamming vault insolvency).
+					// As such, re-add the (now free) funds of the outbound being replaced.
+					if active[i].PubKey.Equals(toi.VaultPubKey) {
+						active[i].Coins = active[i].Coins.Add(toi.Coin)
+						active[i].Coins = active[i].Coins.Add(toi.MaxGas...)
+					}
 				}
 
 				available := active

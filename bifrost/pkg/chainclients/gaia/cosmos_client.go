@@ -395,6 +395,16 @@ func (c *CosmosClient) SignTx(tx stypes.TxOutItem, thorchainHeight int64) (signe
 				}
 				c.accts.Set(tx.VaultPubKey, meta)
 			}
+			// Check whether the vault has enough funds for the intended outbound.
+			// If a vault attempts a GAIA outbound with insufficient funds,
+			// the unobserved gas cost will make the vault insolvent.
+			neededCoins := tx.Coins.Add(tx.MaxGas...)
+			for _, neededCoin := range neededCoins {
+				vaultCoin := acc.Coins.GetCoin(neededCoin.Asset)
+				if vaultCoin.Amount.LT(neededCoin.Amount) {
+					return nil, nil, nil, fmt.Errorf("insufficient vault balance (%s): %s < %s", vaultCoin.Asset.String(), vaultCoin.Amount.String(), neededCoin.Amount.String())
+				}
+			}
 		}
 	}
 
