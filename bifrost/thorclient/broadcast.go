@@ -78,7 +78,6 @@ func (b *thorchainBridge) Broadcast(msgs ...stypes.Msg) (common.TxID, error) {
 	}
 
 	b.m.GetCounter(metrics.TxToThorchainSigned).Inc()
-	// b.logger.Debug().Str("body", string(body)).Msg("broadcast response from THORChain")
 	txHash, err := common.NewTxID(commit.TxHash)
 	if err != nil {
 		return common.BlankTxID, fmt.Errorf("fail to convert txhash: %w", err)

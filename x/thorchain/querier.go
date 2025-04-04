@@ -3209,32 +3209,6 @@ func castVaultRouters(chainContracts []ChainContract) []*types.VaultRouter {
 	return routers
 }
 
-// TODO: Migrate callers to use simulate instead.
-func simulateInternal(ctx cosmos.Context, mgr *Mgrs, msg sdk.Msg) (sdk.Events, error) {
-	// validate
-	m, ok := msg.(sdk.HasValidateBasic)
-	if !ok {
-		return nil, fmt.Errorf("message doesn't support validation")
-	}
-
-	err := m.ValidateBasic()
-	if err != nil {
-		return nil, fmt.Errorf("failed validate: %w", err)
-	}
-
-	// intercept events and avoid modifying state
-	cms := ctx.MultiStore().CacheMultiStore() // never call cms.Write()
-	em := cosmos.NewEventManager()
-	ctx = ctx.WithMultiStore(cms).WithEventManager(em)
-
-	// disable logging
-	ctx = ctx.WithLogger(nullLogger)
-
-	// simulate the message handler
-	_, err = NewInternalHandler(mgr)(ctx, msg)
-	return em.Events(), err
-}
-
 func blockEvent(e sdk.Event) *types.BlockEvent {
 	event := types.BlockEvent{}
 	event.EventKvPair = append(event.EventKvPair, &types.EventKeyValuePair{
@@ -3273,6 +3247,8 @@ func simulate(ctx cosmos.Context, mgr Manager, msg sdk.Msg) (sdk.Events, error) 
 		m.Signer = nodeAccounts[0].NodeAddress
 	case *MsgLoanRepayment:
 		m.Signer = nodeAccounts[0].NodeAddress
+	case *MsgSwap:
+		m.Signer = nodeAccounts[0].NodeAddress
 	}
 
 	// set random txid
@@ -3289,6 +3265,8 @@ func simulate(ctx cosmos.Context, mgr Manager, msg sdk.Msg) (sdk.Events, error) 
 		return nil, fmt.Errorf("failed to validate message: %w", err)
 	}
 
+	// TODO: evaluate if this CacheMultiStore is still needed given
+	//   that the querier is called with a CacheContext.
 	// intercept events and avoid modifying state
 	cms := ctx.MultiStore().CacheMultiStore() // never call cms.Write()
 	em := cosmos.NewEventManager()
@@ -3317,8 +3295,8 @@ func simulate(ctx cosmos.Context, mgr Manager, msg sdk.Msg) (sdk.Events, error) 
 	}
 
 	// simulate end block, loop it until the swap queue is empty
-	var count int64
-	for count < 1000 {
+	queueEmpty := false
+	for count := int64(0); !queueEmpty && count < 1000; count += 1 {
 		err = mgr.SwapQ().EndBlock(ctx.WithBlockHeight(ctx.BlockHeight()+count), mgr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to simulate end block: %w", err)
@@ -3328,17 +3306,9 @@ func simulate(ctx cosmos.Context, mgr Manager, msg sdk.Msg) (sdk.Events, error) 
 			_ = mgr.Keeper().SetPool(ctx, pool)
 		}
 
-		count += 1
-		queueEmpty := true
 		iter = mgr.Keeper().GetSwapQueueIterator(ctx)
-		for ; iter.Valid(); iter.Next() {
-			queueEmpty = false
-			break
-		}
+		queueEmpty = !iter.Valid()
 		iter.Close()
-		if queueEmpty {
-			break
-		}
 	}
 
 	return em.Events(), nil

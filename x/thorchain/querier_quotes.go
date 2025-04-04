@@ -254,15 +254,8 @@ func quoteSimulateSwap(ctx cosmos.Context, mgr *Mgrs, amount sdkmath.Uint, msg *
 
 	msg.Tx.Coins[0].Amount = msg.Tx.Coins[0].Amount.QuoUint64(streamingQuantity)
 
-	// use the first active node account as the signer
-	nodeAccounts, err := mgr.Keeper().ListActiveValidators(ctx)
-	if err != nil {
-		return nil, sdkmath.ZeroUint(), sdkmath.ZeroUint(), fmt.Errorf("no active node accounts: %w", err)
-	}
-	msg.Signer = nodeAccounts[0].NodeAddress
-
 	// simulate the swap
-	events, err := simulateInternal(ctx, mgr, msg)
+	events, err := simulate(ctx, mgr, msg)
 	if err != nil {
 		return nil, sdkmath.ZeroUint(), sdkmath.ZeroUint(), err
 	}
