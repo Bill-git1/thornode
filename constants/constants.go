@@ -52,7 +52,12 @@ const (
 	CtxObservedTx    contextKey = "observed-tx"
 )
 
+// Permitted characters in Mimirs
 const MimirKeyRegex = `^[a-zA-Z0-9-]+$`
+
+// Maximum length of a mimir (in bytes)
+// If increasing this value, be sure to adjust test/regression/suites/mimir/mimir.yaml
+const MaxMimirLength = 128
 
 // ConstantVals implement ConstantValues interface
 type ConstantVals struct {

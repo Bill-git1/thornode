@@ -62,7 +62,7 @@ func (h MimirHandler) validateV3_0_0(ctx cosmos.Context, msg MsgMimir) error {
 		return err
 	}
 
-	if !mimirValidKey(msg.Key) || len(msg.Key) > 64 {
+	if !mimirValidKey(msg.Key) || len(msg.Key) > constants.MaxMimirLength {
 		return cosmos.ErrUnknownRequest("invalid mimir key")
 	}
 	if _, err := validateMimirAuth(ctx, h.mgr.Keeper(), msg); err != nil {

@@ -43,3 +43,20 @@ type: check
 endpoint: http://localhost:1317/thorchain/mimir
 asserts:
   - .FOXTEST|length == 0
+---
+########################################################################################
+# fail when Mimir length greater than MaxMimirLength
+########################################################################################
+type: tx-mimir
+key: RegressionTestRegressionTestRegressionTestRegressionTestRegressionTestRegressionTestRegressionTestRegressionTestRegressionTestRegressionTestRegressionTestRegressionTestRegressionTestRegressionTest
+value: 1
+signer: {{ addr_thor_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/block
+asserts:
+  - .txs[0].result.code == 6
+  - .txs[0].result.log | contains("invalid mimir key")

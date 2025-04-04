@@ -7,6 +7,8 @@ See [Halt Management](./concepts/network-halts.md) for halt and pause specific s
 
 Mimir setting can be created and changed without a corresponding Constant.
 
+Mimirs have a maximum length of 128 bytes (see MaxMimirLength in THORNode code).
+
 ### Values
 
 - Constant Values:[https://midgard.ninerealms.com/v2/thorchain/constants](https://thornode.ninerealms.com/thorchain/constants)
