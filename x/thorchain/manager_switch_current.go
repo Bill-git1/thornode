@@ -15,6 +15,7 @@ var switchMap = map[string]common.Address{
 	"GAIA.NAMI":  common.GaiaZeroAddress,
 	"GAIA.AUTO":  common.GaiaZeroAddress,
 	"GAIA.LQDY":  common.GaiaZeroAddress,
+	"GAIA.NSTK":  common.GaiaZeroAddress,
 }
 
 // SwitchMgrVCUR is VCUR implementation of SwitchManager
