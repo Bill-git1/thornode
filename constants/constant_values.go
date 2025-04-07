@@ -134,6 +134,7 @@ const (
 	PendulumAssetsBasisPoints
 	PendulumUseEffectiveSecurity
 	PendulumUseVaultAssets
+	TVLCapBasisPoints
 	MultipleAffiliatesMaxCount
 	BondSlashBan
 	BankSendEnabled

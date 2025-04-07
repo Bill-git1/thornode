@@ -1009,10 +1009,20 @@ func atTVLCap(ctx cosmos.Context, coins common.Coins, mgr Manager) bool {
 		ctx.Logger().Error("fail to get validators to calculate TVL cap", "error", err)
 		return true
 	}
-	effectiveSecurity := getEffectiveSecurityBond(nodeAccounts)
 
-	if totalRuneValue.GT(effectiveSecurity) {
-		ctx.Logger().Debug("reached TVL cap", "total rune value", totalRuneValue.String(), "effective security", effectiveSecurity.String())
+	tvlCapBasisPoints := mgr.Keeper().GetConfigInt64(ctx, constants.TVLCapBasisPoints)
+	security := cosmos.ZeroUint()
+	if tvlCapBasisPoints > 0 {
+		for _, na := range nodeAccounts {
+			security = security.Add(na.Bond)
+		}
+		security = common.GetUncappedShare(cosmos.NewUint(uint64(tvlCapBasisPoints)), cosmos.NewUint(constants.MaxBasisPts), security)
+	} else {
+		security = getEffectiveSecurityBond(nodeAccounts)
+	}
+
+	if totalRuneValue.GT(security) {
+		ctx.Logger().Debug("reached TVL cap", "total rune value", totalRuneValue.String(), "security", security.String())
 		return true
 	}
 	return false
