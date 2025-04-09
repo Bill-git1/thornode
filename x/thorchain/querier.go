@@ -3276,7 +3276,7 @@ func simulate(ctx cosmos.Context, mgr Manager, msg sdk.Msg) (sdk.Events, error) 
 	ctx = ctx.WithMultiStore(cms).WithEventManager(em)
 
 	// disable logging
-	// ctx = ctx.WithLogger(nullLogger)
+	ctx = ctx.WithLogger(nullLogger)
 
 	// reset the swap queue
 	iter := mgr.Keeper().GetSwapQueueIterator(ctx)
