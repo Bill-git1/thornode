@@ -305,23 +305,26 @@ asserts:
   - .[0].coin.amount == "${OUT_AMOUNT=65817123}"
   - |
     .[0] == {
-      chain: "ETH",
-      clout_spent: "0",
-      coin: {
-          amount: "${OUT_AMOUNT}",
-          asset: "ETH.ETH"
-      },
-      gas_rate: 12,
       height: 20,
-      in_hash: "34AA325C82F0B9572B54B1AD403146200625DB5F31EF59C5F8BF9BF22F93E71A",
+      vault_pub_key: "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
+      in_hash: "{{ native_txid -1 }}",
+      chain: "ETH",
+      to_address: "{{ addr_eth_fox }}",
+      coin: {
+          asset: "ETH.ETH",
+          amount: "${OUT_AMOUNT}"
+      },
       max_gas: [
           {
-              amount: "960000",
               asset: "ETH.ETH",
+              amount: "960000",
               decimals: 8
           }
       ],
-      memo: "OUT:34AA325C82F0B9572B54B1AD403146200625DB5F31EF59C5F8BF9BF22F93E71A",
-      to_address: "0xe3c64974c78f5693bd2bc68b3221d58df5c6e877",
-      vault_pub_key: "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
+      gas_rate: 12,
+      memo: "OUT:{{ native_txid -1 }}",
+      aggregator: "0x69800327b38A4CeF30367Dec3f64c2f2386f3848",
+      aggregator_target_asset: "0x6f67873ebc41ed88B08A9265Bd16480f819e4348",
+      aggregator_target_limit: "0",
+      clout_spent: "0"
     }

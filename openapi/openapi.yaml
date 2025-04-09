@@ -2475,20 +2475,27 @@ components:
         - coin
         - max_gas
       properties:
+        height:
+          type: integer
+          format: int64
+          example: 1234
+        vault_pub_key:
+          type: string
+          example: "thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4"
+        in_hash:
+          type: string
+          example: "208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA"
+        out_hash:
+          type: string
+          example: "0D0B2FDB6DAD6E5FD3C5E46D39128F9DA15E96F0B2CC054CE059EA3532B150FB"
         chain:
           type: string
           example: "ETH"
         to_address:
           type: string
           example: "0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b"
-        vault_pub_key:
-          type: string
-          example: "thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4"
         coin:
           $ref: "#/components/schemas/Coin"
-        memo:
-          type: string
-          example: "OUT:208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA"
         max_gas:
           type: array
           items:
@@ -2496,16 +2503,21 @@ components:
         gas_rate:
           type: integer
           format: int64
-        in_hash:
+        memo:
           type: string
-          example: "208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA"
-        out_hash:
+          example: "OUT:208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA"
+        aggregator:
           type: string
-          example: "0D0B2FDB6DAD6E5FD3C5E46D39128F9DA15E96F0B2CC054CE059EA3532B150FB"
-        height:
-          type: integer
-          format: int64
-          example: 1234
+          description: whitelisted DEX Aggregator contract address
+          example: "0xe4ddca21881bac219af7f217703db0475d2a9f02"
+        aggregator_target_asset:
+          type: string
+          description: target asset for the aggregator contract to attempt a swap to
+          example: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+        aggregator_target_limit:
+          type: string
+          description: the minimum number of tokens the swapper wants to receive of the output asset
+          example: "100"
         clout_spent:
           type: string
           description: clout spent in RUNE for the outbound

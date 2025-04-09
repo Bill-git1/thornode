@@ -20,17 +20,21 @@ message QueryOutboundResponse{
   repeated QueryTxOutItem tx_out_items = 1;
 }
 
+// Fields are rearranged for querier response readability while preserving their field numbers.
 message QueryTxOutItem{
-  string chain = 1 [(gogoproto.jsontag) = "chain"];
-  string to_address = 2 [(gogoproto.jsontag) = "to_address"];
+  int64 height = 10;
   string vault_pub_key = 3;
-  common.Coin coin = 4 [(gogoproto.jsontag) = "coin"];
-  string memo = 5;
-  repeated common.Coin max_gas = 6 [(gogoproto.castrepeated) = "gitlab.com/thorchain/thornode/v3/common.Gas", (gogoproto.nullable) = false, (gogoproto.jsontag) = "max_gas"];
-  int64 gas_rate = 7;
   string in_hash = 8;
   string out_hash = 9;
-  int64 height = 10;
-	// clout spent in RUNE for the outbound
+  string chain = 1 [(gogoproto.jsontag) = "chain"];
+  string to_address = 2 [(gogoproto.jsontag) = "to_address"];
+  common.Coin coin = 4 [(gogoproto.jsontag) = "coin"];
+  repeated common.Coin max_gas = 6 [(gogoproto.castrepeated) = "gitlab.com/thorchain/thornode/v3/common.Gas", (gogoproto.nullable) = false, (gogoproto.jsontag) = "max_gas"];
+  int64 gas_rate = 7;
+  string memo = 5;
+  string aggregator = 12;
+  string aggregator_target_asset = 13;
+  string aggregator_target_limit = 14;
+  // clout spent in RUNE for the outbound
   string clout_spent = 11;
 }

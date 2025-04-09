@@ -3690,9 +3690,11 @@ components:
         gas_rate: 0
         in_hash: 208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
         out_hash: 0D0B2FDB6DAD6E5FD3C5E46D39128F9DA15E96F0B2CC054CE059EA3532B150FB
+        aggregator: 0xe4ddca21881bac219af7f217703db0475d2a9f02
         memo: OUT:208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
-        to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
         vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
+        to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
+        aggregator_target_asset: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
         max_gas:
         - amount: "100000"
           decimals: 6
@@ -3700,27 +3702,35 @@ components:
         - amount: "100000"
           decimals: 6
           asset: BTC.BTC
+        aggregator_target_limit: "100"
         clout_spent: "1234"
+        height: 1234
         coin:
           amount: "100000"
           decimals: 6
           asset: BTC.BTC
-        height: 1234
       properties:
+        height:
+          example: 1234
+          format: int64
+          type: integer
+        vault_pub_key:
+          example: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
+          type: string
+        in_hash:
+          example: 208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
+          type: string
+        out_hash:
+          example: 0D0B2FDB6DAD6E5FD3C5E46D39128F9DA15E96F0B2CC054CE059EA3532B150FB
+          type: string
         chain:
           example: ETH
           type: string
         to_address:
           example: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
           type: string
-        vault_pub_key:
-          example: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
-          type: string
         coin:
           $ref: '#/components/schemas/Coin'
-        memo:
-          example: OUT:208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
-          type: string
         max_gas:
           items:
             $ref: '#/components/schemas/Coin'
@@ -3728,16 +3738,23 @@ components:
         gas_rate:
           format: int64
           type: integer
-        in_hash:
-          example: 208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
+        memo:
+          example: OUT:208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
           type: string
-        out_hash:
-          example: 0D0B2FDB6DAD6E5FD3C5E46D39128F9DA15E96F0B2CC054CE059EA3532B150FB
+        aggregator:
+          description: whitelisted DEX Aggregator contract address
+          example: 0xe4ddca21881bac219af7f217703db0475d2a9f02
           type: string
-        height:
-          example: 1234
-          format: int64
-          type: integer
+        aggregator_target_asset:
+          description: target asset for the aggregator contract to attempt a swap
+            to
+          example: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+          type: string
+        aggregator_target_limit:
+          description: the minimum number of tokens the swapper wants to receive of
+            the output asset
+          example: "100"
+          type: string
         clout_spent:
           description: clout spent in RUNE for the outbound
           example: "1234"
@@ -4431,9 +4448,11 @@ components:
           gas_rate: 0
           in_hash: 208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
           out_hash: 0D0B2FDB6DAD6E5FD3C5E46D39128F9DA15E96F0B2CC054CE059EA3532B150FB
+          aggregator: 0xe4ddca21881bac219af7f217703db0475d2a9f02
           memo: OUT:208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
-          to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
           vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
+          to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
+          aggregator_target_asset: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
           max_gas:
           - amount: "100000"
             decimals: 6
@@ -4441,19 +4460,22 @@ components:
           - amount: "100000"
             decimals: 6
             asset: BTC.BTC
+          aggregator_target_limit: "100"
           clout_spent: "1234"
+          height: 1234
           coin:
             amount: "100000"
             decimals: 6
             asset: BTC.BTC
-          height: 1234
         - chain: ETH
           gas_rate: 0
           in_hash: 208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
           out_hash: 0D0B2FDB6DAD6E5FD3C5E46D39128F9DA15E96F0B2CC054CE059EA3532B150FB
+          aggregator: 0xe4ddca21881bac219af7f217703db0475d2a9f02
           memo: OUT:208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
-          to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
           vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
+          to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
+          aggregator_target_asset: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
           max_gas:
           - amount: "100000"
             decimals: 6
@@ -4461,12 +4483,13 @@ components:
           - amount: "100000"
             decimals: 6
             asset: BTC.BTC
+          aggregator_target_limit: "100"
           clout_spent: "1234"
+          height: 1234
           coin:
             amount: "100000"
             decimals: 6
             asset: BTC.BTC
-          height: 1234
         txs:
         - signers:
           - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
@@ -4668,9 +4691,11 @@ components:
           gas_rate: 0
           in_hash: 208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
           out_hash: 0D0B2FDB6DAD6E5FD3C5E46D39128F9DA15E96F0B2CC054CE059EA3532B150FB
+          aggregator: 0xe4ddca21881bac219af7f217703db0475d2a9f02
           memo: OUT:208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
-          to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
           vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
+          to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
+          aggregator_target_asset: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
           max_gas:
           - amount: "100000"
             decimals: 6
@@ -4678,19 +4703,22 @@ components:
           - amount: "100000"
             decimals: 6
             asset: BTC.BTC
+          aggregator_target_limit: "100"
           clout_spent: "1234"
+          height: 1234
           coin:
             amount: "100000"
             decimals: 6
             asset: BTC.BTC
-          height: 1234
         - chain: ETH
           gas_rate: 0
           in_hash: 208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
           out_hash: 0D0B2FDB6DAD6E5FD3C5E46D39128F9DA15E96F0B2CC054CE059EA3532B150FB
+          aggregator: 0xe4ddca21881bac219af7f217703db0475d2a9f02
           memo: OUT:208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
-          to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
           vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
+          to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
+          aggregator_target_asset: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
           max_gas:
           - amount: "100000"
             decimals: 6
@@ -4698,12 +4726,13 @@ components:
           - amount: "100000"
             decimals: 6
             asset: BTC.BTC
+          aggregator_target_limit: "100"
           clout_spent: "1234"
+          height: 1234
           coin:
             amount: "100000"
             decimals: 6
             asset: BTC.BTC
-          height: 1234
         txs:
         - signers:
           - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
@@ -5334,9 +5363,11 @@ components:
             gas_rate: 0
             in_hash: 208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
             out_hash: 0D0B2FDB6DAD6E5FD3C5E46D39128F9DA15E96F0B2CC054CE059EA3532B150FB
+            aggregator: 0xe4ddca21881bac219af7f217703db0475d2a9f02
             memo: OUT:208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
-            to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
             vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
+            to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
+            aggregator_target_asset: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
             max_gas:
             - amount: "100000"
               decimals: 6
@@ -5344,19 +5375,22 @@ components:
             - amount: "100000"
               decimals: 6
               asset: BTC.BTC
+            aggregator_target_limit: "100"
             clout_spent: "1234"
+            height: 1234
             coin:
               amount: "100000"
               decimals: 6
               asset: BTC.BTC
-            height: 1234
           - chain: ETH
             gas_rate: 0
             in_hash: 208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
             out_hash: 0D0B2FDB6DAD6E5FD3C5E46D39128F9DA15E96F0B2CC054CE059EA3532B150FB
+            aggregator: 0xe4ddca21881bac219af7f217703db0475d2a9f02
             memo: OUT:208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
-            to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
             vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
+            to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
+            aggregator_target_asset: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
             max_gas:
             - amount: "100000"
               decimals: 6
@@ -5364,12 +5398,13 @@ components:
             - amount: "100000"
               decimals: 6
               asset: BTC.BTC
+            aggregator_target_limit: "100"
             clout_spent: "1234"
+            height: 1234
             coin:
               amount: "100000"
               decimals: 6
               asset: BTC.BTC
-            height: 1234
           height: 0
       properties:
         keysign:
@@ -6997,9 +7032,11 @@ components:
           gas_rate: 0
           in_hash: 208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
           out_hash: 0D0B2FDB6DAD6E5FD3C5E46D39128F9DA15E96F0B2CC054CE059EA3532B150FB
+          aggregator: 0xe4ddca21881bac219af7f217703db0475d2a9f02
           memo: OUT:208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
-          to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
           vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
+          to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
+          aggregator_target_asset: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
           max_gas:
           - amount: "100000"
             decimals: 6
@@ -7007,19 +7044,22 @@ components:
           - amount: "100000"
             decimals: 6
             asset: BTC.BTC
+          aggregator_target_limit: "100"
           clout_spent: "1234"
+          height: 1234
           coin:
             amount: "100000"
             decimals: 6
             asset: BTC.BTC
-          height: 1234
         - chain: ETH
           gas_rate: 0
           in_hash: 208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
           out_hash: 0D0B2FDB6DAD6E5FD3C5E46D39128F9DA15E96F0B2CC054CE059EA3532B150FB
+          aggregator: 0xe4ddca21881bac219af7f217703db0475d2a9f02
           memo: OUT:208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
-          to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
           vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
+          to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
+          aggregator_target_asset: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
           max_gas:
           - amount: "100000"
             decimals: 6
@@ -7027,12 +7067,13 @@ components:
           - amount: "100000"
             decimals: 6
             asset: BTC.BTC
+          aggregator_target_limit: "100"
           clout_spent: "1234"
+          height: 1234
           coin:
             amount: "100000"
             decimals: 6
             asset: BTC.BTC
-          height: 1234
         height: 0
       properties:
         height:

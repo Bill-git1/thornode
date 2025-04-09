@@ -1400,33 +1400,39 @@ func (x *_QueryTxOutItem_6_list) IsValid() bool {
 }
 
 var (
-	md_QueryTxOutItem               protoreflect.MessageDescriptor
-	fd_QueryTxOutItem_chain         protoreflect.FieldDescriptor
-	fd_QueryTxOutItem_to_address    protoreflect.FieldDescriptor
-	fd_QueryTxOutItem_vault_pub_key protoreflect.FieldDescriptor
-	fd_QueryTxOutItem_coin          protoreflect.FieldDescriptor
-	fd_QueryTxOutItem_memo          protoreflect.FieldDescriptor
-	fd_QueryTxOutItem_max_gas       protoreflect.FieldDescriptor
-	fd_QueryTxOutItem_gas_rate      protoreflect.FieldDescriptor
-	fd_QueryTxOutItem_in_hash       protoreflect.FieldDescriptor
-	fd_QueryTxOutItem_out_hash      protoreflect.FieldDescriptor
-	fd_QueryTxOutItem_height        protoreflect.FieldDescriptor
-	fd_QueryTxOutItem_clout_spent   protoreflect.FieldDescriptor
+	md_QueryTxOutItem                         protoreflect.MessageDescriptor
+	fd_QueryTxOutItem_height                  protoreflect.FieldDescriptor
+	fd_QueryTxOutItem_vault_pub_key           protoreflect.FieldDescriptor
+	fd_QueryTxOutItem_in_hash                 protoreflect.FieldDescriptor
+	fd_QueryTxOutItem_out_hash                protoreflect.FieldDescriptor
+	fd_QueryTxOutItem_chain                   protoreflect.FieldDescriptor
+	fd_QueryTxOutItem_to_address              protoreflect.FieldDescriptor
+	fd_QueryTxOutItem_coin                    protoreflect.FieldDescriptor
+	fd_QueryTxOutItem_max_gas                 protoreflect.FieldDescriptor
+	fd_QueryTxOutItem_gas_rate                protoreflect.FieldDescriptor
+	fd_QueryTxOutItem_memo                    protoreflect.FieldDescriptor
+	fd_QueryTxOutItem_aggregator              protoreflect.FieldDescriptor
+	fd_QueryTxOutItem_aggregator_target_asset protoreflect.FieldDescriptor
+	fd_QueryTxOutItem_aggregator_target_limit protoreflect.FieldDescriptor
+	fd_QueryTxOutItem_clout_spent             protoreflect.FieldDescriptor
 )
 
 func init() {
 	file_types_query_outbound_proto_init()
 	md_QueryTxOutItem = File_types_query_outbound_proto.Messages().ByName("QueryTxOutItem")
-	fd_QueryTxOutItem_chain = md_QueryTxOutItem.Fields().ByName("chain")
-	fd_QueryTxOutItem_to_address = md_QueryTxOutItem.Fields().ByName("to_address")
+	fd_QueryTxOutItem_height = md_QueryTxOutItem.Fields().ByName("height")
 	fd_QueryTxOutItem_vault_pub_key = md_QueryTxOutItem.Fields().ByName("vault_pub_key")
-	fd_QueryTxOutItem_coin = md_QueryTxOutItem.Fields().ByName("coin")
-	fd_QueryTxOutItem_memo = md_QueryTxOutItem.Fields().ByName("memo")
-	fd_QueryTxOutItem_max_gas = md_QueryTxOutItem.Fields().ByName("max_gas")
-	fd_QueryTxOutItem_gas_rate = md_QueryTxOutItem.Fields().ByName("gas_rate")
 	fd_QueryTxOutItem_in_hash = md_QueryTxOutItem.Fields().ByName("in_hash")
 	fd_QueryTxOutItem_out_hash = md_QueryTxOutItem.Fields().ByName("out_hash")
-	fd_QueryTxOutItem_height = md_QueryTxOutItem.Fields().ByName("height")
+	fd_QueryTxOutItem_chain = md_QueryTxOutItem.Fields().ByName("chain")
+	fd_QueryTxOutItem_to_address = md_QueryTxOutItem.Fields().ByName("to_address")
+	fd_QueryTxOutItem_coin = md_QueryTxOutItem.Fields().ByName("coin")
+	fd_QueryTxOutItem_max_gas = md_QueryTxOutItem.Fields().ByName("max_gas")
+	fd_QueryTxOutItem_gas_rate = md_QueryTxOutItem.Fields().ByName("gas_rate")
+	fd_QueryTxOutItem_memo = md_QueryTxOutItem.Fields().ByName("memo")
+	fd_QueryTxOutItem_aggregator = md_QueryTxOutItem.Fields().ByName("aggregator")
+	fd_QueryTxOutItem_aggregator_target_asset = md_QueryTxOutItem.Fields().ByName("aggregator_target_asset")
+	fd_QueryTxOutItem_aggregator_target_limit = md_QueryTxOutItem.Fields().ByName("aggregator_target_limit")
 	fd_QueryTxOutItem_clout_spent = md_QueryTxOutItem.Fields().ByName("clout_spent")
 }
 
@@ -1495,45 +1501,15 @@ func (x *fastReflection_QueryTxOutItem) Interface() protoreflect.ProtoMessage {
 // While iterating, mutating operations may only be performed
 // on the current field descriptor.
 func (x *fastReflection_QueryTxOutItem) Range(f func(protoreflect.FieldDescriptor, protoreflect.Value) bool) {
-	if x.Chain != "" {
-		value := protoreflect.ValueOfString(x.Chain)
-		if !f(fd_QueryTxOutItem_chain, value) {
-			return
-		}
-	}
-	if x.ToAddress != "" {
-		value := protoreflect.ValueOfString(x.ToAddress)
-		if !f(fd_QueryTxOutItem_to_address, value) {
+	if x.Height != int64(0) {
+		value := protoreflect.ValueOfInt64(x.Height)
+		if !f(fd_QueryTxOutItem_height, value) {
 			return
 		}
 	}
 	if x.VaultPubKey != "" {
 		value := protoreflect.ValueOfString(x.VaultPubKey)
 		if !f(fd_QueryTxOutItem_vault_pub_key, value) {
-			return
-		}
-	}
-	if x.Coin != nil {
-		value := protoreflect.ValueOfMessage(x.Coin.ProtoReflect())
-		if !f(fd_QueryTxOutItem_coin, value) {
-			return
-		}
-	}
-	if x.Memo != "" {
-		value := protoreflect.ValueOfString(x.Memo)
-		if !f(fd_QueryTxOutItem_memo, value) {
-			return
-		}
-	}
-	if len(x.MaxGas) != 0 {
-		value := protoreflect.ValueOfList(&_QueryTxOutItem_6_list{list: &x.MaxGas})
-		if !f(fd_QueryTxOutItem_max_gas, value) {
-			return
-		}
-	}
-	if x.GasRate != int64(0) {
-		value := protoreflect.ValueOfInt64(x.GasRate)
-		if !f(fd_QueryTxOutItem_gas_rate, value) {
 			return
 		}
 	}
@@ -1549,9 +1525,57 @@ func (x *fastReflection_QueryTxOutItem) Range(f func(protoreflect.FieldDescripto
 			return
 		}
 	}
-	if x.Height != int64(0) {
-		value := protoreflect.ValueOfInt64(x.Height)
-		if !f(fd_QueryTxOutItem_height, value) {
+	if x.Chain != "" {
+		value := protoreflect.ValueOfString(x.Chain)
+		if !f(fd_QueryTxOutItem_chain, value) {
+			return
+		}
+	}
+	if x.ToAddress != "" {
+		value := protoreflect.ValueOfString(x.ToAddress)
+		if !f(fd_QueryTxOutItem_to_address, value) {
+			return
+		}
+	}
+	if x.Coin != nil {
+		value := protoreflect.ValueOfMessage(x.Coin.ProtoReflect())
+		if !f(fd_QueryTxOutItem_coin, value) {
+			return
+		}
+	}
+	if len(x.MaxGas) != 0 {
+		value := protoreflect.ValueOfList(&_QueryTxOutItem_6_list{list: &x.MaxGas})
+		if !f(fd_QueryTxOutItem_max_gas, value) {
+			return
+		}
+	}
+	if x.GasRate != int64(0) {
+		value := protoreflect.ValueOfInt64(x.GasRate)
+		if !f(fd_QueryTxOutItem_gas_rate, value) {
+			return
+		}
+	}
+	if x.Memo != "" {
+		value := protoreflect.ValueOfString(x.Memo)
+		if !f(fd_QueryTxOutItem_memo, value) {
+			return
+		}
+	}
+	if x.Aggregator != "" {
+		value := protoreflect.ValueOfString(x.Aggregator)
+		if !f(fd_QueryTxOutItem_aggregator, value) {
+			return
+		}
+	}
+	if x.AggregatorTargetAsset != "" {
+		value := protoreflect.ValueOfString(x.AggregatorTargetAsset)
+		if !f(fd_QueryTxOutItem_aggregator_target_asset, value) {
+			return
+		}
+	}
+	if x.AggregatorTargetLimit != "" {
+		value := protoreflect.ValueOfString(x.AggregatorTargetLimit)
+		if !f(fd_QueryTxOutItem_aggregator_target_limit, value) {
 			return
 		}
 	}
@@ -1576,26 +1600,32 @@ func (x *fastReflection_QueryTxOutItem) Range(f func(protoreflect.FieldDescripto
 // a repeated field is populated if it is non-empty.
 func (x *fastReflection_QueryTxOutItem) Has(fd protoreflect.FieldDescriptor) bool {
 	switch fd.FullName() {
-	case "types.QueryTxOutItem.chain":
-		return x.Chain != ""
-	case "types.QueryTxOutItem.to_address":
-		return x.ToAddress != ""
+	case "types.QueryTxOutItem.height":
+		return x.Height != int64(0)
 	case "types.QueryTxOutItem.vault_pub_key":
 		return x.VaultPubKey != ""
-	case "types.QueryTxOutItem.coin":
-		return x.Coin != nil
-	case "types.QueryTxOutItem.memo":
-		return x.Memo != ""
-	case "types.QueryTxOutItem.max_gas":
-		return len(x.MaxGas) != 0
-	case "types.QueryTxOutItem.gas_rate":
-		return x.GasRate != int64(0)
 	case "types.QueryTxOutItem.in_hash":
 		return x.InHash != ""
 	case "types.QueryTxOutItem.out_hash":
 		return x.OutHash != ""
-	case "types.QueryTxOutItem.height":
-		return x.Height != int64(0)
+	case "types.QueryTxOutItem.chain":
+		return x.Chain != ""
+	case "types.QueryTxOutItem.to_address":
+		return x.ToAddress != ""
+	case "types.QueryTxOutItem.coin":
+		return x.Coin != nil
+	case "types.QueryTxOutItem.max_gas":
+		return len(x.MaxGas) != 0
+	case "types.QueryTxOutItem.gas_rate":
+		return x.GasRate != int64(0)
+	case "types.QueryTxOutItem.memo":
+		return x.Memo != ""
+	case "types.QueryTxOutItem.aggregator":
+		return x.Aggregator != ""
+	case "types.QueryTxOutItem.aggregator_target_asset":
+		return x.AggregatorTargetAsset != ""
+	case "types.QueryTxOutItem.aggregator_target_limit":
+		return x.AggregatorTargetLimit != ""
 	case "types.QueryTxOutItem.clout_spent":
 		return x.CloutSpent != ""
 	default:
@@ -1614,26 +1644,32 @@ func (x *fastReflection_QueryTxOutItem) Has(fd protoreflect.FieldDescriptor) boo
 // Clear is a mutating operation and unsafe for concurrent use.
 func (x *fastReflection_QueryTxOutItem) Clear(fd protoreflect.FieldDescriptor) {
 	switch fd.FullName() {
-	case "types.QueryTxOutItem.chain":
-		x.Chain = ""
-	case "types.QueryTxOutItem.to_address":
-		x.ToAddress = ""
+	case "types.QueryTxOutItem.height":
+		x.Height = int64(0)
 	case "types.QueryTxOutItem.vault_pub_key":
 		x.VaultPubKey = ""
-	case "types.QueryTxOutItem.coin":
-		x.Coin = nil
-	case "types.QueryTxOutItem.memo":
-		x.Memo = ""
-	case "types.QueryTxOutItem.max_gas":
-		x.MaxGas = nil
-	case "types.QueryTxOutItem.gas_rate":
-		x.GasRate = int64(0)
 	case "types.QueryTxOutItem.in_hash":
 		x.InHash = ""
 	case "types.QueryTxOutItem.out_hash":
 		x.OutHash = ""
-	case "types.QueryTxOutItem.height":
-		x.Height = int64(0)
+	case "types.QueryTxOutItem.chain":
+		x.Chain = ""
+	case "types.QueryTxOutItem.to_address":
+		x.ToAddress = ""
+	case "types.QueryTxOutItem.coin":
+		x.Coin = nil
+	case "types.QueryTxOutItem.max_gas":
+		x.MaxGas = nil
+	case "types.QueryTxOutItem.gas_rate":
+		x.GasRate = int64(0)
+	case "types.QueryTxOutItem.memo":
+		x.Memo = ""
+	case "types.QueryTxOutItem.aggregator":
+		x.Aggregator = ""
+	case "types.QueryTxOutItem.aggregator_target_asset":
+		x.AggregatorTargetAsset = ""
+	case "types.QueryTxOutItem.aggregator_target_limit":
+		x.AggregatorTargetLimit = ""
 	case "types.QueryTxOutItem.clout_spent":
 		x.CloutSpent = ""
 	default:
@@ -1652,21 +1688,27 @@ func (x *fastReflection_QueryTxOutItem) Clear(fd protoreflect.FieldDescriptor) {
 // of the value; to obtain a mutable reference, use Mutable.
 func (x *fastReflection_QueryTxOutItem) Get(descriptor protoreflect.FieldDescriptor) protoreflect.Value {
 	switch descriptor.FullName() {
+	case "types.QueryTxOutItem.height":
+		value := x.Height
+		return protoreflect.ValueOfInt64(value)
+	case "types.QueryTxOutItem.vault_pub_key":
+		value := x.VaultPubKey
+		return protoreflect.ValueOfString(value)
+	case "types.QueryTxOutItem.in_hash":
+		value := x.InHash
+		return protoreflect.ValueOfString(value)
+	case "types.QueryTxOutItem.out_hash":
+		value := x.OutHash
+		return protoreflect.ValueOfString(value)
 	case "types.QueryTxOutItem.chain":
 		value := x.Chain
 		return protoreflect.ValueOfString(value)
 	case "types.QueryTxOutItem.to_address":
 		value := x.ToAddress
 		return protoreflect.ValueOfString(value)
-	case "types.QueryTxOutItem.vault_pub_key":
-		value := x.VaultPubKey
-		return protoreflect.ValueOfString(value)
 	case "types.QueryTxOutItem.coin":
 		value := x.Coin
 		return protoreflect.ValueOfMessage(value.ProtoReflect())
-	case "types.QueryTxOutItem.memo":
-		value := x.Memo
-		return protoreflect.ValueOfString(value)
 	case "types.QueryTxOutItem.max_gas":
 		if len(x.MaxGas) == 0 {
 			return protoreflect.ValueOfList(&_QueryTxOutItem_6_list{})
@@ -1676,15 +1718,18 @@ func (x *fastReflection_QueryTxOutItem) Get(descriptor protoreflect.FieldDescrip
 	case "types.QueryTxOutItem.gas_rate":
 		value := x.GasRate
 		return protoreflect.ValueOfInt64(value)
-	case "types.QueryTxOutItem.in_hash":
-		value := x.InHash
+	case "types.QueryTxOutItem.memo":
+		value := x.Memo
 		return protoreflect.ValueOfString(value)
-	case "types.QueryTxOutItem.out_hash":
-		value := x.OutHash
+	case "types.QueryTxOutItem.aggregator":
+		value := x.Aggregator
 		return protoreflect.ValueOfString(value)
-	case "types.QueryTxOutItem.height":
-		value := x.Height
-		return protoreflect.ValueOfInt64(value)
+	case "types.QueryTxOutItem.aggregator_target_asset":
+		value := x.AggregatorTargetAsset
+		return protoreflect.ValueOfString(value)
+	case "types.QueryTxOutItem.aggregator_target_limit":
+		value := x.AggregatorTargetLimit
+		return protoreflect.ValueOfString(value)
 	case "types.QueryTxOutItem.clout_spent":
 		value := x.CloutSpent
 		return protoreflect.ValueOfString(value)
@@ -1708,28 +1753,34 @@ func (x *fastReflection_QueryTxOutItem) Get(descriptor protoreflect.FieldDescrip
 // Set is a mutating operation and unsafe for concurrent use.
 func (x *fastReflection_QueryTxOutItem) Set(fd protoreflect.FieldDescriptor, value protoreflect.Value) {
 	switch fd.FullName() {
+	case "types.QueryTxOutItem.height":
+		x.Height = value.Int()
+	case "types.QueryTxOutItem.vault_pub_key":
+		x.VaultPubKey = value.Interface().(string)
+	case "types.QueryTxOutItem.in_hash":
+		x.InHash = value.Interface().(string)
+	case "types.QueryTxOutItem.out_hash":
+		x.OutHash = value.Interface().(string)
 	case "types.QueryTxOutItem.chain":
 		x.Chain = value.Interface().(string)
 	case "types.QueryTxOutItem.to_address":
 		x.ToAddress = value.Interface().(string)
-	case "types.QueryTxOutItem.vault_pub_key":
-		x.VaultPubKey = value.Interface().(string)
 	case "types.QueryTxOutItem.coin":
 		x.Coin = value.Message().Interface().(*common.Coin)
-	case "types.QueryTxOutItem.memo":
-		x.Memo = value.Interface().(string)
 	case "types.QueryTxOutItem.max_gas":
 		lv := value.List()
 		clv := lv.(*_QueryTxOutItem_6_list)
 		x.MaxGas = *clv.list
 	case "types.QueryTxOutItem.gas_rate":
 		x.GasRate = value.Int()
-	case "types.QueryTxOutItem.in_hash":
-		x.InHash = value.Interface().(string)
-	case "types.QueryTxOutItem.out_hash":
-		x.OutHash = value.Interface().(string)
-	case "types.QueryTxOutItem.height":
-		x.Height = value.Int()
+	case "types.QueryTxOutItem.memo":
+		x.Memo = value.Interface().(string)
+	case "types.QueryTxOutItem.aggregator":
+		x.Aggregator = value.Interface().(string)
+	case "types.QueryTxOutItem.aggregator_target_asset":
+		x.AggregatorTargetAsset = value.Interface().(string)
+	case "types.QueryTxOutItem.aggregator_target_limit":
+		x.AggregatorTargetLimit = value.Interface().(string)
 	case "types.QueryTxOutItem.clout_spent":
 		x.CloutSpent = value.Interface().(string)
 	default:
@@ -1763,22 +1814,28 @@ func (x *fastReflection_QueryTxOutItem) Mutable(fd protoreflect.FieldDescriptor)
 		}
 		value := &_QueryTxOutItem_6_list{list: &x.MaxGas}
 		return protoreflect.ValueOfList(value)
-	case "types.QueryTxOutItem.chain":
-		panic(fmt.Errorf("field chain of message types.QueryTxOutItem is not mutable"))
-	case "types.QueryTxOutItem.to_address":
-		panic(fmt.Errorf("field to_address of message types.QueryTxOutItem is not mutable"))
+	case "types.QueryTxOutItem.height":
+		panic(fmt.Errorf("field height of message types.QueryTxOutItem is not mutable"))
 	case "types.QueryTxOutItem.vault_pub_key":
 		panic(fmt.Errorf("field vault_pub_key of message types.QueryTxOutItem is not mutable"))
-	case "types.QueryTxOutItem.memo":
-		panic(fmt.Errorf("field memo of message types.QueryTxOutItem is not mutable"))
-	case "types.QueryTxOutItem.gas_rate":
-		panic(fmt.Errorf("field gas_rate of message types.QueryTxOutItem is not mutable"))
 	case "types.QueryTxOutItem.in_hash":
 		panic(fmt.Errorf("field in_hash of message types.QueryTxOutItem is not mutable"))
 	case "types.QueryTxOutItem.out_hash":
 		panic(fmt.Errorf("field out_hash of message types.QueryTxOutItem is not mutable"))
-	case "types.QueryTxOutItem.height":
-		panic(fmt.Errorf("field height of message types.QueryTxOutItem is not mutable"))
+	case "types.QueryTxOutItem.chain":
+		panic(fmt.Errorf("field chain of message types.QueryTxOutItem is not mutable"))
+	case "types.QueryTxOutItem.to_address":
+		panic(fmt.Errorf("field to_address of message types.QueryTxOutItem is not mutable"))
+	case "types.QueryTxOutItem.gas_rate":
+		panic(fmt.Errorf("field gas_rate of message types.QueryTxOutItem is not mutable"))
+	case "types.QueryTxOutItem.memo":
+		panic(fmt.Errorf("field memo of message types.QueryTxOutItem is not mutable"))
+	case "types.QueryTxOutItem.aggregator":
+		panic(fmt.Errorf("field aggregator of message types.QueryTxOutItem is not mutable"))
+	case "types.QueryTxOutItem.aggregator_target_asset":
+		panic(fmt.Errorf("field aggregator_target_asset of message types.QueryTxOutItem is not mutable"))
+	case "types.QueryTxOutItem.aggregator_target_limit":
+		panic(fmt.Errorf("field aggregator_target_limit of message types.QueryTxOutItem is not mutable"))
 	case "types.QueryTxOutItem.clout_spent":
 		panic(fmt.Errorf("field clout_spent of message types.QueryTxOutItem is not mutable"))
 	default:
@@ -1794,28 +1851,34 @@ func (x *fastReflection_QueryTxOutItem) Mutable(fd protoreflect.FieldDescriptor)
 // For lists, maps, and messages, this returns a new, empty, mutable value.
 func (x *fastReflection_QueryTxOutItem) NewField(fd protoreflect.FieldDescriptor) protoreflect.Value {
 	switch fd.FullName() {
+	case "types.QueryTxOutItem.height":
+		return protoreflect.ValueOfInt64(int64(0))
+	case "types.QueryTxOutItem.vault_pub_key":
+		return protoreflect.ValueOfString("")
+	case "types.QueryTxOutItem.in_hash":
+		return protoreflect.ValueOfString("")
+	case "types.QueryTxOutItem.out_hash":
+		return protoreflect.ValueOfString("")
 	case "types.QueryTxOutItem.chain":
 		return protoreflect.ValueOfString("")
 	case "types.QueryTxOutItem.to_address":
 		return protoreflect.ValueOfString("")
-	case "types.QueryTxOutItem.vault_pub_key":
-		return protoreflect.ValueOfString("")
 	case "types.QueryTxOutItem.coin":
 		m := new(common.Coin)
 		return protoreflect.ValueOfMessage(m.ProtoReflect())
-	case "types.QueryTxOutItem.memo":
-		return protoreflect.ValueOfString("")
 	case "types.QueryTxOutItem.max_gas":
 		list := []*common.Coin{}
 		return protoreflect.ValueOfList(&_QueryTxOutItem_6_list{list: &list})
 	case "types.QueryTxOutItem.gas_rate":
 		return protoreflect.ValueOfInt64(int64(0))
-	case "types.QueryTxOutItem.in_hash":
+	case "types.QueryTxOutItem.memo":
 		return protoreflect.ValueOfString("")
-	case "types.QueryTxOutItem.out_hash":
+	case "types.QueryTxOutItem.aggregator":
 		return protoreflect.ValueOfString("")
-	case "types.QueryTxOutItem.height":
-		return protoreflect.ValueOfInt64(int64(0))
+	case "types.QueryTxOutItem.aggregator_target_asset":
+		return protoreflect.ValueOfString("")
+	case "types.QueryTxOutItem.aggregator_target_limit":
+		return protoreflect.ValueOfString("")
 	case "types.QueryTxOutItem.clout_spent":
 		return protoreflect.ValueOfString("")
 	default:
@@ -1887,6 +1950,21 @@ func (x *fastReflection_QueryTxOutItem) ProtoMethods() *protoiface.Methods {
 		var n int
 		var l int
 		_ = l
+		if x.Height != 0 {
+			n += 1 + runtime.Sov(uint64(x.Height))
+		}
+		l = len(x.VaultPubKey)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.InHash)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.OutHash)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
 		l = len(x.Chain)
 		if l > 0 {
 			n += 1 + l + runtime.Sov(uint64(l))
@@ -1895,16 +1973,8 @@ func (x *fastReflection_QueryTxOutItem) ProtoMethods() *protoiface.Methods {
 		if l > 0 {
 			n += 1 + l + runtime.Sov(uint64(l))
 		}
-		l = len(x.VaultPubKey)
-		if l > 0 {
-			n += 1 + l + runtime.Sov(uint64(l))
-		}
 		if x.Coin != nil {
 			l = options.Size(x.Coin)
-			n += 1 + l + runtime.Sov(uint64(l))
-		}
-		l = len(x.Memo)
-		if l > 0 {
 			n += 1 + l + runtime.Sov(uint64(l))
 		}
 		if len(x.MaxGas) > 0 {
@@ -1916,16 +1986,21 @@ func (x *fastReflection_QueryTxOutItem) ProtoMethods() *protoiface.Methods {
 		if x.GasRate != 0 {
 			n += 1 + runtime.Sov(uint64(x.GasRate))
 		}
-		l = len(x.InHash)
+		l = len(x.Memo)
 		if l > 0 {
 			n += 1 + l + runtime.Sov(uint64(l))
 		}
-		l = len(x.OutHash)
+		l = len(x.Aggregator)
 		if l > 0 {
 			n += 1 + l + runtime.Sov(uint64(l))
 		}
-		if x.Height != 0 {
-			n += 1 + runtime.Sov(uint64(x.Height))
+		l = len(x.AggregatorTargetAsset)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.AggregatorTargetLimit)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
 		}
 		l = len(x.CloutSpent)
 		if l > 0 {
@@ -1959,6 +2034,27 @@ func (x *fastReflection_QueryTxOutItem) ProtoMethods() *protoiface.Methods {
 		if x.unknownFields != nil {
 			i -= len(x.unknownFields)
 			copy(dAtA[i:], x.unknownFields)
+		}
+		if len(x.AggregatorTargetLimit) > 0 {
+			i -= len(x.AggregatorTargetLimit)
+			copy(dAtA[i:], x.AggregatorTargetLimit)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.AggregatorTargetLimit)))
+			i--
+			dAtA[i] = 0x72
+		}
+		if len(x.AggregatorTargetAsset) > 0 {
+			i -= len(x.AggregatorTargetAsset)
+			copy(dAtA[i:], x.AggregatorTargetAsset)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.AggregatorTargetAsset)))
+			i--
+			dAtA[i] = 0x6a
+		}
+		if len(x.Aggregator) > 0 {
+			i -= len(x.Aggregator)
+			copy(dAtA[i:], x.Aggregator)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.Aggregator)))
+			i--
+			dAtA[i] = 0x62
 		}
 		if len(x.CloutSpent) > 0 {
 			i -= len(x.CloutSpent)
@@ -2098,11 +2194,11 @@ func (x *fastReflection_QueryTxOutItem) ProtoMethods() *protoiface.Methods {
 				return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: QueryTxOutItem: illegal tag %d (wire type %d)", fieldNum, wire)
 			}
 			switch fieldNum {
-			case 1:
-				if wireType != 2 {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Chain", wireType)
+			case 10:
+				if wireType != 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Height", wireType)
 				}
-				var stringLen uint64
+				x.Height = 0
 				for shift := uint(0); ; shift += 7 {
 					if shift >= 64 {
 						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
@@ -2112,56 +2208,11 @@ func (x *fastReflection_QueryTxOutItem) ProtoMethods() *protoiface.Methods {
 					}
 					b := dAtA[iNdEx]
 					iNdEx++
-					stringLen |= uint64(b&0x7F) << shift
+					x.Height |= int64(b&0x7F) << shift
 					if b < 0x80 {
 						break
 					}
 				}
-				intStringLen := int(stringLen)
-				if intStringLen < 0 {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
-				}
-				postIndex := iNdEx + intStringLen
-				if postIndex < 0 {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
-				}
-				if postIndex > l {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
-				}
-				x.Chain = string(dAtA[iNdEx:postIndex])
-				iNdEx = postIndex
-			case 2:
-				if wireType != 2 {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field ToAddress", wireType)
-				}
-				var stringLen uint64
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
-					}
-					if iNdEx >= l {
-						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					stringLen |= uint64(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				intStringLen := int(stringLen)
-				if intStringLen < 0 {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
-				}
-				postIndex := iNdEx + intStringLen
-				if postIndex < 0 {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
-				}
-				if postIndex > l {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
-				}
-				x.ToAddress = string(dAtA[iNdEx:postIndex])
-				iNdEx = postIndex
 			case 3:
 				if wireType != 2 {
 					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field VaultPubKey", wireType)
@@ -2194,127 +2245,6 @@ func (x *fastReflection_QueryTxOutItem) ProtoMethods() *protoiface.Methods {
 				}
 				x.VaultPubKey = string(dAtA[iNdEx:postIndex])
 				iNdEx = postIndex
-			case 4:
-				if wireType != 2 {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Coin", wireType)
-				}
-				var msglen int
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
-					}
-					if iNdEx >= l {
-						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					msglen |= int(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				if msglen < 0 {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
-				}
-				postIndex := iNdEx + msglen
-				if postIndex < 0 {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
-				}
-				if postIndex > l {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
-				}
-				if x.Coin == nil {
-					x.Coin = &common.Coin{}
-				}
-				if err := options.Unmarshal(dAtA[iNdEx:postIndex], x.Coin); err != nil {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, err
-				}
-				iNdEx = postIndex
-			case 5:
-				if wireType != 2 {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Memo", wireType)
-				}
-				var stringLen uint64
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
-					}
-					if iNdEx >= l {
-						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					stringLen |= uint64(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				intStringLen := int(stringLen)
-				if intStringLen < 0 {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
-				}
-				postIndex := iNdEx + intStringLen
-				if postIndex < 0 {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
-				}
-				if postIndex > l {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
-				}
-				x.Memo = string(dAtA[iNdEx:postIndex])
-				iNdEx = postIndex
-			case 6:
-				if wireType != 2 {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field MaxGas", wireType)
-				}
-				var msglen int
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
-					}
-					if iNdEx >= l {
-						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					msglen |= int(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				if msglen < 0 {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
-				}
-				postIndex := iNdEx + msglen
-				if postIndex < 0 {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
-				}
-				if postIndex > l {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
-				}
-				x.MaxGas = append(x.MaxGas, &common.Coin{})
-				if err := options.Unmarshal(dAtA[iNdEx:postIndex], x.MaxGas[len(x.MaxGas)-1]); err != nil {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, err
-				}
-				iNdEx = postIndex
-			case 7:
-				if wireType != 0 {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field GasRate", wireType)
-				}
-				x.GasRate = 0
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
-					}
-					if iNdEx >= l {
-						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					x.GasRate |= int64(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
 			case 8:
 				if wireType != 2 {
 					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field InHash", wireType)
@@ -2379,11 +2309,11 @@ func (x *fastReflection_QueryTxOutItem) ProtoMethods() *protoiface.Methods {
 				}
 				x.OutHash = string(dAtA[iNdEx:postIndex])
 				iNdEx = postIndex
-			case 10:
-				if wireType != 0 {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Height", wireType)
+			case 1:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Chain", wireType)
 				}
-				x.Height = 0
+				var stringLen uint64
 				for shift := uint(0); ; shift += 7 {
 					if shift >= 64 {
 						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
@@ -2393,11 +2323,273 @@ func (x *fastReflection_QueryTxOutItem) ProtoMethods() *protoiface.Methods {
 					}
 					b := dAtA[iNdEx]
 					iNdEx++
-					x.Height |= int64(b&0x7F) << shift
+					stringLen |= uint64(b&0x7F) << shift
 					if b < 0x80 {
 						break
 					}
 				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.Chain = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 2:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field ToAddress", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.ToAddress = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 4:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Coin", wireType)
+				}
+				var msglen int
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					msglen |= int(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				if msglen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + msglen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				if x.Coin == nil {
+					x.Coin = &common.Coin{}
+				}
+				if err := options.Unmarshal(dAtA[iNdEx:postIndex], x.Coin); err != nil {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, err
+				}
+				iNdEx = postIndex
+			case 6:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field MaxGas", wireType)
+				}
+				var msglen int
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					msglen |= int(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				if msglen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + msglen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.MaxGas = append(x.MaxGas, &common.Coin{})
+				if err := options.Unmarshal(dAtA[iNdEx:postIndex], x.MaxGas[len(x.MaxGas)-1]); err != nil {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, err
+				}
+				iNdEx = postIndex
+			case 7:
+				if wireType != 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field GasRate", wireType)
+				}
+				x.GasRate = 0
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					x.GasRate |= int64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+			case 5:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Memo", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.Memo = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 12:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Aggregator", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.Aggregator = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 13:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field AggregatorTargetAsset", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.AggregatorTargetAsset = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 14:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field AggregatorTargetLimit", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.AggregatorTargetLimit = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
 			case 11:
 				if wireType != 2 {
 					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field CloutSpent", wireType)
@@ -2583,21 +2775,25 @@ func (x *QueryOutboundResponse) GetTxOutItems() []*QueryTxOutItem {
 	return nil
 }
 
+// Fields are rearranged for querier response readability while preserving their field numbers.
 type QueryTxOutItem struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Chain       string         `protobuf:"bytes,1,opt,name=chain,proto3" json:"chain,omitempty"`
-	ToAddress   string         `protobuf:"bytes,2,opt,name=to_address,json=toAddress,proto3" json:"to_address,omitempty"`
-	VaultPubKey string         `protobuf:"bytes,3,opt,name=vault_pub_key,json=vaultPubKey,proto3" json:"vault_pub_key,omitempty"`
-	Coin        *common.Coin   `protobuf:"bytes,4,opt,name=coin,proto3" json:"coin,omitempty"`
-	Memo        string         `protobuf:"bytes,5,opt,name=memo,proto3" json:"memo,omitempty"`
-	MaxGas      []*common.Coin `protobuf:"bytes,6,rep,name=max_gas,json=maxGas,proto3" json:"max_gas,omitempty"`
-	GasRate     int64          `protobuf:"varint,7,opt,name=gas_rate,json=gasRate,proto3" json:"gas_rate,omitempty"`
-	InHash      string         `protobuf:"bytes,8,opt,name=in_hash,json=inHash,proto3" json:"in_hash,omitempty"`
-	OutHash     string         `protobuf:"bytes,9,opt,name=out_hash,json=outHash,proto3" json:"out_hash,omitempty"`
-	Height      int64          `protobuf:"varint,10,opt,name=height,proto3" json:"height,omitempty"`
+	Height                int64          `protobuf:"varint,10,opt,name=height,proto3" json:"height,omitempty"`
+	VaultPubKey           string         `protobuf:"bytes,3,opt,name=vault_pub_key,json=vaultPubKey,proto3" json:"vault_pub_key,omitempty"`
+	InHash                string         `protobuf:"bytes,8,opt,name=in_hash,json=inHash,proto3" json:"in_hash,omitempty"`
+	OutHash               string         `protobuf:"bytes,9,opt,name=out_hash,json=outHash,proto3" json:"out_hash,omitempty"`
+	Chain                 string         `protobuf:"bytes,1,opt,name=chain,proto3" json:"chain,omitempty"`
+	ToAddress             string         `protobuf:"bytes,2,opt,name=to_address,json=toAddress,proto3" json:"to_address,omitempty"`
+	Coin                  *common.Coin   `protobuf:"bytes,4,opt,name=coin,proto3" json:"coin,omitempty"`
+	MaxGas                []*common.Coin `protobuf:"bytes,6,rep,name=max_gas,json=maxGas,proto3" json:"max_gas,omitempty"`
+	GasRate               int64          `protobuf:"varint,7,opt,name=gas_rate,json=gasRate,proto3" json:"gas_rate,omitempty"`
+	Memo                  string         `protobuf:"bytes,5,opt,name=memo,proto3" json:"memo,omitempty"`
+	Aggregator            string         `protobuf:"bytes,12,opt,name=aggregator,proto3" json:"aggregator,omitempty"`
+	AggregatorTargetAsset string         `protobuf:"bytes,13,opt,name=aggregator_target_asset,json=aggregatorTargetAsset,proto3" json:"aggregator_target_asset,omitempty"`
+	AggregatorTargetLimit string         `protobuf:"bytes,14,opt,name=aggregator_target_limit,json=aggregatorTargetLimit,proto3" json:"aggregator_target_limit,omitempty"`
 	// clout spent in RUNE for the outbound
 	CloutSpent string `protobuf:"bytes,11,opt,name=clout_spent,json=cloutSpent,proto3" json:"clout_spent,omitempty"`
 }
@@ -2622,18 +2818,11 @@ func (*QueryTxOutItem) Descriptor() ([]byte, []int) {
 	return file_types_query_outbound_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *QueryTxOutItem) GetChain() string {
+func (x *QueryTxOutItem) GetHeight() int64 {
 	if x != nil {
-		return x.Chain
+		return x.Height
 	}
-	return ""
-}
-
-func (x *QueryTxOutItem) GetToAddress() string {
-	if x != nil {
-		return x.ToAddress
-	}
-	return ""
+	return 0
 }
 
 func (x *QueryTxOutItem) GetVaultPubKey() string {
@@ -2641,34 +2830,6 @@ func (x *QueryTxOutItem) GetVaultPubKey() string {
 		return x.VaultPubKey
 	}
 	return ""
-}
-
-func (x *QueryTxOutItem) GetCoin() *common.Coin {
-	if x != nil {
-		return x.Coin
-	}
-	return nil
-}
-
-func (x *QueryTxOutItem) GetMemo() string {
-	if x != nil {
-		return x.Memo
-	}
-	return ""
-}
-
-func (x *QueryTxOutItem) GetMaxGas() []*common.Coin {
-	if x != nil {
-		return x.MaxGas
-	}
-	return nil
-}
-
-func (x *QueryTxOutItem) GetGasRate() int64 {
-	if x != nil {
-		return x.GasRate
-	}
-	return 0
 }
 
 func (x *QueryTxOutItem) GetInHash() string {
@@ -2685,11 +2846,67 @@ func (x *QueryTxOutItem) GetOutHash() string {
 	return ""
 }
 
-func (x *QueryTxOutItem) GetHeight() int64 {
+func (x *QueryTxOutItem) GetChain() string {
 	if x != nil {
-		return x.Height
+		return x.Chain
+	}
+	return ""
+}
+
+func (x *QueryTxOutItem) GetToAddress() string {
+	if x != nil {
+		return x.ToAddress
+	}
+	return ""
+}
+
+func (x *QueryTxOutItem) GetCoin() *common.Coin {
+	if x != nil {
+		return x.Coin
+	}
+	return nil
+}
+
+func (x *QueryTxOutItem) GetMaxGas() []*common.Coin {
+	if x != nil {
+		return x.MaxGas
+	}
+	return nil
+}
+
+func (x *QueryTxOutItem) GetGasRate() int64 {
+	if x != nil {
+		return x.GasRate
 	}
 	return 0
+}
+
+func (x *QueryTxOutItem) GetMemo() string {
+	if x != nil {
+		return x.Memo
+	}
+	return ""
+}
+
+func (x *QueryTxOutItem) GetAggregator() string {
+	if x != nil {
+		return x.Aggregator
+	}
+	return ""
+}
+
+func (x *QueryTxOutItem) GetAggregatorTargetAsset() string {
+	if x != nil {
+		return x.AggregatorTargetAsset
+	}
+	return ""
+}
+
+func (x *QueryTxOutItem) GetAggregatorTargetLimit() string {
+	if x != nil {
+		return x.AggregatorTargetLimit
+	}
+	return ""
 }
 
 func (x *QueryTxOutItem) GetCloutSpent() string {
@@ -2719,32 +2936,41 @@ var file_types_query_outbound_proto_rawDesc = []byte{
 	0x74, 0x5f, 0x69, 0x74, 0x65, 0x6d, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x15, 0x2e,
 	0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x51, 0x75, 0x65, 0x72, 0x79, 0x54, 0x78, 0x4f, 0x75, 0x74,
 	0x49, 0x74, 0x65, 0x6d, 0x52, 0x0a, 0x74, 0x78, 0x4f, 0x75, 0x74, 0x49, 0x74, 0x65, 0x6d, 0x73,
-	0x22, 0xb3, 0x03, 0x0a, 0x0e, 0x51, 0x75, 0x65, 0x72, 0x79, 0x54, 0x78, 0x4f, 0x75, 0x74, 0x49,
-	0x74, 0x65, 0x6d, 0x12, 0x1f, 0x0a, 0x05, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x18, 0x01, 0x20, 0x01,
+	0x22, 0xc3, 0x04, 0x0a, 0x0e, 0x51, 0x75, 0x65, 0x72, 0x79, 0x54, 0x78, 0x4f, 0x75, 0x74, 0x49,
+	0x74, 0x65, 0x6d, 0x12, 0x16, 0x0a, 0x06, 0x68, 0x65, 0x69, 0x67, 0x68, 0x74, 0x18, 0x0a, 0x20,
+	0x01, 0x28, 0x03, 0x52, 0x06, 0x68, 0x65, 0x69, 0x67, 0x68, 0x74, 0x12, 0x22, 0x0a, 0x0d, 0x76,
+	0x61, 0x75, 0x6c, 0x74, 0x5f, 0x70, 0x75, 0x62, 0x5f, 0x6b, 0x65, 0x79, 0x18, 0x03, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x0b, 0x76, 0x61, 0x75, 0x6c, 0x74, 0x50, 0x75, 0x62, 0x4b, 0x65, 0x79, 0x12,
+	0x17, 0x0a, 0x07, 0x69, 0x6e, 0x5f, 0x68, 0x61, 0x73, 0x68, 0x18, 0x08, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x06, 0x69, 0x6e, 0x48, 0x61, 0x73, 0x68, 0x12, 0x19, 0x0a, 0x08, 0x6f, 0x75, 0x74, 0x5f,
+	0x68, 0x61, 0x73, 0x68, 0x18, 0x09, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x6f, 0x75, 0x74, 0x48,
+	0x61, 0x73, 0x68, 0x12, 0x1f, 0x0a, 0x05, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x18, 0x01, 0x20, 0x01,
 	0x28, 0x09, 0x42, 0x09, 0xea, 0xde, 0x1f, 0x05, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x52, 0x05, 0x63,
 	0x68, 0x61, 0x69, 0x6e, 0x12, 0x2d, 0x0a, 0x0a, 0x74, 0x6f, 0x5f, 0x61, 0x64, 0x64, 0x72, 0x65,
 	0x73, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x42, 0x0e, 0xea, 0xde, 0x1f, 0x0a, 0x74, 0x6f,
 	0x5f, 0x61, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x52, 0x09, 0x74, 0x6f, 0x41, 0x64, 0x64, 0x72,
-	0x65, 0x73, 0x73, 0x12, 0x22, 0x0a, 0x0d, 0x76, 0x61, 0x75, 0x6c, 0x74, 0x5f, 0x70, 0x75, 0x62,
-	0x5f, 0x6b, 0x65, 0x79, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x76, 0x61, 0x75, 0x6c,
-	0x74, 0x50, 0x75, 0x62, 0x4b, 0x65, 0x79, 0x12, 0x2a, 0x0a, 0x04, 0x63, 0x6f, 0x69, 0x6e, 0x18,
-	0x04, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x43,
-	0x6f, 0x69, 0x6e, 0x42, 0x08, 0xea, 0xde, 0x1f, 0x04, 0x63, 0x6f, 0x69, 0x6e, 0x52, 0x04, 0x63,
-	0x6f, 0x69, 0x6e, 0x12, 0x12, 0x0a, 0x04, 0x6d, 0x65, 0x6d, 0x6f, 0x18, 0x05, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x04, 0x6d, 0x65, 0x6d, 0x6f, 0x12, 0x65, 0x0a, 0x07, 0x6d, 0x61, 0x78, 0x5f, 0x67,
-	0x61, 0x73, 0x18, 0x06, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x63, 0x6f, 0x6d, 0x6d, 0x6f,
-	0x6e, 0x2e, 0x43, 0x6f, 0x69, 0x6e, 0x42, 0x3e, 0xc8, 0xde, 0x1f, 0x00, 0xea, 0xde, 0x1f, 0x07,
-	0x6d, 0x61, 0x78, 0x5f, 0x67, 0x61, 0x73, 0xaa, 0xdf, 0x1f, 0x2b, 0x67, 0x69, 0x74, 0x6c, 0x61,
-	0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f,
-	0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33, 0x2f, 0x63, 0x6f, 0x6d, 0x6d,
-	0x6f, 0x6e, 0x2e, 0x47, 0x61, 0x73, 0x52, 0x06, 0x6d, 0x61, 0x78, 0x47, 0x61, 0x73, 0x12, 0x19,
-	0x0a, 0x08, 0x67, 0x61, 0x73, 0x5f, 0x72, 0x61, 0x74, 0x65, 0x18, 0x07, 0x20, 0x01, 0x28, 0x03,
-	0x52, 0x07, 0x67, 0x61, 0x73, 0x52, 0x61, 0x74, 0x65, 0x12, 0x17, 0x0a, 0x07, 0x69, 0x6e, 0x5f,
-	0x68, 0x61, 0x73, 0x68, 0x18, 0x08, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x69, 0x6e, 0x48, 0x61,
-	0x73, 0x68, 0x12, 0x19, 0x0a, 0x08, 0x6f, 0x75, 0x74, 0x5f, 0x68, 0x61, 0x73, 0x68, 0x18, 0x09,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x6f, 0x75, 0x74, 0x48, 0x61, 0x73, 0x68, 0x12, 0x16, 0x0a,
-	0x06, 0x68, 0x65, 0x69, 0x67, 0x68, 0x74, 0x18, 0x0a, 0x20, 0x01, 0x28, 0x03, 0x52, 0x06, 0x68,
-	0x65, 0x69, 0x67, 0x68, 0x74, 0x12, 0x1f, 0x0a, 0x0b, 0x63, 0x6c, 0x6f, 0x75, 0x74, 0x5f, 0x73,
+	0x65, 0x73, 0x73, 0x12, 0x2a, 0x0a, 0x04, 0x63, 0x6f, 0x69, 0x6e, 0x18, 0x04, 0x20, 0x01, 0x28,
+	0x0b, 0x32, 0x0c, 0x2e, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x43, 0x6f, 0x69, 0x6e, 0x42,
+	0x08, 0xea, 0xde, 0x1f, 0x04, 0x63, 0x6f, 0x69, 0x6e, 0x52, 0x04, 0x63, 0x6f, 0x69, 0x6e, 0x12,
+	0x65, 0x0a, 0x07, 0x6d, 0x61, 0x78, 0x5f, 0x67, 0x61, 0x73, 0x18, 0x06, 0x20, 0x03, 0x28, 0x0b,
+	0x32, 0x0c, 0x2e, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x43, 0x6f, 0x69, 0x6e, 0x42, 0x3e,
+	0xc8, 0xde, 0x1f, 0x00, 0xea, 0xde, 0x1f, 0x07, 0x6d, 0x61, 0x78, 0x5f, 0x67, 0x61, 0x73, 0xaa,
+	0xdf, 0x1f, 0x2b, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68,
+	0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65,
+	0x2f, 0x76, 0x33, 0x2f, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x47, 0x61, 0x73, 0x52, 0x06,
+	0x6d, 0x61, 0x78, 0x47, 0x61, 0x73, 0x12, 0x19, 0x0a, 0x08, 0x67, 0x61, 0x73, 0x5f, 0x72, 0x61,
+	0x74, 0x65, 0x18, 0x07, 0x20, 0x01, 0x28, 0x03, 0x52, 0x07, 0x67, 0x61, 0x73, 0x52, 0x61, 0x74,
+	0x65, 0x12, 0x12, 0x0a, 0x04, 0x6d, 0x65, 0x6d, 0x6f, 0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x04, 0x6d, 0x65, 0x6d, 0x6f, 0x12, 0x1e, 0x0a, 0x0a, 0x61, 0x67, 0x67, 0x72, 0x65, 0x67, 0x61,
+	0x74, 0x6f, 0x72, 0x18, 0x0c, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x61, 0x67, 0x67, 0x72, 0x65,
+	0x67, 0x61, 0x74, 0x6f, 0x72, 0x12, 0x36, 0x0a, 0x17, 0x61, 0x67, 0x67, 0x72, 0x65, 0x67, 0x61,
+	0x74, 0x6f, 0x72, 0x5f, 0x74, 0x61, 0x72, 0x67, 0x65, 0x74, 0x5f, 0x61, 0x73, 0x73, 0x65, 0x74,
+	0x18, 0x0d, 0x20, 0x01, 0x28, 0x09, 0x52, 0x15, 0x61, 0x67, 0x67, 0x72, 0x65, 0x67, 0x61, 0x74,
+	0x6f, 0x72, 0x54, 0x61, 0x72, 0x67, 0x65, 0x74, 0x41, 0x73, 0x73, 0x65, 0x74, 0x12, 0x36, 0x0a,
+	0x17, 0x61, 0x67, 0x67, 0x72, 0x65, 0x67, 0x61, 0x74, 0x6f, 0x72, 0x5f, 0x74, 0x61, 0x72, 0x67,
+	0x65, 0x74, 0x5f, 0x6c, 0x69, 0x6d, 0x69, 0x74, 0x18, 0x0e, 0x20, 0x01, 0x28, 0x09, 0x52, 0x15,
+	0x61, 0x67, 0x67, 0x72, 0x65, 0x67, 0x61, 0x74, 0x6f, 0x72, 0x54, 0x61, 0x72, 0x67, 0x65, 0x74,
+	0x4c, 0x69, 0x6d, 0x69, 0x74, 0x12, 0x1f, 0x0a, 0x0b, 0x63, 0x6c, 0x6f, 0x75, 0x74, 0x5f, 0x73,
 	0x70, 0x65, 0x6e, 0x74, 0x18, 0x0b, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x63, 0x6c, 0x6f, 0x75,
 	0x74, 0x53, 0x70, 0x65, 0x6e, 0x74, 0x42, 0x83, 0x01, 0x0a, 0x09, 0x63, 0x6f, 0x6d, 0x2e, 0x74,
 	0x79, 0x70, 0x65, 0x73, 0x42, 0x12, 0x51, 0x75, 0x65, 0x72, 0x79, 0x4f, 0x75, 0x74, 0x62, 0x6f,

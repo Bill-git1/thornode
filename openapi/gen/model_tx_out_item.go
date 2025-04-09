@@ -16,16 +16,22 @@ import (
 
 // TxOutItem struct for TxOutItem
 type TxOutItem struct {
-	Chain string `json:"chain"`
-	ToAddress string `json:"to_address"`
+	Height *int64 `json:"height,omitempty"`
 	VaultPubKey *string `json:"vault_pub_key,omitempty"`
-	Coin Coin `json:"coin"`
-	Memo *string `json:"memo,omitempty"`
-	MaxGas []Coin `json:"max_gas"`
-	GasRate *int64 `json:"gas_rate,omitempty"`
 	InHash *string `json:"in_hash,omitempty"`
 	OutHash *string `json:"out_hash,omitempty"`
-	Height *int64 `json:"height,omitempty"`
+	Chain string `json:"chain"`
+	ToAddress string `json:"to_address"`
+	Coin Coin `json:"coin"`
+	MaxGas []Coin `json:"max_gas"`
+	GasRate *int64 `json:"gas_rate,omitempty"`
+	Memo *string `json:"memo,omitempty"`
+	// whitelisted DEX Aggregator contract address
+	Aggregator *string `json:"aggregator,omitempty"`
+	// target asset for the aggregator contract to attempt a swap to
+	AggregatorTargetAsset *string `json:"aggregator_target_asset,omitempty"`
+	// the minimum number of tokens the swapper wants to receive of the output asset
+	AggregatorTargetLimit *string `json:"aggregator_target_limit,omitempty"`
 	// clout spent in RUNE for the outbound
 	CloutSpent *string `json:"clout_spent,omitempty"`
 }
@@ -51,52 +57,36 @@ func NewTxOutItemWithDefaults() *TxOutItem {
 	return &this
 }
 
-// GetChain returns the Chain field value
-func (o *TxOutItem) GetChain() string {
-	if o == nil {
-		var ret string
+// GetHeight returns the Height field value if set, zero value otherwise.
+func (o *TxOutItem) GetHeight() int64 {
+	if o == nil || o.Height == nil {
+		var ret int64
 		return ret
 	}
-
-	return o.Chain
+	return *o.Height
 }
 
-// GetChainOk returns a tuple with the Chain field value
+// GetHeightOk returns a tuple with the Height field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *TxOutItem) GetChainOk() (*string, bool) {
-	if o == nil {
+func (o *TxOutItem) GetHeightOk() (*int64, bool) {
+	if o == nil || o.Height == nil {
 		return nil, false
 	}
-	return &o.Chain, true
+	return o.Height, true
 }
 
-// SetChain sets field value
-func (o *TxOutItem) SetChain(v string) {
-	o.Chain = v
-}
-
-// GetToAddress returns the ToAddress field value
-func (o *TxOutItem) GetToAddress() string {
-	if o == nil {
-		var ret string
-		return ret
+// HasHeight returns a boolean if a field has been set.
+func (o *TxOutItem) HasHeight() bool {
+	if o != nil && o.Height != nil {
+		return true
 	}
 
-	return o.ToAddress
+	return false
 }
 
-// GetToAddressOk returns a tuple with the ToAddress field value
-// and a boolean to check if the value has been set.
-func (o *TxOutItem) GetToAddressOk() (*string, bool) {
-	if o == nil {
-		return nil, false
-	}
-	return &o.ToAddress, true
-}
-
-// SetToAddress sets field value
-func (o *TxOutItem) SetToAddress(v string) {
-	o.ToAddress = v
+// SetHeight gets a reference to the given int64 and assigns it to the Height field.
+func (o *TxOutItem) SetHeight(v int64) {
+	o.Height = &v
 }
 
 // GetVaultPubKey returns the VaultPubKey field value if set, zero value otherwise.
@@ -129,118 +119,6 @@ func (o *TxOutItem) HasVaultPubKey() bool {
 // SetVaultPubKey gets a reference to the given string and assigns it to the VaultPubKey field.
 func (o *TxOutItem) SetVaultPubKey(v string) {
 	o.VaultPubKey = &v
-}
-
-// GetCoin returns the Coin field value
-func (o *TxOutItem) GetCoin() Coin {
-	if o == nil {
-		var ret Coin
-		return ret
-	}
-
-	return o.Coin
-}
-
-// GetCoinOk returns a tuple with the Coin field value
-// and a boolean to check if the value has been set.
-func (o *TxOutItem) GetCoinOk() (*Coin, bool) {
-	if o == nil {
-		return nil, false
-	}
-	return &o.Coin, true
-}
-
-// SetCoin sets field value
-func (o *TxOutItem) SetCoin(v Coin) {
-	o.Coin = v
-}
-
-// GetMemo returns the Memo field value if set, zero value otherwise.
-func (o *TxOutItem) GetMemo() string {
-	if o == nil || o.Memo == nil {
-		var ret string
-		return ret
-	}
-	return *o.Memo
-}
-
-// GetMemoOk returns a tuple with the Memo field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *TxOutItem) GetMemoOk() (*string, bool) {
-	if o == nil || o.Memo == nil {
-		return nil, false
-	}
-	return o.Memo, true
-}
-
-// HasMemo returns a boolean if a field has been set.
-func (o *TxOutItem) HasMemo() bool {
-	if o != nil && o.Memo != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetMemo gets a reference to the given string and assigns it to the Memo field.
-func (o *TxOutItem) SetMemo(v string) {
-	o.Memo = &v
-}
-
-// GetMaxGas returns the MaxGas field value
-func (o *TxOutItem) GetMaxGas() []Coin {
-	if o == nil {
-		var ret []Coin
-		return ret
-	}
-
-	return o.MaxGas
-}
-
-// GetMaxGasOk returns a tuple with the MaxGas field value
-// and a boolean to check if the value has been set.
-func (o *TxOutItem) GetMaxGasOk() ([]Coin, bool) {
-	if o == nil {
-		return nil, false
-	}
-	return o.MaxGas, true
-}
-
-// SetMaxGas sets field value
-func (o *TxOutItem) SetMaxGas(v []Coin) {
-	o.MaxGas = v
-}
-
-// GetGasRate returns the GasRate field value if set, zero value otherwise.
-func (o *TxOutItem) GetGasRate() int64 {
-	if o == nil || o.GasRate == nil {
-		var ret int64
-		return ret
-	}
-	return *o.GasRate
-}
-
-// GetGasRateOk returns a tuple with the GasRate field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *TxOutItem) GetGasRateOk() (*int64, bool) {
-	if o == nil || o.GasRate == nil {
-		return nil, false
-	}
-	return o.GasRate, true
-}
-
-// HasGasRate returns a boolean if a field has been set.
-func (o *TxOutItem) HasGasRate() bool {
-	if o != nil && o.GasRate != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetGasRate gets a reference to the given int64 and assigns it to the GasRate field.
-func (o *TxOutItem) SetGasRate(v int64) {
-	o.GasRate = &v
 }
 
 // GetInHash returns the InHash field value if set, zero value otherwise.
@@ -307,36 +185,260 @@ func (o *TxOutItem) SetOutHash(v string) {
 	o.OutHash = &v
 }
 
-// GetHeight returns the Height field value if set, zero value otherwise.
-func (o *TxOutItem) GetHeight() int64 {
-	if o == nil || o.Height == nil {
+// GetChain returns the Chain field value
+func (o *TxOutItem) GetChain() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.Chain
+}
+
+// GetChainOk returns a tuple with the Chain field value
+// and a boolean to check if the value has been set.
+func (o *TxOutItem) GetChainOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.Chain, true
+}
+
+// SetChain sets field value
+func (o *TxOutItem) SetChain(v string) {
+	o.Chain = v
+}
+
+// GetToAddress returns the ToAddress field value
+func (o *TxOutItem) GetToAddress() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.ToAddress
+}
+
+// GetToAddressOk returns a tuple with the ToAddress field value
+// and a boolean to check if the value has been set.
+func (o *TxOutItem) GetToAddressOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.ToAddress, true
+}
+
+// SetToAddress sets field value
+func (o *TxOutItem) SetToAddress(v string) {
+	o.ToAddress = v
+}
+
+// GetCoin returns the Coin field value
+func (o *TxOutItem) GetCoin() Coin {
+	if o == nil {
+		var ret Coin
+		return ret
+	}
+
+	return o.Coin
+}
+
+// GetCoinOk returns a tuple with the Coin field value
+// and a boolean to check if the value has been set.
+func (o *TxOutItem) GetCoinOk() (*Coin, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.Coin, true
+}
+
+// SetCoin sets field value
+func (o *TxOutItem) SetCoin(v Coin) {
+	o.Coin = v
+}
+
+// GetMaxGas returns the MaxGas field value
+func (o *TxOutItem) GetMaxGas() []Coin {
+	if o == nil {
+		var ret []Coin
+		return ret
+	}
+
+	return o.MaxGas
+}
+
+// GetMaxGasOk returns a tuple with the MaxGas field value
+// and a boolean to check if the value has been set.
+func (o *TxOutItem) GetMaxGasOk() ([]Coin, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.MaxGas, true
+}
+
+// SetMaxGas sets field value
+func (o *TxOutItem) SetMaxGas(v []Coin) {
+	o.MaxGas = v
+}
+
+// GetGasRate returns the GasRate field value if set, zero value otherwise.
+func (o *TxOutItem) GetGasRate() int64 {
+	if o == nil || o.GasRate == nil {
 		var ret int64
 		return ret
 	}
-	return *o.Height
+	return *o.GasRate
 }
 
-// GetHeightOk returns a tuple with the Height field value if set, nil otherwise
+// GetGasRateOk returns a tuple with the GasRate field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *TxOutItem) GetHeightOk() (*int64, bool) {
-	if o == nil || o.Height == nil {
+func (o *TxOutItem) GetGasRateOk() (*int64, bool) {
+	if o == nil || o.GasRate == nil {
 		return nil, false
 	}
-	return o.Height, true
+	return o.GasRate, true
 }
 
-// HasHeight returns a boolean if a field has been set.
-func (o *TxOutItem) HasHeight() bool {
-	if o != nil && o.Height != nil {
+// HasGasRate returns a boolean if a field has been set.
+func (o *TxOutItem) HasGasRate() bool {
+	if o != nil && o.GasRate != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetHeight gets a reference to the given int64 and assigns it to the Height field.
-func (o *TxOutItem) SetHeight(v int64) {
-	o.Height = &v
+// SetGasRate gets a reference to the given int64 and assigns it to the GasRate field.
+func (o *TxOutItem) SetGasRate(v int64) {
+	o.GasRate = &v
+}
+
+// GetMemo returns the Memo field value if set, zero value otherwise.
+func (o *TxOutItem) GetMemo() string {
+	if o == nil || o.Memo == nil {
+		var ret string
+		return ret
+	}
+	return *o.Memo
+}
+
+// GetMemoOk returns a tuple with the Memo field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TxOutItem) GetMemoOk() (*string, bool) {
+	if o == nil || o.Memo == nil {
+		return nil, false
+	}
+	return o.Memo, true
+}
+
+// HasMemo returns a boolean if a field has been set.
+func (o *TxOutItem) HasMemo() bool {
+	if o != nil && o.Memo != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetMemo gets a reference to the given string and assigns it to the Memo field.
+func (o *TxOutItem) SetMemo(v string) {
+	o.Memo = &v
+}
+
+// GetAggregator returns the Aggregator field value if set, zero value otherwise.
+func (o *TxOutItem) GetAggregator() string {
+	if o == nil || o.Aggregator == nil {
+		var ret string
+		return ret
+	}
+	return *o.Aggregator
+}
+
+// GetAggregatorOk returns a tuple with the Aggregator field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TxOutItem) GetAggregatorOk() (*string, bool) {
+	if o == nil || o.Aggregator == nil {
+		return nil, false
+	}
+	return o.Aggregator, true
+}
+
+// HasAggregator returns a boolean if a field has been set.
+func (o *TxOutItem) HasAggregator() bool {
+	if o != nil && o.Aggregator != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetAggregator gets a reference to the given string and assigns it to the Aggregator field.
+func (o *TxOutItem) SetAggregator(v string) {
+	o.Aggregator = &v
+}
+
+// GetAggregatorTargetAsset returns the AggregatorTargetAsset field value if set, zero value otherwise.
+func (o *TxOutItem) GetAggregatorTargetAsset() string {
+	if o == nil || o.AggregatorTargetAsset == nil {
+		var ret string
+		return ret
+	}
+	return *o.AggregatorTargetAsset
+}
+
+// GetAggregatorTargetAssetOk returns a tuple with the AggregatorTargetAsset field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TxOutItem) GetAggregatorTargetAssetOk() (*string, bool) {
+	if o == nil || o.AggregatorTargetAsset == nil {
+		return nil, false
+	}
+	return o.AggregatorTargetAsset, true
+}
+
+// HasAggregatorTargetAsset returns a boolean if a field has been set.
+func (o *TxOutItem) HasAggregatorTargetAsset() bool {
+	if o != nil && o.AggregatorTargetAsset != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetAggregatorTargetAsset gets a reference to the given string and assigns it to the AggregatorTargetAsset field.
+func (o *TxOutItem) SetAggregatorTargetAsset(v string) {
+	o.AggregatorTargetAsset = &v
+}
+
+// GetAggregatorTargetLimit returns the AggregatorTargetLimit field value if set, zero value otherwise.
+func (o *TxOutItem) GetAggregatorTargetLimit() string {
+	if o == nil || o.AggregatorTargetLimit == nil {
+		var ret string
+		return ret
+	}
+	return *o.AggregatorTargetLimit
+}
+
+// GetAggregatorTargetLimitOk returns a tuple with the AggregatorTargetLimit field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TxOutItem) GetAggregatorTargetLimitOk() (*string, bool) {
+	if o == nil || o.AggregatorTargetLimit == nil {
+		return nil, false
+	}
+	return o.AggregatorTargetLimit, true
+}
+
+// HasAggregatorTargetLimit returns a boolean if a field has been set.
+func (o *TxOutItem) HasAggregatorTargetLimit() bool {
+	if o != nil && o.AggregatorTargetLimit != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetAggregatorTargetLimit gets a reference to the given string and assigns it to the AggregatorTargetLimit field.
+func (o *TxOutItem) SetAggregatorTargetLimit(v string) {
+	o.AggregatorTargetLimit = &v
 }
 
 // GetCloutSpent returns the CloutSpent field value if set, zero value otherwise.
@@ -373,26 +475,11 @@ func (o *TxOutItem) SetCloutSpent(v string) {
 
 func (o TxOutItem) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
-	if true {
-		toSerialize["chain"] = o.Chain
-	}
-	if true {
-		toSerialize["to_address"] = o.ToAddress
+	if o.Height != nil {
+		toSerialize["height"] = o.Height
 	}
 	if o.VaultPubKey != nil {
 		toSerialize["vault_pub_key"] = o.VaultPubKey
-	}
-	if true {
-		toSerialize["coin"] = o.Coin
-	}
-	if o.Memo != nil {
-		toSerialize["memo"] = o.Memo
-	}
-	if true {
-		toSerialize["max_gas"] = o.MaxGas
-	}
-	if o.GasRate != nil {
-		toSerialize["gas_rate"] = o.GasRate
 	}
 	if o.InHash != nil {
 		toSerialize["in_hash"] = o.InHash
@@ -400,8 +487,32 @@ func (o TxOutItem) MarshalJSON_deprecated() ([]byte, error) {
 	if o.OutHash != nil {
 		toSerialize["out_hash"] = o.OutHash
 	}
-	if o.Height != nil {
-		toSerialize["height"] = o.Height
+	if true {
+		toSerialize["chain"] = o.Chain
+	}
+	if true {
+		toSerialize["to_address"] = o.ToAddress
+	}
+	if true {
+		toSerialize["coin"] = o.Coin
+	}
+	if true {
+		toSerialize["max_gas"] = o.MaxGas
+	}
+	if o.GasRate != nil {
+		toSerialize["gas_rate"] = o.GasRate
+	}
+	if o.Memo != nil {
+		toSerialize["memo"] = o.Memo
+	}
+	if o.Aggregator != nil {
+		toSerialize["aggregator"] = o.Aggregator
+	}
+	if o.AggregatorTargetAsset != nil {
+		toSerialize["aggregator_target_asset"] = o.AggregatorTargetAsset
+	}
+	if o.AggregatorTargetLimit != nil {
+		toSerialize["aggregator_target_limit"] = o.AggregatorTargetLimit
 	}
 	if o.CloutSpent != nil {
 		toSerialize["clout_spent"] = o.CloutSpent
