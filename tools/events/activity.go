@@ -532,7 +532,7 @@ func scheduledOutbound(height int64, events []map[string]string) {
 		memoParts := strings.Split(*status.Tx.Memo, ":")
 		memoType, err = memo.StringToTxType(memoParts[0])
 		if err != nil {
-			log.Panic().Err(err).Msg("failed to parse memo type")
+			log.Error().Err(err).Msg("failed to parse memo type")
 		}
 	}
 
