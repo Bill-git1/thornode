@@ -138,7 +138,7 @@ func (AppModule) IsAppModule() {}
 func (AppModule) IsOnePerModuleType() {}
 
 func (AppModule) ConsensusVersion() uint64 {
-	return 4
+	return 5
 }
 
 func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
@@ -154,8 +154,8 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 	wasmtypes.RegisterQueryServer(cfg.QueryServer(), wasmkeeper.Querier(&am.mgr.wasmKeeper))
 
 	m := NewMigrator(am.mgr)
-	if err := cfg.RegisterMigration(types.ModuleName, 3, m.Migrate3to4); err != nil {
-		panic(fmt.Sprintf("failed to migrate x/thorchain from version 3 to 4: %v", err))
+	if err := cfg.RegisterMigration(types.ModuleName, 4, m.Migrate4to5); err != nil {
+		panic(fmt.Sprintf("failed to migrate x/thorchain from version 4 to 5: %v", err))
 	}
 }
 

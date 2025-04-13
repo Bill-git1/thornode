@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"gitlab.com/thorchain/thornode/v3/common"
 	v2 "gitlab.com/thorchain/thornode/v3/x/thorchain/migrations/v2"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"

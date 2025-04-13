@@ -5,6 +5,7 @@ package thorchain
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	v2 "gitlab.com/thorchain/thornode/v3/x/thorchain/migrations/v2"
 )
 

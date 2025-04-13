@@ -1243,3 +1243,16 @@ func polPoolValue(ctx cosmos.Context, mgr Manager) (cosmos.Uint, error) {
 
 	return total, nil
 }
+
+// This removes the first prefix ending with "//" (if there is one) from a KVStore key,
+// such as when obtained through an Iterator, whatever the prefix may be.
+// The "/" at the end of every prefix, together with the "/" added by KVStore GetKey
+// (to ensure that no prefix ever contains another prefix)
+// should ensure that each prefix ends with "//".
+func trimKeyPrefix(key []byte) string {
+	keyString := string(key)
+	if _, after, found := strings.Cut(keyString, "//"); found {
+		return after
+	}
+	return keyString
+}
