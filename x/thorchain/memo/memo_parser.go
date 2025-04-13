@@ -242,7 +242,7 @@ func (p *parser) getAddress(idx int, required bool, def common.Address) common.A
 func (p *parser) getAddressWithKeeper(idx int, required bool, def common.Address, chain common.Chain) common.Address {
 	p.incRequired(required)
 	if p.keeper == nil {
-		return p.getAddress(2, required, common.NoAddress)
+		return p.getAddress(idx, required, common.NoAddress)
 	}
 	addr, err := FetchAddress(p.ctx, p.keeper, p.get(idx), chain)
 	if err != nil {
