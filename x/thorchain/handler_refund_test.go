@@ -171,6 +171,7 @@ func newRefundTxHandlerTestHelper(c *C) refundTxHandlerTestHelper {
 	voter := NewObservedTxVoter(tx.Tx.ID, make(ObservedTxs, 0))
 	voter.Add(tx, nodeAccount.NodeAddress)
 	voter.Tx = voter.GetTx(NodeAccounts{nodeAccount})
+	voter.Height = ctx.BlockHeight()
 	voter.FinalisedHeight = ctx.BlockHeight()
 	keeperTestHelper.SetObservedTxOutVoter(ctx, voter)
 

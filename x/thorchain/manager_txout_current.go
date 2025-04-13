@@ -290,10 +290,10 @@ func (tos *TxOutStorageVCUR) cachedTryAddTxOutItem(ctx cosmos.Context, mgr Manag
 			outboundHeight = targetHeight
 		}
 
-		// When the inbound transaction already has an outbound , the make sure the outbound will be scheduled on the same block
-		if voter.OutboundHeight > 0 {
-			outboundHeight = voter.OutboundHeight
-		} else {
+		// While each outbound has its own security-appropriate outbound delay,
+		// ensure the voter.OutboundHeight reflects the furthest-future scheduled outbound height
+		// so as to serve as an estimate of when the entire transaction may be completed.
+		if outboundHeight > voter.OutboundHeight {
 			voter.OutboundHeight = outboundHeight
 			tos.keeper.SetObservedTxInVoter(ctx, voter)
 		}
