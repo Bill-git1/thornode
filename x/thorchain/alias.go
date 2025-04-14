@@ -17,6 +17,8 @@ const (
 	AffiliateCollectorName = types.AffiliateCollectorName
 	TreasuryName           = types.TreasuryName
 	RUNEPoolName           = types.RUNEPoolName
+	TCYClaimingName        = types.TCYClaimingName
+	TCYStakeName           = types.TCYStakeName
 	RouterKey              = types.RouterKey
 	StoreKey               = types.StoreKey
 	DefaultCodespace       = types.DefaultCodespace
@@ -85,6 +87,9 @@ const (
 	TxTHORName      = mem.TxTHORName
 	TxLoanOpen      = mem.TxLoanOpen
 	TxLoanRepayment = mem.TxLoanRepayment
+	TxTCYClaim      = mem.TxTCYClaim
+	TxTCYStake      = mem.TxTCYStake
+	TxTCYUnstake    = mem.TxTCYUnstake
 )
 
 var (
@@ -223,6 +228,9 @@ var (
 	NewSolvencyVoter               = types.NewSolvencyVoter
 	NewMsgSolvency                 = types.NewMsgSolvency
 	NewSwapperClout                = types.NewSwapperClout
+	NewMsgTCYClaim                 = types.NewMsgTCYClaim
+	NewMsgTCYStake                 = types.NewMsgTCYStake
+	NewMsgTCYUnstake               = types.NewMsgTCYUnstake
 
 	// Memo
 	ParseMemo              = mem.ParseMemo
@@ -282,6 +290,9 @@ type (
 	MsgRunePoolWithdraw       = types.MsgRunePoolWithdraw
 	MsgWasmExec               = types.MsgWasmExec
 	MsgSwitch                 = types.MsgSwitch
+	MsgTCYClaim               = types.MsgTCYClaim
+	MsgTCYStake               = types.MsgTCYStake
+	MsgTCYUnstake             = types.MsgTCYUnstake
 
 	// Keeper structs
 	PoolStatus               = types.PoolStatus
@@ -356,6 +367,8 @@ type (
 	SecuredAsset             = types.SecuredAsset
 	RUNEProvider             = types.RUNEProvider
 	RUNEPool                 = types.RUNEPool
+	TCYClaimer               = types.TCYClaimer
+	TCYStaker                = types.TCYStaker
 
 	// Memo
 	SwapMemo                   = mem.SwapMemo
@@ -383,6 +396,9 @@ type (
 	RunePoolWithdrawMemo       = mem.RunePoolWithdrawMemo
 	ExecMemo                   = mem.ExecMemo
 	SwitchMemo                 = mem.SwitchMemo
+	TCYClaimMemo               = mem.TCYClaimMemo
+	TCYStakeMemo               = mem.TCYStakeMemo
+	TCYUnstakeMemo             = mem.TCYUnstakeMemo
 
 	// Proto
 	ProtoStrings = types.ProtoStrings

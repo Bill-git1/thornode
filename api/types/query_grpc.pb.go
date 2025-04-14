@@ -94,6 +94,10 @@ const (
 	Query_UpgradeProposals_FullMethodName    = "/types.Query/UpgradeProposals"
 	Query_UpgradeProposal_FullMethodName     = "/types.Query/UpgradeProposal"
 	Query_UpgradeVotes_FullMethodName        = "/types.Query/UpgradeVotes"
+	Query_TCYStaker_FullMethodName           = "/types.Query/TCYStaker"
+	Query_TCYStakers_FullMethodName          = "/types.Query/TCYStakers"
+	Query_TCYClaimer_FullMethodName          = "/types.Query/TCYClaimer"
+	Query_TCYClaimers_FullMethodName         = "/types.Query/TCYClaimers"
 )
 
 // QueryClient is the client API for Query service.
@@ -184,6 +188,10 @@ type QueryClient interface {
 	UpgradeProposals(ctx context.Context, in *QueryUpgradeProposalsRequest, opts ...grpc.CallOption) (*QueryUpgradeProposalsResponse, error)
 	UpgradeProposal(ctx context.Context, in *QueryUpgradeProposalRequest, opts ...grpc.CallOption) (*QueryUpgradeProposalResponse, error)
 	UpgradeVotes(ctx context.Context, in *QueryUpgradeVotesRequest, opts ...grpc.CallOption) (*QueryUpgradeVotesResponse, error)
+	TCYStaker(ctx context.Context, in *QueryTCYStakerRequest, opts ...grpc.CallOption) (*QueryTCYStakerResponse, error)
+	TCYStakers(ctx context.Context, in *QueryTCYStakersRequest, opts ...grpc.CallOption) (*QueryTCYStakersResponse, error)
+	TCYClaimer(ctx context.Context, in *QueryTCYClaimerRequest, opts ...grpc.CallOption) (*QueryTCYClaimerResponse, error)
+	TCYClaimers(ctx context.Context, in *QueryTCYClaimersRequest, opts ...grpc.CallOption) (*QueryTCYClaimersResponse, error)
 }
 
 type queryClient struct {
@@ -869,6 +877,42 @@ func (c *queryClient) UpgradeVotes(ctx context.Context, in *QueryUpgradeVotesReq
 	return out, nil
 }
 
+func (c *queryClient) TCYStaker(ctx context.Context, in *QueryTCYStakerRequest, opts ...grpc.CallOption) (*QueryTCYStakerResponse, error) {
+	out := new(QueryTCYStakerResponse)
+	err := c.cc.Invoke(ctx, Query_TCYStaker_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) TCYStakers(ctx context.Context, in *QueryTCYStakersRequest, opts ...grpc.CallOption) (*QueryTCYStakersResponse, error) {
+	out := new(QueryTCYStakersResponse)
+	err := c.cc.Invoke(ctx, Query_TCYStakers_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) TCYClaimer(ctx context.Context, in *QueryTCYClaimerRequest, opts ...grpc.CallOption) (*QueryTCYClaimerResponse, error) {
+	out := new(QueryTCYClaimerResponse)
+	err := c.cc.Invoke(ctx, Query_TCYClaimer_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) TCYClaimers(ctx context.Context, in *QueryTCYClaimersRequest, opts ...grpc.CallOption) (*QueryTCYClaimersResponse, error) {
+	out := new(QueryTCYClaimersResponse)
+	err := c.cc.Invoke(ctx, Query_TCYClaimers_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility
@@ -957,6 +1001,10 @@ type QueryServer interface {
 	UpgradeProposals(context.Context, *QueryUpgradeProposalsRequest) (*QueryUpgradeProposalsResponse, error)
 	UpgradeProposal(context.Context, *QueryUpgradeProposalRequest) (*QueryUpgradeProposalResponse, error)
 	UpgradeVotes(context.Context, *QueryUpgradeVotesRequest) (*QueryUpgradeVotesResponse, error)
+	TCYStaker(context.Context, *QueryTCYStakerRequest) (*QueryTCYStakerResponse, error)
+	TCYStakers(context.Context, *QueryTCYStakersRequest) (*QueryTCYStakersResponse, error)
+	TCYClaimer(context.Context, *QueryTCYClaimerRequest) (*QueryTCYClaimerResponse, error)
+	TCYClaimers(context.Context, *QueryTCYClaimersRequest) (*QueryTCYClaimersResponse, error)
 	mustEmbedUnimplementedQueryServer()
 }
 
@@ -1188,6 +1236,18 @@ func (UnimplementedQueryServer) UpgradeProposal(context.Context, *QueryUpgradePr
 }
 func (UnimplementedQueryServer) UpgradeVotes(context.Context, *QueryUpgradeVotesRequest) (*QueryUpgradeVotesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpgradeVotes not implemented")
+}
+func (UnimplementedQueryServer) TCYStaker(context.Context, *QueryTCYStakerRequest) (*QueryTCYStakerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TCYStaker not implemented")
+}
+func (UnimplementedQueryServer) TCYStakers(context.Context, *QueryTCYStakersRequest) (*QueryTCYStakersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TCYStakers not implemented")
+}
+func (UnimplementedQueryServer) TCYClaimer(context.Context, *QueryTCYClaimerRequest) (*QueryTCYClaimerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TCYClaimer not implemented")
+}
+func (UnimplementedQueryServer) TCYClaimers(context.Context, *QueryTCYClaimersRequest) (*QueryTCYClaimersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TCYClaimers not implemented")
 }
 func (UnimplementedQueryServer) mustEmbedUnimplementedQueryServer() {}
 
@@ -2552,6 +2612,78 @@ func _Query_UpgradeVotes_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_TCYStaker_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryTCYStakerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).TCYStaker(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_TCYStaker_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).TCYStaker(ctx, req.(*QueryTCYStakerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_TCYStakers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryTCYStakersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).TCYStakers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_TCYStakers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).TCYStakers(ctx, req.(*QueryTCYStakersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_TCYClaimer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryTCYClaimerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).TCYClaimer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_TCYClaimer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).TCYClaimer(ctx, req.(*QueryTCYClaimerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_TCYClaimers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryTCYClaimersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).TCYClaimers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_TCYClaimers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).TCYClaimers(ctx, req.(*QueryTCYClaimersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Query_ServiceDesc is the grpc.ServiceDesc for Query service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2858,6 +2990,22 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpgradeVotes",
 			Handler:    _Query_UpgradeVotes_Handler,
+		},
+		{
+			MethodName: "TCYStaker",
+			Handler:    _Query_TCYStaker_Handler,
+		},
+		{
+			MethodName: "TCYStakers",
+			Handler:    _Query_TCYStakers_Handler,
+		},
+		{
+			MethodName: "TCYClaimer",
+			Handler:    _Query_TCYClaimer_Handler,
+		},
+		{
+			MethodName: "TCYClaimers",
+			Handler:    _Query_TCYClaimers_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

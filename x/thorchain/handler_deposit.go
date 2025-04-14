@@ -123,8 +123,11 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit) (*cosmos.Resu
 	switch memo.GetType() {
 	case TxBond, TxUnBond, TxLeave:
 		targetModule = BondName
-	case TxReserve, TxTHORName:
+	// For TxTCYClaim, send to Reserve so retrievable if done accidentally
+	case TxReserve, TxTHORName, TxTCYClaim:
 		targetModule = ReserveName
+	case TxTCYStake, TxTCYUnstake:
+		targetModule = TCYStakeName
 	default:
 		targetModule = AsgardName
 	}
@@ -133,14 +136,13 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit) (*cosmos.Resu
 	// (When the Amount is zero, the Asset type is irrelevant.)
 	// Coins having exactly one Coin is ensured by the validate function,
 	// but IsEmpty covers a hypothetical no-Coin scenario too.
-	if !msg.Coins.IsEmpty() && !msg.Coins[0].Asset.IsRune() && targetModule != AsgardName {
-		return nil, fmt.Errorf("(%s) memos are for the (%s) module, for which messages must only contain RUNE", memo.GetType().String(), targetModule)
+	if !msg.Coins.IsEmpty() && (!msg.Coins[0].Asset.IsRune() && !msg.Coins[0].Asset.IsTCY()) && targetModule != AsgardName {
+		return nil, fmt.Errorf("(%s) memos are for the (%s) module, for which messages must only contain RUNE or TCY", memo.GetType().String(), targetModule)
 	}
 
 	coinsInMsg := msg.Coins
 	if !coinsInMsg.IsEmpty() && !coinsInMsg[0].Asset.IsTradeAsset() && !coinsInMsg[0].Asset.IsSecuredAsset() {
 		// send funds to target module
-		// trunk-ignore(golangci-lint/govet): shadow
 		err := h.mgr.Keeper().SendFromAccountToModule(ctx, msg.GetSigners()[0], targetModule, msg.Coins)
 		if err != nil {
 			return nil, err
@@ -204,7 +206,6 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit) (*cosmos.Resu
 	// if an outbound is not expected, mark the voter as done
 	if !memo.GetType().HasOutbound() {
 		// retrieve the voter from store in case the handler caused a change
-		// trunk-ignore(golangci-lint/govet): shadow
 		voter, err := h.mgr.Keeper().GetObservedTxInVoter(ctx, txID)
 		if err != nil {
 			return nil, fmt.Errorf("fail to get voter")

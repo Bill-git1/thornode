@@ -48,6 +48,8 @@ import "types/query_account.proto";
 import "types/query_export.proto";
 import "types/query_bank.proto";
 import "types/query_secured_asset.proto";
+import "types/query_tcy_stakers.proto";
+import "types/query_tcy_claimers.proto";
 
 option (gogoproto.marshaler_all) = true;
 
@@ -360,5 +362,21 @@ service Query {
 
   rpc UpgradeVotes(QueryUpgradeVotesRequest) returns (QueryUpgradeVotesResponse) {
     option (google.api.http).get = "/thorchain/upgrade_votes/{name}";
+  }
+
+  rpc TCYStaker(QueryTCYStakerRequest) returns (QueryTCYStakerResponse) {
+    option (google.api.http).get = "/thorchain/tcy_staker/{address}";
+  }
+
+  rpc TCYStakers(QueryTCYStakersRequest) returns (QueryTCYStakersResponse) {
+    option (google.api.http).get = "/thorchain/tcy_stakers";
+  }
+
+  rpc TCYClaimer(QueryTCYClaimerRequest) returns (QueryTCYClaimerResponse) {
+    option (google.api.http).get = "/thorchain/tcy_claimer/{address}";
+  }
+
+  rpc TCYClaimers(QueryTCYClaimersRequest) returns (QueryTCYClaimersResponse) {
+    option (google.api.http).get = "/thorchain/tcy_claimers";
   }
 }

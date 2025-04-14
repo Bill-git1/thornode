@@ -1,0 +1,17 @@
+[
+  {
+    "asset": "eth.eth",
+    "address": "0xB7bD3149b150878011693aC6eEe6205B05b92C7e",
+    "tcy_claim": 10000000000000
+  },
+  {
+    "asset": "btc.btc",
+    "address": "bc1qlav94c2huygkwfhhuuupydtx54w8pstmv8pdzf",
+    "tcy_claim": 30000000000000
+  },
+  {
+    "asset": "avax.avax",
+    "address": "sthor1g5pgvndmtpejhrnkwem3y5tpznkuhd3ce2a5aa",
+    "tcy_claim": 10000000000000
+  }
+]

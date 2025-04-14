@@ -414,6 +414,19 @@ func (s *MemoSuite) TestParse(c *C) {
 	_, err = ParseMemoWithTHORNames(ctx, k, "ADD:ETH.ETH:0x90f2b1ae50e6018230e90a33f98c7844a0ab635a:tthor176xrckly4p7efq7fshhcuc2kax3dyxu9hguzl7:1000")
 	c.Assert(err, IsNil)
 
+	memo, err = ParseMemoWithTHORNames(ctx, k, "TCY:"+thorAddr.String())
+	c.Assert(err, IsNil)
+	c.Check(memo.IsType(TxTCYClaim), Equals, true, Commentf("MEMO: %+v", memo))
+	c.Check(memo.GetAddress(), Equals, thorAddr)
+
+	memo, err = ParseMemoWithTHORNames(ctx, k, "tcy+")
+	c.Assert(err, IsNil)
+	c.Check(memo.IsType(TxTCYStake), Equals, true, Commentf("MEMO: %+v", memo))
+
+	memo, err = ParseMemoWithTHORNames(ctx, k, "tcy-:10000")
+	c.Assert(err, IsNil)
+	c.Check(memo.IsType(TxTCYUnstake), Equals, true, Commentf("MEMO: %+v", memo))
+
 	// trade account unit tests
 	trAccAddr := types.GetRandomBech32Addr()
 	memo, err = ParseMemoWithTHORNames(ctx, k, fmt.Sprintf("trade+:%s", trAccAddr))
@@ -633,4 +646,8 @@ func (s *MemoSuite) TestParse(c *C) {
 	c.Assert(err, IsNil)
 	c.Check(memo.IsType(TxExec), Equals, true)
 	c.Check(memo.String(), Equals, "x:tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f:AA==")
+	_, err = ParseMemoWithTHORNames(ctx, k, "tcy:0x90f2b1ae50e6018230e90a33f98c7844a0ab635a") // invalid thor address
+	c.Assert(err, NotNil)
+	_, err = ParseMemoWithTHORNames(ctx, k, "tcy-") // emptu bps
+	c.Assert(err, NotNil)
 }

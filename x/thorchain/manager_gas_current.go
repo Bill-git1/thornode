@@ -103,7 +103,7 @@ func (gm *GasMgrVCUR) GetAssetOutboundFee(ctx cosmos.Context, asset common.Asset
 	}
 
 	// Asset is on THORChain, but not RUNE, convert the fee to asset value.
-	if asset.IsSyntheticAsset() || asset.IsDerivedAsset() || asset.IsTradeAsset() || asset.IsSecuredAsset() {
+	if asset.IsNative() {
 		if inRune {
 			return thorchainOutboundFee, nil
 		}

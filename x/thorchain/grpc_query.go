@@ -640,3 +640,35 @@ func (s *queryServer) Balances(c context.Context, req *types.QueryBalancesReques
 	ctx := s.unwrapSdkContext(c)
 	return s.queryBalances(ctx, req)
 }
+
+func (s *queryServer) TCYStaker(c context.Context, req *types.QueryTCYStakerRequest) (*types.QueryTCYStakerResponse, error) {
+	if err := checkHeightParam(req.Height); err != nil {
+		return nil, err
+	}
+	ctx := s.unwrapSdkContext(c)
+	return s.queryTCYStaker(ctx, req)
+}
+
+func (s *queryServer) TCYStakers(c context.Context, req *types.QueryTCYStakersRequest) (*types.QueryTCYStakersResponse, error) {
+	if err := checkHeightParam(req.Height); err != nil {
+		return nil, err
+	}
+	ctx := s.unwrapSdkContext(c)
+	return s.queryTCYStakers(ctx, req)
+}
+
+func (s *queryServer) TCYClaimer(c context.Context, req *types.QueryTCYClaimerRequest) (*types.QueryTCYClaimerResponse, error) {
+	if err := checkHeightParam(req.Height); err != nil {
+		return nil, err
+	}
+	ctx := s.unwrapSdkContext(c)
+	return s.queryTCYClaimer(ctx, req)
+}
+
+func (s *queryServer) TCYClaimers(c context.Context, req *types.QueryTCYClaimersRequest) (*types.QueryTCYClaimersResponse, error) {
+	if err := checkHeightParam(req.Height); err != nil {
+		return nil, err
+	}
+	ctx := s.unwrapSdkContext(c)
+	return s.queryTCYClaimers(ctx, req)
+}

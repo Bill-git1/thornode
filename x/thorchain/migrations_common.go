@@ -7,7 +7,7 @@ import (
 )
 
 // Migrate4to5 migrates from version 4 to 5.
-func (m Migrator) Migrate4to5(ctx sdk.Context) error {
+func (m Migrator) ClearObsoleteMimirs(ctx sdk.Context) error {
 	// Loads the manager for this migration (we are in the x/upgrade's preblock)
 	// Note, we do not require the manager loaded for this migration, but it is okay
 	// to load it earlier and this is the pattern for migrations to follow.

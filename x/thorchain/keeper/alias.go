@@ -77,4 +77,6 @@ type (
 	RUNEProvider             = types.RUNEProvider
 	RUNEPool                 = types.RUNEPool
 	Upgrade                  = types.Upgrade
+	TCYClaimer               = types.TCYClaimer
+	TCYStaker                = types.TCYStaker
 )

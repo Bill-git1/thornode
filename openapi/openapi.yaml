@@ -207,6 +207,76 @@ paths:
               schema:
                 $ref: "#/components/schemas/LiquidityProvidersResponse"
 
+  # ------------------------------ tcy stakers ------------------------------
+
+  /thorchain/tcy_staker/{address}:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+      - $ref: "#/components/parameters/address"
+    get:
+      description: Returns the tcy staker information for an address.
+      operationId: tcyStaker
+      tags:
+        - TCY Stakers
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TCYStakerResponse"
+
+  /thorchain/tcy_stakers:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+    get:
+      description: Returns all tcy stakers information.
+      operationId: tcyStakers
+      tags:
+        - TCY Stakers
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TCYStakersResponse"
+
+  # ------------------------------ tcy claimers ------------------------------
+
+  /thorchain/tcy_claimer/{address}:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+      - $ref: "#/components/parameters/address"
+    get:
+      description: Returns the tcy claimer information for an address.
+      operationId: tcyClaimer
+      tags:
+        - TCY Claimers
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TCYClaimerResponse"
+
+  /thorchain/tcy_claimers:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+    get:
+      description: Returns all tcy claimers information.
+      operationId: tcyClaimers
+      tags:
+        - TCY Claimers
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TCYClaimersResponse"
+
   # ------------------------------ rune pool ------------------------------
 
   /thorchain/runepool:
@@ -1890,6 +1960,56 @@ components:
           type: string
           example: "0"
 
+    TCYStakerSummary:
+      type: object
+      required:
+        - amount
+      properties:
+        amount:
+          type: string
+          example: "0"
+
+    TCYStaker:
+      type: object
+      required:
+        - amount
+      properties:
+        address:
+          type: string
+          example: "thor1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        amount:
+          type: string
+          example: "0"
+
+    TCYClaimerSummary:
+      type: object
+      required:
+        - amount
+        - asset
+      properties:
+        amount:
+          type: string
+          example: "0"
+        asset:
+          type: string
+          example: "BTC.BTC"
+
+    TCYClaimer:
+      type: object
+      required:
+        - amount
+        - asset
+      properties:
+        l1_address:
+          type: string
+          example: "thor1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        amount:
+          type: string
+          example: "0"
+        asset:
+          type: string
+          example: "BTC.BTC"
+
     Saver:
       type: object
       required:
@@ -3097,6 +3217,22 @@ components:
 
     LiquidityProviderResponse:
       $ref: "#/components/schemas/LiquidityProvider"
+
+    TCYStakersResponse:
+      type: array
+      items:
+        $ref: "#/components/schemas/TCYStakerSummary"
+
+    TCYStakerResponse:
+      $ref: "#/components/schemas/TCYStaker"
+
+    TCYClaimersResponse:
+      type: array
+      items:
+        $ref: "#/components/schemas/TCYClaimerSummary"
+
+    TCYClaimerResponse:
+      $ref: "#/components/schemas/TCYClaimer"
 
     SaverResponse:
       $ref: "#/components/schemas/Saver"

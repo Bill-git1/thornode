@@ -196,7 +196,7 @@ func parseOps(localLog zerolog.Logger, path string, tmpls *template.Template, en
 			if err == io.EOF {
 				break
 			}
-			log.Fatal().Err(err).Msg("failed to decode operation")
+			log.Fatal().Str("path", path).Err(err).Msg("failed to decode operation")
 		}
 
 		// warn empty operations

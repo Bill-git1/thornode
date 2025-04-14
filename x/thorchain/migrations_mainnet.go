@@ -62,7 +62,49 @@ func (m Migrator) Migrate2to3(ctx sdk.Context) error {
 	return nil
 }
 
-// Migrate3to4 migrates from version 3 to 4.
-func (m Migrator) Migrate3to4(ctx sdk.Context) error {
-	return nil
+// Migrate3to4 migrates from version 4 to 5.
+func (m Migrator) Migrate4to5(ctx sdk.Context) error {
+	// Loads the manager for this migration (we are in the x/upgrade's preblock)
+	// Note, we do not require the manager loaded for this migration, but it is okay
+	// to load it earlier and this is the pattern for migrations to follow.
+	if err := m.mgr.LoadManagerIfNecessary(ctx); err != nil {
+		return err
+	}
+
+	totalTCYCoin := common.NewCoin(common.TCY, cosmos.NewUint(210_000_000_00000000))
+	err := m.mgr.Keeper().MintToModule(ctx, ModuleName, totalTCYCoin)
+	if err != nil {
+		return err
+	}
+
+	// Claims 206_606_541_28874864
+	claimingModuleCoin := common.NewCoin(common.TCY, totalTCYCoin.Amount.Sub(cosmos.NewUint(206_606_541_28874864)))
+	err = m.mgr.Keeper().SendFromModuleToModule(ctx, ModuleName, TCYClaimingName, common.NewCoins(claimingModuleCoin))
+	if err != nil {
+		return err
+	}
+
+	// 210M minus claims: 206_606_541_28874864
+	treasuryCoin := common.NewCoin(common.TCY, totalTCYCoin.Amount.Sub(claimingModuleCoin.Amount))
+	treasuryAddress, err := common.NewAddress("thor1hjpct8pd9d48vyqltaqunltwx9twm57l3qmaya")
+	if err != nil {
+		return err
+	}
+
+	treasuryAccAddress, err := treasuryAddress.AccAddress()
+	if err != nil {
+		return err
+	}
+
+	err = m.mgr.Keeper().SendFromModuleToAccount(ctx, TCYClaimingName, treasuryAccAddress, common.NewCoins(treasuryCoin))
+	if err != nil {
+		return err
+	}
+
+	err = setTCYClaims(ctx, m.mgr)
+	if err != nil {
+		return err
+	}
+
+	return m.ClearObsoleteMimirs(ctx)
 }

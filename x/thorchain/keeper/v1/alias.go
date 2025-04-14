@@ -12,6 +12,8 @@ const (
 	AffiliateCollectorName = types.AffiliateCollectorName
 	TreasuryName           = types.TreasuryName
 	RUNEPoolName           = types.RUNEPoolName
+	TCYClaimingName        = types.TCYClaimingName
+	TCYStakeName           = types.TCYStakeName
 	BondName               = types.BondName
 	LendingName            = types.LendingName
 	StoreKey               = types.StoreKey
@@ -92,6 +94,8 @@ var (
 	SetupConfigForTest         = types.SetupConfigForTest
 	NewChainContract           = types.NewChainContract
 	NewSwapperClout            = types.NewSwapperClout
+	NewTCYClaimer              = types.NewTCYClaimer
+	NewTCYStaker               = types.NewTCYStaker
 )
 
 type (
@@ -144,9 +148,15 @@ type (
 	SecuredAsset             = types.SecuredAsset
 	RUNEProvider             = types.RUNEProvider
 	RUNEPool                 = types.RUNEPool
+	MsgTCYClaim              = types.MsgTCYClaim
+	MsgTCYStake              = types.MsgTCYStake
+	MsgTCYUnstake            = types.MsgTCYUnstake
+	TCYClaimer               = types.TCYClaimer
+	TCYStaker                = types.TCYStaker
 
 	ProtoInt64        = types.ProtoInt64
 	ProtoUint64       = types.ProtoUint64
+	ProtoAccAddress   = types.ProtoAccAddress
 	ProtoAccAddresses = types.ProtoAccAddresses
 	ProtoStrings      = types.ProtoStrings
 	ProtoUint         = common.ProtoUint

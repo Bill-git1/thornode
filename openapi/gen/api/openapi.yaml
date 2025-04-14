@@ -325,6 +325,118 @@ paths:
           description: OK
       tags:
       - Liquidity Providers
+  /thorchain/tcy_staker/{address}:
+    get:
+      description: Returns the tcy staker information for an address.
+      operationId: tcyStaker
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      - explode: false
+        in: path
+        name: address
+        required: true
+        schema:
+          example: thor1zupk5lmc84r2dh738a9g3zscavannjy3nzplwt
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TCYStakerResponse'
+          description: OK
+      tags:
+      - TCY Stakers
+  /thorchain/tcy_stakers:
+    get:
+      description: Returns all tcy stakers information.
+      operationId: tcyStakers
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TCYStakersResponse'
+          description: OK
+      tags:
+      - TCY Stakers
+  /thorchain/tcy_claimer/{address}:
+    get:
+      description: Returns the tcy claimer information for an address.
+      operationId: tcyClaimer
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      - explode: false
+        in: path
+        name: address
+        required: true
+        schema:
+          example: thor1zupk5lmc84r2dh738a9g3zscavannjy3nzplwt
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TCYClaimerResponse'
+          description: OK
+      tags:
+      - TCY Claimers
+  /thorchain/tcy_claimers:
+    get:
+      description: Returns all tcy claimers information.
+      operationId: tcyClaimers
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TCYClaimersResponse'
+          description: OK
+      tags:
+      - TCY Claimers
   /thorchain/runepool:
     get:
       description: Returns the pool information for the RUNE pool.
@@ -2855,6 +2967,64 @@ components:
       - rune_deposit_value
       - units
       type: object
+    TCYStakerSummary:
+      example:
+        amount: "0"
+      properties:
+        amount:
+          example: "0"
+          type: string
+      required:
+      - amount
+      type: object
+    TCYStaker:
+      example:
+        amount: "0"
+        address: thor1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      properties:
+        address:
+          example: thor1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+          type: string
+        amount:
+          example: "0"
+          type: string
+      required:
+      - amount
+      type: object
+    TCYClaimerSummary:
+      example:
+        amount: "0"
+        asset: BTC.BTC
+      properties:
+        amount:
+          example: "0"
+          type: string
+        asset:
+          example: BTC.BTC
+          type: string
+      required:
+      - amount
+      - asset
+      type: object
+    TCYClaimer:
+      example:
+        amount: "0"
+        l1_address: thor1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        asset: BTC.BTC
+      properties:
+        l1_address:
+          example: thor1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+          type: string
+        amount:
+          example: "0"
+          type: string
+        asset:
+          example: BTC.BTC
+          type: string
+      required:
+      - amount
+      - asset
+      type: object
     Saver:
       example:
         asset_redeem_value: "0"
@@ -4283,6 +4453,18 @@ components:
       type: array
     LiquidityProviderResponse:
       $ref: '#/components/schemas/LiquidityProvider'
+    TCYStakersResponse:
+      items:
+        $ref: '#/components/schemas/TCYStakerSummary'
+      type: array
+    TCYStakerResponse:
+      $ref: '#/components/schemas/TCYStaker'
+    TCYClaimersResponse:
+      items:
+        $ref: '#/components/schemas/TCYClaimerSummary'
+      type: array
+    TCYClaimerResponse:
+      $ref: '#/components/schemas/TCYClaimer'
     SaverResponse:
       $ref: '#/components/schemas/Saver'
     SaversResponse:

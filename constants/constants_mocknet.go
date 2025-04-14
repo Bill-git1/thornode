@@ -51,6 +51,7 @@ func init() {
 		SaversEjectInterval:                 60,
 		SystemIncomeBurnRateBps:             0,
 		DevFundSystemIncomeBps:              0,
+		TCYStakeSystemIncomeBps:             0,
 		MultipleAffiliatesMaxCount:          5,
 		BankSendEnabled:                     1,
 	}

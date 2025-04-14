@@ -333,6 +333,18 @@ func initGenesis(ctx cosmos.Context, keeper keeper.Keeper, data GenesisState) []
 		keeper.SetAffiliateCollector(ctx, item)
 	}
 
+	for _, item := range data.TcyClaimers {
+		if err := keeper.SetTCYClaimer(ctx, item); err != nil {
+			panic(err)
+		}
+	}
+
+	for _, item := range data.TcyStakers {
+		if err := keeper.SetTCYStaker(ctx, item); err != nil {
+			panic(err)
+		}
+	}
+
 	reserveAddr, _ := keeper.GetModuleAddress(ReserveName)
 	ctx.Logger().Info("Reserve Module", "address", reserveAddr.String())
 	bondAddr, _ := keeper.GetModuleAddress(BondName)
@@ -343,6 +355,10 @@ func initGenesis(ctx cosmos.Context, keeper keeper.Keeper, data GenesisState) []
 	ctx.Logger().Info("Treasury Module", "address", treasuryAddr.String())
 	runePoolAddr, _ := keeper.GetModuleAddress(RUNEPoolName)
 	ctx.Logger().Info("RUNEPool Module", "address", runePoolAddr.String())
+	ClaimingAddr, _ := keeper.GetModuleAddress(TCYClaimingName)
+	ctx.Logger().Info("Claiming Module", "address", ClaimingAddr.String())
+	tcyStakeAddr, _ := keeper.GetModuleAddress(TCYStakeName)
+	ctx.Logger().Info("TCYStake Module", "address", tcyStakeAddr.String())
 
 	return validators
 }
@@ -432,6 +448,38 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 			panic(err)
 		}
 		bps = append(bps, bp)
+	}
+
+	tcyClaimers := make([]TCYClaimer, 0)
+	iterator = k.GetTCYClaimerIterator(ctx)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		var claimer TCYClaimer
+		k.Cdc().MustUnmarshal(iterator.Value(), &claimer)
+		if claimer.IsEmpty() {
+			continue
+		}
+		if claimer.Amount.IsZero() {
+			continue
+		}
+
+		tcyClaimers = append(tcyClaimers, claimer)
+	}
+
+	tcyStakers := make([]TCYStaker, 0)
+	stakers, err := k.ListTCYStakers(ctx)
+	if err != nil {
+		panic(err)
+	}
+	for _, staker := range stakers {
+		if staker.IsEmpty() {
+			continue
+		}
+		if staker.Amount.IsZero() {
+			continue
+		}
+
+		tcyStakers = append(tcyStakers, staker)
 	}
 
 	var observedTxInVoters ObservedTxVoters
@@ -765,5 +813,7 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		RuneProviders:           runeProviders,
 		RunePool:                runePool,
 		AffiliateCollectors:     affiliateCollectors,
+		TcyClaimers:             tcyClaimers,
+		TcyStakers:              tcyStakers,
 	}
 }

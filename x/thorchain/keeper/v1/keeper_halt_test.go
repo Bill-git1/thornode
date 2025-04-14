@@ -70,6 +70,42 @@ func (s *KeeperHaltSuite) TestIsTradingHalt(c *C) {
 
 	_ = k.DeleteMimir(ctx, "HaltTrading")
 
+	// TCY trading halt
+	k.SetMimir(ctx, "HaltTCYTrading", 1)
+
+	txTCY := common.Tx{Coins: common.Coins{common.Coin{Asset: common.RuneNative}}}
+	swapTCYMsg := &MsgSwap{Tx: txTCY, TargetAsset: common.TCY}
+	addTCYMsg := &MsgAddLiquidity{Asset: common.TCY}
+	withdrawTCYMsg := &MsgWithdrawLiquidity{Asset: common.TCY}
+
+	c.Check(k.IsTradingHalt(ctx, swapTCYMsg), Equals, true)
+	c.Check(k.IsTradingHalt(ctx, addTCYMsg), Equals, true)
+	c.Check(k.IsTradingHalt(ctx, withdrawTCYMsg), Equals, false)
+
+	txTCY = common.Tx{Coins: common.Coins{common.Coin{Asset: common.TCY}}}
+	swapTCYMsg = &MsgSwap{Tx: txTCY, TargetAsset: common.RuneNative}
+	c.Check(k.IsTradingHalt(ctx, swapTCYMsg), Equals, true)
+
+	_ = k.DeleteMimir(ctx, "HaltTCYTrading")
+
+	// ETH trading halt from TCY
+	k.SetMimir(ctx, "HaltETHTrading", 1)
+
+	txTCY = common.Tx{Coins: common.Coins{common.Coin{Asset: common.TCY}}}
+	swapTCYMsg = &MsgSwap{Tx: txTCY, TargetAsset: common.ETHAsset}
+	c.Check(k.IsTradingHalt(ctx, swapTCYMsg), Equals, true)
+
+	_ = k.DeleteMimir(ctx, "HaltETHTrading")
+
+	// ETH trading halt to TCY
+	k.SetMimir(ctx, "HaltETHTrading", 1)
+
+	txTCY = common.Tx{Coins: common.Coins{common.Coin{Asset: common.ETHAsset}}}
+	swapTCYMsg = &MsgSwap{Tx: txTCY, TargetAsset: common.TCY}
+	c.Check(k.IsTradingHalt(ctx, swapTCYMsg), Equals, true)
+
+	_ = k.DeleteMimir(ctx, "HaltETHTrading")
+
 	// no halts
 	c.Check(k.IsTradingHalt(ctx, swapMsg), Equals, false)
 	c.Check(k.IsTradingHalt(ctx, addMsg), Equals, false)

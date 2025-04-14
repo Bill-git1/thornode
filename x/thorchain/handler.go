@@ -72,6 +72,9 @@ func getInternalHandlerMapping(mgr Manager) map[string]MsgHandler {
 	m[sdk.MsgTypeURL(&MsgRunePoolWithdraw{})] = NewRunePoolWithdrawHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgWasmExec{})] = NewWasmExecHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgSwitch{})] = NewSwitchHandler(mgr)
+	m[sdk.MsgTypeURL(&MsgTCYClaim{})] = NewTCYClaimHandler(mgr)
+	m[sdk.MsgTypeURL(&MsgTCYStake{})] = NewTCYStakeHandler(mgr)
+	m[sdk.MsgTypeURL(&MsgTCYUnstake{})] = NewTCYUnstakeHandler(mgr)
 	return m
 }
 
@@ -248,7 +251,12 @@ func processOneTxIn(ctx cosmos.Context, keeper keeper.Keeper, tx ObservedTx, sig
 	case SwitchMemo:
 		coin := tx.Tx.Coins[0]
 		newMsg = NewMsgSwitch(coin.Asset, coin.Amount, m.GetAccAddress(), signer, tx.Tx)
-
+	case TCYClaimMemo:
+		newMsg = NewMsgTCYClaim(m.Address, tx.Tx.FromAddress, signer)
+	case TCYStakeMemo:
+		newMsg = NewMsgTCYStake(tx.Tx, signer)
+	case TCYUnstakeMemo:
+		newMsg = NewMsgTCYUnstake(tx.Tx, m.BasisPoints, signer)
 	default:
 		return nil, errInvalidMemo
 	}

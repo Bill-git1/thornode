@@ -115,6 +115,8 @@ var maccPerms = map[string][]string{
 	thorchain.RUNEPoolName:           {},
 	wasmtypes.ModuleName:             {authtypes.Burner},
 	denomtypes.ModuleName:            {authtypes.Minter, authtypes.Burner},
+	thorchain.TCYClaimingName:        {},
+	thorchain.TCYStakeName:           {},
 }
 
 var (

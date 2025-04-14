@@ -120,6 +120,7 @@ message EventRewards {
   repeated PoolAmt pool_rewards = 2 [(gogoproto.nullable) = false];
   string dev_fund_reward = 3 [(gogoproto.customtype) = "cosmossdk.io/math.Uint", (gogoproto.nullable) = false];
   string income_burn = 4 [(gogoproto.customtype) = "cosmossdk.io/math.Uint", (gogoproto.nullable) = false];
+  string tcy_stake_reward = 5 [(gogoproto.customtype) = "cosmossdk.io/math.Uint", (gogoproto.nullable) = false];
 }
 
 message EventRefund {
@@ -340,4 +341,16 @@ message EventSwitch {
   string asset_address = 3 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.Address"];
   string rune_address = 4 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.Address"];
   string tx_id = 5 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.TxID", (gogoproto.customname) = "TxID"];
+}
+
+message EventTCYDistribution {
+  bytes rune_address = 1 [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
+  string rune_amount = 2 [(gogoproto.customtype) = "cosmossdk.io/math.Uint",(gogoproto.nullable) = false];
+}
+
+message EventTCYClaim {
+  string rune_address = 1 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.Address"];
+  string tcy_amount = 2 [(gogoproto.customtype) = "cosmossdk.io/math.Uint",(gogoproto.nullable) = false];
+  string l1_address = 3 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.Address"];
+  common.Asset asset = 4 [(gogoproto.nullable) = false, (gogoproto.customtype) = "gitlab.com/thorchain/thornode/v3/common.Asset"];
 }

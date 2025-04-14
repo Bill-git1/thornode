@@ -3360,3 +3360,83 @@ func dollarsPerRuneIgnoreHalt(ctx cosmos.Context, k keeper.Keeper) cosmos.Uint {
 	}
 	return common.GetMedianUint(p).QuoUint64(constants.DollarMulti)
 }
+
+// queryTCYStakers
+func (qs queryServer) queryTCYStakers(ctx cosmos.Context, req *types.QueryTCYStakersRequest) (*types.QueryTCYStakersResponse, error) {
+	var stakers []*types.QueryTCYStakerResponse
+	tcyStakers, err := qs.mgr.Keeper().ListTCYStakers(ctx)
+	if err != nil {
+		return &types.QueryTCYStakersResponse{}, err
+	}
+	for _, staker := range tcyStakers {
+		stakers = append(stakers, &types.QueryTCYStakerResponse{
+			Address: staker.Address.String(),
+			Amount:  staker.Amount.String(),
+		})
+	}
+	return &types.QueryTCYStakersResponse{TcyStakers: stakers}, nil
+}
+
+// queryTCYStaker
+func (qs queryServer) queryTCYStaker(ctx cosmos.Context, req *types.QueryTCYStakerRequest) (*types.QueryTCYStakerResponse, error) {
+	addr, err := common.NewAddress(req.Address)
+	if err != nil {
+		ctx.Logger().Error("fail to get parse address", "error", err)
+		return nil, fmt.Errorf("fail to parse address: %w", err)
+	}
+	staker, err := qs.mgr.Keeper().GetTCYStaker(ctx, addr)
+	if err != nil {
+		ctx.Logger().Error("fail to get tcy staker", "error", err)
+		return nil, fmt.Errorf("fail to tcy staker: %w", err)
+	}
+
+	stakerRes := types.QueryTCYStakerResponse{
+		Address: staker.Address.String(),
+		Amount:  staker.Amount.String(),
+	}
+
+	return &stakerRes, nil
+}
+
+// queryTCYClaimers
+func (qs queryServer) queryTCYClaimers(ctx cosmos.Context, req *types.QueryTCYClaimersRequest) (*types.QueryTCYClaimersResponse, error) {
+	var claimers []*types.QueryTCYClaimer
+	iterator := qs.mgr.Keeper().GetTCYClaimerIterator(ctx)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		var claimer TCYClaimer
+		qs.mgr.Keeper().Cdc().MustUnmarshal(iterator.Value(), &claimer)
+
+		claimers = append(claimers, &types.QueryTCYClaimer{
+			Asset:     claimer.Asset.String(),
+			L1Address: claimer.L1Address.String(),
+			Amount:    claimer.Amount.String(),
+		})
+	}
+	return &types.QueryTCYClaimersResponse{TcyClaimers: claimers}, nil
+}
+
+// queryTCYClaimer
+func (qs queryServer) queryTCYClaimer(ctx cosmos.Context, req *types.QueryTCYClaimerRequest) (*types.QueryTCYClaimerResponse, error) {
+	addr, err := common.NewAddress(req.Address)
+	if err != nil {
+		ctx.Logger().Error("fail to get parse address", "error", err)
+		return nil, fmt.Errorf("fail to parse address: %w", err)
+	}
+	addressClaims, err := qs.mgr.Keeper().ListTCYClaimersFromL1Address(ctx, addr)
+	if err != nil {
+		ctx.Logger().Error("fail to get tcy claimer", "error", err)
+		return nil, fmt.Errorf("fail to tcy claimer: %w", err)
+	}
+
+	var claimsRes []*types.QueryTCYClaimer
+	for _, claim := range addressClaims {
+		claimsRes = append(claimsRes, &types.QueryTCYClaimer{
+			Asset:     claim.Asset.String(),
+			L1Address: claim.L1Address.String(),
+			Amount:    claim.Amount.String(),
+		})
+	}
+
+	return &types.QueryTCYClaimerResponse{TcyClaimer: claimsRes}, nil
+}

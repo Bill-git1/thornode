@@ -31,14 +31,17 @@ const (
 	CodeAddLiquidityRUNEOverLimit    uint32 = 125
 	CodeAddLiquidityRUNEMoreThanBond uint32 = 126
 
-	CodeWithdrawFailValidation uint32 = 130
-	CodeFailAddOutboundTx      uint32 = 131
-	CodeFailSaveEvent          uint32 = 132
-	CodeNoLiquidityUnitLeft    uint32 = 135
-	CodeWithdrawWithin24Hours  uint32 = 136
-	CodeWithdrawFail           uint32 = 137
-	CodeEmptyChain             uint32 = 138
-	CodeWithdrawLockup         uint32 = 139
+	CodeWithdrawFailValidation   uint32 = 130
+	CodeFailAddOutboundTx        uint32 = 131
+	CodeFailSaveEvent            uint32 = 132
+	CodeNoLiquidityUnitLeft      uint32 = 135
+	CodeWithdrawWithin24Hours    uint32 = 136
+	CodeWithdrawFail             uint32 = 137
+	CodeEmptyChain               uint32 = 138
+	CodeWithdrawLockup           uint32 = 139
+	CodeTCYClaimFailValidation   uint32 = 140
+	CodeTCYStakeFailValidation   uint32 = 141
+	CodeTCYUnstakeFailValidation uint32 = 142
 )
 
 var (
@@ -63,6 +66,9 @@ var (
 	errWithdrawLockup               = errorsmod.Register(DefaultCodespace, CodeWithdrawLockup, "last add within lockup blocks")
 	errWithdrawFail                 = errorsmod.Register(DefaultCodespace, CodeWithdrawFail, "fail to withdraw")
 	errInternal                     = errorsmod.Register(DefaultCodespace, CodeInternalError, "internal error")
+	errTCYClaimFailValidation       = errorsmod.Register(DefaultCodespace, CodeTCYClaimFailValidation, "fail to validate tcy claim")
+	errTCYStakeFailValidation       = errorsmod.Register(DefaultCodespace, CodeTCYStakeFailValidation, "fail to validate tcy stake")
+	errTCYUnstakeFailValidation     = errorsmod.Register(DefaultCodespace, CodeTCYUnstakeFailValidation, "fail to validate tcy unstake")
 )
 
 // ErrInternal return an error  of errInternal with additional message

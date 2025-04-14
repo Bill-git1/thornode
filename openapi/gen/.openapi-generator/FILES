@@ -23,6 +23,8 @@ api_savers.go
 api_secured_asset.go
 api_secured_assets.go
 api_streaming_swap.go
+api_tcy_claimers.go
+api_tcy_stakers.go
 api_thornames.go
 api_trade_account.go
 api_trade_accounts.go
@@ -128,6 +130,12 @@ docs/StreamingSwapApi.md
 docs/SwapFinalisedStage.md
 docs/SwapStatus.md
 docs/SwapperCloutResponse.md
+docs/TCYClaimer.md
+docs/TCYClaimerSummary.md
+docs/TCYClaimersApi.md
+docs/TCYStaker.md
+docs/TCYStakerSummary.md
+docs/TCYStakersApi.md
 docs/TSSApi.md
 docs/Thorname.md
 docs/ThornameAlias.md
@@ -235,6 +243,10 @@ model_streaming_swap.go
 model_swap_finalised_stage.go
 model_swap_status.go
 model_swapper_clout_response.go
+model_tcy_claimer.go
+model_tcy_claimer_summary.go
+model_tcy_staker.go
+model_tcy_staker_summary.go
 model_thorname.go
 model_thorname_alias.go
 model_trade_account_response.go

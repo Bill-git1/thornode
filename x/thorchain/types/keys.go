@@ -19,6 +19,10 @@ const (
 	TreasuryName = "treasury"
 	// RUNEPoolName the name of the account used to track RUNEPool
 	RUNEPoolName = "rune_pool"
+	// TCYClaimingName the name of the account used to track claming funds from $TCY
+	TCYClaimingName = "tcy_claim"
+	// TCYStakeName the name of the account used to track stake funds from $TCY
+	TCYStakeName = "tcy_stake"
 
 	// StoreKey to be used when creating the KVStore
 	StoreKey = ModuleName

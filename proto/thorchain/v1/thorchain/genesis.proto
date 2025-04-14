@@ -26,6 +26,8 @@ import "types/type_trade_account.proto";
 import "types/type_rune_provider.proto";
 import "types/type_rune_pool.proto";
 import "types/type_secured_asset.proto";
+import "types/type_tcy_claimer.proto";
+import "types/type_tcy_staker.proto";
 import "gogoproto/gogo.proto";
 
 message lastChainHeight {
@@ -77,4 +79,6 @@ message GenesisState {
   repeated types.AffiliateFeeCollector affiliate_collectors = 39 [(gogoproto.nullable) = false];
   repeated common.Coin loan_total_collateral = 40 [(gogoproto.castrepeated) = "gitlab.com/thorchain/thornode/v3/common.Coins", (gogoproto.nullable) = false];
   repeated types.SecuredAsset secured_assets = 41 [(gogoproto.nullable) = false];
+  repeated types.TCYClaimer tcy_claimers = 42 [(gogoproto.nullable) = false];
+  repeated types.TCYStaker tcy_stakers = 43 [(gogoproto.nullable) = false];
 }

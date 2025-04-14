@@ -39,3 +39,8 @@ func (m Migrator) Migrate2to3(ctx sdk.Context) error {
 func (m Migrator) Migrate3to4(ctx sdk.Context) error {
 	return nil
 }
+
+// Migrate3to4 migrates from version 4 to 5.
+func (m Migrator) Migrate4to5(ctx sdk.Context) error {
+	return m.ClearObsoleteMimirs(ctx)
+}

@@ -632,7 +632,7 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 					}
 
 					outputs[i].Coin.Amount = common.SafeSub(outputs[i].Coin.Amount, assetFee) // Deduct Asset fee
-					if outputs[i].Coin.Asset.IsNative() {
+					if outputs[i].Coin.Asset.IsSyntheticAsset() || outputs[i].Coin.Asset.IsDerivedAsset() {
 						// burn the native asset which used to pay for fee, that's only required when sending from asgard
 						if outputs[i].GetModuleName() == AsgardName {
 							if err := tos.keeper.SendFromModuleToModule(ctx,
@@ -767,6 +767,9 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 				}
 			}
 		} else {
+			// GetModuleName() to ensure that non-"" (AsgardName).
+			sourceModule := toi.GetModuleName()
+
 			// Layer 1 or Synth Asset is implicitly swapped in a pool
 			// whether in vault or burnt from another network module,
 			// but Derived Asset has no outbound fee taken
@@ -775,11 +778,16 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 			// (If a fee were taken, then being for a Derived Asset pool
 			//  it would contribute to Lending breathing room
 			//  rather than affecting Pool Module RUNE.)
-			if !toi.Coin.Asset.IsDerivedAsset() {
-				if err := tos.keeper.AddPoolFeeToReserve(ctx, finalRuneFee); err != nil {
-					ctx.Logger().Error("fail to add pool fee to reserve", "error", err)
+			//
+			// If the source module is the Reserve, leave the fee in the Reserve without a transfer.
+			if !toi.Coin.Asset.IsDerivedAsset() && sourceModule != ReserveName {
+				coin := common.NewCoin(common.RuneAsset(), finalRuneFee)
+				err := tos.keeper.SendFromModuleToModule(ctx, sourceModule, ReserveName, common.NewCoins(coin))
+				if err != nil {
+					ctx.Logger().Error("fail to send fee to reserve", "error", err, "module", sourceModule)
 				}
 			}
+
 		}
 	}
 
@@ -1045,6 +1053,12 @@ func (tos *TxOutStorageVCUR) nativeTxOut(ctx cosmos.Context, mgr Manager, toi Tx
 		return err
 	}
 
+	claimingAddress, err := tos.keeper.GetModuleAddress(TCYClaimingName)
+	if err != nil {
+		ctx.Logger().Error("fail to get from address", "err", err)
+		return err
+	}
+
 	// send funds to/from modules
 	var sdkErr error
 	switch {
@@ -1052,6 +1066,8 @@ func (tos *TxOutStorageVCUR) nativeTxOut(ctx cosmos.Context, mgr Manager, toi Tx
 		sdkErr = tos.keeper.SendFromModuleToModule(ctx, toi.ModuleName, ReserveName, common.NewCoins(toi.Coin))
 	case affColAddress.Equals(toi.ToAddress):
 		sdkErr = tos.keeper.SendFromModuleToModule(ctx, toi.ModuleName, AffiliateCollectorName, common.NewCoins(toi.Coin))
+	case claimingAddress.Equals(toi.ToAddress):
+		sdkErr = tos.keeper.SendFromModuleToModule(ctx, toi.ModuleName, TCYClaimingName, common.NewCoins(toi.Coin))
 	default:
 		sdkErr = tos.keeper.SendFromModuleToAccount(ctx, toi.ModuleName, addr, common.NewCoins(toi.Coin))
 	}

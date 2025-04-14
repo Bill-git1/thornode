@@ -5,6 +5,7 @@ import (
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	tcyclaimlist "gitlab.com/thorchain/thornode/v3/common/tcyclaimlist"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
@@ -151,3 +152,44 @@ func unsafeAddRefundOutbound(ctx cosmos.Context, mgr *Mgrs, inHash string, destA
 // 		mgr.Keeper().SetObservedTxInVoter(ctx, voter)
 // 	}
 // }
+
+func setTCYClaims(ctx cosmos.Context, mgr *Mgrs) error {
+	claimers, err := getTCYClaimsFromData()
+	if err != nil {
+		return err
+	}
+
+	total := len(claimers)
+	for i, claimer := range claimers {
+		// Log every 100 claims
+		if i%100 == 0 {
+			ctx.Logger().Info("setting tcy claimers", "total", total, "number", i)
+		}
+
+		if err = mgr.Keeper().UpdateTCYClaimer(ctx, claimer.L1Address, claimer.Asset, claimer.Amount); err != nil {
+			ctx.Logger().Error("failed to set tcy claimer", "address", claimer.L1Address.String(), "error", err)
+		}
+	}
+
+	return nil
+}
+
+func getTCYClaimsFromData() ([]types.TCYClaimer, error) {
+	var claimers []types.TCYClaimer
+	for _, tcyClaimJSON := range tcyclaimlist.GetTCYClaimsList() {
+		var asset common.Asset
+		asset, err := common.NewAsset(tcyClaimJSON.Asset)
+		if err != nil {
+			return claimers, err
+		}
+
+		claimer := types.TCYClaimer{
+			Asset:     asset,
+			L1Address: common.Address(tcyClaimJSON.Address),
+			Amount:    cosmos.NewUint(tcyClaimJSON.TCYClaim),
+		}
+		claimers = append(claimers, claimer)
+	}
+
+	return claimers, nil
+}

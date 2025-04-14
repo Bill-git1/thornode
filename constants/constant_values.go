@@ -140,6 +140,14 @@ const (
 	BankSendEnabled
 	RUNEPoolHaltDeposit
 	RUNEPoolHaltWithdraw
+	MinRuneForTCYStakeDistribution
+	MinTCYForTCYStakeDistribution
+	TCYStakeSystemIncomeBps
+	TCYClaimingSwapHalt
+	TCYStakeDistributionHalt
+	TCYStakingHalt
+	TCYUnstakingHalt
+	TCYClaimingHalt
 
 	// These are the implicitly-0 Constants undisplayed in the API endpoint (no explicit value set).
 	ArtificialRagnarokBlockHeight

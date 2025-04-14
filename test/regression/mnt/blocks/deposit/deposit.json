@@ -460,7 +460,7 @@
         },
         "result": {
           "code": 99,
-          "log": "failed to execute message; message index: 0: (bond) memos are for the (bond) module, for which messages must only contain RUNE: internal error",
+          "log": "failed to execute message; message index: 0: (bond) memos are for the (bond) module, for which messages must only contain RUNE or TCY: internal error",
           "gas_wanted": "-1",
           "gas_used": "70425",
           "events": [

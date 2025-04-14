@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"cosmossdk.io/log"
+	"cosmossdk.io/math"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	"github.com/blang/semver"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -595,6 +596,60 @@ func (k KVStoreDummy) SetOrderBookProcessor(ctx cosmos.Context, record []bool) e
 // GetOrderBookProcessor - get a list of asset pairs to process
 func (k KVStoreDummy) GetOrderBookProcessor(ctx cosmos.Context) ([]bool, error) {
 	return nil, kaboom
+}
+
+func (k KVStoreDummy) GetTCYClaimer(ctx cosmos.Context, l1Address common.Address, asset common.Asset) (TCYClaimer, error) {
+	return TCYClaimer{}, nil
+}
+
+func (k KVStoreDummy) SetTCYClaimer(ctx cosmos.Context, record TCYClaimer) error {
+	return nil
+}
+
+func (k KVStoreDummy) GetTCYClaimerIteratorFromL1Address(ctx cosmos.Context, l1Address common.Address) cosmos.Iterator {
+	return nil
+}
+
+func (k KVStoreDummy) GetTCYClaimerIterator(ctx cosmos.Context) cosmos.Iterator {
+	return nil
+}
+
+func (k KVStoreDummy) DeleteTCYClaimer(ctx cosmos.Context, l1Address common.Address, asset common.Asset) {
+}
+
+func (k KVStoreDummy) ListTCYClaimersFromL1Address(ctx cosmos.Context, l1Address common.Address) ([]TCYClaimer, error) {
+	return nil, nil
+}
+
+func (k KVStoreDummy) GetTCYStaker(ctx cosmos.Context, address common.Address) (TCYStaker, error) {
+	return TCYStaker{}, nil
+}
+
+func (k KVStoreDummy) SetTCYStaker(ctx cosmos.Context, record TCYStaker) error {
+	return nil
+}
+
+func (k KVStoreDummy) TCYClaimerExists(ctx cosmos.Context, l1Address common.Address, asset common.Asset) bool {
+	return false
+}
+
+func (k KVStoreDummy) UpdateTCYClaimer(ctx cosmos.Context, l1Address common.Address, asset common.Asset, amount math.Uint) error {
+	return nil
+}
+
+func (k KVStoreDummy) DeleteTCYStaker(ctx cosmos.Context, address common.Address) {
+}
+
+func (k KVStoreDummy) ListTCYStakers(ctx cosmos.Context) ([]TCYStaker, error) {
+	return nil, nil
+}
+
+func (k KVStoreDummy) TCYStakerExists(ctx cosmos.Context, address common.Address) bool {
+	return false
+}
+
+func (k KVStoreDummy) UpdateTCYStaker(ctx cosmos.Context, address common.Address, amount math.Uint) error {
+	return nil
 }
 
 func (k KVStoreDummy) GetMimir(_ cosmos.Context, key string) (int64, error) { return 0, kaboom }

@@ -44,6 +44,14 @@ func AsgardInvariant(k KVStore) common.Invariant {
 					pool.BalanceRune.Add(pool.PendingInboundRune),
 				)
 				poolCoins = poolCoins.Add(coin)
+
+				if pool.Asset.IsTCY() {
+					tcyCoin := common.NewCoin(
+						common.TCY,
+						pool.BalanceAsset.Add(pool.PendingInboundAsset),
+					)
+					poolCoins = poolCoins.Add(tcyCoin)
+				}
 			}
 		}
 

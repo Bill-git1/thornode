@@ -340,6 +340,8 @@
           "spent": "0"
         }
       ],
+      "tcy_claimers": [],
+      "tcy_stakers": [],
       "trade_accounts": [
         {
           "asset": "BTC~BTC",

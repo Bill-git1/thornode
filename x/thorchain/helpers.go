@@ -1066,7 +1066,9 @@ func IsModuleAccAddress(keeper keeper.Keeper, accAddr cosmos.AccAddress) bool {
 		accAddr.Equals(keeper.GetModuleAccAddress(ReserveName)) ||
 		accAddr.Equals(keeper.GetModuleAccAddress(LendingName)) ||
 		accAddr.Equals(keeper.GetModuleAccAddress(AffiliateCollectorName)) ||
-		accAddr.Equals(keeper.GetModuleAccAddress(ModuleName))
+		accAddr.Equals(keeper.GetModuleAccAddress(ModuleName)) ||
+		accAddr.Equals(keeper.GetModuleAccAddress(TCYClaimingName)) ||
+		accAddr.Equals(keeper.GetModuleAccAddress(TCYStakeName))
 }
 
 func NewSwapMemo(ctx cosmos.Context, mgr Manager, targetAsset common.Asset, destination common.Address, limit cosmos.Uint, affiliate string, affiliateBps cosmos.Uint) string {
@@ -1255,4 +1257,8 @@ func trimKeyPrefix(key []byte) string {
 		return after
 	}
 	return keyString
+}
+
+func IsPeriodLastBlock(ctx cosmos.Context, blocksPerPeriod int64) bool {
+	return ctx.BlockHeight()%blocksPerPeriod == 0
 }

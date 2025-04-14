@@ -52,6 +52,9 @@ func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&MsgTradeAccountWithdrawal{}, ModuleName+"/MsgTradeAccountWithdrawal", nil)
 	cdc.RegisterConcrete(&MsgSecuredAssetDeposit{}, ModuleName+"/MsgSecuredAssetDeposit", nil)
 	cdc.RegisterConcrete(&MsgSecuredAssetWithdraw{}, ModuleName+"/MsgSecuredAssetWithdraw", nil)
+	cdc.RegisterConcrete(&MsgTCYClaim{}, ModuleName+"/MsgTCYClaim", nil)
+	cdc.RegisterConcrete(&MsgTCYStake{}, ModuleName+"/MsgTCYStake", nil)
+	cdc.RegisterConcrete(&MsgTCYUnstake{}, ModuleName+"/MsgTCYUnstake", nil)
 }
 
 // RegisterInterfaces register the types
@@ -94,6 +97,9 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 		&MsgTradeAccountWithdrawal{},
 		&MsgSecuredAssetDeposit{},
 		&MsgSecuredAssetWithdraw{},
+		&MsgTCYClaim{},
+		&MsgTCYStake{},
+		&MsgTCYUnstake{},
 	)
 
 	msgservice.RegisterMsgServiceDesc(registry, &_Msg_serviceDesc)

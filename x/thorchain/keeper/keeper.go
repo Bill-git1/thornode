@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"cosmossdk.io/math"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	"github.com/blang/semver"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -90,6 +91,8 @@ type Keeper interface {
 	KeeperTradeAccount
 	KeeperSecuredAsset
 	KeeperRUNEPool
+	KeeperTCYClaimer
+	KeeperTCYStaker
 }
 
 type KeeperConfig interface {
@@ -454,4 +457,24 @@ type KeeperAnchors interface {
 	AnchorMedian(ctx cosmos.Context, assets []common.Asset) cosmos.Uint
 	DollarsPerRune(ctx cosmos.Context) cosmos.Uint
 	RunePerDollar(ctx cosmos.Context) cosmos.Uint
+}
+
+type KeeperTCYClaimer interface {
+	SetTCYClaimer(ctx cosmos.Context, record TCYClaimer) error
+	GetTCYClaimer(ctx cosmos.Context, l1Address common.Address, asset common.Asset) (TCYClaimer, error)
+	GetTCYClaimerIteratorFromL1Address(ctx cosmos.Context, l1Address common.Address) cosmos.Iterator
+	DeleteTCYClaimer(ctx cosmos.Context, l1Address common.Address, asset common.Asset)
+	ListTCYClaimersFromL1Address(ctx cosmos.Context, l1Address common.Address) ([]TCYClaimer, error)
+	GetTCYClaimerIterator(ctx cosmos.Context) cosmos.Iterator
+	TCYClaimerExists(ctx cosmos.Context, l1Address common.Address, asset common.Asset) bool
+	UpdateTCYClaimer(ctx cosmos.Context, l1Address common.Address, asset common.Asset, amount math.Uint) error
+}
+
+type KeeperTCYStaker interface {
+	SetTCYStaker(ctx cosmos.Context, record TCYStaker) error
+	GetTCYStaker(ctx cosmos.Context, address common.Address) (TCYStaker, error)
+	DeleteTCYStaker(ctx cosmos.Context, address common.Address)
+	ListTCYStakers(ctx cosmos.Context) ([]TCYStaker, error)
+	TCYStakerExists(ctx cosmos.Context, address common.Address) bool
+	UpdateTCYStaker(ctx cosmos.Context, address common.Address, amount math.Uint) error
 }

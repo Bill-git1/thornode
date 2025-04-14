@@ -820,3 +820,28 @@ func (HandlerSuite) TestNewSwapMemo(c *C) {
 	memo = NewSwapMemo(ctx, mgr, common.RuneNative, addr, cosmos.NewUint(0), "", cosmos.NewUint(0))
 	c.Assert(memo, Equals, fmt.Sprintf("=:THOR.RUNE:%s:0::0", addr.String()))
 }
+
+func (HandlerSuite) TestIsPeriodLastBlock(c *C) {
+	ctx, _ := setupManagerForTest(c)
+	var blockVar int64
+
+	blockVar = 10
+	ctx = ctx.WithBlockHeight(10)
+	result := IsPeriodLastBlock(ctx, blockVar)
+	c.Assert(result, Equals, true)
+
+	blockVar = 100
+	ctx = ctx.WithBlockHeight(100)
+	result = IsPeriodLastBlock(ctx, blockVar)
+	c.Assert(result, Equals, true)
+
+	blockVar = 90
+	ctx = ctx.WithBlockHeight(89)
+	result = IsPeriodLastBlock(ctx, blockVar)
+	c.Assert(result, Equals, false)
+
+	blockVar = 100
+	ctx = ctx.WithBlockHeight(101)
+	result = IsPeriodLastBlock(ctx, blockVar)
+	c.Assert(result, Equals, false)
+}

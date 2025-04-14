@@ -114,6 +114,13 @@ func (p *parser) parse() (mem Memo, err error) {
 		return p.ParseExecMemo()
 	case TxSwitch:
 		return p.ParseSwitch()
+	case TxTCYClaim:
+		return p.ParseTCYClaimMemo()
+	case TxTCYStake:
+		return p.ParseTCYStakeMemo()
+	case TxTCYUnstake:
+		return p.ParseTCYUnstakeMemo()
+
 	default:
 		return EmptyMemo, fmt.Errorf("TxType not supported: %s", p.getType().String())
 	}
@@ -234,6 +241,23 @@ func (p *parser) getAddress(idx int, required bool, def common.Address) common.A
 		if required || p.get(idx) != "" {
 			p.addErr(fmt.Errorf("cannot parse '%s' as an Address: %w", p.get(idx), err))
 		}
+		return def
+	}
+	return value
+}
+
+func (p *parser) getThorAddress(idx int, required bool, def common.Address) common.Address {
+	p.incRequired(required)
+	value, err := common.NewAddress(p.get(idx))
+	if err != nil {
+		if required || p.get(idx) != "" {
+			p.addErr(fmt.Errorf("cannot parse '%s' as an Address: %w", p.get(idx), err))
+		}
+		return def
+	}
+
+	if !value.IsChain(common.THORChain) && required {
+		p.addErr(fmt.Errorf("cannot parse '%s' as a THOR Address: %w", p.get(idx), err))
 		return def
 	}
 	return value
