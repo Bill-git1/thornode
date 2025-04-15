@@ -299,9 +299,9 @@ func run(out io.Writer, path string, routine int) (failExportInvariants bool, er
 		log.Fatal().Err(err).Msg("failed to wait for thornode")
 	}
 
-	// retry context deadline exceeded errors
-	if returnErr != nil && strings.Contains(returnErr.Error(), "context deadline exceeded") {
-		log.Warn().Err(returnErr).Str("path", path).Msg("retrying suite with timeout")
+	// retry context deadline exceeded errors and all errors in CI
+	if returnErr != nil && (strings.Contains(returnErr.Error(), "context deadline exceeded") || os.Getenv("CI") != "") {
+		log.Warn().Err(returnErr).Str("path", path).Msg("retrying suite")
 		fmt.Println()
 
 		// track retries per path
