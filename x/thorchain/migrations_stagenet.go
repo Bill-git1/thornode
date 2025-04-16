@@ -92,14 +92,14 @@ func (m Migrator) Migrate4to5(ctx sdk.Context) error {
 		return err
 	}
 
-	// Claims 500_000_00000000
-	claimingModuleCoin := common.NewCoin(common.TCY, totalTCYCoin.Amount.Sub(cosmos.NewUint(500_000_00000000)))
+	// Claims 1_300_000_00000000
+	claimingModuleCoin := common.NewCoin(common.TCY, totalTCYCoin.Amount.Sub(cosmos.NewUint(1_300_000_00000000)))
 	err = m.mgr.Keeper().SendFromModuleToModule(ctx, ModuleName, TCYClaimingName, common.NewCoins(claimingModuleCoin))
 	if err != nil {
 		return err
 	}
 
-	// 210M minus claims: 500_000_00000000
+	// 210M minus claims: 1_300_000_00000000
 	treasuryCoin := common.NewCoin(common.TCY, totalTCYCoin.Amount.Sub(claimingModuleCoin.Amount))
 	treasuryAddress, err := common.NewAddress("sthor1hjpct8pd9d48vyqltaqunltwx9twm57l9e8tjr")
 	if err != nil {
