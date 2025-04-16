@@ -474,5 +474,483 @@
         }
       }
     ]
+  },
+  {
+    "id": {
+      "hash": "",
+      "parts": {
+        "total": 0,
+        "hash": ""
+      }
+    },
+    "header": {
+      "version": {
+        "block": "11",
+        "app": "0"
+      },
+      "chain_id": "thorchain",
+      "height": 6,
+      "time": "",
+      "last_block_id": {
+        "hash": "",
+        "parts": {
+          "total": 0,
+          "hash": ""
+        }
+      },
+      "last_commit_hash": "",
+      "data_hash": "A638B675CCE003F1CD5E25E2DEE76273B2894AB21B114763A949423C9B2154B6",
+      "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
+      "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
+      "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
+      "app_hash": "C9D92C14476D63369D7779CB721E2DF890D1C2E09B981CDDB1BAE7AD7912439D",
+      "last_results_hash": "4878DDEF746E7CA89DCBD71159FA2CDD811AABFCAAE5105288868469F1A666FD",
+      "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+      "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
+    },
+    "begin_block_events": [],
+    "end_block_events": [],
+    "txs": [
+      {
+        "hash": "6AF61759BD0FE5C00CB7DF0486E88E8B79C5DE588077A7636D6E2FF6BA3968CC",
+        "tx": {
+          "auth_info": {
+            "fee": {
+              "amount": [],
+              "gas_limit": "0",
+              "granter": "",
+              "payer": ""
+            },
+            "signer_infos": [
+              {
+                "mode_info": {
+                  "single": {
+                    "mode": "SIGN_MODE_DIRECT"
+                  }
+                },
+                "public_key": {
+                  "@type": "/cosmos.crypto.secp256k1.PubKey",
+                  "key": "AunSIOo91O3IPUeYE63hVZ9WRELKpNuLe5Gy6Q3LwfdX"
+                },
+                "sequence": "1"
+              }
+            ],
+            "tip": null
+          },
+          "body": {
+            "extension_options": [],
+            "memo": "bond:tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
+            "messages": [
+              {
+                "@type": "/types.MsgSend",
+                "amount": [
+                  {
+                    "amount": "50000",
+                    "denom": "rune"
+                  }
+                ],
+                "from_address": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
+                "to_address": "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp"
+              }
+            ],
+            "non_critical_extension_options": [],
+            "timeout_height": "0"
+          },
+          "signatures": [
+            "AafAcTkiUB7e8tUugUAOBuI34oWuieYfVR6zulkYkI0nw5UDxDC1u3kQ2Kr1FUO3wSSKfuLZShyvVe85xGMkhQ=="
+          ]
+        },
+        "result": {
+          "code": 0,
+          "gas_wanted": "-1",
+          "gas_used": "147525",
+          "events": [
+            {
+              "amount": "2000000rune",
+              "spender": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
+              "type": "coin_spent"
+            },
+            {
+              "amount": "2000000rune",
+              "receiver": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+              "type": "coin_received"
+            },
+            {
+              "amount": "2000000rune",
+              "recipient": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+              "sender": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
+              "type": "transfer"
+            },
+            {
+              "sender": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
+              "type": "message"
+            },
+            {
+              "acc_seq": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7/1",
+              "type": "tx"
+            },
+            {
+              "signature": "AafAcTkiUB7e8tUugUAOBuI34oWuieYfVR6zulkYkI0nw5UDxDC1u3kQ2Kr1FUO3wSSKfuLZShyvVe85xGMkhQ==",
+              "type": "tx"
+            },
+            {
+              "action": "/types.MsgSend",
+              "module": "MsgSend",
+              "msg_index": "0",
+              "sender": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
+              "type": "message"
+            },
+            {
+              "amount": "50000rune",
+              "msg_index": "0",
+              "spender": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
+              "type": "coin_spent"
+            },
+            {
+              "amount": "50000rune",
+              "msg_index": "0",
+              "receiver": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
+              "type": "coin_received"
+            },
+            {
+              "amount": "50000rune",
+              "msg_index": "0",
+              "recipient": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
+              "sender": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
+              "type": "transfer"
+            },
+            {
+              "msg_index": "0",
+              "sender": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
+              "type": "message"
+            },
+            {
+              "address": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
+              "msg_index": "0",
+              "type": "new_node"
+            },
+            {
+              "amount": "50000",
+              "bond_address": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
+              "bond_type": "bond_paid",
+              "chain": "THOR",
+              "coin": "50000 THOR.RUNE",
+              "from": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
+              "id": "6AF61759BD0FE5C00CB7DF0486E88E8B79C5DE588077A7636D6E2FF6BA3968CC",
+              "memo": "bond:tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
+              "msg_index": "0",
+              "node_address": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
+              "to": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
+              "type": "bond"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": {
+      "hash": "",
+      "parts": {
+        "total": 0,
+        "hash": ""
+      }
+    },
+    "header": {
+      "version": {
+        "block": "11",
+        "app": "0"
+      },
+      "chain_id": "thorchain",
+      "height": 7,
+      "time": "",
+      "last_block_id": {
+        "hash": "",
+        "parts": {
+          "total": 0,
+          "hash": ""
+        }
+      },
+      "last_commit_hash": "",
+      "data_hash": "57414D334674691F414D39FD382E2E502B34113D095501B77B53BC299DEFCABD",
+      "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
+      "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
+      "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
+      "app_hash": "1C87E49E7CFF25ACE13C3207A77527AB8A75E295BE338CBC31993020DFC3427B",
+      "last_results_hash": "65DFD449EC10B60A67BD80C1B7043C7CDCBF2D9F46FD1B15585F8AA2B90A7DF9",
+      "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+      "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
+    },
+    "begin_block_events": [],
+    "end_block_events": [],
+    "txs": [
+      {
+        "hash": "633ED5396E4008AAFED151058B54DD6DE8B45A56B8A2CD93EE732CAC58E908AC",
+        "tx": {
+          "auth_info": {
+            "fee": {
+              "amount": [],
+              "gas_limit": "0",
+              "granter": "",
+              "payer": ""
+            },
+            "signer_infos": [
+              {
+                "mode_info": {
+                  "single": {
+                    "mode": "SIGN_MODE_DIRECT"
+                  }
+                },
+                "public_key": {
+                  "@type": "/cosmos.crypto.secp256k1.PubKey",
+                  "key": "AunSIOo91O3IPUeYE63hVZ9WRELKpNuLe5Gy6Q3LwfdX"
+                },
+                "sequence": "2"
+              }
+            ],
+            "tip": null
+          },
+          "body": {
+            "extension_options": [],
+            "memo": "unbond:tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7:50000",
+            "messages": [
+              {
+                "@type": "/types.MsgSend",
+                "amount": [
+                  {
+                    "amount": "0",
+                    "denom": "rune"
+                  }
+                ],
+                "from_address": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
+                "to_address": "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp"
+              }
+            ],
+            "non_critical_extension_options": [],
+            "timeout_height": "0"
+          },
+          "signatures": [
+            "p1gC9BJdhAEbCaI9I/kcrpYwegPrQgk1m+plVi+gKZxPF7zvwKkjnAX/EEDAVPCLch6RGMEtkmUqav5aCBlPuA=="
+          ]
+        },
+        "result": {
+          "code": 0,
+          "gas_wanted": "-1",
+          "gas_used": "129732",
+          "events": [
+            {
+              "amount": "2000000rune",
+              "spender": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
+              "type": "coin_spent"
+            },
+            {
+              "amount": "2000000rune",
+              "receiver": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+              "type": "coin_received"
+            },
+            {
+              "amount": "2000000rune",
+              "recipient": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+              "sender": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
+              "type": "transfer"
+            },
+            {
+              "sender": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
+              "type": "message"
+            },
+            {
+              "acc_seq": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7/2",
+              "type": "tx"
+            },
+            {
+              "signature": "p1gC9BJdhAEbCaI9I/kcrpYwegPrQgk1m+plVi+gKZxPF7zvwKkjnAX/EEDAVPCLch6RGMEtkmUqav5aCBlPuA==",
+              "type": "tx"
+            },
+            {
+              "action": "/types.MsgSend",
+              "module": "MsgSend",
+              "msg_index": "0",
+              "sender": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
+              "type": "message"
+            },
+            {
+              "amount": "50000rune",
+              "msg_index": "0",
+              "spender": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
+              "type": "coin_spent"
+            },
+            {
+              "amount": "50000rune",
+              "msg_index": "0",
+              "receiver": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
+              "type": "coin_received"
+            },
+            {
+              "amount": "50000rune",
+              "msg_index": "0",
+              "recipient": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
+              "sender": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
+              "type": "transfer"
+            },
+            {
+              "msg_index": "0",
+              "sender": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
+              "type": "message"
+            },
+            {
+              "amount": "50000",
+              "bond_address": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
+              "bond_type": "bond_returned",
+              "chain": "THOR",
+              "coin": "0 THOR.RUNE",
+              "from": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
+              "id": "633ED5396E4008AAFED151058B54DD6DE8B45A56B8A2CD93EE732CAC58E908AC",
+              "memo": "unbond:tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7:50000",
+              "msg_index": "0",
+              "node_address": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
+              "to": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
+              "type": "bond"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": {
+      "hash": "",
+      "parts": {
+        "total": 0,
+        "hash": ""
+      }
+    },
+    "header": {
+      "version": {
+        "block": "11",
+        "app": "0"
+      },
+      "chain_id": "thorchain",
+      "height": 8,
+      "time": "",
+      "last_block_id": {
+        "hash": "",
+        "parts": {
+          "total": 0,
+          "hash": ""
+        }
+      },
+      "last_commit_hash": "",
+      "data_hash": "BC241F4EE37714E75A15272AA76DA02A3CD99A4953FCBBE2D272849233FBC985",
+      "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
+      "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
+      "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
+      "app_hash": "7AB1AF52F816655ECDDB1F30A85524CB7F62D70D6C77DE16AB8215A6EB6B3C15",
+      "last_results_hash": "737CC4EC67390D76963CF757A8360389C30DC7739A90C7DA9A17E859A962CF9F",
+      "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+      "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
+    },
+    "begin_block_events": [],
+    "end_block_events": [],
+    "txs": [
+      {
+        "hash": "A0B421F8742FAB4AAE37B60E2105CCCF71400142EB331C38A3E66653845752AB",
+        "tx": {
+          "auth_info": {
+            "fee": {
+              "amount": [],
+              "gas_limit": "0",
+              "granter": "",
+              "payer": ""
+            },
+            "signer_infos": [
+              {
+                "mode_info": {
+                  "single": {
+                    "mode": "SIGN_MODE_DIRECT"
+                  }
+                },
+                "public_key": {
+                  "@type": "/cosmos.crypto.secp256k1.PubKey",
+                  "key": "AmF4AUTWZEUSBtgqiR5n2Lgic/Yrr1mWupMo5TAubNRO"
+                },
+                "sequence": "0"
+              }
+            ],
+            "tip": null
+          },
+          "body": {
+            "extension_options": [],
+            "memo": "leave:tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+            "messages": [
+              {
+                "@type": "/types.MsgSend",
+                "amount": [
+                  {
+                    "amount": "0",
+                    "denom": "rune"
+                  }
+                ],
+                "from_address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+                "to_address": "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp"
+              }
+            ],
+            "non_critical_extension_options": [],
+            "timeout_height": "0"
+          },
+          "signatures": [
+            "kKKzz37smRG4Rhz9x5YHlfcnWH4SEJvQ5b7jJplUcs9uTasq6J1b7JvPrax+hUN6rY4+yYvvJ0naIcCS0sETCg=="
+          ]
+        },
+        "result": {
+          "code": 0,
+          "gas_wanted": "-1",
+          "gas_used": "116246",
+          "events": [
+            {
+              "amount": "2000000rune",
+              "spender": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+              "type": "coin_spent"
+            },
+            {
+              "amount": "2000000rune",
+              "receiver": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+              "type": "coin_received"
+            },
+            {
+              "amount": "2000000rune",
+              "recipient": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+              "sender": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+              "type": "transfer"
+            },
+            {
+              "sender": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+              "type": "message"
+            },
+            {
+              "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/0",
+              "type": "tx"
+            },
+            {
+              "signature": "kKKzz37smRG4Rhz9x5YHlfcnWH4SEJvQ5b7jJplUcs9uTasq6J1b7JvPrax+hUN6rY4+yYvvJ0naIcCS0sETCg==",
+              "type": "tx"
+            },
+            {
+              "action": "/types.MsgSend",
+              "module": "MsgSend",
+              "msg_index": "0",
+              "sender": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+              "type": "message"
+            },
+            {
+              "msg_index": "0",
+              "node": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+              "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+              "txid": "A0B421F8742FAB4AAE37B60E2105CCCF71400142EB331C38A3E66653845752AB",
+              "type": "validator_request_leave"
+            }
+          ]
+        }
+      }
+    ]
   }
 ]

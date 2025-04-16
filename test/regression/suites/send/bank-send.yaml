@@ -73,12 +73,12 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/block?height=3
 asserts:
- - .txs|length == 1
- - .txs[0]|.result.events|length == 11
- - .txs[0]|.result.events[6].type == "message"
- - .txs[0]|.result.events[6].sender == "{{ addr_thor_fox }}"
- - .txs[0]|.result.events[6].action == "/cosmos.bank.v1beta1.MsgSend"
- - .txs[0]|.result.events[6].module == "bank"
+  - .txs|length == 1
+  - .txs[0]|.result.events|length == 11
+  - .txs[0]|.result.events[6].type == "message"
+  - .txs[0]|.result.events[6].sender == "{{ addr_thor_fox }}"
+  - .txs[0]|.result.events[6].action == "/cosmos.bank.v1beta1.MsgSend"
+  - .txs[0]|.result.events[6].module == "bank"
 ---
 # Attempt to send any funds to wolf. Should fail and not land on-chain due to insufficient funds for the gas fee.
 type: tx-bank-send
@@ -100,7 +100,6 @@ asserts:
 ########################################################################################
 # attempt send to lending module
 ########################################################################################
-
 type: check
 endpoint: http://localhost:1317/thorchain/balance/module/lending
 asserts:
@@ -121,6 +120,9 @@ endpoint: http://localhost:1317/thorchain/balance/module/lending
 asserts:
   - .|[.coins[]|select(.denom == "rune")]|length == 0
 ---
+########################################################################################
+# bond with bank send
+########################################################################################
 type: tx-bank-send
 from_address: {{ addr_thor_wolf }}
 to_address: {{ addr_module_thorchain }}
@@ -142,6 +144,57 @@ endpoint: http://localhost:1317/thorchain/node/{{ addr_thor_wolf }}
 asserts:
   - .total_bond == "50000"
 ---
+########################################################################################
+# unbond with bank send
+########################################################################################
+type: tx-bank-send
+from_address: {{ addr_thor_wolf }}
+to_address: {{ addr_module_thorchain }}
+amount:
+  - denom: rune
+    amount: "0"
+memo: "unbond:{{ addr_thor_wolf }}:50000"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/auth/accounts/{{ addr_thor_wolf }}
+asserts:
+  - .result.value.sequence == "3"
+---
+type: check
+endpoint: http://localhost:1317/thorchain/node/{{ addr_thor_wolf }}
+asserts:
+  - .total_bond == "0"
+---
+########################################################################################
+# leave with bank send
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/node/{{ addr_thor_dog }}
+asserts:
+  - .leave_height == 0
+---
+type: tx-bank-send
+from_address: {{ addr_thor_dog }}
+to_address: {{ addr_module_thorchain }}
+amount:
+  - denom: rune
+    amount: "0"
+memo: "leave:{{ addr_thor_dog }}"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/node/{{ addr_thor_dog }}
+asserts:
+  - .leave_height == 800000000
+---
+########################################################################################
+# test bank send disabled
+########################################################################################
 type: check
 endpoint: http://localhost:1317/thorchain/mimir
 asserts:
@@ -175,4 +228,4 @@ count: 1
 type: check
 endpoint: http://localhost:1317/auth/accounts/{{ addr_thor_wolf }}
 asserts:
-  - .result.value.sequence == "2"
+  - .result.value.sequence == "3"

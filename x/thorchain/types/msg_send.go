@@ -35,12 +35,15 @@ func (m *MsgSend) ValidateBasic() error {
 		return cosmos.ErrInvalidAddress(m.ToAddress.String())
 	}
 
-	if !m.Amount.IsValid() {
-		return cosmos.ErrInvalidCoins("coins must be valid")
-	}
-
-	if !m.Amount.IsAllPositive() {
-		return cosmos.ErrInvalidCoins("coins must be positive")
+	// This is a range to do the (Cosmos-SDK) Coin IsValid rather than the Coins IsValid.
+	// Coin IsValid confirms that no amount is negative,
+	// whereas Coins IsValid confirms that all amounts are positive.
+	// As a MsgSend could be intended for conversion to a MsgDeposit,
+	// the full Coins IsValid is to be done only for those confirmed to not be.
+	for i := range m.Amount {
+		if !m.Amount[i].IsValid() {
+			return cosmos.ErrInvalidCoins("coins must be valid")
+		}
 	}
 
 	return nil

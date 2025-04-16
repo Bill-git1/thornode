@@ -8,8 +8,11 @@
           "@type": "/cosmos.auth.v1beta1.BaseAccount",
           "account_number": "6",
           "address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
-          "pub_key": null,
-          "sequence": "0"
+          "pub_key": {
+            "@type": "/cosmos.crypto.secp256k1.PubKey",
+            "key": "AmF4AUTWZEUSBtgqiR5n2Lgic/Yrr1mWupMo5TAubNRO"
+          },
+          "sequence": "1"
         },
         {
           "@type": "/cosmos.auth.v1beta1.ModuleAccount",
@@ -44,7 +47,7 @@
             "@type": "/cosmos.crypto.secp256k1.PubKey",
             "key": "AunSIOo91O3IPUeYE63hVZ9WRELKpNuLe5Gy6Q3LwfdX"
           },
-          "sequence": "1"
+          "sequence": "3"
         },
         {
           "@type": "/cosmos.auth.v1beta1.ModuleAccount",
@@ -125,7 +128,7 @@
           "address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
           "coins": [
             {
-              "amount": "5000000000000",
+              "amount": "4999998000000",
               "denom": "rune"
             }
           ]
@@ -134,7 +137,7 @@
           "address": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
           "coins": [
             {
-              "amount": "2499994000000",
+              "amount": "2499990000000",
               "denom": "rune"
             }
           ]
@@ -143,7 +146,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35000006000000",
+              "amount": "35000012000000",
               "denom": "rune"
             }
           ]
@@ -218,11 +221,13 @@
           "bond": "5000000000000",
           "bond_address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
           "ip_address": "1.1.1.1",
+          "leave_score": "800000000",
           "node_address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
           "pub_key_set": {
             "ed25519": "tthorpub1zcjduepqfan43w2emjhfv45gspf98squqlnl2rcchc3e4dx7z2nxr27edflsy2e8ql",
             "secp256k1": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
           },
+          "requested_to_leave": true,
           "status": "Active",
           "validator_cons_pub_key": "tthorcpub1zcjduepqq75h7uy6qhesh9d3a9tuk0mzrnc46u8rye44ze6peua3zmpfh23q8z37sz"
         }
@@ -325,5 +330,5 @@
       }
     }
   },
-  "initial_height": 6
+  "initial_height": 9
 }

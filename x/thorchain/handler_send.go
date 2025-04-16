@@ -166,6 +166,11 @@ func MsgSendValidateV3_0_0(ctx cosmos.Context, mgr Manager, m sdk.Msg) error {
 	if IsModuleAccAddress(k, msg.ToAddress) {
 		return fmt.Errorf("cannot use MsgSend for Module transactions, use MsgDeposit instead")
 	}
+	// Having been confirmed to be for MsgSend and not MsgDeposit, do the Cosmos-SDK Coins IsValid check.
+	// (This implicitly includes IsAllPositive.)
+	if !msg.Amount.IsValid() {
+		return cosmos.ErrInvalidCoins("coins must be valid")
+	}
 	return nil
 }
 
