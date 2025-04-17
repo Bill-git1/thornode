@@ -7,7 +7,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common"
 )
 
-func DexAggregatorsV3_0_0() []Aggregator {
+func DexAggregatorsList() []Aggregator {
 	return []Aggregator{
 		// TSAggregatorPancakeSwap Ethereum V2
 		{common.ETHChain, `0x35CF22003c90126528fbe95b21bB3ADB2ca8c53D`, 400_000},
@@ -147,5 +147,11 @@ func DexAggregatorsV3_0_0() []Aggregator {
 		{common.ETHChain, `0xDd40F17b848cE3a30b4F71652535E744F45fA5A3`, 400_000},
 		// Thorswap <> Chainflip Aggregator Eth V1
 		{common.ETHChain, `0xd917c32cfa50b0fca692a208118afe4d1d06f1f1`, 250_000},
+		// SwapKit Base UniswapV3 - 500
+		{common.BASEChain, `0xD46ee26b56F28E8a4a83ED853C47b51935dc48Ef`, 400_000},
+		// SwapKit Base UniswapV3 - 3000
+		{common.BASEChain, `0x542f4FFb7EBBc194cCbFd72ea92199a7f77573d7`, 400_000},
+		// SwapKit Base UniswapV3 - 10000
+		{common.BASEChain, `0x8772B3a6c87dC23bf6Ab93c5f04E3F87da0e9606`, 400_000},
 	}
 }

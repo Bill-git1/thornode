@@ -609,7 +609,7 @@ func (c *EVMClient) buildOutboundTx(txOutItem stypes.TxOutItem, memo mem.Memo, n
 	if txOutItem.Aggregator != "" {
 		var gasLimitForAggregator uint64
 		gasLimitForAggregator, err = aggregators.FetchDexAggregatorGasLimit(
-			common.LatestVersion, c.cfg.ChainID, txOutItem.Aggregator,
+			c.cfg.ChainID, txOutItem.Aggregator,
 		)
 		if err != nil {
 			c.logger.Err(err).

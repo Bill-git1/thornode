@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blang/semver"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"gitlab.com/thorchain/thornode/v3/common"
@@ -191,7 +189,7 @@ func processOneTxIn(ctx cosmos.Context, keeper keeper.Keeper, tx ObservedTx, sig
 		newMsg, err = getMsgWithdrawFromMemo(m, tx, signer)
 	case SwapMemo:
 		m.Asset = fuzzyAssetMatch(ctx, keeper, m.Asset)
-		m.DexTargetAddress = externalAssetMatch(keeper.GetVersion(), m.Asset.GetChain(), m.DexTargetAddress)
+		m.DexTargetAddress = externalAssetMatch(m.Asset.GetChain(), m.DexTargetAddress)
 		newMsg, err = getMsgSwapFromMemo(m, tx, signer)
 	case DonateMemo:
 		m.Asset = fuzzyAssetMatch(ctx, keeper, m.Asset)
@@ -335,7 +333,7 @@ func fuzzyAssetMatch(ctx cosmos.Context, keeper keeper.Keeper, origAsset common.
 	return origAsset
 }
 
-func externalAssetMatch(version semver.Version, chain common.Chain, hint string) string {
+func externalAssetMatch(chain common.Chain, hint string) string {
 	if len(hint) == 0 {
 		return hint
 	}
@@ -343,7 +341,7 @@ func externalAssetMatch(version semver.Version, chain common.Chain, hint string)
 		// find all potential matches
 		firstMatch := ""
 		addrHint := strings.ToLower(hint)
-		for _, token := range tokenlist.GetEVMTokenList(chain, version).Tokens {
+		for _, token := range tokenlist.GetEVMTokenList(chain).Tokens {
 			if strings.HasSuffix(strings.ToLower(token.Address), addrHint) {
 				// store first found address
 				if firstMatch == "" {

@@ -213,7 +213,6 @@ func (vm *SwapQueueVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 					dexAgg := ""
 					if len(pick.msg.Aggregator) > 0 {
 						dexAgg, err = FetchDexAggregator(
-							mgr.GetVersion(),
 							pick.msg.TargetAsset.GetChain(),
 							pick.msg.Aggregator,
 						)

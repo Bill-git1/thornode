@@ -8,4 +8,4 @@ import (
 )
 
 //go:embed avax_mainnet_latest.json
-var AVAXTokenListRawV3_0_0 []byte
+var AVAXTokenListRaw []byte

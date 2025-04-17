@@ -24,13 +24,13 @@ func main() {
 		var tl tokenlist.EVMTokenList
 		switch chain.String() {
 		case common.ETHChain.String():
-			tl = tokenlist.GetETHTokenList(common.LatestVersion)
+			tl = tokenlist.GetETHTokenList()
 		case common.AVAXChain.String():
-			tl = tokenlist.GetAVAXTokenList(common.LatestVersion)
+			tl = tokenlist.GetAVAXTokenList()
 		case common.BSCChain.String():
-			tl = tokenlist.GetBSCTokenList(common.LatestVersion)
+			tl = tokenlist.GetBSCTokenList()
 		case common.BASEChain.String():
-			tl = tokenlist.GetBASETokenList(common.LatestVersion)
+			tl = tokenlist.GetBASETokenList()
 		default:
 			fmt.Printf("unsupported chain %s\n", chain)
 			os.Exit(1)

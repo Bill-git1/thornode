@@ -3,23 +3,17 @@ package tokenlist
 import (
 	"encoding/json"
 
-	"github.com/blang/semver"
 	"gitlab.com/thorchain/thornode/v3/common/tokenlist/avaxtokens"
 )
 
-var avaxTokenListV3_0_0 EVMTokenList
+var avaxTokenList EVMTokenList
 
 func init() {
-	if err := json.Unmarshal(avaxtokens.AVAXTokenListRawV3_0_0, &avaxTokenListV3_0_0); err != nil {
+	if err := json.Unmarshal(avaxtokens.AVAXTokenListRaw, &avaxTokenList); err != nil {
 		panic(err)
 	}
 }
 
-func GetAVAXTokenList(version semver.Version) EVMTokenList {
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return avaxTokenListV3_0_0
-	default:
-		return EVMTokenList{}
-	}
+func GetAVAXTokenList() EVMTokenList {
+	return avaxTokenList
 }

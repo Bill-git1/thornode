@@ -119,7 +119,7 @@ func NewEVMScanner(cfg config.BifrostBlockScannerConfiguration,
 	}
 
 	// load token list
-	allTokens := tokenlist.GetEVMTokenList(cfg.ChainID, common.LatestVersion).Tokens
+	allTokens := tokenlist.GetEVMTokenList(cfg.ChainID).Tokens
 	var whitelistTokens []tokenlist.ERC20Token
 	for _, addr := range cfg.WhitelistTokens {
 		// find matching token in token list
@@ -164,7 +164,7 @@ func NewEVMScanner(cfg config.BifrostBlockScannerConfiguration,
 
 	// load whitelist contracts for the chain
 	whitelistContracts := []common.Address{}
-	for _, agg := range aggregators.DexAggregators(common.LatestVersion) {
+	for _, agg := range aggregators.DexAggregators() {
 		if agg.Chain.Equals(cfg.ChainID) {
 			whitelistContracts = append(whitelistContracts, common.Address(agg.Address))
 		}

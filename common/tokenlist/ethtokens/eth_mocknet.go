@@ -8,4 +8,4 @@ import (
 )
 
 //go:embed eth_mocknet_latest.json
-var ETHTokenListRawV3_0_0 []byte
+var ETHTokenListRaw []byte

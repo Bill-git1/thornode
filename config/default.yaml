@@ -176,9 +176,10 @@ bifrost:
           - 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf # cbBTC
           - 0xacfE6019Ed1A7Dc6f7B508C02d1b04ec88cC21bf # Venice (VVV)
           - 0x0b3e328455c4059EEb9e3f84b5543F74E24e7E1b # Virtuals
-          - 0x4ed4E862860beD51a9570b96d89aF5E1B0Efefed # Degen
-          - 0x0578d8A44db98B23BF096A382e016e29a5Ce0ffe # Higher
-          - 0x1bc0c42215582d5A085795f4baDbaC3ff36d1Bcb # Clanker
+          # - 0x4ed4E862860beD51a9570b96d89aF5E1B0Efefed # Degen
+          # - 0x0578d8A44db98B23BF096A382e016e29a5Ce0ffe # Higher
+          # - 0x1bc0c42215582d5A085795f4baDbaC3ff36d1Bcb # Clanker
+          - 0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42 # EURC
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
 
@@ -204,6 +205,7 @@ bifrost:
           - 0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E # USDC
           - 0xFE6B19286885a4F7F55AdAD09C3Cd1f906D2478F # WSOL
           - 0x093783055F9047C2BfF99c4e414501F8A147bC69 # ALOT
+          - 0xC891EB4cbdEFf6e073e859e987815Ed1505c2ACD # EURC
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
 

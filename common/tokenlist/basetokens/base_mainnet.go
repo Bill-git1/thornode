@@ -8,4 +8,4 @@ import (
 )
 
 //go:embed base_mainnet_latest.json
-var BASETokenListRawV3_1_0 []byte
+var BASETokenListRaw []byte

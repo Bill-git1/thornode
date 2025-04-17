@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blang/semver"
-
 	"gitlab.com/thorchain/thornode/v3/common"
 )
 
@@ -16,8 +14,8 @@ type Aggregator struct {
 }
 
 // FetchDexAggregator - fetches a dex aggregator address that matches the given chain and suffix
-func FetchDexAggregator(version semver.Version, chain common.Chain, suffix string) (string, error) {
-	contracts := DexAggregators(version)
+func FetchDexAggregator(chain common.Chain, suffix string) (string, error) {
+	contracts := DexAggregators()
 	// If no whitelist contracts are set, fall through to the suffix
 	if len(contracts) == 0 {
 		return suffix, nil
@@ -35,8 +33,8 @@ func FetchDexAggregator(version semver.Version, chain common.Chain, suffix strin
 }
 
 // FetchDexAggregatorGasLimit - fetches a dex aggregator gas limit that matches the given chain and suffix
-func FetchDexAggregatorGasLimit(version semver.Version, chain common.Chain, suffix string) (uint64, error) {
-	contracts := DexAggregators(version)
+func FetchDexAggregatorGasLimit(chain common.Chain, suffix string) (uint64, error) {
+	contracts := DexAggregators()
 	// If no whitelist contracts are set, fall through to the default of 400_000
 	if len(contracts) == 0 {
 		return 400_000, nil

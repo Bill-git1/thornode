@@ -7,7 +7,7 @@ import (
 
 func LatestAggregatorContracts() []common.Address {
 	addrs := []common.Address{}
-	for _, agg := range aggregators.DexAggregators(common.LatestVersion) {
+	for _, agg := range aggregators.DexAggregators() {
 		if agg.Chain.Equals(common.ETHChain) {
 			addrs = append(addrs, common.Address(agg.Address))
 		}

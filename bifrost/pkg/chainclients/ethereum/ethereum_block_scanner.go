@@ -11,7 +11,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/blang/semver"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ecommon "github.com/ethereum/go-ethereum/common"
@@ -139,7 +138,7 @@ func NewETHScanner(cfg config.BifrostBlockScannerConfiguration,
 		pubkeyMgr:            pubkeyMgr,
 		gasCache:             make([]*big.Int, 0),
 		solvencyReporter:     solvencyReporter,
-		whitelistTokens:      tokenlist.GetETHTokenList(semver.MustParse("9999.0.0")).Tokens,
+		whitelistTokens:      tokenlist.GetETHTokenList().Tokens,
 		signerCacheManager:   signerCacheManager,
 	}, nil
 }

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blang/semver"
 	"gitlab.com/thorchain/thornode/v3/common"
 )
 
@@ -35,16 +34,16 @@ type EVMTokenList struct {
 //
 // NOTE: These tokens are NOT necessarily the same tokens that are whitelisted for each
 // chain - whitelisting happens in each chain's bifrost chain client.
-func GetEVMTokenList(chain common.Chain, version semver.Version) EVMTokenList {
+func GetEVMTokenList(chain common.Chain) EVMTokenList {
 	switch chain {
 	case common.ETHChain:
-		return GetETHTokenList(version)
+		return GetETHTokenList()
 	case common.AVAXChain:
-		return GetAVAXTokenList(version)
+		return GetAVAXTokenList()
 	case common.BSCChain:
-		return GetBSCTokenList(version)
+		return GetBSCTokenList()
 	case common.BASEChain:
-		return GetBASETokenList(version)
+		return GetBASETokenList()
 	default:
 		return EVMTokenList{}
 	}

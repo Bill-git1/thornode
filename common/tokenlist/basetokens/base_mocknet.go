@@ -6,4 +6,4 @@ package basetokens
 import _ "embed"
 
 //go:embed base_mocknet_latest.json
-var BASETokenListRawV3_1_0 []byte
+var BASETokenListRaw []byte

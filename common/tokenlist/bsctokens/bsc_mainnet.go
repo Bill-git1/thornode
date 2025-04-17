@@ -8,4 +8,4 @@ import (
 )
 
 //go:embed bsc_mainnet_latest.json
-var BSCTokenListRawV3_0_0 []byte
+var BSCTokenListRaw []byte
