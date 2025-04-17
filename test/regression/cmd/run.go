@@ -21,19 +21,10 @@ import (
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// Retry
-////////////////////////////////////////////////////////////////////////////////////////
-
-var (
-	retryCount = map[string]int{}
-	retryMu    sync.Mutex
-)
-
-////////////////////////////////////////////////////////////////////////////////////////
 // Run
 ////////////////////////////////////////////////////////////////////////////////////////
 
-func run(out io.Writer, path string, routine int) (failExportInvariants bool, err error) {
+func run(out io.Writer, path string, routine int, doneWithRetries func(path string) bool, abort <-chan struct{}) (failExportInvariants bool, err error) {
 	localLog := consoleLogger(out)
 
 	home := "/" + strconv.Itoa(routine)
@@ -56,9 +47,10 @@ func run(out io.Writer, path string, routine int) (failExportInvariants bool, er
 		"CHAIN_HOME_FOLDER=" + thornodePath,
 		"THOR_TENDERMINT_INSTRUMENTATION_PROMETHEUS=false",
 		// block time should be short, but all consecutive checks must complete within timeout
-		fmt.Sprintf("THOR_TENDERMINT_CONSENSUS_TIMEOUT_COMMIT=%s", time.Second*3/2*getTimeFactor()),
+		fmt.Sprintf("THOR_TENDERMINT_CONSENSUS_TIMEOUT_COMMIT=%s", time.Second*getTimeFactor()),
 		// all ports will be offset by the routine number
 		fmt.Sprintf("THOR_COSMOS_API_ADDRESS=tcp://0.0.0.0:%d", 1317+routine),
+		fmt.Sprintf("THOR_COSMOS_EBIFROST_ADDRESS=127.0.0.1:%d", 50051+routine),
 		fmt.Sprintf("THOR_TENDERMINT_RPC_LISTEN_ADDRESS=tcp://0.0.0.0:%d", 26657+routine),
 		fmt.Sprintf("THOR_TENDERMINT_P2P_LISTEN_ADDRESS=tcp://0.0.0.0:%d", 27000+routine),
 		"CREATE_BLOCK_PORT=" + strconv.Itoa(8080+routine),
@@ -66,8 +58,9 @@ func run(out io.Writer, path string, routine int) (failExportInvariants bool, er
 	}
 
 	// if DEBUG is set also output thornode debug logs
-	if os.Getenv("DEBUG") != "" {
-		env = append(env, "THOR_TENDERMINT_LOG_LEVEL=debug")
+	debugVar := os.Getenv("DEBUG")
+	if debugVar != "" {
+		env = append(env, "THOR_TENDERMINT_LOG_LEVEL="+debugVar)
 	}
 
 	// init chain with dog mnemonic
@@ -132,6 +125,11 @@ func run(out io.Writer, path string, routine int) (failExportInvariants bool, er
 	// execute all state operations
 	stateOpCount := 0
 	for i, op := range ops {
+		select {
+		case <-abort:
+			return false, nil
+		default:
+		}
 		if _, ok := op.(*OpState); ok {
 			localLog.Info().Int("line", opLines[i]).Msgf(">>> [%d] %s", i+1, op.OpType())
 			err = op.Execute(out, path, opLines[i], routine, cmd.Process, nil)
@@ -188,9 +186,9 @@ func run(out io.Writer, path string, routine int) (failExportInvariants bool, er
 	}
 
 	logLevel := "info"
-	switch os.Getenv("DEBUG") {
+	switch debugVar {
 	case "trace", "debug", "info", "warn", "error", "fatal", "panic":
-		logLevel = os.Getenv("DEBUG")
+		logLevel = debugVar
 	}
 
 	// setup process io
@@ -208,7 +206,7 @@ func run(out io.Writer, path string, routine int) (failExportInvariants bool, er
 			stderrLines <- stderrScanner.Text()
 		}
 	}()
-	if os.Getenv("DEBUG") != "" {
+	if debugVar != "" {
 		thornode.Stdout = os.Stdout
 		thornode.Stderr = os.Stderr
 	}
@@ -239,11 +237,21 @@ func run(out io.Writer, path string, routine int) (failExportInvariants bool, er
 	var returnErr error
 	localLog.Info().Msgf("Executing %d operations", len(ops))
 	for i, op := range ops {
+		select {
+		case <-abort:
+			return false, nil
+		default:
+		}
 
 		// prefetch sequences of check operations
 		if os.Getenv("AUTO_UPDATE") == "" && op.OpType() == "check" && ops[i-1].OpType() != "check" {
 			wg := sync.WaitGroup{}
 			for j := i; j < len(ops); j++ {
+				select {
+				case <-abort:
+					return false, nil
+				default:
+				}
 				if ops[j].OpType() != "check" {
 					break
 				}
@@ -304,16 +312,11 @@ func run(out io.Writer, path string, routine int) (failExportInvariants bool, er
 		log.Warn().Err(returnErr).Str("path", path).Msg("retrying suite")
 		fmt.Println()
 
-		// track retries per path
-		retryMu.Lock()
-		retryCount[path]++
-		if retryCount[path] > 3 {
-			retryMu.Unlock()
+		if doneWithRetries(path) {
 			return false, returnErr
 		}
-		retryMu.Unlock()
 
-		return run(out, path, routine)
+		return run(out, path, routine, doneWithRetries, abort)
 	}
 
 	// if failed and debug enabled restart to allow inspection

@@ -3,7 +3,7 @@ package tss
 import (
 	"fmt"
 
-	tssMessages "gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/messages"
+	tssMessages "gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )

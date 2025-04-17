@@ -3,6 +3,7 @@ package thorchain
 import (
 	proto "github.com/cosmos/gogoproto/proto"
 
+	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/aggregators"
 	mem "gitlab.com/thorchain/thornode/v3/x/thorchain/memo"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
@@ -97,7 +98,7 @@ var (
 	NewNetwork                     = types.NewNetwork
 	NewProtocolOwnedLiquidity      = types.NewProtocolOwnedLiquidity
 	NewRUNEPool                    = types.NewRUNEPool
-	NewObservedTx                  = types.NewObservedTx
+	NewObservedTx                  = common.NewObservedTx
 	NewTssVoter                    = types.NewTssVoter
 	NewBanVoter                    = types.NewBanVoter
 	NewErrataTxVoter               = types.NewErrataTxVoter
@@ -304,8 +305,8 @@ type (
 	Loans                    = types.Loans
 	StreamingSwap            = types.StreamingSwap
 	StreamingSwaps           = types.StreamingSwaps
-	ObservedTxs              = types.ObservedTxs
-	ObservedTx               = types.ObservedTx
+	ObservedTxs              = common.ObservedTxs
+	ObservedTx               = common.ObservedTx
 	ObservedTxVoter          = types.ObservedTxVoter
 	ObservedTxVoters         = types.ObservedTxVoters
 	BanVoter                 = types.BanVoter

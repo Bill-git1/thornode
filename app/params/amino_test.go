@@ -76,14 +76,14 @@ func TestAminoThorchainMessages(t *testing.T) {
 		{
 			name: "MsgObservedTxIn",
 			message: func() sdk.Msg {
-				return thorchaintypes.NewMsgObservedTxIn(thorchaintypes.ObservedTxs{thorchaintypes.NewObservedTx(common.NewTx(common.TxID("txID"), common.Address("from"), common.Address("to"), common.NewCoins(common.NewCoin(common.ATOMAsset, math.NewUint(100000000))), common.Gas(common.NewCoins(common.NewCoin(common.ATOMAsset, math.NewUint(12345)))), "memo"), 54321, common.PubKey("pubkey"), 54323)}, sdk.AccAddress("signer"))
+				return thorchaintypes.NewMsgObservedTxIn(common.ObservedTxs{common.NewObservedTx(common.NewTx(common.TxID("txID"), common.Address("from"), common.Address("to"), common.NewCoins(common.NewCoin(common.ATOMAsset, math.NewUint(100000000))), common.Gas(common.NewCoins(common.NewCoin(common.ATOMAsset, math.NewUint(12345)))), "memo"), 54321, common.PubKey("pubkey"), 54323)}, sdk.AccAddress("signer"))
 			},
 			expectedSignDoc: `{"account_number":"123","chain_id":"thorchain-1","fee":{"amount":[{"amount":"100","denom":"rune"}],"gas":"200000"},"memo":"memo","msgs":[{"type":"thorchain/ObservedTxIn","value":{"signer":"cosmos1wd5kwmn9wgr5dmap","txs":[{"block_height":"54321","finalise_height":"54323","observed_pub_key":"pubkey","tx":{"chain":"GAIA","coins":[{"amount":"100000000","asset":"GAIA.ATOM"}],"from_address":"from","gas":[{"amount":"12345","asset":"GAIA.ATOM"}],"id":"txID","memo":"memo","to_address":"to"}}]}}],"sequence":"456"}`,
 		},
 		{
 			name: "MsgObservedTxOut",
 			message: func() sdk.Msg {
-				return thorchaintypes.NewMsgObservedTxOut(thorchaintypes.ObservedTxs{thorchaintypes.NewObservedTx(common.NewTx(common.TxID("txID"), common.Address("from"), common.Address("to"), common.NewCoins(common.NewCoin(common.ATOMAsset, math.NewUint(100000000))), common.Gas(common.NewCoins(common.NewCoin(common.ATOMAsset, math.NewUint(12345)))), "memo"), 54321, common.PubKey("pubkey"), 54323)}, sdk.AccAddress("signer"))
+				return thorchaintypes.NewMsgObservedTxOut(common.ObservedTxs{common.NewObservedTx(common.NewTx(common.TxID("txID"), common.Address("from"), common.Address("to"), common.NewCoins(common.NewCoin(common.ATOMAsset, math.NewUint(100000000))), common.Gas(common.NewCoins(common.NewCoin(common.ATOMAsset, math.NewUint(12345)))), "memo"), 54321, common.PubKey("pubkey"), 54323)}, sdk.AccAddress("signer"))
 			},
 			expectedSignDoc: `{"account_number":"123","chain_id":"thorchain-1","fee":{"amount":[{"amount":"100","denom":"rune"}],"gas":"200000"},"memo":"memo","msgs":[{"type":"thorchain/ObservedTxOut","value":{"signer":"cosmos1wd5kwmn9wgr5dmap","txs":[{"block_height":"54321","finalise_height":"54323","observed_pub_key":"pubkey","tx":{"chain":"GAIA","coins":[{"amount":"100000000","asset":"GAIA.ATOM"}],"from_address":"from","gas":[{"amount":"12345","asset":"GAIA.ATOM"}],"id":"txID","memo":"memo","to_address":"to"}}]}}],"sequence":"456"}`,
 		},

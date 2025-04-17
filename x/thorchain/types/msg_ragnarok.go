@@ -3,6 +3,7 @@ package types
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
@@ -13,7 +14,7 @@ var (
 )
 
 // NewMsgRagnarok is a constructor function for MsgRagnarok
-func NewMsgRagnarok(tx ObservedTx, blockHeight int64, signer cosmos.AccAddress) *MsgRagnarok {
+func NewMsgRagnarok(tx common.ObservedTx, blockHeight int64, signer cosmos.AccAddress) *MsgRagnarok {
 	return &MsgRagnarok{
 		Tx:          tx,
 		BlockHeight: blockHeight,

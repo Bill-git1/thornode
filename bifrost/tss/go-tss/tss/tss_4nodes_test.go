@@ -19,8 +19,9 @@ import (
 	"gopkg.in/check.v1"
 	. "gopkg.in/check.v1"
 
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p"
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/common"
-	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/conversion"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/keygen"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/keysign"
 )
@@ -366,7 +367,14 @@ func (s *FourNodeTestSuite) getTssServer(c *C, index int, conf common.TssConfig,
 	} else {
 		peerIDs = nil
 	}
-	instance, err := NewTss(peerIDs, s.ports[index], priKey, "Asgard", baseHome, conf, s.preParams[index], "")
+	p2pConf := &p2p.Config{
+		Port:             s.ports[index],
+		RendezvousString: "Asgard",
+		BootstrapPeers:   peerIDs,
+	}
+	comm, stateManager, err := p2p.StartP2P(p2pConf, priKey, baseHome)
+	c.Assert(err, IsNil)
+	instance, err := NewTss(comm, stateManager, priKey, conf, s.preParams[index])
 	c.Assert(err, IsNil)
 	return instance
 }

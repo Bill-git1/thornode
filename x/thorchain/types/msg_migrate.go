@@ -3,6 +3,7 @@ package types
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
@@ -13,7 +14,7 @@ var (
 )
 
 // NewMsgMigrate is a constructor function for MsgMigrate
-func NewMsgMigrate(tx ObservedTx, blockHeight int64, signer cosmos.AccAddress) *MsgMigrate {
+func NewMsgMigrate(tx common.ObservedTx, blockHeight int64, signer cosmos.AccAddress) *MsgMigrate {
 	return &MsgMigrate{
 		Tx:          tx,
 		BlockHeight: blockHeight,

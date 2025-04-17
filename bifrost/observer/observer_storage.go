@@ -32,7 +32,7 @@ func NewObserverStorage(path string, opts config.LevelDBOptions) (*ObserverStora
 }
 
 // GetOnDeckTxs retrieve the ondeck tx from key value store
-func (s *ObserverStorage) GetOnDeckTxs() ([]types.TxIn, error) {
+func (s *ObserverStorage) GetOnDeckTxs() ([]*types.TxIn, error) {
 	buf, err := s.db.Get([]byte(OnDeckTxKey), nil)
 	if err != nil {
 		if errors.Is(err, leveldb.ErrNotFound) {
@@ -40,7 +40,7 @@ func (s *ObserverStorage) GetOnDeckTxs() ([]types.TxIn, error) {
 		}
 		return nil, fmt.Errorf("fail to get ondeck tx from key value store: %w", err)
 	}
-	var result []types.TxIn
+	var result []*types.TxIn
 	if err = json.Unmarshal(buf, &result); err != nil {
 		return nil, fmt.Errorf("fail to unmarshal ondeck tx: %w", err)
 	}
@@ -48,7 +48,7 @@ func (s *ObserverStorage) GetOnDeckTxs() ([]types.TxIn, error) {
 }
 
 // SetOnDeckTxs save the ondeck tx to key value store
-func (s *ObserverStorage) SetOnDeckTxs(ondeck []types.TxIn) error {
+func (s *ObserverStorage) SetOnDeckTxs(ondeck []*types.TxIn) error {
 	buf, err := json.Marshal(ondeck)
 	if err != nil {
 		return fmt.Errorf("fail to marshal ondeck tx to json: %w", err)

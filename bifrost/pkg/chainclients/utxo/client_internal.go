@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strconv"
 	"strings"
 	"time"
 
@@ -306,11 +305,14 @@ func (c *Client) sendNetworkFee(height int64) error {
 	}
 
 	c.lastFeeRate = feeRate
-	txid, err := c.bridge.PostNetworkFee(height, c.cfg.ChainID, c.cfg.UTXO.EstimatedAverageTxSize, feeRate)
-	if err != nil {
-		return fmt.Errorf("fail to post network fee to thornode: %w", err)
+	c.globalNetworkFeeQueue <- common.NetworkFee{
+		Chain:           c.cfg.ChainID,
+		Height:          height,
+		TransactionSize: c.cfg.UTXO.EstimatedAverageTxSize,
+		TransactionRate: feeRate,
 	}
-	c.log.Debug().Str("txid", txid.String()).Msg("send network fee to THORNode successfully")
+
+	c.log.Debug().Msg("send network fee to THORNode successfully")
 	return nil
 }
 
@@ -362,11 +364,13 @@ func (c *Client) sendNetworkFeeFromBlock(blockResult *btcjson.GetBlockVerboseTxR
 		Uint64("feeRateSats", feeRateSats).
 		Msg("sendNetworkFee")
 
-	_, err = c.bridge.PostNetworkFee(height, c.cfg.ChainID, c.cfg.UTXO.EstimatedAverageTxSize, feeRateSats)
-	if err != nil {
-		c.log.Error().Err(err).Msg("failed to post network fee to thornode")
-		return fmt.Errorf("fail to post network fee to thornode: %w", err)
+	c.globalNetworkFeeQueue <- common.NetworkFee{
+		Chain:           c.cfg.ChainID,
+		Height:          height,
+		TransactionSize: c.cfg.UTXO.EstimatedAverageTxSize,
+		TransactionRate: feeRateSats,
 	}
+
 	c.lastFeeRate = feeRateSats
 
 	return nil
@@ -644,7 +648,7 @@ func (c *Client) extractTxs(block *btcjson.GetBlockVerboseTxResult) (types.TxIn,
 		}
 	}
 
-	var txItems []types.TxInItem
+	var txItems []*types.TxInItem
 	for idx, tx := range block.Tx {
 		// mempool transaction get committed to block , thus remove it from mempool cache
 		c.removeFromMemPoolCache(tx.Hash)
@@ -676,10 +680,9 @@ func (c *Client) extractTxs(block *btcjson.GetBlockVerboseTxResult) (types.TxIn,
 			}
 			continue
 		}
-		txItems = append(txItems, txInItem)
+		txItems = append(txItems, &txInItem)
 	}
 	txIn.TxArray = txItems
-	txIn.Count = strconv.Itoa(len(txItems))
 	return txIn, nil
 }
 

@@ -3,7 +3,6 @@ package thorchain
 import (
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
-	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 	"gopkg.in/check.v1"
 	. "gopkg.in/check.v1"
 )
@@ -19,7 +18,7 @@ func (s *HandlerCommonOutboundSuite) TestIsOutboundFakeGasTX(c *C) {
 	gas := common.Gas{
 		{Asset: common.ETHAsset, Amount: cosmos.NewUint(1)},
 	}
-	fakeGasTx := types.ObservedTx{
+	fakeGasTx := common.ObservedTx{
 		Tx: common.NewTx("123", "0xabc", "0x123", coins, gas, "=:AVAX.AVAX:0x123"),
 	}
 
@@ -28,7 +27,7 @@ func (s *HandlerCommonOutboundSuite) TestIsOutboundFakeGasTX(c *C) {
 	coins = common.Coins{
 		common.NewCoin(common.ETHAsset, cosmos.NewUint(100000)),
 	}
-	theftTx := types.ObservedTx{
+	theftTx := common.ObservedTx{
 		Tx: common.NewTx("123", "0xabc", "0x123", coins, gas, "=:AVAX.AVAX:0x123"),
 	}
 	c.Assert(isOutboundFakeGasTX(theftTx), Equals, false)
@@ -36,7 +35,7 @@ func (s *HandlerCommonOutboundSuite) TestIsOutboundFakeGasTX(c *C) {
 	coins = common.Coins{
 		common.NewCoin(common.BTCAsset, cosmos.NewUint(1)),
 	}
-	theftTx2 := types.ObservedTx{
+	theftTx2 := common.ObservedTx{
 		Tx: common.NewTx("123", "0xabc", "0x123", coins, gas, "=:AVAX.AVAX:0x123"),
 	}
 	c.Assert(isOutboundFakeGasTX(theftTx2), Equals, false)

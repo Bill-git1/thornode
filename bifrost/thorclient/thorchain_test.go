@@ -126,7 +126,7 @@ func (s *ThorchainSuite) TestGetObservationsStdTx_OutboundShouldHaveConfirmation
 	pk := stypes.GetRandomPubKey()
 	vaultAddr, err := pk.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
-	tx := stypes.NewObservedTx(
+	tx := common.NewObservedTx(
 		common.Tx{
 			Coins: common.Coins{
 				common.NewCoin(common.ETHAsset, cosmos.NewUint(123400000)),
@@ -140,19 +140,17 @@ func (s *ThorchainSuite) TestGetObservationsStdTx_OutboundShouldHaveConfirmation
 		100,
 	)
 
-	signedMsg, err := s.bridge.GetObservationsStdTx(stypes.ObservedTxs{tx})
-	c.Assert(signedMsg, NotNil)
+	_, out, err := s.bridge.GetInboundOutbound(common.ObservedTxs{tx})
+	c.Assert(out, NotNil)
 	c.Assert(err, IsNil)
-	m, ok := signedMsg[0].(*stypes.MsgObservedTxOut)
-	c.Assert(ok, Equals, true)
-	c.Assert(m.Txs[0].FinaliseHeight > m.Txs[0].BlockHeight, Equals, true)
+	c.Assert(out[0].FinaliseHeight > out[0].BlockHeight, Equals, true)
 }
 
 func (s *ThorchainSuite) TestSign(c *C) {
 	pk := stypes.GetRandomPubKey()
 	vaultAddr, err := pk.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
-	tx := stypes.NewObservedTx(
+	tx := common.NewObservedTx(
 		common.Tx{
 			Coins: common.Coins{
 				common.NewCoin(common.ETHAsset, cosmos.NewUint(123400000)),
@@ -166,9 +164,8 @@ func (s *ThorchainSuite) TestSign(c *C) {
 		1,
 	)
 
-	signedMsg, err := s.bridge.GetObservationsStdTx(stypes.ObservedTxs{tx})
-	c.Log(err)
-	c.Assert(signedMsg, NotNil)
+	_, out, err := s.bridge.GetInboundOutbound(common.ObservedTxs{tx})
+	c.Assert(out, NotNil)
 	c.Assert(err, IsNil)
 }
 

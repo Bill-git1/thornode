@@ -18,7 +18,7 @@ import (
 	"github.com/cosmos/go-bip39"
 	"github.com/itchio/lzma"
 	"github.com/rs/zerolog/log"
-	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/storage"
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/storage"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"golang.org/x/crypto/chacha20poly1305"
 )

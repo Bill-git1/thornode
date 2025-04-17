@@ -5,18 +5,10 @@ import (
 	"fmt"
 	"io"
 
-	gogoproto "github.com/cosmos/gogoproto/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/reflect/protoregistry"
 
-	txsigning "cosmossdk.io/x/tx/signing"
 	"cosmossdk.io/x/tx/signing/aminojson"
-	"cosmossdk.io/x/tx/signing/textual"
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/tx/signing"
-	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 
 	apicommon "gitlab.com/thorchain/thornode/v3/api/common"
 	"gitlab.com/thorchain/thornode/v3/common"
@@ -82,38 +74,4 @@ func keygenTypeEncoder(_ *aminojson.Encoder, v protoreflect.Value, w io.Writer) 
 	}
 	_, err = w.Write(bz)
 	return err
-}
-
-func TxConfig(codec codec.Codec, textualCoinMetadataQueryFn textual.CoinMetadataQueryFn) (client.TxConfig, error) {
-	enabledSignModes := []signing.SignMode{
-		signing.SignMode_SIGN_MODE_DIRECT,
-		signing.SignMode_SIGN_MODE_DIRECT_AUX,
-	}
-	if textualCoinMetadataQueryFn != nil {
-		enabledSignModes = append(enabledSignModes, signing.SignMode_SIGN_MODE_TEXTUAL)
-	}
-	aminoEncoder := aminojson.NewEncoder(aminojson.EncoderOptions{
-		FileResolver: gogoproto.HybridResolver,
-		TypeResolver: protoregistry.GlobalTypes,
-		EnumAsString: false, // ensure enum as string is disabled
-	})
-	aminoEncoder.DefineFieldEncoding("bech32", bech32Encoder)
-	aminoEncoder.DefineFieldEncoding("asset", assetEncoder)
-	aminoEncoder.DefineFieldEncoding("keygen_type", keygenTypeEncoder)
-	aminoHandler := aminojson.NewSignModeHandler(aminojson.SignModeHandlerOptions{
-		FileResolver: gogoproto.HybridResolver,
-		TypeResolver: protoregistry.GlobalTypes,
-		Encoder:      &aminoEncoder,
-	})
-	txConfigOpts := tx.ConfigOptions{
-		EnabledSignModes:           enabledSignModes,
-		TextualCoinMetadataQueryFn: textualCoinMetadataQueryFn,
-		CustomSignModes: []txsigning.SignModeHandler{
-			aminoHandler,
-		},
-	}
-	return tx.NewTxConfigWithOptions(
-		codec,
-		txConfigOpts,
-	)
 }

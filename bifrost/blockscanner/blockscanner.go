@@ -39,19 +39,20 @@ type Block struct {
 
 // BlockScanner is used to discover block height
 type BlockScanner struct {
-	cfg             config.BifrostBlockScannerConfiguration
-	logger          zerolog.Logger
-	wg              *sync.WaitGroup
-	scanChan        chan int64
-	stopChan        chan struct{}
-	scannerStorage  ScannerStorage
-	metrics         *metrics.Metrics
-	previousBlock   int64
-	globalTxsQueue  chan types.TxIn
-	errorCounter    *prometheus.CounterVec
-	thorchainBridge thorclient.ThorchainBridge
-	chainScanner    BlockScannerFetcher
-	healthy         *atomic.Bool
+	cfg                   config.BifrostBlockScannerConfiguration
+	logger                zerolog.Logger
+	wg                    *sync.WaitGroup
+	scanChan              chan int64
+	stopChan              chan struct{}
+	scannerStorage        ScannerStorage
+	metrics               *metrics.Metrics
+	previousBlock         int64
+	globalTxsQueue        chan types.TxIn
+	globalNetworkFeeQueue chan common.NetworkFee
+	errorCounter          *prometheus.CounterVec
+	thorchainBridge       thorclient.ThorchainBridge
+	chainScanner          BlockScannerFetcher
+	healthy               *atomic.Bool
 }
 
 // NewBlockScanner create a new instance of BlockScanner
@@ -102,8 +103,9 @@ func (b *BlockScanner) GetMessages() <-chan int64 {
 }
 
 // Start block scanner
-func (b *BlockScanner) Start(globalTxsQueue chan types.TxIn) {
+func (b *BlockScanner) Start(globalTxsQueue chan types.TxIn, globalNetworkFeeQueue chan common.NetworkFee) {
 	b.globalTxsQueue = globalTxsQueue
+	b.globalNetworkFeeQueue = globalNetworkFeeQueue
 	currentPos, err := b.scannerStorage.GetScanPos()
 	if err != nil {
 		b.logger.Error().Err(err).Msgf("fail to get current block scan pos, %s will start from %d", b.cfg.ChainID, b.previousBlock)
@@ -313,14 +315,14 @@ func (b *BlockScanner) updateStaleNetworkFee(currentBlock int64) {
 		return
 	}
 
-	feeTxID, err := b.thorchainBridge.PostNetworkFee(currentBlock, b.cfg.ChainID, transactionSize, transactionFeeRate)
-	if err != nil {
-		b.logger.Error().Err(err).Msg("fail to send timed chain network fee to THORChain")
-		return
+	b.globalNetworkFeeQueue <- common.NetworkFee{
+		Chain:           b.cfg.ChainID,
+		Height:          currentBlock,
+		TransactionSize: transactionSize,
+		TransactionRate: transactionFeeRate,
 	}
 
 	b.logger.Info().
-		Str("tx", feeTxID.String()).
 		Int64("height", currentBlock).
 		Uint64("size", transactionSize).
 		Uint64("rate", transactionFeeRate).

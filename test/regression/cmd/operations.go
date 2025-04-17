@@ -593,7 +593,7 @@ func (op *OpCreateBlocks) Execute(out io.Writer, path string, _, routine int, p 
 		}
 
 		// avoid minor raciness after end block
-		time.Sleep(200 * time.Millisecond * getTimeFactor())
+		time.Sleep(100 * time.Millisecond * getTimeFactor())
 
 		// get the block response
 		url := fmt.Sprintf("http://localhost:%d/thorchain/block?height=%d", 1317+routine, height)
@@ -786,10 +786,10 @@ func (op *OpTxNodePauseChain) Execute(out io.Writer, _ string, _, routine int, _
 
 type OpTxObservedIn struct {
 	OpBase   `yaml:",inline"`
-	Txs      []types.ObservedTx `json:"txs"`
-	Signer   sdk.AccAddress     `json:"signer"`
-	Sequence *int64             `json:"sequence"`
-	Gas      *int64             `json:"gas"`
+	Txs      []common.ObservedTx `json:"txs"`
+	Signer   sdk.AccAddress      `json:"signer"`
+	Sequence *int64              `json:"sequence"`
+	Gas      *int64              `json:"gas"`
 }
 
 func (op *OpTxObservedIn) Execute(out io.Writer, _ string, _, routine int, _ *os.Process, logs chan string) error {
@@ -801,16 +801,15 @@ func (op *OpTxObservedIn) Execute(out io.Writer, _ string, _, routine int, _ *os
 
 type OpTxObservedOut struct {
 	OpBase   `yaml:",inline"`
-	Txs      []types.ObservedTx `json:"txs"`
-	Signer   sdk.AccAddress     `json:"signer"`
-	Sequence *int64             `json:"sequence"`
-	Gas      *int64             `json:"gas"`
+	Txs      []common.ObservedTx `json:"txs"`
+	Signer   sdk.AccAddress      `json:"signer"`
+	Sequence *int64              `json:"sequence"`
+	Gas      *int64              `json:"gas"`
 }
 
 func (op *OpTxObservedOut) Execute(out io.Writer, _ string, _, routine int, _ *os.Process, logs chan string) error {
 	// render the memos (used for native_txid)
-	for i := range op.Txs {
-		tx := &op.Txs[i]
+	for i, tx := range op.Txs {
 		tmpl := template.Must(template.Must(templates.Clone()).Funcs(opFuncMap(routine)).Parse(tx.Tx.Memo))
 		memo := bytes.NewBuffer(nil)
 		err := tmpl.Execute(memo, nil)
@@ -818,6 +817,7 @@ func (op *OpTxObservedOut) Execute(out io.Writer, _ string, _, routine int, _ *o
 			log.Fatal().Err(err).Msg("failed to render memo")
 		}
 		tx.Tx.Memo = memo.String()
+		op.Txs[i] = tx
 	}
 
 	msg := types.NewMsgObservedTxOut(op.Txs, op.Signer)

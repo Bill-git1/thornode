@@ -3,7 +3,7 @@ package common
 import (
 	"sync"
 
-	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/messages"
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 )
 
 // LocalCacheItem used to cache the unconfirmed broadcast message

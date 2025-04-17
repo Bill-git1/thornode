@@ -51,6 +51,7 @@ import (
 	thorlog "gitlab.com/thorchain/thornode/v3/log"
 
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/client/cli"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/ebifrost"
 
 	"github.com/CosmWasm/wasmd/x/wasm"
 	wasmcli "github.com/CosmWasm/wasmd/x/wasm/client/cli"
@@ -77,7 +78,8 @@ func initAppConfig() (string, interface{}) {
 
 	type CustomAppConfig struct {
 		serverconfig.Config
-		Wasm wasmtypes.WasmConfig `mapstructure:"wasm"`
+		Wasm     wasmtypes.WasmConfig    `mapstructure:"wasm"`
+		EBifrost ebifrost.EBifrostConfig `mapstructure:"ebifrost"`
 	}
 
 	// Optionally allow the chain developer to overwrite the SDK's default
@@ -105,6 +107,7 @@ func initAppConfig() (string, interface{}) {
 
 	customAppTemplate := serverconfig.DefaultConfigTemplate
 	customAppTemplate += wasmtypes.DefaultConfigTemplate()
+	customAppTemplate += ebifrost.DefaultConfigTemplate()
 
 	return customAppTemplate, customAppConfig
 }
@@ -167,6 +170,7 @@ func addModuleInitFlags(startCmd *cobra.Command) {
 		return nil
 	}
 	wasm.AddModuleInitFlags(startCmd)
+	ebifrost.AddModuleInitFlags(startCmd)
 }
 
 func renderConfigCommand() *cobra.Command {

@@ -49,3 +49,125 @@ message ProtoUint {
     option (gogoproto.stringer) = true;
     string value = 1 [(gogoproto.customtype) = "cosmossdk.io/math.Uint", (gogoproto.nullable) = false];
 }
+
+enum Status {
+    incomplete = 0;
+    done = 1;
+    reverted = 2;
+}
+
+message ObservedTx {
+    Tx tx = 1 [(gogoproto.nullable) = false];
+    Status status = 2;
+    repeated string out_hashes = 3;
+    int64 block_height = 4;
+    repeated string signers = 5;
+    string observed_pub_key = 6 [(gogoproto.casttype) = "PubKey"];
+    int64 keysign_ms = 7;
+    int64 finalise_height = 8;
+    string aggregator = 9;
+    string aggregator_target = 10;
+    string aggregator_target_limit = 11 [(gogoproto.customtype) = "cosmossdk.io/math.Uint", (gogoproto.nullable) = true];
+}
+
+message Attestation {
+    option (gogoproto.stringer)         = true;
+
+    bytes PubKey = 1;
+    bytes Signature = 2;
+}
+
+message AttestTx {
+    option (gogoproto.stringer)         = true;
+
+    ObservedTx obsTx = 1 [(gogoproto.nullable) = false];
+    Attestation attestation = 2;
+    bool inbound = 3;
+    bool allow_future_observation = 4; // allow future observation if this is an instant observation and gas is wrong, requiring future observation to correct
+}
+
+message QuorumTx {
+    option (gogoproto.stringer)         = true;
+
+    ObservedTx obsTx = 1 [(gogoproto.nullable) = false];
+    repeated Attestation attestations = 2;
+    bool inbound = 3;
+    bool allow_future_observation = 4; // allow future observation if this is an instant observation and gas is wrong, requiring future observation to correct
+}
+
+message QuorumState {
+    option (gogoproto.stringer)         = true;
+
+    repeated QuorumTx quoTxs = 1;
+    repeated QuorumNetworkFee quoNetworkFees = 2;
+    repeated QuorumSolvency quoSolvencies = 3;
+    repeated QuorumErrataTx quoErrataTxs = 4;
+}
+
+message NetworkFee {
+    option (gogoproto.stringer)         = true;
+
+    int64 height = 1;
+    string chain = 2 [(gogoproto.casttype) = "Chain"];
+    uint64 transaction_size = 3;
+    uint64 transaction_rate = 4;
+}
+
+message AttestNetworkFee {
+    option (gogoproto.stringer)         = true;
+
+    NetworkFee network_fee = 1;
+    Attestation attestation = 2;
+}
+
+message QuorumNetworkFee {
+    option (gogoproto.stringer)         = true;
+
+    NetworkFee network_fee = 1;
+    repeated Attestation attestations = 2;
+}
+
+message Solvency {
+    option (gogoproto.stringer)         = true;
+
+    string id = 1 [(gogoproto.casttype) = "TxID"];
+    string chain = 2 [(gogoproto.casttype) = "Chain"];
+    string pub_key = 3 [(gogoproto.casttype) = "PubKey"];
+    repeated Coin coins = 4 [(gogoproto.castrepeated) = "Coins", (gogoproto.nullable) = false];
+    int64 height = 5;
+}
+
+message AttestSolvency {
+    option (gogoproto.stringer)         = true;
+
+    Solvency solvency = 1;
+    Attestation attestation = 2;
+}
+
+message QuorumSolvency {
+    option (gogoproto.stringer)         = true;
+
+    Solvency solvency = 1;
+    repeated Attestation attestations = 2;
+}
+
+message ErrataTx {
+    option (gogoproto.stringer)         = true;
+
+    string id = 1 [(gogoproto.casttype) = "TxID"];
+    string chain = 2 [(gogoproto.casttype) = "Chain"];
+}
+
+message AttestErrataTx {
+    option (gogoproto.stringer)         = true;
+
+    ErrataTx errata_tx = 1;
+    Attestation attestation = 2;
+}
+
+message QuorumErrataTx {
+    option (gogoproto.stringer)         = true;
+
+    ErrataTx errata_tx = 1;
+    repeated Attestation attestations = 2;
+}

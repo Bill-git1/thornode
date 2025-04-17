@@ -1,17 +1,12 @@
 package thorchain
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/blang/semver"
-	"github.com/cosmos/cosmos-sdk/telemetry"
-	se "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/hashicorp/go-metrics"
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
-	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
 )
 
@@ -59,86 +54,6 @@ func (h ObservedTxInHandler) validate(ctx cosmos.Context, msg MsgObservedTxIn) e
 	return nil
 }
 
-func (h ObservedTxInHandler) preflight(ctx cosmos.Context, voter ObservedTxVoter, nas NodeAccounts, tx ObservedTx, signer cosmos.AccAddress) (ObservedTxVoter, bool) {
-	observeSlashPoints := h.mgr.GetConstants().GetInt64Value(constants.ObserveSlashPoints)
-	lackOfObservationPenalty := h.mgr.GetConstants().GetInt64Value(constants.LackOfObservationPenalty)
-	observeFlex := h.mgr.Keeper().GetConfigInt64(ctx, constants.ObservationDelayFlexibility)
-
-	slashCtx := ctx.WithContext(context.WithValue(ctx.Context(), constants.CtxMetricLabels, []metrics.Label{
-		telemetry.NewLabel("reason", "failed_observe_txin"),
-		telemetry.NewLabel("chain", string(tx.Tx.Chain)),
-	}))
-	slashCtx = ctx.WithContext(context.WithValue(slashCtx.Context(), constants.CtxObservedTx, tx.Tx.ID.String()))
-
-	ok := false
-	if err := h.mgr.Keeper().SetLastObserveHeight(ctx, tx.Tx.Chain, signer, tx.BlockHeight); err != nil {
-		ctx.Logger().Error("fail to save last observe height", "error", err, "signer", signer, "chain", tx.Tx.Chain)
-	}
-
-	// As an observation requires processing by all nodes no matter what,
-	// any observation should increment ObserveSlashPoints,
-	// to be decremented only if contributing to or within ObservationDelayFlexibility of consensus.
-	h.mgr.Slasher().IncSlashPoints(slashCtx, observeSlashPoints, signer)
-
-	if !voter.Add(tx, signer) {
-		// A duplicate message, so do nothing further.
-		return voter, ok
-	}
-	if voter.HasFinalised(nas) {
-		if voter.FinalisedHeight == 0 {
-			ok = true
-			voter.Height = ctx.BlockHeight() // Always record the consensus height of the finalised Tx
-			voter.FinalisedHeight = ctx.BlockHeight()
-			voter.Tx = voter.GetTx(nas)
-
-			// This signer brings the voter to consensus;
-			// decrement all the signers' slash points and increment the non-signers' slash points.
-			signers := voter.GetConsensusSigners()
-			nonSigners := getNonSigners(nas, signers)
-			h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints, signers...)
-			h.mgr.Slasher().IncSlashPoints(slashCtx, lackOfObservationPenalty, nonSigners...)
-		} else if ctx.BlockHeight() <= (voter.FinalisedHeight+observeFlex) &&
-			voter.Tx.IsFinal() == tx.IsFinal() &&
-			voter.Tx.Tx.EqualsEx(tx.Tx) &&
-			!voter.Tx.HasSigned(signer) {
-			// Track already-decremented slash points with the consensus Tx's Signers list.
-			voter.Tx.Signers = append(voter.Tx.Signers, signer.String())
-			// event the tx had been processed , given the signer just a bit late , so still take away their slash points
-			// but only when the tx signer are voting is the tx that already reached consensus
-			h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints+lackOfObservationPenalty, signer)
-		}
-	}
-	if !ok && voter.HasConsensus(nas) && !tx.IsFinal() && voter.FinalisedHeight == 0 {
-		if voter.Height == 0 {
-			ok = true
-			voter.Height = ctx.BlockHeight()
-			// this is the tx that has consensus
-			voter.Tx = voter.GetTx(nas)
-
-			// This signer brings the voter to consensus;
-			// decrement all the signers' slash points and increment the non-signers' slash points.
-			signers := voter.GetConsensusSigners()
-			nonSigners := getNonSigners(nas, signers)
-			h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints, signers...)
-			h.mgr.Slasher().IncSlashPoints(slashCtx, lackOfObservationPenalty, nonSigners...)
-		} else if ctx.BlockHeight() <= (voter.Height+observeFlex) &&
-			voter.Tx.IsFinal() == tx.IsFinal() &&
-			voter.Tx.Tx.EqualsEx(tx.Tx) &&
-			!voter.Tx.HasSigned(signer) {
-			// Track already-decremented slash points with the consensus Tx's Signers list.
-			voter.Tx.Signers = append(voter.Tx.Signers, signer.String())
-			// event the tx had been processed , given the signer just a bit late , so still take away their slash points
-			// but only when the tx signer are voting is the tx that already reached consensus
-			h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints+lackOfObservationPenalty, signer)
-		}
-	}
-
-	h.mgr.Keeper().SetObservedTxInVoter(ctx, voter)
-
-	// Check to see if we have enough identical observations to process the transaction
-	return voter, ok
-}
-
 func (h ObservedTxInHandler) handle(ctx cosmos.Context, msg MsgObservedTxIn) (*cosmos.Result, error) {
 	activeNodeAccounts, err := h.mgr.Keeper().ListActiveValidators(ctx)
 	if err != nil {
@@ -146,205 +61,48 @@ func (h ObservedTxInHandler) handle(ctx cosmos.Context, msg MsgObservedTxIn) (*c
 	}
 	handler := NewInternalHandler(h.mgr)
 	for _, tx := range msg.Txs {
-		// check we are sending to a valid vault
-		if !h.mgr.Keeper().VaultExists(ctx, tx.ObservedPubKey) {
-			ctx.Logger().Info("Not valid Observed Pubkey", "observed pub key", tx.ObservedPubKey)
-			continue
-		}
-
-		// trunk-ignore(golangci-lint/govet): shadow
-		voter, err := h.mgr.Keeper().GetObservedTxInVoter(ctx, tx.Tx.ID)
+		voter, err := ensureVaultAndGetTxInVoter(ctx, tx.ObservedPubKey, tx.Tx.ID, h.mgr.Keeper())
 		if err != nil {
-			ctx.Logger().Error("fail to get tx in voter", "error", err)
+			ctx.Logger().Error("fail to ensure vault and get tx in voter", "error", err)
 			continue
 		}
 
-		voter, isConsensus := h.preflight(ctx, voter, activeNodeAccounts, tx, msg.Signer)
-		if !isConsensus {
-			if voter.Height == ctx.BlockHeight() || voter.FinalisedHeight == ctx.BlockHeight() {
-				// we've already process the transaction, but we should still
-				// update the observing addresses
-				h.mgr.ObMgr().AppendObserver(tx.Tx.Chain, msg.GetSigners())
-			}
-			continue
-		}
-
-		// all logic after this is upon consensus
-
-		ctx.Logger().Info("handleMsgObservedTxIn request", "Tx:", tx.String())
-		if voter.Reverted {
-			ctx.Logger().Info("tx had been reverted", "Tx", tx.String())
-			continue
-		}
-
-		vault, err := h.mgr.Keeper().GetVault(ctx, tx.ObservedPubKey)
-		if err != nil {
-			ctx.Logger().Error("fail to get vault", "error", err)
-			continue
-		}
-
-		voter.Tx.Tx.Memo = tx.Tx.Memo
-
-		hasFinalised := voter.HasFinalised(activeNodeAccounts)
-		// memo errors are ignored here and will be caught later in processing,
-		// after vault update, voter setup, etc and the coin will be refunded
-		memo, _ := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), tx.Tx.Memo)
-
-		// Update vault balances from inbounds with Migrate memos immediately,
-		// to minimise any gap between outbound and inbound observations.
-		// TODO: In future somehow update both balances in a single action,
-		// so the ActiveVault balance increase is guaranteed to never be early nor late?
-		if hasFinalised || memo.IsType(TxMigrate) {
-			if vault.IsAsgard() && !voter.UpdatedVault {
-				if !tx.Tx.FromAddress.Equals(tx.Tx.ToAddress) {
-					// Don't add to or subtract from vault balances when the sender and recipient are the same
-					// (particularly avoid Consolidate SafeSub zeroing of vault balances).
-					vault.AddFunds(tx.Tx.Coins)
-					vault.InboundTxCount++
-				}
-				voter.UpdatedVault = true
-			}
-		}
-		if err = h.mgr.Keeper().SetLastChainHeight(ctx, tx.Tx.Chain, tx.BlockHeight); err != nil {
-			ctx.Logger().Error("fail to set last chain height", "error", err)
-		}
-
-		// save the changes in Tx Voter to key value store
-		h.mgr.Keeper().SetObservedTxInVoter(ctx, voter)
-		if err = h.mgr.Keeper().SetVault(ctx, vault); err != nil {
-			ctx.Logger().Error("fail to set vault", "error", err)
-			continue
-		}
-
-		if !vault.IsAsgard() {
-			ctx.Logger().Info("Vault is not an Asgard vault, transaction ignored.")
-			continue
-		}
-
-		if memo.IsOutbound() || memo.IsInternal() {
-			// do not process outbound handlers here, or internal handlers
-			continue
-		}
-
-		// add addresses to observing addresses. This is used to detect
-		// active/inactive observing node accounts
-
-		h.mgr.ObMgr().AppendObserver(tx.Tx.Chain, voter.Tx.GetSigners())
-
-		if !hasFinalised {
-			ctx.Logger().Info("transaction pending confirmation counting", "hash", voter.TxID)
-			continue
-		}
-
-		if vault.Status == InactiveVault {
-			ctx.Logger().Error("observed tx on inactive vault", "tx", tx.String())
-			if newErr := refundTx(ctx, tx, h.mgr, CodeInvalidVault, "observed inbound tx to an inactive vault", ""); newErr != nil {
-				ctx.Logger().Error("fail to refund", "error", newErr)
-			}
-			continue
-		}
-
-		// construct msg from memo
-		m, txErr := processOneTxIn(ctx, h.mgr.Keeper(), voter.Tx, msg.Signer)
-		if txErr != nil {
-			ctx.Logger().Error("fail to process inbound tx", "error", txErr.Error(), "tx hash", tx.Tx.ID.String())
-			if newErr := refundTx(ctx, tx, h.mgr, CodeInvalidMemo, txErr.Error(), ""); nil != newErr {
-				ctx.Logger().Error("fail to refund", "error", err)
-			}
-			continue
-		}
-
-		// check if we've halted trading
-		swapMsg, isSwap := m.(*MsgSwap)
-		_, isAddLiquidity := m.(*MsgAddLiquidity)
-
-		if isSwap || isAddLiquidity {
-			if h.mgr.Keeper().IsTradingHalt(ctx, m) || h.mgr.Keeper().RagnarokInProgress(ctx) {
-				if newErr := refundTx(ctx, tx, h.mgr, se.ErrUnauthorized.ABCICode(), "trading halted", ""); nil != newErr {
-					ctx.Logger().Error("fail to refund for halted trading", "error", err)
-				}
-				continue
-			}
-		}
-
-		// if its a swap, send it to our queue for processing later
-		if isSwap {
-			h.addSwap(ctx, *swapMsg)
-			continue
-		}
-
-		// if it is a loan, inject the observed TxID and ToAddress into the context
-		_, isLoanOpen := m.(*MsgLoanOpen)
-		_, isLoanRepayment := m.(*MsgLoanRepayment)
-		mCtx := ctx
-		if isLoanOpen || isLoanRepayment {
-			mCtx = ctx.WithValue(constants.CtxLoanTxID, tx.Tx.ID)
-			mCtx = mCtx.WithValue(constants.CtxLoanToAddress, tx.Tx.ToAddress)
-		}
-
-		// Check and block switch assets
-		// Check is independent of the mimir to enable the handler in order to support
-		// bifrost & switch whitelisting prior to switching commencing
-		_, isSwitch := m.(*MsgSwitch)
-		if !isSwitch && h.mgr.SwitchManager().IsSwitch(ctx, tx.Tx.Coins[0].Asset) {
-			if err = refundTx(ctx, tx, h.mgr, CodeTxFail, "asset is a switch asset", ""); err != nil {
-				ctx.Logger().Error("fail to refund", "error", err)
-			}
-
-			continue
-		}
-
-		_, err = handler(mCtx, m)
-		if err != nil {
-			if err = refundTx(ctx, tx, h.mgr, CodeTxFail, err.Error(), ""); err != nil {
-				ctx.Logger().Error("fail to refund", "error", err)
-			}
-			continue
-		}
-
-		// if an outbound is not expected, mark the voter as done
-		if !memo.GetType().HasOutbound() {
-			// retrieve the voter from store in case the handler caused a change
-			// trunk-ignore(golangci-lint/govet): shadow
-			voter, err := h.mgr.Keeper().GetObservedTxInVoter(ctx, tx.Tx.ID)
-			if err != nil {
-				return nil, fmt.Errorf("fail to get voter")
-			}
-			voter.SetDone()
-			h.mgr.Keeper().SetObservedTxInVoter(ctx, voter)
+		voter, isQuorum := processTxInAttestation(ctx, h.mgr, voter, activeNodeAccounts, tx, msg.Signer, true)
+		if err := handleObservedTxInQuorum(ctx, h.mgr, msg.Signer, activeNodeAccounts, handler, tx, voter, voter.Tx.GetSigners(), isQuorum); err != nil {
+			return nil, wrapError(ctx, err, "fail to handle observed tx in quorum")
 		}
 	}
 	return &cosmos.Result{}, nil
 }
 
-func (h ObservedTxInHandler) addSwap(ctx cosmos.Context, msg MsgSwap) {
-	if h.mgr.Keeper().OrderBooksEnabled(ctx) {
+func addSwap(ctx cosmos.Context, k keeper.Keeper, eventMgr EventManager, msg MsgSwap) {
+	if k.OrderBooksEnabled(ctx) {
 		// TODO: swap to synth if layer1 asset (follow on PR)
 		// TODO: create handler to modify/cancel an order (follow on PR)
 
 		source := msg.Tx.Coins[0]
 		target := common.NewCoin(msg.TargetAsset, msg.TradeTarget)
 		evt := NewEventLimitOrder(source, target, msg.Tx.ID)
-		if err := h.mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
+		if err := eventMgr.EmitEvent(ctx, evt); err != nil {
 			ctx.Logger().Error("fail to emit swap event", "error", err)
 		}
-		if err := h.mgr.Keeper().SetOrderBookItem(ctx, msg); err != nil {
+		if err := k.SetOrderBookItem(ctx, msg); err != nil {
 			ctx.Logger().Error("fail to add swap to queue", "error", err)
 		}
 	} else {
-		h.addSwapDirect(ctx, msg)
+		addSwapDirect(ctx, k, msg)
 	}
 }
 
 // addSwapDirect adds the swap directly to the swap queue (no order book) - segmented
 // out into its own function to allow easier maintenance of original behavior vs order
 // book behavior.
-func (h ObservedTxInHandler) addSwapDirect(ctx cosmos.Context, msg MsgSwap) {
+func addSwapDirect(ctx cosmos.Context, k keeper.Keeper, msg MsgSwap) {
 	if msg.Tx.Coins.IsEmpty() {
 		return
 	}
 	// Queue the main swap
-	if err := h.mgr.Keeper().SetSwapQueueItem(ctx, msg, 0); err != nil {
+	if err := k.SetSwapQueueItem(ctx, msg, 0); err != nil {
 		ctx.Logger().Error("fail to add swap to queue", "error", err)
 	}
 }

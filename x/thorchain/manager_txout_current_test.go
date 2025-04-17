@@ -7,7 +7,6 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
-	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 type TxOutStoreVCURSuite struct{}
@@ -78,10 +77,10 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItem(c *C) {
 
 	// Create voter
 	inTxID := GetRandomTxHash()
-	voter := NewObservedTxVoter(inTxID, ObservedTxs{
-		ObservedTx{
+	voter := NewObservedTxVoter(inTxID, common.ObservedTxs{
+		common.ObservedTx{
 			Tx:             GetRandomTx(),
-			Status:         types.Status_incomplete,
+			Status:         common.Status_incomplete,
 			BlockHeight:    1,
 			Signers:        []string{w.activeNodeAccount.NodeAddress.String(), acc1.NodeAddress.String(), acc2.NodeAddress.String()},
 			KeysignMs:      0,
@@ -255,10 +254,10 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItem_OutboundHeightDoesNotGetOverride(c
 	w.keeper.SetMimir(w.ctx, constants.MaxTxOutOffset.String(), 720)
 	// Create voter
 	inTxID := GetRandomTxHash()
-	voter := NewObservedTxVoter(inTxID, ObservedTxs{
-		ObservedTx{
+	voter := NewObservedTxVoter(inTxID, common.ObservedTxs{
+		common.ObservedTx{
 			Tx:             GetRandomTx(),
-			Status:         types.Status_incomplete,
+			Status:         common.Status_incomplete,
 			BlockHeight:    1,
 			Signers:        []string{w.activeNodeAccount.NodeAddress.String(), acc1.NodeAddress.String(), acc2.NodeAddress.String()},
 			KeysignMs:      0,
@@ -326,10 +325,10 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItemNotEnoughForFee(c *C) {
 
 	// Create voter
 	inTxID := GetRandomTxHash()
-	voter := NewObservedTxVoter(inTxID, ObservedTxs{
-		ObservedTx{
+	voter := NewObservedTxVoter(inTxID, common.ObservedTxs{
+		common.ObservedTx{
 			Tx:             GetRandomTx(),
-			Status:         types.Status_incomplete,
+			Status:         common.Status_incomplete,
 			BlockHeight:    1,
 			Signers:        []string{w.activeNodeAccount.NodeAddress.String(), acc1.NodeAddress.String(), acc2.NodeAddress.String()},
 			KeysignMs:      0,
@@ -489,10 +488,10 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItem_MultipleOutboundWillNotBeScheduled
 	w.keeper.SetMimir(w.ctx, constants.MaxTxOutOffset.String(), 720)
 	// Create voter
 	inTxID := GetRandomTxHash()
-	voter := NewObservedTxVoter(inTxID, ObservedTxs{
-		ObservedTx{
+	voter := NewObservedTxVoter(inTxID, common.ObservedTxs{
+		common.ObservedTx{
 			Tx:             GetRandomTx(),
-			Status:         types.Status_incomplete,
+			Status:         common.Status_incomplete,
 			BlockHeight:    1,
 			Signers:        []string{w.activeNodeAccount.NodeAddress.String(), acc1.NodeAddress.String(), acc2.NodeAddress.String()},
 			KeysignMs:      0,
@@ -648,10 +647,10 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItemSendingFromRetiredVault(c *C) {
 	w.keeper.SetMimir(w.ctx, constants.MaxTxOutOffset.String(), 720)
 	// Create voter
 	inTxID := GetRandomTxHash()
-	voter := NewObservedTxVoter(inTxID, ObservedTxs{
-		ObservedTx{
+	voter := NewObservedTxVoter(inTxID, common.ObservedTxs{
+		common.ObservedTx{
 			Tx:             GetRandomTx(),
-			Status:         types.Status_incomplete,
+			Status:         common.Status_incomplete,
 			BlockHeight:    1,
 			Signers:        []string{w.activeNodeAccount.NodeAddress.String(), acc1.NodeAddress.String(), acc2.NodeAddress.String()},
 			KeysignMs:      0,
@@ -805,10 +804,10 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItem_SecurityVersusOutboundNumber(c *C)
 	w.keeper.SetMimir(w.ctx, constants.MaxTxOutOffset.String(), maxTxOutOffset)
 	// Create voter
 	inTxID := GetRandomTxHash()
-	voter := NewObservedTxVoter(inTxID, ObservedTxs{
-		ObservedTx{
+	voter := NewObservedTxVoter(inTxID, common.ObservedTxs{
+		common.ObservedTx{
 			Tx:             GetRandomTx(),
-			Status:         types.Status_incomplete,
+			Status:         common.Status_incomplete,
 			BlockHeight:    1,
 			Signers:        []string{w.activeNodeAccount.NodeAddress.String(), acc1.NodeAddress.String(), acc2.NodeAddress.String()},
 			KeysignMs:      0,
@@ -929,10 +928,10 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItem_VaultStatusVersusOutboundNumber(c 
 	w.keeper.SetMimir(w.ctx, constants.MaxTxOutOffset.String(), maxTxOutOffset)
 	// Create voter
 	inTxID := GetRandomTxHash()
-	voter := NewObservedTxVoter(inTxID, ObservedTxs{
-		ObservedTx{
+	voter := NewObservedTxVoter(inTxID, common.ObservedTxs{
+		common.ObservedTx{
 			Tx:             GetRandomTx(),
-			Status:         types.Status_incomplete,
+			Status:         common.Status_incomplete,
 			BlockHeight:    1,
 			Signers:        []string{w.activeNodeAccount.NodeAddress.String(), acc1.NodeAddress.String(), acc2.NodeAddress.String()},
 			KeysignMs:      0,

@@ -69,8 +69,8 @@ func GetRandomVaultNode(status NodeStatus) NodeAccount {
 	return na
 }
 
-func GetRandomObservedTx() ObservedTx {
-	return NewObservedTx(GetRandomTx(), 33, GetRandomPubKey(), 33)
+func GetRandomObservedTx() common.ObservedTx {
+	return common.NewObservedTx(GetRandomTx(), 33, GetRandomPubKey(), 33)
 }
 
 func GetRandomTxOutItem() TxOutItem {
@@ -91,7 +91,7 @@ func GetRandomObservedTxVoter() ObservedTxVoter {
 		TxID:    GetRandomTxHash(),
 		Tx:      observedTx,
 		Height:  10,
-		Txs:     ObservedTxs{observedTx},
+		Txs:     common.ObservedTxs{observedTx},
 		Actions: []TxOutItem{GetRandomTxOutItem()},
 	}
 }

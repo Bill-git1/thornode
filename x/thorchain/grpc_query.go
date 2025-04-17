@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
@@ -12,15 +13,16 @@ import (
 )
 
 type queryServer struct {
-	mgr     *Mgrs
-	kbs     cosmos.KeybaseStore
-	regInit bool
+	mgr      *Mgrs
+	kbs      cosmos.KeybaseStore
+	regInit  bool
+	txConfig client.TxConfig
 }
 
 var _ types.QueryServer = &queryServer{}
 
-func NewQueryServerImpl(mgr *Mgrs, kbs cosmos.KeybaseStore) types.QueryServer {
-	return &queryServer{mgr: mgr, kbs: kbs}
+func NewQueryServerImpl(mgr *Mgrs, txConfig client.TxConfig, kbs cosmos.KeybaseStore) types.QueryServer {
+	return &queryServer{mgr: mgr, txConfig: txConfig, kbs: kbs}
 }
 
 func (s *queryServer) unwrapSdkContext(c context.Context) sdk.Context {

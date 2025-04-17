@@ -102,7 +102,8 @@ services:
       <<: *thorchain-environment
       SEED: thornode
       SIGNER_SEED_PHRASE: "dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog fossil"
-      THOR_BLOCK_TIME: ${BLOCK_TIME:-2s}
+      THOR_BLOCK_TIME: ${BLOCK_TIME:-1s}
+      THOR_COSMOS_EBIFROST_ADDRESS: 0.0.0.0:50051
       THOR_API_LIMIT_COUNT: 100
       THOR_API_LIMIT_DURATION: 1s
       HARDFORK_BLOCK_HEIGHT: ${HARDFORK_BLOCK_HEIGHT:-}
@@ -119,6 +120,7 @@ services:
       - 26656:26656
       - 1317:1317
       - 6060:6060
+      - 50051:50051
     volumes:
       - "../scripts:/docker/scripts"
       - thornode:/root/.thornode
@@ -156,6 +158,7 @@ services:
       SIGNER_SEED_PHRASE: "dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog fossil"
       CHAIN_API: thornode:1317
       CHAIN_RPC: thornode:26657
+      BIFROST_THORCHAIN_CHAIN_EBIFROST: thornode:50051
       BTC_HOST: ${BTC_HOST:-bitcoin:18443}
       DOGE_HOST: ${DOGE_HOST:-dogecoin:18332}
       BCH_HOST: ${BCH_HOST:-bitcoin-cash:28443}
@@ -164,7 +167,7 @@ services:
       AVAX_HOST: ${AVAX_HOST:-http://avalanche:9650/ext/bc/C/rpc}
       GAIA_HOST: ${GAIA_HOST:-http://gaia:26657}
       GAIA_GRPC_HOST: ${GAIA_GRPC_HOST:-gaia:9090}
-      THOR_BLOCK_TIME: ${BLOCK_TIME:-2s}
+      THOR_BLOCK_TIME: ${BLOCK_TIME:-1s}
       BLOCK_SCANNER_BACKOFF: ${BLOCK_SCANNER_BACKOFF:-5s}
       PEER: ${PEER:-}
       BIFROST_METRICS_PPROF_ENABLED: "true"
@@ -333,6 +336,7 @@ services:
       PEER: bifrost
       CHAIN_API: thornode-cat:1317
       CHAIN_RPC: thornode-cat:26657
+      BIFROST_THORCHAIN_CHAIN_EBIFROST: thornode-cat:50051
       SIGNER_SEED_PHRASE: "cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat crawl"
     ports:
       - 5040
@@ -355,6 +359,7 @@ services:
       PEER: bifrost
       CHAIN_API: thornode-fox:1317
       CHAIN_RPC: thornode-fox:26657
+      BIFROST_THORCHAIN_CHAIN_EBIFROST: thornode-fox:50051
       SIGNER_SEED_PHRASE: "fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox fox filter"
     ports:
       - 5040
@@ -377,6 +382,7 @@ services:
       PEER: bifrost
       CHAIN_API: thornode-pig:1317
       CHAIN_RPC: thornode-pig:26657
+      BIFROST_THORCHAIN_CHAIN_EBIFROST: thornode-pig:50051
       SIGNER_SEED_PHRASE: "pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig pig quick"
     ports:
       - 5040

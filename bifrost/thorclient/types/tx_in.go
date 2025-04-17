@@ -11,14 +11,15 @@ import (
 )
 
 type TxIn struct {
-	Count                string       `json:"count"`
 	Chain                common.Chain `json:"chain"`
-	TxArray              []TxInItem   `json:"txArray"`
+	TxArray              []*TxInItem  `json:"txArray"`
 	Filtered             bool         `json:"filtered"`
-	MemPool              bool         `json:"mem_pool"`          // indicate whether this item is in the mempool or not
-	SentUnFinalised      bool         `json:"sent_un_finalised"` // indicate whether unfinalised tx had been sent to THORChain
-	Finalised            bool         `json:"finalised"`
+	MemPool              bool         `json:"mem_pool"` // indicate whether this item is in the mempool or not
 	ConfirmationRequired int64        `json:"confirmation_required"`
+
+	// whether this originated from a "instant observation" - e.g. by a member of the signing party
+	// immediately after signing, and also has incorrect gas, requiring a re-observation to correct.
+	AllowFutureObservation bool `json:"allow_future_observation"`
 }
 
 type TxInItem struct {
@@ -33,6 +34,7 @@ type TxInItem struct {
 	Aggregator            string        `json:"aggregator"`
 	AggregatorTarget      string        `json:"aggregator_target"`
 	AggregatorTargetLimit *cosmos.Uint  `json:"aggregator_target_limit"`
+	CommittedUnFinalised  bool          `json:"committed_pre_final"`
 }
 type TxInStatus byte
 

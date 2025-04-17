@@ -691,7 +691,7 @@ func (s *HandlerObservedTxOutSuite) TestObservingSlashing(c *C) {
 	observedTx.Tx.FromAddress, err = observedTx.ObservedPubKey.GetAddress(observedTx.Tx.Chain)
 	c.Assert(err, IsNil)
 
-	msg := NewMsgObservedTxOut([]ObservedTx{observedTx}, cosmos.AccAddress{})
+	msg := NewMsgObservedTxOut([]common.ObservedTx{observedTx}, cosmos.AccAddress{})
 	handler := NewObservedTxOutHandler(mgr)
 
 	broadcast := func(c *C, ctx cosmos.Context, na NodeAccount, msg *MsgObservedTxOut) {
@@ -738,7 +738,7 @@ func (s *HandlerObservedTxOutSuite) TestObservingSlashing(c *C) {
 	// but with a slightly later BlockHeight and FinaliseHeight,
 	// which is normal.
 	consensusMsg := msg
-	consensusMsg.Txs = []ObservedTx{msg.Txs[0]}
+	consensusMsg.Txs = []common.ObservedTx{msg.Txs[0]}
 	consensusMsg.Txs[0].BlockHeight++
 	consensusMsg.Txs[0].FinaliseHeight++
 

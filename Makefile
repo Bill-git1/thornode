@@ -83,8 +83,6 @@ protoImage=docker run --rm -v $(CURDIR):/workspace --workdir /workspace $(protoI
 proto-all: proto-format proto-lint proto-gen format
 
 proto-gen:
-	@echo "Generating bifrost protobuf files"
-	@docker run --rm -v $(shell pwd):/app -w /app golang:$(GOVERSION) make bifrost-protosh
 	@echo "Generating Protobuf files"
 	@$(protoImage) sh ./scripts/protocgen.sh
 
@@ -97,9 +95,6 @@ proto-lint:
 
 proto-check-breaking:
 	@$(protoImage) buf breaking --against $(HTTPS_GIT)#branch=develop
-
-bifrost-protosh:
-	@./scripts/bifrostprotocgen.sh
 
 # ------------------------------ Docs ------------------------------
 

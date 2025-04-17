@@ -203,6 +203,7 @@ func (s *BitcoinSuite) SetUpTest(c *C) {
 	s.cfg.RPCHost = s.server.Listener.Addr().String()
 	s.client, err = NewClient(s.keys, s.cfg, nil, s.bridge, s.m)
 	s.client.disableVinZeroBatch = true
+	s.client.globalNetworkFeeQueue = make(chan common.NetworkFee, 1)
 	c.Assert(err, IsNil)
 	c.Assert(s.client, NotNil)
 }
@@ -235,7 +236,6 @@ func (s *BitcoinSuite) TestFetchTxs(c *C) {
 	txs, err := s.client.FetchTxs(0, 0)
 	c.Assert(err, IsNil)
 	c.Assert(txs.Chain, Equals, common.BTCChain)
-	c.Assert(txs.Count, Equals, "1")
 	c.Assert(txs.TxArray[0].BlockHeight, Equals, int64(1696761))
 	c.Assert(txs.TxArray[0].Tx, Equals, "24ed2d26fd5d4e0e8fa86633e40faf1bdfc8d1903b1cd02855286312d48818a2")
 	c.Assert(txs.TxArray[0].Sender, Equals, "tb1qdxxlx4r4jk63cve3rjpj428m26xcukjn5yegff")
@@ -774,9 +774,8 @@ func (s *BitcoinSuite) TestGetHeight(c *C) {
 func (s *BitcoinSuite) TestOnObservedTxIn(c *C) {
 	pkey := ttypes.GetRandomPubKey()
 	txIn := types.TxIn{
-		Count: "1",
 		Chain: common.BTCChain,
-		TxArray: []types.TxInItem{
+		TxArray: []*types.TxInItem{
 			{
 				BlockHeight: 1,
 				Tx:          "31f8699ce9028e9cd37f8a6d58a79e614a96e3fdd0f58be5fc36d2d95484716f",
@@ -792,15 +791,14 @@ func (s *BitcoinSuite) TestOnObservedTxIn(c *C) {
 	}
 	blockMeta := utxo.NewBlockMeta("000000001ab8a8484eb89f04b87d90eb88e2cbb2829e84eb36b966dcb28af90b", 1, "00000000ffa57c95f4f226f751114e9b24fdf8dbe2dbc02a860da9320bebd63e")
 	c.Assert(s.client.temporalStorage.SaveBlockMeta(blockMeta.Height, blockMeta), IsNil)
-	s.client.OnObservedTxIn(txIn.TxArray[0], 1)
+	s.client.OnObservedTxIn(*txIn.TxArray[0], 1)
 	blockMeta, err := s.client.temporalStorage.GetBlockMeta(1)
 	c.Assert(err, IsNil)
 	c.Assert(blockMeta, NotNil)
 
 	txIn = types.TxIn{
-		Count: "1",
 		Chain: common.BTCChain,
-		TxArray: []types.TxInItem{
+		TxArray: []*types.TxInItem{
 			{
 				BlockHeight: 2,
 				Tx:          "24ed2d26fd5d4e0e8fa86633e40faf1bdfc8d1903b1cd02855286312d48818a2",
@@ -816,15 +814,14 @@ func (s *BitcoinSuite) TestOnObservedTxIn(c *C) {
 	}
 	blockMeta = utxo.NewBlockMeta("000000001ab8a8484eb89f04b87d90eb88e2cbb2829e84eb36b966dcb28af90b", 2, "00000000ffa57c95f4f226f751114e9b24fdf8dbe2dbc02a860da9320bebd63e")
 	c.Assert(s.client.temporalStorage.SaveBlockMeta(blockMeta.Height, blockMeta), IsNil)
-	s.client.OnObservedTxIn(txIn.TxArray[0], 2)
+	s.client.OnObservedTxIn(*txIn.TxArray[0], 2)
 	blockMeta, err = s.client.temporalStorage.GetBlockMeta(2)
 	c.Assert(err, IsNil)
 	c.Assert(blockMeta, NotNil)
 
 	txIn = types.TxIn{
-		Count: "2",
 		Chain: common.BTCChain,
-		TxArray: []types.TxInItem{
+		TxArray: []*types.TxInItem{
 			{
 				BlockHeight: 3,
 				Tx:          "44ed2d26fd5d4e0e8fa86633e40faf1bdfc8d1903b1cd02855286312d48818a2",
@@ -852,7 +849,7 @@ func (s *BitcoinSuite) TestOnObservedTxIn(c *C) {
 	blockMeta = utxo.NewBlockMeta("000000001ab8a8484eb89f04b87d90eb88e2cbb2829e84eb36b966dcb28af90b", 3, "00000000ffa57c95f4f226f751114e9b24fdf8dbe2dbc02a860da9320bebd63e")
 	c.Assert(s.client.temporalStorage.SaveBlockMeta(blockMeta.Height, blockMeta), IsNil)
 	for _, item := range txIn.TxArray {
-		s.client.OnObservedTxIn(item, 3)
+		s.client.OnObservedTxIn(*item, 3)
 	}
 
 	blockMeta, err = s.client.temporalStorage.GetBlockMeta(3)

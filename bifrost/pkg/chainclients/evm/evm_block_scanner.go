@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
-	"strconv"
 	"strings"
 
 	_ "embed"
@@ -46,28 +45,29 @@ import (
 ////////////////////////////////////////////////////////////////////////////////////////
 
 type EVMScanner struct {
-	cfg                  config.BifrostBlockScannerConfiguration
-	logger               zerolog.Logger
-	db                   blockscanner.ScannerStorage
-	m                    *metrics.Metrics
-	errCounter           *prometheus.CounterVec
-	gasPriceChanged      bool
-	gasPrice             *big.Int
-	lastReportedGasPrice uint64
-	ethClient            *ethclient.Client
-	ethRpc               *evm.EthRPC
-	blockMetaAccessor    evm.BlockMetaAccessor
-	globalErrataQueue    chan<- stypes.ErrataBlock
-	bridge               thorclient.ThorchainBridge
-	pubkeyMgr            pubkeymanager.PubKeyValidator
-	eipSigner            etypes.Signer
-	currentBlockHeight   int64
-	gasCache             []*big.Int
-	solvencyReporter     SolvencyReporter
-	whitelistTokens      []tokenlist.ERC20Token
-	whitelistContracts   []common.Address
-	signerCacheManager   *signercache.CacheManager
-	tokenManager         *evm.TokenManager
+	cfg                   config.BifrostBlockScannerConfiguration
+	logger                zerolog.Logger
+	db                    blockscanner.ScannerStorage
+	m                     *metrics.Metrics
+	errCounter            *prometheus.CounterVec
+	gasPriceChanged       bool
+	gasPrice              *big.Int
+	lastReportedGasPrice  uint64
+	ethClient             *ethclient.Client
+	ethRpc                *evm.EthRPC
+	blockMetaAccessor     evm.BlockMetaAccessor
+	globalErrataQueue     chan<- stypes.ErrataBlock
+	globalNetworkFeeQueue chan<- common.NetworkFee
+	bridge                thorclient.ThorchainBridge
+	pubkeyMgr             pubkeymanager.PubKeyValidator
+	eipSigner             etypes.Signer
+	currentBlockHeight    int64
+	gasCache              []*big.Int
+	solvencyReporter      SolvencyReporter
+	whitelistTokens       []tokenlist.ERC20Token
+	whitelistContracts    []common.Address
+	signerCacheManager    *signercache.CacheManager
+	tokenManager          *evm.TokenManager
 
 	vaultABI *abi.ABI
 	erc20ABI *abi.ABI
@@ -286,12 +286,10 @@ func (e *EVMScanner) FetchTxs(height, chainHeight int64) (stypes.TxIn, error) {
 
 func (e *EVMScanner) processBlock(block *etypes.Block) (stypes.TxIn, error) {
 	txIn := stypes.TxIn{
-		Chain:           e.cfg.ChainID,
-		TxArray:         nil,
-		Filtered:        false,
-		MemPool:         false,
-		SentUnFinalised: false,
-		Finalised:       false,
+		Chain:    e.cfg.ChainID,
+		TxArray:  nil,
+		Filtered: false,
+		MemPool:  false,
 	}
 
 	// skip empty blocks
@@ -412,14 +410,13 @@ func (e *EVMScanner) getTxInOptimized(method string, block *etypes.Block) (stype
 
 		// add the txInItem to the txInbound
 		txInItem.BlockHeight = block.Number().Int64()
-		txInbound.TxArray = append(txInbound.TxArray, *txInItem)
+		txInbound.TxArray = append(txInbound.TxArray, txInItem)
 	}
 
 	if len(txInbound.TxArray) == 0 {
 		e.logger.Debug().Uint64("block", block.NumberU64()).Msg("no tx need to be processed in this block")
 		return stypes.TxIn{}, nil
 	}
-	txInbound.Count = strconv.Itoa(len(txInbound.TxArray))
 	return txInbound, nil
 }
 
@@ -521,7 +518,7 @@ func (e *EVMScanner) getTxIn(block *etypes.Block) (stypes.TxIn, error) {
 
 			// add the txInItem to the txInbound
 			txInItem.BlockHeight = block.Number().Int64()
-			txInbound.TxArray = append(txInbound.TxArray, *txInItem)
+			txInbound.TxArray = append(txInbound.TxArray, txInItem)
 		}
 	}
 
@@ -529,7 +526,6 @@ func (e *EVMScanner) getTxIn(block *etypes.Block) (stypes.TxIn, error) {
 		e.logger.Debug().Uint64("block", block.NumberU64()).Msg("no tx need to be processed in this block")
 		return stypes.TxIn{}, nil
 	}
-	txInbound.Count = strconv.Itoa(len(txInbound.TxArray))
 	return txInbound, nil
 }
 
@@ -793,11 +789,14 @@ func (e *EVMScanner) reportNetworkFee(height int64) {
 	tcGasPrice := new(big.Int).Div(gasPrice, big.NewInt(1e10))
 
 	// post to thorchain
-	if _, err := e.bridge.PostNetworkFee(height, e.cfg.ChainID, e.cfg.MaxGasLimit, tcGasPrice.Uint64()); err != nil {
-		e.logger.Err(err).Msg("failed to post EVM chain single transfer fee to THORNode")
-	} else {
-		e.lastReportedGasPrice = gasPrice.Uint64()
+	e.globalNetworkFeeQueue <- common.NetworkFee{
+		Chain:           e.cfg.ChainID,
+		Height:          height,
+		TransactionSize: e.cfg.MaxGasLimit,
+		TransactionRate: tcGasPrice.Uint64(),
 	}
+
+	e.lastReportedGasPrice = gasPrice.Uint64()
 }
 
 // --------------------------------- parse transaction ---------------------------------

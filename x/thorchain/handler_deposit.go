@@ -159,7 +159,7 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit) (*cosmos.Resu
 
 	// construct msg from memo
 	txIn := ObservedTx{Tx: tx}
-	txInVoter := NewObservedTxVoter(txIn.Tx.ID, []ObservedTx{txIn})
+	txInVoter := NewObservedTxVoter(txIn.Tx.ID, []common.ObservedTx{txIn})
 	txInVoter.Height = ctx.BlockHeight() // While FinalisedHeight may be overwritten, Height records the consensus height
 	txInVoter.FinalisedHeight = ctx.BlockHeight()
 	txInVoter.Tx = txIn

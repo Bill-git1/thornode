@@ -73,12 +73,16 @@ check_darwin_version() {
           "(yours is ${osx_version}). See https://docs.trunk.io for more info."
   exit 1
 }
+
 if [[ ${PLATFORM} == "darwin-x86_64" || ${PLATFORM} == "darwin-arm64" ]]; then
   check_darwin_version
+  TRUNK_PLATFORM=${PLATFORM}
 elif [[ ${PLATFORM} == "linux-x86_64" ]]; then
-  :
+  TRUNK_PLATFORM=${PLATFORM}
+elif [[ ${PLATFORM} == "linux-aarch64" ]]; then
+  TRUNK_PLATFORM=linux-arm64
 else
-  echo -e "${FAIL_MARK} Trunk is only supported on Linux (x64_64) and MacOS (x86_64, arm64)." \
+  echo -e "${FAIL_MARK} Trunk is only supported on Linux (x64_64, aarch64) and MacOS (x86_64, arm64)." \
           "See https://docs.trunk.io for more info."
   exit 1
 fi
@@ -297,12 +301,12 @@ download_cli() {
 
   TRUNK_NEW_URL_VERSION=0.10.2-beta.1
   if sort --help 2>&1 | grep BusyBox; then
-    readonly URL="https://trunk.io/releases/${dl_version}/trunk-${dl_version}-${PLATFORM}.tar.gz"
+    readonly URL="https://trunk.io/releases/${dl_version}/trunk-${dl_version}-${TRUNK_PLATFORM}.tar.gz"
   else
     if [[ "$(printf "%s\n%s\n" "${TRUNK_NEW_URL_VERSION}" "${dl_version}" | \
             sort --version-sort | \
             head -n 1)" == "${TRUNK_NEW_URL_VERSION}"* ]]; then
-      readonly URL="https://trunk.io/releases/${dl_version}/trunk-${dl_version}-${PLATFORM}.tar.gz"
+      readonly URL="https://trunk.io/releases/${dl_version}/trunk-${dl_version}-${TRUNK_PLATFORM}.tar.gz"
       else
       readonly URL="https://trunk.io/releases/trunk-${dl_version}.${KERNEL}.tar.gz"
     fi

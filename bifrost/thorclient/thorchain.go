@@ -29,7 +29,6 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/v3/common"
-	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/config"
 	"gitlab.com/thorchain/thornode/v3/constants"
 	openapi "gitlab.com/thorchain/thornode/v3/openapi/gen"
@@ -44,6 +43,7 @@ const (
 	KeysignEndpoint          = "/thorchain/keysign"
 	LastBlockEndpoint        = "/thorchain/lastblock"
 	NodeAccountEndpoint      = "/thorchain/node"
+	NodeAccountsEndpoint     = "/thorchain/nodes"
 	SignerMembershipEndpoint = "/thorchain/vaults/%s/signers"
 	StatusEndpoint           = "/status"
 	VaultEndpoint            = "/thorchain/vault/%s"
@@ -76,6 +76,7 @@ type ThorchainBridge interface {
 	EnsureNodeWhitelisted() error
 	EnsureNodeWhitelistedWithTimeout() error
 	FetchNodeStatus() (stypes.NodeStatus, error)
+	FetchActiveNodes() ([]common.PubKey, error)
 	GetAsgards() (stypes.Vaults, error)
 	GetVault(pubkey string) (stypes.Vault, error)
 	GetConfig() config.BifrostClientConfiguration
@@ -87,7 +88,7 @@ type ThorchainBridge interface {
 	GetKeysignParty(vaultPubKey common.PubKey) (common.PubKeys, error)
 	GetMimir(key string) (int64, error)
 	GetMimirWithRef(template, ref string) (int64, error)
-	GetObservationsStdTx(txIns stypes.ObservedTxs) ([]cosmos.Msg, error)
+	GetInboundOutbound(txIns common.ObservedTxs) (common.ObservedTxs, common.ObservedTxs, error)
 	GetPools() (stypes.Pools, error)
 	GetPubKeys() ([]PubKeyContractAddressPair, error)
 	GetAsgardPubKeys() ([]PubKeyContractAddressPair, error)
@@ -107,6 +108,7 @@ type ThorchainBridge interface {
 	Broadcast(msgs ...sdk.Msg) (common.TxID, error)
 	GetKeysign(blockHeight int64, pk string) (types.TxOut, error)
 	GetNodeAccount(string) (*stypes.NodeAccount, error)
+	GetNodeAccounts() ([]*stypes.NodeAccount, error)
 	GetKeygenBlock(int64, string) (stypes.KeygenBlock, error)
 }
 
@@ -221,7 +223,6 @@ func (b *thorchainBridge) get(url string) ([]byte, int, error) {
 		return nil, http.StatusNotFound, fmt.Errorf("failed to GET from thorchain: %w", err)
 	}
 	defer func() {
-		// trunk-ignore(golangci-lint/govet): shadow
 		if err := resp.Body.Close(); err != nil {
 			b.logger.Error().Err(err).Msg("failed to close response body")
 		}
@@ -341,13 +342,13 @@ func (b *thorchainBridge) GetKeygenStdTx(poolPubKey common.PubKey, secp256k1Sign
 	return stypes.NewMsgTssPool(inputPks.Strings(), poolPubKey, secp256k1Signature, keysharesBackup, keygenType, height, blame, chains.Strings(), signerAddr, keygenTime)
 }
 
-// GetObservationsStdTx get observations tx from txIns
-func (b *thorchainBridge) GetObservationsStdTx(txIns stypes.ObservedTxs) ([]cosmos.Msg, error) {
+// GetInboundOutbound separate the txs into inbound and outbound
+func (b *thorchainBridge) GetInboundOutbound(txIns common.ObservedTxs) (common.ObservedTxs, common.ObservedTxs, error) {
 	if len(txIns) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
-	inbound := stypes.ObservedTxs{}
-	outbound := stypes.ObservedTxs{}
+	inbound := common.ObservedTxs{}
+	outbound := common.ObservedTxs{}
 
 	// spilt our txs into inbound vs outbound txs
 	for _, tx := range txIns {
@@ -391,23 +392,11 @@ func (b *thorchainBridge) GetObservationsStdTx(txIns stypes.ObservedTxs) ([]cosm
 			b.logger.Error().Msgf("observed tx out for chain (%s) tx (%s) is already in the outbound array", tx.Tx.Chain, tx.Tx.ID)
 		default:
 			// This should never happen; rather than dropping it, return an error.
-			return nil, fmt.Errorf("could not determine if chain (%s) tx (%s) was inbound or outbound", tx.Tx.Chain, tx.Tx.ID)
+			return nil, nil, fmt.Errorf("could not determine if chain (%s) tx (%s) was inbound or outbound", tx.Tx.Chain, tx.Tx.ID)
 		}
 	}
 
-	signerAddr, err := b.keys.GetSignerInfo().GetAddress()
-	if err != nil {
-		return nil, fmt.Errorf("fail to get signer address: %w", err)
-	}
-	var msgs []cosmos.Msg
-	if len(inbound) > 0 {
-		msgs = append(msgs, stypes.NewMsgObservedTxIn(inbound, signerAddr))
-	}
-	if len(outbound) > 0 {
-		msgs = append(msgs, stypes.NewMsgObservedTxOut(outbound, signerAddr))
-	}
-
-	return msgs, nil
+	return inbound, outbound, nil
 }
 
 // EnsureNodeWhitelistedWithTimeout check node is whitelisted with timeout retry
@@ -438,6 +427,20 @@ func (b *thorchainBridge) EnsureNodeWhitelisted() error {
 		return fmt.Errorf("node account status %s , will not be able to forward transaction to thorchain", status)
 	}
 	return nil
+}
+
+func (b *thorchainBridge) FetchActiveNodes() ([]common.PubKey, error) {
+	na, err := b.GetNodeAccounts()
+	if err != nil {
+		return nil, fmt.Errorf("fail to get node accounts: %w", err)
+	}
+	active := make([]common.PubKey, 0)
+	for _, item := range na {
+		if item.Status == stypes.NodeStatus_Active {
+			active = append(active, item.PubKeySet.Secp256k1)
+		}
+	}
+	return active, nil
 }
 
 // FetchNodeStatus get current node status from thorchain

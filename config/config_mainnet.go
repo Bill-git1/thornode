@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	rpcPort = 27147
-	p2pPort = 27146
+	rpcPort      = 27147
+	p2pPort      = 27146
+	ebifrostPort = 50051
 )
 
 func getSeedAddrs() (addrs []string) {

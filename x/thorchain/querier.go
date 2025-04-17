@@ -16,12 +16,10 @@ import (
 	sdkmath "cosmossdk.io/math"
 	"github.com/blang/semver"
 	tmhttp "github.com/cometbft/cometbft/rpc/client/http"
-	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
-	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	"github.com/rs/zerolog/log"
-	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/conversion"
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
@@ -2077,7 +2075,7 @@ func newTxStagesResponse(ctx cosmos.Context, voter ObservedTxVoter, isSwap, isPe
 	var outSigned types.OutboundSignedStage
 
 	// Set the Completed state first.
-	outSigned.Completed = (voter.Tx.Status != types.Status_incomplete)
+	outSigned.Completed = (voter.Tx.Status != common.Status_incomplete)
 
 	// Only fill in other fields if not Completed.
 	if !outSigned.Completed {
@@ -2183,7 +2181,7 @@ func (qs queryServer) queryTx(ctx cosmos.Context, req *types.QueryTxRequest) (*t
 	}
 
 	result := types.QueryTxResponse{
-		ObservedTx:      castObservedTx(voter.GetTx(nodeAccounts)),
+		ObservedTx:      castObservedTx(*voter.GetTx(nodeAccounts)),
 		ConsensusHeight: voter.Height,
 		FinalisedHeight: voter.FinalisedHeight,
 		OutboundHeight:  voter.OutboundHeight,
@@ -3111,12 +3109,13 @@ func (qs queryServer) queryBlock(ctx cosmos.Context, req *types.QueryBlockReques
 
 	for i, tx := range block.Block.Txs {
 		// decode the protobuf and encode to json
-		dtx, err := authtx.DefaultTxDecoder(qs.mgr.cdc.(*codec.ProtoCodec))(tx)
+
+		dtx, err := qs.txConfig.TxDecoder()(tx)
 		if err != nil {
 			return nil, fmt.Errorf("fail to decode tx: %w", err)
 		}
 
-		etx, err := authtx.DefaultJSONTxEncoder(qs.mgr.cdc.(*codec.ProtoCodec))(dtx)
+		etx, err := qs.txConfig.TxJSONEncoder()(dtx)
 		if err != nil {
 			return nil, fmt.Errorf("fail to encode tx: %w", err)
 		}
@@ -3178,7 +3177,7 @@ func castTxOutItem(toi TxOutItem, height int64) *types.QueryTxOutItem {
 func castObservedTx(observedTx ObservedTx) types.QueryObservedTx {
 	// Only display the Status if it is "done", not if "incomplete".
 	status := ""
-	if observedTx.Status != types.Status_incomplete {
+	if observedTx.Status != common.Status_incomplete {
 		status = observedTx.Status.String()
 	}
 	return types.QueryObservedTx{

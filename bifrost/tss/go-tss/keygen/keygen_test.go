@@ -26,11 +26,11 @@ import (
 	maddr "github.com/multiformats/go-multiaddr"
 	. "gopkg.in/check.v1"
 
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p"
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/storage"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/common"
-	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/conversion"
-	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/messages"
-	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/p2p"
-	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/storage"
 )
 
 var (
@@ -117,13 +117,13 @@ func (s *TssKeygenTestSuite) SetUpTest(c *C) {
 		buf, err := base64.StdEncoding.DecodeString(testPriKeyArr[i])
 		c.Assert(err, IsNil)
 		if i == 0 {
-			comm, err := p2p.NewCommunication("asgard", nil, ports[i], "")
+			comm, err := p2p.NewCommunication(&p2p.Config{Port: ports[i], RendezvousString: "asgard"}, nil)
 			c.Assert(err, IsNil)
 			c.Assert(comm.Start(buf[:]), IsNil)
 			s.comms[i] = comm
 			continue
 		}
-		comm, err := p2p.NewCommunication("asgard", []maddr.Multiaddr{multiAddr}, ports[i], "")
+		comm, err := p2p.NewCommunication(&p2p.Config{Port: ports[i], RendezvousString: "asgard", BootstrapPeers: []maddr.Multiaddr{multiAddr}}, nil)
 		c.Assert(err, IsNil)
 		c.Assert(comm.Start(buf[:]), IsNil)
 		s.comms[i] = comm

@@ -12,11 +12,10 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/input"
 	golog "github.com/ipfs/go-log"
-	"github.com/libp2p/go-libp2p-peerstore/addr"
 
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p"
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/common"
-	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/conversion"
-	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/p2p"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/tss"
 )
 
@@ -54,17 +53,17 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// init tss module
-	tss, err := tss.NewTss(
-		addr.AddrList(p2pConf.BootstrapPeers),
-		p2pConf.Port,
+
+	comm, stateManager, err := p2p.StartP2P(
+		&p2pConf,
 		priKey,
-		p2pConf.RendezvousString,
 		baseFolder,
-		tssConf,
-		nil,
-		p2pConf.ExternalIP,
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// init tss module
+	tss, err := tss.NewTss(comm, stateManager, priKey, tssConf, nil)
 	if nil != err {
 		log.Fatal(err)
 	}

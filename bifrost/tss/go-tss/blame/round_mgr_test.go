@@ -3,7 +3,7 @@ package blame
 import (
 	. "gopkg.in/check.v1"
 
-	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/messages"
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 )
 
 type RoundMgrSuite struct{}

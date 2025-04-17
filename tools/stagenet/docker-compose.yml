@@ -84,6 +84,7 @@ services:
 
       CHAIN_API: genesis-thornode:1317
       CHAIN_RPC: genesis-thornode:27147
+      BIFROST_THORCHAIN_CHAIN_EBIFROST: genesis-thornode:50051
 
       BIFROST_CHAINS_AVAX_DISABLED: "false"
       BIFROST_CHAINS_AVAX_RPC_HOST: https://api.avax.network/ext/bc/C/rpc
@@ -140,6 +141,7 @@ services:
       PEER: genesis-bifrost
       CHAIN_API: validator-1-thornode:1317
       CHAIN_RPC: validator-1-thornode:27147
+      BIFROST_THORCHAIN_CHAIN_EBIFROST: validator-1-thornode:50051
     ports:
       - 5040
       - 6040
@@ -170,6 +172,7 @@ services:
       <<: *validator-1-bifrost-environment
       CHAIN_API: validator-2-thornode:1317
       CHAIN_RPC: validator-2-thornode:27147
+      BIFROST_THORCHAIN_CHAIN_EBIFROST: validator-2-thornode:50051
     volumes:
       - validator-2-bifrost:/var/data/bifrost
       - validator-2-thornode:/root/.thornode
@@ -197,6 +200,7 @@ services:
       <<: *validator-1-bifrost-environment
       CHAIN_API: validator-3-thornode:1317
       CHAIN_RPC: validator-3-thornode:27147
+      BIFROST_THORCHAIN_CHAIN_EBIFROST: validator-3-thornode:50051
     volumes:
       - validator-3-bifrost:/var/data/bifrost
       - validator-3-thornode:/root/.thornode

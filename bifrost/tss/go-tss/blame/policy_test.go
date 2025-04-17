@@ -10,8 +10,8 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	. "gopkg.in/check.v1"
 
-	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/conversion"
-	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/messages"
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 )
 
 var (

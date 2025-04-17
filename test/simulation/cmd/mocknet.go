@@ -88,6 +88,7 @@ func InitConfig(parallelism int, seed bool) *OpConfig {
 	// since we reuse the bifrost thorclient, load endpoints into config package
 	os.Setenv("BIFROST_THORCHAIN_CHAIN_HOST", "localhost:1317")
 	os.Setenv("BIFROST_THORCHAIN_CHAIN_RPC", "localhost:26657")
+	os.Setenv("BIFROST_THORCHAIN_CHAIN_EBIFROST", "localhost:50051")
 	config.Init()
 
 	// validators

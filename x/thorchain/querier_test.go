@@ -15,6 +15,7 @@ import (
 	ckeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	types2 "github.com/cosmos/cosmos-sdk/types"
 
+	"gitlab.com/thorchain/thornode/v3/app/params"
 	"gitlab.com/thorchain/thornode/v3/cmd"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
@@ -96,7 +97,9 @@ func (s *QuerierSuite) SetUpTest(c *C) {
 	}
 	s.ctx, s.mgr = setupManagerForTest(c)
 	s.k = s.mgr.Keeper()
-	s.queryServer = NewQueryServerImpl(s.mgr, s.kb)
+	txConfig, err := params.TxConfig(cdc, nil)
+	c.Assert(err, IsNil)
+	s.queryServer = NewQueryServerImpl(s.mgr, txConfig, s.kb)
 }
 
 func (s *QuerierSuite) TestQueryKeysign(c *C) {
@@ -120,7 +123,9 @@ func (s *QuerierSuite) TestQueryKeysign(c *C) {
 
 	_, mgr := setupManagerForTest(c)
 	mgr.K = keeper
-	queryServer := NewQueryServerImpl(mgr, s.kb)
+	txConfig, err := params.TxConfig(s.mgr.cdc, nil)
+	c.Assert(err, IsNil)
+	queryServer := NewQueryServerImpl(mgr, txConfig, s.kb)
 
 	queryKeysignResp, err := queryServer.KeysignPubkey(ctx, &types.QueryKeysignPubkeyRequest{
 		Height: "5",
@@ -143,7 +148,9 @@ func (s *QuerierSuite) TestQueryKeysign(c *C) {
 
 func (s *QuerierSuite) TestQueryPool(c *C) {
 	ctx, mgr := setupManagerForTest(c)
-	queryServer := NewQueryServerImpl(mgr, s.kb)
+	txConfig, err := params.TxConfig(s.mgr.cdc, nil)
+	c.Assert(err, IsNil)
+	queryServer := NewQueryServerImpl(mgr, txConfig, s.kb)
 
 	pubKey := GetRandomPubKey()
 	asgard := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, pubKey, common.Chains{common.ETHChain}.Strings(), []ChainContract{})
@@ -157,7 +164,7 @@ func (s *QuerierSuite) TestQueryPool(c *C) {
 	poolBTC.Asset = common.BTCAsset
 	poolBTC.LPUnits = cosmos.NewUint(0)
 
-	err := mgr.Keeper().SetPool(ctx, poolETH)
+	err = mgr.Keeper().SetPool(ctx, poolETH)
 	c.Assert(err, IsNil)
 
 	err = mgr.Keeper().SetPool(ctx, poolBTC)
@@ -197,7 +204,9 @@ func (s *QuerierSuite) TestQueryPool(c *C) {
 
 func (s *QuerierSuite) TestVaults(c *C) {
 	ctx, mgr := setupManagerForTest(c)
-	queryServer := NewQueryServerImpl(mgr, s.kb)
+	txConfig, err := params.TxConfig(s.mgr.cdc, nil)
+	c.Assert(err, IsNil)
+	queryServer := NewQueryServerImpl(mgr, txConfig, s.kb)
 
 	pubKey := GetRandomPubKey()
 	asgard := NewVault(ctx.BlockHeight(), ActiveVault, AsgardVault, pubKey, common.Chains{common.ETHChain}.Strings(), nil)
@@ -211,7 +220,7 @@ func (s *QuerierSuite) TestVaults(c *C) {
 	poolBTC.Asset = common.BTCAsset
 	poolBTC.LPUnits = cosmos.NewUint(0)
 
-	err := mgr.Keeper().SetPool(ctx, poolETH)
+	err = mgr.Keeper().SetPool(ctx, poolETH)
 	c.Assert(err, IsNil)
 
 	err = mgr.Keeper().SetPool(ctx, poolBTC)
@@ -250,7 +259,9 @@ func (s *QuerierSuite) TestVaults(c *C) {
 
 func (s *QuerierSuite) TestSaverPools(c *C) {
 	ctx, mgr := setupManagerForTest(c)
-	queryServer := NewQueryServerImpl(mgr, s.kb)
+	txConfig, err := params.TxConfig(s.mgr.cdc, nil)
+	c.Assert(err, IsNil)
+	queryServer := NewQueryServerImpl(mgr, txConfig, s.kb)
 
 	poolDOGE := NewPool()
 	poolDOGE.Asset = common.DOGEAsset.GetSyntheticAsset()
@@ -264,7 +275,7 @@ func (s *QuerierSuite) TestSaverPools(c *C) {
 	poolETH.Asset = common.ETHAsset.GetSyntheticAsset()
 	poolETH.LPUnits = cosmos.NewUint(100)
 
-	err := mgr.Keeper().SetPool(ctx, poolDOGE)
+	err = mgr.Keeper().SetPool(ctx, poolDOGE)
 	c.Assert(err, IsNil)
 
 	err = mgr.Keeper().SetPool(ctx, poolBTC)
@@ -288,7 +299,9 @@ func (s *QuerierSuite) TestQueryNodeAccounts(c *C) {
 	ctx, keeper := setupKeeperForTest(c)
 
 	_, mgr := setupManagerForTest(c)
-	queryServer := NewQueryServerImpl(mgr, s.kb)
+	txConfig, err := params.TxConfig(s.mgr.cdc, nil)
+	c.Assert(err, IsNil)
+	queryServer := NewQueryServerImpl(mgr, txConfig, s.kb)
 
 	nodeAccount := GetRandomValidatorNode(NodeActive)
 	c.Assert(keeper.SetNodeAccount(ctx, nodeAccount), IsNil)
@@ -364,7 +377,9 @@ func (s *QuerierSuite) TestQueryNodeAccounts(c *C) {
 
 func (s *QuerierSuite) TestQueryUpgradeProposals(c *C) {
 	ctx, mgr := setupManagerForTest(c)
-	queryServer := NewQueryServerImpl(mgr, s.kb)
+	txConfig, err := params.TxConfig(s.mgr.cdc, nil)
+	c.Assert(err, IsNil)
+	queryServer := NewQueryServerImpl(mgr, txConfig, s.kb)
 
 	k := mgr.Keeper()
 
@@ -582,7 +597,7 @@ func (s *QuerierSuite) TestQueryTxInVoter(c *C) {
 	c.Assert(err, NotNil)
 	c.Assert(queryTxVoterResp, IsNil)
 
-	observedTxInVote := NewObservedTxVoter(tx.ID, []ObservedTx{NewObservedTx(tx, s.ctx.BlockHeight(), GetRandomPubKey(), s.ctx.BlockHeight())})
+	observedTxInVote := NewObservedTxVoter(tx.ID, []common.ObservedTx{NewObservedTx(tx, s.ctx.BlockHeight(), GetRandomPubKey(), s.ctx.BlockHeight())})
 	s.k.SetObservedTxInVoter(s.ctx, observedTxInVote)
 	queryTxVoterResp, err = s.queryServer.TxVoters(s.ctx, &types.QueryTxVotersRequest{
 		TxId: tx.ID.String(),
@@ -623,7 +638,7 @@ func (s *QuerierSuite) TestQueryTxStages(c *C) {
 	result, err := queryTxStagesResp.MarshalJSONPB(nil)
 	c.Assert(result, NotNil) // Expecting a not-started Observation stage.
 	c.Assert(err, IsNil)     // Expecting no error for an unobserved hash.
-	observedTxInVote := NewObservedTxVoter(tx.ID, []ObservedTx{NewObservedTx(tx, s.ctx.BlockHeight(), GetRandomPubKey(), s.ctx.BlockHeight())})
+	observedTxInVote := NewObservedTxVoter(tx.ID, []common.ObservedTx{NewObservedTx(tx, s.ctx.BlockHeight(), GetRandomPubKey(), s.ctx.BlockHeight())})
 	s.k.SetObservedTxInVoter(s.ctx, observedTxInVote)
 	queryTxStagesResp, err = s.queryServer.TxStages(s.ctx, &types.QueryTxStagesRequest{
 		TxId: tx.ID.String(),
@@ -655,7 +670,7 @@ func (s *QuerierSuite) TestQueryTxStatus(c *C) {
 	result, err := queryTxStatusResp.MarshalJSONPB(nil)
 	c.Assert(result, NotNil) // Expecting a not-started Observation stage.
 	c.Assert(err, IsNil)     // Expecting no error for an unobserved hash.
-	observedTxInVote := NewObservedTxVoter(tx.ID, []ObservedTx{NewObservedTx(tx, s.ctx.BlockHeight(), GetRandomPubKey(), s.ctx.BlockHeight())})
+	observedTxInVote := NewObservedTxVoter(tx.ID, []common.ObservedTx{NewObservedTx(tx, s.ctx.BlockHeight(), GetRandomPubKey(), s.ctx.BlockHeight())})
 	s.k.SetObservedTxInVoter(s.ctx, observedTxInVote)
 	queryTxStatusResp, err = s.queryServer.TxStatus(s.ctx, &types.QueryTxStatusRequest{
 		TxId: tx.ID.String(),
@@ -953,7 +968,9 @@ func (s *QuerierSuite) TestQueryPoolAddresses(c *C) {
 	asgard := NewVault(ctx.BlockHeight()-1, ActiveVault, AsgardVault, pubKey, common.Chains{common.ETHChain}.Strings(), nil)
 	c.Assert(mgr.Keeper().SetVault(ctx, asgard), IsNil)
 
-	queryServer := NewQueryServerImpl(mgr, s.kb)
+	txConfig, err := params.TxConfig(s.mgr.cdc, nil)
+	c.Assert(err, IsNil)
+	queryServer := NewQueryServerImpl(mgr, txConfig, s.kb)
 	queryInboundAddrResp, err := queryServer.InboundAddresses(ctx, &types.QueryInboundAddressesRequest{})
 	c.Assert(err, IsNil)
 	result, err := queryInboundAddrResp.MarshalJSONPB(nil)

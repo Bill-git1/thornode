@@ -27,7 +27,7 @@ func (s *LitecoinSuite) TestConfirmationCountReady(c *C) {
 	pkey := ttypes.GetRandomPubKey()
 	c.Assert(s.client.ConfirmationCountReady(types.TxIn{
 		Chain: common.LTCChain,
-		TxArray: []types.TxInItem{
+		TxArray: []*types.TxInItem{
 			{
 				BlockHeight: 2,
 				Tx:          "24ed2d26fd5d4e0e8fa86633e40faf1bdfc8d1903b1cd02855286312d48818a2",
@@ -46,7 +46,7 @@ func (s *LitecoinSuite) TestConfirmationCountReady(c *C) {
 	s.client.currentBlockHeight.Store(3)
 	c.Assert(s.client.ConfirmationCountReady(types.TxIn{
 		Chain: common.LTCChain,
-		TxArray: []types.TxInItem{
+		TxArray: []*types.TxInItem{
 			{
 				BlockHeight: 2,
 				Tx:          "24ed2d26fd5d4e0e8fa86633e40faf1bdfc8d1903b1cd02855286312d48818a2",
@@ -66,7 +66,7 @@ func (s *LitecoinSuite) TestConfirmationCountReady(c *C) {
 
 	c.Assert(s.client.ConfirmationCountReady(types.TxIn{
 		Chain: common.LTCChain,
-		TxArray: []types.TxInItem{
+		TxArray: []*types.TxInItem{
 			{
 				BlockHeight: 2,
 				Tx:          "24ed2d26fd5d4e0e8fa86633e40faf1bdfc8d1903b1cd02855286312d48818a2",
@@ -98,7 +98,7 @@ func (s *LitecoinSuite) TestGetConfirmationCount(c *C) {
 	// mempool txin , confirmation count should be 0
 	c.Assert(s.client.GetConfirmationCount(types.TxIn{
 		Chain: common.BTCChain,
-		TxArray: []types.TxInItem{
+		TxArray: []*types.TxInItem{
 			{
 				BlockHeight: 2,
 				Tx:          "24ed2d26fd5d4e0e8fa86633e40faf1bdfc8d1903b1cd02855286312d48818a2",
@@ -118,7 +118,7 @@ func (s *LitecoinSuite) TestGetConfirmationCount(c *C) {
 
 	c.Assert(s.client.GetConfirmationCount(types.TxIn{
 		Chain: common.LTCChain,
-		TxArray: []types.TxInItem{
+		TxArray: []*types.TxInItem{
 			{
 				BlockHeight: 2,
 				Tx:          "24ed2d26fd5d4e0e8fa86633e40faf1bdfc8d1903b1cd02855286312d48818a2",
@@ -138,7 +138,7 @@ func (s *LitecoinSuite) TestGetConfirmationCount(c *C) {
 
 	c.Assert(s.client.GetConfirmationCount(types.TxIn{
 		Chain: common.LTCChain,
-		TxArray: []types.TxInItem{
+		TxArray: []*types.TxInItem{
 			{
 				BlockHeight: 2,
 				Tx:          "24ed2d26fd5d4e0e8fa86633e40faf1bdfc8d1903b1cd02855286312d48818a2",
@@ -158,7 +158,7 @@ func (s *LitecoinSuite) TestGetConfirmationCount(c *C) {
 
 	c.Assert(s.client.GetConfirmationCount(types.TxIn{
 		Chain: common.LTCChain,
-		TxArray: []types.TxInItem{
+		TxArray: []*types.TxInItem{
 			{
 				BlockHeight: 2,
 				Tx:          "24ed2d26fd5d4e0e8fa86633e40faf1bdfc8d1903b1cd02855286312d48818a2",
@@ -178,7 +178,7 @@ func (s *LitecoinSuite) TestGetConfirmationCount(c *C) {
 
 	c.Assert(s.client.GetConfirmationCount(types.TxIn{
 		Chain: common.LTCChain,
-		TxArray: []types.TxInItem{
+		TxArray: []*types.TxInItem{
 			{
 				BlockHeight: 2,
 				Tx:          "24ed2d26fd5d4e0e8fa86633e40faf1bdfc8d1903b1cd02855286312d48818a2",

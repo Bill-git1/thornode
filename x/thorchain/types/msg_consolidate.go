@@ -3,6 +3,7 @@ package types
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
@@ -13,7 +14,7 @@ var (
 )
 
 // NewMsgConsolidate is a constructor function for MsgConsolidate
-func NewMsgConsolidate(observedTx ObservedTx, signer cosmos.AccAddress) *MsgConsolidate {
+func NewMsgConsolidate(observedTx common.ObservedTx, signer cosmos.AccAddress) *MsgConsolidate {
 	return &MsgConsolidate{
 		ObservedTx: observedTx,
 		Signer:     signer,

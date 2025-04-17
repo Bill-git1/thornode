@@ -16,7 +16,7 @@ func (MsgOutboundTxSuite) TestMsgOutboundTx(c *C) {
 	inTxID := GetRandomTxHash()
 	eth := GetRandomETHAddress()
 	acc1 := GetRandomBech32Addr()
-	tx := NewObservedTx(common.NewTx(
+	tx := common.NewObservedTx(common.NewTx(
 		txID,
 		eth,
 		GetRandomETHAddress(),
@@ -60,7 +60,7 @@ func (MsgOutboundTxSuite) TestMsgOutboundTx(c *C) {
 	}
 
 	for _, item := range inputs {
-		tx = NewObservedTx(common.NewTx(
+		tx = common.NewObservedTx(common.NewTx(
 			item.txID,
 			item.sender,
 			GetRandomETHAddress(),

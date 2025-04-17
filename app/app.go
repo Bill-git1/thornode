@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -46,7 +47,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
-	"github.com/cosmos/cosmos-sdk/x/auth/posthandler"
 	authsims "github.com/cosmos/cosmos-sdk/x/auth/simulation"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
@@ -77,7 +77,9 @@ import (
 	appparams "gitlab.com/thorchain/thornode/v3/app/params"
 	"gitlab.com/thorchain/thornode/v3/openapi"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/ebifrost"
 	thorchainkeeper "gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
+	thorchainkeeperabci "gitlab.com/thorchain/thornode/v3/x/thorchain/keeper/abci"
 	thorchainkeeperv1 "gitlab.com/thorchain/thornode/v3/x/thorchain/keeper/v1"
 	thorchaintypes "gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 
@@ -145,7 +147,8 @@ type THORChainApp struct {
 	ParamsKeeper          paramskeeper.Keeper
 	ConsensusParamsKeeper consensusparamkeeper.Keeper
 
-	ThorchainKeeper thorchainkeeper.Keeper
+	ThorchainKeeper  thorchainkeeper.Keeper
+	EnshrinedBifrost *ebifrost.EnshrinedBifrost
 
 	DenomKeeper      denomkeeper.Keeper
 	msgServiceRouter *MsgServiceRouter // router for redirecting Msg service messages
@@ -173,6 +176,11 @@ func NewChainApp(
 	wasmOpts []wasmkeeper.Option,
 	baseAppOptions ...func(*baseapp.BaseApp),
 ) *THORChainApp {
+	ebifrostConfig, err := ebifrost.ReadEBifrostConfig(appOpts)
+	if err != nil {
+		panic(fmt.Sprintf("error while reading ebifrost config: %s", err))
+	}
+
 	wasmtypes.MaxWasmSize = WasmMaxSize
 	ec := appparams.MakeEncodingConfig()
 	interfaceRegistry := ec.InterfaceRegistry
@@ -291,7 +299,7 @@ func NewChainApp(
 	if err != nil {
 		panic(err)
 	}
-	thorchain.DefineCustomGetSigners(txSigningOptions)
+	thorchaintypes.DefineCustomGetSigners(txSigningOptions)
 	txConfig, err := appparams.TxConfig(app.appCodec, txmodule.NewBankKeeperCoinMetadataQueryFn(app.BankKeeper))
 	if err != nil {
 		panic(err)
@@ -388,6 +396,19 @@ func NewChainApp(
 	app.msgServiceRouter.AddCustomRoute("cosmos.bank.v1beta1.Msg", thorchain.NewBankSendHandler(thorchain.NewSendHandler(mgrs)))
 
 	thorchainModule := thorchain.NewAppModule(mgrs, telemetryEnabled, testApp)
+
+	app.EnshrinedBifrost = ebifrost.NewEnshrinedBifrost(app.appCodec, logger, ebifrostConfig)
+
+	defaultProposalHandler := baseapp.NewDefaultProposalHandler(bApp.Mempool(), bApp)
+	eBifrostProposalHandler := thorchainkeeperabci.NewProposalHandler(
+		&app.ThorchainKeeper,
+		app.EnshrinedBifrost,
+		defaultProposalHandler.PrepareProposalHandler(),
+		defaultProposalHandler.ProcessProposalHandler(),
+	)
+
+	bApp.SetPrepareProposal(eBifrostProposalHandler.PrepareProposal)
+	bApp.SetProcessProposal(eBifrostProposalHandler.ProcessProposal)
 
 	// NOTE: Any module instantiated in the module manager that is later modified
 	// must be passed by reference here.
@@ -624,14 +645,7 @@ func (app *THORChainApp) FinalizeBlock(req *abci.RequestFinalizeBlock) (*abci.Re
 }
 
 func (app *THORChainApp) setPostHandler() {
-	postHandler, err := posthandler.NewPostHandler(
-		posthandler.HandlerOptions{},
-	)
-	if err != nil {
-		panic(err)
-	}
-
-	app.SetPostHandler(postHandler)
+	app.SetPostHandler(sdk.ChainPostDecorators(ebifrost.NewEnshrineBifrostPostDecorator(app.EnshrinedBifrost)))
 }
 
 // Name returns the name of the App
@@ -828,6 +842,16 @@ func (app *THORChainApp) RegisterTendermintService(clientCtx client.Context) {
 
 func (app *THORChainApp) RegisterNodeService(clientCtx client.Context, cfg config.Config) {
 	nodeservice.RegisterNodeService(clientCtx, app.GRPCQueryRouter(), cfg)
+
+	if err := app.EnshrinedBifrost.Start(); err != nil && !errors.Is(err, ebifrost.ErrAlreadyStarted) {
+		panic(fmt.Errorf("failed to start bifrost service: %w", err))
+	}
+}
+
+func (app *THORChainApp) Close() error {
+	app.EnshrinedBifrost.Stop()
+
+	return app.BaseApp.Close()
 }
 
 // GetMaccPerms returns a copy of the module account permissions

@@ -15,7 +15,7 @@ func (MsgMigrateSuite) TestMsgMigrateSuite(c *C) {
 	txID := GetRandomTxHash()
 	eth := GetRandomETHAddress()
 	acc1 := GetRandomBech32Addr()
-	tx := NewObservedTx(common.NewTx(
+	tx := common.NewObservedTx(common.NewTx(
 		txID,
 		eth,
 		GetRandomETHAddress(),
@@ -59,7 +59,7 @@ func (MsgMigrateSuite) TestMsgMigrateSuite(c *C) {
 	}
 
 	for _, item := range inputs {
-		tx = NewObservedTx(common.NewTx(
+		tx = common.NewObservedTx(common.NewTx(
 			item.txID,
 			item.sender,
 			GetRandomETHAddress(),

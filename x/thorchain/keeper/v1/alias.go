@@ -53,7 +53,7 @@ var (
 	NewNetwork                 = types.NewNetwork
 	NewProtocolOwnedLiquidity  = types.NewProtocolOwnedLiquidity
 	NewRUNEPool                = types.NewRUNEPool
-	NewObservedTx              = types.NewObservedTx
+	NewObservedTx              = common.NewObservedTx
 	NewTssVoter                = types.NewTssVoter
 	NewBanVoter                = types.NewBanVoter
 	NewErrataTxVoter           = types.NewErrataTxVoter
@@ -107,7 +107,7 @@ type (
 	LiquidityProvider        = types.LiquidityProvider
 	Loan                     = types.Loan
 	StreamingSwap            = types.StreamingSwap
-	ObservedTxs              = types.ObservedTxs
+	ObservedTxs              = common.ObservedTxs
 	ObservedTxVoter          = types.ObservedTxVoter
 	BanVoter                 = types.BanVoter
 	ErrataTxVoter            = types.ErrataTxVoter

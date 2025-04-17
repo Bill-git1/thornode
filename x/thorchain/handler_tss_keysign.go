@@ -8,7 +8,7 @@ import (
 	"github.com/blang/semver"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	"github.com/hashicorp/go-metrics"
-	tssMessages "gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/messages"
+	tssMessages "gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"

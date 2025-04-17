@@ -115,6 +115,9 @@ asserts:
   - .txs[0].result.events[14].new_value == "1"
   - .txs[0].result.events[14].type == "wasm"
 ---
+type: create-blocks
+count: 1
+---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
 gas: 100000

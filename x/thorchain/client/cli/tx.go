@@ -456,13 +456,13 @@ func observeTxs(outbound bool) func(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("--from must be set")
 		}
 
-		var observations []types.ObservedTx
+		var observations []common.ObservedTx
 
 		// if txids is set, retrieve highest count observation this node did not broadcast
 		if txids != "" {
 			txidList := strings.Split(txids, ",")
 			for _, txid := range txidList {
-				var observation *types.ObservedTx
+				var observation *common.ObservedTx
 				observation, err = findLackingObservation(txid, nodeAddress, thorNodeAPI)
 				if err != nil {
 					return fmt.Errorf("failed to find lacking observation: %w", err)
@@ -516,7 +516,7 @@ func observeTxs(outbound bool) func(cmd *cobra.Command, args []string) error {
 
 // findLackingObservation retrieves the highest count observation this node did not
 // broadcast for the provided transaction ID.
-func findLackingObservation(txid, address, thornodeAPI string) (*types.ObservedTx, error) {
+func findLackingObservation(txid, address, thornodeAPI string) (*common.ObservedTx, error) {
 	// get tx details from thornode API
 	url := fmt.Sprintf("%s/thorchain/tx/details/%s", thornodeAPI, txid)
 	resp, err := http.Get(url)
@@ -534,7 +534,7 @@ func findLackingObservation(txid, address, thornodeAPI string) (*types.ObservedT
 	shortAddress := address[len(address)-4:]
 
 	// find the highest count observation this node did not broadcast
-	var observation *types.ObservedTx
+	var observation *common.ObservedTx
 	highestCount := 0
 	for _, tx := range txDetails.Txs {
 		// determine if we have already taken part in this observation
@@ -569,8 +569,8 @@ func findLackingObservation(txid, address, thornodeAPI string) (*types.ObservedT
 	return observation, nil
 }
 
-func extractOpenAPIObservedTx(otx openapi.ObservedTx) (*types.ObservedTx, error) {
-	tx := &types.ObservedTx{}
+func extractOpenAPIObservedTx(otx openapi.ObservedTx) (*common.ObservedTx, error) {
+	tx := &common.ObservedTx{}
 	var err error
 
 	tx.Tx.ID, err = common.NewTxID(*otx.Tx.Id)

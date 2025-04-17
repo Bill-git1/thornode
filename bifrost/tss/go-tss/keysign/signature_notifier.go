@@ -16,8 +16,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/messages"
-	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/p2p"
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p"
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 )
 
 var signatureNotifierProtocol protocol.ID = "/p2p/signatureNotifier"
@@ -60,18 +60,18 @@ func (s *SignatureNotifier) handleStream(stream network.Stream) {
 	payload, err := p2p.ReadStreamWithBuffer(stream)
 	if err != nil {
 		logger.Err(err).Msgf("fail to read payload from stream")
-		s.streamMgr.AddStream("UNKNOWN", stream)
+		s.streamMgr.AddStream(p2p.StreamUnknown, stream)
 		return
 	}
 	// we tell the sender we have received the message
-	err = p2p.WriteStreamWithBuffer([]byte("done"), stream)
+	err = p2p.WriteStreamWithBuffer([]byte(p2p.StreamMsgDone), stream)
 	if err != nil {
 		logger.Error().Err(err).Msgf("fail to write the reply to peer: %s", remotePeer)
 	}
 	var msg messages.KeysignSignature
 	if err := proto.Unmarshal(payload, &msg); err != nil {
 		logger.Err(err).Msg("fail to unmarshal join party request")
-		s.streamMgr.AddStream("UNKNOWN", stream)
+		s.streamMgr.AddStream(p2p.StreamUnknown, stream)
 		return
 	}
 	s.streamMgr.AddStream(msg.ID, stream)

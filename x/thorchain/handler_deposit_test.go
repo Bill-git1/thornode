@@ -13,7 +13,6 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
-	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 type HandlerDepositSuite struct{}
@@ -71,7 +70,7 @@ func (s *HandlerDepositSuite) TestHandle(c *C) {
 	voter, err := k.GetObservedTxInVoter(ctx, txID)
 	c.Assert(err, IsNil)
 	c.Assert(voter.Tx.IsEmpty(), Equals, false)
-	c.Assert(voter.Tx.Status, Equals, types.Status_done)
+	c.Assert(voter.Tx.Status, Equals, common.Status_done)
 
 	FundAccount(c, ctx, k, addr, 300*common.One)
 	// do it again, make sure the transaction get rejected

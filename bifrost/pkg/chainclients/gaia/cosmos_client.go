@@ -185,10 +185,16 @@ func NewCosmosClient(
 }
 
 // Start Cosmos chain client
-func (c *CosmosClient) Start(globalTxsQueue chan stypes.TxIn, globalErrataQueue chan stypes.ErrataBlock, globalSolvencyQueue chan stypes.Solvency) {
+func (c *CosmosClient) Start(
+	globalTxsQueue chan stypes.TxIn,
+	globalErrataQueue chan stypes.ErrataBlock,
+	globalSolvencyQueue chan stypes.Solvency,
+	globalNetworkFeeQueue chan common.NetworkFee,
+) {
 	c.globalSolvencyQueue = globalSolvencyQueue
+	c.cosmosScanner.globalNetworkFeeQueue = globalNetworkFeeQueue
 	c.tssKeyManager.Start()
-	c.blockScanner.Start(globalTxsQueue)
+	c.blockScanner.Start(globalTxsQueue, globalNetworkFeeQueue)
 	c.wg.Add(1)
 	go runners.SolvencyCheckRunner(c.GetChain(), c, c.thorchainBridge, c.stopchan, c.wg, constants.ThorchainBlockTime)
 }

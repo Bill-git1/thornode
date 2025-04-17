@@ -37,6 +37,11 @@ func (ms msgServer) ErrataTx(goCtx context.Context, msg *types.MsgErrataTx) (*ty
 	return externalHandler(goCtx, handler, msg)
 }
 
+func (ms msgServer) ErrataTxQuorum(goCtx context.Context, msg *types.MsgErrataTxQuorum) (*types.MsgEmpty, error) {
+	handler := NewErrataTxQuorumHandler(ms.mgr)
+	return externalHandler(goCtx, handler, msg)
+}
+
 func (ms msgServer) Mimir(goCtx context.Context, msg *types.MsgMimir) (*types.MsgEmpty, error) {
 	handler := NewMimirHandler(ms.mgr)
 	return externalHandler(goCtx, handler, msg)
@@ -44,6 +49,11 @@ func (ms msgServer) Mimir(goCtx context.Context, msg *types.MsgMimir) (*types.Ms
 
 func (ms msgServer) NetworkFee(goCtx context.Context, msg *types.MsgNetworkFee) (*types.MsgEmpty, error) {
 	handler := NewNetworkFeeHandler(ms.mgr)
+	return externalHandler(goCtx, handler, msg)
+}
+
+func (ms msgServer) NetworkFeeQuorum(goCtx context.Context, msg *types.MsgNetworkFeeQuorum) (*types.MsgEmpty, error) {
+	handler := NewNetworkFeeQuorumHandler(ms.mgr)
 	return externalHandler(goCtx, handler, msg)
 }
 
@@ -59,6 +69,11 @@ func (ms msgServer) ObservedTxIn(goCtx context.Context, msg *types.MsgObservedTx
 
 func (ms msgServer) ObservedTxOut(goCtx context.Context, msg *types.MsgObservedTxOut) (*types.MsgEmpty, error) {
 	handler := NewObservedTxOutHandler(ms.mgr)
+	return externalHandler(goCtx, handler, msg)
+}
+
+func (ms msgServer) ObservedTxQuorum(goCtx context.Context, msg *types.MsgObservedTxQuorum) (*types.MsgEmpty, error) {
+	handler := NewObservedTxQuorumHandler(ms.mgr)
 	return externalHandler(goCtx, handler, msg)
 }
 
@@ -79,6 +94,11 @@ func (ms msgServer) SetNodeKeys(goCtx context.Context, msg *types.MsgSetNodeKeys
 
 func (ms msgServer) Solvency(goCtx context.Context, msg *types.MsgSolvency) (*types.MsgEmpty, error) {
 	handler := NewSolvencyHandler(ms.mgr)
+	return externalHandler(goCtx, handler, msg)
+}
+
+func (ms msgServer) SolvencyQuorum(goCtx context.Context, msg *types.MsgSolvencyQuorum) (*types.MsgEmpty, error) {
+	handler := NewSolvencyQuorumHandler(ms.mgr)
 	return externalHandler(goCtx, handler, msg)
 }
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"sync"
 
 	sdkmath "cosmossdk.io/math"
@@ -57,6 +56,8 @@ type XrpBlockScanner struct {
 	bridge           thorclient.ThorchainBridge
 	solvencyReporter SolvencyReporter
 	rpcClient        *rpc.Client
+
+	globalNetworkFeeQueue chan common.NetworkFee
 
 	// feeCache contains a rolling window of suggested fees.
 	// Fees are stored at 100x the values on the observed chain due to compensate for the
@@ -172,13 +173,15 @@ func (c *XrpBlockScanner) updateFees(height int64) error {
 		// correct fee. We cannot pass the proper size and rate without a deeper change to
 		// Thornode, as the rate on XRP chain is less than 1 and cannot be represented
 		// by the uint.
-		feeTx, err := c.bridge.PostNetworkFee(height, c.cfg.ChainID, 1, avgFee.Uint64())
-		if err != nil {
-			return err
+		c.globalNetworkFeeQueue <- common.NetworkFee{
+			Chain:           c.cfg.ChainID,
+			Height:          height,
+			TransactionSize: 1,
+			TransactionRate: avgFee.Uint64(),
 		}
+
 		c.lastFee = avgFee
 		c.logger.Info().
-			Str("tx", feeTx.String()).
 			Uint64("fee", avgFee.Uint64()).
 			Int64("height", height).
 			Msg("sent network fee to THORChain")
@@ -187,8 +190,8 @@ func (c *XrpBlockScanner) updateFees(height int64) error {
 	return nil
 }
 
-func (c *XrpBlockScanner) processTxs(height int64, rawTxs []transaction.FlatTransaction) ([]types.TxInItem, error) {
-	var txIn []types.TxInItem
+func (c *XrpBlockScanner) processTxs(height int64, rawTxs []transaction.FlatTransaction) ([]*types.TxInItem, error) {
+	var txIn []*types.TxInItem
 	for _, rawTx := range rawTxs {
 		// tx is nil, may not have been validated
 		if rawTx == nil {
@@ -258,7 +261,7 @@ func (c *XrpBlockScanner) processTxs(height int64, rawTxs []transaction.FlatTran
 		}
 		coins := common.Coins{coin}
 
-		txIn = append(txIn, types.TxInItem{
+		txIn = append(txIn, &types.TxInItem{
 			Tx:          hash,
 			BlockHeight: height,
 			Memo:        memo,
@@ -343,7 +346,6 @@ func (c *XrpBlockScanner) FetchTxs(height, chainHeight int64) (types.TxIn, error
 	}
 
 	txIn := types.TxIn{
-		Count:    strconv.Itoa(len(txs)),
 		Chain:    c.cfg.ChainID,
 		TxArray:  txs,
 		Filtered: false,

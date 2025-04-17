@@ -1,6 +1,7 @@
 package types
 
 import (
+	"gitlab.com/thorchain/thornode/v3/common"
 	cosmos "gitlab.com/thorchain/thornode/v3/common/cosmos"
 	. "gopkg.in/check.v1"
 )
@@ -12,9 +13,9 @@ var _ = Suite(&MsgConsolidateSuite{})
 func (MsgConsolidateSuite) TestMsgConsolidate(c *C) {
 	addr := GetRandomBech32Addr()
 	c.Check(addr.Empty(), Equals, false)
-	tx := ObservedTx{
+	tx := common.ObservedTx{
 		Tx:             GetRandomTx(),
-		Status:         Status_done,
+		Status:         common.Status_done,
 		OutHashes:      nil,
 		BlockHeight:    1,
 		Signers:        []string{addr.String()},

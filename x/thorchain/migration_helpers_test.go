@@ -8,7 +8,6 @@ import (
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
-	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 type MigrationHelpersTestSuite struct{}
@@ -51,7 +50,7 @@ func (MigrationHelpersTestSuite) TestUnsafeAddRefundOutbound(c *C) {
 	voter := NewObservedTxVoter(inTxID, ObservedTxs{
 		ObservedTx{
 			Tx:             tx,
-			Status:         types.Status_incomplete,
+			Status:         common.Status_incomplete,
 			BlockHeight:    1,
 			Signers:        []string{w.activeNodeAccount.NodeAddress.String(), acc1.NodeAddress.String()},
 			KeysignMs:      0,

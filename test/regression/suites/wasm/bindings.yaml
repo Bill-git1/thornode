@@ -134,6 +134,9 @@ endpoint: http://localhost:1317/cosmos/auth/v1beta1/module_accounts/bond
 asserts:
   - .account.base_account.address == "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff"
 ---
+type: create-blocks
+count: 1
+---
 # Check that the subMsgs can't sent to blocked module accounts
 type: tx-execute-contract
 contract: "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"

@@ -484,7 +484,6 @@ func (s *HandlerErrataTxSuite) TestErrataHandlerDifferentError(c *C) {
 func (*HandlerErrataTxSuite) TestProcessErrataOutboundTx(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	helper := NewErrataTxHandlerTestHelper(mgr.Keeper())
-	handler := NewErrataTxHandler(mgr)
 	node1 := GetRandomValidatorNode(NodeActive)
 	node2 := GetRandomValidatorNode(NodeActive)
 	node3 := GetRandomValidatorNode(NodeActive)
@@ -494,10 +493,14 @@ func (*HandlerErrataTxSuite) TestProcessErrataOutboundTx(c *C) {
 
 	// fail to get observed tx out voter
 	txID := GetRandomTxHash()
-	msg := NewMsgErrataTx(txID, common.LTCChain, node1.NodeAddress)
-	result, err := handler.processErrataOutboundTx(ctx, *msg)
+	er := &common.ErrataTx{
+		Id:    txID,
+		Chain: common.LTCChain,
+	}
+	k := mgr.Keeper()
+	eventMgr := mgr.EventMgr()
+	err := processErrataOutboundTx(ctx, k, eventMgr, er)
 	c.Assert(err, NotNil)
-	c.Assert(result, IsNil)
 
 	observedPubKey := GetRandomPubKey()
 	tx := common.NewTx(txID, GetRandomLTCAddress(), GetRandomLTCAddress(),
@@ -507,17 +510,16 @@ func (*HandlerErrataTxSuite) TestProcessErrataOutboundTx(c *C) {
 		common.Gas{
 			common.NewCoin(common.LTCAsset, cosmos.NewUint(1000)),
 		}, "swap:LTC.LTC")
-	observedTx := []ObservedTx{
-		NewObservedTx(
+	observedTx := []common.ObservedTx{
+		common.NewObservedTx(
 			tx,
 			1024, observedPubKey, 1024),
 	}
 	txOutVoter := NewObservedTxVoter(txID, observedTx)
 	helper.Keeper.SetObservedTxOutVoter(ctx, txOutVoter)
 	// Tx is empty , it should fail
-	result, err = handler.processErrataOutboundTx(ctx, *msg)
+	err = processErrataOutboundTx(ctx, k, eventMgr, er)
 	c.Assert(err, NotNil)
-	c.Assert(result, IsNil)
 	txOutVoter.Add(observedTx[0], node2.NodeAddress)
 	txOutVoter.Add(observedTx[0], node3.NodeAddress)
 
@@ -525,22 +527,20 @@ func (*HandlerErrataTxSuite) TestProcessErrataOutboundTx(c *C) {
 	c.Assert(finalisedTx.IsEmpty(), Equals, false)
 	// voter.Tx must be explicitly updated in the handler,
 	// for instance on consensus.
-	txOutVoter.Tx = finalisedTx
+	txOutVoter.Tx = *finalisedTx
 
 	helper.Keeper.SetObservedTxOutVoter(ctx, txOutVoter)
 
 	// not outbound tx , it should fail
-	result, err = handler.processErrataOutboundTx(ctx, *msg)
+	err = processErrataOutboundTx(ctx, k, eventMgr, er)
 	c.Assert(err, NotNil)
-	c.Assert(result, IsNil)
 
 	// fail to get vault
 	txInID := GetRandomTxHash()
 	txOutVoter.Tx.Tx.Memo = "OUT:" + txInID.String()
 	helper.Keeper.SetObservedTxOutVoter(ctx, txOutVoter)
-	result, err = handler.processErrataOutboundTx(ctx, *msg)
+	err = processErrataOutboundTx(ctx, k, eventMgr, er)
 	c.Assert(err, NotNil)
-	c.Assert(result, IsNil)
 
 	// Active Asgard vault, TxInVoter not exist
 	asgardVault := NewVault(1, types.VaultStatus_ActiveVault, AsgardVault, observedPubKey, []string{
@@ -549,16 +549,14 @@ func (*HandlerErrataTxSuite) TestProcessErrataOutboundTx(c *C) {
 		common.ETHChain.String(),
 	}, []ChainContract{})
 	c.Assert(helper.Keeper.SetVault(ctx, asgardVault), IsNil)
-	result, err = handler.processErrataOutboundTx(ctx, *msg)
+	err = processErrataOutboundTx(ctx, k, eventMgr, er)
 	c.Assert(err, IsNil)
-	c.Assert(result, NotNil)
 
 	// inactive vault , cause it to compensate asgard with reserve
 	asgardVault.UpdateStatus(types.VaultStatus_InactiveVault, 1024)
 	c.Assert(helper.Keeper.SetVault(ctx, asgardVault), IsNil)
-	result, err = handler.processErrataOutboundTx(ctx, *msg)
+	err = processErrataOutboundTx(ctx, k, eventMgr, er)
 	c.Assert(err, IsNil)
-	c.Assert(result, NotNil)
 	// vault should be set back to retiring
 	v, err := helper.Keeper.GetVault(ctx, asgardVault.PubKey)
 	c.Assert(err, IsNil)
@@ -571,9 +569,8 @@ func (*HandlerErrataTxSuite) TestProcessErrataOutboundTx(c *C) {
 	pool.BalanceRune = cosmos.NewUint(1024 * common.One)
 	pool.Status = PoolAvailable
 	c.Assert(helper.Keeper.SetPool(ctx, pool), IsNil)
-	result, err = handler.processErrataOutboundTx(ctx, *msg)
+	err = processErrataOutboundTx(ctx, k, eventMgr, er)
 	c.Assert(err, IsNil)
-	c.Assert(result, NotNil)
 
 	txInbound := common.NewTx(txInID, GetRandomLTCAddress(), GetRandomLTCAddress(),
 		common.Coins{
@@ -582,7 +579,7 @@ func (*HandlerErrataTxSuite) TestProcessErrataOutboundTx(c *C) {
 		common.Gas{
 			common.NewCoin(common.LTCAsset, cosmos.NewUint(1000)),
 		}, "swap:LTC.LTC")
-	observedTxInbound := []ObservedTx{
+	observedTxInbound := []common.ObservedTx{
 		NewObservedTx(
 			txInbound,
 			1024, observedPubKey, 1024),
@@ -607,9 +604,8 @@ func (*HandlerErrataTxSuite) TestProcessErrataOutboundTx(c *C) {
 	// clear events
 	ctx = ctx.WithEventManager(cosmos.NewEventManager())
 
-	result, err = handler.processErrataOutboundTx(ctx, *msg)
+	err = processErrataOutboundTx(ctx, k, eventMgr, er)
 	c.Assert(err, IsNil)
-	c.Assert(result, NotNil)
 	txOut, err := helper.Keeper.GetTxOut(ctx, ctx.BlockHeight())
 	c.Assert(err, IsNil)
 
@@ -628,6 +624,8 @@ func (*HandlerErrataTxSuite) TestProcessErrortaOutboundTx_EnsureMigrateTxWillSet
 	ctx, mgr := setupManagerForTest(c)
 	helper := NewErrataTxHandlerTestHelper(mgr.Keeper())
 	mgr.K = helper
+	k := mgr.Keeper()
+	eventMgr := mgr.EventMgr()
 	handler := NewErrataTxHandler(mgr)
 	node1 := GetRandomValidatorNode(NodeActive)
 	node2 := GetRandomValidatorNode(NodeActive)
@@ -656,6 +654,10 @@ func (*HandlerErrataTxSuite) TestProcessErrortaOutboundTx_EnsureMigrateTxWillSet
 
 	txID1 := GetRandomTxHash()
 	internalMigrationTx := NewMsgErrataTx(txID1, common.LTCChain, node1.NodeAddress)
+	internalErrata := &common.ErrataTx{
+		Id:    txID1,
+		Chain: common.LTCChain,
+	}
 
 	migrateTx := common.NewTx(txID1,
 		GetRandomLTCAddress(),
@@ -668,8 +670,8 @@ func (*HandlerErrataTxSuite) TestProcessErrortaOutboundTx_EnsureMigrateTxWillSet
 		}, "migrate:111")
 
 	// observed outbound tx in the retired vault
-	observedTx := []ObservedTx{
-		NewObservedTx(
+	observedTx := []common.ObservedTx{
+		common.NewObservedTx(
 			migrateTx,
 			1024, retiredPubKey, 1024),
 	}
@@ -681,13 +683,14 @@ func (*HandlerErrataTxSuite) TestProcessErrortaOutboundTx_EnsureMigrateTxWillSet
 	c.Assert(finalisedTx.IsEmpty(), Equals, false)
 	// voter.Tx must be explicitly updated in the handler,
 	// for instance on consensus.
-	txOutVoter.Tx = finalisedTx
+	txOutVoter.Tx = *finalisedTx
 
 	helper.Keeper.SetObservedTxOutVoter(ctx, txOutVoter)
 
 	// (identical) observed inbound tx in the same retired vault
-	observedInboundTx := []ObservedTx{
-		NewObservedTx(
+	observedInboundTx := []common.ObservedTx{
+		common.NewObservedTx(
+
 			migrateTx,
 			1024, retiredPubKey, 1024),
 	}
@@ -699,11 +702,10 @@ func (*HandlerErrataTxSuite) TestProcessErrortaOutboundTx_EnsureMigrateTxWillSet
 	c.Assert(finalisedTx.IsEmpty(), Equals, false)
 	// voter.Tx must be explicitly updated in the handler,
 	// for instance on consensus.
-	txInVoter.Tx = finalisedTx
+	txInVoter.Tx = *finalisedTx
 	helper.Keeper.SetObservedTxInVoter(ctx, txInVoter)
 
-	result, err := handler.processErrataOutboundTx(ctx, *internalMigrationTx)
-	c.Assert(result, NotNil)
+	err := processErrataOutboundTx(ctx, k, eventMgr, internalErrata)
 	c.Assert(err, IsNil)
 	v, err := helper.Keeper.GetVault(ctx, retiredPubKey)
 	c.Assert(err, IsNil)
@@ -718,7 +720,7 @@ func (*HandlerErrataTxSuite) TestProcessErrortaOutboundTx_EnsureMigrateTxWillSet
 	errataVoter.Sign(node2.NodeAddress)
 	errataVoter.Sign(node3.NodeAddress)
 	helper.Keeper.SetErrataTxVoter(ctx, errataVoter)
-	result, err = handler.handle(ctx, *internalMigrationTx)
+	result, err := handler.handle(ctx, *internalMigrationTx)
 	c.Assert(result, NotNil)
 	c.Assert(err, IsNil)
 	v, err = helper.Keeper.GetVault(ctx, retiredPubKey)
@@ -779,7 +781,7 @@ func (s *HandlerErrataTxSuite) TestObservingSlashing(c *C) {
 	voter := ObservedTxVoter{
 		TxID:            observedTx.Tx.ID,
 		Tx:              observedTx,
-		Txs:             ObservedTxs{observedTx},
+		Txs:             common.ObservedTxs{observedTx},
 		Height:          observedTx.BlockHeight,
 		FinalisedHeight: observedTx.BlockHeight,
 	}

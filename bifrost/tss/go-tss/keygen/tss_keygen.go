@@ -13,12 +13,12 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p"
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/storage"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/blame"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/common"
-	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/conversion"
-	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/messages"
-	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/p2p"
-	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/storage"
 )
 
 type TssKeyGen struct {

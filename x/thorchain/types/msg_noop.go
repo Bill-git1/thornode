@@ -3,6 +3,7 @@ package types
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
@@ -13,7 +14,7 @@ var (
 )
 
 // NewMsgNoOp is a constructor function for MsgNoOp
-func NewMsgNoOp(observedTx ObservedTx, signer cosmos.AccAddress, action string) *MsgNoOp {
+func NewMsgNoOp(observedTx common.ObservedTx, signer cosmos.AccAddress, action string) *MsgNoOp {
 	return &MsgNoOp{
 		ObservedTx: observedTx,
 		Signer:     signer,

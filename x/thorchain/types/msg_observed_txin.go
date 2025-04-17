@@ -8,6 +8,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"gitlab.com/thorchain/thornode/v3/api/types"
+	"gitlab.com/thorchain/thornode/v3/common"
 	cosmos "gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
@@ -18,7 +19,7 @@ var (
 )
 
 // NewMsgObservedTxIn is a constructor function for MsgObservedTxIn
-func NewMsgObservedTxIn(txs ObservedTxs, signer cosmos.AccAddress) *MsgObservedTxIn {
+func NewMsgObservedTxIn(txs common.ObservedTxs, signer cosmos.AccAddress) *MsgObservedTxIn {
 	return &MsgObservedTxIn{
 		Txs:    txs,
 		Signer: signer,
@@ -53,7 +54,7 @@ func (m *MsgObservedTxIn) ValidateBasic() error {
 		if len(tx.OutHashes) > 0 {
 			return cosmos.ErrUnknownRequest("out hashes must be empty")
 		}
-		if tx.Status != Status_incomplete {
+		if tx.Status != common.Status_incomplete {
 			return cosmos.ErrUnknownRequest("status must be incomplete")
 		}
 	}

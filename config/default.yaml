@@ -32,8 +32,16 @@ bifrost:
     chain_id: thorchain
     chain_host: localhost:1317
     chain_rpc: ""
+    chain_ebifrost: localhost:50051
     chain_home_folder: ""
     signer_name: ""
+  attestation_gossip:
+    observe_reconcile_interval: 15s
+    late_observe_timeout: 5m
+    non_quorum_timeout: 10h
+    min_time_between_attestations: 30s
+    ask_peers: 3
+    ask_peers_delay: 5s
   signer:
     backup_keyshares: true
     signer_db_path: /var/data/bifrost/signer_db
@@ -403,6 +411,9 @@ thor:
     grpc:
       enable: false
       address: 0.0.0.0:9090
+    ebifrost:
+      enable: true
+      address: 127.0.0.1:50051
     state_sync:
       snapshot_interval: 0
       snapshot_keep_recent: 2

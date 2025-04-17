@@ -14,7 +14,7 @@ var (
 )
 
 // NewMsgOutboundTx is a constructor function for MsgOutboundTx
-func NewMsgOutboundTx(tx ObservedTx, txID common.TxID, signer cosmos.AccAddress) *MsgOutboundTx {
+func NewMsgOutboundTx(tx common.ObservedTx, txID common.TxID, signer cosmos.AccAddress) *MsgOutboundTx {
 	return &MsgOutboundTx{
 		Tx:     tx,
 		InTxID: txID,

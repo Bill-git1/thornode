@@ -466,7 +466,7 @@ func (HandlerSuite) TestGetMsgSwapFromMemo(c *C) {
 	c.Assert(ok, Equals, true)
 	c.Assert(err, IsNil)
 
-	txin := types.NewObservedTx(
+	txin := common.NewObservedTx(
 		common.Tx{
 			ID:    GetRandomTxHash(),
 			Chain: common.ETHChain,
@@ -561,7 +561,7 @@ func (HandlerSuite) TestGetMsgLiquidityFromMemo(c *C) {
 	runeAsset := common.RuneAsset()
 	c.Assert(err, IsNil)
 
-	txin := types.NewObservedTx(
+	txin := common.NewObservedTx(
 		common.Tx{
 			ID:    GetRandomTxHash(),
 			Chain: common.ETHChain,
@@ -634,7 +634,7 @@ func (HandlerSuite) TestGetMsgLiquidityFromMemo(c *C) {
 func (HandlerSuite) TestMsgLeaveFromMemo(c *C) {
 	w := getHandlerTestWrapper(c, 1, true, false)
 	addr := types.GetRandomBech32Addr()
-	txin := types.NewObservedTx(
+	txin := common.NewObservedTx(
 		common.Tx{
 			ID:          GetRandomTxHash(),
 			Chain:       common.ETHChain,
@@ -660,7 +660,7 @@ func (HandlerSuite) TestMsgLeaveFromMemo(c *C) {
 func (s *HandlerSuite) TestReserveContributor(c *C) {
 	w := getHandlerTestWrapper(c, 1, true, false)
 	addr := types.GetRandomBech32Addr()
-	txin := types.NewObservedTx(
+	txin := common.NewObservedTx(
 		common.Tx{
 			ID:          GetRandomTxHash(),
 			Chain:       common.ETHChain,

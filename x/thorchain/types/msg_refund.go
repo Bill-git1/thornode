@@ -14,7 +14,7 @@ var (
 )
 
 // NewMsgRefundTx is a constructor function for MsgOutboundTx
-func NewMsgRefundTx(tx ObservedTx, txID common.TxID, signer cosmos.AccAddress) *MsgRefundTx {
+func NewMsgRefundTx(tx common.ObservedTx, txID common.TxID, signer cosmos.AccAddress) *MsgRefundTx {
 	return &MsgRefundTx{
 		Tx:     tx,
 		InTxID: txID,

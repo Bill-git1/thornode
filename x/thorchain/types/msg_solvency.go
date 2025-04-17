@@ -1,7 +1,6 @@
 package types
 
 import (
-	"crypto/sha256"
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -21,10 +20,15 @@ var (
 
 // NewMsgSolvency create a new MsgSolvency
 func NewMsgSolvency(chain common.Chain, pubKey common.PubKey, coins common.Coins, height int64, signer cosmos.AccAddress) (*MsgSolvency, error) {
-	input := fmt.Sprintf("%s|%s|%s|%d", chain, pubKey, coins, height)
-	id, err := common.NewTxID(fmt.Sprintf("%X", sha256.Sum256([]byte(input))))
+	s := &common.Solvency{
+		Chain:  chain,
+		PubKey: pubKey,
+		Coins:  coins,
+		Height: height,
+	}
+	id, err := s.Hash()
 	if err != nil {
-		return nil, fmt.Errorf("fail to create msg solvency hash")
+		return nil, fmt.Errorf("fail to create msg solvency hash: %w", err)
 	}
 	return &MsgSolvency{
 		Id:     id,
@@ -42,6 +46,19 @@ func NewMsgSolvency(chain common.Chain, pubKey common.PubKey, coins common.Coins
 // No versioning is used there.
 func (m *MsgSolvency) ValidateBasic() error {
 	if m.Id.IsEmpty() {
+		return cosmos.ErrUnknownRequest("invalid id")
+	}
+	s := &common.Solvency{
+		Chain:  m.Chain,
+		PubKey: m.PubKey,
+		Coins:  m.Coins,
+		Height: m.Height,
+	}
+	id, err := s.Hash()
+	if err != nil {
+		return fmt.Errorf("fail to create msg solvency hash: %w", err)
+	}
+	if !m.Id.Equals(id) {
 		return cosmos.ErrUnknownRequest("invalid id")
 	}
 	if m.Chain.IsEmpty() {

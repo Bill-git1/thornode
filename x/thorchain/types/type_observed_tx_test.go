@@ -35,8 +35,8 @@ func (s TypeObservedTxSuite) TestVoter(c *C) {
 	observePoolAddr := GetRandomPubKey()
 	voter := NewObservedTxVoter(txID, nil)
 
-	obTx1 := NewObservedTx(tx1, 0, observePoolAddr, 1)
-	obTx2 := NewObservedTx(tx2, 0, observePoolAddr, 1)
+	obTx1 := common.NewObservedTx(tx1, 0, observePoolAddr, 1)
+	obTx2 := common.NewObservedTx(tx2, 0, observePoolAddr, 1)
 
 	c.Check(len(obTx1.String()) > 0, Equals, true)
 
@@ -60,8 +60,8 @@ func (s TypeObservedTxSuite) TestVoter(c *C) {
 	c.Assert(voter.Txs[0].Signers, HasLen, 2)
 	c.Assert(voter.Txs[1].Signers, HasLen, 2)
 
-	obTx1Finalised := NewObservedTx(tx1, 1, observePoolAddr, 1)
-	obTx2Finalised := NewObservedTx(tx2, 1, observePoolAddr, 1)
+	obTx1Finalised := common.NewObservedTx(tx1, 1, observePoolAddr, 1)
+	obTx2Finalised := common.NewObservedTx(tx2, 1, observePoolAddr, 1)
 
 	voter.Add(obTx1Finalised, acc1)
 	c.Assert(voter.Txs, HasLen, 3)
@@ -134,20 +134,20 @@ func (s TypeObservedTxSuite) TestVoter(c *C) {
 	c.Check(tx.Tx.Memo, Equals, "hello")
 	txFinalised := voter.GetTx(trusts3)
 	c.Check(txFinalised.Tx.Memo, Equals, "hello")
-	voter.Tx = ObservedTx{} // reset the final observed tx
+	voter.Tx = common.ObservedTx{} // reset the final observed tx
 	tx = voter.GetTx(trusts4)
 	c.Check(tx.IsEmpty(), Equals, true)
 	c.Assert(voter.HasConsensus(trusts3), Equals, true)
-	voter.Tx = ObservedTx{} // reset the final observed tx
+	voter.Tx = common.ObservedTx{} // reset the final observed tx
 	c.Check(voter.HasConsensus(trusts4), Equals, false)
 	c.Check(voter.Key().Equals(txID), Equals, true)
 	c.Check(voter.String() == txID.String(), Equals, true)
 
-	voter.Tx = ObservedTx{}
+	voter.Tx = common.ObservedTx{}
 	txFinalised = voter.GetTx(trusts4)
 	c.Check(txFinalised.IsEmpty(), Equals, true)
 	c.Check(voter.HasFinalised(trusts3), Equals, true)
-	voter.Tx = ObservedTx{}
+	voter.Tx = common.ObservedTx{}
 	c.Check(voter.HasFinalised(trusts4), Equals, false)
 	c.Check(voter.Key().Equals(txID), Equals, true)
 	c.Check(voter.String() == txID.String(), Equals, true)
@@ -210,7 +210,7 @@ func (s TypeObservedTxSuite) TestVoter(c *C) {
 			Gas:         common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))},
 			Memo:        item.memo,
 		}
-		txIn := NewObservedTx(tx, item.blockHeight, item.observePoolAddr, item.blockHeight)
+		txIn := common.NewObservedTx(tx, item.blockHeight, item.observePoolAddr, item.blockHeight)
 		c.Assert(txIn.Valid(), NotNil)
 	}
 }
@@ -226,7 +226,7 @@ func (TypeObservedTxSuite) TestSetTxToComplete(c *C) {
 	tx1.Memo = "whatever"
 	voter := NewObservedTxVoter(tx1.ID, nil)
 	observePoolAddr := GetRandomPubKey()
-	observedTx := NewObservedTx(tx1, 1024, observePoolAddr, 1028)
+	observedTx := common.NewObservedTx(tx1, 1024, observePoolAddr, 1028)
 	voter.Add(observedTx, activeNodes[0].NodeAddress)
 	voter.Add(observedTx, activeNodes[1].NodeAddress)
 	voter.Add(observedTx, activeNodes[2].NodeAddress)
@@ -237,9 +237,9 @@ func (TypeObservedTxSuite) TestSetTxToComplete(c *C) {
 	c.Assert(voter.Tx.IsEmpty(), Equals, true)
 	// voter.Tx must be explicitly updated in the handler,
 	// for instance on consensus.
-	voter.Tx = consensusTx
+	voter.Tx = *consensusTx
 
-	observedTx = NewObservedTx(tx1, 1024, observePoolAddr, 1024)
+	observedTx = common.NewObservedTx(tx1, 1024, observePoolAddr, 1024)
 	voter.Add(observedTx, activeNodes[0].NodeAddress)
 	voter.Add(observedTx, activeNodes[1].NodeAddress)
 	voter.Add(observedTx, activeNodes[2].NodeAddress)
@@ -249,7 +249,7 @@ func (TypeObservedTxSuite) TestSetTxToComplete(c *C) {
 	c.Assert(finalisedTx.IsEmpty(), Equals, false)
 	// voter.Tx must be explicitly updated in the handler,
 	// for instance on consensus.
-	voter.Tx = finalisedTx
+	voter.Tx = *finalisedTx
 
 	tx := GetRandomTx()
 	addr, err := observePoolAddr.GetAddress(common.ETHChain)
@@ -268,11 +268,11 @@ func (TypeObservedTxSuite) TestSetTxToComplete(c *C) {
 	// add it again should return true, but without any real action
 	c.Assert(voter.AddOutTx(tx), Equals, true)
 	c.Assert(voter.AddOutTx(GetRandomTx()), Equals, false)
-	c.Assert(voter.Tx.Status, Equals, Status_done)
+	c.Assert(voter.Tx.Status, Equals, common.Status_done)
 	c.Assert(voter.Tx.OutHashes[0], Equals, tx.ID.String())
 
 	c.Assert(voter.IsDone(), Equals, true)
-	voter.Tx = voter.GetTx(activeNodes)
+	voter.Tx = *voter.GetTx(activeNodes)
 	c.Assert(voter.GetTx(activeNodes).Equals(voter.Tx), Equals, true)
 }
 
@@ -288,7 +288,7 @@ func (TypeObservedTxSuite) TestAddOutTx(c *C) {
 	voter := NewObservedTxVoter(tx1.ID, nil)
 	observePoolAddr := GetRandomPubKey()
 
-	observedTx := NewObservedTx(tx1, 1024, observePoolAddr, 1024)
+	observedTx := common.NewObservedTx(tx1, 1024, observePoolAddr, 1024)
 	voter.Add(observedTx, activeNodes[0].NodeAddress)
 	voter.Add(observedTx, activeNodes[1].NodeAddress)
 	voter.Add(observedTx, activeNodes[2].NodeAddress)
@@ -299,7 +299,7 @@ func (TypeObservedTxSuite) TestAddOutTx(c *C) {
 	c.Assert(voter.Tx.IsEmpty(), Equals, true)
 	// voter.Tx must be explicitly updated in the handler,
 	// for instance on consensus.
-	voter.Tx = finalisedTx
+	voter.Tx = *finalisedTx
 
 	tx := common.NewTx(
 		GetRandomTxHash(),
@@ -334,12 +334,12 @@ func (TypeObservedTxSuite) TestAddOutTx(c *C) {
 	c.Assert(voter.AddOutTx(tx), Equals, true)
 	c.Assert(voter.AddOutTx(GetRandomTx()), Equals, false)
 	if !voter.Tx.IsEmpty() {
-		c.Assert(voter.Tx.Status, Equals, Status_done)
+		c.Assert(voter.Tx.Status, Equals, common.Status_done)
 		c.Assert(voter.Tx.OutHashes[0], Equals, tx.ID.String())
 	}
 
 	c.Assert(voter.IsDone(), Equals, true)
-	voter.Tx = voter.GetTx(activeNodes)
+	voter.Tx = *voter.GetTx(activeNodes)
 	c.Assert(voter.GetTx(activeNodes).Equals(voter.Tx), Equals, true)
 }
 
@@ -366,43 +366,43 @@ func (TypeObservedTxSuite) TestObservedTxEquals(c *C) {
 	observePoolAddr := GetRandomPubKey()
 	observePoolAddr1 := GetRandomPubKey()
 	inputs := []struct {
-		tx    ObservedTx
-		tx1   ObservedTx
+		tx    common.ObservedTx
+		tx1   common.ObservedTx
 		equal bool
 	}{
 		{
-			tx:    NewObservedTx(common.Tx{FromAddress: eth, ToAddress: GetRandomETHAddress(), Coins: coins1, Memo: "memo", Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
-			tx1:   NewObservedTx(common.Tx{FromAddress: eth, ToAddress: GetRandomETHAddress(), Coins: coins1, Memo: "memo1", Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
+			tx:    common.NewObservedTx(common.Tx{FromAddress: eth, ToAddress: GetRandomETHAddress(), Coins: coins1, Memo: "memo", Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
+			tx1:   common.NewObservedTx(common.Tx{FromAddress: eth, ToAddress: GetRandomETHAddress(), Coins: coins1, Memo: "memo1", Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
 			equal: false,
 		},
 		{
-			tx:    NewObservedTx(common.Tx{FromAddress: eth, ToAddress: GetRandomETHAddress(), Coins: coins1, Memo: "memo", Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
-			tx1:   NewObservedTx(common.Tx{FromAddress: eth1, ToAddress: GetRandomETHAddress(), Coins: coins1, Memo: "memo", Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
+			tx:    common.NewObservedTx(common.Tx{FromAddress: eth, ToAddress: GetRandomETHAddress(), Coins: coins1, Memo: "memo", Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
+			tx1:   common.NewObservedTx(common.Tx{FromAddress: eth1, ToAddress: GetRandomETHAddress(), Coins: coins1, Memo: "memo", Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
 			equal: false,
 		},
 		{
-			tx:    NewObservedTx(common.Tx{Coins: coins2, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
-			tx1:   NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
+			tx:    common.NewObservedTx(common.Tx{Coins: coins2, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
+			tx1:   common.NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
 			equal: false,
 		},
 		{
-			tx:    NewObservedTx(common.Tx{Coins: coins3, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
-			tx1:   NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
+			tx:    common.NewObservedTx(common.Tx{Coins: coins3, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
+			tx1:   common.NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
 			equal: false,
 		},
 		{
-			tx:    NewObservedTx(common.Tx{Coins: coins4, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
-			tx1:   NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
+			tx:    common.NewObservedTx(common.Tx{Coins: coins4, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
+			tx1:   common.NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
 			equal: false,
 		},
 		{
-			tx:    NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
-			tx1:   NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr1, 0),
+			tx:    common.NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
+			tx1:   common.NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr1, 0),
 			equal: false,
 		},
 		{
-			tx:    NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
-			tx1:   NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
+			tx:    common.NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
+			tx1:   common.NewObservedTx(common.Tx{Coins: coins1, Memo: "memo", FromAddress: eth, ToAddress: GetRandomETHAddress(), Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0),
 			equal: false,
 		},
 	}
@@ -412,8 +412,8 @@ func (TypeObservedTxSuite) TestObservedTxEquals(c *C) {
 
 	// test aggregator scenarios
 	addr := GetRandomETHAddress()
-	tx1 := NewObservedTx(common.Tx{FromAddress: eth, ToAddress: addr, Coins: coins1, Memo: "memo", Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0)
-	tx2 := NewObservedTx(common.Tx{FromAddress: eth, ToAddress: addr, Coins: coins1, Memo: "memo", Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0)
+	tx1 := common.NewObservedTx(common.Tx{FromAddress: eth, ToAddress: addr, Coins: coins1, Memo: "memo", Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0)
+	tx2 := common.NewObservedTx(common.Tx{FromAddress: eth, ToAddress: addr, Coins: coins1, Memo: "memo", Gas: common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One))}}, 0, observePoolAddr, 0)
 	c.Assert(tx1.Equals(tx2), Equals, true)
 
 	tx1.Aggregator = GetRandomETHAddress().String()
@@ -444,21 +444,21 @@ func (TypeObservedTxSuite) TestObservedTxEquals(c *C) {
 
 func (TypeObservedTxSuite) TestObservedTxVote(c *C) {
 	tx := GetRandomTx()
-	voter := NewObservedTxVoter("", []ObservedTx{NewObservedTx(tx, 1, GetRandomPubKey(), 1)})
+	voter := NewObservedTxVoter("", []common.ObservedTx{common.NewObservedTx(tx, 1, GetRandomPubKey(), 1)})
 	c.Check(voter.Valid(), NotNil)
 
-	voter1 := NewObservedTxVoter(GetRandomTxHash(), []ObservedTx{NewObservedTx(tx, 0, "", 0)})
+	voter1 := NewObservedTxVoter(GetRandomTxHash(), []common.ObservedTx{common.NewObservedTx(tx, 0, "", 0)})
 	c.Check(voter1.Valid(), NotNil)
 
-	voter2 := NewObservedTxVoter(GetRandomTxHash(), []ObservedTx{NewObservedTx(tx, 1024, GetRandomPubKey(), 1024)})
+	voter2 := NewObservedTxVoter(GetRandomTxHash(), []common.ObservedTx{common.NewObservedTx(tx, 1024, GetRandomPubKey(), 1024)})
 	c.Check(voter2.Valid(), IsNil)
 
-	observedTx := NewObservedTx(GetRandomTx(), 1024, GetRandomPubKey(), 1024)
+	observedTx := common.NewObservedTx(GetRandomTx(), 1024, GetRandomPubKey(), 1024)
 	addr := GetRandomBech32Addr()
 	c.Check(observedTx.Sign(addr), Equals, true)
 	c.Check(observedTx.Sign(addr), Equals, false)
 
-	observedTx1 := NewObservedTx(observedTx.Tx, 1024, GetRandomPubKey(), 1024)
+	observedTx1 := common.NewObservedTx(observedTx.Tx, 1024, GetRandomPubKey(), 1024)
 	c.Assert(observedTx.Equals(observedTx1), Equals, false)
 	txID := GetRandomTxHash()
 	observedTx1.SetDone(txID, 2)
@@ -488,8 +488,8 @@ func (TypeObservedTxSuite) TestObservedTxGetConsensus(c *C) {
 	observePoolAddr := GetRandomPubKey()
 
 	voter := NewObservedTxVoter(txID, nil)
-	obTx1 := NewObservedTx(tx1, 1, observePoolAddr, 1)
-	obTx2 := NewObservedTx(tx1, 1, observePoolAddr, 2)
+	obTx1 := common.NewObservedTx(tx1, 1, observePoolAddr, 1)
+	obTx2 := common.NewObservedTx(tx1, 1, observePoolAddr, 2)
 
 	c.Check(len(obTx1.String()) > 0, Equals, true)
 
@@ -513,7 +513,7 @@ func (TypeObservedTxSuite) TestObservedTxGetConsensus(c *C) {
 	c.Assert(voter.Txs[0].Signers, HasLen, 2)
 	c.Assert(voter.Txs[1].Signers, HasLen, 2)
 
-	obTx1Finalised := NewObservedTx(tx1, 2, observePoolAddr, 2)
+	obTx1Finalised := common.NewObservedTx(tx1, 2, observePoolAddr, 2)
 
 	voter.Add(obTx1Finalised, acc2)
 	c.Assert(voter.Txs, HasLen, 3)
@@ -616,10 +616,10 @@ func (TypeObservedTxSuite) TestNewGetConsensusTx(c *C) {
 
 	txForged := GetRandomTx()
 	txForged.ID = txID
-	obTx1 := NewObservedTx(txForged, 1, observePoolAddr, 1)
-	obTx2 := NewObservedTx(tx1, 1, observePoolAddr, 2)
+	obTx1 := common.NewObservedTx(txForged, 1, observePoolAddr, 1)
+	obTx2 := common.NewObservedTx(tx1, 1, observePoolAddr, 2)
 
-	obTx3 := NewObservedTx(tx1, 2, observePoolAddr, 2)
+	obTx3 := common.NewObservedTx(tx1, 2, observePoolAddr, 2)
 
 	c.Assert(voter.Add(obTx1, acc1), Equals, true)
 	c.Assert(voter.Add(obTx2, acc2), Equals, true)

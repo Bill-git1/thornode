@@ -530,7 +530,7 @@ func (s *SlashingVCURSuite) TestNeedsNewVault(c *C) {
 
 	c.Check(slasher.needsNewVault(ctx, mgr, vault, 300, 1, toi), Equals, true)
 
-	voter := NewObservedTxVoter(outhash, []ObservedTx{obs})
+	voter := NewObservedTxVoter(outhash, []common.ObservedTx{obs})
 	mgr.Keeper().SetObservedTxOutVoter(ctx, voter)
 
 	mgr.Keeper().SetObservedLink(ctx, inhash, outhash)

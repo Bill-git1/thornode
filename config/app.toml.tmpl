@@ -181,6 +181,18 @@ address = "0.0.0.0:9091"
 enable-unsafe-cors = false
 
 ###############################################################################
+###                           eBifrost Configuration                            ###
+###############################################################################
+
+[ebifrost]
+
+# Enable defines if the gRPC server should be enabled.
+enable = {{ .EBifrost.Enable }}
+
+# Address defines the gRPC server address to bind to.
+address = "{{ .EBifrost.Address }}"
+
+###############################################################################
 ###                        State Sync Configuration                         ###
 ###############################################################################
 

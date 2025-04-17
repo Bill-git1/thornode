@@ -33,3 +33,4 @@ rm -rf ../../api && mkdir ../../api
 mv thorchain ../../api/.
 mv types ../../api/.
 mv common ../../api/.
+mv bifrost ../../api/.

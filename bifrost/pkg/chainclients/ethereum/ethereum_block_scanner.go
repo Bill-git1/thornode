@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -55,28 +54,29 @@ const (
 
 // ETHScanner is a scanner that understand how to interact with ETH chain ,and scan block , parse smart contract etc
 type ETHScanner struct {
-	cfg                  config.BifrostBlockScannerConfiguration
-	logger               zerolog.Logger
-	db                   blockscanner.ScannerStorage
-	m                    *metrics.Metrics
-	errCounter           *prometheus.CounterVec
-	gasPriceChanged      bool
-	gasPrice             *big.Int
-	lastReportedGasPrice uint64
-	client               *ethclient.Client
-	blockMetaAccessor    evm.BlockMetaAccessor
-	globalErrataQueue    chan<- stypes.ErrataBlock
-	vaultABI             *abi.ABI
-	erc20ABI             *abi.ABI
-	tokens               *evm.LevelDBTokenMeta
-	bridge               thorclient.ThorchainBridge
-	pubkeyMgr            pubkeymanager.PubKeyValidator
-	eipSigner            etypes.Signer
-	currentBlockHeight   int64
-	gasCache             []*big.Int
-	solvencyReporter     SolvencyReporter
-	whitelistTokens      []tokenlist.ERC20Token
-	signerCacheManager   *signercache.CacheManager
+	cfg                   config.BifrostBlockScannerConfiguration
+	logger                zerolog.Logger
+	db                    blockscanner.ScannerStorage
+	m                     *metrics.Metrics
+	errCounter            *prometheus.CounterVec
+	gasPriceChanged       bool
+	gasPrice              *big.Int
+	lastReportedGasPrice  uint64
+	client                *ethclient.Client
+	blockMetaAccessor     evm.BlockMetaAccessor
+	globalErrataQueue     chan<- stypes.ErrataBlock
+	globalNetworkFeeQueue chan<- common.NetworkFee
+	vaultABI              *abi.ABI
+	erc20ABI              *abi.ABI
+	tokens                *evm.LevelDBTokenMeta
+	bridge                thorclient.ThorchainBridge
+	pubkeyMgr             pubkeymanager.PubKeyValidator
+	eipSigner             etypes.Signer
+	currentBlockHeight    int64
+	gasCache              []*big.Int
+	solvencyReporter      SolvencyReporter
+	whitelistTokens       []tokenlist.ERC20Token
+	signerCacheManager    *signercache.CacheManager
 }
 
 // NewETHScanner create a new instance of ETHScanner
@@ -203,7 +203,6 @@ func (e *ETHScanner) FetchTxs(height, chainHeight int64) (stypes.TxIn, error) {
 	pruneHeight := height - e.cfg.MaxReorgRescanBlocks
 	if pruneHeight > 0 {
 		defer func() {
-			// trunk-ignore(golangci-lint/govet): shadow
 			if err := e.blockMetaAccessor.PruneBlockMeta(pruneHeight); err != nil {
 				e.logger.Err(err).Msgf("fail to prune block meta, height(%d)", pruneHeight)
 			}
@@ -224,11 +223,14 @@ func (e *ETHScanner) FetchTxs(height, chainHeight int64) (stypes.TxIn, error) {
 
 	// post to thorchain if there is a fee and it has changed
 	if gasPrice.Cmp(big.NewInt(0)) != 0 && tcGasPrice != e.lastReportedGasPrice {
-		if _, err = e.bridge.PostNetworkFee(height, common.ETHChain, e.cfg.MaxGasLimit, tcGasPrice); err != nil {
-			e.logger.Err(err).Msg("fail to post ETH chain single transfer fee to THORNode")
-		} else {
-			e.lastReportedGasPrice = tcGasPrice
+		e.globalNetworkFeeQueue <- common.NetworkFee{
+			Chain:           common.ETHChain,
+			Height:          height,
+			TransactionSize: e.cfg.MaxGasLimit,
+			TransactionRate: tcGasPrice,
 		}
+
+		e.lastReportedGasPrice = tcGasPrice
 	}
 
 	if e.solvencyReporter != nil {
@@ -304,12 +306,10 @@ func (e *ETHScanner) updateGasPriceFromCache() {
 func (e *ETHScanner) processBlock(block *etypes.Block) (stypes.TxIn, error) {
 	height := int64(block.NumberU64())
 	txIn := stypes.TxIn{
-		Chain:           common.ETHChain,
-		TxArray:         nil,
-		Filtered:        false,
-		MemPool:         false,
-		SentUnFinalised: false,
-		Finalised:       false,
+		Chain:    common.ETHChain,
+		TxArray:  nil,
+		Filtered: false,
+		MemPool:  false,
 	}
 
 	// update gas price
@@ -398,7 +398,7 @@ func (e *ETHScanner) extractTxs(block *etypes.Block) (stypes.TxIn, error) {
 		}
 		txInItem.BlockHeight = block.Number().Int64()
 		mu.Lock()
-		txInbound.TxArray = append(txInbound.TxArray, *txInItem)
+		txInbound.TxArray = append(txInbound.TxArray, txInItem)
 		mu.Unlock()
 		e.logger.Debug().Str("hash", tx.Hash().Hex()).Msgf("%s got %d tx", e.cfg.ChainID, 1)
 	}
@@ -415,12 +415,12 @@ func (e *ETHScanner) extractTxs(block *etypes.Block) (stypes.TxIn, error) {
 	}
 	wg.Wait()
 
-	if len(txInbound.TxArray) == 0 {
+	count := len(txInbound.TxArray)
+	if count == 0 {
 		e.logger.Info().Int64("block", int64(block.NumberU64())).Msg("no tx need to be processed in this block")
 		return stypes.TxIn{}, nil
 	}
-	txInbound.Count = strconv.Itoa(len(txInbound.TxArray))
-	e.logger.Debug().Int64("block", int64(block.NumberU64())).Msgf("there are %s tx in this block need to process", txInbound.Count)
+	e.logger.Debug().Int64("block", int64(block.NumberU64())).Msgf("there are %d tx in this block need to process", count)
 	return txInbound, nil
 }
 
