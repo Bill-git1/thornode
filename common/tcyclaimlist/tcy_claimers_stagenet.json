@@ -53,5 +53,30 @@
     "asset": "doge.doge",
     "address": "sthor1tvtt3qv3clu9g4nyu2vr307l2vnrugpxdp5zze",
     "tcy_claim": 10000000000000
+  },
+  {
+    "asset": "eth.eth",
+    "address": "0xff75E131c711e4310C045317779d39B3B4f718C4",
+    "tcy_claim": 10000000000000
+  },
+  {
+    "asset": "btc.btc",
+    "address": "bc1qxhf7wdu426qr4dpq4s3fn2pk9fqjyl66y8qv4y",
+    "tcy_claim": 10000000000000
+  },
+  {
+    "asset": "eth.eth",
+    "address": "0x617a2a7106be10761a8712a303101c069998b5d6",
+    "tcy_claim": 10000000000000
+  },
+  {
+    "asset": "btc.btc",
+    "address": "bc1qruuvw2lnu2hwtys422rtw2l08zuel2k9fkxgrn",
+    "tcy_claim": 10000000000000
+  },
+  {
+    "asset": "eth.eth",
+    "address": "0xe37e864eaf6c46a9867f42a3f35c15a968c52bb7",
+    "tcy_claim": 10000000000000
   }
 ]
