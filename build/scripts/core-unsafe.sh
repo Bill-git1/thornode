@@ -3,7 +3,7 @@
 set -o pipefail
 
 deploy_evm_contracts() {
-  for CHAIN in ETH AVAX BSC BASE; do
+  for CHAIN in ETH AVAX BASE; do
     (
       # deploy contract and get address from output
       echo "Deploying $CHAIN contracts"
@@ -42,7 +42,7 @@ init_mocknet() {
 
   # send bond
 
-  sleep 10 # wait for thorchain to commit a block , otherwise it get the wrong sequence number
+  sleep 2 # wait for thorchain to commit a block , otherwise it get the wrong sequence number
 
   NODE_PUB_KEY=$(echo "$SIGNER_PASSWD" | thornode keys show thorchain --pubkey --keyring-backend=file | thornode pubkey)
   VALIDATOR=$(thornode tendermint show-validator | thornode pubkey --bech cons)
@@ -53,14 +53,14 @@ init_mocknet() {
   done
 
   # add IP address
-  sleep 10 # wait for thorchain to commit a block
+  sleep 2 # wait for thorchain to commit a block
 
   NODE_IP_ADDRESS=${EXTERNAL_IP:=$(curl -s http://whatismyip.akamai.com)}
   until printf "%s\n" "$SIGNER_PASSWD" | thornode tx thorchain set-ip-address "$NODE_IP_ADDRESS" --node tcp://"$PEER":26657 --from "$SIGNER_NAME" --keyring-backend=file --chain-id "$CHAIN_ID" --yes; do
     sleep 5
   done
 
-  sleep 10 # wait for thorchain to commit a block
+  sleep 2 # wait for thorchain to commit a block
   # set node version
   until printf "%s\n" "$SIGNER_PASSWD" | thornode tx thorchain set-version --node tcp://"$PEER":26657 --from "$SIGNER_NAME" --keyring-backend=file --chain-id "$CHAIN_ID" --yes; do
     sleep 5

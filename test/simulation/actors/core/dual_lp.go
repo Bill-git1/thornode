@@ -59,6 +59,8 @@ func NewDualLPActor(asset common.Asset) *Actor {
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func (a *DualLPActor) acquireUser(config *OpConfig) OpResult {
+	userMaxRune := cosmos.NewUint(0)
+
 	for _, user := range config.Users {
 		a.SetLogger(a.Log().With().Str("user", user.Name()).Logger())
 
@@ -109,6 +111,13 @@ func (a *DualLPActor) acquireUser(config *OpConfig) OpResult {
 			continue
 		}
 
+		// find the user with the most RUNE balance
+		if thorBalances.GetCoin(common.RuneAsset()).Amount.LTE(userMaxRune) {
+			user.Release()
+			continue
+		}
+		userMaxRune = thorBalances.GetCoin(common.RuneAsset()).Amount
+
 		// set acquired account and amounts in state context
 		a.Log().Info().
 			Stringer("address", thorAddress).
@@ -119,10 +128,6 @@ func (a *DualLPActor) acquireUser(config *OpConfig) OpResult {
 		a.runeAmount = thorBalances.GetCoin(common.RuneAsset()).Amount.QuoUint64(5)
 		a.l1Amount = l1Acct.Coins.GetCoin(a.asset).Amount.QuoUint64(5)
 		a.account = user
-
-		// TODO: above amounts could check for existing pool and use same exchange rate
-
-		break
 	}
 
 	// remain pending if no user is available

@@ -1,6 +1,7 @@
 package common
 
 import (
+	"fmt"
 	"math/big"
 	"time"
 
@@ -64,7 +65,7 @@ func DepositL1Token(log *zerolog.Logger, client LiteChainClient, asset common.As
 	}
 	if routerAddr == nil {
 		log.Error().Msg("failed to get router address")
-		return "", err
+		return "", fmt.Errorf("failed to get router address")
 	}
 	token := evm.Tokens(asset.Chain)[asset]
 

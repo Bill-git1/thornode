@@ -142,7 +142,19 @@ func (a *SwapActor) acquireUser(config *OpConfig) OpResult {
 	}
 
 	// remain pending if no user is available
-	a.Log().Info().Msg("waiting for user with sufficient balance")
+	lockedUsers := 0
+	availableUsers := 0
+	for _, user := range config.Users {
+		if !user.IsLocked() {
+			availableUsers++
+		} else {
+			lockedUsers++
+		}
+	}
+	a.Log().Info().
+		Int("available_users", availableUsers).
+		Int("locked_users", lockedUsers).
+		Msg("waiting for user with sufficient balance")
 	return OpResult{
 		Continue: false,
 	}

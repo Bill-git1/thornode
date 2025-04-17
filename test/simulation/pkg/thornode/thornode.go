@@ -189,7 +189,8 @@ func Get(url string, target interface{}) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("HTTP: %d", resp.StatusCode)
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("(%s) HTTP: %d => %s", url, resp.StatusCode, body)
 	}
 
 	// extract error if the request failed

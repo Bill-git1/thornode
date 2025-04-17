@@ -110,23 +110,29 @@ func InitConfig(parallelism int, seed bool) *OpConfig {
 			if !seed {
 				return
 			}
-			log.Info().Msg("posting gaia network fee")
-			for {
-				_, err := a.Thorchain.PostNetworkFee(1, common.GAIAChain, 1, 1_000_000)
-				if err == nil {
-					break
-				}
-				log.Error().Err(err).Msg("failed to post gaia network fee")
-				time.Sleep(5 * time.Second)
+
+			// default network fees on chains needing a window of blocks before bifrost sends
+			defaultFees := []struct {
+				chain common.Chain
+				size  uint64
+				rate  uint64
+			}{
+				{common.GAIAChain, 1, 1_000_000},
+				{common.XRPChain, 1, 1_000},
+				{common.AVAXChain, 80000, 150},
+				{common.BASEChain, 80000, 30},
+				{common.ETHChain, 80000, 30},
 			}
-			log.Info().Msg("posting xrp network fee")
-			for {
-				_, err := a.Thorchain.PostNetworkFee(1, common.XRPChain, 1, 1_000)
-				if err == nil {
-					break
+			for _, fee := range defaultFees {
+				log.Info().Msgf("posting %s network fee", fee.chain)
+				for {
+					_, err := a.Thorchain.PostNetworkFee(1, fee.chain, fee.size, fee.rate)
+					if err == nil {
+						break
+					}
+					log.Error().Err(err).Msg("failed to post network fee")
+					time.Sleep(2 * time.Second)
 				}
-				log.Error().Err(err).Msg("failed to post xrp network fee")
-				time.Sleep(5 * time.Second)
 			}
 		}(mnemonic)
 	}
@@ -215,9 +221,9 @@ func InitConfig(parallelism int, seed bool) *OpConfig {
 		// determine the amount to seed
 		chainSeedAmount := sdkmath.ZeroUint()
 		switch chain {
-		case common.BTCChain, common.ETHChain, common.LTCChain, common.BCHChain, common.BASEChain:
+		case common.BTCChain, common.LTCChain, common.BCHChain:
 			chainSeedAmount = sdkmath.NewUint(10 * common.One)
-		case common.BSCChain:
+		case common.BSCChain, common.BASEChain, common.ETHChain:
 			chainSeedAmount = sdkmath.NewUint(100 * common.One)
 		case common.GAIAChain:
 			chainSeedAmount = sdkmath.NewUint(1000 * common.One)

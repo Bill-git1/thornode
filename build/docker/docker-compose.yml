@@ -110,6 +110,7 @@ services:
       NEW_GENESIS_TIME: ${NEW_GENESIS_TIME:-}
       CHURN_MIGRATION_ROUNDS: 2
       FUND_MIGRATION_INTERVAL: 10
+      EMISSION_CURVE: 100000
       AVAX_HOST: ${AVAX_HOST:-http://avalanche:9650/ext/bc/C/rpc}
       ETH_HOST: ${ETH_HOST:-http://ethereum:8545}
       BASE_HOST: ${BASE_HOST:-http://base:8545}
@@ -214,6 +215,10 @@ services:
       BIFROST_CHAINS_AVAX_BLOCK_SCANNER_WHITELIST_TOKENS: "0x52C84043CD9c865236f11d9Fc9F56aa003c1f922,0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E,0x17aB05351fC94a1a67Bf3f56DdbB941aE6c63E25"
       BIFROST_CHAINS_BSC_BLOCK_SCANNER_WHITELIST_TOKENS: "0x52C84043CD9c865236f11d9Fc9F56aa003c1f922,0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d,0x17aB05351fC94a1a67Bf3f56DdbB941aE6c63E25"
       BIFROST_CHAINS_BASE_BLOCK_SCANNER_WHITELIST_TOKENS: "0x52C84043CD9c865236f11d9Fc9F56aa003c1f922,0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913,0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf,0x17aB05351fC94a1a67Bf3f56DdbB941aE6c63E25"
+
+      # attestation timing
+      BIFROST_ATTESTATION_GOSSIP_MIN_TIME_BETWEEN_ATTESTATIONS: 1s
+      BIFROST_ATTESTATION_GOSSIP_OBSERVE_RECONCILE_INTERVAL: 1s
 
     ports:
       - 5040:5040
@@ -403,7 +408,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: registry.gitlab.com/thorchain/devops/node-launcher:gaia-daemon-23.0.0
+    image: registry.gitlab.com/thorchain/devops/node-launcher:gaia-daemon-23.1.1
     volumes:
       - "./mocknet:/mocknet"
     environment:
@@ -438,7 +443,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: registry.gitlab.com/thorchain/devops/node-launcher:bitcoin-cash-daemon-28.0.0
+    image: registry.gitlab.com/thorchain/devops/node-launcher:bitcoin-cash-daemon-28.0.1
     restart: unless-stopped
     environment:
       RPC_PORT: "28443"
@@ -487,7 +492,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: ethereum/client-go:v1.15.6
+    image: ethereum/client-go:v1.15.8
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-5}
@@ -505,7 +510,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101500.1
+    image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101503.2
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-5}
@@ -522,7 +527,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: xrpllabsofficial/xrpld:2.3.1
+    image: xrpllabsofficial/xrpld:2.4.0
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-5}

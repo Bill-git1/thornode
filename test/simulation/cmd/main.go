@@ -78,8 +78,8 @@ func main() {
 	stages := []cli.Option{
 		{Name: "seed", Default: true},
 		{Name: "bootstrap", Default: true},
+		{Name: "consolidate", Default: true},
 		{Name: "arb", Default: true},
-		{Name: "consolidate", Default: false},
 		{Name: "swaps", Default: true},
 		{Name: "ragnarok", Default: true},
 	}
@@ -121,8 +121,8 @@ func main() {
 		}
 	}
 	appendIfEnabled("bootstrap", suites.Bootstrap)
-	appendIfEnabled("arb", core.NewArbActor)
 	appendIfEnabled("consolidate", features.Consolidate)
+	appendIfEnabled("arb", core.NewArbActor)
 	appendIfEnabled("swaps", suites.Swaps)
 	appendIfEnabled("ragnarok", suites.Ragnarok)
 

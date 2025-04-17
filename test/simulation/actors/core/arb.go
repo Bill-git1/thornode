@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"gitlab.com/thorchain/thornode/v3/common"
@@ -36,7 +37,9 @@ func NewArbActor() *Actor {
 		originalPools: make(map[string]types.Pool),
 	}
 	a.Timeout = time.Hour
-	a.Interval = 5 * time.Second // roughly once per block
+
+	// init pool balances
+	a.Ops = append(a.Ops, a.init)
 
 	// lock an account to use for arb
 	a.Ops = append(a.Ops, a.acquireUser)
@@ -56,6 +59,29 @@ func NewArbActor() *Actor {
 ////////////////////////////////////////////////////////////////////////////////////////
 // Ops
 ////////////////////////////////////////////////////////////////////////////////////////
+
+func (a *ArbActor) init(config *OpConfig) OpResult {
+	// get all pools
+	pools, err := thornode.GetPools()
+	if err != nil {
+		a.Log().Error().Err(err).Msg("failed to get pools")
+		return OpResult{
+			Continue: false,
+			Error:    err,
+		}
+	}
+
+	for _, pool := range pools {
+		a.originalPools[pool.Asset] = types.Pool{
+			BalanceRune:  cosmos.NewUintFromString(pool.BalanceRune),
+			BalanceAsset: cosmos.NewUintFromString(pool.BalanceAsset),
+		}
+	}
+
+	return OpResult{
+		Continue: true,
+	}
+}
 
 func (a *ArbActor) acquireUser(config *OpConfig) OpResult {
 	for _, user := range config.Users {
@@ -144,13 +170,28 @@ func (a *ArbActor) bootstrapTradeAssets(config *OpConfig) OpResult {
 		}
 	}
 
-	// deposit trade assets for all pools
-	for _, pool := range pools {
+	chainLocks := struct {
+		sync.Mutex
+		m map[common.Chain]*sync.Mutex
+	}{m: make(map[common.Chain]*sync.Mutex)}
+
+	bootstrap := func(pool openapi.Pool) {
 		var asset common.Asset
 		asset, err = common.NewAsset(pool.Asset)
 		if err != nil {
 			a.Log().Fatal().Err(err).Str("asset", pool.Asset).Msg("failed to create asset")
 		}
+
+		// lock chain
+		chainLocks.Lock()
+		chainLock, ok := chainLocks.m[asset.Chain]
+		if !ok {
+			chainLock = &sync.Mutex{}
+			chainLocks.m[asset.Chain] = chainLock
+		}
+		chainLocks.Unlock()
+		chainLock.Lock()
+		defer chainLock.Unlock()
 
 		// get deposit parameters for 90% of asset balance
 		client := a.account.ChainClients[asset.Chain]
@@ -180,6 +221,17 @@ func (a *ArbActor) bootstrapTradeAssets(config *OpConfig) OpResult {
 			Str("txid", txid).
 			Msg("deposited trade asset")
 	}
+
+	// deposit trade assets for all pools
+	wg := sync.WaitGroup{}
+	for _, pool := range pools {
+		wg.Add(1)
+		go func(pool openapi.Pool) {
+			defer wg.Done()
+			bootstrap(pool)
+		}(pool)
+	}
+	wg.Wait()
 
 	// mark actor as backgrounded
 	a.Log().Info().Msg("moving arbitrage actor to background")
@@ -219,15 +271,6 @@ func (a *ArbActor) arb(config *OpConfig) OpResult {
 			continue
 		}
 
-		// if this is the first time we see the pool, store it to use as the target price
-		if _, ok := a.originalPools[pool.Asset]; !ok {
-			a.originalPools[pool.Asset] = types.Pool{
-				BalanceRune:  cosmos.NewUintFromString(pool.BalanceRune),
-				BalanceAsset: cosmos.NewUintFromString(pool.BalanceAsset),
-			}
-			continue
-		}
-
 		arbPools = append(arbPools, pool)
 	}
 
@@ -244,7 +287,7 @@ func (a *ArbActor) arb(config *OpConfig) OpResult {
 		originalPool := a.originalPools[pool.Asset]
 		originalPrice := originalPool.BalanceRune.MulUint64(1e8).Quo(originalPool.BalanceAsset)
 		currentPrice := cosmos.NewUintFromString(pool.BalanceRune).MulUint64(1e8).Quo(cosmos.NewUintFromString(pool.BalanceAsset))
-		return int64(constants.MaxBasisPts) - int64(originalPrice.MulUint64(constants.MaxBasisPts).Quo(currentPrice).Uint64())
+		return int64(currentPrice.MulUint64(constants.MaxBasisPts).Quo(originalPrice).Uint64()) - int64(constants.MaxBasisPts)
 	}
 	sort.Slice(arbPools, func(i, j int) bool {
 		return priceChangeBps(arbPools[i]) > priceChangeBps(arbPools[j])
@@ -254,8 +297,7 @@ func (a *ArbActor) arb(config *OpConfig) OpResult {
 	receive := arbPools[len(arbPools)-1]
 
 	// skip if none have diverged more than 10 basis points
-	adjustmentBps := common.Min(common.Abs(priceChangeBps(send)), common.Abs(priceChangeBps(receive)))
-	if adjustmentBps < 10 {
+	if priceChangeBps(send)-priceChangeBps(receive) < 25 {
 		a.Log().Info().
 			Int64("maxShift", priceChangeBps(send)).
 			Int64("minShift", priceChangeBps(receive)).
@@ -264,15 +306,18 @@ func (a *ArbActor) arb(config *OpConfig) OpResult {
 			Continue: false,
 		}
 	}
+	adjustmentBps := int64(10)
 
 	// build the swap
+	minRuneDepth := common.Min(cosmos.NewUintFromString(send.BalanceRune).Uint64(), cosmos.NewUintFromString(receive.BalanceRune).Uint64())
+	runeValue := cosmos.NewUint(uint64(adjustmentBps)).MulUint64(minRuneDepth).QuoUint64(2).QuoUint64(constants.MaxBasisPts)
+	assetAmount := runeValue.Mul(cosmos.NewUintFromString(send.BalanceAsset)).Quo(cosmos.NewUintFromString(send.BalanceRune))
 	memo := fmt.Sprintf("=:%s", strings.Replace(receive.Asset, ".", "~", 1))
 	asset, err := common.NewAsset(strings.Replace(send.Asset, ".", "~", 1))
 	if err != nil {
 		a.Log().Fatal().Err(err).Str("asset", send.Asset).Msg("failed to create asset")
 	}
-	amount := cosmos.NewUint(uint64(adjustmentBps / 2)).Mul(cosmos.NewUintFromString(send.BalanceAsset)).QuoUint64(constants.MaxBasisPts)
-	coin := common.NewCoin(asset, amount)
+	coin := common.NewCoin(asset, assetAmount)
 
 	// build the swap
 	deposit := types.NewMsgDeposit(common.NewCoins(coin), memo, a.thorAddress)

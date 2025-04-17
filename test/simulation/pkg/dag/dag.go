@@ -60,7 +60,9 @@ func Execute(c *OpConfig, root *Actor, parallelism int) {
 
 	// execute dag
 	log.Info().Int("actors", total).Int("parallelism", parallelism).Msg("executing dag")
-	for {
+	tick := time.NewTicker(time.Second)
+	defer tick.Stop()
+	for range tick.C {
 		ready, running, finished := status()
 
 		// if all actors are finished we are done
@@ -76,25 +78,23 @@ func Execute(c *OpConfig, root *Actor, parallelism int) {
 			Int("remaining", total-len(finished)).
 			Int("ready", len(ready))
 
-		// sleep if no actors are ready to execute
-		if len(ready) == 0 {
-			time.Sleep(time.Second)
-
-			// determine how many users are available to help debug deadlock
-			lockedUsers := 0
-			availableUsers := 0
-			for _, user := range c.Users {
-				if !user.IsLocked() {
-					availableUsers++
-				} else {
-					lockedUsers++
-				}
+		// determine how many users are available
+		lockedUsers := 0
+		availableUsers := 0
+		for _, user := range c.Users {
+			if !user.IsLocked() {
+				availableUsers++
+			} else {
+				lockedUsers++
 			}
+		}
 
+		// sleep if no actors are ready to execute
+		if len(ready) == 0 || availableUsers == 0 {
 			infoLog.
 				Int("available_users", availableUsers).
 				Int("locked_users", lockedUsers).
-				Msg("waiting for ready actors")
+				Msg("waiting for ready actors and users")
 
 			continue
 		}
