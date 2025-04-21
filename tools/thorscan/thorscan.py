@@ -36,7 +36,7 @@ logging.basicConfig(
 
 
 def _parse_block_time(dt_str):
-    dt = datetime.datetime.strptime(dt_str[:26], "%Y-%m-%dT%H:%M:%S.%f")
+    dt = datetime.datetime.strptime(dt_str[:-4], "%Y-%m-%dT%H:%M:%S.%f")
     timestamp = dt.replace(tzinfo=datetime.timezone.utc).timestamp()
     return timestamp
 
@@ -130,7 +130,11 @@ def messages(
 
     def _listen(block):
         for tx in block["txs"]:
-            for msg in tx["tx"]["body"]["messages"]:
+            if "messages" in tx["tx"]:
+                messages = tx["tx"]["messages"]
+            else:
+                messages = tx["tx"]["body"]["messages"]
+            for msg in messages:
                 if types is not None and msg["type"] not in types:
                     continue
                 for listener in listeners:
@@ -282,7 +286,12 @@ def scan(
 
         # modify block transaction type field for convenience
         for tx in block["txs"]:
-            for msg in tx["tx"]["body"]["messages"]:
+            if "messages" in tx["tx"]:
+                messages = tx["tx"]["messages"]
+            else:
+                messages = tx["tx"]["body"]["messages"]
+
+            for msg in messages:
                 msg["type"] = msg["@type"].lstrip("/types.")
                 del msg["@type"]
 
