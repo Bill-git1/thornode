@@ -354,3 +354,13 @@ message EventTCYClaim {
   string l1_address = 3 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.Address"];
   common.Asset asset = 4 [(gogoproto.nullable) = false, (gogoproto.customtype) = "gitlab.com/thorchain/thornode/v3/common.Asset"];
 }
+
+message EventTCYStake {
+  string address = 1 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.Address"];
+  string amount = 2 [(gogoproto.customtype) = "cosmossdk.io/math.Uint",(gogoproto.nullable) = false];
+}
+
+message EventTCYUnstake {
+  string address = 1 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.Address"];
+  string basis_points = 2 [(gogoproto.customtype) = "cosmossdk.io/math.Uint", (gogoproto.nullable) = false];
+}

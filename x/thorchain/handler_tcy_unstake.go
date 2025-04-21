@@ -81,5 +81,7 @@ func (h TCYUnstakeHandler) handle(ctx cosmos.Context, msg MsgTCYUnstake) (*cosmo
 	}
 
 	err = h.mgr.Keeper().SetTCYStaker(ctx, types.NewTCYStaker(msg.Tx.FromAddress, newStakingAmount))
-	return &cosmos.Result{}, err
+
+	evt := types.NewEventTCYUnstake(msg.Tx.FromAddress, msg.BasisPoints)
+	return &cosmos.Result{}, h.mgr.EventMgr().EmitEvent(ctx, evt)
 }

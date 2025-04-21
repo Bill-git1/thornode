@@ -55,6 +55,8 @@ const (
 	WithdrawEventType             = "withdraw"
 	TCYDistributionType           = "tcy_distribution"
 	TCYClaimType                  = "tcy_claim"
+	TCYStakeType                  = "tcy_stake"
+	TCYUnstakeType                = "tcy_unstake"
 )
 
 // PoolMods a list of pool modifications
@@ -1291,6 +1293,50 @@ func (m *EventTCYClaim) Events() (cosmos.Events, error) {
 		cosmos.NewAttribute("l1_address", m.L1Address.String()),
 		cosmos.NewAttribute("asset", m.Asset.String()),
 		cosmos.NewAttribute("tcy_amount", m.TcyAmount.String()),
+	)
+	return cosmos.Events{evt}, nil
+}
+
+// NewEventTCYStake create a new EventTCYStake
+func NewEventTCYStake(address common.Address, amount cosmos.Uint) *EventTCYStake {
+	return &EventTCYStake{
+		Address: address,
+		Amount:  amount,
+	}
+}
+
+// Type return tcy stake event type
+func (m *EventTCYStake) Type() string {
+	return TCYStakeType
+}
+
+// Events return events
+func (m *EventTCYStake) Events() (cosmos.Events, error) {
+	evt := cosmos.NewEvent(m.Type(),
+		cosmos.NewAttribute("address", m.Address.String()),
+		cosmos.NewAttribute("amount", m.Amount.String()),
+	)
+	return cosmos.Events{evt}, nil
+}
+
+// NewEventTCYUnstake create a new EventTCYUnstake
+func NewEventTCYUnstake(address common.Address, bps cosmos.Uint) *EventTCYUnstake {
+	return &EventTCYUnstake{
+		Address:     address,
+		BasisPoints: bps,
+	}
+}
+
+// Type return tcy stake event type
+func (m *EventTCYUnstake) Type() string {
+	return TCYUnstakeType
+}
+
+// Events return events
+func (m *EventTCYUnstake) Events() (cosmos.Events, error) {
+	evt := cosmos.NewEvent(m.Type(),
+		cosmos.NewAttribute("address", m.Address.String()),
+		cosmos.NewAttribute("basis_points", m.BasisPoints.String()),
 	)
 	return cosmos.Events{evt}, nil
 }

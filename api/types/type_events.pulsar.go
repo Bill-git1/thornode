@@ -29004,6 +29004,974 @@ func (x *fastReflection_EventTCYClaim) ProtoMethods() *protoiface.Methods {
 	}
 }
 
+var (
+	md_EventTCYStake         protoreflect.MessageDescriptor
+	fd_EventTCYStake_address protoreflect.FieldDescriptor
+	fd_EventTCYStake_amount  protoreflect.FieldDescriptor
+)
+
+func init() {
+	file_types_type_events_proto_init()
+	md_EventTCYStake = File_types_type_events_proto.Messages().ByName("EventTCYStake")
+	fd_EventTCYStake_address = md_EventTCYStake.Fields().ByName("address")
+	fd_EventTCYStake_amount = md_EventTCYStake.Fields().ByName("amount")
+}
+
+var _ protoreflect.Message = (*fastReflection_EventTCYStake)(nil)
+
+type fastReflection_EventTCYStake EventTCYStake
+
+func (x *EventTCYStake) ProtoReflect() protoreflect.Message {
+	return (*fastReflection_EventTCYStake)(x)
+}
+
+func (x *EventTCYStake) slowProtoReflect() protoreflect.Message {
+	mi := &file_types_type_events_proto_msgTypes[45]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+var _fastReflection_EventTCYStake_messageType fastReflection_EventTCYStake_messageType
+var _ protoreflect.MessageType = fastReflection_EventTCYStake_messageType{}
+
+type fastReflection_EventTCYStake_messageType struct{}
+
+func (x fastReflection_EventTCYStake_messageType) Zero() protoreflect.Message {
+	return (*fastReflection_EventTCYStake)(nil)
+}
+func (x fastReflection_EventTCYStake_messageType) New() protoreflect.Message {
+	return new(fastReflection_EventTCYStake)
+}
+func (x fastReflection_EventTCYStake_messageType) Descriptor() protoreflect.MessageDescriptor {
+	return md_EventTCYStake
+}
+
+// Descriptor returns message descriptor, which contains only the protobuf
+// type information for the message.
+func (x *fastReflection_EventTCYStake) Descriptor() protoreflect.MessageDescriptor {
+	return md_EventTCYStake
+}
+
+// Type returns the message type, which encapsulates both Go and protobuf
+// type information. If the Go type information is not needed,
+// it is recommended that the message descriptor be used instead.
+func (x *fastReflection_EventTCYStake) Type() protoreflect.MessageType {
+	return _fastReflection_EventTCYStake_messageType
+}
+
+// New returns a newly allocated and mutable empty message.
+func (x *fastReflection_EventTCYStake) New() protoreflect.Message {
+	return new(fastReflection_EventTCYStake)
+}
+
+// Interface unwraps the message reflection interface and
+// returns the underlying ProtoMessage interface.
+func (x *fastReflection_EventTCYStake) Interface() protoreflect.ProtoMessage {
+	return (*EventTCYStake)(x)
+}
+
+// Range iterates over every populated field in an undefined order,
+// calling f for each field descriptor and value encountered.
+// Range returns immediately if f returns false.
+// While iterating, mutating operations may only be performed
+// on the current field descriptor.
+func (x *fastReflection_EventTCYStake) Range(f func(protoreflect.FieldDescriptor, protoreflect.Value) bool) {
+	if x.Address != "" {
+		value := protoreflect.ValueOfString(x.Address)
+		if !f(fd_EventTCYStake_address, value) {
+			return
+		}
+	}
+	if x.Amount != "" {
+		value := protoreflect.ValueOfString(x.Amount)
+		if !f(fd_EventTCYStake_amount, value) {
+			return
+		}
+	}
+}
+
+// Has reports whether a field is populated.
+//
+// Some fields have the property of nullability where it is possible to
+// distinguish between the default value of a field and whether the field
+// was explicitly populated with the default value. Singular message fields,
+// member fields of a oneof, and proto2 scalar fields are nullable. Such
+// fields are populated only if explicitly set.
+//
+// In other cases (aside from the nullable cases above),
+// a proto3 scalar field is populated if it contains a non-zero value, and
+// a repeated field is populated if it is non-empty.
+func (x *fastReflection_EventTCYStake) Has(fd protoreflect.FieldDescriptor) bool {
+	switch fd.FullName() {
+	case "types.EventTCYStake.address":
+		return x.Address != ""
+	case "types.EventTCYStake.amount":
+		return x.Amount != ""
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventTCYStake"))
+		}
+		panic(fmt.Errorf("message types.EventTCYStake does not contain field %s", fd.FullName()))
+	}
+}
+
+// Clear clears the field such that a subsequent Has call reports false.
+//
+// Clearing an extension field clears both the extension type and value
+// associated with the given field number.
+//
+// Clear is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_EventTCYStake) Clear(fd protoreflect.FieldDescriptor) {
+	switch fd.FullName() {
+	case "types.EventTCYStake.address":
+		x.Address = ""
+	case "types.EventTCYStake.amount":
+		x.Amount = ""
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventTCYStake"))
+		}
+		panic(fmt.Errorf("message types.EventTCYStake does not contain field %s", fd.FullName()))
+	}
+}
+
+// Get retrieves the value for a field.
+//
+// For unpopulated scalars, it returns the default value, where
+// the default value of a bytes scalar is guaranteed to be a copy.
+// For unpopulated composite types, it returns an empty, read-only view
+// of the value; to obtain a mutable reference, use Mutable.
+func (x *fastReflection_EventTCYStake) Get(descriptor protoreflect.FieldDescriptor) protoreflect.Value {
+	switch descriptor.FullName() {
+	case "types.EventTCYStake.address":
+		value := x.Address
+		return protoreflect.ValueOfString(value)
+	case "types.EventTCYStake.amount":
+		value := x.Amount
+		return protoreflect.ValueOfString(value)
+	default:
+		if descriptor.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventTCYStake"))
+		}
+		panic(fmt.Errorf("message types.EventTCYStake does not contain field %s", descriptor.FullName()))
+	}
+}
+
+// Set stores the value for a field.
+//
+// For a field belonging to a oneof, it implicitly clears any other field
+// that may be currently set within the same oneof.
+// For extension fields, it implicitly stores the provided ExtensionType.
+// When setting a composite type, it is unspecified whether the stored value
+// aliases the source's memory in any way. If the composite value is an
+// empty, read-only value, then it panics.
+//
+// Set is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_EventTCYStake) Set(fd protoreflect.FieldDescriptor, value protoreflect.Value) {
+	switch fd.FullName() {
+	case "types.EventTCYStake.address":
+		x.Address = value.Interface().(string)
+	case "types.EventTCYStake.amount":
+		x.Amount = value.Interface().(string)
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventTCYStake"))
+		}
+		panic(fmt.Errorf("message types.EventTCYStake does not contain field %s", fd.FullName()))
+	}
+}
+
+// Mutable returns a mutable reference to a composite type.
+//
+// If the field is unpopulated, it may allocate a composite value.
+// For a field belonging to a oneof, it implicitly clears any other field
+// that may be currently set within the same oneof.
+// For extension fields, it implicitly stores the provided ExtensionType
+// if not already stored.
+// It panics if the field does not contain a composite type.
+//
+// Mutable is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_EventTCYStake) Mutable(fd protoreflect.FieldDescriptor) protoreflect.Value {
+	switch fd.FullName() {
+	case "types.EventTCYStake.address":
+		panic(fmt.Errorf("field address of message types.EventTCYStake is not mutable"))
+	case "types.EventTCYStake.amount":
+		panic(fmt.Errorf("field amount of message types.EventTCYStake is not mutable"))
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventTCYStake"))
+		}
+		panic(fmt.Errorf("message types.EventTCYStake does not contain field %s", fd.FullName()))
+	}
+}
+
+// NewField returns a new value that is assignable to the field
+// for the given descriptor. For scalars, this returns the default value.
+// For lists, maps, and messages, this returns a new, empty, mutable value.
+func (x *fastReflection_EventTCYStake) NewField(fd protoreflect.FieldDescriptor) protoreflect.Value {
+	switch fd.FullName() {
+	case "types.EventTCYStake.address":
+		return protoreflect.ValueOfString("")
+	case "types.EventTCYStake.amount":
+		return protoreflect.ValueOfString("")
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventTCYStake"))
+		}
+		panic(fmt.Errorf("message types.EventTCYStake does not contain field %s", fd.FullName()))
+	}
+}
+
+// WhichOneof reports which field within the oneof is populated,
+// returning nil if none are populated.
+// It panics if the oneof descriptor does not belong to this message.
+func (x *fastReflection_EventTCYStake) WhichOneof(d protoreflect.OneofDescriptor) protoreflect.FieldDescriptor {
+	switch d.FullName() {
+	default:
+		panic(fmt.Errorf("%s is not a oneof field in types.EventTCYStake", d.FullName()))
+	}
+	panic("unreachable")
+}
+
+// GetUnknown retrieves the entire list of unknown fields.
+// The caller may only mutate the contents of the RawFields
+// if the mutated bytes are stored back into the message with SetUnknown.
+func (x *fastReflection_EventTCYStake) GetUnknown() protoreflect.RawFields {
+	return x.unknownFields
+}
+
+// SetUnknown stores an entire list of unknown fields.
+// The raw fields must be syntactically valid according to the wire format.
+// An implementation may panic if this is not the case.
+// Once stored, the caller must not mutate the content of the RawFields.
+// An empty RawFields may be passed to clear the fields.
+//
+// SetUnknown is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_EventTCYStake) SetUnknown(fields protoreflect.RawFields) {
+	x.unknownFields = fields
+}
+
+// IsValid reports whether the message is valid.
+//
+// An invalid message is an empty, read-only value.
+//
+// An invalid message often corresponds to a nil pointer of the concrete
+// message type, but the details are implementation dependent.
+// Validity is not part of the protobuf data model, and may not
+// be preserved in marshaling or other operations.
+func (x *fastReflection_EventTCYStake) IsValid() bool {
+	return x != nil
+}
+
+// ProtoMethods returns optional fastReflectionFeature-path implementations of various operations.
+// This method may return nil.
+//
+// The returned methods type is identical to
+// "google.golang.org/protobuf/runtime/protoiface".Methods.
+// Consult the protoiface package documentation for details.
+func (x *fastReflection_EventTCYStake) ProtoMethods() *protoiface.Methods {
+	size := func(input protoiface.SizeInput) protoiface.SizeOutput {
+		x := input.Message.Interface().(*EventTCYStake)
+		if x == nil {
+			return protoiface.SizeOutput{
+				NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+				Size:              0,
+			}
+		}
+		options := runtime.SizeInputToOptions(input)
+		_ = options
+		var n int
+		var l int
+		_ = l
+		l = len(x.Address)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.Amount)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		if x.unknownFields != nil {
+			n += len(x.unknownFields)
+		}
+		return protoiface.SizeOutput{
+			NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+			Size:              n,
+		}
+	}
+
+	marshal := func(input protoiface.MarshalInput) (protoiface.MarshalOutput, error) {
+		x := input.Message.Interface().(*EventTCYStake)
+		if x == nil {
+			return protoiface.MarshalOutput{
+				NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+				Buf:               input.Buf,
+			}, nil
+		}
+		options := runtime.MarshalInputToOptions(input)
+		_ = options
+		size := options.Size(x)
+		dAtA := make([]byte, size)
+		i := len(dAtA)
+		_ = i
+		var l int
+		_ = l
+		if x.unknownFields != nil {
+			i -= len(x.unknownFields)
+			copy(dAtA[i:], x.unknownFields)
+		}
+		if len(x.Amount) > 0 {
+			i -= len(x.Amount)
+			copy(dAtA[i:], x.Amount)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.Amount)))
+			i--
+			dAtA[i] = 0x12
+		}
+		if len(x.Address) > 0 {
+			i -= len(x.Address)
+			copy(dAtA[i:], x.Address)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.Address)))
+			i--
+			dAtA[i] = 0xa
+		}
+		if input.Buf != nil {
+			input.Buf = append(input.Buf, dAtA...)
+		} else {
+			input.Buf = dAtA
+		}
+		return protoiface.MarshalOutput{
+			NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+			Buf:               input.Buf,
+		}, nil
+	}
+	unmarshal := func(input protoiface.UnmarshalInput) (protoiface.UnmarshalOutput, error) {
+		x := input.Message.Interface().(*EventTCYStake)
+		if x == nil {
+			return protoiface.UnmarshalOutput{
+				NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+				Flags:             input.Flags,
+			}, nil
+		}
+		options := runtime.UnmarshalInputToOptions(input)
+		_ = options
+		dAtA := input.Buf
+		l := len(dAtA)
+		iNdEx := 0
+		for iNdEx < l {
+			preIndex := iNdEx
+			var wire uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				wire |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			fieldNum := int32(wire >> 3)
+			wireType := int(wire & 0x7)
+			if wireType == 4 {
+				return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: EventTCYStake: wiretype end group for non-group")
+			}
+			if fieldNum <= 0 {
+				return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: EventTCYStake: illegal tag %d (wire type %d)", fieldNum, wire)
+			}
+			switch fieldNum {
+			case 1:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Address", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.Address = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 2:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Amount", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.Amount = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			default:
+				iNdEx = preIndex
+				skippy, err := runtime.Skip(dAtA[iNdEx:])
+				if err != nil {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, err
+				}
+				if (skippy < 0) || (iNdEx+skippy) < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if (iNdEx + skippy) > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				if !options.DiscardUnknown {
+					x.unknownFields = append(x.unknownFields, dAtA[iNdEx:iNdEx+skippy]...)
+				}
+				iNdEx += skippy
+			}
+		}
+
+		if iNdEx > l {
+			return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+		}
+		return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, nil
+	}
+	return &protoiface.Methods{
+		NoUnkeyedLiterals: struct{}{},
+		Flags:             protoiface.SupportMarshalDeterministic | protoiface.SupportUnmarshalDiscardUnknown,
+		Size:              size,
+		Marshal:           marshal,
+		Unmarshal:         unmarshal,
+		Merge:             nil,
+		CheckInitialized:  nil,
+	}
+}
+
+var (
+	md_EventTCYUnstake              protoreflect.MessageDescriptor
+	fd_EventTCYUnstake_address      protoreflect.FieldDescriptor
+	fd_EventTCYUnstake_basis_points protoreflect.FieldDescriptor
+)
+
+func init() {
+	file_types_type_events_proto_init()
+	md_EventTCYUnstake = File_types_type_events_proto.Messages().ByName("EventTCYUnstake")
+	fd_EventTCYUnstake_address = md_EventTCYUnstake.Fields().ByName("address")
+	fd_EventTCYUnstake_basis_points = md_EventTCYUnstake.Fields().ByName("basis_points")
+}
+
+var _ protoreflect.Message = (*fastReflection_EventTCYUnstake)(nil)
+
+type fastReflection_EventTCYUnstake EventTCYUnstake
+
+func (x *EventTCYUnstake) ProtoReflect() protoreflect.Message {
+	return (*fastReflection_EventTCYUnstake)(x)
+}
+
+func (x *EventTCYUnstake) slowProtoReflect() protoreflect.Message {
+	mi := &file_types_type_events_proto_msgTypes[46]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+var _fastReflection_EventTCYUnstake_messageType fastReflection_EventTCYUnstake_messageType
+var _ protoreflect.MessageType = fastReflection_EventTCYUnstake_messageType{}
+
+type fastReflection_EventTCYUnstake_messageType struct{}
+
+func (x fastReflection_EventTCYUnstake_messageType) Zero() protoreflect.Message {
+	return (*fastReflection_EventTCYUnstake)(nil)
+}
+func (x fastReflection_EventTCYUnstake_messageType) New() protoreflect.Message {
+	return new(fastReflection_EventTCYUnstake)
+}
+func (x fastReflection_EventTCYUnstake_messageType) Descriptor() protoreflect.MessageDescriptor {
+	return md_EventTCYUnstake
+}
+
+// Descriptor returns message descriptor, which contains only the protobuf
+// type information for the message.
+func (x *fastReflection_EventTCYUnstake) Descriptor() protoreflect.MessageDescriptor {
+	return md_EventTCYUnstake
+}
+
+// Type returns the message type, which encapsulates both Go and protobuf
+// type information. If the Go type information is not needed,
+// it is recommended that the message descriptor be used instead.
+func (x *fastReflection_EventTCYUnstake) Type() protoreflect.MessageType {
+	return _fastReflection_EventTCYUnstake_messageType
+}
+
+// New returns a newly allocated and mutable empty message.
+func (x *fastReflection_EventTCYUnstake) New() protoreflect.Message {
+	return new(fastReflection_EventTCYUnstake)
+}
+
+// Interface unwraps the message reflection interface and
+// returns the underlying ProtoMessage interface.
+func (x *fastReflection_EventTCYUnstake) Interface() protoreflect.ProtoMessage {
+	return (*EventTCYUnstake)(x)
+}
+
+// Range iterates over every populated field in an undefined order,
+// calling f for each field descriptor and value encountered.
+// Range returns immediately if f returns false.
+// While iterating, mutating operations may only be performed
+// on the current field descriptor.
+func (x *fastReflection_EventTCYUnstake) Range(f func(protoreflect.FieldDescriptor, protoreflect.Value) bool) {
+	if x.Address != "" {
+		value := protoreflect.ValueOfString(x.Address)
+		if !f(fd_EventTCYUnstake_address, value) {
+			return
+		}
+	}
+	if x.BasisPoints != "" {
+		value := protoreflect.ValueOfString(x.BasisPoints)
+		if !f(fd_EventTCYUnstake_basis_points, value) {
+			return
+		}
+	}
+}
+
+// Has reports whether a field is populated.
+//
+// Some fields have the property of nullability where it is possible to
+// distinguish between the default value of a field and whether the field
+// was explicitly populated with the default value. Singular message fields,
+// member fields of a oneof, and proto2 scalar fields are nullable. Such
+// fields are populated only if explicitly set.
+//
+// In other cases (aside from the nullable cases above),
+// a proto3 scalar field is populated if it contains a non-zero value, and
+// a repeated field is populated if it is non-empty.
+func (x *fastReflection_EventTCYUnstake) Has(fd protoreflect.FieldDescriptor) bool {
+	switch fd.FullName() {
+	case "types.EventTCYUnstake.address":
+		return x.Address != ""
+	case "types.EventTCYUnstake.basis_points":
+		return x.BasisPoints != ""
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventTCYUnstake"))
+		}
+		panic(fmt.Errorf("message types.EventTCYUnstake does not contain field %s", fd.FullName()))
+	}
+}
+
+// Clear clears the field such that a subsequent Has call reports false.
+//
+// Clearing an extension field clears both the extension type and value
+// associated with the given field number.
+//
+// Clear is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_EventTCYUnstake) Clear(fd protoreflect.FieldDescriptor) {
+	switch fd.FullName() {
+	case "types.EventTCYUnstake.address":
+		x.Address = ""
+	case "types.EventTCYUnstake.basis_points":
+		x.BasisPoints = ""
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventTCYUnstake"))
+		}
+		panic(fmt.Errorf("message types.EventTCYUnstake does not contain field %s", fd.FullName()))
+	}
+}
+
+// Get retrieves the value for a field.
+//
+// For unpopulated scalars, it returns the default value, where
+// the default value of a bytes scalar is guaranteed to be a copy.
+// For unpopulated composite types, it returns an empty, read-only view
+// of the value; to obtain a mutable reference, use Mutable.
+func (x *fastReflection_EventTCYUnstake) Get(descriptor protoreflect.FieldDescriptor) protoreflect.Value {
+	switch descriptor.FullName() {
+	case "types.EventTCYUnstake.address":
+		value := x.Address
+		return protoreflect.ValueOfString(value)
+	case "types.EventTCYUnstake.basis_points":
+		value := x.BasisPoints
+		return protoreflect.ValueOfString(value)
+	default:
+		if descriptor.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventTCYUnstake"))
+		}
+		panic(fmt.Errorf("message types.EventTCYUnstake does not contain field %s", descriptor.FullName()))
+	}
+}
+
+// Set stores the value for a field.
+//
+// For a field belonging to a oneof, it implicitly clears any other field
+// that may be currently set within the same oneof.
+// For extension fields, it implicitly stores the provided ExtensionType.
+// When setting a composite type, it is unspecified whether the stored value
+// aliases the source's memory in any way. If the composite value is an
+// empty, read-only value, then it panics.
+//
+// Set is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_EventTCYUnstake) Set(fd protoreflect.FieldDescriptor, value protoreflect.Value) {
+	switch fd.FullName() {
+	case "types.EventTCYUnstake.address":
+		x.Address = value.Interface().(string)
+	case "types.EventTCYUnstake.basis_points":
+		x.BasisPoints = value.Interface().(string)
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventTCYUnstake"))
+		}
+		panic(fmt.Errorf("message types.EventTCYUnstake does not contain field %s", fd.FullName()))
+	}
+}
+
+// Mutable returns a mutable reference to a composite type.
+//
+// If the field is unpopulated, it may allocate a composite value.
+// For a field belonging to a oneof, it implicitly clears any other field
+// that may be currently set within the same oneof.
+// For extension fields, it implicitly stores the provided ExtensionType
+// if not already stored.
+// It panics if the field does not contain a composite type.
+//
+// Mutable is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_EventTCYUnstake) Mutable(fd protoreflect.FieldDescriptor) protoreflect.Value {
+	switch fd.FullName() {
+	case "types.EventTCYUnstake.address":
+		panic(fmt.Errorf("field address of message types.EventTCYUnstake is not mutable"))
+	case "types.EventTCYUnstake.basis_points":
+		panic(fmt.Errorf("field basis_points of message types.EventTCYUnstake is not mutable"))
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventTCYUnstake"))
+		}
+		panic(fmt.Errorf("message types.EventTCYUnstake does not contain field %s", fd.FullName()))
+	}
+}
+
+// NewField returns a new value that is assignable to the field
+// for the given descriptor. For scalars, this returns the default value.
+// For lists, maps, and messages, this returns a new, empty, mutable value.
+func (x *fastReflection_EventTCYUnstake) NewField(fd protoreflect.FieldDescriptor) protoreflect.Value {
+	switch fd.FullName() {
+	case "types.EventTCYUnstake.address":
+		return protoreflect.ValueOfString("")
+	case "types.EventTCYUnstake.basis_points":
+		return protoreflect.ValueOfString("")
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventTCYUnstake"))
+		}
+		panic(fmt.Errorf("message types.EventTCYUnstake does not contain field %s", fd.FullName()))
+	}
+}
+
+// WhichOneof reports which field within the oneof is populated,
+// returning nil if none are populated.
+// It panics if the oneof descriptor does not belong to this message.
+func (x *fastReflection_EventTCYUnstake) WhichOneof(d protoreflect.OneofDescriptor) protoreflect.FieldDescriptor {
+	switch d.FullName() {
+	default:
+		panic(fmt.Errorf("%s is not a oneof field in types.EventTCYUnstake", d.FullName()))
+	}
+	panic("unreachable")
+}
+
+// GetUnknown retrieves the entire list of unknown fields.
+// The caller may only mutate the contents of the RawFields
+// if the mutated bytes are stored back into the message with SetUnknown.
+func (x *fastReflection_EventTCYUnstake) GetUnknown() protoreflect.RawFields {
+	return x.unknownFields
+}
+
+// SetUnknown stores an entire list of unknown fields.
+// The raw fields must be syntactically valid according to the wire format.
+// An implementation may panic if this is not the case.
+// Once stored, the caller must not mutate the content of the RawFields.
+// An empty RawFields may be passed to clear the fields.
+//
+// SetUnknown is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_EventTCYUnstake) SetUnknown(fields protoreflect.RawFields) {
+	x.unknownFields = fields
+}
+
+// IsValid reports whether the message is valid.
+//
+// An invalid message is an empty, read-only value.
+//
+// An invalid message often corresponds to a nil pointer of the concrete
+// message type, but the details are implementation dependent.
+// Validity is not part of the protobuf data model, and may not
+// be preserved in marshaling or other operations.
+func (x *fastReflection_EventTCYUnstake) IsValid() bool {
+	return x != nil
+}
+
+// ProtoMethods returns optional fastReflectionFeature-path implementations of various operations.
+// This method may return nil.
+//
+// The returned methods type is identical to
+// "google.golang.org/protobuf/runtime/protoiface".Methods.
+// Consult the protoiface package documentation for details.
+func (x *fastReflection_EventTCYUnstake) ProtoMethods() *protoiface.Methods {
+	size := func(input protoiface.SizeInput) protoiface.SizeOutput {
+		x := input.Message.Interface().(*EventTCYUnstake)
+		if x == nil {
+			return protoiface.SizeOutput{
+				NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+				Size:              0,
+			}
+		}
+		options := runtime.SizeInputToOptions(input)
+		_ = options
+		var n int
+		var l int
+		_ = l
+		l = len(x.Address)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.BasisPoints)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		if x.unknownFields != nil {
+			n += len(x.unknownFields)
+		}
+		return protoiface.SizeOutput{
+			NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+			Size:              n,
+		}
+	}
+
+	marshal := func(input protoiface.MarshalInput) (protoiface.MarshalOutput, error) {
+		x := input.Message.Interface().(*EventTCYUnstake)
+		if x == nil {
+			return protoiface.MarshalOutput{
+				NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+				Buf:               input.Buf,
+			}, nil
+		}
+		options := runtime.MarshalInputToOptions(input)
+		_ = options
+		size := options.Size(x)
+		dAtA := make([]byte, size)
+		i := len(dAtA)
+		_ = i
+		var l int
+		_ = l
+		if x.unknownFields != nil {
+			i -= len(x.unknownFields)
+			copy(dAtA[i:], x.unknownFields)
+		}
+		if len(x.BasisPoints) > 0 {
+			i -= len(x.BasisPoints)
+			copy(dAtA[i:], x.BasisPoints)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.BasisPoints)))
+			i--
+			dAtA[i] = 0x12
+		}
+		if len(x.Address) > 0 {
+			i -= len(x.Address)
+			copy(dAtA[i:], x.Address)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.Address)))
+			i--
+			dAtA[i] = 0xa
+		}
+		if input.Buf != nil {
+			input.Buf = append(input.Buf, dAtA...)
+		} else {
+			input.Buf = dAtA
+		}
+		return protoiface.MarshalOutput{
+			NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+			Buf:               input.Buf,
+		}, nil
+	}
+	unmarshal := func(input protoiface.UnmarshalInput) (protoiface.UnmarshalOutput, error) {
+		x := input.Message.Interface().(*EventTCYUnstake)
+		if x == nil {
+			return protoiface.UnmarshalOutput{
+				NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+				Flags:             input.Flags,
+			}, nil
+		}
+		options := runtime.UnmarshalInputToOptions(input)
+		_ = options
+		dAtA := input.Buf
+		l := len(dAtA)
+		iNdEx := 0
+		for iNdEx < l {
+			preIndex := iNdEx
+			var wire uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				wire |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			fieldNum := int32(wire >> 3)
+			wireType := int(wire & 0x7)
+			if wireType == 4 {
+				return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: EventTCYUnstake: wiretype end group for non-group")
+			}
+			if fieldNum <= 0 {
+				return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: EventTCYUnstake: illegal tag %d (wire type %d)", fieldNum, wire)
+			}
+			switch fieldNum {
+			case 1:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Address", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.Address = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 2:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field BasisPoints", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.BasisPoints = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			default:
+				iNdEx = preIndex
+				skippy, err := runtime.Skip(dAtA[iNdEx:])
+				if err != nil {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, err
+				}
+				if (skippy < 0) || (iNdEx+skippy) < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if (iNdEx + skippy) > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				if !options.DiscardUnknown {
+					x.unknownFields = append(x.unknownFields, dAtA[iNdEx:iNdEx+skippy]...)
+				}
+				iNdEx += skippy
+			}
+		}
+
+		if iNdEx > l {
+			return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+		}
+		return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, nil
+	}
+	return &protoiface.Methods{
+		NoUnkeyedLiterals: struct{}{},
+		Flags:             protoiface.SupportMarshalDeterministic | protoiface.SupportUnmarshalDiscardUnknown,
+		Size:              size,
+		Marshal:           marshal,
+		Unmarshal:         unmarshal,
+		Merge:             nil,
+		CheckInitialized:  nil,
+	}
+}
+
 // Code generated by protoc-gen-go. DO NOT EDIT.
 // versions:
 // 	protoc-gen-go v1.27.0
@@ -31896,6 +32864,92 @@ func (x *EventTCYClaim) GetAsset() *common.Asset {
 	return nil
 }
 
+type EventTCYStake struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Address string `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
+	Amount  string `protobuf:"bytes,2,opt,name=amount,proto3" json:"amount,omitempty"`
+}
+
+func (x *EventTCYStake) Reset() {
+	*x = EventTCYStake{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_types_type_events_proto_msgTypes[45]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *EventTCYStake) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventTCYStake) ProtoMessage() {}
+
+// Deprecated: Use EventTCYStake.ProtoReflect.Descriptor instead.
+func (*EventTCYStake) Descriptor() ([]byte, []int) {
+	return file_types_type_events_proto_rawDescGZIP(), []int{45}
+}
+
+func (x *EventTCYStake) GetAddress() string {
+	if x != nil {
+		return x.Address
+	}
+	return ""
+}
+
+func (x *EventTCYStake) GetAmount() string {
+	if x != nil {
+		return x.Amount
+	}
+	return ""
+}
+
+type EventTCYUnstake struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Address     string `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
+	BasisPoints string `protobuf:"bytes,2,opt,name=basis_points,json=basisPoints,proto3" json:"basis_points,omitempty"`
+}
+
+func (x *EventTCYUnstake) Reset() {
+	*x = EventTCYUnstake{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_types_type_events_proto_msgTypes[46]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *EventTCYUnstake) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventTCYUnstake) ProtoMessage() {}
+
+// Deprecated: Use EventTCYUnstake.ProtoReflect.Descriptor instead.
+func (*EventTCYUnstake) Descriptor() ([]byte, []int) {
+	return file_types_type_events_proto_rawDescGZIP(), []int{46}
+}
+
+func (x *EventTCYUnstake) GetAddress() string {
+	if x != nil {
+		return x.Address
+	}
+	return ""
+}
+
+func (x *EventTCYUnstake) GetBasisPoints() string {
+	if x != nil {
+		return x.BasisPoints
+	}
+	return ""
+}
+
 var File_types_type_events_proto protoreflect.FileDescriptor
 
 var file_types_type_events_proto_rawDesc = []byte{
@@ -32694,26 +33748,46 @@ var file_types_type_events_proto_rawDesc = []byte{
 	0x00, 0xda, 0xde, 0x1f, 0x2d, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f,
 	0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f,
 	0x64, 0x65, 0x2f, 0x76, 0x33, 0x2f, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x41, 0x73, 0x73,
-	0x65, 0x74, 0x52, 0x05, 0x61, 0x73, 0x73, 0x65, 0x74, 0x2a, 0x2d, 0x0a, 0x14, 0x50, 0x65, 0x6e,
-	0x64, 0x69, 0x6e, 0x67, 0x4c, 0x69, 0x71, 0x75, 0x69, 0x64, 0x69, 0x74, 0x79, 0x54, 0x79, 0x70,
-	0x65, 0x12, 0x07, 0x0a, 0x03, 0x61, 0x64, 0x64, 0x10, 0x00, 0x12, 0x0c, 0x0a, 0x08, 0x77, 0x69,
-	0x74, 0x68, 0x64, 0x72, 0x61, 0x77, 0x10, 0x01, 0x2a, 0x4c, 0x0a, 0x08, 0x42, 0x6f, 0x6e, 0x64,
-	0x54, 0x79, 0x70, 0x65, 0x12, 0x0d, 0x0a, 0x09, 0x62, 0x6f, 0x6e, 0x64, 0x5f, 0x70, 0x61, 0x69,
-	0x64, 0x10, 0x00, 0x12, 0x11, 0x0a, 0x0d, 0x62, 0x6f, 0x6e, 0x64, 0x5f, 0x72, 0x65, 0x74, 0x75,
-	0x72, 0x6e, 0x65, 0x64, 0x10, 0x01, 0x12, 0x0f, 0x0a, 0x0b, 0x62, 0x6f, 0x6e, 0x64, 0x5f, 0x72,
-	0x65, 0x77, 0x61, 0x72, 0x64, 0x10, 0x02, 0x12, 0x0d, 0x0a, 0x09, 0x62, 0x6f, 0x6e, 0x64, 0x5f,
-	0x63, 0x6f, 0x73, 0x74, 0x10, 0x03, 0x2a, 0x28, 0x0a, 0x12, 0x4d, 0x69, 0x6e, 0x74, 0x42, 0x75,
-	0x72, 0x6e, 0x53, 0x75, 0x70, 0x70, 0x6c, 0x79, 0x54, 0x79, 0x70, 0x65, 0x12, 0x08, 0x0a, 0x04,
-	0x6d, 0x69, 0x6e, 0x74, 0x10, 0x00, 0x12, 0x08, 0x0a, 0x04, 0x62, 0x75, 0x72, 0x6e, 0x10, 0x01,
-	0x42, 0x7c, 0x0a, 0x09, 0x63, 0x6f, 0x6d, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x42, 0x0f, 0x54,
-	0x79, 0x70, 0x65, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x73, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01,
-	0x5a, 0x2a, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f,
+	0x65, 0x74, 0x52, 0x05, 0x61, 0x73, 0x73, 0x65, 0x74, 0x22, 0x96, 0x01, 0x0a, 0x0d, 0x45, 0x76,
+	0x65, 0x6e, 0x74, 0x54, 0x43, 0x59, 0x53, 0x74, 0x61, 0x6b, 0x65, 0x12, 0x4d, 0x0a, 0x07, 0x61,
+	0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x42, 0x33, 0xfa, 0xde,
+	0x1f, 0x2f, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f,
 	0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f,
-	0x76, 0x33, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x73, 0xa2, 0x02, 0x03, 0x54,
-	0x58, 0x58, 0xaa, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xca, 0x02, 0x05, 0x54, 0x79, 0x70,
-	0x65, 0x73, 0xe2, 0x02, 0x11, 0x54, 0x79, 0x70, 0x65, 0x73, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65,
-	0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0x62, 0x06,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x76, 0x33, 0x2f, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x41, 0x64, 0x64, 0x72, 0x65, 0x73,
+	0x73, 0x52, 0x07, 0x61, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x12, 0x36, 0x0a, 0x06, 0x61, 0x6d,
+	0x6f, 0x75, 0x6e, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x42, 0x1e, 0xc8, 0xde, 0x1f, 0x00,
+	0xda, 0xde, 0x1f, 0x16, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x73, 0x64, 0x6b, 0x2e, 0x69, 0x6f,
+	0x2f, 0x6d, 0x61, 0x74, 0x68, 0x2e, 0x55, 0x69, 0x6e, 0x74, 0x52, 0x06, 0x61, 0x6d, 0x6f, 0x75,
+	0x6e, 0x74, 0x22, 0xa3, 0x01, 0x0a, 0x0f, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x54, 0x43, 0x59, 0x55,
+	0x6e, 0x73, 0x74, 0x61, 0x6b, 0x65, 0x12, 0x4d, 0x0a, 0x07, 0x61, 0x64, 0x64, 0x72, 0x65, 0x73,
+	0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x42, 0x33, 0xfa, 0xde, 0x1f, 0x2f, 0x67, 0x69, 0x74,
+	0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69,
+	0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33, 0x2f, 0x63, 0x6f,
+	0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x41, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x52, 0x07, 0x61, 0x64,
+	0x64, 0x72, 0x65, 0x73, 0x73, 0x12, 0x41, 0x0a, 0x0c, 0x62, 0x61, 0x73, 0x69, 0x73, 0x5f, 0x70,
+	0x6f, 0x69, 0x6e, 0x74, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x42, 0x1e, 0xc8, 0xde, 0x1f,
+	0x00, 0xda, 0xde, 0x1f, 0x16, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x73, 0x64, 0x6b, 0x2e, 0x69,
+	0x6f, 0x2f, 0x6d, 0x61, 0x74, 0x68, 0x2e, 0x55, 0x69, 0x6e, 0x74, 0x52, 0x0b, 0x62, 0x61, 0x73,
+	0x69, 0x73, 0x50, 0x6f, 0x69, 0x6e, 0x74, 0x73, 0x2a, 0x2d, 0x0a, 0x14, 0x50, 0x65, 0x6e, 0x64,
+	0x69, 0x6e, 0x67, 0x4c, 0x69, 0x71, 0x75, 0x69, 0x64, 0x69, 0x74, 0x79, 0x54, 0x79, 0x70, 0x65,
+	0x12, 0x07, 0x0a, 0x03, 0x61, 0x64, 0x64, 0x10, 0x00, 0x12, 0x0c, 0x0a, 0x08, 0x77, 0x69, 0x74,
+	0x68, 0x64, 0x72, 0x61, 0x77, 0x10, 0x01, 0x2a, 0x4c, 0x0a, 0x08, 0x42, 0x6f, 0x6e, 0x64, 0x54,
+	0x79, 0x70, 0x65, 0x12, 0x0d, 0x0a, 0x09, 0x62, 0x6f, 0x6e, 0x64, 0x5f, 0x70, 0x61, 0x69, 0x64,
+	0x10, 0x00, 0x12, 0x11, 0x0a, 0x0d, 0x62, 0x6f, 0x6e, 0x64, 0x5f, 0x72, 0x65, 0x74, 0x75, 0x72,
+	0x6e, 0x65, 0x64, 0x10, 0x01, 0x12, 0x0f, 0x0a, 0x0b, 0x62, 0x6f, 0x6e, 0x64, 0x5f, 0x72, 0x65,
+	0x77, 0x61, 0x72, 0x64, 0x10, 0x02, 0x12, 0x0d, 0x0a, 0x09, 0x62, 0x6f, 0x6e, 0x64, 0x5f, 0x63,
+	0x6f, 0x73, 0x74, 0x10, 0x03, 0x2a, 0x28, 0x0a, 0x12, 0x4d, 0x69, 0x6e, 0x74, 0x42, 0x75, 0x72,
+	0x6e, 0x53, 0x75, 0x70, 0x70, 0x6c, 0x79, 0x54, 0x79, 0x70, 0x65, 0x12, 0x08, 0x0a, 0x04, 0x6d,
+	0x69, 0x6e, 0x74, 0x10, 0x00, 0x12, 0x08, 0x0a, 0x04, 0x62, 0x75, 0x72, 0x6e, 0x10, 0x01, 0x42,
+	0x7c, 0x0a, 0x09, 0x63, 0x6f, 0x6d, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x42, 0x0f, 0x54, 0x79,
+	0x70, 0x65, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x73, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a,
+	0x2a, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72,
+	0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76,
+	0x33, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x73, 0xa2, 0x02, 0x03, 0x54, 0x58,
+	0x58, 0xaa, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xca, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65,
+	0x73, 0xe2, 0x02, 0x11, 0x54, 0x79, 0x70, 0x65, 0x73, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74,
+	0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0x62, 0x06, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -32729,7 +33803,7 @@ func file_types_type_events_proto_rawDescGZIP() []byte {
 }
 
 var file_types_type_events_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_types_type_events_proto_msgTypes = make([]protoimpl.MessageInfo, 45)
+var file_types_type_events_proto_msgTypes = make([]protoimpl.MessageInfo, 47)
 var file_types_type_events_proto_goTypes = []interface{}{
 	(PendingLiquidityType)(0),         // 0: types.PendingLiquidityType
 	(BondType)(0),                     // 1: types.BondType
@@ -32779,63 +33853,65 @@ var file_types_type_events_proto_goTypes = []interface{}{
 	(*EventSwitch)(nil),               // 45: types.EventSwitch
 	(*EventTCYDistribution)(nil),      // 46: types.EventTCYDistribution
 	(*EventTCYClaim)(nil),             // 47: types.EventTCYClaim
-	(*common.Asset)(nil),              // 48: common.Asset
-	(*common.Coin)(nil),               // 49: common.Coin
-	(*common.Tx)(nil),                 // 50: common.Tx
-	(PoolStatus)(0),                   // 51: types.PoolStatus
-	(*common.Fee)(nil),                // 52: common.Fee
-	(*ReserveContributor)(nil),        // 53: types.ReserveContributor
-	(*TxOutItem)(nil),                 // 54: types.TxOutItem
+	(*EventTCYStake)(nil),             // 48: types.EventTCYStake
+	(*EventTCYUnstake)(nil),           // 49: types.EventTCYUnstake
+	(*common.Asset)(nil),              // 50: common.Asset
+	(*common.Coin)(nil),               // 51: common.Coin
+	(*common.Tx)(nil),                 // 52: common.Tx
+	(PoolStatus)(0),                   // 53: types.PoolStatus
+	(*common.Fee)(nil),                // 54: common.Fee
+	(*ReserveContributor)(nil),        // 55: types.ReserveContributor
+	(*TxOutItem)(nil),                 // 56: types.TxOutItem
 }
 var file_types_type_events_proto_depIdxs = []int32{
-	48, // 0: types.PoolMod.asset:type_name -> common.Asset
-	49, // 1: types.EventLimitOrder.source:type_name -> common.Coin
-	49, // 2: types.EventLimitOrder.target:type_name -> common.Coin
-	49, // 3: types.EventStreamingSwap.deposit:type_name -> common.Coin
-	49, // 4: types.EventStreamingSwap.in:type_name -> common.Coin
-	49, // 5: types.EventStreamingSwap.out:type_name -> common.Coin
-	48, // 6: types.EventSwap.pool:type_name -> common.Asset
-	50, // 7: types.EventSwap.in_tx:type_name -> common.Tx
-	50, // 8: types.EventSwap.out_txs:type_name -> common.Tx
-	49, // 9: types.EventSwap.emit_asset:type_name -> common.Coin
-	48, // 10: types.EventAffiliateFee.asset:type_name -> common.Asset
-	48, // 11: types.EventAddLiquidity.pool:type_name -> common.Asset
-	48, // 12: types.EventWithdraw.pool:type_name -> common.Asset
-	50, // 13: types.EventWithdraw.in_tx:type_name -> common.Tx
-	48, // 14: types.EventPendingLiquidity.pool:type_name -> common.Asset
+	50, // 0: types.PoolMod.asset:type_name -> common.Asset
+	51, // 1: types.EventLimitOrder.source:type_name -> common.Coin
+	51, // 2: types.EventLimitOrder.target:type_name -> common.Coin
+	51, // 3: types.EventStreamingSwap.deposit:type_name -> common.Coin
+	51, // 4: types.EventStreamingSwap.in:type_name -> common.Coin
+	51, // 5: types.EventStreamingSwap.out:type_name -> common.Coin
+	50, // 6: types.EventSwap.pool:type_name -> common.Asset
+	52, // 7: types.EventSwap.in_tx:type_name -> common.Tx
+	52, // 8: types.EventSwap.out_txs:type_name -> common.Tx
+	51, // 9: types.EventSwap.emit_asset:type_name -> common.Coin
+	50, // 10: types.EventAffiliateFee.asset:type_name -> common.Asset
+	50, // 11: types.EventAddLiquidity.pool:type_name -> common.Asset
+	50, // 12: types.EventWithdraw.pool:type_name -> common.Asset
+	52, // 13: types.EventWithdraw.in_tx:type_name -> common.Tx
+	50, // 14: types.EventPendingLiquidity.pool:type_name -> common.Asset
 	0,  // 15: types.EventPendingLiquidity.pending_type:type_name -> types.PendingLiquidityType
-	48, // 16: types.EventDonate.pool:type_name -> common.Asset
-	50, // 17: types.EventDonate.in_tx:type_name -> common.Tx
-	48, // 18: types.EventPool.pool:type_name -> common.Asset
-	51, // 19: types.EventPool.Status:type_name -> types.PoolStatus
-	48, // 20: types.PoolAmt.asset:type_name -> common.Asset
+	50, // 16: types.EventDonate.pool:type_name -> common.Asset
+	52, // 17: types.EventDonate.in_tx:type_name -> common.Tx
+	50, // 18: types.EventPool.pool:type_name -> common.Asset
+	53, // 19: types.EventPool.Status:type_name -> types.PoolStatus
+	50, // 20: types.PoolAmt.asset:type_name -> common.Asset
 	13, // 21: types.EventRewards.pool_rewards:type_name -> types.PoolAmt
-	50, // 22: types.EventRefund.in_tx:type_name -> common.Tx
-	52, // 23: types.EventRefund.fee:type_name -> common.Fee
+	52, // 22: types.EventRefund.in_tx:type_name -> common.Tx
+	54, // 23: types.EventRefund.fee:type_name -> common.Fee
 	1,  // 24: types.EventBond.bond_type:type_name -> types.BondType
-	50, // 25: types.EventBond.tx_in:type_name -> common.Tx
-	48, // 26: types.GasPool.asset:type_name -> common.Asset
+	52, // 25: types.EventBond.tx_in:type_name -> common.Tx
+	50, // 26: types.GasPool.asset:type_name -> common.Asset
 	17, // 27: types.EventGas.pools:type_name -> types.GasPool
-	53, // 28: types.EventReserve.reserve_contributor:type_name -> types.ReserveContributor
-	50, // 29: types.EventReserve.in_tx:type_name -> common.Tx
-	54, // 30: types.EventScheduledOutbound.out_tx:type_name -> types.TxOutItem
-	50, // 31: types.EventSecurity.tx:type_name -> common.Tx
-	48, // 32: types.EventSlash.pool:type_name -> common.Asset
+	55, // 28: types.EventReserve.reserve_contributor:type_name -> types.ReserveContributor
+	52, // 29: types.EventReserve.in_tx:type_name -> common.Tx
+	56, // 30: types.EventScheduledOutbound.out_tx:type_name -> types.TxOutItem
+	52, // 31: types.EventSecurity.tx:type_name -> common.Tx
+	50, // 32: types.EventSlash.pool:type_name -> common.Asset
 	13, // 33: types.EventSlash.slash_amount:type_name -> types.PoolAmt
 	3,  // 34: types.EventErrata.pools:type_name -> types.PoolMod
-	52, // 35: types.EventFee.fee:type_name -> common.Fee
-	50, // 36: types.EventOutbound.tx:type_name -> common.Tx
+	54, // 35: types.EventFee.fee:type_name -> common.Fee
+	52, // 36: types.EventOutbound.tx:type_name -> common.Tx
 	3,  // 37: types.EventPoolBalanceChanged.pool_change:type_name -> types.PoolMod
 	2,  // 38: types.EventMintBurn.supply:type_name -> types.MintBurnSupplyType
-	48, // 39: types.EventTradeAccountDeposit.asset:type_name -> common.Asset
-	48, // 40: types.EventTradeAccountWithdraw.asset:type_name -> common.Asset
-	48, // 41: types.EventSecuredAssetDeposit.asset:type_name -> common.Asset
-	48, // 42: types.EventSecuredAssetWithdraw.asset:type_name -> common.Asset
-	48, // 43: types.EventLoanOpen.collateral_asset:type_name -> common.Asset
-	48, // 44: types.EventLoanOpen.target_asset:type_name -> common.Asset
-	48, // 45: types.EventLoanRepayment.collateral_asset:type_name -> common.Asset
-	48, // 46: types.EventSwitch.asset:type_name -> common.Asset
-	48, // 47: types.EventTCYClaim.asset:type_name -> common.Asset
+	50, // 39: types.EventTradeAccountDeposit.asset:type_name -> common.Asset
+	50, // 40: types.EventTradeAccountWithdraw.asset:type_name -> common.Asset
+	50, // 41: types.EventSecuredAssetDeposit.asset:type_name -> common.Asset
+	50, // 42: types.EventSecuredAssetWithdraw.asset:type_name -> common.Asset
+	50, // 43: types.EventLoanOpen.collateral_asset:type_name -> common.Asset
+	50, // 44: types.EventLoanOpen.target_asset:type_name -> common.Asset
+	50, // 45: types.EventLoanRepayment.collateral_asset:type_name -> common.Asset
+	50, // 46: types.EventSwitch.asset:type_name -> common.Asset
+	50, // 47: types.EventTCYClaim.asset:type_name -> common.Asset
 	48, // [48:48] is the sub-list for method output_type
 	48, // [48:48] is the sub-list for method input_type
 	48, // [48:48] is the sub-list for extension type_name
@@ -33392,6 +34468,30 @@ func file_types_type_events_proto_init() {
 				return nil
 			}
 		}
+		file_types_type_events_proto_msgTypes[45].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*EventTCYStake); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_types_type_events_proto_msgTypes[46].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*EventTCYUnstake); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -33399,7 +34499,7 @@ func file_types_type_events_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_types_type_events_proto_rawDesc,
 			NumEnums:      3,
-			NumMessages:   45,
+			NumMessages:   47,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

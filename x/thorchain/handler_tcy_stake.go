@@ -5,6 +5,7 @@ import (
 
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 // TCYStakeHandler to process withdraw requests
@@ -58,5 +59,6 @@ func (h TCYStakeHandler) handle(ctx cosmos.Context, msg MsgTCYStake) (*cosmos.Re
 		ctx.Logger().Error("failed to update tcy staker", "err", err)
 	}
 
-	return &cosmos.Result{}, err
+	evt := types.NewEventTCYStake(msg.Tx.FromAddress, msg.Tx.Coins[0].Amount)
+	return &cosmos.Result{}, h.mgr.EventMgr().EmitEvent(ctx, evt)
 }
