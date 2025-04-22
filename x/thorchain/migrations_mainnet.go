@@ -88,7 +88,7 @@ func (m Migrator) Migrate4to5(ctx sdk.Context) error {
 
 	// 210M minus claims: 206_606_541_28874864
 	treasuryCoin := common.NewCoin(common.TCY, totalTCYCoin.Amount.Sub(claimingModuleCoin.Amount))
-	treasuryAddress, err := common.NewAddress("thor1hjpct8pd9d48vyqltaqunltwx9twm57l3qmaya")
+	treasuryAddress, err := common.NewAddress("thor10qh5272ktq4wes8ex343ky9rsuehcypddjh08k")
 	if err != nil {
 		return err
 	}
