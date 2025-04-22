@@ -312,7 +312,7 @@ func (o *Observer) processObservedTx(txIn types.TxIn) {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 	found := false
-	for i, in := range o.onDeck {
+	for _, in := range o.onDeck {
 		if in.Chain != txIn.Chain {
 			continue
 		}
@@ -335,7 +335,19 @@ func (o *Observer) processObservedTx(txIn types.TxIn) {
 				return
 			}
 		}
-		o.onDeck[i].TxArray = append(o.onDeck[i].TxArray, txIn.TxArray...)
+		// dedupe incoming txs
+		for _, txInItem := range txIn.TxArray {
+			foundTx := false
+			for _, txInItemDeck := range in.TxArray {
+				if txInItemDeck.Equals(txInItem) {
+					foundTx = true
+					break
+				}
+			}
+			if !foundTx {
+				in.TxArray = append(in.TxArray, txInItem)
+			}
+		}
 		found = true
 		break
 	}

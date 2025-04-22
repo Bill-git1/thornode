@@ -71,8 +71,36 @@ const (
 	Failed
 )
 
+func (t *TxInItem) Equals(other *TxInItem) bool {
+	if t.BlockHeight != other.BlockHeight {
+		return false
+	}
+	if t.Tx != other.Tx {
+		return false
+	}
+	if t.Memo != other.Memo {
+		return false
+	}
+	if t.Sender != other.Sender {
+		return false
+	}
+	if t.To != other.To {
+		return false
+	}
+	if !t.Coins.EqualsEx(other.Coins) {
+		return false
+	}
+	if !t.Gas.Equals(other.Gas) {
+		return false
+	}
+	if !t.ObservedVaultPubKey.Equals(other.ObservedVaultPubKey) {
+		return false
+	}
+	return true
+}
+
 // IsEmpty return true only when every field in TxInItem is empty
-func (t TxInItem) IsEmpty() bool {
+func (t *TxInItem) IsEmpty() bool {
 	return t.BlockHeight == 0 &&
 		t.Tx == "" &&
 		t.Memo == "" &&
@@ -84,12 +112,12 @@ func (t TxInItem) IsEmpty() bool {
 }
 
 // CacheHash calculate the has used for signer cache
-func (t TxInItem) CacheHash(chain common.Chain, inboundHash string) string {
+func (t *TxInItem) CacheHash(chain common.Chain, inboundHash string) string {
 	str := fmt.Sprintf("%s|%s|%s|%s|%s", chain, t.To, t.Coins, t.Memo, inboundHash)
 	return fmt.Sprintf("%X", sha256.Sum256([]byte(str)))
 }
 
-func (t TxInItem) CacheVault(chain common.Chain) string {
+func (t *TxInItem) CacheVault(chain common.Chain) string {
 	return InboundCacheKey(t.ObservedVaultPubKey.String(), chain.String())
 }
 
