@@ -1320,10 +1320,10 @@ func (m *EventTCYStake) Events() (cosmos.Events, error) {
 }
 
 // NewEventTCYUnstake create a new EventTCYUnstake
-func NewEventTCYUnstake(address common.Address, bps cosmos.Uint) *EventTCYUnstake {
+func NewEventTCYUnstake(address common.Address, amount cosmos.Uint) *EventTCYUnstake {
 	return &EventTCYUnstake{
-		Address:     address,
-		BasisPoints: bps,
+		Address: address,
+		Amount:  amount,
 	}
 }
 
@@ -1336,7 +1336,7 @@ func (m *EventTCYUnstake) Type() string {
 func (m *EventTCYUnstake) Events() (cosmos.Events, error) {
 	evt := cosmos.NewEvent(m.Type(),
 		cosmos.NewAttribute("address", m.Address.String()),
-		cosmos.NewAttribute("basis_points", m.BasisPoints.String()),
+		cosmos.NewAttribute("amount", m.Amount.String()),
 	)
 	return cosmos.Events{evt}, nil
 }

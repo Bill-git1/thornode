@@ -62,6 +62,7 @@ func (h TCYUnstakeHandler) handle(ctx cosmos.Context, msg MsgTCYUnstake) (*cosmo
 	if unstakeAmount.IsZero() {
 		return &cosmos.Result{}, fmt.Errorf("staker: %s doesn't have enough tcy", staker.Address)
 	}
+	evt := types.NewEventTCYUnstake(msg.Tx.FromAddress, unstakeAmount)
 
 	stakerAddress, err := staker.Address.AccAddress()
 	if err != nil {
@@ -77,11 +78,13 @@ func (h TCYUnstakeHandler) handle(ctx cosmos.Context, msg MsgTCYUnstake) (*cosmo
 	newStakingAmount := common.SafeSub(staker.Amount, unstakeAmount)
 	if newStakingAmount.IsZero() {
 		h.mgr.Keeper().DeleteTCYStaker(ctx, msg.Tx.FromAddress)
-		return &cosmos.Result{}, nil
+		return &cosmos.Result{}, h.mgr.EventMgr().EmitEvent(ctx, evt)
 	}
 
 	err = h.mgr.Keeper().SetTCYStaker(ctx, types.NewTCYStaker(msg.Tx.FromAddress, newStakingAmount))
+	if err != nil {
+		return &cosmos.Result{}, err
+	}
 
-	evt := types.NewEventTCYUnstake(msg.Tx.FromAddress, msg.BasisPoints)
 	return &cosmos.Result{}, h.mgr.EventMgr().EmitEvent(ctx, evt)
 }
