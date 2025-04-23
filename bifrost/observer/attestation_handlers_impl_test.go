@@ -427,29 +427,29 @@ func TestRefactoredHandlersIntegration(t *testing.T) {
 		}
 
 		// Track sent messages for each type
-		var sentTx *common.QuorumTx
-		var sentFee *common.QuorumNetworkFee
-		var sentSolvency *common.QuorumSolvency
-		var sentErrata *common.QuorumErrataTx
+		var sentTxs []*common.QuorumTx
+		var sentFees []*common.QuorumNetworkFee
+		var sentSolvencies []*common.QuorumSolvency
+		var sentErratas []*common.QuorumErrataTx
 
 		// Setup GRPC client mocks
 		grpcClient.sendQuorumTxFunc = func(ctx context.Context, quorumTx *common.QuorumTx, opts ...grpc.CallOption) (*ebifrost.SendQuorumTxResult, error) {
-			sentTx = quorumTx
+			sentTxs = append(sentTxs, quorumTx)
 			return &ebifrost.SendQuorumTxResult{}, nil
 		}
 
 		grpcClient.sendQuorumNetworkFeeFunc = func(ctx context.Context, quorumNetworkFee *common.QuorumNetworkFee, opts ...grpc.CallOption) (*ebifrost.SendQuorumNetworkFeeResult, error) {
-			sentFee = quorumNetworkFee
+			sentFees = append(sentFees, quorumNetworkFee)
 			return &ebifrost.SendQuorumNetworkFeeResult{}, nil
 		}
 
 		grpcClient.sendQuorumSolvencyFunc = func(ctx context.Context, quorumSolvency *common.QuorumSolvency, opts ...grpc.CallOption) (*ebifrost.SendQuorumSolvencyResult, error) {
-			sentSolvency = quorumSolvency
+			sentSolvencies = append(sentSolvencies, quorumSolvency)
 			return &ebifrost.SendQuorumSolvencyResult{}, nil
 		}
 
 		grpcClient.sendQuorumErrataFunc = func(ctx context.Context, quorumErrataTx *common.QuorumErrataTx, opts ...grpc.CallOption) (*ebifrost.SendQuorumErrataTxResult, error) {
-			sentErrata = quorumErrataTx
+			sentErratas = append(sentErratas, quorumErrataTx)
 			return &ebifrost.SendQuorumErrataTxResult{}, nil
 		}
 
@@ -520,34 +520,41 @@ func TestRefactoredHandlersIntegration(t *testing.T) {
 		time.Sleep(200 * time.Millisecond)
 
 		// Verify all types were sent to thornode
-		assert.NotNil(t, sentTx, "Should have sent tx to thornode")
-		assert.NotNil(t, sentFee, "Should have sent network fee to thornode")
-		assert.NotNil(t, sentSolvency, "Should have sent solvency to thornode")
-		assert.NotNil(t, sentErrata, "Should have sent errata tx to thornode")
+		assert.Len(t, sentTxs, 2, "Should have sent txs to thornode")
+		assert.Len(t, sentFees, 2, "Should have sent network fee to thornode")
+		assert.Len(t, sentSolvencies, 2, "Should have sent solvency to thornode")
+		assert.Len(t, sentErratas, 2, "Should have sent errata tx to thornode")
 
 		// Verify correct data was sent for each type
-		if sentTx != nil {
+		sentAttestations := 0
+		for _, sentTx := range sentTxs {
 			assert.Equal(t, tx.Tx.ID, sentTx.ObsTx.Tx.ID)
 			assert.Equal(t, tx.Tx.Chain, sentTx.ObsTx.Tx.Chain)
-			assert.GreaterOrEqual(t, len(sentTx.Attestations), 2, "Should include quorum attestations")
+			sentAttestations += len(sentTx.Attestations)
 		}
+		assert.Equal(t, sentAttestations, 3, "Should have sent 3 attestations in total")
 
-		if sentFee != nil {
+		sentAttestations = 0
+		for _, sentFee := range sentFees {
 			assert.Equal(t, networkFee.Chain, sentFee.NetworkFee.Chain)
 			assert.Equal(t, networkFee.Height, sentFee.NetworkFee.Height)
-			assert.GreaterOrEqual(t, len(sentFee.Attestations), 2, "Should include quorum attestations")
+			sentAttestations += len(sentFee.Attestations)
 		}
+		assert.Equal(t, sentAttestations, 3, "Should have sent 3 attestations in total")
 
-		if sentSolvency != nil {
+		sentAttestations = 0
+		for _, sentSolvency := range sentSolvencies {
 			assert.Equal(t, solvency.Chain, sentSolvency.Solvency.Chain)
 			assert.Equal(t, solvency.Height, sentSolvency.Solvency.Height)
-			assert.GreaterOrEqual(t, len(sentSolvency.Attestations), 2, "Should include quorum attestations")
+			sentAttestations += len(sentSolvency.Attestations)
 		}
+		assert.Equal(t, sentAttestations, 3, "Should have sent 3 attestations in total")
 
-		if sentErrata != nil {
+		sentAttestations = 0
+		for _, sentErrata := range sentErratas {
 			assert.Equal(t, errataTx.Chain, sentErrata.ErrataTx.Chain)
 			assert.Equal(t, errataTx.Id, sentErrata.ErrataTx.Id)
-			assert.GreaterOrEqual(t, len(sentErrata.Attestations), 2, "Should include quorum attestations")
+			sentAttestations += len(sentErrata.Attestations)
 		}
 
 		// Verify all state data is stored correctly
@@ -561,6 +568,7 @@ func TestRefactoredHandlersIntegration(t *testing.T) {
 			UniqueHash:             tx.Tx.Hash(0),
 			AllowFutureObservation: false,
 			Finalized:              tx.IsFinal(),
+			Inbound:                true,
 		}
 		txState, exists := ag.observedTxs[k]
 		assert.True(t, exists, "TX should exist in observed txs map")

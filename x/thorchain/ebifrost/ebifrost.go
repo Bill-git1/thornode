@@ -307,7 +307,7 @@ func (b *EnshrinedBifrost) MarkQuorumTxAttestationsConfirmed(ctx context.Context
 
 	if !found {
 		cmpObsTx := qtx.ObsTx
-		b.logger.Error("Failed to find quorum tx to mark attestations confirmed",
+		b.logger.Debug("Failed to find quorum tx to mark attestations confirmed",
 			"chain", cmpObsTx.Tx.Chain,
 			"hash", cmpObsTx.Tx.ID,
 		)
@@ -346,7 +346,7 @@ func (b *EnshrinedBifrost) MarkQuorumNetworkFeeAttestationsConfirmed(ctx context
 
 	if !found {
 		cmpNf := qnf.NetworkFee
-		b.logger.Error("Failed to find quorum network fee to mark attestations confirmed",
+		b.logger.Debug("Failed to find quorum network fee to mark attestations confirmed",
 			"chain", cmpNf.Chain,
 			"height", cmpNf.Height,
 			"tx_size", cmpNf.TransactionSize,
@@ -387,7 +387,7 @@ func (b *EnshrinedBifrost) MarkQuorumSolvencyAttestationsConfirmed(ctx context.C
 
 	if !found {
 		cmpS := qs.Solvency
-		b.logger.Error("Failed to find quorum solvency to mark attestations confirmed",
+		b.logger.Debug("Failed to find quorum solvency to mark attestations confirmed",
 			"chain", cmpS.Chain,
 			"height", cmpS.Height,
 			"coins", cmpS.Coins,
@@ -417,7 +417,7 @@ func (b *EnshrinedBifrost) MarkQuorumErrataTxAttestationsConfirmed(ctx context.C
 		(*common.QuorumErrataTx).RemoveAttestations,
 		func(qe *common.QuorumErrataTx, logger log.Logger) {
 			er := qe.ErrataTx
-			logger.Debug("Marking quorum solvency attestations confirmed",
+			logger.Debug("Marking quorum errata attestations confirmed",
 				"chain", er.Chain,
 				"id", er.Id,
 				"attestations", len(qe.Attestations))
@@ -426,7 +426,7 @@ func (b *EnshrinedBifrost) MarkQuorumErrataTxAttestationsConfirmed(ctx context.C
 
 	if !found {
 		cmpEr := qe.ErrataTx
-		b.logger.Error("Failed to find quorum solvency to mark attestations confirmed",
+		b.logger.Debug("Failed to find quorum errata to mark attestations confirmed",
 			"chain", cmpEr.Chain,
 			"id", cmpEr.Id,
 		)
@@ -453,7 +453,7 @@ func (b *EnshrinedBifrost) ProposalInjectTxs(ctx sdk.Context) [][]byte {
 
 	var injectTxs [][]byte
 
-	// Process quorum txs
+	// Process observed txs
 	txBzs := b.quorumTxCache.ProcessForProposal(
 		func(tx *common.QuorumTx) (sdk.Msg, error) {
 			return types.NewMsgObservedTxQuorum(tx, ebifrostSignerAcc), nil
@@ -461,10 +461,11 @@ func (b *EnshrinedBifrost) ProposalInjectTxs(ctx sdk.Context) [][]byte {
 		b.MarshalTx,
 		func(tx *common.QuorumTx, logger log.Logger) {
 			obsTx := tx.ObsTx
-			logger.Debug("Injecting quorum tx",
+			logger.Info("Injecting quorum tx",
 				"chain", obsTx.Tx.Chain,
 				"hash", obsTx.Tx.ID,
 				"finalized", obsTx.IsFinal(),
+				"inbound", tx.Inbound,
 				"attestations", len(tx.Attestations))
 		},
 		b.logger,
@@ -479,7 +480,7 @@ func (b *EnshrinedBifrost) ProposalInjectTxs(ctx sdk.Context) [][]byte {
 		b.MarshalTx,
 		func(qnf *common.QuorumNetworkFee, logger log.Logger) {
 			nf := qnf.NetworkFee
-			logger.Debug("Injecting quorum network fee",
+			logger.Info("Injecting quorum network fee",
 				"chain", nf.Chain,
 				"height", nf.Height,
 				"attestations", len(qnf.Attestations))
@@ -496,7 +497,7 @@ func (b *EnshrinedBifrost) ProposalInjectTxs(ctx sdk.Context) [][]byte {
 		b.MarshalTx,
 		func(qs *common.QuorumSolvency, logger log.Logger) {
 			s := qs.Solvency
-			logger.Debug("Injecting quorum solvency",
+			logger.Info("Injecting quorum solvency",
 				"chain", s.Chain,
 				"pubkey", s.PubKey,
 				"height", s.Height,
@@ -515,7 +516,7 @@ func (b *EnshrinedBifrost) ProposalInjectTxs(ctx sdk.Context) [][]byte {
 		b.MarshalTx,
 		func(qe *common.QuorumErrataTx, logger log.Logger) {
 			e := qe.ErrataTx
-			logger.Debug("Injecting quorum errata",
+			logger.Info("Injecting quorum errata",
 				"chain", e.Chain,
 				"id", e.Id,
 				"attestations", len(qe.Attestations))

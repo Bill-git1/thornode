@@ -77,10 +77,6 @@ type AttestationState[T AttestableItem] struct {
 	// The item being attested
 	Item T
 
-	// Additional metadata associated with this attestation
-	// For ObservedTx, this would be the inbound flag
-	Metadata map[string]interface{}
-
 	// List of attestations that have been collected
 	attestations []attestationSentState
 
@@ -97,7 +93,6 @@ type AttestationState[T AttestableItem] struct {
 func NewAttestationState[T AttestableItem](item T) *AttestationState[T] {
 	return &AttestationState[T]{
 		Item:                     item,
-		Metadata:                 make(map[string]interface{}),
 		attestations:             make([]attestationSentState, 0),
 		firstAttestationObserved: time.Now(),
 	}
@@ -212,6 +207,10 @@ func (s *AttestationState[T]) ExpiredAfterQuorum(lateObserveTimeout, nonQuorumTi
 	return false
 }
 
+func (s *AttestationState[T]) State() string {
+	return fmt.Sprintf("sent: %d, total: %d post-quorum: %t", s.UnsentCount(), len(s.attestations), !s.quorumAttestationsSent.IsZero())
+}
+
 // MarkAttestationsSent marks all attestations as sent and updates timestamps
 func (s *AttestationState[T]) MarkAttestationsSent(isQuorum bool) {
 	timestamp := time.Now()
@@ -220,7 +219,7 @@ func (s *AttestationState[T]) MarkAttestationsSent(isQuorum bool) {
 	if s.initialAttestationsSent.IsZero() {
 		s.initialAttestationsSent = timestamp
 	}
-	if isQuorum {
+	if isQuorum && s.quorumAttestationsSent.IsZero() {
 		s.quorumAttestationsSent = timestamp
 	}
 
@@ -228,17 +227,6 @@ func (s *AttestationState[T]) MarkAttestationsSent(isQuorum bool) {
 	for i := range s.attestations {
 		s.attestations[i].sent = true
 	}
-}
-
-// GetMetadata retrieves a metadata value by key
-func (s *AttestationState[T]) GetMetadata(key string) (interface{}, bool) {
-	val, ok := s.Metadata[key]
-	return val, ok
-}
-
-// SetMetadata sets a metadata value
-func (s *AttestationState[T]) SetMetadata(key string, value interface{}) {
-	s.Metadata[key] = value
 }
 
 // verifySignature verifies that a signature is valid for a specific public key and data

@@ -76,6 +76,13 @@ func (s *Solvency) Hash() (TxID, error) {
 
 // GetSignablePayload returns the data that is signed for verification
 func (s *Solvency) GetSignablePayload() ([]byte, error) {
+	if s.Id.IsEmpty() {
+		id, err := s.Hash()
+		if err != nil {
+			return nil, fmt.Errorf("fail to create msg solvency hash")
+		}
+		s.Id = id
+	}
 	return s.Marshal()
 }
 
@@ -132,6 +139,9 @@ func (qtx *QuorumTx) RemoveAttestations(atts []*Attestation) bool {
 }
 
 func (qtx *QuorumTx) Equals(other *QuorumTx) bool {
+	if qtx.Inbound != other.Inbound {
+		return false
+	}
 	return qtx.ObsTx.Equals(other.ObsTx)
 }
 

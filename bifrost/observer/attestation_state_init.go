@@ -57,41 +57,13 @@ func (s *AttestationGossip) sendAttestationState(stream network.Stream) {
 
 	// Collect all QuorumTxs
 	allQuorumTxs := make([]*common.QuorumTx, 0, len(s.observedTxs))
-	for _, ots := range s.observedTxs {
+	for k, ots := range s.observedTxs {
 		ots.mu.Lock()
-
-		inbound, ok := ots.GetMetadata(metadataKeyInbound)
-		if !ok {
-			s.logger.Error().Msg("failed to get inbound metadata")
-			ots.mu.Unlock()
-			continue
-		}
-
-		inboundBool, ok := inbound.(bool)
-		if !ok {
-			s.logger.Error().Msg("inbound metadata is not a boolean")
-			ots.mu.Unlock()
-			continue
-		}
-
-		allowFutureObservation, ok := ots.GetMetadata(metadataKeyAllowFutureObservation)
-		if !ok {
-			s.logger.Error().Msg("failed to get allow future observation metadata")
-			ots.mu.Unlock()
-			continue
-		}
-
-		allowFutureObservationBool, ok := allowFutureObservation.(bool)
-		if !ok {
-			s.logger.Error().Msg("allow future observation metadata is not a boolean")
-			ots.mu.Unlock()
-			continue
-		}
 
 		quorumTxs := &common.QuorumTx{
 			ObsTx:                  *ots.Item,
-			Inbound:                inboundBool,
-			AllowFutureObservation: allowFutureObservationBool,
+			Inbound:                k.Inbound,
+			AllowFutureObservation: k.AllowFutureObservation,
 			Attestations:           ots.AttestationsCopy(),
 		}
 		allQuorumTxs = append(allQuorumTxs, quorumTxs)

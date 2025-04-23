@@ -47,9 +47,6 @@ const (
 
 	cachedKeysignPartyTTL = 1 * time.Minute
 
-	metadataKeyInbound                = "inbound"
-	metadataKeyAllowFutureObservation = "allow_future_observation"
-
 	streamAckBegin  = "ack_begin"
 	streamAckHeader = "ack_header"
 	streamAckData   = "ack_data"
@@ -81,6 +78,7 @@ type txKey struct {
 	UniqueHash             string
 	AllowFutureObservation bool
 	Finalized              bool
+	Inbound                bool
 }
 
 type KeysInterface interface {
@@ -306,34 +304,10 @@ func (s *AttestationGossip) Start(ctx context.Context) {
 				if state.ExpiredAfterQuorum(s.config.LateObserveTimeout, s.config.NonQuorumTimeout) {
 					delete(s.observedTxs, k)
 				} else if state.ShouldSendLate(s.config.MinTimeBetweenAttestations) {
-					s.logger.Info().Msg("sending late observed tx attestations")
-					isInbound, ok := state.GetMetadata(metadataKeyInbound)
-					if !ok {
-						s.logger.Error().Msg("fail to get inbound metadata")
-						state.mu.Unlock()
-						continue
-					}
-					inboundBool, ok := isInbound.(bool)
-					if !ok {
-						s.logger.Error().Msg("fail to cast inbound metadata to bool")
-						state.mu.Unlock()
-						continue
-					}
-					allowFutureObs, ok := state.GetMetadata(metadataKeyAllowFutureObservation)
-					if !ok {
-						s.logger.Error().Msg("fail to get allow future observation metadata")
-						state.mu.Unlock()
-						continue
-					}
-					allowFutureObsBool, ok := allowFutureObs.(bool)
-					if !ok {
-						s.logger.Error().Msg("fail to cast allow future observation metadata to bool")
-						state.mu.Unlock()
-						continue
-					}
+					s.logger.Debug().Msg("sending late observed tx attestations")
 
 					obsTx := state.Item
-					s.sendObservedTxAttestationsToThornode(ctx, *obsTx, state, inboundBool, allowFutureObsBool, false)
+					s.sendObservedTxAttestationsToThornode(ctx, *obsTx, state, k.Inbound, k.AllowFutureObservation, false)
 				}
 				state.mu.Unlock()
 			}
@@ -344,7 +318,7 @@ func (s *AttestationGossip) Start(ctx context.Context) {
 				if state.ExpiredAfterQuorum(s.config.LateObserveTimeout, s.config.NonQuorumTimeout) {
 					delete(s.networkFees, k)
 				} else if state.ShouldSendLate(s.config.MinTimeBetweenAttestations) {
-					s.logger.Info().Msg("sending late network fee attestations")
+					s.logger.Debug().Msg("sending late network fee attestations")
 					s.sendNetworkFeeAttestationsToThornode(ctx, *state.Item, state, false)
 				}
 				state.mu.Unlock()
@@ -356,7 +330,7 @@ func (s *AttestationGossip) Start(ctx context.Context) {
 				if state.ExpiredAfterQuorum(s.config.LateObserveTimeout, s.config.NonQuorumTimeout) {
 					delete(s.solvencies, k)
 				} else if state.ShouldSendLate(s.config.MinTimeBetweenAttestations) {
-					s.logger.Info().Msg("sending late solvency attestations")
+					s.logger.Debug().Msg("sending late solvency attestations")
 					s.sendSolvencyAttestationsToThornode(ctx, *state.Item, state, false)
 				}
 				state.mu.Unlock()
@@ -368,7 +342,7 @@ func (s *AttestationGossip) Start(ctx context.Context) {
 				if state.ExpiredAfterQuorum(s.config.LateObserveTimeout, s.config.NonQuorumTimeout) {
 					delete(s.errataTxs, k)
 				} else if state.ShouldSendLate(s.config.MinTimeBetweenAttestations) {
-					s.logger.Info().Msg("sending late errata attestations")
+					s.logger.Debug().Msg("sending late errata attestations")
 					s.sendErrataAttestationsToThornode(ctx, *state.Item, state, false)
 				}
 				state.mu.Unlock()

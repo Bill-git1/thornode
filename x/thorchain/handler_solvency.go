@@ -58,18 +58,23 @@ func (h SolvencyHandler) validate(ctx cosmos.Context, msg MsgSolvency) error {
 func (h SolvencyHandler) handle(ctx cosmos.Context, msg MsgSolvency) (*cosmos.Result, error) {
 	ctx.Logger().Debug("handle Solvency request", "id", msg.Id.String(), "signer", msg.Signer.String())
 
-	active, err := h.mgr.Keeper().ListActiveValidators(ctx)
+	k := h.mgr.Keeper()
+
+	active, err := k.ListActiveValidators(ctx)
 	if err != nil {
 		return nil, wrapError(ctx, err, "fail to get list of active node accounts")
 	}
 
-	voter, err := h.mgr.Keeper().GetSolvencyVoter(ctx, msg.Id, msg.Chain)
+	voter, err := k.GetSolvencyVoter(ctx, msg.Id, msg.Chain)
 	if err != nil {
 		return &cosmos.Result{}, fmt.Errorf("fail to get solvency voter, err: %w", err)
 	}
+	if voter.Empty() {
+		voter = NewSolvencyVoter(msg.Id, msg.Chain, msg.PubKey, msg.Coins, msg.Height)
+	}
 
 	defer func() {
-		h.mgr.Keeper().SetSolvencyVoter(ctx, voter)
+		k.SetSolvencyVoter(ctx, voter)
 	}()
 
 	s := &common.Solvency{

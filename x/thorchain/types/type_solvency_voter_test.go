@@ -17,7 +17,9 @@ func (s *TypeSolvencyVoterTestSuite) TestSolvencyVoter(c *C) {
 	), 1024,
 		signer)
 	c.Assert(err, IsNil)
-	voter := NewSolvencyVoter(msg.Id, msg.Chain, msg.PubKey, msg.Coins, msg.Height, msg.Signer)
+	voter := NewSolvencyVoter(msg.Id, msg.Chain, msg.PubKey, msg.Coins, msg.Height)
+	ok := voter.Sign(signer)
+	c.Assert(ok, Equals, true)
 	c.Assert(voter.Empty(), Equals, false)
 	c.Assert(voter.String() != "", Equals, true)
 	addr := GetRandomBech32Addr()

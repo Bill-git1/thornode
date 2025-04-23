@@ -338,22 +338,13 @@ func TestAttestObservedTx(t *testing.T) {
 			UniqueHash:             tx.Tx.Hash(0),
 			AllowFutureObservation: false,
 			Finalized:              tx.IsFinal(),
+			Inbound:                true,
 		}
 
 		state, exists := ag.observedTxs[key]
 		assert.True(t, exists, "Observed tx should be added to the map")
 
 		if exists {
-			inbound, ok := state.GetMetadata(metadataKeyInbound)
-			assert.True(t, ok, "The tx should have inbound metadata")
-			inboundBool, ok := inbound.(bool)
-			assert.True(t, ok, "The inbound metadata should be a boolean")
-			assert.Equal(t, true, inboundBool, "The tx should be marked as inbound")
-			allowFuture, ok := state.GetMetadata(metadataKeyAllowFutureObservation)
-			assert.True(t, ok, "The tx should have allow future metadata")
-			allowFutureBool, ok := allowFuture.(bool)
-			assert.True(t, ok, "The allow future metadata should be a boolean")
-			assert.Equal(t, false, allowFutureBool, "The tx should not allow future observation")
 			assert.Equal(t, 1, state.AttestationCount(), "Should have one attestation")
 		}
 	})
@@ -398,12 +389,12 @@ func TestHandleObservedTxAttestation(t *testing.T) {
 		}
 
 		// Set up GRPC client mock to capture the sent tx
-		var sentTx *common.QuorumTx
+		var sentTxs []*common.QuorumTx
 		var grpcMu sync.Mutex
 
 		grpcClient.sendQuorumTxFunc = func(ctx context.Context, quorumTx *common.QuorumTx, opts ...grpc.CallOption) (*ebifrost.SendQuorumTxResult, error) {
 			grpcMu.Lock()
-			sentTx = quorumTx
+			sentTxs = append(sentTxs, quorumTx)
 			grpcMu.Unlock()
 			return &ebifrost.SendQuorumTxResult{}, nil
 		}
@@ -446,12 +437,14 @@ func TestHandleObservedTxAttestation(t *testing.T) {
 		grpcMu.Lock()
 		defer grpcMu.Unlock()
 
-		require.NotNil(t, sentTx, "Should have sent tx to thornode")
-		if sentTx != nil {
+		require.Len(t, sentTxs, 2, "Should have sent txs to thornode")
+		sentAttestations := 0
+		for _, sentTx := range sentTxs {
 			assert.Equal(t, tx, sentTx.ObsTx, "Sent tx should match original")
 			assert.True(t, sentTx.Inbound, "Tx should be marked as inbound")
-			assert.GreaterOrEqual(t, len(sentTx.Attestations), 2, "Should include quorum attestations")
+			sentAttestations += len(sentTx.Attestations)
 		}
+		assert.Equal(t, sentAttestations, 3, "Should include all attestations")
 
 		// Verify attestations are marked as sent
 		ag.mu.Lock()
@@ -463,6 +456,7 @@ func TestHandleObservedTxAttestation(t *testing.T) {
 			UniqueHash:             tx.Tx.Hash(0),
 			AllowFutureObservation: false,
 			Finalized:              tx.IsFinal(),
+			Inbound:                true,
 		}
 
 		state, exists := ag.observedTxs[key]
@@ -505,12 +499,12 @@ func TestHandleNetworkFeeAttestation(t *testing.T) {
 		require.NoError(t, err)
 
 		// Set up GRPC client mock with mutex for thread safety
-		var sentFee *common.QuorumNetworkFee
+		var sentFees []*common.QuorumNetworkFee
 		var grpcMu sync.Mutex
 
 		grpcClient.sendQuorumNetworkFeeFunc = func(ctx context.Context, quorumNetworkFee *common.QuorumNetworkFee, opts ...grpc.CallOption) (*ebifrost.SendQuorumNetworkFeeResult, error) {
 			grpcMu.Lock()
-			sentFee = quorumNetworkFee
+			sentFees = append(sentFees, quorumNetworkFee)
 			grpcMu.Unlock()
 			return &ebifrost.SendQuorumNetworkFeeResult{}, nil
 		}
@@ -550,12 +544,14 @@ func TestHandleNetworkFeeAttestation(t *testing.T) {
 		grpcMu.Lock()
 		defer grpcMu.Unlock()
 
-		require.NotNil(t, sentFee, "Should have sent network fee to thornode")
-		if sentFee != nil {
+		require.Len(t, sentFees, 2, "Should have sent network fees to thornode")
+		sentAttestations := 0
+		for _, sentFee := range sentFees {
 			assert.Equal(t, networkFee.Chain, sentFee.NetworkFee.Chain)
 			assert.Equal(t, networkFee.Height, sentFee.NetworkFee.Height)
-			assert.GreaterOrEqual(t, len(sentFee.Attestations), 2, "Should include quorum attestations")
+			sentAttestations += len(sentFee.Attestations)
 		}
+		assert.Equal(t, sentAttestations, 3, "Should include all attestations")
 
 		// Verify attestations are in the state
 		ag.mu.Lock()
@@ -691,7 +687,6 @@ func TestSendLateAttestations(t *testing.T) {
 	}
 
 	lateState := NewAttestationState(obsTx)
-	lateState.SetMetadata(metadataKeyInbound, true)
 
 	// Add two attestations
 	lateState.attestations = append(lateState.attestations, attestationSentState{
@@ -728,14 +723,11 @@ func TestSendLateAttestations(t *testing.T) {
 
 	// Run the check for late attestations
 	ag.mu.Lock()
-	for _, state := range ag.observedTxs {
+	for k, state := range ag.observedTxs {
 		state.mu.Lock()
 		if state.ShouldSendLate(ag.config.MinTimeBetweenAttestations) {
 			// Send late attestations
-			isInbound, _ := state.GetMetadata(metadataKeyInbound)
-			inboundBool, ok := isInbound.(bool)
-			assert.True(t, ok, "The inbound metadata should be a boolean")
-			ag.sendObservedTxAttestationsToThornode(context.Background(), *obsTx, state, inboundBool, false, false)
+			ag.sendObservedTxAttestationsToThornode(context.Background(), *obsTx, state, k.Inbound, false, false)
 		}
 		state.mu.Unlock()
 	}

@@ -177,40 +177,34 @@ DeckLoop:
 			// if the chain of the observed tx in the deck is not the same as the chain of the committed observed tx, skip it.
 			continue
 		}
-
 		for j, txInItem := range deck.TxArray {
-			txInItemID, err := common.NewTxID(txInItem.Tx)
-			if err != nil {
-				o.logger.Error().Err(err).Msg("fail to parse tx id")
+			if !txInItem.EqualsObservedTx(tx) {
 				continue
 			}
-			if tx.Tx.ID.Equals(txInItemID) {
-				o.logger.Debug().Msgf("tx found in deck %s - %s", tx.Tx.Chain, tx.Tx.ID)
-				if isFinal {
-					o.logger.Debug().Msgf("tx final %s - %s removing from tx array", tx.Tx.Chain, tx.Tx.ID)
-					// if the tx is in the tx array, and it is final, remove it from the tx array.
-					deck.TxArray = append(deck.TxArray[:j], deck.TxArray[j+1:]...)
-					if len(deck.TxArray) == 0 {
-						o.logger.Debug().Msgf("deck is empty, removing from ondeck")
+			if isFinal {
+				o.logger.Debug().Msgf("tx final %s - %s removing from tx array", tx.Tx.Chain, tx.Tx.ID)
+				// if the tx is in the tx array, and it is final, remove it from the tx array.
+				deck.TxArray = append(deck.TxArray[:j], deck.TxArray[j+1:]...)
+				if len(deck.TxArray) == 0 {
+					o.logger.Debug().Msgf("deck is empty, removing from ondeck")
 
-						// if the deck is empty after removing, remove it from ondeck.
-						o.onDeck = append(o.onDeck[:i], o.onDeck[i+1:]...)
-					}
-				} else {
-					// if the tx is not final, set tx.CommittedUnFinalised to true to indicate that it has been committed to thorchain but not finalised yet.
-					deck.TxArray[j].CommittedUnFinalised = true
+					// if the deck is empty after removing, remove it from ondeck.
+					o.onDeck = append(o.onDeck[:i], o.onDeck[i+1:]...)
 				}
-
-				chain, err := o.getChain(deck.Chain)
-				if err != nil {
-					o.logger.Error().Err(err).Msg("chain not found")
-				} else {
-					chain.OnObservedTxIn(*txInItem, txInItem.BlockHeight)
-				}
-
-				madeChanges = true
-				break DeckLoop
+			} else {
+				// if the tx is not final, set tx.CommittedUnFinalised to true to indicate that it has been committed to thorchain but not finalised yet.
+				txInItem.CommittedUnFinalised = true
 			}
+
+			chain, err := o.getChain(deck.Chain)
+			if err != nil {
+				o.logger.Error().Err(err).Msg("chain not found")
+			} else {
+				chain.OnObservedTxIn(*txInItem, txInItem.BlockHeight)
+			}
+
+			madeChanges = true
+			break DeckLoop
 		}
 	}
 
@@ -221,7 +215,18 @@ DeckLoop:
 		return
 	}
 
-	o.logger.Debug().Msgf("new deck size after handle: %d", len(o.onDeck))
+	o.logger.Debug().
+		Int("ondeck_size", len(o.onDeck)).
+		Str("id", tx.Tx.ID.String()).
+		Str("chain", tx.Tx.Chain.String()).
+		Int64("height", tx.BlockHeight).
+		Str("from", tx.Tx.FromAddress.String()).
+		Str("to", tx.Tx.ToAddress.String()).
+		Str("memo", tx.Tx.Memo).
+		Str("coins", tx.Tx.Coins.String()).
+		Str("gas", common.Coins(tx.Tx.Gas).String()).
+		Str("observed_vault_pubkey", tx.ObservedPubKey.String()).
+		Msg("observed tx committed to thorchain")
 
 	// if the deck is not empty, save it back to key value store
 	if err := o.storage.SetOnDeckTxs(o.onDeck); err != nil {
@@ -309,6 +314,9 @@ func (o *Observer) processTxIns() {
 // processObservedTx will process the observed tx, and either add it to the
 // onDeck queue, or merge it with an existing tx in the onDeck queue.
 func (o *Observer) processObservedTx(txIn types.TxIn) {
+	if len(txIn.TxArray) == 0 {
+		return
+	}
 	o.lock.Lock()
 	defer o.lock.Unlock()
 	found := false
@@ -317,9 +325,6 @@ func (o *Observer) processObservedTx(txIn types.TxIn) {
 			continue
 		}
 		if in.MemPool != txIn.MemPool {
-			continue
-		}
-		if in.AllowFutureObservation != txIn.AllowFutureObservation {
 			continue
 		}
 		if len(in.TxArray) > 0 && len(txIn.TxArray) > 0 {
@@ -336,18 +341,34 @@ func (o *Observer) processObservedTx(txIn types.TxIn) {
 			}
 		}
 		// dedupe incoming txs
+		var newTxs []*types.TxInItem
 		for _, txInItem := range txIn.TxArray {
 			foundTx := false
 			for _, txInItemDeck := range in.TxArray {
 				if txInItemDeck.Equals(txInItem) {
 					foundTx = true
+					o.logger.Warn().
+						Str("id", txInItem.Tx).
+						Str("chain", in.Chain.String()).
+						Int64("height", txInItem.BlockHeight).
+						Str("from", txInItem.Sender).
+						Str("to", txInItem.To).
+						Str("memo", txInItem.Memo).
+						Str("coins", txInItem.Coins.String()).
+						Str("gas", common.Coins(txInItem.Gas).String()).
+						Str("observed_vault_pubkey", txInItem.ObservedVaultPubKey.String()).
+						Msg("Dropping duplicate observation tx")
 					break
 				}
 			}
 			if !foundTx {
-				in.TxArray = append(in.TxArray, txInItem)
+				newTxs = append(newTxs, txInItem)
 			}
 		}
+		if len(newTxs) > 0 {
+			in.TxArray = append(in.TxArray, newTxs...)
+		}
+
 		found = true
 		break
 	}
@@ -369,7 +390,8 @@ func (o *Observer) processObservedTx(txIn types.TxIn) {
 	}
 }
 
-func (o *Observer) filterObservations(chain common.Chain, items []*types.TxInItem, memPool bool) (txs []*types.TxInItem) {
+func (o *Observer) filterObservations(chain common.Chain, items []*types.TxInItem, memPool bool) []*types.TxInItem {
+	var txs []*types.TxInItem
 	for _, txInItem := range items {
 		// NOTE: the following could result in the same tx being added
 		// twice, which is expected. We want to make sure we generate both
@@ -378,23 +400,25 @@ func (o *Observer) filterObservations(chain common.Chain, items []*types.TxInIte
 		isInternal := false
 		// check if the from address is a valid pool
 		if ok, cpi := o.pubkeyMgr.IsValidPoolAddress(txInItem.Sender, chain); ok {
-			txInItem.ObservedVaultPubKey = cpi.PubKey
+			tx := txInItem.Copy()
+			tx.ObservedVaultPubKey = cpi.PubKey
 			isInternal = true
 
 			// skip the outbound observation if we signed and manually observed
-			if !o.signedTxOutCache.Contains(txInItem.Tx) {
-				txs = append(txs, txInItem)
+			if !o.signedTxOutCache.Contains(tx.Tx) {
+				txs = append(txs, tx)
 			}
 		}
 		// check if the to address is a valid pool address
 		// for inbound message , if it is still in mempool , it will be ignored unless it is internal transaction
 		// internal tx means both from & to addresses belongs to the network. for example migrate/consolidate
 		if ok, cpi := o.pubkeyMgr.IsValidPoolAddress(txInItem.To, chain); ok && (!memPool || isInternal) {
-			txInItem.ObservedVaultPubKey = cpi.PubKey
-			txs = append(txs, txInItem)
+			tx := txInItem.Copy()
+			tx.ObservedVaultPubKey = cpi.PubKey
+			txs = append(txs, tx)
 		}
 	}
-	return
+	return txs
 }
 
 func (o *Observer) processErrataTx(ctx context.Context) {
@@ -441,6 +465,10 @@ func (o *Observer) filterErrataTx(block types.ErrataBlock) {
 			if idx != -1 {
 				o.logger.Info().Msgf("drop tx (%s) from ondeck memory due to errata", tx.TxID)
 				o.onDeck[deckIdx].TxArray = append(txIn.TxArray[:idx], txIn.TxArray[idx+1:]...) // nolint
+				if len(o.onDeck[deckIdx].TxArray) == 0 {
+					o.logger.Info().Msgf("ondeck tx is empty, remove it from ondeck")
+					o.onDeck = append(o.onDeck[:deckIdx], o.onDeck[deckIdx+1:]...)
+				}
 			}
 		}
 	}

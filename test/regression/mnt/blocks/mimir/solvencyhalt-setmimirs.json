@@ -244,7 +244,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "103987",
+          "gas_used": "92687",
           "events": [
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/0",
@@ -326,7 +326,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "84726",
+          "gas_used": "73426",
           "events": [
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/1",

@@ -442,3 +442,90 @@ func TestConcurrentHandlerRegistration(t *testing.T) {
 
 	// No direct way to check results, but if no race detector warnings, it's good
 }
+
+func TestHandlersNotDuplicatedAfterReconnection(t *testing.T) {
+	mockClient := new(MockBifrostClient)
+	client := observer.NewEventClient(mockClient)
+
+	// Channel to signal handler execution and collect invocation count
+	handlerCalled := make(chan struct{}, 5) // Buffer to catch potential duplicates
+
+	// Register a handler
+	client.RegisterHandler("transaction", func(event *ebifrost.EventNotification) {
+		assert.Equal(t, "transaction", event.EventType)
+		assert.Equal(t, "test_data", string(event.Payload))
+		handlerCalled <- struct{}{}
+	})
+
+	// First subscription fails
+	mockClient.On("SubscribeToEvents",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything).Return(nil, errors.New("connection error")).Once()
+
+	// Second subscription succeeds
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Create mock stream with ONE event that will be delivered
+	mockStream := &MockBifrostStream{
+		events: []*ebifrost.EventNotification{
+			{
+				EventType: "transaction",
+				Payload:   []byte("test_data"),
+			},
+		},
+		ctx: ctx,
+	}
+
+	mockClient.On("SubscribeToEvents",
+		mock.Anything,
+		mock.MatchedBy(func(req *ebifrost.SubscribeRequest) bool {
+			// Verify transaction is in the event types EXACTLY ONCE
+			count := 0
+			for _, t := range req.EventTypes {
+				if t == "transaction" {
+					count++
+				}
+			}
+			return count == 1
+		}),
+		mock.Anything).Return(mockStream, nil).Once()
+
+	// Start client
+	client.Start()
+
+	// Allow time for retry to happen (greater than 1 second backoff)
+	time.Sleep(1500 * time.Millisecond)
+
+	// Wait for handler to be called with timeout
+	timer := time.NewTimer(time.Second)
+	select {
+	case <-handlerCalled:
+		// Handler was called at least once
+	case <-timer.C:
+		t.Fatal("Handler was not called within timeout")
+	}
+
+	// Check if there are any more calls after a brief wait (there shouldn't be)
+	timer.Reset(300 * time.Millisecond)
+	var extraCalls int
+
+waitLoop:
+	for {
+		select {
+		case <-handlerCalled:
+			extraCalls++
+		case <-timer.C:
+			break waitLoop
+		}
+	}
+
+	// Verify no extra calls occurred
+	assert.Equal(t, 0, extraCalls, "Handler should not be called more than once for a single event")
+
+	// Stop client
+	client.Stop()
+
+	mockClient.AssertExpectations(t)
+}

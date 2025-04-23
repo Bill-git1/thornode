@@ -16,7 +16,7 @@ func NewEnshrineBifrostPostDecorator(eb *EnshrinedBifrost) *EnshrinedBifrostPost
 }
 
 func (e *EnshrinedBifrostPostDecorator) PostHandle(ctx sdk.Context, tx sdk.Tx, simulate, success bool, next sdk.PostHandler) (newCtx sdk.Context, err error) {
-	if simulate {
+	if simulate || !success {
 		return next(ctx, tx, simulate, success)
 	}
 
@@ -36,9 +36,6 @@ func (e *EnshrinedBifrostPostDecorator) PostHandle(ctx sdk.Context, tx sdk.Tx, s
 		case *types.MsgErrataTxQuorum:
 			e.EnshrinedBifrost.MarkQuorumErrataTxAttestationsConfirmed(ctx, m.QuoErrata)
 		}
-	}
-	if !success {
-		e.EnshrinedBifrost.logger.Error("InjectTx failed")
 	}
 
 	return next(ctx, tx, simulate, success)

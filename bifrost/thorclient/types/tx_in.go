@@ -63,6 +63,7 @@ func NewTxInItem(
 		Aggregator:            aggregator,
 		AggregatorTarget:      aggregatorTarget,
 		AggregatorTargetLimit: aggregatorTargetLimit,
+		CommittedUnFinalised:  false, // stateful parameter used internally in the observer
 	}
 }
 
@@ -97,6 +98,55 @@ func (t *TxInItem) Equals(other *TxInItem) bool {
 		return false
 	}
 	return true
+}
+
+func (t *TxInItem) EqualsObservedTx(other common.ObservedTx) bool {
+	// Do not compare block height, as we only keep one deck item for a tx pre/post finalization.
+	// The final block height will be ConfirmationCount higher than the unfinalized tx.
+
+	txId, err := common.NewTxID(t.Tx)
+	if err != nil {
+		return false
+	}
+	if !txId.Equals(other.Tx.ID) {
+		return false
+	}
+	if t.Memo != other.Tx.Memo {
+		return false
+	}
+	if t.Sender != other.Tx.FromAddress.String() {
+		return false
+	}
+	if t.To != other.Tx.ToAddress.String() {
+		return false
+	}
+	if !t.Coins.EqualsEx(other.Tx.Coins) {
+		return false
+	}
+	if !t.Gas.Equals(other.Tx.Gas) {
+		return false
+	}
+	if !t.ObservedVaultPubKey.Equals(other.ObservedPubKey) {
+		return false
+	}
+	return true
+}
+
+func (t *TxInItem) Copy() *TxInItem {
+	return &TxInItem{
+		BlockHeight:           t.BlockHeight,
+		Tx:                    t.Tx,
+		Memo:                  t.Memo,
+		Sender:                t.Sender,
+		To:                    t.To,
+		Coins:                 t.Coins.Copy(),
+		Gas:                   common.Gas(common.Coins(t.Gas).Copy()),
+		ObservedVaultPubKey:   t.ObservedVaultPubKey,
+		Aggregator:            t.Aggregator,
+		AggregatorTarget:      t.AggregatorTarget,
+		AggregatorTargetLimit: t.AggregatorTargetLimit,
+		CommittedUnFinalised:  t.CommittedUnFinalised,
+	}
 }
 
 // IsEmpty return true only when every field in TxInItem is empty

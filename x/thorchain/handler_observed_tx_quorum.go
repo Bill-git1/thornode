@@ -75,7 +75,7 @@ func (h ObservedTxQuorumHandler) handle(ctx cosmos.Context, msg types.MsgObserve
 		return &cosmos.Result{}, nil
 	}
 
-	var isQuorum bool
+	var crossedQuorum bool
 	var accAddrs []cosmos.AccAddress
 	for _, att := range msg.QuoTx.Attestations {
 		accAddr, err := verifyQuorumAttestation(activeNodeAccounts, signBz, att)
@@ -86,19 +86,24 @@ func (h ObservedTxQuorumHandler) handle(ctx cosmos.Context, msg types.MsgObserve
 
 		accAddrs = append(accAddrs, accAddr)
 
+		var isQuorum bool
 		if inbound {
 			voter, isQuorum = processTxInAttestation(ctx, h.mgr, voter, activeNodeAccounts, obsTx, accAddr, false)
 		} else {
 			voter, isQuorum = processTxOutAttestation(ctx, h.mgr, voter, activeNodeAccounts, obsTx, accAddr, false)
 		}
+		if isQuorum {
+			// we crossed over quorum with this attestation.
+			crossedQuorum = true
+		}
 	}
 
 	if inbound {
-		if err := handleObservedTxInQuorum(ctx, h.mgr, msg.Signer, activeNodeAccounts, handler, obsTx, voter, accAddrs, isQuorum); err != nil {
+		if err := handleObservedTxInQuorum(ctx, h.mgr, msg.Signer, activeNodeAccounts, handler, obsTx, voter, accAddrs, crossedQuorum); err != nil {
 			ctx.Logger().Error("fail to handle observed tx in quorum", "error", err)
 		}
 	} else {
-		if err := handleObservedTxOutQuorum(ctx, h.mgr, msg.Signer, activeNodeAccounts, handler, obsTx, voter, accAddrs, isQuorum); err != nil {
+		if err := handleObservedTxOutQuorum(ctx, h.mgr, msg.Signer, activeNodeAccounts, handler, obsTx, voter, accAddrs, crossedQuorum); err != nil {
 			ctx.Logger().Error("fail to handle observed tx out quorum", "error", err)
 		}
 	}

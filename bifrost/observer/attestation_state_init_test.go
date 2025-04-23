@@ -131,8 +131,6 @@ func TestSendAttestationStateSingleBatch(t *testing.T) {
 
 		// Create attestation state
 		state := NewAttestationState(obsTx)
-		state.SetMetadata(metadataKeyInbound, true)
-		state.SetMetadata(metadataKeyAllowFutureObservation, false)
 
 		for j := 0; j < numVals; j++ {
 			sig, err := valPrivs[j].Sign(signBz)
@@ -287,8 +285,6 @@ func TestSendAttestationStateMultipleBatches(t *testing.T) {
 
 		// Create attestation state
 		state := NewAttestationState(obsTx)
-		state.SetMetadata(metadataKeyInbound, true)
-		state.SetMetadata(metadataKeyAllowFutureObservation, false)
 
 		signBz, err := obsTx.GetSignablePayload()
 		require.NoError(t, err, "Should be able to get signable payload")
@@ -663,11 +659,13 @@ func TestReceiveBatchedAttestationState(t *testing.T) {
 	for k, ots := range ag.observedTxs {
 		if k.Chain == common.BSCChain && len(k.ID) == 1 && k.ID[0] >= 'A' && k.ID[0] < 'A'+byte(numTxs) {
 			txCount++
+			ots.mu.Lock()
 			for _, att := range ots.attestations {
 				if att.attestation != nil && att.attestation.PubKey != nil {
 					attCount++
 				}
 			}
+			ots.mu.Unlock()
 		}
 	}
 
@@ -679,11 +677,13 @@ func TestReceiveBatchedAttestationState(t *testing.T) {
 	for _, s := range ag.solvencies {
 		if s.Item.Chain == common.BSCChain && s.Item.Height+100 == int64(s.Item.Coins[0].Amount.Uint64()) {
 			solvencyCount++
+			s.mu.Lock()
 			for _, att := range s.attestations {
 				if att.attestation != nil && att.attestation.PubKey != nil {
 					solvencyAttCount++
 				}
 			}
+			s.mu.Unlock()
 		}
 	}
 
@@ -731,8 +731,6 @@ func TestSendReceiveBatchedAttestationState(t *testing.T) {
 
 		// Create attestation state
 		state := NewAttestationState(obsTx)
-		state.SetMetadata(metadataKeyInbound, true)
-		state.SetMetadata(metadataKeyAllowFutureObservation, false)
 
 		signBz, err := obsTx.GetSignablePayload()
 		require.NoError(t, err, "Should be able to get signable payload")
@@ -851,11 +849,13 @@ func TestSendReceiveBatchedAttestationState(t *testing.T) {
 	for k, ots := range agReceiver.observedTxs {
 		if k.Chain == common.BSCChain && len(k.ID) == 1 && k.ID[0] >= 'A' && k.ID[0] < 'A'+byte(numTxs) {
 			txCount++
+			ots.mu.Lock()
 			for _, att := range ots.attestations {
 				if att.attestation != nil && att.attestation.PubKey != nil {
 					attCount++
 				}
 			}
+			ots.mu.Unlock()
 		}
 	}
 	assert.Equal(t, numTxs, txCount, "All transactions should be added to the state")
@@ -866,11 +866,13 @@ func TestSendReceiveBatchedAttestationState(t *testing.T) {
 	for _, s := range agReceiver.solvencies {
 		if s.Item.Chain == common.BSCChain && s.Item.Height+100 == int64(s.Item.Coins[0].Amount.Uint64()) {
 			solvencyCount++
+			s.mu.Lock()
 			for _, att := range s.attestations {
 				if att.attestation != nil && att.attestation.PubKey != nil {
 					solvencyAttCount++
 				}
 			}
+			s.mu.Unlock()
 		}
 	}
 

@@ -37,9 +37,7 @@ func processSolvencyAttestation(
 
 	slasher := mgr.Slasher()
 
-	if voter.Empty() {
-		*voter = NewSolvencyVoter(s.Id, s.Chain, s.PubKey, s.Coins, s.Height, attester)
-	} else if !voter.Sign(attester) {
+	if !voter.Sign(attester) {
 		// Slash for the network having to handle the extra message/s.
 		if shouldSlashForDuplicate {
 			slasher.IncSlashPoints(slashCtx, observeSlashPoints, attester)
@@ -47,7 +45,6 @@ func processSolvencyAttestation(
 		ctx.Logger().Info("signer already signed MsgSolvency", "signer", attester.String(), "id", s.Id)
 		return nil
 	}
-	k.SetSolvencyVoter(ctx, *voter)
 
 	if !voter.HasConsensus(active) {
 		// Before consensus, slash until consensus.

@@ -31,7 +31,6 @@ func TestNewAttestationState(t *testing.T) {
 	assert.Equal(t, obsTx, state.Item)
 	assert.NotZero(t, state.firstAttestationObserved)
 	assert.Empty(t, state.attestations)
-	assert.Empty(t, state.Metadata)
 	assert.True(t, state.initialAttestationsSent.IsZero())
 	assert.True(t, state.quorumAttestationsSent.IsZero())
 	assert.True(t, state.lastAttestationsSent.IsZero())
@@ -540,53 +539,6 @@ func TestMarkAttestationsSent(t *testing.T) {
 	}
 }
 
-// TestMetadataFunctions tests setting and getting metadata
-func TestMetadataFunctions(t *testing.T) {
-	// Create a test tx
-	tx := &common.Tx{
-		ID:    "test-tx",
-		Chain: common.Chain("BTC"),
-	}
-
-	obsTx := &common.ObservedTx{
-		Tx: *tx,
-	}
-
-	// Create a new attestation state
-	state := NewAttestationState(obsTx)
-
-	// Check that metadata is initially empty
-	assert.Empty(t, state.Metadata)
-
-	// Set metadata
-	state.SetMetadata("key1", "value1")
-	state.SetMetadata("key2", 42)
-	state.SetMetadata("key3", true)
-
-	// Get metadata
-	val1, ok := state.GetMetadata("key1")
-	assert.True(t, ok)
-	assert.Equal(t, "value1", val1)
-
-	val2, ok := state.GetMetadata("key2")
-	assert.True(t, ok)
-	assert.Equal(t, 42, val2)
-
-	val3, ok := state.GetMetadata("key3")
-	assert.True(t, ok)
-	assert.Equal(t, true, val3)
-
-	// Check non-existent key
-	_, ok = state.GetMetadata("nonexistent")
-	assert.False(t, ok)
-
-	// Overwrite existing key
-	state.SetMetadata("key1", "new-value")
-	val1, ok = state.GetMetadata("key1")
-	assert.True(t, ok)
-	assert.Equal(t, "new-value", val1)
-}
-
 // TestVerifySignature tests the signature verification function
 func TestVerifySignature(t *testing.T) {
 	// Create a key pair for testing
@@ -640,10 +592,6 @@ func TestFullWorkflow(t *testing.T) {
 
 	// Create a new attestation state
 	state := NewAttestationState(obsTx)
-
-	// Set metadata
-	state.SetMetadata(metadataKeyInbound, true)
-	state.SetMetadata(metadataKeyAllowFutureObservation, true)
 
 	// Override the verifySignature function for testing
 	origVerifySignature := verifySignature
@@ -724,12 +672,4 @@ func TestFullWorkflow(t *testing.T) {
 
 	// Now it should be expired
 	assert.True(t, state.ExpiredAfterQuorum(15*time.Minute, 24*time.Hour))
-
-	// Check metadata is preserved
-	inbound, ok := state.GetMetadata(metadataKeyInbound)
-	assert.True(t, ok)
-	assert.Equal(t, true, inbound)
-	allowFuture, ok := state.GetMetadata(metadataKeyAllowFutureObservation)
-	assert.True(t, ok)
-	assert.Equal(t, true, allowFuture)
 }

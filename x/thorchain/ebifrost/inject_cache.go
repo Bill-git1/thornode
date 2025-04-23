@@ -132,36 +132,6 @@ func (c *InjectCache[T]) CheckRecentBlocks(matches func(T) bool) bool {
 	return false
 }
 
-// FilterNewItems filters a slice of items, keeping only those that don't match any items in recent blocks
-func (c *InjectCache[T]) FilterNewItems(items []T, equals func(T, T) bool) []T {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	newItems := make([]T, 0)
-
-	for _, item := range items {
-		found := false
-		// analyze-ignore(map-iteration)
-		for _, blockItems := range c.recentBlockItems {
-			for _, blockItem := range blockItems {
-				if equals(item, blockItem) {
-					found = true
-					break
-				}
-			}
-			if found {
-				break
-			}
-		}
-
-		if !found {
-			newItems = append(newItems, item)
-		}
-	}
-
-	return newItems
-}
-
 // MergeWithExisting tries to merge an item with an existing one or adds it as new
 func (c *InjectCache[T]) MergeWithExisting(item T, equals func(T, T) bool, merge func(existing T, new T)) bool {
 	c.mu.Lock()

@@ -219,6 +219,18 @@ func handleObservedTxInQuorum(
 		return nil
 	}
 
+	ctx.Logger().Debug("tx in finalized and has consensus",
+		"id", tx.Tx.ID.String(),
+		"chain", tx.Tx.Chain.String(),
+		"height", tx.BlockHeight,
+		"from", tx.Tx.FromAddress.String(),
+		"to", tx.Tx.ToAddress.String(),
+		"memo", tx.Tx.Memo,
+		"coins", tx.Tx.Coins.String(),
+		"gas", common.Coins(tx.Tx.Gas).String(),
+		"observed_vault_pubkey", tx.ObservedPubKey.String(),
+	)
+
 	if vault.Status == InactiveVault {
 		ctx.Logger().Error("observed tx on inactive vault", "tx", tx.String())
 		if newErr := refundTx(ctx, tx, mgr, CodeInvalidVault, "observed inbound tx to an inactive vault", ""); newErr != nil {
@@ -359,6 +371,18 @@ func processTxOutAttestation(
 			}
 			voter.FinalisedHeight = ctx.BlockHeight()
 			voter.Tx = *voter.GetTx(nas)
+
+			ctx.Logger().Debug("tx out finalized and has consensus",
+				"id", tx.Tx.ID.String(),
+				"chain", tx.Tx.Chain.String(),
+				"height", tx.BlockHeight,
+				"from", tx.Tx.FromAddress.String(),
+				"to", tx.Tx.ToAddress.String(),
+				"memo", tx.Tx.Memo,
+				"coins", tx.Tx.Coins.String(),
+				"gas", common.Coins(tx.Tx.Gas).String(),
+				"observed_vault_pubkey", tx.ObservedPubKey.String(),
+			)
 
 			// This signer brings the voter to consensus;
 			// decrement all the signers' slash points and increment the non-signers' slash points.

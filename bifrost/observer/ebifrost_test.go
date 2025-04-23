@@ -150,8 +150,8 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 		// Create attestation gossip manually with the bifrost client
 		ag, err := NewAttestationGossip(comm.GetHost(), keys, grpcAddresses[i], mockBridge, config.BifrostAttestationGossipConfig{
 			ObserveReconcileInterval:   time.Second * 1,
-			MinTimeBetweenAttestations: time.Second * 3,
-			LateObserveTimeout:         time.Second * 6,
+			MinTimeBetweenAttestations: time.Second * 2,
+			LateObserveTimeout:         time.Second * 4,
 			AskPeers:                   3,
 			AskPeersDelay:              time.Second * 1,
 		})
@@ -208,7 +208,14 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 
 			logger.Info().Msgf("Dialing %s from %s", ph.ID(), host.GetHost().ID())
 
-			err := host.GetHost().Connect(ctx, peerInfo)
+			var err error
+			for range 5 {
+				err = host.GetHost().Connect(ctx, peerInfo)
+				if err == nil {
+					break
+				}
+				time.Sleep(time.Millisecond * 100)
+			}
 			c.Assert(err, IsNil)
 		}
 	}
@@ -267,7 +274,7 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 	for _, atg := range attestationGossips {
 		atg.mu.Lock()
 		c.Assert(len(atg.observedTxs), Equals, 1)
-		ots, ok := atg.observedTxs[txKey{Chain: common.BTCChain, ID: testTx.Tx.ID, UniqueHash: testTx.Tx.Hash(1), Finalized: false}]
+		ots, ok := atg.observedTxs[txKey{Chain: common.BTCChain, ID: testTx.Tx.ID, UniqueHash: testTx.Tx.Hash(1), Finalized: false, Inbound: true}]
 		c.Assert(ok, Equals, true)            // Should have the tx in the observed txs map
 		ots.mu.Lock()                         // Should have the tx in the observed txs map
 		c.Assert(ots.attestations, HasLen, 1) // Should have an attestation
@@ -313,16 +320,18 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 			var ok bool
 			injectedTxQuorum, ok = msgs[0].(*stypes.MsgObservedTxQuorum)
 			c.Assert(ok, Equals, true)
+			c.Assert(injectedTxQuorum.QuoTx.Attestations, HasLen, 4)
 		}
 	}
 
 	for _, atg := range attestationGossips {
 		atg.mu.Lock()
 		c.Assert(len(atg.observedTxs), Equals, 1)
-		ots, ok := atg.observedTxs[txKey{Chain: common.BTCChain, ID: testTx.Tx.ID, UniqueHash: testTx.Tx.Hash(1), Finalized: false}]
+		ots, ok := atg.observedTxs[txKey{Chain: common.BTCChain, ID: testTx.Tx.ID, UniqueHash: testTx.Tx.Hash(1), Finalized: false, Inbound: true}]
 		c.Assert(ok, Equals, true)                    // Should have the tx in the observed txs map
 		ots.mu.Lock()                                 // Should have the tx in the observed txs map
-		c.Assert(ots.UnsentAttestations(), HasLen, 1) // one (post quorum) should be remaining
+		c.Assert(ots.attestations, HasLen, 4)         // Should have 4 attestations
+		c.Assert(ots.UnsentAttestations(), HasLen, 0) // no attestations remain to be flushed
 		ots.mu.Unlock()
 		atg.mu.Unlock()
 	}
@@ -349,45 +358,6 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 	}
 
 	time.Sleep(time.Second * 5)
-
-	// Now check that each validator's enshrined bifrost has the tx ready for injection
-	// Each validator should have the transaction ready since they all participated in attestation
-	for i, eb := range ebs {
-		injectTxs := eb.ProposalInjectTxs(sdk.Context{})
-		c.Assert(len(injectTxs), Equals, 1, Commentf("Validator %d: Expected 1 tx to be ready for injection", i))
-		if i == 0 {
-			msgs, err := eb.GetInjectedMsgs(sdk.Context{}, injectTxs)
-			c.Assert(err, IsNil)
-			c.Assert(msgs, HasLen, 1)
-			var ok bool
-			injectedTxQuorum, ok = msgs[0].(*stypes.MsgObservedTxQuorum)
-			c.Assert(ok, Equals, true)
-		}
-	}
-
-	for _, atg := range attestationGossips {
-		atg.mu.Lock()
-		c.Assert(len(atg.observedTxs), Equals, 1)
-		ots, ok := atg.observedTxs[txKey{Chain: common.BTCChain, ID: testTx.Tx.ID, UniqueHash: testTx.Tx.Hash(1), Finalized: false}]
-		c.Assert(ok, Equals, true)                    // Should have the tx in the observed txs map
-		ots.mu.Lock()                                 // Should have the tx in the observed txs map
-		c.Assert(ots.UnsentAttestations(), HasLen, 0) // zero remaining since last attestation is flushed
-		ots.mu.Unlock()
-		atg.mu.Unlock()
-	}
-
-	for i := 0; i < len(ebs); i++ {
-		injectTxs := ebs[i].ProposalInjectTxs(sdk.Context{})
-		c.Assert(len(injectTxs), Equals, 1, Commentf("Validator %d: Should still have tx in queue", i))
-
-		ebs[i].MarkQuorumTxAttestationsConfirmed(sdkCtx, injectedTxQuorum.QuoTx)
-
-		// Verify it's cleared
-		injectTxsAfterMark = ebs[i].ProposalInjectTxs(sdk.Context{})
-		c.Assert(len(injectTxsAfterMark), Equals, 0, Commentf("Validator %d: Expected 0 txs after marking as confirmed", i))
-	}
-
-	time.Sleep(time.Second * 3)
 
 	// attestation gossips should have removed the tx due to the timeout
 	for _, atg := range attestationGossips {
