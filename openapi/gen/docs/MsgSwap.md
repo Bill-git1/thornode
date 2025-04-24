@@ -14,7 +14,7 @@ Name | Type | Description | Notes
 **Aggregator** | Pointer to **string** | the contract address if an aggregator is specified for a non-THORChain SwapOut | [optional] 
 **AggregatorTargetAddress** | Pointer to **string** | the desired output asset of the aggregator SwapOut | [optional] 
 **AggregatorTargetLimit** | Pointer to **string** | the minimum amount of SwapOut asset to receive (else cancelling the SwapOut and receiving THORChain&#39;s output) | [optional] 
-**OrderType** | Pointer to **string** | market if immediately completed or refunded, limit if held until fulfillable | [optional] 
+**SwapType** | Pointer to **string** | market if immediately completed or refunded, limit if held until fulfillable | [optional] 
 **StreamQuantity** | Pointer to **int64** | number of swaps to execute in a streaming swap | [optional] 
 **StreamInterval** | Pointer to **int64** | the interval (in blocks) to execute the streaming swap | [optional] 
 
@@ -267,30 +267,30 @@ SetAggregatorTargetLimit sets AggregatorTargetLimit field to given value.
 
 HasAggregatorTargetLimit returns a boolean if a field has been set.
 
-### GetOrderType
+### GetSwapType
 
-`func (o *MsgSwap) GetOrderType() string`
+`func (o *MsgSwap) GetSwapType() string`
 
-GetOrderType returns the OrderType field if non-nil, zero value otherwise.
+GetSwapType returns the SwapType field if non-nil, zero value otherwise.
 
-### GetOrderTypeOk
+### GetSwapTypeOk
 
-`func (o *MsgSwap) GetOrderTypeOk() (*string, bool)`
+`func (o *MsgSwap) GetSwapTypeOk() (*string, bool)`
 
-GetOrderTypeOk returns a tuple with the OrderType field if it's non-nil, zero value otherwise
+GetSwapTypeOk returns a tuple with the SwapType field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetOrderType
+### SetSwapType
 
-`func (o *MsgSwap) SetOrderType(v string)`
+`func (o *MsgSwap) SetSwapType(v string)`
 
-SetOrderType sets OrderType field to given value.
+SetSwapType sets SwapType field to given value.
 
-### HasOrderType
+### HasSwapType
 
-`func (o *MsgSwap) HasOrderType() bool`
+`func (o *MsgSwap) HasSwapType() bool`
 
-HasOrderType returns a boolean if a field has been set.
+HasSwapType returns a boolean if a field has been set.
 
 ### GetStreamQuantity
 

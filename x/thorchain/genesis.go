@@ -67,7 +67,7 @@ func ValidateGenesis(data GenesisState) error {
 		}
 	}
 
-	for _, item := range data.OrderbookItems {
+	for _, item := range data.AdvSwapQueueItems {
 		if err := item.ValidateBasic(); err != nil {
 			return fmt.Errorf("invalid swap msg: %w", err)
 		}
@@ -134,7 +134,7 @@ func DefaultGenesisState() GenesisState {
 		OutboundFeeWithheldRune: common.Coins{},
 		OutboundFeeSpentRune:    common.Coins{},
 		POL:                     NewProtocolOwnedLiquidity(),
-		OrderbookItems:          make([]MsgSwap, 0),
+		AdvSwapQueueItems:       make([]MsgSwap, 0),
 		SwapQueueItems:          make([]MsgSwap, 0),
 		StreamingSwaps:          make([]StreamingSwap, 0),
 		NetworkFees:             make([]NetworkFee, 0),
@@ -248,8 +248,8 @@ func initGenesis(ctx cosmos.Context, keeper keeper.Keeper, data GenesisState) []
 		panic(err)
 	}
 
-	for _, item := range data.OrderbookItems {
-		if err := keeper.SetOrderBookItem(ctx, item); err != nil {
+	for _, item := range data.AdvSwapQueueItems {
+		if err := keeper.SetAdvSwapQueueItem(ctx, item); err != nil {
 			panic(err)
 		}
 	}
@@ -573,7 +573,7 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 	}
 
 	swapMsgs := make([]MsgSwap, 0)
-	iterMsgSwap := k.GetOrderBookItemIterator(ctx)
+	iterMsgSwap := k.GetAdvSwapQueueItemIterator(ctx)
 	defer iterMsgSwap.Close()
 	for ; iterMsgSwap.Valid(); iterMsgSwap.Next() {
 		var m MsgSwap
@@ -796,7 +796,7 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		OutboundFeeWithheldRune: outboundFeeWithheldRune,
 		OutboundFeeSpentRune:    outboundFeeSpentRune,
 		POL:                     pol,
-		OrderbookItems:          swapMsgs,
+		AdvSwapQueueItems:       swapMsgs,
 		SwapQueueItems:          swapQ,
 		StreamingSwaps:          streamSwaps,
 		NetworkFees:             networkFees,

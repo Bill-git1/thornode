@@ -35,7 +35,7 @@ const (
 	StreamingSwapEventType        = "streaming_swap"
 	SwapEventType                 = "swap"
 	AffiliateFeeEventType         = "affiliate_fee"
-	LimitOrderEventType           = "limit_order"
+	LimitSwapEventType            = "limit_swap"
 	MintBurnType                  = "mint_burn"
 	THORNameEventType             = "thorname"
 	LoanOpenEventType             = "loan_open"
@@ -73,9 +73,9 @@ func NewPoolMod(asset common.Asset, runeAmt cosmos.Uint, runeAdd bool, assetAmt 
 	}
 }
 
-// NewEventLimitOrder create a new swap event
-func NewEventLimitOrder(source, target common.Coin, txid common.TxID) *EventLimitOrder {
-	return &EventLimitOrder{
+// NewEventLimitSwap create a new swap event
+func NewEventLimitSwap(source, target common.Coin, txid common.TxID) *EventLimitSwap {
+	return &EventLimitSwap{
 		Source: source,
 		Target: target,
 		TxID:   txid,
@@ -83,12 +83,12 @@ func NewEventLimitOrder(source, target common.Coin, txid common.TxID) *EventLimi
 }
 
 // Type return a string that represent the type, it should not duplicated with other event
-func (m *EventLimitOrder) Type() string {
-	return LimitOrderEventType
+func (m *EventLimitSwap) Type() string {
+	return LimitSwapEventType
 }
 
-// Events convert EventLimitOrder to key value pairs used in cosmos
-func (m *EventLimitOrder) Events() (cosmos.Events, error) {
+// Events convert EventLimitSwap to key value pairs used in cosmos
+func (m *EventLimitSwap) Events() (cosmos.Events, error) {
 	evt := cosmos.NewEvent(m.Type(),
 		cosmos.NewAttribute("source", m.Source.String()),
 		cosmos.NewAttribute("target", m.Target.String()),

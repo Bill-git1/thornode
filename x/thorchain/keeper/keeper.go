@@ -77,7 +77,7 @@ type Keeper interface {
 	KeeperErrataTx
 	KeeperBanVoter
 	KeeperSwapQueue
-	KeeperOrderBooks
+	KeeperAdvSwapQueues
 	KeeperMimir
 	KeeperNetworkFee
 	KeeperObservedNetworkFeeVoter
@@ -374,20 +374,20 @@ type KeeperSwapQueue interface {
 	RemoveSwapQueueItem(ctx cosmos.Context, txID common.TxID, i int)
 }
 
-type KeeperOrderBooks interface {
-	OrderBooksEnabled(ctx cosmos.Context) bool
-	SetOrderBookItem(ctx cosmos.Context, msg MsgSwap) error
-	GetOrderBookItemIterator(ctx cosmos.Context) cosmos.Iterator
-	GetOrderBookItem(ctx cosmos.Context, txID common.TxID) (MsgSwap, error)
-	HasOrderBookItem(ctx cosmos.Context, txID common.TxID) bool
-	RemoveOrderBookItem(ctx cosmos.Context, txID common.TxID) error
-	GetOrderBookIndexIterator(_ cosmos.Context, _ types.OrderType, _, _ common.Asset) cosmos.Iterator
-	SetOrderBookIndex(_ cosmos.Context, _ MsgSwap) error
-	GetOrderBookIndex(_ cosmos.Context, _ MsgSwap) (common.TxIDs, error)
-	HasOrderBookIndex(_ cosmos.Context, _ MsgSwap) (bool, error)
-	RemoveOrderBookIndex(_ cosmos.Context, _ MsgSwap) error
-	SetOrderBookProcessor(_ cosmos.Context, _ []bool) error
-	GetOrderBookProcessor(_ cosmos.Context) ([]bool, error)
+type KeeperAdvSwapQueues interface {
+	AdvSwapQueueEnabled(ctx cosmos.Context) bool
+	SetAdvSwapQueueItem(ctx cosmos.Context, msg MsgSwap) error
+	GetAdvSwapQueueItemIterator(ctx cosmos.Context) cosmos.Iterator
+	GetAdvSwapQueueItem(ctx cosmos.Context, txID common.TxID) (MsgSwap, error)
+	HasAdvSwapQueueItem(ctx cosmos.Context, txID common.TxID) bool
+	RemoveAdvSwapQueueItem(ctx cosmos.Context, txID common.TxID) error
+	GetAdvSwapQueueIndexIterator(_ cosmos.Context, _ types.SwapType, _, _ common.Asset) cosmos.Iterator
+	SetAdvSwapQueueIndex(_ cosmos.Context, _ MsgSwap) error
+	GetAdvSwapQueueIndex(_ cosmos.Context, _ MsgSwap) (common.TxIDs, error)
+	HasAdvSwapQueueIndex(_ cosmos.Context, _ MsgSwap) (bool, error)
+	RemoveAdvSwapQueueIndex(_ cosmos.Context, _ MsgSwap) error
+	SetAdvSwapQueueProcessor(_ cosmos.Context, _ []bool) error
+	GetAdvSwapQueueProcessor(_ cosmos.Context) ([]bool, error)
 }
 
 type KeeperMimir interface {

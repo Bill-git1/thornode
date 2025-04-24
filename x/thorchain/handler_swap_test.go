@@ -45,7 +45,7 @@ func (s *HandlerSwapSuite) TestValidate(c *C) {
 		},
 		"",
 	)
-	msg := NewMsgSwap(tx, common.DOGEAsset, signerDOGEAddr, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 0, 0, observerAddr)
+	msg := NewMsgSwap(tx, common.DOGEAsset, signerDOGEAddr, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, 0, observerAddr)
 	err := handler.validate(ctx, *msg)
 	c.Assert(err, IsNil)
 
@@ -193,7 +193,7 @@ func (s *HandlerSwapSuite) TestValidation(c *C) {
 		},
 		"",
 	)
-	msg := NewMsgSwap(tx, common.DOGEAsset.GetSyntheticAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 0, 0, observerAddr)
+	msg := NewMsgSwap(tx, common.DOGEAsset.GetSyntheticAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, 0, observerAddr)
 	err := handler.validate(ctx, *msg)
 	c.Assert(err, IsNil)
 
@@ -247,7 +247,7 @@ func (s *HandlerSwapSuite) TestValidationWithStreamingSwap(c *C) {
 	)
 
 	// happy path
-	msg := NewMsgSwap(tx, common.DOGEAsset.GetSyntheticAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 10, 20, observerAddr)
+	msg := NewMsgSwap(tx, common.DOGEAsset.GetSyntheticAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 10, 20, observerAddr)
 	err := handler.validate(ctx, *msg)
 	c.Assert(err, IsNil)
 
@@ -299,7 +299,7 @@ func (s *HandlerSwapSuite) TestHandle(c *C) {
 		},
 		"",
 	)
-	msg := NewMsgSwap(tx, common.DOGEAsset, signerDOGEAddr, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 0, 0, observerAddr)
+	msg := NewMsgSwap(tx, common.DOGEAsset, signerDOGEAddr, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, 0, observerAddr)
 
 	pool := NewPool()
 	pool.Asset = common.DOGEAsset
@@ -323,7 +323,7 @@ func (s *HandlerSwapSuite) TestHandle(c *C) {
 		},
 		"",
 	)
-	msgSwapPriceProtection := NewMsgSwap(tx, common.DOGEAsset, signerDOGEAddr, cosmos.NewUint(2*common.One), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 0, 0, observerAddr)
+	msgSwapPriceProtection := NewMsgSwap(tx, common.DOGEAsset, signerDOGEAddr, cosmos.NewUint(2*common.One), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, 0, observerAddr)
 	result, err = handler.handle(ctx, *msgSwapPriceProtection)
 	c.Assert(err.Error(), Equals, errors.New("emit asset 192233756 less than price limit 200000000").Error())
 	c.Assert(result, IsNil)
@@ -367,7 +367,7 @@ func (s *HandlerSwapSuite) TestHandle(c *C) {
 	result, err = handler.Run(ctx, msgSwapFromTxIn)
 	c.Assert(err, NotNil)
 	c.Assert(result, IsNil)
-	msgSwap := NewMsgSwap(GetRandomTx(), common.EmptyAsset, GetRandomDOGEAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 0, 0, GetRandomBech32Addr())
+	msgSwap := NewMsgSwap(GetRandomTx(), common.EmptyAsset, GetRandomDOGEAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, 0, GetRandomBech32Addr())
 	result, err = handler.Run(ctx, msgSwap)
 	c.Assert(err, NotNil)
 	c.Assert(result, IsNil)
@@ -411,7 +411,7 @@ func (s *HandlerSwapSuite) TestHandleStreamingSwap(c *C) {
 		},
 		fmt.Sprintf("=:DOGE.DOGE:%s", signerDOGEAddr),
 	)
-	msg := NewMsgSwap(tx, common.DOGEAsset, signerDOGEAddr, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 3, 5, na.NodeAddress)
+	msg := NewMsgSwap(tx, common.DOGEAsset, signerDOGEAddr, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 3, 5, na.NodeAddress)
 	swp := msg.GetStreamingSwap()
 	swp.Deposit = tx.Coins[0].Amount
 	mgr.Keeper().SetStreamingSwap(ctx, swp)

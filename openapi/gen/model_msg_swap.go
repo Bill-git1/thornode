@@ -36,7 +36,7 @@ type MsgSwap struct {
 	// the minimum amount of SwapOut asset to receive (else cancelling the SwapOut and receiving THORChain's output)
 	AggregatorTargetLimit *string `json:"aggregator_target_limit,omitempty"`
 	// market if immediately completed or refunded, limit if held until fulfillable
-	OrderType *string `json:"order_type,omitempty"`
+	SwapType *string `json:"swap_type,omitempty"`
 	// number of swaps to execute in a streaming swap
 	StreamQuantity *int64 `json:"stream_quantity,omitempty"`
 	// the interval (in blocks) to execute the streaming swap
@@ -352,36 +352,36 @@ func (o *MsgSwap) SetAggregatorTargetLimit(v string) {
 	o.AggregatorTargetLimit = &v
 }
 
-// GetOrderType returns the OrderType field value if set, zero value otherwise.
-func (o *MsgSwap) GetOrderType() string {
-	if o == nil || o.OrderType == nil {
+// GetSwapType returns the SwapType field value if set, zero value otherwise.
+func (o *MsgSwap) GetSwapType() string {
+	if o == nil || o.SwapType == nil {
 		var ret string
 		return ret
 	}
-	return *o.OrderType
+	return *o.SwapType
 }
 
-// GetOrderTypeOk returns a tuple with the OrderType field value if set, nil otherwise
+// GetSwapTypeOk returns a tuple with the SwapType field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *MsgSwap) GetOrderTypeOk() (*string, bool) {
-	if o == nil || o.OrderType == nil {
+func (o *MsgSwap) GetSwapTypeOk() (*string, bool) {
+	if o == nil || o.SwapType == nil {
 		return nil, false
 	}
-	return o.OrderType, true
+	return o.SwapType, true
 }
 
-// HasOrderType returns a boolean if a field has been set.
-func (o *MsgSwap) HasOrderType() bool {
-	if o != nil && o.OrderType != nil {
+// HasSwapType returns a boolean if a field has been set.
+func (o *MsgSwap) HasSwapType() bool {
+	if o != nil && o.SwapType != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetOrderType gets a reference to the given string and assigns it to the OrderType field.
-func (o *MsgSwap) SetOrderType(v string) {
-	o.OrderType = &v
+// SetSwapType gets a reference to the given string and assigns it to the SwapType field.
+func (o *MsgSwap) SetSwapType(v string) {
+	o.SwapType = &v
 }
 
 // GetStreamQuantity returns the StreamQuantity field value if set, zero value otherwise.
@@ -480,8 +480,8 @@ func (o MsgSwap) MarshalJSON_deprecated() ([]byte, error) {
 	if o.AggregatorTargetLimit != nil {
 		toSerialize["aggregator_target_limit"] = o.AggregatorTargetLimit
 	}
-	if o.OrderType != nil {
-		toSerialize["order_type"] = o.OrderType
+	if o.SwapType != nil {
+		toSerialize["swap_type"] = o.SwapType
 	}
 	if o.StreamQuantity != nil {
 		toSerialize["stream_quantity"] = o.StreamQuantity

@@ -344,7 +344,7 @@ func (h AddLiquidityHandler) swap(ctx cosmos.Context, msg MsgAddLiquidity) error
 		ssInterval = 0
 	}
 
-	swapMsg := NewMsgSwap(msg.Tx, msg.Asset, common.NoopAddress, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketOrder, 0, uint64(ssInterval), msg.Signer)
+	swapMsg := NewMsgSwap(msg.Tx, msg.Asset, common.NoopAddress, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, uint64(ssInterval), msg.Signer)
 
 	// sanity check swap msg
 	handler := NewSwapHandler(h.mgr)

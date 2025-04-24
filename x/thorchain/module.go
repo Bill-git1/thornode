@@ -211,8 +211,8 @@ func (am AppModule) EndBlock(goCtx context.Context) ([]abci.ValidatorUpdate, err
 		ctx.Logger().Error("fail to process swap queue", "error", err)
 	}
 
-	if err := am.mgr.OrderBookMgr().EndBlock(ctx, am.mgr); err != nil {
-		ctx.Logger().Error("fail to process order books", "error", err)
+	if err := am.mgr.AdvSwapQueueMgr().EndBlock(ctx, am.mgr); err != nil {
+		ctx.Logger().Error("fail to process adv swap queue", "error", err)
 	}
 
 	if err := am.mgr.Slasher().LackSigning(ctx, am.mgr); err != nil {

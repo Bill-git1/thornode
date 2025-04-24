@@ -744,7 +744,7 @@ func (s HandlerObservedTxInSuite) TestSwapWithAffiliate(c *C) {
 	}, common.ETHAsset, GetRandomETHAddress(), cosmos.ZeroUint(), affAddr, cosmos.NewUint(1000),
 		"",
 		"", nil,
-		MarketOrder,
+		MarketSwap,
 		0, 0, GetRandomBech32Addr(),
 	)
 	// no affiliate fees

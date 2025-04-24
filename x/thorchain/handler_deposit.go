@@ -217,14 +217,14 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit) (*cosmos.Resu
 }
 
 func (h DepositHandler) addSwap(ctx cosmos.Context, msg MsgSwap) {
-	if h.mgr.Keeper().OrderBooksEnabled(ctx) {
+	if h.mgr.Keeper().AdvSwapQueueEnabled(ctx) {
 		source := msg.Tx.Coins[0]
 		target := common.NewCoin(msg.TargetAsset, msg.TradeTarget)
-		evt := NewEventLimitOrder(source, target, msg.Tx.ID)
+		evt := NewEventLimitSwap(source, target, msg.Tx.ID)
 		if err := h.mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
-			ctx.Logger().Error("fail to emit limit order event", "error", err)
+			ctx.Logger().Error("fail to emit limit swap event", "error", err)
 		}
-		if err := h.mgr.Keeper().SetOrderBookItem(ctx, msg); err != nil {
+		if err := h.mgr.Keeper().SetAdvSwapQueueItem(ctx, msg); err != nil {
 			ctx.Logger().Error("fail to add swap to queue", "error", err)
 		}
 	} else {
@@ -232,9 +232,9 @@ func (h DepositHandler) addSwap(ctx cosmos.Context, msg MsgSwap) {
 	}
 }
 
-// addSwapDirect adds the swap directly to the swap queue (no order book) - segmented
-// out into its own function to allow easier maintenance of original behavior vs order
-// book behavior.
+// addSwapDirect adds the swap directly to the swap queue - segmented out into
+// its own function to allow easier maintenance of original behavior vs advanced
+// behavior.
 func (h DepositHandler) addSwapDirect(ctx cosmos.Context, msg MsgSwap) {
 	version := h.mgr.GetVersion()
 	switch {

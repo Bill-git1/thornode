@@ -22,7 +22,7 @@ const (
 	TxAdd
 	TxWithdraw
 	TxSwap
-	TxLimitOrder
+	TxLimitSwap
 	TxOutbound
 	TxDonate
 	TxBond
@@ -59,8 +59,7 @@ var stringToTxTypeMap = map[string]TxType{
 	"swap":        TxSwap,
 	"s":           TxSwap,
 	"=":           TxSwap,
-	"limito":      TxLimitOrder,
-	"lo":          TxLimitOrder,
+	"=>":          TxLimitSwap,
 	"out":         TxOutbound,
 	"donate":      TxDonate,
 	"d":           TxDonate,
@@ -98,7 +97,7 @@ var txToStringMap = map[TxType]string{
 	TxAdd:                    "add",
 	TxWithdraw:               "withdraw",
 	TxSwap:                   "swap",
-	TxLimitOrder:             "limito",
+	TxLimitSwap:              "=>",
 	TxOutbound:               "out",
 	TxRefund:                 "refund",
 	TxDonate:                 "donate",
@@ -146,7 +145,7 @@ func (tx TxType) IsInbound() bool {
 		TxSecuredAssetDeposit,
 		TxSecuredAssetWithdraw,
 		TxSwap,
-		TxLimitOrder,
+		TxLimitSwap,
 		TxDonate,
 		TxBond,
 		TxUnbond,

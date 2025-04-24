@@ -96,7 +96,7 @@ func triggerPreferredAssetSwapV3_0_0(ctx cosmos.Context, mgr Manager, tn THORNam
 		cosmos.ZeroUint(),
 		"",
 		"", nil,
-		MarketOrder,
+		MarketSwap,
 		0, 0,
 		tn.Owner,
 	)
@@ -321,7 +321,7 @@ func affiliateSwapToRuneV3_0_0(ctx cosmos.Context, mgr Manager, mainTx common.Tx
 		cosmos.ZeroUint(),
 		"",
 		"", nil,
-		MarketOrder,
+		MarketSwap,
 		0, 0,
 		signer,
 	)

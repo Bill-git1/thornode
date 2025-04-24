@@ -42,7 +42,7 @@ type Manager interface {
 	ObMgr() ObserverManager
 	PoolMgr() PoolManager
 	SwapQ() SwapQueue
-	OrderBookMgr() OrderBook
+	AdvSwapQueueMgr() AdvSwapQueue
 	Slasher() Slasher
 	TradeAccountManager() TradeAccountManager
 	SecuredAssetManager() SecuredAssetManager
@@ -187,8 +187,8 @@ type SwapQueue interface {
 	EndBlock(ctx cosmos.Context, mgr Manager) error
 }
 
-// OrderBook interface define the contract of Order Book
-type OrderBook interface {
+// AdvSwapQueue interface define the contract of Advanced Swap Queue
+type AdvSwapQueue interface {
 	EndBlock(ctx cosmos.Context, mgr Manager) error
 }
 
@@ -239,7 +239,7 @@ type Mgrs struct {
 	obMgr          ObserverManager
 	poolMgr        PoolManager
 	swapQ          SwapQueue
-	orderBook      OrderBook
+	advSwapQueue   AdvSwapQueue
 	slasher        Slasher
 	tradeManager   TradeAccountManager
 	securedManager SecuredAssetManager
@@ -360,9 +360,9 @@ func (mgr *Mgrs) LoadManagerIfNecessary(ctx cosmos.Context) error {
 		return fmt.Errorf("fail to create swap queue: %w", err)
 	}
 
-	mgr.orderBook, err = GetOrderBook(v, mgr.K)
+	mgr.advSwapQueue, err = GetAdvSwapQueue(v, mgr.K)
 	if err != nil {
-		return fmt.Errorf("fail to create order book: %w", err)
+		return fmt.Errorf("fail to create adv swap queue: %w", err)
 	}
 
 	mgr.slasher, err = GetSlasher(v, mgr.K, mgr.eventMgr)
@@ -420,8 +420,8 @@ func (mgr *Mgrs) ObMgr() ObserverManager { return mgr.obMgr }
 // SwapQ return an implementation of SwapQueue
 func (mgr *Mgrs) SwapQ() SwapQueue { return mgr.swapQ }
 
-// OrderBookMgr
-func (mgr *Mgrs) OrderBookMgr() OrderBook { return mgr.orderBook }
+// AdvSwapQueueMgr
+func (mgr *Mgrs) AdvSwapQueueMgr() AdvSwapQueue { return mgr.advSwapQueue }
 
 // Slasher return an implementation of Slasher
 func (mgr *Mgrs) Slasher() Slasher { return mgr.slasher }
@@ -523,11 +523,11 @@ func GetSwapQueue(version semver.Version, keeper keeper.Keeper) (SwapQueue, erro
 	}
 }
 
-// GetOrderBook retrieve a OrderBook that is compatible with the given version
-func GetOrderBook(version semver.Version, keeper keeper.Keeper) (OrderBook, error) {
+// GetAdvSwapQueue retrieve a AdvSwapQueue that is compatible with the given version
+func GetAdvSwapQueue(version semver.Version, keeper keeper.Keeper) (AdvSwapQueue, error) {
 	switch {
 	case version.GTE(semver.MustParse("3.0.0")):
-		return newOrderBookVCUR(keeper), nil
+		return newSwapQueueAdvVCUR(keeper), nil
 	default:
 		return nil, errInvalidVersion
 	}

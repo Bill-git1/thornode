@@ -202,6 +202,7 @@
         "rune_withdrawn": "0"
       },
       "THORNames": [],
+      "adv_swap_queue_items": [],
       "affiliate_collectors": null,
       "bond_providers": [
         {
@@ -281,7 +282,6 @@
       ],
       "observed_tx_in_voters": null,
       "observed_tx_out_voters": null,
-      "orderbook_items": [],
       "outbound_fee_spent_rune": [
         {
           "amount": "52481031",

@@ -1900,7 +1900,7 @@ func checkPending(ctx cosmos.Context, keeper keeper.Keeper, voter ObservedTxVote
 		return
 	}
 
-	pending = keeper.HasSwapQueueItem(ctx, voter.TxID, 0) || keeper.HasOrderBookItem(ctx, voter.TxID)
+	pending = keeper.HasSwapQueueItem(ctx, voter.TxID, 0) || keeper.HasAdvSwapQueueItem(ctx, voter.TxID)
 
 	// Only look for streaming information when a swap is pending.
 	if pending {
@@ -1914,20 +1914,20 @@ func checkPending(ctx cosmos.Context, keeper keeper.Keeper, voter ObservedTxVote
 
 	memo, err := ParseMemoWithTHORNames(ctx, keeper, voter.Tx.Tx.Memo)
 	if err != nil {
-		// If unable to parse, assume not a (valid) swap or limit order memo.
+		// If unable to parse, assume not a (valid) swap or limit swap memo.
 		return
 	}
 
 	memoType := memo.GetType()
 	// If the memo asset is a synth, as with Savers add liquidity or withdraw, a swap is assumed to be involved.
-	if memoType == TxSwap || memoType == TxLimitOrder || memo.GetAsset().IsSyntheticAsset() {
+	if memoType == TxSwap || memoType == TxLimitSwap || memo.GetAsset().IsSyntheticAsset() {
 		isSwap = true
 		// Only check the KVStore when the inbound transaction has already been finalised
 		// and when there haven't been any Actions planned.
 		// This will also check the KVStore when an inbound transaction has no output,
 		// such as the output being not enough to cover a fee.
 		if voter.FinalisedHeight != 0 && len(voter.Actions) == 0 {
-			// Use of Swap Queue or Order Book depends on Mimir key EnableOrderBooks rather than memo type, so check both.
+			// Use of Swap Queue or Adv Swap Queue depends on Mimir key AdvSwapQueueBooks rather than memo type, so check both.
 			isPending = pending
 		}
 	}
@@ -2332,7 +2332,7 @@ func (qs queryServer) queryQueue(ctx cosmos.Context, _ *types.QueryQueueRequest)
 		query.Swap++
 	}
 
-	iter2 := qs.mgr.Keeper().GetOrderBookItemIterator(ctx)
+	iter2 := qs.mgr.Keeper().GetAdvSwapQueueItemIterator(ctx)
 	defer iter2.Close()
 	for ; iter2.Valid(); iter2.Next() {
 		var msg MsgSwap

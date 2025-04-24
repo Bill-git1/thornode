@@ -64,9 +64,9 @@ const (
 	AddPendingLiquidity      = types.PendingLiquidityType_add
 	WithdrawPendingLiquidity = types.PendingLiquidityType_withdraw
 
-	// Order Type
-	MarketOrder = types.OrderType_market
-	LimitOrder  = types.OrderType_limit
+	// Swap Type
+	MarketSwap = types.SwapType_market
+	LimitSwap  = types.SwapType_limit
 
 	// Mint/Burn type
 	MintSupplyType = types.MintBurnSupplyType_mint
@@ -74,7 +74,7 @@ const (
 
 	// Memos
 	TxSwap          = mem.TxSwap
-	TxLimitOrder    = mem.TxLimitOrder
+	TxLimitSwap     = mem.TxLimitSwap
 	TxAdd           = mem.TxAdd
 	TxBond          = mem.TxBond
 	TxMigrate       = mem.TxMigrate
@@ -136,7 +136,7 @@ var (
 	NewEventSwap                   = types.NewEventSwap
 	NewEventAffiliateFee           = types.NewEventAffiliateFee
 	NewEventStreamingSwap          = types.NewEventStreamingSwap
-	NewEventLimitOrder             = types.NewEventLimitOrder
+	NewEventLimitSwap              = types.NewEventLimitSwap
 	NewEventAddLiquidity           = types.NewEventAddLiquidity
 	NewEventWithdraw               = types.NewEventWithdraw
 	NewEventRefund                 = types.NewEventRefund

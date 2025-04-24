@@ -244,6 +244,7 @@
           "preferred_asset": "ETH.USDX-0X9999999999999999999999999999999999999999"
         }
       ],
+      "adv_swap_queue_items": [],
       "affiliate_collectors": [
         {
           "owner_address": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
@@ -384,7 +385,6 @@
       ],
       "observed_tx_in_voters": null,
       "observed_tx_out_voters": null,
-      "orderbook_items": [],
       "outbound_fee_spent_rune": [
         {
           "amount": "13417410",

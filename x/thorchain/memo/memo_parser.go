@@ -76,7 +76,7 @@ func (p *parser) parse() (mem Memo, err error) {
 		return p.ParseRunePoolDepositMemo()
 	case TxRunePoolWithdraw:
 		return p.ParseRunePoolWithdrawMemo()
-	case TxSwap, TxLimitOrder:
+	case TxSwap, TxLimitSwap:
 		return p.ParseSwapMemo()
 	case TxOutbound:
 		return p.ParseOutboundMemo()

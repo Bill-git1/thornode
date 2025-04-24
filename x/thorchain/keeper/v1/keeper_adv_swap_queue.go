@@ -23,79 +23,79 @@ import (
 // A value of 18 means that granularity is maxed out at 1 trillion to 1 ratio.
 const ratioLength int = 18
 
-// OrderBooksEnabled return true if the orderbooks feature is enabled
-func (k KVStore) OrderBooksEnabled(ctx cosmos.Context) bool {
-	val := k.GetConfigInt64(ctx, constants.EnableOrderBooks)
+// AdvSwapQueueEnabled return true if the adv swap queue feature is enabled
+func (k KVStore) AdvSwapQueueEnabled(ctx cosmos.Context) bool {
+	val := k.GetConfigInt64(ctx, constants.EnableAdvSwapQueue)
 	return val > 0
 }
 
-// SetOrderBookItem - writes a order book item to the kv store
-func (k KVStore) SetOrderBookItem(ctx cosmos.Context, msg MsgSwap) error {
+// SetAdvSwapQueueItem - writes an adv swap queue item to the kv store
+func (k KVStore) SetAdvSwapQueueItem(ctx cosmos.Context, msg MsgSwap) error {
 	if msg.Tx.Coins == nil || len(msg.Tx.Coins) != 1 {
 		return fmt.Errorf("incorrect number of coins in transaction (%d)", len(msg.Tx.Coins))
 	}
-	if msg.OrderType == types.OrderType_limit && msg.TradeTarget.IsZero() {
-		return fmt.Errorf("trade target cannot be zero for limit orders")
+	if msg.SwapType == types.SwapType_limit && msg.TradeTarget.IsZero() {
+		return fmt.Errorf("trade target cannot be zero for limit swaps")
 	}
 	if msg.Tx.ID.IsEmpty() {
 		return fmt.Errorf("invalid tx hash")
 	}
-	if err := k.SetOrderBookIndex(ctx, msg); err != nil {
+	if err := k.SetAdvSwapQueueIndex(ctx, msg); err != nil {
 		return err
 	}
-	k.setMsgSwap(ctx, k.GetKey(prefixOrderBookItem, msg.Tx.ID.String()), msg)
+	k.setMsgSwap(ctx, k.GetKey(prefixAdvSwapQueueItem, msg.Tx.ID.String()), msg)
 	return nil
 }
 
-// GetOrderBookItemIterator iterate order book items
-func (k KVStore) GetOrderBookItemIterator(ctx cosmos.Context) cosmos.Iterator {
-	return k.getIterator(ctx, prefixOrderBookItem)
+// GetAdvSwapQueueItemIterator iterate adv swap queue items
+func (k KVStore) GetAdvSwapQueueItemIterator(ctx cosmos.Context) cosmos.Iterator {
+	return k.getIterator(ctx, prefixAdvSwapQueueItem)
 }
 
-// GetOrderBookItem - read the given order book item information from key values store
-func (k KVStore) GetOrderBookItem(ctx cosmos.Context, txID common.TxID) (MsgSwap, error) {
+// GetAdvSwapQueueItem - read the given adv swap queue item information from key values store
+func (k KVStore) GetAdvSwapQueueItem(ctx cosmos.Context, txID common.TxID) (MsgSwap, error) {
 	record := MsgSwap{}
-	ok, err := k.getMsgSwap(ctx, k.GetKey(prefixOrderBookItem, txID.String()), &record)
+	ok, err := k.getMsgSwap(ctx, k.GetKey(prefixAdvSwapQueueItem, txID.String()), &record)
 	if !ok {
 		return record, errors.New("not found")
 	}
 	return record, err
 }
 
-// HasOrderBookItem - checks if order book item already exists
-func (k KVStore) HasOrderBookItem(ctx cosmos.Context, txID common.TxID) bool {
+// HasAdvSwapQueueItem - checks if adv swap queue item already exists
+func (k KVStore) HasAdvSwapQueueItem(ctx cosmos.Context, txID common.TxID) bool {
 	record := MsgSwap{}
-	ok, _ := k.getMsgSwap(ctx, k.GetKey(prefixOrderBookItem, txID.String()), &record)
+	ok, _ := k.getMsgSwap(ctx, k.GetKey(prefixAdvSwapQueueItem, txID.String()), &record)
 	return ok
 }
 
-// RemoveOrderBookItem - removes a order book item from the kv store
-func (k KVStore) RemoveOrderBookItem(ctx cosmos.Context, txID common.TxID) error {
-	msg, err := k.GetOrderBookItem(ctx, txID)
+// RemoveAdvSwapQueueItem - removes a adv swap queue item from the kv store
+func (k KVStore) RemoveAdvSwapQueueItem(ctx cosmos.Context, txID common.TxID) error {
+	msg, err := k.GetAdvSwapQueueItem(ctx, txID)
 	if err != nil {
-		_ = dbError(ctx, "failed to fetch order book item", err)
+		_ = dbError(ctx, "failed to fetch adv swap queue item", err)
 	} else {
-		err = k.RemoveOrderBookIndex(ctx, msg)
+		err = k.RemoveAdvSwapQueueIndex(ctx, msg)
 	}
-	k.del(ctx, k.GetKey(prefixOrderBookItem, txID.String()))
+	k.del(ctx, k.GetKey(prefixAdvSwapQueueItem, txID.String()))
 	return err
 }
 
-///-------------------------- Order Book Processor --------------------------///
-// The Order Book Processor tracks a list of pairs to be processed in the next
-// block to check for any limit orders that are available to be executed. This
+///-------------------------- Adv Swap Queue Processor --------------------------///
+// The advanced swap queue processor tracks a list of pairs to be processed in the next
+// block to check for any limit swaps that are available to be executed. This
 // is stored as an array of bools.
 
-// SetOrderBookProcessor - writes a list of pairs to process
-func (k KVStore) SetOrderBookProcessor(ctx cosmos.Context, record []bool) error {
-	key := k.GetKey(prefixOrderBookProcessor, "")
+// SetAdvSwapQueueProcessor - writes a list of pairs to process
+func (k KVStore) SetAdvSwapQueueProcessor(ctx cosmos.Context, record []bool) error {
+	key := k.GetKey(prefixAdvSwapQueueProcessor, "")
 	k.setBools(ctx, key, record)
 	return nil
 }
 
-// GetOrderBookProcessor - get a list of asset pairs to process
-func (k KVStore) GetOrderBookProcessor(ctx cosmos.Context) ([]bool, error) {
-	key := k.GetKey(prefixOrderBookProcessor, "")
+// GetAdvSwapQueueProcessor - get a list of asset pairs to process
+func (k KVStore) GetAdvSwapQueueProcessor(ctx cosmos.Context) ([]bool, error) {
+	key := k.GetKey(prefixAdvSwapQueueProcessor, "")
 	var record []bool
 	_, err := k.getBools(ctx, key, &record)
 	return record, err
@@ -103,11 +103,11 @@ func (k KVStore) GetOrderBookProcessor(ctx cosmos.Context) ([]bool, error) {
 
 ///----------------------------------------------------------------------///
 
-///-------------------------- Order Book Index --------------------------///
+///-------------------------- Adv Swap Queue Index --------------------------///
 
-// SetOrderBookIndex - writes a order book index to the kv store
-func (k KVStore) SetOrderBookIndex(ctx cosmos.Context, msg MsgSwap) error {
-	ok, err := k.HasOrderBookIndex(ctx, msg)
+// SetAdvSwapQueueIndex - writes a adv swap queue index to the kv store
+func (k KVStore) SetAdvSwapQueueIndex(ctx cosmos.Context, msg MsgSwap) error {
+	ok, err := k.HasAdvSwapQueueIndex(ctx, msg)
 	if err != nil {
 		return err
 	}
@@ -115,7 +115,7 @@ func (k KVStore) SetOrderBookIndex(ctx cosmos.Context, msg MsgSwap) error {
 		return nil
 	}
 
-	key := k.getOrderBookIndexKey(ctx, msg)
+	key := k.getAdvSwapQueueIndexKey(ctx, msg)
 	record := make([]string, 0)
 	_, err = k.getStrings(ctx, key, &record)
 	if err != nil {
@@ -126,23 +126,23 @@ func (k KVStore) SetOrderBookIndex(ctx cosmos.Context, msg MsgSwap) error {
 	return nil
 }
 
-// GetOrderBookIterator iterate order book items
-func (k KVStore) GetOrderBookIndexIterator(ctx cosmos.Context, order types.OrderType, source, target common.Asset) cosmos.Iterator {
+// GetAdvSwapQueueIterator iterate adv swap queue items
+func (k KVStore) GetAdvSwapQueueIndexIterator(ctx cosmos.Context, swapType types.SwapType, source, target common.Asset) cosmos.Iterator {
 	store := ctx.KVStore(k.storeKey)
-	switch order {
-	case types.OrderType_limit:
-		prefix := k.GetKey(prefixOrderBookLimitIndex, fmt.Sprintf("%s>%s/", source, target))
+	switch swapType {
+	case types.SwapType_limit:
+		prefix := k.GetKey(prefixAdvSwapQueueLimitIndex, fmt.Sprintf("%s>%s/", source, target))
 		return cosmos.KVStoreReversePrefixIterator(store, []byte(prefix))
-	case types.OrderType_market:
+	case types.SwapType_market:
 		return nil
 	default:
 		return nil
 	}
 }
 
-// GetOrderBookIndex - read the given order book index information from key values tore
-func (k KVStore) GetOrderBookIndex(ctx cosmos.Context, msg MsgSwap) (common.TxIDs, error) {
-	key := k.getOrderBookIndexKey(ctx, msg)
+// GetAdvSwapQueueIndex - read the given adv swap queue index information from key values tore
+func (k KVStore) GetAdvSwapQueueIndex(ctx cosmos.Context, msg MsgSwap) (common.TxIDs, error) {
+	key := k.getAdvSwapQueueIndexKey(ctx, msg)
 	record := make([]string, 0)
 	_, err := k.getStrings(ctx, key, &record)
 	if err != nil {
@@ -161,9 +161,9 @@ func (k KVStore) GetOrderBookIndex(ctx cosmos.Context, msg MsgSwap) (common.TxID
 	return result, nil
 }
 
-// HasOrderBookIndex - checks if order book item already exists
-func (k KVStore) HasOrderBookIndex(ctx cosmos.Context, msg MsgSwap) (bool, error) {
-	key := k.getOrderBookIndexKey(ctx, msg)
+// HasAdvSwapQueueIndex - checks if adv swap queue item already exists
+func (k KVStore) HasAdvSwapQueueIndex(ctx cosmos.Context, msg MsgSwap) (bool, error) {
+	key := k.getAdvSwapQueueIndexKey(ctx, msg)
 	record := make([]string, 0)
 	_, err := k.getStrings(ctx, key, &record)
 	if err != nil {
@@ -177,9 +177,9 @@ func (k KVStore) HasOrderBookIndex(ctx cosmos.Context, msg MsgSwap) (bool, error
 	return false, nil
 }
 
-// RemoveOrderBookIndex - removes a order book item from the kv store
-func (k KVStore) RemoveOrderBookIndex(ctx cosmos.Context, msg MsgSwap) error {
-	key := k.getOrderBookIndexKey(ctx, msg)
+// RemoveAdvSwapQueueIndex - removes a adv swap queue item from the kv store
+func (k KVStore) RemoveAdvSwapQueueIndex(ctx cosmos.Context, msg MsgSwap) error {
+	key := k.getAdvSwapQueueIndexKey(ctx, msg)
 	record := make([]string, 0)
 	_, err := k.getStrings(ctx, key, &record)
 	if err != nil {
@@ -205,15 +205,15 @@ func (k KVStore) RemoveOrderBookIndex(ctx cosmos.Context, msg MsgSwap) error {
 	return nil
 }
 
-func (k KVStore) getOrderBookIndexKey(ctx cosmos.Context, msg MsgSwap) string {
-	switch msg.OrderType {
-	case types.OrderType_limit:
+func (k KVStore) getAdvSwapQueueIndexKey(ctx cosmos.Context, msg MsgSwap) string {
+	switch msg.SwapType {
+	case types.SwapType_limit:
 		ra := rewriteRatio(ratioLength, getRatio(msg.Tx.Coins[0].Amount, msg.TradeTarget))
 		f := msg.Tx.Coins[0].Asset
 		t := msg.TargetAsset
-		return k.GetKey(prefixOrderBookLimitIndex, fmt.Sprintf("%s>%s/%s/", f.String(), t.String(), ra))
-	case types.OrderType_market:
-		return k.GetKey(prefixOrderBookMarketIndex, "")
+		return k.GetKey(prefixAdvSwapQueueLimitIndex, fmt.Sprintf("%s>%s/%s/", f.String(), t.String(), ra))
+	case types.SwapType_market:
+		return k.GetKey(prefixAdvSwapQueueMarketIndex, "")
 	default:
 		return ""
 	}

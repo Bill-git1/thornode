@@ -361,17 +361,17 @@ func (m *SwapperClout) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, error) {
 	return jsonify(m)
 }
 
-// Use openapi type since its ordertype is a string (i.e. "market", "limit") and not the int representation ("0", "1")
+// Use openapi type since its swaptype is a string (i.e. "market", "limit") and not the int representation ("0", "1")
 func (m *QuerySwapQueueResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, error) {
 	result := make([]openapi.MsgSwap, 0)
 	for _, msg := range m.SwapQueue {
-		// Only display the OrderType if it is "limit", not if "market".
-		var orderType *string
-		if msg.OrderType != OrderType_market {
-			orderType = wrapString(msg.OrderType.String())
+		// Only display the SwapType if it is "limit", not if "market".
+		var swapType *string
+		if msg.SwapType != SwapType_market {
+			swapType = wrapString(msg.SwapType.String())
 		}
-		// TODO: After order books implementation,
-		// always display the OrderType?
+		// TODO: After adv swap queue implementation,
+		// always display the SwapType?
 
 		result = append(result, openapi.MsgSwap{
 			Tx:                      castTx(msg.Tx),
@@ -384,7 +384,7 @@ func (m *QuerySwapQueueResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, err
 			Aggregator:              wrapString(msg.Aggregator),
 			AggregatorTargetAddress: wrapString(msg.AggregatorTargetAddress),
 			AggregatorTargetLimit:   wrapUintPtr(msg.AggregatorTargetLimit),
-			OrderType:               orderType,
+			SwapType:                swapType,
 			StreamQuantity:          wrapInt64(int64(msg.StreamQuantity)),
 			StreamInterval:          wrapInt64(int64(msg.StreamInterval)),
 		})

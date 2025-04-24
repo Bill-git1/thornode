@@ -55,7 +55,7 @@ message GenesisState {
   repeated types.ReserveContributor reserve_contributors = 12 [(gogoproto.castrepeated) = "gitlab.com/thorchain/thornode/v3/x/thorchain/types.ReserveContributors", (gogoproto.nullable) = false];
   types.Network network = 13 [(gogoproto.nullable) = false];
   reserved 14,15,16,17,18;
-  repeated types.MsgSwap orderbook_items = 19 [(gogoproto.nullable) = false];
+  repeated types.MsgSwap adv_swap_queue_items = 19 [(gogoproto.nullable) = false];
   repeated types.NetworkFee network_fees = 20 [(gogoproto.nullable) = false];
   reserved 21;
   repeated types.ChainContract chain_contracts = 22 [(gogoproto.nullable) = false];

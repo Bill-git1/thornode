@@ -246,6 +246,7 @@
           "preferred_asset": "."
         }
       ],
+      "adv_swap_queue_items": [],
       "affiliate_collectors": null,
       "bond_providers": [
         {
@@ -539,7 +540,6 @@
         }
       ],
       "observed_tx_out_voters": null,
-      "orderbook_items": [],
       "outbound_fee_spent_rune": [
         {
           "amount": "20984993",

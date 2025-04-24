@@ -10,12 +10,12 @@ import (
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
 )
 
-type OrderBookVCURSuite struct{}
+type AdvSwapQueueVCURSuite struct{}
 
-var _ = Suite(&OrderBookVCURSuite{})
+var _ = Suite(&AdvSwapQueueVCURSuite{})
 
-func (s OrderBookVCURSuite) TestGetTodoNum(c *C) {
-	book := newOrderBookVCUR(keeper.KVStoreDummy{})
+func (s AdvSwapQueueVCURSuite) TestGetTodoNum(c *C) {
+	book := newSwapQueueAdvVCUR(keeper.KVStoreDummy{})
 
 	c.Check(book.getTodoNum(50, 10, 100), Equals, int64(25))     // halves it
 	c.Check(book.getTodoNum(11, 10, 100), Equals, int64(5))      // halves it
@@ -26,7 +26,7 @@ func (s OrderBookVCURSuite) TestGetTodoNum(c *C) {
 	c.Check(book.getTodoNum(200, 10, 100), Equals, int64(100))   // does max 100
 }
 
-func (s OrderBookVCURSuite) TestScoreMsgs(c *C) {
+func (s AdvSwapQueueVCURSuite) TestScoreMsgs(c *C) {
 	ctx, k := setupKeeperForTest(c)
 
 	pool := NewPool()
@@ -40,7 +40,7 @@ func (s OrderBookVCURSuite) TestScoreMsgs(c *C) {
 	pool.BalanceAsset = cosmos.NewUint(1000 * common.One)
 	c.Assert(k.SetPool(ctx, pool), IsNil)
 
-	book := newOrderBookVCUR(k)
+	book := newSwapQueueAdvVCUR(k)
 
 	// check that we sort by liquidity ok
 	msgs := []*MsgSwap{
@@ -49,35 +49,35 @@ func (s OrderBookVCURSuite) TestScoreMsgs(c *C) {
 			Coins: common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(2*common.One))},
 		}, common.ETHAsset, GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
-			MarketOrder,
+			MarketSwap,
 			0, 0, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("53C1A22436B385133BDD9157BB365DB7AAC885910D2FA7C9DC3578A04FFD4ADC"),
 			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(50*common.One))},
 		}, common.RuneAsset(), GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
-			MarketOrder,
+			MarketSwap,
 			0, 0, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("6A470EB9AFE82981979A5EEEED3296E1E325597794BD5BFB3543A372CAF435E5"),
 			Coins: common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(1*common.One))},
 		}, common.ETHAsset, GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
-			MarketOrder,
+			MarketSwap,
 			0, 0, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("5EE9A7CCC55A3EBAFA0E542388CA1B909B1E3CE96929ED34427B96B7CCE9F8E8"),
 			Coins: common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(100*common.One))},
 		}, common.ETHAsset, GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
-			MarketOrder,
+			MarketSwap,
 			0, 0, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("0FF2A521FB11FFEA4DFE3B7AD4066FF0A33202E652D846F8397EFC447C97A91B"),
 			Coins: common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(10*common.One))},
 		}, common.ETHAsset, GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
-			MarketOrder,
+			MarketSwap,
 			0, 0, GetRandomBech32Addr()),
 
 		NewMsgSwap(common.Tx{
@@ -85,7 +85,7 @@ func (s OrderBookVCURSuite) TestScoreMsgs(c *C) {
 			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(150*common.One))},
 		}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
-			MarketOrder,
+			MarketSwap,
 			0, 0, GetRandomBech32Addr()),
 
 		NewMsgSwap(common.Tx{
@@ -93,13 +93,13 @@ func (s OrderBookVCURSuite) TestScoreMsgs(c *C) {
 			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(151*common.One))},
 		}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
-			MarketOrder,
+			MarketSwap,
 			0, 0, GetRandomBech32Addr()),
 	}
 
-	swaps := make(orderItems, len(msgs))
+	swaps := make(swapItems, len(msgs))
 	for i, msg := range msgs {
-		swaps[i] = orderItem{
+		swaps[i] = swapItem{
 			msg:  *msg,
 			fee:  cosmos.ZeroUint(),
 			slip: cosmos.ZeroUint(),
@@ -107,7 +107,7 @@ func (s OrderBookVCURSuite) TestScoreMsgs(c *C) {
 	}
 	swaps, err := book.scoreMsgs(ctx, swaps, 10_000)
 	c.Assert(err, IsNil)
-	swaps = swaps.Sort(ctx)
+	swaps = swaps.Sort()
 	c.Check(swaps, HasLen, 7)
 	c.Check(swaps[0].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(151*common.One)), Equals, true, Commentf("%d", swaps[0].msg.Tx.Coins[0].Amount.Uint64()))
 	c.Check(swaps[1].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(150*common.One)), Equals, true, Commentf("%d", swaps[1].msg.Tx.Coins[0].Amount.Uint64()))
@@ -127,70 +127,70 @@ func (s OrderBookVCURSuite) TestScoreMsgs(c *C) {
 			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(2*common.One))},
 		}, common.RuneAsset(), GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
-			MarketOrder,
+			MarketSwap,
 			0, 0, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000004"),
 			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(50*common.One))},
 		}, common.RuneAsset(), GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
-			MarketOrder,
+			MarketSwap,
 			0, 0, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000005"),
 			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(1*common.One))},
 		}, common.RuneAsset(), GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
-			MarketOrder,
+			MarketSwap,
 			0, 0, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000009"),
 			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One))},
 		}, common.RuneAsset(), GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
-			MarketOrder,
+			MarketSwap,
 			0, 0, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000007"),
 			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(10*common.One))},
 		}, common.RuneAsset(), GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
-			MarketOrder,
+			MarketSwap,
 			0, 0, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000008"),
 			Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(2*common.One))},
 		}, common.RuneAsset(), GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
-			MarketOrder,
+			MarketSwap,
 			0, 0, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000006"),
 			Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(50*common.One))},
 		}, common.RuneAsset(), GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
-			MarketOrder,
+			MarketSwap,
 			0, 0, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000010"),
 			Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1*common.One))},
 		}, common.RuneAsset(), GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
-			MarketOrder,
+			MarketSwap,
 			0, 0, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000013"),
 			Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(100*common.One))},
 		}, common.RuneAsset(), GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
-			MarketOrder,
+			MarketSwap,
 			0, 0, GetRandomBech32Addr()),
 		NewMsgSwap(common.Tx{
 			ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000012"),
 			Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(10*common.One))},
 		}, common.RuneAsset(), GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
-			MarketOrder,
+			MarketSwap,
 			0, 0, GetRandomBech32Addr()),
 
 		NewMsgSwap(common.Tx{
@@ -198,13 +198,13 @@ func (s OrderBookVCURSuite) TestScoreMsgs(c *C) {
 			Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(10*common.One))},
 		}, common.ETHAsset, GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 			"", "", nil,
-			MarketOrder,
+			MarketSwap,
 			0, 0, GetRandomBech32Addr()),
 	}
 
-	swaps = make(orderItems, len(msgs))
+	swaps = make(swapItems, len(msgs))
 	for i, msg := range msgs {
-		swaps[i] = orderItem{
+		swaps[i] = swapItem{
 			msg:  *msg,
 			fee:  cosmos.ZeroUint(),
 			slip: cosmos.ZeroUint(),
@@ -212,7 +212,7 @@ func (s OrderBookVCURSuite) TestScoreMsgs(c *C) {
 	}
 	swaps, err = book.scoreMsgs(ctx, swaps, 10_000)
 	c.Assert(err, IsNil)
-	swaps = swaps.Sort(ctx)
+	swaps = swaps.Sort()
 	c.Assert(swaps, HasLen, 11)
 
 	c.Check(swaps[0].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(10*common.One)), Equals, true, Commentf("%d", swaps[0].msg.Tx.Coins[0].Amount.Uint64()))
@@ -221,11 +221,11 @@ func (s OrderBookVCURSuite) TestScoreMsgs(c *C) {
 	c.Check(swaps[1].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(100*common.One)), Equals, true, Commentf("%d", swaps[1].msg.Tx.Coins[0].Amount.Uint64()))
 	c.Check(swaps[1].msg.Tx.Coins[0].Asset.Equals(common.BTCAsset), Equals, true)
 
-	c.Check(swaps[2].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(50*common.One)), Equals, true, Commentf("%d", swaps[2].msg.Tx.Coins[0].Amount.Uint64()))
-	c.Check(swaps[2].msg.Tx.Coins[0].Asset.Equals(common.BTCAsset), Equals, true)
+	c.Check(swaps[2].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(100*common.One)), Equals, true, Commentf("%d", swaps[2].msg.Tx.Coins[0].Amount.Uint64()))
+	c.Check(swaps[2].msg.Tx.Coins[0].Asset.Equals(common.ETHAsset), Equals, true)
 
-	c.Check(swaps[3].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(100*common.One)), Equals, true, Commentf("%d", swaps[3].msg.Tx.Coins[0].Amount.Uint64()))
-	c.Check(swaps[3].msg.Tx.Coins[0].Asset.Equals(common.ETHAsset), Equals, true)
+	c.Check(swaps[3].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(50*common.One)), Equals, true, Commentf("%d", swaps[3].msg.Tx.Coins[0].Amount.Uint64()))
+	c.Check(swaps[3].msg.Tx.Coins[0].Asset.Equals(common.BTCAsset), Equals, true)
 
 	c.Check(swaps[4].msg.Tx.Coins[0].Amount.Equal(cosmos.NewUint(50*common.One)), Equals, true, Commentf("%d", swaps[4].msg.Tx.Coins[0].Amount.Uint64()))
 	c.Check(swaps[4].msg.Tx.Coins[0].Asset.Equals(common.ETHAsset), Equals, true)
@@ -249,9 +249,9 @@ func (s OrderBookVCURSuite) TestScoreMsgs(c *C) {
 	c.Check(swaps[10].msg.Tx.Coins[0].Asset.Equals(common.ETHAsset), Equals, true)
 }
 
-func (s OrderBookVCURSuite) TestFetchQueue(c *C) {
+func (s AdvSwapQueueVCURSuite) TestFetchQueue(c *C) {
 	ctx, mgr := setupManagerForTest(c)
-	book := newOrderBookVCUR(mgr.Keeper())
+	book := newSwapQueueAdvVCUR(mgr.Keeper())
 
 	pool := NewPool()
 	pool.Asset = common.ETHAsset
@@ -272,14 +272,14 @@ func (s OrderBookVCURSuite) TestFetchQueue(c *C) {
 		Coins: common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(2*common.One))},
 	}, common.ETHAsset, GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 		"", "", nil,
-		MarketOrder,
+		MarketSwap,
 		0, 0, GetRandomBech32Addr())
 	limit1 := NewMsgSwap(common.Tx{
 		ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000015"),
 		Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1*common.One))},
 	}, common.ETHAsset, GetRandomETHAddress(), cosmos.NewUint(80*common.One), common.NoAddress, cosmos.ZeroUint(),
 		"", "", nil,
-		LimitOrder,
+		LimitSwap,
 		0, 0, GetRandomBech32Addr())
 
 	limit2 := NewMsgSwap(common.Tx{
@@ -287,14 +287,14 @@ func (s OrderBookVCURSuite) TestFetchQueue(c *C) {
 		Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1*common.One))},
 	}, common.ETHAsset, GetRandomETHAddress(), cosmos.NewUint(100*common.One), common.NoAddress, cosmos.ZeroUint(),
 		"", "", nil,
-		LimitOrder,
+		LimitSwap,
 		0, 0, GetRandomBech32Addr())
 
-	c.Assert(mgr.Keeper().SetOrderBookItem(ctx, *market), IsNil)
-	c.Assert(mgr.Keeper().SetOrderBookItem(ctx, *limit1), IsNil)
-	c.Assert(mgr.Keeper().SetOrderBookItem(ctx, *limit2), IsNil)
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *market), IsNil)
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *limit1), IsNil)
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *limit2), IsNil)
 
-	c.Assert(mgr.Keeper().SetOrderBookProcessor(ctx, []bool{true, true, true, true, true, true}), IsNil)
+	c.Assert(mgr.Keeper().SetAdvSwapQueueProcessor(ctx, []bool{true, true, true, true, true, true}), IsNil)
 
 	pairs, pools := book.getAssetPairs(ctx)
 
@@ -303,10 +303,10 @@ func (s OrderBookVCURSuite) TestFetchQueue(c *C) {
 	c.Check(items, HasLen, 2, Commentf("%d", len(items)))
 }
 
-func (s OrderBookVCURSuite) TestgetAssetPairs(c *C) {
+func (s AdvSwapQueueVCURSuite) TestgetAssetPairs(c *C) {
 	ctx, k := setupKeeperForTest(c)
 
-	book := newOrderBookVCUR(k)
+	book := newSwapQueueAdvVCUR(k)
 
 	pool := NewPool()
 	pool.Asset = common.BTCAsset
@@ -319,7 +319,7 @@ func (s OrderBookVCURSuite) TestgetAssetPairs(c *C) {
 	c.Check(pairs, HasLen, len(pools)*(len(pools)+1))
 }
 
-func (s OrderBookVCURSuite) TestTradePairsTodo(c *C) {
+func (s AdvSwapQueueVCURSuite) TestTradePairsTodo(c *C) {
 	pairs := tradePairs{
 		{common.RuneAsset(), common.ETHAsset},
 		{common.ETHAsset, common.RuneAsset()},
@@ -356,7 +356,7 @@ func (s OrderBookVCURSuite) TestTradePairsTodo(c *C) {
 	c.Check(todo[2].Equals(genTradePair(common.ETHAsset, common.BTCAsset)), Equals, true, Commentf("%s", todo[2]))
 }
 
-func (s OrderBookVCURSuite) TestConvertProc(c *C) {
+func (s AdvSwapQueueVCURSuite) TestConvertProc(c *C) {
 	_, k := setupKeeperForTest(c)
 
 	pairs := tradePairs{
@@ -368,7 +368,7 @@ func (s OrderBookVCURSuite) TestConvertProc(c *C) {
 		{common.BTCAsset, common.ETHAsset},
 	}
 
-	book := newOrderBookVCUR(k)
+	book := newSwapQueueAdvVCUR(k)
 
 	result, ok := book.convertProcToAssetArrays(nil, pairs)
 	c.Assert(result, HasLen, 0)
@@ -409,10 +409,10 @@ func (s OrderBookVCURSuite) TestConvertProc(c *C) {
 	c.Assert(ok, Equals, false)
 }
 
-func (s OrderBookVCURSuite) TestEndBlock(c *C) {
+func (s AdvSwapQueueVCURSuite) TestEndBlock(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	mgr.txOutStore = NewTxStoreDummy()
-	book := newOrderBookVCUR(mgr.Keeper())
+	book := newSwapQueueAdvVCUR(mgr.Keeper())
 
 	pool := NewPool()
 	pool.Asset = common.ETHAsset
@@ -438,7 +438,7 @@ func (s OrderBookVCURSuite) TestEndBlock(c *C) {
 		tx, common.ETHAsset, ethAddr, cosmos.ZeroUint(),
 		affilAddr, cosmos.NewUint(1_000),
 		"", "", nil,
-		MarketOrder,
+		MarketSwap,
 		0, 0, GetRandomBech32Addr())
 
 	tx = GetRandomTx()
@@ -448,13 +448,13 @@ func (s OrderBookVCURSuite) TestEndBlock(c *C) {
 		tx, common.ETHAsset, ethAddr, cosmos.NewUint(856815149),
 		affilAddr, cosmos.NewUint(1_000),
 		"", "", nil,
-		LimitOrder,
+		LimitSwap,
 		0, 0, GetRandomBech32Addr())
 
-	c.Assert(mgr.Keeper().SetOrderBookItem(ctx, *market), IsNil)
-	c.Assert(mgr.Keeper().SetOrderBookItem(ctx, *limit1), IsNil)
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *market), IsNil)
+	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *limit1), IsNil)
 
-	c.Assert(mgr.Keeper().SetOrderBookProcessor(ctx, []bool{true, true, true, true, true, true}), IsNil)
+	c.Assert(mgr.Keeper().SetAdvSwapQueueProcessor(ctx, []bool{true, true, true, true, true, true}), IsNil)
 
 	err := book.EndBlock(ctx, mgr)
 	c.Assert(err, IsNil)
@@ -463,7 +463,7 @@ func (s OrderBookVCURSuite) TestEndBlock(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(items, HasLen, 2) // two outbounds are rune, which doesn't show up in the outbound items list
 
-	proc, err := mgr.Keeper().GetOrderBookProcessor(ctx)
+	proc, err := mgr.Keeper().GetAdvSwapQueueProcessor(ctx)
 	c.Assert(err, IsNil)
 	c.Check(proc, DeepEquals, []bool{true, false, false, false, true, true}, Commentf("%+v", proc))
 }

@@ -78,7 +78,7 @@ Memos contain functions such as Swap or Add, which describe the user's intent an
 | Loan Open     | Loan+       | $+          |
 | Loan Close    | Loan-       | $-          |
 | THORName      | name, n     | \~          |
-| Limit Order   | Limitto     | lo          |
+| Limit Swap    | =>          | =>          |
 
 **Example**:
 

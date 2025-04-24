@@ -471,7 +471,7 @@ Refunds cost fees to prevent DoS (denial-of-service) attacks. The user will pay 
 ## **Other Internal Memos**
 
 - `consolidate` &mdash; consolidate UTXO transactions
-- `limito` or `lo` &mdash; limit order functions (to be implemented)
+- `=>` &mdash; limit swap functions (to be implemented)
 - `name` or `n` or `~` &mdash; THORName operations; see [THORName Guide](../affiliate-guide/thorname-guide.md)
 - `out` &mdash; for outbound transaction, set within a outbound transaction
 - `ragnarok` &mdash; used to delist pools, set within a outbound transaction

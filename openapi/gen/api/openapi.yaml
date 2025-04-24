@@ -3794,11 +3794,11 @@ components:
         destination: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
         affiliate_basis_points: affiliate_basis_points
         aggregator_target_limit: aggregator_target_limit
+        swap_type: swap_type
         stream_quantity: 0
         target_asset: ETH.ETH
         stream_interval: 6
         affiliate_address: thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
-        order_type: order_type
         signer: signer
       properties:
         tx:
@@ -3836,7 +3836,7 @@ components:
           description: the minimum amount of SwapOut asset to receive (else cancelling
             the SwapOut and receiving THORChain's output)
           type: string
-        order_type:
+        swap_type:
           description: "market if immediately completed or refunded, limit if held\
             \ until fulfillable"
           type: string
