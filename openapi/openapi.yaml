@@ -207,6 +207,24 @@ paths:
               schema:
                 $ref: "#/components/schemas/LiquidityProvidersResponse"
 
+  # ------------------------------ codes ------------------------------
+
+  /thorchain/codes:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+    get:
+      description: Returns all whitelisted contract codes
+      operationId: codes
+      tags:
+        - Codes
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CodesResponse"
+
   # ------------------------------ tcy stakers ------------------------------
 
   /thorchain/tcy_staker/{address}:
@@ -1959,6 +1977,29 @@ components:
         luvi_growth_pct:
           type: string
           example: "0"
+
+    CodesResponse:
+      type: object
+      properties:
+        codes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Code"
+
+    Code:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "a70d5005130246ff44470494ed5cb63d7c9ddffebda8e556e56d11c2057b0820"
+        deployers:
+          type: array
+          items:
+            type: string
+            example: "thor1e0lmk5juawc46jwjwd0xfz587njej7ay5fh6cd"
+        origin:
+          type: string
+          example: "https://gitlab.com/thorchain/rujira/-/tree/main/contracts/rujira-merge"
 
     TCYStakerSummary:
       type: object

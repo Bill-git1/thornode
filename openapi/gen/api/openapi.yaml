@@ -325,6 +325,30 @@ paths:
           description: OK
       tags:
       - Liquidity Providers
+  /thorchain/codes:
+    get:
+      description: Returns all whitelisted contract codes
+      operationId: codes
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodesResponse'
+          description: OK
+      tags:
+      - Codes
   /thorchain/tcy_staker/{address}:
     get:
       description: Returns the tcy staker information for an address.
@@ -2966,6 +2990,45 @@ components:
       - pending_rune
       - rune_deposit_value
       - units
+      type: object
+    CodesResponse:
+      example:
+        codes:
+        - code: a70d5005130246ff44470494ed5cb63d7c9ddffebda8e556e56d11c2057b0820
+          deployers:
+          - thor1e0lmk5juawc46jwjwd0xfz587njej7ay5fh6cd
+          - thor1e0lmk5juawc46jwjwd0xfz587njej7ay5fh6cd
+          origin: https://gitlab.com/thorchain/rujira/-/tree/main/contracts/rujira-merge
+        - code: a70d5005130246ff44470494ed5cb63d7c9ddffebda8e556e56d11c2057b0820
+          deployers:
+          - thor1e0lmk5juawc46jwjwd0xfz587njej7ay5fh6cd
+          - thor1e0lmk5juawc46jwjwd0xfz587njej7ay5fh6cd
+          origin: https://gitlab.com/thorchain/rujira/-/tree/main/contracts/rujira-merge
+      properties:
+        codes:
+          items:
+            $ref: '#/components/schemas/Code'
+          type: array
+      type: object
+    Code:
+      example:
+        code: a70d5005130246ff44470494ed5cb63d7c9ddffebda8e556e56d11c2057b0820
+        deployers:
+        - thor1e0lmk5juawc46jwjwd0xfz587njej7ay5fh6cd
+        - thor1e0lmk5juawc46jwjwd0xfz587njej7ay5fh6cd
+        origin: https://gitlab.com/thorchain/rujira/-/tree/main/contracts/rujira-merge
+      properties:
+        code:
+          example: a70d5005130246ff44470494ed5cb63d7c9ddffebda8e556e56d11c2057b0820
+          type: string
+        deployers:
+          items:
+            example: thor1e0lmk5juawc46jwjwd0xfz587njej7ay5fh6cd
+            type: string
+          type: array
+        origin:
+          example: https://gitlab.com/thorchain/rujira/-/tree/main/contracts/rujira-merge
+          type: string
       type: object
     TCYStakerSummary:
       example:

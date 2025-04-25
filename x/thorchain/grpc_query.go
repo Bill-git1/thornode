@@ -674,3 +674,11 @@ func (s *queryServer) TCYClaimers(c context.Context, req *types.QueryTCYClaimers
 	ctx := s.unwrapSdkContext(c)
 	return s.queryTCYClaimers(ctx, req)
 }
+
+func (s *queryServer) Codes(c context.Context, req *types.QueryCodesRequest) (*types.QueryCodesResponse, error) {
+	if err := checkHeightParam(req.Height); err != nil {
+		return nil, err
+	}
+	ctx := s.unwrapSdkContext(c)
+	return s.queryCodes(ctx, req)
+}

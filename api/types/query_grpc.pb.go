@@ -98,6 +98,7 @@ const (
 	Query_TCYStakers_FullMethodName          = "/types.Query/TCYStakers"
 	Query_TCYClaimer_FullMethodName          = "/types.Query/TCYClaimer"
 	Query_TCYClaimers_FullMethodName         = "/types.Query/TCYClaimers"
+	Query_Codes_FullMethodName               = "/types.Query/Codes"
 )
 
 // QueryClient is the client API for Query service.
@@ -192,6 +193,7 @@ type QueryClient interface {
 	TCYStakers(ctx context.Context, in *QueryTCYStakersRequest, opts ...grpc.CallOption) (*QueryTCYStakersResponse, error)
 	TCYClaimer(ctx context.Context, in *QueryTCYClaimerRequest, opts ...grpc.CallOption) (*QueryTCYClaimerResponse, error)
 	TCYClaimers(ctx context.Context, in *QueryTCYClaimersRequest, opts ...grpc.CallOption) (*QueryTCYClaimersResponse, error)
+	Codes(ctx context.Context, in *QueryCodesRequest, opts ...grpc.CallOption) (*QueryCodesResponse, error)
 }
 
 type queryClient struct {
@@ -913,6 +915,15 @@ func (c *queryClient) TCYClaimers(ctx context.Context, in *QueryTCYClaimersReque
 	return out, nil
 }
 
+func (c *queryClient) Codes(ctx context.Context, in *QueryCodesRequest, opts ...grpc.CallOption) (*QueryCodesResponse, error) {
+	out := new(QueryCodesResponse)
+	err := c.cc.Invoke(ctx, Query_Codes_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility
@@ -1005,6 +1016,7 @@ type QueryServer interface {
 	TCYStakers(context.Context, *QueryTCYStakersRequest) (*QueryTCYStakersResponse, error)
 	TCYClaimer(context.Context, *QueryTCYClaimerRequest) (*QueryTCYClaimerResponse, error)
 	TCYClaimers(context.Context, *QueryTCYClaimersRequest) (*QueryTCYClaimersResponse, error)
+	Codes(context.Context, *QueryCodesRequest) (*QueryCodesResponse, error)
 	mustEmbedUnimplementedQueryServer()
 }
 
@@ -1248,6 +1260,9 @@ func (UnimplementedQueryServer) TCYClaimer(context.Context, *QueryTCYClaimerRequ
 }
 func (UnimplementedQueryServer) TCYClaimers(context.Context, *QueryTCYClaimersRequest) (*QueryTCYClaimersResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method TCYClaimers not implemented")
+}
+func (UnimplementedQueryServer) Codes(context.Context, *QueryCodesRequest) (*QueryCodesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Codes not implemented")
 }
 func (UnimplementedQueryServer) mustEmbedUnimplementedQueryServer() {}
 
@@ -2684,6 +2699,24 @@ func _Query_TCYClaimers_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_Codes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryCodesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).Codes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_Codes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).Codes(ctx, req.(*QueryCodesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Query_ServiceDesc is the grpc.ServiceDesc for Query service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -3006,6 +3039,10 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "TCYClaimers",
 			Handler:    _Query_TCYClaimers_Handler,
+		},
+		{
+			MethodName: "Codes",
+			Handler:    _Query_Codes_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

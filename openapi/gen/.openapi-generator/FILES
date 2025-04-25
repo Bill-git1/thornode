@@ -7,6 +7,7 @@ api_bank.go
 api_block.go
 api_borrowers.go
 api_clout.go
+api_codes.go
 api_export.go
 api_health.go
 api_invariants.go
@@ -56,6 +57,9 @@ docs/Borrower.md
 docs/BorrowersApi.md
 docs/ChainHeight.md
 docs/CloutApi.md
+docs/Code.md
+docs/CodesApi.md
+docs/CodesResponse.md
 docs/Coin.md
 docs/ConstantsResponse.md
 docs/DerivedPool.md
@@ -185,6 +189,8 @@ model_block_tx.go
 model_block_tx_result.go
 model_borrower.go
 model_chain_height.go
+model_code.go
+model_codes_response.go
 model_coin.go
 model_constants_response.go
 model_derived_pool.go

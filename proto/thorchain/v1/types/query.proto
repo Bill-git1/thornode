@@ -50,6 +50,7 @@ import "types/query_bank.proto";
 import "types/query_secured_asset.proto";
 import "types/query_tcy_stakers.proto";
 import "types/query_tcy_claimers.proto";
+import "types/query_codes.proto";
 
 option (gogoproto.marshaler_all) = true;
 
@@ -378,5 +379,9 @@ service Query {
 
   rpc TCYClaimers(QueryTCYClaimersRequest) returns (QueryTCYClaimersResponse) {
     option (google.api.http).get = "/thorchain/tcy_claimers";
+  }
+
+  rpc Codes(QueryCodesRequest) returns (QueryCodesResponse) {
+    option (google.api.http).get = "/thorchain/codes";
   }
 }

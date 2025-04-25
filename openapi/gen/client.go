@@ -58,6 +58,8 @@ type APIClient struct {
 
 	CloutApi *CloutApiService
 
+	CodesApi *CodesApiService
+
 	ExportApi *ExportApiService
 
 	HealthApi *HealthApiService
@@ -132,6 +134,7 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 	c.BlockApi = (*BlockApiService)(&c.common)
 	c.BorrowersApi = (*BorrowersApiService)(&c.common)
 	c.CloutApi = (*CloutApiService)(&c.common)
+	c.CodesApi = (*CodesApiService)(&c.common)
 	c.ExportApi = (*ExportApiService)(&c.common)
 	c.HealthApi = (*HealthApiService)(&c.common)
 	c.InvariantsApi = (*InvariantsApiService)(&c.common)

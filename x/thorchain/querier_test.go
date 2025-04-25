@@ -1247,3 +1247,19 @@ func (s *QuerierSuite) TestQuerySecuredAssets(c *C) {
 	c.Assert(asset.Depth, Equals, "2000")
 	c.Assert(asset.Supply, Equals, "2000")
 }
+
+func (s *QuerierSuite) TestQueryCodes(c *C) {
+	result, err := s.queryServer.Codes(s.ctx, &types.QueryCodesRequest{})
+
+	c.Assert(err, IsNil)
+	c.Assert(result, NotNil)
+	c.Assert(result.Codes, NotNil)
+	c.Assert(len(result.Codes), Equals, 1)
+
+	code := result.Codes[0]
+	c.Assert(code.Code, Equals, "a8f1a38aa518864169e30ab482ea86558a817982a030b8888ea6dfa0cd700128")
+	c.Assert(code.Origin, Equals, "https://thorchain.org")
+	c.Assert(len(code.Deployers), Equals, 2)
+	c.Assert(code.Deployers[0], Equals, "tthor1jgnk2mg88m57csrmrlrd6c3qe4lag3e33y2f3k")
+	c.Assert(code.Deployers[1], Equals, "tthor1khtl8ch2zgay00c47ukvulam3a4faw2500g7lu")
+}
