@@ -125,6 +125,13 @@ func GetPools() ([]openapi.Pool, error) {
 	return pools, err
 }
 
+func GetVaults() ([]openapi.Vault, error) {
+	url := fmt.Sprintf("%s/thorchain/vaults/asgard", thornodeURL)
+	var vaults []openapi.Vault
+	err := Get(url, &vaults)
+	return vaults, err
+}
+
 func GetPool(asset common.Asset) (openapi.Pool, error) {
 	url := fmt.Sprintf("%s/thorchain/pool/%s", thornodeURL, asset.String())
 	var pool openapi.Pool

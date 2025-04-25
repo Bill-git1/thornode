@@ -81,6 +81,7 @@ func main() {
 		{Name: "consolidate", Default: true},
 		{Name: "arb", Default: true},
 		{Name: "swaps", Default: true},
+		{Name: "solvency", Default: true},
 		{Name: "ragnarok", Default: true},
 	}
 	if os.Getenv("STAGES") != "" {
@@ -124,6 +125,7 @@ func main() {
 	appendIfEnabled("consolidate", features.Consolidate)
 	appendIfEnabled("arb", core.NewArbActor)
 	appendIfEnabled("swaps", suites.Swaps)
+	appendIfEnabled("solvency", core.NewSolvencyCheckActor)
 	appendIfEnabled("ragnarok", suites.Ragnarok)
 
 	// gather config from the environment

@@ -24,6 +24,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/evm"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/v3/common"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/common/tokenlist"
 
 	. "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/types"
@@ -63,7 +64,6 @@ func init() {
 ////////////////////////////////////////////////////////////////////////////////////////
 // ABI
 ////////////////////////////////////////////////////////////////////////////////////////
-//
 
 func RouterABI() abi.ABI {
 	return routerABI
@@ -189,14 +189,23 @@ func NewClient(chain common.Chain, host string, keys *thorclient.Keys) (LiteChai
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func (c *Client) GetAccount(pk *common.PubKey) (*common.Account, error) {
+	address := c.address
+	if pk != nil {
+		var err error
+		address, err = pk.GetAddress(c.chain)
+		if err != nil {
+			return nil, fmt.Errorf("fail to get address from pubkey(%s): %w", pk, err)
+		}
+	}
+
 	// get nonce
-	nonce, err := c.rpc.PendingNonceAt(ctx(), ecommon.HexToAddress(c.address.String()))
+	nonce, err := c.rpc.PendingNonceAt(ctx(), ecommon.HexToAddress(address.String()))
 	if err != nil {
 		return nil, fmt.Errorf("fail to get account nonce: %w", err)
 	}
 
 	// get balance
-	balance, err := c.rpc.BalanceAt(ctx(), ecommon.HexToAddress(c.address.String()), nil)
+	balance, err := c.rpc.BalanceAt(ctx(), ecommon.HexToAddress(address.String()), nil)
 	if err != nil {
 		return nil, fmt.Errorf("fail to get account balance: %w", err)
 	}
@@ -215,7 +224,7 @@ func (c *Client) GetAccount(pk *common.PubKey) (*common.Account, error) {
 		// get balance
 		abi := ERC20ABI()
 		var data []byte
-		data, err = abi.Pack("balanceOf", ecommon.HexToAddress(c.address.String()))
+		data, err = abi.Pack("balanceOf", ecommon.HexToAddress(address.String()))
 		if err != nil {
 			log.Error().Err(err).Msg("error packing balanceOf")
 			continue
@@ -396,4 +405,35 @@ func (c *Client) GetTokenDecimals(address string) (int, error) {
 	decimals := new(big.Int)
 	decimals.SetBytes(result)
 	return int(decimals.Uint64()), nil
+}
+
+func (c *Client) GetVaultAllowance(router, vault common.Address, asset common.Asset) (cosmos.Uint, error) {
+	// build contract read call
+	routerAddr := ecommon.HexToAddress(router.String())
+	vaultAddr := ecommon.HexToAddress(vault.String())
+	token := Tokens(asset.Chain)[asset]
+	tokenAddr := ecommon.HexToAddress(token.Address)
+	abi := RouterABI()
+	data, err := abi.Pack("vaultAllowance", vaultAddr, tokenAddr)
+	if err != nil {
+		return cosmos.ZeroUint(), fmt.Errorf("fail to pack vaultAllowance call: %w", err)
+	}
+
+	// read the contract
+	result, err := c.rpc.CallContract(ctx(), ethereum.CallMsg{
+		To:   &routerAddr,
+		Data: data,
+	}, nil)
+	if err != nil {
+		return cosmos.ZeroUint(), fmt.Errorf("fail to call contract: %w", err)
+	}
+
+	// extract the allowance
+	allowance := new(big.Int)
+	allowance.SetBytes(result)
+
+	// convert balance from decimals to 1e8
+	allowance.Mul(allowance, big.NewInt(common.One))
+	allowance.Div(allowance, big.NewInt(1).Exp(big.NewInt(10), big.NewInt(int64(token.Decimals)), nil))
+	return cosmos.NewUintFromBigInt(allowance), nil
 }

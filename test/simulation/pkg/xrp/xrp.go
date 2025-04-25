@@ -12,7 +12,7 @@ import (
 
 	. "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/types"
 
-	"github.com/Peersyst/xrpl-go/binary-codec"
+	binarycodec "github.com/Peersyst/xrpl-go/binary-codec"
 	"github.com/Peersyst/xrpl-go/xrpl/queries/account"
 	qcommon "github.com/Peersyst/xrpl-go/xrpl/queries/common"
 	"github.com/Peersyst/xrpl-go/xrpl/rpc"
@@ -66,8 +66,17 @@ func NewClient(chain common.Chain, host string, keys *thorclient.Keys) (LiteChai
 }
 
 func (c *Client) GetAccount(pk *common.PubKey) (*common.Account, error) {
+	address := c.localKm.AccountID
+	if pk != nil {
+		addr, err := pk.GetAddress(common.XRPChain)
+		if err != nil {
+			return nil, fmt.Errorf("fail to get address from pubkey(%s): %w", pk, err)
+		}
+		address = addr.String()
+	}
+
 	aiReq := account.InfoRequest{
-		Account:     txtypes.Address(c.localKm.AccountID),
+		Account:     txtypes.Address(address),
 		LedgerIndex: qcommon.Current, // Query current/non-closed/non-validated ledger
 	}
 	aiResp, err := c.rpcClient.GetAccountInfo(&aiReq)

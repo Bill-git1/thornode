@@ -15,10 +15,14 @@ deploy_evm_contracts() {
 
       # add contract address to genesis
       echo "$CHAIN Contract Address: $CONTRACT"
-      jq --arg CHAIN "$CHAIN" --arg CONTRACT "$CONTRACT" \
-        '.app_state.thorchain.chain_contracts += [{"chain": $CHAIN, "router": $CONTRACT}]' \
-        ~/.thornode/config/genesis.json >/tmp/genesis-$CHAIN.json
-      mv /tmp/genesis-$CHAIN.json ~/.thornode/config/genesis.json
+
+      (
+        flock -x 200
+        jq --arg CHAIN "$CHAIN" --arg CONTRACT "$CONTRACT" \
+          '.app_state.thorchain.chain_contracts += [{"chain": $CHAIN, "router": $CONTRACT}]' \
+          ~/.thornode/config/genesis.json >/tmp/genesis-$CHAIN.json
+        mv /tmp/genesis-$CHAIN.json ~/.thornode/config/genesis.json
+      ) 200>/tmp/genesis.lock
     ) &
   done
   wait

@@ -109,8 +109,17 @@ func NewClient(chain common.Chain, host string, keys *thorclient.Keys) (LiteChai
 }
 
 func (c *Client) GetAccount(pk *common.PubKey) (*common.Account, error) {
+	address := c.address
+	if pk != nil {
+		var err error
+		address, err = pk.GetAddress(c.chain)
+		if err != nil {
+			return nil, fmt.Errorf("fail to get address from pubkey(%s): %w", pk, err)
+		}
+	}
+
 	// get balances
-	balanceReq := &btypes.QueryAllBalancesRequest{Address: c.address.String()}
+	balanceReq := &btypes.QueryAllBalancesRequest{Address: address.String()}
 	balances, err := btypes.NewQueryClient(c.grpc).AllBalances(ctx(), balanceReq)
 	if err != nil {
 		return nil, fmt.Errorf("fail to get account balance: %w", err)
@@ -127,7 +136,7 @@ func (c *Client) GetAccount(pk *common.PubKey) (*common.Account, error) {
 	}
 
 	// get account sequence
-	accountReq := &atypes.QueryAccountRequest{Address: c.address.String()}
+	accountReq := &atypes.QueryAccountRequest{Address: address.String()}
 	account, err := atypes.NewQueryClient(c.grpc).Account(ctx(), accountReq)
 	if err != nil {
 		return nil, fmt.Errorf("fail to get account: %w", err)
