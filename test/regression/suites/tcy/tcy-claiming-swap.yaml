@@ -163,3 +163,64 @@ asserts:
   - .balances|length == 2
   - .balances[]|select(.denom == "tcy")|.amount|tonumber == ${CLAIM_SWAP_TCY_AMT}
   - .balances[]|select(.denom == "rune")|.amount|tonumber == ${SWAP_FEES}+${SECOND_SWAP_FEES=208}
+---
+# Swap RUNE -> TCY with affiliate fees
+type: check
+endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
+asserts:
+  - .balances|length == 0
+---
+type: check
+endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fish }}
+asserts:
+  - .balances|length == 2
+  - .balances[]|select(.denom == "tcy")|.amount|tonumber == ${FISH_INIT_AFF_SWAP_TCY=132108862029}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 869679562
+---
+type: tx-deposit
+signer: {{ addr_thor_fish }}
+coins:
+  - amount: "500000000"
+    asset: "rune"
+memo: "SWAP:THOR.TCY:{{ addr_thor_fish }}::{{ addr_thor_pig }}:100"
+---
+type: create-blocks
+count: 2
+---
+type: check
+endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
+asserts:
+  - .balances|length == 1
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${PIG_INIT_AFF_FEE=2999997}
+---
+type: check
+endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fish }}
+asserts:
+  - .balances|length == 2
+  - .balances[]|select(.denom == "tcy")|.amount|tonumber == ${FISH_INIT_AFF_SWAP_TCY}+${FISH_SWAPED_TCY=6514071471}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FISH_POST_SWAP_RUNE=367679562}
+---
+# Swap TCY -> RUNE with affiliate fees
+type: tx-deposit
+signer: {{ addr_thor_fish }}
+coins:
+  - amount: "${FISH_SWAPED_TCY}"
+    asset: "tcy"
+memo: "SWAP:THOR.RUNE:{{ addr_thor_fish }}::{{ addr_thor_pig }}:100"
+---
+type: create-blocks
+count: 2
+---
+type: check
+endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
+asserts:
+  - .balances|length == 1
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${PIG_INIT_AFF_FEE}+${PIG_SECOND_AFF_FEE=4929822}
+---
+type: check
+endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fish }}
+asserts:
+  - .balances|length == 2
+  - .balances[]|select(.denom == "tcy")|.amount|tonumber == ${FISH_INIT_AFF_SWAP_TCY}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FISH_POST_SWAP_RUNE}+${FISH_SECOND_RUNE_SWAP=484052388}
+  
