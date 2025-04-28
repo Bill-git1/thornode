@@ -157,10 +157,14 @@ func (tos *TxOutStorageVCUR) TryAddTxOutItem(ctx cosmos.Context, mgr Manager, to
 
 	// Deduct affiliate fee from outbound amount
 	amount, err := tos.takeAffiliateFee(cacheCtx, mgr, toi)
-	if err == nil {
-		toi.Coin.Amount = amount
-	} else {
+	if err != nil {
 		ctx.Logger().Error("fail to take affiliate fee", "error", err)
+	} else if !toi.Coin.Asset.IsTradeAsset() && !toi.Coin.Asset.IsSecuredAsset() {
+		// For Trade and Secured Assets do not decrement the affiliate fee here,
+		// as the affiliate fee swap will take it from the user's balance after the outbound.
+		// (Since Trade/Secured Withdraw is done in the MsgSwap internal handler,
+		//  not the MsgDeposit external handler.)
+		toi.Coin.Amount = amount
 	}
 
 	success, err := tos.cachedTryAddTxOutItem(cacheCtx, mgr, toi, minOut)
@@ -234,16 +238,6 @@ func (tos *TxOutStorageVCUR) takeAffiliateFee(ctx cosmos.Context, mgr Manager, t
 // return bool indicate whether the transaction had been added successful or not
 // return error indicate error
 func (tos *TxOutStorageVCUR) cachedTryAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem, minOut cosmos.Uint) (bool, error) {
-	if toi.Coin.Asset.IsTradeAsset() {
-		// no outbound needed for trade assets
-		return true, nil
-	}
-
-	if toi.Coin.Asset.IsSecuredAsset() {
-		// no outbound needed for secured assets
-		return true, nil
-	}
-
 	outputs, totalOutboundFeeRune, err := tos.prepareTxOutItem(ctx, toi)
 	if err != nil {
 		return false, fmt.Errorf("fail to prepare outbound tx: %w", err)
@@ -633,7 +627,8 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 
 					outputs[i].Coin.Amount = common.SafeSub(outputs[i].Coin.Amount, assetFee) // Deduct Asset fee
 					if outputs[i].Coin.Asset.IsSyntheticAsset() || outputs[i].Coin.Asset.IsDerivedAsset() {
-						// burn the native asset which used to pay for fee, that's only required when sending from asgard
+						// burn the native asset which used to pay for fee, that's only required when sending Synthetic/Derived assets from asgard
+						// (not for instance applicable for Trade/Secured Assets which are not (1-to-1) Cosmos-SDK coins transferred from the Pool Module)
 						if outputs[i].GetModuleName() == AsgardName {
 							if err := tos.keeper.SendFromModuleToModule(ctx,
 								AsgardName,
@@ -1023,7 +1018,7 @@ func (tos *TxOutStorageVCUR) CalcTxOutHeight(ctx cosmos.Context, version semver.
 }
 
 func (tos *TxOutStorageVCUR) nativeTxOut(ctx cosmos.Context, mgr Manager, toi TxOutItem) error {
-	addr, err := cosmos.AccAddressFromBech32(toi.ToAddress.String())
+	addr, err := toi.ToAddress.AccAddress()
 	if err != nil {
 		return err
 	}
@@ -1062,6 +1057,18 @@ func (tos *TxOutStorageVCUR) nativeTxOut(ctx cosmos.Context, mgr Manager, toi Tx
 	// send funds to/from modules
 	var sdkErr error
 	switch {
+	case toi.Coin.Asset.IsTradeAsset():
+		// Even if trade accounts are not enabled, outbounds (as for streaming swap refunds) should complete.
+		_, err = mgr.TradeAccountManager().Deposit(ctx, toi.Coin.Asset, toi.Coin.Amount, addr, common.NoAddress, toi.InHash)
+		if err != nil {
+			return ErrInternal(err, "fail to deposit to trade account")
+		}
+	case toi.Coin.Asset.IsSecuredAsset():
+		// Even if secured assets are halted, outbounds (as for streaming swap refunds) should complete.
+		_, err = mgr.SecuredAssetManager().Deposit(ctx, toi.Coin.Asset.GetLayer1Asset(), toi.Coin.Amount, addr, common.NoAddress, toi.InHash)
+		if err != nil {
+			return ErrInternal(err, "fail to deposit secured asset")
+		}
 	case polAddress.Equals(toi.ToAddress):
 		sdkErr = tos.keeper.SendFromModuleToModule(ctx, toi.ModuleName, ReserveName, common.NewCoins(toi.Coin))
 	case affColAddress.Equals(toi.ToAddress):

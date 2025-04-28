@@ -418,29 +418,17 @@ func (s *SwapperVCUR) swapOne(ctx cosmos.Context,
 		return cosmos.ZeroUint(), evt, fmt.Errorf("fail to set pool")
 	}
 
-	// if target is trade account, deposit the asset to trade account
+	// if target is trade account, check whether swaps to trade assets are enabled
 	if target.IsTradeAsset() {
 		if tradeAccountsEnabled <= 0 {
 			return cosmos.ZeroUint(), evt, fmt.Errorf("trade accounts are disabled")
 		}
-		acc, err := destination.AccAddress()
-		if err != nil {
-			return cosmos.ZeroUint(), evt, ErrInternal(err, "fail to parse trade account address")
-		}
-		_, err = mgr.TradeAccountManager().Deposit(ctx, target, emitAssets, acc, common.NoAddress, tx.ID)
-		if err != nil {
-			return cosmos.ZeroUint(), evt, ErrInternal(err, "fail to deposit to trade account")
-		}
 	}
 
+	// if target is secured asset, check whether swaps to secured assets are enabled
 	if target.IsSecuredAsset() {
-		acc, err := destination.AccAddress()
-		if err != nil {
-			return cosmos.ZeroUint(), evt, ErrInternal(err, "fail to parse destination address")
-		}
-		_, err = mgr.SecuredAssetManager().Deposit(ctx, target.GetLayer1Asset(), emitAssets, acc, common.NoAddress, tx.ID)
-		if err != nil {
-			return cosmos.ZeroUint(), evt, ErrInternal(err, "fail to mint secured asset")
+		if err := mgr.SecuredAssetManager().CheckHalt(ctx); err != nil {
+			return cosmos.ZeroUint(), evt, err
 		}
 	}
 

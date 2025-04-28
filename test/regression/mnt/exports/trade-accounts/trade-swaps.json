@@ -172,7 +172,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "200121505371",
+              "amount": "200113612756",
               "denom": "rune"
             }
           ]
@@ -190,7 +190,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35000028242486",
+              "amount": "35000036241758",
               "denom": "rune"
             }
           ]
@@ -199,7 +199,7 @@
           "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "coins": [
             {
-              "amount": "2499869994778",
+              "amount": "2499869890295",
               "denom": "rune"
             }
           ]
@@ -217,7 +217,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "12499980257365",
+              "amount": "12499980255191",
               "denom": "rune"
             }
           ]
@@ -330,7 +330,7 @@
       "network": {
         "LPIncomeSplit": "9840",
         "NodeIncomeSplit": "160",
-        "bond_reward_rune": "12257365",
+        "bond_reward_rune": "12255191",
         "total_bond_units": "80"
       },
       "network_fees": [
@@ -508,8 +508,8 @@
         {
           "LP_units": "100000000000",
           "asset": "BTC.BTC",
-          "balance_asset": "100640047",
-          "balance_rune": "99864276390",
+          "balance_asset": "100647904",
+          "balance_rune": "99856430818",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -520,7 +520,7 @@
           "LP_units": "100000000000",
           "asset": "ETH.ETH",
           "balance_asset": "1000000000",
-          "balance_rune": "100257228981",
+          "balance_rune": "100257181938",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -530,8 +530,8 @@
         {
           "LP_units": "0",
           "asset": "THOR.BTC",
-          "balance_asset": "33174725",
-          "balance_rune": "32295834346",
+          "balance_asset": "33176667",
+          "balance_rune": "32293924823",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
           "status": "Available",
@@ -541,8 +541,8 @@
         {
           "LP_units": "0",
           "asset": "THOR.ETH",
-          "balance_asset": "430000000",
-          "balance_rune": "43110608462",
+          "balance_asset": "429999999",
+          "balance_rune": "43110588233",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
           "status": "Available",
@@ -565,7 +565,7 @@
         {
           "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "reclaimed": "0",
-          "score": "749777903",
+          "score": "749655926",
           "spent": "0"
         }
       ],
@@ -577,7 +577,7 @@
           "last_add_height": "16",
           "last_withdraw_height": "15",
           "owner": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
-          "units": "9359953"
+          "units": "9352096"
         },
         {
           "asset": "ETH~ETH",
@@ -590,8 +590,8 @@
       "trade_units": [
         {
           "asset": "BTC~BTC",
-          "depth": "9359953",
-          "units": "9359953"
+          "depth": "9352096",
+          "units": "9352096"
         },
         {
           "asset": "ETH~ETH",

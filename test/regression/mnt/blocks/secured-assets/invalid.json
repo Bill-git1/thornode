@@ -4356,7 +4356,7 @@
         "id": "000000000000000000000000000000000000000000000000000000000000000c",
         "memo": "=:ETH-ETH:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
         "mode": "EndBlock",
-        "reason": "fail to mint secured asset: 2 errors occurred:\n\t* internal error\n\t* secured assets are disabled\n\n",
+        "reason": "secured assets are disabled",
         "to": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk",
         "type": "refund"
       },

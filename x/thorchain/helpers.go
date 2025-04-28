@@ -23,6 +23,14 @@ func refundTx(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uint32,
 
 	refundCoins := make(common.Coins, 0)
 	for _, coin := range tx.Tx.Coins {
+		// Do not emit Trade/Secured Asset refund event or attempt refund txout,
+		// as Trade/Secured Asset withdrawals take place in the internal handlers
+		// (state changes and event emission only if the internal handler succeeds)
+		// and not in the deposit handler.
+		if coin.Asset.IsTradeAsset() || coin.Asset.IsSecuredAsset() {
+			continue
+		}
+
 		if coin.IsRune() && coin.Asset.GetChain().Equals(common.ETHChain) {
 			continue
 		}

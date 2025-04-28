@@ -50,6 +50,11 @@ func (ManagersTestSuite) TestManagers(c *C) {
 	c.Assert(err, NotNil)
 	c.Assert(errors.Is(err, errInvalidVersion), Equals, true)
 
+	// Versioning has been removed from GetSwapper.
+	swapper, err := GetSwapper(ver)
+	c.Assert(swapper, NotNil)
+	c.Assert(err, IsNil)
+
 	slasher, err := GetSlasher(ver, mgr.Keeper(), mgr.EventMgr())
 	c.Assert(slasher, IsNil)
 	c.Assert(err, NotNil)

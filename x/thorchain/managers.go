@@ -546,12 +546,7 @@ func GetSlasher(version semver.Version, keeper keeper.Keeper, eventMgr EventMana
 // Though Swapper is not a full manager, it is recorded here for versioning convenience.
 // GetSwapper return an implementation of Swapper
 func GetSwapper(version semver.Version) (Swapper, error) {
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return newSwapperVCUR(), nil
-	default:
-		return nil, errInvalidVersion
-	}
+	return newSwapperVCUR(), nil
 }
 
 func GetTradeAccountManager(version semver.Version, keeper keeper.Keeper, eventMgr EventManager) (TradeAccountManager, error) {

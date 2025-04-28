@@ -148,35 +148,38 @@ params:
   from_asset: "BTC~BTC"
   to_asset: "ETH~ETH"
   destination: {{ addr_thor_fox }}
-  amount: 5000000
+  amount: ${SWAP_IN=5000000}
 asserts:
-  - .expected_amount_out|tonumber == 41501780
-  - .fees|.outbound|tonumber == 0
-  - .fees|.liquidity|tonumber == 4320290
-  - .fees|.total|tonumber == 4320290
-  - .fees|.slippage_bps == 942
-  - .fees|.total_bps == 942
+  - .expected_amount_out == "${SWAP_OUT=41483406}"
+  - .fees.outbound == "${OUTBOUND_FEE=18374}"
+  - .fees.liquidity == "${LIQFEE=4320290}"
+  - .fees.total == "${FEES_TOTAL=4338664}"
+  - .fees.slippage_bps == 942
+  - .fees.total_bps == 946
 ---
-# synth swap should be equivalent, with additional outbound fee
+# synth swap should be nearly equivalent
 type: check
 endpoint: http://localhost:1317/thorchain/quote/swap
 params:
   from_asset: "BTC/BTC"
   to_asset: "ETH/ETH"
   destination: {{ addr_thor_fox }}
-  amount: 5000000
+  amount: ${SWAP_IN}
 asserts:
-  - .expected_amount_out|tonumber == 41482612 # minus outbound fee
-  - .fees|.outbound|tonumber == 19168
-  - .fees|.liquidity|tonumber == 4235099
-  - .fees|.total|tonumber == 4254267
-  - .fees|.slippage_bps == 925
-  - .fees|.total_bps == 929
+  - .fees.outbound|tonumber == ${OUTBOUND_FEE} + ${OUTFEE_DISCREPANCY=794}
+  - .expected_amount_out|tonumber == ${SWAP_OUT} - ${OUTFEE_DISCREPANCY}
+  # This discrepancy is because a Trade Asset swap lowers the ETH.ETH BalanceAsset
+  # and thus the amount of ETH.ETH corresponding to the 0.02 RUNE native outbound fee,
+  # whereas a Synth Asset swap leaves the ETH.ETH BalanceAsset unchanged.
+  - .fees.liquidity|tonumber == ${LIQFEE} + ${LIQFEE_DISCREPANCY=-85191}
+  - .fees.total|tonumber == ${FEES_TOTAL} + ${OUTFEE_DISCREPANCY} + ${LIQFEE_DISCREPANCY}
+  - .fees.slippage_bps == 925
+  - .fees.total_bps == 929
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
 coins:
-  - amount: "5000000" # 0.05 BTC
+  - amount: "${SWAP_IN}" # 0.05 BTC
     asset: "BTC~BTC"
 memo: "=:ETH~ETH:{{ addr_thor_fox }}"
 ---
@@ -190,10 +193,29 @@ endpoint: http://localhost:1317/thorchain/trade/account/{{ addr_thor_fox }}
 asserts:
   - .|length == 2
   - .[0].asset == "BTC~BTC"
-  - .[0].units|tonumber == 5000000 # 0.05 BTC
+  - .[0].units == "5000000" # 0.05 BTC remaining
   - .[0].owner == "{{ addr_thor_fox }}"
   - .[1].asset == "ETH~ETH"
-  - .[1].units|tonumber == 41501780 # 0.41 ETH
+  - .[1].units == "${SWAP_OUT}" # 0.41 ETH
+---
+type: check
+endpoint: http://localhost:1317/thorchain/tx/details/{{ native_txid -1 }}
+asserts:
+  - .tx.tx.coins | length == 1
+  - .tx.tx.coins[0].amount == "${SWAP_IN}"
+  - .actions | length == 1
+  - .actions[0].coin.amount == "${SWAP_OUT}"
+  - .out_txs | length == 1
+  - .out_txs[0].coins | length == 1
+  - .out_txs[0].coins[0].amount == "${SWAP_OUT}"
+  # Prepare next swap in amount.
+  - ${SWAP_OUT} / 2 | floor == ${SWAP_IN=20741703}
+---
+type: check
+endpoint: http://localhost:1317/thorchain/block
+asserts:
+  - .|[.end_block_events[]|select(.type? == "fee")] | length == 1
+  - .end_block_events[]|select(.type? == "fee").coins == "18374 ETH~ETH"
 ---
 # swap half ETH~ETH to BTC~BTC, quote should match actual
 type: check
@@ -202,15 +224,15 @@ params:
   from_asset: "ETH~ETH"
   to_asset: "BTC~BTC"
   destination: {{ addr_thor_fox }}
-  amount: 20750890
+  amount: ${SWAP_IN}
 asserts:
-  - .expected_amount_out|tonumber == 2280054
-  - .fees|.total_bps == 443
+  - .expected_amount_out == "2276943"
+  - .fees.total_bps == 451
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
 coins:
-  - amount: "20750890" # 0.2 ETH
+  - amount: "${SWAP_IN}" # 0.2 ETH
     asset: "ETH~ETH"
 memo: "=:BTC~BTC:{{ addr_thor_fox }}"
 ---
@@ -222,10 +244,10 @@ endpoint: http://localhost:1317/thorchain/trade/account/{{ addr_thor_fox }}
 asserts:
   - .|length == 2
   - .[0].asset == "BTC~BTC"
-  - .[0].units|tonumber == 7280054
+  - .[0].units == "7276943"
   - .[0].owner == "{{ addr_thor_fox }}"
   - .[1].asset == "ETH~ETH"
-  - .[1].units|tonumber == 20750890 # 0.2 ETH
+  - .[1].units == "20741703" # 0.2 ETH remaining
 ---
 # stream swap remaining ETH, quote should match actual
 type: check
@@ -234,16 +256,16 @@ params:
   from_asset: "ETH~ETH"
   to_asset: "BTC~BTC"
   destination: {{ addr_thor_fox }}
-  amount: 20750890
+  amount: ${SWAP_IN}
   streaming_interval: 1
 asserts:
-  - .expected_amount_out|tonumber == 2233640
-  - .fees|.total_bps == 107
+  - .expected_amount_out == "2230745"
+  - .fees.total_bps == 117
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
 coins:
-  - amount: "20750890" # 0.2 ETH
+  - amount: "${SWAP_IN}" # 0.2 ETH
     asset: "ETH~ETH"
 memo: "=:BTC~BTC:{{ addr_thor_fox }}:0/1/0"
 ---
@@ -259,7 +281,7 @@ asserts:
   - .[0].quantity == 4
   - .[0].source_asset == "ETH~ETH"
   - .[0].target_asset == "BTC~BTC"
-  - .[0].deposit|tonumber == 20750890
+  - .[0].deposit == "${SWAP_IN}"
 ---
 type: create-blocks
 count: 4
@@ -269,7 +291,7 @@ endpoint: http://localhost:1317/thorchain/trade/account/{{ addr_thor_fox }}
 asserts:
   - .|length == 1
   - .[0].asset == "BTC~BTC"
-  - .[0].units|tonumber == 9444718
+  - .[0].units == "9438772"
   - .[0].owner == "{{ addr_thor_fox }}"
 ---
 ########################################################################################
@@ -283,8 +305,11 @@ params:
   destination: {{ addr_thor_fox }}
   amount: 10000
 asserts:
-  - .expected_amount_out|tonumber == 97937
-  - .fees.total_bps == 99
+  - .expected_amount_out == "77981"
+  - .fees.outbound == "19945"
+  - .fees.liquidity == "987"
+  - .fees.slippage_bps == 99
+  - .fees.total_bps == 1761
 ---
 type: tx-mimir
 signer: {{ addr_thor_cat }}
@@ -317,9 +342,9 @@ params:
   destination: {{ addr_thor_fox }}
   amount: 10000
 asserts:
-  - .expected_amount_out|tonumber == 80129
+  - .expected_amount_out == "60174"
   - .fees.slippage_bps == 1900
-  - .fees.total_bps == 1900
+  - .fees.total_bps == 3259
 ---
 ########################################################################################
 # try obtaining THOR.BTC with EnabledDerivedAssets 0
@@ -434,7 +459,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .|[..|select(.type? == "refund")] | length == 1
-  - .|..|select(.type? == "refund").reason | contains("swapping to a trade asset of a native coin is not allowed")
+  - ..|select(.type? == "refund").reason | contains("swapping to a trade asset of a native coin is not allowed")
 ---
 ########################################################################################
 # swap to RUNE (for instance if there were an arbitrage opportunity)
@@ -444,7 +469,7 @@ endpoint: http://localhost:1317/thorchain/trade/account/{{ addr_thor_fox }}
 asserts:
   - .|length == 1
   - .[0].asset == "BTC~BTC"
-  - .[0].units|tonumber == ${INITIAL_UNITS=9444718}
+  - .[0].units == "${INITIAL_UNITS=9438772}"
   - .[0].owner == "{{ addr_thor_fox }}"
 ---
 type: check
@@ -487,7 +512,7 @@ endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
 asserts:
   - .result | length == 1
   - .result[0].denom == "rune"
-  - .result[0].amount|tonumber == ${INITIAL_RUNE=2500871994778}
+  - .result[0].amount == "${INITIAL_RUNE=2500871890295}"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/network
@@ -499,7 +524,7 @@ endpoint: http://localhost:1317/thorchain/trade/account/{{ addr_thor_fox }}
 asserts:
   - .|length == 1
   - .[0].asset == "BTC~BTC"
-  - .[0].units|tonumber == ${INITIAL_UNITS=8444718}
+  - .[0].units == "${INITIAL_UNITS=8438772}"
   - .[0].owner == "{{ addr_thor_fox }}"
 ---
 type: tx-deposit

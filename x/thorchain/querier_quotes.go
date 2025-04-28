@@ -273,15 +273,12 @@ func quoteSimulateSwap(ctx cosmos.Context, mgr *Mgrs, amount sdkmath.Uint, msg *
 	}
 	finalSwap := swaps[len(swaps)-1]
 
-	// parse outbound fee from event (except on trade & secured assets with no outbound fee)
-	outboundFeeAmount = sdkmath.ZeroUint()
-	if !(msg.TargetAsset.IsTradeAsset() || msg.TargetAsset.IsSecuredAsset()) {
-		outboundFeeCoin, err := common.ParseCoin(fee["coins"])
-		if err != nil {
-			return nil, sdkmath.ZeroUint(), sdkmath.ZeroUint(), fmt.Errorf("unable to parse outbound fee coin: %w", err)
-		}
-		outboundFeeAmount = outboundFeeCoin.Amount
+	// parse outbound fee from event
+	outboundFeeCoin, err := common.ParseCoin(fee["coins"])
+	if err != nil {
+		return nil, sdkmath.ZeroUint(), sdkmath.ZeroUint(), fmt.Errorf("unable to parse outbound fee coin: %w", err)
 	}
+	outboundFeeAmount = outboundFeeCoin.Amount
 
 	// parse outbound amount from event
 	emitCoin, err := common.ParseCoin(finalSwap["emit_asset"])
