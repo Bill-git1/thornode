@@ -21,8 +21,8 @@ var WasmPermissionsRaw = WasmPermissions{
 		},
 
 		// rujira-bow (pools) v1.0.0
-		"e302b793dbb23ccbed1878a6eda8ee1437de92d58d087a2d1a98fb346006e49c": {
-			Origin: "https://gitlab.com/thorchain/rujira/-/tree/80b48eddc0f16f735855442fdbc5423ac5398ff6/contracts/rujira-bow",
+		"49868d92a81ed5613b26772b6e02a43d1ebdb3d61fa13f337ef9b45b9fefb6ff": {
+			Origin: "https://gitlab.com/thorchain/rujira/-/tree/bde18fdb02b9b0213e43308c7ebf5b865886ac97/contracts/rujira-bow",
 			Deployers: map[string]bool{
 				"thor1e0lmk5juawc46jwjwd0xfz587njej7ay5fh6cd": true,
 			},
