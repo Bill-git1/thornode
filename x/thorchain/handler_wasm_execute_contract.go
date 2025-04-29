@@ -30,7 +30,7 @@ func NewWasmExecuteContractHandler(mgr Manager) WasmExecuteContractHandler {
 }
 
 // Run is the main entry of WasmExecuteContractHandler
-func (h WasmExecuteContractHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, error) {
+func (h WasmExecuteContractHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*wasmtypes.MsgExecuteContractResponse, error) {
 	msg, ok := m.(*wasmtypes.MsgExecuteContract)
 	if !ok {
 		return nil, errInvalidMessage
@@ -51,7 +51,7 @@ func (h WasmExecuteContractHandler) validate(ctx cosmos.Context, msg wasmtypes.M
 	return nil
 }
 
-func (h WasmExecuteContractHandler) handle(ctx cosmos.Context, msg wasmtypes.MsgExecuteContract) (*cosmos.Result, error) {
+func (h WasmExecuteContractHandler) handle(ctx cosmos.Context, msg wasmtypes.MsgExecuteContract) (*wasmtypes.MsgExecuteContractResponse, error) {
 	ctx.Logger().Info("receive MsgExecuteContract", "from", msg.Sender)
 	if h.mgr.Keeper().IsChainHalted(ctx, common.THORChain) {
 		return nil, fmt.Errorf("unable to use MsgExecuteContract while THORChain is halted")
@@ -66,12 +66,14 @@ func (h WasmExecuteContractHandler) handle(ctx cosmos.Context, msg wasmtypes.Msg
 		return nil, errorsmod.Wrap(err, "contract")
 	}
 
-	_, err = h.mgr.WasmManager().ExecuteContract(ctx, contractAddr, senderAddr, msg.Msg, msg.Funds)
+	data, err := h.mgr.WasmManager().ExecuteContract(ctx, contractAddr, senderAddr, msg.Msg, msg.Funds)
 	if err != nil {
-		return &cosmos.Result{}, err
+		return nil, err
 	}
 
-	return &cosmos.Result{}, nil
+	return &wasmtypes.MsgExecuteContractResponse{
+		Data: data,
+	}, nil
 }
 
 type WasmExecuteAnteDecorator struct {

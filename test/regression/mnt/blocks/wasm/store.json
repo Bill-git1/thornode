@@ -117,8 +117,8 @@
           ]
         },
         "result": {
-          "code": 99,
-          "log": "failed to execute message; message index: 0: unauthorized: internal error",
+          "code": 1,
+          "log": "failed to execute message; message index: 0: unauthorized",
           "gas_wanted": "-1",
           "gas_used": "1198129",
           "events": [
@@ -169,7 +169,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "83ECBBE73D53016819D31DDE9318062DC04973B91C3FDD7A592DB1DFD2827DCC",
-      "last_results_hash": "4F244605979FDB2A4C3EFEA079EAA17CA347B12A49267FD07C61AAEF110C4446",
+      "last_results_hash": "2D00E78B90C3C31833F75A1748CBFDB662F5935FEC1F62B5BBC26E022064478C",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },

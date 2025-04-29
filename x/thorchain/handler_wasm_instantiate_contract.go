@@ -23,7 +23,7 @@ func NewWasmInstantiateContractHandler(mgr Manager) WasmInstantiateContractHandl
 }
 
 // Run is the main entry of WasmInstantiateContractHandler
-func (h WasmInstantiateContractHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, error) {
+func (h WasmInstantiateContractHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*wasmtypes.MsgInstantiateContractResponse, error) {
 	msg, ok := m.(*wasmtypes.MsgInstantiateContract)
 	if !ok {
 		return nil, errInvalidMessage
@@ -44,7 +44,7 @@ func (h WasmInstantiateContractHandler) validate(ctx cosmos.Context, msg wasmtyp
 	return nil
 }
 
-func (h WasmInstantiateContractHandler) handle(ctx cosmos.Context, msg wasmtypes.MsgInstantiateContract) (*cosmos.Result, error) {
+func (h WasmInstantiateContractHandler) handle(ctx cosmos.Context, msg wasmtypes.MsgInstantiateContract) (*wasmtypes.MsgInstantiateContractResponse, error) {
 	ctx.Logger().Info("receive MsgInstantiateContract", "from", msg.Sender)
 	if h.mgr.Keeper().IsChainHalted(ctx, common.THORChain) {
 		return nil, fmt.Errorf("unable to use MsgInstantiateContract while THORChain is halted")
@@ -62,7 +62,7 @@ func (h WasmInstantiateContractHandler) handle(ctx cosmos.Context, msg wasmtypes
 		}
 	}
 
-	_, _, err = h.mgr.WasmManager().InstantiateContract(ctx,
+	address, data, err := h.mgr.WasmManager().InstantiateContract(ctx,
 		msg.CodeID,
 		senderAddr,
 		adminAddr,
@@ -71,8 +71,11 @@ func (h WasmInstantiateContractHandler) handle(ctx cosmos.Context, msg wasmtypes
 		msg.Funds,
 	)
 	if err != nil {
-		return &cosmos.Result{}, err
+		return nil, err
 	}
 
-	return &cosmos.Result{}, nil
+	return &wasmtypes.MsgInstantiateContractResponse{
+		Address: address.String(),
+		Data:    data,
+	}, nil
 }

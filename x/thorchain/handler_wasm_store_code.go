@@ -23,7 +23,7 @@ func NewWasmStoreCodeHandler(mgr Manager) WasmStoreCodeHandler {
 }
 
 // Run is the main entry of WasmStoreCodeHandler
-func (h WasmStoreCodeHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, error) {
+func (h WasmStoreCodeHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*wasmtypes.MsgStoreCodeResponse, error) {
 	msg, ok := m.(*wasmtypes.MsgStoreCode)
 	if !ok {
 		return nil, errInvalidMessage
@@ -44,7 +44,7 @@ func (h WasmStoreCodeHandler) validate(ctx cosmos.Context, msg wasmtypes.MsgStor
 	return nil
 }
 
-func (h WasmStoreCodeHandler) handle(ctx cosmos.Context, msg wasmtypes.MsgStoreCode) (*cosmos.Result, error) {
+func (h WasmStoreCodeHandler) handle(ctx cosmos.Context, msg wasmtypes.MsgStoreCode) (*wasmtypes.MsgStoreCodeResponse, error) {
 	ctx.Logger().Info("receive MsgStoreCode", "from", msg.Sender)
 	if h.mgr.Keeper().IsChainHalted(ctx, common.THORChain) {
 		return nil, fmt.Errorf("unable to use MsgStoreCode while THORChain is halted")
@@ -55,10 +55,12 @@ func (h WasmStoreCodeHandler) handle(ctx cosmos.Context, msg wasmtypes.MsgStoreC
 		return nil, errorsmod.Wrap(err, "sender")
 	}
 
-	_, _, err = h.mgr.WasmManager().StoreCode(ctx, senderAddr, msg.WASMByteCode)
+	codeId, checksum, err := h.mgr.WasmManager().StoreCode(ctx, senderAddr, msg.WASMByteCode)
 	if err != nil {
-		return &cosmos.Result{}, err
+		return nil, err
 	}
-
-	return &cosmos.Result{}, nil
+	return &wasmtypes.MsgStoreCodeResponse{
+		CodeID:   codeId,
+		Checksum: checksum,
+	}, err
 }

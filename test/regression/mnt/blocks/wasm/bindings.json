@@ -516,7 +516,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "26709F1C54A9FE5D1E4F2C8C576E38337AD72F881A9F3E39E11B3764B174475A",
-      "last_results_hash": "B05467BBF8B934549BB5FD3879867E09CC715A6D830226402E78CBF70CC1E142",
+      "last_results_hash": "FA41C398DCAF812DED4FB01C326834E92750A44F2E7D6DD0F20BE9022CF20478",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -693,7 +693,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "0ABC7CDDB2F4FCA5A01C960A420F1ABE8E490A063F6555953E06FB976F1764B3",
-      "last_results_hash": "218BE2E119AA0D98D73739E3175341A08999FE22CA53D33F9E672B316C0B4870",
+      "last_results_hash": "96DCEF5EDDA5698A39C44FE8D3B56CBFCCA70357E1CD4AE89352166840029658",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -1372,8 +1372,8 @@
           ]
         },
         "result": {
-          "code": 99,
-          "log": "failed to execute message; message index: 0: dispatch: submessages: cannot use MsgSend for Module transactions, use MsgDeposit instead: internal error",
+          "code": 1,
+          "log": "failed to execute message; message index: 0: dispatch: submessages: cannot use MsgSend for Module transactions, use MsgDeposit instead",
           "gas_wanted": "-1",
           "gas_used": "69056",
           "events": [

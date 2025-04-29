@@ -23,7 +23,7 @@ func NewWasmSudoContractHandler(mgr Manager) WasmSudoContractHandler {
 }
 
 // Run is the main entry of WasmSudoContractHandler
-func (h WasmSudoContractHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, error) {
+func (h WasmSudoContractHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*wasmtypes.MsgSudoContractResponse, error) {
 	msg, ok := m.(*wasmtypes.MsgSudoContract)
 	if !ok {
 		return nil, errInvalidMessage
@@ -44,7 +44,7 @@ func (h WasmSudoContractHandler) validate(ctx cosmos.Context, msg wasmtypes.MsgS
 	return nil
 }
 
-func (h WasmSudoContractHandler) handle(ctx cosmos.Context, msg wasmtypes.MsgSudoContract) (*cosmos.Result, error) {
+func (h WasmSudoContractHandler) handle(ctx cosmos.Context, msg wasmtypes.MsgSudoContract) (*wasmtypes.MsgSudoContractResponse, error) {
 	ctx.Logger().Info("receive MsgSudoContract", "from", msg.Authority)
 	if h.mgr.Keeper().IsChainHalted(ctx, common.THORChain) {
 		return nil, fmt.Errorf("unable to use MsgSudoContract while THORChain is halted")
@@ -60,10 +60,12 @@ func (h WasmSudoContractHandler) handle(ctx cosmos.Context, msg wasmtypes.MsgSud
 		return nil, errorsmod.Wrap(err, "contract")
 	}
 
-	_, err = h.mgr.WasmManager().SudoContract(ctx, contractAddr, authorityAddr, msg.Msg)
+	data, err := h.mgr.WasmManager().SudoContract(ctx, contractAddr, authorityAddr, msg.Msg)
 	if err != nil {
-		return &cosmos.Result{}, err
+		return nil, err
 	}
 
-	return &cosmos.Result{}, nil
+	return &wasmtypes.MsgSudoContractResponse{
+		Data: data,
+	}, nil
 }

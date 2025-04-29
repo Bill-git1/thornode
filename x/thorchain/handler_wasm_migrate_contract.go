@@ -24,7 +24,7 @@ func NewWasmMigrateContractHandler(mgr Manager) WasmMigrateContractHandler {
 }
 
 // Run is the main entry of WasmMigrateContractHandler
-func (h WasmMigrateContractHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, error) {
+func (h WasmMigrateContractHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*wasmtypes.MsgMigrateContractResponse, error) {
 	msg, ok := m.(*wasmtypes.MsgMigrateContract)
 	if !ok {
 		return nil, errInvalidMessage
@@ -45,7 +45,7 @@ func (h WasmMigrateContractHandler) validate(ctx cosmos.Context, msg wasmtypes.M
 	return nil
 }
 
-func (h WasmMigrateContractHandler) handle(ctx cosmos.Context, msg wasmtypes.MsgMigrateContract) (*cosmos.Result, error) {
+func (h WasmMigrateContractHandler) handle(ctx cosmos.Context, msg wasmtypes.MsgMigrateContract) (*wasmtypes.MsgMigrateContractResponse, error) {
 	ctx.Logger().Info("receive MsgMigrateContract", "from", msg.Sender)
 	if h.mgr.Keeper().IsChainHalted(ctx, common.THORChain) {
 		return nil, fmt.Errorf("unable to use MsgMigrateContract while THORChain is halted")
@@ -61,10 +61,12 @@ func (h WasmMigrateContractHandler) handle(ctx cosmos.Context, msg wasmtypes.Msg
 		return nil, errorsmod.Wrap(err, "contract")
 	}
 
-	_, err = h.mgr.WasmManager().MigrateContract(ctx, contractAddr, senderAddr, msg.CodeID, msg.Msg)
+	data, err := h.mgr.WasmManager().MigrateContract(ctx, contractAddr, senderAddr, msg.CodeID, msg.Msg)
 	if err != nil {
-		return &cosmos.Result{}, err
+		return nil, err
 	}
 
-	return &cosmos.Result{}, nil
+	return &wasmtypes.MsgMigrateContractResponse{
+		Data: data,
+	}, nil
 }
