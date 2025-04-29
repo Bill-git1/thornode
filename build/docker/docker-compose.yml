@@ -104,11 +104,9 @@ services:
       SIGNER_SEED_PHRASE: "dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog fossil"
       THOR_BLOCK_TIME: ${BLOCK_TIME:-1s}
       THOR_COSMOS_EBIFROST_ADDRESS: 0.0.0.0:50051
-      THOR_API_LIMIT_COUNT: 100
-      THOR_API_LIMIT_DURATION: 1s
       HARDFORK_BLOCK_HEIGHT: ${HARDFORK_BLOCK_HEIGHT:-}
       NEW_GENESIS_TIME: ${NEW_GENESIS_TIME:-}
-      CHURN_MIGRATION_ROUNDS: 2
+      CHURN_MIGRATE_ROUNDS: 2
       FUND_MIGRATION_INTERVAL: 10
       EMISSION_CURVE: 100000
       AVAX_HOST: ${AVAX_HOST:-http://avalanche:9650/ext/bc/C/rpc}

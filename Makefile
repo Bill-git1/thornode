@@ -220,6 +220,11 @@ _test-regression:
 
 test-simulation: build-mocknet reset-mocknet test-simulation-no-reset
 
+test-simulation-cluster: build-test-simulation build-mocknet-cluster reset-mocknet-cluster
+	@STAGES=all docker run --rm ${DOCKER_TTY_ARGS} \
+		-e PARALLELISM -e STAGES --network host -w /app \
+		thornode-simtest sh -c 'make _test-simulation'
+
 test-simulation-no-reset: build-test-simulation
 	@docker run --rm ${DOCKER_TTY_ARGS} \
 		-e PARALLELISM -e STAGES --network host -w /app \

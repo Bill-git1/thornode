@@ -21,11 +21,11 @@ func init() {
 	int64Overrides = map[ConstantName]int64{
 		// ArtificialRagnarokBlockHeight: 200,
 		DesiredValidatorSet:                 12,
-		ChurnInterval:                       60, // 5 min
+		ChurnInterval:                       60,
 		ChurnRetryInterval:                  30,
 		MinimumBondInRune:                   100_000_000, // 1 rune
 		ValidatorMaxRewardRatio:             3,
-		FundMigrationInterval:               40,
+		FundMigrationInterval:               15,
 		LiquidityLockUpBlocks:               0,
 		MaxRuneSupply:                       500_000_000_00000000,
 		JailTimeKeygen:                      10,

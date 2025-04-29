@@ -19,6 +19,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/evm"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/thornode"
 	. "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/types"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain"
 	ttypes "gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
@@ -47,9 +48,9 @@ var (
 
 	mocknetValidatorMnemonics = [...]string{
 		strings.Repeat("dog ", 23) + "fossil",
-		// strings.Repeat("cat ", 23) + "crawl",
-		// strings.Repeat("fox ", 23) + "filter",
-		// strings.Repeat("pig ", 23) + "quick",
+		strings.Repeat("cat ", 23) + "crawl",
+		strings.Repeat("fox ", 23) + "filter",
+		strings.Repeat("pig ", 23) + "quick",
 	}
 
 	mocknetUserMnemonics = [...]string{
@@ -80,7 +81,9 @@ func InitConfig(parallelism int, seed bool) *OpConfig {
 			Msg("parallelism limited by available user accounts")
 	}
 
-	c := &OpConfig{}
+	c := &OpConfig{
+		NodeUsers: make([]*User, len(mocknetValidatorMnemonics)),
+	}
 	mu := &sync.Mutex{}
 	wg := &sync.WaitGroup{}
 	sem := make(chan struct{}, 8)
@@ -92,13 +95,13 @@ func InitConfig(parallelism int, seed bool) *OpConfig {
 	config.Init()
 
 	// validators
-	for _, mnemonic := range mocknetValidatorMnemonics {
+	for i, mnemonic := range mocknetValidatorMnemonics {
 		wg.Add(1)
 		sem <- struct{}{}
-		go func(mnemonic string) {
+		go func(i int, mnemonic string) {
 			a := NewUser(mnemonic, liteClientConstructors)
 			mu.Lock()
-			c.NodeUsers = append(c.NodeUsers, a)
+			c.NodeUsers[i] = a
 			mu.Unlock()
 
 			defer func() {
@@ -109,6 +112,22 @@ func InitConfig(parallelism int, seed bool) *OpConfig {
 			// send gaia network fee observation if this is a seed run
 			if !seed {
 				return
+			}
+
+			// only the first mnemonic is an active node at init
+			if i != 0 {
+				return
+			}
+
+			// halt churning
+			accAddr, err := a.PubKey().GetThorAddress()
+			if err != nil {
+				log.Error().Err(err).Msg("failed to get thor address")
+			}
+			mimir := thorchain.NewMsgMimir("HALTCHURNING", 1, accAddr)
+			_, err = a.Thorchain.Broadcast(mimir)
+			if err != nil {
+				log.Error().Err(err).Msg("failed to broadcast mimir")
 			}
 
 			// default network fees on chains needing a window of blocks before bifrost sends
@@ -134,7 +153,7 @@ func InitConfig(parallelism int, seed bool) *OpConfig {
 					time.Sleep(2 * time.Second)
 				}
 			}
-		}(mnemonic)
+		}(i, mnemonic)
 	}
 
 	// users

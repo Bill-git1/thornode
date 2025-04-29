@@ -223,7 +223,7 @@ test-simulation:
       wget https://github.com/docker/compose/releases/download/v2.28.1/docker-compose-linux-x86_64 -O $PLUGIN
       chmod +x $PLUGIN
   script:
-    - make test-simulation
+    - make test-simulation-cluster
   after_script:
     - make test-simulation-events
     - mkdir logs

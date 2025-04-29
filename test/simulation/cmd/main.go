@@ -78,9 +78,10 @@ func main() {
 	stages := []cli.Option{
 		{Name: "seed", Default: true},
 		{Name: "bootstrap", Default: true},
-		{Name: "consolidate", Default: true},
 		{Name: "arb", Default: true},
 		{Name: "swaps", Default: true},
+		{Name: "consolidate", Default: true},
+		{Name: "churn", Default: false},
 		{Name: "solvency", Default: true},
 		{Name: "ragnarok", Default: true},
 	}
@@ -117,14 +118,15 @@ func main() {
 	root := NewActor("Root")
 
 	appendIfEnabled := func(key string, constructor func() *Actor) {
-		if enabledStages[key] {
+		if enabledStages[key] || enabledStages["all"] {
 			root.Append(constructor())
 		}
 	}
 	appendIfEnabled("bootstrap", suites.Bootstrap)
-	appendIfEnabled("consolidate", features.Consolidate)
 	appendIfEnabled("arb", core.NewArbActor)
 	appendIfEnabled("swaps", suites.Swaps)
+	appendIfEnabled("consolidate", features.Consolidate)
+	appendIfEnabled("churn", core.NewChurnActor)
 	appendIfEnabled("solvency", core.NewSolvencyCheckActor)
 	appendIfEnabled("ragnarok", suites.Ragnarok)
 
@@ -138,7 +140,7 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to parse PARALLELISM")
 	}
 
-	cfg := InitConfig(parallelismInt, enabledStages["seed"])
+	cfg := InitConfig(parallelismInt, enabledStages["seed"] || enabledStages["all"])
 
 	// start watchers
 	for _, w := range []*Watcher{watchers.NewInvariants()} {
