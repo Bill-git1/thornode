@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -37,6 +38,7 @@ func ScanActivity(block *thorscan.BlockResponse) {
 	Bond(block)
 	FailedTransactions(block)
 	LargeHighSlipSwaps(block)
+	FailedRefunds(block)
 
 	// THORNameRegistrations(block) (disable per community request)
 }
@@ -1171,6 +1173,58 @@ func FailedTransactions(block *thorscan.BlockResponse) {
 		// notify failed transaction
 		title := "Failed Transaction"
 		notify.Notify(config.Get().Notifications.Activity, title, block.Header.Height, nil, notify.Warning, fields)
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+// Failed Refunds
+////////////////////////////////////////////////////////////////////////////////////////
+
+func FailedRefunds(block *thorscan.BlockResponse) {
+	for _, event := range block.EndBlockEvents {
+		if event["type"] != types.RefundEventType {
+			continue
+		}
+
+		// only failed refunds
+		if !strings.Contains(event["reason"], "fail to refund") {
+			continue
+		}
+
+		coin, err := common.ParseCoin(event["coin"])
+		if err != nil {
+			log.Panic().Str("coin", event["coin"]).Err(err).Msg("unable to parse refund coin")
+		}
+
+		// skip refunds for less than the native transaction fee (failed affiliate swaps)
+		txFee := float64(constants.NewConstantValue().GetInt64Value(constants.NativeTransactionFee)) / common.One
+		if util.RuneValue(block.Header.Height, coin) < txFee {
+			continue
+		}
+
+		fields := util.NewOrderedMap()
+		fields.Set("Chain", event["chain"])
+		fields.Set("Hash", event["id"])
+		fields.Set("Inbound From Address", fmt.Sprintf("`%s`", event["from"]))
+		fields.Set("Inbound Memo", fmt.Sprintf("`%s`", event["memo"]))
+		fields.Set("Amount", fmt.Sprintf(
+			"%f %s (%s)",
+			float64(coin.Amount.Uint64())/common.One,
+			coin.Asset,
+			util.USDValueString(block.Header.Height, coin),
+		))
+		reason := event["reason"]
+		reason = regexp.MustCompile(`\s+`).ReplaceAllString(reason, " ")
+		fields.Set("Reason", fmt.Sprintf("`%s`", reason))
+
+		links := []string{
+			fmt.Sprintf("[Transaction](%s/tx/%s)", config.Get().Links.Explorer, event["id"]),
+			fmt.Sprintf("[Track](%s/%s)", config.Get().Links.Track, event["id"]),
+		}
+		fields.Set("Links", strings.Join(links, " | "))
+
+		title := "Failed Refund"
+		notify.Notify(config.Get().Notifications.FailedRefunds, title, block.Header.Height, nil, notify.Info, fields)
 	}
 }
 

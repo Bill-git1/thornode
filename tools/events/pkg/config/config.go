@@ -76,11 +76,12 @@ type Config struct {
 
 	// Notifications contain categories of webhooks that route to multiple services.
 	Notifications struct {
-		Activity    Webhooks `mapstructure:"activity"`
-		Lending     Webhooks `mapstructure:"lending"`
-		Info        Webhooks `mapstructure:"info"`
-		Security    Webhooks `mapstructure:"security"`
-		Reschedules Webhooks `mapstructure:"reschedules"`
+		Activity      Webhooks `mapstructure:"activity"`
+		Lending       Webhooks `mapstructure:"lending"`
+		Info          Webhooks `mapstructure:"info"`
+		Security      Webhooks `mapstructure:"security"`
+		Reschedules   Webhooks `mapstructure:"reschedules"`
+		FailedRefunds Webhooks `mapstructure:"failed_refunds"`
 	} `mapstructure:"notifications"`
 
 	// Links contain URLs to services linked in alerts.
@@ -191,6 +192,7 @@ func init() {
 	config.Notifications.Lending.Category = "Lending"
 	config.Notifications.Security.Category = "Security"
 	config.Notifications.Reschedules.Category = "Reschedules"
+	config.Notifications.FailedRefunds.Category = "Failed Refunds"
 
 	// retries
 	config.MaxRetries = 10
