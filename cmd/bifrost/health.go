@@ -134,7 +134,7 @@ func (s *HealthServer) p2pStatus(w http.ResponseWriter, _ *http.Request) {
 		defer resp.Body.Close()
 
 		// set the height from header
-		res.ThornodeHeight, err = strconv.ParseInt(resp.Header.Get("x-thorchain-height"), 10, 64)
+		res.ThornodeHeight, err = strconv.ParseInt(resp.Header.Get("grpc-metadata-x-cosmos-block-height"), 10, 64)
 		if err != nil {
 			s.logger.Error().Err(err).Msg("fail to parse thornode height")
 		}
@@ -348,7 +348,7 @@ func (s *HealthServer) chainScanner(w http.ResponseWriter, _ *http.Request) {
 	} else {
 		defer resp.Body.Close()
 		var height int64
-		height, err = strconv.ParseInt(resp.Header.Get("x-thorchain-height"), 10, 64)
+		height, err = strconv.ParseInt(resp.Header.Get("grpc-metadata-x-cosmos-block-height"), 10, 64)
 		if err != nil {
 			s.logger.Error().Err(err).Msg("fail to parse thornode height")
 		}
