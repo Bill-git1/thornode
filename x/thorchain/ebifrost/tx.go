@@ -61,6 +61,15 @@ func (w wInjectTx) GetMsgsV2() ([]protov2.Message, error) {
 	return msgsv2, nil
 }
 
+func (w wInjectTx) AsAny() *codectypes.Any {
+	tx := sdktx.Tx{
+		Body: &sdktx.TxBody{
+			Messages: w.Tx.Messages,
+		},
+	}
+	return codectypes.UnsafePackAny(&tx)
+}
+
 func TxEncoder(txEncoder sdk.TxEncoder) sdk.TxEncoder {
 	return func(tx sdk.Tx) ([]byte, error) {
 		itx, ok := tx.(wInjectTx)
