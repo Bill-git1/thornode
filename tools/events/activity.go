@@ -174,7 +174,7 @@ func LargeUnconfirmedInbounds(block *thorscan.BlockResponse) {
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func LargeStreamingSwaps(block *thorscan.BlockResponse) {
-	for _, event := range block.EndBlockEvents {
+	for _, event := range append(block.EndBlockEvents, block.FinalizeBlockEvents...) {
 		if event["type"] != types.SwapEventType {
 			continue
 		}
@@ -697,7 +697,7 @@ func ScheduledOutbounds(block *thorscan.BlockResponse) {
 	events := []map[string]string{}
 
 	// gather block events
-	for _, event := range block.EndBlockEvents {
+	for _, event := range append(block.EndBlockEvents, block.FinalizeBlockEvents...) {
 		if event["type"] != types.ScheduledOutboundEventType {
 			continue
 		}
@@ -1296,7 +1296,7 @@ func THORNameRegistrations(block *thorscan.BlockResponse) {
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func LargeHighSlipSwaps(block *thorscan.BlockResponse) {
-	for _, event := range block.EndBlockEvents {
+	for _, event := range append(block.EndBlockEvents, block.FinalizeBlockEvents...) {
 		if event["type"] != types.SwapEventType {
 			continue
 		}

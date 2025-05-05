@@ -5925,6 +5925,9 @@ components:
       type: object
     BlockResponse:
       example:
+        finalize_block_events:
+        - key: finalize_block_events
+        - key: finalize_block_events
         begin_block_events:
         - key: begin_block_events
         - key: begin_block_events
@@ -5991,6 +5994,12 @@ components:
           $ref: '#/components/schemas/BlockResponse_id'
         header:
           $ref: '#/components/schemas/BlockResponse_header'
+        finalize_block_events:
+          items:
+            additionalProperties:
+              type: string
+            type: object
+          type: array
         begin_block_events:
           items:
             additionalProperties:
@@ -6011,6 +6020,7 @@ components:
       required:
       - begin_block_events
       - end_block_events
+      - finalize_block_events
       - header
       - id
       - txs

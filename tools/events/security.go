@@ -54,7 +54,7 @@ func SecurityEvents(block *thorscan.BlockResponse) {
 	}
 
 	// block security events
-	for _, event := range block.EndBlockEvents {
+	for _, event := range append(block.EndBlockEvents, block.FinalizeBlockEvents...) {
 		if event["type"] != types.SecurityEventType {
 			continue
 		}

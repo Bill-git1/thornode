@@ -6,6 +6,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Id** | [**BlockResponseId**](BlockResponseId.md) |  | 
 **Header** | [**BlockResponseHeader**](BlockResponseHeader.md) |  | 
+**FinalizeBlockEvents** | **[]map[string]string** |  | 
 **BeginBlockEvents** | **[]map[string]string** |  | 
 **EndBlockEvents** | **[]map[string]string** |  | 
 **Txs** | [**[]BlockTx**](BlockTx.md) |  | 
@@ -14,7 +15,7 @@ Name | Type | Description | Notes
 
 ### NewBlockResponse
 
-`func NewBlockResponse(id BlockResponseId, header BlockResponseHeader, beginBlockEvents []map[string]string, endBlockEvents []map[string]string, txs []BlockTx, ) *BlockResponse`
+`func NewBlockResponse(id BlockResponseId, header BlockResponseHeader, finalizeBlockEvents []map[string]string, beginBlockEvents []map[string]string, endBlockEvents []map[string]string, txs []BlockTx, ) *BlockResponse`
 
 NewBlockResponse instantiates a new BlockResponse object
 This constructor will assign default values to properties that have it defined,
@@ -67,6 +68,26 @@ and a boolean to check if the value has been set.
 `func (o *BlockResponse) SetHeader(v BlockResponseHeader)`
 
 SetHeader sets Header field to given value.
+
+
+### GetFinalizeBlockEvents
+
+`func (o *BlockResponse) GetFinalizeBlockEvents() []map[string]string`
+
+GetFinalizeBlockEvents returns the FinalizeBlockEvents field if non-nil, zero value otherwise.
+
+### GetFinalizeBlockEventsOk
+
+`func (o *BlockResponse) GetFinalizeBlockEventsOk() (*[]map[string]string, bool)`
+
+GetFinalizeBlockEventsOk returns a tuple with the FinalizeBlockEvents field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetFinalizeBlockEvents
+
+`func (o *BlockResponse) SetFinalizeBlockEvents(v []map[string]string)`
+
+SetFinalizeBlockEvents sets FinalizeBlockEvents field to given value.
 
 
 ### GetBeginBlockEvents

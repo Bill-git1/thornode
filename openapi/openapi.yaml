@@ -4086,6 +4086,7 @@ components:
         - "header"
         - "begin_block_events"
         - "end_block_events"
+        - "finalize_block_events"
         - "txs"
       properties:
         id:
@@ -4199,6 +4200,12 @@ components:
             proposer_address:
               type: string
               example: "D540AB022088612AC74B287D076DBFBC4A377A2E"
+        finalize_block_events:
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
         begin_block_events:
           type: array
           items:

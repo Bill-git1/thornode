@@ -3127,44 +3127,50 @@ func (qs queryServer) queryBlock(ctx cosmos.Context, req *types.QueryBlockReques
 		},
 		Header: &types.BlockResponseHeader{
 			Version: &types.BlockResponseHeaderVersion{
-				Block: strconv.FormatUint(block.Block.Header.Version.Block, 10),
-				App:   strconv.FormatUint(block.Block.Header.Version.App, 10),
+				Block: strconv.FormatUint(block.Block.Version.Block, 10),
+				App:   strconv.FormatUint(block.Block.Version.App, 10),
 			},
-			ChainId: block.Block.Header.ChainID,
-			Height:  block.Block.Header.Height,
-			Time:    block.Block.Header.Time.Format(time.RFC3339Nano),
+			ChainId: block.Block.ChainID,
+			Height:  block.Block.Height,
+			Time:    block.Block.Time.Format(time.RFC3339Nano),
 			LastBlockId: &types.BlockResponseId{
-				Hash: block.Block.Header.LastBlockID.Hash.String(),
+				Hash: block.Block.LastBlockID.Hash.String(),
 				Parts: &types.BlockResponseIdParts{
-					Total: int64(block.Block.Header.LastBlockID.PartSetHeader.Total),
-					Hash:  block.Block.Header.LastBlockID.PartSetHeader.Hash.String(),
+					Total: int64(block.Block.LastBlockID.PartSetHeader.Total),
+					Hash:  block.Block.LastBlockID.PartSetHeader.Hash.String(),
 				},
 			},
-			LastCommitHash:     block.Block.Header.LastCommitHash.String(),
-			DataHash:           block.Block.Header.DataHash.String(),
-			ValidatorsHash:     block.Block.Header.ValidatorsHash.String(),
-			NextValidatorsHash: block.Block.Header.NextValidatorsHash.String(),
-			ConsensusHash:      block.Block.Header.ConsensusHash.String(),
-			AppHash:            block.Block.Header.AppHash.String(),
-			LastResultsHash:    block.Block.Header.LastResultsHash.String(),
-			EvidenceHash:       block.Block.Header.EvidenceHash.String(),
-			ProposerAddress:    block.Block.Header.ProposerAddress.String(),
+			LastCommitHash:     block.Block.LastCommitHash.String(),
+			DataHash:           block.Block.DataHash.String(),
+			ValidatorsHash:     block.Block.ValidatorsHash.String(),
+			NextValidatorsHash: block.Block.NextValidatorsHash.String(),
+			ConsensusHash:      block.Block.ConsensusHash.String(),
+			AppHash:            block.Block.AppHash.String(),
+			LastResultsHash:    block.Block.LastResultsHash.String(),
+			EvidenceHash:       block.Block.EvidenceHash.String(),
+			ProposerAddress:    block.Block.ProposerAddress.String(),
 		},
 		Txs: make([]*types.QueryBlockTx, len(block.Block.Txs)),
 	}
 
 	// parse the events
 	for _, event := range results.FinalizeBlockEvents {
+		foundMode := false
 		for _, attr := range event.Attributes {
 			if attr.Key == "mode" {
 				if attr.Value == "BeginBlock" {
 					res.BeginBlockEvents = append(res.BeginBlockEvents, blockEvent(sdk.Event(event)))
+					foundMode = true
 				}
 				if attr.Value == "EndBlock" {
 					res.EndBlockEvents = append(res.EndBlockEvents, blockEvent(sdk.Event(event)))
+					foundMode = true
 				}
 				continue
 			}
+		}
+		if !foundMode {
+			res.FinalizeBlockEvents = append(res.FinalizeBlockEvents, blockEvent(sdk.Event(event)))
 		}
 	}
 

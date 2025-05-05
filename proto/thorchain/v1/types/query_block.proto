@@ -16,6 +16,7 @@ message QueryBlockResponse{
   BlockResponseHeader header = 2 [(gogoproto.jsontag) = "header"];
   repeated BlockEvent begin_block_events = 3 [(gogoproto.jsontag) = "begin_block_events"];
   repeated BlockEvent end_block_events = 4 [(gogoproto.jsontag) = "end_block_events"];
+  repeated BlockEvent finalize_block_events = 6 [(gogoproto.jsontag) = "finalize_block_events"];
   repeated QueryBlockTx txs = 5 [(gogoproto.jsontag) = "txs"];
 }
 

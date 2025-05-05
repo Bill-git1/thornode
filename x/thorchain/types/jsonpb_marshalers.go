@@ -566,8 +566,9 @@ func (m *QueryBlockResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, error) 
 				EvidenceHash:       m.Header.EvidenceHash,
 				ProposerAddress:    m.Header.ProposerAddress,
 			},
-			BeginBlockEvents: []map[string]string{},
-			EndBlockEvents:   []map[string]string{},
+			BeginBlockEvents:    []map[string]string{},
+			EndBlockEvents:      []map[string]string{},
+			FinalizeBlockEvents: []map[string]string{},
 		},
 		Txs: make([]QueryOpenApiBlockTx, len(m.Txs)),
 	}
@@ -578,6 +579,10 @@ func (m *QueryBlockResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, error) 
 
 	for _, event := range m.EndBlockEvents {
 		res.EndBlockEvents = append(res.EndBlockEvents, eventMap(event))
+	}
+
+	for _, event := range m.FinalizeBlockEvents {
+		res.FinalizeBlockEvents = append(res.FinalizeBlockEvents, eventMap(event))
 	}
 
 	for i, tx := range m.Txs {

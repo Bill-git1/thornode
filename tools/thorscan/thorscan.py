@@ -99,7 +99,11 @@ def events(
     """
 
     def _listen(block):
-        for event in block["begin_block_events"] + block["end_block_events"]:
+        for event in (
+            block["begin_block_events"]
+            + block["end_block_events"]
+            + block["finalize_block_events"]
+        ):
             if types is not None and event["type"] not in types:
                 continue
             for listener in listeners:
