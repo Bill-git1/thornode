@@ -157,11 +157,11 @@ Claim TCY tokens for THORFi debt. Claims must be sent form an address within [`t
 
 **`TCY:ADDR`**
 
-| Parameter | Notes                           | Conditions                                       |
-| --------- | ------------------------------- | ------------------------------------------------ |
-| Payload   | From L1 a calim address address | [Dust thresholds](#dust-thresholds) must be met. |
-| `TCY`     | The TCY Claim handler.          |                                                  |
-| `ADDR`    | Must be a thor address          | Becomes the owner of the TCY                     |
+| Parameter | Notes                  | Conditions                                       |
+| --------- | ---------------------- | ------------------------------------------------ |
+| Payload   | From a claim address   | [Dust thresholds](#dust-thresholds) must be met. |
+| `TCY`     | The TCY Claim handler. |                                                  |
+| `ADDR`    | Must be a thor address | Becomes the owner of the TCY                     |
 
 Example:
 
