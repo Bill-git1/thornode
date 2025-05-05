@@ -8,7 +8,7 @@ lint:
     - name: codespell
       commands:
         # IDae = base64 found in wasm bytecode expected to be "idea"
-        - run: codespell --uri-ignore-words-list=* --ignore-words-list=toi,amountIn,IDae ${target}
+        - run: codespell --uri-ignore-words-list=* --ignore-words-list=toi,amountIn,IDae,liquify ${target}
     - name: golangci-lint
       environment:
         - name: CGO_ENABLED

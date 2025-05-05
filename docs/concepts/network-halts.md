@@ -53,6 +53,16 @@ A chain halt is possible in which case Mimir or Midgard will not return data. Th
 While very rare, a network level halt is possible and should be monitored for.
 ```
 
+### TCY Management
+
+Claiming and Staking of $TCY can be enabled and disabled using flags.
+
+- `TCYClaimingSwapHalt`: Enables/disables RUNE-to-TCY swaps in the claiming module (default: 1, halted).
+- `TCYStakeDistributionHalt`: Enables/disables distribution of RUNE revenue to TCY stakers (default: 1, halted).
+- `TCYStakingHalt`: Enables/disables staking of TCY tokens (default: 1, halted).
+- `TCYUnstakingHalt`: Enables/disables unstaking of TCY tokens (default: 1, halted).
+- `TCYClaimingHalt`: Enables/disables claiming of TCY tokens for THORFi deposits (default: 1, halted).
+
 ### Synth Management
 
 Synths minting and redeeming can be enabled and disabled using flags. There is also a Synth mint limit. The setting are:

@@ -1,6 +1,6 @@
 [book]
 title = "THORChain Dev Docs"
-description = "Developer Documentation for THORChain. Integrate with THORChain; Swap, Save and Lend."
+description = "Developer Documentation for THORChain. Integrate with THORChain; Cross-Chain Swapping."
 language = "en"
 authors = ["THORChain"]
 src = ""

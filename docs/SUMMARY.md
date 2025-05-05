@@ -2,35 +2,18 @@
 
 - [Introduction](README.md)
 
-  - [FAQs](./technical-faq.md)
+  - [FAQs](technical-faq.md)
   - [Swap Guide](swap-guide/quickstart-guide.md)
   - [Quickstart Guide](swap-guide/quickstart-guide.md)
   - [Fees and Wait Times](swap-guide/fees-and-wait-times.md)
   - [Streaming Swaps](swap-guide/streaming-swaps.md)
-
-- [Lending](lending/quick-start-guide.md)
-
-  - [Quick Start Guide](lending/quick-start-guide.md)
-
-- [Saving Guide](saving-guide/quickstart-guide.md)
-
-  - [Quickstart Guide](saving-guide/quickstart-guide.md)
-  - [Fees and Wait Times](saving-guide/fees-and-wait-times.md)
 
 - [Affiliate Guide](affiliate-guide/thorname-guide.md)
 
   - [THORName Guide](affiliate-guide/thorname-guide.md)
   - [Affiliate Guide](affiliate-guide/affiliate-fee-guide.md)
 
-- [Examples](examples/tutorials.md)
-
-  - [TypeScript (Web)](examples/typescript-web/README.md)
-    - [Overview](examples/typescript-web/overview.md)
-    - [Query Package](examples/typescript-web/query-package.md)
-    - [AMM Package](examples/typescript-web/amm-package.md)
-    - [Client Packages](examples/typescript-web/client-packages.md)
-    - [Packages Breakdown](examples/typescript-web/packages-breakdown.md)
-    - [Coding Guide](examples/typescript-web/coding-guide.md)
+- [TCY Information](concepts/tcy.md)
 
 - [Concepts](concepts/connecting-to-thorchain.md)
 
@@ -39,11 +22,11 @@
   - [Transaction Memos](concepts/memos.md)
   - [Asset Notation](concepts/asset-notation.md)
   - [Memo Length Reduction](concepts/memo-length-reduction.md)
-  - [Swapper Clout](./concepts/swapper-clout.md)
-  - [Trade Accounts](./concepts/trade-accounts.md)
-  - [Secured Assets](./concepts/secured-assets.md)
-  - [RUNE Pool](./concepts/rune-pool.md)
-  - [Incentive Pendulum](./concepts/incentive-pendulum.md)
+  - [Incentive Pendulum](concepts/incentive-pendulum.md)
+  - [Trade Accounts](concepts/trade-accounts.md)
+  - [Secured Assets](concepts/secured-assets.md)
+  - [RUNE Pool](concepts/rune-pool.md)
+  - [Swapper Clout](concepts/swapper-clout.md)
   - [Network Halts](concepts/network-halts.md)
   - [Fees](concepts/fees.md)
   - [Delays](concepts/delays.md)
@@ -95,9 +78,28 @@
     - [ADR 019: AutoBond](architecture/adr-019-auto-bond.md)
 
 - [Protocol Development](protocol-development/adding-new-chains.md)
+
   - [Adding New Chains](protocol-development/adding-new-chains.md)
   - [Chain Clients](protocol-development/chain-clients/README.md)
     - [UTXO](protocol-development/chain-clients/utxo.md)
     - [EVM Chains](protocol-development/chain-clients/evm-chains.md)
     - [BFT Chains](protocol-development/chain-clients/bft-chains.md)
   - [ERC20 Tokens](protocol-development/erc20-tokens.md)
+
+- [Examples](examples/tutorials.md)
+
+  - [TypeScript (Web)](examples/typescript-web/README.md)
+    - [Overview](examples/typescript-web/overview.md)
+    - [Query Package](examples/typescript-web/query-package.md)
+    - [AMM Package](examples/typescript-web/amm-package.md)
+    - [Client Packages](examples/typescript-web/client-packages.md)
+    - [Packages Breakdown](examples/typescript-web/packages-breakdown.md)
+    - [Coding Guide](examples/typescript-web/coding-guide.md)
+
+- [Archived](archived/archived.md)
+
+  - [Saving Guide](archived/saving-guide/quickstart-guide.md)
+    - [Quickstart Guide](archived/saving-guide/quickstart-guide.md)
+    - [Fees and Wait Times](archived/saving-guide/fees-and-wait-times.md)
+  - [Lending](archived/lending/quick-start-guide.md)
+    - [Quick Start Guide](archived/lending/quick-start-guide.md)

@@ -4,16 +4,16 @@
 
 Below are the list of supported Address Formats. Not using this risks loss of funds.
 
-| Chain            | Supported Address Format                                         | Notes                                                                                           |                                          |
-| ---------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| BTC              | P2WSH /w Bech32 (preferred), P2WPKH /w Bech32, P2PKH, P2SH, P2TR | Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats |                                          |
-| ETH              | EIP-55                                                           | addresses.                                                                                      | Do not swap to smart contract addresses. |
-| BSC              | EIP-55                                                           | addresses.                                                                                      | Do not swap to smart contract addresses. |
-| AVAX             | EIP-55                                                           | addresses.                                                                                      | Do not swap to smart contract addresses. |
-| DOGE             | Bech32, P2PKH                                                    | Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats |                                          |
-| LTC              | Bech32, P2PKH                                                    | Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats |                                          |
-| BCH              | Bech32, P2PKH                                                    | Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats |                                          |
-| GAIA (cosmoshub) | Bech32                                                           |                                                                                                 |                                          |
+| Chain            | Supported Address Format                                         | Notes                                                                                           |
+| ---------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| BTC              | P2WSH /w Bech32 (preferred), P2WPKH /w Bech32, P2PKH, P2SH, P2TR | Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats |
+| ETH              | EIP-55                                                           | Do not swap to smart contract addresses.                                                        |
+| BSC              | EIP-55                                                           | Do not swap to smart contract addresses.                                                        |
+| AVAX             | EIP-55                                                           | Do not swap to smart contract addresses..                                                       |
+| DOGE             | Bech32, P2PKH                                                    | Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats |
+| LTC              | Bech32, P2PKH                                                    | Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats |
+| BCH              | Bech32, P2PKH                                                    | Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats |
+| GAIA (cosmoshub) | Bech32                                                           |                                                                                                 |
 
 All inbound_address support this format.
 

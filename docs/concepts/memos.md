@@ -31,20 +31,23 @@ Some parameters are optional. Simply leave them blank but retain the `:` separat
 The following functions can be put into a memo:
 
 1. [**SWAP**](memos.md#swap)
-1. [**DEPOSIT** **Savers**](memos.md#deposit-savers)
-1. [**WITHDRAW Savers**](memos.md#withdraw-savers)
-1. [**OPEN** **Loan**](memos.md#open-loan)
-1. [**REPAY Loan**](memos.md#repay-loan)
-1. [**DEPOSIT RUNEPool**](memos.md#deposit-runepool)
-1. [**WITHDRAW RUNEPool**](memos.md#withdraw-runepool)
 1. [**ADD Liquidity**](memos.md#add-liquidity)
 1. [**WITHDRAW Liquidity**](memos.md#withdraw-liquidity)
+1. [**CLAIM TCY**](memos.md#claim-tcy)
+1. [**STAKE TCY**](memos.md#stake-tcy)
+1. [**UNSTAKE TCY**](memos.md#unstake-tcy)
 1. [**ADD Trade Account**](memos.md#add-trade-account)
 1. [**WITHDRAW Trade Account**](memos.md#withdraw-liquidity)
 1. [**ADD Secured Asset**](memos.md#add-secured-asset)
 1. [**WITHDRAW Secured Asset**](memos.md#withdraw-secured-asset)
 1. [**EXECUTE Smart Contract**](memos.md#execute)
 1. [**SWITCH Asset**](memos.md#switch)
+1. [**DEPOSIT** **Savers**](memos.md#deposit-savers)
+1. [**WITHDRAW Savers**](memos.md#withdraw-savers)
+1. [**OPEN** **Loan**](memos.md#open-loan)
+1. [**REPAY Loan**](memos.md#repay-loan)
+1. [**DEPOSIT RUNEPool**](memos.md#deposit-runepool)
+1. [**WITHDRAW RUNEPool**](memos.md#withdraw-runepool)
 1. [**BOND**, **UNBOND** & **LEAVE**](memos.md#bond-unbond-and-leave)
 1. [**DONATE** & **RESERVE**](memos.md#donate-and-reserve)
 1. [**MIGRATE**](memos.md#migrate)
@@ -102,6 +105,194 @@ For the DEX aggregator-oriented variation of the `SWAP` memo, see [Aggregators M
 - `=:ETH.ETH:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430::t1/t2/t3/t4/t5:10` &mdash; Swap to Ether, will skim 10 basis points for each of the affiliates
 - `=:ETH.ETH:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430::t1/dx/ss:10/20/30` &mdash; Swap to Ether, Will skim 10 basis points for `t1`, 20 basis points for `dx`, and 30 basis points for `ss`
 
+### Add Liquidity
+
+Add liquidity to a pool.
+
+**`ADD:POOL:PAIREDADDR:AFFILIATE:FEE`**
+
+There are rules for adding liquidity, see [the rules here](https://docs.thorchain.org/learn/getting-started#entering-and-leaving-a-pool).
+
+| Parameter     | Notes                                                                                                                                                                                                                                  | Conditions                                                                  |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Payload       | The asset to add liquidity with.                                                                                                                                                                                                       | Must be supported by THORChain.                                             |
+| `ADD`         | The add liquidity handler.                                                                                                                                                                                                             | Also `a` or `+`                                                             |
+| `:POOL`       | The pool to add liquidity to.                                                                                                                                                                                                          | Can be shortened.                                                           |
+| `:PAIREDADDR` | The other address to link with. If on external chain, link to THOR address. If on THORChain, link to external address. If a paired address is found, the LP is matched and added. If none is found, the liquidity is put into pending. | Optional. If not specified, a single-sided add-liquidity action is created. |
+| `:AFFILIATE`  | The affiliate address. The affiliate is added to the pool as an LP.                                                                                                                                                                    | Optional. Must be a THORName or THOR Address.                               |
+| `:FEE`        | The [affiliate fee](fees.md#affiliate-fee).                                                                                                                                                                                            | Optional. Ranges from 0 to 1000 Basis Points.                               |
+
+**Examples:**
+
+- `ADD:BTC.BTC` &mdash; add liquidity single-sided. If this is a position's first add, liquidity can only be withdrawn to the same address
+- `a:POOL:PAIREDADDR` &mdash; add on both sides (dual-sided)
+- `+:POOL:PAIREDADDR:AFFILIATE:FEE` &mdash; add dual-sided with affiliate
+- `+:ETH.ETH:` &mdash; add liquidity with position pending
+
+### Withdraw Liquidity
+
+Withdraw liquidity from a pool.
+
+**`WITHDRAW:POOL:BASISPOINTS:ASSET`**
+
+A withdrawal can be either dual-sided (withdrawn based on pool's price) or entirely single-sided (converted to one side and sent out).
+
+| Parameter      | Notes                                                                                       | Conditions                                                    |
+| -------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Payload        | Send the dust threshold of the asset to cause the transaction to be picked up by THORChain. | [Dust thresholds](#dust-thresholds) must be met.              |
+| `WITHDRAW`     | The withdraw liquidity handler.                                                             | Also `-` or `wd`                                              |
+| `:POOL`        | The pool to withdraw liquidity from.                                                        | Can be shortened.                                             |
+| `:BASISPOINTS` | Basis points.                                                                               | Range 0-10000, where 10000 = 100%.                            |
+| `:ASSET`       | Single-sided withdraw to one side.                                                          | Optional. Can be shortened. Must be either RUNE or the ASSET. |
+
+**Examples:**
+
+- `WITHDRAW:POOL:10000` &mdash; dual-sided 100% withdraw liquidity. If a single-address position, this withdraws single-sidedly instead
+- `-:POOL:1000` &mdash; dual-sided 10% withdraw liquidity
+- `wd:POOL:5000:ASSET` &mdash; withdraw 50% liquidity as the asset specified while the rest stays in the pool, e.g., `w:BTC.BTC:5000:BTC.BTC`
+
+### Claim TCY
+
+Claim TCY tokens for THORFi debt. Claims must be sent form an address within [`tcy_claimers_mainnet`](https://gitlab.com/thorchain/thornode/-/raw/develop/common/tcyclaimlist/tcy_claimers_mainnet.json). Claimed TCY is assigned to the specified thor address and automatically staked.
+
+**`TCY:ADDR`**
+
+| Parameter | Notes                           | Conditions                                       |
+| --------- | ------------------------------- | ------------------------------------------------ |
+| Payload   | From L1 a calim address address | [Dust thresholds](#dust-thresholds) must be met. |
+| `TCY`     | The TCY Claim handler.          |                                                  |
+| `ADDR`    | Must be a thor address          | Becomes the owner of the TCY                     |
+
+Example:
+
+- `tcy:thor1tj237x6zdpk3l7x8g4qhutqnnjq5v6syglprz7` &mdash; claim TCY, sent to the originator's address.
+
+### Stake TCY
+
+**`TCY+`**
+
+| Parameter | Notes                  | Conditions        |
+| --------- | ---------------------- | ----------------- |
+| Payload   | TCY to be staked       | Use `MsgDeposit`. |
+| `TCY+`    | The TCY Stake handler. |                   |
+
+Example:
+
+- `TCY+` &mdash; Stakes TCY included in the payload.
+
+### Unstake TCY
+
+**`TCY-:BASISPOINTS`**
+
+| Parameter      | Notes                    | Conditions                         |
+| -------------- | ------------------------ | ---------------------------------- |
+| Payload        | Unstake TCY              | Use `MsgDeposit`.                  |
+| `TCY-`         | The TCY Unstake handler. |                                    |
+| `:BASISPOINTS` | Basis points.            | Range 0-10000, where 10000 = 100%. |
+
+Example:
+
+- `TCY-:5000` &mdash; remove 50% of the staked TCY.
+
+### Add Trade Account
+
+**`TRADE+:ADDR`**
+
+Adds an L1 asset to the [Trade Account](../concepts/trade-accounts.md).
+
+| Parameter | Notes                                 | Conditions                                     |
+| --------- | ------------------------------------- | ---------------------------------------------- |
+| Payload   | The asset to add to the Trade Account | Must be a L1 asset and supported by THORChain. |
+| `TRADE+`  | The trade account handler.            |                                                |
+| `ADDR`    | Must be a thor address                | Specifies the owner                            |
+
+**Example:** `TRADE+:thor1x2whgc2nt665y0kc44uywhynazvp0l8tp0vtu6` - Add the sent asset and amount to the Trade Account.
+
+### Withdraw Trade Account
+
+Withdraws an L1 asset from the Trade Account.
+
+**`TRADE-:ADDR`**
+
+| Parameter | Notes                                                                          | Conditions               |
+| --------- | ------------------------------------------------------------------------------ | ------------------------ |
+| Payload   | The [Trade Asset](./asset-notation.md#trade-assets) to be withdrawn and amount | Use `MsgDeposit`.        |
+| `TRADE-`  | The trade account handler.                                                     |                          |
+| `ADDR`    | L1 address to which the withdrawal will be sent                                | Cannot be a thor address |
+
+Note: Trade Asset and Amount are determined by the `coins` within the `MsgDeposit`. Transaction fee in `RUNE` does apply.
+
+**Example:**
+
+- `TRADE-:bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw` - Withdraw 0.1 BTC from the Trade Account and send to `bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw`
+
+  ```text
+  {"body":{"messages":[{"":"/types.MsgDeposit","coins":[{"asset":"BTC~BTC","amount":"10000000","decimals":"0"}],"memo":"trade-:bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw","signer":"thor19phfqh3ce3nnjhh0cssn433nydq9shx7wfmk7k"}],"memo":"","timeout_height":"0","extension_options":[],"non_critical_extension_options":[]},"auth_info":{"signer_infos":[],"fee":{"amount":[],"gas_limit":"200000","payer":"","granter":""}},"signatures":[]}
+  ```
+
+### Add Secured Asset
+
+**`SECURE+:ADDR`**
+
+Converts a L1 asset to a [Secured Asset](../concepts/secured-assets.md).
+
+| Parameter | Notes                               | Conditions                                     |
+| --------- | ----------------------------------- | ---------------------------------------------- |
+| Payload   | The asset to become a Secured Asset | Must be a L1 asset and supported by THORChain. |
+| `SECURE+` | The Secured Asset handler.          |                                                |
+| `ADDR`    | Must be a thor address              | Specifies the owner and desitnation            |
+
+**Example:** `SECURE+:thor1x2whgc2nt665y0kc44uywhynazvp0l8tp0vtu6` - Converts the sent asset and amount to a Secured Asset.
+
+### Withdraw Secured Asset
+
+Converts a Secured Asset to a L1 Asset.
+
+**`SECURE-:ADDR`**
+
+| Parameter | Notes                                                                             | Conditions               |
+| --------- | --------------------------------------------------------------------------------- | ------------------------ |
+| Payload   | The [Secured Asset](./asset-notation.md#secured-assets) to be redeemed and amount | Use `MsgDeposit`.        |
+| `SECURE-` | The Secured Asset handler.                                                        |                          |
+| `ADDR`    | L1 address to which the L1 asset will be sent                                     | Cannot be a thor address |
+
+Note: Secured Assets and amount are determined by the `coins` within the `MsgDeposit`. Transaction fee in `RUNE` does apply.
+
+**Example:** `SECURE-:bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw` - Convert 0.1 BTC from a Secured Asset to a L1 and send to `bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw`
+
+### Execute
+
+Execute a Smart Contract from a base layer transaction.
+
+**`X:ADDR:PAYLOAD`**
+
+| Parameter | Notes                                                                                                                          | Conditions                                       |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
+| Payload   | The asset to sent to the smart contract. L1 asset will be converted into a [Secured Asset](./asset-notation.md#secured-assets) | [Dust thresholds](#dust-thresholds) must be met. |
+| `x`       | The Wasm Execute handler. Also `exec`.                                                                                         | Must be a THORChain address                      |
+| `ADDR`    | The THORChain Wasm smart contract address                                                                                      | Must be a thor address                           |
+| `MSG`     | Payload send as `msg` to the Smart Contract, encoded as a base64 byte string.                                                  |                                                  |
+
+Example: `x:tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f:AA==`
+
+The above example creates a `MsgWasmExec` object for a smart contract execution and calls the contract with the following parameters:
+
+1. Contract Address: The address specified in the ADDR field `tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f`.
+2. Sender Address: Derived from the Layer 1 transaction's sender (e.g., the Bitcoin address).
+3. Msg Payload: The arguments provided in the MSG field (AA== in the example, decoded into the expected input for the smart contract).
+4. Funds: The Layer 1 asset (e.g., BTC amount sent in) is converted into a Secured Asset and included in the smart contract call.
+5. The smart contract will be executed via the following Cosmos SDK function: `ExecuteContract(ctx, contractAddr, senderAddr, msg.Msg, msg.Funds)`
+
+### Switch
+
+One way switch for external tokens to be a native THORChain asset. Supported Assets are listed in a switchMap within the `SwitchManager`.
+
+| Parameter | Notes                              | Conditions                           |
+| --------- | ---------------------------------- | ------------------------------------ |
+| Payload   | The asset to become a Native Asset | Must be a L1 supported on THORChain. |
+| `switch`  | The Secured Asset handler.         |                                      |
+| `ADDR`    | The thor address for native asset  | Must be a thor address               |
+
 ### **Deposit Savers**
 
 Deposit an asset into THORChain Savers.
@@ -133,7 +324,7 @@ Withdraw an asset from THORChain Savers.
 
 **`WITHDRAW:POOL:BASISPOINTS`**
 
-| Parameter      | Notes                                                                                       | Extra                                            |
+| Parameter      | Notes                                                                                       | Conditions                                       |
 | -------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------ |
 | Payload        | Send the dust threshold of the asset to cause the transaction to be picked up by THORChain. | [Dust thresholds](#dust-thresholds) must be met. |
 | `WITHDRAW`     | The withdraw handler.                                                                       | Also `-` or `wd`                                 |
@@ -196,7 +387,7 @@ Deposit RUNE to the RUNEPool
 
 **`POOL+`**
 
-| Parameter | Notes                 | Extra                                                                    |
+| Parameter | Notes                 | Conditions                                                               |
 | --------- | --------------------- | ------------------------------------------------------------------------ |
 | Payload   | THOR.RUNE             | Use `MsgDeposit`. The amount of RUNE in the tx will be added to RunePool |
 | `POOL+`   | The RUNEPool handler. |                                                                          |
@@ -205,7 +396,7 @@ Deposit RUNE to the RUNEPool
 
 **`POOL-:BASISPOINTS:AFFILIATE:FEE`**
 
-| Parameter      | Notes                                       | Extra                                         |
+| Parameter      | Notes                                       | Conditions                                    |
 | -------------- | ------------------------------------------- | --------------------------------------------- |
 | Payload        | None required.                              | Use `MsgDeposit`.                             |
 | `POOL-`        | The The RUNEPool handler.                   |                                               |
@@ -215,158 +406,13 @@ Deposit RUNE to the RUNEPool
 
 Example: `POOL-:10000:dx:10` - 100% Withdraw from RUNEPool with a 10 basis point affiliate fee. Affiliates receive the corresponding basis points of positive PnL. If user is withdrawing with a loss, the affiliate will receive no fee.
 
-### Add Liquidity
-
-Add liquidity to a pool.
-
-**`ADD:POOL:PAIREDADDR:AFFILIATE:FEE`**
-
-There are rules for adding liquidity, see [the rules here](https://docs.thorchain.org/learn/getting-started#entering-and-leaving-a-pool).
-
-| Parameter     | Notes                                                                                                                                                                                                                                  | Conditions                                                                  |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| Payload       | The asset to add liquidity with.                                                                                                                                                                                                       | Must be supported by THORChain.                                             |
-| `ADD`         | The add liquidity handler.                                                                                                                                                                                                             | Also `a` or `+`                                                             |
-| `:POOL`       | The pool to add liquidity to.                                                                                                                                                                                                          | Can be shortened.                                                           |
-| `:PAIREDADDR` | The other address to link with. If on external chain, link to THOR address. If on THORChain, link to external address. If a paired address is found, the LP is matched and added. If none is found, the liquidity is put into pending. | Optional. If not specified, a single-sided add-liquidity action is created. |
-| `:AFFILIATE`  | The affiliate address. The affiliate is added to the pool as an LP.                                                                                                                                                                    | Optional. Must be a THORName or THOR Address.                               |
-| `:FEE`        | The [affiliate fee](fees.md#affiliate-fee).                                                                                                                                                                                            | Optional. Ranges from 0 to 1000 Basis Points.                               |
-
-**Examples:**
-
-- `ADD:BTC.BTC` &mdash; add liquidity single-sided. If this is a position's first add, liquidity can only be withdrawn to the same address
-- `a:POOL:PAIREDADDR` &mdash; add on both sides (dual-sided)
-- `+:POOL:PAIREDADDR:AFFILIATE:FEE` &mdash; add dual-sided with affiliate
-- `+:ETH.ETH:` &mdash; add liquidity with position pending
-
-### Withdraw Liquidity
-
-Withdraw liquidity from a pool.
-
-**`WITHDRAW:POOL:BASISPOINTS:ASSET`**
-
-A withdrawal can be either dual-sided (withdrawn based on pool's price) or entirely single-sided (converted to one side and sent out).
-
-| Parameter      | Notes                                                                                       | Extra                                                         |
-| -------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| Payload        | Send the dust threshold of the asset to cause the transaction to be picked up by THORChain. | [Dust thresholds](#dust-thresholds) must be met.              |
-| `WITHDRAW`     | The withdraw liquidity handler.                                                             | Also `-` or `wd`                                              |
-| `:POOL`        | The pool to withdraw liquidity from.                                                        | Can be shortened.                                             |
-| `:BASISPOINTS` | Basis points.                                                                               | Range 0-10000, where 10000 = 100%.                            |
-| `:ASSET`       | Single-sided withdraw to one side.                                                          | Optional. Can be shortened. Must be either RUNE or the ASSET. |
-
-**Examples:**
-
-- `WITHDRAW:POOL:10000` &mdash; dual-sided 100% withdraw liquidity. If a single-address position, this withdraws single-sidedly instead
-- `-:POOL:1000` &mdash; dual-sided 10% withdraw liquidity
-- `wd:POOL:5000:ASSET` &mdash; withdraw 50% liquidity as the asset specified while the rest stays in the pool, e.g., `w:BTC.BTC:5000:BTC.BTC`
-
-### Add Trade Account
-
-**`TRADE+:ADDR`**
-
-Adds an L1 asset to the [Trade Account](../concepts/trade-accounts.md).
-
-| Parameter | Notes                                 | Extra                                          |
-| --------- | ------------------------------------- | ---------------------------------------------- |
-| Payload   | The asset to add to the Trade Account | Must be a L1 asset and supported by THORChain. |
-| `TRADE+`  | The trade account handler.            |                                                |
-| `ADDR`    | Must be a thor address                | Specifies the owner                            |
-
-**Example:** `TRADE+:thor1x2whgc2nt665y0kc44uywhynazvp0l8tp0vtu6` - Add the sent asset and amount to the Trade Account.
-
-### Withdraw Trade Account
-
-Withdraws an L1 asset from the Trade Account.
-
-**`TRADE-:ADDR`**
-
-| Parameter | Notes                                                                          | Extra                    |
-| --------- | ------------------------------------------------------------------------------ | ------------------------ |
-| Payload   | The [Trade Asset](./asset-notation.md#trade-assets) to be withdrawn and amount | Use `MsgDeposit`.        |
-| `TRADE-`  | The trade account handler.                                                     |                          |
-| `ADDR`    | L1 address to which the withdrawal will be sent                                | Cannot be a thor address |
-
-Note: Trade Asset and Amount are determined by the `coins` within the `MsgDeposit`. Transaction fee in `RUNE` does apply.
-
-**Example:**
-
-- `TRADE-:bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw` - Withdraw 0.1 BTC from the Trade Account and send to `bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw`
-
-  ```text
-  {"body":{"messages":[{"":"/types.MsgDeposit","coins":[{"asset":"BTC~BTC","amount":"10000000","decimals":"0"}],"memo":"trade-:bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw","signer":"thor19phfqh3ce3nnjhh0cssn433nydq9shx7wfmk7k"}],"memo":"","timeout_height":"0","extension_options":[],"non_critical_extension_options":[]},"auth_info":{"signer_infos":[],"fee":{"amount":[],"gas_limit":"200000","payer":"","granter":""}},"signatures":[]}
-  ```
-
-### Add Secured Asset
-
-**`SECURE+:ADDR`**
-
-Converts a L1 asset to a [Secured Asset](../concepts/secured-assets.md).
-
-| Parameter | Notes                               | Extra                                          |
-| --------- | ----------------------------------- | ---------------------------------------------- |
-| Payload   | The asset to become a Secured Asset | Must be a L1 asset and supported by THORChain. |
-| `SECURE+` | The Secured Asset handler.          |                                                |
-| `ADDR`    | Must be a thor address              | Specifies the owner and desitnation            |
-
-**Example:** `SECURE+:thor1x2whgc2nt665y0kc44uywhynazvp0l8tp0vtu6` - Converts the sent asset and amount to a Secured Asset.
-
-### Withdraw Secured Asset
-
-Converts a Secured Asset to a L1 Asset.
-
-**`SECURE-:ADDR`**
-
-| Parameter | Notes                                                                             | Extra                    |
-| --------- | --------------------------------------------------------------------------------- | ------------------------ |
-| Payload   | The [Secured Asset](./asset-notation.md#secured-assets) to be redeemed and amount | Use `MsgDeposit`.        |
-| `SECURE-` | The Secured Asset handler.                                                        |                          |
-| `ADDR`    | L1 address to which the L1 asset will be sent                                     | Cannot be a thor address |
-
-Note: Secured Assets and amount are determined by the `coins` within the `MsgDeposit`. Transaction fee in `RUNE` does apply.
-
-**Example:** `SECURE-:bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw` - Convert 0.1 BTC from a Secured Asset to a L1 and send to `bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw`
-
-### Execute
-
-Execute a Smart Contract from a base layer transaction.
-
-**`X:ADDR:PAYLOAD`**
-
-| Parameter | Notes                                                                                                                          | Extra                                            |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
-| Payload   | The asset to sent to the smart contract. L1 asset will be converted into a [Secured Asset](./asset-notation.md#secured-assets) | [Dust thresholds](#dust-thresholds) must be met. |
-| `x`       | The Wasm Execute handler. Also `exec`.                                                                                         | Must be a THORChain address                      |
-| `ADDR`    | The THORChain Wasm smart contract address                                                                                      | Must be a thor address                           |
-| `MSG`     | Payload send as `msg` to the Smart Contract, encoded as a base64 byte string.                                                  |                                                  |
-
-Example: `x:tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f:AA==`
-
-The above example creates a `MsgWasmExec` object for a smart contract execution and calls the contract with the following parameters:
-
-1. Contract Address: The address specified in the ADDR field `tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f`.
-2. Sender Address: Derived from the Layer 1 transaction's sender (e.g., the Bitcoin address).
-3. Msg Payload: The arguments provided in the MSG field (AA== in the example, decoded into the expected input for the smart contract).
-4. Funds: The Layer 1 asset (e.g., BTC amount sent in) is converted into a Secured Asset and included in the smart contract call.
-5. The smart contract will be executed via the following Cosmos SDK function: `ExecuteContract(ctx, contractAddr, senderAddr, msg.Msg, msg.Funds)`
-
-### Switch
-
-One way switch for external tokens to be a native THORChain asset. Supported Assets are listed in a switchMap within the `SwitchManager`.
-
-| Parameter | Notes                              | Extra                                |
-| --------- | ---------------------------------- | ------------------------------------ |
-| Payload   | The asset to become a Native Asset | Must be a L1 supported on THORChain. |
-| `switch`  | The Secured Asset handler.         |                                      |
-| `ADDR`    | The thor address for native asset  | Must be a thor address               |
-
 ### DONATE & RESERVE
 
 Donate to a pool.
 
 **`DONATE:POOL`**
 
-| Parameter | Notes                                    | Extra                                                 |
+| Parameter | Notes                                    | Conditions                                            |
 | --------- | ---------------------------------------- | ----------------------------------------------------- |
 | Payload   | The asset to donate to a THORChain pool. | Must be supported by THORChain. Can be RUNE or ASSET. |
 | `DONATE`  | The donate handler.                      | Also `d`                                              |
@@ -380,7 +426,7 @@ Donate to a pool.
 
 Donate to the THORChain Reserve.
 
-| Parameter | Notes                | Extra                                        |
+| Parameter | Notes                | Conditions                                   |
 | --------- | -------------------- | -------------------------------------------- |
 | Payload   | THOR.RUNE            | The RUNE to credit to the THORChain Reserve. |
 | `RESERVE` | The reserve handler. |                                              |
@@ -391,7 +437,7 @@ Perform node maintenance features. Also see [Pooled Nodes](https://docs.thorchai
 
 **`BOND:NODEADDR:PROVIDER:FEE`**
 
-| Parameter   | Notes                                    | Extra                                                                                  |
+| Parameter   | Notes                                    | Conditions                                                                             |
 | ----------- | ---------------------------------------- | -------------------------------------------------------------------------------------- |
 | Payload     | THOR.RUNE                                | The asset to bond to a Node.                                                           |
 | `BOND`      | The bond handler.                        |                                                                                        |
@@ -401,7 +447,7 @@ Perform node maintenance features. Also see [Pooled Nodes](https://docs.thorchai
 
 **`UNBOND:NODEADDR:AMOUNT:PROVIDER`**
 
-| Parameter   | Notes                    | Extra                                                                 |
+| Parameter   | Notes                    | Conditions                                                            |
 | ----------- | ------------------------ | --------------------------------------------------------------------- |
 | Payload     | None required.           | Use `MsgDeposit`.                                                     |
 | `UNBOND`    | The unbond handler.      |                                                                       |
@@ -411,7 +457,7 @@ Perform node maintenance features. Also see [Pooled Nodes](https://docs.thorchai
 
 **`LEAVE:NODEADDR`**
 
-| Parameter   | Notes                       | Extra                                                                                                    |
+| Parameter   | Notes                       | Conditions                                                                                               |
 | ----------- | --------------------------- | -------------------------------------------------------------------------------------------------------- |
 | Payload     | None required.              | Use `MsgDeposit`.                                                                                        |
 | `LEAVE`     | The leave handler.          |                                                                                                          |
@@ -429,7 +475,7 @@ Internal memo type used to mark migration transactions between a retiring vault 
 
 **`MIGRATE:BLOCKHEIGHT`**
 
-| Parameter      | Notes                              | Extra                         |
+| Parameter      | Notes                              | Conditions                    |
 | -------------- | ---------------------------------- | ----------------------------- |
 | Payload        | Assets migrating.                  |                               |
 | `MIGRATE`      | The migrate handler.               |                               |
@@ -449,7 +495,7 @@ May cause loss of funds if not performed correctly and at the right time.
 
 **`NOOP:NOVAULT`**
 
-| Parameter  | Notes                           | Extra                                                    |
+| Parameter  | Notes                           | Conditions                                               |
 | ---------- | ------------------------------- | -------------------------------------------------------- |
 | Payload    | The asset to credit to a vault. | Must be ASSET or RUNE.                                   |
 | `NOOP`     | The no-op handler.              | Adds to the vault balance, but does not add to the pool. |
@@ -459,7 +505,7 @@ May cause loss of funds if not performed correctly and at the right time.
 
 The following are the conditions for refunds:
 
-| Condition                | Notes                                                                                                        |
+| Condition                | Conditions                                                                                                   |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | Invalid `MEMO`           | If the `MEMO` is incorrect the user will be refunded.                                                        |
 | Invalid Assets           | If the asset for the transaction is incorrect (adding an asset into a wrong pool) the user will be refunded. |

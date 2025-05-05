@@ -81,7 +81,7 @@ Mimirs have a maximum length of 128 bytes (see MaxMimirLength in THORNode code).
 - `LoanRepaymentMaturity`: Number of blocks before loan has reached maturity and can be repaid
 - `MinCR`\*: Minimum collateralization ratio (basis pts)
 - `MaxCR`\*: Maximum collateralization ratio (basis pts)
-- `Lending-THOR-<Asset>`#: Lending key for an asset, allows that Asset to be used as colloteral. The lending key for the `ETH.ETH` pool would be `LENDING-THOR-ETH` and enabled the `THOR-ETH` virtual pool.
+- `Lending-THOR-<Asset>`#: Lending key for an asset, allows that Asset to be used as collateral. The lending key for the `ETH.ETH` pool would be `LENDING-THOR-ETH` and enabled the `THOR-ETH` virtual pool.
 - `LoanStreamingSwapsInterval`\*: The block interval between each streaming swap of opening or closing a loan
 
 ## Derived Assets
@@ -202,6 +202,17 @@ Mimirs have a maximum length of 128 bytes (see MaxMimirLength in THORNode code).
 - `PendulumUseEffectiveSecurity`: Determines the [Incentive Pendulum](./concepts/incentive-pendulum.md) perception of the `securing`. If set to 1, `Effective Security Bond` is used; otherwise `Total Effective Bond` is applied.
 - `PendulumUseVaultAssets`: Determines the [Incentive Pendulum](./concepts/incentive-pendulum.md) perception of the `securing`. If set to 1, `Total Pooled` is used; otherwise `Vaulted Assets` is applied.
 - `PendulumAssetsBasisPoints`: Scales the Incentive Pendulum perception of the `secured` L1 asset size, where values above 100% overestimate and values below 100% underestimate the amount of `secured` assets.
+
+## TCY Management
+
+- `MinRuneForTCYStakeDistribution`: Minimum RUNE required in the TCY fund to be eligible for distribution (default: 2,100 RUNE (210000000000 in 1e8 notation))
+- `MinTCYForTCYStakeDistribution`: Minimum TCY required in the TCY fund to be eligible for distribution (default: 100,000 TCY)
+- `TCYStakeSystemIncomeBps`: Percentage (in basis points) of system income allocated to the TCY fund (default: 1000 bps = 10%)
+- `TCYClaimingSwapHalt`: Enables/disables RUNE-to-TCY swaps in the claiming module (default: 1, halted)
+- `TCYStakeDistributionHalt`: Enables/disables distribution of RUNE revenue to TCY stakers (default: 1, halted)
+- `TCYStakingHalt`: Enables/disables staking of TCY tokens (default: 1, halted)
+- `TCYUnstakingHalt`: Enables/disables unstaking of TCY tokens (default: 1, halted)
+- `TCYClaimingHalt`: Enables/disables claiming of TCY tokens for THORFi deposits (default: 1, halted)
 
 ## Miscellaneous
 

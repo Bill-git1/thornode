@@ -24,9 +24,9 @@ See this [THORChain Development Guide](https://youtu.be/Qowrasst2UQ) video for m
 
 Frontend developers can use THORChain to access decentralised layer1 swaps between BTC, ETH, ATOM and more.
 
-### [Native Savings Guide](saving-guide/quickstart-guide.md)
+### [Affiliate Guide](affiliate-guide/affiliate-fee-guide.md)
 
-THORChain offers a Savings product, which earns yield from Swap fees. Deposit Layer1 Assets to earn in-kind yield. No lockups, penalties, impermanent loss, minimums, maximums or KYC.
+THORChain offers user interfaces affiliate fees up to 10% for using THORChain.
 
 ### [Aggregators](aggregators/aggregator-overview.md)
 
@@ -54,7 +54,8 @@ THORChain has several APIs with Swagger documentation.
 
 - Midgard - [https://midgard.ninerealms.com/v2/doc](https://midgard.ninerealms.com/v2/doc)
 - THORNode - [https://thornode.ninerealms.com/thorchain/doc](https://thornode.ninerealms.com/thorchain/doc)
-- Cosmos RPC - [https://v1.cosmos.network/rpc/v0.45.1](https://v1.cosmos.network/rpc/v0.45.1), [Example Link](https://stagenet-thornode.ninerealms.com/cosmos/base/tendermint/v1beta1/blocks/latest)
+- Cosmos RPC - [https://docs.cosmos.network/v0.50/learn/advanced/grpc_rest](https://docs.cosmos.network/v0.50/learn/advanced/grpc_rest)
+- CometBFT RPC - [https://docs.cometbft.com/v0.38/rpc/](https://docs.cometbft.com/v0.38/rpc/)
 
 See [Connecting to THORChain](concepts/connecting-to-thorchain.md "mention") for more information.
 
