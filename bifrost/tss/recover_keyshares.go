@@ -17,6 +17,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/app"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/v3/config"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/ebifrost"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
@@ -70,7 +71,8 @@ func RecoverKeyShares(conf config.Bifrost, thorchain thorclient.ThorchainBridge)
 
 	// walk backward from the churn height until we find the TssPool message we sent
 	var keysharesEncBytes []byte
-	dec := tx.DefaultTxDecoder(thorclient.MakeCodec())
+	cdc := thorclient.MakeCodec()
+	dec := ebifrost.TxDecoder(cdc, tx.DefaultTxDecoder(cdc))
 	for i := lastVaultHeight; i > lastVaultHeight-conf.TSS.MaxKeyshareRecoverScanBlocks; i-- {
 		if i%1000 == 0 {
 			log.Info().Msgf("scanning block %d for TssPool message to recover key shares", i)
