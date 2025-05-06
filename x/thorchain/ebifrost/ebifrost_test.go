@@ -167,10 +167,20 @@ func TestProposalInjectTxs(t *testing.T) {
 
 	// Call the method
 	sdkCtx := createTestSDKContext(100)
-	result := ebs.ProposalInjectTxs(sdkCtx)
+
+	const maxTxBytes = 10000000
+	result, totalBytes := ebs.ProposalInjectTxs(sdkCtx, maxTxBytes)
 
 	// Verify results
 	require.Len(t, result, 2)
+	// Verify the cumulative byte length is calculated and returned
+	require.Greater(t, totalBytes, int64(0))
+
+	// Test with a very small maxTxBytes to verify size filtering
+	const smallMaxTxBytes = 1 // Too small to include any transactions
+	limitedResult, limitedTotalBytes := ebs.ProposalInjectTxs(sdkCtx, smallMaxTxBytes)
+	require.Len(t, limitedResult, 0, "No transactions should be included when maxTxBytes is too small")
+	require.Zero(t, limitedTotalBytes)
 }
 
 // TestEnshrinedBifrostStartStop tests the Start and Stop methods

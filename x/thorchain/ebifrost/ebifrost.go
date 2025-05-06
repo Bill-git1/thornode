@@ -13,6 +13,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/bech32"
 
+	cmttypes "github.com/cometbft/cometbft/types"
 	common "gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 	"google.golang.org/grpc"
@@ -445,13 +446,14 @@ func (b *EnshrinedBifrost) MarshalTx(msg sdk.Msg) ([]byte, error) {
 }
 
 // ProposalInjectTxs is intended to be called by the current proposing validator during PrepareProposal
-// and will return a list of in-quorum transactions to be included in the next block.
-func (b *EnshrinedBifrost) ProposalInjectTxs(ctx sdk.Context) [][]byte {
+// and will return a list of in-quorum transactions to be included in the next block along with the total byte length of the transactions.
+func (b *EnshrinedBifrost) ProposalInjectTxs(ctx sdk.Context, maxTxBytes int64) ([][]byte, int64) {
 	if b == nil {
-		return nil
+		return nil, 0
 	}
 
 	var injectTxs [][]byte
+	var txBzLen int64
 
 	// Process observed txs
 	txBzs := b.quorumTxCache.ProcessForProposal(
@@ -470,7 +472,14 @@ func (b *EnshrinedBifrost) ProposalInjectTxs(ctx sdk.Context) [][]byte {
 		},
 		b.logger,
 	)
-	injectTxs = append(injectTxs, txBzs...)
+	for _, bz := range txBzs {
+		addLen := cmttypes.ComputeProtoSizeForTxs([]cmttypes.Tx{bz})
+		if txBzLen+addLen > maxTxBytes {
+			continue
+		}
+		txBzLen += addLen
+		injectTxs = append(injectTxs, bz)
+	}
 
 	// Process network fees
 	nfBzs := b.networkFeeCache.ProcessForProposal(
@@ -487,7 +496,14 @@ func (b *EnshrinedBifrost) ProposalInjectTxs(ctx sdk.Context) [][]byte {
 		},
 		b.logger,
 	)
-	injectTxs = append(injectTxs, nfBzs...)
+	for _, bz := range nfBzs {
+		addLen := cmttypes.ComputeProtoSizeForTxs([]cmttypes.Tx{bz})
+		if txBzLen+addLen > maxTxBytes {
+			continue
+		}
+		txBzLen += addLen
+		injectTxs = append(injectTxs, bz)
+	}
 
 	// Process solvency
 	sBzs := b.solvencyCache.ProcessForProposal(
@@ -506,7 +522,14 @@ func (b *EnshrinedBifrost) ProposalInjectTxs(ctx sdk.Context) [][]byte {
 		},
 		b.logger,
 	)
-	injectTxs = append(injectTxs, sBzs...)
+	for _, bz := range sBzs {
+		addLen := cmttypes.ComputeProtoSizeForTxs([]cmttypes.Tx{bz})
+		if txBzLen+addLen > maxTxBytes {
+			continue
+		}
+		txBzLen += addLen
+		injectTxs = append(injectTxs, bz)
+	}
 
 	// Process errata
 	eBzs := b.errataCache.ProcessForProposal(
@@ -523,9 +546,16 @@ func (b *EnshrinedBifrost) ProposalInjectTxs(ctx sdk.Context) [][]byte {
 		},
 		b.logger,
 	)
-	injectTxs = append(injectTxs, eBzs...)
+	for _, bz := range eBzs {
+		addLen := cmttypes.ComputeProtoSizeForTxs([]cmttypes.Tx{bz})
+		if txBzLen+addLen > maxTxBytes {
+			continue
+		}
+		txBzLen += addLen
+		injectTxs = append(injectTxs, bz)
+	}
 
-	return injectTxs
+	return injectTxs, txBzLen
 }
 
 // Test use only

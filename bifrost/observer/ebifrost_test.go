@@ -268,7 +268,8 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 
 	// Check that enshrined bifrost has the tx cached
 	for _, eb := range ebs {
-		c.Assert(len(eb.ProposalInjectTxs(sdk.Context{})), Equals, 0) // No txs yet, need quorum
+		txs, _ := eb.ProposalInjectTxs(sdk.Context{}, 10000000)
+		c.Assert(len(txs), Equals, 0) // No txs yet, need quorum
 	}
 
 	for _, atg := range attestationGossips {
@@ -311,7 +312,7 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 	// Each validator should have the transaction ready since they all participated in attestation
 	var injectedTxQuorum *stypes.MsgObservedTxQuorum
 	for i, eb := range ebs {
-		injectTxs := eb.ProposalInjectTxs(sdk.Context{})
+		injectTxs, _ := eb.ProposalInjectTxs(sdk.Context{}, 10000000)
 		c.Assert(len(injectTxs), Equals, 1, Commentf("Validator %d: Expected 1 tx to be ready for injection", i))
 		if i == 0 {
 			msgs, err := eb.GetInjectedMsgs(sdk.Context{}, injectTxs)
@@ -341,19 +342,19 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 	ebs[0].MarkQuorumTxAttestationsConfirmed(sdkCtx, injectedTxQuorum.QuoTx)
 
 	// Check that tx was removed from that validator's injection queue
-	injectTxsAfterMark := ebs[0].ProposalInjectTxs(sdk.Context{})
+	injectTxsAfterMark, _ := ebs[0].ProposalInjectTxs(sdk.Context{}, 10000000)
 	c.Assert(len(injectTxsAfterMark), Equals, 0, Commentf("Expected 0 txs after marking as confirmed"))
 
 	// Other validators should still have the tx in their queue
 	for i := 1; i < len(ebs); i++ {
-		injectTxs := ebs[i].ProposalInjectTxs(sdk.Context{})
+		injectTxs, _ := ebs[i].ProposalInjectTxs(sdk.Context{}, 10000000)
 		c.Assert(len(injectTxs), Equals, 1, Commentf("Validator %d: Should still have tx in queue", i))
 
 		// Now clear from the other validators too
 		ebs[i].MarkQuorumTxAttestationsConfirmed(sdkCtx, injectedTxQuorum.QuoTx)
 
 		// Verify it's cleared
-		injectTxsAfterMark = ebs[i].ProposalInjectTxs(sdk.Context{})
+		injectTxsAfterMark, _ = ebs[i].ProposalInjectTxs(sdk.Context{}, 10000000)
 		c.Assert(len(injectTxsAfterMark), Equals, 0, Commentf("Validator %d: Expected 0 txs after marking as confirmed", i))
 	}
 
