@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -55,8 +56,11 @@ type Observer struct {
 	// signedTxOutCache is a cache to keep track of observations for outbounds which were
 	// manually observed after completion of signing and should be filtered from future
 	// mempool and block observations.
-	signedTxOutCache  *lru.Cache
-	attestationGossip *AttestationGossip
+	signedTxOutCache   *lru.Cache
+	signedTxOutCacheMu sync.Mutex
+	attestationGossip  *AttestationGossip
+
+	observerWorkers int
 }
 
 // NewObserver create a new instance of Observer for chain
@@ -70,6 +74,14 @@ func NewObserver(pubkeyMgr *pubkeymanager.PubKeyManager,
 	logger := log.Logger.With().Str("module", "observer").Logger()
 
 	cfg := config.GetBifrost()
+
+	observerWorkers := cfg.ObserverWorkers
+	if observerWorkers == 0 {
+		observerWorkers = runtime.NumCPU() / 2
+		if observerWorkers == 0 {
+			observerWorkers = 1
+		}
+	}
 
 	storage, err := NewObserverStorage(dataPath, cfg.ObserverLevelDB)
 	if err != nil {
@@ -91,16 +103,17 @@ func NewObserver(pubkeyMgr *pubkeymanager.PubKeyManager,
 		m:                     m,
 		pubkeyMgr:             pubkeyMgr,
 		lock:                  &sync.Mutex{},
-		globalTxsQueue:        make(chan types.TxIn),
-		globalErrataQueue:     make(chan types.ErrataBlock),
-		globalSolvencyQueue:   make(chan types.Solvency),
-		globalNetworkFeeQueue: make(chan common.NetworkFee),
+		globalTxsQueue:        make(chan types.TxIn, 10000),
+		globalErrataQueue:     make(chan types.ErrataBlock, 100),
+		globalSolvencyQueue:   make(chan types.Solvency, 100),
+		globalNetworkFeeQueue: make(chan common.NetworkFee, 100),
 		errCounter:            m.GetCounterVec(metrics.ObserverError),
 		thorchainBridge:       thorchainBridge,
 		storage:               storage,
 		tssKeysignMetricMgr:   tssKeysignMetricMgr,
 		signedTxOutCache:      signedTxOutCache,
 		attestationGossip:     attestationGossip,
+		observerWorkers:       observerWorkers,
 	}, nil
 }
 
@@ -132,9 +145,11 @@ func (o *Observer) Start(ctx context.Context) error {
 func (o *Observer) ObserveSigned(txIn types.TxIn) {
 	if !txIn.AllowFutureObservation {
 		// add all transaction ids to the signed tx out cache
+		o.signedTxOutCacheMu.Lock()
 		for _, tx := range txIn.TxArray {
 			o.signedTxOutCache.Add(tx.Tx, nil)
 		}
+		o.signedTxOutCacheMu.Unlock()
 	}
 
 	o.globalTxsQueue <- txIn
@@ -301,12 +316,41 @@ func (o *Observer) sendToQuorumChecker(deck *types.TxIn, finalised bool) {
 }
 
 func (o *Observer) processTxIns() {
+	// Create a worker pool with a reasonable number of workers
+	// We can use runtime.NumCPU() to get the number of available CPUs
+	// but let's limit the workers to avoid overwhelming the system
+
+	// Create a semaphore to limit concurrency
+	sem := make(chan struct{}, o.observerWorkers)
+
 	for {
 		select {
 		case <-o.stopChan:
+			// Wait for any running goroutines to complete
+			for range o.observerWorkers {
+				sem <- struct{}{}
+			}
 			return
 		case txIn := <-o.globalTxsQueue:
-			o.processObservedTx(txIn)
+			// Check if there are any items to process
+			if len(txIn.TxArray) == 0 {
+				continue
+			}
+
+			// Acquire a token from semaphore
+			sem <- struct{}{}
+
+			// Process observed tx in a goroutine
+			go func(tx types.TxIn) {
+				defer func() {
+					// Release the token back to semaphore when done
+					<-sem
+				}()
+
+				start := time.Now()
+				o.processObservedTx(tx)
+				o.logger.Debug().Msgf("processObservedTx took %s", time.Since(start))
+			}(txIn)
 		}
 	}
 }
@@ -317,9 +361,42 @@ func (o *Observer) processObservedTx(txIn types.TxIn) {
 	if len(txIn.TxArray) == 0 {
 		return
 	}
+
+	// Create a new slice for filtered transactions
+	var filteredTxArray []*types.TxInItem
+
+	// Check if we need to filter the incoming transactions
+
+	if !txIn.Filtered {
+		filterStart := time.Now()
+		// First, get a read lock to check existing transactions
+		// Filter without modifying shared state
+		filteredTxArray = o.filterObservations(txIn.Chain, txIn.TxArray, txIn.MemPool)
+		if len(filteredTxArray) == 0 {
+			o.logger.Debug().Msgf("txin is empty after filtering, ignore it")
+			return
+		}
+
+		// Set the filtered flag and update TxArray
+		txIn.TxArray = filteredTxArray
+		txIn.Filtered = true
+
+		// If we're creating a new deck entry, set the confirmation required
+		chainClient, err := o.getChain(txIn.Chain)
+		if err == nil {
+			txIn.ConfirmationRequired = chainClient.GetConfirmationCount(txIn)
+		} else {
+			o.logger.Error().Err(err).Msg("fail to get chain client for confirmation count")
+		}
+		o.logger.Debug().Msgf("filterObservations took %s", time.Since(filterStart))
+	}
+
+	// Now acquire a write lock for modifying the onDeck slice
 	o.lock.Lock()
 	defer o.lock.Unlock()
+
 	found := false
+	deckIterStart := time.Now()
 	for _, in := range o.onDeck {
 		if in.Chain != txIn.Chain {
 			continue
@@ -332,15 +409,10 @@ func (o *Observer) processObservedTx(txIn types.TxIn) {
 				continue
 			}
 		}
-		if !txIn.Filtered {
-			// onDeck txs are already filtered, so we can safely assume we are merging non-filtered txs into filtered txs
-			txIn.TxArray = o.filterObservations(txIn.Chain, txIn.TxArray, txIn.MemPool)
-			if len(txIn.TxArray) == 0 {
-				o.logger.Debug().Msgf("txin is empty after filtering for existing, ignore it")
-				return
-			}
-		}
-		// dedupe incoming txs
+
+		dedupeStart := time.Now()
+
+		// Dedupe incoming txs
 		var newTxs []*types.TxInItem
 		for _, txInItem := range txIn.TxArray {
 			foundTx := false
@@ -368,26 +440,23 @@ func (o *Observer) processObservedTx(txIn types.TxIn) {
 		if len(newTxs) > 0 {
 			in.TxArray = append(in.TxArray, newTxs...)
 		}
+		o.logger.Debug().Msgf("Dedupe took %s", time.Since(dedupeStart))
 
 		found = true
 		break
 	}
+	o.logger.Debug().Msgf("Deck iteration took %s", time.Since(deckIterStart))
+
 	if !found {
-		if !txIn.Filtered {
-			txIn.TxArray = o.filterObservations(txIn.Chain, txIn.TxArray, txIn.MemPool)
-			if len(txIn.TxArray) == 0 {
-				o.logger.Debug().Msgf("txin is empty after filtering for new, ignore it")
-				return
-			}
-			txIn.ConfirmationRequired = o.chains[txIn.Chain].GetConfirmationCount(txIn)
-			txIn.Filtered = true
-		}
-		// only append filtered txs
+		// Only append filtered txs
 		o.onDeck = append(o.onDeck, &txIn)
 	}
+
+	setDeckStart := time.Now()
 	if err := o.storage.SetOnDeckTxs(o.onDeck); err != nil {
 		o.logger.Err(err).Msg("fail to save ondeck tx")
 	}
+	o.logger.Debug().Msgf("SetOnDeckTxs took %s", time.Since(setDeckStart))
 }
 
 func (o *Observer) filterObservations(chain common.Chain, items []*types.TxInItem, memPool bool) []*types.TxInItem {
@@ -405,7 +474,10 @@ func (o *Observer) filterObservations(chain common.Chain, items []*types.TxInIte
 			isInternal = true
 
 			// skip the outbound observation if we signed and manually observed
-			if !o.signedTxOutCache.Contains(tx.Tx) {
+			o.signedTxOutCacheMu.Lock()
+			hasSigned := o.signedTxOutCache.Contains(tx.Tx)
+			o.signedTxOutCacheMu.Unlock()
+			if !hasSigned {
 				txs = append(txs, tx)
 			}
 		}

@@ -10,6 +10,7 @@ bifrost:
     write_buffer: 4194304
     block_cache_capacity: 8388608
     compact_on_init: true
+  observer_workers: 0
 
   metrics:
     enabled: true
