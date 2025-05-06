@@ -78,7 +78,7 @@ func NewSigner(cfg config.Bifrost,
 		return nil, fmt.Errorf("fail to create signer , tss keysign metric manager is nil")
 	}
 	var na *ttypes.NodeAccount
-	for i := 0; i < 300; i++ { // wait for 5 min before timing out
+	for i := int64(0); i < constants.BlocksIn(5*time.Minute); i++ { // wait for 5 min before timing out
 		var signerAddr sdktypes.AccAddress
 		signerAddr, err = thorKeys.GetSignerInfo().GetAddress()
 		if err != nil {

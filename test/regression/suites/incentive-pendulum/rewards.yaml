@@ -63,7 +63,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - .|length == 2
-  - .|[.[].balance_rune|tonumber] | add == ${TOTAL_POOLED_RUNE=200000066590}
+  - .|[.[].balance_rune|tonumber] | add == ${TOTAL_POOLED_RUNE=200000022196}
   - 100 * ${TOTAL_POOLED_RUNE} / ${BOND} | round == ${SECURED_PROPORTION=40} # (%)
 ---
 ########################################################################################
@@ -75,8 +75,8 @@ asserts:
   - .|[..|select(.type?=="swap").liquidity_fee_in_rune|tonumber] | length == 0
   # No swap events so no liquidity fees.
   - .|[..|select(.type?=="rewards")] | length == 1
-  - ..|select(.type?=="rewards").bond_reward == "${BOND_REWARD=44394}"
-  - ..|select(.type?=="rewards") | ([.[]|tonumber?] | add) - (.bond_reward|tonumber) == ${POOL_REWARDS=66590}
+  - ..|select(.type?=="rewards").bond_reward == "${BOND_REWARD=14798}"
+  - ..|select(.type?=="rewards") | ([.[]|tonumber?] | add) - (.bond_reward|tonumber) == ${POOL_REWARDS=22196}
   # Pool rewards includes the returned portion of deducted liquidity fees.
   - 100 * ${BOND_REWARD} / (${BOND_REWARD} + ${POOL_REWARDS}) | round == ${SECURED_PROPORTION}
   # (%, securing bond gets same proportion as the secured proportion of it,
@@ -113,16 +113,16 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
-  - .|[.[].balance_rune|tonumber] | add == ${TOTAL_POOLED_RUNE=195376441927}
+  - .|[.[].balance_rune|tonumber] | add == ${TOTAL_POOLED_RUNE=195376353478}
   - 100 * ${TOTAL_POOLED_RUNE} / ${BOND} | round == ${SECURED_PROPORTION=39} # (%)
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .|[..|select(.type?=="swap").liquidity_fee_in_rune|tonumber] | add == 226757445
+  - .|[..|select(.type?=="swap").liquidity_fee_in_rune|tonumber] | add == 226757394
   - .|[..|select(.type?=="rewards")] | length == 1
-  - ..|select(.type?=="rewards").bond_reward == "${BOND_REWARD=88586753}"
-  - ..|select(.type?=="rewards") | ([.[]|tonumber?] | add) - (.bond_reward|tonumber) == ${POOL_REWARDS=138281684}
+  - ..|select(.type?=="rewards").bond_reward == "${BOND_REWARD=88557820}"
+  - ..|select(.type?=="rewards") | ([.[]|tonumber?] | add) - (.bond_reward|tonumber) == ${POOL_REWARDS=138236571}
   # Pool rewards includes the returned portion of deducted liquidity fees.
   - 100 * ${BOND_REWARD} / (${BOND_REWARD} + ${POOL_REWARDS}) | round == ${SECURED_PROPORTION}
   # (%, securing bond gets same proportion as the secured proportion of it,
@@ -143,8 +143,8 @@ asserts:
   - .|[..|select(.type?=="swap").liquidity_fee_in_rune|tonumber] | length == 0
   # No swap events so no liquidity fees.
   - .|[..|select(.type?=="rewards")] | length == 1
-  - ..|select(.type?=="rewards").bond_reward == "${BOND_REWARD=21684}"
-  - ..|select(.type?=="rewards") | ([.[]|tonumber?] | add) - (.bond_reward|tonumber) == ${POOL_REWARDS=89300}
+  - ..|select(.type?=="rewards").bond_reward == "${BOND_REWARD=7228}"
+  - ..|select(.type?=="rewards") | ([.[]|tonumber?] | add) - (.bond_reward|tonumber) == ${POOL_REWARDS=29767}
   # Pool rewards includes the returned portion of deducted liquidity fees.
   - (100 * ${BOND_REWARD} / (${BOND_REWARD} + ${POOL_REWARDS}) | round) == (${SECURED_PROPORTION} * ${ASSETS_BPS}/10000 | round)
   # Because the pendulum only only perceives half the Assets, it decreases the node yield and increases the pool yield.
@@ -179,15 +179,15 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
-  - .|[.[].balance_rune|tonumber] | add == ${TOTAL_POOLED_RUNE=191200740012}
+  - .|[.[].balance_rune|tonumber] | add == ${TOTAL_POOLED_RUNE=191200536374}
   - 100 * ${TOTAL_POOLED_RUNE} / ${BOND} | round == ${SECURED_PROPORTION=38} # (%)
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .|[..|select(.type?=="swap").liquidity_fee_in_rune|tonumber] | add == 197058785
+  - .|[..|select(.type?=="swap").liquidity_fee_in_rune|tonumber] | add == 197058588
   - .|[..|select(.type?=="rewards")] | length == 1
-  - ..|select(.type?=="rewards").bond_reward == "${BOND_REWARD=37667709}"
-  - ..|select(.type?=="rewards") | ([.[]|tonumber?] | add) - (.bond_reward|tonumber) == ${POOL_REWARDS=159502067}
+  - ..|select(.type?=="rewards").bond_reward == "${BOND_REWARD=37653507}"
+  - ..|select(.type?=="rewards") | ([.[]|tonumber?] | add) - (.bond_reward|tonumber) == ${POOL_REWARDS=159442078}
   # Pool rewards includes the returned portion of deducted liquidity fees.
   - (100 * ${BOND_REWARD} / (${BOND_REWARD} + ${POOL_REWARDS}) | round) == (${SECURED_PROPORTION} * ${ASSETS_BPS}/10000 | round)

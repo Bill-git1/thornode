@@ -271,7 +271,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 2
-  - .balances[]|select(.denom=="eth/eth")|.amount|tonumber == 47122024
+  - .balances[]|select(.denom=="eth/eth")|.amount|tonumber == 47358979
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_cat }}
@@ -300,7 +300,7 @@ asserts:
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_cat }}
 asserts:
-  - .balances[]|select(.denom=="rune")|.amount|tonumber == 2499696000000+100405724
+  - .balances[]|select(.denom=="rune")|.amount|tonumber == 2499796135639
 ---
 # observe token pool outbound
 type: tx-observed-out
@@ -351,7 +351,7 @@ asserts:
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_cat }}
 asserts:
-  - .balances[]|select(.denom=="rune")|.amount|tonumber == ${CAT_BALANCE=2499796405724}
+  - .balances[]|select(.denom=="rune")|.amount|tonumber == ${CAT_BALANCE=2499796135639}
 ---
 type: tx-deposit
 signer: {{ addr_thor_cat }}
@@ -428,7 +428,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .|[.balances[]|select(.denom=="eth/eth")] | length == 1
-  - .balances[]|select(.denom=="eth/eth").amount == "${FOX_SYNTH=47122024}"
+  - .balances[]|select(.denom=="eth/eth").amount == "${FOX_SYNTH=46439946}"
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
@@ -474,13 +474,13 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 5
-  - .[0].coin.amount == "${OUTPUT_AMOUNT_1=8898578}"
+  - .[0].coin.amount == "${OUTPUT_AMOUNT_1=8887355}"
   - .[0].in_hash == "${IN_HASH_1=59F3B49705FEE999EE4B944FB3ABD8458FE284A98BAF17A9A5136E64DB5BA81A}"
-  - .[1].coin.amount == "${OUTPUT_AMOUNT_2=8836985}"
+  - .[1].coin.amount == "${OUTPUT_AMOUNT_2=8825910}"
   - .[1].in_hash == "${IN_HASH_2=03BA38020AF6B8AB2CB571104F6B6B04F3947588A707C26B5A63E1253A6A88EA}"
-  - .[2].coin.amount == "${OUTPUT_AMOUNT_3=31784670}"
-  - .[2].in_hash == "${IN_HASH_3=763237E360553D59A8E428A5F34D1273AE53905098B37620B7FF1BD65323C3EB}"
-  - .[3].coin.amount == "${OUTPUT_AMOUNT_4=8709396}"
+  - .[2].coin.amount == "${OUTPUT_AMOUNT_3=31485455}"
+  - .[2].in_hash == "${IN_HASH_3=902948878B4113F1CB70AF874D205E328A4175DCEDFDE96A2EE68C659F0AAB57}"
+  - .[3].coin.amount == "${OUTPUT_AMOUNT_4=8698153}"
   - .[3].in_hash == "${IN_HASH_4=E91556161E52FC55FF96F9D3E520C1CA4716C6578D2AF3E498F8A3C3CFEDDECC}"
 ---
 # observe outbounds for saver withdrawals and the synth swap
@@ -564,7 +564,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
-  - .[0].coin.amount == "${OUTPUT_AMOUNT=85862686}"
+  - .[0].coin.amount == "${OUTPUT_AMOUNT=86029064}"
 ---
 # observe lp outbound
 type: tx-observed-out

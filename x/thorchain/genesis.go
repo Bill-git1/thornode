@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	abci "github.com/cometbft/cometbft/abci/types"
 	"gitlab.com/thorchain/thornode/v3/common"
@@ -488,7 +489,7 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 	if startBlockHeight < 1 {
 		startBlockHeight = 1
 	}
-	endBlockHeight := ctx.BlockHeight() + 17200
+	endBlockHeight := ctx.BlockHeight() + constants.BlocksIn(30*time.Minute)
 
 	for height := startBlockHeight; height < endBlockHeight; height++ {
 		txOut, err := k.GetTxOut(ctx, height)

@@ -123,3 +123,9 @@ func (m Migrator) Migrate4to5(ctx sdk.Context) error {
 
 	return m.ClearObsoleteMimirs(ctx)
 }
+
+// Migrate5to6 migrates from version 5 to 6.
+func (m Migrator) Migrate5to6(ctx sdk.Context) error {
+	m.UpdateMimirsForBlockTime(ctx)
+	return nil
+}

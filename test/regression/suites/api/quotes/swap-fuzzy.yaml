@@ -34,7 +34,7 @@ params:
   affiliate: xxxxxxxxxxxxx
   affiliate_bps: 500
 asserts:
-  - .memo == "=:r:{{ addr_thor_fox }}:2000007991:xxxxxxxxxxxxx:500"
+  - .memo == "=:r:{{ addr_thor_fox }}:2000002663:xxxxxxxxxxxxx:500"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/quote/swap

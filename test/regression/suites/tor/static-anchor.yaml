@@ -64,7 +64,7 @@ endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
   - .derived_depth_bps|tonumber == 10000
   - .balance_asset|tonumber == 299999999999
-  - .balance_rune|tonumber == 300001797948
+  - .balance_rune|tonumber == 300000599319
 ---
 # thor.tor should not be available in the pool querier
 type: check
@@ -102,8 +102,8 @@ type: check
 endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
   - .derived_depth_bps|tonumber == 8913
-  - .balance_asset|tonumber == 271721142140 # median still ~1:1
-  - .balance_rune|tonumber == 271722770609
+  - .balance_asset|tonumber == 271720566882 # median still ~1:1
+  - .balance_rune|tonumber == 271721109707
 ---
 ########################################################################################
 # swap to USDY should reduce depth
@@ -123,8 +123,8 @@ type: check
 endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
   - .derived_depth_bps|tonumber == 7853
-  - .balance_asset|tonumber == 221719650611 # price shift with affected median
-  - .balance_rune|tonumber == 243215785107
+  - .balance_asset|tonumber == 221720052450 # price shift with affected median
+  - .balance_rune|tonumber == 243213800253
 ---
 ########################################################################################
 # swap to USDZ should reduce depth
@@ -143,8 +143,8 @@ type: check
 endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
   - .derived_depth_bps|tonumber == 6827
-  - .balance_asset|tonumber == 195750974471
-  - .balance_rune|tonumber == 214729397283
+  - .balance_asset|tonumber == 195750941088
+  - .balance_rune|tonumber == 214727219118
 ---
 ########################################################################################
 # depth should increase back to 100% over the successive max anchor blocks
@@ -181,7 +181,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 3
   - .[0].memo == "OUT:{{ native_txid -3 }}"
-  - .[0].coin.amount == "${OUT_AMOUNT=4418469500}"
+  - .[0].coin.amount == "${OUT_AMOUNT=4418485800}"
   - .[1].memo == "OUT:{{ native_txid -2 }}"
   - .[1].coin.amount == "${OUT_AMOUNT}"
   - .[2].memo == "OUT:{{ native_txid -1 }}"

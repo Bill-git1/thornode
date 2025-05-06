@@ -30,8 +30,8 @@ asserts:
   - ..|select(.type?=="affiliate_fee").asset == "BTC.BTC"
   - ..|select(.type?=="affiliate_fee").rune_address == "{{ addr_thor_pig }}"
   - ..|select(.type?=="affiliate_fee").fee_bps == "500"
-  - ..|select(.type?=="affiliate_fee").fee_amount == "413221"
-  - ..|select(.type?=="affiliate_fee").gross_amount == "8264426"
+  - ..|select(.type?=="affiliate_fee").fee_amount == "413222"
+  - ..|select(.type?=="affiliate_fee").gross_amount == "8264450"
 ---
 type: create-blocks
 count: 1
@@ -46,7 +46,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${BAL_PIG=488732572}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${BAL_PIG=488729127}
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -57,7 +57,7 @@ txs:
     from_address: {{ addr_btc_dog }}
     to_address: {{ addr_btc_fox }}
     coins:
-      - amount: "7837205"
+      - amount: "7837228"
         asset: "BTC.BTC"
         decimals: 8
     gas:
@@ -106,13 +106,13 @@ type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount|tonumber == ${BAL_PIG} + ${FEE_AMT=1248018013}
+  - .result[]|select(.denom == "rune").amount|tonumber == ${BAL_PIG} + ${FEE_AMT=1247993705}
 ---
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount == "2513708342238"
+  - .result[]|select(.denom == "rune").amount == "2513707880386"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block

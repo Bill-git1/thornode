@@ -64,7 +64,7 @@ endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
   - .derived_depth_bps|tonumber == 10000
   - .balance_asset|tonumber == 299999999999
-  - .balance_rune|tonumber == 300001797948
+  - .balance_rune|tonumber == 300000599319
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/pool/ETH.USDX-0X9999999999999999999999999999999999999999

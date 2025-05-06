@@ -1,9 +1,11 @@
 package thorchain
 
 import (
+	"sort"
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"gitlab.com/thorchain/thornode/v3/constants"
 )
 
 // Migrate4to5 migrates from version 4 to 5.
@@ -63,4 +65,32 @@ func (m Migrator) ClearObsoleteMimirs(ctx sdk.Context) error {
 	}
 
 	return nil
+}
+
+func (m Migrator) UpdateMimirsForBlockTime(ctx sdk.Context) {
+	keeper := m.mgr.Keeper()
+
+	// Get constants derived from ThorchainBlockTime
+	c := constants.BlockTimeConstants()
+
+	keys := make([]constants.ConstantName, 0, len(c))
+	// analyze-ignore(map-iteration)
+	for k := range c {
+		keys = append(keys, k)
+	}
+
+	// Sort the keys to ensure consistent ordering
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i] < keys[j]
+	})
+
+	for _, k := range keys {
+		mimirKey := k.String()
+		existing, _ := keeper.GetMimir(ctx, mimirKey)
+		if existing == -1 {
+			// Mimir not set, don't need to set since it will come from the constants
+			continue
+		}
+		keeper.SetMimir(ctx, mimirKey, c[k])
+	}
 }

@@ -197,9 +197,9 @@ func (vts *ValidatorMgrVCURTestSuite) TestLowerVersion(c *C) {
 	}
 	c.Assert(markedCount, Equals, 0)
 
-	ctx = ctx.WithBlockHeight(30000)
+	ctx = ctx.WithBlockHeight(90000)
 
-	// Now more than ChurnOutForLowVersionBlocks (default 21600), so should mark 3 of the low version validators
+	// Now more than ChurnOutForLowVersionBlocks (default 64800), so should mark 3 of the low version validators
 	c.Assert(networkMgr.markLowVersionValidators(ctx), IsNil)
 	activeNas, err = networkMgr.k.ListActiveValidators(ctx)
 	c.Assert(err, IsNil)

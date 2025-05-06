@@ -125,12 +125,12 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
-  - .affiliate_collector_rune == "226763410"
+  - .affiliate_collector_rune == "226759383"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/balance/module/affiliate_collector
 asserts:
-  - .coins[]|select(.denom == "rune")|.amount == "226763410"
+  - .coins[]|select(.denom == "rune")|.amount == "226759383"
 ---
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
@@ -156,12 +156,12 @@ count: 2
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
-  - .affiliate_collector_rune == "472787908"
+  - .affiliate_collector_rune == "472782428"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/balance/module/affiliate_collector
 asserts:
-  - .coins[]|select(.denom == "rune")|.amount == "472787908"
+  - .coins[]|select(.denom == "rune")|.amount == "472782428"
 ---
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
@@ -178,7 +178,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_cat }}
       coins:
-        - amount: "4703583"
+        - amount: "4703690"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -215,7 +215,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
   - .[0].memo == "OUT:{{ native_txid -1 }}"
-  - .[0].coin.amount == "${OUT_AMOUNT=21143340}"
+  - .[0].coin.amount == "${OUT_AMOUNT=21143612}"
 ---
 # Observe the main swap outbound.
 type: tx-observed-out
@@ -289,14 +289,14 @@ endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .|[.end_block_events[]|select(.type == "scheduled_outbound")]|length == 1
   - .end_block_events[]|select(.type == "scheduled_outbound").to_address == "{{ addr_btc_pig }}"
-  - .end_block_events[]|select(.type == "scheduled_outbound").coin_amount == "${OUT_ONE=1927830}"
+  - .end_block_events[]|select(.type == "scheduled_outbound").coin_amount == "${OUT_ONE=1927870}"
   - .end_block_events[]|select(.type == "scheduled_outbound").coin_asset == "BTC.BTC"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
-  - .[0].in_hash == "${IN_HASH=1F7AB31B73C55AEFEFDB85BD1F4691B8D0862F6465ADFBFEBD1EF0A058003C33}"
+  - .[0].in_hash == "${IN_HASH=3CF84AA525F05B8EDA9BA396F988A4AB897505101ACDA82E90152753ACFB92BD}"
   - .[0].coin.amount == "${OUT_ONE}"
 ---
 # Observe the preferred asset swap outbound.
@@ -357,7 +357,7 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
-  - .affiliate_collector_rune == "${RUNE_AMOUNT=384481146}"
+  - .affiliate_collector_rune == "${RUNE_AMOUNT=384462426}"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/balance/module/affiliate_collector
@@ -403,7 +403,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
   - .[0].in_hash == "${IN_HASH=F7B3511C55618B34293F9BC879D703152966A25AC8F346506F4017C1F23A39B5}"
-  - .[0].coin.amount == "${OUT_AMOUNT=198716993}"
+  - .[0].coin.amount == "${OUT_AMOUNT=198718997}"
   # Despite the section title, no PreferredAsset swap refund?
 ---
 type: tx-observed-out
@@ -463,13 +463,13 @@ count: 2
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
-  - .affiliate_collector_rune == "${TEST_THORNAME_RUNE=6536800126}"
-  - .preferred_asset_swap_threshold_rune == "${SWAP_THRESHOLD_RUNE=2160289600}"
+  - .affiliate_collector_rune == "${TEST_THORNAME_RUNE=6536666261}"
+  - .preferred_asset_swap_threshold_rune == "${SWAP_THRESHOLD_RUNE=2160160400}"
   # Also confirm full THORName response format.
   - |
     . == {
       "name": "test",
-      "expire_block_height": 455256004,
+      "expire_block_height": 1301482289,
       "owner": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
       "preferred_asset": "BTC.BTC",
       "preferred_asset_swap_threshold_rune": "${SWAP_THRESHOLD_RUNE}",

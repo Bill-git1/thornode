@@ -2895,7 +2895,7 @@ func (qs queryServer) queryScheduledOutbound(ctx cosmos.Context, _ *types.QueryS
 	if maxTxOutOffset < 0 || err != nil {
 		maxTxOutOffset = constAccessor.GetInt64Value(constants.MaxTxOutOffset)
 	}
-	for height := ctx.BlockHeight() + 1; height <= ctx.BlockHeight()+17280; height++ {
+	for height := ctx.BlockHeight() + 1; height <= ctx.BlockHeight()+constants.BlocksIn(30*time.Minute); height++ {
 		txOut, err := qs.mgr.Keeper().GetTxOut(ctx, height)
 		if err != nil {
 			ctx.Logger().Error("fail to get tx out array from key value store", "error", err)

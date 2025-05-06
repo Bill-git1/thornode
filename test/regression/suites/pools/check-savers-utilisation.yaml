@@ -83,7 +83,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/supply
 asserts:
   - .supply|length == 2
-  - .supply[]|select(.denom == "btc/btc")|.amount|tonumber == 4777728
+  - .supply[]|select(.denom == "btc/btc")|.amount|tonumber == 4777719
 ---
 type: create-blocks
 count: 1
@@ -97,7 +97,7 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC
 asserts:
-  - .savers_depth|tonumber == 4777740
+  - .savers_depth|tonumber == 4777723
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/saver/{{ addr_btc_pig }}

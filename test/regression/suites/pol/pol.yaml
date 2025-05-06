@@ -75,7 +75,7 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/runepool
 asserts:
-  - .pol.current_deposit == "${CURRENT_DEPOSIT=42097154496}"
+  - .pol.current_deposit == "${CURRENT_DEPOSIT=42096893811}"
   - .pol.current_deposit|tonumber < ${MAX_NETWORK_DEPOSIT}
   - .pol.rune_deposited == "${CURRENT_DEPOSIT}"
   - .pol.rune_withdrawn == "0"
@@ -87,11 +87,11 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/runepool
 asserts:
-  - .pol.current_deposit == "${CURRENT_DEPOSIT=89347125908}"
+  - .pol.current_deposit == "${CURRENT_DEPOSIT=89346489160}"
   - .pol.current_deposit|tonumber > ${MAX_NETWORK_DEPOSIT}
   - .pol.rune_deposited == "${CURRENT_DEPOSIT}"
   - .pol.rune_withdrawn == "0"
-  - .reserve.units == "${RESERVE_UNITS=84194308992}"
+  - .reserve.units == "${RESERVE_UNITS=84193787622}"
 ---
 ########################################################################################
 # Ensure Max Deposit is Respected
@@ -120,7 +120,7 @@ type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_cat }}
 asserts:
   - .|[.result[]|select(.denom=="btc/btc")] | length == 1
-  - .result[]|select(.denom=="btc/btc").amount == "${CAT_SYNTH_BALANCE=24488478}"
+  - .result[]|select(.denom=="btc/btc").amount == "${CAT_SYNTH_BALANCE=24488816}"
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
@@ -147,12 +147,12 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/runepool
 asserts:
-  - .pol.current_deposit == "89339308664"
-  - .pol.rune_deposited == "89347125908"
-  - .pol.rune_withdrawn == "7817244"
-  - .pol.value == "78173776864"
-  - .pol.pnl == "-11165531800"
-  - .reserve.units|tonumber == ${RESERVE_UNITS}-8419431
+  - .pol.current_deposit == "89338672022"
+  - .pol.rune_deposited == "89346489160"
+  - .pol.rune_withdrawn == "7817138"
+  - .pol.value == "78172817956"
+  - .pol.pnl == "-11165854066"
+  - .reserve.units|tonumber == ${RESERVE_UNITS}-8419379
 ---
 type: tx-mimir
 key: POLMaxPoolMovement
@@ -165,9 +165,9 @@ count: 2
 type: check
 endpoint: http://localhost:1317/thorchain/runepool
 asserts:
-  - .pol.current_deposit == "${CURRENT_DEPOSIT=17466985325}"
-  - .pol.rune_deposited == "${RUNE_DEPOSITED=89347125908}"
-  - .pol.rune_withdrawn == "${RUNE_WITHRDAWN=71880140583}"
+  - .pol.current_deposit == "${CURRENT_DEPOSIT=17467512256}"
+  - .pol.rune_deposited == "${RUNE_DEPOSITED=89346489160}"
+  - .pol.rune_withdrawn == "${RUNE_WITHRDAWN=71878976904}"
   - .pol.value == "${VALUE=0}"
   - .pol.pnl == "-${CURRENT_DEPOSIT}"
   - .reserve.units == "${UNITS=0}"

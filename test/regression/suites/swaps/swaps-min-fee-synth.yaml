@@ -116,5 +116,5 @@ asserts:
   - .end_block_events[] | select(.type == "swap") | .swap_slip == "500"
   - .end_block_events[] | select(.type == "swap") | .pool_slip == "1"
   - .end_block_events[] | select(.type == "swap") | .liquidity_fee == "999"
-  - .end_block_events[] | select(.type == "swap") | .liquidity_fee_in_rune == "999407"
-  - .end_block_events[] | select(.type == "swap") | .emit_asset == "18994 BTC/BTC"
+  - .end_block_events[] | select(.type == "swap") | .liquidity_fee_in_rune == "999389"
+  - .end_block_events[] | select(.type == "swap") | .emit_asset == "18995 BTC/BTC"

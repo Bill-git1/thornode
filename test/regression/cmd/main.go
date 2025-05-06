@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"sort"
 	"strconv"
+	"strings"
 	"text/template"
 
 	"github.com/rs/zerolog/log"
@@ -20,9 +21,18 @@ func main() {
 	cleanExports()
 
 	// parse the regex in the RUN environment variable to determine which tests to run
-	runRegex := regexp.MustCompile(".*")
+	var runRegexs []*regexp.Regexp
 	if len(os.Getenv("RUN")) > 0 {
-		runRegex = regexp.MustCompile(os.Getenv("RUN"))
+		csv := strings.Split(os.Getenv("RUN"), ",")
+		for _, item := range csv {
+			item = strings.Trim(item, " \"")
+			if len(item) == 0 {
+				continue
+			}
+			runRegexs = append(runRegexs, regexp.MustCompile(item))
+		}
+	} else {
+		runRegexs = append(runRegexs, regexp.MustCompile(".*"))
 	}
 
 	// find all regression tests in path
@@ -40,8 +50,11 @@ func main() {
 			return nil
 		}
 
-		if runRegex.MatchString(path) {
-			files = append(files, path)
+		for _, r := range runRegexs {
+			if r.MatchString(path) {
+				files = append(files, path)
+				break
+			}
 		}
 		return nil
 	})

@@ -194,7 +194,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "200019495154",
+              "amount": "200004164419",
               "denom": "rune"
             }
           ]
@@ -212,7 +212,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "34999980194081",
+              "amount": "34999995731994",
               "denom": "rune"
             }
           ]
@@ -239,7 +239,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "15000000310765",
+              "amount": "15000000103587",
               "denom": "rune"
             }
           ]
@@ -342,7 +342,7 @@
       "network": {
         "LPIncomeSplit": "9867",
         "NodeIncomeSplit": "133",
-        "bond_reward_rune": "310765",
+        "bond_reward_rune": "103587",
         "total_bond_units": "126"
       },
       "network_fees": [
@@ -454,13 +454,13 @@
       "observed_tx_out_voters": null,
       "outbound_fee_spent_rune": [
         {
-          "amount": "10497808",
+          "amount": "10497310",
           "asset": "BTC.BTC"
         }
       ],
       "outbound_fee_withheld_rune": [
         {
-          "amount": "13998577",
+          "amount": "13998219",
           "asset": "BTC.BTC"
         }
       ],
@@ -469,7 +469,7 @@
           "LP_units": "100000000000",
           "asset": "BTC.BTC",
           "balance_asset": "100003500",
-          "balance_rune": "100007996886",
+          "balance_rune": "100000331649",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -480,7 +480,7 @@
           "LP_units": "100000000000",
           "asset": "ETH.ETH",
           "balance_asset": "1000000000",
-          "balance_rune": "100011498268",
+          "balance_rune": "100003832770",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",

@@ -56,7 +56,7 @@ type: check
 # data: CgdCVEMuQlRD
 endpoint: http://localhost:1317/cosmwasm/wasm/v1/contract/tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f/smart/eyJncnBjIjp7InBhdGgiOiIvdHlwZXMuUXVlcnkvUG9vbCIsImRhdGEiOiJDZ2RDVkVNdVFsUkQifX0=
 asserts:
-  - .data == "CgdCVEMuQlRDEgFiGglBdmFpbGFibGUgCCoBMDIBMDoJMTAwMDAwMDAwQgwxMDAwMDQzNTA1ODNKATBSDDEwMDAwMDAwMDAwMFoMMTAwMDAwMDAwMDAwYgEwagEwcgEwegEwggEBMIoBCTEwMDAwMDAwMJoBCDcwMDAwMDAwogEBMKoBATCyAQEwugEBMA=="
+  - .data == "CgdCVEMuQlRDEgFiGglBdmFpbGFibGUgCCoBMDIBMDoJMTAwMDAwMDAwQgwxMDAwMDE0NTAxOTZKATBSDDEwMDAwMDAwMDAwMFoMMTAwMDAwMDAwMDAwYgEwagEwcgEwegEwggEBMIoBCTEwMDAwMDAwMJoBCDcwMDAwMDAwogEBMKoBATCyAQEwugEBMA=="
 ---
 # Smart contract needs whitelisting as a bond provider
 type: tx-deposit

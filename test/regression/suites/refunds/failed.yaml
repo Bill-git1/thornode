@@ -28,7 +28,7 @@ endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 2
   - .balances[]|select(.denom == "rune")|.amount|tonumber == 2498998000000
-  - .balances[]|select(.denom == "btc/btc")|.amount|tonumber == 988089
+  - .balances[]|select(.denom == "btc/btc")|.amount|tonumber == 988092
 ---
 ########################################################################################
 # swap insufficient rune for refund (rune sent to reserve)

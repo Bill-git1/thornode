@@ -142,7 +142,7 @@ count: 1
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
-  - .balances[]|select(.denom == "btc/btc")|.amount|tonumber == 9068901
+  - .balances[]|select(.denom == "btc/btc")|.amount|tonumber == 9069015
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}

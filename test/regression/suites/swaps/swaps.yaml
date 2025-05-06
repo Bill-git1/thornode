@@ -40,7 +40,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2504533171552
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2504533155445
 ---
 ########################################################################################
 # swap to asset
@@ -60,7 +60,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
   - .[0].in_hash == "{{ native_txid -1 }}"
-  - .[0].coin.amount == "${OUT_AMOUNT=8998476}"
+  - .[0].coin.amount == "${OUT_AMOUNT=8998556}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -121,7 +121,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
   - .[0].in_hash == "{{ observe_txid 3 }}"
-  - .[0].coin.amount == "${OUT_AMOUNT=43747026}"
+  - .[0].coin.amount == "${OUT_AMOUNT=43746521}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}

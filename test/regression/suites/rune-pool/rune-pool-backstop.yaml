@@ -88,11 +88,11 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/runepool
 asserts:
-  - .pol.current_deposit == "${POL_DEPOSIT=1719644313}"
+  - .pol.current_deposit == "${POL_DEPOSIT=1719640775}"
   - .pol.rune_deposited == "${POL_DEPOSIT}"
   - .pol.rune_withdrawn == "0"
-  - .pol.pnl == "-2534941"
-  - .pol.value == "${POL_VALUE=1717109372}"
+  - .pol.pnl == "-2534945"
+  - .pol.value == "${POL_VALUE=1717105830}"
   - .reserve.units == "${POL_DEPOSIT}"
   - 'all(.providers|.[]; . == "0")'
   - (.reserve.pnl|tonumber)+(.providers.pnl|tonumber) == (.pol.pnl|tonumber)
@@ -125,7 +125,7 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/runepool
 asserts:
-  - .pol.pnl == "${RESERVE_PNL=-2534941}"
+  - .pol.pnl == "${RESERVE_PNL=-2534945}"
   - .reserve.units == "0" # provider owns all pol
   - .reserve.value == "0"
   - .reserve.pnl == "${RESERVE_PNL}" # reserve still has loss
@@ -152,12 +152,12 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/runepool
 asserts:
-  - .pol.pnl == "17489749"
+  - .pol.pnl == "17489633"
   - .pol.rune_withdrawn == "0" # no rune withdrawn
   - .reserve.units == "0" # provider owns all pol
   - .reserve.value == "0"
   - .reserve.pnl == "${RESERVE_PNL}" # reserve has same loss
-  - .providers.pnl == "${PROVIDER_PNL=20024690}" # provider has profit
+  - .providers.pnl == "${PROVIDER_PNL=20024578}" # provider has profit
   - (.reserve.pnl|tonumber)+(.providers.pnl|tonumber) == (.pol.pnl|tonumber)
   - (.reserve.value|tonumber)+(.providers.value|tonumber)-(.providers.pending_rune|tonumber) == (.pol.value|tonumber)
   - (.reserve.current_deposit|tonumber)+(.providers.current_deposit|tonumber)-(.providers.pending_rune|tonumber) == (.pol.current_deposit|tonumber)
@@ -207,12 +207,12 @@ asserts:
   - .last_deposit_height == 4
   - .last_withdraw_height == 7
   - .units == "0"
-  - .pnl == "20024690"
+  - .pnl == "20024578"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/runepool
 asserts:
-  - .pol.pnl == "17489749"
+  - .pol.pnl == "17489633"
   - .reserve.units == "${POL_DEPOSIT}"
   - .reserve.pnl == "${RESERVE_PNL}" # reserve has same loss
   - .providers.units == "0"

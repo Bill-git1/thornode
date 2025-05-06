@@ -24,7 +24,7 @@ endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_module_rese
 asserts:
   - length == 1
   - .balance.denom == "rune"
-  - .balance.amount == "${HEIGHT_1_RESERVE=34999998890157}"
+  - .balance.amount == "${HEIGHT_1_RESERVE=34999999630052}"
 ---
 type: create-blocks
 count: 1
@@ -40,7 +40,7 @@ endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_module_rese
 asserts:
   - length == 1
   - .balance.denom == "rune"
-  - .balance.amount == "${HEIGHT_2_RESERVE=34999997780314}"
+  - .balance.amount == "${HEIGHT_2_RESERVE=34999999260104}"
   - ${HEIGHT_2_RESERVE} < ${HEIGHT_1_RESERVE} # Due to block rewards.
 ---
 type: check

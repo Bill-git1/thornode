@@ -120,7 +120,7 @@ count: 1
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/supply
 asserts:
-  - .supply[]|select(.denom == "eth/usdc-0x9999999999999999999999999999999999999999")|.amount|tonumber == 990256389
+  - .supply[]|select(.denom == "eth/usdc-0x9999999999999999999999999999999999999999")|.amount|tonumber == 990254682
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/pool/ETH.USDC-0X9999999999999999999999999999999999999999/savers
@@ -163,7 +163,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
   - .[0].memo == "OUT:{{ observe_txid 4 }}"
-  - .[0].coin.amount == "${OUT_AMOUNT=842789200}"
+  - .[0].coin.amount == "${OUT_AMOUNT=842786700}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}

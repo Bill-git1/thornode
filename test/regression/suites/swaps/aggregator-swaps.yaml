@@ -38,7 +38,7 @@ asserts:
       to_address: "0xe3c64974c78f5693bd2bc68b3221d58df5c6e877",
       coin: {
           asset: "ETH.ETH",
-          amount: "81364267"
+          amount: "81364508"
       },
       max_gas: [
           {
@@ -65,7 +65,7 @@ asserts:
       vault_pub_key: "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
       coin: {
         "asset": "ETH.ETH",
-        "amount": "81364267"
+        "amount": "81364508"
       },
       memo: "OUT:34AA325C82F0B9572B54B1AD403146200625DB5F31EF59C5F8BF9BF22F93E71A",
       max_gas: [
@@ -82,4 +82,4 @@ asserts:
       aggregator_target_limit: "0",
       clout_spent: "0"
     }
-  - .signature == "p5Um0zj8bVFnFsdK5suZmLu+UvqnIsivVI0xWRy56QYx+MZqnX+gF61z3Z3C318m+Zk3eTBwFwhKQQCpyU8XUQ=="
+  - .signature == "C4ZfN+FhQtPpuFroO2AR4TFG6QMt0NaQKiOkrflMO4M8tQX7bR6Fh0vhGQyaLj1DmnwODDkhYn0LSVVc3vsNTQ=="

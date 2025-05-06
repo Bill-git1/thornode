@@ -3,6 +3,7 @@ package thorchain
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/blang/semver"
 	se "github.com/cosmos/cosmos-sdk/types/errors"
@@ -232,7 +233,7 @@ func (s *HandlerObservedTxOutSuite) TestHandle(c *C) {
 	pendingTxOuts, err := validatorMgr.getPendingTxOut(ctx)
 	c.Assert(err, IsNil)
 	// c.Check(pendingTxOuts, Equals, int64(1))
-	c.Check(pendingTxOuts, Equals, int64(301)) // pendingTxOuts in fact returns 301; learn why.
+	c.Check(pendingTxOuts, Equals, int64(901)) // pendingTxOuts in fact returns 901; learn why.
 
 	_, err = handler.handle(ctx, *msg)
 	c.Assert(err, IsNil)
@@ -329,7 +330,7 @@ func (s *HandlerObservedTxOutSuite) TestHandleFailedTransaction(c *C) {
 	pendingTxOuts, err := validatorMgr.getPendingTxOut(ctx)
 	c.Assert(err, IsNil)
 	// c.Check(pendingTxOuts, Equals, int64(1))
-	c.Check(pendingTxOuts, Equals, int64(301)) // pendingTxOuts in fact returns 301; learn why.
+	c.Check(pendingTxOuts, Equals, int64(901)) // pendingTxOuts in fact returns 901; learn why.
 
 	_, err = handler.handle(ctx, *msg)
 	c.Assert(err, IsNil)
@@ -340,7 +341,7 @@ func (s *HandlerObservedTxOutSuite) TestHandleFailedTransaction(c *C) {
 	pendingTxOuts, err = validatorMgr.getPendingTxOut(ctx)
 	c.Assert(err, IsNil)
 	// c.Check(pendingTxOuts, Equals, int64(1)) // The pending outbound remains.
-	c.Check(pendingTxOuts, Equals, int64(301)) // pendingTxOuts in fact returns 301; learn why.
+	c.Check(pendingTxOuts, Equals, int64(901)) // pendingTxOuts in fact returns 901; learn why.
 
 	mgr.ObMgr().EndBlock(ctx, keeper)
 	c.Check(keeper.observing, HasLen, 1)
@@ -664,7 +665,7 @@ func (s *HandlerObservedTxOutSuite) TestObservingSlashing(c *C) {
 	observeFlex := mgr.GetConstants().GetInt64Value(constants.ObservationDelayFlexibility)
 	c.Assert(observeSlashPoints, Equals, int64(1))
 	c.Assert(lackOfObservationPenalty, Equals, int64(2))
-	c.Assert(observeFlex, Equals, int64(10))
+	c.Assert(observeFlex, Equals, constants.BlocksIn(2*time.Minute))
 
 	asgardVault := GetRandomVault()
 	c.Assert(mgr.Keeper().SetVault(ctx, asgardVault), IsNil)
