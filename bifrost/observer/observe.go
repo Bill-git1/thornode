@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -35,13 +36,25 @@ const signedTxOutCacheSize = 10_000
 // deckRefreshTime is the time to wait before reconciling txIn status.
 const deckRefreshTime = 1 * time.Second
 
+type txInKey struct {
+	chain  common.Chain
+	height int64
+}
+
+func TxInKey(txIn *types.TxIn) txInKey {
+	return txInKey{
+		chain:  txIn.Chain,
+		height: txIn.TxArray[0].BlockHeight + txIn.ConfirmationRequired,
+	}
+}
+
 // Observer observer service
 type Observer struct {
 	logger                zerolog.Logger
 	chains                map[common.Chain]chainclients.ChainClient
 	stopChan              chan struct{}
 	pubkeyMgr             *pubkeymanager.PubKeyManager
-	onDeck                []*types.TxIn
+	onDeck                map[txInKey]*types.TxIn
 	lock                  *sync.Mutex
 	globalTxsQueue        chan types.TxIn
 	globalErrataQueue     chan types.ErrataBlock
@@ -103,10 +116,11 @@ func NewObserver(pubkeyMgr *pubkeymanager.PubKeyManager,
 		m:                     m,
 		pubkeyMgr:             pubkeyMgr,
 		lock:                  &sync.Mutex{},
-		globalTxsQueue:        make(chan types.TxIn, 10000),
-		globalErrataQueue:     make(chan types.ErrataBlock, 100),
-		globalSolvencyQueue:   make(chan types.Solvency, 100),
-		globalNetworkFeeQueue: make(chan common.NetworkFee, 100),
+		onDeck:                make(map[txInKey]*types.TxIn),
+		globalTxsQueue:        make(chan types.TxIn),
+		globalErrataQueue:     make(chan types.ErrataBlock),
+		globalSolvencyQueue:   make(chan types.Solvency),
+		globalNetworkFeeQueue: make(chan common.NetworkFee),
 		errCounter:            m.GetCounterVec(metrics.ObserverError),
 		thorchainBridge:       thorchainBridge,
 		storage:               storage,
@@ -155,6 +169,7 @@ func (o *Observer) ObserveSigned(txIn types.TxIn) {
 	o.globalTxsQueue <- txIn
 }
 
+// restoreDeck initializes the memory cache with the ondeck txs from the storage
 func (o *Observer) restoreDeck() {
 	onDeckTxs, err := o.storage.GetOnDeckTxs()
 	if err != nil {
@@ -162,7 +177,9 @@ func (o *Observer) restoreDeck() {
 	}
 	o.lock.Lock()
 	defer o.lock.Unlock()
-	o.onDeck = onDeckTxs
+	for _, txIn := range onDeckTxs {
+		o.onDeck[TxInKey(txIn)] = txIn
+	}
 }
 
 func (o *Observer) deck() {
@@ -186,47 +203,59 @@ func (o *Observer) handleObservedTxCommitted(tx common.ObservedTx) {
 
 	o.lock.Lock()
 	defer o.lock.Unlock()
-DeckLoop:
-	for i, deck := range o.onDeck {
-		if deck.Chain != tx.Tx.Chain {
-			// if the chain of the observed tx in the deck is not the same as the chain of the committed observed tx, skip it.
+
+	k := txInKey{
+		chain:  tx.Tx.Chain,
+		height: tx.FinaliseHeight,
+	}
+
+	deck, ok := o.onDeck[k]
+	if !ok {
+		return
+	}
+
+	for j, txInItem := range deck.TxArray {
+		if !txInItem.EqualsObservedTx(tx) {
 			continue
 		}
-		for j, txInItem := range deck.TxArray {
-			if !txInItem.EqualsObservedTx(tx) {
-				continue
-			}
-			if isFinal {
-				o.logger.Debug().Msgf("tx final %s - %s removing from tx array", tx.Tx.Chain, tx.Tx.ID)
-				// if the tx is in the tx array, and it is final, remove it from the tx array.
-				deck.TxArray = append(deck.TxArray[:j], deck.TxArray[j+1:]...)
-				if len(deck.TxArray) == 0 {
-					o.logger.Debug().Msgf("deck is empty, removing from ondeck")
+		if isFinal {
+			o.logger.Debug().Msgf("tx final %s - %s removing from tx array", tx.Tx.Chain, tx.Tx.ID)
+			// if the tx is in the tx array, and it is final, remove it from the tx array.
+			deck.TxArray = slices.Delete(deck.TxArray, j, j+1)
+			if len(deck.TxArray) == 0 {
+				o.logger.Debug().Msgf("deck is empty, removing from ondeck")
 
-					// if the deck is empty after removing, remove it from ondeck.
-					o.onDeck = append(o.onDeck[:i], o.onDeck[i+1:]...)
+				// if the deck is empty after removing, remove it from ondeck.
+				delete(o.onDeck, k)
+				if err := o.storage.RemoveTx(deck, tx.FinaliseHeight); err != nil {
+					o.logger.Error().Err(err).Msg("fail to remove tx from storage")
 				}
 			} else {
-				// if the tx is not final, set tx.CommittedUnFinalised to true to indicate that it has been committed to thorchain but not finalised yet.
-				txInItem.CommittedUnFinalised = true
+				if err := o.storage.AddOrUpdateTx(deck); err != nil {
+					o.logger.Error().Err(err).Msg("fail to update tx in storage")
+				}
 			}
-
-			chain, err := o.getChain(deck.Chain)
-			if err != nil {
-				o.logger.Error().Err(err).Msg("chain not found")
-			} else {
-				chain.OnObservedTxIn(*txInItem, txInItem.BlockHeight)
+		} else {
+			// if the tx is not final, set tx.CommittedUnFinalised to true to indicate that it has been committed to thorchain but not finalised yet.
+			txInItem.CommittedUnFinalised = true
+			if err := o.storage.AddOrUpdateTx(deck); err != nil {
+				o.logger.Error().Err(err).Msg("fail to update tx in storage")
 			}
-
-			madeChanges = true
-			break DeckLoop
 		}
+
+		chain, err := o.getChain(deck.Chain)
+		if err != nil {
+			o.logger.Error().Err(err).Msg("chain not found")
+		} else {
+			chain.OnObservedTxIn(*txInItem, txInItem.BlockHeight)
+		}
+
+		madeChanges = true
+		break
 	}
 
 	if !madeChanges {
 		o.logger.Debug().Msgf("no changes made to ondeck, size: %d", len(o.onDeck))
-
-		// do not save the onDeck to storage if no changes were made.
 		return
 	}
 
@@ -242,11 +271,6 @@ DeckLoop:
 		Str("gas", common.Coins(tx.Tx.Gas).String()).
 		Str("observed_vault_pubkey", tx.ObservedPubKey.String()).
 		Msg("observed tx committed to thorchain")
-
-	// if the deck is not empty, save it back to key value store
-	if err := o.storage.SetOnDeckTxs(o.onDeck); err != nil {
-		o.logger.Error().Err(err).Msg("fail to save ondeck tx to key value store")
-	}
 }
 
 func (o *Observer) sendDeck() {
@@ -366,7 +390,6 @@ func (o *Observer) processObservedTx(txIn types.TxIn) {
 	var filteredTxArray []*types.TxInItem
 
 	// Check if we need to filter the incoming transactions
-
 	if !txIn.Filtered {
 		filterStart := time.Now()
 		// First, get a read lock to check existing transactions
@@ -391,28 +414,16 @@ func (o *Observer) processObservedTx(txIn types.TxIn) {
 		o.logger.Debug().Msgf("filterObservations took %s", time.Since(filterStart))
 	}
 
+	k := TxInKey(&txIn)
+
 	// Now acquire a write lock for modifying the onDeck slice
 	o.lock.Lock()
 	defer o.lock.Unlock()
 
-	found := false
-	deckIterStart := time.Now()
-	for _, in := range o.onDeck {
-		if in.Chain != txIn.Chain {
-			continue
-		}
-		if in.MemPool != txIn.MemPool {
-			continue
-		}
-		if len(in.TxArray) > 0 && len(txIn.TxArray) > 0 {
-			if in.TxArray[0].BlockHeight != txIn.TxArray[0].BlockHeight {
-				continue
-			}
-		}
-
+	in, ok := o.onDeck[k]
+	if ok {
+		// tx is already in the onDeck, dedupe incoming txs
 		dedupeStart := time.Now()
-
-		// Dedupe incoming txs
 		var newTxs []*types.TxInItem
 		for _, txInItem := range txIn.TxArray {
 			foundTx := false
@@ -437,26 +448,25 @@ func (o *Observer) processObservedTx(txIn types.TxIn) {
 				newTxs = append(newTxs, txInItem)
 			}
 		}
+		o.logger.Debug().Msgf("Dedupe took %s", time.Since(dedupeStart))
 		if len(newTxs) > 0 {
 			in.TxArray = append(in.TxArray, newTxs...)
+			setDeckStart := time.Now()
+			if err := o.storage.AddOrUpdateTx(in); err != nil {
+				o.logger.Error().Err(err).Msg("fail to add tx to storage")
+			}
+			o.logger.Debug().Msgf("AddOrUpdateTx existing took %s", time.Since(setDeckStart))
 		}
-		o.logger.Debug().Msgf("Dedupe took %s", time.Since(dedupeStart))
 
-		found = true
-		break
+		return
 	}
-	o.logger.Debug().Msgf("Deck iteration took %s", time.Since(deckIterStart))
-
-	if !found {
-		// Only append filtered txs
-		o.onDeck = append(o.onDeck, &txIn)
-	}
+	o.onDeck[k] = &txIn
 
 	setDeckStart := time.Now()
-	if err := o.storage.SetOnDeckTxs(o.onDeck); err != nil {
-		o.logger.Err(err).Msg("fail to save ondeck tx")
+	if err := o.storage.AddOrUpdateTx(&txIn); err != nil {
+		o.logger.Error().Err(err).Msg("fail to add tx to storage")
 	}
-	o.logger.Debug().Msgf("SetOnDeckTxs took %s", time.Since(setDeckStart))
+	o.logger.Debug().Msgf("AddOrUpdateTx new took %s", time.Since(setDeckStart))
 }
 
 func (o *Observer) filterObservations(chain common.Chain, items []*types.TxInItem, memPool bool) []*types.TxInItem {
@@ -525,21 +535,18 @@ func (o *Observer) processErrataTx(ctx context.Context) {
 func (o *Observer) filterErrataTx(block types.ErrataBlock) {
 	o.lock.Lock()
 	defer o.lock.Unlock()
+BlockLoop:
 	for _, tx := range block.Txs {
-		for deckIdx, txIn := range o.onDeck {
-			idx := -1
+		for k, txIn := range o.onDeck {
 			for i, item := range txIn.TxArray {
 				if item.Tx == tx.TxID.String() {
-					idx = i
-					break
-				}
-			}
-			if idx != -1 {
-				o.logger.Info().Msgf("drop tx (%s) from ondeck memory due to errata", tx.TxID)
-				o.onDeck[deckIdx].TxArray = append(txIn.TxArray[:idx], txIn.TxArray[idx+1:]...) // nolint
-				if len(o.onDeck[deckIdx].TxArray) == 0 {
-					o.logger.Info().Msgf("ondeck tx is empty, remove it from ondeck")
-					o.onDeck = append(o.onDeck[:deckIdx], o.onDeck[deckIdx+1:]...)
+					o.logger.Info().Msgf("drop tx (%s) from ondeck memory due to errata", tx.TxID)
+					txIn.TxArray = append(txIn.TxArray[:i], txIn.TxArray[i+1:]...) // nolint
+					if len(txIn.TxArray) == 0 {
+						o.logger.Info().Msgf("ondeck tx is empty, remove it from ondeck")
+						delete(o.onDeck, k)
+					}
+					break BlockLoop
 				}
 			}
 		}

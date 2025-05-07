@@ -16,6 +16,7 @@ import (
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	cKeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	. "gopkg.in/check.v1"
 
@@ -385,4 +386,388 @@ func (s *ObserverSuite) TestGetSaversMemo(c *C) {
 	btcSaversTx.Coins = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(40_000)))
 	memo = obs.getSaversMemo(common.BTCChain, &btcSaversTx)
 	c.Assert(memo, Equals, "+:BTC/BTC")
+}
+
+func (s *ObserverSuite) TestObserverDeckStorage(c *C) {
+	vault1 := types2.GetRandomPubKey()
+	vault2 := types2.GetRandomPubKey()
+	vault1Addr, err := vault1.GetAddress(common.BTCChain)
+	c.Assert(err, IsNil)
+	vault2Addr, err := vault2.GetAddress(common.BTCChain)
+	c.Assert(err, IsNil)
+
+	// Helper function to create a minimal Observer instance for testing
+	setupObserver := func() (*Observer, string) {
+		tempDir, err := os.MkdirTemp("", "observer-test")
+		c.Assert(err, IsNil)
+
+		pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.metrics)
+		c.Assert(err, IsNil)
+		pubkeyMgr.AddPubKey(vault1, false)
+		pubkeyMgr.AddPubKey(vault2, false)
+
+		ag, err := NewAttestationGossip(NewMockHost([]peer.ID{}), s.thorKeys, "localhost:50052", s.bridge, config.BifrostAttestationGossipConfig{})
+		c.Assert(err, IsNil)
+		obs, err := NewObserver(
+			pubkeyMgr,
+			map[common.Chain]chainclients.ChainClient{common.AVAXChain: s.client},
+			s.bridge,
+			s.metrics,
+			tempDir,
+			metrics.NewTssKeysignMetricMgr(),
+			ag,
+		)
+		c.Assert(obs, NotNil)
+		c.Assert(err, IsNil)
+
+		return obs, tempDir
+	}
+
+	// Helper to check if TxIn exists in both memory and storage
+	assertTxExists := func(observer *Observer, key txInKey, txID string) {
+		// Check memory cache
+		observer.lock.Lock()
+		deckTx, exists := observer.onDeck[key]
+		observer.lock.Unlock()
+		c.Assert(exists, Equals, true, Commentf("Transaction not found in memory cache"))
+
+		found := false
+		for _, item := range deckTx.TxArray {
+			if item.Tx == txID {
+				found = true
+				break
+			}
+		}
+		c.Assert(found, Equals, true, Commentf("Transaction not found in memory cache array"))
+
+		// Check storage
+		storageTxs, err := observer.storage.GetOnDeckTxs()
+		c.Assert(err, IsNil)
+		found = false
+		for _, tx := range storageTxs {
+			for _, item := range tx.TxArray {
+				if item.Tx == txID {
+					found = true
+					break
+				}
+			}
+		}
+		c.Assert(found, Equals, true, Commentf("Transaction not found in storage"))
+	}
+
+	// Helper to check if TxIn is removed from memory and storage after finalization
+	assertTxFinalized := func(observer *Observer, key txInKey, txID string) {
+		observer.lock.Lock()
+		deckTx, exists := observer.onDeck[key]
+		observer.lock.Unlock()
+
+		if !exists {
+			// If the entire deck is removed, that's acceptable
+			storageTxs, err := observer.storage.GetOnDeckTxs()
+			c.Assert(err, IsNil)
+
+			found := false
+			for _, tx := range storageTxs {
+				for _, item := range tx.TxArray {
+					if item.Tx == txID {
+						found = true
+						break
+					}
+				}
+			}
+			c.Assert(found, Equals, false, Commentf("Transaction should be removed from storage after finalization"))
+			return
+		}
+
+		// If deck still exists, the specific tx should be removed from its array
+		found := false
+		for _, item := range deckTx.TxArray {
+			if item.Tx == txID {
+				found = true
+				break
+			}
+		}
+		c.Assert(found, Equals, false, Commentf("Transaction should be removed from memory cache array after finalization"))
+	}
+
+	// Test Case 1: tx observed in mempool, then non-mempool, then final
+	{
+		observer, tempDir := setupObserver()
+		defer func() {
+			observer.storage.Close()
+			os.RemoveAll(tempDir)
+		}()
+
+		// Define test data
+		chain := common.BTCChain
+		blockHeight := int64(100)
+		confirmRequired := int64(6)
+		finalHeight := blockHeight + confirmRequired
+		txID := types2.GetRandomTxHash()
+		memo := "SWAP:ETH.ETH:0xe6a30f4f3bad978910e2cbb4d97581f5b5a0ade0"
+		recipient := "recipient"
+		coins := common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1000))}
+
+		// 1. Observe transaction in mempool
+		txInMempool := &types.TxIn{
+			Chain:                chain,
+			MemPool:              true,
+			ConfirmationRequired: confirmRequired,
+			TxArray: []*types.TxInItem{
+				{
+					BlockHeight: blockHeight,
+					Tx:          txID.String(),
+					Memo:        memo,
+					Sender:      vault1Addr.String(),
+					To:          recipient,
+					Coins:       coins,
+				},
+			},
+		}
+		observer.processObservedTx(*txInMempool)
+
+		// Verify transaction is in both memory and storage
+		key := TxInKey(txInMempool)
+		assertTxExists(observer, key, txID.String())
+
+		// Simulate non-final observation in Thorchain
+		observedTxMempool := common.ObservedTx{
+			Tx: common.Tx{
+				ID:          txID,
+				Chain:       chain,
+				FromAddress: vault1Addr,
+				ToAddress:   common.Address(recipient),
+				Coins:       coins,
+				Memo:        memo,
+			},
+			BlockHeight:    blockHeight, // Initial block height
+			FinaliseHeight: finalHeight, // Final height is in the future
+			ObservedPubKey: vault1,
+		}
+
+		observer.handleObservedTxCommitted(observedTxMempool)
+
+		// Transaction should still exist but be marked as CommittedUnFinalised
+		assertTxExists(observer, key, txID.String())
+
+		// 2. Observe same transaction in a block (non-mempool)
+		txInBlock := &types.TxIn{
+			Chain:                chain,
+			MemPool:              false,
+			ConfirmationRequired: confirmRequired,
+			TxArray: []*types.TxInItem{
+				{
+					BlockHeight: blockHeight,
+					Tx:          txID.String(),
+					Memo:        memo,
+					Sender:      vault1Addr.String(),
+					To:          recipient,
+					Coins:       coins,
+					// After first handleObservedTxCommitted, this should be marked as committed
+					CommittedUnFinalised: true,
+				},
+			},
+		}
+		observer.processObservedTx(*txInBlock)
+
+		// Should still be in both memory and storage
+		assertTxExists(observer, key, txID.String())
+
+		// Simulate non-final observation in Thorchain (still not enough confirmations)
+		observedTxBlock := common.ObservedTx{
+			Tx: common.Tx{
+				ID:          txID,
+				Chain:       chain,
+				FromAddress: vault1Addr,
+				ToAddress:   common.Address(recipient),
+				Coins:       coins,
+				Memo:        memo,
+			},
+			BlockHeight:    blockHeight, // Still the same block height
+			FinaliseHeight: finalHeight, // Final height is still in the future
+			ObservedPubKey: vault1,
+		}
+
+		observer.handleObservedTxCommitted(observedTxBlock)
+
+		// Should still exist (not finalized yet)
+		assertTxExists(observer, key, txID.String())
+
+		// 3. Transaction finalized (BlockHeight == FinaliseHeight)
+		observedTxFinal := common.ObservedTx{
+			Tx: common.Tx{
+				ID:          txID,
+				Chain:       chain,
+				FromAddress: vault1Addr,
+				ToAddress:   common.Address(recipient),
+				Coins:       coins,
+				Memo:        memo,
+			},
+			BlockHeight:    finalHeight, // Block height now equals finalize height
+			FinaliseHeight: finalHeight, // This makes it final (BlockHeight == FinaliseHeight)
+			ObservedPubKey: vault1,
+		}
+
+		observer.handleObservedTxCommitted(observedTxFinal)
+
+		// Verify transaction is removed after finalization
+		assertTxFinalized(observer, key, txID.String())
+	}
+
+	// Test Case 2: tx observed non-mempool, then final
+	{
+		observer, tempDir := setupObserver()
+		defer func() {
+			observer.storage.Close()
+			os.RemoveAll(tempDir)
+		}()
+
+		// Define test data
+		chain := common.BTCChain
+		blockHeight := int64(100)
+		confirmRequired := int64(6)
+		sender := "sender"
+		finalHeight := blockHeight + confirmRequired
+		txID := types2.GetRandomTxHash()
+		memo := "test"
+
+		// 1. Observe transaction directly in a block (non-mempool)
+		txInBlock := &types.TxIn{
+			Chain:                chain,
+			MemPool:              false,
+			ConfirmationRequired: confirmRequired,
+			TxArray: []*types.TxInItem{
+				{
+					BlockHeight: blockHeight,
+					Tx:          txID.String(),
+					Memo:        memo,
+					Sender:      sender,
+					To:          vault1Addr.String(),
+					Coins:       common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1000))},
+				},
+			},
+		}
+		observer.processObservedTx(*txInBlock)
+
+		// Verify transaction is in both memory and storage
+		key := TxInKey(txInBlock)
+		assertTxExists(observer, key, txID.String())
+
+		// Simulate non-final observation in Thorchain
+		observedTxNonFinal := common.ObservedTx{
+			Tx: common.Tx{
+				ID:          txID,
+				Chain:       chain,
+				FromAddress: common.Address(sender),
+				ToAddress:   vault1Addr,
+				Coins:       common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1000))},
+				Memo:        memo,
+			},
+			BlockHeight:    blockHeight, // Initial block height
+			FinaliseHeight: finalHeight, // Final height is in the future
+			ObservedPubKey: vault1,
+		}
+
+		observer.handleObservedTxCommitted(observedTxNonFinal)
+
+		// Transaction should still exist but be marked as CommittedUnFinalised
+		assertTxExists(observer, key, txID.String())
+
+		// 2. Transaction finalized (BlockHeight == FinaliseHeight)
+		observedTxFinal := common.ObservedTx{
+			Tx: common.Tx{
+				ID:          txID,
+				Chain:       chain,
+				FromAddress: common.Address(sender),
+				ToAddress:   vault1Addr,
+				Coins:       common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1000))},
+				Memo:        memo,
+			},
+			BlockHeight:    finalHeight, // Block height now equals finalize height
+			FinaliseHeight: finalHeight, // This makes it final (BlockHeight == FinaliseHeight)
+			ObservedPubKey: vault1,
+		}
+
+		observer.handleObservedTxCommitted(observedTxFinal)
+
+		// Verify transaction is removed after finalization
+		assertTxFinalized(observer, key, txID.String())
+	}
+
+	// Test Case 3: tx observed final immediately
+	{
+		observer, tempDir := setupObserver()
+		defer func() {
+			observer.storage.Close()
+			os.RemoveAll(tempDir)
+		}()
+
+		// Define test data
+		chain := common.BTCChain
+		blockHeight := int64(100)
+		confirmRequired := int64(0) // No confirmations required
+		finalHeight := blockHeight  // Final height equals block height
+		txID := types2.GetRandomTxHash()
+		memo := "MIGRATE:BTC.BTC:1000"
+
+		// 1. Observe transaction that's already final
+		txFinal := &types.TxIn{
+			Chain:                chain,
+			MemPool:              false,
+			ConfirmationRequired: confirmRequired,
+			TxArray: []*types.TxInItem{
+				{
+					BlockHeight: blockHeight,
+					Tx:          txID.String(),
+					Memo:        memo,
+					Sender:      vault1Addr.String(),
+					To:          vault2Addr.String(),
+					Coins:       common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1000))},
+				},
+			},
+		}
+		observer.processObservedTx(*txFinal)
+
+		// Verify transaction is in both memory and storage
+		key := TxInKey(txFinal)
+		assertTxExists(observer, key, txID.String())
+
+		// Simulate final observation in Thorchain (already final since BlockHeight == FinaliseHeight)
+		observedTx := common.ObservedTx{
+			Tx: common.Tx{
+				ID:          txID,
+				Chain:       chain,
+				FromAddress: vault1Addr,
+				ToAddress:   vault2Addr,
+				Coins:       common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1000))},
+				Memo:        memo,
+			},
+			BlockHeight:    finalHeight, // Block height equals finalize height (already final)
+			FinaliseHeight: finalHeight, // This makes it final (BlockHeight == FinaliseHeight)
+			ObservedPubKey: vault1,
+		}
+
+		observer.handleObservedTxCommitted(observedTx)
+
+		// Simulate final observation in Thorchain (already final since BlockHeight == FinaliseHeight)
+		// observe from both vaults
+		observedTx = common.ObservedTx{
+			Tx: common.Tx{
+				ID:          txID,
+				Chain:       chain,
+				FromAddress: vault1Addr,
+				ToAddress:   vault2Addr,
+				Coins:       common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1000))},
+				Memo:        memo,
+			},
+			BlockHeight:    finalHeight, // Block height equals finalize height (already final)
+			FinaliseHeight: finalHeight, // This makes it final (BlockHeight == FinaliseHeight)
+			ObservedPubKey: vault2,
+		}
+
+		observer.handleObservedTxCommitted(observedTx)
+
+		// Verify transaction is removed immediately after finalization
+		assertTxFinalized(observer, key, txID.String())
+	}
 }
