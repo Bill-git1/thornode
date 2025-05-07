@@ -96,9 +96,11 @@ bifrost:
       max_rpc_retries: 9 # about 1 min
       max_pending_nonces: 0
       authorization_bearer: ""
-      max_gas_tip_percentage: 0
-      token_max_gas_multiplier: 0
-      aggregator_max_gas_multiplier: 0
+      evm:
+        max_gas_tip_percentage: 0
+        token_max_gas_multiplier: 0
+        aggregator_max_gas_multiplier: 0
+        extra_l1_gas_fee: 0
       utxo: &utxo
         block_cache_count: 144
         transaction_batch_size: 500
@@ -154,9 +156,11 @@ bifrost:
       <<: *default-chain
       chain_id: ETH
       max_pending_nonces: 3
-      max_gas_tip_percentage: 20
-      token_max_gas_multiplier: 3
-      aggregator_max_gas_multiplier: 10
+      evm:
+        max_gas_tip_percentage: 20
+        token_max_gas_multiplier: 3
+        aggregator_max_gas_multiplier: 10
+        extra_l1_gas_fee: 0
       block_scanner:
         <<: *default-block-scanner
         max_reorg_rescan_blocks: 96 # 3 epochs
@@ -174,9 +178,12 @@ bifrost:
       chain_id: BASE
       solvency_blocks: 100
       max_pending_nonces: 3
-      max_gas_tip_percentage: 20
-      token_max_gas_multiplier: 3
-      aggregator_max_gas_multiplier: 10
+      evm:
+        max_gas_tip_percentage: 20
+        token_max_gas_multiplier: 3
+        aggregator_max_gas_multiplier: 10
+        # deteremined as 90th percentile of observed delta across 1 month on 9R nodes
+        extra_l1_gas_fee: 700
       block_scanner:
         <<: *default-block-scanner
         gas_cache_blocks: 40
@@ -202,8 +209,11 @@ bifrost:
       chain_id: AVAX
       solvency_blocks: 100
       max_pending_nonces: 3
-      token_max_gas_multiplier: 3
-      aggregator_max_gas_multiplier: 10
+      evm:
+        token_max_gas_multiplier: 3
+        aggregator_max_gas_multiplier: 10
+        max_gas_tip_percentage: 0
+        extra_l1_gas_fee: 0
       block_scanner:
         <<: *default-block-scanner
         max_reorg_rescan_blocks: 0 # avax has guaranteed finality
@@ -229,8 +239,11 @@ bifrost:
       chain_id: BSC
       solvency_blocks: 100
       max_pending_nonces: 3
-      token_max_gas_multiplier: 3
-      aggregator_max_gas_multiplier: 10
+      evm:
+        token_max_gas_multiplier: 3
+        aggregator_max_gas_multiplier: 10
+        max_gas_tip_percentage: 0
+        extra_l1_gas_fee: 0
       block_scanner:
         <<: *default-block-scanner
         max_reorg_rescan_blocks: 600 # 30m

@@ -166,7 +166,7 @@ func (c *Client) unstuckTx(clog zerolog.Logger, item types.SignedTxItem) error {
 		to := ecommon.HexToAddress(address.String())
 
 		// tip cap at configured percentage of max fee
-		tipCap := new(big.Int).Mul(currentGasRate, big.NewInt(int64(c.cfg.MaxGasTipPercentage)))
+		tipCap := new(big.Int).Mul(currentGasRate, big.NewInt(int64(c.cfg.EVM.MaxGasTipPercentage)))
 		tipCap.Div(tipCap, big.NewInt(100))
 
 		cancelTx = etypes.NewTx(&etypes.DynamicFeeTx{

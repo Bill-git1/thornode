@@ -642,9 +642,15 @@ func (c *EVMClient) buildOutboundTx(txOutItem stypes.TxOutItem, memo mem.Memo, n
 		// set limit to aggregator gas limit
 		estimatedGas = gasLimitForAggregator
 
-		scheduledMaxFee = scheduledMaxFee.Mul(scheduledMaxFee, big.NewInt(c.cfg.AggregatorMaxGasMultiplier))
+		scheduledMaxFee = scheduledMaxFee.Mul(scheduledMaxFee, big.NewInt(c.cfg.EVM.AggregatorMaxGasMultiplier))
 	} else if !txOutItem.Coins[0].Asset.IsGasAsset() {
-		scheduledMaxFee = scheduledMaxFee.Mul(scheduledMaxFee, big.NewInt(c.cfg.TokenMaxGasMultiplier))
+		scheduledMaxFee = scheduledMaxFee.Mul(scheduledMaxFee, big.NewInt(c.cfg.EVM.TokenMaxGasMultiplier))
+	}
+
+	// L2 chains require a small amount of gas asset left for the L1 fee
+	if c.cfg.EVM.ExtraL1GasFee > 0 {
+		l1Fee := big.NewInt(c.cfg.EVM.ExtraL1GasFee)
+		scheduledMaxFee = scheduledMaxFee.Sub(scheduledMaxFee, convertThorchainAmountToWei(l1Fee))
 	}
 
 	// determine max gas units based on scheduled max gas (fee) and current rate
@@ -779,12 +785,6 @@ func (c *EVMClient) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *
 	gas := common.MakeEVMGas(c.GetChain(), outboundTx.GasPrice(), outboundTx.Gas(), nil)
 	// This is the maximum gas, using the gas limit for instant-observation
 	// rather than the GasUsed which can only be gotten from the receipt when scanning.
-
-	// TODO:  For BASEChain MaxGas, what to do about the L1Fee not reflected in the GasPrice(),
-	// but which THORChain needs to allow enough for?
-	// (Not urgent as long as L1Fee is observed and the Dynamic Outbound Fee Multiplier
-	//  keeps total outbound fees inflow equal to total gas reimbursements outflow?
-	//  However, careful regarding any bond slashing for higher-gas-cost-than-permitted observed txouts.)
 
 	signedTx := &etypes.Transaction{}
 	if err = signedTx.UnmarshalJSON(rawTx); err != nil {

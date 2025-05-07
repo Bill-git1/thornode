@@ -549,7 +549,7 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 	}
 
 	// tip cap at configured percentage of max fee
-	tipCap := new(big.Int).Mul(gasRate, big.NewInt(int64(c.cfg.MaxGasTipPercentage)))
+	tipCap := new(big.Int).Mul(gasRate, big.NewInt(int64(c.cfg.EVM.MaxGasTipPercentage)))
 	tipCap.Div(tipCap, big.NewInt(100))
 
 	c.logger.Info().
@@ -630,9 +630,9 @@ func (c *Client) SignTx(tx stypes.TxOutItem, height int64) ([]byte, []byte, *sty
 		// set limit to aggregator gas limit
 		estimatedGas = gasLimitForAggregator
 
-		scheduledMaxFee = scheduledMaxFee.Mul(scheduledMaxFee, big.NewInt(c.cfg.AggregatorMaxGasMultiplier))
+		scheduledMaxFee = scheduledMaxFee.Mul(scheduledMaxFee, big.NewInt(c.cfg.EVM.AggregatorMaxGasMultiplier))
 	} else if !tx.Coins[0].Asset.IsGasAsset() {
-		scheduledMaxFee = scheduledMaxFee.Mul(scheduledMaxFee, big.NewInt(c.cfg.TokenMaxGasMultiplier))
+		scheduledMaxFee = scheduledMaxFee.Mul(scheduledMaxFee, big.NewInt(c.cfg.EVM.TokenMaxGasMultiplier))
 	}
 
 	var estimatedFee *big.Int

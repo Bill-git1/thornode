@@ -404,16 +404,17 @@ func (s *EthereumSuite) TestSignETHTx(c *C) {
 	pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.m)
 	c.Assert(err, IsNil)
 	poolMgr := thorclient.NewPoolMgr(s.bridge)
-	e, err := NewClient(s.thorKeys, config.BifrostChainConfiguration{
+	chainConfig := config.BifrostChainConfiguration{
 		RPCHost: "http://" + s.server.Listener.Addr().String(),
 		BlockScanner: config.BifrostBlockScannerConfiguration{
 			StartBlockHeight:   1, // avoids querying thorchain for block height
 			HTTPRequestTimeout: time.Second,
 			MaxGasLimit:        80000,
 		},
-		AggregatorMaxGasMultiplier: 10,
-		TokenMaxGasMultiplier:      3,
-	}, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
+	}
+	chainConfig.EVM.AggregatorMaxGasMultiplier = 10
+	chainConfig.EVM.TokenMaxGasMultiplier = 3
+	e, err := NewClient(s.thorKeys, chainConfig, nil, s.bridge, s.m, pubkeyMgr, poolMgr)
 	c.Assert(err, IsNil)
 	c.Assert(e, NotNil)
 	e.ethScanner.globalNetworkFeeQueue = make(chan common.NetworkFee, 1)

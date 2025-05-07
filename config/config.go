@@ -645,20 +645,6 @@ type BifrostChainConfiguration struct {
 	// MaxRPCRetries is the maximum number of retries for RPC requests.
 	MaxRPCRetries int `mapstructure:"max_rpc_retries"`
 
-	// MaxGasTipPercentage is the percentage of the max fee to set for the max tip cap on
-	// dynamic fee EVM transactions.
-	MaxGasTipPercentage int `mapstructure:"max_gas_tip_percentage"`
-
-	// TokenMaxGasMultiplier is a multiplier applied to max gas for outbounds which are
-	// not the gas asset. This compensates for variance in gas units when contracts for
-	// pool assets use more than the configured MaxGasLimit gas units in transferOut.
-	TokenMaxGasMultiplier int64 `mapstructure:"token_max_gas_multiplier"`
-
-	// AggregatorMaxGasMultiplier is a multiplier applied to max gas for outbounds which
-	// swap out via an aggregator contract. This compensates for variance in gas units when
-	// aggregator swaps outs use more than the configured MaxGasLimit gas units.
-	AggregatorMaxGasMultiplier int64 `mapstructure:"aggregator_max_gas_multiplier"`
-
 	// MaxPendingNonces is the maximum number of pending nonces to allow before aborting
 	// new signing attempts.
 	MaxPendingNonces uint64 `mapstructure:"max_pending_nonces"`
@@ -666,6 +652,27 @@ type BifrostChainConfiguration struct {
 	// AuthorizationBearer can be set to configure the RPC client with an API token that
 	// will be provided to the backend in an Authorization header.
 	AuthorizationBearer string `mapstructure:"authorization_bearer"`
+
+	// EVM contains EVM chain specific configuration.
+	EVM struct {
+		// MaxGasTipPercentage is the percentage of the max fee to set for the max tip cap on
+		// dynamic fee EVM transactions.
+		MaxGasTipPercentage int `mapstructure:"max_gas_tip_percentage"`
+
+		// TokenMaxGasMultiplier is a multiplier applied to max gas for outbounds which are
+		// not the gas asset. This compensates for variance in gas units when contracts for
+		// pool assets use more than the configured MaxGasLimit gas units in transferOut.
+		TokenMaxGasMultiplier int64 `mapstructure:"token_max_gas_multiplier"`
+
+		// AggregatorMaxGasMultiplier is a multiplier applied to max gas for outbounds which
+		// swap out via an aggregator contract. This compensates for variance in gas units when
+		// aggregator swaps outs use more than the configured MaxGasLimit gas units.
+		AggregatorMaxGasMultiplier int64 `mapstructure:"aggregator_max_gas_multiplier"`
+
+		// ExtraL1GasFee is an extra 1e8 amount deducted from the scheduled max gas to
+		// account for the Ethereum gas fee on Ethereum L2s.
+		ExtraL1GasFee int64 `mapstructure:"extra_l1_gas_fee"`
+	} `mapstructure:"evm"`
 
 	// UTXO contains UTXO chain specific configuration.
 	UTXO struct {
