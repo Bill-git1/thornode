@@ -77,7 +77,19 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 	if voter.Height > earliestHeight {
 		earliestHeight = voter.Height
 	}
-	for height := ctx.BlockHeight(); height >= earliestHeight; height-- {
+
+	// A TxOutItem might be rescheduled (by LackSigning) rounded up to nearest multiple of RescheduleCoalesceBlocks,
+	// so check backwards from that future nearest multiple.
+	latestHeight := ctx.BlockHeight()
+	rescheduleCoalesceBlocks := h.mgr.Keeper().GetConfigInt64(ctx, constants.RescheduleCoalesceBlocks)
+	if rescheduleCoalesceBlocks > 1 {
+		overBlocks := latestHeight % rescheduleCoalesceBlocks
+		if overBlocks != 0 {
+			latestHeight += rescheduleCoalesceBlocks - overBlocks
+		}
+	}
+
+	for height := latestHeight; height >= earliestHeight; height-- {
 		// update txOut record with our TxID that sent funds out of the pool
 		// trunk-ignore(golangci-lint/govet): shadow
 		txOut, err := h.mgr.Keeper().GetTxOut(ctx, height)
