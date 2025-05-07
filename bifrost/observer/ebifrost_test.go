@@ -148,7 +148,7 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 		}()
 
 		// Create attestation gossip manually with the bifrost client
-		ag, err := NewAttestationGossip(comm.GetHost(), keys, grpcAddresses[i], mockBridge, config.BifrostAttestationGossipConfig{
+		ag, err := NewAttestationGossip(comm.GetHost(), keys, grpcAddresses[i], mockBridge, s.metrics, config.BifrostAttestationGossipConfig{
 			ObserveReconcileInterval:   time.Second * 1,
 			MinTimeBetweenAttestations: time.Second * 2,
 			LateObserveTimeout:         time.Second * 4,
@@ -157,9 +157,12 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 		})
 		c.Assert(err, IsNil)
 
-		ag.setActiveValidators(validatorPubs)
+		if i > 1 {
+			// Test legacy protocols on half of vals for backward compatibility
+			ag.host.RemoveStreamHandler(batchedAttestationProtocol)
+		}
 
-		go ag.Start(ctx)
+		ag.setActiveValidators(validatorPubs)
 
 		// Create pubkey manager
 		pubkeyMgr, err := pubkeymanager.NewPubKeyManager(mockBridge, s.metrics)
@@ -272,6 +275,8 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 		c.Assert(len(txs), Equals, 0) // No txs yet, need quorum
 	}
 
+	time.Sleep(time.Second * 2)
+
 	for _, atg := range attestationGossips {
 		atg.mu.Lock()
 		c.Assert(len(atg.observedTxs), Equals, 1)
@@ -292,7 +297,7 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 	logger.Info().Msg("Remaining validators attested")
 
 	// Wait for gossip to propagate
-	time.Sleep(time.Millisecond * 500)
+	time.Sleep(time.Second * 2)
 
 	// for _, atg := range attestationGossips {
 	// 	atg.mu.Lock()

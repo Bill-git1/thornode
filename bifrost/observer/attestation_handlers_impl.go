@@ -9,12 +9,6 @@ import (
 
 // handleObservedTxAttestation processes attestations for observed transactions
 func (s *AttestationGossip) handleObservedTxAttestation(ctx context.Context, tx common.AttestTx) {
-	// Ensure the attester is an active validator
-	if err := s.ensureAttesterIsActiveNode(tx.Attestation); err != nil {
-		s.logger.Error().Err(err).Msg("fail to ensure attester for observed tx is active node")
-		return
-	}
-
 	obsTx := tx.ObsTx
 
 	k := txKey{
@@ -101,12 +95,6 @@ func (s *AttestationGossip) sendObservedTxAttestationsToThornode(
 
 // handleNetworkFeeAttestation processes attestations for network fees
 func (s *AttestationGossip) handleNetworkFeeAttestation(ctx context.Context, anf common.AttestNetworkFee) {
-	// Ensure the attester is an active validator
-	if err := s.ensureAttesterIsActiveNode(anf.Attestation); err != nil {
-		s.logger.Error().Err(err).Msg("fail to ensure attester for network fee is active node")
-		return
-	}
-
 	// Use the network fee as the map key
 	k := *anf.NetworkFee
 
@@ -167,12 +155,6 @@ func (s *AttestationGossip) sendNetworkFeeAttestationsToThornode(ctx context.Con
 
 // handleSolvencyAttestation processes attestations for solvency proofs
 func (s *AttestationGossip) handleSolvencyAttestation(ctx context.Context, ats common.AttestSolvency) {
-	// Ensure the attester is an active validator
-	if err := s.ensureAttesterIsActiveNode(ats.Attestation); err != nil {
-		s.logger.Error().Err(err).Msg("fail to ensure attester for solvency is active node")
-		return
-	}
-
 	// Calculate the hash for the solvency to use as key
 	k, err := ats.Solvency.Hash()
 	if err != nil {
@@ -237,12 +219,6 @@ func (s *AttestationGossip) sendSolvencyAttestationsToThornode(ctx context.Conte
 
 // handleErrataAttestation processes attestations for errata transactions
 func (s *AttestationGossip) handleErrataAttestation(ctx context.Context, aet common.AttestErrataTx) {
-	// Ensure the attester is an active validator
-	if err := s.ensureAttesterIsActiveNode(aet.Attestation); err != nil {
-		s.logger.Error().Err(err).Msg("fail to ensure attester for errata tx is active node")
-		return
-	}
-
 	// Use the errata tx as the map key
 	k := *aet.ErrataTx
 

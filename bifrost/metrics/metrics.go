@@ -37,6 +37,12 @@ const (
 	SignerError   MetricName = `signer_error`
 
 	PubKeyManagerError MetricName = `pubkey_manager_error`
+
+	BatchSends      MetricName = `batch_sends`
+	BatchClears     MetricName = `batch_clears`
+	MessagesBatched MetricName = `messages_batched`
+	BatchSize       MetricName = `batch_size`
+	BatchSendTime   MetricName = `batch_send_time`
 )
 
 // Metrics used to provide promethus metrics
@@ -77,6 +83,18 @@ var (
 			Subsystem: "thorchain_client",
 			Name:      "tx_to_thorchain_signed_total",
 			Help:      "number of tx observer signed successfully",
+		}),
+		BatchSends: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: "observer",
+			Subsystem: "attestation_batcher",
+			Name:      "batch_sends_total",
+			Help:      "number of batch sends",
+		}),
+		BatchClears: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: "observer",
+			Subsystem: "attestation_batcher",
+			Name:      "batch_clears_total",
+			Help:      "number of batch clears",
 		}),
 	}
 	counterVecs = map[MetricName]*prometheus.CounterVec{
@@ -131,6 +149,14 @@ var (
 		}, []string{
 			"error_name", "additional",
 		}),
+		MessagesBatched: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace: "observer",
+			Subsystem: "attestation_batcher",
+			Name:      "messages_batched_total",
+			Help:      "number of messages batched",
+		}, []string{
+			"message_type",
+		}),
 	}
 
 	histograms = map[MetricName]prometheus.Histogram{
@@ -151,6 +177,18 @@ var (
 			Subsystem: "thorchain",
 			Name:      "send_to_thorchain_duration",
 			Help:      "how long it takes to sign and broadcast to thorchain",
+		}),
+		BatchSize: prometheus.NewHistogram(prometheus.HistogramOpts{
+			Namespace: "observer",
+			Subsystem: "attestation_batcher",
+			Name:      "batch_size",
+			Help:      "size of the batch",
+		}),
+		BatchSendTime: prometheus.NewHistogram(prometheus.HistogramOpts{
+			Namespace: "observer",
+			Subsystem: "attestation_batcher",
+			Name:      "batch_send_time",
+			Help:      "how long it takes to send a batch",
 		}),
 	}
 

@@ -171,3 +171,12 @@ message QuorumErrataTx {
     ErrataTx errata_tx = 1;
     repeated Attestation attestations = 2;
 }
+
+message AttestationBatch {
+    option (gogoproto.stringer)         = true;
+
+    repeated AttestTx attest_txs = 1;
+    repeated AttestNetworkFee attest_network_fees = 2;
+    repeated AttestSolvency attest_solvencies = 3;
+    repeated AttestErrataTx attest_errata_txs = 4;
+}

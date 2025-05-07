@@ -17,10 +17,15 @@ func TestHandleStreamObservedTxAttestation(t *testing.T) {
 	agVal2, _, _, _, _, _ := setupTestGossip(t)
 
 	numVals := 2
+	agVals := []*AttestationGossip{agVal1, agVal2}
 	valPrivs := make([]*secp256k1.PrivKey, numVals)
 	valPubs := make([]common.PubKey, numVals)
 	for i := 0; i < numVals; i++ {
-		valPrivs[i] = secp256k1.GenPrivKey()
+		priv, err := agVals[i].keys.GetPrivateKey()
+		require.NoError(t, err, "Should be able to get private key")
+		var ok bool
+		valPrivs[i], ok = priv.(*secp256k1.PrivKey)
+		require.True(t, ok, "Should be able to cast private key to secp256k1")
 		bech32Pub, err := cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeAccPub, valPrivs[i].PubKey())
 		require.NoError(t, err, "Should be able to convert pubkey to bech32")
 		valPubs[i] = common.PubKey(bech32Pub)
@@ -99,7 +104,7 @@ func TestHandleStreamObservedTxAttestation(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		agVal1.handleObservedTxAttestation(context.TODO(), *val1AttestTx)
-		agVal1.sendPayloadToStream(val1Stream, val1AttestTxBz)
+		agVal1.batcher.sendPayloadToStream(val1Stream, val1AttestTxBz)
 	}()
 
 	go func() {
@@ -113,7 +118,7 @@ func TestHandleStreamObservedTxAttestation(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		agVal2.handleObservedTxAttestation(context.TODO(), *val2AttestTx)
-		agVal2.sendPayloadToStream(val2Stream, val2AttestTxBz)
+		agVal2.batcher.sendPayloadToStream(val2Stream, val2AttestTxBz)
 	}()
 
 	go func() {
@@ -153,10 +158,15 @@ func TestHandleStreamNetworkFeeAttestation(t *testing.T) {
 	agVal2, _, _, _, _, _ := setupTestGossip(t)
 
 	numVals := 2
+	agVals := []*AttestationGossip{agVal1, agVal2}
 	valPrivs := make([]*secp256k1.PrivKey, numVals)
 	valPubs := make([]common.PubKey, numVals)
 	for i := 0; i < numVals; i++ {
-		valPrivs[i] = secp256k1.GenPrivKey()
+		priv, err := agVals[i].keys.GetPrivateKey()
+		require.NoError(t, err, "Should be able to get private key")
+		var ok bool
+		valPrivs[i], ok = priv.(*secp256k1.PrivKey)
+		require.True(t, ok, "Should be able to cast private key to secp256k1")
 		bech32Pub, err := cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeAccPub, valPrivs[i].PubKey())
 		require.NoError(t, err, "Should be able to convert pubkey to bech32")
 		valPubs[i] = common.PubKey(bech32Pub)
@@ -236,7 +246,7 @@ func TestHandleStreamNetworkFeeAttestation(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		agVal1.handleNetworkFeeAttestation(context.TODO(), *val1AttestTx)
-		agVal1.sendPayloadToStream(val1Stream, val1AttestTxBz)
+		agVal1.batcher.sendPayloadToStream(val1Stream, val1AttestTxBz)
 	}()
 
 	go func() {
@@ -250,7 +260,7 @@ func TestHandleStreamNetworkFeeAttestation(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		agVal2.handleNetworkFeeAttestation(context.TODO(), *val2AttestTx)
-		agVal2.sendPayloadToStream(val2Stream, val2AttestTxBz)
+		agVal2.batcher.sendPayloadToStream(val2Stream, val2AttestTxBz)
 	}()
 
 	go func() {
@@ -290,10 +300,15 @@ func TestHandleStreamSolvencyAttestation(t *testing.T) {
 	agVal2, _, _, _, _, _ := setupTestGossip(t)
 
 	numVals := 2
+	agVals := []*AttestationGossip{agVal1, agVal2}
 	valPrivs := make([]*secp256k1.PrivKey, numVals)
 	valPubs := make([]common.PubKey, numVals)
 	for i := 0; i < numVals; i++ {
-		valPrivs[i] = secp256k1.GenPrivKey()
+		priv, err := agVals[i].keys.GetPrivateKey()
+		require.NoError(t, err, "Should be able to get private key")
+		var ok bool
+		valPrivs[i], ok = priv.(*secp256k1.PrivKey)
+		require.True(t, ok, "Should be able to cast private key to secp256k1")
 		bech32Pub, err := cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeAccPub, valPrivs[i].PubKey())
 		require.NoError(t, err, "Should be able to convert pubkey to bech32")
 		valPubs[i] = common.PubKey(bech32Pub)
@@ -384,7 +399,7 @@ func TestHandleStreamSolvencyAttestation(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		agVal1.handleSolvencyAttestation(context.TODO(), *val1AttestTx)
-		agVal1.sendPayloadToStream(val1Stream, val1AttestTxBz)
+		agVal1.batcher.sendPayloadToStream(val1Stream, val1AttestTxBz)
 	}()
 
 	go func() {
@@ -398,7 +413,7 @@ func TestHandleStreamSolvencyAttestation(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		agVal2.handleSolvencyAttestation(context.TODO(), *val2AttestTx)
-		agVal2.sendPayloadToStream(val2Stream, val2AttestTxBz)
+		agVal2.batcher.sendPayloadToStream(val2Stream, val2AttestTxBz)
 	}()
 
 	go func() {
@@ -438,10 +453,15 @@ func TestHandleStreamErrataTxAttestation(t *testing.T) {
 	agVal2, _, _, _, _, _ := setupTestGossip(t)
 
 	numVals := 2
+	agVals := []*AttestationGossip{agVal1, agVal2}
 	valPrivs := make([]*secp256k1.PrivKey, numVals)
 	valPubs := make([]common.PubKey, numVals)
 	for i := 0; i < numVals; i++ {
-		valPrivs[i] = secp256k1.GenPrivKey()
+		priv, err := agVals[i].keys.GetPrivateKey()
+		require.NoError(t, err, "Should be able to get private key")
+		var ok bool
+		valPrivs[i], ok = priv.(*secp256k1.PrivKey)
+		require.True(t, ok, "Should be able to cast private key to secp256k1")
 		bech32Pub, err := cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeAccPub, valPrivs[i].PubKey())
 		require.NoError(t, err, "Should be able to convert pubkey to bech32")
 		valPubs[i] = common.PubKey(bech32Pub)
@@ -519,7 +539,7 @@ func TestHandleStreamErrataTxAttestation(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		agVal1.handleErrataAttestation(context.TODO(), *val1AttestTx)
-		agVal1.sendPayloadToStream(val1Stream, val1AttestTxBz)
+		agVal1.batcher.sendPayloadToStream(val1Stream, val1AttestTxBz)
 	}()
 
 	go func() {
@@ -533,7 +553,7 @@ func TestHandleStreamErrataTxAttestation(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		agVal2.handleErrataAttestation(context.TODO(), *val2AttestTx)
-		agVal2.sendPayloadToStream(val2Stream, val2AttestTxBz)
+		agVal2.batcher.sendPayloadToStream(val2Stream, val2AttestTxBz)
 	}()
 
 	go func() {

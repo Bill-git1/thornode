@@ -74,6 +74,8 @@ type Observer struct {
 	attestationGossip  *AttestationGossip
 
 	observerWorkers int
+
+	lastNodeStatus stypes.NodeStatus
 }
 
 // NewObserver create a new instance of Observer for chain
@@ -149,7 +151,7 @@ func (o *Observer) Start(ctx context.Context) error {
 	go o.processErrataTx(ctx)
 	go o.processSolvencyQueue(ctx)
 	go o.processNetworkFeeQueue(ctx)
-	go o.deck()
+	go o.deck(ctx)
 	go o.attestationGossip.Start(ctx)
 	return nil
 }
@@ -182,14 +184,14 @@ func (o *Observer) restoreDeck() {
 	}
 }
 
-func (o *Observer) deck() {
+func (o *Observer) deck(ctx context.Context) {
 	for {
 		select {
 		case <-o.stopChan:
-			o.sendDeck()
+			o.sendDeck(ctx)
 			return
 		case <-time.After(deckRefreshTime):
-			o.sendDeck()
+			o.sendDeck(ctx)
 		}
 	}
 }
@@ -273,18 +275,7 @@ func (o *Observer) handleObservedTxCommitted(tx common.ObservedTx) {
 		Msg("observed tx committed to thorchain")
 }
 
-func (o *Observer) sendDeck() {
-	// check if node is active
-	nodeStatus, err := o.thorchainBridge.FetchNodeStatus()
-	if err != nil {
-		o.logger.Error().Err(err).Msg("failed to get node status")
-		return
-	}
-	if nodeStatus != stypes.NodeStatus_Active {
-		o.logger.Warn().Msg("node is not active, will not handle tx in")
-		return
-	}
-
+func (o *Observer) sendDeck(ctx context.Context) {
 	// fetch and update active validator count on attestation gossip so it can calculate quorum
 	activeVals, err := o.thorchainBridge.FetchActiveNodes()
 	if err != nil {
@@ -292,6 +283,24 @@ func (o *Observer) sendDeck() {
 		return
 	}
 	o.attestationGossip.setActiveValidators(activeVals)
+
+	// check if node is active
+	nodeStatus, err := o.thorchainBridge.FetchNodeStatus()
+	if err != nil {
+		o.logger.Error().Err(err).Msg("failed to get node status")
+		return
+	}
+	if nodeStatus != o.lastNodeStatus {
+		if nodeStatus == stypes.NodeStatus_Active {
+			o.logger.Info().Msg("node is now active, will begin observation and gossip")
+			o.attestationGossip.askForAttestationState(ctx)
+		}
+		o.lastNodeStatus = nodeStatus
+	}
+	if nodeStatus != stypes.NodeStatus_Active {
+		o.logger.Warn().Msg("node is not active, will not handle tx in")
+		return
+	}
 
 	o.lock.Lock()
 	defer o.lock.Unlock()

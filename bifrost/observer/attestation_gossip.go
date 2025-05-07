@@ -7,15 +7,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	"github.com/libp2p/go-libp2p-core/host"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
+	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
@@ -53,11 +55,12 @@ const (
 )
 
 var (
-	observeTxProtocol        protocol.ID = "/p2p/observed-tx"
-	networkFeeProtocol       protocol.ID = "/p2p/network-fee"
-	solvencyProtocol         protocol.ID = "/p2p/solvency"
-	errataTxProtocol         protocol.ID = "/p2p/errata-tx"
-	attestationStateProtocol protocol.ID = "/p2p/attestation-state"
+	observeTxProtocol          protocol.ID = "/p2p/observed-tx"
+	networkFeeProtocol         protocol.ID = "/p2p/network-fee"
+	solvencyProtocol           protocol.ID = "/p2p/solvency"
+	errataTxProtocol           protocol.ID = "/p2p/errata-tx"
+	attestationStateProtocol   protocol.ID = "/p2p/attestation-state"
+	batchedAttestationProtocol protocol.ID = "/p2p/batched-attestations"
 
 	// AttestationState protocol prefixes
 	prefixSendState = []byte{0x01} // request
@@ -111,13 +114,15 @@ type AttestationGossip struct {
 	errataTxs   map[common.ErrataTx]*AttestationState[*common.ErrataTx]
 	mu          sync.Mutex
 
-	activeVals common.PubKeys
+	activeVals map[peer.ID]bool // active val peer IDs
 	avMu       sync.Mutex
 
 	observerHandleObservedTxCommitted func(tx common.ObservedTx)
 
 	cachedKeySignParties map[common.PubKey]cachedKeySignParty
 	cachedKeySignMu      sync.Mutex
+
+	batcher *AttestationBatcher
 }
 
 type cachedKeySignParty struct {
@@ -131,6 +136,7 @@ func NewAttestationGossip(
 	keys *thorclient.Keys,
 	thornodeBifrostGRPCAddress string,
 	bridge thorclient.ThorchainBridge,
+	m *metrics.Metrics,
 	config config.BifrostAttestationGossipConfig,
 ) (*AttestationGossip, error) {
 	cc, err := grpc.NewClient(thornodeBifrostGRPCAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -148,6 +154,16 @@ func NewAttestationGossip(
 		return nil, fmt.Errorf("fail to get private key: %w", err)
 	}
 
+	batcher := NewAttestationBatcher(
+		host,
+		log.With().Str("module", "attestation_batcher").Logger(),
+		m,
+		config.BatchInterval,
+		config.MaxBatchSize,
+		config.PeerTimeout,
+		config.PeerConcurrentSends,
+	)
+
 	s := &AttestationGossip{
 		logger:      log.With().Str("module", "attestation_gossip").Logger(),
 		host:        host,
@@ -164,7 +180,10 @@ func NewAttestationGossip(
 		solvencies:           make(map[common.TxID]*AttestationState[*common.Solvency]),
 		errataTxs:            make(map[common.ErrataTx]*AttestationState[*common.ErrataTx]),
 		cachedKeySignParties: make(map[common.PubKey]cachedKeySignParty),
+
+		batcher: batcher,
 	}
+	batcher.setActiveValGetter(s.getActiveValidators)
 	// Register event handlers
 	eventClient.RegisterHandler(ebifrost.EventQuorumTxCommited, s.handleQuorumTxCommited)
 
@@ -174,6 +193,7 @@ func NewAttestationGossip(
 	host.SetStreamHandler(networkFeeProtocol, s.handleStreamNetworkFee)
 	host.SetStreamHandler(solvencyProtocol, s.handleStreamSolvency)
 	host.SetStreamHandler(errataTxProtocol, s.handleStreamErrataTx)
+	host.SetStreamHandler(batchedAttestationProtocol, s.handleStreamBatchedAttestations)
 
 	return s, nil
 }
@@ -204,7 +224,22 @@ func normalizeConfig(config *config.BifrostAttestationGossipConfig) {
 func (s *AttestationGossip) setActiveValidators(activeVals common.PubKeys) {
 	s.avMu.Lock()
 	defer s.avMu.Unlock()
-	s.activeVals = activeVals
+	activePeers := make(map[peer.ID]bool, len(activeVals))
+	for _, pub := range activeVals {
+		pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeAccPub, pub.String())
+		if err != nil {
+			s.logger.Error().Err(err).Msg("fail to convert bech32 pubkey to raw secp256k1 pubkey")
+			continue
+		}
+		peerID, err := conversion.GetPeerIDFromSecp256PubKey(pk.Bytes())
+		if err != nil {
+			s.logger.Error().Err(err).Msg("fail to convert secp256k1 pubkey to peer ID")
+			continue
+		}
+		activePeers[peerID] = true
+	}
+
+	s.activeVals = activePeers
 }
 
 // Get the number of active validators
@@ -215,20 +250,17 @@ func (s *AttestationGossip) activeValidatorCount() int {
 }
 
 // Check if a public key belongs to an active validator
-func (s *AttestationGossip) isActiveValidator(secp256k1PubKey []byte) error {
-	bech32Pub, err := cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeAccPub, &secp256k1.PubKey{Key: secp256k1PubKey})
-	if err != nil {
-		return fmt.Errorf("fail to convert pubkey to bech32: %w", err)
-	}
-
+func (s *AttestationGossip) isActiveValidator(p peer.ID) bool {
 	s.avMu.Lock()
 	defer s.avMu.Unlock()
-	for _, val := range s.activeVals {
-		if val.Equals(common.PubKey(bech32Pub)) {
-			return nil
-		}
-	}
-	return fmt.Errorf("not an active validator: %s", bech32Pub)
+	_, ok := s.activeVals[p]
+	return ok
+}
+
+func (s *AttestationGossip) getActiveValidators() map[peer.ID]bool {
+	s.avMu.Lock()
+	defer s.avMu.Unlock()
+	return s.activeVals
 }
 
 // Get the keysign party for a specific public key
@@ -291,6 +323,8 @@ func (s *AttestationGossip) Start(ctx context.Context) {
 	startupDelay := s.config.AskPeersDelay
 	delayTimer := time.NewTimer(startupDelay)
 	defer delayTimer.Stop()
+
+	go s.batcher.Start(ctx)
 
 	for {
 		select {
@@ -360,28 +394,10 @@ func (s *AttestationGossip) Start(ctx context.Context) {
 
 		case <-delayTimer.C:
 			s.eventClient.Start()
-			s.logger.Debug().Msg("asking for attestation state")
-			s.askForAttestationState(ctx)
 
 		case <-ctx.Done():
 			s.eventClient.Stop()
 			return
 		}
 	}
-}
-
-func (s *AttestationGossip) ensureAttesterIsActiveNode(att *common.Attestation) error {
-	if att == nil {
-		return fmt.Errorf("attestation is nil")
-	}
-
-	if att.PubKey == nil {
-		return fmt.Errorf("attestation pubkey is nil")
-	}
-
-	if err := s.isActiveValidator(att.PubKey); err != nil {
-		return fmt.Errorf("ignoring attestation: %w", err)
-	}
-
-	return nil
 }

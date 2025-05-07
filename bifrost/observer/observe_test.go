@@ -219,7 +219,7 @@ func (s *ObserverSuite) TestProcess(c *C) {
 	}()
 
 	c.Assert(comm.GetHost(), NotNil)
-	ag, err := NewAttestationGossip(comm.GetHost(), s.thorKeys, "localhost:50051", s.bridge, config.BifrostAttestationGossipConfig{})
+	ag, err := NewAttestationGossip(comm.GetHost(), s.thorKeys, "localhost:50051", s.bridge, s.metrics, config.BifrostAttestationGossipConfig{})
 	c.Assert(err, IsNil)
 	obs, err := NewObserver(
 		pubkeyMgr,
@@ -264,7 +264,8 @@ func (s *ObserverSuite) TestErrataTx(c *C) {
 	}()
 
 	c.Assert(comm.GetHost(), NotNil)
-	ag, err := NewAttestationGossip(comm.GetHost(), s.thorKeys, "localhost:50051", s.bridge, config.BifrostAttestationGossipConfig{})
+
+	ag, err := NewAttestationGossip(comm.GetHost(), s.thorKeys, "localhost:50051", s.bridge, s.metrics, config.BifrostAttestationGossipConfig{})
 	c.Assert(err, IsNil)
 
 	obs, err := NewObserver(pubkeyMgr, nil, s.bridge, s.metrics, "", metrics.NewTssKeysignMetricMgr(), ag)
@@ -305,7 +306,8 @@ func (s *ObserverSuite) TestGetSaversMemo(c *C) {
 		c.Assert(err, IsNil)
 	}()
 	c.Assert(comm.GetHost(), NotNil)
-	ag, err := NewAttestationGossip(comm.GetHost(), s.thorKeys, "localhost:50051", s.bridge, config.BifrostAttestationGossipConfig{})
+
+	ag, err := NewAttestationGossip(comm.GetHost(), s.thorKeys, "localhost:50051", s.bridge, s.metrics, config.BifrostAttestationGossipConfig{})
 	c.Assert(err, IsNil)
 	obs, err := NewObserver(
 		pubkeyMgr,
@@ -406,7 +408,7 @@ func (s *ObserverSuite) TestObserverDeckStorage(c *C) {
 		pubkeyMgr.AddPubKey(vault1, false)
 		pubkeyMgr.AddPubKey(vault2, false)
 
-		ag, err := NewAttestationGossip(NewMockHost([]peer.ID{}), s.thorKeys, "localhost:50052", s.bridge, config.BifrostAttestationGossipConfig{})
+		ag, err := NewAttestationGossip(NewMockHost([]peer.ID{}), s.thorKeys, "localhost:50052", s.bridge, s.metrics, config.BifrostAttestationGossipConfig{})
 		c.Assert(err, IsNil)
 		obs, err := NewObserver(
 			pubkeyMgr,

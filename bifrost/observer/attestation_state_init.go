@@ -24,13 +24,19 @@ func (s *AttestationGossip) askForAttestationState(ctx context.Context) {
 		return
 	}
 	peersWithoutMe := make([]peer.ID, 0, len(allPeers)-1)
-	for _, peer := range allPeers {
-		if peer != s.host.ID() {
-			peersWithoutMe = append(peersWithoutMe, peer)
+	// Skip self, send to 3 active vals that we are peered with
+	activeVals := s.getActiveValidators()
+	for _, peerID := range allPeers {
+		if peerID == s.host.ID() {
+			continue
+		}
+		if _, ok := activeVals[peerID]; ok {
+			peersWithoutMe = append(peersWithoutMe, peerID)
 		}
 	}
+
 	if len(peersWithoutMe) == 0 {
-		s.logger.Debug().Msg("no peers without me to ask for attestation state")
+		s.logger.Debug().Msg("no active val peers without me to ask for attestation state")
 		return
 	}
 	// ask 3 random peers for their attestation state

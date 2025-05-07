@@ -595,6 +595,18 @@ type BifrostAttestationGossipConfig struct {
 
 	// delay before asking peers for their attestation state on startup.
 	AskPeersDelay time.Duration `mapstructure:"ask_peers_delay"`
+
+	// how many attestations to batch together before sending to thornode.
+	MaxBatchSize int `mapstructure:"max_batch_size"`
+
+	// how often to send batches of attestations to thornode.
+	BatchInterval time.Duration `mapstructure:"batch_interval"`
+
+	// how long to wait when sending a single attestation to a peer before giving up.
+	PeerTimeout time.Duration `mapstructure:"peer_timeout"`
+
+	// maximum concurrent sends to a single peer
+	PeerConcurrentSends int `mapstructure:"peer_concurrent_sends"`
 }
 
 type BifrostChainConfiguration struct {
