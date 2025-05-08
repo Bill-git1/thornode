@@ -52,6 +52,14 @@ func AsgardInvariant(k KVStore) common.Invariant {
 					)
 					poolCoins = poolCoins.Add(tcyCoin)
 				}
+
+				if pool.Asset.IsRUJI() {
+					rujiCoin := common.NewCoin(
+						common.RUJI,
+						pool.BalanceAsset.Add(pool.PendingInboundAsset),
+					)
+					poolCoins = poolCoins.Add(rujiCoin)
+				}
 			}
 		}
 

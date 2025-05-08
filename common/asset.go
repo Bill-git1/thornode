@@ -239,7 +239,7 @@ func (a Asset) IsVaultAsset() bool {
 
 // Check if asset is a derived asset
 func (a Asset) IsDerivedAsset() bool {
-	return !a.Synth && !a.Trade && !a.Secured && a.GetChain().IsTHORChain() && !a.IsRune() && !a.Equals(TCY)
+	return !a.Synth && !a.Trade && !a.Secured && a.GetChain().IsTHORChain() && !a.IsRune() && !a.IsTCY() && !a.IsRUJI()
 }
 
 // Native return native asset, only relevant on THORChain
@@ -251,7 +251,7 @@ func (a Asset) Native() string {
 		return "tor"
 	case a.Equals(TCY):
 		return "tcy"
-	case a.Equals(RUJI):
+	case a.IsRUJI():
 		return "x/ruji"
 	}
 
@@ -325,6 +325,10 @@ func (a Asset) IsRune() bool {
 // IsTCY is a helper function ,return true only when the asset represent RUNE
 func (a Asset) IsTCY() bool {
 	return TCY.Equals(a)
+}
+
+func (a Asset) IsRUJI() bool {
+	return RUJI.Equals(a)
 }
 
 // IsNative is a helper function, returns true when the asset is a native

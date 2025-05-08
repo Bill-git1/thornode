@@ -136,7 +136,7 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit) (*cosmos.Resu
 	// (When the Amount is zero, the Asset type is irrelevant.)
 	// Coins having exactly one Coin is ensured by the validate function,
 	// but IsEmpty covers a hypothetical no-Coin scenario too.
-	if !msg.Coins.IsEmpty() && (!msg.Coins[0].Asset.IsRune() && !msg.Coins[0].Asset.IsTCY()) && targetModule != AsgardName {
+	if !msg.Coins.IsEmpty() && (!msg.Coins[0].Asset.IsRune() && !msg.Coins[0].Asset.IsTCY() && !msg.Coins[0].Asset.IsRUJI()) && targetModule != AsgardName {
 		return nil, fmt.Errorf("(%s) memos are for the (%s) module, for which messages must only contain RUNE or TCY", memo.GetType().String(), targetModule)
 	}
 
