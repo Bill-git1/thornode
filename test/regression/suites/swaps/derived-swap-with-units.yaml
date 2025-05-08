@@ -67,12 +67,12 @@ count: 1
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/supply
 asserts:
-  - .supply[]|select(.denom == "thor.btc")|.amount|tonumber == 978324
+  - .supply[]|select(.denom == "thor.btc")|.amount|tonumber == 978303
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
-  - .balances[]|select(.denom == "thor.btc")|.amount|tonumber == 978324 # should be the total supply
+  - .balances[]|select(.denom == "thor.btc")|.amount|tonumber == 978303 # should be the total supply
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}

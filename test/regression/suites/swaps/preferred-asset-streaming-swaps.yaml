@@ -77,7 +77,7 @@ count: 2
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
-  - .affiliate_collector_rune == "722633433"
+  - .affiliate_collector_rune == "722638857"
 ---
 # Observe the outbound.
 type: tx-observed-out
@@ -89,7 +89,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_cat }}
       coins:
-        - amount: "10761021"
+        - amount: "10760967"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -137,7 +137,7 @@ count: 2
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
-  - .affiliate_collector_rune == "1003648199"
+  - .affiliate_collector_rune == "1003658766"
 ---
 ########################################################################################
 # streaming swap to rune to trigger preferred asset swap
@@ -146,7 +146,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FOX_BAL=2498765723539}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FOX_BAL=2498765975535}
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -179,7 +179,7 @@ asserts:
   - .count == 1
   - .interval == 1
   - .quantity == 6
-  - .out == "495039549"
+  - .out == "495044145"
   - .last_height == 11
   - .trade_target == "0"
   - .failed_swaps|length == 0
@@ -196,7 +196,7 @@ asserts:
   - .count == 4
   - .interval == 1
   - .quantity == 6
-  - .out == "1951100686"
+  - .out == "1951138297"
   - .last_height == 14
   - .trade_target == "0"
   - .failed_swaps|length == 0
@@ -209,7 +209,7 @@ type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount|tonumber == ${FOX_BAL} + 2606462849
+  - .result[]|select(.denom == "rune").amount|tonumber == ${FOX_BAL} + 2606530511
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
@@ -228,9 +228,9 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
-  - .[0]|.in_hash == "${IN_HASH=72596E96ED43333B8EFF5E515C5FA789ECD9913561895E18BC0FC78B4887C429}"
+  - .[0]|.in_hash == "${IN_HASH=24CAF6FDC0345E36A43E152C48E407EDAA6BF07766FBB135EEBCE7A65E919603}"
   - .[0]|.coin.asset == "ETH.USDX-0X9999999999999999999999999999999999999999"
-  - .[0]|.coin.amount == "${OUT_AMOUNT=1143000800}"
+  - .[0]|.coin.amount == "${OUT_AMOUNT=1143001800}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}

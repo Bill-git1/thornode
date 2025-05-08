@@ -25,8 +25,6 @@ const (
 	tssKeysignTimeout    = 5  // in minutes, the maximum time bifrost is going to wait before the tss result come back
 )
 
-var blockHeightRoundingInterval = constants.BlocksIn(2 * time.Minute)
-
 type tssServer interface {
 	KeySign(req keysign.Request) (keysign.Response, error)
 }
@@ -273,8 +271,8 @@ func (s *KeySign) toLocalTSSSigner(poolPubKey string, tasks []*tssKeySignTask) {
 		s.setTssKeySignTasksFail(tasks, fmt.Errorf("fail to get block height from thorchain: %w", err))
 		return
 	}
-	// this is just round the block height to the nearest 60
-	tssMsg.BlockHeight = blockHeight / blockHeightRoundingInterval * blockHeightRoundingInterval
+	// this is just round the block height to the nearest 20
+	tssMsg.BlockHeight = blockHeight / 20 * 20
 
 	s.logger.Info().Msgf("msgToSign to tss Local node PoolPubKey: %s, Messages: %+v, block height: %d", tssMsg.PoolPubKey, tssMsg.Messages, tssMsg.BlockHeight)
 

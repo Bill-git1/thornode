@@ -28,7 +28,7 @@ endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_provider/{{ add
 asserts:
   - .pending_rune | tonumber == 0
   - .pending_asset | tonumber == 0
-  - .rune_deposit_value | tonumber == 49999999
+  - .rune_deposit_value | tonumber == 50000000
   - .asset_deposit_value | tonumber == 49950
 ---
 ########################################################################################
@@ -69,7 +69,7 @@ endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_provider/{{ add
 asserts:
   - .pending_rune | tonumber == 0
   - .pending_asset | tonumber == 0
-  - .rune_deposit_value | tonumber == 49999999
+  - .rune_deposit_value | tonumber == 50000000
   - .asset_deposit_value | tonumber == 49950
 ---
 ########################################################################################
@@ -118,7 +118,7 @@ endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_provider/{{ add
 asserts:
   - .pending_rune | tonumber == 0
   - .pending_asset | tonumber == 0
-  - .rune_deposit_value | tonumber == 49999999
+  - .rune_deposit_value | tonumber == 50000000
   - .asset_deposit_value | tonumber == 49950
 ---
 ########################################################################################
@@ -168,7 +168,7 @@ endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_provider/{{ add
 asserts:
   - .pending_rune | tonumber == 0
   - .pending_asset | tonumber == 0
-  - .rune_deposit_value | tonumber == 49999999
+  - .rune_deposit_value | tonumber == 50000000
   - .asset_deposit_value | tonumber == 49950
 ---
 ########################################################################################
@@ -194,5 +194,5 @@ endpoint: http://localhost:1317/thorchain/pool/ETH.ETH/liquidity_provider/{{ add
 asserts:
   - .pending_rune | tonumber == 0
   - .pending_asset | tonumber == 0
-  - .rune_deposit_value | tonumber == 50000000
-  - .asset_deposit_value | tonumber == 499493
+  - .rune_deposit_value | tonumber == 49999999
+  - .asset_deposit_value | tonumber == 499479

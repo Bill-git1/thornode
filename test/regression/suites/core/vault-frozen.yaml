@@ -74,7 +74,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "8250450"
+        - amount: "8250426"
           asset: "BTC.BTC"
           decimals: 8
       gas:

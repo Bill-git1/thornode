@@ -127,7 +127,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "200739866",
+              "amount": "202219597",
               "denom": "rune"
             }
           ]
@@ -136,7 +136,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35000003260104",
+              "amount": "35000001780314",
               "denom": "rune"
             }
           ]
@@ -167,7 +167,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "4999998000030",
+              "amount": "4999998000089",
               "denom": "rune"
             }
           ]
@@ -241,7 +241,7 @@
       ],
       "network": {
         "LPIncomeSplit": "10000",
-        "bond_reward_rune": "30",
+        "bond_reward_rune": "89",
         "total_bond_units": "2"
       },
       "network_fees": [
@@ -370,7 +370,7 @@
           "LP_units": "200000000",
           "asset": "GAIA.ATOM",
           "balance_asset": "10000000",
-          "balance_rune": "200739866",
+          "balance_rune": "202219597",
           "decimals": "6",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",

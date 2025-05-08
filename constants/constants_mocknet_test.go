@@ -17,7 +17,7 @@ var _ = Suite(&ConstantsSuite{})
 
 func (s *ConstantsSuite) Test010(c *C) {
 	consts := NewConstantValue()
-	c.Check(consts.GetInt64Value(PoolCycle), Equals, int64(129600))
+	c.Check(consts.GetInt64Value(PoolCycle), Equals, int64(43200))
 }
 
 func (s *ConstantsSuite) TestCamelToSnake(c *C) {

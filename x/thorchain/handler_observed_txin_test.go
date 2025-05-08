@@ -3,7 +3,6 @@ package thorchain
 import (
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/blang/semver"
 	se "github.com/cosmos/cosmos-sdk/types/errors"
@@ -827,7 +826,7 @@ func (s *HandlerObservedTxInSuite) TestObservingSlashing(c *C) {
 	observeFlex := mgr.GetConstants().GetInt64Value(constants.ObservationDelayFlexibility)
 	c.Assert(observeSlashPoints, Equals, int64(1))
 	c.Assert(lackOfObservationPenalty, Equals, int64(2))
-	c.Assert(observeFlex, Equals, constants.BlocksIn(2*time.Minute))
+	c.Assert(observeFlex, Equals, int64(10))
 
 	asgardVault := GetRandomVault()
 	c.Assert(mgr.Keeper().SetVault(ctx, asgardVault), IsNil)

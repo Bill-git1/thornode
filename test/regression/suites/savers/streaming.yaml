@@ -107,7 +107,7 @@ asserts:
   - .inbound_address == "{{ addr_btc_dog }}"
   - .dust_amount|tonumber == 20000
   - .dust_threshold|tonumber == 10000
-  - .expected_amount_out|tonumber == 9787126
+  - .expected_amount_out|tonumber == 9787144
   - .fees.liquidity|tonumber == 98730
   - .fees.outbound|tonumber == 14000
   - .fees.slippage_bps|tonumber == 99
@@ -369,7 +369,7 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/saver/{{ addr_btc_fish }}
 asserts:
-  - .units == "${SAVER_UNITS=148740}" # Successful Savers add for the Affiliate BTC address.
+  - .units == "${SAVER_UNITS=148739}" # Successful Savers add for the Affiliate BTC address.
 ---
 ###########################################################################
 type: tx-observed-in

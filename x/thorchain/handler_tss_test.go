@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"time"
 
 	"github.com/blang/semver"
 	se "github.com/cosmos/cosmos-sdk/types/errors"
@@ -724,8 +723,8 @@ func (s *HandlerTssSuite) TestObservingSlashing(c *C) {
 	failKeygenSlashPoints := mgr.GetConstants().GetInt64Value(constants.FailKeygenSlashPoints)
 	c.Assert(observeSlashPoints, Equals, int64(1))
 	c.Assert(lackOfObservationPenalty, Equals, int64(2))
-	c.Assert(observeFlex, Equals, constants.BlocksIn(2*time.Minute))
-	c.Assert(failKeygenSlashPoints, Equals, int64(2160))
+	c.Assert(observeFlex, Equals, int64(10))
+	c.Assert(failKeygenSlashPoints, Equals, int64(720))
 
 	asgardVault := GetRandomVault()
 	c.Assert(mgr.Keeper().SetVault(ctx, asgardVault), IsNil)
@@ -802,18 +801,18 @@ func (s *HandlerTssSuite) TestObservingSlashing(c *C) {
 	//  those which haven't are incremented LackOfObservationPenalty.)
 	// Also, those which haven't observed are incremented FailKeygenSlashPoints.
 	broadcast(c, ctx, nas[3], msg)
-	checkSlashPoints(c, ctx, nas, [7]int64{1, 0, 0, 0, 2162, 2162, 0})
+	checkSlashPoints(c, ctx, nas, [7]int64{1, 0, 0, 0, 722, 722, 0})
 
 	// nas[0] observes again.
 	broadcast(c, ctx, nas[0], msg)
-	checkSlashPoints(c, ctx, nas, [7]int64{2, 0, 0, 0, 2162, 2162, 0})
+	checkSlashPoints(c, ctx, nas, [7]int64{2, 0, 0, 0, 722, 722, 0})
 
 	// Within the ObservationDelayFlexibility period, nas[4] observes
 	// (and is decremented LackOfObservationPenalty as well as FailKeygenSlashPoints).
 	height += observeFlex
 	ctx = ctx.WithBlockHeight(height)
 	broadcast(c, ctx, nas[4], msg)
-	checkSlashPoints(c, ctx, nas, [7]int64{2, 0, 0, 0, 0, 2162, 0})
+	checkSlashPoints(c, ctx, nas, [7]int64{2, 0, 0, 0, 0, 722, 0})
 
 	// The ObservationDelayFlexibility period ends, after which nas[5] observes (still within ChurnRetryInterval);
 	// it is not incremented ObserveSlashPoints (and it is added to the list of signers)

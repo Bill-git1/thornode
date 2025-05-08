@@ -333,7 +333,7 @@ func (c Chain) ApproximateBlockMilliseconds() int64 {
 	case GAIAChain:
 		return 6_000
 	case THORChain:
-		return constants.ThorchainBlockTime.Milliseconds()
+		return 6_000
 	case BASEChain:
 		return 2_000
 	case XRPChain:

@@ -53,7 +53,7 @@ asserts:
   - .|[..|select(.type?=="swap")] | length == 2
   - .|[..|select(.type?=="scheduled_outbound")] | length == 1
   # Double-swap was successful.
-  - .|[..|select(.type?=="swap").liquidity_fee_in_rune|tonumber] | add == ${LIQFEES=432030111}
+  - .|[..|select(.type?=="swap").liquidity_fee_in_rune|tonumber] | add == ${LIQFEES=432032114}
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound

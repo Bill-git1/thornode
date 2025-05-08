@@ -1008,9 +1008,6 @@ func (c *EVMClient) ReportSolvency(height int64) error {
 
 // ShouldReportSolvency returns true if the given height is a solvency report height.
 func (c *EVMClient) ShouldReportSolvency(height int64) bool {
-	if c.cfg.SolvencyBlocks == 0 {
-		return false
-	}
 	return height%c.cfg.SolvencyBlocks == 0
 }
 

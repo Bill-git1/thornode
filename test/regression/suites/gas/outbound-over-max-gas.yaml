@@ -22,7 +22,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
-  - .[0].coin.amount == "${OUT_AMOUNT=11241538700}"
+  - .[0].coin.amount == "${OUT_AMOUNT=11241527500}"
 ---
 ########################################################################################
 # observe outbound using more than max gas, but under MaxETHGas is ok

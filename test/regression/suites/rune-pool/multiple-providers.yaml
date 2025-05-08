@@ -94,8 +94,8 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/runepool
 asserts:
-  - .pol.pnl == "${RESERVE_PNL=-2534945}"
-  - .pol.value == "${POL_VALUE=1717105818}"
+  - .pol.pnl == "${RESERVE_PNL=-2534941}"
+  - .pol.value == "${POL_VALUE=1717109360}"
   - .reserve.pnl == "${RESERVE_PNL}"
   - .reserve.value == "${POL_VALUE}"
   - 'all(.providers|.[]; . == "0")'
@@ -103,7 +103,7 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/balance/module/reserve
 asserts:
-  - .coins[0].amount == "${RESERVE_BALANCE=34998305989594}"
+  - .coins[0].amount == "${RESERVE_BALANCE=34998305246196}"
 ---
 ########################################################################################
 # RUNEPool deposit acquires POL ownership from reserve
@@ -134,7 +134,7 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/runepool
 asserts:
-  - .providers.units|tonumber == 2*${POL_VALUE=1719640763}
+  - .providers.units|tonumber == 2*${POL_VALUE=1719644301}
   - .providers.pending_units == "${POL_VALUE}"
   - .providers.value == .providers.current_deposit
   - .providers.pnl == "0"
@@ -159,7 +159,7 @@ type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_cat }}
 asserts:
   - .|[.result[]|select(.denom=="btc/btc")] | length == 1
-  - .result[]|select(.denom=="btc/btc").amount == "${CAT_SYNTH_BALANCE=24488901}"
+  - .result[]|select(.denom=="btc/btc").amount == "${CAT_SYNTH_BALANCE=24488732}"
 ---
 type: tx-deposit
 signer: {{ addr_thor_cat }}
@@ -206,7 +206,7 @@ asserts:
   - .[0].deposit_amount == .[1].deposit_amount # same deposit
   - .[0].withdraw_amount == .[1].withdraw_amount # same withdraw
   - .[0].pnl == .[1].pnl # same pnl
-  - .[0].pnl == "-${PROVIDER_PNL=33247687}"
+  - .[0].pnl == "-${PROVIDER_PNL=33247779}"
 ---
 ########################################################################################
 # reserve owns the POL with loss, but balance increased by sum of provider loss

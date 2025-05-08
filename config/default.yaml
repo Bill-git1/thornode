@@ -441,7 +441,7 @@ thor:
       max_num_outbound_peers: 10
       allow_duplicate_ip: true
     consensus:
-      timeout_commit: 1s
+      timeout_commit: 5s
       # these can be set to 1ms temporarily to recover from consensus failure faster
       timeout_propose_delta: 500ms
       timeout_prevote_delta: 500ms

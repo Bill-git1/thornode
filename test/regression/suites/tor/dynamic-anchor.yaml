@@ -64,7 +64,7 @@ endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
   - .derived_depth_bps|tonumber == 10000
   - .balance_asset|tonumber == 299999999999
-  - .balance_rune|tonumber == 300000599319
+  - .balance_rune|tonumber == 300001797948
 ---
 # thor.tor should not be available in the pool querier
 type: check
@@ -102,8 +102,8 @@ type: check
 endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
   - .derived_depth_bps|tonumber == 8913
-  - .balance_asset|tonumber == 271720566882 # median still ~1:1
-  - .balance_rune|tonumber == 271721109707
+  - .balance_asset|tonumber == 271721142140 # median still ~1:1
+  - .balance_rune|tonumber == 271722770609
 ---
 ########################################################################################
 # swap to USDY should reduce depth
@@ -132,8 +132,8 @@ type: check
 endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
   - .derived_depth_bps|tonumber == 7853
-  - .balance_asset|tonumber == 221720052450 # price shift with affected median
-  - .balance_rune|tonumber == 243213800253
+  - .balance_asset|tonumber == 221719650611 # price shift with affected median
+  - .balance_rune|tonumber == 243215785107
 ---
 ########################################################################################
 # enable the dynamic anchor to target 95% and compute every block
@@ -224,11 +224,11 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 5
-  - .[0].coin.amount == "${OUTPUT_AMOUNTS=4418485800}"
-  - .[1].coin.amount == "${OUTPUT_AMOUNTS=4418485800}"
-  - .[2].coin.amount == "${OUTPUT_AMOUNTS=4418485800}"
-  - .[3].coin.amount == "${OUTPUT_AMOUNT_4=4045850200}"
-  - .[4].coin.amount == "${OUTPUT_AMOUNT_5=4045858700}"
+  - .[0].coin.amount == "${OUTPUT_AMOUNTS=4418469500}"
+  - .[1].coin.amount == "${OUTPUT_AMOUNTS=4418469500}"
+  - .[2].coin.amount == "${OUTPUT_AMOUNTS=4418469500}"
+  - .[3].coin.amount == "${OUTPUT_AMOUNT_4=4045813200}"
+  - .[4].coin.amount == "${OUTPUT_AMOUNT_5=4045821800}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
