@@ -21,8 +21,7 @@ func TestHandleStreamObservedTxAttestation(t *testing.T) {
 	valPrivs := make([]*secp256k1.PrivKey, numVals)
 	valPubs := make([]common.PubKey, numVals)
 	for i := 0; i < numVals; i++ {
-		priv, err := agVals[i].keys.GetPrivateKey()
-		require.NoError(t, err, "Should be able to get private key")
+		priv := agVals[i].privKey
 		var ok bool
 		valPrivs[i], ok = priv.(*secp256k1.PrivKey)
 		require.True(t, ok, "Should be able to cast private key to secp256k1")
@@ -98,13 +97,15 @@ func TestHandleStreamObservedTxAttestation(t *testing.T) {
 	val2AttestTxBz, err := val2AttestTx.Marshal()
 	require.NoError(t, err, "Should be able to marshal attestation")
 
+	ctx := context.Background()
+
 	// Call the method with a timeout
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
 		agVal1.handleObservedTxAttestation(context.TODO(), *val1AttestTx)
-		agVal1.batcher.sendPayloadToStream(val1Stream, val1AttestTxBz)
+		agVal1.batcher.sendPayloadToStream(ctx, val1Stream, val1AttestTxBz)
 	}()
 
 	go func() {
@@ -118,7 +119,7 @@ func TestHandleStreamObservedTxAttestation(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		agVal2.handleObservedTxAttestation(context.TODO(), *val2AttestTx)
-		agVal2.batcher.sendPayloadToStream(val2Stream, val2AttestTxBz)
+		agVal2.batcher.sendPayloadToStream(ctx, val2Stream, val2AttestTxBz)
 	}()
 
 	go func() {
@@ -162,8 +163,7 @@ func TestHandleStreamNetworkFeeAttestation(t *testing.T) {
 	valPrivs := make([]*secp256k1.PrivKey, numVals)
 	valPubs := make([]common.PubKey, numVals)
 	for i := 0; i < numVals; i++ {
-		priv, err := agVals[i].keys.GetPrivateKey()
-		require.NoError(t, err, "Should be able to get private key")
+		priv := agVals[i].privKey
 		var ok bool
 		valPrivs[i], ok = priv.(*secp256k1.PrivKey)
 		require.True(t, ok, "Should be able to cast private key to secp256k1")
@@ -240,13 +240,15 @@ func TestHandleStreamNetworkFeeAttestation(t *testing.T) {
 	val2AttestTxBz, err := val2AttestTx.Marshal()
 	require.NoError(t, err, "Should be able to marshal attestation")
 
+	ctx := context.Background()
+
 	// Call the method with a timeout
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
 		agVal1.handleNetworkFeeAttestation(context.TODO(), *val1AttestTx)
-		agVal1.batcher.sendPayloadToStream(val1Stream, val1AttestTxBz)
+		agVal1.batcher.sendPayloadToStream(ctx, val1Stream, val1AttestTxBz)
 	}()
 
 	go func() {
@@ -260,7 +262,7 @@ func TestHandleStreamNetworkFeeAttestation(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		agVal2.handleNetworkFeeAttestation(context.TODO(), *val2AttestTx)
-		agVal2.batcher.sendPayloadToStream(val2Stream, val2AttestTxBz)
+		agVal2.batcher.sendPayloadToStream(ctx, val2Stream, val2AttestTxBz)
 	}()
 
 	go func() {
@@ -304,8 +306,7 @@ func TestHandleStreamSolvencyAttestation(t *testing.T) {
 	valPrivs := make([]*secp256k1.PrivKey, numVals)
 	valPubs := make([]common.PubKey, numVals)
 	for i := 0; i < numVals; i++ {
-		priv, err := agVals[i].keys.GetPrivateKey()
-		require.NoError(t, err, "Should be able to get private key")
+		priv := agVals[i].privKey
 		var ok bool
 		valPrivs[i], ok = priv.(*secp256k1.PrivKey)
 		require.True(t, ok, "Should be able to cast private key to secp256k1")
@@ -393,13 +394,15 @@ func TestHandleStreamSolvencyAttestation(t *testing.T) {
 	val2AttestTxBz, err := val2AttestTx.Marshal()
 	require.NoError(t, err, "Should be able to marshal attestation")
 
+	ctx := context.Background()
+
 	// Call the method with a timeout
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
 		agVal1.handleSolvencyAttestation(context.TODO(), *val1AttestTx)
-		agVal1.batcher.sendPayloadToStream(val1Stream, val1AttestTxBz)
+		agVal1.batcher.sendPayloadToStream(ctx, val1Stream, val1AttestTxBz)
 	}()
 
 	go func() {
@@ -413,7 +416,7 @@ func TestHandleStreamSolvencyAttestation(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		agVal2.handleSolvencyAttestation(context.TODO(), *val2AttestTx)
-		agVal2.batcher.sendPayloadToStream(val2Stream, val2AttestTxBz)
+		agVal2.batcher.sendPayloadToStream(ctx, val2Stream, val2AttestTxBz)
 	}()
 
 	go func() {
@@ -457,8 +460,7 @@ func TestHandleStreamErrataTxAttestation(t *testing.T) {
 	valPrivs := make([]*secp256k1.PrivKey, numVals)
 	valPubs := make([]common.PubKey, numVals)
 	for i := 0; i < numVals; i++ {
-		priv, err := agVals[i].keys.GetPrivateKey()
-		require.NoError(t, err, "Should be able to get private key")
+		priv := agVals[i].privKey
 		var ok bool
 		valPrivs[i], ok = priv.(*secp256k1.PrivKey)
 		require.True(t, ok, "Should be able to cast private key to secp256k1")
@@ -533,13 +535,15 @@ func TestHandleStreamErrataTxAttestation(t *testing.T) {
 	val2AttestTxBz, err := val2AttestTx.Marshal()
 	require.NoError(t, err, "Should be able to marshal attestation")
 
+	ctx := context.Background()
+
 	// Call the method with a timeout
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
 		agVal1.handleErrataAttestation(context.TODO(), *val1AttestTx)
-		agVal1.batcher.sendPayloadToStream(val1Stream, val1AttestTxBz)
+		agVal1.batcher.sendPayloadToStream(ctx, val1Stream, val1AttestTxBz)
 	}()
 
 	go func() {
@@ -553,7 +557,7 @@ func TestHandleStreamErrataTxAttestation(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		agVal2.handleErrataAttestation(context.TODO(), *val2AttestTx)
-		agVal2.batcher.sendPayloadToStream(val2Stream, val2AttestTxBz)
+		agVal2.batcher.sendPayloadToStream(ctx, val2Stream, val2AttestTxBz)
 	}()
 
 	go func() {

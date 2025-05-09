@@ -23,7 +23,7 @@ func (s *AttestationGossip) handleObservedTxAttestation(ctx context.Context, tx 
 	s.mu.Lock()
 	state, ok := s.observedTxs[k]
 	if !ok {
-		state = NewAttestationState(&obsTx)
+		state = s.observedTxsPool.NewAttestationState(&obsTx)
 		s.observedTxs[k] = state
 	}
 	s.mu.Unlock()
@@ -102,7 +102,7 @@ func (s *AttestationGossip) handleNetworkFeeAttestation(ctx context.Context, anf
 	state, ok := s.networkFees[k]
 	if !ok {
 		// Create a new attestation state
-		state = NewAttestationState(anf.NetworkFee)
+		state = s.networkFeesPool.NewAttestationState(anf.NetworkFee)
 		s.networkFees[k] = state
 	}
 	s.mu.Unlock()
@@ -166,7 +166,7 @@ func (s *AttestationGossip) handleSolvencyAttestation(ctx context.Context, ats c
 	state, ok := s.solvencies[k]
 	if !ok {
 		// Create a new attestation state
-		state = NewAttestationState(ats.Solvency)
+		state = s.solvenciesPool.NewAttestationState(ats.Solvency)
 		s.solvencies[k] = state
 	}
 	s.mu.Unlock()
@@ -226,7 +226,7 @@ func (s *AttestationGossip) handleErrataAttestation(ctx context.Context, aet com
 	state, ok := s.errataTxs[k]
 	if !ok {
 		// Create a new attestation state
-		state = NewAttestationState(aet.ErrataTx)
+		state = s.errataTxsPool.NewAttestationState(aet.ErrataTx)
 		s.errataTxs[k] = state
 	}
 	s.mu.Unlock()

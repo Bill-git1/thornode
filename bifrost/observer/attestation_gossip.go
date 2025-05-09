@@ -49,6 +49,8 @@ const (
 
 	cachedKeysignPartyTTL = 1 * time.Minute
 
+	defaultPeerTimeout = 20 * time.Second
+
 	streamAckBegin  = "ack_begin"
 	streamAckHeader = "ack_header"
 	streamAckData   = "ack_data"
@@ -96,14 +98,15 @@ type EventClientInterface interface {
 
 // AttestationGossip handles observed tx attestations to/from other nodes
 type AttestationGossip struct {
-	logger      zerolog.Logger
-	host        host.Host
-	keys        KeysInterface
+	logger zerolog.Logger
+	host   host.Host
+
 	grpcClient  ebifrost.LocalhostBifrostClient
 	eventClient EventClientInterface
 	bridge      thorclient.ThorchainBridge
 
-	pubKey []byte // our public key, cached for performance
+	privKey cryptotypes.PrivKey // our private key, cached for performance
+	pubKey  []byte              // our public key, cached for performance
 
 	config config.BifrostAttestationGossipConfig
 
@@ -113,6 +116,11 @@ type AttestationGossip struct {
 	solvencies  map[common.TxID]*AttestationState[*common.Solvency]
 	errataTxs   map[common.ErrataTx]*AttestationState[*common.ErrataTx]
 	mu          sync.Mutex
+
+	observedTxsPool *AttestationStatePool[*common.ObservedTx]
+	networkFeesPool *AttestationStatePool[*common.NetworkFee]
+	solvenciesPool  *AttestationStatePool[*common.Solvency]
+	errataTxsPool   *AttestationStatePool[*common.ErrataTx]
 
 	activeVals map[peer.ID]bool // active val peer IDs
 	avMu       sync.Mutex
@@ -167,7 +175,7 @@ func NewAttestationGossip(
 	s := &AttestationGossip{
 		logger:      log.With().Str("module", "attestation_gossip").Logger(),
 		host:        host,
-		keys:        keys,
+		privKey:     pk,
 		pubKey:      pk.PubKey().Bytes(),
 		grpcClient:  grpcClient,
 		config:      config,
@@ -175,17 +183,26 @@ func NewAttestationGossip(
 		eventClient: eventClient,
 
 		// Initialize generic maps
-		observedTxs:          make(map[txKey]*AttestationState[*common.ObservedTx]),
-		networkFees:          make(map[common.NetworkFee]*AttestationState[*common.NetworkFee]),
-		solvencies:           make(map[common.TxID]*AttestationState[*common.Solvency]),
-		errataTxs:            make(map[common.ErrataTx]*AttestationState[*common.ErrataTx]),
+		observedTxs: make(map[txKey]*AttestationState[*common.ObservedTx]),
+		networkFees: make(map[common.NetworkFee]*AttestationState[*common.NetworkFee]),
+		solvencies:  make(map[common.TxID]*AttestationState[*common.Solvency]),
+		errataTxs:   make(map[common.ErrataTx]*AttestationState[*common.ErrataTx]),
+
+		observedTxsPool: NewAttestationStatePool[*common.ObservedTx](),
+		networkFeesPool: NewAttestationStatePool[*common.NetworkFee](),
+		solvenciesPool:  NewAttestationStatePool[*common.Solvency](),
+		errataTxsPool:   NewAttestationStatePool[*common.ErrataTx](),
+
 		cachedKeySignParties: make(map[common.PubKey]cachedKeySignParty),
 
 		batcher: batcher,
 	}
 	batcher.setActiveValGetter(s.getActiveValidators)
 	// Register event handlers
-	eventClient.RegisterHandler(ebifrost.EventQuorumTxCommited, s.handleQuorumTxCommited)
+	eventClient.RegisterHandler(ebifrost.EventQuorumTxCommitted, s.handleQuorumTxCommitted)
+	eventClient.RegisterHandler(ebifrost.EventQuorumNetworkFeeCommitted, s.handleQuorumNetworkFeeCommitted)
+	eventClient.RegisterHandler(ebifrost.EventQuorumSolvencyCommitted, s.handleQuorumSolvencyCommitted)
+	eventClient.RegisterHandler(ebifrost.EventQuorumErrataTxCommitted, s.handleQuorumErrataTxCommitted)
 
 	// Register stream handlers
 	host.SetStreamHandler(observeTxProtocol, s.handleStreamObservedTx)
@@ -217,6 +234,9 @@ func normalizeConfig(config *config.BifrostAttestationGossipConfig) {
 	}
 	if config.AskPeersDelay == 0 {
 		config.AskPeersDelay = defaultAskPeersDelay
+	}
+	if config.PeerTimeout == 0 {
+		config.PeerTimeout = defaultPeerTimeout
 	}
 }
 
@@ -290,7 +310,7 @@ func (s *AttestationGossip) SetObserverHandleObservedTxCommitted(o *Observer) {
 }
 
 // Handle a committed quorum transaction event
-func (s *AttestationGossip) handleQuorumTxCommited(en *ebifrost.EventNotification) {
+func (s *AttestationGossip) handleQuorumTxCommitted(en *ebifrost.EventNotification) {
 	s.logger.Debug().Msg("handling quorum tx committed event")
 
 	if s.observerHandleObservedTxCommitted == nil {
@@ -298,30 +318,117 @@ func (s *AttestationGossip) handleQuorumTxCommited(en *ebifrost.EventNotificatio
 		return
 	}
 
-	var tx common.QuorumTx
-	if err := tx.Unmarshal(en.Payload); err != nil {
+	var qtx common.QuorumTx
+	if err := qtx.Unmarshal(en.Payload); err != nil {
 		s.logger.Error().Err(err).Msg("fail to unmarshal quorum tx")
 		return
 	}
 
 	// if our attestation is in the quorum tx, we can remove it from our observer deck.
-	for _, att := range tx.Attestations {
+	for _, att := range qtx.Attestations {
 		if bytes.Equal(att.PubKey, s.pubKey) {
 			// we have attested to this tx, and it has been committed to the chain.
 			s.logger.Debug().Msg("our attestation is in the quorum tx, passing to observer to remove from ondeck")
-			s.observerHandleObservedTxCommitted(tx.ObsTx)
+			s.observerHandleObservedTxCommitted(qtx.ObsTx)
 			return
 		}
 	}
+
+	k := txKey{
+		Chain:                  qtx.ObsTx.Tx.Chain,
+		ID:                     qtx.ObsTx.Tx.ID,
+		UniqueHash:             qtx.ObsTx.Tx.Hash(qtx.ObsTx.BlockHeight),
+		AllowFutureObservation: qtx.AllowFutureObservation,
+		Inbound:                qtx.Inbound,
+		Finalized:              qtx.ObsTx.IsFinal(),
+	}
+
+	s.mu.Lock()
+	as, ok := s.observedTxs[k]
+	s.mu.Unlock()
+	if !ok {
+		return
+	}
+
+	as.mu.Lock()
+	defer as.mu.Unlock()
+	as.MarkAttestationsCommitted(qtx.Attestations)
 }
 
-// / Start the attestation gossip service
+// Handle a committed quorum network fee event
+func (s *AttestationGossip) handleQuorumNetworkFeeCommitted(en *ebifrost.EventNotification) {
+	s.logger.Debug().Msg("handling quorum network fee committed event")
+
+	var qnf common.QuorumNetworkFee
+	if err := qnf.Unmarshal(en.Payload); err != nil {
+		s.logger.Error().Err(err).Msg("fail to unmarshal quorum network fee")
+		return
+	}
+
+	s.mu.Lock()
+	as, ok := s.networkFees[*qnf.NetworkFee]
+	s.mu.Unlock()
+	if !ok {
+		return
+	}
+
+	as.mu.Lock()
+	defer as.mu.Unlock()
+	as.MarkAttestationsCommitted(qnf.Attestations)
+}
+
+// Handle a committed quorum solvency event
+func (s *AttestationGossip) handleQuorumSolvencyCommitted(en *ebifrost.EventNotification) {
+	s.logger.Debug().Msg("handling quorum solvency committed event")
+
+	var qs common.QuorumSolvency
+	if err := qs.Unmarshal(en.Payload); err != nil {
+		s.logger.Error().Err(err).Msg("fail to unmarshal quorum solvency")
+		return
+	}
+
+	s.mu.Lock()
+	as, ok := s.solvencies[qs.Solvency.Id]
+	s.mu.Unlock()
+	if !ok {
+		return
+	}
+
+	as.mu.Lock()
+	defer as.mu.Unlock()
+	as.MarkAttestationsCommitted(qs.Attestations)
+}
+
+// Handle a committed quorum errata tx event
+func (s *AttestationGossip) handleQuorumErrataTxCommitted(en *ebifrost.EventNotification) {
+	s.logger.Debug().Msg("handling quorum errata tx committed event")
+
+	var qe common.QuorumErrataTx
+	if err := qe.Unmarshal(en.Payload); err != nil {
+		s.logger.Error().Err(err).Msg("fail to unmarshal quorum errata")
+		return
+	}
+
+	s.mu.Lock()
+	as, ok := s.errataTxs[*qe.ErrataTx]
+	s.mu.Unlock()
+	if !ok {
+		return
+	}
+
+	as.mu.Lock()
+	defer as.mu.Unlock()
+	as.MarkAttestationsCommitted(qe.Attestations)
+}
+
+// Start the attestation gossip service
 func (s *AttestationGossip) Start(ctx context.Context) {
 	ticker := time.NewTicker(s.config.ObserveReconcileInterval)
 	defer ticker.Stop()
 
 	startupDelay := s.config.AskPeersDelay
 	delayTimer := time.NewTimer(startupDelay)
+
 	defer delayTimer.Stop()
 
 	go s.batcher.Start(ctx)
@@ -337,6 +444,7 @@ func (s *AttestationGossip) Start(ctx context.Context) {
 				state.mu.Lock()
 				if state.ExpiredAfterQuorum(s.config.LateObserveTimeout, s.config.NonQuorumTimeout) {
 					delete(s.observedTxs, k)
+					s.observedTxsPool.PutAttestationState(state)
 				} else if state.ShouldSendLate(s.config.MinTimeBetweenAttestations) {
 					s.logger.Debug().Msg("sending late observed tx attestations")
 
@@ -351,6 +459,7 @@ func (s *AttestationGossip) Start(ctx context.Context) {
 				state.mu.Lock()
 				if state.ExpiredAfterQuorum(s.config.LateObserveTimeout, s.config.NonQuorumTimeout) {
 					delete(s.networkFees, k)
+					s.networkFeesPool.PutAttestationState(state)
 				} else if state.ShouldSendLate(s.config.MinTimeBetweenAttestations) {
 					s.logger.Debug().Msg("sending late network fee attestations")
 					s.sendNetworkFeeAttestationsToThornode(ctx, *state.Item, state, false)
@@ -363,6 +472,7 @@ func (s *AttestationGossip) Start(ctx context.Context) {
 				state.mu.Lock()
 				if state.ExpiredAfterQuorum(s.config.LateObserveTimeout, s.config.NonQuorumTimeout) {
 					delete(s.solvencies, k)
+					s.solvenciesPool.PutAttestationState(state)
 				} else if state.ShouldSendLate(s.config.MinTimeBetweenAttestations) {
 					s.logger.Debug().Msg("sending late solvency attestations")
 					s.sendSolvencyAttestationsToThornode(ctx, *state.Item, state, false)
@@ -375,6 +485,7 @@ func (s *AttestationGossip) Start(ctx context.Context) {
 				state.mu.Lock()
 				if state.ExpiredAfterQuorum(s.config.LateObserveTimeout, s.config.NonQuorumTimeout) {
 					delete(s.errataTxs, k)
+					s.errataTxsPool.PutAttestationState(state)
 				} else if state.ShouldSendLate(s.config.MinTimeBetweenAttestations) {
 					s.logger.Debug().Msg("sending late errata attestations")
 					s.sendErrataAttestationsToThornode(ctx, *state.Item, state, false)

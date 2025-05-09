@@ -225,7 +225,7 @@ func TestSendAttestationsToThornode(t *testing.T) {
 	}
 
 	// Create a new attestation state
-	state := NewAttestationState(obsTx)
+	state := ag.observedTxsPool.NewAttestationState(obsTx)
 
 	// Add two attestations
 	state.attestations = []attestationSentState{

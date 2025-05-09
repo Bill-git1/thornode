@@ -45,7 +45,7 @@ bifrost:
     ask_peers_delay: 5s
     max_batch_size: 100
     batch_interval: 2s
-    peer_timeout: 10s
+    peer_timeout: 20s
     peer_concurrent_sends: 4
   signer:
     backup_keyshares: true
@@ -419,6 +419,7 @@ thor:
     ebifrost:
       enable: true
       address: 127.0.0.1:50051
+      cache_item_ttl: 30m
     state_sync:
       snapshot_interval: 0
       snapshot_keep_recent: 2

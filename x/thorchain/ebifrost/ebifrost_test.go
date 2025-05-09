@@ -134,8 +134,8 @@ func TestSendQuorumTx(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, result)
-	require.Len(t, ebs.quorumTxCache.items, 1)                 // Still one tx
-	require.Len(t, ebs.quorumTxCache.items[0].Attestations, 2) // But now with two attestations
+	require.Len(t, ebs.quorumTxCache.items, 1)                      // Still one tx
+	require.Len(t, ebs.quorumTxCache.items[0].Item.Attestations, 2) // But now with two attestations
 
 	// Test case 3: Different tx
 	tx3 := createTestQuorumTx(common.BTCChain, "tx2", false, []*common.Attestation{attestation1})
@@ -163,7 +163,16 @@ func TestProposalInjectTxs(t *testing.T) {
 	tx1 := createTestQuorumTx(common.BTCChain, "tx1", true, []*common.Attestation{attestation})
 	tx2 := createTestQuorumTx(common.BTCChain, "tx2", false, []*common.Attestation{attestation})
 
-	ebs.quorumTxCache.items = []*common.QuorumTx{tx1, tx2}
+	ebs.quorumTxCache.items = []TimestampedItem[*common.QuorumTx]{
+		{
+			Item:      tx1,
+			Timestamp: time.Now(),
+		},
+		{
+			Item:      tx2,
+			Timestamp: time.Now(),
+		},
+	}
 
 	// Call the method
 	sdkCtx := createTestSDKContext(100)
@@ -238,7 +247,7 @@ func TestSendQuorumTxWithMultipleOverlappingAttestations(t *testing.T) {
 
 	// Verify the initial state
 	require.Len(t, ebs.quorumTxCache.items, 1)
-	require.Len(t, ebs.quorumTxCache.items[0].Attestations, 2)
+	require.Len(t, ebs.quorumTxCache.items[0].Item.Attestations, 2)
 	require.Len(t, ebs.quorumTxCache.recentBlockItems, 1)
 
 	// Now send a tx with a mix of attestations: some already in recentBlockTxs,
@@ -259,11 +268,11 @@ func TestSendQuorumTxWithMultipleOverlappingAttestations(t *testing.T) {
 	//    - 3 and 4 were already there
 	//    - 5 and 6 are new
 	//    - 1 was in recentBlockTxs so should be filtered out
-	require.Len(t, ebs.quorumTxCache.items[0].Attestations, 4)
+	require.Len(t, ebs.quorumTxCache.items[0].Item.Attestations, 4)
 
 	// Verify all expected attestations are present
 	found3, found4, found5, found6 := false, false, false, false
-	for _, att := range ebs.quorumTxCache.items[0].Attestations {
+	for _, att := range ebs.quorumTxCache.items[0].Item.Attestations {
 		switch string(att.PubKey) {
 		case string(att3.PubKey):
 			found3 = true
@@ -340,9 +349,9 @@ func TestPartialOverlapWithRecentBlockTxs(t *testing.T) {
 
 	// Only attestation3 should be added
 	require.Len(t, ebs.quorumTxCache.items, 1)
-	require.Len(t, ebs.quorumTxCache.items[0].Attestations, 1)
-	require.Equal(t, attestation3.PubKey, ebs.quorumTxCache.items[0].Attestations[0].PubKey)
-	require.Equal(t, attestation3.Signature, ebs.quorumTxCache.items[0].Attestations[0].Signature)
+	require.Len(t, ebs.quorumTxCache.items[0].Item.Attestations, 1)
+	require.Equal(t, attestation3.PubKey, ebs.quorumTxCache.items[0].Item.Attestations[0].PubKey)
+	require.Equal(t, attestation3.Signature, ebs.quorumTxCache.items[0].Item.Attestations[0].Signature)
 }
 
 // TestPartialOverlapWithPendingTxs tests the case where a new tx contains attestations that
@@ -369,7 +378,7 @@ func TestPartialOverlapWithPendingTxs(t *testing.T) {
 
 	// Verify the initial state
 	require.Len(t, ebs.quorumTxCache.items, 1)
-	require.Len(t, ebs.quorumTxCache.items[0].Attestations, 2)
+	require.Len(t, ebs.quorumTxCache.items[0].Item.Attestations, 2)
 
 	// Now send a tx with the same ID but with attestation2 and attestation3
 	tx2 := createTestQuorumTx(common.BTCChain, "tx1", true, []*common.Attestation{attestation2, attestation3})
@@ -378,11 +387,11 @@ func TestPartialOverlapWithPendingTxs(t *testing.T) {
 
 	// The tx should now have all three attestations, with no duplicates
 	require.Len(t, ebs.quorumTxCache.items, 1)
-	require.Len(t, ebs.quorumTxCache.items[0].Attestations, 3)
+	require.Len(t, ebs.quorumTxCache.items[0].Item.Attestations, 3)
 
 	// Verify all attestations are present
 	found1, found2, found3 := false, false, false
-	for _, att := range ebs.quorumTxCache.items[0].Attestations {
+	for _, att := range ebs.quorumTxCache.items[0].Item.Attestations {
 		if string(att.PubKey) == string(attestation1.PubKey) {
 			found1 = true
 		}
@@ -428,8 +437,8 @@ func TestMarkQuorumTxAttestationsConfirmed(t *testing.T) {
 
 	// Verify the tx still exists but with one attestation
 	require.Len(t, ebs.quorumTxCache.items, 1)
-	require.Len(t, ebs.quorumTxCache.items[0].Attestations, 1)
-	require.Equal(t, attestation2.PubKey, ebs.quorumTxCache.items[0].Attestations[0].PubKey)
+	require.Len(t, ebs.quorumTxCache.items[0].Item.Attestations, 1)
+	require.Equal(t, attestation2.PubKey, ebs.quorumTxCache.items[0].Item.Attestations[0].PubKey)
 
 	// Verify tx was added to recentBlockTxs
 	require.Len(t, ebs.quorumTxCache.recentBlockItems, 1)
@@ -495,7 +504,8 @@ func TestComplexAttestationConfirmationScenario(t *testing.T) {
 
 	// Find tx1 and verify it has only attestation3 left
 	var foundTx1 *common.QuorumTx
-	for _, qtx := range ebs.quorumTxCache.items {
+	for _, item := range ebs.quorumTxCache.items {
+		qtx := item.Item
 		if string(qtx.ObsTx.Tx.ID) == "tx1" {
 			foundTx1 = qtx
 			break
@@ -507,7 +517,8 @@ func TestComplexAttestationConfirmationScenario(t *testing.T) {
 
 	// Verify tx2 still has both attestations (attestation2 confirmation only affects tx1)
 	var foundTx2 *common.QuorumTx
-	for _, qtx := range ebs.quorumTxCache.items {
+	for _, item := range ebs.quorumTxCache.items {
+		qtx := item.Item
 		if string(qtx.ObsTx.Tx.ID) == "tx2" {
 			foundTx2 = qtx
 			break

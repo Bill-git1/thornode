@@ -2,6 +2,7 @@ package ebifrost
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
@@ -15,14 +16,16 @@ const (
 )
 
 type EBifrostConfig struct {
-	Enable  bool   `json:"enable"`
-	Address string `json:"address"`
+	Enable       bool          `json:"enable"`
+	Address      string        `json:"address"`
+	CacheItemTTL time.Duration `json:"cache_item_ttl"`
 }
 
 func DefaultEBifrostConfig() EBifrostConfig {
 	return EBifrostConfig{
-		Enable:  true,
-		Address: "localhost:50051",
+		Enable:       true,
+		Address:      "localhost:50051",
+		CacheItemTTL: 30 * time.Minute,
 	}
 }
 
@@ -35,7 +38,10 @@ enabled = %t
 
 # Address of the enshrined bifrost GRPC listener
 address = "%s"
-`, c.Enable, c.Address)
+
+# Cache item TTL
+cache_item_ttl = "%s"
+`, c.Enable, c.Address, c.CacheItemTTL.String())
 }
 
 func DefaultConfigTemplate() string {

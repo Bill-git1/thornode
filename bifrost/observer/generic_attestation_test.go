@@ -24,10 +24,12 @@ func TestNewAttestationState(t *testing.T) {
 	}
 
 	// Create a new attestation state
-	state := NewAttestationState(obsTx)
+	state := AttestationState[*common.ObservedTx]{
+		Item:                     obsTx,
+		firstAttestationObserved: time.Now(),
+	}
 
 	// Check initial state
-	assert.NotNil(t, state)
 	assert.Equal(t, obsTx, state.Item)
 	assert.NotZero(t, state.firstAttestationObserved)
 	assert.Empty(t, state.attestations)
@@ -49,7 +51,10 @@ func TestAddAttestation(t *testing.T) {
 	}
 
 	// Create a new attestation state
-	state := NewAttestationState(obsTx)
+	state := AttestationState[*common.ObservedTx]{
+		Item:                     obsTx,
+		firstAttestationObserved: time.Now(),
+	}
 
 	// Create a private key for testing
 	privKey := secp256k1.GenPrivKey()
@@ -111,7 +116,10 @@ func TestUnsentAttestations(t *testing.T) {
 	}
 
 	// Create a new attestation state
-	state := NewAttestationState(obsTx)
+	state := AttestationState[*common.ObservedTx]{
+		Item:                     obsTx,
+		firstAttestationObserved: time.Now(),
+	}
 
 	// Add some attestations with varying sent states
 	state.attestations = []attestationSentState{
@@ -166,7 +174,10 @@ func TestAttestationsCopy(t *testing.T) {
 	}
 
 	// Create a new attestation state
-	state := NewAttestationState(obsTx)
+	state := AttestationState[*common.ObservedTx]{
+		Item:                     obsTx,
+		firstAttestationObserved: time.Now(),
+	}
 
 	// Add some attestations
 	state.attestations = []attestationSentState{
@@ -261,7 +272,10 @@ func TestUnsentCount(t *testing.T) {
 			}
 
 			// Create a new attestation state
-			state := NewAttestationState(obsTx)
+			state := AttestationState[*common.ObservedTx]{
+				Item:                     obsTx,
+				firstAttestationObserved: time.Now(),
+			}
 			state.attestations = tt.attestations
 
 			// Count unsent attestations
@@ -285,7 +299,10 @@ func TestAttestationCount(t *testing.T) {
 	}
 
 	// Create a new attestation state
-	state := NewAttestationState(obsTx)
+	state := AttestationState[*common.ObservedTx]{
+		Item:                     obsTx,
+		firstAttestationObserved: time.Now(),
+	}
 
 	// Check initial count
 	assert.Equal(t, 0, state.AttestationCount())
@@ -382,7 +399,10 @@ func TestShouldSendLate(t *testing.T) {
 			}
 
 			// Create a new attestation state
-			state := NewAttestationState(obsTx)
+			state := AttestationState[*common.ObservedTx]{
+				Item:                     obsTx,
+				firstAttestationObserved: time.Now(),
+			}
 			state.attestations = tt.attestations
 			state.firstAttestationObserved = tt.firstObserved
 			state.initialAttestationsSent = tt.initialAttsSent
@@ -447,7 +467,10 @@ func TestExpiredAfterQuorum(t *testing.T) {
 			}
 
 			// Create a new attestation state
-			state := NewAttestationState(obsTx)
+			state := AttestationState[*common.ObservedTx]{
+				Item:                     obsTx,
+				firstAttestationObserved: time.Now(),
+			}
 			state.quorumAttestationsSent = tt.quorumAttsSent
 			state.lastAttestationsSent = tt.lastAttsSent
 
@@ -473,7 +496,10 @@ func TestMarkAttestationsSent(t *testing.T) {
 	}
 
 	// Create a new attestation state
-	state := NewAttestationState(obsTx)
+	state := AttestationState[*common.ObservedTx]{
+		Item:                     obsTx,
+		firstAttestationObserved: time.Now(),
+	}
 
 	// Add some attestations
 	state.attestations = []attestationSentState{
@@ -591,7 +617,10 @@ func TestFullWorkflow(t *testing.T) {
 	}
 
 	// Create a new attestation state
-	state := NewAttestationState(obsTx)
+	state := AttestationState[*common.ObservedTx]{
+		Item:                     obsTx,
+		firstAttestationObserved: time.Now(),
+	}
 
 	// Override the verifySignature function for testing
 	origVerifySignature := verifySignature

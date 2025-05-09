@@ -154,6 +154,10 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 			LateObserveTimeout:         time.Second * 4,
 			AskPeers:                   3,
 			AskPeersDelay:              time.Second * 1,
+			PeerTimeout:                time.Second * 20,
+			MaxBatchSize:               100,
+			BatchInterval:              time.Second * 1,
+			PeerConcurrentSends:        4,
 		})
 		c.Assert(err, IsNil)
 

@@ -130,7 +130,7 @@ func TestSendAttestationStateSingleBatch(t *testing.T) {
 		require.NoError(t, err, "Should be able to get signable payload")
 
 		// Create attestation state
-		state := NewAttestationState(obsTx)
+		state := ag.observedTxsPool.NewAttestationState(obsTx)
 
 		for j := 0; j < numVals; j++ {
 			sig, err := valPrivs[j].Sign(signBz)
@@ -284,7 +284,7 @@ func TestSendAttestationStateMultipleBatches(t *testing.T) {
 		}
 
 		// Create attestation state
-		state := NewAttestationState(obsTx)
+		state := ag.observedTxsPool.NewAttestationState(obsTx)
 
 		signBz, err := obsTx.GetSignablePayload()
 		require.NoError(t, err, "Should be able to get signable payload")
@@ -730,7 +730,7 @@ func TestSendReceiveBatchedAttestationState(t *testing.T) {
 		}
 
 		// Create attestation state
-		state := NewAttestationState(obsTx)
+		state := agSender.observedTxsPool.NewAttestationState(obsTx)
 
 		signBz, err := obsTx.GetSignablePayload()
 		require.NoError(t, err, "Should be able to get signable payload")
@@ -778,7 +778,7 @@ func TestSendReceiveBatchedAttestationState(t *testing.T) {
 		signBz, err := s.GetSignablePayload()
 		require.NoError(t, err, "Should be able to get signable payload")
 
-		state := NewAttestationState(s)
+		state := agSender.solvenciesPool.NewAttestationState(s)
 
 		for j := range numVals {
 			sig, err := valPrivs[j].Sign(signBz)

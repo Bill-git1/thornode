@@ -283,6 +283,10 @@ func (m *MockStream) SetReadDeadline(t time.Time) error {
 	return nil
 }
 
+func (m *MockStream) Reset() error {
+	return nil
+}
+
 type MockConn struct {
 	network.Conn
 	peer peer.ID

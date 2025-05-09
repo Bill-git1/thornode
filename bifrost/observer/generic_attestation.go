@@ -10,6 +10,55 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common"
 )
 
+// AttestationStatePool is a sync.Pool for reusing AttestationState objects to reduce memory allocations.
+type AttestationStatePool[T AttestableItem] struct {
+	*sync.Pool
+}
+
+// NewAttestationStatePool creates a new AttestationStatePool
+func NewAttestationStatePool[T AttestableItem]() *AttestationStatePool[T] {
+	return &AttestationStatePool[T]{
+		Pool: &sync.Pool{
+			New: func() interface{} {
+				return &AttestationState[T]{
+					attestations: make([]attestationSentState, 0, 10), // Preallocate with small capacity
+				}
+			},
+		},
+	}
+}
+
+func (p *AttestationStatePool[T]) NewAttestationState(initialItem T) *AttestationState[T] {
+	pooled := p.Get()
+	state, ok := pooled.(*AttestationState[T])
+	if !ok || pooled == nil || state == nil {
+		state = &AttestationState[T]{
+			attestations: make([]attestationSentState, 0, 10),
+		}
+	}
+
+	// reset / initialise fields
+	state.Item = initialItem
+	state.attestations = state.attestations[:0]
+	state.firstAttestationObserved = time.Now()
+	state.initialAttestationsSent = time.Time{}
+	state.quorumAttestationsSent = time.Time{}
+	state.lastAttestationsSent = time.Time{}
+
+	return state
+}
+
+func (p *AttestationStatePool[T]) PutAttestationState(state *AttestationState[T]) {
+	state.Item = *new(T)                         // Clear item
+	state.attestations = state.attestations[:0]  // Clear attestations
+	state.firstAttestationObserved = time.Time{} // Reset timestamps
+	state.initialAttestationsSent = time.Time{}
+	state.quorumAttestationsSent = time.Time{}
+	state.lastAttestationsSent = time.Time{}
+	// Return to pool
+	p.Put(state)
+}
+
 // AttestableItem represents any data type that can be attested
 type AttestableItem interface {
 	// Marshal serializes the item for signature verification
@@ -70,6 +119,7 @@ func ProcessAttestation[T AttestMessage](attestations *[]attestationSentState, m
 type attestationSentState struct {
 	attestation *common.Attestation
 	sent        bool
+	committed   bool
 }
 
 // AttestationState is a generic attestation state for any attestable item
@@ -85,17 +135,9 @@ type AttestationState[T AttestableItem] struct {
 	initialAttestationsSent  time.Time
 	quorumAttestationsSent   time.Time
 	lastAttestationsSent     time.Time
+	lastCommittedAttestation time.Time
 
 	mu sync.Mutex
-}
-
-// NewAttestationState creates a new attestation state for the given item
-func NewAttestationState[T AttestableItem](item T) *AttestationState[T] {
-	return &AttestationState[T]{
-		Item:                     item,
-		attestations:             make([]attestationSentState, 0),
-		firstAttestationObserved: time.Now(),
-	}
 }
 
 // AddAttestation adds a new attestation to the state
@@ -141,12 +183,16 @@ func (s *AttestationState[T]) UnsentAttestations() []*common.Attestation {
 
 // AttestationsCopy returns a deep copy of all attestations
 func (s *AttestationState[T]) AttestationsCopy() []*common.Attestation {
-	atts := make([]*common.Attestation, len(s.attestations))
-	for i, item := range s.attestations {
-		atts[i] = &common.Attestation{
+	atts := make([]*common.Attestation, 0, len(s.attestations))
+	for _, item := range s.attestations {
+		if item.committed {
+			// skip committed attestations
+			continue
+		}
+		atts = append(atts, &common.Attestation{
 			PubKey:    append([]byte(nil), item.attestation.PubKey...),
 			Signature: append([]byte(nil), item.attestation.Signature...),
-		}
+		})
 	}
 	return atts
 }
@@ -194,6 +240,19 @@ func (s *AttestationState[T]) ExpiredAfterQuorum(lateObserveTimeout, nonQuorumTi
 		return true
 	}
 
+	allAttestationsCommitted := true
+	for _, item := range s.attestations {
+		if !item.committed {
+			allAttestationsCommitted = false
+			break
+		}
+	}
+
+	if allAttestationsCommitted && !s.lastCommittedAttestation.IsZero() && time.Since(s.lastCommittedAttestation) > lateObserveTimeout {
+		// all attestations have been committed to the chain, and it's been too long since the last one
+		return true
+	}
+
 	if s.quorumAttestationsSent.IsZero() {
 		// we haven't reached quorum yet, so we can't expire
 		return false
@@ -227,6 +286,20 @@ func (s *AttestationState[T]) MarkAttestationsSent(isQuorum bool) {
 	for i := range s.attestations {
 		s.attestations[i].sent = true
 	}
+}
+
+func (s *AttestationState[T]) MarkAttestationsCommitted(commitedAtts []*common.Attestation) {
+	sigSet := make(map[string]struct{}, len(commitedAtts))
+	for _, c := range commitedAtts {
+		sigSet[string(c.Signature)] = struct{}{}
+	}
+	for i := range s.attestations {
+		if _, ok := sigSet[string(s.attestations[i].attestation.Signature)]; ok {
+			s.attestations[i].committed = true
+		}
+	}
+
+	s.lastCommittedAttestation = time.Now()
 }
 
 // verifySignature verifies that a signature is valid for a specific public key and data

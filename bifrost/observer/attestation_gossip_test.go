@@ -126,7 +126,7 @@ func setupTestGossip(t *testing.T) (*AttestationGossip, *MockHost, *MockKeys, *M
 	ag := &AttestationGossip{
 		logger:               getTestLogger(t),
 		host:                 host,
-		keys:                 keys,
+		privKey:              privKey,
 		pubKey:               privKey.PubKey().Bytes(),
 		grpcClient:           grpcClient,
 		config:               cfg,
@@ -139,6 +139,11 @@ func setupTestGossip(t *testing.T) (*AttestationGossip, *MockHost, *MockKeys, *M
 		networkFees: make(map[common.NetworkFee]*AttestationState[*common.NetworkFee]),
 		solvencies:  make(map[common.TxID]*AttestationState[*common.Solvency]),
 		errataTxs:   make(map[common.ErrataTx]*AttestationState[*common.ErrataTx]),
+
+		observedTxsPool: NewAttestationStatePool[*common.ObservedTx](),
+		networkFeesPool: NewAttestationStatePool[*common.NetworkFee](),
+		solvenciesPool:  NewAttestationStatePool[*common.Solvency](),
+		errataTxsPool:   NewAttestationStatePool[*common.ErrataTx](),
 	}
 
 	// Set active validators
@@ -642,7 +647,7 @@ func TestPruningLogic(t *testing.T) {
 		Tx: *pruneTx,
 	}
 
-	pruneState := NewAttestationState(obsTx)
+	pruneState := ag.observedTxsPool.NewAttestationState(obsTx)
 
 	// Set quorum time in the distant past
 	pruneState.quorumAttestationsSent = time.Now().Add(-24 * time.Hour)
@@ -657,7 +662,7 @@ func TestPruningLogic(t *testing.T) {
 		Height: 400,
 	}
 
-	pruneFeeState := NewAttestationState(&pruneFee)
+	pruneFeeState := ag.networkFeesPool.NewAttestationState(&pruneFee)
 
 	// Set quorum time in the distant past
 	pruneFeeState.quorumAttestationsSent = time.Now().Add(-24 * time.Hour)
@@ -714,7 +719,7 @@ func TestSendLateAttestations(t *testing.T) {
 		ID:    tx.ID,
 	}
 
-	lateState := NewAttestationState(obsTx)
+	lateState := ag.observedTxsPool.NewAttestationState(obsTx)
 
 	// Add two attestations
 	lateState.attestations = append(lateState.attestations, attestationSentState{
@@ -820,7 +825,7 @@ func TestHandleQuorumTxCommited(t *testing.T) {
 		require.NoError(t, err)
 
 		// Call the handler
-		ag.handleQuorumTxCommited(&ebifrost.EventNotification{
+		ag.handleQuorumTxCommitted(&ebifrost.EventNotification{
 			Payload: payload,
 		})
 
@@ -858,7 +863,7 @@ func TestHandleQuorumTxCommited(t *testing.T) {
 		require.NoError(t, err)
 
 		// Call the handler
-		ag.handleQuorumTxCommited(&ebifrost.EventNotification{
+		ag.handleQuorumTxCommitted(&ebifrost.EventNotification{
 			Payload: payload,
 		})
 

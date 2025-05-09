@@ -13,15 +13,8 @@ import (
 
 // AttestObservedTx creates and broadcasts an attestation for an observed transaction
 func (s *AttestationGossip) AttestObservedTx(ctx context.Context, obsTx *common.ObservedTx, inbound bool) error {
-	pk, err := s.keys.GetPrivateKey()
-	if err != nil {
-		return fmt.Errorf("fail to get private key: %w", err)
-	}
-
-	pubBz := pk.PubKey().Bytes()
-
 	if !s.isActiveValidator(s.host.ID()) {
-		return fmt.Errorf("skipping attest observed tx: %w", err)
+		return fmt.Errorf("skipping attest observed tx: not active")
 	}
 
 	signBz, err := obsTx.GetSignablePayload()
@@ -29,7 +22,7 @@ func (s *AttestationGossip) AttestObservedTx(ctx context.Context, obsTx *common.
 		return fmt.Errorf("fail to marshal tx sign payload: %w", err)
 	}
 
-	signature, err := pk.Sign(signBz)
+	signature, err := s.privKey.Sign(signBz)
 	if err != nil {
 		return fmt.Errorf("fail to sign tx sign payload: %w", err)
 	}
@@ -38,7 +31,7 @@ func (s *AttestationGossip) AttestObservedTx(ctx context.Context, obsTx *common.
 		ObsTx:   *obsTx,
 		Inbound: inbound,
 		Attestation: &common.Attestation{
-			PubKey:    pubBz,
+			PubKey:    s.pubKey,
 			Signature: signature,
 		},
 	}
@@ -54,15 +47,8 @@ func (s *AttestationGossip) AttestObservedTx(ctx context.Context, obsTx *common.
 
 // AttestNetworkFee creates and broadcasts an attestation for a network fee
 func (s *AttestationGossip) AttestNetworkFee(ctx context.Context, networkFee common.NetworkFee) error {
-	pk, err := s.keys.GetPrivateKey()
-	if err != nil {
-		return fmt.Errorf("fail to get private key: %w", err)
-	}
-
-	pubBz := pk.PubKey().Bytes()
-
 	if !s.isActiveValidator(s.host.ID()) {
-		return fmt.Errorf("skipping attest network fee: %w", err)
+		return fmt.Errorf("skipping attest network fee: not active")
 	}
 
 	signBz, err := networkFee.GetSignablePayload()
@@ -70,7 +56,7 @@ func (s *AttestationGossip) AttestNetworkFee(ctx context.Context, networkFee com
 		return fmt.Errorf("fail to marshal network fee sign payload: %w", err)
 	}
 
-	signature, err := pk.Sign(signBz)
+	signature, err := s.privKey.Sign(signBz)
 	if err != nil {
 		return fmt.Errorf("fail to sign network fee sign payload: %w", err)
 	}
@@ -78,7 +64,7 @@ func (s *AttestationGossip) AttestNetworkFee(ctx context.Context, networkFee com
 	msg := common.AttestNetworkFee{
 		NetworkFee: &networkFee,
 		Attestation: &common.Attestation{
-			PubKey:    pubBz,
+			PubKey:    s.pubKey,
 			Signature: signature,
 		},
 	}
@@ -94,15 +80,8 @@ func (s *AttestationGossip) AttestNetworkFee(ctx context.Context, networkFee com
 
 // AttestSolvency creates and broadcasts an attestation for a solvency proof
 func (s *AttestationGossip) AttestSolvency(ctx context.Context, solvency common.Solvency) error {
-	pk, err := s.keys.GetPrivateKey()
-	if err != nil {
-		return fmt.Errorf("fail to get private key: %w", err)
-	}
-
-	pubBz := pk.PubKey().Bytes()
-
 	if !s.isActiveValidator(s.host.ID()) {
-		return fmt.Errorf("skipping attest solvency: %w", err)
+		return fmt.Errorf("skipping attest solvency: not active")
 	}
 
 	signBz, err := solvency.GetSignablePayload()
@@ -110,7 +89,7 @@ func (s *AttestationGossip) AttestSolvency(ctx context.Context, solvency common.
 		return fmt.Errorf("fail to marshal solvency sign payload: %w", err)
 	}
 
-	signature, err := pk.Sign(signBz)
+	signature, err := s.privKey.Sign(signBz)
 	if err != nil {
 		return fmt.Errorf("fail to sign solvency sign payload: %w", err)
 	}
@@ -118,7 +97,7 @@ func (s *AttestationGossip) AttestSolvency(ctx context.Context, solvency common.
 	msg := common.AttestSolvency{
 		Solvency: &solvency,
 		Attestation: &common.Attestation{
-			PubKey:    pubBz,
+			PubKey:    s.pubKey,
 			Signature: signature,
 		},
 	}
@@ -144,15 +123,8 @@ func (s *AttestationGossip) AttestErrata(ctx context.Context, errata common.Erra
 	}
 	s.mu.Unlock()
 
-	pk, err := s.keys.GetPrivateKey()
-	if err != nil {
-		return fmt.Errorf("fail to get private key: %w", err)
-	}
-
-	pubBz := pk.PubKey().Bytes()
-
 	if !s.isActiveValidator(s.host.ID()) {
-		return fmt.Errorf("skipping attest errata tx: %w", err)
+		return fmt.Errorf("skipping attest errata tx: not active")
 	}
 
 	signBz, err := errata.GetSignablePayload()
@@ -160,7 +132,7 @@ func (s *AttestationGossip) AttestErrata(ctx context.Context, errata common.Erra
 		return fmt.Errorf("fail to marshal errata sign payload: %w", err)
 	}
 
-	signature, err := pk.Sign(signBz)
+	signature, err := s.privKey.Sign(signBz)
 	if err != nil {
 		return fmt.Errorf("fail to sign errata sign payload: %w", err)
 	}
@@ -168,7 +140,7 @@ func (s *AttestationGossip) AttestErrata(ctx context.Context, errata common.Erra
 	msg := common.AttestErrataTx{
 		ErrataTx: &errata,
 		Attestation: &common.Attestation{
-			PubKey:    pubBz,
+			PubKey:    s.pubKey,
 			Signature: signature,
 		},
 	}

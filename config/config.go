@@ -415,8 +415,9 @@ type Thornode struct {
 		} `mapstructure:"grpc"`
 
 		EBifrost struct {
-			Enable  bool   `mapstructure:"enable"`
-			Address string `mapstructure:"address"`
+			Enable       bool          `mapstructure:"enable"`
+			Address      string        `mapstructure:"address"`
+			CacheItemTTL time.Duration `mapstructure:"cache_item_ttl"`
 		} `mapstructure:"ebifrost"`
 
 		StateSync struct {

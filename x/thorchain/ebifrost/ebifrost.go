@@ -22,14 +22,17 @@ import (
 const (
 	// This is a dummy address used for injected transactions.
 	// It is not used otherwise, as quorum msg attestations are verified within the handlers.
-	ebifrostSigner        = "thor1zxhfu0qmmq6gmgq4sgz0xgq69h0nhqx5yrseu5"
-	cachedBlocks          = 10
-	EventQuorumTxCommited = "quorum_tx_committed"
+	ebifrostSigner                 = "thor1zxhfu0qmmq6gmgq4sgz0xgq69h0nhqx5yrseu5"
+	cachedBlocks                   = 10
+	EventQuorumTxCommitted         = "quorum_tx_committed"
+	EventQuorumNetworkFeeCommitted = "quorum_network_fee_committed"
+	EventQuorumSolvencyCommitted   = "quorum_solvency_committed"
+	EventQuorumErrataTxCommitted   = "quorum_errata_tx_committed"
 )
 
 var ErrAlreadyStarted = errors.New("ebifrost already started")
 
-var notifyEvents = []string{EventQuorumTxCommited}
+var notifyEvents = []string{EventQuorumTxCommitted, EventQuorumNetworkFeeCommitted, EventQuorumSolvencyCommitted, EventQuorumErrataTxCommitted}
 
 var _, ebifrostSignerAcc, _ = bech32.DecodeAndConvert(ebifrostSigner)
 
@@ -52,6 +55,8 @@ type EnshrinedBifrost struct {
 
 	started bool
 	mu      sync.Mutex
+
+	stopChan chan struct{}
 }
 
 func NewEnshrinedBifrost(cdc codec.Codec, logger log.Logger, config EBifrostConfig) *EnshrinedBifrost {
@@ -70,6 +75,7 @@ func NewEnshrinedBifrost(cdc codec.Codec, logger log.Logger, config EBifrostConf
 		errataCache:     NewInjectCache[*common.QuorumErrataTx](),
 		subscribers:     make(map[string][]chan *EventNotification),
 		cfg:             config,
+		stopChan:        make(chan struct{}),
 	}
 
 	RegisterLocalhostBifrostServer(s, ebs)
@@ -98,6 +104,11 @@ func (b *EnshrinedBifrost) Start() error {
 		}
 	}()
 
+	// Start the prune timer if TTL is enabled
+	if b.cfg.CacheItemTTL > 0 {
+		b.startPruneTimer()
+	}
+
 	return nil
 }
 
@@ -112,7 +123,80 @@ func (b *EnshrinedBifrost) Stop() {
 	}
 	b.started = false
 
+	close(b.stopChan)
+
 	b.s.Stop()
+}
+
+// startPruneTimer starts a timer to periodically prune expired items from the caches
+func (b *EnshrinedBifrost) startPruneTimer() {
+	interval := b.cfg.CacheItemTTL / 10 // Check every 1/10th of the TTL
+	if interval < time.Second {
+		interval = time.Second // Minimum interval of 1 second
+	}
+
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				b.logger.Debug("Pruning expired cache items", "ttl", b.cfg.CacheItemTTL.String())
+				prunedTxs := b.quorumTxCache.PruneExpiredItems(b.cfg.CacheItemTTL)
+				prunedNfs := b.networkFeeCache.PruneExpiredItems(b.cfg.CacheItemTTL)
+				prunedSlvs := b.solvencyCache.PruneExpiredItems(b.cfg.CacheItemTTL)
+				prunedEtxs := b.errataCache.PruneExpiredItems(b.cfg.CacheItemTTL)
+
+				for _, tx := range prunedTxs {
+					b.logger.Warn(
+						"EBifrost pruned quorum tx",
+						"attestations", len(tx.Attestations),
+						"chain", tx.ObsTx.Tx.Chain,
+						"hash", tx.ObsTx.Tx.ID,
+						"block_height", tx.ObsTx.BlockHeight,
+						"finalise_height", tx.ObsTx.FinaliseHeight,
+						"from", tx.ObsTx.Tx.FromAddress,
+						"to", tx.ObsTx.Tx.ToAddress,
+						"memo", tx.ObsTx.Tx.Memo,
+						"coins", tx.ObsTx.Tx.Coins.String(),
+						"gas", tx.ObsTx.Tx.Gas.ToCoins().String(),
+						"inbound", tx.Inbound,
+					)
+				}
+				for _, nf := range prunedNfs {
+					b.logger.Warn(
+						"EBifrost pruned quorum network fee",
+						"attestations", len(nf.Attestations),
+						"chain", nf.NetworkFee.Chain,
+						"height", nf.NetworkFee.Height,
+						"tx_size", nf.NetworkFee.TransactionSize,
+						"tx_rate", nf.NetworkFee.TransactionRate,
+					)
+				}
+				for _, slv := range prunedSlvs {
+					b.logger.Warn(
+						"Ebifrost pruned quorum solvency",
+						"attestations", len(slv.Attestations),
+						"chain", slv.Solvency.Chain,
+						"height", slv.Solvency.Height,
+						"pubkey", slv.Solvency.PubKey,
+						"coins", slv.Solvency.Coins.String(),
+					)
+				}
+				for _, etx := range prunedEtxs {
+					b.logger.Warn(
+						"Ebifrost pruned quorum errata tx",
+						"attestations", len(etx.Attestations),
+						"chain", etx.ErrataTx.Chain,
+						"id", etx.ErrataTx.Id,
+					)
+				}
+			case <-b.stopChan:
+				return
+			}
+		}
+	}()
 }
 
 func (b *EnshrinedBifrost) SendQuorumTx(ctx context.Context, tx *common.QuorumTx) (*SendQuorumTxResult, error) {
@@ -156,7 +240,8 @@ func (b *EnshrinedBifrost) SendQuorumSolvency(ctx context.Context, s *common.Quo
 
 func (b *EnshrinedBifrost) SendQuorumErrataTx(ctx context.Context, e *common.QuorumErrataTx) (*SendQuorumErrataTxResult, error) {
 	b.quorumTxCache.Lock()
-	for i, tx := range b.quorumTxCache.items {
+	for i, item := range b.quorumTxCache.items {
+		tx := item.Item
 		if tx.ObsTx.Tx.Chain == e.ErrataTx.Chain && tx.ObsTx.Tx.ID == e.ErrataTx.Id {
 			// remove the tx from the cache because we observed an error for it
 			b.quorumTxCache.items = append(b.quorumTxCache.items[:i], b.quorumTxCache.items[i+1:]...)
@@ -277,7 +362,7 @@ func (b *EnshrinedBifrost) broadcastQuorumTxEvent(tx *common.QuorumTx) {
 			return item.Marshal()
 		},
 		b.broadcastEvent,
-		EventQuorumTxCommited,
+		EventQuorumTxCommitted,
 		b.logger,
 	)
 }
@@ -321,12 +406,26 @@ func (b *EnshrinedBifrost) MarkQuorumTxAttestationsConfirmed(ctx context.Context
 	b.quorumTxCache.CleanOldBlocks(height, cachedBlocks)
 }
 
+func (b *EnshrinedBifrost) broadcastQuorumNetworkFeeEvent(nf *common.QuorumNetworkFee) {
+	b.networkFeeCache.BroadcastEvent(
+		nf,
+		func(item *common.QuorumNetworkFee) ([]byte, error) {
+			return item.Marshal()
+		},
+		b.broadcastEvent,
+		EventQuorumNetworkFeeCommitted,
+		b.logger,
+	)
+}
+
 // MarkQuorumNetworkFeeAttestationsConfirmed is intended to be called by the bifrost post handler after a tx has been processed.
 // It will look for any matching quorum txs, remove the confirmed attestations from them, and remove the quorum txs if all attestations have been confirmed.
 func (b *EnshrinedBifrost) MarkQuorumNetworkFeeAttestationsConfirmed(ctx context.Context, qnf *common.QuorumNetworkFee) {
 	if b == nil {
 		return
 	}
+
+	go b.broadcastQuorumNetworkFeeEvent(qnf)
 
 	found := b.networkFeeCache.MarkAttestationsConfirmed(
 		qnf,
@@ -362,12 +461,26 @@ func (b *EnshrinedBifrost) MarkQuorumNetworkFeeAttestationsConfirmed(ctx context
 	b.networkFeeCache.CleanOldBlocks(height, cachedBlocks)
 }
 
+func (b *EnshrinedBifrost) broadcastQuorumSolvencyEvent(s *common.QuorumSolvency) {
+	b.solvencyCache.BroadcastEvent(
+		s,
+		func(item *common.QuorumSolvency) ([]byte, error) {
+			return item.Marshal()
+		},
+		b.broadcastEvent,
+		EventQuorumSolvencyCommitted,
+		b.logger,
+	)
+}
+
 // MarkQuorumSolvencyAttestationsConfirmed is intended to be called by the bifrost post handler after a tx has been processed.
 // It will look for any matching quorum txs, remove the confirmed attestations from them, and remove the quorum txs if all attestations have been confirmed.
 func (b *EnshrinedBifrost) MarkQuorumSolvencyAttestationsConfirmed(ctx context.Context, qs *common.QuorumSolvency) {
 	if b == nil {
 		return
 	}
+
+	go b.broadcastQuorumSolvencyEvent(qs)
 
 	found := b.solvencyCache.MarkAttestationsConfirmed(
 		qs,
@@ -403,12 +516,26 @@ func (b *EnshrinedBifrost) MarkQuorumSolvencyAttestationsConfirmed(ctx context.C
 	b.solvencyCache.CleanOldBlocks(height, cachedBlocks)
 }
 
+func (b *EnshrinedBifrost) broadcastQuorumErrataTxEvent(qe *common.QuorumErrataTx) {
+	b.errataCache.BroadcastEvent(
+		qe,
+		func(item *common.QuorumErrataTx) ([]byte, error) {
+			return item.Marshal()
+		},
+		b.broadcastEvent,
+		EventQuorumErrataTxCommitted,
+		b.logger,
+	)
+}
+
 // MarkQuorumErrataTxAttestationsConfirmed is intended to be called by the bifrost post handler after a tx has been processed.
 // It will look for any matching quorum txs, remove the confirmed attestations from them, and remove the quorum txs if all attestations have been confirmed.
 func (b *EnshrinedBifrost) MarkQuorumErrataTxAttestationsConfirmed(ctx context.Context, qe *common.QuorumErrataTx) {
 	if b == nil {
 		return
 	}
+
+	go b.broadcastQuorumErrataTxEvent(qe)
 
 	found := b.errataCache.MarkAttestationsConfirmed(
 		qe,
