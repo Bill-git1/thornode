@@ -144,6 +144,8 @@ func setupTestGossip(t *testing.T) (*AttestationGossip, *MockHost, *MockKeys, *M
 		networkFeesPool: NewAttestationStatePool[*common.NetworkFee](),
 		solvenciesPool:  NewAttestationStatePool[*common.Solvency](),
 		errataTxsPool:   NewAttestationStatePool[*common.ErrataTx](),
+
+		peerMgr: newPeerManager(getTestLogger(t), 2),
 	}
 
 	// Set active validators

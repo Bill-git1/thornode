@@ -47,6 +47,7 @@ bifrost:
     batch_interval: 2s
     peer_timeout: 20s
     peer_concurrent_sends: 4
+    peer_concurrent_receives: 5
   signer:
     backup_keyshares: true
     signer_db_path: /var/data/bifrost/signer_db

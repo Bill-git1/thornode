@@ -291,7 +291,7 @@ func (o *Observer) sendDeck(ctx context.Context) {
 		return
 	}
 	if nodeStatus != o.lastNodeStatus {
-		if nodeStatus == stypes.NodeStatus_Active && o.lastNodeStatus != stypes.NodeStatus_Unknown {
+		if nodeStatus == stypes.NodeStatus_Active {
 			o.logger.Info().Msg("node is now active, will begin observation and gossip")
 			o.attestationGossip.askForAttestationState(ctx)
 		}

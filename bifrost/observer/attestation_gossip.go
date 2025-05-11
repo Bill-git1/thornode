@@ -51,16 +51,15 @@ const (
 
 	defaultPeerTimeout = 20 * time.Second
 
+	defaultPeerConcurrentSends    = 4
+	defaultPeerConcurrentReceives = 5
+
 	streamAckBegin  = "ack_begin"
 	streamAckHeader = "ack_header"
 	streamAckData   = "ack_data"
 )
 
 var (
-	observeTxProtocol          protocol.ID = "/p2p/observed-tx"
-	networkFeeProtocol         protocol.ID = "/p2p/network-fee"
-	solvencyProtocol           protocol.ID = "/p2p/solvency"
-	errataTxProtocol           protocol.ID = "/p2p/errata-tx"
 	attestationStateProtocol   protocol.ID = "/p2p/attestation-state"
 	batchedAttestationProtocol protocol.ID = "/p2p/batched-attestations"
 
@@ -131,6 +130,9 @@ type AttestationGossip struct {
 	cachedKeySignMu      sync.Mutex
 
 	batcher *AttestationBatcher
+
+	// peerManager is used to limit the number of concurrent receives from a peer
+	peerMgr *peerManager
 }
 
 type cachedKeySignParty struct {
@@ -172,8 +174,10 @@ func NewAttestationGossip(
 		config.PeerConcurrentSends,
 	)
 
+	logger := log.With().Str("module", "attestation_gossip").Logger()
+
 	s := &AttestationGossip{
-		logger:      log.With().Str("module", "attestation_gossip").Logger(),
+		logger:      logger,
 		host:        host,
 		privKey:     pk,
 		pubKey:      pk.PubKey().Bytes(),
@@ -187,6 +191,8 @@ func NewAttestationGossip(
 		networkFees: make(map[common.NetworkFee]*AttestationState[*common.NetworkFee]),
 		solvencies:  make(map[common.TxID]*AttestationState[*common.Solvency]),
 		errataTxs:   make(map[common.ErrataTx]*AttestationState[*common.ErrataTx]),
+
+		peerMgr: newPeerManager(logger, config.PeerConcurrentReceives),
 
 		observedTxsPool: NewAttestationStatePool[*common.ObservedTx](),
 		networkFeesPool: NewAttestationStatePool[*common.NetworkFee](),
@@ -205,11 +211,7 @@ func NewAttestationGossip(
 	eventClient.RegisterHandler(ebifrost.EventQuorumErrataTxCommitted, s.handleQuorumErrataTxCommitted)
 
 	// Register stream handlers
-	host.SetStreamHandler(observeTxProtocol, s.handleStreamObservedTx)
 	host.SetStreamHandler(attestationStateProtocol, s.handleStreamAttestationState)
-	host.SetStreamHandler(networkFeeProtocol, s.handleStreamNetworkFee)
-	host.SetStreamHandler(solvencyProtocol, s.handleStreamSolvency)
-	host.SetStreamHandler(errataTxProtocol, s.handleStreamErrataTx)
 	host.SetStreamHandler(batchedAttestationProtocol, s.handleStreamBatchedAttestations)
 
 	return s, nil
@@ -237,6 +239,16 @@ func normalizeConfig(config *config.BifrostAttestationGossipConfig) {
 	}
 	if config.PeerTimeout == 0 {
 		config.PeerTimeout = defaultPeerTimeout
+	}
+	if config.PeerConcurrentSends == 0 {
+		config.PeerConcurrentSends = defaultPeerConcurrentSends
+	}
+	if config.PeerConcurrentReceives == 0 {
+		config.PeerConcurrentReceives = defaultPeerConcurrentReceives
+	}
+	if config.PeerConcurrentReceives < config.PeerConcurrentSends {
+		// ensure that the number of concurrent receives is at least as large as the number of concurrent sends
+		config.PeerConcurrentReceives = config.PeerConcurrentSends
 	}
 }
 
@@ -424,12 +436,16 @@ func (s *AttestationGossip) handleQuorumErrataTxCommitted(en *ebifrost.EventNoti
 // Start the attestation gossip service
 func (s *AttestationGossip) Start(ctx context.Context) {
 	ticker := time.NewTicker(s.config.ObserveReconcileInterval)
-	defer ticker.Stop()
 
 	startupDelay := s.config.AskPeersDelay
 	delayTimer := time.NewTimer(startupDelay)
+	semPruneTicker := time.NewTicker(semaphorePruneInterval)
 
-	defer delayTimer.Stop()
+	defer func() {
+		ticker.Stop()
+		delayTimer.Stop()
+		semPruneTicker.Stop()
+	}()
 
 	go s.batcher.Start(ctx)
 
@@ -506,6 +522,10 @@ func (s *AttestationGossip) Start(ctx context.Context) {
 		case <-delayTimer.C:
 			s.eventClient.Start()
 
+		case <-semPruneTicker.C:
+			// Periodically prune semaphores that have been idle for a while
+			s.peerMgr.prune()
+			s.batcher.peerMgr.prune()
 		case <-ctx.Done():
 			s.eventClient.Stop()
 			return

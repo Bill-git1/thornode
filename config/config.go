@@ -608,6 +608,9 @@ type BifrostAttestationGossipConfig struct {
 
 	// maximum concurrent sends to a single peer
 	PeerConcurrentSends int `mapstructure:"peer_concurrent_sends"`
+
+	// maximum concurrent receives from a single peer
+	PeerConcurrentReceives int `mapstructure:"peer_concurrent_receives"`
 }
 
 type BifrostChainConfiguration struct {

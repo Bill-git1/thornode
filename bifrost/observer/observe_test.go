@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -16,12 +17,15 @@ import (
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	cKeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/rs/zerolog"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p"
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/evm"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pubkeymanager"
@@ -771,5 +775,264 @@ func (s *ObserverSuite) TestObserverDeckStorage(c *C) {
 
 		// Verify transaction is removed immediately after finalization
 		assertTxFinalized(observer, key, txID.String())
+	}
+}
+
+func (s *ObserverSuite) TestPeerConcurrencyLimits(c *C) {
+	// Create a logger
+	logger := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).Level(zerolog.InfoLevel)
+
+	// Test concurrent operations with different limits
+	testConcurrentOperations := func(concurrencyLimit int) {
+		// Create a peer manager with the specified limit
+		peerMgr := newPeerManager(logger, concurrencyLimit)
+
+		// Generate random peer ID for testing
+		privKey := secp256k1.GenPrivKey()
+		peerID, err := conversion.GetPeerIDFromSecp256PubKey(privKey.PubKey().Bytes())
+		c.Assert(err, IsNil)
+
+		var wg sync.WaitGroup
+		activeCount := 0
+		maxActive := 0
+		var countMu sync.Mutex
+
+		// Track success/failure counts
+		successCount := 0
+		failureCount := 0
+
+		// Launch many more goroutines than the concurrency limit
+		totalOps := concurrencyLimit * 4
+		for i := 0; i < totalOps; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+
+				sem, err := peerMgr.acquire(peerID)
+				if err == nil {
+					// Successfully acquired token
+					countMu.Lock()
+					activeCount++
+					successCount++
+					if activeCount > maxActive {
+						maxActive = activeCount
+					}
+					countMu.Unlock()
+
+					// Hold the token for a bit to ensure concurrency
+					time.Sleep(50 * time.Millisecond)
+
+					countMu.Lock()
+					activeCount--
+					countMu.Unlock()
+
+					peerMgr.release(sem)
+				} else {
+					countMu.Lock()
+					failureCount++
+					countMu.Unlock()
+				}
+			}()
+		}
+
+		// Wait for all operations to complete
+		wg.Wait()
+
+		// Verify max concurrency was enforced
+		c.Assert(maxActive <= concurrencyLimit, Equals, true,
+			Commentf("Expected max %d concurrent operations, got %d", concurrencyLimit, maxActive))
+
+		// Verify that operations both succeeded and failed
+		c.Assert(successCount > 0, Equals, true,
+			Commentf("Expected some operations to succeed"))
+		c.Assert(failureCount > 0, Equals, true,
+			Commentf("Expected some operations to fail due to concurrency limits"))
+
+		// Verify that the sum matches our total operations
+		c.Assert(successCount+failureCount, Equals, totalOps,
+			Commentf("Total operations should match success + failure count"))
+	}
+
+	// Test with different concurrency limits for sending
+	c.Log("Testing send concurrency limits")
+	testConcurrentOperations(1) // Strict limit
+	testConcurrentOperations(2) // Standard limit
+	testConcurrentOperations(5) // More permissive limit
+
+	// Test with concurrency limits for receiving
+	c.Log("Testing receive concurrency limits")
+	testConcurrentOperations(3) // Standard receive limit (typically higher than send)
+
+	// Test integration with AttestationGossip
+	c.Log("Testing integration with AttestationGossip")
+
+	// Create p2p communication for testing
+	comm, err := p2p.NewCommunication(&p2p.Config{
+		RendezvousString: "test-rendezvous",
+		Port:             1234,
+	}, nil)
+	c.Assert(err, IsNil)
+
+	priv, err := s.thorKeys.GetPrivateKey()
+	c.Assert(err, IsNil)
+	err = comm.Start(priv.Bytes())
+	c.Assert(err, IsNil)
+
+	defer func() {
+		err := comm.Stop()
+		c.Assert(err, IsNil)
+	}()
+
+	// Create AttestationGossip with specific concurrency settings
+	sendLimit := 2
+	receiveLimit := 3
+
+	ag, err := NewAttestationGossip(
+		comm.GetHost(),
+		s.thorKeys,
+		"localhost:50051",
+		s.bridge,
+		s.metrics,
+		config.BifrostAttestationGossipConfig{
+			PeerConcurrentSends:    sendLimit,
+			PeerConcurrentReceives: receiveLimit,
+		},
+	)
+	c.Assert(err, IsNil)
+
+	// Verify peer manager was correctly initialized with limits
+	c.Assert(ag.peerMgr.limit, Equals, receiveLimit)
+	c.Assert(ag.batcher.peerMgr.limit, Equals, sendLimit)
+
+	// Create test peer
+	fakePeerID, err := peer.Decode("QmYyQSo1c1Ym7orWxLYvCrM2EmxFTANf8wXmmE7DWjhx5N")
+	c.Assert(err, IsNil)
+
+	// Test batch limits by concurrent acquire/release
+	{
+		var wg sync.WaitGroup
+		activeCount := 0
+		maxActive := 0
+		var countMu sync.Mutex
+
+		// Launch more goroutines than the concurrency limit
+		totalOps := sendLimit * 3
+		for i := 0; i < totalOps; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+
+				sem, err := ag.batcher.peerMgr.acquire(fakePeerID)
+				if err == nil {
+					// Successfully acquired token
+					countMu.Lock()
+					activeCount++
+					if activeCount > maxActive {
+						maxActive = activeCount
+					}
+					countMu.Unlock()
+
+					// Hold the token for a bit
+					time.Sleep(50 * time.Millisecond)
+
+					countMu.Lock()
+					activeCount--
+					countMu.Unlock()
+
+					ag.batcher.peerMgr.release(sem)
+				}
+			}()
+		}
+
+		// Wait for all operations to complete
+		wg.Wait()
+
+		// Verify max concurrency was enforced
+		c.Assert(maxActive <= sendLimit, Equals, true,
+			Commentf("Batcher should respect concurrency limit of %d", sendLimit))
+	}
+
+	// Test receive limits by concurrent acquire/release
+	{
+		var wg sync.WaitGroup
+		activeCount := 0
+		maxActive := 0
+		var countMu sync.Mutex
+
+		// Launch more goroutines than the concurrency limit
+		totalOps := receiveLimit * 3
+		for i := 0; i < totalOps; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+
+				sem, err := ag.peerMgr.acquire(fakePeerID)
+				if err == nil {
+					// Successfully acquired token
+					countMu.Lock()
+					activeCount++
+					if activeCount > maxActive {
+						maxActive = activeCount
+					}
+					countMu.Unlock()
+
+					// Hold the token for a bit
+					time.Sleep(50 * time.Millisecond)
+
+					countMu.Lock()
+					activeCount--
+					countMu.Unlock()
+
+					ag.peerMgr.release(sem)
+				}
+			}()
+		}
+
+		// Wait for all operations to complete
+		wg.Wait()
+
+		// Verify max concurrency was enforced
+		c.Assert(maxActive <= receiveLimit, Equals, true,
+			Commentf("AttestationGossip should respect concurrency limit of %d", receiveLimit))
+	}
+
+	// Test pruning behavior
+	{
+		peerMgr := ag.peerMgr
+
+		// Create two different test peer IDs
+		peerID1 := fakePeerID
+		peerID2, err := peer.Decode("QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ")
+		c.Assert(err, IsNil)
+
+		// Acquire and release for both peers
+		sem1, err := peerMgr.acquire(peerID1)
+		c.Assert(err, IsNil)
+		sem2, err := peerMgr.acquire(peerID2)
+		c.Assert(err, IsNil)
+
+		peerMgr.release(sem1)
+		peerMgr.release(sem2)
+
+		// Verify both peers have semaphores
+		peerMgr.mu.Lock()
+		initialSemCount := len(peerMgr.semaphores)
+		c.Assert(initialSemCount >= 2, Equals, true)
+		peerMgr.mu.Unlock()
+
+		// Override the lastZero time to simulate that peerID1's semaphore has been unused for longer than the prune interval
+		peerMgr.mu.Lock()
+		peerMgr.semaphores[peerID1].lastZero = time.Now().Add(-2 * semaphorePruneInterval)
+		peerMgr.mu.Unlock()
+
+		// Run prune
+		peerMgr.prune()
+
+		// Verify peerID1's semaphore was pruned
+		peerMgr.mu.Lock()
+		c.Assert(len(peerMgr.semaphores) < initialSemCount, Equals, true)
+		_, exists := peerMgr.semaphores[peerID1]
+		c.Assert(exists, Equals, false)
+		peerMgr.mu.Unlock()
 	}
 }

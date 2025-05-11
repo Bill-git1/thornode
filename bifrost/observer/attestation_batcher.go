@@ -2,14 +2,12 @@ package observer
 
 import (
 	"context"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/libp2p/go-libp2p-core/protocol"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
@@ -30,11 +28,10 @@ type AttestationBatcher struct {
 
 	batchPool sync.Pool
 
-	mu                  sync.Mutex
-	batchInterval       time.Duration
-	maxBatchSize        int
-	peerTimeout         time.Duration // Timeout for peer send
-	peerConcurrentSends int           // Number of concurrent sends to a single peer
+	mu            sync.Mutex
+	batchInterval time.Duration
+	maxBatchSize  int
+	peerTimeout   time.Duration // Timeout for peer send
 
 	getActiveValidators func() map[peer.ID]bool
 
@@ -46,14 +43,7 @@ type AttestationBatcher struct {
 	logger  zerolog.Logger
 	metrics *batchMetrics
 
-	peerSemaphores   map[peer.ID]*peerSemaphore
-	peerSemaphoresMu sync.Mutex
-}
-
-type peerSemaphore struct {
-	tokens   chan struct{}
-	refCount int
-	lastZero time.Time
+	peerMgr *peerManager
 }
 
 // Metrics for the batcher
@@ -88,10 +78,6 @@ func NewAttestationBatcher(
 		peerTimeout = 20 * time.Second // Default peer timeout
 	}
 
-	if peerConcurrentSends == 0 {
-		peerConcurrentSends = 4 // Default concurrent sends
-	}
-
 	// Create batch metrics
 	batchMetrics := &batchMetrics{
 		BatchSends:      m.GetCounter(metrics.BatchSends),
@@ -110,18 +96,19 @@ func NewAttestationBatcher(
 		solvencyBatch:   make([]*common.AttestSolvency, 0, maxBatchSize),
 		errataTxBatch:   make([]*common.AttestErrataTx, 0, maxBatchSize),
 
-		batchInterval:       batchInterval,
-		maxBatchSize:        maxBatchSize,
-		peerTimeout:         peerTimeout,
-		peerConcurrentSends: peerConcurrentSends,
+		batchInterval: batchInterval,
+		maxBatchSize:  maxBatchSize,
+		peerTimeout:   peerTimeout,
 
-		peerSemaphores: make(map[peer.ID]*peerSemaphore),
+		peerMgr: newPeerManager(logger, peerConcurrentSends),
 
 		lastBatchSent: time.Time{}, // Zero time
 
 		host:    host,
 		logger:  logger,
 		metrics: batchMetrics,
+
+		forceSendChan: make(chan struct{}, 1), // Buffer of 1 to avoid blocking
 
 		// sync.Pool for reusing AttestationBatch objects to reduce memory allocations.
 		batchPool: sync.Pool{
@@ -143,34 +130,23 @@ func (b *AttestationBatcher) setActiveValGetter(getter func() map[peer.ID]bool) 
 
 func (b *AttestationBatcher) Start(ctx context.Context) {
 	b.batchTicker = time.NewTicker(b.batchInterval)
-	b.forceSendChan = make(chan struct{}, 1) // Buffer of 1 to avoid blocking
-	semPruneTicker := time.NewTicker(semaphorePruneInterval)
 
 	defer func() {
 		b.batchTicker.Stop()
-		semPruneTicker.Stop()
 		close(b.forceSendChan)
 	}()
 
 	for {
 		select {
 		case <-ctx.Done():
-			b.sendBatches(ctx, true)
+			// Context is done, exit the loop
+			// don't need to worry about sending any batches,
+			// as next startup will send from the deck again.
 			return
 		case <-b.batchTicker.C:
 			b.sendBatches(ctx, false)
 		case <-b.forceSendChan:
 			b.sendBatches(ctx, true)
-		case <-semPruneTicker.C:
-			// Periodically prune semaphores that have been idle for a while
-			b.peerSemaphoresMu.Lock()
-			for peerID, sem := range b.peerSemaphores {
-				if sem.refCount == 0 && time.Since(sem.lastZero) >= semaphorePruneInterval {
-					delete(b.peerSemaphores, peerID)
-					b.logger.Debug().Msgf("pruned semaphore for peer: %s", peerID)
-				}
-			}
-			b.peerSemaphoresMu.Unlock()
 		}
 	}
 }
@@ -199,13 +175,44 @@ func (b *AttestationBatcher) sendBatches(ctx context.Context, force bool) {
 			AttestErrataTxs:   make([]*common.AttestErrataTx, 0, b.maxBatchSize),
 		}
 	}
+
+	max := b.maxBatchSize
+
+	clear := true
+	batchSizeTx := len(b.observedTxBatch)
+	if batchSizeTx > max {
+		clear = false
+		batchSizeTx = max
+	}
+	batchSizeNF := len(b.networkFeeBatch)
+	if batchSizeNF > max {
+		clear = false
+		batchSizeNF = max
+	}
+	batchSizeSolvency := len(b.solvencyBatch)
+	if batchSizeSolvency > max {
+		clear = false
+		batchSizeSolvency = max
+	}
+	batchSizeErrata := len(b.errataTxBatch)
+	if batchSizeErrata > max {
+		clear = false
+		batchSizeErrata = max
+	}
+
 	// Populate the batch
-	batch.AttestTxs = append(batch.AttestTxs[:0], b.observedTxBatch...)
-	batch.AttestNetworkFees = append(batch.AttestNetworkFees[:0], b.networkFeeBatch...)
-	batch.AttestSolvencies = append(batch.AttestSolvencies[:0], b.solvencyBatch...)
-	batch.AttestErrataTxs = append(batch.AttestErrataTxs[:0], b.errataTxBatch...)
+	batch.AttestTxs = append(batch.AttestTxs[:0], b.observedTxBatch[:batchSizeTx]...)
+	batch.AttestNetworkFees = append(batch.AttestNetworkFees[:0], b.networkFeeBatch[:batchSizeNF]...)
+	batch.AttestSolvencies = append(batch.AttestSolvencies[:0], b.solvencyBatch[:batchSizeSolvency]...)
+	batch.AttestErrataTxs = append(batch.AttestErrataTxs[:0], b.errataTxBatch[:batchSizeErrata]...)
 
 	txCount, nfCount, solvencyCount, errataCount := len(batch.AttestTxs), len(batch.AttestNetworkFees), len(batch.AttestSolvencies), len(batch.AttestErrataTxs)
+
+	b.observedTxBatch = b.observedTxBatch[batchSizeTx:]
+	b.networkFeeBatch = b.networkFeeBatch[batchSizeNF:]
+	b.solvencyBatch = b.solvencyBatch[batchSizeSolvency:]
+	b.errataTxBatch = b.errataTxBatch[batchSizeErrata:]
+
 	b.mu.Unlock()
 
 	// Send to all peers
@@ -226,8 +233,15 @@ func (b *AttestationBatcher) sendBatches(ctx context.Context, force bool) {
 	b.metrics.BatchSendTime.Observe(batchDuration.Seconds())
 	b.metrics.BatchSends.Inc()
 
-	// Clear batches and update timestamp
-	b.clearBatches()
+	if clear {
+		// Log batch clear
+		b.logger.Debug().Msg("attestation batches cleared")
+
+		// Update metrics
+		b.metrics.BatchClears.Inc()
+
+		return
+	}
 	b.lastBatchSent = time.Now()
 }
 
@@ -310,11 +324,6 @@ func (b *AttestationBatcher) triggerBatchSend() {
 	}
 }
 
-type legacyAtt struct {
-	protocolID protocol.ID
-	payload    []byte
-}
-
 // broadcastToAllPeers sends the batch payload to all connected peers without blocking on slow peers
 func (b *AttestationBatcher) broadcastToAllPeers(ctx context.Context, batch common.AttestationBatch) {
 	// Marshal the batch
@@ -322,65 +331,6 @@ func (b *AttestationBatcher) broadcastToAllPeers(ctx context.Context, batch comm
 	if err != nil {
 		b.logger.Error().Err(err).Msg("failed to marshal attestation batch")
 		return
-	}
-
-	var legacyAttestations []*legacyAtt
-	var legacyAttestationsMu sync.Mutex
-
-	// if all peers support the new batch protocol, this will not be called.
-	getMarshaledLegacyAttestations := func() []*legacyAtt {
-		legacyAttestationsMu.Lock()
-		defer legacyAttestationsMu.Unlock()
-		if len(legacyAttestations) > 0 {
-			// only marshal once if we encounter a peer that doesn't support the new batch protocol
-			return legacyAttestations
-		}
-		legacyAttestations = make([]*legacyAtt, 0, len(batch.AttestTxs)+len(batch.AttestNetworkFees)+len(batch.AttestSolvencies)+len(batch.AttestErrataTxs))
-		for _, tx := range batch.AttestTxs {
-			legacyPayload, err := tx.Marshal()
-			if err != nil {
-				b.logger.Error().Err(err).Msg("failed to marshal tx attestation")
-				continue
-			}
-			legacyAttestations = append(legacyAttestations, &legacyAtt{
-				protocolID: observeTxProtocol,
-				payload:    legacyPayload,
-			})
-		}
-		for _, fee := range batch.AttestNetworkFees {
-			legacyPayload, err := fee.Marshal()
-			if err != nil {
-				b.logger.Error().Err(err).Msg("failed to marshal net fee attestation")
-				continue
-			}
-			legacyAttestations = append(legacyAttestations, &legacyAtt{
-				protocolID: networkFeeProtocol,
-				payload:    legacyPayload,
-			})
-		}
-		for _, solvency := range batch.AttestSolvencies {
-			legacyPayload, err := solvency.Marshal()
-			if err != nil {
-				b.logger.Error().Err(err).Msg("failed to marshal solvency attestation")
-				continue
-			}
-			legacyAttestations = append(legacyAttestations, &legacyAtt{
-				protocolID: solvencyProtocol,
-				payload:    legacyPayload,
-			})
-		}
-		for _, errata := range batch.AttestErrataTxs {
-			legacyPayload, err := errata.Marshal()
-			if err != nil {
-				b.logger.Error().Err(err).Msg("failed to marshal errata tx attestation")
-				continue
-			}
-			legacyAttestations = append(legacyAttestations, &legacyAtt{
-				protocolID: errataTxProtocol,
-				payload:    legacyPayload,
-			})
-		}
-		return legacyAttestations
 	}
 
 	peers := b.host.Peerstore().Peers()
@@ -415,115 +365,44 @@ func (b *AttestationBatcher) broadcastToAllPeers(ctx context.Context, batch comm
 	// Launch each send operation in its own goroutine and don't wait for completion
 	for _, p := range peersToSend {
 		// Launch a goroutine for each peer and don't wait for completion
-		go func(peer peer.ID) {
-			// Limit the number of concurrent sends to this peer
-			// Get or create semaphore with atomic reference counting
-			b.peerSemaphoresMu.Lock()
-			sem, exists := b.peerSemaphores[peer]
-			if !exists {
-				sem = &peerSemaphore{
-					tokens:   make(chan struct{}, b.peerConcurrentSends),
-					refCount: 0,
-				}
-				b.peerSemaphores[peer] = sem
-			}
-			sem.refCount++
-			b.peerSemaphoresMu.Unlock()
-
-			// Try to acquire token with timeout
-			select {
-			case sem.tokens <- struct{}{}: // Acquire the semaphore
-				defer func() {
-					// Release token
-					<-sem.tokens
-
-					// Clean up semaphore if this was the last reference
-					b.peerSemaphoresMu.Lock()
-					sem.refCount--
-					if sem.refCount == 0 {
-						// do not delete here, delete in main loop periodically if ref count has been zero for a while
-						sem.lastZero = time.Now()
-					}
-					b.peerSemaphoresMu.Unlock()
-				}()
-
-				// Create a context with timeout for this specific peer
-				peerCtx, cancel := context.WithTimeout(ctx, b.peerTimeout)
-				stream, err := b.host.NewStream(peerCtx, peer, batchedAttestationProtocol)
-				b.logger.Debug().Msgf("starting attestation send to peer: %s", peer)
-
-				if err != nil {
-					cancel()
-					if strings.Contains(err.Error(), "protocol not supported") {
-						b.logger.Debug().Msgf("peer %s does not support batched attestation protocol, sending unbatched", peer)
-						// send unbatched attestations
-						legacyAtts := getMarshaledLegacyAttestations()
-						for _, att := range legacyAtts {
-							peerCtx, cancel = context.WithTimeout(ctx, b.peerTimeout)
-							legacyStream, err := b.host.NewStream(peerCtx, peer, att.protocolID)
-							if err != nil {
-								cancel()
-								b.logger.Error().Err(err).Msgf("fail to create stream to peer: %s", peer)
-								return
-							}
-							b.sendPayloadToStream(peerCtx, legacyStream, att.payload)
-							cancel()
-						}
-						return
-					}
-					b.logger.Error().Err(err).Msgf("fail to create stream to peer: %s", peer)
-					return
-				}
-
-				b.sendPayloadToStream(peerCtx, stream, payload)
-				cancel()
-
-				b.logger.Debug().Msgf("completed attestation send to peer: %s", peer)
-			case <-time.After(50 * time.Millisecond): // Short timeout to avoid blocking too long
-				// Couldn't acquire token, clean up and return
-				b.peerSemaphoresMu.Lock()
-				sem.refCount--
-				if sem.refCount <= 0 {
-					// do not delete here, delete in main loop periodically if ref counts are zero
-					sem.lastZero = time.Now()
-				}
-				b.peerSemaphoresMu.Unlock()
-
-				b.logger.Debug().Msgf("peer %s is busy, skipping this send", peer)
-				return
-			}
-		}(p)
+		go b.broadcastToPeer(ctx, p, payload)
 	}
 
 	// Function returns immediately without waiting for sends to complete
 	b.logger.Debug().Msg("broadcast initiated to all peers")
 }
 
-// clearBatches resets all batch arrays to empty without reallocating
-func (b *AttestationBatcher) clearBatches() {
-	// Clear all batches in-place to preserve preallocated capacity
-	b.observedTxBatch = b.observedTxBatch[:0]
-	b.networkFeeBatch = b.networkFeeBatch[:0]
-	b.solvencyBatch = b.solvencyBatch[:0]
-	b.errataTxBatch = b.errataTxBatch[:0]
+func (b *AttestationBatcher) broadcastToPeer(ctx context.Context, peer peer.ID, payload []byte) {
+	// Limit the number of concurrent sends to this peer
+	sem, err := b.peerMgr.acquire(peer)
+	if err != nil {
+		b.logger.Error().Err(err).Msgf("fail to acquire semaphore for peer: %s", peer)
+		return
+	}
 
-	// Log batch clear
-	b.logger.Debug().Msg("attestation batches cleared")
+	defer b.peerMgr.release(sem)
 
-	// Update metrics
-	b.metrics.BatchClears.Inc()
+	b.logger.Debug().Msgf("starting attestation send to peer: %s", peer)
+
+	// Create a context with timeout for this specific peer
+	peerCtx, cancel := context.WithTimeout(ctx, b.peerTimeout)
+	defer cancel()
+	stream, err := b.host.NewStream(peerCtx, peer, batchedAttestationProtocol)
+	if err != nil {
+		b.logger.Error().Err(err).Msgf("fail to create stream to peer: %s", peer)
+		return
+	}
+
+	b.sendPayloadToStream(peerCtx, stream, payload)
+
+	b.logger.Debug().Msgf("completed attestation send to peer: %s", peer)
 }
 
 func (b *AttestationBatcher) sendPayloadToStream(ctx context.Context, stream network.Stream, payload []byte) {
 	peer := stream.Conn().RemotePeer()
+	logger := b.logger.With().Str("remote_peer", peer.String()).Logger()
 
-	defer func() {
-		if err := stream.Close(); err != nil {
-			b.logger.Error().Err(err).Msgf("fail to close stream to peer: %s", peer)
-		}
-
-		_ = stream.Reset()
-	}()
+	defer closeStream(logger, stream)
 
 	if err := p2p.WriteStreamWithBufferWithContext(ctx, payload, stream); err != nil {
 		b.logger.Error().Err(err).Msgf("fail to write payload to peer: %s", peer)

@@ -229,42 +229,6 @@ func (c *Communication) handleStreamTss(stream network.Stream) {
 	}
 }
 
-func (c *Communication) handleStreamObservedTx(stream network.Stream) {
-	peerID := stream.Conn().RemotePeer().String()
-	c.logger.Debug().Msgf("reading from observed tx stream of peer: %s", peerID)
-
-	select {
-	case <-c.stopChan:
-		return
-	default:
-		dataBuf, err := ReadStreamWithBuffer(stream)
-		if err != nil {
-			c.logger.Error().Err(err).Msgf("fail to read from stream,peerID: %s", peerID)
-			c.streamMgr.AddStream(StreamUnknown, stream)
-			return
-		}
-		var wrappedMsg messages.WrappedMessage
-		if err := json.Unmarshal(dataBuf, &wrappedMsg); nil != err {
-			c.logger.Error().Err(err).Msg("fail to unmarshal wrapped message bytes")
-			c.streamMgr.AddStream(StreamUnknown, stream)
-			return
-		}
-		c.logger.Debug().Msgf(">>>>>>>[%s] %s", wrappedMsg.MessageType, string(wrappedMsg.Payload))
-		c.streamMgr.AddStream(wrappedMsg.MsgID, stream)
-		channel := c.getSubscriber(wrappedMsg.MessageType, wrappedMsg.MsgID)
-		if nil == channel {
-			c.logger.Debug().Msgf("no MsgID %s found for this message", wrappedMsg.MsgID)
-			c.logger.Debug().Msgf("no MsgID %s found for this message", wrappedMsg.MessageType)
-			return
-		}
-		channel <- &Message{
-			PeerID:  stream.Conn().RemotePeer(),
-			Payload: dataBuf,
-		}
-
-	}
-}
-
 func (c *Communication) getPeers() addr.AddrList {
 	var bootstrapPeers addr.AddrList
 
@@ -359,7 +323,6 @@ func (c *Communication) startChannel(privKeyBytes []byte) error {
 	c.host = h
 	c.logger.Info().Msgf("Host created, we are: %s, at: %s", h.ID(), h.Addrs())
 	h.SetStreamHandler(TSSProtocolID, c.handleStreamTss)
-	h.SetStreamHandler(ObservedTxProtocolID, c.handleStreamObservedTx)
 	// Start a DHT, for use in peer discovery. We can't just make a new DHT
 	// client because we want each peer to maintain its own local copy of the
 	// DHT, so that the bootstrapping node of the DHT can go down without

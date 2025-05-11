@@ -161,11 +161,6 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 		})
 		c.Assert(err, IsNil)
 
-		if i > 1 {
-			// Test legacy protocols on half of vals for backward compatibility
-			ag.host.RemoveStreamHandler(batchedAttestationProtocol)
-		}
-
 		ag.setActiveValidators(validatorPubs)
 
 		// Create pubkey manager
