@@ -219,7 +219,7 @@ func TestHandleStreamBatchedAttestations(t *testing.T) {
 	agVal2.mu.Unlock()
 
 	// Test batch size limits
-	maxBatchSize := agVal1.batcher.maxBatchSize
+	maxBatchSize := int(agVal1.batcher.getMaxBatchSize()) //nolint:staticcheck
 
 	// Create oversized batches for testing limits
 	oversizedObsTxBatch := make([]*common.AttestTx, maxBatchSize+5)

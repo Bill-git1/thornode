@@ -598,7 +598,7 @@ type BifrostAttestationGossipConfig struct {
 	AskPeersDelay time.Duration `mapstructure:"ask_peers_delay"`
 
 	// how many attestations to batch together before sending to thornode.
-	MaxBatchSize int `mapstructure:"max_batch_size"`
+	MaxBatchSize int64 `mapstructure:"max_batch_size"`
 
 	// how often to send batches of attestations to thornode.
 	BatchInterval time.Duration `mapstructure:"batch_interval"`

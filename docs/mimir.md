@@ -214,6 +214,12 @@ Mimirs have a maximum length of 128 bytes (see MaxMimirLength in THORNode code).
 - `TCYUnstakingHalt`: Enables/disables unstaking of TCY tokens (default: 1, halted)
 - `TCYClaimingHalt`: Enables/disables claiming of TCY tokens for THORFi deposits (default: 1, halted)
 
+## Attestation Gossip
+
+- `AttestationMaxBatchSize`: Maximum attestations to send in a batch
+- `AttestationPeerConcurrentSends`: Maximum batches to concurrently send to peer
+- `AttestationPeerConcurrentReceives`: Maximum batches to concurrently receive from a peer
+
 ## Miscellaneous
 
 - `DollarsPerRune`: Manual override of number of dollars per one RUNE. Used for metrics data collection and RUNE calculation from MinimumL1OutboundFeeUSD

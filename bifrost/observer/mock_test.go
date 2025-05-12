@@ -221,6 +221,10 @@ func (m *MockThorchainBridge) GetKeysignParty(pubKey common.PubKey) (common.PubK
 	return m.getKeysignPartyFunc(pubKey)
 }
 
+func (m *MockThorchainBridge) GetMimir(key string) (int64, error) {
+	return 0, nil
+}
+
 type MockStream struct {
 	network.Stream
 	reader io.Reader

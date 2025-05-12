@@ -28,10 +28,11 @@ type AttestationBatcher struct {
 
 	batchPool sync.Pool
 
-	mu            sync.Mutex
-	batchInterval time.Duration
-	maxBatchSize  int
-	peerTimeout   time.Duration // Timeout for peer send
+	mu             sync.Mutex
+	batchInterval  time.Duration
+	maxBatchSize   int64
+	maxBatchSizeMu sync.Mutex
+	peerTimeout    time.Duration // Timeout for peer send
 
 	getActiveValidators func() map[peer.ID]bool
 
@@ -61,23 +62,10 @@ func NewAttestationBatcher(
 	logger zerolog.Logger,
 	m *metrics.Metrics,
 	batchInterval time.Duration,
-	maxBatchSize int,
+	maxBatchSize int64,
 	peerTimeout time.Duration,
 	peerConcurrentSends int,
 ) *AttestationBatcher {
-	// Set default values if not specified
-	if batchInterval == 0 {
-		batchInterval = 2 * time.Second // Default to 2 second
-	}
-
-	if maxBatchSize == 0 {
-		maxBatchSize = 100 // Default max batch size
-	}
-
-	if peerTimeout == 0 {
-		peerTimeout = 20 * time.Second // Default peer timeout
-	}
-
 	// Create batch metrics
 	batchMetrics := &batchMetrics{
 		BatchSends:      m.GetCounter(metrics.BatchSends),
@@ -89,7 +77,7 @@ func NewAttestationBatcher(
 
 	logger = logger.With().Str("module", "attestation_batcher").Logger()
 
-	return &AttestationBatcher{
+	b := &AttestationBatcher{
 		// Initialize with empty slices with initial capacity
 		observedTxBatch: make([]*common.AttestTx, 0, maxBatchSize),
 		networkFeeBatch: make([]*common.AttestNetworkFee, 0, maxBatchSize),
@@ -109,23 +97,49 @@ func NewAttestationBatcher(
 		metrics: batchMetrics,
 
 		forceSendChan: make(chan struct{}, 1), // Buffer of 1 to avoid blocking
+	}
 
-		// sync.Pool for reusing AttestationBatch objects to reduce memory allocations.
-		batchPool: sync.Pool{
-			New: func() interface{} {
-				return &common.AttestationBatch{
-					AttestTxs:         make([]*common.AttestTx, 0, maxBatchSize), // Preallocate with maxBatchSize capacity
-					AttestNetworkFees: make([]*common.AttestNetworkFee, 0, maxBatchSize),
-					AttestSolvencies:  make([]*common.AttestSolvency, 0, maxBatchSize),
-					AttestErrataTxs:   make([]*common.AttestErrataTx, 0, maxBatchSize),
-				}
-			},
-		},
+	// sync.Pool for reusing AttestationBatch objects to reduce memory allocations.
+	b.batchPool = sync.Pool{New: b.newAttestationBatch}
+
+	return b
+}
+
+func (b *AttestationBatcher) getMaxBatchSize() int64 {
+	b.maxBatchSizeMu.Lock()
+	defer b.maxBatchSizeMu.Unlock()
+	return b.maxBatchSize
+}
+
+func (b *AttestationBatcher) newAttestationBatch() interface{} {
+	maxBatchSize := b.getMaxBatchSize()
+	return &common.AttestationBatch{
+		AttestTxs:         make([]*common.AttestTx, 0, maxBatchSize), // Preallocate with maxBatchSize capacity
+		AttestNetworkFees: make([]*common.AttestNetworkFee, 0, maxBatchSize),
+		AttestSolvencies:  make([]*common.AttestSolvency, 0, maxBatchSize),
+		AttestErrataTxs:   make([]*common.AttestErrataTx, 0, maxBatchSize),
 	}
 }
 
 func (b *AttestationBatcher) setActiveValGetter(getter func() map[peer.ID]bool) {
 	b.getActiveValidators = getter
+}
+
+// updateMaxBatchSize updates the maximum batch size at runtime.
+func (b *AttestationBatcher) updateMaxBatchSize(newSize int64) {
+	if newSize <= 0 {
+		b.logger.Error().Int64("new_size", newSize).Msg("invalid batch size, must be greater than 0")
+		return
+	}
+
+	b.maxBatchSizeMu.Lock()
+	defer b.maxBatchSizeMu.Unlock()
+
+	oldSize := b.maxBatchSize
+	// Set the new max batch size
+	b.maxBatchSize = newSize
+
+	b.logger.Info().Int64("old_size", oldSize).Int64("new_size", newSize).Msg("max batch size updated")
 }
 
 func (b *AttestationBatcher) Start(ctx context.Context) {
@@ -164,37 +178,37 @@ func (b *AttestationBatcher) sendBatches(ctx context.Context, force bool) {
 		return
 	}
 
+	max := b.getMaxBatchSize()
+
 	start := time.Now()
 	// Get a batched message from the pool
 	batch, ok := b.batchPool.Get().(*common.AttestationBatch)
 	if !ok {
 		batch = &common.AttestationBatch{
-			AttestTxs:         make([]*common.AttestTx, 0, b.maxBatchSize),
-			AttestNetworkFees: make([]*common.AttestNetworkFee, 0, b.maxBatchSize),
-			AttestSolvencies:  make([]*common.AttestSolvency, 0, b.maxBatchSize),
-			AttestErrataTxs:   make([]*common.AttestErrataTx, 0, b.maxBatchSize),
+			AttestTxs:         make([]*common.AttestTx, 0, max),
+			AttestNetworkFees: make([]*common.AttestNetworkFee, 0, max),
+			AttestSolvencies:  make([]*common.AttestSolvency, 0, max),
+			AttestErrataTxs:   make([]*common.AttestErrataTx, 0, max),
 		}
 	}
 
-	max := b.maxBatchSize
-
 	clear := true
-	batchSizeTx := len(b.observedTxBatch)
+	batchSizeTx := int64(len(b.observedTxBatch))
 	if batchSizeTx > max {
 		clear = false
 		batchSizeTx = max
 	}
-	batchSizeNF := len(b.networkFeeBatch)
+	batchSizeNF := int64(len(b.networkFeeBatch))
 	if batchSizeNF > max {
 		clear = false
 		batchSizeNF = max
 	}
-	batchSizeSolvency := len(b.solvencyBatch)
+	batchSizeSolvency := int64(len(b.solvencyBatch))
 	if batchSizeSolvency > max {
 		clear = false
 		batchSizeSolvency = max
 	}
-	batchSizeErrata := len(b.errataTxBatch)
+	batchSizeErrata := int64(len(b.errataTxBatch))
 	if batchSizeErrata > max {
 		clear = false
 		batchSizeErrata = max
@@ -247,13 +261,15 @@ func (b *AttestationBatcher) sendBatches(ctx context.Context, force bool) {
 
 // AddObservedTx adds an observed transaction attestation to the batch
 func (b *AttestationBatcher) AddObservedTx(tx common.AttestTx) {
+	maxBatchSize := b.getMaxBatchSize()
+
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
 	b.observedTxBatch = append(b.observedTxBatch, &tx)
 
 	// If we've reached the maximum batch size, trigger an immediate send
-	if len(b.observedTxBatch) >= b.maxBatchSize {
+	if int64(len(b.observedTxBatch)) >= maxBatchSize {
 		b.logger.Debug().
 			Int("batch_size", len(b.observedTxBatch)).
 			Msg("observed tx batch reached max size, triggering immediate send")
@@ -265,13 +281,15 @@ func (b *AttestationBatcher) AddObservedTx(tx common.AttestTx) {
 
 // AddNetworkFee adds a network fee attestation to the batch
 func (b *AttestationBatcher) AddNetworkFee(fee common.AttestNetworkFee) {
+	maxBatchSize := b.getMaxBatchSize()
+
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
 	b.networkFeeBatch = append(b.networkFeeBatch, &fee)
 
 	// If we've reached the maximum batch size, trigger an immediate send
-	if len(b.networkFeeBatch) >= b.maxBatchSize {
+	if int64(len(b.networkFeeBatch)) >= maxBatchSize {
 		b.logger.Debug().
 			Int("batch_size", len(b.networkFeeBatch)).
 			Msg("network fee batch reached max size, triggering immediate send")
@@ -282,13 +300,15 @@ func (b *AttestationBatcher) AddNetworkFee(fee common.AttestNetworkFee) {
 
 // AddSolvency adds a solvency attestation to the batch
 func (b *AttestationBatcher) AddSolvency(solvency common.AttestSolvency) {
+	maxBatchSize := b.getMaxBatchSize()
+
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
 	b.solvencyBatch = append(b.solvencyBatch, &solvency)
 
 	// If we've reached the maximum batch size, trigger an immediate send
-	if len(b.solvencyBatch) >= b.maxBatchSize {
+	if int64(len(b.solvencyBatch)) >= maxBatchSize {
 		b.logger.Debug().
 			Int("batch_size", len(b.solvencyBatch)).
 			Msg("solvency batch reached max size, triggering immediate send")
@@ -299,13 +319,15 @@ func (b *AttestationBatcher) AddSolvency(solvency common.AttestSolvency) {
 
 // AddErrataTx adds an errata transaction attestation to the batch
 func (b *AttestationBatcher) AddErrataTx(errata common.AttestErrataTx) {
+	maxBatchSize := b.getMaxBatchSize()
+
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
 	b.errataTxBatch = append(b.errataTxBatch, &errata)
 
 	// If we've reached the maximum batch size, trigger an immediate send
-	if len(b.errataTxBatch) >= b.maxBatchSize {
+	if int64(len(b.errataTxBatch)) >= maxBatchSize {
 		b.logger.Debug().
 			Int("batch_size", len(b.errataTxBatch)).
 			Msg("errata tx batch reached max size, triggering immediate send")

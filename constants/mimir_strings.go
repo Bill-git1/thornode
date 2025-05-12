@@ -23,4 +23,8 @@ const (
 	MimirRefL1           = "L1"           // Use with SwapSlipBasisPoints
 	MimirRefSynth        = "Synth"        // Use with SwapSlipBasisPoints
 	MimirRefTradeAccount = "TradeAccount" // Use with SwapSlipBasisPoints
+
+	MimirMaxBatchSize           = "AttestationMaxBatchSize"
+	MimirPeerConcurrentSends    = "AttestationPeerConcurrentSends"
+	MimirPeerConcurrentReceives = "AttestationPeerConcurrentReceives"
 )

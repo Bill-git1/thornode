@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/rs/zerolog"
@@ -50,9 +51,16 @@ func closeStream(logger zerolog.Logger, stream network.Stream) {
 	if err := stream.Close(); err != nil {
 		logger.Error().Err(err).Msg("fail to close stream")
 	}
-	if err := stream.Reset(); err != nil {
-		logger.Error().Err(err).Msg("fail to reset stream")
-	}
+	go func() {
+		// Give some time for the remote side to process
+		// NOTE: remove this after upgrading to libp2p v0.12.0+, because
+		// then Close() will close both write and read sides of the stream.
+		// In v0.11.0, it only closes the write side.
+		time.Sleep(10 * time.Second)
+		if err := stream.Reset(); err != nil {
+			logger.Error().Err(err).Msg("fail to reset stream after delay")
+		}
+	}()
 }
 
 // AttestNetworkFee creates and broadcasts an attestation for a network fee
@@ -269,37 +277,53 @@ func (s *AttestationGossip) handleStreamBatchedAttestations(stream network.Strea
 	}
 
 	// slight tolerance above max
-	max := s.batcher.maxBatchSize
+	max := s.batcher.getMaxBatchSize()
 
 	// Process each attestation in the batch
 	for i, tx := range batch.AttestTxs {
-		if i >= max {
+		if int64(i) >= max {
 			logger.Error().Msgf("tx batch size %d exceeds max size %d", len(batch.AttestTxs), max)
 			break
+		}
+		if tx == nil {
+			logger.Error().Msgf("tx is nil at index %d", i)
+			continue
 		}
 		s.handleObservedTxAttestation(context.Background(), *tx)
 	}
 
 	for i, nf := range batch.AttestNetworkFees {
-		if i >= max {
+		if int64(i) >= max {
 			logger.Error().Msgf("net fee batch size %d exceeds max size %d", len(batch.AttestNetworkFees), max)
 			break
+		}
+		if nf == nil {
+			logger.Error().Msgf("network fee is nil at index %d", i)
+			continue
 		}
 		s.handleNetworkFeeAttestation(context.Background(), *nf)
 	}
 
 	for i, solvency := range batch.AttestSolvencies {
-		if i >= max {
+		if int64(i) >= max {
 			logger.Error().Msgf("solvency batch size %d exceeds max size %d", len(batch.AttestSolvencies), max)
 			break
+		}
+		if solvency == nil {
+			logger.Error().Msgf("solvency is nil at index %d", i)
+			continue
 		}
 		s.handleSolvencyAttestation(context.Background(), *solvency)
 	}
 
 	for i, errata := range batch.AttestErrataTxs {
-		if i >= max {
+		if int64(i) >= max {
 			logger.Error().Msgf("errata batch size %d exceeds max size %d", len(batch.AttestErrataTxs), max)
 			break
+		}
+		if errata == nil {
+			logger.Error().Msgf("errata is nil at index %d", i)
+			continue
 		}
 		s.handleErrataAttestation(context.Background(), *errata)
 	}

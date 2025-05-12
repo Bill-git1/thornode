@@ -22,6 +22,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/config"
+	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/ebifrost"
 )
 
@@ -53,6 +54,8 @@ const (
 
 	defaultPeerConcurrentSends    = 4
 	defaultPeerConcurrentReceives = 5
+	defaultMaxBatchSize           = 100
+	defaultBatchInterval          = 2 * time.Second
 
 	streamAckBegin  = "ack_begin"
 	streamAckHeader = "ack_header"
@@ -240,6 +243,9 @@ func normalizeConfig(config *config.BifrostAttestationGossipConfig) {
 	if config.PeerTimeout == 0 {
 		config.PeerTimeout = defaultPeerTimeout
 	}
+	if config.MaxBatchSize == 0 {
+		config.MaxBatchSize = defaultMaxBatchSize
+	}
 	if config.PeerConcurrentSends == 0 {
 		config.PeerConcurrentSends = defaultPeerConcurrentSends
 	}
@@ -249,6 +255,9 @@ func normalizeConfig(config *config.BifrostAttestationGossipConfig) {
 	if config.PeerConcurrentReceives < config.PeerConcurrentSends {
 		// ensure that the number of concurrent receives is at least as large as the number of concurrent sends
 		config.PeerConcurrentReceives = config.PeerConcurrentSends
+	}
+	if config.BatchInterval == 0 {
+		config.BatchInterval = defaultBatchInterval
 	}
 }
 
@@ -447,6 +456,8 @@ func (s *AttestationGossip) Start(ctx context.Context) {
 		semPruneTicker.Stop()
 	}()
 
+	s.reconcileMimirConfigs()
+
 	go s.batcher.Start(ctx)
 
 	for {
@@ -519,6 +530,8 @@ func (s *AttestationGossip) Start(ctx context.Context) {
 			}
 			s.cachedKeySignMu.Unlock()
 
+			s.reconcileMimirConfigs()
+
 		case <-delayTimer.C:
 			s.eventClient.Start()
 
@@ -529,6 +542,35 @@ func (s *AttestationGossip) Start(ctx context.Context) {
 		case <-ctx.Done():
 			s.eventClient.Stop()
 			return
+		}
+	}
+}
+
+func (s *AttestationGossip) reconcileMimirConfigs() {
+	maxBatchSize, err := s.bridge.GetMimir(constants.MimirMaxBatchSize)
+	if err != nil {
+		s.logger.Error().Str("mimir", constants.MimirMaxBatchSize).Err(err).Msg("fail to get mimir value")
+	} else if maxBatchSize > 0 {
+		if maxBatchSize != s.batcher.getMaxBatchSize() {
+			s.batcher.updateMaxBatchSize(maxBatchSize)
+		}
+	}
+
+	peerConcurrentSends, err := s.bridge.GetMimir(constants.MimirPeerConcurrentSends)
+	if err != nil {
+		s.logger.Error().Str("mimir", constants.MimirPeerConcurrentSends).Err(err).Msg("fail to get mimir value")
+	} else if peerConcurrentSends > 0 {
+		if peerConcurrentSends != int64(s.batcher.peerMgr.getLimit()) {
+			s.batcher.peerMgr.updateLimit(int(peerConcurrentSends)) //nolint:staticcheck
+		}
+	}
+
+	peerConcurrentReceives, err := s.bridge.GetMimir(constants.MimirPeerConcurrentReceives)
+	if err != nil {
+		s.logger.Error().Str("mimir", constants.MimirPeerConcurrentReceives).Err(err).Msg("fail to get mimir value")
+	} else if peerConcurrentReceives > 0 {
+		if peerConcurrentReceives != int64(s.peerMgr.getLimit()) {
+			s.peerMgr.updateLimit(int(peerConcurrentReceives)) //nolint:staticcheck
 		}
 	}
 }

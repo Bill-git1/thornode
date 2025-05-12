@@ -48,6 +48,10 @@ func (m *mockThorchainBridge) FetchActiveNodes() ([]common.PubKey, error) {
 	return m.activeNodes, nil
 }
 
+func (m *mockThorchainBridge) GetMimir(key string) (int64, error) {
+	return 0, nil
+}
+
 // Create a local gRPC server
 func createLocalGrpcServer(c *C, eb *ebifrost.EnshrinedBifrost, port int) (*grpc.Server, string) {
 	addr := fmt.Sprintf("localhost:%d", port)
