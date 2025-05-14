@@ -68,7 +68,10 @@ generate:
       ./scripts/lint-generated.bash
 
 unit-tests:
-  rules: *rules
+  rules:
+    - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train" && $CI_MERGE_REQUEST_TARGET_BRANCH_SHA == $CI_MERGE_REQUEST_DIFF_BASE_SHA'
+      when: never
+    - *rules
   stage: test
   coverage: /total:\s+\(statements\)\s+(\d+.\d+\%)/
   before_script:
@@ -88,6 +91,8 @@ unit-tests:
 
 lint:
   rules:
+    - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train" && $CI_MERGE_REQUEST_TARGET_BRANCH_SHA == $CI_MERGE_REQUEST_DIFF_BASE_SHA'
+      when: never
     - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH
       when: never
     - if: $CI_COMMIT_BRANCH == "stagenet"
@@ -204,7 +209,10 @@ build-events:
     - make events-gitlab-push
 
 test-simulation:
-  rules: *rules
+  rules:
+    - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train" && $CI_MERGE_REQUEST_TARGET_BRANCH_SHA == $CI_MERGE_REQUEST_DIFF_BASE_SHA'
+      when: never
+    - *rules
   stage: long-test
   <<: *use_dind
   artifacts:
@@ -234,7 +242,10 @@ test-simulation:
       done
 
 test-regression:
-  rules: *rules
+  rules:
+    - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train" && $CI_MERGE_REQUEST_TARGET_BRANCH_SHA == $CI_MERGE_REQUEST_DIFF_BASE_SHA'
+      when: never
+    - *rules
   stage: long-test
   <<: *use_dind
   environment:
