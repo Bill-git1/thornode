@@ -47,8 +47,8 @@ var WasmPermissionsRaw = WasmPermissions{
 		},
 
 		// rujira-merge v1.0.1
-		"ee360e8c899deb1526f56fd83d7ed482876bb3071b1a2b41645d767f4b68e15b": {
-			Origin: "https://gitlab.com/thorchain/rujira/-/tree/80b48eddc0f16f735855442fdbc5423ac5398ff6/contracts/rujira-merge",
+		"46f98e6ac1be26c3108ecb684cedd846ffda220dde5bb6b86644dbe0b0acfd05": {
+			Origin: "https://gitlab.com/thorchain/rujira/-/tree/d74d3dc4e2d384aef36af39bc200b59ed8206331/contracts/rujira-merge",
 			Deployers: map[string]bool{
 				"thor1e0lmk5juawc46jwjwd0xfz587njej7ay5fh6cd": true,
 			},
