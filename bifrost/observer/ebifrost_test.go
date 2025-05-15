@@ -301,7 +301,7 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 	logger.Info().Msg("Remaining validators attested")
 
 	// Wait for gossip to propagate
-	time.Sleep(time.Second * 2)
+	time.Sleep(time.Second * 3)
 
 	// for _, atg := range attestationGossips {
 	// 	atg.mu.Lock()
