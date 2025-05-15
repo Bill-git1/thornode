@@ -26,9 +26,12 @@ func (s *AttestationGossip) handleObservedTxAttestation(ctx context.Context, tx 
 		state = s.observedTxsPool.NewAttestationState(&obsTx)
 		s.observedTxs[k] = state
 	}
+
+	// note, purposefully locking the single state mutex prior to releasing the global mutex to avoid race in between.
+	// This order must be maintained everywhere to avoid deadlock.
+	state.mu.Lock()
 	s.mu.Unlock()
 
-	state.mu.Lock()
 	defer state.mu.Unlock()
 
 	// Add the attestation
@@ -105,9 +108,12 @@ func (s *AttestationGossip) handleNetworkFeeAttestation(ctx context.Context, anf
 		state = s.networkFeesPool.NewAttestationState(anf.NetworkFee)
 		s.networkFees[k] = state
 	}
+
+	// note, purposefully locking the single state mutex prior to releasing the global mutex to avoid race in between.
+	// This order must be maintained everywhere to avoid deadlock.
+	state.mu.Lock()
 	s.mu.Unlock()
 
-	state.mu.Lock()
 	defer state.mu.Unlock()
 
 	// Add the attestation
@@ -169,9 +175,12 @@ func (s *AttestationGossip) handleSolvencyAttestation(ctx context.Context, ats c
 		state = s.solvenciesPool.NewAttestationState(ats.Solvency)
 		s.solvencies[k] = state
 	}
+
+	// note, purposefully locking the single state mutex prior to releasing the global mutex to avoid race in between.
+	// This order must be maintained everywhere to avoid deadlock.
+	state.mu.Lock()
 	s.mu.Unlock()
 
-	state.mu.Lock()
 	defer state.mu.Unlock()
 
 	// Add the attestation
@@ -229,9 +238,12 @@ func (s *AttestationGossip) handleErrataAttestation(ctx context.Context, aet com
 		state = s.errataTxsPool.NewAttestationState(aet.ErrataTx)
 		s.errataTxs[k] = state
 	}
+
+	// note, purposefully locking the single state mutex prior to releasing the global mutex to avoid race in between.
+	// This order must be maintained everywhere to avoid deadlock.
+	state.mu.Lock()
 	s.mu.Unlock()
 
-	state.mu.Lock()
 	defer state.mu.Unlock()
 
 	// Add the attestation

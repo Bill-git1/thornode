@@ -65,6 +65,9 @@ func (p *AttestationStatePool[T]) PutAttestationState(state *AttestationState[T]
 type AttestableItem interface {
 	// Marshal serializes the item for signature verification
 	GetSignablePayload() ([]byte, error)
+
+	// basic nil check, other validation if necessary
+	IsValid() bool
 }
 
 // AttestMessage is an interface for messages containing an attestation
@@ -144,6 +147,10 @@ type AttestationState[T AttestableItem] struct {
 
 // AddAttestation adds a new attestation to the state
 func (s *AttestationState[T]) AddAttestation(attestation *common.Attestation) error {
+	if !s.Item.IsValid() {
+		return fmt.Errorf("item is not valid")
+	}
+
 	// Check for duplicates
 	for _, item := range s.attestations {
 		if bytes.Equal(item.attestation.Signature, attestation.Signature) {

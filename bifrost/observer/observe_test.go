@@ -233,6 +233,7 @@ func (s *ObserverSuite) TestProcess(c *C) {
 		"",
 		metrics.NewTssKeysignMetricMgr(),
 		ag,
+		"",
 	)
 	c.Assert(obs, NotNil)
 	c.Assert(err, IsNil)
@@ -272,7 +273,7 @@ func (s *ObserverSuite) TestErrataTx(c *C) {
 	ag, err := NewAttestationGossip(comm.GetHost(), s.thorKeys, "localhost:50051", s.bridge, s.metrics, config.BifrostAttestationGossipConfig{})
 	c.Assert(err, IsNil)
 
-	obs, err := NewObserver(pubkeyMgr, nil, s.bridge, s.metrics, "", metrics.NewTssKeysignMetricMgr(), ag)
+	obs, err := NewObserver(pubkeyMgr, nil, s.bridge, s.metrics, "", metrics.NewTssKeysignMetricMgr(), ag, "")
 	c.Assert(obs, NotNil)
 	c.Assert(err, IsNil)
 	ag.SetObserverHandleObservedTxCommitted(obs)
@@ -321,6 +322,7 @@ func (s *ObserverSuite) TestGetSaversMemo(c *C) {
 		"",
 		metrics.NewTssKeysignMetricMgr(),
 		ag,
+		"",
 	)
 	c.Assert(obs, NotNil)
 	c.Assert(err, IsNil)
@@ -422,6 +424,7 @@ func (s *ObserverSuite) TestObserverDeckStorage(c *C) {
 			tempDir,
 			metrics.NewTssKeysignMetricMgr(),
 			ag,
+			"",
 		)
 		c.Assert(obs, NotNil)
 		c.Assert(err, IsNil)

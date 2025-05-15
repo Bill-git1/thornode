@@ -813,14 +813,14 @@ func TestSendReceiveBatchedAttestationState(t *testing.T) {
 	receiverStream := &MockStream{
 		reader: receiverReader,
 		writer: receiverWriter,
-		peer:   agReceiver.host.ID(),
+		peer:   agSender.host.ID(),
 		mu:     &sharedMu,
 	}
 
 	senderStream := &MockStream{
 		reader: senderReader,
 		writer: senderWriter,
-		peer:   agSender.host.ID(),
+		peer:   agReceiver.host.ID(),
 		mu:     &sharedMu,
 	}
 

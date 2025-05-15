@@ -63,7 +63,7 @@ const (
 )
 
 var (
-	attestationStateProtocol   protocol.ID = "/p2p/attestation-state"
+	attestationStateProtocol   protocol.ID = "/p2p/attestation-state/v2"
 	batchedAttestationProtocol protocol.ID = "/p2p/batched-attestations"
 
 	// AttestationState protocol prefixes
@@ -136,6 +136,9 @@ type AttestationGossip struct {
 
 	// peerManager is used to limit the number of concurrent receives from a peer
 	peerMgr *peerManager
+
+	stateInitPeers map[peer.ID]bool // peers that we have asked for their attestation state
+	stateInitMu    sync.Mutex
 }
 
 type cachedKeySignParty struct {
@@ -334,24 +337,21 @@ func (s *AttestationGossip) SetObserverHandleObservedTxCommitted(o *Observer) {
 func (s *AttestationGossip) handleQuorumTxCommitted(en *ebifrost.EventNotification) {
 	s.logger.Debug().Msg("handling quorum tx committed event")
 
-	if s.observerHandleObservedTxCommitted == nil {
-		// nothing to do
-		return
-	}
-
 	var qtx common.QuorumTx
 	if err := qtx.Unmarshal(en.Payload); err != nil {
 		s.logger.Error().Err(err).Msg("fail to unmarshal quorum tx")
 		return
 	}
 
-	// if our attestation is in the quorum tx, we can remove it from our observer deck.
-	for _, att := range qtx.Attestations {
-		if bytes.Equal(att.PubKey, s.pubKey) {
-			// we have attested to this tx, and it has been committed to the chain.
-			s.logger.Debug().Msg("our attestation is in the quorum tx, passing to observer to remove from ondeck")
-			s.observerHandleObservedTxCommitted(qtx.ObsTx)
-			return
+	if s.observerHandleObservedTxCommitted != nil {
+		// if our attestation is in the quorum tx, we can remove it from our observer deck.
+		for _, att := range qtx.Attestations {
+			if bytes.Equal(att.PubKey, s.pubKey) {
+				// we have attested to this tx, and it has been committed to the chain.
+				s.logger.Debug().Msg("our attestation is in the quorum tx, passing to observer to remove from ondeck")
+				s.observerHandleObservedTxCommitted(qtx.ObsTx)
+				break
+			}
 		}
 	}
 
@@ -366,12 +366,16 @@ func (s *AttestationGossip) handleQuorumTxCommitted(en *ebifrost.EventNotificati
 
 	s.mu.Lock()
 	as, ok := s.observedTxs[k]
+	if ok {
+		// note, purposefully locking the single state mutex prior to releasing the global mutex to avoid race in between.
+		// This order must be maintained everywhere to avoid deadlock.
+		as.mu.Lock()
+	}
 	s.mu.Unlock()
 	if !ok {
 		return
 	}
 
-	as.mu.Lock()
 	defer as.mu.Unlock()
 	as.MarkAttestationsCommitted(qtx.Attestations)
 }
@@ -388,12 +392,16 @@ func (s *AttestationGossip) handleQuorumNetworkFeeCommitted(en *ebifrost.EventNo
 
 	s.mu.Lock()
 	as, ok := s.networkFees[*qnf.NetworkFee]
+	if ok {
+		// note, purposefully locking the single state mutex prior to releasing the global mutex to avoid race in between.
+		// This order must be maintained everywhere to avoid deadlock.
+		as.mu.Lock()
+	}
 	s.mu.Unlock()
 	if !ok {
 		return
 	}
 
-	as.mu.Lock()
 	defer as.mu.Unlock()
 	as.MarkAttestationsCommitted(qnf.Attestations)
 }
@@ -410,12 +418,16 @@ func (s *AttestationGossip) handleQuorumSolvencyCommitted(en *ebifrost.EventNoti
 
 	s.mu.Lock()
 	as, ok := s.solvencies[qs.Solvency.Id]
+	if ok {
+		// note, purposefully locking the single state mutex prior to releasing the global mutex to avoid race in between.
+		// This order must be maintained everywhere to avoid deadlock.
+		as.mu.Lock()
+	}
 	s.mu.Unlock()
 	if !ok {
 		return
 	}
 
-	as.mu.Lock()
 	defer as.mu.Unlock()
 	as.MarkAttestationsCommitted(qs.Attestations)
 }
@@ -432,12 +444,16 @@ func (s *AttestationGossip) handleQuorumErrataTxCommitted(en *ebifrost.EventNoti
 
 	s.mu.Lock()
 	as, ok := s.errataTxs[*qe.ErrataTx]
+	if ok {
+		// note, purposefully locking the single state mutex prior to releasing the global mutex to avoid race in between.
+		// This order must be maintained everywhere to avoid deadlock.
+		as.mu.Lock()
+	}
 	s.mu.Unlock()
 	if !ok {
 		return
 	}
 
-	as.mu.Lock()
 	defer as.mu.Unlock()
 	as.MarkAttestationsCommitted(qe.Attestations)
 }

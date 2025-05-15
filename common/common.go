@@ -11,6 +11,10 @@ import (
 
 var LatestVersion semver.Version = semver.MustParse("999.0.0")
 
+func (o *ObservedTx) IsValid() bool {
+	return o != nil
+}
+
 // GetSignablePayload returns the data that is signed for verification
 func (o *ObservedTx) GetSignablePayload() ([]byte, error) {
 	return o.Tx.Marshal()
@@ -44,6 +48,10 @@ func (m *NetworkFee) Valid() error {
 	return nil
 }
 
+func (nf *NetworkFee) IsValid() bool {
+	return nf != nil
+}
+
 // GetSignablePayload returns the data that is signed for verification
 func (nf *NetworkFee) GetSignablePayload() ([]byte, error) {
 	return nf.Marshal()
@@ -72,6 +80,10 @@ func (s *Solvency) Hash() (TxID, error) {
 		return "", fmt.Errorf("fail to create msg solvency hash")
 	}
 	return id, nil
+}
+
+func (s *Solvency) IsValid() bool {
+	return s != nil
 }
 
 // GetSignablePayload returns the data that is signed for verification
@@ -105,6 +117,10 @@ func (s *Solvency) Equals(other *Solvency) bool {
 		}
 	}
 	return true
+}
+
+func (e *ErrataTx) IsValid() bool {
+	return e != nil
 }
 
 // GetSignablePayload returns the data that is signed for verification

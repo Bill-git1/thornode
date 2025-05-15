@@ -2,8 +2,10 @@ package observer
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"runtime"
 	"slices"
 	"strconv"
@@ -76,6 +78,8 @@ type Observer struct {
 	observerWorkers int
 
 	lastNodeStatus stypes.NodeStatus
+
+	deckDumpFile string
 }
 
 // NewObserver create a new instance of Observer for chain
@@ -85,6 +89,7 @@ func NewObserver(pubkeyMgr *pubkeymanager.PubKeyManager,
 	m *metrics.Metrics, dataPath string,
 	tssKeysignMetricMgr *metrics.TssKeysignMetricMgr,
 	attestationGossip *AttestationGossip,
+	deckDumpFile string,
 ) (*Observer, error) {
 	logger := log.Logger.With().Str("module", "observer").Logger()
 
@@ -102,6 +107,7 @@ func NewObserver(pubkeyMgr *pubkeymanager.PubKeyManager,
 	if err != nil {
 		return nil, fmt.Errorf("failed to create observer storage: %w", err)
 	}
+
 	if tssKeysignMetricMgr == nil {
 		return nil, fmt.Errorf("tss keysign manager is nil")
 	}
@@ -130,6 +136,7 @@ func NewObserver(pubkeyMgr *pubkeymanager.PubKeyManager,
 		signedTxOutCache:      signedTxOutCache,
 		attestationGossip:     attestationGossip,
 		observerWorkers:       observerWorkers,
+		deckDumpFile:          deckDumpFile,
 	}, nil
 }
 
@@ -177,6 +184,21 @@ func (o *Observer) restoreDeck() {
 	if err != nil {
 		o.logger.Error().Err(err).Msg("fail to restore ondeck txs")
 	}
+
+	if o.deckDumpFile != "" {
+		// dump the ondeck txs to a file for debugging
+		o.logger.Info().Msgf("dumping ondeck txs to %s", o.deckDumpFile)
+		dumpTxs, err := json.Marshal(onDeckTxs)
+		if err != nil {
+			o.logger.Error().Err(err).Msg("fail to marshal ondeck txs")
+		} else {
+			if err := os.WriteFile(o.deckDumpFile, dumpTxs, 0o600); err != nil {
+				o.logger.Error().Err(err).Msg("fail to write ondeck txs to file")
+			}
+			o.logger.Info().Msgf("ondeck txs dumped to %s", o.deckDumpFile)
+		}
+	}
+
 	o.lock.Lock()
 	defer o.lock.Unlock()
 	for _, txIn := range onDeckTxs {
@@ -233,6 +255,10 @@ func (o *Observer) handleObservedTxCommitted(tx common.ObservedTx) {
 					o.logger.Error().Err(err).Msg("fail to remove tx from storage")
 				}
 			} else {
+				if j == 0 {
+					// update block confirmation count
+					deck.ConfirmationRequired = k.height - deck.TxArray[0].BlockHeight
+				}
 				if err := o.storage.AddOrUpdateTx(deck); err != nil {
 					o.logger.Error().Err(err).Msg("fail to update tx in storage")
 				}
@@ -305,7 +331,7 @@ func (o *Observer) sendDeck(ctx context.Context) {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 
-	for _, deck := range o.onDeck {
+	for k, deck := range o.onDeck {
 		chainClient, err := o.getChain(deck.Chain)
 		if err != nil {
 			o.logger.Error().Err(err).Msg("fail to retrieve chain client")
@@ -313,12 +339,12 @@ func (o *Observer) sendDeck(ctx context.Context) {
 		}
 
 		final := chainClient.ConfirmationCountReady(*deck)
-		o.sendToQuorumChecker(deck, final)
+		o.sendToQuorumChecker(deck, final, k.height)
 	}
 }
 
-func (o *Observer) sendToQuorumChecker(deck *types.TxIn, finalised bool) {
-	txs, err := o.getThorchainTxIns(deck, finalised)
+func (o *Observer) sendToQuorumChecker(deck *types.TxIn, finalised bool, finaliseHeight int64) {
+	txs, err := o.getThorchainTxIns(deck, finalised, finaliseHeight)
 	if err != nil {
 		o.logger.Error().Err(err).Msg("fail to convert txin to thorchain txins")
 		return
@@ -554,6 +580,17 @@ BlockLoop:
 					if len(txIn.TxArray) == 0 {
 						o.logger.Info().Msgf("ondeck tx is empty, remove it from ondeck")
 						delete(o.onDeck, k)
+						if err := o.storage.RemoveTx(txIn, block.Height); err != nil {
+							o.logger.Error().Err(err).Msg("fail to remove tx from storage")
+						}
+					} else {
+						if i == 0 {
+							// update block confirmation count
+							txIn.ConfirmationRequired = k.height - txIn.TxArray[0].BlockHeight
+						}
+						if err := o.storage.AddOrUpdateTx(txIn); err != nil {
+							o.logger.Error().Err(err).Msg("fail to update tx in storage")
+						}
 					}
 					break BlockLoop
 				}
@@ -600,7 +637,7 @@ func (o *Observer) getSaversMemo(chain common.Chain, tx *types.TxInItem) string 
 
 // getThorchainTxIns convert to the type thorchain expected
 // maybe in later THORNode can just refactor this to use the type in thorchain
-func (o *Observer) getThorchainTxIns(txIn *types.TxIn, finalized bool) (common.ObservedTxs, error) {
+func (o *Observer) getThorchainTxIns(txIn *types.TxIn, finalized bool, finaliseHeight int64) (common.ObservedTxs, error) {
 	obsTxs := make(common.ObservedTxs, 0, len(txIn.TxArray))
 	o.logger.Debug().Msgf("len %d", len(txIn.TxArray))
 	for _, item := range txIn.TxArray {
@@ -664,11 +701,11 @@ func (o *Observer) getThorchainTxIns(txIn *types.TxIn, finalized bool) (common.O
 		}
 		height := item.BlockHeight
 		if finalized {
-			height += txIn.ConfirmationRequired
+			height = finaliseHeight
 		}
 		// Strip out any empty Coin from Coins and Gas, as even one empty Coin will make a MsgObservedTxIn for instance fail validation.
 		tx := common.NewTx(txID, sender, to, item.Coins.NoneEmpty(), item.Gas.NoneEmpty(), item.Memo)
-		obsTx := common.NewObservedTx(tx, height, item.ObservedVaultPubKey, item.BlockHeight+txIn.ConfirmationRequired)
+		obsTx := common.NewObservedTx(tx, height, item.ObservedVaultPubKey, finaliseHeight)
 		obsTx.KeysignMs = o.tssKeysignMetricMgr.GetTssKeysignMetric(item.Tx)
 		obsTx.Aggregator = item.Aggregator
 		obsTx.AggregatorTarget = item.AggregatorTarget

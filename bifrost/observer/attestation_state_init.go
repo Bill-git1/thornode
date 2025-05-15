@@ -48,12 +48,24 @@ func (s *AttestationGossip) askForAttestationState(ctx context.Context) {
 		numPeers = len(peersWithoutMe)
 	}
 	peers := peersWithoutMe[:numPeers]
+
+	s.stateInitMu.Lock()
+	s.stateInitPeers = make(map[peer.ID]bool, len(peers))
+	for _, peer := range peers {
+		s.stateInitPeers[peer] = true
+	}
+	s.stateInitMu.Unlock()
+
 	var wg sync.WaitGroup
 	wg.Add(len(peers))
 	for _, peer := range peers {
 		go s.askPeerForState(ctx, peer, &wg)
 	}
 	wg.Wait()
+	// Reset the state init peers
+	s.stateInitMu.Lock()
+	s.stateInitPeers = nil
+	s.stateInitMu.Unlock()
 }
 
 func (s *AttestationGossip) sendAttestationState(stream network.Stream) {
@@ -479,11 +491,7 @@ func (s *AttestationGossip) askPeerForState(ctx context.Context, peer peer.ID, w
 func (s *AttestationGossip) askStreamForState(stream network.Stream) {
 	peer := stream.Conn().RemotePeer()
 
-	defer func() {
-		if err := stream.Close(); err != nil {
-			s.logger.Error().Err(err).Msgf("fail to close stream to peer: %s", peer)
-		}
-	}()
+	defer closeStream(s.logger, stream)
 
 	if err := p2p.WriteStreamWithBuffer(prefixSendState, stream); err != nil {
 		s.logger.Error().Err(err).Msgf("fail to write payload to peer: %s", peer)

@@ -181,6 +181,7 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 			"",
 			metrics.NewTssKeysignMetricMgr(),
 			ag,
+			"",
 		)
 		c.Assert(err, IsNil)
 
