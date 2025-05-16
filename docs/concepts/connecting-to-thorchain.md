@@ -9,6 +9,7 @@ This guide helps developers connect to THORChain’s network for querying data, 
 
 ```admonish info
 The below endpoints are run by specific organisations for public use. There is a cost to running these services. If you want to run your own full node, please see [https://docs.thorchain.org/thornodes/overview.](https://docs.thorchain.org/thornodes/overview)
+A list of endpoints operated by Nine Realms is located at [NineRealms THORChain Ops Dashboard](https://ops.ninerealms.com/links)
 ```
 
 ## Quick Reference

@@ -57,6 +57,8 @@ THORChain has several APIs with Swagger documentation.
 - Cosmos RPC - [https://docs.cosmos.network/v0.50/learn/advanced/grpc_rest](https://docs.cosmos.network/v0.50/learn/advanced/grpc_rest)
 - CometBFT RPC - [https://docs.cometbft.com/v0.38/rpc/](https://docs.cometbft.com/v0.38/rpc/)
 
+A list of endpoints operated by Nine Realms is located at [NineRealms THORChain Ops Dashboard](https://ops.ninerealms.com/links).
+
 See [Connecting to THORChain](concepts/connecting-to-thorchain.md "mention") for more information.
 
 ### Support and Questions
