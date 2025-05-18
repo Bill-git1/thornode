@@ -31,6 +31,7 @@ ETHEREUM_ENDPOINT="${ETH_HOST:-http://ethereum-daemon:${ETHEREUM_DAEMON_SERVICE_
 # trunk-ignore(shellcheck/SC2001)
 ETHEREUM_BEACON_ENDPOINT=$(echo "$ETHEREUM_ENDPOINT" | sed 's/:[0-9]*$/:3500/g')
 BINANCE_SMART_ENDPOINT="${BSC_HOST:-http://binance-smart-daemon:${BINANCE_SMART_DAEMON_SERVICE_PORT_RPC:-8545}}"
+BASE_ENDPOINT="${BASE_HOST:-http://base-daemon:${BASE_DAEMON_SERVICE_PORT_RPC:-8545}}"
 GAIA_ENDPOINT="${GAIA_HOST:-http://gaia-daemon:26657}"
 AVALANCHE_ENDPOINT="${AVAX_HOST:-http://avalanche-daemon:9650/ext/bc/C/rpc}"
 
@@ -127,6 +128,19 @@ if [ "$VALIDATOR" = "true" ]; then
     fi
     BSC_PROGRESS=$(calc_progress "$BSC_SYNC_HEIGHT" "$BSC_HEIGHT")
   fi
+
+  # calculate BASE chain sync progress
+  if [ -z "$BASE_DISABLED" ]; then
+    BASE_HEIGHT_RESULT=$(curl -X POST -sL --fail -m 10 --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' -H 'content-type: application/json' "https://base.llamarpc.com")
+    BASE_SYNC_HEIGHT_RESULT=$(curl -X POST -sL --fail -m 10 --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' -H 'content-type: application/json' "$BASE_ENDPOINT")
+    BASE_HEIGHT=$(printf "%.0f" "$(echo "$BASE_HEIGHT_RESULT" | jq -r ".result")")
+    if [ -n "$BASE_SYNC_HEIGHT_RESULT" ]; then
+      BASE_SYNC_HEIGHT=$(printf "%.0f" "$(echo "$BASE_SYNC_HEIGHT_RESULT" | jq -r ".result")")
+    else
+      BASE_SYNC_HEIGHT=0
+    fi
+    BASE_PROGRESS=$(calc_progress "$BASE_SYNC_HEIGHT" "$BASE_HEIGHT")
+  fi
 fi
 
 # calculate THOR chain sync progress
@@ -189,6 +203,8 @@ DOGE_HEIGHT=${DOGE_HEIGHT:=0}
 DOGE_SYNC_HEIGHT=${DOGE_SYNC_HEIGHT:=0}
 GAIA_HEIGHT=${GAIA_HEIGHT:=0}
 GAIA_SYNC_HEIGHT=${GAIA_SYNC_HEIGHT:=0}
+BASE_HEIGHT=${BASE_HEIGHT:=0}
+BASE_SYNC_HEIGHT=${BASE_SYNC_HEIGHT:=0}
 
 echo
 printf "%-18s %-10s %-14s %-10s\n" CHAIN SYNC BEHIND TIP
@@ -205,6 +221,9 @@ if [ "$VALIDATOR" = "true" ]; then
   printf "%-18s %-10s %-14s %-10s\n" AVAX "$AVAX_PROGRESS" "$(format_int $((AVAX_SYNC_HEIGHT - AVAX_HEIGHT)))" "$(format_int "$AVAX_HEIGHT")"
   if [ -z "$BSC_DISABLED" ]; then
     printf "%-18s %-10s %-14s %-10s\n" BSC "$BSC_PROGRESS" "$(format_int $((BSC_SYNC_HEIGHT - BSC_HEIGHT)))" "$(format_int "$BSC_HEIGHT")"
+  fi
+  if [ -z "$BASE_DISABLED" ]; then
+    printf "%-18s %-10s %-14s %-10s\n" BASE "$BASE_PROGRESS" "$(format_int $((BASE_SYNC_HEIGHT - BASE_HEIGHT)))" "$(format_int "$BASE_HEIGHT")"
   fi
 fi
 
