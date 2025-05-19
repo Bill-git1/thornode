@@ -66,16 +66,6 @@ func (h UnBondHandler) validate(ctx cosmos.Context, msg MsgUnBond) error {
 		return ErrInternal(err, "unbonding has been paused")
 	}
 
-	jail, err := h.mgr.Keeper().GetNodeAccountJail(ctx, msg.NodeAddress)
-	if err != nil {
-		// ignore this error and carry on. Don't want a jail bug causing node
-		// accounts to not be able to get their funds out
-		ctx.Logger().Error("fail to get node account jail", "error", err)
-	}
-	if jail.IsJailed(ctx) {
-		return fmt.Errorf("failed to unbond due to jail status: (release height %d) %s", jail.ReleaseHeight, jail.Reason)
-	}
-
 	bp, err := h.mgr.Keeper().GetBondProviders(ctx, msg.NodeAddress)
 	if err != nil {
 		return ErrInternal(err, fmt.Sprintf("fail to get bond providers(%s)", msg.NodeAddress))

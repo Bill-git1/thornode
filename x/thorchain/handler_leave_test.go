@@ -78,35 +78,6 @@ func (HandlerLeaveSuite) TestLeaveHandler_ActiveNodeLeave(c *C) {
 	c.Check(acc2.Bond.Equal(cosmos.NewUint(10000000000)), Equals, true, Commentf("Bond:%d\n", acc2.Bond.Uint64()))
 }
 
-func (HandlerLeaveSuite) TestLeaveJail(c *C) {
-	w := getHandlerTestWrapper(c, 1, true, false)
-	vault := GetRandomVault()
-	c.Assert(w.keeper.SetVault(w.ctx, vault), IsNil)
-	leaveHandler := NewLeaveHandler(NewDummyMgrWithKeeper(w.keeper))
-	acc2 := GetRandomValidatorNode(NodeStandby)
-	acc2.Bond = cosmos.NewUint(100 * common.One)
-	c.Assert(w.keeper.SetNodeAccount(w.ctx, acc2), IsNil)
-
-	c.Assert(w.keeper.SetNodeAccountJail(w.ctx, acc2.NodeAddress, w.ctx.BlockHeight()+100, "test it"), IsNil)
-
-	FundModule(c, w.ctx, w.keeper, BondName, 100*common.One)
-
-	txID := GetRandomTxHash()
-	tx := common.NewTx(
-		txID,
-		acc2.BondAddress,
-		GetRandomETHAddress(),
-		common.Coins{common.NewCoin(common.RuneAsset(), cosmos.OneUint())},
-		common.Gas{
-			common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
-		},
-		"LEAVE",
-	)
-	msgLeave := NewMsgLeave(tx, acc2.NodeAddress, w.activeNodeAccount.NodeAddress)
-	_, err := leaveHandler.Run(w.ctx, msgLeave)
-	c.Assert(err, NotNil)
-}
-
 func (HandlerLeaveSuite) TestLeaveBondProvider(c *C) {
 	var err error
 	w := getHandlerTestWrapper(c, 1, true, false)

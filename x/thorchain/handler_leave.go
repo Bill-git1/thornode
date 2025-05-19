@@ -54,16 +54,6 @@ func (h LeaveHandler) validate(ctx cosmos.Context, msg MsgLeave) error {
 		return cosmos.ErrUnknownRequest("leave message cannot have a non-zero coin amount")
 	}
 
-	jail, err := h.mgr.Keeper().GetNodeAccountJail(ctx, msg.NodeAddress)
-	if err != nil {
-		// ignore this error and carry on. Don't want a jail bug causing node
-		// accounts to not be able to get their funds out
-		ctx.Logger().Error("fail to get node account jail", "error", err)
-	}
-	if jail.IsJailed(ctx) {
-		return fmt.Errorf("failed to leave due to jail status: (release height %d) %s", jail.ReleaseHeight, jail.Reason)
-	}
-
 	return nil
 }
 
