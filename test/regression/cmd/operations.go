@@ -597,10 +597,21 @@ func (op *OpCreateBlocks) Execute(out io.Writer, path string, _, routine int, p 
 
 		// get the block response
 		url := fmt.Sprintf("http://localhost:%d/thorchain/block?height=%d", 1317+routine, height)
-		res, err := httpClient.Get(url)
+		var res *http.Response
+		for j := 0; j < 5; j++ {
+			res, err = httpClient.Get(url)
+			if res.StatusCode == http.StatusOK {
+				break
+			}
+			time.Sleep(100 * time.Millisecond * getTimeFactor())
+		}
 		if err != nil {
 			localLog.Err(err).Msg("failed to get block")
 			return err
+		}
+		if res.StatusCode != http.StatusOK {
+			localLog.Error().Int("status", res.StatusCode).Msg("failed to get block")
+			return fmt.Errorf("failed to get block: %d", res.StatusCode)
 		}
 
 		// decode response
