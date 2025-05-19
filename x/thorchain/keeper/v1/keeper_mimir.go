@@ -51,6 +51,12 @@ func (k KVStore) SetNodeMimir(ctx cosmos.Context, key string, value int64, acc c
 		return err
 	}
 	record.Set(key, value, acc)
+
+	// delete the node mimir if value is negative
+	if value < 0 {
+		record.Delete(key, acc)
+	}
+
 	store := ctx.KVStore(k.storeKey)
 	buf := k.cdc.MustMarshal(&record)
 	if buf == nil || len(record.Mimirs) == 0 {

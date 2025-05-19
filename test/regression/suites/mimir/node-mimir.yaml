@@ -60,3 +60,56 @@ type: check
 endpoint: http://localhost:1317/thorchain/mimir
 asserts:
   - .REGRESSIONTEST == 2
+---
+########################################################################################
+# nodes can remove their vote with -1
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/mimir/nodes_all
+asserts:
+  - .mimirs|length == 4
+---
+type: tx-mimir
+key: RegressionTest
+value: -1
+signer: {{ addr_thor_fox }}
+---
+type: tx-mimir
+key: RegressionTest
+value: -1
+signer: {{ addr_thor_frog }}
+---
+type: tx-mimir
+key: RegressionTest
+value: -1
+signer: {{ addr_thor_goat }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/mimir/nodes_all
+asserts:
+  - .mimirs|length == 1
+---
+# mimir value stays set after unvote
+type: check
+endpoint: http://localhost:1317/thorchain/mimir
+asserts:
+  - .REGRESSIONTEST == 2
+---
+########################################################################################
+# all nodes deleting votes removes key
+########################################################################################
+type: tx-mimir
+key: RegressionTest
+value: -1
+signer: {{ addr_thor_cat }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/mimir/nodes_all
+asserts:
+  - .mimirs == null
