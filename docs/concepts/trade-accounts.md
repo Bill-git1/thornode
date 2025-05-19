@@ -9,7 +9,7 @@ Arbitrage bots can arbitrage the pools faster and with more capital efficiency t
 ## How it Works
 
 1. Traders deposit Layer1 assets into the network, minting a [Trade Asset](./asset-notation.md#trade-assets) in a 1:1 ratio within a Network Trade module held by the network, not the user's wallet. These assets are held separately from the Liquidity Pools.
-1. Trader receives accredited shares of this module relative to their deposit versus module depth. This is done using the same logic as savers.
+1. Trader receives accredited shares of this module relative to their deposit versus module depth.
 1. Trader can swap/trade assets <> RUNE (or other trade asset) to and from the trade module. Because this occurs completely within THORNode, execution times are fast and efficient. Swap fees are the same as any other Layer1 swap.
 1. Trader can withdraw some or all of their balance from their Trade Account. [Outbound delay](./delays.md) applies when they withdraw.
 

@@ -1,1 +1,0 @@
-# Fees and Wait Times

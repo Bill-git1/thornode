@@ -16,7 +16,7 @@ You are ready to make the transaction and swap via THORChain.
 - [ ] Pass all change back to the VIN0 address in a subsequent VOUT e.g. VOUT1
 - [ ] Include the memo as an OP_RETURN in a subsequent VOUT e.g. VOUT2
 - [ ] Use a high enough `gas_rate` to be included
-- [ ] Do not send below the dust threshold (10k Sats BTC, BCH, LTC, 1m DOGE), exhaustive values can be found on the [Inbound Addresses](https://thornode.ninerealms.com/thorchain/inbound_addresses) endpoint
+- [ ] Do not send below the dust threshold (e.g., 10k sats for BTC, BCH, LTC; 1 DOGE). See [Dust Thresholds and Transaction Validation](#dust-thresholds-and-transaction-validation) for exhaustive values.
 - [ ] Do not send funds that are part of a transaction with more than 10 outputs
 
 ```admonish warning
@@ -24,7 +24,7 @@ Inbound transactions should not be delayed for any reason else there is risk fun
 ```
 
 ```admonish info
-Memo limited to 80 bytes on BTC, BCH, LTC and DOGE. Use abbreviated options and [THORNames](https://docs.thorchain.org/network/thorchain-name-service) where possible.
+Memo limited to 80 bytes on BTC, BCH, LTC and DOGE. Use [abbreviated options](./memo-length-reduction.md) where possible.
 ```
 
 ```admonish warning
@@ -63,6 +63,44 @@ ETH is sent and received as an internal transaction. Your wallet may not be set 
 - [ ] Include the memo
 - [ ] Only use the base asset as the choice for gas asset
 
+### XRP Ledger
+
+- [ ] Send the transaction to the Asgard vault
+- [ ] Include the `DestinationTag` in the memo field if sending to a centralised exchange or shared address
+- [ ] Include the [memo](./memos.md) with user intent in the transaction
+- [ ] Use a high enough `gas_rate` to be included, as specified in the [Inbound Addresses](https://thornode.ninerealms.com/thorchain/inbound_addresses) endpoint
+- [ ] Ensure the transaction amount exceeds the dust threshold; see [Dust Thresholds and Transaction Validation](#dust-thresholds-and-transaction-validation)
+- [ ] Ensure the transaction is a Payment type, as THORChain only processes XRP Payment transactions
+- [ ] Use the correct sequence number for the sending account, obtainable via the `GetAccount` method
+
+## Dust Thresholds and Transaction Validation
+
+THORChain enforces dust thresholds to prevent dust attacks, where negligible amounts are sent to clog the network. The dust threshold is the minimum transaction amount required for a Layer 1 (L1) chain to ensure THORChain processes the transaction and its associated memo. Transactions with amounts **equal to or below the dust threshold** are ignored by the network.
+
+### Dust Threshold Rules
+
+- **General Rule**: Transactions must exceed the chain’s dust threshold in base units (e.g., wei for EVM chains, sats for UTXO chains, uatom for GAIA) to be processed by THORChain. This ensures the network recognizes the transaction and executes the instruction specified in the memo.
+- **Unit Clarification**: The `gas_rate_units` field (e.g., gwei for EVM chains, satsperbyte for UTXO chains) in the [Inbound Addresses](https://thornode.ninerealms.com/thorchain/inbound_addresses) endpoint refers to gas pricing, while dust thresholds are specified in base units.
+- **Source of Truth**: Dust thresholds may be updated by the network. Always check the latest values at the [Inbound Addresses](https://thornode.ninerealms.com/thorchain/inbound_addresses) endpoint before sending a transaction.
+- **Important**: Convert “human-readable” amounts (e.g., 1 BTC) to base units (e.g., 100,000,000 sats) when calculating the transaction amount to comply with the dust threshold.
+
+### Chain-Specific Dust Thresholds
+
+- **AVAX**: 1 gwei
+- **BASE**: 1 gwei
+- **BCH**: 10,000 sats
+- **BSC**: 1 gwei
+- **BTC**: 10,000 sats
+- **DOGE**: 100,000,000 sats (1 DOGE)
+- **ETH**: 1 gwei
+- **GAIA**: 1 uatom
+- **LTC**: 10,000 sats
+- **XRP**: 1,000,000 drops (1 XRP)
+
+```admonish warning
+Ensure transaction amounts exceed the dust threshold for the chain to avoid being ignored. Verify the latest dust threshold at [Inbound Addresses](https://thornode.ninerealms.com/thorchain/inbound_addresses) endpoint before sending to ensure the amount is sufficient to trigger the desired action on THORChain.
+```
+
 ## THORChain
 
 To initiate a $RUNE -> $ASSET swap a `MsgDeposit` must be broadcasted to the THORChain blockchain. The `MsgDeposit` does not have a destination address, and has the following properties. The full definition can be found [here](https://gitlab.com/thorchain/thornode/-/blob/develop/x/thorchain/types/msg_deposit.go).
@@ -91,15 +129,15 @@ If you are using Javascript, [CosmJS](https://github.com/cosmos/cosmjs) is the r
 
    TMP_DIR=$(mktemp -d)
 
-   tput setaf 2; echo "Checking out https://gitlab.com/thorchain/thornode  to $TMP_DIR";tput sgr0
+   tput setaf 2; echo "Checking out https://gitlab.com/thorchain/thornode to $TMP_DIR";tput sgr0
    (cd $TMP_DIR && git clone https://gitlab.com/thorchain/thornode)
 
    # Generate msgs
    tput setaf 2; echo "Generating $MSG_COMPILED_OUTPUTFILE";tput sgr0
-   yarn run pbjs -w commonjs  -t static-module $TMP_DIR/thornode/proto/thorchain/v1/common/common.proto $TMP_DIR/thornode/proto/thorchain/v1/x/thorchain/types/msg_deposit.proto $TMP_DIR/thornode/proto/thorchain/v1/x/thorchain/types/msg_send.proto $TMP_DIR/thornode/third_party/proto/cosmos/base/v1beta1/coin.proto -o $MSG_COMPILED_OUTPUTFILE
+   yarn run pbjs -w commonjs -t static-module $TMP_DIR/thornode/proto/thorchain/v1/common/common.proto $TMP_DIR/thornode/proto/thorchain/v1/x/thorchain/types/msg_deposit.proto $TMP_DIR/thornode/proto/thorchain/v1/x/thorchain/types/msg_send.proto $TMP_DIR/thornode/third_party/proto/cosmos/base/v1beta1/coin.proto -o $MSG_COMPILED_OUTPUTFILE
 
    tput setaf 2; echo "Generating $MSG_COMPILED_TYPES_OUTPUTFILE";tput sgr0
-   yarn run pbts  $MSG_COMPILED_OUTPUTFILE -o $MSG_COMPILED_TYPES_OUTPUTFILE
+   yarn run pbts $MSG_COMPILED_OUTPUTFILE -o $MSG_COMPILED_TYPES_OUTPUTFILE
 
    tput setaf 2; echo "Removing $TMP_DIR/thornode";tput sgr0
    rm -rf $TMP_DIR
@@ -157,7 +195,7 @@ If you are using Javascript, [CosmJS](https://github.com/cosmos/cosmjs) is the r
      };
 
      const depositMsg = {
-       typeUrl: "/types.MsgDeposit",
+       typeUrl: "types.MsgDeposit",
        value: MsgDeposit.fromObject(msg),
      };
 

@@ -8,8 +8,8 @@ THORChain is built on the [Cosmos SDK](https://docs.thorchain.org/technology/cos
 
   - **[Add liquidity, withdraw liquidity, and swap handlers](./concepts/memos.md)**: Facilitate cross-chain liquidity pooling and swaps.
   - **[Lending module](https://docs.thorchain.org/thorchain-finance/lending)**: Users post collateral and receive debt in USD, with collateral held in THORChain’s pools. Repayment of USD-denominated debt returns the collateral. See the [Dashboard](https://dashboards.ninerealms.com/#lending) for more information.
-  - **[Reserve module](https://runescan.io/address/thor1dheycdevq39qlkxs2a6wuuzyn4aqxhve4qxtxt)**: Manages a Reserve of 78.8M RUNE, used for block rewards and backstopping lending and savers features.
-  - **[RUNEPool module](https://thorchain.network/runepool/)**: Phased in to allow RUNE liquidity provision across pools and to replace the reserve’s role in backstopping the savers feature. See the [Dashboard](https://thorchain.net/thorfi/runepool?tab=rune-pools) for more information.
+  - **[Reserve module](https://runescan.io/address/thor1dheycdevq39qlkxs2a6wuuzyn4aqxhve4qxtxt)**: Manages a Reserve of 78.8M RUNE, used for block rewards.
+  - **[RUNEPool module](https://thorchain.network/runepool/)**: Phased in to allow RUNE liquidity provision across pools. See the [Dashboard](https://thorchain.net/thorfi/runepool?tab=rune-pools) for more information.
 
 - **Bifrost & Threshold Signatures:**
 

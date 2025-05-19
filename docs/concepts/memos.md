@@ -16,7 +16,7 @@ THORChain has a [memo size limit of 250 bytes](https://gitlab.com/thorchain/thor
 
 ### Dust Thresholds
 
-THORChain has various dust thresholds (dust limits), defined on a per-chain basis. Refer to the [THORNode inbound addresses endpoint](https://dev.thorchain.org/saving-guide/quickstart-guide.html#basic-mechanics) for details, specifically the `dust_threshold` field.
+THORChain has various dust thresholds (dust limits), defined on a per-chain basis. Refer to the [Dust-thresholds and transaction validation](sending-transactions.md#dust-thresholds-and-transaction-validation) for details.
 
 ## Format
 

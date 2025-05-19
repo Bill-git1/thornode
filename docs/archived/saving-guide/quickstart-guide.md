@@ -136,7 +136,7 @@ To **withdraw**, the user should send a specific dust amount of asset (avoiding 
 10,000 units is read as “withdraw 10000 basis points”, which is 100%.
 
 ```admonish info
-The dust threshold is the point at which the network will ignore the amount sent to stop dust attacks (widely seen on UTXO chains).
+The [dust threshold](../../concepts/sending-transactions.md#dust-thresholds-and-transaction-validation) is the point at which the network will ignore the amount sent to stop dust attacks (widely seen on UTXO chains).
 ```
 
 Specific rules for each chain and action are as follows:
@@ -144,19 +144,6 @@ Specific rules for each chain and action are as follows:
 - Each chain has a defined `dust_threshold` in base units
 - For asset amounts in the range: `[ dust_threshold + 1 : dust_threshold + 10,000]`, the network will withdraw `dust_threshold - 10,000` basis points from the user’s Savers position
 - For asset amounts greater than `dust_threshold + 10,000`, the network will add to the user’s Savers position
-
-The `dust_threshold` for each chain are defined as:
-
-- BTC: 10,000 sats
-- BCH: 10,000 sats
-- LTC: 10,000 sats
-- DOGE: 100,000,000 sats
-- ETH,AVAX: 0 wei
-- ATOM: 0 uatom
-
-```admonish info
-Transactions with asset amounts equal to or below the `dust_threshold` for the chain will be ignored to prevent dust attacks. Ensure you are converting the “human readable” amount (1 BTC) to the correct gas units (100,000,000 sats)
-```
 
 **Examples:**
 

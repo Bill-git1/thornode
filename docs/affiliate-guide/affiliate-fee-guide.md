@@ -23,7 +23,6 @@ Affiliate fees provide a way for interfaces to generate revenue through THORChai
 - If the inbound swap asset is a native THORChain asset ($RUNE, synth, or trade asset), the affiliate fee amount will be deducted directly from the transaction amount.
 - If the inbound swap asset is on any other chain, the network will submit a swap to $RUNE.
 - If the affiliate is added to an `ADDLP` transaction, then the affiliate is included in the network as an LP.
-- If the affiliate is added to a lending or savers deposit, it is taken from the transaction amount.
 - If the affiliate is added to a RUNEPool withdrawal, it is deducted from the profit amount (positive PnL), not the principal.
 
 ## How it Works
