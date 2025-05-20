@@ -1008,6 +1008,9 @@ func atTVLCap(ctx cosmos.Context, coins common.Coins, mgr Manager) bool {
 		if pool.BalanceRune.IsZero() || pool.BalanceAsset.IsZero() {
 			continue
 		}
+		if pool.Asset.IsNative() {
+			continue
+		}
 		totalRuneValue = totalRuneValue.Add(pool.AssetValueInRune(coin.Amount))
 	}
 
