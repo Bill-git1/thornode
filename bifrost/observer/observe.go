@@ -77,7 +77,8 @@ type Observer struct {
 
 	observerWorkers int
 
-	lastNodeStatus stypes.NodeStatus
+	lastNodeStatus   stypes.NodeStatus
+	lastNodeStatusMu sync.RWMutex
 
 	deckDumpFile string
 }
@@ -316,12 +317,30 @@ func (o *Observer) sendDeck(ctx context.Context) {
 		o.logger.Error().Err(err).Msg("failed to get node status")
 		return
 	}
-	if nodeStatus != o.lastNodeStatus {
+	o.lastNodeStatusMu.RLock()
+	lastNodeStatus := o.lastNodeStatus
+	o.lastNodeStatusMu.RUnlock()
+	if nodeStatus != lastNodeStatus {
+		o.lastNodeStatusMu.Lock()
+		o.lastNodeStatus = nodeStatus
+		o.lastNodeStatusMu.Unlock()
+
 		if nodeStatus == stypes.NodeStatus_Active {
 			o.logger.Info().Msg("node is now active, will begin observation and gossip")
 			o.attestationGossip.askForAttestationState(ctx)
+			if lastNodeStatus != stypes.NodeStatus_Unknown {
+				// if this is not the first startup, we just churned in. rollback block scanners to re-observe recent blocks
+				for _, chain := range o.chains {
+					if err := chain.RollbackBlockScanner(); err != nil {
+						o.logger.Error().Err(err).Msg("fail to rollback chain")
+					}
+				}
+			}
+		} else {
+			if err := o.storage.RemoveAllTxs(); err != nil {
+				o.logger.Error().Err(err).Msg("fail to remove all tx from storage")
+			}
 		}
-		o.lastNodeStatus = nodeStatus
 	}
 	if nodeStatus != stypes.NodeStatus_Active {
 		o.logger.Warn().Msg("node is not active, will not handle tx in")
@@ -391,6 +410,14 @@ func (o *Observer) processTxIns() {
 			}
 			return
 		case txIn := <-o.globalTxsQueue:
+			o.lastNodeStatusMu.RLock()
+			lastNodeStatus := o.lastNodeStatus
+			o.lastNodeStatusMu.RUnlock()
+
+			if lastNodeStatus != stypes.NodeStatus_Active {
+				continue
+			}
+
 			// Check if there are any items to process
 			if len(txIn.TxArray) == 0 {
 				continue

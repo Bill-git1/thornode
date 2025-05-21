@@ -44,6 +44,7 @@ type BlockScanner struct {
 	wg                    *sync.WaitGroup
 	scanChan              chan int64
 	stopChan              chan struct{}
+	rollbackChan          chan int64
 	scannerStorage        ScannerStorage
 	metrics               *metrics.Metrics
 	previousBlock         int64
@@ -75,6 +76,7 @@ func NewBlockScanner(cfg config.BifrostBlockScannerConfiguration, scannerStorage
 		wg:              &sync.WaitGroup{},
 		stopChan:        make(chan struct{}),
 		scanChan:        make(chan int64),
+		rollbackChan:    make(chan int64),
 		scannerStorage:  scannerStorage,
 		metrics:         m,
 		errorCounter:    m.GetCounterVec(metrics.CommonBlockScannerError),
@@ -95,6 +97,63 @@ func (b *BlockScanner) IsHealthy() bool {
 
 func (b *BlockScanner) PreviousHeight() int64 {
 	return atomic.LoadInt64(&b.previousBlock)
+}
+
+// RollbackToLastObserved rollback the block scanner to last observed height minus flex period
+func (b *BlockScanner) RollbackToLastObserved() error {
+	lastObservedHeight, err := b.thorchainBridge.GetLastObservedInHeight(b.cfg.ChainID)
+	if err != nil {
+		return fmt.Errorf("fail to get last observed height: %w", err)
+	}
+	if lastObservedHeight <= 0 {
+		// no last observed height, no need to rollback
+		return nil
+	}
+
+	maxConfirmations, err := b.thorchainBridge.GetMimirWithRef(constants.MimirTemplateMaxConfirmations, b.cfg.ChainID.String())
+	if err != nil || maxConfirmations < 0 {
+		maxConfirmations = 0
+	}
+
+	c, err := b.thorchainBridge.GetConstants()
+	if err != nil {
+		return fmt.Errorf("fail to get constants: %w", err)
+	}
+
+	obsDelayFlexConst := constants.ObservationDelayFlexibility.String()
+	observerFlexWindowBlocksThor := c[obsDelayFlexConst]
+	observerFlexWindowBlocksThorMimir, err := b.thorchainBridge.GetMimir(obsDelayFlexConst)
+	if err == nil && observerFlexWindowBlocksThorMimir > 0 {
+		observerFlexWindowBlocksThor = observerFlexWindowBlocksThorMimir
+	}
+
+	thorBlockTimeMs := c[constants.ThorchainBlockTime.String()] / int64(time.Millisecond)
+	observerFlexWindowBlocksChain := observerFlexWindowBlocksThor * thorBlockTimeMs / b.cfg.ChainID.ApproximateBlockMilliseconds()
+	if observerFlexWindowBlocksChain < 1 {
+		observerFlexWindowBlocksChain = 1
+	}
+
+	rollbackHeight := lastObservedHeight - max(observerFlexWindowBlocksChain, maxConfirmations)
+
+	if rollbackHeight < 0 {
+		rollbackHeight = 0
+	}
+
+	b.rollbackChan <- rollbackHeight
+	return nil
+}
+
+func (b *BlockScanner) rollback(height int64) error {
+	if b.PreviousHeight() <= height {
+		// height is already below rollback amount, proceed as normal
+		return nil
+	}
+	if err := b.scannerStorage.SetScanPos(height); err != nil {
+		return fmt.Errorf("fail to set scan pos: %w", err)
+	}
+	// set the previous block to height
+	atomic.StoreInt64(&b.previousBlock, height)
+	return nil
 }
 
 // GetMessages return the channel
@@ -208,6 +267,13 @@ func (b *BlockScanner) scanBlocks() {
 		select {
 		case <-b.stopChan:
 			return
+		case amount := <-b.rollbackChan:
+			if err := b.rollback(amount); err != nil {
+				b.logger.Error().Err(err).Msg("fail to rollback block scanner")
+				b.errorCounter.WithLabelValues(b.cfg.ChainID.String()).Inc()
+				time.Sleep(b.cfg.BlockHeightDiscoverBackoff)
+				continue
+			}
 		default:
 			preBlockHeight := atomic.LoadInt64(&b.previousBlock)
 			currentBlock := preBlockHeight + 1

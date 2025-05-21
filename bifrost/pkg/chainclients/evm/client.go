@@ -314,6 +314,11 @@ func (c *EVMClient) GetBlockScannerHeight() (int64, error) {
 	return c.blockScanner.PreviousHeight(), nil
 }
 
+// RollbackBlockScanner rolls back the block scanner to the last observed block
+func (c *EVMClient) RollbackBlockScanner() error {
+	return c.blockScanner.RollbackToLastObserved()
+}
+
 func (c *EVMClient) GetLatestTxForVault(vault string) (string, string, error) {
 	lastObserved, err := c.signerCacheManager.GetLatestRecordedTx(stypes.InboundCacheKey(vault, c.GetChain().String()))
 	if err != nil {

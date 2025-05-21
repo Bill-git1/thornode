@@ -135,6 +135,24 @@ func (s *ObserverStorage) RemoveTx(txIn *types.TxIn, finalizeHeight int64) error
 	return s.db.Delete([]byte(key), nil)
 }
 
+// RemoveAllTxs removes all TxIn from storage
+func (s *ObserverStorage) RemoveAllTxs() error {
+	iter := s.db.NewIterator(util.BytesPrefix([]byte(OnDeckTxKeyPrefix)), nil)
+	defer iter.Release()
+
+	for iter.Next() {
+		if err := s.db.Delete(iter.Key(), nil); err != nil {
+			return fmt.Errorf("fail to delete ondeck tx from key value store: %w", err)
+		}
+	}
+
+	if err := iter.Error(); err != nil {
+		return fmt.Errorf("error iterating through ondeck txs: %w", err)
+	}
+
+	return nil
+}
+
 func (s *ObserverStorage) Close() error {
 	return s.db.Close()
 }

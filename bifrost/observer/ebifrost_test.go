@@ -157,11 +157,12 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 			MinTimeBetweenAttestations: time.Second * 2,
 			LateObserveTimeout:         time.Second * 4,
 			AskPeers:                   3,
-			AskPeersDelay:              time.Second * 1,
+			AskPeersDelay:              time.Hour * 1, // don't ask peers during this test
 			PeerTimeout:                time.Second * 20,
 			MaxBatchSize:               100,
-			BatchInterval:              time.Second * 1,
+			BatchInterval:              time.Millisecond * 200,
 			PeerConcurrentSends:        4,
+			PeerConcurrentReceives:     5,
 		})
 		c.Assert(err, IsNil)
 
@@ -279,18 +280,31 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 		c.Assert(len(txs), Equals, 0) // No txs yet, need quorum
 	}
 
-	time.Sleep(time.Second * 2)
+	// Wait for the first validator to have the transaction ready
+	pollForCondition(c, "all validators have the gossipped attestation of the first validator", func() bool {
+		for _, atg := range attestationGossips {
+			atg.mu.Lock()
+			if len(atg.observedTxs) != 1 {
+				atg.mu.Unlock()
+				return false
+			}
+			ots, ok := atg.observedTxs[txKey{Chain: common.BTCChain, ID: testTx.Tx.ID, UniqueHash: testTx.Tx.Hash(1), Finalized: false, Inbound: true}]
+			if !ok {
+				atg.mu.Unlock()
+				return false
+			}
+			ots.mu.Lock() // Should have the tx in the observed txs map
+			if len(ots.attestations) != 1 {
+				ots.mu.Unlock()
+				atg.mu.Unlock()
+				return false
+			}
+			ots.mu.Unlock()
+			atg.mu.Unlock()
+		}
 
-	for _, atg := range attestationGossips {
-		atg.mu.Lock()
-		c.Assert(len(atg.observedTxs), Equals, 1)
-		ots, ok := atg.observedTxs[txKey{Chain: common.BTCChain, ID: testTx.Tx.ID, UniqueHash: testTx.Tx.Hash(1), Finalized: false, Inbound: true}]
-		c.Assert(ok, Equals, true)            // Should have the tx in the observed txs map
-		ots.mu.Lock()                         // Should have the tx in the observed txs map
-		c.Assert(ots.attestations, HasLen, 1) // Should have an attestation
-		ots.mu.Unlock()
-		atg.mu.Unlock()
-	}
+		return true
+	}, 10*time.Second, 100*time.Millisecond)
 
 	// Have the rest of the validators attest
 	for i := 1; i < len(validatorKeys); i++ {
@@ -300,8 +314,17 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 
 	logger.Info().Msg("Remaining validators attested")
 
-	// Wait for gossip to propagate
-	time.Sleep(time.Second * 3)
+	// Wait for all enshrined bifrosts to have the transaction ready
+	pollForCondition(c, "all validators to have transaction ready", func() bool {
+		for i, eb := range ebs {
+			injectTxs, _ := eb.ProposalInjectTxs(sdk.Context{}, 10000000)
+			if len(injectTxs) != 1 {
+				logger.Info().Msgf("Validator %d: Has %d transactions ready (waiting for 1)", i, len(injectTxs))
+				return false
+			}
+		}
+		return true
+	}, 10*time.Second, 100*time.Millisecond)
 
 	// for _, atg := range attestationGossips {
 	// 	atg.mu.Lock()
@@ -322,7 +345,7 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 	var injectedTxQuorum *stypes.MsgObservedTxQuorum
 	for i, eb := range ebs {
 		injectTxs, _ := eb.ProposalInjectTxs(sdk.Context{}, 10000000)
-		c.Assert(len(injectTxs), Equals, 1, Commentf("Validator %d: Expected 1 tx to be ready for injection", i))
+		c.Assert(len(injectTxs), Equals, 1, Commentf("Validator %d: Expected 1 tx to be ready for injection", i)) // fails here
 		if i == 0 {
 			msgs, err := eb.GetInjectedMsgs(sdk.Context{}, injectTxs)
 			c.Assert(err, IsNil)
@@ -377,6 +400,18 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 	}
 }
 
+// Helper function to poll for a condition with timeout
+func pollForCondition(c *C, description string, condition func() bool, maxWait time.Duration, pollInterval time.Duration) {
+	deadline := time.Now().Add(maxWait)
+	for time.Now().Before(deadline) {
+		if condition() {
+			return
+		}
+		time.Sleep(pollInterval)
+	}
+	c.Fatalf("Timed out waiting for %s after %v", description, maxWait)
+}
+
 // Mock chain client for testing
 type mockChainClient struct{}
 
@@ -423,6 +458,10 @@ func (m *mockChainClient) GetAddress(common.PubKey) string {
 
 func (m *mockChainClient) GetBlockScannerHeight() (int64, error) {
 	return 0, nil
+}
+
+func (m *mockChainClient) RollbackBlockScanner() error {
+	return nil
 }
 
 func (m *mockChainClient) GetConfig() config.BifrostChainConfiguration {

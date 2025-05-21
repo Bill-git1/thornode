@@ -250,6 +250,11 @@ func (b *MockChainClient) GetBlockScannerHeight() (int64, error) {
 	return 0, nil
 }
 
+// RollbackBlockScanner rolls back the block scanner to the last observed block
+func (c *MockChainClient) RollbackBlockScanner() error {
+	return nil
+}
+
 func (b *MockChainClient) GetLatestTxForVault(vault string) (string, string, error) {
 	return "", "", nil
 }

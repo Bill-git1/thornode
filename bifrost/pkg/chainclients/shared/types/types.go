@@ -62,6 +62,9 @@ type ChainClient interface {
 
 	// GetLatestTxForVault returns last observed and broadcasted tx for a particular vault and chain
 	GetLatestTxForVault(vault string) (string, string, error)
+
+	// RollbackBlockScanner rolls back the block scanner to re-observe recent blocks.
+	RollbackBlockScanner() error
 }
 
 // SolvencyReporter reports the solvency of the chain at the given height.

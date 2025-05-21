@@ -1,11 +1,13 @@
 package blockscanner
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -335,4 +337,117 @@ func (s *BlockScannerTestSuite) TestIsChainPaused(c *C) {
 	time.Sleep(constants.ThorchainBlockTime)
 	isHalted = cbs.isChainPaused()
 	c.Assert(isHalted, Equals, true)
+}
+
+func (s *BlockScannerTestSuite) TestRollbackScanner(c *C) {
+	// Define test variables
+	lastObservedHeight := int64(100)
+	startBlockHeight := lastObservedHeight + 20 // We're ahead of the last observed height
+
+	// Mock HTTP responses
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c.Logf("Test request URI: %s", r.RequestURI)
+		switch {
+		case strings.HasPrefix(r.RequestURI, thorclient.MimirEndpoint):
+			buf, err := os.ReadFile("../../test/fixtures/endpoints/mimir/mimir.json")
+			c.Assert(err, IsNil)
+			_, err = w.Write(buf)
+			c.Assert(err, IsNil)
+		case strings.HasPrefix(r.RequestURI, "/thorchain/lastblock"):
+			// Return last observed height for ETH chain
+			resp := fmt.Sprintf(`[{"chain": "ETH", "last_observed_in": %d, "last_signed_out": 0, "thorchain": 150}]`, lastObservedHeight)
+			_, err := w.Write([]byte(resp))
+			c.Assert(err, IsNil)
+		case strings.HasPrefix(r.RequestURI, "/thorchain/constants"):
+			// Return constants used in rollback calculation - note integers WITHOUT quotes
+			resp := `{"int_64_values": {"ObservationDelayFlexibility": 10, "ThorchainBlockTime": 6000000000}}`
+			_, err := w.Write([]byte(resp))
+			c.Assert(err, IsNil)
+		}
+	})
+
+	// Setup scanner with mock storage and bridge
+	mss := NewMockScannerStorage()
+	server := httptest.NewServer(h)
+	defer server.Close()
+
+	bridge, err := thorclient.NewThorchainBridge(config.BifrostClientConfiguration{
+		ChainID:         "thorchain",
+		ChainHost:       server.Listener.Addr().String(),
+		ChainRPC:        server.Listener.Addr().String(),
+		SignerName:      "bob",
+		SignerPasswd:    "password",
+		ChainHomeFolder: ".",
+	}, s.m, s.keys)
+	c.Assert(err, IsNil)
+
+	// Create block scanner with initial position higher than where we'll rollback to
+	cbs, err := NewBlockScanner(config.BifrostBlockScannerConfiguration{
+		StartBlockHeight:           startBlockHeight,
+		BlockScanProcessors:        1,
+		HTTPRequestTimeout:         time.Second,
+		HTTPRequestReadTimeout:     time.Second * 30,
+		HTTPRequestWriteTimeout:    time.Second * 30,
+		MaxHTTPRequestRetry:        3,
+		BlockHeightDiscoverBackoff: time.Second,
+		BlockRetryInterval:         time.Second,
+		ChainID:                    common.ETHChain,
+	}, mss, m, bridge, DummyFetcher{})
+	c.Assert(err, IsNil)
+
+	// Set the scanner's current position to be ahead
+	atomic.StoreInt64(&cbs.previousBlock, startBlockHeight)
+	err = mss.SetScanPos(startBlockHeight)
+	c.Assert(err, IsNil)
+
+	// Verify initial position
+	c.Assert(cbs.PreviousHeight(), Equals, startBlockHeight)
+
+	// Start scanner
+	globalChan := make(chan types.TxIn)
+	nfChan := make(chan common.NetworkFee)
+	cbs.Start(globalChan, nfChan)
+	defer cbs.Stop()
+
+	// Allow scanner to initialize
+	time.Sleep(time.Second)
+
+	// Call rollback
+	err = cbs.RollbackToLastObserved()
+	c.Assert(err, IsNil)
+
+	// Allow time for rollback to be processed
+	time.Sleep(time.Second * 2)
+
+	// Verify rollback occurred
+	currentHeight := cbs.PreviousHeight()
+	c.Assert(currentHeight < startBlockHeight, Equals, true, Commentf("Expected height < %d, got %d", startBlockHeight, currentHeight))
+	c.Assert(currentHeight <= lastObservedHeight, Equals, true, Commentf("Expected height <= %d, got %d", lastObservedHeight, currentHeight))
+
+	// Verify storage was updated as well
+	pos, err := mss.GetScanPos()
+	c.Assert(err, IsNil)
+	c.Assert(pos, Equals, currentHeight)
+
+	// Test edge case: current height already below rollback height
+	// Set the scanner to a height below the last observed
+	lowerHeight := lastObservedHeight - 50
+	atomic.StoreInt64(&cbs.previousBlock, lowerHeight)
+	err = mss.SetScanPos(lowerHeight)
+	c.Assert(err, IsNil)
+
+	// Call rollback again
+	err = cbs.RollbackToLastObserved()
+	c.Assert(err, IsNil)
+
+	// Allow time for rollback to process
+	time.Sleep(time.Second * 2)
+
+	// Verify height didn't change (since we were already below the rollback point)
+	c.Assert(cbs.PreviousHeight(), Equals, lowerHeight, Commentf("Height should not change when already below rollback point"))
+
+	// Verify storage wasn't modified
+	pos, err = mss.GetScanPos()
+	c.Assert(err, IsNil)
+	c.Assert(pos, Equals, lowerHeight)
 }
