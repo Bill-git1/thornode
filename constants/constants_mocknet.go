@@ -34,6 +34,8 @@ func init() {
 		StreamingSwapMinBPFee:               100, // TODO: remove on hard fork
 		VirtualMultSynthsBasisPoints:        20_000,
 		MinTxOutVolumeThreshold:             2000000_00000000,
+		MissingBlockChurnOut:                100,
+		MaxMissingBlockChurnOut:             5,
 		TxOutDelayRate:                      2000000_00000000,
 		MaxSynthPerPoolDepth:                3_500,
 		MaxSynthsForSaversYield:             5000,

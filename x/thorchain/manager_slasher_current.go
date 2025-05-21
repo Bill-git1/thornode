@@ -48,12 +48,14 @@ func (s *SlasherVCUR) BeginBlock(ctx cosmos.Context, constAccessor constants.Con
 
 	// Identify validators which didn't sign the previous block
 	var missingSignAddresses []crypto.Address
+	var successfulSignAddresses []crypto.Address
 	for i := range ctx.CometInfo().GetLastCommit().Votes().Len() {
 		voteInfo := ctx.CometInfo().GetLastCommit().Votes().Get(i)
 		if voteInfo.GetBlockIDFlag() != comet.BlockIDFlagAbsent {
-			continue
+			successfulSignAddresses = append(successfulSignAddresses, voteInfo.Validator().Address())
+		} else {
+			missingSignAddresses = append(missingSignAddresses, voteInfo.Validator().Address())
 		}
-		missingSignAddresses = append(missingSignAddresses, voteInfo.Validator().Address())
 	}
 
 	// Do not continue if there is no action to take.
@@ -91,6 +93,13 @@ func (s *SlasherVCUR) BeginBlock(ctx cosmos.Context, constAccessor constants.Con
 	for _, missingSignAddress := range missingSignAddresses {
 		if err := s.HandleMissingSign(ctx, missingSignAddress, constAccessor, validatorAddresses); err != nil {
 			ctx.Logger().Error("fail to slash for missing signing a block", "error", err)
+		}
+	}
+
+	// Act on successful signs.
+	for _, successfulSignAddress := range successfulSignAddresses {
+		if err := s.HandleSuccessfulSign(ctx, successfulSignAddress, constAccessor, validatorAddresses); err != nil {
+			ctx.Logger().Error("fail to mark for successfully signing a block", "error", err)
 		}
 	}
 }
@@ -131,9 +140,35 @@ func (s *SlasherVCUR) HandleDoubleSign(ctx cosmos.Context, addr crypto.Address, 
 	return fmt.Errorf("could not find active node account with validator address: %s", addr)
 }
 
+// HandleSuccessfulSign - decrement missing blocks from a validator for signing a block
+func (s *SlasherVCUR) HandleSuccessfulSign(ctx cosmos.Context, addr crypto.Address, constAccessor constants.ConstantValues, validatorAddresses []nodeAddressValidatorAddressPair) error {
+	for _, pair := range validatorAddresses {
+		if addr.String() != pair.validatorAddress.String() {
+			continue
+		}
+
+		na, err := s.keeper.GetNodeAccount(ctx, pair.nodeAddress)
+		if err != nil {
+			return err
+		}
+
+		if na.MissingBlocks == 0 {
+			return nil
+		}
+
+		// decrement the number of blocks that weren't signed
+		na.MissingBlocks -= 1
+
+		return s.keeper.SetNodeAccount(ctx, na)
+	}
+
+	return fmt.Errorf("could not find active node account with validator address: %s", addr)
+}
+
 // HandleMissingSign - slashes a validator for not signing a block
 func (s *SlasherVCUR) HandleMissingSign(ctx cosmos.Context, addr crypto.Address, constAccessor constants.ConstantValues, validatorAddresses []nodeAddressValidatorAddressPair) error {
 	missBlockSignSlashPoints := s.keeper.GetConfigInt64(ctx, constants.MissBlockSignSlashPoints)
+	maxTrack := s.keeper.GetConfigInt64(ctx, constants.MaxTrackMissingBlock)
 
 	for _, pair := range validatorAddresses {
 		if addr.String() != pair.validatorAddress.String() {
@@ -151,6 +186,12 @@ func (s *SlasherVCUR) HandleMissingSign(ctx cosmos.Context, addr crypto.Address,
 		}))
 		if err := s.keeper.IncNodeAccountSlashPoints(slashCtx, na.NodeAddress, missBlockSignSlashPoints); err != nil {
 			ctx.Logger().Error("fail to increase node account slash points", "error", err, "address", na.NodeAddress.String())
+		}
+
+		// increment the number of blocks that weren't signed
+		na.MissingBlocks += 1
+		if na.MissingBlocks > uint64(maxTrack) {
+			na.MissingBlocks = uint64(maxTrack)
 		}
 
 		return s.keeper.SetNodeAccount(ctx, na)

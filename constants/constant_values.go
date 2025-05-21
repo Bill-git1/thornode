@@ -34,6 +34,9 @@ const (
 	DynamicMaxAnchorCalcInterval
 	ChurnInterval
 	ChurnRetryInterval
+	MissingBlockChurnOut
+	MaxMissingBlockChurnOut
+	MaxTrackMissingBlock
 	BadValidatorRedline
 	LackOfObservationPenalty
 	SigningTransactionPeriod

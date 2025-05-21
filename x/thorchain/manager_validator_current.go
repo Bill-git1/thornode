@@ -159,6 +159,11 @@ func (vm *ValidatorMgrVCUR) churn(ctx cosmos.Context) error {
 		return err
 	}
 
+	// mark someone(s) for not signing blocks
+	if err := vm.markMissingActors(ctx); err != nil {
+		return err
+	}
+
 	next, ok, err := vm.nextVaultNodeAccounts(ctx, int(desiredValidatorSet))
 	if err != nil {
 		return err
@@ -343,6 +348,7 @@ func (vm *ValidatorMgrVCUR) EndBlock(ctx cosmos.Context, mgr Manager) []abci.Val
 		na.UpdateStatus(NodeActive, height)
 		na.LeaveScore = 0
 		na.RequestedToLeave = false
+		na.MissingBlocks = 0 // zero missing blocks that weren't signed (if any)
 
 		vm.k.ResetNodeAccountSlashPoints(ctx, na.NodeAddress)
 		if err := vm.k.SetNodeAccount(ctx, na); err != nil {
@@ -1091,6 +1097,40 @@ func (vm *ValidatorMgrVCUR) findBadActors(ctx cosmos.Context, minSlashPointsForB
 	}
 
 	return badActors, nil
+}
+
+// Iterate over active node accounts, finding the one that hasn't been signing blocks
+func (vm *ValidatorMgrVCUR) markMissingActors(ctx cosmos.Context) error {
+	maxMissingBlocks := vm.k.GetConfigInt64(ctx, constants.MissingBlockChurnOut)
+	maxChurnOut := vm.k.GetConfigInt64(ctx, constants.MaxMissingBlockChurnOut)
+	if maxMissingBlocks == 0 || maxChurnOut == 0 {
+		return nil // skip this mark
+	}
+
+	nas, err := vm.k.ListActiveValidators(ctx)
+	if err != nil {
+		return err
+	}
+
+	counter := int64(0)
+	for _, n := range nas {
+		// Only mark an old actor not already marked for churn-out.
+		if n.LeaveScore > 0 {
+			continue
+		}
+
+		if maxMissingBlocks < int64(n.MissingBlocks) {
+			if err := vm.markActor(ctx, n, "for not signing blocks"); err != nil {
+				return err
+			}
+			counter += 1
+			if counter >= maxChurnOut {
+				break
+			}
+		}
+	}
+
+	return nil
 }
 
 // Iterate over active node accounts, finding the one that has been active longest

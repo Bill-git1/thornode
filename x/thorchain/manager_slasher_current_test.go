@@ -201,6 +201,250 @@ func (s *SlashingVCURSuite) TestNewSlasher(c *C) {
 	c.Assert(slasher, NotNil)
 }
 
+func (s *SlashingVCURSuite) TestHandleSuccessfulSign(c *C) {
+	ctx, _ := setupKeeperForTest(c)
+	constAccessor := constants.GetConstantValues(GetCurrentVersion())
+
+	testCases := []struct {
+		name                  string
+		setupNodeAccount      func() (NodeAccount, error)
+		validatorAddr         string
+		expectedMissingBefore uint64
+		expectedMissingAfter  uint64
+		expectedErr           error
+	}{
+		{
+			name: "normal node account with missing blocks",
+			setupNodeAccount: func() (NodeAccount, error) {
+				na := GetRandomValidatorNode(NodeActive)
+				na.MissingBlocks = 10
+				return na, nil
+			},
+			expectedMissingBefore: 10,
+			expectedMissingAfter:  9,
+			expectedErr:           nil,
+		},
+		{
+			name: "node account with zero missing blocks",
+			setupNodeAccount: func() (NodeAccount, error) {
+				na := GetRandomValidatorNode(NodeActive)
+				na.MissingBlocks = 0
+				return na, nil
+			},
+			expectedMissingBefore: 0,
+			expectedMissingAfter:  0,
+			expectedErr:           nil,
+		},
+		{
+			name: "node account with max missing blocks",
+			setupNodeAccount: func() (NodeAccount, error) {
+				na := GetRandomValidatorNode(NodeActive)
+				na.MissingBlocks = 100
+				return na, nil
+			},
+			expectedMissingBefore: 100,
+			expectedMissingAfter:  99,
+			expectedErr:           nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		c.Logf("Test case: %s", tc.name)
+		na, err := tc.setupNodeAccount()
+		c.Assert(err, IsNil)
+
+		keeper := &TestDoubleSlashKeeper{
+			na:          na,
+			network:     NewNetwork(),
+			slashPoints: make(map[string]int64),
+			constants:   make(map[string]int64),
+		}
+		slasher := newSlasherVCUR(keeper, NewDummyEventMgr())
+
+		pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeConsPub, na.ValidatorConsPubKey)
+		c.Assert(err, IsNil)
+
+		var pair nodeAddressValidatorAddressPair
+		pair.nodeAddress = na.NodeAddress
+		pair.validatorAddress = pk.Address()
+
+		c.Assert(keeper.na.MissingBlocks, Equals, tc.expectedMissingBefore)
+		err = slasher.HandleSuccessfulSign(ctx, pk.Address(), constAccessor, []nodeAddressValidatorAddressPair{pair})
+		c.Assert(err, IsNil)
+		c.Assert(keeper.na.MissingBlocks, Equals, tc.expectedMissingAfter)
+	}
+}
+
+func (s *SlashingVCURSuite) TestHandleSuccessfulSignErrors(c *C) {
+	ctx, _ := setupKeeperForTest(c)
+	constAccessor := constants.GetConstantValues(GetCurrentVersion())
+
+	// Test case: validator address not found
+	na := GetRandomValidatorNode(NodeActive)
+	keeper := &TestDoubleSlashKeeper{
+		na:          na,
+		network:     NewNetwork(),
+		slashPoints: make(map[string]int64),
+		constants:   make(map[string]int64),
+	}
+	slasher := newSlasherVCUR(keeper, NewDummyEventMgr())
+
+	randomAddr := GetRandomBech32Addr().String()
+	err := slasher.HandleSuccessfulSign(ctx, []byte(randomAddr), constAccessor, []nodeAddressValidatorAddressPair{})
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Matches, "could not find active node account with validator address: .*")
+}
+
+func (s *SlashingVCURSuite) TestHandleMissingSign(c *C) {
+	ctx, _ := setupKeeperForTest(c)
+	constAccessor := constants.GetConstantValues(GetCurrentVersion())
+
+	testCases := []struct {
+		name                  string
+		setupNodeAccount      func() (NodeAccount, error)
+		maxTrack              int64
+		missBlockSignSlashPts int64
+		expectedMissingBefore uint64
+		expectedMissingAfter  uint64
+		expectedSlashPoints   int64
+		expectedErr           error
+	}{
+		{
+			name: "normal node account with no missing blocks",
+			setupNodeAccount: func() (NodeAccount, error) {
+				na := GetRandomValidatorNode(NodeActive)
+				na.MissingBlocks = 0
+				return na, nil
+			},
+			maxTrack:              10,
+			missBlockSignSlashPts: 5,
+			expectedMissingBefore: 0,
+			expectedMissingAfter:  1,
+			expectedSlashPoints:   5,
+			expectedErr:           nil,
+		},
+		{
+			name: "node account with some missing blocks",
+			setupNodeAccount: func() (NodeAccount, error) {
+				na := GetRandomValidatorNode(NodeActive)
+				na.MissingBlocks = 5
+				return na, nil
+			},
+			maxTrack:              10,
+			missBlockSignSlashPts: 5,
+			expectedMissingBefore: 5,
+			expectedMissingAfter:  6,
+			expectedSlashPoints:   5,
+			expectedErr:           nil,
+		},
+		{
+			name: "node account at max missing blocks",
+			setupNodeAccount: func() (NodeAccount, error) {
+				na := GetRandomValidatorNode(NodeActive)
+				na.MissingBlocks = 10
+				return na, nil
+			},
+			maxTrack:              10,
+			missBlockSignSlashPts: 5,
+			expectedMissingBefore: 10,
+			expectedMissingAfter:  10, // Should not increase beyond maxTrack
+			expectedSlashPoints:   5,
+			expectedErr:           nil,
+		},
+		{
+			name: "node account exceeding max missing blocks",
+			setupNodeAccount: func() (NodeAccount, error) {
+				na := GetRandomValidatorNode(NodeActive)
+				na.MissingBlocks = 11 // This is already above maxTrack, but should be capped
+				return na, nil
+			},
+			maxTrack:              10,
+			missBlockSignSlashPts: 5,
+			expectedMissingBefore: 11,
+			expectedMissingAfter:  10, // Should be capped at maxTrack
+			expectedSlashPoints:   5,
+			expectedErr:           nil,
+		},
+		{
+			name: "node account with low maxTrack value",
+			setupNodeAccount: func() (NodeAccount, error) {
+				na := GetRandomValidatorNode(NodeActive)
+				na.MissingBlocks = 1
+				return na, nil
+			},
+			maxTrack:              3,
+			missBlockSignSlashPts: 5,
+			expectedMissingBefore: 1,
+			expectedMissingAfter:  2,
+			expectedSlashPoints:   5,
+			expectedErr:           nil,
+		},
+		{
+			name: "node account with high slash points",
+			setupNodeAccount: func() (NodeAccount, error) {
+				na := GetRandomValidatorNode(NodeActive)
+				na.MissingBlocks = 5
+				return na, nil
+			},
+			maxTrack:              10,
+			missBlockSignSlashPts: 20,
+			expectedMissingBefore: 5,
+			expectedMissingAfter:  6,
+			expectedSlashPoints:   20,
+			expectedErr:           nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		c.Logf("Test case: %s", tc.name)
+		na, err := tc.setupNodeAccount()
+		c.Assert(err, IsNil)
+
+		keeper := &TestDoubleSlashKeeper{
+			na:          na,
+			network:     NewNetwork(),
+			slashPoints: make(map[string]int64),
+			constants:   make(map[string]int64),
+		}
+		keeper.constants["MissBlockSignSlashPoints"] = tc.missBlockSignSlashPts
+		keeper.constants["MaxTrackMissingBlock"] = tc.maxTrack
+		slasher := newSlasherVCUR(keeper, NewDummyEventMgr())
+
+		pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeConsPub, na.ValidatorConsPubKey)
+		c.Assert(err, IsNil)
+
+		var pair nodeAddressValidatorAddressPair
+		pair.nodeAddress = na.NodeAddress
+		pair.validatorAddress = pk.Address()
+
+		c.Assert(keeper.na.MissingBlocks, Equals, tc.expectedMissingBefore)
+		err = slasher.HandleMissingSign(ctx, pk.Address(), constAccessor, []nodeAddressValidatorAddressPair{pair})
+		c.Assert(err, IsNil)
+		c.Assert(keeper.na.MissingBlocks, Equals, tc.expectedMissingAfter)
+		c.Assert(keeper.slashPoints[na.NodeAddress.String()], Equals, tc.expectedSlashPoints)
+	}
+}
+
+func (s *SlashingVCURSuite) TestHandleMissingSignErrors(c *C) {
+	ctx, _ := setupKeeperForTest(c)
+	constAccessor := constants.GetConstantValues(GetCurrentVersion())
+
+	// Test case: validator address not found
+	na := GetRandomValidatorNode(NodeActive)
+	keeper := &TestDoubleSlashKeeper{
+		na:          na,
+		network:     NewNetwork(),
+		slashPoints: make(map[string]int64),
+		constants:   make(map[string]int64),
+	}
+	slasher := newSlasherVCUR(keeper, NewDummyEventMgr())
+
+	randomAddr := GetRandomBech32Addr().String()
+	err := slasher.HandleMissingSign(ctx, []byte(randomAddr), constAccessor, []nodeAddressValidatorAddressPair{})
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Matches, "could not find active node account with validator address: .*")
+}
+
 func (s *SlashingVCURSuite) TestDoubleSign(c *C) {
 	ctx, _ := setupKeeperForTest(c)
 	constAccessor := constants.GetConstantValues(GetCurrentVersion())

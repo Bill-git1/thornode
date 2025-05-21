@@ -874,3 +874,103 @@ func (vts *ValidatorMgrVCURTestSuite) TestActiveNodeRequestToLeaveShouldBeStandb
 	c.Assert(err, IsNil)
 	c.Assert(naAfter.RequestedToLeave, Equals, false)
 }
+
+func (vts *ValidatorMgrVCURTestSuite) TestMarkMissingActors(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(1000)
+
+	networkMgr := newValidatorMgrVCUR(mgr.Keeper(), mgr.NetworkMgr(), mgr.TxOutStore(), mgr.EventMgr())
+	c.Assert(networkMgr, NotNil)
+
+	// Set MissingBlockChurnOut mimir
+	missingBlocksThreshold := int64(10)
+	mgr.Keeper().SetMimir(ctx, constants.MissingBlockChurnOut.String(), missingBlocksThreshold)
+
+	// Create active nodes with different missing blocks counts
+	activeNode1 := GetRandomValidatorNode(NodeActive)
+	activeNode1.MissingBlocks = 5 // Below threshold
+	c.Assert(mgr.Keeper().SetNodeAccount(ctx, activeNode1), IsNil)
+
+	activeNode2 := GetRandomValidatorNode(NodeActive)
+	activeNode2.MissingBlocks = 15 // Above threshold
+	c.Assert(mgr.Keeper().SetNodeAccount(ctx, activeNode2), IsNil)
+
+	activeNode3 := GetRandomValidatorNode(NodeActive)
+	activeNode3.MissingBlocks = 20 // Above threshold but already marked for churn
+	activeNode3.LeaveScore = 100
+	c.Assert(mgr.Keeper().SetNodeAccount(ctx, activeNode3), IsNil)
+
+	// Run the function being tested
+	err := networkMgr.markMissingActors(ctx)
+	c.Assert(err, IsNil)
+
+	// Check results
+	node1After, err := mgr.Keeper().GetNodeAccount(ctx, activeNode1.NodeAddress)
+	c.Assert(err, IsNil)
+	c.Assert(node1After.LeaveScore, Equals, uint64(0), Commentf("Node with missing blocks below threshold should not be marked"))
+
+	node2After, err := mgr.Keeper().GetNodeAccount(ctx, activeNode2.NodeAddress)
+	c.Assert(err, IsNil)
+	c.Assert(node2After.LeaveScore, Equals, uint64(100000000000), Commentf("Node with missing blocks above threshold should be marked, %d", node2After.LeaveScore))
+
+	node3After, err := mgr.Keeper().GetNodeAccount(ctx, activeNode3.NodeAddress)
+	c.Assert(err, IsNil)
+	c.Assert(node3After.LeaveScore, Equals, uint64(100), Commentf("Node already marked for churn should keep its leave score"))
+}
+
+func (vts *ValidatorMgrVCURTestSuite) TestMarkMissingActors_NoActiveNodes(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	networkMgr := newValidatorMgrVCUR(mgr.Keeper(), mgr.NetworkMgr(), mgr.TxOutStore(), mgr.EventMgr())
+
+	// Set MissingBlockChurnOut mimir
+	mgr.Keeper().SetMimir(ctx, constants.MissingBlockChurnOut.String(), 10)
+
+	// Run with no active nodes
+	err := networkMgr.markMissingActors(ctx)
+	c.Assert(err, IsNil, Commentf("Should handle empty node list gracefully"))
+}
+
+func (vts *ValidatorMgrVCURTestSuite) TestMarkMissingActors_EdgeCases(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	networkMgr := newValidatorMgrVCUR(mgr.Keeper(), mgr.NetworkMgr(), mgr.TxOutStore(), mgr.EventMgr())
+
+	// Set MissingBlockChurnOut mimir to exactly match a node's missing blocks
+	missingBlocksThreshold := int64(10)
+	mgr.Keeper().SetMimir(ctx, constants.MissingBlockChurnOut.String(), missingBlocksThreshold)
+
+	// Create node with exactly the threshold number of missing blocks
+	activeNode := GetRandomValidatorNode(NodeActive)
+	activeNode.MissingBlocks = uint64(missingBlocksThreshold)
+	c.Assert(mgr.Keeper().SetNodeAccount(ctx, activeNode), IsNil)
+
+	// Run the function
+	err := networkMgr.markMissingActors(ctx)
+	c.Assert(err, IsNil)
+
+	// Check result - node should not be marked as the condition is > threshold, not >=
+	nodeAfter, err := mgr.Keeper().GetNodeAccount(ctx, activeNode.NodeAddress)
+	c.Assert(err, IsNil)
+	c.Assert(nodeAfter.LeaveScore, Equals, uint64(0), Commentf("Node with missing blocks equal to threshold should not be marked"))
+}
+
+func (vts *ValidatorMgrVCURTestSuite) TestMarkMissingActors_MimirDisabled(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	networkMgr := newValidatorMgrVCUR(mgr.Keeper(), mgr.NetworkMgr(), mgr.TxOutStore(), mgr.EventMgr())
+
+	// Set MissingBlockChurnOut mimir to 0 (disabled)
+	mgr.Keeper().SetMimir(ctx, constants.MissingBlockChurnOut.String(), 0)
+
+	// Create node with missing blocks
+	activeNode := GetRandomValidatorNode(NodeActive)
+	activeNode.MissingBlocks = 100 // High number of missing blocks
+	c.Assert(mgr.Keeper().SetNodeAccount(ctx, activeNode), IsNil)
+
+	// Run the function
+	err := networkMgr.markMissingActors(ctx)
+	c.Assert(err, IsNil)
+
+	// Check result - node should not be marked when mimir is disabled
+	nodeAfter, err := mgr.Keeper().GetNodeAccount(ctx, activeNode.NodeAddress)
+	c.Assert(err, IsNil)
+	c.Assert(nodeAfter.LeaveScore, Equals, uint64(0), Commentf("Node should not be marked when MissingBlockChurnOut is disabled"))
+}

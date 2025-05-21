@@ -29,6 +29,9 @@ func NewConstantValue() *ConstantVals {
 			FundMigrationInterval:               360,                // number of blocks THORNode will attempt to move funds from a retiring vault to an active one
 			ChurnInterval:                       43200,              // How many blocks THORNode try to rotate validators
 			ChurnRetryInterval:                  720,                // How many blocks until we retry a churn (only if we haven't had a successful churn in ChurnInterval blocks
+			MissingBlockChurnOut:                0,                  // num of blocks a validator needs to NOT sign between churns
+			MaxMissingBlockChurnOut:             0,                  // max number of nodes to be churned out due to not signing blocks
+			MaxTrackMissingBlock:                700,                // maximum number of missing blocks to track for a block signer
 			BadValidatorRedline:                 3,                  // redline multiplier to find a multitude of bad actors
 			LackOfObservationPenalty:            2,                  // add two slash point for each block where a node does not observe
 			SigningTransactionPeriod:            300,                // how many blocks before a request to sign a tx by yggdrasil pool, is counted as delinquent.
