@@ -224,7 +224,7 @@ func (h DepositHandler) addSwap(ctx cosmos.Context, msg MsgSwap) {
 		if err := h.mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
 			ctx.Logger().Error("fail to emit limit swap event", "error", err)
 		}
-		if err := h.mgr.Keeper().SetAdvSwapQueueItem(ctx, msg); err != nil {
+		if err := h.mgr.AdvSwapQueueMgr().AddSwapQueueItem(ctx, msg); err != nil {
 			ctx.Logger().Error("fail to add swap to queue", "error", err)
 		}
 	} else {

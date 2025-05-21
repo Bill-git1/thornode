@@ -63,61 +63,69 @@ func AsgardInvariant(k KVStore) common.Invariant {
 			}
 		}
 
-		// sum all rune in pending swaps
-		var swapCoins common.Coins
-		swapIter := k.GetSwapQueueIterator(ctx)
-		defer swapIter.Close()
-		for ; swapIter.Valid(); swapIter.Next() {
-			var swap MsgSwap
-			k.Cdc().MustUnmarshal(swapIter.Value(), &swap)
+		processSwaps := func(ctx cosmos.Context, k KVStore, swapIter cosmos.Iterator) common.Coins { // Replace IteratorType with the actual iterator type
+			var swapCoins common.Coins
+			defer swapIter.Close()
 
-			if len(swap.Tx.Coins) != 1 {
-				broken = true
-				msg = append(msg, fmt.Sprintf("wrong number of coins for swap: %d, %s", len(swap.Tx.Coins), swap.Tx.ID))
-				continue
-			}
+			for ; swapIter.Valid(); swapIter.Next() {
+				var swap MsgSwap
+				k.Cdc().MustUnmarshal(swapIter.Value(), &swap)
 
-			coin := swap.Tx.Coins[0]
-			if !coin.IsNative() && !swap.TargetAsset.IsNative() {
-				continue // only verifying native coins in this invariant
-			}
+				if len(swap.Tx.Coins) != 1 {
+					broken = true
+					msg = append(msg, fmt.Sprintf("wrong number of coins for swap: %d, %s", len(swap.Tx.Coins), swap.Tx.ID))
+					continue
+				}
 
-			// adjust for streaming swaps
-			ss := swap.GetStreamingSwap() // GetStreamingSwap() rather than var so In.IsZero() doesn't panic
-			// A non-streaming affiliate swap and streaming main swap could have the same TxID,
-			// so explicitly check IsStreaming to not double-count the main swap's In and Out amounts.
-			if swap.IsStreaming() {
-				var err error
-				ss, err = k.GetStreamingSwap(ctx, swap.Tx.ID)
-				if err != nil {
-					ctx.Logger().Error("error getting streaming swap", "error", err)
-					continue // should never happen
+				coin := swap.Tx.Coins[0]
+				if !coin.IsNative() && !swap.TargetAsset.IsNative() {
+					continue // only verifying native coins in this invariant
+				}
+
+				// adjust for streaming swaps
+				ss := swap.GetStreamingSwap() // GetStreamingSwap() rather than var so In.IsZero() doesn't panic
+
+				// A non-streaming affiliate swap and streaming main swap could have the same TxID,
+				// so explicitly check IsStreaming to not double-count the main swap's In and Out amounts.
+				if swap.IsStreaming() {
+					var err error
+					ss, err = k.GetStreamingSwap(ctx, swap.Tx.ID)
+					if err != nil {
+						ctx.Logger().Error("error getting streaming swap", "error", err)
+						continue // should never happen
+					}
+				}
+
+				// Trade Assets do not correspond to Module balance coins and panic on .Native(),
+				// so do not include them in swapCoins.
+				if coin.IsNative() && !coin.Asset.IsTradeAsset() && !coin.Asset.IsSecuredAsset() {
+					if !ss.In.IsZero() {
+						// adjust for stream swap amount, the amount In has been added
+						// to the pool but not deducted from the tx or module, so deduct
+						// that In amount from the tx coin
+						coin.Amount = coin.Amount.Sub(ss.In)
+					}
+					swapCoins = swapCoins.Add(coin)
+				}
+
+				if swap.TargetAsset.IsNative() && !swap.TargetAsset.IsTradeAsset() && !swap.TargetAsset.IsSecuredAsset() && !ss.Out.IsZero() {
+					swapCoins = swapCoins.Add(common.NewCoin(swap.TargetAsset, ss.Out))
 				}
 			}
 
-			// Trade Assets do not correspond to Module balance coins and panic on .Native(),
-			// so do not include them in swapCoins.
-			if coin.IsNative() && !coin.Asset.IsTradeAsset() && !coin.Asset.IsSecuredAsset() {
-				if !ss.In.IsZero() {
-					// adjust for stream swap amount, the amount In has been added
-					// to the pool but not deducted from the tx or module, so deduct
-					// that In amount from the tx coin
-					coin.Amount = coin.Amount.Sub(ss.In)
-				}
-				swapCoins = swapCoins.Add(coin)
-			}
-
-			if swap.TargetAsset.IsNative() && !swap.TargetAsset.IsTradeAsset() && !swap.TargetAsset.IsSecuredAsset() && !ss.Out.IsZero() {
-				swapCoins = swapCoins.Add(common.NewCoin(swap.TargetAsset, ss.Out))
-			}
+			return swapCoins
 		}
+
+		// sum all rune in pending swaps
+		swapCoins := processSwaps(ctx, k, k.GetSwapQueueIterator(ctx))
+		advSwapCoins := processSwaps(ctx, k, k.GetAdvSwapQueueItemIterator(ctx))
 
 		// get asgard module balance
 		asgardAddr := k.GetModuleAccAddress(AsgardName)
 		asgardCoins := k.GetBalance(ctx, asgardAddr)
 
 		// asgard balance is expected to equal sum of pool and swap coins
-		expNative, _ := poolCoins.Add(swapCoins...).Native()
+		expNative, _ := poolCoins.Add(append(swapCoins, advSwapCoins...)...).Native()
 
 		// note: coins must be sorted for SafeSub
 		diffCoins, _ := asgardCoins.SafeSub(expNative.Sort()...)

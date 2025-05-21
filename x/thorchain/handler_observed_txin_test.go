@@ -748,7 +748,7 @@ func (s HandlerObservedTxInSuite) TestSwapWithAffiliate(c *C) {
 		0, 0, GetRandomBech32Addr(),
 	)
 	// no affiliate fees
-	addSwap(ctx, mgr.Keeper(), mgr.EventMgr(), *msg)
+	addSwap(ctx, mgr.Keeper(), mgr.AdvSwapQueueMgr(), mgr.EventMgr(), *msg)
 	swaps, err := queue.FetchQueue(ctx)
 	c.Assert(err, IsNil)
 	c.Assert(swaps, HasLen, 1, Commentf("%d", len(swaps)))

@@ -75,7 +75,7 @@ func (h ObservedTxInHandler) handle(ctx cosmos.Context, msg MsgObservedTxIn) (*c
 	return &cosmos.Result{}, nil
 }
 
-func addSwap(ctx cosmos.Context, k keeper.Keeper, eventMgr EventManager, msg MsgSwap) {
+func addSwap(ctx cosmos.Context, k keeper.Keeper, advQueueMgr AdvSwapQueue, eventMgr EventManager, msg MsgSwap) {
 	if k.AdvSwapQueueEnabled(ctx) {
 		// TODO: swap to synth if layer1 asset (follow on PR)
 		// TODO: create handler to modify/cancel a limit swap (follow on PR)
@@ -86,7 +86,7 @@ func addSwap(ctx cosmos.Context, k keeper.Keeper, eventMgr EventManager, msg Msg
 		if err := eventMgr.EmitEvent(ctx, evt); err != nil {
 			ctx.Logger().Error("fail to emit swap event", "error", err)
 		}
-		if err := k.SetAdvSwapQueueItem(ctx, msg); err != nil {
+		if err := advQueueMgr.AddSwapQueueItem(ctx, msg); err != nil {
 			ctx.Logger().Error("fail to add swap to queue", "error", err)
 		}
 	} else {

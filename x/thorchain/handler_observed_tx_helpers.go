@@ -264,7 +264,7 @@ func handleObservedTxInQuorum(
 
 	// if its a swap, send it to our queue for processing later
 	if isSwap {
-		addSwap(ctx, k, mgr.EventMgr(), *swapMsg)
+		addSwap(ctx, k, mgr.AdvSwapQueueMgr(), mgr.EventMgr(), *swapMsg)
 		return nil
 	}
 

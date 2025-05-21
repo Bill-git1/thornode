@@ -294,7 +294,7 @@ func (vm *SwapQueueAdvVCUR) getAssetPairs(ctx cosmos.Context) (tradePairs, Pools
 	return result, pools
 }
 
-func (vm *SwapQueueAdvVCUR) AddSwapItem(ctx cosmos.Context, msg MsgSwap) error {
+func (vm *SwapQueueAdvVCUR) AddSwapQueueItem(ctx cosmos.Context, msg MsgSwap) error {
 	if err := vm.k.SetAdvSwapQueueItem(ctx, msg); err != nil {
 		ctx.Logger().Error("fail to add swap item", "error", err)
 		return err

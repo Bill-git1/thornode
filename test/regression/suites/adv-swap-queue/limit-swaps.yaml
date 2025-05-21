@@ -1,0 +1,139 @@
+########################################################################################
+## this file is testing regular swaps with the adv swap queue manager. These tests are a 
+## copy/paste from swaps/swaps.yaml, except due to the extra block from setting the 
+## mimir, the pool depths are slightly different
+########################################################################################
+{{ template "default-state.yaml" }}
+---
+{{ template "btc-eth-pool-state.yaml" }}
+---
+type: create-blocks
+count: 1
+---
+type: tx-mimir
+key: EnableAdvSwapQueue
+value: 1
+signer: {{ addr_thor_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/pools
+asserts:
+  - .|length == 2
+---
+########################################################################################
+# swap to rune, this limit swap should execute in a single swap
+########################################################################################
+type: tx-observed-in
+signer: {{ addr_thor_dog }}
+txs:
+- tx:
+    id: '{{ observe_txid 1 }}'
+    chain: BTC
+    from_address: {{ addr_btc_fox }}
+    to_address: {{ addr_btc_dog }}
+    coins:
+      - amount: "5000000"
+        asset: "BTC.BTC"
+        decimals: 8
+    gas:
+      - amount: "10000"
+        asset: "BTC.BTC"
+    memo: "=<:THOR.RUNE:{{ addr_thor_fox }}:4533195711"
+  block_height: 1
+  finalise_height: 1
+  observed_pub_key: {{ pubkey_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
+asserts:
+  - .balances|length == 1
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2504533195711
+---
+########################################################################################
+# swap to asset, but won't swap due to limit swap, until another swap comes in later,
+# changing the pool ratio, thus allowing the limit swap to execute
+########################################################################################
+type: tx-deposit
+signer: {{ addr_thor_fox }}
+coins:
+  - amount: "10000000000"
+    asset: "rune"
+memo: "=<:BTC.BTC:{{ addr_btc_fox }}:8998438"
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - length == 0
+---
+type: tx-observed-in
+signer: {{ addr_thor_dog }}
+txs:
+- tx:
+    id: '{{ observe_txid 2 }}'
+    chain: BTC
+    from_address: {{ addr_btc_fox }}
+    to_address: {{ addr_btc_dog }}
+    coins:
+      - amount: "5000000"
+        asset: "BTC.BTC"
+        decimals: 8
+    gas:
+      - amount: "10000"
+        asset: "BTC.BTC"
+    memo: "=:THOR.RUNE:{{ addr_thor_fox }}"
+  block_height: 1
+  finalise_height: 1
+  observed_pub_key: {{ pubkey_dog }}
+---
+type: create-blocks
+count: 2
+---
+type: check
+endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
+asserts:
+  - .balances|length == 1
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2498670994582 
+---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - length == 1
+  - .[0].in_hash == "{{ native_txid -2 }}"
+  - .[0].coin.amount == "${OUT_AMOUNT=9771998}"
+---
+type: tx-observed-out
+signer: {{ addr_thor_dog }}
+txs:
+- tx:
+    id: '{{ observe_txid 3 }}'
+    chain: BTC
+    from_address: {{ addr_btc_dog }}
+    to_address: {{ addr_btc_fox }}
+    coins:
+      - amount: "${OUT_AMOUNT}"
+        asset: "BTC.BTC"
+        decimals: 8
+    gas:
+      - amount: "10500"
+        asset: "BTC.BTC"
+    memo: "OUT:{{ native_txid -2 }}"
+  block_height: 2
+  finalise_height: 2
+  observed_pub_key: {{ pubkey_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - .|length == 0

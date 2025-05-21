@@ -169,7 +169,7 @@ func (p *parser) ParseSwapMemoV3_0_0() (SwapMemo, error) {
 	var err error
 	asset := p.getAsset(1, true, common.EmptyAsset)
 	var swapType types.SwapType
-	if strings.EqualFold(p.parts[0], "limito") || strings.EqualFold(p.parts[0], "lo") {
+	if strings.EqualFold(p.parts[0], TxLimitSwap.String()) {
 		swapType = types.SwapType_limit
 	}
 
