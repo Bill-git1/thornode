@@ -1,0 +1,4 @@
+# Collapse all files
+*.pb.go gitlab-generated
+*.pulsar.go gitlab-generated
+test/regression/mnt/** gitlab-generated
