@@ -2258,7 +2258,7 @@ func (qs queryServer) queryKeygen(ctx cosmos.Context, req *types.QueryKeygenRequ
 	}, nil
 }
 
-func (qs queryServer) queryKeysign(ctx cosmos.Context, heightStr string, pubKey string) (*types.QueryKeysignResponse, error) {
+func (qs queryServer) queryKeysign(ctx cosmos.Context, heightStr, pubKey string) (*types.QueryKeysignResponse, error) {
 	height, err := extractBlockHeight(ctx, heightStr)
 	if err != nil {
 		return nil, err

@@ -304,10 +304,10 @@ func newMockNodeAccountIterator(cdc codec.BinaryCodec, nodeAccounts []NodeAccoun
 	return &mockNodeAccountIterator{cdc: cdc, nodeAccounts: nodeAccounts}
 }
 
-func (it *mockNodeAccountIterator) Domain() (start []byte, end []byte) { return nil, nil }
-func (it *mockNodeAccountIterator) Valid() bool                        { return it.i < len(it.nodeAccounts) }
-func (it *mockNodeAccountIterator) Next()                              { it.i++ }
-func (it *mockNodeAccountIterator) Key() (key []byte)                  { return nil }
+func (it *mockNodeAccountIterator) Domain() (start, end []byte) { return nil, nil }
+func (it *mockNodeAccountIterator) Valid() bool                 { return it.i < len(it.nodeAccounts) }
+func (it *mockNodeAccountIterator) Next()                       { it.i++ }
+func (it *mockNodeAccountIterator) Key() (key []byte)           { return nil }
 func (it *mockNodeAccountIterator) Value() (value []byte) {
 	bz, err := it.cdc.Marshal(&it.nodeAccounts[it.i])
 	if err != nil {
@@ -332,9 +332,9 @@ func newMockUpgradeVoteIterator(upgradeVotes []mockVote) *mockUpgradeVoteIterato
 	return &mockUpgradeVoteIterator{upgradeVotes: upgradeVotes}
 }
 
-func (it *mockUpgradeVoteIterator) Domain() (start []byte, end []byte) { return nil, nil }
-func (it *mockUpgradeVoteIterator) Valid() bool                        { return it.i < len(it.upgradeVotes) }
-func (it *mockUpgradeVoteIterator) Next()                              { it.i++ }
+func (it *mockUpgradeVoteIterator) Domain() (start, end []byte) { return nil, nil }
+func (it *mockUpgradeVoteIterator) Valid() bool                 { return it.i < len(it.upgradeVotes) }
+func (it *mockUpgradeVoteIterator) Next()                       { it.i++ }
 func (it *mockUpgradeVoteIterator) Key() (key []byte) {
 	return it.upgradeVotes[it.i].acc.Bytes()
 }
@@ -359,10 +359,10 @@ func newMockUpgradeProposalIterator(cdc codec.BinaryCodec, proposals []types.Upg
 	return &mockUpgradeProposalIterator{cdc: cdc, proposals: proposals}
 }
 
-func (it *mockUpgradeProposalIterator) Domain() (start []byte, end []byte) { return nil, nil }
-func (it *mockUpgradeProposalIterator) Valid() bool                        { return it.i < len(it.proposals) }
-func (it *mockUpgradeProposalIterator) Next()                              { it.i++ }
-func (it *mockUpgradeProposalIterator) Key() (key []byte)                  { return nil }
+func (it *mockUpgradeProposalIterator) Domain() (start, end []byte) { return nil, nil }
+func (it *mockUpgradeProposalIterator) Valid() bool                 { return it.i < len(it.proposals) }
+func (it *mockUpgradeProposalIterator) Next()                       { it.i++ }
+func (it *mockUpgradeProposalIterator) Key() (key []byte)           { return nil }
 func (it *mockUpgradeProposalIterator) Value() (value []byte) {
 	bz, err := it.cdc.Marshal(&it.proposals[it.i])
 	if err != nil {

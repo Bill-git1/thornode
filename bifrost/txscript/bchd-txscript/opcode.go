@@ -2683,7 +2683,6 @@ func opcodeCheckMultiSig(op *parsedOpcode, vm *Engine) error {
 				var err error
 				if vm.hasFlag(ScriptVerifyStrictEncoding) ||
 					vm.hasFlag(ScriptVerifyDERSignatures) {
-
 					parsedSig, err = bchec.ParseDERSignature(signature,
 						bchec.S256())
 				} else {
@@ -2824,7 +2823,6 @@ func opcodeCheckDataSig(op *parsedOpcode, vm *Engine) error {
 		signature, err = bchec.ParseSchnorrSignature(sigBytes)
 	} else if vm.hasFlag(ScriptVerifyStrictEncoding) ||
 		vm.hasFlag(ScriptVerifyDERSignatures) {
-
 		signature, err = bchec.ParseDERSignature(sigBytes, bchec.S256())
 	} else {
 		signature, err = bchec.ParseBERSignature(sigBytes, bchec.S256())

@@ -102,7 +102,7 @@ func TestProcessAttestation(t *testing.T) {
 	// Override verifySignature for testing
 	origVerifySignature := verifySignature
 	defer func() { verifySignature = origVerifySignature }()
-	verifySignature = func(signBz []byte, signature []byte, attester []byte) error {
+	verifySignature = func(signBz, signature, attester []byte) error {
 		return nil // Always succeed in tests
 	}
 
@@ -331,7 +331,7 @@ func TestRefactoredHandlersIntegration(t *testing.T) {
 	// Override verifySignature for testing
 	origVerifySignature := verifySignature
 	defer func() { verifySignature = origVerifySignature }()
-	verifySignature = func(signBz []byte, signature []byte, attester []byte) error {
+	verifySignature = func(signBz, signature, attester []byte) error {
 		return nil // Always succeed in tests
 	}
 

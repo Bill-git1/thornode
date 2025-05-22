@@ -107,7 +107,6 @@ func parseShortForm(script string) ([]byte, error) {
 			if (opcodeName == "OP_FALSE" || opcodeName == "OP_TRUE") ||
 				(opcodeValue != OP_0 && (opcodeValue < OP_1 ||
 					opcodeValue > OP_16)) {
-
 				ops[strings.TrimPrefix(opcodeName, "OP_")] = opcodeValue
 			}
 		}

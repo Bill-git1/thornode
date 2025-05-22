@@ -128,7 +128,7 @@ func (c *XrpBlockScanner) decodeTxBlobIfNecessary(rawTx transaction.FlatTransact
 	return flatTx, nil
 }
 
-func (c *XrpBlockScanner) getDeliveredAmount(tx map[string]any, meta map[string]any) (txtypes.CurrencyAmount, error) {
+func (c *XrpBlockScanner) getDeliveredAmount(tx, meta map[string]any) (txtypes.CurrencyAmount, error) {
 	// The delivered_amount field is generated on-demand for the request,
 	// and is not included in the binary format for transaction metadata,
 	// nor is it used when calculating the hash of the transaction metadata.

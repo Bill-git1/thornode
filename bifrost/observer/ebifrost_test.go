@@ -401,7 +401,7 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 }
 
 // Helper function to poll for a condition with timeout
-func pollForCondition(c *C, description string, condition func() bool, maxWait time.Duration, pollInterval time.Duration) {
+func pollForCondition(c *C, description string, condition func() bool, maxWait, pollInterval time.Duration) {
 	deadline := time.Now().Add(maxWait)
 	for time.Now().Before(deadline) {
 		if condition() {

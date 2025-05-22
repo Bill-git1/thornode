@@ -14,7 +14,7 @@ import (
 // - destAddr: the address to refund to
 // - coin: the amount to refund
 // - height: the block height to schedule the outbound
-func unsafeAddRefundOutbound(ctx cosmos.Context, mgr *Mgrs, inHash string, destAddr string, coin common.Coin, height int64) error {
+func unsafeAddRefundOutbound(ctx cosmos.Context, mgr *Mgrs, inHash, destAddr string, coin common.Coin, height int64) error {
 	if coin.IsEmpty() || coin.IsNative() {
 		return fmt.Errorf("coin must be an external asset")
 	}

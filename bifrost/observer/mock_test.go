@@ -163,7 +163,7 @@ func (m *MockPeerstore) SupportsProtocols(peer.ID, ...string) ([]string, error) 
 	return nil, nil
 }
 
-func (m *MockPeerstore) UpdateAddrs(p peer.ID, oldTTL time.Duration, newTTL time.Duration) {
+func (m *MockPeerstore) UpdateAddrs(p peer.ID, oldTTL, newTTL time.Duration) {
 	// Mock implementation, do nothing
 }
 

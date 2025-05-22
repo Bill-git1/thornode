@@ -197,7 +197,6 @@ func (vm *Engine) executeOpcode(pop *parsedOpcode) error {
 	// the minimal data verification flag is set.
 	if vm.dstack.verifyMinimalData && vm.isBranchExecuting() &&
 		pop.opcode.value >= 0 && pop.opcode.value <= OP_PUSHDATA4 {
-
 		if err := pop.checkMinimalDataPush(); err != nil {
 			return err
 		}
@@ -210,7 +209,7 @@ func (vm *Engine) executeOpcode(pop *parsedOpcode) error {
 // DisasmScript.  It produces the opcode prefixed by the program counter at the
 // provided position in the script.  It does no error checking and leaves that
 // to the caller to provide a valid offset.
-func (vm *Engine) disasm(scriptIdx int, scriptOff int) string {
+func (vm *Engine) disasm(scriptIdx, scriptOff int) string {
 	return fmt.Sprintf("%02x:%04x: %s", scriptIdx, scriptOff,
 		vm.scripts[scriptIdx][scriptOff].print(false))
 }
@@ -234,7 +233,7 @@ func (vm *Engine) validPC() error {
 
 // curPC returns either the current script and offset, or an error if the
 // position isn't valid.
-func (vm *Engine) curPC() (script int, off int, err error) {
+func (vm *Engine) curPC() (script, off int, err error) {
 	err = vm.validPC()
 	if err != nil {
 		return 0, 0, err
@@ -612,7 +611,6 @@ func (vm *Engine) checkSignatureEncoding(sig []byte) error {
 	if !vm.hasFlag(ScriptVerifyDERSignatures) &&
 		!vm.hasFlag(ScriptVerifyLowS) &&
 		!vm.hasFlag(ScriptVerifyStrictEncoding) {
-
 		return nil
 	}
 
@@ -971,7 +969,6 @@ func NewEngine(scriptPubKey []byte, tx *wire.MsgTx, txIdx int, flags ScriptFlags
 			sigPops := vm.scripts[0]
 			if len(sigPops) == 1 && canonicalPush(sigPops[0]) &&
 				IsWitnessProgram(sigPops[0].data) {
-
 				witProgram = sigPops[0].data
 			} else {
 				errStr := "signature script for witness " +

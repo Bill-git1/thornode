@@ -3,7 +3,7 @@ package keymanager
 import (
 	"crypto/sha256"
 
-	"github.com/Peersyst/xrpl-go/address-codec"
+	addresscodec "github.com/Peersyst/xrpl-go/address-codec"
 	"golang.org/x/crypto/ripemd160" //nolint:gosec,staticcheck
 )
 
@@ -22,7 +22,7 @@ func checksum(input []byte) (cksum [4]byte) {
 	return cksum
 }
 
-func Encode(b []byte, prefix []byte) string {
+func Encode(b, prefix []byte) string {
 	buf := make([]byte, 0, len(b)+len(prefix))
 	buf = append(buf, prefix...)
 	buf = append(buf, b...)

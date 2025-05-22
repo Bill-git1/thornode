@@ -4061,7 +4061,7 @@ func TestRemoveOpcodeByData(t *testing.T) {
 	// tstRemoveOpcodeByData is a convenience function to parse the provided
 	// raw script, remove the passed data, then unparse the result back
 	// into a raw script.
-	tstRemoveOpcodeByData := func(script []byte, data []byte) ([]byte, error) {
+	tstRemoveOpcodeByData := func(script, data []byte) ([]byte, error) {
 		pops, err := parseScript(script)
 		if err != nil {
 			return nil, err

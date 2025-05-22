@@ -540,7 +540,6 @@ func extractWitnessV1KeyBytes(script []byte) []byte {
 	if len(script) == witnessV1TaprootLen &&
 		script[0] == OP_1 &&
 		script[1] == OP_DATA_32 {
-
 		return script[2:34]
 	}
 

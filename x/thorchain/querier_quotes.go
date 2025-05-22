@@ -62,7 +62,7 @@ func quoteParseAddress(ctx cosmos.Context, mgr *Mgrs, addrString string, chain c
 
 // parseMultipleAffiliateParams - attempts to parse one or more affiliates + affiliate
 // bps. skips any that are invalid
-func parseMultipleAffiliateParams(ctx cosmos.Context, mgr *Mgrs, affiliateParams []string, bpParams []string) ([]string, []sdkmath.Uint, sdkmath.Uint, error) {
+func parseMultipleAffiliateParams(ctx cosmos.Context, mgr *Mgrs, affiliateParams, bpParams []string) ([]string, []sdkmath.Uint, sdkmath.Uint, error) {
 	affParams := make([]string, 0)
 	affiliateBps := make([]sdkmath.Uint, 0)
 	totalBps := sdkmath.ZeroUint()
@@ -101,7 +101,7 @@ func parseMultipleAffiliateParams(ctx cosmos.Context, mgr *Mgrs, affiliateParams
 	return affParams, affiliateBps, totalBps, nil
 }
 
-func quoteHandleAffiliate(ctx cosmos.Context, mgr *Mgrs, affiliateParam []string, affiliateBpsParam []string, amount sdkmath.Uint) (affiliate common.Address, memo string, bps, newAmount, affiliateAmt sdkmath.Uint, err error) {
+func quoteHandleAffiliate(ctx cosmos.Context, mgr *Mgrs, affiliateParam, affiliateBpsParam []string, amount sdkmath.Uint) (affiliate common.Address, memo string, bps, newAmount, affiliateAmt sdkmath.Uint, err error) {
 	// parse affiliate
 	affAmt := cosmos.ZeroUint()
 	memo = "" // do not resolve thorname for the memo

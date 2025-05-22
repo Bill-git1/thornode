@@ -6,7 +6,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/x/denom/types"
 )
 
-func (k Keeper) CreateDenom(ctx sdk.Context, denomId string, adminAddr string) (newTokenDenom string, err error) {
+func (k Keeper) CreateDenom(ctx sdk.Context, denomId, adminAddr string) (newTokenDenom string, err error) {
 	denom, err := types.GetTokenDenom(denomId)
 	if err != nil {
 		return "", err
