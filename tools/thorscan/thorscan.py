@@ -172,7 +172,7 @@ def _get(*args, **kwargs) -> requests.Response:
     kwargs["headers"]["x-client-id"] = "thorscan"
 
     # 5 second timeout
-    kwargs["timeout"] = kwargs.get("timeout", 5)
+    kwargs["timeout"] = kwargs.get("timeout", 20)
 
     # get session from pool for request
     session = sessions.get()
@@ -298,6 +298,8 @@ def scan(
         # call all block listeners
         for listener in listeners:
             _print(listener(block))
+
+        sys.stdout.flush()
 
 
 ########################################################################################
