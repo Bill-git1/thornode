@@ -44,6 +44,7 @@ message NodeAccount {
   string version = 14;
   NodeType type = 15;
   uint64 missing_blocks = 16;
+  bool maintenance = 17;
 }
 
 message BondProvider {

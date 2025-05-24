@@ -19,6 +19,7 @@ import "types/msg_tss_keysign_fail.proto";
 import "types/msg_tss_pool.proto";
 import "types/msg_version.proto";
 import "types/msg_upgrade.proto";
+import "types/msg_maint.proto";
 import "cosmwasm/wasm/v1/tx.proto";
 
 option go_package = "gitlab.com/thorchain/thornode/v3/x/thorchain/types";

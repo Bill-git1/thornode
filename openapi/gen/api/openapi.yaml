@@ -4068,6 +4068,7 @@ components:
           - bond_address: bond_address
             bond: bond
         node_operator_address: thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+        maintenance: false
         status: Active
       properties:
         node_address:
@@ -4150,6 +4151,10 @@ components:
           items:
             $ref: '#/components/schemas/ChainHeight'
           type: array
+        maintenance:
+          description: indicates whether the node is in maintenance mode
+          example: false
+          type: boolean
         preflight_status:
           $ref: '#/components/schemas/NodePreflightStatus'
       required:
@@ -4160,6 +4165,7 @@ components:
       - ip_address
       - jail
       - leave_height
+      - maintenance
       - node_address
       - node_operator_address
       - observe_chains

@@ -84,6 +84,7 @@ const (
 	TxRefund        = mem.TxRefund
 	TxUnBond        = mem.TxUnbond
 	TxLeave         = mem.TxLeave
+	TxMaint         = mem.TxMaint
 	TxWithdraw      = mem.TxWithdraw
 	TxTHORName      = mem.TxTHORName
 	TxLoanOpen      = mem.TxLoanOpen
@@ -277,6 +278,7 @@ type (
 	MsgSetIPAddress           = types.MsgSetIPAddress
 	MsgSetNodeKeys            = types.MsgSetNodeKeys
 	MsgLeave                  = types.MsgLeave
+	MsgMaint                  = types.MsgMaint
 	MsgReserveContributor     = types.MsgReserveContributor
 	MsgObservedTxIn           = types.MsgObservedTxIn
 	MsgObservedTxOut          = types.MsgObservedTxOut
@@ -383,6 +385,7 @@ type (
 	UnbondMemo                 = mem.UnbondMemo
 	OutboundMemo               = mem.OutboundMemo
 	LeaveMemo                  = mem.LeaveMemo
+	MaintMemo                  = mem.MaintMemo
 	ReserveMemo                = mem.ReserveMemo
 	NoOpMemo                   = mem.NoOpMemo
 	ConsolidateMemo            = mem.ConsolidateMemo

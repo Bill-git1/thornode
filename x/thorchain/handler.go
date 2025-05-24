@@ -10,6 +10,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/common/tokenlist"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 // MsgHandler is an interface expect all handler to implement
@@ -51,6 +52,7 @@ func getInternalHandlerMapping(mgr Manager) map[string]MsgHandler {
 	m[sdk.MsgTypeURL(&MsgBond{})] = NewBondHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgUnBond{})] = NewUnBondHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgLeave{})] = NewLeaveHandler(mgr)
+	m[sdk.MsgTypeURL(&MsgMaint{})] = NewMaintHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgDonate{})] = NewDonateHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgWithdrawLiquidity{})] = NewWithdrawLiquidityHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgAddLiquidity{})] = NewAddLiquidityHandler(mgr)
@@ -158,6 +160,10 @@ func getMsgUnbondFromMemo(memo UnbondMemo, tx ObservedTx, signer cosmos.AccAddre
 	return NewMsgUnBond(tx.Tx, memo.GetAccAddress(), memo.GetAmount(), tx.Tx.FromAddress, memo.BondProviderAddress, signer), nil
 }
 
+func getMsgMaintFromMemo(memo MaintMemo, signer cosmos.AccAddress) (cosmos.Msg, error) {
+	return types.NewMsgMaint(memo.GetAccAddress(), signer), nil
+}
+
 func getMsgManageTHORNameFromMemo(memo ManageTHORNameMemo, tx ObservedTx, signer cosmos.AccAddress) (cosmos.Msg, error) {
 	if len(tx.Tx.Coins) == 0 {
 		return nil, fmt.Errorf("transaction must have rune in it")
@@ -255,6 +261,8 @@ func processOneTxIn(ctx cosmos.Context, keeper keeper.Keeper, tx ObservedTx, sig
 		newMsg = NewMsgTCYStake(tx.Tx, signer)
 	case TCYUnstakeMemo:
 		newMsg = NewMsgTCYUnstake(tx.Tx, m.BasisPoints, signer)
+	case MaintMemo:
+		newMsg, err = getMsgMaintFromMemo(m, signer)
 	default:
 		return nil, errInvalidMemo
 	}

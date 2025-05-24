@@ -120,6 +120,8 @@ func (p *parser) parse() (mem Memo, err error) {
 		return p.ParseTCYStakeMemo()
 	case TxTCYUnstake:
 		return p.ParseTCYUnstakeMemo()
+	case TxMaint:
+		return p.ParseMaintMemo()
 
 	default:
 		return EmptyMemo, fmt.Errorf("TxType not supported: %s", p.getType().String())

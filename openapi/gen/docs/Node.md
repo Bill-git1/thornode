@@ -24,13 +24,14 @@ Name | Type | Description | Notes
 **Jail** | [**NodeJail**](NodeJail.md) |  | 
 **CurrentAward** | **string** |  | 
 **ObserveChains** | [**[]ChainHeight**](ChainHeight.md) | the last observed heights for all chain by the node | 
+**Maintenance** | **bool** | indicates whether the node is in maintenance mode | 
 **PreflightStatus** | [**NodePreflightStatus**](NodePreflightStatus.md) |  | 
 
 ## Methods
 
 ### NewNode
 
-`func NewNode(nodeAddress string, status string, pubKeySet NodePubKeySet, validatorConsPubKey string, peerId string, activeBlockHeight int64, statusSince int64, nodeOperatorAddress string, totalBond string, bondProviders NodeBondProviders, signerMembership []string, requestedToLeave bool, forcedToLeave bool, leaveHeight int64, ipAddress string, version string, slashPoints int64, jail NodeJail, currentAward string, observeChains []ChainHeight, preflightStatus NodePreflightStatus, ) *Node`
+`func NewNode(nodeAddress string, status string, pubKeySet NodePubKeySet, validatorConsPubKey string, peerId string, activeBlockHeight int64, statusSince int64, nodeOperatorAddress string, totalBond string, bondProviders NodeBondProviders, signerMembership []string, requestedToLeave bool, forcedToLeave bool, leaveHeight int64, ipAddress string, version string, slashPoints int64, jail NodeJail, currentAward string, observeChains []ChainHeight, maintenance bool, preflightStatus NodePreflightStatus, ) *Node`
 
 NewNode instantiates a new Node object
 This constructor will assign default values to properties that have it defined,
@@ -443,6 +444,26 @@ and a boolean to check if the value has been set.
 `func (o *Node) SetObserveChains(v []ChainHeight)`
 
 SetObserveChains sets ObserveChains field to given value.
+
+
+### GetMaintenance
+
+`func (o *Node) GetMaintenance() bool`
+
+GetMaintenance returns the Maintenance field if non-nil, zero value otherwise.
+
+### GetMaintenanceOk
+
+`func (o *Node) GetMaintenanceOk() (*bool, bool)`
+
+GetMaintenanceOk returns a tuple with the Maintenance field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetMaintenance
+
+`func (o *Node) SetMaintenance(v bool)`
+
+SetMaintenance sets Maintenance field to given value.
 
 
 ### GetPreflightStatus

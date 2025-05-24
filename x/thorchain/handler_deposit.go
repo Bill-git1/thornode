@@ -124,7 +124,7 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit) (*cosmos.Resu
 	case TxBond, TxUnBond, TxLeave:
 		targetModule = BondName
 	// For TxTCYClaim, send to Reserve so retrievable if done accidentally
-	case TxReserve, TxTHORName, TxTCYClaim:
+	case TxReserve, TxTHORName, TxTCYClaim, TxMaint:
 		targetModule = ReserveName
 	case TxTCYStake, TxTCYUnstake:
 		targetModule = TCYStakeName

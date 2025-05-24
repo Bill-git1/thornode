@@ -48,6 +48,7 @@ const (
 	TxTCYClaim
 	TxTCYStake
 	TxTCYUnstake
+	TxMaint
 )
 
 var stringToTxTypeMap = map[string]TxType{
@@ -91,6 +92,7 @@ var stringToTxTypeMap = map[string]TxType{
 	"tcy":         TxTCYClaim,
 	"tcy+":        TxTCYStake,
 	"tcy-":        TxTCYUnstake,
+	"maint":       TxMaint,
 }
 
 var txToStringMap = map[TxType]string{
@@ -121,6 +123,7 @@ var txToStringMap = map[TxType]string{
 	TxTCYClaim:               "tcy",
 	TxTCYStake:               "tcy+",
 	TxTCYUnstake:             "tcy-",
+	TxMaint:                  "maint",
 }
 
 // converts a string into a txType
@@ -150,6 +153,7 @@ func (tx TxType) IsInbound() bool {
 		TxBond,
 		TxUnbond,
 		TxLeave,
+		TxMaint,
 		TxReserve,
 		TxNoOp,
 		TxTHORName,
@@ -195,6 +199,7 @@ func (tx TxType) HasOutbound() bool {
 		TxDonate,
 		TxReserve,
 		TxMigrate,
+		TxMaint,
 		TxRagnarok:
 		return false
 	default:

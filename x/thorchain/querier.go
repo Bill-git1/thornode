@@ -610,6 +610,7 @@ func (qs queryServer) queryNode(ctx cosmos.Context, req *types.QueryNodeRequest)
 		RequestedToLeave:    nodeAcc.RequestedToLeave,
 		ForcedToLeave:       nodeAcc.ForcedToLeave,
 		LeaveHeight:         int64(nodeAcc.LeaveScore), // OpenAPI can only represent uint64 as int64
+		Maintenance:         nodeAcc.Maintenance,
 		IpAddress:           nodeAcc.IPAddress,
 		Version:             nodeAcc.GetVersion().String(),
 		CurrentAward:        cosmos.ZeroUint().String(), // Default display for if not overwritten.
@@ -799,6 +800,7 @@ func (qs queryServer) queryNodes(ctx cosmos.Context, _ *types.QueryNodesRequest)
 			RequestedToLeave:    na.RequestedToLeave,
 			ForcedToLeave:       na.ForcedToLeave,
 			LeaveHeight:         int64(na.LeaveScore), // OpenAPI can only represent uint64 as int64
+			Maintenance:         na.Maintenance,
 			IpAddress:           na.IPAddress,
 			Version:             na.GetVersion().String(),
 			CurrentAward:        cosmos.ZeroUint().String(), // Default display for if not overwritten.

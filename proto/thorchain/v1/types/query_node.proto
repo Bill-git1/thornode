@@ -45,6 +45,8 @@ message QueryNodeResponse{
 	// the last observed heights for all chain by the node
   repeated ChainHeight observe_chains = 20 [(gogoproto.jsontag) = "observe_chains"];
   NodePreflightStatus preflight_status = 21 [(gogoproto.jsontag) = "preflight_status"];
+  // if the node operator has placed the node in maintenance or not
+  bool maintenance = 22 [(gogoproto.jsontag) = "maintenance"];
 }
 
 message QueryNodesRequest{

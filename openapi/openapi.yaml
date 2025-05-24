@@ -2728,6 +2728,7 @@ components:
         - jail
         - current_award
         - observe_chains
+        - maintenance
         - preflight_status
       properties:
         node_address:
@@ -2850,6 +2851,10 @@ components:
                 type: integer
                 format: int64
                 example: 2000000
+        maintenance:
+          type: boolean
+          description: indicates whether the node is in maintenance mode
+          example: false
         preflight_status:
           type: object
           title: NodePreflightStatus

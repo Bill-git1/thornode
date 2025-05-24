@@ -829,6 +829,77 @@ func (vts *ValidatorMgrVCURTestSuite) TestWeightedBondReward(c *C) {
 	c.Check(nodeOperator3Balance.AmountOf(common.RuneNative.Native()).String(), Equals, strconv.FormatInt(1250000, 10))
 }
 
+func (vts *ValidatorMgrVCURTestSuite) TestNodeAccountPreflightCheckMaintenance(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	ctx = ctx.WithBlockHeight(1000)
+	mgr := NewDummyMgrWithKeeper(k)
+
+	validatorMgr := newValidatorMgrVCUR(k, mgr.NetworkMgr(), mgr.TxOutStore(), mgr.EventMgr())
+	c.Assert(validatorMgr, NotNil)
+
+	// Test with a valid node account
+	nodeAccount := GetRandomValidatorNode(NodeActive)
+	nodeAccount.Bond = cosmos.NewUint(10 * common.One) // well above min bond
+	nodeAccount.PubKeySet = GetRandomPubKeySet()
+	nodeAccount.Version = constants.SWVersion.String()
+	nodeAccount.IPAddress = "192.168.0.1"
+
+	// Add the node account to the store
+	c.Assert(k.SetNodeAccount(ctx, nodeAccount), IsNil)
+
+	// Set minimum bond
+	k.SetMimir(ctx, constants.MinimumBondInRune.String(), 1000000)
+
+	// Test normal operation first (should be Ready)
+	status, err := validatorMgr.NodeAccountPreflightCheck(ctx, nodeAccount, k.GetConstants())
+	c.Assert(err, IsNil)
+	c.Assert(status, Equals, NodeReady)
+
+	// Test with maintenance mode enabled
+	nodeAccount.Maintenance = true
+	c.Assert(k.SetNodeAccount(ctx, nodeAccount), IsNil)
+
+	status, err = validatorMgr.NodeAccountPreflightCheck(ctx, nodeAccount, k.GetConstants())
+	c.Assert(status, Equals, NodeStandby)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "node account is in maintenance mode")
+
+	// Test with maintenance mode disabled again
+	nodeAccount.Maintenance = false
+	c.Assert(k.SetNodeAccount(ctx, nodeAccount), IsNil)
+
+	status, err = validatorMgr.NodeAccountPreflightCheck(ctx, nodeAccount, k.GetConstants())
+	c.Assert(err, IsNil)
+	c.Assert(status, Equals, NodeReady)
+
+	// Test with other failure conditions while in maintenance
+
+	// Test with maintenance mode + forced to leave
+	nodeAccount.Maintenance = true
+	nodeAccount.ForcedToLeave = true
+	c.Assert(k.SetNodeAccount(ctx, nodeAccount), IsNil)
+
+	status, err = validatorMgr.NodeAccountPreflightCheck(ctx, nodeAccount, k.GetConstants())
+	c.Assert(status, Equals, NodeDisabled)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "node account has been banned")
+
+	// Reset forced to leave
+	nodeAccount.ForcedToLeave = false
+	c.Assert(k.SetNodeAccount(ctx, nodeAccount), IsNil)
+
+	// Test with maintenance mode + requested to leave
+	nodeAccount.RequestedToLeave = true
+	c.Assert(k.SetNodeAccount(ctx, nodeAccount), IsNil)
+
+	status, err = validatorMgr.NodeAccountPreflightCheck(ctx, nodeAccount, k.GetConstants())
+	c.Assert(status, Equals, NodeStandby)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "node account has requested to leave")
+
+	// Maintenance mode error should be masked by more severe errors
+}
+
 func (vts *ValidatorMgrVCURTestSuite) TestActiveNodeRequestToLeaveShouldBeStandby(c *C) {
 	var err error
 	ctx, mgr := setupManagerForTest(c)

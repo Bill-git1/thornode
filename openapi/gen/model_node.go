@@ -46,6 +46,8 @@ type Node struct {
 	CurrentAward string `json:"current_award"`
 	// the last observed heights for all chain by the node
 	ObserveChains []ChainHeight `json:"observe_chains"`
+	// indicates whether the node is in maintenance mode
+	Maintenance bool `json:"maintenance"`
 	PreflightStatus NodePreflightStatus `json:"preflight_status"`
 }
 
@@ -53,7 +55,7 @@ type Node struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewNode(nodeAddress string, status string, pubKeySet NodePubKeySet, validatorConsPubKey string, peerId string, activeBlockHeight int64, statusSince int64, nodeOperatorAddress string, totalBond string, bondProviders NodeBondProviders, signerMembership []string, requestedToLeave bool, forcedToLeave bool, leaveHeight int64, ipAddress string, version string, slashPoints int64, jail NodeJail, currentAward string, observeChains []ChainHeight, preflightStatus NodePreflightStatus) *Node {
+func NewNode(nodeAddress string, status string, pubKeySet NodePubKeySet, validatorConsPubKey string, peerId string, activeBlockHeight int64, statusSince int64, nodeOperatorAddress string, totalBond string, bondProviders NodeBondProviders, signerMembership []string, requestedToLeave bool, forcedToLeave bool, leaveHeight int64, ipAddress string, version string, slashPoints int64, jail NodeJail, currentAward string, observeChains []ChainHeight, maintenance bool, preflightStatus NodePreflightStatus) *Node {
 	this := Node{}
 	this.NodeAddress = nodeAddress
 	this.Status = status
@@ -75,6 +77,7 @@ func NewNode(nodeAddress string, status string, pubKeySet NodePubKeySet, validat
 	this.Jail = jail
 	this.CurrentAward = currentAward
 	this.ObserveChains = observeChains
+	this.Maintenance = maintenance
 	this.PreflightStatus = preflightStatus
 	return &this
 }
@@ -567,6 +570,30 @@ func (o *Node) SetObserveChains(v []ChainHeight) {
 	o.ObserveChains = v
 }
 
+// GetMaintenance returns the Maintenance field value
+func (o *Node) GetMaintenance() bool {
+	if o == nil {
+		var ret bool
+		return ret
+	}
+
+	return o.Maintenance
+}
+
+// GetMaintenanceOk returns a tuple with the Maintenance field value
+// and a boolean to check if the value has been set.
+func (o *Node) GetMaintenanceOk() (*bool, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.Maintenance, true
+}
+
+// SetMaintenance sets field value
+func (o *Node) SetMaintenance(v bool) {
+	o.Maintenance = v
+}
+
 // GetPreflightStatus returns the PreflightStatus field value
 func (o *Node) GetPreflightStatus() NodePreflightStatus {
 	if o == nil {
@@ -652,6 +679,9 @@ func (o Node) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if true {
 		toSerialize["observe_chains"] = o.ObserveChains
+	}
+	if true {
+		toSerialize["maintenance"] = o.Maintenance
 	}
 	if true {
 		toSerialize["preflight_status"] = o.PreflightStatus

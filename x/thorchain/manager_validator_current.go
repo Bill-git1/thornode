@@ -1342,6 +1342,10 @@ func (vm *ValidatorMgrVCUR) NodeAccountPreflightCheck(ctx cosmos.Context, na Nod
 		return NodeStandby, fmt.Errorf("node account has requested to leave")
 	}
 
+	if na.Maintenance {
+		return NodeStandby, fmt.Errorf("node account is in maintenance mode")
+	}
+
 	// Check that the node account has an IP address
 	if net.ParseIP(na.IPAddress) == nil {
 		return NodeStandby, fmt.Errorf("node account has invalid registered IP address")
