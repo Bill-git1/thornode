@@ -4,6 +4,8 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common"
 )
 
+var useWhitelistSmartContract = false
+
 var whitelistSmartContractAddress = append(
 	[]common.Address{
 		// XRUNE

@@ -124,6 +124,14 @@
       "name": "Test token",
       "decimals": 18,
       "tags": []
+    },
+    {
+      "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      "chainId": 4,
+      "name": "WrappedBTC",
+      "symbol": "WBTC",
+      "decimals": 8,
+      "logoURI": ""
     }
   ],
   "version": {

@@ -134,7 +134,7 @@ func NewETHScanner(cfg config.BifrostBlockScannerConfiguration,
 		bridge:               bridge,
 		vaultABI:             vaultABI,
 		erc20ABI:             erc20ABI,
-		eipSigner:            etypes.NewLondonSigner(chainID),
+		eipSigner:            etypes.NewPragueSigner(chainID),
 		pubkeyMgr:            pubkeyMgr,
 		gasCache:             make([]*big.Int, 0),
 		solvencyReporter:     solvencyReporter,
@@ -684,7 +684,7 @@ func (e *ETHScanner) getSymbol(token string) (string, error) {
 func (e *ETHScanner) isToValidContractAddress(addr *ecommon.Address, includeWhiteList bool) bool {
 	// get the smart contract used by thornode
 	contractAddresses := e.pubkeyMgr.GetContracts(common.ETHChain)
-	if includeWhiteList {
+	if includeWhiteList || useWhitelistSmartContract {
 		contractAddresses = append(contractAddresses, whitelistSmartContractAddress...)
 	}
 	// combine the whitelist smart contract address
@@ -864,7 +864,9 @@ func (e *ETHScanner) getTxInFromTransaction(tx *etypes.Transaction, receipt *ety
 			txInItem.Coins = common.NewCoins(common.NewCoin(common.ETHAsset, observableAmount))
 
 			// remove the outbound from signer cache so it can be re-attempted
-			e.signerCacheManager.RemoveSigned(tx.Hash().Hex())
+			if e.signerCacheManager != nil {
+				e.signerCacheManager.RemoveSigned(tx.Hash().Hex())
+			}
 		} else {
 			e.logger.Debug().Msgf("there is no coin in this tx, ignore, %+v", txInItem)
 			return nil, nil
