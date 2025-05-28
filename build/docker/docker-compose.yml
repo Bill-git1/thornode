@@ -34,6 +34,7 @@ services:
       CHAIN_ID: thorchain
       SIGNER_NAME: thorchain
       SIGNER_PASSWD: password
+      THORNODE_GRPC_ENABLE: true
     logging: &logging
       driver: "json-file"
       options:
@@ -120,6 +121,7 @@ services:
       - 1317:1317
       - 6060:6060
       - 50051:50051
+      - 9090:9090
     volumes:
       - "../scripts:/docker/scripts"
       - thornode:/root/.thornode
