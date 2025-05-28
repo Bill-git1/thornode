@@ -95,7 +95,7 @@ func (m WasmMgrVCUR) InstantiateContract(
 		return nil, nil, err
 	}
 
-	err = m.checkAuthorization(ctx, creator, codeInfo.CodeHash)
+	err = m.checkInstantiateAuthorization(ctx, creator, codeInfo.CodeHash)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -131,7 +131,7 @@ func (m WasmMgrVCUR) InstantiateContract2(
 		return nil, nil, err
 	}
 
-	err = m.checkAuthorization(ctx, creator, codeInfo.CodeHash)
+	err = m.checkInstantiateAuthorization(ctx, creator, codeInfo.CodeHash)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -319,26 +319,27 @@ func (m WasmMgrVCUR) checkAuthorization(ctx cosmos.Context, actor cosmos.AccAddr
 	return m.permissions.Permit(actor, checksum)
 }
 
-func (m WasmMgrVCUR) checkContractAuthorization(ctx cosmos.Context, contractInfo *wasmtypes.ContractInfo, actor cosmos.AccAddress, checksum []byte) error {
-	v, err := m.keeper.GetMimir(ctx, constants.MimirKeyWasmPermissionless)
-	if err != nil {
-		return err
+func (m WasmMgrVCUR) checkInstantiateAuthorization(ctx cosmos.Context, actor cosmos.AccAddress, checksum []byte) error {
+	// If the actor is a contract, it can instantiate new contracts without explicit permission
+	// wasmKeeper.QueryContractInfo panics if the contract does not exist, so query for non zero length history instead
+	result := m.wasmKeeper.GetContractHistory(ctx, actor)
+	if len(result) > 0 {
+		return nil
 	}
+
+	return m.checkAuthorization(ctx, actor, checksum)
+}
+
+func (m WasmMgrVCUR) checkContractAuthorization(ctx cosmos.Context, contractInfo *wasmtypes.ContractInfo, actor cosmos.AccAddress, checksum []byte) error {
 	// If MimirKeyWasmPermissionless is enabled, we still need to restrict who can call Sudo on and Migrate contracts
 	// Check this against the admin value that is stored on instantiation, as is default x/wasm behaviour
 	// Current limitations of x/wasm mean we can't access the storage for ContractInfo to support updating of this value
 	policy := wasmkeeper.DefaultAuthorizationPolicy{}
-	if v > 0 && ctx.BlockHeight() > v {
-		if policy.CanModifyContract(
-			contractInfo.AdminAddr(),
-			actor,
-		) {
-			return nil
-		}
+	if !policy.CanModifyContract(contractInfo.AdminAddr(), actor) {
 		return errors.ErrUnauthorized
 	}
 
-	return m.permissions.Permit(actor, checksum)
+	return m.checkAuthorization(ctx, actor, checksum)
 }
 
 func (m WasmMgrVCUR) getCodeInfo(ctx cosmos.Context, id uint64) (*wasmtypes.CodeInfo, error) {

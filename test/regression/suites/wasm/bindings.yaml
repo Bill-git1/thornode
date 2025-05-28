@@ -161,3 +161,41 @@ type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .txs[0].result.log|match("cannot use MsgSend for Module transactions, use MsgDeposit instead")
+---
+# Disable permissionless and ensure a contract can instantiate
+type: tx-mimir
+key: WasmPermissionless
+value: -1
+signer: {{ addr_thor_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: tx-execute-contract
+contract: "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"
+msg:
+  {
+    "any":
+      {
+        "type_url": "/cosmwasm.wasm.v1.MsgInstantiateContract",
+        "value": "CkB0dGhvcjE0aGoydGF2cThmcGVzZHd4eGN1NDRydHkzaGg5MHZodWpydmNtc3RsNHpyM3R4bWZ2dzlzdzU4dTlmEkB0dGhvcjE0aGoydGF2cThmcGVzZHd4eGN1NDRydHkzaGg5MHZodWpydmNtc3RsNHpyM3R4bWZ2dzlzdzU4dTlmGAEiBHRlc3QqAnt9",
+      },
+  }
+funds: []
+sender: {{ addr_thor_dog }}
+gas: 200000
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/block
+asserts:
+  - .txs[0].result.events[5].type == "instantiate"
+  - .txs[0].result.events[5]._contract_address == "tthor1suhgf5svhu4usrurvxzlgn54ksxmn8gljarjtxqnapv8kjnp4nrs3ptfdq"
+  - .txs[0].result.events[5].code_id == "1"
+---
+type: check
+endpoint: http://localhost:1317/cosmwasm/wasm/v1/code/1/contracts
+asserts:
+  - .contracts|length == 2
