@@ -337,6 +337,9 @@ func (o *Observer) sendDeck(ctx context.Context) {
 				}
 			}
 		} else {
+			o.lock.Lock()
+			o.onDeck = make(map[txInKey]*types.TxIn)
+			o.lock.Unlock()
 			if err := o.storage.RemoveAllTxs(); err != nil {
 				o.logger.Error().Err(err).Msg("fail to remove all tx from storage")
 			}
