@@ -42,6 +42,14 @@ const DollarMulti = 1e9
 // MaxETHGas define the maximum gas for a single transaction on ETH
 const MaxETHGas = 50000000
 
+// max amount of data that can be provided with OP_RETURN (bytes)
+const MaxOpReturnDataSize = 80
+
+// when using fake transactions to encode further memo information, support up
+// to eight fake addresses (20 bytes each):
+// 80 (op_return) + 8 * 20 (addresses) - 1 ('^' marker)
+const MaxMemoSizeUtxoExtended = MaxOpReturnDataSize - 1 + 8*20
+
 // The provided key must be comparable and should not be of type string or any other built-in type to avoid collisions between packages using context. Users of WithValue should define their own types for keys. To avoid allocating when assigning to an interface{}, context keys often have concrete type struct{}. Alternatively, exported context key variables' static type should be a pointer or interface.
 type contextKey string
 

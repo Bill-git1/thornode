@@ -12,7 +12,7 @@ All memos are listed in the [relevant THORChain source code](https://gitlab.com/
 
 ### Memo Size Limits
 
-THORChain has a [memo size limit of 250 bytes](https://gitlab.com/thorchain/thornode/-/blob/develop/constants/constants.go?ref_type=heads#L32). Any inbound tx sent with a larger memo will be ignored. Additionally, memos on UTXO chains are further constrained by the `OP_RETURN` size limit, which is [80 bytes](https://developer.bitcoin.org/devguide/transactions.html#null-data).
+THORChain has a [memo size limit of 250 bytes](https://gitlab.com/thorchain/thornode/-/blob/develop/constants/constants.go?ref_type=heads#L32). Any inbound tx sent with a larger memo will be ignored. Additionally, memos on UTXO chains are further constrained by the `OP_RETURN` size limit, which is [80 bytes](https://developer.bitcoin.org/devguide/transactions.html#null-data), which can be extended by using the approach described [here](sending-transactions.md#memo-greater-than-80-characters).
 
 ### Dust Thresholds
 

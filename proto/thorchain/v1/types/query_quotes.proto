@@ -20,6 +20,7 @@ message QueryQuoteSwapRequest{
   repeated string affiliate_bps = 10;
   string height = 11;
   string liquidity_tolerance_bps = 12;
+  bool extended = 13;
 }
 
 message QueryQuoteSwapResponse{
@@ -62,6 +63,8 @@ message QueryQuoteSwapResponse{
   int64 streaming_swap_seconds = 19;
 	// total number of seconds a swap is expected to take (inbound conf + streaming swap + outbound delay)
   int64 total_swap_seconds = 20;
+  // List of outputs needed (additional to deposit and change return). Meant for wallets to easily construct transactions with more than 80bytes
+  repeated Vout vout = 21;
 }
 
 message QueryQuoteSaverDepositRequest{
@@ -278,4 +281,13 @@ message QuoteFees{
   int64 slippage_bps = 6 [(gogoproto.jsontag) = "slippage_bps"];
 	// total basis points in fees relative to amount out
   int64 total_bps = 7 [(gogoproto.jsontag) = "total_bps"];
+}
+
+message Vout{
+  // type of content, either "op_return" or "address"
+  string type = 1 [(gogoproto.jsontag) = "type"];
+  // l1 address or hex encoded memo
+  string data = 2 [(gogoproto.jsontag) = "data"];
+  // sats to send, depends on dust limit per chain, 0 for op_return
+  int64 amount = 3 [(gogoproto.jsontag) = "amount"];
 }

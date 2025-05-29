@@ -315,6 +315,35 @@ func (s *DogecoinSuite) TestGetMemo(c *C) {
 	memo, err = s.client.getMemo(&tx)
 	c.Assert(err, IsNil)
 	c.Assert(memo, Equals, "")
+
+	tx = btcjson.TxRawResult{
+		Vout: []btcjson.Vout{
+			{
+				ScriptPubKey: btcjson.ScriptPubKeyResult{
+					Asm:  "OP_RETURN 737761703a6574682e3078633534633135313236393646334541373935366264396144343130383138654563414443466666663a3078633534633135313236393646334541373935366264396144345e",
+					Type: "nulldata",
+					Hex:  "6a4c50737761703a6574682e3078633534633135313236393646334541373935366264396144343130383138654563414443466666663a3078633534633135313236393646334541373935366264396144345e",
+				},
+			},
+			{
+				ScriptPubKey: btcjson.ScriptPubKeyResult{
+					Asm:  "OP_DUP OP_HASH 3130383138654563414443466666663a31303030 OP_EQUALVERIFY OP_CHECKSIG",
+					Type: "pubkeyhash",
+					Hex:  "76A9143130383138654563414443466666663a3130303088AC",
+				},
+			},
+			{
+				ScriptPubKey: btcjson.ScriptPubKeyResult{
+					Asm:  "OP_DUP OP_HASH 3030303030303000000000000000000000000000 OP_EQUALVERIFY OP_CHECKSIG",
+					Type: "pubkeyhash",
+					Hex:  "76A914303030303030300000000000000000000000000088AC",
+				},
+			},
+		},
+	}
+	memo, err = s.client.getMemo(&tx)
+	c.Assert(err, IsNil)
+	c.Assert(memo, Equals, "swap:eth.0xc54c1512696F3EA7956bd9aD410818eEcADCFfff:0xc54c1512696F3EA7956bd9aD410818eEcADCFfff:10000000000")
 }
 
 func (s *DogecoinSuite) TestIgnoreTx(c *C) {

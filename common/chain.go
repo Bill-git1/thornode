@@ -288,7 +288,7 @@ func (c Chain) DustThreshold() cosmos.Uint {
 func (c Chain) MaxMemoLength() int {
 	switch c {
 	case BTCChain, LTCChain, BCHChain, DOGEChain:
-		return 80
+		return constants.MaxOpReturnDataSize
 	default:
 		// Default to the max memo size that we will process, regardless
 		// of any higher memo size capable on other chains.

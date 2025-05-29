@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
+	"regexp"
 	"sync"
 	"time"
 
@@ -38,8 +39,6 @@ import (
 ////////////////////////////////////////////////////////////////////////////////////////
 // Generate
 ////////////////////////////////////////////////////////////////////////////////////////
-
-//go:generate go run generate.go
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // Client - Base
@@ -94,6 +93,11 @@ type Client struct {
 
 	// ---------- testing ----------
 	disableVinZeroBatch bool
+
+	// ---------- utility ----------
+	// regexpRemoveTrailingZeros is used to remove trailing zeroes from utxo
+	// fake addresses. Defined here, to compile just once
+	regexpRemoveTrailingZeros *regexp.Regexp
 }
 
 // NewClient generates a new Client
@@ -140,20 +144,21 @@ func NewClient(
 
 	// create base client
 	c := &Client{
-		cfg:                   cfg,
-		log:                   logger,
-		m:                     m,
-		rpc:                   rpcClient,
-		nodePubKey:            nodePubKey,
-		nodePrivKey:           nodePrivKey,
-		tssKeySigner:          tssKeysign,
-		wg:                    &sync.WaitGroup{},
-		signerLock:            &sync.Mutex{},
-		vaultLocks:            make(map[string]*sync.Mutex),
-		consolidateInProgress: atomic.NewBool(false),
-		stopchan:              make(chan struct{}),
-		currentBlockHeight:    atomic.NewInt64(0),
-		bridge:                bridge,
+		cfg:                       cfg,
+		log:                       logger,
+		m:                         m,
+		rpc:                       rpcClient,
+		nodePubKey:                nodePubKey,
+		nodePrivKey:               nodePrivKey,
+		tssKeySigner:              tssKeysign,
+		wg:                        &sync.WaitGroup{},
+		signerLock:                &sync.Mutex{},
+		vaultLocks:                make(map[string]*sync.Mutex),
+		consolidateInProgress:     atomic.NewBool(false),
+		stopchan:                  make(chan struct{}),
+		currentBlockHeight:        atomic.NewInt64(0),
+		bridge:                    bridge,
+		regexpRemoveTrailingZeros: regexp.MustCompile(`(?:00)+$`),
 	}
 
 	// import the node local address in the daemon wallet
