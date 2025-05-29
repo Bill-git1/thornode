@@ -54,6 +54,8 @@ type Pool struct {
 	LoanCr string `json:"loan_cr"`
 	// the depth of the derived virtual pool relative to L1 pool (in basis points)
 	DerivedDepthBps string `json:"derived_depth_bps"`
+	// indicates if the pool can be used for swaps
+	TradingHalted *bool `json:"trading_halted,omitempty"`
 }
 
 // NewPool instantiates a new Pool object
@@ -662,6 +664,38 @@ func (o *Pool) SetDerivedDepthBps(v string) {
 	o.DerivedDepthBps = v
 }
 
+// GetTradingHalted returns the TradingHalted field value if set, zero value otherwise.
+func (o *Pool) GetTradingHalted() bool {
+	if o == nil || o.TradingHalted == nil {
+		var ret bool
+		return ret
+	}
+	return *o.TradingHalted
+}
+
+// GetTradingHaltedOk returns a tuple with the TradingHalted field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *Pool) GetTradingHaltedOk() (*bool, bool) {
+	if o == nil || o.TradingHalted == nil {
+		return nil, false
+	}
+	return o.TradingHalted, true
+}
+
+// HasTradingHalted returns a boolean if a field has been set.
+func (o *Pool) HasTradingHalted() bool {
+	if o != nil && o.TradingHalted != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetTradingHalted gets a reference to the given bool and assigns it to the TradingHalted field.
+func (o *Pool) SetTradingHalted(v bool) {
+	o.TradingHalted = &v
+}
+
 func (o Pool) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
@@ -732,6 +766,9 @@ func (o Pool) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if true {
 		toSerialize["derived_depth_bps"] = o.DerivedDepthBps
+	}
+	if o.TradingHalted != nil {
+		toSerialize["trading_halted"] = o.TradingHalted
 	}
 	return json.Marshal(toSerialize)
 }

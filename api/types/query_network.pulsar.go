@@ -451,6 +451,7 @@ var (
 	fd_QueryNetworkResponse_tns_fee_per_block_rune   protoreflect.FieldDescriptor
 	fd_QueryNetworkResponse_rune_price_in_tor        protoreflect.FieldDescriptor
 	fd_QueryNetworkResponse_tor_price_in_rune        protoreflect.FieldDescriptor
+	fd_QueryNetworkResponse_tor_price_halted         protoreflect.FieldDescriptor
 )
 
 func init() {
@@ -472,6 +473,7 @@ func init() {
 	fd_QueryNetworkResponse_tns_fee_per_block_rune = md_QueryNetworkResponse.Fields().ByName("tns_fee_per_block_rune")
 	fd_QueryNetworkResponse_rune_price_in_tor = md_QueryNetworkResponse.Fields().ByName("rune_price_in_tor")
 	fd_QueryNetworkResponse_tor_price_in_rune = md_QueryNetworkResponse.Fields().ByName("tor_price_in_rune")
+	fd_QueryNetworkResponse_tor_price_halted = md_QueryNetworkResponse.Fields().ByName("tor_price_halted")
 }
 
 var _ protoreflect.Message = (*fastReflection_QueryNetworkResponse)(nil)
@@ -635,6 +637,12 @@ func (x *fastReflection_QueryNetworkResponse) Range(f func(protoreflect.FieldDes
 			return
 		}
 	}
+	if x.TorPriceHalted != false {
+		value := protoreflect.ValueOfBool(x.TorPriceHalted)
+		if !f(fd_QueryNetworkResponse_tor_price_halted, value) {
+			return
+		}
+	}
 }
 
 // Has reports whether a field is populated.
@@ -682,6 +690,8 @@ func (x *fastReflection_QueryNetworkResponse) Has(fd protoreflect.FieldDescripto
 		return x.RunePriceInTor != ""
 	case "types.QueryNetworkResponse.tor_price_in_rune":
 		return x.TorPriceInRune != ""
+	case "types.QueryNetworkResponse.tor_price_halted":
+		return x.TorPriceHalted != false
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryNetworkResponse"))
@@ -730,6 +740,8 @@ func (x *fastReflection_QueryNetworkResponse) Clear(fd protoreflect.FieldDescrip
 		x.RunePriceInTor = ""
 	case "types.QueryNetworkResponse.tor_price_in_rune":
 		x.TorPriceInRune = ""
+	case "types.QueryNetworkResponse.tor_price_halted":
+		x.TorPriceHalted = false
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryNetworkResponse"))
@@ -794,6 +806,9 @@ func (x *fastReflection_QueryNetworkResponse) Get(descriptor protoreflect.FieldD
 	case "types.QueryNetworkResponse.tor_price_in_rune":
 		value := x.TorPriceInRune
 		return protoreflect.ValueOfString(value)
+	case "types.QueryNetworkResponse.tor_price_halted":
+		value := x.TorPriceHalted
+		return protoreflect.ValueOfBool(value)
 	default:
 		if descriptor.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryNetworkResponse"))
@@ -846,6 +861,8 @@ func (x *fastReflection_QueryNetworkResponse) Set(fd protoreflect.FieldDescripto
 		x.RunePriceInTor = value.Interface().(string)
 	case "types.QueryNetworkResponse.tor_price_in_rune":
 		x.TorPriceInRune = value.Interface().(string)
+	case "types.QueryNetworkResponse.tor_price_halted":
+		x.TorPriceHalted = value.Bool()
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryNetworkResponse"))
@@ -898,6 +915,8 @@ func (x *fastReflection_QueryNetworkResponse) Mutable(fd protoreflect.FieldDescr
 		panic(fmt.Errorf("field rune_price_in_tor of message types.QueryNetworkResponse is not mutable"))
 	case "types.QueryNetworkResponse.tor_price_in_rune":
 		panic(fmt.Errorf("field tor_price_in_rune of message types.QueryNetworkResponse is not mutable"))
+	case "types.QueryNetworkResponse.tor_price_halted":
+		panic(fmt.Errorf("field tor_price_halted of message types.QueryNetworkResponse is not mutable"))
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryNetworkResponse"))
@@ -943,6 +962,8 @@ func (x *fastReflection_QueryNetworkResponse) NewField(fd protoreflect.FieldDesc
 		return protoreflect.ValueOfString("")
 	case "types.QueryNetworkResponse.tor_price_in_rune":
 		return protoreflect.ValueOfString("")
+	case "types.QueryNetworkResponse.tor_price_halted":
+		return protoreflect.ValueOfBool(false)
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryNetworkResponse"))
@@ -1075,6 +1096,9 @@ func (x *fastReflection_QueryNetworkResponse) ProtoMethods() *protoiface.Methods
 		if l > 0 {
 			n += 1 + l + runtime.Sov(uint64(l))
 		}
+		if x.TorPriceHalted {
+			n += 3
+		}
 		if x.unknownFields != nil {
 			n += len(x.unknownFields)
 		}
@@ -1103,6 +1127,18 @@ func (x *fastReflection_QueryNetworkResponse) ProtoMethods() *protoiface.Methods
 		if x.unknownFields != nil {
 			i -= len(x.unknownFields)
 			copy(dAtA[i:], x.unknownFields)
+		}
+		if x.TorPriceHalted {
+			i--
+			if x.TorPriceHalted {
+				dAtA[i] = 1
+			} else {
+				dAtA[i] = 0
+			}
+			i--
+			dAtA[i] = 0x1
+			i--
+			dAtA[i] = 0x88
 		}
 		if len(x.VaultsLiquidityRune) > 0 {
 			i -= len(x.VaultsLiquidityRune)
@@ -1770,6 +1806,26 @@ func (x *fastReflection_QueryNetworkResponse) ProtoMethods() *protoiface.Methods
 				}
 				x.TorPriceInRune = string(dAtA[iNdEx:postIndex])
 				iNdEx = postIndex
+			case 17:
+				if wireType != 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field TorPriceHalted", wireType)
+				}
+				var v int
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					v |= int(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				x.TorPriceHalted = bool(v != 0)
 			default:
 				iNdEx = preIndex
 				skippy, err := runtime.Skip(dAtA[iNdEx:])
@@ -1890,6 +1946,8 @@ type QueryNetworkResponse struct {
 	RunePriceInTor string `protobuf:"bytes,13,opt,name=rune_price_in_tor,json=runePriceInTor,proto3" json:"rune_price_in_tor,omitempty"`
 	// the tor price in rune
 	TorPriceInRune string `protobuf:"bytes,14,opt,name=tor_price_in_rune,json=torPriceInRune,proto3" json:"tor_price_in_rune,omitempty"`
+	// indicator if all anchor chains are halted
+	TorPriceHalted bool `protobuf:"varint,17,opt,name=tor_price_halted,json=torPriceHalted,proto3" json:"tor_price_halted,omitempty"`
 }
 
 func (x *QueryNetworkResponse) Reset() {
@@ -2024,6 +2082,13 @@ func (x *QueryNetworkResponse) GetTorPriceInRune() string {
 	return ""
 }
 
+func (x *QueryNetworkResponse) GetTorPriceHalted() bool {
+	if x != nil {
+		return x.TorPriceHalted
+	}
+	return false
+}
+
 var File_types_query_network_proto protoreflect.FileDescriptor
 
 var file_types_query_network_proto_rawDesc = []byte{
@@ -2033,7 +2098,7 @@ var file_types_query_network_proto_rawDesc = []byte{
 	0x67, 0x6f, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x2d, 0x0a, 0x13, 0x51, 0x75, 0x65, 0x72,
 	0x79, 0x4e, 0x65, 0x74, 0x77, 0x6f, 0x72, 0x6b, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12,
 	0x16, 0x0a, 0x06, 0x68, 0x65, 0x69, 0x67, 0x68, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x06, 0x68, 0x65, 0x69, 0x67, 0x68, 0x74, 0x22, 0xf2, 0x08, 0x0a, 0x14, 0x51, 0x75, 0x65, 0x72,
+	0x06, 0x68, 0x65, 0x69, 0x67, 0x68, 0x74, 0x22, 0xb2, 0x09, 0x0a, 0x14, 0x51, 0x75, 0x65, 0x72,
 	0x79, 0x4e, 0x65, 0x74, 0x77, 0x6f, 0x72, 0x6b, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
 	0x12, 0x3e, 0x0a, 0x10, 0x62, 0x6f, 0x6e, 0x64, 0x5f, 0x72, 0x65, 0x77, 0x61, 0x72, 0x64, 0x5f,
 	0x72, 0x75, 0x6e, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x42, 0x14, 0xea, 0xde, 0x1f, 0x10,
@@ -2104,7 +2169,11 @@ var file_types_query_network_proto_rawDesc = []byte{
 	0x72, 0x5f, 0x70, 0x72, 0x69, 0x63, 0x65, 0x5f, 0x69, 0x6e, 0x5f, 0x72, 0x75, 0x6e, 0x65, 0x18,
 	0x0e, 0x20, 0x01, 0x28, 0x09, 0x42, 0x15, 0xea, 0xde, 0x1f, 0x11, 0x74, 0x6f, 0x72, 0x5f, 0x70,
 	0x72, 0x69, 0x63, 0x65, 0x5f, 0x69, 0x6e, 0x5f, 0x72, 0x75, 0x6e, 0x65, 0x52, 0x0e, 0x74, 0x6f,
-	0x72, 0x50, 0x72, 0x69, 0x63, 0x65, 0x49, 0x6e, 0x52, 0x75, 0x6e, 0x65, 0x42, 0x82, 0x01, 0x0a,
+	0x72, 0x50, 0x72, 0x69, 0x63, 0x65, 0x49, 0x6e, 0x52, 0x75, 0x6e, 0x65, 0x12, 0x3e, 0x0a, 0x10,
+	0x74, 0x6f, 0x72, 0x5f, 0x70, 0x72, 0x69, 0x63, 0x65, 0x5f, 0x68, 0x61, 0x6c, 0x74, 0x65, 0x64,
+	0x18, 0x11, 0x20, 0x01, 0x28, 0x08, 0x42, 0x14, 0xea, 0xde, 0x1f, 0x10, 0x74, 0x6f, 0x72, 0x5f,
+	0x70, 0x72, 0x69, 0x63, 0x65, 0x5f, 0x68, 0x61, 0x6c, 0x74, 0x65, 0x64, 0x52, 0x0e, 0x74, 0x6f,
+	0x72, 0x50, 0x72, 0x69, 0x63, 0x65, 0x48, 0x61, 0x6c, 0x74, 0x65, 0x64, 0x42, 0x82, 0x01, 0x0a,
 	0x09, 0x63, 0x6f, 0x6d, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x42, 0x11, 0x51, 0x75, 0x65, 0x72,
 	0x79, 0x4e, 0x65, 0x74, 0x77, 0x6f, 0x72, 0x6b, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a,
 	0x2a, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72,

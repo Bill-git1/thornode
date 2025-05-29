@@ -450,6 +450,9 @@ func (qs queryServer) queryNetwork(ctx cosmos.Context, _ *types.QueryNetworkRequ
 	minMultiplierBasisPoints := qs.mgr.Keeper().GetConfigInt64(ctx, constants.MinOutboundFeeMultiplierBasisPoints)
 	outboundFeeMultiplier := qs.mgr.gasMgr.CalcOutboundFeeMultiplier(ctx, cosmos.NewUint(uint64(targetOutboundFeeSurplus)), cosmos.NewUint(data.OutboundGasSpentRune), cosmos.NewUint(data.OutboundGasWithheldRune), cosmos.NewUint(uint64(maxMultiplierBasisPoints)), cosmos.NewUint(uint64(minMultiplierBasisPoints)))
 
+	assets := qs.mgr.Keeper().GetAnchors(ctx, common.TOR)
+	median := qs.mgr.Keeper().AnchorMedian(ctx, assets).QuoUint64(constants.DollarMulti)
+
 	result := types.QueryNetworkResponse{
 		// Due to using openapi. this will be displayed in alphabetical order,
 		// so its schema (and order here) should also be in alphabetical order.
@@ -468,7 +471,8 @@ func (qs queryServer) queryNetwork(ctx cosmos.Context, _ *types.QueryNetworkRequ
 		TnsRegisterFeeRune:    qs.mgr.Keeper().GetTHORNameRegisterFee(ctx).String(),
 		TnsFeePerBlockRune:    qs.mgr.Keeper().GetTHORNamePerBlockFee(ctx).String(),
 		RunePriceInTor:        dollarsPerRuneIgnoreHalt(ctx, qs.mgr.Keeper()).String(),
-		TorPriceInRune:        qs.mgr.Keeper().RunePerDollar(ctx).String(),
+		TorPriceInRune:        runePerDollarIgnoreHalt(ctx, qs.mgr.Keeper()).String(),
+		TorPriceHalted:        median.IsZero(),
 	}
 
 	return &result, nil
@@ -1376,6 +1380,27 @@ func (qs queryServer) queryPool(ctx cosmos.Context, req *types.QueryPoolRequest)
 		dbps = cosmos.ZeroUint()
 	}
 
+	tradingHalted := qs.mgr.Keeper().IsGlobalTradingHalted(ctx)
+
+	l1Asset := pool.Asset.GetLayer1Asset()
+	chain := l1Asset.GetChain()
+
+	if !pool.IsAvailable() {
+		tradingHalted = true
+	}
+
+	if !tradingHalted && qs.mgr.Keeper().IsChainTradingHalted(ctx, chain) {
+		tradingHalted = true
+	}
+
+	if !tradingHalted && qs.mgr.Keeper().IsChainHalted(ctx, chain) {
+		tradingHalted = true
+	}
+
+	if !tradingHalted && qs.mgr.Keeper().IsRagnarok(ctx, []common.Asset{l1Asset}) {
+		tradingHalted = true
+	}
+
 	p := types.QueryPoolResponse{
 		Asset:               pool.Asset.String(),
 		ShortCode:           pool.Asset.ShortCode(),
@@ -1388,6 +1413,7 @@ func (qs queryServer) queryPool(ctx cosmos.Context, req *types.QueryPoolRequest)
 		PoolUnits:           pool.GetPoolUnits().String(),
 		LPUnits:             pool.LPUnits.String(),
 		SynthUnits:          pool.SynthUnits.String(),
+		TradingHalted:       tradingHalted,
 	}
 	p.SynthSupply = synthSupply.String()
 	p.SaversDepth = saversDepth.String()
@@ -1411,6 +1437,10 @@ func (qs queryServer) queryPool(ctx cosmos.Context, req *types.QueryPoolRequest)
 
 func (qs queryServer) queryPools(ctx cosmos.Context, _ *types.QueryPoolsRequest) (*types.QueryPoolsResponse, error) {
 	dollarsPerRune := dollarsPerRuneIgnoreHalt(ctx, qs.mgr.Keeper())
+
+	isGlobalTradingHalted := qs.mgr.Keeper().IsGlobalTradingHalted(ctx)
+	isChainOrChainTradingHalted := map[common.Chain]bool{}
+
 	pools := make([]*types.QueryPoolResponse, 0)
 	iterator := qs.mgr.Keeper().GetPoolIterator(ctx)
 	for ; iterator.Valid(); iterator.Next() {
@@ -1476,6 +1506,31 @@ func (qs queryServer) queryPools(ctx cosmos.Context, _ *types.QueryPoolsRequest)
 			dbps = cosmos.ZeroUint()
 		}
 
+		tradingHalted := isGlobalTradingHalted
+
+		l1Asset := pool.Asset.GetLayer1Asset()
+		chain := l1Asset.GetChain()
+
+		_, found := isChainOrChainTradingHalted[chain]
+		if !found {
+			isChainHalted := qs.mgr.Keeper().IsChainHalted(ctx, chain)
+			isChainTradingHalted := qs.mgr.Keeper().IsChainTradingHalted(ctx, chain)
+
+			isChainOrChainTradingHalted[chain] = isChainHalted || isChainTradingHalted
+		}
+
+		if !tradingHalted {
+			tradingHalted = isChainOrChainTradingHalted[chain]
+		}
+
+		if !pool.IsAvailable() {
+			tradingHalted = true
+		}
+
+		if qs.mgr.Keeper().IsRagnarok(ctx, []common.Asset{l1Asset}) {
+			tradingHalted = true
+		}
+
 		p := types.QueryPoolResponse{
 			Asset:               pool.Asset.String(),
 			ShortCode:           pool.Asset.ShortCode(),
@@ -1488,6 +1543,7 @@ func (qs queryServer) queryPools(ctx cosmos.Context, _ *types.QueryPoolsRequest)
 			PoolUnits:           pool.GetPoolUnits().String(),
 			LPUnits:             pool.LPUnits.String(),
 			SynthUnits:          pool.SynthUnits.String(),
+			TradingHalted:       tradingHalted,
 		}
 
 		p.SynthSupply = synthSupply.String()
@@ -3319,6 +3375,16 @@ func simulate(ctx cosmos.Context, mgr Manager, msg sdk.Msg) (sdk.Events, error) 
 	}
 
 	return em.Events(), nil
+}
+
+// runePerDollarIgnoreHalt mirrors keeper.RunePerDollar, ignoring halts by using
+// dollarsPerRuneIgnoreHalt to return the last known price instead of "0"
+func runePerDollarIgnoreHalt(ctx cosmos.Context, k keeper.Keeper) cosmos.Uint {
+	runePerDollar := dollarsPerRuneIgnoreHalt(ctx, k)
+
+	one := cosmos.NewUint(common.One)
+
+	return common.GetUncappedShare(one, runePerDollar, one)
 }
 
 // dollarsPerRuneIgnoreHalt mirrors keeper.DollarsPerRune, but ignoring halts if all

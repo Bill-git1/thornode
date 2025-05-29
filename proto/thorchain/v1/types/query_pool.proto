@@ -51,6 +51,8 @@ message QueryPoolResponse{
   string loan_cr = 22 [(gogoproto.jsontag) = "loan_cr"];
 	// the depth of the derived virtual pool relative to L1 pool (in basis points)
   string derived_depth_bps = 23 [(gogoproto.jsontag) = "derived_depth_bps"];
+  // whether trading is halted
+  bool trading_halted = 24 [(gogoproto.jsontag) = "trading_halted"];
 }
 
 message QueryPoolsRequest{

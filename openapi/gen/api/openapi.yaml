@@ -2614,6 +2614,7 @@ components:
         synth_supply: "0"
         savers_capacity_remaining: "1000"
         loan_collateral_remaining: "123456"
+        trading_halted: false
         asset_tor_price: "123456"
         synth_mint_paused: true
         pending_inbound_rune: "464993836"
@@ -2715,6 +2716,10 @@ components:
             basis points)
           example: "123456"
           type: string
+        trading_halted:
+          description: indicates if the pool can be used for swaps
+          example: false
+          type: boolean
       required:
       - LP_units
       - asset
@@ -5368,6 +5373,7 @@ components:
         tns_fee_per_block_rune: "20"
         gas_spent_rune: "1000000000"
         rune_price_in_tor: "10"
+        tor_price_halted: false
         tns_register_fee_rune: "1000000000"
         tor_price_in_rune: "10"
         vaults_liquidity_rune: "5792105087034476"
@@ -5443,6 +5449,11 @@ components:
           description: the tor price in rune
           example: "10"
           type: string
+        tor_price_halted:
+          description: "indicates if all anchor chains are halted (true), or at least\
+            \ one anchor chain is available (false)"
+          example: false
+          type: boolean
       required:
       - available_pools_rune
       - bond_reward_rune
@@ -5454,6 +5465,7 @@ components:
       - rune_price_in_tor
       - tns_fee_per_block_rune
       - tns_register_fee_rune
+      - tor_price_halted
       - tor_price_in_rune
       - total_bond_units
       - total_reserve

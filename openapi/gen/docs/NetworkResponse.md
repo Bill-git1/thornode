@@ -20,12 +20,13 @@ Name | Type | Description | Notes
 **TnsFeePerBlockRune** | **string** | the thorname fee per block in rune, converted from the TNSFeePerBlockUSD mimir (after USD fees are enabled) | 
 **RunePriceInTor** | **string** | the rune price in tor | 
 **TorPriceInRune** | **string** | the tor price in rune | 
+**TorPriceHalted** | **bool** | indicates if all anchor chains are halted (true), or at least one anchor chain is available (false) | 
 
 ## Methods
 
 ### NewNetworkResponse
 
-`func NewNetworkResponse(bondRewardRune string, totalBondUnits string, availablePoolsRune string, vaultsLiquidityRune string, effectiveSecurityBond string, totalReserve string, vaultsMigrating bool, gasSpentRune string, gasWithheldRune string, nativeOutboundFeeRune string, nativeTxFeeRune string, tnsRegisterFeeRune string, tnsFeePerBlockRune string, runePriceInTor string, torPriceInRune string, ) *NetworkResponse`
+`func NewNetworkResponse(bondRewardRune string, totalBondUnits string, availablePoolsRune string, vaultsLiquidityRune string, effectiveSecurityBond string, totalReserve string, vaultsMigrating bool, gasSpentRune string, gasWithheldRune string, nativeOutboundFeeRune string, nativeTxFeeRune string, tnsRegisterFeeRune string, tnsFeePerBlockRune string, runePriceInTor string, torPriceInRune string, torPriceHalted bool, ) *NetworkResponse`
 
 NewNetworkResponse instantiates a new NetworkResponse object
 This constructor will assign default values to properties that have it defined,
@@ -363,6 +364,26 @@ and a boolean to check if the value has been set.
 `func (o *NetworkResponse) SetTorPriceInRune(v string)`
 
 SetTorPriceInRune sets TorPriceInRune field to given value.
+
+
+### GetTorPriceHalted
+
+`func (o *NetworkResponse) GetTorPriceHalted() bool`
+
+GetTorPriceHalted returns the TorPriceHalted field if non-nil, zero value otherwise.
+
+### GetTorPriceHaltedOk
+
+`func (o *NetworkResponse) GetTorPriceHaltedOk() (*bool, bool)`
+
+GetTorPriceHaltedOk returns a tuple with the TorPriceHalted field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetTorPriceHalted
+
+`func (o *NetworkResponse) SetTorPriceHalted(v bool)`
+
+SetTorPriceHalted sets TorPriceHalted field to given value.
 
 
 

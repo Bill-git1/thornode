@@ -1263,3 +1263,53 @@ func (s *QuerierSuite) TestQueryCodes(c *C) {
 	c.Assert(code.Deployers[0], Equals, "tthor1jgnk2mg88m57csrmrlrd6c3qe4lag3e33y2f3k")
 	c.Assert(code.Deployers[1], Equals, "tthor1khtl8ch2zgay00c47ukvulam3a4faw2500g7lu")
 }
+
+func (s *QuerierSuite) TestNetwork(c *C) {
+	vault := GetRandomVault()
+	vault.Chains = append(vault.Chains, common.ETHChain.String())
+	c.Assert(s.k.SetVault(s.ctx, vault), IsNil)
+
+	s.k.SetMimir(s.ctx, "DerivedDepthBasisPts", 10_000)
+	s.k.SetMimir(s.ctx, "TorAnchor-ETH-BUSD-BD1", 1) // enable BUSD pool as a TOR anchor
+	ethBusd, err := common.NewAsset("ETH.BUSD-BD1")
+	c.Assert(err, IsNil)
+
+	pool := NewPool()
+	pool.Asset = ethBusd
+	pool.Status = PoolAvailable
+	pool.BalanceRune = cosmos.NewUint(500_000_00000000)
+	pool.BalanceAsset = cosmos.NewUint(4_556_123_00000000)
+	pool.Decimals = 8
+	err = s.k.SetPool(s.ctx, pool)
+	c.Assert(err, IsNil)
+
+	runePriceInTor := s.k.DollarsPerRune(s.ctx)
+	c.Assert(runePriceInTor.String(), Equals, "911224600")
+
+	torPriceInRune := s.k.RunePerDollar(s.ctx)
+	c.Assert(torPriceInRune.String(), Equals, "10974243")
+
+	resp, err := s.queryServer.Network(s.ctx, &types.QueryNetworkRequest{})
+	c.Assert(err, IsNil)
+	c.Assert(resp.TorPriceInRune, Equals, torPriceInRune.String())
+	c.Assert(resp.RunePriceInTor, Equals, runePriceInTor.String())
+	c.Assert(resp.TorPriceHalted, Equals, false)
+	// there is no previous block, so lastTorHeight is not set
+
+	s.k.SetMimir(s.ctx, "HALTETHTRADING", 1)
+
+	c.Assert(s.k.DollarsPerRune(s.ctx).String(), Equals, "0")
+	c.Assert(s.k.RunePerDollar(s.ctx).String(), Equals, "0")
+
+	resp, err = s.queryServer.Network(s.ctx, &types.QueryNetworkRequest{})
+	c.Assert(err, IsNil)
+	c.Assert(resp.TorPriceInRune, Equals, torPriceInRune.String())
+	c.Assert(resp.RunePriceInTor, Equals, runePriceInTor.String())
+	c.Assert(resp.TorPriceHalted, Equals, true)
+
+	s.k.SetMimir(s.ctx, "HALTETHTRADING", 0)
+
+	resp, err = s.queryServer.Network(s.ctx, &types.QueryNetworkRequest{})
+	c.Assert(err, IsNil)
+	c.Assert(resp.TorPriceHalted, Equals, false)
+}

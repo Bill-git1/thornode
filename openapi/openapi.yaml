@@ -1771,7 +1771,10 @@ components:
           type: string
           example: "123456"
           description: the depth of the derived virtual pool relative to L1 pool (in basis points)
-
+        trading_halted:
+          type: boolean
+          example: false
+          description: indicates if the pool can be used for swaps
     DerivedPool:
       type: object
       required:
@@ -3629,6 +3632,7 @@ components:
         - tns_fee_per_block_rune
         - rune_price_in_tor
         - tor_price_in_rune
+        - tor_price_halted
       properties:
         bond_reward_rune:
           type: string
@@ -3694,6 +3698,10 @@ components:
           type: string
           example: "10"
           description: the tor price in rune
+        tor_price_halted:
+          type: boolean
+          example: false
+          description: indicates if all anchor chains are halted (true), or at least one anchor chain is available (false)
 
     OutboundFeesResponse:
       type: array

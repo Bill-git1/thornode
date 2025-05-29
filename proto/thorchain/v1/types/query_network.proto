@@ -44,4 +44,6 @@ message QueryNetworkResponse{
   string rune_price_in_tor = 13 [(gogoproto.jsontag) = "rune_price_in_tor"];
   // the tor price in rune
   string tor_price_in_rune = 14 [(gogoproto.jsontag) = "tor_price_in_rune"];
+  // indicator if all anchor chains are halted
+  bool tor_price_halted = 17 [(gogoproto.jsontag) = "tor_price_halted"];
 }
