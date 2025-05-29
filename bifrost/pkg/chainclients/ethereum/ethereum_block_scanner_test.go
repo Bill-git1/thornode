@@ -318,24 +318,25 @@ func (s *BlockScannerTestSuite) TestFromTxToTxIn(c *C) {
 				c.Assert(err, IsNil)
 			}
 			if rpcRequest.Method == "eth_call" {
-				if string(rpcRequest.Params) == `[{"from":"0x0000000000000000000000000000000000000000","input":"0x95d89b41","to":"0x3b7fa4dd21c6f9ba3ca375217ead7cab9d6bf483"},"latest"]` ||
-					string(rpcRequest.Params) == `[{"data":"0x95d89b41","from":"0x0000000000000000000000000000000000000000","to":"0x40bcd4db8889a8bf0b1391d0c819dcd9627f9d0a"},"latest"]` {
+				switch string(rpcRequest.Params) {
+				case `[{"from":"0x0000000000000000000000000000000000000000","input":"0x95d89b41","to":"0x3b7fa4dd21c6f9ba3ca375217ead7cab9d6bf483"},"latest"]`,
+					`[{"data":"0x95d89b41","from":"0x0000000000000000000000000000000000000000","to":"0x40bcd4db8889a8bf0b1391d0c819dcd9627f9d0a"},"latest"]`:
 					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":3,"result":"0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003544b4e0000000000000000000000000000000000000000000000000000000000"}`))
 					c.Assert(err, IsNil)
 					return
-				} else if string(rpcRequest.Params) == `[{"from":"0x0000000000000000000000000000000000000000","input":"0x313ce567","to":"0x3b7fa4dd21c6f9ba3ca375217ead7cab9d6bf483"},"latest"]` {
+				case `[{"from":"0x0000000000000000000000000000000000000000","input":"0x313ce567","to":"0x3b7fa4dd21c6f9ba3ca375217ead7cab9d6bf483"},"latest"]`:
 					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":4,"result":"0x0000000000000000000000000000000000000000000000000000000000000012"}`))
 					c.Assert(err, IsNil)
 					return
-				} else if string(rpcRequest.Params) == `[{"from":"0x0000000000000000000000000000000000000000","input":"0x95d89b41","to":"0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"},"latest"]` {
+				case `[{"from":"0x0000000000000000000000000000000000000000","input":"0x95d89b41","to":"0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"},"latest"]`:
 					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":5,"result":"0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003544b4e0000000000000000000000000000000000000000000000000000000000"}`))
 					c.Assert(err, IsNil)
 					return
-				} else if string(rpcRequest.Params) == `[{"from":"0x0000000000000000000000000000000000000000","input":"0x313ce567","to":"0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"},"latest"]` {
+				case `[{"from":"0x0000000000000000000000000000000000000000","input":"0x313ce567","to":"0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"},"latest"]`:
 					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":6,"result":"0x0000000000000000000000000000000000000000000000000000000000000008"}`))
 					c.Assert(err, IsNil)
 					return
-				} else {
+				default:
 					fmt.Printf("======> rpcRequest.Params: %s\n", string(rpcRequest.Params))
 				}
 				_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x52554e45"}`))

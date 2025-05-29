@@ -91,8 +91,6 @@ unit-tests:
 
 lint:
   rules:
-    - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train" && $CI_MERGE_REQUEST_TARGET_BRANCH_SHA == $CI_MERGE_REQUEST_DIFF_BASE_SHA'
-      when: never
     - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH
       when: never
     - if: $CI_COMMIT_BRANCH == "stagenet"
