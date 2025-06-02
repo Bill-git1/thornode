@@ -2,7 +2,7 @@
 
 ## Overview
 
-The network launched with a set number of constants, which has not changed. Constants can be overridden via Mimir and nodes have the ability to [vote on](../thornodes/overview.md#node-voting) and change Mimir values. \
+The network launched with a set number of constants, which have not changed. Constants can be overridden via Mimir and nodes have the ability to [vote on](../thornodes/overview.md#node-voting) and change Mimir values. \
 See [Halt Management](./concepts/network-halts.md) for halt and pause specific settings.
 
 Mimir setting can be created and changed without a corresponding Constant.
@@ -16,7 +16,7 @@ Mimirs have a maximum length of 128 bytes (see MaxMimirLength in THORNode code).
 
 ### Key
 
-- No Star or Hash - Constant only, no Mimir override.
+- No Symbol - Constant only, no Mimir override.
 - Star (\*) indicates a Mimir override of a Constant.
 - Hash (#) indicates Mimir with no Constant.
 
@@ -53,52 +53,37 @@ Mimirs have a maximum length of 128 bytes (see MaxMimirLength in THORNode code).
 - `SynthSlipMinBps`: Minimum synth asset swap fee in basis points
 - `DerivedSlipMinBps`: Minimum derived asset swap fee in basis points
 
-## Synths
+## TCY Management
 
-- `MaxSynthPerAssetDepth`: The amount of synths allowed per pool relative to the pool depth
-- `MaxSynthPerPoolDepth`\*: The percentage (in basis points) of how many synths are allowed relative to pool depth of the related pool
-- `BurnSynths`#: Enable/Disable burning synths
-- `MintSynths`#: Enable/Disable minting synths
-- `VirtualMultSynths`: The amount of increase the pool depths for calculating swap fees of synths
+- `MinRuneForTCYStakeDistribution`: Minimum RUNE required in the TCY fund to be eligible for distribution (default: 2,100 RUNE (210000000000 in 1e8 notation))
+- `MinTCYForTCYStakeDistribution`: Minimum TCY required in the TCY fund to be eligible for distribution (default: 100,000 TCY)
+- `TCYStakeSystemIncomeBps`: Percentage (in basis points) of system income allocated to the TCY fund (default: 1000 bps = 10%)
+- `TCYClaimingSwapHalt`: Enables/disables RUNE-to-TCY swaps in the claiming module (default: 1, halted)
+- `TCYStakeDistributionHalt`: Enables/disables distribution of RUNE revenue to TCY stakers (default: 1, halted)
+- `TCYStakingHalt`: Enables/disables staking of TCY tokens (default: 1, halted)
+- `TCYUnstakingHalt`: Enables/disables unstaking of TCY tokens (default: 1, halted)
+- `TCYClaimingHalt`: Enables/disables claiming of TCY tokens for THORFi deposits (default: 1, halted)
 
-## Savers
+## Secured Asset Management
 
-- `MaxSynthsForSaversYield`\*: The percentage (in basis points) synth per pool where synth yield reaches 0%
-- `SaversStreamingSwapsInterval`\*: For Savers deposits and withdraws, the streaming swaps interval to use for the Native <> Synth swap
-- `SaversEjectInterval`: The number of blocks for savers check, disabled if zero.
+- `HaltSecuredGlobal`#: Halts operations for all secured assets across both the Base and App Layers
+- `HaltSecuredDeposit-<Chain>`#: Disables deposit of secured assets on the specified chain
+- `HaltSecuredWithdraw-<Chain>`#: Disables withdrawal of secured asset on the specified chain
 
-### POL Management
+## App Layer Management
 
-- `POL-<Asset-Asset>`#: Enabled POL for that pool. E.g. `POL-BTC-BTC" = 1` enabled POL for the BTC pool.
-- `POLBuffer`\*: the buffer around the POL synth utilization (basis points added to/subtracted from POLTargetSynthPerPoolDepth basis points)
-- `POLMaxNetworkDeposit`\*: Maximum amount of rune deposited into the pools
-- `POLMaxPoolMovement`\*: Maximum amount of rune to enter/exit a pool per iteration - 1 equals one hundredth of a basis point of pool rune depth
-- `POLTargetSynthPerPoolDepth`\*: The target synth per pool depth for POL (basis points)
-
-## Lending
-
-- `LendingLever`: Controls (in basis points) how much lending is allowed relative to rune supply
-- `LoanRepaymentMaturity`: Number of blocks before loan has reached maturity and can be repaid
-- `MinCR`\*: Minimum collateralization ratio (basis pts)
-- `MaxCR`\*: Maximum collateralization ratio (basis pts)
-- `Lending-THOR-<Asset>`#: Lending key for an asset, allows that Asset to be used as collateral. The lending key for the `ETH.ETH` pool would be `LENDING-THOR-ETH` and enabled the `THOR-ETH` virtual pool.
-- `LoanStreamingSwapsInterval`\*: The block interval between each streaming swap of opening or closing a loan
-
-## Derived Assets
-
-- `DerivedDepthBasisPts`: Allows mimir to increase or decrease the default derived asset pool depth relative to the anchor pools. 10k == 1x, 20k == 2x, 5k == 0.5x
-- `DerivedMinDepth`: Sets the minimum derived asset depth in basis points, or pool depth floor.
-- `MaxAnchorSlip`\*: Percentage (in basis points) of how much price slip in the anchor pools will cause the derived asset pool depths to decrease to
-- `DerivedMinDepth`. For example, 8k basis pts will mean that when there has been 80% price slip in the last `MaxAnchorBlocks`, the derived asset pool depth will be `DerivedMinDepth`. So this controls the "reactiveness" of the derived asset pool to the layer1 trade volume.
-- `MaxAnchorBlocks`: Number of blocks that are summed to get total pool slip. This is the number used to be applied to `MaxAnchorSlip`
-- `TORAnchor-<Asset>`#: Enables an asset to be used in the TOR price calculation
+- `WasmPermissionless`#: Toggles permissionless deployment of CosmWasm smart contracts (default: 0, restricted).
+- `WasmMinGasPrice`#: Sets the minimum gas price for CosmWasm transactions in the App Layer in RUNE.
+- `HaltWasmGlobal`#: Pauses all CosmWasm smart contract executions in the App Layer.
+- `HaltWasmCs-<checksum>`#: Halts a specific CosmWasm contract by its base32-encoded checksum.
+- `HaltWasmContract-<address suffix>`#: Halts a specific CosmWasm contract using the last 6 characters of its address.
 
 ## LP Management
 
 - `PauseLP`#: Pauses the ability for LPs to add/remove liquidity
 - `PauseLP<chain>`#: Pauses the ability for LPs to add/remove liquidity, per chain
 - `MaximumLiquidityRune`#: Maximum RUNE capped on the pools known as the ‘soft cap’
-- `LiquidityLockUpBlocks`: The number of blocks LP can withdraw after their liquidity
+- `LiquidityLockUpBlocks`: The number of blocks an LP must wait before they can withdraw their liquidity
 - `PendingLiquidityAgeLimit`: The number of blocks the network waits before initiating pending liquidity cleanup. Cleanup of all pools lasts for the same duration.
 - `PauseAsymWithdrawal-<Chain>`#: Forces dual-address liquidity providers to withdraw symmetrically rather than asymmetrically.
 - `PauseLPDeposit-<Asset>`#: pauses the ability to add liquidity into that pool. E.g. `PAUSELPDEPOSIT-BTC-BTC=1` suspends deposits for the BTC pool
@@ -107,20 +92,20 @@ Mimirs have a maximum length of 128 bytes (see MaxMimirLength in THORNode code).
 
 - `RUNEPoolEnabled`: Enable/disable RUNE Pool
 - `RUNEPoolDepositMaturityBlocks`: Minimum number of blocks from last RUNEPool deposit when a withdraw is allowed.
-- `RUNEPoolMaxReserveBackstop`: Max amount of RUNE above the `POLMaxNetworkDeposit` that the reserve can enter RunePool before withdrawls are disabled.
+- `RUNEPoolMaxReserveBackstop`: Max amount of RUNE above the `POLMaxNetworkDeposit` that the reserve can enter RunePool before withdrawals are disabled.
 
 ## Chain Management
 
 - `HaltChainGlobal`#: Pause observations on all chains (chain clients)
 - `HaltTrading`: Stops swaps and additions, if done, will result in refunds. Observations still occur.
 - `Halt<chain>Chain`#: Pause a specific blockchain
-- `SolvencyHalt<Chain>`# Halts a chain if the solvancy checker for that chain fails.
+- `SolvencyHalt<Chain>`# Halts a chain if the solvency checker for that chain fails.
 - `NodePauseChainGlobal`#: Individual node controlled means to pause all chains
 - `NodePauseChainBlocks`: Number of block a node operator can pause/resume the chains for
 - `BlocksPerYear`: Blocks in a year
 - `MaxUTXOsToSpend`#: Max UTXOs to be spent in one block
 - `MinimumNodesForBFT`: Minimum node count to keep the network running. Below this, Ragnarök is performed
-- `MaxConfirmations-<Chain>`# : The maximum number of conformations for a chain
+- `MaxConfirmations-<Chain>`# : The maximum number of confirmations for a chain
 - `ConfMultiplierBasisPoints-<Chain>`#: Increases or decrease the inbound confirmation count block requirement for a chain
 
 ### Fee Management
@@ -146,19 +131,6 @@ Mimirs have a maximum length of 128 bytes (see MaxMimirLength in THORNode code).
 - `MaxBondProviders`\*: Maximum number of bond providers per mode
 - `NodeOperatorFee`\*: Minimum node operator fee
 - `SignerConcurrency`\*: Number of concurrent signers for active and retiring vaults
-
-### Yggdrasil Management
-
-```admonish note
-**Yggdrasil** Vaults are deprecated since [ADR-002](./architecture/adr-002-removeyggvaults.md).
-```
-
-- `YggFundLimit`: Funding limit for yggdrasil vaults (percentage)
-- `YggFundRetry`\*: Number of blocks to wait before attempting to fund a yggdrasil again
-- `StopFundYggdrasil`#: Enable/Disable yggdrasil funding
-- `ObservationDelayFlexibility`\*: Number of blocks of flexibility for a validator to get their slash points taken off for making an observation
-- `PoolDepthForYggFundingMin`\*: The minimum pool depth in RUNE required for ygg funding
-- `MinimumNodesForYggdrasil`: No yggdrasil vaults if THORNode have less than 6 active nodes
 
 ### Slashing Management
 
@@ -194,7 +166,7 @@ Mimirs have a maximum length of 128 bytes (see MaxMimirLength in THORNode code).
 - `MaxAvailablePools`: Maximum number of pools allowed on the network. Gas pools (native pools) are excluded from this.
 - `MinRunePoolDepth`\*: Minimum number of RUNE to be considered to become active
 - `PoolCycle`\*: Number of blocks the network will churn the pools (add/remove new available pools)
-- `StagedPoolCost`: Number of RUNE (1e8 notation) that a stage pool is deducted on each pool cycle.
+- `StagedPoolCost`: Number of RUNE (1e8 notation) that a staged pool is deducted on each pool cycle.
 - `KillSwitchStart`\*: Block height to start to kill BEP2 and ERC20 RUNE
 - `KillSwitchDuration`: Duration (in blocks) until switching is deprecated
 - `MinimumPoolLiquidityFee`: Minimum liquidity fee an active pool should accumulate to avoid being demoted, set to 0 to disable demote pool based on liquidity fee
@@ -202,17 +174,6 @@ Mimirs have a maximum length of 128 bytes (see MaxMimirLength in THORNode code).
 - `PendulumUseEffectiveSecurity`: Determines the [Incentive Pendulum](./concepts/incentive-pendulum.md) perception of the `securing`. If set to 1, `Effective Security Bond` is used; otherwise `Total Effective Bond` is applied.
 - `PendulumUseVaultAssets`: Determines the [Incentive Pendulum](./concepts/incentive-pendulum.md) perception of the `securing`. If set to 1, `Total Pooled` is used; otherwise `Vaulted Assets` is applied.
 - `PendulumAssetsBasisPoints`: Scales the Incentive Pendulum perception of the `secured` L1 asset size, where values above 100% overestimate and values below 100% underestimate the amount of `secured` assets.
-
-## TCY Management
-
-- `MinRuneForTCYStakeDistribution`: Minimum RUNE required in the TCY fund to be eligible for distribution (default: 2,100 RUNE (210000000000 in 1e8 notation))
-- `MinTCYForTCYStakeDistribution`: Minimum TCY required in the TCY fund to be eligible for distribution (default: 100,000 TCY)
-- `TCYStakeSystemIncomeBps`: Percentage (in basis points) of system income allocated to the TCY fund (default: 1000 bps = 10%)
-- `TCYClaimingSwapHalt`: Enables/disables RUNE-to-TCY swaps in the claiming module (default: 1, halted)
-- `TCYStakeDistributionHalt`: Enables/disables distribution of RUNE revenue to TCY stakers (default: 1, halted)
-- `TCYStakingHalt`: Enables/disables staking of TCY tokens (default: 1, halted)
-- `TCYUnstakingHalt`: Enables/disables unstaking of TCY tokens (default: 1, halted)
-- `TCYClaimingHalt`: Enables/disables claiming of TCY tokens for THORFi deposits (default: 1, halted)
 
 ## Attestation Gossip
 
@@ -232,6 +193,7 @@ Mimirs have a maximum length of 128 bytes (see MaxMimirLength in THORNode code).
 - `HALTSIGNING#`: Halt signing globally
 - `Ragnarok-<Asset>`#: Ragnaroks a specific pool
 - `BankSendEnabled`: Enable/Disable cosmos bank send messages
+- `ObservationDelayFlexibility`\*: Number of blocks of flexibility for a validator to get their slash points taken off for making an observation
 
 ### Router Upgrading (DO NOT TOUCH!)
 
