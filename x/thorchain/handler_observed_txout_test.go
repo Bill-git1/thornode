@@ -177,7 +177,7 @@ func (s *HandlerObservedTxOutSuite) TestHandle(c *C) {
 	pk := GetRandomPubKey()
 	tx.FromAddress, err = pk.GetAddress(tx.Coins[0].Asset.Chain)
 	txInHash := GetRandomTxHash()
-	tx.Memo = fmt.Sprintf("OUT:%s", txInHash)
+	tx.Memo = fmt.Sprintf("OUT:%s|hello world", txInHash) // Including data passthrough test.
 	obTx := NewObservedTx(tx, 12, pk, 12)
 	txs := ObservedTxs{obTx}
 	c.Assert(err, IsNil)

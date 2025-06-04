@@ -355,13 +355,16 @@ func processTxOutAttestation(
 		// A duplicate message, so do nothing further.
 		return voter, ok
 	}
-	parts := strings.Split(tx.Tx.Memo, ":")
-	if len(parts) > 1 {
-		inhash, err := common.NewTxID(parts[len(parts)-1])
-		if err == nil {
-			k.SetObservedLink(ctx, inhash, tx.Tx.ID)
-		}
+
+	// Outbound memos can have | data passthrough,
+	// so linked TxID extracted with memo parsing and GetTxID
+	// rather than strings.Split .
+	if memo, err := ParseMemoWithTHORNames(ctx, k, tx.Tx.Memo); err != nil {
+		ctx.Logger().Error("fail to parse outbound memo", "error", err, "memo", tx.Tx.Memo)
+	} else if inhash := memo.GetTxID(); !inhash.IsEmpty() {
+		k.SetObservedLink(ctx, inhash, tx.Tx.ID)
 	}
+
 	if voter.HasFinalised(nas) {
 		if voter.FinalisedHeight == 0 {
 			if voter.Height == 0 {
