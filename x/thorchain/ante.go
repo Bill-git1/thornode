@@ -173,7 +173,9 @@ func (ad AnteDecorator) anteHandleMessage(ctx sdk.Context, version semver.Versio
 		*wasmtypes.MsgInstantiateContract2,
 		*wasmtypes.MsgExecuteContract,
 		*wasmtypes.MsgMigrateContract,
-		*wasmtypes.MsgSudoContract:
+		*wasmtypes.MsgSudoContract,
+		*wasmtypes.MsgUpdateAdmin,
+		*wasmtypes.MsgClearAdmin:
 		return ctx, nil
 	default:
 		return ctx, cosmos.ErrUnknownRequest("invalid message type")

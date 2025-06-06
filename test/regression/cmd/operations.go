@@ -139,6 +139,10 @@ func NewOperation(opMap map[string]any) Operation {
 		op = &OpTxStoreCode{}
 	case "tx-sudo-contract":
 		op = &OpTxSudoContract{}
+	case "tx-update-admin":
+		op = &OpTxUpdateAdmin{}
+	case "tx-clear-admin":
+		op = &OpTxClearAdmin{}
 
 	default:
 		log.Fatal().Str("type", t).Msg("unknown operation type")
@@ -1148,6 +1152,30 @@ type OpTxSudoContract struct {
 
 func (op *OpTxSudoContract) Execute(out io.Writer, _ string, _, routine int, _ *os.Process, logs chan string) error {
 	return sendMsg(out, routine, &op.MsgSudoContract, sdk.MustAccAddressFromBech32(op.Authority), "", op.Sequence, op.Gas, op, op.Fees, logs)
+}
+
+type OpTxUpdateAdmin struct {
+	OpBase                   `yaml:",inline"`
+	wasmtypes.MsgUpdateAdmin `yaml:",inline"`
+	Sequence                 *int64 `json:"sequence"`
+	Gas                      *int64 `json:"gas"`
+	Fees                     string `json:"fees"`
+}
+
+func (op *OpTxUpdateAdmin) Execute(out io.Writer, _ string, _, routine int, _ *os.Process, logs chan string) error {
+	return sendMsg(out, routine, &op.MsgUpdateAdmin, sdk.MustAccAddressFromBech32(op.Sender), "", op.Sequence, op.Gas, op, op.Fees, logs)
+}
+
+type OpTxClearAdmin struct {
+	OpBase                  `yaml:",inline"`
+	wasmtypes.MsgClearAdmin `yaml:",inline"`
+	Sequence                *int64 `json:"sequence"`
+	Gas                     *int64 `json:"gas"`
+	Fees                    string `json:"fees"`
+}
+
+func (op *OpTxClearAdmin) Execute(out io.Writer, _ string, _, routine int, _ *os.Process, logs chan string) error {
+	return sendMsg(out, routine, &op.MsgClearAdmin, sdk.MustAccAddressFromBech32(op.Sender), "", op.Sequence, op.Gas, op, op.Fees, logs)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////

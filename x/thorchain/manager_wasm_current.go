@@ -264,6 +264,64 @@ func (m WasmMgrVCUR) SudoContract(
 	return m.permissionedKeeper().Sudo(ctx, contractAddress, msg)
 }
 
+func (m WasmMgrVCUR) UpdateAdmin(
+	ctx cosmos.Context,
+	contractAddress, sender, newAdmin sdk.AccAddress,
+) ([]byte, error) {
+	if err := m.checkHalt(ctx); err != nil {
+		return nil, err
+	}
+
+	contractInfo, err := m.getContractInfo(ctx, contractAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	codeInfo, err := m.getCodeInfo(ctx, contractInfo.CodeID)
+	if err != nil {
+		return nil, err
+	}
+
+	err = m.checkContractAuthorization(ctx, contractInfo, sender, codeInfo.CodeHash)
+	if err != nil {
+		return nil, err
+	}
+
+	// Verify that the sender isn't going to black-hole their permissions
+	err = m.checkAuthorization(ctx, sender, codeInfo.CodeHash)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, m.permissionedKeeper().UpdateContractAdmin(ctx, contractAddress, sender, newAdmin)
+}
+
+func (m WasmMgrVCUR) ClearAdmin(
+	ctx cosmos.Context,
+	contractAddress, sender sdk.AccAddress,
+) ([]byte, error) {
+	if err := m.checkHalt(ctx); err != nil {
+		return nil, err
+	}
+
+	contractInfo, err := m.getContractInfo(ctx, contractAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	codeInfo, err := m.getCodeInfo(ctx, contractInfo.CodeID)
+	if err != nil {
+		return nil, err
+	}
+
+	err = m.checkContractAuthorization(ctx, contractInfo, sender, codeInfo.CodeHash)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, m.permissionedKeeper().ClearContractAdmin(ctx, contractAddress, sender)
+}
+
 func (m WasmMgrVCUR) checkHalt(ctx cosmos.Context) error {
 	v, err := m.keeper.GetMimir(ctx, constants.MimirKeyWasmHaltGlobal)
 	if err != nil {

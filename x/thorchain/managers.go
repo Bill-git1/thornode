@@ -180,6 +180,12 @@ type WasmManager interface {
 		contractAddress, caller sdk.AccAddress,
 		msg []byte,
 	) ([]byte, error)
+	UpdateAdmin(ctx cosmos.Context,
+		contractAddress, caller, newAdmin sdk.AccAddress,
+	) ([]byte, error)
+	ClearAdmin(ctx cosmos.Context,
+		contractAddress, caller sdk.AccAddress,
+	) ([]byte, error)
 }
 
 // SwapQueue interface define the contract of Swap Queue

@@ -69,3 +69,15 @@ func (s *DummyWasmManager) SudoContract(ctx cosmos.Context,
 ) ([]byte, error) {
 	return nil, nil
 }
+
+func (s *DummyWasmManager) UpdateAdmin(ctx cosmos.Context,
+	contractAddress, sender, newAdmin sdk.AccAddress,
+) ([]byte, error) {
+	return nil, nil
+}
+
+func (s *DummyWasmManager) ClearAdmin(ctx cosmos.Context,
+	contractAddress, sender sdk.AccAddress,
+) ([]byte, error) {
+	return nil, nil
+}

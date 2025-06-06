@@ -36,3 +36,13 @@ func (ms msgServer) SudoContract(goCtx context.Context, msg *wasmtypes.MsgSudoCo
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	return NewWasmSudoContractHandler(ms.mgr).Run(ctx, msg)
 }
+
+func (ms msgServer) UpdateAdmin(goCtx context.Context, msg *wasmtypes.MsgUpdateAdmin) (*wasmtypes.MsgUpdateAdminResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	return NewWasmUpdateAdminHandler(ms.mgr).Run(ctx, msg)
+}
+
+func (ms msgServer) ClearAdmin(goCtx context.Context, msg *wasmtypes.MsgClearAdmin) (*wasmtypes.MsgClearAdminResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	return NewWasmClearAdminHandler(ms.mgr).Run(ctx, msg)
+}
