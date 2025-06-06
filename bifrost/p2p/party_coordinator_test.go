@@ -95,8 +95,14 @@ func TestPartyCoordinatorTimeOut(t *testing.T) {
 		peers = append(peers, el.host.ID().String())
 	}
 
+	// Stop the party coordinators that should not participate
+	// This prevents them from handling any incoming streams
+	for _, el := range pcs[2:] {
+		el.Stop()
+	}
+
 	defer func() {
-		for _, el := range pcs {
+		for _, el := range pcs[:2] {
 			el.Stop()
 		}
 	}()

@@ -166,8 +166,6 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 		})
 		c.Assert(err, IsNil)
 
-		ag.setActiveValidators(validatorPubs)
-
 		// Create pubkey manager
 		pubkeyMgr, err := pubkeymanager.NewPubKeyManager(mockBridge, s.metrics)
 		c.Assert(err, IsNil)
@@ -232,6 +230,23 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 	time.Sleep(time.Millisecond * 100)
 
 	logger.Info().Msg("All validators connected")
+
+	// Set active validators for all attestation gossips using actual host peer IDs
+	hostPeerIDs := make([]peer.ID, len(hosts))
+	for i, host := range hosts {
+		hostPeerIDs[i] = host.GetHost().ID()
+	}
+
+	// Set active validators for each attestation gossip instance
+	for _, ag := range attestationGossips {
+		ag.avMu.Lock()
+		activePeers := make(map[peer.ID]bool)
+		for _, peerID := range hostPeerIDs {
+			activePeers[peerID] = true
+		}
+		ag.activeVals = activePeers
+		ag.avMu.Unlock()
+	}
 
 	// Start all observers
 	for _, obs := range observers {
