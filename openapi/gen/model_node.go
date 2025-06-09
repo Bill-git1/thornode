@@ -48,6 +48,8 @@ type Node struct {
 	ObserveChains []ChainHeight `json:"observe_chains"`
 	// indicates whether the node is in maintenance mode
 	Maintenance bool `json:"maintenance"`
+	// the number of recent blocks the node has missed signing
+	MissingBlocks int64 `json:"missing_blocks"`
 	PreflightStatus NodePreflightStatus `json:"preflight_status"`
 }
 
@@ -55,7 +57,7 @@ type Node struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewNode(nodeAddress string, status string, pubKeySet NodePubKeySet, validatorConsPubKey string, peerId string, activeBlockHeight int64, statusSince int64, nodeOperatorAddress string, totalBond string, bondProviders NodeBondProviders, signerMembership []string, requestedToLeave bool, forcedToLeave bool, leaveHeight int64, ipAddress string, version string, slashPoints int64, jail NodeJail, currentAward string, observeChains []ChainHeight, maintenance bool, preflightStatus NodePreflightStatus) *Node {
+func NewNode(nodeAddress string, status string, pubKeySet NodePubKeySet, validatorConsPubKey string, peerId string, activeBlockHeight int64, statusSince int64, nodeOperatorAddress string, totalBond string, bondProviders NodeBondProviders, signerMembership []string, requestedToLeave bool, forcedToLeave bool, leaveHeight int64, ipAddress string, version string, slashPoints int64, jail NodeJail, currentAward string, observeChains []ChainHeight, maintenance bool, missingBlocks int64, preflightStatus NodePreflightStatus) *Node {
 	this := Node{}
 	this.NodeAddress = nodeAddress
 	this.Status = status
@@ -78,6 +80,7 @@ func NewNode(nodeAddress string, status string, pubKeySet NodePubKeySet, validat
 	this.CurrentAward = currentAward
 	this.ObserveChains = observeChains
 	this.Maintenance = maintenance
+	this.MissingBlocks = missingBlocks
 	this.PreflightStatus = preflightStatus
 	return &this
 }
@@ -594,6 +597,30 @@ func (o *Node) SetMaintenance(v bool) {
 	o.Maintenance = v
 }
 
+// GetMissingBlocks returns the MissingBlocks field value
+func (o *Node) GetMissingBlocks() int64 {
+	if o == nil {
+		var ret int64
+		return ret
+	}
+
+	return o.MissingBlocks
+}
+
+// GetMissingBlocksOk returns a tuple with the MissingBlocks field value
+// and a boolean to check if the value has been set.
+func (o *Node) GetMissingBlocksOk() (*int64, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.MissingBlocks, true
+}
+
+// SetMissingBlocks sets field value
+func (o *Node) SetMissingBlocks(v int64) {
+	o.MissingBlocks = v
+}
+
 // GetPreflightStatus returns the PreflightStatus field value
 func (o *Node) GetPreflightStatus() NodePreflightStatus {
 	if o == nil {
@@ -682,6 +709,9 @@ func (o Node) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if true {
 		toSerialize["maintenance"] = o.Maintenance
+	}
+	if true {
+		toSerialize["missing_blocks"] = o.MissingBlocks
 	}
 	if true {
 		toSerialize["preflight_status"] = o.PreflightStatus

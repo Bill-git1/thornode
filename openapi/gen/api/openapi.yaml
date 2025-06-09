@@ -4064,6 +4064,7 @@ components:
         total_bond: "123456789"
         slash_points: 42
         forced_to_leave: true
+        missing_blocks: 0
         validator_cons_pub_key: thor104gsqwta048e80j909g6y9kkqdjrw0lff866ew
         bond_providers:
           node_operator_fee: node_operator_fee
@@ -4160,6 +4161,10 @@ components:
           description: indicates whether the node is in maintenance mode
           example: false
           type: boolean
+        missing_blocks:
+          description: the number of recent blocks the node has missed signing
+          format: int64
+          type: integer
         preflight_status:
           $ref: '#/components/schemas/NodePreflightStatus'
       required:
@@ -4171,6 +4176,7 @@ components:
       - jail
       - leave_height
       - maintenance
+      - missing_blocks
       - node_address
       - node_operator_address
       - observe_chains

@@ -2732,6 +2732,7 @@ components:
         - current_award
         - observe_chains
         - maintenance
+        - missing_blocks
         - preflight_status
       properties:
         node_address:
@@ -2858,6 +2859,10 @@ components:
           type: boolean
           description: indicates whether the node is in maintenance mode
           example: false
+        missing_blocks:
+          type: integer
+          format: int64
+          description: the number of recent blocks the node has missed signing
         preflight_status:
           type: object
           title: NodePreflightStatus

@@ -47,6 +47,7 @@ message QueryNodeResponse{
   NodePreflightStatus preflight_status = 21 [(gogoproto.jsontag) = "preflight_status"];
   // if the node operator has placed the node in maintenance or not
   bool maintenance = 22 [(gogoproto.jsontag) = "maintenance"];
+  int64 missing_blocks = 23 [(gogoproto.jsontag) = "missing_blocks"];
 }
 
 message QueryNodesRequest{

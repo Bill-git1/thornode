@@ -25,13 +25,14 @@ Name | Type | Description | Notes
 **CurrentAward** | **string** |  | 
 **ObserveChains** | [**[]ChainHeight**](ChainHeight.md) | the last observed heights for all chain by the node | 
 **Maintenance** | **bool** | indicates whether the node is in maintenance mode | 
+**MissingBlocks** | **int64** | the number of recent blocks the node has missed signing | 
 **PreflightStatus** | [**NodePreflightStatus**](NodePreflightStatus.md) |  | 
 
 ## Methods
 
 ### NewNode
 
-`func NewNode(nodeAddress string, status string, pubKeySet NodePubKeySet, validatorConsPubKey string, peerId string, activeBlockHeight int64, statusSince int64, nodeOperatorAddress string, totalBond string, bondProviders NodeBondProviders, signerMembership []string, requestedToLeave bool, forcedToLeave bool, leaveHeight int64, ipAddress string, version string, slashPoints int64, jail NodeJail, currentAward string, observeChains []ChainHeight, maintenance bool, preflightStatus NodePreflightStatus, ) *Node`
+`func NewNode(nodeAddress string, status string, pubKeySet NodePubKeySet, validatorConsPubKey string, peerId string, activeBlockHeight int64, statusSince int64, nodeOperatorAddress string, totalBond string, bondProviders NodeBondProviders, signerMembership []string, requestedToLeave bool, forcedToLeave bool, leaveHeight int64, ipAddress string, version string, slashPoints int64, jail NodeJail, currentAward string, observeChains []ChainHeight, maintenance bool, missingBlocks int64, preflightStatus NodePreflightStatus, ) *Node`
 
 NewNode instantiates a new Node object
 This constructor will assign default values to properties that have it defined,
@@ -464,6 +465,26 @@ and a boolean to check if the value has been set.
 `func (o *Node) SetMaintenance(v bool)`
 
 SetMaintenance sets Maintenance field to given value.
+
+
+### GetMissingBlocks
+
+`func (o *Node) GetMissingBlocks() int64`
+
+GetMissingBlocks returns the MissingBlocks field if non-nil, zero value otherwise.
+
+### GetMissingBlocksOk
+
+`func (o *Node) GetMissingBlocksOk() (*int64, bool)`
+
+GetMissingBlocksOk returns a tuple with the MissingBlocks field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetMissingBlocks
+
+`func (o *Node) SetMissingBlocks(v int64)`
+
+SetMissingBlocks sets MissingBlocks field to given value.
 
 
 ### GetPreflightStatus

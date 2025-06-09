@@ -58,11 +58,6 @@ func (s *SlasherVCUR) BeginBlock(ctx cosmos.Context, constAccessor constants.Con
 		}
 	}
 
-	// Do not continue if there is no action to take.
-	if len(doubleSignEvidence)+len(missingSignAddresses) == 0 {
-		return
-	}
-
 	// Derive Active node validator addresses once.
 	nas, err := s.keeper.ListActiveValidators(ctx)
 	if err != nil {
