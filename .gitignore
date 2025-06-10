@@ -32,3 +32,6 @@ test/regression/mnt/coverage
 
 # Test
 test/regression/mnt/blocks/**/[0-9]*.json
+
+CLAUDE.local.md
+.claude/*.local.*
