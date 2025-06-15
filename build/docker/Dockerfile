@@ -28,7 +28,7 @@ FROM debian:bullseye-20241111-slim@sha256:60a596681410bd31a48e5975806a24cd78328f
 RUN apt-get update && \
   apt-get install -y --no-install-recommends \
   ca-certificates=20210119 \
-  curl=7.74.0-1.3+deb11u14 \
+  curl=7.74.0-1.3+deb11u15 \
   jq=1.6-2.1 \
   libffi-dev=3.3-6 \
   libssl-dev=1.1.1w-0+deb11u3 \
