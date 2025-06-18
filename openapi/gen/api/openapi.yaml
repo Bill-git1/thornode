@@ -3252,12 +3252,15 @@ components:
           router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
         - chain: ETH
           router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
+        pub_key_eddsa: pub_key_eddsa
         status: status
       properties:
         block_height:
           format: int64
           type: integer
         pub_key:
+          type: string
+        pub_key_eddsa:
           type: string
         coins:
           items:
@@ -3447,8 +3450,12 @@ components:
         - chain: ETH
           router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
         pub_key: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
+        pub_key_eddsa: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
       properties:
         pub_key:
+          example: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
+          type: string
+        pub_key_eddsa:
           example: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
           type: string
         routers:
@@ -3740,11 +3747,15 @@ components:
         external_observed_height: 7581334
         external_confirmation_delay_height: 7581334
         aggregator_target_limit: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
+        observed_pub_key_eddsa: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
         status: done
       properties:
         tx:
           $ref: '#/components/schemas/Tx'
         observed_pub_key:
+          example: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
+          type: string
+        observed_pub_key_eddsa:
           example: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
           type: string
         external_observed_height:
@@ -3924,14 +3935,15 @@ components:
       type: object
     TxOutItem:
       example:
+        vault_pub_key_eddsa: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
         chain: ETH
         gas_rate: 0
         in_hash: 208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
         out_hash: 0D0B2FDB6DAD6E5FD3C5E46D39128F9DA15E96F0B2CC054CE059EA3532B150FB
         aggregator: 0xe4ddca21881bac219af7f217703db0475d2a9f02
         memo: OUT:208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
-        vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
         to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
+        vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
         aggregator_target_asset: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
         max_gas:
         - amount: "100000"
@@ -3952,9 +3964,6 @@ components:
           example: 1234
           format: int64
           type: integer
-        vault_pub_key:
-          example: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
-          type: string
         in_hash:
           example: 208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
           type: string
@@ -3966,6 +3975,12 @@ components:
           type: string
         to_address:
           example: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
+          type: string
+        vault_pub_key:
+          example: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
+          type: string
+        vault_pub_key_eddsa:
+          example: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
           type: string
         coin:
           $ref: '#/components/schemas/Coin'
@@ -4593,6 +4608,7 @@ components:
           external_observed_height: 7581334
           external_confirmation_delay_height: 7581334
           aggregator_target_limit: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
+          observed_pub_key_eddsa: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
           status: done
         keysign_metric:
           tx_id: tx_id
@@ -4661,6 +4677,7 @@ components:
           external_observed_height: 7581334
           external_confirmation_delay_height: 7581334
           aggregator_target_limit: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
+          observed_pub_key_eddsa: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
           status: done
         out_txs:
         - chain: BTC
@@ -4706,14 +4723,15 @@ components:
         tx_id: CF524818D42B63D25BBA0CCC4909F127CAA645C0F9CD07324F2824CC151A64C7
         consensus_height: 7581321
         actions:
-        - chain: ETH
+        - vault_pub_key_eddsa: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
+          chain: ETH
           gas_rate: 0
           in_hash: 208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
           out_hash: 0D0B2FDB6DAD6E5FD3C5E46D39128F9DA15E96F0B2CC054CE059EA3532B150FB
           aggregator: 0xe4ddca21881bac219af7f217703db0475d2a9f02
           memo: OUT:208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
-          vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
           to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
+          vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
           aggregator_target_asset: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
           max_gas:
           - amount: "100000"
@@ -4729,14 +4747,15 @@ components:
             amount: "100000"
             decimals: 6
             asset: BTC.BTC
-        - chain: ETH
+        - vault_pub_key_eddsa: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
+          chain: ETH
           gas_rate: 0
           in_hash: 208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
           out_hash: 0D0B2FDB6DAD6E5FD3C5E46D39128F9DA15E96F0B2CC054CE059EA3532B150FB
           aggregator: 0xe4ddca21881bac219af7f217703db0475d2a9f02
           memo: OUT:208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
-          vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
           to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
+          vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
           aggregator_target_asset: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
           max_gas:
           - amount: "100000"
@@ -4786,6 +4805,7 @@ components:
           external_observed_height: 7581334
           external_confirmation_delay_height: 7581334
           aggregator_target_limit: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
+          observed_pub_key_eddsa: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
           status: done
         - signers:
           - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
@@ -4820,6 +4840,7 @@ components:
           external_observed_height: 7581334
           external_confirmation_delay_height: 7581334
           aggregator_target_limit: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
+          observed_pub_key_eddsa: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
           status: done
         finalised_height: 7581334
         reverted: false
@@ -4904,6 +4925,7 @@ components:
           external_observed_height: 7581334
           external_confirmation_delay_height: 7581334
           aggregator_target_limit: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
+          observed_pub_key_eddsa: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
           status: done
         out_txs:
         - chain: BTC
@@ -4949,14 +4971,15 @@ components:
         tx_id: CF524818D42B63D25BBA0CCC4909F127CAA645C0F9CD07324F2824CC151A64C7
         consensus_height: 7581321
         actions:
-        - chain: ETH
+        - vault_pub_key_eddsa: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
+          chain: ETH
           gas_rate: 0
           in_hash: 208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
           out_hash: 0D0B2FDB6DAD6E5FD3C5E46D39128F9DA15E96F0B2CC054CE059EA3532B150FB
           aggregator: 0xe4ddca21881bac219af7f217703db0475d2a9f02
           memo: OUT:208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
-          vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
           to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
+          vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
           aggregator_target_asset: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
           max_gas:
           - amount: "100000"
@@ -4972,14 +4995,15 @@ components:
             amount: "100000"
             decimals: 6
             asset: BTC.BTC
-        - chain: ETH
+        - vault_pub_key_eddsa: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
+          chain: ETH
           gas_rate: 0
           in_hash: 208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
           out_hash: 0D0B2FDB6DAD6E5FD3C5E46D39128F9DA15E96F0B2CC054CE059EA3532B150FB
           aggregator: 0xe4ddca21881bac219af7f217703db0475d2a9f02
           memo: OUT:208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
-          vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
           to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
+          vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
           aggregator_target_asset: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
           max_gas:
           - amount: "100000"
@@ -5029,6 +5053,7 @@ components:
           external_observed_height: 7581334
           external_confirmation_delay_height: 7581334
           aggregator_target_limit: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
+          observed_pub_key_eddsa: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
           status: done
         - signers:
           - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
@@ -5063,6 +5088,7 @@ components:
           external_observed_height: 7581334
           external_confirmation_delay_height: 7581334
           aggregator_target_limit: 0x0a44986b70527154e9F4290eC14e5f0D1C861822
+          observed_pub_key_eddsa: thorpub1addwnpepq27ck6u44zl8qqdnmzjjc8rg72amrxrsp42p9vd7kt6marhy6ww76z8shwe
           status: done
         finalised_height: 7581334
         reverted: false
@@ -5315,12 +5341,14 @@ components:
           - chain: ETH
             router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
           pub_key: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
+          pub_key_eddsa: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
         - routers:
           - chain: ETH
             router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
           - chain: ETH
             router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
           pub_key: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
+          pub_key_eddsa: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
         inactive:
         - routers:
           - chain: ETH
@@ -5328,12 +5356,14 @@ components:
           - chain: ETH
             router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
           pub_key: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
+          pub_key_eddsa: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
         - routers:
           - chain: ETH
             router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
           - chain: ETH
             router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
           pub_key: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
+          pub_key_eddsa: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
         asgard:
         - routers:
           - chain: ETH
@@ -5341,12 +5371,14 @@ components:
           - chain: ETH
             router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
           pub_key: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
+          pub_key_eddsa: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
         - routers:
           - chain: ETH
             router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
           - chain: ETH
             router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
           pub_key: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
+          pub_key_eddsa: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
       properties:
         asgard:
           items:
@@ -5628,14 +5660,15 @@ components:
         signature: signature
         keysign:
           tx_array:
-          - chain: ETH
+          - vault_pub_key_eddsa: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
+            chain: ETH
             gas_rate: 0
             in_hash: 208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
             out_hash: 0D0B2FDB6DAD6E5FD3C5E46D39128F9DA15E96F0B2CC054CE059EA3532B150FB
             aggregator: 0xe4ddca21881bac219af7f217703db0475d2a9f02
             memo: OUT:208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
-            vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
             to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
+            vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
             aggregator_target_asset: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
             max_gas:
             - amount: "100000"
@@ -5651,14 +5684,15 @@ components:
               amount: "100000"
               decimals: 6
               asset: BTC.BTC
-          - chain: ETH
+          - vault_pub_key_eddsa: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
+            chain: ETH
             gas_rate: 0
             in_hash: 208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
             out_hash: 0D0B2FDB6DAD6E5FD3C5E46D39128F9DA15E96F0B2CC054CE059EA3532B150FB
             aggregator: 0xe4ddca21881bac219af7f217703db0475d2a9f02
             memo: OUT:208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
-            vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
             to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
+            vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
             aggregator_target_asset: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
             max_gas:
             - amount: "100000"
@@ -7307,14 +7341,15 @@ components:
     KeysignInfo:
       example:
         tx_array:
-        - chain: ETH
+        - vault_pub_key_eddsa: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
+          chain: ETH
           gas_rate: 0
           in_hash: 208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
           out_hash: 0D0B2FDB6DAD6E5FD3C5E46D39128F9DA15E96F0B2CC054CE059EA3532B150FB
           aggregator: 0xe4ddca21881bac219af7f217703db0475d2a9f02
           memo: OUT:208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
-          vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
           to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
+          vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
           aggregator_target_asset: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
           max_gas:
           - amount: "100000"
@@ -7330,14 +7365,15 @@ components:
             amount: "100000"
             decimals: 6
             asset: BTC.BTC
-        - chain: ETH
+        - vault_pub_key_eddsa: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
+          chain: ETH
           gas_rate: 0
           in_hash: 208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
           out_hash: 0D0B2FDB6DAD6E5FD3C5E46D39128F9DA15E96F0B2CC054CE059EA3532B150FB
           aggregator: 0xe4ddca21881bac219af7f217703db0475d2a9f02
           memo: OUT:208BF0ACD78C89A0534B0457BA0867B101961A2319C1E49DD28676526904BBEA
-          vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
           to_address: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
+          vault_pub_key: thorpub1addwnpepqt45wmsxj29xpgdrdsvg2h3dx68qeapgykw3hlyj6vuds2r0pnkwx5gt9m4
           aggregator_target_asset: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
           max_gas:
           - amount: "100000"

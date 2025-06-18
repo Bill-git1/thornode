@@ -109,11 +109,11 @@ func (a *SwapActor) acquireUser(config *OpConfig) OpResult {
 		}
 
 		// get l1 address to store in state context
-		a.fromAddress, err = user.PubKey().GetAddress(a.from.Chain)
+		a.fromAddress, err = user.PubKey(a.from.Chain).GetAddress(a.from.Chain)
 		if err != nil {
 			a.Log().Fatal().Err(err).Msg("failed to get L1 address")
 		}
-		a.toAddress, err = user.PubKey().GetAddress(a.to.Chain)
+		a.toAddress, err = user.PubKey(a.to.Chain).GetAddress(a.to.Chain)
 		if err != nil {
 			a.Log().Fatal().Err(err).Msg("failed to get L1 address")
 		}

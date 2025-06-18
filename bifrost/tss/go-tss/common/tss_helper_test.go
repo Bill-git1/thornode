@@ -1,13 +1,6 @@
 package common
 
 import (
-	"bytes"
-	"encoding/json"
-	"io/ioutil"
-	"math/big"
-	"path"
-
-	btss "github.com/binance-chain/tss-lib/tss"
 	"github.com/cometbft/cometbft/crypto/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types/bech32/legacybech32"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -15,7 +8,6 @@ import (
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
-	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/blame"
 )
 
 type tssHelpSuite struct{}
@@ -94,84 +86,5 @@ func (t *tssHelpSuite) TestTssCommon_processRequestMsgFromPeer(c *C) {
 
 	tssCommon.blameMgr.GetRoundMgr().Set("test", nil)
 	err = tssCommon.processRequestMsgFromPeer([]peer.ID{testPeer}, &msg, false)
-	c.Assert(err, IsNil)
-}
-
-func (t *tssHelpSuite) TestGetMsgRound(c *C) {
-	fileNameKeyGen := "shareskeygen0"
-	fileNameKeySign := "shareskeysign0"
-	filePathKeyGen := path.Join("../test_data/tss_keygen_shares", fileNameKeyGen)
-	dataKeyGen, err := ioutil.ReadFile(filePathKeyGen)
-	c.Assert(err, IsNil)
-	filePathKeySign := path.Join("../test_data/tss_keysign_shares", fileNameKeySign)
-	dataKeySign, err := ioutil.ReadFile(filePathKeySign)
-	sharesRawKeyGen := bytes.Split(dataKeyGen, []byte("\n"))
-	sharesRawKeySign := bytes.Split(dataKeySign, []byte("\n"))
-	var sharesKeyGen []*messages.WireMessage
-	var sharesKeySign []*messages.WireMessage
-	for _, el := range sharesRawKeyGen {
-		var msg messages.WireMessage
-		json.Unmarshal(el, &msg)
-		sharesKeyGen = append(sharesKeyGen, &msg)
-	}
-
-	for _, el := range sharesRawKeySign {
-		var msg messages.WireMessage
-		json.Unmarshal(el, &msg)
-		sharesKeySign = append(sharesKeySign, &msg)
-	}
-	messagesKeygen := []string{
-		messages.KEYGEN1,
-		messages.KEYGEN2aUnicast,
-		messages.KEYGEN2b,
-		messages.KEYGEN3,
-	}
-	//
-	messagesKeysign := []string{
-		messages.KEYSIGN1aUnicast,
-		messages.KEYSIGN1b,
-		messages.KEYSIGN2Unicast,
-		messages.KEYSIGN3,
-		messages.KEYSIGN4,
-		messages.KEYSIGN5,
-		messages.KEYSIGN6,
-		messages.KEYSIGN7,
-	}
-	mockParty := btss.NewPartyID("12", "22", big.NewInt(2))
-	j := 0
-	for i := 0; i < len(messagesKeygen); i++ {
-		ret, err := GetMsgRound(sharesKeyGen[j].Message, mockParty, sharesKeyGen[j].Routing.IsBroadcast)
-		c.Assert(err, IsNil)
-		expectedRound := blame.RoundInfo{
-			Index:    i,
-			RoundMsg: messagesKeygen[i],
-		}
-		c.Assert(ret, Equals, expectedRound)
-		// we skip the unicast
-		if j == 1 {
-			j += 3
-		} else {
-			j += 1
-		}
-	}
-	j = 0
-	for i := 0; i < len(messagesKeysign); i++ {
-		ret, err := GetMsgRound(sharesKeySign[j].Message, mockParty, sharesKeySign[1].Routing.IsBroadcast)
-		c.Assert(err, IsNil)
-		expectedRound := blame.RoundInfo{
-			Index:    i,
-			RoundMsg: messagesKeysign[i],
-		}
-		c.Assert(ret, Equals, expectedRound)
-		// we skip the unicast
-		if j == 0 || j == 4 {
-			j += 3
-		} else {
-			j += 1
-		}
-	}
-
-	ret, err := GetMsgRound(sharesKeyGen[1].Message, mockParty, sharesKeyGen[1].Routing.IsBroadcast)
-	c.Assert(ret, Equals, blame.RoundInfo{Index: 1, RoundMsg: messages.KEYGEN2aUnicast})
 	c.Assert(err, IsNil)
 }

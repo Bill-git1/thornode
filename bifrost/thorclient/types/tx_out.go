@@ -25,6 +25,7 @@ type TxOutItem struct {
 	AggregatorTargetLimit *cosmos.Uint   `json:"aggregator_target_limit,omitempty"`
 	Checkpoint            []byte         `json:"-"`
 	Height                int64          `json:"height"`
+	VaultPubKeyEddsa      common.PubKey  `json:"vault_pub_key_eddsa,omitempty"`
 }
 
 // Hash return a sha256 hash that can uniquely represent the TxOutItem
@@ -88,6 +89,9 @@ func (tx TxOutItem) Equals(tx2 TxOutItem) bool {
 	if !tx.AggregatorTargetLimit.Equal(*tx2.AggregatorTargetLimit) {
 		return false
 	}
+	if !tx.VaultPubKeyEddsa.Equals(tx2.VaultPubKeyEddsa) {
+		return false
+	}
 	return true
 }
 
@@ -109,6 +113,7 @@ type TxArrayItem struct {
 	AggregatorTargetAsset string         `json:"aggregator_target_asset,omitempty"`
 	AggregatorTargetLimit *cosmos.Uint   `json:"aggregator_target_limit,omitempty"`
 	CloutSpent            string         `json:"clout_spent,omitempty"`
+	VaultPubKeyEddsa      common.PubKey  `json:"vault_pub_key_eddsa,omitempty"`
 }
 
 // TxOutItem convert the information to TxOutItem
@@ -127,6 +132,7 @@ func (tx TxArrayItem) TxOutItem(height int64) TxOutItem {
 		AggregatorTargetAsset: tx.AggregatorTargetAsset,
 		AggregatorTargetLimit: tx.AggregatorTargetLimit,
 		Height:                height,
+		VaultPubKeyEddsa:      tx.VaultPubKeyEddsa,
 	}
 }
 

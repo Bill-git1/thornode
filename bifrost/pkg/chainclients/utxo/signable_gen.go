@@ -34,7 +34,7 @@ func newTssSignableBCH(poolPubKey common.PubKey, tssKeyManager tss.ThorchainKeyM
 }
 func (ts *tssSignableBCH) SignECDSA(payload []byte) (*bchec.Signature, error) {
 	ts.log.Info().Msgf("msg to sign: %s", base64.StdEncoding.EncodeToString(payload))
-	result, _, err := ts.tssKeyManager.RemoteSign(payload, ts.poolPubKey.String())
+	result, _, err := ts.tssKeyManager.RemoteSign(payload, common.SigningAlgoSecp256k1, ts.poolPubKey.String())
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func newTssSignableBTC(poolPubKey common.PubKey, tssKeyManager tss.ThorchainKeyM
 }
 func (ts *tssSignableBTC) Sign(payload []byte) (*btcec.Signature, error) {
 	ts.log.Info().Msgf("msg to sign: %s", base64.StdEncoding.EncodeToString(payload))
-	result, _, err := ts.tssKeyManager.RemoteSign(payload, ts.poolPubKey.String())
+	result, _, err := ts.tssKeyManager.RemoteSign(payload, common.SigningAlgoSecp256k1, ts.poolPubKey.String())
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +142,7 @@ func newTssSignableDOGE(poolPubKey common.PubKey, tssKeyManager tss.ThorchainKey
 }
 func (ts *tssSignableDOGE) Sign(payload []byte) (*dogeec.Signature, error) {
 	ts.log.Info().Msgf("msg to sign: %s", base64.StdEncoding.EncodeToString(payload))
-	result, _, err := ts.tssKeyManager.RemoteSign(payload, ts.poolPubKey.String())
+	result, _, err := ts.tssKeyManager.RemoteSign(payload, common.SigningAlgoSecp256k1, ts.poolPubKey.String())
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +194,7 @@ func newTssSignableLTC(poolPubKey common.PubKey, tssKeyManager tss.ThorchainKeyM
 }
 func (ts *tssSignableLTC) Sign(payload []byte) (*ltcec.Signature, error) {
 	ts.log.Info().Msgf("msg to sign: %s", base64.StdEncoding.EncodeToString(payload))
-	result, _, err := ts.tssKeyManager.RemoteSign(payload, ts.poolPubKey.String())
+	result, _, err := ts.tssKeyManager.RemoteSign(payload, common.SigningAlgoSecp256k1, ts.poolPubKey.String())
 	if err != nil {
 		return nil, err
 	}

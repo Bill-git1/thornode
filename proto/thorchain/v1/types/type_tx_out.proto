@@ -24,6 +24,7 @@ message TxOutItem {
   string aggregator_target_asset = 12;
   string aggregator_target_limit = 13 [(gogoproto.customtype) = "cosmossdk.io/math.Uint", (gogoproto.nullable) = true];
   string clout_spent = 14 [(gogoproto.customtype) = "cosmossdk.io/math.Uint", (gogoproto.nullable) = true];
+  string vault_pub_key_eddsa = 15 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.PubKey", (gogoproto.nullable) = true];
 }
 
 message TxOut {

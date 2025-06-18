@@ -908,23 +908,25 @@ func (op *OpTxTssKeysign) Execute(out io.Writer, _ string, _, routine int, _ *os
 // ------------------------------ OpTxTssPool ------------------------------
 
 type OpTxTssPool struct {
-	OpBase             `yaml:",inline"`
-	PubKeys            []string         `json:"pub_keys"`
-	PoolPubKey         common.PubKey    `json:"pool_pub_key"`
-	Secp256K1Signature []byte           `json:"secp256k1_signature"`
-	KeysharesBackup    []byte           `json:"keyshares_backup"`
-	KeygenType         types.KeygenType `json:"keygen_type"`
-	Height             int64            `json:"height"`
-	Blame              types.Blame      `json:"blame"`
-	Chains             []string         `json:"chains"`
-	Signer             sdk.AccAddress   `json:"signer"`
-	KeygenTime         int64            `json:"keygen_time"`
-	Sequence           *int64           `json:"sequence"`
-	Gas                *int64           `json:"gas"`
+	OpBase               `yaml:",inline"`
+	PubKeys              []string         `json:"pub_keys"`
+	PoolPubKey           common.PubKey    `json:"pool_pub_key"`
+	Secp256K1Signature   []byte           `json:"secp256k1_signature"`
+	KeysharesBackup      []byte           `json:"keyshares_backup"`
+	KeygenType           types.KeygenType `json:"keygen_type"`
+	Height               int64            `json:"height"`
+	Blame                []types.Blame    `json:"blame"`
+	Chains               []string         `json:"chains"`
+	Signer               sdk.AccAddress   `json:"signer"`
+	KeygenTime           int64            `json:"keygen_time"`
+	Sequence             *int64           `json:"sequence"`
+	Gas                  *int64           `json:"gas"`
+	PoolPubKeyEddsa      common.PubKey    `json:"pool_pub_key_eddsa"`
+	KeysharesBackupEddsa []byte           `json:"keyshares_backup_eddsa"`
 }
 
 func (op *OpTxTssPool) Execute(out io.Writer, _ string, _, routine int, _ *os.Process, logs chan string) error {
-	msg, err := types.NewMsgTssPool(op.PubKeys, op.PoolPubKey, op.Secp256K1Signature, op.KeysharesBackup, op.KeygenType, op.Height, op.Blame, op.Chains, op.Signer, op.KeygenTime)
+	msg, err := types.NewMsgTssPoolV2(op.PubKeys, op.PoolPubKey, op.Secp256K1Signature, op.KeysharesBackup, op.KeygenType, op.Height, op.Blame, op.Chains, op.Signer, op.KeygenTime, op.PoolPubKeyEddsa, op.KeysharesBackupEddsa)
 	if err != nil {
 		return err
 	}

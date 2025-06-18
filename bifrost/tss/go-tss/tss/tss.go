@@ -40,6 +40,7 @@ type TssServer struct {
 	stateManager      storage.LocalStateManager
 	signatureNotifier *keysign.SignatureNotifier
 	privateKey        tcrypto.PrivKey
+	privateKeyEddsa   tcrypto.PrivKey
 	tssMetrics        *monitor.Metric
 }
 
@@ -53,6 +54,7 @@ func NewTss(
 	comm *p2p.Communication,
 	stateManager storage.LocalStateManager,
 	priKey tcrypto.PrivKey,
+	priKeyEddsa tcrypto.PrivKey,
 	conf common.TssConfig,
 	preParams *bkeygen.LocalPreParams,
 ) (*TssServer, error) {
@@ -60,9 +62,9 @@ func NewTss(
 		Key: priKey.PubKey().Bytes()[:],
 	}
 
-	pubKey, err := sdk.MarshalPubKey(sdk.AccPK, &pk)
+	pubKey, err := sdk.MarshalPubKey(sdk.AccPK, &pk) //nolint:staticcheck
 	if err != nil {
-		return nil, fmt.Errorf("fail to genearte the key: %w", err)
+		return nil, fmt.Errorf("fail to generate the secp256k1 key: %w", err)
 	}
 
 	// When using the keygen party it is recommended that you pre-compute the
@@ -98,6 +100,7 @@ func NewTss(
 		stateManager:      stateManager,
 		signatureNotifier: sn,
 		privateKey:        priKey,
+		privateKeyEddsa:   priKeyEddsa,
 		tssMetrics:        metrics,
 	}
 
@@ -139,13 +142,16 @@ func (t *TssServer) notifyJoinPartyChan() {
 func (t *TssServer) requestToMsgId(request interface{}) (string, error) {
 	var dat []byte
 	var keys []string
+	var algo string
 	switch value := request.(type) {
 	case keygen.Request:
 		keys = value.Keys
+		algo = string(value.Algo)
 	case keysign.Request:
 		sort.Strings(value.Messages)
 		dat = []byte(strings.Join(value.Messages, ","))
 		keys = value.SignerPubKeys
+		algo = string(value.Algo)
 	default:
 		t.logger.Error().Msg("unknown request type")
 		return "", errors.New("unknown request type")
@@ -156,6 +162,7 @@ func (t *TssServer) requestToMsgId(request interface{}) (string, error) {
 		keyAccumulation += el
 	}
 	dat = append(dat, []byte(keyAccumulation)...)
+	dat = append(dat, []byte(algo)...)
 	return common.MsgToHashString(dat)
 }
 

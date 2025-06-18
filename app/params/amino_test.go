@@ -120,11 +120,11 @@ func TestAminoThorchainMessages(t *testing.T) {
 		{
 			name: "MsgTssPool",
 			message: func() sdk.Msg {
-				msg, err := thorchaintypes.NewMsgTssPool([]string{"pk1", "pk2"}, common.PubKey("pool"), []byte("secp256k1sig"), []byte("ksbackup"), thorchaintypes.KeygenType_AsgardKeygen, 1234567890, thorchaintypes.Blame{FailReason: "fail reason", IsUnicast: true, BlameNodes: []thorchaintypes.Node{{Pubkey: "blame", BlameData: []byte("blame data"), BlameSignature: []byte("blame signature")}}}, []string{string(common.BCHChain), string(common.AVAXChain)}, cosmos.AccAddress("signer"), 123)
+				msg, err := thorchaintypes.NewMsgTssPool([]string{"pk1", "pk2"}, common.PubKey("pool"), []byte("secp256k1sig"), []byte("ksbackup"), thorchaintypes.KeygenType_AsgardKeygen, 1234567890, []thorchaintypes.Blame{{FailReason: "fail reason", IsUnicast: true, BlameNodes: []thorchaintypes.Node{{Pubkey: "blame", BlameData: []byte("blame data"), BlameSignature: []byte("blame signature")}}}}, []string{string(common.BCHChain), string(common.AVAXChain)}, cosmos.AccAddress("signer"), 123)
 				require.NoError(t, err)
 				return msg
 			},
-			expectedSignDoc: `{"account_number":"123","chain_id":"thorchain-1","fee":{"amount":[{"amount":"100","denom":"rune"}],"gas":"200000"},"memo":"memo","msgs":[{"type":"thorchain/TssPool","value":{"blame":{"blame_nodes":[{"blame_data":"YmxhbWUgZGF0YQ==","blame_signature":"YmxhbWUgc2lnbmF0dXJl","pubkey":"blame"}],"fail_reason":"fail reason","is_unicast":true},"chains":["BCH","AVAX"],"height":"1234567890","id":"95fb31a6efb06bda7cd3c2b12637a1cc631cf9186a868edafa505551071901eb","keygen_time":"123","keygen_type":"AsgardKeygen","keyshares_backup":"a3NiYWNrdXA=","pool_pub_key":"pool","pub_keys":["pk1","pk2"],"secp256k1_signature":"c2VjcDI1Nmsxc2ln","signer":"cosmos1wd5kwmn9wgr5dmap"}}],"sequence":"456"}`,
+			expectedSignDoc: `{"account_number":"123","chain_id":"thorchain-1","fee":{"amount":[{"amount":"100","denom":"rune"}],"gas":"200000"},"memo":"memo","msgs":[{"type":"thorchain/TssPool","value":{"blame":[{"blame_nodes":[{"blame_data":"YmxhbWUgZGF0YQ==","blame_signature":"YmxhbWUgc2lnbmF0dXJl","pubkey":"blame"}],"fail_reason":"fail reason","is_unicast":true}],"chains":["BCH","AVAX"],"height":"1234567890","id":"95fb31a6efb06bda7cd3c2b12637a1cc631cf9186a868edafa505551071901eb","keygen_time":"123","keygen_type":"AsgardKeygen","keyshares_backup":"a3NiYWNrdXA=","pool_pub_key":"pool","pub_keys":["pk1","pk2"],"secp256k1_signature":"c2VjcDI1Nmsxc2ln","signer":"cosmos1wd5kwmn9wgr5dmap"}}],"sequence":"456"}`,
 		},
 		{
 			name:            "MsgSetVersion",

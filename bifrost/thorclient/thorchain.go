@@ -84,7 +84,7 @@ type ThorchainBridge interface {
 	GetContext() client.Context
 	GetContractAddress() ([]PubKeyContractAddressPair, error)
 	GetErrataMsg(txID common.TxID, chain common.Chain) sdk.Msg
-	GetKeygenStdTx(poolPubKey common.PubKey, secp256k1Signature, keysharesBackup []byte, blame stypes.Blame, inputPks common.PubKeys, keygenType stypes.KeygenType, chains common.Chains, height, keygenTime int64) (sdk.Msg, error)
+	GetKeygenStdTx(poolPubKey common.PubKey, secp256k1Signature, keysharesBackup []byte, blame []stypes.Blame, inputPks common.PubKeys, keygenType stypes.KeygenType, chains common.Chains, height, keygenTime int64, poolPubKeyEddsa common.PubKey, keysharesBackupEddsa []byte) (sdk.Msg, error)
 	GetKeysignParty(vaultPubKey common.PubKey) (common.PubKeys, error)
 	GetMimir(key string) (int64, error)
 	GetMimirWithRef(template, ref string) (int64, error)
@@ -334,12 +334,13 @@ func (b *thorchainBridge) GetSolvencyMsg(height int64, chain common.Chain, pubKe
 }
 
 // GetKeygenStdTx get keygen tx from params
-func (b *thorchainBridge) GetKeygenStdTx(poolPubKey common.PubKey, secp256k1Signature, keysharesBackup []byte, blame stypes.Blame, inputPks common.PubKeys, keygenType stypes.KeygenType, chains common.Chains, height, keygenTime int64) (sdk.Msg, error) {
+func (b *thorchainBridge) GetKeygenStdTx(poolPubKey common.PubKey, secp256k1Signature, keysharesBackup []byte, blame []stypes.Blame, inputPks common.PubKeys, keygenType stypes.KeygenType, chains common.Chains, height, keygenTime int64, poolPubKeyEddsa common.PubKey, keysharesBackupEddsa []byte) (sdk.Msg, error) {
 	signerAddr, err := b.keys.GetSignerInfo().GetAddress()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get signer address: %w", err)
 	}
-	return stypes.NewMsgTssPool(inputPks.Strings(), poolPubKey, secp256k1Signature, keysharesBackup, keygenType, height, blame, chains.Strings(), signerAddr, keygenTime)
+
+	return stypes.NewMsgTssPoolV2(inputPks.Strings(), poolPubKey, secp256k1Signature, keysharesBackup, keygenType, height, blame, chains.Strings(), signerAddr, keygenTime, poolPubKeyEddsa, keysharesBackupEddsa)
 }
 
 // GetInboundOutbound separate the txs into inbound and outbound
@@ -639,9 +640,21 @@ func (b *thorchainBridge) GetPubKeys() ([]PubKeyContractAddressPair, error) {
 	}
 	var addressPairs []PubKeyContractAddressPair
 	for _, v := range append(result.Asgard, result.Inactive...) {
+		if v.PubKeyEddsa != nil && *v.PubKeyEddsa != "" {
+			kp := PubKeyContractAddressPair{
+				PubKey:    common.PubKey(*v.PubKeyEddsa),
+				Contracts: make(map[common.Chain]common.Address),
+				Algo:      common.SigningAlgoEd25519,
+			}
+			for _, item := range v.Routers {
+				kp.Contracts[common.Chain(*item.Chain)] = common.Address(*item.Router)
+			}
+			addressPairs = append(addressPairs, kp)
+		}
 		kp := PubKeyContractAddressPair{
 			PubKey:    common.PubKey(v.PubKey),
 			Contracts: make(map[common.Chain]common.Address),
+			Algo:      common.SigningAlgoSecp256k1,
 		}
 		for _, item := range v.Routers {
 			kp.Contracts[common.Chain(*item.Chain)] = common.Address(*item.Router)
@@ -663,9 +676,21 @@ func (b *thorchainBridge) GetAsgardPubKeys() ([]PubKeyContractAddressPair, error
 	}
 	var addressPairs []PubKeyContractAddressPair
 	for _, v := range append(result.Asgard, result.Inactive...) {
+		if v.PubKeyEddsa != nil {
+			kp := PubKeyContractAddressPair{
+				PubKey:    common.PubKey(*v.PubKeyEddsa),
+				Contracts: make(map[common.Chain]common.Address),
+				Algo:      common.SigningAlgoEd25519,
+			}
+			for _, item := range v.Routers {
+				kp.Contracts[common.Chain(*item.Chain)] = common.Address(*item.Router)
+			}
+			addressPairs = append(addressPairs, kp)
+		}
 		kp := PubKeyContractAddressPair{
 			PubKey:    common.PubKey(v.PubKey),
 			Contracts: make(map[common.Chain]common.Address),
+			Algo:      common.SigningAlgoSecp256k1,
 		}
 		for _, item := range v.Routers {
 			kp.Contracts[common.Chain(*item.Chain)] = common.Address(*item.Router)
@@ -775,6 +800,7 @@ func (b *thorchainBridge) GetMimirWithRef(template, ref string) (int64, error) {
 type PubKeyContractAddressPair struct {
 	PubKey    common.PubKey
 	Contracts map[common.Chain]common.Address
+	Algo      common.SigningAlgo
 }
 
 // GetContractAddress retrieve the contract address from asgard

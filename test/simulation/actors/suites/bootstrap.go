@@ -11,6 +11,18 @@ import (
 	. "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/types"
 )
 
+var SimChains = []common.Chain{
+	common.AVAXChain,
+	common.BASEChain,
+	common.BCHChain,
+	common.BTCChain,
+	common.DOGEChain,
+	common.ETHChain,
+	common.GAIAChain,
+	common.LTCChain,
+	common.XRPChain,
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////
 // Bootstrap
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -25,16 +37,8 @@ func Bootstrap() *Actor {
 
 	// bootstrap pools for all chains
 	count := 0
-	for _, chain := range common.AllChains {
-		if chain == common.THORChain {
-			continue
-		}
-		// BSC not compatible with sim tests
-		if chain.Equals(common.BSCChain) {
-			continue
-		}
+	for _, chain := range SimChains {
 		count++
-
 		a.Children[core.NewDualLPActor(chain.GetGasAsset())] = true
 	}
 
@@ -44,8 +48,8 @@ func Bootstrap() *Actor {
 		if !chain.IsEVM() {
 			continue
 		}
-		// BSC not compatible with sim tests
-		if chain.Equals(common.BSCChain) {
+		// BSC & SOL not compatible with sim tests
+		if chain.Equals(common.BSCChain) || chain.Equals(common.SOLChain) {
 			continue
 		}
 		count++

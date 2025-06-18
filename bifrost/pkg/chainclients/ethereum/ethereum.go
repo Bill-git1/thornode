@@ -333,12 +333,18 @@ func (c *Client) getSmartContractAddr(pubkey common.PubKey) common.Address {
 }
 
 func (c *Client) getSmartContractByAddress(addr common.Address) common.Address {
-	for _, pk := range c.pubkeyMgr.GetPubKeys() {
-		ethAddr, err := pk.GetAddress(common.ETHChain)
+	for _, pk := range c.pubkeyMgr.GetAlgoPubKeys(common.SigningAlgoSecp256k1) {
+		evmAddr, err := pk.GetAddress(common.ETHChain)
 		if err != nil {
-			return common.NoAddress
+			c.logger.Warn().
+				Err(err).
+				Str("chain", common.ETHChain.String()).
+				Str("address", addr.String()).
+				Str("pubkey", pk.String()).
+				Msg("fail to get address for pubkey")
+			continue
 		}
-		if ethAddr.Equals(addr) {
+		if evmAddr.Equals(addr) {
 			return c.pubkeyMgr.GetContract(common.ETHChain, pk)
 		}
 	}

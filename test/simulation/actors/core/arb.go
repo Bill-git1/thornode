@@ -97,7 +97,7 @@ func (a *ArbActor) acquireUser(config *OpConfig) OpResult {
 		a.account = user
 
 		// set thorchain address for later use
-		thorAddress, err := user.PubKey().GetThorAddress()
+		thorAddress, err := user.PubKey(common.THORChain).GetThorAddress()
 		if err != nil {
 			a.Log().Error().Err(err).Msg("failed to get thor address")
 			user.Release()
@@ -134,7 +134,7 @@ func (a *ArbActor) enableTradeAssets(config *OpConfig) OpResult {
 	// Release all the node users at the end of the function.
 	defer node.Release()
 
-	accAddr, err := node.PubKey().GetThorAddress()
+	accAddr, err := node.PubKey(common.THORChain).GetThorAddress()
 	if err != nil {
 		a.Log().Error().Err(err).Msg("failed to get thor address")
 		return OpResult{

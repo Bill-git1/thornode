@@ -15,6 +15,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/pubkeymanager"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
+	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/config"
 	ttypes "gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
@@ -89,7 +90,7 @@ func (b *ThorchainBlockScan) FetchTxs(height, _ int64) (types.TxIn, error) {
 }
 
 func (b *ThorchainBlockScan) processKeygenBlock(blockHeight int64) error {
-	pk := b.pubkeyMgr.GetNodePubKey()
+	pk := b.pubkeyMgr.GetNodePubKey(common.SigningAlgoSecp256k1)
 	keygen, err := b.thorchain.GetKeygenBlock(blockHeight, pk.String())
 	if err != nil {
 		return fmt.Errorf("fail to get keygen from thorchain: %w", err)

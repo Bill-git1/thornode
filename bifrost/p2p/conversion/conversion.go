@@ -1,6 +1,7 @@
 package conversion
 
 import (
+	"crypto/elliptic"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -11,9 +12,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/decred/dcrd/dcrec/edwards/v2"
+
 	"github.com/binance-chain/tss-lib/crypto"
 	btss "github.com/binance-chain/tss-lib/tss"
 	"github.com/btcsuite/btcd/btcec"
+	cosedkey "github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	coskey "github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types/bech32/legacybech32" // nolint:staticcheck
 	crypto2 "github.com/libp2p/go-libp2p-core/crypto"
@@ -107,7 +111,7 @@ func SetupIDMaps(parties map[string]*btss.PartyID, partyIDtoP2PID map[string]pee
 	return nil
 }
 
-func GetParties(keys []string, localPartyKey string) ([]*btss.PartyID, *btss.PartyID, error) {
+func GetParties(keys []string, localPartyKey string) (btss.SortedPartyIDs, *btss.PartyID, error) {
 	var localPartyID *btss.PartyID
 	var unSortedPartiesID []*btss.PartyID
 	sort.Strings(keys)
@@ -142,15 +146,14 @@ func GetPreviousKeySignUicast(current string) string {
 	return messages.KEYSIGN2Unicast
 }
 
-func isOnCurve(x, y *big.Int) bool {
-	curve := btcec.S256()
+func isOnCurve(x, y *big.Int, curve elliptic.Curve) bool {
 	return curve.IsOnCurve(x, y)
 }
 
-func GetTssPubKey(pubKeyPoint *crypto.ECPoint) (string, cosmos.AccAddress, error) {
+func GetTssPubKeyECDSA(pubKeyPoint *crypto.ECPoint) (string, cosmos.AccAddress, error) {
 	// we check whether the point is on curve according to Kudelski report
-	if pubKeyPoint == nil || !isOnCurve(pubKeyPoint.X(), pubKeyPoint.Y()) {
-		return "", cosmos.AccAddress{}, errors.New("invalid points")
+	if pubKeyPoint == nil || !isOnCurve(pubKeyPoint.X(), pubKeyPoint.Y(), btcec.S256()) {
+		return "", cosmos.AccAddress{}, errors.New("[ECDSA] invalid points")
 	}
 	tssPubKey := btcec.PublicKey{
 		Curve: btcec.S256(),
@@ -159,6 +162,26 @@ func GetTssPubKey(pubKeyPoint *crypto.ECPoint) (string, cosmos.AccAddress, error
 	}
 
 	compressedPubkey := coskey.PubKey{
+		Key: tssPubKey.SerializeCompressed(),
+	}
+
+	pubKey, err := sdk.MarshalPubKey(sdk.AccPK, &compressedPubkey) // nolint:staticcheck
+	addr := cosmos.AccAddress(compressedPubkey.Address().Bytes())
+	return pubKey, addr, err
+}
+
+func GetTssPubKeyEDDSA(pubKeyPoint *crypto.ECPoint) (string, cosmos.AccAddress, error) {
+	// we check whether the point is on curve according to Kudelski report
+	if pubKeyPoint == nil || !isOnCurve(pubKeyPoint.X(), pubKeyPoint.Y(), edwards.Edwards()) {
+		return "", nil, errors.New("[EDDSA] invalid points")
+	}
+	tssPubKey := edwards.PublicKey{
+		Curve: edwards.Edwards(),
+		X:     pubKeyPoint.X(),
+		Y:     pubKeyPoint.Y(),
+	}
+
+	compressedPubkey := cosedkey.PubKey{
 		Key: tssPubKey.SerializeCompressed(),
 	}
 
@@ -182,4 +205,8 @@ func GetThreshold(value int) (int, error) {
 	}
 	threshold := int(math.Ceil(float64(value)*2.0/3.0)) - 1
 	return threshold, nil
+}
+
+func GetEDDSAPrivateKeyRawBytes(privateKey crypto2.PrivKey) ([]byte, error) {
+	return privateKey.Raw()
 }

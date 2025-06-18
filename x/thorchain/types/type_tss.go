@@ -8,11 +8,12 @@ import (
 )
 
 // NewTssVoter create a new instance of TssVoter
-func NewTssVoter(id string, pks []string, pool common.PubKey) TssVoter {
+func NewTssVoter(id string, pks []string, pool, poolPubKeyEddsa common.PubKey) TssVoter {
 	return TssVoter{
-		ID:         id,
-		PubKeys:    pks,
-		PoolPubKey: pool,
+		ID:              id,
+		PubKeys:         pks,
+		PoolPubKey:      pool,
+		PoolPubKeyEddsa: poolPubKeyEddsa,
 	}
 }
 

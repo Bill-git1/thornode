@@ -41,16 +41,6 @@ func (h VersionHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, e
 }
 
 func (h VersionHandler) validate(ctx cosmos.Context, msg MsgSetVersion) error {
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.validateV3_0_0(ctx, msg)
-	default:
-		return errBadVersion
-	}
-}
-
-func (h VersionHandler) validateV3_0_0(ctx cosmos.Context, msg MsgSetVersion) error {
 	// ValidateBasic is also executed in message service router's handler and isn't versioned there
 	if err := msg.ValidateBasic(); err != nil {
 		return err
@@ -72,16 +62,7 @@ func (h VersionHandler) validateV3_0_0(ctx cosmos.Context, msg MsgSetVersion) er
 
 func (h VersionHandler) handle(ctx cosmos.Context, msg MsgSetVersion) error {
 	ctx.Logger().Info("handleMsgSetVersion request", "Version:", msg.Version)
-	version := h.mgr.GetVersion()
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return h.handleV3_0_0(ctx, msg)
-	default:
-		return errBadVersion
-	}
-}
 
-func (h VersionHandler) handleV3_0_0(ctx cosmos.Context, msg MsgSetVersion) error {
 	nodeAccount, err := h.mgr.Keeper().GetNodeAccount(ctx, msg.Signer)
 	if err != nil {
 		return cosmos.ErrUnauthorized(fmt.Errorf("unable to find account(%s):%w", msg.Signer, err).Error())

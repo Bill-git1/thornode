@@ -24,6 +24,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/blame"
+	"gitlab.com/thorchain/thornode/v3/common"
 )
 
 var (
@@ -48,8 +49,7 @@ func (t *TssTestSuite) SetUpSuite(c *C) {
 	c.Assert(err, IsNil)
 	rawBytes, err := hex.DecodeString(string(priHexBytes))
 	c.Assert(err, IsNil)
-	var priKey secp256k1.PrivKey
-	priKey = rawBytes[:32]
+	var priKey secp256k1.PrivKey = rawBytes[:32]
 	t.privKey = priKey
 }
 
@@ -72,7 +72,7 @@ func (t *TssTestSuite) TestGetThreshold(c *C) {
 
 func (t *TssTestSuite) TestMsgToHashInt(c *C) {
 	input := []byte("whatever")
-	result, err := MsgToHashInt(input)
+	result, err := MsgToHashInt(input, common.SigningAlgoSecp256k1)
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
 }
@@ -135,6 +135,9 @@ func fabricateTssMsg(c *C, privKey tcrypto.PrivKey, partyID *btss.PartyID, round
 
 	bulkMsg := NewBulkWireMsg([]byte(msg), "tester", &routingInfo)
 	buf, err := json.Marshal([]BulkWireMsg{bulkMsg})
+	if err != nil {
+		c.Fatal(err)
+	}
 	var dataForSign bytes.Buffer
 	dataForSign.Write(buf)
 	dataForSign.WriteString(msgID)
@@ -197,7 +200,7 @@ func setupProcessVerMsgEnv(c *C, privKey tcrypto.PrivKey, keyPool []string, part
 	partyIDMap := conversion.SetupPartyIDMap(partiesID)
 	conversion.SetupIDMaps(partyIDMap, tssCommonStruct.PartyIDtoP2PID)
 	ctx := btss.NewPeerContext(partiesID)
-	params := btss.NewParameters(ctx, localPartyID, len(partiesID), 2)
+	params := btss.NewParameters(btss.S256(), ctx, localPartyID, len(partiesID), 2)
 	outCh := make(chan btss.Message, len(partiesID))
 	endCh := make(chan btsskeygen.LocalPartySaveData, len(partiesID))
 	keyGenParty := btsskeygen.NewLocalParty(params, outCh, endCh)
@@ -220,7 +223,7 @@ func setupProcessVerMsgEnv(c *C, privKey tcrypto.PrivKey, keyPool []string, part
 	return tssCommonStruct, peerPartiesID, partiesID
 }
 
-func (t *TssTestSuite) testDropMsgOwner(c *C, privKey tcrypto.PrivKey, tssCommonStruct *TssCommon, senderID *btss.PartyID, peerPartiesID []*btss.PartyID) {
+func (t *TssTestSuite) testDropMsgOwner(c *C, privKey tcrypto.PrivKey, tssCommonStruct *TssCommon, senderID *btss.PartyID, _ []*btss.PartyID) {
 	testMsg := "testDropMsgOwner"
 	roundInfo := "round testDropMsgOwner"
 	msgHash, err := conversion.BytesToHashString([]byte(testMsg))
@@ -418,7 +421,7 @@ func (t *TssTestSuite) TestTssCommon(c *C) {
 	go func() {
 		tssCommon.ProcessInboundMessages(stopchan, &wg)
 	}()
-	bi, err := MsgToHashInt([]byte("whatever"))
+	bi, err := MsgToHashInt([]byte("whatever"), common.SigningAlgoSecp256k1)
 	c.Assert(err, IsNil)
 	wrapMsg, _ := fabricateTssMsg(c, sk, btss.NewPartyID("1,", "test", bi), "roundInfo", "message", "123", messages.TSSKeyGenMsg)
 	buf, err := json.Marshal(wrapMsg)

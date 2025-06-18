@@ -70,7 +70,7 @@ func (a *DualLPActor) acquireUser(config *OpConfig) OpResult {
 		}
 
 		// skip users that don't have RUNE balance
-		thorAddress, err := user.PubKey().GetAddress(common.THORChain)
+		thorAddress, err := user.PubKey(common.THORChain).GetAddress(common.THORChain)
 		if err != nil {
 			a.Log().Error().Err(err).Msg("failed to get thor address")
 			user.Release()
@@ -104,7 +104,7 @@ func (a *DualLPActor) acquireUser(config *OpConfig) OpResult {
 		// TODO: skip users that already have a position in this pool
 
 		// get l1 address to store in state context
-		l1Address, err := user.PubKey().GetAddress(a.asset.Chain)
+		l1Address, err := user.PubKey(a.asset.Chain).GetAddress(a.asset.Chain)
 		if err != nil {
 			a.Log().Error().Err(err).Msg("failed to get L1 address")
 			user.Release()
@@ -172,7 +172,7 @@ func (a *DualLPActor) depositL1(config *OpConfig) OpResult {
 
 func (a *DualLPActor) depositRune(config *OpConfig) OpResult {
 	memo := fmt.Sprintf("+:%s:%s", a.asset, a.l1Address)
-	accAddr, err := a.account.PubKey().GetThorAddress()
+	accAddr, err := a.account.PubKey(common.THORChain).GetThorAddress()
 	if err != nil {
 		a.Log().Error().Err(err).Msg("failed to get thor address")
 		return OpResult{

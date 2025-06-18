@@ -200,7 +200,7 @@ func newOutboundTxHandlerTestHelper(c *C) outboundTxHandlerTestHelper {
 	}
 	asgardVault.AddFunds(vaultCoins)
 	c.Assert(mgr.Keeper().SetVault(ctx, asgardVault), IsNil)
-	addr, err := asgardVault.PubKey.GetAddress(common.RuneAsset().Chain)
+	addr, err := asgardVault.GetAddress(common.RuneAsset().Chain)
 	c.Check(err, IsNil)
 
 	tx := NewObservedTx(common.Tx{
@@ -491,7 +491,7 @@ func (s *HandlerOutboundTxSuite) TestOutboundTxHandlerETHChainSpendTooMuchGasSho
 	pool.BalanceRune = cosmos.NewUint(100 * common.One)
 	pool.LPUnits = pool.BalanceRune
 	c.Assert(helper.keeper.SetPool(helper.ctx, pool), IsNil)
-	fromAddr, err := helper.asgardVault.PubKey.GetAddress(common.ETHChain)
+	fromAddr, err := helper.asgardVault.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
 	usdtAsset, err := common.NewAsset("ETH.USDT-0XA3910454BF2CB59B8B3A401589A3BACC5CA42306")
 	c.Assert(err, IsNil)
@@ -541,7 +541,7 @@ func (s *HandlerOutboundTxSuite) TestOutboundTxHandlerETHChainSpendTooMuchGasPer
 	pool.BalanceRune = cosmos.NewUint(100 * common.One)
 	pool.LPUnits = pool.BalanceRune
 	c.Assert(helper.keeper.SetPool(helper.ctx, pool), IsNil)
-	fromAddr, err := helper.asgardVault.PubKey.GetAddress(common.ETHChain)
+	fromAddr, err := helper.asgardVault.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
 	usdtAsset, err := common.NewAsset("ETH.USDT-0XA3910454BF2CB59B8B3A401589A3BACC5CA42306")
 	c.Assert(err, IsNil)
@@ -598,7 +598,7 @@ func (s *HandlerOutboundTxSuite) TestOutboundTxHandlerMismatchDecimalShouldNotSl
 	pool.Decimals = 6
 	pool.LPUnits = pool.BalanceRune
 	c.Assert(helper.keeper.SetPool(helper.ctx, pool), IsNil)
-	fromAddr, err := helper.asgardVault.PubKey.GetAddress(common.ETHChain)
+	fromAddr, err := helper.asgardVault.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
 
 	txOutStorage := newTxOutStorageVCUR(helper.keeper, helper.constAccessor, NewDummyEventMgr(), newGasMgrVCUR(helper.constAccessor, helper.keeper))

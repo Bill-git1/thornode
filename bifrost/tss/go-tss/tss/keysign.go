@@ -10,8 +10,8 @@ import (
 	"time"
 
 	tsslibcommon "github.com/binance-chain/tss-lib/common"
-	"github.com/libp2p/go-libp2p-core/peer"
 
+	"github.com/libp2p/go-libp2p-core/peer"
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p"
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
@@ -19,9 +19,12 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/blame"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/common"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/keysign"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/keysign/ecdsa"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/keysign/eddsa"
+	tcommon "gitlab.com/thorchain/thornode/v3/common"
 )
 
-func (t *TssServer) waitForSignatures(msgID, poolPubKey string, msgsToSign [][]byte, sigChan chan string) (keysign.Response, error) {
+func (t *TssServer) waitForSignatures(msgID, poolPubKey string, msgsToSign [][]byte, algo tcommon.SigningAlgo, sigChan chan string) (keysign.Response, error) {
 	// TSS keysign include both form party and keysign itself, thus we wait twice of the timeout
 	data, err := t.signatureNotifier.WaitForSignature(msgID, msgsToSign, poolPubKey, t.conf.KeySignTimeout, sigChan)
 	if err != nil {
@@ -32,10 +35,20 @@ func (t *TssServer) waitForSignatures(msgID, poolPubKey string, msgsToSign [][]b
 		return keysign.Response{}, errors.New("keysign failed")
 	}
 
-	return t.batchSignatures(data, msgsToSign), nil
+	return t.batchSignatures(algo, data, msgsToSign), nil
 }
 
-func (t *TssServer) generateSignature(msgID string, msgsToSign [][]byte, req keysign.Request, threshold int, allParticipants []string, localStateItem storage.KeygenLocalState, blameMgr *blame.Manager, keysignInstance *keysign.TssKeySign, sigChan chan string) (keysign.Response, error) {
+func (t *TssServer) generateSignature(
+	msgID string,
+	msgsToSign [][]byte,
+	req keysign.Request,
+	threshold int,
+	allParticipants []string,
+	localStateItem storage.KeygenLocalState,
+	blameMgr *blame.Manager,
+	keysignInstance keysign.TssKeySign,
+	sigChan chan string,
+) (keysign.Response, error) {
 	allPeersID, err := conversion.GetPeerIDsFromPubKeys(allParticipants)
 	if err != nil {
 		t.logger.Error().Msg("invalid block height or public key")
@@ -52,12 +65,15 @@ func (t *TssServer) generateSignature(msgID string, msgsToSign [][]byte, req key
 			Blame:  blame.NewBlame(blame.InternalError, []blame.Node{}),
 		}, errors.New("fail to parse the version")
 	}
+
+	ourPeerString := t.p2pCommunication.GetHost().ID().String()
+
 	// we use the old join party
 	if oldJoinParty {
 		allParticipants = req.SignerPubKeys
-		myPk, err := conversion.GetPubKeyFromPeerID(t.p2pCommunication.GetHost().ID().String())
+		myPk, err := conversion.GetPubKeyFromPeerID(ourPeerString)
 		if err != nil {
-			t.logger.Info().Msgf("fail to convert the p2p id(%s) to pubkey, turn to wait for signature", t.p2pCommunication.GetHost().ID().String())
+			t.logger.Info().Msgf("fail to convert the p2p id(%s) to pubkey, turn to wait for signature", ourPeerString)
 			return keysign.Response{}, p2p.ErrNotActiveSigner
 		}
 		isSignMember := false
@@ -68,7 +84,7 @@ func (t *TssServer) generateSignature(msgID string, msgsToSign [][]byte, req key
 			}
 		}
 		if !isSignMember {
-			t.logger.Info().Msgf("we(%s) are not the active signer", t.p2pCommunication.GetHost().ID().String())
+			t.logger.Info().Msgf("we(%s) are not the active signer", ourPeerString)
 			return keysign.Response{}, p2p.ErrNotActiveSigner
 		}
 
@@ -113,7 +129,11 @@ func (t *TssServer) generateSignature(msgID string, msgsToSign [][]byte, req key
 			t.logger.Error().Err(errJoinParty).Msgf("fail to convert the peerID to public key %s", leader)
 			blameLeader = blame.NewBlame(blame.TssSyncFail, []blame.Node{})
 		} else {
-			blameLeader = blame.NewBlame(blame.TssSyncFail, []blame.Node{{leaderPubKey, nil, nil}})
+			blameLeader = blame.NewBlame(blame.TssSyncFail, []blame.Node{{
+				Pubkey:         leaderPubKey,
+				BlameData:      nil,
+				BlameSignature: nil,
+			}})
 		}
 
 		t.broadcastKeysignFailure(msgID, allPeersID)
@@ -127,19 +147,17 @@ func (t *TssServer) generateSignature(msgID string, msgsToSign [][]byte, req key
 	}
 	t.tssMetrics.KeysignJoinParty(joinPartyTime, true)
 	isKeySignMember := false
-	for _, el := range onlinePeers {
-		if el == t.p2pCommunication.GetHost().ID() {
+	parsedPeers := make([]string, len(onlinePeers))
+	for i, el := range onlinePeers {
+		parsedPeers[i] = el.String()
+		if el.String() == ourPeerString {
 			isKeySignMember = true
 		}
 	}
 	if !isKeySignMember {
 		// we are not the keysign member so we quit keysign and waiting for signature
-		t.logger.Info().Msgf("we(%s) are not the active signer", t.p2pCommunication.GetHost().ID().String())
+		t.logger.Info().Msgf("we(%s) are not the active signer", ourPeerString)
 		return keysign.Response{}, p2p.ErrNotActiveSigner
-	}
-	parsedPeers := make([]string, len(onlinePeers))
-	for i, el := range onlinePeers {
-		parsedPeers[i] = el.String()
 	}
 
 	signers, err := conversion.GetPubKeysFromPeerIDs(parsedPeers)
@@ -164,13 +182,13 @@ func (t *TssServer) generateSignature(msgID string, msgsToSign [][]byte, req key
 		}, nil
 	}
 
-	sigChan <- "signature generated"
+	// sigChan <- "signature generated"
 	// update signature notification
 	if err := t.signatureNotifier.BroadcastSignature(msgID, signatureData, allPeersID); err != nil {
 		return keysign.Response{}, fmt.Errorf("fail to broadcast signature:%w", err)
 	}
 
-	return t.batchSignatures(signatureData, msgsToSign), nil
+	return t.batchSignatures(tcommon.SigningAlgo(req.Algo), signatureData, msgsToSign), nil
 }
 
 func (t *TssServer) updateKeySignResult(result keysign.Response, timeSpent time.Duration) {
@@ -179,7 +197,6 @@ func (t *TssServer) updateKeySignResult(result keysign.Response, timeSpent time.
 		return
 	}
 	t.tssMetrics.UpdateKeySign(timeSpent, false)
-	return
 }
 
 func (t *TssServer) KeySign(req keysign.Request) (keysign.Response, error) {
@@ -193,17 +210,40 @@ func (t *TssServer) KeySign(req keysign.Request) (keysign.Response, error) {
 		return emptyResp, err
 	}
 
-	keysignInstance := keysign.NewTssKeySign(
-		t.p2pCommunication.GetLocalPeerID(),
-		t.conf,
-		t.p2pCommunication.BroadcastMsgChan,
-		t.stopChan,
-		msgID,
-		t.privateKey,
-		t.p2pCommunication,
-		t.stateManager,
-		len(req.Messages),
-	)
+	var keysignInstance keysign.TssKeySign
+
+	algo := tcommon.SigningAlgo(req.Algo)
+
+	ourPeerID := t.p2pCommunication.GetLocalPeerID()
+
+	switch algo {
+	case tcommon.SigningAlgoSecp256k1:
+		keysignInstance = ecdsa.NewTssKeySign(
+			ourPeerID,
+			t.conf,
+			t.p2pCommunication.BroadcastMsgChan,
+			t.stopChan,
+			msgID,
+			t.privateKey,
+			t.p2pCommunication,
+			t.stateManager,
+			len(req.Messages),
+		)
+	case tcommon.SigningAlgoEd25519:
+		keysignInstance = eddsa.NewTssKeySign(
+			ourPeerID,
+			t.conf,
+			t.p2pCommunication.BroadcastMsgChan,
+			t.stopChan,
+			msgID,
+			t.privateKey,
+			t.p2pCommunication,
+			t.stateManager,
+			len(req.Messages),
+		)
+	default:
+		return keysign.Response{}, fmt.Errorf("unsupported signing algo: %s", algo)
+	}
 
 	keySignChannels := keysignInstance.GetTssKeySignChannels()
 	t.p2pCommunication.SetSubscribe(messages.TSSKeySignMsg, msgID, keySignChannels)
@@ -237,18 +277,15 @@ func (t *TssServer) KeySign(req keysign.Request) (keysign.Response, error) {
 	}
 
 	sort.SliceStable(msgsToSign, func(i, j int) bool {
-		ma, err := common.MsgToHashInt(msgsToSign[i])
+		ma, err := common.MsgToHashInt(msgsToSign[i], algo)
 		if err != nil {
 			t.logger.Error().Err(err).Msgf("fail to convert the hash value")
 		}
-		mb, err := common.MsgToHashInt(msgsToSign[j])
+		mb, err := common.MsgToHashInt(msgsToSign[j], algo)
 		if err != nil {
 			t.logger.Error().Err(err).Msgf("fail to convert the hash value")
 		}
-		if ma.Cmp(mb) == -1 {
-			return false
-		}
-		return true
+		return ma.Cmp(mb) == -1
 	})
 
 	oldJoinParty, err := conversion.VersionLTCheck(req.Version, messages.NEWJOINPARTYVERSION)
@@ -281,17 +318,24 @@ func (t *TssServer) KeySign(req keysign.Request) (keysign.Response, error) {
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 	keysignStartTime := time.Now()
+	msgsCopy := make([][]byte, len(msgsToSign))
+	for i, msg := range msgsToSign {
+		msgsCopy[i] = make([]byte, len(msg))
+		copy(msgsCopy[i], msg)
+	}
 	// we wait for signatures
 	go func() {
 		defer wg.Done()
-		receivedSig, errWait = t.waitForSignatures(msgID, req.PoolPubKey, msgsToSign, sigChan)
+		receivedSig, errWait = t.waitForSignatures(msgID, req.PoolPubKey, msgsCopy, algo, sigChan)
 		// we received an valid signature indeed
 		if errWait == nil {
 			sigChan <- "signature received"
-			t.logger.Log().Msgf("for message %s we get the signature from the peer", msgID)
+			t.logger.Debug().Msgf("received signature for messageID (%s) from peer", msgID)
 			return
 		}
-		t.logger.Log().Msgf("we fail to get the valid signature with error %v", errWait)
+		if errWait != p2p.ErrSigGenerated {
+			t.logger.Error().Err(errWait).Msg("waitForSignatures returned error")
+		}
 	}()
 
 	// we generate the signature ourselves
@@ -323,15 +367,24 @@ func (t *TssServer) broadcastKeysignFailure(messageID string, peers []peer.ID) {
 	}
 }
 
-func (t *TssServer) batchSignatures(sigs []*tsslibcommon.ECSignature, msgsToSign [][]byte) keysign.Response {
+func (t *TssServer) batchSignatures(algo tcommon.SigningAlgo, sigs []*tsslibcommon.SignatureData, msgsToSign [][]byte) keysign.Response {
 	var signatures []keysign.Signature
 	for i, sig := range sigs {
-		msg := base64.StdEncoding.EncodeToString(msgsToSign[i])
-		r := base64.StdEncoding.EncodeToString(sig.R)
-		s := base64.StdEncoding.EncodeToString(sig.S)
-		recovery := base64.StdEncoding.EncodeToString(sig.SignatureRecovery)
+		sigg := sig.GetSignature()
+		var signature keysign.Signature
+		switch algo {
+		case tcommon.SigningAlgoSecp256k1:
+			msg := base64.StdEncoding.EncodeToString(msgsToSign[i])
+			r := base64.StdEncoding.EncodeToString(sigg.R)
+			s := base64.StdEncoding.EncodeToString(sigg.S)
+			recovery := base64.StdEncoding.EncodeToString(sigg.GetSignatureRecovery())
 
-		signature := keysign.NewSignature(msg, r, s, recovery)
+			signature = keysign.NewSignature(msg, r, s, recovery)
+		case tcommon.SigningAlgoEd25519:
+			msg := base64.StdEncoding.EncodeToString(msgsToSign[i])
+			s := base64.StdEncoding.EncodeToString(sigg.Signature)
+			signature = keysign.NewSignature(msg, "", s, "")
+		}
 		signatures = append(signatures, signature)
 	}
 	return keysign.NewResponse(

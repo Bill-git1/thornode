@@ -94,12 +94,11 @@ func NewBulkWireMsg(msg []byte, id string, r *btss.MessageRouting) BulkWireMsg {
 }
 
 type tssJob struct {
-	wireBytes      []byte
-	msgIdentifier  string
-	partyID        *btss.PartyID
-	isBroadcast    bool
-	localParty     btss.Party
-	acceptedShares map[blame.RoundInfo][]string
+	wireBytes     []byte
+	msgIdentifier string
+	partyID       *btss.PartyID
+	isBroadcast   bool
+	localParty    btss.Party
 }
 
 func newJob(party btss.Party, wireBytes []byte, msgIdentifier string, from *btss.PartyID, isBroadcast bool) *tssJob {
@@ -754,8 +753,7 @@ func (t *TssCommon) processTSSMsg(wireMsg *messages.WireMessage, msgType message
 		return errors.New("error in find the data owner")
 	}
 	keyBytes := dataOwner.GetKey()
-	var pk secp256k1.PubKey
-	pk = keyBytes
+	var pk secp256k1.PubKey = keyBytes
 	ok = verifySignature(pk, wireMsg.Message, wireMsg.Sig, t.msgID)
 	if !ok {
 		t.logger.Error().Msg("fail to verify the signature")

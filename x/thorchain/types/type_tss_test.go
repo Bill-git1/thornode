@@ -22,6 +22,7 @@ func (s *TypeTssSuite) TestVoter(c *C) {
 		"hello",
 		pks,
 		pk,
+		GetRandomPubKey(),
 	)
 	c.Check(tss.IsEmpty(), Equals, false)
 	c.Check(tss.String(), Equals, "hello")
@@ -44,7 +45,7 @@ func (s *TypeTssSuite) TestVoter(c *C) {
 	c.Assert(err, IsNil)
 	tss.Sign(addr, chains, "")
 	c.Check(tss.HasConsensus(), Equals, true)
-	v1 := NewTssVoter("", nil, common.EmptyPubKey)
+	v1 := NewTssVoter("", nil, common.EmptyPubKey, common.EmptyPubKey)
 	c.Check(v1.IsEmpty(), Equals, true)
 }
 
@@ -84,7 +85,7 @@ func (s *TypeTssSuite) TestConsensusCheckSignature(c *C) {
 	}
 
 	// 3/3 post signature
-	tss := NewTssVoter("foo", members, pk)
+	tss := NewTssVoter("foo", members, pk, pk)
 	c.Check(tss.HasConsensus(), Equals, false)
 	for _, member := range members {
 		c.Check(tss.HasCompleteConsensus(), Equals, false)
@@ -98,7 +99,7 @@ func (s *TypeTssSuite) TestConsensusCheckSignature(c *C) {
 	c.Check(sig, Equals, "foo")
 
 	// 2/3 post signature
-	tss = NewTssVoter("foo", members, pk)
+	tss = NewTssVoter("foo", members, pk, pk)
 	c.Check(tss.HasConsensus(), Equals, false)
 	for i, member := range members {
 		c.Check(tss.HasCompleteConsensus(), Equals, false)
@@ -120,7 +121,7 @@ func (s *TypeTssSuite) TestConsensusCheckSignature(c *C) {
 	c.Check(sig, Equals, "foo")
 
 	// 1/3 posts signature
-	tss = NewTssVoter("foo", members, pk)
+	tss = NewTssVoter("foo", members, pk, pk)
 	c.Check(tss.HasConsensus(), Equals, false)
 	for i, member := range members {
 		c.Check(tss.HasCompleteConsensus(), Equals, false)
@@ -142,7 +143,7 @@ func (s *TypeTssSuite) TestConsensusCheckSignature(c *C) {
 	c.Check(sig, Equals, "")
 
 	// 1/3 posts different signature
-	tss = NewTssVoter("foo", members, pk)
+	tss = NewTssVoter("foo", members, pk, pk)
 	c.Check(tss.HasConsensus(), Equals, false)
 	for i, member := range members {
 		c.Check(tss.HasCompleteConsensus(), Equals, false)
@@ -164,7 +165,7 @@ func (s *TypeTssSuite) TestConsensusCheckSignature(c *C) {
 	c.Check(sig, Equals, "foo")
 
 	// no signatures posted
-	tss = NewTssVoter("foo", members, pk)
+	tss = NewTssVoter("foo", members, pk, pk)
 	c.Check(tss.HasConsensus(), Equals, false)
 	for _, member := range members {
 		c.Check(tss.HasCompleteConsensus(), Equals, false)
@@ -180,7 +181,7 @@ func (s *TypeTssSuite) TestConsensusCheckSignature(c *C) {
 	c.Check(sig, Equals, "")
 
 	// all different signatures
-	tss = NewTssVoter("foo", members, pk)
+	tss = NewTssVoter("foo", members, pk, pk)
 	c.Check(tss.HasConsensus(), Equals, false)
 	for i, member := range members {
 		c.Check(tss.HasCompleteConsensus(), Equals, false)

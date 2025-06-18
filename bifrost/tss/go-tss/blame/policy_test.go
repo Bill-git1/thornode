@@ -55,7 +55,7 @@ func (p *policyTestSuite) SetUpTest(c *C) {
 	outCh := make(chan btss.Message, len(partiesID))
 	endCh := make(chan bkg.LocalPartySaveData, len(partiesID))
 	ctx := btss.NewPeerContext(partiesID)
-	params := btss.NewParameters(ctx, localPartyID, len(partiesID), 3)
+	params := btss.NewParameters(btss.S256(), ctx, localPartyID, len(partiesID), 3)
 	keyGenParty := bkg.NewLocalParty(params, outCh, endCh)
 
 	testPartyMap := new(sync.Map)
@@ -129,14 +129,14 @@ func (p *policyTestSuite) TestTssMissingShareBlame(c *C) {
 	acceptedShares[RoundInfo{0, "testRound", "123:0"}] = []string{"1", "2"}
 	acceptedShares[RoundInfo{1, "testRound", "123:0"}] = []string{"1"}
 	blameMgr.acceptShareLocker.Unlock()
-	nodes, _, err := blameMgr.TssMissingShareBlame(2)
+	nodes, _, err := blameMgr.TssMissingShareBlame(2, messages.ECDSAKEYGEN)
 	c.Assert(err, IsNil)
 	c.Assert(nodes[0].Pubkey, Equals, localTestPubKeys[3])
 	// we test if the missing share happens in round2
 	blameMgr.acceptShareLocker.Lock()
 	acceptedShares[RoundInfo{0, "testRound", "123:0"}] = []string{"1", "2", "3"}
 	blameMgr.acceptShareLocker.Unlock()
-	nodes, _, err = blameMgr.TssMissingShareBlame(2)
+	nodes, _, err = blameMgr.TssMissingShareBlame(2, messages.ECDSAKEYGEN)
 	c.Assert(err, IsNil)
 	results := []string{nodes[0].Pubkey, nodes[1].Pubkey}
 	sort.Strings(results)

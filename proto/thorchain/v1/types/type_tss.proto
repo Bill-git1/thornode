@@ -17,4 +17,5 @@ message TssVoter {
   repeated string signers = 6;
   int64 majority_consensus_block_height = 7;
   repeated string secp256k1_signatures = 8;
+  string pool_pub_key_eddsa = 9 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.PubKey", (gogoproto.nullable) = true];
 }

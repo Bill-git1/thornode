@@ -374,10 +374,16 @@ func (c *EVMClient) getSmartContractAddr(pubkey common.PubKey) common.Address {
 }
 
 func (c *EVMClient) getSmartContractByAddress(addr common.Address) common.Address {
-	for _, pk := range c.pubkeyMgr.GetPubKeys() {
+	for _, pk := range c.pubkeyMgr.GetAlgoPubKeys(c.cfg.ChainID.GetSigningAlgo()) {
 		evmAddr, err := pk.GetAddress(c.cfg.ChainID)
 		if err != nil {
-			return common.NoAddress
+			c.logger.Warn().
+				Err(err).
+				Str("chain", common.ETHChain.String()).
+				Str("address", addr.String()).
+				Str("pubkey", pk.String()).
+				Msg("fail to get address for pubkey")
+			continue
 		}
 		if evmAddr.Equals(addr) {
 			return c.pubkeyMgr.GetContract(c.cfg.ChainID, pk)

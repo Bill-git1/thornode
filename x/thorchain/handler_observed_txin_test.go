@@ -86,6 +86,13 @@ func (k *TestObservedTxInFailureKeeper) GetPool(_ cosmos.Context, _ common.Asset
 	return k.pool, nil
 }
 
+func (k *TestObservedTxInFailureKeeper) GetVault(_ cosmos.Context, pubKey common.PubKey) (Vault, error) {
+	return Vault{
+		PubKey:      pubKey,
+		PubKeyEddsa: pubKey,
+	}, nil
+}
+
 func (s *HandlerObservedTxInSuite) TestFailure(c *C) {
 	ctx, _ := setupKeeperForTest(c)
 	// w := getHandlerTestWrapper(c, 1, true, false)

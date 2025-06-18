@@ -13,8 +13,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	ckeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
-	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
+	cryptokeysed25519 "github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
+	cryptokeyssecp256k1 "github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"gitlab.com/thorchain/thornode/v3/common/crypto/ed25519"
 )
 
 const (
@@ -22,11 +24,15 @@ const (
 	thorchainCliFolderName = `.thornode`
 )
 
+type Keyring interface {
+	ckeys.Keyring
+}
+
 // Keys manages all the keys used by thorchain
 type Keys struct {
 	signerName string
 	password   string // TODO this is a bad way , need to fix it
-	kb         ckeys.Keyring
+	kb         Keyring
 }
 
 // NewKeysWithKeybase create a new instance of Keys
@@ -94,8 +100,8 @@ func (k *Keys) GetSignerInfo() *ckeys.Record {
 	return record
 }
 
-// GetPrivateKey return the private key
-func (k *Keys) GetPrivateKey() (cryptotypes.PrivKey, error) {
+// GetPrivateKey return the ecdsa private key
+func (k *Keys) GetPrivateKey() (*cryptokeyssecp256k1.PrivKey, error) {
 	// return k.kb.ExportPrivateKeyObject(k.signerName)
 	privKeyArmor, err := k.kb.ExportPrivKeyArmor(k.signerName, k.password)
 	if err != nil {
@@ -105,7 +111,30 @@ func (k *Keys) GetPrivateKey() (cryptotypes.PrivKey, error) {
 	if err != nil {
 		return nil, fmt.Errorf("fail to unarmor private key: %w", err)
 	}
-	return priKey, nil
+	secpKey, ok := priKey.(*cryptokeyssecp256k1.PrivKey)
+	if !ok {
+		return nil, fmt.Errorf("fail to cast private key to secp256k1 private key")
+	}
+	return secpKey, nil
+}
+
+// GetPrivateKeyEDDSA return the eddsa private key
+func (k *Keys) GetPrivateKeyEDDSA() (*cryptokeysed25519.PrivKey, error) {
+	signerNameEDDSA := ed25519.SignerNameEDDSA(k.signerName)
+	// return k.kb.ExportPrivateKeyObject(k.signerName)
+	privKeyArmor, err := k.kb.ExportPrivKeyArmor(signerNameEDDSA, k.password)
+	if err != nil {
+		return nil, err
+	}
+	priKey, _, err := crypto.UnarmorDecryptPrivKey(privKeyArmor, k.password)
+	if err != nil {
+		return nil, fmt.Errorf("fail to unarmor private key: %w", err)
+	}
+	eddsaKey, ok := priKey.(*cryptokeysed25519.PrivKey)
+	if !ok {
+		return nil, fmt.Errorf("fail to cast private key to eddsa private key")
+	}
+	return eddsaKey, nil
 }
 
 // GetKeybase return the keybase

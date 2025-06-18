@@ -134,7 +134,7 @@ func runKeyGen(dir string, t, n int) {
 
 	// init the parties
 	for i := 0; i < len(pIDs); i++ {
-		params := tss.NewParameters(p2pCtx, pIDs[i], len(pIDs), t)
+		params := tss.NewParameters(tss.S256(), p2pCtx, pIDs[i], len(pIDs), t)
 		params.UNSAFE_setKGIgnoreH1H2Dupes(true)
 		P := keygen.NewLocalParty(params, outCh, endCh, preParamTestData).(*keygen.LocalParty)
 		parties = append(parties, P)
@@ -229,7 +229,7 @@ func tryWriteKeyGenDataFile(dir string, index int, data keygen.LocalPartySaveDat
 }
 
 func makeKeyGenDataFilePath(dir string, partyIndex int) string {
-	return fmt.Sprintf("%s/keygen_data_%d.json", dir, partyIndex)
+	return fmt.Sprintf("%s/%d.json", dir, partyIndex)
 }
 
 // ----- //

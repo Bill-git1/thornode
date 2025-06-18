@@ -1,4 +1,4 @@
-package keysign
+package ecdsa
 
 import (
 	"encoding/base64"
@@ -32,6 +32,8 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/messages"
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/storage"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/common"
+	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/keysign"
+	tcommon "gitlab.com/thorchain/thornode/v3/common"
 )
 
 var (
@@ -92,7 +94,7 @@ func (s *MockLocalStateManager) RetrieveP2PAddresses() (addr.AddrList, error) {
 	return nil, os.ErrNotExist
 }
 
-type TssKeysignTestSuite struct {
+type TssECDSAKeysignTestSuite struct {
 	comms        []*p2p.Communication
 	partyNum     int
 	stateMgrs    []storage.LocalStateManager
@@ -100,9 +102,9 @@ type TssKeysignTestSuite struct {
 	targetPeers  []peer.ID
 }
 
-var _ = Suite(&TssKeysignTestSuite{})
+var _ = Suite(&TssECDSAKeysignTestSuite{})
 
-func (s *TssKeysignTestSuite) SetUpSuite(c *C) {
+func (s *TssECDSAKeysignTestSuite) SetUpSuite(c *C) {
 	conversion.SetupBech32Prefix()
 	common.InitLog("info", true, "keysign_test")
 
@@ -123,7 +125,7 @@ func (s *TssKeysignTestSuite) SetUpSuite(c *C) {
 	}
 }
 
-func (s *TssKeysignTestSuite) SetUpTest(c *C) {
+func (s *TssECDSAKeysignTestSuite) SetUpTest(c *C) {
 	if testing.Short() {
 		c.Skip("skip the test")
 		return
@@ -155,27 +157,27 @@ func (s *TssKeysignTestSuite) SetUpTest(c *C) {
 
 	for i := 0; i < s.partyNum; i++ {
 		f := &MockLocalStateManager{
-			file: fmt.Sprintf("../test_data/keysign_data/%d.json", i),
+			file: fmt.Sprintf("../../test_data/keysign_data/ecdsa/%d.json", i),
 		}
 		s.stateMgrs[i] = f
 	}
 }
 
-func (s *TssKeysignTestSuite) TestSignMessage(c *C) {
+func (s *TssECDSAKeysignTestSuite) TestSignMessage(c *C) {
 	if testing.Short() {
 		c.Skip("skip the test")
 		return
 	}
 	log.SetLogLevel("tss-lib", "info")
 	sort.Strings(testPubKeys)
-	req := NewRequest("thorpub1addwnpepqv6xp3fmm47dfuzglywqvpv8fdjv55zxte4a26tslcezns5czv586u2fw33", []string{"helloworld-test", "t"}, 10, testPubKeys, "")
+	req := keysign.NewRequest("thorpub1addwnpepqv6xp3fmm47dfuzglywqvpv8fdjv55zxte4a26tslcezns5czv586u2fw33", tcommon.SigningAlgoSecp256k1, []string{"helloworld-test", "t"}, 10, testPubKeys, "")
 	sort.Strings(req.Messages)
 	dat := []byte(strings.Join(req.Messages, ","))
 	messageID, err := common.MsgToHashString(dat)
 	c.Assert(err, IsNil)
 	wg := sync.WaitGroup{}
 	lock := &sync.Mutex{}
-	keysignResult := make(map[int][]*tsslibcommon.ECSignature)
+	keysignResult := make(map[int][]*tsslibcommon.SignatureData)
 	conf := common.TssConfig{
 		KeyGenTimeout:   90 * time.Second,
 		KeySignTimeout:  90 * time.Second,
@@ -222,13 +224,13 @@ func (s *TssKeysignTestSuite) TestSignMessage(c *C) {
 	for _, item := range keysignResult {
 		if len(signatures) == 0 {
 			for _, each := range item {
-				signatures = append(signatures, string(each.GetSignature()))
+				signatures = append(signatures, string(each.GetSignature().Signature))
 			}
 			continue
 		}
 		var targetSignatures []string
 		for _, each := range item {
-			targetSignatures = append(targetSignatures, string(each.GetSignature()))
+			targetSignatures = append(targetSignatures, string(each.GetSignature().Signature))
 		}
 
 		c.Assert(signatures, DeepEquals, targetSignatures)
@@ -242,7 +244,7 @@ func observeAndStop(c *C, tssKeySign *TssKeySign, stopChan chan struct{}) {
 		case <-stopChan:
 			return
 		case <-time.After(time.Millisecond):
-			blameMgr := tssKeySign.tssCommonStruct.GetBlameMgr()
+			blameMgr := (*tssKeySign).GetTssCommonStruct().GetBlameMgr()
 			lastMsg := blameMgr.GetLastMsg()
 			if lastMsg != nil && len(lastMsg.Type()) > 4 {
 				a := lastMsg.Type()
@@ -260,13 +262,13 @@ func observeAndStop(c *C, tssKeySign *TssKeySign, stopChan chan struct{}) {
 	}
 }
 
-func (s *TssKeysignTestSuite) TestSignMessageWithStop(c *C) {
+func (s *TssECDSAKeysignTestSuite) TestSignMessageWithStop(c *C) {
 	if testing.Short() {
 		c.Skip("skip the test")
 		return
 	}
 	sort.Strings(testPubKeys)
-	req := NewRequest("thorpub1addwnpepqv6xp3fmm47dfuzglywqvpv8fdjv55zxte4a26tslcezns5czv586u2fw33", []string{"helloworld-test", "t"}, 10, testPubKeys, "")
+	req := keysign.NewRequest("thorpub1addwnpepqv6xp3fmm47dfuzglywqvpv8fdjv55zxte4a26tslcezns5czv586u2fw33", tcommon.SigningAlgoSecp256k1, []string{"helloworld-test", "t"}, 10, testPubKeys, "")
 	sort.Strings(req.Messages)
 	dat := []byte(strings.Join(req.Messages, ","))
 	messageID, err := common.MsgToHashString(dat)
@@ -332,7 +334,7 @@ func rejectSendToOnePeer(c *C, tssKeySign *TssKeySign, stopChan chan struct{}, t
 		case <-stopChan:
 			return
 		case <-time.After(time.Millisecond):
-			lastMsg := tssKeySign.tssCommonStruct.GetBlameMgr().GetLastMsg()
+			lastMsg := (*tssKeySign).GetTssCommonStruct().GetBlameMgr().GetLastMsg()
 			if lastMsg != nil && len(lastMsg.Type()) > 6 {
 				a := lastMsg.Type()
 				idx := strings.Index(a, "Round")
@@ -341,13 +343,9 @@ func rejectSendToOnePeer(c *C, tssKeySign *TssKeySign, stopChan chan struct{}, t
 				roundD, err := strconv.Atoi(round)
 				c.Assert(err, IsNil)
 				if roundD > 6 {
-					tssKeySign.tssCommonStruct.P2PPeersLock.Lock()
-					peersID := tssKeySign.tssCommonStruct.P2PPeers
-					sort.Slice(peersID, func(i, j int) bool {
-						return peersID[i].String() > peersID[j].String()
-					})
-					tssKeySign.tssCommonStruct.P2PPeers = targetPeers
-					tssKeySign.tssCommonStruct.P2PPeersLock.Unlock()
+					(*tssKeySign).GetTssCommonStruct().P2PPeersLock.Lock()
+					(*tssKeySign).GetTssCommonStruct().P2PPeers = targetPeers
+					(*tssKeySign).GetTssCommonStruct().P2PPeersLock.Unlock()
 					return
 				}
 			}
@@ -355,13 +353,13 @@ func rejectSendToOnePeer(c *C, tssKeySign *TssKeySign, stopChan chan struct{}, t
 	}
 }
 
-func (s *TssKeysignTestSuite) TestSignMessageRejectOnePeer(c *C) {
+func (s *TssECDSAKeysignTestSuite) TestSignMessageRejectOnePeer(c *C) {
 	if testing.Short() {
 		c.Skip("skip the test")
 		return
 	}
 	sort.Strings(testPubKeys)
-	req := NewRequest("thorpub1addwnpepqv6xp3fmm47dfuzglywqvpv8fdjv55zxte4a26tslcezns5czv586u2fw33", []string{"helloworld-test", "t"}, 10, testPubKeys, "")
+	req := keysign.NewRequest("thorpub1addwnpepqv6xp3fmm47dfuzglywqvpv8fdjv55zxte4a26tslcezns5czv586u2fw33", tcommon.SigningAlgoSecp256k1, []string{"helloworld-test", "t"}, 10, testPubKeys, "")
 	sort.Strings(req.Messages)
 	dat := []byte(strings.Join(req.Messages, ","))
 	messageID, err := common.MsgToHashString(dat)
@@ -411,7 +409,7 @@ func (s *TssKeysignTestSuite) TestSignMessageRejectOnePeer(c *C) {
 	wg.Wait()
 }
 
-func (s *TssKeysignTestSuite) TearDownSuite(c *C) {
+func (s *TssECDSAKeysignTestSuite) TearDownSuite(c *C) {
 	for i := range s.comms {
 		tempFilePath := path.Join(os.TempDir(), strconv.Itoa(i))
 		err := os.RemoveAll(tempFilePath)
@@ -419,7 +417,7 @@ func (s *TssKeysignTestSuite) TearDownSuite(c *C) {
 	}
 }
 
-func (s *TssKeysignTestSuite) TearDownTest(c *C) {
+func (s *TssECDSAKeysignTestSuite) TearDownTest(c *C) {
 	if testing.Short() {
 		c.Skip("skip the test")
 		return
@@ -430,7 +428,7 @@ func (s *TssKeysignTestSuite) TearDownTest(c *C) {
 	}
 }
 
-func (s *TssKeysignTestSuite) TestCloseKeySignnotifyChannel(c *C) {
+func (s *TssECDSAKeysignTestSuite) TestCloseKeySignnotifyChannel(c *C) {
 	conf := common.TssConfig{}
 	keySignInstance := NewTssKeySign("", conf, nil, nil, "test", s.nodePrivKeys[0], s.comms[0], s.stateMgrs[0], 1)
 

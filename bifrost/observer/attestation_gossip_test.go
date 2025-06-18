@@ -289,9 +289,9 @@ func TestGetKeysignParty(t *testing.T) {
 // TestAttestObservedTx tests attesting to an observed transaction
 func TestAttestObservedTx(t *testing.T) {
 	// Disable deadline application during tests
-	originalApplyDeadline := p2p.ApplyDeadline
-	p2p.ApplyDeadline = false
-	defer func() { p2p.ApplyDeadline = originalApplyDeadline }()
+	originalApplyDeadline := p2p.ApplyDeadline.Load()
+	p2p.ApplyDeadline.Store(false)
+	defer func() { p2p.ApplyDeadline.Store(originalApplyDeadline) }()
 
 	ag, host, _, _, _, _ := setupTestGossip(t)
 

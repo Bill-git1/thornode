@@ -21,7 +21,7 @@ import (
 func ScanSecurity(block *thorscan.BlockResponse) {
 	SecurityEvents(block)
 	ErrataTransactions(block)
-	Round7Failures(block)
+	LastRoundFailures(block)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -96,10 +96,10 @@ func ErrataTransactions(block *thorscan.BlockResponse) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// Round 7 Failures
+// Last Round Failures
 ////////////////////////////////////////////////////////////////////////////////////////
 
-func Round7Failures(block *thorscan.BlockResponse) {
+func LastRoundFailures(block *thorscan.BlockResponse) {
 	for _, tx := range block.Txs {
 		if tx.Tx == nil { // transaction failed decode
 			continue
@@ -112,13 +112,13 @@ func Round7Failures(block *thorscan.BlockResponse) {
 				}
 
 				// skip failures except for round 7
-				if msgKeysignFail.Blame.Round != "SignRound7Message" {
+				if msgKeysignFail.Blame.Round != "SignRound7Message" && msgKeysignFail.Blame.Round != "EDDSASignRound3Message" {
 					continue
 				}
 
 				// skip seen round 7 failures
 				seen := map[string]bool{}
-				err := util.Load("round7", &seen)
+				err := util.Load("lastRound", &seen)
 				if err != nil {
 					log.Error().Err(err).Msg("unable to load round 7 failures")
 				}
@@ -127,7 +127,7 @@ func Round7Failures(block *thorscan.BlockResponse) {
 				}
 
 				// build the notification
-				title := "Round 7 Failure"
+				title := "Last Round Failure"
 				fields := util.NewOrderedMap()
 				fields.Set("Amount", fmt.Sprintf(
 					"%f %s (%s)",
@@ -141,9 +141,9 @@ func Round7Failures(block *thorscan.BlockResponse) {
 
 				// save seen round 7 failures
 				seen[msgKeysignFail.Memo] = true
-				err = util.Store("round7", seen)
+				err = util.Store("lastRound", seen)
 				if err != nil {
-					log.Error().Err(err).Msg("unable to save round 7 failures")
+					log.Error().Err(err).Msg("unable to save last round failures")
 				}
 			}
 		}

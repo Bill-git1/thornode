@@ -9,6 +9,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/keygen"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/keysign"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/tss"
+	tcommon "gitlab.com/thorchain/thornode/v3/common"
 )
 
 type MockTssServer struct {
@@ -39,7 +40,17 @@ func (mts *MockTssServer) Keygen(req keygen.Request) (keygen.Response, error) {
 	if mts.failToKeyGen {
 		return keygen.Response{}, errors.New("you ask for it")
 	}
-	return keygen.NewResponse(conversion.GetRandomPubKey(), "whatever", common.Success, blame.Blame{}), nil
+	return keygen.NewResponse(tcommon.SigningAlgoSecp256k1, conversion.GetRandomPubKey(), "whatever", common.Success, blame.Blame{}), nil
+}
+
+func (mts *MockTssServer) KeygenAllAlgo(req keygen.Request) ([]keygen.Response, error) {
+	if mts.failToKeyGen {
+		return []keygen.Response{{}}, errors.New("you ask for it")
+	}
+	return []keygen.Response{
+		keygen.NewResponse(tcommon.SigningAlgoSecp256k1, conversion.GetRandomPubKey(), "whatever", common.Success, blame.Blame{}),
+		keygen.NewResponse(tcommon.SigningAlgoEd25519, conversion.GetRandomPubKey(), "whatever", common.Success, blame.Blame{}),
+	}, nil
 }
 
 func (mts *MockTssServer) KeySign(req keysign.Request) (keysign.Response, error) {

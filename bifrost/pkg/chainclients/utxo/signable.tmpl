@@ -39,7 +39,7 @@ func (ts *tssSignable{{ ToUpper $chain }}) SignECDSA(payload []byte) (*{{ $chain
 func (ts *tssSignable{{ ToUpper $chain }}) Sign(payload []byte) (*{{ $chain }}ec.Signature, error) {
 {{- end }}
 	ts.log.Info().Msgf("msg to sign: %s", base64.StdEncoding.EncodeToString(payload))
-	result, _, err := ts.tssKeyManager.RemoteSign(payload, ts.poolPubKey.String())
+	result, _, err := ts.tssKeyManager.RemoteSign(payload, common.SigningAlgoSecp256k1, ts.poolPubKey.String())
 	if err != nil {
 		return nil, err
 	}

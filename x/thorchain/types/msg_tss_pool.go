@@ -34,7 +34,7 @@ var (
 )
 
 // NewMsgTssPool is a constructor function for MsgTssPool
-func NewMsgTssPool(pks []string, poolpk common.PubKey, secp256k1Signature, keysharesBackup []byte, keygenType KeygenType, height int64, bl Blame, chains []string, signer cosmos.AccAddress, keygenTime int64) (*MsgTssPool, error) {
+func NewMsgTssPool(pks []string, poolpk common.PubKey, secp256k1Signature, keysharesBackup []byte, keygenType KeygenType, height int64, bl []Blame, chains []string, signer cosmos.AccAddress, keygenTime int64) (*MsgTssPool, error) {
 	id, err := getTssID(pks, poolpk, height, bl)
 	if err != nil {
 		return nil, fmt.Errorf("fail to get tss id: %w", err)
@@ -55,15 +55,17 @@ func NewMsgTssPool(pks []string, poolpk common.PubKey, secp256k1Signature, keysh
 }
 
 // getTssID
-func getTssID(members []string, poolPk common.PubKey, height int64, bl Blame) (string, error) {
+func getTssID(members []string, poolPk common.PubKey, height int64, bl []Blame) (string, error) {
 	// ensure input pubkeys list is deterministically sorted
 	sort.SliceStable(members, func(i, j int) bool {
 		return members[i] < members[j]
 	})
 
-	pubkeys := make([]string, len(bl.BlameNodes))
-	for i, node := range bl.BlameNodes {
-		pubkeys[i] = node.Pubkey
+	pubkeys := make([]string, 0)
+	for _, b := range bl {
+		for _, node := range b.BlameNodes {
+			pubkeys = append(pubkeys, node.Pubkey)
+		}
 	}
 	sort.SliceStable(pubkeys, func(i, j int) bool {
 		return pubkeys[i] < pubkeys[j]
@@ -167,7 +169,7 @@ func (m *MsgTssPool) ValidateBasic() error {
 
 // IsSuccess when blame is empty , then treat it as success
 func (m MsgTssPool) IsSuccess() bool {
-	return m.Blame.IsEmpty()
+	return len(m.Blame) == 0
 }
 
 func (m MsgTssPool) GetChains() common.Chains {

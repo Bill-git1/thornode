@@ -14,20 +14,25 @@ func NewMockPoolAddressValidator() *MockPoolAddressValidator {
 	return &MockPoolAddressValidator{}
 }
 
-func (mpa *MockPoolAddressValidator) GetPubKeys() common.PubKeys { return nil }
+func (mpa *MockPoolAddressValidator) GetPubKeys() common.PubKeys                         { return nil }
+func (mpa *MockPoolAddressValidator) GetAlgoPubKeys(_ common.SigningAlgo) common.PubKeys { return nil }
 func (mpa *MockPoolAddressValidator) GetSignPubKeys() common.PubKeys {
 	pubKey, _ := common.NewPubKey(MockPubkey)
 	return common.PubKeys{pubKey}
 }
-func (mpa *MockPoolAddressValidator) GetNodePubKey() common.PubKey { return common.EmptyPubKey }
+
+func (mpa *MockPoolAddressValidator) GetNodePubKey(_ common.SigningAlgo) common.PubKey {
+	return common.EmptyPubKey
+}
+
 func (mpa *MockPoolAddressValidator) HasPubKey(pk common.PubKey) bool {
 	return pk.String() == MockPubkey
 }
-func (mpa *MockPoolAddressValidator) AddPubKey(pk common.PubKey, _ bool) {}
-func (mpa *MockPoolAddressValidator) AddNodePubKey(pk common.PubKey)     {}
-func (mpa *MockPoolAddressValidator) RemovePubKey(pk common.PubKey)      {}
-func (mpa *MockPoolAddressValidator) Start() error                       { return errors.New("kaboom") }
-func (mpa *MockPoolAddressValidator) Stop() error                        { return errors.New("kaboom") }
+func (mpa *MockPoolAddressValidator) AddPubKey(pk common.PubKey, _ bool, _ common.SigningAlgo) {}
+func (mpa *MockPoolAddressValidator) AddNodePubKey(pk common.PubKey, _ common.SigningAlgo)     {}
+func (mpa *MockPoolAddressValidator) RemovePubKey(pk common.PubKey)                            {}
+func (mpa *MockPoolAddressValidator) Start() error                                             { return errors.New("kaboom") }
+func (mpa *MockPoolAddressValidator) Stop() error                                              { return errors.New("kaboom") }
 
 func (mpa *MockPoolAddressValidator) IsValidPoolAddress(addr string, chain common.Chain) (bool, common.ChainPoolInfo) {
 	return false, common.EmptyChainPoolInfo

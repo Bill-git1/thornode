@@ -17,6 +17,7 @@ import (
 	"github.com/gcash/bchutil"
 	ltcchaincfg "github.com/ltcsuite/ltcd/chaincfg"
 	"github.com/ltcsuite/ltcutil"
+	"github.com/mr-tron/base58"
 
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
@@ -55,6 +56,12 @@ func NewAddress(address string) (Address, error) {
 
 	// Check is xrp address
 	if IsValidXRPAddress(address) {
+		return Address(address), nil
+	}
+
+	// Check ED25519 (base58 encoded) addresses - SOL addresses must be 32 bytes long
+	res, err := base58.Decode(address)
+	if err == nil && len(res) == 32 {
 		return Address(address), nil
 	}
 

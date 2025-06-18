@@ -16,6 +16,7 @@ import (
 	"github.com/tendermint/btcd/btcec"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/keysign"
+	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
@@ -91,13 +92,14 @@ func (s *KeySign) Stop() {
 }
 
 // RemoteSign send the request to local task queue
-func (s *KeySign) RemoteSign(msg []byte, poolPubKey string) ([]byte, []byte, error) {
+func (s *KeySign) RemoteSign(msg []byte, algo common.SigningAlgo, poolPubKey string) ([]byte, []byte, error) {
 	if len(msg) == 0 {
 		return nil, nil, nil
 	}
 
 	encodedMsg := base64.StdEncoding.EncodeToString(msg)
 	task := tssKeySignTask{
+		Algo:       algo,
 		PoolPubKey: poolPubKey,
 		Msg:        encodedMsg,
 		Resp:       make(chan tssKeySignResult, 1),
@@ -107,6 +109,15 @@ func (s *KeySign) RemoteSign(msg []byte, poolPubKey string) ([]byte, []byte, err
 	case resp := <-task.Resp:
 		if resp.Err != nil {
 			return nil, nil, fmt.Errorf("fail to tss sign: %w", resp.Err)
+		}
+
+		if algo == common.SigningAlgoEd25519 {
+			// ed25519 signature is not R and S , but a single byte array
+			sBytes, err := base64.StdEncoding.DecodeString(resp.S)
+			if err != nil {
+				return nil, nil, err
+			}
+			return sBytes, nil, nil
 		}
 
 		if len(resp.R) == 0 && len(resp.S) == 0 {
@@ -130,6 +141,7 @@ func (s *KeySign) RemoteSign(msg []byte, poolPubKey string) ([]byte, []byte, err
 
 type tssKeySignTask struct {
 	PoolPubKey string
+	Algo       common.SigningAlgo
 	Msg        string
 	Resp       chan tssKeySignResult
 }
@@ -185,7 +197,28 @@ func (s *KeySign) processKeySignTasks() {
 				s.wg.Add(1)
 				signingTask := v[:totalTasks]
 				tasks[k] = v[totalTasks:]
-				go s.toLocalTSSSigner(k, signingTask)
+
+				// split by algo
+				signingTasksSecp256k1 := make([]*tssKeySignTask, 0)
+				signingTasksEd25519 := make([]*tssKeySignTask, 0)
+				for _, task := range signingTask {
+					switch task.Algo {
+					case common.SigningAlgoSecp256k1:
+						signingTasksSecp256k1 = append(signingTasksSecp256k1, task)
+					case common.SigningAlgoEd25519:
+						signingTasksEd25519 = append(signingTasksEd25519, task)
+					default:
+						s.setTssKeySignTasksFail(signingTask, fmt.Errorf("unknown signing algo %s", task.Algo))
+						continue
+					}
+				}
+
+				if len(signingTasksSecp256k1) > 0 {
+					go s.toLocalTSSSigner(k, common.SigningAlgoSecp256k1, signingTasksSecp256k1)
+				}
+				if len(signingTasksEd25519) > 0 {
+					go s.toLocalTSSSigner(k, common.SigningAlgoEd25519, signingTasksEd25519)
+				}
 			}
 			taskLock.Unlock()
 		}
@@ -252,13 +285,14 @@ func (s *KeySign) setTssKeySignTasksFail(tasks []*tssKeySignTask, err error) {
 }
 
 // toLocalTSSSigner will send the request to local signer
-func (s *KeySign) toLocalTSSSigner(poolPubKey string, tasks []*tssKeySignTask) {
+func (s *KeySign) toLocalTSSSigner(poolPubKey string, algo common.SigningAlgo, tasks []*tssKeySignTask) {
 	defer s.wg.Done()
 	var msgToSign []string
 	for _, item := range tasks {
 		msgToSign = append(msgToSign, item.Msg)
 	}
 	tssMsg := keysign.Request{
+		Algo:       string(algo),
 		PoolPubKey: poolPubKey,
 		Messages:   msgToSign,
 	}

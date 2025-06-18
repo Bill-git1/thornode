@@ -4,7 +4,9 @@ import (
 	"fmt"
 
 	"github.com/cometbft/cometbft/crypto"
+	tmed25519 "github.com/cometbft/cometbft/crypto/ed25519"
 	tmsecp256k1 "github.com/cometbft/cometbft/crypto/secp256k1"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 
@@ -70,6 +72,8 @@ func CosmosPrivateKeyToTMPrivateKey(privateKey cryptotypes.PrivKey) crypto.PrivK
 	switch k := privateKey.(type) {
 	case *secp256k1.PrivKey:
 		return tmsecp256k1.PrivKey(k.Bytes())
+	case *ed25519.PrivKey:
+		return tmed25519.PrivKey(k.Bytes())
 	default:
 		return nil
 	}

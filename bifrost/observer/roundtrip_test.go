@@ -142,7 +142,7 @@ func TestObserverRoundTrip(t *testing.T) {
 		obs.onDeck[TxInKey(tx)] = tx
 
 		for _, txi := range tx.TxArray {
-			pubkeyMgr.AddPubKey(txi.ObservedVaultPubKey, false)
+			pubkeyMgr.AddPubKey(txi.ObservedVaultPubKey, false, common.SigningAlgoSecp256k1)
 		}
 	}
 

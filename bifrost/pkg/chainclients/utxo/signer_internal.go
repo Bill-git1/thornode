@@ -522,9 +522,10 @@ func (c *Client) consolidateUTXOs() {
 		}
 
 		txOutItem := stypes.TxOutItem{
-			Chain:       c.cfg.ChainID,
-			ToAddress:   addr,
-			VaultPubKey: vault.PubKey,
+			Chain:            c.cfg.ChainID,
+			ToAddress:        addr,
+			VaultPubKey:      vault.PubKey,
+			VaultPubKeyEddsa: vault.PubKeyEddsa,
 			Coins: common.Coins{
 				common.NewCoin(c.cfg.ChainID.GetGasAsset(), cosmos.NewUint(uint64(amt))),
 			},

@@ -411,8 +411,8 @@ func (s *ObserverSuite) TestObserverDeckStorage(c *C) {
 
 		pubkeyMgr, err := pubkeymanager.NewPubKeyManager(s.bridge, s.metrics)
 		c.Assert(err, IsNil)
-		pubkeyMgr.AddPubKey(vault1, false)
-		pubkeyMgr.AddPubKey(vault2, false)
+		pubkeyMgr.AddPubKey(vault1, false, common.SigningAlgoSecp256k1)
+		pubkeyMgr.AddPubKey(vault2, false, common.SigningAlgoSecp256k1)
 
 		ag, err := NewAttestationGossip(NewMockHost([]peer.ID{}), s.thorKeys, "localhost:50052", s.bridge, s.metrics, config.BifrostAttestationGossipConfig{})
 		c.Assert(err, IsNil)

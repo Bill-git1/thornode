@@ -18,15 +18,7 @@ func Swaps() *Actor {
 
 	// gather all pools we expect to swap through
 	swapPools := []common.Asset{}
-	for _, chain := range common.AllChains {
-		if chain == common.THORChain {
-			continue
-		}
-		// BSC not compatible with sim tests
-		if chain.Equals(common.BSCChain) {
-			continue
-		}
-
+	for _, chain := range SimChains {
 		swapPools = append(swapPools, chain.GetGasAsset())
 
 		// add tokens to swap pools

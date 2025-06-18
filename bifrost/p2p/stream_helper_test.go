@@ -148,7 +148,7 @@ func TestReadLength(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		ApplyDeadline = true
+		ApplyDeadline.Store(true)
 		t.Run(tc.name, func(st *testing.T) {
 			stream := tc.streamProvider()
 			l, err := ReadStreamWithBuffer(stream)
@@ -192,7 +192,7 @@ func TestReadPayload(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		ApplyDeadline = true
+		ApplyDeadline.Store(true)
 		t.Run(tc.name, func(st *testing.T) {
 			stream := tc.streamProvider()
 			l, err := ReadStreamWithBuffer(stream)

@@ -4,30 +4,31 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"sync"
 	"testing"
 	"time"
 
 	tsslibcommon "github.com/binance-chain/tss-lib/common"
-	"github.com/binance-chain/tss-lib/ecdsa/signing"
 	"github.com/libp2p/go-libp2p-core/peer"
 	tnet "github.com/libp2p/go-libp2p-testing/net"
 	mocknet "github.com/libp2p/go-libp2p/p2p/net/mock"
 	"github.com/stretchr/testify/assert"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p"
+	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss/go-tss/common"
 )
 
 func TestSignatureNotifierHappyPath(t *testing.T) {
+	conversion.SetupBech32Prefix()
 	poolPubKey := `thorpub1addwnpepq0ul3xt882a6nm6m7uhxj4tk2n82zyu647dyevcs5yumuadn4uamqx7neak`
 	messageToSign := "yhEwrxWuNBGnPT/L7PNnVWg7gFWNzCYTV+GuX3tKRH8="
 	buf, err := base64.StdEncoding.DecodeString(messageToSign)
 	assert.Nil(t, err)
 	messageID, err := common.MsgToHashString(buf)
 	assert.Nil(t, err)
-	p2p.ApplyDeadline = false
+	p2p.ApplyDeadline.Store(false)
 	id1 := tnet.RandIdentityOrFatal(t)
 	id2 := tnet.RandIdentityOrFatal(t)
 	id3 := tnet.RandIdentityOrFatal(t)
@@ -66,10 +67,10 @@ func TestSignatureNotifierHappyPath(t *testing.T) {
 	assert.NotNil(t, n2)
 	assert.NotNil(t, n3)
 	sigFile := "../test_data/signature_notify/sig1.json"
-	content, err := ioutil.ReadFile(sigFile)
+	content, err := os.ReadFile(sigFile)
 	assert.Nil(t, err)
 	assert.NotNil(t, content)
-	var signature signing.SignatureData
+	var signature tsslibcommon.SignatureData
 	err = json.Unmarshal(content, &signature)
 	assert.Nil(t, err)
 	sigChan := make(chan string)
@@ -82,11 +83,113 @@ func TestSignatureNotifierHappyPath(t *testing.T) {
 		assert.NotNil(t, sig)
 	}()
 
-	assert.Nil(t, n2.BroadcastSignature(messageID, []*tsslibcommon.ECSignature{signature.GetSignature()}, []peer.ID{
+	assert.Nil(t, n2.BroadcastSignature(messageID, []*tsslibcommon.SignatureData{&signature}, []peer.ID{
 		p1, p3,
 	}))
-	assert.Nil(t, n3.BroadcastSignature(messageID, []*tsslibcommon.ECSignature{signature.GetSignature()}, []peer.ID{
+	assert.Nil(t, n3.BroadcastSignature(messageID, []*tsslibcommon.SignatureData{&signature}, []peer.ID{
 		p1, p2,
 	}))
 	wg.Wait()
+}
+
+func TestSignatureNotifierBroadcastFirst(t *testing.T) {
+	conversion.SetupBech32Prefix()
+	poolPubKey := `thorpub1addwnpepq0ul3xt882a6nm6m7uhxj4tk2n82zyu647dyevcs5yumuadn4uamqx7neak`
+	messageToSign := "yhEwrxWuNBGnPT/L7PNnVWg7gFWNzCYTV+GuX3tKRH8="
+	buf, err := base64.StdEncoding.DecodeString(messageToSign)
+	assert.Nil(t, err)
+	messageID, err := common.MsgToHashString(buf)
+	assert.Nil(t, err)
+	p2p.ApplyDeadline.Store(false)
+	id1 := tnet.RandIdentityOrFatal(t)
+	id2 := tnet.RandIdentityOrFatal(t)
+	id3 := tnet.RandIdentityOrFatal(t)
+	mn := mocknet.New(context.Background())
+	// add peers to mock net
+
+	a1 := tnet.RandLocalTCPAddress()
+	a2 := tnet.RandLocalTCPAddress()
+	a3 := tnet.RandLocalTCPAddress()
+
+	h1, err := mn.AddPeer(id1.PrivateKey(), a1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p1 := h1.ID()
+	h2, err := mn.AddPeer(id2.PrivateKey(), a2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p2 := h2.ID()
+	h3, err := mn.AddPeer(id3.PrivateKey(), a3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p3 := h3.ID()
+	if err := mn.LinkAll(); err != nil {
+		t.Error(err)
+	}
+	if err := mn.ConnectAllButSelf(); err != nil {
+		t.Error(err)
+	}
+	n1 := NewSignatureNotifier(h1)
+	n2 := NewSignatureNotifier(h2)
+	n3 := NewSignatureNotifier(h3)
+	assert.NotNil(t, n1)
+	assert.NotNil(t, n2)
+	assert.NotNil(t, n3)
+	sigFile := "../test_data/signature_notify/sig1.json"
+	content, err := os.ReadFile(sigFile)
+	assert.Nil(t, err)
+	assert.NotNil(t, content)
+	var signature tsslibcommon.SignatureData
+	err = json.Unmarshal(content, &signature)
+	assert.Nil(t, err)
+	sigChan := make(chan string)
+
+	assert.NotContains(t, n1.notifiers, messageID)
+
+	assert.Nil(t, n2.BroadcastSignature(messageID, []*tsslibcommon.SignatureData{&signature}, []peer.ID{
+		p1, p3,
+	}))
+
+	assert.Nil(t, n3.BroadcastSignature(messageID, []*tsslibcommon.SignatureData{&signature}, []peer.ID{
+		p1, p2,
+	}))
+
+	n1.notifierLock.Lock()
+	assert.Contains(t, n1.notifiers, messageID)
+	notifier := n1.notifiers[messageID]
+	n1.notifierLock.Unlock()
+	notifier.mu.Lock()
+	assert.False(t, notifier.readyToProcess())
+	assert.Equal(t, defaultNotifierTTL, notifier.ttl)
+	notifier.mu.Unlock()
+
+	sig, err := n1.WaitForSignature(messageID, [][]byte{buf}, poolPubKey, time.Second*30, sigChan)
+	assert.Nil(t, err)
+	assert.NotNil(t, sig)
+
+	n1.notifierLock.Lock()
+	assert.NotContains(t, n1.notifiers, messageID)
+	n1.notifierLock.Unlock()
+
+	// check ttl logic and cleanup
+	n3.notifierLock.Lock()
+	assert.Contains(t, n3.notifiers, messageID)
+	notifier = n3.notifiers[messageID]
+	n3.notifierLock.Unlock()
+	notifier.mu.Lock()
+	notifier.ttl = 0
+	notifier.mu.Unlock()
+
+	n3.Start()
+	defer n3.Stop()
+
+	// let cleanup goroutine run
+	time.Sleep(time.Second)
+
+	n3.notifierLock.Lock()
+	assert.NotContains(t, n3.notifiers, messageID)
+	n3.notifierLock.Unlock()
 }

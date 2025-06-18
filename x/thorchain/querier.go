@@ -148,6 +148,7 @@ func (qs queryServer) queryVault(ctx cosmos.Context, req *types.QueryVaultReques
 	resp := types.QueryVaultResponse{
 		BlockHeight:           v.BlockHeight,
 		PubKey:                v.PubKey.String(),
+		PubKeyEddsa:           v.PubKeyEddsa.String(),
 		Coins:                 v.Coins,
 		Type:                  v.Type.String(),
 		Status:                v.Status.String(),
@@ -183,6 +184,7 @@ func (qs queryServer) queryAsgardVaults(ctx cosmos.Context, _ *types.QueryAsgard
 			vaultsWithFunds = append(vaultsWithFunds, &types.QueryVaultResponse{
 				BlockHeight:           vault.BlockHeight,
 				PubKey:                vault.PubKey.String(),
+				PubKeyEddsa:           vault.PubKeyEddsa.String(),
 				Coins:                 vault.Coins,
 				Type:                  vault.Type.String(),
 				Status:                vault.Status.String(),
@@ -206,7 +208,7 @@ func getVaultChainAddresses(ctx cosmos.Context, vault Vault) []*types.VaultAddre
 	var result []*types.VaultAddress
 	allChains := append(vault.GetChains(), common.THORChain)
 	for _, c := range allChains.Distinct() {
-		addr, err := vault.PubKey.GetAddress(c)
+		addr, err := vault.GetAddress(c)
 		if err != nil {
 			ctx.Logger().Error("fail to get address for %s:%w", c.String(), err)
 			continue
@@ -264,8 +266,9 @@ func (qs queryServer) queryVaultsPubkeys(ctx cosmos.Context, _ *types.QueryVault
 				allMembers := vault.Membership
 				if HasSuperMajority(len(activeMembers), len(allMembers)) {
 					resp.Inactive = append(resp.Inactive, &types.VaultInfo{
-						PubKey:  vault.PubKey.String(),
-						Routers: castVaultRouters(vault.Routers),
+						PubKey:      vault.PubKey.String(),
+						PubKeyEddsa: vault.PubKeyEddsa.String(),
+						Routers:     castVaultRouters(vault.Routers),
 					})
 				}
 			}
@@ -514,7 +517,7 @@ func (qs queryServer) queryInboundAddresses(ctx cosmos.Context, _ *types.QueryIn
 		isChainTradingPaused := k.IsChainTradingHalted(ctx, chain)
 		isChainLpPaused := k.IsLPPaused(ctx, chain)
 
-		vaultAddress, err := vault.PubKey.GetAddress(chain)
+		vaultAddress, err := vault.GetAddress(chain)
 		if err != nil {
 			ctx.Logger().Error("fail to get address for chain", "error", err)
 			return nil, fmt.Errorf("fail to get address for chain: %w", err)
@@ -3227,6 +3230,7 @@ func castTxOutItem(toi TxOutItem, height int64) *types.QueryTxOutItem {
 	return &types.QueryTxOutItem{
 		Height:                height, // Omitted if 0, for use in openapi.TxDetailsResponse
 		VaultPubKey:           toi.VaultPubKey.String(),
+		VaultPubKeyEddsa:      toi.VaultPubKeyEddsa.String(),
 		InHash:                toi.InHash.String(),
 		OutHash:               toi.OutHash.String(),
 		Chain:                 toi.Chain.String(),

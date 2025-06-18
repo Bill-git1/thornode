@@ -10,20 +10,19 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/binance-chain/tss-lib/ecdsa/keygen"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-peerstore/addr"
-	ma "github.com/multiformats/go-multiaddr"
+	maddr "github.com/multiformats/go-multiaddr"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
 )
 
 // KeygenLocalState is a structure used to represent the data we saved locally for different keygen
 type KeygenLocalState struct {
-	PubKey          string                    `json:"pub_key"`
-	LocalData       keygen.LocalPartySaveData `json:"local_data"`
-	ParticipantKeys []string                  `json:"participant_keys"` // the participant of last key gen
-	LocalPartyKey   string                    `json:"local_party_key"`
+	PubKey          string   `json:"pub_key"`
+	LocalData       []byte   `json:"local_data"`
+	ParticipantKeys []string `json:"participant_keys"` // the participant of last key gen
+	LocalPartyKey   string   `json:"local_party_key"`
 }
 
 // LocalStateManager provide necessary methods to manage the local state, save it , and read it back
@@ -153,13 +152,13 @@ func (fsm *FileStateMgr) RetrieveP2PAddresses() (addr.AddrList, error) {
 	}
 	fsm.writeLock.RUnlock()
 	data := strings.Split(string(input), "\n")
-	var peerAddresses []ma.Multiaddr
+	var peerAddresses []maddr.Multiaddr
 	for _, el := range data {
 		// we skip the empty entry
 		if len(el) == 0 {
 			continue
 		}
-		addr, err := ma.NewMultiaddr(el)
+		addr, err := maddr.NewMultiaddr(el)
 		if err != nil {
 			return nil, fmt.Errorf("invalid address in address book %w", err)
 		}

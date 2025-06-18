@@ -17,11 +17,12 @@ import (
 // TxOutItem struct for TxOutItem
 type TxOutItem struct {
 	Height *int64 `json:"height,omitempty"`
-	VaultPubKey *string `json:"vault_pub_key,omitempty"`
 	InHash *string `json:"in_hash,omitempty"`
 	OutHash *string `json:"out_hash,omitempty"`
 	Chain string `json:"chain"`
 	ToAddress string `json:"to_address"`
+	VaultPubKey *string `json:"vault_pub_key,omitempty"`
+	VaultPubKeyEddsa *string `json:"vault_pub_key_eddsa,omitempty"`
 	Coin Coin `json:"coin"`
 	MaxGas []Coin `json:"max_gas"`
 	GasRate *int64 `json:"gas_rate,omitempty"`
@@ -87,38 +88,6 @@ func (o *TxOutItem) HasHeight() bool {
 // SetHeight gets a reference to the given int64 and assigns it to the Height field.
 func (o *TxOutItem) SetHeight(v int64) {
 	o.Height = &v
-}
-
-// GetVaultPubKey returns the VaultPubKey field value if set, zero value otherwise.
-func (o *TxOutItem) GetVaultPubKey() string {
-	if o == nil || o.VaultPubKey == nil {
-		var ret string
-		return ret
-	}
-	return *o.VaultPubKey
-}
-
-// GetVaultPubKeyOk returns a tuple with the VaultPubKey field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *TxOutItem) GetVaultPubKeyOk() (*string, bool) {
-	if o == nil || o.VaultPubKey == nil {
-		return nil, false
-	}
-	return o.VaultPubKey, true
-}
-
-// HasVaultPubKey returns a boolean if a field has been set.
-func (o *TxOutItem) HasVaultPubKey() bool {
-	if o != nil && o.VaultPubKey != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetVaultPubKey gets a reference to the given string and assigns it to the VaultPubKey field.
-func (o *TxOutItem) SetVaultPubKey(v string) {
-	o.VaultPubKey = &v
 }
 
 // GetInHash returns the InHash field value if set, zero value otherwise.
@@ -231,6 +200,70 @@ func (o *TxOutItem) GetToAddressOk() (*string, bool) {
 // SetToAddress sets field value
 func (o *TxOutItem) SetToAddress(v string) {
 	o.ToAddress = v
+}
+
+// GetVaultPubKey returns the VaultPubKey field value if set, zero value otherwise.
+func (o *TxOutItem) GetVaultPubKey() string {
+	if o == nil || o.VaultPubKey == nil {
+		var ret string
+		return ret
+	}
+	return *o.VaultPubKey
+}
+
+// GetVaultPubKeyOk returns a tuple with the VaultPubKey field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TxOutItem) GetVaultPubKeyOk() (*string, bool) {
+	if o == nil || o.VaultPubKey == nil {
+		return nil, false
+	}
+	return o.VaultPubKey, true
+}
+
+// HasVaultPubKey returns a boolean if a field has been set.
+func (o *TxOutItem) HasVaultPubKey() bool {
+	if o != nil && o.VaultPubKey != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetVaultPubKey gets a reference to the given string and assigns it to the VaultPubKey field.
+func (o *TxOutItem) SetVaultPubKey(v string) {
+	o.VaultPubKey = &v
+}
+
+// GetVaultPubKeyEddsa returns the VaultPubKeyEddsa field value if set, zero value otherwise.
+func (o *TxOutItem) GetVaultPubKeyEddsa() string {
+	if o == nil || o.VaultPubKeyEddsa == nil {
+		var ret string
+		return ret
+	}
+	return *o.VaultPubKeyEddsa
+}
+
+// GetVaultPubKeyEddsaOk returns a tuple with the VaultPubKeyEddsa field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TxOutItem) GetVaultPubKeyEddsaOk() (*string, bool) {
+	if o == nil || o.VaultPubKeyEddsa == nil {
+		return nil, false
+	}
+	return o.VaultPubKeyEddsa, true
+}
+
+// HasVaultPubKeyEddsa returns a boolean if a field has been set.
+func (o *TxOutItem) HasVaultPubKeyEddsa() bool {
+	if o != nil && o.VaultPubKeyEddsa != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetVaultPubKeyEddsa gets a reference to the given string and assigns it to the VaultPubKeyEddsa field.
+func (o *TxOutItem) SetVaultPubKeyEddsa(v string) {
+	o.VaultPubKeyEddsa = &v
 }
 
 // GetCoin returns the Coin field value
@@ -478,9 +511,6 @@ func (o TxOutItem) MarshalJSON_deprecated() ([]byte, error) {
 	if o.Height != nil {
 		toSerialize["height"] = o.Height
 	}
-	if o.VaultPubKey != nil {
-		toSerialize["vault_pub_key"] = o.VaultPubKey
-	}
 	if o.InHash != nil {
 		toSerialize["in_hash"] = o.InHash
 	}
@@ -492,6 +522,12 @@ func (o TxOutItem) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if true {
 		toSerialize["to_address"] = o.ToAddress
+	}
+	if o.VaultPubKey != nil {
+		toSerialize["vault_pub_key"] = o.VaultPubKey
+	}
+	if o.VaultPubKeyEddsa != nil {
+		toSerialize["vault_pub_key_eddsa"] = o.VaultPubKeyEddsa
 	}
 	if true {
 		toSerialize["coin"] = o.Coin

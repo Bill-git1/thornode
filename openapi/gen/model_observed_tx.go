@@ -18,6 +18,7 @@ import (
 type ObservedTx struct {
 	Tx Tx `json:"tx"`
 	ObservedPubKey *string `json:"observed_pub_key,omitempty"`
+	ObservedPubKeyEddsa *string `json:"observed_pub_key_eddsa,omitempty"`
 	// the block height on the external source chain when the transaction was observed, not provided if chain is THOR
 	ExternalObservedHeight *int64 `json:"external_observed_height,omitempty"`
 	// the block height on the external source chain when confirmation counting will be complete, not provided if chain is THOR
@@ -106,6 +107,38 @@ func (o *ObservedTx) HasObservedPubKey() bool {
 // SetObservedPubKey gets a reference to the given string and assigns it to the ObservedPubKey field.
 func (o *ObservedTx) SetObservedPubKey(v string) {
 	o.ObservedPubKey = &v
+}
+
+// GetObservedPubKeyEddsa returns the ObservedPubKeyEddsa field value if set, zero value otherwise.
+func (o *ObservedTx) GetObservedPubKeyEddsa() string {
+	if o == nil || o.ObservedPubKeyEddsa == nil {
+		var ret string
+		return ret
+	}
+	return *o.ObservedPubKeyEddsa
+}
+
+// GetObservedPubKeyEddsaOk returns a tuple with the ObservedPubKeyEddsa field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ObservedTx) GetObservedPubKeyEddsaOk() (*string, bool) {
+	if o == nil || o.ObservedPubKeyEddsa == nil {
+		return nil, false
+	}
+	return o.ObservedPubKeyEddsa, true
+}
+
+// HasObservedPubKeyEddsa returns a boolean if a field has been set.
+func (o *ObservedTx) HasObservedPubKeyEddsa() bool {
+	if o != nil && o.ObservedPubKeyEddsa != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetObservedPubKeyEddsa gets a reference to the given string and assigns it to the ObservedPubKeyEddsa field.
+func (o *ObservedTx) SetObservedPubKeyEddsa(v string) {
+	o.ObservedPubKeyEddsa = &v
 }
 
 // GetExternalObservedHeight returns the ExternalObservedHeight field value if set, zero value otherwise.
@@ -403,6 +436,9 @@ func (o ObservedTx) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if o.ObservedPubKey != nil {
 		toSerialize["observed_pub_key"] = o.ObservedPubKey
+	}
+	if o.ObservedPubKeyEddsa != nil {
+		toSerialize["observed_pub_key_eddsa"] = o.ObservedPubKeyEddsa
 	}
 	if o.ExternalObservedHeight != nil {
 		toSerialize["external_observed_height"] = o.ExternalObservedHeight

@@ -23,9 +23,9 @@ import (
 // TestSendAttestationStateEmpty tests sending an empty attestation state
 func TestSendAttestationStateEmpty(t *testing.T) {
 	// Disable deadline application during tests
-	originalApplyDeadline := p2p.ApplyDeadline
-	p2p.ApplyDeadline = false
-	defer func() { p2p.ApplyDeadline = originalApplyDeadline }()
+	originalApplyDeadline := p2p.ApplyDeadline.Load()
+	p2p.ApplyDeadline.Store(false)
+	defer func() { p2p.ApplyDeadline.Store(originalApplyDeadline) }()
 
 	// Create a test instance with empty state
 	ag, _, _, _, _, _ := setupTestGossip(t)
@@ -93,9 +93,9 @@ func TestSendAttestationStateEmpty(t *testing.T) {
 // TestSendAttestationStateSingleBatch tests sending a small attestation state in a single batch
 func TestSendAttestationStateSingleBatch(t *testing.T) {
 	// Disable deadline application during tests
-	originalApplyDeadline := p2p.ApplyDeadline
-	p2p.ApplyDeadline = false
-	defer func() { p2p.ApplyDeadline = originalApplyDeadline }()
+	originalApplyDeadline := p2p.ApplyDeadline.Load()
+	p2p.ApplyDeadline.Store(false)
+	defer func() { p2p.ApplyDeadline.Store(originalApplyDeadline) }()
 
 	// Create a test instance
 	ag, _, _, _, _, _ := setupTestGossip(t)
@@ -244,9 +244,9 @@ func TestSendAttestationStateSingleBatch(t *testing.T) {
 // TestSendAttestationStateMultipleBatches tests sending a large attestation state in multiple batches
 func TestSendAttestationStateMultipleBatches(t *testing.T) {
 	// Disable deadline application during tests
-	originalApplyDeadline := p2p.ApplyDeadline
-	p2p.ApplyDeadline = false
-	defer func() { p2p.ApplyDeadline = originalApplyDeadline }()
+	originalApplyDeadline := p2p.ApplyDeadline.Load()
+	p2p.ApplyDeadline.Store(false)
+	defer func() { p2p.ApplyDeadline.Store(originalApplyDeadline) }()
 
 	// Create a test instance
 	ag, _, _, _, _, _ := setupTestGossip(t)
@@ -433,9 +433,9 @@ func TestSendAttestationStateMultipleBatches(t *testing.T) {
 // TestReceiveBatchedAttestationState tests receiving batched attestation state
 func TestReceiveBatchedAttestationState(t *testing.T) {
 	// Disable deadline application during tests
-	originalApplyDeadline := p2p.ApplyDeadline
-	p2p.ApplyDeadline = false
-	defer func() { p2p.ApplyDeadline = originalApplyDeadline }()
+	originalApplyDeadline := p2p.ApplyDeadline.Load()
+	p2p.ApplyDeadline.Store(false)
+	defer func() { p2p.ApplyDeadline.Store(originalApplyDeadline) }()
 
 	// Create a test instance
 	ag, _, _, _, _, _ := setupTestGossip(t)

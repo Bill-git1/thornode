@@ -12,7 +12,7 @@ func (s *KeeperTssSuite) TestTssVoter(c *C) {
 	ctx, k := setupKeeperForTest(c)
 
 	pk := GetRandomPubKey()
-	voter := NewTssVoter("hello", nil, pk)
+	voter := NewTssVoter("hello", nil, pk, GetRandomPubKey())
 
 	v, err1 := k.GetTssVoter(ctx, voter.ID)
 	c.Check(err1, IsNil)

@@ -513,7 +513,7 @@ func (c *CosmosClient) signMsg(
 		}
 	} else {
 		hashedMsg := crypto.Sha256(signBytes)
-		sigData.Signature, _, err = c.tssKeyManager.RemoteSign(hashedMsg, pubkey.String())
+		sigData.Signature, _, err = c.tssKeyManager.RemoteSign(hashedMsg, common.SigningAlgoSecp256k1, pubkey.String())
 		if err != nil {
 			return nil, err
 		}

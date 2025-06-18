@@ -61,11 +61,11 @@
         }
       },
       "last_commit_hash": "",
-      "data_hash": "35E2C110F0DE6440B40191303A1961C14C645BA66B0AA73FEFD0342BC8D26437",
+      "data_hash": "FCF633ECFBF279DED4BA9AA2A737FD65FA515872848E7E01DD1AC009E5ED0788",
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "4C22EB464E234D4A631DDB25F78B110BC23D790D2B808F4B3E612B9FFAD7F668",
+      "app_hash": "A394196F9DC9B84CA689C5AAD8326789B39580B7DA0FC878A43E2FC68B388DC4",
       "last_results_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
@@ -75,7 +75,7 @@
     "end_block_events": [],
     "txs": [
       {
-        "hash": "62321E61FA41C5B2BE9F9C33369C0603EEF4F84949C44B342F6ED957BCB471AD",
+        "hash": "7718D2F1B69873F429D764D5B5D1C6772E5CCEA4EFE9D625C92DC9572ED4D319",
         "tx": {
           "auth_info": {
             "fee": {
@@ -106,12 +106,7 @@
             "messages": [
               {
                 "@type": "/types.MsgTssPool",
-                "blame": {
-                  "blame_nodes": [],
-                  "fail_reason": "",
-                  "is_unicast": false,
-                  "round": ""
-                },
+                "blame": [],
                 "chains": [
                   "THOR"
                 ],
@@ -120,7 +115,9 @@
                 "keygen_time": "0",
                 "keygen_type": "AsgardKeygen",
                 "keyshares_backup": null,
+                "keyshares_backup_eddsa": null,
                 "pool_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
+                "pool_pub_key_eddsa": "",
                 "pub_keys": [
                   "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
                   "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
@@ -133,21 +130,21 @@
             "timeout_height": "0"
           },
           "signatures": [
-            "MKKPmVvr0Qe+hO9uX9mwEylCEqygBxm1LqS+nqo9gOsK7GJinGp0bJICztcMfySXJ8OtI3RWKb2tEYDNw7jGYA=="
+            "axWBAGg6drd0pSLgG/l3zHBDXSaK9cvEw1kN6pj+LGRV75DkQ8imh0vXXNwDJKAdWS5vwVF8CnE+EYq8EEwcLw=="
           ]
         },
         "result": {
           "code": 4,
           "log": "failed to execute message; message index: 0: not authorized: unauthorized",
           "gas_wanted": "-1",
-          "gas_used": "53758",
+          "gas_used": "53738",
           "events": [
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/0",
               "type": "tx"
             },
             {
-              "signature": "MKKPmVvr0Qe+hO9uX9mwEylCEqygBxm1LqS+nqo9gOsK7GJinGp0bJICztcMfySXJ8OtI3RWKb2tEYDNw7jGYA==",
+              "signature": "axWBAGg6drd0pSLgG/l3zHBDXSaK9cvEw1kN6pj+LGRV75DkQ8imh0vXXNwDJKAdWS5vwVF8CnE+EYq8EEwcLw==",
               "type": "tx"
             }
           ]
@@ -183,8 +180,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "851FE8A0804E226B2AC353050450C97271387572025E377D3A4C92B54A08C6C1",
-      "last_results_hash": "F0412900E3ADF141BDCFE874147E91AFE3AD90954C1BCE5BF70681AED678A705",
+      "app_hash": "9272046F4EC43B1A097CCA1B00083F435B309A0E4C4A8FEF7AA75331A09FEFE1",
+      "last_results_hash": "EC7BCC880C5232A5F7BD5A6A9C4EFB394912692DF9EAFB5332E958615517C3D7",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },

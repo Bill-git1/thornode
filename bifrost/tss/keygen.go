@@ -62,35 +62,37 @@ func (kg *KeyGen) getVersion() semver.Version {
 	return kg.currentVersion
 }
 
-func (kg *KeyGen) GenerateNewKey(keygenBlockHeight int64, pKeys common.PubKeys) (pk common.PubKeySet, blame types.Blame, err error) {
+func (kg *KeyGen) GenerateNewKey(keygenBlockHeight int64, pKeys common.PubKeys) (pk common.PubKeySet, blame []types.Blame, err error) {
 	// No need to do key gen
 	if len(pKeys) == 0 {
-		return common.EmptyPubKeySet, types.Blame{}, nil
+		return common.EmptyPubKeySet, nil, nil
 	}
 
 	// add some logging
 	defer func() {
-		if blame.IsEmpty() {
+		if len(blame) == 0 {
 			kg.logger.Info().Int64("height", keygenBlockHeight).Str("pubkey", pk.String()).Msg("tss keygen results success")
 		} else {
-			blames := make([]string, len(blame.BlameNodes))
-			for i := range blame.BlameNodes {
-				var pk common.PubKey
-				pk, err = common.NewPubKey(blame.BlameNodes[i].Pubkey)
-				if err != nil {
-					kg.logger.Error().Err(err).Int64("height", keygenBlockHeight).Str("pubkey", blame.BlameNodes[i].Pubkey).Msg("tss keygen results error")
-					continue
+			for _, b := range blame {
+				blames := make([]string, len(b.BlameNodes))
+				for i := range b.BlameNodes {
+					var pk common.PubKey
+					pk, err = common.NewPubKey(b.BlameNodes[i].Pubkey)
+					if err != nil {
+						kg.logger.Error().Err(err).Int64("height", keygenBlockHeight).Str("pubkey", b.BlameNodes[i].Pubkey).Msg("tss keygen results error")
+						continue
+					}
+					var acc cosmos.AccAddress
+					acc, err = pk.GetThorAddress()
+					if err != nil {
+						kg.logger.Error().Err(err).Int64("height", keygenBlockHeight).Str("pubkey", pk.String()).Msg("tss keygen results error")
+						continue
+					}
+					blames[i] = acc.String()
 				}
-				var acc cosmos.AccAddress
-				acc, err = pk.GetThorAddress()
-				if err != nil {
-					kg.logger.Error().Err(err).Int64("height", keygenBlockHeight).Str("pubkey", pk.String()).Msg("tss keygen results error")
-					continue
-				}
-				blames[i] = acc.String()
+				sort.Strings(blames)
+				kg.logger.Info().Int64("height", keygenBlockHeight).Str("pubkey", pk.String()).Str("round", b.Round).Str("blames", strings.Join(blames, ", ")).Str("reason", b.FailReason).Msg("tss keygen results blame")
 			}
-			sort.Strings(blames)
-			kg.logger.Info().Int64("height", keygenBlockHeight).Str("pubkey", pk.String()).Str("round", blame.Round).Str("blames", strings.Join(blames, ", ")).Str("reason", blame.FailReason).Msg("tss keygen results blame")
 		}
 	}()
 
@@ -113,9 +115,9 @@ func (kg *KeyGen) GenerateNewKey(keygenBlockHeight int64, pKeys common.PubKeys) 
 	timer := time.NewTimer(30 * time.Minute)
 	defer timer.Stop()
 
-	var resp keygen.Response
+	var responses []keygen.Response
 	go func() {
-		resp, err = kg.server.Keygen(keyGenReq)
+		responses, err = kg.server.KeygenAllAlgo(keyGenReq)
 		ch <- true
 	}()
 
@@ -126,32 +128,84 @@ func (kg *KeyGen) GenerateNewKey(keygenBlockHeight int64, pKeys common.PubKeys) 
 		panic("tss keygen timeout")
 	}
 
-	// copy blame to our own struct
-	blame = types.Blame{
-		FailReason: resp.Blame.FailReason,
-		IsUnicast:  resp.Blame.IsUnicast,
-		Round:      resp.Blame.Round,
-		BlameNodes: make([]types.Node, len(resp.Blame.BlameNodes)),
-	}
-	for i, n := range resp.Blame.BlameNodes {
-		blame.BlameNodes[i].Pubkey = n.Pubkey
-		blame.BlameNodes[i].BlameData = n.BlameData
-		blame.BlameNodes[i].BlameSignature = n.BlameSignature
-	}
-
+	// Handle KeygenAllAlgo error first, before processing individual responses
 	if err != nil {
-		// the resp from kg.server.Keygen will not be nil
-		if blame.IsEmpty() {
-			blame.FailReason = err.Error()
+		// Create blame from the error or use the first response's blame if available
+		var b types.Blame
+		if len(responses) > 0 && responses[0].Blame.AlreadyBlame() {
+			// Use the blame from the first response if available
+			b = types.Blame{
+				FailReason: responses[0].Blame.FailReason,
+				IsUnicast:  responses[0].Blame.IsUnicast,
+				Round:      responses[0].Blame.Round,
+				BlameNodes: make([]types.Node, len(responses[0].Blame.BlameNodes)),
+			}
+			for i, n := range responses[0].Blame.BlameNodes {
+				b.BlameNodes[i].Pubkey = n.Pubkey
+				b.BlameNodes[i].BlameData = n.BlameData
+				b.BlameNodes[i].BlameSignature = n.BlameSignature
+			}
+		} else {
+			// Create a generic blame with the error message
+			b.FailReason = err.Error()
 		}
-		return common.EmptyPubKeySet, blame, fmt.Errorf("fail to keygen,err:%w", err)
+		blame = append(blame, b)
+		return common.EmptyPubKeySet, blame, fmt.Errorf("fail to keygen: %w", err)
 	}
 
-	cpk, err := common.NewPubKey(resp.PubKey)
-	if err != nil {
-		return common.EmptyPubKeySet, blame, fmt.Errorf("fail to create common.PubKey,%w", err)
+	// Process individual response blames (for cases where KeygenAllAlgo succeeded but individual algos had issues)
+	for _, resp := range responses {
+		// copy blame to our own struct
+		b := types.Blame{
+			FailReason: resp.Blame.FailReason,
+			IsUnicast:  resp.Blame.IsUnicast,
+			Round:      resp.Blame.Round,
+			BlameNodes: make([]types.Node, len(resp.Blame.BlameNodes)),
+		}
+		for i, n := range resp.Blame.BlameNodes {
+			b.BlameNodes[i].Pubkey = n.Pubkey
+			b.BlameNodes[i].BlameData = n.BlameData
+			b.BlameNodes[i].BlameSignature = n.BlameSignature
+		}
+
+		// Only add blame if it contains actual blame information
+		if !b.IsEmpty() {
+			blame = append(blame, b)
+		}
 	}
 
-	// TODO later on THORNode need to have both secp256k1 key and ed25519
-	return common.NewPubKeySet(cpk, cpk), blame, nil
+	// If there were any individual response blames, return error
+	if len(blame) > 0 {
+		return common.EmptyPubKeySet, blame, fmt.Errorf("fail to keygen: individual algorithm failures")
+	}
+
+	// Extract public keys from successful responses
+	var ecdsaPubKey common.PubKey
+	var eddsaPubKey common.PubKey
+	for _, resp := range responses {
+		switch resp.Algo {
+		case common.SigningAlgoSecp256k1:
+			var err error
+			ecdsaPubKey, err = common.NewPubKey(resp.PubKey)
+			if err != nil {
+				return common.EmptyPubKeySet, blame, fmt.Errorf("fail to create ECDSA PubKey: %w", err)
+			}
+		case common.SigningAlgoEd25519:
+			var err error
+			eddsaPubKey, err = common.NewPubKey(resp.PubKey)
+			if err != nil {
+				return common.EmptyPubKeySet, blame, fmt.Errorf("fail to create EDDSA PubKey: %w", err)
+			}
+		}
+	}
+
+	// Ensure both key types were generated
+	if ecdsaPubKey.IsEmpty() {
+		return common.EmptyPubKeySet, blame, fmt.Errorf("ECDSA PubKey not generated")
+	}
+	if eddsaPubKey.IsEmpty() {
+		return common.EmptyPubKeySet, blame, fmt.Errorf("EDDSA PubKey not generated")
+	}
+
+	return common.NewPubKeySet(ecdsaPubKey, eddsaPubKey), blame, nil
 }

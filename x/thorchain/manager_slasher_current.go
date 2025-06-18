@@ -375,7 +375,6 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 					for i, action := range voter.Actions {
 						if action.Equals(toi) {
 							voter.Actions[i].VaultPubKey = vault.PubKey
-
 							if toi.Aggregator != "" || toi.AggregatorTargetAsset != "" || toi.AggregatorTargetLimit != nil {
 								ctx.Logger().Info("clearing aggregator fields on outbound reassignment", "hash", toi.InHash)
 

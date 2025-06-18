@@ -37,4 +37,5 @@ message QueryTxOutItem{
   string aggregator_target_limit = 14;
   // clout spent in RUNE for the outbound
   string clout_spent = 11;
+  string vault_pub_key_eddsa = 15;
 }

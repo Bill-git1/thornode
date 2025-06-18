@@ -63,7 +63,7 @@ func main() {
 		log.Fatal(err)
 	}
 	// init tss module
-	tss, err := tss.NewTss(comm, stateManager, priKey, tssConf, nil)
+	tss, err := tss.NewTss(comm, stateManager, priKey, priKey, tssConf, nil)
 	if nil != err {
 		log.Fatal(err)
 	}

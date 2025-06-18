@@ -92,6 +92,7 @@ func Init() {
 	// explicit keys for the new configuration package. In the meantime we will preserve
 	// mappings from historical environment for backwards compatibility.
 	assert(viper.BindEnv("bifrost.thorchain.signer_name", "SIGNER_NAME"))
+	assert(viper.BindEnv("bifrost.thorchain.signer_name_eddsa", "SIGNER_NAME_EDDSA"))
 	assert(viper.BindEnv(
 		"bifrost.chains.btc.block_scanner.block_height_discover_back_off",
 		"BLOCK_SCANNER_BACKOFF",

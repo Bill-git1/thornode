@@ -85,27 +85,40 @@ func (h MigrateHandler) handleV3_0_0(ctx cosmos.Context, msg MsgMigrate) (*cosmo
 		return nil, cosmos.ErrUnknownRequest(err.Error())
 	}
 
+	migTx := msg.Tx.Tx
+
 	shouldSlash := true
 	for i, tx := range txOut.TxArray {
+		if !migTx.Chain.Equals(tx.Chain) {
+			continue
+		}
 		// migrate is the memo used by thorchain to identify fund migration between asgard vault.
 		// it use migrate:{block height} to mark a tx out caused by vault rotation
 		// this type of tx out is special , because it doesn't have relevant tx in to trigger it, it is trigger by thorchain itself.
-		fromAddress, _ := tx.VaultPubKey.GetAddress(tx.Chain)
+		var fromAddress common.Address
+		switch tx.Chain.GetSigningAlgo() {
+		case common.SigningAlgoSecp256k1:
+			fromAddress, _ = tx.VaultPubKey.GetAddress(tx.Chain)
+		case common.SigningAlgoEd25519:
+			fromAddress, _ = tx.VaultPubKeyEddsa.GetAddress(tx.Chain)
+		default:
+			ctx.Logger().Error("unknown signing algo", "signing_algo", tx.Chain.GetSigningAlgo())
+		}
 
 		if tx.InHash.Equals(common.BlankTxID) &&
 			tx.OutHash.IsEmpty() &&
-			tx.ToAddress.Equals(msg.Tx.Tx.ToAddress) &&
-			fromAddress.Equals(msg.Tx.Tx.FromAddress) {
+			tx.ToAddress.Equals(migTx.ToAddress) &&
+			fromAddress.Equals(migTx.FromAddress) {
 
-			matchCoin := msg.Tx.Tx.Coins.Contains(tx.Coin)
+			matchCoin := migTx.Coins.Contains(tx.Coin)
 			// when outbound is gas asset
 			if !matchCoin && tx.Coin.Asset.Equals(tx.Chain.GetGasAsset()) {
 				asset := tx.Chain.GetGasAsset()
 				intendToSpend := tx.Coin.Amount.Add(tx.MaxGas.ToCoins().GetCoin(asset).Amount)
-				actualSpend := msg.Tx.Tx.Coins.GetCoin(asset).Amount.Add(msg.Tx.Tx.Gas.ToCoins().GetCoin(asset).Amount)
+				actualSpend := migTx.Coins.GetCoin(asset).Amount.Add(migTx.Gas.ToCoins().GetCoin(asset).Amount)
 				if intendToSpend.Equal(actualSpend) {
 					maxGasAmt := tx.MaxGas.ToCoins().GetCoin(asset).Amount
-					realGasAmt := msg.Tx.Tx.Gas.ToCoins().GetCoin(asset).Amount
+					realGasAmt := migTx.Gas.ToCoins().GetCoin(asset).Amount
 					if maxGasAmt.GTE(realGasAmt) {
 						ctx.Logger().Info("override match coin", "intend to spend", intendToSpend, "actual spend", actualSpend)
 						matchCoin = true
@@ -117,14 +130,13 @@ func (h MigrateHandler) handleV3_0_0(ctx cosmos.Context, msg MsgMigrate) (*cosmo
 			if !matchCoin {
 				continue
 			}
-			txOut.TxArray[i].OutHash = msg.Tx.Tx.ID
+			txOut.TxArray[i].OutHash = migTx.ID
 			shouldSlash = false
 
 			if err = h.mgr.Keeper().SetTxOut(ctx, txOut); nil != err {
 				return nil, ErrInternal(err, "fail to save tx out")
 			}
 			break
-
 		}
 	}
 

@@ -429,7 +429,7 @@ func (c *Client) signMsg(
 		}
 	} else {
 		hashedMsg := sha512.Sum512(signBytes)
-		signature, _, err := c.tssKeyManager.RemoteSign(hashedMsg[:32], pubkey.String())
+		signature, _, err := c.tssKeyManager.RemoteSign(hashedMsg[:32], common.SigningAlgoSecp256k1, pubkey.String())
 		if err != nil {
 			c.logger.Err(err).Msg("xrp remote sign")
 			return nil, fmt.Errorf("error, xrp remote sign: %w", err)

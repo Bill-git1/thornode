@@ -314,7 +314,9 @@
         {
           "actions": [
             {
+              "aggregator_target_limit": "0",
               "chain": "BTC",
+              "clout_spent": "0",
               "coin": {
                 "amount": "86000",
                 "asset": "BTC.BTC",

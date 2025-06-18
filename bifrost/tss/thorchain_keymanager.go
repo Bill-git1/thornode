@@ -3,6 +3,7 @@ package tss
 import (
 	"github.com/cometbft/cometbft/crypto"
 	"github.com/cosmos/cosmos-sdk/types"
+	"gitlab.com/thorchain/thornode/v3/common"
 )
 
 type EncryptedKeyJSON struct {
@@ -34,7 +35,7 @@ type ThorchainKeyManager interface {
 	ExportAsPrivateKey() (string, error)
 	ExportAsKeyStore(password string) (*EncryptedKeyJSON, error)
 
-	RemoteSign(msg []byte, poolPubKey string) ([]byte, []byte, error)
+	RemoteSign(msg []byte, algo common.SigningAlgo, poolPubKey string) ([]byte, []byte, error)
 	Start()
 	Stop()
 }

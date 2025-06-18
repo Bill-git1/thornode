@@ -140,6 +140,7 @@ func main() {
 
 	// scan from 20 blocks before vault block height to find corresponding TssPool
 	var keyshare []byte
+	var keyshareEddsa []byte
 	start := *vaultResponse.BlockHeight - 20
 	stop := *vaultResponse.BlockHeight
 	for block := range thorscan.Scan(int(start), int(stop)) {
@@ -158,6 +159,7 @@ func main() {
 					log.Fatal().Msg("Keyshare was not backed up.")
 				}
 				keyshare = msgTssPool.KeysharesBackup
+				keyshareEddsa = msgTssPool.KeysharesBackupEddsa
 				break
 			}
 		}
@@ -180,7 +182,7 @@ func main() {
 	cmpDec := lzma.NewReader(bytes.NewReader(decrypted))
 
 	// write to file
-	filename := fmt.Sprintf("%s-localstate-%s.json", selectedNode, vault)
+	filename := fmt.Sprintf("localstate-%s.json", vault)
 	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
 	check(err, "Failed to open file")
 	defer f.Close()
@@ -189,4 +191,22 @@ func main() {
 
 	// success
 	fmt.Printf("Decrypted keyshare written to %s\n", filename)
+
+	if len(keyshareEddsa) > 0 {
+		// decrypt eddsa keyshare
+		decryptedEddsa, err := tss.DecryptKeyshares(keyshareEddsa, mnemonic)
+		check(err, "Failed to decrypt keyshare")
+
+		cmpDecEddsa := lzma.NewReader(bytes.NewReader(decryptedEddsa))
+
+		filenameEddsa := fmt.Sprintf("localstate-%s.json", *vaultResponse.PubKeyEddsa)
+		fed, err := os.OpenFile(filenameEddsa, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+		check(err, "Failed to open file")
+		defer fed.Close()
+		_, err = io.Copy(fed, cmpDecEddsa)
+		check(err, "Failed to write to file")
+
+		// success
+		fmt.Printf("Decrypted eddsa keyshare written to %s\n", filenameEddsa)
+	}
 }

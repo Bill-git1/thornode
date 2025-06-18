@@ -270,7 +270,7 @@ func (s *ThorchainSuite) TestGetAsgards(c *C) {
 func (s *ThorchainSuite) TestGetPubKeys(c *C) {
 	pks, err := s.bridge.GetPubKeys()
 	c.Assert(err, IsNil)
-	c.Assert(pks, HasLen, 4)
+	c.Assert(pks, HasLen, 6)
 }
 
 func (s *ThorchainSuite) TestPostNetworkFee(c *C) {

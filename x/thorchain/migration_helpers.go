@@ -52,13 +52,14 @@ func unsafeAddRefundOutbound(ctx cosmos.Context, mgr *Mgrs, inHash, destAddr str
 	}
 
 	txOut := TxOutItem{
-		Chain:       coin.Asset.GetChain(),
-		InHash:      inTxId,
-		ToAddress:   dest,
-		VaultPubKey: asg.PubKey,
-		Coin:        coin,
-		MaxGas:      common.Gas{maxGasCoin},
-		Memo:        memo,
+		Chain:            coin.Asset.GetChain(),
+		InHash:           inTxId,
+		ToAddress:        dest,
+		VaultPubKey:      asg.PubKey,
+		VaultPubKeyEddsa: asg.PubKeyEddsa,
+		Coin:             coin,
+		MaxGas:           common.Gas{maxGasCoin},
+		Memo:             memo,
 	}
 
 	err = mgr.TxOutStore().UnSafeAddTxOutItem(ctx, mgr, txOut, height)

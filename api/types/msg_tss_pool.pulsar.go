@@ -60,6 +60,57 @@ func (x *_MsgTssPool_4_list) IsValid() bool {
 	return x.list != nil
 }
 
+var _ protoreflect.List = (*_MsgTssPool_6_list)(nil)
+
+type _MsgTssPool_6_list struct {
+	list *[]*Blame
+}
+
+func (x *_MsgTssPool_6_list) Len() int {
+	if x.list == nil {
+		return 0
+	}
+	return len(*x.list)
+}
+
+func (x *_MsgTssPool_6_list) Get(i int) protoreflect.Value {
+	return protoreflect.ValueOfMessage((*x.list)[i].ProtoReflect())
+}
+
+func (x *_MsgTssPool_6_list) Set(i int, value protoreflect.Value) {
+	valueUnwrapped := value.Message()
+	concreteValue := valueUnwrapped.Interface().(*Blame)
+	(*x.list)[i] = concreteValue
+}
+
+func (x *_MsgTssPool_6_list) Append(value protoreflect.Value) {
+	valueUnwrapped := value.Message()
+	concreteValue := valueUnwrapped.Interface().(*Blame)
+	*x.list = append(*x.list, concreteValue)
+}
+
+func (x *_MsgTssPool_6_list) AppendMutable() protoreflect.Value {
+	v := new(Blame)
+	*x.list = append(*x.list, v)
+	return protoreflect.ValueOfMessage(v.ProtoReflect())
+}
+
+func (x *_MsgTssPool_6_list) Truncate(n int) {
+	for i := n; i < len(*x.list); i++ {
+		(*x.list)[i] = nil
+	}
+	*x.list = (*x.list)[:n]
+}
+
+func (x *_MsgTssPool_6_list) NewElement() protoreflect.Value {
+	v := new(Blame)
+	return protoreflect.ValueOfMessage(v.ProtoReflect())
+}
+
+func (x *_MsgTssPool_6_list) IsValid() bool {
+	return x.list != nil
+}
+
 var _ protoreflect.List = (*_MsgTssPool_7_list)(nil)
 
 type _MsgTssPool_7_list struct {
@@ -107,18 +158,20 @@ func (x *_MsgTssPool_7_list) IsValid() bool {
 }
 
 var (
-	md_MsgTssPool                     protoreflect.MessageDescriptor
-	fd_MsgTssPool_id                  protoreflect.FieldDescriptor
-	fd_MsgTssPool_pool_pub_key        protoreflect.FieldDescriptor
-	fd_MsgTssPool_keygen_type         protoreflect.FieldDescriptor
-	fd_MsgTssPool_pub_keys            protoreflect.FieldDescriptor
-	fd_MsgTssPool_height              protoreflect.FieldDescriptor
-	fd_MsgTssPool_blame               protoreflect.FieldDescriptor
-	fd_MsgTssPool_chains              protoreflect.FieldDescriptor
-	fd_MsgTssPool_signer              protoreflect.FieldDescriptor
-	fd_MsgTssPool_keygen_time         protoreflect.FieldDescriptor
-	fd_MsgTssPool_keyshares_backup    protoreflect.FieldDescriptor
-	fd_MsgTssPool_secp256k1_signature protoreflect.FieldDescriptor
+	md_MsgTssPool                        protoreflect.MessageDescriptor
+	fd_MsgTssPool_id                     protoreflect.FieldDescriptor
+	fd_MsgTssPool_pool_pub_key           protoreflect.FieldDescriptor
+	fd_MsgTssPool_keygen_type            protoreflect.FieldDescriptor
+	fd_MsgTssPool_pub_keys               protoreflect.FieldDescriptor
+	fd_MsgTssPool_height                 protoreflect.FieldDescriptor
+	fd_MsgTssPool_blame                  protoreflect.FieldDescriptor
+	fd_MsgTssPool_chains                 protoreflect.FieldDescriptor
+	fd_MsgTssPool_signer                 protoreflect.FieldDescriptor
+	fd_MsgTssPool_keygen_time            protoreflect.FieldDescriptor
+	fd_MsgTssPool_keyshares_backup       protoreflect.FieldDescriptor
+	fd_MsgTssPool_secp256k1_signature    protoreflect.FieldDescriptor
+	fd_MsgTssPool_pool_pub_key_eddsa     protoreflect.FieldDescriptor
+	fd_MsgTssPool_keyshares_backup_eddsa protoreflect.FieldDescriptor
 )
 
 func init() {
@@ -135,6 +188,8 @@ func init() {
 	fd_MsgTssPool_keygen_time = md_MsgTssPool.Fields().ByName("keygen_time")
 	fd_MsgTssPool_keyshares_backup = md_MsgTssPool.Fields().ByName("keyshares_backup")
 	fd_MsgTssPool_secp256k1_signature = md_MsgTssPool.Fields().ByName("secp256k1_signature")
+	fd_MsgTssPool_pool_pub_key_eddsa = md_MsgTssPool.Fields().ByName("pool_pub_key_eddsa")
+	fd_MsgTssPool_keyshares_backup_eddsa = md_MsgTssPool.Fields().ByName("keyshares_backup_eddsa")
 }
 
 var _ protoreflect.Message = (*fastReflection_MsgTssPool)(nil)
@@ -232,8 +287,8 @@ func (x *fastReflection_MsgTssPool) Range(f func(protoreflect.FieldDescriptor, p
 			return
 		}
 	}
-	if x.Blame != nil {
-		value := protoreflect.ValueOfMessage(x.Blame.ProtoReflect())
+	if len(x.Blame) != 0 {
+		value := protoreflect.ValueOfList(&_MsgTssPool_6_list{list: &x.Blame})
 		if !f(fd_MsgTssPool_blame, value) {
 			return
 		}
@@ -268,6 +323,18 @@ func (x *fastReflection_MsgTssPool) Range(f func(protoreflect.FieldDescriptor, p
 			return
 		}
 	}
+	if x.PoolPubKeyEddsa != "" {
+		value := protoreflect.ValueOfString(x.PoolPubKeyEddsa)
+		if !f(fd_MsgTssPool_pool_pub_key_eddsa, value) {
+			return
+		}
+	}
+	if len(x.KeysharesBackupEddsa) != 0 {
+		value := protoreflect.ValueOfBytes(x.KeysharesBackupEddsa)
+		if !f(fd_MsgTssPool_keyshares_backup_eddsa, value) {
+			return
+		}
+	}
 }
 
 // Has reports whether a field is populated.
@@ -294,7 +361,7 @@ func (x *fastReflection_MsgTssPool) Has(fd protoreflect.FieldDescriptor) bool {
 	case "types.MsgTssPool.height":
 		return x.Height != int64(0)
 	case "types.MsgTssPool.blame":
-		return x.Blame != nil
+		return len(x.Blame) != 0
 	case "types.MsgTssPool.chains":
 		return len(x.Chains) != 0
 	case "types.MsgTssPool.signer":
@@ -305,6 +372,10 @@ func (x *fastReflection_MsgTssPool) Has(fd protoreflect.FieldDescriptor) bool {
 		return len(x.KeysharesBackup) != 0
 	case "types.MsgTssPool.secp256k1_signature":
 		return len(x.Secp256K1Signature) != 0
+	case "types.MsgTssPool.pool_pub_key_eddsa":
+		return x.PoolPubKeyEddsa != ""
+	case "types.MsgTssPool.keyshares_backup_eddsa":
+		return len(x.KeysharesBackupEddsa) != 0
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.MsgTssPool"))
@@ -343,6 +414,10 @@ func (x *fastReflection_MsgTssPool) Clear(fd protoreflect.FieldDescriptor) {
 		x.KeysharesBackup = nil
 	case "types.MsgTssPool.secp256k1_signature":
 		x.Secp256K1Signature = nil
+	case "types.MsgTssPool.pool_pub_key_eddsa":
+		x.PoolPubKeyEddsa = ""
+	case "types.MsgTssPool.keyshares_backup_eddsa":
+		x.KeysharesBackupEddsa = nil
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.MsgTssPool"))
@@ -378,8 +453,11 @@ func (x *fastReflection_MsgTssPool) Get(descriptor protoreflect.FieldDescriptor)
 		value := x.Height
 		return protoreflect.ValueOfInt64(value)
 	case "types.MsgTssPool.blame":
-		value := x.Blame
-		return protoreflect.ValueOfMessage(value.ProtoReflect())
+		if len(x.Blame) == 0 {
+			return protoreflect.ValueOfList(&_MsgTssPool_6_list{})
+		}
+		listValue := &_MsgTssPool_6_list{list: &x.Blame}
+		return protoreflect.ValueOfList(listValue)
 	case "types.MsgTssPool.chains":
 		if len(x.Chains) == 0 {
 			return protoreflect.ValueOfList(&_MsgTssPool_7_list{})
@@ -397,6 +475,12 @@ func (x *fastReflection_MsgTssPool) Get(descriptor protoreflect.FieldDescriptor)
 		return protoreflect.ValueOfBytes(value)
 	case "types.MsgTssPool.secp256k1_signature":
 		value := x.Secp256K1Signature
+		return protoreflect.ValueOfBytes(value)
+	case "types.MsgTssPool.pool_pub_key_eddsa":
+		value := x.PoolPubKeyEddsa
+		return protoreflect.ValueOfString(value)
+	case "types.MsgTssPool.keyshares_backup_eddsa":
+		value := x.KeysharesBackupEddsa
 		return protoreflect.ValueOfBytes(value)
 	default:
 		if descriptor.IsExtension() {
@@ -431,7 +515,9 @@ func (x *fastReflection_MsgTssPool) Set(fd protoreflect.FieldDescriptor, value p
 	case "types.MsgTssPool.height":
 		x.Height = value.Int()
 	case "types.MsgTssPool.blame":
-		x.Blame = value.Message().Interface().(*Blame)
+		lv := value.List()
+		clv := lv.(*_MsgTssPool_6_list)
+		x.Blame = *clv.list
 	case "types.MsgTssPool.chains":
 		lv := value.List()
 		clv := lv.(*_MsgTssPool_7_list)
@@ -444,6 +530,10 @@ func (x *fastReflection_MsgTssPool) Set(fd protoreflect.FieldDescriptor, value p
 		x.KeysharesBackup = value.Bytes()
 	case "types.MsgTssPool.secp256k1_signature":
 		x.Secp256K1Signature = value.Bytes()
+	case "types.MsgTssPool.pool_pub_key_eddsa":
+		x.PoolPubKeyEddsa = value.Interface().(string)
+	case "types.MsgTssPool.keyshares_backup_eddsa":
+		x.KeysharesBackupEddsa = value.Bytes()
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.MsgTssPool"))
@@ -472,9 +562,10 @@ func (x *fastReflection_MsgTssPool) Mutable(fd protoreflect.FieldDescriptor) pro
 		return protoreflect.ValueOfList(value)
 	case "types.MsgTssPool.blame":
 		if x.Blame == nil {
-			x.Blame = new(Blame)
+			x.Blame = []*Blame{}
 		}
-		return protoreflect.ValueOfMessage(x.Blame.ProtoReflect())
+		value := &_MsgTssPool_6_list{list: &x.Blame}
+		return protoreflect.ValueOfList(value)
 	case "types.MsgTssPool.chains":
 		if x.Chains == nil {
 			x.Chains = []string{}
@@ -497,6 +588,10 @@ func (x *fastReflection_MsgTssPool) Mutable(fd protoreflect.FieldDescriptor) pro
 		panic(fmt.Errorf("field keyshares_backup of message types.MsgTssPool is not mutable"))
 	case "types.MsgTssPool.secp256k1_signature":
 		panic(fmt.Errorf("field secp256k1_signature of message types.MsgTssPool is not mutable"))
+	case "types.MsgTssPool.pool_pub_key_eddsa":
+		panic(fmt.Errorf("field pool_pub_key_eddsa of message types.MsgTssPool is not mutable"))
+	case "types.MsgTssPool.keyshares_backup_eddsa":
+		panic(fmt.Errorf("field keyshares_backup_eddsa of message types.MsgTssPool is not mutable"))
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.MsgTssPool"))
@@ -522,8 +617,8 @@ func (x *fastReflection_MsgTssPool) NewField(fd protoreflect.FieldDescriptor) pr
 	case "types.MsgTssPool.height":
 		return protoreflect.ValueOfInt64(int64(0))
 	case "types.MsgTssPool.blame":
-		m := new(Blame)
-		return protoreflect.ValueOfMessage(m.ProtoReflect())
+		list := []*Blame{}
+		return protoreflect.ValueOfList(&_MsgTssPool_6_list{list: &list})
 	case "types.MsgTssPool.chains":
 		list := []string{}
 		return protoreflect.ValueOfList(&_MsgTssPool_7_list{list: &list})
@@ -534,6 +629,10 @@ func (x *fastReflection_MsgTssPool) NewField(fd protoreflect.FieldDescriptor) pr
 	case "types.MsgTssPool.keyshares_backup":
 		return protoreflect.ValueOfBytes(nil)
 	case "types.MsgTssPool.secp256k1_signature":
+		return protoreflect.ValueOfBytes(nil)
+	case "types.MsgTssPool.pool_pub_key_eddsa":
+		return protoreflect.ValueOfString("")
+	case "types.MsgTssPool.keyshares_backup_eddsa":
 		return protoreflect.ValueOfBytes(nil)
 	default:
 		if fd.IsExtension() {
@@ -624,9 +723,11 @@ func (x *fastReflection_MsgTssPool) ProtoMethods() *protoiface.Methods {
 		if x.Height != 0 {
 			n += 1 + runtime.Sov(uint64(x.Height))
 		}
-		if x.Blame != nil {
-			l = options.Size(x.Blame)
-			n += 1 + l + runtime.Sov(uint64(l))
+		if len(x.Blame) > 0 {
+			for _, e := range x.Blame {
+				l = options.Size(e)
+				n += 1 + l + runtime.Sov(uint64(l))
+			}
 		}
 		if len(x.Chains) > 0 {
 			for _, s := range x.Chains {
@@ -646,6 +747,14 @@ func (x *fastReflection_MsgTssPool) ProtoMethods() *protoiface.Methods {
 			n += 1 + l + runtime.Sov(uint64(l))
 		}
 		l = len(x.Secp256K1Signature)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.PoolPubKeyEddsa)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.KeysharesBackupEddsa)
 		if l > 0 {
 			n += 1 + l + runtime.Sov(uint64(l))
 		}
@@ -677,6 +786,20 @@ func (x *fastReflection_MsgTssPool) ProtoMethods() *protoiface.Methods {
 		if x.unknownFields != nil {
 			i -= len(x.unknownFields)
 			copy(dAtA[i:], x.unknownFields)
+		}
+		if len(x.KeysharesBackupEddsa) > 0 {
+			i -= len(x.KeysharesBackupEddsa)
+			copy(dAtA[i:], x.KeysharesBackupEddsa)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.KeysharesBackupEddsa)))
+			i--
+			dAtA[i] = 0x6a
+		}
+		if len(x.PoolPubKeyEddsa) > 0 {
+			i -= len(x.PoolPubKeyEddsa)
+			copy(dAtA[i:], x.PoolPubKeyEddsa)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.PoolPubKeyEddsa)))
+			i--
+			dAtA[i] = 0x62
 		}
 		if len(x.Secp256K1Signature) > 0 {
 			i -= len(x.Secp256K1Signature)
@@ -713,19 +836,21 @@ func (x *fastReflection_MsgTssPool) ProtoMethods() *protoiface.Methods {
 				dAtA[i] = 0x3a
 			}
 		}
-		if x.Blame != nil {
-			encoded, err := options.Marshal(x.Blame)
-			if err != nil {
-				return protoiface.MarshalOutput{
-					NoUnkeyedLiterals: input.NoUnkeyedLiterals,
-					Buf:               input.Buf,
-				}, err
+		if len(x.Blame) > 0 {
+			for iNdEx := len(x.Blame) - 1; iNdEx >= 0; iNdEx-- {
+				encoded, err := options.Marshal(x.Blame[iNdEx])
+				if err != nil {
+					return protoiface.MarshalOutput{
+						NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+						Buf:               input.Buf,
+					}, err
+				}
+				i -= len(encoded)
+				copy(dAtA[i:], encoded)
+				i = runtime.EncodeVarint(dAtA, i, uint64(len(encoded)))
+				i--
+				dAtA[i] = 0x32
 			}
-			i -= len(encoded)
-			copy(dAtA[i:], encoded)
-			i = runtime.EncodeVarint(dAtA, i, uint64(len(encoded)))
-			i--
-			dAtA[i] = 0x32
 		}
 		if x.Height != 0 {
 			i = runtime.EncodeVarint(dAtA, i, uint64(x.Height))
@@ -972,10 +1097,8 @@ func (x *fastReflection_MsgTssPool) ProtoMethods() *protoiface.Methods {
 				if postIndex > l {
 					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
 				}
-				if x.Blame == nil {
-					x.Blame = &Blame{}
-				}
-				if err := options.Unmarshal(dAtA[iNdEx:postIndex], x.Blame); err != nil {
+				x.Blame = append(x.Blame, &Blame{})
+				if err := options.Unmarshal(dAtA[iNdEx:postIndex], x.Blame[len(x.Blame)-1]); err != nil {
 					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, err
 				}
 				iNdEx = postIndex
@@ -1132,6 +1255,72 @@ func (x *fastReflection_MsgTssPool) ProtoMethods() *protoiface.Methods {
 					x.Secp256K1Signature = []byte{}
 				}
 				iNdEx = postIndex
+			case 12:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field PoolPubKeyEddsa", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.PoolPubKeyEddsa = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 13:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field KeysharesBackupEddsa", wireType)
+				}
+				var byteLen int
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					byteLen |= int(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				if byteLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + byteLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.KeysharesBackupEddsa = append(x.KeysharesBackupEddsa[:0], dAtA[iNdEx:postIndex]...)
+				if x.KeysharesBackupEddsa == nil {
+					x.KeysharesBackupEddsa = []byte{}
+				}
+				iNdEx = postIndex
 			default:
 				iNdEx = preIndex
 				skippy, err := runtime.Skip(dAtA[iNdEx:])
@@ -1185,17 +1374,19 @@ type MsgTssPool struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id                 string     `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	PoolPubKey         string     `protobuf:"bytes,2,opt,name=pool_pub_key,json=poolPubKey,proto3" json:"pool_pub_key,omitempty"`
-	KeygenType         KeygenType `protobuf:"varint,3,opt,name=keygen_type,json=keygenType,proto3,enum=types.KeygenType" json:"keygen_type,omitempty"`
-	PubKeys            []string   `protobuf:"bytes,4,rep,name=pub_keys,json=pubKeys,proto3" json:"pub_keys,omitempty"`
-	Height             int64      `protobuf:"varint,5,opt,name=height,proto3" json:"height,omitempty"`
-	Blame              *Blame     `protobuf:"bytes,6,opt,name=blame,proto3" json:"blame,omitempty"`
-	Chains             []string   `protobuf:"bytes,7,rep,name=chains,proto3" json:"chains,omitempty"`
-	Signer             []byte     `protobuf:"bytes,8,opt,name=signer,proto3" json:"signer,omitempty"`
-	KeygenTime         int64      `protobuf:"varint,9,opt,name=keygen_time,json=keygenTime,proto3" json:"keygen_time,omitempty"`
-	KeysharesBackup    []byte     `protobuf:"bytes,10,opt,name=keyshares_backup,json=keysharesBackup,proto3" json:"keyshares_backup,omitempty"`
-	Secp256K1Signature []byte     `protobuf:"bytes,11,opt,name=secp256k1_signature,json=secp256k1Signature,proto3" json:"secp256k1_signature,omitempty"`
+	Id                   string     `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	PoolPubKey           string     `protobuf:"bytes,2,opt,name=pool_pub_key,json=poolPubKey,proto3" json:"pool_pub_key,omitempty"`
+	KeygenType           KeygenType `protobuf:"varint,3,opt,name=keygen_type,json=keygenType,proto3,enum=types.KeygenType" json:"keygen_type,omitempty"`
+	PubKeys              []string   `protobuf:"bytes,4,rep,name=pub_keys,json=pubKeys,proto3" json:"pub_keys,omitempty"`
+	Height               int64      `protobuf:"varint,5,opt,name=height,proto3" json:"height,omitempty"`
+	Blame                []*Blame   `protobuf:"bytes,6,rep,name=blame,proto3" json:"blame,omitempty"`
+	Chains               []string   `protobuf:"bytes,7,rep,name=chains,proto3" json:"chains,omitempty"`
+	Signer               []byte     `protobuf:"bytes,8,opt,name=signer,proto3" json:"signer,omitempty"`
+	KeygenTime           int64      `protobuf:"varint,9,opt,name=keygen_time,json=keygenTime,proto3" json:"keygen_time,omitempty"`
+	KeysharesBackup      []byte     `protobuf:"bytes,10,opt,name=keyshares_backup,json=keysharesBackup,proto3" json:"keyshares_backup,omitempty"`
+	Secp256K1Signature   []byte     `protobuf:"bytes,11,opt,name=secp256k1_signature,json=secp256k1Signature,proto3" json:"secp256k1_signature,omitempty"`
+	PoolPubKeyEddsa      string     `protobuf:"bytes,12,opt,name=pool_pub_key_eddsa,json=poolPubKeyEddsa,proto3" json:"pool_pub_key_eddsa,omitempty"`
+	KeysharesBackupEddsa []byte     `protobuf:"bytes,13,opt,name=keyshares_backup_eddsa,json=keysharesBackupEddsa,proto3" json:"keyshares_backup_eddsa,omitempty"`
 }
 
 func (x *MsgTssPool) Reset() {
@@ -1253,7 +1444,7 @@ func (x *MsgTssPool) GetHeight() int64 {
 	return 0
 }
 
-func (x *MsgTssPool) GetBlame() *Blame {
+func (x *MsgTssPool) GetBlame() []*Blame {
 	if x != nil {
 		return x.Blame
 	}
@@ -1295,6 +1486,20 @@ func (x *MsgTssPool) GetSecp256K1Signature() []byte {
 	return nil
 }
 
+func (x *MsgTssPool) GetPoolPubKeyEddsa() string {
+	if x != nil {
+		return x.PoolPubKeyEddsa
+	}
+	return ""
+}
+
+func (x *MsgTssPool) GetKeysharesBackupEddsa() []byte {
+	if x != nil {
+		return x.KeysharesBackupEddsa
+	}
+	return nil
+}
+
 var File_types_msg_tss_pool_proto protoreflect.FileDescriptor
 
 var file_types_msg_tss_pool_proto_rawDesc = []byte{
@@ -1305,7 +1510,7 @@ var file_types_msg_tss_pool_proto_rawDesc = []byte{
 	0x2f, 0x74, 0x79, 0x70, 0x65, 0x5f, 0x6b, 0x65, 0x79, 0x67, 0x65, 0x6e, 0x2e, 0x70, 0x72, 0x6f,
 	0x74, 0x6f, 0x1a, 0x14, 0x67, 0x6f, 0x67, 0x6f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x67, 0x6f,
 	0x67, 0x6f, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x11, 0x61, 0x6d, 0x69, 0x6e, 0x6f, 0x2f,
-	0x61, 0x6d, 0x69, 0x6e, 0x6f, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0xae, 0x04, 0x0a, 0x0a,
+	0x61, 0x6d, 0x69, 0x6e, 0x6f, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0xcf, 0x05, 0x0a, 0x0a,
 	0x4d, 0x73, 0x67, 0x54, 0x73, 0x73, 0x50, 0x6f, 0x6f, 0x6c, 0x12, 0x16, 0x0a, 0x02, 0x69, 0x64,
 	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x42, 0x06, 0xe2, 0xde, 0x1f, 0x02, 0x49, 0x44, 0x52, 0x02,
 	0x69, 0x64, 0x12, 0x54, 0x0a, 0x0c, 0x70, 0x6f, 0x6f, 0x6c, 0x5f, 0x70, 0x75, 0x62, 0x5f, 0x6b,
@@ -1322,7 +1527,7 @@ var file_types_msg_tss_pool_proto_rawDesc = []byte{
 	0x70, 0x75, 0x62, 0x5f, 0x6b, 0x65, 0x79, 0x73, 0x18, 0x04, 0x20, 0x03, 0x28, 0x09, 0x52, 0x07,
 	0x70, 0x75, 0x62, 0x4b, 0x65, 0x79, 0x73, 0x12, 0x16, 0x0a, 0x06, 0x68, 0x65, 0x69, 0x67, 0x68,
 	0x74, 0x18, 0x05, 0x20, 0x01, 0x28, 0x03, 0x52, 0x06, 0x68, 0x65, 0x69, 0x67, 0x68, 0x74, 0x12,
-	0x28, 0x0a, 0x05, 0x62, 0x6c, 0x61, 0x6d, 0x65, 0x18, 0x06, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c,
+	0x28, 0x0a, 0x05, 0x62, 0x6c, 0x61, 0x6d, 0x65, 0x18, 0x06, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0c,
 	0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x42, 0x6c, 0x61, 0x6d, 0x65, 0x42, 0x04, 0xc8, 0xde,
 	0x1f, 0x00, 0x52, 0x05, 0x62, 0x6c, 0x61, 0x6d, 0x65, 0x12, 0x16, 0x0a, 0x06, 0x63, 0x68, 0x61,
 	0x69, 0x6e, 0x73, 0x18, 0x07, 0x20, 0x03, 0x28, 0x09, 0x52, 0x06, 0x63, 0x68, 0x61, 0x69, 0x6e,
@@ -1339,17 +1544,27 @@ var file_types_msg_tss_pool_proto_rawDesc = []byte{
 	0x6b, 0x75, 0x70, 0x12, 0x2f, 0x0a, 0x13, 0x73, 0x65, 0x63, 0x70, 0x32, 0x35, 0x36, 0x6b, 0x31,
 	0x5f, 0x73, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, 0x18, 0x0b, 0x20, 0x01, 0x28, 0x0c,
 	0x52, 0x12, 0x73, 0x65, 0x63, 0x70, 0x32, 0x35, 0x36, 0x6b, 0x31, 0x53, 0x69, 0x67, 0x6e, 0x61,
-	0x74, 0x75, 0x72, 0x65, 0x3a, 0x16, 0x8a, 0xe7, 0xb0, 0x2a, 0x11, 0x74, 0x68, 0x6f, 0x72, 0x63,
-	0x68, 0x61, 0x69, 0x6e, 0x2f, 0x54, 0x73, 0x73, 0x50, 0x6f, 0x6f, 0x6c, 0x42, 0x80, 0x01, 0x0a,
-	0x09, 0x63, 0x6f, 0x6d, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x42, 0x0f, 0x4d, 0x73, 0x67, 0x54,
-	0x73, 0x73, 0x50, 0x6f, 0x6f, 0x6c, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x2a, 0x67,
-	0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68,
-	0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33, 0x2f,
-	0x61, 0x70, 0x69, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x73, 0xa2, 0x02, 0x03, 0x54, 0x58, 0x58, 0xaa,
-	0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xca, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xe2,
-	0x02, 0x11, 0x54, 0x79, 0x70, 0x65, 0x73, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64,
-	0x61, 0x74, 0x61, 0xea, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xc8, 0xe1, 0x1e, 0x00, 0x62,
-	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x74, 0x75, 0x72, 0x65, 0x12, 0x63, 0x0a, 0x12, 0x70, 0x6f, 0x6f, 0x6c, 0x5f, 0x70, 0x75, 0x62,
+	0x5f, 0x6b, 0x65, 0x79, 0x5f, 0x65, 0x64, 0x64, 0x73, 0x61, 0x18, 0x0c, 0x20, 0x01, 0x28, 0x09,
+	0x42, 0x36, 0xc8, 0xde, 0x1f, 0x01, 0xfa, 0xde, 0x1f, 0x2e, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62,
+	0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74,
+	0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33, 0x2f, 0x63, 0x6f, 0x6d, 0x6d, 0x6f,
+	0x6e, 0x2e, 0x50, 0x75, 0x62, 0x4b, 0x65, 0x79, 0x52, 0x0f, 0x70, 0x6f, 0x6f, 0x6c, 0x50, 0x75,
+	0x62, 0x4b, 0x65, 0x79, 0x45, 0x64, 0x64, 0x73, 0x61, 0x12, 0x3a, 0x0a, 0x16, 0x6b, 0x65, 0x79,
+	0x73, 0x68, 0x61, 0x72, 0x65, 0x73, 0x5f, 0x62, 0x61, 0x63, 0x6b, 0x75, 0x70, 0x5f, 0x65, 0x64,
+	0x64, 0x73, 0x61, 0x18, 0x0d, 0x20, 0x01, 0x28, 0x0c, 0x42, 0x04, 0xc8, 0xde, 0x1f, 0x01, 0x52,
+	0x14, 0x6b, 0x65, 0x79, 0x73, 0x68, 0x61, 0x72, 0x65, 0x73, 0x42, 0x61, 0x63, 0x6b, 0x75, 0x70,
+	0x45, 0x64, 0x64, 0x73, 0x61, 0x3a, 0x16, 0x8a, 0xe7, 0xb0, 0x2a, 0x11, 0x74, 0x68, 0x6f, 0x72,
+	0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x54, 0x73, 0x73, 0x50, 0x6f, 0x6f, 0x6c, 0x42, 0x80, 0x01,
+	0x0a, 0x09, 0x63, 0x6f, 0x6d, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x42, 0x0f, 0x4d, 0x73, 0x67,
+	0x54, 0x73, 0x73, 0x50, 0x6f, 0x6f, 0x6c, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x2a,
+	0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63,
+	0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33,
+	0x2f, 0x61, 0x70, 0x69, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x73, 0xa2, 0x02, 0x03, 0x54, 0x58, 0x58,
+	0xaa, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xca, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73,
+	0xe2, 0x02, 0x11, 0x54, 0x79, 0x70, 0x65, 0x73, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61,
+	0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xc8, 0xe1, 0x1e, 0x00,
+	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (

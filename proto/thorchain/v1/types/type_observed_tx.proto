@@ -10,7 +10,6 @@ import "common/common.proto";
 import "types/type_tx_out.proto";
 import "gogoproto/gogo.proto";
 
-
 message ObservedTxVoter {
   string tx_id = 1 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.TxID", (gogoproto.customname) = "TxID"];
   common.ObservedTx tx = 2 [(gogoproto.nullable) = false];

@@ -179,9 +179,12 @@ func (p *pipeline) SpawnSignings(s pipelineSigner, bridge thorclient.ThorchainBr
 		if err != nil {
 			log.Err(err).
 				Stringer("vault_pubkey", item.TxOutItem.VaultPubKey).
+				Stringer("vault_pubkey_eddsa", item.TxOutItem.VaultPubKeyEddsa).
 				Msg("failed to get tx out item vault")
 			return
 		}
+
+		item.TxOutItem.VaultPubKeyEddsa = vault.PubKeyEddsa
 
 		// check if the vault status semaphore has capacity
 		if availableCapacities[vault.Status] == 0 {

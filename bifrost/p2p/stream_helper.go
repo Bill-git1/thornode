@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/network"
@@ -23,7 +24,11 @@ const (
 
 // applyDeadline will be true , and only disable it when we are doing test
 // the reason being the p2p network , mocknet, mock stream doesn't support SetReadDeadline ,SetWriteDeadline feature
-var ApplyDeadline = true
+var ApplyDeadline = &atomic.Bool{}
+
+func init() {
+	ApplyDeadline.Store(true)
+}
 
 type StreamMgr struct {
 	unusedStreams map[string][]network.Stream
@@ -77,7 +82,7 @@ func (sm *StreamMgr) AddStream(msgID string, stream network.Stream) {
 
 // ReadStreamWithBuffer read data from the given stream
 func ReadStreamWithBuffer(stream network.Stream) ([]byte, error) {
-	if ApplyDeadline {
+	if ApplyDeadline.Load() {
 		if err := stream.SetReadDeadline(time.Now().Add(TimeoutReadPayload)); err != nil {
 			if errReset := stream.Reset(); errReset != nil {
 				return nil, errReset
@@ -108,8 +113,8 @@ func WriteStreamWithBuffer(msg []byte, stream network.Stream) error {
 	length := uint32(len(msg))
 	lengthBytes := make([]byte, LengthHeader)
 	binary.LittleEndian.PutUint32(lengthBytes, length)
-	if ApplyDeadline {
-		if err := stream.SetWriteDeadline(time.Now().Add(TimeoutWritePayload)); nil != err {
+	if ApplyDeadline.Load() {
+		if err := stream.SetWriteDeadline(time.Now().Add(TimeoutWritePayload)); err != nil {
 			if errReset := stream.Reset(); errReset != nil {
 				return errReset
 			}
@@ -144,7 +149,7 @@ func ReadStreamWithBufferWithContext(ctx context.Context, stream network.Stream)
 	}
 
 	// Apply deadline to stream
-	if ApplyDeadline {
+	if ApplyDeadline.Load() {
 		if err := stream.SetReadDeadline(deadline); err != nil {
 			if errReset := stream.Reset(); errReset != nil {
 				return nil, errReset
@@ -206,7 +211,7 @@ func WriteStreamWithBufferWithContext(ctx context.Context, msg []byte, stream ne
 	}
 
 	// Apply deadline to stream
-	if ApplyDeadline {
+	if ApplyDeadline.Load() {
 		if err := stream.SetWriteDeadline(deadline); err != nil {
 			if errReset := stream.Reset(); errReset != nil {
 				return errReset

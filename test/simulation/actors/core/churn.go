@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"gitlab.com/thorchain/thornode/v3/api/types"
+	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/thornode"
 	. "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/types"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain"
@@ -67,7 +68,7 @@ func (a *ChurnActor) startChurn(config *OpConfig) OpResult {
 		}
 	}
 	defer node.Release()
-	accAddr, err := node.PubKey().GetThorAddress()
+	accAddr, err := node.PubKey(common.THORChain).GetThorAddress()
 	if err != nil {
 		a.Log().Error().Err(err).Msg("failed to get thor address")
 		return OpResult{

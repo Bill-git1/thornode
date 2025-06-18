@@ -6,6 +6,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Tx** | [**Tx**](Tx.md) |  | 
 **ObservedPubKey** | Pointer to **string** |  | [optional] 
+**ObservedPubKeyEddsa** | Pointer to **string** |  | [optional] 
 **ExternalObservedHeight** | Pointer to **int64** | the block height on the external source chain when the transaction was observed, not provided if chain is THOR | [optional] 
 **ExternalConfirmationDelayHeight** | Pointer to **int64** | the block height on the external source chain when confirmation counting will be complete, not provided if chain is THOR | [optional] 
 **Aggregator** | Pointer to **string** | the outbound aggregator to use, will also match a suffix | [optional] 
@@ -79,6 +80,31 @@ SetObservedPubKey sets ObservedPubKey field to given value.
 `func (o *ObservedTx) HasObservedPubKey() bool`
 
 HasObservedPubKey returns a boolean if a field has been set.
+
+### GetObservedPubKeyEddsa
+
+`func (o *ObservedTx) GetObservedPubKeyEddsa() string`
+
+GetObservedPubKeyEddsa returns the ObservedPubKeyEddsa field if non-nil, zero value otherwise.
+
+### GetObservedPubKeyEddsaOk
+
+`func (o *ObservedTx) GetObservedPubKeyEddsaOk() (*string, bool)`
+
+GetObservedPubKeyEddsaOk returns a tuple with the ObservedPubKeyEddsa field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetObservedPubKeyEddsa
+
+`func (o *ObservedTx) SetObservedPubKeyEddsa(v string)`
+
+SetObservedPubKeyEddsa sets ObservedPubKeyEddsa field to given value.
+
+### HasObservedPubKeyEddsa
+
+`func (o *ObservedTx) HasObservedPubKeyEddsa() bool`
+
+HasObservedPubKeyEddsa returns a boolean if a field has been set.
 
 ### GetExternalObservedHeight
 

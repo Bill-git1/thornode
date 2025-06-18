@@ -16,6 +16,7 @@ import (
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/config"
+	"gitlab.com/thorchain/thornode/v3/test/simulation/actors/suites"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/evm"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/thornode"
 	. "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/types"
@@ -120,7 +121,7 @@ func InitConfig(parallelism int, seed bool) *OpConfig {
 			}
 
 			// halt churning
-			accAddr, err := a.PubKey().GetThorAddress()
+			accAddr, err := a.PubKey(common.THORChain).GetThorAddress()
 			if err != nil {
 				log.Error().Err(err).Msg("failed to get thor address")
 			}
@@ -231,12 +232,7 @@ func InitConfig(parallelism int, seed bool) *OpConfig {
 
 	// fund user accounts with one goroutine per chain
 	wg = &sync.WaitGroup{}
-	for _, chain := range common.AllChains {
-		// BSC not compatible with simtests
-		if chain.Equals(common.BSCChain) {
-			continue
-		}
-
+	for _, chain := range suites.SimChains {
 		// determine the amount to seed
 		chainSeedAmount := sdkmath.ZeroUint()
 		switch chain {
@@ -281,7 +277,7 @@ func fundUserChainAccounts(master *User, users []*User, chain common.Chain, amou
 // nolint:typecheck
 func fundUserChainAccount(master, user *User, chain common.Chain, amount sdkmath.Uint) {
 	// build tx
-	addr, err := user.PubKey().GetAddress(chain)
+	addr, err := user.PubKey(chain).GetAddress(chain)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to get address")
 	}
@@ -339,7 +335,7 @@ func fundUserChainAccount(master, user *User, chain common.Chain, amount sdkmath
 		}
 		tokenTxid, err := master.ChainClients[chain].BroadcastTx(tokenSigned)
 		if err != nil {
-			from, _ := master.PubKey().GetAddress(chain)
+			from, _ := master.PubKey(chain).GetAddress(chain)
 			log.Fatal().Err(err).
 				Stringer("chain", chain).
 				Stringer("from", from).
@@ -358,13 +354,13 @@ func fundUserChainAccount(master, user *User, chain common.Chain, amount sdkmath
 }
 
 func fundUserThorAccount(master, user *User) bool {
-	masterThorAddress, err := master.PubKey().GetThorAddress()
+	masterThorAddress, err := master.PubKey(common.THORChain).GetThorAddress()
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to get master thor address")
 	}
 
 	// skip seeding user if thorchain account has balance
-	userThorAddress, err := user.PubKey().GetAddress(common.THORChain)
+	userThorAddress, err := user.PubKey(common.THORChain).GetAddress(common.THORChain)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to get user thor address")
 	}
@@ -375,7 +371,7 @@ func fundUserThorAccount(master, user *User) bool {
 	}
 
 	// seed thorchain account
-	userThorAccAddress, err := user.PubKey().GetThorAddress()
+	userThorAccAddress, err := user.PubKey(common.THORChain).GetThorAddress()
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to get user thor address")
 	}

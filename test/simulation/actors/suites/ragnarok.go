@@ -3,7 +3,6 @@ package suites
 import (
 	"fmt"
 
-	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/actors/core"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/thornode"
 	. "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/types"
@@ -17,14 +16,7 @@ func Ragnarok() *Actor {
 	a := NewActor("Ragnarok")
 
 	// ragnarok all gas asset pools (should apply to tokens implicitly)
-	for _, chain := range common.AllChains {
-		if chain == common.THORChain {
-			continue
-		}
-		// BSC not compatible with sim tests
-		if chain.Equals(common.BSCChain) {
-			continue
-		}
+	for _, chain := range SimChains {
 		a.Children[core.NewRagnarokPoolActor(chain.GetGasAsset())] = true
 	}
 

@@ -13,6 +13,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/cmd"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/common/crypto/ed25519"
 	"gitlab.com/thorchain/thornode/v3/config"
 )
 
@@ -28,9 +29,10 @@ type User struct {
 	// ChainClients is a map of chain to the corresponding client for the account.
 	ChainClients map[common.Chain]LiteChainClient
 
-	lock     chan struct{}
-	pubkey   common.PubKey
-	mnemonic string
+	lock        chan struct{}
+	pubkey      common.PubKey
+	eddsaPubkey common.PubKey
+	mnemonic    string
 }
 
 // NewUser returns a new client using the private key from the given mnemonic.
@@ -47,13 +49,33 @@ func NewUser(mnemonic string, constructors map[common.Chain]LiteChainClientConst
 	}
 	pubkey := common.PubKey(s)
 
+	// EdDSA pubkey
+	edPriv, err := ed25519.Ed25519.Derive()(mnemonic, "", ed25519.HDPath)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to derive ed25519 private key")
+	}
+	edPrivKey := ed25519.Ed25519.Generate()(edPriv)
+	edS, err := cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeAccPub, edPrivKey.PubKey())
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to bech32ify eddsa pubkey")
+	}
+	edPubkey := common.PubKey(edS)
+
 	// add key to keyring
 	registry := codectypes.NewInterfaceRegistry()
 	cryptocodec.RegisterInterfaces(registry)
 	cdc := codec.NewProtoCodec(registry)
-	kr := keyring.NewInMemory(cdc)
+	kr := keyring.NewInMemory(cdc, func(options *keyring.Options) {
+		options.SupportedAlgos = keyring.SigningAlgoList{hd.Secp256k1, ed25519.Ed25519}
+	})
 	name := strings.Split(mnemonic, " ")[0]
 	_, err = kr.NewAccount(name, mnemonic, "", cmd.THORChainHDPath, hd.Secp256k1)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to add account to keyring")
+	}
+
+	// Add Ed25519 key to keyring
+	_, err = kr.NewAccount(ed25519.SignerNameEDDSA(name), mnemonic, "", ed25519.HDPath, ed25519.Ed25519)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to add account to keyring")
 	}
@@ -67,7 +89,8 @@ func NewUser(mnemonic string, constructors map[common.Chain]LiteChainClientConst
 	// create chain clients
 	chainClients := make(map[common.Chain]LiteChainClient)
 	for chain := range constructors {
-		chainClients[chain], err = constructors[chain](chain, keys)
+		pKeys := keys
+		chainClients[chain], err = constructors[chain](chain, pKeys)
 		if err != nil {
 			log.Fatal().Err(err).Stringer("chain", chain).Msg("failed to create chain client")
 		}
@@ -86,6 +109,7 @@ func NewUser(mnemonic string, constructors map[common.Chain]LiteChainClientConst
 		Thorchain:    thorchain,
 		lock:         make(chan struct{}, 1),
 		pubkey:       pubkey,
+		eddsaPubkey:  edPubkey,
 		mnemonic:     mnemonic,
 	}
 }
@@ -123,12 +147,22 @@ func (u *User) Release() {
 }
 
 // PubKey returns the public key of the client.
-func (u *User) PubKey() common.PubKey {
+func (u *User) PubKey(chain common.Chain) common.PubKey {
+	if chain.GetSigningAlgo() == common.SigningAlgoEd25519 {
+		return u.eddsaPubkey
+	}
 	return u.pubkey
 }
 
 // Address returns the address of the client for the given chain.
 func (u *User) Address(chain common.Chain) common.Address {
+	if chain.GetSigningAlgo() == common.SigningAlgoEd25519 {
+		address, err := u.eddsaPubkey.GetAddress(chain)
+		if err != nil {
+			log.Fatal().Err(err).Stringer("chain", chain).Msg("failed to get address")
+		}
+		return address
+	}
 	address, err := u.pubkey.GetAddress(chain)
 	if err != nil {
 		log.Fatal().Err(err).Stringer("chain", chain).Msg("failed to get address")

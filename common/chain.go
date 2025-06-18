@@ -26,6 +26,7 @@ const (
 	AVAXChain  = Chain("AVAX")
 	BASEChain  = Chain("BASE")
 	XRPChain   = Chain("XRP")
+	SOLChain   = Chain("SOL")
 
 	SigningAlgoSecp256k1 = SigningAlgo("secp256k1")
 	SigningAlgoEd25519   = SigningAlgo("ed25519")
@@ -43,6 +44,7 @@ var AllChains = [...]Chain{
 	AVAXChain,
 	BASEChain,
 	XRPChain,
+	SOLChain,
 }
 
 type SigningAlgo string
@@ -140,8 +142,12 @@ func (c Chain) String() string {
 
 // GetSigningAlgo get the signing algorithm for the given chain
 func (c Chain) GetSigningAlgo() SigningAlgo {
-	// Only SigningAlgoSecp256k1 is supported for now
-	return SigningAlgoSecp256k1
+	switch c {
+	case SOLChain:
+		return SigningAlgoEd25519
+	default:
+		return SigningAlgoSecp256k1
+	}
 }
 
 // GetGasAsset chain's base asset

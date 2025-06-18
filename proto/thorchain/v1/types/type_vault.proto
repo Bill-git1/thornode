@@ -34,4 +34,8 @@ message Vault {
   repeated int64 pending_tx_block_heights = 11;
   repeated types.ChainContract routers = 22 [(gogoproto.nullable) = false];
   repeated string frozen = 23;
+  string pub_key_eddsa = 24 [
+    (gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.PubKey",
+    (gogoproto.nullable) = true
+  ];
 }

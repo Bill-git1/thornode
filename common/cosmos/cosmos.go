@@ -16,11 +16,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	ckeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/bech32/legacybech32" // nolint SA1019 deprecated
 	se "github.com/cosmos/cosmos-sdk/types/errors"
 	log "github.com/rs/zerolog/log"
+	"gitlab.com/thorchain/thornode/v3/common/crypto/ed25519"
 )
 
 const (
@@ -181,7 +183,9 @@ func GetKeybase(thorchainHome string) (KeybaseStore, error) {
 	registry := codectypes.NewInterfaceRegistry()
 	cryptocodec.RegisterInterfaces(registry)
 	cdc := codec.NewProtoCodec(registry)
-	kb, err := ckeys.New(KeyringServiceName(), ckeys.BackendFile, cliDir, buf, cdc)
+	kb, err := ckeys.New(KeyringServiceName(), ckeys.BackendFile, cliDir, buf, cdc, func(options *ckeys.Options) {
+		options.SupportedAlgos = ckeys.SigningAlgoList{hd.Secp256k1, ed25519.Ed25519}
+	})
 	return KeybaseStore{
 		SignerName:   username,
 		SignerPasswd: password,

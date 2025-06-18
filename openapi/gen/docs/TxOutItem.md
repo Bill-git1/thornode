@@ -5,11 +5,12 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Height** | Pointer to **int64** |  | [optional] 
-**VaultPubKey** | Pointer to **string** |  | [optional] 
 **InHash** | Pointer to **string** |  | [optional] 
 **OutHash** | Pointer to **string** |  | [optional] 
 **Chain** | **string** |  | 
 **ToAddress** | **string** |  | 
+**VaultPubKey** | Pointer to **string** |  | [optional] 
+**VaultPubKeyEddsa** | Pointer to **string** |  | [optional] 
 **Coin** | [**Coin**](Coin.md) |  | 
 **MaxGas** | [**[]Coin**](Coin.md) |  | 
 **GasRate** | Pointer to **int64** |  | [optional] 
@@ -62,31 +63,6 @@ SetHeight sets Height field to given value.
 `func (o *TxOutItem) HasHeight() bool`
 
 HasHeight returns a boolean if a field has been set.
-
-### GetVaultPubKey
-
-`func (o *TxOutItem) GetVaultPubKey() string`
-
-GetVaultPubKey returns the VaultPubKey field if non-nil, zero value otherwise.
-
-### GetVaultPubKeyOk
-
-`func (o *TxOutItem) GetVaultPubKeyOk() (*string, bool)`
-
-GetVaultPubKeyOk returns a tuple with the VaultPubKey field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetVaultPubKey
-
-`func (o *TxOutItem) SetVaultPubKey(v string)`
-
-SetVaultPubKey sets VaultPubKey field to given value.
-
-### HasVaultPubKey
-
-`func (o *TxOutItem) HasVaultPubKey() bool`
-
-HasVaultPubKey returns a boolean if a field has been set.
 
 ### GetInHash
 
@@ -177,6 +153,56 @@ and a boolean to check if the value has been set.
 
 SetToAddress sets ToAddress field to given value.
 
+
+### GetVaultPubKey
+
+`func (o *TxOutItem) GetVaultPubKey() string`
+
+GetVaultPubKey returns the VaultPubKey field if non-nil, zero value otherwise.
+
+### GetVaultPubKeyOk
+
+`func (o *TxOutItem) GetVaultPubKeyOk() (*string, bool)`
+
+GetVaultPubKeyOk returns a tuple with the VaultPubKey field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetVaultPubKey
+
+`func (o *TxOutItem) SetVaultPubKey(v string)`
+
+SetVaultPubKey sets VaultPubKey field to given value.
+
+### HasVaultPubKey
+
+`func (o *TxOutItem) HasVaultPubKey() bool`
+
+HasVaultPubKey returns a boolean if a field has been set.
+
+### GetVaultPubKeyEddsa
+
+`func (o *TxOutItem) GetVaultPubKeyEddsa() string`
+
+GetVaultPubKeyEddsa returns the VaultPubKeyEddsa field if non-nil, zero value otherwise.
+
+### GetVaultPubKeyEddsaOk
+
+`func (o *TxOutItem) GetVaultPubKeyEddsaOk() (*string, bool)`
+
+GetVaultPubKeyEddsaOk returns a tuple with the VaultPubKeyEddsa field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetVaultPubKeyEddsa
+
+`func (o *TxOutItem) SetVaultPubKeyEddsa(v string)`
+
+SetVaultPubKeyEddsa sets VaultPubKeyEddsa field to given value.
+
+### HasVaultPubKeyEddsa
+
+`func (o *TxOutItem) HasVaultPubKeyEddsa() bool`
+
+HasVaultPubKeyEddsa returns a boolean if a field has been set.
 
 ### GetCoin
 

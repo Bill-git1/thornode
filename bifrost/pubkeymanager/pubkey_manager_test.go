@@ -31,12 +31,12 @@ func (s *PubKeyMgrSuite) TestPubkeyMgr(c *C) {
 	pubkeyMgr, err := NewPubKeyManager(nil, nil)
 	c.Assert(err, IsNil)
 	c.Check(pubkeyMgr.HasPubKey(pk1), Equals, false)
-	pubkeyMgr.AddPubKey(pk1, true)
+	pubkeyMgr.AddPubKey(pk1, true, common.SigningAlgoSecp256k1)
 	c.Check(pubkeyMgr.HasPubKey(pk1), Equals, true)
 	c.Check(pubkeyMgr.pubkeys[0].PubKey.Equals(pk1), Equals, true)
 	c.Check(pubkeyMgr.pubkeys[0].Signer, Equals, true)
 
-	pubkeyMgr.AddPubKey(pk2, false)
+	pubkeyMgr.AddPubKey(pk2, false, common.SigningAlgoSecp256k1)
 	c.Check(pubkeyMgr.HasPubKey(pk2), Equals, true)
 	c.Check(pubkeyMgr.pubkeys[1].PubKey.Equals(pk2), Equals, true)
 	c.Check(pubkeyMgr.pubkeys[1].Signer, Equals, false)
@@ -59,8 +59,8 @@ func (s *PubKeyMgrSuite) TestPubkeyMgr(c *C) {
 
 	addr, err = pk3.GetAddress(common.ETHChain)
 	c.Assert(err, IsNil)
-	pubkeyMgr.AddNodePubKey(pk4)
-	c.Check(pubkeyMgr.GetNodePubKey().String(), Equals, pk4.String())
+	pubkeyMgr.AddNodePubKey(pk4, common.SigningAlgoSecp256k1)
+	c.Check(pubkeyMgr.GetNodePubKey(common.SigningAlgoSecp256k1).String(), Equals, pk4.String())
 	ok, _ = pubkeyMgr.IsValidPoolAddress(addr.String(), common.ETHChain)
 	c.Assert(ok, Equals, false)
 }
@@ -112,13 +112,14 @@ func (s *PubKeyMgrSuite) TestFetchKeys(c *C) {
 		return nil
 	}
 	pubkeyMgr.RegisterCallback(callBack)
-	pubkeyMgr.AddPubKey(pk2, false)
+	pubkeyMgr.AddPubKey(pk2, false, common.SigningAlgoSecp256k1)
 	c.Check(hasCallbackFired, Equals, true)
 	// add a key that is the node account, ensure it doesn't get removed
 	pubkeyMgr.pubkeys = append(pubkeyMgr.pubkeys, pubKeyInfo{
 		PubKey:      pk3,
 		Signer:      true,
 		NodeAccount: true,
+		Algo:        common.SigningAlgoSecp256k1,
 		Contracts:   map[common.Chain]common.Address{},
 	})
 	c.Check(len(pubkeyMgr.GetPubKeys()), Equals, 2)

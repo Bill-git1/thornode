@@ -18,6 +18,7 @@ import (
 type Vault struct {
 	BlockHeight *int64 `json:"block_height,omitempty"`
 	PubKey *string `json:"pub_key,omitempty"`
+	PubKeyEddsa *string `json:"pub_key_eddsa,omitempty"`
 	Coins []Coin `json:"coins"`
 	Type *string `json:"type,omitempty"`
 	Status string `json:"status"`
@@ -116,6 +117,38 @@ func (o *Vault) HasPubKey() bool {
 // SetPubKey gets a reference to the given string and assigns it to the PubKey field.
 func (o *Vault) SetPubKey(v string) {
 	o.PubKey = &v
+}
+
+// GetPubKeyEddsa returns the PubKeyEddsa field value if set, zero value otherwise.
+func (o *Vault) GetPubKeyEddsa() string {
+	if o == nil || o.PubKeyEddsa == nil {
+		var ret string
+		return ret
+	}
+	return *o.PubKeyEddsa
+}
+
+// GetPubKeyEddsaOk returns a tuple with the PubKeyEddsa field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *Vault) GetPubKeyEddsaOk() (*string, bool) {
+	if o == nil || o.PubKeyEddsa == nil {
+		return nil, false
+	}
+	return o.PubKeyEddsa, true
+}
+
+// HasPubKeyEddsa returns a boolean if a field has been set.
+func (o *Vault) HasPubKeyEddsa() bool {
+	if o != nil && o.PubKeyEddsa != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetPubKeyEddsa gets a reference to the given string and assigns it to the PubKeyEddsa field.
+func (o *Vault) SetPubKeyEddsa(v string) {
+	o.PubKeyEddsa = &v
 }
 
 // GetCoins returns the Coins field value
@@ -477,6 +510,9 @@ func (o Vault) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if o.PubKey != nil {
 		toSerialize["pub_key"] = o.PubKey
+	}
+	if o.PubKeyEddsa != nil {
+		toSerialize["pub_key_eddsa"] = o.PubKeyEddsa
 	}
 	if true {
 		toSerialize["coins"] = o.Coins

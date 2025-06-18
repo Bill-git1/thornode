@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
@@ -169,10 +170,10 @@ func (m *MockPeerstore) UpdateAddrs(p peer.ID, oldTTL, newTTL time.Duration) {
 
 type MockKeys struct {
 	thorclient.Keys
-	privKey cryptotypes.PrivKey
+	privKey *secp256k1.PrivKey
 }
 
-func (m *MockKeys) GetPrivateKey() (cryptotypes.PrivKey, error) {
+func (m *MockKeys) GetPrivateKey() (*secp256k1.PrivKey, error) {
 	return m.privKey, nil
 }
 

@@ -60,11 +60,11 @@ func (x *_TssKeysignFailVoter_6_list) IsValid() bool {
 }
 
 var (
-	md_TssKeysignFailVoter              protoreflect.MessageDescriptor
-	fd_TssKeysignFailVoter_id           protoreflect.FieldDescriptor
-	fd_TssKeysignFailVoter_height       protoreflect.FieldDescriptor
-	fd_TssKeysignFailVoter_signers      protoreflect.FieldDescriptor
-	fd_TssKeysignFailVoter_round7_count protoreflect.FieldDescriptor
+	md_TssKeysignFailVoter                  protoreflect.MessageDescriptor
+	fd_TssKeysignFailVoter_id               protoreflect.FieldDescriptor
+	fd_TssKeysignFailVoter_height           protoreflect.FieldDescriptor
+	fd_TssKeysignFailVoter_signers          protoreflect.FieldDescriptor
+	fd_TssKeysignFailVoter_last_round_count protoreflect.FieldDescriptor
 )
 
 func init() {
@@ -73,7 +73,7 @@ func init() {
 	fd_TssKeysignFailVoter_id = md_TssKeysignFailVoter.Fields().ByName("id")
 	fd_TssKeysignFailVoter_height = md_TssKeysignFailVoter.Fields().ByName("height")
 	fd_TssKeysignFailVoter_signers = md_TssKeysignFailVoter.Fields().ByName("signers")
-	fd_TssKeysignFailVoter_round7_count = md_TssKeysignFailVoter.Fields().ByName("round7_count")
+	fd_TssKeysignFailVoter_last_round_count = md_TssKeysignFailVoter.Fields().ByName("last_round_count")
 }
 
 var _ protoreflect.Message = (*fastReflection_TssKeysignFailVoter)(nil)
@@ -159,9 +159,9 @@ func (x *fastReflection_TssKeysignFailVoter) Range(f func(protoreflect.FieldDesc
 			return
 		}
 	}
-	if x.Round7Count != int64(0) {
-		value := protoreflect.ValueOfInt64(x.Round7Count)
-		if !f(fd_TssKeysignFailVoter_round7_count, value) {
+	if x.LastRoundCount != int64(0) {
+		value := protoreflect.ValueOfInt64(x.LastRoundCount)
+		if !f(fd_TssKeysignFailVoter_last_round_count, value) {
 			return
 		}
 	}
@@ -186,8 +186,8 @@ func (x *fastReflection_TssKeysignFailVoter) Has(fd protoreflect.FieldDescriptor
 		return x.Height != int64(0)
 	case "types.TssKeysignFailVoter.signers":
 		return len(x.Signers) != 0
-	case "types.TssKeysignFailVoter.round7_count":
-		return x.Round7Count != int64(0)
+	case "types.TssKeysignFailVoter.last_round_count":
+		return x.LastRoundCount != int64(0)
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.TssKeysignFailVoter"))
@@ -210,8 +210,8 @@ func (x *fastReflection_TssKeysignFailVoter) Clear(fd protoreflect.FieldDescript
 		x.Height = int64(0)
 	case "types.TssKeysignFailVoter.signers":
 		x.Signers = nil
-	case "types.TssKeysignFailVoter.round7_count":
-		x.Round7Count = int64(0)
+	case "types.TssKeysignFailVoter.last_round_count":
+		x.LastRoundCount = int64(0)
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.TssKeysignFailVoter"))
@@ -240,8 +240,8 @@ func (x *fastReflection_TssKeysignFailVoter) Get(descriptor protoreflect.FieldDe
 		}
 		listValue := &_TssKeysignFailVoter_6_list{list: &x.Signers}
 		return protoreflect.ValueOfList(listValue)
-	case "types.TssKeysignFailVoter.round7_count":
-		value := x.Round7Count
+	case "types.TssKeysignFailVoter.last_round_count":
+		value := x.LastRoundCount
 		return protoreflect.ValueOfInt64(value)
 	default:
 		if descriptor.IsExtension() {
@@ -271,8 +271,8 @@ func (x *fastReflection_TssKeysignFailVoter) Set(fd protoreflect.FieldDescriptor
 		lv := value.List()
 		clv := lv.(*_TssKeysignFailVoter_6_list)
 		x.Signers = *clv.list
-	case "types.TssKeysignFailVoter.round7_count":
-		x.Round7Count = value.Int()
+	case "types.TssKeysignFailVoter.last_round_count":
+		x.LastRoundCount = value.Int()
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.TssKeysignFailVoter"))
@@ -303,8 +303,8 @@ func (x *fastReflection_TssKeysignFailVoter) Mutable(fd protoreflect.FieldDescri
 		panic(fmt.Errorf("field id of message types.TssKeysignFailVoter is not mutable"))
 	case "types.TssKeysignFailVoter.height":
 		panic(fmt.Errorf("field height of message types.TssKeysignFailVoter is not mutable"))
-	case "types.TssKeysignFailVoter.round7_count":
-		panic(fmt.Errorf("field round7_count of message types.TssKeysignFailVoter is not mutable"))
+	case "types.TssKeysignFailVoter.last_round_count":
+		panic(fmt.Errorf("field last_round_count of message types.TssKeysignFailVoter is not mutable"))
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.TssKeysignFailVoter"))
@@ -325,7 +325,7 @@ func (x *fastReflection_TssKeysignFailVoter) NewField(fd protoreflect.FieldDescr
 	case "types.TssKeysignFailVoter.signers":
 		list := []string{}
 		return protoreflect.ValueOfList(&_TssKeysignFailVoter_6_list{list: &list})
-	case "types.TssKeysignFailVoter.round7_count":
+	case "types.TssKeysignFailVoter.last_round_count":
 		return protoreflect.ValueOfInt64(int64(0))
 	default:
 		if fd.IsExtension() {
@@ -409,8 +409,8 @@ func (x *fastReflection_TssKeysignFailVoter) ProtoMethods() *protoiface.Methods 
 				n += 1 + l + runtime.Sov(uint64(l))
 			}
 		}
-		if x.Round7Count != 0 {
-			n += 1 + runtime.Sov(uint64(x.Round7Count))
+		if x.LastRoundCount != 0 {
+			n += 1 + runtime.Sov(uint64(x.LastRoundCount))
 		}
 		if x.unknownFields != nil {
 			n += len(x.unknownFields)
@@ -441,8 +441,8 @@ func (x *fastReflection_TssKeysignFailVoter) ProtoMethods() *protoiface.Methods 
 			i -= len(x.unknownFields)
 			copy(dAtA[i:], x.unknownFields)
 		}
-		if x.Round7Count != 0 {
-			i = runtime.EncodeVarint(dAtA, i, uint64(x.Round7Count))
+		if x.LastRoundCount != 0 {
+			i = runtime.EncodeVarint(dAtA, i, uint64(x.LastRoundCount))
 			i--
 			dAtA[i] = 0x38
 		}
@@ -601,9 +601,9 @@ func (x *fastReflection_TssKeysignFailVoter) ProtoMethods() *protoiface.Methods 
 				iNdEx = postIndex
 			case 7:
 				if wireType != 0 {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Round7Count", wireType)
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field LastRoundCount", wireType)
 				}
-				x.Round7Count = 0
+				x.LastRoundCount = 0
 				for shift := uint(0); ; shift += 7 {
 					if shift >= 64 {
 						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
@@ -613,7 +613,7 @@ func (x *fastReflection_TssKeysignFailVoter) ProtoMethods() *protoiface.Methods 
 					}
 					b := dAtA[iNdEx]
 					iNdEx++
-					x.Round7Count |= int64(b&0x7F) << shift
+					x.LastRoundCount |= int64(b&0x7F) << shift
 					if b < 0x80 {
 						break
 					}
@@ -671,10 +671,10 @@ type TssKeysignFailVoter struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id          string   `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Height      int64    `protobuf:"varint,4,opt,name=height,proto3" json:"height,omitempty"`
-	Signers     []string `protobuf:"bytes,6,rep,name=signers,proto3" json:"signers,omitempty"`
-	Round7Count int64    `protobuf:"varint,7,opt,name=round7_count,json=round7Count,proto3" json:"round7_count,omitempty"`
+	Id             string   `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Height         int64    `protobuf:"varint,4,opt,name=height,proto3" json:"height,omitempty"`
+	Signers        []string `protobuf:"bytes,6,rep,name=signers,proto3" json:"signers,omitempty"`
+	LastRoundCount int64    `protobuf:"varint,7,opt,name=last_round_count,json=lastRoundCount,proto3" json:"last_round_count,omitempty"`
 }
 
 func (x *TssKeysignFailVoter) Reset() {
@@ -718,9 +718,9 @@ func (x *TssKeysignFailVoter) GetSigners() []string {
 	return nil
 }
 
-func (x *TssKeysignFailVoter) GetRound7Count() int64 {
+func (x *TssKeysignFailVoter) GetLastRoundCount() int64 {
 	if x != nil {
-		return x.Round7Count
+		return x.LastRoundCount
 	}
 	return 0
 }
@@ -731,25 +731,25 @@ var file_types_type_tss_keysign_proto_rawDesc = []byte{
 	0x0a, 0x1c, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x5f, 0x74, 0x73, 0x73,
 	0x5f, 0x6b, 0x65, 0x79, 0x73, 0x69, 0x67, 0x6e, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x05,
 	0x74, 0x79, 0x70, 0x65, 0x73, 0x1a, 0x14, 0x67, 0x6f, 0x67, 0x6f, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x2f, 0x67, 0x6f, 0x67, 0x6f, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x82, 0x01, 0x0a, 0x13,
+	0x2f, 0x67, 0x6f, 0x67, 0x6f, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x89, 0x01, 0x0a, 0x13,
 	0x54, 0x73, 0x73, 0x4b, 0x65, 0x79, 0x73, 0x69, 0x67, 0x6e, 0x46, 0x61, 0x69, 0x6c, 0x56, 0x6f,
 	0x74, 0x65, 0x72, 0x12, 0x16, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x42,
 	0x06, 0xe2, 0xde, 0x1f, 0x02, 0x49, 0x44, 0x52, 0x02, 0x69, 0x64, 0x12, 0x16, 0x0a, 0x06, 0x68,
 	0x65, 0x69, 0x67, 0x68, 0x74, 0x18, 0x04, 0x20, 0x01, 0x28, 0x03, 0x52, 0x06, 0x68, 0x65, 0x69,
 	0x67, 0x68, 0x74, 0x12, 0x18, 0x0a, 0x07, 0x73, 0x69, 0x67, 0x6e, 0x65, 0x72, 0x73, 0x18, 0x06,
-	0x20, 0x03, 0x28, 0x09, 0x52, 0x07, 0x73, 0x69, 0x67, 0x6e, 0x65, 0x72, 0x73, 0x12, 0x21, 0x0a,
-	0x0c, 0x72, 0x6f, 0x75, 0x6e, 0x64, 0x37, 0x5f, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x18, 0x07, 0x20,
-	0x01, 0x28, 0x03, 0x52, 0x0b, 0x72, 0x6f, 0x75, 0x6e, 0x64, 0x37, 0x43, 0x6f, 0x75, 0x6e, 0x74,
-	0x42, 0x8c, 0x01, 0x0a, 0x09, 0x63, 0x6f, 0x6d, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x42, 0x13,
-	0x54, 0x79, 0x70, 0x65, 0x54, 0x73, 0x73, 0x4b, 0x65, 0x79, 0x73, 0x69, 0x67, 0x6e, 0x50, 0x72,
-	0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x2a, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f,
-	0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72,
-	0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x74, 0x79, 0x70, 0x65,
-	0x73, 0xa2, 0x02, 0x03, 0x54, 0x58, 0x58, 0xaa, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xca,
-	0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xe2, 0x02, 0x11, 0x54, 0x79, 0x70, 0x65, 0x73, 0x5c,
-	0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x05, 0x54, 0x79,
-	0x70, 0x65, 0x73, 0xc8, 0xe1, 0x1e, 0x00, 0xd8, 0xe1, 0x1e, 0x00, 0x80, 0xe2, 0x1e, 0x00, 0x62,
-	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x20, 0x03, 0x28, 0x09, 0x52, 0x07, 0x73, 0x69, 0x67, 0x6e, 0x65, 0x72, 0x73, 0x12, 0x28, 0x0a,
+	0x10, 0x6c, 0x61, 0x73, 0x74, 0x5f, 0x72, 0x6f, 0x75, 0x6e, 0x64, 0x5f, 0x63, 0x6f, 0x75, 0x6e,
+	0x74, 0x18, 0x07, 0x20, 0x01, 0x28, 0x03, 0x52, 0x0e, 0x6c, 0x61, 0x73, 0x74, 0x52, 0x6f, 0x75,
+	0x6e, 0x64, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x42, 0x8c, 0x01, 0x0a, 0x09, 0x63, 0x6f, 0x6d, 0x2e,
+	0x74, 0x79, 0x70, 0x65, 0x73, 0x42, 0x13, 0x54, 0x79, 0x70, 0x65, 0x54, 0x73, 0x73, 0x4b, 0x65,
+	0x79, 0x73, 0x69, 0x67, 0x6e, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x2a, 0x67, 0x69,
+	0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61,
+	0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33, 0x2f, 0x61,
+	0x70, 0x69, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x73, 0xa2, 0x02, 0x03, 0x54, 0x58, 0x58, 0xaa, 0x02,
+	0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xca, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xe2, 0x02,
+	0x11, 0x54, 0x79, 0x70, 0x65, 0x73, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61,
+	0x74, 0x61, 0xea, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xc8, 0xe1, 0x1e, 0x00, 0xd8, 0xe1,
+	0x1e, 0x00, 0x80, 0xe2, 0x1e, 0x00, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (

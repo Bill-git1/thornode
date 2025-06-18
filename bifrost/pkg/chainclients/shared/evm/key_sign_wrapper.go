@@ -93,7 +93,7 @@ func (w *KeySignWrapper) signTSS(tx *etypes.Transaction, poolPubKey string) ([]b
 	}
 
 	hash := w.signer.Hash(tx)
-	sig, recovery, err := w.tssKeyManager.RemoteSign(hash[:], poolPubKey)
+	sig, recovery, err := w.tssKeyManager.RemoteSign(hash[:], common.SigningAlgoSecp256k1, poolPubKey)
 	if err != nil || sig == nil {
 		return nil, fmt.Errorf("fail to TSS sign: %w", err)
 	}

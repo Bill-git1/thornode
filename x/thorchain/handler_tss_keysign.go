@@ -128,8 +128,8 @@ func (h TssKeysignHandler) handleV3_0_0(ctx cosmos.Context, msg MsgTssKeysignFai
 	}
 
 	// track the count of round 7 failures
-	if msg.Blame.Round == tssMessages.KEYSIGN7 {
-		voter.Round7Count++
+	if msg.Blame.Round == tssMessages.KEYSIGN7 || msg.Blame.Round == tssMessages.EDDSAKEYSIGN3 {
+		voter.LastRoundCount++
 	}
 
 	h.mgr.Keeper().SetTssKeysignFailVoter(ctx, voter)
@@ -179,7 +179,7 @@ func (h TssKeysignHandler) handleV3_0_0(ctx cosmos.Context, msg MsgTssKeysignFai
 	// There is a tradeoff here between the number of nodes required to maliciously freeze
 	// the vault and the number of nodes required to maliciously prevent freeze - we err
 	// on the side of over-freezing.
-	if voter.Round7Count > 1 || (voter.Round7Count > 0 && len(voter.Signers) <= 2) {
+	if voter.LastRoundCount > 1 || (voter.LastRoundCount > 0 && len(voter.Signers) <= 2) {
 		if err != nil {
 			ctx.Logger().Error("fail to fetch vault", "pubkey", msg.PubKey, "error", err)
 		}
@@ -205,7 +205,7 @@ func (h TssKeysignHandler) handleV3_0_0(ctx cosmos.Context, msg MsgTssKeysignFai
 
 	h.mgr.Slasher().DecSlashPoints(slashCtx, observeSlashPoints, voter.GetSigners()...)
 	voter.Signers = nil
-	voter.Round7Count = 0
+	voter.LastRoundCount = 0
 	h.mgr.Keeper().SetTssKeysignFailVoter(ctx, voter)
 
 	slashPoints := h.mgr.GetConstants().GetInt64Value(constants.FailKeysignSlashPoints)

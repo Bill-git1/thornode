@@ -495,7 +495,7 @@ func (s *EVMSuite) TestSignEVMTx(c *C) {
 	c.Assert(pubkeyMgr.Start(), IsNil)
 	defer func() { c.Assert(pubkeyMgr.Stop(), IsNil) }()
 	pubkeys := pubkeyMgr.GetPubKeys()
-	addr, err := pubkeys[len(pubkeys)-1].GetAddress(common.AVAXChain)
+	addr, err := pubkeys[len(pubkeys)-4].GetAddress(common.AVAXChain)
 	c.Assert(err, IsNil)
 
 	// Not AVAX chain

@@ -5,6 +5,7 @@ import (
 
 	"github.com/cometbft/cometbft/crypto"
 	ctypes "github.com/cosmos/cosmos-sdk/types"
+	"gitlab.com/thorchain/thornode/v3/common"
 )
 
 // MockThorchainKeymanager is to mock the TSS , so as we could test it
@@ -30,7 +31,7 @@ func (k *MockThorchainKeyManager) ExportAsKeyStore(password string) (*EncryptedK
 	return nil, nil
 }
 
-func (k *MockThorchainKeyManager) RemoteSign(msg []byte, poolPubKey string) ([]byte, []byte, error) {
+func (k *MockThorchainKeyManager) RemoteSign(msg []byte, algo common.SigningAlgo, poolPubKey string) ([]byte, []byte, error) {
 	// this is the key we are using to test TSS keysign result in BTC chain
 	// tthorpub1addwnpepqwznsrgk2t5vn2cszr6ku6zned6tqxknugzw3vhdcjza284d7djp5rql6vn
 	if poolPubKey == "tthorpub1addwnpepqwznsrgk2t5vn2cszr6ku6zned6tqxknugzw3vhdcjza284d7djp5rql6vn" {

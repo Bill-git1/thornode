@@ -66,7 +66,7 @@ func (vm *NetworkMgrVCUR) processGenesisSetup(ctx cosmos.Context) error {
 			common.BASEChain,
 			common.XRPChain,
 		}
-		vault := NewVault(0, ActiveVault, AsgardVault, active[0].PubKeySet.Secp256k1, supportChains.Strings(), vm.k.GetChainContracts(ctx, supportChains))
+		vault := NewVaultV2(0, ActiveVault, AsgardVault, active[0].PubKeySet.Secp256k1, supportChains.Strings(), vm.k.GetChainContracts(ctx, supportChains), active[0].PubKeySet.Ed25519)
 		vault.Membership = common.PubKeys{active[0].PubKeySet.Secp256k1}.Strings()
 		if err := vm.k.SetVault(ctx, vault); err != nil {
 			return fmt.Errorf("fail to save vault: %w", err)
@@ -616,7 +616,7 @@ func (vm *NetworkMgrVCUR) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 				// GetMostSecure also takes into account migration outbound items.
 				target := vm.k.GetMostSecure(ctx, targetVaults, signingTransactionPeriod)
 				// get address of asgard pubkey
-				addr, err := target.PubKey.GetAddress(coin.Asset.GetChain())
+				addr, err := target.GetAddress(coin.Asset.GetChain())
 				if err != nil {
 					return err
 				}
@@ -740,10 +740,11 @@ func (vm *NetworkMgrVCUR) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 					}
 				}
 				toi := TxOutItem{
-					Chain:       coin.Asset.GetChain(),
-					InHash:      common.BlankTxID,
-					ToAddress:   addr,
-					VaultPubKey: vault.PubKey,
+					Chain:            coin.Asset.GetChain(),
+					InHash:           common.BlankTxID,
+					ToAddress:        addr,
+					VaultPubKey:      vault.PubKey,
+					VaultPubKeyEddsa: vault.PubKeyEddsa,
 					Coin: common.Coin{
 						Asset:  coin.Asset,
 						Amount: amt,

@@ -59,7 +59,6 @@ func (m TxOutItem) Equals(toi2 TxOutItem) bool {
 	if m.GasRate != toi2.GasRate {
 		return false
 	}
-
 	return true
 }
 

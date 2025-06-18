@@ -51,6 +51,10 @@
           "router": "0x17aB05351fC94a1a67Bf3f56DdbB941aE6c63E25"
         }
       ]
+    },
+    {
+      "pub_key": "tthorpub1addwnpepq27s79a9xk8hjcpjuthmwnl2z4su43uynekcjuqcnmhpemfgfrh6sm4yd8e",
+      "pub_key_eddsa": "tthorpub1zcjduepq3p80uejsez2p7ynwjfshlsetm7uqqjxn8xe5susgsf37c0de0kcsecrfnm"
     }
   ],
   "yggdrasil": [
