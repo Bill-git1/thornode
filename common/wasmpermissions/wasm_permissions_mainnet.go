@@ -97,6 +97,8 @@ var WasmPermissionsRaw = WasmPermissions{
 			Origin: "https://gitlab.com/thorchain/rujira/-/tree/80b48eddc0f16f735855442fdbc5423ac5398ff6/contracts/rujira-revenue",
 			Deployers: map[string]bool{
 				"thor1e0lmk5juawc46jwjwd0xfz587njej7ay5fh6cd": true,
+				// AUTO x for TCY auto-compounder
+				"thor1lt2r7uwly4gwx7kdmdp86md3zzdrqlt3dgr0ag": true,
 			},
 		},
 
@@ -105,7 +107,7 @@ var WasmPermissionsRaw = WasmPermissions{
 			Origin: "https://gitlab.com/thorchain/rujira/-/tree/80b48eddc0f16f735855442fdbc5423ac5398ff6/contracts/rujira-staking",
 			Deployers: map[string]bool{
 				"thor1e0lmk5juawc46jwjwd0xfz587njej7ay5fh6cd": true,
-				// AUTO team for TCY auto-compounder
+				// AUTO x for TCY auto-compounder
 				"thor1lt2r7uwly4gwx7kdmdp86md3zzdrqlt3dgr0ag": true,
 			},
 		},
