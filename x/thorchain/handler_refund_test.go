@@ -118,7 +118,7 @@ func (k *refundTxHandlerKeeperTestHelper) SetNetwork(ctx cosmos.Context, data Ne
 }
 
 // newRefundTxHandlerTestHelper setup all the basic condition to test OutboundTxHandler
-func newRefundTxHandlerTestHelper(c *C) refundTxHandlerTestHelper {
+func newRefundTxHandlerTestHelper(c *C, txIds ...common.TxID) refundTxHandlerTestHelper {
 	ctx, k := setupKeeperForTest(c)
 	ctx = ctx.WithBlockHeight(1023)
 	pool := NewPool()
@@ -140,8 +140,12 @@ func newRefundTxHandlerTestHelper(c *C) refundTxHandlerTestHelper {
 	}
 	yggVault.AddFunds(vaultCoins)
 
+	if len(txIds) == 0 {
+		txIds = append(txIds, GetRandomTxHash())
+	}
+
 	tx := NewObservedTx(common.Tx{
-		ID:          GetRandomTxHash(),
+		ID:          txIds[0],
 		Chain:       common.ETHChain,
 		Coins:       vaultCoins,
 		Memo:        "swap:RUNE-67C",
@@ -283,33 +287,46 @@ func (s *HandlerRefundSuite) TestRefundTxHandlerShouldUpdateTxOut(c *C) {
 }
 
 func (s *HandlerRefundSuite) TestRefundTxNormalCase(c *C) {
-	helper := newRefundTxHandlerTestHelper(c)
-	handler := NewRefundHandler(helper.mgr)
+	testHashes := []string{
+		"b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c",
+		"b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c-1234",
+		"B5BB9D8014A0F9B1D61E21E796D78DCCDF1352F23CD32812F4850B878AE4944C",
+		"B5BB9D8014A0F9B1D61E21E796D78DCCDF1352F23CD32812F4850B878AE4944C-1234",
+	}
 
-	fromAddr, err := helper.yggVault.PubKey.GetAddress(common.ETHChain)
-	c.Assert(err, IsNil)
-	tx := NewObservedTx(common.Tx{
-		ID:    GetRandomTxHash(),
-		Chain: common.ETHChain,
-		Coins: common.Coins{
-			common.NewCoin(common.ETHAsset, cosmos.NewUint(199925000)),
-		},
-		Memo:        NewRefundMemo(helper.inboundTx.Tx.ID).String(),
-		FromAddress: fromAddr,
-		ToAddress:   helper.inboundTx.Tx.FromAddress,
-		Gas: common.Gas{
-			common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
-		},
-	}, helper.ctx.BlockHeight(), helper.yggVault.PubKey, helper.ctx.BlockHeight())
-	// valid outbound message, with event, with txout
-	outMsg := NewMsgRefundTx(tx, helper.inboundTx.Tx.ID, helper.nodeAccount.NodeAddress)
-	_, err = handler.Run(helper.ctx, outMsg)
-	c.Assert(err, IsNil)
+	for _, hash := range testHashes {
 
-	// txout should had been complete
-	txOut, err := helper.keeper.GetTxOut(helper.ctx, helper.ctx.BlockHeight())
-	c.Assert(err, IsNil)
-	c.Assert(txOut.TxArray[0].OutHash.IsEmpty(), Equals, false)
+		txId, err := common.NewTxID(hash)
+		c.Assert(err, IsNil)
+
+		helper := newRefundTxHandlerTestHelper(c, txId)
+		handler := NewRefundHandler(helper.mgr)
+
+		fromAddr, err := helper.yggVault.PubKey.GetAddress(common.ETHChain)
+		c.Assert(err, IsNil)
+		tx := NewObservedTx(common.Tx{
+			ID:    GetRandomTxHash(),
+			Chain: common.ETHChain,
+			Coins: common.Coins{
+				common.NewCoin(common.ETHAsset, cosmos.NewUint(199925000)),
+			},
+			Memo:        NewRefundMemo(helper.inboundTx.Tx.ID).String(),
+			FromAddress: fromAddr,
+			ToAddress:   helper.inboundTx.Tx.FromAddress,
+			Gas: common.Gas{
+				common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
+			},
+		}, helper.ctx.BlockHeight(), helper.yggVault.PubKey, helper.ctx.BlockHeight())
+		// valid outbound message, with event, with txout
+		outMsg := NewMsgRefundTx(tx, helper.inboundTx.Tx.ID, helper.nodeAccount.NodeAddress)
+		_, err = handler.Run(helper.ctx, outMsg)
+		c.Assert(err, IsNil)
+
+		// txout should had been complete
+		txOut, err := helper.keeper.GetTxOut(helper.ctx, helper.ctx.BlockHeight())
+		c.Assert(err, IsNil)
+		c.Assert(txOut.TxArray[0].OutHash.IsEmpty(), Equals, false)
+	}
 }
 
 func (s *HandlerRefundSuite) TestRefundTxHandlerSendExtraFundShouldBeSlashed(c *C) {

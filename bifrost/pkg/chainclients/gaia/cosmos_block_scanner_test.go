@@ -3,6 +3,10 @@ package gaia
 import (
 	"fmt"
 
+	ibccoretypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
+	ibcchanneltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
+	ibclightclient "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
+
 	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -200,10 +204,15 @@ func (s *BlockScannerTestSuite) TestProcessTxs(c *C) {
 		ChainID: common.GAIAChain,
 		WhitelistCosmosAssets: []config.WhitelistCosmosAsset{
 			{Denom: "uatom", Decimals: 6, THORChainSymbol: "ATOM"},
+			{Denom: "ibc/5DB84693CB3F67A2D25D133C177B06786F423D6D1AFF2B8E080F0753B2E4D585", Decimals: 6, THORChainSymbol: "NTRN"},
 		},
 	}
 	registry := s.bridge.GetContext().InterfaceRegistry
 	btypes.RegisterInterfaces(registry)
+	ibcchanneltypes.RegisterInterfaces(registry)
+	ibccoretypes.RegisterInterfaces(registry)
+	ibclightclient.RegisterInterfaces(registry)
+
 	cdc := codec.NewProtoCodec(registry)
 
 	blockScanner := CosmosBlockScanner{
@@ -221,4 +230,29 @@ func (s *BlockScannerTestSuite) TestProcessTxs(c *C) {
 
 	// proccessTxs should filter out everything besides the valid MsgSend
 	c.Assert(len(txInItems), Equals, 1)
+
+	// single tx in single ibc message
+	// ------------------------------------------------------------------------
+
+	block, err = blockScanner.GetBlock(11350886)
+	c.Assert(err, IsNil)
+
+	txInItems, err = blockScanner.processTxs(11350886, block.Data.Txs)
+	c.Assert(err, IsNil)
+
+	c.Assert(len(txInItems), Equals, 1)
+	c.Assert(txInItems[0].Tx, Equals, "935638acbd9be5ae7861ad6932d1967a35db0e682f602a275611e5ed62d70cae")
+
+	// multiple tx in single ibc message
+	// ------------------------------------------------------------------------
+
+	block, err = blockScanner.GetBlock(11350935)
+	c.Assert(err, IsNil)
+
+	txInItems, err = blockScanner.processTxs(11350935, block.Data.Txs)
+	c.Assert(err, IsNil)
+
+	c.Assert(len(txInItems), Equals, 2)
+	c.Assert(txInItems[0].Tx, Equals, "17471479c1cb868818dfdfde25711f13ec448ffe08893cb47b4c7b60b1429b25-0")
+	c.Assert(txInItems[1].Tx, Equals, "17471479c1cb868818dfdfde25711f13ec448ffe08893cb47b4c7b60b1429b25-1")
 }

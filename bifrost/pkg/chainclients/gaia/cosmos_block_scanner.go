@@ -2,11 +2,19 @@ package gaia
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/btcsuite/btcutil/bech32"
+	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	ibccoretypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
+	ibcchanneltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
+	ibclightclient "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -125,6 +133,9 @@ func NewCosmosBlockScanner(rpcHost string,
 	paramsproptypes.RegisterInterfaces(registry)
 	upgradetypes.RegisterInterfaces(registry)
 	distribtypes.RegisterInterfaces(registry)
+	ibcchanneltypes.RegisterInterfaces(registry)
+	ibccoretypes.RegisterInterfaces(registry)
+	ibclightclient.RegisterInterfaces(registry)
 	cdc := codec.NewProtoCodec(registry)
 
 	// Registry for encoding txs
@@ -309,6 +320,15 @@ func (c *CosmosBlockScanner) processTxs(height int64, rawTxs []tmtypes.Tx) ([]*t
 	var txIn []*types.TxInItem
 	for i, rawTx := range rawTxs {
 		hash := hex.EncodeToString(tmhash.Sum(rawTx))
+
+		if blockResults.TxsResults[i].Code != 0 {
+			c.logger.Warn().
+				Str("txhash", hash).
+				Int64("height", height).
+				Msg("inbound tx has non-zero response code, ignoring...")
+			continue
+		}
+
 		var tx ctypes.Tx
 		tx, err = decoder(rawTx)
 		if err != nil {
@@ -317,8 +337,19 @@ func (c *CosmosBlockScanner) processTxs(height int64, rawTxs []tmtypes.Tx) ([]*t
 				// transaction may contain a valid MsgSend, we support transactions containing
 				// only MsgSend and MsgExecuteContract. If the transaction contains MsgSend or
 				// MsgExecuteContract log the error for debugging.
-				if strings.Contains(err.Error(), "MsgSend") || strings.Contains(err.Error(), "MsgExecuteContract") {
-					c.logger.Error().Str("tx", string(rawTx)).Err(err).Msg("unable to decode msg")
+				supportedMessages := []string{
+					"MsgSend",
+					"MsgExecuteContract",
+					"MsgRecvPacket",
+					"MsgUpdateClient",
+				}
+				for _, msg := range supportedMessages {
+					if strings.Contains(err.Error(), msg) {
+						c.logger.Err(err).
+							Str("tx", string(rawTx)).
+							Msg("unable to decode msg")
+						break
+					}
 				}
 			}
 			continue
@@ -328,66 +359,153 @@ func (c *CosmosBlockScanner) processTxs(height int64, rawTxs []tmtypes.Tx) ([]*t
 		fees := feeTx.GetFee()
 		mem, _ := tx.(ctypes.TxWithMemo)
 		memo := mem.GetMemo()
+
 		c.updateGasCache(feeTx)
 
-		for _, msg := range tx.GetMsgs() {
-			if msg, isMsgSend := msg.(*banktypes.MsgSend); isMsgSend {
-				// Transaction contains a relevant MsgSend, check if the transaction was successful...
-				if blockResults.TxsResults[i].Code != 0 {
-					c.logger.Warn().Str("txhash", hash).Int64("height", height).Msg("inbound tx has non-zero response code, ignoring...")
+		// collect all txIns in a temp list, in case we need to append ids
+		// to the tx hash, if more than one deposit per tx is found
+		txInItems := []*types.TxInItem{}
+		stop := false
+
+		for _, message := range tx.GetMsgs() {
+			coins := common.Coins{}
+			var fromAddress, toAddress string
+
+			switch msg := message.(type) {
+			case *ibcchanneltypes.MsgRecvPacket:
+				var packetData ibctransfertypes.FungibleTokenPacketData
+				err := json.Unmarshal(msg.Packet.Data, &packetData)
+				if err != nil {
+					c.logger.Err(err).Msg("unable to unmarshal fungible token data")
+					continue
+				}
+
+				memo = packetData.Memo
+
+				amount, ok := sdkmath.NewIntFromString(packetData.Amount)
+				if !ok {
+					c.logger.Error().
+						Str("amount", packetData.Amount).
+						Msg("unable to parse amount")
+					continue
+				}
+
+				path := fmt.Sprintf(
+					"%s/%s/%s",
+					msg.Packet.DestinationPort,
+					msg.Packet.DestinationChannel,
+					packetData.Denom,
+				)
+
+				denom := fmt.Sprintf("ibc/%X", sha256.Sum256([]byte(path)))
+
+				// Convert cosmos coins to thorchain coins (taking into account asset decimal precision)
+				coin, err := c.fromCosmosToThorchain(cosmos.NewCoin(
+					denom, amount,
+				))
+				if err != nil {
+					c.logger.Debug().Err(err).Msgf("failed to parse coin: %s", denom)
+					continue
+				}
+
+				coins = common.Coins{coin}
+
+				// set address of destination chain
+				_, data, err := bech32.Decode(packetData.Sender)
+				if err != nil {
+					c.logger.Err(err).Msg("failed to decode sender address")
+				}
+
+				fromAddress, err = bech32.Encode("cosmos", data)
+				if err != nil {
+					c.logger.Err(err).Msg("failed to encode sender address")
+				}
+
+				toAddress = packetData.Receiver
+
+			case *banktypes.MsgSend:
+				// If there are more than one TxIn item per transaction hash,
+				// thornode will fail to process any after the first.
+				// Therefore, limit to 1 MsgSend per transaction.
+
+				// only allow a single MsgSend, or multiple FungibleTokenPakets
+				if len(txInItems) > 0 {
 					continue
 				}
 
 				// Convert cosmos coins to thorchain coins (taking into account asset decimal precision)
-				coins := common.Coins{}
 				for _, coin := range msg.Amount {
 					var cCoin common.Coin
 					cCoin, err = c.fromCosmosToThorchain(coin)
 					if err != nil {
-						c.logger.Debug().Err(err).Interface("coins", c).Msg("unable to convert coin, not whitelisted. skipping...")
+						c.logger.Debug().Err(err).
+							Interface("coins", coin).
+							Msg("unable to convert coin, not whitelisted. skipping...")
 						continue
 					}
 					coins = append(coins, cCoin)
 				}
 
-				// Ignore the tx when no coins exist
-				if coins.IsEmpty() {
+				fromAddress = msg.FromAddress
+				toAddress = msg.ToAddress
+
+				// stop processing tx
+				stop = true
+
+			default:
+				continue
+			}
+
+			// Ignore the tx when no coins exist
+			if coins.IsEmpty() {
+				continue
+			}
+
+			// Convert cosmos gas to thorchain coins (taking into account gas asset decimal precision)
+			gasFees := common.Gas{}
+			for _, fee := range fees {
+				var cCoin common.Coin
+				cCoin, err = c.fromCosmosToThorchain(fee)
+				if err != nil {
+					c.logger.Debug().Err(err).Interface("fees", fees).
+						Msg("unable to convert coin, not whitelisted. skipping...")
 					continue
 				}
+				gasFees = append(gasFees, cCoin)
+			}
+			// THORChain only supports gas paid in ATOM, if gas is paid in another asset
+			// then fake gas as `0.000001 ATOM`, the fee is not used but cannot be empty
+			if gasFees.IsEmpty() {
+				gasFees = append(gasFees, common.NewCoin(
+					c.cfg.ChainID.GetGasAsset(), cosmos.NewUint(1)),
+				)
+			}
 
-				// Convert cosmos gas to thorchain coins (taking into account gas asset decimal precision)
-				gasFees := common.Gas{}
-				for _, fee := range fees {
-					var cCoin common.Coin
-					cCoin, err = c.fromCosmosToThorchain(fee)
-					if err != nil {
-						c.logger.Debug().Err(err).Interface("fees", fees).Msg("unable to convert coin, not whitelisted. skipping...")
-						continue
-					}
-					gasFees = append(gasFees, cCoin)
-				}
-				// THORChain only supports gas paid in ATOM, if gas is paid in another asset
-				// then fake gas as `0.000001 ATOM`, the fee is not used but cannot be empty
-				if gasFees.IsEmpty() {
-					gasFees = append(gasFees, common.NewCoin(c.cfg.ChainID.GetGasAsset(), cosmos.NewUint(1)))
-				}
-				txIn = append(txIn, &types.TxInItem{
-					Tx:          hash,
-					BlockHeight: height,
-					Memo:        memo,
-					Sender:      msg.FromAddress,
-					To:          msg.ToAddress,
-					Coins:       coins,
-					Gas:         gasFees,
-				})
+			txInItems = append(txInItems, &types.TxInItem{
+				Tx:          hash,
+				BlockHeight: height,
+				Memo:        memo,
+				Sender:      fromAddress,
+				To:          toAddress,
+				Coins:       coins,
+				Gas:         gasFees,
+			})
 
-				// If there are more than one TxIn item per transaction hash,
-				// thornode will fail to process any after the first.
-				// Therefore, limit to 1 MsgSend per transaction.
+			// found a MsgSend
+			if stop {
 				break
 			}
 		}
 
+		// Add ids to tx hash, if there have been multiple ibc packets batched
+		// into a single transaction
+		if len(txInItems) > 1 {
+			for index, item := range txInItems {
+				txInItems[index].Tx = fmt.Sprintf("%s-%d", item.Tx, index)
+			}
+		}
+
+		txIn = append(txIn, txInItems...)
 	}
 
 	return txIn, nil
