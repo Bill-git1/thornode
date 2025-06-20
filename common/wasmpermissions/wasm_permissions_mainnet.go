@@ -112,17 +112,17 @@ var WasmPermissionsRaw = WasmPermissions{
 			},
 		},
 
-		// rujira-merge v1.0.1
-		"46f98e6ac1be26c3108ecb684cedd846ffda220dde5bb6b86644dbe0b0acfd05": {
-			Origin: "https://gitlab.com/thorchain/rujira/-/tree/d74d3dc4e2d384aef36af39bc200b59ed8206331/contracts/rujira-merge",
+		// rujira-merge v1.0.2
+		"26876d1d5cb038ff957d875fe79fb739283b74c6a390c8cf6b96b22735aa3e7e": {
+			Origin: "https://gitlab.com/thorchain/rujira/-/tree/ad78b65b2913f8bf6e9f2c3c9f67ade10991ff11/contracts/rujira-merge",
 			Deployers: map[string]bool{
 				"thor1e0lmk5juawc46jwjwd0xfz587njej7ay5fh6cd": true,
 			},
 		},
 
-		// rujira-merge v1.0.0
-		"dab37041278fe3b13e7a401918b09e8fd232aaec7b00b5826cf9ecd9d34991ba": {
-			Origin: "https://gitlab.com/thorchain/rujira/-/tree/0ff0376fd8316ad6cb4e4c306a215c7cbb3e29f6/contracts/rujira-merge",
+		// rujira-merge v1.0.1
+		"46f98e6ac1be26c3108ecb684cedd846ffda220dde5bb6b86644dbe0b0acfd05": {
+			Origin: "https://gitlab.com/thorchain/rujira/-/tree/d74d3dc4e2d384aef36af39bc200b59ed8206331/contracts/rujira-merge",
 			Deployers: map[string]bool{
 				"thor1e0lmk5juawc46jwjwd0xfz587njej7ay5fh6cd": true,
 			},
