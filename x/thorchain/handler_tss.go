@@ -79,9 +79,9 @@ func (h TssHandler) validate(ctx cosmos.Context, msg *MsgTssPool) error {
 	if msg.KeygenType != AsgardKeygen {
 		return fmt.Errorf("only asgard vaults allowed for tss")
 	}
-	// add additional check after v1.134.0 for EdDSA pubkey
+
 	if !msg.PoolPubKeyEddsa.IsEmpty() {
-		if _, err := common.NewPubKey(msg.PoolPubKey.String()); err != nil {
+		if _, err := common.NewPubKey(msg.PoolPubKeyEddsa.String()); err != nil {
 			return cosmos.ErrUnknownRequest(err.Error())
 		}
 	}
