@@ -56,6 +56,7 @@ func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&MsgManageTHORName{}, ModuleName+"/MsgManageTHORName", nil)
 	cdc.RegisterConcrete(&MsgTradeAccountDeposit{}, ModuleName+"/MsgTradeAccountDeposit", nil)
 	cdc.RegisterConcrete(&MsgTradeAccountWithdrawal{}, ModuleName+"/MsgTradeAccountWithdrawal", nil)
+	cdc.RegisterConcrete(&MsgModifyLimitSwap{}, ModuleName+"/MsgModifyLimitSwap", nil)
 	cdc.RegisterConcrete(&MsgSecuredAssetDeposit{}, ModuleName+"/MsgSecuredAssetDeposit", nil)
 	cdc.RegisterConcrete(&MsgSecuredAssetWithdraw{}, ModuleName+"/MsgSecuredAssetWithdraw", nil)
 	cdc.RegisterConcrete(&MsgTCYClaim{}, ModuleName+"/MsgTCYClaim", nil)
@@ -105,6 +106,7 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 		&MsgSolvencyQuorum{},
 		&MsgTradeAccountDeposit{},
 		&MsgTradeAccountWithdrawal{},
+		&MsgModifyLimitSwap{},
 		&MsgSecuredAssetDeposit{},
 		&MsgSecuredAssetWithdraw{},
 		&MsgTCYClaim{},
@@ -121,6 +123,7 @@ func DefineCustomGetSigners(signingOptions *signing.Options) {
 	signingOptions.DefineCustomGetSigners(protoreflect.FullName("types.MsgErrataTx"), MsgErrataCustomGetSigners)
 	signingOptions.DefineCustomGetSigners(protoreflect.FullName("types.MsgErrataTxQuorum"), MsgErrataTxQuorumCustomGetSigners)
 	signingOptions.DefineCustomGetSigners(protoreflect.FullName("types.MsgMimir"), MsgMimirCustomGetSigners)
+	signingOptions.DefineCustomGetSigners(protoreflect.FullName("types.MsgModifyLimitSwap"), MsgModifyLimitSwapCustomGetSigners)
 	signingOptions.DefineCustomGetSigners(protoreflect.FullName("types.MsgNetworkFee"), MsgNetworkFeeCustomGetSigners)
 	signingOptions.DefineCustomGetSigners(protoreflect.FullName("types.MsgNetworkFeeQuorum"), MsgNetworkFeeQuorumCustomGetSigners)
 	signingOptions.DefineCustomGetSigners(protoreflect.FullName("types.MsgNodePauseChain"), MsgNodePauseChainCustomGetSigners)

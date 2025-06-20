@@ -62,6 +62,7 @@ var (
 	_ jsonpb.JSONPBMarshaler = &QueryStreamingSwapsResponse{}
 	_ jsonpb.JSONPBMarshaler = &SwapperClout{}
 	_ jsonpb.JSONPBMarshaler = &QuerySwapQueueResponse{}
+	_ jsonpb.JSONPBMarshaler = &QuerySwapDetailsResponse{}
 	_ jsonpb.JSONPBMarshaler = &QueryThornameResponse{}
 	_ jsonpb.JSONPBMarshaler = &QueryTradeAccountsResponse{}
 	_ jsonpb.JSONPBMarshaler = &QueryTradeUnitsResponse{}
@@ -388,6 +389,43 @@ func (m *QuerySwapQueueResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, err
 			StreamQuantity:          wrapInt64(int64(msg.StreamQuantity)),
 			StreamInterval:          wrapInt64(int64(msg.StreamInterval)),
 		})
+	}
+	return jsonify(result)
+}
+
+// QuerySwapDetailsResponse
+func (m *QuerySwapDetailsResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, error) {
+	if m.Swap == nil {
+		return jsonify(openapi.SwapDetailsResponse{
+			Status:    wrapString(m.Status),
+			QueueType: wrapString(m.QueueType),
+		})
+	}
+
+	// Only display the SwapType if it is "limit", not if "market".
+	var swapType *string
+	if m.Swap.SwapType != SwapType_market {
+		swapType = wrapString(m.Swap.SwapType.String())
+	}
+
+	result := openapi.SwapDetailsResponse{
+		Swap: &openapi.MsgSwap{
+			Tx:                      castTx(m.Swap.Tx),
+			TargetAsset:             m.Swap.TargetAsset.String(),
+			Destination:             wrapString(m.Swap.Destination.String()),
+			TradeTarget:             m.Swap.TradeTarget.String(),
+			AffiliateAddress:        wrapString(m.Swap.AffiliateAddress.String()),
+			AffiliateBasisPoints:    m.Swap.AffiliateBasisPoints.String(),
+			Signer:                  wrapString(m.Swap.Signer.String()),
+			Aggregator:              wrapString(m.Swap.Aggregator),
+			AggregatorTargetAddress: wrapString(m.Swap.AggregatorTargetAddress),
+			AggregatorTargetLimit:   wrapUintPtr(m.Swap.AggregatorTargetLimit),
+			SwapType:                swapType,
+			StreamQuantity:          wrapInt64(int64(m.Swap.StreamQuantity)),
+			StreamInterval:          wrapInt64(int64(m.Swap.StreamInterval)),
+		},
+		Status:    wrapString(m.Status),
+		QueueType: wrapString(m.QueueType),
 	}
 	return jsonify(result)
 }

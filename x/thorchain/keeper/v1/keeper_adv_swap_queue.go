@@ -26,7 +26,7 @@ const ratioLength int = 18
 // AdvSwapQueueEnabled return true if the adv swap queue feature is enabled
 func (k KVStore) AdvSwapQueueEnabled(ctx cosmos.Context) bool {
 	val := k.GetConfigInt64(ctx, constants.EnableAdvSwapQueue)
-	return val > 0
+	return types.AdvSwapQueueMode(val) != types.AdvSwapQueueModeDisabled
 }
 
 // SetAdvSwapQueueItem - writes an adv swap queue item to the kv store

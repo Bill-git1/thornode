@@ -62,14 +62,13 @@ func main() {
 	// get parallelism from environment variable if DEBUG is not set
 	parallelism := 1
 	envParallelism := os.Getenv("PARALLELISM")
-	if envParallelism != "" {
-		if os.Getenv("DEBUG") != "" {
-			log.Fatal().Msg("PARALLELISM is not supported in DEBUG mode")
-		}
+	if envParallelism != "" && os.Getenv("DEBUG") == "" {
 		parallelism, err = strconv.Atoi(envParallelism)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to parse PARALLELISM")
 		}
+	} else if envParallelism != "" && os.Getenv("DEBUG") != "" {
+		log.Warn().Msg("PARALLELISM is not supported in DEBUG mode, ignoring parallelism value")
 	}
 
 	newRegressionTest(files, parallelism).run()

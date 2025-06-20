@@ -20,6 +20,7 @@ import "types/msg_tss_pool.proto";
 import "types/msg_version.proto";
 import "types/msg_upgrade.proto";
 import "types/msg_maint.proto";
+import "types/msg_modify_limit_swap.proto";
 import "cosmwasm/wasm/v1/tx.proto";
 
 option go_package = "gitlab.com/thorchain/thornode/v3/x/thorchain/types";
@@ -33,6 +34,7 @@ service Msg {
     rpc ErrataTx(MsgErrataTx) returns (MsgEmpty);
     rpc ErrataTxQuorum(MsgErrataTxQuorum) returns (MsgEmpty);
     rpc Mimir(MsgMimir) returns (MsgEmpty);
+    rpc ModifyLimitSwap(MsgModifyLimitSwap) returns (MsgEmpty);
     rpc NetworkFee(MsgNetworkFee) returns (MsgEmpty);
     rpc NetworkFeeQuorum(MsgNetworkFeeQuorum) returns (MsgEmpty);
     rpc NodePauseChain(MsgNodePauseChain) returns (MsgEmpty);

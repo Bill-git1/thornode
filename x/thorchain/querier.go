@@ -33,6 +33,17 @@ import (
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
+// Swap status constants
+const (
+	SwapStatusQueued = "queued"
+)
+
+// Queue type constants
+const (
+	QueueTypeRegular  = "regular"
+	QueueTypeAdvanced = "advanced"
+)
+
 var (
 	initManager = func(_ cosmos.Context, _ *Mgrs) {}
 	queryExport = func(_ sdk.Context, _ *Mgrs) ([]byte, error) {
@@ -2401,7 +2412,7 @@ func (qs queryServer) queryQueue(ctx cosmos.Context, _ *types.QueryQueueRequest)
 	defer iter2.Close()
 	for ; iter2.Valid(); iter2.Next() {
 		var msg MsgSwap
-		if err := qs.mgr.Keeper().Cdc().Unmarshal(iterator.Value(), &msg); err != nil {
+		if err := qs.mgr.Keeper().Cdc().Unmarshal(iter2.Value(), &msg); err != nil {
 			ctx.Logger().Error("failed to load MsgSwap", "error", err)
 			continue
 		}
@@ -3014,6 +3025,7 @@ func (qs queryServer) queryPendingOutbound(ctx cosmos.Context, _ *types.QueryPen
 func (qs queryServer) querySwapQueue(ctx cosmos.Context, _ *types.QuerySwapQueueRequest) (*types.QuerySwapQueueResponse, error) {
 	result := make([]*MsgSwap, 0)
 
+	// Add items from regular swap queue
 	iterator := qs.mgr.Keeper().GetSwapQueueIterator(ctx)
 	defer iterator.Close()
 	for ; iterator.Valid(); iterator.Next() {
@@ -3024,7 +3036,65 @@ func (qs queryServer) querySwapQueue(ctx cosmos.Context, _ *types.QuerySwapQueue
 		result = append(result, &msg)
 	}
 
+	// Add items from advanced swap queue if enabled
+	if qs.mgr.Keeper().AdvSwapQueueEnabled(ctx) {
+		advIterator := qs.mgr.Keeper().GetAdvSwapQueueItemIterator(ctx)
+		defer advIterator.Close()
+		for ; advIterator.Valid(); advIterator.Next() {
+			var msg MsgSwap
+			if err := qs.mgr.Keeper().Cdc().Unmarshal(advIterator.Value(), &msg); err != nil {
+				continue
+			}
+			result = append(result, &msg)
+		}
+	}
+
 	return &types.QuerySwapQueueResponse{SwapQueue: result}, nil
+}
+
+func (qs queryServer) querySwapDetails(ctx cosmos.Context, req *types.QuerySwapDetailsRequest) (*types.QuerySwapDetailsResponse, error) {
+	if len(req.TxId) == 0 {
+		return nil, fmt.Errorf("missing tx_id parameter")
+	}
+
+	txID, err := common.NewTxID(req.TxId)
+	if err != nil {
+		return nil, fmt.Errorf("invalid tx_id: %w", err)
+	}
+
+	// Check if it's in the regular swap queue
+	iterator := qs.mgr.Keeper().GetSwapQueueIterator(ctx)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		var msg MsgSwap
+		if err := qs.mgr.Keeper().Cdc().Unmarshal(iterator.Value(), &msg); err != nil {
+			continue
+		}
+		if msg.Tx.ID.Equals(txID) {
+			return &types.QuerySwapDetailsResponse{
+				Swap:      &msg,
+				Status:    SwapStatusQueued,
+				QueueType: QueueTypeRegular,
+			}, nil
+		}
+	}
+
+	// Check if it's in the advanced swap queue
+	if qs.mgr.Keeper().AdvSwapQueueEnabled(ctx) {
+		if qs.mgr.Keeper().HasAdvSwapQueueItem(ctx, txID) {
+			msg, err := qs.mgr.Keeper().GetAdvSwapQueueItem(ctx, txID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get advanced swap queue item: %w", err)
+			}
+			return &types.QuerySwapDetailsResponse{
+				Swap:      &msg,
+				Status:    SwapStatusQueued,
+				QueueType: QueueTypeAdvanced,
+			}, nil
+		}
+	}
+
+	return nil, fmt.Errorf("swap with tx_id %s not found in any queue", req.TxId)
 }
 
 func (qs queryServer) queryTssKeygenMetric(ctx cosmos.Context, req *types.QueryTssKeygenMetricRequest) (*types.QueryTssKeygenMetricResponse, error) {

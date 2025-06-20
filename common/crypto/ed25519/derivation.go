@@ -72,7 +72,7 @@ func ParseDerivationPath(path string) (DerivationPath, error) {
 }
 
 // SeedFromMnemonic generates a seed from a BIP39 mnemonic with an optional passphrase
-func SeedFromMnemonic(mnemonic string, passphrase string) ([]byte, error) {
+func SeedFromMnemonic(mnemonic, passphrase string) ([]byte, error) {
 	if !bip39.IsMnemonicValid(mnemonic) {
 		return nil, fmt.Errorf("invalid mnemonic")
 	}

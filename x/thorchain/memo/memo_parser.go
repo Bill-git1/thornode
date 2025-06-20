@@ -78,6 +78,8 @@ func (p *parser) parse() (mem Memo, err error) {
 		return p.ParseRunePoolWithdrawMemo()
 	case TxSwap, TxLimitSwap:
 		return p.ParseSwapMemo()
+	case TxModifyLimitSwap:
+		return p.ParseModifyLimitSwap()
 	case TxOutbound:
 		return p.ParseOutboundMemo()
 	case TxRefund:
@@ -374,6 +376,42 @@ func (p *parser) getAsset(idx int, required bool, def common.Asset) common.Asset
 		return def
 	}
 	return value
+}
+
+func (p *parser) getCoin(idx int, required bool, def common.Coin) common.Coin {
+	p.incRequired(required)
+	coinStr := p.get(idx)
+
+	// Parse using cosmos.ParseCoins
+	coins, err := cosmos.ParseCoins(coinStr)
+	if err != nil {
+		if required || coinStr != "" {
+			p.addErr(fmt.Errorf("cannot parse '%s' as coins: %w", p.get(idx), err))
+		}
+		return def
+	}
+
+	// Should have exactly one coin
+	if len(coins) != 1 {
+		if required || coinStr != "" {
+			p.addErr(fmt.Errorf("expected exactly one coin, got %d", len(coins)))
+		}
+		return def
+	}
+
+	// Convert cosmos.Coin to common.Coin
+	cosmosCoin := coins[0]
+
+	// Parse the denom back to an asset
+	asset, err := common.NewAssetWithShortCodes(p.version, cosmosCoin.Denom)
+	if err != nil {
+		if required || coinStr != "" {
+			p.addErr(fmt.Errorf("cannot parse denom '%s' as asset: %w", cosmosCoin.Denom, err))
+		}
+		return def
+	}
+
+	return common.NewCoin(asset, cosmos.NewUintFromBigInt(cosmosCoin.Amount.BigInt()))
 }
 
 func (p *parser) getTxID(idx int, required bool, def common.TxID) common.TxID {

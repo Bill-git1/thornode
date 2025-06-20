@@ -73,25 +73,26 @@ const (
 	BurnSupplyType = types.MintBurnSupplyType_burn
 
 	// Memos
-	TxSwap          = mem.TxSwap
-	TxLimitSwap     = mem.TxLimitSwap
-	TxAdd           = mem.TxAdd
-	TxBond          = mem.TxBond
-	TxMigrate       = mem.TxMigrate
-	TxRagnarok      = mem.TxRagnarok
-	TxReserve       = mem.TxReserve
-	TxOutbound      = mem.TxOutbound
-	TxRefund        = mem.TxRefund
-	TxUnBond        = mem.TxUnbond
-	TxLeave         = mem.TxLeave
-	TxMaint         = mem.TxMaint
-	TxWithdraw      = mem.TxWithdraw
-	TxTHORName      = mem.TxTHORName
-	TxLoanOpen      = mem.TxLoanOpen
-	TxLoanRepayment = mem.TxLoanRepayment
-	TxTCYClaim      = mem.TxTCYClaim
-	TxTCYStake      = mem.TxTCYStake
-	TxTCYUnstake    = mem.TxTCYUnstake
+	TxSwap            = mem.TxSwap
+	TxLimitSwap       = mem.TxLimitSwap
+	TxModifyLimitSwap = mem.TxModifyLimitSwap
+	TxAdd             = mem.TxAdd
+	TxBond            = mem.TxBond
+	TxMigrate         = mem.TxMigrate
+	TxRagnarok        = mem.TxRagnarok
+	TxReserve         = mem.TxReserve
+	TxOutbound        = mem.TxOutbound
+	TxRefund          = mem.TxRefund
+	TxUnBond          = mem.TxUnbond
+	TxLeave           = mem.TxLeave
+	TxMaint           = mem.TxMaint
+	TxWithdraw        = mem.TxWithdraw
+	TxTHORName        = mem.TxTHORName
+	TxLoanOpen        = mem.TxLoanOpen
+	TxLoanRepayment   = mem.TxLoanRepayment
+	TxTCYClaim        = mem.TxTCYClaim
+	TxTCYStake        = mem.TxTCYStake
+	TxTCYUnstake      = mem.TxTCYUnstake
 )
 
 var (
@@ -126,6 +127,7 @@ var (
 	NewMsgAddLiquidity             = types.NewMsgAddLiquidity
 	NewMsgWithdrawLiquidity        = types.NewMsgWithdrawLiquidity
 	NewMsgSwap                     = types.NewMsgSwap
+	NewMsgModifyLimitSwap          = types.NewMsgModifyLimitSwap
 	NewKeygen                      = types.NewKeygen
 	NewKeygenBlock                 = types.NewKeygenBlock
 	NewMsgSetNodeKeys              = types.NewMsgSetNodeKeys
@@ -139,6 +141,7 @@ var (
 	NewEventAffiliateFee           = types.NewEventAffiliateFee
 	NewEventStreamingSwap          = types.NewEventStreamingSwap
 	NewEventLimitSwap              = types.NewEventLimitSwap
+	NewEventModifyLimitSwap        = types.NewEventModifyLimitSwap
 	NewEventAddLiquidity           = types.NewEventAddLiquidity
 	NewEventWithdraw               = types.NewEventWithdraw
 	NewEventRefund                 = types.NewEventRefund
@@ -273,6 +276,7 @@ type (
 	MsgErrataTx               = types.MsgErrataTx
 	MsgBan                    = types.MsgBan
 	MsgSwap                   = types.MsgSwap
+	MsgModifyLimitSwap        = types.MsgModifyLimitSwap
 	MsgSetVersion             = types.MsgSetVersion
 	MsgProposeUpgrade         = types.MsgProposeUpgrade
 	MsgApproveUpgrade         = types.MsgApproveUpgrade
@@ -377,6 +381,7 @@ type (
 
 	// Memo
 	SwapMemo                   = mem.SwapMemo
+	ModifyLimitSwapMemo        = mem.ModifyLimitSwapMemo
 	AddLiquidityMemo           = mem.AddLiquidityMemo
 	WithdrawLiquidityMemo      = mem.WithdrawLiquidityMemo
 	DonateMemo                 = mem.DonateMemo

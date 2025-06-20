@@ -1263,6 +1263,648 @@ func (x *fastReflection_EventLimitSwap) ProtoMethods() *protoiface.Methods {
 	}
 }
 
+var (
+	md_EventModifyLimitSwap                        protoreflect.MessageDescriptor
+	fd_EventModifyLimitSwap_from                   protoreflect.FieldDescriptor
+	fd_EventModifyLimitSwap_source                 protoreflect.FieldDescriptor
+	fd_EventModifyLimitSwap_target                 protoreflect.FieldDescriptor
+	fd_EventModifyLimitSwap_modified_target_amount protoreflect.FieldDescriptor
+)
+
+func init() {
+	file_types_type_events_proto_init()
+	md_EventModifyLimitSwap = File_types_type_events_proto.Messages().ByName("EventModifyLimitSwap")
+	fd_EventModifyLimitSwap_from = md_EventModifyLimitSwap.Fields().ByName("from")
+	fd_EventModifyLimitSwap_source = md_EventModifyLimitSwap.Fields().ByName("source")
+	fd_EventModifyLimitSwap_target = md_EventModifyLimitSwap.Fields().ByName("target")
+	fd_EventModifyLimitSwap_modified_target_amount = md_EventModifyLimitSwap.Fields().ByName("modified_target_amount")
+}
+
+var _ protoreflect.Message = (*fastReflection_EventModifyLimitSwap)(nil)
+
+type fastReflection_EventModifyLimitSwap EventModifyLimitSwap
+
+func (x *EventModifyLimitSwap) ProtoReflect() protoreflect.Message {
+	return (*fastReflection_EventModifyLimitSwap)(x)
+}
+
+func (x *EventModifyLimitSwap) slowProtoReflect() protoreflect.Message {
+	mi := &file_types_type_events_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+var _fastReflection_EventModifyLimitSwap_messageType fastReflection_EventModifyLimitSwap_messageType
+var _ protoreflect.MessageType = fastReflection_EventModifyLimitSwap_messageType{}
+
+type fastReflection_EventModifyLimitSwap_messageType struct{}
+
+func (x fastReflection_EventModifyLimitSwap_messageType) Zero() protoreflect.Message {
+	return (*fastReflection_EventModifyLimitSwap)(nil)
+}
+func (x fastReflection_EventModifyLimitSwap_messageType) New() protoreflect.Message {
+	return new(fastReflection_EventModifyLimitSwap)
+}
+func (x fastReflection_EventModifyLimitSwap_messageType) Descriptor() protoreflect.MessageDescriptor {
+	return md_EventModifyLimitSwap
+}
+
+// Descriptor returns message descriptor, which contains only the protobuf
+// type information for the message.
+func (x *fastReflection_EventModifyLimitSwap) Descriptor() protoreflect.MessageDescriptor {
+	return md_EventModifyLimitSwap
+}
+
+// Type returns the message type, which encapsulates both Go and protobuf
+// type information. If the Go type information is not needed,
+// it is recommended that the message descriptor be used instead.
+func (x *fastReflection_EventModifyLimitSwap) Type() protoreflect.MessageType {
+	return _fastReflection_EventModifyLimitSwap_messageType
+}
+
+// New returns a newly allocated and mutable empty message.
+func (x *fastReflection_EventModifyLimitSwap) New() protoreflect.Message {
+	return new(fastReflection_EventModifyLimitSwap)
+}
+
+// Interface unwraps the message reflection interface and
+// returns the underlying ProtoMessage interface.
+func (x *fastReflection_EventModifyLimitSwap) Interface() protoreflect.ProtoMessage {
+	return (*EventModifyLimitSwap)(x)
+}
+
+// Range iterates over every populated field in an undefined order,
+// calling f for each field descriptor and value encountered.
+// Range returns immediately if f returns false.
+// While iterating, mutating operations may only be performed
+// on the current field descriptor.
+func (x *fastReflection_EventModifyLimitSwap) Range(f func(protoreflect.FieldDescriptor, protoreflect.Value) bool) {
+	if x.From != "" {
+		value := protoreflect.ValueOfString(x.From)
+		if !f(fd_EventModifyLimitSwap_from, value) {
+			return
+		}
+	}
+	if x.Source != nil {
+		value := protoreflect.ValueOfMessage(x.Source.ProtoReflect())
+		if !f(fd_EventModifyLimitSwap_source, value) {
+			return
+		}
+	}
+	if x.Target != nil {
+		value := protoreflect.ValueOfMessage(x.Target.ProtoReflect())
+		if !f(fd_EventModifyLimitSwap_target, value) {
+			return
+		}
+	}
+	if x.ModifiedTargetAmount != "" {
+		value := protoreflect.ValueOfString(x.ModifiedTargetAmount)
+		if !f(fd_EventModifyLimitSwap_modified_target_amount, value) {
+			return
+		}
+	}
+}
+
+// Has reports whether a field is populated.
+//
+// Some fields have the property of nullability where it is possible to
+// distinguish between the default value of a field and whether the field
+// was explicitly populated with the default value. Singular message fields,
+// member fields of a oneof, and proto2 scalar fields are nullable. Such
+// fields are populated only if explicitly set.
+//
+// In other cases (aside from the nullable cases above),
+// a proto3 scalar field is populated if it contains a non-zero value, and
+// a repeated field is populated if it is non-empty.
+func (x *fastReflection_EventModifyLimitSwap) Has(fd protoreflect.FieldDescriptor) bool {
+	switch fd.FullName() {
+	case "types.EventModifyLimitSwap.from":
+		return x.From != ""
+	case "types.EventModifyLimitSwap.source":
+		return x.Source != nil
+	case "types.EventModifyLimitSwap.target":
+		return x.Target != nil
+	case "types.EventModifyLimitSwap.modified_target_amount":
+		return x.ModifiedTargetAmount != ""
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventModifyLimitSwap"))
+		}
+		panic(fmt.Errorf("message types.EventModifyLimitSwap does not contain field %s", fd.FullName()))
+	}
+}
+
+// Clear clears the field such that a subsequent Has call reports false.
+//
+// Clearing an extension field clears both the extension type and value
+// associated with the given field number.
+//
+// Clear is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_EventModifyLimitSwap) Clear(fd protoreflect.FieldDescriptor) {
+	switch fd.FullName() {
+	case "types.EventModifyLimitSwap.from":
+		x.From = ""
+	case "types.EventModifyLimitSwap.source":
+		x.Source = nil
+	case "types.EventModifyLimitSwap.target":
+		x.Target = nil
+	case "types.EventModifyLimitSwap.modified_target_amount":
+		x.ModifiedTargetAmount = ""
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventModifyLimitSwap"))
+		}
+		panic(fmt.Errorf("message types.EventModifyLimitSwap does not contain field %s", fd.FullName()))
+	}
+}
+
+// Get retrieves the value for a field.
+//
+// For unpopulated scalars, it returns the default value, where
+// the default value of a bytes scalar is guaranteed to be a copy.
+// For unpopulated composite types, it returns an empty, read-only view
+// of the value; to obtain a mutable reference, use Mutable.
+func (x *fastReflection_EventModifyLimitSwap) Get(descriptor protoreflect.FieldDescriptor) protoreflect.Value {
+	switch descriptor.FullName() {
+	case "types.EventModifyLimitSwap.from":
+		value := x.From
+		return protoreflect.ValueOfString(value)
+	case "types.EventModifyLimitSwap.source":
+		value := x.Source
+		return protoreflect.ValueOfMessage(value.ProtoReflect())
+	case "types.EventModifyLimitSwap.target":
+		value := x.Target
+		return protoreflect.ValueOfMessage(value.ProtoReflect())
+	case "types.EventModifyLimitSwap.modified_target_amount":
+		value := x.ModifiedTargetAmount
+		return protoreflect.ValueOfString(value)
+	default:
+		if descriptor.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventModifyLimitSwap"))
+		}
+		panic(fmt.Errorf("message types.EventModifyLimitSwap does not contain field %s", descriptor.FullName()))
+	}
+}
+
+// Set stores the value for a field.
+//
+// For a field belonging to a oneof, it implicitly clears any other field
+// that may be currently set within the same oneof.
+// For extension fields, it implicitly stores the provided ExtensionType.
+// When setting a composite type, it is unspecified whether the stored value
+// aliases the source's memory in any way. If the composite value is an
+// empty, read-only value, then it panics.
+//
+// Set is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_EventModifyLimitSwap) Set(fd protoreflect.FieldDescriptor, value protoreflect.Value) {
+	switch fd.FullName() {
+	case "types.EventModifyLimitSwap.from":
+		x.From = value.Interface().(string)
+	case "types.EventModifyLimitSwap.source":
+		x.Source = value.Message().Interface().(*common.Coin)
+	case "types.EventModifyLimitSwap.target":
+		x.Target = value.Message().Interface().(*common.Coin)
+	case "types.EventModifyLimitSwap.modified_target_amount":
+		x.ModifiedTargetAmount = value.Interface().(string)
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventModifyLimitSwap"))
+		}
+		panic(fmt.Errorf("message types.EventModifyLimitSwap does not contain field %s", fd.FullName()))
+	}
+}
+
+// Mutable returns a mutable reference to a composite type.
+//
+// If the field is unpopulated, it may allocate a composite value.
+// For a field belonging to a oneof, it implicitly clears any other field
+// that may be currently set within the same oneof.
+// For extension fields, it implicitly stores the provided ExtensionType
+// if not already stored.
+// It panics if the field does not contain a composite type.
+//
+// Mutable is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_EventModifyLimitSwap) Mutable(fd protoreflect.FieldDescriptor) protoreflect.Value {
+	switch fd.FullName() {
+	case "types.EventModifyLimitSwap.source":
+		if x.Source == nil {
+			x.Source = new(common.Coin)
+		}
+		return protoreflect.ValueOfMessage(x.Source.ProtoReflect())
+	case "types.EventModifyLimitSwap.target":
+		if x.Target == nil {
+			x.Target = new(common.Coin)
+		}
+		return protoreflect.ValueOfMessage(x.Target.ProtoReflect())
+	case "types.EventModifyLimitSwap.from":
+		panic(fmt.Errorf("field from of message types.EventModifyLimitSwap is not mutable"))
+	case "types.EventModifyLimitSwap.modified_target_amount":
+		panic(fmt.Errorf("field modified_target_amount of message types.EventModifyLimitSwap is not mutable"))
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventModifyLimitSwap"))
+		}
+		panic(fmt.Errorf("message types.EventModifyLimitSwap does not contain field %s", fd.FullName()))
+	}
+}
+
+// NewField returns a new value that is assignable to the field
+// for the given descriptor. For scalars, this returns the default value.
+// For lists, maps, and messages, this returns a new, empty, mutable value.
+func (x *fastReflection_EventModifyLimitSwap) NewField(fd protoreflect.FieldDescriptor) protoreflect.Value {
+	switch fd.FullName() {
+	case "types.EventModifyLimitSwap.from":
+		return protoreflect.ValueOfString("")
+	case "types.EventModifyLimitSwap.source":
+		m := new(common.Coin)
+		return protoreflect.ValueOfMessage(m.ProtoReflect())
+	case "types.EventModifyLimitSwap.target":
+		m := new(common.Coin)
+		return protoreflect.ValueOfMessage(m.ProtoReflect())
+	case "types.EventModifyLimitSwap.modified_target_amount":
+		return protoreflect.ValueOfString("")
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventModifyLimitSwap"))
+		}
+		panic(fmt.Errorf("message types.EventModifyLimitSwap does not contain field %s", fd.FullName()))
+	}
+}
+
+// WhichOneof reports which field within the oneof is populated,
+// returning nil if none are populated.
+// It panics if the oneof descriptor does not belong to this message.
+func (x *fastReflection_EventModifyLimitSwap) WhichOneof(d protoreflect.OneofDescriptor) protoreflect.FieldDescriptor {
+	switch d.FullName() {
+	default:
+		panic(fmt.Errorf("%s is not a oneof field in types.EventModifyLimitSwap", d.FullName()))
+	}
+	panic("unreachable")
+}
+
+// GetUnknown retrieves the entire list of unknown fields.
+// The caller may only mutate the contents of the RawFields
+// if the mutated bytes are stored back into the message with SetUnknown.
+func (x *fastReflection_EventModifyLimitSwap) GetUnknown() protoreflect.RawFields {
+	return x.unknownFields
+}
+
+// SetUnknown stores an entire list of unknown fields.
+// The raw fields must be syntactically valid according to the wire format.
+// An implementation may panic if this is not the case.
+// Once stored, the caller must not mutate the content of the RawFields.
+// An empty RawFields may be passed to clear the fields.
+//
+// SetUnknown is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_EventModifyLimitSwap) SetUnknown(fields protoreflect.RawFields) {
+	x.unknownFields = fields
+}
+
+// IsValid reports whether the message is valid.
+//
+// An invalid message is an empty, read-only value.
+//
+// An invalid message often corresponds to a nil pointer of the concrete
+// message type, but the details are implementation dependent.
+// Validity is not part of the protobuf data model, and may not
+// be preserved in marshaling or other operations.
+func (x *fastReflection_EventModifyLimitSwap) IsValid() bool {
+	return x != nil
+}
+
+// ProtoMethods returns optional fastReflectionFeature-path implementations of various operations.
+// This method may return nil.
+//
+// The returned methods type is identical to
+// "google.golang.org/protobuf/runtime/protoiface".Methods.
+// Consult the protoiface package documentation for details.
+func (x *fastReflection_EventModifyLimitSwap) ProtoMethods() *protoiface.Methods {
+	size := func(input protoiface.SizeInput) protoiface.SizeOutput {
+		x := input.Message.Interface().(*EventModifyLimitSwap)
+		if x == nil {
+			return protoiface.SizeOutput{
+				NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+				Size:              0,
+			}
+		}
+		options := runtime.SizeInputToOptions(input)
+		_ = options
+		var n int
+		var l int
+		_ = l
+		l = len(x.From)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		if x.Source != nil {
+			l = options.Size(x.Source)
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		if x.Target != nil {
+			l = options.Size(x.Target)
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.ModifiedTargetAmount)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		if x.unknownFields != nil {
+			n += len(x.unknownFields)
+		}
+		return protoiface.SizeOutput{
+			NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+			Size:              n,
+		}
+	}
+
+	marshal := func(input protoiface.MarshalInput) (protoiface.MarshalOutput, error) {
+		x := input.Message.Interface().(*EventModifyLimitSwap)
+		if x == nil {
+			return protoiface.MarshalOutput{
+				NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+				Buf:               input.Buf,
+			}, nil
+		}
+		options := runtime.MarshalInputToOptions(input)
+		_ = options
+		size := options.Size(x)
+		dAtA := make([]byte, size)
+		i := len(dAtA)
+		_ = i
+		var l int
+		_ = l
+		if x.unknownFields != nil {
+			i -= len(x.unknownFields)
+			copy(dAtA[i:], x.unknownFields)
+		}
+		if len(x.ModifiedTargetAmount) > 0 {
+			i -= len(x.ModifiedTargetAmount)
+			copy(dAtA[i:], x.ModifiedTargetAmount)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.ModifiedTargetAmount)))
+			i--
+			dAtA[i] = 0x22
+		}
+		if x.Target != nil {
+			encoded, err := options.Marshal(x.Target)
+			if err != nil {
+				return protoiface.MarshalOutput{
+					NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+					Buf:               input.Buf,
+				}, err
+			}
+			i -= len(encoded)
+			copy(dAtA[i:], encoded)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(encoded)))
+			i--
+			dAtA[i] = 0x1a
+		}
+		if x.Source != nil {
+			encoded, err := options.Marshal(x.Source)
+			if err != nil {
+				return protoiface.MarshalOutput{
+					NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+					Buf:               input.Buf,
+				}, err
+			}
+			i -= len(encoded)
+			copy(dAtA[i:], encoded)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(encoded)))
+			i--
+			dAtA[i] = 0x12
+		}
+		if len(x.From) > 0 {
+			i -= len(x.From)
+			copy(dAtA[i:], x.From)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.From)))
+			i--
+			dAtA[i] = 0xa
+		}
+		if input.Buf != nil {
+			input.Buf = append(input.Buf, dAtA...)
+		} else {
+			input.Buf = dAtA
+		}
+		return protoiface.MarshalOutput{
+			NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+			Buf:               input.Buf,
+		}, nil
+	}
+	unmarshal := func(input protoiface.UnmarshalInput) (protoiface.UnmarshalOutput, error) {
+		x := input.Message.Interface().(*EventModifyLimitSwap)
+		if x == nil {
+			return protoiface.UnmarshalOutput{
+				NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+				Flags:             input.Flags,
+			}, nil
+		}
+		options := runtime.UnmarshalInputToOptions(input)
+		_ = options
+		dAtA := input.Buf
+		l := len(dAtA)
+		iNdEx := 0
+		for iNdEx < l {
+			preIndex := iNdEx
+			var wire uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				wire |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			fieldNum := int32(wire >> 3)
+			wireType := int(wire & 0x7)
+			if wireType == 4 {
+				return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: EventModifyLimitSwap: wiretype end group for non-group")
+			}
+			if fieldNum <= 0 {
+				return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: EventModifyLimitSwap: illegal tag %d (wire type %d)", fieldNum, wire)
+			}
+			switch fieldNum {
+			case 1:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field From", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.From = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 2:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Source", wireType)
+				}
+				var msglen int
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					msglen |= int(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				if msglen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + msglen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				if x.Source == nil {
+					x.Source = &common.Coin{}
+				}
+				if err := options.Unmarshal(dAtA[iNdEx:postIndex], x.Source); err != nil {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, err
+				}
+				iNdEx = postIndex
+			case 3:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Target", wireType)
+				}
+				var msglen int
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					msglen |= int(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				if msglen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + msglen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				if x.Target == nil {
+					x.Target = &common.Coin{}
+				}
+				if err := options.Unmarshal(dAtA[iNdEx:postIndex], x.Target); err != nil {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, err
+				}
+				iNdEx = postIndex
+			case 4:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field ModifiedTargetAmount", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.ModifiedTargetAmount = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			default:
+				iNdEx = preIndex
+				skippy, err := runtime.Skip(dAtA[iNdEx:])
+				if err != nil {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, err
+				}
+				if (skippy < 0) || (iNdEx+skippy) < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if (iNdEx + skippy) > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				if !options.DiscardUnknown {
+					x.unknownFields = append(x.unknownFields, dAtA[iNdEx:iNdEx+skippy]...)
+				}
+				iNdEx += skippy
+			}
+		}
+
+		if iNdEx > l {
+			return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+		}
+		return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, nil
+	}
+	return &protoiface.Methods{
+		NoUnkeyedLiterals: struct{}{},
+		Flags:             protoiface.SupportMarshalDeterministic | protoiface.SupportUnmarshalDiscardUnknown,
+		Size:              size,
+		Marshal:           marshal,
+		Unmarshal:         unmarshal,
+		Merge:             nil,
+		CheckInitialized:  nil,
+	}
+}
+
 var _ protoreflect.List = (*_EventStreamingSwap_10_list)(nil)
 
 type _EventStreamingSwap_10_list struct {
@@ -1395,7 +2037,7 @@ func (x *EventStreamingSwap) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventStreamingSwap) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[2]
+	mi := &file_types_type_events_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2522,7 +3164,7 @@ func (x *EventSwap) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventSwap) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[3]
+	mi := &file_types_type_events_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3666,7 +4308,7 @@ func (x *EventAffiliateFee) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventAffiliateFee) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[4]
+	mi := &file_types_type_events_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4533,7 +5175,7 @@ func (x *EventAddLiquidity) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventAddLiquidity) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[5]
+	mi := &file_types_type_events_proto_msgTypes[6]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5414,7 +6056,7 @@ func (x *EventWithdraw) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventWithdraw) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[6]
+	mi := &file_types_type_events_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6236,7 +6878,7 @@ func (x *EventPendingLiquidity) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventPendingLiquidity) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[7]
+	mi := &file_types_type_events_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7091,7 +7733,7 @@ func (x *EventDonate) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventDonate) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[8]
+	mi := &file_types_type_events_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7605,7 +8247,7 @@ func (x *EventPool) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventPool) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[9]
+	mi := &file_types_type_events_proto_msgTypes[10]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8088,7 +8730,7 @@ func (x *PoolAmt) ProtoReflect() protoreflect.Message {
 }
 
 func (x *PoolAmt) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[10]
+	mi := &file_types_type_events_proto_msgTypes[11]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8628,7 +9270,7 @@ func (x *EventRewards) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventRewards) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[11]
+	mi := &file_types_type_events_proto_msgTypes[12]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9325,7 +9967,7 @@ func (x *EventRefund) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventRefund) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[12]
+	mi := &file_types_type_events_proto_msgTypes[13]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9953,7 +10595,7 @@ func (x *EventBond) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventBond) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[13]
+	mi := &file_types_type_events_proto_msgTypes[14]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10630,7 +11272,7 @@ func (x *GasPool) ProtoReflect() protoreflect.Message {
 }
 
 func (x *GasPool) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[14]
+	mi := &file_types_type_events_proto_msgTypes[15]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11286,7 +11928,7 @@ func (x *EventGas) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventGas) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[15]
+	mi := &file_types_type_events_proto_msgTypes[16]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11731,7 +12373,7 @@ func (x *EventReserve) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventReserve) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[16]
+	mi := &file_types_type_events_proto_msgTypes[17]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12243,7 +12885,7 @@ func (x *EventScheduledOutbound) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventScheduledOutbound) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[17]
+	mi := &file_types_type_events_proto_msgTypes[18]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12680,7 +13322,7 @@ func (x *EventSecurity) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventSecurity) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[18]
+	mi := &file_types_type_events_proto_msgTypes[19]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13230,7 +13872,7 @@ func (x *EventSlash) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventSlash) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[19]
+	mi := &file_types_type_events_proto_msgTypes[20]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13803,7 +14445,7 @@ func (x *EventErrata) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventErrata) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[20]
+	mi := &file_types_type_events_proto_msgTypes[21]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14312,7 +14954,7 @@ func (x *EventFee) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventFee) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[21]
+	mi := &file_types_type_events_proto_msgTypes[22]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14873,7 +15515,7 @@ func (x *EventOutbound) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventOutbound) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[22]
+	mi := &file_types_type_events_proto_msgTypes[23]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15420,7 +16062,7 @@ func (x *EventTssKeygenSuccess) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventTssKeygenSuccess) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[23]
+	mi := &file_types_type_events_proto_msgTypes[24]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16016,7 +16658,7 @@ func (x *EventTssKeygenFailure) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventTssKeygenFailure) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[24]
+	mi := &file_types_type_events_proto_msgTypes[25]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16674,7 +17316,7 @@ func (x *EventTssKeygenMetric) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventTssKeygenMetric) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[25]
+	mi := &file_types_type_events_proto_msgTypes[26]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17142,7 +17784,7 @@ func (x *EventTssKeysignMetric) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventTssKeysignMetric) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[26]
+	mi := &file_types_type_events_proto_msgTypes[27]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17612,7 +18254,7 @@ func (x *EventSlashPoint) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventSlashPoint) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[27]
+	mi := &file_types_type_events_proto_msgTypes[28]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18144,7 +18786,7 @@ func (x *EventPoolBalanceChanged) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventPoolBalanceChanged) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[28]
+	mi := &file_types_type_events_proto_msgTypes[29]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18647,7 +19289,7 @@ func (x *EventMintBurn) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventMintBurn) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[29]
+	mi := &file_types_type_events_proto_msgTypes[30]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -19245,7 +19887,7 @@ func (x *EventTradeAccountDeposit) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventTradeAccountDeposit) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[30]
+	mi := &file_types_type_events_proto_msgTypes[31]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -19936,7 +20578,7 @@ func (x *EventTradeAccountWithdraw) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventTradeAccountWithdraw) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[31]
+	mi := &file_types_type_events_proto_msgTypes[32]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -20627,7 +21269,7 @@ func (x *EventSecuredAssetDeposit) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventSecuredAssetDeposit) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[32]
+	mi := &file_types_type_events_proto_msgTypes[33]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -21318,7 +21960,7 @@ func (x *EventSecuredAssetWithdraw) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventSecuredAssetWithdraw) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[33]
+	mi := &file_types_type_events_proto_msgTypes[34]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -22007,7 +22649,7 @@ func (x *EventRUNEPoolDeposit) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventRUNEPoolDeposit) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[34]
+	mi := &file_types_type_events_proto_msgTypes[35]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -22629,7 +23271,7 @@ func (x *EventRUNEPoolWithdraw) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventRUNEPoolWithdraw) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[35]
+	mi := &file_types_type_events_proto_msgTypes[36]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -23465,7 +24107,7 @@ func (x *EventLoanOpen) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventLoanOpen) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[36]
+	mi := &file_types_type_events_proto_msgTypes[37]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -24295,7 +24937,7 @@ func (x *EventLoanRepayment) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventLoanRepayment) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[37]
+	mi := &file_types_type_events_proto_msgTypes[38]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -24990,7 +25632,7 @@ func (x *EventTHORName) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventTHORName) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[38]
+	mi := &file_types_type_events_proto_msgTypes[39]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -25770,7 +26412,7 @@ func (x *EventSetMimir) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventSetMimir) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[39]
+	mi := &file_types_type_events_proto_msgTypes[40]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -26256,7 +26898,7 @@ func (x *EventSetNodeMimir) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventSetNodeMimir) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[40]
+	mi := &file_types_type_events_proto_msgTypes[41]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -26800,7 +27442,7 @@ func (x *EventVersion) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventVersion) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[41]
+	mi := &file_types_type_events_proto_msgTypes[42]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -27228,7 +27870,7 @@ func (x *EventSwitch) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventSwitch) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[42]
+	mi := &file_types_type_events_proto_msgTypes[43]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -27913,7 +28555,7 @@ func (x *EventTCYDistribution) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventTCYDistribution) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[43]
+	mi := &file_types_type_events_proto_msgTypes[44]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -28403,7 +29045,7 @@ func (x *EventTCYClaim) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventTCYClaim) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[44]
+	mi := &file_types_type_events_proto_msgTypes[45]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -29026,7 +29668,7 @@ func (x *EventTCYStake) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventTCYStake) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[45]
+	mi := &file_types_type_events_proto_msgTypes[46]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -29510,7 +30152,7 @@ func (x *EventTCYUnstake) ProtoReflect() protoreflect.Message {
 }
 
 func (x *EventTCYUnstake) slowProtoReflect() protoreflect.Message {
-	mi := &file_types_type_events_proto_msgTypes[46]
+	mi := &file_types_type_events_proto_msgTypes[47]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -30247,6 +30889,65 @@ func (x *EventLimitSwap) GetTxId() string {
 	return ""
 }
 
+type EventModifyLimitSwap struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	From                 string       `protobuf:"bytes,1,opt,name=from,proto3" json:"from,omitempty"`
+	Source               *common.Coin `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`
+	Target               *common.Coin `protobuf:"bytes,3,opt,name=target,proto3" json:"target,omitempty"`
+	ModifiedTargetAmount string       `protobuf:"bytes,4,opt,name=modified_target_amount,json=modifiedTargetAmount,proto3" json:"modified_target_amount,omitempty"`
+}
+
+func (x *EventModifyLimitSwap) Reset() {
+	*x = EventModifyLimitSwap{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_types_type_events_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *EventModifyLimitSwap) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventModifyLimitSwap) ProtoMessage() {}
+
+// Deprecated: Use EventModifyLimitSwap.ProtoReflect.Descriptor instead.
+func (*EventModifyLimitSwap) Descriptor() ([]byte, []int) {
+	return file_types_type_events_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *EventModifyLimitSwap) GetFrom() string {
+	if x != nil {
+		return x.From
+	}
+	return ""
+}
+
+func (x *EventModifyLimitSwap) GetSource() *common.Coin {
+	if x != nil {
+		return x.Source
+	}
+	return nil
+}
+
+func (x *EventModifyLimitSwap) GetTarget() *common.Coin {
+	if x != nil {
+		return x.Target
+	}
+	return nil
+}
+
+func (x *EventModifyLimitSwap) GetModifiedTargetAmount() string {
+	if x != nil {
+		return x.ModifiedTargetAmount
+	}
+	return ""
+}
+
 type EventStreamingSwap struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -30268,7 +30969,7 @@ type EventStreamingSwap struct {
 func (x *EventStreamingSwap) Reset() {
 	*x = EventStreamingSwap{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[2]
+		mi := &file_types_type_events_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -30282,7 +30983,7 @@ func (*EventStreamingSwap) ProtoMessage() {}
 
 // Deprecated: Use EventStreamingSwap.ProtoReflect.Descriptor instead.
 func (*EventStreamingSwap) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{2}
+	return file_types_type_events_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *EventStreamingSwap) GetTxId() string {
@@ -30384,7 +31085,7 @@ type EventSwap struct {
 func (x *EventSwap) Reset() {
 	*x = EventSwap{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[3]
+		mi := &file_types_type_events_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -30398,7 +31099,7 @@ func (*EventSwap) ProtoMessage() {}
 
 // Deprecated: Use EventSwap.ProtoReflect.Descriptor instead.
 func (*EventSwap) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{3}
+	return file_types_type_events_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *EventSwap) GetPool() *common.Asset {
@@ -30503,7 +31204,7 @@ type EventAffiliateFee struct {
 func (x *EventAffiliateFee) Reset() {
 	*x = EventAffiliateFee{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[4]
+		mi := &file_types_type_events_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -30517,7 +31218,7 @@ func (*EventAffiliateFee) ProtoMessage() {}
 
 // Deprecated: Use EventAffiliateFee.ProtoReflect.Descriptor instead.
 func (*EventAffiliateFee) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{4}
+	return file_types_type_events_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *EventAffiliateFee) GetTxId() string {
@@ -30594,7 +31295,7 @@ type EventAddLiquidity struct {
 func (x *EventAddLiquidity) Reset() {
 	*x = EventAddLiquidity{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[5]
+		mi := &file_types_type_events_proto_msgTypes[6]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -30608,7 +31309,7 @@ func (*EventAddLiquidity) ProtoMessage() {}
 
 // Deprecated: Use EventAddLiquidity.ProtoReflect.Descriptor instead.
 func (*EventAddLiquidity) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{5}
+	return file_types_type_events_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *EventAddLiquidity) GetPool() *common.Asset {
@@ -30684,7 +31385,7 @@ type EventWithdraw struct {
 func (x *EventWithdraw) Reset() {
 	*x = EventWithdraw{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[6]
+		mi := &file_types_type_events_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -30698,7 +31399,7 @@ func (*EventWithdraw) ProtoMessage() {}
 
 // Deprecated: Use EventWithdraw.ProtoReflect.Descriptor instead.
 func (*EventWithdraw) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{6}
+	return file_types_type_events_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *EventWithdraw) GetPool() *common.Asset {
@@ -30768,7 +31469,7 @@ type EventPendingLiquidity struct {
 func (x *EventPendingLiquidity) Reset() {
 	*x = EventPendingLiquidity{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[7]
+		mi := &file_types_type_events_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -30782,7 +31483,7 @@ func (*EventPendingLiquidity) ProtoMessage() {}
 
 // Deprecated: Use EventPendingLiquidity.ProtoReflect.Descriptor instead.
 func (*EventPendingLiquidity) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{7}
+	return file_types_type_events_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *EventPendingLiquidity) GetPool() *common.Asset {
@@ -30853,7 +31554,7 @@ type EventDonate struct {
 func (x *EventDonate) Reset() {
 	*x = EventDonate{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[8]
+		mi := &file_types_type_events_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -30867,7 +31568,7 @@ func (*EventDonate) ProtoMessage() {}
 
 // Deprecated: Use EventDonate.ProtoReflect.Descriptor instead.
 func (*EventDonate) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{8}
+	return file_types_type_events_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *EventDonate) GetPool() *common.Asset {
@@ -30896,7 +31597,7 @@ type EventPool struct {
 func (x *EventPool) Reset() {
 	*x = EventPool{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[9]
+		mi := &file_types_type_events_proto_msgTypes[10]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -30910,7 +31611,7 @@ func (*EventPool) ProtoMessage() {}
 
 // Deprecated: Use EventPool.ProtoReflect.Descriptor instead.
 func (*EventPool) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{9}
+	return file_types_type_events_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *EventPool) GetPool() *common.Asset {
@@ -30939,7 +31640,7 @@ type PoolAmt struct {
 func (x *PoolAmt) Reset() {
 	*x = PoolAmt{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[10]
+		mi := &file_types_type_events_proto_msgTypes[11]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -30953,7 +31654,7 @@ func (*PoolAmt) ProtoMessage() {}
 
 // Deprecated: Use PoolAmt.ProtoReflect.Descriptor instead.
 func (*PoolAmt) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{10}
+	return file_types_type_events_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *PoolAmt) GetAsset() *common.Asset {
@@ -30985,7 +31686,7 @@ type EventRewards struct {
 func (x *EventRewards) Reset() {
 	*x = EventRewards{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[11]
+		mi := &file_types_type_events_proto_msgTypes[12]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -30999,7 +31700,7 @@ func (*EventRewards) ProtoMessage() {}
 
 // Deprecated: Use EventRewards.ProtoReflect.Descriptor instead.
 func (*EventRewards) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{11}
+	return file_types_type_events_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *EventRewards) GetBondReward() string {
@@ -31051,7 +31752,7 @@ type EventRefund struct {
 func (x *EventRefund) Reset() {
 	*x = EventRefund{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[12]
+		mi := &file_types_type_events_proto_msgTypes[13]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -31065,7 +31766,7 @@ func (*EventRefund) ProtoMessage() {}
 
 // Deprecated: Use EventRefund.ProtoReflect.Descriptor instead.
 func (*EventRefund) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{12}
+	return file_types_type_events_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *EventRefund) GetCode() uint32 {
@@ -31111,7 +31812,7 @@ type EventBond struct {
 func (x *EventBond) Reset() {
 	*x = EventBond{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[13]
+		mi := &file_types_type_events_proto_msgTypes[14]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -31125,7 +31826,7 @@ func (*EventBond) ProtoMessage() {}
 
 // Deprecated: Use EventBond.ProtoReflect.Descriptor instead.
 func (*EventBond) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{13}
+	return file_types_type_events_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *EventBond) GetAmount() string {
@@ -31177,7 +31878,7 @@ type GasPool struct {
 func (x *GasPool) Reset() {
 	*x = GasPool{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[14]
+		mi := &file_types_type_events_proto_msgTypes[15]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -31191,7 +31892,7 @@ func (*GasPool) ProtoMessage() {}
 
 // Deprecated: Use GasPool.ProtoReflect.Descriptor instead.
 func (*GasPool) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{14}
+	return file_types_type_events_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GasPool) GetAsset() *common.Asset {
@@ -31233,7 +31934,7 @@ type EventGas struct {
 func (x *EventGas) Reset() {
 	*x = EventGas{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[15]
+		mi := &file_types_type_events_proto_msgTypes[16]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -31247,7 +31948,7 @@ func (*EventGas) ProtoMessage() {}
 
 // Deprecated: Use EventGas.ProtoReflect.Descriptor instead.
 func (*EventGas) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{15}
+	return file_types_type_events_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *EventGas) GetPools() []*GasPool {
@@ -31269,7 +31970,7 @@ type EventReserve struct {
 func (x *EventReserve) Reset() {
 	*x = EventReserve{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[16]
+		mi := &file_types_type_events_proto_msgTypes[17]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -31283,7 +31984,7 @@ func (*EventReserve) ProtoMessage() {}
 
 // Deprecated: Use EventReserve.ProtoReflect.Descriptor instead.
 func (*EventReserve) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{16}
+	return file_types_type_events_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *EventReserve) GetReserveContributor() *ReserveContributor {
@@ -31311,7 +32012,7 @@ type EventScheduledOutbound struct {
 func (x *EventScheduledOutbound) Reset() {
 	*x = EventScheduledOutbound{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[17]
+		mi := &file_types_type_events_proto_msgTypes[18]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -31325,7 +32026,7 @@ func (*EventScheduledOutbound) ProtoMessage() {}
 
 // Deprecated: Use EventScheduledOutbound.ProtoReflect.Descriptor instead.
 func (*EventScheduledOutbound) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{17}
+	return file_types_type_events_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *EventScheduledOutbound) GetOutTx() *TxOutItem {
@@ -31347,7 +32048,7 @@ type EventSecurity struct {
 func (x *EventSecurity) Reset() {
 	*x = EventSecurity{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[18]
+		mi := &file_types_type_events_proto_msgTypes[19]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -31361,7 +32062,7 @@ func (*EventSecurity) ProtoMessage() {}
 
 // Deprecated: Use EventSecurity.ProtoReflect.Descriptor instead.
 func (*EventSecurity) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{18}
+	return file_types_type_events_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *EventSecurity) GetMsg() string {
@@ -31390,7 +32091,7 @@ type EventSlash struct {
 func (x *EventSlash) Reset() {
 	*x = EventSlash{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[19]
+		mi := &file_types_type_events_proto_msgTypes[20]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -31404,7 +32105,7 @@ func (*EventSlash) ProtoMessage() {}
 
 // Deprecated: Use EventSlash.ProtoReflect.Descriptor instead.
 func (*EventSlash) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{19}
+	return file_types_type_events_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *EventSlash) GetPool() *common.Asset {
@@ -31433,7 +32134,7 @@ type EventErrata struct {
 func (x *EventErrata) Reset() {
 	*x = EventErrata{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[20]
+		mi := &file_types_type_events_proto_msgTypes[21]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -31447,7 +32148,7 @@ func (*EventErrata) ProtoMessage() {}
 
 // Deprecated: Use EventErrata.ProtoReflect.Descriptor instead.
 func (*EventErrata) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{20}
+	return file_types_type_events_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *EventErrata) GetTxId() string {
@@ -31477,7 +32178,7 @@ type EventFee struct {
 func (x *EventFee) Reset() {
 	*x = EventFee{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[21]
+		mi := &file_types_type_events_proto_msgTypes[22]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -31491,7 +32192,7 @@ func (*EventFee) ProtoMessage() {}
 
 // Deprecated: Use EventFee.ProtoReflect.Descriptor instead.
 func (*EventFee) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{21}
+	return file_types_type_events_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *EventFee) GetTxId() string {
@@ -31527,7 +32228,7 @@ type EventOutbound struct {
 func (x *EventOutbound) Reset() {
 	*x = EventOutbound{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[22]
+		mi := &file_types_type_events_proto_msgTypes[23]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -31541,7 +32242,7 @@ func (*EventOutbound) ProtoMessage() {}
 
 // Deprecated: Use EventOutbound.ProtoReflect.Descriptor instead.
 func (*EventOutbound) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{22}
+	return file_types_type_events_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *EventOutbound) GetInTxId() string {
@@ -31571,7 +32272,7 @@ type EventTssKeygenSuccess struct {
 func (x *EventTssKeygenSuccess) Reset() {
 	*x = EventTssKeygenSuccess{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[23]
+		mi := &file_types_type_events_proto_msgTypes[24]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -31585,7 +32286,7 @@ func (*EventTssKeygenSuccess) ProtoMessage() {}
 
 // Deprecated: Use EventTssKeygenSuccess.ProtoReflect.Descriptor instead.
 func (*EventTssKeygenSuccess) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{23}
+	return file_types_type_events_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *EventTssKeygenSuccess) GetPubKey() string {
@@ -31624,7 +32325,7 @@ type EventTssKeygenFailure struct {
 func (x *EventTssKeygenFailure) Reset() {
 	*x = EventTssKeygenFailure{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[24]
+		mi := &file_types_type_events_proto_msgTypes[25]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -31638,7 +32339,7 @@ func (*EventTssKeygenFailure) ProtoMessage() {}
 
 // Deprecated: Use EventTssKeygenFailure.ProtoReflect.Descriptor instead.
 func (*EventTssKeygenFailure) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{24}
+	return file_types_type_events_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *EventTssKeygenFailure) GetFailReason() string {
@@ -31688,7 +32389,7 @@ type EventTssKeygenMetric struct {
 func (x *EventTssKeygenMetric) Reset() {
 	*x = EventTssKeygenMetric{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[25]
+		mi := &file_types_type_events_proto_msgTypes[26]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -31702,7 +32403,7 @@ func (*EventTssKeygenMetric) ProtoMessage() {}
 
 // Deprecated: Use EventTssKeygenMetric.ProtoReflect.Descriptor instead.
 func (*EventTssKeygenMetric) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{25}
+	return file_types_type_events_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *EventTssKeygenMetric) GetPubKey() string {
@@ -31731,7 +32432,7 @@ type EventTssKeysignMetric struct {
 func (x *EventTssKeysignMetric) Reset() {
 	*x = EventTssKeysignMetric{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[26]
+		mi := &file_types_type_events_proto_msgTypes[27]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -31745,7 +32446,7 @@ func (*EventTssKeysignMetric) ProtoMessage() {}
 
 // Deprecated: Use EventTssKeysignMetric.ProtoReflect.Descriptor instead.
 func (*EventTssKeysignMetric) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{26}
+	return file_types_type_events_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *EventTssKeysignMetric) GetTxId() string {
@@ -31775,7 +32476,7 @@ type EventSlashPoint struct {
 func (x *EventSlashPoint) Reset() {
 	*x = EventSlashPoint{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[27]
+		mi := &file_types_type_events_proto_msgTypes[28]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -31789,7 +32490,7 @@ func (*EventSlashPoint) ProtoMessage() {}
 
 // Deprecated: Use EventSlashPoint.ProtoReflect.Descriptor instead.
 func (*EventSlashPoint) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{27}
+	return file_types_type_events_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *EventSlashPoint) GetNodeAddress() []byte {
@@ -31825,7 +32526,7 @@ type EventPoolBalanceChanged struct {
 func (x *EventPoolBalanceChanged) Reset() {
 	*x = EventPoolBalanceChanged{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[28]
+		mi := &file_types_type_events_proto_msgTypes[29]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -31839,7 +32540,7 @@ func (*EventPoolBalanceChanged) ProtoMessage() {}
 
 // Deprecated: Use EventPoolBalanceChanged.ProtoReflect.Descriptor instead.
 func (*EventPoolBalanceChanged) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{28}
+	return file_types_type_events_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *EventPoolBalanceChanged) GetPoolChange() *PoolMod {
@@ -31870,7 +32571,7 @@ type EventMintBurn struct {
 func (x *EventMintBurn) Reset() {
 	*x = EventMintBurn{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[29]
+		mi := &file_types_type_events_proto_msgTypes[30]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -31884,7 +32585,7 @@ func (*EventMintBurn) ProtoMessage() {}
 
 // Deprecated: Use EventMintBurn.ProtoReflect.Descriptor instead.
 func (*EventMintBurn) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{29}
+	return file_types_type_events_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *EventMintBurn) GetSupply() MintBurnSupplyType {
@@ -31930,7 +32631,7 @@ type EventTradeAccountDeposit struct {
 func (x *EventTradeAccountDeposit) Reset() {
 	*x = EventTradeAccountDeposit{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[30]
+		mi := &file_types_type_events_proto_msgTypes[31]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -31944,7 +32645,7 @@ func (*EventTradeAccountDeposit) ProtoMessage() {}
 
 // Deprecated: Use EventTradeAccountDeposit.ProtoReflect.Descriptor instead.
 func (*EventTradeAccountDeposit) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{30}
+	return file_types_type_events_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *EventTradeAccountDeposit) GetAmount() string {
@@ -31997,7 +32698,7 @@ type EventTradeAccountWithdraw struct {
 func (x *EventTradeAccountWithdraw) Reset() {
 	*x = EventTradeAccountWithdraw{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[31]
+		mi := &file_types_type_events_proto_msgTypes[32]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -32011,7 +32712,7 @@ func (*EventTradeAccountWithdraw) ProtoMessage() {}
 
 // Deprecated: Use EventTradeAccountWithdraw.ProtoReflect.Descriptor instead.
 func (*EventTradeAccountWithdraw) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{31}
+	return file_types_type_events_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *EventTradeAccountWithdraw) GetAmount() string {
@@ -32064,7 +32765,7 @@ type EventSecuredAssetDeposit struct {
 func (x *EventSecuredAssetDeposit) Reset() {
 	*x = EventSecuredAssetDeposit{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[32]
+		mi := &file_types_type_events_proto_msgTypes[33]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -32078,7 +32779,7 @@ func (*EventSecuredAssetDeposit) ProtoMessage() {}
 
 // Deprecated: Use EventSecuredAssetDeposit.ProtoReflect.Descriptor instead.
 func (*EventSecuredAssetDeposit) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{32}
+	return file_types_type_events_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *EventSecuredAssetDeposit) GetAmount() string {
@@ -32131,7 +32832,7 @@ type EventSecuredAssetWithdraw struct {
 func (x *EventSecuredAssetWithdraw) Reset() {
 	*x = EventSecuredAssetWithdraw{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[33]
+		mi := &file_types_type_events_proto_msgTypes[34]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -32145,7 +32846,7 @@ func (*EventSecuredAssetWithdraw) ProtoMessage() {}
 
 // Deprecated: Use EventSecuredAssetWithdraw.ProtoReflect.Descriptor instead.
 func (*EventSecuredAssetWithdraw) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{33}
+	return file_types_type_events_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *EventSecuredAssetWithdraw) GetAmount() string {
@@ -32197,7 +32898,7 @@ type EventRUNEPoolDeposit struct {
 func (x *EventRUNEPoolDeposit) Reset() {
 	*x = EventRUNEPoolDeposit{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[34]
+		mi := &file_types_type_events_proto_msgTypes[35]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -32211,7 +32912,7 @@ func (*EventRUNEPoolDeposit) ProtoMessage() {}
 
 // Deprecated: Use EventRUNEPoolDeposit.ProtoReflect.Descriptor instead.
 func (*EventRUNEPoolDeposit) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{34}
+	return file_types_type_events_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *EventRUNEPoolDeposit) GetRuneAddress() []byte {
@@ -32260,7 +32961,7 @@ type EventRUNEPoolWithdraw struct {
 func (x *EventRUNEPoolWithdraw) Reset() {
 	*x = EventRUNEPoolWithdraw{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[35]
+		mi := &file_types_type_events_proto_msgTypes[36]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -32274,7 +32975,7 @@ func (*EventRUNEPoolWithdraw) ProtoMessage() {}
 
 // Deprecated: Use EventRUNEPoolWithdraw.ProtoReflect.Descriptor instead.
 func (*EventRUNEPoolWithdraw) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{35}
+	return file_types_type_events_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *EventRUNEPoolWithdraw) GetRuneAddress() []byte {
@@ -32350,7 +33051,7 @@ type EventLoanOpen struct {
 func (x *EventLoanOpen) Reset() {
 	*x = EventLoanOpen{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[36]
+		mi := &file_types_type_events_proto_msgTypes[37]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -32364,7 +33065,7 @@ func (*EventLoanOpen) ProtoMessage() {}
 
 // Deprecated: Use EventLoanOpen.ProtoReflect.Descriptor instead.
 func (*EventLoanOpen) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{36}
+	return file_types_type_events_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *EventLoanOpen) GetCollateralDeposited() string {
@@ -32431,7 +33132,7 @@ type EventLoanRepayment struct {
 func (x *EventLoanRepayment) Reset() {
 	*x = EventLoanRepayment{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[37]
+		mi := &file_types_type_events_proto_msgTypes[38]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -32445,7 +33146,7 @@ func (*EventLoanRepayment) ProtoMessage() {}
 
 // Deprecated: Use EventLoanRepayment.ProtoReflect.Descriptor instead.
 func (*EventLoanRepayment) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{37}
+	return file_types_type_events_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *EventLoanRepayment) GetCollateralWithdrawn() string {
@@ -32500,7 +33201,7 @@ type EventTHORName struct {
 func (x *EventTHORName) Reset() {
 	*x = EventTHORName{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[38]
+		mi := &file_types_type_events_proto_msgTypes[39]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -32514,7 +33215,7 @@ func (*EventTHORName) ProtoMessage() {}
 
 // Deprecated: Use EventTHORName.ProtoReflect.Descriptor instead.
 func (*EventTHORName) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{38}
+	return file_types_type_events_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *EventTHORName) GetName() string {
@@ -32578,7 +33279,7 @@ type EventSetMimir struct {
 func (x *EventSetMimir) Reset() {
 	*x = EventSetMimir{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[39]
+		mi := &file_types_type_events_proto_msgTypes[40]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -32592,7 +33293,7 @@ func (*EventSetMimir) ProtoMessage() {}
 
 // Deprecated: Use EventSetMimir.ProtoReflect.Descriptor instead.
 func (*EventSetMimir) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{39}
+	return file_types_type_events_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *EventSetMimir) GetKey() string {
@@ -32622,7 +33323,7 @@ type EventSetNodeMimir struct {
 func (x *EventSetNodeMimir) Reset() {
 	*x = EventSetNodeMimir{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[40]
+		mi := &file_types_type_events_proto_msgTypes[41]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -32636,7 +33337,7 @@ func (*EventSetNodeMimir) ProtoMessage() {}
 
 // Deprecated: Use EventSetNodeMimir.ProtoReflect.Descriptor instead.
 func (*EventSetNodeMimir) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{40}
+	return file_types_type_events_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *EventSetNodeMimir) GetKey() string {
@@ -32671,7 +33372,7 @@ type EventVersion struct {
 func (x *EventVersion) Reset() {
 	*x = EventVersion{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[41]
+		mi := &file_types_type_events_proto_msgTypes[42]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -32685,7 +33386,7 @@ func (*EventVersion) ProtoMessage() {}
 
 // Deprecated: Use EventVersion.ProtoReflect.Descriptor instead.
 func (*EventVersion) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{41}
+	return file_types_type_events_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *EventVersion) GetVersion() string {
@@ -32710,7 +33411,7 @@ type EventSwitch struct {
 func (x *EventSwitch) Reset() {
 	*x = EventSwitch{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[42]
+		mi := &file_types_type_events_proto_msgTypes[43]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -32724,7 +33425,7 @@ func (*EventSwitch) ProtoMessage() {}
 
 // Deprecated: Use EventSwitch.ProtoReflect.Descriptor instead.
 func (*EventSwitch) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{42}
+	return file_types_type_events_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *EventSwitch) GetAmount() string {
@@ -32774,7 +33475,7 @@ type EventTCYDistribution struct {
 func (x *EventTCYDistribution) Reset() {
 	*x = EventTCYDistribution{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[43]
+		mi := &file_types_type_events_proto_msgTypes[44]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -32788,7 +33489,7 @@ func (*EventTCYDistribution) ProtoMessage() {}
 
 // Deprecated: Use EventTCYDistribution.ProtoReflect.Descriptor instead.
 func (*EventTCYDistribution) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{43}
+	return file_types_type_events_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *EventTCYDistribution) GetRuneAddress() []byte {
@@ -32819,7 +33520,7 @@ type EventTCYClaim struct {
 func (x *EventTCYClaim) Reset() {
 	*x = EventTCYClaim{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[44]
+		mi := &file_types_type_events_proto_msgTypes[45]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -32833,7 +33534,7 @@ func (*EventTCYClaim) ProtoMessage() {}
 
 // Deprecated: Use EventTCYClaim.ProtoReflect.Descriptor instead.
 func (*EventTCYClaim) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{44}
+	return file_types_type_events_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *EventTCYClaim) GetRuneAddress() string {
@@ -32876,7 +33577,7 @@ type EventTCYStake struct {
 func (x *EventTCYStake) Reset() {
 	*x = EventTCYStake{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[45]
+		mi := &file_types_type_events_proto_msgTypes[46]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -32890,7 +33591,7 @@ func (*EventTCYStake) ProtoMessage() {}
 
 // Deprecated: Use EventTCYStake.ProtoReflect.Descriptor instead.
 func (*EventTCYStake) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{45}
+	return file_types_type_events_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *EventTCYStake) GetAddress() string {
@@ -32919,7 +33620,7 @@ type EventTCYUnstake struct {
 func (x *EventTCYUnstake) Reset() {
 	*x = EventTCYUnstake{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_types_type_events_proto_msgTypes[46]
+		mi := &file_types_type_events_proto_msgTypes[47]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -32933,7 +33634,7 @@ func (*EventTCYUnstake) ProtoMessage() {}
 
 // Deprecated: Use EventTCYUnstake.ProtoReflect.Descriptor instead.
 func (*EventTCYUnstake) Descriptor() ([]byte, []int) {
-	return file_types_type_events_proto_rawDescGZIP(), []int{46}
+	return file_types_type_events_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *EventTCYUnstake) GetAddress() string {
@@ -32992,7 +33693,24 @@ var file_types_type_events_proto_rawDesc = []byte{
 	0x2c, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72,
 	0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76,
 	0x33, 0x2f, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x54, 0x78, 0x49, 0x44, 0x52, 0x04, 0x74,
-	0x78, 0x49, 0x64, 0x22, 0xe0, 0x03, 0x0a, 0x12, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x53, 0x74, 0x72,
+	0x78, 0x49, 0x64, 0x22, 0x8d, 0x02, 0x0a, 0x14, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x4d, 0x6f, 0x64,
+	0x69, 0x66, 0x79, 0x4c, 0x69, 0x6d, 0x69, 0x74, 0x53, 0x77, 0x61, 0x70, 0x12, 0x47, 0x0a, 0x04,
+	0x66, 0x72, 0x6f, 0x6d, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x42, 0x33, 0xfa, 0xde, 0x1f, 0x2f,
+	0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63,
+	0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33,
+	0x2f, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x41, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x52,
+	0x04, 0x66, 0x72, 0x6f, 0x6d, 0x12, 0x2a, 0x0a, 0x06, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x43,
+	0x6f, 0x69, 0x6e, 0x42, 0x04, 0xc8, 0xde, 0x1f, 0x00, 0x52, 0x06, 0x73, 0x6f, 0x75, 0x72, 0x63,
+	0x65, 0x12, 0x2a, 0x0a, 0x06, 0x74, 0x61, 0x72, 0x67, 0x65, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28,
+	0x0b, 0x32, 0x0c, 0x2e, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x43, 0x6f, 0x69, 0x6e, 0x42,
+	0x04, 0xc8, 0xde, 0x1f, 0x00, 0x52, 0x06, 0x74, 0x61, 0x72, 0x67, 0x65, 0x74, 0x12, 0x54, 0x0a,
+	0x16, 0x6d, 0x6f, 0x64, 0x69, 0x66, 0x69, 0x65, 0x64, 0x5f, 0x74, 0x61, 0x72, 0x67, 0x65, 0x74,
+	0x5f, 0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x42, 0x1e, 0xc8,
+	0xde, 0x1f, 0x00, 0xda, 0xde, 0x1f, 0x16, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x73, 0x64, 0x6b,
+	0x2e, 0x69, 0x6f, 0x2f, 0x6d, 0x61, 0x74, 0x68, 0x2e, 0x55, 0x69, 0x6e, 0x74, 0x52, 0x14, 0x6d,
+	0x6f, 0x64, 0x69, 0x66, 0x69, 0x65, 0x64, 0x54, 0x61, 0x72, 0x67, 0x65, 0x74, 0x41, 0x6d, 0x6f,
+	0x75, 0x6e, 0x74, 0x22, 0xe0, 0x03, 0x0a, 0x12, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x53, 0x74, 0x72,
 	0x65, 0x61, 0x6d, 0x69, 0x6e, 0x67, 0x53, 0x77, 0x61, 0x70, 0x12, 0x4d, 0x0a, 0x05, 0x74, 0x78,
 	0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x42, 0x38, 0xe2, 0xde, 0x1f, 0x04, 0x54,
 	0x78, 0x49, 0x44, 0xfa, 0xde, 0x1f, 0x2c, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f,
@@ -33802,120 +34520,123 @@ func file_types_type_events_proto_rawDescGZIP() []byte {
 }
 
 var file_types_type_events_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_types_type_events_proto_msgTypes = make([]protoimpl.MessageInfo, 47)
+var file_types_type_events_proto_msgTypes = make([]protoimpl.MessageInfo, 48)
 var file_types_type_events_proto_goTypes = []interface{}{
 	(PendingLiquidityType)(0),         // 0: types.PendingLiquidityType
 	(BondType)(0),                     // 1: types.BondType
 	(MintBurnSupplyType)(0),           // 2: types.MintBurnSupplyType
 	(*PoolMod)(nil),                   // 3: types.PoolMod
 	(*EventLimitSwap)(nil),            // 4: types.EventLimitSwap
-	(*EventStreamingSwap)(nil),        // 5: types.EventStreamingSwap
-	(*EventSwap)(nil),                 // 6: types.EventSwap
-	(*EventAffiliateFee)(nil),         // 7: types.EventAffiliateFee
-	(*EventAddLiquidity)(nil),         // 8: types.EventAddLiquidity
-	(*EventWithdraw)(nil),             // 9: types.EventWithdraw
-	(*EventPendingLiquidity)(nil),     // 10: types.EventPendingLiquidity
-	(*EventDonate)(nil),               // 11: types.EventDonate
-	(*EventPool)(nil),                 // 12: types.EventPool
-	(*PoolAmt)(nil),                   // 13: types.PoolAmt
-	(*EventRewards)(nil),              // 14: types.EventRewards
-	(*EventRefund)(nil),               // 15: types.EventRefund
-	(*EventBond)(nil),                 // 16: types.EventBond
-	(*GasPool)(nil),                   // 17: types.GasPool
-	(*EventGas)(nil),                  // 18: types.EventGas
-	(*EventReserve)(nil),              // 19: types.EventReserve
-	(*EventScheduledOutbound)(nil),    // 20: types.EventScheduledOutbound
-	(*EventSecurity)(nil),             // 21: types.EventSecurity
-	(*EventSlash)(nil),                // 22: types.EventSlash
-	(*EventErrata)(nil),               // 23: types.EventErrata
-	(*EventFee)(nil),                  // 24: types.EventFee
-	(*EventOutbound)(nil),             // 25: types.EventOutbound
-	(*EventTssKeygenSuccess)(nil),     // 26: types.EventTssKeygenSuccess
-	(*EventTssKeygenFailure)(nil),     // 27: types.EventTssKeygenFailure
-	(*EventTssKeygenMetric)(nil),      // 28: types.EventTssKeygenMetric
-	(*EventTssKeysignMetric)(nil),     // 29: types.EventTssKeysignMetric
-	(*EventSlashPoint)(nil),           // 30: types.EventSlashPoint
-	(*EventPoolBalanceChanged)(nil),   // 31: types.EventPoolBalanceChanged
-	(*EventMintBurn)(nil),             // 32: types.EventMintBurn
-	(*EventTradeAccountDeposit)(nil),  // 33: types.EventTradeAccountDeposit
-	(*EventTradeAccountWithdraw)(nil), // 34: types.EventTradeAccountWithdraw
-	(*EventSecuredAssetDeposit)(nil),  // 35: types.EventSecuredAssetDeposit
-	(*EventSecuredAssetWithdraw)(nil), // 36: types.EventSecuredAssetWithdraw
-	(*EventRUNEPoolDeposit)(nil),      // 37: types.EventRUNEPoolDeposit
-	(*EventRUNEPoolWithdraw)(nil),     // 38: types.EventRUNEPoolWithdraw
-	(*EventLoanOpen)(nil),             // 39: types.EventLoanOpen
-	(*EventLoanRepayment)(nil),        // 40: types.EventLoanRepayment
-	(*EventTHORName)(nil),             // 41: types.EventTHORName
-	(*EventSetMimir)(nil),             // 42: types.EventSetMimir
-	(*EventSetNodeMimir)(nil),         // 43: types.EventSetNodeMimir
-	(*EventVersion)(nil),              // 44: types.EventVersion
-	(*EventSwitch)(nil),               // 45: types.EventSwitch
-	(*EventTCYDistribution)(nil),      // 46: types.EventTCYDistribution
-	(*EventTCYClaim)(nil),             // 47: types.EventTCYClaim
-	(*EventTCYStake)(nil),             // 48: types.EventTCYStake
-	(*EventTCYUnstake)(nil),           // 49: types.EventTCYUnstake
-	(*common.Asset)(nil),              // 50: common.Asset
-	(*common.Coin)(nil),               // 51: common.Coin
-	(*common.Tx)(nil),                 // 52: common.Tx
-	(PoolStatus)(0),                   // 53: types.PoolStatus
-	(*common.Fee)(nil),                // 54: common.Fee
-	(*ReserveContributor)(nil),        // 55: types.ReserveContributor
-	(*TxOutItem)(nil),                 // 56: types.TxOutItem
+	(*EventModifyLimitSwap)(nil),      // 5: types.EventModifyLimitSwap
+	(*EventStreamingSwap)(nil),        // 6: types.EventStreamingSwap
+	(*EventSwap)(nil),                 // 7: types.EventSwap
+	(*EventAffiliateFee)(nil),         // 8: types.EventAffiliateFee
+	(*EventAddLiquidity)(nil),         // 9: types.EventAddLiquidity
+	(*EventWithdraw)(nil),             // 10: types.EventWithdraw
+	(*EventPendingLiquidity)(nil),     // 11: types.EventPendingLiquidity
+	(*EventDonate)(nil),               // 12: types.EventDonate
+	(*EventPool)(nil),                 // 13: types.EventPool
+	(*PoolAmt)(nil),                   // 14: types.PoolAmt
+	(*EventRewards)(nil),              // 15: types.EventRewards
+	(*EventRefund)(nil),               // 16: types.EventRefund
+	(*EventBond)(nil),                 // 17: types.EventBond
+	(*GasPool)(nil),                   // 18: types.GasPool
+	(*EventGas)(nil),                  // 19: types.EventGas
+	(*EventReserve)(nil),              // 20: types.EventReserve
+	(*EventScheduledOutbound)(nil),    // 21: types.EventScheduledOutbound
+	(*EventSecurity)(nil),             // 22: types.EventSecurity
+	(*EventSlash)(nil),                // 23: types.EventSlash
+	(*EventErrata)(nil),               // 24: types.EventErrata
+	(*EventFee)(nil),                  // 25: types.EventFee
+	(*EventOutbound)(nil),             // 26: types.EventOutbound
+	(*EventTssKeygenSuccess)(nil),     // 27: types.EventTssKeygenSuccess
+	(*EventTssKeygenFailure)(nil),     // 28: types.EventTssKeygenFailure
+	(*EventTssKeygenMetric)(nil),      // 29: types.EventTssKeygenMetric
+	(*EventTssKeysignMetric)(nil),     // 30: types.EventTssKeysignMetric
+	(*EventSlashPoint)(nil),           // 31: types.EventSlashPoint
+	(*EventPoolBalanceChanged)(nil),   // 32: types.EventPoolBalanceChanged
+	(*EventMintBurn)(nil),             // 33: types.EventMintBurn
+	(*EventTradeAccountDeposit)(nil),  // 34: types.EventTradeAccountDeposit
+	(*EventTradeAccountWithdraw)(nil), // 35: types.EventTradeAccountWithdraw
+	(*EventSecuredAssetDeposit)(nil),  // 36: types.EventSecuredAssetDeposit
+	(*EventSecuredAssetWithdraw)(nil), // 37: types.EventSecuredAssetWithdraw
+	(*EventRUNEPoolDeposit)(nil),      // 38: types.EventRUNEPoolDeposit
+	(*EventRUNEPoolWithdraw)(nil),     // 39: types.EventRUNEPoolWithdraw
+	(*EventLoanOpen)(nil),             // 40: types.EventLoanOpen
+	(*EventLoanRepayment)(nil),        // 41: types.EventLoanRepayment
+	(*EventTHORName)(nil),             // 42: types.EventTHORName
+	(*EventSetMimir)(nil),             // 43: types.EventSetMimir
+	(*EventSetNodeMimir)(nil),         // 44: types.EventSetNodeMimir
+	(*EventVersion)(nil),              // 45: types.EventVersion
+	(*EventSwitch)(nil),               // 46: types.EventSwitch
+	(*EventTCYDistribution)(nil),      // 47: types.EventTCYDistribution
+	(*EventTCYClaim)(nil),             // 48: types.EventTCYClaim
+	(*EventTCYStake)(nil),             // 49: types.EventTCYStake
+	(*EventTCYUnstake)(nil),           // 50: types.EventTCYUnstake
+	(*common.Asset)(nil),              // 51: common.Asset
+	(*common.Coin)(nil),               // 52: common.Coin
+	(*common.Tx)(nil),                 // 53: common.Tx
+	(PoolStatus)(0),                   // 54: types.PoolStatus
+	(*common.Fee)(nil),                // 55: common.Fee
+	(*ReserveContributor)(nil),        // 56: types.ReserveContributor
+	(*TxOutItem)(nil),                 // 57: types.TxOutItem
 }
 var file_types_type_events_proto_depIdxs = []int32{
-	50, // 0: types.PoolMod.asset:type_name -> common.Asset
-	51, // 1: types.EventLimitSwap.source:type_name -> common.Coin
-	51, // 2: types.EventLimitSwap.target:type_name -> common.Coin
-	51, // 3: types.EventStreamingSwap.deposit:type_name -> common.Coin
-	51, // 4: types.EventStreamingSwap.in:type_name -> common.Coin
-	51, // 5: types.EventStreamingSwap.out:type_name -> common.Coin
-	50, // 6: types.EventSwap.pool:type_name -> common.Asset
-	52, // 7: types.EventSwap.in_tx:type_name -> common.Tx
-	52, // 8: types.EventSwap.out_txs:type_name -> common.Tx
-	51, // 9: types.EventSwap.emit_asset:type_name -> common.Coin
-	50, // 10: types.EventAffiliateFee.asset:type_name -> common.Asset
-	50, // 11: types.EventAddLiquidity.pool:type_name -> common.Asset
-	50, // 12: types.EventWithdraw.pool:type_name -> common.Asset
-	52, // 13: types.EventWithdraw.in_tx:type_name -> common.Tx
-	50, // 14: types.EventPendingLiquidity.pool:type_name -> common.Asset
-	0,  // 15: types.EventPendingLiquidity.pending_type:type_name -> types.PendingLiquidityType
-	50, // 16: types.EventDonate.pool:type_name -> common.Asset
-	52, // 17: types.EventDonate.in_tx:type_name -> common.Tx
-	50, // 18: types.EventPool.pool:type_name -> common.Asset
-	53, // 19: types.EventPool.Status:type_name -> types.PoolStatus
-	50, // 20: types.PoolAmt.asset:type_name -> common.Asset
-	13, // 21: types.EventRewards.pool_rewards:type_name -> types.PoolAmt
-	52, // 22: types.EventRefund.in_tx:type_name -> common.Tx
-	54, // 23: types.EventRefund.fee:type_name -> common.Fee
-	1,  // 24: types.EventBond.bond_type:type_name -> types.BondType
-	52, // 25: types.EventBond.tx_in:type_name -> common.Tx
-	50, // 26: types.GasPool.asset:type_name -> common.Asset
-	17, // 27: types.EventGas.pools:type_name -> types.GasPool
-	55, // 28: types.EventReserve.reserve_contributor:type_name -> types.ReserveContributor
-	52, // 29: types.EventReserve.in_tx:type_name -> common.Tx
-	56, // 30: types.EventScheduledOutbound.out_tx:type_name -> types.TxOutItem
-	52, // 31: types.EventSecurity.tx:type_name -> common.Tx
-	50, // 32: types.EventSlash.pool:type_name -> common.Asset
-	13, // 33: types.EventSlash.slash_amount:type_name -> types.PoolAmt
-	3,  // 34: types.EventErrata.pools:type_name -> types.PoolMod
-	54, // 35: types.EventFee.fee:type_name -> common.Fee
-	52, // 36: types.EventOutbound.tx:type_name -> common.Tx
-	3,  // 37: types.EventPoolBalanceChanged.pool_change:type_name -> types.PoolMod
-	2,  // 38: types.EventMintBurn.supply:type_name -> types.MintBurnSupplyType
-	50, // 39: types.EventTradeAccountDeposit.asset:type_name -> common.Asset
-	50, // 40: types.EventTradeAccountWithdraw.asset:type_name -> common.Asset
-	50, // 41: types.EventSecuredAssetDeposit.asset:type_name -> common.Asset
-	50, // 42: types.EventSecuredAssetWithdraw.asset:type_name -> common.Asset
-	50, // 43: types.EventLoanOpen.collateral_asset:type_name -> common.Asset
-	50, // 44: types.EventLoanOpen.target_asset:type_name -> common.Asset
-	50, // 45: types.EventLoanRepayment.collateral_asset:type_name -> common.Asset
-	50, // 46: types.EventSwitch.asset:type_name -> common.Asset
-	50, // 47: types.EventTCYClaim.asset:type_name -> common.Asset
-	48, // [48:48] is the sub-list for method output_type
-	48, // [48:48] is the sub-list for method input_type
-	48, // [48:48] is the sub-list for extension type_name
-	48, // [48:48] is the sub-list for extension extendee
-	0,  // [0:48] is the sub-list for field type_name
+	51, // 0: types.PoolMod.asset:type_name -> common.Asset
+	52, // 1: types.EventLimitSwap.source:type_name -> common.Coin
+	52, // 2: types.EventLimitSwap.target:type_name -> common.Coin
+	52, // 3: types.EventModifyLimitSwap.source:type_name -> common.Coin
+	52, // 4: types.EventModifyLimitSwap.target:type_name -> common.Coin
+	52, // 5: types.EventStreamingSwap.deposit:type_name -> common.Coin
+	52, // 6: types.EventStreamingSwap.in:type_name -> common.Coin
+	52, // 7: types.EventStreamingSwap.out:type_name -> common.Coin
+	51, // 8: types.EventSwap.pool:type_name -> common.Asset
+	53, // 9: types.EventSwap.in_tx:type_name -> common.Tx
+	53, // 10: types.EventSwap.out_txs:type_name -> common.Tx
+	52, // 11: types.EventSwap.emit_asset:type_name -> common.Coin
+	51, // 12: types.EventAffiliateFee.asset:type_name -> common.Asset
+	51, // 13: types.EventAddLiquidity.pool:type_name -> common.Asset
+	51, // 14: types.EventWithdraw.pool:type_name -> common.Asset
+	53, // 15: types.EventWithdraw.in_tx:type_name -> common.Tx
+	51, // 16: types.EventPendingLiquidity.pool:type_name -> common.Asset
+	0,  // 17: types.EventPendingLiquidity.pending_type:type_name -> types.PendingLiquidityType
+	51, // 18: types.EventDonate.pool:type_name -> common.Asset
+	53, // 19: types.EventDonate.in_tx:type_name -> common.Tx
+	51, // 20: types.EventPool.pool:type_name -> common.Asset
+	54, // 21: types.EventPool.Status:type_name -> types.PoolStatus
+	51, // 22: types.PoolAmt.asset:type_name -> common.Asset
+	14, // 23: types.EventRewards.pool_rewards:type_name -> types.PoolAmt
+	53, // 24: types.EventRefund.in_tx:type_name -> common.Tx
+	55, // 25: types.EventRefund.fee:type_name -> common.Fee
+	1,  // 26: types.EventBond.bond_type:type_name -> types.BondType
+	53, // 27: types.EventBond.tx_in:type_name -> common.Tx
+	51, // 28: types.GasPool.asset:type_name -> common.Asset
+	18, // 29: types.EventGas.pools:type_name -> types.GasPool
+	56, // 30: types.EventReserve.reserve_contributor:type_name -> types.ReserveContributor
+	53, // 31: types.EventReserve.in_tx:type_name -> common.Tx
+	57, // 32: types.EventScheduledOutbound.out_tx:type_name -> types.TxOutItem
+	53, // 33: types.EventSecurity.tx:type_name -> common.Tx
+	51, // 34: types.EventSlash.pool:type_name -> common.Asset
+	14, // 35: types.EventSlash.slash_amount:type_name -> types.PoolAmt
+	3,  // 36: types.EventErrata.pools:type_name -> types.PoolMod
+	55, // 37: types.EventFee.fee:type_name -> common.Fee
+	53, // 38: types.EventOutbound.tx:type_name -> common.Tx
+	3,  // 39: types.EventPoolBalanceChanged.pool_change:type_name -> types.PoolMod
+	2,  // 40: types.EventMintBurn.supply:type_name -> types.MintBurnSupplyType
+	51, // 41: types.EventTradeAccountDeposit.asset:type_name -> common.Asset
+	51, // 42: types.EventTradeAccountWithdraw.asset:type_name -> common.Asset
+	51, // 43: types.EventSecuredAssetDeposit.asset:type_name -> common.Asset
+	51, // 44: types.EventSecuredAssetWithdraw.asset:type_name -> common.Asset
+	51, // 45: types.EventLoanOpen.collateral_asset:type_name -> common.Asset
+	51, // 46: types.EventLoanOpen.target_asset:type_name -> common.Asset
+	51, // 47: types.EventLoanRepayment.collateral_asset:type_name -> common.Asset
+	51, // 48: types.EventSwitch.asset:type_name -> common.Asset
+	51, // 49: types.EventTCYClaim.asset:type_name -> common.Asset
+	50, // [50:50] is the sub-list for method output_type
+	50, // [50:50] is the sub-list for method input_type
+	50, // [50:50] is the sub-list for extension type_name
+	50, // [50:50] is the sub-list for extension extendee
+	0,  // [0:50] is the sub-list for field type_name
 }
 
 func init() { file_types_type_events_proto_init() }
@@ -33952,7 +34673,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventStreamingSwap); i {
+			switch v := v.(*EventModifyLimitSwap); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -33964,7 +34685,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventSwap); i {
+			switch v := v.(*EventStreamingSwap); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -33976,7 +34697,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventAffiliateFee); i {
+			switch v := v.(*EventSwap); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -33988,7 +34709,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventAddLiquidity); i {
+			switch v := v.(*EventAffiliateFee); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34000,7 +34721,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventWithdraw); i {
+			switch v := v.(*EventAddLiquidity); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34012,7 +34733,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventPendingLiquidity); i {
+			switch v := v.(*EventWithdraw); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34024,7 +34745,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventDonate); i {
+			switch v := v.(*EventPendingLiquidity); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34036,7 +34757,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventPool); i {
+			switch v := v.(*EventDonate); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34048,7 +34769,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PoolAmt); i {
+			switch v := v.(*EventPool); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34060,7 +34781,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventRewards); i {
+			switch v := v.(*PoolAmt); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34072,7 +34793,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventRefund); i {
+			switch v := v.(*EventRewards); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34084,7 +34805,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventBond); i {
+			switch v := v.(*EventRefund); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34096,7 +34817,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GasPool); i {
+			switch v := v.(*EventBond); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34108,7 +34829,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventGas); i {
+			switch v := v.(*GasPool); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34120,7 +34841,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventReserve); i {
+			switch v := v.(*EventGas); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34132,7 +34853,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[17].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventScheduledOutbound); i {
+			switch v := v.(*EventReserve); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34144,7 +34865,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[18].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventSecurity); i {
+			switch v := v.(*EventScheduledOutbound); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34156,7 +34877,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[19].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventSlash); i {
+			switch v := v.(*EventSecurity); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34168,7 +34889,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[20].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventErrata); i {
+			switch v := v.(*EventSlash); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34180,7 +34901,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[21].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventFee); i {
+			switch v := v.(*EventErrata); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34192,7 +34913,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[22].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventOutbound); i {
+			switch v := v.(*EventFee); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34204,7 +34925,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[23].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventTssKeygenSuccess); i {
+			switch v := v.(*EventOutbound); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34216,7 +34937,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[24].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventTssKeygenFailure); i {
+			switch v := v.(*EventTssKeygenSuccess); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34228,7 +34949,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[25].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventTssKeygenMetric); i {
+			switch v := v.(*EventTssKeygenFailure); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34240,7 +34961,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[26].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventTssKeysignMetric); i {
+			switch v := v.(*EventTssKeygenMetric); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34252,7 +34973,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[27].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventSlashPoint); i {
+			switch v := v.(*EventTssKeysignMetric); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34264,7 +34985,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[28].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventPoolBalanceChanged); i {
+			switch v := v.(*EventSlashPoint); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34276,7 +34997,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[29].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventMintBurn); i {
+			switch v := v.(*EventPoolBalanceChanged); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34288,7 +35009,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[30].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventTradeAccountDeposit); i {
+			switch v := v.(*EventMintBurn); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34300,7 +35021,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[31].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventTradeAccountWithdraw); i {
+			switch v := v.(*EventTradeAccountDeposit); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34312,7 +35033,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[32].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventSecuredAssetDeposit); i {
+			switch v := v.(*EventTradeAccountWithdraw); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34324,7 +35045,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[33].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventSecuredAssetWithdraw); i {
+			switch v := v.(*EventSecuredAssetDeposit); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34336,7 +35057,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[34].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventRUNEPoolDeposit); i {
+			switch v := v.(*EventSecuredAssetWithdraw); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34348,7 +35069,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[35].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventRUNEPoolWithdraw); i {
+			switch v := v.(*EventRUNEPoolDeposit); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34360,7 +35081,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[36].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventLoanOpen); i {
+			switch v := v.(*EventRUNEPoolWithdraw); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34372,7 +35093,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[37].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventLoanRepayment); i {
+			switch v := v.(*EventLoanOpen); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34384,7 +35105,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[38].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventTHORName); i {
+			switch v := v.(*EventLoanRepayment); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34396,7 +35117,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[39].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventSetMimir); i {
+			switch v := v.(*EventTHORName); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34408,7 +35129,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[40].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventSetNodeMimir); i {
+			switch v := v.(*EventSetMimir); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34420,7 +35141,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[41].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventVersion); i {
+			switch v := v.(*EventSetNodeMimir); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34432,7 +35153,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[42].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventSwitch); i {
+			switch v := v.(*EventVersion); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34444,7 +35165,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[43].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventTCYDistribution); i {
+			switch v := v.(*EventSwitch); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34456,7 +35177,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[44].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventTCYClaim); i {
+			switch v := v.(*EventTCYDistribution); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34468,7 +35189,7 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[45].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventTCYStake); i {
+			switch v := v.(*EventTCYClaim); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -34480,6 +35201,18 @@ func file_types_type_events_proto_init() {
 			}
 		}
 		file_types_type_events_proto_msgTypes[46].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*EventTCYStake); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_types_type_events_proto_msgTypes[47].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*EventTCYUnstake); i {
 			case 0:
 				return &v.state
@@ -34498,7 +35231,7 @@ func file_types_type_events_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_types_type_events_proto_rawDesc,
 			NumEnums:      3,
-			NumMessages:   47,
+			NumMessages:   48,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

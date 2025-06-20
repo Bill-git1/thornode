@@ -987,6 +987,32 @@ paths:
               schema:
                 $ref: "#/components/schemas/SecuredAssetsResponse"
 
+  # ------------------------------ swap ------------------------------
+
+  /thorchain/queue/swap/details/{tx_id}:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+      - name: tx_id
+        in: path
+        required: true
+        description: Transaction ID of the swap
+        schema:
+          type: string
+    get:
+      description: Returns detailed information about a specific swap.
+      operationId: swapDetails
+      tags:
+        - Swap
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SwapDetailsResponse"
+        404:
+          description: Swap not found
+
   # ------------------------------ queue ------------------------------
 
   /thorchain/queue:
@@ -3841,6 +3867,20 @@ components:
       type: array
       items:
         $ref: "#/components/schemas/MsgSwap"
+
+    SwapDetailsResponse:
+      type: object
+      properties:
+        swap:
+          $ref: "#/components/schemas/MsgSwap"
+        status:
+          type: string
+          description: Current status of the swap
+          example: "queued"
+        queue_type:
+          type: string
+          description: Type of queue the swap is in
+          example: "advanced"
 
     OutboundResponse:
       type: array

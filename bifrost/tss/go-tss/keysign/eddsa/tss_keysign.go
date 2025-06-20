@@ -270,7 +270,7 @@ func (tKeySign *EDDSAKeySign) processKeySign(reqNum int, errChan chan struct{}, 
 				return nil, err
 			}
 
-		//nolint
+		// nolint
 		case msg := <-endCh:
 			signatures = append(signatures, &msg)
 			if len(signatures) == reqNum {

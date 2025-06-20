@@ -246,6 +246,15 @@ func checkExportInvariants(out io.Writer, genesis map[string]any) error {
 		}
 	}
 
+	// adjust vault depths to account for advanced swap queue items (limit swaps)
+	for _, msg := range genesisState.AdvSwapQueueItems {
+		// For limit swaps in the advanced queue, the input asset is already in the vault
+		// but not yet in the pool, so we need to subtract it from vault accounting
+		if len(msg.Tx.Coins) > 0 {
+			sumVaultAsset = sumVaultAsset.SafeSub(msg.Tx.Coins[0])
+		}
+	}
+
 	// print any discrepancies
 	for _, coin := range sumPoolAsset {
 		for _, vaultCoin := range sumVaultAsset {

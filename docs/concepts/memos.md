@@ -55,7 +55,7 @@ The following functions can be put into a memo:
 
 ### Swap
 
-Perform an asset swap.
+Perform an asset swap. If you'd like to implement a limit swap, use the `=<` prefix.
 
 **`SWAP:ASSET:DESTADDR:LIM/INTERVAL/QUANTITY:AFFILIATE:FEE`**
 
@@ -66,7 +66,7 @@ For the DEX aggregator-oriented variation of the `SWAP` memo, see [Aggregators M
 | Parameter     | Notes                                                                                 | Conditions                                                                                                                                      |
 | ------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | Payload       | Send the asset to swap.                                                               | Must be an active pool on THORChain.                                                                                                            |
-| `SWAP`        | The swap handler.                                                                     | Also `s` or `=`                                                                                                                                 |
+| `SWAP`        | The swap handler.                                                                     | Also `s` or `=` or `=<`                                                                                                                         |
 | `:ASSET`      | The [asset identifier](asset-notation.md).                                            | Can be shortened.                                                                                                                               |
 | `:DESTADDR`   | The destination address to send to.                                                   | Can use THORName.                                                                                                                               |
 | `/REFUNDADDR` | The destination address for a refund to be sent to.                                   | Optional. If provided, the refund will be sent to this address; otherwise, it will be sent to the originator’s address.                         |
@@ -293,6 +293,21 @@ One way switch for external tokens to be a native THORChain asset. Supported Ass
 | `switch`  | The Secured Asset handler.         |                                      |
 | `ADDR`    | The thor address for native asset  | Must be a thor address               |
 
+### Limit Swap Modification
+
+**`m=<:SOURCE:TARGET:MODIFIEDTARGETAMOUNT`**
+
+A trader can modify a limit swap by changing the target amount. Setting this
+value to 0 will cancel the limit swap.
+
+| Parameter               | Description                               | Notes            |
+| ----------------------- | ----------------------------------------- | ---------------- |
+| `Payload`               | None required                             | Use `MsgDeposit` |
+| `m=<`                   | The limit swap modifier handler           |                  |
+| `:SOURCE`               | The source coin (e.g., `1234BTC.BTC`)     |                  |
+| `:TARGET`               | The target coin (e.g., `1234ETH.ETH`)     |                  |
+| `:MODIFIEDTARGETAMOUNT` | The modified target amount (e.g., `1235`) |                  |
+
 ### **Deposit Savers**
 
 Deposit an asset into THORChain Savers.
@@ -517,7 +532,6 @@ Refunds cost fees to prevent DoS (denial-of-service) attacks. The user will pay 
 ## **Other Internal Memos**
 
 - `consolidate` &mdash; consolidate UTXO transactions
-- `=>` &mdash; limit swap functions (to be implemented)
 - `name` or `n` or `~` &mdash; THORName operations; see [THORName Guide](../affiliate-guide/thorname-guide.md)
 - `out` &mdash; for outbound transaction, set within a outbound transaction
 - `ragnarok` &mdash; used to delist pools, set within a outbound transaction

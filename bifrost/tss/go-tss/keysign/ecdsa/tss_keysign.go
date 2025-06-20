@@ -278,7 +278,7 @@ func (tKeySign *TssKeySign) processKeySign(reqNum int, errChan chan struct{}, ou
 				return nil, err
 			}
 
-		//nolint
+		// nolint
 		case msg := <-endCh:
 			cMsg := new(tsslibcommon.SignatureData)
 			cMsg.Signature = msg.GetSignature()

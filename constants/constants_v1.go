@@ -58,7 +58,7 @@ func NewConstantValue() *ConstantVals {
 			MinSwapsPerBlock:                    10,                 // process all swaps if queue is less than this number
 			MaxSwapsPerBlock:                    100,                // max swaps to process per block
 			EnableOrderBooks:                    0,                  // enable order books instead of swap queue
-			EnableAdvSwapQueue:                  0,                  // enable advanced swap queue
+			EnableAdvSwapQueue:                  0,                  // enable advanced swap queue, value of 2 skips limit swaps and forces all swaps to be market trades
 			VirtualMultSynths:                   2,                  // pool depth multiplier for synthetic swaps
 			VirtualMultSynthsBasisPoints:        10_000,             // pool depth multiplier for synthetic swaps (in basis points)
 			MaxSynthPerPoolDepth:                1700,               // percentage (in basis points) of how many synths are allowed relative to pool depth of the related pool

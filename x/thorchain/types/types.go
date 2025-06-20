@@ -7,6 +7,18 @@ const (
 	SimpleMajorityFactor = 2
 )
 
+// AdvSwapQueueMode defines the operating mode for the advanced swap queue
+type AdvSwapQueueMode int64
+
+const (
+	// AdvSwapQueueModeDisabled - Advanced swap queue is disabled
+	AdvSwapQueueModeDisabled AdvSwapQueueMode = 0
+	// AdvSwapQueueModeEnabled - Advanced swap queue is enabled for all swap types
+	AdvSwapQueueModeEnabled AdvSwapQueueMode = 1
+	// AdvSwapQueueModeMarketOnly - Advanced swap queue processes market swaps only, blocks limit swaps
+	AdvSwapQueueModeMarketOnly AdvSwapQueueMode = 2
+)
+
 // HasSuperMajority return true when it has 2/3 majority
 func HasSuperMajority(signers, total int) bool {
 	if signers > total {

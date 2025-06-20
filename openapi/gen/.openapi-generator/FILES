@@ -24,6 +24,7 @@ api_savers.go
 api_secured_asset.go
 api_secured_assets.go
 api_streaming_swap.go
+api_swap.go
 api_tcy_claimers.go
 api_tcy_stakers.go
 api_thornames.go
@@ -131,6 +132,8 @@ docs/SecuredAssetsApi.md
 docs/StreamingStatus.md
 docs/StreamingSwap.md
 docs/StreamingSwapApi.md
+docs/SwapApi.md
+docs/SwapDetailsResponse.md
 docs/SwapFinalisedStage.md
 docs/SwapStatus.md
 docs/SwapperCloutResponse.md
@@ -246,6 +249,7 @@ model_saver.go
 model_secured_asset_response.go
 model_streaming_status.go
 model_streaming_swap.go
+model_swap_details_response.go
 model_swap_finalised_stage.go
 model_swap_status.go
 model_swapper_clout_response.go

@@ -36,6 +36,7 @@ const (
 	SwapEventType                 = "swap"
 	AffiliateFeeEventType         = "affiliate_fee"
 	LimitSwapEventType            = "limit_swap"
+	ModifyLimitSwapEventType      = "limit_swap_mod"
 	MintBurnType                  = "mint_burn"
 	THORNameEventType             = "thorname"
 	LoanOpenEventType             = "loan_open"
@@ -93,6 +94,32 @@ func (m *EventLimitSwap) Events() (cosmos.Events, error) {
 		cosmos.NewAttribute("source", m.Source.String()),
 		cosmos.NewAttribute("target", m.Target.String()),
 		cosmos.NewAttribute("txid", m.TxID.String()),
+	)
+	return cosmos.Events{evt}, nil
+}
+
+// NewEventModifyLimitSwap create a new modify limit swap event
+func NewEventModifyLimitSwap(from common.Address, source, target common.Coin, mod cosmos.Uint) *EventModifyLimitSwap {
+	return &EventModifyLimitSwap{
+		From:                 from,
+		Source:               source,
+		Target:               target,
+		ModifiedTargetAmount: mod,
+	}
+}
+
+// Type return a string that represent the type, it should not duplicated with other event
+func (m *EventModifyLimitSwap) Type() string {
+	return ModifyLimitSwapEventType
+}
+
+// Events convert EventModifyLimitSwap to key value pairs used in cosmos
+func (m *EventModifyLimitSwap) Events() (cosmos.Events, error) {
+	evt := cosmos.NewEvent(m.Type(),
+		cosmos.NewAttribute("from", m.From.String()),
+		cosmos.NewAttribute("source", m.Source.String()),
+		cosmos.NewAttribute("target", m.Target.String()),
+		cosmos.NewAttribute("modified_target_amount", m.ModifiedTargetAmount.String()),
 	)
 	return cosmos.Events{evt}, nil
 }

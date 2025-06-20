@@ -47,6 +47,11 @@ func (ms msgServer) Mimir(goCtx context.Context, msg *types.MsgMimir) (*types.Ms
 	return externalHandler(goCtx, handler, msg)
 }
 
+func (ms msgServer) ModifyLimitSwap(goCtx context.Context, msg *types.MsgModifyLimitSwap) (*types.MsgEmpty, error) {
+	handler := NewModifyLimitSwapHandler(ms.mgr)
+	return externalHandler(goCtx, handler, msg)
+}
+
 func (ms msgServer) NetworkFee(goCtx context.Context, msg *types.MsgNetworkFee) (*types.MsgEmpty, error) {
 	handler := NewNetworkFeeHandler(ms.mgr)
 	return externalHandler(goCtx, handler, msg)

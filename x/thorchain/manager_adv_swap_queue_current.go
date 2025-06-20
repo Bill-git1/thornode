@@ -9,6 +9,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 
 	"github.com/jinzhu/copier"
 )
@@ -50,6 +51,8 @@ func (vm *SwapQueueAdvVCUR) FetchQueue(ctx cosmos.Context, mgr Manager, pairs tr
 		return nil, nil
 	}
 
+	val := vm.k.GetConfigInt64(ctx, constants.EnableAdvSwapQueue)
+
 	// get market swap
 	hashes, err := vm.k.GetAdvSwapQueueIndex(ctx, MsgSwap{SwapType: MarketSwap})
 	if err != nil {
@@ -59,6 +62,11 @@ func (vm *SwapQueueAdvVCUR) FetchQueue(ctx cosmos.Context, mgr Manager, pairs tr
 		msg, err := vm.k.GetAdvSwapQueueItem(ctx, hash)
 		if err != nil {
 			ctx.Logger().Error("fail to fetch adv swap item", "error", err)
+			continue
+		}
+
+		// skip processing limit swaps if EnableAdvSwapQueue is set to market only mode
+		if types.AdvSwapQueueMode(val) == types.AdvSwapQueueModeMarketOnly && msg.SwapType == LimitSwap {
 			continue
 		}
 
@@ -295,6 +303,11 @@ func (vm *SwapQueueAdvVCUR) getAssetPairs(ctx cosmos.Context) (tradePairs, Pools
 }
 
 func (vm *SwapQueueAdvVCUR) AddSwapQueueItem(ctx cosmos.Context, msg MsgSwap) error {
+	// If advanced swap queue is in market-only mode, force all swaps to be market swaps
+	val := vm.k.GetConfigInt64(ctx, constants.EnableAdvSwapQueue)
+	if types.AdvSwapQueueMode(val) == types.AdvSwapQueueModeMarketOnly {
+		msg.SwapType = MarketSwap
+	}
 	if err := vm.k.SetAdvSwapQueueItem(ctx, msg); err != nil {
 		ctx.Logger().Error("fail to add swap item", "error", err)
 		return err
