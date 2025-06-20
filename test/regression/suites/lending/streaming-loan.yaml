@@ -65,7 +65,7 @@ asserts:
   - .expected_collateral_deposited|tonumber == 990122
   - .expected_collateralization_ratio|tonumber == 10000
   - .expected_debt_issued|tonumber == 980290000
-  - .recommended_min_amount_in == "56000"
+  - .recommended_min_amount_in == "42000"
   - .fees.slippage_bps|tonumber == 293
   - .fees.total_bps|tonumber == 437
   - .fees.outbound|tonumber == 14000
@@ -87,7 +87,7 @@ asserts:
   - .expected_collateral_deposited|tonumber == 980488
   - .expected_collateralization_ratio|tonumber == 10000
   - .expected_debt_issued|tonumber == 961160000
-  - .recommended_min_amount_in|tonumber == 56000
+  - .recommended_min_amount_in|tonumber == 42000
   - .fees.slippage_bps|tonumber == 382
   - .fees.total_bps|tonumber == 525
   - .fees.outbound|tonumber == 14000

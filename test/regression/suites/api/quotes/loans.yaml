@@ -131,7 +131,7 @@ asserts:
   - .streaming_swap_blocks|tonumber == 3
   - .streaming_swap_seconds|tonumber == 18
   - .total_open_loan_seconds|tonumber == 618
-  - .recommended_min_amount_in == "56000"
+  - .recommended_min_amount_in == "42000"
   - .fees.slippage_bps|tonumber == 145
   - .fees.total_bps|tonumber == 189
   - .fees.outbound|tonumber == 2000000
@@ -162,7 +162,7 @@ asserts:
   - .streaming_swap_blocks|tonumber == 3
   - .streaming_swap_seconds|tonumber == 18
   - .total_open_loan_seconds|tonumber == 618
-  - .recommended_min_amount_in == "56000"
+  - .recommended_min_amount_in == "42000"
   - .fees.slippage_bps|tonumber == 144
   - .fees.total_bps|tonumber == 238
   - .fees.outbound|tonumber == 2000000

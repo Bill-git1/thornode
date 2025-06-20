@@ -133,7 +133,7 @@ asserts:
   - .streaming_swap_blocks|tonumber == 4
   - .streaming_swap_seconds|tonumber == 24
   - .total_open_loan_seconds|tonumber == 624
-  - .recommended_min_amount_in == "512000"
+  - .recommended_min_amount_in == "384000"
   - .fees.slippage_bps|tonumber == 195
   - .fees.total_bps|tonumber == 2879
   - .fees.outbound|tonumber == 126784100

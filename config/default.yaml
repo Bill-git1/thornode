@@ -389,6 +389,7 @@ thor:
   vault_pubkeys_cutoff_blocks: 1_000_000
   seed_nodes_endpoint: https://thornode.ninerealms.com/thorchain/nodes
   stagenet_admin_addresses: "sthor1gdq9qejfy33jctztqdrg5v4hvxnytmvjhduacc" # 9R official stagenet
+  quote_recommended_min_amount_fee_multiplier: 3 # the multiplier for calculateMinSwapAmount
   telemetry:
     slash_points: false
 

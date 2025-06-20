@@ -358,6 +358,12 @@ type Thornode struct {
 	// consensus failure on sync from genesis.
 	StagenetAdminAddresses []string `mapstructure:"stagenet_admin_addresses"`
 
+	// QuoteRecommendedMinAmountFeeMultiplier sets the multiplier on the outbound fee
+	// for the source and destination chains, used to determine the min recommended
+	// swap amount that should be respected by clients to avoid outbounds and
+	// refunds being swallowed.
+	QuoteRecommendedMinAmountFeeMultiplier uint64 `mapstructure:"quote_recommended_min_amount_fee_multiplier"`
+
 	// Telemetry contains THORnode-specific telemetry configuration.
 	Telemetry struct {
 		// SlashPoints enables slash point telemetry. This creates a file in the node home
