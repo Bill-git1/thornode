@@ -106,61 +106,57 @@ func (s *HandlerAddLiquiditySuite) SetUpSuite(c *C) {
 func (s *HandlerAddLiquiditySuite) TestAddLiquidityHandler(c *C) {
 	var err error
 	ctx, mgr := setupManagerForTest(c)
-	activeNodeAccount := GetRandomValidatorNode(NodeActive)
-	runeAddr := GetRandomRUNEAddress()
-	ethAddr := GetRandomETHAddress()
+	nodeAccount := GetRandomValidatorNode(NodeActive)
+	c.Assert(mgr.K.SetNodeAccount(ctx, nodeAccount), IsNil)
+
+	vault := GetRandomVault()
+	vault.Chains = append(vault.Chains, common.ETHChain.String())
+	err = mgr.K.SetVault(ctx, vault)
+	c.Assert(err, IsNil)
+
+	FundModule(c, ctx, mgr.K, BondName, nodeAccount.Bond.Uint64())
+
 	pool := NewPool()
 	pool.Asset = common.ETHAsset
 	pool.Status = PoolAvailable
-	k := &MockAddLiquidityKeeper{
-		activeNodeAccount: activeNodeAccount,
-		currentPool:       pool,
-		lp: LiquidityProvider{
-			Asset:             common.ETHAsset,
-			RuneAddress:       runeAddr,
-			AssetAddress:      ethAddr,
-			Units:             cosmos.ZeroUint(),
-			PendingRune:       cosmos.ZeroUint(),
-			PendingAsset:      cosmos.ZeroUint(),
-			RuneDepositValue:  cosmos.ZeroUint(),
-			AssetDepositValue: cosmos.ZeroUint(),
-		},
-		pol:        NewProtocolOwnedLiquidity(),
-		polAddress: GetRandomRUNEAddress(),
-	}
-	mgr.K = k
-	// happy path
+	err = mgr.K.SetPool(ctx, pool)
+	c.Assert(err, IsNil)
+
+	runeAddr := GetRandomRUNEAddress()
+	ethAddr := GetRandomETHAddress()
+
 	addHandler := NewAddLiquidityHandler(mgr)
-	addTxHash := GetRandomTxHash()
-	tx := common.NewTx(
-		addTxHash,
-		runeAddr,
-		GetRandomETHAddress(),
-		common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(common.One*5))},
-		common.Gas{
-			common.NewCoin(common.ETHAsset, cosmos.NewUint(10000)),
-		},
-		"add:ETH",
-	)
-	msg := NewMsgAddLiquidity(
-		tx,
+	secHandler := NewSecuredAssetDepositHandler(mgr)
+
+	_, err = addHandler.Run(ctx, NewMsgAddLiquidity(
+		GetRandomTx(),
 		common.ETHAsset,
 		cosmos.NewUint(100*common.One),
 		cosmos.ZeroUint(),
 		runeAddr,
 		ethAddr,
-		common.NoAddress, cosmos.ZeroUint(),
-		activeNodeAccount.NodeAddress)
-	_, err = addHandler.Run(ctx, msg)
+		common.NoAddress,
+		cosmos.ZeroUint(),
+		nodeAccount.NodeAddress,
+	))
 	c.Assert(err, IsNil)
 
 	midLiquidityPool, err := mgr.Keeper().GetPool(ctx, common.ETHAsset)
 	c.Assert(err, IsNil)
 	c.Assert(midLiquidityPool.PendingInboundRune.String(), Equals, "10000000000")
 
-	msg.RuneAmount = cosmos.ZeroUint()
-	msg.AssetAmount = cosmos.NewUint(100 * common.One)
-	_, err = addHandler.Run(ctx, msg)
+	// add ETH
+	_, err = addHandler.Run(ctx, NewMsgAddLiquidity(
+		GetRandomTx(),
+		common.ETHAsset,
+		cosmos.ZeroUint(),
+		cosmos.NewUint(100*common.One),
+		runeAddr,
+		ethAddr,
+		common.NoAddress,
+		cosmos.ZeroUint(),
+		nodeAccount.NodeAddress,
+	))
 	c.Assert(err, IsNil)
 
 	postLiquidityPool, err := mgr.Keeper().GetPool(ctx, common.ETHAsset)
@@ -173,6 +169,148 @@ func (s *HandlerAddLiquiditySuite) TestAddLiquidityHandler(c *C) {
 	pol, err := mgr.Keeper().GetPOL(ctx)
 	c.Assert(err, IsNil)
 	c.Check(pol.RuneDeposited.Uint64(), Equals, uint64(0))
+
+	// Secured asset deposit
+	// NOTE: needs to be a different than the one that deposited L1 assets
+	contractAddr := GetRandomRUNEAddress()
+	accAddr, err := contractAddr.AccAddress()
+	c.Assert(err, IsNil)
+
+	_, err = secHandler.Run(ctx, NewMsgSecuredAssetDeposit(
+		common.ETHAsset,
+		cosmos.NewUint(common.One*100),
+		accAddr,
+		accAddr,
+		GetRandomTx(),
+	))
+	c.Assert(err, IsNil)
+
+	balance := mgr.SecuredAssetManager().BalanceOf(ctx, common.ETHAsset, accAddr)
+	c.Assert(balance.String(), Equals, "10000000000")
+
+	tx := GetRandomTx()
+	tx.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(10000)))
+
+	// add RUNE
+	_, err = addHandler.Run(ctx, NewMsgAddLiquidity(
+		tx,
+		common.ETHAsset.GetSecuredAsset(),
+		cosmos.NewUint(50*common.One),
+		cosmos.ZeroUint(),
+		contractAddr,
+		contractAddr,
+		common.NoAddress,
+		cosmos.ZeroUint(),
+		nodeAccount.NodeAddress,
+	))
+	c.Assert(err, IsNil)
+
+	pool, err = mgr.K.GetPool(ctx, common.ETHAsset)
+	c.Assert(err, IsNil)
+
+	c.Assert(pool.PendingInboundRune.String(), Equals, "5000000000")
+
+	// add secured ETH (ETH-ETH)
+	_, err = addHandler.Run(ctx, NewMsgAddLiquidity(
+		tx,
+		common.ETHAsset.GetSecuredAsset(),
+		cosmos.ZeroUint(),
+		cosmos.NewUint(50*common.One),
+		contractAddr,
+		contractAddr,
+		common.NoAddress,
+		cosmos.ZeroUint(),
+		nodeAccount.NodeAddress,
+	))
+	c.Assert(err, IsNil)
+
+	balance = mgr.SecuredAssetManager().BalanceOf(ctx, common.ETHAsset, accAddr)
+	c.Assert(balance.String(), Equals, "5000000000")
+
+	pool, err = mgr.K.GetPool(ctx, common.ETHAsset)
+	c.Assert(err, IsNil)
+	c.Assert(pool.BalanceAsset.String(), Equals, "15000000000")
+	c.Assert(pool.BalanceRune.String(), Equals, "15000000000")
+	c.Assert(pool.PendingInboundAsset.String(), Equals, "0")
+	c.Assert(pool.PendingInboundRune.String(), Equals, "0")
+
+	// add secured ETH + RUNE
+	_, err = addHandler.Run(ctx, NewMsgAddLiquidity(
+		tx,
+		common.ETHAsset.GetSecuredAsset(),
+		cosmos.NewUint(10*common.One),
+		cosmos.NewUint(10*common.One),
+		contractAddr,
+		contractAddr,
+		common.NoAddress,
+		cosmos.ZeroUint(),
+		nodeAccount.NodeAddress,
+	))
+	c.Assert(err, IsNil)
+
+	balance = mgr.SecuredAssetManager().BalanceOf(ctx, common.ETHAsset, accAddr)
+	c.Assert(balance.String(), Equals, "4000000000")
+
+	pool, err = mgr.K.GetPool(ctx, common.ETHAsset)
+	c.Assert(err, IsNil)
+	c.Assert(pool.BalanceAsset.String(), Equals, "16000000000")
+	c.Assert(pool.BalanceRune.String(), Equals, "16000000000")
+	c.Assert(pool.PendingInboundAsset.String(), Equals, "0")
+	c.Assert(pool.PendingInboundRune.String(), Equals, "0")
+
+	// add nothing
+	_, err = addHandler.Run(ctx, NewMsgAddLiquidity(
+		tx,
+		common.ETHAsset.GetSecuredAsset(),
+		cosmos.ZeroUint(),
+		cosmos.ZeroUint(),
+		contractAddr,
+		contractAddr,
+		common.NoAddress,
+		cosmos.ZeroUint(),
+		nodeAccount.NodeAddress,
+	))
+	c.Assert(err, IsNil)
+
+	balance = mgr.SecuredAssetManager().BalanceOf(ctx, common.ETHAsset, accAddr)
+	c.Assert(balance.String(), Equals, "4000000000")
+
+	pool, err = mgr.K.GetPool(ctx, common.ETHAsset)
+	c.Assert(err, IsNil)
+	c.Assert(pool.BalanceAsset.String(), Equals, "16000000000")
+	c.Assert(pool.BalanceRune.String(), Equals, "16000000000")
+	c.Assert(pool.PendingInboundAsset.String(), Equals, "0")
+	c.Assert(pool.PendingInboundRune.String(), Equals, "0")
+
+	// provide wrong params
+
+	// wrong asset address
+	_, err = addHandler.Run(ctx, NewMsgAddLiquidity(
+		tx,
+		common.ETHAsset.GetSecuredAsset(),
+		cosmos.NewUint(common.One),
+		cosmos.ZeroUint(),
+		contractAddr,
+		GetRandomETHAddress(),
+		common.NoAddress,
+		cosmos.ZeroUint(),
+		nodeAccount.NodeAddress,
+	))
+	c.Assert(err, NotNil)
+
+	// no asset address
+	_, err = addHandler.Run(ctx, NewMsgAddLiquidity(
+		tx,
+		common.ETHAsset.GetSecuredAsset(),
+		cosmos.NewUint(common.One),
+		cosmos.ZeroUint(),
+		contractAddr,
+		common.NoAddress,
+		common.NoAddress,
+		cosmos.ZeroUint(),
+		nodeAccount.NodeAddress,
+	))
+	c.Assert(err, NotNil)
 }
 
 func (s *HandlerAddLiquiditySuite) TestAddLiquidityHandler_NoPool_ShouldCreateNewPool(c *C) {
@@ -235,6 +373,80 @@ func (s *HandlerAddLiquiditySuite) TestAddLiquidityHandler_NoPool_ShouldCreateNe
 	c.Assert(err, IsNil)
 	c.Assert(postLiquidityPool.BalanceAsset.String(), Equals, preLiquidityPool.BalanceAsset.Add(msg.AssetAmount).String())
 	c.Assert(postLiquidityPool.BalanceRune.String(), Equals, preLiquidityPool.BalanceRune.Add(msg.RuneAmount).String())
+}
+
+func (s *HandlerAddLiquiditySuite) TestAddLiquidityHandler_NoPool_ShouldCreateNewPoolSecured(c *C) {
+	var err error
+	ctx, mgr := setupManagerForTest(c)
+	nodeAccount := GetRandomValidatorNode(NodeActive)
+	c.Assert(mgr.K.SetNodeAccount(ctx, nodeAccount), IsNil)
+
+	vault := GetRandomVault()
+	vault.Chains = append(vault.Chains, common.BTCChain.String())
+	err = mgr.K.SetVault(ctx, vault)
+	c.Assert(err, IsNil)
+
+	FundModule(c, ctx, mgr.K, BondName, nodeAccount.Bond.Uint64())
+
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.Status = PoolAvailable
+	err = mgr.K.SetPool(ctx, pool)
+	c.Assert(err, IsNil)
+
+	runeAddr := GetRandomRUNEAddress()
+
+	addHandler := NewAddLiquidityHandler(mgr)
+	secHandler := NewSecuredAssetDepositHandler(mgr)
+
+	preLiquidityPool, err := mgr.K.GetPool(ctx, common.BTCAsset)
+	c.Assert(err, IsNil)
+	c.Assert(preLiquidityPool.Asset, Equals, common.BTCAsset)
+	c.Assert(preLiquidityPool.BalanceAsset.String(), Equals, "0")
+	c.Assert(preLiquidityPool.BalanceRune.String(), Equals, "0")
+
+	tx := GetRandomTx()
+	tx.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(10000)))
+
+	accAddr, err := runeAddr.AccAddress()
+	c.Assert(err, IsNil)
+
+	_, err = secHandler.Run(ctx, NewMsgSecuredAssetDeposit(
+		common.BTCAsset,
+		cosmos.NewUint(common.One*2),
+		accAddr,
+		accAddr,
+		tx,
+	))
+	c.Assert(err, IsNil)
+
+	mgr.constAccessor = constants.NewDummyConstants(map[constants.ConstantName]int64{
+		constants.MaximumLiquidityRune: 600_000_00000000,
+	}, map[constants.ConstantName]bool{
+		constants.StrictBondLiquidityRatio: true,
+	}, map[constants.ConstantName]string{})
+
+	msg := NewMsgAddLiquidity(
+		tx,
+		common.BTCAsset.GetSecuredAsset(),
+		cosmos.NewUint(1000*common.One),
+		cosmos.NewUint(1*common.One),
+		runeAddr,
+		runeAddr,
+		common.NoAddress,
+		cosmos.ZeroUint(),
+		nodeAccount.NodeAddress,
+	)
+
+	_, err = addHandler.Run(ctx, msg)
+	c.Assert(err, IsNil)
+	postLiquidityPool, err := mgr.K.GetPool(ctx, common.BTCAsset)
+	c.Assert(err, IsNil)
+	c.Assert(postLiquidityPool.BalanceAsset.String(), Equals, preLiquidityPool.BalanceAsset.Add(msg.AssetAmount).String())
+	c.Assert(postLiquidityPool.BalanceRune.String(), Equals, preLiquidityPool.BalanceRune.Add(msg.RuneAmount).String())
+
+	balance := mgr.SecuredAssetManager().BalanceOf(ctx, common.BTCAsset, accAddr)
+	c.Assert(balance.String(), Equals, "100000000")
 }
 
 func (s *HandlerAddLiquiditySuite) TestAddLiquidityHandlerValidation(c *C) {

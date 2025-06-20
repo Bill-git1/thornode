@@ -108,9 +108,39 @@ func (h WithdrawLiquidityHandler) handleV3_0_0(ctx cosmos.Context, msg MsgWithdr
 	if err != nil {
 		return nil, multierror.Append(errFailGetLiquidityProvider, err)
 	}
+
+	withdrawToSecuredAsset := !msg.Asset.IsNative() && lp.AssetAddress.IsChain(common.THORChain)
+
 	runeAmt, assetAmt, units, gasAsset, err := withdraw(ctx, msg, h.mgr)
 	if err != nil {
 		return nil, ErrInternal(err, "fail to process withdraw request")
+	}
+
+	// withdraw to secure asset
+	if withdrawToSecuredAsset {
+		if !msg.WithdrawalAsset.IsEmpty() {
+			return nil, fmt.Errorf("single sided withdrawal not supported for secured assets")
+		}
+
+		if !assetAmt.IsZero() {
+			// Withdraw to secure asset
+			accAddr, err := lp.AssetAddress.AccAddress()
+			if err != nil {
+				return nil, err
+			}
+
+			_, err = h.mgr.SecuredAssetManager().Deposit(
+				ctx,
+				msg.Asset,
+				assetAmt,
+				accAddr,
+				lp.AssetAddress,
+				msg.Tx.ID,
+			)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	memo := ""
@@ -187,10 +217,11 @@ func (h WithdrawLiquidityHandler) handleV3_0_0(ctx cosmos.Context, msg MsgWithdr
 		return nil
 	}
 
-	if !assetAmt.IsZero() {
+	if !assetAmt.IsZero() && !withdrawToSecuredAsset {
 		coin := common.NewCoin(msg.Asset, assetAmt)
-		// TODO: this might be an issue for single sided/AVAX->ETH, ETH -> AVAX
+
 		if !msg.Asset.IsRune() && !lp.AssetAddress.IsChain(msg.Asset.GetChain()) {
+			// TODO: this might be an issue for single sided/AVAX->ETH, ETH -> AVAX
 			if err := h.swap(ctx, msg, coin, lp.AssetAddress); err != nil {
 				return nil, err
 			}

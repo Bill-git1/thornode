@@ -99,3 +99,103 @@ func (MsgAddLiquiditySuite) TestMsgAddLiquidity(c *C) {
 	m1 = NewMsgAddLiquidity(tx, common.ETHAsset, cosmos.ZeroUint(), cosmos.ZeroUint(), GetRandomTHORAddress(), GetRandomETHAddress(), GetRandomTHORAddress(), cosmos.ZeroUint(), GetRandomBech32Addr())
 	c.Assert(m1.ValidateBasic(), IsNil)
 }
+
+func (MsgAddLiquiditySuite) TestMsgAddLiquidity_SecuredAssets(c *C) {
+	testCases := []struct {
+		Asset        common.Asset
+		AssetAmount  cosmos.Uint
+		AssetAddress common.Address
+		RuneAmount   cosmos.Uint
+		RuneAddress  common.Address
+		TxHash       common.TxID
+		Signer       cosmos.AccAddress
+		Error        string
+	}{
+		{
+			// zero asset amount
+			Asset:        common.BTCAsset.GetSecuredAsset(),
+			AssetAmount:  cosmos.ZeroUint(),
+			AssetAddress: GetRandomTHORAddress(),
+			RuneAmount:   cosmos.ZeroUint(),
+			RuneAddress:  GetRandomTHORAddress(),
+			TxHash:       GetRandomTxHash(),
+			Signer:       GetRandomBech32Addr(),
+			Error:        "",
+		},
+		{
+			// zero rune amount
+			Asset:        common.BTCAsset.GetSecuredAsset(),
+			AssetAmount:  cosmos.NewUint(common.One),
+			AssetAddress: GetRandomTHORAddress(),
+			RuneAmount:   cosmos.ZeroUint(),
+			RuneAddress:  GetRandomTHORAddress(),
+			TxHash:       GetRandomTxHash(),
+			Signer:       GetRandomBech32Addr(),
+			Error:        "",
+		},
+		{
+			// non zero asset and rune amount
+			Asset:        common.BTCAsset.GetSecuredAsset(),
+			AssetAmount:  cosmos.NewUint(common.One),
+			AssetAddress: GetRandomTHORAddress(),
+			RuneAmount:   cosmos.NewUint(common.One),
+			RuneAddress:  GetRandomTHORAddress(),
+			TxHash:       GetRandomTxHash(),
+			Signer:       GetRandomBech32Addr(),
+			Error:        "",
+		},
+		{
+			// no asset address
+			Asset:        common.BTCAsset.GetSecuredAsset(),
+			AssetAmount:  cosmos.NewUint(common.One),
+			AssetAddress: common.NoAddress,
+			RuneAmount:   cosmos.ZeroUint(),
+			RuneAddress:  GetRandomTHORAddress(),
+			TxHash:       GetRandomTxHash(),
+			Signer:       GetRandomBech32Addr(),
+			Error:        "asset address cannot be empty.*",
+		},
+		{
+			// no rune address
+			Asset:        common.BTCAsset.GetSecuredAsset(),
+			AssetAmount:  cosmos.NewUint(common.One),
+			AssetAddress: GetRandomTHORAddress(),
+			RuneAmount:   cosmos.ZeroUint(),
+			RuneAddress:  common.NoAddress,
+			TxHash:       GetRandomTxHash(),
+			Signer:       GetRandomBech32Addr(),
+			Error:        "rune address cannot be empty.*",
+		},
+		{
+			// wrong asset address
+			Asset:        common.BTCAsset.GetSecuredAsset(),
+			AssetAmount:  cosmos.NewUint(common.One),
+			AssetAddress: GetRandomBTCAddress(),
+			RuneAmount:   cosmos.ZeroUint(),
+			RuneAddress:  GetRandomTHORAddress(),
+			TxHash:       GetRandomTxHash(),
+			Signer:       GetRandomBech32Addr(),
+			Error:        "asset address must be thor address.*",
+		},
+	}
+
+	for _, tc := range testCases {
+		msg := NewMsgAddLiquidity(
+			GetRandomTx(),
+			tc.Asset,
+			tc.RuneAmount,
+			tc.AssetAmount,
+			tc.RuneAddress,
+			tc.AssetAddress,
+			common.NoAddress,
+			cosmos.ZeroUint(),
+			tc.Signer,
+		)
+		err := msg.ValidateBasic()
+		if tc.Error == "" {
+			c.Assert(err, IsNil)
+		} else {
+			c.Assert(err, ErrorMatches, tc.Error)
+		}
+	}
+}

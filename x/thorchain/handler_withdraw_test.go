@@ -155,6 +155,177 @@ func (HandlerWithdrawSuite) TestWithdrawHandler(c *C) {
 	c.Assert(err, NotNil)
 }
 
+func (HandlerWithdrawSuite) TestWithdrawToSecuredAsset(c *C) {
+	// w := getHandlerTestWrapper(c, 1, true, true)
+	SetupConfigForTest()
+	ctx, mgr := setupManagerForTest(c)
+
+	nodeAccount := GetRandomValidatorNode(NodeActive)
+	c.Assert(mgr.K.SetNodeAccount(ctx, nodeAccount), IsNil)
+
+	FundModule(c, ctx, mgr.K, BondName, nodeAccount.Bond.Uint64())
+
+	vault := GetRandomVault()
+	vault.Chains = []string{common.ETHChain.String()}
+	c.Assert(mgr.K.SetVault(ctx, vault), IsNil)
+
+	pool := Pool{
+		BalanceRune:  cosmos.NewUint(common.One * 4000),
+		BalanceAsset: cosmos.NewUint(common.One * 40),
+		Asset:        common.ETHAsset,
+		LPUnits:      cosmos.NewUint(10000),
+		Status:       PoolAvailable,
+	}
+	c.Assert(mgr.K.SetPool(ctx, pool), IsNil)
+
+	runeAddr := GetRandomRUNEAddress()
+	accAddr, _ := runeAddr.AccAddress()
+
+	mgr.K.SetLiquidityProvider(ctx, LiquidityProvider{
+		Asset:        common.ETHAsset,
+		AssetAddress: runeAddr,
+		RuneAddress:  runeAddr,
+		Units:        cosmos.NewUint(10000),
+	})
+
+	tx := GetRandomTx()
+	tx.Coins = common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(10000)))
+
+	withdrawHandler := NewWithdrawLiquidityHandler(mgr)
+
+	// withdraw 25%
+
+	_, err := withdrawHandler.Run(ctx, NewMsgWithdrawLiquidity(
+		tx,
+		runeAddr,
+		cosmos.NewUint(2500),
+		common.ETHAsset,
+		common.EmptyAsset,
+		nodeAccount.NodeAddress,
+	))
+	c.Assert(err, IsNil)
+
+	pool, err = mgr.K.GetPool(ctx, common.ETHAsset)
+	c.Assert(err, IsNil)
+	c.Assert(pool.BalanceAsset.String(), Equals, "3000000000")
+
+	balance := mgr.SecuredAssetManager().BalanceOf(ctx, common.ETHAsset, accAddr)
+	c.Assert(balance.String(), Equals, "1000000000")
+
+	coins := mgr.K.GetBalance(ctx, accAddr)
+	c.Assert(len(coins), Equals, 2)
+	for _, coin := range coins {
+		switch coin.Denom {
+		case "rune":
+			c.Assert(coin.Amount.String(), Equals, "99998000000")
+		case "eth-eth":
+			c.Assert(coin.Amount.String(), Equals, "1000000000")
+		default:
+			c.Errorf("unexpected coin: %s", coin.Denom)
+		}
+	}
+
+	pool.Status = PoolSuspended
+	c.Assert(mgr.K.SetPool(ctx, pool), IsNil)
+
+	_, err = withdrawHandler.Run(ctx, NewMsgWithdrawLiquidity(
+		tx,
+		runeAddr,
+		cosmos.NewUint(9900),
+		common.ETHAsset,
+		common.EmptyAsset,
+		nodeAccount.NodeAddress,
+	))
+	c.Assert(err, NotNil)
+
+	pool, err = mgr.K.GetPool(ctx, common.ETHAsset)
+	c.Assert(err, IsNil)
+	c.Assert(pool.BalanceAsset.String(), Equals, "3000000000")
+
+	balance = mgr.SecuredAssetManager().BalanceOf(ctx, common.ETHAsset, accAddr)
+	c.Assert(balance.String(), Equals, "1000000000")
+
+	coins = mgr.K.GetBalance(ctx, accAddr)
+	c.Assert(len(coins), Equals, 2)
+	for _, coin := range coins {
+		switch coin.Denom {
+		case "rune":
+			c.Assert(coin.Amount.String(), Equals, "99998000000")
+		case "eth-eth":
+			c.Assert(coin.Amount.String(), Equals, "1000000000")
+		default:
+			c.Errorf("unexpected coin: %s", coin.Denom)
+		}
+	}
+
+	pool.Status = PoolAvailable
+	c.Assert(mgr.K.SetPool(ctx, pool), IsNil)
+
+	_, err = withdrawHandler.Run(ctx, NewMsgWithdrawLiquidity(
+		tx,
+		runeAddr,
+		cosmos.NewUint(10000),
+		common.ETHAsset,
+		common.EmptyAsset,
+		nodeAccount.NodeAddress,
+	))
+	c.Assert(err, IsNil)
+
+	balance = mgr.SecuredAssetManager().BalanceOf(ctx, common.ETHAsset, accAddr)
+	c.Assert(balance.String(), Equals, "4000000000")
+
+	coins = mgr.K.GetBalance(ctx, accAddr)
+	c.Assert(len(coins), Equals, 2)
+	for _, coin := range coins {
+		switch coin.Denom {
+		case "rune":
+			c.Assert(coin.Amount.String(), Equals, "399996000000")
+		case "eth-eth":
+			c.Assert(coin.Amount.String(), Equals, "4000000000")
+		default:
+			c.Errorf("unexpected coin: %s", coin.Denom)
+		}
+	}
+
+	pool, err = mgr.K.GetPool(ctx, common.ETHAsset)
+	c.Assert(err, IsNil)
+	c.Assert(pool.BalanceAsset.String(), Equals, "0")
+	c.Assert(pool.BalanceRune.String(), Equals, "0")
+
+	// try to withdraw from empty pool
+
+	_, err = withdrawHandler.Run(ctx, NewMsgWithdrawLiquidity(
+		tx,
+		runeAddr,
+		cosmos.NewUint(10000),
+		common.ETHAsset,
+		common.EmptyAsset,
+		nodeAccount.NodeAddress,
+	))
+	c.Assert(err, NotNil)
+
+	balance = mgr.SecuredAssetManager().BalanceOf(ctx, common.ETHAsset, accAddr)
+	c.Assert(balance.String(), Equals, "4000000000")
+
+	coins = mgr.K.GetBalance(ctx, accAddr)
+	c.Assert(len(coins), Equals, 2)
+	for _, coin := range coins {
+		switch coin.Denom {
+		case "rune":
+			c.Assert(coin.Amount.String(), Equals, "399996000000")
+		case "eth-eth":
+			c.Assert(coin.Amount.String(), Equals, "4000000000")
+		default:
+			c.Errorf("unexpected coin: %s", coin.Denom)
+		}
+	}
+
+	pool, err = mgr.K.GetPool(ctx, common.ETHAsset)
+	c.Assert(err, IsNil)
+	c.Assert(pool.BalanceAsset.String(), Equals, "0")
+	c.Assert(pool.BalanceRune.String(), Equals, "0")
+}
+
 func (HandlerWithdrawSuite) TestAsymmetricWithdraw(c *C) {
 	SetupConfigForTest()
 	ctx, keeper := setupKeeperForTest(c)

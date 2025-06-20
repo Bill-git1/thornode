@@ -691,7 +691,7 @@ func getWithdrawTestKeeper(c *C, ctx cosmos.Context, k keeper.Keeper, runeAddres
 	lp := LiquidityProvider{
 		Asset:              pool.Asset,
 		RuneAddress:        runeAddress,
-		AssetAddress:       runeAddress,
+		AssetAddress:       GetRandomETHAddress(),
 		LastAddHeight:      0,
 		LastWithdrawHeight: 0,
 		Units:              cosmos.NewUint(100 * common.One),

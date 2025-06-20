@@ -61,6 +61,17 @@ func (m *MsgAddLiquidity) ValidateBasic() error {
 	if !m.AffiliateBasisPoints.IsZero() && m.AffiliateBasisPoints.GT(cosmos.NewUint(MaxAffiliateFeeBasisPoints)) {
 		return cosmos.ErrUnknownRequest(fmt.Sprintf("affiliate fee basis points can't be more than %d", MaxAffiliateFeeBasisPoints))
 	}
+	if m.Asset.IsSecuredAsset() {
+		if m.AssetAddress.IsEmpty() {
+			return cosmos.ErrUnknownRequest("asset address cannot be empty")
+		}
+		if m.RuneAddress.IsEmpty() {
+			return cosmos.ErrUnknownRequest("rune address cannot be empty")
+		}
+		if !m.AssetAddress.IsChain(common.THORChain) {
+			return cosmos.ErrUnknownRequest("asset address must be thor address")
+		}
+	}
 	return nil
 }
 

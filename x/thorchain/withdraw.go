@@ -43,8 +43,9 @@ func withdrawV3_0_0(ctx cosmos.Context, msg MsgWithdrawLiquidity, mgr Manager) (
 	if err != nil {
 		ctx.Logger().Error("failed to find liquidity provider", "error", err)
 		return cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), err
-
 	}
+
+	withdrawToSecuredAsset := !msg.Asset.IsNative() && !lp.AssetAddress.IsEmpty() && lp.AssetAddress.Equals(lp.RuneAddress)
 
 	poolRune := pool.BalanceRune
 	poolAsset := pool.BalanceAsset
@@ -103,8 +104,11 @@ func withdrawV3_0_0(ctx cosmos.Context, msg MsgWithdrawLiquidity, mgr Manager) (
 	}
 	withDrawAsset = cosmos.RoundToDecimal(withDrawAsset, pool.Decimals)
 	gasAsset := cosmos.ZeroUint()
+
 	// If the pool is empty, and there is a gas asset, subtract required gas
-	if common.SafeSub(pool.GetPoolUnits(), fLiquidityProviderUnit).Add(unitAfter).IsZero() {
+	// Skip, if withdrawn to secured asset (lp asset address is TC address)
+	remainingPoolUnits := common.SafeSub(pool.GetPoolUnits(), fLiquidityProviderUnit).Add(unitAfter)
+	if remainingPoolUnits.IsZero() && !withdrawToSecuredAsset {
 		maxGas, err := mgr.GasMgr().GetMaxGas(ctx, pool.Asset.GetChain())
 		if err != nil {
 			ctx.Logger().Error("fail to get gas for asset", "asset", pool.Asset, "error", err)
