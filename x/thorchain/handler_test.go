@@ -549,6 +549,31 @@ func (HandlerSuite) TestGetMsgUnBondFromMemo(c *C) {
 	c.Assert(isUnBond, Equals, true)
 }
 
+func (HandlerSuite) TestGetMsgReBondFromMemo(c *C) {
+	w := getHandlerTestWrapper(c, 1, true, false)
+	tx := GetRandomTx()
+	tx.Coins = common.Coins{
+		common.NewCoin(common.RuneAsset(), cosmos.NewUint(100*common.One)),
+	}
+	for _, template := range []string{
+		"rebond:%s:%s:123456789",
+		"rebond:%s:%s:0",
+		"rebond:%s:%s",
+	} {
+		tx.Memo = fmt.Sprintf(
+			template,
+			GetRandomTHORAddress().String(),
+			GetRandomTHORAddress().String(),
+		)
+		obTx := NewObservedTx(tx, w.ctx.BlockHeight(), GetRandomPubKey(), w.ctx.BlockHeight())
+		msg, err := processOneTxIn(w.ctx, w.keeper, obTx, w.activeNodeAccount.NodeAddress)
+		c.Assert(err, IsNil)
+		c.Assert(msg, NotNil)
+		_, isReBond := msg.(*MsgReBond)
+		c.Assert(isReBond, Equals, true)
+	}
+}
+
 func (HandlerSuite) TestGetMsgLiquidityFromMemo(c *C) {
 	w := getHandlerTestWrapper(c, 1, true, false)
 	// provide DOGE, however THORNode send T-CAN as coin , which is incorrect, should result in an error

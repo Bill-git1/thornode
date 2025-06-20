@@ -15,6 +15,7 @@ import (
 const (
 	AddLiquidityEventType         = "add_liquidity"
 	BondEventType                 = "bond"
+	ReBondEventType               = "rebond"
 	DonateEventType               = "donate"
 	ErrataEventType               = "errata"
 	FeeEventType                  = "fee"
@@ -442,6 +443,37 @@ func (m *EventBond) Events() (cosmos.Events, error) {
 		cosmos.NewAttribute("bond_type", m.BondType.String()),
 		cosmos.NewAttribute("node_address", m.NodeAddress.String()),
 		cosmos.NewAttribute("bond_address", m.BondAddress.String()))
+	evt = evt.AppendAttributes(m.TxIn.ToAttributes()...)
+	return cosmos.Events{evt}, nil
+}
+
+// NewEventReBond create a new ReBond Event
+func NewEventReBond(
+	amount cosmos.Uint, txIn common.Tx,
+	nodeAccount *NodeAccount,
+	oldProvider, newProvider cosmos.AccAddress,
+) *EventReBond {
+	return &EventReBond{
+		Amount:         amount,
+		TxIn:           txIn,
+		NodeAddress:    nodeAccount.NodeAddress,
+		OldBondAddress: oldProvider,
+		NewBondAddress: newProvider,
+	}
+}
+
+// Type return bond event Type
+func (m *EventReBond) Type() string {
+	return ReBondEventType
+}
+
+// Events return all the event attributes
+func (m *EventReBond) Events() (cosmos.Events, error) {
+	evt := cosmos.NewEvent(m.Type(),
+		cosmos.NewAttribute("amount", m.Amount.String()),
+		cosmos.NewAttribute("node_address", m.NodeAddress.String()),
+		cosmos.NewAttribute("old_bond_address", m.OldBondAddress.String()),
+		cosmos.NewAttribute("new_bond_address", m.NewBondAddress.String()))
 	evt = evt.AppendAttributes(m.TxIn.ToAttributes()...)
 	return cosmos.Events{evt}, nil
 }

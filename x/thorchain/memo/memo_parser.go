@@ -88,6 +88,8 @@ func (p *parser) parse() (mem Memo, err error) {
 		return p.ParseBondMemo()
 	case TxUnbond:
 		return p.ParseUnbondMemo()
+	case TxRebond:
+		return p.ParseRebondMemo()
 	case TxReserve:
 		return p.ParseReserveMemo()
 	case TxMigrate:

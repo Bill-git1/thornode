@@ -84,6 +84,7 @@ const (
 	TxOutbound        = mem.TxOutbound
 	TxRefund          = mem.TxRefund
 	TxUnBond          = mem.TxUnbond
+	TxRebond          = mem.TxRebond
 	TxLeave           = mem.TxLeave
 	TxMaint           = mem.TxMaint
 	TxWithdraw        = mem.TxWithdraw
@@ -146,6 +147,7 @@ var (
 	NewEventWithdraw               = types.NewEventWithdraw
 	NewEventRefund                 = types.NewEventRefund
 	NewEventBond                   = types.NewEventBond
+	NewEventReBond                 = types.NewEventReBond
 	NewEventGas                    = types.NewEventGas
 	NewEventScheduledOutbound      = types.NewEventScheduledOutbound
 	NewEventSecurity               = types.NewEventSecurity
@@ -192,6 +194,7 @@ var (
 	NewMsgReserveContributor       = types.NewMsgReserveContributor
 	NewMsgBond                     = types.NewMsgBond
 	NewMsgUnBond                   = types.NewMsgUnBond
+	NewMsgReBond                   = types.NewMsgReBond
 	NewMsgErrataTx                 = types.NewMsgErrataTx
 	NewMsgBan                      = types.NewMsgBan
 	NewMsgLeave                    = types.NewMsgLeave
@@ -258,6 +261,7 @@ type (
 	MsgDeposit                = types.MsgDeposit
 	MsgBond                   = types.MsgBond
 	MsgUnBond                 = types.MsgUnBond
+	MsgReBond                 = types.MsgReBond
 	MsgNoOp                   = types.MsgNoOp
 	MsgTradeAccountDeposit    = types.MsgTradeAccountDeposit
 	MsgTradeAccountWithdrawal = types.MsgTradeAccountWithdrawal
@@ -390,6 +394,7 @@ type (
 	RagnarokMemo               = mem.RagnarokMemo
 	BondMemo                   = mem.BondMemo
 	UnbondMemo                 = mem.UnbondMemo
+	RebondMemo                 = mem.RebondMemo
 	OutboundMemo               = mem.OutboundMemo
 	LeaveMemo                  = mem.LeaveMemo
 	MaintMemo                  = mem.MaintMemo

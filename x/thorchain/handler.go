@@ -51,6 +51,7 @@ func getInternalHandlerMapping(mgr Manager) map[string]MsgHandler {
 	m[sdk.MsgTypeURL(&MsgReserveContributor{})] = NewReserveContributorHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgBond{})] = NewBondHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgUnBond{})] = NewUnBondHandler(mgr)
+	m[sdk.MsgTypeURL(&MsgReBond{})] = NewReBondHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgLeave{})] = NewLeaveHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgMaint{})] = NewMaintHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgDonate{})] = NewDonateHandler(mgr)
@@ -165,6 +166,10 @@ func getMsgUnbondFromMemo(memo UnbondMemo, tx ObservedTx, signer cosmos.AccAddre
 	return NewMsgUnBond(tx.Tx, memo.GetAccAddress(), memo.GetAmount(), tx.Tx.FromAddress, memo.BondProviderAddress, signer), nil
 }
 
+func getMsgRebondFromMemo(memo RebondMemo, tx ObservedTx, signer cosmos.AccAddress) (cosmos.Msg, error) {
+	return NewMsgReBond(tx.Tx, memo.GetNodeAddress(), memo.GetNewProviderAddress(), memo.GetAmount(), signer), nil
+}
+
 func getMsgMaintFromMemo(memo MaintMemo, signer cosmos.AccAddress) (cosmos.Msg, error) {
 	return types.NewMsgMaint(memo.GetAccAddress(), signer), nil
 }
@@ -217,6 +222,8 @@ func processOneTxIn(ctx cosmos.Context, keeper keeper.Keeper, tx ObservedTx, sig
 		newMsg, err = getMsgBondFromMemo(m, tx, signer)
 	case UnbondMemo:
 		newMsg, err = getMsgUnbondFromMemo(m, tx, signer)
+	case RebondMemo:
+		newMsg, err = getMsgRebondFromMemo(m, tx, signer)
 	case RagnarokMemo:
 		newMsg, err = getMsgRagnarokFromMemo(m, tx, signer)
 	case LeaveMemo:

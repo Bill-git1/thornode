@@ -209,6 +209,20 @@ func (EventSuite) TestEventBond(c *C) {
 	c.Check(events, NotNil)
 }
 
+func (EventSuite) TestEventReBond(c *C) {
+	tx := GetRandomTx()
+	amount := cosmos.NewUint(68468161)
+	nodeAddress := GetRandomValidatorNode(NodeStatus_Active)
+	oldAddress := GetRandomBech32Addr()
+	newAddress := GetRandomBech32Addr()
+
+	e := NewEventReBond(amount, tx, &nodeAddress, oldAddress, newAddress)
+	c.Check(e.Type(), Equals, "rebond")
+	events, err := e.Events()
+	c.Check(err, IsNil)
+	c.Check(events, NotNil)
+}
+
 func (EventSuite) TestEventReserve(c *C) {
 	e := NewEventReserve(ReserveContributor{
 		Address: GetRandomETHAddress(),

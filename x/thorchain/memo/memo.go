@@ -50,6 +50,7 @@ const (
 	TxTCYStake
 	TxTCYUnstake
 	TxMaint
+	TxRebond
 )
 
 var stringToTxTypeMap = map[string]TxType{
@@ -68,6 +69,7 @@ var stringToTxTypeMap = map[string]TxType{
 	"d":           TxDonate,
 	"bond":        TxBond,
 	"unbond":      TxUnbond,
+	"rebond":      TxRebond,
 	"leave":       TxLeave,
 	"reserve":     TxReserve,
 	"refund":      TxRefund,
@@ -108,6 +110,7 @@ var txToStringMap = map[TxType]string{
 	TxDonate:                 "donate",
 	TxBond:                   "bond",
 	TxUnbond:                 "unbond",
+	TxRebond:                 "rebond",
 	TxLeave:                  "leave",
 	TxReserve:                "reserve",
 	TxMigrate:                "migrate",
@@ -156,6 +159,7 @@ func (tx TxType) IsInbound() bool {
 		TxDonate,
 		TxBond,
 		TxUnbond,
+		TxRebond,
 		TxLeave,
 		TxMaint,
 		TxReserve,

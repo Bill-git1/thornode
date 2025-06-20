@@ -48,7 +48,7 @@ The following functions can be put into a memo:
 1. [**REPAY Loan**](memos.md#repay-loan)
 1. [**DEPOSIT RUNEPool**](memos.md#deposit-runepool)
 1. [**WITHDRAW RUNEPool**](memos.md#withdraw-runepool)
-1. [**BOND**, **UNBOND** & **LEAVE**](memos.md#bond-unbond-and-leave)
+1. [**BOND**, **UNBOND**, **REBOND** & **LEAVE**](memos.md#bond-unbond-and-leave)
 1. [**DONATE** & **RESERVE**](memos.md#donate-and-reserve)
 1. [**MIGRATE**](memos.md#migrate)
 1. [**NOOP**](memos.md#noop)
@@ -446,7 +446,7 @@ Donate to the THORChain Reserve.
 | Payload   | THOR.RUNE            | The RUNE to credit to the THORChain Reserve. |
 | `RESERVE` | The reserve handler. |                                              |
 
-### BOND, UNBOND and LEAVE
+### BOND, UNBOND, REBOND and LEAVE
 
 Perform node maintenance features. Also see [Pooled Nodes](https://docs.thorchain.org/thornodes/pooled-thornodes).
 
@@ -469,6 +469,18 @@ Perform node maintenance features. Also see [Pooled Nodes](https://docs.thorchai
 | `:NODEADDR` | The node to unbond from. | Must be in standby only.                                              |
 | `:AMOUNT`   | The amount to unbond.    | In 1e8 format. If setting more than actual bond, then capped at bond. |
 | `:PROVIDER` | Unwhitelist a provider.  | Optional. Remove a provider.                                          |
+
+**`REBOND:NODEADDR:NEWADDR:AMOUNT`**
+
+Migrate bonded RUNE to a different whitelisted address on the same node
+
+| Parameter   | Notes                                   | Conditions                                                                                            |
+| ----------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Payload     | None required                           | Use `MsgDeposit`                                                                                      |
+| `REBOND`    | The rebond handler.                     |                                                                                                       |
+| `:NODEADDR` | The node to unbond from.                | Can be in any state.                                                                                  |
+| `:NEWADDR`  | The address to receive the bonded RUNE. | Must be whitelisted and on the same node.                                                             |
+| `:AMOUNT`   | The amount to migrate.                  | Optional. Default is 0. In 1e8 format. If setting is 0 or more than actual bond, then capped at bond. |
 
 **`LEAVE:NODEADDR`**
 
