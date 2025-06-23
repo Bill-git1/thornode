@@ -100,13 +100,15 @@ func (s *HandlerTCYClaim) TestHandle(c *C) {
 	claimingNameBalance := k.GetBalanceOfModule(ctx, TCYClaimingName, common.TCY.Native())
 	c.Assert(claimingNameBalance.Equal(math.NewUint(210)), Equals, true)
 
-	// there should only be the TCY contract staker before sending msg
+	// there should only be TCY contract stakers before sending msg
 	stakers, err := k.ListTCYStakers(ctx)
 	c.Assert(err, IsNil)
-	c.Assert(len(stakers), Equals, 1)
-	scAddress, err := tcysmartcontract.GetTCYSmartContractAddress()
+	scAddresses, err := tcysmartcontract.GetTCYSmartContractAddresses()
 	c.Assert(err, IsNil)
-	c.Assert(stakers[0].Address.String(), Equals, scAddress.String())
+	c.Assert(len(stakers), Equals, len(scAddresses))
+	for i, staker := range stakers {
+		c.Assert(staker.Address.String(), Equals, scAddresses[i].String())
+	}
 
 	// setup pools and claimers
 	c.Assert(k.SetPool(ctx, types.Pool{Asset: addr1Asset}), IsNil)

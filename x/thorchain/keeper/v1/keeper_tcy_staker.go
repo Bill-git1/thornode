@@ -36,7 +36,7 @@ func (k KVStore) getTCYStaker(ctx cosmos.Context, key string, record *TCYStaker)
 // GetTCYStaker - gets tcy staker
 func (k KVStore) GetTCYStaker(ctx cosmos.Context, address common.Address) (TCYStaker, error) {
 	if tcysmartcontract.IsTCYSmartContractAddress(address) {
-		return k.getTCYSmartContractAddressStaker(ctx)
+		return k.getTCYSmartContractAddressStaker(address, ctx)
 	}
 	record := NewTCYStaker(address, math.ZeroUint())
 	ok, err := k.getTCYStaker(ctx, k.GetKey(prefixTCYStaker, address.String()), &record)
@@ -85,10 +85,10 @@ func (k KVStore) ListTCYStakers(ctx cosmos.Context) ([]TCYStaker, error) {
 		stakers = append(stakers, staker)
 	}
 
-	// Add TCY smart contract staker
-	tcySCStaker, err := k.getTCYSmartContractAddressStaker(ctx)
+	// Add TCY smart contract stakers
+	tcySCStakers, err := k.getTCYSmartContractAddressStakers(ctx)
 	if err == nil {
-		stakers = append(stakers, tcySCStaker)
+		stakers = append(stakers, tcySCStakers...)
 	}
 
 	return stakers, nil
@@ -116,11 +116,7 @@ func (k KVStore) UpdateTCYStaker(ctx cosmos.Context, address common.Address, amo
 	return k.SetTCYStaker(ctx, types.NewTCYStaker(address, amount))
 }
 
-func (k KVStore) getTCYSmartContractAddressStaker(ctx cosmos.Context) (TCYStaker, error) {
-	address, err := tcysmartcontract.GetTCYSmartContractAddress()
-	if err != nil {
-		return TCYStaker{}, err
-	}
+func (k KVStore) getTCYSmartContractAddressStaker(address common.Address, ctx cosmos.Context) (TCYStaker, error) {
 	accAddress, err := address.AccAddress()
 	if err != nil {
 		return TCYStaker{}, err
@@ -131,4 +127,27 @@ func (k KVStore) getTCYSmartContractAddressStaker(ctx cosmos.Context) (TCYStaker
 	}
 
 	return NewTCYStaker(address, math.NewUint(coin.Amount.Uint64())), nil
+}
+
+func (k KVStore) getTCYSmartContractAddressStakers(ctx cosmos.Context) ([]TCYStaker, error) {
+	addresses, err := tcysmartcontract.GetTCYSmartContractAddresses()
+	if err != nil {
+		return nil, err
+	}
+
+	var stakers []TCYStaker
+	for _, address := range addresses {
+		accAddress, err := address.AccAddress()
+		if err != nil {
+			return nil, err
+		}
+		coin := k.GetBalanceOf(ctx, accAddress, common.TCY)
+		balance := math.ZeroUint()
+		if !coin.IsNil() {
+			balance = math.NewUint(coin.Amount.Uint64())
+		}
+		staker := NewTCYStaker(address, balance)
+		stakers = append(stakers, staker)
+	}
+	return stakers, nil
 }
