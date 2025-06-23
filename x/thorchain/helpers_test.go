@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"cosmossdk.io/math"
+
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/common"
@@ -653,6 +655,58 @@ func (s *HelperSuite) TestGetHardBondCap(c *C) {
 		NodeAccount{Bond: cosmos.NewUint(60)},
 	}
 	c.Assert(getHardBondCap(nas).Uint64(), Equals, uint64(40), Commentf("%d", getHardBondCap(nas).Uint64()))
+}
+
+func (s *HelperSuite) TestIsTronZeroGasTx(c *C) {
+	testCases := []struct {
+		Chain  common.Chain
+		Asset  common.Asset
+		Amount uint64
+		Result bool
+	}{
+		{
+			Chain:  common.THORChain,
+			Asset:  common.TCY,
+			Amount: 1,
+			Result: false,
+		},
+		{
+			Chain:  common.ETHChain,
+			Asset:  common.ETHAsset,
+			Amount: 123456789,
+			Result: false,
+		},
+		{
+			Chain:  common.TRONChain,
+			Asset:  common.ETHAsset,
+			Amount: 1,
+			Result: false,
+		},
+		{
+			Chain:  common.TRONChain,
+			Asset:  common.TRXAsset,
+			Amount: 2,
+			Result: false,
+		},
+		{
+			Chain:  common.TRONChain,
+			Asset:  common.TRXAsset,
+			Amount: 1,
+			Result: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		coin := common.Coin{Asset: tc.Asset, Amount: math.NewUint(tc.Amount)}
+
+		tx := GetRandomTx()
+		tx.Chain = tc.Chain
+		tx.Gas = common.Gas{}.Add(coin)
+
+		obsTx := NewObservedTx(tx, 7, GetRandomPubKey(), 3)
+
+		c.Assert(isTronZeroGasTx(obsTx), Equals, tc.Result)
+	}
 }
 
 func (HandlerSuite) TestIsSignedByActiveNodeAccounts(c *C) {

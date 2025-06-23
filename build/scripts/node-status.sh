@@ -35,6 +35,7 @@ BASE_ENDPOINT="${BIFROST_CHAINS_BASE_RPC_HOST:-http://base-daemon:${BASE_DAEMON_
 GAIA_ENDPOINT="${GAIA_HOST:-http://gaia-daemon:26657}"
 AVALANCHE_ENDPOINT="${AVAX_HOST:-http://avalanche-daemon:9650/ext/bc/C/rpc}"
 XRP_ENDPOINT="${BIFROST_CHAINS_XRP_RPC_HOST:-http://xrp-daemon:${XRP_DAEMON_SERVICE_PORT_RPC:-51234}}"
+TRON_ENDPOINT="${BIFROST_CHAINS_TRON_API_HOST:-http://tron-daemon:16667}"
 
 ADDRESS=$(echo "$SIGNER_PASSWD" | thornode keys show "$SIGNER_NAME" -a --keyring-backend file)
 JSON=$(curl -sL --fail -m 10 "$API/thorchain/node/$ADDRESS")
@@ -153,6 +154,16 @@ if [ "$VALIDATOR" = "true" ]; then
   fi
 fi
 
+# calculate Tron chain sync progress
+if [ "$BIFROST_CHAINS_TRON_DISABLED" = "false" ]; then
+  TRON_HEIGHT=$(curl -sL --fail -m 10 https://api.trongrid.io/wallet/getnowblock | jq ".block_header.raw_data.number")
+  TRON_SYNC_HEIGHT=$(curl -sL --fail -m 10 "$TRON_ENDPOINT/wallet/getnowblock" | jq ".block_header.raw_data.number")
+  if [ -z "$TRON_SYNC_HEIGHT" ]; then
+    TRON_SYNC_HEIGHT=0
+  fi
+  TRON_PROGRESS=$(calc_progress "$TRON_SYNC_HEIGHT" "$TRON_HEIGHT")
+fi
+
 # calculate THOR chain sync progress
 THOR_SYNC_HEIGHT=$(curl -sL --fail -m 10 thornode:"$THORNODE_PORT"/status | jq -r ".result.sync_info.latest_block_height")
 if [ "$PEER" != "" ]; then
@@ -215,6 +226,8 @@ GAIA_HEIGHT=${GAIA_HEIGHT:=0}
 GAIA_SYNC_HEIGHT=${GAIA_SYNC_HEIGHT:=0}
 BASE_HEIGHT=${BASE_HEIGHT:=0}
 BASE_SYNC_HEIGHT=${BASE_SYNC_HEIGHT:=0}
+TRON_HEIGHT=${TRON_HEIGHT:=0}
+TRON_SYNC_HEIGHT=${TRON_SYNC_HEIGHT:=0}
 
 echo
 printf "%-18s %-10s %-14s %-10s\n" CHAIN SYNC BEHIND TIP
@@ -233,6 +246,9 @@ if [ "$VALIDATOR" = "true" ]; then
   printf "%-18s %-10s %-14s %-10s\n" BASE "$BASE_PROGRESS" "$(format_int $((BASE_SYNC_HEIGHT - BASE_HEIGHT)))" "$(format_int "$BASE_HEIGHT")"
   if [ "$BIFROST_CHAINS_XRP_DISABLED" = "false" ]; then
     printf "%-18s %-10s %-14s %-10s\n" XRP "$XRP_PROGRESS" "$(format_int $((XRP_SYNC_HEIGHT - XRP_HEIGHT)))" "$(format_int "$XRP_HEIGHT")"
+  fi
+  if [ "$BIFROST_CHAINS_TRON_DISABLED" = "false" ]; then
+    printf "%-18s %-10s %-14s %-10s\n" TRON "$TRON_PROGRESS" "$(format_int $((TRON_SYNC_HEIGHT - TRON_HEIGHT)))" "$(format_int "$TRON_HEIGHT")"
   fi
 fi
 

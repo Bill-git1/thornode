@@ -51,5 +51,9 @@ func (s *PubKeyTestSuite) TestPubKeyGetAddress(c *C) {
 		addrDOGE, err := pk.GetAddress(DOGEChain)
 		c.Assert(err, IsNil)
 		c.Assert(addrDOGE.String(), Equals, d.addrDOGE.mocknet)
+
+		addrTRON, err := pk.GetAddress(TRONChain)
+		c.Assert(err, IsNil)
+		c.Assert(addrTRON.IsChain(TRONChain), Equals, true)
 	}
 }

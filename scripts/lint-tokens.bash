@@ -12,14 +12,19 @@ possibly_die() {
 check_token_list() {
   local LIST="$1"
 
+  local FILTER=".tokens[] | .address"
+  if [ $# -eq 2 ] && [ "$2" == "downcase" ]; then
+    FILTER="$FILTER | ascii_downcase"
+  fi
+
   echo "Linting $LIST"
 
   git show origin/develop:"$LIST" |
-    jq -r '.tokens[] | .address | ascii_downcase' |
-    sort -n >/tmp/orig_erc20_token_list.txt
+    jq -r "$FILTER" |
+    sort >/tmp/orig_erc20_token_list.txt
 
-  jq -r '.tokens[] | .address | ascii_downcase' <"$LIST" |
-    sort -n >/tmp/modified_erc20_token_list.txt
+  jq -r "$FILTER" <"$LIST" |
+    sort >/tmp/modified_erc20_token_list.txt
 
   # shellcheck disable=SC2155
   local REMOVALS=$(comm -23 /tmp/orig_erc20_token_list.txt /tmp/modified_erc20_token_list.txt)
@@ -36,9 +41,12 @@ check_token_list() {
   # fi
 }
 
-check_token_list common/tokenlist/ethtokens/eth_mainnet_latest.json
-check_token_list common/tokenlist/avaxtokens/avax_mainnet_latest.json
-check_token_list common/tokenlist/bsctokens/bsc_mainnet_latest.json
-check_token_list common/tokenlist/basetokens/base_mainnet_latest.json
+check_token_list common/tokenlist/ethtokens/eth_mainnet_latest.json downcase
+check_token_list common/tokenlist/avaxtokens/avax_mainnet_latest.json downcase
+check_token_list common/tokenlist/bsctokens/bsc_mainnet_latest.json downcase
+check_token_list common/tokenlist/basetokens/base_mainnet_latest.json downcase
+
+# case sensitive
+# check_token_list common/tokenlist/trontokens/tron_mainnet_latest.json
 
 echo "OK"

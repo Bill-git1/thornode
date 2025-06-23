@@ -35,6 +35,7 @@ func (s ChainSuite) TestChain(c *C) {
 	c.Assert(LTCChain.GetGasAsset(), Equals, LTCAsset)
 	c.Assert(BCHChain.GetGasAsset(), Equals, BCHAsset)
 	c.Assert(DOGEChain.GetGasAsset(), Equals, DOGEAsset)
+	c.Assert(TRONChain.GetGasAsset(), Equals, TRXAsset)
 	c.Assert(EmptyChain.GetGasAsset(), Equals, EmptyAsset)
 
 	c.Assert(BTCChain.AddressPrefix(MockNet), Equals, chaincfg.RegressionNetParams.Bech32HRPSegwit)
@@ -48,4 +49,9 @@ func (s ChainSuite) TestChain(c *C) {
 	c.Assert(DOGEChain.AddressPrefix(MockNet), Equals, dogchaincfg.RegressionNetParams.Bech32HRPSegwit)
 	c.Assert(DOGEChain.AddressPrefix(MainNet), Equals, dogchaincfg.MainNetParams.Bech32HRPSegwit)
 	c.Assert(DOGEChain.AddressPrefix(StageNet), Equals, dogchaincfg.MainNetParams.Bech32HRPSegwit)
+
+	// Tron chain tests
+	c.Assert(TRONChain.GetGasUnits(), Equals, "sun")
+	c.Assert(TRONChain.GetGasAssetDecimal(), Equals, int64(6))
+	c.Assert(TRONChain.ApproximateBlockMilliseconds(), Equals, int64(3000))
 }

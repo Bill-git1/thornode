@@ -306,6 +306,21 @@ func (s *AddressSuite) TestAddress(c *C) {
 	c.Check(addr.IsChain(XRPChain), Equals, true)
 	c.Check(addr.GetNetwork(XRPChain), Equals, MainNet)
 
+	// tron test
+	addr, err = NewAddress("TKSrg7Ffs81r8QsLMfqRHG82hbFYz2Bw5W")
+	c.Check(err, IsNil)
+	c.Check(addr.IsChain(BCHChain), Equals, false)
+	c.Check(addr.IsChain(LTCChain), Equals, false)
+	c.Check(addr.IsChain(BTCChain), Equals, false)
+	c.Check(addr.IsChain(ETHChain), Equals, false)
+	c.Check(addr.IsChain(GAIAChain), Equals, false)
+	c.Check(addr.IsChain(THORChain), Equals, false)
+	c.Check(addr.IsChain(DOGEChain), Equals, false)
+	c.Check(addr.IsChain(XRPChain), Equals, false)
+	c.Check(addr.IsChain(TRONChain), Equals, true)
+	c.Check(addr.GetNetwork(TRONChain), Equals, MainNet)
+
+	//
 	addr, err = NewAddress("mtyBWSzMZaCxJ1xy9apJBZzXz648BZrpJg")
 	c.Check(err, IsNil)
 	c.Check(addr.IsChain(BCHChain), Equals, true)

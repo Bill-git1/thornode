@@ -38,7 +38,7 @@ require (
 	cosmossdk.io/x/tx v0.13.7
 	cosmossdk.io/x/upgrade v0.1.4
 	filippo.io/age v1.0.0-rc.3
-	github.com/99designs/keyring v1.2.1
+	github.com/99designs/keyring v1.2.1 // indirect
 	github.com/CosmWasm/wasmd v0.53.0
 	github.com/CosmWasm/wasmvm/v2 v2.1.2 // indirect
 	github.com/Peersyst/xrpl-go v0.1.3
@@ -58,7 +58,6 @@ require (
 	github.com/cosmos/gogoproto v1.7.0
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/deckarep/golang-set v1.8.0
-	github.com/decred/dcrd/dcrec/edwards v1.0.0
 	github.com/decred/dcrd/dcrec/edwards/v2 v2.0.0
 	github.com/eager7/dogd v0.0.0-20200427085516-2caf59f59dbb
 	github.com/eager7/doglog v0.0.0-20200427040431-a0db59f0a792
@@ -119,7 +118,12 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-require cosmossdk.io/collections v0.4.0
+require (
+	cosmossdk.io/collections v0.4.0
+	github.com/decred/dcrd/dcrec/secp256k1 v1.0.4
+)
+
+require github.com/decred/dcrd/dcrec/secp256k1/v2 v2.0.0 // indirect
 
 require (
 	cloud.google.com/go v0.114.0 // indirect
@@ -348,7 +352,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/tyler-smith/go-bip32 v1.0.0 // indirect
-	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
+	github.com/tyler-smith/go-bip39 v1.1.0
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	github.com/ulikunitz/xz v0.5.11 // indirect
 	github.com/whyrusleeping/go-keyspace v0.0.0-20160322163242-5b898ac5add1 // indirect

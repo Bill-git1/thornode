@@ -430,6 +430,10 @@ func addGasFees(ctx cosmos.Context, mgr Manager, tx ObservedTx) error {
 		return nil
 	}
 
+	if isTronZeroGasTx(tx) {
+		return nil
+	}
+
 	// If the transaction wasn't from a known vault, then no relevance for known vaults or pools.
 	if !mgr.Keeper().VaultExists(ctx, tx.ObservedPubKey) {
 		return nil
@@ -1288,4 +1292,13 @@ func trimKeyPrefix(key []byte) string {
 
 func IsPeriodLastBlock(ctx cosmos.Context, blocksPerPeriod int64) bool {
 	return ctx.BlockHeight()%blocksPerPeriod == 0
+}
+
+func isTronZeroGasTx(tx ObservedTx) bool {
+	if !tx.Tx.Chain.Equals(common.TRONChain) {
+		return false
+	}
+
+	gasAmount := tx.Tx.Gas.ToCoins().GetCoin(common.TRXAsset).Amount
+	return gasAmount.Equal(cosmos.NewUint(1))
 }

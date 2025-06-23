@@ -151,6 +151,8 @@ services:
       - dogecoin
       - gaia
       - litecoin
+      - tron-supernode
+      - tron-fullnode
       - thornode
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -204,6 +206,10 @@ services:
       BIFROST_CHAINS_XRP_DISABLED: "false"
       BIFROST_CHAINS_XRP_RPC_HOST: http://xrp:5005
       BIFROST_CHAINS_XRP_CHAIN_NETWORK: "1234"
+
+      # enable tron
+      BIFROST_CHAINS_TRON_API_HOST: http://tron-fullnode:8090
+      BIFROST_CHAINS_TRON_RPC_HOST: http://tron-fullnode:8091
 
       # set fixed gas rate for evm chains
       BIFROST_CHAINS_ETH_BLOCK_SCANNER_FIXED_GAS_RATE: 20_000_000_000 # 20 gwei
@@ -574,3 +580,31 @@ services:
       - 9650:9650
     environment:
       RPC_PORT: "9650"
+
+  # ------------------------------ tron ------------------------------
+
+  tron-supernode:
+    profiles:
+      - mocknet
+      - mocknet-cluster
+    image: registry.gitlab.com/thorchain/devops/node-launcher:tron-daemon-4.8.0
+    volumes:
+      - "./mocknet:/mocknet"
+    environment:
+      TRON_NODE_TYPE: mocknet-supernode
+
+  tron-fullnode:
+    profiles:
+      - mocknet
+      - mocknet-cluster
+    image: registry.gitlab.com/thorchain/devops/node-launcher:tron-daemon-4.8.0
+    links:
+      - tron-supernode:supernode
+    volumes:
+      - "./mocknet:/mocknet"
+    ports:
+      - "8090:8090"
+      - "8091:8091"
+    environment:
+      TRON_NODE_TYPE: mocknet-fullnode
+      TRON_SEED_NODE: docker-tron-supernode-1:18888

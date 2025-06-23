@@ -64,6 +64,7 @@ func (vm *NetworkMgrVCUR) processGenesisSetup(ctx cosmos.Context) error {
 			common.GAIAChain,
 			common.BSCChain,
 			common.BASEChain,
+			common.TRONChain,
 			common.XRPChain,
 		}
 		vault := NewVaultV2(0, ActiveVault, AsgardVault, active[0].PubKeySet.Secp256k1, supportChains.Strings(), vm.k.GetChainContracts(ctx, supportChains), active[0].PubKeySet.Ed25519)

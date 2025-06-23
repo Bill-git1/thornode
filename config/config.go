@@ -498,6 +498,7 @@ type Bifrost struct {
 		GAIA BifrostChainConfiguration `mapstructure:"gaia"`
 		LTC  BifrostChainConfiguration `mapstructure:"ltc"`
 		BASE BifrostChainConfiguration `mapstructure:"base"`
+		TRON BifrostChainConfiguration `mapstructure:"tron"`
 		XRP  BifrostChainConfiguration `mapstructure:"xrp"`
 	} `mapstructure:"chains"`
 	TSS             BifrostTSSConfiguration `mapstructure:"tss"`
@@ -516,6 +517,7 @@ func (b Bifrost) GetChains() map[common.Chain]BifrostChainConfiguration {
 		common.GAIAChain: b.Chains.GAIA,
 		common.LTCChain:  b.Chains.LTC,
 		common.BASEChain: b.Chains.BASE,
+		common.TRONChain: b.Chains.TRON,
 		common.XRPChain:  b.Chains.XRP,
 	}
 }
@@ -627,6 +629,7 @@ type BifrostChainConfiguration struct {
 	UserName            string                           `mapstructure:"username"`
 	Password            string                           `mapstructure:"password"`
 	RPCHost             string                           `mapstructure:"rpc_host"`
+	APIHost             string                           `mapstructure:"api_host"`
 	CosmosGRPCHost      string                           `mapstructure:"cosmos_grpc_host"`
 	CosmosGRPCTLS       bool                             `mapstructure:"cosmos_grpc_tls"`
 	HTTPostMode         bool                             `mapstructure:"http_post_mode"` // Bitcoin core only supports HTTP POST mode
@@ -730,8 +733,19 @@ type BifrostChainConfiguration struct {
 }
 
 func (b *BifrostChainConfiguration) Validate() {
-	if b.RPCHost == "" {
-		log.Fatal().Str("chain", b.ChainID.String()).Msg("rpc host is required")
+	switch b.ChainID {
+	case common.TRONChain:
+		if b.APIHost == "" {
+			log.Fatal().
+				Str("chain", b.ChainID.String()).
+				Msg("api host is required")
+		}
+	default:
+		if b.RPCHost == "" {
+			log.Fatal().
+				Str("chain", b.ChainID.String()).
+				Msg("rpc host is required")
+		}
 	}
 }
 

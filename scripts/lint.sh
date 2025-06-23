@@ -23,8 +23,7 @@ fi
 go mod verify
 
 ./scripts/lint-handlers.bash
-
-./scripts/lint-erc20s.bash
+./scripts/lint-tokens.bash
 
 go run tools/analyze/main.go ./common/... ./constants/... ./x/...
 

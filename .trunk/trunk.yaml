@@ -59,6 +59,7 @@ lint:
         - common/tokenlist/*/*.json
         - third_party/**
         - test/regression/mnt/blocks/**
+        - bifrost/pkg/chainclients/tron/api/core
 actions:
   disabled:
     - trunk-announce

@@ -422,6 +422,7 @@ func quoteInboundInfo(ctx cosmos.Context, mgr *Mgrs, amount sdkmath.Uint, chain 
 		common.ETHChain:  2,
 		common.DOGEChain: 2,
 		common.BASEChain: 12, // NOTE: additional inconsistent lag since we scan the "safe" block
+		common.TRONChain: 3,  // TODO: Discuss, if enough
 	}
 	if floor := confFloor[chain]; confirmations < floor {
 		confirmations = floor

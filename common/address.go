@@ -43,6 +43,11 @@ func NewAddress(address string) (Address, error) {
 		return NoAddress, fmt.Errorf("address format not supported: %s", address)
 	}
 
+	// Check is tron address
+	if IsValidTRONAddress(address) {
+		return Address(address), nil
+	}
+
 	// Check is eth address
 	if eth.IsHexAddress(address) {
 		return Address(address), nil
@@ -77,6 +82,16 @@ func IsValidXRPAddress(address string) bool {
 	}
 
 	return len(decoded) == 21 && decoded[0] == 0x00
+}
+
+func IsValidTRONAddress(address string) bool {
+	if len(address) != 34 || address[:1] != "T" {
+		return false
+	}
+
+	// prefix (1 byte, 0x41) + address (20 bytes) + checksum (4 bytes)
+	decoded, err := base58.Decode(address)
+	return err == nil && len(decoded) == 25 && decoded[0] == 0x41
 }
 
 // IsValidBCHAddress determinate whether the address is a valid new BCH address format
@@ -157,6 +172,8 @@ func (addr Address) IsChain(chain Chain) bool {
 	switch chain {
 	case XRPChain:
 		return IsValidXRPAddress(addr.String())
+	case TRONChain:
+		return IsValidTRONAddress(addr.String())
 	case GAIAChain:
 		// Note: Gaia does not use a special prefix for testnet
 		prefix, _, _ := bech32.Decode(addr.String())

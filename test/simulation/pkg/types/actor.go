@@ -114,7 +114,7 @@ func (a *Actor) InitRoot() {
 	a.WalkDepthFirst(func(b *Actor) bool {
 		b.log = log.Logger.With().Str("actor", b.Name).Logger()
 		if b.Timeout == 0 {
-			b.Timeout = time.Minute
+			b.Timeout = time.Minute * 2
 		}
 		if b.Interval == 0 {
 			b.Interval = time.Second
