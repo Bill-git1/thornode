@@ -3,8 +3,10 @@
 
 package wasmpermissions
 
+import "gitlab.com/thorchain/thornode/v3/common/wasmpermissions/types"
+
 var WasmPermissionsRaw = WasmPermissions{
-	Permissions: map[string]WasmPermission{
+	Permissions: map[string]types.WasmPermission{
 		"a8f1a38aa518864169e30ab482ea86558a817982a030b8888ea6dfa0cd700128": {
 			Origin: "https://thorchain.org",
 			Deployers: map[string]bool{

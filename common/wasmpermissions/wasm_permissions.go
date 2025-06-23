@@ -5,15 +5,11 @@ import (
 	"errors"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"gitlab.com/thorchain/thornode/v3/common/wasmpermissions/types"
 )
 
 type WasmPermissions struct {
-	Permissions map[string]WasmPermission
-}
-
-type WasmPermission struct {
-	Origin    string          `json:"origin"`
-	Deployers map[string]bool `json:"deployers"`
+	Permissions map[string]types.WasmPermission
 }
 
 func (w WasmPermissions) Permit(actor sdk.AccAddress, checksum []byte) error {
