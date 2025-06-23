@@ -48,7 +48,7 @@ func (vm *ValidatorMgrVCUR) BeginBlock(ctx cosmos.Context, mgr Manager, existing
 		return nil
 	}
 
-	lastChurnHeight := vm.getLastChurnHeight(ctx)
+	lastChurnHeight := getLastChurnHeight(ctx, vm.k)
 	churnInterval := vm.k.GetConfigInt64(ctx, constants.ChurnInterval)
 	churnRetryInterval := vm.k.GetConfigInt64(ctx, constants.ChurnRetryInterval)
 	onChurnTick := (ctx.BlockHeight()-lastChurnHeight-churnInterval)%churnRetryInterval == 0
@@ -994,22 +994,6 @@ func (vm *ValidatorMgrVCUR) setupValidatorNodes(ctx cosmos.Context, height int64
 	return nil
 }
 
-func (vm *ValidatorMgrVCUR) getLastChurnHeight(ctx cosmos.Context) int64 {
-	vaults, err := vm.k.GetAsgardVaultsByStatus(ctx, ActiveVault)
-	if err != nil {
-		ctx.Logger().Error("Failed to get Asgard vaults", "error", err)
-		return ctx.BlockHeight()
-	}
-	// calculate last churn block height
-	var lastChurnHeight int64 // the last block height we had a successful churn
-	for _, vault := range vaults {
-		if vault.StatusSince > lastChurnHeight {
-			lastChurnHeight = vault.StatusSince
-		}
-	}
-	return lastChurnHeight
-}
-
 func (vm *ValidatorMgrVCUR) getScore(ctx cosmos.Context, slashPts, lastChurnHeight int64) cosmos.Uint {
 	// get to the 8th decimal point, but keep numbers integers for safer math
 	score := cosmos.NewUint(uint64((ctx.BlockHeight() - lastChurnHeight) * common.One))
@@ -1043,7 +1027,7 @@ func (vm *ValidatorMgrVCUR) findBadActors(ctx cosmos.Context, minSlashPointsForB
 	totalScore := cosmos.ZeroUint()
 
 	// Find bad actor relative to age / slashpoints
-	lastChurnHeight := vm.getLastChurnHeight(ctx)
+	lastChurnHeight := getLastChurnHeight(ctx, vm.k)
 	for _, na := range nas {
 		slashPts, err := vm.k.GetNodeAccountSlashPoints(ctx, na.NodeAddress)
 		if err != nil {
@@ -1189,7 +1173,7 @@ func (vm *ValidatorMgrVCUR) markActor(ctx cosmos.Context, na NodeAccount, reason
 		if err != nil {
 			return fmt.Errorf("fail to get node account(%s) slash points: %w", na.NodeAddress, err)
 		}
-		na.LeaveScore = vm.getScore(ctx, slashPts, vm.getLastChurnHeight(ctx)).Uint64()
+		na.LeaveScore = vm.getScore(ctx, slashPts, getLastChurnHeight(ctx, vm.k)).Uint64()
 		return vm.k.SetNodeAccount(ctx, na)
 	}
 	return nil
@@ -1406,7 +1390,7 @@ func (vm *ValidatorMgrVCUR) nextVaultNodeAccounts(ctx cosmos.Context, targetCoun
 	// find out all the nodes that had been marked to leave , and update their score again , because even after a node has been marked
 	// to be churn out , they can continue to accumulate slash points, in the scenario that an active node go offline , and consistently fail
 	// keygen / keysign for a while , we would like to churn it out first
-	lastChurnHeight := vm.getLastChurnHeight(ctx)
+	lastChurnHeight := getLastChurnHeight(ctx, vm.k)
 	for idx, item := range active {
 
 		if item.LeaveScore == 0 {

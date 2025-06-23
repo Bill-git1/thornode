@@ -51,6 +51,7 @@ const (
 	TxTCYUnstake
 	TxMaint
 	TxRebond
+	TxOperatorRotate
 )
 
 var stringToTxTypeMap = map[string]TxType{
@@ -97,6 +98,7 @@ var stringToTxTypeMap = map[string]TxType{
 	"tcy+":        TxTCYStake,
 	"tcy-":        TxTCYUnstake,
 	"maint":       TxMaint,
+	"operator":    TxOperatorRotate,
 }
 
 var txToStringMap = map[TxType]string{
@@ -171,7 +173,8 @@ func (tx TxType) IsInbound() bool {
 		TxSwitch,
 		TxTCYClaim,
 		TxTCYStake,
-		TxTCYUnstake:
+		TxTCYUnstake,
+		TxOperatorRotate:
 		return true
 	default:
 		return false

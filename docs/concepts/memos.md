@@ -49,6 +49,7 @@ The following functions can be put into a memo:
 1. [**DEPOSIT RUNEPool**](memos.md#deposit-runepool)
 1. [**WITHDRAW RUNEPool**](memos.md#withdraw-runepool)
 1. [**BOND**, **UNBOND**, **REBOND** & **LEAVE**](memos.md#bond-unbond-and-leave)
+1. [**OPERATOR ROTATE**](memos.md#operator-rotate)
 1. [**DONATE** & **RESERVE**](memos.md#donate-and-reserve)
 1. [**MIGRATE**](memos.md#migrate)
 1. [**NOOP**](memos.md#noop)
@@ -495,6 +496,18 @@ Migrate bonded RUNE to a different whitelisted address on the same node
 - `BOND:thor19m4kqulyqvya339jfja84h6qp8tkjgxuxa4n4a`
 - `UNBOND:thor1x2whgc2nt665y0kc44uywhynazvp0l8tp0vtu6:750000000000`
 - `LEAVE:thor1hlhdm0ngr2j4lt8tt8wuvqxz6aus58j57nxnps`
+
+### Operator Rotate
+
+**`OPERATOR:NEWOPADDR`**
+
+The operator address can send a `OPERATOR` memo to change the operator address for all their nodes. No nodes for the old or new operator can be active at the time of operator rotation. Operator rotation can only occur in the first half of churn cycle.
+
+| Parameter    | Notes                        | Extra             |
+| ------------ | ---------------------------- | ----------------- |
+| Payload      | None required.               | Use `MsgDeposit`. |
+| `OPERATOR`   | The operator rotate handler. |                   |
+| `:NEWOPADDR` | The new operator address.    |                   |
 
 ### MIGRATE
 

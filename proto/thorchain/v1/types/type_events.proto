@@ -358,6 +358,12 @@ message EventSwitch {
   string tx_id = 5 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.TxID", (gogoproto.customname) = "TxID"];
 }
 
+message EventOperatorRotate {
+  bytes signer = 1 [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
+  bytes node_address = 2 [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
+  bytes operator_address = 3 [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
+}
+
 message EventTCYDistribution {
   bytes rune_address = 1 [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
   string rune_amount = 2 [(gogoproto.customtype) = "cosmossdk.io/math.Uint",(gogoproto.nullable) = false];

@@ -1149,6 +1149,23 @@ func willSwapOutputExceedLimitAndFees(ctx cosmos.Context, mgr Manager, msg MsgSw
 	return err == nil && emit.GT(target.Amount.Add(transactionFeeAsset))
 }
 
+// getLastChurnHeight returns the block height of the last churn.
+func getLastChurnHeight(ctx cosmos.Context, k keeper.Keeper) int64 {
+	vaults, err := k.GetAsgardVaultsByStatus(ctx, ActiveVault)
+	if err != nil {
+		ctx.Logger().Error("failed to get asgard vaults", "error", err)
+		return ctx.BlockHeight()
+	}
+	// calculate last churn block height
+	var lastChurnHeight int64 // the last block height we had a successful churn
+	for _, vault := range vaults {
+		if vault.StatusSince > lastChurnHeight {
+			lastChurnHeight = vault.StatusSince
+		}
+	}
+	return lastChurnHeight
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////
 // RUNEPool and POL
 ////////////////////////////////////////////////////////////////////////////////////////

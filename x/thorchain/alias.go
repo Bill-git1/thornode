@@ -94,6 +94,7 @@ const (
 	TxTCYClaim        = mem.TxTCYClaim
 	TxTCYStake        = mem.TxTCYStake
 	TxTCYUnstake      = mem.TxTCYUnstake
+	TxOperatorRotate  = mem.TxOperatorRotate
 )
 
 var (
@@ -134,6 +135,7 @@ var (
 	NewMsgSetNodeKeys              = types.NewMsgSetNodeKeys
 	NewMsgManageTHORName           = types.NewMsgManageTHORName
 	NewMsgSwitch                   = types.NewMsgSwitch
+	NewMsgOperatorRotate           = types.NewMsgOperatorRotate
 	NewTxOut                       = types.NewTxOut
 	NewEventRewards                = types.NewEventRewards
 	NewEventPool                   = types.NewEventPool
@@ -177,6 +179,7 @@ var (
 	NewEventLoanOpen               = types.NewEventLoanOpen
 	NewEventLoanRepayment          = types.NewEventLoanRepayment
 	NewEventSwitch                 = types.NewEventSwitch
+	NewEventOperatorRotate         = types.NewEventOperatorRotate
 	NewPoolMod                     = types.NewPoolMod
 	NewMsgRefundTx                 = types.NewMsgRefundTx
 	NewMsgOutboundTx               = types.NewMsgOutboundTx
@@ -306,6 +309,7 @@ type (
 	MsgTCYClaim               = types.MsgTCYClaim
 	MsgTCYStake               = types.MsgTCYStake
 	MsgTCYUnstake             = types.MsgTCYUnstake
+	MsgOperatorRotate         = types.MsgOperatorRotate
 
 	// Keeper structs
 	PoolStatus               = types.PoolStatus
@@ -415,6 +419,7 @@ type (
 	TCYClaimMemo               = mem.TCYClaimMemo
 	TCYStakeMemo               = mem.TCYStakeMemo
 	TCYUnstakeMemo             = mem.TCYUnstakeMemo
+	OperatorRotateMemo         = mem.OperatorRotateMemo
 
 	// Proto
 	ProtoStrings = types.ProtoStrings

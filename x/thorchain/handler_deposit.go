@@ -121,7 +121,7 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit) (*cosmos.Resu
 
 	var targetModule string
 	switch memo.GetType() {
-	case TxBond, TxUnBond, TxLeave:
+	case TxBond, TxUnBond, TxLeave, TxOperatorRotate:
 		targetModule = BondName
 	// For TxTCYClaim, send to Reserve so retrievable if done accidentally
 	case TxReserve, TxTHORName, TxTCYClaim, TxMaint, TxModifyLimitSwap:

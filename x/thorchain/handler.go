@@ -77,6 +77,7 @@ func getInternalHandlerMapping(mgr Manager) map[string]MsgHandler {
 	m[sdk.MsgTypeURL(&MsgTCYClaim{})] = NewTCYClaimHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgTCYStake{})] = NewTCYStakeHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgTCYUnstake{})] = NewTCYUnstakeHandler(mgr)
+	m[sdk.MsgTypeURL(&MsgOperatorRotate{})] = NewOperatorRotateHandler(mgr)
 	return m
 }
 
@@ -277,6 +278,8 @@ func processOneTxIn(ctx cosmos.Context, keeper keeper.Keeper, tx ObservedTx, sig
 		newMsg = NewMsgTCYUnstake(tx.Tx, m.BasisPoints, signer)
 	case MaintMemo:
 		newMsg, err = getMsgMaintFromMemo(m, signer)
+	case OperatorRotateMemo:
+		newMsg = NewMsgOperatorRotate(signer, m.OperatorAddress, tx.Tx.Coins[0])
 	default:
 		return nil, errInvalidMemo
 	}
