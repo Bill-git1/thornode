@@ -97,15 +97,13 @@ func (h NodePauseChainHandler) handleV3_0_0(ctx cosmos.Context, msg MsgNodePause
 	}
 
 	// get the current block height set by node pause chain global
-	pauseHeight, err := h.mgr.Keeper().GetMimir(ctx, "NodePauseChainGlobal")
+	key := "NodePauseChainGlobal"
+	pauseHeight, err := h.mgr.Keeper().GetMimir(ctx, key)
 	if err != nil {
 		return err
 	}
 
-	blocks, err := h.mgr.Keeper().GetMimir(ctx, constants.NodePauseChainBlocks.String())
-	if blocks < 0 || err != nil {
-		blocks = h.mgr.GetConstants().GetInt64Value(constants.NodePauseChainBlocks)
-	}
+	blocks := h.mgr.Keeper().GetConfigInt64(ctx, constants.NodePauseChainBlocks)
 
 	if msg.Value > 0 { // node intends to pause chain
 		if pauseHeight > ctx.BlockHeight() { // chain is paused
@@ -115,14 +113,15 @@ func (h NodePauseChainHandler) handleV3_0_0(ctx cosmos.Context, msg MsgNodePause
 			pauseHeight = ctx.BlockHeight() + blocks
 			h.mgr.Keeper().SetNodePauseChain(ctx, msg.Signer)
 		}
-	} else if msg.Value < 0 { // node intends so resume chain
-		if pauseHeight > ctx.BlockHeight() { // chain is paused
-			h.mgr.Keeper().SetNodePauseChain(ctx, msg.Signer)
-			pauseHeight -= blocks
+	} else { // node intends to resume chain
+		if pauseHeight <= ctx.BlockHeight() {
+			// chain isn't paused, so don't do anything
+			return nil
 		}
+		h.mgr.Keeper().SetNodePauseChain(ctx, msg.Signer)
+		pauseHeight -= blocks
 	}
 
-	key := "NodePauseChainGlobal"
 	h.mgr.Keeper().SetMimir(ctx, key, pauseHeight)
 	mimirEvent := NewEventSetMimir(strings.ToUpper(key), strconv.FormatInt(pauseHeight, 10))
 	if err = h.mgr.EventMgr().EmitEvent(ctx, mimirEvent); err != nil {
