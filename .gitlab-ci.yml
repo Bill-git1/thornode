@@ -23,16 +23,60 @@ variables:
     - docker:27.5.0-dind
 
 stages:
+  - .pre
   - fork
   - generate
   - test
   - build
   - long-test
 
-fork:
-  stage: fork
+# Check if only text files are changed in fork MRs
+text_files_check:
+  stage: .pre
+  image: alpine/git:latest
   rules:
     - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH
+      when: always
+  script:
+    - |
+      # Fetch the target branch to compare
+      git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+
+      # Get list of changed files in the merge request
+      CHANGED_FILES=$(git diff --name-only origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME...HEAD)
+      echo "Changed files:"
+      echo "$CHANGED_FILES"
+
+      # Check if all changed files are text files (md, json, yaml, yml)
+      # Exclude .gitlab-ci.yml as it's not considered a text-only change
+      TEXT_ONLY=true
+      if [ -n "$CHANGED_FILES" ]; then
+        for file in $CHANGED_FILES; do
+          if [[ "$file" == ".gitlab-ci.yml" ]] || [[ ! "$file" =~ \.(md|json|yaml|yml)$ ]]; then
+            echo "Non-text file found: $file"
+            TEXT_ONLY=false
+            break
+          fi
+        done
+      else
+        # No files changed, consider it as non-text
+        TEXT_ONLY=false
+      fi
+
+      # Export variable for other jobs
+      echo "TEXT_FILES_ONLY=$TEXT_ONLY" > build.env
+      echo "Detected text files only: $TEXT_ONLY"
+  artifacts:
+    reports:
+      dotenv: build.env
+
+fork:
+  stage: fork
+  needs:
+    - job: text_files_check
+      optional: true
+  rules:
+    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH && $TEXT_FILES_ONLY != "true"
       when: always
   before_script:
     - apt-get update && apt-get install -y --no-install-recommends jq
@@ -53,7 +97,7 @@ fork:
 
 generate:
   rules: &rules
-    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH
+    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH && $TEXT_FILES_ONLY != "true"
       when: never
     - if: $CI == "true"
       when: on_success
@@ -92,7 +136,7 @@ unit-tests:
 
 lint:
   rules:
-    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH
+    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH && $TEXT_FILES_ONLY != "true"
       when: never
     - if: $CI_COMMIT_BRANCH == "stagenet"
       when: never
@@ -108,7 +152,7 @@ lint:
 
 build-thornode:
   rules: &build-thornode-rules
-    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH
+    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH && $TEXT_FILES_ONLY != "true"
       when: never
     - if: $CI_COMMIT_BRANCH == "develop"
       when: always
@@ -177,7 +221,7 @@ go-tss:
 
 pages:
   rules:
-    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH
+    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH && $TEXT_FILES_ONLY != "true"
       when: never
     - if: $CI_COMMIT_BRANCH == "develop"
       when: always
