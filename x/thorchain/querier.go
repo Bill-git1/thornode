@@ -626,6 +626,7 @@ func (qs queryServer) queryNode(ctx cosmos.Context, req *types.QueryNodeRequest)
 		ForcedToLeave:       nodeAcc.ForcedToLeave,
 		LeaveHeight:         int64(nodeAcc.LeaveScore), // OpenAPI can only represent uint64 as int64
 		Maintenance:         nodeAcc.Maintenance,
+		MissingBlocks:       int64(nodeAcc.MissingBlocks),
 		IpAddress:           nodeAcc.IPAddress,
 		Version:             nodeAcc.GetVersion().String(),
 		CurrentAward:        cosmos.ZeroUint().String(), // Default display for if not overwritten.
