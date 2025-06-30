@@ -48,11 +48,12 @@ text_files_check:
       echo "$CHANGED_FILES"
 
       # Check if all changed files are text files (md, json, yaml, yml)
-      # Exclude .gitlab-ci.yml as it's not considered a text-only change
+      # Exclude specific files that are not considered text-only changes
+      EXCLUDED_FILES=".gitlab-ci.yml .trunk/trunk.yaml .trunk/configs/analyzers.yml .trunk/configs/.golangci.yaml .trunk/configs/.markdownlint.yaml .trunk/configs/.yamllint.yaml build/docker/docker-compose.yml config/default.yaml openapi/openapi.yaml"
       TEXT_ONLY=true
       if [ -n "$CHANGED_FILES" ]; then
         for file in $CHANGED_FILES; do
-          if [[ "$file" == ".gitlab-ci.yml" ]] || [[ ! "$file" =~ \.(md|json|yaml|yml)$ ]]; then
+          if echo "$EXCLUDED_FILES" | grep -q "$file" || [[ ! "$file" =~ \.(md|json|yaml|yml)$ ]]; then
             echo "Non-text file found: $file"
             TEXT_ONLY=false
             break
