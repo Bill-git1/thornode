@@ -260,6 +260,19 @@ func Churn(block *thorscan.BlockResponse) {
 				updated = true
 				info.KeyshareBackups[pk][msgTssPool.Signer.String()] = true
 			}
+
+			// track eddsa keyshare backups
+			if len(msgTssPool.KeysharesBackupEddsa) > 1 {
+				pk := string(msgTssPool.PoolPubKeyEddsa)
+				if info.KeyshareBackups == nil {
+					info.KeyshareBackups = make(map[string]map[string]bool)
+				}
+				if info.KeyshareBackups[pk] == nil {
+					info.KeyshareBackups[pk] = make(map[string]bool)
+				}
+				updated = true
+				info.KeyshareBackups[pk][msgTssPool.Signer.String()] = true
+			}
 		}
 	}
 	if updated {
@@ -430,11 +443,19 @@ func notifyChurnStarted(height int64, keyshareBackups map[string]map[string]bool
 			continue
 		}
 		pk := *vault.PubKey
+		eddsaPk := *vault.PubKeyEddsa
 		keyshareBackupLines = append(keyshareBackupLines,
 			fmt.Sprintf(
-				"`%s`: %d/%d (%.2f%%)",
+				"`%s` (ECDSA): %d/%d (%.2f%%)",
 				pk[len(pk)-4:], len(keyshareBackups[pk]), len(vault.Membership),
 				100*float64(len(keyshareBackups[pk]))/float64(len(vault.Membership)),
+			),
+		)
+		keyshareBackupLines = append(keyshareBackupLines,
+			fmt.Sprintf(
+				"`%s` (EDDSA): %d/%d (%.2f%%)",
+				eddsaPk[len(eddsaPk)-4:], len(keyshareBackups[eddsaPk]), len(vault.Membership),
+				100*float64(len(keyshareBackups[eddsaPk]))/float64(len(vault.Membership)),
 			),
 		)
 	}
