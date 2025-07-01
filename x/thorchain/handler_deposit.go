@@ -86,7 +86,10 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit) (*cosmos.Resu
 			return nil, ErrInternal(err, "coins are native to THORChain")
 		}
 
-		if !h.mgr.Keeper().HasCoins(ctx, msg.GetSigners()[0], coins) {
+		// HasCoins always returns false if the address has no balances
+		// (such as if having had just enough for the network fee),
+		// so check first whether there is any non-zero Amount necessary.
+		if !msg.Coins.IsEmpty() && !h.mgr.Keeper().HasCoins(ctx, msg.GetSigners()[0], coins) {
 			return nil, se.ErrInsufficientFunds
 		}
 	}

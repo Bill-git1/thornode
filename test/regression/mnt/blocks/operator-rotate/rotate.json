@@ -759,7 +759,7 @@
           "code": 99,
           "log": "failed to execute message; message index: 0: invalid memo: 2 errors occurred:\n\t* internal error\n\t* MEMO: OPERATOR\nPARSE FAILURE(S): cannot parse '' as an AccAddress: empty address string is not allowed-not enough parameters: 1/2\n\n: internal error",
           "gas_wanted": "-1",
-          "gas_used": "56601",
+          "gas_used": "56313",
           "events": [
             {
               "amount": "2000000rune",
@@ -823,7 +823,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "4263694071CB3440F63F8999EE76EB79B09614B0A13659B584CDF71806788042",
-      "last_results_hash": "2B3C8207CC6081090E2E4E39BA53D0B35DB573E40A6F17FAA37CD73F38DEBAA5",
+      "last_results_hash": "73804F0F318954043C28968AB20CA8C279FFB06AA6EEE76B900EB28393737B7D",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -885,7 +885,7 @@
           "code": 99,
           "log": "failed to execute message; message index: 0: invalid memo: 2 errors occurred:\n\t* internal error\n\t* MEMO: OPERATOR:\nPARSE FAILURE(S): cannot parse '' as an AccAddress: empty address string is not allowed\n\n: internal error",
           "gas_wanted": "-1",
-          "gas_used": "56611",
+          "gas_used": "56323",
           "events": [
             {
               "amount": "2000000rune",
@@ -949,7 +949,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "EA38A90023B4463E901A8B0806BEE7DE3822B33AF016E9AF86C2437A222470AD",
-      "last_results_hash": "DC9EE11EFFA541325D581A40041B2659E91077C803F5384C2F2F2BB32BED3438",
+      "last_results_hash": "766C77358508628019621F7FE781283F2E452578BD024275989031A485D6CD29",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -1011,7 +1011,7 @@
           "code": 99,
           "log": "failed to execute message; message index: 0: invalid memo: 2 errors occurred:\n\t* internal error\n\t* MEMO: OPERATOR:cosmos13wrmhnh2qe98rjse30pl7u6jxszjjwl4t2v05e\nPARSE FAILURE(S): cannot parse 'cosmos13wrmhnh2qe98rjse30pl7u6jxszjjwl4t2v05e' as an AccAddress: invalid Bech32 prefix; expected tthor, got cosmos\n\n: internal error",
           "gas_wanted": "-1",
-          "gas_used": "57061",
+          "gas_used": "56773",
           "events": [
             {
               "amount": "2000000rune",
@@ -1075,7 +1075,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "2B823953FBF26550725DDDEBB9CE09CC3037F4AFBE5145FCCDD3C1ED9A368205",
-      "last_results_hash": "687F46BA5617E43BABC97C788F453E49280D53563A56387B510CA98B674AFB65",
+      "last_results_hash": "42DBA523A4E6952B0EA8A69F009F433738A3C7811D81871493DB9F766FC0BE38",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -1294,7 +1294,7 @@
           "code": 99,
           "log": "failed to execute message; message index: 0: rotate is halted: internal error",
           "gas_wanted": "-1",
-          "gas_used": "80632",
+          "gas_used": "80344",
           "events": [
             {
               "amount": "2000000rune",
@@ -1358,7 +1358,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "D80FE739DE4C902D18499FD82354746593BB6783AEA07516426AC88216A91C40",
-      "last_results_hash": "920DA9719E8D91158C6B428CAADB0CEBCE58564830338217784B5FE27379C634",
+      "last_results_hash": "66545C97E6ED1B959D737305DF9CB610188EBCBDFFA141F8ED861B691383E815",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -1734,7 +1734,7 @@
           "code": 99,
           "log": "failed to execute message; message index: 0: rotate is only allowed in the first half of churn: internal error",
           "gas_wanted": "-1",
-          "gas_used": "88153",
+          "gas_used": "87865",
           "events": [
             {
               "amount": "2000000rune",
@@ -1798,7 +1798,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "B368BB806B42472F05C8BAD670ED7EA887ECF5558B2C7F39B976CD6AD9F3BAEB",
-      "last_results_hash": "CFD2967F238F8BDDAECEEA67A8ECF25183F17F3CF10F60F06D04BF45528705B8",
+      "last_results_hash": "ACB9FC3E76B5186B5BF02E35FAFAA695A2F9E5D0AD11A7DE52E3739F9A206205",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -2017,7 +2017,7 @@
           "code": 99,
           "log": "failed to execute message; message index: 0: cannot rotate from operator with active node: tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m: internal error",
           "gas_wanted": "-1",
-          "gas_used": "89611",
+          "gas_used": "89317",
           "events": [
             {
               "amount": "2000000rune",
@@ -2081,7 +2081,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "BBBF18701D8E537F0F0B1C1D3AE7D9275D9E02C9A5B99C3ED18B074983C43114",
-      "last_results_hash": "270AB50CC54CACD7112C6ED6783E2F793367742A66D1836126A416475DA223BB",
+      "last_results_hash": "9BA39EEAD8C1D0A8883903A40D041607BC0861AB100239F72E0DCAC3F98B03DA",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -2143,7 +2143,7 @@
           "code": 99,
           "log": "failed to execute message; message index: 0: cannot rotate to operator with active node: tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m: internal error",
           "gas_wanted": "-1",
-          "gas_used": "89572",
+          "gas_used": "89284",
           "events": [
             {
               "amount": "2000000rune",
@@ -2207,7 +2207,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "0263A311744E3DE05245835F3197B14F1959AF48CD19D59E33A5E327E677475B",
-      "last_results_hash": "3BF1348A7392E81FFE9C29A915CDB0E55CC492C4EDF57CC876680AF41939AE2A",
+      "last_results_hash": "6327905750A9EE88E01EA86AF8B40B3D3347A8C781214850133A8AD0DAE5CE42",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -2268,7 +2268,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "105367",
+          "gas_used": "105079",
           "events": [
             {
               "amount": "2000000rune",
@@ -2346,7 +2346,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "5CD967754D0CB73ECAF7E63203B8D143F5A059CF5353D8823A2B87C46B27B38C",
-      "last_results_hash": "4FA56EA7699831571B498329B212A3E63094A5201980CC26B4D91CFC14CBB405",
+      "last_results_hash": "B0251358FC25A6CF0C5DEE82AB3E4ABBE93AAAAA5E9B484B638F7B344752CD48",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -2703,7 +2703,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "105367",
+          "gas_used": "105079",
           "events": [
             {
               "amount": "2000000rune",
@@ -2781,7 +2781,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "CA1A6FF92BC86C701A6829E781F6E6DD3F442DE5F451D9D4A5EC442BAE1F273C",
-      "last_results_hash": "4FA56EA7699831571B498329B212A3E63094A5201980CC26B4D91CFC14CBB405",
+      "last_results_hash": "B0251358FC25A6CF0C5DEE82AB3E4ABBE93AAAAA5E9B484B638F7B344752CD48",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -2842,7 +2842,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "119974",
+          "gas_used": "119680",
           "events": [
             {
               "amount": "2000000rune",
