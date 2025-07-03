@@ -368,7 +368,8 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) (signedTx, c
 		return nil, nil, nil, fmt.Errorf("fail to marshal checkpoint: %w", err)
 	}
 
-	feeCurrency, err := fromThorchainToXrp(common.NewCoin(common.XRPAsset, cosmos.NewUint(uint64(tx.GasRate))))
+	gasCoin := common.NewCoin(common.XRPAsset, cosmos.NewUint(uint64(tx.GasRate)))
+	feeCurrency, err := fromThorchainToXrp(gasCoin)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("fail to get fee: %w", err)
 	}
@@ -397,7 +398,33 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) (signedTx, c
 		return nil, checkpointBytes, nil, fmt.Errorf("failed to sign message: %w", err)
 	}
 
-	return txBytes, nil, nil, nil
+	// create instant observation
+	fromAddr, err := tx.VaultPubKey.GetAddress(c.GetChain())
+	if err != nil {
+		c.logger.Err(err).Msg("error retrieving from address for instant observation")
+		return txBytes, nil, nil, nil
+	}
+	blobHex := hex.EncodeToString(txBytes)
+	txID, err := hash.SignTxBlob(blobHex)
+	if err != nil {
+		c.logger.Err(err).Msg("error retrieving txid for instant observation")
+		return txBytes, nil, nil, nil
+	}
+	txIn := stypes.NewTxInItem(
+		currentHeight,
+		txID,
+		tx.Memo,
+		fromAddr.String(),
+		tx.ToAddress.String(),
+		tx.Coins,
+		common.Gas([]common.Coin{gasCoin}),
+		tx.VaultPubKey,
+		"",
+		"",
+		nil,
+	)
+
+	return txBytes, nil, txIn, nil
 }
 
 // signMsg takes a payment msg and signs it using either private key or TSS.
@@ -522,7 +549,7 @@ func (c *Client) txNeedsBroadcast(txHash string) bool {
 		return true
 	}
 
-	return false
+	return txResponse == nil || !txResponse.Validated
 }
 
 func (c *Client) broadcastTx(txBlob string) error {
