@@ -433,6 +433,11 @@ func (tos *TxOutStorageVCUR) DiscoverOutbounds(ctx cosmos.Context, transactionFe
 			}
 		}
 
+		// XRP wallets must keep 1 XRP (the dust threshold) in the wallet
+		if toi.Coin.Asset.Equals(common.XRPAsset) {
+			vaultCoinAmount = common.SafeSub(vaultCoinAmount, common.XRPChain.DustThreshold())
+		}
+
 		toi.VaultPubKey = vault.PubKey
 		if toi.Coin.Amount.LTE(vaultCoinAmount) {
 			outputs = append(outputs, toi)
