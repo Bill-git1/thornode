@@ -278,7 +278,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "1276670",
+          "gas_used": "2262374",
           "events": [
             {
               "fee": "",
@@ -305,11 +305,6 @@
               "code_id": "1",
               "msg_index": "0",
               "type": "store_code"
-            },
-            {
-              "code_id": "1",
-              "msg_index": "0",
-              "type": "pin_code"
             }
           ]
         }
@@ -344,8 +339,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "B0A171281FCE6FD49CABD7EC97D8F9E36822CB57CAE88479FDA80994F6A80F05",
-      "last_results_hash": "18E6C3873B4B7A53955E547A8AA38631A844E25659893EA62232168D618ABF20",
+      "app_hash": "6B01A66BB1E9CA56549E7023304CA6EB6FD379C11D878FE46BD6156FE5B95A7F",
+      "last_results_hash": "9F48F8DF89903B58762B22D7D41F28FF771CD0EC57214CD31F7A2B2369A89D4F",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -403,7 +398,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "88497",
+          "gas_used": "91827",
           "events": [
             {
               "fee": "",
@@ -424,6 +419,11 @@
               "msg_index": "0",
               "sender": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "type": "message"
+            },
+            {
+              "code_id": "1",
+              "msg_index": "0",
+              "type": "pin_code"
             },
             {
               "_contract_address": "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f",
@@ -464,8 +464,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "138C821EDFEBC785E41909FA523F63273FA54788AE274747BA0C63B1562418C6",
-      "last_results_hash": "B0219E2ABF3873BA3D5635CA68BFF133D92871742C1068FE9C7C006BBFDB1641",
+      "app_hash": "533820F2C7301567C31665B258D3012F9B798B269E0AE6EFEBAAF41C23D271C4",
+      "last_results_hash": "6C9E705477DFCD0FE3F550F6ED8D1C19E7F15DC9ECB3D4FDDE52E6106E8E3048",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -521,7 +521,7 @@
           "code": 4,
           "log": "failed to execute message; message index: 0: unauthorized",
           "gas_wanted": "-1",
-          "gas_used": "54665",
+          "gas_used": "53386",
           "events": [
             {
               "fee": "",
@@ -569,8 +569,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "1A7DC02A1A361F3398B424413AD44C12D341EC7B7F68C248FB1FF23B0DC9E104",
-      "last_results_hash": "36ACAF0580B090D64416A2044F968F10453B83267FD7C9917A2DFC6340DFFC87",
+      "app_hash": "BCC77C2CE26CA0D63D0CE0782045D2BAA6F79CB4C751E620975B5895DD067938",
+      "last_results_hash": "CECC828F7EC352ADF9A23BC2AE6EE661505B29EA97A7B218C744BA8BE2985E38",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -625,7 +625,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "49195",
+          "gas_used": "45835",
           "events": [
             {
               "fee": "",

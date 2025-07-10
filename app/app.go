@@ -360,6 +360,7 @@ func NewChainApp(
 					app.appCodec),
 			},
 		),
+		wasmkeeper.WithGasRegister(WasmGasRegister),
 	)
 
 	// The last arguments can contain custom message handlers, and custom query handlers,

@@ -8,13 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-
-	"gitlab.com/thorchain/thornode/v3/common/wasmpermissions"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/blang/semver"
@@ -3590,36 +3587,4 @@ func (qs queryServer) queryTCYClaimer(ctx cosmos.Context, req *types.QueryTCYCla
 	}
 
 	return &types.QueryTCYClaimerResponse{TcyClaimer: claimsRes}, nil
-}
-
-// queryCodes
-func (qs queryServer) queryCodes(_ cosmos.Context, _ *types.QueryCodesRequest) (*types.QueryCodesResponse, error) {
-	var codes []*types.QueryCodesCode
-
-	permissionsRaw := wasmpermissions.GetWasmPermissions()
-	// analyze-ignore(map-iteration)
-	for code, permission := range permissionsRaw.Permissions {
-		deployers := []string{}
-		// analyze-ignore(map-iteration)
-		for deployer, allowed := range permission.Deployers {
-			if !allowed {
-				continue
-			}
-			deployers = append(deployers, deployer)
-		}
-
-		sort.Strings(deployers)
-
-		codes = append(codes, &types.QueryCodesCode{
-			Code:      code,
-			Deployers: deployers,
-			Origin:    permission.Origin,
-		})
-	}
-
-	sort.Slice(codes, func(i, j int) bool {
-		return codes[i].Code < codes[j].Code
-	})
-
-	return &types.QueryCodesResponse{Codes: codes}, nil
 }

@@ -122,7 +122,7 @@
           "code": 1,
           "log": "failed to execute message; message index: 0: unauthorized",
           "gas_wanted": "-1",
-          "gas_used": "1198129",
+          "gas_used": "2127863",
           "events": [
             {
               "fee": "",
@@ -171,7 +171,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "C850EFF1CE8928C026C0DCB9ECC8D317DAA496E8FAF46F7F3B6C56C5C4083195",
-      "last_results_hash": "2D00E78B90C3C31833F75A1748CBFDB662F5935FEC1F62B5BBC26E022064478C",
+      "last_results_hash": "91CD1FB3B763DBCFEFBC97D5C0FD92FFB5DFA14BE661ABAA052BAB1F5C888C3F",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -383,7 +383,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "1189458",
+          "gas_used": "2115613",
           "events": [
             {
               "fee": "",
@@ -410,11 +410,6 @@
               "code_id": "1",
               "msg_index": "0",
               "type": "store_code"
-            },
-            {
-              "code_id": "1",
-              "msg_index": "0",
-              "type": "pin_code"
             }
           ]
         }

@@ -44,8 +44,6 @@ asserts:
   - .txs[0].result.events[4].code_checksum == "f9b2efce508ab3594d41ad0d7bd645014b1e145df64083308d37c780de7390b0"
   - .txs[0].result.events[4].code_id == "1"
   - .txs[0].result.events[4].type == "store_code"
-  - .txs[0].result.events[5].code_id == "1"
-  - .txs[0].result.events[5].type == "pin_code"
 ---
 type: check
 endpoint: http://localhost:1317/cosmwasm/wasm/v1/code

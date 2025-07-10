@@ -297,7 +297,7 @@
               "permission": "Everybody"
             }
           },
-          "pinned": true
+          "pinned": false
         }
       ],
       "contracts": [],
