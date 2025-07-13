@@ -4154,7 +4154,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "245892",
+          "gas_used": "248960",
           "events": [
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/1",
@@ -4216,7 +4216,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "0DE10F38E47E66B07FBCEF329D46862E3A98B597212D5A50442A085A67E6A248",
-      "last_results_hash": "404DAF66A1BACC5A3C372445A36E161881A25A6FFBA9584674D48C9E54610BD2",
+      "last_results_hash": "C0D7D68785F1D9FFABA8524AE286474D3A98DDF5C105288583494484F568B4B8",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -4728,7 +4728,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "247030",
+          "gas_used": "250104",
           "events": [
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/2",
