@@ -261,7 +261,9 @@
               }
             ],
             "non_critical_extension_options": [],
-            "timeout_height": "0"
+            "timeout_height": "0",
+            "timeout_timestamp": null,
+            "unordered": false
           },
           "signatures": [
             "BBriE9BEn364ptAxwufP9CEJXKRjMWRqfKIQS4Jsxlht5K8aGz0S6CcCt8HshB4n+YekAYPwqF1cvEBcZo0xpQ=="

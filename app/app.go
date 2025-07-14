@@ -38,7 +38,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/api"
 	"github.com/cosmos/cosmos-sdk/server/config"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
-	"github.com/cosmos/cosmos-sdk/std"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/types/msgservice"
@@ -86,6 +85,9 @@ import (
 	"gitlab.com/thorchain/thornode/v3/x/denom"
 	denomkeeper "gitlab.com/thorchain/thornode/v3/x/denom/keeper"
 	denomtypes "gitlab.com/thorchain/thornode/v3/x/denom/types"
+
+	evm "github.com/cosmos/evm/encoding/codec"
+	"github.com/cosmos/evm/ethereum/eip712"
 )
 
 const (
@@ -139,11 +141,12 @@ type THORChainApp struct {
 	tkeys map[string]*storetypes.TransientStoreKey
 
 	// keepers
-	AccountKeeper         authkeeper.AccountKeeper
-	BankKeeper            bankkeeper.BaseKeeper
-	StakingKeeper         *stakingkeeper.Keeper
-	MintKeeper            mintkeeper.Keeper
-	UpgradeKeeper         *upgradekeeper.Keeper
+	AccountKeeper authkeeper.AccountKeeper
+	BankKeeper    bankkeeper.BaseKeeper
+	StakingKeeper *stakingkeeper.Keeper
+	MintKeeper    mintkeeper.Keeper
+	UpgradeKeeper *upgradekeeper.Keeper
+	// trunk-ignore(golangci-lint/staticcheck): deprecated TODO: SDK 0.53 cleanup
 	ParamsKeeper          paramskeeper.Keeper
 	ConsensusParamsKeeper consensusparamkeeper.Keeper
 
@@ -184,9 +187,9 @@ func NewChainApp(
 	wasmtypes.MaxWasmSize = WasmMaxSize
 	ec := appparams.MakeEncodingConfig()
 	interfaceRegistry := ec.InterfaceRegistry
-
-	std.RegisterLegacyAminoCodec(ec.Amino)
-	std.RegisterInterfaces(interfaceRegistry)
+	eip712.SetEncodingConfig(ec.Amino, interfaceRegistry, 1)
+	evm.RegisterLegacyAminoCodec(ec.Amino)
+	evm.RegisterInterfaces(interfaceRegistry)
 
 	// Below we could construct and set an application specific mempool and
 	// ABCI 1.0 PrepareProposal and ProcessProposal handlers. These defaults are
@@ -417,6 +420,7 @@ func NewChainApp(
 	bankModule := bank.NewAppModule(app.appCodec, app.BankKeeper, app.AccountKeeper, app.GetSubspace(banktypes.ModuleName))
 	consensusModule := consensus.NewAppModule(app.appCodec, app.ConsensusParamsKeeper)
 	genutilModule := genutil.NewAppModule(app.AccountKeeper, app.StakingKeeper, app, txConfig)
+	// trunk-ignore(golangci-lint/staticcheck): deprecated TODO: SDK 0.53 cleanup
 	paramsModule := params.NewAppModule(app.ParamsKeeper)
 	upgradeModule := upgrade.NewAppModule(app.UpgradeKeeper, app.AccountKeeper.AddressCodec())
 	wasmModule := wasm.NewAppModule(
@@ -467,6 +471,7 @@ func NewChainApp(
 	// NOTE: upgrade module is required to be prioritized
 	app.ModuleManager.SetOrderPreBlockers(
 		upgradetypes.ModuleName,
+		authtypes.ModuleName,
 	)
 	// NOTE: staking module is required if HistoricalEntries param > 0
 	app.ModuleManager.SetOrderBeginBlockers(
@@ -893,7 +898,9 @@ func (app *THORChainApp) SetInterfaceRegistry(registry types.InterfaceRegistry) 
 	app.BaseApp.SetInterfaceRegistry(registry)
 }
 
+// trunk-ignore(golangci-lint/staticcheck): deprecated TODO: SDK 0.53 cleanup
 func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino, key, tkey storetypes.StoreKey) paramskeeper.Keeper {
+	// trunk-ignore(golangci-lint/staticcheck): deprecated TODO: SDK 0.53 cleanup
 	paramsKeeper := paramskeeper.NewKeeper(appCodec, legacyAmino, key, tkey)
 
 	// required for testing finalized block migration

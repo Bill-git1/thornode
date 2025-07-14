@@ -2,7 +2,7 @@
 # Build
 ########################################################################################
 
-FROM golang:1.23.4-bullseye AS build
+FROM golang:1.23.8-bullseye AS build
 
 ENV GOBIN=/go/bin
 ENV GOPATH=/go

@@ -112,7 +112,9 @@
               }
             ],
             "non_critical_extension_options": [],
-            "timeout_height": "0"
+            "timeout_height": "0",
+            "timeout_timestamp": null,
+            "unordered": false
           },
           "signatures": [
             "kfCr6Go6QylP4lfGqaWhT1u5EvCV8ML9zUQuTGXHBAwvZr0754Cqkrp1D5OWucXFjXF1rLK1X2UAhFNDCBkNNA=="
@@ -307,7 +309,9 @@
               }
             ],
             "non_critical_extension_options": [],
-            "timeout_height": "0"
+            "timeout_height": "0",
+            "timeout_timestamp": null,
+            "unordered": false
           },
           "signatures": [
             "BWiiyer90Z2iKdN47GMJdhPzth2sqOpT3uRmUb1GEfhcHUh2Ps3VNCeUlcTLQpW2i/4xau0sSRXLh4R75qrPZg=="

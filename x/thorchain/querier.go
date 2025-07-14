@@ -18,6 +18,7 @@ import (
 	tmhttp "github.com/cometbft/cometbft/rpc/client/http"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
+	"github.com/cosmos/evm/ethereum/eip712"
 	"github.com/rs/zerolog/log"
 	"gitlab.com/thorchain/thornode/v3/bifrost/p2p/conversion"
 
@@ -3588,4 +3589,18 @@ func (qs queryServer) queryTCYClaimer(ctx cosmos.Context, req *types.QueryTCYCla
 	}
 
 	return &types.QueryTCYClaimerResponse{TcyClaimer: claimsRes}, nil
+}
+
+func (qs queryServer) queryEip712TypedData(_ cosmos.Context, req *types.QueryEip712TypedDataRequest) (*types.QueryEip712TypedDataResponse, error) {
+	typedData, err := eip712.GetEIP712TypedDataForMsg(req.SignBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert to EIP-712 typed data: %w", err)
+	}
+
+	// Convert to JSON for output
+	data, err := json.Marshal(typedData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal EIP-712 typed data: %w", err)
+	}
+	return &types.QueryEip712TypedDataResponse{TypedData: string(data)}, nil
 }

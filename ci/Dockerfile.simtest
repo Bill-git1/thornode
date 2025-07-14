@@ -1,4 +1,4 @@
-FROM golang:1.23.4
+FROM golang:1.23.8
 
 ENV GOBIN=/go/bin
 ENV GOPATH=/go

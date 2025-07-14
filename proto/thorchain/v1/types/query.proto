@@ -52,6 +52,7 @@ import "types/query_secured_asset.proto";
 import "types/query_tcy_stakers.proto";
 import "types/query_tcy_claimers.proto";
 import "types/query_codes.proto";
+import "types/query_eip712.proto";
 
 option (gogoproto.marshaler_all) = true;
 
@@ -384,5 +385,9 @@ service Query {
 
   rpc TCYClaimers(QueryTCYClaimersRequest) returns (QueryTCYClaimersResponse) {
     option (google.api.http).get = "/thorchain/tcy_claimers";
+  }
+
+  rpc Eip712TypedData(QueryEip712TypedDataRequest) returns (QueryEip712TypedDataResponse) {
+    option (google.api.http).get = "/thorchain/eip715/tx";
   }
 }

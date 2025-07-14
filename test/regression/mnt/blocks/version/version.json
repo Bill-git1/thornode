@@ -118,7 +118,9 @@
               }
             ],
             "non_critical_extension_options": [],
-            "timeout_height": "0"
+            "timeout_height": "0",
+            "timeout_timestamp": null,
+            "unordered": false
           },
           "signatures": [
             "xv6tV8fG95ose+AWmm1LBpw9e+je889VAYY3nL5TQkYu83LR35JIph+rit6KHEmE17KKRsMKm8G5zLdoh38tHQ=="
@@ -286,7 +288,9 @@
               }
             ],
             "non_critical_extension_options": [],
-            "timeout_height": "0"
+            "timeout_height": "0",
+            "timeout_timestamp": null,
+            "unordered": false
           },
           "signatures": [
             "+NoegpA9Rj90oZeyHqKrFc4d1sp9Un3fLet6ZCPOFfstCftkgPrCTr97pYv1fL/2hhPkBgTuG+UhynWtBPH6DA=="
@@ -430,7 +434,9 @@
               }
             ],
             "non_critical_extension_options": [],
-            "timeout_height": "0"
+            "timeout_height": "0",
+            "timeout_timestamp": null,
+            "unordered": false
           },
           "signatures": [
             "/wHZTTdCUJn/m/oy4c5yb/DgneFm/zP4m8jp6wc5jcRttuOGdm9D2wQNNM8z1dy/LBivyPOEsnbd1fILDshgTQ=="

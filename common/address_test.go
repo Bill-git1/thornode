@@ -383,3 +383,36 @@ func (s *AddressSuite) TestAddress(c *C) {
 	c.Check(addr.IsChain(TRONChain), Equals, false)
 	c.Check(addr.GetNetwork(DOGEChain), Equals, MockNet)
 }
+
+func (s *AddressSuite) TestAddressMapping(c *C) {
+	// bech32
+	addr, err := NewAddress("thor1x6m28lezv00ugcahqv5w2eagrm9396j2gf6zjpd4aulvagh5")
+	c.Check(err, IsNil)
+	mapped, err := addr.MappedAccAddress()
+	c.Check(err, IsNil)
+	c.Check(mapped.String(), Equals, "cosmos1x6m28lezv00ugcahqv5w2eagrm9396j2gf6zjpd4aulq9g5n")
+
+	// evm
+	addr, err = NewAddress("0x90f2b1ae50e6018230e90a33f98c7844a0ab635a")
+	c.Check(err, IsNil)
+	mapped, err = addr.MappedAccAddress()
+	c.Check(err, IsNil)
+	c.Check(mapped.String(), Equals, "cosmos1jretrtjsucqcyv8fpgelnrrcgjs2kc66pfx7w6")
+
+	mapped, err = EVMNullAddress.MappedAccAddress()
+	c.Check(err, IsNil)
+	c.Check(mapped.String(), Equals, "cosmos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqnrql8a")
+
+	// segwit
+	addr, err = NewAddress("bc1pfy63nact82mfmts5jv87p2uayxqs29gf8070td7kzhwzx6zc9ruq9u7xy7")
+	c.Check(err, IsNil)
+	mapped, err = addr.MappedAccAddress()
+	c.Check(err, IsNil)
+	c.Check(mapped.String(), Equals, "cosmos1pfy63nact82mfmts5jv87p2uayxqs29gf8070td7kzhwzx6zc9ruqdehkrz")
+
+	// Invalid
+	addr, err = NewAddress("r4KYDZBbcAaJJ5MQPwRR9apJ2p5EBz8bq8")
+	c.Check(err, IsNil)
+	_, err = addr.MappedAccAddress()
+	c.Check(err, NotNil)
+}

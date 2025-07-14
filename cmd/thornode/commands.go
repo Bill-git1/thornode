@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"gitlab.com/thorchain/thornode/v3/app"
+	"gitlab.com/thorchain/thornode/v3/common"
 
 	"cosmossdk.io/log"
 	"cosmossdk.io/store"
@@ -186,6 +187,30 @@ func renderConfigCommand() *cobra.Command {
 	}
 }
 
+func queryMappedAddress() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "address [address]",
+		Short: "Convert an address to its mapped bech32 format",
+		Long:  ``,
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			address, err := common.NewAddress(args[0])
+			if err != nil {
+				return fmt.Errorf("failed to read address: %w", err)
+			}
+
+			bech32Addr, err := address.MappedAccAddress()
+			if err != nil {
+				return fmt.Errorf("failed to convert to bech32: %w", err)
+			}
+
+			fmt.Println(bech32Addr.String())
+			return nil
+		},
+	}
+	return cmd
+}
+
 // genesisCommand builds genesis-related `simd genesis` command. Users may provide application specific commands as a parameter
 func genesisCommand(txConfig client.TxConfig, basicManager module.BasicManager, cmds ...*cobra.Command) *cobra.Command {
 	cmd := genutilcli.Commands(txConfig, basicManager, app.DefaultNodeHome)
@@ -213,6 +238,7 @@ func queryCommand() *cobra.Command {
 		server.QueryBlocksCmd(),
 		authcmd.QueryTxCmd(),
 		server.QueryBlockResultsCmd(),
+		queryMappedAddress(),
 	)
 
 	return cmd

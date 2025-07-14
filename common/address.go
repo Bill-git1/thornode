@@ -386,8 +386,12 @@ func (addr Address) String() string {
 }
 
 func (addr Address) MappedAccAddress() (cosmos.AccAddress, error) {
-	// TODO: Add support to map EVM addresses -> bech32.
-	// Will require new PubKey type to validate.
+	if addr.GetChain().IsEVM() {
+		return cosmos.AccAddressFromHexUnsafe(
+			strings.TrimPrefix(addr.String(), "0x"),
+		)
+	}
+
 	_, data, err := bech32.Decode(addr.String())
 	if err != nil {
 		return nil, err

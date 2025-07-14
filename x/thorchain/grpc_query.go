@@ -682,3 +682,8 @@ func (s *queryServer) TCYClaimers(c context.Context, req *types.QueryTCYClaimers
 	ctx := s.unwrapSdkContext(c)
 	return s.queryTCYClaimers(ctx, req)
 }
+
+func (s *queryServer) Eip712TypedData(c context.Context, req *types.QueryEip712TypedDataRequest) (*types.QueryEip712TypedDataResponse, error) {
+	ctx := s.unwrapSdkContext(c)
+	return s.queryEip712TypedData(ctx, req)
+}

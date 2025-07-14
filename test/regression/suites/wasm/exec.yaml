@@ -60,58 +60,45 @@ endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .txs[0].result.events[2].action == "/types.MsgObservedTxIn"
   - .txs[0].result.events[2].module == "MsgObservedTxIn"
-  - .txs[0].result.events[2].msg_index == "0"
   - .txs[0].result.events[2].sender == "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m"
   - .txs[0].result.events[2].type == "message"
   - .txs[0].result.events[3].amount == "10000000gaia-atom"
-  - .txs[0].result.events[3].msg_index == "0"
   - .txs[0].result.events[3].receiver == "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp"
   - .txs[0].result.events[3].type == "coin_received"
   - .txs[0].result.events[4].amount == "10000000gaia-atom"
   - .txs[0].result.events[4].minter == "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp"
-  - .txs[0].result.events[4].msg_index == "0"
   - .txs[0].result.events[4].type == "coinbase"
   - .txs[0].result.events[5].amount == "10000000gaia-atom"
-  - .txs[0].result.events[5].msg_index == "0"
   - .txs[0].result.events[5].spender == "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp"
   - .txs[0].result.events[5].type == "coin_spent"
   - .txs[0].result.events[6].amount == "10000000gaia-atom"
-  - .txs[0].result.events[6].msg_index == "0"
   - .txs[0].result.events[6].receiver == "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
   - .txs[0].result.events[6].type == "coin_received"
   - .txs[0].result.events[7].amount == "10000000gaia-atom"
-  - .txs[0].result.events[7].msg_index == "0"
   - .txs[0].result.events[7].recipient == "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
   - .txs[0].result.events[7].sender == "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp"
   - .txs[0].result.events[7].type == "transfer"
-  - .txs[0].result.events[8].msg_index == "0"
   - .txs[0].result.events[8].sender == "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp"
   - .txs[0].result.events[8].type == "message"
   - .txs[0].result.events[9].amount == "10000000"
   - .txs[0].result.events[9].asset == "GAIA-ATOM"
   - .txs[0].result.events[9].asset_address == "cosmos13wrmhnh2qe98rjse30pl7u6jxszjjwl4t2v05e"
-  - .txs[0].result.events[9].msg_index == "0"
   - .txs[0].result.events[9].rune_address == "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
   - .txs[0].result.events[9].tx_id == "0000000000000000000000000000000000000000000000000000000000000001"
   - .txs[0].result.events[9].type == "secured_asset_deposit"
   - .txs[0].result.events[10].amount == "10000000gaia-atom"
-  - .txs[0].result.events[10].msg_index == "0"
   - .txs[0].result.events[10].spender == "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
   - .txs[0].result.events[10].type == "coin_spent"
   - .txs[0].result.events[11].amount == "10000000gaia-atom"
-  - .txs[0].result.events[11].msg_index == "0"
   - .txs[0].result.events[11].receiver == "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"
   - .txs[0].result.events[11].type == "coin_received"
   - .txs[0].result.events[12].amount == "10000000gaia-atom"
-  - .txs[0].result.events[12].msg_index == "0"
   - .txs[0].result.events[12].recipient == "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"
   - .txs[0].result.events[12].sender == "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
   - .txs[0].result.events[12].type == "transfer"
   - .txs[0].result.events[13]._contract_address == "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"
-  - .txs[0].result.events[13].msg_index == "0"
   - .txs[0].result.events[13].type == "execute"
   - .txs[0].result.events[14]._contract_address == "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"
-  - .txs[0].result.events[14].msg_index == "0"
   - .txs[0].result.events[14].new_value == "1"
   - .txs[0].result.events[14].type == "wasm"
 ---
@@ -145,16 +132,48 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - '[.txs[]|.result.events[]|select(.type=="refund")]|length == 1'
-  - .txs[]|.result.events[]|select(.type=="refund")|.from == "{{ addr_eth_fox }}"
-  - .txs[]|.result.events[]|select(.type=="refund")|.reason|match("invalid")
----
-type: check
-endpoint: http://localhost:1317/thorchain/securedasset/ETH-ETH
-asserts:
-  - .asset == "ETH-ETH"
-  - .supply|tonumber == 0
-  - .depth|tonumber == 0
+  - .txs[0].result.events[2].action == "/types.MsgObservedTxIn"
+  - .txs[0].result.events[2].module == "MsgObservedTxIn"
+  - .txs[0].result.events[2].sender == "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m"
+  - .txs[0].result.events[3].amount == "10000000eth-eth"
+  - .txs[0].result.events[3].receiver == "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp"
+  - .txs[0].result.events[3].type == "coin_received"
+  - .txs[0].result.events[4].amount == "10000000eth-eth"
+  - .txs[0].result.events[4].minter == "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp"
+  - .txs[0].result.events[4].type == "coinbase"
+  - .txs[0].result.events[5].amount == "10000000eth-eth"
+  - .txs[0].result.events[5].spender == "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp"
+  - .txs[0].result.events[5].type == "coin_spent"
+  - .txs[0].result.events[6].amount == "10000000eth-eth"
+  - .txs[0].result.events[6].receiver == "tthor1u0ryjax83atf80ftc69nygw43h6ud6rh9zeshw"
+  - .txs[0].result.events[6].type == "coin_received"
+  - .txs[0].result.events[7].amount == "10000000eth-eth"
+  - .txs[0].result.events[7].recipient == "tthor1u0ryjax83atf80ftc69nygw43h6ud6rh9zeshw"
+  - .txs[0].result.events[7].sender == "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp"
+  - .txs[0].result.events[7].type == "transfer"
+  - .txs[0].result.events[8].sender == "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp"
+  - .txs[0].result.events[8].type == "message"
+  - .txs[0].result.events[9].amount == "10000000"
+  - .txs[0].result.events[9].asset == "ETH-ETH"
+  - .txs[0].result.events[9].asset_address == "0xe3c64974c78f5693bd2bc68b3221d58df5c6e877"
+  - .txs[0].result.events[9].rune_address == "tthor1u0ryjax83atf80ftc69nygw43h6ud6rh9zeshw"
+  - .txs[0].result.events[9].tx_id == "0000000000000000000000000000000000000000000000000000000000000002"
+  - .txs[0].result.events[9].type == "secured_asset_deposit"
+  - .txs[0].result.events[10].amount == "10000000eth-eth"
+  - .txs[0].result.events[10].spender == "tthor1u0ryjax83atf80ftc69nygw43h6ud6rh9zeshw"
+  - .txs[0].result.events[10].type == "coin_spent"
+  - .txs[0].result.events[11].amount == "10000000eth-eth"
+  - .txs[0].result.events[11].receiver == "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"
+  - .txs[0].result.events[11].type == "coin_received"
+  - .txs[0].result.events[12].amount == "10000000eth-eth"
+  - .txs[0].result.events[12].recipient == "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"
+  - .txs[0].result.events[12].sender == "tthor1u0ryjax83atf80ftc69nygw43h6ud6rh9zeshw"
+  - .txs[0].result.events[12].type == "transfer"
+  - .txs[0].result.events[13]._contract_address == "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"
+  - .txs[0].result.events[13].type == "execute"
+  - .txs[0].result.events[14]._contract_address == "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"
+  - .txs[0].result.events[14].new_value == "2"
+  - .txs[0].result.events[14].type == "wasm"
 ---
 # Check that MsgDeposit with an Exec memo and secured assets succeeds
 type: tx-observed-in
@@ -184,8 +203,8 @@ type: check
 endpoint: http://localhost:1317/thorchain/securedasset/ETH-ETH
 asserts:
   - .asset == "ETH-ETH"
-  - .supply|tonumber == 10000000
-  - .depth|tonumber == 10000000
+  - .supply|tonumber == 20000000
+  - .depth|tonumber == 20000000
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
@@ -202,25 +221,19 @@ endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .txs[0].result.events[6].action == "/types.MsgDeposit"
   - .txs[0].result.events[6].module == "MsgDeposit"
-  - .txs[0].result.events[6].msg_index == "0"
   - .txs[0].result.events[7].amount == "10000000eth-eth"
-  - .txs[0].result.events[7].msg_index == "0"
   - .txs[0].result.events[7].spender == "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
   - .txs[0].result.events[7].type == "coin_spent"
   - .txs[0].result.events[8].amount == "10000000eth-eth"
-  - .txs[0].result.events[8].msg_index == "0"
   - .txs[0].result.events[8].receiver == "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"
   - .txs[0].result.events[8].type == "coin_received"
   - .txs[0].result.events[9].amount == "10000000eth-eth"
-  - .txs[0].result.events[9].msg_index == "0"
   - .txs[0].result.events[9].recipient == "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"
   - .txs[0].result.events[9].sender == "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr"
   - .txs[0].result.events[9].type == "transfer"
   - .txs[0].result.events[10]._contract_address == "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"
-  - .txs[0].result.events[10].msg_index == "0"
   - .txs[0].result.events[10].type == "execute"
   - .txs[0].result.events[11]._contract_address == "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"
-  - .txs[0].result.events[11].msg_index == "0"
-  - .txs[0].result.events[11].new_value == "2"
+  - .txs[0].result.events[11].new_value == "3"
   - .txs[0].result.events[11].type == "wasm"
 
