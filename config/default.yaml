@@ -171,7 +171,7 @@ bifrost:
         chain_id: ETH
         observation_flexibility_blocks: 20
         max_gas_limit: 100000
-        max_contract_tx_logs: 50
+        max_contract_tx_logs: 200
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
 
@@ -193,7 +193,7 @@ bifrost:
         chain_id: BASE
         observation_flexibility_blocks: 20
         max_gas_limit: 100000
-        max_contract_tx_logs: 50
+        max_contract_tx_logs: 200
         whitelist_tokens:
           - 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 # USDC
           - 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf # cbBTC
@@ -237,7 +237,7 @@ bifrost:
         gas_price_resolution: 50_000_000_000 # 50 navax
         observation_flexibility_blocks: 80
         max_gas_limit: 100000
-        max_contract_tx_logs: 50
+        max_contract_tx_logs: 200
         whitelist_tokens:
           - 0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7 # USDT
           - 0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E # USDC
@@ -267,7 +267,7 @@ bifrost:
         gas_price_resolution: 10_000_000_000 # 10 gwei
         observation_flexibility_blocks: 80
         max_gas_limit: 100000
-        max_contract_tx_logs: 50
+        max_contract_tx_logs: 200
         whitelist_tokens:
           - 0x55d398326f99059fF775485246999027B3197955 # Binance Pegged USDT
           - 0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d # Binance Pegged USDC
