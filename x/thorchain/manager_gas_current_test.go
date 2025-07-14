@@ -1,6 +1,8 @@
 package thorchain
 
 import (
+	"strings"
+
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/common"
@@ -254,20 +256,31 @@ func (GasManagerTestSuiteVCUR) TestGetMaxGas(c *C) {
 	ctx, k := setupKeeperForTest(c)
 	constAccessor := constants.GetConstantValues(GetCurrentVersion())
 	gasMgr := newGasMgrVCUR(constAccessor, k)
+
 	gasCoin, err := gasMgr.GetMaxGas(ctx, common.GAIAChain)
-	c.Assert(err, IsNil)
 	c.Assert(gasCoin.Amount.IsZero(), Equals, true)
-	networkFee := NewNetworkFee(common.GAIAChain, 1000, 127)
+	c.Assert(err, NotNil)
+	c.Assert(strings.Contains(err.Error(), "network fee for chain(GAIA) is invalid"), Equals, true)
+	// Code relying on GetMaxGas should not proceed when not able to do a valid calculation.
+
+	var transactionSize uint64 = 1000
+	var transactionFeeRate uint64 = 127
+	networkFee := NewNetworkFee(common.GAIAChain, transactionSize, transactionFeeRate)
 	c.Assert(k.SaveNetworkFee(ctx, common.GAIAChain, networkFee), IsNil)
 	gasCoin, err = gasMgr.GetMaxGas(ctx, common.GAIAChain)
 	c.Assert(err, IsNil)
-	c.Assert(gasCoin.Amount.Uint64(), Equals, uint64(127*1000*3/2))
+	decimals := gasCoin.Asset.Chain.GetGasAssetDecimal()
+	c.Assert(decimals, Equals, int64(6))
+	// /100 and then *100 needed to floor the gas rate to respect the decimals after the *3/2.
+	// Note, a pre-*3/2 GAIA transactionFeeRate not a multiple of 100 should not be possible for Decimals 6.
+	c.Assert(gasCoin.Amount.Uint64(), Equals, ((transactionFeeRate*3/2)/100)*100*transactionSize)
 
 	networkFee = NewNetworkFee(common.ETHChain, 123, 127)
 	c.Assert(k.SaveNetworkFee(ctx, common.ETHChain, networkFee), IsNil)
 	gasCoin, err = gasMgr.GetMaxGas(ctx, common.ETHChain)
 	c.Assert(err, IsNil)
-	c.Assert(gasCoin.Amount.Uint64(), Equals, uint64(23431))
+	c.Assert(gasCoin.Amount.String(), Equals, "23370")
+	// 23370 = 123  * (127*3/2 = 190.5 -> 190)
 }
 
 func (GasManagerTestSuiteVCUR) TestOutboundFeeMultiplier(c *C) {

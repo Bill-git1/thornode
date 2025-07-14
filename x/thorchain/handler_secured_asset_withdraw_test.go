@@ -15,7 +15,10 @@ func (HandlerSecuredAssetWithdraw) TestSecuredAssetWithdraw(c *C) {
 	asset := common.BTCAsset
 	addr := GetRandomBech32Addr()
 	bc1Addr := GetRandomBTCAddress()
-	dummyTx := common.Tx{ID: "test"}
+	dummyTx := common.Tx{ID: GetRandomTxHash()}
+	// If the ID were "test" rather than a valid hash, the TxOutItem's Memo would be "OUT:test",
+	// the txout manager's ParseMemoWithTHORNames to determine whether a Ragnarok or not would fail,
+	// and by default the txout manager would deduct MaxGas like a Ragnarok rather than attempting outbound fee calculation.
 
 	{
 		msg := NewMsgSecuredAssetDeposit(asset, cosmos.NewUint(500), addr, addr, dummyTx)

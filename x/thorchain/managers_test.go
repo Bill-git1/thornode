@@ -15,10 +15,10 @@ func (ManagersTestSuite) TestManagers(c *C) {
 	_, mgr := setupManagerForTest(c)
 	ver := semver.MustParse("0.0.1")
 
+	// Versioning has been removed from GetGasManager.
 	gasMgr, err := GetGasManager(ver, mgr.Keeper())
-	c.Assert(gasMgr, IsNil)
-	c.Assert(err, NotNil)
-	c.Assert(errors.Is(err, errInvalidVersion), Equals, true)
+	c.Assert(gasMgr, NotNil)
+	c.Assert(err, IsNil)
 
 	eventMgr, err := GetEventManager(ver)
 	c.Assert(eventMgr, IsNil)

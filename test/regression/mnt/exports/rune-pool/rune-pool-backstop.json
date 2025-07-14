@@ -381,7 +381,7 @@
               "in_hash": "EDE5F404960ABD5F49AAAC560B4FF2F14D860207F3730E4072F8086279AAF70B",
               "max_gas": [
                 {
-                  "amount": "10500",
+                  "amount": "10000",
                   "asset": "BTC.BTC",
                   "decimals": "8"
                 }
@@ -513,7 +513,7 @@
               "in_hash": "EDE5F404960ABD5F49AAAC560B4FF2F14D860207F3730E4072F8086279AAF70B",
               "max_gas": [
                 {
-                  "amount": "10500",
+                  "amount": "10000",
                   "asset": "BTC.BTC",
                   "decimals": "8"
                 }

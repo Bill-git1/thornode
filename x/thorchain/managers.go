@@ -75,6 +75,7 @@ type GasManager interface {
 	ProcessGas(ctx cosmos.Context, keeper keeper.Keeper)
 	GetGas() common.Gas
 	GetAssetOutboundFee(ctx cosmos.Context, asset common.Asset, inRune bool) (cosmos.Uint, error)
+	GetGasDetails(ctx cosmos.Context, chain common.Chain) (common.Coin, int64, error)
 	GetMaxGas(ctx cosmos.Context, chain common.Chain) (common.Coin, error)
 	GetGasRate(ctx cosmos.Context, chain common.Chain) cosmos.Uint
 	GetNetworkFee(ctx cosmos.Context, chain common.Chain) (types.NetworkFee, error)
@@ -460,12 +461,7 @@ func GetKeeper(
 // GetGasManager return GasManager
 func GetGasManager(version semver.Version, keeper keeper.Keeper) (GasManager, error) {
 	constAccessor := constants.GetConstantValues(version)
-	switch {
-	case version.GTE(semver.MustParse("3.0.0")):
-		return newGasMgrVCUR(constAccessor, keeper), nil
-	default:
-		return nil, errInvalidVersion
-	}
+	return newGasMgrVCUR(constAccessor, keeper), nil
 }
 
 // GetEventManager will return an implementation of EventManager

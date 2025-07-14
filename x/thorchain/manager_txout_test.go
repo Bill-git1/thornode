@@ -29,8 +29,8 @@ func testAndCheckModuleBalances(c *C, ctx cosmos.Context, k keeper.Keeper, runTe
 	runTest()
 	after := getModuleBalances(c, ctx, k)
 
-	c.Assert(expDeltas.Asgard, Equals, after.Asgard-before.Asgard)
-	c.Assert(expDeltas.Bond, Equals, after.Bond-before.Bond)
-	c.Assert(expDeltas.Reserve, Equals, after.Reserve-before.Reserve)
-	c.Assert(expDeltas.Module, Equals, after.Module-before.Module)
+	c.Check(expDeltas.Asgard, Equals, after.Asgard-before.Asgard)
+	c.Check(expDeltas.Bond, Equals, after.Bond-before.Bond)
+	c.Check(expDeltas.Reserve, Equals, after.Reserve-before.Reserve)
+	c.Check(expDeltas.Module, Equals, after.Module-before.Module)
 }

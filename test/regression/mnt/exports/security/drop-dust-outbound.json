@@ -257,14 +257,14 @@
             {
               "chain": "BTC",
               "coin": {
-                "amount": "49975500",
+                "amount": "49976000",
                 "asset": "BTC.BTC"
               },
               "gas_rate": "10",
               "in_hash": "8981FAD7CB0C61699317FBB811E6D4D027F9AD0FA6B738E095CB87A81A6798F1",
               "max_gas": [
                 {
-                  "amount": "10500",
+                  "amount": "10000",
                   "asset": "BTC.BTC",
                   "decimals": "8"
                 }
@@ -283,7 +283,7 @@
               "in_hash": "8981FAD7CB0C61699317FBB811E6D4D027F9AD0FA6B738E095CB87A81A6798F1",
               "max_gas": [
                 {
-                  "amount": "0",
+                  "amount": "2000000",
                   "asset": "THOR.RUNE",
                   "decimals": "8"
                 }
@@ -405,14 +405,14 @@
               "chain": "BTC",
               "clout_spent": "0",
               "coin": {
-                "amount": "49975500",
+                "amount": "49976000",
                 "asset": "BTC.BTC"
               },
               "gas_rate": "10",
               "in_hash": "8981FAD7CB0C61699317FBB811E6D4D027F9AD0FA6B738E095CB87A81A6798F1",
               "max_gas": [
                 {
-                  "amount": "10500",
+                  "amount": "10000",
                   "asset": "BTC.BTC",
                   "decimals": "8"
                 }

@@ -179,7 +179,7 @@ asserts:
   - .[0].coin.asset == "${IN_ASSET}"
   - .[0].coin.amount == "${OUT_AMOUNT=1486000}"
   - .| ${OUT_AMOUNT} > ${IN_AMOUNT} * 95/100 # Full inbound amount, minus outbound fee.
-  - .[0].max_gas[0].amount == "${OUT_GAS_AMOUNT=10500}"
+  - .[0].max_gas[0].amount == "${OUT_GAS_AMOUNT=10000}"
   - .[0].memo == "REFUND:${IN_TXID}"
 ---
 type: tx-observed-out
@@ -268,7 +268,7 @@ asserts:
   - .[0].coin.asset == "${IN_ASSET}"
   - .[0].coin.amount == "${OUT_AMOUNT=1486000}"
   - .| ${OUT_AMOUNT} > ${IN_AMOUNT} * 95/100 # Full inbound amount, minus outbound fee.
-  - .[0].max_gas[0].amount == "${OUT_GAS_AMOUNT=10500}"
+  - .[0].max_gas[0].amount == "${OUT_GAS_AMOUNT=10000}"
   - .[0].memo == "REFUND:${IN_TXID}"
 ---
 type: tx-observed-out

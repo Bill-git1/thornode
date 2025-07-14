@@ -66,7 +66,8 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
-  - .[0]|.coin.amount|tonumber == 49982000-6500
+  # ${DROPPED=6000} is the amount from the "dropping gas asset output below dust threshold" log
+  - .[0]|.coin.amount|tonumber == 49982000-${DROPPED}
 ---
 ########################################################################################
 # vault will have more than pool

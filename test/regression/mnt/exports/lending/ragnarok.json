@@ -418,14 +418,14 @@
               "chain": "BTC",
               "clout_spent": "0",
               "coin": {
-                "amount": "104979000",
+                "amount": "104980000",
                 "asset": "BTC.BTC"
               },
               "gas_rate": "10",
               "in_hash": "0000000000000000000000000000000000000000000000000000000000000000",
               "max_gas": [
                 {
-                  "amount": "10500",
+                  "amount": "10000",
                   "asset": "BTC.BTC"
                 }
               ],
