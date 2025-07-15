@@ -33,10 +33,11 @@ stages:
 # Check if only text files are changed in fork MRs
 text_files_check:
   stage: .pre
-  image: alpine/git:latest
   rules:
     - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH
       when: always
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends git jq
   script:
     - |
       # Fetch the target branch to compare
@@ -53,7 +54,7 @@ text_files_check:
       TEXT_ONLY=true
       if [ -n "$CHANGED_FILES" ]; then
         for file in $CHANGED_FILES; do
-          if echo "$EXCLUDED_FILES" | grep -q "$file" || [[ ! "$file" =~ \.(md|json|yaml|yml)$ ]]; then
+          if echo "$EXCLUDED_FILES" | grep -q "$file" || ! echo "$file" | grep -q '\.\(md\|json\|yaml\|yml\)$'; then
             echo "Non-text file found: $file"
             TEXT_ONLY=false
             break
