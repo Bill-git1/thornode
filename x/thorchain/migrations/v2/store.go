@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	storetypes "cosmossdk.io/store/types"
+	"cosmossdk.io/core/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
@@ -16,17 +16,19 @@ const (
 // migration includes:
 //
 // - Remove legacy store migration version
-func MigrateStore(ctx sdk.Context, storeKey storetypes.StoreKey) error {
-	key := getKey(prefixStoreVersion, "")
-	store := ctx.KVStore(storeKey)
-
-	if store.Has([]byte(key)) {
-		store.Delete([]byte(key))
+func MigrateStore(ctx sdk.Context, storeService store.KVStoreService) error {
+	store := storeService.OpenKVStore(ctx)
+	ok, err := store.Has(getKey(prefixStoreVersion, ""))
+	if err != nil {
+		return err
+	}
+	if ok {
+		return store.Delete(getKey(prefixStoreVersion, ""))
 	}
 
 	return nil
 }
 
-func getKey(prefix, key string) string {
-	return fmt.Sprintf("%s/%s", prefix, strings.ToUpper(key))
+func getKey(prefix, key string) []byte {
+	return []byte(fmt.Sprintf("%s/%s", prefix, strings.ToUpper(key)))
 }

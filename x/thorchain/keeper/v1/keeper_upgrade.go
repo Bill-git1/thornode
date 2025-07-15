@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	upgradetypes "cosmossdk.io/x/upgrade/types"
+	"github.com/cosmos/cosmos-sdk/runtime"
 
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
@@ -34,7 +35,7 @@ func (k KVStore) ClearUpgradePlan(ctx cosmos.Context) {
 // ProposeUpgrade proposes an upgrade by name
 func (k KVStore) ProposeUpgrade(ctx cosmos.Context, name string, upgrade types.UpgradeProposal) error {
 	key := fmt.Sprintf("%s%s", prefixUpgradeProposals, name)
-	store := ctx.KVStore(k.storeKey)
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
 
 	v, err := k.cdc.Marshal(&upgrade)
 	if err != nil {
@@ -48,10 +49,10 @@ func (k KVStore) ProposeUpgrade(ctx cosmos.Context, name string, upgrade types.U
 
 // GetProposedUpgrade retrieves a proposed upgrade
 func (k KVStore) GetProposedUpgrade(ctx cosmos.Context, name string) (*types.UpgradeProposal, error) {
-	key := fmt.Sprintf("%s%s", prefixUpgradeProposals, name)
-	store := ctx.KVStore(k.storeKey)
+	key := []byte(fmt.Sprintf("%s%s", prefixUpgradeProposals, name))
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
 
-	v := store.Get([]byte(key))
+	v := store.Get(key)
 	if v == nil {
 		return nil, nil
 	}
@@ -66,7 +67,7 @@ func (k KVStore) GetProposedUpgrade(ctx cosmos.Context, name string) (*types.Upg
 
 // GetUpgradeVote retrieves a vote from a validator for an upgrade proposal.
 func (k KVStore) GetUpgradeVote(ctx cosmos.Context, addr cosmos.AccAddress, name string) (bool, error) {
-	store := ctx.KVStore(k.storeKey)
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
 
 	v := store.Get(append([]byte(VotePrefix(name)), addr...))
 	if v == nil {
@@ -78,14 +79,14 @@ func (k KVStore) GetUpgradeVote(ctx cosmos.Context, addr cosmos.AccAddress, name
 
 // ApproveUpgrade approves an upgrade as a validator
 func (k KVStore) ApproveUpgrade(ctx cosmos.Context, addr cosmos.AccAddress, name string) {
-	store := ctx.KVStore(k.storeKey)
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
 
 	store.Set(append([]byte(VotePrefix(name)), addr...), []byte{0x1})
 }
 
 // RejectUpgrade rejects an upgrade as a validator
 func (k KVStore) RejectUpgrade(ctx cosmos.Context, addr cosmos.AccAddress, name string) {
-	store := ctx.KVStore(k.storeKey)
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
 
 	store.Set(append([]byte(VotePrefix(name)), addr...), []byte{0xFF})
 }
@@ -96,7 +97,7 @@ func (k KVStore) RemoveExpiredUpgradeProposals(ctx cosmos.Context) error {
 	iter := k.GetUpgradeProposalIterator(ctx)
 	defer iter.Close()
 
-	store := ctx.KVStore(k.storeKey)
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
 
 	for ; iter.Valid(); iter.Next() {
 		key, value := iter.Key(), iter.Value()
@@ -126,7 +127,7 @@ func (k KVStore) RemoveExpiredUpgradeProposals(ctx cosmos.Context) error {
 }
 
 func (k KVStore) removeExpiredUpgradeProposalVotes(ctx cosmos.Context, name string) {
-	store := ctx.KVStore(k.storeKey)
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
 
 	iter := k.GetUpgradeVoteIterator(ctx, name)
 	defer iter.Close()

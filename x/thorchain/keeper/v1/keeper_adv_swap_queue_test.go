@@ -51,7 +51,7 @@ func (s *KeeperAdvSwapQueueSuite) TestKeeperAdvSwapQueue(c *C) {
 	iter = k.GetAdvSwapQueueIndexIterator(ctx, msg1.SwapType, msg1.Tx.Coins[0].Asset, msg1.TargetAsset)
 	for ; iter.Valid(); iter.Next() {
 		hashes := make([]string, 0)
-		ok, err = k.getStrings(ctx, string(iter.Key()), &hashes)
+		ok, err = k.getStrings(ctx, iter.Key(), &hashes)
 		c.Assert(err, IsNil)
 		c.Check(ok, Equals, true)
 		c.Check(hashes, HasLen, 2)
@@ -80,7 +80,7 @@ func (s *KeeperAdvSwapQueueSuite) TestGetAdvSwapQueueIndexKey(c *C) {
 		TargetAsset: common.RuneAsset(),
 		TradeTarget: cosmos.NewUint(1239585),
 	}
-	c.Check(k.getAdvSwapQueueIndexKey(ctx, msg), Equals, "aqlim//BTC.BTC>THOR.RUNE/000000000000806721/")
+	c.Check(string(k.getAdvSwapQueueIndexKey(ctx, msg)), Equals, "aqlim//BTC.BTC>THOR.RUNE/000000000000806721/")
 }
 
 func (s *KeeperAdvSwapQueueSuite) TestRewriteRatio(c *C) {

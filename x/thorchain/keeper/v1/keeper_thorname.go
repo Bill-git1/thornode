@@ -3,26 +3,27 @@ package keeperv1
 import (
 	"fmt"
 
+	"github.com/cosmos/cosmos-sdk/runtime"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
-func (k KVStore) setTHORName(ctx cosmos.Context, key string, record THORName) {
-	store := ctx.KVStore(k.storeKey)
+func (k KVStore) setTHORName(ctx cosmos.Context, key []byte, record THORName) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
 	buf := k.cdc.MustMarshal(&record)
 	if buf == nil {
-		store.Delete([]byte(key))
+		store.Delete(key)
 	} else {
-		store.Set([]byte(key), buf)
+		store.Set(key, buf)
 	}
 }
 
-func (k KVStore) getTHORName(ctx cosmos.Context, key string, record *THORName) (bool, error) {
-	store := ctx.KVStore(k.storeKey)
-	if !store.Has([]byte(key)) {
+func (k KVStore) getTHORName(ctx cosmos.Context, key []byte, record *THORName) (bool, error) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	if !store.Has(key) {
 		return false, nil
 	}
 
-	bz := store.Get([]byte(key))
+	bz := store.Get(key)
 	if err := k.cdc.Unmarshal(bz, record); err != nil {
 		return true, dbError(ctx, fmt.Sprintf("Unmarshal kvstore: (%T) %s", record, key), err)
 	}
@@ -76,23 +77,23 @@ func (k KVStore) DeleteTHORName(ctx cosmos.Context, name string) error {
 
 // AffiliateFeeCollector
 
-func (k KVStore) setAffiliateCollector(ctx cosmos.Context, key string, record AffiliateFeeCollector) {
-	store := ctx.KVStore(k.storeKey)
+func (k KVStore) setAffiliateCollector(ctx cosmos.Context, key []byte, record AffiliateFeeCollector) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
 	buf := k.cdc.MustMarshal(&record)
 	if buf == nil {
-		store.Delete([]byte(key))
+		store.Delete(key)
 	} else {
-		store.Set([]byte(key), buf)
+		store.Set(key, buf)
 	}
 }
 
-func (k KVStore) getAffilateCollector(ctx cosmos.Context, key string, record *AffiliateFeeCollector) (bool, error) {
-	store := ctx.KVStore(k.storeKey)
-	if !store.Has([]byte(key)) {
+func (k KVStore) getAffilateCollector(ctx cosmos.Context, key []byte, record *AffiliateFeeCollector) (bool, error) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	if !store.Has(key) {
 		return false, nil
 	}
 
-	bz := store.Get([]byte(key))
+	bz := store.Get(key)
 	if err := k.cdc.Unmarshal(bz, record); err != nil {
 		return true, dbError(ctx, fmt.Sprintf("Unmarshal kvstore: (%T) %s", record, key), err)
 	}

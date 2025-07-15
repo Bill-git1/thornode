@@ -402,8 +402,8 @@ func (vm *NetworkMgrVCUR) calculateWeightedMeanSlip(ctx cosmos.Context, asset co
 		iter := mgr.Keeper().GetSwapSlipSnapShotIterator(ctx, anchorAsset)
 		defer iter.Close()
 		for ; iter.Valid(); iter.Next() {
-			key := string(iter.Key())
-			parts := strings.Split(key, "/")
+			key := iter.Key()
+			parts := strings.Split(string(key), "/")
 			i, err := strconv.ParseInt(parts[len(parts)-1], 10, 64)
 			if err != nil || i < ctx.BlockHeight()-dynamicMaxAnchorSlipBlocks {
 				mgr.Keeper().DeleteKey(ctx, key)

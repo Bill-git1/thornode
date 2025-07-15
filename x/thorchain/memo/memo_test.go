@@ -97,7 +97,7 @@ func (s *MemoSuite) SetUpSuite(c *C) {
 		nil,
 		authtypes.NewModuleAddress(types.ModuleName).String(),
 	)
-	s.k = kv1.NewKVStore(encodingConfig.Codec, bk, ak, uk, keyThorchain, types.GetCurrentVersion())
+	s.k = kv1.NewKVStore(encodingConfig.Codec, runtime.NewKVStoreService(keyThorchain), bk, ak, uk, types.GetCurrentVersion())
 }
 
 func (s *MemoSuite) TestTxType(c *C) {

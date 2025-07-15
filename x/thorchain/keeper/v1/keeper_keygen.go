@@ -4,26 +4,27 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/cosmos/cosmos-sdk/runtime"
 	cosmos "gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
-func (k KVStore) setKeygenBlock(ctx cosmos.Context, key string, record KeygenBlock) {
-	store := ctx.KVStore(k.storeKey)
+func (k KVStore) setKeygenBlock(ctx cosmos.Context, key []byte, record KeygenBlock) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
 	buf := k.cdc.MustMarshal(&record)
 	if buf == nil {
-		store.Delete([]byte(key))
+		store.Delete(key)
 	} else {
-		store.Set([]byte(key), buf)
+		store.Set(key, buf)
 	}
 }
 
-func (k KVStore) getKeygenBlock(ctx cosmos.Context, key string, record *KeygenBlock) (bool, error) {
-	store := ctx.KVStore(k.storeKey)
-	if !store.Has([]byte(key)) {
+func (k KVStore) getKeygenBlock(ctx cosmos.Context, key []byte, record *KeygenBlock) (bool, error) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	if !store.Has(key) {
 		return false, nil
 	}
 
-	bz := store.Get([]byte(key))
+	bz := store.Get(key)
 	if err := k.cdc.Unmarshal(bz, record); err != nil {
 		return true, dbError(ctx, fmt.Sprintf("Unmarshal kvstore: (%T) %s", record, key), err)
 	}

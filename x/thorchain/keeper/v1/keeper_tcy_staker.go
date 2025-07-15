@@ -4,29 +4,30 @@ import (
 	"fmt"
 
 	"cosmossdk.io/math"
+	"github.com/cosmos/cosmos-sdk/runtime"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/common/tcysmartcontract"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
-func (k KVStore) setTCYStaker(ctx cosmos.Context, key string, record TCYStaker) {
-	store := ctx.KVStore(k.storeKey)
+func (k KVStore) setTCYStaker(ctx cosmos.Context, key []byte, record TCYStaker) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
 	buf := k.cdc.MustMarshal(&record)
 	if buf == nil {
-		store.Delete([]byte(key))
+		store.Delete(key)
 	} else {
-		store.Set([]byte(key), buf)
+		store.Set(key, buf)
 	}
 }
 
-func (k KVStore) getTCYStaker(ctx cosmos.Context, key string, record *TCYStaker) (bool, error) {
-	store := ctx.KVStore(k.storeKey)
-	if !store.Has([]byte(key)) {
+func (k KVStore) getTCYStaker(ctx cosmos.Context, key []byte, record *TCYStaker) (bool, error) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	if !store.Has(key) {
 		return false, nil
 	}
 
-	bz := store.Get([]byte(key))
+	bz := store.Get(key)
 	if err := k.cdc.Unmarshal(bz, record); err != nil {
 		return true, dbError(ctx, fmt.Sprintf("Unmarshal kvstore: (%T) %s", record, key), err)
 	}
@@ -99,9 +100,9 @@ func (k KVStore) TCYStakerExists(ctx cosmos.Context, address common.Address) boo
 		return true
 	}
 
-	store := ctx.KVStore(k.storeKey)
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
 	key := k.GetKey(prefixTCYStaker, address.String())
-	return store.Has([]byte(key))
+	return store.Has(key)
 }
 
 func (k KVStore) UpdateTCYStaker(ctx cosmos.Context, address common.Address, amount math.Uint) error {

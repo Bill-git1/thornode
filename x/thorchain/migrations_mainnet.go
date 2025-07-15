@@ -31,7 +31,7 @@ func (m Migrator) Migrate1to2(ctx sdk.Context) error {
 	if err := m.mgr.LoadManagerIfNecessary(ctx); err != nil {
 		return err
 	}
-	return v2.MigrateStore(ctx, m.mgr.storeKey)
+	return v2.MigrateStore(ctx, m.mgr.storeService)
 }
 
 // Migrate2to3 migrates from version 2 to 3.
@@ -180,6 +180,11 @@ func (m Migrator) Migrate5to6(ctx sdk.Context) error {
 
 // Migrate6to7 migrates from version 6 to 7.
 func (m Migrator) Migrate6to7(ctx sdk.Context) error {
+	// loads the manager for this migration
+	if err := m.mgr.LoadManagerIfNecessary(ctx); err != nil {
+		return err
+	}
+
 	// handle manual outbounds
 	outbounds, err := mainnetManualOutbounds6to7(ctx, m.mgr)
 	if err != nil {

@@ -4,10 +4,11 @@ import (
 	"testing"
 
 	storetypes "cosmossdk.io/store/types"
+	"github.com/cosmos/cosmos-sdk/runtime"
 	"github.com/cosmos/cosmos-sdk/testutil"
 	modtestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
 
-	"gitlab.com/thorchain/thornode/v3/x/thorchain/migrations/v2"
+	v2 "gitlab.com/thorchain/thornode/v3/x/thorchain/migrations/v2"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 
 	. "gopkg.in/check.v1"
@@ -22,6 +23,7 @@ var _ = Suite(&MigrationsV2Suite{})
 func (s *MigrationsV2Suite) TestV2Migrations(c *C) {
 	encodingConfig := modtestutil.MakeTestEncodingConfig()
 	storeKey := storetypes.NewKVStoreKey("thorchain")
+	serviceThorchain := runtime.NewKVStoreService(storeKey)
 	ctx := testutil.DefaultContext(storeKey, storetypes.NewTransientStoreKey("transient_test"))
 	key := "_ver//"
 	store := ctx.KVStore(storeKey)
@@ -31,7 +33,7 @@ func (s *MigrationsV2Suite) TestV2Migrations(c *C) {
 	store.Set([]byte(key), encodingConfig.Codec.MustMarshal(&ver))
 	c.Check(store.Has([]byte(key)), Equals, true)
 
-	err := v2.MigrateStore(ctx, storeKey)
+	err := v2.MigrateStore(ctx, serviceThorchain)
 	c.Assert(err, IsNil)
 
 	c.Check(store.Has([]byte(key)), Equals, false)

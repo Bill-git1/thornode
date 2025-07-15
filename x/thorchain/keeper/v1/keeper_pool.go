@@ -4,27 +4,28 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/cosmos/cosmos-sdk/runtime"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
-func (k KVStore) setPool(ctx cosmos.Context, key string, record Pool) {
-	store := ctx.KVStore(k.storeKey)
+func (k KVStore) setPool(ctx cosmos.Context, key []byte, record Pool) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
 	buf := k.cdc.MustMarshal(&record)
 	if buf == nil {
-		store.Delete([]byte(key))
+		store.Delete(key)
 	} else {
-		store.Set([]byte(key), buf)
+		store.Set(key, buf)
 	}
 }
 
-func (k KVStore) getPool(ctx cosmos.Context, key string, record *Pool) (bool, error) {
-	store := ctx.KVStore(k.storeKey)
-	if !store.Has([]byte(key)) {
+func (k KVStore) getPool(ctx cosmos.Context, key []byte, record *Pool) (bool, error) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	if !store.Has(key) {
 		return false, nil
 	}
 
-	bz := store.Get([]byte(key))
+	bz := store.Get(key)
 	if err := k.cdc.Unmarshal(bz, record); err != nil {
 		return true, dbError(ctx, fmt.Sprintf("Unmarshal kvstore: (%T) %s", record, key), err)
 	}

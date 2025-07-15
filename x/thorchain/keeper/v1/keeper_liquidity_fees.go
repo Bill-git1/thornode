@@ -56,7 +56,7 @@ func (k KVStore) ResetRollingPoolLiquidityFee(ctx cosmos.Context, asset common.A
 	k.setUint64(ctx, key, 0)
 }
 
-func (k KVStore) getLiquidityFees(ctx cosmos.Context, key string) (cosmos.Uint, error) {
+func (k KVStore) getLiquidityFees(ctx cosmos.Context, key []byte) (cosmos.Uint, error) {
 	var record uint64
 	_, err := k.getUint64(ctx, key, &record)
 	return cosmos.NewUint(record), err

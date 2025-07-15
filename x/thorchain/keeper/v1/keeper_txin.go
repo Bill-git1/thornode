@@ -3,6 +3,7 @@ package keeperv1
 import (
 	"fmt"
 
+	"github.com/cosmos/cosmos-sdk/runtime"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper/types"
@@ -19,13 +20,13 @@ func (k KVStore) SetObservedTxOutVoter(ctx cosmos.Context, tx ObservedTxVoter) {
 }
 
 func (k KVStore) setObservedTxVoter(ctx cosmos.Context, prefix types.DbPrefix, tx ObservedTxVoter) {
-	store := ctx.KVStore(k.storeKey)
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
 	key := k.GetKey(prefix, tx.String())
 	buf := k.cdc.MustMarshal(&tx)
 	if buf == nil {
-		store.Delete([]byte(key))
+		store.Delete(key)
 	} else {
-		store.Set([]byte(key), buf)
+		store.Set(key, buf)
 	}
 }
 
@@ -56,12 +57,12 @@ func (k KVStore) GetObservedTxOutVoter(ctx cosmos.Context, hash common.TxID) (Ob
 func (k KVStore) getObservedTxVoter(ctx cosmos.Context, prefix types.DbPrefix, hash common.TxID) (ObservedTxVoter, error) {
 	record := ObservedTxVoter{TxID: hash}
 	key := k.GetKey(prefix, hash.String())
-	store := ctx.KVStore(k.storeKey)
-	if !store.Has([]byte(key)) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	if !store.Has(key) {
 		return record, nil
 	}
 
-	bz := store.Get([]byte(key))
+	bz := store.Get(key)
 	if err := k.cdc.Unmarshal(bz, &record); err != nil {
 		return record, dbError(ctx, fmt.Sprintf("Unmarshal kvstore: (%T) %s", record, key), err)
 	}

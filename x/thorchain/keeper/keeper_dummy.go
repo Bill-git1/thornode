@@ -27,7 +27,7 @@ var kaboom = errors.New("Kaboom!!!")
 type KVStoreDummy struct{}
 
 func (k KVStoreDummy) Cdc() codec.BinaryCodec                  { return testutil.MakeTestEncodingConfig().Codec }
-func (k KVStoreDummy) DeleteKey(_ cosmos.Context, _ string)    {}
+func (k KVStoreDummy) DeleteKey(_ cosmos.Context, _ []byte)    {}
 func (k KVStoreDummy) CoinKeeper() bankkeeper.Keeper           { return bankkeeper.BaseKeeper{} }
 func (k KVStoreDummy) AccountKeeper() authkeeper.AccountKeeper { return authkeeper.AccountKeeper{} }
 func (k KVStoreDummy) Logger(ctx cosmos.Context) log.Logger {
@@ -86,8 +86,12 @@ func (k KVStoreDummy) RemoveExpiredUpgradeProposals(_ cosmos.Context) error {
 
 func (k KVStoreDummy) ClearUpgradePlan(ctx cosmos.Context) {}
 
-func (k KVStoreDummy) GetKey(prefix kvTypes.DbPrefix, key string) string {
-	return fmt.Sprintf("%s/1/%s", prefix, key)
+func (k KVStoreDummy) GetKey(prefix kvTypes.DbPrefix, key string, other ...string) []byte {
+	s := fmt.Sprintf("%s/1/%s", prefix, key)
+	for _, o := range other {
+		s += o
+	}
+	return []byte(s)
 }
 
 func (k KVStoreDummy) GetRuneBalanceOfModule(ctx cosmos.Context, moduleName string) cosmos.Uint {

@@ -5,9 +5,11 @@ import (
 
 	. "gopkg.in/check.v1"
 
+	cstore "cosmossdk.io/core/store"
 	"cosmossdk.io/log"
 	"cosmossdk.io/store"
 	storemetrics "cosmossdk.io/store/metrics"
+
 	upgradekeeper "cosmossdk.io/x/upgrade/keeper"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
@@ -40,20 +42,22 @@ func FundModule(c *C, ctx cosmos.Context, k KVStore, name string, amt uint64) {
 	c.Assert(err, IsNil)
 }
 
-var keyThorchain = cosmos.NewKVStoreKey(StoreKey)
+var serviceThorchain cstore.KVStoreService
 
 func setupKeeperForTest(c *C) (cosmos.Context, KVStore) {
 	SetupConfigForTest()
 	keys := cosmos.NewKVStoreKeys(
-		authtypes.StoreKey, banktypes.StoreKey, stakingtypes.StoreKey, upgradetypes.StoreKey,
+		authtypes.StoreKey, banktypes.StoreKey, stakingtypes.StoreKey, upgradetypes.StoreKey, StoreKey,
 	)
+
+	serviceThorchain = runtime.NewKVStoreService(keys[StoreKey])
 
 	db := dbm.NewMemDB()
 	ms := store.NewCommitMultiStore(db, log.NewNopLogger(), storemetrics.NewNoOpMetrics())
 	ms.MountStoreWithDB(keys[authtypes.StoreKey], cosmos.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(keys[banktypes.StoreKey], cosmos.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(keys[upgradetypes.StoreKey], cosmos.StoreTypeIAVL, db)
-	ms.MountStoreWithDB(keyThorchain, cosmos.StoreTypeIAVL, db)
+	ms.MountStoreWithDB(keys[StoreKey], cosmos.StoreTypeIAVL, db)
 	err := ms.LoadLatestVersion()
 	c.Assert(err, IsNil)
 
@@ -106,7 +110,7 @@ func setupKeeperForTest(c *C) (cosmos.Context, KVStore) {
 		authtypes.NewModuleAddress(ModuleName).String(),
 	)
 
-	k := NewKVStore(encodingConfig.Codec, bk, ak, uk, keyThorchain, GetCurrentVersion())
+	k := NewKVStore(encodingConfig.Codec, serviceThorchain, bk, ak, uk, GetCurrentVersion())
 
 	FundModule(c, ctx, k, AsgardName, 100_000_000*common.One)
 

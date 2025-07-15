@@ -73,7 +73,7 @@ func (k KVStore) GetLastChainHeights(ctx cosmos.Context) (map[common.Chain]int64
 // SetLastObserveHeight save the last observe height into key value store
 func (k KVStore) SetLastObserveHeight(ctx cosmos.Context, chain common.Chain, address cosmos.AccAddress, height int64) error {
 	var lastHeight int64
-	key := k.GetKey(prefixLastObserveHeight, address.String()) + "/" + chain.String()
+	key := k.GetKey(prefixLastObserveHeight, address.String(), "/", chain.String())
 	exist, err := k.getInt64(ctx, key, &lastHeight)
 	if err != nil {
 		ctx.Logger().Error("fail to get last observe height", "error", err)
@@ -89,19 +89,21 @@ func (k KVStore) SetLastObserveHeight(ctx cosmos.Context, chain common.Chain, ad
 
 // ForceSetLastObserveHeight force sets the observe height.
 func (k KVStore) ForceSetLastObserveHeight(ctx cosmos.Context, chain common.Chain, address cosmos.AccAddress, height int64) {
-	key := k.GetKey(prefixLastObserveHeight, address.String()) + "/" + chain.String()
+	key := k.GetKey(prefixLastObserveHeight, address.String(), "/", chain.String())
 	k.setInt64(ctx, key, height)
 }
 
 // GetLastObserveHeight retrieve last observe height of a given node account from key value store
 func (k KVStore) GetLastObserveHeight(ctx cosmos.Context, address cosmos.AccAddress) (map[common.Chain]int64, error) {
-	prefixKey := k.GetKey(prefixLastObserveHeight, address.String()) + "/"
+	// TODO(reece): is this last added '/' a bug shouldn't there be some data after it like other keys?
+	// if not then `GetKey(...)` can auto add the '/'s in without us needing to add manually
+	prefixKey := k.GetKey(prefixLastObserveHeight, address.String(), "/")
 	iter := k.getIterator(ctx, types.DbPrefix(prefixKey))
 	result := make(map[common.Chain]int64)
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		key := string(iter.Key())
-		c := strings.TrimPrefix(key, prefixKey)
+		c := strings.TrimPrefix(key, string(prefixKey))
 		chain, err := common.NewChain(c)
 		if err != nil {
 			return nil, fmt.Errorf("fail to parse chain: %w", err)

@@ -3,73 +3,74 @@ package keeperv1
 import (
 	"fmt"
 
+	"github.com/cosmos/cosmos-sdk/runtime"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
-func (k KVStore) setTssVoter(ctx cosmos.Context, key string, record TssVoter) {
-	store := ctx.KVStore(k.storeKey)
+func (k KVStore) setTssVoter(ctx cosmos.Context, key []byte, record TssVoter) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
 	buf := k.cdc.MustMarshal(&record)
 	if buf == nil {
-		store.Delete([]byte(key))
+		store.Delete(key)
 	} else {
-		store.Set([]byte(key), buf)
+		store.Set(key, buf)
 	}
 }
 
-func (k KVStore) getTssVoter(ctx cosmos.Context, key string, record *TssVoter) (bool, error) {
-	store := ctx.KVStore(k.storeKey)
-	if !store.Has([]byte(key)) {
+func (k KVStore) getTssVoter(ctx cosmos.Context, key []byte, record *TssVoter) (bool, error) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	if !store.Has(key) {
 		return false, nil
 	}
 
-	bz := store.Get([]byte(key))
+	bz := store.Get(key)
 	if err := k.cdc.Unmarshal(bz, record); err != nil {
 		return true, dbError(ctx, fmt.Sprintf("Unmarshal kvstore: (%T) %s", record, key), err)
 	}
 	return true, nil
 }
 
-func (k KVStore) setTssKeygenMetric(ctx cosmos.Context, key string, record TssKeygenMetric) {
-	store := ctx.KVStore(k.storeKey)
+func (k KVStore) setTssKeygenMetric(ctx cosmos.Context, key []byte, record TssKeygenMetric) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
 	buf := k.cdc.MustMarshal(&record)
 	if buf == nil {
-		store.Delete([]byte(key))
+		store.Delete(key)
 	} else {
-		store.Set([]byte(key), buf)
+		store.Set(key, buf)
 	}
 }
 
-func (k KVStore) getTssKeygenMetric(ctx cosmos.Context, key string, record *TssKeygenMetric) (bool, error) {
-	store := ctx.KVStore(k.storeKey)
-	if !store.Has([]byte(key)) {
+func (k KVStore) getTssKeygenMetric(ctx cosmos.Context, key []byte, record *TssKeygenMetric) (bool, error) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	if !store.Has(key) {
 		return false, nil
 	}
 
-	bz := store.Get([]byte(key))
+	bz := store.Get(key)
 	if err := k.cdc.Unmarshal(bz, record); err != nil {
 		return true, dbError(ctx, fmt.Sprintf("Unmarshal kvstore: (%T) %s", record, key), err)
 	}
 	return true, nil
 }
 
-func (k KVStore) setTssKeysignMetric(ctx cosmos.Context, key string, record TssKeysignMetric) {
-	store := ctx.KVStore(k.storeKey)
+func (k KVStore) setTssKeysignMetric(ctx cosmos.Context, key []byte, record TssKeysignMetric) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
 	buf := k.cdc.MustMarshal(&record)
 	if buf == nil {
-		store.Delete([]byte(key))
+		store.Delete(key)
 	} else {
-		store.Set([]byte(key), buf)
+		store.Set(key, buf)
 	}
 }
 
-func (k KVStore) getTssKeysignMetric(ctx cosmos.Context, key string, record *TssKeysignMetric) (bool, error) {
-	store := ctx.KVStore(k.storeKey)
-	if !store.Has([]byte(key)) {
+func (k KVStore) getTssKeysignMetric(ctx cosmos.Context, key []byte, record *TssKeysignMetric) (bool, error) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	if !store.Has(key) {
 		return false, nil
 	}
 
-	bz := store.Get([]byte(key))
+	bz := store.Get(key)
 	if err := k.cdc.Unmarshal(bz, record); err != nil {
 		return true, dbError(ctx, fmt.Sprintf("Unmarshal kvstore: (%T) %s", record, key), err)
 	}

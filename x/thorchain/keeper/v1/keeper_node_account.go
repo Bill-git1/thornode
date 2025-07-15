@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/blang/semver"
+	"github.com/cosmos/cosmos-sdk/runtime"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	"github.com/hashicorp/go-metrics"
 
@@ -17,23 +18,23 @@ import (
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper/types"
 )
 
-func (k KVStore) setNodeAccount(ctx cosmos.Context, key string, record NodeAccount) {
-	store := ctx.KVStore(k.storeKey)
+func (k KVStore) setNodeAccount(ctx cosmos.Context, key []byte, record NodeAccount) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
 	buf := k.cdc.MustMarshal(&record)
 	if buf == nil {
-		store.Delete([]byte(key))
+		store.Delete(key)
 	} else {
-		store.Set([]byte(key), buf)
+		store.Set(key, buf)
 	}
 }
 
-func (k KVStore) getNodeAccount(ctx cosmos.Context, key string, record *NodeAccount) (bool, error) {
-	store := ctx.KVStore(k.storeKey)
-	if !store.Has([]byte(key)) {
+func (k KVStore) getNodeAccount(ctx cosmos.Context, key []byte, record *NodeAccount) (bool, error) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	if !store.Has(key) {
 		return false, nil
 	}
 
-	bz := store.Get([]byte(key))
+	bz := store.Get(key)
 	if err := k.cdc.Unmarshal(bz, record); err != nil {
 		return true, dbError(ctx, fmt.Sprintf("Unmarshal kvstore: (%T) %s", record, key), err)
 	}
@@ -158,7 +159,7 @@ func (k KVStore) RemoveLowBondValidatorAccounts(ctx cosmos.Context) error {
 		}
 	}
 	for _, naKey := range lowBondValidators {
-		k.del(ctx, string(naKey))
+		k.del(ctx, naKey)
 	}
 	return nil
 }
@@ -410,23 +411,23 @@ func (k KVStore) DecNodeAccountSlashPoints(ctx cosmos.Context, addr cosmos.AccAd
 	return nil
 }
 
-func (k KVStore) setJail(ctx cosmos.Context, key string, record Jail) {
-	store := ctx.KVStore(k.storeKey)
+func (k KVStore) setJail(ctx cosmos.Context, key []byte, record Jail) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
 	buf := k.cdc.MustMarshal(&record)
 	if buf == nil {
-		store.Delete([]byte(key))
+		store.Delete(key)
 	} else {
-		store.Set([]byte(key), buf)
+		store.Set(key, buf)
 	}
 }
 
-func (k KVStore) getJail(ctx cosmos.Context, key string, record *Jail) (bool, error) {
-	store := ctx.KVStore(k.storeKey)
-	if !store.Has([]byte(key)) {
+func (k KVStore) getJail(ctx cosmos.Context, key []byte, record *Jail) (bool, error) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	if !store.Has(key) {
 		return false, nil
 	}
 
-	bz := store.Get([]byte(key))
+	bz := store.Get(key)
 	if err := k.cdc.Unmarshal(bz, record); err != nil {
 		return true, dbError(ctx, fmt.Sprintf("Unmarshal kvstore: (%T) %s", record, key), err)
 	}
@@ -469,23 +470,23 @@ func (k KVStore) ReleaseNodeAccountFromJail(ctx cosmos.Context, addr cosmos.AccA
 	return nil
 }
 
-func (k KVStore) setBondProviders(ctx cosmos.Context, key string, record BondProviders) {
-	store := ctx.KVStore(k.storeKey)
+func (k KVStore) setBondProviders(ctx cosmos.Context, key []byte, record BondProviders) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
 	buf := k.cdc.MustMarshal(&record)
 	if buf == nil {
-		store.Delete([]byte(key))
+		store.Delete(key)
 	} else {
-		store.Set([]byte(key), buf)
+		store.Set(key, buf)
 	}
 }
 
-func (k KVStore) getBondProviders(ctx cosmos.Context, key string, record *BondProviders) (bool, error) {
-	store := ctx.KVStore(k.storeKey)
-	if !store.Has([]byte(key)) {
+func (k KVStore) getBondProviders(ctx cosmos.Context, key []byte, record *BondProviders) (bool, error) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	if !store.Has(key) {
 		return false, nil
 	}
 
-	bz := store.Get([]byte(key))
+	bz := store.Get(key)
 	if err := k.cdc.Unmarshal(bz, record); err != nil {
 		return true, dbError(ctx, fmt.Sprintf("Unmarshal kvstore: (%T) %s", record, key), err)
 	}

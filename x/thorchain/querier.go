@@ -3425,7 +3425,7 @@ func simulate(ctx cosmos.Context, mgr Manager, msg sdk.Msg) (sdk.Events, error) 
 	// reset the swap queue
 	iter := mgr.Keeper().GetSwapQueueIterator(ctx)
 	for ; iter.Valid(); iter.Next() {
-		mgr.Keeper().DeleteKey(ctx, string(iter.Key()))
+		mgr.Keeper().DeleteKey(ctx, iter.Key())
 	}
 	iter.Close()
 

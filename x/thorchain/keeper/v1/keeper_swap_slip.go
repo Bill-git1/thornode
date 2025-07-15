@@ -29,7 +29,7 @@ func (k KVStore) DeletePoolSwapSlip(ctx cosmos.Context, height int64, asset comm
 	k.del(ctx, key)
 }
 
-func (k KVStore) getSwapSlip(ctx cosmos.Context, key string) (cosmos.Int, error) {
+func (k KVStore) getSwapSlip(ctx cosmos.Context, key []byte) (cosmos.Int, error) {
 	var record int64
 	_, err := k.getInt64(ctx, key, &record)
 	return cosmos.NewInt(record), err

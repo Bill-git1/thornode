@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cosmos/cosmos-sdk/runtime"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
@@ -128,11 +129,11 @@ func (k KVStore) SetAdvSwapQueueIndex(ctx cosmos.Context, msg MsgSwap) error {
 
 // GetAdvSwapQueueIterator iterate adv swap queue items
 func (k KVStore) GetAdvSwapQueueIndexIterator(ctx cosmos.Context, swapType types.SwapType, source, target common.Asset) cosmos.Iterator {
-	store := ctx.KVStore(k.storeKey)
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
 	switch swapType {
 	case types.SwapType_limit:
 		prefix := k.GetKey(prefixAdvSwapQueueLimitIndex, fmt.Sprintf("%s>%s/", source, target))
-		return cosmos.KVStoreReversePrefixIterator(store, []byte(prefix))
+		return cosmos.KVStoreReversePrefixIterator(store, prefix)
 	case types.SwapType_market:
 		return nil
 	default:
@@ -205,7 +206,7 @@ func (k KVStore) RemoveAdvSwapQueueIndex(ctx cosmos.Context, msg MsgSwap) error 
 	return nil
 }
 
-func (k KVStore) getAdvSwapQueueIndexKey(ctx cosmos.Context, msg MsgSwap) string {
+func (k KVStore) getAdvSwapQueueIndexKey(ctx cosmos.Context, msg MsgSwap) []byte {
 	switch msg.SwapType {
 	case types.SwapType_limit:
 		ra := rewriteRatio(ratioLength, getRatio(msg.Tx.Coins[0].Amount, msg.TradeTarget))
@@ -215,7 +216,7 @@ func (k KVStore) getAdvSwapQueueIndexKey(ctx cosmos.Context, msg MsgSwap) string
 	case types.SwapType_market:
 		return k.GetKey(prefixAdvSwapQueueMarketIndex, "")
 	default:
-		return ""
+		return []byte{}
 	}
 }
 

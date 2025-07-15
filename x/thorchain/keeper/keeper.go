@@ -15,13 +15,13 @@ import (
 
 type Keeper interface {
 	Cdc() codec.BinaryCodec
-	DeleteKey(ctx cosmos.Context, key string)
+	DeleteKey(ctx cosmos.Context, key []byte)
 	GetVersion() semver.Version
 	GetVersionWithCtx(ctx cosmos.Context) (semver.Version, bool)
 	SetVersionWithCtx(ctx cosmos.Context, v semver.Version)
 	GetMinJoinLast(ctx cosmos.Context) (semver.Version, int64)
 	SetMinJoinLast(ctx cosmos.Context)
-	GetKey(prefix kvTypes.DbPrefix, key string) string
+	GetKey(prefix kvTypes.DbPrefix, key string, other ...string) []byte
 	GetRuneBalanceOfModule(ctx cosmos.Context, moduleName string) cosmos.Uint
 	GetBalanceOfModule(ctx cosmos.Context, moduleName, denom string) cosmos.Uint
 	SendFromModuleToModule(ctx cosmos.Context, from, to string, coin common.Coins) error

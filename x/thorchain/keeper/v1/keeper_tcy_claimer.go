@@ -4,28 +4,29 @@ import (
 	"fmt"
 
 	"cosmossdk.io/math"
+	"github.com/cosmos/cosmos-sdk/runtime"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper/types"
 )
 
-func (k KVStore) setTCYClaimer(ctx cosmos.Context, key string, record TCYClaimer) {
-	store := ctx.KVStore(k.storeKey)
+func (k KVStore) setTCYClaimer(ctx cosmos.Context, key []byte, record TCYClaimer) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
 	buf := k.cdc.MustMarshal(&record)
 	if buf == nil {
-		store.Delete([]byte(key))
+		store.Delete(key)
 	} else {
-		store.Set([]byte(key), buf)
+		store.Set(key, buf)
 	}
 }
 
-func (k KVStore) getTCYClaimer(ctx cosmos.Context, key string, record *TCYClaimer) (bool, error) {
-	store := ctx.KVStore(k.storeKey)
-	if !store.Has([]byte(key)) {
+func (k KVStore) getTCYClaimer(ctx cosmos.Context, key []byte, record *TCYClaimer) (bool, error) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	if !store.Has(key) {
 		return false, nil
 	}
 
-	bz := store.Get([]byte(key))
+	bz := store.Get(key)
 	if err := k.cdc.Unmarshal(bz, record); err != nil {
 		return true, dbError(ctx, fmt.Sprintf("Unmarshal kvstore: (%T) %s", record, key), err)
 	}
@@ -90,9 +91,9 @@ func (k KVStore) ListTCYClaimersFromL1Address(ctx cosmos.Context, l1Address comm
 
 // TCYClaimerExists checks if claimer already exists
 func (k KVStore) TCYClaimerExists(ctx cosmos.Context, l1Address common.Address, asset common.Asset) bool {
-	store := ctx.KVStore(k.storeKey)
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
 	key := k.GetKey(prefixTCYClaimer, fmt.Sprintf("%s/%s", l1Address.String(), asset.String()))
-	return store.Has([]byte(key))
+	return store.Has(key)
 }
 
 // UpdateTCYClaimer will update value if claimer exists, if not it will create a new one

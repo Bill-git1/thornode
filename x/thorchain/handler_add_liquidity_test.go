@@ -677,12 +677,12 @@ func (p *AddLiquidityTestKeeper) GetLiquidityProvider(ctx cosmos.Context, asset 
 		AssetDepositValue: cosmos.ZeroUint(),
 	}
 	key := p.GetKey("lp/", lp.Key())
-	if res, ok := p.store[key]; ok {
-		lp, ok = res.(LiquidityProvider)
-		if !ok {
-			return lp, fmt.Errorf("dev error: failed to cast liquidity provider")
+	if res, ok := p.store[string(key)]; ok {
+		lpCast, okCast := res.(LiquidityProvider)
+		if !okCast {
+			return lpCast, fmt.Errorf("dev error: failed to cast liquidity provider")
 		}
-		return lp, nil
+		return lpCast, nil
 	}
 	lp.Units = p.liquidityUnits
 	return lp, nil
@@ -690,7 +690,7 @@ func (p *AddLiquidityTestKeeper) GetLiquidityProvider(ctx cosmos.Context, asset 
 
 func (p *AddLiquidityTestKeeper) SetLiquidityProvider(ctx cosmos.Context, lp LiquidityProvider) {
 	key := p.GetKey("lp/", lp.Key())
-	p.store[key] = lp
+	p.store[string(key)] = lp
 }
 
 func (p *AddLiquidityTestKeeper) AddOwnership(ctx cosmos.Context, coin common.Coin, addr cosmos.AccAddress) error {

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"cosmossdk.io/core/store"
 	upgradekeeper "cosmossdk.io/x/upgrade/keeper"
 	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
 	"github.com/blang/semver"
@@ -260,18 +261,18 @@ type Mgrs struct {
 	accountKeeper authkeeper.AccountKeeper
 	upgradeKeeper *upgradekeeper.Keeper
 	wasmKeeper    wasmkeeper.Keeper
-	storeKey      cosmos.StoreKey
+	storeService  store.KVStoreService
 }
 
 // NewManagers  create a new Manager
 func NewManagers(
 	keeper keeper.Keeper,
 	cdc codec.Codec,
+	storeService store.KVStoreService,
 	coinKeeper bankkeeper.Keeper,
 	accountKeeper authkeeper.AccountKeeper,
 	upgradeKeeper *upgradekeeper.Keeper,
 	wasmKeeper wasmkeeper.Keeper,
-	storeKey cosmos.StoreKey,
 ) *Mgrs {
 	return &Mgrs{
 		K:             keeper,
@@ -280,7 +281,7 @@ func NewManagers(
 		accountKeeper: accountKeeper,
 		upgradeKeeper: upgradeKeeper,
 		wasmKeeper:    wasmKeeper,
-		storeKey:      storeKey,
+		storeService:  storeService,
 	}
 }
 
@@ -303,7 +304,7 @@ func (mgr *Mgrs) LoadManagerIfNecessary(ctx cosmos.Context) error {
 	mgr.constAccessor = constants.GetConstantValues(v)
 	var err error
 
-	mgr.K, err = GetKeeper(v, mgr.cdc, mgr.coinKeeper, mgr.accountKeeper, mgr.upgradeKeeper, mgr.storeKey)
+	mgr.K, err = GetKeeper(v, mgr.cdc, mgr.storeService, mgr.coinKeeper, mgr.accountKeeper, mgr.upgradeKeeper)
 	if err != nil {
 		return fmt.Errorf("fail to create keeper: %w", err)
 	}
@@ -446,13 +447,13 @@ func (mgr *Mgrs) SwitchManager() SwitchManager { return mgr.switchManager }
 func GetKeeper(
 	version semver.Version,
 	cdc codec.BinaryCodec,
+	storeService store.KVStoreService,
 	coinKeeper bankkeeper.Keeper,
 	accountKeeper authkeeper.AccountKeeper,
 	upgradeKeeper *upgradekeeper.Keeper,
-	storeKey cosmos.StoreKey,
 ) (keeper.Keeper, error) {
 	if version.GTE(semver.MustParse("3.0.0")) {
-		kvs := kv1.NewKVStore(cdc, coinKeeper, accountKeeper, upgradeKeeper, storeKey, version)
+		kvs := kv1.NewKVStore(cdc, storeService, coinKeeper, accountKeeper, upgradeKeeper, version)
 		return &kvs, nil
 	}
 	return nil, errInvalidVersion
