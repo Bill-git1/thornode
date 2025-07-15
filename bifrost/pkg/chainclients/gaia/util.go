@@ -70,7 +70,7 @@ func (c *CosmosBlockScanner) fromCosmosToThorchain(coin cosmos.Coin) (common.Coi
 		return common.NoCoin, fmt.Errorf("asset does not exist / not whitelisted by client")
 	}
 
-	thorAsset, err := common.NewAsset(fmt.Sprintf("%s.%s", common.GAIAChain.String(), cosmosAsset.THORChainSymbol))
+	thorAsset, err := common.NewAsset(fmt.Sprintf("%s.%s", c.cfg.ChainID, cosmosAsset.THORChainSymbol))
 	if err != nil {
 		return common.NoCoin, fmt.Errorf("invalid thorchain asset: %w", err)
 	}

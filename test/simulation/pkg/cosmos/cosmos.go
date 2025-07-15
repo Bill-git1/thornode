@@ -51,6 +51,8 @@ type Client struct {
 	privKey ctypes.PrivKey
 	pubKey  common.PubKey
 	address common.Address
+	denom   string
+	chainId string
 }
 
 var _ LiteChainClient = &Client{}
@@ -97,6 +99,19 @@ func NewClient(chain common.Chain, host string, keys *thorclient.Keys) (LiteChai
 	signTypes := []signingtypes.SignMode{signingtypes.SignMode_SIGN_MODE_DIRECT}
 	txConfig := tx.NewTxConfig(marshaler, signTypes)
 
+	var denom, chainId string
+
+	switch chain {
+	case common.GAIAChain:
+		denom = "uatom"
+		chainId = "localgaia"
+	case common.NOBLEChain:
+		denom = "uusdc"
+		chainId = "localnoble"
+	default:
+		return nil, fmt.Errorf("unsupported chain: %s", chain)
+	}
+
 	return &Client{
 		chain:    chain,
 		grpc:     grpc,
@@ -105,6 +120,8 @@ func NewClient(chain common.Chain, host string, keys *thorclient.Keys) (LiteChai
 		privKey:  privKey,
 		pubKey:   pubKey,
 		address:  address,
+		denom:    denom,
+		chainId:  chainId,
 	}, nil
 }
 
@@ -128,10 +145,10 @@ func (c *Client) GetAccount(pk *common.PubKey) (*common.Account, error) {
 	// only atom is supported
 	nativeCoins := make([]common.Coin, 0)
 	for _, coin := range balances.Balances {
-		if coin.Denom == "uatom" {
+		if coin.Denom == c.denom {
 			amount := coin.Amount.Mul(sdkmath.NewInt(100)) // 1e6 -> 1e8
 			amountUint := sdkmath.NewUintFromBigInt(amount.BigInt())
-			nativeCoins = append(nativeCoins, common.NewCoin(common.ATOMAsset, amountUint))
+			nativeCoins = append(nativeCoins, common.NewCoin(c.chain.GetGasAsset(), amountUint))
 		}
 	}
 
@@ -169,7 +186,7 @@ func (c *Client) SignTx(tx SimTx) ([]byte, error) {
 
 	// create message
 	amount := tx.Coin.Amount.Quo(sdkmath.NewUint(100)) // 1e8 -> 1e6
-	coins := []sdk.Coin{sdk.NewCoin("uatom", sdkmath.NewIntFromBigInt(amount.BigInt()))}
+	coins := []sdk.Coin{sdk.NewCoin(c.denom, sdkmath.NewIntFromBigInt(amount.BigInt()))}
 	msg := &btypes.MsgSend{
 		FromAddress: c.address.String(),
 		ToAddress:   tx.ToAddress.String(),
@@ -183,7 +200,7 @@ func (c *Client) SignTx(tx SimTx) ([]byte, error) {
 		return nil, fmt.Errorf("fail to set messages: %w", err)
 	}
 	txBuilder.SetMemo(tx.Memo)
-	txBuilder.SetFeeAmount(sdk.NewCoins(sdk.NewCoin("uatom", sdkmath.NewInt(2000))))
+	txBuilder.SetFeeAmount(sdk.NewCoins(sdk.NewCoin(c.denom, sdkmath.NewInt(2000))))
 	txBuilder.SetGasLimit(150_000)
 
 	// configure signing
@@ -192,7 +209,7 @@ func (c *Client) SignTx(tx SimTx) ([]byte, error) {
 	}
 	cpk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeAccPub, c.pubKey.String())
 	if err != nil {
-		return nil, fmt.Errorf("fail to get cosmoos pubkey: %w", err)
+		return nil, fmt.Errorf("fail to get cosmos pubkey: %w", err)
 	}
 	sig := signingtypes.SignatureV2{
 		PubKey:   cpk,
@@ -209,7 +226,7 @@ func (c *Client) SignTx(tx SimTx) ([]byte, error) {
 	// sign transaction
 	modeHandler := c.txConfig.SignModeHandler()
 	signingData := authsigning.SignerData{
-		ChainID:       "localgaia",
+		ChainID:       c.chainId,
 		AccountNumber: uint64(account.AccountNumber),
 		Sequence:      uint64(account.Sequence),
 	}

@@ -29,16 +29,17 @@ import (
 ////////////////////////////////////////////////////////////////////////////////////////
 
 var chainRPCs = map[common.Chain]string{
-	common.BTCChain:  "http://localhost:18443",
-	common.LTCChain:  "http://localhost:38443",
-	common.BCHChain:  "http://localhost:28443",
-	common.DOGEChain: "http://localhost:18332",
-	common.ETHChain:  "http://localhost:8545",
-	common.AVAXChain: "http://localhost:9650/ext/bc/C/rpc",
-	common.GAIAChain: "localhost:9091",
-	common.BASEChain: "http://localhost:8547",
-	common.TRONChain: "http://localhost:8090",
-	common.XRPChain:  "http://localhost:5005",
+	common.BTCChain:   "http://localhost:18443",
+	common.LTCChain:   "http://localhost:38443",
+	common.BCHChain:   "http://localhost:28443",
+	common.DOGEChain:  "http://localhost:18332",
+	common.ETHChain:   "http://localhost:8545",
+	common.AVAXChain:  "http://localhost:9650/ext/bc/C/rpc",
+	common.GAIAChain:  "localhost:9091",
+	common.NOBLEChain: "localhost:9092",
+	common.BASEChain:  "http://localhost:8547",
+	common.TRONChain:  "http://localhost:8090",
+	common.XRPChain:   "http://localhost:5005",
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -139,6 +140,7 @@ func InitConfig(parallelism int, seed bool) *OpConfig {
 				rate  uint64
 			}{
 				{common.GAIAChain, 1, 1_000_000},
+				{common.NOBLEChain, 1, 1_000_000},
 				{common.XRPChain, 1, 1_000},
 				{common.AVAXChain, 80000, 150},
 				{common.BASEChain, 80000, 30},
@@ -241,7 +243,7 @@ func InitConfig(parallelism int, seed bool) *OpConfig {
 			chainSeedAmount = sdkmath.NewUint(10 * common.One)
 		case common.BSCChain, common.BASEChain, common.ETHChain:
 			chainSeedAmount = sdkmath.NewUint(100 * common.One)
-		case common.GAIAChain:
+		case common.GAIAChain, common.NOBLEChain:
 			chainSeedAmount = sdkmath.NewUint(1000 * common.One)
 		case common.AVAXChain, // more since local gas is high
 			common.XRPChain: // more since dust threshold is 1 XRP

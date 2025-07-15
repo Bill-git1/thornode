@@ -211,6 +211,18 @@ services:
       BIFROST_CHAINS_TRON_API_HOST: http://tron-fullnode:8090
       BIFROST_CHAINS_TRON_RPC_HOST: http://tron-fullnode:8091
 
+      # enable gaia
+      BIFROST_CHAINS_GAIA_DISABLED: "false"
+      BIFROST_CHAINS_GAIA_RPC_HOST: ${GAIA_HOST:-http://gaia:26657}
+      BIFROST_CHAINS_GAIA_COSMOS_GRPC_HOST: ${GAIA_GRPC_HOST:-gaia:9090}
+      BIFROST_CHAINS_GAIA_COSMOS_CHAIN_ID: "localgaia"
+
+      # enable noble
+      BIFROST_CHAINS_NOBLE_DISABLED: "false"
+      BIFROST_CHAINS_NOBLE_RPC_HOST: http://noble:26657
+      BIFROST_CHAINS_NOBLE_COSMOS_GRPC_HOST: "noble:9090"
+      BIFROST_CHAINS_NOBLE_COSMOS_CHAIN_ID: "localnoble"
+
       # set fixed gas rate for evm chains
       BIFROST_CHAINS_ETH_BLOCK_SCANNER_FIXED_GAS_RATE: 20_000_000_000 # 20 gwei
       BIFROST_CHAINS_AVAX_BLOCK_SCANNER_FIXED_GAS_RATE: 100_000_000_000 # 100 navax
@@ -424,6 +436,23 @@ services:
       - "9091:9090"
       - "21317:1317"
     command: /mocknet/init-gaia.sh
+
+  # ------------------------------ noble ------------------------------
+
+  noble:
+    profiles:
+      - mocknet
+      - mocknet-cluster
+    image: registry.gitlab.com/thorchain/devops/node-launcher:noble-daemon-9.0.4
+    volumes:
+      - "./mocknet:/mocknet"
+    environment:
+      BLOCK_TIME: ${BLOCK_TIME:-1s}
+    ports:
+      - "20257:26657"
+      - "9092:9090"
+      - "22317:1317"
+    command: /mocknet/init-noble.sh
 
   # ------------------------------ bitcoin ------------------------------
 

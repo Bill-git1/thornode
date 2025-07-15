@@ -131,7 +131,7 @@ func (p PubKey) GetAddress(chain Chain) (Address, error) {
 			return NoAddress, fmt.Errorf("get pub key secp256k1, %w", err)
 		}
 		addressString = xrpkm.MasterPubKeyToAccountID(pk.SerializeCompressed())
-	case GAIAChain, THORChain:
+	case GAIAChain, THORChain, NOBLEChain:
 		pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeAccPub, string(p))
 		if err != nil {
 			return NoAddress, err

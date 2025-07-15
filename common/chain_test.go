@@ -35,6 +35,8 @@ func (s ChainSuite) TestChain(c *C) {
 	c.Assert(LTCChain.GetGasAsset(), Equals, LTCAsset)
 	c.Assert(BCHChain.GetGasAsset(), Equals, BCHAsset)
 	c.Assert(DOGEChain.GetGasAsset(), Equals, DOGEAsset)
+	c.Assert(GAIAChain.GetGasAsset(), Equals, ATOMAsset)
+	c.Assert(NOBLEChain.GetGasAsset(), Equals, USDCAsset)
 	c.Assert(TRONChain.GetGasAsset(), Equals, TRXAsset)
 	c.Assert(EmptyChain.GetGasAsset(), Equals, EmptyAsset)
 
@@ -49,6 +51,27 @@ func (s ChainSuite) TestChain(c *C) {
 	c.Assert(DOGEChain.AddressPrefix(MockNet), Equals, dogchaincfg.RegressionNetParams.Bech32HRPSegwit)
 	c.Assert(DOGEChain.AddressPrefix(MainNet), Equals, dogchaincfg.MainNetParams.Bech32HRPSegwit)
 	c.Assert(DOGEChain.AddressPrefix(StageNet), Equals, dogchaincfg.MainNetParams.Bech32HRPSegwit)
+
+	// Noble chain tests
+	c.Assert(NOBLEChain.AddressPrefix(MockNet), Equals, "noble")
+	c.Assert(NOBLEChain.AddressPrefix(MainNet), Equals, "noble")
+	c.Assert(NOBLEChain.AddressPrefix(StageNet), Equals, "noble")
+
+	// Test GetGasUnits
+	c.Assert(NOBLEChain.GetGasUnits(), Equals, "uusdc")
+	c.Assert(GAIAChain.GetGasUnits(), Equals, "uatom")
+
+	// Test GetGasAssetDecimal
+	c.Assert(NOBLEChain.GetGasAssetDecimal(), Equals, int64(6))
+	c.Assert(GAIAChain.GetGasAssetDecimal(), Equals, int64(6))
+
+	// Test ApproximateBlockMilliseconds
+	c.Assert(NOBLEChain.ApproximateBlockMilliseconds(), Equals, int64(1500))
+	c.Assert(GAIAChain.ApproximateBlockMilliseconds(), Equals, int64(6000))
+
+	// Test InboundNotes
+	c.Assert(NOBLEChain.InboundNotes(), Equals, "Transfer the inbound_address the asset with the memo. Do not use multi-in, multi-out transactions.")
+	c.Assert(GAIAChain.InboundNotes(), Equals, "Transfer the inbound_address the asset with the memo. Do not use multi-in, multi-out transactions.")
 
 	// Tron chain tests
 	c.Assert(TRONChain.GetGasUnits(), Equals, "sun")

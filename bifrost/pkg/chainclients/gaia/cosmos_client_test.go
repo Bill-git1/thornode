@@ -103,6 +103,7 @@ func (s *CosmosTestSuite) TestGetAddress(c *C) {
 	mockAccountServiceClient := NewMockAccountServiceClient()
 
 	cfg := config.BifrostBlockScannerConfiguration{
+		ChainID: common.GAIAChain,
 		WhitelistCosmosAssets: []config.WhitelistCosmosAsset{
 			{Denom: "uatom", Decimals: 6, THORChainSymbol: "ATOM"},
 		},

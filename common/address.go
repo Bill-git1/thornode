@@ -178,6 +178,9 @@ func (addr Address) IsChain(chain Chain) bool {
 		// Note: Gaia does not use a special prefix for testnet
 		prefix, _, _ := bech32.Decode(addr.String())
 		return prefix == "cosmos"
+	case NOBLEChain:
+		prefix, _, _ := bech32.Decode(addr.String())
+		return prefix == "noble"
 	case THORChain:
 		prefix, _, _ := bech32.Decode(addr.String())
 		return prefix == "thor" || prefix == "tthor" || prefix == "sthor"

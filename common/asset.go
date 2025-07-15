@@ -43,6 +43,7 @@ var (
 	TCY        = Asset{Chain: THORChain, Symbol: "TCY", Ticker: "TCY", Synth: false}
 	TOR        = Asset{Chain: THORChain, Symbol: "TOR", Ticker: "TOR", Synth: false}
 	THORBTC    = Asset{Chain: THORChain, Symbol: "BTC", Ticker: "BTC", Synth: false}
+	USDCAsset  = Asset{Chain: NOBLEChain, Symbol: "USDC", Ticker: "USDC", Synth: false}
 )
 
 var _ sdk.CustomProtobufType = (*Asset)(nil)

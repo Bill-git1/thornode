@@ -23,6 +23,7 @@ const (
 	DOGEChain  = Chain("DOGE")
 	THORChain  = Chain("THOR")
 	GAIAChain  = Chain("GAIA")
+	NOBLEChain = Chain("NOBLE")
 	AVAXChain  = Chain("AVAX")
 	BASEChain  = Chain("BASE")
 	TRONChain  = Chain("TRON")
@@ -42,6 +43,7 @@ var AllChains = [...]Chain{
 	DOGEChain,
 	THORChain,
 	GAIAChain,
+	NOBLEChain,
 	AVAXChain,
 	BASEChain,
 	TRONChain,
@@ -173,6 +175,9 @@ func (c Chain) GetGasAsset() Asset {
 		return AVAXAsset
 	case GAIAChain:
 		return ATOMAsset
+	case NOBLEChain:
+		// Noble doesn't charge gas. `0uusdc` typically provided as fee
+		return USDCAsset
 	case BASEChain:
 		return BaseETHAsset
 	case TRONChain:
@@ -199,6 +204,8 @@ func (c Chain) GetGasUnits() string {
 		return "gwei"
 	case GAIAChain:
 		return "uatom"
+	case NOBLEChain:
+		return "uusdc"
 	case LTCChain:
 		return "satsperbyte"
 	case XRPChain:
@@ -215,7 +222,7 @@ func (c Chain) GetGasUnits() string {
 // 1e8, just return cosmos.DefaultCoinDecimals.
 func (c Chain) GetGasAssetDecimal() int64 {
 	switch c {
-	case GAIAChain, TRONChain:
+	case GAIAChain, NOBLEChain, TRONChain:
 		return 6
 	case XRPChain:
 		return 6
@@ -242,6 +249,8 @@ func (c Chain) AddressPrefix(cn ChainNetwork) string {
 		switch c {
 		case GAIAChain:
 			return "cosmos"
+		case NOBLEChain:
+			return "noble"
 		case THORChain:
 			// TODO update this to use mocknet address prefix
 			return types.GetConfig().GetBech32AccountAddrPrefix()
@@ -256,6 +265,8 @@ func (c Chain) AddressPrefix(cn ChainNetwork) string {
 		switch c {
 		case GAIAChain:
 			return "cosmos"
+		case NOBLEChain:
+			return "noble"
 		case THORChain:
 			return types.GetConfig().GetBech32AccountAddrPrefix()
 		case BTCChain:
@@ -352,6 +363,8 @@ func (c Chain) ApproximateBlockMilliseconds() int64 {
 		return 3_000
 	case XRPChain:
 		return 4_000 // approx 3-5 seconds
+	case NOBLEChain:
+		return 1_500
 	default:
 		return 0
 	}
@@ -363,7 +376,7 @@ func (c Chain) InboundNotes() string {
 		return "First output should be to inbound_address, second output should be change back to self, third output should be OP_RETURN, limited to 80 bytes. Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats."
 	case ETHChain, AVAXChain, BSCChain, BASEChain:
 		return "Base Asset: Send the inbound_address the asset with the memo encoded in hex in the data field. Tokens: First approve router to spend tokens from user: asset.approve(router, amount). Then call router.depositWithExpiry(inbound_address, asset, amount, memo, expiry). Asset is the token contract address. Amount should be in native asset decimals (eg 1e18 for most tokens). Do not swap to smart contract addresses."
-	case GAIAChain:
+	case GAIAChain, NOBLEChain:
 		return "Transfer the inbound_address the asset with the memo. Do not use multi-in, multi-out transactions."
 	case THORChain:
 		return "Broadcast a MsgDeposit to the THORChain network with the appropriate memo. Do not use multi-in, multi-out transactions."

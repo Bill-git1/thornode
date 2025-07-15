@@ -100,7 +100,8 @@ type CosmosBlockScanner struct {
 }
 
 // NewCosmosBlockScanner create a new instance of BlockScan
-func NewCosmosBlockScanner(rpcHost string,
+func NewCosmosBlockScanner(
+	rpcHost string,
 	cfg config.BifrostBlockScannerConfiguration,
 	scanStorage blockscanner.ScannerStorage,
 	bridge thorclient.ThorchainBridge,

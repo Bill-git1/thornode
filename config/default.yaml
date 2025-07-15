@@ -30,6 +30,7 @@ bifrost:
       - BASE
       - TRON
       - XRP
+      - NOBLE
   thorchain:
     chain_id: thorchain
     chain_host: localhost:1317
@@ -82,6 +83,7 @@ bifrost:
     btc: &default-chain
       disabled: false
       chain_id: BTC
+      cosmos_chain_id: ""
       username: thorchain
       password: password
       http_post_mode: 1
@@ -306,6 +308,7 @@ bifrost:
     gaia:
       <<: *default-chain
       chain_id: GAIA
+      cosmos_chain_id: "cosmoshub-4"
       block_scanner:
         <<: *default-block-scanner
         chain_id: GAIA
@@ -343,6 +346,28 @@ bifrost:
             decimals: 6
             denom: ibc/CF52BFC8A11248F05151BFEC0FB033C3531E40C7BAFC72E277F49346EF76E981
 
+      mempool_tx_id_cache_size: 0
+      scanner_leveldb: *default-leveldb
+
+    noble:
+      <<: *default-chain
+      chain_id: NOBLE
+      cosmos_chain_id: "noble-1"
+      block_scanner:
+        <<: *default-block-scanner
+        chain_id: NOBLE
+        gas_price_resolution: 100_000
+        observation_flexibility_blocks: 40
+        whitelist_cosmos_assets:
+          - symbol: USDC
+            decimals: 6
+            denom: uusdc
+          - symbol: USDY
+            decimals: 18
+            denom: ausdy
+          - symbol: EURE
+            decimals: 6
+            denom: ueure
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
 

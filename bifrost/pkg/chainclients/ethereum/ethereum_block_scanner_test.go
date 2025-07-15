@@ -309,15 +309,14 @@ func (s *BlockScannerTestSuite) TestFromTxToTxIn(c *C) {
 			if err != nil {
 				return
 			}
-			if rpcRequest.Method == "eth_chainId" {
+			switch rpcRequest.Method {
+			case "eth_chainId":
 				_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x1"}`))
 				c.Assert(err, IsNil)
-			}
-			if rpcRequest.Method == "eth_gasPrice" {
+			case "eth_gasPrice":
 				_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x1"}`))
 				c.Assert(err, IsNil)
-			}
-			if rpcRequest.Method == "eth_call" {
+			case "eth_call":
 				switch string(rpcRequest.Params) {
 				case `[{"from":"0x0000000000000000000000000000000000000000","input":"0x95d89b41","to":"0x3b7fa4dd21c6f9ba3ca375217ead7cab9d6bf483"},"latest"]`,
 					`[{"data":"0x95d89b41","from":"0x0000000000000000000000000000000000000000","to":"0x40bcd4db8889a8bf0b1391d0c819dcd9627f9d0a"},"latest"]`:
@@ -338,11 +337,10 @@ func (s *BlockScannerTestSuite) TestFromTxToTxIn(c *C) {
 					return
 				default:
 					fmt.Printf("======> rpcRequest.Params: %s\n", string(rpcRequest.Params))
+					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x52554e45"}`))
+					c.Assert(err, IsNil)
 				}
-				_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":"0x52554e45"}`))
-				c.Assert(err, IsNil)
-			}
-			if rpcRequest.Method == "eth_getTransactionReceipt" {
+			case "eth_getTransactionReceipt":
 				switch string(rpcRequest.Params) {
 				case `["0xa132791c8f868ac84bcffc0c2c8076f35c0b8fa1f7358428917892f0edddc550"]`:
 					_, err = rw.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"root":"0x","status":"0x1","cumulativeGasUsed":"0xe8c5","logsBloom":"0x00000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000000000000000000800000000000000000000000800000000000000000001000000000000800000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000004000000000000000000000000000000000400000000000000000000000000000020000020000000000000000000000000000000000000000000000000000000000000","logs":[{"address":"0xe65e9d372f8cacc7b6dfcd4af6507851ed31bb44","topics":["0xef519b7eb82aaf6ac376a6df2d793843ebfd593de5f1a0601d3cc6ab49ebb395","0x00000000000000000000000058e99c9c4a20f5f054c737389fdd51d7ed9c7d2a","0x0000000000000000000000000000000000000000000000000000000000000000"],"data":"0x0000000000000000000000000000000000000000000000004563918244f40000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000384144443a4554482e4554483a7474686f72313678786e30636164727575773661327177707633356176306d6568727976647a7a6a7a3361660000000000000000","blockNumber":"0x22","transactionHash":"0xa132791c8f868ac84bcffc0c2c8076f35c0b8fa1f7358428917892f0edddc550","transactionIndex":"0x0","blockHash":"0x2383a22acdbe27d3c7c56a0452ae5e7edfbebeabe3a9a047c87716dafc8fa9d0","logIndex":"0x0","removed":false}],"transactionHash":"0xa132791c8f868ac84bcffc0c2c8076f35c0b8fa1f7358428917892f0edddc550","contractAddress":"0x0000000000000000000000000000000000000000","gasUsed":"0xe8c5","effectiveGasPrice":"0x2540be400","blockHash":"0x2383a22acdbe27d3c7c56a0452ae5e7edfbebeabe3a9a047c87716dafc8fa9d0","blockNumber":"0x22","transactionIndex":"0x0"}}`))

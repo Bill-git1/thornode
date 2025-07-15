@@ -489,17 +489,18 @@ type Bifrost struct {
 	AttestationGossip BifrostAttestationGossipConfig `mapstructure:"attestation_gossip"`
 	Metrics           BifrostMetricsConfiguration    `mapstructure:"metrics"`
 	Chains            struct {
-		AVAX BifrostChainConfiguration `mapstructure:"avax"`
-		BCH  BifrostChainConfiguration `mapstructure:"bch"`
-		BSC  BifrostChainConfiguration `mapstructure:"bsc"`
-		BTC  BifrostChainConfiguration `mapstructure:"btc"`
-		DOGE BifrostChainConfiguration `mapstructure:"doge"`
-		ETH  BifrostChainConfiguration `mapstructure:"eth"`
-		GAIA BifrostChainConfiguration `mapstructure:"gaia"`
-		LTC  BifrostChainConfiguration `mapstructure:"ltc"`
-		BASE BifrostChainConfiguration `mapstructure:"base"`
-		TRON BifrostChainConfiguration `mapstructure:"tron"`
-		XRP  BifrostChainConfiguration `mapstructure:"xrp"`
+		AVAX  BifrostChainConfiguration `mapstructure:"avax"`
+		BCH   BifrostChainConfiguration `mapstructure:"bch"`
+		BSC   BifrostChainConfiguration `mapstructure:"bsc"`
+		BTC   BifrostChainConfiguration `mapstructure:"btc"`
+		DOGE  BifrostChainConfiguration `mapstructure:"doge"`
+		ETH   BifrostChainConfiguration `mapstructure:"eth"`
+		GAIA  BifrostChainConfiguration `mapstructure:"gaia"`
+		NOBLE BifrostChainConfiguration `mapstructure:"noble"`
+		LTC   BifrostChainConfiguration `mapstructure:"ltc"`
+		BASE  BifrostChainConfiguration `mapstructure:"base"`
+		TRON  BifrostChainConfiguration `mapstructure:"tron"`
+		XRP   BifrostChainConfiguration `mapstructure:"xrp"`
 	} `mapstructure:"chains"`
 	TSS             BifrostTSSConfiguration `mapstructure:"tss"`
 	ObserverLevelDB LevelDBOptions          `mapstructure:"observer_leveldb"`
@@ -508,17 +509,18 @@ type Bifrost struct {
 
 func (b Bifrost) GetChains() map[common.Chain]BifrostChainConfiguration {
 	return map[common.Chain]BifrostChainConfiguration{
-		common.AVAXChain: b.Chains.AVAX,
-		common.BCHChain:  b.Chains.BCH,
-		common.BSCChain:  b.Chains.BSC,
-		common.BTCChain:  b.Chains.BTC,
-		common.DOGEChain: b.Chains.DOGE,
-		common.ETHChain:  b.Chains.ETH,
-		common.GAIAChain: b.Chains.GAIA,
-		common.LTCChain:  b.Chains.LTC,
-		common.BASEChain: b.Chains.BASE,
-		common.TRONChain: b.Chains.TRON,
-		common.XRPChain:  b.Chains.XRP,
+		common.AVAXChain:  b.Chains.AVAX,
+		common.BCHChain:   b.Chains.BCH,
+		common.BSCChain:   b.Chains.BSC,
+		common.BTCChain:   b.Chains.BTC,
+		common.DOGEChain:  b.Chains.DOGE,
+		common.ETHChain:   b.Chains.ETH,
+		common.GAIAChain:  b.Chains.GAIA,
+		common.NOBLEChain: b.Chains.NOBLE,
+		common.LTCChain:   b.Chains.LTC,
+		common.BASEChain:  b.Chains.BASE,
+		common.TRONChain:  b.Chains.TRON,
+		common.XRPChain:   b.Chains.XRP,
 	}
 }
 
@@ -632,6 +634,7 @@ type BifrostChainConfiguration struct {
 	APIHost             string                           `mapstructure:"api_host"`
 	CosmosGRPCHost      string                           `mapstructure:"cosmos_grpc_host"`
 	CosmosGRPCTLS       bool                             `mapstructure:"cosmos_grpc_tls"`
+	CosmosChainID       string                           `mapstructure:"cosmos_chain_id"`
 	HTTPostMode         bool                             `mapstructure:"http_post_mode"` // Bitcoin core only supports HTTP POST mode
 	DisableTLS          bool                             `mapstructure:"disable_tls"`    // Bitcoin core does not provide TLS by default
 	OptToRetire         bool                             `mapstructure:"opt_to_retire"`  // don't emit support for this chain during keygen process

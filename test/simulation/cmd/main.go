@@ -39,16 +39,17 @@ const (
 )
 
 var liteClientConstructors = map[common.Chain]LiteChainClientConstructor{
-	common.BTCChain:  utxo.NewConstructor(chainRPCs[common.BTCChain]),
-	common.LTCChain:  utxo.NewConstructor(chainRPCs[common.LTCChain]),
-	common.BCHChain:  utxo.NewConstructor(chainRPCs[common.BCHChain]),
-	common.DOGEChain: utxo.NewConstructor(chainRPCs[common.DOGEChain]),
-	common.ETHChain:  evm.NewConstructor(chainRPCs[common.ETHChain]),
-	common.AVAXChain: evm.NewConstructor(chainRPCs[common.AVAXChain]),
-	common.GAIAChain: pkgcosmos.NewConstructor(chainRPCs[common.GAIAChain]),
-	common.BASEChain: evm.NewConstructor(chainRPCs[common.BASEChain]),
-	common.TRONChain: tron.NewConstructor(chainRPCs[common.TRONChain]),
-	common.XRPChain:  xrp.NewConstructor(chainRPCs[common.XRPChain]),
+	common.BTCChain:   utxo.NewConstructor(chainRPCs[common.BTCChain]),
+	common.LTCChain:   utxo.NewConstructor(chainRPCs[common.LTCChain]),
+	common.BCHChain:   utxo.NewConstructor(chainRPCs[common.BCHChain]),
+	common.DOGEChain:  utxo.NewConstructor(chainRPCs[common.DOGEChain]),
+	common.ETHChain:   evm.NewConstructor(chainRPCs[common.ETHChain]),
+	common.AVAXChain:  evm.NewConstructor(chainRPCs[common.AVAXChain]),
+	common.GAIAChain:  pkgcosmos.NewConstructor(chainRPCs[common.GAIAChain]),
+	common.BASEChain:  evm.NewConstructor(chainRPCs[common.BASEChain]),
+	common.TRONChain:  tron.NewConstructor(chainRPCs[common.TRONChain]),
+	common.XRPChain:   xrp.NewConstructor(chainRPCs[common.XRPChain]),
+	common.NOBLEChain: pkgcosmos.NewConstructor(chainRPCs[common.NOBLEChain]),
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////

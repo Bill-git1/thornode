@@ -81,6 +81,27 @@ func (s AssetSuite) TestAsset(c *C) {
 	c.Check(asset.IsEmpty(), Equals, false)
 	c.Check(asset.String(), Equals, "LTC.LTC")
 
+	// GAIA test
+	asset, err = NewAsset("gaia.atom")
+	c.Assert(err, IsNil)
+	c.Check(asset.Valid(), IsNil)
+	c.Check(asset.Chain.Equals(GAIAChain), Equals, true)
+	c.Check(asset.Equals(ATOMAsset), Equals, true)
+	c.Check(asset.IsRune(), Equals, false)
+	c.Check(asset.IsEmpty(), Equals, false)
+	c.Check(asset.String(), Equals, "GAIA.ATOM")
+
+	// NOBLE test
+	asset, err = NewAsset("noble.usdc")
+	c.Assert(err, IsNil)
+	c.Check(asset.Valid(), IsNil)
+	c.Check(asset.Chain.Equals(NOBLEChain), Equals, true)
+	c.Check(asset.Equals(USDCAsset), Equals, true)
+	c.Check(asset.IsRune(), Equals, false)
+	c.Check(asset.IsEmpty(), Equals, false)
+	c.Check(asset.String(), Equals, "NOBLE.USDC")
+	c.Check(asset.IsGasAsset(), Equals, true) // USDC is gas asset for Noble
+
 	// btc/btc
 	asset, err = NewAsset("btc/btc")
 	c.Check(err, IsNil)

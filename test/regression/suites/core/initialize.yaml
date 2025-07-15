@@ -16,7 +16,7 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/inbound_addresses
 asserts:
-  - .|length == 11
+  - .|length == 12
   # all addresses should be for the dog mnemonic
   - .[]|select(.chain == "AVAX")|.address == "{{ addr_avax_dog }}"
   - .[]|select(.chain == "BCH")|.address == "{{ addr_bch_dog }}"
@@ -24,12 +24,13 @@ asserts:
   - .[]|select(.chain == "DOGE")|.address == "{{ addr_doge_dog }}"
   - .[]|select(.chain == "ETH")|.address == "{{ addr_eth_dog }}"
   - .[]|select(.chain == "GAIA")|.address == "{{ addr_gaia_dog }}"
+  - .[]|select(.chain == "NOBLE")|.address == "{{ addr_noble_dog }}"
   - .[]|select(.chain == "LTC")|.address == "{{ addr_ltc_dog }}"
   - .[]|select(.chain == "BSC")|.address == "{{ addr_bsc_dog }}"
   - .[]|select(.chain == "BASE")|.address == "{{ addr_base_dog }}"
   - .[]|select(.chain == "TRON")|.address == "{{ addr_tron_dog }}"
   - .[]|select(.chain == "XRP")|.address == "{{ addr_xrp_dog }}"
-  - '[.[]|select(.pub_key == "{{ pubkey_dog }}")]|length == 11'
+  - '[.[]|select(.pub_key == "{{ pubkey_dog }}")]|length == 12'
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/network?height=1000
