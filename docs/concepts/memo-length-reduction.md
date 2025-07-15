@@ -36,7 +36,6 @@ Native asset names can be shortened to reduce the length of the memo. The exact 
 | g             | GAIA.ATOM      |
 | s             | BSC.BNB        |
 | d             | DOGE.DOGE      |
-| e             | ETH.ETH        |
 | l             | LTC.LTC        |
 | f             | BASE.ETH       |
 | x             | XRP.XRP        |

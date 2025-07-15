@@ -1,32 +1,38 @@
-# Incentive Pendulum
+# Overview
 
-The Incentive Pendulum splits rewards between nodes operators and liquidity providers based on how much security the nodes provide to the network (in terms of bond) and how much liquidity is at risk in pools. Adjustments are made based on actual vaults and assets that need to be secured and the amount of bond provided, leading to a fair allocation of rewards depending on the security/liquidity balance.
-
-```admonish Info
-
-This page documents the updated Incentive Pendulum from v2.137.0 and supersedes [https://docs.thorchain.org/how-it-works/incentive-pendulum](https://docs.thorchain.org/how-it-works/incentive-pendulum).
-```
-
-The current network Incentive Pendulum can be seen in [RUNETools](https://rune.tools/pendulum).
+The Incentive Pendulum splits rewards between node operators and liquidity providers based on how much security the nodes provide to the network (in terms of bond) and how much liquidity is at risk in pools. Adjustments are made based on the actual vaults and assets that need to be secured and the amount of bond provided, leading to a fair allocation of rewards depending on the security/liquidity balance. The Incentive Pendulum controls the split of rewards up to the Pendulum Reward Cap, but it does not control the admission of liquidity to the network—that is enforced by the TVL Cap.
 
 ## Terms and Variables
 
 ### Key terms used to determine the Incentive Pendulum are
 
 - **Bond Hard Cap**: The highest bond value among the bottom 2/3 of [active nodes](https://thorchain.net/nodes), including bond from both node operators and bond providers, to ensure no single node has excessive influence on the **Total Effective Bond**.
-- **Effective Security Bond**: The sum of the total bond of the bottom 2/3rds active nodes (including both node operators and bond providers).
-- **Total Effective Bond**: The sum of all active nodes bond up to the **Bond Hard Cap**. For each node, the effective bond amount which receives rewards and is acknowledged by the Incentive Pendulum added is capped by the Bond Hard Cap. This maintains a balanced and secure network by encouraging addition bond increase only of the 2/3rds of nodes with the lowest bond.
+- **Effective Security Bond**: The sum of the total bond of the bottom 2/3 active nodes (including both node operators and bond providers).
+- **Total Effective Bond**: The sum of all active nodes bond up to the **Bond Hard Cap**. For each node, the effective bond amount that receives rewards and is acknowledged by the Incentive Pendulum is capped by the Bond Hard Cap. This maintains a balanced and secure network by encouraging additional bond increase only of the 2/3 of nodes with the lowest bond.
 - **Vault Liquidity**: Sum value of L1 assets within all Asgard Vaults valued in RUNE. Includes Pooled Assets, Trade Assets, Secure Assets, streaming swap Assets, and Oversolvencies.
-- [**Total Pooled**](https://runescan.io/address/thor1g98cy3n9mmjrpn0sxmn63lztelera37n8n67c0): Sum of RUNE liquidity in all available [pools](https://runescan.io/pools) by liquidity providers. Total Pooled is within Vaulted Liquidity.
-- **Total Rewards**: Block rewards as per the [block emission schedule](https://docs.thorchain.org/how-it-works/emission-schedule) plus liquidity fees within one block, after `DevFundSystemIncomeBps` and `SystemIncomeBurnRateBps` have been removed.
+- [**Total Pooled**](https://runescan.io/address/thor1g98cy3n9mmjrpn0sxmn63lztelera37n8n67c0): Sum of RUNE liquidity in all available [pools](https://runescan.io/pools) by liquidity providers. Total Pooled is within Vault Liquidity.
+- **Total Rewards**: Block rewards as per the [block emission schedule](https://docs.thorchain.org/how-it-works/emission-schedule) plus liquidity fees within one block, after `DevFundSystemIncomeBps`, `SystemIncomeBurnRateBps` and `TCYStakeSystemIncomeBps` have been deducted.
+- **TVL Cap Basis Points**: Basis points defining the maximum allowed liquidity relative to total bonded RUNE before deposits are blocked.
 
-Within the Incentive Pendulum, `secured` and `securing` defines the amount of L1 assets to be secured and the amount of RUNE Bond that secures them. Both values can change depending on the below Network Variables [Mimir](../mimir.md#economics).
+## Pendulum Reward Cap and TVL Cap
+
+While the Incentive Pendulum dynamically adjusts rewards to maintain a healthy balance between bonded RUNE and pooled liquidity, there are also independent mechanisms that enforce upper limits on rewards and liquidity admitted into the protocol.
+
+- **Pendulum Reward Cap**: As described above, if the `securing` amount of bonded RUNE falls below the secured amount of liquidity, liquidity providers receive no rewards. This creates a strong disincentive to over-supply liquidity without sufficient bond coverage. This enforcement is referred to as the Pendulum Reward Cap.
+
+- **TVL Cap (Independent Safety Limit)**: Separately from the Incentive Pendulum, the protocol enforces a configurable Total Value Locked Cap (TVL Cap) to prevent the aggregate Total Pooled value from exceeding a safe proportion of total node bond. The TVL Cap is calculated as `security = sum(all node bonds) × TVLCapBasisPoints / 10,000`. When the total pooled liquidity exceeds this threshold, further liquidity additions are rejected until either more bond is added or the cap is adjusted. These mechanisms work alongside the Incentive Pendulum, which determines the dynamic reward allocation described below.
+
+## Incentive Pendulum
+
+Within the Incentive Pendulum, `secured` and `securing` define the amount of L1 assets to be secured and the amount of RUNE Bond that secures them. Both values can change depending on the below Network Variables [Mimir](../mimir.md#economics).
 
 ### Key [Network Variables](../mimir.md#economics) that influence the Incentive Pendulum are
 
 - **PendulumUseEffectiveSecurity**: If = 1 (True), `securing` will be the **Effective Security Bond**. If = 0 (False) `securing` will be **Total Effective Bond**.
-- **PendulumUseVaultAssets**: If = 1 (True), `secured` will be **Vault Liquidity**, e.g. all L1 Assets. If = 0 (False) `secured` will be **Total Pooled**, a subset of Vaulted Liquidty.
-- **PendulumAssetsBasisPoints**: Used to scale Incentive Pendulum perception of the `secured` L1 asset size. > 100% overestimates and < 100% underestimates the amount of secured assets.
+- **PendulumUseVaultAssets**: If = 1 (True), `secured` will be **Vault Liquidity**, e.g., all L1 Assets. If = 0 (False) `secured` will be **Total Pooled**, a subset of Vaulted Liquidty.
+- **PendulumAssetsBasisPoints**: Used to scale the Incentive Pendulum perception of the `secured` L1 asset size. > 100% overestimates and < 100% underestimates the amount of secured assets.
+
+The current network Incentive Pendulum can be seen in [RUNETools](https://rune.tools/pendulum).
 
 ## Algorithm
 
@@ -58,7 +64,7 @@ $$
 secured = \frac{PendulumAssetBasisPoints}{10,000} \times secured
 $$
 
-3. Check the securing bond is not less than the secured liquidity. No reward payments to liquidity providers when the `securing` is less than or equal to the `secured`; example: `if effectiveSecurityBond.LTE(vaultLiquidity)`. This known as the Liquidity Hard Cap.
+3. Check the securing bond is not less than the secured liquidity. No reward payments to liquidity providers when the `securing` is less than or equal to the `secured`; example: `if effectiveSecurityBond.LTE(vaultLiquidity)`. This known as the Pendulum Reward Cap.
 
 $$
 securing \leq secured \implies finalPoolShare = 0

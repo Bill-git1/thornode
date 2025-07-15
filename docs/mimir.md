@@ -174,6 +174,7 @@ Mimirs have a maximum length of 128 bytes (see MaxMimirLength in THORNode code).
 - `PendulumUseEffectiveSecurity`: Determines the [Incentive Pendulum](./concepts/incentive-pendulum.md) perception of the `securing`. If set to 1, `Effective Security Bond` is used; otherwise `Total Effective Bond` is applied.
 - `PendulumUseVaultAssets`: Determines the [Incentive Pendulum](./concepts/incentive-pendulum.md) perception of the `securing`. If set to 1, `Total Pooled` is used; otherwise `Vaulted Assets` is applied.
 - `PendulumAssetsBasisPoints`: Scales the Incentive Pendulum perception of the `secured` L1 asset size, where values above 100% overestimate and values below 100% underestimate the amount of `secured` assets.
+- `TVLCapBasisPoints`\*: If 0, TVL Cap is set to the effective active bond. If non-zero, the value is interrupted as basis points relative to total active bond.
 
 ## Attestation Gossip
 
