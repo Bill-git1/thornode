@@ -1457,6 +1457,7 @@ func (qs queryServer) queryPools(ctx cosmos.Context, _ *types.QueryPoolsRequest)
 
 	pools := make([]*types.QueryPoolResponse, 0)
 	iterator := qs.mgr.Keeper().GetPoolIterator(ctx)
+	defer iterator.Close()
 	for ; iterator.Valid(); iterator.Next() {
 		var pool Pool
 		if err := qs.mgr.Keeper().Cdc().Unmarshal(iterator.Value(), &pool); err != nil {
@@ -1592,6 +1593,7 @@ func (qs queryServer) queryPoolSlips(ctx cosmos.Context, asset string) (*types.Q
 		assets = []common.Asset{assetObj}
 	} else {
 		iterator := qs.mgr.Keeper().GetPoolIterator(ctx)
+		defer iterator.Close()
 		for ; iterator.Valid(); iterator.Next() {
 			var pool Pool
 			if err := qs.mgr.Keeper().Cdc().Unmarshal(iterator.Value(), &pool); err != nil {
@@ -1702,6 +1704,7 @@ func (qs queryServer) queryDerivedPool(ctx cosmos.Context, req *types.QueryDeriv
 func (qs queryServer) queryDerivedPools(ctx cosmos.Context, _ *types.QueryDerivedPoolsRequest) (*types.QueryDerivedPoolsResponse, error) {
 	pools := make([]*types.QueryDerivedPoolResponse, 0)
 	iterator := qs.mgr.Keeper().GetPoolIterator(ctx)
+	defer iterator.Close()
 	for ; iterator.Valid(); iterator.Next() {
 		var pool Pool
 		if err := qs.mgr.Keeper().Cdc().Unmarshal(iterator.Value(), &pool); err != nil {
@@ -2867,6 +2870,7 @@ func (qs queryServer) queryOutboundFees(ctx cosmos.Context, asset string) (*type
 		// Even Staged pool Assets can incur outbound fees (from withdraw outbounds).
 		assets = []common.Asset{common.RuneAsset()}
 		iterator := qs.mgr.Keeper().GetPoolIterator(ctx)
+		defer iterator.Close()
 		for ; iterator.Valid(); iterator.Next() {
 			var pool Pool
 			if err := qs.mgr.Keeper().Cdc().Unmarshal(iterator.Value(), &pool); err != nil {
