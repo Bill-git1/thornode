@@ -128,3 +128,8 @@ func (m Migrator) Migrate4to5(ctx sdk.Context) error {
 func (m Migrator) Migrate5to6(ctx sdk.Context) error {
 	return nil
 }
+
+// Migrate6to7 migrates from version 6 to 7.
+func (m Migrator) Migrate6to7(ctx sdk.Context) error {
+	return nil
+}

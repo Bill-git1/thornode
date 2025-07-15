@@ -1,5 +1,12 @@
 package thorchain
 
+import (
+	"fmt"
+
+	"gitlab.com/thorchain/thornode/v3/common"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+)
+
 var mainnetSlashRefunds4to5 = []struct {
 	address string
 	amount  uint64
@@ -741,4 +748,184 @@ var mainnetSlashRefunds5to6 = []struct {
 	{"thor1mesm8v6w6p4x4j5qyrdmn02y0qe5uy9h52hl76", 604204464},
 	{"thor1k57lw0tua0wpyme8u0kt5uewv2h67gtddp4slr", 91937145},
 	{"thor1r4vjqhkwhhy25kjy7y96lkl4gcrm4u5tsp5894", 343554594},
+}
+
+// mainnetManualOutbounds6to7 returns manual outbounds for the following transactions
+// which were observed to inactive vaults, but the single try refund failed due to the
+// assets being tokens and the vault having no gas asset to satisfy the refund. They
+// will be ejected to treasury with one outbound per vault/asset for the corresponding
+// balance, and treasury will handle the refund to user minus a bounty for recovery.
+//
+// https://etherscan.io/tx/0x9F6B1FF9E82D516788174D2FAE6EE535AAAA9ECC0B5071D16B5B8592CEA22FBD
+// https://etherscan.io/tx/0x554D05E9C4487911FDADC884C9C44B57E9B28B337B7AF4AFDC8C37703EF3079D
+// https://etherscan.io/tx/0x19d659bf519218d395a583f157d8e7c071ec77523e8e4af88bda4e37acb95708
+// https://etherscan.io/tx/0x533c37f92fdd5236ac19326962afda5e32eceef5cec1ca18cdba17427804d26c
+// https://bscscan.com/tx/0x2d4cc8b3941908d4025cc4b9059622997a6b8745734b474bfee43ad688729cf3
+//
+// NOTE: The vaults must be dusted with sufficient gas asset using a NOOP memo before
+// the migration is run, otherwise the refund will fail again.
+//
+// trunk-ignore(golangci-lint/unused)
+func mainnetManualOutbounds6to7(ctx cosmos.Context, mgr *Mgrs) ([]TxOutItem, error) {
+	ethUSDT, err := common.NewAsset("ETH.USDT-0XDAC17F958D2EE523A2206206994597C13D831EC7")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create asset: %w", err)
+	}
+
+	bscUSDT, err := common.NewAsset("BSC.USDT-0X55D398326F99059FF775485246999027B3197955")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create asset: %w", err)
+	}
+
+	recoveryEVMAddress, err := common.NewAddress("0x3c4a7c01811e14bb3d723d4961b4f2c28afc5e6e")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create recovery address: %w", err)
+	}
+
+	maxGasCoinETH, err := mgr.GasMgr().GetMaxGas(ctx, common.ETHChain)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get max gas: %w", err)
+	}
+
+	maxGasCoinBSC, err := mgr.GasMgr().GetMaxGas(ctx, common.BSCChain)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get max gas: %w", err)
+	}
+
+	manualOutbounds := []TxOutItem{}
+
+	// use txid of first inbound for this vault
+	txid := common.TxID("9F6B1FF9E82D516788174D2FAE6EE535AAAA9ECC0B5071D16B5B8592CEA22FBD")
+	manualOutbounds = append(manualOutbounds, TxOutItem{
+		Chain:     common.ETHChain,
+		InHash:    txid,
+		ToAddress: recoveryEVMAddress,
+		// Vault EVM address: 0x4c7eb58da578a116144b35ece936869fde4fce03
+		VaultPubKey: "thorpub1addwnpepqvxuc443vlt3nv25qv773mrp00dsxlgzzzznftkg3h3z2skp95w8jcach22",
+		Coin:        common.NewCoin(ethUSDT, cosmos.NewUint(2999900000000)),
+		Memo:        fmt.Sprintf("OUT:%s", txid),
+		MaxGas:      common.Gas{maxGasCoinETH},
+	})
+
+	// use txid of first inbound for this vault
+	txid = common.TxID("19D659BF519218D395A583F157D8E7C071EC77523E8E4AF88BDA4E37ACB95708")
+	manualOutbounds = append(manualOutbounds, TxOutItem{
+		Chain:     common.ETHChain,
+		InHash:    txid,
+		ToAddress: recoveryEVMAddress,
+		// Vault EVM address: 0xe82d3aaa34e5872745f27fa791780e1ab6d14da8
+		VaultPubKey: "thorpub1addwnpepqt8y82gar8atam785a6jsac7avf4ryj9wgyedj544ay306z96uhx5la24zc",
+		Coin:        common.NewCoin(ethUSDT, cosmos.NewUint(20000000000000)),
+		Memo:        fmt.Sprintf("OUT:%s", txid),
+		MaxGas:      common.Gas{maxGasCoinETH},
+	})
+
+	txid = common.TxID("2D4CC8B3941908D4025CC4B9059622997A6B8745734B474BFEE43AD688729CF3")
+	manualOutbounds = append(manualOutbounds, TxOutItem{
+		Chain:     common.BSCChain,
+		InHash:    txid,
+		ToAddress: recoveryEVMAddress,
+		// Vault EVM address: 0x79cbdf838d772fe65c769888dbf5a8e3b0e30f29
+		VaultPubKey: "thorpub1addwnpepq0uuw6q3355kdctv2a2rm2l3wjtahhwqz0hty8mh2kltekhvldswwmzcgcc",
+		Coin:        common.NewCoin(bscUSDT, cosmos.NewUint(500000000000)),
+		Memo:        fmt.Sprintf("OUT:%s", txid),
+		MaxGas:      common.Gas{maxGasCoinBSC},
+	})
+
+	return manualOutbounds, nil
+}
+
+// mainnetManualInbounds6to7 returns the manual inbounds for the following transactions
+// which were not observed due to emitting more logs than the max of 50.
+//
+// https://bscscan.com/tx/0xa3448a12c1815688fcd3551967288dd1795c5107cfd4cc45d8fa09ae9cdb4849
+// https://snowtrace.io/tx/0x875f0f5d5e70c306719e1f2b4ae17c08f32ffc05fb030ea6d88f9331ac6dc4d1
+// https://etherscan.io/tx/0xf8c2e5ee98a622b1e7e845ea2a6fa13e72f3988901ad71f16ac25d5f99399b40
+//
+// They will be ejected to treasury which will handle the refund to user minus a bounty
+// for recovery.
+//
+// NOTE: The vault for the AVAX.USDT inbound must be dusted with sufficient gas asset
+// using a NOOP memo before the migration is run, otherwise the refund will fail.
+//
+// trunk-ignore(golangci-lint/unused)
+func mainnetManualInbounds6to7() (ObservedTxs, error) {
+	recoveryEVMAddress, err := common.NewAddress("0x3c4a7c01811e14bb3d723d4961b4f2c28afc5e6e")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create recovery address: %w", err)
+	}
+
+	unobservedTxs := ObservedTxs{}
+
+	// https://bscscan.com/tx/0xa3448a12c1815688fcd3551967288dd1795c5107cfd4cc45d8fa09ae9cdb4849
+	txid := common.TxID("A3448A12C1815688FCD3551967288DD1795C5107CFD4CC45D8FA09AE9CDB4849")
+	vaultPubKey := common.PubKey("thorpub1addwnpepq05qexnkd22lhm53w8lnmrldsdj5fry9auk3sx66jht5u4yx7jfdwkfdzrk")
+	externalHeight := int64(53453670)
+	unobservedTxs = append(unobservedTxs, NewObservedTx(
+		common.Tx{
+			ID:          txid,
+			Chain:       common.BSCChain,
+			FromAddress: recoveryEVMAddress,
+			ToAddress:   common.Address("0x18eeb52bf18c3a8ce4bae59b12b2c49b2b3eb1e7"),
+			Coins: common.Coins{
+				common.NewCoin(common.BNBBEP20Asset, cosmos.NewUint(350349963)),
+			},
+			Gas: common.Gas{common.Coin{
+				Asset:  common.BNBBEP20Asset,
+				Amount: cosmos.NewUint(1),
+			}},
+			Memo: "RECOVERY",
+		},
+		externalHeight, vaultPubKey, externalHeight,
+	))
+
+	// https://snowtrace.io/tx/0x875f0f5d5e70c306719e1f2b4ae17c08f32ffc05fb030ea6d88f9331ac6dc4d1
+	txid = common.TxID("875F0F5D5E70C306719E1F2B4AE17C08F32FFC05FB030EA6D88F9331AC6DC4D1")
+	vaultPubKey = common.PubKey("thorpub1addwnpepqwzdyhswhyag74q0z8ntxvvq3074mmnluwy3nmrw7l2he0d8rem8xqkfv6p")
+	externalHeight = int64(64039968)
+	avaxUSDC, err := common.NewAsset("AVAX.USDC-0XB97EF9EF8734C71904D8002F8B6BC66DD9C48A6E")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create asset: %w", err)
+	}
+	unobservedTxs = append(unobservedTxs, NewObservedTx(
+		common.Tx{
+			ID:          txid,
+			Chain:       common.AVAXChain,
+			FromAddress: recoveryEVMAddress,
+			ToAddress:   common.Address("0x5a8c96e8675b7c68a05b5c940804cc512ac59ed6"),
+			Coins: common.Coins{
+				common.NewCoin(avaxUSDC, cosmos.NewUint(105120813500)),
+			},
+			Gas: common.Gas{common.Coin{
+				Asset:  common.AVAXAsset,
+				Amount: cosmos.NewUint(1),
+			}},
+			Memo: "RECOVERY",
+		},
+		externalHeight, vaultPubKey, externalHeight,
+	))
+
+	// https://etherscan.io/tx/0xf8c2e5ee98a622b1e7e845ea2a6fa13e72f3988901ad71f16ac25d5f99399b40
+	txid = common.TxID("F8C2E5EE98A622B1E7E845EA2A6FA13E72F3988901AD71F16AC25D5F99399B40")
+	vaultPubKey = common.PubKey("thorpub1addwnpepqtn57vj7kvd5dushlrpahk5kak33p9638rz7epcr6q7v7ksw2qaly7gwqeh")
+	externalHeight = int64(22756683)
+	unobservedTxs = append(unobservedTxs, NewObservedTx(
+		common.Tx{
+			ID:          txid,
+			Chain:       common.ETHChain,
+			FromAddress: recoveryEVMAddress,
+			ToAddress:   common.Address("0x9dec237eb85056c63c11ba9c5477e82685767991"),
+			Coins: common.Coins{
+				common.NewCoin(common.ETHAsset, cosmos.NewUint(1926543989)),
+			},
+			Gas: common.Gas{common.Coin{
+				Asset:  common.ETHAsset,
+				Amount: cosmos.NewUint(1),
+			}},
+			Memo: "RECOVERY",
+		},
+		externalHeight, vaultPubKey, externalHeight,
+	))
+
+	return unobservedTxs, nil
 }

@@ -194,3 +194,27 @@ func getTCYClaimsFromData() ([]types.TCYClaimer, error) {
 
 	return claimers, nil
 }
+
+// makeFakeTxInObservation accepts an array of unobserved inbounds, queries for active
+// node accounts, and makes a fake observation for each validator and unobserved TxIn.
+// trunk-ignore(golangci-lint/unused)
+func makeFakeTxInObservation(ctx cosmos.Context, mgr *Mgrs, txs ObservedTxs) error {
+	activeNodes, err := mgr.Keeper().ListActiveValidators(ctx)
+	if err != nil {
+		ctx.Logger().Error("Failed to get active nodes", "err", err)
+		return err
+	}
+
+	handler := NewObservedTxInHandler(mgr)
+
+	for _, na := range activeNodes {
+		txInMsg := NewMsgObservedTxIn(txs, na.NodeAddress)
+		_, err := handler.handle(ctx, *txInMsg)
+		if err != nil {
+			ctx.Logger().Error("failed ObservedTxIn handler", "error", err)
+			continue
+		}
+	}
+
+	return nil
+}

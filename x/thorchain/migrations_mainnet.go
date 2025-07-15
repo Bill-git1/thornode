@@ -177,3 +177,38 @@ func (m Migrator) Migrate5to6(ctx sdk.Context) error {
 
 	return nil
 }
+
+// Migrate6to7 migrates from version 6 to 7.
+func (m Migrator) Migrate6to7(ctx sdk.Context) error {
+	// handle manual outbounds
+	outbounds, err := mainnetManualOutbounds6to7(ctx, m.mgr)
+	if err != nil {
+		ctx.Logger().Error("failed to create manual outbounds for migration", "error", err)
+	}
+	for _, out := range outbounds {
+		// schedule outbound for 30 minutes after upgrade height
+		outboundHeight := ctx.BlockHeight() + 300
+		err := m.mgr.TxOutStore().UnSafeAddTxOutItem(ctx, m.mgr, out, outboundHeight)
+		if err != nil {
+			ctx.Logger().Error("failed to add manual outbound", "error", err, "outbound", out)
+		} else {
+			ctx.Logger().Info("successfully added manual outbound", "outbound", out)
+		}
+	}
+
+	// handle manual observations of dropped inbounds
+	inbounds, err := mainnetManualInbounds6to7()
+	if err != nil {
+		ctx.Logger().Error("failed to create manual inbounds for migration", "error", err)
+	}
+	for _, in := range inbounds {
+		err = makeFakeTxInObservation(ctx, m.mgr, ObservedTxs{in})
+		if err != nil {
+			ctx.Logger().Error("failed to create fake inbound observation", "error", err, "inbound", in)
+		} else {
+			ctx.Logger().Info("successfully created fake inbound observation", "inbound", in)
+		}
+	}
+
+	return nil
+}
