@@ -388,7 +388,7 @@ func (pc *PartyCoordinator) joinPartyLeader(msgID string, peerGroup *peerStatus,
 		pc.logger.Debug().Msg("leader's party coordinator stopped")
 	case <-peerGroup.notify:
 		pc.logger.Debug().Msg("we have enough participants")
-	case <-time.After(pc.timeout / 2):
+	case <-time.After(pc.timeout * 9 / 10):
 		// timeout, reporting to peers before their timeout
 		pc.logger.Debug().Msgf("leader timedout waiting for peers after %s", pc.timeout/2)
 	case result := <-sigChan:
