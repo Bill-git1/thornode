@@ -296,10 +296,33 @@ func (mgr *Mgrs) GetConstants() constants.ConstantValues {
 // LoadManagerIfNecessary detect whether there are new version available, if it is available then create a new version of Mgr
 func (mgr *Mgrs) LoadManagerIfNecessary(ctx cosmos.Context) error {
 	v := mgr.K.GetLowestActiveVersion(ctx)
-	if v.Equals(mgr.GetVersion()) {
-		return nil
+
+	if !v.Equals(mgr.GetVersion()) {
+		// version is different , thus all the manager need to re-create
+		if err := mgr.recreateManagers(ctx, v); err != nil {
+			return err
+		}
 	}
-	// version is different , thus all the manager need to re-create
+
+	storedVer, hasStoredVer := mgr.Keeper().GetVersionWithCtx(ctx)
+	if !hasStoredVer || v.GT(storedVer) {
+		// store the version for contextual lookups if it has been upgraded
+		mgr.Keeper().SetVersionWithCtx(ctx, v)
+	}
+
+	// Emit a version event as long as there was indeed a previously-recorded version changed from.
+	// (As indicated by the keeper rather than by the manager.)
+	if hasStoredVer && v.GT(storedVer) {
+		evt := NewEventVersion(v)
+		if err := mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
+			ctx.Logger().Error("fail to emit version event", "error", err)
+		}
+	}
+
+	return nil
+}
+
+func (mgr *Mgrs) recreateManagers(ctx cosmos.Context, v semver.Version) error {
 	mgr.currentVersion = v
 	mgr.constAccessor = constants.GetConstantValues(v)
 	var err error
@@ -309,17 +332,6 @@ func (mgr *Mgrs) LoadManagerIfNecessary(ctx cosmos.Context) error {
 		return fmt.Errorf("fail to create keeper: %w", err)
 	}
 
-	shouldEmitVersion := false
-	storedVer, hasStoredVer := mgr.Keeper().GetVersionWithCtx(ctx)
-	if !hasStoredVer || v.GT(storedVer) {
-		// store the version for contextual lookups if it has been upgraded
-		mgr.Keeper().SetVersionWithCtx(ctx, v)
-	}
-
-	// Managers might be new from a fresh node,
-	// but the keeper should be consistent.
-	shouldEmitVersion = (hasStoredVer && v.GT(storedVer))
-
 	mgr.gasMgr, err = GetGasManager(v, mgr.K)
 	if err != nil {
 		return fmt.Errorf("fail to create gas manager: %w", err)
@@ -328,15 +340,6 @@ func (mgr *Mgrs) LoadManagerIfNecessary(ctx cosmos.Context) error {
 	mgr.eventMgr, err = GetEventManager(v)
 	if err != nil {
 		return fmt.Errorf("fail to get event manager: %w", err)
-	}
-	// Having created the event manager, emit a version event
-	// as long as there was indeed a previously-recorded version changed from.
-	// (As indicated by the keeper, rather than by managers created for the first time.)
-	if shouldEmitVersion {
-		evt := NewEventVersion(v)
-		if err := mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
-			ctx.Logger().Error("fail to emit version event", "error", err)
-		}
 	}
 
 	mgr.txOutStore, err = GetTxOutStore(v, mgr.K, mgr.eventMgr, mgr.gasMgr)
