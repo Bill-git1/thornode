@@ -89,7 +89,8 @@ func (s *ObserverSuite) ResetMockClient(c *C) {
 	s.client, err = evm.NewEVMClient(
 		s.thorKeys,
 		config.BifrostChainConfiguration{
-			RPCHost: mockEvmRPC.URL,
+			RPCHost:        mockEvmRPC.URL,
+			SolvencyBlocks: 10,
 			BlockScanner: config.BifrostBlockScannerConfiguration{
 				HTTPRequestTimeout:  httpRequestTimeout,
 				BlockScanProcessors: 1,
@@ -122,6 +123,11 @@ func (s *ObserverSuite) SetUpSuite(c *C) {
 			switch {
 			case strings.HasPrefix(req.RequestURI, thorclient.MimirEndpoint):
 				buf, err := os.ReadFile("../../test/fixtures/endpoints/mimir/mimir.json")
+				c.Assert(err, IsNil)
+				_, err = rw.Write(buf)
+				c.Assert(err, IsNil)
+			case strings.HasPrefix(req.RequestURI, thorclient.ConstantsEndpoint):
+				buf, err := os.ReadFile("../../test/fixtures/endpoints/constants/constants.json")
 				c.Assert(err, IsNil)
 				_, err = rw.Write(buf)
 				c.Assert(err, IsNil)

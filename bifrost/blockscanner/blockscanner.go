@@ -216,41 +216,44 @@ func (b *BlockScanner) scanMempool() {
 // Checks current mimir settings to determine if the current chain is paused
 // either globally or specifically
 func (b *BlockScanner) isChainPaused() bool {
-	var haltHeight, solvencyHaltHeight, nodeHaltHeight, thorHeight int64
+	thorHeight, err := b.thorchainBridge.GetBlockHeight()
+	if err != nil {
+		b.logger.Error().Err(err).Msg("fail to get THORChain block height")
+	}
 
 	// Check if chain has been halted via mimir
 	haltHeight, err := b.thorchainBridge.GetMimir(fmt.Sprintf("Halt%sChain", b.cfg.ChainID))
 	if err != nil {
 		b.logger.Error().Err(err).Msgf("fail to get mimir setting %s", fmt.Sprintf("Halt%sChain", b.cfg.ChainID))
 	}
+	if haltHeight > 0 && thorHeight >= haltHeight {
+		return true
+	}
+
 	// Check if chain has been halted by auto solvency checks
-	solvencyHaltHeight, err = b.thorchainBridge.GetMimir(fmt.Sprintf("SolvencyHalt%sChain", b.cfg.ChainID))
+	solvencyHaltHeight, err := b.thorchainBridge.GetMimir(fmt.Sprintf("SolvencyHalt%sChain", b.cfg.ChainID))
 	if err != nil {
 		b.logger.Error().Err(err).Msgf("fail to get mimir %s", fmt.Sprintf("SolvencyHalt%sChain", b.cfg.ChainID))
 	}
+	if solvencyHaltHeight > 0 && thorHeight >= solvencyHaltHeight {
+		return true
+	}
+
 	// Check if all chains halted globally
 	globalHaltHeight, err := b.thorchainBridge.GetMimir("HaltChainGlobal")
 	if err != nil {
 		b.logger.Error().Err(err).Msg("fail to get mimir setting HaltChainGlobal")
 	}
-	if globalHaltHeight > haltHeight {
-		haltHeight = globalHaltHeight
+	if globalHaltHeight > 0 && thorHeight >= globalHaltHeight {
+		return true
 	}
-	// Check if a node paused all chains
-	nodeHaltHeight, err = b.thorchainBridge.GetMimir("NodePauseChainGlobal")
+
+	// Check if a node temporarily paused all chains
+	nodePauseHeight, err := b.thorchainBridge.GetMimir("NodePauseChainGlobal")
 	if err != nil {
 		b.logger.Error().Err(err).Msg("fail to get mimir setting NodePauseChainGlobal")
 	}
-	thorHeight, err = b.thorchainBridge.GetBlockHeight()
-	if err != nil {
-		b.logger.Error().Err(err).Msg("fail to get THORChain block height")
-	}
-
-	if nodeHaltHeight > 0 && thorHeight < nodeHaltHeight {
-		haltHeight = 1
-	}
-
-	return (haltHeight > 0 && thorHeight > haltHeight) || (solvencyHaltHeight > 0 && thorHeight > solvencyHaltHeight)
+	return (nodePauseHeight > 0 && thorHeight <= nodePauseHeight)
 }
 
 // scanBlocks

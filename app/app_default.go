@@ -13,7 +13,7 @@ import (
 // BeginBlocker application updates every begin block
 func (app *THORChainApp) BeginBlocker(ctx sdk.Context) (sdk.BeginBlock, error) {
 	haltHeight := config.GetThornode().Cosmos.HaltHeight
-	if haltHeight > 0 && ctx.BlockHeight() > haltHeight {
+	if haltHeight > 0 && ctx.BlockHeight() >= haltHeight {
 		ctx.Logger().Info("halt height reached", "height", ctx.BlockHeight(), "halt height", haltHeight)
 		os.Exit(0)
 	}

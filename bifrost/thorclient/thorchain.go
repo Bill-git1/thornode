@@ -39,6 +39,7 @@ import (
 const (
 	AuthAccountEndpoint      = "/cosmos/auth/v1beta1/accounts"
 	BroadcastTxsEndpoint     = "/"
+	ConstantsEndpoint        = "/thorchain/constants"
 	KeygenEndpoint           = "/thorchain/keygen"
 	KeysignEndpoint          = "/thorchain/keysign"
 	LastBlockEndpoint        = "/thorchain/lastblock"

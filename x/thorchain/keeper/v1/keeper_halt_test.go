@@ -119,9 +119,13 @@ func (s *KeeperHaltSuite) TestIsGlobalTradingHalted(c *C) {
 	// no halts
 	c.Check(k.IsGlobalTradingHalted(ctx), Equals, false)
 
-	// expired global trading halt
-	k.SetMimir(ctx, "HaltTrading", 10)
+	// pending global trading halt
+	k.SetMimir(ctx, "HaltTrading", 11)
 	c.Check(k.IsGlobalTradingHalted(ctx), Equals, false)
+
+	// current-block global trading halt
+	k.SetMimir(ctx, "HaltTrading", 10)
+	c.Check(k.IsGlobalTradingHalted(ctx), Equals, true)
 
 	// current global trading halt
 	k.SetMimir(ctx, "HaltTrading", 1)
@@ -141,9 +145,14 @@ func (s *KeeperHaltSuite) TestIsChainTradingHalted(c *C) {
 	c.Check(k.IsChainTradingHalted(ctx, common.BTCChain), Equals, false)
 	c.Check(k.IsChainTradingHalted(ctx, common.ETHChain), Equals, false)
 
-	// expired btc trading halt
-	k.SetMimir(ctx, "HaltBTCTrading", 10)
+	// pending btc trading halt
+	k.SetMimir(ctx, "HaltBTCTrading", 11)
 	c.Check(k.IsChainTradingHalted(ctx, common.BTCChain), Equals, false)
+	c.Check(k.IsChainTradingHalted(ctx, common.ETHChain), Equals, false)
+
+	// current-block btc trading halt
+	k.SetMimir(ctx, "HaltBTCTrading", 10)
+	c.Check(k.IsChainTradingHalted(ctx, common.BTCChain), Equals, true)
 	c.Check(k.IsChainTradingHalted(ctx, common.ETHChain), Equals, false)
 
 	// current btc trading halt
@@ -173,10 +182,15 @@ func (s *KeeperHaltSuite) TestIsChainHalted(c *C) {
 	c.Check(k.IsChainHalted(ctx, common.BTCChain), Equals, false)
 	c.Check(k.IsChainHalted(ctx, common.ETHChain), Equals, false)
 
-	// expired global halt
-	k.SetMimir(ctx, "HaltChainGlobal", 10)
+	// pending global halt
+	k.SetMimir(ctx, "HaltChainGlobal", 11)
 	c.Check(k.IsChainHalted(ctx, common.BTCChain), Equals, false)
 	c.Check(k.IsChainHalted(ctx, common.ETHChain), Equals, false)
+
+	// current-block global halt
+	k.SetMimir(ctx, "HaltChainGlobal", 10)
+	c.Check(k.IsChainHalted(ctx, common.BTCChain), Equals, true)
+	c.Check(k.IsChainHalted(ctx, common.ETHChain), Equals, true)
 
 	// current global halt
 	k.SetMimir(ctx, "HaltChainGlobal", 1)
@@ -190,6 +204,11 @@ func (s *KeeperHaltSuite) TestIsChainHalted(c *C) {
 	c.Check(k.IsChainHalted(ctx, common.BTCChain), Equals, false)
 	c.Check(k.IsChainHalted(ctx, common.ETHChain), Equals, false)
 
+	// current-block node pause
+	k.SetMimir(ctx, "NodePauseChainGlobal", 10)
+	c.Check(k.IsChainHalted(ctx, common.BTCChain), Equals, true)
+	c.Check(k.IsChainHalted(ctx, common.ETHChain), Equals, true)
+
 	// current node pause
 	k.SetMimir(ctx, "NodePauseChainGlobal", 11)
 	c.Check(k.IsChainHalted(ctx, common.BTCChain), Equals, true)
@@ -197,9 +216,14 @@ func (s *KeeperHaltSuite) TestIsChainHalted(c *C) {
 
 	_ = k.DeleteMimir(ctx, "NodePauseChainGlobal")
 
-	// expired btc halt
-	k.SetMimir(ctx, "HaltBTCChain", 10)
+	// pending btc halt
+	k.SetMimir(ctx, "HaltBTCChain", 11)
 	c.Check(k.IsChainHalted(ctx, common.BTCChain), Equals, false)
+	c.Check(k.IsChainHalted(ctx, common.ETHChain), Equals, false)
+
+	// current-block btc halt
+	k.SetMimir(ctx, "HaltBTCChain", 10)
+	c.Check(k.IsChainHalted(ctx, common.BTCChain), Equals, true)
 	c.Check(k.IsChainHalted(ctx, common.ETHChain), Equals, false)
 
 	// current btc halt
@@ -209,9 +233,14 @@ func (s *KeeperHaltSuite) TestIsChainHalted(c *C) {
 
 	_ = k.DeleteMimir(ctx, "HaltBTCChain")
 
-	// expired btc solvency halt
-	k.SetMimir(ctx, "SolvencyHaltBTCChain", 10)
+	// pending btc solvency halt (though should never happen)
+	k.SetMimir(ctx, "SolvencyHaltBTCChain", 11)
 	c.Check(k.IsChainHalted(ctx, common.BTCChain), Equals, false)
+	c.Check(k.IsChainHalted(ctx, common.ETHChain), Equals, false)
+
+	// current-block btc solvency halt
+	k.SetMimir(ctx, "SolvencyHaltBTCChain", 10)
+	c.Check(k.IsChainHalted(ctx, common.BTCChain), Equals, true)
 	c.Check(k.IsChainHalted(ctx, common.ETHChain), Equals, false)
 
 	// current btc solvency halt
@@ -234,24 +263,34 @@ func (s *KeeperHaltSuite) TestIsLPPaused(c *C) {
 	c.Check(k.IsLPPaused(ctx, common.BTCChain), Equals, false)
 	c.Check(k.IsLPPaused(ctx, common.ETHChain), Equals, false)
 
-	// expired btc pause
-	k.SetMimir(ctx, "PauseLPBTC", 10)
+	// pending btc pause (acts like halt)
+	k.SetMimir(ctx, "PauseLPBTC", 11)
 	c.Check(k.IsLPPaused(ctx, common.BTCChain), Equals, false)
 	c.Check(k.IsLPPaused(ctx, common.ETHChain), Equals, false)
 
-	// current btc pause
+	// current-block btc pause
+	k.SetMimir(ctx, "PauseLPBTC", 10)
+	c.Check(k.IsLPPaused(ctx, common.BTCChain), Equals, true)
+	c.Check(k.IsLPPaused(ctx, common.ETHChain), Equals, false)
+
+	// current btc pause (acts like halt)
 	k.SetMimir(ctx, "PauseLPBTC", 1)
 	c.Check(k.IsLPPaused(ctx, common.BTCChain), Equals, true)
 	c.Check(k.IsLPPaused(ctx, common.ETHChain), Equals, false)
 
 	_ = k.DeleteMimir(ctx, "PauseLPBTC")
 
-	// expired global pause
-	k.SetMimir(ctx, "PauseLP", 10)
+	// pending global pause (acts like halt)
+	k.SetMimir(ctx, "PauseLP", 11)
 	c.Check(k.IsLPPaused(ctx, common.BTCChain), Equals, false)
 	c.Check(k.IsLPPaused(ctx, common.ETHChain), Equals, false)
 
-	// current global pause
+	// current-block global pause
+	k.SetMimir(ctx, "PauseLP", 10)
+	c.Check(k.IsLPPaused(ctx, common.BTCChain), Equals, true)
+	c.Check(k.IsLPPaused(ctx, common.ETHChain), Equals, true)
+
+	// current global pause (acts like halt)
 	k.SetMimir(ctx, "PauseLP", 1)
 	c.Check(k.IsLPPaused(ctx, common.BTCChain), Equals, true)
 	c.Check(k.IsLPPaused(ctx, common.ETHChain), Equals, true)
