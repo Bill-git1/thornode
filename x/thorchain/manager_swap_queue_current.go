@@ -301,11 +301,15 @@ func (vm *SwapQueueVCUR) cleanupFailedPreferredAssetSwap(ctx cosmos.Context, mgr
 // getTodoNum - determine how many swaps to do.
 func (vm *SwapQueueVCUR) getTodoNum(queueLen, minSwapsPerBlock, maxSwapsPerBlock int64) int64 {
 	// Do half the length of the queue. Unless...
-	//	1. The queue length is greater than maxSwapsPerBlock
-	//  2. The queue length is less than minSwapsPerBlock
+	//  1. Half the queue length is greater than maxSwapsPerBlock
+	//  2. Half the queue length is less than minSwapsPerBlock
 	todo := queueLen / 2
-	if minSwapsPerBlock >= queueLen {
-		todo = queueLen
+	if minSwapsPerBlock > todo {
+		if queueLen < minSwapsPerBlock {
+			todo = queueLen
+		} else {
+			todo = minSwapsPerBlock
+		}
 	}
 	if maxSwapsPerBlock < todo {
 		todo = maxSwapsPerBlock

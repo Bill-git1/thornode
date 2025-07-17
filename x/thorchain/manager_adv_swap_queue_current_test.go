@@ -18,7 +18,7 @@ func (s AdvSwapQueueVCURSuite) TestGetTodoNum(c *C) {
 	book := newSwapQueueAdvVCUR(keeper.KVStoreDummy{})
 
 	c.Check(book.getTodoNum(50, 10, 100), Equals, int64(25))     // halves it
-	c.Check(book.getTodoNum(11, 10, 100), Equals, int64(5))      // halves it
+	c.Check(book.getTodoNum(11, 10, 100), Equals, int64(10))     // enforces minimum
 	c.Check(book.getTodoNum(10, 10, 100), Equals, int64(10))     // does all of them
 	c.Check(book.getTodoNum(1, 10, 100), Equals, int64(1))       // does all of them
 	c.Check(book.getTodoNum(0, 10, 100), Equals, int64(0))       // does none

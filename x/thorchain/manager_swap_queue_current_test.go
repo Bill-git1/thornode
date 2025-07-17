@@ -18,13 +18,25 @@ var _ = Suite(&SwapQueueVCURSuite{})
 func (s SwapQueueVCURSuite) TestGetTodoNum(c *C) {
 	queue := newSwapQueueVCUR(keeper.KVStoreDummy{})
 
-	c.Check(queue.getTodoNum(50, 10, 100), Equals, int64(25))     // halves it
-	c.Check(queue.getTodoNum(11, 10, 100), Equals, int64(5))      // halves it
-	c.Check(queue.getTodoNum(10, 10, 100), Equals, int64(10))     // does all of them
-	c.Check(queue.getTodoNum(1, 10, 100), Equals, int64(1))       // does all of them
-	c.Check(queue.getTodoNum(0, 10, 100), Equals, int64(0))       // does none
-	c.Check(queue.getTodoNum(10000, 10, 100), Equals, int64(100)) // does max 100
-	c.Check(queue.getTodoNum(200, 10, 100), Equals, int64(100))   // does max 100
+	c.Check(queue.getTodoNum(10000, 10, 100), Equals, int64(100)) // MaxSwapsPerBlock
+
+	c.Check(queue.getTodoNum(202, 10, 100), Equals, int64(100)) // MaxSwapsPerBlock
+	c.Check(queue.getTodoNum(201, 10, 100), Equals, int64(100)) // MaxSwapsPerBlock
+	c.Check(queue.getTodoNum(200, 10, 100), Equals, int64(100)) // MaxSwapsPerBlock
+	c.Check(queue.getTodoNum(199, 10, 100), Equals, int64(99))  // halves it
+	c.Check(queue.getTodoNum(198, 10, 100), Equals, int64(99))  // halves it
+
+	c.Check(queue.getTodoNum(50, 10, 100), Equals, int64(25)) // halves it
+
+	c.Check(queue.getTodoNum(22, 10, 100), Equals, int64(11)) // halves it
+	c.Check(queue.getTodoNum(21, 10, 100), Equals, int64(10)) // MinSwapsPerblock
+	c.Check(queue.getTodoNum(11, 10, 100), Equals, int64(10)) // MinSwapsPerblock
+	c.Check(queue.getTodoNum(10, 10, 100), Equals, int64(10)) // MinSwapsPerblock
+	c.Check(queue.getTodoNum(9, 10, 100), Equals, int64(9))   // does all of them
+	c.Check(queue.getTodoNum(8, 10, 100), Equals, int64(8))   // does all of them
+
+	c.Check(queue.getTodoNum(1, 10, 100), Equals, int64(1)) // does all of them
+	c.Check(queue.getTodoNum(0, 10, 100), Equals, int64(0)) // does none
 }
 
 func (s SwapQueueVCURSuite) TestScoreMsgs(c *C) {
