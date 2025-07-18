@@ -795,7 +795,7 @@ func mainnetManualOutbounds6to7(ctx cosmos.Context, mgr *Mgrs) ([]TxOutItem, err
 	manualOutbounds := []TxOutItem{}
 
 	// use txid of first inbound for this vault
-	txid := common.TxID("9F6B1FF9E82D516788174D2FAE6EE535AAAA9ECC0B5071D16B5B8592CEA22FBD")
+	txid := common.TxID("000B1FF9E82D516788174D2FAE6EE535AAAA9ECC0B5071D16B5B8592CEA22FBD")
 	manualOutbounds = append(manualOutbounds, TxOutItem{
 		Chain:     common.ETHChain,
 		InHash:    txid,
@@ -808,7 +808,7 @@ func mainnetManualOutbounds6to7(ctx cosmos.Context, mgr *Mgrs) ([]TxOutItem, err
 	})
 
 	// use txid of first inbound for this vault
-	txid = common.TxID("19D659BF519218D395A583F157D8E7C071EC77523E8E4AF88BDA4E37ACB95708")
+	txid = common.TxID("000659BF519218D395A583F157D8E7C071EC77523E8E4AF88BDA4E37ACB95708")
 	manualOutbounds = append(manualOutbounds, TxOutItem{
 		Chain:     common.ETHChain,
 		InHash:    txid,
@@ -820,7 +820,7 @@ func mainnetManualOutbounds6to7(ctx cosmos.Context, mgr *Mgrs) ([]TxOutItem, err
 		MaxGas:      common.Gas{maxGasCoinETH},
 	})
 
-	txid = common.TxID("2D4CC8B3941908D4025CC4B9059622997A6B8745734B474BFEE43AD688729CF3")
+	txid = common.TxID("000CC8B3941908D4025CC4B9059622997A6B8745734B474BFEE43AD688729CF3")
 	manualOutbounds = append(manualOutbounds, TxOutItem{
 		Chain:     common.BSCChain,
 		InHash:    txid,
