@@ -3,6 +3,7 @@ package thorchain
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	math "cosmossdk.io/math"
 	"github.com/blang/semver"
@@ -117,7 +118,11 @@ func getDeposit(ctx cosmos.Context, fromAddress sdk.AccAddress, sdkCoins sdk.Coi
 	}
 	coins := make(common.Coins, len(sdkCoins))
 	for i, coin := range sdkCoins {
-		asset, err := common.NewAsset(coin.Denom)
+		asset, err := common.NewAsset(
+			// Strip x/denom denom string prefix to force asset.NewAsset
+			// to interpret custom denom strings as native assets
+			strings.TrimPrefix(coin.Denom, "x/"),
+		)
 		if err != nil {
 			return nil, err
 		}
