@@ -783,14 +783,12 @@ func (s *Signer) processTransaction(item TxOutStoreItem) {
 	// if enabled and the observation is non-nil, instant observe the outbound
 	if s.cfg.Signer.AutoObserve && obs != nil {
 		s.observer.ObserveSigned(types.TxIn{
-			Chain:                item.TxOutItem.Chain,
-			TxArray:              []*types.TxInItem{obs},
-			MemPool:              true,
-			Filtered:             true,
-			ConfirmationRequired: 0,
-
-			// Instant EVM observations have wrong gas and need future correct observations
-			AllowFutureObservation: item.TxOutItem.Chain.IsEVM(),
+			Chain:                  item.TxOutItem.Chain,
+			TxArray:                []*types.TxInItem{obs},
+			MemPool:                true,
+			Filtered:               true,
+			ConfirmationRequired:   0,
+			AllowFutureObservation: true,
 		})
 	}
 
