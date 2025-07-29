@@ -2,6 +2,8 @@ package gaia
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -457,7 +459,23 @@ func (c *CosmosClient) SignTx(tx stypes.TxOutItem, thorchainHeight int64) (signe
 		return nil, checkpointBytes, nil, fmt.Errorf("failed to sign message: %w", err)
 	}
 
-	return txBytes, nil, nil, nil
+	hash := sha256.Sum256(txBytes)
+
+	txIn := stypes.NewTxInItem(
+		currentHeight,
+		hex.EncodeToString(hash[:]),
+		tx.Memo,
+		c.GetAddress(tx.VaultPubKey),
+		tx.ToAddress.String(),
+		tx.Coins,
+		append(common.Gas{}, gasCoins...),
+		tx.VaultPubKey,
+		"",
+		"",
+		nil,
+	)
+
+	return txBytes, nil, txIn, nil
 }
 
 // signMsg takes an unsigned msg in a txBuilder and signs it using either private key or TSS.
