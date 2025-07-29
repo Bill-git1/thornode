@@ -7496,14 +7496,6 @@
       "logoURI": "https://tokens.1inch.io/0xbb1ee07d6c7baeb702949904080eb61f5d5e7732.png"
     },
     {
-      "address": "0x582d872A1B094FC48F5DE31D3B73F2D9bE47def1",
-      "chainId": 1,
-      "name": "WrappedTONCoin",
-      "symbol": "TONCOIN",
-      "decimals": 9,
-      "logoURI": "https://tokens.1inch.io/0x582d872a1b094fc48f5de31d3b73f2d9be47def1.png"
-    },
-    {
       "address": "0xe87e15B9c7d989474Cb6d8c56b3DB4eFAD5b21E8",
       "chainId": 1,
       "name": "HokkaidoInu",
@@ -8030,14 +8022,6 @@
       "symbol": "CULT",
       "decimals": 18,
       "logoURI": "https://tokens.1inch.io/0xf0f9d895aca5c8678f706fb8216fa22957685a13.png"
-    },
-    {
-      "address": "0x9506d37f70eB4C3d79C398d326C871aBBf10521d",
-      "chainId": 1,
-      "name": "MediaLicensingToken",
-      "symbol": "MLT",
-      "decimals": 18,
-      "logoURI": "https://tokens.1inch.io/0x9506d37f70eb4c3d79c398d326c871abbf10521d.png"
     },
     {
       "address": "0x4f640F2529ee0cF119A2881485845FA8e61A782A",
