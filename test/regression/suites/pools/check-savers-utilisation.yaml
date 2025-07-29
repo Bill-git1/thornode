@@ -36,7 +36,7 @@ asserts:
   - .expected_amount_deposit|tonumber == 4770146
   - .memo == "+:BTC/BTC"
   - .inbound_address == "{{ addr_btc_dog }}"
-  - .recommended_min_amount_in == "10000"
+  - .recommended_min_amount_in == "1000"
   - .fees.liquidity == "334678"
   - .fees.outbound == "2107"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)

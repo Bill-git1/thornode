@@ -11,7 +11,7 @@ count: 1
 type: tx-deposit
 signer: {{ addr_thor_fox }}
 coins:
-  - amount: "20000000"
+  - amount: "4000000"
     asset: "rune"
 memo: "=:BTC.BTC:{{ addr_btc_fox }}"
 ---
@@ -44,7 +44,7 @@ signer: {{ addr_thor_cat }}
 coins:
   - amount: "0"
     asset: "rune"
-memo: "-:BTC.BTC:5001"
+memo: "-:BTC.BTC:5000"
 ---
 type: create-blocks
 count: 1

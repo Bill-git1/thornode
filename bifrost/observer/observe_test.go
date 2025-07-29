@@ -371,7 +371,7 @@ func (s *ObserverSuite) TestGetSaversMemo(c *C) {
 		Sender:      thorchain.GetRandomBTCAddress().String(),
 		To:          thorchain.GetRandomBTCAddress().String(),
 		Coins: common.Coins{
-			common.NewCoin(common.BTCAsset, cosmos.NewUint(1001)),
+			common.NewCoin(common.BTCAsset, cosmos.NewUint(999)),
 		},
 		Gas:                 nil,
 		ObservedVaultPubKey: thorchain.GetRandomPubKey(),
@@ -382,19 +382,19 @@ func (s *ObserverSuite) TestGetSaversMemo(c *C) {
 	c.Assert(memo, Equals, "")
 
 	// memo should still be empty, amount is at the dust threshold, but you can't withdraw 0 basis points
-	btcSaversTx.Coins = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(10_000)))
+	btcSaversTx.Coins = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(1_000)))
 	memo = obs.getSaversMemo(common.BTCChain, &btcSaversTx)
 	c.Assert(memo, Equals, "")
 
 	// memo should be withdraw 500 basis points
-	btcSaversTx.Coins = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(10_500)))
+	btcSaversTx.Coins = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(1_500)))
 	memo = obs.getSaversMemo(common.BTCChain, &btcSaversTx)
 	c.Assert(memo, Equals, "-:BTC/BTC:500")
 
-	// memo should be withdraw 10_000 basis points
-	btcSaversTx.Coins = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(20_000)))
+	// memo should be withdraw 1_000 basis points
+	btcSaversTx.Coins = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(2_000)))
 	memo = obs.getSaversMemo(common.BTCChain, &btcSaversTx)
-	c.Assert(memo, Equals, "-:BTC/BTC:10000")
+	c.Assert(memo, Equals, "-:BTC/BTC:1000")
 
 	// memo should be add
 	btcSaversTx.Coins = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(40_000)))

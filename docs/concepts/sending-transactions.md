@@ -165,7 +165,7 @@ THORChain enforces dust thresholds to prevent dust attacks, where negligible amo
 - **BASE**: 1 gwei
 - **BCH**: 10,000 sats
 - **BSC**: 1 gwei
-- **BTC**: 10,000 sats
+- **BTC**: 1,000 sats
 - **DOGE**: 100,000,000 sats (1 DOGE)
 - **ETH**: 1 gwei
 - **GAIA**: 1 uatom

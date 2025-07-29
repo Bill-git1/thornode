@@ -288,7 +288,9 @@ func (c Chain) AddressPrefix(cn ChainNetwork) string {
 // NOTE: these should all be in 8 decimal places
 func (c Chain) DustThreshold() cosmos.Uint {
 	switch c {
-	case BTCChain, LTCChain, BCHChain:
+	case BTCChain:
+		return cosmos.NewUint(1_000)
+	case LTCChain, BCHChain:
 		return cosmos.NewUint(10_000)
 	case DOGEChain:
 		return cosmos.NewUint(100_000_000)

@@ -828,7 +828,7 @@ endpoint: http://localhost:1317/thorchain/quote/swap
 params:
   from_asset: BTC.BTC
   to_asset: THOR.RUNE
-  amount: 9000
+  amount: 900
   destination: {{ addr_thor_fox }}
 status: 400
 asserts:

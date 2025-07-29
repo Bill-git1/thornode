@@ -24,7 +24,7 @@ params:
 asserts:
   - .inbound_address == "{{ addr_btc_dog }}"
   - .expected_amount_deposit|tonumber == 9149338
-  - .dust_threshold|tonumber == 10000
+  - .dust_threshold|tonumber == 1000
   - .fees.liquidity|tonumber == 1201394
   - .fees.outbound|tonumber == 2227
   - .fees.slippage_bps|tonumber == 1160
@@ -54,7 +54,7 @@ params:
 asserts:
   - .inbound_address == "{{ addr_btc_dog }}"
   - .expected_amount_deposit|tonumber == 9925103
-  - .dust_threshold|tonumber == 10000
+  - .dust_threshold|tonumber == 1000
   - .fees.liquidity|tonumber == 99120
   - .fees.outbound|tonumber == 2010
   - .fees.slippage_bps|tonumber == 98
@@ -105,8 +105,8 @@ params:
   address: "{{ addr_btc_pig }}"
 asserts:
   - .inbound_address == "{{ addr_btc_dog }}"
-  - .dust_amount|tonumber == 20000
-  - .dust_threshold|tonumber == 10000
+  - .dust_amount|tonumber == 11000
+  - .dust_threshold|tonumber == 1000
   - .expected_amount_out|tonumber == 9787144
   - .fees.liquidity|tonumber == 98730
   - .fees.outbound|tonumber == 14000
