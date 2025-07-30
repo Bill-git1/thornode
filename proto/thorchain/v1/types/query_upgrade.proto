@@ -25,6 +25,10 @@ message QueryUpgradeProposalResponse{
 	string approved_percent = 5;
 	// the amount of additional active validators required to reach quorum for the upgrade
 	int64 validators_to_quorum = 6 [(gogoproto.jsontag) = "validators_to_quorum"];
+	// the list of node addresses that have approved the upgrade
+	repeated string approvers = 7 [(gogoproto.jsontag) = "approvers,omitempty"];
+	// the list of node addresses that have rejected the upgrade
+	repeated string rejecters = 8 [(gogoproto.jsontag) = "rejecters,omitempty"];
 }
 
 message QueryUpgradeProposalsRequest{

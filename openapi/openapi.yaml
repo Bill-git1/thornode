@@ -3312,6 +3312,18 @@ components:
           format: int64
           example: 20
           description: the amount of additional active validators required to reach quorum for the upgrade
+        approvers:
+          type: array
+          items:
+            type: string
+            example: "thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5"
+          description: the list of node addresses that have approved the upgrade
+        rejecters:
+          type: array
+          items:
+            type: string
+            example: "thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5"
+          description: the list of node addresses that have rejected the upgrade
 
     UpgradeVote:
       type: object

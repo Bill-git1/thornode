@@ -28,6 +28,10 @@ type UpgradeProposal struct {
 	ApprovedPercent *string `json:"approved_percent,omitempty"`
 	// the amount of additional active validators required to reach quorum for the upgrade
 	ValidatorsToQuorum *int64 `json:"validators_to_quorum,omitempty"`
+	// the list of node addresses that have approved the upgrade
+	Approvers []string `json:"approvers,omitempty"`
+	// the list of node addresses that have rejected the upgrade
+	Rejecters []string `json:"rejecters,omitempty"`
 }
 
 // NewUpgradeProposal instantiates a new UpgradeProposal object
@@ -218,6 +222,70 @@ func (o *UpgradeProposal) SetValidatorsToQuorum(v int64) {
 	o.ValidatorsToQuorum = &v
 }
 
+// GetApprovers returns the Approvers field value if set, zero value otherwise.
+func (o *UpgradeProposal) GetApprovers() []string {
+	if o == nil || o.Approvers == nil {
+		var ret []string
+		return ret
+	}
+	return o.Approvers
+}
+
+// GetApproversOk returns a tuple with the Approvers field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *UpgradeProposal) GetApproversOk() ([]string, bool) {
+	if o == nil || o.Approvers == nil {
+		return nil, false
+	}
+	return o.Approvers, true
+}
+
+// HasApprovers returns a boolean if a field has been set.
+func (o *UpgradeProposal) HasApprovers() bool {
+	if o != nil && o.Approvers != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetApprovers gets a reference to the given []string and assigns it to the Approvers field.
+func (o *UpgradeProposal) SetApprovers(v []string) {
+	o.Approvers = v
+}
+
+// GetRejecters returns the Rejecters field value if set, zero value otherwise.
+func (o *UpgradeProposal) GetRejecters() []string {
+	if o == nil || o.Rejecters == nil {
+		var ret []string
+		return ret
+	}
+	return o.Rejecters
+}
+
+// GetRejectersOk returns a tuple with the Rejecters field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *UpgradeProposal) GetRejectersOk() ([]string, bool) {
+	if o == nil || o.Rejecters == nil {
+		return nil, false
+	}
+	return o.Rejecters, true
+}
+
+// HasRejecters returns a boolean if a field has been set.
+func (o *UpgradeProposal) HasRejecters() bool {
+	if o != nil && o.Rejecters != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetRejecters gets a reference to the given []string and assigns it to the Rejecters field.
+func (o *UpgradeProposal) SetRejecters(v []string) {
+	o.Rejecters = v
+}
+
 func (o UpgradeProposal) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
@@ -237,6 +305,12 @@ func (o UpgradeProposal) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if o.ValidatorsToQuorum != nil {
 		toSerialize["validators_to_quorum"] = o.ValidatorsToQuorum
+	}
+	if o.Approvers != nil {
+		toSerialize["approvers"] = o.Approvers
+	}
+	if o.Rejecters != nil {
+		toSerialize["rejecters"] = o.Rejecters
 	}
 	return json.Marshal(toSerialize)
 }

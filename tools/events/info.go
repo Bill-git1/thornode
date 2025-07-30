@@ -724,8 +724,13 @@ func UpgradeProposalAndApproval(block *thorscan.BlockResponse) {
 				}
 				lines = []string{fmt.Sprintf("```yaml\n%s\n```", yamlInfo)}
 
-			case "approve_upgrade":
-				title = fmt.Sprintf("Upgrade Approved: `%s`", event["name"])
+			case "approve_upgrade", "reject_upgrade":
+				action := "Approved"
+				if event["type"] == "reject_upgrade" {
+					action = "Rejected"
+					level = notify.Warning
+				}
+				title = fmt.Sprintf("Upgrade %s: `%s`", action, event["name"])
 
 				// fetch proposal stats
 				proposal := openapi.UpgradeProposal{}
@@ -748,6 +753,7 @@ func UpgradeProposalAndApproval(block *thorscan.BlockResponse) {
 				}
 				fields.Set("Approval Percent", fmt.Sprintf("%.1f%%", percent))
 				fields.Set("Approvals Required", fmt.Sprintf("%d", *proposal.ValidatorsToQuorum))
+
 			default:
 				continue
 			}

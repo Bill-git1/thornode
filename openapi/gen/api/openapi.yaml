@@ -4726,9 +4726,15 @@ components:
       type: object
     UpgradeProposal:
       example:
+        rejecters:
+        - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+        - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
         approved: true
         validators_to_quorum: 20
         name: scheduled upgrade 1
+        approvers:
+        - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+        - thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
         height: 1234
         info: "{\"binaries\":{\"linux/amd64\":\"https://link.to.binary.amd64\",\"\
           linux/arm64\":\"https://link.to.binary.arm64\"}}"
@@ -4764,6 +4770,18 @@ components:
           example: 20
           format: int64
           type: integer
+        approvers:
+          description: the list of node addresses that have approved the upgrade
+          items:
+            example: thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+            type: string
+          type: array
+        rejecters:
+          description: the list of node addresses that have rejected the upgrade
+          items:
+            example: thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+            type: string
+          type: array
       required:
       - height
       - info

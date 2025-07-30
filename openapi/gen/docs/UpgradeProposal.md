@@ -10,6 +10,8 @@ Name | Type | Description | Notes
 **Approved** | Pointer to **bool** | whether the upgrade has been approved by the active validators | [optional] 
 **ApprovedPercent** | Pointer to **string** | the percentage of active validators that have approved the upgrade | [optional] 
 **ValidatorsToQuorum** | Pointer to **int64** | the amount of additional active validators required to reach quorum for the upgrade | [optional] 
+**Approvers** | Pointer to **[]string** | the list of node addresses that have approved the upgrade | [optional] 
+**Rejecters** | Pointer to **[]string** | the list of node addresses that have rejected the upgrade | [optional] 
 
 ## Methods
 
@@ -164,6 +166,56 @@ SetValidatorsToQuorum sets ValidatorsToQuorum field to given value.
 `func (o *UpgradeProposal) HasValidatorsToQuorum() bool`
 
 HasValidatorsToQuorum returns a boolean if a field has been set.
+
+### GetApprovers
+
+`func (o *UpgradeProposal) GetApprovers() []string`
+
+GetApprovers returns the Approvers field if non-nil, zero value otherwise.
+
+### GetApproversOk
+
+`func (o *UpgradeProposal) GetApproversOk() (*[]string, bool)`
+
+GetApproversOk returns a tuple with the Approvers field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetApprovers
+
+`func (o *UpgradeProposal) SetApprovers(v []string)`
+
+SetApprovers sets Approvers field to given value.
+
+### HasApprovers
+
+`func (o *UpgradeProposal) HasApprovers() bool`
+
+HasApprovers returns a boolean if a field has been set.
+
+### GetRejecters
+
+`func (o *UpgradeProposal) GetRejecters() []string`
+
+GetRejecters returns the Rejecters field if non-nil, zero value otherwise.
+
+### GetRejectersOk
+
+`func (o *UpgradeProposal) GetRejectersOk() (*[]string, bool)`
+
+GetRejectersOk returns a tuple with the Rejecters field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetRejecters
+
+`func (o *UpgradeProposal) SetRejecters(v []string)`
+
+SetRejecters sets Rejecters field to given value.
+
+### HasRejecters
+
+`func (o *UpgradeProposal) HasRejecters() bool`
+
+HasRejecters returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

@@ -2689,6 +2689,21 @@ func (qs queryServer) queryUpgradeProposal(ctx cosmos.Context, req *types.QueryU
 
 	vtq := int64(uq.NeededForQuorum)
 
+	// gather the approvers and rejecters
+	approvers := []string{}
+	rejecters := []string{}
+	iter := k.GetUpgradeVoteIterator(ctx, req.Name)
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		key, value := iter.Key(), iter.Value()
+		addr := cosmos.AccAddress(bytes.TrimPrefix(key, []byte(keeperv1.VotePrefix(req.Name))))
+		if bytes.Equal(value, []byte{0x1}) {
+			approvers = append(approvers, addr.String())
+		} else {
+			rejecters = append(rejecters, addr.String())
+		}
+	}
+
 	res := types.QueryUpgradeProposalResponse{
 		Name:               req.Name,
 		Height:             proposal.Height,
@@ -2696,6 +2711,8 @@ func (qs queryServer) queryUpgradeProposal(ctx cosmos.Context, req *types.QueryU
 		Approved:           uq.Approved,
 		ApprovedPercent:    approvalStr,
 		ValidatorsToQuorum: vtq,
+		Approvers:          approvers,
+		Rejecters:          rejecters,
 	}
 
 	return &res, nil
