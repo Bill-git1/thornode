@@ -27,6 +27,12 @@ func (m *mockTendermintRPC) Block(ctx context.Context, height *int64) (*ctypes.R
 		case 11350935:
 			// two deposits in single ibc transaction
 			path = "./test-data/block_by_height_11350935.json"
+		case 26750027:
+			// two ibc txs sending atom back to gaia (from osmosis & secret)
+			path = "./test-data/block_by_height_26750027.json"
+		case 26757930:
+			// ibc usdc from noble to gaia + atom transfer
+			path = "./test-data/block_by_height_26757930.json"
 		default:
 			path = "./test-data/block_by_height.json"
 		}
@@ -54,6 +60,12 @@ func (m *mockTendermintRPC) BlockResults(ctx context.Context, height *int64) (*c
 	case 11350935:
 		// two deposits in single ibc transaction
 		path = "./test-data/tx_results_by_height_11350935.json"
+	case 26750027:
+		// two ibc txs sending atom back to gaia (from osmosis & secret)
+		path = "./test-data/tx_results_by_height_26750027.json"
+	case 26757930:
+		// ibc usdc from noble to gaia + atom transfer
+		path = "./test-data/tx_results_by_height_26757930.json"
 	}
 
 	data, err := os.ReadFile(path)

@@ -55,7 +55,7 @@ lint:
     - linters:
         - codespell
       paths:
-        - bifrost/pkg/chainclients/gaia/test-data/latest_block.json
+        - bifrost/pkg/chainclients/gaia/test-data/*.json
         - common/tokenlist/*/*.json
         - third_party/**
         - test/regression/mnt/blocks/**

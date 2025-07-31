@@ -399,6 +399,23 @@ func (c *CosmosBlockScanner) processTxs(height int64, rawTxs []tmtypes.Tx) ([]*t
 				)
 
 				denom := fmt.Sprintf("ibc/%X", sha256.Sum256([]byte(path)))
+				// See https://github.com/cosmos/ibc-go/blob/release/v8.4.x/modules/apps/transfer/keeper/relay.go#L205
+				// Extract the base denom for tokens that are IBC'd back to their source chain
+				if ibctransfertypes.ReceiverChainIsSource(
+					msg.Packet.GetSourcePort(),
+					msg.Packet.GetSourceChannel(),
+					packetData.Denom,
+				) {
+					voucherPrefix := ibctransfertypes.GetDenomPrefix(
+						msg.Packet.GetSourcePort(),
+						msg.Packet.GetSourceChannel(),
+					)
+					unprefixedDenom := packetData.Denom[len(voucherPrefix):]
+					denomTrace := ibctransfertypes.ParseDenomTrace(unprefixedDenom)
+					if denomTrace.IsNativeDenom() {
+						denom = denomTrace.BaseDenom
+					}
+				}
 
 				// Convert cosmos coins to thorchain coins (taking into account asset decimal precision)
 				coin, err := c.fromCosmosToThorchain(cosmos.NewCoin(

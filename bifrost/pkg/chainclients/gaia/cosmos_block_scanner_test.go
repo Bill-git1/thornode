@@ -2,6 +2,7 @@ package gaia
 
 import (
 	"fmt"
+	"sort"
 
 	ibccoretypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	ibcchanneltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
@@ -255,4 +256,36 @@ func (s *BlockScannerTestSuite) TestProcessTxs(c *C) {
 	c.Assert(len(txInItems), Equals, 2)
 	c.Assert(txInItems[0].Tx, Equals, "17471479c1cb868818dfdfde25711f13ec448ffe08893cb47b4c7b60b1429b25-0")
 	c.Assert(txInItems[1].Tx, Equals, "17471479c1cb868818dfdfde25711f13ec448ffe08893cb47b4c7b60b1429b25-1")
+
+	// two ibc txs sending atom back to gaia (from osmosis & secret)
+	// ------------------------------------------------------------------------
+
+	block, err = blockScanner.GetBlock(26750027)
+	c.Assert(err, IsNil)
+
+	txInItems, err = blockScanner.processTxs(26750027, block.Data.Txs)
+	c.Assert(err, IsNil)
+
+	c.Assert(len(txInItems), Equals, 2)
+
+	sort.Slice(txInItems, func(i, j int) bool {
+		return txInItems[i].Tx < txInItems[j].Tx
+	})
+
+	c.Assert(txInItems[0].Tx, Equals, "5a9eedadf67048dc569eec2fa312a8f85393afdf5f0e84b629ffd2587abad73e")
+	c.Assert(txInItems[1].Tx, Equals, "7144c5fc683482e93d373783832a0cd460b21e1d4dfc2770b3cb76732edf6897")
+
+	// ibc usdc from noble to gaia + atom transfer
+	// ------------------------------------------------------------------------
+
+	block, err = blockScanner.GetBlock(26757930)
+	c.Assert(err, IsNil)
+
+	txInItems, err = blockScanner.processTxs(26757930, block.Data.Txs)
+	c.Assert(err, IsNil)
+
+	// only reports atom tx, usdc is not whitelisted
+	c.Assert(len(txInItems), Equals, 1)
+
+	c.Assert(txInItems[0].Tx, Equals, "d1490eb0303aa7f4612f46826230b14102ab6d3ee77645c3710ed53be31ad230")
 }
