@@ -75,7 +75,7 @@ genesis:
           transaction_fee_rate: "7"
           transaction_size: "1000"
         - chain: ETH
-          transaction_fee_rate: "8"
+          transaction_fee_rate: "80" # 80 gwei
           transaction_size: "80000"
       vaults:
         - block_height: "0"

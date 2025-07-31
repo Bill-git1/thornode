@@ -13,8 +13,10 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
 
-// One is useful type so THORNode doesn't need to manage 8 zeroes all the time
-const One = 100000000
+const (
+	One       = 1e8  // One is a useful constant so THORNode doesn't need to manage 8 zeroes all the time.
+	WeiPerOne = 1e18 // Relevant for chain clients which record numbers in Wei.
+)
 
 // GetSafeShare does the same as GetUncappedShare , but GetSafeShare will guarantee the result will not more than total.
 // The first two arguments should always have the same units (cancelling out to represent a unitless ratio applied to the allocation).

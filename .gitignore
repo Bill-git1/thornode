@@ -12,6 +12,7 @@
 *.exe
 /.cache
 /.go
+/app/data
 /docs/book
 /docs/theme
 /public

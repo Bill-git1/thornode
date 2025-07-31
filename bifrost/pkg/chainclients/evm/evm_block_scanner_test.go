@@ -38,9 +38,11 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-const TestGasPriceResolution = 50_000_000_000
-
-const Mainnet = 1
+const (
+	TestGasPriceResolution = 50  // 50 nAVAX
+	weiPerNanoAvax         = 1e9 // For .gasPrice checks.
+	Mainnet                = 1
+)
 
 var (
 	//go:embed test/deposit_evm_transaction.json
@@ -714,11 +716,11 @@ func (s *BlockScannerTestSuite) TestUpdateGasPrice(c *C) {
 	// almost fill gas cache
 	for i := 0; i < 99; i++ {
 		bs.updateGasPrice([]*big.Int{
-			big.NewInt(1 * TestGasPriceResolution),
-			big.NewInt(2 * TestGasPriceResolution),
-			big.NewInt(3 * TestGasPriceResolution),
-			big.NewInt(4 * TestGasPriceResolution),
-			big.NewInt(5 * TestGasPriceResolution),
+			big.NewInt(1 * TestGasPriceResolution * weiPerNanoAvax),
+			big.NewInt(2 * TestGasPriceResolution * weiPerNanoAvax),
+			big.NewInt(3 * TestGasPriceResolution * weiPerNanoAvax),
+			big.NewInt(4 * TestGasPriceResolution * weiPerNanoAvax),
+			big.NewInt(5 * TestGasPriceResolution * weiPerNanoAvax),
 		})
 	}
 
@@ -729,50 +731,50 @@ func (s *BlockScannerTestSuite) TestUpdateGasPrice(c *C) {
 
 	// now we should get the median of medians
 	bs.updateGasPrice([]*big.Int{
-		big.NewInt(1 * TestGasPriceResolution),
-		big.NewInt(2 * TestGasPriceResolution),
-		big.NewInt(3 * TestGasPriceResolution),
-		big.NewInt(4 * TestGasPriceResolution),
-		big.NewInt(5 * TestGasPriceResolution),
+		big.NewInt(1 * TestGasPriceResolution * weiPerNanoAvax),
+		big.NewInt(2 * TestGasPriceResolution * weiPerNanoAvax),
+		big.NewInt(3 * TestGasPriceResolution * weiPerNanoAvax),
+		big.NewInt(4 * TestGasPriceResolution * weiPerNanoAvax),
+		big.NewInt(5 * TestGasPriceResolution * weiPerNanoAvax),
 	})
 	c.Assert(len(bs.gasCache), Equals, 100)
-	c.Assert(bs.gasPrice.String(), Equals, big.NewInt(3*TestGasPriceResolution).String())
+	c.Assert(bs.gasPrice.String(), Equals, big.NewInt(3*TestGasPriceResolution*weiPerNanoAvax).String())
 
 	// add 49 more blocks with 2x the median and we should get the same
 	for i := 0; i < 49; i++ {
 		bs.updateGasPrice([]*big.Int{
-			big.NewInt(2 * TestGasPriceResolution),
-			big.NewInt(4 * TestGasPriceResolution),
-			big.NewInt(6 * TestGasPriceResolution),
-			big.NewInt(8 * TestGasPriceResolution),
-			big.NewInt(10 * TestGasPriceResolution),
+			big.NewInt(2 * TestGasPriceResolution * weiPerNanoAvax),
+			big.NewInt(4 * TestGasPriceResolution * weiPerNanoAvax),
+			big.NewInt(6 * TestGasPriceResolution * weiPerNanoAvax),
+			big.NewInt(8 * TestGasPriceResolution * weiPerNanoAvax),
+			big.NewInt(10 * TestGasPriceResolution * weiPerNanoAvax),
 		})
 	}
 	c.Assert(len(bs.gasCache), Equals, 100)
-	c.Assert(bs.gasPrice.String(), Equals, big.NewInt(3*TestGasPriceResolution).String())
+	c.Assert(bs.gasPrice.String(), Equals, big.NewInt(3*TestGasPriceResolution*weiPerNanoAvax).String())
 
 	// after one more block with 2x the median we should get 2x
 	bs.updateGasPrice([]*big.Int{
-		big.NewInt(2 * TestGasPriceResolution),
-		big.NewInt(4 * TestGasPriceResolution),
-		big.NewInt(6 * TestGasPriceResolution),
-		big.NewInt(8 * TestGasPriceResolution),
-		big.NewInt(10 * TestGasPriceResolution),
+		big.NewInt(2 * TestGasPriceResolution * weiPerNanoAvax),
+		big.NewInt(4 * TestGasPriceResolution * weiPerNanoAvax),
+		big.NewInt(6 * TestGasPriceResolution * weiPerNanoAvax),
+		big.NewInt(8 * TestGasPriceResolution * weiPerNanoAvax),
+		big.NewInt(10 * TestGasPriceResolution * weiPerNanoAvax),
 	})
-	c.Assert(bs.gasPrice.String(), Equals, big.NewInt(6*TestGasPriceResolution).String())
+	c.Assert(bs.gasPrice.String(), Equals, big.NewInt(6*TestGasPriceResolution*weiPerNanoAvax).String())
 
 	// add 50 more blocks with half the median and we should get the same
 	for i := 0; i < 50; i++ {
 		bs.updateGasPrice([]*big.Int{
-			big.NewInt(TestGasPriceResolution),
+			big.NewInt(TestGasPriceResolution * weiPerNanoAvax),
 		})
 	}
 	c.Assert(len(bs.gasCache), Equals, 100)
-	c.Assert(bs.gasPrice.String(), Equals, big.NewInt(6*TestGasPriceResolution).String())
+	c.Assert(bs.gasPrice.String(), Equals, big.NewInt(6*TestGasPriceResolution*weiPerNanoAvax).String())
 
 	// after one more block with half the median we should get half
 	bs.updateGasPrice([]*big.Int{
 		big.NewInt(TestGasPriceResolution),
 	})
-	c.Assert(bs.gasPrice.String(), Equals, big.NewInt(TestGasPriceResolution).String())
+	c.Assert(bs.gasPrice.String(), Equals, big.NewInt(TestGasPriceResolution*weiPerNanoAvax).String())
 }

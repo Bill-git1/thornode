@@ -417,7 +417,7 @@ func (c *TronClient) SignTx(
 			txOutItem.ToAddress.String(),
 			contract,
 			*amount,
-			*txOutItem.MaxGas[0].Amount.Quo(math.NewUint(100)).BigInt(), // 1e8 -> 1e6
+			*txOutItem.MaxGas[0].Amount.BigInt(), // 1e8 -> 1e6
 		)
 		if err != nil {
 			c.logger.Err(err).Msg("failed to create trc20 tx")
@@ -553,7 +553,8 @@ func (c *TronClient) ReportSolvency(height int64) error {
 			Coins:  acc.Coins,
 		}
 
-		if runners.IsVaultSolvent(acc, vaults[i], fee) {
+		currentGasFee := c.config.ChainID.NativeGasToThorchain(fee)
+		if runners.IsVaultSolvent(acc, vaults[i], currentGasFee) {
 			solventMsgs = append(solventMsgs, msg)
 			continue
 		}

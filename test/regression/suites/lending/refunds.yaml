@@ -88,7 +88,7 @@ asserts:
   - .[0].coin.asset == "BTC.BTC"
   - .[0].coin.amount == "10000" # dust over outbound fee
   - .[0].max_gas[0].asset == "BTC.BTC"
-  - .[0].max_gas[0].amount == "10000" # 1.5x estimated gas cost (10 * 1000 satoshi)
+  - .[0].max_gas[0].amount == "10000" # 1.5x estimated gas (7000 satoshi)
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -103,7 +103,7 @@ txs:
           asset: "BTC.BTC"
           decimals: 8
       gas:
-        - amount: "10500"
+        - amount: "10000"
           asset: "BTC.BTC"
       memo: "REFUND:{{ observe_txid 1 }}"
     block_height: 2

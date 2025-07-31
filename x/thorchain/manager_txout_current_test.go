@@ -44,10 +44,10 @@ func (s TxOutStoreVCURSuite) TestEndBlock(c *C) {
 	items, err := txOutStore.GetOutboundItems(w.ctx)
 	c.Assert(err, IsNil)
 	c.Assert(items, HasLen, 1)
-	c.Check(items[0].GasRate, Equals, int64(56250))
+	c.Check(items[0].GasRate, Equals, int64(562_500), Commentf("%d", items[0].GasRate)) // 562,500 gwei
 	c.Assert(items[0].MaxGas, HasLen, 1)
 	c.Check(items[0].MaxGas[0].Asset.Equals(common.ETHAsset), Equals, true)
-	c.Check(items[0].MaxGas[0].Amount.Uint64(), Equals, uint64(56250))
+	c.Check(items[0].MaxGas[0].Amount.Uint64(), Equals, uint64(56250), Commentf("%d", items[0].MaxGas[0].Amount.Uint64()))
 }
 
 func (s TxOutStoreVCURSuite) TestAddOutTxItem(c *C) {

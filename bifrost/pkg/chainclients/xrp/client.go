@@ -368,8 +368,19 @@ func (c *Client) SignTx(tx stypes.TxOutItem, thorchainHeight int64) (signedTx, c
 		return nil, nil, nil, fmt.Errorf("fail to marshal checkpoint: %w", err)
 	}
 
+	// gas rate from gas rate units to THORChain decimals
+	gasRate := c.cfg.ChainID.NativeGasToThorchain(cosmos.NewUint(uint64(tx.GasRate)))
+	if gasRate.IsZero() {
+		gasRate = cosmos.OneUint()
+	}
 	gasCoin := common.NewCoin(common.XRPAsset, cosmos.NewUint(uint64(tx.GasRate)))
-	feeCurrency, err := fromThorchainToXrp(gasCoin)
+
+	// TODO: Optionally
+	// (to avoid overpaying for already-queued TxOutItems when changing units),
+	// rather than assuming Transaction Size 1 here,
+	// use the tx.MaxGas instead like GAIA?
+
+	feeCurrency, err := fromThorchainToXrp(common.NewCoin(common.XRPAsset, gasRate))
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("fail to get fee: %w", err)
 	}
@@ -622,7 +633,8 @@ func (c *Client) ReportSolvency(blockHeight int64) error {
 		return fmt.Errorf("fail to get asgards,err: %w", err)
 	}
 
-	currentGasFee := c.xrpScanner.lastFee
+	// 1x estimated gas cost breathing room (transaction size 1), from gas rate units gas price to THORChain (1e8) format
+	currentGasFee := c.cfg.ChainID.NativeGasToThorchain(c.xrpScanner.lastFee)
 
 	// report insolvent asgard vaults,
 	// or else all if the chain is halted and all are solvent

@@ -214,23 +214,23 @@ func (e *ETHScanner) FetchTxs(height, chainHeight int64) (stypes.TxIn, error) {
 		return txIn, nil
 	}
 
-	// gas price to 1e8 from 1e18
+	// gas rate from wei to gas rate units
 	gasPrice := e.GetGasPrice()
-	tcGasPrice := new(big.Int).Div(gasPrice, big.NewInt(1e10)).Uint64()
-	if tcGasPrice == 0 {
-		tcGasPrice = 1
+	_, gasRateUnitsPerOne := e.cfg.ChainID.GetGasUnits()
+	gasRate := cosmos.NewUintFromBigInt(gasPrice).Mul(gasRateUnitsPerOne).QuoUint64(common.WeiPerOne).Uint64()
+	if gasRate == 0 {
+		gasRate = 1
 	}
 
 	// post to thorchain if there is a fee and it has changed
-	if gasPrice.Cmp(big.NewInt(0)) != 0 && tcGasPrice != e.lastReportedGasPrice {
+	if gasPrice.Cmp(big.NewInt(0)) != 0 && gasRate != e.lastReportedGasPrice {
 		e.globalNetworkFeeQueue <- common.NetworkFee{
 			Chain:           common.ETHChain,
 			Height:          height,
 			TransactionSize: e.cfg.MaxGasLimit,
-			TransactionRate: tcGasPrice,
+			TransactionRate: gasRate,
 		}
-
-		e.lastReportedGasPrice = tcGasPrice
+		e.lastReportedGasPrice = gasRate
 	}
 
 	if e.solvencyReporter != nil {
@@ -255,8 +255,9 @@ func (e *ETHScanner) updateGasPrice(baseFee *big.Int, priorityFees []*big.Int) {
 	// consider gas price as base fee + 25th percentile priority fee
 	gasPriceWei := new(big.Int).Add(baseFee, priorityFee)
 
-	// round the price up to nearest configured resolution
-	resolution := big.NewInt(e.cfg.GasPriceResolution)
+	// round the price up to nearest configured resolution, converting gas rate units to wei
+	_, gasRateUnitsPerOne := e.cfg.ChainID.GetGasUnits()
+	resolution := cosmos.NewUint(uint64(e.cfg.GasPriceResolution)).MulUint64(common.WeiPerOne).Quo(gasRateUnitsPerOne).BigInt()
 	gasPriceWei.Add(gasPriceWei, new(big.Int).Sub(resolution, big.NewInt(1)))
 	gasPriceWei = gasPriceWei.Div(gasPriceWei, resolution)
 	gasPriceWei = gasPriceWei.Mul(gasPriceWei, resolution)

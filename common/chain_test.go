@@ -58,8 +58,10 @@ func (s ChainSuite) TestChain(c *C) {
 	c.Assert(NOBLEChain.AddressPrefix(StageNet), Equals, "noble")
 
 	// Test GetGasUnits
-	c.Assert(NOBLEChain.GetGasUnits(), Equals, "uusdc")
-	c.Assert(GAIAChain.GetGasUnits(), Equals, "uatom")
+	nobleGasUnits, _ := NOBLEChain.GetGasUnits()
+	gaiaGasUnits, _ := GAIAChain.GetGasUnits()
+	c.Assert(nobleGasUnits, Equals, "uusdc")
+	c.Assert(gaiaGasUnits, Equals, "uatom")
 
 	// Test GetGasAssetDecimal
 	c.Assert(NOBLEChain.GetGasAssetDecimal(), Equals, int64(6))
@@ -74,7 +76,8 @@ func (s ChainSuite) TestChain(c *C) {
 	c.Assert(GAIAChain.InboundNotes(), Equals, "Transfer the inbound_address the asset with the memo. Do not use multi-in, multi-out transactions.")
 
 	// Tron chain tests
-	c.Assert(TRONChain.GetGasUnits(), Equals, "sun")
+	tronGasUnits, _ := TRONChain.GetGasUnits()
+	c.Assert(tronGasUnits, Equals, "sun")
 	c.Assert(TRONChain.GetGasAssetDecimal(), Equals, int64(6))
 	c.Assert(TRONChain.ApproximateBlockMilliseconds(), Equals, int64(3000))
 }

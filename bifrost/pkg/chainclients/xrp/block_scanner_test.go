@@ -65,31 +65,31 @@ func (s *BlockScannerTestSuite) TestCalculateAverageFees(c *C) {
 	cfg := config.BifrostBlockScannerConfiguration{ChainID: common.XRPChain}
 	blockScanner := XrpBlockScanner{cfg: cfg}
 
-	blockScanner.updateFeeCache(common.NewCoin(common.XRPAsset, sdkmath.NewUint(10)))
+	blockScanner.updateFeeCache(common.NewCoin(common.XRPAsset, sdkmath.NewUint(1_000))) // 10 drops
 	c.Check(len(blockScanner.feeCache), Equals, 1)
-	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(10)))
+	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(10))) // 10 drops
 
-	blockScanner.updateFeeCache(common.NewCoin(common.XRPAsset, sdkmath.NewUint(10)))
+	blockScanner.updateFeeCache(common.NewCoin(common.XRPAsset, sdkmath.NewUint(1_000))) // 10 drops
 	c.Check(len(blockScanner.feeCache), Equals, 2)
-	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(10)))
+	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(10))) // 10 drops
 
 	// two txs at double fee should average to 75% of last
-	blockScanner.updateFeeCache(common.NewCoin(common.XRPAsset, sdkmath.NewUint(20)))
-	blockScanner.updateFeeCache(common.NewCoin(common.XRPAsset, sdkmath.NewUint(20)))
+	blockScanner.updateFeeCache(common.NewCoin(common.XRPAsset, sdkmath.NewUint(2_000))) // 20 drops
+	blockScanner.updateFeeCache(common.NewCoin(common.XRPAsset, sdkmath.NewUint(2_000))) // 20 drops
 	c.Check(len(blockScanner.feeCache), Equals, 4)
-	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(15)))
+	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(15))) // 15 drops
 
 	// skip transactions with zero fee
 	blockScanner.updateFeeCache(common.NewCoin(common.XRPAsset, sdkmath.NewUint(0)))
 	c.Check(len(blockScanner.feeCache), Equals, 4)
-	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(15)))
+	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(15))) // 15 drops
 
 	// ensure we only cache the transaction limit number of blocks
 	for i := 0; i < FeeCacheTransactions; i++ {
-		blockScanner.updateFeeCache(common.NewCoin(common.XRPAsset, sdkmath.NewUint(12)))
+		blockScanner.updateFeeCache(common.NewCoin(common.XRPAsset, sdkmath.NewUint(1_200))) // 12 drops
 	}
 	c.Check(len(blockScanner.feeCache), Equals, FeeCacheTransactions)
-	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(12)))
+	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(12))) // 12 drops
 }
 
 func (s *BlockScannerTestSuite) TestProcessTxs(c *C) {

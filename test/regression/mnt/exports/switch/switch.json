@@ -247,7 +247,7 @@
       "network_fees": [
         {
           "chain": "GAIA",
-          "transaction_fee_rate": "1000",
+          "transaction_fee_rate": "10",
           "transaction_size": "1000"
         }
       ],
@@ -282,7 +282,7 @@
                 "amount": "10000000",
                 "asset": "GAIA.KUJI"
               },
-              "gas_rate": "1500",
+              "gas_rate": "15",
               "in_hash": "0000000000000000000000000000000000000000000000000000000000000002",
               "max_gas": [
                 {
@@ -406,7 +406,7 @@
                 "amount": "10000000",
                 "asset": "GAIA.KUJI"
               },
-              "gas_rate": "1500",
+              "gas_rate": "15",
               "in_hash": "0000000000000000000000000000000000000000000000000000000000000002",
               "max_gas": [
                 {

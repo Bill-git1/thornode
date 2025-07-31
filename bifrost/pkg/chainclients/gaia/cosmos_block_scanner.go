@@ -233,6 +233,13 @@ func (c *CosmosBlockScanner) updateGasCache(tx ctypes.FeeTx) {
 	price := amount.Quo(sdkmath.NewUint(tx.GetGas()))          // divide by gas to get the price
 	fee := price.Mul(sdkmath.NewUint(GasLimit))                // tx fee for default gas limit
 	fee = fee.Quo(sdkmath.NewUint(GasPriceFactor))             // unroll the multiple
+
+	// gas rate from THORChain decimals to gas rate units
+	fee = c.cfg.ChainID.ThorchainToNativeGas(fee)
+	if fee.IsZero() {
+		fee = cosmos.OneUint()
+	}
+
 	c.feeCache = append(c.feeCache, fee)
 
 	// truncate gas prices older than our max cached transactions
@@ -252,7 +259,7 @@ func (c *CosmosBlockScanner) averageFee() sdkmath.Uint {
 	for _, val := range c.feeCache {
 		sum = sum.Add(val)
 	}
-	mean := sum.Quo(sdkmath.NewUint(uint64(len(c.feeCache))))
+	mean := sum.QuoUint64(uint64(len(c.feeCache)))
 
 	// round the price up to avoid fee noise
 	resolution := sdkmath.NewUint(uint64(c.cfg.GasPriceResolution))
@@ -283,11 +290,11 @@ func (c *CosmosBlockScanner) updateGasFees(height int64) error {
 			return nil
 		}
 
-		// NOTE: We post the fee to the network instead of the transaction rate, and set the
-		// transaction size 1 to ensure the MaxGas in the generated TxOut contains the
-		// correct fee. We cannot pass the proper size and rate without a deeper change to
-		// Thornode, as the rate on Cosmos chains is less than 1 and cannot be represented
-		// by the uint.
+		// NOTE: We post the fee to the network as the transaction rate (in gas rate units),
+		// and set the transaction size 1 to ensure the MaxGas in the generated TxOut
+		// contains the correct fee. We previously could not pass the proper size and rate
+		// without a deeper change to Thornode, as the rate on Cosmos chains can be less
+		// than 1.
 		c.globalNetworkFeeQueue <- common.NetworkFee{
 			Chain:           c.cfg.ChainID,
 			Height:          height,

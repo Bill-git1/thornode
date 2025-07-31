@@ -235,7 +235,7 @@
       "network_fees": [
         {
           "chain": "ETH",
-          "transaction_fee_rate": "10",
+          "transaction_fee_rate": "100",
           "transaction_size": "1000"
         }
       ],

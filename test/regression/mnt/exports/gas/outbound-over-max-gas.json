@@ -293,7 +293,7 @@
         },
         {
           "chain": "ETH",
-          "transaction_fee_rate": "8",
+          "transaction_fee_rate": "80",
           "transaction_size": "80000"
         }
       ],
@@ -322,7 +322,7 @@
                 "amount": "8992828100",
                 "asset": "ETH.USDX-0X9999999999999999999999999999999999999999"
               },
-              "gas_rate": "12",
+              "gas_rate": "120",
               "in_hash": "FC48955BB43A023562DC27A4601DDAD188EFF5A38B400D144FFCAF0996853EF7",
               "max_gas": [
                 {
@@ -488,7 +488,7 @@
                 "amount": "8992828100",
                 "asset": "ETH.USDX-0X9999999999999999999999999999999999999999"
               },
-              "gas_rate": "12",
+              "gas_rate": "120",
               "in_hash": "FC48955BB43A023562DC27A4601DDAD188EFF5A38B400D144FFCAF0996853EF7",
               "max_gas": [
                 {

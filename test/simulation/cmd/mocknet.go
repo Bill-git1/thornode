@@ -139,12 +139,12 @@ func InitConfig(parallelism int, seed bool) *OpConfig {
 				size  uint64
 				rate  uint64
 			}{
-				{common.GAIAChain, 1, 1_000_000},
-				{common.NOBLEChain, 1, 1_000_000},
-				{common.XRPChain, 1, 1_000},
-				{common.AVAXChain, 80000, 150},
-				{common.BASEChain, 80000, 30},
-				{common.ETHChain, 80000, 30},
+				{common.GAIAChain, 1, 10_000},
+				{common.NOBLEChain, 1, 10_000},
+				{common.XRPChain, 1, 10},
+				{common.AVAXChain, 80000, 1500},
+				{common.BASEChain, 80000, 300000},
+				{common.ETHChain, 80000, 300},
 			}
 			for _, fee := range defaultFees {
 				log.Info().Msgf("posting %s network fee", fee.chain)

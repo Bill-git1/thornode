@@ -606,7 +606,8 @@ func (c *CosmosClient) ReportSolvency(blockHeight int64) error {
 		return fmt.Errorf("fail to get asgards,err: %w", err)
 	}
 
-	currentGasFee := c.cosmosScanner.lastFee
+	// 1x estimated gas cost breathing room (transaction size 1), from gas rate units gas price to THORChain (1e8) format
+	currentGasFee := c.cfg.ChainID.NativeGasToThorchain(c.cosmosScanner.lastFee)
 
 	// report insolvent asgard vaults,
 	// or else all if the chain is halted and all are solvent

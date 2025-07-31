@@ -224,7 +224,7 @@ func (s *ThorchainSuite) TestChurn(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(items, HasLen, 1)
 	item := items[0]
-	c.Check(item.Coin.Amount.Uint64(), Equals, uint64(1579962500), Commentf("%d", item.Coin.Amount.Uint64()))
+	c.Check(item.Coin.Amount.Uint64(), Equals, uint64(1579996250), Commentf("%d", item.Coin.Amount.Uint64()))
 
 	// check we empty the rest at the last migration event
 	// Ensure that the height is past the SigningTransactionPeriod,
@@ -240,7 +240,7 @@ func (s *ThorchainSuite) TestChurn(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(items, HasLen, 1, Commentf("%d", len(items)))
 	item = items[0]
-	c.Check(item.Coin.Amount.Uint64(), Equals, uint64(7899962500), Commentf("%d", item.Coin.Amount.Uint64()))
+	c.Check(item.Coin.Amount.Uint64(), Equals, uint64(7899996250), Commentf("%d", item.Coin.Amount.Uint64()))
 }
 
 func (s *ThorchainSuite) TestRagnarok(c *C) {

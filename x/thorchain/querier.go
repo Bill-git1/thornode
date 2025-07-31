@@ -539,15 +539,10 @@ func (qs queryServer) queryInboundAddresses(ctx cosmos.Context, _ *types.QueryIn
 			return nil, fmt.Errorf("fail to get network fee info: %w", err)
 		}
 
-		// because THORNode is using 1e8, while GWei in ETH is in 1e9, thus the minimum THORNode can represent is 10Gwei
-		// here convert the gas rate to Gwei , so api user don't need to convert it , make it easier for people to understand
-		if chain.IsEVM() {
-			gasRate = gasRate.MulUint64(10)
-		}
-
 		// Retrieve the outbound fee for the chain's gas asset - fee will be zero if no network fee has been posted/the pool doesn't exist
 		outboundFee, _ := qs.mgr.GasMgr().GetAssetOutboundFee(ctx, chain.GetGasAsset(), false)
 
+		gasUnits, _ := chain.GetGasUnits()
 		addr := types.QueryInboundAddressResponse{
 			Chain:                chain.String(),
 			PubKey:               vault.PubKey.String(),
@@ -559,7 +554,7 @@ func (qs queryServer) queryInboundAddresses(ctx cosmos.Context, _ *types.QueryIn
 			ChainLpActionsPaused: isChainLpPaused,
 			ObservedFeeRate:      cosmos.NewUint(networkFeeInfo.TransactionFeeRate).String(),
 			GasRate:              gasRate.String(),
-			GasRateUnits:         chain.GetGasUnits(),
+			GasRateUnits:         gasUnits,
 			OutboundTxSize:       cosmos.NewUint(networkFeeInfo.TransactionSize).String(),
 			OutboundFee:          outboundFee.String(),
 			DustThreshold:        chain.DustThreshold().String(),

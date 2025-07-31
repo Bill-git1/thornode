@@ -107,28 +107,26 @@ func (s *BlockScannerTestSuite) SetUpSuite(c *C) {
 func (s *BlockScannerTestSuite) TestCalculateAverageGasFees(c *C) {
 	cfg := config.BifrostBlockScannerConfiguration{
 		ChainID:            common.GAIAChain,
-		GasPriceResolution: 100_000,
+		GasPriceResolution: 1_000, // 1,000 uatom
 		WhitelistCosmosAssets: []config.WhitelistCosmosAsset{
 			{Denom: "uatom", Decimals: 6, THORChainSymbol: "ATOM"},
 		},
 	}
 	blockScanner := CosmosBlockScanner{cfg: cfg}
 
-	atomToThorchain := int64(100)
-
 	blockScanner.updateGasCache(&MockFeeTx{
 		gas: GasLimit / 2,
 		fee: ctypes.Coins{ctypes.NewCoin("uatom", sdkmath.NewInt(10000))},
 	})
 	c.Check(len(blockScanner.feeCache), Equals, 1)
-	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(20000*atomToThorchain)))
+	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(20000)))
 
 	blockScanner.updateGasCache(&MockFeeTx{
 		gas: GasLimit / 2,
 		fee: ctypes.Coins{ctypes.NewCoin("uatom", sdkmath.NewInt(10000))},
 	})
 	c.Check(len(blockScanner.feeCache), Equals, 2)
-	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(20000*atomToThorchain)))
+	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(20000)))
 
 	// two blocks at half fee should average to 75% of last
 	blockScanner.updateGasCache(&MockFeeTx{
@@ -140,7 +138,7 @@ func (s *BlockScannerTestSuite) TestCalculateAverageGasFees(c *C) {
 		fee: ctypes.Coins{ctypes.NewCoin("uatom", sdkmath.NewInt(10000))},
 	})
 	c.Check(len(blockScanner.feeCache), Equals, 4)
-	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(15000*atomToThorchain)))
+	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(15000)))
 
 	// skip transactions with multiple coins
 	blockScanner.updateGasCache(&MockFeeTx{
@@ -151,7 +149,7 @@ func (s *BlockScannerTestSuite) TestCalculateAverageGasFees(c *C) {
 		},
 	})
 	c.Check(len(blockScanner.feeCache), Equals, 4)
-	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(15000*atomToThorchain)))
+	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(15000)))
 
 	// skip transactions with fees not in uatom
 	blockScanner.updateGasCache(&MockFeeTx{
@@ -161,7 +159,7 @@ func (s *BlockScannerTestSuite) TestCalculateAverageGasFees(c *C) {
 		},
 	})
 	c.Check(len(blockScanner.feeCache), Equals, 4)
-	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(15000*atomToThorchain)))
+	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(15000)))
 
 	// skip transactions with zero fee
 	blockScanner.updateGasCache(&MockFeeTx{
@@ -171,7 +169,7 @@ func (s *BlockScannerTestSuite) TestCalculateAverageGasFees(c *C) {
 		},
 	})
 	c.Check(len(blockScanner.feeCache), Equals, 4)
-	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(15000*atomToThorchain)))
+	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(15000)))
 
 	// ensure we only cache the transaction limit number of blocks
 	for i := 0; i < GasCacheTransactions; i++ {
@@ -183,7 +181,7 @@ func (s *BlockScannerTestSuite) TestCalculateAverageGasFees(c *C) {
 		})
 	}
 	c.Check(len(blockScanner.feeCache), Equals, GasCacheTransactions)
-	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(10000*atomToThorchain)))
+	c.Check(blockScanner.averageFee().String(), Equals, fmt.Sprintf("%d", uint64(10000)))
 }
 
 func (s *BlockScannerTestSuite) TestGetBlock(c *C) {

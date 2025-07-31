@@ -157,9 +157,10 @@ func (gm *GasMgrVCUR) GetAssetOutboundFee(ctx cosmos.Context, asset common.Asset
 	minMultiplierBasisPoints := gm.keeper.GetConfigInt64(ctx, constants.MinOutboundFeeMultiplierBasisPoints)
 
 	// Calculate outbound fee based on current fee multiplier
-	chainBaseFee := chainOutboundFee.TransactionSize * chainOutboundFee.TransactionFeeRate
+	_, gasRateUnitsPerOne := asset.GetChain().GetGasUnits()
+	chainBaseFee := cosmos.NewUint(chainOutboundFee.TransactionSize).MulUint64(chainOutboundFee.TransactionFeeRate).MulUint64(common.One).Quo(gasRateUnitsPerOne)
 	feeMultiplierBps := gm.CalcOutboundFeeMultiplier(ctx, cosmos.NewUint(uint64(targetOutboundFeeSurplus)), outboundFeeSpentRune, outboundFeeWithheldRune, cosmos.NewUint(uint64(maxMultiplierBasisPoints)), cosmos.NewUint(uint64(minMultiplierBasisPoints)))
-	finalFee := common.GetUncappedShare(feeMultiplierBps, cosmos.NewUint(constants.MaxBasisPts), cosmos.NewUint(chainBaseFee))
+	finalFee := common.GetUncappedShare(feeMultiplierBps, cosmos.NewUint(constants.MaxBasisPts), chainBaseFee)
 
 	fee := cosmos.RoundToDecimal(
 		finalFee,
@@ -260,13 +261,17 @@ func (gm *GasMgrVCUR) GetGasDetails(ctx cosmos.Context, chain common.Chain) (com
 		gasRate = gasRate.MulUint64(3).QuoUint64(2)
 	}
 	chainGasAssetPrecision := chain.GetGasAssetDecimal()
-	gasRate = cosmos.RoundToDecimal(
-		gasRate,
+
+	// convert to 1e8 decimals for the max gas coin
+	_, gasRateUnitsPerOne := chain.GetGasUnits()
+	gasRate1e8 := gasRate.MulUint64(common.One).Quo(gasRateUnitsPerOne)
+	gasRate1e8 = cosmos.RoundToDecimal(
+		gasRate1e8,
 		chainGasAssetPrecision,
 	)
 
 	// As gasRate has Decimals precision, an integer multiple also has Decimals precision.
-	maxGasCoin := common.NewCoin(chain.GetGasAsset(), gasRate.MulUint64(networkFee.TransactionSize))
+	maxGasCoin := common.NewCoin(chain.GetGasAsset(), gasRate1e8.MulUint64(networkFee.TransactionSize))
 	maxGasCoin.Decimals = chainGasAssetPrecision
 
 	return maxGasCoin, int64(gasRate.Uint64()), nil

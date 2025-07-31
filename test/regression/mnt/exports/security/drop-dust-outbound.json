@@ -283,7 +283,7 @@
               "in_hash": "4F31E75FBE770F05F64A9077764914F9F0BB7893B15D12B9004C21EDDDD47D56",
               "max_gas": [
                 {
-                  "amount": "2000000",
+                  "amount": "200000000000000",
                   "asset": "THOR.RUNE",
                   "decimals": "8"
                 }

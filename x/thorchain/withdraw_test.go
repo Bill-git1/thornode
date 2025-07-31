@@ -17,7 +17,7 @@ type WithdrawSuite struct{}
 
 var _ = Suite(&WithdrawSuite{})
 
-var ethSingleTxFee = cosmos.NewUint(37500)
+var ethSingleTxFee = cosmos.NewUint(375_000) // 375,000 gwei gas rate
 
 type WithdrawTestKeeper struct {
 	keeper.KVStoreDummy

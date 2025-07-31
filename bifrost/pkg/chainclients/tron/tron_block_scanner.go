@@ -423,7 +423,7 @@ func (s *TronBlockScanner) updateFee(height int64) {
 		return
 	}
 
-	s.currentFee = uint64(fee * 100)
+	s.currentFee = uint64(fee)
 
 	s.globalNetworkFeeQueue <- common.NetworkFee{
 		Chain:           s.config.ChainID,

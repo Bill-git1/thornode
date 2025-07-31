@@ -52,6 +52,9 @@ asserts:
       aggregator: "0x69800327b38A4CeF30367Dec3f64c2f2386f3848",
       aggregator_target_asset: "0x6f67873ebc41ed88B08A9265Bd16480f819e4348",
       aggregator_target_limit: "0",
+      gas_rate: 120,
+      in_hash: "34AA325C82F0B9572B54B1AD403146200625DB5F31EF59C5F8BF9BF22F93E71A",
+      height: 2,
       clout_spent: "0"
     }
 ---
@@ -75,11 +78,11 @@ asserts:
           decimals: 8
         }
       ],
-      gas_rate: 12,
+      gas_rate: 120,
       in_hash: "34AA325C82F0B9572B54B1AD403146200625DB5F31EF59C5F8BF9BF22F93E71A",
       aggregator: "0x69800327b38A4CeF30367Dec3f64c2f2386f3848",
       aggregator_target_asset: "0x6f67873ebc41ed88B08A9265Bd16480f819e4348",
       aggregator_target_limit: "0",
       clout_spent: "0"
     }
-  - .signature == "p5Um0zj8bVFnFsdK5suZmLu+UvqnIsivVI0xWRy56QYx+MZqnX+gF61z3Z3C318m+Zk3eTBwFwhKQQCpyU8XUQ=="
+  - .signature == "x8bWMOpKVhL1mj4Wm88fUFxGksy44xw6jYyMbyDBsBEXvLfWYHidgOk+iA6tHgg2kHhwlqyn/73nLfzvkKTuWg=="

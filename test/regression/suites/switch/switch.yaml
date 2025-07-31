@@ -25,7 +25,7 @@ signer: {{ addr_thor_dog }}
 block_height: 1
 chain: GAIA
 transaction_size: 1000
-transaction_rate: 1000
+transaction_rate: 10 # 10 uatom
 ---
 type: create-blocks
 count: 1

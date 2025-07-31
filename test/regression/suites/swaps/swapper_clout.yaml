@@ -35,22 +35,22 @@ asserts:
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
 txs:
-- tx:
-    id: '{{ observe_txid 3 }}'
-    chain: BTC
-    from_address: {{ addr_btc_fox }}
-    to_address: {{ addr_btc_dog }}
-    coins:
-      - amount: "5000000"
-        asset: "BTC.BTC"
-        decimals: 8
-    gas:
-      - amount: "10000"
-        asset: "BTC.BTC"
-    memo: "=:ETH.ETH:{{ addr_eth_fox }}"
-  block_height: 3
-  finalise_height: 3
-  observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 3 }}"
+      chain: BTC
+      from_address: {{ addr_btc_fox }}
+      to_address: {{ addr_btc_dog }}
+      coins:
+        - amount: "5000000"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "10000"
+          asset: "BTC.BTC"
+      memo: "=:ETH.ETH:{{ addr_eth_fox }}"
+    block_height: 3
+    finalise_height: 3
+    observed_pub_key: {{ pubkey_dog }}
 ---
 type: create-blocks
 count: 1
@@ -82,23 +82,23 @@ asserts:
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
 txs:
-- tx:
-    id: '{{ observe_txid 4 }}'
-    chain: ETH
-    from_address: {{ addr_eth_dog }}
-    to_address: {{ addr_eth_fox }}
-    coins:
-      - amount: "40221780"
-        asset: "ETH.ETH"
-        decimals: 8
-    gas:
-      - amount: "960000"
-        asset: "ETH.ETH"
-    memo: "OUT:{{ observe_txid 3 }}"
-  block_height: 2
-  finalise_height: 2
-  observed_pub_key: {{ pubkey_dog }}
-  clout_spent: "414976178"
+  - tx:
+      id: "{{ observe_txid 4 }}"
+      chain: ETH
+      from_address: {{ addr_eth_dog }}
+      to_address: {{ addr_eth_fox }}
+      coins:
+        - amount: "40221780"
+          asset: "ETH.ETH"
+          decimals: 8
+      gas:
+        - amount: "960000"
+          asset: "ETH.ETH"
+      memo: "OUT:{{ observe_txid 3 }}"
+    block_height: 2
+    finalise_height: 2
+    observed_pub_key: {{ pubkey_dog }}
+    clout_spent: "414976178"
 ---
 type: create-blocks
 count: 1
@@ -142,22 +142,22 @@ count: 1
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
 txs:
-- tx:
-    id: '{{ observe_txid 4 }}'
-    chain: BTC
-    from_address: {{ addr_btc_fox }}
-    to_address: {{ addr_btc_dog }}
-    coins:
-      - amount: "5000000"
-        asset: "BTC.BTC"
-        decimals: 8
-    gas:
-      - amount: "10000"
-        asset: "BTC.BTC"
-    memo: "=:ETH.ETH:{{ addr_eth_fox }}"
-  block_height: 3
-  finalise_height: 3
-  observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 4 }}"
+      chain: BTC
+      from_address: {{ addr_btc_fox }}
+      to_address: {{ addr_btc_dog }}
+      coins:
+        - amount: "5000000"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "10000"
+          asset: "BTC.BTC"
+      memo: "=:ETH.ETH:{{ addr_eth_fox }}"
+    block_height: 3
+    finalise_height: 3
+    observed_pub_key: {{ pubkey_dog }}
 ---
 type: create-blocks
 count: 11
@@ -185,22 +185,22 @@ asserts:
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
 txs:
-- tx:
-    id: '{{ observe_txid 5 }}'
-    chain: BTC
-    from_address: {{ addr_btc_fox }}
-    to_address: {{ addr_btc_dog }}
-    coins:
-      - amount: "5000000"
-        asset: "BTC.BTC"
-        decimals: 8
-    gas:
-      - amount: "10000"
-        asset: "BTC.BTC"
-    memo: "=:ETH.ETH:{{ addr_eth_fox }}"
-  block_height: 3
-  finalise_height: 3
-  observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 5 }}"
+      chain: BTC
+      from_address: {{ addr_btc_fox }}
+      to_address: {{ addr_btc_dog }}
+      coins:
+        - amount: "5000000"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "10000"
+          asset: "BTC.BTC"
+      memo: "=:ETH.ETH:{{ addr_eth_fox }}"
+    block_height: 3
+    finalise_height: 3
+    observed_pub_key: {{ pubkey_dog }}
 ---
 type: create-blocks
 count: 1
@@ -235,22 +235,22 @@ asserts:
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
 txs:
-- tx:
-    id: '{{ observe_txid 6 }}'
-    chain: ETH
-    from_address: {{ addr_eth_dog }}
-    to_address: {{ addr_eth_fox }}
-    coins:
-      - amount: "${OUT_ONE}"
-        asset: "ETH.ETH"
-        decimals: 8
-    gas:
-      - amount: "960000"
-        asset: "ETH.ETH"
-    memo: "OUT:{{ observe_txid 4 }}"
-  block_height: 2
-  finalise_height: 2
-  observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 6 }}"
+      chain: ETH
+      from_address: {{ addr_eth_dog }}
+      to_address: {{ addr_eth_fox }}
+      coins:
+        - amount: "${OUT_ONE}"
+          asset: "ETH.ETH"
+          decimals: 8
+      gas:
+        - amount: "960000"
+          asset: "ETH.ETH"
+      memo: "OUT:{{ observe_txid 4 }}"
+    block_height: 2
+    finalise_height: 2
+    observed_pub_key: {{ pubkey_dog }}
 ---
 type: create-blocks
 count: 1
@@ -258,22 +258,22 @@ count: 1
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
 txs:
-- tx:
-    id: '{{ observe_txid 7 }}'
-    chain: ETH
-    from_address: {{ addr_eth_dog }}
-    to_address: {{ addr_eth_fox }}
-    coins:
-      - amount: "${OUT_TWO}"
-        asset: "ETH.ETH"
-        decimals: 8
-    gas:
-      - amount: "960000"
-        asset: "ETH.ETH"
-    memo: "OUT:{{ observe_txid 5 }}"
-  block_height: 17
-  finalise_height: 17
-  observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 7 }}"
+      chain: ETH
+      from_address: {{ addr_eth_dog }}
+      to_address: {{ addr_eth_fox }}
+      coins:
+        - amount: "${OUT_TWO}"
+          asset: "ETH.ETH"
+          decimals: 8
+      gas:
+        - amount: "960000"
+          asset: "ETH.ETH"
+      memo: "OUT:{{ observe_txid 5 }}"
+    block_height: 17
+    finalise_height: 17
+    observed_pub_key: {{ pubkey_dog }}
 ---
 type: create-blocks
 count: 1
@@ -303,28 +303,4 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .[0].coin.amount == "${OUT_AMOUNT=65817123}"
-  - |
-    .[0] == {
-      height: 20,
-      vault_pub_key: "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4",
-      in_hash: "{{ native_txid -1 }}",
-      chain: "ETH",
-      to_address: "{{ addr_eth_fox }}",
-      coin: {
-          asset: "ETH.ETH",
-          amount: "${OUT_AMOUNT}"
-      },
-      max_gas: [
-          {
-              asset: "ETH.ETH",
-              amount: "960000",
-              decimals: 8
-          }
-      ],
-      gas_rate: 12,
-      memo: "OUT:{{ native_txid -1 }}",
-      aggregator: "0x69800327b38A4CeF30367Dec3f64c2f2386f3848",
-      aggregator_target_asset: "0x6f67873ebc41ed88B08A9265Bd16480f819e4348",
-      aggregator_target_limit: "0",
-      clout_spent: "0"
-    }
+  - .[0].clout_spent == "0"

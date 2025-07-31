@@ -398,7 +398,7 @@
         },
         {
           "chain": "ETH",
-          "transaction_fee_rate": "8",
+          "transaction_fee_rate": "80",
           "transaction_size": "80000"
         }
       ],
@@ -463,7 +463,7 @@
               "in_hash": "0000000000000000000000000000000000000000000000000000000000000006",
               "max_gas": [
                 {
-                  "amount": "2000000",
+                  "amount": "200000000000000",
                   "asset": "THOR.RUNE",
                   "decimals": "8"
                 }

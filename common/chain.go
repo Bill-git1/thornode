@@ -189,32 +189,44 @@ func (c Chain) GetGasAsset() Asset {
 	}
 }
 
-// GetGasUnits returns name of the gas unit for each chain
-func (c Chain) GetGasUnits() string {
+// GetGasUnits returns the name of the gas unit for each chain
+// as well as the number of gas units per 'One'.
+// gasRateUnitsPerOne type is cosmos.Uint to avoid uint64 overflow through
+// for example .Mul(gasRateUnitsPerOne).QuoUint64(common.One)
+// rather than * gasRateUnitsPerOne / common.One .
+func (c Chain) GetGasUnits() (gasRateUnits string, gasRateUnitsPerOne cosmos.Uint) {
 	switch c {
-	case AVAXChain:
-		return "nAVAX"
-	case BTCChain:
-		return "satsperbyte"
-	case BCHChain:
-		return "satsperbyte"
-	case DOGEChain:
-		return "satsperbyte"
-	case ETHChain, BSCChain, BASEChain:
-		return "gwei"
 	case GAIAChain:
-		return "uatom"
+		return "uatom", cosmos.NewUint(1e6)
 	case NOBLEChain:
-		return "uusdc"
-	case LTCChain:
-		return "satsperbyte"
+		return "uusdc", cosmos.NewUint(1e6)
 	case XRPChain:
-		return "drop"
+		return "drop", cosmos.NewUint(1e6)
 	case TRONChain:
-		return "sun"
+		return "sun", cosmos.NewUint(1e6)
+	case BTCChain, BCHChain, LTCChain, DOGEChain:
+		return "satsperbyte", cosmos.NewUint(1e8)
+	case ETHChain, BSCChain:
+		return "gwei", cosmos.NewUint(1e9)
+	case AVAXChain:
+		return "nAVAX", cosmos.NewUint(1e9)
+	case BASEChain:
+		return "mwei", cosmos.NewUint(1e12)
 	default:
-		return ""
+		return "", cosmos.OneUint() // Avoid any divide-by-zero.
 	}
+}
+
+// NativeGasToThorchain converts native gas units to THORChain units (1e8).
+func (c Chain) NativeGasToThorchain(native cosmos.Uint) cosmos.Uint {
+	_, gasRateUnitsPerOne := c.GetGasUnits()
+	return native.MulUint64(One).Quo(gasRateUnitsPerOne)
+}
+
+// ThorchainToNativeGas converts THORChain units (1e8) to native gas units.
+func (c Chain) ThorchainToNativeGas(thorchain cosmos.Uint) cosmos.Uint {
+	_, gasRateUnitsPerOne := c.GetGasUnits()
+	return thorchain.Mul(gasRateUnitsPerOne).QuoUint64(One)
 }
 
 // GetGasAssetDecimal returns decimals for the gas asset of the given chain. Currently

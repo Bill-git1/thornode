@@ -564,16 +564,20 @@ func (c *EVMClient) buildOutboundTx(txOutItem stypes.TxOutItem, memo mem.Memo, n
 		evmValue = cosmos.ZeroUint().BigInt()
 	}
 
+	// Convert TxOutItem gas rate units to Wei.
+	_, gasRateUnitsPerOne := c.cfg.ChainID.GetGasUnits()
+	toiGasRateWei := cosmos.NewUint(uint64(txOutItem.GasRate)).MulUint64(common.WeiPerOne).Quo(gasRateUnitsPerOne).BigInt()
+
 	gasRate := c.GetGasPrice()
 	if c.cfg.BlockScanner.FixedGasRate > 0 || gasRate.Cmp(big.NewInt(0)) == 0 {
 		// if chain gas is zero we are still filling our gas price buffer, use outbound rate
-		gasRate = convertThorchainAmountToWei(big.NewInt(txOutItem.GasRate))
+		gasRate = toiGasRateWei
 	} else {
 		// Thornode uses a gas rate 1.5x the reported network fee for the rate and computed
 		// max gas to ensure the rate is sufficient when it is signed later. Since we now know
 		// the more recent rate, we will use our current rate with a lower bound on 2/3 the
 		// outbound rate (the original rate we reported to Thornode in the network fee).
-		lowerBound := convertThorchainAmountToWei(big.NewInt(txOutItem.GasRate))
+		lowerBound := toiGasRateWei
 		lowerBound.Mul(lowerBound, big.NewInt(2))
 		lowerBound.Div(lowerBound, big.NewInt(3))
 
@@ -959,7 +963,9 @@ func (c *EVMClient) ReportSolvency(height int64) error {
 		return fmt.Errorf("fail to get asgards, err: %w", err)
 	}
 
-	currentGasFee := cosmos.NewUint(3 * c.cfg.BlockScanner.MaxGasLimit * c.evmScanner.lastReportedGasPrice)
+	// 3x MaxGas breathing room, from gas rate units gas price to THORChain (1e8) format
+	_, gasRateUnitsPerOne := c.cfg.ChainID.GetGasUnits()
+	currentGasFee := cosmos.NewUint(c.cfg.BlockScanner.MaxGasLimit).MulUint64(3).MulUint64(c.evmScanner.lastReportedGasPrice).MulUint64(common.One).Quo(gasRateUnitsPerOne)
 
 	// report insolvent asgard vaults,
 	// or else all if the chain is halted and all are solvent

@@ -127,7 +127,7 @@ func (k *TestSwapKeeper) GetNetworkFee(ctx cosmos.Context, chain common.Chain) (
 		return NetworkFee{
 			Chain:              common.ETHChain,
 			TransactionSize:    1,
-			TransactionFeeRate: 37500,
+			TransactionFeeRate: 375_000, // 375,000 gwei
 		}, nil
 	}
 	if chain.Equals(common.THORChain) {
