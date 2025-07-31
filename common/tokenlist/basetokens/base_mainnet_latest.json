@@ -6162,6 +6162,30 @@
       "symbol": "KAITO",
       "address": "0x98d0baa52b2D063E780DE12F615f963Fe8537553",
       "decimals": 18
+    },
+    {
+      "name": "Coinbase Wrapped ADA",
+      "symbol": "cbADA",
+      "address": "0xcbada732173e39521cdbe8bf59a6dc85a9fc7b8c",
+      "decimals": 6
+    },
+    {
+      "name": "Coinbase Wrapped DOGE",
+      "symbol": "cbDOGE",
+      "address": "0xcbd06e5a2b0c65597161de254aa074e489deb510",
+      "decimals": 8
+    },
+    {
+      "name": "Coinbase Wrapped LTC",
+      "symbol": "cbLTC",
+      "address": "0xcb17c9db87b595717c857a08468793f5bab6445f",
+      "decimals": 8
+    },
+    {
+      "name": "Coinbase Wrapped XRP",
+      "symbol": "cbXRP",
+      "address": "0xcb585250f852c6c6bf90434ab21a00f02833a4af",
+      "decimals": 6
     }
   ]
 }

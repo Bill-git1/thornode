@@ -205,6 +205,10 @@ bifrost:
           # - 0x0578d8A44db98B23BF096A382e016e29a5Ce0ffe # Higher
           # - 0x1bc0c42215582d5A085795f4baDbaC3ff36d1Bcb # Clanker
           - 0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42 # EURC
+          - 0xcbada732173e39521cdbe8bf59a6dc85a9fc7b8c # cbADA
+          - 0xcbd06e5a2b0c65597161de254aa074e489deb510 # cbDOGE
+          - 0xcb17c9db87b595717c857a08468793f5bab6445f # cbLTC
+          - 0xcb585250f852c6c6bf90434ab21a00f02833a4af # cbXRP
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
 
