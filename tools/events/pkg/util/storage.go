@@ -70,7 +70,7 @@ func Prune(path string) {
 
 		return nil
 	})
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		log.Error().Err(err).Msg("prune failed")
 	}
 }

@@ -116,7 +116,9 @@ func main() {
 	height := -1
 	err := util.Load("height", &height)
 	if err != nil {
-		log.Warn().Err(err).Msg("unable to load height")
+		if !os.IsNotExist(err) {
+			log.Warn().Err(err).Msg("unable to load height")
+		}
 	} else {
 		log.Info().Int("height", height).Msg("loaded height")
 		height++ // start from the next block
