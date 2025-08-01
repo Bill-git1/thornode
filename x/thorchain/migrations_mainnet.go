@@ -217,3 +217,28 @@ func (m Migrator) Migrate6to7(ctx sdk.Context) error {
 
 	return nil
 }
+
+// Migrate8to9 migrates from version 8 to 9.
+func (m Migrator) Migrate8to9(ctx sdk.Context) error {
+	// loads the manager for this migration
+	if err := m.mgr.LoadManagerIfNecessary(ctx); err != nil {
+		return err
+	}
+
+	// handle manual outbounds
+	outbounds, err := mainnetManualOutbounds8to9(ctx, m.mgr)
+	if err != nil {
+		ctx.Logger().Error("failed to create manual outbounds for migration", "error", err)
+	}
+	for _, out := range outbounds {
+		outboundHeight := ctx.BlockHeight()
+		err := m.mgr.TxOutStore().UnSafeAddTxOutItem(ctx, m.mgr, out, outboundHeight)
+		if err != nil {
+			ctx.Logger().Error("failed to add manual outbound", "error", err, "outbound", out)
+		} else {
+			ctx.Logger().Info("successfully added manual outbound", "outbound", out)
+		}
+	}
+
+	return nil
+}

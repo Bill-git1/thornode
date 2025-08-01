@@ -129,6 +129,27 @@ txs:
 type: create-blocks
 count: 1
 ---
+# Check that MsgDeposit with an Exec memo and secured assets succeeds
+type: tx-observed-in
+signer: {{ addr_thor_dog }}
+txs:
+  - tx:
+      id: "{{ observe_txid 3 }}"
+      chain: ETH
+      from_address: {{ addr_eth_fox }}
+      to_address: {{ addr_eth_dog }}
+      coins:
+        - amount: "10000000"
+          asset: "ETH.ETH"
+          decimals: 8
+      gas:
+        - amount: "10000"
+          asset: "ETH.ETH"
+      memo: "secure+:{{ addr_thor_fox }}"
+    block_height: 3
+    finalise_height: 3
+    observed_pub_key: {{ pubkey_dog }}
+---
 type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
@@ -175,27 +196,6 @@ asserts:
   - .txs[0].result.events[14].new_value == "2"
   - .txs[0].result.events[14].type == "wasm"
 ---
-# Check that MsgDeposit with an Exec memo and secured assets succeeds
-type: tx-observed-in
-signer: {{ addr_thor_dog }}
-txs:
-  - tx:
-      id: "{{ observe_txid 3 }}"
-      chain: ETH
-      from_address: {{ addr_eth_fox }}
-      to_address: {{ addr_eth_dog }}
-      coins:
-        - amount: "10000000"
-          asset: "ETH.ETH"
-          decimals: 8
-      gas:
-        - amount: "10000"
-          asset: "ETH.ETH"
-      memo: "secure+:{{ addr_thor_fox }}"
-    block_height: 3
-    finalise_height: 3
-    observed_pub_key: {{ pubkey_dog }}
----
 type: create-blocks
 count: 1
 ---
@@ -236,4 +236,3 @@ asserts:
   - .txs[0].result.events[11]._contract_address == "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"
   - .txs[0].result.events[11].new_value == "3"
   - .txs[0].result.events[11].type == "wasm"
-

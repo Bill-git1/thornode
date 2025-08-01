@@ -929,3 +929,89 @@ func mainnetManualInbounds6to7() (ObservedTxs, error) {
 
 	return unobservedTxs, nil
 }
+
+// trunk-ignore(golangci-lint/unused)
+func mainnetManualOutbounds8to9(ctx cosmos.Context, mgr *Mgrs) ([]TxOutItem, error) {
+	// none of the attempts in 6to7 were successful, so retry them all
+	manualOutbounds, err := mainnetManualOutbounds6to7(ctx, mgr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get manual outbounds for 6to7: %w", err)
+	}
+
+	// The logic below adds manual outbounds for the inbounds faked in 6to7, since the
+	// inbounds were properly observed and corrected the vault balance, but the refund
+	// attempts failed.
+
+	recoveryEVMAddress, err := common.NewAddress("0x3c4a7c01811e14bb3d723d4961b4f2c28afc5e6e")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create recovery address: %w", err)
+	}
+
+	maxGasCoinETH, err := mgr.GasMgr().GetMaxGas(ctx, common.ETHChain)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get max gas: %w", err)
+	}
+
+	maxGasCoinBSC, err := mgr.GasMgr().GetMaxGas(ctx, common.BSCChain)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get max gas: %w", err)
+	}
+
+	maxGasCoinAVAX, err := mgr.GasMgr().GetMaxGas(ctx, common.AVAXChain)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get max gas: %w", err)
+	}
+
+	// fake txid overwrite first 3 characters of inbound with 0
+	txid := common.TxID("00048A12C1815688FCD3551967288DD1795C5107CFD4CC45D8FA09AE9CDB4849")
+	vaultPubKey := common.PubKey("thorpub1addwnpepq05qexnkd22lhm53w8lnmrldsdj5fry9auk3sx66jht5u4yx7jfdwkfdzrk")
+	refundCoin := common.NewCoin(common.BNBBEP20Asset, cosmos.NewUint(350349963))
+	refundCoin.Amount = refundCoin.Amount.Sub(maxGasCoinBSC.Amount)
+	manualOutbounds = append(manualOutbounds, TxOutItem{
+		Chain:     common.BSCChain,
+		InHash:    txid,
+		ToAddress: recoveryEVMAddress,
+		// Vault EVM address: 0x18eeb52bf18c3a8ce4bae59b12b2c49b2b3eb1e7
+		VaultPubKey: vaultPubKey,
+		Coin:        refundCoin,
+		Memo:        fmt.Sprintf("REFUND:%s", txid),
+		MaxGas:      common.Gas{maxGasCoinBSC},
+	})
+
+	// fake txid overwrite first 3 characters of inbound with 0
+	txid = common.TxID("000F0F5D5E70C306719E1F2B4AE17C08F32FFC05FB030EA6D88F9331AC6DC4D1")
+	vaultPubKey = common.PubKey("thorpub1addwnpepqwzdyhswhyag74q0z8ntxvvq3074mmnluwy3nmrw7l2he0d8rem8xqkfv6p")
+	avaxUSDC, err := common.NewAsset("AVAX.USDC-0XB97EF9EF8734C71904D8002F8B6BC66DD9C48A6E")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create asset: %w", err)
+	}
+	refundCoin = common.NewCoin(avaxUSDC, cosmos.NewUint(105120813500))
+	manualOutbounds = append(manualOutbounds, TxOutItem{
+		Chain:     common.AVAXChain,
+		InHash:    txid,
+		ToAddress: recoveryEVMAddress,
+		// Vault EVM address: 0x5a8c96e8675b7c68a05b5c940804cc512ac59ed6
+		VaultPubKey: vaultPubKey,
+		Coin:        refundCoin,
+		Memo:        fmt.Sprintf("REFUND:%s", txid),
+		MaxGas:      common.Gas{maxGasCoinAVAX},
+	})
+
+	// fake txid overwrite first 3 characters of inbound with 0
+	txid = common.TxID("0002E5EE98A622B1E7E845EA2A6FA13E72F3988901AD71F16AC25D5F99399B40")
+	vaultPubKey = common.PubKey("thorpub1addwnpepqtn57vj7kvd5dushlrpahk5kak33p9638rz7epcr6q7v7ksw2qaly7gwqeh")
+	refundCoin = common.NewCoin(common.ETHAsset, cosmos.NewUint(1926543989))
+	refundCoin.Amount = refundCoin.Amount.Sub(maxGasCoinETH.Amount)
+	manualOutbounds = append(manualOutbounds, TxOutItem{
+		Chain:     common.ETHChain,
+		InHash:    txid,
+		ToAddress: recoveryEVMAddress,
+		// Vault EVM address: 0x9dec237eb85056c63c11ba9c5477e82685767991
+		VaultPubKey: vaultPubKey,
+		Coin:        refundCoin,
+		Memo:        fmt.Sprintf("REFUND:%s", txid),
+		MaxGas:      common.Gas{maxGasCoinETH},
+	})
+
+	return manualOutbounds, nil
+}
