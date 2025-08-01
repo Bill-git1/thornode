@@ -305,10 +305,6 @@ func (s *TronBlockScanner) processTxs(
 			continue
 		}
 
-		if len(memo) == 0 {
-			continue
-		}
-
 		// get fee
 		info, err := s.api.GetTransactionInfo(rawTx.TxId)
 		if err != nil {
