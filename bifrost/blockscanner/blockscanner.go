@@ -85,7 +85,7 @@ func NewBlockScanner(cfg config.BifrostBlockScannerConfiguration, scannerStorage
 		healthy:         &atomic.Bool{},
 	}
 
-	scanner.previousBlock, err = scanner.FetchLastHeight()
+	scanner.previousBlock, err = scanner.GetStartHeight()
 	logger.Info().Int64("block height", scanner.previousBlock).Msg("block scanner last fetch height")
 	return scanner, err
 }
@@ -398,34 +398,35 @@ func (b *BlockScanner) updateStaleNetworkFee(currentBlock int64) {
 		Msg("sent timed network fee to THORChain")
 }
 
-// FetchLastHeight determines the height to start scanning:
+// GetStartHeight determines the height to start scanning:
 //  1. Use the config start height if set.
 //  2. If last consensus inbound height (lastblock) is available:
 //     a) Use local scanner storage height if available, up to the max lag from lastblock.
 //     b) Otherwise, use lastblock.
 //  3. Otherwise, use local scanner storage height if available.
 //  4. Otherwise, use the last height from the chain itself.
-func (b *BlockScanner) FetchLastHeight() (int64, error) {
+func (b *BlockScanner) GetStartHeight() (int64, error) {
 	// get scanner storage height
 	currentPos, _ := b.scannerStorage.GetScanPos() // ignore error
 
+	clog := b.logger.With().Stringer("chain", b.cfg.ChainID).Logger()
+
 	// 1. Use the config start height if set.
 	if b.cfg.StartBlockHeight > 0 {
+		clog.Info().
+			Int64("start_height", b.cfg.StartBlockHeight).
+			Msg("using configured start block height")
 		return b.cfg.StartBlockHeight, nil
 	}
 
 	// wait for thorchain to be caught up first
 	if err := b.thorchainBridge.WaitToCatchUp(); err != nil {
+		clog.Info().Err(err).Msg("waiting for thorchain to catch up")
 		return 0, err
 	}
 
-	if b.thorchainBridge != nil {
-		var height int64
-		if b.cfg.ChainID.Equals(common.THORChain) {
-			height, _ = b.thorchainBridge.GetBlockHeight()
-		} else {
-			height, _ = b.thorchainBridge.GetLastObservedInHeight(b.cfg.ChainID)
-		}
+	if b.thorchainBridge != nil && b.cfg.ChainID != common.THORChain {
+		height, _ := b.thorchainBridge.GetLastObservedInHeight(b.cfg.ChainID)
 		if height > 0 {
 
 			// 2.a) Use local scanner storage height if available, up to the max lag from lastblock.
@@ -435,23 +436,46 @@ func (b *BlockScanner) FetchLastHeight() (int64, error) {
 
 				// return the position up to the max block lag behind the consensus height
 				if height <= currentPos+maxLagBlocks {
+					clog.Info().
+						Int64("start_height", currentPos).
+						Int64("last_observed_height", height).
+						Msg("using local scanner storage height")
+
 					return currentPos, nil
 				} else {
+					clog.Info().
+						Int64("start_height", height-maxLagBlocks).
+						Int64("last_observed_height", height).
+						Msg("using last observed height with max lag")
 					return height - maxLagBlocks, nil
 				}
 			}
 
 			// 2.b) Otherwise, use lastblock.
+			clog.Info().
+				Int64("start_height", height).
+				Msg("using last observed height")
 			return height, nil
 		}
 	}
 
 	//  3. Otherwise, use local scanner storage height if available.
 	if currentPos > 0 {
+		clog.Info().
+			Int64("start_height", currentPos).
+			Msg("using local scanner storage height")
 		return currentPos, nil
 	}
 
 	//  4. Otherwise, use the last height from the chain itself.
+	height, err := b.chainScanner.GetHeight()
+	if err != nil {
+		clog.Error().Err(err).Msg("failed to get chain height")
+		return 0, err
+	}
+	clog.Info().
+		Int64("start_height", height).
+		Msg("using chain height as start height")
 	return b.chainScanner.GetHeight()
 }
 
