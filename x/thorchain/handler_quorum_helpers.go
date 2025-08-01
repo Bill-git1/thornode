@@ -37,11 +37,11 @@ func verifyQuorumAttestation(activeNodeAccounts NodeAccounts, signBz []byte, att
 	}
 	if !found {
 		// can occur if a node account churns out before the tx is processed.
-		return nil, fmt.Errorf("signer is not an active node account: %s", pk)
+		return nil, fmt.Errorf("signer is not an active node account: %s", pk.String())
 	}
 
 	if !pk.VerifySignature(signBz, att.Signature) {
-		return nil, fmt.Errorf("failed to verify signature: %s", pk)
+		return nil, fmt.Errorf("failed to verify signature: %s", pk.String())
 	}
 
 	return cosmos.AccAddress(pk.Address()), nil

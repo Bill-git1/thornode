@@ -99,6 +99,8 @@ const (
 	Query_TCYStakers_FullMethodName          = "/types.Query/TCYStakers"
 	Query_TCYClaimer_FullMethodName          = "/types.Query/TCYClaimer"
 	Query_TCYClaimers_FullMethodName         = "/types.Query/TCYClaimers"
+	Query_OraclePrices_FullMethodName        = "/types.Query/OraclePrices"
+	Query_OraclePrice_FullMethodName         = "/types.Query/OraclePrice"
 	Query_Eip712TypedData_FullMethodName     = "/types.Query/Eip712TypedData"
 )
 
@@ -195,6 +197,8 @@ type QueryClient interface {
 	TCYStakers(ctx context.Context, in *QueryTCYStakersRequest, opts ...grpc.CallOption) (*QueryTCYStakersResponse, error)
 	TCYClaimer(ctx context.Context, in *QueryTCYClaimerRequest, opts ...grpc.CallOption) (*QueryTCYClaimerResponse, error)
 	TCYClaimers(ctx context.Context, in *QueryTCYClaimersRequest, opts ...grpc.CallOption) (*QueryTCYClaimersResponse, error)
+	OraclePrices(ctx context.Context, in *QueryOraclePricesRequest, opts ...grpc.CallOption) (*QueryOraclePricesResponse, error)
+	OraclePrice(ctx context.Context, in *QueryOraclePriceRequest, opts ...grpc.CallOption) (*QueryOraclePriceResponse, error)
 	Eip712TypedData(ctx context.Context, in *QueryEip712TypedDataRequest, opts ...grpc.CallOption) (*QueryEip712TypedDataResponse, error)
 }
 
@@ -926,6 +930,24 @@ func (c *queryClient) TCYClaimers(ctx context.Context, in *QueryTCYClaimersReque
 	return out, nil
 }
 
+func (c *queryClient) OraclePrices(ctx context.Context, in *QueryOraclePricesRequest, opts ...grpc.CallOption) (*QueryOraclePricesResponse, error) {
+	out := new(QueryOraclePricesResponse)
+	err := c.cc.Invoke(ctx, Query_OraclePrices_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) OraclePrice(ctx context.Context, in *QueryOraclePriceRequest, opts ...grpc.CallOption) (*QueryOraclePriceResponse, error) {
+	out := new(QueryOraclePriceResponse)
+	err := c.cc.Invoke(ctx, Query_OraclePrice_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *queryClient) Eip712TypedData(ctx context.Context, in *QueryEip712TypedDataRequest, opts ...grpc.CallOption) (*QueryEip712TypedDataResponse, error) {
 	out := new(QueryEip712TypedDataResponse)
 	err := c.cc.Invoke(ctx, Query_Eip712TypedData_FullMethodName, in, out, opts...)
@@ -1028,6 +1050,8 @@ type QueryServer interface {
 	TCYStakers(context.Context, *QueryTCYStakersRequest) (*QueryTCYStakersResponse, error)
 	TCYClaimer(context.Context, *QueryTCYClaimerRequest) (*QueryTCYClaimerResponse, error)
 	TCYClaimers(context.Context, *QueryTCYClaimersRequest) (*QueryTCYClaimersResponse, error)
+	OraclePrices(context.Context, *QueryOraclePricesRequest) (*QueryOraclePricesResponse, error)
+	OraclePrice(context.Context, *QueryOraclePriceRequest) (*QueryOraclePriceResponse, error)
 	Eip712TypedData(context.Context, *QueryEip712TypedDataRequest) (*QueryEip712TypedDataResponse, error)
 	mustEmbedUnimplementedQueryServer()
 }
@@ -1275,6 +1299,12 @@ func (UnimplementedQueryServer) TCYClaimer(context.Context, *QueryTCYClaimerRequ
 }
 func (UnimplementedQueryServer) TCYClaimers(context.Context, *QueryTCYClaimersRequest) (*QueryTCYClaimersResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method TCYClaimers not implemented")
+}
+func (UnimplementedQueryServer) OraclePrices(context.Context, *QueryOraclePricesRequest) (*QueryOraclePricesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OraclePrices not implemented")
+}
+func (UnimplementedQueryServer) OraclePrice(context.Context, *QueryOraclePriceRequest) (*QueryOraclePriceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OraclePrice not implemented")
 }
 func (UnimplementedQueryServer) Eip712TypedData(context.Context, *QueryEip712TypedDataRequest) (*QueryEip712TypedDataResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Eip712TypedData not implemented")
@@ -2732,6 +2762,42 @@ func _Query_TCYClaimers_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_OraclePrices_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryOraclePricesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).OraclePrices(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_OraclePrices_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).OraclePrices(ctx, req.(*QueryOraclePricesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_OraclePrice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryOraclePriceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).OraclePrice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_OraclePrice_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).OraclePrice(ctx, req.(*QueryOraclePriceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Query_Eip712TypedData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(QueryEip712TypedDataRequest)
 	if err := dec(in); err != nil {
@@ -3076,6 +3142,14 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "TCYClaimers",
 			Handler:    _Query_TCYClaimers_Handler,
+		},
+		{
+			MethodName: "OraclePrices",
+			Handler:    _Query_OraclePrices_Handler,
+		},
+		{
+			MethodName: "OraclePrice",
+			Handler:    _Query_OraclePrice_Handler,
 		},
 		{
 			MethodName: "Eip712TypedData",

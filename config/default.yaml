@@ -425,6 +425,371 @@ bifrost:
         max_sats_per_vbyte: 9765 # backwards compatible with 1e8/10/1024
         min_sats_per_vbyte: 2
         estimated_average_tx_size: 1500
+  oracle:
+    log_level: info
+    enabled: false
+    detailed_metrics: false
+  providers:
+    binance:
+      name: binance
+      disabled: false
+      polling_interval: 3s
+      api_endpoints:
+        - https://data-api.binance.vision
+      ws_endpoints:
+        - wss://stream.binance.com:9443/ws
+      pairs:
+        - ATOM/USDT
+        - AVAX/USDT
+        - BCH/USDT
+        - BNB/USDT
+        - BTC/USDT
+        - DOGE/USDT
+        - ETH/USDT
+        - LTC/USDT
+        - RUNE/USDT
+        - SOL/USDT
+        - TRX/USDT
+        - USDC/USDT
+        - XRP/USDT
+      symbol_mapping: []
+
+    bitfinex:
+      name: bitfinex
+      disabled: true
+      polling_interval: 3s
+      api_endpoints:
+        - https://api-pub.bitfinex.com
+      ws_endpoints:
+        - wss://api-pub.bitfinex.com/ws/2
+      pairs:
+        - BTC/USD
+        - ETH/USD
+        - USDT/USD
+        - XRP/USDT
+        - DOGE/USD
+      symbol_mapping:
+        - USDT/USD=tUSTUSD
+        - XRP/USDT=tXRPUST
+
+    bitget:
+      name: bitget
+      disabled: false
+      polling_interval: 2s
+      api_endpoints:
+        - https://api.bitget.com
+      ws_endpoints:
+        - wss://ws.bitget.com/v2/ws/public
+      pairs:
+        - AVAX/USDT
+        - BCH/USDT
+        - BNB/USDT
+        - BTC/USDC
+        - BTC/USDT
+        - DOGE/USDT
+        - ETH/USDT
+        - LTC/USDT
+        - RUNE/USDT
+        - SOL/USDT
+        - XRP/USDT
+      symbol_mapping: []
+
+    bitmart:
+      name: bitmart
+      disabled: false
+      polling_interval: 3s
+      api_endpoints:
+        - https://api-cloud.bitmart.com
+      ws_endpoints:
+        - wss://ws-manager-compress.bitmart.com/api?protocol=1.1
+      pairs:
+        - AVAX/USDT
+        - BTC/USDT
+        - ETH/USDT
+        - RUNE/USDT
+      symbol_mapping: []
+
+    bitstamp:
+      name: bitstamp
+      disabled: false
+      polling_interval: 2s
+      api_endpoints:
+        - https://www.bitstamp.net
+      ws_endpoints: []
+      pairs:
+        - BTC/USD
+        - USDC/USD
+        - USDT/USD
+      symbol_mapping: []
+
+    bybit:
+      name: bybit
+      disabled: false
+      polling_interval: 5s
+      api_endpoints:
+        # check https://bybit-exchange.github.io/docs/v5/guide
+        - https://api.bybit.com
+        - https://api.bytick.com
+      ws_endpoints:
+        - wss://stream.bybit.com/v5/public/spot
+      pairs:
+        - ATOM/USDT
+        - AVAX/USDT
+        - BCH/USDT
+        - BNB/USDT
+        - BTC/USDT
+        - DOGE/USDT
+        - ETH/USDT
+        - LTC/USDT
+        - RUNE/USDT
+        - SOL/USDT
+        - TRX/USDT
+        - USDC/USDT
+        - XRP/USDT
+      symbol_mapping: []
+
+    coinbase:
+      name: coinbase
+      disabled: false
+      polling_interval: 10s
+      api_endpoints:
+        - https://api.exchange.coinbase.com
+      ws_endpoints:
+        - wss://ws-feed.exchange.coinbase.com
+      pairs:
+        - ATOM/USD
+        - AVAX/USD
+        - BCH/USD
+        - BTC/USD
+        - DOGE/USD
+        - ETH/USD
+        - LTC/USD
+        - SOL/USD
+        - USDT/USD
+        - XRP/USD
+      symbol_mapping: []
+
+    coinw:
+      name: coinw
+      disabled: false
+      polling_interval: 3s
+      api_endpoints:
+        - https://api.coinw.com
+      ws_endpoints:
+        - wss://ws.futurescw.com
+      pairs:
+        - ATOM/USDT
+        - AVAX/USDT
+        - BCH/USDT
+        - BNB/USDT
+        - BTC/USDT
+        - DOGE/USDT
+        - ETH/USDT
+        - LTC/USDT
+        - SOL/USDT
+        - TRX/USDT
+        - XRP/USDT
+      symbol_mapping: []
+
+    digifinex:
+      name: digifinex
+      disabled: false
+      polling_interval: 3s
+      api_endpoints:
+        - https://openapi.digifinex.com
+      ws_endpoints:
+        - wss://openapi.digifinex.com/ws/v1/
+      pairs:
+        - ATOM/USDT
+        - AVAX/USDT
+        - BNB/USDT
+        - BTC/USDT
+        - DOGE/USDT
+        - ETH/USDT
+        - LTC/USDT
+        - SOL/USDT
+        - TRX/USDT
+      symbol_mapping: []
+
+    crypto:
+      name: crypto
+      disabled: false
+      polling_interval: 3s
+      api_endpoints:
+        - https://api.crypto.com
+      ws_endpoints:
+        - wss://stream.crypto.com/exchange/v1/market
+      pairs:
+        - BTC/USD
+        - ETH/USD
+        - USDT/USD
+        - XRP/USD
+      symbol_mapping: []
+
+    gate:
+      name: gate
+      disabled: false
+      polling_interval: 3s
+      api_endpoints:
+        - https://api.gateio.ws
+      ws_endpoints:
+        - wss://api.gateio.ws/ws/v4/ # slash matters
+      pairs:
+        - ATOM/USDC
+        - BCH/USDT
+        - BNB/USDT
+        - BTC/USDT
+        - DOGE/USDT
+        - ETH/USDT
+        - LTC/USDT
+        - RUNE/USDT
+        - SOL/USDT
+        - TRX/USDT
+        - USDC/USDT
+      symbol_mapping: []
+
+    gemini:
+      name: gemini
+      disabled: false
+      polling_interval: 2s
+      api_endpoints:
+        - https://api.gemini.com
+      ws_endpoints: []
+      pairs:
+        - BTC/USD
+        - ETH/USD
+        - USDC/USD
+        - USDT/USD
+      symbol_mapping: []
+
+    htx:
+      name: htx
+      disabled: false
+      polling_interval: 3s
+      api_endpoints:
+        - https://api.huobi.pro
+        # - https://api-aws.huobi.pro
+      ws_endpoints:
+        - wss://api.huobi.pro/ws
+        # - wss://api-aws.huobi.pro/ws
+      pairs:
+        - ATOM/USDT
+        - AVAX/USDT
+        - BCH/USDT
+        - BNB/USDT
+        - BTC/USDT
+        - ETH/USDT
+        - LTC/USDT
+        - SOL/USDT
+        - TRX/USDT
+        - XRP/USDT
+      symbol_mapping: []
+
+    kraken:
+      name: kraken
+      disabled: false
+      polling_interval: 3s
+      api_endpoints:
+        - https://api.kraken.com
+      ws_endpoints:
+        - wss://ws.kraken.com/v2
+      pairs:
+        - BTC/USD
+        - DOGE/USD
+        - USDC/USDT
+        - USDT/USD
+        - XRP/USD
+      symbol_mapping:
+        - USDT/USD=USDTZUSD
+        - BTC/USD=XXBTZUSD
+        - XRP/USD=XRPZUSD
+        - DOGE/USD=XDGUSD
+
+    kucoin:
+      name: kucoin
+      disabled: false
+      polling_interval: 3s
+      api_endpoints:
+        - https://api.kucoin.com
+      ws_endpoints:
+        - wss://ws-api-spot.kucoin.com
+      pairs:
+        - BCH/USDT
+        - BNB/USDT
+        - DOGE/USDT
+        - LTC/USDT
+        - RUNE/USDT
+        - SOL/USDT
+        - TRX/USDT
+        - XRP/USDT
+      symbol_mapping: []
+
+    lbank:
+      name: lbank
+      disabled: false
+      polling_interval: 3s
+      api_endpoints:
+        - https://api.lbkex.com
+      ws_endpoints:
+        - wss://www.lbkex.net/ws/V2/
+      pairs:
+        - ATOM/USDT
+        - AVAX/USDT
+        - BCH/USDT
+        - BNB/USDT
+        - DOGE/USDT
+        - LTC/USDT
+        - USDC/USDT
+        - SOL/USDT
+        - TRX/USDT
+        - XRP/USDT
+      symbol_mapping: []
+
+    mexc:
+      name: mexc
+      disabled: false
+      polling_interval: 3s
+      api_endpoints:
+        - https://api.mexc.com
+      ws_endpoints: []
+      pairs:
+        - ATOM/USDT
+        - AVAX/USDT
+        - BCH/USDT
+        - BNB/USDT
+        - BTC/USDT
+        - DOGE/USDT
+        - ETH/USDT
+        - LTC/USDT
+        - RUNE/USDT
+        - SOL/USDT
+        - TRX/USDT
+        - USDC/USDT
+        - XRP/USDT
+      symbol_mapping: []
+
+    okx:
+      name: okx
+      disabled: false
+      polling_interval: 3s
+      api_endpoints:
+        - https://www.okx.com
+      ws_endpoints:
+        - wss://ws.okx.com:8443/ws/v5/public
+      pairs:
+        - ATOM/USDT
+        - AVAX/USDT
+        - BCH/USDT
+        - BTC/USDT
+        - DOGE/USDT
+        - ETH/USDT
+        - LTC/USDT
+        - SOL/USDT
+        - TRX/USDT
+        - USDC/USDT
+        - USDT/USD
+        - XRP/USDT
+      symbol_mapping: []
 
 ########################################################################################
 # Thor
@@ -438,6 +803,7 @@ thor:
   quote_recommended_min_amount_fee_multiplier: 3 # the multiplier for calculateMinSwapAmount
   telemetry:
     slash_points: false
+    price_per_node: false
 
   log_filter:
     modules:

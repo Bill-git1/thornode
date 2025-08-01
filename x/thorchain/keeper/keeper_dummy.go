@@ -857,6 +857,18 @@ func (k KVStoreDummy) RemoveLowBondValidatorAccounts(ctx cosmos.Context) error {
 	return kaboom
 }
 
+func (k KVStoreDummy) SetPrice(_ cosmos.Context, _ OraclePrice) error {
+	return nil
+}
+
+func (k KVStoreDummy) GetPrice(_ cosmos.Context, _ string) (OraclePrice, error) {
+	return OraclePrice{}, nil
+}
+func (k KVStoreDummy) DelPrice(_ cosmos.Context, _ string) {}
+func (k KVStoreDummy) GetPriceIterator(_ cosmos.Context) cosmos.Iterator {
+	return nil
+}
+
 // a mock cosmos.Iterator implementation for testing purposes
 type DummyIterator struct {
 	cosmos.Iterator

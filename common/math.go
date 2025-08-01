@@ -2,6 +2,8 @@ package common
 
 import (
 	"errors"
+	"fmt"
+	"math/big"
 	"sort"
 
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
@@ -102,4 +104,45 @@ func WeightedMean(vals, weights []cosmos.Uint) (cosmos.Uint, error) {
 	}
 
 	return weightedTotal.Quo(totalWeight), nil
+}
+
+func MedianAbsoluteDeviation(values []*big.Float) (*big.Float, *big.Float, error) {
+	median, err := GetMedianBigFloat(values)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	deviations := make([]*big.Float, len(values))
+	for i, value := range values {
+		difference := new(big.Float).Sub(value, median)
+		deviations[i] = new(big.Float).Abs(difference)
+	}
+
+	mad, err := GetMedianBigFloat(deviations)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return mad, median, nil
+}
+
+func GetMedianBigFloat(values []*big.Float) (*big.Float, error) {
+	switch len(values) {
+	case 0:
+		return nil, fmt.Errorf("no values provided")
+	case 1:
+		return values[0], nil
+	}
+
+	sort.SliceStable(values, func(i, j int) bool {
+		return values[i].Cmp(values[j]) < 0
+	})
+
+	if len(values)%2 > 0 {
+		return values[len(values)/2], nil
+	} else {
+		midpoint := len(values) / 2
+		sum := new(big.Float).Add(values[midpoint-1], values[midpoint])
+		return new(big.Float).Quo(sum, big.NewFloat(2)), nil
+	}
 }

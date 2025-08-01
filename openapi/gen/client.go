@@ -74,6 +74,8 @@ type APIClient struct {
 
 	NodesApi *NodesApiService
 
+	OracleApi *OracleApiService
+
 	PoolSlipApi *PoolSlipApiService
 
 	PoolsApi *PoolsApiService
@@ -144,6 +146,7 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 	c.MimirApi = (*MimirApiService)(&c.common)
 	c.NetworkApi = (*NetworkApiService)(&c.common)
 	c.NodesApi = (*NodesApiService)(&c.common)
+	c.OracleApi = (*OracleApiService)(&c.common)
 	c.PoolSlipApi = (*PoolSlipApiService)(&c.common)
 	c.PoolsApi = (*PoolsApiService)(&c.common)
 	c.QueueApi = (*QueueApiService)(&c.common)

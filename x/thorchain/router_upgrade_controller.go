@@ -115,7 +115,7 @@ func (r *RouterUpgradeController) upgradeContract(ctx cosmos.Context, version se
 		// Unset upgrade router mimir
 		err = r.mgr.Keeper().DeleteMimir(ctx, mimirKey)
 		if err != nil {
-			ctx.Logger().Error("fail to unset router upgrade mimir", "chain", chain.String(), "error", err)
+			ctx.Logger().Debug("fail to unset router upgrade mimir", "chain", chain.String(), "error", err)
 		}
 	}
 

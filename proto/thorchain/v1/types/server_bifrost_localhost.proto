@@ -15,6 +15,8 @@ service LocalhostBifrost {
 
     rpc SendQuorumErrataTx(common.QuorumErrataTx) returns (SendQuorumErrataTxResult);
 
+    rpc SendQuorumPriceFeedBatch(common.QuorumPriceFeedBatch) returns (SendQuorumPriceFeedBatchResult);
+
     // Server streaming for notifications
     rpc SubscribeToEvents(SubscribeRequest) returns (stream EventNotification);
 }
@@ -41,3 +43,6 @@ message SendQuorumSolvencyResult {}
 
 // SendQuorumErrataTxResult is the empty return type
 message SendQuorumErrataTxResult {}
+
+// SendQuorumPriceFeedBatchResult is the empty return type
+message SendQuorumPriceFeedBatchResult {}

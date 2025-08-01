@@ -11,6 +11,7 @@ import "types/msg_node_pause_chain.proto";
 import "types/msg_observed_txin.proto";
 import "types/msg_observed_txout.proto";
 import "types/msg_observed_tx_quorum.proto";
+import "types/msg_price_feed.proto";
 import "types/msg_send.proto";
 import "types/msg_set_ip_address.proto";
 import "types/msg_set_node_keys.proto";
@@ -52,6 +53,7 @@ service Msg {
     rpc ProposeUpgrade(MsgProposeUpgrade) returns (MsgEmpty);
     rpc ApproveUpgrade(MsgApproveUpgrade) returns (MsgEmpty);
     rpc RejectUpgrade(MsgRejectUpgrade) returns (MsgEmpty);
+    rpc PriceFeedQuorumBatch(MsgPriceFeedQuorumBatch) returns (MsgEmpty);
 
     // CosmWasm interface cloned in order so that we can register the x/thorchain message server as the server for x/wasm messages, and route through version control
     rpc StoreCode(cosmwasm.wasm.v1.MsgStoreCode) returns (cosmwasm.wasm.v1.MsgStoreCodeResponse);

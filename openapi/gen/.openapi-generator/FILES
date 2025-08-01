@@ -15,6 +15,7 @@ api_liquidity_providers.go
 api_mimir.go
 api_network.go
 api_nodes.go
+api_oracle.go
 api_pool_slip.go
 api_pools.go
 api_queue.go
@@ -100,6 +101,10 @@ docs/NodePreflightStatus.md
 docs/NodePubKeySet.md
 docs/NodesApi.md
 docs/ObservedTx.md
+docs/OracleApi.md
+docs/OraclePrice.md
+docs/OraclePriceResponse.md
+docs/OraclePricesResponse.md
 docs/OutboundDelayStage.md
 docs/OutboundFee.md
 docs/OutboundSignedStage.md
@@ -226,6 +231,9 @@ model_node_keygen_metric.go
 model_node_preflight_status.go
 model_node_pub_key_set.go
 model_observed_tx.go
+model_oracle_price.go
+model_oracle_price_response.go
+model_oracle_prices_response.go
 model_outbound_delay_stage.go
 model_outbound_fee.go
 model_outbound_signed_stage.go

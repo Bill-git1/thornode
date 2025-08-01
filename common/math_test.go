@@ -2,6 +2,7 @@ package common
 
 import (
 	"errors"
+	"math/big"
 
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	. "gopkg.in/check.v1"
@@ -70,4 +71,61 @@ func (s *MathSuite) TestWeightedMeanErrors(c *C) {
 	weightsZero := []cosmos.Uint{cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint()}
 	_, errZero := WeightedMean(valsZero, weightsZero)
 	c.Assert(errZero, DeepEquals, errors.New("total weight is zero"))
+}
+
+func (s *MathSuite) TestMedianAverageDeviation(c *C) {
+	testCases := []struct {
+		Values    []float64
+		Deviation string
+		Median    string
+		Fail      bool
+	}{
+		{
+			Values:    []float64{4.43, 5.35, 1.26, 7.62, 7.11, 1.24, 7.01, 8.18, 9.82, 8.77},
+			Deviation: "1.71",
+			Median:    "7.06",
+		},
+		{
+			Values:    []float64{4.43, 5.35},
+			Deviation: "0.46",
+			Median:    "4.89",
+		},
+		{
+			Values:    []float64{4.43},
+			Deviation: "0.00",
+			Median:    "4.43",
+		},
+		{
+			Values:    []float64{0, 0, 0},
+			Deviation: "0.00",
+			Median:    "0.00",
+		},
+		{
+			Values: []float64{},
+			Fail:   true,
+		},
+		{
+			Values:    []float64{100003, 100006},
+			Deviation: "1.50",
+			Median:    "100004.50",
+		},
+	}
+
+	for _, tc := range testCases {
+		values := make([]*big.Float, len(tc.Values))
+		for i, value := range tc.Values {
+			values[i] = big.NewFloat(value)
+		}
+
+		deviation, median, err := MedianAbsoluteDeviation(values)
+
+		if tc.Fail {
+			c.Assert(err, NotNil)
+			continue
+		}
+
+		c.Assert(err, IsNil)
+		c.Assert(deviation.Text('f', 2), Equals, tc.Deviation)
+		c.Assert(median.Text('f', 2), Equals, tc.Median)
+	}
 }

@@ -185,6 +185,11 @@ func (am AppModule) BeginBlock(goCtx context.Context) error {
 		panic(fmt.Sprintf("Unsupported Version: update your binary (your version: %s, network consensus version: %s)", constants.SWVersion.String(), version.String()))
 	}
 
+	// Clear all oracle prices
+	if err := am.mgr.OracleManager().BeginBlock(ctx); err != nil {
+		ctx.Logger().Error("fail to process oracle manager", "error", err)
+	}
+
 	am.mgr.Keeper().ClearObservingAddresses(ctx)
 
 	am.mgr.GasMgr().BeginBlock()
@@ -199,6 +204,7 @@ func (am AppModule) BeginBlock(goCtx context.Context) error {
 	if err := am.mgr.Keeper().RemoveExpiredUpgradeProposals(ctx); err != nil {
 		ctx.Logger().Error("Failed to remove expired upgrade proposals", "error", err)
 	}
+
 	return nil
 }
 

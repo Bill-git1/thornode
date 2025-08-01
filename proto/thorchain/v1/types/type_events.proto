@@ -385,3 +385,8 @@ message EventTCYUnstake {
   string address = 1 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.Address"];
   string amount = 2 [(gogoproto.customtype) = "cosmossdk.io/math.Uint",(gogoproto.nullable) = false];
 }
+
+message EventOraclePrice {
+  string symbol = 1;
+  string price = 2;
+}

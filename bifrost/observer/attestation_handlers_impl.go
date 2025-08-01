@@ -2,10 +2,14 @@ package observer
 
 import (
 	"context"
+	"encoding/hex"
+	"time"
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
+
+const priceFeedsUpdateDelay = time.Millisecond * 100
 
 // handleObservedTxAttestation processes attestations for observed transactions
 func (s *AttestationGossip) handleObservedTxAttestation(ctx context.Context, tx common.AttestTx) {
@@ -286,4 +290,94 @@ func (s *AttestationGossip) sendErrataAttestationsToThornode(ctx context.Context
 
 	// Mark attestations as sent
 	state.MarkAttestationsSent(isQuorum)
+}
+
+// handlePriceFeedAttestation processes attestations for price feeds
+func (s *AttestationGossip) handlePriceFeedAttestation(ctx context.Context, apf common.AttestPriceFeed) {
+	// Use the pubkey as key
+	k := hex.EncodeToString(apf.Attestation.PubKey)
+
+	// Get the marshaled data for signature verification
+	signBz, err := apf.PriceFeed.GetSignablePayload()
+	if err != nil {
+		s.logger.Error().Err(err).Msg("fail to get signable payload")
+		return
+	}
+
+	// Verify the signature
+	att := apf.Attestation
+	err = verifySignature(signBz, att.Signature, att.PubKey)
+	if err != nil {
+		s.logger.Error().Err(err).Msgf("signature verification failed for %x", att.PubKey)
+		return
+	}
+
+	// We don't collect multiple attestations for price feeds, rather want
+	// to store the most recent price we received for every node
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	state, ok := s.priceFeeds[k]
+	if !ok || state.Item.Time < apf.PriceFeed.Time {
+		// Set new attestation state
+		state = s.priceFeedsPool.NewAttestationState(apf.PriceFeed)
+		state.attestations = []attestationSentState{
+			{attestation: apf.Attestation, sent: false},
+		}
+		s.priceFeeds[k] = state
+
+		// we received an updated price feed, start delay to maybe collect
+		// more updated values before sending them to thornode
+		if s.priceFeedsDelay.IsRunning() {
+			return
+		}
+
+		s.priceFeedsDelay.Start()
+		go func() {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(priceFeedsUpdateDelay):
+				s.sendPriceFeedAttestationsToThornode(ctx)
+				s.priceFeedsDelay.Done()
+			}
+		}()
+	}
+}
+
+// sendPriceFeedAttestationsToThornode sends price feed attestations
+// to thornode via gRPC
+//
+// To avoid calling the endpoint hundred times per update, all
+// (quorum) price feeds are batched into a single request
+func (s *AttestationGossip) sendPriceFeedAttestationsToThornode(
+	ctx context.Context,
+) {
+	qpfb := common.QuorumPriceFeedBatch{
+		QuorumPriceFeeds: []*common.QuorumPriceFeed{},
+	}
+
+	s.mu.Lock()
+	for k, state := range s.priceFeeds {
+		state.mu.Lock()
+
+		qpfb.QuorumPriceFeeds = append(qpfb.QuorumPriceFeeds, &common.QuorumPriceFeed{
+			PriceFeed:    state.Item,
+			Attestations: []*common.Attestation{state.attestations[0].attestation},
+		})
+
+		delete(s.priceFeeds, k)
+		state.mu.Unlock()
+	}
+	s.mu.Unlock()
+
+	if len(qpfb.QuorumPriceFeeds) == 0 {
+		return
+	}
+
+	_, err := s.grpcClient.SendQuorumPriceFeedBatch(ctx, &qpfb)
+	if err != nil {
+		s.logger.Error().Err(err).Msg("fail to send price feed")
+		return
+	}
 }

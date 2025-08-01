@@ -236,6 +236,10 @@ type SwitchManager interface {
 	IsSwitch(_ cosmos.Context, _ common.Asset) bool
 }
 
+type OracleManager interface {
+	BeginBlock(ctx cosmos.Context) error
+}
+
 // Mgrs is an implementation of Manager interface
 type Mgrs struct {
 	currentVersion semver.Version
@@ -254,6 +258,7 @@ type Mgrs struct {
 	securedManager SecuredAssetManager
 	wasmManager    WasmManager
 	switchManager  SwitchManager
+	oracleManager  OracleManager
 
 	K             keeper.Keeper
 	cdc           codec.Codec
@@ -402,6 +407,11 @@ func (mgr *Mgrs) recreateManagers(ctx cosmos.Context, v semver.Version) error {
 		return fmt.Errorf("fail to create switch manager: %w", err)
 	}
 
+	mgr.oracleManager, err = GetOracleManager(v, mgr.K, mgr.eventMgr)
+	if err != nil {
+		return fmt.Errorf("fail to create oracle manager: %w", err)
+	}
+
 	return nil
 }
 
@@ -445,6 +455,8 @@ func (mgr *Mgrs) SecuredAssetManager() SecuredAssetManager { return mgr.securedM
 func (mgr *Mgrs) WasmManager() WasmManager { return mgr.wasmManager }
 
 func (mgr *Mgrs) SwitchManager() SwitchManager { return mgr.switchManager }
+
+func (mgr *Mgrs) OracleManager() OracleManager { return mgr.oracleManager }
 
 // GetKeeper return Keeper
 func GetKeeper(
@@ -580,4 +592,8 @@ func GetWasmManager(ctx cosmos.Context, keeper keeper.Keeper, wasmKeeper wasmkee
 
 func GetSwitchManager(version semver.Version, keeper keeper.Keeper, eventMgr EventManager) (SwitchManager, error) {
 	return newSwitchMgrVCUR(keeper, eventMgr), nil
+}
+
+func GetOracleManager(_ semver.Version, keeper keeper.Keeper, eventMgr EventManager) (OracleManager, error) {
+	return newOracleMgrVCUR(keeper), nil
 }

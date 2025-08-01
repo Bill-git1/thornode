@@ -62,6 +62,7 @@ func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&MsgTCYClaim{}, ModuleName+"/MsgTCYClaim", nil)
 	cdc.RegisterConcrete(&MsgTCYStake{}, ModuleName+"/MsgTCYStake", nil)
 	cdc.RegisterConcrete(&MsgTCYUnstake{}, ModuleName+"/MsgTCYUnstake", nil)
+	cdc.RegisterConcrete(&MsgPriceFeedQuorumBatch{}, ModuleName+"/MsgPriceFeedQuorumBatch", nil)
 }
 
 // RegisterInterfaces register the types
@@ -112,6 +113,7 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 		&MsgTCYClaim{},
 		&MsgTCYStake{},
 		&MsgTCYUnstake{},
+		&MsgPriceFeedQuorumBatch{},
 	)
 
 	msgservice.RegisterMsgServiceDesc(registry, &_Msg_serviceDesc)
@@ -141,4 +143,5 @@ func DefineCustomGetSigners(signingOptions *signing.Options) {
 	signingOptions.DefineCustomGetSigners(protoreflect.FullName("types.MsgProposeUpgrade"), MsgProposeUpgradeCustomGetSigners)
 	signingOptions.DefineCustomGetSigners(protoreflect.FullName("types.MsgApproveUpgrade"), MsgApproveUpgradeCustomGetSigners)
 	signingOptions.DefineCustomGetSigners(protoreflect.FullName("types.MsgRejectUpgrade"), MsgRejectUpgradeCustomGetSigners)
+	signingOptions.DefineCustomGetSigners(protoreflect.FullName("types.MsgPriceFeedQuorumBatch"), MsgPriceFeedQuorumBatchCustomGetSigners)
 }

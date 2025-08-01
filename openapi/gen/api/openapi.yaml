@@ -349,6 +349,62 @@ paths:
           description: OK
       tags:
       - Codes
+  /thorchain/oracle/price/{symbol}:
+    get:
+      description: Returns oracle price for a symbol.
+      operationId: oraclePrice
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      - explode: false
+        in: path
+        name: symbol
+        required: true
+        schema:
+          example: BTC
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OraclePriceResponse'
+          description: OK
+      tags:
+      - Oracle
+  /thorchain/oracle/prices:
+    get:
+      description: Returns all available oracle prices.
+      operationId: oraclePrices
+      parameters:
+      - description: "optional block height, defaults to current tip"
+        explode: true
+        in: query
+        name: height
+        required: false
+        schema:
+          format: int64
+          minimum: 0
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OraclePricesResponse'
+          description: OK
+      tags:
+      - Oracle
   /thorchain/tcy_staker/{address}:
     get:
       description: Returns the tcy staker information for an address.
@@ -2635,6 +2691,15 @@ components:
         example: asgard
         type: string
       style: simple
+    symbol:
+      explode: false
+      in: path
+      name: symbol
+      required: true
+      schema:
+        example: BTC
+        type: string
+      style: simple
   schemas:
     Pool:
       example:
@@ -3067,6 +3132,44 @@ components:
           type: array
         origin:
           example: https://gitlab.com/thorchain/rujira/-/tree/main/contracts/rujira-merge
+          type: string
+      type: object
+    OraclePricesResponse:
+      example:
+        prices:
+        - symbol: BTC
+          amount: "105126.5321"
+        - symbol: BTC
+          amount: "105126.5321"
+      properties:
+        prices:
+          items:
+            $ref: '#/components/schemas/OraclePrice'
+          type: array
+      type: object
+    OraclePriceResponse:
+      example:
+        price:
+        - symbol: BTC
+          amount: "105126.5321"
+        - symbol: BTC
+          amount: "105126.5321"
+      properties:
+        price:
+          items:
+            $ref: '#/components/schemas/OraclePrice'
+          type: array
+      type: object
+    OraclePrice:
+      example:
+        symbol: BTC
+        amount: "105126.5321"
+      properties:
+        symbol:
+          example: BTC
+          type: string
+        amount:
+          example: "105126.5321"
           type: string
       type: object
     TCYStakerSummary:

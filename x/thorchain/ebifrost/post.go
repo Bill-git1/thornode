@@ -2,6 +2,7 @@ package ebifrost
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
@@ -35,6 +36,9 @@ func (e *EnshrinedBifrostPostDecorator) PostHandle(ctx sdk.Context, tx sdk.Tx, s
 			e.EnshrinedBifrost.MarkQuorumSolvencyAttestationsConfirmed(ctx, m.QuoSolvency)
 		case *types.MsgErrataTxQuorum:
 			e.EnshrinedBifrost.MarkQuorumErrataTxAttestationsConfirmed(ctx, m.QuoErrata)
+		case *types.MsgPriceFeedQuorumBatch:
+			batch := common.QuorumPriceFeedBatch{QuorumPriceFeeds: m.QuoPriceFeeds}
+			e.EnshrinedBifrost.MarkQuorumPriceFeedBatchAttestationsConfirmed(ctx, &batch)
 		}
 	}
 

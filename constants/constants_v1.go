@@ -148,8 +148,9 @@ func NewConstantValue() *ConstantVals {
 			StrictBondLiquidityRatio: true,
 		},
 		stringValues: map[ConstantName]string{
-			DefaultPoolStatus: "Staged",
-			DevFundAddress:    "thor1d8c0wv4y72kmlytegjmgx825xwumt9qt5xe07k", // dev fund address for ADR 18,  initially set via to address pre-funded 1M by TC treasury
+			DefaultPoolStatus:  "Staged",
+			DevFundAddress:     "thor1d8c0wv4y72kmlytegjmgx825xwumt9qt5xe07k", // dev fund address for ADR 18,  initially set via to address pre-funded 1M by TC treasury
+			RequiredPriceFeeds: "ATOM,AVAX,BCH,BNB,BTC,DOGE,ETH,LTC,RUNE,SOL,TRX,USDC,USDT,XRP",
 		},
 	}
 }

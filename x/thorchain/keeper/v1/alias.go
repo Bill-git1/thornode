@@ -153,6 +153,8 @@ type (
 	MsgTCYUnstake            = types.MsgTCYUnstake
 	TCYClaimer               = types.TCYClaimer
 	TCYStaker                = types.TCYStaker
+	OraclePrice              = types.OraclePrice
+	PriceFeed                = types.PriceFeed
 
 	ProtoInt64        = types.ProtoInt64
 	ProtoUint64       = types.ProtoUint64

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -3588,6 +3589,36 @@ func (qs queryServer) queryTCYClaimer(ctx cosmos.Context, req *types.QueryTCYCla
 	}
 
 	return &types.QueryTCYClaimerResponse{TcyClaimer: claimsRes}, nil
+}
+
+// queryOraclePrices
+func (qs queryServer) queryOraclePrices(ctx cosmos.Context, _ *types.QueryOraclePricesRequest) (*types.QueryOraclePricesResponse, error) {
+	var prices []*OraclePrice
+
+	iterator := qs.mgr.Keeper().GetPriceIterator(ctx)
+	defer iterator.Close()
+
+	for ; iterator.Valid(); iterator.Next() {
+		var price OraclePrice
+		qs.mgr.Keeper().Cdc().MustUnmarshal(iterator.Value(), &price)
+		prices = append(prices, &price)
+	}
+
+	sort.Slice(prices, func(i, j int) bool {
+		return prices[i].Symbol < prices[j].Symbol
+	})
+
+	return &types.QueryOraclePricesResponse{Prices: prices}, nil
+}
+
+// queryOraclePrice
+func (qs queryServer) queryOraclePrice(ctx cosmos.Context, req *types.QueryOraclePriceRequest) (*types.QueryOraclePriceResponse, error) {
+	price, err := qs.mgr.Keeper().GetPrice(ctx, req.Symbol)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get price for symbol '%s': %w", req.Symbol, err)
+	}
+
+	return &types.QueryOraclePriceResponse{Price: &price}, nil
 }
 
 func (qs queryServer) queryEip712TypedData(_ cosmos.Context, req *types.QueryEip712TypedDataRequest) (*types.QueryEip712TypedDataResponse, error) {

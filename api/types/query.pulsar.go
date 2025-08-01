@@ -112,8 +112,10 @@ var file_types_query_proto_rawDesc = []byte{
 	0x2f, 0x71, 0x75, 0x65, 0x72, 0x79, 0x5f, 0x74, 0x63, 0x79, 0x5f, 0x63, 0x6c, 0x61, 0x69, 0x6d,
 	0x65, 0x72, 0x73, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x17, 0x74, 0x79, 0x70, 0x65, 0x73,
 	0x2f, 0x71, 0x75, 0x65, 0x72, 0x79, 0x5f, 0x63, 0x6f, 0x64, 0x65, 0x73, 0x2e, 0x70, 0x72, 0x6f,
+	0x74, 0x6f, 0x1a, 0x1e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2f, 0x71, 0x75, 0x65, 0x72, 0x79, 0x5f,
+	0x6f, 0x72, 0x61, 0x63, 0x6c, 0x65, 0x5f, 0x70, 0x72, 0x69, 0x63, 0x65, 0x2e, 0x70, 0x72, 0x6f,
 	0x74, 0x6f, 0x1a, 0x18, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2f, 0x71, 0x75, 0x65, 0x72, 0x79, 0x5f,
-	0x65, 0x69, 0x70, 0x37, 0x31, 0x32, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x32, 0xda, 0x48, 0x0a,
+	0x65, 0x69, 0x70, 0x37, 0x31, 0x32, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x32, 0xc9, 0x4a, 0x0a,
 	0x05, 0x51, 0x75, 0x65, 0x72, 0x79, 0x12, 0x64, 0x0a, 0x07, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e,
 	0x74, 0x12, 0x1a, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x51, 0x75, 0x65, 0x72, 0x79, 0x41,
 	0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1b, 0x2e,
@@ -688,22 +690,37 @@ var file_types_query_proto_rawDesc = []byte{
 	0x61, 0x69, 0x6d, 0x65, 0x72, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x1f,
 	0x82, 0xd3, 0xe4, 0x93, 0x02, 0x19, 0x12, 0x17, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61,
 	0x69, 0x6e, 0x2f, 0x74, 0x63, 0x79, 0x5f, 0x63, 0x6c, 0x61, 0x69, 0x6d, 0x65, 0x72, 0x73, 0x12,
-	0x78, 0x0a, 0x0f, 0x45, 0x69, 0x70, 0x37, 0x31, 0x32, 0x54, 0x79, 0x70, 0x65, 0x64, 0x44, 0x61,
-	0x74, 0x61, 0x12, 0x22, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x51, 0x75, 0x65, 0x72, 0x79,
-	0x45, 0x69, 0x70, 0x37, 0x31, 0x32, 0x54, 0x79, 0x70, 0x65, 0x64, 0x44, 0x61, 0x74, 0x61, 0x52,
-	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x23, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x51,
-	0x75, 0x65, 0x72, 0x79, 0x45, 0x69, 0x70, 0x37, 0x31, 0x32, 0x54, 0x79, 0x70, 0x65, 0x64, 0x44,
-	0x61, 0x74, 0x61, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x1c, 0x82, 0xd3, 0xe4,
-	0x93, 0x02, 0x16, 0x12, 0x14, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f,
-	0x65, 0x69, 0x70, 0x37, 0x31, 0x35, 0x2f, 0x74, 0x78, 0x42, 0x7b, 0x0a, 0x09, 0x63, 0x6f, 0x6d,
-	0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x42, 0x0a, 0x51, 0x75, 0x65, 0x72, 0x79, 0x50, 0x72, 0x6f,
-	0x74, 0x6f, 0x50, 0x01, 0x5a, 0x2a, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d,
-	0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e,
-	0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x73,
-	0xa2, 0x02, 0x03, 0x54, 0x58, 0x58, 0xaa, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xca, 0x02,
-	0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xe2, 0x02, 0x11, 0x54, 0x79, 0x70, 0x65, 0x73, 0x5c, 0x47,
-	0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x05, 0x54, 0x79, 0x70,
-	0x65, 0x73, 0xc8, 0xe2, 0x1e, 0x01, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x73, 0x0a, 0x0c, 0x4f, 0x72, 0x61, 0x63, 0x6c, 0x65, 0x50, 0x72, 0x69, 0x63, 0x65, 0x73, 0x12,
+	0x1f, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x51, 0x75, 0x65, 0x72, 0x79, 0x4f, 0x72, 0x61,
+	0x63, 0x6c, 0x65, 0x50, 0x72, 0x69, 0x63, 0x65, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x1a, 0x20, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x51, 0x75, 0x65, 0x72, 0x79, 0x4f, 0x72,
+	0x61, 0x63, 0x6c, 0x65, 0x50, 0x72, 0x69, 0x63, 0x65, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x22, 0x20, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x1a, 0x12, 0x18, 0x2f, 0x74, 0x68, 0x6f,
+	0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x6f, 0x72, 0x61, 0x63, 0x6c, 0x65, 0x2f, 0x70, 0x72,
+	0x69, 0x63, 0x65, 0x73, 0x12, 0x78, 0x0a, 0x0b, 0x4f, 0x72, 0x61, 0x63, 0x6c, 0x65, 0x50, 0x72,
+	0x69, 0x63, 0x65, 0x12, 0x1e, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x51, 0x75, 0x65, 0x72,
+	0x79, 0x4f, 0x72, 0x61, 0x63, 0x6c, 0x65, 0x50, 0x72, 0x69, 0x63, 0x65, 0x52, 0x65, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x1a, 0x1f, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x51, 0x75, 0x65, 0x72,
+	0x79, 0x4f, 0x72, 0x61, 0x63, 0x6c, 0x65, 0x50, 0x72, 0x69, 0x63, 0x65, 0x52, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x22, 0x28, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x22, 0x12, 0x20, 0x2f, 0x74,
+	0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x6f, 0x72, 0x61, 0x63, 0x6c, 0x65, 0x2f,
+	0x70, 0x72, 0x69, 0x63, 0x65, 0x2f, 0x7b, 0x73, 0x79, 0x6d, 0x62, 0x6f, 0x6c, 0x7d, 0x12, 0x78,
+	0x0a, 0x0f, 0x45, 0x69, 0x70, 0x37, 0x31, 0x32, 0x54, 0x79, 0x70, 0x65, 0x64, 0x44, 0x61, 0x74,
+	0x61, 0x12, 0x22, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x51, 0x75, 0x65, 0x72, 0x79, 0x45,
+	0x69, 0x70, 0x37, 0x31, 0x32, 0x54, 0x79, 0x70, 0x65, 0x64, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x23, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x51, 0x75,
+	0x65, 0x72, 0x79, 0x45, 0x69, 0x70, 0x37, 0x31, 0x32, 0x54, 0x79, 0x70, 0x65, 0x64, 0x44, 0x61,
+	0x74, 0x61, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x1c, 0x82, 0xd3, 0xe4, 0x93,
+	0x02, 0x16, 0x12, 0x14, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x65,
+	0x69, 0x70, 0x37, 0x31, 0x35, 0x2f, 0x74, 0x78, 0x42, 0x7b, 0x0a, 0x09, 0x63, 0x6f, 0x6d, 0x2e,
+	0x74, 0x79, 0x70, 0x65, 0x73, 0x42, 0x0a, 0x51, 0x75, 0x65, 0x72, 0x79, 0x50, 0x72, 0x6f, 0x74,
+	0x6f, 0x50, 0x01, 0x5a, 0x2a, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f,
+	0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f,
+	0x64, 0x65, 0x2f, 0x76, 0x33, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x73, 0xa2,
+	0x02, 0x03, 0x54, 0x58, 0x58, 0xaa, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xca, 0x02, 0x05,
+	0x54, 0x79, 0x70, 0x65, 0x73, 0xe2, 0x02, 0x11, 0x54, 0x79, 0x70, 0x65, 0x73, 0x5c, 0x47, 0x50,
+	0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65,
+	0x73, 0xc8, 0xe2, 0x1e, 0x01, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var file_types_query_proto_goTypes = []interface{}{
@@ -786,81 +803,85 @@ var file_types_query_proto_goTypes = []interface{}{
 	(*QueryTCYStakersRequest)(nil),           // 76: types.QueryTCYStakersRequest
 	(*QueryTCYClaimerRequest)(nil),           // 77: types.QueryTCYClaimerRequest
 	(*QueryTCYClaimersRequest)(nil),          // 78: types.QueryTCYClaimersRequest
-	(*QueryEip712TypedDataRequest)(nil),      // 79: types.QueryEip712TypedDataRequest
-	(*QueryAccountResponse)(nil),             // 80: types.QueryAccountResponse
-	(*QueryBalancesResponse)(nil),            // 81: types.QueryBalancesResponse
-	(*QueryExportResponse)(nil),              // 82: types.QueryExportResponse
-	(*QueryPoolResponse)(nil),                // 83: types.QueryPoolResponse
-	(*QueryPoolsResponse)(nil),               // 84: types.QueryPoolsResponse
-	(*QueryDerivedPoolResponse)(nil),         // 85: types.QueryDerivedPoolResponse
-	(*QueryDerivedPoolsResponse)(nil),        // 86: types.QueryDerivedPoolsResponse
-	(*QueryLiquidityProviderResponse)(nil),   // 87: types.QueryLiquidityProviderResponse
-	(*QueryLiquidityProvidersResponse)(nil),  // 88: types.QueryLiquidityProvidersResponse
-	(*QuerySaverResponse)(nil),               // 89: types.QuerySaverResponse
-	(*QuerySaversResponse)(nil),              // 90: types.QuerySaversResponse
-	(*QueryBorrowerResponse)(nil),            // 91: types.QueryBorrowerResponse
-	(*QueryBorrowersResponse)(nil),           // 92: types.QueryBorrowersResponse
-	(*QueryTradeUnitResponse)(nil),           // 93: types.QueryTradeUnitResponse
-	(*QueryTradeUnitsResponse)(nil),          // 94: types.QueryTradeUnitsResponse
-	(*QueryTradeAccountsResponse)(nil),       // 95: types.QueryTradeAccountsResponse
-	(*QuerySecuredAssetResponse)(nil),        // 96: types.QuerySecuredAssetResponse
-	(*QuerySecuredAssetsResponse)(nil),       // 97: types.QuerySecuredAssetsResponse
-	(*QueryNodeResponse)(nil),                // 98: types.QueryNodeResponse
-	(*QueryNodesResponse)(nil),               // 99: types.QueryNodesResponse
-	(*QueryPoolSlipsResponse)(nil),           // 100: types.QueryPoolSlipsResponse
-	(*QueryOutboundFeesResponse)(nil),        // 101: types.QueryOutboundFeesResponse
-	(*QueryStreamingSwapResponse)(nil),       // 102: types.QueryStreamingSwapResponse
-	(*QueryStreamingSwapsResponse)(nil),      // 103: types.QueryStreamingSwapsResponse
-	(*BanVoter)(nil),                         // 104: types.BanVoter
-	(*QueryRagnarokResponse)(nil),            // 105: types.QueryRagnarokResponse
-	(*QueryRunePoolResponse)(nil),            // 106: types.QueryRunePoolResponse
-	(*QueryRuneProviderResponse)(nil),        // 107: types.QueryRuneProviderResponse
-	(*QueryRuneProvidersResponse)(nil),       // 108: types.QueryRuneProvidersResponse
-	(*QueryMimirValuesResponse)(nil),         // 109: types.QueryMimirValuesResponse
-	(*QueryMimirWithKeyResponse)(nil),        // 110: types.QueryMimirWithKeyResponse
-	(*QueryMimirAdminValuesResponse)(nil),    // 111: types.QueryMimirAdminValuesResponse
-	(*QueryMimirNodesAllValuesResponse)(nil), // 112: types.QueryMimirNodesAllValuesResponse
-	(*QueryMimirNodesValuesResponse)(nil),    // 113: types.QueryMimirNodesValuesResponse
-	(*QueryMimirNodeValuesResponse)(nil),     // 114: types.QueryMimirNodeValuesResponse
-	(*QueryInboundAddressesResponse)(nil),    // 115: types.QueryInboundAddressesResponse
-	(*QueryVersionResponse)(nil),             // 116: types.QueryVersionResponse
-	(*QueryThornameResponse)(nil),            // 117: types.QueryThornameResponse
-	(*QueryInvariantResponse)(nil),           // 118: types.QueryInvariantResponse
-	(*QueryInvariantsResponse)(nil),          // 119: types.QueryInvariantsResponse
-	(*QueryNetworkResponse)(nil),             // 120: types.QueryNetworkResponse
-	(*QueryBalanceModuleResponse)(nil),       // 121: types.QueryBalanceModuleResponse
-	(*QueryQuoteSwapResponse)(nil),           // 122: types.QueryQuoteSwapResponse
-	(*QueryQuoteSaverDepositResponse)(nil),   // 123: types.QueryQuoteSaverDepositResponse
-	(*QueryQuoteSaverWithdrawResponse)(nil),  // 124: types.QueryQuoteSaverWithdrawResponse
-	(*QueryQuoteLoanOpenResponse)(nil),       // 125: types.QueryQuoteLoanOpenResponse
-	(*QueryQuoteLoanCloseResponse)(nil),      // 126: types.QueryQuoteLoanCloseResponse
-	(*QueryConstantValuesResponse)(nil),      // 127: types.QueryConstantValuesResponse
-	(*QuerySwapQueueResponse)(nil),           // 128: types.QuerySwapQueueResponse
-	(*QuerySwapDetailsResponse)(nil),         // 129: types.QuerySwapDetailsResponse
-	(*QueryLastBlocksResponse)(nil),          // 130: types.QueryLastBlocksResponse
-	(*QueryVaultResponse)(nil),               // 131: types.QueryVaultResponse
-	(*QueryAsgardVaultsResponse)(nil),        // 132: types.QueryAsgardVaultsResponse
-	(*QueryVaultsPubkeysResponse)(nil),       // 133: types.QueryVaultsPubkeysResponse
-	(*QueryTxStagesResponse)(nil),            // 134: types.QueryTxStagesResponse
-	(*QueryTxStatusResponse)(nil),            // 135: types.QueryTxStatusResponse
-	(*QueryTxResponse)(nil),                  // 136: types.QueryTxResponse
-	(*QueryObservedTxVoter)(nil),             // 137: types.QueryObservedTxVoter
-	(*SwapperClout)(nil),                     // 138: types.SwapperClout
-	(*QueryQueueResponse)(nil),               // 139: types.QueryQueueResponse
-	(*QueryOutboundResponse)(nil),            // 140: types.QueryOutboundResponse
-	(*QueryBlockResponse)(nil),               // 141: types.QueryBlockResponse
-	(*QueryTssKeygenMetricResponse)(nil),     // 142: types.QueryTssKeygenMetricResponse
-	(*QueryTssMetricResponse)(nil),           // 143: types.QueryTssMetricResponse
-	(*QueryKeysignResponse)(nil),             // 144: types.QueryKeysignResponse
-	(*QueryKeygenResponse)(nil),              // 145: types.QueryKeygenResponse
-	(*QueryUpgradeProposalsResponse)(nil),    // 146: types.QueryUpgradeProposalsResponse
-	(*QueryUpgradeProposalResponse)(nil),     // 147: types.QueryUpgradeProposalResponse
-	(*QueryUpgradeVotesResponse)(nil),        // 148: types.QueryUpgradeVotesResponse
-	(*QueryTCYStakerResponse)(nil),           // 149: types.QueryTCYStakerResponse
-	(*QueryTCYStakersResponse)(nil),          // 150: types.QueryTCYStakersResponse
-	(*QueryTCYClaimerResponse)(nil),          // 151: types.QueryTCYClaimerResponse
-	(*QueryTCYClaimersResponse)(nil),         // 152: types.QueryTCYClaimersResponse
-	(*QueryEip712TypedDataResponse)(nil),     // 153: types.QueryEip712TypedDataResponse
+	(*QueryOraclePricesRequest)(nil),         // 79: types.QueryOraclePricesRequest
+	(*QueryOraclePriceRequest)(nil),          // 80: types.QueryOraclePriceRequest
+	(*QueryEip712TypedDataRequest)(nil),      // 81: types.QueryEip712TypedDataRequest
+	(*QueryAccountResponse)(nil),             // 82: types.QueryAccountResponse
+	(*QueryBalancesResponse)(nil),            // 83: types.QueryBalancesResponse
+	(*QueryExportResponse)(nil),              // 84: types.QueryExportResponse
+	(*QueryPoolResponse)(nil),                // 85: types.QueryPoolResponse
+	(*QueryPoolsResponse)(nil),               // 86: types.QueryPoolsResponse
+	(*QueryDerivedPoolResponse)(nil),         // 87: types.QueryDerivedPoolResponse
+	(*QueryDerivedPoolsResponse)(nil),        // 88: types.QueryDerivedPoolsResponse
+	(*QueryLiquidityProviderResponse)(nil),   // 89: types.QueryLiquidityProviderResponse
+	(*QueryLiquidityProvidersResponse)(nil),  // 90: types.QueryLiquidityProvidersResponse
+	(*QuerySaverResponse)(nil),               // 91: types.QuerySaverResponse
+	(*QuerySaversResponse)(nil),              // 92: types.QuerySaversResponse
+	(*QueryBorrowerResponse)(nil),            // 93: types.QueryBorrowerResponse
+	(*QueryBorrowersResponse)(nil),           // 94: types.QueryBorrowersResponse
+	(*QueryTradeUnitResponse)(nil),           // 95: types.QueryTradeUnitResponse
+	(*QueryTradeUnitsResponse)(nil),          // 96: types.QueryTradeUnitsResponse
+	(*QueryTradeAccountsResponse)(nil),       // 97: types.QueryTradeAccountsResponse
+	(*QuerySecuredAssetResponse)(nil),        // 98: types.QuerySecuredAssetResponse
+	(*QuerySecuredAssetsResponse)(nil),       // 99: types.QuerySecuredAssetsResponse
+	(*QueryNodeResponse)(nil),                // 100: types.QueryNodeResponse
+	(*QueryNodesResponse)(nil),               // 101: types.QueryNodesResponse
+	(*QueryPoolSlipsResponse)(nil),           // 102: types.QueryPoolSlipsResponse
+	(*QueryOutboundFeesResponse)(nil),        // 103: types.QueryOutboundFeesResponse
+	(*QueryStreamingSwapResponse)(nil),       // 104: types.QueryStreamingSwapResponse
+	(*QueryStreamingSwapsResponse)(nil),      // 105: types.QueryStreamingSwapsResponse
+	(*BanVoter)(nil),                         // 106: types.BanVoter
+	(*QueryRagnarokResponse)(nil),            // 107: types.QueryRagnarokResponse
+	(*QueryRunePoolResponse)(nil),            // 108: types.QueryRunePoolResponse
+	(*QueryRuneProviderResponse)(nil),        // 109: types.QueryRuneProviderResponse
+	(*QueryRuneProvidersResponse)(nil),       // 110: types.QueryRuneProvidersResponse
+	(*QueryMimirValuesResponse)(nil),         // 111: types.QueryMimirValuesResponse
+	(*QueryMimirWithKeyResponse)(nil),        // 112: types.QueryMimirWithKeyResponse
+	(*QueryMimirAdminValuesResponse)(nil),    // 113: types.QueryMimirAdminValuesResponse
+	(*QueryMimirNodesAllValuesResponse)(nil), // 114: types.QueryMimirNodesAllValuesResponse
+	(*QueryMimirNodesValuesResponse)(nil),    // 115: types.QueryMimirNodesValuesResponse
+	(*QueryMimirNodeValuesResponse)(nil),     // 116: types.QueryMimirNodeValuesResponse
+	(*QueryInboundAddressesResponse)(nil),    // 117: types.QueryInboundAddressesResponse
+	(*QueryVersionResponse)(nil),             // 118: types.QueryVersionResponse
+	(*QueryThornameResponse)(nil),            // 119: types.QueryThornameResponse
+	(*QueryInvariantResponse)(nil),           // 120: types.QueryInvariantResponse
+	(*QueryInvariantsResponse)(nil),          // 121: types.QueryInvariantsResponse
+	(*QueryNetworkResponse)(nil),             // 122: types.QueryNetworkResponse
+	(*QueryBalanceModuleResponse)(nil),       // 123: types.QueryBalanceModuleResponse
+	(*QueryQuoteSwapResponse)(nil),           // 124: types.QueryQuoteSwapResponse
+	(*QueryQuoteSaverDepositResponse)(nil),   // 125: types.QueryQuoteSaverDepositResponse
+	(*QueryQuoteSaverWithdrawResponse)(nil),  // 126: types.QueryQuoteSaverWithdrawResponse
+	(*QueryQuoteLoanOpenResponse)(nil),       // 127: types.QueryQuoteLoanOpenResponse
+	(*QueryQuoteLoanCloseResponse)(nil),      // 128: types.QueryQuoteLoanCloseResponse
+	(*QueryConstantValuesResponse)(nil),      // 129: types.QueryConstantValuesResponse
+	(*QuerySwapQueueResponse)(nil),           // 130: types.QuerySwapQueueResponse
+	(*QuerySwapDetailsResponse)(nil),         // 131: types.QuerySwapDetailsResponse
+	(*QueryLastBlocksResponse)(nil),          // 132: types.QueryLastBlocksResponse
+	(*QueryVaultResponse)(nil),               // 133: types.QueryVaultResponse
+	(*QueryAsgardVaultsResponse)(nil),        // 134: types.QueryAsgardVaultsResponse
+	(*QueryVaultsPubkeysResponse)(nil),       // 135: types.QueryVaultsPubkeysResponse
+	(*QueryTxStagesResponse)(nil),            // 136: types.QueryTxStagesResponse
+	(*QueryTxStatusResponse)(nil),            // 137: types.QueryTxStatusResponse
+	(*QueryTxResponse)(nil),                  // 138: types.QueryTxResponse
+	(*QueryObservedTxVoter)(nil),             // 139: types.QueryObservedTxVoter
+	(*SwapperClout)(nil),                     // 140: types.SwapperClout
+	(*QueryQueueResponse)(nil),               // 141: types.QueryQueueResponse
+	(*QueryOutboundResponse)(nil),            // 142: types.QueryOutboundResponse
+	(*QueryBlockResponse)(nil),               // 143: types.QueryBlockResponse
+	(*QueryTssKeygenMetricResponse)(nil),     // 144: types.QueryTssKeygenMetricResponse
+	(*QueryTssMetricResponse)(nil),           // 145: types.QueryTssMetricResponse
+	(*QueryKeysignResponse)(nil),             // 146: types.QueryKeysignResponse
+	(*QueryKeygenResponse)(nil),              // 147: types.QueryKeygenResponse
+	(*QueryUpgradeProposalsResponse)(nil),    // 148: types.QueryUpgradeProposalsResponse
+	(*QueryUpgradeProposalResponse)(nil),     // 149: types.QueryUpgradeProposalResponse
+	(*QueryUpgradeVotesResponse)(nil),        // 150: types.QueryUpgradeVotesResponse
+	(*QueryTCYStakerResponse)(nil),           // 151: types.QueryTCYStakerResponse
+	(*QueryTCYStakersResponse)(nil),          // 152: types.QueryTCYStakersResponse
+	(*QueryTCYClaimerResponse)(nil),          // 153: types.QueryTCYClaimerResponse
+	(*QueryTCYClaimersResponse)(nil),         // 154: types.QueryTCYClaimersResponse
+	(*QueryOraclePricesResponse)(nil),        // 155: types.QueryOraclePricesResponse
+	(*QueryOraclePriceResponse)(nil),         // 156: types.QueryOraclePriceResponse
+	(*QueryEip712TypedDataResponse)(nil),     // 157: types.QueryEip712TypedDataResponse
 }
 var file_types_query_proto_depIdxs = []int32{
 	0,   // 0: types.Query.Account:input_type -> types.QueryAccountRequest
@@ -943,90 +964,94 @@ var file_types_query_proto_depIdxs = []int32{
 	76,  // 77: types.Query.TCYStakers:input_type -> types.QueryTCYStakersRequest
 	77,  // 78: types.Query.TCYClaimer:input_type -> types.QueryTCYClaimerRequest
 	78,  // 79: types.Query.TCYClaimers:input_type -> types.QueryTCYClaimersRequest
-	79,  // 80: types.Query.Eip712TypedData:input_type -> types.QueryEip712TypedDataRequest
-	80,  // 81: types.Query.Account:output_type -> types.QueryAccountResponse
-	81,  // 82: types.Query.Balances:output_type -> types.QueryBalancesResponse
-	82,  // 83: types.Query.Export:output_type -> types.QueryExportResponse
-	83,  // 84: types.Query.Pool:output_type -> types.QueryPoolResponse
-	84,  // 85: types.Query.Pools:output_type -> types.QueryPoolsResponse
-	85,  // 86: types.Query.DerivedPool:output_type -> types.QueryDerivedPoolResponse
-	86,  // 87: types.Query.DerivedPools:output_type -> types.QueryDerivedPoolsResponse
-	87,  // 88: types.Query.LiquidityProvider:output_type -> types.QueryLiquidityProviderResponse
-	88,  // 89: types.Query.LiquidityProviders:output_type -> types.QueryLiquidityProvidersResponse
-	89,  // 90: types.Query.Saver:output_type -> types.QuerySaverResponse
-	90,  // 91: types.Query.Savers:output_type -> types.QuerySaversResponse
-	91,  // 92: types.Query.Borrower:output_type -> types.QueryBorrowerResponse
-	92,  // 93: types.Query.Borrowers:output_type -> types.QueryBorrowersResponse
-	93,  // 94: types.Query.TradeUnit:output_type -> types.QueryTradeUnitResponse
-	94,  // 95: types.Query.TradeUnits:output_type -> types.QueryTradeUnitsResponse
-	95,  // 96: types.Query.TradeAccount:output_type -> types.QueryTradeAccountsResponse
-	95,  // 97: types.Query.TradeAccounts:output_type -> types.QueryTradeAccountsResponse
-	96,  // 98: types.Query.SecuredAsset:output_type -> types.QuerySecuredAssetResponse
-	97,  // 99: types.Query.SecuredAssets:output_type -> types.QuerySecuredAssetsResponse
-	98,  // 100: types.Query.Node:output_type -> types.QueryNodeResponse
-	99,  // 101: types.Query.Nodes:output_type -> types.QueryNodesResponse
-	100, // 102: types.Query.PoolSlip:output_type -> types.QueryPoolSlipsResponse
-	100, // 103: types.Query.PoolSlips:output_type -> types.QueryPoolSlipsResponse
-	101, // 104: types.Query.OutboundFee:output_type -> types.QueryOutboundFeesResponse
-	101, // 105: types.Query.OutboundFees:output_type -> types.QueryOutboundFeesResponse
-	102, // 106: types.Query.StreamingSwap:output_type -> types.QueryStreamingSwapResponse
-	103, // 107: types.Query.StreamingSwaps:output_type -> types.QueryStreamingSwapsResponse
-	104, // 108: types.Query.Ban:output_type -> types.BanVoter
-	105, // 109: types.Query.Ragnarok:output_type -> types.QueryRagnarokResponse
-	106, // 110: types.Query.RunePool:output_type -> types.QueryRunePoolResponse
-	107, // 111: types.Query.RuneProvider:output_type -> types.QueryRuneProviderResponse
-	108, // 112: types.Query.RuneProviders:output_type -> types.QueryRuneProvidersResponse
-	109, // 113: types.Query.MimirValues:output_type -> types.QueryMimirValuesResponse
-	110, // 114: types.Query.MimirWithKey:output_type -> types.QueryMimirWithKeyResponse
-	111, // 115: types.Query.MimirAdminValues:output_type -> types.QueryMimirAdminValuesResponse
-	112, // 116: types.Query.MimirNodesAllValues:output_type -> types.QueryMimirNodesAllValuesResponse
-	113, // 117: types.Query.MimirNodesValues:output_type -> types.QueryMimirNodesValuesResponse
-	114, // 118: types.Query.MimirNodeValues:output_type -> types.QueryMimirNodeValuesResponse
-	115, // 119: types.Query.InboundAddresses:output_type -> types.QueryInboundAddressesResponse
-	116, // 120: types.Query.Version:output_type -> types.QueryVersionResponse
-	117, // 121: types.Query.Thorname:output_type -> types.QueryThornameResponse
-	118, // 122: types.Query.Invariant:output_type -> types.QueryInvariantResponse
-	119, // 123: types.Query.Invariants:output_type -> types.QueryInvariantsResponse
-	120, // 124: types.Query.Network:output_type -> types.QueryNetworkResponse
-	121, // 125: types.Query.BalanceModule:output_type -> types.QueryBalanceModuleResponse
-	122, // 126: types.Query.QuoteSwap:output_type -> types.QueryQuoteSwapResponse
-	123, // 127: types.Query.QuoteSaverDeposit:output_type -> types.QueryQuoteSaverDepositResponse
-	124, // 128: types.Query.QuoteSaverWithdraw:output_type -> types.QueryQuoteSaverWithdrawResponse
-	125, // 129: types.Query.QuoteLoanOpen:output_type -> types.QueryQuoteLoanOpenResponse
-	126, // 130: types.Query.QuoteLoanClose:output_type -> types.QueryQuoteLoanCloseResponse
-	127, // 131: types.Query.ConstantValues:output_type -> types.QueryConstantValuesResponse
-	128, // 132: types.Query.SwapQueue:output_type -> types.QuerySwapQueueResponse
-	129, // 133: types.Query.SwapDetails:output_type -> types.QuerySwapDetailsResponse
-	130, // 134: types.Query.LastBlocks:output_type -> types.QueryLastBlocksResponse
-	130, // 135: types.Query.ChainsLastBlock:output_type -> types.QueryLastBlocksResponse
-	131, // 136: types.Query.Vault:output_type -> types.QueryVaultResponse
-	132, // 137: types.Query.AsgardVaults:output_type -> types.QueryAsgardVaultsResponse
-	133, // 138: types.Query.VaultsPubkeys:output_type -> types.QueryVaultsPubkeysResponse
-	134, // 139: types.Query.TxStages:output_type -> types.QueryTxStagesResponse
-	135, // 140: types.Query.TxStatus:output_type -> types.QueryTxStatusResponse
-	136, // 141: types.Query.Tx:output_type -> types.QueryTxResponse
-	137, // 142: types.Query.TxVoters:output_type -> types.QueryObservedTxVoter
-	137, // 143: types.Query.TxVotersOld:output_type -> types.QueryObservedTxVoter
-	138, // 144: types.Query.Clout:output_type -> types.SwapperClout
-	139, // 145: types.Query.Queue:output_type -> types.QueryQueueResponse
-	140, // 146: types.Query.ScheduledOutbound:output_type -> types.QueryOutboundResponse
-	140, // 147: types.Query.PendingOutbound:output_type -> types.QueryOutboundResponse
-	141, // 148: types.Query.Block:output_type -> types.QueryBlockResponse
-	142, // 149: types.Query.TssKeygenMetric:output_type -> types.QueryTssKeygenMetricResponse
-	143, // 150: types.Query.TssMetric:output_type -> types.QueryTssMetricResponse
-	144, // 151: types.Query.Keysign:output_type -> types.QueryKeysignResponse
-	144, // 152: types.Query.KeysignPubkey:output_type -> types.QueryKeysignResponse
-	145, // 153: types.Query.Keygen:output_type -> types.QueryKeygenResponse
-	146, // 154: types.Query.UpgradeProposals:output_type -> types.QueryUpgradeProposalsResponse
-	147, // 155: types.Query.UpgradeProposal:output_type -> types.QueryUpgradeProposalResponse
-	148, // 156: types.Query.UpgradeVotes:output_type -> types.QueryUpgradeVotesResponse
-	149, // 157: types.Query.TCYStaker:output_type -> types.QueryTCYStakerResponse
-	150, // 158: types.Query.TCYStakers:output_type -> types.QueryTCYStakersResponse
-	151, // 159: types.Query.TCYClaimer:output_type -> types.QueryTCYClaimerResponse
-	152, // 160: types.Query.TCYClaimers:output_type -> types.QueryTCYClaimersResponse
-	153, // 161: types.Query.Eip712TypedData:output_type -> types.QueryEip712TypedDataResponse
-	81,  // [81:162] is the sub-list for method output_type
-	0,   // [0:81] is the sub-list for method input_type
+	79,  // 80: types.Query.OraclePrices:input_type -> types.QueryOraclePricesRequest
+	80,  // 81: types.Query.OraclePrice:input_type -> types.QueryOraclePriceRequest
+	81,  // 82: types.Query.Eip712TypedData:input_type -> types.QueryEip712TypedDataRequest
+	82,  // 83: types.Query.Account:output_type -> types.QueryAccountResponse
+	83,  // 84: types.Query.Balances:output_type -> types.QueryBalancesResponse
+	84,  // 85: types.Query.Export:output_type -> types.QueryExportResponse
+	85,  // 86: types.Query.Pool:output_type -> types.QueryPoolResponse
+	86,  // 87: types.Query.Pools:output_type -> types.QueryPoolsResponse
+	87,  // 88: types.Query.DerivedPool:output_type -> types.QueryDerivedPoolResponse
+	88,  // 89: types.Query.DerivedPools:output_type -> types.QueryDerivedPoolsResponse
+	89,  // 90: types.Query.LiquidityProvider:output_type -> types.QueryLiquidityProviderResponse
+	90,  // 91: types.Query.LiquidityProviders:output_type -> types.QueryLiquidityProvidersResponse
+	91,  // 92: types.Query.Saver:output_type -> types.QuerySaverResponse
+	92,  // 93: types.Query.Savers:output_type -> types.QuerySaversResponse
+	93,  // 94: types.Query.Borrower:output_type -> types.QueryBorrowerResponse
+	94,  // 95: types.Query.Borrowers:output_type -> types.QueryBorrowersResponse
+	95,  // 96: types.Query.TradeUnit:output_type -> types.QueryTradeUnitResponse
+	96,  // 97: types.Query.TradeUnits:output_type -> types.QueryTradeUnitsResponse
+	97,  // 98: types.Query.TradeAccount:output_type -> types.QueryTradeAccountsResponse
+	97,  // 99: types.Query.TradeAccounts:output_type -> types.QueryTradeAccountsResponse
+	98,  // 100: types.Query.SecuredAsset:output_type -> types.QuerySecuredAssetResponse
+	99,  // 101: types.Query.SecuredAssets:output_type -> types.QuerySecuredAssetsResponse
+	100, // 102: types.Query.Node:output_type -> types.QueryNodeResponse
+	101, // 103: types.Query.Nodes:output_type -> types.QueryNodesResponse
+	102, // 104: types.Query.PoolSlip:output_type -> types.QueryPoolSlipsResponse
+	102, // 105: types.Query.PoolSlips:output_type -> types.QueryPoolSlipsResponse
+	103, // 106: types.Query.OutboundFee:output_type -> types.QueryOutboundFeesResponse
+	103, // 107: types.Query.OutboundFees:output_type -> types.QueryOutboundFeesResponse
+	104, // 108: types.Query.StreamingSwap:output_type -> types.QueryStreamingSwapResponse
+	105, // 109: types.Query.StreamingSwaps:output_type -> types.QueryStreamingSwapsResponse
+	106, // 110: types.Query.Ban:output_type -> types.BanVoter
+	107, // 111: types.Query.Ragnarok:output_type -> types.QueryRagnarokResponse
+	108, // 112: types.Query.RunePool:output_type -> types.QueryRunePoolResponse
+	109, // 113: types.Query.RuneProvider:output_type -> types.QueryRuneProviderResponse
+	110, // 114: types.Query.RuneProviders:output_type -> types.QueryRuneProvidersResponse
+	111, // 115: types.Query.MimirValues:output_type -> types.QueryMimirValuesResponse
+	112, // 116: types.Query.MimirWithKey:output_type -> types.QueryMimirWithKeyResponse
+	113, // 117: types.Query.MimirAdminValues:output_type -> types.QueryMimirAdminValuesResponse
+	114, // 118: types.Query.MimirNodesAllValues:output_type -> types.QueryMimirNodesAllValuesResponse
+	115, // 119: types.Query.MimirNodesValues:output_type -> types.QueryMimirNodesValuesResponse
+	116, // 120: types.Query.MimirNodeValues:output_type -> types.QueryMimirNodeValuesResponse
+	117, // 121: types.Query.InboundAddresses:output_type -> types.QueryInboundAddressesResponse
+	118, // 122: types.Query.Version:output_type -> types.QueryVersionResponse
+	119, // 123: types.Query.Thorname:output_type -> types.QueryThornameResponse
+	120, // 124: types.Query.Invariant:output_type -> types.QueryInvariantResponse
+	121, // 125: types.Query.Invariants:output_type -> types.QueryInvariantsResponse
+	122, // 126: types.Query.Network:output_type -> types.QueryNetworkResponse
+	123, // 127: types.Query.BalanceModule:output_type -> types.QueryBalanceModuleResponse
+	124, // 128: types.Query.QuoteSwap:output_type -> types.QueryQuoteSwapResponse
+	125, // 129: types.Query.QuoteSaverDeposit:output_type -> types.QueryQuoteSaverDepositResponse
+	126, // 130: types.Query.QuoteSaverWithdraw:output_type -> types.QueryQuoteSaverWithdrawResponse
+	127, // 131: types.Query.QuoteLoanOpen:output_type -> types.QueryQuoteLoanOpenResponse
+	128, // 132: types.Query.QuoteLoanClose:output_type -> types.QueryQuoteLoanCloseResponse
+	129, // 133: types.Query.ConstantValues:output_type -> types.QueryConstantValuesResponse
+	130, // 134: types.Query.SwapQueue:output_type -> types.QuerySwapQueueResponse
+	131, // 135: types.Query.SwapDetails:output_type -> types.QuerySwapDetailsResponse
+	132, // 136: types.Query.LastBlocks:output_type -> types.QueryLastBlocksResponse
+	132, // 137: types.Query.ChainsLastBlock:output_type -> types.QueryLastBlocksResponse
+	133, // 138: types.Query.Vault:output_type -> types.QueryVaultResponse
+	134, // 139: types.Query.AsgardVaults:output_type -> types.QueryAsgardVaultsResponse
+	135, // 140: types.Query.VaultsPubkeys:output_type -> types.QueryVaultsPubkeysResponse
+	136, // 141: types.Query.TxStages:output_type -> types.QueryTxStagesResponse
+	137, // 142: types.Query.TxStatus:output_type -> types.QueryTxStatusResponse
+	138, // 143: types.Query.Tx:output_type -> types.QueryTxResponse
+	139, // 144: types.Query.TxVoters:output_type -> types.QueryObservedTxVoter
+	139, // 145: types.Query.TxVotersOld:output_type -> types.QueryObservedTxVoter
+	140, // 146: types.Query.Clout:output_type -> types.SwapperClout
+	141, // 147: types.Query.Queue:output_type -> types.QueryQueueResponse
+	142, // 148: types.Query.ScheduledOutbound:output_type -> types.QueryOutboundResponse
+	142, // 149: types.Query.PendingOutbound:output_type -> types.QueryOutboundResponse
+	143, // 150: types.Query.Block:output_type -> types.QueryBlockResponse
+	144, // 151: types.Query.TssKeygenMetric:output_type -> types.QueryTssKeygenMetricResponse
+	145, // 152: types.Query.TssMetric:output_type -> types.QueryTssMetricResponse
+	146, // 153: types.Query.Keysign:output_type -> types.QueryKeysignResponse
+	146, // 154: types.Query.KeysignPubkey:output_type -> types.QueryKeysignResponse
+	147, // 155: types.Query.Keygen:output_type -> types.QueryKeygenResponse
+	148, // 156: types.Query.UpgradeProposals:output_type -> types.QueryUpgradeProposalsResponse
+	149, // 157: types.Query.UpgradeProposal:output_type -> types.QueryUpgradeProposalResponse
+	150, // 158: types.Query.UpgradeVotes:output_type -> types.QueryUpgradeVotesResponse
+	151, // 159: types.Query.TCYStaker:output_type -> types.QueryTCYStakerResponse
+	152, // 160: types.Query.TCYStakers:output_type -> types.QueryTCYStakersResponse
+	153, // 161: types.Query.TCYClaimer:output_type -> types.QueryTCYClaimerResponse
+	154, // 162: types.Query.TCYClaimers:output_type -> types.QueryTCYClaimersResponse
+	155, // 163: types.Query.OraclePrices:output_type -> types.QueryOraclePricesResponse
+	156, // 164: types.Query.OraclePrice:output_type -> types.QueryOraclePriceResponse
+	157, // 165: types.Query.Eip712TypedData:output_type -> types.QueryEip712TypedDataResponse
+	83,  // [83:166] is the sub-list for method output_type
+	0,   // [0:83] is the sub-list for method input_type
 	0,   // [0:0] is the sub-list for extension type_name
 	0,   // [0:0] is the sub-list for extension extendee
 	0,   // [0:0] is the sub-list for field type_name
@@ -1083,6 +1108,7 @@ func file_types_query_proto_init() {
 	file_types_query_tcy_stakers_proto_init()
 	file_types_query_tcy_claimers_proto_init()
 	file_types_query_codes_proto_init()
+	file_types_query_oracle_price_proto_init()
 	file_types_query_eip712_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{

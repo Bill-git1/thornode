@@ -138,6 +138,49 @@ func (e *ErrataTx) Equals(other *ErrataTx) bool {
 	return true
 }
 
+func (pf *PriceFeed) Valid() error {
+	if len(pf.Rates) == 0 {
+		return fmt.Errorf("rates is empty")
+	}
+	if pf.Time <= 0 {
+		return fmt.Errorf("invalid timestamo: %d", pf.Time)
+	}
+	if len(pf.Version) != 8 {
+		return fmt.Errorf("invalid version: %x", pf.Version)
+	}
+	return nil
+}
+
+func (pf *PriceFeed) IsValid() bool {
+	return pf != nil
+}
+
+// GetSignablePayload returns the data that is signed for verification
+func (pf *PriceFeed) GetSignablePayload() ([]byte, error) {
+	return pf.Marshal()
+}
+
+func (pf *PriceFeed) Equals(other *PriceFeed) bool {
+	if pf.Time != other.Time {
+		return false
+	}
+	if !bytes.Equal(pf.Version, other.Version) {
+		return false
+	}
+	if len(pf.Rates) != len(other.Rates) {
+		return false
+	}
+	for i, rate := range pf.Rates {
+		if rate.Amount != other.Rates[i].Amount {
+			return false
+		}
+		if rate.Decimals != other.Rates[i].Decimals {
+			return false
+		}
+	}
+	return true
+}
+
 func (qtx *QuorumTx) GetAttestations() []*Attestation {
 	return qtx.Attestations
 }
@@ -217,6 +260,26 @@ func (qe *QuorumErrataTx) RemoveAttestations(atts []*Attestation) bool {
 
 func (qe *QuorumErrataTx) Equals(other *QuorumErrataTx) bool {
 	return qe.ErrataTx.Equals(other.ErrataTx)
+}
+
+func (qpfb *QuorumPriceFeedBatch) GetAttestations() []*Attestation {
+	for _, qpf := range qpfb.QuorumPriceFeeds {
+		return qpf.Attestations
+	}
+	return nil
+}
+
+func (qpfb *QuorumPriceFeedBatch) SetAttestations(_ []*Attestation) *QuorumPriceFeedBatch {
+	return qpfb
+}
+
+// RemoveAttestations removes matching attestations from a quorum network fee, and returns true if there are no more attestations.
+func (qpfb *QuorumPriceFeedBatch) RemoveAttestations(_ []*Attestation) bool {
+	return true
+}
+
+func (qpfb *QuorumPriceFeedBatch) Equals(_ *QuorumPriceFeedBatch) bool {
+	return false
 }
 
 func removeAttestations(

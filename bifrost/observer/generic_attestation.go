@@ -85,6 +85,7 @@ var (
 	_ AttestableItem = &common.NetworkFee{}
 	_ AttestableItem = &common.Solvency{}
 	_ AttestableItem = &common.ErrataTx{}
+	_ AttestableItem = &common.PriceFeed{}
 )
 
 // ProcessAttestation processes an attestation message by checking for duplicates,
@@ -151,7 +152,6 @@ func (s *AttestationState[T]) AddAttestation(attestation *common.Attestation) er
 		return fmt.Errorf("item is not valid")
 	}
 
-	// Check for duplicates
 	for _, item := range s.attestations {
 		if bytes.Equal(item.attestation.Signature, attestation.Signature) {
 			// already have the signature, ignore
@@ -171,7 +171,7 @@ func (s *AttestationState[T]) AddAttestation(attestation *common.Attestation) er
 
 	// Verify the signature
 	if err := verifySignature(signBz, attestation.Signature, attestation.PubKey); err != nil {
-		return fmt.Errorf("signature verification failed for %s - %w", attestation.PubKey, err)
+		return fmt.Errorf("signature verification failed for %x - %w", attestation.PubKey, err)
 	}
 
 	// Add the attestation

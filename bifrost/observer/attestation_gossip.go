@@ -118,12 +118,16 @@ type AttestationGossip struct {
 	networkFees map[common.NetworkFee]*AttestationState[*common.NetworkFee]
 	solvencies  map[common.TxID]*AttestationState[*common.Solvency]
 	errataTxs   map[common.ErrataTx]*AttestationState[*common.ErrataTx]
+	priceFeeds  map[string]*AttestationState[*common.PriceFeed]
 	mu          sync.Mutex
 
 	observedTxsPool *AttestationStatePool[*common.ObservedTx]
 	networkFeesPool *AttestationStatePool[*common.NetworkFee]
 	solvenciesPool  *AttestationStatePool[*common.Solvency]
 	errataTxsPool   *AttestationStatePool[*common.ErrataTx]
+	priceFeedsPool  *AttestationStatePool[*common.PriceFeed]
+
+	priceFeedsDelay *Delay
 
 	activeVals map[peer.ID]bool // active val peer IDs
 	avMu       sync.Mutex
@@ -198,6 +202,7 @@ func NewAttestationGossip(
 		networkFees: make(map[common.NetworkFee]*AttestationState[*common.NetworkFee]),
 		solvencies:  make(map[common.TxID]*AttestationState[*common.Solvency]),
 		errataTxs:   make(map[common.ErrataTx]*AttestationState[*common.ErrataTx]),
+		priceFeeds:  make(map[string]*AttestationState[*common.PriceFeed]),
 
 		peerMgr: newPeerManager(logger, config.PeerConcurrentReceives),
 
@@ -205,6 +210,9 @@ func NewAttestationGossip(
 		networkFeesPool: NewAttestationStatePool[*common.NetworkFee](),
 		solvenciesPool:  NewAttestationStatePool[*common.Solvency](),
 		errataTxsPool:   NewAttestationStatePool[*common.ErrataTx](),
+		priceFeedsPool:  NewAttestationStatePool[*common.PriceFeed](),
+
+		priceFeedsDelay: NewDelay(),
 
 		cachedKeySignParties: make(map[common.PubKey]cachedKeySignParty),
 
@@ -536,6 +544,10 @@ func (s *AttestationGossip) Start(ctx context.Context) {
 				}
 				state.mu.Unlock()
 			}
+
+			// Prune price feeds
+			s.priceFeeds = make(map[string]*AttestationState[*common.PriceFeed])
+
 			s.mu.Unlock()
 
 			// Prune cached keysign parties

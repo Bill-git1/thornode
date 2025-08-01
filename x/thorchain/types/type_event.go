@@ -60,6 +60,7 @@ const (
 	TCYClaimType                  = "tcy_claim"
 	TCYStakeType                  = "tcy_stake"
 	TCYUnstakeType                = "tcy_unstake"
+	OraclePriceEvent              = "oracle_price"
 )
 
 // PoolMods a list of pool modifications
@@ -1423,6 +1424,26 @@ func (m *EventOperatorRotate) Events() (cosmos.Events, error) {
 		cosmos.NewAttribute("signer", m.Signer.String()),
 		cosmos.NewAttribute("node_address", m.NodeAddress.String()),
 		cosmos.NewAttribute("operator_address", m.OperatorAddress.String()),
+	)
+	return cosmos.Events{evt}, nil
+}
+
+// NewEventOraclePrice create a new EventOraclePrice
+func NewEventOraclePrice(symbol, price string) *EventOraclePrice {
+	return &EventOraclePrice{
+		Symbol: symbol,
+		Price:  price,
+	}
+}
+
+// Type return oracle price event type
+func (m *EventOraclePrice) Type() string { return OraclePriceEvent }
+
+// Events return events
+func (m EventOraclePrice) Events() (cosmos.Events, error) {
+	evt := cosmos.NewEvent(m.Type(),
+		cosmos.NewAttribute("symbol", m.Symbol),
+		cosmos.NewAttribute("price", m.Price),
 	)
 	return cosmos.Events{evt}, nil
 }

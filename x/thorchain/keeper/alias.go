@@ -79,4 +79,6 @@ type (
 	Upgrade                  = types.Upgrade
 	TCYClaimer               = types.TCYClaimer
 	TCYStaker                = types.TCYStaker
+	PriceFeed                = types.PriceFeed
+	OraclePrice              = types.OraclePrice
 )

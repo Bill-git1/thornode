@@ -31865,6 +31865,490 @@ func (x *fastReflection_EventTCYUnstake) ProtoMethods() *protoiface.Methods {
 	}
 }
 
+var (
+	md_EventOraclePrice        protoreflect.MessageDescriptor
+	fd_EventOraclePrice_symbol protoreflect.FieldDescriptor
+	fd_EventOraclePrice_price  protoreflect.FieldDescriptor
+)
+
+func init() {
+	file_types_type_events_proto_init()
+	md_EventOraclePrice = File_types_type_events_proto.Messages().ByName("EventOraclePrice")
+	fd_EventOraclePrice_symbol = md_EventOraclePrice.Fields().ByName("symbol")
+	fd_EventOraclePrice_price = md_EventOraclePrice.Fields().ByName("price")
+}
+
+var _ protoreflect.Message = (*fastReflection_EventOraclePrice)(nil)
+
+type fastReflection_EventOraclePrice EventOraclePrice
+
+func (x *EventOraclePrice) ProtoReflect() protoreflect.Message {
+	return (*fastReflection_EventOraclePrice)(x)
+}
+
+func (x *EventOraclePrice) slowProtoReflect() protoreflect.Message {
+	mi := &file_types_type_events_proto_msgTypes[50]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+var _fastReflection_EventOraclePrice_messageType fastReflection_EventOraclePrice_messageType
+var _ protoreflect.MessageType = fastReflection_EventOraclePrice_messageType{}
+
+type fastReflection_EventOraclePrice_messageType struct{}
+
+func (x fastReflection_EventOraclePrice_messageType) Zero() protoreflect.Message {
+	return (*fastReflection_EventOraclePrice)(nil)
+}
+func (x fastReflection_EventOraclePrice_messageType) New() protoreflect.Message {
+	return new(fastReflection_EventOraclePrice)
+}
+func (x fastReflection_EventOraclePrice_messageType) Descriptor() protoreflect.MessageDescriptor {
+	return md_EventOraclePrice
+}
+
+// Descriptor returns message descriptor, which contains only the protobuf
+// type information for the message.
+func (x *fastReflection_EventOraclePrice) Descriptor() protoreflect.MessageDescriptor {
+	return md_EventOraclePrice
+}
+
+// Type returns the message type, which encapsulates both Go and protobuf
+// type information. If the Go type information is not needed,
+// it is recommended that the message descriptor be used instead.
+func (x *fastReflection_EventOraclePrice) Type() protoreflect.MessageType {
+	return _fastReflection_EventOraclePrice_messageType
+}
+
+// New returns a newly allocated and mutable empty message.
+func (x *fastReflection_EventOraclePrice) New() protoreflect.Message {
+	return new(fastReflection_EventOraclePrice)
+}
+
+// Interface unwraps the message reflection interface and
+// returns the underlying ProtoMessage interface.
+func (x *fastReflection_EventOraclePrice) Interface() protoreflect.ProtoMessage {
+	return (*EventOraclePrice)(x)
+}
+
+// Range iterates over every populated field in an undefined order,
+// calling f for each field descriptor and value encountered.
+// Range returns immediately if f returns false.
+// While iterating, mutating operations may only be performed
+// on the current field descriptor.
+func (x *fastReflection_EventOraclePrice) Range(f func(protoreflect.FieldDescriptor, protoreflect.Value) bool) {
+	if x.Symbol != "" {
+		value := protoreflect.ValueOfString(x.Symbol)
+		if !f(fd_EventOraclePrice_symbol, value) {
+			return
+		}
+	}
+	if x.Price != "" {
+		value := protoreflect.ValueOfString(x.Price)
+		if !f(fd_EventOraclePrice_price, value) {
+			return
+		}
+	}
+}
+
+// Has reports whether a field is populated.
+//
+// Some fields have the property of nullability where it is possible to
+// distinguish between the default value of a field and whether the field
+// was explicitly populated with the default value. Singular message fields,
+// member fields of a oneof, and proto2 scalar fields are nullable. Such
+// fields are populated only if explicitly set.
+//
+// In other cases (aside from the nullable cases above),
+// a proto3 scalar field is populated if it contains a non-zero value, and
+// a repeated field is populated if it is non-empty.
+func (x *fastReflection_EventOraclePrice) Has(fd protoreflect.FieldDescriptor) bool {
+	switch fd.FullName() {
+	case "types.EventOraclePrice.symbol":
+		return x.Symbol != ""
+	case "types.EventOraclePrice.price":
+		return x.Price != ""
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventOraclePrice"))
+		}
+		panic(fmt.Errorf("message types.EventOraclePrice does not contain field %s", fd.FullName()))
+	}
+}
+
+// Clear clears the field such that a subsequent Has call reports false.
+//
+// Clearing an extension field clears both the extension type and value
+// associated with the given field number.
+//
+// Clear is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_EventOraclePrice) Clear(fd protoreflect.FieldDescriptor) {
+	switch fd.FullName() {
+	case "types.EventOraclePrice.symbol":
+		x.Symbol = ""
+	case "types.EventOraclePrice.price":
+		x.Price = ""
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventOraclePrice"))
+		}
+		panic(fmt.Errorf("message types.EventOraclePrice does not contain field %s", fd.FullName()))
+	}
+}
+
+// Get retrieves the value for a field.
+//
+// For unpopulated scalars, it returns the default value, where
+// the default value of a bytes scalar is guaranteed to be a copy.
+// For unpopulated composite types, it returns an empty, read-only view
+// of the value; to obtain a mutable reference, use Mutable.
+func (x *fastReflection_EventOraclePrice) Get(descriptor protoreflect.FieldDescriptor) protoreflect.Value {
+	switch descriptor.FullName() {
+	case "types.EventOraclePrice.symbol":
+		value := x.Symbol
+		return protoreflect.ValueOfString(value)
+	case "types.EventOraclePrice.price":
+		value := x.Price
+		return protoreflect.ValueOfString(value)
+	default:
+		if descriptor.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventOraclePrice"))
+		}
+		panic(fmt.Errorf("message types.EventOraclePrice does not contain field %s", descriptor.FullName()))
+	}
+}
+
+// Set stores the value for a field.
+//
+// For a field belonging to a oneof, it implicitly clears any other field
+// that may be currently set within the same oneof.
+// For extension fields, it implicitly stores the provided ExtensionType.
+// When setting a composite type, it is unspecified whether the stored value
+// aliases the source's memory in any way. If the composite value is an
+// empty, read-only value, then it panics.
+//
+// Set is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_EventOraclePrice) Set(fd protoreflect.FieldDescriptor, value protoreflect.Value) {
+	switch fd.FullName() {
+	case "types.EventOraclePrice.symbol":
+		x.Symbol = value.Interface().(string)
+	case "types.EventOraclePrice.price":
+		x.Price = value.Interface().(string)
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventOraclePrice"))
+		}
+		panic(fmt.Errorf("message types.EventOraclePrice does not contain field %s", fd.FullName()))
+	}
+}
+
+// Mutable returns a mutable reference to a composite type.
+//
+// If the field is unpopulated, it may allocate a composite value.
+// For a field belonging to a oneof, it implicitly clears any other field
+// that may be currently set within the same oneof.
+// For extension fields, it implicitly stores the provided ExtensionType
+// if not already stored.
+// It panics if the field does not contain a composite type.
+//
+// Mutable is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_EventOraclePrice) Mutable(fd protoreflect.FieldDescriptor) protoreflect.Value {
+	switch fd.FullName() {
+	case "types.EventOraclePrice.symbol":
+		panic(fmt.Errorf("field symbol of message types.EventOraclePrice is not mutable"))
+	case "types.EventOraclePrice.price":
+		panic(fmt.Errorf("field price of message types.EventOraclePrice is not mutable"))
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventOraclePrice"))
+		}
+		panic(fmt.Errorf("message types.EventOraclePrice does not contain field %s", fd.FullName()))
+	}
+}
+
+// NewField returns a new value that is assignable to the field
+// for the given descriptor. For scalars, this returns the default value.
+// For lists, maps, and messages, this returns a new, empty, mutable value.
+func (x *fastReflection_EventOraclePrice) NewField(fd protoreflect.FieldDescriptor) protoreflect.Value {
+	switch fd.FullName() {
+	case "types.EventOraclePrice.symbol":
+		return protoreflect.ValueOfString("")
+	case "types.EventOraclePrice.price":
+		return protoreflect.ValueOfString("")
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventOraclePrice"))
+		}
+		panic(fmt.Errorf("message types.EventOraclePrice does not contain field %s", fd.FullName()))
+	}
+}
+
+// WhichOneof reports which field within the oneof is populated,
+// returning nil if none are populated.
+// It panics if the oneof descriptor does not belong to this message.
+func (x *fastReflection_EventOraclePrice) WhichOneof(d protoreflect.OneofDescriptor) protoreflect.FieldDescriptor {
+	switch d.FullName() {
+	default:
+		panic(fmt.Errorf("%s is not a oneof field in types.EventOraclePrice", d.FullName()))
+	}
+	panic("unreachable")
+}
+
+// GetUnknown retrieves the entire list of unknown fields.
+// The caller may only mutate the contents of the RawFields
+// if the mutated bytes are stored back into the message with SetUnknown.
+func (x *fastReflection_EventOraclePrice) GetUnknown() protoreflect.RawFields {
+	return x.unknownFields
+}
+
+// SetUnknown stores an entire list of unknown fields.
+// The raw fields must be syntactically valid according to the wire format.
+// An implementation may panic if this is not the case.
+// Once stored, the caller must not mutate the content of the RawFields.
+// An empty RawFields may be passed to clear the fields.
+//
+// SetUnknown is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_EventOraclePrice) SetUnknown(fields protoreflect.RawFields) {
+	x.unknownFields = fields
+}
+
+// IsValid reports whether the message is valid.
+//
+// An invalid message is an empty, read-only value.
+//
+// An invalid message often corresponds to a nil pointer of the concrete
+// message type, but the details are implementation dependent.
+// Validity is not part of the protobuf data model, and may not
+// be preserved in marshaling or other operations.
+func (x *fastReflection_EventOraclePrice) IsValid() bool {
+	return x != nil
+}
+
+// ProtoMethods returns optional fastReflectionFeature-path implementations of various operations.
+// This method may return nil.
+//
+// The returned methods type is identical to
+// "google.golang.org/protobuf/runtime/protoiface".Methods.
+// Consult the protoiface package documentation for details.
+func (x *fastReflection_EventOraclePrice) ProtoMethods() *protoiface.Methods {
+	size := func(input protoiface.SizeInput) protoiface.SizeOutput {
+		x := input.Message.Interface().(*EventOraclePrice)
+		if x == nil {
+			return protoiface.SizeOutput{
+				NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+				Size:              0,
+			}
+		}
+		options := runtime.SizeInputToOptions(input)
+		_ = options
+		var n int
+		var l int
+		_ = l
+		l = len(x.Symbol)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.Price)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		if x.unknownFields != nil {
+			n += len(x.unknownFields)
+		}
+		return protoiface.SizeOutput{
+			NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+			Size:              n,
+		}
+	}
+
+	marshal := func(input protoiface.MarshalInput) (protoiface.MarshalOutput, error) {
+		x := input.Message.Interface().(*EventOraclePrice)
+		if x == nil {
+			return protoiface.MarshalOutput{
+				NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+				Buf:               input.Buf,
+			}, nil
+		}
+		options := runtime.MarshalInputToOptions(input)
+		_ = options
+		size := options.Size(x)
+		dAtA := make([]byte, size)
+		i := len(dAtA)
+		_ = i
+		var l int
+		_ = l
+		if x.unknownFields != nil {
+			i -= len(x.unknownFields)
+			copy(dAtA[i:], x.unknownFields)
+		}
+		if len(x.Price) > 0 {
+			i -= len(x.Price)
+			copy(dAtA[i:], x.Price)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.Price)))
+			i--
+			dAtA[i] = 0x12
+		}
+		if len(x.Symbol) > 0 {
+			i -= len(x.Symbol)
+			copy(dAtA[i:], x.Symbol)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.Symbol)))
+			i--
+			dAtA[i] = 0xa
+		}
+		if input.Buf != nil {
+			input.Buf = append(input.Buf, dAtA...)
+		} else {
+			input.Buf = dAtA
+		}
+		return protoiface.MarshalOutput{
+			NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+			Buf:               input.Buf,
+		}, nil
+	}
+	unmarshal := func(input protoiface.UnmarshalInput) (protoiface.UnmarshalOutput, error) {
+		x := input.Message.Interface().(*EventOraclePrice)
+		if x == nil {
+			return protoiface.UnmarshalOutput{
+				NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+				Flags:             input.Flags,
+			}, nil
+		}
+		options := runtime.UnmarshalInputToOptions(input)
+		_ = options
+		dAtA := input.Buf
+		l := len(dAtA)
+		iNdEx := 0
+		for iNdEx < l {
+			preIndex := iNdEx
+			var wire uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				wire |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			fieldNum := int32(wire >> 3)
+			wireType := int(wire & 0x7)
+			if wireType == 4 {
+				return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: EventOraclePrice: wiretype end group for non-group")
+			}
+			if fieldNum <= 0 {
+				return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: EventOraclePrice: illegal tag %d (wire type %d)", fieldNum, wire)
+			}
+			switch fieldNum {
+			case 1:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Symbol", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.Symbol = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 2:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Price", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.Price = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			default:
+				iNdEx = preIndex
+				skippy, err := runtime.Skip(dAtA[iNdEx:])
+				if err != nil {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, err
+				}
+				if (skippy < 0) || (iNdEx+skippy) < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if (iNdEx + skippy) > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				if !options.DiscardUnknown {
+					x.unknownFields = append(x.unknownFields, dAtA[iNdEx:iNdEx+skippy]...)
+				}
+				iNdEx += skippy
+			}
+		}
+
+		if iNdEx > l {
+			return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+		}
+		return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, nil
+	}
+	return &protoiface.Methods{
+		NoUnkeyedLiterals: struct{}{},
+		Flags:             protoiface.SupportMarshalDeterministic | protoiface.SupportUnmarshalDiscardUnknown,
+		Size:              size,
+		Marshal:           marshal,
+		Unmarshal:         unmarshal,
+		Merge:             nil,
+		CheckInitialized:  nil,
+	}
+}
+
 // Code generated by protoc-gen-go. DO NOT EDIT.
 // versions:
 // 	protoc-gen-go v1.27.0
@@ -35020,6 +35504,49 @@ func (x *EventTCYUnstake) GetAmount() string {
 	return ""
 }
 
+type EventOraclePrice struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Symbol string `protobuf:"bytes,1,opt,name=symbol,proto3" json:"symbol,omitempty"`
+	Price  string `protobuf:"bytes,2,opt,name=price,proto3" json:"price,omitempty"`
+}
+
+func (x *EventOraclePrice) Reset() {
+	*x = EventOraclePrice{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_types_type_events_proto_msgTypes[50]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *EventOraclePrice) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventOraclePrice) ProtoMessage() {}
+
+// Deprecated: Use EventOraclePrice.ProtoReflect.Descriptor instead.
+func (*EventOraclePrice) Descriptor() ([]byte, []int) {
+	return file_types_type_events_proto_rawDescGZIP(), []int{50}
+}
+
+func (x *EventOraclePrice) GetSymbol() string {
+	if x != nil {
+		return x.Symbol
+	}
+	return ""
+}
+
+func (x *EventOraclePrice) GetPrice() string {
+	if x != nil {
+		return x.Price
+	}
+	return ""
+}
+
 var File_types_type_events_proto protoreflect.FileDescriptor
 
 var file_types_type_events_proto_rawDesc = []byte{
@@ -35896,25 +36423,30 @@ var file_types_type_events_proto_rawDesc = []byte{
 	0x6f, 0x75, 0x6e, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x42, 0x1e, 0xc8, 0xde, 0x1f, 0x00,
 	0xda, 0xde, 0x1f, 0x16, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x73, 0x64, 0x6b, 0x2e, 0x69, 0x6f,
 	0x2f, 0x6d, 0x61, 0x74, 0x68, 0x2e, 0x55, 0x69, 0x6e, 0x74, 0x52, 0x06, 0x61, 0x6d, 0x6f, 0x75,
-	0x6e, 0x74, 0x2a, 0x2d, 0x0a, 0x14, 0x50, 0x65, 0x6e, 0x64, 0x69, 0x6e, 0x67, 0x4c, 0x69, 0x71,
-	0x75, 0x69, 0x64, 0x69, 0x74, 0x79, 0x54, 0x79, 0x70, 0x65, 0x12, 0x07, 0x0a, 0x03, 0x61, 0x64,
-	0x64, 0x10, 0x00, 0x12, 0x0c, 0x0a, 0x08, 0x77, 0x69, 0x74, 0x68, 0x64, 0x72, 0x61, 0x77, 0x10,
-	0x01, 0x2a, 0x4c, 0x0a, 0x08, 0x42, 0x6f, 0x6e, 0x64, 0x54, 0x79, 0x70, 0x65, 0x12, 0x0d, 0x0a,
-	0x09, 0x62, 0x6f, 0x6e, 0x64, 0x5f, 0x70, 0x61, 0x69, 0x64, 0x10, 0x00, 0x12, 0x11, 0x0a, 0x0d,
-	0x62, 0x6f, 0x6e, 0x64, 0x5f, 0x72, 0x65, 0x74, 0x75, 0x72, 0x6e, 0x65, 0x64, 0x10, 0x01, 0x12,
-	0x0f, 0x0a, 0x0b, 0x62, 0x6f, 0x6e, 0x64, 0x5f, 0x72, 0x65, 0x77, 0x61, 0x72, 0x64, 0x10, 0x02,
-	0x12, 0x0d, 0x0a, 0x09, 0x62, 0x6f, 0x6e, 0x64, 0x5f, 0x63, 0x6f, 0x73, 0x74, 0x10, 0x03, 0x2a,
-	0x28, 0x0a, 0x12, 0x4d, 0x69, 0x6e, 0x74, 0x42, 0x75, 0x72, 0x6e, 0x53, 0x75, 0x70, 0x70, 0x6c,
-	0x79, 0x54, 0x79, 0x70, 0x65, 0x12, 0x08, 0x0a, 0x04, 0x6d, 0x69, 0x6e, 0x74, 0x10, 0x00, 0x12,
-	0x08, 0x0a, 0x04, 0x62, 0x75, 0x72, 0x6e, 0x10, 0x01, 0x42, 0x7c, 0x0a, 0x09, 0x63, 0x6f, 0x6d,
-	0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x42, 0x0f, 0x54, 0x79, 0x70, 0x65, 0x45, 0x76, 0x65, 0x6e,
-	0x74, 0x73, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x2a, 0x67, 0x69, 0x74, 0x6c, 0x61,
-	0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f,
-	0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33, 0x2f, 0x61, 0x70, 0x69, 0x2f,
-	0x74, 0x79, 0x70, 0x65, 0x73, 0xa2, 0x02, 0x03, 0x54, 0x58, 0x58, 0xaa, 0x02, 0x05, 0x54, 0x79,
-	0x70, 0x65, 0x73, 0xca, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xe2, 0x02, 0x11, 0x54, 0x79,
-	0x70, 0x65, 0x73, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea,
-	0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x6e, 0x74, 0x22, 0x40, 0x0a, 0x10, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x4f, 0x72, 0x61, 0x63, 0x6c,
+	0x65, 0x50, 0x72, 0x69, 0x63, 0x65, 0x12, 0x16, 0x0a, 0x06, 0x73, 0x79, 0x6d, 0x62, 0x6f, 0x6c,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x73, 0x79, 0x6d, 0x62, 0x6f, 0x6c, 0x12, 0x14,
+	0x0a, 0x05, 0x70, 0x72, 0x69, 0x63, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x70,
+	0x72, 0x69, 0x63, 0x65, 0x2a, 0x2d, 0x0a, 0x14, 0x50, 0x65, 0x6e, 0x64, 0x69, 0x6e, 0x67, 0x4c,
+	0x69, 0x71, 0x75, 0x69, 0x64, 0x69, 0x74, 0x79, 0x54, 0x79, 0x70, 0x65, 0x12, 0x07, 0x0a, 0x03,
+	0x61, 0x64, 0x64, 0x10, 0x00, 0x12, 0x0c, 0x0a, 0x08, 0x77, 0x69, 0x74, 0x68, 0x64, 0x72, 0x61,
+	0x77, 0x10, 0x01, 0x2a, 0x4c, 0x0a, 0x08, 0x42, 0x6f, 0x6e, 0x64, 0x54, 0x79, 0x70, 0x65, 0x12,
+	0x0d, 0x0a, 0x09, 0x62, 0x6f, 0x6e, 0x64, 0x5f, 0x70, 0x61, 0x69, 0x64, 0x10, 0x00, 0x12, 0x11,
+	0x0a, 0x0d, 0x62, 0x6f, 0x6e, 0x64, 0x5f, 0x72, 0x65, 0x74, 0x75, 0x72, 0x6e, 0x65, 0x64, 0x10,
+	0x01, 0x12, 0x0f, 0x0a, 0x0b, 0x62, 0x6f, 0x6e, 0x64, 0x5f, 0x72, 0x65, 0x77, 0x61, 0x72, 0x64,
+	0x10, 0x02, 0x12, 0x0d, 0x0a, 0x09, 0x62, 0x6f, 0x6e, 0x64, 0x5f, 0x63, 0x6f, 0x73, 0x74, 0x10,
+	0x03, 0x2a, 0x28, 0x0a, 0x12, 0x4d, 0x69, 0x6e, 0x74, 0x42, 0x75, 0x72, 0x6e, 0x53, 0x75, 0x70,
+	0x70, 0x6c, 0x79, 0x54, 0x79, 0x70, 0x65, 0x12, 0x08, 0x0a, 0x04, 0x6d, 0x69, 0x6e, 0x74, 0x10,
+	0x00, 0x12, 0x08, 0x0a, 0x04, 0x62, 0x75, 0x72, 0x6e, 0x10, 0x01, 0x42, 0x7c, 0x0a, 0x09, 0x63,
+	0x6f, 0x6d, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x42, 0x0f, 0x54, 0x79, 0x70, 0x65, 0x45, 0x76,
+	0x65, 0x6e, 0x74, 0x73, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x2a, 0x67, 0x69, 0x74,
+	0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69,
+	0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33, 0x2f, 0x61, 0x70,
+	0x69, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x73, 0xa2, 0x02, 0x03, 0x54, 0x58, 0x58, 0xaa, 0x02, 0x05,
+	0x54, 0x79, 0x70, 0x65, 0x73, 0xca, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xe2, 0x02, 0x11,
+	0x54, 0x79, 0x70, 0x65, 0x73, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74,
+	0x61, 0xea, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x33,
 }
 
 var (
@@ -35930,7 +36462,7 @@ func file_types_type_events_proto_rawDescGZIP() []byte {
 }
 
 var file_types_type_events_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_types_type_events_proto_msgTypes = make([]protoimpl.MessageInfo, 50)
+var file_types_type_events_proto_msgTypes = make([]protoimpl.MessageInfo, 51)
 var file_types_type_events_proto_goTypes = []interface{}{
 	(PendingLiquidityType)(0),         // 0: types.PendingLiquidityType
 	(BondType)(0),                     // 1: types.BondType
@@ -35985,66 +36517,67 @@ var file_types_type_events_proto_goTypes = []interface{}{
 	(*EventTCYClaim)(nil),             // 50: types.EventTCYClaim
 	(*EventTCYStake)(nil),             // 51: types.EventTCYStake
 	(*EventTCYUnstake)(nil),           // 52: types.EventTCYUnstake
-	(*common.Asset)(nil),              // 53: common.Asset
-	(*common.Coin)(nil),               // 54: common.Coin
-	(*common.Tx)(nil),                 // 55: common.Tx
-	(PoolStatus)(0),                   // 56: types.PoolStatus
-	(*common.Fee)(nil),                // 57: common.Fee
-	(*ReserveContributor)(nil),        // 58: types.ReserveContributor
-	(*TxOutItem)(nil),                 // 59: types.TxOutItem
+	(*EventOraclePrice)(nil),          // 53: types.EventOraclePrice
+	(*common.Asset)(nil),              // 54: common.Asset
+	(*common.Coin)(nil),               // 55: common.Coin
+	(*common.Tx)(nil),                 // 56: common.Tx
+	(PoolStatus)(0),                   // 57: types.PoolStatus
+	(*common.Fee)(nil),                // 58: common.Fee
+	(*ReserveContributor)(nil),        // 59: types.ReserveContributor
+	(*TxOutItem)(nil),                 // 60: types.TxOutItem
 }
 var file_types_type_events_proto_depIdxs = []int32{
-	53, // 0: types.PoolMod.asset:type_name -> common.Asset
-	54, // 1: types.EventLimitSwap.source:type_name -> common.Coin
-	54, // 2: types.EventLimitSwap.target:type_name -> common.Coin
-	54, // 3: types.EventModifyLimitSwap.source:type_name -> common.Coin
-	54, // 4: types.EventModifyLimitSwap.target:type_name -> common.Coin
-	54, // 5: types.EventStreamingSwap.deposit:type_name -> common.Coin
-	54, // 6: types.EventStreamingSwap.in:type_name -> common.Coin
-	54, // 7: types.EventStreamingSwap.out:type_name -> common.Coin
-	53, // 8: types.EventSwap.pool:type_name -> common.Asset
-	55, // 9: types.EventSwap.in_tx:type_name -> common.Tx
-	55, // 10: types.EventSwap.out_txs:type_name -> common.Tx
-	54, // 11: types.EventSwap.emit_asset:type_name -> common.Coin
-	53, // 12: types.EventAffiliateFee.asset:type_name -> common.Asset
-	53, // 13: types.EventAddLiquidity.pool:type_name -> common.Asset
-	53, // 14: types.EventWithdraw.pool:type_name -> common.Asset
-	55, // 15: types.EventWithdraw.in_tx:type_name -> common.Tx
-	53, // 16: types.EventPendingLiquidity.pool:type_name -> common.Asset
+	54, // 0: types.PoolMod.asset:type_name -> common.Asset
+	55, // 1: types.EventLimitSwap.source:type_name -> common.Coin
+	55, // 2: types.EventLimitSwap.target:type_name -> common.Coin
+	55, // 3: types.EventModifyLimitSwap.source:type_name -> common.Coin
+	55, // 4: types.EventModifyLimitSwap.target:type_name -> common.Coin
+	55, // 5: types.EventStreamingSwap.deposit:type_name -> common.Coin
+	55, // 6: types.EventStreamingSwap.in:type_name -> common.Coin
+	55, // 7: types.EventStreamingSwap.out:type_name -> common.Coin
+	54, // 8: types.EventSwap.pool:type_name -> common.Asset
+	56, // 9: types.EventSwap.in_tx:type_name -> common.Tx
+	56, // 10: types.EventSwap.out_txs:type_name -> common.Tx
+	55, // 11: types.EventSwap.emit_asset:type_name -> common.Coin
+	54, // 12: types.EventAffiliateFee.asset:type_name -> common.Asset
+	54, // 13: types.EventAddLiquidity.pool:type_name -> common.Asset
+	54, // 14: types.EventWithdraw.pool:type_name -> common.Asset
+	56, // 15: types.EventWithdraw.in_tx:type_name -> common.Tx
+	54, // 16: types.EventPendingLiquidity.pool:type_name -> common.Asset
 	0,  // 17: types.EventPendingLiquidity.pending_type:type_name -> types.PendingLiquidityType
-	53, // 18: types.EventDonate.pool:type_name -> common.Asset
-	55, // 19: types.EventDonate.in_tx:type_name -> common.Tx
-	53, // 20: types.EventPool.pool:type_name -> common.Asset
-	56, // 21: types.EventPool.Status:type_name -> types.PoolStatus
-	53, // 22: types.PoolAmt.asset:type_name -> common.Asset
+	54, // 18: types.EventDonate.pool:type_name -> common.Asset
+	56, // 19: types.EventDonate.in_tx:type_name -> common.Tx
+	54, // 20: types.EventPool.pool:type_name -> common.Asset
+	57, // 21: types.EventPool.Status:type_name -> types.PoolStatus
+	54, // 22: types.PoolAmt.asset:type_name -> common.Asset
 	14, // 23: types.EventRewards.pool_rewards:type_name -> types.PoolAmt
-	55, // 24: types.EventRefund.in_tx:type_name -> common.Tx
-	57, // 25: types.EventRefund.fee:type_name -> common.Fee
+	56, // 24: types.EventRefund.in_tx:type_name -> common.Tx
+	58, // 25: types.EventRefund.fee:type_name -> common.Fee
 	1,  // 26: types.EventBond.bond_type:type_name -> types.BondType
-	55, // 27: types.EventBond.tx_in:type_name -> common.Tx
-	55, // 28: types.EventReBond.tx_in:type_name -> common.Tx
-	53, // 29: types.GasPool.asset:type_name -> common.Asset
+	56, // 27: types.EventBond.tx_in:type_name -> common.Tx
+	56, // 28: types.EventReBond.tx_in:type_name -> common.Tx
+	54, // 29: types.GasPool.asset:type_name -> common.Asset
 	19, // 30: types.EventGas.pools:type_name -> types.GasPool
-	58, // 31: types.EventReserve.reserve_contributor:type_name -> types.ReserveContributor
-	55, // 32: types.EventReserve.in_tx:type_name -> common.Tx
-	59, // 33: types.EventScheduledOutbound.out_tx:type_name -> types.TxOutItem
-	55, // 34: types.EventSecurity.tx:type_name -> common.Tx
-	53, // 35: types.EventSlash.pool:type_name -> common.Asset
+	59, // 31: types.EventReserve.reserve_contributor:type_name -> types.ReserveContributor
+	56, // 32: types.EventReserve.in_tx:type_name -> common.Tx
+	60, // 33: types.EventScheduledOutbound.out_tx:type_name -> types.TxOutItem
+	56, // 34: types.EventSecurity.tx:type_name -> common.Tx
+	54, // 35: types.EventSlash.pool:type_name -> common.Asset
 	14, // 36: types.EventSlash.slash_amount:type_name -> types.PoolAmt
 	3,  // 37: types.EventErrata.pools:type_name -> types.PoolMod
-	57, // 38: types.EventFee.fee:type_name -> common.Fee
-	55, // 39: types.EventOutbound.tx:type_name -> common.Tx
+	58, // 38: types.EventFee.fee:type_name -> common.Fee
+	56, // 39: types.EventOutbound.tx:type_name -> common.Tx
 	3,  // 40: types.EventPoolBalanceChanged.pool_change:type_name -> types.PoolMod
 	2,  // 41: types.EventMintBurn.supply:type_name -> types.MintBurnSupplyType
-	53, // 42: types.EventTradeAccountDeposit.asset:type_name -> common.Asset
-	53, // 43: types.EventTradeAccountWithdraw.asset:type_name -> common.Asset
-	53, // 44: types.EventSecuredAssetDeposit.asset:type_name -> common.Asset
-	53, // 45: types.EventSecuredAssetWithdraw.asset:type_name -> common.Asset
-	53, // 46: types.EventLoanOpen.collateral_asset:type_name -> common.Asset
-	53, // 47: types.EventLoanOpen.target_asset:type_name -> common.Asset
-	53, // 48: types.EventLoanRepayment.collateral_asset:type_name -> common.Asset
-	53, // 49: types.EventSwitch.asset:type_name -> common.Asset
-	53, // 50: types.EventTCYClaim.asset:type_name -> common.Asset
+	54, // 42: types.EventTradeAccountDeposit.asset:type_name -> common.Asset
+	54, // 43: types.EventTradeAccountWithdraw.asset:type_name -> common.Asset
+	54, // 44: types.EventSecuredAssetDeposit.asset:type_name -> common.Asset
+	54, // 45: types.EventSecuredAssetWithdraw.asset:type_name -> common.Asset
+	54, // 46: types.EventLoanOpen.collateral_asset:type_name -> common.Asset
+	54, // 47: types.EventLoanOpen.target_asset:type_name -> common.Asset
+	54, // 48: types.EventLoanRepayment.collateral_asset:type_name -> common.Asset
+	54, // 49: types.EventSwitch.asset:type_name -> common.Asset
+	54, // 50: types.EventTCYClaim.asset:type_name -> common.Asset
 	51, // [51:51] is the sub-list for method output_type
 	51, // [51:51] is the sub-list for method input_type
 	51, // [51:51] is the sub-list for extension type_name
@@ -36661,6 +37194,18 @@ func file_types_type_events_proto_init() {
 				return nil
 			}
 		}
+		file_types_type_events_proto_msgTypes[50].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*EventOraclePrice); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -36668,7 +37213,7 @@ func file_types_type_events_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_types_type_events_proto_rawDesc,
 			NumEnums:      3,
-			NumMessages:   50,
+			NumMessages:   51,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

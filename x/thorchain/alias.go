@@ -136,6 +136,7 @@ var (
 	NewMsgManageTHORName           = types.NewMsgManageTHORName
 	NewMsgSwitch                   = types.NewMsgSwitch
 	NewMsgOperatorRotate           = types.NewMsgOperatorRotate
+	NewMsgPriceFeedQuorumBatch     = types.NewMsgPriceFeedQuorumBatch
 	NewTxOut                       = types.NewTxOut
 	NewEventRewards                = types.NewEventRewards
 	NewEventPool                   = types.NewEventPool
@@ -180,6 +181,7 @@ var (
 	NewEventLoanRepayment          = types.NewEventLoanRepayment
 	NewEventSwitch                 = types.NewEventSwitch
 	NewEventOperatorRotate         = types.NewEventOperatorRotate
+	NewEventOraclePrice            = types.NewEventOraclePrice
 	NewPoolMod                     = types.NewPoolMod
 	NewMsgRefundTx                 = types.NewMsgRefundTx
 	NewMsgOutboundTx               = types.NewMsgOutboundTx
@@ -367,6 +369,8 @@ type (
 	EventSlash               = types.EventSlash
 	EventOutbound            = types.EventOutbound
 	NetworkFee               = types.NetworkFee
+	PriceFeed                = types.PriceFeed
+	OraclePrice              = types.OraclePrice
 	ObservedNetworkFeeVoter  = types.ObservedNetworkFeeVoter
 	Jail                     = types.Jail
 	RagnarokWithdrawPosition = types.RagnarokWithdrawPosition

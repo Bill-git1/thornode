@@ -225,6 +225,41 @@ paths:
               schema:
                 $ref: "#/components/schemas/CodesResponse"
 
+  # --------------------------- oracle prices ----------------------------
+
+  /thorchain/oracle/price/{symbol}:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+      - $ref: "#/components/parameters/symbol"
+    get:
+      description: Returns oracle price for a symbol.
+      operationId: oraclePrice
+      tags:
+        - Oracle
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OraclePriceResponse"
+
+  /thorchain/oracle/prices:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+    get:
+      description: Returns all available oracle prices.
+      operationId: oraclePrices
+      tags:
+        - Oracle
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OraclePricesResponse"
+
   # ------------------------------ tcy stakers ------------------------------
 
   /thorchain/tcy_staker/{address}:
@@ -1684,6 +1719,14 @@ components:
         type: string
         example: asgard
 
+    symbol:
+      name: symbol
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "BTC"
+
   # ------------------------------ schemas ------------------------------
 
   schemas:
@@ -2029,6 +2072,32 @@ components:
         origin:
           type: string
           example: "https://gitlab.com/thorchain/rujira/-/tree/main/contracts/rujira-merge"
+
+    OraclePricesResponse:
+      type: object
+      properties:
+        prices:
+          type: array
+          items:
+            $ref: "#/components/schemas/OraclePrice"
+
+    OraclePriceResponse:
+      type: object
+      properties:
+        price:
+          type: object
+          items:
+            $ref: "#/components/schemas/OraclePrice"
+
+    OraclePrice:
+      type: object
+      properties:
+        symbol:
+          type: string
+          example: "BTC"
+        amount:
+          type: string
+          example: "105126.5321"
 
     TCYStakerSummary:
       type: object

@@ -370,6 +370,9 @@ type Thornode struct {
 		// directory with JSON events for all slash increments and decrements. This feature
 		// should not be enabled on production nodes.
 		SlashPoints bool `mapstructure:"slash_points"`
+		// PricePerNode enables oracle price telemetry. This tracks the reported
+		// price per asset and per node, updated every block.
+		PricePerNode bool `mapstructure:"price_per_node"`
 	} `mapstructure:"telemetry"`
 
 	// LogFilter will drop logs matching the modules and messages when not in debug level.
@@ -502,9 +505,30 @@ type Bifrost struct {
 		TRON  BifrostChainConfiguration `mapstructure:"tron"`
 		XRP   BifrostChainConfiguration `mapstructure:"xrp"`
 	} `mapstructure:"chains"`
-	TSS             BifrostTSSConfiguration `mapstructure:"tss"`
-	ObserverLevelDB LevelDBOptions          `mapstructure:"observer_leveldb"`
-	ObserverWorkers int                     `mapstructure:"observer_workers"`
+	TSS             BifrostTSSConfiguration    `mapstructure:"tss"`
+	ObserverLevelDB LevelDBOptions             `mapstructure:"observer_leveldb"`
+	ObserverWorkers int                        `mapstructure:"observer_workers"`
+	Oracle          BifrostOracleConfiguration `mapstructure:"oracle"`
+	Providers       struct {
+		Binance   BifrostOracleProviderConfiguration `mapstructure:"binance"`
+		Bitfinex  BifrostOracleProviderConfiguration `mapstructure:"bitfinex"`
+		Bitget    BifrostOracleProviderConfiguration `mapstructure:"bitget"`
+		Bitmart   BifrostOracleProviderConfiguration `mapstructure:"bitmart"`
+		Bitstamp  BifrostOracleProviderConfiguration `mapstructure:"bitstamp"`
+		Bybit     BifrostOracleProviderConfiguration `mapstructure:"bybit"`
+		Coinbase  BifrostOracleProviderConfiguration `mapstructure:"coinbase"`
+		Coinw     BifrostOracleProviderConfiguration `mapstructure:"coinw"`
+		Crypto    BifrostOracleProviderConfiguration `mapstructure:"crypto"`
+		Digifinex BifrostOracleProviderConfiguration `mapstructure:"digifinex"`
+		Gate      BifrostOracleProviderConfiguration `mapstructure:"gate"`
+		Gemini    BifrostOracleProviderConfiguration `mapstructure:"gemini"`
+		Htx       BifrostOracleProviderConfiguration `mapstructure:"htx"`
+		Kraken    BifrostOracleProviderConfiguration `mapstructure:"kraken"`
+		Kucoin    BifrostOracleProviderConfiguration `mapstructure:"kucoin"`
+		Lbank     BifrostOracleProviderConfiguration `mapstructure:"lbank"`
+		Mexc      BifrostOracleProviderConfiguration `mapstructure:"mexc"`
+		Okx       BifrostOracleProviderConfiguration `mapstructure:"okx"`
+	} `mapstructure:"providers"`
 }
 
 func (b Bifrost) GetChains() map[common.Chain]BifrostChainConfiguration {
@@ -521,6 +545,29 @@ func (b Bifrost) GetChains() map[common.Chain]BifrostChainConfiguration {
 		common.BASEChain:  b.Chains.BASE,
 		common.TRONChain:  b.Chains.TRON,
 		common.XRPChain:   b.Chains.XRP,
+	}
+}
+
+func (b Bifrost) GetProviders() map[string]BifrostOracleProviderConfiguration {
+	return map[string]BifrostOracleProviderConfiguration{
+		common.ProviderBinance:   b.Providers.Binance,
+		common.ProviderBitfinex:  b.Providers.Bitfinex,
+		common.ProviderBitget:    b.Providers.Bitget,
+		common.ProviderBitmart:   b.Providers.Bitmart,
+		common.ProviderBitstamp:  b.Providers.Bitstamp,
+		common.ProviderBybit:     b.Providers.Bybit,
+		common.ProviderCoinbase:  b.Providers.Coinbase,
+		common.ProviderCoinw:     b.Providers.Coinw,
+		common.ProviderCrypto:    b.Providers.Crypto,
+		common.ProviderDigifinex: b.Providers.Digifinex,
+		common.ProviderGate:      b.Providers.Gate,
+		common.ProviderGemini:    b.Providers.Gemini,
+		common.ProviderHtx:       b.Providers.Htx,
+		common.ProviderKraken:    b.Providers.Kraken,
+		common.ProviderKucoin:    b.Providers.Kucoin,
+		common.ProviderLbank:     b.Providers.Lbank,
+		common.ProviderMexc:      b.Providers.Mexc,
+		common.ProviderOkx:       b.Providers.Okx,
 	}
 }
 
@@ -861,6 +908,25 @@ type BifrostTSSConfiguration struct {
 	InfoAddress                  string   `mapstructure:"info_address"`
 	ExternalIP                   string   `mapstructure:"external_ip"`
 	MaxKeyshareRecoverScanBlocks int64    `mapstructure:"max_keyshare_recover_scan_blocks"`
+}
+
+type BifrostOracleConfiguration struct {
+	LogLevel string `mapstructure:"log_level"`
+	Enabled  bool   `mapstructure:"enabled"`
+	// DetailedMetrics enables tracking rates and 24h trading volume  of each
+	// trading pair on each provider, as well as final USD rates and internal
+	// weightings
+	DetailedMetrics bool `mapstructure:"detailed_metrics"`
+}
+
+type BifrostOracleProviderConfiguration struct {
+	Name            string        `mapstructure:"name"`
+	Disabled        bool          `mapstructure:"disabled"`
+	PollingInterval time.Duration `mapstructure:"polling_interval"`
+	ApiEndpoints    []string      `mapstructure:"api_endpoints"`
+	WsEndpoints     []string      `mapstructure:"ws_endpoints"`
+	Pairs           []string      `mapstructure:"pairs"`
+	SymbolMapping   []string      `mapstructure:"symbol_mapping"`
 }
 
 func (c BifrostTSSConfiguration) GetP2PPort() int {

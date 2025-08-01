@@ -683,6 +683,22 @@ func (s *queryServer) TCYClaimers(c context.Context, req *types.QueryTCYClaimers
 	return s.queryTCYClaimers(ctx, req)
 }
 
+func (s *queryServer) OraclePrices(c context.Context, req *types.QueryOraclePricesRequest) (*types.QueryOraclePricesResponse, error) {
+	if err := checkHeightParam(req.Height); err != nil {
+		return nil, err
+	}
+	ctx := s.unwrapSdkContext(c)
+	return s.queryOraclePrices(ctx, req)
+}
+
+func (s *queryServer) OraclePrice(c context.Context, req *types.QueryOraclePriceRequest) (*types.QueryOraclePriceResponse, error) {
+	if err := checkHeightParam(req.Height); err != nil {
+		return nil, err
+	}
+	ctx := s.unwrapSdkContext(c)
+	return s.queryOraclePrice(ctx, req)
+}
+
 func (s *queryServer) Eip712TypedData(c context.Context, req *types.QueryEip712TypedDataRequest) (*types.QueryEip712TypedDataResponse, error) {
 	ctx := s.unwrapSdkContext(c)
 	return s.queryEip712TypedData(ctx, req)

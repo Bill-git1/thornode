@@ -110,6 +110,8 @@ Class | Method | HTTP request | Description
 *NetworkApi* | [**Version**](docs/NetworkApi.md#version) | **Get** /thorchain/version | 
 *NodesApi* | [**Node**](docs/NodesApi.md#node) | **Get** /thorchain/node/{address} | 
 *NodesApi* | [**Nodes**](docs/NodesApi.md#nodes) | **Get** /thorchain/nodes | 
+*OracleApi* | [**OraclePrice**](docs/OracleApi.md#oracleprice) | **Get** /thorchain/oracle/price/{symbol} | 
+*OracleApi* | [**OraclePrices**](docs/OracleApi.md#oracleprices) | **Get** /thorchain/oracle/prices | 
 *PoolSlipApi* | [**Poolslip**](docs/PoolSlipApi.md#poolslip) | **Get** /thorchain/slip/{asset} | 
 *PoolSlipApi* | [**Poolslips**](docs/PoolSlipApi.md#poolslips) | **Get** /thorchain/slips | 
 *PoolsApi* | [**Dpool**](docs/PoolsApi.md#dpool) | **Get** /thorchain/dpool/{asset} | 
@@ -212,6 +214,9 @@ Class | Method | HTTP request | Description
  - [NodePreflightStatus](docs/NodePreflightStatus.md)
  - [NodePubKeySet](docs/NodePubKeySet.md)
  - [ObservedTx](docs/ObservedTx.md)
+ - [OraclePrice](docs/OraclePrice.md)
+ - [OraclePriceResponse](docs/OraclePriceResponse.md)
+ - [OraclePricesResponse](docs/OraclePricesResponse.md)
  - [OutboundDelayStage](docs/OutboundDelayStage.md)
  - [OutboundFee](docs/OutboundFee.md)
  - [OutboundSignedStage](docs/OutboundSignedStage.md)

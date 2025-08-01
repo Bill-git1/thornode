@@ -56,6 +56,7 @@ lint:
         - codespell
       paths:
         - bifrost/pkg/chainclients/gaia/test-data/*.json
+        - bifrost/oracle/providers/mock/data/*.json
         - common/tokenlist/*/*.json
         - third_party/**
         - test/regression/mnt/blocks/**
