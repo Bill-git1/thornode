@@ -39,11 +39,13 @@ var (
 	XRPAsset = Asset{Chain: XRPChain, Symbol: "XRP", Ticker: "XRP", Synth: false}
 	// RuneNative RUNE on thorchain
 	RuneNative = Asset{Chain: THORChain, Symbol: "RUNE", Ticker: "RUNE", Synth: false}
-	RUJI       = Asset{Chain: THORChain, Symbol: "RUJI", Ticker: "RUJI", Synth: false}
 	TCY        = Asset{Chain: THORChain, Symbol: "TCY", Ticker: "TCY", Synth: false}
 	TOR        = Asset{Chain: THORChain, Symbol: "TOR", Ticker: "TOR", Synth: false}
 	THORBTC    = Asset{Chain: THORChain, Symbol: "BTC", Ticker: "BTC", Synth: false}
 	USDCAsset  = Asset{Chain: NOBLEChain, Symbol: "USDC", Ticker: "USDC", Synth: false}
+	// Whitelisted assets
+	RUJI = Asset{Chain: THORChain, Symbol: "RUJI", Ticker: "RUJI", Synth: false}
+	NAMI = Asset{Chain: THORChain, Symbol: "NAMI", Ticker: "NAMI", Synth: false}
 )
 
 var _ sdk.CustomProtobufType = (*Asset)(nil)
@@ -243,7 +245,7 @@ func (a Asset) IsVaultAsset() bool {
 
 // Check if asset is a derived asset
 func (a Asset) IsDerivedAsset() bool {
-	return !a.Synth && !a.Trade && !a.Secured && a.GetChain().IsTHORChain() && !a.IsRune() && !a.IsTCY() && !a.IsRUJI()
+	return !a.Synth && !a.Trade && !a.Secured && a.GetChain().IsTHORChain() && !a.IsRune() && !a.IsTCY() && !a.IsWhitelisted()
 }
 
 // Native return native asset, only relevant on THORChain
@@ -255,8 +257,10 @@ func (a Asset) Native() string {
 		return "tor"
 	case a.Equals(TCY):
 		return "tcy"
-	case a.IsRUJI():
+	case a.Equals(RUJI):
 		return "x/ruji"
+	case a.Equals(NAMI):
+		return "thor.nami"
 	}
 
 	return strings.ToLower(a.String())
@@ -328,13 +332,18 @@ func (a Asset) IsRune() bool {
 	return RuneAsset().Equals(a)
 }
 
-// IsTCY is a helper function ,return true only when the asset represent RUNE
+// IsTCY is a helper function, return true only when the asset represents TCY
 func (a Asset) IsTCY() bool {
 	return TCY.Equals(a)
 }
 
-func (a Asset) IsRUJI() bool {
-	return RUJI.Equals(a)
+// IsWhitelisted is a helper function, return true when the asset is whitelisted for a base layer pool
+func (a Asset) IsWhitelisted() bool {
+	whitelist := map[Asset]bool{
+		RUJI: true,
+		NAMI: true,
+	}
+	return whitelist[a]
 }
 
 // IsNative is a helper function, returns true when the asset is a native
