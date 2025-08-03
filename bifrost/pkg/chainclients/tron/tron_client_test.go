@@ -212,7 +212,7 @@ func (s *TronTestSuite) TestGetAccountByAddress(c *C) {
 
 func (s *TronTestSuite) TestGetConfirmationCountAndBlocks(c *C) {
 	c.Assert(s.client.GetConfirmationCount(types.TxIn{}), Equals, int64(0))
-	c.Assert(ConfirmationBlocks, Equals, int64(19))
+	c.Assert(ConfirmationBlocks, Equals, int64(1))
 }
 
 func (s *TronTestSuite) TestGetConfig(c *C) {

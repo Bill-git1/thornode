@@ -145,6 +145,7 @@ bifrost:
         max_resume_block_lag: 24h
         max_healthy_lag: 30m
         transaction_batch_size: 500
+        reference_address: ""
 
       # the following defaults must be defined to override with environment
       chain_host: ""
@@ -223,6 +224,9 @@ bifrost:
         gas_price_resolution: 100_000
         observation_flexibility_blocks: 40
         scan_mempool: false
+        # TCpyVx6RVmrQsE3Xo3epB7y1CdJdCdAwAx is a generated address,
+        # funded with 1 TRX & 1 USDT initially
+        reference_address: "TCpyVx6RVmrQsE3Xo3epB7y1CdJdCdAwAx"
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
 

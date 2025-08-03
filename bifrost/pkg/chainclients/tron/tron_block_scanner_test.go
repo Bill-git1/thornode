@@ -62,7 +62,7 @@ func (s *BlockScannerTestSuite) SetUpSuite(c *C) {
 func (s *BlockScannerTestSuite) TestGetHeight(c *C) {
 	height, err := s.scanner.GetHeight()
 	c.Assert(err, IsNil)
-	// scanning 19 blocks behind the tip
+	// scanning 1 blocks behind the tip
 	c.Assert(height, Equals, 55088560-ConfirmationBlocks)
 }
 

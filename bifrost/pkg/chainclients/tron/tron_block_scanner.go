@@ -60,24 +60,6 @@ func NewTronBlockScanner(
 		Str("chain", cfg.ChainID.String()).
 		Logger()
 
-	// The energy estimation API expects an existing address for the api call,
-	// which is only needed when at least one TRC-20 token is whitelisted.
-	// Before being able to handle tokens, there needs to be a TRX pool, which
-	// can be used for the request.
-	if refAddress == "" {
-		vaults, _ := bridge.GetAsgards()
-		for _, vault := range vaults {
-			if vault.HasAsset(cfg.ChainID.GetGasAsset()) {
-				address, err := vault.PubKey.GetAddress(cfg.ChainID)
-				if err != nil {
-					continue
-				}
-				refAddress = address.String()
-				break
-			}
-		}
-	}
-
 	// load whitelisted tokens
 	tokens := tokenlist.GetEVMTokenList(cfg.ChainID).Tokens
 
@@ -88,6 +70,11 @@ func NewTronBlockScanner(
 				whitelist[address] = token
 			}
 		}
+	}
+
+	refAddress := cfg.BlockScanner.ReferenceAddress
+	if len(whitelist) > 0 && refAddress == "" {
+		return nil, fmt.Errorf("reference address is empty")
 	}
 
 	scanner := TronBlockScanner{
@@ -132,7 +119,7 @@ func (s *TronBlockScanner) FetchMemPool(_ int64) (types.TxIn, error) {
 }
 
 func (s *TronBlockScanner) FetchTxs(
-	fetchHeight, _ int64,
+	fetchHeight, chainHeight int64,
 ) (types.TxIn, error) {
 	block, err := s.api.GetBlock(fetchHeight)
 	if err != nil {
@@ -151,6 +138,17 @@ func (s *TronBlockScanner) FetchTxs(
 		TxArray:  txs,
 		Filtered: false,
 		MemPool:  false,
+	}
+
+	if chainHeight-fetchHeight > s.config.ObservationFlexibilityBlocks {
+		return txIn, nil
+	}
+
+	s.updateFees(fetchHeight)
+
+	err = s.reportSolvency(chainHeight)
+	if err != nil {
+		s.logger.Err(err).Msg("fail to send solvency to THORChain")
 	}
 
 	if fetchHeight%refBlockInterval != 0 {
@@ -345,15 +343,6 @@ func (s *TronBlockScanner) processTxs(
 		})
 	}
 
-	if height%updateGasInterval == 0 {
-		s.updateFee(height)
-	}
-
-	err := s.reportSolvency(height)
-	if err != nil {
-		s.logger.Err(err).Msg("fail to send solvency to THORChain")
-	}
-
 	return txInItems, nil
 }
 
@@ -385,7 +374,11 @@ func (s *TronBlockScanner) decodeTRC20Input(
 	return method.Name, inputs, nil
 }
 
-func (s *TronBlockScanner) updateFee(height int64) {
+func (s *TronBlockScanner) updateFees(height int64) {
+	if height%updateGasInterval != 0 {
+		return
+	}
+
 	params, err := s.api.GetChainParameters()
 	if err != nil {
 		s.logger.Err(err).Msg("failed get chain parameters")
@@ -403,7 +396,7 @@ func (s *TronBlockScanner) updateFee(height int64) {
 	} else {
 		// hex data is longer and penalty factor is applied
 		// => 211 + 3 + 64 + 67 = 361
-		bandwidth = 345 * params.BandwidthFee
+		bandwidth = 361 * params.BandwidthFee
 
 		maxEnergy, err := s.getMaxEnergy()
 		if err != nil || maxEnergy <= 0 {
@@ -439,8 +432,6 @@ func (s *TronBlockScanner) updateFee(height int64) {
 }
 
 func (s *TronBlockScanner) getMaxEnergy() (int64, error) {
-	s.logger.Info().Msg("updating fee for block")
-
 	// get max energy usage of all whitelisted tokens
 	maxEnergy := int64(0)
 

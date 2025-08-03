@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+
 	_ "embed"
 
 	"cosmossdk.io/math"
@@ -39,7 +41,7 @@ import (
 const (
 	TimestampAccuracy        = 10 * time.Second
 	TimestampValidity        = 90 * time.Second
-	ConfirmationBlocks int64 = 19
+	ConfirmationBlocks int64 = 1
 )
 
 //go:embed abi/trc20.json
@@ -485,7 +487,32 @@ func (c *TronClient) SignTx(
 		return nil, nil, nil, err
 	}
 
-	return txBytes, nil, nil, nil
+	currentHeight, err := c.tronScanner.GetHeight()
+	if err != nil {
+		c.logger.Err(err).Msg("failed to get latest block")
+		return nil, nil, nil, err
+	}
+
+	gasCoin := common.NewCoin(
+		common.TRXAsset,
+		cosmos.NewUint(uint64(txOutItem.GasRate)),
+	)
+
+	txIn := types.NewTxInItem(
+		currentHeight,
+		tronTx.TxId,
+		txOutItem.Memo,
+		fromAddress,
+		txOutItem.ToAddress.String(),
+		txOutItem.Coins,
+		[]common.Coin{gasCoin},
+		txOutItem.VaultPubKey,
+		"",
+		"",
+		nil,
+	)
+
+	return txBytes, nil, txIn, nil
 }
 
 // BroadcastTx sends the transaction to Tron chain

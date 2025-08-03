@@ -880,6 +880,10 @@ type BifrostBlockScannerConfiguration struct {
 
 	// MaxReorgRescanBlocks is the maximum number of blocks to rescan during a reorg.
 	MaxReorgRescanBlocks int64 `mapstructure:"max_reorg_rescan_blocks"`
+
+	// ReferenceAddress is needed for calculating TRC20 fees on Tron blockchain
+	// The default address is pre-funded with 1 TRX & 1 USDT, see config.yaml
+	ReferenceAddress string `mapstructure:"reference_address"`
 }
 
 type BifrostClientConfiguration struct {
