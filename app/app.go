@@ -46,6 +46,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
+	"github.com/cosmos/cosmos-sdk/x/auth/migrations/legacytx"
 	authsims "github.com/cosmos/cosmos-sdk/x/auth/simulation"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
@@ -187,6 +188,9 @@ func NewChainApp(
 	wasmtypes.MaxWasmSize = WasmMaxSize
 	ec := appparams.MakeEncodingConfig()
 	interfaceRegistry := ec.InterfaceRegistry
+	// This is needed for the EIP712 txs because currently is using
+	// the deprecated method legacytx.StdSignBytes
+	legacytx.RegressionTestingAminoCodec = ec.Amino
 	eip712.SetEncodingConfig(ec.Amino, interfaceRegistry, 1)
 	evm.RegisterLegacyAminoCodec(ec.Amino)
 	evm.RegisterInterfaces(interfaceRegistry)
@@ -562,7 +566,7 @@ func NewChainApp(
 				AccountKeeper:   app.AccountKeeper,
 				BankKeeper:      app.BankKeeper,
 				SignModeHandler: txConfig.SignModeHandler(),
-				SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
+				SigGasConsumer:  SigGasConsumer,
 			},
 			THORChainKeeper:       app.ThorchainKeeper,
 			WasmConfig:            &wasmConfig,

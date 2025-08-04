@@ -8,7 +8,12 @@ import (
 	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	"github.com/cosmos/evm/crypto/ethsecp256k1"
+
+	storetypes "cosmossdk.io/store/types"
 
 	"gitlab.com/thorchain/thornode/v3/x/thorchain"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/ebifrost"
@@ -84,4 +89,18 @@ func NewAnteHandler(options HandlerOptions) (sdk.AnteHandler, error) {
 	}
 
 	return sdk.ChainAnteDecorators(anteDecorators...), nil
+}
+
+func SigGasConsumer(
+	meter storetypes.GasMeter, sig signing.SignatureV2, params authtypes.Params,
+) error {
+	pubkey := sig.PubKey
+	switch pubkey.(type) {
+	case *ethsecp256k1.PubKey:
+		// Ethereum keys
+		meter.ConsumeGas(params.SigVerifyCostSecp256k1, "ante verify: eth_secp256k1")
+		return nil
+	default:
+		return ante.DefaultSigVerificationGasConsumer(meter, sig, params)
+	}
 }
