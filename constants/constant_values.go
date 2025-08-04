@@ -123,6 +123,7 @@ const (
 	SynthSlipMinBps
 	TradeAccountsSlipMinBps
 	DerivedSlipMinBps
+	SlipMinBpsMax
 	TradeAccountsEnabled
 	TradeAccountsDepositEnabled
 	SecuredAssetSlipMinBps

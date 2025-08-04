@@ -1,3 +1,7 @@
+type: env
+key: SLIP_MIN_BPS_MAX
+value: "1000"
+---
 {{ template "5-validators-btc-eth-pool-state.yaml" }}
 ---
 type: create-blocks

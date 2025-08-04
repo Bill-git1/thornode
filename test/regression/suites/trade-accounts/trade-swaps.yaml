@@ -1,4 +1,8 @@
 type: env
+key: SLIP_MIN_BPS_MAX
+value: "1000"
+---
+type: env
 key: TRADE_ACCOUNTS_SLIP_MIN_BPS
 value: "50"
 ---
@@ -355,7 +359,7 @@ asserts:
   - .result | length == 1
   - .result[0].denom == "rune"
 ---
-  # Confirming the sequence before two MsgMimirs (per signer) in the same block.
+# Confirming the sequence before two MsgMimirs (per signer) in the same block.
 type: check
 endpoint: http://localhost:1317/auth/accounts/{{ addr_thor_cat }}
 asserts:

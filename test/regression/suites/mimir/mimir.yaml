@@ -60,3 +60,39 @@ endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .txs[0].result.code == 6
   - .txs[0].result.log | contains("invalid mimir key")
+---
+########################################################################################
+# fail min slip mimirs when over the SlipMinBpsMax (default 1%)
+########################################################################################
+type: tx-mimir
+key: L1SlipMinBps
+value: 101
+signer: {{ addr_thor_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/mimir/key/L1SlipMinBps
+asserts:
+  - . == -1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/block
+asserts:
+  - .txs[0].result.code == 6
+  - .txs[0].result.log | contains("min slip mimir exceeds SlipMinBpsMax")
+---
+# up to the limit is ok
+type: tx-mimir
+key: L1SlipMinBps
+value: 100
+signer: {{ addr_thor_dog }}
+---
+type: create-blocks
+count: 1
+---
+type: check
+endpoint: http://localhost:1317/thorchain/mimir/key/L1SlipMinBps
+asserts:
+  - . == 100

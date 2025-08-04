@@ -823,7 +823,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "104073",
+          "gas_used": "108823",
           "events": [
             {
               "acc_seq": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej/0",
@@ -884,6 +884,12 @@
               "node_address": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
               "to": "",
               "type": "bond"
+            },
+            {
+              "key": "SYNTHSLIPMINBPS",
+              "msg_index": "0",
+              "type": "set_mimir",
+              "value": "500"
             }
           ]
         }
@@ -937,7 +943,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "106735",
+          "gas_used": "98872",
           "events": [
             {
               "acc_seq": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u/0",
@@ -1051,7 +1057,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "97772",
+          "gas_used": "89777",
           "events": [
             {
               "acc_seq": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr/1",
@@ -1165,7 +1171,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "112653",
+          "gas_used": "101776",
           "events": [
             {
               "acc_seq": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm/0",
@@ -1226,12 +1232,6 @@
               "node_address": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
               "to": "",
               "type": "bond"
-            },
-            {
-              "key": "SYNTHSLIPMINBPS",
-              "msg_index": "0",
-              "type": "set_mimir",
-              "value": "500"
             }
           ]
         }
@@ -1267,7 +1267,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "17284A73183260D3BF8E09894A839CC76ABB4528AE18633740A94AE4F05BDCF8",
-      "last_results_hash": "2D094A146C3BF91441F7A1C3806A5C33B7CFB2A55E6EEEC8AB03BFE3D15F8D33",
+      "last_results_hash": "19C97DE58217594D948D3FFE8999319155B98EF161C2E0C16B2B427B736E73FB",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },

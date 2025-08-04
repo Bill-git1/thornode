@@ -3181,7 +3181,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "91016",
+          "gas_used": "95976",
           "events": [
             {
               "acc_seq": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej/1",
@@ -3242,6 +3242,12 @@
               "node_address": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
               "to": "",
               "type": "bond"
+            },
+            {
+              "key": "SECUREDASSETSLIPMINBPS",
+              "msg_index": "0",
+              "type": "set_mimir",
+              "value": "1000"
             }
           ]
         }
@@ -3295,7 +3301,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "93951",
+          "gas_used": "86046",
           "events": [
             {
               "acc_seq": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u/1",
@@ -3409,7 +3415,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "98829",
+          "gas_used": "90771",
           "events": [
             {
               "acc_seq": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr/4",
@@ -3523,7 +3529,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "100583",
+          "gas_used": "89412",
           "events": [
             {
               "acc_seq": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm/1",
@@ -3584,12 +3590,6 @@
               "node_address": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
               "to": "",
               "type": "bond"
-            },
-            {
-              "key": "SECUREDASSETSLIPMINBPS",
-              "msg_index": "0",
-              "type": "set_mimir",
-              "value": "1000"
             }
           ]
         }
@@ -3625,7 +3625,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "3CD03DC4A051935DB73E1854071F290FDF421EFD1AB85AAB941EF40585E8FD98",
-      "last_results_hash": "48A3EE4201CE7EB6F8EFBCD1D4244126D0054628CB1150D967AF08F4E561FEA5",
+      "last_results_hash": "09DED168C6AA14E253ABD861121E991BCD507F5E6010751FAE402567AE57DE52",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -6135,7 +6135,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "98829",
+          "gas_used": "100829",
           "events": [
             {
               "acc_seq": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej/4",
@@ -6249,7 +6249,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "98793",
+          "gas_used": "100793",
           "events": [
             {
               "acc_seq": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u/4",
@@ -6363,7 +6363,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "114029",
+          "gas_used": "118959",
           "events": [
             {
               "acc_seq": "tthor12e7ngn5h22su4hecdf0h8aw7hvnly5tchrfd43/0",
@@ -6424,6 +6424,12 @@
               "node_address": "tthor12e7ngn5h22su4hecdf0h8aw7hvnly5tchrfd43",
               "to": "",
               "type": "bond"
+            },
+            {
+              "key": "SECUREDASSETSLIPMINBPS",
+              "msg_index": "0",
+              "type": "set_mimir",
+              "value": "10"
             }
           ]
         }
@@ -6477,7 +6483,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "103487",
+          "gas_used": "91106",
           "events": [
             {
               "acc_seq": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm/4",
@@ -6538,12 +6544,6 @@
               "node_address": "tthor1xkz88t875m7ms7wa6220estwwdlc86pqsccrvm",
               "to": "",
               "type": "bond"
-            },
-            {
-              "key": "SECUREDASSETSLIPMINBPS",
-              "msg_index": "0",
-              "type": "set_mimir",
-              "value": "10"
             }
           ]
         }
@@ -6674,7 +6674,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "E52D9CB1CA12EC07068B77E76D101B2CDB2F890F65C1C99C008161F499A44DAD",
-      "last_results_hash": "65FEAF68F58B95ACF100B4B94523626E2844166D558DEC6A71B712756DCE955D",
+      "last_results_hash": "E0E67735F76ADC00BBE860A2D52F0B85835E4D170DF10B6765C74050E790DF34",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },

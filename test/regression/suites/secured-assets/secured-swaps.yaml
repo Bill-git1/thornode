@@ -1,4 +1,8 @@
 type: env
+key: SLIP_MIN_BPS_MAX
+value: "1000"
+---
+type: env
 key: SECURED_ASSET_SLIP_MIN_BPS
 value: "50"
 ---
@@ -416,7 +420,7 @@ endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 2
   - .balances[0].denom == "btc-btc"
-  - .balances[0].amount|tonumber == ${INITIAL_UNITS} - 1000000 
+  - .balances[0].amount|tonumber == ${INITIAL_UNITS} - 1000000
   - .balances[1].denom == "rune"
   - .balances[1].amount|tonumber == ${INITIAL_RUNE} + 879894308
 ---

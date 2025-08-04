@@ -120,6 +120,7 @@ func NewConstantValue() *ConstantVals {
 			SecuredAssetSlipMinBps:              5,                  // Minimum secured asset swap fee in basis points
 			SynthSlipMinBps:                     0,                  // Minimum synth asset swap fee in basis points
 			DerivedSlipMinBps:                   0,                  // Minimum derived asset swap fee in basis points
+			SlipMinBpsMax:                       100,                // Maximum slip min bps for all asset types
 			RUNEPoolEnabled:                     0,                  // enable/disable RUNE Pool
 			RUNEPoolDepositMaturityBlocks:       14400 * 90,         // blocks from last deposit to allow withdraw
 			RUNEPoolMaxReserveBackstop:          5_000_000_00000000, // 5 million RUNE
