@@ -881,6 +881,9 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 	}
 
 	res.Notes = fromAsset.GetChain().InboundNotes()
+	if outboundNotes := toAsset.Chain.OutboundNotes(); outboundNotes != "" {
+		res.Notes += " " + outboundNotes
+	}
 	res.Warning = quoteWarning
 	res.Expiry = time.Now().Add(quoteExpiration).Unix()
 	minSwapAmount, err := calculateMinSwapAmount(ctx, qs.mgr, fromAsset, toAsset)

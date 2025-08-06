@@ -401,6 +401,15 @@ func (c Chain) InboundNotes() string {
 	}
 }
 
+func (c Chain) OutboundNotes() string {
+	switch c {
+	case XRPChain:
+		return "Ensure XRP destination address does not have special flags like lsfRequireDestTag, lsfRequireAuth, lsfDisallowIncomingPayChan, etcetera."
+	default:
+		return ""
+	}
+}
+
 func NewChains(raw []string) (Chains, error) {
 	var returnErr error
 	var chains Chains
