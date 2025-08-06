@@ -94,8 +94,17 @@ func (m Migrator) Migrate7to8(ctx sdk.Context) error {
 
 		networkFee, err := m.mgr.Keeper().GetNetworkFee(ctx, chain)
 		if err != nil {
+			ctx.Logger().Error("Error getting NetworkFee for chain", "chain", chain.String(), "error", err)
 			return err
 		}
+		ctx.Logger().Info("NetworkFee details", "chain", chain.String(), "transactionSize", networkFee.TransactionSize, "transactionFeeRate", networkFee.TransactionFeeRate)
+
+		// Skip if TransactionSize is 0 to avoid validation error
+		if networkFee.TransactionSize == 0 {
+			ctx.Logger().Info("Skipping chain due to zero TransactionSize", "chain", chain.String())
+			continue
+		}
+
 		networkFee.TransactionFeeRate = cosmos.NewUint(networkFee.TransactionFeeRate).Mul(gasRateUnitsPerOne).QuoUint64(common.One).Uint64()
 		if err := m.mgr.Keeper().SaveNetworkFee(ctx, chain, networkFee); err != nil {
 			return err
