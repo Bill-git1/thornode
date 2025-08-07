@@ -52,7 +52,7 @@ func (h ModifyLimitSwapHandler) handle(ctx cosmos.Context, msg MsgModifyLimitSwa
 	// If multiple swaps exist with the same source/target for a user, only the first is modified.
 
 	// get the txn hashes that match this fake swap msg
-	hashes, err := h.mgr.Keeper().GetAdvSwapQueueIndex(ctx, MsgSwap{
+	items, err := h.mgr.Keeper().GetAdvSwapQueueIndex(ctx, MsgSwap{
 		Tx: common.Tx{
 			Coins: common.NewCoins(msg.Source),
 		},
@@ -66,10 +66,10 @@ func (h ModifyLimitSwapHandler) handle(ctx cosmos.Context, msg MsgModifyLimitSwa
 
 	// convert the list of txn hashes to real msg swaps
 	msgSwaps := make([]MsgSwap, 0)
-	for _, hash := range hashes {
-		msgSwap, err := h.mgr.Keeper().GetAdvSwapQueueItem(ctx, hash)
+	for _, item := range items {
+		msgSwap, err := h.mgr.Keeper().GetAdvSwapQueueItem(ctx, item.TxID, item.Index)
 		if err != nil {
-			ctx.Logger().Error("fail to get swap book item", "hash", hash)
+			ctx.Logger().Error("fail to get swap book item", "hash", item.TxID, "index", item.Index)
 			continue
 		}
 
@@ -89,44 +89,95 @@ func (h ModifyLimitSwapHandler) handle(ctx cosmos.Context, msg MsgModifyLimitSwa
 	msgSwap := msgSwaps[0]
 	if msg.ModifiedTargetAmount.IsZero() {
 		// the target is being modified to zero, which is interpreted as a cancel
-		if err := h.mgr.Keeper().RemoveAdvSwapQueueIndex(ctx, msgSwap); err != nil {
+		if err := h.cancelLimitSwap(ctx, msgSwap); err != nil {
 			return err
-		}
-		if err := h.mgr.Keeper().RemoveAdvSwapQueueItem(ctx, msgSwap.Tx.ID); err != nil {
-			return err
-		}
-
-		// Refund the original transaction
-		voter, voterErr := h.mgr.Keeper().GetObservedTxInVoter(ctx, msgSwap.Tx.ID)
-		var refundErr error
-		if voterErr == nil && !voter.Tx.IsEmpty() {
-			refundErr = refundTx(ctx, ObservedTx{Tx: msgSwap.Tx, ObservedPubKey: voter.Tx.ObservedPubKey}, h.mgr, CodeSwapFail, "limit swap cancelled", "")
-		} else {
-			ctx.Logger().Error("fail to get non-empty observed tx", "error", voterErr)
-			refundErr = refundTx(ctx, ObservedTx{Tx: msgSwap.Tx}, h.mgr, CodeSwapFail, "limit swap cancelled", "")
-		}
-
-		if refundErr != nil {
-			ctx.Logger().Error("fail to refund cancelled limit swap", "error", refundErr)
-			return refundErr
 		}
 	} else {
-		// remove current index
-		if err := h.mgr.Keeper().RemoveAdvSwapQueueIndex(ctx, msgSwap); err != nil {
+		// modify the limit swap
+		if err := h.modifyLimitSwap(ctx, msgSwap, msg.ModifiedTargetAmount); err != nil {
 			return err
 		}
+	}
 
-		// update trade target
-		msgSwap.TradeTarget = msg.ModifiedTargetAmount
-		// save new index and swap limit item
-		if err := h.mgr.AdvSwapQueueMgr().AddSwapQueueItem(ctx, msgSwap); err != nil {
-			return err
+	// Donate any incoming funds from the modification transaction to the pool
+	if !msg.DepositAmount.IsZero() && !msg.DepositAsset.IsEmpty() {
+		if err := h.donateToPool(ctx, msg.DepositAsset, msg.DepositAmount, msg.From); err != nil {
+			ctx.Logger().Error("fail to donate modification tx funds to pool", "error", err, "asset", msg.DepositAsset, "amount", msg.DepositAmount)
+			// Don't fail the modification if donation fails
 		}
 	}
 
 	modEvent := NewEventModifyLimitSwap(msg.From, msg.Source, msg.Target, msg.ModifiedTargetAmount)
 	if err := h.mgr.EventMgr().EmitEvent(ctx, modEvent); err != nil {
 		ctx.Logger().Error("fail to emit modEvent event", "error", err)
+	}
+
+	return nil
+}
+
+// cancelLimitSwap handles the cancellation of a limit swap
+func (h ModifyLimitSwapHandler) cancelLimitSwap(ctx cosmos.Context, msgSwap MsgSwap) error {
+	// Use settleSwap to handle the cancellation
+	// This will handle any partial swaps and refund the remainder
+	return settleSwap(ctx, h.mgr, msgSwap, "limit swap cancelled")
+}
+
+// modifyLimitSwap handles the modification of a limit swap's target amount
+func (h ModifyLimitSwapHandler) modifyLimitSwap(ctx cosmos.Context, msgSwap MsgSwap, newTargetAmount cosmos.Uint) error {
+	// remove current index
+	if err := h.mgr.Keeper().RemoveAdvSwapQueueIndex(ctx, msgSwap); err != nil {
+		return err
+	}
+
+	// update trade target
+	msgSwap.TradeTarget = newTargetAmount
+
+	// save the modified swap back to the queue (SetAdvSwapQueueItem also updates the index)
+	if err := h.mgr.Keeper().SetAdvSwapQueueItem(ctx, msgSwap); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// donateToPool adds the given amount to the specified pool's balance
+func (h ModifyLimitSwapHandler) donateToPool(ctx cosmos.Context, asset common.Asset, amount cosmos.Uint, from common.Address) error {
+	// Get the pool for the asset
+	pool, err := h.mgr.Keeper().GetPool(ctx, asset.GetLayer1Asset())
+	if err != nil {
+		return fmt.Errorf("fail to get pool: %w", err)
+	}
+	if pool.IsEmpty() {
+		return fmt.Errorf("pool does not exist for asset %s", asset)
+	}
+
+	// Add the amount to the appropriate balance
+	if asset.IsRune() {
+		pool.BalanceRune = pool.BalanceRune.Add(amount)
+	} else {
+		pool.BalanceAsset = pool.BalanceAsset.Add(amount)
+	}
+
+	// Save the updated pool
+	if err := h.mgr.Keeper().SetPool(ctx, pool); err != nil {
+		return fmt.Errorf("fail to save pool: %w", err)
+	}
+
+	// Create a minimal transaction for the donation event
+	tx := common.Tx{
+		ID:          common.TxID(""),
+		Chain:       asset.GetChain(),
+		FromAddress: from,
+		ToAddress:   common.NoAddress,
+		Coins:       common.NewCoins(common.NewCoin(asset, amount)),
+		Gas:         nil,
+		Memo:        "THOR-MODIFY-LIMIT",
+	}
+
+	// Emit a donation event
+	donateEvt := NewEventDonate(pool.Asset, tx)
+	if err := h.mgr.EventMgr().EmitEvent(ctx, donateEvt); err != nil {
+		ctx.Logger().Error("fail to emit donate event", "error", err)
 	}
 
 	return nil

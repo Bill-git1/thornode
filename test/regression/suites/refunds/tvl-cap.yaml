@@ -43,7 +43,7 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .end_block_events[]|select(.type == "refund")|.reason == "add liquidity rune is more than bond"
+  - .|[..|select(.type? == "refund")][0].reason == "add liquidity rune is more than bond"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound

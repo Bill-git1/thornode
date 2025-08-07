@@ -54,10 +54,11 @@ const MaxMemoSizeUtxoExtended = MaxOpReturnDataSize - 1 + 8*20
 type contextKey string
 
 const (
-	CtxMetricLabels  contextKey = "metricLabels"
-	CtxLoanTxID      contextKey = "loan-txid"
-	CtxLoanToAddress contextKey = "loan-toaddress"
-	CtxObservedTx    contextKey = "observed-tx"
+	CtxMetricLabels   contextKey = "metricLabels"
+	CtxLoanTxID       contextKey = "loan-txid"
+	CtxLoanToAddress  contextKey = "loan-toaddress"
+	CtxObservedTx     contextKey = "observed-tx"
+	CtxSimulationMode contextKey = "simulation-mode"
 )
 
 // Permitted characters in Mimirs

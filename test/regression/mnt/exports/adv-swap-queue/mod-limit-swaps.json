@@ -201,7 +201,17 @@
         {
           "affiliate_basis_points": "0",
           "destination": "0xe3c64974c78f5693bd2bc68b3221d58df5c6e877",
+          "initial_block_height": "8",
           "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+          "state": {
+            "deposit": "1000000",
+            "in": "0",
+            "interval": "1",
+            "out": "0",
+            "quantity": "1",
+            "withdrawn": "0"
+          },
+          "stream_interval": "1",
           "swap_type": 1,
           "target_asset": "ETH.ETH",
           "trade_target": "500000000000000000",
@@ -223,12 +233,23 @@
             "id": "0000000000000000000000000000000000000000000000000000000000000001",
             "memo": "=\u003c:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877:500000000000000000",
             "to_address": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk"
-          }
+          },
+          "version": 1
         },
         {
           "affiliate_basis_points": "0",
           "destination": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
+          "initial_block_height": "3",
           "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
+          "state": {
+            "deposit": "10000000000",
+            "in": "0",
+            "interval": "1",
+            "out": "0",
+            "quantity": "1",
+            "withdrawn": "0"
+          },
+          "stream_interval": "1",
           "swap_type": 1,
           "target_asset": "BTC.BTC",
           "trade_target": "9500000",
@@ -245,12 +266,23 @@
             "id": "33F61E5132E5C07FEA1CE5CC2098906EA2D5CD3B85316EC8FE7D94620424EB11",
             "memo": "=\u003c:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw:8998438",
             "to_address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2"
-          }
+          },
+          "version": 1
         },
         {
           "affiliate_basis_points": "0",
           "destination": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
+          "initial_block_height": "10",
           "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
+          "state": {
+            "deposit": "2000000000",
+            "in": "0",
+            "interval": "1",
+            "out": "0",
+            "quantity": "1",
+            "withdrawn": "0"
+          },
+          "stream_interval": "1",
           "swap_type": 1,
           "target_asset": "BTC.BTC",
           "trade_target": "22000000",
@@ -267,12 +299,23 @@
             "id": "4E6778568B1B7C44E547C0E5D3A5471906138CF596CA2CDB01FAEBF6B99F80E5",
             "memo": "=\u003c:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw:15000000",
             "to_address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2"
-          }
+          },
+          "version": 1
         },
         {
           "affiliate_basis_points": "0",
           "destination": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
+          "initial_block_height": "13",
           "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
+          "state": {
+            "deposit": "3000000000",
+            "in": "0",
+            "interval": "1",
+            "out": "0",
+            "quantity": "1",
+            "withdrawn": "0"
+          },
+          "stream_interval": "1",
           "swap_type": 1,
           "target_asset": "BTC.BTC",
           "trade_target": "4500000",
@@ -289,12 +332,23 @@
             "id": "6D08A8EF72B70000E64389BD0204ED05A0060104021D3D35A4C9257F4EFD3B0B",
             "memo": "=\u003c:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw:5000000",
             "to_address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2"
-          }
+          },
+          "version": 1
         },
         {
           "affiliate_basis_points": "0",
           "destination": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
+          "initial_block_height": "11",
           "signer": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
+          "state": {
+            "deposit": "2000000000",
+            "in": "0",
+            "interval": "1",
+            "out": "0",
+            "quantity": "1",
+            "withdrawn": "0"
+          },
+          "stream_interval": "1",
           "swap_type": 1,
           "target_asset": "BTC.BTC",
           "trade_target": "15000000",
@@ -311,7 +365,8 @@
             "id": "F866EEEE0263E4EAE18F9EA396BF12D253430B6056A4FAD34976A81D57B24833",
             "memo": "=\u003c:BTC.BTC:bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw:15000000",
             "to_address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2"
-          }
+          },
+          "version": 1
         }
       ],
       "affiliate_collectors": null,

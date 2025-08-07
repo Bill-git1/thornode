@@ -140,6 +140,7 @@ docs/StreamingSwapApi.md
 docs/SwapApi.md
 docs/SwapDetailsResponse.md
 docs/SwapFinalisedStage.md
+docs/SwapState.md
 docs/SwapStatus.md
 docs/SwapperCloutResponse.md
 docs/TCYClaimer.md
@@ -259,6 +260,7 @@ model_streaming_status.go
 model_streaming_swap.go
 model_swap_details_response.go
 model_swap_finalised_stage.go
+model_swap_state.go
 model_swap_status.go
 model_swapper_clout_response.go
 model_tcy_claimer.go

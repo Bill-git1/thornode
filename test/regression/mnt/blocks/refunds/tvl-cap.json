@@ -132,67 +132,6 @@
     "begin_block_events": [],
     "end_block_events": [
       {
-        "coins": "14000 BTC.BTC",
-        "mode": "EndBlock",
-        "pool_deduct": "13998193",
-        "tx_id": "0000000000000000000000000000000000000000000000000000000000000001",
-        "type": "fee"
-      },
-      {
-        "amount": "13998193rune",
-        "mode": "EndBlock",
-        "spender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
-        "type": "coin_spent"
-      },
-      {
-        "amount": "13998193rune",
-        "mode": "EndBlock",
-        "receiver": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
-        "type": "coin_received"
-      },
-      {
-        "amount": "13998193rune",
-        "mode": "EndBlock",
-        "recipient": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
-        "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
-        "type": "transfer"
-      },
-      {
-        "mode": "EndBlock",
-        "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
-        "type": "message"
-      },
-      {
-        "chain": "BTC",
-        "coin_amount": "4999986000",
-        "coin_asset": "BTC.BTC",
-        "coin_decimals": "8",
-        "gas_rate": "10",
-        "in_hash": "0000000000000000000000000000000000000000000000000000000000000001",
-        "max_gas_amount_0": "10000",
-        "max_gas_asset_0": "BTC.BTC",
-        "max_gas_decimals_0": "8",
-        "memo": "REFUND:0000000000000000000000000000000000000000000000000000000000000001",
-        "mode": "EndBlock",
-        "module_name": "",
-        "out_hash": "",
-        "to_address": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
-        "type": "scheduled_outbound",
-        "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
-      },
-      {
-        "chain": "BTC",
-        "code": "108",
-        "coin": "5000000000 BTC.BTC",
-        "from": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
-        "id": "0000000000000000000000000000000000000000000000000000000000000001",
-        "memo": "=:BTC/BTC:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
-        "mode": "EndBlock",
-        "reason": "add liquidity rune is more than bond",
-        "to": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk",
-        "type": "refund"
-      },
-      {
         "amount": "1087649rune",
         "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
@@ -333,7 +272,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "197371",
+          "gas_used": "1128825",
           "events": [
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/0",
@@ -349,6 +288,74 @@
               "msg_index": "0",
               "sender": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
               "type": "message"
+            },
+            {
+              "msg_index": "0",
+              "source": "5000000000 BTC.BTC",
+              "target": "0 BTC/BTC",
+              "txid": "0000000000000000000000000000000000000000000000000000000000000001",
+              "type": "limit_swap"
+            },
+            {
+              "coins": "14000 BTC.BTC",
+              "msg_index": "0",
+              "pool_deduct": "13998193",
+              "tx_id": "0000000000000000000000000000000000000000000000000000000000000001",
+              "type": "fee"
+            },
+            {
+              "amount": "13998193rune",
+              "msg_index": "0",
+              "spender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
+              "type": "coin_spent"
+            },
+            {
+              "amount": "13998193rune",
+              "msg_index": "0",
+              "receiver": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+              "type": "coin_received"
+            },
+            {
+              "amount": "13998193rune",
+              "msg_index": "0",
+              "recipient": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+              "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
+              "type": "transfer"
+            },
+            {
+              "msg_index": "0",
+              "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
+              "type": "message"
+            },
+            {
+              "chain": "BTC",
+              "coin_amount": "4999986000",
+              "coin_asset": "BTC.BTC",
+              "coin_decimals": "8",
+              "gas_rate": "10",
+              "in_hash": "0000000000000000000000000000000000000000000000000000000000000001",
+              "max_gas_amount_0": "10000",
+              "max_gas_asset_0": "BTC.BTC",
+              "max_gas_decimals_0": "8",
+              "memo": "REFUND:0000000000000000000000000000000000000000000000000000000000000001",
+              "module_name": "",
+              "msg_index": "0",
+              "out_hash": "",
+              "to_address": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
+              "type": "scheduled_outbound",
+              "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
+            },
+            {
+              "chain": "BTC",
+              "code": "108",
+              "coin": "5000000000 BTC.BTC",
+              "from": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
+              "id": "0000000000000000000000000000000000000000000000000000000000000001",
+              "memo": "=:BTC/BTC:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
+              "msg_index": "0",
+              "reason": "add liquidity rune is more than bond",
+              "to": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk",
+              "type": "refund"
             }
           ]
         }

@@ -302,6 +302,7 @@ func quoteSimulateSwap(ctx cosmos.Context, mgr *Mgrs, amount sdkmath.Uint, msg *
 			fee = eventMap(e)
 		}
 	}
+
 	finalSwap := swaps[len(swaps)-1]
 
 	// parse outbound fee from event
@@ -1278,7 +1279,8 @@ func (qs queryServer) queryQuoteLoanOpen(ctx cosmos.Context, req *types.QueryQuo
 		affCoin := common.NewCoin(asset, affiliateAmt)
 		gasCoin := common.NewCoin(asset.GetChain().GetGasAsset(), cosmos.OneUint())
 		fakeTx := common.NewTx(common.BlankTxID, randomCollateralOwner, common.NoopAddress, common.NewCoins(affCoin), common.Gas{gasCoin}, "noop")
-		affiliateSwap := NewMsgSwap(fakeTx, common.RuneAsset(), affiliate, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, 0, 0, 0, nil)
+		// Use default version for quote calculation
+		affiliateSwap := NewMsgSwap(fakeTx, common.RuneAsset(), affiliate, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, 0, types.SwapVersion_v1, nil)
 
 		_, affiliateRuneAmt, _, err = quoteSimulateSwap(ctx, qs.mgr, affiliateAmt, affiliateSwap, 1)
 		if err == nil {

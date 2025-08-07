@@ -52,8 +52,8 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - '[.end_block_events[]|select(.type=="reserve")]|length == 1'
-  - .end_block_events[]|select(.type=="reserve")|.coin == "10000 THOR.RUNE"
+  - '[.end_block_events[]|select(.type=="refund")]|length == 1'
+  - .end_block_events[]|select(.type=="refund")|.coin == "9 BTC.BTC"
 ---
 ########################################################################################
 # swap insufficient synth for refund (synth sent to reserve)
@@ -78,7 +78,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - '[.end_block_events[]|select(.type=="reserve")]|length == 1'
-  - .end_block_events[]|select(.type=="reserve")|.coin == "100 BTC/BTC"
+  - .end_block_events[]|select(.type=="reserve")|.coin == "100999 THOR.RUNE"
 ---
 ########################################################################################
 # swap l1 to rune failed limit (l1 left in vault, removed from pool)
@@ -114,7 +114,7 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/pool/btc.btc
 asserts:
-  - .balance_asset|tonumber == 100000000
+  - .balance_asset|tonumber == 100000991
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound

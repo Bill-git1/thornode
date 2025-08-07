@@ -58,7 +58,7 @@ func NewConstantValue() *ConstantVals {
 			MinSwapsPerBlock:                    10,                 // process all swaps if queue is less than this number
 			MaxSwapsPerBlock:                    100,                // max swaps to process per block
 			EnableOrderBooks:                    0,                  // enable order books instead of swap queue
-			EnableAdvSwapQueue:                  0,                  // enable advanced swap queue, value of 2 skips limit swaps and forces all swaps to be market trades
+			EnableAdvSwapQueue:                  1,                  // enable advanced swap queue, value of 2 skips limit swaps and forces all swaps to be market trades
 			VirtualMultSynths:                   2,                  // pool depth multiplier for synthetic swaps
 			VirtualMultSynthsBasisPoints:        10_000,             // pool depth multiplier for synthetic swaps (in basis points)
 			MaxSynthPerPoolDepth:                1700,               // percentage (in basis points) of how many synths are allowed relative to pool depth of the related pool
@@ -68,6 +68,7 @@ func NewConstantValue() *ConstantVals {
 			StreamingSwapMinBPFee:               0,                  // min swap fee (in basis points) for a streaming swap trade
 			StreamingSwapMaxLength:              14400,              // max number of blocks a streaming swap can trade for
 			StreamingSwapMaxLengthNative:        14400 * 365,        // max number of blocks native streaming swaps can trade over
+			StreamingLimitSwapMaxAge:            14400 * 7,          // max number of blocks a streaming limit swap can exist before completing (7 days)
 			MinCR:                               10_000,             // Minimum collateralization ratio (basis pts)
 			MaxCR:                               60_000,             // Maximum collateralization ratio (basis pts)
 			LoanStreamingSwapsInterval:          0,                  // block interval between each streaming swap of opening or closing a loan

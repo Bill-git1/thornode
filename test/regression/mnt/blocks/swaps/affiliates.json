@@ -374,7 +374,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "154206",
+          "gas_used": "178296",
           "events": [
             {
               "amount": "2000000rune",
@@ -434,6 +434,13 @@
               "msg_index": "0",
               "sender": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "type": "message"
+            },
+            {
+              "msg_index": "0",
+              "source": "10000000000 THOR.RUNE",
+              "target": "0 BTC.BTC",
+              "txid": "8C59F38B596FFBBA3E320605BD3DF9ECFE5D5BF56D181BF82747805223582CDF",
+              "type": "limit_swap"
             }
           ]
         }
@@ -468,8 +475,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "39F39CB488F8206447334151329439E880DD477C0B2A873EAAE974D6CA581BCC",
-      "last_results_hash": "884DD3F2DDC1F84009B90CA570DB97CA3EDED73FE319A60BDB7401D4CFA65604",
+      "app_hash": "13C5234AE56FB4F4C1B235A995291BD4624C4881ED759110CD93421F2AA58557",
+      "last_results_hash": "F07D4E6376E9F029CB4AA009D0707581CE43423D4A7A54A62FFC858FD467CF04",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -673,7 +680,7 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "774E1B9B713F1AA88AD71EF9F5C28CA8DF33DA67E4F88BAFB9102A2DAC6D5419",
+      "app_hash": "9F74ECCAE303B0A7969818F214374BD787BC7525AA3D3BFCE159187CC93167B2",
       "last_results_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
@@ -879,7 +886,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "288012",
+          "gas_used": "288210",
           "events": [
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/0",
@@ -940,8 +947,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "6C257DE9E08D72B89AAF018182FDF0C5A4103C96C2F5718EA9FA8FD8494362CB",
-      "last_results_hash": "DB546DBF725D81722892D6F8ED51624742D913796CB133891A9D6A2580210D89",
+      "app_hash": "D63134ACF4FC2DF32940A2583E78D17F63779DC1312EFEDB73AE11DE0A7E8F34",
+      "last_results_hash": "00344D0BA379675A38CDE130CADCB06E862C66C62A4A073724F6641E6A69AE39",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -1234,7 +1241,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "195361",
+          "gas_used": "219361",
           "events": [
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/1",
@@ -1250,6 +1257,13 @@
               "msg_index": "0",
               "sender": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
               "type": "message"
+            },
+            {
+              "msg_index": "0",
+              "source": "50000000 BTC.BTC",
+              "target": "0 THOR.RUNE",
+              "txid": "0000000000000000000000000000000000000000000000000000000000000002",
+              "type": "limit_swap"
             }
           ]
         }

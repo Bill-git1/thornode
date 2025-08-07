@@ -1234,8 +1234,45 @@ func newStreamingSwap(streamingSwap StreamingSwap, msgSwap MsgSwap) *types.Query
 	}
 }
 
+// newStreamingSwapFromAdvQueue converts an advanced swap queue MsgSwap to QueryStreamingSwapResponse format
+func newStreamingSwapFromAdvQueue(msgSwap MsgSwap) *types.QueryStreamingSwapResponse {
+	var sourceAsset common.Asset
+	// Leave the source_asset field empty if there is more than a single input Coin.
+	if len(msgSwap.Tx.Coins) == 1 {
+		sourceAsset = msgSwap.Tx.Coins[0].Asset
+	}
+
+	var failedSwaps []int64
+	// Leave this nil (null rather than []) if the source is nil.
+	if msgSwap.State.FailedSwaps != nil {
+		failedSwaps = make([]int64, len(msgSwap.State.FailedSwaps))
+		for i := range msgSwap.State.FailedSwaps {
+			failedSwaps[i] = int64(msgSwap.State.FailedSwaps[i])
+		}
+	}
+
+	return &types.QueryStreamingSwapResponse{
+		TxId:              msgSwap.Tx.ID.String(),
+		Interval:          int64(msgSwap.State.Interval),
+		Quantity:          int64(msgSwap.State.Quantity),
+		Count:             int64(msgSwap.State.Count),
+		LastHeight:        msgSwap.State.LastHeight,
+		TradeTarget:       msgSwap.TradeTarget.String(),
+		SourceAsset:       sourceAsset.String(),
+		TargetAsset:       msgSwap.TargetAsset.String(),
+		Destination:       msgSwap.Destination.String(),
+		Deposit:           msgSwap.State.Deposit.String(),
+		In:                msgSwap.State.In.String(),
+		Out:               msgSwap.State.Out.String(),
+		FailedSwaps:       failedSwaps,
+		FailedSwapReasons: msgSwap.State.FailedSwapReasons,
+	}
+}
+
 func (qs queryServer) queryStreamingSwaps(ctx cosmos.Context, _ *types.QueryStreamingSwapsRequest) (*types.QueryStreamingSwapsResponse, error) {
 	var streams []*types.QueryStreamingSwapResponse
+
+	// Get legacy streaming swaps
 	iter := qs.mgr.Keeper().GetStreamingSwapIterator(ctx)
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
@@ -1250,7 +1287,7 @@ func (qs queryServer) queryStreamingSwaps(ctx cosmos.Context, _ *types.QueryStre
 				// GetSwapQueueItem returns an error if there is no MsgSwap set for that index, a normal occurrence here.
 				continue
 			}
-			if !swapQueueItem.IsStreaming() {
+			if !swapQueueItem.IsLegacyStreaming() {
 				continue
 			}
 			// In case there are multiple streaming swaps with the same TxID, check the input amount.
@@ -1263,6 +1300,26 @@ func (qs queryServer) queryStreamingSwaps(ctx cosmos.Context, _ *types.QueryStre
 
 		streams = append(streams, newStreamingSwap(stream, msgSwap))
 	}
+
+	// Get advanced swap queue streaming swaps
+	advIter := qs.mgr.Keeper().GetAdvSwapQueueItemIterator(ctx)
+	defer advIter.Close()
+	for ; advIter.Valid(); advIter.Next() {
+		var msgSwap MsgSwap
+		if err := qs.mgr.Keeper().Cdc().Unmarshal(advIter.Value(), &msgSwap); err != nil {
+			ctx.Logger().Error("failed to unmarshal advanced swap queue item", "error", err)
+			continue
+		}
+
+		// Only include streaming swaps (quantity > 1)
+		if !msgSwap.IsStreaming() {
+			continue
+		}
+
+		// Convert advanced swap queue MsgSwap to streaming swap response format
+		streams = append(streams, newStreamingSwapFromAdvQueue(msgSwap))
+	}
+
 	return &types.QueryStreamingSwapsResponse{StreamingSwaps: streams}, nil
 }
 
@@ -1295,34 +1352,52 @@ func (qs queryServer) queryStreamingSwap(ctx cosmos.Context, req *types.QueryStr
 		return nil, fmt.Errorf("could not parse txid: %w", err)
 	}
 
-	streamingSwap, err := qs.mgr.Keeper().GetStreamingSwap(ctx, txid)
-	if err != nil {
-		ctx.Logger().Error("fail to get streaming swap", "error", err)
-		return nil, fmt.Errorf("could not get streaming swap: %w", err)
-	}
-
-	var msgSwap MsgSwap
-	// Check up to the first two indices (0 through 1) for the MsgSwap; if not found, leave the fields blank.
+	// First try advanced swap queue (primary system since EnableAdvSwapQueue = 1 by default)
+	// Check up to the first two indices (0 through 1) for streaming swaps in advanced queue
 	for i := 0; i <= 1; i++ {
-		swapQueueItem, err := qs.mgr.Keeper().GetSwapQueueItem(ctx, txid, i)
+		advSwapItem, err := qs.mgr.Keeper().GetAdvSwapQueueItem(ctx, txid, i)
 		if err != nil {
-			// GetSwapQueueItem returns an error if there is no MsgSwap set for that index, a normal occurrence here.
+			// GetAdvSwapQueueItem returns an error if there is no MsgSwap set for that index, a normal occurrence here.
 			continue
 		}
-		if !swapQueueItem.IsStreaming() {
+		if !advSwapItem.IsStreaming() {
 			continue
 		}
-		// In case there are multiple streaming swaps with the same TxID, check the input amount.
-		if len(swapQueueItem.Tx.Coins) == 0 || !swapQueueItem.Tx.Coins[0].Amount.Equal(streamingSwap.Deposit) {
-			continue
-		}
-		msgSwap = swapQueueItem
-		break
+		// Found streaming swap in advanced queue
+		result := newStreamingSwapFromAdvQueue(advSwapItem)
+		return result, nil
 	}
 
-	result := newStreamingSwap(streamingSwap, msgSwap)
+	// Advanced swap queue not found, try legacy streaming swap for backward compatibility
+	streamingSwap, err := qs.mgr.Keeper().GetStreamingSwap(ctx, txid)
+	if err == nil {
+		// Found legacy streaming swap, look for corresponding MsgSwap
+		var msgSwap MsgSwap
+		// Check up to the first two indices (0 through 1) for the MsgSwap; if not found, leave the fields blank.
+		for i := 0; i <= 1; i++ {
+			swapQueueItem, err := qs.mgr.Keeper().GetSwapQueueItem(ctx, txid, i)
+			if err != nil {
+				// GetSwapQueueItem returns an error if there is no MsgSwap set for that index, a normal occurrence here.
+				continue
+			}
+			if !swapQueueItem.IsLegacyStreaming() {
+				continue
+			}
+			// In case there are multiple streaming swaps with the same TxID, check the input amount.
+			if len(swapQueueItem.Tx.Coins) == 0 || !swapQueueItem.Tx.Coins[0].Amount.Equal(streamingSwap.Deposit) {
+				continue
+			}
+			msgSwap = swapQueueItem
+			break
+		}
 
-	return result, nil
+		result := newStreamingSwap(streamingSwap, msgSwap)
+		return result, nil
+	}
+
+	// Neither advanced queue nor legacy system contains the streaming swap
+	ctx.Logger().Error("streaming swap not found in advanced queue or legacy system", "txid", txid)
+	return nil, fmt.Errorf("could not find streaming swap: %s", txid)
 }
 
 func (qs queryServer) queryPool(ctx cosmos.Context, req *types.QueryPoolRequest) (*types.QueryPoolResponse, error) {
@@ -1974,7 +2049,7 @@ func checkPending(ctx cosmos.Context, keeper keeper.Keeper, voter ObservedTxVote
 		return
 	}
 
-	pending = keeper.HasSwapQueueItem(ctx, voter.TxID, 0) || keeper.HasAdvSwapQueueItem(ctx, voter.TxID)
+	pending = keeper.HasSwapQueueItem(ctx, voter.TxID, 0) || keeper.HasAdvSwapQueueItem(ctx, voter.TxID, 0)
 
 	// Only look for streaming information when a swap is pending.
 	if pending {
@@ -3080,8 +3155,8 @@ func (qs queryServer) querySwapDetails(ctx cosmos.Context, req *types.QuerySwapD
 
 	// Check if it's in the advanced swap queue
 	if qs.mgr.Keeper().AdvSwapQueueEnabled(ctx) {
-		if qs.mgr.Keeper().HasAdvSwapQueueItem(ctx, txID) {
-			msg, err := qs.mgr.Keeper().GetAdvSwapQueueItem(ctx, txID)
+		if qs.mgr.Keeper().HasAdvSwapQueueItem(ctx, txID, 0) {
+			msg, err := qs.mgr.Keeper().GetAdvSwapQueueItem(ctx, txID, 0)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get advanced swap queue item: %w", err)
 			}
@@ -3398,6 +3473,9 @@ func simulate(ctx cosmos.Context, mgr Manager, msg sdk.Msg) (sdk.Events, error) 
 	txid := common.TxID(common.RandHexString(64))
 	ctx = ctx.WithValue(constants.CtxLoanTxID, txid)
 
+	// mark context as simulation mode for swap logic
+	ctx = ctx.WithValue(constants.CtxSimulationMode, true)
+
 	// validate
 	msgV, ok := msg.(sdk.HasValidateBasic)
 	if !ok {
@@ -3418,12 +3496,21 @@ func simulate(ctx cosmos.Context, mgr Manager, msg sdk.Msg) (sdk.Events, error) 
 	// disable logging
 	ctx = ctx.WithLogger(nullLogger)
 
-	// reset the swap queue
+	// reset the swap queues (both regular and advanced)
 	iter := mgr.Keeper().GetSwapQueueIterator(ctx)
 	for ; iter.Valid(); iter.Next() {
 		mgr.Keeper().DeleteKey(ctx, iter.Key())
 	}
 	iter.Close()
+
+	// reset the advanced swap queue if enabled
+	if mgr.Keeper().AdvSwapQueueEnabled(ctx) {
+		advIter := mgr.Keeper().GetAdvSwapQueueItemIterator(ctx)
+		for ; advIter.Valid(); advIter.Next() {
+			mgr.Keeper().DeleteKey(ctx, advIter.Key())
+		}
+		advIter.Close()
+	}
 
 	// save pool state
 	pools, err := mgr.Keeper().GetPools(ctx)
@@ -3440,18 +3527,39 @@ func simulate(ctx cosmos.Context, mgr Manager, msg sdk.Msg) (sdk.Events, error) 
 	// simulate end block, loop it until the swap queue is empty
 	queueEmpty := false
 	for count := int64(0); !queueEmpty && count < 1000; count += 1 {
-		err = mgr.SwapQ().EndBlock(ctx.WithBlockHeight(ctx.BlockHeight()+count), mgr)
+		blockCtx := ctx.WithBlockHeight(ctx.BlockHeight() + count)
+
+		// process regular swap queue
+		err = mgr.SwapQ().EndBlock(blockCtx, mgr)
 		if err != nil {
-			return nil, fmt.Errorf("failed to simulate end block: %w", err)
+			return nil, fmt.Errorf("failed to simulate end block for regular queue: %w", err)
+		}
+
+		// process advanced swap queue if enabled
+		if mgr.Keeper().AdvSwapQueueEnabled(ctx) {
+			err = mgr.AdvSwapQueueMgr().EndBlock(blockCtx, mgr)
+			if err != nil {
+				return nil, fmt.Errorf("failed to simulate end block for advanced queue: %w", err)
+			}
 		}
 
 		for _, pool := range pools {
 			_ = mgr.Keeper().SetPool(ctx, pool)
 		}
 
+		// check both regular and advanced swap queues for emptiness
 		iter = mgr.Keeper().GetSwapQueueIterator(ctx)
-		queueEmpty = !iter.Valid()
+		regularQueueEmpty := !iter.Valid()
 		iter.Close()
+
+		advQueueEmpty := true
+		if mgr.Keeper().AdvSwapQueueEnabled(ctx) {
+			advIter := mgr.Keeper().GetAdvSwapQueueItemIterator(ctx)
+			advQueueEmpty = !advIter.Valid()
+			advIter.Close()
+		}
+
+		queueEmpty = regularQueueEmpty && advQueueEmpty
 	}
 
 	return em.Events(), nil

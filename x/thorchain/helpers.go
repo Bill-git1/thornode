@@ -17,6 +17,12 @@ import (
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
+// isSimulationMode checks if the context indicates we're in simulation mode
+func isSimulationMode(ctx cosmos.Context) bool {
+	simulationMode, ok := ctx.Value(constants.CtxSimulationMode).(bool)
+	return ok && simulationMode
+}
+
 func refundTx(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uint32, refundReason, sourceModuleName string) error {
 	// If THORNode recognize one of the coins, and therefore able to refund
 	// withholding fees, refund all coins.
@@ -1164,6 +1170,126 @@ func getLastChurnHeight(ctx cosmos.Context, k keeper.Keeper) int64 {
 		}
 	}
 	return lastChurnHeight
+}
+
+// settleSwap handles the settlement of any type of swap (market, limit, streaming) from the advanced swap queue, including:
+// - Scheduling the outbound transaction for swapped amounts
+// - Refunding any remaining deposit
+// - Removing the swap from advanced queue and indexes
+// - Emitting appropriate events
+func settleSwap(ctx cosmos.Context, mgr Manager, msg MsgSwap, settleReason string) error {
+	// Schedule outbound for what was already swapped
+	if !msg.State.Out.IsZero() {
+		// Parse memo to check if this is a savers add
+		memo, err := ParseMemoWithTHORNames(ctx, mgr.Keeper(), msg.Tx.Memo)
+		if err != nil {
+			ctx.Logger().Error("fail to parse memo", "error", err)
+			// Continue with outbound even if memo parsing fails
+			memo = nil
+		}
+
+		// Only schedule outbound if not a savers add and not in simulation mode
+		if (memo == nil || !memo.IsType(TxAdd)) && !isSimulationMode(ctx) {
+			// Handle aggregator if present
+			dexAgg := ""
+			if len(msg.Aggregator) > 0 {
+				dexAgg, err = FetchDexAggregator(
+					msg.TargetAsset.GetChain(),
+					msg.Aggregator,
+				)
+				if err != nil {
+					ctx.Logger().Error("fail to fetch dex aggregator", "error", err)
+					// Continue without aggregator
+				}
+			}
+
+			toi := TxOutItem{
+				Chain:                 msg.TargetAsset.GetChain(),
+				InHash:                msg.Tx.ID,
+				ToAddress:             msg.Destination,
+				Coin:                  common.NewCoin(msg.TargetAsset, msg.State.Out),
+				Memo:                  "",
+				MaxGas:                []common.Coin{},
+				GasRate:               0,
+				OutHash:               "",
+				ModuleName:            "",
+				Aggregator:            dexAgg,
+				AggregatorTargetAsset: msg.AggregatorTargetAddress,
+				AggregatorTargetLimit: msg.AggregatorTargetLimit,
+				CloutSpent:            &cosmos.Uint{},
+			}
+
+			if _, err := mgr.TxOutStore().TryAddTxOutItem(ctx, mgr, toi, cosmos.ZeroUint()); err != nil {
+				ctx.Logger().Error("fail to schedule swap outbound", "error", err)
+				unrefundableCoinCleanup(ctx, mgr, toi, "failed_outbound")
+
+				// Emit a "fail to refund" refund event
+				refundReasonFull := fmt.Sprintf("%s; fail to refund (%s): swap output", err, toi.Coin.String())
+				refundTx := common.NewTx(msg.Tx.ID, msg.Tx.FromAddress, msg.Tx.ToAddress, common.NewCoins(toi.Coin), msg.Tx.Gas, msg.Tx.Memo)
+				eventRefund := NewEventRefund(CodeFailAddOutboundTx, refundReasonFull, refundTx, common.Fee{})
+				if err := mgr.EventMgr().EmitEvent(ctx, eventRefund); err != nil {
+					ctx.Logger().Error("fail to emit refund event", "error", err)
+				}
+			}
+		}
+	}
+
+	// Refund any remaining deposit
+	if msg.State.Deposit.GT(msg.State.In) {
+		remainder := common.SafeSub(msg.State.Deposit, msg.State.In)
+		refundCoin := common.NewCoin(msg.Tx.Coins[0].Asset, remainder)
+		refundCoinTx := msg.Tx
+		refundCoinTx.Coins = common.NewCoins(refundCoin)
+
+		// Try to get the observed tx for vault selection
+		voter, voterErr := mgr.Keeper().GetObservedTxInVoter(ctx, msg.Tx.ID)
+		if voterErr == nil && !voter.Tx.IsEmpty() {
+			if refundErr := refundTx(ctx, ObservedTx{Tx: refundCoinTx, ObservedPubKey: voter.Tx.ObservedPubKey}, mgr, CodeSwapFail, settleReason, ""); refundErr != nil {
+				ctx.Logger().Error("fail to refund swap remainder", "error", refundErr)
+			}
+		} else {
+			if refundErr := refundTx(ctx, ObservedTx{Tx: refundCoinTx}, mgr, CodeSwapFail, settleReason, ""); refundErr != nil {
+				ctx.Logger().Error("fail to refund swap remainder", "error", refundErr)
+			}
+		}
+	}
+
+	// Remove from advanced swap queue index
+	if err := mgr.Keeper().RemoveAdvSwapQueueIndex(ctx, msg); err != nil {
+		// Log but don't fail - it might not exist in index
+		ctx.Logger().Debug("fail to remove swap from adv queue index", "error", err)
+	}
+
+	// Remove from advanced swap queue
+	if err := mgr.Keeper().RemoveAdvSwapQueueItem(ctx, msg.Tx.ID, int(msg.Index)); err != nil {
+		// Log but don't fail
+		ctx.Logger().Debug("fail to remove swap from adv queue", "error", err)
+	}
+
+	// Emit streaming swap event if this was a streaming swap
+	if msg.IsStreaming() {
+		// Create a StreamingSwap struct from the MsgSwap state for the event
+		swp := StreamingSwap{
+			TxID:              msg.Tx.ID,
+			Interval:          msg.State.Interval,
+			Quantity:          msg.State.Quantity,
+			Count:             msg.State.Count,
+			LastHeight:        msg.State.LastHeight,
+			TradeTarget:       msg.TradeTarget,
+			Deposit:           msg.State.Deposit,
+			In:                msg.State.In,
+			Out:               msg.State.Out,
+			FailedSwaps:       msg.State.FailedSwaps,
+			FailedSwapReasons: msg.State.FailedSwapReasons,
+		}
+
+		evt := NewEventStreamingSwap(msg.Tx.Coins[0].Asset, msg.TargetAsset, swp)
+		if err := mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
+			ctx.Logger().Error("fail to emit streaming swap event", "error", err)
+		}
+	}
+
+	return nil
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////

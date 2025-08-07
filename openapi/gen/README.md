@@ -242,6 +242,7 @@ Class | Method | HTTP request | Description
  - [StreamingSwap](docs/StreamingSwap.md)
  - [SwapDetailsResponse](docs/SwapDetailsResponse.md)
  - [SwapFinalisedStage](docs/SwapFinalisedStage.md)
+ - [SwapState](docs/SwapState.md)
  - [SwapStatus](docs/SwapStatus.md)
  - [SwapperCloutResponse](docs/SwapperCloutResponse.md)
  - [TCYClaimer](docs/TCYClaimer.md)

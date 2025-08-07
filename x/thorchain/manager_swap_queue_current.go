@@ -46,7 +46,7 @@ func (vm *SwapQueueVCUR) FetchQueue(ctx cosmos.Context) (swapItems, error) { // 
 
 		// exclude streaming swaps when its not "their time". Always want to
 		// allow the first sub-swap immediately (ie no LastHeight yet)
-		if msg.IsStreaming() {
+		if msg.IsLegacyStreaming() {
 			pausedStreaming := vm.k.GetConfigInt64(ctx, constants.StreamingSwapPause)
 			if pausedStreaming > 0 {
 				continue
@@ -127,9 +127,9 @@ func (vm *SwapQueueVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 			ctx.Logger().Error("fail to swap", "msg", pick.msg.Tx.String(), "error", handleErr)
 
 			var refundErr error
-			triggerRefund = !pick.msg.IsStreaming()
+			triggerRefund = !pick.msg.IsLegacyStreaming()
 
-			if pick.msg.IsStreaming() {
+			if pick.msg.IsLegacyStreaming() {
 				if vm.k.StreamingSwapExists(ctx, pick.msg.Tx.ID) {
 					var getErr error
 					swp, getErr = vm.k.GetStreamingSwap(ctx, pick.msg.Tx.ID)
@@ -183,7 +183,7 @@ func (vm *SwapQueueVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 			}
 		}
 
-		if pick.msg.IsStreaming() {
+		if pick.msg.IsLegacyStreaming() {
 			swp, err = vm.k.GetStreamingSwap(ctx, pick.msg.Tx.ID)
 			if err != nil {
 				ctx.Logger().Error("fail to fetch streaming swap", "error", err)

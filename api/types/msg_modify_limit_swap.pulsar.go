@@ -23,6 +23,8 @@ var (
 	fd_MsgModifyLimitSwap_target                 protoreflect.FieldDescriptor
 	fd_MsgModifyLimitSwap_modified_target_amount protoreflect.FieldDescriptor
 	fd_MsgModifyLimitSwap_signer                 protoreflect.FieldDescriptor
+	fd_MsgModifyLimitSwap_deposit_asset          protoreflect.FieldDescriptor
+	fd_MsgModifyLimitSwap_deposit_amount         protoreflect.FieldDescriptor
 )
 
 func init() {
@@ -33,6 +35,8 @@ func init() {
 	fd_MsgModifyLimitSwap_target = md_MsgModifyLimitSwap.Fields().ByName("target")
 	fd_MsgModifyLimitSwap_modified_target_amount = md_MsgModifyLimitSwap.Fields().ByName("modified_target_amount")
 	fd_MsgModifyLimitSwap_signer = md_MsgModifyLimitSwap.Fields().ByName("signer")
+	fd_MsgModifyLimitSwap_deposit_asset = md_MsgModifyLimitSwap.Fields().ByName("deposit_asset")
+	fd_MsgModifyLimitSwap_deposit_amount = md_MsgModifyLimitSwap.Fields().ByName("deposit_amount")
 }
 
 var _ protoreflect.Message = (*fastReflection_MsgModifyLimitSwap)(nil)
@@ -130,6 +134,18 @@ func (x *fastReflection_MsgModifyLimitSwap) Range(f func(protoreflect.FieldDescr
 			return
 		}
 	}
+	if x.DepositAsset != nil {
+		value := protoreflect.ValueOfMessage(x.DepositAsset.ProtoReflect())
+		if !f(fd_MsgModifyLimitSwap_deposit_asset, value) {
+			return
+		}
+	}
+	if x.DepositAmount != "" {
+		value := protoreflect.ValueOfString(x.DepositAmount)
+		if !f(fd_MsgModifyLimitSwap_deposit_amount, value) {
+			return
+		}
+	}
 }
 
 // Has reports whether a field is populated.
@@ -155,6 +171,10 @@ func (x *fastReflection_MsgModifyLimitSwap) Has(fd protoreflect.FieldDescriptor)
 		return x.ModifiedTargetAmount != ""
 	case "types.MsgModifyLimitSwap.signer":
 		return len(x.Signer) != 0
+	case "types.MsgModifyLimitSwap.deposit_asset":
+		return x.DepositAsset != nil
+	case "types.MsgModifyLimitSwap.deposit_amount":
+		return x.DepositAmount != ""
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.MsgModifyLimitSwap"))
@@ -181,6 +201,10 @@ func (x *fastReflection_MsgModifyLimitSwap) Clear(fd protoreflect.FieldDescripto
 		x.ModifiedTargetAmount = ""
 	case "types.MsgModifyLimitSwap.signer":
 		x.Signer = nil
+	case "types.MsgModifyLimitSwap.deposit_asset":
+		x.DepositAsset = nil
+	case "types.MsgModifyLimitSwap.deposit_amount":
+		x.DepositAmount = ""
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.MsgModifyLimitSwap"))
@@ -212,6 +236,12 @@ func (x *fastReflection_MsgModifyLimitSwap) Get(descriptor protoreflect.FieldDes
 	case "types.MsgModifyLimitSwap.signer":
 		value := x.Signer
 		return protoreflect.ValueOfBytes(value)
+	case "types.MsgModifyLimitSwap.deposit_asset":
+		value := x.DepositAsset
+		return protoreflect.ValueOfMessage(value.ProtoReflect())
+	case "types.MsgModifyLimitSwap.deposit_amount":
+		value := x.DepositAmount
+		return protoreflect.ValueOfString(value)
 	default:
 		if descriptor.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.MsgModifyLimitSwap"))
@@ -242,6 +272,10 @@ func (x *fastReflection_MsgModifyLimitSwap) Set(fd protoreflect.FieldDescriptor,
 		x.ModifiedTargetAmount = value.Interface().(string)
 	case "types.MsgModifyLimitSwap.signer":
 		x.Signer = value.Bytes()
+	case "types.MsgModifyLimitSwap.deposit_asset":
+		x.DepositAsset = value.Message().Interface().(*common.Asset)
+	case "types.MsgModifyLimitSwap.deposit_amount":
+		x.DepositAmount = value.Interface().(string)
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.MsgModifyLimitSwap"))
@@ -272,12 +306,19 @@ func (x *fastReflection_MsgModifyLimitSwap) Mutable(fd protoreflect.FieldDescrip
 			x.Target = new(common.Coin)
 		}
 		return protoreflect.ValueOfMessage(x.Target.ProtoReflect())
+	case "types.MsgModifyLimitSwap.deposit_asset":
+		if x.DepositAsset == nil {
+			x.DepositAsset = new(common.Asset)
+		}
+		return protoreflect.ValueOfMessage(x.DepositAsset.ProtoReflect())
 	case "types.MsgModifyLimitSwap.from":
 		panic(fmt.Errorf("field from of message types.MsgModifyLimitSwap is not mutable"))
 	case "types.MsgModifyLimitSwap.modified_target_amount":
 		panic(fmt.Errorf("field modified_target_amount of message types.MsgModifyLimitSwap is not mutable"))
 	case "types.MsgModifyLimitSwap.signer":
 		panic(fmt.Errorf("field signer of message types.MsgModifyLimitSwap is not mutable"))
+	case "types.MsgModifyLimitSwap.deposit_amount":
+		panic(fmt.Errorf("field deposit_amount of message types.MsgModifyLimitSwap is not mutable"))
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.MsgModifyLimitSwap"))
@@ -303,6 +344,11 @@ func (x *fastReflection_MsgModifyLimitSwap) NewField(fd protoreflect.FieldDescri
 		return protoreflect.ValueOfString("")
 	case "types.MsgModifyLimitSwap.signer":
 		return protoreflect.ValueOfBytes(nil)
+	case "types.MsgModifyLimitSwap.deposit_asset":
+		m := new(common.Asset)
+		return protoreflect.ValueOfMessage(m.ProtoReflect())
+	case "types.MsgModifyLimitSwap.deposit_amount":
+		return protoreflect.ValueOfString("")
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.MsgModifyLimitSwap"))
@@ -392,6 +438,14 @@ func (x *fastReflection_MsgModifyLimitSwap) ProtoMethods() *protoiface.Methods {
 		if l > 0 {
 			n += 1 + l + runtime.Sov(uint64(l))
 		}
+		if x.DepositAsset != nil {
+			l = options.Size(x.DepositAsset)
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.DepositAmount)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
 		if x.unknownFields != nil {
 			n += len(x.unknownFields)
 		}
@@ -420,6 +474,27 @@ func (x *fastReflection_MsgModifyLimitSwap) ProtoMethods() *protoiface.Methods {
 		if x.unknownFields != nil {
 			i -= len(x.unknownFields)
 			copy(dAtA[i:], x.unknownFields)
+		}
+		if len(x.DepositAmount) > 0 {
+			i -= len(x.DepositAmount)
+			copy(dAtA[i:], x.DepositAmount)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.DepositAmount)))
+			i--
+			dAtA[i] = 0x3a
+		}
+		if x.DepositAsset != nil {
+			encoded, err := options.Marshal(x.DepositAsset)
+			if err != nil {
+				return protoiface.MarshalOutput{
+					NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+					Buf:               input.Buf,
+				}, err
+			}
+			i -= len(encoded)
+			copy(dAtA[i:], encoded)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(encoded)))
+			i--
+			dAtA[i] = 0x32
 		}
 		if len(x.Signer) > 0 {
 			i -= len(x.Signer)
@@ -689,6 +764,74 @@ func (x *fastReflection_MsgModifyLimitSwap) ProtoMethods() *protoiface.Methods {
 					x.Signer = []byte{}
 				}
 				iNdEx = postIndex
+			case 6:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field DepositAsset", wireType)
+				}
+				var msglen int
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					msglen |= int(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				if msglen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + msglen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				if x.DepositAsset == nil {
+					x.DepositAsset = &common.Asset{}
+				}
+				if err := options.Unmarshal(dAtA[iNdEx:postIndex], x.DepositAsset); err != nil {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, err
+				}
+				iNdEx = postIndex
+			case 7:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field DepositAmount", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.DepositAmount = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
 			default:
 				iNdEx = preIndex
 				skippy, err := runtime.Skip(dAtA[iNdEx:])
@@ -742,11 +885,13 @@ type MsgModifyLimitSwap struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	From                 string       `protobuf:"bytes,1,opt,name=from,proto3" json:"from,omitempty"`
-	Source               *common.Coin `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`
-	Target               *common.Coin `protobuf:"bytes,3,opt,name=target,proto3" json:"target,omitempty"`
-	ModifiedTargetAmount string       `protobuf:"bytes,4,opt,name=modified_target_amount,json=modifiedTargetAmount,proto3" json:"modified_target_amount,omitempty"`
-	Signer               []byte       `protobuf:"bytes,5,opt,name=signer,proto3" json:"signer,omitempty"`
+	From                 string        `protobuf:"bytes,1,opt,name=from,proto3" json:"from,omitempty"`
+	Source               *common.Coin  `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`
+	Target               *common.Coin  `protobuf:"bytes,3,opt,name=target,proto3" json:"target,omitempty"`
+	ModifiedTargetAmount string        `protobuf:"bytes,4,opt,name=modified_target_amount,json=modifiedTargetAmount,proto3" json:"modified_target_amount,omitempty"`
+	Signer               []byte        `protobuf:"bytes,5,opt,name=signer,proto3" json:"signer,omitempty"`
+	DepositAsset         *common.Asset `protobuf:"bytes,6,opt,name=deposit_asset,json=depositAsset,proto3" json:"deposit_asset,omitempty"`
+	DepositAmount        string        `protobuf:"bytes,7,opt,name=deposit_amount,json=depositAmount,proto3" json:"deposit_amount,omitempty"`
 }
 
 func (x *MsgModifyLimitSwap) Reset() {
@@ -804,6 +949,20 @@ func (x *MsgModifyLimitSwap) GetSigner() []byte {
 	return nil
 }
 
+func (x *MsgModifyLimitSwap) GetDepositAsset() *common.Asset {
+	if x != nil {
+		return x.DepositAsset
+	}
+	return nil
+}
+
+func (x *MsgModifyLimitSwap) GetDepositAmount() string {
+	if x != nil {
+		return x.DepositAmount
+	}
+	return ""
+}
+
 var File_types_msg_modify_limit_swap_proto protoreflect.FileDescriptor
 
 var file_types_msg_modify_limit_swap_proto_rawDesc = []byte{
@@ -815,7 +974,7 @@ var file_types_msg_modify_limit_swap_proto_rawDesc = []byte{
 	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x11, 0x61, 0x6d, 0x69, 0x6e, 0x6f, 0x2f, 0x61, 0x6d, 0x69,
 	0x6e, 0x6f, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x17, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73,
 	0x2f, 0x6d, 0x73, 0x67, 0x2f, 0x76, 0x31, 0x2f, 0x6d, 0x73, 0x67, 0x2e, 0x70, 0x72, 0x6f, 0x74,
-	0x6f, 0x22, 0x8f, 0x03, 0x0a, 0x12, 0x4d, 0x73, 0x67, 0x4d, 0x6f, 0x64, 0x69, 0x66, 0x79, 0x4c,
+	0x6f, 0x22, 0x90, 0x04, 0x0a, 0x12, 0x4d, 0x73, 0x67, 0x4d, 0x6f, 0x64, 0x69, 0x66, 0x79, 0x4c,
 	0x69, 0x6d, 0x69, 0x74, 0x53, 0x77, 0x61, 0x70, 0x12, 0x47, 0x0a, 0x04, 0x66, 0x72, 0x6f, 0x6d,
 	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x42, 0x33, 0xfa, 0xde, 0x1f, 0x2f, 0x67, 0x69, 0x74, 0x6c,
 	0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e,
@@ -837,19 +996,27 @@ var file_types_msg_modify_limit_swap_proto_rawDesc = []byte{
 	0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2f, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2d, 0x73, 0x64,
 	0x6b, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x41, 0x63, 0x63, 0x41, 0x64, 0x64, 0x72, 0x65,
 	0x73, 0x73, 0x9a, 0xe7, 0xb0, 0x2a, 0x06, 0x62, 0x65, 0x63, 0x68, 0x33, 0x32, 0x52, 0x06, 0x73,
-	0x69, 0x67, 0x6e, 0x65, 0x72, 0x3a, 0x2c, 0x82, 0xe7, 0xb0, 0x2a, 0x06, 0x73, 0x69, 0x67, 0x6e,
-	0x65, 0x72, 0x8a, 0xe7, 0xb0, 0x2a, 0x1c, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e,
-	0x2f, 0x4d, 0x73, 0x67, 0x4d, 0x6f, 0x64, 0x69, 0x66, 0x79, 0x4c, 0x69, 0x6d, 0x69, 0x74, 0x53,
-	0x77, 0x61, 0x70, 0x42, 0x84, 0x01, 0x0a, 0x09, 0x63, 0x6f, 0x6d, 0x2e, 0x74, 0x79, 0x70, 0x65,
-	0x73, 0x42, 0x17, 0x4d, 0x73, 0x67, 0x4d, 0x6f, 0x64, 0x69, 0x66, 0x79, 0x4c, 0x69, 0x6d, 0x69,
-	0x74, 0x53, 0x77, 0x61, 0x70, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x2a, 0x67, 0x69,
-	0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61,
-	0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33, 0x2f, 0x61,
-	0x70, 0x69, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x73, 0xa2, 0x02, 0x03, 0x54, 0x58, 0x58, 0xaa, 0x02,
-	0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xca, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xe2, 0x02,
-	0x11, 0x54, 0x79, 0x70, 0x65, 0x73, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61,
-	0x74, 0x61, 0xea, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74,
-	0x6f, 0x33,
+	0x69, 0x67, 0x6e, 0x65, 0x72, 0x12, 0x38, 0x0a, 0x0d, 0x64, 0x65, 0x70, 0x6f, 0x73, 0x69, 0x74,
+	0x5f, 0x61, 0x73, 0x73, 0x65, 0x74, 0x18, 0x06, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0d, 0x2e, 0x63,
+	0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x41, 0x73, 0x73, 0x65, 0x74, 0x42, 0x04, 0xc8, 0xde, 0x1f,
+	0x00, 0x52, 0x0c, 0x64, 0x65, 0x70, 0x6f, 0x73, 0x69, 0x74, 0x41, 0x73, 0x73, 0x65, 0x74, 0x12,
+	0x45, 0x0a, 0x0e, 0x64, 0x65, 0x70, 0x6f, 0x73, 0x69, 0x74, 0x5f, 0x61, 0x6d, 0x6f, 0x75, 0x6e,
+	0x74, 0x18, 0x07, 0x20, 0x01, 0x28, 0x09, 0x42, 0x1e, 0xc8, 0xde, 0x1f, 0x00, 0xda, 0xde, 0x1f,
+	0x16, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x73, 0x64, 0x6b, 0x2e, 0x69, 0x6f, 0x2f, 0x6d, 0x61,
+	0x74, 0x68, 0x2e, 0x55, 0x69, 0x6e, 0x74, 0x52, 0x0d, 0x64, 0x65, 0x70, 0x6f, 0x73, 0x69, 0x74,
+	0x41, 0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x3a, 0x2c, 0x82, 0xe7, 0xb0, 0x2a, 0x06, 0x73, 0x69, 0x67,
+	0x6e, 0x65, 0x72, 0x8a, 0xe7, 0xb0, 0x2a, 0x1c, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69,
+	0x6e, 0x2f, 0x4d, 0x73, 0x67, 0x4d, 0x6f, 0x64, 0x69, 0x66, 0x79, 0x4c, 0x69, 0x6d, 0x69, 0x74,
+	0x53, 0x77, 0x61, 0x70, 0x42, 0x84, 0x01, 0x0a, 0x09, 0x63, 0x6f, 0x6d, 0x2e, 0x74, 0x79, 0x70,
+	0x65, 0x73, 0x42, 0x17, 0x4d, 0x73, 0x67, 0x4d, 0x6f, 0x64, 0x69, 0x66, 0x79, 0x4c, 0x69, 0x6d,
+	0x69, 0x74, 0x53, 0x77, 0x61, 0x70, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x2a, 0x67,
+	0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68,
+	0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33, 0x2f,
+	0x61, 0x70, 0x69, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x73, 0xa2, 0x02, 0x03, 0x54, 0x58, 0x58, 0xaa,
+	0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xca, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xe2,
+	0x02, 0x11, 0x54, 0x79, 0x70, 0x65, 0x73, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64,
+	0x61, 0x74, 0x61, 0xea, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0x62, 0x06, 0x70, 0x72, 0x6f,
+	0x74, 0x6f, 0x33,
 }
 
 var (
@@ -868,15 +1035,17 @@ var file_types_msg_modify_limit_swap_proto_msgTypes = make([]protoimpl.MessageIn
 var file_types_msg_modify_limit_swap_proto_goTypes = []interface{}{
 	(*MsgModifyLimitSwap)(nil), // 0: types.MsgModifyLimitSwap
 	(*common.Coin)(nil),        // 1: common.Coin
+	(*common.Asset)(nil),       // 2: common.Asset
 }
 var file_types_msg_modify_limit_swap_proto_depIdxs = []int32{
 	1, // 0: types.MsgModifyLimitSwap.source:type_name -> common.Coin
 	1, // 1: types.MsgModifyLimitSwap.target:type_name -> common.Coin
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	2, // 2: types.MsgModifyLimitSwap.deposit_asset:type_name -> common.Asset
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_types_msg_modify_limit_swap_proto_init() }

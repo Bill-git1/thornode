@@ -12,7 +12,7 @@
             "@type": "/cosmos.crypto.secp256k1.PubKey",
             "key": "AmF4AUTWZEUSBtgqiR5n2Lgic/Yrr1mWupMo5TAubNRO"
           },
-          "sequence": "1"
+          "sequence": "2"
         },
         {
           "@type": "/cosmos.auth.v1beta1.ModuleAccount",
@@ -163,7 +163,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35000002364612",
+              "amount": "35000003254769",
               "denom": "rune"
             }
           ]
@@ -190,7 +190,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "14996211101389",
+              "amount": "14996210211232",
               "denom": "rune"
             }
           ]
@@ -240,7 +240,7 @@
         {
           "asset": "BTC.BTC",
           "asset_deposit_value": "4776480940",
-          "last_add_height": "12",
+          "last_add_height": "13",
           "pending_asset": "0",
           "pending_rune": "0",
           "rune_address": "tthor1f6z8lvkkj4u0f4g0cz6akzhydn6d9yv64t7ss7",
@@ -262,14 +262,17 @@
       "loans": [],
       "mimirs": [
         {
+          "key": "ENABLEADVSWAPQUEUE"
+        },
+        {
           "key": "MAXSYNTHPERPOOLDEPTH",
           "value": "6000"
         }
       ],
       "network": {
         "NodeIncomeSplit": "10000",
-        "bond_reward_rune": "9996213101389",
-        "total_bond_units": "12"
+        "bond_reward_rune": "9996214211232",
+        "total_bond_units": "13"
       },
       "network_fees": [
         {
@@ -280,6 +283,10 @@
       ],
       "nodeMimirs": [
         {
+          "key": "ENABLEADVSWAPQUEUE",
+          "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m"
+        },
+        {
           "key": "MAXSYNTHPERPOOLDEPTH",
           "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
           "value": "6000"
@@ -288,7 +295,7 @@
       "node_accounts": [
         {
           "active_block_height": "1",
-          "bond": "4999998000000",
+          "bond": "4999996000000",
           "bond_address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
           "ip_address": "1.1.1.1",
           "node_address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
@@ -421,5 +428,5 @@
       }
     }
   },
-  "initial_height": 13
+  "initial_height": 14
 }

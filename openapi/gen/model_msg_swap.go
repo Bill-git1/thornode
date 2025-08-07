@@ -41,6 +41,13 @@ type MsgSwap struct {
 	StreamQuantity *int64 `json:"stream_quantity,omitempty"`
 	// the interval (in blocks) to execute the streaming swap
 	StreamInterval *int64 `json:"stream_interval,omitempty"`
+	// the initial block height when the streaming swap was first queued
+	InitialBlockHeight *int64 `json:"initial_block_height,omitempty"`
+	State *SwapState `json:"state,omitempty"`
+	// the version of the swap (v1 or v2)
+	Version *string `json:"version,omitempty"`
+	// the index of the swap in the batch
+	Index *int32 `json:"index,omitempty"`
 }
 
 // NewMsgSwap instantiates a new MsgSwap object
@@ -448,6 +455,134 @@ func (o *MsgSwap) SetStreamInterval(v int64) {
 	o.StreamInterval = &v
 }
 
+// GetInitialBlockHeight returns the InitialBlockHeight field value if set, zero value otherwise.
+func (o *MsgSwap) GetInitialBlockHeight() int64 {
+	if o == nil || o.InitialBlockHeight == nil {
+		var ret int64
+		return ret
+	}
+	return *o.InitialBlockHeight
+}
+
+// GetInitialBlockHeightOk returns a tuple with the InitialBlockHeight field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *MsgSwap) GetInitialBlockHeightOk() (*int64, bool) {
+	if o == nil || o.InitialBlockHeight == nil {
+		return nil, false
+	}
+	return o.InitialBlockHeight, true
+}
+
+// HasInitialBlockHeight returns a boolean if a field has been set.
+func (o *MsgSwap) HasInitialBlockHeight() bool {
+	if o != nil && o.InitialBlockHeight != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetInitialBlockHeight gets a reference to the given int64 and assigns it to the InitialBlockHeight field.
+func (o *MsgSwap) SetInitialBlockHeight(v int64) {
+	o.InitialBlockHeight = &v
+}
+
+// GetState returns the State field value if set, zero value otherwise.
+func (o *MsgSwap) GetState() SwapState {
+	if o == nil || o.State == nil {
+		var ret SwapState
+		return ret
+	}
+	return *o.State
+}
+
+// GetStateOk returns a tuple with the State field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *MsgSwap) GetStateOk() (*SwapState, bool) {
+	if o == nil || o.State == nil {
+		return nil, false
+	}
+	return o.State, true
+}
+
+// HasState returns a boolean if a field has been set.
+func (o *MsgSwap) HasState() bool {
+	if o != nil && o.State != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetState gets a reference to the given SwapState and assigns it to the State field.
+func (o *MsgSwap) SetState(v SwapState) {
+	o.State = &v
+}
+
+// GetVersion returns the Version field value if set, zero value otherwise.
+func (o *MsgSwap) GetVersion() string {
+	if o == nil || o.Version == nil {
+		var ret string
+		return ret
+	}
+	return *o.Version
+}
+
+// GetVersionOk returns a tuple with the Version field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *MsgSwap) GetVersionOk() (*string, bool) {
+	if o == nil || o.Version == nil {
+		return nil, false
+	}
+	return o.Version, true
+}
+
+// HasVersion returns a boolean if a field has been set.
+func (o *MsgSwap) HasVersion() bool {
+	if o != nil && o.Version != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetVersion gets a reference to the given string and assigns it to the Version field.
+func (o *MsgSwap) SetVersion(v string) {
+	o.Version = &v
+}
+
+// GetIndex returns the Index field value if set, zero value otherwise.
+func (o *MsgSwap) GetIndex() int32 {
+	if o == nil || o.Index == nil {
+		var ret int32
+		return ret
+	}
+	return *o.Index
+}
+
+// GetIndexOk returns a tuple with the Index field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *MsgSwap) GetIndexOk() (*int32, bool) {
+	if o == nil || o.Index == nil {
+		return nil, false
+	}
+	return o.Index, true
+}
+
+// HasIndex returns a boolean if a field has been set.
+func (o *MsgSwap) HasIndex() bool {
+	if o != nil && o.Index != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetIndex gets a reference to the given int32 and assigns it to the Index field.
+func (o *MsgSwap) SetIndex(v int32) {
+	o.Index = &v
+}
+
 func (o MsgSwap) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
@@ -488,6 +623,18 @@ func (o MsgSwap) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if o.StreamInterval != nil {
 		toSerialize["stream_interval"] = o.StreamInterval
+	}
+	if o.InitialBlockHeight != nil {
+		toSerialize["initial_block_height"] = o.InitialBlockHeight
+	}
+	if o.State != nil {
+		toSerialize["state"] = o.State
+	}
+	if o.Version != nil {
+		toSerialize["version"] = o.Version
+	}
+	if o.Index != nil {
+		toSerialize["index"] = o.Index
 	}
 	return json.Marshal(toSerialize)
 }

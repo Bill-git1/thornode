@@ -80,6 +80,7 @@ const (
 	StreamingSwapMinBPFee // TODO: remove on hard fork
 	StreamingSwapMaxLength
 	StreamingSwapMaxLengthNative
+	StreamingLimitSwapMaxAge
 	MinCR
 	MaxCR
 	LoanStreamingSwapsInterval

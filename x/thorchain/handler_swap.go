@@ -26,20 +26,26 @@ func NewSwapHandler(mgr Manager) SwapHandler {
 
 // Run is the main entry point of swap message
 func (h SwapHandler) Run(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, error) {
+	result, _, err := h.RunWithEmit(ctx, m)
+	return result, err
+}
+
+// RunWithEmit executes the swap and returns the emit amount along with the result
+func (h SwapHandler) RunWithEmit(ctx cosmos.Context, m cosmos.Msg) (*cosmos.Result, cosmos.Uint, error) {
 	msg, ok := m.(*MsgSwap)
 	if !ok {
-		return nil, errInvalidMessage
+		return nil, cosmos.ZeroUint(), errInvalidMessage
 	}
 	if err := h.validate(ctx, *msg); err != nil {
 		ctx.Logger().Error("MsgSwap failed validation", "error", err)
-		return nil, err
+		return nil, cosmos.ZeroUint(), err
 	}
-	result, err := h.handle(ctx, *msg)
+	result, emit, err := h.handleWithEmit(ctx, *msg)
 	if err != nil {
 		ctx.Logger().Error("fail to handle MsgSwap", "error", err)
-		return nil, err
+		return nil, cosmos.ZeroUint(), err
 	}
-	return result, err
+	return result, emit, err
 }
 
 func (h SwapHandler) validate(ctx cosmos.Context, msg MsgSwap) error {
@@ -129,7 +135,7 @@ func (h SwapHandler) validateV3_0_0(ctx cosmos.Context, msg MsgSwap) error {
 		sourceCoin = msg.Tx.Coins[0]
 	}
 
-	if msg.IsStreaming() {
+	if msg.IsLegacyStreaming() {
 		pausedStreaming := h.mgr.Keeper().GetConfigInt64(ctx, constants.StreamingSwapPause)
 		if pausedStreaming > 0 {
 			return fmt.Errorf("streaming swaps are paused")
@@ -251,23 +257,23 @@ func (h SwapHandler) validateV3_0_0(ctx cosmos.Context, msg MsgSwap) error {
 	return nil
 }
 
-func (h SwapHandler) handle(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result, error) {
-	ctx.Logger().Info("receive MsgSwap", "request tx hash", msg.Tx.ID, "source asset", msg.Tx.Coins[0].Asset, "target asset", msg.TargetAsset, "signer", msg.Signer.String())
+func (h SwapHandler) handleWithEmit(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result, cosmos.Uint, error) {
+	ctx.Logger().Info("receive MsgSwap", "request tx hash", msg.Tx.ID, "index", msg.Index, "source", msg.Tx.Coins[0].String(), "target asset", msg.TargetAsset, "signer", msg.Signer.String())
 	version := h.mgr.GetVersion()
 	switch {
 	case version.GTE(semver.MustParse("3.0.0")):
 		return h.handleV3_0_0(ctx, msg)
 	default:
-		return nil, errBadVersion
+		return nil, cosmos.ZeroUint(), errBadVersion
 	}
 }
 
-func (h SwapHandler) handleV3_0_0(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result, error) {
+func (h SwapHandler) handleV3_0_0(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result, cosmos.Uint, error) {
 	// test that the network we are running matches the destination network
 	// Don't change msg.Destination here; this line was introduced to avoid people from swapping mainnet asset,
 	// but using mocknet address.
 	if !common.CurrentChainNetwork.SoftEquals(msg.Destination.GetNetwork(msg.Destination.GetChain())) {
-		return nil, fmt.Errorf("address(%s) is not same network", msg.Destination)
+		return nil, cosmos.ZeroUint(), fmt.Errorf("address(%s) is not same network", msg.Destination)
 	}
 
 	synthVirtualDepthMult, err := h.mgr.Keeper().GetMimir(ctx, constants.VirtualMultSynthsBasisPoints.String())
@@ -280,23 +286,24 @@ func (h SwapHandler) handleV3_0_0(ctx cosmos.Context, msg MsgSwap) (*cosmos.Resu
 	if len(msg.Aggregator) > 0 {
 		dexAgg, err = FetchDexAggregator(msg.TargetAsset.Chain, msg.Aggregator)
 		if err != nil {
-			return nil, err
+			return nil, cosmos.ZeroUint(), err
 		}
 	}
 	dexAggTargetAsset = msg.AggregatorTargetAddress
 
 	swapper, err := GetSwapper(h.mgr.Keeper().GetVersion())
 	if err != nil {
-		return nil, err
+		return nil, cosmos.ZeroUint(), err
 	}
 
 	swp := msg.GetStreamingSwap()
-	if msg.IsStreaming() {
+	// Only create streaming swap records for actual streaming swaps (not limit swaps)
+	if msg.IsLegacyStreaming() && !msg.IsLimitSwap() {
 		if h.mgr.Keeper().StreamingSwapExists(ctx, msg.Tx.ID) {
 			swp, err = h.mgr.Keeper().GetStreamingSwap(ctx, msg.Tx.ID)
 			if err != nil {
 				ctx.Logger().Error("fail to fetch streaming swap", "error", err)
-				return nil, err
+				return nil, cosmos.ZeroUint(), err
 			}
 		}
 
@@ -312,7 +319,7 @@ func (h SwapHandler) handleV3_0_0(ctx cosmos.Context, msg MsgSwap) (*cosmos.Resu
 			targetAsset := msg.TargetAsset
 			maxSwapQuantity, err := getMaxSwapQuantity(ctx, h.mgr, sourceAsset, targetAsset, swp)
 			if err != nil {
-				return nil, err
+				return nil, cosmos.ZeroUint(), err
 			}
 			if swp.Quantity == 0 || swp.Quantity > maxSwapQuantity {
 				swp.Quantity = maxSwapQuantity
@@ -340,8 +347,11 @@ func (h SwapHandler) handleV3_0_0(ctx cosmos.Context, msg MsgSwap) (*cosmos.Resu
 		synthVirtualDepthMult,
 		h.mgr)
 	if swapErr != nil {
-		return nil, swapErr
+		return nil, cosmos.ZeroUint(), swapErr
 	}
+
+	// Track the final emit value to return
+	finalEmit := emit
 
 	// Check if swap is to AffiliateCollector Module, if so, add the accrued RUNE for the affiliate
 	affColAddress, err := h.mgr.Keeper().GetModuleAddress(AffiliateCollectorName)
@@ -379,14 +389,15 @@ func (h SwapHandler) handleV3_0_0(ctx cosmos.Context, msg MsgSwap) (*cosmos.Resu
 	// MaxSynthPerPoolDepth cap
 	// Ignore caps when the swap is streaming (its checked at the start of the
 	// stream, not during)
-	if msg.TargetAsset.IsSyntheticAsset() && !msg.IsStreaming() {
+	if msg.TargetAsset.IsSyntheticAsset() && !msg.IsLegacyStreaming() {
 		err = isSynthMintPaused(ctx, h.mgr, msg.TargetAsset, emit)
 		if err != nil {
-			return nil, err
+			return nil, cosmos.ZeroUint(), err
 		}
 	}
 
-	if msg.IsStreaming() {
+	// Only update streaming swap records for actual streaming swaps (not limit swaps)
+	if msg.IsLegacyStreaming() && !msg.IsLimitSwap() {
 		// only increment In/Out if we have a successful swap
 		swp.In = swp.In.Add(msg.Tx.Coins[0].Amount)
 		swp.Out = swp.Out.Add(emit)
@@ -395,9 +406,10 @@ func (h SwapHandler) handleV3_0_0(ctx cosmos.Context, msg MsgSwap) (*cosmos.Resu
 			// exit early so we don't execute follow-on handlers mid streaming swap. if this
 			// is the last swap execute the follow-on handlers as swap count is incremented in
 			// the swap queue manager
-			return &cosmos.Result{}, nil
+			return &cosmos.Result{}, finalEmit, nil
 		}
 		emit = swp.Out
+		finalEmit = swp.Out
 	}
 
 	// this is a preferred asset swap, so return early since there is no need to call any
@@ -405,36 +417,36 @@ func (h SwapHandler) handleV3_0_0(ctx cosmos.Context, msg MsgSwap) (*cosmos.Resu
 	memo := msg.Tx.Memo
 	fromAdd := msg.Tx.FromAddress
 	if strings.HasPrefix(memo, PreferredAssetSwapMemoPrefix) && fromAdd.Equals(affColAddress) {
-		return &cosmos.Result{}, nil
+		return &cosmos.Result{}, finalEmit, nil
 	}
 
 	if parseMemoErr != nil {
 		ctx.Logger().Error("swap handler failed to parse memo", "memo", msg.Tx.Memo, "error", parseMemoErr)
-		return nil, err
+		return nil, cosmos.ZeroUint(), parseMemoErr
 	}
 	switch mem.GetType() {
 	case TxAdd:
 		m, ok := mem.(AddLiquidityMemo)
 		if !ok {
-			return nil, fmt.Errorf("fail to cast add liquidity memo")
+			return nil, cosmos.ZeroUint(), fmt.Errorf("fail to cast add liquidity memo")
 		}
 		m.Asset = fuzzyAssetMatch(ctx, h.mgr.Keeper(), m.Asset)
 		msg.Tx.Coins = common.NewCoins(common.NewCoin(m.Asset, emit))
 		obTx := ObservedTx{Tx: msg.Tx}
 		msg, err := getMsgAddLiquidityFromMemo(ctx, m, obTx, msg.Signer)
 		if err != nil {
-			return nil, err
+			return nil, cosmos.ZeroUint(), err
 		}
 		handler := NewAddLiquidityHandler(h.mgr)
 		_, err = handler.Run(ctx, msg)
 		if err != nil {
 			ctx.Logger().Error("swap handler failed to add liquidity", "error", err)
-			return nil, err
+			return nil, cosmos.ZeroUint(), err
 		}
 	case TxLoanOpen:
 		m, ok := mem.(LoanOpenMemo)
 		if !ok {
-			return nil, fmt.Errorf("fail to cast loan open memo")
+			return nil, cosmos.ZeroUint(), fmt.Errorf("fail to cast loan open memo")
 		}
 		m.Asset = fuzzyAssetMatch(ctx, h.mgr.Keeper(), m.Asset)
 		msg.Tx.Coins = common.NewCoins(common.NewCoin(
@@ -446,19 +458,19 @@ func (h SwapHandler) handleV3_0_0(ctx cosmos.Context, msg MsgSwap) (*cosmos.Resu
 		obTx := ObservedTx{Tx: msg.Tx}
 		msg, err := getMsgLoanOpenFromMemo(ctx, h.mgr.Keeper(), m, obTx, msg.Signer, msg.Tx.ID)
 		if err != nil {
-			return nil, err
+			return nil, cosmos.ZeroUint(), err
 		}
 		openLoanHandler := NewLoanOpenHandler(h.mgr)
 
 		_, err = openLoanHandler.Run(ctx, msg) // fire and forget
 		if err != nil {
 			ctx.Logger().Error("swap handler failed to open loan", "error", err)
-			return nil, err
+			return nil, cosmos.ZeroUint(), err
 		}
 	case TxLoanRepayment:
 		m, ok := mem.(LoanRepaymentMemo)
 		if !ok {
-			return nil, fmt.Errorf("fail to cast loan repayment memo")
+			return nil, cosmos.ZeroUint(), fmt.Errorf("fail to cast loan repayment memo")
 		}
 		m.Asset = fuzzyAssetMatch(ctx, h.mgr.Keeper(), m.Asset)
 
@@ -466,16 +478,16 @@ func (h SwapHandler) handleV3_0_0(ctx cosmos.Context, msg MsgSwap) (*cosmos.Resu
 
 		msg, err := getMsgLoanRepaymentFromMemo(m, msg.Tx.FromAddress, common.NewCoin(common.TOR, emit), msg.Signer, msg.Tx.ID)
 		if err != nil {
-			return nil, err
+			return nil, cosmos.ZeroUint(), err
 		}
 		repayLoanHandler := NewLoanRepaymentHandler(h.mgr)
 		_, err = repayLoanHandler.Run(ctx, msg) // fire and forget
 		if err != nil {
 			ctx.Logger().Error("swap handler failed to repay loan", "error", err)
-			return nil, err
+			return nil, cosmos.ZeroUint(), err
 		}
 	}
-	return &cosmos.Result{}, nil
+	return &cosmos.Result{}, finalEmit, nil
 }
 
 // getTotalLiquidityRUNE we have in all pools

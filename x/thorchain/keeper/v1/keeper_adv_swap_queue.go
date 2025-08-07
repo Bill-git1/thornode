@@ -3,6 +3,7 @@ package keeperv1
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/runtime"
@@ -24,6 +25,11 @@ import (
 // A value of 18 means that granularity is maxed out at 1 trillion to 1 ratio.
 const ratioLength int = 18
 
+// formatSwapQueueItemKey formats a swap queue item key from a TxID and index
+func formatSwapQueueItemKey(txID common.TxID, index int) string {
+	return fmt.Sprintf("%s-%d", txID.String(), index)
+}
+
 // AdvSwapQueueEnabled return true if the adv swap queue feature is enabled
 func (k KVStore) AdvSwapQueueEnabled(ctx cosmos.Context) bool {
 	val := k.GetConfigInt64(ctx, constants.EnableAdvSwapQueue)
@@ -35,16 +41,13 @@ func (k KVStore) SetAdvSwapQueueItem(ctx cosmos.Context, msg MsgSwap) error {
 	if msg.Tx.Coins == nil || len(msg.Tx.Coins) != 1 {
 		return fmt.Errorf("incorrect number of coins in transaction (%d)", len(msg.Tx.Coins))
 	}
-	if msg.SwapType == types.SwapType_limit && msg.TradeTarget.IsZero() {
-		return fmt.Errorf("trade target cannot be zero for limit swaps")
-	}
 	if msg.Tx.ID.IsEmpty() {
 		return fmt.Errorf("invalid tx hash")
 	}
 	if err := k.SetAdvSwapQueueIndex(ctx, msg); err != nil {
 		return err
 	}
-	k.setMsgSwap(ctx, k.GetKey(prefixAdvSwapQueueItem, msg.Tx.ID.String()), msg)
+	k.setMsgSwap(ctx, k.GetKey(prefixAdvSwapQueueItem, formatSwapQueueItemKey(msg.Tx.ID, int(msg.Index))), msg)
 	return nil
 }
 
@@ -54,9 +57,9 @@ func (k KVStore) GetAdvSwapQueueItemIterator(ctx cosmos.Context) cosmos.Iterator
 }
 
 // GetAdvSwapQueueItem - read the given adv swap queue item information from key values store
-func (k KVStore) GetAdvSwapQueueItem(ctx cosmos.Context, txID common.TxID) (MsgSwap, error) {
+func (k KVStore) GetAdvSwapQueueItem(ctx cosmos.Context, txID common.TxID, index int) (MsgSwap, error) {
 	record := MsgSwap{}
-	ok, err := k.getMsgSwap(ctx, k.GetKey(prefixAdvSwapQueueItem, txID.String()), &record)
+	ok, err := k.getMsgSwap(ctx, k.GetKey(prefixAdvSwapQueueItem, formatSwapQueueItemKey(txID, index)), &record)
 	if !ok {
 		return record, errors.New("not found")
 	}
@@ -64,21 +67,21 @@ func (k KVStore) GetAdvSwapQueueItem(ctx cosmos.Context, txID common.TxID) (MsgS
 }
 
 // HasAdvSwapQueueItem - checks if adv swap queue item already exists
-func (k KVStore) HasAdvSwapQueueItem(ctx cosmos.Context, txID common.TxID) bool {
+func (k KVStore) HasAdvSwapQueueItem(ctx cosmos.Context, txID common.TxID, index int) bool {
 	record := MsgSwap{}
-	ok, _ := k.getMsgSwap(ctx, k.GetKey(prefixAdvSwapQueueItem, txID.String()), &record)
+	ok, _ := k.getMsgSwap(ctx, k.GetKey(prefixAdvSwapQueueItem, formatSwapQueueItemKey(txID, index)), &record)
 	return ok
 }
 
 // RemoveAdvSwapQueueItem - removes a adv swap queue item from the kv store
-func (k KVStore) RemoveAdvSwapQueueItem(ctx cosmos.Context, txID common.TxID) error {
-	msg, err := k.GetAdvSwapQueueItem(ctx, txID)
+func (k KVStore) RemoveAdvSwapQueueItem(ctx cosmos.Context, txID common.TxID, index int) error {
+	msg, err := k.GetAdvSwapQueueItem(ctx, txID, index)
 	if err != nil {
 		_ = dbError(ctx, "failed to fetch adv swap queue item", err)
 	} else {
 		err = k.RemoveAdvSwapQueueIndex(ctx, msg)
 	}
-	k.del(ctx, k.GetKey(prefixAdvSwapQueueItem, txID.String()))
+	k.del(ctx, k.GetKey(prefixAdvSwapQueueItem, formatSwapQueueItemKey(txID, index)))
 	return err
 }
 
@@ -122,7 +125,7 @@ func (k KVStore) SetAdvSwapQueueIndex(ctx cosmos.Context, msg MsgSwap) error {
 	if err != nil {
 		return err
 	}
-	record = append(record, msg.Tx.ID.String())
+	record = append(record, formatSwapQueueItemKey(msg.Tx.ID, int(msg.Index)))
 	k.setStrings(ctx, key, record)
 	return nil
 }
@@ -142,22 +145,45 @@ func (k KVStore) GetAdvSwapQueueIndexIterator(ctx cosmos.Context, swapType types
 }
 
 // GetAdvSwapQueueIndex - read the given adv swap queue index information from key values tore
-func (k KVStore) GetAdvSwapQueueIndex(ctx cosmos.Context, msg MsgSwap) (common.TxIDs, error) {
+func (k KVStore) GetAdvSwapQueueIndex(ctx cosmos.Context, msg MsgSwap) ([]types.AdvSwapQueueIndexItem, error) {
 	key := k.getAdvSwapQueueIndexKey(ctx, msg)
 	record := make([]string, 0)
 	_, err := k.getStrings(ctx, key, &record)
 	if err != nil {
 		return nil, err
 	}
-	result := make(common.TxIDs, len(record))
-	for i, rec := range record {
-		var hash common.TxID
-		hash, err = common.NewTxID(rec)
-		if err != nil {
-			_ = dbError(ctx, fmt.Sprintf("failed to parse tx hash: (%s)", rec), err)
+	result := make([]types.AdvSwapQueueIndexItem, 0, len(record))
+	for _, rec := range record {
+		// Parse format "txID-index" using last hyphen to handle Cosmos indexed TxIDs
+		lastHyphenIndex := strings.LastIndex(rec, "-")
+		if lastHyphenIndex == -1 {
+			_ = dbError(ctx, fmt.Sprintf("invalid swap queue index format - no hyphen found: (%s)", rec), nil)
 			continue
 		}
-		result[i] = hash
+		parts := []string{rec[:lastHyphenIndex], rec[lastHyphenIndex+1:]}
+		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+			_ = dbError(ctx, fmt.Sprintf("invalid swap queue index format: (%s)", rec), nil)
+			continue
+		}
+
+		// Parse TxID
+		hash, err := common.NewTxID(parts[0])
+		if err != nil {
+			_ = dbError(ctx, fmt.Sprintf("failed to parse tx hash: (%s)", parts[0]), err)
+			continue
+		}
+
+		// Parse index
+		index, err := strconv.Atoi(parts[1])
+		if err != nil {
+			_ = dbError(ctx, fmt.Sprintf("failed to parse index: (%s)", parts[1]), err)
+			continue
+		}
+
+		result = append(result, types.AdvSwapQueueIndexItem{
+			TxID:  hash,
+			Index: index,
+		})
 	}
 	return result, nil
 }
@@ -170,8 +196,9 @@ func (k KVStore) HasAdvSwapQueueIndex(ctx cosmos.Context, msg MsgSwap) (bool, er
 	if err != nil {
 		return false, err
 	}
+	idStr := formatSwapQueueItemKey(msg.Tx.ID, int(msg.Index))
 	for _, r := range record {
-		if strings.EqualFold(msg.Tx.ID.String(), r) {
+		if strings.EqualFold(idStr, r) {
 			return true, nil
 		}
 	}
@@ -188,8 +215,9 @@ func (k KVStore) RemoveAdvSwapQueueIndex(ctx cosmos.Context, msg MsgSwap) error 
 	}
 
 	found := false
+	idStr := formatSwapQueueItemKey(msg.Tx.ID, int(msg.Index))
 	for i, rec := range record {
-		if strings.EqualFold(rec, msg.Tx.ID.String()) {
+		if strings.EqualFold(rec, idStr) {
 			record = removeString(record, i)
 			found = true
 			break

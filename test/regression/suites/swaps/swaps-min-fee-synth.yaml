@@ -7,6 +7,17 @@ value: "1000"
 type: create-blocks
 count: 1
 ---
+########################################################################################
+# disable advanced swap queue to ensure consistent test behavior
+########################################################################################
+type: tx-mimir
+key: EnableAdvSwapQueue
+value: 0
+signer: {{ addr_thor_dog }}
+---
+type: create-blocks
+count: 1
+---
 type: check
 endpoint: http://localhost:1317/thorchain/quote/swap
 params:
@@ -120,5 +131,5 @@ asserts:
   - .end_block_events[] | select(.type == "swap") | .swap_slip == "500"
   - .end_block_events[] | select(.type == "swap") | .pool_slip == "1"
   - .end_block_events[] | select(.type == "swap") | .liquidity_fee == "999"
-  - .end_block_events[] | select(.type == "swap") | .liquidity_fee_in_rune == "999407"
+  - .end_block_events[] | select(.type == "swap") | .liquidity_fee_in_rune == "999412"
   - .end_block_events[] | select(.type == "swap") | .emit_asset == "18994 BTC/BTC"

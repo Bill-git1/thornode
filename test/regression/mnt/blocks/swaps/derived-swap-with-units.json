@@ -906,7 +906,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "148825",
+          "gas_used": "175969",
           "events": [
             {
               "amount": "2000000rune",
@@ -966,6 +966,13 @@
               "msg_index": "0",
               "sender": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "type": "message"
+            },
+            {
+              "msg_index": "0",
+              "source": "1000000000 THOR.RUNE",
+              "target": "0 THOR.BTC",
+              "txid": "532211CC6F704C48AB718CAADAD3F0A2205723880FFF85789BB994AFC3F49DD4",
+              "type": "limit_swap"
             }
           ]
         }
@@ -1000,8 +1007,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "75FE87D57AF06B83C5F2FB29926C0F1AC7FB587571D533AC2CE3271E0F80A8F4",
-      "last_results_hash": "CBA995D3E45909F30973C8AA82CEF1F0FD3A06B54F065408BA4BF62BBA2422E0",
+      "app_hash": "92E0A39E4BAAA0A0A7278509014E30EC7329E940B3263D41809166FA21BF320D",
+      "last_results_hash": "AFD529AA37BB0F03B00305C981EA071A2B188F3028D2148655207744540B158D",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -1437,7 +1444,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "134840",
+          "gas_used": "178679",
           "events": [
             {
               "amount": "2000000rune",
@@ -1497,6 +1504,13 @@
               "msg_index": "0",
               "sender": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "type": "message"
+            },
+            {
+              "msg_index": "0",
+              "source": "50000 THOR.BTC",
+              "target": "0 BTC/BTC",
+              "txid": "C26B80C94868191E2603D850838958C7763E4146D3592497EBFB77AF3C0B9535",
+              "type": "limit_swap"
             }
           ]
         }

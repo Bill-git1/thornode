@@ -9,6 +9,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
 	thorchain "gitlab.com/thorchain/thornode/v3/x/thorchain/memo"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 func triggerPreferredAssetSwap(ctx cosmos.Context, mgr Manager, affiliateAddress common.Address, txID common.TxID, tn THORName, affcol AffiliateFeeCollector, queueIndex int) error {
@@ -87,6 +88,12 @@ func triggerPreferredAssetSwapV3_0_0(ctx cosmos.Context, mgr Manager, tn THORNam
 		networkMemo,
 	)
 
+	// Determine version based on configuration
+	version := types.SwapVersion_v1
+	if mgr.Keeper().AdvSwapQueueEnabled(ctx) {
+		version = types.SwapVersion_v2
+	}
+
 	preferredAssetSwap := NewMsgSwap(
 		tx,
 		tn.PreferredAsset,
@@ -98,6 +105,7 @@ func triggerPreferredAssetSwapV3_0_0(ctx cosmos.Context, mgr Manager, tn THORNam
 		"", nil,
 		MarketSwap,
 		0, 0,
+		version,
 		tn.Owner,
 	)
 
@@ -110,9 +118,17 @@ func triggerPreferredAssetSwapV3_0_0(ctx cosmos.Context, mgr Manager, tn THORNam
 	mgr.Keeper().SetObservedTxInVoter(ctx, txInVoter)
 
 	// Queue the preferred asset swap
-	if err = mgr.Keeper().SetSwapQueueItem(ctx, *preferredAssetSwap, queueIndex); err != nil {
-		ctx.Logger().Error("fail to add preferred asset swap to queue", "error", err)
-		return err
+	// Use advanced swap queue if enabled
+	if mgr.Keeper().AdvSwapQueueEnabled(ctx) {
+		if err = mgr.AdvSwapQueueMgr().AddSwapQueueItem(ctx, mgr, preferredAssetSwap); err != nil {
+			ctx.Logger().Error("fail to add preferred asset swap to advanced queue", "error", err)
+			return err
+		}
+	} else {
+		if err = mgr.Keeper().SetSwapQueueItem(ctx, *preferredAssetSwap, queueIndex); err != nil {
+			ctx.Logger().Error("fail to add preferred asset swap to queue", "error", err)
+			return err
+		}
 	}
 
 	// Send RUNE from AffiliateCollector to Asgard and update AffiliateCollector
@@ -171,7 +187,7 @@ func skimAffiliateFeesV3_0_0(ctx cosmos.Context, mgr Manager, mainTx common.Tx, 
 
 	// Iterate through each affiliate and attempt to distribute the fee
 	for i, affiliate := range affiliates {
-		ctx.Logger().Info("distributing affiliate fee", "txid", mainTx.ID.String(), "affiliate", affiliate, "fee", affiliatesBps[i].String(), "asset", coin.Asset, "amount", coin.Amount)
+		ctx.Logger().Info("distributing affiliate fee", "txid", mainTx.ID.String(), "index", i, "affiliate", affiliate, "fee", affiliatesBps[i].String(), "asset", coin.Asset, "amount", coin.Amount)
 		// Determine if affiliate is address or thorname. If it's an address it must be a RUNE address.
 		var runeAddr cosmos.AccAddress
 		var thorname *THORName
@@ -304,6 +320,10 @@ func affiliateSwapToRuneV3_0_0(ctx cosmos.Context, mgr Manager, mainTx common.Tx
 	// Copy mainTx coins so as not to modify the original
 	mainTx.Coins = mainTx.Coins.Copy()
 
+	if mainTx.Coins[0].Amount.GTE(affAmt) {
+		mainTx.Coins[0].Amount = affAmt
+	}
+
 	// Update memo to include only this affiliate
 	tnMemo := affAddr.String()
 	if tn != nil {
@@ -311,6 +331,12 @@ func affiliateSwapToRuneV3_0_0(ctx cosmos.Context, mgr Manager, mainTx common.Tx
 	}
 	memoStr := NewSwapMemo(ctx, mgr, common.RuneAsset(), affAddr, cosmos.ZeroUint(), tnMemo, cosmos.ZeroUint())
 	mainTx.Memo = memoStr
+
+	// Determine version based on configuration
+	version := types.SwapVersion_v1
+	if mgr.Keeper().AdvSwapQueueEnabled(ctx) {
+		version = types.SwapVersion_v2
+	}
 
 	affiliateSwap := NewMsgSwap(
 		mainTx,
@@ -323,6 +349,7 @@ func affiliateSwapToRuneV3_0_0(ctx cosmos.Context, mgr Manager, mainTx common.Tx
 		"", nil,
 		MarketSwap,
 		0, 0,
+		version,
 		signer,
 	)
 
@@ -372,13 +399,17 @@ func affiliateSwapToRuneV3_0_0(ctx cosmos.Context, mgr Manager, mainTx common.Tx
 		}
 	}
 
-	if affiliateSwap.Tx.Coins[0].Amount.GTE(affAmt) {
-		affiliateSwap.Tx.Coins[0].Amount = affAmt
-	}
-
 	*swapIndex++
-	if err = mgr.Keeper().SetSwapQueueItem(ctx, *affiliateSwap, *swapIndex); err != nil {
-		return fmt.Errorf("fail to add swap to queue: %w", err)
+	// Use advanced swap queue if enabled
+	if mgr.Keeper().AdvSwapQueueEnabled(ctx) {
+		affiliateSwap.Index = uint32(*swapIndex)
+		if err = mgr.AdvSwapQueueMgr().AddSwapQueueItem(ctx, mgr, affiliateSwap); err != nil {
+			return fmt.Errorf("fail to add swap to advanced queue: %w", err)
+		}
+	} else {
+		if err = mgr.Keeper().SetSwapQueueItem(ctx, *affiliateSwap, *swapIndex); err != nil {
+			return fmt.Errorf("fail to add swap to queue: %w", err)
+		}
 	}
 
 	return nil

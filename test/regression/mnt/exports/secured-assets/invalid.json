@@ -589,8 +589,7 @@
               "clout_spent": "0",
               "coin": {
                 "amount": "9986000",
-                "asset": "BTC.BTC",
-                "decimals": "8"
+                "asset": "BTC.BTC"
               },
               "gas_rate": "10",
               "in_hash": "000000000000000000000000000000000000000000000000000000000000000c",
@@ -821,8 +820,7 @@
               "clout_spent": "0",
               "coin": {
                 "amount": "9986000",
-                "asset": "BTC.BTC",
-                "decimals": "8"
+                "asset": "BTC.BTC"
               },
               "gas_rate": "10",
               "in_hash": "000000000000000000000000000000000000000000000000000000000000000c",

@@ -559,6 +559,5 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - .|[.end_block_events[]|select(.type == "refund")]|length == 1
-  - .end_block_events[]|select(.type == "refund")|.from == "{{ addr_thor_fox }}"
-  - .end_block_events[]|select(.type == "refund")|.reason == "a network module cannot be the final destination of a swap memo"
+  - .|[..|select(.type? == "refund")] | length == 1
+  - ..|select(.type? == "refund").reason | contains("a network module cannot be the final destination of a swap memo")

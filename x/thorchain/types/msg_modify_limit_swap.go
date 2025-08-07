@@ -18,13 +18,15 @@ var (
 )
 
 // NewMsgModifyLimitSwap is a constructor function for MsgModifyLimitSwap
-func NewMsgModifyLimitSwap(from common.Address, source, target common.Coin, mod cosmos.Uint, signer cosmos.AccAddress) *MsgModifyLimitSwap {
+func NewMsgModifyLimitSwap(from common.Address, source, target common.Coin, mod cosmos.Uint, signer cosmos.AccAddress, depositAsset common.Asset, depositAmount cosmos.Uint) *MsgModifyLimitSwap {
 	return &MsgModifyLimitSwap{
 		From:                 from,
 		Source:               source,
 		Target:               target,
 		ModifiedTargetAmount: mod,
 		Signer:               signer,
+		DepositAsset:         depositAsset,
+		DepositAmount:        depositAmount,
 	}
 }
 

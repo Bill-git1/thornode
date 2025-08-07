@@ -168,10 +168,6 @@ func (p *parser) ParseSwapMemoV3_0_0() (SwapMemo, error) {
 
 	var err error
 	asset := p.getAsset(1, true, common.EmptyAsset)
-	var swapType types.SwapType
-	if strings.EqualFold(p.parts[0], TxLimitSwap.String()) {
-		swapType = types.SwapType_limit
-	}
 
 	// DESTADDR can be empty , if it is empty , it will swap to the sender address
 	destination, refundAddress := p.getAddressAndRefundAddressWithKeeper(2, false, common.NoAddress, asset.Chain)
@@ -207,6 +203,16 @@ func (p *parser) ParseSwapMemoV3_0_0() (SwapMemo, error) {
 		}
 	} else {
 		slip = p.getUintWithScientificNotation(3, false, 0)
+	}
+
+	var swapType types.SwapType
+	if strings.EqualFold(p.parts[0], TxLimitSwap.String()) && !slip.IsZero() {
+		swapType = types.SwapType_limit
+	}
+
+	// override interval to be 1 on all limit swaps
+	if swapType == types.SwapType_limit {
+		streamInterval = 1
 	}
 
 	// Parse multiple affiliate thornames + fee bps

@@ -15,7 +15,7 @@ func (s *KeeperAdvSwapQueueSuite) TestKeeperAdvSwapQueue(c *C) {
 	ctx, k := setupKeeperForTest(c)
 
 	// not found
-	_, err := k.GetAdvSwapQueueItem(ctx, GetRandomTxHash())
+	_, err := k.GetAdvSwapQueueItem(ctx, GetRandomTxHash(), 0)
 	c.Assert(err, NotNil)
 
 	msg1 := MsgSwap{
@@ -31,11 +31,11 @@ func (s *KeeperAdvSwapQueueSuite) TestKeeperAdvSwapQueue(c *C) {
 
 	c.Assert(k.SetAdvSwapQueueItem(ctx, msg1), IsNil)
 	c.Assert(k.SetAdvSwapQueueItem(ctx, msg2), IsNil)
-	msg3, err := k.GetAdvSwapQueueItem(ctx, msg1.Tx.ID)
+	msg3, err := k.GetAdvSwapQueueItem(ctx, msg1.Tx.ID, int(msg1.Index))
 	c.Assert(err, IsNil)
 	c.Check(msg3.Tx.ID.Equals(msg1.Tx.ID), Equals, true)
 
-	c.Check(k.HasAdvSwapQueueItem(ctx, msg1.Tx.ID), Equals, true)
+	c.Check(k.HasAdvSwapQueueItem(ctx, msg1.Tx.ID, int(msg1.Index)), Equals, true)
 	ok, err := k.HasAdvSwapQueueIndex(ctx, msg1)
 	c.Assert(err, IsNil)
 	c.Check(ok, Equals, true)
@@ -55,16 +55,16 @@ func (s *KeeperAdvSwapQueueSuite) TestKeeperAdvSwapQueue(c *C) {
 		c.Assert(err, IsNil)
 		c.Check(ok, Equals, true)
 		c.Check(hashes, HasLen, 2)
-		c.Check(hashes[0], Equals, msg1.Tx.ID.String())
-		c.Check(hashes[1], Equals, msg2.Tx.ID.String())
+		c.Check(hashes[0], Equals, msg1.Tx.ID.String()+"-0")
+		c.Check(hashes[1], Equals, msg2.Tx.ID.String()+"-0")
 	}
 	iter.Close()
 
 	// test remove
-	c.Assert(k.RemoveAdvSwapQueueItem(ctx, msg1.Tx.ID), IsNil)
-	_, err = k.GetAdvSwapQueueItem(ctx, msg1.Tx.ID)
+	c.Assert(k.RemoveAdvSwapQueueItem(ctx, msg1.Tx.ID, int(msg1.Index)), IsNil)
+	_, err = k.GetAdvSwapQueueItem(ctx, msg1.Tx.ID, int(msg1.Index))
 	c.Check(err, NotNil)
-	c.Check(k.HasAdvSwapQueueItem(ctx, msg1.Tx.ID), Equals, false)
+	c.Check(k.HasAdvSwapQueueItem(ctx, msg1.Tx.ID, int(msg1.Index)), Equals, false)
 	ok, err = k.HasAdvSwapQueueIndex(ctx, msg1)
 	c.Assert(err, IsNil)
 	c.Check(ok, Equals, false)
@@ -95,4 +95,96 @@ func (s *KeeperAdvSwapQueueSuite) TestRemoveSlice(c *C) {
 	c.Check(removeString([]string{"foo", "bar", "baz"}, 2), DeepEquals, []string{"foo", "bar"})
 	c.Check(removeString([]string{"foo", "bar", "baz"}, 3), DeepEquals, []string{"foo", "bar", "baz"})
 	c.Check(removeString([]string{"foo", "bar", "baz"}, -1), DeepEquals, []string{"foo", "bar", "baz"})
+}
+
+func (s *KeeperAdvSwapQueueSuite) TestAdvSwapQueueIndexParsing(c *C) {
+	ctx, k := setupKeeperForTest(c)
+
+	// Test with standard 64-character hex transaction ID
+	standardTxID := "A7DA8FF1B7C290616D68A276F30AC618315E6CCE982EB8F7A79339E163798F49"
+	standardTx := GetRandomTx()
+	standardTx.ID = common.TxID(standardTxID)
+	standardTx.Coins = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(100)))
+	standardMsg := MsgSwap{
+		Tx:          standardTx,
+		TradeTarget: cosmos.NewUint(10 * common.One),
+		SwapType:    types.SwapType_limit,
+		Index:       5,
+	}
+
+	// Test with Cosmos indexed transaction ID (contains hyphen)
+	cosmosIndexedTxID := "A7DA8FF1B7C290616D68A276F30AC618315E6CCE982EB8F7A79339E163798F49-1"
+	cosmosIndexedTx := GetRandomTx()
+	cosmosIndexedTx.ID = common.TxID(cosmosIndexedTxID)
+	cosmosIndexedTx.Coins = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(100)))
+	cosmosIndexedMsg := MsgSwap{
+		Tx:          cosmosIndexedTx,
+		TradeTarget: cosmos.NewUint(10 * common.One),
+		SwapType:    types.SwapType_limit,
+		Index:       3,
+	}
+
+	// Set both items in the queue
+	c.Assert(k.SetAdvSwapQueueItem(ctx, standardMsg), IsNil)
+	c.Assert(k.SetAdvSwapQueueItem(ctx, cosmosIndexedMsg), IsNil)
+
+	// Verify both can be retrieved correctly
+	retrievedStandard, err := k.GetAdvSwapQueueItem(ctx, standardMsg.Tx.ID, int(standardMsg.Index))
+	c.Assert(err, IsNil)
+	c.Check(retrievedStandard.Tx.ID.Equals(standardMsg.Tx.ID), Equals, true)
+	c.Check(retrievedStandard.Index, Equals, standardMsg.Index)
+
+	retrievedCosmos, err := k.GetAdvSwapQueueItem(ctx, cosmosIndexedMsg.Tx.ID, int(cosmosIndexedMsg.Index))
+	c.Assert(err, IsNil)
+	c.Check(retrievedCosmos.Tx.ID.Equals(cosmosIndexedMsg.Tx.ID), Equals, true)
+	c.Check(retrievedCosmos.Index, Equals, cosmosIndexedMsg.Index)
+
+	// Test the index retrieval and parsing
+	index, err := k.GetAdvSwapQueueIndex(ctx, standardMsg)
+	c.Assert(err, IsNil)
+	c.Assert(len(index), Equals, 2) // Should have both items
+
+	// Verify that parsing works correctly for both transaction ID types
+	foundStandard := false
+	foundCosmos := false
+	for _, item := range index {
+		if item.TxID.Equals(standardMsg.Tx.ID) && item.Index == int(standardMsg.Index) {
+			foundStandard = true
+		}
+		if item.TxID.Equals(cosmosIndexedMsg.Tx.ID) && item.Index == int(cosmosIndexedMsg.Index) {
+			foundCosmos = true
+		}
+	}
+	c.Check(foundStandard, Equals, true, Commentf("Standard transaction ID should be parsed correctly"))
+	c.Check(foundCosmos, Equals, true, Commentf("Cosmos indexed transaction ID should be parsed correctly"))
+}
+
+func (s *KeeperAdvSwapQueueSuite) TestLastIndexParsing(c *C) {
+	// Test the parsing logic directly by simulating swap queue index records
+	testRecords := []string{
+		"A7DA8FF1B7C290616D68A276F30AC618315E6CCE982EB8F7A79339E163798F49-0",   // Standard TxID with swap index 0
+		"A7DA8FF1B7C290616D68A276F30AC618315E6CCE982EB8F7A79339E163798F49-1-0", // Cosmos indexed TxID (HASH-1) with swap index 0
+		"A7DA8FF1B7C290616D68A276F30AC618315E6CCE982EB8F7A79339E163798F49-1-5", // Cosmos indexed TxID (HASH-1) with swap index 5
+	}
+
+	// Manually test the parsing logic used in GetAdvSwapQueueIndex
+	for _, rec := range testRecords {
+		lastHyphenIndex := len(rec) - 1
+		for i := len(rec) - 1; i >= 0; i-- {
+			if rec[i] == '-' {
+				lastHyphenIndex = i
+				break
+			}
+		}
+		c.Assert(lastHyphenIndex, Not(Equals), len(rec)-1, Commentf("Should find hyphen in: %s", rec))
+
+		parts := []string{rec[:lastHyphenIndex], rec[lastHyphenIndex+1:]}
+		c.Assert(len(parts), Equals, 2, Commentf("Should split into 2 parts: %s", rec))
+		c.Check(parts[0], Not(Equals), "", Commentf("TxID part should not be empty: %s", rec))
+		c.Check(parts[1], Not(Equals), "", Commentf("Index part should not be empty: %s", rec))
+
+		// Verify the TxID can be parsed (this will work for both standard and Cosmos indexed TxIDs)
+		_, err := common.NewTxID(parts[0])
+		c.Check(err, IsNil, Commentf("Should parse TxID from: %s -> %s", rec, parts[0]))
+	}
 }

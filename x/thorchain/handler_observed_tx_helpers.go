@@ -264,7 +264,12 @@ func handleObservedTxInQuorum(
 
 	// if its a swap, send it to our queue for processing later
 	if isSwap {
-		addSwap(ctx, k, mgr.AdvSwapQueueMgr(), mgr.EventMgr(), *swapMsg)
+		if err := addSwap(ctx, mgr, *swapMsg); err != nil {
+			if refundErr := refundTx(ctx, tx, mgr, CodeSwapFail, err.Error(), ""); refundErr != nil {
+				ctx.Logger().Error("fail to refund swap", "error", refundErr)
+				// swallow the error here
+			}
+		}
 		return nil
 	}
 

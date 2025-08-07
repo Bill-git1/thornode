@@ -466,6 +466,7 @@ func (HandlerSuite) TestRefund(c *C) {
 }
 
 func (HandlerSuite) TestGetMsgSwapFromMemo(c *C) {
+	ctx, mgr := setupManagerForTest(c)
 	m, err := ParseMemo(GetCurrentVersion(), "swap:DOGE.DOGE")
 	swapMemo, ok := m.(SwapMemo)
 	c.Assert(ok, Equals, true)
@@ -492,7 +493,7 @@ func (HandlerSuite) TestGetMsgSwapFromMemo(c *C) {
 		common.EmptyPubKey, 1024,
 	)
 
-	resultMsg1, err := getMsgSwapFromMemo(swapMemo, txin, GetRandomBech32Addr())
+	resultMsg1, err := getMsgSwapFromMemo(ctx, mgr.Keeper(), swapMemo, txin, GetRandomBech32Addr())
 	c.Assert(resultMsg1, NotNil)
 	c.Assert(err, IsNil)
 }

@@ -4382,7 +4382,7 @@
         "chain": "BTC",
         "coin_amount": "9986000",
         "coin_asset": "BTC.BTC",
-        "coin_decimals": "8",
+        "coin_decimals": "0",
         "gas_rate": "10",
         "in_hash": "000000000000000000000000000000000000000000000000000000000000000c",
         "max_gas_amount_0": "10000",
@@ -4574,7 +4574,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "188070",
+          "gas_used": "213070",
           "events": [
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/14",
@@ -4590,6 +4590,13 @@
               "msg_index": "0",
               "sender": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
               "type": "message"
+            },
+            {
+              "msg_index": "0",
+              "source": "10000000 BTC.BTC",
+              "target": "0 ETH-ETH",
+              "txid": "000000000000000000000000000000000000000000000000000000000000000c",
+              "type": "limit_swap"
             }
           ]
         }

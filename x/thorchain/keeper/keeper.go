@@ -379,12 +379,12 @@ type KeeperAdvSwapQueues interface {
 	AdvSwapQueueEnabled(ctx cosmos.Context) bool
 	SetAdvSwapQueueItem(ctx cosmos.Context, msg MsgSwap) error
 	GetAdvSwapQueueItemIterator(ctx cosmos.Context) cosmos.Iterator
-	GetAdvSwapQueueItem(ctx cosmos.Context, txID common.TxID) (MsgSwap, error)
-	HasAdvSwapQueueItem(ctx cosmos.Context, txID common.TxID) bool
-	RemoveAdvSwapQueueItem(ctx cosmos.Context, txID common.TxID) error
+	GetAdvSwapQueueItem(ctx cosmos.Context, txID common.TxID, index int) (MsgSwap, error)
+	HasAdvSwapQueueItem(ctx cosmos.Context, txID common.TxID, index int) bool
+	RemoveAdvSwapQueueItem(ctx cosmos.Context, txID common.TxID, index int) error
 	GetAdvSwapQueueIndexIterator(_ cosmos.Context, _ types.SwapType, _, _ common.Asset) cosmos.Iterator
 	SetAdvSwapQueueIndex(_ cosmos.Context, _ MsgSwap) error
-	GetAdvSwapQueueIndex(_ cosmos.Context, _ MsgSwap) (common.TxIDs, error)
+	GetAdvSwapQueueIndex(_ cosmos.Context, _ MsgSwap) ([]types.AdvSwapQueueIndexItem, error)
 	HasAdvSwapQueueIndex(_ cosmos.Context, _ MsgSwap) (bool, error)
 	RemoveAdvSwapQueueIndex(_ cosmos.Context, _ MsgSwap) error
 	SetAdvSwapQueueProcessor(_ cosmos.Context, _ []bool) error

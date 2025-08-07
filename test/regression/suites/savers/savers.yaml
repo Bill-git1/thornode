@@ -13,6 +13,17 @@ value: "50"
 type: create-blocks
 count: 1
 ---
+########################################################################################
+# disable advanced swap queue to ensure consistent test behavior
+########################################################################################
+type: tx-mimir
+key: EnableAdvSwapQueue
+value: 0
+signer: {{ addr_thor_dog }}
+---
+type: create-blocks
+count: 1
+---
 type: check
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
@@ -113,7 +124,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2514340637699
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2514340793682
 ---
 ########################################################################################
 # check growth and withdraw 50%
@@ -141,8 +152,8 @@ endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
   - .|length == 1
   - .[0].asset_deposit_value|tonumber == 4770146
-  - .[0].asset_redeem_value|tonumber == 14089561
-  - .[0].growth_pct|tonumber == 1.9536959665385505
+  - .[0].asset_redeem_value|tonumber == 14089560
+  - .[0].growth_pct|tonumber == 1.953695756901361090
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -212,7 +223,7 @@ params:
   address: {{ addr_btc_pig }}
   withdraw_bps: 10000
 asserts:
-  - .expected_amount_out == "6868657"
+  - .expected_amount_out == "6868656"
   - .memo == "-:BTC/BTC:10000"
   - .inbound_address == "{{ addr_btc_dog }}"
   - .fees.liquidity == "123024"
@@ -228,8 +239,8 @@ endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
   - .|length == 1
   - .[0].asset_deposit_value|tonumber == 2385073
-  - .[0].asset_redeem_value|tonumber == 7045519
-  - .[0].growth_pct|tonumber == 1.9540056006671493
+  - .[0].asset_redeem_value|tonumber == 7045518
+  - .[0].growth_pct|tonumber == 1.954005181392770787
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -259,7 +270,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
   - .[0].in_hash == "{{ observe_txid 5 }}"
-  - .[0].coin.amount == "${OUT_AMOUNT=6869402}"
+  - .[0].coin.amount == "${OUT_AMOUNT=6869401}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -294,7 +305,7 @@ endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - length == 1
   - .[0].savers_fill_bps == "0"
-  - .[0].savers_capacity_remaining == "594050341"
+  - .[0].savers_capacity_remaining == "594050342"
 ---
 ########################################################################################
 # turn on streaming swaps for savers adds (set interval to 1)
@@ -623,7 +634,7 @@ asserts:
   - length == 1
   - .[0].asset_deposit_value == "19840111"
   - .[0].asset_redeem_value == "19840915"
-  - .[0].last_add_height == 25
+  - .[0].last_add_height == 26
 ---
 ########################################################################################
 # small savers add: shouldn't create streaming swap even when enabled
@@ -670,7 +681,7 @@ asserts:
   - length == 1
   - .[0].asset_deposit_value == "${PRE_ADD_DEPOSIT=19840111}"
   - .[0].asset_redeem_value == "${PRE_ADD_REDEEM=19840998}"
-  - .[0].last_add_height == 25
+  - .[0].last_add_height == 26
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block
@@ -744,7 +755,7 @@ asserts:
   - .[0].asset_redeem_value == "20039206"
   - .[0].asset_redeem_value | tonumber > ${PRE_ADD_REDEEM} + (${ADD} * 0.99)
   # Larger-than-add increase is hypothetically possible due to savers yield.
-  - .[0].last_add_height == 29
+  - .[0].last_add_height == 30
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound

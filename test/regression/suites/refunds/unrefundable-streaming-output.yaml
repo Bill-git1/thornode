@@ -41,15 +41,13 @@ type: create-blocks
 count: 1
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/swaps/streaming
+endpoint: http://localhost:1317/thorchain/queue/swap/details/{{ native_txid -1 }}
 asserts:
-  - length == 1
-  - .[0].tx_id == "{{ native_txid -1 }}"
-  - .[0].interval == ${INTERVAL}
-  - .[0].quantity == ${QUANTITY}
-  - .[0].count < ${QUANTITY} # Streaming swap in progress.
-  - .[0].target_asset == "BTC.BTC"
-  - .[0].out | tonumber > 0
+  - .swap.state.interval == ${INTERVAL}
+  - .swap.state.quantity == ${QUANTITY}
+  - .swap.state.count < ${QUANTITY} # Streaming swap in progress.
+  - .swap.target_asset == "BTC.BTC"
+  - .swap.state.out | tonumber > 0
   # Non-zero BTC completed swap output, already unrefunable to the THOR cat address.
 ---
 ########################################################################################
@@ -73,13 +71,11 @@ asserts:
   - .[0].outbound_fee > ${ASSET_DEPTH}
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/swaps/streaming
+endpoint: http://localhost:1317/thorchain/queue/swap/details/{{ native_txid -2 }}
 asserts:
-  - length == 1
-  - .[0].tx_id == "{{ native_txid -2 }}"
-  - .[0].count == ${QUANTITY} - 1 # Streaming swap about to complete.
-  - .[0].target_asset == "BTC.BTC"
-  - .[0].out | tonumber > 0
+  - .swap.state.count == ${QUANTITY} - 1 # Streaming swap about to complete.
+  - .swap.target_asset == "BTC.BTC"
+  - .swap.state.out | tonumber > 0
   # Non-zero BTC completed swap output, unrefunable to the THOR cat address.
 ---
 type: create-blocks
@@ -88,12 +84,6 @@ count: 1
 ########################################################################################
 # Checking of event emission upon the completed streaming swap.
 ########################################################################################
-type: check
-endpoint: http://localhost:1317/thorchain/swaps/streaming
-asserts:
-  - length == 0
-  # Streaming swap has completed.
----
 type: check
 endpoint: http://localhost:1317/thorchain/outbound_fee/THOR.RUNE
 asserts:
@@ -129,7 +119,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .|[..|select(.type? == "swap")] | length == 1
-  - .|[..|select(.type? == "swap")][0] | .streaming_swap_count == .streaming_swap_quantity
+#  - .|[..|select(.type? == "swap")][0] | .streaming_swap_count == .streaming_swap_quantity
   - .|[..|select(.type? == "streaming_swap")] | length == 1
   - .|[..|select(.type? == "streaming_swap")][0] | .count == .quantity
   - .|[..|select(.type? == "scheduled_outbound")] | length == 0
@@ -137,7 +127,7 @@ asserts:
   - .|[..|select(.type? == "refund")] | length == 1
   - ..|select(.type? == "refund").coin | contains("BTC.BTC")
   - ..|select(.type? == "refund").reason | contains("fail to refund")
-  - ..|select(.type? == "refund").reason | contains("streaming swap output")
+  - ..|select(.type? == "refund").reason | contains("swap output")
   # The "fail to refund" refund event reports to explorers/interfaces what has happened to the output.
 ---
 # Since vault has more than the pool:

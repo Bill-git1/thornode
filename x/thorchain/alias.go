@@ -68,6 +68,11 @@ const (
 	MarketSwap = types.SwapType_market
 	LimitSwap  = types.SwapType_limit
 
+	// Advanced Swap Queue Mode
+	AdvSwapQueueModeDisabled   = types.AdvSwapQueueModeDisabled
+	AdvSwapQueueModeEnabled    = types.AdvSwapQueueModeEnabled
+	AdvSwapQueueModeMarketOnly = types.AdvSwapQueueModeMarketOnly
+
 	// Mint/Burn type
 	MintSupplyType = types.MintBurnSupplyType_mint
 	BurnSupplyType = types.MintBurnSupplyType_burn
@@ -229,6 +234,7 @@ var (
 	GetRandomBTCAddress            = types.GetRandomBTCAddress
 	GetRandomLTCAddress            = types.GetRandomLTCAddress
 	GetRandomDOGEAddress           = types.GetRandomDOGEAddress
+	GetRandomBCHAddress            = types.GetRandomBCHAddress
 	GetRandomTxHash                = types.GetRandomTxHash
 	GetRandomBech32Addr            = types.GetRandomBech32Addr
 	GetRandomBech32ConsensusPubKey = types.GetRandomBech32ConsensusPubKey

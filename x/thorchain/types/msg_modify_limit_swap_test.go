@@ -25,7 +25,7 @@ func (MsgModifyLimitSwapSuite) TestMsgModifyLimitSwapConstructor(c *C) {
 	signer := GetRandomBech32Addr()
 
 	// Test constructor
-	msg := NewMsgModifyLimitSwap(from, source, target, modifiedAmount, signer)
+	msg := NewMsgModifyLimitSwap(from, source, target, modifiedAmount, signer, common.EmptyAsset, cosmos.ZeroUint())
 
 	// Verify all fields are set correctly
 	c.Assert(msg.From.Equals(from), Equals, true)
@@ -46,7 +46,7 @@ func (MsgModifyLimitSwapSuite) TestMsgModifyLimitSwapValidateBasic(c *C) {
 	modifiedAmount := cosmos.NewUint(60 * common.One)
 	signer := GetRandomBech32Addr()
 
-	msg := NewMsgModifyLimitSwap(from, source, target, modifiedAmount, signer)
+	msg := NewMsgModifyLimitSwap(from, source, target, modifiedAmount, signer, common.EmptyAsset, cosmos.ZeroUint())
 	c.Assert(msg.ValidateBasic(), IsNil)
 
 	// Test invalid cases
@@ -108,7 +108,7 @@ func (MsgModifyLimitSwapSuite) TestMsgModifyLimitSwapValidateBasic(c *C) {
 
 	for _, tc := range testCases {
 		c.Logf("Test case: %s", tc.name)
-		message := NewMsgModifyLimitSwap(tc.from, tc.source, tc.target, tc.modAmount, tc.signer)
+		message := NewMsgModifyLimitSwap(tc.from, tc.source, tc.target, tc.modAmount, tc.signer, common.EmptyAsset, cosmos.ZeroUint())
 		err := message.ValidateBasic()
 		c.Assert(err, NotNil)
 		c.Assert(errors.Is(err, tc.expectedErr), Equals, true, Commentf("Expected: %v, got: %v", tc.expectedErr, err))
@@ -126,7 +126,7 @@ func (MsgModifyLimitSwapSuite) TestMsgModifyLimitSwapGetSigners(c *C) {
 	signer := GetRandomBech32Addr()
 
 	// Test GetSigners
-	msg := NewMsgModifyLimitSwap(from, source, target, modifiedAmount, signer)
+	msg := NewMsgModifyLimitSwap(from, source, target, modifiedAmount, signer, common.EmptyAsset, cosmos.ZeroUint())
 	signers := msg.GetSigners()
 
 	c.Assert(len(signers), Equals, 1)
@@ -145,7 +145,7 @@ func (MsgModifyLimitSwapSuite) TestMsgModifyLimitSwapWithZeroAmount(c *C) {
 	signer := GetRandomBech32Addr()
 
 	// Test with zero amount (should still be valid as it might be used for cancellation)
-	msg := NewMsgModifyLimitSwap(from, source, target, zeroAmount, signer)
+	msg := NewMsgModifyLimitSwap(from, source, target, zeroAmount, signer, common.EmptyAsset, cosmos.ZeroUint())
 	c.Assert(msg.ValidateBasic(), IsNil)
 	c.Assert(msg.ModifiedTargetAmount.Equal(zeroAmount), Equals, true)
 }
@@ -204,7 +204,7 @@ func (MsgModifyLimitSwapSuite) TestMsgModifyLimitSwapWithDifferentChains(c *C) {
 
 	for _, tc := range testCases {
 		c.Logf("Test case: %s", tc.name)
-		msg := NewMsgModifyLimitSwap(tc.from, tc.source, tc.target, tc.modAmount, tc.signer)
+		msg := NewMsgModifyLimitSwap(tc.from, tc.source, tc.target, tc.modAmount, tc.signer, common.EmptyAsset, cosmos.ZeroUint())
 		err := msg.ValidateBasic()
 		if tc.valid {
 			c.Assert(err, IsNil, Commentf("Expected valid message but got error: %v", err))
@@ -234,17 +234,17 @@ func (MsgModifyLimitSwapSuite) TestMsgModifyLimitSwapSecurityValidation(c *C) {
 		btcTarget := common.NewCoin(common.BTCAsset, cosmos.NewUint(0.1*common.One))
 
 		// Valid case: From and Signer match
-		validMsg := NewMsgModifyLimitSwap(thorAddr1, runeSource, btcTarget, cosmos.NewUint(0.05*common.One), signer1)
+		validMsg := NewMsgModifyLimitSwap(thorAddr1, runeSource, btcTarget, cosmos.NewUint(0.05*common.One), signer1, common.EmptyAsset, cosmos.ZeroUint())
 		c.Assert(validMsg.ValidateBasic(), IsNil)
 
 		// Invalid case: From and Signer don't match
-		invalidMsg := NewMsgModifyLimitSwap(thorAddr1, runeSource, btcTarget, cosmos.NewUint(0.05*common.One), signer2)
+		invalidMsg := NewMsgModifyLimitSwap(thorAddr1, runeSource, btcTarget, cosmos.NewUint(0.05*common.One), signer2, common.EmptyAsset, cosmos.ZeroUint())
 		err = invalidMsg.ValidateBasic()
 		c.Assert(err, NotNil)
 		c.Assert(err.Error(), Matches, ".*from and signer address must match when source asset is native.*")
 
 		// Invalid case: Empty signer with RUNE source
-		emptySignerMsg := NewMsgModifyLimitSwap(thorAddr1, runeSource, btcTarget, cosmos.NewUint(0.05*common.One), cosmos.AccAddress{})
+		emptySignerMsg := NewMsgModifyLimitSwap(thorAddr1, runeSource, btcTarget, cosmos.NewUint(0.05*common.One), cosmos.AccAddress{}, common.EmptyAsset, cosmos.ZeroUint())
 		err = emptySignerMsg.ValidateBasic()
 		c.Assert(err, NotNil)
 		c.Assert(err.Error(), Matches, ".*invalid address.*")
@@ -259,7 +259,7 @@ func (MsgModifyLimitSwapSuite) TestMsgModifyLimitSwapSecurityValidation(c *C) {
 		runeTarget := common.NewCoin(common.RuneAsset(), cosmos.NewUint(100*common.One))
 
 		// This should be valid even though From (BTC address) and Signer (THOR address) don't match
-		msg := NewMsgModifyLimitSwap(btcAddr, btcSource, runeTarget, cosmos.NewUint(50*common.One), signer)
+		msg := NewMsgModifyLimitSwap(btcAddr, btcSource, runeTarget, cosmos.NewUint(50*common.One), signer, common.EmptyAsset, cosmos.ZeroUint())
 		c.Assert(msg.ValidateBasic(), IsNil)
 	}
 
@@ -271,7 +271,7 @@ func (MsgModifyLimitSwapSuite) TestMsgModifyLimitSwapSecurityValidation(c *C) {
 		runeTarget := common.NewCoin(common.RuneAsset(), cosmos.NewUint(100*common.One))
 		signer := GetRandomBech32Addr()
 
-		msg := NewMsgModifyLimitSwap(btcAddr, ethSource, runeTarget, cosmos.NewUint(50*common.One), signer)
+		msg := NewMsgModifyLimitSwap(btcAddr, ethSource, runeTarget, cosmos.NewUint(50*common.One), signer, common.EmptyAsset, cosmos.ZeroUint())
 		err := msg.ValidateBasic()
 		c.Assert(err, NotNil)
 		c.Assert(err.Error(), Matches, ".*from address and source asset do not match.*")
@@ -283,13 +283,13 @@ func (MsgModifyLimitSwapSuite) TestMsgModifyLimitSwapSecurityValidation(c *C) {
 		runeTarget := common.NewCoin(common.RuneAsset(), cosmos.NewUint(100*common.One))
 
 		// Empty signer
-		msg := NewMsgModifyLimitSwap(GetRandomBTCAddress(), btcSource, runeTarget, cosmos.NewUint(50*common.One), cosmos.AccAddress{})
+		msg := NewMsgModifyLimitSwap(GetRandomBTCAddress(), btcSource, runeTarget, cosmos.NewUint(50*common.One), cosmos.AccAddress{}, common.EmptyAsset, cosmos.ZeroUint())
 		err := msg.ValidateBasic()
 		c.Assert(err, NotNil)
 		c.Assert(errors.Is(err, se.ErrInvalidAddress), Equals, true)
 
 		// Empty From address
-		msg = NewMsgModifyLimitSwap(common.NoAddress, btcSource, runeTarget, cosmos.NewUint(50*common.One), GetRandomBech32Addr())
+		msg = NewMsgModifyLimitSwap(common.NoAddress, btcSource, runeTarget, cosmos.NewUint(50*common.One), GetRandomBech32Addr(), common.EmptyAsset, cosmos.ZeroUint())
 		err = msg.ValidateBasic()
 		c.Assert(err, NotNil)
 		c.Assert(err.Error(), Matches, ".*from address and source asset do not match.*")
@@ -306,12 +306,12 @@ func (MsgModifyLimitSwapSuite) TestMsgModifyLimitSwapSecurityValidation(c *C) {
 		runeTarget := common.NewCoin(common.RuneAsset(), cosmos.NewUint(100*common.One))
 
 		// This should validate properly as synths are on THORChain
-		msg := NewMsgModifyLimitSwap(thorAddr, synthBTCSource, runeTarget, cosmos.NewUint(50*common.One), signer)
+		msg := NewMsgModifyLimitSwap(thorAddr, synthBTCSource, runeTarget, cosmos.NewUint(50*common.One), signer, common.EmptyAsset, cosmos.ZeroUint())
 		c.Assert(msg.ValidateBasic(), IsNil)
 
 		// Different signer should fail
 		differentSigner := GetRandomBech32Addr()
-		invalidMsg := NewMsgModifyLimitSwap(thorAddr, synthBTCSource, runeTarget, cosmos.NewUint(50*common.One), differentSigner)
+		invalidMsg := NewMsgModifyLimitSwap(thorAddr, synthBTCSource, runeTarget, cosmos.NewUint(50*common.One), differentSigner, common.EmptyAsset, cosmos.ZeroUint())
 		err = invalidMsg.ValidateBasic()
 		c.Assert(err, NotNil)
 		c.Assert(err.Error(), Matches, ".*from and signer address must match when source asset is native.*")
@@ -328,7 +328,7 @@ func (MsgModifyLimitSwapSuite) TestMsgModifyLimitSwapSecurityValidation(c *C) {
 		btcSource := common.NewCoin(common.BTCAsset, cosmos.NewUint(10*common.One))
 		runeTarget := common.NewCoin(common.RuneAsset(), cosmos.NewUint(100*common.One))
 
-		msg := NewMsgModifyLimitSwap(btcAddr, btcSource, runeTarget, cosmos.NewUint(50*common.One), signer)
+		msg := NewMsgModifyLimitSwap(btcAddr, btcSource, runeTarget, cosmos.NewUint(50*common.One), signer, common.EmptyAsset, cosmos.ZeroUint())
 		c.Assert(msg.ValidateBasic(), IsNil)
 
 		// Now test with secured BTC - should also work since secured assets have same chain
@@ -337,7 +337,7 @@ func (MsgModifyLimitSwapSuite) TestMsgModifyLimitSwapSecurityValidation(c *C) {
 		securedBTCAsset, err := common.NewAsset("BTC.BTC/sc")
 		if err == nil && securedBTCAsset.IsSecuredAsset() {
 			securedBTCSource := common.NewCoin(securedBTCAsset, cosmos.NewUint(10*common.One))
-			msg = NewMsgModifyLimitSwap(btcAddr, securedBTCSource, runeTarget, cosmos.NewUint(50*common.One), signer)
+			msg = NewMsgModifyLimitSwap(btcAddr, securedBTCSource, runeTarget, cosmos.NewUint(50*common.One), signer, common.EmptyAsset, cosmos.ZeroUint())
 			// This might fail if the secured asset format is not supported in the test environment
 			// Just check that validation runs without panic
 			_ = msg.ValidateBasic()
@@ -352,7 +352,7 @@ func (MsgModifyLimitSwapSuite) TestMsgModifyLimitSwapSecurityValidation(c *C) {
 		signer := GetRandomBech32Addr()
 
 		// Zero amount (cancellation) should still validate properly
-		cancelMsg := NewMsgModifyLimitSwap(btcAddr, btcSource, runeTarget, cosmos.ZeroUint(), signer)
+		cancelMsg := NewMsgModifyLimitSwap(btcAddr, btcSource, runeTarget, cosmos.ZeroUint(), signer, common.EmptyAsset, cosmos.ZeroUint())
 		c.Assert(cancelMsg.ValidateBasic(), IsNil)
 
 		// But it should still enforce the same security rules
@@ -361,7 +361,7 @@ func (MsgModifyLimitSwapSuite) TestMsgModifyLimitSwapSecurityValidation(c *C) {
 		runeSource := common.NewCoin(common.RuneAsset(), cosmos.NewUint(100*common.One))
 		btcTarget := common.NewCoin(common.BTCAsset, cosmos.NewUint(0.1*common.One))
 
-		invalidCancelMsg := NewMsgModifyLimitSwap(thorAddr, runeSource, btcTarget, cosmos.ZeroUint(), wrongSigner)
+		invalidCancelMsg := NewMsgModifyLimitSwap(thorAddr, runeSource, btcTarget, cosmos.ZeroUint(), wrongSigner, common.EmptyAsset, cosmos.ZeroUint())
 		err := invalidCancelMsg.ValidateBasic()
 		c.Assert(err, NotNil)
 		c.Assert(err.Error(), Matches, ".*from and signer address must match when source asset is native.*")

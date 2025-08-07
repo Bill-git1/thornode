@@ -169,7 +169,7 @@
         }
       },
       "last_commit_hash": "",
-      "data_hash": "61C0CC33FE78CE8FD65B6D60F78E1840DFC07DED26E22778A13DF9C27055E376",
+      "data_hash": "4645768D999E5D58EEAF23AE7D0C618DAAD76A7030DC9EF28F818241E9ADB189",
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
@@ -291,7 +291,7 @@
     ],
     "txs": [
       {
-        "hash": "75DF3BF91BD5158939458ADE44376E83437F5AF0F3B6BEBFA0A1177B5E43CAA5",
+        "hash": "C4F1DC7636E39B56271D90687A4C20AD753F466F4EB432ABD26B842876FE247F",
         "tx": {
           "auth_info": {
             "fee": {
@@ -322,9 +322,9 @@
             "messages": [
               {
                 "@type": "/types.MsgMimir",
-                "key": "TorAnchor-ETH-USDC-0X9999999999999999999999999999999999999999",
+                "key": "EnableAdvSwapQueue",
                 "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
-                "value": "1"
+                "value": "0"
               }
             ],
             "non_critical_extension_options": [],
@@ -333,20 +333,20 @@
             "unordered": false
           },
           "signatures": [
-            "bT3XXdmGoAtp75tcTX3CNrOWiV+pziB8ukpSTuPBnH1+sAK9MDhYzLJIwfci6Ec4xwzrZx8U0M8aJjwCU/xCpA=="
+            "MP7wLtIBr8oVm6SL6pCZ8KifuJsWgzM+ZxRMUNB4VG5KoAAO4MY/zXRj/pEsgf2HipDqC12lX/HapiGI4JSLuQ=="
           ]
         },
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "106415",
+          "gas_used": "101711",
           "events": [
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/0",
               "type": "tx"
             },
             {
-              "signature": "bT3XXdmGoAtp75tcTX3CNrOWiV+pziB8ukpSTuPBnH1+sAK9MDhYzLJIwfci6Ec4xwzrZx8U0M8aJjwCU/xCpA==",
+              "signature": "MP7wLtIBr8oVm6SL6pCZ8KifuJsWgzM+ZxRMUNB4VG5KoAAO4MY/zXRj/pEsgf2HipDqC12lX/HapiGI4JSLuQ==",
               "type": "tx"
             },
             {
@@ -382,10 +382,10 @@
             },
             {
               "address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
-              "key": "TORANCHOR-ETH-USDC-0X9999999999999999999999999999999999999999",
+              "key": "ENABLEADVSWAPQUEUE",
               "msg_index": "0",
               "type": "set_node_mimir",
-              "value": "1"
+              "value": "0"
             },
             {
               "amount": "2000000",
@@ -402,16 +402,163 @@
               "type": "bond"
             },
             {
-              "key": "TORANCHOR-ETH-USDC-0X9999999999999999999999999999999999999999",
+              "key": "ENABLEADVSWAPQUEUE",
               "msg_index": "0",
               "type": "set_mimir",
-              "value": "1"
+              "value": "0"
             }
           ]
         }
+      }
+    ]
+  },
+  {
+    "id": {
+      "hash": "",
+      "parts": {
+        "total": 0,
+        "hash": ""
+      }
+    },
+    "header": {
+      "version": {
+        "block": "11",
+        "app": "0"
+      },
+      "chain_id": "thorchain",
+      "height": 3,
+      "time": "",
+      "last_block_id": {
+        "hash": "",
+        "parts": {
+          "total": 0,
+          "hash": ""
+        }
+      },
+      "last_commit_hash": "",
+      "data_hash": "51148B325508EBFA655955F80B801687886B11AD49AD38E7C9F6650BE25F097D",
+      "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
+      "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
+      "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
+      "app_hash": "940257561D187B21C1F5154ABA3433592A72F35F76A33DAE6A3E872B33621E1A",
+      "last_results_hash": "81E912C38D33A92432E59C3DF08B71C91CE21B5003F4D83C0FC858CADCE66CAC",
+      "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+      "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
+    },
+    "finalize_block_events": [],
+    "begin_block_events": [],
+    "end_block_events": [
+      {
+        "amount": "347751rune",
+        "mode": "EndBlock",
+        "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+        "type": "coin_spent"
       },
       {
-        "hash": "AF87674E7A99C219364EE51741FD8521C52AF3E14CCABA1DB410B59322A2D96F",
+        "amount": "347751rune",
+        "mode": "EndBlock",
+        "receiver": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
+        "type": "coin_received"
+      },
+      {
+        "amount": "347751rune",
+        "mode": "EndBlock",
+        "recipient": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
+        "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+        "type": "transfer"
+      },
+      {
+        "mode": "EndBlock",
+        "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+        "type": "message"
+      },
+      {
+        "amount": "347751rune",
+        "mode": "EndBlock",
+        "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+        "type": "coin_spent"
+      },
+      {
+        "amount": "347751rune",
+        "mode": "EndBlock",
+        "receiver": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
+        "type": "coin_received"
+      },
+      {
+        "amount": "347751rune",
+        "mode": "EndBlock",
+        "recipient": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
+        "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+        "type": "transfer"
+      },
+      {
+        "mode": "EndBlock",
+        "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+        "type": "message"
+      },
+      {
+        "amount": "347751rune",
+        "mode": "EndBlock",
+        "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+        "type": "coin_spent"
+      },
+      {
+        "amount": "347751rune",
+        "mode": "EndBlock",
+        "receiver": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
+        "type": "coin_received"
+      },
+      {
+        "amount": "347751rune",
+        "mode": "EndBlock",
+        "recipient": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
+        "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+        "type": "transfer"
+      },
+      {
+        "mode": "EndBlock",
+        "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+        "type": "message"
+      },
+      {
+        "amount": "66591rune",
+        "mode": "EndBlock",
+        "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+        "type": "coin_spent"
+      },
+      {
+        "amount": "66591rune",
+        "mode": "EndBlock",
+        "receiver": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
+        "type": "coin_received"
+      },
+      {
+        "amount": "66591rune",
+        "mode": "EndBlock",
+        "recipient": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
+        "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+        "type": "transfer"
+      },
+      {
+        "mode": "EndBlock",
+        "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+        "type": "message"
+      },
+      {
+        "BTC.BTC": "347751",
+        "ETH.ETH": "347751",
+        "ETH.USDC-0X9999999999999999999999999999999999999999": "347751",
+        "bond_reward": "66591",
+        "dev_fund_reward": "0",
+        "income_burn": "0",
+        "mode": "EndBlock",
+        "tcy_stake_reward": "0",
+        "type": "rewards"
+      }
+    ],
+    "txs": [
+      {
+        "hash": "BC9B384094B9B636778006BA18AA86FB9AE095A4BB74BF60D6C4754535223D98",
         "tx": {
           "auth_info": {
             "fee": {
@@ -442,9 +589,9 @@
             "messages": [
               {
                 "@type": "/types.MsgMimir",
-                "key": "DerivedDepthBasisPts",
+                "key": "TorAnchor-ETH-USDC-0X9999999999999999999999999999999999999999",
                 "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
-                "value": "10000"
+                "value": "1"
               }
             ],
             "non_critical_extension_options": [],
@@ -453,20 +600,20 @@
             "unordered": false
           },
           "signatures": [
-            "TibUQnrC2OnRb3LA1Crqjd+ItZT8C9/LlLlOaF8jzIdkLuOmoLiSMoY0E0d4K9yW70IAMy/huhxx+5E6vPDNvw=="
+            "4cC61fi0DFtky69aC1ug0uiVLgIfR+pt8TLqFbRuVuwATu1jAn0wvTdBeTeI5mzOXyx5OK+nZefK6okXOqctgQ=="
           ]
         },
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "88589",
+          "gas_used": "92862",
           "events": [
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/1",
               "type": "tx"
             },
             {
-              "signature": "TibUQnrC2OnRb3LA1Crqjd+ItZT8C9/LlLlOaF8jzIdkLuOmoLiSMoY0E0d4K9yW70IAMy/huhxx+5E6vPDNvw==",
+              "signature": "4cC61fi0DFtky69aC1ug0uiVLgIfR+pt8TLqFbRuVuwATu1jAn0wvTdBeTeI5mzOXyx5OK+nZefK6okXOqctgQ==",
               "type": "tx"
             },
             {
@@ -502,10 +649,10 @@
             },
             {
               "address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
-              "key": "DERIVEDDEPTHBASISPTS",
+              "key": "TORANCHOR-ETH-USDC-0X9999999999999999999999999999999999999999",
               "msg_index": "0",
               "type": "set_node_mimir",
-              "value": "10000"
+              "value": "1"
             },
             {
               "amount": "2000000",
@@ -522,16 +669,16 @@
               "type": "bond"
             },
             {
-              "key": "DERIVEDDEPTHBASISPTS",
+              "key": "TORANCHOR-ETH-USDC-0X9999999999999999999999999999999999999999",
               "msg_index": "0",
               "type": "set_mimir",
-              "value": "10000"
+              "value": "1"
             }
           ]
         }
       },
       {
-        "hash": "945FE6ED31018AD22375EE4E6F78BD22EE69CA1892D63246C346337542618B8F",
+        "hash": "C9D5D0FF377B1164719B17781A62955AA24240EF195E68648C578382B8AA7393",
         "tx": {
           "auth_info": {
             "fee": {
@@ -562,6 +709,126 @@
             "messages": [
               {
                 "@type": "/types.MsgMimir",
+                "key": "DerivedDepthBasisPts",
+                "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+                "value": "10000"
+              }
+            ],
+            "non_critical_extension_options": [],
+            "timeout_height": "0",
+            "timeout_timestamp": null,
+            "unordered": false
+          },
+          "signatures": [
+            "RBlVi5pRay8xDgD/hl1I5y+t5RqvWAcrxGn/qm7Q6S0DCgYkPynM+aEf0u0fwC1TyezabUwERlpgE3vvoAIBFg=="
+          ]
+        },
+        "result": {
+          "code": 0,
+          "gas_wanted": "-1",
+          "gas_used": "88589",
+          "events": [
+            {
+              "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/2",
+              "type": "tx"
+            },
+            {
+              "signature": "RBlVi5pRay8xDgD/hl1I5y+t5RqvWAcrxGn/qm7Q6S0DCgYkPynM+aEf0u0fwC1TyezabUwERlpgE3vvoAIBFg==",
+              "type": "tx"
+            },
+            {
+              "action": "/types.MsgMimir",
+              "module": "MsgMimir",
+              "msg_index": "0",
+              "sender": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+              "type": "message"
+            },
+            {
+              "amount": "2000000rune",
+              "msg_index": "0",
+              "spender": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
+              "type": "coin_spent"
+            },
+            {
+              "amount": "2000000rune",
+              "msg_index": "0",
+              "receiver": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+              "type": "coin_received"
+            },
+            {
+              "amount": "2000000rune",
+              "msg_index": "0",
+              "recipient": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+              "sender": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
+              "type": "transfer"
+            },
+            {
+              "msg_index": "0",
+              "sender": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
+              "type": "message"
+            },
+            {
+              "address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+              "key": "DERIVEDDEPTHBASISPTS",
+              "msg_index": "0",
+              "type": "set_node_mimir",
+              "value": "10000"
+            },
+            {
+              "amount": "2000000",
+              "bond_address": "",
+              "bond_type": "bond_cost",
+              "chain": "",
+              "coin": "",
+              "from": "",
+              "id": "",
+              "memo": "",
+              "msg_index": "0",
+              "node_address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
+              "to": "",
+              "type": "bond"
+            },
+            {
+              "key": "DERIVEDDEPTHBASISPTS",
+              "msg_index": "0",
+              "type": "set_mimir",
+              "value": "10000"
+            }
+          ]
+        }
+      },
+      {
+        "hash": "5FE2552ECE23BDD0C9FB61C81AB079F3B6EDA3DD5C0919E5D6228E18A89FA4D5",
+        "tx": {
+          "auth_info": {
+            "fee": {
+              "amount": [],
+              "gas_limit": "0",
+              "granter": "",
+              "payer": ""
+            },
+            "signer_infos": [
+              {
+                "mode_info": {
+                  "single": {
+                    "mode": "SIGN_MODE_DIRECT"
+                  }
+                },
+                "public_key": {
+                  "@type": "/cosmos.crypto.secp256k1.PubKey",
+                  "key": "AmF4AUTWZEUSBtgqiR5n2Lgic/Yrr1mWupMo5TAubNRO"
+                },
+                "sequence": "3"
+              }
+            ],
+            "tip": null
+          },
+          "body": {
+            "extension_options": [],
+            "memo": "",
+            "messages": [
+              {
+                "@type": "/types.MsgMimir",
                 "key": "RagnarokProcessNumOfLPPerIteration",
                 "signer": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
                 "value": "2"
@@ -573,7 +840,7 @@
             "unordered": false
           },
           "signatures": [
-            "I9+Ak46QdN1G9esAKLQs7iEEG9OgzD36e6Z0AhAz0s0ekMtQJyL5RspTLWJP1j2bUUzcVGt9zFr2OZ6PXdxktQ=="
+            "OZudzwtRMu+vDdsCRyOZGJJCjfrXMdFu2fNifRsQl4lWiP0WNRVob/ihT9eM5lB4ujPtQ0UzQLCY5POnLKm0Sw=="
           ]
         },
         "result": {
@@ -582,11 +849,11 @@
           "gas_used": "90000",
           "events": [
             {
-              "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/2",
+              "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/3",
               "type": "tx"
             },
             {
-              "signature": "I9+Ak46QdN1G9esAKLQs7iEEG9OgzD36e6Z0AhAz0s0ekMtQJyL5RspTLWJP1j2bUUzcVGt9zFr2OZ6PXdxktQ==",
+              "signature": "OZudzwtRMu+vDdsCRyOZGJJCjfrXMdFu2fNifRsQl4lWiP0WNRVob/ihT9eM5lB4ujPtQ0UzQLCY5POnLKm0Sw==",
               "type": "tx"
             },
             {
@@ -651,7 +918,7 @@
         }
       },
       {
-        "hash": "EC74F6F9E6A452DE26BAE947AC3B7F0D9C1EAE9560CC87C5620218F7A522C915",
+        "hash": "3E2080988DAF8E200D20FC29207CB39DD11A21E128DB85B4FE106FD66F67C408",
         "tx": {
           "auth_info": {
             "fee": {
@@ -671,7 +938,7 @@
                   "@type": "/cosmos.crypto.secp256k1.PubKey",
                   "key": "AmF4AUTWZEUSBtgqiR5n2Lgic/Yrr1mWupMo5TAubNRO"
                 },
-                "sequence": "3"
+                "sequence": "4"
               }
             ],
             "tip": null
@@ -693,7 +960,7 @@
             "unordered": false
           },
           "signatures": [
-            "1tYd8FII0iEgXkWzktTuVMC8Q1g0jXD63zneQffkS+kKBuWaume3Xfkvu/LE4l4jxBiUziMdEFHJkvQyvQxxTw=="
+            "wbGHULS0esAdkOGwr9JLz3tzADCtSgrVBC2oag+jUuEPmF4KsPd9t52/9FGAcOpE+YkgJthoCKb+VS8/ts7Qiw=="
           ]
         },
         "result": {
@@ -702,11 +969,11 @@
           "gas_used": "88622",
           "events": [
             {
-              "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/3",
+              "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/4",
               "type": "tx"
             },
             {
-              "signature": "1tYd8FII0iEgXkWzktTuVMC8Q1g0jXD63zneQffkS+kKBuWaume3Xfkvu/LE4l4jxBiUziMdEFHJkvQyvQxxTw==",
+              "signature": "wbGHULS0esAdkOGwr9JLz3tzADCtSgrVBC2oag+jUuEPmF4KsPd9t52/9FGAcOpE+YkgJthoCKb+VS8/ts7Qiw==",
               "type": "tx"
             },
             {
@@ -786,7 +1053,7 @@
         "app": "0"
       },
       "chain_id": "thorchain",
-      "height": 3,
+      "height": 4,
       "time": "",
       "last_block_id": {
         "hash": "",
@@ -800,8 +1067,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "A07F0CDDDEB82CDDFAF1D14DB96C5E2A5A23093E9BF52C3A62ECEC80FD172F5C",
-      "last_results_hash": "4E63A76093A3B5A4141DB800D5C18965C5E0288C69D6826891F5D4DE3F71D550",
+      "app_hash": "D6535825D0D85679543622829CFC330666AC369AE158847AB6A56F794EAA5EFA",
+      "last_results_hash": "A8DEA2F75DF27A8AAB612A4C5C04135FE27A81EF204EE2F2A763195698CD4ABA",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -820,7 +1087,7 @@
         "mode": "BeginBlock",
         "reason": "derived pool adjustment",
         "rune_add": "true",
-        "rune_amt": "100000695502",
+        "rune_amt": "100001043253",
         "type": "pool_balance_change"
       },
       {
@@ -832,11 +1099,11 @@
       {
         "asset": "THOR.BTC",
         "asset_add": "true",
-        "asset_amt": "99999999",
+        "asset_amt": "100000000",
         "mode": "BeginBlock",
         "reason": "derived pool adjustment",
         "rune_add": "true",
-        "rune_amt": "100000695502",
+        "rune_amt": "100001043253",
         "type": "pool_balance_change"
       },
       {
@@ -852,7 +1119,7 @@
         "mode": "BeginBlock",
         "reason": "derived pool adjustment",
         "rune_add": "true",
-        "rune_amt": "100000695502",
+        "rune_amt": "100001043253",
         "type": "pool_balance_change"
       }
     ],
@@ -981,7 +1248,7 @@
         "app": "0"
       },
       "chain_id": "thorchain",
-      "height": 4,
+      "height": 5,
       "time": "",
       "last_block_id": {
         "hash": "",
@@ -991,11 +1258,11 @@
         }
       },
       "last_commit_hash": "",
-      "data_hash": "60EB42AE4FE4D9E841C5035E1E923263076E3910D611BC6CE21FF9943D02366F",
+      "data_hash": "E0428A5541389164B4DE1BDE89D23B2A55F57B7840F86BA233DEC355009F6F86",
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "F6C8A54C74DA1A5A8386D07E3FE950B968FBF290A1E58C50EC515072EAEF0B2D",
+      "app_hash": "2B4D469A144176041ED3D7B3B98E5FF967A5E9A8EC2C3076F12C69B60CF0C560",
       "last_results_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
@@ -1015,7 +1282,7 @@
       {
         "asset": "THOR.BTC",
         "asset_add": "true",
-        "asset_amt": "1",
+        "asset_amt": "0",
         "mode": "BeginBlock",
         "reason": "derived pool adjustment",
         "rune_add": "true",
@@ -1035,19 +1302,19 @@
     ],
     "end_block_events": [
       {
-        "amount": "226759735rune",
+        "amount": "226760523rune",
         "mode": "EndBlock",
         "spender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_spent"
       },
       {
-        "amount": "226759735rune",
+        "amount": "226760523rune",
         "mode": "EndBlock",
         "receiver": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_received"
       },
       {
-        "amount": "226759735rune",
+        "amount": "226760523rune",
         "mode": "EndBlock",
         "recipient": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
@@ -1061,27 +1328,27 @@
       {
         "asset": "THOR.BTC",
         "asset_add": "true",
-        "asset_amt": "4999999",
+        "asset_amt": "5000000",
         "mode": "EndBlock",
         "reason": "derived pool adjustment",
         "rune_add": "false",
-        "rune_amt": "4761954440",
+        "rune_amt": "4761970999",
         "type": "pool_balance_change"
       },
       {
-        "amount": "4535194705rune",
+        "amount": "4535210476rune",
         "mode": "EndBlock",
         "spender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_spent"
       },
       {
-        "amount": "4535194705rune",
+        "amount": "4535210476rune",
         "mode": "EndBlock",
         "receiver": "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp",
         "type": "coin_received"
       },
       {
-        "amount": "4535194705rune",
+        "amount": "4535210476rune",
         "mode": "EndBlock",
         "recipient": "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp",
         "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
@@ -1093,19 +1360,19 @@
         "type": "message"
       },
       {
-        "amount": "4535194705rune",
+        "amount": "4535210476rune",
         "mode": "EndBlock",
         "spender": "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp",
         "type": "coin_spent"
       },
       {
-        "amount": "4535194705rune",
+        "amount": "4535210476rune",
         "burner": "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp",
         "mode": "EndBlock",
         "type": "burn"
       },
       {
-        "amount": "4535194705",
+        "amount": "4535210476",
         "denom": "rune",
         "mode": "EndBlock",
         "reason": "swap",
@@ -1159,11 +1426,11 @@
       {
         "chain": "BTC",
         "coin": "5000000 BTC.BTC",
-        "emit_asset": "4535194705 THOR.RUNE",
+        "emit_asset": "4535210476 THOR.RUNE",
         "from": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
         "id": "0000000000000000000000000000000000000000000000000000000000000001",
-        "liquidity_fee": "226759735",
-        "liquidity_fee_in_rune": "226759735",
+        "liquidity_fee": "226760523",
+        "liquidity_fee_in_rune": "226760523",
         "memo": "loan+:THOR.RUNE:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr:0::0:::0",
         "mode": "EndBlock",
         "pool": "BTC.BTC",
@@ -1177,12 +1444,12 @@
       },
       {
         "chain": "BTC",
-        "coin": "4535194705 THOR.RUNE",
+        "coin": "4535210476 THOR.RUNE",
         "emit_asset": "4555785 THOR.BTC",
         "from": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
         "id": "0000000000000000000000000000000000000000000000000000000000000001",
         "liquidity_fee": "216942",
-        "liquidity_fee_in_rune": "215495067",
+        "liquidity_fee_in_rune": "215495814",
         "memo": "loan+:THOR.RUNE:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr:0::0:::0",
         "mode": "EndBlock",
         "pool": "THOR.BTC",
@@ -1307,19 +1574,19 @@
         "type": "mint_burn"
       },
       {
-        "amount": "3810822135rune",
+        "amount": "3810835388rune",
         "mode": "EndBlock",
         "receiver": "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp",
         "type": "coin_received"
       },
       {
-        "amount": "3810822135rune",
+        "amount": "3810835388rune",
         "minter": "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp",
         "mode": "EndBlock",
         "type": "coinbase"
       },
       {
-        "amount": "3810822135",
+        "amount": "3810835388",
         "denom": "rune",
         "mode": "EndBlock",
         "reason": "swap",
@@ -1327,19 +1594,19 @@
         "type": "mint_burn"
       },
       {
-        "amount": "3810822135rune",
+        "amount": "3810835388rune",
         "mode": "EndBlock",
         "spender": "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp",
         "type": "coin_spent"
       },
       {
-        "amount": "3810822135rune",
+        "amount": "3810835388rune",
         "mode": "EndBlock",
         "receiver": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_received"
       },
       {
-        "amount": "3810822135rune",
+        "amount": "3810835388rune",
         "mode": "EndBlock",
         "recipient": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "sender": "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp",
@@ -1353,11 +1620,11 @@
       {
         "chain": "THOR",
         "coin": "4132230000 THOR.TOR",
-        "emit_asset": "3810822135 THOR.RUNE",
+        "emit_asset": "3810835388 THOR.RUNE",
         "from": "noop",
         "id": "0000000000000000000000000000000000000000000000000000000000000001",
-        "liquidity_fee": "157471935",
-        "liquidity_fee_in_rune": "157471935",
+        "liquidity_fee": "157472483",
+        "liquidity_fee_in_rune": "157472483",
         "memo": "noop",
         "mode": "EndBlock",
         "pool": "THOR.TOR",
@@ -1401,19 +1668,19 @@
         "type": "message"
       },
       {
-        "amount": "3808822135rune",
+        "amount": "3808835388rune",
         "mode": "EndBlock",
         "spender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_spent"
       },
       {
-        "amount": "3808822135rune",
+        "amount": "3808835388rune",
         "mode": "EndBlock",
         "receiver": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
         "type": "coin_received"
       },
       {
-        "amount": "3808822135rune",
+        "amount": "3808835388rune",
         "mode": "EndBlock",
         "recipient": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
         "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
@@ -1426,7 +1693,7 @@
       },
       {
         "chain": "THOR",
-        "coin": "3808822135 THOR.RUNE",
+        "coin": "3808835388 THOR.RUNE",
         "from": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "id": "0000000000000000000000000000000000000000000000000000000000000000",
         "in_tx_id": "0000000000000000000000000000000000000000000000000000000000000001",
@@ -1447,19 +1714,19 @@
         "type": "loan_open"
       },
       {
-        "amount": "214414267rune",
+        "amount": "214414956rune",
         "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_spent"
       },
       {
-        "amount": "214414267rune",
+        "amount": "214414956rune",
         "mode": "EndBlock",
         "receiver": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_received"
       },
       {
-        "amount": "214414267rune",
+        "amount": "214414956rune",
         "mode": "EndBlock",
         "recipient": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
@@ -1471,19 +1738,19 @@
         "type": "message"
       },
       {
-        "amount": "13455318rune",
+        "amount": "13455417rune",
         "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_spent"
       },
       {
-        "amount": "13455318rune",
+        "amount": "13455417rune",
         "mode": "EndBlock",
         "receiver": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
         "type": "coin_received"
       },
       {
-        "amount": "13455318rune",
+        "amount": "13455417rune",
         "mode": "EndBlock",
         "recipient": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
@@ -1495,8 +1762,8 @@
         "type": "message"
       },
       {
-        "BTC.BTC": "214414267",
-        "bond_reward": "13455318",
+        "BTC.BTC": "214414956",
+        "bond_reward": "13455417",
         "dev_fund_reward": "0",
         "income_burn": "0",
         "mode": "EndBlock",
@@ -1506,7 +1773,7 @@
     ],
     "txs": [
       {
-        "hash": "AEC919249216AE4DA5BC60584998AFF0A22973F7E924B81E5A3F2F6586A90185",
+        "hash": "ED55558074C57B9AFCCB77709481900738C3824DF2984C928F35BD0AF4400350",
         "tx": {
           "auth_info": {
             "fee": {
@@ -1526,7 +1793,7 @@
                   "@type": "/cosmos.crypto.secp256k1.PubKey",
                   "key": "AmF4AUTWZEUSBtgqiR5n2Lgic/Yrr1mWupMo5TAubNRO"
                 },
-                "sequence": "4"
+                "sequence": "5"
               }
             ],
             "tip": null
@@ -1581,20 +1848,20 @@
             "unordered": false
           },
           "signatures": [
-            "IOnX8EDWln6yV2KVcSLojHtexWkI3LoZAgiz2GUclxcXouwz+AW2v2Kz2MzT1jrI03Z1Srz094W0zOzdwvZtcQ=="
+            "BiZr74GqDRlW6Fxdfs6WhDB5A88FTj9uBSC+9E3+L5dZ6p6d68PvbbOBrJiYp8rQ7IqDdKFrCriKJVLNVbsbrQ=="
           ]
         },
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "191423",
+          "gas_used": "194098",
           "events": [
             {
-              "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/4",
+              "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/5",
               "type": "tx"
             },
             {
-              "signature": "IOnX8EDWln6yV2KVcSLojHtexWkI3LoZAgiz2GUclxcXouwz+AW2v2Kz2MzT1jrI03Z1Srz094W0zOzdwvZtcQ==",
+              "signature": "BiZr74GqDRlW6Fxdfs6WhDB5A88FTj9uBSC+9E3+L5dZ6p6d68PvbbOBrJiYp8rQ7IqDdKFrCriKJVLNVbsbrQ==",
               "type": "tx"
             },
             {
@@ -1623,7 +1890,7 @@
         "app": "0"
       },
       "chain_id": "thorchain",
-      "height": 5,
+      "height": 6,
       "time": "",
       "last_block_id": {
         "hash": "",
@@ -1633,12 +1900,12 @@
         }
       },
       "last_commit_hash": "",
-      "data_hash": "DB619CF6CF03669C3F1513547DCF8305403F21F92D0BB94DEB18282D7459C3A6",
+      "data_hash": "9E7B42240708D6D022C82105878F155B9703807C8D49AA83178B3F230DD16AFE",
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "E97E39642FEB0D892256EA9A58B157FF157CB87E0BA406AB6DD7159F2180E93C",
-      "last_results_hash": "4F6E735BC4F90AC472010535EF95FB27E0F14FF880FB27738A7FC0E75A5766CD",
+      "app_hash": "B49E7807D954AD050CEF7B9E2F357C138085F5BA8839BBB703FF680BAF2AC8E3",
+      "last_results_hash": "81F6FDE4899157119526BF4DDA7B295D465613F0AD930A27B7F47437E51E6BA7",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -1651,17 +1918,17 @@
         "mode": "BeginBlock",
         "reason": "derived pool adjustment",
         "rune_add": "true",
-        "rune_amt": "3810822135",
+        "rune_amt": "3810835388",
         "type": "pool_balance_change"
       },
       {
         "asset": "THOR.BTC",
         "asset_add": "false",
-        "asset_amt": "28764215",
+        "asset_amt": "28764216",
         "mode": "BeginBlock",
         "reason": "derived pool adjustment",
         "rune_add": "false",
-        "rune_amt": "34611358749",
+        "rune_amt": "34611479148",
         "type": "pool_balance_change"
       }
     ],
@@ -1791,7 +2058,7 @@
         "chain": "BTC",
         "coin": "1 BTC.BLANK",
         "emit_asset": "104990000",
-        "emit_rune": "95453840452",
+        "emit_rune": "95454172333",
         "from": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
         "id": "0000000000000000000000000000000000000000000000000000000000000000",
         "liquidity_provider_units": "100000000000",
@@ -1811,7 +2078,7 @@
         "max_gas_amount_0": "10000",
         "max_gas_asset_0": "BTC.BTC",
         "max_gas_decimals_0": "0",
-        "memo": "RAGNAROK:5",
+        "memo": "RAGNAROK:6",
         "mode": "EndBlock",
         "module_name": "",
         "out_hash": "",
@@ -1820,19 +2087,19 @@
         "vault_pub_key": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
       },
       {
-        "amount": "95453840452rune",
+        "amount": "95454172333rune",
         "mode": "EndBlock",
         "spender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_spent"
       },
       {
-        "amount": "95453840452rune",
+        "amount": "95454172333rune",
         "mode": "EndBlock",
         "receiver": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
         "type": "coin_received"
       },
       {
-        "amount": "95453840452rune",
+        "amount": "95454172333rune",
         "mode": "EndBlock",
         "recipient": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
         "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
@@ -1888,7 +2155,7 @@
     ],
     "txs": [
       {
-        "hash": "1080CABD3844DC62720631778F074DA248712297DAA339D98269CA79DEF49CE1",
+        "hash": "9E2DA4DB6EFCAB9FE8B316DB121A938A16CCF36329968D21EDD5E3C9D1ABFA84",
         "tx": {
           "auth_info": {
             "fee": {
@@ -1908,7 +2175,7 @@
                   "@type": "/cosmos.crypto.secp256k1.PubKey",
                   "key": "AmF4AUTWZEUSBtgqiR5n2Lgic/Yrr1mWupMo5TAubNRO"
                 },
-                "sequence": "5"
+                "sequence": "6"
               }
             ],
             "tip": null
@@ -1930,7 +2197,7 @@
             "unordered": false
           },
           "signatures": [
-            "LgSr8R53pDa8bhR3sSU83Tj9sgOeLgtqMMIg3+RiZw0bkTKQcNy01/Z+fbK2+5Wx81Vze7n/pQg/Zaca+dcGbQ=="
+            "2UOMWC+yiSN0ud10CZKyQ94SVmoST0uO8heDJUG2SLNDBbj0ADRjOSHtJAmqPuXQr6w2a7o0JgCcTZ6kv++ozw=="
           ]
         },
         "result": {
@@ -1939,11 +2206,11 @@
           "gas_used": "88092",
           "events": [
             {
-              "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/5",
+              "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/6",
               "type": "tx"
             },
             {
-              "signature": "LgSr8R53pDa8bhR3sSU83Tj9sgOeLgtqMMIg3+RiZw0bkTKQcNy01/Z+fbK2+5Wx81Vze7n/pQg/Zaca+dcGbQ==",
+              "signature": "2UOMWC+yiSN0ud10CZKyQ94SVmoST0uO8heDJUG2SLNDBbj0ADRjOSHtJAmqPuXQr6w2a7o0JgCcTZ6kv++ozw==",
               "type": "tx"
             },
             {

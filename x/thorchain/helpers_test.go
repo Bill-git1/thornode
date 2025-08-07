@@ -790,22 +790,22 @@ func (HandlerSuite) TestWillSwapSucceed(c *C) {
 	// swap from BTC to ETH
 
 	// no limit, should succeed
-	msg := NewMsgSwap(tx, common.ETHAsset, GetRandomBTCAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, 0, GetRandomBech32Addr())
+	msg := NewMsgSwap(tx, common.ETHAsset, GetRandomBTCAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_market, 0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
 	c.Assert(willSwapOutputExceedLimitAndFees(ctx, mgr, *msg), Equals, true)
 
 	// no limit, but small swap, should fail
 	tx.Coins = common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1))}
-	msg = NewMsgSwap(tx, common.ETHAsset, GetRandomBTCAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, 0, GetRandomBech32Addr())
+	msg = NewMsgSwap(tx, common.ETHAsset, GetRandomBTCAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_market, 0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
 	c.Assert(willSwapOutputExceedLimitAndFees(ctx, mgr, *msg), Equals, false)
 
 	// limit too high, should fail
 	tx.Coins = common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(common.One))}
-	msg = NewMsgSwap(tx, common.ETHAsset, GetRandomBTCAddress(), cosmos.NewUint(100*common.One), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, 0, GetRandomBech32Addr())
+	msg = NewMsgSwap(tx, common.ETHAsset, GetRandomBTCAddress(), cosmos.NewUint(100*common.One), common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_market, 0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
 	c.Assert(willSwapOutputExceedLimitAndFees(ctx, mgr, *msg), Equals, false)
 
 	// limit not too high, should succeed
 	tx.Coins = common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(common.One))}
-	msg = NewMsgSwap(tx, common.ETHAsset, GetRandomBTCAddress(), cosmos.NewUint(1*common.One), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, 0, GetRandomBech32Addr())
+	msg = NewMsgSwap(tx, common.ETHAsset, GetRandomBTCAddress(), cosmos.NewUint(1*common.One), common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_market, 0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
 	c.Assert(willSwapOutputExceedLimitAndFees(ctx, mgr, *msg), Equals, true)
 
 	runeTx := common.NewTx(
@@ -822,42 +822,42 @@ func (HandlerSuite) TestWillSwapSucceed(c *C) {
 	// swaps from RUNE
 
 	// swap from RUNE no limit, should succeed
-	msg = NewMsgSwap(runeTx, common.BTCAsset, GetRandomBTCAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, 0, GetRandomBech32Addr())
+	msg = NewMsgSwap(runeTx, common.BTCAsset, GetRandomBTCAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_market, 0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
 	c.Assert(willSwapOutputExceedLimitAndFees(ctx, mgr, *msg), Equals, true)
 
 	// swap from RUNE, no limit, but small swap, should fail
 	runeTx.Coins = common.Coins{common.NewCoin(common.RuneNative, cosmos.NewUint(1))}
-	msg = NewMsgSwap(runeTx, common.BTCAsset, GetRandomBTCAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, 0, GetRandomBech32Addr())
+	msg = NewMsgSwap(runeTx, common.BTCAsset, GetRandomBTCAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_market, 0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
 	c.Assert(willSwapOutputExceedLimitAndFees(ctx, mgr, *msg), Equals, false)
 
 	// swap from RUNE, limit too high, should fail
 	runeTx.Coins = common.Coins{common.NewCoin(common.RuneNative, cosmos.NewUint(common.One*50))}
-	msg = NewMsgSwap(runeTx, common.BTCAsset, GetRandomBTCAddress(), cosmos.NewUint(100*common.One), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, 0, GetRandomBech32Addr())
+	msg = NewMsgSwap(runeTx, common.BTCAsset, GetRandomBTCAddress(), cosmos.NewUint(100*common.One), common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_market, 0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
 	c.Assert(willSwapOutputExceedLimitAndFees(ctx, mgr, *msg), Equals, false)
 
 	// swap from RUNE, limit not too high, should succeed
-	msg = NewMsgSwap(runeTx, common.BTCAsset, GetRandomBTCAddress(), cosmos.NewUint(0.01*common.One), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, 0, GetRandomBech32Addr())
+	msg = NewMsgSwap(runeTx, common.BTCAsset, GetRandomBTCAddress(), cosmos.NewUint(0.01*common.One), common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_market, 0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
 	c.Assert(willSwapOutputExceedLimitAndFees(ctx, mgr, *msg), Equals, true)
 
 	// swaps to RUNE
 
 	// swap to RUNE, no limit, should succeed
-	msg = NewMsgSwap(tx, common.RuneNative, GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, 0, GetRandomBech32Addr())
+	msg = NewMsgSwap(tx, common.RuneNative, GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_market, 0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
 	c.Assert(willSwapOutputExceedLimitAndFees(ctx, mgr, *msg), Equals, true)
 
 	// swap to RUNE, no limit, but small swap, should fail
 	tx.Coins = common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1))}
-	msg = NewMsgSwap(tx, common.RuneNative, GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, 0, GetRandomBech32Addr())
+	msg = NewMsgSwap(tx, common.RuneNative, GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_market, 0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
 	c.Assert(willSwapOutputExceedLimitAndFees(ctx, mgr, *msg), Equals, false)
 
 	// swap to RUNE, limit too high, should fail
 	tx.Coins = common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(common.One))}
-	msg = NewMsgSwap(tx, common.RuneNative, GetRandomTHORAddress(), cosmos.NewUint(100_000*common.One), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, 0, GetRandomBech32Addr())
+	msg = NewMsgSwap(tx, common.RuneNative, GetRandomTHORAddress(), cosmos.NewUint(100_000*common.One), common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_market, 0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
 	c.Assert(willSwapOutputExceedLimitAndFees(ctx, mgr, *msg), Equals, false)
 
 	// swap to RUNE, limit not too high, should succeed
 	tx.Coins = common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(common.One))}
-	msg = NewMsgSwap(tx, common.RuneNative, GetRandomTHORAddress(), cosmos.NewUint(1*common.One), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, 0, GetRandomBech32Addr())
+	msg = NewMsgSwap(tx, common.RuneNative, GetRandomTHORAddress(), cosmos.NewUint(1*common.One), common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_market, 0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
 	c.Assert(willSwapOutputExceedLimitAndFees(ctx, mgr, *msg), Equals, true)
 }
 
@@ -898,4 +898,222 @@ func (HandlerSuite) TestIsPeriodLastBlock(c *C) {
 	ctx = ctx.WithBlockHeight(101)
 	result = IsPeriodLastBlock(ctx, blockVar)
 	c.Assert(result, Equals, false)
+}
+
+type SettleSwapTestKeeper struct {
+	keeper.KVStoreDummy
+	advSwapItems map[string]types.MsgSwap
+	failRemove   bool
+	voter        ObservedTxVoter
+	pools        map[common.Asset]Pool
+}
+
+func (k *SettleSwapTestKeeper) GetObservedTxInVoter(_ cosmos.Context, txID common.TxID) (ObservedTxVoter, error) {
+	if !k.voter.Tx.IsEmpty() {
+		return k.voter, nil
+	}
+	return ObservedTxVoter{}, fmt.Errorf("voter not found")
+}
+
+func (k *SettleSwapTestKeeper) RemoveAdvSwapQueueIndex(_ cosmos.Context, msg types.MsgSwap) error {
+	if k.failRemove {
+		return fmt.Errorf("failed to remove from index")
+	}
+	return nil
+}
+
+func (k *SettleSwapTestKeeper) RemoveAdvSwapQueueItem(_ cosmos.Context, txID common.TxID, index int) error {
+	if k.failRemove {
+		return fmt.Errorf("failed to remove from queue")
+	}
+	delete(k.advSwapItems, txID.String())
+	return nil
+}
+
+func (k *SettleSwapTestKeeper) GetPool(_ cosmos.Context, asset common.Asset) (Pool, error) {
+	if pool, ok := k.pools[asset.GetLayer1Asset()]; ok {
+		return pool, nil
+	}
+	return Pool{}, fmt.Errorf("pool not found: %s", asset)
+}
+
+func (k *SettleSwapTestKeeper) GetVault(_ cosmos.Context, pk common.PubKey) (Vault, error) {
+	// Return a dummy vault for testing
+	vault := NewVault(0, ActiveVault, AsgardVault, pk, common.Chains{common.BTCChain, common.ETHChain}.Strings(), nil)
+	vault.Coins = common.Coins{
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(10*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(10*common.One)),
+	}
+	return vault, nil
+}
+
+func (k *SettleSwapTestKeeper) GetTHORNameIterator(ctx cosmos.Context) cosmos.Iterator {
+	return nil
+}
+
+func (k *SettleSwapTestKeeper) GetTHORName(ctx cosmos.Context, _ string) (THORName, error) {
+	return THORName{}, fmt.Errorf("thorname not found")
+}
+
+func (HelperSuite) TestSettleSwap(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	// Test 1: Successful swap settlement with outbound
+	txID := GetRandomTxHash()
+
+	// Create a pool for BTC to avoid refund errors
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.BalanceRune = cosmos.NewUint(100 * common.One)
+	btcPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	btcPool.Status = PoolAvailable
+
+	keeper := &SettleSwapTestKeeper{
+		advSwapItems: make(map[string]types.MsgSwap),
+		pools:        make(map[common.Asset]Pool),
+		voter: ObservedTxVoter{
+			Tx: ObservedTx{
+				Tx: common.Tx{
+					ID: txID,
+				},
+				ObservedPubKey: GetRandomPubKey(),
+			},
+		},
+	}
+	keeper.pools[common.BTCAsset] = btcPool
+	mgr.K = keeper
+	mgr.txOutStore = NewTxStoreDummy()
+	ethAddr := GetRandomETHAddress()
+	tx := common.NewTx(
+		txID,
+		ethAddr,
+		GetRandomETHAddress(),
+		common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1000))},
+		common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(1))},
+		"SWAP:ETH.ETH",
+	)
+	msg := types.MsgSwap{
+		Tx:          tx,
+		TargetAsset: common.ETHAsset,
+		Destination: ethAddr,
+		State: &types.SwapState{
+			Deposit: cosmos.NewUint(1000),
+			In:      cosmos.NewUint(1000), // Full deposit used
+			Out:     cosmos.NewUint(750),
+		},
+	}
+
+	err := settleSwap(ctx, mgr, msg, "test settlement")
+	c.Assert(err, IsNil)
+
+	// Verify outbound was scheduled
+	outItems, err := mgr.TxOutStore().GetOutboundItems(ctx)
+	c.Assert(err, IsNil)
+	c.Assert(len(outItems), Equals, 1)
+	c.Assert(outItems[0].Coin.Amount.Equal(cosmos.NewUint(750)), Equals, true)
+	c.Assert(outItems[0].Coin.Asset.Equals(common.ETHAsset), Equals, true)
+
+	// Test 2: Settlement with refund of remaining deposit
+	mgr.TxOutStore().ClearOutboundItems(ctx)
+	msg2 := types.MsgSwap{
+		Tx:          tx,
+		TargetAsset: common.ETHAsset,
+		Destination: ethAddr,
+		State: &types.SwapState{
+			Deposit: cosmos.NewUint(1000),
+			In:      cosmos.NewUint(600), // Only 600 used
+			Out:     cosmos.NewUint(550),
+		},
+	}
+
+	err = settleSwap(ctx, mgr, msg2, "partial swap settlement")
+	c.Assert(err, IsNil)
+
+	// Verify both outbound and refund were scheduled
+	outItems, err = mgr.TxOutStore().GetOutboundItems(ctx)
+	c.Assert(err, IsNil)
+	c.Assert(len(outItems), Equals, 2) // One for swap out, one for refund
+
+	// Test 3: Settlement with aggregator
+	mgr.TxOutStore().ClearOutboundItems(ctx)
+	aggTargetLimit := cosmos.NewUint(100)
+	msg3 := types.MsgSwap{
+		Tx:                      tx,
+		TargetAsset:             common.ETHAsset,
+		Destination:             ethAddr,
+		Aggregator:              "0x69800327b38A4CeF30367Dec3f64c2f2386f3848",
+		AggregatorTargetAddress: "0x1234567890123456789012345678901234567890",
+		AggregatorTargetLimit:   &aggTargetLimit,
+		State: &types.SwapState{
+			Deposit: cosmos.NewUint(1000),
+			In:      cosmos.NewUint(1000),
+			Out:     cosmos.NewUint(900),
+		},
+	}
+
+	err = settleSwap(ctx, mgr, msg3, "swap with aggregator")
+	c.Assert(err, IsNil)
+
+	outItems, err = mgr.TxOutStore().GetOutboundItems(ctx)
+	c.Assert(err, IsNil)
+	c.Assert(len(outItems), Equals, 1)
+	c.Assert(outItems[0].Aggregator, Equals, "0x69800327b38A4CeF30367Dec3f64c2f2386f3848")
+	c.Assert(outItems[0].AggregatorTargetAsset, Equals, "0x1234567890123456789012345678901234567890")
+
+	// Test 4: Settlement with no outbound (all deposit refunded)
+	mgr.TxOutStore().ClearOutboundItems(ctx)
+	msg4 := types.MsgSwap{
+		Tx:          tx,
+		TargetAsset: common.ETHAsset,
+		Destination: ethAddr,
+		State: &types.SwapState{
+			Deposit: cosmos.NewUint(1000),
+			In:      cosmos.ZeroUint(), // Nothing swapped
+			Out:     cosmos.ZeroUint(),
+		},
+	}
+
+	err = settleSwap(ctx, mgr, msg4, "no swap occurred")
+	c.Assert(err, IsNil)
+
+	// Only refund should be scheduled
+	outItems, err = mgr.TxOutStore().GetOutboundItems(ctx)
+	c.Assert(err, IsNil)
+	c.Assert(len(outItems), Equals, 1)
+	c.Assert(outItems[0].Coin.Amount.Equal(cosmos.NewUint(1000)), Equals, true)
+	c.Assert(outItems[0].Coin.Asset.Equals(common.BTCAsset), Equals, true) // Refund in original asset
+
+	// Test 5: Settlement with savers add memo (should not schedule outbound)
+	mgr.TxOutStore().ClearOutboundItems(ctx)
+	saversTx := common.NewTx(
+		GetRandomTxHash(),
+		ethAddr,
+		GetRandomETHAddress(),
+		common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(1000))},
+		common.Gas{common.NewCoin(common.RuneAsset(), cosmos.NewUint(1))},
+		"+:BTC/BTC", // Add liquidity memo (savers)
+	)
+	msg5 := types.MsgSwap{
+		Tx:          saversTx,
+		TargetAsset: common.BTCAsset,
+		Destination: GetRandomBTCAddress(),
+		State: &types.SwapState{
+			Deposit: cosmos.NewUint(1000),
+			In:      cosmos.NewUint(1000),
+			Out:     cosmos.NewUint(900),
+		},
+	}
+
+	err = settleSwap(ctx, mgr, msg5, "savers add settlement")
+	c.Assert(err, IsNil)
+
+	// No outbound should be scheduled for savers add
+	outItems, err = mgr.TxOutStore().GetOutboundItems(ctx)
+	c.Assert(err, IsNil)
+	c.Assert(len(outItems), Equals, 0)
+
+	// Test 6: Error handling - fail to remove from queue (should still succeed)
+	keeper.failRemove = true
+	err = settleSwap(ctx, mgr, msg, "test with removal failure")
+	c.Assert(err, IsNil) // Should not fail, just log errors
+	keeper.failRemove = false
 }

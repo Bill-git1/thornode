@@ -18,6 +18,11 @@ type MsgHandler interface {
 	Run(ctx cosmos.Context, msg cosmos.Msg) (*cosmos.Result, error)
 }
 
+// SwapHandlerWithEmit is a specialized interface for handlers that need to return emit values
+type SwapHandlerWithEmit interface {
+	RunWithEmit(ctx cosmos.Context, msg cosmos.Msg) (*cosmos.Result, cosmos.Uint, error)
+}
+
 // NewInternalHandler returns a handler for "thorchain" internal type messages.
 func NewInternalHandler(mgr Manager) cosmos.Handler {
 	return func(ctx cosmos.Context, msg cosmos.Msg) (*cosmos.Result, error) {
@@ -81,11 +86,18 @@ func getInternalHandlerMapping(mgr Manager) map[string]MsgHandler {
 	return m
 }
 
-func getMsgSwapFromMemo(memo SwapMemo, tx ObservedTx, signer cosmos.AccAddress) (cosmos.Msg, error) {
+func getMsgSwapFromMemo(ctx cosmos.Context, keeper keeper.Keeper, memo SwapMemo, tx ObservedTx, signer cosmos.AccAddress) (cosmos.Msg, error) {
 	if memo.Destination.IsEmpty() {
 		memo.Destination = tx.Tx.FromAddress
 	}
-	return NewMsgSwap(tx.Tx, memo.GetAsset(), memo.Destination, memo.SlipLimit, memo.AffiliateAddress, memo.AffiliateBasisPoints, memo.GetDexAggregator(), memo.GetDexTargetAddress(), memo.GetDexTargetLimit(), memo.GetSwapType(), memo.GetStreamQuantity(), memo.GetStreamInterval(), signer), nil
+
+	// Determine version based on configuration
+	version := types.SwapVersion_v1
+	if keeper.AdvSwapQueueEnabled(ctx) {
+		version = types.SwapVersion_v2
+	}
+
+	return NewMsgSwap(tx.Tx, memo.GetAsset(), memo.Destination, memo.SlipLimit, memo.AffiliateAddress, memo.AffiliateBasisPoints, memo.GetDexAggregator(), memo.GetDexTargetAddress(), memo.GetDexTargetLimit(), memo.GetSwapType(), memo.GetStreamQuantity(), memo.GetStreamInterval(), version, signer), nil
 }
 
 func getMsgWithdrawFromMemo(memo WithdrawLiquidityMemo, tx ObservedTx, signer cosmos.AccAddress) (cosmos.Msg, error) {
@@ -126,7 +138,14 @@ func getMsgDonateFromMemo(memo DonateMemo, tx ObservedTx, signer cosmos.AccAddre
 }
 
 func getMsgModifyLimitSwap(memo ModifyLimitSwapMemo, tx ObservedTx, signer cosmos.AccAddress) (cosmos.Msg, error) {
-	return NewMsgModifyLimitSwap(tx.Tx.FromAddress, memo.Source, memo.Target, memo.ModifiedTargetAmount, signer), nil
+	// Get the deposit asset and amount from the transaction
+	var depositAsset common.Asset
+	var depositAmount cosmos.Uint
+	if len(tx.Tx.Coins) > 0 {
+		depositAsset = tx.Tx.Coins[0].Asset
+		depositAmount = tx.Tx.Coins[0].Amount
+	}
+	return NewMsgModifyLimitSwap(tx.Tx.FromAddress, memo.Source, memo.Target, memo.ModifiedTargetAmount, signer, depositAsset, depositAmount), nil
 }
 
 func getMsgRefundFromMemo(memo RefundMemo, tx ObservedTx, signer cosmos.AccAddress) (cosmos.Msg, error) {
@@ -207,7 +226,7 @@ func processOneTxIn(ctx cosmos.Context, keeper keeper.Keeper, tx ObservedTx, sig
 	case SwapMemo:
 		m.Asset = fuzzyAssetMatch(ctx, keeper, m.Asset)
 		m.DexTargetAddress = externalAssetMatch(m.Asset.GetChain(), m.DexTargetAddress)
-		newMsg, err = getMsgSwapFromMemo(m, tx, signer)
+		newMsg, err = getMsgSwapFromMemo(ctx, keeper, m, tx, signer)
 	case ModifyLimitSwapMemo:
 		newMsg, err = getMsgModifyLimitSwap(m, tx, signer)
 	case DonateMemo:

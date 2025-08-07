@@ -12,6 +12,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 type HandlerObservedTxInSuite struct{}
@@ -747,19 +748,30 @@ func (s HandlerObservedTxInSuite) TestSwapWithAffiliate(c *C) {
 		},
 		Chain: common.ETHChain,
 		Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(2*common.One))},
-		Memo:  "=:ETH.ETH:" + GetRandomETHAddress().String() + "::" + affAddr.String() + ":1000",
-	}, common.ETHAsset, GetRandomETHAddress(), cosmos.ZeroUint(), affAddr, cosmos.NewUint(1000),
+		Memo:  "=:THOR.RUNE:" + GetRandomTHORAddress().String() + "::" + affAddr.String() + ":1000",
+	}, common.RuneAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), affAddr, cosmos.NewUint(1000),
 		"",
 		"", nil,
-		MarketSwap,
-		0, 0, GetRandomBech32Addr(),
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v1, GetRandomBech32Addr(),
 	)
 	// no affiliate fees
-	addSwap(ctx, mgr.Keeper(), mgr.AdvSwapQueueMgr(), mgr.EventMgr(), *msg)
-	swaps, err := queue.FetchQueue(ctx)
-	c.Assert(err, IsNil)
-	c.Assert(swaps, HasLen, 1, Commentf("%d", len(swaps)))
-	c.Check(swaps[0].msg.Tx.Coins[0].Amount.Uint64(), Equals, uint64(200000000))
+	c.Assert(addSwap(ctx, mgr, *msg), IsNil)
+
+	// Check if the swap was added to the appropriate queue
+	// Route based on message version (V1 goes to regular queue, V2 goes to advanced queue)
+	if msg.IsV2() {
+		// Swap should be in advanced queue
+		swap, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, msg.Tx.ID, 0)
+		c.Assert(err, IsNil)
+		c.Check(swap.Tx.Coins[0].Amount.Uint64(), Equals, uint64(200000000))
+	} else {
+		// Swap should be in regular queue
+		swaps, err := queue.FetchQueue(ctx)
+		c.Assert(err, IsNil)
+		c.Assert(swaps, HasLen, 1, Commentf("%d", len(swaps)))
+		c.Check(swaps[0].msg.Tx.Coins[0].Amount.Uint64(), Equals, uint64(200000000))
+	}
 }
 
 func (s *HandlerObservedTxInSuite) TestVaultStatus(c *C) {

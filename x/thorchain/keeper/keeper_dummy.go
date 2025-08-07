@@ -565,15 +565,18 @@ func (k KVStoreDummy) AdvSwapQueueEnabled(ctx cosmos.Context) bool {
 
 func (k KVStoreDummy) SetAdvSwapQueueItem(ctx cosmos.Context, msg MsgSwap) error      { return kaboom }
 func (k KVStoreDummy) GetAdvSwapQueueItemIterator(ctx cosmos.Context) cosmos.Iterator { return nil }
-func (k KVStoreDummy) RemoveAdvSwapQueueItem(ctx cosmos.Context, _ common.TxID) error {
+func (k KVStoreDummy) RemoveAdvSwapQueueItem(ctx cosmos.Context, _ common.TxID, _ int) error {
 	return kaboom
 }
 
-func (k KVStoreDummy) GetAdvSwapQueueItem(ctx cosmos.Context, txID common.TxID) (MsgSwap, error) {
+func (k KVStoreDummy) GetAdvSwapQueueItem(ctx cosmos.Context, txID common.TxID, index int) (MsgSwap, error) {
 	return MsgSwap{}, kaboom
 }
 
-func (k KVStoreDummy) HasAdvSwapQueueItem(ctx cosmos.Context, txID common.TxID) bool { return false }
+func (k KVStoreDummy) HasAdvSwapQueueItem(ctx cosmos.Context, txID common.TxID, index int) bool {
+	return false
+}
+
 func (k KVStoreDummy) GetAdvSwapQueueIndexIterator(_ cosmos.Context, _ types.SwapType, _, _ common.Asset) cosmos.Iterator {
 	return nil
 }
@@ -582,7 +585,7 @@ func (k KVStoreDummy) SetAdvSwapQueueIndex(_ cosmos.Context, _ MsgSwap) error {
 	return kaboom
 }
 
-func (k KVStoreDummy) GetAdvSwapQueueIndex(_ cosmos.Context, _ MsgSwap) (common.TxIDs, error) {
+func (k KVStoreDummy) GetAdvSwapQueueIndex(_ cosmos.Context, _ MsgSwap) ([]types.AdvSwapQueueIndexItem, error) {
 	return nil, kaboom
 }
 

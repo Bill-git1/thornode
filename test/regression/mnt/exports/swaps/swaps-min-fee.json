@@ -434,6 +434,7 @@
           "actions": [
             {
               "chain": "BTC",
+              "clout_spent": "0",
               "coin": {
                 "amount": "14476",
                 "asset": "BTC.BTC"

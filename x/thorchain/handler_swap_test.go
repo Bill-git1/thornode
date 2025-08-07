@@ -45,7 +45,7 @@ func (s *HandlerSwapSuite) TestValidate(c *C) {
 		},
 		"",
 	)
-	msg := NewMsgSwap(tx, common.DOGEAsset, signerDOGEAddr, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, 0, observerAddr)
+	msg := NewMsgSwap(tx, common.DOGEAsset, signerDOGEAddr, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_market, 0, 0, types.SwapVersion_v1, observerAddr)
 	err := handler.validate(ctx, *msg)
 	c.Assert(err, IsNil)
 
@@ -66,9 +66,13 @@ type TestSwapHandleKeeper struct {
 	synthSupply       cosmos.Uint
 	haltChain         int64
 	derivedAssets     bool
+	mimirs            map[string]int64
 }
 
 func (k *TestSwapHandleKeeper) GetConfigInt64(ctx cosmos.Context, key constants.ConstantName) int64 {
+	if key.String() == "PoolCycle" {
+		return 43200
+	}
 	val, _ := k.GetMimir(ctx, key.String())
 	return val
 }
@@ -127,6 +131,11 @@ func (k *TestSwapHandleKeeper) GetTotalSupply(_ cosmos.Context, _ common.Asset) 
 }
 
 func (k *TestSwapHandleKeeper) GetMimir(ctx cosmos.Context, key string) (int64, error) {
+	if k.mimirs != nil {
+		if val, ok := k.mimirs[key]; ok {
+			return val, nil
+		}
+	}
 	if key == "MaxSynthPerPoolDepth" {
 		return 5000, nil
 	}
@@ -137,6 +146,13 @@ func (k *TestSwapHandleKeeper) GetMimir(ctx cosmos.Context, key string) (int64, 
 		return 0, nil
 	}
 	return k.haltChain, nil
+}
+
+func (k *TestSwapHandleKeeper) SetMimir(ctx cosmos.Context, key string, value int64) {
+	if k.mimirs == nil {
+		k.mimirs = make(map[string]int64)
+	}
+	k.mimirs[key] = value
 }
 
 func (k *TestSwapHandleKeeper) GetMimirWithRef(ctx cosmos.Context, template string, ref ...any) (int64, error) {
@@ -193,7 +209,7 @@ func (s *HandlerSwapSuite) TestValidation(c *C) {
 		},
 		"",
 	)
-	msg := NewMsgSwap(tx, common.DOGEAsset.GetSyntheticAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, 0, observerAddr)
+	msg := NewMsgSwap(tx, common.DOGEAsset.GetSyntheticAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_market, 0, 0, types.SwapVersion_v1, observerAddr)
 	err := handler.validate(ctx, *msg)
 	c.Assert(err, IsNil)
 
@@ -247,7 +263,7 @@ func (s *HandlerSwapSuite) TestValidationWithStreamingSwap(c *C) {
 	)
 
 	// happy path
-	msg := NewMsgSwap(tx, common.DOGEAsset.GetSyntheticAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 10, 20, observerAddr)
+	msg := NewMsgSwap(tx, common.DOGEAsset.GetSyntheticAsset(), GetRandomTHORAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_market, 10, 20, types.SwapVersion_v1, observerAddr)
 	err := handler.validate(ctx, *msg)
 	c.Assert(err, IsNil)
 
@@ -275,6 +291,7 @@ func (s *HandlerSwapSuite) TestHandle(c *C) {
 		activeNodeAccount: GetRandomValidatorNode(NodeActive),
 		synthSupply:       cosmos.ZeroUint(),
 	}
+	mgr.K = keeper
 	mgr.txOutStore = NewTxStoreDummy()
 	handler := NewSwapHandler(mgr)
 
@@ -299,7 +316,7 @@ func (s *HandlerSwapSuite) TestHandle(c *C) {
 		},
 		"",
 	)
-	msg := NewMsgSwap(tx, common.DOGEAsset, signerDOGEAddr, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, 0, observerAddr)
+	msg := NewMsgSwap(tx, common.DOGEAsset, signerDOGEAddr, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_market, 0, 0, types.SwapVersion_v1, observerAddr)
 
 	pool := NewPool()
 	pool.Asset = common.DOGEAsset
@@ -308,7 +325,7 @@ func (s *HandlerSwapSuite) TestHandle(c *C) {
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
 
 	// swap of only 0.00000001 would emit 0, thus rejected.
-	_, err = handler.handle(ctx, *msg)
+	_, _, err = handler.handleWithEmit(ctx, *msg)
 	c.Assert(err.Error(), Equals, "zero emit asset")
 
 	tx = common.NewTx(
@@ -323,8 +340,8 @@ func (s *HandlerSwapSuite) TestHandle(c *C) {
 		},
 		"",
 	)
-	msgSwapPriceProtection := NewMsgSwap(tx, common.DOGEAsset, signerDOGEAddr, cosmos.NewUint(2*common.One), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, 0, observerAddr)
-	result, err = handler.handle(ctx, *msgSwapPriceProtection)
+	msgSwapPriceProtection := NewMsgSwap(tx, common.DOGEAsset, signerDOGEAddr, cosmos.NewUint(2*common.One), common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_market, 0, 0, types.SwapVersion_v1, observerAddr)
+	result, _, err = handler.handleWithEmit(ctx, *msgSwapPriceProtection)
 	c.Assert(err.Error(), Equals, errors.New("emit asset 192233756 less than price limit 200000000").Error())
 	c.Assert(result, IsNil)
 
@@ -351,7 +368,7 @@ func (s *HandlerSwapSuite) TestHandle(c *C) {
 		1,
 		GetRandomPubKey(), 1,
 	)
-	msgSwapFromTxIn, err := getMsgSwapFromMemo(m.(SwapMemo), txIn, observerAddr)
+	msgSwapFromTxIn, err := getMsgSwapFromMemo(ctx, mgr.Keeper(), m.(SwapMemo), txIn, observerAddr)
 	c.Assert(err, IsNil)
 	items, err := mgr.TxOutStore().GetOutboundItems(ctx)
 	c.Assert(err, IsNil)
@@ -360,6 +377,7 @@ func (s *HandlerSwapSuite) TestHandle(c *C) {
 	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil) // reset the pool
 	_, err = handler.Run(ctx, msgSwapFromTxIn.(*MsgSwap))
 	c.Assert(err, IsNil)
+	c.Assert(processSwapQueues(ctx, mgr), IsNil)
 	items, err = mgr.TxOutStore().GetOutboundItems(ctx)
 	c.Assert(err, IsNil)
 	c.Assert(items, HasLen, 1)
@@ -367,7 +385,7 @@ func (s *HandlerSwapSuite) TestHandle(c *C) {
 	result, err = handler.Run(ctx, msgSwapFromTxIn)
 	c.Assert(err, NotNil)
 	c.Assert(result, IsNil)
-	msgSwap := NewMsgSwap(GetRandomTx(), common.EmptyAsset, GetRandomDOGEAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, 0, GetRandomBech32Addr())
+	msgSwap := NewMsgSwap(GetRandomTx(), common.EmptyAsset, GetRandomDOGEAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_market, 0, 0, types.SwapVersion_v1, GetRandomBech32Addr())
 	result, err = handler.Run(ctx, msgSwap)
 	c.Assert(err, NotNil)
 	c.Assert(result, IsNil)
@@ -411,12 +429,14 @@ func (s *HandlerSwapSuite) TestHandleStreamingSwap(c *C) {
 		},
 		fmt.Sprintf("=:DOGE.DOGE:%s", signerDOGEAddr),
 	)
-	msg := NewMsgSwap(tx, common.DOGEAsset, signerDOGEAddr, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 3, 5, na.NodeAddress)
+	msg := NewMsgSwap(tx, common.DOGEAsset, signerDOGEAddr, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_market, 3, 5, types.SwapVersion_v1, na.NodeAddress)
 	swp := msg.GetStreamingSwap()
 	swp.Deposit = tx.Coins[0].Amount
 	mgr.Keeper().SetStreamingSwap(ctx, swp)
 	mgr.Keeper().SetMimir(ctx, constants.L1SlipMinBps.String(), 1)
-	_, err = handler.handle(ctx, *msg)
+	// Enable advanced swap queue so streaming swaps are handled by the queue manager
+	mgr.Keeper().SetMimir(ctx, constants.EnableAdvSwapQueue.String(), 1)
+	_, _, err = handler.handleWithEmit(ctx, *msg)
 	c.Assert(err, IsNil)
 
 	// ensure we don't add items into txout for streaming swaps. That is
@@ -431,7 +451,7 @@ func (s *HandlerSwapSuite) TestHandleStreamingSwap(c *C) {
 	c.Check(swp.Out.String(), Equals, "617319586")
 
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 1)
-	_, err = handler.handle(ctx, *msg)
+	_, _, err = handler.handleWithEmit(ctx, *msg)
 	c.Assert(err, IsNil)
 	swp, err = mgr.Keeper().GetStreamingSwap(ctx, txID)
 	c.Assert(err, IsNil)
@@ -439,7 +459,7 @@ func (s *HandlerSwapSuite) TestHandleStreamingSwap(c *C) {
 	c.Check(swp.Out.String(), Equals, "1165237487")
 
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 1)
-	_, err = handler.handle(ctx, *msg)
+	_, _, err = handler.handleWithEmit(ctx, *msg)
 	c.Assert(err, IsNil)
 	swp, err = mgr.Keeper().GetStreamingSwap(ctx, txID)
 	c.Assert(err, IsNil)
@@ -447,7 +467,7 @@ func (s *HandlerSwapSuite) TestHandleStreamingSwap(c *C) {
 	c.Check(swp.Out.String(), Equals, "1654583341")
 
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 1)
-	_, err = handler.handle(ctx, *msg)
+	_, _, err = handler.handleWithEmit(ctx, *msg)
 	c.Assert(err, NotNil)
 	swp, err = mgr.Keeper().GetStreamingSwap(ctx, txID)
 	c.Assert(err, IsNil)
@@ -488,7 +508,7 @@ func (s *HandlerSwapSuite) TestSwapSynthERC20(c *C) {
 	)
 	observerAddr, err := GetRandomTHORAddress().AccAddress()
 	c.Assert(err, IsNil)
-	msgSwapFromTxIn, err := getMsgSwapFromMemo(m.(SwapMemo), txIn, observerAddr)
+	msgSwapFromTxIn, err := getMsgSwapFromMemo(ctx, mgr.Keeper(), m.(SwapMemo), txIn, observerAddr)
 	c.Assert(err, IsNil)
 	res, err := handler.Run(ctx, msgSwapFromTxIn)
 	c.Assert(res, IsNil)
@@ -502,6 +522,7 @@ func (s *HandlerSwapSuite) TestDoubleSwap(c *C) {
 		activeNodeAccount: GetRandomValidatorNode(NodeActive),
 		synthSupply:       cosmos.ZeroUint(),
 	}
+	mgr.K = keeper
 	mgr.txOutStore = NewTxStoreDummy()
 	handler := NewSwapHandler(mgr)
 
@@ -538,7 +559,7 @@ func (s *HandlerSwapSuite) TestDoubleSwap(c *C) {
 		1,
 		GetRandomPubKey(), 1,
 	)
-	msgSwapFromTxIn, err := getMsgSwapFromMemo(m.(SwapMemo), txIn, observerAddr)
+	msgSwapFromTxIn, err := getMsgSwapFromMemo(ctx, mgr.Keeper(), m.(SwapMemo), txIn, observerAddr)
 	c.Assert(err, IsNil)
 
 	items, err := mgr.TxOutStore().GetOutboundItems(ctx)
@@ -547,6 +568,7 @@ func (s *HandlerSwapSuite) TestDoubleSwap(c *C) {
 
 	_, err = handler.Run(ctx, msgSwapFromTxIn)
 	c.Assert(err, IsNil)
+	c.Assert(processSwapQueues(ctx, mgr), IsNil)
 
 	items, err = mgr.TxOutStore().GetOutboundItems(ctx)
 	c.Assert(err, IsNil)
@@ -568,7 +590,7 @@ func (s *HandlerSwapSuite) TestDoubleSwap(c *C) {
 		1,
 		GetRandomPubKey(), 1,
 	)
-	msgSwapFromTxIn1, err := getMsgSwapFromMemo(m1.(SwapMemo), txIn1, observerAddr)
+	msgSwapFromTxIn1, err := getMsgSwapFromMemo(ctx, mgr.Keeper(), m1.(SwapMemo), txIn1, observerAddr)
 	c.Assert(err, IsNil)
 	mgr.TxOutStore().ClearOutboundItems(ctx)
 	_, err = handler.Run(ctx, msgSwapFromTxIn1)
@@ -584,6 +606,12 @@ func (s *HandlerSwapSuite) TestDoubleSwap(c *C) {
 
 func (s *HandlerSwapSuite) TestSwapOutDexIntegration(c *C) {
 	ctx, mgr := setupManagerForTest(c)
+	keeper := &TestSwapHandleKeeper{
+		pools:             make(map[common.Asset]Pool),
+		activeNodeAccount: GetRandomValidatorNode(NodeActive),
+		synthSupply:       cosmos.ZeroUint(),
+	}
+	mgr.K = keeper
 	mgr.txOutStore = NewTxStoreDummy()
 	handler := NewSwapHandler(mgr)
 
@@ -594,12 +622,6 @@ func (s *HandlerSwapSuite) TestSwapOutDexIntegration(c *C) {
 	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
 	pool.BalanceRune = cosmos.NewUint(100 * common.One)
 	c.Assert(mgr.K.SetPool(ctx, pool), IsNil)
-
-	c.Assert(mgr.K.SaveNetworkFee(ctx, common.ETHChain, NetworkFee{
-		Chain:              common.ETHChain,
-		TransactionSize:    10,
-		TransactionFeeRate: 50_000,
-	}), IsNil)
 
 	swapMemo := "swap:ETH.ETH:" + types.GetRandomETHAddress().String() + "::::2f2386f3848:" + types.GetRandomETHAddress().String()
 	m, err := ParseMemoWithTHORNames(ctx, mgr.Keeper(), swapMemo)
@@ -621,7 +643,7 @@ func (s *HandlerSwapSuite) TestSwapOutDexIntegration(c *C) {
 
 	observerAddr, err := GetRandomTHORAddress().AccAddress()
 	c.Assert(err, IsNil)
-	msgSwapFromTxIn, err := getMsgSwapFromMemo(m.(SwapMemo), txIn, observerAddr)
+	msgSwapFromTxIn, err := getMsgSwapFromMemo(ctx, mgr.Keeper(), m.(SwapMemo), txIn, observerAddr)
 	c.Assert(err, IsNil)
 	// when SwapOut Dex integration has been disabled by mimir , it should return an error cause refund
 	mgr.Keeper().SetMimir(ctx, constants.SwapOutDexAggregationDisabled.String(), 1)
@@ -636,7 +658,7 @@ func (s *HandlerSwapSuite) TestSwapOutDexIntegration(c *C) {
 	swapM, ok := m.(SwapMemo)
 	c.Assert(ok, Equals, true)
 	swapM.DexTargetAddress = ""
-	msgSwapFromTxIn, err = getMsgSwapFromMemo(swapM, txIn, observerAddr)
+	msgSwapFromTxIn, err = getMsgSwapFromMemo(ctx, mgr.Keeper(), swapM, txIn, observerAddr)
 	c.Assert(err, IsNil)
 	res, err = handler.Run(ctx, msgSwapFromTxIn)
 	c.Assert(err, NotNil)
@@ -650,7 +672,7 @@ func (s *HandlerSwapSuite) TestSwapOutDexIntegration(c *C) {
 	AAVEAsset, err := common.NewAsset("ETH.AAVE-0X7FC66500C84A76AD7E9C93437BFC5AC33E2DDAE9")
 	c.Assert(err, IsNil)
 	swapM.Asset = AAVEAsset
-	msgSwapFromTxIn, err = getMsgSwapFromMemo(swapM, txIn, observerAddr)
+	msgSwapFromTxIn, err = getMsgSwapFromMemo(ctx, mgr.Keeper(), swapM, txIn, observerAddr)
 	c.Assert(err, IsNil)
 	res, err = handler.Run(ctx, msgSwapFromTxIn)
 	c.Assert(err, NotNil)
@@ -661,7 +683,7 @@ func (s *HandlerSwapSuite) TestSwapOutDexIntegration(c *C) {
 	swapM, ok = m.(SwapMemo)
 	c.Assert(ok, Equals, true)
 	swapM.DexAggregator = "whatever"
-	msgSwapFromTxIn, err = getMsgSwapFromMemo(swapM, txIn, observerAddr)
+	msgSwapFromTxIn, err = getMsgSwapFromMemo(ctx, mgr.Keeper(), swapM, txIn, observerAddr)
 	c.Assert(err, IsNil)
 	res, err = handler.Run(ctx, msgSwapFromTxIn)
 	c.Assert(err, NotNil)
@@ -672,7 +694,7 @@ func (s *HandlerSwapSuite) TestSwapOutDexIntegration(c *C) {
 	swapM, ok = m.(SwapMemo)
 	c.Assert(ok, Equals, true)
 	swapM.DexTargetAddress = "whatever"
-	msgSwapFromTxIn, err = getMsgSwapFromMemo(swapM, txIn, observerAddr)
+	msgSwapFromTxIn, err = getMsgSwapFromMemo(ctx, mgr.Keeper(), swapM, txIn, observerAddr)
 	c.Assert(err, IsNil)
 	res, err = handler.Run(ctx, msgSwapFromTxIn)
 	c.Assert(err, IsNil)
@@ -682,7 +704,7 @@ func (s *HandlerSwapSuite) TestSwapOutDexIntegration(c *C) {
 	swapM, ok = m.(SwapMemo)
 	c.Assert(ok, Equals, true)
 	swapM.DexTargetAddress = GetRandomDOGEAddress().String()
-	msgSwapFromTxIn, err = getMsgSwapFromMemo(swapM, txIn, observerAddr)
+	msgSwapFromTxIn, err = getMsgSwapFromMemo(ctx, mgr.Keeper(), swapM, txIn, observerAddr)
 	c.Assert(err, IsNil)
 	res, err = handler.Run(ctx, msgSwapFromTxIn)
 	c.Assert(err, IsNil)
@@ -692,15 +714,29 @@ func (s *HandlerSwapSuite) TestSwapOutDexIntegration(c *C) {
 	// normal swap with DEX
 	swapM, ok = m.(SwapMemo)
 	c.Assert(ok, Equals, true)
-	msgSwapFromTxIn, err = getMsgSwapFromMemo(swapM, txIn, observerAddr)
+	msgSwapFromTxIn, err = getMsgSwapFromMemo(ctx, mgr.Keeper(), swapM, txIn, observerAddr)
 	c.Assert(err, IsNil)
 	res, err = handler.Run(ctx, msgSwapFromTxIn)
 	c.Assert(err, IsNil)
 	c.Assert(res, NotNil)
+	c.Assert(processSwapQueues(ctx, mgr), IsNil)
 	items, err := mgr.TxOutStore().GetOutboundItems(ctx)
 	c.Assert(err, IsNil)
 	c.Assert(items, HasLen, 1)
 	c.Assert(items[0].Aggregator, Equals, "0x69800327b38A4CeF30367Dec3f64c2f2386f3848")
 	c.Assert(items[0].AggregatorTargetAsset, Equals, swapM.DexTargetAddress)
 	c.Assert(items[0].AggregatorTargetLimit, IsNil)
+}
+
+// Helper function to process both swap queues
+func processSwapQueues(ctx cosmos.Context, mgr Manager) error {
+	if err := mgr.SwapQ().EndBlock(ctx, mgr); err != nil {
+		return err
+	}
+	if mgr.Keeper().AdvSwapQueueEnabled(ctx) {
+		if err := mgr.AdvSwapQueueMgr().EndBlock(ctx, mgr); err != nil {
+			return err
+		}
+	}
+	return nil
 }

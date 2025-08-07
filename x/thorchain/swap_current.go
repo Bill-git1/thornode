@@ -151,7 +151,19 @@ func (s *SwapperVCUR) Swap(ctx cosmos.Context,
 		}
 
 		// streaming swap outbounds are handled in the swap queue manager
-		if swp.Valid() != nil {
+		// all swaps are managed by the swap queue manager for the advanced swap queue
+		// Skip outbound creation when:
+		// 1. It's a streaming swap (swp.Valid() == nil)
+		// 2. OR advanced swap queue is enabled AND we're not in simulation mode
+		advSwapQueueEnabled := keeper.AdvSwapQueueEnabled(ctx)
+		isSimMode := isSimulationMode(ctx)
+		streamingSwap := swp.Valid() == nil
+
+		if streamingSwap || (advSwapQueueEnabled && !isSimMode) {
+			// Skip - outbound will be created by swap queue manager or settleSwap
+		} else {
+			// Create outbound for regular swaps when advanced queue is disabled
+			// OR when in simulation mode (to generate fee events for quotes)
 			ok, err := mgr.TxOutStore().TryAddTxOutItem(ctx, mgr, toi, swapTarget)
 			if err != nil {
 				return assetAmount, swapEvents, ErrInternal(err, "fail to add outbound tx")

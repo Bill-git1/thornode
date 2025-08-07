@@ -17,6 +17,10 @@ Name | Type | Description | Notes
 **SwapType** | Pointer to **string** | market if immediately completed or refunded, limit if held until fulfillable | [optional] 
 **StreamQuantity** | Pointer to **int64** | number of swaps to execute in a streaming swap | [optional] 
 **StreamInterval** | Pointer to **int64** | the interval (in blocks) to execute the streaming swap | [optional] 
+**InitialBlockHeight** | Pointer to **int64** | the initial block height when the streaming swap was first queued | [optional] 
+**State** | Pointer to [**SwapState**](SwapState.md) |  | [optional] 
+**Version** | Pointer to **string** | the version of the swap (v1 or v2) | [optional] 
+**Index** | Pointer to **int32** | the index of the swap in the batch | [optional] 
 
 ## Methods
 
@@ -341,6 +345,106 @@ SetStreamInterval sets StreamInterval field to given value.
 `func (o *MsgSwap) HasStreamInterval() bool`
 
 HasStreamInterval returns a boolean if a field has been set.
+
+### GetInitialBlockHeight
+
+`func (o *MsgSwap) GetInitialBlockHeight() int64`
+
+GetInitialBlockHeight returns the InitialBlockHeight field if non-nil, zero value otherwise.
+
+### GetInitialBlockHeightOk
+
+`func (o *MsgSwap) GetInitialBlockHeightOk() (*int64, bool)`
+
+GetInitialBlockHeightOk returns a tuple with the InitialBlockHeight field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetInitialBlockHeight
+
+`func (o *MsgSwap) SetInitialBlockHeight(v int64)`
+
+SetInitialBlockHeight sets InitialBlockHeight field to given value.
+
+### HasInitialBlockHeight
+
+`func (o *MsgSwap) HasInitialBlockHeight() bool`
+
+HasInitialBlockHeight returns a boolean if a field has been set.
+
+### GetState
+
+`func (o *MsgSwap) GetState() SwapState`
+
+GetState returns the State field if non-nil, zero value otherwise.
+
+### GetStateOk
+
+`func (o *MsgSwap) GetStateOk() (*SwapState, bool)`
+
+GetStateOk returns a tuple with the State field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetState
+
+`func (o *MsgSwap) SetState(v SwapState)`
+
+SetState sets State field to given value.
+
+### HasState
+
+`func (o *MsgSwap) HasState() bool`
+
+HasState returns a boolean if a field has been set.
+
+### GetVersion
+
+`func (o *MsgSwap) GetVersion() string`
+
+GetVersion returns the Version field if non-nil, zero value otherwise.
+
+### GetVersionOk
+
+`func (o *MsgSwap) GetVersionOk() (*string, bool)`
+
+GetVersionOk returns a tuple with the Version field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetVersion
+
+`func (o *MsgSwap) SetVersion(v string)`
+
+SetVersion sets Version field to given value.
+
+### HasVersion
+
+`func (o *MsgSwap) HasVersion() bool`
+
+HasVersion returns a boolean if a field has been set.
+
+### GetIndex
+
+`func (o *MsgSwap) GetIndex() int32`
+
+GetIndex returns the Index field if non-nil, zero value otherwise.
+
+### GetIndexOk
+
+`func (o *MsgSwap) GetIndexOk() (*int32, bool)`
+
+GetIndexOk returns a tuple with the Index field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetIndex
+
+`func (o *MsgSwap) SetIndex(v int32)`
+
+SetIndex sets Index field to given value.
+
+### HasIndex
+
+`func (o *MsgSwap) HasIndex() bool`
+
+HasIndex returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

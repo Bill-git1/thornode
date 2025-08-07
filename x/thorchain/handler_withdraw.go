@@ -11,6 +11,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 // WithdrawLiquidityHandler to process withdraw requests
@@ -324,7 +325,14 @@ func (h WithdrawLiquidityHandler) swap(ctx cosmos.Context, msg MsgWithdrawLiquid
 	memo := fmt.Sprintf("=:%s:%s", targetAsset, addr)
 	msg.Tx.Memo = memo
 	msg.Tx.Coins = common.NewCoins(coin)
-	swapMsg := NewMsgSwap(msg.Tx, targetAsset, addr, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, uint64(ssInterval), msg.Signer)
+
+	// Determine version based on configuration
+	version := types.SwapVersion_v1
+	if h.mgr.Keeper().AdvSwapQueueEnabled(ctx) {
+		version = types.SwapVersion_v2
+	}
+
+	swapMsg := NewMsgSwap(msg.Tx, targetAsset, addr, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, uint64(ssInterval), version, msg.Signer)
 
 	// sanity check swap msg
 	handler := NewSwapHandler(h.mgr)

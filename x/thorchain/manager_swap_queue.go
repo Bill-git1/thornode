@@ -120,6 +120,18 @@ func (pair tradePair) Equals(p tradePair) bool {
 	return pair.source.Equals(p.source) && pair.target.Equals(p.target)
 }
 
+// Append adds a tradePair to the list if it doesn't already exist
+func (p tradePairs) Append(pair tradePair) tradePairs {
+	// Check if the pair already exists
+	for _, existing := range p {
+		if existing.Equals(pair) {
+			return p
+		}
+	}
+	// If not found, append it
+	return append(p, pair)
+}
+
 // given a trade pair, find the trading pairs that are the reverse of this
 // trade pair. This helps us build a list of trading pairs adv swap queue to check
 // for limit swaps later
@@ -135,17 +147,7 @@ func (p tradePairs) findMatchingTrades(trade tradePair, pairs tradePairs) tradeP
 	}
 	for _, pair := range pairs {
 		if comp(pair) {
-			// check for duplicates
-			exists := false
-			for _, p2 := range p {
-				if p2.Equals(pair) {
-					exists = true
-					break
-				}
-			}
-			if !exists {
-				p = append(p, pair)
-			}
+			p = p.Append(pair)
 		}
 	}
 	return p

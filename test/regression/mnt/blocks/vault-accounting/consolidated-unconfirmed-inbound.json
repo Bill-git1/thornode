@@ -1110,7 +1110,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "215337",
+          "gas_used": "239307",
           "events": [
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/3",
@@ -1126,6 +1126,13 @@
               "msg_index": "0",
               "sender": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
               "type": "message"
+            },
+            {
+              "msg_index": "0",
+              "source": "5000000 BTC.BTC",
+              "target": "0 THOR.RUNE",
+              "txid": "0000000000000000000000000000000000000000000000000000000000000001",
+              "type": "limit_swap"
             }
           ]
         }

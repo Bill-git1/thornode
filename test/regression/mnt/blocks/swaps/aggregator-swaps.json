@@ -362,7 +362,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "150259",
+          "gas_used": "175349",
           "events": [
             {
               "amount": "2000000rune",
@@ -422,6 +422,13 @@
               "msg_index": "0",
               "sender": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "type": "message"
+            },
+            {
+              "msg_index": "0",
+              "source": "10000000000 THOR.RUNE",
+              "target": "0 ETH.ETH",
+              "txid": "34AA325C82F0B9572B54B1AD403146200625DB5F31EF59C5F8BF9BF22F93E71A",
+              "type": "limit_swap"
             }
           ]
         }

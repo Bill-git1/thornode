@@ -457,7 +457,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "198433",
+          "gas_used": "222403",
           "events": [
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/0",
@@ -473,6 +473,13 @@
               "msg_index": "0",
               "sender": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
               "type": "message"
+            },
+            {
+              "msg_index": "0",
+              "source": "5000000 BTC.BTC",
+              "target": "0 ETH.ETH",
+              "txid": "0000000000000000000000000000000000000000000000000000000000000001",
+              "type": "limit_swap"
             }
           ]
         }
@@ -507,8 +514,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "9845C334AD8FA74E2A229B7974649656F379A64F05A63E37946BCF061CEC6FF2",
-      "last_results_hash": "61C4891667176F74EACF8241DE22B169249FF7286899AE0AB85057B7C0FB1141",
+      "app_hash": "831698F2953C0EFB901CD67CC6425DE012493E5C12FD4801E70A93584F5AFC2F",
+      "last_results_hash": "50315BBF01642C1D43AA04DC647489090E203E0E2FC4C629D3CD2338CC103514",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -713,7 +720,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "260996",
+          "gas_used": "261095",
           "events": [
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/1",
@@ -774,8 +781,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "A23FDF0F71FF3F7B5CA78EC67D5D8FCA6B34046A03697264BBC8602DF4F04A18",
-      "last_results_hash": "E4CC570D00AAE262B3B0047C9A48488CE7C18190BD95804E2A086DF0E2A5DFFA",
+      "app_hash": "8D89EE35B9D7BFF7242C4A4E99779A13A0363B85E32AF6772E2DE8423AD6A4D6",
+      "last_results_hash": "71D1E5A317E2EB8EC3A244979CA3E9393FD9259C3F003330F945CF411998931C",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -817,7 +824,7 @@
         "chain": "BTC",
         "coin_amount": "4986000",
         "coin_asset": "BTC.BTC",
-        "coin_decimals": "8",
+        "coin_decimals": "0",
         "gas_rate": "10",
         "in_hash": "0000000000000000000000000000000000000000000000000000000000000003",
         "max_gas_amount_0": "10000",
@@ -1009,7 +1016,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "188930",
+          "gas_used": "213900",
           "events": [
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/2",
@@ -1025,6 +1032,13 @@
               "msg_index": "0",
               "sender": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
               "type": "message"
+            },
+            {
+              "msg_index": "0",
+              "source": "5000000 BTC.BTC",
+              "target": "0 ETH.BAR",
+              "txid": "0000000000000000000000000000000000000000000000000000000000000003",
+              "type": "limit_swap"
             }
           ]
         }
@@ -1059,8 +1073,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "515133AEE13FD66EDEBAEF07ECB918E5A668E6F3E967076A80F89C9946E9DFFB",
-      "last_results_hash": "10B8901650EA6561421A038E169E3803B5E6B6B503555358EEFD4418E63FA6FC",
+      "app_hash": "6A45E97FE1794D1D61383D55F93354D37FF61F4EC92FCDAA8F7F0A6E71B83049",
+      "last_results_hash": "D93077146B1ADDA326CB66F577DF0437DC7A232EA41738A0905DDD4A4E2AB19C",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -1265,7 +1279,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "264000",
+          "gas_used": "263868",
           "events": [
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/3",

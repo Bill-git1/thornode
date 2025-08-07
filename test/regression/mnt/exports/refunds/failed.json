@@ -127,7 +127,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "201004190938",
+              "amount": "201003089956",
               "denom": "rune"
             }
           ]
@@ -136,11 +136,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "100",
-              "denom": "btc/btc"
-            },
-            {
-              "amount": "35000001350615",
+              "amount": "35000002451597",
               "denom": "rune"
             }
           ]
@@ -185,7 +181,7 @@
       "send_enabled": [],
       "supply": [
         {
-          "amount": "988089",
+          "amount": "987989",
           "denom": "btc/btc"
         },
         {
@@ -291,19 +287,19 @@
         {
           "LP_units": "100000000000",
           "asset": "BTC.BTC",
-          "balance_asset": "100000000",
-          "balance_rune": "101001538346",
+          "balance_asset": "100000991",
+          "balance_rune": "101000967331",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
           "status": "Available",
-          "synth_units": "497497283"
+          "synth_units": "496446965"
         },
         {
           "LP_units": "100000000000",
           "asset": "ETH.ETH",
           "balance_asset": "1000000000",
-          "balance_rune": "100002652592",
+          "balance_rune": "100002122625",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -324,9 +320,15 @@
       "swap_queue_items": [],
       "swapper_clout": [
         {
+          "address": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
+          "reclaimed": "0",
+          "score": "5",
+          "spent": "0"
+        },
+        {
           "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "reclaimed": "0",
-          "score": "4999526",
+          "score": "4999531",
           "spent": "0"
         }
       ],

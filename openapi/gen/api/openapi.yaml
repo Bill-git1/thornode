@@ -1683,7 +1683,8 @@ paths:
       - SecuredAssets
   /thorchain/queue/swap/details/{tx_id}:
     get:
-      description: Returns detailed information about a specific swap.
+      description: Returns detailed information about a specific swap including its
+        state.
       operationId: swapDetails
       parameters:
       - description: "optional block height, defaults to current tip"
@@ -4009,12 +4010,31 @@ components:
         aggregator: aggregator
         destination: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
         affiliate_basis_points: affiliate_basis_points
+        index: 2
         aggregator_target_limit: aggregator_target_limit
+        initial_block_height: 1
+        version: version
         swap_type: swap_type
         stream_quantity: 0
         target_asset: ETH.ETH
         stream_interval: 6
         affiliate_address: thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+        state:
+          failed_swaps:
+          - 3
+          - 3
+          quantity: 5
+          in: in
+          count: 7
+          withdrawn: withdrawn
+          deposit: deposit
+          interval: 5
+          failed_swap_reasons:
+          - failed_swap_reasons
+          - failed_swap_reasons
+          ttl: 2
+          last_height: 9
+          out: out
         signer: signer
       properties:
         tx:
@@ -4064,11 +4084,88 @@ components:
           description: the interval (in blocks) to execute the streaming swap
           format: int64
           type: integer
+        initial_block_height:
+          description: the initial block height when the streaming swap was first
+            queued
+          format: int64
+          type: integer
+        state:
+          $ref: '#/components/schemas/SwapState'
+        version:
+          description: the version of the swap (v1 or v2)
+          type: string
+        index:
+          description: the index of the swap in the batch
+          format: int32
+          type: integer
       required:
       - affiliate_basis_points
       - target_asset
       - trade_target
       - tx
+      type: object
+    SwapState:
+      description: State tracking for swap execution
+      example:
+        failed_swaps:
+        - 3
+        - 3
+        quantity: 5
+        in: in
+        count: 7
+        withdrawn: withdrawn
+        deposit: deposit
+        interval: 5
+        failed_swap_reasons:
+        - failed_swap_reasons
+        - failed_swap_reasons
+        ttl: 2
+        last_height: 9
+        out: out
+      properties:
+        interval:
+          description: the interval for streaming swaps
+          format: int64
+          type: integer
+        quantity:
+          description: the number of swaps to execute
+          format: int64
+          type: integer
+        ttl:
+          description: time to live
+          format: int64
+          type: integer
+        count:
+          description: number of swaps executed
+          format: int64
+          type: integer
+        last_height:
+          description: last height when a swap was executed
+          format: int64
+          type: integer
+        deposit:
+          description: total deposit amount
+          type: string
+        withdrawn:
+          description: amount withdrawn
+          type: string
+        in:
+          description: total amount swapped in
+          type: string
+        out:
+          description: total amount swapped out
+          type: string
+        failed_swaps:
+          description: list of failed swap indices
+          items:
+            format: int64
+            type: integer
+          type: array
+        failed_swap_reasons:
+          description: reasons for failed swaps
+          items:
+            type: string
+          type: array
       type: object
     TxOutItem:
       example:
@@ -5813,12 +5910,31 @@ components:
           aggregator: aggregator
           destination: 0x66fb1cd65b97fa40457b90b7d1ca6b92cb64b32b
           affiliate_basis_points: affiliate_basis_points
+          index: 2
           aggregator_target_limit: aggregator_target_limit
+          initial_block_height: 1
+          version: version
           swap_type: swap_type
           stream_quantity: 0
           target_asset: ETH.ETH
           stream_interval: 6
           affiliate_address: thor1f3s7q037eancht7sg0aj995dht25rwrnu4ats5
+          state:
+            failed_swaps:
+            - 3
+            - 3
+            quantity: 5
+            in: in
+            count: 7
+            withdrawn: withdrawn
+            deposit: deposit
+            interval: 5
+            failed_swap_reasons:
+            - failed_swap_reasons
+            - failed_swap_reasons
+            ttl: 2
+            last_height: 9
+            out: out
           signer: signer
         status: queued
       properties:

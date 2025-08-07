@@ -91,6 +91,17 @@ type: create-blocks
 count: 1
 ---
 ########################################################################################
+# disable advanced swap queue to ensure consistent test behavior
+########################################################################################
+type: tx-mimir
+key: EnableAdvSwapQueue
+value: 0
+signer: {{ addr_thor_dog }}
+---
+type: create-blocks
+count: 1
+---
+########################################################################################
 # set MaxSynthPerPoolDepth high enough to allow synth minting
 ########################################################################################
 type: tx-mimir

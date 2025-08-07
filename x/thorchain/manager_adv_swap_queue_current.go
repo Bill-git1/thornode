@@ -16,13 +16,12 @@ import (
 
 // SwapQueueAdvVCUR is going to manage the swaps queue
 type SwapQueueAdvVCUR struct {
-	k          keeper.Keeper
-	limitSwaps swapItems
+	k keeper.Keeper
 }
 
 // newSwapQueueAdvVCUR create a new vault manager
 func newSwapQueueAdvVCUR(k keeper.Keeper) *SwapQueueAdvVCUR {
-	return &SwapQueueAdvVCUR{k: k, limitSwaps: make(swapItems, 0)}
+	return &SwapQueueAdvVCUR{k: k}
 }
 
 // FetchQueue - grabs all swap queue items from the kvstore and returns them
@@ -51,47 +50,85 @@ func (vm *SwapQueueAdvVCUR) FetchQueue(ctx cosmos.Context, mgr Manager, pairs tr
 		return nil, nil
 	}
 
-	val := vm.k.GetConfigInt64(ctx, constants.EnableAdvSwapQueue)
+	// If todo is empty, set it to every pair
+	if len(todo) == 0 {
+		todo = pairs
+	}
 
 	// get market swap
-	hashes, err := vm.k.GetAdvSwapQueueIndex(ctx, MsgSwap{SwapType: MarketSwap})
+	marketItems, err := vm.k.GetAdvSwapQueueIndex(ctx, MsgSwap{SwapType: MarketSwap})
 	if err != nil {
 		return nil, err
 	}
-	for _, hash := range hashes {
-		msg, err := vm.k.GetAdvSwapQueueItem(ctx, hash)
+	for _, item := range marketItems {
+		msg, err := vm.k.GetAdvSwapQueueItem(ctx, item.TxID, item.Index)
 		if err != nil {
 			ctx.Logger().Error("fail to fetch adv swap item", "error", err)
 			continue
 		}
 
-		// skip processing limit swaps if EnableAdvSwapQueue is set to market only mode
-		if types.AdvSwapQueueMode(val) == types.AdvSwapQueueModeMarketOnly && msg.SwapType == LimitSwap {
+		if !vm.isSwapReady(ctx, msg) {
 			continue
 		}
 
 		items = append(items, swapItem{
 			msg:   msg,
-			index: 0,
+			index: item.Index,
 			fee:   cosmos.ZeroUint(),
 			slip:  cosmos.ZeroUint(),
 		})
 	}
 
 	for _, pair := range todo {
-		newItems, done := vm.discoverLimitSwaps(ctx, pair, pools)
+		newItems := vm.discoverLimitSwaps(ctx, mgr, pair, pools)
 		items = append(items, newItems...)
-		if done {
-			break
-		}
 	}
 
 	return items, nil
 }
 
-func (vm *SwapQueueAdvVCUR) discoverLimitSwaps(ctx cosmos.Context, pair tradePair, pools Pools) (swapItems, bool) {
+func (vm *SwapQueueAdvVCUR) isSwapReady(ctx cosmos.Context, msg MsgSwap) bool {
+	// skip processing limit swaps if EnableAdvSwapQueue is set to market only mode
+	val := vm.k.GetConfigInt64(ctx, constants.EnableAdvSwapQueue)
+	if types.AdvSwapQueueMode(val) == types.AdvSwapQueueModeMarketOnly && msg.IsLimitSwap() {
+		return false
+	}
+
+	pausedStreaming := vm.k.GetConfigInt64(ctx, constants.StreamingSwapPause)
+	if pausedStreaming > 0 && msg.IsStreaming() {
+		return false
+	}
+
+	// Check if it's the right interval for the next sub-swap
+	if msg.State.Interval > 0 && (ctx.BlockHeight()-msg.State.LastHeight)%int64(msg.State.Interval) != 0 {
+		return false
+	}
+
+	// TODO: we will need to remove this if statement when implementing rapid swaps
+	if msg.State.LastHeight >= ctx.BlockHeight() {
+		// last swap must be in the past
+		return false // skip
+	}
+
+	if vm.k.IsTradingHalt(ctx, &msg) {
+		// if trading/chain is halted, skip
+		return false // skip
+	}
+
+	// if either source or target in ragnarok, streaming is not allowed
+	for _, asset := range []common.Asset{msg.Tx.Coins[0].Asset, msg.TargetAsset} {
+		key := "RAGNAROK-" + asset.MimirString()
+		ragnarok, err := vm.k.GetMimir(ctx, key)
+		if err == nil && ragnarok > 0 {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (vm *SwapQueueAdvVCUR) discoverLimitSwaps(ctx cosmos.Context, mgr Manager, pair tradePair, pools Pools) swapItems {
 	items := make(swapItems, 0)
-	done := false
 
 	iter := vm.k.GetAdvSwapQueueIndexIterator(ctx, LimitSwap, pair.source, pair.target)
 	defer iter.Close()
@@ -102,13 +139,8 @@ func (vm *SwapQueueAdvVCUR) discoverLimitSwaps(ctx cosmos.Context, pair tradePai
 			continue
 		}
 
-		// if a fee-less swap doesn't meet the ratio requirement, then we
-		// can be assured that all adv swap items in this index and every
-		// index there after will not be met.
-		if ok := vm.checkFeelessSwap(pools, pair, ratio); !ok {
-			done = true
-			break
-		}
+		// Check if fee-less swap meets the ratio requirement
+		canExecute := vm.checkFeelessSwap(pools, pair, ratio)
 
 		record := make([]string, 0)
 		value := ProtoStrings{Value: record}
@@ -118,19 +150,56 @@ func (vm *SwapQueueAdvVCUR) discoverLimitSwaps(ctx cosmos.Context, pair tradePai
 		}
 
 		for i, rec := range value.Value {
-			hash, err := common.NewTxID(rec)
+			// Parse format "txID-index" using last hyphen to handle Cosmos indexed TxIDs
+			lastHyphenIndex := strings.LastIndex(rec, "-")
+			if lastHyphenIndex == -1 {
+				ctx.Logger().Error("invalid swap queue index format - no hyphen found", "record", rec)
+				continue
+			}
+			parts := []string{rec[:lastHyphenIndex], rec[lastHyphenIndex+1:]}
+			if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+				ctx.Logger().Error("invalid swap queue index format", "record", rec)
+				continue
+			}
+
+			hash, err := common.NewTxID(parts[0])
 			if err != nil {
 				ctx.Logger().Error("fail to parse tx hash", "error", err)
 				continue
 			}
-			msg, err := vm.k.GetAdvSwapQueueItem(ctx, hash)
+
+			index, err := strconv.Atoi(parts[1])
+			if err != nil {
+				ctx.Logger().Error("fail to parse index", "error", err)
+				continue
+			}
+
+			msg, err := vm.k.GetAdvSwapQueueItem(ctx, hash, index)
 			if err != nil {
 				ctx.Logger().Error("fail to fetch msg swap", "error", err)
 				continue
 			}
 
+			if !vm.isSwapReady(ctx, msg) {
+				continue
+			}
+
+			// Check if our swap is already completed, ie a limit swap has expired
+			ctx.Logger().Info("IS SWAP DONE", "done", vm.IsDone(ctx, msg))
+			if vm.IsDone(ctx, msg) {
+				if err := settleSwap(ctx, mgr, msg, "swap has been completed."); err != nil {
+					ctx.Logger().Error("fail to handle completed streaming limit swap", "error", err)
+				}
+				continue
+			}
+
+			// Only try to execute if the price check passed
+			if !canExecute {
+				continue
+			}
+
 			// do a swap, including swap fees and outbound fees. If this passes attempt the swap.
-			if ok := vm.checkWithFeeSwap(ctx, pools, msg); !ok {
+			if ok := vm.checkWithFeeSwap(ctx, mgr, pools, msg); !ok {
 				continue
 			}
 
@@ -141,8 +210,29 @@ func (vm *SwapQueueAdvVCUR) discoverLimitSwaps(ctx cosmos.Context, pair tradePai
 				slip:  cosmos.ZeroUint(),
 			})
 		}
+
+		// If fee-less swap doesn't meet the ratio requirement, we can stop
+		// checking further ratio indices since they're sorted
+		if !canExecute {
+			break
+		}
 	}
-	return items, done
+	return items
+}
+
+func (vm *SwapQueueAdvVCUR) IsDone(ctx cosmos.Context, msg MsgSwap) bool {
+	if msg.IsDone() {
+		return true
+	}
+
+	if msg.IsLimitSwap() {
+		maxAge := vm.k.GetConfigInt64(ctx, constants.StreamingLimitSwapMaxAge)
+		if ctx.BlockHeight()-msg.InitialBlockHeight >= maxAge {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (vm *SwapQueueAdvVCUR) checkFeelessSwap(pools Pools, pair tradePair, indexRatio uint64) bool {
@@ -177,7 +267,7 @@ func (vm *SwapQueueAdvVCUR) checkFeelessSwap(pools Pools, pair tradePair, indexR
 	return cosmos.NewUint(indexRatio).GT(ratio)
 }
 
-func (vm *SwapQueueAdvVCUR) checkWithFeeSwap(ctx cosmos.Context, pools Pools, msg MsgSwap) bool {
+func (vm *SwapQueueAdvVCUR) checkWithFeeSwap(ctx cosmos.Context, mgr Manager, pools Pools, msg MsgSwap) bool {
 	swapper, err := GetSwapper(vm.k.GetVersion())
 	if err != nil {
 		panic(err)
@@ -218,11 +308,30 @@ func (vm *SwapQueueAdvVCUR) checkWithFeeSwap(ctx cosmos.Context, pools Pools, ms
 		emit = swapper.CalcAssetEmission(pool.BalanceAsset, source.Amount, pool.BalanceRune)
 	}
 
-	// txout manager has fees as well, that might fail the swap. That is NOT
-	// accounted for here, because its prob more work computationally than its
-	// worth to check (?).
+	// Check if this would be the last swap by temporarily simulating the state after this swap
+	swapSize, _ := msg.NextSize()
+	wouldBeLastSwap := false
+	if msg.SwapType == MarketSwap {
+		// For market swaps, check if count+1 >= quantity. We do >= instead of == just in case
+		// of some unexpected dev error and count exceeds quantity somehow
+		wouldBeLastSwap = msg.State.Count+1 >= msg.State.Quantity
+	} else if msg.SwapType == LimitSwap {
+		// For limit swaps, check if in + swapSize would equal deposit
+		tempIn := msg.State.In.Add(swapSize)
+		wouldBeLastSwap = tempIn.Equal(msg.State.Deposit)
+	}
 
-	return emit.GT(target.Amount)
+	// If this would be the last swap and target is not RUNE, account for outbound fee
+	if wouldBeLastSwap && !target.IsRune() {
+		// Get the outbound fee from the gas manager
+		outboundFee, err := mgr.GasMgr().GetAssetOutboundFee(ctx, target.Asset, false)
+		if err == nil && !outboundFee.IsZero() {
+			// Deduct the outbound fee from emit amount before comparing
+			emit = common.SafeSub(emit, outboundFee)
+		}
+	}
+
+	return emit.GTE(target.Amount)
 }
 
 func (vm *SwapQueueAdvVCUR) getRatio(input, output cosmos.Uint) cosmos.Uint {
@@ -302,34 +411,160 @@ func (vm *SwapQueueAdvVCUR) getAssetPairs(ctx cosmos.Context) (tradePairs, Pools
 	return result, pools
 }
 
-func (vm *SwapQueueAdvVCUR) AddSwapQueueItem(ctx cosmos.Context, msg MsgSwap) error {
-	// If advanced swap queue is in market-only mode, force all swaps to be market swaps
-	val := vm.k.GetConfigInt64(ctx, constants.EnableAdvSwapQueue)
-	if types.AdvSwapQueueMode(val) == types.AdvSwapQueueModeMarketOnly {
-		msg.SwapType = MarketSwap
+func (vm *SwapQueueAdvVCUR) getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsset common.Asset, msg MsgSwap) (uint64, error) {
+	if msg.State.Interval == 0 {
+		return 1, nil
 	}
-	if err := vm.k.SetAdvSwapQueueItem(ctx, msg); err != nil {
+
+	// collect pools involved in this swap
+	minSwapSize := cosmos.ZeroUint()
+	var sourceAssetPool types.Pool
+	for i, asset := range []common.Asset{sourceAsset, targetAsset} {
+		if asset.IsRune() {
+			continue
+		}
+
+		// get the asset pool
+		pool, err := vm.k.GetPool(ctx, asset.GetLayer1Asset())
+		if err != nil {
+			ctx.Logger().Error("fail to fetch pool", "error", err)
+			return 0, err
+		}
+
+		// store the source asset pool for later conversion of RUNE to asset
+		if i == 0 {
+			sourceAssetPool = pool
+		}
+
+		// get the configured min slip for this asset
+		minSlip := getMinSlipBps(ctx, vm.k, asset)
+		if minSlip.IsZero() {
+			continue
+		}
+
+		// compute the minimum rune swap size for this leg of the swap
+		minRuneSwapSize := common.GetSafeShare(minSlip, cosmos.NewUint(constants.MaxBasisPts), pool.BalanceRune)
+		if minSwapSize.IsZero() || minRuneSwapSize.LT(minSwapSize) {
+			minSwapSize = minRuneSwapSize
+		}
+	}
+
+	var maxSwapQuantity cosmos.Uint
+
+	// calculate the max swap quantity
+	if !sourceAsset.IsRune() {
+		minSwapSize = sourceAssetPool.RuneValueInAsset(minSwapSize)
+	}
+	if minSwapSize.IsZero() {
+		// If no minimum slip is configured, respect the user's requested quantity
+		// but still check against max length limits below
+		maxSwapQuantity = cosmos.NewUint(msg.State.Quantity)
+	} else {
+		maxSwapQuantity = msg.State.Deposit.Quo(minSwapSize)
+	}
+
+	// make sure maxSwapQuantity doesn't infringe on max length that a
+	// streaming swap can exist
+	var maxLength int64
+	if sourceAsset.IsNative() && targetAsset.IsNative() {
+		maxLength = vm.k.GetConfigInt64(ctx, constants.StreamingSwapMaxLengthNative)
+	} else {
+		maxLength = vm.k.GetConfigInt64(ctx, constants.StreamingSwapMaxLength)
+	}
+	if msg.State.Interval == 0 {
+		return 1, nil
+	}
+	maxSwapInMaxLength := uint64(maxLength) / msg.State.Interval
+	if maxSwapQuantity.GT(cosmos.NewUint(maxSwapInMaxLength)) {
+		return maxSwapInMaxLength, nil
+	}
+
+	// sanity check that max swap quantity is not zero
+	if maxSwapQuantity.IsZero() {
+		return 1, nil
+	}
+
+	// if swapping with a derived asset, reduce quantity relative to derived
+	// virtual pool depth. The equation for this as follows
+	dbps := cosmos.ZeroUint()
+	for _, asset := range []common.Asset{sourceAsset, targetAsset} {
+		// get the rune depth of the anchor pool(s)
+		runeDepth, _, _ := mgr.NetworkMgr().CalcAnchor(ctx, mgr, asset)
+		dpool, _ := vm.k.GetPool(ctx, asset) // get the derived asset pool
+		newDbps := common.GetUncappedShare(dpool.BalanceRune, runeDepth, cosmos.NewUint(constants.MaxBasisPts))
+		if dbps.IsZero() || newDbps.LT(dbps) {
+			dbps = newDbps
+		}
+	}
+	if !dbps.IsZero() {
+		// quantity = 1 / (1-dbps)
+		// But since we're dealing in basis points (to avoid float math)
+		// quantity = 10,000 / (10,000 - dbps)
+		maxBasisPoints := cosmos.NewUint(constants.MaxBasisPts)
+		diff := common.SafeSub(maxBasisPoints, dbps)
+		if !diff.IsZero() {
+			newQuantity := maxBasisPoints.Quo(diff)
+			if maxSwapQuantity.GT(newQuantity) {
+				return newQuantity.Uint64(), nil
+			}
+		}
+	}
+
+	return maxSwapQuantity.Uint64(), nil
+}
+
+func (vm *SwapQueueAdvVCUR) AddSwapQueueItem(ctx cosmos.Context, mgr Manager, msg *MsgSwap) error {
+	// If advanced swap queue is in market-only mode, reject limit swaps
+	val := vm.k.GetConfigInt64(ctx, constants.EnableAdvSwapQueue)
+	if types.AdvSwapQueueMode(val) == types.AdvSwapQueueModeMarketOnly && msg.IsLimitSwap() {
+		return fmt.Errorf("limit swaps are not allowed in market-only mode")
+	}
+
+	// Set initial block height when adding the swap
+	if msg.InitialBlockHeight == 0 {
+		msg.InitialBlockHeight = ctx.BlockHeight()
+	}
+
+	// Initialize deposit state if not already set
+	if msg.State.Deposit.IsZero() {
+		msg.State.Deposit = msg.Tx.Coins[0].Amount
+	}
+
+	maxSwapQuantity, err := vm.getMaxSwapQuantity(ctx, mgr, msg.Tx.Coins[0].Asset, msg.TargetAsset, *msg)
+	if err != nil {
+		return err
+	}
+
+	// default interval if zero is set
+	if msg.State.Interval == 0 {
+		msg.State.Interval = 1
+	}
+
+	if msg.State.Quantity == 0 {
+		msg.State.Quantity = maxSwapQuantity
+	}
+
+	if msg.State.Quantity > maxSwapQuantity {
+		msg.State.Quantity = maxSwapQuantity
+	}
+
+	swapHandler := NewSwapHandler(mgr)
+	if err := swapHandler.validate(ctx, *msg); err != nil {
+		ctx.Logger().Error("MsgSwap failed validation", "error", err)
+		return err
+	}
+
+	if err := vm.k.SetAdvSwapQueueItem(ctx, *msg); err != nil {
 		ctx.Logger().Error("fail to add swap item", "error", err)
 		return err
 	}
-	if msg.SwapType == LimitSwap {
-		if err := vm.k.SetAdvSwapQueueIndex(ctx, msg); err != nil {
-			ctx.Logger().Error("fail to add limit swap index", "error", err)
-			return err
-		}
-		vm.limitSwaps = append(vm.limitSwaps, swapItem{
-			msg:   msg,
-			index: 0,
-			fee:   cosmos.ZeroUint(),
-			slip:  cosmos.ZeroUint(),
-		})
-	}
+
 	return nil
 }
 
 // EndBlock trigger the real swap to be processed
 func (vm *SwapQueueAdvVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
-	handler := NewInternalHandler(mgr)
+	swapHandler := NewSwapHandler(mgr)
 
 	minSwapsPerBlock, err := vm.k.GetMimir(ctx, constants.MinSwapsPerBlock.String())
 	if minSwapsPerBlock < 0 || err != nil {
@@ -353,14 +588,6 @@ func (vm *SwapQueueAdvVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 		return err
 	}
 
-	// pull new limit swaps added this block (if not already added)
-	for _, item := range vm.limitSwaps {
-		if !swaps.HasItem(item.msg.Tx.ID) {
-			swaps = append(swaps, item)
-		}
-	}
-	vm.limitSwaps = make(swapItems, 0)
-
 	swaps, err = vm.scoreMsgs(ctx, swaps, synthVirtualDepthMult)
 	if err != nil {
 		ctx.Logger().Error("fail to fetch swap items", "error", err)
@@ -368,102 +595,59 @@ func (vm *SwapQueueAdvVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 	}
 	swaps = swaps.Sort()
 
-	refund := func(msg MsgSwap, err error) {
-		ctx.Logger().Error("fail to execute swap", "msg", msg.Tx.String(), "error", err)
-
-		var refundErr error
-
-		// Get the full ObservedTx from the TxID, for the vault ObservedPubKey to first try to refund from.
-		voter, voterErr := mgr.Keeper().GetObservedTxInVoter(ctx, msg.Tx.ID)
-		if voterErr == nil && !voter.Tx.IsEmpty() {
-			refundErr = refundTx(ctx, ObservedTx{Tx: msg.Tx, ObservedPubKey: voter.Tx.ObservedPubKey}, mgr, CodeSwapFail, err.Error(), "")
-		} else {
-			// If the full ObservedTx could not be retrieved, proceed with just the MsgSwap's Tx (no ObservedPubKey).
-			ctx.Logger().Error("fail to get non-empty observed tx", "error", voterErr)
-			refundErr = refundTx(ctx, ObservedTx{Tx: msg.Tx}, mgr, CodeSwapFail, err.Error(), "")
-		}
-
-		if nil != refundErr {
-			ctx.Logger().Error("fail to refund swap", "error", err)
-		}
-	}
-
 	for i := int64(0); i < vm.getTodoNum(int64(len(swaps)), minSwapsPerBlock, maxSwapsPerBlock); i++ {
 		pick := swaps[i]
-		var msg, affiliateSwap MsgSwap
+		var msg MsgSwap
 		if err := copier.Copy(&msg, &pick.msg); err != nil {
 			ctx.Logger().Error("fail copy msg", "msg", msg.Tx.String(), "error", err)
 			continue
 		}
-		if !msg.AffiliateBasisPoints.IsZero() && msg.AffiliateAddress.IsChain(common.THORChain) {
-			affiliateAmt := common.GetSafeShare(
-				msg.AffiliateBasisPoints,
-				cosmos.NewUint(10000),
-				msg.Tx.Coins[0].Amount,
-			)
-			msg.Tx.Coins[0].Amount = common.SafeSub(msg.Tx.Coins[0].Amount, affiliateAmt)
 
-			affiliateSwap = *NewMsgSwap(
-				msg.Tx,
-				common.RuneAsset(),
-				msg.AffiliateAddress,
-				cosmos.ZeroUint(),
-				common.NoAddress,
-				cosmos.ZeroUint(),
-				"",
-				"", nil,
-				MarketSwap,
-				0, 0, msg.Signer,
-			)
-			if affiliateSwap.Tx.Coins[0].Amount.GTE(affiliateAmt) {
-				affiliateSwap.Tx.Coins[0].Amount = affiliateAmt
-			}
-		}
+		// Preserve original values before modification
+		originalAmount := msg.Tx.Coins[0].Amount
+		originalTradeTarget := msg.TradeTarget
 
-		// make the primary swap
-		_, err := handler(ctx, &msg)
-		if err != nil {
-			switch pick.msg.SwapType {
-			case MarketSwap:
-				refund(pick.msg, err)
-			case LimitSwap:
-				// if swap fails due to not enough outbound amounts, don't
-				// remove the adv swap item and try again later
-				if strings.Contains(err.Error(), "less than price limit") || strings.Contains(err.Error(), "outbound amount does not meet requirements") {
-					continue
-				}
-				refund(pick.msg, err)
-			default:
-				// non-supported adv swap item, refund
-				refund(pick.msg, err)
-			}
+		msg.Tx.Coins[0].Amount, msg.TradeTarget = msg.NextSize()
+
+		// Create a cache context for the swap to ensure state changes are only
+		// committed if the swap succeeds (similar to regular swap queue manager)
+		cacheCtx, commit := ctx.CacheContext()
+
+		// make the primary swap using the cached context
+		var settleMsg string
+		_, emit, handleErr := swapHandler.RunWithEmit(cacheCtx, &msg)
+		if handleErr != nil {
+			// Don't commit - this discards all state changes
+			ctx.Logger().Error("fail to handle completed streaming limit swap", "error", handleErr)
+			msg.State.FailedSwaps = append(msg.State.FailedSwaps, msg.State.Count)
+			msg.State.FailedSwapReasons = append(msg.State.FailedSwapReasons, handleErr.Error())
+			settleMsg = handleErr.Error()
 		} else {
+			// Success - commit the changes
+			commit()
+			settleMsg = "swap has been completed"
+
+			// Update state for successful swap
+			msg.State.In = msg.State.In.Add(msg.Tx.Coins[0].Amount)
+			msg.State.Out = msg.State.Out.Add(emit)
+
 			todo = todo.findMatchingTrades(genTradePair(msg.Tx.Coins[0].Asset, msg.TargetAsset), pairs)
-			if !affiliateSwap.Tx.IsEmpty() {
-				// if asset sent in is native rune, no need
-				if affiliateSwap.Tx.Coins[0].IsRune() {
-					toAddress, err := msg.AffiliateAddress.AccAddress()
-					if err != nil {
-						ctx.Logger().Error("fail to convert address into AccAddress", "msg", msg.AffiliateAddress, "error", err)
-						continue
-					}
-					// since native transaction fee has been charged to inbound from address, thus for affiliated fee , the network doesn't need to charge it again
-					coin := common.NewCoin(common.RuneAsset(), affiliateSwap.Tx.Coins[0].Amount)
-					sdkErr := mgr.Keeper().SendFromModuleToAccount(ctx, AsgardName, toAddress, common.NewCoins(coin))
-					if sdkErr != nil {
-						ctx.Logger().Error("fail to send native asset to affiliate", "msg", msg.AffiliateAddress, "error", err, "asset", coin.Asset)
-					}
-				} else {
-					// make the affiliate fee swap
-					_, err := handler(ctx, &affiliateSwap)
-					if err != nil {
-						ctx.Logger().Error("fail to execute affiliate swap", "msg", affiliateSwap.Tx.String(), "error", err)
-					}
-				}
-			}
 		}
-		if err := vm.k.RemoveAdvSwapQueueItem(ctx, pick.msg.Tx.ID); err != nil {
-			ctx.Logger().Error("fail to remove adv swap item", "msg", pick.msg.Tx.String(), "error", err)
+		msg.State.Count += 1
+		msg.State.LastHeight = ctx.BlockHeight()
+
+		// Restore original values before saving
+		msg.Tx.Coins[0].Amount = originalAmount
+		msg.TradeTarget = originalTradeTarget
+
+		// Save the updated swap state back to the keeper
+		if err := vm.k.SetAdvSwapQueueItem(ctx, msg); err != nil {
+			ctx.Logger().Error("fail to save swap item", "error", err)
+		}
+		if vm.IsDone(ctx, msg) {
+			if err := settleSwap(ctx, mgr, msg, settleMsg); err != nil {
+				ctx.Logger().Error("fail to handle completed streaming limit swap", "error", err)
+			}
 		}
 	}
 

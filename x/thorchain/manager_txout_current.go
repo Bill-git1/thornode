@@ -1057,6 +1057,7 @@ func (tos *TxOutStorageVCUR) nativeTxOut(ctx cosmos.Context, mgr Manager, toi Tx
 
 	// send funds to/from modules
 	var sdkErr error
+
 	switch {
 	case toi.Coin.Asset.IsTradeAsset():
 		// Even if trade accounts are not enabled, outbounds (as for streaming swap refunds) should complete.

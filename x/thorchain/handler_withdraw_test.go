@@ -677,6 +677,9 @@ func (s *HandlerWithdrawSuite) TestFairMergeAddAndWithdrawLiquidityHandlerSavers
 	c.Assert(err, IsNil)
 
 	c.Assert(mgr.SwapQ().EndBlock(ctx, mgr), IsNil)
+	if mgr.Keeper().AdvSwapQueueEnabled(ctx) {
+		c.Assert(mgr.AdvSwapQueueMgr().EndBlock(ctx, mgr), IsNil)
+	}
 
 	pool, err = mgr.Keeper().GetPool(ctx, common.AVAXAsset)
 	c.Assert(err, IsNil)
@@ -696,6 +699,7 @@ func (s *HandlerWithdrawSuite) TestFairMergeAddAndWithdrawLiquidityHandlerSavers
 	// set network fee
 	networkFee := NewNetworkFee(common.AVAXChain, 1, 10)
 	c.Assert(mgr.Keeper().SaveNetworkFee(ctx, common.AVAXChain, networkFee), IsNil)
+	mgr.Keeper().SetMimir(ctx, constants.EnableAdvSwapQueue.String(), 0) // Disable Advanced Swap Queue
 
 	withdrawHandler := NewWithdrawLiquidityHandler(mgr)
 
@@ -703,7 +707,7 @@ func (s *HandlerWithdrawSuite) TestFairMergeAddAndWithdrawLiquidityHandlerSavers
 	_, err = withdrawHandler.Run(ctx, msgWithdraw)
 	c.Assert(err, IsNil)
 
-	c.Assert(mgr.SwapQ().EndBlock(ctx, mgr), IsNil)
+	c.Assert(processSwapQueues(ctx, mgr), IsNil)
 
 	outbound, err = mgr.txOutStore.GetOutboundItems(ctx)
 	c.Assert(err, IsNil)

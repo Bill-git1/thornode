@@ -295,7 +295,14 @@ func (h LoanOpenHandler) openLoan(ctx cosmos.Context, msg MsgLoanOpen) error {
 		// As this is to be a swap from TOR which has been sent to AsgardName, the ToAddress should be AsgardName's address.
 		tx := common.NewTx(txID, common.NoopAddress, common.NoopAddress, common.NewCoins(torCoin), nil, "noop")
 		// we do NOT pass affiliate info here as it was already taken out on the swap of the collateral to derived asset
-		swapMsg := NewMsgSwap(tx, msg.TargetAsset, msg.TargetAddress, msg.MinOut, common.NoAddress, zero, msg.Aggregator, msg.AggregatorTargetAddress, &msg.AggregatorTargetLimit, 0, 0, uint64(ssInterval), msg.Signer)
+
+		// Determine version based on configuration
+		version := types.SwapVersion_v1
+		if h.mgr.Keeper().AdvSwapQueueEnabled(ctx) {
+			version = types.SwapVersion_v2
+		}
+
+		swapMsg := NewMsgSwap(tx, msg.TargetAsset, msg.TargetAddress, msg.MinOut, common.NoAddress, zero, msg.Aggregator, msg.AggregatorTargetAddress, &msg.AggregatorTargetLimit, MarketSwap, 0, uint64(ssInterval), version, msg.Signer)
 		if ssInterval == 0 {
 			handler := NewSwapHandler(h.mgr)
 			if _, err := handler.Run(ctx, swapMsg); err != nil {
@@ -413,7 +420,13 @@ func (h LoanOpenHandler) swap(ctx cosmos.Context, msg MsgLoanOpen) error {
 	memo := fmt.Sprintf("loan+:%s:%s:%d:%s:%d:%s:%s:%d", msg.TargetAsset, msg.TargetAddress, msg.MinOut.Uint64(), msg.AffiliateAddress, msg.AffiliateBasisPoints.Uint64(), msg.Aggregator, msg.AggregatorTargetAddress, msg.AggregatorTargetLimit.Uint64())
 	fakeGas := common.NewCoin(msg.CollateralAsset.GetChain().GetGasAsset(), cosmos.OneUint())
 	tx := common.NewTx(txID, msg.Owner, toAddress, common.NewCoins(collateral), common.Gas{fakeGas}, memo)
-	swapMsg := NewMsgSwap(tx, msg.CollateralAsset.GetDerivedAsset(), common.NoopAddress, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, 0, 0, uint64(ssInterval), msg.Signer)
+	// Determine version based on configuration
+	version := types.SwapVersion_v1
+	if h.mgr.Keeper().AdvSwapQueueEnabled(ctx) {
+		version = types.SwapVersion_v2
+	}
+
+	swapMsg := NewMsgSwap(tx, msg.CollateralAsset.GetDerivedAsset(), common.NoopAddress, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, uint64(ssInterval), version, msg.Signer)
 	if err := h.mgr.Keeper().SetSwapQueueItem(ctx, *swapMsg, 0); err != nil {
 		ctx.Logger().Error("fail to add swap to queue", "error", err)
 		return err
@@ -435,7 +448,13 @@ func (h LoanOpenHandler) handleAffiliateSwap(ctx cosmos.Context, msg MsgLoanOpen
 	affCoin := common.NewCoin(msg.CollateralAsset, affAmt)
 	gasCoin := common.NewCoin(msg.CollateralAsset.GetChain().GetGasAsset(), cosmos.OneUint())
 	fakeTx := common.NewTx(msg.TxID, common.NoopAddress, common.NoopAddress, common.NewCoins(affCoin), common.Gas{gasCoin}, "noop")
-	affiliateSwap := NewMsgSwap(fakeTx, common.RuneAsset(), msg.AffiliateAddress, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, 0, 0, 0, msg.Signer)
+	// Determine version based on configuration
+	version := types.SwapVersion_v1
+	if h.mgr.Keeper().AdvSwapQueueEnabled(ctx) {
+		version = types.SwapVersion_v2
+	}
+
+	affiliateSwap := NewMsgSwap(fakeTx, common.RuneAsset(), msg.AffiliateAddress, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, 0, version, msg.Signer)
 
 	var affThorname *types.THORName
 	voter, err := h.mgr.Keeper().GetObservedTxInVoter(ctx, msg.TxID)

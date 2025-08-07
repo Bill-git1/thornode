@@ -1034,7 +1034,7 @@ paths:
         schema:
           type: string
     get:
-      description: Returns detailed information about a specific swap.
+      description: Returns detailed information about a specific swap including its state.
       operationId: swapDetails
       tags:
         - Swap
@@ -2733,6 +2733,67 @@ components:
           type: integer
           format: int64 # OpenAPI cannot generate a uint64 or int128 field, so using int64 instead.
           description: the interval (in blocks) to execute the streaming swap
+        initial_block_height:
+          type: integer
+          format: int64
+          description: the initial block height when the streaming swap was first queued
+        state:
+          $ref: "#/components/schemas/SwapState"
+        version:
+          type: string
+          description: the version of the swap (v1 or v2)
+        index:
+          type: integer
+          format: int32
+          description: the index of the swap in the batch
+
+    SwapState:
+      type: object
+      description: State tracking for swap execution
+      properties:
+        interval:
+          type: integer
+          format: int64
+          description: the interval for streaming swaps
+        quantity:
+          type: integer
+          format: int64
+          description: the number of swaps to execute
+        ttl:
+          type: integer
+          format: int64
+          description: time to live
+        count:
+          type: integer
+          format: int64
+          description: number of swaps executed
+        last_height:
+          type: integer
+          format: int64
+          description: last height when a swap was executed
+        deposit:
+          type: string
+          description: total deposit amount
+        withdrawn:
+          type: string
+          description: amount withdrawn
+        in:
+          type: string
+          description: total amount swapped in
+        out:
+          type: string
+          description: total amount swapped out
+        failed_swaps:
+          type: array
+          items:
+            type: integer
+            format: int64
+          description: list of failed swap indices
+        failed_swap_reasons:
+          type: array
+          items:
+            type: string
+          description: reasons for failed swaps
 
     TxOutItem:
       type: object

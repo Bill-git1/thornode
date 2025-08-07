@@ -437,7 +437,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "154532",
+          "gas_used": "179622",
           "events": [
             {
               "amount": "2000000rune",
@@ -497,6 +497,13 @@
               "msg_index": "0",
               "sender": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
               "type": "message"
+            },
+            {
+              "msg_index": "0",
+              "source": "15000000000 THOR.RUNE",
+              "target": "0 ETH.USDX-0X9999999999999999999999999999999999999999",
+              "txid": "69A1E2025E1E45D051F31CB5B770F31A169907AD040BFD1C2A2D2F409EFCF11F",
+              "type": "limit_swap"
             }
           ]
         }
@@ -531,8 +538,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "2EBFE61370D2D6322659C259F52ADA81077D4E36190DA2533710E7668EC63B1A",
-      "last_results_hash": "C65758946F04ACCB84A63931029DBBC97594052E74766CF140473480B69B7592",
+      "app_hash": "F81CF01A4724A46DCA916C2948F4AF4880C5D6F914847FB46C03C8881B065A49",
+      "last_results_hash": "8A0340402BD6B1CF005427DDF52F54CE182A987A703842613EA4F2CACF830DB5",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -812,7 +819,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "290696",
+          "gas_used": "290795",
           "events": [
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/0",
@@ -873,8 +880,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "9FBD4DA0024AD9675C9349E904EA955562D4DCA26D2C81F4C2162E11E22C3E48",
-      "last_results_hash": "640ABAB2573CFA5B2A9DA4204F5DBB77ACA27393932C4902895ADA3FA37BEC06",
+      "app_hash": "55458FD97D176BE98DAFB1E0AAD06299171CB6B084AAC6B8F3FE25D9AEBAEB33",
+      "last_results_hash": "A8A26BC7D25C68396ED45B85F935664EBDB0E924AA58491E223BB6E6BEAC23DD",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -1087,7 +1094,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "141198",
+          "gas_used": "166288",
           "events": [
             {
               "amount": "2000000rune",
@@ -1147,6 +1154,13 @@
               "msg_index": "0",
               "sender": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
               "type": "message"
+            },
+            {
+              "msg_index": "0",
+              "source": "15000000000 THOR.RUNE",
+              "target": "0 ETH.USDX-0X9999999999999999999999999999999999999999",
+              "txid": "FC48955BB43A023562DC27A4601DDAD188EFF5A38B400D144FFCAF0996853EF7",
+              "type": "limit_swap"
             }
           ]
         }
@@ -1181,8 +1195,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "565A0042407B6697FB2A5BBDA28A73494A636353D96B8AA559F520AFA50F632D",
-      "last_results_hash": "9B40E47D6420529D0FF1FBA88EAF532238F8A7E66F769E46600FA1B277DE948F",
+      "app_hash": "C0A0C38FF66CD52F811C6948518F0AFC4AC85C1DFAE16DC3AAE62F4C21B9143C",
+      "last_results_hash": "CB5250AF39DC6BBCB9ED480EDE4C1F47D30D806BD6F1C94FC86CE0119065737F",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },

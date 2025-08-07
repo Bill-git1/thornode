@@ -79,8 +79,14 @@ func (s *HandlerLoanSuite) TestLoanValidate(c *C) {
 func (s *HandlerLoanSuite) TestLoanOpenHandleToBTC(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	ctx = ctx.WithBlockHeight(128)
+	mockTxOut := MockTxOutDummy{
+		blockOut: NewTxOut(ctx.BlockHeight()),
+	}
+	mgr.txOutStore = &mockTxOut
 	mgr.Keeper().SetMimir(ctx, "LENDING-THOR-ETH", 1)
 	mgr.Keeper().SetMimir(ctx, "LENDING-THOR-BTC", 1)
+	mgr.Keeper().SetMimir(ctx, "DerivedDepthBasisPts", 10_000)
+	mgr.Keeper().SetMimir(ctx, constants.EnableAdvSwapQueue.String(), 0) // Disable Advanced Swap Queue
 
 	pool := NewPool()
 	pool.Asset = common.BTCAsset
@@ -127,7 +133,7 @@ func (s *HandlerLoanSuite) TestLoanOpenHandleToBTC(c *C) {
 	signer, _ := cosmos.AccAddressFromBech32("tthor1qxcgl07dm3vvewwxag7u0q7nq2uk984v60xpl0")
 	msg := NewMsgLoanOpen(owner, common.BTCAsset, cosmos.NewUint(1e8), receiver, common.BTCAsset, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), signer, txid)
 	c.Assert(handler.handle(ctx.WithValue(constants.CtxLoanTxID, txid), *msg), IsNil)
-	c.Assert(mgr.SwapQ().EndBlock(ctx, mgr), IsNil)
+	c.Assert(processSwapQueues(ctx, mgr), IsNil)
 
 	loan, err := mgr.Keeper().GetLoan(ctx, common.BTCAsset, owner)
 	c.Assert(err, IsNil)
@@ -198,7 +204,7 @@ func (s *HandlerLoanSuite) TestLoanOpenHandleToTOR(c *C) {
 	signer, _ := cosmos.AccAddressFromBech32("tthor1qxcgl07dm3vvewwxag7u0q7nq2uk984v60xpl0")
 	msg := NewMsgLoanOpen(owner, common.BTCAsset, cosmos.NewUint(1e8), receiver, common.TOR, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), signer, txid)
 	c.Assert(handler.handle(ctx.WithValue(constants.CtxLoanTxID, txid), *msg), IsNil)
-	c.Assert(mgr.SwapQ().EndBlock(ctx, mgr), IsNil)
+	c.Assert(processSwapQueues(ctx, mgr), IsNil)
 
 	loan, err := mgr.Keeper().GetLoan(ctx, common.BTCAsset, owner)
 	c.Assert(err, IsNil)
@@ -262,7 +268,7 @@ func (s *HandlerLoanSuite) TestLoanSwapFails(c *C) {
 	signer, _ := cosmos.AccAddressFromBech32("tthor1qxcgl07dm3vvewwxag7u0q7nq2uk984v60xpl0")
 	msg := NewMsgLoanOpen(owner, common.BTCAsset, cosmos.NewUint(1e8), receiver, common.BTCAsset, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", cosmos.ZeroUint(), signer, txid)
 	c.Assert(handler.handle(ctx.WithValue(constants.CtxLoanTxID, txid), *msg), IsNil)
-	c.Assert(mgr.SwapQ().EndBlock(ctx, mgr), IsNil)
+	c.Assert(processSwapQueues(ctx, mgr), IsNil)
 
 	loan, err := mgr.Keeper().GetLoan(ctx, common.BTCAsset, owner)
 	c.Assert(err, IsNil)

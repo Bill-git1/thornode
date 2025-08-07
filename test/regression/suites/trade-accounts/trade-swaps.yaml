@@ -295,7 +295,7 @@ endpoint: http://localhost:1317/thorchain/trade/account/{{ addr_thor_fox }}
 asserts:
   - .|length == 1
   - .[0].asset == "BTC~BTC"
-  - .[0].units == "9438772"
+  - .[0].units == "9438771"
   - .[0].owner == "{{ addr_thor_fox }}"
 ---
 ########################################################################################
@@ -473,7 +473,7 @@ endpoint: http://localhost:1317/thorchain/trade/account/{{ addr_thor_fox }}
 asserts:
   - .|length == 1
   - .[0].asset == "BTC~BTC"
-  - .[0].units == "${INITIAL_UNITS=9438772}"
+  - .[0].units == "${INITIAL_UNITS=9438771}"
   - .[0].owner == "{{ addr_thor_fox }}"
 ---
 type: check
@@ -516,7 +516,7 @@ endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
 asserts:
   - .result | length == 1
   - .result[0].denom == "rune"
-  - .result[0].amount == "${INITIAL_RUNE=2500871890295}"
+  - .result[0].amount == "${INITIAL_RUNE=2500871890287}"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/network
@@ -528,7 +528,7 @@ endpoint: http://localhost:1317/thorchain/trade/account/{{ addr_thor_fox }}
 asserts:
   - .|length == 1
   - .[0].asset == "BTC~BTC"
-  - .[0].units == "${INITIAL_UNITS=8438772}"
+  - .[0].units == "${INITIAL_UNITS=8438771}"
   - .[0].owner == "{{ addr_thor_fox }}"
 ---
 type: tx-deposit

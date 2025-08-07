@@ -318,6 +318,7 @@
           "actions": [
             {
               "chain": "ETH",
+              "clout_spent": "0",
               "coin": {
                 "amount": "8992828100",
                 "asset": "ETH.USDX-0X9999999999999999999999999999999999999999"

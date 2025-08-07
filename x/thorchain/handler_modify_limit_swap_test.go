@@ -17,7 +17,7 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapHandler(c *C) {
 
 	handler := NewModifyLimitSwapHandler(mgr)
 
-	// Create a valid MsgModifyLimitSwap
+	// Create a valid MsgModifytypes.SwapType_limit
 	fromAddr := GetRandomBTCAddress()
 	sourceAsset := common.BTCAsset
 	targetAsset := common.RuneAsset()
@@ -26,7 +26,7 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapHandler(c *C) {
 	modifiedTargetAmount := cosmos.NewUint(600 * common.One)
 	signer := GetRandomBech32Addr()
 
-	msg := types.NewMsgModifyLimitSwap(fromAddr, sourceCoin, targetCoin, modifiedTargetAmount, signer)
+	msg := types.NewMsgModifyLimitSwap(fromAddr, sourceCoin, targetCoin, modifiedTargetAmount, signer, common.EmptyAsset, cosmos.ZeroUint())
 
 	// Test when no matching limit swap exists
 	result, err := handler.Run(ctx, msg)
@@ -44,7 +44,7 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapHandler(c *C) {
 		common.Gas{},
 		"",
 	)
-	limitSwap := NewMsgSwap(tx, targetAsset, fromAddr, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, LimitSwap, 0, 0, signer)
+	limitSwap := NewMsgSwap(tx, targetAsset, fromAddr, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_limit, 0, 0, types.SwapVersion_v2, signer)
 
 	// Set up the swap book item and index
 	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *limitSwap), IsNil)
@@ -56,32 +56,32 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapHandler(c *C) {
 	c.Assert(result, NotNil)
 
 	// Verify the limit swap was modified
-	modifiedSwap, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txID)
+	modifiedSwap, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txID, 0)
 	c.Assert(err, IsNil)
 	c.Assert(modifiedSwap.TradeTarget.Equal(modifiedTargetAmount), Equals, true)
 
 	// verify original index is no longer there
-	hashes, err := mgr.Keeper().GetAdvSwapQueueIndex(ctx, *limitSwap)
+	items, err := mgr.Keeper().GetAdvSwapQueueIndex(ctx, *limitSwap)
 	c.Assert(err, IsNil)
-	c.Check(hashes, HasLen, 0)
+	c.Check(items, HasLen, 0)
 
 	// verify new index IS there
-	hashes, err = mgr.Keeper().GetAdvSwapQueueIndex(ctx, modifiedSwap)
+	items, err = mgr.Keeper().GetAdvSwapQueueIndex(ctx, modifiedSwap)
 	c.Assert(err, IsNil)
-	c.Check(hashes, HasLen, 1)
+	c.Check(items, HasLen, 1)
 
 	// Test cancellation (setting modified amount to zero)
-	cancelMsg := types.NewMsgModifyLimitSwap(fromAddr, sourceCoin, common.NewCoin(targetAsset, modifiedTargetAmount), cosmos.ZeroUint(), signer)
+	cancelMsg := types.NewMsgModifyLimitSwap(fromAddr, sourceCoin, common.NewCoin(targetAsset, modifiedTargetAmount), cosmos.ZeroUint(), signer, common.EmptyAsset, cosmos.ZeroUint())
 	result, err = handler.Run(ctx, cancelMsg)
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
 
 	// Verify the limit swap was removed from the swap book
-	hashes, err = mgr.Keeper().GetAdvSwapQueueIndex(ctx, modifiedSwap)
+	items, err = mgr.Keeper().GetAdvSwapQueueIndex(ctx, modifiedSwap)
 	c.Assert(err, IsNil)
-	c.Check(hashes, HasLen, 0)
+	c.Check(items, HasLen, 0)
 
-	_, err = mgr.Keeper().GetAdvSwapQueueItem(ctx, txID)
+	_, err = mgr.Keeper().GetAdvSwapQueueItem(ctx, txID, 0)
 	c.Assert(err, NotNil) // Should be removed
 }
 
@@ -102,7 +102,7 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapValidation(c *C) {
 	targetCoin := common.NewCoin(targetAsset, cosmos.NewUint(500*common.One))
 	modifiedTargetAmount := cosmos.NewUint(600 * common.One)
 
-	invalidMsg := types.NewMsgModifyLimitSwap(fromAddr, sourceCoin, targetCoin, modifiedTargetAmount, cosmos.AccAddress{})
+	invalidMsg := types.NewMsgModifyLimitSwap(fromAddr, sourceCoin, targetCoin, modifiedTargetAmount, cosmos.AccAddress{}, common.EmptyAsset, cosmos.ZeroUint())
 	result, err := handler.Run(ctx, invalidMsg)
 	c.Assert(err, NotNil)
 	c.Assert(result, IsNil)
@@ -135,7 +135,7 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapAddressCheck(c *C) {
 		common.Gas{},
 		"",
 	)
-	limitSwap := NewMsgSwap(tx, targetAsset, fromAddr, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, LimitSwap, 0, 0, signer)
+	limitSwap := NewMsgSwap(tx, targetAsset, fromAddr, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_limit, 0, 0, types.SwapVersion_v2, signer)
 
 	// Set up the swap book item and index
 	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *limitSwap), IsNil)
@@ -145,14 +145,14 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapAddressCheck(c *C) {
 	// When source asset is RUNE, signer must match the From address
 	differentSigner, err := differentAddr.AccAddress()
 	c.Assert(err, IsNil)
-	msg := types.NewMsgModifyLimitSwap(differentAddr, sourceCoin, targetCoin, modifiedTargetAmount, differentSigner)
+	msg := types.NewMsgModifyLimitSwap(differentAddr, sourceCoin, targetCoin, modifiedTargetAmount, differentSigner, common.EmptyAsset, cosmos.ZeroUint())
 	result, err := handler.Run(ctx, msg)
 	c.Assert(err, NotNil)
 	c.Assert(result, IsNil)
 	c.Assert(err.Error(), Equals, "could not find matching limit swap")
 
 	// Verify the original limit swap is unchanged
-	originalSwap, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txID)
+	originalSwap, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txID, 0)
 	c.Assert(err, IsNil)
 	c.Assert(originalSwap.TradeTarget.Equal(targetCoin.Amount), Equals, true)
 }
@@ -181,7 +181,7 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyMultipleLimitSwaps(c *C) {
 		common.Gas{},
 		"",
 	)
-	limitSwap1 := NewMsgSwap(tx1, targetAsset, fromAddr, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, LimitSwap, 0, 0, signer)
+	limitSwap1 := NewMsgSwap(tx1, targetAsset, fromAddr, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_limit, 0, 0, types.SwapVersion_v2, signer)
 	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *limitSwap1), IsNil)
 	c.Assert(mgr.Keeper().SetAdvSwapQueueIndex(ctx, *limitSwap1), IsNil)
 
@@ -194,23 +194,23 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyMultipleLimitSwaps(c *C) {
 		common.Gas{},
 		"",
 	)
-	limitSwap2 := NewMsgSwap(tx2, targetAsset, fromAddr, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, LimitSwap, 0, 0, signer)
+	limitSwap2 := NewMsgSwap(tx2, targetAsset, fromAddr, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_limit, 0, 0, types.SwapVersion_v2, signer)
 	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *limitSwap2), IsNil)
 	c.Assert(mgr.Keeper().SetAdvSwapQueueIndex(ctx, *limitSwap2), IsNil)
 
 	// Modify both limit swaps
-	msg := types.NewMsgModifyLimitSwap(fromAddr, sourceCoin, targetCoin, modifiedTargetAmount, signer)
+	msg := types.NewMsgModifyLimitSwap(fromAddr, sourceCoin, targetCoin, modifiedTargetAmount, signer, common.EmptyAsset, cosmos.ZeroUint())
 	result, err := handler.Run(ctx, msg)
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
 
 	// Verify only the first limit swap was modified (only one swap should be modified)
-	modifiedSwap1, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txID1)
+	modifiedSwap1, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txID1, 0)
 	c.Assert(err, IsNil)
 	c.Assert(modifiedSwap1.TradeTarget.Equal(modifiedTargetAmount), Equals, true)
 
 	// The second swap should remain unchanged
-	modifiedSwap2, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txID2)
+	modifiedSwap2, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txID2, 0)
 	c.Assert(err, IsNil)
 	c.Assert(modifiedSwap2.TradeTarget.Equal(targetCoin.Amount), Equals, true) // Should still be original amount
 }
@@ -241,7 +241,7 @@ func (s *HandlerModifyLimitSwapSuite) TestCancelMultipleLimitSwaps(c *C) {
 		common.Gas{},
 		"",
 	)
-	limitSwap1 := NewMsgSwap(tx1, targetAsset, fromAddr, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, LimitSwap, 0, 0, signer)
+	limitSwap1 := NewMsgSwap(tx1, targetAsset, fromAddr, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_limit, 0, 0, types.SwapVersion_v2, signer)
 	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *limitSwap1), IsNil)
 	c.Assert(mgr.Keeper().SetAdvSwapQueueIndex(ctx, *limitSwap1), IsNil)
 
@@ -254,24 +254,24 @@ func (s *HandlerModifyLimitSwapSuite) TestCancelMultipleLimitSwaps(c *C) {
 		common.Gas{},
 		"",
 	)
-	limitSwap2 := NewMsgSwap(tx2, targetAsset, fromAddr, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, LimitSwap, 0, 0, signer)
+	limitSwap2 := NewMsgSwap(tx2, targetAsset, fromAddr, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_limit, 0, 0, types.SwapVersion_v2, signer)
 	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *limitSwap2), IsNil)
 	c.Assert(mgr.Keeper().SetAdvSwapQueueIndex(ctx, *limitSwap2), IsNil)
 
 	// Cancel both limit swaps by setting modified amount to zero
-	cancelMsg := types.NewMsgModifyLimitSwap(fromAddr, sourceCoin, targetCoin, cosmos.ZeroUint(), signer)
+	cancelMsg := types.NewMsgModifyLimitSwap(fromAddr, sourceCoin, targetCoin, cosmos.ZeroUint(), signer, common.EmptyAsset, cosmos.ZeroUint())
 	result, err := handler.Run(ctx, cancelMsg)
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
 
 	// Verify only the first limit swap was cancelled (removed)
-	_, err = mgr.Keeper().GetAdvSwapQueueItem(ctx, txID1)
+	_, err = mgr.Keeper().GetAdvSwapQueueItem(ctx, txID1, 0)
 	c.Assert(err, NotNil) // Should be removed
 
 	// The second swap should remain unchanged as a limit swap
-	mSwap2, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txID2)
+	mSwap2, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txID2, 0)
 	c.Assert(err, IsNil)
-	c.Check(mSwap2.SwapType, Equals, LimitSwap) // Should still be a limit swap
+	c.Check(mSwap2.SwapType, Equals, types.SwapType_limit) // Should still be a limit swap
 }
 
 func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapErrorHandling(c *C) {
@@ -284,7 +284,7 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapErrorHandling(c *C) {
 	invalidCoin := common.NewCoin(sourceAsset, cosmos.NewUint(100*common.One))
 	signer := GetRandomBech32Addr()
 
-	invalidMsg := types.NewMsgModifyLimitSwap(fromAddr, invalidCoin, invalidCoin, cosmos.NewUint(200*common.One), signer)
+	invalidMsg := types.NewMsgModifyLimitSwap(fromAddr, invalidCoin, invalidCoin, cosmos.NewUint(200*common.One), signer, common.EmptyAsset, cosmos.ZeroUint())
 	result, err := handler.Run(ctx, invalidMsg)
 	c.Assert(err, NotNil)
 	c.Assert(result, IsNil)
@@ -295,7 +295,7 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapErrorHandling(c *C) {
 	btcCoin := common.NewCoin(common.BTCAsset, cosmos.NewUint(100*common.One))
 	runeCoin := common.NewCoin(common.RuneAsset(), cosmos.NewUint(500*common.One))
 
-	invalidChainMsg := types.NewMsgModifyLimitSwap(thorAddr, btcCoin, runeCoin, cosmos.NewUint(600*common.One), signer)
+	invalidChainMsg := types.NewMsgModifyLimitSwap(thorAddr, btcCoin, runeCoin, cosmos.NewUint(600*common.One), signer, common.EmptyAsset, cosmos.ZeroUint())
 	result, err = handler.Run(ctx, invalidChainMsg)
 	c.Assert(err, NotNil)
 	c.Assert(result, IsNil)
@@ -324,20 +324,20 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapCancellationLogic(c *C)
 		common.Gas{},
 		"",
 	)
-	limitSwap := NewMsgSwap(tx, targetAsset, fromAddr, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, LimitSwap, 0, 0, signer)
+	limitSwap := NewMsgSwap(tx, targetAsset, fromAddr, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_limit, 0, 0, types.SwapVersion_v2, signer)
 
 	// Set up the swap book item and index
 	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *limitSwap), IsNil)
 	c.Assert(mgr.Keeper().SetAdvSwapQueueIndex(ctx, *limitSwap), IsNil)
 
 	// Test cancellation with zero amount
-	cancelMsg := types.NewMsgModifyLimitSwap(fromAddr, sourceCoin, targetCoin, cosmos.ZeroUint(), signer)
+	cancelMsg := types.NewMsgModifyLimitSwap(fromAddr, sourceCoin, targetCoin, cosmos.ZeroUint(), signer, common.EmptyAsset, cosmos.ZeroUint())
 	result, err := handler.Run(ctx, cancelMsg)
 	c.Assert(err, IsNil)
 	c.Assert(result, NotNil)
 
 	// Verify the swap was removed
-	_, err = mgr.Keeper().GetAdvSwapQueueItem(ctx, txID)
+	_, err = mgr.Keeper().GetAdvSwapQueueItem(ctx, txID, 0)
 	c.Assert(err, NotNil) // Should be removed
 }
 
@@ -368,7 +368,7 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapSecurityFromFieldSpoofi
 			common.Gas{},
 			"",
 		)
-		limitSwap := NewMsgSwap(tx, targetAsset, legitimateUser, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, LimitSwap, 0, 0, signer)
+		limitSwap := NewMsgSwap(tx, targetAsset, legitimateUser, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_limit, 0, 0, types.SwapVersion_v2, signer)
 
 		// Set up the swap in the keeper
 		c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *limitSwap), IsNil)
@@ -383,6 +383,8 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapSecurityFromFieldSpoofi
 			targetCoin,
 			cosmos.NewUint(100*common.One), // Trying to reduce the target amount
 			maliciousActor,
+			common.EmptyAsset,
+			cosmos.ZeroUint(),
 		)
 
 		// The handler should reject this because the From address doesn't match
@@ -392,7 +394,7 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapSecurityFromFieldSpoofi
 		c.Assert(err.Error(), Equals, "could not find matching limit swap")
 
 		// Verify the original limit swap is unchanged
-		originalSwap, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txID)
+		originalSwap, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txID, 0)
 		c.Assert(err, IsNil)
 		c.Assert(originalSwap.TradeTarget.Equal(targetCoin.Amount), Equals, true)
 	}
@@ -416,7 +418,7 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapSecurityFromFieldSpoofi
 			common.Gas{},
 			"",
 		)
-		limitSwap2 := NewMsgSwap(tx2, targetAsset, legitimateUser2, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, LimitSwap, 0, 0, signer2)
+		limitSwap2 := NewMsgSwap(tx2, targetAsset, legitimateUser2, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_limit, 0, 0, types.SwapVersion_v2, signer2)
 
 		// Set up the swap in the keeper
 		c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *limitSwap2), IsNil)
@@ -431,6 +433,8 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapSecurityFromFieldSpoofi
 			targetCoin,
 			cosmos.ZeroUint(), // Trying to cancel
 			maliciousActor,
+			common.EmptyAsset,
+			cosmos.ZeroUint(),
 		)
 
 		// The handler should reject this because From doesn't match
@@ -440,7 +444,7 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapSecurityFromFieldSpoofi
 		c.Assert(err.Error(), Equals, "could not find matching limit swap")
 
 		// Verify the limit swap still exists
-		stillExists, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txID2)
+		stillExists, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txID2, 0)
 		c.Assert(err, IsNil)
 		c.Assert(stillExists.TradeTarget.Equal(targetCoin.Amount), Equals, true)
 	}
@@ -467,6 +471,8 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapSecurityFromFieldSpoofi
 			targetCoin,
 			cosmos.NewUint(0.05*common.One),
 			maliciousSigner, // Signer: malicious user
+			common.EmptyAsset,
+			cosmos.ZeroUint(),
 		)
 
 		// This should fail validation
@@ -493,14 +499,14 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapSecurityFromFieldSpoofi
 		// Create User A's swap
 		txIDA := GetRandomTxHash()
 		txA := common.NewTx(txIDA, userAAddr, userAAddr, common.Coins{sourceCoin}, common.Gas{}, "")
-		limitSwapA := NewMsgSwap(txA, targetAsset, userAAddr, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, LimitSwap, 0, 0, signerA)
+		limitSwapA := NewMsgSwap(txA, targetAsset, userAAddr, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_limit, 0, 0, types.SwapVersion_v2, signerA)
 		c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *limitSwapA), IsNil)
 		c.Assert(mgr.Keeper().SetAdvSwapQueueIndex(ctx, *limitSwapA), IsNil)
 
 		// Create User B's swap
 		txIDB := GetRandomTxHash()
 		txB := common.NewTx(txIDB, userBAddr, userBAddr, common.Coins{sourceCoin}, common.Gas{}, "")
-		limitSwapB := NewMsgSwap(txB, targetAsset, userBAddr, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, LimitSwap, 0, 0, signerB)
+		limitSwapB := NewMsgSwap(txB, targetAsset, userBAddr, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_limit, 0, 0, types.SwapVersion_v2, signerB)
 		c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *limitSwapB), IsNil)
 		c.Assert(mgr.Keeper().SetAdvSwapQueueIndex(ctx, *limitSwapB), IsNil)
 
@@ -512,6 +518,8 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapSecurityFromFieldSpoofi
 			targetCoin,
 			cosmos.NewUint(100*common.One),
 			signerB, // But signing with User B's key
+			common.EmptyAsset,
+			cosmos.ZeroUint(),
 		)
 
 		// This currently succeeds - which is a security issue
@@ -520,12 +528,12 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapSecurityFromFieldSpoofi
 		c.Assert(result, NotNil)
 
 		// The swap was modified by User B - this shouldn't be allowed!
-		modifiedSwapA, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txIDA)
+		modifiedSwapA, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txIDA, 0)
 		c.Assert(err, IsNil)
 		c.Assert(modifiedSwapA.TradeTarget.Equal(cosmos.NewUint(100*common.One)), Equals, true)
 
 		// User B's swap remains unchanged
-		swapB, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txIDB)
+		swapB, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txIDB, 0)
 		c.Assert(err, IsNil)
 		c.Assert(swapB.TradeTarget.Equal(targetCoin.Amount), Equals, true)
 
@@ -536,19 +544,463 @@ func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwapSecurityFromFieldSpoofi
 			common.NewCoin(targetAsset, cosmos.NewUint(100*common.One)), // Current target
 			cosmos.NewUint(600*common.One),
 			signerA,
+			common.EmptyAsset,
+			cosmos.ZeroUint(),
 		)
 		result, err = handler.Run(ctx, validMsg)
 		c.Assert(err, IsNil)
 		c.Assert(result, NotNil)
 
 		// Verify User A's swap was modified to 600
-		finalSwapA, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txIDA)
+		finalSwapA, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txIDA, 0)
 		c.Assert(err, IsNil)
 		c.Assert(finalSwapA.TradeTarget.Equal(cosmos.NewUint(600*common.One)), Equals, true)
 
 		// User B's swap should remain unchanged
-		unchangedSwapB, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txIDB)
+		unchangedSwapB, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txIDB, 0)
 		c.Assert(err, IsNil)
 		c.Assert(unchangedSwapB.TradeTarget.Equal(targetCoin.Amount), Equals, true)
+	}
+}
+
+// TestCancelLimitSwap tests the canceltypes.SwapType_limit method directly
+func (s *HandlerModifyLimitSwapSuite) TestCancelLimitSwap(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	handler := NewModifyLimitSwapHandler(mgr)
+
+	// Test Case 1: Cancel a limit swap with no partial execution
+	{
+		fromAddr := GetRandomBTCAddress()
+		sourceAsset := common.BTCAsset
+		targetAsset := common.RuneAsset()
+		sourceCoin := common.NewCoin(sourceAsset, cosmos.NewUint(100*common.One))
+		targetCoin := common.NewCoin(targetAsset, cosmos.NewUint(500*common.One))
+		signer := GetRandomBech32Addr()
+
+		txID := GetRandomTxHash()
+		tx := common.NewTx(
+			txID,
+			fromAddr,
+			fromAddr,
+			common.Coins{sourceCoin},
+			common.Gas{},
+			"",
+		)
+		limitSwap := NewMsgSwap(tx, targetAsset, fromAddr, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_limit, 0, 0, types.SwapVersion_v2, signer)
+
+		// Set up the swap in the keeper
+		c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *limitSwap), IsNil)
+		c.Assert(mgr.Keeper().SetAdvSwapQueueIndex(ctx, *limitSwap), IsNil)
+
+		// Cancel the limit swap
+		err := handler.cancelLimitSwap(ctx, *limitSwap)
+		c.Assert(err, IsNil)
+
+		// Verify the swap was removed from the queue
+		_, err = mgr.Keeper().GetAdvSwapQueueItem(ctx, txID, 0)
+		c.Assert(err, NotNil) // Should be removed
+
+		// Verify index was removed
+		items, err := mgr.Keeper().GetAdvSwapQueueIndex(ctx, *limitSwap)
+		c.Assert(err, IsNil)
+		c.Assert(items, HasLen, 0)
+	}
+
+	// Test Case 2: Cancel a streaming limit swap with partial execution
+	{
+		fromAddr := GetRandomBTCAddress()
+		sourceAsset := common.BTCAsset
+		targetAsset := common.RuneAsset()
+		sourceCoin := common.NewCoin(sourceAsset, cosmos.NewUint(100*common.One))
+		targetCoin := common.NewCoin(targetAsset, cosmos.NewUint(500*common.One))
+		signer := GetRandomBech32Addr()
+
+		txID := GetRandomTxHash()
+		tx := common.NewTx(
+			txID,
+			fromAddr,
+			fromAddr,
+			common.Coins{sourceCoin},
+			common.Gas{},
+			"",
+		)
+		// Create a streaming limit swap with 10 sub-swaps
+		streamingSwap := NewMsgSwap(tx, targetAsset, fromAddr, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_limit, 10, 1, types.SwapVersion_v2, signer)
+
+		// Simulate partial execution - 3 successful swaps
+		streamingSwap.State.Count = 3
+		streamingSwap.State.In = cosmos.NewUint(30 * common.One)   // 30% executed
+		streamingSwap.State.Out = cosmos.NewUint(150 * common.One) // Got 150 RUNE
+
+		// Set up the swap in the keeper
+		c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *streamingSwap), IsNil)
+		c.Assert(mgr.Keeper().SetAdvSwapQueueIndex(ctx, *streamingSwap), IsNil)
+
+		// Cancel the streaming swap
+		err := handler.cancelLimitSwap(ctx, *streamingSwap)
+		c.Assert(err, IsNil)
+
+		// Verify the swap was removed
+		_, err = mgr.Keeper().GetAdvSwapQueueItem(ctx, txID, 0)
+		c.Assert(err, NotNil) // Should be removed
+	}
+
+	// Test Case 3: Cancel limit swap with failed sub-swaps
+	{
+		fromAddr := GetRandomBTCAddress()
+		sourceAsset := common.BTCAsset
+		targetAsset := common.RuneAsset()
+		sourceCoin := common.NewCoin(sourceAsset, cosmos.NewUint(100*common.One))
+		targetCoin := common.NewCoin(targetAsset, cosmos.NewUint(500*common.One))
+		signer := GetRandomBech32Addr()
+
+		txID := GetRandomTxHash()
+		tx := common.NewTx(
+			txID,
+			fromAddr,
+			fromAddr,
+			common.Coins{sourceCoin},
+			common.Gas{},
+			"",
+		)
+		// Create a streaming limit swap with some failed swaps
+		failedSwap := NewMsgSwap(tx, targetAsset, fromAddr, targetCoin.Amount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_limit, 5, 1, types.SwapVersion_v2, signer)
+
+		// Simulate 2 failed swaps out of 3 attempts
+		failedSwap.State.Count = 3
+		failedSwap.State.FailedSwaps = []uint64{0, 2}
+		failedSwap.State.In = cosmos.NewUint(20 * common.One) // Only 1 successful swap
+		failedSwap.State.Out = cosmos.NewUint(100 * common.One)
+
+		// Set up the swap in the keeper
+		c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *failedSwap), IsNil)
+		c.Assert(mgr.Keeper().SetAdvSwapQueueIndex(ctx, *failedSwap), IsNil)
+
+		// Cancel the swap
+		err := handler.cancelLimitSwap(ctx, *failedSwap)
+		c.Assert(err, IsNil)
+
+		// Verify removal
+		_, err = mgr.Keeper().GetAdvSwapQueueItem(ctx, txID, 0)
+		c.Assert(err, NotNil)
+	}
+}
+
+// TestModifyLimitSwap tests the modifytypes.SwapType_limit method directly
+func (s *HandlerModifyLimitSwapSuite) TestModifyLimitSwap(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	handler := NewModifyLimitSwapHandler(mgr)
+
+	// Test Case 1: Successfully modify trade target amount
+	{
+		fromAddr := GetRandomBTCAddress()
+		sourceAsset := common.BTCAsset
+		targetAsset := common.RuneAsset()
+		sourceCoin := common.NewCoin(sourceAsset, cosmos.NewUint(100*common.One))
+		originalTarget := cosmos.NewUint(500 * common.One)
+		newTarget := cosmos.NewUint(600 * common.One)
+		signer := GetRandomBech32Addr()
+
+		txID := GetRandomTxHash()
+		tx := common.NewTx(
+			txID,
+			fromAddr,
+			fromAddr,
+			common.Coins{sourceCoin},
+			common.Gas{},
+			"",
+		)
+		limitSwap := NewMsgSwap(tx, targetAsset, fromAddr, originalTarget, common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_limit, 0, 0, types.SwapVersion_v2, signer)
+
+		// Set up the swap in the keeper
+		c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *limitSwap), IsNil)
+		c.Assert(mgr.Keeper().SetAdvSwapQueueIndex(ctx, *limitSwap), IsNil)
+
+		// Verify original index exists
+		originalHashes, err := mgr.Keeper().GetAdvSwapQueueIndex(ctx, *limitSwap)
+		c.Assert(err, IsNil)
+		c.Assert(originalHashes, HasLen, 1)
+
+		// Modify the swap
+		err = handler.modifyLimitSwap(ctx, *limitSwap, newTarget)
+		c.Assert(err, IsNil)
+
+		// Verify the trade target was updated
+		modifiedSwap, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txID, 0)
+		c.Assert(err, IsNil)
+		c.Assert(modifiedSwap.TradeTarget.Equal(newTarget), Equals, true)
+
+		// Verify old index was removed
+		oldItems, err := mgr.Keeper().GetAdvSwapQueueIndex(ctx, *limitSwap)
+		c.Assert(err, IsNil)
+		c.Assert(oldItems, HasLen, 0)
+
+		// Verify new index was created
+		newItems, err := mgr.Keeper().GetAdvSwapQueueIndex(ctx, modifiedSwap)
+		c.Assert(err, IsNil)
+		c.Assert(newItems, HasLen, 1)
+		c.Assert(newItems[0].TxID.Equals(txID), Equals, true)
+	}
+
+	// Test Case 2: Modify to same amount (edge case)
+	{
+		fromAddr := GetRandomBTCAddress()
+		sourceAsset := common.BTCAsset
+		targetAsset := common.RuneAsset()
+		sourceCoin := common.NewCoin(sourceAsset, cosmos.NewUint(50*common.One))
+		targetAmount := cosmos.NewUint(250 * common.One)
+		signer := GetRandomBech32Addr()
+
+		txID := GetRandomTxHash()
+		tx := common.NewTx(
+			txID,
+			fromAddr,
+			fromAddr,
+			common.Coins{sourceCoin},
+			common.Gas{},
+			"",
+		)
+		limitSwap := NewMsgSwap(tx, targetAsset, fromAddr, targetAmount, common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_limit, 0, 0, types.SwapVersion_v2, signer)
+
+		// Set up the swap
+		c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *limitSwap), IsNil)
+		c.Assert(mgr.Keeper().SetAdvSwapQueueIndex(ctx, *limitSwap), IsNil)
+
+		// Modify to same amount
+		err := handler.modifyLimitSwap(ctx, *limitSwap, targetAmount)
+		c.Assert(err, IsNil)
+
+		// Verify nothing broke
+		sameSwap, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txID, 0)
+		c.Assert(err, IsNil)
+		c.Assert(sameSwap.TradeTarget.Equal(targetAmount), Equals, true)
+	}
+
+	// Test Case 3: Modify with very large amount
+	{
+		fromAddr := GetRandomBTCAddress()
+		sourceAsset := common.BTCAsset
+		targetAsset := common.RuneAsset()
+		sourceCoin := common.NewCoin(sourceAsset, cosmos.NewUint(1000*common.One))
+		originalTarget := cosmos.NewUint(5000 * common.One)
+		largeTarget := cosmos.NewUint(1 << 62) // Very large amount
+		signer := GetRandomBech32Addr()
+
+		txID := GetRandomTxHash()
+		tx := common.NewTx(
+			txID,
+			fromAddr,
+			fromAddr,
+			common.Coins{sourceCoin},
+			common.Gas{},
+			"",
+		)
+		limitSwap := NewMsgSwap(tx, targetAsset, fromAddr, originalTarget, common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_limit, 0, 0, types.SwapVersion_v2, signer)
+
+		// Set up the swap
+		c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *limitSwap), IsNil)
+		c.Assert(mgr.Keeper().SetAdvSwapQueueIndex(ctx, *limitSwap), IsNil)
+
+		// Modify to very large amount
+		err := handler.modifyLimitSwap(ctx, *limitSwap, largeTarget)
+		c.Assert(err, IsNil)
+
+		// Verify the large amount was set correctly
+		largeSwap, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txID, 0)
+		c.Assert(err, IsNil)
+		c.Assert(largeSwap.TradeTarget.Equal(largeTarget), Equals, true)
+	}
+
+	// Test Case 4: Modify streaming limit swap mid-execution
+	{
+		fromAddr := GetRandomBTCAddress()
+		sourceAsset := common.BTCAsset
+		targetAsset := common.RuneAsset()
+		sourceCoin := common.NewCoin(sourceAsset, cosmos.NewUint(100*common.One))
+		originalTarget := cosmos.NewUint(500 * common.One)
+		newTarget := cosmos.NewUint(800 * common.One)
+		signer := GetRandomBech32Addr()
+
+		txID := GetRandomTxHash()
+		tx := common.NewTx(
+			txID,
+			fromAddr,
+			fromAddr,
+			common.Coins{sourceCoin},
+			common.Gas{},
+			"",
+		)
+		// Create streaming swap with partial execution
+		streamingSwap := NewMsgSwap(tx, targetAsset, fromAddr, originalTarget, common.NoAddress, cosmos.ZeroUint(), "", "", nil, types.SwapType_limit, 10, 1, types.SwapVersion_v2, signer)
+		streamingSwap.State.Count = 3
+		streamingSwap.State.In = cosmos.NewUint(30 * common.One)
+		streamingSwap.State.Out = cosmos.NewUint(150 * common.One)
+
+		// Set up the swap
+		c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *streamingSwap), IsNil)
+		c.Assert(mgr.Keeper().SetAdvSwapQueueIndex(ctx, *streamingSwap), IsNil)
+
+		// Modify mid-execution
+		err := handler.modifyLimitSwap(ctx, *streamingSwap, newTarget)
+		c.Assert(err, IsNil)
+
+		// Verify modification
+		modifiedStreaming, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, txID, 0)
+		c.Assert(err, IsNil)
+		c.Assert(modifiedStreaming.TradeTarget.Equal(newTarget), Equals, true)
+		// Verify execution state is preserved
+		c.Assert(modifiedStreaming.State.Count, Equals, uint64(3))
+		c.Assert(modifiedStreaming.State.In.Equal(cosmos.NewUint(30*common.One)), Equals, true)
+	}
+}
+
+// TestDonateToPool tests the donateToPool method directly
+func (s *HandlerModifyLimitSwapSuite) TestDonateToPool(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	handler := NewModifyLimitSwapHandler(mgr)
+
+	// Test Case 1: Successfully donate BTC to BTC pool
+	{
+		// Create BTC pool
+		btcPool := NewPool()
+		btcPool.Asset = common.BTCAsset
+		btcPool.BalanceRune = cosmos.NewUint(1000 * common.One)
+		btcPool.BalanceAsset = cosmos.NewUint(10 * common.One)
+		btcPool.Status = PoolAvailable
+		c.Assert(mgr.Keeper().SetPool(ctx, btcPool), IsNil)
+
+		donationAmount := cosmos.NewUint(1 * common.One)
+		fromAddr := GetRandomBTCAddress()
+
+		// Donate BTC to BTC pool
+		err := handler.donateToPool(ctx, common.BTCAsset, donationAmount, fromAddr)
+		c.Assert(err, IsNil)
+
+		// Verify pool balance increased
+		updatedPool, err := mgr.Keeper().GetPool(ctx, common.BTCAsset)
+		c.Assert(err, IsNil)
+		c.Assert(updatedPool.BalanceRune.Equal(cosmos.NewUint(1000*common.One)), Equals, true)
+		c.Assert(updatedPool.BalanceAsset.Equal(cosmos.NewUint(11*common.One)), Equals, true)
+	}
+
+	// Test Case 2: Successfully donate asset to pool
+	{
+		// Create ETH pool
+		ethPool := NewPool()
+		ethPool.Asset = common.ETHAsset
+		ethPool.BalanceRune = cosmos.NewUint(2000 * common.One)
+		ethPool.BalanceAsset = cosmos.NewUint(20 * common.One)
+		ethPool.Status = PoolAvailable
+		c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+		donationAmount := cosmos.NewUint(5 * common.One)
+		fromAddr := GetRandomETHAddress()
+
+		// Donate ETH to ETH pool
+		err := handler.donateToPool(ctx, common.ETHAsset, donationAmount, fromAddr)
+		c.Assert(err, IsNil)
+
+		// Verify pool balance increased
+		updatedPool, err := mgr.Keeper().GetPool(ctx, common.ETHAsset)
+		c.Assert(err, IsNil)
+		c.Assert(updatedPool.BalanceRune.Equal(cosmos.NewUint(2000*common.One)), Equals, true)
+		c.Assert(updatedPool.BalanceAsset.Equal(cosmos.NewUint(25*common.One)), Equals, true)
+	}
+
+	// Test Case 3: Donate to non-existent pool
+	{
+		donationAmount := cosmos.NewUint(50 * common.One)
+		fromAddr := GetRandomBCHAddress()
+
+		// Try to donate to non-existent BCH pool
+		err := handler.donateToPool(ctx, common.BCHAsset, donationAmount, fromAddr)
+		c.Assert(err, NotNil)
+		c.Assert(err.Error(), Matches, ".*pool does not exist.*")
+	}
+
+	// Test Case 4: Donate to suspended pool
+	{
+		// Create suspended DOGE pool
+		dogePool := NewPool()
+		dogePool.Asset = common.DOGEAsset
+		dogePool.BalanceRune = cosmos.NewUint(500 * common.One)
+		dogePool.BalanceAsset = cosmos.NewUint(50000 * common.One)
+		dogePool.Status = PoolSuspended
+		c.Assert(mgr.Keeper().SetPool(ctx, dogePool), IsNil)
+
+		donationAmount := cosmos.NewUint(10 * common.One)
+		fromAddr := GetRandomDOGEAddress()
+
+		// Try to donate to suspended pool (should succeed)
+		err := handler.donateToPool(ctx, common.DOGEAsset, donationAmount, fromAddr)
+		c.Assert(err, IsNil)
+
+		// Verify the donation was added
+		updatedPool, err := mgr.Keeper().GetPool(ctx, common.DOGEAsset)
+		c.Assert(err, IsNil)
+		c.Assert(updatedPool.BalanceAsset.Equal(cosmos.NewUint(50010*common.One)), Equals, true)
+	}
+
+	// Test Case 5: Zero amount donation (edge case)
+	{
+		// Use existing BTC pool from test case 1
+		donationAmount := cosmos.ZeroUint()
+		fromAddr := GetRandomBTCAddress()
+
+		// Try zero donation
+		err := handler.donateToPool(ctx, common.BTCAsset, donationAmount, fromAddr)
+		c.Assert(err, IsNil) // Should succeed even with zero
+
+		// Verify balance unchanged
+		btcPool, err := mgr.Keeper().GetPool(ctx, common.BTCAsset)
+		c.Assert(err, IsNil)
+		c.Assert(btcPool.BalanceAsset.Equal(cosmos.NewUint(11*common.One)), Equals, true) // Unchanged from test case 1
+	}
+
+	// Test Case 6: Donate synthetic asset
+	{
+		// Create synth BTC pool if needed
+		synthBTC := common.BTCAsset.GetSyntheticAsset()
+
+		donationAmount := cosmos.NewUint(25 * common.One)
+		fromAddr := GetRandomTHORAddress()
+
+		// Donate synth BTC (should go to BTC pool as asset)
+		err := handler.donateToPool(ctx, synthBTC, donationAmount, fromAddr)
+		c.Assert(err, IsNil)
+
+		// Verify it went to the BTC pool's asset balance
+		btcPool, err := mgr.Keeper().GetPool(ctx, common.BTCAsset)
+		c.Assert(err, IsNil)
+		c.Assert(btcPool.BalanceAsset.Equal(cosmos.NewUint(36*common.One)), Equals, true) // 11 + 25
+	}
+
+	// Test Case 7: Large donation amount
+	{
+		largeAmount := cosmos.NewUint(1 << 62) // Very large amount
+		fromAddr := GetRandomBTCAddress()
+
+		// Large BTC donation
+		err := handler.donateToPool(ctx, common.BTCAsset, largeAmount, fromAddr)
+		c.Assert(err, IsNil)
+
+		// Verify large amount was added correctly
+		btcPool, err := mgr.Keeper().GetPool(ctx, common.BTCAsset)
+		c.Assert(err, IsNil)
+		expectedBalance := cosmos.NewUint(36 * common.One).Add(largeAmount) // 11 + 25 from previous tests
+		c.Assert(btcPool.BalanceAsset.Equal(expectedBalance), Equals, true)
+	}
+
+	// Test Case 8: Donate RUNE - but this is incorrect usage
+	{
+		// When the asset is RUNE, donateToPool will try to get pool for RUNE itself
+		// which doesn't exist. This test verifies the error handling.
+		donationAmount := cosmos.NewUint(100 * common.One)
+		fromAddr := GetRandomTHORAddress()
+
+		// Try to donate RUNE (which should fail)
+		err := handler.donateToPool(ctx, common.RuneAsset(), donationAmount, fromAddr)
+		c.Assert(err, NotNil)
+		c.Assert(err.Error(), Matches, ".*pool does not exist.*")
 	}
 }

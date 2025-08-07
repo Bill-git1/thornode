@@ -43,7 +43,7 @@ func (r ApiSwapDetailsRequest) Execute() (*SwapDetailsResponse, *http.Response, 
 /*
 SwapDetails Method for SwapDetails
 
-Returns detailed information about a specific swap.
+Returns detailed information about a specific swap including its state.
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @param txId Transaction ID of the swap

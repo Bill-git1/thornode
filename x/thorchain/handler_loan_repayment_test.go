@@ -114,7 +114,12 @@ func (s *HandlerLoanRepaymentSuite) TestLoanRepaymentHandleWithTOR(c *C) {
 
 func (s *HandlerLoanRepaymentSuite) TestLoanRepaymentHandleWithSwap(c *C) {
 	ctx, mgr := setupManagerForTest(c)
+	mockTxOut := MockTxOutDummy{
+		blockOut: NewTxOut(ctx.BlockHeight()),
+	}
+	mgr.txOutStore = &mockTxOut
 	mgr.Keeper().SetMimir(ctx, "DerivedDepthBasisPts", 10_000)
+	mgr.Keeper().SetMimir(ctx, constants.EnableAdvSwapQueue.String(), 0) // Disable Advanced Swap Queue
 
 	pool := NewPool()
 	pool.Asset = common.BTCAsset
@@ -161,8 +166,8 @@ func (s *HandlerLoanRepaymentSuite) TestLoanRepaymentHandleWithSwap(c *C) {
 	msg := NewMsgLoanRepayment(owner, common.BTCAsset, cosmos.OneUint(), owner, common.NewCoin(common.BTCAsset, cosmos.NewUint(1e8+15000000)), signer, txid)
 	ctx = ctx.WithBlockHeight(2 * 1440000)
 	c.Check(handler.handle(ctx.WithValue(constants.CtxLoanTxID, txid), *msg), IsNil)
-	c.Assert(mgr.SwapQ().EndBlock(ctx, mgr), IsNil) // swap into TOR
-	c.Assert(mgr.SwapQ().EndBlock(ctx, mgr), IsNil) // swap out into collateral
+	c.Assert(processSwapQueues(ctx, mgr), IsNil) // swap into TOR
+	c.Assert(processSwapQueues(ctx, mgr), IsNil) // swap out into collateral
 
 	loan, err = mgr.Keeper().GetLoan(ctx, common.BTCAsset, owner)
 	c.Assert(err, IsNil)

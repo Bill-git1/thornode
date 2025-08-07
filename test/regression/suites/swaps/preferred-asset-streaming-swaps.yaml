@@ -189,18 +189,18 @@ type: create-blocks
 count: 3
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/swap/streaming/{{ observe_txid 3 }}
+endpoint: http://localhost:1317/thorchain/queue/swap/details/{{ observe_txid 3 }}
 asserts:
-  - .deposit == "30000000"
-  - .in == "20000000"
-  - .count == 4
-  - .interval == 1
-  - .quantity == 6
-  - .out == "1951138297"
-  - .last_height == 14
-  - .trade_target == "0"
-  - .failed_swaps|length == 0
-  - .failed_swap_reasons|length == 0
+  - .swap.state.deposit == "30000000"
+  - .swap.state.in == "20000000"
+  - .swap.state.count == 4
+  - .swap.state.interval == 1
+  - .swap.state.quantity == 6
+  - .swap.state.out == "1951138297"
+  - .swap.state.last_height == 14
+  - .swap.trade_target == "0"
+  - .swap.state.failed_swaps|length == 0
+  - .swap.state.failed_swap_reasons|length == 0
 ---
 type: create-blocks
 count: 2

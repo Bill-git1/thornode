@@ -342,11 +342,16 @@ func run(out io.Writer, path string, routine int, doneWithRetries func(path stri
 			log.Fatal().Err(err).Msg("failed to restart thornode")
 		}
 
-		// wait for thornode
-		localLog.Debug().Msg("Waiting for thornode")
-		_, err = thornode.Process.Wait()
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to wait for thornode")
+		// if CI is set, don't wait forever
+		if os.Getenv("CI") != "" {
+			localLog.Debug().Msg("CI mode: exiting without waiting for debug thornode")
+		} else {
+			// wait for thornode
+			localLog.Debug().Msg("Waiting for thornode")
+			_, err = thornode.Process.Wait()
+			if err != nil {
+				log.Fatal().Err(err).Msg("failed to wait for thornode")
+			}
 		}
 	}
 

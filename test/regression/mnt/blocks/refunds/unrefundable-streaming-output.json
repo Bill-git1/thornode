@@ -132,19 +132,19 @@
     "begin_block_events": [],
     "end_block_events": [
       {
-        "amount": "136053977563rune",
+        "amount": "136053977564rune",
         "mode": "EndBlock",
         "spender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_spent"
       },
       {
-        "amount": "136053977563rune",
+        "amount": "136053977564rune",
         "mode": "EndBlock",
         "receiver": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_received"
       },
       {
-        "amount": "136053977563rune",
+        "amount": "136053977564rune",
         "mode": "EndBlock",
         "recipient": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
@@ -157,12 +157,12 @@
       },
       {
         "chain": "THOR",
-        "coin": "166666666666 THOR.RUNE",
+        "coin": "166666666667 THOR.RUNE",
         "emit_asset": "23437563 BTC.BTC",
         "from": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
         "id": "F409194110562EBBFBA69E53DD3F304F25A4C70117CDD680C77BB724FAC4209C",
         "liquidity_fee": "39062181",
-        "liquidity_fee_in_rune": "136053977563",
+        "liquidity_fee_in_rune": "136053977564",
         "memo": "=:BTC.BTC:bcrt1quuds8pd92qnnq0udw0rpg0szpgcslc9pm6tzal:0/1/3",
         "mode": "EndBlock",
         "pool": "BTC.BTC",
@@ -175,19 +175,19 @@
         "type": "swap"
       },
       {
-        "amount": "132500957845rune",
+        "amount": "132500957846rune",
         "mode": "EndBlock",
         "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
         "type": "coin_spent"
       },
       {
-        "amount": "132500957845rune",
+        "amount": "132500957846rune",
         "mode": "EndBlock",
         "receiver": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_received"
       },
       {
-        "amount": "132500957845rune",
+        "amount": "132500957846rune",
         "mode": "EndBlock",
         "recipient": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
@@ -223,7 +223,7 @@
         "type": "message"
       },
       {
-        "BTC.BTC": "132500957845",
+        "BTC.BTC": "132500957846",
         "bond_reward": "3554133875",
         "dev_fund_reward": "0",
         "income_burn": "0",
@@ -288,7 +288,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "148576",
+          "gas_used": "209770",
           "events": [
             {
               "amount": "2000000rune",
@@ -348,6 +348,13 @@
               "msg_index": "0",
               "sender": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
               "type": "message"
+            },
+            {
+              "msg_index": "0",
+              "source": "500000000000 THOR.RUNE",
+              "target": "0 BTC.BTC",
+              "txid": "F409194110562EBBFBA69E53DD3F304F25A4C70117CDD680C77BB724FAC4209C",
+              "type": "limit_swap"
             }
           ]
         }
@@ -382,8 +389,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "EAFE00B90C1AB2A30EAB9F984E57272EACE05C57F06C77F91BFCFD5AE2823855",
-      "last_results_hash": "CE977E2BB292C06EB06C7F11B092BF415037EF677CC8825E9228CB8480E823B1",
+      "app_hash": "847DB8113DF28D463D0192F7B991A83DD1BC0FD6B57CDD279BE9A8170A34393F",
+      "last_results_hash": "BBA581829DF2EEC9F1724940C7690353798C8CFA891B1555924CA8FD3133EE1C",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -416,7 +423,7 @@
       },
       {
         "chain": "THOR",
-        "coin": "166666666666 THOR.RUNE",
+        "coin": "166666666667 THOR.RUNE",
         "emit_asset": "18176674 BTC.BTC",
         "from": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
         "id": "F409194110562EBBFBA69E53DD3F304F25A4C70117CDD680C77BB724FAC4209C",
@@ -426,7 +433,7 @@
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "3878",
-        "streaming_swap_count": "2",
+        "streaming_swap_count": "1",
         "streaming_swap_quantity": "3",
         "swap_slip": "3878",
         "swap_target": "0",
@@ -593,7 +600,7 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "FDEB396AFB3860645C7B95461FDD4B03CEC11DB75F39F35FC84A4E97BDF34F45",
+      "app_hash": "611A4116AEE2DD37D094865FB40C3484253EB743DBB3DDD1DD8AD9B3E097B2B1",
       "last_results_hash": "BE5F303414650E91A338C78CEF8464641402FC18FB0A92044B00FDEAC120745B",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
@@ -627,7 +634,7 @@
       },
       {
         "chain": "THOR",
-        "coin": "166666666668 THOR.RUNE",
+        "coin": "166666666666 THOR.RUNE",
         "emit_asset": "11826768 BTC.BTC",
         "from": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
         "id": "F409194110562EBBFBA69E53DD3F304F25A4C70117CDD680C77BB724FAC4209C",
@@ -637,7 +644,7 @@
         "mode": "EndBlock",
         "pool": "BTC.BTC",
         "pool_slip": "2822",
-        "streaming_swap_count": "3",
+        "streaming_swap_count": "1",
         "streaming_swap_quantity": "3",
         "swap_slip": "2822",
         "swap_target": "0",
@@ -652,7 +659,7 @@
         "id": "F409194110562EBBFBA69E53DD3F304F25A4C70117CDD680C77BB724FAC4209C",
         "memo": "=:BTC.BTC:bcrt1quuds8pd92qnnq0udw0rpg0szpgcslc9pm6tzal:0/1/3",
         "mode": "EndBlock",
-        "reason": "fail to prepare outbound tx: insufficient funds for outbound request: bcrt1quuds8pd92qnnq0udw0rpg0szpgcslc9pm6tzal 53441005 remaining; fail to refund (53441005 BTC.BTC): streaming swap output",
+        "reason": "fail to prepare outbound tx: insufficient funds for outbound request: bcrt1quuds8pd92qnnq0udw0rpg0szpgcslc9pm6tzal 53441005 remaining; fail to refund (53441005 BTC.BTC): swap output",
         "to": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "refund"
       },

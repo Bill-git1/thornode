@@ -187,7 +187,12 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit) (*cosmos.Resu
 	if isSwap {
 		msg, ok := m.(*MsgSwap)
 		if ok {
-			h.addSwap(ctx, *msg)
+			if err := h.addSwap(ctx, *msg); err != nil {
+				if refundErr := refundTx(ctx, txIn, h.mgr, CodeSwapFail, err.Error(), ""); refundErr != nil {
+					ctx.Logger().Error("fail to refund swap", "error", refundErr)
+					// swallow the error here
+				}
+			}
 		}
 		return &cosmos.Result{}, nil
 	}
@@ -219,20 +224,23 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit) (*cosmos.Resu
 	return result, nil
 }
 
-func (h DepositHandler) addSwap(ctx cosmos.Context, msg MsgSwap) {
-	if h.mgr.Keeper().AdvSwapQueueEnabled(ctx) {
+func (h DepositHandler) addSwap(ctx cosmos.Context, msg MsgSwap) error {
+	// Route swap based on message version instead of configuration
+	if msg.IsV2() {
 		source := msg.Tx.Coins[0]
 		target := common.NewCoin(msg.TargetAsset, msg.TradeTarget)
 		evt := NewEventLimitSwap(source, target, msg.Tx.ID)
 		if err := h.mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
 			ctx.Logger().Error("fail to emit limit swap event", "error", err)
 		}
-		if err := h.mgr.AdvSwapQueueMgr().AddSwapQueueItem(ctx, msg); err != nil {
+		if err := h.mgr.AdvSwapQueueMgr().AddSwapQueueItem(ctx, h.mgr, &msg); err != nil {
 			ctx.Logger().Error("fail to add swap to queue", "error", err)
+			return err
 		}
 	} else {
 		h.addSwapDirect(ctx, msg)
 	}
+	return nil
 }
 
 // addSwapDirect adds the swap directly to the swap queue - segmented out into

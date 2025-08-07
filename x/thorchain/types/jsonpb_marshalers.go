@@ -408,6 +408,24 @@ func (m *QuerySwapDetailsResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, e
 		swapType = wrapString(m.Swap.SwapType.String())
 	}
 
+	// Convert SwapState if present
+	var state *openapi.SwapState
+	if m.Swap.State != nil {
+		state = &openapi.SwapState{
+			Interval:          wrapInt64(int64(m.Swap.State.Interval)),
+			Quantity:          wrapInt64(int64(m.Swap.State.Quantity)),
+			Ttl:               wrapInt64(int64(m.Swap.State.Ttl)),
+			Count:             wrapInt64(int64(m.Swap.State.Count)),
+			LastHeight:        wrapInt64(m.Swap.State.LastHeight),
+			Deposit:           wrapString(m.Swap.State.Deposit.String()),
+			Withdrawn:         wrapString(m.Swap.State.Withdrawn.String()),
+			In:                wrapString(m.Swap.State.In.String()),
+			Out:               wrapString(m.Swap.State.Out.String()),
+			FailedSwaps:       convertUint64SliceToInt64(m.Swap.State.FailedSwaps),
+			FailedSwapReasons: m.Swap.State.FailedSwapReasons,
+		}
+	}
+
 	result := openapi.SwapDetailsResponse{
 		Swap: &openapi.MsgSwap{
 			Tx:                      castTx(m.Swap.Tx),
@@ -423,6 +441,8 @@ func (m *QuerySwapDetailsResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, e
 			SwapType:                swapType,
 			StreamQuantity:          wrapInt64(int64(m.Swap.StreamQuantity)),
 			StreamInterval:          wrapInt64(int64(m.Swap.StreamInterval)),
+			InitialBlockHeight:      wrapInt64(m.Swap.InitialBlockHeight),
+			State:                   state,
 		},
 		Status:    wrapString(m.Status),
 		QueueType: wrapString(m.QueueType),
@@ -780,5 +800,16 @@ func castTxStagesResponse(in QueryTxStagesResponse) (result openapi.TxStagesResp
 		}
 	}
 
+	return result
+}
+
+func convertUint64SliceToInt64(slice []uint64) []int64 {
+	if slice == nil {
+		return nil
+	}
+	result := make([]int64, len(slice))
+	for i, v := range slice {
+		result[i] = int64(v)
+	}
 	return result
 }

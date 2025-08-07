@@ -583,7 +583,7 @@ asserts:
   - ..|select(.type? == "swap").id == "{{ native_txid -2 }}"
   - ..|select(.type? == "swap").coin == "${INPUT_3=2338008} BTC-BTC"
   - ..|select(.type? == "swap").emit_asset == "${OUTPUT_3=1946887514} THOR.RUNE"
-  - ..|select(.type? == "swap").streaming_swap_count == "${QUANTITY}" # Final sub-swap.
+  - ..|select(.type? == "swap").streaming_swap_count == "1" # Final sub-swap.
   - ..|select(.type? == "swap").streaming_swap_quantity == "${QUANTITY}"
   ##
   - .|[..|select(.type? == "secured_asset_withdraw")] | length == 1

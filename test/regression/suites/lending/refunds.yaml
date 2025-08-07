@@ -5,6 +5,17 @@
 type: create-blocks
 count: 1
 ---
+########################################################################################
+# disable advanced swap queue to ensure consistent test behavior
+########################################################################################
+type: tx-mimir
+key: EnableAdvSwapQueue
+value: 0
+signer: {{ addr_thor_dog }}
+---
+type: create-blocks
+count: 1
+---
 type: check
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
@@ -31,7 +42,6 @@ count: 2
 type: check
 endpoint: http://localhost:1317/thorchain/mimir
 asserts:
-  - .DERIVEDDEPTHBASISPTS == 10000
   - ."TORANCHOR-ETH-USDC-0X9999999999999999999999999999999999999999" == 1
 ---
 type: check

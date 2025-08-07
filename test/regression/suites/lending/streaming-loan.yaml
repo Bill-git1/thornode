@@ -13,6 +13,17 @@ value: "50"
 type: create-blocks
 count: 1
 ---
+########################################################################################
+# disable advanced swap queue to ensure consistent test behavior
+########################################################################################
+type: tx-mimir
+key: EnableAdvSwapQueue
+value: 0
+signer: {{ addr_thor_dog }}
+---
+type: create-blocks
+count: 1
+---
 type: check
 endpoint: http://localhost:1317/thorchain/pools
 asserts:
@@ -195,7 +206,7 @@ asserts:
   - .[0]|.debt_issued == "${DEBT_ISSUED}"
   - .[0]|.owner == "{{ addr_btc_fox }}"
   - .[0]|.collateral_withdrawn == "${COLLATERAL_DEPOSITED}" # should now be fully repaid
-  - .[0]|.debt_repaid == "${DEBT_REPAID=975469882}" # over repaid
+  - .[0]|.debt_repaid == "${DEBT_REPAID=975469881}" # over repaid
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound

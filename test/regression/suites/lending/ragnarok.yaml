@@ -6,6 +6,17 @@ type: create-blocks
 count: 1
 ---
 ########################################################################################
+# disable advanced swap queue to ensure consistent test behavior
+########################################################################################
+type: tx-mimir
+key: EnableAdvSwapQueue
+value: 0
+signer: {{ addr_thor_dog }}
+---
+type: create-blocks
+count: 1
+---
+########################################################################################
 # enable lending
 ########################################################################################
 type: tx-mimir
@@ -16,21 +27,27 @@ sequence: 0
 ---
 type: tx-mimir
 signer: {{ addr_thor_dog }}
+key: LENDING-THOR-BTC
+value: 1
+sequence: 1
+---
+type: tx-mimir
+signer: {{ addr_thor_dog }}
 key: DerivedDepthBasisPts
 value: 10000
-sequence: 1
+sequence: 2
 ---
 type: tx-mimir
 key: "RagnarokProcessNumOfLPPerIteration"
 value: 2
 signer: {{ addr_thor_dog }}
-sequence: 2
+sequence: 3
 ---
 type: tx-mimir
 key: "FundMigrationInterval"
 value: 1
 signer: {{ addr_thor_dog }}
-sequence: 3
+sequence: 4
 ---
 type: create-blocks
 count: 2

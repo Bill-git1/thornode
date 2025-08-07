@@ -12,6 +12,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 // AddLiquidityHandler is to handle add liquidity
@@ -351,7 +352,13 @@ func (h AddLiquidityHandler) swap(ctx cosmos.Context, msg MsgAddLiquidity) error
 		ssInterval = 0
 	}
 
-	swapMsg := NewMsgSwap(msg.Tx, msg.Asset, common.NoopAddress, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, uint64(ssInterval), msg.Signer)
+	// Determine version based on configuration
+	version := types.SwapVersion_v1
+	if h.mgr.Keeper().AdvSwapQueueEnabled(ctx) {
+		version = types.SwapVersion_v2
+	}
+
+	swapMsg := NewMsgSwap(msg.Tx, msg.Asset, common.NoopAddress, cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(), "", "", nil, MarketSwap, 0, uint64(ssInterval), version, msg.Signer)
 
 	// sanity check swap msg
 	handler := NewSwapHandler(h.mgr)

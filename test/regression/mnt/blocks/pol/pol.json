@@ -1491,7 +1491,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "144432",
+          "gas_used": "182710",
           "events": [
             {
               "amount": "2000000rune",
@@ -1551,6 +1551,13 @@
               "msg_index": "0",
               "sender": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "type": "message"
+            },
+            {
+              "msg_index": "0",
+              "source": "200000000000 THOR.RUNE",
+              "target": "0 BTC/BTC",
+              "txid": "506631CF180A23EA2CF212CAD267E54D9892DCAEACA3491387708FE382314B7F",
+              "type": "limit_swap"
             }
           ]
         }
@@ -1610,7 +1617,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "144332",
+          "gas_used": "187076",
           "events": [
             {
               "amount": "2000000rune",
@@ -1670,6 +1677,13 @@
               "msg_index": "0",
               "sender": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
               "type": "message"
+            },
+            {
+              "msg_index": "0",
+              "source": "50000000000 THOR.RUNE",
+              "target": "0 BTC/BTC",
+              "txid": "24890481A6BD928ADAB9725C3E4257A219059560CDC9C0868B0A9E73BC8A34B7",
+              "type": "limit_swap"
             }
           ]
         }
@@ -1704,8 +1718,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "7DF84618EC536001E91244DA661984BD55D0AC9CB5F0D5A2F681D964C5EFD035",
-      "last_results_hash": "AE914CF5D7E4BC9D9E1D83E2E862AC5F971F926E55BF6333379B788DE321FFD7",
+      "app_hash": "7A05B12238460DEAD71262C405560640556052CC108DE74346C51AC0168AC3B3",
+      "last_results_hash": "FD868E94A784C8AF7FBAA1B058C8DD708781AD04C7DE7804AD1ADAFA9B57814C",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -1835,7 +1849,7 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "0D015ABB29E484E433A3F487D7037CD9FE831933A850E4ADA64824069A95F013",
+      "app_hash": "FCD9B17028C3FEF5398556CF666BFA52BE40C5586D44CB4DA18FC80129B2E130",
       "last_results_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
@@ -1931,7 +1945,7 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "DA683DE1D011612375F5652CD8B79F5A989DCB3A1AE78E7760F8A169A346F610",
+      "app_hash": "3FAD3E820944E31B3E61F704D67B15D282481EE4B89583EFD75E65C49A7DF89B",
       "last_results_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
@@ -2399,7 +2413,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "125843",
+          "gas_used": "150843",
           "events": [
             {
               "amount": "2000000rune",
@@ -2459,6 +2473,13 @@
               "msg_index": "0",
               "sender": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "type": "message"
+            },
+            {
+              "msg_index": "0",
+              "source": "49998666 BTC/BTC",
+              "target": "0 THOR.RUNE",
+              "txid": "95AAEA7A0F5FE48E3C6EA7441BEFB8331B2D9826B120D6226AEE5ED405C917E7",
+              "type": "limit_swap"
             }
           ]
         }
@@ -2518,7 +2539,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "125867",
+          "gas_used": "155363",
           "events": [
             {
               "amount": "2000000rune",
@@ -2578,6 +2599,13 @@
               "msg_index": "0",
               "sender": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
               "type": "message"
+            },
+            {
+              "msg_index": "0",
+              "source": "24488478 BTC/BTC",
+              "target": "0 THOR.RUNE",
+              "txid": "85312176A579809E79D727035A6D1255CB1905329DCE608215FEA828DFABCC8B",
+              "type": "limit_swap"
             }
           ]
         }
@@ -2732,8 +2760,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "627636705CF433F8791B53F48C311AB3BACDB08F34E8C7C590F4DA4EB4C211BD",
-      "last_results_hash": "29DDBF2529A4A8E65D04D4D8598E4DE50D337736F09847D92EA065C5BC9E243E",
+      "app_hash": "420EF647107AAF74BA96A4AA1FEAED962D7459B8233877DDC24C53E0BBE7CFBA",
+      "last_results_hash": "DB600FAAE64B625F0BC9036AE0766F1482FB595217A44DD1BBDD0D87C4519469",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -2989,7 +3017,7 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "B9404D0CE0FEA882CB0BD9F105AC222A0213C4DC399FE24643867F0006886035",
+      "app_hash": "1425C76A1F8D20A4FEE03ADF16957DDEE4945F5654A1D82F17A0F73430AE0CED",
       "last_results_hash": "92374D348E4CF85D08501F2797E189BA5A9C91FB11BCDA8C8C4E3F4ABAED82BC",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
@@ -3125,7 +3153,7 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "25771C8EF2F3C276E124EFB0133A3529A690DF33EC3C5CF75267F5A525163410",
+      "app_hash": "5ACA9847FCE333CC02B7C8A8601F620906655AA0B1145976535EB02F9055B48C",
       "last_results_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
