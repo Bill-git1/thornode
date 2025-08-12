@@ -272,7 +272,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "1043170",
+          "gas_used": "1041170",
           "events": [
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/0",
@@ -384,7 +384,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "CD022331B79E964BCB1C0CC5AD481262F81971E93152C09D2E080BEC86C7BB31",
-      "last_results_hash": "4EB1694D4EA0B05A416D099E29F4E9433E9790A19FFD1FFD0843E907B6C89FE0",
+      "last_results_hash": "40E178CDB08621EB9C3D60B720A4A74DB98C03BB83041E7F136BA77EA8DC7774",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },

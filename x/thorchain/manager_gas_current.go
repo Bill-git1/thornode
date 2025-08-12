@@ -264,14 +264,14 @@ func (gm *GasMgrVCUR) GetGasDetails(ctx cosmos.Context, chain common.Chain) (com
 
 	// convert to 1e8 decimals for the max gas coin
 	_, gasRateUnitsPerOne := chain.GetGasUnits()
-	gasRate1e8 := gasRate.MulUint64(common.One).Quo(gasRateUnitsPerOne)
-	gasRate1e8 = cosmos.RoundToDecimal(
-		gasRate1e8,
+	maxGasAmount := gasRate.MulUint64(networkFee.TransactionSize)
+	maxGasAmount1e8 := maxGasAmount.MulUint64(common.One).Quo(gasRateUnitsPerOne)
+	maxGasAmount1e8 = cosmos.RoundToDecimal(
+		maxGasAmount1e8,
 		chainGasAssetPrecision,
 	)
 
-	// As gasRate has Decimals precision, an integer multiple also has Decimals precision.
-	maxGasCoin := common.NewCoin(chain.GetGasAsset(), gasRate1e8.MulUint64(networkFee.TransactionSize))
+	maxGasCoin := common.NewCoin(chain.GetGasAsset(), maxGasAmount1e8)
 	maxGasCoin.Decimals = chainGasAssetPrecision
 
 	return maxGasCoin, int64(gasRate.Uint64()), nil
@@ -284,8 +284,8 @@ func (gm *GasMgrVCUR) GetGasRate(ctx cosmos.Context, chain common.Chain) cosmos.
 }
 
 func (gm *GasMgrVCUR) GetNetworkFee(ctx cosmos.Context, chain common.Chain) (types.NetworkFee, error) {
-	transactionFee := gm.keeper.GetOutboundTxFee(ctx)
 	if chain.Equals(common.THORChain) {
+		transactionFee := gm.keeper.GetOutboundTxFee(ctx)
 		return types.NewNetworkFee(common.THORChain, 1, transactionFee.Uint64()), nil
 	}
 

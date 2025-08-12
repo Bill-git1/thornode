@@ -499,7 +499,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "1924362",
+          "gas_used": "1922362",
           "events": [
             {
               "amount": "2000000rune",

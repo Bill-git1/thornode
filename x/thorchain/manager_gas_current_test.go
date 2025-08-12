@@ -342,3 +342,21 @@ func (GasManagerTestSuiteVCUR) TestOutboundFeeMultiplier(c *C) {
 	m = gasMgr.CalcOutboundFeeMultiplier(ctx, targetSurplus, gasSpent, gasWithheld, maxMultiplier, minMultiplier)
 	c.Assert(m.Uint64(), Equals, uint64(30_000), Commentf("%d", m.Uint64()))
 }
+
+func (GasManagerTestSuiteVCUR) TestGetGasDetailsLowRate(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	constAccessor := constants.GetConstantValues(GetCurrentVersion())
+	gasMgr := newGasMgrVCUR(constAccessor, k)
+
+	// test with stagenet state case with observed issue on BASE (1e12 gas rate)
+
+	var transactionSize uint64 = 100000
+	var transactionFeeRate uint64 = 1000
+	networkFee := NewNetworkFee(common.BASEChain, transactionSize, transactionFeeRate)
+	c.Assert(k.SaveNetworkFee(ctx, common.BASEChain, networkFee), IsNil)
+
+	maxGasCoin, gasRate, err := gasMgr.GetGasDetails(ctx, common.BASEChain)
+	c.Assert(err, IsNil)
+	c.Assert(maxGasCoin.Amount.Uint64(), Equals, uint64(15000))
+	c.Assert(gasRate, Equals, int64(1500))
+}
