@@ -1,5 +1,5 @@
-//go:build mainnet
-// +build mainnet
+//go:build !mocknet
+// +build !mocknet
 
 package trontokens
 
