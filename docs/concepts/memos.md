@@ -37,22 +37,23 @@ The following functions can be put into a memo:
 1. [**STAKE TCY**](memos.md#stake-tcy)
 1. [**UNSTAKE TCY**](memos.md#unstake-tcy)
 1. [**ADD Trade Account**](memos.md#add-trade-account)
-1. [**WITHDRAW Trade Account**](memos.md#withdraw-liquidity)
+1. [**WITHDRAW Trade Account**](memos.md#withdraw-trade-account)
 1. [**ADD Secured Asset**](memos.md#add-secured-asset)
 1. [**WITHDRAW Secured Asset**](memos.md#withdraw-secured-asset)
-1. [**EXECUTE Smart Contract**](memos.md#execute)
-1. [**SWITCH Asset**](memos.md#switch)
+1. [**EXECUTE Smart Contract**](memos.md#execute-smart-contract)
+1. [**SWITCH Asset**](memos.md#switch-asset)
 1. [**DEPOSIT** **Savers**](memos.md#deposit-savers)
 1. [**WITHDRAW Savers**](memos.md#withdraw-savers)
-1. [**OPEN** **Loan**](memos.md#open-loan)
+1. [**OPEN Loan**](memos.md#open-loan)
 1. [**REPAY Loan**](memos.md#repay-loan)
 1. [**DEPOSIT RUNEPool**](memos.md#deposit-runepool)
 1. [**WITHDRAW RUNEPool**](memos.md#withdraw-runepool)
-1. [**BOND**, **UNBOND**, **REBOND** & **LEAVE**](memos.md#bond-unbond-and-leave)
-1. [**OPERATOR ROTATE**](memos.md#operator-rotate)
-1. [**DONATE** & **RESERVE**](memos.md#donate-and-reserve)
+1. [**BOND**, **UNBOND**, **REBOND** & **LEAVE**](memos.md#bond-unbond-rebond-and-leave)
+1. [**OPERATOR Rotate**](memos.md#operator-rotate)
+1. [**DONATE** & **RESERVE**](memos.md#donate--reserve)
 1. [**MIGRATE**](memos.md#migrate)
 1. [**NOOP**](memos.md#noop)
+1. [**Other Internal Memos**](memos.md#other-internal-memos)
 
 ### Swap
 
@@ -261,7 +262,7 @@ Note: Secured Assets and amount are determined by the `coins` within the `MsgDep
 
 **Example:** `SECURE-:bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw` - Convert 0.1 BTC from a Secured Asset to a L1 and send to `bc1qp8278yutn09r2wu3jrc8xg2a7hgdgwv2gvsdyw`
 
-### Execute
+### Execute Smart Contract
 
 Execute a Smart Contract from a base layer transaction.
 
@@ -284,7 +285,7 @@ The above example creates a `MsgWasmExec` object for a smart contract execution 
 4. Funds: The Layer 1 asset (e.g., BTC amount sent in) is converted into a Secured Asset and included in the smart contract call.
 5. The smart contract will be executed via the following Cosmos SDK function: `ExecuteContract(ctx, contractAddr, senderAddr, msg.Msg, msg.Funds)`
 
-### Switch
+### Switch Asset
 
 One way switch for external tokens to be a native THORChain asset. Supported Assets are listed in a switchMap within the `SwitchManager`.
 
