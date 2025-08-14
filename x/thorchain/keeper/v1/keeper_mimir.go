@@ -116,6 +116,7 @@ func (k KVStore) IsOperationalMimir(key string) bool {
 		"RUNEPoolEnabled",
 		"EVMDisableContractWhitelist",
 		"MaxOutboundAttempts",
+		"EnableADVSwapQueue",
 	}
 	for i := range exactMatches {
 		if strings.EqualFold(key, exactMatches[i]) {
