@@ -110,7 +110,7 @@ If a transaction fails, it is refunded, thus it will pay the `outboundFee` for t
 
 The outbound_fee for each chain is returned on the [Inbound Addresses](https://thornode.ninerealms.com/thorchain/inbound_addresses) endpoint, priced in the gas asset.
 
-It is strongly recommended to use the `recommended_min_amount_in` value that is included on the [Swap Quote](broken-reference) endpoint, which is the calculation described above. This value is priced in the inbound asset of the quote request (in 1e8). This should be the minimum-allowed swap amount for the requested quote.
+It is strongly recommended to use the `recommended_min_amount_in` value that is included on the [Swap Quote](../swap-guide/quickstart-guide.md#2-query-for-a-swap-quote) endpoint, which is the calculation described above. This value is priced in the inbound asset of the quote request (in 1e8). This should be the minimum-allowed swap amount for the requested quote. The swap quote endpoint will return a helpful error message including this value if the swap amount is insufficient.
 
 _Remember, if the swap limit is not met or the swap is otherwise refunded the outbound_fee of the Source Chain will be deducted from the input amount, so give your users enough room._
 

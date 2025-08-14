@@ -23,7 +23,7 @@ If a transaction fails, it is refunded, thus it will pay the `outboundFee` for t
 - The Source Chain outboundFee, or
 - $1.00 (the minimum outboundFee).
 
-For convenience, a `recommended_min_amount_in` is included on the [Swap Quote](../swap-guide/quickstart-guide.md#2-query-for-a-swap-quote) endpoint, which is the value described above. This value is priced in the inbound asset of the quote request (in 1e8). This should be the minimum-allowed swap amount for the requested quote.
+For convenience, a `recommended_min_amount_in` is included on the [Swap Quote](../swap-guide/quickstart-guide.md#2-query-for-a-swap-quote) endpoint, which is the value described above. This value is priced in the inbound asset of the quote request (in 1e8). This should be the minimum-allowed swap amount for the requested quote. If a swap is attempted and fails due to insufficient funds to pay for fees, the endpoint will return an error message that includes the recommended minimum amount.
 
 ## Wait Times
 

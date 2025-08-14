@@ -372,6 +372,24 @@ affiliate_bps=1
 Response:
 `{"error":"tolerance basis points must be less than 10000"}`
 
+#### Minimum Swap Amount Error
+
+Description: This error occurs when the swap amount is less than the minimum required amount to cover fees. The error message now includes the recommended minimum amount.
+
+Request URL:
+
+```json
+https://thornode.ninerealms.com/thornode/quote/swap \
+from_asset=BTC.BTC \
+to_asset=ETH.ETH \
+amount=1000 \
+destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1 \
+streaming_interval=1
+```
+
+Response:
+`{"error":"amount less than min swap amount (recommended_min_amount_in: 10760)"}`
+
 ### Support
 
 Developers experiencing issues with these APIs can go to the THORChain Dev Discord for assistance. Interface developers should subscribe to the #interface-alerts channel for information pertinent to the endpoints and functionality discussed here.

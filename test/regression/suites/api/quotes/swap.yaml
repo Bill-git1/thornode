@@ -907,3 +907,18 @@ params:
   destination: {{ addr_eth_fox }}
 asserts:
   - .memo == "=:ETH.USDC:{{ addr_eth_fox }}"  # Should use shortened form, not full contract address
+---
+########################################################################################
+# Test insufficient funds, return error with recommended_min_amount_in
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/quote/swap
+params:
+  from_asset: BTC.BTC
+  to_asset: THOR.RUNE
+  amount: 1000
+  destination: {{ addr_thor_fox }}
+status: 400
+asserts:
+  - .code|tonumber == 3
+  - .message|contains("recommended_min_amount_in")

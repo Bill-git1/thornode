@@ -2,6 +2,7 @@ package thorchain
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -533,6 +534,12 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 		return nil, fmt.Errorf("amount less than dust threshold")
 	}
 
+	// check if the amount is less than the minimum swap amount
+	minSwapAmount, err := calculateMinSwapAmount(ctx, qs.mgr, fromAsset, toAsset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to calculate min swap amount: %w", err)
+	}
+
 	// parse streaming interval
 	streamingInterval := uint64(0) // default value
 	if len(req.StreamingInterval) > 0 {
@@ -743,6 +750,9 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 	// simulate the swap
 	res, emitAmount, outboundFeeAmount, err := quoteSimulateSwap(ctx, qs.mgr, amount, msg, 1)
 	if err != nil {
+		if errors.Is(err, ErrNotEnoughToPayFee) {
+			return nil, fmt.Errorf("amount less than min swap amount (recommended_min_amount_in: %s)", minSwapAmount.String())
+		}
 		return nil, fmt.Errorf("failed to simulate swap: %w", err)
 	}
 
@@ -757,6 +767,9 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 		var streamRes *types.QueryQuoteSwapResponse
 		streamRes, emitAmount, _, err = quoteSimulateSwap(ctx, qs.mgr, amount, msg, streamingQuantity)
 		if err != nil {
+			if errors.Is(err, ErrNotEnoughToPayFee) {
+				return nil, fmt.Errorf("amount less than min swap amount (recommended_min_amount_in: %s)", minSwapAmount.String())
+			}
 			return nil, fmt.Errorf("failed to simulate swap: %w", err)
 		}
 		res.Fees = streamRes.Fees
@@ -887,10 +900,6 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 	}
 	res.Warning = quoteWarning
 	res.Expiry = time.Now().Add(quoteExpiration).Unix()
-	minSwapAmount, err := calculateMinSwapAmount(ctx, qs.mgr, fromAsset, toAsset)
-	if err != nil {
-		return nil, fmt.Errorf("failed to calculate min amount in: %s", err.Error())
-	}
 	res.RecommendedMinAmountIn = minSwapAmount.String()
 
 	// set inbound recommended gas for non-native swaps
