@@ -571,6 +571,10 @@ func (c *EVMClient) buildOutboundTx(txOutItem stypes.TxOutItem, memo mem.Memo, n
 	gasRate := c.GetGasPrice()
 	if c.cfg.BlockScanner.FixedGasRate > 0 || gasRate.Cmp(big.NewInt(0)) == 0 {
 		// if chain gas is zero we are still filling our gas price buffer, use outbound rate
+		c.logger.Info().
+			Stringer("toiGasRateWei", toiGasRateWei).
+			Stringer("gasRate", gasRate).
+			Msg("using gas rate from tx out item")
 		gasRate = toiGasRateWei
 	} else {
 		// Thornode uses a gas rate 1.5x the reported network fee for the rate and computed
@@ -581,15 +585,12 @@ func (c *EVMClient) buildOutboundTx(txOutItem stypes.TxOutItem, memo mem.Memo, n
 		lowerBound.Mul(lowerBound, big.NewInt(2))
 		lowerBound.Div(lowerBound, big.NewInt(3))
 
-		// round current rate to avoid consensus trouble, same rounding implied in outbound
-		gasRate.Div(gasRate, big.NewInt(common.One*100))
-		if gasRate.Cmp(big.NewInt(0)) == 0 { // floor at 1 like in network fee reporting
-			gasRate = big.NewInt(1)
-		}
-		gasRate.Mul(gasRate, big.NewInt(common.One*100))
-
 		// if the gas rate is less than the lower bound, use the lower bound
 		if gasRate.Cmp(lowerBound) < 0 {
+			c.logger.Info().
+				Stringer("gasRate", gasRate).
+				Stringer("lowerBound", lowerBound).
+				Msg("gas rate is below lower bound, using lower bound")
 			gasRate = lowerBound
 		}
 	}

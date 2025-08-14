@@ -198,7 +198,7 @@ bifrost:
         observation_flexibility_blocks: 20
         max_gas_limit: 100000
         max_contract_tx_logs: 200
-        gas_price_resolution: 1_000 # 1,000 mwei (1 gwei)
+        gas_price_resolution: 100 # mwei
         whitelist_tokens:
           - 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 # USDC
           - 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf # cbBTC
@@ -246,7 +246,7 @@ bifrost:
         concurrency: 1
         chain_id: AVAX
         gas_cache_blocks: 40
-        gas_price_resolution: 50 # 50 navax
+        gas_price_resolution: 10 # nAvax
         observation_flexibility_blocks: 80
         max_gas_limit: 100000
         max_contract_tx_logs: 200
@@ -276,7 +276,7 @@ bifrost:
         concurrency: 1
         chain_id: BSC
         gas_cache_blocks: 40
-        gas_price_resolution: 10 # 10 gwei
+        gas_price_resolution: 1 # gwei
         observation_flexibility_blocks: 80
         max_gas_limit: 100000
         max_contract_tx_logs: 200

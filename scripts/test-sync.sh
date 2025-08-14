@@ -2,14 +2,28 @@
 
 set -euo pipefail
 
-NET=mainnet
-CHAIN_ID=thorchain-1
-SNAPSHOTS_URL=https://snapshots.ninerealms.com
+NET=$1
+
+# only mainnet and stagenet are supported
+if [ "${NET}" != "mainnet" ] && [ "${NET}" != "stagenet" ]; then
+  echo "Unsupported network: ${NET}. Only 'mainnet' and 'stagenet' are supported."
+  exit 1
+fi
+
+if [ "${NET}" = "mainnet" ]; then
+  CHAIN_ID=thorchain-1
+  SNAPSHOTS_URL=https://snapshots.ninerealms.com
+else
+  CHAIN_ID=thorchain-stagenet-2
+  SNAPSHOTS_URL=https://stagenet-snapshots.ninerealms.com
+  EXTRA_ARGS="-e THOR_SEED_NODES_ENDPOINT=https://stagenet-thornode.ninerealms.com/thorchain/nodes"
+fi
+
 EXTRA_ARGS="${EXTRA_ARGS-}"
 NET_DIR=tmp/sync-test/${NET}
 
 # download snapshot
-if [ ! -d ${NET_DIR}/data ]; then
+if [ ! -d "${NET_DIR}/data" ]; then
   mkdir -p "${NET_DIR}/data"
   LATEST_SNAPSHOT_KEY=$(
     docker run --rm --entrypoint sh minio/minio:latest -c "
@@ -31,4 +45,4 @@ docker run --rm ${EXTRA_ARGS} \
   -e "NET=${NET}" \
   -p 1317:1317 \
   -p 27147:27147 \
-  registry.gitlab.com/thorchain/thornode:${NET}
+  "registry.gitlab.com/thorchain/thornode:${NET}"

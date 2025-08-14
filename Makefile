@@ -311,7 +311,10 @@ reset-mocknet-cluster: stop-mocknet-cluster build-mocknet-cluster run-mocknet-cl
 # ------------------------------ Test Sync ------------------------------
 
 test-sync-mainnet:
-	@./scripts/test-sync.sh
+	@./scripts/test-sync.sh mainnet
+
+test-sync-stagenet:
+	@./scripts/test-sync.sh stagenet
 
 # ------------------------------ Docker Build ------------------------------
 

@@ -317,8 +317,8 @@ func (b *BlockScanner) scanBlocks() {
 			ms := b.cfg.ChainID.ApproximateBlockMilliseconds()
 
 			// determine how often we compare THORNode network fee to Bifrost network fee.
-			// General goal is about once per day.
-			mod := ((24 * 60 * 60 * 1000) + ms - 1) / ms
+			// General goal is about once per hour.
+			mod := ((60 * 60 * 1000) + ms - 1) / ms
 			if currentBlock%mod == 0 {
 				b.updateStaleNetworkFee(currentBlock)
 			}
@@ -381,6 +381,11 @@ func (b *BlockScanner) updateStaleNetworkFee(currentBlock int64) {
 	}
 	// Do not broadcast a regularly-timed network fee if the THORNode network fee is already consistent with the scanner's.
 	if thorTransactionSize == transactionSize && thorTransactionFeeRate == transactionFeeRate {
+		b.logger.Info().
+			Int64("height", currentBlock).
+			Uint64("size", transactionSize).
+			Uint64("rate", transactionFeeRate).
+			Msg("thornode network fee is consistent with scanner, no need to broadcast")
 		return
 	}
 
