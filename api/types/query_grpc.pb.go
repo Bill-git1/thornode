@@ -72,6 +72,8 @@ const (
 	Query_ConstantValues_FullMethodName      = "/types.Query/ConstantValues"
 	Query_SwapQueue_FullMethodName           = "/types.Query/SwapQueue"
 	Query_SwapDetails_FullMethodName         = "/types.Query/SwapDetails"
+	Query_LimitSwaps_FullMethodName          = "/types.Query/LimitSwaps"
+	Query_LimitSwapsSummary_FullMethodName   = "/types.Query/LimitSwapsSummary"
 	Query_LastBlocks_FullMethodName          = "/types.Query/LastBlocks"
 	Query_ChainsLastBlock_FullMethodName     = "/types.Query/ChainsLastBlock"
 	Query_Vault_FullMethodName               = "/types.Query/Vault"
@@ -170,6 +172,8 @@ type QueryClient interface {
 	ConstantValues(ctx context.Context, in *QueryConstantValuesRequest, opts ...grpc.CallOption) (*QueryConstantValuesResponse, error)
 	SwapQueue(ctx context.Context, in *QuerySwapQueueRequest, opts ...grpc.CallOption) (*QuerySwapQueueResponse, error)
 	SwapDetails(ctx context.Context, in *QuerySwapDetailsRequest, opts ...grpc.CallOption) (*QuerySwapDetailsResponse, error)
+	LimitSwaps(ctx context.Context, in *QueryLimitSwapsRequest, opts ...grpc.CallOption) (*QueryLimitSwapsResponse, error)
+	LimitSwapsSummary(ctx context.Context, in *QueryLimitSwapsSummaryRequest, opts ...grpc.CallOption) (*QueryLimitSwapsSummaryResponse, error)
 	LastBlocks(ctx context.Context, in *QueryLastBlocksRequest, opts ...grpc.CallOption) (*QueryLastBlocksResponse, error)
 	ChainsLastBlock(ctx context.Context, in *QueryChainsLastBlockRequest, opts ...grpc.CallOption) (*QueryLastBlocksResponse, error)
 	Vault(ctx context.Context, in *QueryVaultRequest, opts ...grpc.CallOption) (*QueryVaultResponse, error)
@@ -687,6 +691,24 @@ func (c *queryClient) SwapDetails(ctx context.Context, in *QuerySwapDetailsReque
 	return out, nil
 }
 
+func (c *queryClient) LimitSwaps(ctx context.Context, in *QueryLimitSwapsRequest, opts ...grpc.CallOption) (*QueryLimitSwapsResponse, error) {
+	out := new(QueryLimitSwapsResponse)
+	err := c.cc.Invoke(ctx, Query_LimitSwaps_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) LimitSwapsSummary(ctx context.Context, in *QueryLimitSwapsSummaryRequest, opts ...grpc.CallOption) (*QueryLimitSwapsSummaryResponse, error) {
+	out := new(QueryLimitSwapsSummaryResponse)
+	err := c.cc.Invoke(ctx, Query_LimitSwapsSummary_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *queryClient) LastBlocks(ctx context.Context, in *QueryLastBlocksRequest, opts ...grpc.CallOption) (*QueryLastBlocksResponse, error) {
 	out := new(QueryLastBlocksResponse)
 	err := c.cc.Invoke(ctx, Query_LastBlocks_FullMethodName, in, out, opts...)
@@ -1023,6 +1045,8 @@ type QueryServer interface {
 	ConstantValues(context.Context, *QueryConstantValuesRequest) (*QueryConstantValuesResponse, error)
 	SwapQueue(context.Context, *QuerySwapQueueRequest) (*QuerySwapQueueResponse, error)
 	SwapDetails(context.Context, *QuerySwapDetailsRequest) (*QuerySwapDetailsResponse, error)
+	LimitSwaps(context.Context, *QueryLimitSwapsRequest) (*QueryLimitSwapsResponse, error)
+	LimitSwapsSummary(context.Context, *QueryLimitSwapsSummaryRequest) (*QueryLimitSwapsSummaryResponse, error)
 	LastBlocks(context.Context, *QueryLastBlocksRequest) (*QueryLastBlocksResponse, error)
 	ChainsLastBlock(context.Context, *QueryChainsLastBlockRequest) (*QueryLastBlocksResponse, error)
 	Vault(context.Context, *QueryVaultRequest) (*QueryVaultResponse, error)
@@ -1218,6 +1242,12 @@ func (UnimplementedQueryServer) SwapQueue(context.Context, *QuerySwapQueueReques
 }
 func (UnimplementedQueryServer) SwapDetails(context.Context, *QuerySwapDetailsRequest) (*QuerySwapDetailsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SwapDetails not implemented")
+}
+func (UnimplementedQueryServer) LimitSwaps(context.Context, *QueryLimitSwapsRequest) (*QueryLimitSwapsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LimitSwaps not implemented")
+}
+func (UnimplementedQueryServer) LimitSwapsSummary(context.Context, *QueryLimitSwapsSummaryRequest) (*QueryLimitSwapsSummaryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LimitSwapsSummary not implemented")
 }
 func (UnimplementedQueryServer) LastBlocks(context.Context, *QueryLastBlocksRequest) (*QueryLastBlocksResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LastBlocks not implemented")
@@ -2276,6 +2306,42 @@ func _Query_SwapDetails_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_LimitSwaps_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryLimitSwapsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).LimitSwaps(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_LimitSwaps_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).LimitSwaps(ctx, req.(*QueryLimitSwapsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_LimitSwapsSummary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryLimitSwapsSummaryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).LimitSwapsSummary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_LimitSwapsSummary_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).LimitSwapsSummary(ctx, req.(*QueryLimitSwapsSummaryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Query_LastBlocks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(QueryLastBlocksRequest)
 	if err := dec(in); err != nil {
@@ -3034,6 +3100,14 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SwapDetails",
 			Handler:    _Query_SwapDetails_Handler,
+		},
+		{
+			MethodName: "LimitSwaps",
+			Handler:    _Query_LimitSwaps_Handler,
+		},
+		{
+			MethodName: "LimitSwapsSummary",
+			Handler:    _Query_LimitSwapsSummary_Handler,
 		},
 		{
 			MethodName: "LastBlocks",

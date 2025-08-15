@@ -445,6 +445,22 @@ func (s *queryServer) SwapDetails(c context.Context, req *types.QuerySwapDetails
 	return s.querySwapDetails(ctx, req)
 }
 
+func (s *queryServer) LimitSwaps(c context.Context, req *types.QueryLimitSwapsRequest) (*types.QueryLimitSwapsResponse, error) {
+	if err := checkHeightParam(req.Height); err != nil {
+		return nil, err
+	}
+	ctx := s.unwrapSdkContext(c)
+	return s.queryLimitSwaps(ctx, req)
+}
+
+func (s *queryServer) LimitSwapsSummary(c context.Context, req *types.QueryLimitSwapsSummaryRequest) (*types.QueryLimitSwapsSummaryResponse, error) {
+	if err := checkHeightParam(req.Height); err != nil {
+		return nil, err
+	}
+	ctx := s.unwrapSdkContext(c)
+	return s.queryLimitSwapsSummary(ctx, req)
+}
+
 func (s *queryServer) LastBlocks(c context.Context, req *types.QueryLastBlocksRequest) (*types.QueryLastBlocksResponse, error) {
 	if err := checkHeightParam(req.Height); err != nil {
 		return nil, err

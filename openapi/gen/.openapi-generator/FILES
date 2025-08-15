@@ -42,6 +42,7 @@ docs/Account.md
 docs/AccountResponse.md
 docs/AccountResponseResult.md
 docs/Amount.md
+docs/AssetPairSummary.md
 docs/AuthApi.md
 docs/BalancesResponse.md
 docs/BanResponse.md
@@ -82,6 +83,9 @@ docs/KeysignInfo.md
 docs/KeysignMetrics.md
 docs/KeysignResponse.md
 docs/LastBlock.md
+docs/LimitSwapWithDetails.md
+docs/LimitSwapsResponse.md
+docs/LimitSwapsSummaryResponse.md
 docs/LiquidityProvider.md
 docs/LiquidityProviderSummary.md
 docs/LiquidityProvidersApi.md
@@ -109,6 +113,7 @@ docs/OutboundDelayStage.md
 docs/OutboundFee.md
 docs/OutboundSignedStage.md
 docs/POL.md
+docs/PaginationMeta.md
 docs/Ping.md
 docs/PlannedOutTx.md
 docs/Pool.md
@@ -186,6 +191,7 @@ model_account.go
 model_account_response.go
 model_account_response_result.go
 model_amount.go
+model_asset_pair_summary.go
 model_balances_response.go
 model_ban_response.go
 model_base_quote_response.go
@@ -217,6 +223,9 @@ model_keysign_info.go
 model_keysign_metrics.go
 model_keysign_response.go
 model_last_block.go
+model_limit_swap_with_details.go
+model_limit_swaps_response.go
+model_limit_swaps_summary_response.go
 model_liquidity_provider.go
 model_liquidity_provider_summary.go
 model_metrics_response.go
@@ -238,6 +247,7 @@ model_oracle_prices_response.go
 model_outbound_delay_stage.go
 model_outbound_fee.go
 model_outbound_signed_stage.go
+model_pagination_meta.go
 model_ping.go
 model_planned_out_tx.go
 model_pol.go

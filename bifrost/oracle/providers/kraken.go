@@ -27,6 +27,7 @@ type KrakenWsGenericMsg struct {
 type KrakenWsSubscriptionMsg struct {
 	Method string `json:"method"`
 }
+
 type KrakenWsTickerMsg struct {
 	Channel string `json:"channel"`
 	Data    []struct {

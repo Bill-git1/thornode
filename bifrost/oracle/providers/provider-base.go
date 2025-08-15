@@ -231,7 +231,7 @@ func (p *baseProvider) httpPost(path string, body []byte) ([]byte, error) {
 	return p.httpRequest(path, "POST", body, headers)
 }
 
-func (p *baseProvider) httpRequest(path string, method string, body []byte, headers map[string]string) ([]byte, error) {
+func (p *baseProvider) httpRequest(path, method string, body []byte, headers map[string]string) ([]byte, error) {
 	res, err := p.makeHttpRequest(p.apiEndpoint+path, method, body, headers)
 	if err != nil && len(p.config.ApiEndpoints) > 1 {
 		index := 0
@@ -252,7 +252,7 @@ func (p *baseProvider) httpRequest(path string, method string, body []byte, head
 	return res, err
 }
 
-func (p *baseProvider) makeHttpRequest(url string, method string, body []byte, headers map[string]string) ([]byte, error) {
+func (p *baseProvider) makeHttpRequest(url, method string, body []byte, headers map[string]string) ([]byte, error) {
 	req, err := http.NewRequest(method, url, bytes.NewBuffer(body))
 	if err != nil {
 		return nil, err

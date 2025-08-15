@@ -118,6 +118,8 @@ Class | Method | HTTP request | Description
 *PoolsApi* | [**Dpools**](docs/PoolsApi.md#dpools) | **Get** /thorchain/dpools | 
 *PoolsApi* | [**Pool**](docs/PoolsApi.md#pool) | **Get** /thorchain/pool/{asset} | 
 *PoolsApi* | [**Pools**](docs/PoolsApi.md#pools) | **Get** /thorchain/pools | 
+*QueueApi* | [**LimitSwaps**](docs/QueueApi.md#limitswaps) | **Get** /thorchain/queue/limit_swaps | 
+*QueueApi* | [**LimitSwapsSummary**](docs/QueueApi.md#limitswapssummary) | **Get** /thorchain/queue/limit_swaps/summary | 
 *QueueApi* | [**Queue**](docs/QueueApi.md#queue) | **Get** /thorchain/queue | 
 *QueueApi* | [**QueueOutbound**](docs/QueueApi.md#queueoutbound) | **Get** /thorchain/queue/outbound | 
 *QueueApi* | [**QueueScheduled**](docs/QueueApi.md#queuescheduled) | **Get** /thorchain/queue/scheduled | 
@@ -168,6 +170,7 @@ Class | Method | HTTP request | Description
  - [AccountResponse](docs/AccountResponse.md)
  - [AccountResponseResult](docs/AccountResponseResult.md)
  - [Amount](docs/Amount.md)
+ - [AssetPairSummary](docs/AssetPairSummary.md)
  - [BalancesResponse](docs/BalancesResponse.md)
  - [BanResponse](docs/BanResponse.md)
  - [BaseQuoteResponse](docs/BaseQuoteResponse.md)
@@ -199,6 +202,9 @@ Class | Method | HTTP request | Description
  - [KeysignMetrics](docs/KeysignMetrics.md)
  - [KeysignResponse](docs/KeysignResponse.md)
  - [LastBlock](docs/LastBlock.md)
+ - [LimitSwapWithDetails](docs/LimitSwapWithDetails.md)
+ - [LimitSwapsResponse](docs/LimitSwapsResponse.md)
+ - [LimitSwapsSummaryResponse](docs/LimitSwapsSummaryResponse.md)
  - [LiquidityProvider](docs/LiquidityProvider.md)
  - [LiquidityProviderSummary](docs/LiquidityProviderSummary.md)
  - [MetricsResponse](docs/MetricsResponse.md)
@@ -221,6 +227,7 @@ Class | Method | HTTP request | Description
  - [OutboundFee](docs/OutboundFee.md)
  - [OutboundSignedStage](docs/OutboundSignedStage.md)
  - [POL](docs/POL.md)
+ - [PaginationMeta](docs/PaginationMeta.md)
  - [Ping](docs/Ping.md)
  - [PlannedOutTx](docs/PlannedOutTx.md)
  - [Pool](docs/Pool.md)

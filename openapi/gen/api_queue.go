@@ -22,6 +22,314 @@ import (
 // QueueApiService QueueApi service
 type QueueApiService service
 
+type ApiLimitSwapsRequest struct {
+	ctx context.Context
+	ApiService *QueueApiService
+	height *int64
+	offset *int32
+	limit *int32
+	sourceAsset *string
+	targetAsset *string
+	sender *string
+	sortBy *string
+	sortOrder *string
+}
+
+// optional block height, defaults to current tip
+func (r ApiLimitSwapsRequest) Height(height int64) ApiLimitSwapsRequest {
+	r.height = &height
+	return r
+}
+
+// Number of items to skip
+func (r ApiLimitSwapsRequest) Offset(offset int32) ApiLimitSwapsRequest {
+	r.offset = &offset
+	return r
+}
+
+// Number of items to return
+func (r ApiLimitSwapsRequest) Limit(limit int32) ApiLimitSwapsRequest {
+	r.limit = &limit
+	return r
+}
+
+// Filter by source asset (e.g., \&quot;BTC.BTC\&quot;)
+func (r ApiLimitSwapsRequest) SourceAsset(sourceAsset string) ApiLimitSwapsRequest {
+	r.sourceAsset = &sourceAsset
+	return r
+}
+
+// Filter by target asset (e.g., \&quot;ETH.ETH\&quot;)
+func (r ApiLimitSwapsRequest) TargetAsset(targetAsset string) ApiLimitSwapsRequest {
+	r.targetAsset = &targetAsset
+	return r
+}
+
+// Filter by sender address
+func (r ApiLimitSwapsRequest) Sender(sender string) ApiLimitSwapsRequest {
+	r.sender = &sender
+	return r
+}
+
+// Sort by field
+func (r ApiLimitSwapsRequest) SortBy(sortBy string) ApiLimitSwapsRequest {
+	r.sortBy = &sortBy
+	return r
+}
+
+// Sort order
+func (r ApiLimitSwapsRequest) SortOrder(sortOrder string) ApiLimitSwapsRequest {
+	r.sortOrder = &sortOrder
+	return r
+}
+
+func (r ApiLimitSwapsRequest) Execute() (*LimitSwapsResponse, *http.Response, error) {
+	return r.ApiService.LimitSwapsExecute(r)
+}
+
+/*
+LimitSwaps Method for LimitSwaps
+
+Returns limit swaps with pagination and filtering.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @return ApiLimitSwapsRequest
+*/
+func (a *QueueApiService) LimitSwaps(ctx context.Context) ApiLimitSwapsRequest {
+	return ApiLimitSwapsRequest{
+		ApiService: a,
+		ctx: ctx,
+	}
+}
+
+// Execute executes the request
+//  @return LimitSwapsResponse
+func (a *QueueApiService) LimitSwapsExecute(r ApiLimitSwapsRequest) (*LimitSwapsResponse, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodGet
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *LimitSwapsResponse
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "QueueApiService.LimitSwaps")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/thorchain/queue/limit_swaps"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.height != nil {
+		localVarQueryParams.Add("height", parameterToString(*r.height, ""))
+	}
+	if r.offset != nil {
+		localVarQueryParams.Add("offset", parameterToString(*r.offset, ""))
+	}
+	if r.limit != nil {
+		localVarQueryParams.Add("limit", parameterToString(*r.limit, ""))
+	}
+	if r.sourceAsset != nil {
+		localVarQueryParams.Add("source_asset", parameterToString(*r.sourceAsset, ""))
+	}
+	if r.targetAsset != nil {
+		localVarQueryParams.Add("target_asset", parameterToString(*r.targetAsset, ""))
+	}
+	if r.sender != nil {
+		localVarQueryParams.Add("sender", parameterToString(*r.sender, ""))
+	}
+	if r.sortBy != nil {
+		localVarQueryParams.Add("sort_by", parameterToString(*r.sortBy, ""))
+	}
+	if r.sortOrder != nil {
+		localVarQueryParams.Add("sort_order", parameterToString(*r.sortOrder, ""))
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiLimitSwapsSummaryRequest struct {
+	ctx context.Context
+	ApiService *QueueApiService
+	height *int64
+	sourceAsset *string
+	targetAsset *string
+}
+
+// optional block height, defaults to current tip
+func (r ApiLimitSwapsSummaryRequest) Height(height int64) ApiLimitSwapsSummaryRequest {
+	r.height = &height
+	return r
+}
+
+// Filter by source asset (e.g., \&quot;BTC.BTC\&quot;)
+func (r ApiLimitSwapsSummaryRequest) SourceAsset(sourceAsset string) ApiLimitSwapsSummaryRequest {
+	r.sourceAsset = &sourceAsset
+	return r
+}
+
+// Filter by target asset (e.g., \&quot;ETH.ETH\&quot;)
+func (r ApiLimitSwapsSummaryRequest) TargetAsset(targetAsset string) ApiLimitSwapsSummaryRequest {
+	r.targetAsset = &targetAsset
+	return r
+}
+
+func (r ApiLimitSwapsSummaryRequest) Execute() (*LimitSwapsSummaryResponse, *http.Response, error) {
+	return r.ApiService.LimitSwapsSummaryExecute(r)
+}
+
+/*
+LimitSwapsSummary Method for LimitSwapsSummary
+
+Returns limit swaps summary statistics.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @return ApiLimitSwapsSummaryRequest
+*/
+func (a *QueueApiService) LimitSwapsSummary(ctx context.Context) ApiLimitSwapsSummaryRequest {
+	return ApiLimitSwapsSummaryRequest{
+		ApiService: a,
+		ctx: ctx,
+	}
+}
+
+// Execute executes the request
+//  @return LimitSwapsSummaryResponse
+func (a *QueueApiService) LimitSwapsSummaryExecute(r ApiLimitSwapsSummaryRequest) (*LimitSwapsSummaryResponse, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodGet
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *LimitSwapsSummaryResponse
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "QueueApiService.LimitSwapsSummary")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/thorchain/queue/limit_swaps/summary"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.height != nil {
+		localVarQueryParams.Add("height", parameterToString(*r.height, ""))
+	}
+	if r.sourceAsset != nil {
+		localVarQueryParams.Add("source_asset", parameterToString(*r.sourceAsset, ""))
+	}
+	if r.targetAsset != nil {
+		localVarQueryParams.Add("target_asset", parameterToString(*r.targetAsset, ""))
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiQueueRequest struct {
 	ctx context.Context
 	ApiService *QueueApiService

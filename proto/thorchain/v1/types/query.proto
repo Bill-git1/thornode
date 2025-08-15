@@ -33,6 +33,8 @@ import "types/query_quotes.proto";
 import "types/query_constant_values.proto";
 import "types/query_swap_queue.proto";
 import "types/query_swap_details.proto";
+import "types/query_limit_swaps.proto";
+import "types/query_limit_swaps_summary.proto";
 import "types/query_last_block.proto";
 import "types/query_vault.proto";
 import "types/query_tx.proto";
@@ -278,6 +280,14 @@ service Query {
 
   rpc SwapDetails(QuerySwapDetailsRequest) returns (QuerySwapDetailsResponse) {
     option (google.api.http).get = "/thorchain/queue/swap/details/{tx_id}";
+  }
+
+  rpc LimitSwaps(QueryLimitSwapsRequest) returns (QueryLimitSwapsResponse) {
+    option (google.api.http).get = "/thorchain/queue/limit_swaps";
+  }
+
+  rpc LimitSwapsSummary(QueryLimitSwapsSummaryRequest) returns (QueryLimitSwapsSummaryResponse) {
+    option (google.api.http).get = "/thorchain/queue/limit_swaps/summary";
   }
 
   rpc LastBlocks(QueryLastBlocksRequest) returns (QueryLastBlocksResponse) {

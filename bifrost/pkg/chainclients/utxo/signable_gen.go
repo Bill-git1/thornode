@@ -4,15 +4,15 @@ package utxo
 
 import (
 	"encoding/base64"
-  "fmt"
+	"fmt"
 	"math/big"
 
+	btcec "github.com/btcsuite/btcd/btcec"
 	"github.com/cosmos/cosmos-sdk/crypto/codec"
+	dogeec "github.com/eager7/dogd/btcec"
+	bchec "github.com/gcash/bchd/bchec"
+	ltcec "github.com/ltcsuite/ltcd/btcec"
 	"github.com/rs/zerolog"
-  bchec "github.com/gcash/bchd/bchec"
-  btcec "github.com/btcsuite/btcd/btcec"
-  dogeec "github.com/eager7/dogd/btcec"
-  ltcec "github.com/ltcsuite/ltcd/btcec"
 
 	"gitlab.com/thorchain/thornode/v3/bifrost/tss"
 	"gitlab.com/thorchain/thornode/v3/common"
@@ -51,6 +51,7 @@ func (ts *tssSignableBCH) SignECDSA(payload []byte) (*bchec.Signature, error) {
 
 	return &sig, nil
 }
+
 // SignSchnorr signs the given payload using Schnorr
 func (ts *tssSignableBCH) SignSchnorr(payload []byte) (*bchec.Signature, error) {
 	return nil, fmt.Errorf("schnorr signature not yet implemented in TSS")

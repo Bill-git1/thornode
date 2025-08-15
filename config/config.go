@@ -417,6 +417,10 @@ type Thornode struct {
 			EnabledUnsafeCORS bool   `mapstructure:"enabled_unsafe_cors"`
 			EnabledSwagger    bool   `mapstructure:"enabled_swagger"`
 			Address           string `mapstructure:"address"`
+			Pagination        struct {
+				DefaultPageSize uint64 `mapstructure:"default_page_size"`
+				MaxPageSize     uint64 `mapstructure:"max_page_size"`
+			} `mapstructure:"pagination"`
 		} `mapstructure:"api"`
 
 		GRPC struct {

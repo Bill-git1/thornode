@@ -1082,6 +1082,90 @@ paths:
               schema:
                 $ref: "#/components/schemas/SwapQueueResponse"
 
+  /thorchain/queue/limit_swaps:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+        description: Number of items to skip
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 100
+          maximum: 1000
+        description: Number of items to return
+      - name: source_asset
+        in: query
+        schema:
+          type: string
+        description: Filter by source asset (e.g., "BTC.BTC")
+      - name: target_asset
+        in: query
+        schema:
+          type: string
+        description: Filter by target asset (e.g., "ETH.ETH")
+      - name: sender
+        in: query
+        schema:
+          type: string
+        description: Filter by sender address
+      - name: sort_by
+        in: query
+        schema:
+          type: string
+          default: "ratio"
+          enum: ["ratio", "age", "amount", "created_height"]
+        description: Sort by field
+      - name: sort_order
+        in: query
+        schema:
+          type: string
+          default: "asc"
+          enum: ["asc", "desc"]
+        description: Sort order
+    get:
+      description: Returns limit swaps with pagination and filtering.
+      operationId: limitSwaps
+      tags:
+        - Queue
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LimitSwapsResponse"
+
+  /thorchain/queue/limit_swaps/summary:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+      - name: source_asset
+        in: query
+        schema:
+          type: string
+        description: Filter by source asset (e.g., "BTC.BTC")
+      - name: target_asset
+        in: query
+        schema:
+          type: string
+        description: Filter by target asset (e.g., "ETH.ETH")
+    get:
+      description: Returns limit swaps summary statistics.
+      operationId: limitSwapsSummary
+      tags:
+        - Queue
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LimitSwapsSummaryResponse"
+
   /thorchain/queue/scheduled:
     parameters:
       - $ref: "#/components/parameters/queryHeight"
@@ -4011,6 +4095,118 @@ components:
           type: string
           description: Type of queue the swap is in
           example: "advanced"
+
+    LimitSwapWithDetails:
+      type: object
+      properties:
+        swap:
+          $ref: "#/components/schemas/MsgSwap"
+        ratio:
+          type: string
+          description: The ratio threshold for this limit swap
+          example: "1234567890123456789"
+        blocks_since_created:
+          type: integer
+          format: int64
+          description: Number of blocks since the swap was created
+          example: 150
+        time_to_expiry_blocks:
+          type: integer
+          format: int64
+          description: Number of blocks until the swap expires
+          example: 14850
+        created_timestamp:
+          type: integer
+          format: int64
+          description: Unix timestamp when the swap was created
+          example: 1699123456
+
+    PaginationMeta:
+      type: object
+      properties:
+        offset:
+          type: integer
+          format: int64
+          description: Number of items skipped
+          example: 0
+        limit:
+          type: integer
+          format: int64
+          description: Number of items returned
+          example: 100
+        total:
+          type: integer
+          format: int64
+          description: Total number of items available
+          example: 1247
+        has_next:
+          type: boolean
+          description: Whether there are more items after this page
+          example: true
+        has_prev:
+          type: boolean
+          description: Whether there are items before this page
+          example: false
+
+    LimitSwapsResponse:
+      type: object
+      properties:
+        limit_swaps:
+          type: array
+          items:
+            $ref: "#/components/schemas/LimitSwapWithDetails"
+          description: Array of limit swaps with details
+        pagination:
+          $ref: "#/components/schemas/PaginationMeta"
+
+    AssetPairSummary:
+      type: object
+      properties:
+        source_asset:
+          type: string
+          description: Source asset identifier
+          example: "BTC.BTC"
+        target_asset:
+          type: string
+          description: Target asset identifier
+          example: "ETH.ETH"
+        count:
+          type: integer
+          format: int64
+          description: Number of limit swaps for this asset pair
+          example: 456
+        total_value_usd:
+          type: string
+          description: Total USD value of limit swaps for this asset pair
+          example: "4500000.00"
+
+    LimitSwapsSummaryResponse:
+      type: object
+      properties:
+        total_limit_swaps:
+          type: integer
+          format: int64
+          description: Total number of limit swaps
+          example: 1247
+        total_value_usd:
+          type: string
+          description: Total USD value of all limit swaps
+          example: "12450000.50"
+        asset_pairs:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssetPairSummary"
+          description: Summary statistics by asset pair
+        oldest_swap_blocks:
+          type: integer
+          format: int64
+          description: Age in blocks of the oldest limit swap
+          example: 14999
+        average_age_blocks:
+          type: integer
+          format: int64
+          description: Average age in blocks of all limit swaps
+          example: 7500
 
     OutboundResponse:
       type: array
