@@ -411,6 +411,7 @@ func NewChainApp(
 	eBifrostProposalHandler := thorchainkeeperabci.NewProposalHandler(
 		&app.ThorchainKeeper,
 		app.EnshrinedBifrost,
+		interfaceRegistry,
 		defaultProposalHandler.PrepareProposalHandler(),
 		defaultProposalHandler.ProcessProposalHandler(),
 	)
