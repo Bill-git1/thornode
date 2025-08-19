@@ -2,91 +2,144 @@
 
 ## Overview
 
-There are four phases of a transaction sent to THORChain.
+There are five phases a transaction goes through when interacting with THORChain:
 
-1. [Inbound Confirmation](delays.md#inbound-confirmation)
-2. [Observation Counting](delays.md#observation-counting)
-3. [Confirmation Counting](delays.md#confirmation-counting)
-4. [Outbound Delay](delays.md#outbound-delay)
-5. [Outbound Confirmation](delays.md#txout-delay)
+1. [Inbound Confirmation](#1-inbound-confirmation)
+2. [Observation & Consensus](#2-observation--consensus)
+3. [Finality & Confirmation Counting](#3-finality--confirmation-counting)
+4. [Outbound Delay (Queueing)](#4-outbound-delay-queueing)
+5. [Outbound Confirmation](#5-outbound-confirmation)
 
 Wait times can be between a few seconds to several hours. The assets being swapped, the size of the swap and the current network traffic within THORChain will determine the wait time.
 
-### Inbound Confirmation
+## 1. Inbound Confirmation
 
 This depends purely on the host chain and is out of the control of THORChain.
 
-- Bitcoin/BitcoinCash: \~10 minutes
-- Litecoin: \~2.5 minutes
-- Dogecoin: \~60 seconds
-- ETH: \~15 seconds
-- Cosmos: \~6 seconds
+Typical confirmation times:
 
-### Observation Counting
+| Chain      | Time to First Confirmation |
+| ---------- | -------------------------- |
+| Bitcoin    | \~10 minutes               |
+| Litecoin   | \~2.5 minutes              |
+| Dogecoin   | \~60 seconds               |
+| Ethereum   | \~15 seconds               |
+| Cosmos SDK | \~6 seconds                |
 
-THORNodes have to witness to THORChain when they see a transaction. It could seconds to minutes depending on how fast nodes can scan their blockchains to find transactions. Once 67% of THORNodes see a tx, then it can be confirmed. You can count the number of nodes that have seen a tx by counting the signatures in the `signers` parameter or look at the `status` field on the `/tx` endpoint.
+## 2. Observation & Consensus
 
-Example: [https://thornode.ninerealms.com/thorchain/tx/0AAA205438B6409CBA11DED8C8F63794D719CF4E3818B85117259311E3ADEA0E](https://thornode.ninerealms.com/thorchain/tx/0AAA205438B6409CBA11DED8C8F63794D719CF4E3818B85117259311E3ADEA0E)
+Once a transaction is confirmed on its host chain, THORNodes must _observe_ it. Each THORNode scans external chains for relevant vault activity. Once a supermajority (**2/3+** of active nodes) independently observe the same transaction, it reaches consensus and is marked as `observed`. This process could be seconds to minutes depending on how fast nodes can scan their blockchains to find transactions.
 
-### Confirmation Counting
+You can inspect this process using the `/thorchain/tx` endpoint. For example:
 
-THORChain has to defend against 51% attacks, which it does by counting to economic finality for each block (the value of the block relative to the value of the block reward). It tracks both, then computes the number of blocks to wait. It then populates this on the `/tx` endpoint.
+[View example Tx](https://thornode.ninerealms.com/thorchain/tx/b9d70ea425c44ce0a2f78ea0bdb2fc861e214d93752bc9a1f811000dc2b44d4b)
 
-Example: [https://thornode.ninerealms.com/thorchain/tx/0AAA205438B6409CBA11DED8C8F63794D719CF4E3818B85117259311E3ADEA0E](https://thornode.ninerealms.com/thorchain/tx/0AAA205438B6409CBA11DED8C8F63794D719CF4E3818B85117259311E3ADEA0E)
-
-`block_height` is the external height it first saw it.
-
-`finalise_height` is the external height it needs to see before it will confirm it.
-
-```admonish warning
-An event is not sent until the external block height crosses `finalise_height` so Midgard will NOT see the tx until confirmation-counted.
+```json
+"external_observed_height": 874437,
+"external_confirmation_delay_height": 874437
 ```
 
-Examples:
+> In this example, Bitcoin block 874437 is when the transaction was first observed and when confirmation counting begins.
 
-- 10 BTC: 2 blocks
-- 50 ETH: 16 blocks
-- 100 LTC: 9 blocks
+You can track the number of nodes that have seen a Tx by checking the `signers` array or looking at the `status` field on the `/tx` endpoint.
 
-### Outbound Delay
+See [Inbound Transactions](../bifrost/how-bifrost-works.md#inbound-transactions) for more information.
 
-THORChain throttles all outputs to prevent fund loss attacks. The maximum delay is 720 blocks which is approx 1 hour. Outbound delay worked out by computing the value of the outbound transaction in RUNE then applying an artificial delay. If the tx is in "scheduled", it will be delayed by a number of blocks. Once it is "outbound" it is being processed. See more information [here](https://docs.thorchain.org/how-it-works/security#b905-1).
+## 3. Finality & Confirmation Counting
+
+To protect against reorgs, THORChain requires some chains (like Bitcoin and Ethereum) to wait for _economic finality_ — enough confirmations to make a reorg economically infeasible. It tracks both, then computes the number of blocks to wait. It then populates this on the `/tx` endpoint.
+
+Example: [https://thornode.ninerealms.com/thorchain/tx/b9d70ea425c44ce0a2f78ea0bdb2fc861e214d93752bc9a1f811000dc2b44d4b](https://thornode.ninerealms.com/thorchain/tx/b9d70ea425c44ce0a2f78ea0bdb2fc861e214d93752bc9a1f811000dc2b44d4b)
+
+- BFT chains like Cosmos **do not require** additional confirmation counting.
+- UTXO and EVM chains **do**.
+
+This is reflected in these fields:
+
+```json
+"consensus_height": 18972084,
+"finalised_height": 18972084,
+"outbound_height": 18972085,
+```
+
+- `block_height` = first seen external block height
+- `finalised_height` = block height required to mark tx as final
+- `outbound_height` = when outbound is eligible for scheduling
+
+```admonish warning
+An event is not emitted until the external chain’s height passes `finalised_height`.
+Midgard will not show the transaction until this point.
+```
+
+Finality is dynamically calculated using:
+
+```text
+RequiredConfirmations = min(
+    (TxValue / BlockReward) × ConfMultiplier,
+    MAXCONFIRMATIONS
+)
+```
+
+- The confirmation multiplier and cap are set via Mimir per chain
+- Larger transactions generally require more confirmations
+
+See [Finality & Pre-Confirmation](../bifrost/how-bifrost-works.md#finality--pre-confirmation) for deeper explanation and code references.
+
+## 4. Outbound Delay (Queueing)
+
+After finality, the transaction is ready for outbound processing. THORChain throttles all outputs to prevent fund loss attacks. The maximum delay is 720 blocks which is approx 1 hour. Outbound delay worked out by computing the value of the outbound transaction in RUNE then applying an artificial delay. If the tx is in "scheduled", it will be delayed by a number of blocks.
+
+A transaction in `"scheduled"` state is delayed. Once it reaches `"outbound"`, it’s in the signing queue and about to be broadcast.
 
 ```admonish info
 Arbs and Traders who have trade history can have a reduced wait time due to [Swapper Clout.](./swapper-clout.md)
 ```
 
-**Queue:**
+See more information [here](https://docs.thorchain.org/how-it-works/security#b905-1).
 
-[https://thornode.ninerealms.com/thorchain/queue](https://thornode.ninerealms.com/thorchain/queue)
+### Swapper Clout Reduces Delay
 
-**Delayed txOuts:**
+[Clout](./swapper-clout.md) is the cumulative total fees paid (in RUNE) for a given address. Swappers with a high clout have proven themselves to be highly aligned to the project and therefore can reap the rewards by getting faster trade execution.
+Frequent swappers who pay more fees earn **Swapper Clout**. This is used to **reduce or eliminate** outbound delay.
 
-[https://thornode.ninerealms.com/thorchain/queue/scheduled](https://thornode.ninerealms.com/thorchain/queue/scheduled)
+- For each swap, 50% of fees (in RUNE) are attributed to the sender and recipient
+- Clout reduces the _effective value_ of the outbound when calculating delay
+- The formula:
 
-**Finalised txOuts:**
+```text
+delay = delayCalc(outboundValue - (cloutScore - cloutUsed))
+```
 
-[https://thornode.ninerealms.com/thorchain/queue/outbound](https://thornode.ninerealms.com/thorchain/queue/outbound)
+- Clout is applied proportionally across all active outbounds from the same address
+- Clout is _restored_ once the outbound achieves observation consensus
 
-**Swap Clout:**
+[See full implementation](./swapper-clout.md)
 
-[Clout](./swapper-clout.md) is the cumulative total fees paid (in RUNE) for a given address. Swappers with a high clout have proven themselves to be highly aligned to the project and therefore can reap the rewards by getting faster trade execution. Clout is deducted from the RUNE value of an outbound before a delay relative to the outbound value is applied. Clout is removed from an address when an outbound using it is scheduled, and the clout is reclaimed when the outbound achieves observation consensus.
+### Monitoring the Outbound Queue
 
-### Outbound Confirmation
+- [All Queued TxOuts](https://thornode.ninerealms.com/thorchain/queue)
+- [Scheduled (Delayed) Outbounds](https://thornode.ninerealms.com/thorchain/queue/scheduled)
+- [Ready-to-Send Outbounds](https://thornode.ninerealms.com/thorchain/queue/outbound)
+
+## 5. Outbound Confirmation
 
 This depends purely on the host chain and is out of the control of THORChain.
 
-- Bitcoin/BitcoinCash: \~10 minutes
-- Litecoin: \~2.5 minutes
-- Dogecoin: \~60 seconds
-- ETH: \~15 seconds
-- Cosmos: \~6 seconds
+Typical confirmation times:
 
-## How to Handle Delays
+| Chain      | Time to Confirm Outbound |
+| ---------- | ------------------------ |
+| Bitcoin    | \~10 minutes             |
+| Litecoin   | \~2.5 minutes            |
+| Dogecoin   | \~60 seconds             |
+| Ethereum   | \~15 seconds             |
+| Cosmos SDK | \~6 seconds              |
 
-Follow these guidelines
+## UX Guidelines: Handling Delays
 
-1. Use the Quote endpoint to get the estimated fee.
-2. Don't leave the user with a swap screen spinner, instead, move the swap to a "pending state" with a 10minute countdown. Let the user exit the app, perhaps even send them a notification after.
-3. Every minute, poll Midgard and see if the swap is processed.
-4. Once processed, you can inform the user, perhaps surprise them if the swap is done faster
+Apps and frontends should:
+
+1. **Use the [Quote endpoint](../concepts/querying-thorchain.md#querying-thorchain)** to estimate gas fees and inform the user.
+1. **Avoid leaving users staring at a spinner** — move swaps to a "pending" state with a countdown.
+1. **Notify the user** once their swap completes — especially if it's faster than expected.
+1. Let users close the app while waiting — no need to keep them locked in.

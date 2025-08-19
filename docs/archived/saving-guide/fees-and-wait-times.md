@@ -78,4 +78,4 @@ Wait times can be between a few seconds up to an hour. The assets being swapped,
 The Quote endpoint will calculate wait times.
 ```
 
-See the [delays.md](../concepts/delays.md "mention") section for full details.
+See the [delays.md](../../concepts/delays.md "mention") section for full details.

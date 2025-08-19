@@ -9,32 +9,35 @@ There are 4 different fees the user should know about.
 3. Liquidity Fee (swapSlip \* swapAmount)
 4. Outbound Fee (destinationChain: gasRate \* txSize)
 
-### **Terms**
+## Key Terms
 
-- **SourceChain**: the chain the user is swapping from
-- **DestinationChain**: the chain the user is swapping to txSize: the size of the transaction in bytes (or units)
-- **gasRate**: the current gas rate of the external network
-- **swapAmount**: the amount the user is swapping swapSlip: the slip created by the as a function of poolDepth
-- **affiliateFee**: optional fee set by interface in basis points
+| Term                  | Description                                   |
+| --------------------- | --------------------------------------------- |
+| **Source Chain**      | Chain the user is sending funds from          |
+| **Destination Chain** | Chain the user is receiving funds on          |
+| **txSize**            | Size of the transaction in bytes or gas units |
+| **gasRate**           | Gas price (e.g. sats/byte, gwei) for a chain  |
+| **swapAmount**        | Amount sent by the user                       |
+| **swapSlip**          | Pool-based slip incurred by the swap          |
+| **affiliateFee**      | Optional fee taken as a basis point skim      |
 
 ## Fee Ordering for Swaps
 
 Fees are taken in the following order when conducting a swap.
 
-1. Inbound Fee (user wallet controlled, not THORChain controlled)
-1. Swap Fee (denoted in output asset)
-1. Affiliate Fee (if any)
-1. Outbound Fee (taken from the swap output)
+1. **Inbound Fee** — paid directly on the source chain
+2. **Swap Fee** — deducted by THORChain during the swap (in output asset)
+3. **Affiliate Fee** — skimmed post-swap (in output asset)
+4. **Outbound Fee** — charged from the swap output to cover final delivery
+
+```admonish info
+With **streaming swaps**, the **Affiliate Fee is applied *before* the Swap Fee**.
+This ensures that if the swap is later refunded, the full amount (including the affiliate portion) is returned to the user. It prevents cases where an affiliate fee is deducted even when the swap does not complete.
+```
 
 To work out the total fees, fees should be converted to a common asset (e.g. RUNE or USD) then added up. Total fees should be less than the input else it is likely to result in a refund.
 
-```admonish info
-Because the affiliate fee is deducted after the Swap Fee, using streaming swaps is recommended for better swap efficiency.
-```
-
-## Fees Details
-
-### Inbound Fee
+## 1. Inbound Fee
 
 This is the fee the user pays to make a transaction on the source chain, which the user pays directly themselves. The gas rate recommended to use is `fast` where the tx is guaranteed to be committed in the next block. Any longer and the user will be waiting a long time for their swap and their price will be invalid (thus they may get an unnecessary refund).
 
@@ -42,17 +45,18 @@ $$
 inboundFee = txSize * gasRate
 $$
 
-```admonish success
-THORChain calculates and posts fee rates at [`https://thornode.ninerealms.com/thorchain/inbound_addresses`](https://thornode.ninerealms.com/thorchain/inbound_addresses)
-
-Gas Rate is calculated by taking the highest gas rate over the last 10 blocks then times 1.5.
+```admonish info
+THORChain publishes current gas rates at [`/thorchain/inbound_addresses`](https://thornode.ninerealms.com/thorchain/inbound_addresses)
 ```
+
+- `gasRate` is derived from the **max of the last 10 blocks**, then scaled via OFM
+- `txSize` is estimated per chain (e.g. 250 bytes for UTXO, 21,000 gas for ETH)
 
 ```admonish warning
 Always use a "fast" or "fastest" fee, if the transaction is not confirmed in time, it could be abandoned by the network or failed due to old prices. You should allow your users to cancel or re-try with higher fees.
 ```
 
-### Liquidity Fee
+## 2. Liquidity Fee
 
 This is simply the slip created by the transaction multiplied by its amount. It is priced and deducted from the destination amount automatically by the protocol.
 
@@ -64,13 +68,13 @@ $$
 fee =slip * swapAmount
 $$
 
-See more information in the [Liquidity Section]
+See more information in the [Liquidity Section](https://docs.thorchain.org/thorchain-finance/continuous-liquidity-pools)
 
 ```admonish warning
 A minimum swap fee in basis points (bps) applies for different asset types, governed by the [mimir network settings](../mimir.md#swapping).
 ```
 
-### Affiliate Fee
+## 3. Affiliate Fee
 
 Within the transactions you build for your users you can include an affiliate for your exchange.
 
@@ -86,19 +90,66 @@ $$
 
 See the [Affiliate Fee Guide](../affiliate-guide/affiliate-fee-guide.md) for more information.
 
-### Outbound Fee
+## 4. Outbound Fee
 
-This is the fee the Network pays on behalf of the user to send the outbound transaction. To adequately pay for network resources (TSS, compute, state storage) the fee is marked up from what nodes actually pay on-chain by an "Outbound Fee Multiplier" (OFM).
+The Outbound Fee is what THORChain charges to deliver the final asset to the user on the*destination chai*. It covers the actual L1 gas costs\*(paid by nodes), and helps sustain the network's infrastructure — including TSS signing, compute, and state management.
 
-The OFM moves between a `MaxOutboundFeeMultiplier` and a `MinOutboundFeeMultiplier`(defined as [Network Constants](https://gitlab.com/thorchain/thornode/-/blob/develop/constants/constants_v1.go) or as [Mimir Values](https://thornode.ninerealms.com/thorchain/mimir)), based on the network's current outbound fee "surplus" in relation to a "target surplus". The outbound fee "surplus" is the cumulative difference (in $RUNE) between what the users are charged for outbound fees and what the nodes actually pay. As the network books a "surplus" the OFM slowly decreases from the Max to the Min. Current values for the OFM can be found on the [Network Endpoint](https://thornode.ninerealms.com/thorchain/network).
+To ensure long-term sustainability, the outbound fee is marked up by a dynamic value called the **Outbound Fee Multiplier (OFM)**. This allows the protocol to collect slightly more than it spends, building a buffer (or "surplus") of RUNE to cover fluctuations in network cost.
 
-$$
-outboundFee = txSize * gasRate * OFM
-$$
+### Why It's Dynamic
 
-The minimum Outbound Layer1 Fee the network will charge is on `/thorchain/mimir` and is priced in USD (based on THORChain's USD pool prices). This means really cheap chains still pay their fair share. It is currently set to `100000000` = $1.00
+The Outbound Fee Multiplier moves between a **maximum** and **minimum** value, depending on the current fee "surplus" for a chain:
 
-See [Outbound Fee](https://docs.thorchain.org/how-it-works/fees#outbound-fee) for more information.
+- **Surplus = Fees Withheld – Fees Spent**
+- If the surplus is **above target**, the OFM **decreases** (users pay closer to actual gas costs)
+- If the surplus is **below target**, the OFM **increases** (users pay more to replenish reserves)
+
+This dynamic model ensures users pay fair outbound fees while keeping the protocol solvent.
+
+The outbound fee "surplus" is the cumulative difference (in $RUNE) between what the users are charged for outbound fees and what the nodes actually pay. As the network books a "surplus" the OFM slowly decreases from the Max to the Min.
+
+### Outbound Fee Formula
+
+```math
+outboundFee = txSize × gasRate × Outbound Fee Multiplier (OFM)
+```
+
+- The `gasRate` and `txSize` come from live on-chain data
+- The **OFM** ranges from **1.0x to 3.0x** and is dynamically calculated using the following [Mimir values](https://thornode.ninerealms.com/thorchain/mimir):
+
+| Mimir Key                             | Description                                            | Default        |
+| ------------------------------------- | ------------------------------------------------------ | -------------- |
+| `TARGETOUTBOUNDFEESURPLUSRUNE`        | Target surplus (in RUNE) the protocol aims to maintain | `5,000 RUNE`   |
+| `MAXOUTBOUNDFEEMULTIPLIERBASISPOINTS` | Max fee multiplier in basis points                     | `30000` = 3.0x |
+| `MINOUTBOUNDFEEMULTIPLIERBASISPOINTS` | Min fee multiplier in basis points                     | `1000` = 1.0x  |
+
+```admonish info
+Values can change. Current OFM values are published at [`/thorchain/network`](https://thornode.ninerealms.com/thorchain/network)
+```
+
+### How the OFM works
+
+- THORChain tracks the **gas fees spent** and **fees withheld** for each chain
+- The **surplus** is defined as:
+
+  ```text
+  surplus = feesWithheld - feesSpent
+  ```
+
+- If the surplus exceeds the target, the multiplier drops toward the min
+- If below target, the multiplier rises toward the max
+- This ensures the network collects enough to cover real costs without overcharging users
+
+```math
+OFM = Max - ((surplus / targetSurplus) × (Max - Min))
+```
+
+It is recalculated every block, per chain and per asset.
+
+- Final fee is returned by:
+
+  - [`/thorchain/inbound_addresses`](https://thornode.ninerealms.com/thorchain/inbound_addresses) → `outbound_fee`
+  - [`/thorchain/network`](https://thornode.ninerealms.com/thorchain/network) → `outbound_fee_multiplier`
 
 ### Refunds and Minimum Swappable Amount
 
@@ -112,7 +163,9 @@ The outbound_fee for each chain is returned on the [Inbound Addresses](https://t
 
 It is strongly recommended to use the `recommended_min_amount_in` value that is included on the [Swap Quote](../swap-guide/quickstart-guide.md#2-query-for-a-swap-quote) endpoint, which is the calculation described above. This value is priced in the inbound asset of the quote request (in 1e8). This should be the minimum-allowed swap amount for the requested quote. The swap quote endpoint will return a helpful error message including this value if the swap amount is insufficient.
 
-_Remember, if the swap limit is not met or the swap is otherwise refunded the outbound_fee of the Source Chain will be deducted from the input amount, so give your users enough room._
+```admonish info
+Remember, if the swap limit is not met or the swap is otherwise refunded the outbound_fee of the Source Chain will be deducted from the input amount, so give your users enough room.
+```
 
 ### Understanding gas_rate
 

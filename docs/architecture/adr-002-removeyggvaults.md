@@ -17,7 +17,7 @@ There are two types of vaults in THORChain:
 
 This is primarily a result of TSS limitations. During the initial build of THORChain it was found that TSS's quadratic scaling problem (signing times increase quadratically with the size of member committee) would set a limit on the number of outbounds per second.
 
-Key extract from [TSS Benchmark 2020] (https://github.com/thorchain/Resources/blob/master/Whitepapers/THORChain-TSS-Benchmark-July2020.pdf)
+Key extract from [TSS Benchmark 2020](https://github.com/thorchain/Resources/blob/master/Whitepapers/THORChain-TSS-Benchmark-July2020.pdf)
 
 ```json
 [

@@ -2,7 +2,9 @@
 
 THORChain uses a CHAIN.ASSET notation for all assets. TICKER and ID are added where required. The asset full notation is pictured.
 
-![L1 Asset Notation](https://docs.google.com/drawings/u/1/d/skidhZPIsMKQ-XWJWb3EJaQ/image?w=698&h=276&rev=23&ac=1&parent=1ZoJQKvyATQekFbWMk_rqX96K9BSmCArh9e-A_g66wDQ)
+<p align="center">
+  <img src="../images/asset-notation.png" alt="L1 Asset Notation">
+</p>
 
 Each asset type has a different delimiter, as explained below. Understanding this notation and delimiter is essential for interacting with THORChain, especially when constructing [transaction memos](./memos.md).
 
@@ -21,13 +23,14 @@ For a complete list of usable Layer 1 (L1) asset names and their shortcuts, refe
 | Asset         | Notation                                            |
 | ------------- | --------------------------------------------------- |
 | Bitcoin       | BTC.BTC (Native BTC)                                |
-| Bitcoin       | BTC/BTC (Synthetic BTC)                             |
-| Bitcoin       | THOR.BTC (Derived BTC)                              |
 | Bitcoin       | BTC~BTC (Trade BTC)                                 |
 | Bitcoin       | BTC-BTC (Secured BTC)                               |
+| Bitcoin       | BTC/BTC (Synthetic BTC)                             |
+| Bitcoin       | THOR.BTC (Derived BTC)                              |
 | Ethereum      | ETH.ETH                                             |
 | USDT          | ETH.USDT-0xdac17f958d2ee523a2206206994597c13d831ec7 |
 | RUNE (NATIVE) | THOR.RUNE                                           |
+| RUJI (NATIVE) | THOR.RUJI                                           |
 
 ## Layer 1 Assets
 

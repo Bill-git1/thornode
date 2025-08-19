@@ -1,53 +1,5 @@
 # Tutorials
 
-## Find Savers Position
-
-Endpoints have been made to look up a savers position quickly.
-
-### **Savers Position using Thornode**
-
-**Request**: _Get BTC saver information for the address 33XBYjiR3B7g8755mCB56aHtxQYL2Go9xf_ [https://thornode.ninerealms.com/thorchain/pool/BTC.BTC/saver/33XBYjiR3B7g8755mCB56aHtxQYL2Go9xf](https://thornode.ninerealms.com/thorchain/pool/BTC.BTC/saver/33XBYjiR3B7g8755mCB56aHtxQYL2Go9xf)
-
-**Response:**
-
-```json
-{
-  "asset": "BTC.BTC",
-  "asset_address": "33XBYjiR3B7g8755mCB56aHtxQYL2Go9xf",
-  "last_add_height": 8794877,
-  "units": "71338",
-  "asset_deposit_value": "71723",
-  "asset_redeem_value": "71830",
-  "growth_pct": "0.001491850591860352"
-}
-```
-
-Returns all savers for a given asset. To get all savers you can use [https://thornode.ninerealms.com/thorchain/pool/BTC.BTC/savers](https://thornode.ninerealms.com/thorchain/pool/BTC.BTC/savers)
-
-### **Savers Position using Midgard**
-
-**Request** _Get Savers Position for address 33XBYjiR3B7g8755mCB56aHtxQYL2Go9xf_
-
-[https://midgard.ninerealms.com/v2/saver/33XBYjiR3B7g8755mCB56aHtxQYL2Go9xf](https://midgard.ninerealms.com/v2/saver/33XBYjiR3B7g8755mCB56aHtxQYL2Go9xf)
-
-**Response:**
-
-```json
-{
-  "pools": [
-    {
-      "assetAddress": "33XBYjiR3B7g8755mCB56aHtxQYL2Go9xf",
-      "assetBalance": "71723",
-      "assetWithdrawn": "0",
-      "dateFirstAdded": "1671838673",
-      "dateLastAdded": "1671838673",
-      "pool": "BTC.BTC",
-      "saverUnits": "71338"
-    }
-  ]
-}
-```
-
 ## **Find Liquidity Position**
 
 Similar to savers, looking up the liquidity position with a given address is possible.
@@ -174,7 +126,7 @@ Will also include savers' actions. The Action endpoint is very flexible, see the
 
 Transactions can [take time to fully process](../concepts/delays.md) once sent to THORChain.
 
-**Request**: Get the status for BTC tx A56B423250020E4960D9836C6F843E1D3333FAE583C9CA26776F0D68DA69CE4A sent to the Savers vault. [https://thornode.ninerealms.com/thorchain/alpha/tx/status/A56B423250020E4960D9836C6F843E1D3333FAE583C9CA26776F0D68DA69CE4A](https://thornode.ninerealms.com/thorchain/alpha/tx/status/A56B423250020E4960D9836C6F843E1D3333FAE583C9CA26776F0D68DA69CE4A)
+**Request**: Get the status for BTC tx A56B423250020E4960D9836C6F843E1D3333FAE583C9CA26776F0D68DA69CE4A sent to the Savers vault. [https://thornode.ninerealms.com/thorchain/tx/status/A56B423250020E4960D9836C6F843E1D3333FAE583C9CA26776F0D68DA69CE4A](https://thornode.ninerealms.com/thorchain/tx/status/A56B423250020E4960D9836C6F843E1D3333FAE583C9CA26776F0D68DA69CE4A)
 
 **Response**:
 
@@ -209,7 +161,3 @@ Transactions can [take time to fully process](../concepts/delays.md) once sent t
   }
 }
 ```
-
-Note this endpoint is in alpha and the response will differ for swaps.
-
-For more details information, [https://thornode.ninerealms.com/thorchain/tx/A56B423250020E4960D9836C6F843E1D3333FAE583C9CA26776F0D68DA69CE4A/signers](https://thornode.ninerealms.com/thorchain/tx/A56B423250020E4960D9836C6F843E1D3333FAE583C9CA26776F0D68DA69CE4A/signers) can be used looking for `updated_vault`

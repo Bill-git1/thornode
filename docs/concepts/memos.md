@@ -6,7 +6,7 @@ Transactions to THORChain pass user intent with the `MEMO` field on their respec
 
 THORChain uses specific [asset notation](asset-notation.md) for all assets. Assets and functions can be abbreviated, and affiliate addresses and asset amounts can be shortened to [reduce memo length](memo-length-reduction.md), including through use of [scientific notation](memo-length-reduction.md#scientific-notation). Some parameters can also refer to a [THORName](../affiliate-guide/thorname-guide.md) instead of an address.
 
-Guides have been created for [Swap](../swap-guide/quickstart-guide.md), [Savers](../saving-guide/quickstart-guide.md) and [Lending](../lending/quick-start-guide.md) to enable quoting and the automatic construction of memos for simplicity.
+A guide has been created for [Swap](../swap-guide/quickstart-guide.md) to enable quoting and the automatic construction of memos for simplicity.
 
 All memos are listed in the [relevant THORChain source code](https://gitlab.com/thorchain/thornode/-/blob/develop/x/thorchain/memo/memo.go) variable `stringToTxTypeMap`.
 
@@ -16,7 +16,7 @@ THORChain has a [memo size limit of 250 bytes](https://gitlab.com/thorchain/thor
 
 ### Dust Thresholds
 
-THORChain has various dust thresholds (dust limits), defined on a per-chain basis. Refer to the [Dust-thresholds and transaction validation](sending-transactions.md#dust-thresholds-and-transaction-validation) for details.
+THORChain has various dust thresholds (dust limits), defined on a per-chain basis. Refer to the [Dust Thresholds](../bifrost/vault-behaviors.md#dust-thresholds) for details.
 
 ## Format
 

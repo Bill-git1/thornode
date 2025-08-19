@@ -21,7 +21,7 @@ RUNE, Synthetics and Trade Assets cannot be converted to a Secured Asset.
 
 As Secured Assets are not held in the pools, the combined pool and secured asset value (combined Layer1 asset value) could exceed the total bonded. To ensure this does not occur:
 
-1. The calculation of the [Incentive Pendulum](https://docs.thorchain.org/how-it-works/incentive-pendulum) now operates based on Layer1 assets versus bonds, rather than solely on pool depths versus bonds. This ensures there is always "space" for arbitrageurs to exist in the network and be able to arbitrage pools effectively (versus synths hitting caps).
+1. The calculation of the [Incentive Pendulum](../concepts/incentive-pendulum.md) now operates based on Layer1 assets versus bonds, rather than solely on pool depths versus bonds. This ensures there is always "space" for arbitrageurs to exist in the network and be able to arbitrage pools effectively (versus synths hitting caps).
 1. Before Secured Assets are created, a check is done to ensure there is sufficient security budget to secure them.
 
 ## Using Secured Assets

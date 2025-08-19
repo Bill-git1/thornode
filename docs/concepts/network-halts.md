@@ -12,7 +12,7 @@ In most cases funds won't be lost if they are sent when halted, but they may be 
 In the worse case if THORChain suffers a consensus halt the `inbound_addresses` endpoint will freeze with `halted = false` but the network is actually hard-halted. In this case running a fullnode is beneficial, because the last block will become stale after 6 seconds and interfaces can detect this.
 ```
 
-Interfaces that provide LP management can provide more feedback to the user what specifically is paused.
+Interfaces should provide more feedback to the user what specifically is paused.
 
 There are levels of granularity the network has to control itself and chains in the event of issues. Interfaces need to monitor these settings and apply appropriate controls in their interfaces, inform users and prevent unsupported actions.
 

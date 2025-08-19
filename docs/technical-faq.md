@@ -7,13 +7,12 @@ THORChain is built on the [Cosmos SDK](https://docs.thorchain.org/technology/cos
 - **Custom Handlers:**
 
   - **[Add liquidity, withdraw liquidity, and swap handlers](./concepts/memos.md)**: Facilitate cross-chain liquidity pooling and swaps.
-  - **[Lending module](https://docs.thorchain.org/thorchain-finance/lending)**: Users post collateral and receive debt in USD, with collateral held in THORChain’s pools. Repayment of USD-denominated debt returns the collateral. See the [Dashboard](https://dashboards.ninerealms.com/#lending) for more information.
   - **[Reserve module](https://runescan.io/address/thor1dheycdevq39qlkxs2a6wuuzyn4aqxhve4qxtxt)**: Manages a Reserve of 78.8M RUNE, used for block rewards.
-  - **[RUNEPool module](https://thorchain.network/runepool/)**: Phased in to allow RUNE liquidity provision across pools. See the [Dashboard](https://thorchain.net/thorfi/runepool?tab=rune-pools) for more information.
+  - **[RUNEPool module](https://thorchain.network/runepool/)**: Phased in to allow RUNE liquidity provision across pools. See the [Dashboard](https://thorchain.net/pools/runepool?tab=rune-pools) for more information.
 
 - **Bifrost & Threshold Signatures:**
 
-  - THORChain uses [Bifrost](https://docs.thorchain.org/technology/bifrost-tss-and-vaults) to facilitate native, L1 cross-chain swaps. It runs a fullnode RPC daemon for each network it connects to and utilizes [Threshold Signature Scheme](../bifrost/tss/go-tss/README.md) (TSS) technology for multi-encryption management of assets across blockchains.
+  - THORChain uses [Bifrost](./bifrost/how-bifrost-works.md) to facilitate native, L1 cross-chain swaps. It runs a fullnode RPC daemon for each network it connects to and utilizes [Threshold Signature Scheme](./bifrost/vault-behaviors.md#vault-behaviors) (TSS) technology for multi-encryption management of assets across blockchains.
 
 - **Custom Governance Mechanisms:**
   - THORChain’s governance is distinct from the Cosmos SDK’s generic module. RUNE holders are not voting members; node operators receive votes. Most economic parameters require a 2/3 majority to change, while some operational parameters require 3 votes, which can be overridden by 4 votes.
@@ -144,7 +143,7 @@ RUNE. A minimum of 300,000 RUNE, sent by the [network variable](./mimir.md#node-
 
 **Can accounts delegate their tokens to be staked by a different validator?**
 
-Accounts must choose which validator to stake to, and a [node operator](https://docs.thorchain.org/thornodes/overview) can only whitelist “[bond providers](https://docs.thorchain.org/thornodes/pooled-thornodes)”. Currently there is a max of 10 bond providers per node, set my the network [mimir](./mimir.md) setting `MAXBONDPROVIDERS`, however there is a campaign underway to increase this number to 100. This is different from most “distributed proof-of-stake” networks. It requires bonders to have a relationship with their bond providers, curtailing “public, branded validators”. Validators are anonymous entities and may conduct their own business development to find bond providers. Bond providers themselves have no stake in governance. There is a proposed feature for AutoBond, which will allow users to provide bond that is split evenly across validators without explicit bi-directional coordination. See [Pooled THORNodes]((https://docs.thorchain.org/thornodes/pooled-thornodes) for more information.
+Accounts must choose which validator to stake to, and a [node operator](https://docs.thorchain.org/thornodes/overview) can only whitelist “[bond providers](https://docs.thorchain.org/thornodes/pooled-thornodes)”. Currently there is a max of 10 bond providers per node, set my the network [mimir](./mimir.md) setting `MAXBONDPROVIDERS`, however there is a campaign underway to increase this number to 100. This is different from most “distributed proof-of-stake” networks. It requires bonders to have a relationship with their bond providers, curtailing “public, branded validators”. Validators are anonymous entities and may conduct their own business development to find bond providers. Bond providers themselves have no stake in governance. There is a proposed feature for AutoBond, which will allow users to provide bond that is split evenly across validators without explicit bi-directional coordination. See [Pooled THORNodes](https://docs.thorchain.org/thornodes/pooled-thornodes) for more information.
 
 **How soon after calling the staking operation can a staker start accruing rewards?**
 

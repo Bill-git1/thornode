@@ -2,7 +2,7 @@
 
 ## Overview
 
-The network launched with a set number of constants, which have not changed. Constants can be overridden via Mimir and nodes have the ability to [vote on](../thornodes/overview.md#node-voting) and change Mimir values. \
+The network launched with a set number of constants, which have not changed. Constants can be overridden via Mimir and nodes have the ability to [vote on](https://docs.thorchain.org/thornodes/overview#node-voting) and change Mimir values. \
 See [Halt Management](./concepts/network-halts.md) for halt and pause specific settings.
 
 Mimir setting can be created and changed without a corresponding Constant.

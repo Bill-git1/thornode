@@ -9,11 +9,12 @@ Below are the list of supported Address Formats. Not using this risks loss of fu
 | BTC              | P2WSH /w Bech32 (preferred), P2WPKH /w Bech32, P2PKH, P2SH, P2TR | Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats |
 | ETH              | EIP-55                                                           | Do not swap to smart contract addresses.                                                        |
 | BSC              | EIP-55                                                           | Do not swap to smart contract addresses.                                                        |
-| AVAX             | EIP-55                                                           | Do not swap to smart contract addresses..                                                       |
+| AVAX             | EIP-55                                                           | Do not swap to smart contract addresses.                                                        |
 | DOGE             | Bech32, P2PKH                                                    | Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats |
 | LTC              | Bech32, P2PKH                                                    | Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats |
 | BCH              | Bech32, P2PKH                                                    | Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats |
-| GAIA (cosmoshub) | Bech32                                                           |                                                                                                 |
+| GAIA (cosmoshub) | Bech32 (supports both Secp256k1 and Ed25519)                     | THORChain now supports EDDSA (Ed25519) addresses in addition to the traditional Secp256k1.      |
+| XRP              | Classic Base58                                                   | Avoid destination tags unless required by receiving wallet. Leave 1 XRP minimum for migration   |
 
 All inbound_address support this format.
 
@@ -30,25 +31,25 @@ The address will be the current active Asgard Address that accepts inbounds. Do 
 Example Output, each connected chain will be displayed.
 
 ```json
-
-  {
-    "chain": "BTC",
-    "pub_key": "thorpub1addwnpepqtwl02y7c30shldqe3lr0s45xt6s0n9jkjchcd7zgscknmcn92vugv5v2ng",
-    "address": "bc1qkqg0v50q2wj7r5jykkmsjm549kpua70yfyav5t",
-    "halted": false,
-    "global_trading_paused": false,
-    "chain_trading_paused": false,
-    "chain_lp_actions_paused": false,
-    "gas_rate": "22",
-    "gas_rate_units": "satsperbyte",
-    "outbound_tx_size": "1000",
-    "outbound_fee": "45000",
-    "dust_threshold": "10000"
-  },
+{
+  "chain": "BTC",
+  "pub_key": "thorpub1addwnpepqf33c0dn8wqey2xcj0fe34kn3hhpz3z3vsjvke3f5mhdq5xumajmc7k89fv",
+  "address": "bc1qjrj4cw7x46m2rxa78y32kv6nhzzssmvmpyfpcz",
+  "halted": false,
+  "global_trading_paused": false,
+  "chain_trading_paused": false,
+  "chain_lp_actions_paused": false,
+  "observed_fee_rate": "2",
+  "gas_rate": "3",
+  "gas_rate_units": "satsperbyte",
+  "outbound_tx_size": "1000",
+  "outbound_fee": "903",
+  "dust_threshold": "10000"
+}
 ```
 
 ```admonish danger
-Never cache vault addresses, they churn regularly!
+Never cache vault addresses, they [churn](../bifrost/vault-behaviors.md#vault-migrations) regularly!
 ```
 
 ```admonish danger
@@ -95,29 +96,29 @@ Use the `/pools` [endpoint](https://midgard.ninerealms.com/v2/pools) of Midgard 
 
 ```json
 {
-  "annualPercentageRate": "0.26851741838417964",
-  "asset": "ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48",
-  "assetDepth": "704918488993385",
-  "assetPrice": "0.27957103705024305",
+  "annualPercentageRate": "0.013025968330830473",
+  "asset": "AVAX.USDC-0XB97EF9EF8734C71904D8002F8B6BC66DD9C48A6E",
+  "assetDepth": "44984823069671",
+  "assetPrice": "0.7628247087053169",
   "assetPriceUSD": "1",
-  "earnings": "1806133325329",
-  "earningsAnnualAsPercentOfDepth": "0.23893708202900793",
-  "liquidityUnits": "30358099575031",
-  "lpLuvi": "-0.21236440724172345",
+  "earnings": "17038463728",
+  "earningsAnnualAsPercentOfDepth": "0.012945072714771326",
+  "liquidityUnits": "92700911990602",
+  "lpLuvi": "-0.9995183044925366",
   "nativeDecimal": "6",
-  "poolAPY": "0.26851741838417964",
-  "runeDepth": "197074793003771",
-  "saversAPR": "0.02920836798030401",
-  "saversDepth": "368446044075677",
-  "saversUnits": "338062015741477",
-  "saversYieldShare": "0.27977160028361103",
+  "poolAPY": "0.013025968330830473",
+  "runeDepth": "34315534554282",
+  "saversAPR": "0",
+  "saversDepth": "64514721140337",
+  "saversUnits": "57164578167010",
+  "saversYieldShare": "NaN",
   "status": "available",
-  "synthSupply": "458398271824424",
-  "synthUnits": "14626376130101",
+  "synthSupply": "65229115178334",
+  "synthUnits": "244408597168005",
   "totalCollateral": "0",
   "totalDebtTor": "0",
-  "units": "44984475705132",
-  "volume24h": "265009796099941"
+  "units": "337109509158607",
+  "volume24h": "5772328862793"
 }
 ```
 
@@ -130,9 +131,9 @@ Make sure to manually add Native $RUNE as a swappable asset.
 ```
 
 ```admonish info
-`"assetPrice" tells you the asset's price in RUNE (RUNE Depth/AssetDepth ). In the above example`
+`"assetPrice" tells you the asset's price in RUNE (RUNE Depth/AssetDepth ). In the above example;
 
-`1 ETH.USDC = 0.279571 RUNE`
+`1 ETH.USDC = 0.76282 RUNE`
 ```
 
 ### Decimals and Base Units
@@ -146,4 +147,4 @@ See code examples using the THORChain xchain package here [https://github.com/xc
 There are two ways to see if a Chain is halted.
 
 1. Looking at the `/inbound_addresses` [endpoint](https://thornode.ninerealms.com/thorchain/inbound_addresses) and inspecting the halted flag.
-2. Looking at Mimir and inspecting the HALT\[Chain]TRADING setting. See [network-halts.md](network-halts.md "mention") for more details.
+2. Looking at Mimir and inspecting the HALT\[Chain]TRADING setting. See [network-halts.md](network-halts.md#halt-pause-management) for more details.

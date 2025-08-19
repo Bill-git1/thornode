@@ -154,27 +154,11 @@ THORChain enforces dust thresholds to prevent dust attacks, where negligible amo
 
 ### Dust Threshold Rules
 
-- **General Rule**: Transactions must exceed the chain’s dust threshold in base units (e.g., wei for EVM chains, sats for UTXO chains, uatom for GAIA) to be processed by THORChain. This ensures the network recognizes the transaction and executes the instruction specified in the memo.
-- **Unit Clarification**: The `gas_rate_units` field (e.g., gwei for EVM chains, satsperbyte for UTXO chains) in the [Inbound Addresses](https://thornode.ninerealms.com/thorchain/inbound_addresses) endpoint refers to gas pricing, while dust thresholds are specified in base units.
-- **Source of Truth**: Dust thresholds may be updated by the network. Always check the latest values at the [Inbound Addresses](https://thornode.ninerealms.com/thorchain/inbound_addresses) endpoint before sending a transaction.
-- **Important**: Convert “human-readable” amounts (e.g., 1 BTC) to base units (e.g., 100,000,000 sats) when calculating the transaction amount to comply with the dust threshold.
-
-### Chain-Specific Dust Thresholds
-
-- **AVAX**: 1 gwei
-- **BASE**: 1 gwei
-- **BCH**: 10,000 sats
-- **BSC**: 1 gwei
-- **BTC**: 1,000 sats
-- **DOGE**: 100,000,000 sats (1 DOGE)
-- **ETH**: 1 gwei
-- **GAIA**: 1 uatom
-- **LTC**: 10,000 sats
-- **XRP**: 1,000,000 drops (1 XRP)
-
 ```admonish warning
 Ensure transaction amounts exceed the dust threshold for the chain to avoid being ignored. Verify the latest dust threshold at [Inbound Addresses](https://thornode.ninerealms.com/thorchain/inbound_addresses) endpoint before sending to ensure the amount is sufficient to trigger the desired action on THORChain.
 ```
+
+See [the Dust Thresholds Section](../bifrost/vault-behaviors.md#dust-thresholds) for full information.
 
 ## THORChain
 

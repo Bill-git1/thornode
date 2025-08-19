@@ -1,7 +1,7 @@
 # EVM Whitelist Procedure
 
 ```admonish info
-Whitelists have been removed. See [here](https://github.com/code-423n4/2024-06-thorchain?tab=readme-ov-file#whitelist-removal) for more information.
+Whitelists have been removed for the router. See [here](https://github.com/code-423n4/2024-06-thorchain?tab=readme-ov-file#whitelist-removal) for more information.
 ```
 
 ## Overview

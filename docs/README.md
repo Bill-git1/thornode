@@ -7,7 +7,7 @@ THORChain is a decentralised cross-chain liquidity protocol that allows users to
 THORChain works by observing transactions to its vaults across all the chains it supports. When the majority of nodes observe funds flowing into the system, they agree on the user's intent (usually expressed through a [memo](concepts/memos.md) within a transaction) and take the appropriate action.
 
 ```admonish info
-For more information see [Understanding THORChain](https://docs.thorchain.org/learn/understanding-thorchain) [Technology](https://docs.thorchain.org/how-it-works/technology) or [Concepts](broken-reference).
+For more information see [Understanding THORChain](https://docs.thorchain.org/learn/understanding-thorchain) [Technology](https://docs.thorchain.org/how-it-works/technology) or [Concepts](./concepts/feature-guide.md).
 ```
 
 For wallets/interfaces to interact with THORChain, they need to:

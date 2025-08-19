@@ -136,7 +136,7 @@ To **withdraw**, the user should send a specific dust amount of asset (avoiding 
 10,000 units is read as “withdraw 10000 basis points”, which is 100%.
 
 ```admonish info
-The [dust threshold](../../concepts/sending-transactions.md#dust-thresholds-and-transaction-validation) is the point at which the network will ignore the amount sent to stop dust attacks (widely seen on UTXO chains).
+The [dust threshold](../../bifrost/vault-behaviors.md#dust-thresholds) is the point at which the network will ignore the amount sent to stop dust attacks (widely seen on UTXO chains).
 ```
 
 Specific rules for each chain and action are as follows:
