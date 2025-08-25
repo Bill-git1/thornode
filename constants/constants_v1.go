@@ -145,6 +145,7 @@ func NewConstantValue() *ConstantVals {
 			TCYStakingHalt:                      1,                  // enable/disable tcy staking
 			TCYUnstakingHalt:                    1,                  // enable/disable tcy unstaking
 			TCYClaimingHalt:                     1,                  // enable/disable tcy claiming
+			ReserveMaxCap:                       0,                  // maximum reserve balance before EmissionCurve is overridden, 0 = disabled
 		},
 		boolValues: map[ConstantName]bool{
 			StrictBondLiquidityRatio: true,

@@ -1575,6 +1575,13 @@ func (vm *NetworkMgrVCUR) UpdateNetwork(ctx cosmos.Context, constAccessor consta
 	totalEffectiveBond, _ := getTotalEffectiveBond(active)
 
 	emissionCurve := vm.k.GetConfigInt64(ctx, constants.EmissionCurve)
+
+	// Override EmissionCurve to default (6) if reserve balance exceeds ReserveMaxCap
+	reserveMaxCap := vm.k.GetConfigInt64(ctx, constants.ReserveMaxCap)
+	if reserveMaxCap > 0 && totalReserve.GT(cosmos.NewUint(uint64(reserveMaxCap))) {
+		emissionCurve = 6 // Default EmissionCurve value
+	}
+
 	devFundSystemIncomeBps := vm.k.GetConfigInt64(ctx, constants.DevFundSystemIncomeBps)
 	systemIncomeBurnRateBps := vm.k.GetConfigInt64(ctx, constants.SystemIncomeBurnRateBps)
 	tcyStakeSystemIncomeBps := vm.k.GetConfigInt64(ctx, constants.TCYStakeSystemIncomeBps)
