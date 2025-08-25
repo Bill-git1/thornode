@@ -13,6 +13,7 @@ import (
 	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
 	abci "github.com/cometbft/cometbft/abci/types"
 	dbm "github.com/cosmos/cosmos-db"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -27,6 +28,19 @@ import (
 	thorchain "gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 )
+
+// appOptionsWrapper wraps simtestutil.EmptyAppOptions to provide custom home directory
+type appOptionsWrapper struct {
+	simtestutil.EmptyAppOptions
+	homeDir string
+}
+
+func (a *appOptionsWrapper) Get(key string) interface{} {
+	if key == flags.FlagHome {
+		return a.homeDir
+	}
+	return a.EmptyAppOptions.Get(key)
+}
 
 // func TestAppExport(t *testing.T) {
 // 	cfg := sdk.GetConfig()
@@ -173,12 +187,21 @@ func TestEip712Signing(t *testing.T) {
 }
 
 func TestProcessProposal(t *testing.T) {
+	// Create temporary directory for CosmWasm VM to avoid lock conflicts
+	tempDir := t.TempDir()
+
+	// Create app options with custom home directory
+	appOpts := &appOptionsWrapper{
+		EmptyAppOptions: simtestutil.EmptyAppOptions{},
+		homeDir:         tempDir,
+	}
+
 	tcApp := NewChainApp(
 		log.NewNopLogger(),
 		dbm.NewMemDB(),
 		nil,
 		true,
-		simtestutil.EmptyAppOptions{},
+		appOpts,
 		[]wasmkeeper.Option{},
 	)
 
