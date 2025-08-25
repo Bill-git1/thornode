@@ -25,28 +25,15 @@ func newSwapQueueAdvVCUR(k keeper.Keeper) *SwapQueueAdvVCUR {
 }
 
 // FetchQueue - grabs all swap queue items from the kvstore and returns them
-func (vm *SwapQueueAdvVCUR) FetchQueue(ctx cosmos.Context, mgr Manager, pairs tradePairs, pools Pools) (swapItems, error) { // nolint
+func (vm *SwapQueueAdvVCUR) FetchQueue(ctx cosmos.Context, mgr Manager, pairs tradePairs, pools Pools, todo tradePairs) (swapItems, error) { // nolint
 	items := make(swapItems, 0)
 
 	// if the network is doing a pool cycle, no swaps are executed this
 	// block. This is because the change of active pools can cause the
 	// mechanism to index/encode the selected pools/trading pairs that need to
-	// be checked (proc).
+	// be checked.
 	poolCycle := mgr.Keeper().GetConfigInt64(ctx, constants.PoolCycle)
 	if ctx.BlockHeight()%poolCycle == 0 {
-		return nil, nil
-	}
-
-	proc, err := vm.k.GetAdvSwapQueueProcessor(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	todo, ok := vm.convertProcToAssetArrays(proc, pairs)
-	if !ok {
-		// number of pools has changed from the previous block. Skip processing
-		// swaps for this block. This is due to our total pair list (aka
-		// reference table) changing underneath our feet.
 		return nil, nil
 	}
 
@@ -104,9 +91,9 @@ func (vm *SwapQueueAdvVCUR) isSwapReady(ctx cosmos.Context, msg MsgSwap) bool {
 		return false
 	}
 
-	// TODO: we will need to remove this if statement when implementing rapid swaps
-	if msg.State.LastHeight >= ctx.BlockHeight() {
-		// last swap must be in the past
+	// if interval is 0, then allow a market swap to execute multiple times in the same block
+	// if interval is 1 or greater, then only swap one time per block
+	if msg.State.Interval > 0 && msg.State.LastHeight >= ctx.BlockHeight() {
 		return false // skip
 	}
 
@@ -185,7 +172,6 @@ func (vm *SwapQueueAdvVCUR) discoverLimitSwaps(ctx cosmos.Context, mgr Manager, 
 			}
 
 			// Check if our swap is already completed, ie a limit swap has expired
-			ctx.Logger().Info("IS SWAP DONE", "done", vm.IsDone(ctx, msg))
 			if vm.IsDone(ctx, msg) {
 				if err := settleSwap(ctx, mgr, msg, "swap has been completed."); err != nil {
 					ctx.Logger().Error("fail to handle completed streaming limit swap", "error", err)
@@ -341,39 +327,6 @@ func (vm *SwapQueueAdvVCUR) getRatio(input, output cosmos.Uint) cosmos.Uint {
 	return input.MulUint64(1e8).Quo(output)
 }
 
-// converts a proc, cosmos.Uint, into a series of selected pairs from the pairs
-// input (ie asset pairs that need to be check for executable swaps)
-func (vm *SwapQueueAdvVCUR) convertProcToAssetArrays(proc []bool, pairs tradePairs) (tradePairs, bool) {
-	result := make(tradePairs, 0)
-	if len(proc) != len(pairs) {
-		return result, false
-	}
-	for i, b := range proc {
-		if len(pairs)-1 < i {
-			break // pairs length < bin length
-		}
-		if b {
-			result = append(result, pairs[i])
-		}
-	}
-	return result, true
-}
-
-// converts a list of selected pairs from a list of total pairs, to be represented as a uint64
-func (vm *SwapQueueAdvVCUR) convertAssetArraysToProc(toProc, pairs tradePairs) []bool {
-	builder := make([]bool, len(pairs))
-	for i, pair := range pairs {
-		builder[i] = false
-		for _, p := range toProc {
-			if pair.Equals(p) {
-				builder[i] = true
-				break
-			}
-		}
-	}
-	return builder
-}
-
 // getAssetPairs - fetches a list of strings that represents directional trading pairs
 func (vm *SwapQueueAdvVCUR) getAssetPairs(ctx cosmos.Context) (tradePairs, Pools) {
 	result := make(tradePairs, 0)
@@ -412,10 +365,6 @@ func (vm *SwapQueueAdvVCUR) getAssetPairs(ctx cosmos.Context) (tradePairs, Pools
 }
 
 func (vm *SwapQueueAdvVCUR) getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, sourceAsset, targetAsset common.Asset, msg MsgSwap) (uint64, error) {
-	if msg.State.Interval == 0 {
-		return 1, nil
-	}
-
 	// collect pools involved in this swap
 	minSwapSize := cosmos.ZeroUint()
 	var sourceAssetPool types.Pool
@@ -471,10 +420,11 @@ func (vm *SwapQueueAdvVCUR) getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, 
 	} else {
 		maxLength = vm.k.GetConfigInt64(ctx, constants.StreamingSwapMaxLength)
 	}
-	if msg.State.Interval == 0 {
-		return 1, nil
+	interval := msg.State.Interval
+	if interval == 0 {
+		interval = 1
 	}
-	maxSwapInMaxLength := uint64(maxLength) / msg.State.Interval
+	maxSwapInMaxLength := uint64(maxLength) / interval
 	if maxSwapQuantity.GT(cosmos.NewUint(maxSwapInMaxLength)) {
 		return maxSwapInMaxLength, nil
 	}
@@ -535,11 +485,6 @@ func (vm *SwapQueueAdvVCUR) AddSwapQueueItem(ctx cosmos.Context, mgr Manager, ms
 		return err
 	}
 
-	// default interval if zero is set
-	if msg.State.Interval == 0 {
-		msg.State.Interval = 1
-	}
-
 	if msg.State.Quantity == 0 {
 		msg.State.Quantity = maxSwapQuantity
 	}
@@ -579,81 +524,94 @@ func (vm *SwapQueueAdvVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 		synthVirtualDepthMult = mgr.GetConstants().GetInt64Value(constants.VirtualMultSynthsBasisPoints)
 	}
 
+	// Get rapid swap max from config (mimir or constants)
+	rapidSwapMax := mgr.Keeper().GetConfigInt64(ctx, constants.AdvSwapQueueRapidSwapMax)
+
 	todo := make(tradePairs, 0)
 	pairs, pools := vm.getAssetPairs(ctx)
+	iterationCount := int64(0)
 
-	swaps, err := vm.FetchQueue(ctx, mgr, pairs, pools)
-	if err != nil {
-		ctx.Logger().Error("fail to fetch swap queue from store", "error", err)
-		return err
-	}
+	// Rapid swap iterations
+	for iteration := int64(0); iteration < rapidSwapMax; iteration++ {
+		iterationCount = iteration + 1
 
-	swaps, err = vm.scoreMsgs(ctx, swaps, synthVirtualDepthMult)
-	if err != nil {
-		ctx.Logger().Error("fail to fetch swap items", "error", err)
-		// continue, don't exit, just do them out of order (instead of not at all)
-	}
-	swaps = swaps.Sort()
-
-	for i := int64(0); i < vm.getTodoNum(int64(len(swaps)), minSwapsPerBlock, maxSwapsPerBlock); i++ {
-		pick := swaps[i]
-		var msg MsgSwap
-		if err := copier.Copy(&msg, &pick.msg); err != nil {
-			ctx.Logger().Error("fail copy msg", "msg", msg.Tx.String(), "error", err)
-			continue
+		swaps, err := vm.FetchQueue(ctx, mgr, pairs, pools, todo)
+		if err != nil {
+			ctx.Logger().Error("fail to fetch swap queue from store", "error", err)
+			return err
 		}
 
-		// Preserve original values before modification
-		originalAmount := msg.Tx.Coins[0].Amount
-		originalTradeTarget := msg.TradeTarget
-
-		msg.Tx.Coins[0].Amount, msg.TradeTarget = msg.NextSize()
-
-		// Create a cache context for the swap to ensure state changes are only
-		// committed if the swap succeeds (similar to regular swap queue manager)
-		cacheCtx, commit := ctx.CacheContext()
-
-		// make the primary swap using the cached context
-		var settleMsg string
-		_, emit, handleErr := swapHandler.RunWithEmit(cacheCtx, &msg)
-		if handleErr != nil {
-			// Don't commit - this discards all state changes
-			ctx.Logger().Error("fail to handle completed streaming limit swap", "error", handleErr)
-			msg.State.FailedSwaps = append(msg.State.FailedSwaps, msg.State.Count)
-			msg.State.FailedSwapReasons = append(msg.State.FailedSwapReasons, handleErr.Error())
-			settleMsg = handleErr.Error()
-		} else {
-			// Success - commit the changes
-			commit()
-			settleMsg = "swap has been completed"
-
-			// Update state for successful swap
-			msg.State.In = msg.State.In.Add(msg.Tx.Coins[0].Amount)
-			msg.State.Out = msg.State.Out.Add(emit)
-
-			todo = todo.findMatchingTrades(genTradePair(msg.Tx.Coins[0].Asset, msg.TargetAsset), pairs)
+		// Exit early if no swaps found
+		if len(swaps) == 0 {
+			break
 		}
-		msg.State.Count += 1
-		msg.State.LastHeight = ctx.BlockHeight()
 
-		// Restore original values before saving
-		msg.Tx.Coins[0].Amount = originalAmount
-		msg.TradeTarget = originalTradeTarget
-
-		// Save the updated swap state back to the keeper
-		if err := vm.k.SetAdvSwapQueueItem(ctx, msg); err != nil {
-			ctx.Logger().Error("fail to save swap item", "error", err)
+		swaps, err = vm.scoreMsgs(ctx, swaps, synthVirtualDepthMult)
+		if err != nil {
+			ctx.Logger().Error("fail to fetch swap items", "error", err)
+			// continue, don't exit, just do them out of order (instead of not at all)
 		}
-		if vm.IsDone(ctx, msg) {
-			if err := settleSwap(ctx, mgr, msg, settleMsg); err != nil {
-				ctx.Logger().Error("fail to handle completed streaming limit swap", "error", err)
+		swaps = swaps.Sort()
+
+		for i := int64(0); i < vm.getTodoNum(int64(len(swaps)), minSwapsPerBlock, maxSwapsPerBlock); i++ {
+			pick := swaps[i]
+			var msg MsgSwap
+			if err := copier.Copy(&msg, &pick.msg); err != nil {
+				ctx.Logger().Error("fail copy msg", "msg", msg.Tx.String(), "error", err)
+				continue
+			}
+
+			// Preserve original values before modification
+			originalAmount := msg.Tx.Coins[0].Amount
+			originalTradeTarget := msg.TradeTarget
+
+			msg.Tx.Coins[0].Amount, msg.TradeTarget = msg.NextSize()
+
+			// Create a cache context for the swap to ensure state changes are only
+			// committed if the swap succeeds (similar to regular swap queue manager)
+			cacheCtx, commit := ctx.CacheContext()
+
+			// make the primary swap using the cached context
+			var settleMsg string
+			_, emit, handleErr := swapHandler.RunWithEmit(cacheCtx, &msg)
+			if handleErr != nil {
+				// Don't commit - this discards all state changes
+				ctx.Logger().Error("fail to handle completed streaming limit swap", "error", handleErr)
+				msg.State.FailedSwaps = append(msg.State.FailedSwaps, msg.State.Count)
+				msg.State.FailedSwapReasons = append(msg.State.FailedSwapReasons, handleErr.Error())
+				settleMsg = handleErr.Error()
+			} else {
+				// Success - commit the changes
+				commit()
+				settleMsg = "swap has been completed"
+
+				// Update state for successful swap
+				msg.State.In = msg.State.In.Add(msg.Tx.Coins[0].Amount)
+				msg.State.Out = msg.State.Out.Add(emit)
+
+				todo = todo.findMatchingTrades(genTradePair(msg.Tx.Coins[0].Asset, msg.TargetAsset), pairs)
+			}
+			msg.State.Count += 1
+			msg.State.LastHeight = ctx.BlockHeight()
+
+			// Restore original values before saving
+			msg.Tx.Coins[0].Amount = originalAmount
+			msg.TradeTarget = originalTradeTarget
+
+			// Save the updated swap state back to the keeper
+			if err := vm.k.SetAdvSwapQueueItem(ctx, msg); err != nil {
+				ctx.Logger().Error("fail to save swap item", "error", err)
+			}
+			if vm.IsDone(ctx, msg) {
+				if err := settleSwap(ctx, mgr, msg, settleMsg); err != nil {
+					ctx.Logger().Error("fail to handle completed streaming limit swap", "error", err)
+				}
 			}
 		}
 	}
 
-	if err := vm.k.SetAdvSwapQueueProcessor(ctx, vm.convertAssetArraysToProc(todo, pairs)); err != nil {
-		ctx.Logger().Error("fail to set book processor", "error", err)
-	}
+	// Log the number of iterations completed
+	ctx.Logger().Info("advanced swap iterations completed", "count", iterationCount)
 
 	return nil
 }

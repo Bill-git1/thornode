@@ -63,6 +63,7 @@ const (
 	MaxSwapsPerBlock
 	EnableOrderBooks
 	EnableAdvSwapQueue
+	AdvSwapQueueRapidSwapMax
 	MaxSynthPerPoolDepth
 	MaxSynthsForSaversYield
 	VirtualMultSynths

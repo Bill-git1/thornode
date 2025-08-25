@@ -75,7 +75,7 @@ signer: {{ addr_thor_fox }}
 coins:
   - amount: "5000000"
     asset: "BTC-BTC"
-memo: "=:ETH-ETH:{{ addr_thor_fox }}"
+memo: "=:ETH-ETH:{{ addr_thor_fox }}:0/0/1"
 ---
 type: create-blocks
 count: 1
@@ -104,7 +104,7 @@ signer: {{ addr_thor_fox }}
 coins:
   - amount: "9999999999999"
     asset: "BTC-BTC"
-memo: "=:ETH-ETH:{{ addr_thor_fox }}"
+memo: "=:ETH-ETH:{{ addr_thor_fox }}:0/0/1"
 ---
 type: create-blocks
 count: 1

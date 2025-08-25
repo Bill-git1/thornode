@@ -633,7 +633,7 @@
                 }
               ],
               "id": "000000000000000000000000000000000000000000000000000000000000000c",
-              "memo": "=:ETH-ETH:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+              "memo": "=:ETH-ETH:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u:0/0/1",
               "to_address": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk"
             }
           },
@@ -663,7 +663,7 @@
                   }
                 ],
                 "id": "000000000000000000000000000000000000000000000000000000000000000c",
-                "memo": "=:ETH-ETH:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
+                "memo": "=:ETH-ETH:tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u:0/0/1",
                 "to_address": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk"
               }
             }

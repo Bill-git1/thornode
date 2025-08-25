@@ -69,7 +69,7 @@ signer: {{ addr_thor_cat }}
 coins:
   - amount: "15000000000"
     asset: "rune"
-memo: "=:BTC.BTC:{{ addr_btc_cat }}::test:500"
+memo: "=:BTC.BTC:{{ addr_btc_cat }}:0/0/1:test:500"
 ---
 type: create-blocks
 count: 2
@@ -126,7 +126,7 @@ txs:
       gas:
         - amount: "10000"
           asset: "BTC.BTC"
-      memo: "=:THOR.RUNE:{{ addr_thor_fox }}::test:200"
+      memo: "=:THOR.RUNE:{{ addr_thor_fox }}:0/0/1:test:200"
     block_height: 4
     finalise_height: 4
     observed_pub_key: {{ pubkey_dog }}
@@ -163,7 +163,7 @@ txs:
       gas:
         - amount: "1280000"
           asset: "ETH.ETH"
-      memo: "=:r:{{ addr_thor_fox }}:0/1:test:1000"
+      memo: "=:r:{{ addr_thor_fox }}:0/1/0:test:1000"
     block_height: 8
     finalise_height: 8
     observed_pub_key: {{ pubkey_dog }}

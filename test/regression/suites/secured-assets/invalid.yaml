@@ -413,7 +413,7 @@ txs:
       gas:
         - amount: "10000"
           asset: "BTC.BTC"
-      memo: "=:ETH-ETH:{{ addr_thor_pig }}"
+      memo: "=:ETH-ETH:{{ addr_thor_pig }}:0/0/1"
     block_height: 12
     finalise_height: 12
     observed_pub_key: {{ pubkey_dog }}

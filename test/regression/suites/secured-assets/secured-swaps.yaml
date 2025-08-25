@@ -162,7 +162,7 @@ signer: {{ addr_thor_fox }}
 coins:
   - amount: "5000000" # 0.05 BTC
     asset: "BTC-BTC"
-memo: "=:ETH-ETH:{{ addr_thor_fox }}"
+memo: "=:ETH-ETH:{{ addr_thor_fox }}:0/0/1"
 ---
 type: create-blocks
 count: 1
@@ -195,7 +195,7 @@ signer: {{ addr_thor_fox }}
 coins:
   - amount: "20750890" # 0.2 ETH
     asset: "ETH-ETH"
-memo: "=:BTC-BTC:{{ addr_thor_fox }}"
+memo: "=:BTC-BTC:{{ addr_thor_fox }}:0/0/1"
 ---
 type: create-blocks
 count: 1
@@ -534,7 +534,7 @@ signer: {{ addr_thor_fox }}
 coins:
   - amount: "${INPUT_2}"
     asset: "BTC-BTC"
-memo: "=:THOR.RUNE:{{ addr_thor_fish }}"
+memo: "=:THOR.RUNE:{{ addr_thor_fish }}:0/0/1"
 ---
 type: create-blocks
 count: 1

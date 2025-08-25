@@ -432,7 +432,7 @@ txs:
       from_address: {{ addr_eth_dog }}
       to_address: {{ addr_eth_fox }}
       coins:
-        - amount: "8093456"  # Partial swap amount
+        - amount: "12636431"  # Partial swap amount
           asset: "ETH.ETH"
           decimals: 8
       gas:
@@ -448,7 +448,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "2319332"  # Remaining BTC after partial swap
+        - amount: "1735999"  # Remaining BTC after partial swap
           asset: "BTC.BTC"
           decimals: 8
       gas:

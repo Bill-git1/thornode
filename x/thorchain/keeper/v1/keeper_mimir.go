@@ -116,6 +116,7 @@ func (k KVStore) IsOperationalMimir(key string) bool {
 		"RUNEPoolEnabled",
 		"EVMDisableContractWhitelist",
 		"MaxOutboundAttempts",
+		"AdvSwapQueueRapidSwapMax",
 		"EnableADVSwapQueue",
 	}
 	for i := range exactMatches {

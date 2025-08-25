@@ -33,6 +33,7 @@ func init() {
 		AsgardSize:                          6,
 		StreamingSwapMinBPFee:               100, // TODO: remove on hard fork
 		EnableAdvSwapQueue:                  1,
+		AdvSwapQueueRapidSwapMax:            1, // For testing rapid swaps
 		VirtualMultSynthsBasisPoints:        20_000,
 		MinTxOutVolumeThreshold:             2000000_00000000,
 		MissingBlockChurnOut:                100,

@@ -85,26 +85,6 @@ func (k KVStore) RemoveAdvSwapQueueItem(ctx cosmos.Context, txID common.TxID, in
 	return err
 }
 
-///-------------------------- Adv Swap Queue Processor --------------------------///
-// The advanced swap queue processor tracks a list of pairs to be processed in the next
-// block to check for any limit swaps that are available to be executed. This
-// is stored as an array of bools.
-
-// SetAdvSwapQueueProcessor - writes a list of pairs to process
-func (k KVStore) SetAdvSwapQueueProcessor(ctx cosmos.Context, record []bool) error {
-	key := k.GetKey(prefixAdvSwapQueueProcessor, "")
-	k.setBools(ctx, key, record)
-	return nil
-}
-
-// GetAdvSwapQueueProcessor - get a list of asset pairs to process
-func (k KVStore) GetAdvSwapQueueProcessor(ctx cosmos.Context) ([]bool, error) {
-	key := k.GetKey(prefixAdvSwapQueueProcessor, "")
-	var record []bool
-	_, err := k.getBools(ctx, key, &record)
-	return record, err
-}
-
 ///----------------------------------------------------------------------///
 
 ///-------------------------- Adv Swap Queue Index --------------------------///

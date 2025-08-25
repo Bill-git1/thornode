@@ -387,8 +387,6 @@ type KeeperAdvSwapQueues interface {
 	GetAdvSwapQueueIndex(_ cosmos.Context, _ MsgSwap) ([]types.AdvSwapQueueIndexItem, error)
 	HasAdvSwapQueueIndex(_ cosmos.Context, _ MsgSwap) (bool, error)
 	RemoveAdvSwapQueueIndex(_ cosmos.Context, _ MsgSwap) error
-	SetAdvSwapQueueProcessor(_ cosmos.Context, _ []bool) error
-	GetAdvSwapQueueProcessor(_ cosmos.Context) ([]bool, error)
 }
 
 type KeeperMimir interface {

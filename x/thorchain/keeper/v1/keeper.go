@@ -74,7 +74,6 @@ const (
 	prefixAdvSwapQueueItem        types.DbPrefix = "aq/"
 	prefixAdvSwapQueueLimitIndex  types.DbPrefix = "aqlim/"
 	prefixAdvSwapQueueMarketIndex types.DbPrefix = "aqmark/"
-	prefixAdvSwapQueueProcessor   types.DbPrefix = "aqproc/"
 	prefixOutboundFeeWithheldRune types.DbPrefix = "outbound_fee_withheld_rune/"
 	prefixOutboundFeeSpentRune    types.DbPrefix = "outbound_fee_spent_rune/"
 	prefixMimir                   types.DbPrefix = "mimir/"
@@ -312,35 +311,6 @@ func (k KVStore) getUint(ctx cosmos.Context, key []byte, record *cosmos.Uint) (b
 	bz := store.Get(key)
 	if err := k.cdc.Unmarshal(bz, &value); err != nil {
 		return false, dbError(ctx, fmt.Sprintf("Unmarshal kvstore: (%T) %s", record, key), err)
-	}
-	*record = value.Value
-	return true, nil
-}
-
-func (k KVStore) setBools(ctx cosmos.Context, key []byte, record []bool) {
-	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
-	value := ProtoBools{Value: record}
-	buf := k.cdc.MustMarshal(&value)
-	if buf == nil {
-		store.Delete(key)
-	} else {
-		store.Set(key, buf)
-	}
-}
-
-func (k KVStore) getBools(ctx cosmos.Context, key []byte, record *[]bool) (bool, error) {
-	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
-
-	var value ProtoBools
-	bz := store.Get(key)
-	if bz == nil {
-		return false, nil
-	}
-	if err := k.cdc.Unmarshal(bz, &value); err != nil {
-		return false, dbError(ctx, fmt.Sprintf("Unmarshal kvstore: (%T) %s", record, key), err)
-	}
-	if record == nil {
-		return false, nil
 	}
 	*record = value.Value
 	return true, nil

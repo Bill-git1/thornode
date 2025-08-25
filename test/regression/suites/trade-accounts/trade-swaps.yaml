@@ -185,7 +185,7 @@ signer: {{ addr_thor_fox }}
 coins:
   - amount: "${SWAP_IN}" # 0.05 BTC
     asset: "BTC~BTC"
-memo: "=:ETH~ETH:{{ addr_thor_fox }}"
+memo: "=:ETH~ETH:{{ addr_thor_fox }}:0/0/1"
 ---
 type: create-blocks
 count: 1
@@ -238,7 +238,7 @@ signer: {{ addr_thor_fox }}
 coins:
   - amount: "${SWAP_IN}" # 0.2 ETH
     asset: "ETH~ETH"
-memo: "=:BTC~BTC:{{ addr_thor_fox }}"
+memo: "=:BTC~BTC:{{ addr_thor_fox }}:0/0/1"
 ---
 type: create-blocks
 count: 1

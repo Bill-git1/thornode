@@ -597,15 +597,6 @@ func (k KVStoreDummy) RemoveAdvSwapQueueIndex(_ cosmos.Context, _ MsgSwap) error
 	return kaboom
 }
 
-func (k KVStoreDummy) SetAdvSwapQueueProcessor(ctx cosmos.Context, record []bool) error {
-	return kaboom
-}
-
-// GetAdvSwapQueueProcessor - get a list of asset pairs to process
-func (k KVStoreDummy) GetAdvSwapQueueProcessor(ctx cosmos.Context) ([]bool, error) {
-	return nil, kaboom
-}
-
 func (k KVStoreDummy) GetTCYClaimer(ctx cosmos.Context, l1Address common.Address, asset common.Asset) (TCYClaimer, error) {
 	return TCYClaimer{}, nil
 }
