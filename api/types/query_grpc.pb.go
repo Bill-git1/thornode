@@ -65,10 +65,6 @@ const (
 	Query_Network_FullMethodName             = "/types.Query/Network"
 	Query_BalanceModule_FullMethodName       = "/types.Query/BalanceModule"
 	Query_QuoteSwap_FullMethodName           = "/types.Query/QuoteSwap"
-	Query_QuoteSaverDeposit_FullMethodName   = "/types.Query/QuoteSaverDeposit"
-	Query_QuoteSaverWithdraw_FullMethodName  = "/types.Query/QuoteSaverWithdraw"
-	Query_QuoteLoanOpen_FullMethodName       = "/types.Query/QuoteLoanOpen"
-	Query_QuoteLoanClose_FullMethodName      = "/types.Query/QuoteLoanClose"
 	Query_ConstantValues_FullMethodName      = "/types.Query/ConstantValues"
 	Query_SwapQueue_FullMethodName           = "/types.Query/SwapQueue"
 	Query_SwapDetails_FullMethodName         = "/types.Query/SwapDetails"
@@ -165,10 +161,6 @@ type QueryClient interface {
 	Network(ctx context.Context, in *QueryNetworkRequest, opts ...grpc.CallOption) (*QueryNetworkResponse, error)
 	BalanceModule(ctx context.Context, in *QueryBalanceModuleRequest, opts ...grpc.CallOption) (*QueryBalanceModuleResponse, error)
 	QuoteSwap(ctx context.Context, in *QueryQuoteSwapRequest, opts ...grpc.CallOption) (*QueryQuoteSwapResponse, error)
-	QuoteSaverDeposit(ctx context.Context, in *QueryQuoteSaverDepositRequest, opts ...grpc.CallOption) (*QueryQuoteSaverDepositResponse, error)
-	QuoteSaverWithdraw(ctx context.Context, in *QueryQuoteSaverWithdrawRequest, opts ...grpc.CallOption) (*QueryQuoteSaverWithdrawResponse, error)
-	QuoteLoanOpen(ctx context.Context, in *QueryQuoteLoanOpenRequest, opts ...grpc.CallOption) (*QueryQuoteLoanOpenResponse, error)
-	QuoteLoanClose(ctx context.Context, in *QueryQuoteLoanCloseRequest, opts ...grpc.CallOption) (*QueryQuoteLoanCloseResponse, error)
 	ConstantValues(ctx context.Context, in *QueryConstantValuesRequest, opts ...grpc.CallOption) (*QueryConstantValuesResponse, error)
 	SwapQueue(ctx context.Context, in *QuerySwapQueueRequest, opts ...grpc.CallOption) (*QuerySwapQueueResponse, error)
 	SwapDetails(ctx context.Context, in *QuerySwapDetailsRequest, opts ...grpc.CallOption) (*QuerySwapDetailsResponse, error)
@@ -628,42 +620,6 @@ func (c *queryClient) QuoteSwap(ctx context.Context, in *QueryQuoteSwapRequest, 
 	return out, nil
 }
 
-func (c *queryClient) QuoteSaverDeposit(ctx context.Context, in *QueryQuoteSaverDepositRequest, opts ...grpc.CallOption) (*QueryQuoteSaverDepositResponse, error) {
-	out := new(QueryQuoteSaverDepositResponse)
-	err := c.cc.Invoke(ctx, Query_QuoteSaverDeposit_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *queryClient) QuoteSaverWithdraw(ctx context.Context, in *QueryQuoteSaverWithdrawRequest, opts ...grpc.CallOption) (*QueryQuoteSaverWithdrawResponse, error) {
-	out := new(QueryQuoteSaverWithdrawResponse)
-	err := c.cc.Invoke(ctx, Query_QuoteSaverWithdraw_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *queryClient) QuoteLoanOpen(ctx context.Context, in *QueryQuoteLoanOpenRequest, opts ...grpc.CallOption) (*QueryQuoteLoanOpenResponse, error) {
-	out := new(QueryQuoteLoanOpenResponse)
-	err := c.cc.Invoke(ctx, Query_QuoteLoanOpen_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *queryClient) QuoteLoanClose(ctx context.Context, in *QueryQuoteLoanCloseRequest, opts ...grpc.CallOption) (*QueryQuoteLoanCloseResponse, error) {
-	out := new(QueryQuoteLoanCloseResponse)
-	err := c.cc.Invoke(ctx, Query_QuoteLoanClose_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *queryClient) ConstantValues(ctx context.Context, in *QueryConstantValuesRequest, opts ...grpc.CallOption) (*QueryConstantValuesResponse, error) {
 	out := new(QueryConstantValuesResponse)
 	err := c.cc.Invoke(ctx, Query_ConstantValues_FullMethodName, in, out, opts...)
@@ -1038,10 +994,6 @@ type QueryServer interface {
 	Network(context.Context, *QueryNetworkRequest) (*QueryNetworkResponse, error)
 	BalanceModule(context.Context, *QueryBalanceModuleRequest) (*QueryBalanceModuleResponse, error)
 	QuoteSwap(context.Context, *QueryQuoteSwapRequest) (*QueryQuoteSwapResponse, error)
-	QuoteSaverDeposit(context.Context, *QueryQuoteSaverDepositRequest) (*QueryQuoteSaverDepositResponse, error)
-	QuoteSaverWithdraw(context.Context, *QueryQuoteSaverWithdrawRequest) (*QueryQuoteSaverWithdrawResponse, error)
-	QuoteLoanOpen(context.Context, *QueryQuoteLoanOpenRequest) (*QueryQuoteLoanOpenResponse, error)
-	QuoteLoanClose(context.Context, *QueryQuoteLoanCloseRequest) (*QueryQuoteLoanCloseResponse, error)
 	ConstantValues(context.Context, *QueryConstantValuesRequest) (*QueryConstantValuesResponse, error)
 	SwapQueue(context.Context, *QuerySwapQueueRequest) (*QuerySwapQueueResponse, error)
 	SwapDetails(context.Context, *QuerySwapDetailsRequest) (*QuerySwapDetailsResponse, error)
@@ -1221,18 +1173,6 @@ func (UnimplementedQueryServer) BalanceModule(context.Context, *QueryBalanceModu
 }
 func (UnimplementedQueryServer) QuoteSwap(context.Context, *QueryQuoteSwapRequest) (*QueryQuoteSwapResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QuoteSwap not implemented")
-}
-func (UnimplementedQueryServer) QuoteSaverDeposit(context.Context, *QueryQuoteSaverDepositRequest) (*QueryQuoteSaverDepositResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method QuoteSaverDeposit not implemented")
-}
-func (UnimplementedQueryServer) QuoteSaverWithdraw(context.Context, *QueryQuoteSaverWithdrawRequest) (*QueryQuoteSaverWithdrawResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method QuoteSaverWithdraw not implemented")
-}
-func (UnimplementedQueryServer) QuoteLoanOpen(context.Context, *QueryQuoteLoanOpenRequest) (*QueryQuoteLoanOpenResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method QuoteLoanOpen not implemented")
-}
-func (UnimplementedQueryServer) QuoteLoanClose(context.Context, *QueryQuoteLoanCloseRequest) (*QueryQuoteLoanCloseResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method QuoteLoanClose not implemented")
 }
 func (UnimplementedQueryServer) ConstantValues(context.Context, *QueryConstantValuesRequest) (*QueryConstantValuesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ConstantValues not implemented")
@@ -2180,78 +2120,6 @@ func _Query_QuoteSwap_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Query_QuoteSaverDeposit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryQuoteSaverDepositRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(QueryServer).QuoteSaverDeposit(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Query_QuoteSaverDeposit_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).QuoteSaverDeposit(ctx, req.(*QueryQuoteSaverDepositRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Query_QuoteSaverWithdraw_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryQuoteSaverWithdrawRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(QueryServer).QuoteSaverWithdraw(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Query_QuoteSaverWithdraw_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).QuoteSaverWithdraw(ctx, req.(*QueryQuoteSaverWithdrawRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Query_QuoteLoanOpen_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryQuoteLoanOpenRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(QueryServer).QuoteLoanOpen(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Query_QuoteLoanOpen_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).QuoteLoanOpen(ctx, req.(*QueryQuoteLoanOpenRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Query_QuoteLoanClose_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryQuoteLoanCloseRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(QueryServer).QuoteLoanClose(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Query_QuoteLoanClose_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).QuoteLoanClose(ctx, req.(*QueryQuoteLoanCloseRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Query_ConstantValues_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(QueryConstantValuesRequest)
 	if err := dec(in); err != nil {
@@ -3072,22 +2940,6 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "QuoteSwap",
 			Handler:    _Query_QuoteSwap_Handler,
-		},
-		{
-			MethodName: "QuoteSaverDeposit",
-			Handler:    _Query_QuoteSaverDeposit_Handler,
-		},
-		{
-			MethodName: "QuoteSaverWithdraw",
-			Handler:    _Query_QuoteSaverWithdraw_Handler,
-		},
-		{
-			MethodName: "QuoteLoanOpen",
-			Handler:    _Query_QuoteLoanOpen_Handler,
-		},
-		{
-			MethodName: "QuoteLoanClose",
-			Handler:    _Query_QuoteLoanClose_Handler,
 		},
 		{
 			MethodName: "ConstantValues",

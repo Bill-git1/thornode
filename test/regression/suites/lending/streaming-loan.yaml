@@ -59,53 +59,6 @@ type: create-blocks
 count: 2
 ---
 ########################################################################################
-# test quotes endpoint
-########################################################################################
-type: check
-endpoint: http://localhost:1317/thorchain/quote/loan/open
-params:
-  from_asset: BTC.BTC
-  amount: 1000000
-  to_asset: BTC.BTC
-  min_out: 0
-  destination: {{ addr_btc_fox }}
-asserts:
-  - .memo == "$+:BTC.BTC:{{ addr_btc_fox }}"
-  - .inbound_address == "{{ addr_btc_dog }}"
-  - .expected_amount_out|tonumber == 936128
-  - .expected_collateral_deposited|tonumber == 990122
-  - .expected_collateralization_ratio|tonumber == 10000
-  - .expected_debt_issued|tonumber == 980290000
-  - .recommended_min_amount_in == "21000"
-  - .fees.slippage_bps|tonumber == 293
-  - .fees.total_bps|tonumber == 365
-  - .fees.outbound|tonumber == 7000
-  - .fees.liquidity|tonumber == 28538
-  - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
----
-type: check
-endpoint: http://localhost:1317/thorchain/quote/loan/open
-params:
-  from_asset: BTC.BTC
-  amount: 1000000
-  to_asset: BTC.BTC
-  min_out: 1
-  destination: {{ addr_btc_fox }}
-asserts:
-  - .memo == "$+:BTC.BTC:{{ addr_btc_fox }}:1"
-  - .inbound_address == "{{ addr_btc_dog }}"
-  - .expected_amount_out|tonumber == 936836
-  - .expected_collateral_deposited|tonumber == 980488
-  - .expected_collateralization_ratio|tonumber == 10000
-  - .expected_debt_issued|tonumber == 961160000
-  - .recommended_min_amount_in|tonumber == 21000
-  - .fees.slippage_bps|tonumber == 382
-  - .fees.total_bps|tonumber == 453
-  - .fees.outbound|tonumber == 7000
-  - .fees.liquidity|tonumber == 37549
-  - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
----
-########################################################################################
 # open loan btc -> rune
 ########################################################################################
 type: tx-observed-in

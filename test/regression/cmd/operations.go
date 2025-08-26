@@ -67,11 +67,11 @@ func (op *OpBase) OpType() string {
 	return op.Type
 }
 
-func NewOperation(opMap map[string]any) Operation {
+func NewOperation(opMap map[string]any) (Operation, error) {
 	// ensure type is provided
 	t, ok := opMap["type"].(string)
 	if !ok {
-		log.Fatal().Interface("type", opMap["type"]).Msg("operation type is not a string")
+		return nil, fmt.Errorf("operation type is not a string: %v", opMap["type"])
 	}
 
 	// create the operation for the type
@@ -145,7 +145,7 @@ func NewOperation(opMap map[string]any) Operation {
 		op = &OpTxClearAdmin{}
 
 	default:
-		log.Fatal().Str("type", t).Msg("unknown operation type")
+		return nil, fmt.Errorf("unknown operation type: %s", t)
 	}
 
 	// create decoder supporting embedded structs and weakly typed input
@@ -157,7 +157,7 @@ func NewOperation(opMap map[string]any) Operation {
 		Result:           op,
 	})
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to create decoder")
+		return nil, fmt.Errorf("failed to create decoder: %w", err)
 	}
 
 	switch op.(type) {
@@ -191,7 +191,7 @@ func NewOperation(opMap map[string]any) Operation {
 		enc := json.NewEncoder(buf)
 		err = enc.Encode(opMap)
 		if err != nil {
-			log.Fatal().Interface("op", opMap).Err(err).Msg("failed to encode operation")
+			return nil, fmt.Errorf("failed to encode operation: %w", err)
 		}
 
 		// unmarshal json to op
@@ -201,7 +201,7 @@ func NewOperation(opMap map[string]any) Operation {
 		err = dec.Decode(opMap)
 	}
 	if err != nil {
-		log.Fatal().Interface("op", opMap).Err(err).Msg("failed to decode operation")
+		return nil, fmt.Errorf("failed to decode operation: %w", err)
 	}
 
 	// default status check to 200 if endpoint is set
@@ -212,7 +212,7 @@ func NewOperation(opMap map[string]any) Operation {
 		}
 	}
 
-	return op
+	return op, nil
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////

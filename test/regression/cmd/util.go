@@ -188,7 +188,7 @@ func parseOps(localLog zerolog.Logger, path string, tmpls *template.Template, en
 	envAdded := 0
 
 	dec := yaml.NewDecoder(buf)
-	for {
+	for i := 0; ; i++ {
 		// decode into temporary type
 		op := map[string]any{}
 		err = dec.Decode(&op)
@@ -210,7 +210,10 @@ func parseOps(localLog zerolog.Logger, path string, tmpls *template.Template, en
 			if envComplete {
 				log.Fatal().Msg("env operations must be first")
 			}
-			o := NewOperation(op)
+			o, err := NewOperation(op)
+			if err != nil {
+				log.Fatal().Str("path", path).Err(err).Msg("failed to create operation")
+			}
 			env = append(env, fmt.Sprintf("%s=%s", o.(*OpEnv).Key, o.(*OpEnv).Value))
 			envAdded++
 			continue
@@ -225,7 +228,11 @@ func parseOps(localLog zerolog.Logger, path string, tmpls *template.Template, en
 			stateComplete = true
 		}
 
-		ops = append(ops, NewOperation(op))
+		operation, err := NewOperation(op)
+		if err != nil {
+			log.Fatal().Str("path", path).Int("line", opLines[i]).Err(err).Msg("failed to create operation")
+		}
+		ops = append(ops, operation)
 	}
 
 	// remove env operations from op lines so numbers are correct

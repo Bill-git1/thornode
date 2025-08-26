@@ -254,22 +254,6 @@ service Query {
     option (google.api.http).get = "/thorchain/quote/swap";
   }
 
-  rpc QuoteSaverDeposit(QueryQuoteSaverDepositRequest) returns (QueryQuoteSaverDepositResponse) {
-    option (google.api.http).get = "/thorchain/quote/saver/deposit";
-  }
-
-  rpc QuoteSaverWithdraw(QueryQuoteSaverWithdrawRequest) returns (QueryQuoteSaverWithdrawResponse) {
-    option (google.api.http).get = "/thorchain/quote/saver/withdraw";
-  }
-
-  rpc QuoteLoanOpen(QueryQuoteLoanOpenRequest) returns (QueryQuoteLoanOpenResponse) {
-    option (google.api.http).get = "/thorchain/quote/loan/open";
-  }
-
-  rpc QuoteLoanClose(QueryQuoteLoanCloseRequest) returns (QueryQuoteLoanCloseResponse) {
-    option (google.api.http).get = "/thorchain/quote/loan/close";
-  }
-
   rpc ConstantValues(QueryConstantValuesRequest) returns (QueryConstantValuesResponse) {
     option (google.api.http).get = "/thorchain/constants";
   }

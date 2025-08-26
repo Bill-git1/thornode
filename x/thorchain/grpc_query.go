@@ -389,38 +389,6 @@ func (s *queryServer) QuoteSwap(c context.Context, req *types.QueryQuoteSwapRequ
 	return s.queryQuoteSwap(ctx, req)
 }
 
-func (s *queryServer) QuoteSaverDeposit(c context.Context, req *types.QueryQuoteSaverDepositRequest) (*types.QueryQuoteSaverDepositResponse, error) {
-	if err := checkHeightParam(req.Height); err != nil {
-		return nil, err
-	}
-	ctx := s.unwrapSdkContext(c)
-	return s.queryQuoteSaverDeposit(ctx, req)
-}
-
-func (s *queryServer) QuoteSaverWithdraw(c context.Context, req *types.QueryQuoteSaverWithdrawRequest) (*types.QueryQuoteSaverWithdrawResponse, error) {
-	if err := checkHeightParam(req.Height); err != nil {
-		return nil, err
-	}
-	ctx := s.unwrapSdkContext(c)
-	return s.queryQuoteSaverWithdraw(ctx, req)
-}
-
-func (s *queryServer) QuoteLoanOpen(c context.Context, req *types.QueryQuoteLoanOpenRequest) (*types.QueryQuoteLoanOpenResponse, error) {
-	if err := checkHeightParam(req.Height); err != nil {
-		return nil, err
-	}
-	ctx := s.unwrapSdkContext(c)
-	return s.queryQuoteLoanOpen(ctx, req)
-}
-
-func (s *queryServer) QuoteLoanClose(c context.Context, req *types.QueryQuoteLoanCloseRequest) (*types.QueryQuoteLoanCloseResponse, error) {
-	if err := checkHeightParam(req.Height); err != nil {
-		return nil, err
-	}
-	ctx := s.unwrapSdkContext(c)
-	return s.queryQuoteLoanClose(ctx, req)
-}
-
 func (s *queryServer) ConstantValues(c context.Context, req *types.QueryConstantValuesRequest) (*types.QueryConstantValuesResponse, error) {
 	if err := checkHeightParam(req.Height); err != nil {
 		return nil, err

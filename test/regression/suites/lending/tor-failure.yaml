@@ -84,17 +84,6 @@ asserts:
 ########################################################################################
 # 1/3 of tor anchor pools depeg (no significant effect)
 ########################################################################################
-type: check
-endpoint: http://localhost:1317/thorchain/quote/loan/open
-params:
-  from_asset: BTC.BTC
-  amount: 500000
-  to_asset: RUNE
-  destination: {{ addr_thor_fox }}
-asserts:
-  - .expected_amount_out|tonumber == ${INITIAL_EXPECTED_OUT=486546238}
-  - .expected_debt_issued|tonumber == ${INITIAL_EXPECTED_DEBT_ISSUED=490140000}
----
 type: tx-deposit
 signer: {{ addr_thor_fox }}
 coins:
@@ -104,18 +93,6 @@ memo: "=:ETH.USDZ-0X9999999999999999999999999999999999999999:{{ addr_eth_fox }}"
 ---
 type: create-blocks
 count: 1
----
-type: check
-endpoint: http://localhost:1317/thorchain/quote/loan/open
-params:
-  from_asset: BTC.BTC
-  amount: 500000
-  to_asset: RUNE
-  destination: {{ addr_thor_fox }}
-asserts:
-  - .expected_amount_out|tonumber == 486923069 # some change (TODO below)
-  - .expected_amount_out|tonumber != ${INITIAL_EXPECTED_OUT}
-  - .expected_debt_issued|tonumber == ${INITIAL_EXPECTED_DEBT_ISSUED} # no change, since no median price change
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
@@ -195,17 +172,6 @@ asserts:
 ########################################################################################
 # 2/3 of tor anchor pools depeg
 ########################################################################################
-type: check
-endpoint: http://localhost:1317/thorchain/quote/loan/open
-params:
-  from_asset: BTC.BTC
-  amount: 5000000
-  to_asset: RUNE
-  destination: {{ addr_thor_fox }}
-asserts:
-  - .expected_amount_out == "${INITIAL_EXPECTED_OUT=979650067}"
-  - .expected_debt_issued == "4095040000"
----
 type: tx-deposit
 signer: {{ addr_thor_fox }}
 coins:
@@ -215,19 +181,6 @@ memo: "=:ETH.USDY-0X9999999999999999999999999999999999999999:{{ addr_eth_fox }}"
 ---
 type: create-blocks
 count: 1
----
-type: check
-endpoint: http://localhost:1317/thorchain/quote/loan/open
-params:
-  from_asset: BTC.BTC
-  amount: 5000000
-  to_asset: RUNE
-  destination: {{ addr_thor_fox }}
-asserts:
-  # the expected amount is up, but by less than the RUNE to manipulate
-  - .expected_amount_out|tonumber > ${INITIAL_EXPECTED_OUT}
-  - .expected_amount_out|tonumber-100000000000 < ${INITIAL_EXPECTED_OUT}
-  - .expected_debt_issued == "1598800000"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
@@ -325,32 +278,8 @@ key: MaxAnchorBlocks
 value: 2
 sequence: 9
 ---
-type: check
-endpoint: http://localhost:1317/thorchain/quote/loan/open
-params:
-  from_asset: BTC.BTC
-  amount: 5000000
-  to_asset: RUNE
-  destination: {{ addr_thor_fox }}
-asserts:
-  - .expected_amount_out == "1199293342"
-  - .expected_debt_issued == "1584500000"
----
 type: create-blocks
 count: 3
----
-type: check
-endpoint: http://localhost:1317/thorchain/quote/loan/open
-params:
-  from_asset: BTC.BTC
-  amount: 5000000
-  to_asset: RUNE
-  destination: {{ addr_thor_fox }}
-asserts:
-  # anchor blocks must be set sufficiently high, otherwise debt can be manipulated with
-  # no penalty on the debt outbound from the contracted virtual pool
-  - .expected_amount_out == "3989251192"
-  - .expected_debt_issued == "1589420000"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/dpool/thor.tor

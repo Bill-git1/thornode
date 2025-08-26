@@ -48,10 +48,6 @@ var (
 	_ jsonpb.JSONPBMarshaler = &QueryPoolSlipsResponse{}
 	_ jsonpb.JSONPBMarshaler = &QueryPoolsResponse{}
 	_ jsonpb.JSONPBMarshaler = &QueryQueueResponse{}
-	_ jsonpb.JSONPBMarshaler = &QueryQuoteLoanCloseResponse{}
-	_ jsonpb.JSONPBMarshaler = &QueryQuoteLoanOpenResponse{}
-	_ jsonpb.JSONPBMarshaler = &QueryQuoteSaverDepositResponse{}
-	_ jsonpb.JSONPBMarshaler = &QueryQuoteSaverWithdrawResponse{}
 	_ jsonpb.JSONPBMarshaler = &QueryQuoteSwapResponse{}
 	_ jsonpb.JSONPBMarshaler = &QueryRagnarokResponse{}
 	_ jsonpb.JSONPBMarshaler = &QueryRuneProviderResponse{}
@@ -292,26 +288,6 @@ func (m *QueryPoolSlipsResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, err
 
 // QueryQueueResponse
 func (m *QueryQueueResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, error) {
-	return jsonify(m)
-}
-
-// QueryQuoteLoanOpenResponse
-func (m *QueryQuoteLoanOpenResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, error) {
-	return jsonify(m)
-}
-
-// QueryQuoteLoanCloseResponse
-func (m *QueryQuoteLoanCloseResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, error) {
-	return jsonify(m)
-}
-
-// QueryQuoteSaverDepositResponse
-func (m *QueryQuoteSaverDepositResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, error) {
-	return jsonify(m)
-}
-
-// QueryQuoteSaverWithdrawResponse
-func (m *QueryQuoteSaverWithdrawResponse) MarshalJSONPB(_ *jsonpb.Marshaler) ([]byte, error) {
 	return jsonify(m)
 }
 
