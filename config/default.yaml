@@ -227,6 +227,8 @@ bifrost:
         # TCpyVx6RVmrQsE3Xo3epB7y1CdJdCdAwAx is a generated address,
         # funded with 1 TRX & 1 USDT initially
         reference_address: "TCpyVx6RVmrQsE3Xo3epB7y1CdJdCdAwAx"
+        whitelist_tokens:
+          - TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t # USDT
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
 
