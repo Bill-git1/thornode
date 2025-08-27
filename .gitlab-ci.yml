@@ -30,9 +30,16 @@ stages:
   - build
   - long-test
 
-# Check if only text files are changed in fork MRs
-text_files_check:
-  stage: .pre
+# Fork MR validation job
+# This job runs for all fork MRs and implements two main functions:
+# 1. Skip CI validation if only documentation/config text files are changed
+# 2. Validate that non-text changes have successful CI in the source project
+#
+# This consolidates the logic that was previously split between text_files_check
+# and fork jobs, fixing a timing issue where GitLab CI rule evaluation happened
+# before dotenv artifacts were available.
+fork:
+  stage: fork
   rules:
     - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH
       when: always
@@ -40,6 +47,9 @@ text_files_check:
     - apt-get update && apt-get install -y --no-install-recommends git jq
   script:
     - |
+      # First, check if only text files are changed in this fork MR
+      echo "Checking if only text files are changed..."
+
       # Fetch the target branch to compare
       git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
 
@@ -65,25 +75,17 @@ text_files_check:
         TEXT_ONLY=false
       fi
 
-      # Export variable for other jobs
-      echo "TEXT_FILES_ONLY=$TEXT_ONLY" > build.env
       echo "Detected text files only: $TEXT_ONLY"
-  artifacts:
-    reports:
-      dotenv: build.env
 
-fork:
-  stage: fork
-  needs:
-    - job: text_files_check
-      optional: true
-  rules:
-    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH && $TEXT_FILES_ONLY != "true"
-      when: always
-  before_script:
-    - apt-get update && apt-get install -y --no-install-recommends jq
-  script:
-    - |
+      # If only text files are changed, skip the fork validation
+      if [ "$TEXT_ONLY" = "true" ]; then
+        echo "Only text files detected in fork MR. Skipping fork validation."
+        echo "Fork MR with text-only changes is allowed to proceed without CI validation."
+        exit 0
+      fi
+
+      # Continue with fork validation for non-text changes
+      echo "Non-text files detected. Proceeding with fork validation..."
       echo Project ID: $CI_PROJECT_ID
       echo Merge project ID: $CI_MERGE_REQUEST_PROJECT_ID
       COMMIT_SHA=${CI_MERGE_REQUEST_SOURCE_BRANCH_SHA:-$CI_COMMIT_SHA}
@@ -99,7 +101,7 @@ fork:
 
 generate:
   rules: &rules
-    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH && $TEXT_FILES_ONLY != "true"
+    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH
       when: never
     - if: $CI == "true"
       when: on_success
@@ -138,7 +140,7 @@ unit-tests:
 
 lint:
   rules:
-    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH && $TEXT_FILES_ONLY != "true"
+    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH
       when: never
     - if: $CI_COMMIT_BRANCH == "stagenet"
       when: never
@@ -154,7 +156,7 @@ lint:
 
 build-thornode:
   rules: &build-thornode-rules
-    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH && $TEXT_FILES_ONLY != "true"
+    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH
       when: never
     - if: $CI_COMMIT_BRANCH == "develop"
       when: always
@@ -223,7 +225,7 @@ go-tss:
 
 pages:
   rules:
-    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH && $TEXT_FILES_ONLY != "true"
+    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH
       when: never
     - if: $CI_COMMIT_BRANCH == "develop"
       when: always

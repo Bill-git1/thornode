@@ -202,3 +202,5 @@ THORChain supports multiple network types, each with specific configurations:
 
 - When you want to generate go files or the api, please use "make generate"
 - this code repository is a gitlab repository, so remember to use the GitLab CLI ('glab') for all GitLab-related tasks
+
+- when modifying gitlab ci file (.gitlab-ci.yaml), validate it with the glab cli (`glab ci lint`)
