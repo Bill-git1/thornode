@@ -206,12 +206,10 @@
           "state": {
             "deposit": "1000000",
             "in": "0",
-            "interval": "1",
             "out": "0",
             "quantity": "1",
             "withdrawn": "0"
           },
-          "stream_interval": "1",
           "swap_type": 1,
           "target_asset": "ETH.ETH",
           "trade_target": "500000000000000000",
@@ -244,12 +242,10 @@
           "state": {
             "deposit": "10000000000",
             "in": "0",
-            "interval": "1",
             "out": "0",
             "quantity": "1",
             "withdrawn": "0"
           },
-          "stream_interval": "1",
           "swap_type": 1,
           "target_asset": "BTC.BTC",
           "trade_target": "9500000",
@@ -277,12 +273,10 @@
           "state": {
             "deposit": "2000000000",
             "in": "0",
-            "interval": "1",
             "out": "0",
             "quantity": "1",
             "withdrawn": "0"
           },
-          "stream_interval": "1",
           "swap_type": 1,
           "target_asset": "BTC.BTC",
           "trade_target": "22000000",
@@ -310,12 +304,10 @@
           "state": {
             "deposit": "3000000000",
             "in": "0",
-            "interval": "1",
             "out": "0",
             "quantity": "1",
             "withdrawn": "0"
           },
-          "stream_interval": "1",
           "swap_type": 1,
           "target_asset": "BTC.BTC",
           "trade_target": "4500000",
@@ -343,12 +335,10 @@
           "state": {
             "deposit": "2000000000",
             "in": "0",
-            "interval": "1",
             "out": "0",
             "quantity": "1",
             "withdrawn": "0"
           },
-          "stream_interval": "1",
           "swap_type": 1,
           "target_asset": "BTC.BTC",
           "trade_target": "15000000",

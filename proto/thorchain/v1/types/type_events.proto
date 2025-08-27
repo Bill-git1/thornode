@@ -30,6 +30,12 @@ message EventModifyLimitSwap {
   string modified_target_amount = 4 [(gogoproto.customtype) = "cosmossdk.io/math.Uint", (gogoproto.nullable) = false];
 }
 
+message EventLimitSwapClose {
+  string tx_id = 1 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.TxID", (gogoproto.customname) = "TxID"];
+  string reason = 2;
+  int64 block_height = 3;
+}
+
 message EventStreamingSwap {
   string tx_id = 1 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.TxID", (gogoproto.customname) = "TxID"];
   uint64 interval = 2;

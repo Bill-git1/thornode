@@ -151,6 +151,7 @@ var (
 	NewEventStreamingSwap          = types.NewEventStreamingSwap
 	NewEventLimitSwap              = types.NewEventLimitSwap
 	NewEventModifyLimitSwap        = types.NewEventModifyLimitSwap
+	NewEventLimitSwapClose         = types.NewEventLimitSwapClose
 	NewEventAddLiquidity           = types.NewEventAddLiquidity
 	NewEventWithdraw               = types.NewEventWithdraw
 	NewEventRefund                 = types.NewEventRefund

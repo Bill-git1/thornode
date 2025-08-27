@@ -38,6 +38,7 @@ const (
 	AffiliateFeeEventType         = "affiliate_fee"
 	LimitSwapEventType            = "limit_swap"
 	ModifyLimitSwapEventType      = "limit_swap_mod"
+	LimitSwapCloseEventType       = "limit_swap_close"
 	MintBurnType                  = "mint_burn"
 	THORNameEventType             = "thorname"
 	LoanOpenEventType             = "loan_open"
@@ -123,6 +124,30 @@ func (m *EventModifyLimitSwap) Events() (cosmos.Events, error) {
 		cosmos.NewAttribute("source", m.Source.String()),
 		cosmos.NewAttribute("target", m.Target.String()),
 		cosmos.NewAttribute("modified_target_amount", m.ModifiedTargetAmount.String()),
+	)
+	return cosmos.Events{evt}, nil
+}
+
+// NewEventLimitSwapClose create a new limit swap close event
+func NewEventLimitSwapClose(txid common.TxID, reason string, blockHeight int64) *EventLimitSwapClose {
+	return &EventLimitSwapClose{
+		TxID:        txid,
+		Reason:      reason,
+		BlockHeight: blockHeight,
+	}
+}
+
+// Type return a string that represent the type, it should not duplicated with other event
+func (m *EventLimitSwapClose) Type() string {
+	return LimitSwapCloseEventType
+}
+
+// Events convert EventLimitSwapClose to key value pairs used in cosmos
+func (m *EventLimitSwapClose) Events() (cosmos.Events, error) {
+	evt := cosmos.NewEvent(m.Type(),
+		cosmos.NewAttribute("txid", m.TxID.String()),
+		cosmos.NewAttribute("reason", m.Reason),
+		cosmos.NewAttribute("block_height", fmt.Sprintf("%d", m.BlockHeight)),
 	)
 	return cosmos.Events{evt}, nil
 }

@@ -373,6 +373,9 @@ func (s AdvSwapQueueVCURSuite) TestFetchQueue(c *C) {
 	ctx, mgr := setupManagerForTest(c)
 	book := newSwapQueueAdvVCUR(mgr.Keeper())
 
+	// Enable advanced swap queue to allow limit swaps
+	mgr.Keeper().SetMimir(ctx, "EnableAdvSwapQueue", int64(AdvSwapQueueModeEnabled))
+
 	pool := NewPool()
 	pool.Asset = common.ETHAsset
 	pool.BalanceAsset = cosmos.NewUint(2088519094783)
@@ -388,8 +391,11 @@ func (s AdvSwapQueueVCURSuite) TestFetchQueue(c *C) {
 	c.Check(mgr.Keeper().SetPool(ctx, pool), IsNil)
 
 	market := NewMsgSwap(common.Tx{
-		ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000014"),
-		Coins: common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(2*common.One))},
+		ID:          common.TxID("0000000000000000000000000000000000000000000000000000000000000014"),
+		Chain:       common.THORChain,
+		FromAddress: GetRandomTHORAddress(),
+		ToAddress:   GetRandomTHORAddress(),
+		Coins:       common.Coins{common.NewCoin(common.RuneAsset(), cosmos.NewUint(2*common.One))},
 	}, common.ETHAsset, GetRandomETHAddress(), cosmos.ZeroUint(), common.NoAddress, cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_market,
@@ -401,42 +407,55 @@ func (s AdvSwapQueueVCURSuite) TestFetchQueue(c *C) {
 	}
 
 	limit1 := NewMsgSwap(common.Tx{
-		ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000015"),
-		Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1*common.One))},
-	}, common.ETHAsset, GetRandomETHAddress(), cosmos.NewUint(75*common.One), common.NoAddress, cosmos.ZeroUint(),
+		ID:          common.TxID("0000000000000000000000000000000000000000000000000000000000000015"),
+		Chain:       common.BTCChain,
+		FromAddress: GetRandomBTCAddress(),
+		ToAddress:   GetRandomBTCAddress(),
+		Coins:       common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1*common.One))},
+		Gas:         common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(10000))},
+	}, common.ETHAsset, GetRandomETHAddress(), cosmos.NewUint(80000), common.NoAddress, cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_limit,
 		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
-	limit1.InitialBlockHeight = 10
+	limit1.InitialBlockHeight = 15
 	limit1.State = &types.SwapState{
 		Deposit:    cosmos.NewUint(1 * common.One),
 		In:         cosmos.ZeroUint(),
 		Out:        cosmos.ZeroUint(),
 		Quantity:   1,
-		Interval:   1,
-		LastHeight: 10,
+		Interval:   0,
+		LastHeight: 17,
 	}
 
 	limit2 := NewMsgSwap(common.Tx{
-		ID:    common.TxID("0000000000000000000000000000000000000000000000000000000000000016"),
-		Coins: common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1*common.One))},
-	}, common.ETHAsset, GetRandomETHAddress(), cosmos.NewUint(70*common.One), common.NoAddress, cosmos.ZeroUint(),
+		ID:          common.TxID("0000000000000000000000000000000000000000000000000000000000000016"),
+		Chain:       common.BTCChain,
+		FromAddress: GetRandomBTCAddress(),
+		ToAddress:   GetRandomBTCAddress(),
+		Coins:       common.Coins{common.NewCoin(common.BTCAsset, cosmos.NewUint(1*common.One))},
+		Gas:         common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(10000))},
+	}, common.ETHAsset, GetRandomETHAddress(), cosmos.NewUint(70000), common.NoAddress, cosmos.ZeroUint(),
 		"", "", nil,
 		types.SwapType_limit,
 		0, 0, types.SwapVersion_v2, GetRandomBech32Addr())
-	limit2.InitialBlockHeight = 10
+	limit2.InitialBlockHeight = 15
 	limit2.State = &types.SwapState{
 		Deposit:    cosmos.NewUint(1 * common.One),
 		In:         cosmos.ZeroUint(),
 		Out:        cosmos.ZeroUint(),
 		Quantity:   1,
-		Interval:   1,
-		LastHeight: 10,
+		Interval:   0,
+		LastHeight: 17,
 	}
 
-	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *market), IsNil)
-	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *limit1), IsNil)
-	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *limit2), IsNil)
+	c.Assert(book.AddSwapQueueItem(ctx, mgr, market), IsNil)
+	c.Logf("Market swap stored: %s->%s", market.Tx.Coins[0].Asset, market.TargetAsset)
+
+	c.Assert(book.AddSwapQueueItem(ctx, mgr, limit1), IsNil)
+	c.Logf("Limit1 swap stored: %s->%s, TradeTarget=%s", limit1.Tx.Coins[0].Asset, limit1.TargetAsset, limit1.TradeTarget)
+
+	c.Assert(book.AddSwapQueueItem(ctx, mgr, limit2), IsNil)
+	c.Logf("Limit2 swap stored: %s->%s, TradeTarget=%s", limit2.Tx.Coins[0].Asset, limit2.TargetAsset, limit2.TradeTarget)
 
 	pairs, pools := book.getAssetPairs(ctx)
 
@@ -449,15 +468,25 @@ func (s AdvSwapQueueVCURSuite) TestFetchQueue(c *C) {
 	}
 
 	// Check for limit swaps specifically
+	c.Logf("Looking for limit swaps with assets: %s->%s", common.BTCAsset, common.ETHAsset)
 	limitIndexIter := mgr.Keeper().GetAdvSwapQueueIndexIterator(ctx, types.SwapType_limit, common.BTCAsset, common.ETHAsset)
 	defer limitIndexIter.Close()
 	hasLimitSwaps := limitIndexIter.Valid()
 	c.Logf("Has limit swaps in index: %v", hasLimitSwaps)
 
+	// Check asset pairs from getAssetPairs
+	c.Logf("Asset pairs found: %d", len(pairs))
+	for i, pair := range pairs {
+		if i < 5 { // Log first 5 pairs
+			c.Logf("Pair %d: %s->%s", i, pair.source, pair.target)
+		}
+	}
+
 	// Check why limit swaps aren't discovered
 	pair := genTradePair(common.BTCAsset, common.ETHAsset)
+	c.Logf("Testing pair: %s->%s", pair.source, pair.target)
 	limitItems := book.discoverLimitSwaps(ctx, mgr, pair, pools)
-	c.Logf("Discovered %d limit swaps for BTC->ETH", len(limitItems))
+	c.Logf("Discovered %d limit swaps for %s->%s", len(limitItems), pair.source, pair.target)
 
 	c.Check(items, HasLen, 3, Commentf("%d", len(items))) // Market swap + 2 limit swaps expected (all pairs checked)
 }
@@ -673,11 +702,11 @@ func (s AdvSwapQueueVCURSuite) TestGetMaxSwapQuantity(c *C) {
 	// The actual check depends on the calculation, let's just verify it's reasonable
 	c.Assert(quantity <= 144, Equals, true) // 14400 / 100 = 144 max based on length
 
-	// Test 2: Swap with zero interval (should use quantity calculation)
+	// Test 2: Swap with zero interval (should return 1000)
 	msg.State.Interval = 0
 	quantity, err = vm.getMaxSwapQuantity(ctx, mgr, common.ETHAsset, common.BTCAsset, msg)
 	c.Assert(err, IsNil)
-	c.Assert(quantity >= 1, Equals, true) // Should be >= 1, not exactly 1
+	c.Assert(quantity, Equals, uint64(1000), Commentf("%d", quantity))
 
 	// Test 3: Rune to asset swap
 	msg.State.Interval = 100
@@ -1111,13 +1140,13 @@ func (s AdvSwapQueueVCURSuite) TestDiscoverLimitSwaps(c *C) {
 			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(1*common.One))},
 		},
 		TargetAsset:          common.BTCAsset,
-		TradeTarget:          cosmos.NewUint(4000000), // 0.04 BTC (below market to account for fees)
+		TradeTarget:          cosmos.NewUint(4500000), // 0.045 BTC (above market rate for execution)
 		SwapType:             types.SwapType_limit,
 		InitialBlockHeight:   10,
 		AffiliateBasisPoints: cosmos.ZeroUint(),
 		State: &types.SwapState{
-			LastHeight: 10,
-			Interval:   10,
+			LastHeight: 90,
+			Interval:   0, // No interval restriction, uses default TTL (43200 blocks)
 			Quantity:   5,
 			Count:      0,
 			Deposit:    cosmos.NewUint(1 * common.One),
@@ -1126,6 +1155,7 @@ func (s AdvSwapQueueVCURSuite) TestDiscoverLimitSwaps(c *C) {
 		},
 	}
 	c.Assert(k.SetAdvSwapQueueItem(ctx, swap1), IsNil)
+	c.Assert(k.SetAdvSwapQueueIndex(ctx, swap1), IsNil)
 
 	// Test discovery
 	pair := tradePair{
@@ -1143,7 +1173,7 @@ func (s AdvSwapQueueVCURSuite) TestDiscoverLimitSwaps(c *C) {
 
 	// Debug: Calculate the ratio for our swap
 	inputAmount := cosmos.NewUint(1 * common.One)
-	targetAmount := cosmos.NewUint(4000000)
+	targetAmount := cosmos.NewUint(4500000)
 	ratio := inputAmount.MulUint64(1e8).Quo(targetAmount)
 	c.Logf("Swap ratio: %s", ratio.String())
 
@@ -1162,8 +1192,9 @@ func (s AdvSwapQueueVCURSuite) TestDiscoverLimitSwaps(c *C) {
 	c.Logf("Market ratio (1e8 scale): %s", marketRatio.String())
 
 	// Check if our swap should execute
-	shouldExecute := cosmos.NewUint(ratio.Uint64()).LTE(marketRatio)
-	c.Logf("Should execute (ratio <= market): %v", shouldExecute)
+	// For limit orders: execute if indexRatio > marketRatio (accepting worse price than market)
+	shouldExecute := cosmos.NewUint(ratio.Uint64()).GT(marketRatio)
+	c.Logf("Should execute (ratio > market): %v", shouldExecute)
 
 	items := vm.discoverLimitSwaps(ctx, mgr, pair, pools)
 	c.Logf("Discovered %d limit swaps", len(items))
@@ -3022,4 +3053,472 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapWithExistingSwapLimits(c *C) {
 
 	// Final verification: The system successfully integrates rapid swaps with existing limits
 	// All EndBlock calls should complete without errors, demonstrating proper integration
+}
+
+func (s AdvSwapQueueVCURSuite) TestProcessExpiredLimitSwaps(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	k := mgr.Keeper()
+	vm := newSwapQueueAdvVCUR(k)
+
+	// Set TTL to 100 blocks
+	maxAge := int64(100)
+	k.SetMimir(ctx, "StreamingLimitSwapMaxAge", maxAge)
+
+	// Create expired and non-expired limit swaps
+	currentBlockHeight := int64(200)
+	ctx = ctx.WithBlockHeight(currentBlockHeight)
+
+	// Expired swap (created at block 50, expires at 150, current is 200)
+	txID1 := GetRandomTxHash()
+	expiredSwap := types.MsgSwap{
+		Tx: common.Tx{
+			ID:    txID1,
+			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(1*common.One))},
+		},
+		TargetAsset:        common.BTCAsset,
+		TradeTarget:        cosmos.NewUint(5000000), // 0.05 BTC
+		SwapType:           types.SwapType_limit,
+		InitialBlockHeight: 50,
+		State: &types.SwapState{
+			Quantity: 1,
+			Count:    0,
+			Deposit:  cosmos.NewUint(1 * common.One),
+		},
+	}
+	c.Assert(k.SetAdvSwapQueueItem(ctx, expiredSwap), IsNil)
+
+	// Non-expired swap (created at block 150, expires at 250, current is 200)
+	txID2 := GetRandomTxHash()
+	activeSwap := types.MsgSwap{
+		Tx: common.Tx{
+			ID:    txID2,
+			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(1*common.One))},
+		},
+		TargetAsset:        common.BTCAsset,
+		TradeTarget:        cosmos.NewUint(5000000), // 0.05 BTC
+		SwapType:           types.SwapType_limit,
+		InitialBlockHeight: 150,
+		State: &types.SwapState{
+			Quantity: 1,
+			Count:    0,
+			Deposit:  cosmos.NewUint(1 * common.One),
+		},
+	}
+	c.Assert(k.SetAdvSwapQueueItem(ctx, activeSwap), IsNil)
+
+	// Set up TTL tracking for expired swap
+	expiryHeight := expiredSwap.InitialBlockHeight + maxAge
+	err := k.AddToLimitSwapTTL(ctx, expiryHeight, txID1)
+	c.Assert(err, IsNil)
+
+	// Set up TTL tracking for active swap
+	activeExpiryHeight := activeSwap.InitialBlockHeight + maxAge
+	err = k.AddToLimitSwapTTL(ctx, activeExpiryHeight, txID2)
+	c.Assert(err, IsNil)
+
+	// Verify swaps exist before processing
+	_, err = k.GetAdvSwapQueueItem(ctx, txID1, 0)
+	c.Assert(err, IsNil)
+	_, err = k.GetAdvSwapQueueItem(ctx, txID2, 0)
+	c.Assert(err, IsNil)
+
+	// Process expired limit swaps
+	err = vm.processExpiredLimitSwaps(ctx, mgr)
+	c.Assert(err, IsNil)
+
+	// Verify expired swap was removed
+	_, err = k.GetAdvSwapQueueItem(ctx, txID1, 0)
+	c.Assert(err, NotNil) // Should not exist
+
+	// Verify active swap still exists
+	retrievedActiveSwap, err := k.GetAdvSwapQueueItem(ctx, txID2, 0)
+	c.Assert(err, IsNil)
+	c.Assert(retrievedActiveSwap.Tx.ID.Equals(txID2), Equals, true)
+
+	// Verify TTL entry for expired swap was cleaned up
+	expiredTTL, err := k.GetLimitSwapTTL(ctx, expiryHeight)
+	c.Assert(err, IsNil)
+	c.Assert(len(expiredTTL), Equals, 0)
+
+	// Verify TTL entry for active swap still exists
+	activeTTL, err := k.GetLimitSwapTTL(ctx, activeExpiryHeight)
+	c.Assert(err, IsNil)
+	c.Assert(len(activeTTL), Equals, 1)
+	c.Assert(activeTTL[0].Equals(txID2), Equals, true)
+}
+
+func (s AdvSwapQueueVCURSuite) TestProcessExpiredLimitSwapsNoExpired(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	k := mgr.Keeper()
+	vm := newSwapQueueAdvVCUR(k)
+
+	// Set TTL to 100 blocks
+	maxAge := int64(100)
+	k.SetMimir(ctx, "StreamingLimitSwapMaxAge", maxAge)
+
+	currentBlockHeight := int64(100)
+	ctx = ctx.WithBlockHeight(currentBlockHeight)
+
+	// Create a non-expired swap
+	txID := GetRandomTxHash()
+	activeSwap := types.MsgSwap{
+		Tx: common.Tx{
+			ID:    txID,
+			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(1*common.One))},
+		},
+		TargetAsset:        common.BTCAsset,
+		TradeTarget:        cosmos.NewUint(5000000), // 0.05 BTC
+		SwapType:           types.SwapType_limit,
+		InitialBlockHeight: 50, // Expires at block 150, current is 100
+		State: &types.SwapState{
+			Quantity: 1,
+			Count:    0,
+			Deposit:  cosmos.NewUint(1 * common.One),
+		},
+	}
+	c.Assert(k.SetAdvSwapQueueItem(ctx, activeSwap), IsNil)
+
+	// Set up TTL tracking
+	expiryHeight := activeSwap.InitialBlockHeight + maxAge
+	err := k.AddToLimitSwapTTL(ctx, expiryHeight, txID)
+	c.Assert(err, IsNil)
+
+	// Process expired limit swaps (should do nothing)
+	err = vm.processExpiredLimitSwaps(ctx, mgr)
+	c.Assert(err, IsNil)
+
+	// Verify swap still exists
+	retrievedSwap, err := k.GetAdvSwapQueueItem(ctx, txID, 0)
+	c.Assert(err, IsNil)
+	c.Assert(retrievedSwap.Tx.ID.Equals(txID), Equals, true)
+
+	// Verify TTL entry still exists
+	ttlEntries, err := k.GetLimitSwapTTL(ctx, expiryHeight)
+	c.Assert(err, IsNil)
+	c.Assert(len(ttlEntries), Equals, 1)
+	c.Assert(ttlEntries[0].Equals(txID), Equals, true)
+}
+
+func (s AdvSwapQueueVCURSuite) TestProcessExpiredLimitSwapsMultipleAtSameHeight(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	k := mgr.Keeper()
+	vm := newSwapQueueAdvVCUR(k)
+
+	// Set TTL to 50 blocks
+	maxAge := int64(50)
+	k.SetMimir(ctx, "StreamingLimitSwapMaxAge", maxAge)
+
+	currentBlockHeight := int64(150)
+	ctx = ctx.WithBlockHeight(currentBlockHeight)
+
+	// Create multiple expired swaps that expire at the same block height
+	initialHeight := int64(50) // All expire at block 100
+	expiryHeight := initialHeight + maxAge
+
+	var txIDs []common.TxID
+	for i := 0; i < 3; i++ {
+		txID := GetRandomTxHash()
+		txIDs = append(txIDs, txID)
+
+		expiredSwap := types.MsgSwap{
+			Tx: common.Tx{
+				ID:    txID,
+				Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(1*common.One))},
+			},
+			TargetAsset:        common.BTCAsset,
+			TradeTarget:        cosmos.NewUint(5000000), // 0.05 BTC
+			SwapType:           types.SwapType_limit,
+			InitialBlockHeight: initialHeight,
+			State: &types.SwapState{
+				Quantity: 1,
+				Count:    0,
+				Deposit:  cosmos.NewUint(1 * common.One),
+			},
+		}
+		c.Assert(k.SetAdvSwapQueueItem(ctx, expiredSwap), IsNil)
+
+		// Add to TTL tracking
+		err := k.AddToLimitSwapTTL(ctx, expiryHeight, txID)
+		c.Assert(err, IsNil)
+	}
+
+	// Verify all swaps exist before processing
+	for _, txID := range txIDs {
+		_, err := k.GetAdvSwapQueueItem(ctx, txID, 0)
+		c.Assert(err, IsNil)
+	}
+
+	// Verify TTL entry contains all txIDs
+	ttlEntries, err := k.GetLimitSwapTTL(ctx, expiryHeight)
+	c.Assert(err, IsNil)
+	c.Assert(len(ttlEntries), Equals, 3)
+
+	// Process expired limit swaps
+	err = vm.processExpiredLimitSwaps(ctx, mgr)
+	c.Assert(err, IsNil)
+
+	// Verify all expired swaps were removed
+	for _, txID := range txIDs {
+		_, err := k.GetAdvSwapQueueItem(ctx, txID, 0)
+		c.Assert(err, NotNil) // Should not exist
+	}
+
+	// Verify TTL entry was cleaned up
+	ttlEntries, err = k.GetLimitSwapTTL(ctx, expiryHeight)
+	c.Assert(err, IsNil)
+	c.Assert(len(ttlEntries), Equals, 0)
+}
+
+func (s AdvSwapQueueVCURSuite) TestProcessExpiredLimitSwapsHandlesMissingSwap(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	k := mgr.Keeper()
+	vm := newSwapQueueAdvVCUR(k)
+
+	currentBlockHeight := int64(200)
+	ctx = ctx.WithBlockHeight(currentBlockHeight)
+
+	// Create TTL entry for a swap that doesn't exist in the queue
+	expiryHeight := int64(150)
+	nonExistentTxID := GetRandomTxHash()
+	err := k.AddToLimitSwapTTL(ctx, expiryHeight, nonExistentTxID)
+	c.Assert(err, IsNil)
+
+	// Process expired limit swaps (should handle missing swap gracefully)
+	err = vm.processExpiredLimitSwaps(ctx, mgr)
+	c.Assert(err, IsNil)
+
+	// Verify TTL entry was still cleaned up
+	ttlEntries, err := k.GetLimitSwapTTL(ctx, expiryHeight)
+	c.Assert(err, IsNil)
+	c.Assert(len(ttlEntries), Equals, 0)
+}
+
+func (s AdvSwapQueueVCURSuite) TestProcessExpiredLimitSwapsWithMixedSwapTypes(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	k := mgr.Keeper()
+	vm := newSwapQueueAdvVCUR(k)
+
+	// Set TTL to 50 blocks
+	maxAge := int64(50)
+	k.SetMimir(ctx, "StreamingLimitSwapMaxAge", maxAge)
+
+	currentBlockHeight := int64(200)
+	ctx = ctx.WithBlockHeight(currentBlockHeight)
+
+	// Create expired limit swap
+	txID1 := GetRandomTxHash()
+	expiredLimitSwap := types.MsgSwap{
+		Tx: common.Tx{
+			ID:    txID1,
+			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(1*common.One))},
+		},
+		TargetAsset:        common.BTCAsset,
+		TradeTarget:        cosmos.NewUint(5000000), // 0.05 BTC
+		SwapType:           types.SwapType_limit,
+		InitialBlockHeight: 100, // Expires at 150, current is 200
+		State: &types.SwapState{
+			Quantity: 1,
+			Count:    0,
+			Deposit:  cosmos.NewUint(1 * common.One),
+		},
+	}
+	c.Assert(k.SetAdvSwapQueueItem(ctx, expiredLimitSwap), IsNil)
+
+	// Create expired market swap (should not be processed by TTL)
+	txID2 := GetRandomTxHash()
+	expiredMarketSwap := types.MsgSwap{
+		Tx: common.Tx{
+			ID:    txID2,
+			Coins: common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(1*common.One))},
+		},
+		TargetAsset:        common.BTCAsset,
+		SwapType:           types.SwapType_market,
+		InitialBlockHeight: 100,
+		State: &types.SwapState{
+			Quantity: 1,
+			Count:    0,
+			Deposit:  cosmos.NewUint(1 * common.One),
+		},
+	}
+	c.Assert(k.SetAdvSwapQueueItem(ctx, expiredMarketSwap), IsNil)
+
+	// Set up TTL tracking only for limit swap
+	expiryHeight := expiredLimitSwap.InitialBlockHeight + maxAge
+	err := k.AddToLimitSwapTTL(ctx, expiryHeight, txID1)
+	c.Assert(err, IsNil)
+
+	// Process expired limit swaps
+	err = vm.processExpiredLimitSwaps(ctx, mgr)
+	c.Assert(err, IsNil)
+
+	// Verify expired limit swap was removed
+	_, err = k.GetAdvSwapQueueItem(ctx, txID1, 0)
+	c.Assert(err, NotNil) // Should not exist
+
+	// Verify market swap was not affected (TTL doesn't track market swaps)
+	retrievedMarketSwap, err := k.GetAdvSwapQueueItem(ctx, txID2, 0)
+	c.Assert(err, IsNil)
+	c.Assert(retrievedMarketSwap.Tx.ID.Equals(txID2), Equals, true)
+}
+
+func (s AdvSwapQueueVCURSuite) TestAddSwapQueueItemWithCustomTTL(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	k := mgr.Keeper()
+
+	// Enable advanced swap queue in normal mode
+	mgr.Keeper().SetMimir(ctx, "EnableAdvSwapQueue", 1)
+
+	// Set StreamingLimitSwapMaxAge to 1000 blocks
+	maxAge := int64(1000)
+	k.SetMimir(ctx, "StreamingLimitSwapMaxAge", maxAge)
+
+	// Setup pools
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	pool = NewPool()
+	pool.Asset = common.ETHAsset
+	pool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	pool.BalanceRune = cosmos.NewUint(10000 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	swapQueue := newSwapQueueAdvVCUR(mgr.Keeper())
+
+	// Test 1: Custom TTL within limits (500 blocks)
+	customTTL := uint64(500)
+	currentHeight := int64(100)
+	ctx = ctx.WithBlockHeight(currentHeight)
+
+	msg1 := NewMsgSwap(
+		common.NewTx(
+			common.TxID("0000000000000000000000000000000000000000000000000000000000000001"),
+			GetRandomBTCAddress(),
+			GetRandomBTCAddress(),
+			common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(1500000))),
+			common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(10000))},
+			"=<:ETH.ETH:"+GetRandomETHAddress().String()+":999999999",
+		),
+		common.ETHAsset,
+		GetRandomETHAddress(),
+		cosmos.NewUint(999999999),
+		common.NoAddress,
+		cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_limit,
+		0, 0, types.SwapVersion_v2,
+		GetRandomValidatorNode(NodeActive).NodeAddress,
+	)
+	msg1.State.Interval = customTTL
+
+	err := swapQueue.AddSwapQueueItem(ctx, mgr, msg1)
+	c.Assert(err, IsNil)
+
+	// Verify the TTL was set correctly using the custom interval
+	expectedExpiryHeight := currentHeight + int64(customTTL)
+	ttlEntries, err := k.GetLimitSwapTTL(ctx, expectedExpiryHeight)
+	c.Assert(err, IsNil)
+	c.Assert(len(ttlEntries), Equals, 1)
+	c.Assert(ttlEntries[0].Equals(msg1.Tx.ID), Equals, true)
+
+	// Test 2: Custom TTL exceeding maximum (should fall back to maxAge)
+	excessiveTTL := uint64(2000) // Exceeds maxAge of 1000
+
+	msg2 := NewMsgSwap(
+		common.NewTx(
+			common.TxID("0000000000000000000000000000000000000000000000000000000000000002"),
+			GetRandomBTCAddress(),
+			GetRandomBTCAddress(),
+			common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(1500000))),
+			common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(10000))},
+			"=<:ETH.ETH:"+GetRandomETHAddress().String()+":999999999",
+		),
+		common.ETHAsset,
+		GetRandomETHAddress(),
+		cosmos.NewUint(999999999),
+		common.NoAddress,
+		cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_limit,
+		0, 0, types.SwapVersion_v2,
+		GetRandomValidatorNode(NodeActive).NodeAddress,
+	)
+	msg2.State.Interval = excessiveTTL
+
+	err = swapQueue.AddSwapQueueItem(ctx, mgr, msg2)
+	c.Assert(err, IsNil)
+
+	// Verify the TTL fell back to maxAge
+	defaultExpiryHeight := currentHeight + maxAge
+	ttlEntries, err = k.GetLimitSwapTTL(ctx, defaultExpiryHeight)
+	c.Assert(err, IsNil)
+	c.Assert(len(ttlEntries), Equals, 1)
+	c.Assert(ttlEntries[0].Equals(msg2.Tx.ID), Equals, true)
+
+	// Test 3: Zero custom TTL (gets converted to maxAge, so uses maxAge as TTL)
+	msg3 := NewMsgSwap(
+		common.NewTx(
+			common.TxID("0000000000000000000000000000000000000000000000000000000000000003"),
+			GetRandomBTCAddress(),
+			GetRandomBTCAddress(),
+			common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(1500000))),
+			common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(10000))},
+			"=<:ETH.ETH:"+GetRandomETHAddress().String()+":999999999",
+		),
+		common.ETHAsset,
+		GetRandomETHAddress(),
+		cosmos.NewUint(999999999),
+		common.NoAddress,
+		cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_limit,
+		0, 0, types.SwapVersion_v2,
+		GetRandomValidatorNode(NodeActive).NodeAddress,
+	)
+	msg3.State.Interval = 0 // Zero gets converted to maxAge by AddSwapQueueItem
+
+	err = swapQueue.AddSwapQueueItem(ctx, mgr, msg3)
+	c.Assert(err, IsNil)
+
+	// msg3 should use maxAge as TTL (since 0 gets converted to maxAge)
+	msg3ExpiryHeight := currentHeight + maxAge
+	ttlEntries, err = k.GetLimitSwapTTL(ctx, msg3ExpiryHeight)
+	c.Assert(err, IsNil)
+	c.Assert(len(ttlEntries), Equals, 2, Commentf("Should have 2 TTL entry at height %d", msg3ExpiryHeight))
+	c.Assert(ttlEntries[1].Equals(msg3.Tx.ID), Equals, true, Commentf("msg3 should be in TTL entries"))
+
+	// Test 4: Market swap (should not set TTL at all)
+	msg4 := NewMsgSwap(
+		common.NewTx(
+			common.TxID("0000000000000000000000000000000000000000000000000000000000000004"),
+			GetRandomBTCAddress(),
+			GetRandomBTCAddress(),
+			common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(1500000))),
+			common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(10000))},
+			"swap:ETH.ETH:"+GetRandomETHAddress().String(),
+		),
+		common.ETHAsset,
+		GetRandomETHAddress(),
+		cosmos.ZeroUint(),
+		common.NoAddress,
+		cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v1,
+		GetRandomValidatorNode(NodeActive).NodeAddress,
+	)
+	msg4.State.Interval = 100
+
+	err = swapQueue.AddSwapQueueItem(ctx, mgr, msg4)
+	c.Assert(err, IsNil)
+
+	// Verify no TTL was set for the market swap
+	marketExpiryHeight := currentHeight + 100
+	ttlEntries, err = k.GetLimitSwapTTL(ctx, marketExpiryHeight)
+	c.Assert(err, IsNil)
+	c.Assert(len(ttlEntries), Equals, 0) // Market swaps don't get TTL entries
 }

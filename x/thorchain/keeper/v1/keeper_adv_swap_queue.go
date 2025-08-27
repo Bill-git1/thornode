@@ -48,6 +48,7 @@ func (k KVStore) SetAdvSwapQueueItem(ctx cosmos.Context, msg MsgSwap) error {
 		return err
 	}
 	k.setMsgSwap(ctx, k.GetKey(prefixAdvSwapQueueItem, formatSwapQueueItemKey(msg.Tx.ID, int(msg.Index))), msg)
+
 	return nil
 }
 
@@ -263,4 +264,81 @@ func removeString(a []string, i int) []string {
 	a[i] = a[len(a)-1]  // Copy last element to index i.
 	a[len(a)-1] = ""    // Erase last element (write zero value).
 	return a[:len(a)-1] // Truncate slice.
+}
+
+///-------------------------- Limit Swap TTL Management --------------------------///
+
+// SetLimitSwapTTL - stores a list of transaction hashes that expire at the given block height
+func (k KVStore) SetLimitSwapTTL(ctx cosmos.Context, blockHeight int64, txHashes []common.TxID) error {
+	if blockHeight <= 0 {
+		return fmt.Errorf("invalid block height: %d", blockHeight)
+	}
+
+	key := k.GetKey(prefixAdvSwapQueueTTL, fmt.Sprintf("%d", blockHeight))
+	txHashStrings := make([]string, len(txHashes))
+	for i, hash := range txHashes {
+		txHashStrings[i] = hash.String()
+	}
+	k.setStrings(ctx, key, txHashStrings)
+	return nil
+}
+
+// GetLimitSwapTTL - retrieves the list of transaction hashes that expire at the given block height
+func (k KVStore) GetLimitSwapTTL(ctx cosmos.Context, blockHeight int64) ([]common.TxID, error) {
+	if blockHeight <= 0 {
+		return nil, fmt.Errorf("invalid block height: %d", blockHeight)
+	}
+
+	key := k.GetKey(prefixAdvSwapQueueTTL, fmt.Sprintf("%d", blockHeight))
+	var txHashStrings []string
+	_, err := k.getStrings(ctx, key, &txHashStrings)
+	if err != nil {
+		return nil, err
+	}
+
+	txHashes := make([]common.TxID, 0, len(txHashStrings))
+	for _, hashStr := range txHashStrings {
+		hash, err := common.NewTxID(hashStr)
+		if err != nil {
+			_ = dbError(ctx, fmt.Sprintf("failed to parse tx hash from TTL: %s", hashStr), err)
+			continue
+		}
+		txHashes = append(txHashes, hash)
+	}
+
+	return txHashes, nil
+}
+
+// RemoveLimitSwapTTL - removes the TTL entry for the given block height (tombstone)
+func (k KVStore) RemoveLimitSwapTTL(ctx cosmos.Context, blockHeight int64) {
+	if blockHeight <= 0 {
+		return
+	}
+	key := k.GetKey(prefixAdvSwapQueueTTL, fmt.Sprintf("%d", blockHeight))
+	k.del(ctx, key)
+}
+
+// AddToLimitSwapTTL - adds a transaction hash to the TTL list for the given block height
+func (k KVStore) AddToLimitSwapTTL(ctx cosmos.Context, blockHeight int64, txHash common.TxID) error {
+	if blockHeight <= 0 {
+		return fmt.Errorf("invalid block height: %d", blockHeight)
+	}
+
+	// Get existing TTL list
+	existingHashes, err := k.GetLimitSwapTTL(ctx, blockHeight)
+	if err != nil {
+		// If no existing list, start with empty slice
+		existingHashes = []common.TxID{}
+	}
+
+	// Check if hash already exists
+	for _, existing := range existingHashes {
+		if existing.Equals(txHash) {
+			return nil // Already exists, no need to add
+		}
+	}
+
+	// Add the new hash and save
+	existingHashes = append(existingHashes, txHash)
+	return k.SetLimitSwapTTL(ctx, blockHeight, existingHashes)
 }

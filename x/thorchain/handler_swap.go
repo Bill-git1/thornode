@@ -258,7 +258,32 @@ func (h SwapHandler) validateV3_0_0(ctx cosmos.Context, msg MsgSwap) error {
 }
 
 func (h SwapHandler) handleWithEmit(ctx cosmos.Context, msg MsgSwap) (*cosmos.Result, cosmos.Uint, error) {
-	ctx.Logger().Info("receive MsgSwap", "request tx hash", msg.Tx.ID, "index", msg.Index, "source", msg.Tx.Coins[0].String(), "target asset", msg.TargetAsset, "signer", msg.Signer.String())
+	logFields := []interface{}{
+		"request tx hash", msg.Tx.ID,
+		"index", msg.Index,
+		"source", msg.Tx.Coins[0].String(),
+		"target asset", msg.TargetAsset,
+		"signer", msg.Signer.String(),
+		"swap type", msg.SwapType.String(),
+		"stream quantity", msg.StreamQuantity,
+		"stream interval", msg.StreamInterval,
+		"trade target", msg.TradeTarget.String(),
+	}
+
+	if msg.State != nil {
+		logFields = append(logFields,
+			"interval", msg.State.Interval,
+			"quantity", msg.State.Quantity,
+			"count", msg.State.Count,
+			"deposit", msg.State.Deposit.String(),
+			"in", msg.State.In.String(),
+			"out", msg.State.Out.String(),
+			"ttl", msg.State.Ttl,
+			"last_height", msg.State.LastHeight,
+		)
+	}
+
+	ctx.Logger().Info("receive MsgSwap", logFields...)
 	version := h.mgr.GetVersion()
 	switch {
 	case version.GTE(semver.MustParse("3.0.0")):

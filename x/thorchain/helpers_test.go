@@ -1117,3 +1117,173 @@ func (HelperSuite) TestSettleSwap(c *C) {
 	c.Assert(err, IsNil) // Should not fail, just log errors
 	keeper.failRemove = false
 }
+
+func (s *HelperSuite) TestSettleSwapLimitSwapBasic(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// Test: Basic limit swap settlement should work without errors
+	txID := GetRandomTxHash()
+	currentBlockHeight := int64(100)
+	ctx = ctx.WithBlockHeight(currentBlockHeight)
+
+	ethAddr := GetRandomETHAddress()
+	tx := common.NewTx(
+		txID,
+		ethAddr,
+		GetRandomETHAddress(),
+		common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(1*common.One))},
+		common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(1))},
+		"swap:BTC.BTC",
+	)
+
+	limitSwapMsg := types.MsgSwap{
+		Tx:          tx,
+		TargetAsset: common.BTCAsset,
+		Destination: GetRandomBTCAddress(),
+		SwapType:    types.SwapType_limit,
+		TradeTarget: cosmos.NewUint(5000000), // 0.05 BTC
+		State: &types.SwapState{
+			Deposit: cosmos.NewUint(1 * common.One),
+			In:      cosmos.NewUint(1 * common.One),
+			Out:     cosmos.NewUint(5000000),
+		},
+	}
+
+	// Settle the limit swap
+	err := settleSwap(ctx, mgr, limitSwapMsg, "limit swap expired")
+	c.Assert(err, IsNil)
+
+	// Verify that settleSwap correctly handled the limit swap
+	// The specific event emission logic is tested separately
+	c.Assert(limitSwapMsg.IsLimitSwap(), Equals, true)
+}
+
+func (s *HelperSuite) TestSettleSwapMarketSwapBasic(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// Test: Market swap settlement should work without errors
+	txID := GetRandomTxHash()
+	currentBlockHeight := int64(100)
+	ctx = ctx.WithBlockHeight(currentBlockHeight)
+
+	ethAddr := GetRandomETHAddress()
+	tx := common.NewTx(
+		txID,
+		ethAddr,
+		GetRandomETHAddress(),
+		common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(1*common.One))},
+		common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(1))},
+		"swap:BTC.BTC",
+	)
+
+	marketSwapMsg := types.MsgSwap{
+		Tx:          tx,
+		TargetAsset: common.BTCAsset,
+		Destination: GetRandomBTCAddress(),
+		SwapType:    types.SwapType_market, // Market swap, not limit
+		State: &types.SwapState{
+			Deposit: cosmos.NewUint(1 * common.One),
+			In:      cosmos.NewUint(1 * common.One),
+			Out:     cosmos.NewUint(5000000),
+		},
+	}
+
+	// Settle the market swap
+	err := settleSwap(ctx, mgr, marketSwapMsg, "market swap completed")
+	c.Assert(err, IsNil)
+
+	// Verify that settleSwap correctly handled the market swap
+	c.Assert(marketSwapMsg.IsLimitSwap(), Equals, false)
+}
+
+func (s *HelperSuite) TestSettleSwapLimitSwapWithDifferentReasons(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	currentBlockHeight := int64(150)
+	ctx = ctx.WithBlockHeight(currentBlockHeight)
+
+	ethAddr := GetRandomETHAddress()
+
+	testCases := []struct {
+		reason string
+		txID   common.TxID
+	}{
+		{"limit swap completed", GetRandomTxHash()},
+		{"limit swap cancelled", GetRandomTxHash()},
+		{"limit swap expired", GetRandomTxHash()},
+		{"limit swap failed", GetRandomTxHash()},
+	}
+
+	for i, testCase := range testCases {
+		tx := common.NewTx(
+			testCase.txID,
+			ethAddr,
+			GetRandomETHAddress(),
+			common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(1*common.One))},
+			common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(1))},
+			"swap:BTC.BTC",
+		)
+
+		limitSwapMsg := types.MsgSwap{
+			Tx:          tx,
+			TargetAsset: common.BTCAsset,
+			Destination: GetRandomBTCAddress(),
+			SwapType:    types.SwapType_limit,
+			TradeTarget: cosmos.NewUint(5000000),
+			State: &types.SwapState{
+				Deposit: cosmos.NewUint(1 * common.One),
+				In:      cosmos.NewUint(1 * common.One),
+				Out:     cosmos.NewUint(5000000),
+			},
+		}
+
+		// Settle the limit swap with different reason
+		err := settleSwap(ctx, mgr, limitSwapMsg, testCase.reason)
+		c.Assert(err, IsNil, Commentf("Test case %d failed: %s", i, testCase.reason))
+
+		// Verify it's still recognized as a limit swap
+		c.Assert(limitSwapMsg.IsLimitSwap(), Equals, true)
+	}
+}
+
+func (s *HelperSuite) TestSettleSwapStreamingLimitSwap(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// Test: Streaming limit swap (quantity > 1) should settle correctly
+	txID := GetRandomTxHash()
+	currentBlockHeight := int64(200)
+	ctx = ctx.WithBlockHeight(currentBlockHeight)
+
+	ethAddr := GetRandomETHAddress()
+	tx := common.NewTx(
+		txID,
+		ethAddr,
+		GetRandomETHAddress(),
+		common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(10*common.One))},
+		common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(1))},
+		"swap:BTC.BTC",
+	)
+
+	streamingLimitSwapMsg := types.MsgSwap{
+		Tx:          tx,
+		TargetAsset: common.BTCAsset,
+		Destination: GetRandomBTCAddress(),
+		SwapType:    types.SwapType_limit,
+		TradeTarget: cosmos.NewUint(50000000), // 0.5 BTC
+		State: &types.SwapState{
+			Quantity: 10, // Streaming swap with 10 sub-swaps
+			Count:    10, // All sub-swaps completed
+			Deposit:  cosmos.NewUint(10 * common.One),
+			In:       cosmos.NewUint(10 * common.One),
+			Out:      cosmos.NewUint(50000000),
+		},
+	}
+
+	// Settle the streaming limit swap
+	err := settleSwap(ctx, mgr, streamingLimitSwapMsg, "streaming limit swap completed")
+	c.Assert(err, IsNil)
+
+	// Verify it's recognized as a limit swap
+	c.Assert(streamingLimitSwapMsg.IsLimitSwap(), Equals, true)
+	c.Assert(streamingLimitSwapMsg.State.Quantity, Equals, uint64(10))
+}

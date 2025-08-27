@@ -74,6 +74,7 @@ const (
 	prefixAdvSwapQueueItem        types.DbPrefix = "aq/"
 	prefixAdvSwapQueueLimitIndex  types.DbPrefix = "aqlim/"
 	prefixAdvSwapQueueMarketIndex types.DbPrefix = "aqmark/"
+	prefixAdvSwapQueueTTL         types.DbPrefix = "aqttl/"
 	prefixOutboundFeeWithheldRune types.DbPrefix = "outbound_fee_withheld_rune/"
 	prefixOutboundFeeSpentRune    types.DbPrefix = "outbound_fee_spent_rune/"
 	prefixMimir                   types.DbPrefix = "mimir/"

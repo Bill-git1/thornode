@@ -64,7 +64,7 @@ signer: {{ addr_thor_fox }}
 coins:
   - amount: "10000000000"
     asset: "rune"
-memo: "=<:BTC.BTC:{{ addr_btc_fox }}:8998438"
+memo: "=<:BTC.BTC:{{ addr_btc_fox }}:8998438/0/0"
 ---
 type: create-blocks
 count: 1
@@ -263,7 +263,7 @@ txs:
     gas:
       - amount: "10000"
         asset: "BTC.BTC"
-    memo: "=:THOR.RUNE:{{ addr_thor_fox }}"
+    memo: "=:THOR.RUNE:{{ addr_thor_fox }}:0/0/1"
   block_height: 1
   finalise_height: 1
   observed_pub_key: {{ pubkey_dog }}

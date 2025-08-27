@@ -69,7 +69,7 @@ func NewConstantValue() *ConstantVals {
 			StreamingSwapMinBPFee:               0,                  // min swap fee (in basis points) for a streaming swap trade
 			StreamingSwapMaxLength:              14400,              // max number of blocks a streaming swap can trade for
 			StreamingSwapMaxLengthNative:        14400 * 365,        // max number of blocks native streaming swaps can trade over
-			StreamingLimitSwapMaxAge:            14400 * 7,          // max number of blocks a streaming limit swap can exist before completing (7 days)
+			StreamingLimitSwapMaxAge:            43200,              // max number of blocks a streaming limit swap can exist before completing (3 days)
 			MinCR:                               10_000,             // Minimum collateralization ratio (basis pts)
 			MaxCR:                               60_000,             // Maximum collateralization ratio (basis pts)
 			LoanStreamingSwapsInterval:          0,                  // block interval between each streaming swap of opening or closing a loan

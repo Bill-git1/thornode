@@ -597,6 +597,21 @@ func (k KVStoreDummy) RemoveAdvSwapQueueIndex(_ cosmos.Context, _ MsgSwap) error
 	return kaboom
 }
 
+func (k KVStoreDummy) SetLimitSwapTTL(ctx cosmos.Context, blockHeight int64, txHashes []common.TxID) error {
+	return kaboom
+}
+
+func (k KVStoreDummy) GetLimitSwapTTL(ctx cosmos.Context, blockHeight int64) ([]common.TxID, error) {
+	return []common.TxID{}, kaboom
+}
+
+func (k KVStoreDummy) RemoveLimitSwapTTL(ctx cosmos.Context, blockHeight int64) {
+}
+
+func (k KVStoreDummy) AddToLimitSwapTTL(ctx cosmos.Context, blockHeight int64, txHash common.TxID) error {
+	return kaboom
+}
+
 func (k KVStoreDummy) GetTCYClaimer(ctx cosmos.Context, l1Address common.Address, asset common.Asset) (TCYClaimer, error) {
 	return TCYClaimer{}, nil
 }

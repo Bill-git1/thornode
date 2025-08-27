@@ -1289,6 +1289,14 @@ func settleSwap(ctx cosmos.Context, mgr Manager, msg MsgSwap, settleReason strin
 		}
 	}
 
+	// Emit limit swap close event if this was a limit swap being closed
+	if msg.IsLimitSwap() {
+		evt := NewEventLimitSwapClose(msg.Tx.ID, settleReason, ctx.BlockHeight())
+		if err := mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
+			ctx.Logger().Error("fail to emit limit swap close event", "error", err)
+		}
+	}
+
 	return nil
 }
 

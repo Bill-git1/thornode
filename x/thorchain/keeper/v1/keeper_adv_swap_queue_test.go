@@ -188,3 +188,115 @@ func (s *KeeperAdvSwapQueueSuite) TestLastIndexParsing(c *C) {
 		c.Check(err, IsNil, Commentf("Should parse TxID from: %s -> %s", rec, parts[0]))
 	}
 }
+
+func (s *KeeperAdvSwapQueueSuite) TestLimitSwapTTL(c *C) {
+	ctx, k := setupKeeperForTest(c)
+
+	// Test SetLimitSwapTTL and GetLimitSwapTTL
+	blockHeight := int64(1000)
+	txHashes := []common.TxID{
+		GetRandomTxHash(),
+		GetRandomTxHash(),
+		GetRandomTxHash(),
+	}
+
+	// Test setting TTL entries
+	err := k.SetLimitSwapTTL(ctx, blockHeight, txHashes)
+	c.Assert(err, IsNil)
+
+	// Test getting TTL entries
+	retrievedHashes, err := k.GetLimitSwapTTL(ctx, blockHeight)
+	c.Assert(err, IsNil)
+	c.Assert(len(retrievedHashes), Equals, 3)
+
+	// Verify all hashes are present
+	for i, originalHash := range txHashes {
+		c.Assert(retrievedHashes[i].Equals(originalHash), Equals, true,
+			Commentf("Hash %d should match", i))
+	}
+
+	// Test getting non-existent TTL entry (should return empty slice, not error)
+	nonExistentHashes, err := k.GetLimitSwapTTL(ctx, blockHeight+1)
+	c.Assert(err, IsNil, Commentf("Should not return error for non-existent TTL entry"))
+	c.Assert(len(nonExistentHashes), Equals, 0, Commentf("Should return empty slice for non-existent TTL entry"))
+
+	// Test updating existing TTL entry
+	newTxHashes := []common.TxID{
+		GetRandomTxHash(),
+		GetRandomTxHash(),
+	}
+	err = k.SetLimitSwapTTL(ctx, blockHeight, newTxHashes)
+	c.Assert(err, IsNil)
+
+	updatedHashes, err := k.GetLimitSwapTTL(ctx, blockHeight)
+	c.Assert(err, IsNil)
+	c.Assert(len(updatedHashes), Equals, 2)
+	c.Assert(updatedHashes[0].Equals(newTxHashes[0]), Equals, true)
+	c.Assert(updatedHashes[1].Equals(newTxHashes[1]), Equals, true)
+}
+
+func (s *KeeperAdvSwapQueueSuite) TestLimitSwapTTLValidation(c *C) {
+	ctx, k := setupKeeperForTest(c)
+
+	// Test invalid block height (negative)
+	err := k.SetLimitSwapTTL(ctx, -1, []common.TxID{GetRandomTxHash()})
+	c.Assert(err, NotNil, Commentf("Should reject negative block height"))
+
+	// Test invalid block height (zero)
+	err = k.SetLimitSwapTTL(ctx, 0, []common.TxID{GetRandomTxHash()})
+	c.Assert(err, NotNil, Commentf("Should reject zero block height"))
+
+	// Test empty tx hash list
+	err = k.SetLimitSwapTTL(ctx, 100, []common.TxID{})
+	c.Assert(err, IsNil, Commentf("Should allow empty hash list"))
+
+	// Test nil tx hash list
+	err = k.SetLimitSwapTTL(ctx, 100, nil)
+	c.Assert(err, IsNil, Commentf("Should allow nil hash list"))
+
+	// Test getting with invalid block height
+	_, err = k.GetLimitSwapTTL(ctx, -1)
+	c.Assert(err, NotNil, Commentf("Should reject negative block height for get"))
+
+	_, err = k.GetLimitSwapTTL(ctx, 0)
+	c.Assert(err, NotNil, Commentf("Should reject zero block height for get"))
+}
+
+func (s *KeeperAdvSwapQueueSuite) TestLimitSwapTTLRemoval(c *C) {
+	ctx, k := setupKeeperForTest(c)
+
+	blockHeight := int64(500)
+	txHashes := []common.TxID{
+		GetRandomTxHash(),
+		GetRandomTxHash(),
+		GetRandomTxHash(),
+	}
+
+	// Set TTL entries
+	err := k.SetLimitSwapTTL(ctx, blockHeight, txHashes)
+	c.Assert(err, IsNil)
+
+	// Verify they exist
+	retrievedHashes, err := k.GetLimitSwapTTL(ctx, blockHeight)
+	c.Assert(err, IsNil)
+	c.Assert(len(retrievedHashes), Equals, 3)
+
+	// Test removing one hash
+	remainingHashes := []common.TxID{txHashes[0], txHashes[2]} // Remove middle hash
+	err = k.SetLimitSwapTTL(ctx, blockHeight, remainingHashes)
+	c.Assert(err, IsNil)
+
+	updatedHashes, err := k.GetLimitSwapTTL(ctx, blockHeight)
+	c.Assert(err, IsNil)
+	c.Assert(len(updatedHashes), Equals, 2)
+	c.Assert(updatedHashes[0].Equals(txHashes[0]), Equals, true)
+	c.Assert(updatedHashes[1].Equals(txHashes[2]), Equals, true)
+
+	// Test removing all hashes (set empty list)
+	err = k.SetLimitSwapTTL(ctx, blockHeight, []common.TxID{})
+	c.Assert(err, IsNil)
+
+	emptyHashes, err := k.GetLimitSwapTTL(ctx, blockHeight)
+	c.Assert(err, IsNil)
+	c.Assert(len(emptyHashes), Equals, 0)
+}

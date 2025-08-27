@@ -210,11 +210,6 @@ func (p *parser) ParseSwapMemoV3_0_0() (SwapMemo, error) {
 		swapType = types.SwapType_limit
 	}
 
-	// override interval to be 1 on all limit swaps
-	if swapType == types.SwapType_limit {
-		streamInterval = 1
-	}
-
 	// Parse multiple affiliate thornames + fee bps
 	affiliates := p.getStringArrayBySeparator(4, false, "/")
 	affFeeBps := p.getUintArrayBySeparator(5, false, "/")
