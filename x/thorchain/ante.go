@@ -11,6 +11,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/types/multisig"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
+	"github.com/cosmos/cosmos-sdk/x/authz"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
@@ -175,7 +176,10 @@ func (ad AnteDecorator) anteHandleMessage(ctx sdk.Context, version semver.Versio
 		*wasmtypes.MsgMigrateContract,
 		*wasmtypes.MsgSudoContract,
 		*wasmtypes.MsgUpdateAdmin,
-		*wasmtypes.MsgClearAdmin:
+		*wasmtypes.MsgClearAdmin,
+		*authz.MsgGrant,
+		*authz.MsgRevoke,
+		*authz.MsgExec:
 		return ctx, nil
 	default:
 		return ctx, cosmos.ErrUnknownRequest("invalid message type")
