@@ -118,12 +118,12 @@ asserts:
   - .inbound_address == "{{ addr_btc_dog }}"
   - .dust_amount|tonumber == 11000
   - .dust_threshold|tonumber == 1000
-  - .expected_amount_out|tonumber == 9787144
+  - .expected_amount_out|tonumber == 9794144
   - .fees.liquidity|tonumber == 98730
-  - .fees.outbound|tonumber == 14000
+  - .fees.outbound|tonumber == 7000
   - .fees.slippage_bps|tonumber == 99
-  - .fees.total|tonumber == 112730
-  - .fees.total_bps|tonumber == 113
+  - .fees.total|tonumber == 105730
+  - .fees.total_bps|tonumber == 106
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
 ---
 ########################################################################################
@@ -188,7 +188,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0].coin.asset == "${IN_ASSET}"
-  - .[0].coin.amount == "${OUT_AMOUNT=1486000}"
+  - .[0].coin.amount == "${OUT_AMOUNT=1493000}"
   - .| ${OUT_AMOUNT} > ${IN_AMOUNT} * 95/100 # Full inbound amount, minus outbound fee.
   - .[0].max_gas[0].amount == "${OUT_GAS_AMOUNT=10000}"
   - .[0].memo == "REFUND:${IN_TXID}"
@@ -277,7 +277,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0].coin.asset == "${IN_ASSET}"
-  - .[0].coin.amount == "${OUT_AMOUNT=1486000}"
+  - .[0].coin.amount == "${OUT_AMOUNT=1493000}"
   - .| ${OUT_AMOUNT} > ${IN_AMOUNT} * 95/100 # Full inbound amount, minus outbound fee.
   - .[0].max_gas[0].amount == "${OUT_GAS_AMOUNT=10000}"
   - .[0].memo == "REFUND:${IN_TXID}"

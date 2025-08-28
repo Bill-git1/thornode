@@ -113,7 +113,7 @@ params:
   to_asset: RUNE
   destination: {{ addr_thor_fox }}
 asserts:
-  - .expected_amount_out|tonumber == 486922873 # some change (TODO below)
+  - .expected_amount_out|tonumber == 486923069 # some change (TODO below)
   - .expected_amount_out|tonumber != ${INITIAL_EXPECTED_OUT}
   - .expected_debt_issued|tonumber == ${INITIAL_EXPECTED_DEBT_ISSUED} # no change, since no median price change
 ---
@@ -122,7 +122,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
   - .[0].in_hash == "{{ native_txid -1 }}"
-  - .[0].coin.amount == "${OUT_AMOUNT=24927999900}"
+  - .[0].coin.amount == "${OUT_AMOUNT=24963999900}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -155,8 +155,8 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
-  - .balance_asset == "3927629251"
-  - .balance_rune == "3927667119"
+  - .balance_asset == "3928259809"
+  - .balance_rune == "3928297682"
   - .derived_depth_bps == "100" # squash to 1%
 ---
 type: tx-observed-in
@@ -203,7 +203,7 @@ params:
   to_asset: RUNE
   destination: {{ addr_thor_fox }}
 asserts:
-  - .expected_amount_out == "${INITIAL_EXPECTED_OUT=979489213}"
+  - .expected_amount_out == "${INITIAL_EXPECTED_OUT=979650067}"
   - .expected_debt_issued == "4095040000"
 ---
 type: tx-deposit
@@ -227,14 +227,14 @@ asserts:
   # the expected amount is up, but by less than the RUNE to manipulate
   - .expected_amount_out|tonumber > ${INITIAL_EXPECTED_OUT}
   - .expected_amount_out|tonumber-100000000000 < ${INITIAL_EXPECTED_OUT}
-  - .expected_debt_issued == "1600090000"
+  - .expected_debt_issued == "1598800000"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
   - .[0].in_hash == "{{ native_txid -1 }}"
-  - .[0].coin.amount == "${OUT_AMOUNT=24927861600}"
+  - .[0].coin.amount == "${OUT_AMOUNT=24963930800}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -267,8 +267,8 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
-  - .balance_asset == "1898229684"
-  - .balance_rune == "4842992520"
+  - .balance_asset == "1897191443"
+  - .balance_rune == "4844246450"
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -298,7 +298,7 @@ endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
 asserts:
   - length == 2
   - .[1].collateral_deposited == "494917"
-  - .[1].debt_issued == "190170000" # almost 3x less debt than no manipulation
+  - .[1].debt_issued == "190010000" # almost 3x less debt than no manipulation
   - .[1].collateral_withdrawn == "0"
   - .[1].debt_repaid == "0"
   - .[1].owner == "{{ addr_btc_pig }}"
@@ -306,15 +306,15 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
-  - .balance_asset == "1898229684"
-  - .balance_rune == "4842992520"
+  - .balance_asset == "1897191443"
+  - .balance_rune == "4844246450"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - '[.end_block_events[]|select(.type=="outbound" and .to=="{{ addr_thor_pig }}")]|length == 1'
   # use this amount later to pay back the loan after anchor repegs
-  - .end_block_events[]|select(.type=="outbound" and .to=="{{ addr_thor_pig }}")|.coin == "${RUNE_BORROWED=398845790} THOR.RUNE"
+  - .end_block_events[]|select(.type=="outbound" and .to=="{{ addr_thor_pig }}")|.coin == "${RUNE_BORROWED=398852975} THOR.RUNE"
 ---
 ########################################################################################
 # 2/3 of tor anchor pools depeg and attacker prevents swaps for max anchor blocks
@@ -333,8 +333,8 @@ params:
   to_asset: RUNE
   destination: {{ addr_thor_fox }}
 asserts:
-  - .expected_amount_out == "1199009775"
-  - .expected_debt_issued == "1585770000"
+  - .expected_amount_out == "1199293342"
+  - .expected_debt_issued == "1584500000"
 ---
 type: create-blocks
 count: 3
@@ -349,14 +349,14 @@ params:
 asserts:
   # anchor blocks must be set sufficiently high, otherwise debt can be manipulated with
   # no penalty on the debt outbound from the contracted virtual pool
-  - .expected_amount_out == "3989230163"
-  - .expected_debt_issued == "1590700000"
+  - .expected_amount_out == "3989251192"
+  - .expected_debt_issued == "1589420000"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
-  - .balance_asset == "189822968431"
-  - .balance_rune == "484301288588"
+  - .balance_asset == "189719144338"
+  - .balance_rune == "484426681759"
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -386,7 +386,7 @@ endpoint: http://localhost:1317/thorchain/pool/btc.btc/borrowers
 asserts:
   - length == 3
   - .[2].collateral_deposited == "495110"
-  - .[2].debt_issued == "188380000" # almost 3x less debt than no manipulation
+  - .[2].debt_issued == "188220000" # almost 3x less debt than no manipulation
   - .[2].collateral_withdrawn == "0"
   - .[2].debt_repaid == "0"
   - .[2].owner == "{{ addr_btc_bird }}"
@@ -419,7 +419,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
   - .balance_asset == "99999999999"
-  - .balance_rune == "100002226217"
+  - .balance_rune == "100002225927"
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -462,7 +462,7 @@ endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances[]|select(.denom == "rune")|.amount == "${RUNE_BORROWED}"
   # Prepare repay amount.
-  - ${RUNE_BORROWED} - 2000000 == ${REPAY_AMOUNT=396845790}
+  - ${RUNE_BORROWED} - 2000000 == ${REPAY_AMOUNT=396852975}
 ---
 type: tx-deposit
 signer: {{ addr_thor_pig }}
@@ -485,9 +485,9 @@ asserts:
   - length == 4
   - .[2].collateral_deposited   == "494917"
   - .[2].collateral_withdrawn == "494917"
-  - .[2].debt_issued == "190170000"
-  - .[2].debt_repaid == "393706013"
-  - .[2]| (.debt_repaid|tonumber) > 1.4 * (.debt_issued|tonumber) # over 1.4x the repaid debt
+  - .[2].debt_issued == "190010000"
+  - .[2].debt_repaid == "393713086"
+  - .[2]| (.debt_repaid|tonumber) > 2 * (.debt_issued|tonumber) # over 2x the repaid debt
   - .[2].owner == "{{ addr_btc_pig }}"
 ---
 type: check
@@ -495,7 +495,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
   - .[0].in_hash == "{{ native_txid -1 }}"
-  - .[0].coin.amount == "${OUT_AMOUNT=471315}"
+  - .[0].coin.amount == "${OUT_AMOUNT=478315}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -572,6 +572,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
+  - .[0]|.coin.amount|tonumber == ${OUT_AMOUNT=493000}
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block
@@ -589,7 +590,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_duck }}
       coins:
-        - amount: "486000"
+        - amount: "${OUT_AMOUNT}"
           asset: "BTC.BTC"
           decimals: 8
       gas:

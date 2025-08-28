@@ -37,6 +37,7 @@ asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ observe_txid 1 }}"
   - .[0]|.memo == "OUT:{{ observe_txid 1 }}|hello world"
+  - .[0]|.coin.amount == "${OUT_AMOUNT=40861780}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -47,7 +48,7 @@ txs:
       from_address: {{ addr_eth_dog }}
       to_address: {{ addr_eth_fox }}
       coins:
-        - amount: "40221780"
+        - amount: "${OUT_AMOUNT}"
           asset: "ETH.ETH"
           decimals: 8
       gas:
@@ -99,6 +100,7 @@ asserts:
   - .[0]|.in_hash == "{{ observe_txid 3 }}"
   - .[0]|.memo == "REFUND:{{ observe_txid 3 }}|hello wo"
   - .[0]|.memo|length == 80 # memo is truncated to chain-specific max
+  - .[0]|.coin.amount == "${OUT_AMOUNT=4993000}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -109,7 +111,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "4986000"
+        - amount: "${OUT_AMOUNT}"
           asset: "BTC.BTC"
           decimals: 8
       gas:

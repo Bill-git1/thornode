@@ -15,7 +15,7 @@ params:
   amount: 30000000
   destination: {{ addr_btc_fox }}
 asserts:
-  - .expected_amount_out == "15981"
+  - .expected_amount_out == "22981"
   - .fees.liquidity == "8"
   - .fees.slippage_bps == 2
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
@@ -36,7 +36,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ native_txid -1 }}"
-  - .[0]|.coin.amount == "15981"
+  - .[0]|.coin.amount == "${OUT_AMOUNT=22981}"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block
@@ -56,7 +56,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "15981"
+        - amount: "${OUT_AMOUNT}"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -76,7 +76,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "15981"
+        - amount: "${OUT_AMOUNT}"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -96,7 +96,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "15981"
+        - amount: "${OUT_AMOUNT}"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -116,7 +116,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "15981"
+        - amount: "${OUT_AMOUNT}"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -172,7 +172,7 @@ params:
   amount: 30000000
   destination: {{ addr_btc_fox }}
 asserts:
-  - .expected_amount_out == "14476"
+  - .expected_amount_out == "21472"
   - .fees.liquidity == "1499"
   - .fees.slippage_bps == 500
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
@@ -214,7 +214,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ native_txid -1 }}"
-  - .[0]|.coin.amount == "14476"
+  - .[0]|.coin.amount == "21472"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block
@@ -222,5 +222,5 @@ asserts:
   - .end_block_events[] | select(.type == "swap") | .swap_slip == "500"
   - .end_block_events[] | select(.type == "swap") | .pool_slip == "3"
   - .end_block_events[] | select(.type == "swap") | .liquidity_fee == "1498"
-  - .end_block_events[] | select(.type == "swap") | .liquidity_fee_in_rune == "1499711"
-  - .end_block_events[] | select(.type == "swap") | .emit_asset == "28476 BTC.BTC"
+  - .end_block_events[] | select(.type == "swap") | .liquidity_fee_in_rune == "1499921"
+  - .end_block_events[] | select(.type == "swap") | .emit_asset == "28472 BTC.BTC"

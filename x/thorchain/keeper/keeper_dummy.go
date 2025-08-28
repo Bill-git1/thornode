@@ -840,6 +840,10 @@ func (k KVStoreDummy) GetOutboundFeeSpentRuneIterator(ctx cosmos.Context) cosmos
 	return nil
 }
 
+func (k KVStoreDummy) GetSurplusForTargetMultiplier(ctx cosmos.Context, targetMultiplierBps cosmos.Uint) cosmos.Uint {
+	return cosmos.ZeroUint()
+}
+
 func (k KVStoreDummy) GetOutboundTxFee(ctx cosmos.Context) cosmos.Uint {
 	return cosmos.ZeroUint()
 }

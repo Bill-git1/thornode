@@ -36,6 +36,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ native_txid -1 }}"
+  - .[0]|.coin.amount == "${OUT_AMOUNT=8257462}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -46,7 +47,7 @@ txs:
     from_address: {{ addr_btc_dog }}
     to_address: {{ addr_btc_fox }}
     coins:
-      - amount: "8250462"
+      - amount: "${OUT_AMOUNT}"
         asset: "BTC.BTC"
         decimals: 8
     gas:
@@ -66,7 +67,7 @@ asserts:
   - .|length == 0
 ---
 ############################################################################
-# After swap is executed we get ~10% of the fees to TCY Fund:              # 
+# After swap is executed we get ~10% of the fees to TCY Fund:              #
 # Block 2:                                                                 #
 #   - init_system_income = 990990645                                      #
 #     (system_income + tcy_stake_reward + dev_fund_reward + income_burn)   #

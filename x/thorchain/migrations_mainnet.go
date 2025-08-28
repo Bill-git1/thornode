@@ -225,6 +225,11 @@ func (m Migrator) Migrate8to9(ctx sdk.Context) error {
 		return err
 	}
 
+	err := m.CommonMigrate8to9(ctx)
+	if err != nil {
+		return err
+	}
+
 	// handle manual outbounds
 	outbounds, err := mainnetManualOutbounds8to9(ctx, m.mgr)
 	if err != nil {

@@ -383,7 +383,12 @@
       ],
       "observed_tx_out_voters": null,
       "outbound_fee_spent_rune": [],
-      "outbound_fee_withheld_rune": [],
+      "outbound_fee_withheld_rune": [
+        {
+          "amount": "689655172414",
+          "asset": "GAIA.NAMI"
+        }
+      ],
       "pools": [
         {
           "LP_units": "200000000",

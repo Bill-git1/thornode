@@ -54,6 +54,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1 # The outbound exists.
   - .[]|.in_hash == "{{ native_txid 2 }}"
+  - .[0]|.coin.amount == "${OUT_AMOUNT=62476000000}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -65,7 +66,7 @@ txs:
       to_address: {{ addr_eth_cat }}
       coins:
         - asset: "ETH.USDC-0X9999999999999999999999999999999999999999"
-          amount: "62452000000"
+          amount: "${OUT_AMOUNT}"
           decimals: 8
       gas:
         - asset: "ETH.ETH"

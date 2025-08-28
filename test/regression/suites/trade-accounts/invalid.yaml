@@ -44,6 +44,12 @@ txs:
 type: create-blocks
 count: 1
 ---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - .|length == 1
+  - .[0]|.coin.amount|tonumber == ${OUT_AMOUNT=9993000}
+---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
 txs:
@@ -53,7 +59,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "9986000"
+        - amount: "${OUT_AMOUNT}"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -98,6 +104,12 @@ txs:
 type: create-blocks
 count: 1
 ---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - .|length == 1
+  - .[0]|.coin.amount|tonumber == ${OUT_AMOUNT=9993000}
+---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
 txs:
@@ -107,7 +119,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "9986000"
+        - amount: "${OUT_AMOUNT}"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -185,6 +197,12 @@ memo: "trade-:{{ addr_btc_fox }}"
 type: create-blocks
 count: 1
 ---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - .|length == 1
+  - .[0]|.coin.amount|tonumber == ${OUT_AMOUNT=99993000}
+---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
 txs:
@@ -194,7 +212,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "99986000"
+        - amount: "${OUT_AMOUNT}"
           asset: "BTC.BTC"
           decimals: 8
       gas:

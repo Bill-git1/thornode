@@ -166,6 +166,11 @@ coins:
     asset: "BTC-BTC"
 memo: "secure-:{{ addr_btc_fox }}"
 ---
+type: check
+endpoint: http://localhost:1317/thorchain/inbound_addresses
+asserts:
+  - .[]|select(.chain == "BTC").outbound_fee == "${OUT_FEE=7000}"
+---
 type: create-blocks
 count: 1
 ---
@@ -192,17 +197,12 @@ asserts:
   - .|length == 2
 ---
 type: check
-endpoint: http://localhost:1317/thorchain/inbound_addresses
-asserts:
-  - .[]|select(.chain == "BTC").outbound_fee == "${OUT_FEE=14000}"
----
-type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ native_txid -1 }}"
-  - .[0].coin.amount == "${OUT_AMOUNT=6502485}"
-  -  ${WITHDRAW_AMOUNT} - ${OUT_FEE} == ${OUT_AMOUNT}
+  - .[0].coin.amount == "${OUT_AMOUNT=6509485}"
+  - ${WITHDRAW_AMOUNT} - ${OUT_FEE} == ${OUT_AMOUNT}
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -242,6 +242,11 @@ coins:
     asset: "BTC-BTC"
 memo: "secure-:{{ addr_btc_fox }}"
 ---
+type: check
+endpoint: http://localhost:1317/thorchain/inbound_addresses
+asserts:
+  - .[]|select(.chain == "BTC").outbound_fee == "${OUT_FEE=7000}"
+---
 type: create-blocks
 count: 1
 ---
@@ -272,7 +277,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ native_txid -1 }}"
-  - ${NEW_REMAINING_UNITS} - ${OUT_FEE} == ${OUT_AMOUNT=2986000}
+  - ${NEW_REMAINING_UNITS} - ${OUT_FEE} == ${OUT_AMOUNT=2993000}
   - .[0].coin.amount == "${OUT_AMOUNT}"
 ---
 type: tx-observed-out

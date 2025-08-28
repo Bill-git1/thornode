@@ -243,6 +243,7 @@ type KeeperOutboundFees interface {
 	GetOutboundFeeSpentRune(ctx cosmos.Context, outAsset common.Asset) (cosmos.Uint, error)
 	GetOutboundFeeSpentRuneIterator(ctx cosmos.Context) cosmos.Iterator
 	GetOutboundTxFee(ctx cosmos.Context) cosmos.Uint
+	GetSurplusForTargetMultiplier(ctx cosmos.Context, targetMultiplierBps cosmos.Uint) cosmos.Uint
 }
 
 type KeeperSwapSlip interface {

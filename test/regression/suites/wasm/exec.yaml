@@ -199,6 +199,30 @@ asserts:
 type: create-blocks
 count: 1
 ---
+# Check that MsgDeposit with an Exec memo and secured assets succeeds
+type: tx-observed-in
+signer: {{ addr_thor_dog }}
+txs:
+  - tx:
+      id: "{{ observe_txid 3 }}"
+      chain: ETH
+      from_address: {{ addr_eth_fox }}
+      to_address: {{ addr_eth_dog }}
+      coins:
+        - amount: "10000000"
+          asset: "ETH.ETH"
+          decimals: 8
+      gas:
+        - amount: "10000"
+          asset: "ETH.ETH"
+      memo: "secure+:{{ addr_thor_fox }}"
+    block_height: 3
+    finalise_height: 3
+    observed_pub_key: {{ pubkey_dog }}
+---
+type: create-blocks
+count: 1
+---
 type: check
 endpoint: http://localhost:1317/thorchain/securedasset/ETH-ETH
 asserts:

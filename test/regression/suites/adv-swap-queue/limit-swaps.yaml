@@ -1,6 +1,6 @@
 ########################################################################################
-## this file is testing regular swaps with the adv swap queue manager. These tests are a 
-## copy/paste from swaps/swaps.yaml, except due to the extra block from setting the 
+## this file is testing regular swaps with the adv swap queue manager. These tests are a
+## copy/paste from swaps/swaps.yaml, except due to the extra block from setting the
 ## mimir, the pool depths are slightly different
 ########################################################################################
 {{ template "default-state.yaml" }}
@@ -29,22 +29,22 @@ asserts:
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
 txs:
-- tx:
-    id: '{{ observe_txid 1 }}'
-    chain: BTC
-    from_address: {{ addr_btc_fox }}
-    to_address: {{ addr_btc_dog }}
-    coins:
-      - amount: "5000000"
-        asset: "BTC.BTC"
-        decimals: 8
-    gas:
-      - amount: "10000"
-        asset: "BTC.BTC"
-    memo: "=<:THOR.RUNE:{{ addr_thor_fox }}:4533195711"
-  block_height: 1
-  finalise_height: 1
-  observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 1 }}"
+      chain: BTC
+      from_address: {{ addr_btc_fox }}
+      to_address: {{ addr_btc_dog }}
+      coins:
+        - amount: "5000000"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "10000"
+          asset: "BTC.BTC"
+      memo: "=<:THOR.RUNE:{{ addr_thor_fox }}:4533195711"
+    block_height: 1
+    finalise_height: 1
+    observed_pub_key: {{ pubkey_dog }}
 ---
 type: create-blocks
 count: 1
@@ -64,7 +64,7 @@ signer: {{ addr_thor_fox }}
 coins:
   - amount: "10000000000"
     asset: "rune"
-memo: "=<:BTC.BTC:{{ addr_btc_fox }}:8998438/0/0"
+memo: "=<:BTC.BTC:{{ addr_btc_fox }}:9005438/0/0"
 ---
 type: create-blocks
 count: 1
@@ -92,18 +92,18 @@ asserts:
   - .pagination.has_next == false
   - .pagination.has_prev == false
 ---
- type: check
- endpoint: http://localhost:1317/thorchain/queue/limit_swaps/summary
- asserts:
-   - .total_limit_swaps == "1"
-   - .total_value_usd == "0"
-   - .asset_pairs|length == 1
-   - .asset_pairs[0].source_asset == "THOR.RUNE"
-   - .asset_pairs[0].target_asset == "BTC.BTC"
-   - .asset_pairs[0].count == "1"
-   - .asset_pairs[0].total_value_usd == "0"
-   - .oldest_swap_blocks >= 0
-   - .average_age_blocks >= 0
+type: check
+endpoint: http://localhost:1317/thorchain/queue/limit_swaps/summary
+asserts:
+  - .total_limit_swaps == "1"
+  - .total_value_usd == "0"
+  - .asset_pairs|length == 1
+  - .asset_pairs[0].source_asset == "THOR.RUNE"
+  - .asset_pairs[0].target_asset == "BTC.BTC"
+  - .asset_pairs[0].count == "1"
+  - .asset_pairs[0].total_value_usd == "0"
+  - .oldest_swap_blocks >= 0
+  - .average_age_blocks >= 0
 ---
 ########################################################################################
 # Test filtering functionality
@@ -131,20 +131,20 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/queue/limit_swaps/summary?source_asset=THOR.RUNE
 asserts:
-- .total_limit_swaps == "1"
-- .asset_pairs|length == 1
+  - .total_limit_swaps == "1"
+  - .asset_pairs|length == 1
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/limit_swaps/summary?target_asset=BTC.BTC
 asserts:
-- .total_limit_swaps == "1"
-- .asset_pairs|length == 1
+  - .total_limit_swaps == "1"
+  - .asset_pairs|length == 1
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/limit_swaps/summary?source_asset=ETH.ETH
 asserts:
-- .total_limit_swaps == "0"
-- .asset_pairs|length == 0
+  - .total_limit_swaps == "0"
+  - .asset_pairs|length == 0
 ---
 type: create-blocks
 count: 1
@@ -183,16 +183,16 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/queue/limit_swaps/summary?source_asset=thor.rune
 asserts:
-- .total_limit_swaps == "1"
-- .asset_pairs|length == 1
-- .asset_pairs[0].source_asset == "THOR.RUNE"
+  - .total_limit_swaps == "1"
+  - .asset_pairs|length == 1
+  - .asset_pairs[0].source_asset == "THOR.RUNE"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/limit_swaps/summary?target_asset=btc.btc
 asserts:
-- .total_limit_swaps == "1"
-- .asset_pairs|length == 1
-- .asset_pairs[0].target_asset == "BTC.BTC"
+  - .total_limit_swaps == "1"
+  - .asset_pairs|length == 1
+  - .asset_pairs[0].target_asset == "BTC.BTC"
 ---
 type: create-blocks
 count: 1
@@ -251,22 +251,22 @@ asserts:
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
 txs:
-- tx:
-    id: '{{ observe_txid 2 }}'
-    chain: BTC
-    from_address: {{ addr_btc_fox }}
-    to_address: {{ addr_btc_dog }}
-    coins:
-      - amount: "5000000"
-        asset: "BTC.BTC"
-        decimals: 8
-    gas:
-      - amount: "10000"
-        asset: "BTC.BTC"
-    memo: "=:THOR.RUNE:{{ addr_thor_fox }}:0/0/1"
-  block_height: 1
-  finalise_height: 1
-  observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 2 }}"
+      chain: BTC
+      from_address: {{ addr_btc_fox }}
+      to_address: {{ addr_btc_dog }}
+      coins:
+        - amount: "5000000"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "10000"
+          asset: "BTC.BTC"
+      memo: "=:THOR.RUNE:{{ addr_thor_fox }}:0/0/1"
+    block_height: 1
+    finalise_height: 1
+    observed_pub_key: {{ pubkey_dog }}
 ---
 type: create-blocks
 count: 2
@@ -275,34 +275,34 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2498671039778 
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2498671039778
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
   - .[0].in_hash == "{{ native_txid -2 }}"
-  - .[0].coin.amount == "${OUT_AMOUNT=9771912}"
+  - .[0].coin.amount == "${OUT_AMOUNT=9778912}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
 txs:
-- tx:
-    id: '{{ observe_txid 3 }}'
-    chain: BTC
-    from_address: {{ addr_btc_dog }}
-    to_address: {{ addr_btc_fox }}
-    coins:
-      - amount: "${OUT_AMOUNT}"
-        asset: "BTC.BTC"
-        decimals: 8
-    gas:
-      - amount: "10500"
-        asset: "BTC.BTC"
-    memo: "OUT:{{ native_txid -2 }}"
-  block_height: 2
-  finalise_height: 2
-  observed_pub_key: {{ pubkey_dog }}
+  - tx:
+      id: "{{ observe_txid 3 }}"
+      chain: BTC
+      from_address: {{ addr_btc_dog }}
+      to_address: {{ addr_btc_fox }}
+      coins:
+        - amount: "${OUT_AMOUNT}"
+          asset: "BTC.BTC"
+          decimals: 8
+      gas:
+        - amount: "10500"
+          asset: "BTC.BTC"
+      memo: "OUT:{{ native_txid -2 }}"
+    block_height: 2
+    finalise_height: 2
+    observed_pub_key: {{ pubkey_dog }}
 ---
 type: create-blocks
 count: 1

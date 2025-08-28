@@ -158,7 +158,7 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 
 	m := NewMigrator(am.mgr)
 	if err := cfg.RegisterMigration(types.ModuleName, 8, m.Migrate8to9); err != nil {
-		panic(fmt.Sprintf("failed to migrate x/thorchain from version 7 to 8: %v", err))
+		panic(fmt.Sprintf("failed to migrate x/thorchain from version 8 to 9: %v", err))
 	}
 }
 

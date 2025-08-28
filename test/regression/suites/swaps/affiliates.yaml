@@ -41,12 +41,13 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ native_txid -1 }}"
+  - .[0]|.coin.amount == "${OUT_AMOUNT=7844205}"
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${BAL_PIG=488732572}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${BAL_PIG=488806795}
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -57,7 +58,7 @@ txs:
     from_address: {{ addr_btc_dog }}
     to_address: {{ addr_btc_fox }}
     coins:
-      - amount: "7837205"
+      - amount: "${OUT_AMOUNT}"
         asset: "BTC.BTC"
         decimals: 8
     gas:
@@ -106,13 +107,13 @@ type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount|tonumber == ${BAL_PIG} + ${FEE_AMT=1248018013}
+  - .result[]|select(.denom == "rune").amount|tonumber == ${BAL_PIG} + ${FEE_AMT=1248140094}
 ---
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount == "2513708342238"
+  - .result[]|select(.denom == "rune").amount == "2513710661789"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block

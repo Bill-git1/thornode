@@ -61,11 +61,11 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItem(c *C) {
 	}
 	c.Assert(w.keeper.SetVault(w.ctx, vault), IsNil)
 
-	outboundFeeWithheldRune, err := w.keeper.GetOutboundFeeWithheldRune(w.ctx, common.ETHAsset)
+	initialOutboundFeeWithheldRune, err := w.keeper.GetOutboundFeeWithheldRune(w.ctx, common.ETHAsset)
 	c.Assert(err, IsNil)
 	outboundFeeSpentRune, err := w.keeper.GetOutboundFeeSpentRune(w.ctx, common.ETHAsset)
 	c.Assert(err, IsNil)
-	c.Check(outboundFeeWithheldRune.String(), Equals, "0")
+	c.Check(initialOutboundFeeWithheldRune.String(), Equals, "689655172414")
 	c.Check(outboundFeeSpentRune.String(), Equals, "0")
 
 	acc1 := GetRandomValidatorNode(NodeActive)
@@ -104,14 +104,16 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItem(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(msgs, HasLen, 1)
 	c.Assert(msgs[0].VaultPubKey.String(), Equals, vault.PubKey.String())
-	c.Assert(msgs[0].Coin.Amount.Equal(cosmos.NewUint(1999925000)), Equals, true, Commentf("%d", msgs[0].Coin.Amount.Uint64()))
+	c.Assert(msgs[0].Coin.Amount.Equal(cosmos.NewUint(1999962500)), Equals, true, Commentf("%d", msgs[0].Coin.Amount.Uint64()))
 
 	// Gas withheld should be updated
-	outboundFeeWithheldRune, err = w.keeper.GetOutboundFeeWithheldRune(w.ctx, common.DOGEAsset)
+	outboundFeeWithheldRune, err := w.keeper.GetOutboundFeeWithheldRune(w.ctx, common.DOGEAsset)
 	c.Assert(err, IsNil)
 	outboundFeeSpentRune, err = w.keeper.GetOutboundFeeSpentRune(w.ctx, common.DOGEAsset)
 	c.Assert(err, IsNil)
-	c.Check(outboundFeeWithheldRune.String(), Equals, "74999") // After slippage the 75000 fee is 74999 in RUNE
+
+	// After slippage the 75000 fee is 74999 in RUNE.
+	c.Check(outboundFeeWithheldRune.Sub(initialOutboundFeeWithheldRune).String(), Equals, "37500")
 	c.Check(outboundFeeSpentRune.String(), Equals, "0")
 
 	// Should get acc1. Acc3 hasn't signed and acc1 now has the highest amount
@@ -134,7 +136,7 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItem(c *C) {
 	// Outbound fee withheld RUNE should be updated
 	outboundFeeWithheldRune, err = w.keeper.GetOutboundFeeWithheldRune(w.ctx, common.DOGEAsset)
 	c.Assert(err, IsNil)
-	c.Assert(outboundFeeWithheldRune.String(), Equals, "149997")
+	c.Assert(outboundFeeWithheldRune.Sub(initialOutboundFeeWithheldRune).String(), Equals, "75000")
 
 	item = TxOutItem{
 		Chain:     common.DOGEChain,
@@ -154,7 +156,7 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItem(c *C) {
 	// Outbound fee withheld RUNE should be updated
 	outboundFeeWithheldRune, err = w.keeper.GetOutboundFeeWithheldRune(w.ctx, common.DOGEAsset)
 	c.Assert(err, IsNil)
-	c.Assert(outboundFeeWithheldRune.String(), Equals, "224994")
+	c.Assert(outboundFeeWithheldRune.Sub(initialOutboundFeeWithheldRune).String(), Equals, "112499")
 
 	networkFee := NewNetworkFee(common.BCHChain, 1, 10)
 	c.Assert(w.keeper.SaveNetworkFee(w.ctx, common.BCHChain, networkFee), IsNil)
@@ -287,7 +289,7 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItem_OutboundHeightDoesNotGetOverride(c
 	c.Assert(err, IsNil)
 	c.Assert(msgs, HasLen, 1)
 	c.Assert(msgs[0].VaultPubKey.String(), Equals, vault.PubKey.String())
-	c.Assert(msgs[0].Coin.Amount.Equal(cosmos.NewUint(7999925000)), Equals, true, Commentf("%d", msgs[0].Coin.Amount.Uint64()))
+	c.Assert(msgs[0].Coin.Amount.Equal(cosmos.NewUint(7999962500)), Equals, true, Commentf("%d", msgs[0].Coin.Amount.Uint64()))
 
 	// make sure outbound_height has been set correctly
 	afterVoter, err := w.keeper.GetObservedTxInVoter(w.ctx, inTxID)
@@ -533,14 +535,14 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItem_MultipleOutboundWillNotBeScheduled
 	c.Assert(msgs, HasLen, 1)
 	//  the smaller outbound hasn't been delayed
 	c.Assert(msgs[0].VaultPubKey.String(), Equals, vault.PubKey.String())
-	c.Assert(msgs[0].Coin.Amount.Equal(cosmos.NewUint(9_99925000)), Equals, true, Commentf("%d", msgs[0].Coin.Amount.Uint64()))
+	c.Assert(msgs[0].Coin.Amount.Equal(cosmos.NewUint(999962500)), Equals, true, Commentf("%d", msgs[0].Coin.Amount.Uint64()))
 
 	newCtx := w.ctx.WithBlockHeight(4)
 	msgs, err = txOutStore.GetOutboundItems(newCtx)
 	c.Assert(err, IsNil)
 	c.Assert(msgs, HasLen, 1) // the delayed outbound's height has been reached
 	c.Assert(msgs[0].VaultPubKey.String(), Equals, vault.PubKey.String())
-	c.Assert(msgs[0].Coin.Amount.Equal(cosmos.NewUint(79_99925000)), Equals, true, Commentf("%d", msgs[0].Coin.Amount.Uint64()))
+	c.Assert(msgs[0].Coin.Amount.Equal(cosmos.NewUint(7999962500)), Equals, true, Commentf("%d", msgs[0].Coin.Amount.Uint64()))
 
 	// make sure outbound_height has been set correctly (to the furthest-future outbound height)
 	afterVoter, err := w.keeper.GetObservedTxInVoter(w.ctx, inTxID)
@@ -591,7 +593,7 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItemInteractionWithPool(c *C) {
 	msgs, err := txOutStore.GetOutboundItems(w.ctx)
 	c.Assert(err, IsNil)
 	c.Assert(msgs, HasLen, 1)
-	c.Assert(msgs[0].Coin.Amount.Equal(cosmos.NewUint(1999925000)), Equals, true, Commentf("%d", msgs[0].Coin.Amount.Uint64()))
+	c.Assert(msgs[0].Coin.Amount.Equal(cosmos.NewUint(1999962500)), Equals, true, Commentf("%d", msgs[0].Coin.Amount.Uint64()))
 	pool, err = w.keeper.GetPool(w.ctx, common.DOGEAsset)
 	c.Assert(err, IsNil)
 	// Let:
@@ -602,8 +604,8 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItemInteractionWithPool(c *C) {
 	//   A_1 = A_0 + a = 50e8 + (20e8 - 1999925000) = 5000075000
 	//   R_1 = R_0 - R_0 * a / (A_0 + a)  // slip formula
 	//       = 100e8 - 100e8 * (20e8 - 1999925000) / (50e8 + (20e8 - 1999925000)) = 9999850002
-	c.Assert(pool.BalanceAsset.Equal(cosmos.NewUint(5000075000)), Equals, true, Commentf("%d", pool.BalanceAsset.Uint64()))
-	c.Assert(pool.BalanceRune.Equal(cosmos.NewUint(9999850002)), Equals, true, Commentf("%d", pool.BalanceRune.Uint64()))
+	c.Assert(pool.BalanceAsset.Equal(cosmos.NewUint(5000037500)), Equals, true, Commentf("%d", pool.BalanceAsset.Uint64()))
+	c.Assert(pool.BalanceRune.Equal(cosmos.NewUint(9999925001)), Equals, true, Commentf("%d", pool.BalanceRune.Uint64()))
 }
 
 func (s TxOutStoreVCURSuite) TestAddOutTxItemSendingFromRetiredVault(c *C) {

@@ -60,6 +60,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ observe_txid 3 }}"
+  - .[0]|.coin.amount|tonumber == ${OUT_AMOUNT=40861780}
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_btc_fox }}
@@ -88,7 +89,7 @@ txs:
       from_address: {{ addr_eth_dog }}
       to_address: {{ addr_eth_fox }}
       coins:
-        - amount: "40221780"
+        - amount: "${OUT_AMOUNT}"
           asset: "ETH.ETH"
           decimals: 8
       gas:
@@ -166,9 +167,9 @@ type: check
 endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_btc_fox }}
 asserts:
   - .address == "{{ addr_btc_fox }}"
-  - .score|tonumber == 396589518
+  - .score|tonumber == 396535055
   - .reclaimed|tonumber == 216016805
-  - .spent|tonumber == 612606323
+  - .spent|tonumber == 612551860
   - .last_spent_height == 6
   - .last_reclaim_height == 4
 ---
@@ -176,9 +177,9 @@ type: check
 endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_eth_fox }}
 asserts:
   - .address == "{{ addr_eth_fox }}"
-  - .score|tonumber == 396589521
+  - .score|tonumber == 396535057
   - .reclaimed|tonumber == 216016806
-  - .spent|tonumber == 612606327
+  - .spent|tonumber == 612551863
   - .last_spent_height == 6
   - .last_reclaim_height == 4
 ---
@@ -209,9 +210,9 @@ type: check
 endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_btc_fox }}
 asserts:
   - .address == "{{ addr_btc_fox }}"
-  - .score|tonumber == 549286121
-  - .reclaimed|tonumber == 612606323
-  - .spent|tonumber == 1161892444
+  - .score|tonumber == 549143498
+  - .reclaimed|tonumber == 612551860
+  - .spent|tonumber == 1161695358
   - .last_spent_height == 17
   - .last_reclaim_height == 4
 ---
@@ -219,9 +220,9 @@ type: check
 endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_eth_fox }}
 asserts:
   - .address == "{{ addr_eth_fox }}"
-  - .score|tonumber == 549286125
-  - .reclaimed|tonumber == 612606327
-  - .spent|tonumber == 1161892452
+  - .score|tonumber == 549143501
+  - .reclaimed|tonumber == 612551863
+  - .spent|tonumber == 1161695364
   - .last_spent_height == 17
   - .last_reclaim_height == 4
 ---
@@ -229,8 +230,8 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 2
-  - .[0].coin.amount == "${OUT_ONE=33881399}"
-  - .[1].coin.amount == "${OUT_TWO=28944435}"
+  - .[0].coin.amount == "${OUT_ONE=34476239}"
+  - .[1].coin.amount == "${OUT_TWO=29506626}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -302,5 +303,5 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
-  - .[0].coin.amount == "${OUT_AMOUNT=65817123}"
+  - .[0].coin.amount == "${OUT_AMOUNT=66209768}"
   - .[0].clout_spent == "0"

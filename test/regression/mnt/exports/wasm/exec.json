@@ -12,7 +12,7 @@
             "@type": "/cosmos.crypto.secp256k1.PubKey",
             "key": "AmF4AUTWZEUSBtgqiR5n2Lgic/Yrr1mWupMo5TAubNRO"
           },
-          "sequence": "6"
+          "sequence": "7"
         },
         {
           "@type": "/cosmos.auth.v1beta1.ModuleAccount",
@@ -144,7 +144,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "200009589032",
+              "amount": "200010654480",
               "denom": "rune"
             }
           ]
@@ -153,7 +153,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "34999994011416",
+              "amount": "34999992901572",
               "denom": "rune"
             }
           ]
@@ -180,7 +180,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "4999998399552",
+              "amount": "4999998443948",
               "denom": "rune"
             }
           ]
@@ -287,8 +287,8 @@
       "network": {
         "LPIncomeSplit": "9600",
         "NodeIncomeSplit": "400",
-        "bond_reward_rune": "399552",
-        "total_bond_units": "9"
+        "bond_reward_rune": "443948",
+        "total_bond_units": "10"
       },
       "network_fees": [
         {
@@ -333,7 +333,7 @@
           "LP_units": "100000000000",
           "asset": "BTC.BTC",
           "balance_asset": "100000000",
-          "balance_rune": "100004794516",
+          "balance_rune": "100005327240",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -344,7 +344,7 @@
           "LP_units": "100000000000",
           "asset": "ETH.ETH",
           "balance_asset": "1000000000",
-          "balance_rune": "100004794516",
+          "balance_rune": "100005327240",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -514,5 +514,5 @@
       }
     }
   },
-  "initial_height": 10
+  "initial_height": 11
 }

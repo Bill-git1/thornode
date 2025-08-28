@@ -72,14 +72,14 @@ params:
 asserts:
   - .memo == "$+:BTC.BTC:{{ addr_btc_fox }}"
   - .inbound_address == "{{ addr_btc_dog }}"
-  - .expected_amount_out|tonumber == 929128
+  - .expected_amount_out|tonumber == 936128
   - .expected_collateral_deposited|tonumber == 990122
   - .expected_collateralization_ratio|tonumber == 10000
   - .expected_debt_issued|tonumber == 980290000
-  - .recommended_min_amount_in == "42000"
+  - .recommended_min_amount_in == "21000"
   - .fees.slippage_bps|tonumber == 293
-  - .fees.total_bps|tonumber == 437
-  - .fees.outbound|tonumber == 14000
+  - .fees.total_bps|tonumber == 365
+  - .fees.outbound|tonumber == 7000
   - .fees.liquidity|tonumber == 28538
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
 ---
@@ -94,14 +94,14 @@ params:
 asserts:
   - .memo == "$+:BTC.BTC:{{ addr_btc_fox }}:1"
   - .inbound_address == "{{ addr_btc_dog }}"
-  - .expected_amount_out|tonumber == 929836
+  - .expected_amount_out|tonumber == 936836
   - .expected_collateral_deposited|tonumber == 980488
   - .expected_collateralization_ratio|tonumber == 10000
   - .expected_debt_issued|tonumber == 961160000
-  - .recommended_min_amount_in|tonumber == 42000
+  - .recommended_min_amount_in|tonumber == 21000
   - .fees.slippage_bps|tonumber == 382
-  - .fees.total_bps|tonumber == 525
-  - .fees.outbound|tonumber == 14000
+  - .fees.total_bps|tonumber == 453
+  - .fees.outbound|tonumber == 7000
   - .fees.liquidity|tonumber == 37549
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
 ---
@@ -213,7 +213,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
   - .[0].in_hash == "{{ observe_txid 6 }}"
-  - .[0].coin.amount == "${OUT_AMOUNT=955844}"
+  - .[0].coin.amount == "${OUT_AMOUNT=962844}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}

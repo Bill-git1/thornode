@@ -1,11 +1,14 @@
 package thorchain
 
 import (
+	"fmt"
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/constants"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 // Migrate4to5 migrates from version 4 to 5.
@@ -112,4 +115,144 @@ func (m Migrator) Migrate7to8(ctx sdk.Context) error {
 	}
 
 	return nil
+}
+
+func (m Migrator) CommonMigrate8to9(ctx sdk.Context) error {
+	// reduce the minimum L1 outbound fee to $0.25
+	m.mgr.Keeper().SetMimir(ctx, constants.MinimumL1OutboundFeeUSD.String(), 25000000)
+
+	// ------------------------------ Asset Gas Multiplier Adjustments ------------------------------
+	//
+	// We are going to adjust the target surplus and multipliers for all assets. The steps are:
+	// 1. Adjust the target surplus to 10k RUNE
+	// 2. Compute the new multiplier for each asset
+	// 3. If the multiplier is less than or equal to 100%, do nothing
+	// 4. If the multiplier is greater than 100%, increase the withheld amount so that the multiplier is equal to 100%
+
+	// Adjust the target surplus to 10k RUNE
+	m.mgr.Keeper().SetMimir(ctx, constants.TargetOutboundFeeSurplusRune.String(), 10000_00000000) // 10k x 10^8
+
+	// Adjust minimum DOFM multiplier to 1%
+	// https://gitlab.com/thorchain/thornode/-/issues/2239#note_2690577110
+	m.mgr.Keeper().SetMimir(ctx, constants.MinOutboundFeeMultiplierBasisPoints.String(), 100)
+
+	// Gather all the parameters for the multiplier calculation
+	targetSurplus := cosmos.NewUint(uint64(m.mgr.Keeper().GetConfigInt64(ctx, constants.TargetOutboundFeeSurplusRune)))
+	maxMultiplier := cosmos.NewUint(uint64(m.mgr.Keeper().GetConfigInt64(ctx, constants.MaxOutboundFeeMultiplierBasisPoints)))
+	minMultiplier := cosmos.NewUint(uint64(m.mgr.Keeper().GetConfigInt64(ctx, constants.MinOutboundFeeMultiplierBasisPoints)))
+
+	// Collect all the assets via pool iterator (copied from querier.go outbound fees endpoint)
+	var assets []common.Asset
+	iterator := m.mgr.Keeper().GetPoolIterator(ctx)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		var pool Pool
+		if err := m.mgr.Keeper().Cdc().Unmarshal(iterator.Value(), &pool); err != nil {
+			return fmt.Errorf("fail to unmarshal pool: %w", err)
+		}
+
+		if pool.Asset.IsNative() {
+			// To avoid clutter do not by default display the outbound fees
+			// of THORChain Assets other than RUNE.
+			continue
+		}
+		if pool.BalanceAsset.IsZero() || pool.BalanceRune.IsZero() {
+			// A Layer 1 Asset's pool must have both depths be non-zero
+			// for any outbound fee withholding or gas reimbursement to take place.
+			// (This can take place even if the PoolUnits are zero and all liquidity is synths.)
+			continue
+		}
+		if pool.Status != types.PoolStatus_Available {
+			// A Layer 1 Asset's pool must be available
+			// for any outbound fee withholding or gas reimbursement to take place.
+			continue
+		}
+
+		assets = append(assets, pool.Asset)
+	}
+
+	type feesAndMultiplier struct {
+		withheld   cosmos.Uint
+		spent      cosmos.Uint
+		surplus    cosmos.Uint
+		multiplier cosmos.Uint
+	}
+
+	getFeesAndMultiplier := func(ctx cosmos.Context, asset common.Asset) (feesAndMultiplier, error) {
+		var err error
+		var fem feesAndMultiplier
+		fem.withheld, err = m.mgr.Keeper().GetOutboundFeeWithheldRune(ctx, asset)
+		if err != nil {
+			return fem, err
+		}
+		fem.spent, err = m.mgr.Keeper().GetOutboundFeeSpentRune(ctx, asset)
+		if err != nil {
+			return fem, err
+		}
+		fem.surplus = fem.withheld.Sub(fem.spent)
+		fem.multiplier = m.mgr.GasMgr().CalcOutboundFeeMultiplier(ctx, targetSurplus,
+			fem.spent, fem.withheld, maxMultiplier, minMultiplier)
+		return fem, nil
+	}
+
+	processAsset := func(asset common.Asset, targetMultiplier cosmos.Uint) error {
+		before, err := getFeesAndMultiplier(ctx, asset)
+		if err != nil {
+			ctx.Logger().Error("failed to get fees and multiplier before adjustment", "asset", asset, "error", err)
+			return err
+		}
+
+		equilibriumSurplus := m.mgr.Keeper().GetSurplusForTargetMultiplier(ctx, targetMultiplier)
+		if before.multiplier.LTE(targetMultiplier) {
+			ctx.Logger().Info("multiplier is less than 100%; no adjustment needed",
+				"asset", asset,
+				"multiplier", before.multiplier,
+				"surplus", before.surplus,
+				"target_multiplier", targetMultiplier,
+				"equilibrium_surplus", equilibriumSurplus,
+				"withheld_adjustment", "none",
+			)
+			return nil
+		}
+
+		// Increase withheld so that the multiplier is equal to 100%
+		withheldAdjustment := equilibriumSurplus.Sub(before.surplus)
+		err = m.mgr.Keeper().AddToOutboundFeeWithheldRune(ctx, asset, withheldAdjustment)
+		if err != nil {
+			ctx.Logger().Error("failed to adjust withheld amount", "asset", asset, "adjustment", withheldAdjustment, "error", err)
+			return err
+		}
+
+		after, err := getFeesAndMultiplier(ctx, asset)
+		if err != nil {
+			ctx.Logger().Error("failed to get fees and multiplier after adjustment", "asset", asset, "error", err)
+			return err
+		}
+
+		ctx.Logger().Info("multiplier was greater than target; adjusted",
+			"asset", asset,
+			"before_withheld", before.withheld,
+			"before_surplus", before.surplus,
+			"before_multiplier", before.multiplier,
+			"target_multiplier", targetMultiplier,
+			"equilibrium_surplus", equilibriumSurplus,
+			"adjustment", withheldAdjustment,
+			"after_withheld", after.withheld,
+			"after_surplus", after.surplus,
+			"after_multiplier", after.multiplier,
+		)
+
+		return nil
+	}
+
+	for _, asset := range assets {
+		err := processAsset(asset, cosmos.NewUint(10_000)) // target 100% multiplier
+		if err != nil {
+			return err
+		}
+	}
+
+	// Special case TRON.TRX to target 10% multiplier
+	// https://gitlab.com/thorchain/thornode/-/issues/2239#note_2690577110
+	return processAsset(common.TRXAsset, cosmos.NewUint(1_000))
 }

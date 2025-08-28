@@ -178,6 +178,24 @@ func (k *outboundTxHandlerKeeperHelper) SetNetwork(ctx cosmos.Context, data Netw
 	return k.Keeper.SetNetwork(ctx, data)
 }
 
+// resetFeeMultiplierForAsset resets the fee multiplier for an asset to 10_000bps (100%)
+func (k *outboundTxHandlerKeeperHelper) resetFeeMultiplierForAsset(ctx cosmos.Context, asset common.Asset) error {
+	surplus := k.GetSurplusForTargetMultiplier(ctx, cosmos.NewUint(10_000))
+	spent, err := k.GetOutboundFeeSpentRune(ctx, asset)
+	if err != nil {
+		return err
+	}
+	withheld, err := k.GetOutboundFeeWithheldRune(ctx, asset)
+	if err != nil {
+		return err
+	}
+	if surplus.GT(withheld.Sub(spent)) {
+		return k.AddToOutboundFeeWithheldRune(ctx, asset, surplus.Sub(withheld.Sub(spent)))
+	} else {
+		return k.AddToOutboundFeeSpentRune(ctx, asset, withheld.Sub(spent).Sub(surplus))
+	}
+}
+
 // newOutboundTxHandlerTestHelper setup all the basic condition to test OutboundTxHandler
 func newOutboundTxHandlerTestHelper(c *C) outboundTxHandlerTestHelper {
 	ctx, mgr := setupManagerForTest(c)
@@ -349,6 +367,10 @@ func (s *HandlerOutboundTxSuite) TestOutboundTxNormalCase(c *C) {
 	fromAddr, err := helper.asgardVault.PubKey.GetAddress(common.BTCChain)
 	c.Assert(err, IsNil)
 	gasMgr := newGasMgrVCUR(helper.constAccessor, helper.keeper)
+
+	err = helper.keeper.resetFeeMultiplierForAsset(helper.ctx, common.BTCAsset)
+	c.Assert(err, IsNil)
+
 	outboundFee, err := gasMgr.GetAssetOutboundFee(helper.ctx, common.BTCAsset, false)
 	c.Assert(err, IsNil)
 
@@ -371,7 +393,6 @@ func (s *HandlerOutboundTxSuite) TestOutboundTxNormalCase(c *C) {
 	_, err = handler.Run(helper.ctx, outMsg)
 	c.Assert(err, IsNil)
 	// txout should had been complete
-
 	txOut, err := helper.keeper.GetTxOut(helper.ctx, helper.ctx.BlockHeight())
 	c.Assert(err, IsNil)
 	c.Assert(txOut.TxArray[0].OutHash.IsEmpty(), Equals, false)
@@ -395,8 +416,8 @@ func (s *HandlerOutboundTxSuite) TestOuboundTxHandlerSendExtraFundShouldBeSlashe
 			common.NewCoin(common.BTCAsset, cosmos.NewUint(10000)),
 		},
 	}, helper.ctx.BlockHeight(), helper.nodeAccount.PubKeySet.Secp256k1, helper.ctx.BlockHeight())
-	expectedBond := cosmos.NewUint(9999985039)
-	expectedVaultTotalReserve := cosmos.NewUint(10000000012835703)
+	expectedBond := cosmos.NewUint(9999985020)
+	expectedVaultTotalReserve := cosmos.NewUint(10000000006424469)
 	// valid outbound message, with event, with txout
 	outMsg := NewMsgOutboundTx(tx, helper.inboundTx.Tx.ID, helper.nodeAccount.NodeAddress)
 	_, err = handler.Run(helper.ctx, outMsg)
@@ -427,7 +448,7 @@ func (s *HandlerOutboundTxSuite) TestOutboundTxHandlerSendAdditionalCoinsShouldB
 			common.NewCoin(common.BTCAsset, cosmos.NewUint(10000)),
 		},
 	}, helper.ctx.BlockHeight(), helper.nodeAccount.PubKeySet.Secp256k1, helper.ctx.BlockHeight())
-	expectedBond := cosmos.NewUint(9850369713)
+	expectedBond := cosmos.NewUint(9850177542)
 	// slash one BTC, and one rune
 	outMsg := NewMsgOutboundTx(tx, helper.inboundTx.Tx.ID, helper.nodeAccount.NodeAddress)
 	_, err = handler.Run(helper.ctx, outMsg)
@@ -457,10 +478,10 @@ func (s *HandlerOutboundTxSuite) TestOutboundTxHandlerInvalidObservedTxVoterShou
 		},
 	}, helper.ctx.BlockHeight(), helper.nodeAccount.PubKeySet.Secp256k1, helper.ctx.BlockHeight())
 
-	expectedBond := cosmos.NewUint(9850369713)
+	expectedBond := cosmos.NewUint(9850177542)
 
 	// expected 0.5 slashed RUNE be added to reserve
-	expectedVaultTotalReserve := cosmos.NewUint(10000000062707478)
+	expectedVaultTotalReserve := cosmos.NewUint(10000000056360295)
 	pool, err := helper.keeper.GetPool(helper.ctx, common.BTCAsset)
 	c.Assert(err, IsNil)
 	poolBTC := common.SafeSub(pool.BalanceAsset, cosmos.NewUint(common.One).AddUint64(10000))
@@ -478,7 +499,7 @@ func (s *HandlerOutboundTxSuite) TestOutboundTxHandlerInvalidObservedTxVoterShou
 	c.Assert(newReserve, DeepEquals, expectedVaultTotalReserve)
 	pool, err = helper.keeper.GetPool(helper.ctx, common.BTCAsset)
 	c.Assert(err, IsNil)
-	c.Assert(pool.BalanceRune, DeepEquals, cosmos.NewUint(10086922809))
+	c.Assert(pool.BalanceRune, DeepEquals, cosmos.NewUint(10093462163))
 	c.Assert(pool.BalanceAsset, DeepEquals, poolBTC)
 }
 

@@ -156,6 +156,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ observe_txid 5 }}"
+  - .[0]|.coin.amount|tonumber == ${OUT_AMOUNT=999360000}
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -166,7 +167,7 @@ txs:
       from_address: {{ addr_eth_dog }}
       to_address: {{ addr_eth_fox }}
       coins:
-        - amount: "998720000"
+        - amount: "${OUT_AMOUNT}"
           asset: "ETH.ETH"
           decimals: 8
       gas:
@@ -216,6 +217,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ observe_txid 7 }}"
+  - .[0]|.coin.amount|tonumber == ${OUT_AMOUNT=999360000}
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -226,7 +228,7 @@ txs:
       from_address: {{ addr_eth_dog }}
       to_address: {{ addr_eth_pig }}
       coins:
-        - amount: "998720000"
+        - amount: "${OUT_AMOUNT}"
           asset: "ETH.ETH"
           decimals: 8
       gas:
@@ -276,6 +278,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ observe_txid 9 }}"
+  - .[0]|.coin.amount|tonumber == ${OUT_AMOUNT=999359936}
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -286,7 +289,7 @@ txs:
       from_address: {{ addr_eth_dog }}
       to_address: {{ addr_eth_fox }}
       coins:
-        - amount: "998720000"
+        - amount: "${OUT_AMOUNT}"
           asset: "ETH.ETH"
           decimals: 8
       gas:
@@ -336,6 +339,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ observe_txid 11 }}"
+  - .[0]|.coin.amount|tonumber == ${OUT_AMOUNT=999359936}
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -346,7 +350,7 @@ txs:
       from_address: {{ addr_eth_dog }}
       to_address: {{ addr_eth_fox }}
       coins:
-        - amount: "998720000"
+        - amount: "${OUT_AMOUNT}"
           asset: "ETH.ETH"
           decimals: 8
       gas:
@@ -396,6 +400,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ observe_txid 13 }}"
+  - .[0]|.coin.amount|tonumber == ${OUT_AMOUNT=999359936}
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -406,7 +411,7 @@ txs:
       from_address: {{ addr_eth_dog }}
       to_address: {{ addr_eth_pig }}
       coins:
-        - amount: "998720000"
+        - amount: "${OUT_AMOUNT}"
           asset: "ETH.ETH"
           decimals: 8
       gas:

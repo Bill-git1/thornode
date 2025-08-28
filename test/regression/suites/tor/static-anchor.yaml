@@ -102,8 +102,8 @@ type: check
 endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
   - .derived_depth_bps|tonumber == 8913
-  - .balance_asset|tonumber == 271721142140 # median still ~1:1
-  - .balance_rune|tonumber == 271722770609
+  - .balance_asset|tonumber == 271778080233 # median still ~1:1
+  - .balance_rune|tonumber == 271779709043
 ---
 ########################################################################################
 # swap to USDY should reduce depth
@@ -123,8 +123,8 @@ type: check
 endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
   - .derived_depth_bps|tonumber == 7853
-  - .balance_asset|tonumber == 221719650611 # price shift with affected median
-  - .balance_rune|tonumber == 243215785107
+  - .balance_asset|tonumber == 221540789479 # price shift with affected median
+  - .balance_rune|tonumber == 243316116886
 ---
 ########################################################################################
 # swap to USDZ should reduce depth
@@ -143,8 +143,8 @@ type: check
 endpoint: http://localhost:1317/thorchain/dpool/thor.tor
 asserts:
   - .derived_depth_bps|tonumber == 6827
-  - .balance_asset|tonumber == 195750974471
-  - .balance_rune|tonumber == 214729397283
+  - .balance_asset|tonumber == 195631521389
+  - .balance_rune|tonumber == 214860217104
 ---
 ########################################################################################
 # depth should increase back to 100% over the successive max anchor blocks
@@ -181,7 +181,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 3
   - .[0].memo == "OUT:{{ native_txid -3 }}"
-  - .[0].coin.amount == "${OUT_AMOUNT=4418469500}"
+  - .[0].coin.amount == "${OUT_AMOUNT=4476796200}"
   - .[1].memo == "OUT:{{ native_txid -2 }}"
   - .[1].coin.amount == "${OUT_AMOUNT}"
   - .[2].memo == "OUT:{{ native_txid -1 }}"

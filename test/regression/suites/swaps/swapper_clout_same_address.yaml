@@ -61,7 +61,7 @@ asserts:
   - length == 1
   - .[0].clout_spent == "${CLOUT_LIMIT}" # Full clout limit spent.
   - .[0].coin.asset == ${USDC_ASSET="ETH.USDC-0X9999999999999999999999999999999999999999"}
-  - .[0].coin.amount == "${USDC_OUT=4043515000}"
+  - .[0].coin.amount == "${USDC_OUT=4096846500}"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/clout/swap/{{ addr_eth_fox }}

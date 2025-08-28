@@ -130,7 +130,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "100827696461",
+              "amount": "100834688569",
               "denom": "rune"
             }
           ]
@@ -139,7 +139,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35000020435998",
+              "amount": "35000013443472",
               "denom": "rune"
             }
           ]
@@ -166,7 +166,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "5000032129130",
+              "amount": "5000032129548",
               "denom": "rune"
             }
           ]
@@ -232,7 +232,7 @@
       "network": {
         "LPIncomeSplit": "9799",
         "NodeIncomeSplit": "201",
-        "bond_reward_rune": "32129130",
+        "bond_reward_rune": "32129548",
         "total_bond_units": "5"
       },
       "network_fees": [
@@ -265,7 +265,7 @@
               "chain": "BTC",
               "clout_spent": "0",
               "coin": {
-                "amount": "4350882",
+                "amount": "4357882",
                 "asset": "BTC.BTC"
               },
               "gas_rate": "10",
@@ -327,7 +327,7 @@
       "outbound_fee_spent_rune": [],
       "outbound_fee_withheld_rune": [
         {
-          "amount": "13986024",
+          "amount": "689662165912",
           "asset": "BTC.BTC"
         }
       ],
@@ -335,8 +335,8 @@
         {
           "LP_units": "100000000000",
           "asset": "BTC.BTC",
-          "balance_asset": "100649118",
-          "balance_rune": "100827696461",
+          "balance_asset": "100642118",
+          "balance_rune": "100834688569",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -382,7 +382,7 @@
               "chain": "BTC",
               "clout_spent": "0",
               "coin": {
-                "amount": "4350882",
+                "amount": "4357882",
                 "asset": "BTC.BTC"
               },
               "gas_rate": "10",

@@ -146,7 +146,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "199952714780",
+              "amount": "200001676235",
               "denom": "rune"
             }
           ]
@@ -155,7 +155,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35000054486184",
+              "amount": "35000005524645",
               "denom": "rune"
             }
           ]
@@ -182,7 +182,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "4999994799036",
+              "amount": "4999994799120",
               "denom": "rune"
             }
           ]
@@ -272,7 +272,7 @@
       "network": {
         "LPIncomeSplit": "9600",
         "NodeIncomeSplit": "400",
-        "bond_reward_rune": "799036",
+        "bond_reward_rune": "799120",
         "total_bond_units": "18"
       },
       "network_fees": [
@@ -321,7 +321,7 @@
               "chain": "BTC",
               "clout_spent": "0",
               "coin": {
-                "amount": "49986000",
+                "amount": "49993000",
                 "asset": "BTC.BTC",
                 "decimals": "8"
               },
@@ -411,7 +411,7 @@
               "chain": "BTC",
               "clout_spent": "0",
               "coin": {
-                "amount": "9986000",
+                "amount": "9993000",
                 "asset": "BTC.BTC",
                 "decimals": "8"
               },
@@ -501,7 +501,7 @@
               "chain": "BTC",
               "clout_spent": "0",
               "coin": {
-                "amount": "49986000",
+                "amount": "49993000",
                 "asset": "BTC.BTC",
                 "decimals": "8"
               },
@@ -591,7 +591,7 @@
               "chain": "BTC",
               "clout_spent": "0",
               "coin": {
-                "amount": "9986000",
+                "amount": "9993000",
                 "asset": "BTC.BTC"
               },
               "gas_rate": "10",
@@ -677,13 +677,13 @@
       "observed_tx_out_voters": null,
       "outbound_fee_spent_rune": [
         {
-          "amount": "31490095",
+          "amount": "31498914",
           "asset": "BTC.BTC"
         }
       ],
       "outbound_fee_withheld_rune": [
         {
-          "amount": "97953455",
+          "amount": "689704173138",
           "asset": "BTC.BTC"
         }
       ],
@@ -691,8 +691,8 @@
         {
           "LP_units": "100000000000",
           "asset": "BTC.BTC",
-          "balance_asset": "100066500",
-          "balance_rune": "99943124648",
+          "balance_asset": "100017500",
+          "balance_rune": "99992087155",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -703,7 +703,7 @@
           "LP_units": "100000000000",
           "asset": "ETH.ETH",
           "balance_asset": "1000000000",
-          "balance_rune": "100009590132",
+          "balance_rune": "100009589080",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -741,7 +741,7 @@
               "chain": "BTC",
               "clout_spent": "0",
               "coin": {
-                "amount": "49986000",
+                "amount": "49993000",
                 "asset": "BTC.BTC",
                 "decimals": "8"
               },
@@ -768,7 +768,7 @@
               "chain": "BTC",
               "clout_spent": "0",
               "coin": {
-                "amount": "9986000",
+                "amount": "9993000",
                 "asset": "BTC.BTC",
                 "decimals": "8"
               },
@@ -795,7 +795,7 @@
               "chain": "BTC",
               "clout_spent": "0",
               "coin": {
-                "amount": "49986000",
+                "amount": "49993000",
                 "asset": "BTC.BTC",
                 "decimals": "8"
               },
@@ -822,7 +822,7 @@
               "chain": "BTC",
               "clout_spent": "0",
               "coin": {
-                "amount": "9986000",
+                "amount": "9993000",
                 "asset": "BTC.BTC"
               },
               "gas_rate": "10",
@@ -856,7 +856,7 @@
           ],
           "coins": [
             {
-              "amount": "320010500",
+              "amount": "319989500",
               "asset": "BTC.BTC",
               "decimals": "8"
             },

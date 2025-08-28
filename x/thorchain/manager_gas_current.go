@@ -124,7 +124,6 @@ func (gm *GasMgrVCUR) GetAssetOutboundFee(ctx cosmos.Context, asset common.Asset
 	if err != nil {
 		return cosmos.ZeroUint(), err
 	}
-
 	minOutboundUSD, err := gm.keeper.GetMimir(ctx, constants.MinimumL1OutboundFeeUSD.String())
 	if minOutboundUSD < 0 || err != nil {
 		minOutboundUSD = gm.constantsAccessor.GetInt64Value(constants.MinimumL1OutboundFeeUSD)

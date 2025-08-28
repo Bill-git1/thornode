@@ -150,6 +150,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
   - .[0].coin.asset == "BTC.BTC"
+  - .[0].coin.amount == "${BTC_OUT_1=16657379}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -160,7 +161,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "${BTC_OUT_1=16650379}"
+        - amount: "${BTC_OUT_1}"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -178,7 +179,7 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/preftest
 asserts:
-  - .affiliate_collector_rune | tonumber > ${COLLECTED_RUNE_1}
+  - .affiliate_collector_rune | tonumber >= ${COLLECTED_RUNE_1}
 ---
 # Do a RUNE -> ETH swap with affiliate
 type: tx-deposit
@@ -207,7 +208,7 @@ txs:
       from_address: {{ addr_eth_dog }}
       to_address: {{ addr_eth_cat }}
       coins:
-        - amount: "${ETH_OUT_1=431633807}"
+        - amount: "${ETH_OUT_1=432273855}"
           asset: "ETH.ETH"
           decimals: 8
       gas:
@@ -221,6 +222,12 @@ txs:
 type: create-blocks
 count: 1
 ---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - length == 1
+  - .[0].coin.amount == "${BTC_OUT_2=2080469}"
+---
 # Process remaining BTC outbound from pool initialization
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -231,13 +238,13 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_pig }}
       coins:
-        - amount: "${BTC_OUT_2=2073521}"
+        - amount: "${BTC_OUT_2}"
           asset: "BTC.BTC"
           decimals: 8
       gas:
         - amount: "10500"
           asset: "BTC.BTC"
-      memo: "OUT:2B9E832E41ACEBE3A848CACB2D9A7A5FB27938B1D7AAF97F69B74944E61BA01E"
+      memo: "OUT:A9660C33F808BC186A95D728BB56606D31B43F5C7F0D70A4FC0D63E965948667"
     block_height: 4
     finalise_height: 4
     observed_pub_key: {{ pubkey_dog }}

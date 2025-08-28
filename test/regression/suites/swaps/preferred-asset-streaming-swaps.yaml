@@ -77,7 +77,13 @@ count: 2
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
-  - .affiliate_collector_rune == "722638857"
+  - .affiliate_collector_rune == "722751541"
+---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - .|length == 1
+  - .[0]|.coin.amount|tonumber == ${OUT_AMOUNT=10767967}
 ---
 # Observe the outbound.
 type: tx-observed-out
@@ -89,7 +95,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_cat }}
       coins:
-        - amount: "10760967"
+        - amount: "${OUT_AMOUNT}"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -137,7 +143,7 @@ count: 2
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
-  - .affiliate_collector_rune == "1003658766"
+  - .affiliate_collector_rune == "0"
 ---
 ########################################################################################
 # streaming swap to rune to trigger preferred asset swap
@@ -146,7 +152,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FOX_BAL=2498765975535}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FOX_BAL=2498767806132}
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -179,7 +185,7 @@ asserts:
   - .count == 1
   - .interval == 1
   - .quantity == 6
-  - .out == "495044145"
+  - .out == "495043155"
   - .last_height == 11
   - .trade_target == "0"
   - .failed_swaps|length == 0
@@ -196,7 +202,7 @@ asserts:
   - .swap.state.count == 4
   - .swap.state.interval == 1
   - .swap.state.quantity == 6
-  - .swap.state.out == "1951138297"
+  - .swap.state.out == "1951134377"
   - .swap.state.last_height == 14
   - .swap.trade_target == "0"
   - .swap.state.failed_swaps|length == 0
@@ -209,12 +215,12 @@ type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount|tonumber == ${FOX_BAL} + 2606530511
+  - .result[]|select(.denom == "rune").amount|tonumber == ${FOX_BAL} + 2606525254
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
-  - .affiliate_collector_rune == "0"
+  - .affiliate_collector_rune == "289836139"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/swaps/streaming
@@ -228,9 +234,9 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
-  - .[0]|.in_hash == "${IN_HASH=24CAF6FDC0345E36A43E152C48E407EDAA6BF07766FBB135EEBCE7A65E919603}"
+  - .[0]|.in_hash == "${IN_HASH=57449AE4740CA10C5B4A0A0BBFF8807EA8B41F4D2B699A7C7C8EF691C1D0FAFF}"
   - .[0]|.coin.asset == "ETH.USDX-0X9999999999999999999999999999999999999999"
-  - .[0]|.coin.amount == "${OUT_AMOUNT=1143001800}"
+  - .[0]|.coin.amount == "${OUT_AMOUNT=921197300}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}

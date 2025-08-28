@@ -12,18 +12,18 @@ asserts:
   - .[0] == {"asset":"THOR.RUNE","outbound_fee":"2000000"} # Only those two fields, others omitted.
   ###
   - .[1].asset == "BTC.BTC"
-  - .[1].outbound_fee == "14000"
-  - .[1].fee_withheld_rune == "0"
+  - .[1].outbound_fee == "7000"
+  - .[1].fee_withheld_rune == "689655172414"
   - .[1].fee_spent_rune == "0"
-  - .[1].surplus_rune == "0"
-  - .[1].dynamic_multiplier_basis_points == "20000"
+  - .[1].surplus_rune == "689655172414"
+  - .[1].dynamic_multiplier_basis_points == "10000"
   ###
   - .[2].asset == "ETH.ETH"
-  - .[2].outbound_fee == "1280000"
-  - .[2].fee_withheld_rune == "0"
+  - .[2].outbound_fee == "640000"
+  - .[2].fee_withheld_rune == "689655172414"
   - .[2].fee_spent_rune == "0"
-  - .[2].surplus_rune == "0"
-  - .[2].dynamic_multiplier_basis_points == "20000"
+  - .[2].surplus_rune == "689655172414"
+  - .[2].dynamic_multiplier_basis_points == "10000"
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
@@ -39,7 +39,13 @@ type: check
 endpoint: http://localhost:1317/thorchain/outbound_fee/${OUT_ASSET}
 asserts:
   - .|length == 1
-  - .[0].fee_withheld_rune == "${FEE_WITHHELD=16633687}"
+  - .[0].fee_withheld_rune == "${FEE_WITHHELD=689663489892}"
+---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - .|length == 1
+  - .[0]|.coin.amount == "${OUT_AMOUNT=8257426}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -50,7 +56,7 @@ txs:
     from_address: {{ addr_btc_dog }}
     to_address: {{ addr_btc_fox }}
     coins:
-      - amount: "8250426"
+      - amount: "${OUT_AMOUNT}"
         asset: "${OUT_ASSET}"
         decimals: 8
     gas:
@@ -73,7 +79,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/outbound_fee/${OUT_ASSET}
 asserts:
   - .[0].fee_withheld_rune == "${FEE_WITHHELD}"
-  - .[0].fee_spent_rune == "${FEE_SPENT=12582217}"
+  - .[0].fee_spent_rune == "${FEE_SPENT=12584128}"
   - .[0].surplus_rune|tonumber == ${FEE_WITHHELD} - ${FEE_SPENT}
 ---
 type: tx-observed-in
@@ -103,7 +109,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2495385421140
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2495386197539
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/outbound_fees
@@ -112,17 +118,17 @@ asserts:
   - .[0] == {"asset":"THOR.RUNE","outbound_fee":"2000000"}
   ###
   - .[1].asset == "BTC.BTC"
-  - .[1].outbound_fee == "14000"
+  - .[1].outbound_fee == "7000"
   - .[1].fee_withheld_rune == "${FEE_WITHHELD}"
   - .[1].fee_spent_rune == "${FEE_SPENT}"
   - .[1].surplus_rune|tonumber == ${FEE_WITHHELD} - ${FEE_SPENT}
-  - .[1].dynamic_multiplier_basis_points == "20000"
+  - .[1].dynamic_multiplier_basis_points == "10000"
   ###
   - .[2].asset == "ETH.ETH"
-  - .[2].outbound_fee == "1280000"
-  - .[2].fee_withheld_rune == "0"
+  - .[2].outbound_fee == "640000"
+  - .[2].fee_withheld_rune == "689655172414"
   - .[2].fee_spent_rune == "0"
-  - .[2].surplus_rune == "0"
-  - .[2].dynamic_multiplier_basis_points == "20000"
-  ### 
+  - .[2].surplus_rune == "689655172414"
+  - .[2].dynamic_multiplier_basis_points == "10000"
+  ###
   # No change from the THOR.RUNE outbound, since not an external Layer 1 Asset.

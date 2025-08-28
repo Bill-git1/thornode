@@ -62,7 +62,7 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/inbound_addresses
 asserts:
-  - .[]|select(.chain == "BTC")|.outbound_fee == "14000" # 2x estimated gas cost (7 * 1000 satoshi)
+  - .[]|select(.chain == "BTC")|.outbound_fee == "7000" # 2x estimated gas cost (7 * 1000 satoshi)
 ---
 ########################################################################################
 # small amount should refund and not result in swallowed funds
@@ -96,9 +96,10 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0].coin.asset == "BTC.BTC"
-  - .[0].coin.amount == "10000" # dust over outbound fee
+  - .[0].coin.amount == "17000" # dust over outbound fee
   - .[0].max_gas[0].asset == "BTC.BTC"
   - .[0].max_gas[0].amount == "10000" # 1.5x estimated gas (7000 satoshi)
+  - .[0].coin.amount == "${OUT_AMOUNT=17000}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -109,7 +110,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "10000"
+        - amount: "${OUT_AMOUNT}"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -180,6 +181,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
+  - .[0].coin.amount == "${OUT_AMOUNT=1693000}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -190,7 +192,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "1686000"
+        - amount: "${OUT_AMOUNT}"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -227,7 +229,7 @@ txs:
       from_address: {{ addr_btc_fox }}
       to_address: {{ addr_btc_dog }}
       coins:
-        - amount: "10100" # Lower than outbound fee or max_gas, though still over dust threshold
+        - amount: "1100" # Lower than outbound fee or max_gas, though still over dust threshold
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -251,7 +253,7 @@ endpoint: http://localhost:1317/thorchain/block
 asserts:
   - '[.end_block_events[]|select(.type == "refund")]|length == 1'
   - .end_block_events[]|select(.type == "refund")|.from == "{{ addr_btc_fox }}"
-  - .end_block_events[]|select(.type == "refund")|.reason| contains("fail to refund (10100 BTC.BTC)") and contains("not enough asset to pay for fees")
+  - .end_block_events[]|select(.type == "refund")|.reason| contains("fail to refund (1100 BTC.BTC)") and contains("not enough asset to pay for fees")
   # TODO:  Having removed the donate-to-pool invariant preservation, replace it with a different unrefundableCoinCleanup method.
   # - .|[.end_block_events[]|select(.type=="donate")]|length == 1
   # - .end_block_events[]|select(.type=="donate")|.memo == "LOAN+:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877"

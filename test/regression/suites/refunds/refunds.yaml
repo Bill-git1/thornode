@@ -118,6 +118,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ observe_txid 1 }}"
+  - .[0]|.coin.amount|tonumber == ${OUT_AMOUNT=4993000}
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -128,7 +129,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "4986000"
+        - amount: "${OUT_AMOUNT}"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -176,6 +177,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ observe_txid 3 }}"
+  - .[0]|.coin.amount|tonumber == ${OUT_AMOUNT=4993000}
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -186,7 +188,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "4986000"
+        - amount: "${OUT_AMOUNT}"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -234,6 +236,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ observe_txid 5 }}"
+  - .[0]|.coin.amount|tonumber == ${OUT_AMOUNT=4993000}
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -244,7 +247,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "4986000"
+        - amount: "${OUT_AMOUNT}"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -292,6 +295,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ observe_txid 7 }}"
+  - .[0]|.coin.amount|tonumber == ${OUT_AMOUNT=4993000}
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -302,7 +306,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "4986000"
+        - amount: "${OUT_AMOUNT}"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -327,7 +331,7 @@ signer: {{ addr_thor_fox }}
 coins:
   - amount: "5000000000"
     asset: "rune"
-memo: "~:"  
+memo: "~:"
 ---
 type: create-blocks
 count: 1

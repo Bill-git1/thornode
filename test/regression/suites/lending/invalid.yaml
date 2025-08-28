@@ -75,6 +75,12 @@ txs:
 type: create-blocks
 count: 1
 ---
+type: check
+endpoint: http://localhost:1317/thorchain/queue/outbound
+asserts:
+  - .|length == 1
+  - .[0]|.coin.amount|tonumber == ${OUT_AMOUNT=493000}
+---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
 txs:
@@ -84,7 +90,7 @@ txs:
       from_address: {{ addr_btc_dog }}
       to_address: {{ addr_btc_fox }}
       coins:
-        - amount: "486000"
+        - amount: "${OUT_AMOUNT}"
           asset: "BTC.BTC"
           decimals: 8
       gas:
@@ -142,7 +148,7 @@ count: 1
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
-  - .balances[]|select(.denom == "btc/btc")|.amount|tonumber == 9068901
+  - .balances[]|select(.denom == "btc/btc")|.amount|tonumber == 9067692
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}

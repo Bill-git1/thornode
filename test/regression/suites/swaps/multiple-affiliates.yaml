@@ -78,24 +78,25 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
   - .[0]|.in_hash == "{{ native_txid -1 }}"
+  - .[0]|.coin.amount|tonumber == ${OUT_AMOUNT=8009422}
 ---
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount == "96677353"
+  - .result[]|select(.denom == "rune").amount == "96692318"
 ---
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_cat }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount|tonumber == ${CAT_AFF} + 96500144
+  - .result[]|select(.denom == "rune").amount|tonumber == ${CAT_AFF} + 96515068
 ---
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fish }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount == "96855041"
+  - .result[]|select(.denom == "rune").amount == "96870047"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -106,7 +107,7 @@ txs:
     from_address: {{ addr_btc_dog }}
     to_address: {{ addr_btc_fox }}
     coins:
-      - amount: "8002422"
+      - amount: "${OUT_AMOUNT}"
         asset: "BTC.BTC"
         decimals: 8
     gas:
@@ -132,19 +133,19 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${PIG_AFF=96677353}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${PIG_AFF=96692318}
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_cat }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${CAT_AFF=2500096500144}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${CAT_AFF=2500096515068}
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fish }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FISH_AFF=96855041}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FISH_AFF=96870047}
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
@@ -161,25 +162,25 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
   - .[0].in_hash == "{{ native_txid -1 }}"
-  - .[0].coin.amount == "${OUT_AMOUNT=6467207}"
+  - .[0].coin.amount == "${OUT_AMOUNT=6473308}"
 ---
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount|tonumber == ${PIG_AFF} + 489809799
+  - .result[]|select(.denom == "rune").amount|tonumber == ${PIG_AFF} + 489890950
 ---
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_cat }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount|tonumber == ${CAT_AFF} + 95876399
+  - .result[]|select(.denom == "rune").amount|tonumber == ${CAT_AFF} + 95892266
 ---
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fish }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount|tonumber == ${FISH_AFF} + 194075705
+  - .result[]|select(.denom == "rune").amount|tonumber == ${FISH_AFF} + 194107495
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -255,19 +256,19 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${PIG_AFF=384487152}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${PIG_AFF=384583268}
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_cat }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${CAT_AFF=2499990376543}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${CAT_AFF=2499990407334}
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fish }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FISH_AFF=290930746}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FISH_AFF=290977542}
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
@@ -283,7 +284,7 @@ type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount|tonumber == ${PIG_AFF} + 96981933
+  - .result[]|select(.denom == "rune").amount|tonumber == ${PIG_AFF} + 96999827
 ---
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_cat }}
@@ -297,20 +298,20 @@ asserts:
   - .aliases[0].address == "{{ addr_eth_cat }}"
   - .owner == "{{ addr_thor_cat }}"
   - .preferred_asset == "ETH.ETH"
-  - .affiliate_collector_rune == "96829712"
+  - .affiliate_collector_rune == "96847586"
 ---
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fish }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount|tonumber == ${FISH_AFF} + 97134505
+  - .result[]|select(.denom == "rune").amount|tonumber == ${FISH_AFF} + 97152420
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
   - .[0].memo == "OUT:{{ native_txid -1 }}"
-  - .[0].coin.amount == "${OUT_AMOUNT=5924253}"
+  - .[0].coin.amount == "${OUT_AMOUNT=5929586}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -370,7 +371,7 @@ type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount == "${PIG_AFF=785979033}"
+  - .result[]|select(.denom == "rune").amount == "${PIG_AFF=786178260}"
 ---
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_cat }}
@@ -384,13 +385,13 @@ asserts:
   - .aliases[0].address == "{{ addr_eth_cat }}"
   - .owner == "{{ addr_thor_cat }}"
   - .preferred_asset == "ETH.ETH"
-  - .affiliate_collector_rune == "249084686"
+  - .affiliate_collector_rune == "0"
 ---
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fish }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount == "${FISH_AFF=997085146}"
+  - .result[]|select(.denom == "rune").amount == "${FISH_AFF=997320291}"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block
@@ -400,20 +401,20 @@ asserts:
   - .|[..|select(.type?=="affiliate_fee")][0].rune_address == "{{ addr_thor_pig }}"
   - .|[..|select(.type?=="affiliate_fee")][0].asset == "THOR.RUNE" # pig affiliate
   - .|[..|select(.type?=="affiliate_fee")][0].fee_bps == "100"
-  - .|[..|select(.type?=="affiliate_fee")][0].fee_amount == "304509948"
-  - .|[..|select(.type?=="affiliate_fee")][0].gross_amount == "${GROSS_AMOUNT=30450994773}"
+  - .|[..|select(.type?=="affiliate_fee")][0].fee_amount == "304595165"
+  - .|[..|select(.type?=="affiliate_fee")][0].gross_amount == "${GROSS_AMOUNT=30459516474}"
   - .|[..|select(.type?=="affiliate_fee")][0].thorname == "t"
   ##
   - .|[..|select(.type?=="affiliate_fee")][1].rune_address == "{{ addr_thor_fish }}"
   - .|[..|select(.type?=="affiliate_fee")][1].asset == "THOR.RUNE" # fish affiliate
   - .|[..|select(.type?=="affiliate_fee")][1].fee_bps == "200"
-  - .|[..|select(.type?=="affiliate_fee")][1].fee_amount == "609019895"
+  - .|[..|select(.type?=="affiliate_fee")][1].fee_amount == "609190329"
   - .|[..|select(.type?=="affiliate_fee")][1].gross_amount == "${GROSS_AMOUNT}"
   - .|[..|select(.type?=="affiliate_fee")][1].thorname == ""
   ##
   - .|[..|select(.type?=="affiliate_fee")][2].rune_address == "{{ addr_thor_cat }}"
   - .|[..|select(.type?=="affiliate_fee")][2].asset == "THOR.RUNE" # cat affiliate
   - .|[..|select(.type?=="affiliate_fee")][2].fee_bps == "50"
-  - .|[..|select(.type?=="affiliate_fee")][2].fee_amount == "152254974"
+  - .|[..|select(.type?=="affiliate_fee")][2].fee_amount == "152297582"
   - .|[..|select(.type?=="affiliate_fee")][2].gross_amount == "${GROSS_AMOUNT}"
   - .|[..|select(.type?=="affiliate_fee")][2].thorname == "a"

@@ -1,6 +1,6 @@
 ########################################################################################
-## this file is testing regular swaps with the adv swap queue manager. These tests are a 
-## copy/paste from swaps/swaps.yaml, except due to the extra block from setting the 
+## this file is testing regular swaps with the adv swap queue manager. These tests are a
+## copy/paste from swaps/swaps.yaml, except due to the extra block from setting the
 ## mimir, the pool depths are slightly different
 ########################################################################################
 {{ template "default-state.yaml" }}
@@ -73,7 +73,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
   - .[0].in_hash == "{{ native_txid -1 }}"
-  - .[0].coin.amount == "${OUT_AMOUNT=8998437}"
+  - .[0].coin.amount == "${OUT_AMOUNT=9005437}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -134,7 +134,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
   - .[0].in_hash == "{{ observe_txid 3 }}"
-  - .[0].coin.amount == "${OUT_AMOUNT=43746991}"
+  - .[0].coin.amount == "${OUT_AMOUNT=44392615}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -197,7 +197,7 @@ asserts:
   - .[0].in_hash == "{{ observe_txid 5 }}"
   - .[0].memo == "REFUND:{{ observe_txid 5 }}"
   - .[0].to_address == "{{ addr_btc_fox }}"
-  - .[0].coin.amount == "${REFUND_AMOUNT=986000}"
+  - .[0].coin.amount == "${REFUND_AMOUNT=993000}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -258,7 +258,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
   - .[0].in_hash == "{{ observe_txid 7 }}"
-  - .[0].coin.amount == "${BTC_OUT_AMOUNT=7608439}"
+  - .[0].coin.amount == "${BTC_OUT_AMOUNT=7621293}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -388,7 +388,7 @@ txs:
     from_address: {{ addr_eth_dog }}
     to_address: {{ addr_eth_fox }}
     coins:
-      - amount: "${ETH_OUT_AMOUNT=48431059}"
+      - amount: "${ETH_OUT_AMOUNT=49012706}"
         asset: "ETH.ETH"
         decimals: 8
     gas:
@@ -461,6 +461,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
   - .[0].in_hash == "{{ observe_txid 13 }}"
+  - .[0].coin.amount == "${ETH_LIMIT_OUT=29012111}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -471,7 +472,7 @@ txs:
     from_address: {{ addr_eth_dog }}
     to_address: {{ addr_eth_fox }}
     coins:
-      - amount: "${ETH_LIMIT_OUT=28427073}"
+      - amount: "${ETH_LIMIT_OUT}"
         asset: "ETH.ETH"
         decimals: 8
     gas:
@@ -515,6 +516,7 @@ asserts:
   - length == 1
   - .[0].memo == "REFUND:{{ observe_txid 15 }}"
   - .[0].to_address == "{{ addr_btc_fox }}"
+  - .[0].coin.amount == "${LIMIT_REFUND=993000}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -525,7 +527,7 @@ txs:
     from_address: {{ addr_btc_dog }}
     to_address: {{ addr_btc_fox }}
     coins:
-      - amount: "${LIMIT_REFUND=986000}"
+      - amount: "${LIMIT_REFUND}"
         asset: "BTC.BTC"
         decimals: 8
     gas:
@@ -581,6 +583,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
+  - .[0].coin.amount == "${ETH_AFF_OUT=38272306}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -591,7 +594,7 @@ txs:
     from_address: {{ addr_eth_dog }}
     to_address: {{ addr_eth_fox }}
     coins:
-      - amount: "${ETH_AFF_OUT=37747347}"
+      - amount: "${ETH_AFF_OUT}"
         asset: "ETH.ETH"
         decimals: 8
     gas:
@@ -639,6 +642,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
+  - .[0].coin.amount == "${BTC_MULTI_AFF_OUT=4668785}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -649,7 +653,7 @@ txs:
     from_address: {{ addr_btc_dog }}
     to_address: {{ addr_btc_fox }}
     coins:
-      - amount: "${BTC_MULTI_AFF_OUT=4644861}"
+      - amount: "${BTC_MULTI_AFF_OUT}"
         asset: "BTC.BTC"
         decimals: 8
     gas:

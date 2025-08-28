@@ -136,14 +136,14 @@ params:
   address: {{ addr_btc_pig }}
   withdraw_bps: 5000
 asserts:
-  - .expected_amount_out|tonumber == 6869767
+  - .expected_amount_out|tonumber == 6876767
   - .memo == "-:BTC/BTC:5000"
   - .inbound_address == "{{ addr_btc_dog }}"
   - .fees.liquidity == "121618"
-  - .fees.outbound == "14000"
+  - .fees.outbound == "7000"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
   - .fees.slippage_bps == 173
-  - .fees.total_bps == 193
+  - .fees.total_bps == 183
   - .recommended_gas_rate == "10"
   - .gas_rate_units == "satsperbyte"
 ---
@@ -183,7 +183,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
   - .[0].in_hash == "{{ observe_txid 3 }}"
-  - .[0].coin.amount == "${OUT_AMOUNT=6869769}"
+  - .[0].coin.amount == "${OUT_AMOUNT=6876769}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -223,14 +223,14 @@ params:
   address: {{ addr_btc_pig }}
   withdraw_bps: 10000
 asserts:
-  - .expected_amount_out == "6868656"
+  - .expected_amount_out == "6875654"
   - .memo == "-:BTC/BTC:10000"
   - .inbound_address == "{{ addr_btc_dog }}"
-  - .fees.liquidity == "123024"
-  - .fees.outbound == "14000"
+  - .fees.liquidity == "123026"
+  - .fees.outbound == "7000"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
   - .fees.slippage_bps == 175
-  - .fees.total_bps == 195
+  - .fees.total_bps == 185
   - .recommended_gas_rate == "10"
   - .gas_rate_units == "satsperbyte"
 ---
@@ -270,7 +270,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
   - .[0].in_hash == "{{ observe_txid 5 }}"
-  - .[0].coin.amount == "${OUT_AMOUNT=6869401}"
+  - .[0].coin.amount == "${OUT_AMOUNT=6876399}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -305,7 +305,7 @@ endpoint: http://localhost:1317/thorchain/pools
 asserts:
   - length == 1
   - .[0].savers_fill_bps == "0"
-  - .[0].savers_capacity_remaining == "594050342"
+  - .[0].savers_capacity_remaining == "594036344"
 ---
 ########################################################################################
 # turn on streaming swaps for savers adds (set interval to 1)
@@ -371,7 +371,7 @@ asserts:
   - .interval == 1
   - .quantity == 6
   - .in == "9999999"
-  - .out == "9922470"
+  - .out == "9922468"
 ---
 type: create-blocks
 count: 3
@@ -388,8 +388,8 @@ type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
   - length == 1
-  - .[0].asset_deposit_value == "19845390"
-  - .[0].asset_redeem_value == "19845989"
+  - .[0].asset_deposit_value == "19845387"
+  - .[0].asset_redeem_value == "19845986"
 ---
 ########################################################################################
 # swap btc to rune and back to generate yield
@@ -421,9 +421,9 @@ type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
 asserts:
   - length == 1
-  - .[0].asset_deposit_value == "19845390"
-  - .[0].asset_redeem_value == "${ASSET_REDEEM=23391167}"
-  - .[0].growth_pct == "0.178670058890251086"
+  - .[0].asset_deposit_value == "19845387"
+  - .[0].asset_redeem_value == "${ASSET_REDEEM=23391289}"
+  - .[0].growth_pct == "0.178676384592550400"
 ---
 ########################################################################################
 # withdraw savers should use streaming swaps
@@ -474,7 +474,7 @@ asserts:
   - .tx_id == "{{ observe_txid 9 }}"
   - .interval == 1
   - .quantity == 4
-  - .in == "11695582"
+  - .in == "11695644"
 ---
 type: create-blocks
 count: 2
@@ -492,7 +492,7 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
   - .[0].in_hash == "{{ observe_txid 9 }}"
-  - .[0].coin.amount == "${OUTPUT_AMOUNT=23077546}"
+  - .[0].coin.amount == "${OUTPUT_AMOUNT=23084664}"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/savers
@@ -710,7 +710,7 @@ asserts:
   - .inbound_address == "{{ addr_btc_dog }}"
   - .recommended_min_amount_in == "1000"
   - .fees.liquidity == "1995"
-  - .fees.outbound == "34645"
+  - .fees.outbound == "34643"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
   - .fees.slippage_bps == 99
   - .fees.total_bps == 1561

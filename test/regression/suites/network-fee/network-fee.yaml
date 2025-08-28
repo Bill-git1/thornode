@@ -19,7 +19,7 @@ asserts:
   - .|length == 12
   - .[0].chain == "BTC"
   - .[0].outbound_tx_size == "3"
-  - .[0].outbound_fee == "42"
+  - .[0].outbound_fee == "21"
 ---
 type: tx-network-fee
 signer: {{ addr_thor_fox }}
@@ -42,4 +42,4 @@ asserts:
   - .|length == 12
   - .[0].chain == "BTC"
   - .[0].outbound_tx_size == "3"
-  - .[0].outbound_fee == "42"
+  - .[0].outbound_fee == "21"
