@@ -73,6 +73,10 @@ func (c *Converter) GetRate(symbol string, metrics bool) (*big.Float, *big.Float
 		c.metrics.UpdateProviderBounds(symbol, upperBound, lowerBound)
 	}
 
+	if len(rates) == 0 {
+		return nil, nil, fmt.Errorf("no rates found")
+	}
+
 	volume := new(big.Float)
 
 	prices := map[string]*big.Float{}
@@ -327,12 +331,7 @@ func RedistributePercentage(
 	values map[string]*big.Float,
 	amount, cap *big.Float,
 ) map[string]*big.Float {
-	total := new(big.Float)
 	remain := new(big.Float)
-
-	for _, value := range values {
-		total.Add(total, value)
-	}
 
 	percentages := ComputePercentage(values)
 	capped := map[string]*big.Float{}

@@ -358,18 +358,16 @@ func (s *AttestationGossip) sendPriceFeedAttestationsToThornode(
 	}
 
 	s.mu.Lock()
-	for k, state := range s.priceFeeds {
+	defer s.mu.Unlock()
+	for _, state := range s.priceFeeds {
 		state.mu.Lock()
+		defer state.mu.Unlock()
 
 		qpfb.QuorumPriceFeeds = append(qpfb.QuorumPriceFeeds, &common.QuorumPriceFeed{
 			PriceFeed:    state.Item,
 			Attestations: []*common.Attestation{state.attestations[0].attestation},
 		})
-
-		delete(s.priceFeeds, k)
-		state.mu.Unlock()
 	}
-	s.mu.Unlock()
 
 	if len(qpfb.QuorumPriceFeeds) == 0 {
 		return
@@ -379,5 +377,10 @@ func (s *AttestationGossip) sendPriceFeedAttestationsToThornode(
 	if err != nil {
 		s.logger.Error().Err(err).Msg("fail to send price feed")
 		return
+	}
+
+	// delete price feeds
+	for k := range s.priceFeeds {
+		delete(s.priceFeeds, k)
 	}
 }

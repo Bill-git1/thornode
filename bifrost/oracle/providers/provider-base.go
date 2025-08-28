@@ -243,7 +243,10 @@ func (p *baseProvider) httpRequest(path, method string, body []byte, headers map
 			}
 		}
 
-		if index == len(p.config.ApiEndpoints)-1 {
+		// use next endpoint
+		index++
+
+		if index >= len(p.config.ApiEndpoints) {
 			index = 0
 		}
 

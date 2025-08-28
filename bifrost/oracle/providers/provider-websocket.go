@@ -166,8 +166,10 @@ func (p *websocketProvider) Start() {
 		var ping, check *time.Ticker
 		if p.keepaliveInterval > 0 {
 			ping = time.NewTicker(p.keepaliveInterval)
-			check = time.NewTicker(keepaliveCheckInterval)
 			defer ping.Stop()
+
+			check = time.NewTicker(keepaliveCheckInterval)
+			defer check.Stop()
 		}
 
 		for {

@@ -70,6 +70,7 @@ func (h PriceFeedQuorumBatchHandler) handle(ctx cosmos.Context, msg types.MsgPri
 	// ignore price feed tx, if prices have already been processed to avoid
 	// to prevent reorder attacks
 	iterator := h.mgr.Keeper().GetPriceIterator(ctx)
+	defer iterator.Close()
 	if iterator.Valid() {
 		ctx.Logger().Error("price feed already processed")
 		return &cosmos.Result{}, nil
