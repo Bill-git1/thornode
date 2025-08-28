@@ -532,6 +532,7 @@ type Bifrost struct {
 		Lbank     BifrostOracleProviderConfiguration `mapstructure:"lbank"`
 		Mexc      BifrostOracleProviderConfiguration `mapstructure:"mexc"`
 		Okx       BifrostOracleProviderConfiguration `mapstructure:"okx"`
+		Thorchain BifrostOracleProviderConfiguration `mapstructure:"thorchain"`
 	} `mapstructure:"providers"`
 }
 
@@ -572,6 +573,7 @@ func (b Bifrost) GetProviders() map[string]BifrostOracleProviderConfiguration {
 		common.ProviderLbank:     b.Providers.Lbank,
 		common.ProviderMexc:      b.Providers.Mexc,
 		common.ProviderOkx:       b.Providers.Okx,
+		common.ProviderThorchain: b.Providers.Thorchain,
 	}
 }
 

@@ -1,7 +1,6 @@
 package common
 
 const (
-	ProviderBifrost   = "bifrost"
 	ProviderBinance   = "binance"
 	ProviderBitfinex  = "bitfinex"
 	ProviderBitget    = "bitget"
@@ -20,4 +19,5 @@ const (
 	ProviderLbank     = "lbank"
 	ProviderMexc      = "mexc"
 	ProviderOkx       = "okx"
+	ProviderThorchain = "thorchain"
 )

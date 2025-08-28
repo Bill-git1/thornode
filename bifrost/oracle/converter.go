@@ -89,6 +89,22 @@ func (c *Converter) GetRate(symbol string, metrics bool) (*big.Float, *big.Float
 		volume.Add(volume, rate.Volume)
 	}
 
+	// temporary hack for RUNE until on chain volume data is available:
+	// set the volume reported by thorchain to twice the amount of the highest
+	// reported volume
+	_, found = totalVolumes[common.ProviderThorchain]
+	if symbol == "RUNE" && found {
+		maxVolume := new(big.Float)
+		for _, providerVolume := range totalVolumes {
+			if providerVolume.Cmp(maxVolume) > 0 {
+				maxVolume = new(big.Float).Copy(providerVolume)
+			}
+		}
+		newVolume := new(big.Float).Mul(maxVolume, big.NewFloat(2))
+		totalVolumes[common.ProviderThorchain] = newVolume
+		volume.Add(volume, newVolume)
+	}
+
 	// replace volume totals with capped percentages
 	threshold := big.NewFloat(maxVolumePercentage)
 	for provider, percent := range ComputeCappedPercentage(totalVolumes, threshold) {

@@ -200,6 +200,8 @@ func (o *Oracle) LoadProviders() error {
 			provider, err = providers.NewMexcProvider(o.ctx, o.logger, providerConfig, o.metrics)
 		case common.ProviderOkx:
 			provider, err = providers.NewOkxProvider(o.ctx, o.logger, providerConfig, o.metrics)
+		case common.ProviderThorchain:
+			provider, err = providers.NewThorchainProvider(o.ctx, o.logger, providerConfig, o.metrics)
 		default:
 			o.logger.Error().Msgf("unknown provider: %s", providerName)
 			continue

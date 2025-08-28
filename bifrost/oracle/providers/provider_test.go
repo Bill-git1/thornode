@@ -34,7 +34,7 @@ func Test(t *testing.T) {
 	TestingT(t)
 }
 
-func (s *ProviderTestSuite) SetUpSuite(c *C) {
+func (s *ProviderTestSuite) SetUpSuite(_ *C) {
 	symbols := []string{
 		"BTC/USDT",
 		"ETH/USDT",
@@ -66,13 +66,14 @@ func (s *ProviderTestSuite) SetUpSuite(c *C) {
 		common.ProviderLbank,
 		common.ProviderMexc,
 		common.ProviderOkx,
+		common.ProviderThorchain,
 	} {
 		s.config[provider] = s.newProviderConfig(provider, symbols)
 	}
 	s.metrics = metrics.NewMetrics(false)
 }
 
-func (s *ProviderTestSuite) TearDownSuite(c *C) {
+func (s *ProviderTestSuite) TearDownSuite(_ *C) {
 	s.server.Close()
 }
 

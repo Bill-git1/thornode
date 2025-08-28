@@ -797,6 +797,17 @@ bifrost:
         - XRP/USDT
       symbol_mapping: []
 
+    thorchain:
+      name: thorchain
+      disabled: false
+      polling_interval: 3s
+      api_endpoints:
+        - http://thornode:1317
+      ws_endpoints: []
+      pairs:
+        - RUNE/USD
+      symbol_mapping: []
+
 ########################################################################################
 # Thor
 ########################################################################################
