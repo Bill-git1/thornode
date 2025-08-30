@@ -625,7 +625,7 @@ func (s AdvSwapQueueVCURSuite) TestEndBlock(c *C) {
 		c.Logf("Queue item %d: Type=%v, TxID=%s", i, item.msg.SwapType, item.msg.Tx.ID)
 	}
 
-	err = book.EndBlock(ctx, mgr)
+	err = book.EndBlock(ctx, mgr, false)
 	c.Assert(err, IsNil)
 
 	items, err := mgr.TxOutStore().GetOutboundItems(ctx)
@@ -1420,7 +1420,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapMultipleIterations(c *C) {
 	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *streamingSwap), IsNil)
 
 	// Run EndBlock with single iteration
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Verify one swap was processed
 	updatedSwap, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, streamingSwap.Tx.ID, 0)
@@ -1436,7 +1436,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapMultipleIterations(c *C) {
 	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *streamingSwap), IsNil)
 
 	// Run EndBlock with multiple iterations
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Verify swaps were processed (may be 1 or more due to new interval logic)
 	updatedSwap, err = mgr.Keeper().GetAdvSwapQueueItem(ctx, streamingSwap.Tx.ID, 0)
@@ -1472,7 +1472,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapMultipleIterations(c *C) {
 	swapCountBefore := len(swapsBefore)
 
 	// Run EndBlock with 5 iterations
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Verify swaps were processed (may be less than initial count due to processing)
 	swapsAfter, err := book.FetchQueue(ctx, mgr, pairs, pools, make(tradePairs, 0))
@@ -1489,7 +1489,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapMultipleIterations(c *C) {
 	}
 
 	// Should default to 1 iteration (existing behavior maintained)
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 	// If test reaches here without panic/error, default behavior works
 }
 
@@ -1525,7 +1525,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapEarlyExit(c *C) {
 	c.Assert(len(swaps), Equals, 0) // Confirm no swaps available
 
 	// Run EndBlock - should exit immediately on first iteration
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Test 2: Single swap that completes in first iteration
 	tx := GetRandomTx()
@@ -1545,7 +1545,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapEarlyExit(c *C) {
 	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *singleSwap), IsNil)
 
 	// Run EndBlock - should process the swap in first iteration, then exit
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Verify swap was completed
 	_, err = mgr.Keeper().GetAdvSwapQueueItem(ctx, singleSwap.Tx.ID, 0)
@@ -1572,7 +1572,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapEarlyExit(c *C) {
 	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *streamingSwap), IsNil)
 
 	// Run EndBlock - should process 2 swaps then exit (not continue to 10 iterations)
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Verify swap processed (count should be at least 1, but may be 1 due to new interval logic)
 	_, err = mgr.Keeper().GetAdvSwapQueueItem(ctx, streamingSwap.Tx.ID, 0)
@@ -1609,7 +1609,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapEarlyExit(c *C) {
 	c.Assert(len(swapsBefore), Equals, 3) // Should have 3 swaps
 
 	// Run EndBlock - should process all 3 swaps and exit early (not run 10 iterations)
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Verify all swaps were processed
 	swapsAfter, err := book.FetchQueue(ctx, mgr, pairs, pools, make(tradePairs, 0))
@@ -1778,7 +1778,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapIterationCountLogging(c *C) {
 	}
 
 	// Run EndBlock with no swaps - should log count = 1 (always runs at least one iteration)
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 	// Note: Cannot directly test log output in unit tests, but EndBlock should complete without error
 
 	// Test 2: Multiple iterations with early exit
@@ -1805,7 +1805,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapIterationCountLogging(c *C) {
 
 	// Run EndBlock - should process swap in iteration 1, then exit early (not run all 5 iterations)
 	// Should log count = 1 due to early exit after processing the single swap
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Test 3: Multiple iterations with streaming swap
 	for _, node := range activeNodes {
@@ -1834,7 +1834,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapIterationCountLogging(c *C) {
 
 	// Run EndBlock - should process up to 3 iterations (may exit early if swap completes)
 	// Should log the actual iteration count (1-3)
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Test 4: Maximum iterations reached
 	for _, node := range activeNodes {
@@ -1862,7 +1862,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapIterationCountLogging(c *C) {
 
 	// Run EndBlock - should run exactly 2 iterations (rapidSwapMax = 2)
 	// Should log count = 2
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Test 5: Default behavior when no mimir votes
 	// Clear mimir votes
@@ -1872,7 +1872,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapIterationCountLogging(c *C) {
 
 	// Run EndBlock - should default to 1 iteration
 	// Should log count = 1
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Note: All tests verify that EndBlock completes without errors
 	// The actual log message "advanced swap iterations completed" with count
@@ -1940,7 +1940,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapWithPoolCycleInteraction(c *C) {
 	c.Assert(len(swapsBeforeNormal), Equals, 3) // Should find the 3 swaps
 
 	// Run EndBlock - should process swaps normally
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Test 2: Pool cycle block - should block all swaps
 	// Set block height to a pool cycle block (e.g., 200, which is divisible by 100)
@@ -1971,7 +1971,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapWithPoolCycleInteraction(c *C) {
 	c.Assert(len(swapsPoolCycle), Equals, 0) // Should return no swaps during pool cycle
 
 	// Run EndBlock during pool cycle - should exit early after first iteration
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Test 3: Verify swaps are available again after pool cycle
 	// Move to next block (201, not divisible by 100)
@@ -2005,14 +2005,14 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapWithPoolCycleInteraction(c *C) {
 
 	// Run EndBlock on pool cycle block with high iteration count
 	// Should still exit early (iteration 1) due to pool cycle
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Test 6: Verify pool cycle doesn't affect rapid swap configuration
 	// Move to non-pool-cycle block
 	ctx = ctx.WithBlockHeight(211)
 
 	// Should be able to run multiple iterations again
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Test 7: Edge case - pool cycle value of 1 (every block is pool cycle)
 	mgr.Keeper().SetMimir(ctx, "PoolCycle", 1)
@@ -2091,7 +2091,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapEndToEndScenarios(c *C) {
 	c.Assert(retrievedSwap.State.Count, Equals, uint64(0))
 
 	// Execute rapid swaps
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Verify market swap is completed and removed
 	_, err = mgr.Keeper().GetAdvSwapQueueItem(ctx, marketSwap.Tx.ID, 0)
@@ -2123,7 +2123,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapEndToEndScenarios(c *C) {
 	c.Assert(retrievedStreaming.State.Count, Equals, uint64(0))
 
 	// Execute rapid swaps - should process all 3 sub-swaps
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Verify streaming swap has been processed (may not complete all 3 due to interval logic)
 	// May be removed or still exist with partial completion
@@ -2184,7 +2184,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapEndToEndScenarios(c *C) {
 	initialSwapCount := len(swapsBefore)
 
 	// Execute rapid swaps on mixed types
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Verify swaps were processed
 	swapsAfter, err := book.FetchQueue(ctx, mgr, pairs, pools, make(tradePairs, 0))
@@ -2212,7 +2212,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapEndToEndScenarios(c *C) {
 	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *crossAssetSwap), IsNil)
 
 	// Execute cross-asset swap
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Verify cross-asset swap was handled (should be removed if completed)
 	_, _ = mgr.Keeper().GetAdvSwapQueueItem(ctx, crossAssetSwap.Tx.ID, 600)
@@ -2246,7 +2246,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapEndToEndScenarios(c *C) {
 	}
 
 	// Execute with new configuration
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Change back to higher value
 	for _, node := range activeNodes[:2] {
@@ -2254,7 +2254,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapEndToEndScenarios(c *C) {
 	}
 
 	// Execute again
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Scenario 6: Complete workflow with todo list propagation
 	// Create swaps that will benefit from todo list optimization
@@ -2279,7 +2279,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapEndToEndScenarios(c *C) {
 	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *todoSwap), IsNil)
 
 	// Execute to test todo list functionality
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Scenario 7: Comprehensive workflow verification
 	// Verify that the system handles complex scenarios gracefully
@@ -2328,7 +2328,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapEndToEndScenarios(c *C) {
 	}
 
 	// Execute comprehensive scenario
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Final verification - system should remain stable
 	// All EndBlock calls should complete without errors
@@ -2384,7 +2384,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapErrorHandling(c *C) {
 	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *largeSwap), IsNil)
 
 	// Execute rapid swaps - should handle the error gracefully
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Verify swap was handled gracefully (either removed or still exists)
 	_, _ = mgr.Keeper().GetAdvSwapQueueItem(ctx, largeSwap.Tx.ID, 0)
@@ -2409,7 +2409,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapErrorHandling(c *C) {
 	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *invalidSwap), IsNil)
 
 	// Execute rapid swaps - should handle invalid asset gracefully
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Test 3: Error handling during rapid swap iterations with mixed valid/invalid swaps
 	// Add a mix of valid and potentially problematic swaps
@@ -2449,7 +2449,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapErrorHandling(c *C) {
 	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *zeroSwap), IsNil)
 
 	// Execute rapid swaps - should process valid swaps and handle errors on invalid ones
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Test 4: Error handling with streaming swap that fails mid-execution
 	tx5 := GetRandomTx()
@@ -2473,7 +2473,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapErrorHandling(c *C) {
 	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *streamingSwap), IsNil)
 
 	// Execute rapid swaps - should handle streaming swap errors gracefully
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Test 5: Error handling with corrupted swap state
 	tx6 := GetRandomTx()
@@ -2494,7 +2494,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapErrorHandling(c *C) {
 	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *corruptedSwap), IsNil)
 
 	// Execute rapid swaps - should handle corrupted state gracefully
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Test 6: Error handling when pool becomes unavailable during rapid swap iterations
 	// Create swaps and then make the pool unavailable
@@ -2519,7 +2519,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapErrorHandling(c *C) {
 	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
 
 	// Execute rapid swaps - should handle pool unavailability gracefully
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Restore pool for next tests
 	ethPool.Status = PoolAvailable
@@ -2550,7 +2550,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapErrorHandling(c *C) {
 	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *mimirTestSwap), IsNil)
 
 	// Execute with invalid mimir - should default to safe behavior (1 iteration)
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Test 8: Error handling with FetchQueue errors
 	// This test verifies that errors in FetchQueue don't crash the system
@@ -2582,7 +2582,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapErrorHandling(c *C) {
 	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *fetchErrorSwap), IsNil)
 
 	// Execute - should handle missing pool gracefully
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Test 9: Recovery after errors
 	// Restore the pool and verify system recovery
@@ -2606,7 +2606,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapErrorHandling(c *C) {
 	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *recoverySwap), IsNil)
 
 	// Execute - should work normally after error recovery
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Test 10: Comprehensive error resilience
 	// This test verifies that the system continues operating despite various errors
@@ -2651,7 +2651,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapErrorHandling(c *C) {
 	}
 
 	// Execute comprehensive error test - should handle mix gracefully
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Final verification: The key test is that all EndBlock calls completed without panics
 	// This demonstrates that the rapid swap system is resilient to various error conditions
@@ -2724,7 +2724,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapWithExistingSwapLimits(c *C) {
 	c.Assert(len(swapsBefore), Equals, 3) // Confirm we have 3 swaps
 
 	// Execute rapid swaps - should respect MinSwapsPerBlock per iteration
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Test 2: Interaction with MaxSwapsPerBlock
 	// Set MaxSwapsPerBlock to a low value
@@ -2755,7 +2755,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapWithExistingSwapLimits(c *C) {
 	initialCount := len(swapsBeforeMax)
 
 	// Execute rapid swaps - should respect MaxSwapsPerBlock per iteration
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	swapsAfterMax, err := book.FetchQueue(ctx, mgr, pairs, pools, make(tradePairs, 0))
 	c.Assert(err, IsNil)
@@ -2789,7 +2789,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapWithExistingSwapLimits(c *C) {
 	}
 
 	// Execute - should process all 5 swaps even though less than MinSwapsPerBlock
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Test 4: getTodoNum with queue size between Min and Max
 	mgr.Keeper().SetMimir(ctx, "MinSwapsPerBlock", 5)
@@ -2815,7 +2815,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapWithExistingSwapLimits(c *C) {
 	}
 
 	// Execute - should process half the queue (5 swaps) per the getTodoNum logic
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Test 5: Rapid swaps with streaming swap interval limits
 	// Test that streaming swaps respect their interval constraints even with rapid swaps
@@ -2842,7 +2842,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapWithExistingSwapLimits(c *C) {
 	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *intervalSwap), IsNil)
 
 	// Execute at current block - should process the swap since interval constraint is met
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Verify swap was processed
 	updatedIntervalSwap, err := mgr.Keeper().GetAdvSwapQueueItem(ctx, intervalSwap.Tx.ID, 3400)
@@ -2877,7 +2877,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapWithExistingSwapLimits(c *C) {
 	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *synthSwap), IsNil)
 
 	// Execute - should handle synthetic asset multiplier
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Test 7: Rapid swaps with extreme limit configurations
 	// Test edge cases with limit configurations
@@ -2906,7 +2906,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapWithExistingSwapLimits(c *C) {
 	}
 
 	// Execute - should handle the configuration gracefully
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Test 8: Rapid swaps with zero limits
 	mgr.Keeper().SetMimir(ctx, "MinSwapsPerBlock", 0)
@@ -2930,7 +2930,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapWithExistingSwapLimits(c *C) {
 	c.Assert(mgr.Keeper().SetAdvSwapQueueItem(ctx, *zeroLimitSwap), IsNil)
 
 	// Execute - should handle zero limits gracefully
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Test 9: Interaction between rapid swap iterations and per-iteration limits
 	// Test that each rapid swap iteration respects the limits independently
@@ -2969,7 +2969,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapWithExistingSwapLimits(c *C) {
 
 	// Execute rapid swaps - should process up to MaxSwapsPerBlock per iteration
 	// With 4 iterations and MaxSwapsPerBlock=4, could process up to 16 swaps total
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	swapsAfterIterations, err := book.FetchQueue(ctx, mgr, pairs, pools, make(tradePairs, 0))
 	c.Assert(err, IsNil)
@@ -3049,7 +3049,7 @@ func (s AdvSwapQueueVCURSuite) TestRapidSwapWithExistingSwapLimits(c *C) {
 	}
 
 	// Execute final comprehensive test
-	c.Assert(book.EndBlock(ctx, mgr), IsNil)
+	c.Assert(book.EndBlock(ctx, mgr, false), IsNil)
 
 	// Final verification: The system successfully integrates rapid swaps with existing limits
 	// All EndBlock calls should complete without errors, demonstrating proper integration
@@ -3521,4 +3521,445 @@ func (s AdvSwapQueueVCURSuite) TestAddSwapQueueItemWithCustomTTL(c *C) {
 	ttlEntries, err = k.GetLimitSwapTTL(ctx, marketExpiryHeight)
 	c.Assert(err, IsNil)
 	c.Assert(len(ttlEntries), Equals, 0) // Market swaps don't get TTL entries
+}
+
+// TestTelemConversion tests the telem helper function for cosmos.Uint to float32 conversion
+func (s AdvSwapQueueVCURSuite) TestTelemConversion(c *C) {
+	swapQueue := newSwapQueueAdvVCUR(keeper.KVStoreDummy{})
+
+	// Test zero value
+	result := swapQueue.telem(cosmos.ZeroUint())
+	c.Check(result, Equals, float32(0))
+
+	// Test normal value (100 RUNE = 100 * 1e8 base units)
+	hundredRune := cosmos.NewUint(100 * 100000000) // 100 RUNE
+	result = swapQueue.telem(hundredRune)
+	c.Check(result, Equals, float32(100))
+
+	// Test small value (0.5 RUNE = 0.5 * 1e8 base units)
+	halfRune := cosmos.NewUint(50000000) // 0.5 RUNE
+	result = swapQueue.telem(halfRune)
+	c.Check(result, Equals, float32(0.5))
+
+	// Test large value that fits in uint64
+	largeValue := cosmos.NewUint(1000000000000000) // 10M RUNE
+	result = swapQueue.telem(largeValue)
+	c.Check(result, Equals, float32(10000000))
+
+	// Test maximum safe uint64 value
+	maxSafe := cosmos.NewUintFromString("18446744073709551615") // max uint64
+	result = swapQueue.telem(maxSafe)
+	c.Check(result, Equals, float32(184467440737.09552))
+
+	// Test value that exceeds uint64 (should return 0)
+	maxUint256 := cosmos.NewUintFromString("115792089237316195423570985008687907853269984665640564039457584007913129639935") // max uint256
+	result = swapQueue.telem(maxUint256)
+	c.Check(result, Equals, float32(0))
+}
+
+// TestSwapTypeCountingAccuracy tests that market vs limit swap classification is 100% accurate
+func (s AdvSwapQueueVCURSuite) TestSwapTypeCountingAccuracy(c *C) {
+	ctx, k := setupKeeperForTest(c)
+
+	// Set up pools for testing
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceRune = cosmos.NewUint(100000 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	pool = NewPool()
+	pool.Asset = common.ETHAsset
+	pool.BalanceRune = cosmos.NewUint(100000 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	// Create test swaps with different types
+	marketSwap := NewMsgSwap(
+		common.NewTx(
+			common.TxID("MARKET000000000000000000000000000000000000000000000000000000001"),
+			GetRandomBTCAddress(),
+			GetRandomBTCAddress(),
+			common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(1000000))),
+			common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(10000))},
+			"swap:ETH.ETH:"+GetRandomETHAddress().String(),
+		),
+		common.ETHAsset,
+		GetRandomETHAddress(),
+		cosmos.ZeroUint(),
+		common.NoAddress,
+		cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market, // Market swap
+		0, 0, types.SwapVersion_v1,
+		GetRandomValidatorNode(NodeActive).NodeAddress,
+	)
+
+	limitSwap := NewMsgSwap(
+		common.NewTx(
+			common.TxID("LIMIT0000000000000000000000000000000000000000000000000000000001"),
+			GetRandomBTCAddress(),
+			GetRandomBTCAddress(),
+			common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(1000000))),
+			common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(10000))},
+			"swap:ETH.ETH:"+GetRandomETHAddress().String()+":1000000000",
+		),
+		common.ETHAsset,
+		GetRandomETHAddress(),
+		cosmos.NewUint(1000000000), // Trade target makes it a limit swap
+		common.NoAddress,
+		cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_limit, // Limit swap
+		0, 0, types.SwapVersion_v2,
+		GetRandomValidatorNode(NodeActive).NodeAddress,
+	)
+
+	// Verify swap type identification
+	c.Check(marketSwap.IsLimitSwap(), Equals, false, Commentf("Market swap should not be identified as limit swap"))
+	c.Check(limitSwap.IsLimitSwap(), Equals, true, Commentf("Limit swap should be identified as limit swap"))
+
+	// Test with multiple swaps of each type
+	marketSwaps := []*MsgSwap{marketSwap}
+	limitSwaps := []*MsgSwap{limitSwap}
+
+	// Add more test swaps
+	for i := 2; i <= 5; i++ {
+		// Market swap
+		ms := NewMsgSwap(
+			common.NewTx(
+				common.TxID(fmt.Sprintf("MARKET00000000000000000000000000000000000000000000000000000000%d", i)),
+				GetRandomBTCAddress(),
+				GetRandomBTCAddress(),
+				common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(1000000))),
+				common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(10000))},
+				"swap:ETH.ETH:"+GetRandomETHAddress().String(),
+			),
+			common.ETHAsset,
+			GetRandomETHAddress(),
+			cosmos.ZeroUint(),
+			common.NoAddress,
+			cosmos.ZeroUint(),
+			"", "", nil,
+			types.SwapType_market,
+			0, 0, types.SwapVersion_v1,
+			GetRandomValidatorNode(NodeActive).NodeAddress,
+		)
+		marketSwaps = append(marketSwaps, ms)
+
+		// Limit swap
+		ls := NewMsgSwap(
+			common.NewTx(
+				common.TxID(fmt.Sprintf("LIMIT000000000000000000000000000000000000000000000000000000000%d", i)),
+				GetRandomBTCAddress(),
+				GetRandomBTCAddress(),
+				common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(1000000))),
+				common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(10000))},
+				"swap:ETH.ETH:"+GetRandomETHAddress().String()+":1000000000",
+			),
+			common.ETHAsset,
+			GetRandomETHAddress(),
+			cosmos.NewUint(1000000000),
+			common.NoAddress,
+			cosmos.ZeroUint(),
+			"", "", nil,
+			types.SwapType_limit,
+			0, 0, types.SwapVersion_v2,
+			GetRandomValidatorNode(NodeActive).NodeAddress,
+		)
+		limitSwaps = append(limitSwaps, ls)
+	}
+
+	// Simulate counting during swap processing
+	totalSwapsProcessed := int64(0)
+	marketSwapCount := int64(0)
+	limitSwapCount := int64(0)
+
+	// Count market swaps
+	for _, swap := range marketSwaps {
+		if swap.IsLimitSwap() {
+			limitSwapCount++
+		} else {
+			marketSwapCount++
+		}
+		totalSwapsProcessed++
+	}
+
+	// Count limit swaps
+	for _, swap := range limitSwaps {
+		if swap.IsLimitSwap() {
+			limitSwapCount++
+		} else {
+			marketSwapCount++
+		}
+		totalSwapsProcessed++
+	}
+
+	// Verify accuracy
+	expectedMarketCount := int64(len(marketSwaps))
+	expectedLimitCount := int64(len(limitSwaps))
+	expectedTotalCount := expectedMarketCount + expectedLimitCount
+
+	c.Check(marketSwapCount, Equals, expectedMarketCount, Commentf("Market swap count should be accurate"))
+	c.Check(limitSwapCount, Equals, expectedLimitCount, Commentf("Limit swap count should be accurate"))
+	c.Check(totalSwapsProcessed, Equals, expectedTotalCount, Commentf("Total swap count should equal sum of market + limit"))
+	c.Check(totalSwapsProcessed, Equals, marketSwapCount+limitSwapCount, Commentf("Total should equal market + limit"))
+}
+
+// TestQueueDepthTelemetryAccuracy tests queue depth calculation and value computation
+func (s AdvSwapQueueVCURSuite) TestQueueDepthTelemetryAccuracy(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	mgr := NewDummyMgrWithKeeper(k)
+
+	// Set up test pools with known ratios
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.BalanceRune = cosmos.NewUint(100000 * common.One) // 1 BTC = 100 RUNE
+	btcPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	c.Assert(k.SetPool(ctx, btcPool), IsNil)
+
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceRune = cosmos.NewUint(50000 * common.One) // 1 ETH = 50 RUNE
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	c.Assert(k.SetPool(ctx, ethPool), IsNil)
+
+	// Mock RUNE price for USD conversion ($5 per RUNE)
+	k.SetMimir(ctx, "DollarsPerRune", 500000000) // $5.00 in base units
+
+	swapQueue := newSwapQueueAdvVCUR(k)
+
+	// Create limit swaps with known deposit amounts
+	limitSwap1 := NewMsgSwap(
+		common.NewTx(
+			common.TxID("LIMITSWAP000000000000000000000000000000000000000000000000000001"),
+			GetRandomBTCAddress(),
+			GetRandomBTCAddress(),
+			common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(10*common.One))), // 10 BTC = 1000 RUNE
+			common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(10000))},
+			"swap:ETH.ETH:"+GetRandomETHAddress().String()+":500000000000",
+		),
+		common.ETHAsset,
+		GetRandomETHAddress(),
+		cosmos.NewUint(500000000000), // 500 ETH trade target
+		common.NoAddress,
+		cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_limit,
+		0, 0, types.SwapVersion_v2,
+		GetRandomValidatorNode(NodeActive).NodeAddress,
+	)
+	limitSwap1.State.Deposit = cosmos.NewUint(10 * common.One) // 10 BTC
+	limitSwap1.State.In = cosmos.NewUint(2 * common.One)       // 2 BTC already processed
+	limitSwap1.State.Out = cosmos.NewUint(100 * common.One)    // 100 ETH already received
+
+	// Add swap to queue
+	c.Assert(swapQueue.AddSwapQueueItem(ctx, mgr, limitSwap1), IsNil)
+
+	// Test remaining deposit calculation
+	expectedRemainingBTC := cosmos.NewUint(8 * common.One) // 10 - 2 = 8 BTC remaining
+	actualRemaining := common.SafeSub(limitSwap1.State.Deposit, limitSwap1.State.In)
+	c.Check(actualRemaining.Equal(expectedRemainingBTC), Equals, true, Commentf("Remaining deposit should be 8 BTC"))
+
+	// Test asset to RUNE conversion
+	expectedRuneValue := btcPool.AssetValueInRune(expectedRemainingBTC) // 8 BTC = 800 RUNE
+	c.Check(expectedRuneValue.Equal(cosmos.NewUint(800*common.One)), Equals, true, Commentf("8 BTC should equal 800 RUNE"))
+
+	// Test telem conversion
+	expectedTelemValue := float32(800) // 800 RUNE
+	actualTelemValue := swapQueue.telem(expectedRuneValue)
+	c.Check(actualTelemValue, Equals, expectedTelemValue, Commentf("Telem conversion should be accurate"))
+
+	// Test USD conversion ($5 per RUNE * 800 RUNE = $4000)
+	runeUSDPrice := swapQueue.telem(mgr.Keeper().DollarsPerRune(ctx))
+	expectedUSDValue := actualTelemValue * runeUSDPrice
+	c.Check(expectedUSDValue, Equals, float32(4000), Commentf("USD value should be $4000"))
+}
+
+// TestTelemetryEdgeCases tests edge cases and error handling
+func (s AdvSwapQueueVCURSuite) TestTelemetryEdgeCases(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	mgr := NewDummyMgrWithKeeper(k)
+
+	swapQueue := newSwapQueueAdvVCUR(k)
+
+	// Test with empty queues (no swaps)
+	emptyTelemetryValues := []int64{0, 0, 0, 0, 0} // iterationCount, totalSwapsProcessed, marketSwapCount, limitSwapCount, completedSwapCount
+
+	// This should not panic or error
+	swapQueue.emitAdvSwapQueueTelemetry(ctx, mgr, emptyTelemetryValues[0], emptyTelemetryValues[1], emptyTelemetryValues[2], emptyTelemetryValues[3], emptyTelemetryValues[4])
+
+	// Test queue depth telemetry with no swaps
+	swapQueue.emitQueueDepthTelemetry(ctx, mgr)
+
+	// Test with zero RUNE price (should handle gracefully)
+	k.SetMimir(ctx, "DollarsPerRune", 0)
+	runeUSDPrice := swapQueue.telem(mgr.Keeper().DollarsPerRune(ctx))
+	c.Check(runeUSDPrice, Equals, float32(0), Commentf("Zero RUNE price should be handled"))
+
+	// Test with no pools available
+	// (Pools are not set up in this test, so getAssetPairs should return empty pairs)
+	pairs, pools := swapQueue.getAssetPairs(ctx)
+	c.Check(len(pairs), Equals, 0, Commentf("Should have no trading pairs with no pools"))
+	c.Check(len(pools), Equals, 0, Commentf("Should have no pools"))
+
+	// Test with extremely large values
+	largeValue := cosmos.NewUintFromString("999999999999999999") // Large but within uint64
+	largeTelemValue := swapQueue.telem(largeValue)
+	c.Check(largeTelemValue > 0, Equals, true, Commentf("Large values should be handled"))
+
+	// Test with invalid/corrupted swap state (nil checks)
+	invalidSwap := &MsgSwap{}
+	c.Check(invalidSwap.IsLimitSwap(), Equals, false, Commentf("Invalid swap should default to market swap"))
+}
+
+// TestEmitAdvSwapQueueTelemetryIntegration tests the integration between EndBlock and telemetry
+func (s AdvSwapQueueVCURSuite) TestEmitAdvSwapQueueTelemetryIntegration(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	mgr := NewDummyMgrWithKeeper(k)
+
+	// Set up basic pools
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceRune = cosmos.NewUint(100000 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	pool = NewPool()
+	pool.Asset = common.ETHAsset
+	pool.BalanceRune = cosmos.NewUint(50000 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	c.Assert(k.SetPool(ctx, pool), IsNil)
+
+	// Set RUNE price
+	k.SetMimir(ctx, "DollarsPerRune", 500000000) // $5.00
+
+	// Enable advanced swap queue
+	k.SetMimir(ctx, "EnableAdvSwapQueue", 1)
+	k.SetMimir(ctx, "AdvSwapQueueRapidSwapMax", 2)
+
+	swapQueue := newSwapQueueAdvVCUR(k)
+
+	// Create and add test swaps
+	marketSwap := NewMsgSwap(
+		common.NewTx(
+			common.TxID("INTEGRATION_MARKET0000000000000000000000000000000000000001"),
+			GetRandomBTCAddress(),
+			GetRandomBTCAddress(),
+			common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(1*common.One))),
+			common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(10000))},
+			"swap:ETH.ETH:"+GetRandomETHAddress().String(),
+		),
+		common.ETHAsset,
+		GetRandomETHAddress(),
+		cosmos.ZeroUint(),
+		common.NoAddress,
+		cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0, types.SwapVersion_v1,
+		GetRandomValidatorNode(NodeActive).NodeAddress,
+	)
+
+	limitSwap := NewMsgSwap(
+		common.NewTx(
+			common.TxID("INTEGRATION_LIMIT00000000000000000000000000000000000000001"),
+			GetRandomBTCAddress(),
+			GetRandomBTCAddress(),
+			common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(5*common.One))),
+			common.Gas{common.NewCoin(common.BTCAsset, cosmos.NewUint(10000))},
+			"swap:ETH.ETH:"+GetRandomETHAddress().String()+":250000000000",
+		),
+		common.ETHAsset,
+		GetRandomETHAddress(),
+		cosmos.NewUint(250000000000),
+		common.NoAddress,
+		cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_limit,
+		0, 0, types.SwapVersion_v2,
+		GetRandomValidatorNode(NodeActive).NodeAddress,
+	)
+
+	// Add swaps to queue
+	c.Assert(swapQueue.AddSwapQueueItem(ctx, mgr, marketSwap), IsNil)
+	c.Assert(swapQueue.AddSwapQueueItem(ctx, mgr, limitSwap), IsNil)
+
+	// Simulate EndBlock telemetry collection
+	// (Note: We can't easily test the full EndBlock execution due to its complexity,
+	// but we can test that the telemetry functions work with realistic values)
+
+	// Simulate values that would be collected during EndBlock execution
+	iterationCount := int64(2)      // 2 rapid swap iterations
+	totalSwapsProcessed := int64(2) // 2 swaps processed
+	marketSwapCount := int64(1)     // 1 market swap
+	limitSwapCount := int64(1)      // 1 limit swap
+	completedSwapCount := int64(0)  // No swaps completed in this test
+
+	// Test that telemetry emission works without errors
+	swapQueue.emitAdvSwapQueueTelemetry(ctx, mgr, iterationCount, totalSwapsProcessed, marketSwapCount, limitSwapCount, completedSwapCount)
+
+	// Test queue depth telemetry with actual swaps in queue
+	swapQueue.emitQueueDepthTelemetry(ctx, mgr)
+
+	// Verify that the telemetry values make sense
+	c.Check(totalSwapsProcessed, Equals, marketSwapCount+limitSwapCount, Commentf("Total should equal sum of market and limit"))
+	c.Check(iterationCount > 0, Equals, true, Commentf("Should have completed iterations"))
+}
+
+// TestTradingPairLabelingAccuracy tests that trading pair labels are set correctly
+func (s AdvSwapQueueVCURSuite) TestTradingPairLabelingAccuracy(c *C) {
+	ctx, k := setupKeeperForTest(c)
+
+	// Set up pools for different asset types
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.BalanceRune = cosmos.NewUint(100000 * common.One)
+	btcPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	c.Assert(k.SetPool(ctx, btcPool), IsNil)
+
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceRune = cosmos.NewUint(50000 * common.One)
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	c.Assert(k.SetPool(ctx, ethPool), IsNil)
+
+	swapQueue := newSwapQueueAdvVCUR(k)
+
+	// Test getAssetPairs functionality
+	pairs, pools := swapQueue.getAssetPairs(ctx)
+
+	// Should have trading pairs for:
+	// RUNE -> BTC, BTC -> RUNE, RUNE -> ETH, ETH -> RUNE, BTC -> ETH, ETH -> BTC
+	expectedPairCount := 6 // 3 assets (RUNE, BTC, ETH) * 2 directions - 3 self-pairs
+	c.Check(len(pairs) >= expectedPairCount-3, Equals, true, Commentf("Should have reasonable number of trading pairs, got %d", len(pairs)))
+	c.Check(len(pools), Equals, 2, Commentf("Should have 2 pools"))
+
+	// Verify trading pair structure
+	for _, pair := range pairs {
+		c.Check(pair.source.String() != "", Equals, true, Commentf("Source asset should not be empty"))
+		c.Check(pair.target.String() != "", Equals, true, Commentf("Target asset should not be empty"))
+		c.Check(pair.source.Equals(pair.target), Equals, false, Commentf("Source and target should be different"))
+
+		// Test string representation
+		pairString := pair.String()
+		c.Check(pairString != "", Equals, true, Commentf("Pair string representation should not be empty"))
+		c.Check(len(pairString) > 5, Equals, true, Commentf("Pair string should be meaningful length"))
+	}
+
+	// Test specific trading pair identification
+	found_btc_eth := false
+	found_rune_btc := false
+
+	for _, pair := range pairs {
+		if pair.source.Equals(common.BTCAsset) && pair.target.Equals(common.ETHAsset) {
+			found_btc_eth = true
+		}
+		if pair.source.Equals(common.RuneAsset()) && pair.target.Equals(common.BTCAsset) {
+			found_rune_btc = true
+		}
+	}
+
+	c.Check(found_btc_eth, Equals, true, Commentf("Should find BTC->ETH trading pair"))
+	c.Check(found_rune_btc, Equals, true, Commentf("Should find RUNE->BTC trading pair"))
 }

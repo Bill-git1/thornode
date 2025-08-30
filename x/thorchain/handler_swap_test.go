@@ -734,7 +734,7 @@ func processSwapQueues(ctx cosmos.Context, mgr Manager) error {
 		return err
 	}
 	if mgr.Keeper().AdvSwapQueueEnabled(ctx) {
-		if err := mgr.AdvSwapQueueMgr().EndBlock(ctx, mgr); err != nil {
+		if err := mgr.AdvSwapQueueMgr().EndBlock(ctx, mgr, false); err != nil {
 			return err
 		}
 	}

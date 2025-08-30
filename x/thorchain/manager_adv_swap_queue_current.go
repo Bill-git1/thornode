@@ -5,13 +5,15 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cosmos/cosmos-sdk/telemetry"
+	"github.com/hashicorp/go-metrics"
+	"github.com/jinzhu/copier"
+
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
-
-	"github.com/jinzhu/copier"
 )
 
 // SwapQueueAdvVCUR is going to manage the swaps queue
@@ -531,7 +533,7 @@ func (vm *SwapQueueAdvVCUR) AddSwapQueueItem(ctx cosmos.Context, mgr Manager, ms
 }
 
 // EndBlock trigger the real swap to be processed
-func (vm *SwapQueueAdvVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
+func (vm *SwapQueueAdvVCUR) EndBlock(ctx cosmos.Context, mgr Manager, telemetryEnabled bool) error {
 	swapHandler := NewSwapHandler(mgr)
 
 	minSwapsPerBlock, err := vm.k.GetMimir(ctx, constants.MinSwapsPerBlock.String())
@@ -553,6 +555,12 @@ func (vm *SwapQueueAdvVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 	todo := make(tradePairs, 0)
 	pairs, pools := vm.getAssetPairs(ctx)
 	iterationCount := int64(0)
+
+	// Telemetry tracking variables
+	totalSwapsProcessed := int64(0)
+	marketSwapCount := int64(0)
+	limitSwapCount := int64(0)
+	completedSwapCount := int64(0)
 
 	// Rapid swap iterations
 	for iteration := int64(0); iteration < rapidSwapMax; iteration++ {
@@ -583,6 +591,14 @@ func (vm *SwapQueueAdvVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 				ctx.Logger().Error("fail copy msg", "msg", msg.Tx.String(), "error", err)
 				continue
 			}
+
+			// Track swap types for telemetry
+			if msg.IsLimitSwap() {
+				limitSwapCount++
+			} else {
+				marketSwapCount++
+			}
+			totalSwapsProcessed++
 
 			// Preserve original values before modification
 			originalAmount := msg.Tx.Coins[0].Amount
@@ -629,6 +645,7 @@ func (vm *SwapQueueAdvVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 				if err := settleSwap(ctx, mgr, msg, settleMsg); err != nil {
 					ctx.Logger().Error("fail to handle completed streaming limit swap", "error", err)
 				}
+				completedSwapCount++
 			}
 		}
 	}
@@ -639,6 +656,11 @@ func (vm *SwapQueueAdvVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 	// Process expired limit swaps at current block height
 	if err := vm.processExpiredLimitSwaps(ctx, mgr); err != nil {
 		ctx.Logger().Error("fail to process expired limit swaps", "error", err)
+	}
+
+	// Emit telemetry metrics only if telemetry is enabled
+	if telemetryEnabled {
+		vm.emitAdvSwapQueueTelemetry(ctx, mgr, iterationCount, totalSwapsProcessed, marketSwapCount, limitSwapCount, completedSwapCount)
 	}
 
 	return nil
@@ -823,4 +845,145 @@ func (vm *SwapQueueAdvVCUR) processExpiredLimitSwaps(ctx cosmos.Context, mgr Man
 	}
 
 	return nil
+}
+
+// emitAdvSwapQueueTelemetry emits telemetry metrics for the advanced swap queue
+// This method should only be called when telemetry is enabled
+func (vm *SwapQueueAdvVCUR) emitAdvSwapQueueTelemetry(ctx cosmos.Context, mgr Manager, iterationCount int64, totalSwapsProcessed int64, marketSwapCount int64, limitSwapCount int64, completedSwapCount int64) {
+	// Emit core metrics
+	telemetry.SetGauge(float32(iterationCount), "thornode", "adv_swap_queue", "iterations_per_block")
+	telemetry.SetGauge(float32(totalSwapsProcessed), "thornode", "adv_swap_queue", "total_swaps_per_block")
+	telemetry.SetGauge(float32(marketSwapCount), "thornode", "adv_swap_queue", "market_swaps_per_block")
+	telemetry.SetGauge(float32(limitSwapCount), "thornode", "adv_swap_queue", "limit_swaps_per_block")
+	telemetry.SetGauge(float32(completedSwapCount), "thornode", "adv_swap_queue", "completed_swaps_per_block")
+
+	// Emit total counters (these will accumulate over time)
+	telemetry.IncrCounterWithLabels([]string{"thornode", "adv_swap_queue", "market_swaps_total"}, float32(marketSwapCount), nil)
+	telemetry.IncrCounterWithLabels([]string{"thornode", "adv_swap_queue", "limit_swaps_total"}, float32(limitSwapCount), nil)
+	telemetry.IncrCounterWithLabels([]string{"thornode", "adv_swap_queue", "swaps_completed_total"}, float32(completedSwapCount), nil)
+
+	// Emit queue depth and trading pair metrics
+	vm.emitQueueDepthTelemetry(ctx, mgr)
+}
+
+// emitQueueDepthTelemetry emits queue depth metrics per trading pair
+func (vm *SwapQueueAdvVCUR) emitQueueDepthTelemetry(ctx cosmos.Context, mgr Manager) {
+	pairs, _ := vm.getAssetPairs(ctx)
+
+	// Get 1 RUNE price in USD for value conversions
+	runeUSDPrice := vm.telem(mgr.Keeper().DollarsPerRune(ctx))
+
+	totalLimitSwaps := int64(0)
+	totalLimitSwapValue := cosmos.ZeroUint()
+
+	// Iterate through each trading pair to collect metrics
+	for _, pair := range pairs {
+		limitSwapCount := int64(0)
+		limitSwapValue := cosmos.ZeroUint()
+
+		// Get limit swap iterator for this pair
+		iter := vm.k.GetAdvSwapQueueIndexIterator(ctx, LimitSwap, pair.source, pair.target)
+		if iter != nil {
+			func() { // Use anonymous function to ensure defer works properly
+				defer iter.Close()
+				for ; iter.Valid(); iter.Next() {
+					record := make([]string, 0)
+					value := ProtoStrings{Value: record}
+					if err := vm.k.Cdc().Unmarshal(iter.Value(), &value); err != nil {
+						continue
+					}
+
+					for _, rec := range value.Value {
+						lastHyphenIndex := strings.LastIndex(rec, "-")
+						if lastHyphenIndex == -1 {
+							continue
+						}
+						parts := []string{rec[:lastHyphenIndex], rec[lastHyphenIndex+1:]}
+						if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+							continue
+						}
+
+						hash, err := common.NewTxID(parts[0])
+						if err != nil {
+							continue
+						}
+
+						index, err := strconv.Atoi(parts[1])
+						if err != nil {
+							continue
+						}
+
+						msg, err := vm.k.GetAdvSwapQueueItem(ctx, hash, index)
+						if err != nil {
+							continue
+						}
+
+						if msg.IsLimitSwap() {
+							limitSwapCount++
+							// Add the swap value (remaining deposit amount)
+							remainingValue := common.SafeSub(msg.State.Deposit, msg.State.In)
+
+							// Convert to RUNE value if source asset is not RUNE
+							runeValue := remainingValue
+							if !msg.Tx.Coins[0].Asset.IsRune() {
+								// Get the pool to convert asset value to RUNE
+								if pool, err := vm.k.GetPool(ctx, msg.Tx.Coins[0].Asset.GetLayer1Asset()); err == nil {
+									runeValue = pool.AssetValueInRune(remainingValue)
+								}
+							}
+
+							limitSwapValue = limitSwapValue.Add(runeValue)
+						}
+					}
+				}
+			}()
+		}
+
+		totalLimitSwaps += limitSwapCount
+		totalLimitSwapValue = totalLimitSwapValue.Add(limitSwapValue)
+
+		// Emit per-trading-pair metrics with labels (only if there are swaps)
+		if limitSwapCount > 0 {
+			labels := []metrics.Label{
+				telemetry.NewLabel("source_asset", pair.source.String()),
+				telemetry.NewLabel("target_asset", pair.target.String()),
+			}
+			telemetry.SetGaugeWithLabels(
+				[]string{"thornode", "adv_swap_queue", "limit_swaps_by_pair"},
+				float32(limitSwapCount),
+				labels,
+			)
+			// Emit both RUNE and USD values for trading pair
+			telemetry.SetGaugeWithLabels(
+				[]string{"thornode", "adv_swap_queue", "limit_swap_value_by_pair", "rune"},
+				vm.telem(limitSwapValue),
+				labels,
+			)
+			telemetry.SetGaugeWithLabels(
+				[]string{"thornode", "adv_swap_queue", "limit_swap_value_by_pair", "usd"},
+				vm.telem(limitSwapValue)*runeUSDPrice,
+				labels,
+			)
+		}
+	}
+
+	// Emit global metrics in both RUNE and USD
+	telemetry.SetGauge(float32(totalLimitSwaps), "thornode", "adv_swap_queue", "total_limit_swaps")
+	telemetry.SetGauge(vm.telem(totalLimitSwapValue), "thornode", "adv_swap_queue", "total_limit_swap_value", "rune")
+	telemetry.SetGauge(vm.telem(totalLimitSwapValue)*runeUSDPrice, "thornode", "adv_swap_queue", "total_limit_swap_value", "usd")
+
+	// Count market swaps currently in queue
+	marketItems, err := vm.k.GetAdvSwapQueueIndex(ctx, MsgSwap{SwapType: MarketSwap})
+	if err == nil {
+		telemetry.SetGauge(float32(len(marketItems)), "thornode", "adv_swap_queue", "market_swaps_queued")
+	}
+}
+
+// telem converts cosmos.Uint to float32 for telemetry (similar to helpers.go)
+func (vm *SwapQueueAdvVCUR) telem(input cosmos.Uint) float32 {
+	if !input.BigInt().IsUint64() {
+		return 0
+	}
+	i := input.Uint64()
+	return float32(i) / 100000000
 }

@@ -2,6 +2,7 @@ package thorchain
 
 import (
 	"github.com/blang/semver"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
 )
@@ -40,7 +41,7 @@ func NewDummyMgrWithKeeper(k keeper.Keeper) *DummyMgr {
 		tradeMgr:      NewDummyTradeAccountManager(),
 		wasmMgr:       NewDummyWasmManager(),
 		switchMgr:     NewDummySwitchManager(),
-		// TODO add dummy advanced swap queue
+		advSwapQueue:  NewDummyAdvSwapQueue(),
 	}
 }
 
@@ -59,7 +60,7 @@ func NewDummyMgr() *DummyMgr {
 		tradeMgr:      NewDummyTradeAccountManager(),
 		wasmMgr:       NewDummyWasmManager(),
 		switchMgr:     NewDummySwitchManager(),
-		// TODO add dummy advanced swap queue
+		advSwapQueue:  NewDummyAdvSwapQueue(),
 	}
 }
 
@@ -80,3 +81,19 @@ func (m DummyMgr) TradeAccountManager() TradeAccountManager { return m.tradeMgr 
 func (m DummyMgr) SecuredAssetManager() SecuredAssetManager { return m.securedMgr }
 func (m DummyMgr) WasmManager() WasmManager                 { return m.wasmMgr }
 func (m DummyMgr) SwitchManager() SwitchManager             { return m.switchMgr }
+
+// DummyAdvSwapQueue is for test purpose
+type DummyAdvSwapQueue struct{}
+
+// NewDummyAdvSwapQueue create a new instance of DummyAdvSwapQueue for test purpose
+func NewDummyAdvSwapQueue() *DummyAdvSwapQueue {
+	return &DummyAdvSwapQueue{}
+}
+
+func (d *DummyAdvSwapQueue) AddSwapQueueItem(ctx cosmos.Context, mgr Manager, msg *MsgSwap) error {
+	return nil
+}
+
+func (d *DummyAdvSwapQueue) EndBlock(ctx cosmos.Context, mgr Manager, telemetryEnabled bool) error {
+	return nil
+}

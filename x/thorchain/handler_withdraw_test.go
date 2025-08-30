@@ -678,7 +678,7 @@ func (s *HandlerWithdrawSuite) TestFairMergeAddAndWithdrawLiquidityHandlerSavers
 
 	c.Assert(mgr.SwapQ().EndBlock(ctx, mgr), IsNil)
 	if mgr.Keeper().AdvSwapQueueEnabled(ctx) {
-		c.Assert(mgr.AdvSwapQueueMgr().EndBlock(ctx, mgr), IsNil)
+		c.Assert(mgr.AdvSwapQueueMgr().EndBlock(ctx, mgr, false), IsNil)
 	}
 
 	pool, err = mgr.Keeper().GetPool(ctx, common.AVAXAsset)

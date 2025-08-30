@@ -198,7 +198,7 @@ type SwapQueue interface {
 // AdvSwapQueue interface define the contract of Advanced Swap Queue
 type AdvSwapQueue interface {
 	AddSwapQueueItem(ctx cosmos.Context, mgr Manager, msg *MsgSwap) error
-	EndBlock(ctx cosmos.Context, mgr Manager) error
+	EndBlock(ctx cosmos.Context, mgr Manager, telemetryEnabled bool) error
 }
 
 // Slasher define all the method to perform slash

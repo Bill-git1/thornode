@@ -3554,7 +3554,7 @@ func simulate(ctx cosmos.Context, mgr Manager, msg sdk.Msg) (sdk.Events, error) 
 
 		// process advanced swap queue if enabled
 		if mgr.Keeper().AdvSwapQueueEnabled(ctx) {
-			err = mgr.AdvSwapQueueMgr().EndBlock(blockCtx, mgr)
+			err = mgr.AdvSwapQueueMgr().EndBlock(blockCtx, mgr, false)
 			if err != nil {
 				return nil, fmt.Errorf("failed to simulate end block for advanced queue: %w", err)
 			}
