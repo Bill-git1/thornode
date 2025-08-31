@@ -48,6 +48,8 @@ var (
 	// Whitelisted assets
 	RUJI = Asset{Chain: THORChain, Symbol: "RUJI", Ticker: "RUJI", Synth: false}
 	NAMI = Asset{Chain: THORChain, Symbol: "NAMI", Ticker: "NAMI", Synth: false}
+	LQDY = Asset{Chain: THORChain, Symbol: "LQDY", Ticker: "LQDY", Synth: false}
+	AUTO = Asset{Chain: THORChain, Symbol: "AUTO", Ticker: "AUTO", Synth: false}
 )
 
 var _ sdk.CustomProtobufType = (*Asset)(nil)
@@ -264,6 +266,10 @@ func (a Asset) Native() string {
 		return "x/ruji"
 	case a.Equals(NAMI):
 		return "thor.nami"
+	case a.Equals(LQDY):
+		return "thor.lqdy"
+	case a.Equals(AUTO):
+		return "thor.auto"
 	}
 
 	return strings.ToLower(a.String())
@@ -347,6 +353,8 @@ func (a Asset) IsWhitelisted() bool {
 	whitelist := map[Asset]bool{
 		RUJI: true,
 		NAMI: true,
+		LQDY: true,
+		AUTO: true,
 	}
 	return whitelist[a]
 }
