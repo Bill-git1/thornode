@@ -189,7 +189,11 @@ func (m Migrator) CommonMigrate8to9(ctx sdk.Context) error {
 		if err != nil {
 			return fem, err
 		}
-		fem.surplus = fem.withheld.Sub(fem.spent)
+		if fem.withheld.GTE(fem.spent) {
+			fem.surplus = fem.withheld.Sub(fem.spent)
+		} else {
+			fem.surplus = cosmos.ZeroUint()
+		}
 		fem.multiplier = m.mgr.GasMgr().CalcOutboundFeeMultiplier(ctx, targetSurplus,
 			fem.spent, fem.withheld, maxMultiplier, minMultiplier)
 		return fem, nil
