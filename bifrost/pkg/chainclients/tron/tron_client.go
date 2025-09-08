@@ -42,6 +42,7 @@ const (
 	TimestampAccuracy        = 10 * time.Second
 	TimestampValidity        = 90 * time.Second
 	ConfirmationBlocks int64 = 1
+	FinalityBlocks           = 19
 )
 
 //go:embed abi/trc20.json
@@ -574,7 +575,11 @@ func (c *TronClient) ReportSolvency(height int64) error {
 		}
 
 		msg := types.Solvency{
-			Height: height,
+			// Token balances reported from the RPC appear to be based on finalized state and
+			// lagging the observations themselves. We report the finalized height with the
+			// solvency message so the handler in thornode will disregard if there is a more
+			// recent observation.
+			Height: height - FinalityBlocks,
 			Chain:  c.config.ChainID,
 			PubKey: vaults[i].PubKey,
 			Coins:  acc.Coins,
