@@ -275,4 +275,4 @@ Investing in marketing is essential for THORChain to achieve its long-term visio
 
 ## Decision
 
-TBD
+Approved via node consensus.

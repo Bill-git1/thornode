@@ -65,7 +65,7 @@ This would be enough funding to pay for Core Protocol Maintenance needs, as well
 
 ## Decision
 
-TBD
+Approved via node consensus.
 
 ## Consequences
 

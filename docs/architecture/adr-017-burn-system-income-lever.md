@@ -47,7 +47,7 @@ This immediately starts burning 1% of system income (prior to be split to Nodes-
 
 ## Decision
 
-TBD
+Approved via node consensus.
 
 ## Consequences
 

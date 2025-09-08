@@ -29,7 +29,7 @@ If the affiliate is collecting 20bps then the additional protocol fee would add 
 
 ## Decision
 
-TBD
+Approved via node consensus.
 
 ## Consequences
 
