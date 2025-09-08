@@ -16,6 +16,7 @@ var wasmAcceptedQueries = wasmkeeper.AcceptedQueries{
 	"/types.Query/Network":           &apitypes.QueryNetworkResponse{},
 	"/types.Query/Borrower":          &apitypes.QueryBorrowerResponse{},
 	"/types.Query/LiquidityProvider": &apitypes.QueryLiquidityProviderResponse{},
+	"/types.Query/MimirWithKey":      &apitypes.QueryMimirWithKeyResponse{},
 	"/types.Query/Node":              &apitypes.QueryNodeResponse{},
 	"/types.Query/OutboundFee":       &apitypes.QueryOutboundFeeResponse{},
 	"/types.Query/Pool":              &apitypes.QueryPoolResponse{},
