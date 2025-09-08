@@ -73,8 +73,8 @@ func (k KVStore) GetSurplusForTargetMultiplier(ctx cosmos.Context, targetMultipl
 		targetMultiplierBps = maxMultiplier
 	}
 
-	deltaToTarget := maxMultiplier.Sub(targetMultiplierBps)
-	maxMinusMin := maxMultiplier.Sub(minMultiplier)
+	deltaToTarget := common.SafeSub(maxMultiplier, targetMultiplierBps)
+	maxMinusMin := common.SafeSub(maxMultiplier, minMultiplier)
 
 	// Convert to cosmos.Dec to avoid integer division.
 	deltaToTargetDec, err := cosmos.NewDecFromStr(deltaToTarget.String())

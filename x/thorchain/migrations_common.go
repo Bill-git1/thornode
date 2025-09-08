@@ -189,11 +189,7 @@ func (m Migrator) CommonMigrate8to9(ctx sdk.Context) error {
 		if err != nil {
 			return fem, err
 		}
-		if fem.withheld.GTE(fem.spent) {
-			fem.surplus = fem.withheld.Sub(fem.spent)
-		} else {
-			fem.surplus = cosmos.ZeroUint()
-		}
+		fem.surplus = common.SafeSub(fem.withheld, fem.spent)
 		fem.multiplier = m.mgr.GasMgr().CalcOutboundFeeMultiplier(ctx, targetSurplus,
 			fem.spent, fem.withheld, maxMultiplier, minMultiplier)
 		return fem, nil
@@ -220,7 +216,7 @@ func (m Migrator) CommonMigrate8to9(ctx sdk.Context) error {
 		}
 
 		// Increase withheld so that the multiplier is equal to 100%
-		withheldAdjustment := equilibriumSurplus.Sub(before.surplus)
+		withheldAdjustment := common.SafeSub(equilibriumSurplus, before.surplus)
 		err = m.mgr.Keeper().AddToOutboundFeeWithheldRune(ctx, asset, withheldAdjustment)
 		if err != nil {
 			ctx.Logger().Error("failed to adjust withheld amount", "asset", asset, "adjustment", withheldAdjustment, "error", err)
