@@ -295,6 +295,7 @@ bifrost:
           - 0x4B0F1812e5Df2A09796481Ff14017e6005508003 # Trust Wallet Token (TWT)
           - 0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82 # PancakeSwap (CAKE)
           - 0x53312F85Bba24C8cb99CFFc13BF82420157230d3 # Moca (Moca)
+          - 0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d # World Liberty Financial USD (USD1)
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
 
