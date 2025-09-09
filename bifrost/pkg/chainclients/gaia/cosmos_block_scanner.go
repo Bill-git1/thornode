@@ -198,6 +198,11 @@ func (c *CosmosBlockScanner) GetBlock(height int64) (*tmtypes.Block, error) {
 		return nil, fmt.Errorf("failed to get block: %w", err)
 	}
 
+	if resultBlock == nil || resultBlock.Block == nil {
+		c.logger.Error().Int64("height", height).Msg("received nil block from RPC")
+		return nil, fmt.Errorf("received nil block from RPC for height %d", height)
+	}
+
 	return resultBlock.Block, nil
 }
 
@@ -540,6 +545,11 @@ func (c *CosmosBlockScanner) FetchTxs(height, chainHeight int64) (types.TxIn, er
 	block, err := c.GetBlock(height)
 	if err != nil {
 		return types.TxIn{}, err
+	}
+
+	// The block scanner should never receive a nil block.
+	if block == nil {
+		return types.TxIn{}, fmt.Errorf("received nil block for height %d", height)
 	}
 
 	txs, err := c.processTxs(height, block.Data.Txs)
