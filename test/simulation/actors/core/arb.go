@@ -295,8 +295,8 @@ func (a *ArbActor) arb(config *OpConfig) OpResult {
 	send := arbPools[0]
 	receive := arbPools[len(arbPools)-1]
 
-	// skip if none have diverged more than 10 basis points
-	if priceChangeBps(send)-priceChangeBps(receive) < 25 {
+	// skip if none have diverged more than 1% basis points
+	if priceChangeBps(send)-priceChangeBps(receive) < 100 {
 		a.Log().Info().
 			Int64("maxShift", priceChangeBps(send)).
 			Int64("minShift", priceChangeBps(receive)).
@@ -305,7 +305,8 @@ func (a *ArbActor) arb(config *OpConfig) OpResult {
 			Continue: false,
 		}
 	}
-	adjustmentBps := int64(10)
+
+	adjustmentBps := int64(50)
 
 	// build the swap
 	minRuneDepth := common.Min(cosmos.NewUintFromString(send.BalanceRune).Uint64(), cosmos.NewUintFromString(receive.BalanceRune).Uint64())

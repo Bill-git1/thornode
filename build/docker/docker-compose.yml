@@ -108,7 +108,8 @@ services:
       HARDFORK_BLOCK_HEIGHT: ${HARDFORK_BLOCK_HEIGHT:-}
       NEW_GENESIS_TIME: ${NEW_GENESIS_TIME:-}
       CHURN_MIGRATE_ROUNDS: 2
-      FUND_MIGRATION_INTERVAL: 10
+      FUND_MIGRATION_INTERVAL: 30
+      SIGNING_TRANSACTION_PERIOD: 30
       EMISSION_CURVE: 100000
       AVAX_HOST: ${AVAX_HOST:-http://avalanche:9650/ext/bc/C/rpc}
       ETH_HOST: ${ETH_HOST:-http://ethereum:8545}
@@ -175,6 +176,7 @@ services:
       PEER: ${PEER:-}
       BIFROST_METRICS_PPROF_ENABLED: "true"
       BIFROST_SIGNER_BACKUP_KEYSHARES: "true"
+      BIFROST_SIGNER_RESCHEDULE_BUFFER_BLOCKS: "5"
       BIFROST_SIGNER_AUTO_OBSERVE: "false"
       BIFROST_SIGNER_KEYGEN_TIMEOUT: 30s
       BIFROST_SIGNER_KEYSIGN_TIMEOUT: 30s
@@ -545,7 +547,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101511.0
+    image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101511.1
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-5}
@@ -562,7 +564,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: xrpllabsofficial/xrpld:2.5.0
+    image: xrpllabsofficial/xrpld:2.6.0
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-5}
@@ -595,7 +597,7 @@ services:
       - mocknet
       - mocknet-cluster
     restart: unless-stopped
-    image: registry.gitlab.com/thorchain/devops/node-launcher:avalanche-daemon-1.13.2
+    image: registry.gitlab.com/thorchain/devops/node-launcher:avalanche-daemon-1.13.5
     volumes:
       - "./mocknet/avax:/mocknet"
     command:

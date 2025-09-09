@@ -504,7 +504,7 @@ func (s *Signer) sendKeygenToThorchain(height int64, poolPk common.PubKey, secp2
 	strHeight := strconv.FormatInt(height, 10)
 
 	bf := backoff.NewExponentialBackOff()
-	bf.MaxElapsedTime = constants.ThorchainBlockTime
+	bf.MaxElapsedTime = time.Minute
 	return backoff.Retry(func() error {
 		txID, err := s.thorchainBridge.Broadcast(keygenMsg)
 		if err != nil {

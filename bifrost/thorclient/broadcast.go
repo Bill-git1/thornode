@@ -2,7 +2,6 @@ package thorclient
 
 import (
 	"fmt"
-	"sync/atomic"
 	"time"
 
 	clienttx "github.com/cosmos/cosmos-sdk/client/tx"
@@ -97,12 +96,12 @@ func (b *thorchainBridge) Broadcast(msgs ...stypes.Msg) (common.TxID, error) {
 		if commit.Code != 6 {
 			return txHash, fmt.Errorf("fail to broadcast to THORChain,code:%d, log:%s", commit.Code, commit.RawLog)
 		}
+	} else {
+		b.seqNumber++
 	}
+
 	b.m.GetCounter(metrics.TxToThorchain).Inc()
 	b.logger.Info().Msgf("Received a TxHash of %v from the thorchain", commit.TxHash)
-
-	// increment seqNum
-	atomic.AddUint64(&b.seqNumber, 1)
 
 	return txHash, nil
 }
