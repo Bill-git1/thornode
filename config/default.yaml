@@ -143,7 +143,7 @@ bifrost:
         max_gas_limit: 0
         fixed_gas_rate: 0
         gas_price_resolution: 1 # 1 satoshi (UTXO default)
-        max_resume_block_lag: 24h
+        max_resume_block_lag: 1h
         max_healthy_lag: 30m
         transaction_batch_size: 500
         reference_address: ""
