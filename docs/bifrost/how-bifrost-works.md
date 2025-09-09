@@ -135,7 +135,9 @@ Where:
 
 The actual confirmation logic is implemented in the `getBlockRequiredConfirmation()` function within the relevant `ChainClient`, and varies slightly between UTXO and EVM chains. Both rely on the same utility helpers to pull values from Mimir (`GetConfMulBasisPoint` and `MaxConfAdjustment`).
 
-> **Note**: The `CONFIRMATIONMULTIPLIER-*` Mimir keys are currently **not active** (not set in Mimir). In practice, a default multiplier of 10,000 basis points (i.e. `1x`) is used unless overridden.
+```admonish info
+Note: The `CONFIRMATIONMULTIPLIER-*` Mimir keys are currently **not active** (not set in Mimir). In practice, a default multiplier of 10,000 basis points (i.e. `1x`) is used unless overridden.
+```
 
 ### Economic Security Rationale
 
@@ -193,7 +195,28 @@ If a double-spend or failed outbound is not properly suppressed, it can lead to 
 
 ### Prevention Mechanism
 
-THORChain uses the `LackSigning` mechanism to detect and prevent double-spends:
+THORChain uses two processes to deal with this scenario:
+
+- AutoObserve instantly observes signed outbounds so they are not rescheduled to a secondary vault.
+- LackSigning is a fallback process that will reassign an outbound transaction if no observation is detected. Reassignment occurs only after a sufficient delay and typically only if the initial outbound signing failed or the observation was not received by THORNode.
+
+### AutoObserve
+
+AutoObserve enables immediate observation of outbound transactions. Within the ChainClient, during the `SignTx` function of an outbound transaction, a `TxInItem` is created. If AutoObserve is enabled, this `TxInItem` is immediately marked as observed. The `TxInItem` is then sent from Bifrost to THORNode for processing. This prevents the `LackSigning` mechanism from reassigning the same outbound transaction to a secondary vault.
+
+**Key characteristics:**
+
+- **Does not reach consensus**: The outbound is not finalised at this stage. The unfinalised observation only prevents reschedule. Finalisation and consensus occur within THORNode.
+- **Gas handling**: Records gas limit rather than actual gas consumed (which is unknown until block confirmation). This is acceptable since the instant observation does not reach consensus.
+
+**Network Configuration:**
+
+- **Mainnet**: Enabled.
+- **Stagenet/Mocknet**: Disabled by default.
+
+### LackSigning
+
+For transactions that remain unconfirmed `LackSigning` provides long-term protection:
 
 - `LackSigning` runs **every block**.
 - It checks for outbound transactions that:
@@ -203,9 +226,7 @@ THORChain uses the `LackSigning` mechanism to detect and prevent double-spends:
   - Are not assigned to an inactive or frozen vault,
   - Pass the `needsNewVault` check.
 
-If these conditions are met, the transaction is **rescheduled** to a new vault. The original vault's transaction is tracked. If it later appears on-chain **after** the rescheduled transaction has been confirmed, it is ignored. This suppresses slashing and ensures only the final successful outbound is honored. Duplicate outbounds from the same vault are safely discarded if they arrive late.
-
-This mechanism protects THORChain from accidental or malicious double-spends caused by network delays, stuck mempool transactions, or external chain instability.
+If these conditions are met, the transaction is **rescheduled** to a new vault. The original vault's transaction is tracked. If it later appears on-chain after the rescheduled transaction has been confirmed, it is ignored. This suppresses slashing and ensures only the final successful outbound is honored. Duplicate outbounds from the same vault are safely discarded if they arrive late.
 
 ## Gas Tracking
 

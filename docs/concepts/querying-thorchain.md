@@ -88,7 +88,7 @@ If you connect to a public Midgard, you must be conscious of the fact that you c
 - `Chain`: Chain Name
 - `Address`: Asgard Vault inbound address for that chain.,
 - `Halted`: Boolean, if the chain is halted. This should be monitored.
-- `gas_rate`: rate to be used, e.g. in Stats or GWei. See Fees.
+- `gas_rate`: rate to be used, e.g. in Stats or GWei. This represents the current gas price for transactions on that chain. For EVM chains, this is in Gwei. For UTXO chains, this is in sats/byte. Use this value when constructing transactions to ensure proper fee estimation. See [Fees and Wait Times](../swap-guide/fees-and-wait-times.md) for more details.
 
 ### Displaying available pairs
 

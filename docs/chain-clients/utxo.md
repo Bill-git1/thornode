@@ -43,7 +43,7 @@ For wallet developers, see [Sending UTXO Transactions](../concepts/sending-trans
 
 THORChain dynamically delays finality based on transaction value and miner incentives.
 
-See [Finality & Confirmation Counting](../bifrost/how-bifrost-works.md#confirmation-counting).
+See [Finality & Confirmation Counting](../bifrost/how-bifrost-works.md#finality--pre-confirmation).
 
 ### UTXO Specifics
 

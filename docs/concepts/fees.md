@@ -65,34 +65,34 @@ slip = \frac{swapAmount}{swapAmount + poolDepth}
 $$
 
 $$
-fee =slip * swapAmount
+fee = slip * swapAmount
 $$
 
 See more information in the [Liquidity Section](https://docs.thorchain.org/thorchain-finance/continuous-liquidity-pools)
 
 ```admonish warning
-A minimum swap fee in basis points (bps) applies for different asset types, governed by the [mimir network settings](../mimir.md#swapping).
+A minimum swap fee in basis points applies for different asset types, governed by the [mimir network settings](../mimir.md#swapping).
 ```
 
 ## 3. Affiliate Fee
 
 Within the transactions you build for your users you can include an affiliate for your exchange.
 
-- Affiliate fees are possible for: swaps, saving despoit, lending addition, RUNEPool withdrawal.
+- Affiliate fees are possible for: swaps, saving deposit, lending addition, RUNEPool withdrawal.
 - The affiliate fee is in basis points (0-10,000) and will be deducted from the inbound or outbound transaction amount.
 - A THORName is required to collect affiliate address. See a guide on creating THORNames [here](../affiliate-guide/thorname-guide.md).
 - Affiliates are paid in $RUNE by default however a [preferred asset](../affiliate-guide/thorname-guide.md#preferred-asset-for-affiliate-fees) can be specified within the THORName.
-- Mupiple Affiliates are possible for swaps.
+- Multiple Affiliates are possible for swaps.
 
 $$
-affliateFee = \frac{feeInBasisPoints * txAmount}{10000}
+affiliateFee = \frac{feeInBasisPoints * txAmount}{10000}
 $$
 
 See the [Affiliate Fee Guide](../affiliate-guide/affiliate-fee-guide.md) for more information.
 
 ## 4. Outbound Fee
 
-The Outbound Fee is what THORChain charges to deliver the final asset to the user on the*destination chai*. It covers the actual L1 gas costs\*(paid by nodes), and helps sustain the network's infrastructure — including TSS signing, compute, and state management.
+The Outbound Fee is what THORChain charges to deliver the final asset to the user on the destination chain. It covers the actual L1 gas costs (paid by nodes), and helps sustain the network's infrastructure — including TSS signing, compute, and state management.
 
 To ensure long-term sustainability, the outbound fee is marked up by a dynamic value called the **Outbound Fee Multiplier (OFM)**. This allows the protocol to collect slightly more than it spends, building a buffer (or "surplus") of RUNE to cover fluctuations in network cost.
 

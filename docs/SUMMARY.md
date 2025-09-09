@@ -37,6 +37,7 @@
 
   - [How Bifrost Works](bifrost/how-bifrost-works.md)
   - [Vault Behaviors](bifrost/vault-behaviors.md)
+  - [Oracles](bifrost/oracle.md)
 
 - [Chain Clients](chain-clients/README.md)
 
@@ -103,6 +104,7 @@
     - [ADR 017: Burn System Income Lever](architecture/adr-017-burn-system-income-lever.md)
     - [ADR 018: Core Protocol Sustainability](architecture/adr-018-core-protocol-sustainability.md)
     - [ADR 019: AutoBond](architecture/adr-019-auto-bond.md)
+    - [ADR 021: Marketing Fund Allocation](architecture/ADR-021-marketing-fund-allocation.md)
 
 - [Archived](archived/archived.md)
 

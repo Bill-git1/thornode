@@ -296,3 +296,37 @@ As of [ADR-009](https://gitlab.com/thorchain/thornode/-/blob/develop/docs/archit
 ```
 
 The native transaction fee is automatically deducted from the user's account for $RUNE transfers and inbound swaps. Ensure the user's balance exceeds `tx amount + native_tx_fee_rune` before broadcasting the transaction.
+
+### Error Handling
+
+When sending transactions to THORChain, several common errors can occur. Always implement proper error handling:
+
+```javascript
+try {
+  const txResponse = await client.signAndBroadcast(signerAddress, [msg], fee);
+
+  // Check if transaction was successful
+  if (txResponse.code !== 0) {
+    console.error("Transaction failed:", txResponse.rawLog);
+    // Handle specific error codes
+    if (txResponse.code === 5) {
+      throw new Error("Insufficient funds");
+    } else if (txResponse.code === 7) {
+      throw new Error("Invalid memo format");
+    }
+    // Add more specific error handling as needed
+  }
+
+  console.log("Transaction successful:", txResponse.transactionHash);
+} catch (error) {
+  console.error("Failed to broadcast transaction:", error.message);
+  // Implement retry logic or user notification
+}
+```
+
+**Common Error Scenarios:**
+
+- **Insufficient Balance**: Ensure account has enough RUNE for transaction + fees
+- **Invalid Memo**: Check memo format against [transaction memo guidelines](memos.md)
+- **Network Issues**: Implement retry logic with exponential backoff
+- **Gas Estimation**: Use current gas rates from [inbound addresses endpoint](querying-thorchain.md)

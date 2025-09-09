@@ -4,7 +4,7 @@ Integrating a new L1 chain into THORChain is a structured process involving prop
 
 ## Overview
 
-Each new chain poses risk and operational cost to the network. Chains must be economically meaningful, decentralized, and technically sound to be considered for integration.
+Each new chain poses risk and operational cost to the network. Chains must be economically meaningful, decentralised, and technically sound to be considered for integration.
 
 The process consists of:
 
@@ -59,7 +59,7 @@ Open PRs to:
 - [`thornode`](https://gitlab.com/thorchain/thornode)
 - [`node-launcher`](https://gitlab.com/thorchain/node-launcher)
 
-Follow the [Chain Client Implementation Guide](./chain-client-implementation.md) for detailed requirements.
+Follow the [Chain Client Implementation Guide](./implementation-guide.md) for detailed requirements.
 
 ### Stagenet Testing Requirements
 

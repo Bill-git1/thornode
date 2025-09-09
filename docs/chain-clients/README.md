@@ -168,6 +168,7 @@ All chain clients must handle the following responsibilities consistently:
 - Clients receive `TxOut` instructions from THORChain to spend funds from vaults.
 - Bifrost handles TSS signing.
 - Clients broadcast the transaction and submit `MsgObservedTxOut`.
+- Outbound transactions are also instantly observed using [AutoObserve](../bifrost/how-bifrost-works.md#autoobserve)
 
 ### Confirmation Counting
 
@@ -216,5 +217,5 @@ See [token-lists.md](./token-lists.md) for details.
 
 - [How Bifrost Works](../bifrost/how-bifrost-works.md)
 - [Vault Behaviors](../bifrost/vault-behaviors.md)
-- [Integrating New Chains](./integrating-new-chains.md)
-- [Sending Transactions](../technology/sending-transactions.md)
+- [Integrating New Chains](../new-chains/implementation-guide.md)
+- [Sending Transactions](../concepts/sending-transactions.md)

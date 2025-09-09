@@ -56,7 +56,7 @@ EVM transactions require **delayed finality** due to frequent re-orgs. THORChain
 - Pool pricing from THORChain is used to estimate value
 - Finality is typically reached at `MAXCONFIRMATIONS-ETH = 14`
 
-See [Finality & Confirmation Counting](../bifrost/how-bifrost-works.md#confirmation-counting).
+See [Finality & Confirmation Counting](../bifrost/how-bifrost-works.md#finality--pre-confirmation).
 
 ## Stuck Transaction Recovery
 
@@ -94,7 +94,7 @@ Outbound EVM gas fees are estimated based on:
 - A **default gas limit** (typically 200,000 units)
 - A **target gas price** set to \~1.5× the network median
 
-However, THORChain generally **charges users based on \~80,000 gas units** to avoid overcharging.
+The gas limit is used as the actual gas cost is not known until inclusion. THORChain generally **charges users based on \~80,000 gas units** to avoid overcharging.
 
 See [Gas Tracking](../bifrost/how-bifrost-works.md#gas-tracking).
 
@@ -106,7 +106,7 @@ EVM chains are reorg-prone. Bifrost handles this by:
 - Emitting an `ErrataTx` if a previously observed transaction is missing
 - Reverting state changes (vault balances, etc.)
 
-See [Re-orgs & Errata](../bifrost/how-bifrost-works.md#re-org-detection).
+See [Re-orgs & Errata](../bifrost/how-bifrost-works.md#re-orgs--errata).
 
 ## Vault Address Derivation
 

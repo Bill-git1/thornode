@@ -56,6 +56,8 @@ THORNode provides raw blockchain data (e.g., balances, transactions) specific to
 
 Cosmos RPC provides generic Cosmos SDK data (e.g., account balances, transactions). Common endpoints include `/cosmos/bank/v1beta1/balances` and `/cosmos/base/tendermint/v1beta1/blocks`. Not all endpoints are enabled.
 
+Archive node RPC links can be found at: https://ops.ninerealms.com/links.
+
 ### Cosmos Documentation
 
 - Cosmos SDK v0.50 RPC - [Cosmos gRPC Guide](https://docs.cosmos.network/v0.50/learn/advanced/grpc_rest)
@@ -83,7 +85,7 @@ Tendermint (CometBFT) RPC provides consensus and node status data (e.g., block h
 
 ### Tendermint RPC Endpoints
 
-- **Mainnet:(for post-hard-fork blocks 4786560 and later)**
+- **Mainnet: (for post-hard-fork blocks 4786560 and later)**
   - [https://rpc.ninerealms.com](https://rpc.ninerealms.com)
   - [https://rpc.thorchain.liquify.com/genesis](https://rpc.thorchain.liquify.com/genesis)
   - [https://rpc.thorswap.net/](https://rpc.thorswap.net/)

@@ -4,7 +4,7 @@
 
 THORChain allows native L1 Swaps. On-chain [Memos](../concepts/memos.md) are used instruct THORChain how to swap, with the option to add [price limits](quickstart-guide.md#price-limits) and [affiliate fees](quickstart-guide.md#affiliate-fees). THORChain nodes observe the inbound transactions and when the majority have observed the transactions, the transaction is processed by threshold-signature transactions from THORChain vaults.
 
-Let's demonstrate decentralized, non-custodial cross-chain swaps. In this example, we will build a transaction that instructs THORChain to swap native Bitcoin to native Ethereum in one transaction.
+Let's demonstrate decentralised, non-custodial cross-chain swaps. In this example, we will build a transaction that instructs THORChain to swap native Bitcoin to native Ethereum in one transaction.
 
 ```admonish info
 The following examples use a free, hosted API provided by [Nine Realms](https://twitter.com/ninerealms_cap). If you want to run your own full node, please see [connecting-to-thorchain.md](../concepts/connecting-to-thorchain.md).
@@ -27,7 +27,7 @@ Only available pools can be used. (`where 'status' == Available)`
 All amounts are 1e8. Multiply native asset amounts by 100000000 when dealing with amounts in THORChain. 1 BTC = 100,000,000.
 ```
 
-**Request**: _Swap 1 BTC to ETH and send the ETH to_ `0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430` using [Streaming Swaps](./streaming-swaps.md), swapping every block (`streaming_interval=1`) and allowing THORNode to work out the optimal amount of blocks (`streaming_quantity=0`).
+**Request**: _Swap 1 BTC to ETH and send the ETH to_ `0x86d526d6624AbC0178cF7296cD538Ecc080A95F1` using [Streaming Swaps](./streaming-swaps.md), swapping every block (`streaming_interval=1`) and allowing THORNode to work out the optimal amount of blocks (`streaming_quantity=0`).
 
 [https://thornode.ninerealms.com/thorchain/quote/swap?from_asset=BTC.BTC&to_asset=ETH.ETH&amount=100000000&destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1&streaming_interval=1&streaming_quantity=0](https://thornode.ninerealms.com/thorchain/quote/swap?from_asset=BTC.BTC&to_asset=ETH.ETH&amount=100000000&destination=0x86d526d6624AbC0178cF7296cD538Ecc080A95F1&streaming_interval=1&streaming_quantity=0)
 
@@ -67,7 +67,7 @@ All amounts are 1e8. Multiply native asset amounts by 100000000 when dealing wit
   "total_swap_seconds": 1674
 ```
 
-_If you send 1 BTC to `bc1qlccxv985m20qvd8g5yp6g9lc0wlc70v6zlalz8` with the memo `=:ETH.ETH:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430`, you can expect to receive `20.35299208` ETH._
+_If you send 1 BTC to `bc1qt9723ak9t7lu7a97lt9kelq4gnrlmyvk4yhzwr` with the memo `=:ETH.ETH:0x86d526d6624AbC0178cF7296cD538Ecc080A95F1:0/1/0`, you can expect to receive `20.35299208` ETH._
 
 _For security reasons, your inbound transaction will be delayed by 600 seconds (1 BTC Block) and 1074 seconds (or 179 native THORChain blocks) for the outbound transaction,_ 2640 seconds all up*. You will pay an outbound gas fee of 0.0054 ETH and will incur 9 basis points (0.09%) of slippage due to streaming swaps, would be 41 bps without StreamingSwaps.*
 The swap will be conduced over 7 blocks taking 42 seconds for the streaming swap to complete.
@@ -83,7 +83,7 @@ If you'd prefer to calculate the swap yourself, see the [Fees](fees-and-wait-tim
 Construct, sign and broadcast a transaction on the BTC network with the following parameters:
 
 - Amount => `1.0`
-- Recipient => `bc1qlccxv985m20qvd8g5yp6g9lc0wlc70v6zlalz8`
+- Recipient => `bc1qt9723ak9t7lu7a97lt9kelq4gnrlmyvk4yhzwr`
 - Memo => `=:ETH.ETH:0x86d526d6624AbC0178cF7296cD538Ecc080A95F1:0/1/0`
 
 ```admonish error
@@ -118,7 +118,7 @@ Specify _tolerance_bps_ to give users control over the maximum slip they are wil
 
 Notice how a minimum amount (1342846539 / \~13.42 ETH) has been appended to the end of the memo. This tells THORChain to revert the transaction if the transacted amount is more than 100 basis points less than what the _expected_amount_out_ returns.
 
-### [Affiliate Fees](../concepts/fees.md#affiliate-fee)
+### [Affiliate Fees](../affiliate-guide/affiliate-fee-guide.md)
 
 Specify `affiliate` and `affiliate_bps` to skim a percentage of the swap as an affiliate fee. When a valid affiliate address and affiliate basis points are present in the memo, the protocol will skim affiliate_bps from the inbound swap amount and swap this to $RUNE with the affiliate address as the destination address. Affiliates may either be a RUNE address or a registered & un-expired THORName with a THORChain alias defined. If the THORName has a preferred asset set it must also have an alias for the preferred asset's chain. If an invalid, improperly configured, or expired THORName, or an invalid RUNE address is provided as an affiliate, the affiliate fee will be skipped.
 
@@ -170,7 +170,7 @@ Quote example:
 
 Notice how `dx:10` has been appended to the end of the memo. This instructs THORChain to skim 10 basis points from the swap. The user should still expect to receive the _expected_amount_out,_ meaning the affiliate fee has already been subtracted from this number.
 
-For more information on affiliate fees: [fees.md](../concepts/fees.md#affiliate-fee").
+For more information on affiliate fees: [Affiliate Fee Guide](../affiliate-guide/affiliate-fee-guide.md).
 
 ### Multiple Affiliates
 

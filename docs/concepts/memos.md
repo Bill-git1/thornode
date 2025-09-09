@@ -16,7 +16,9 @@ THORChain has a [memo size limit of 250 bytes](https://gitlab.com/thorchain/thor
 
 ### Dust Thresholds
 
-THORChain has various dust thresholds (dust limits), defined on a per-chain basis. Refer to the [Dust Thresholds](../bifrost/vault-behaviors.md#dust-thresholds) for details.
+THORChain has various dust thresholds (dust limits), defined on a per-chain basis. These are minimum amounts required for transactions to be processed by THORChain. Transactions below these thresholds will be ignored to prevent spam and ensure economic viability.
+
+For example, sending 1 satoshi of BTC or 1 wei of ETH would be below the dust threshold and ignored. Each chain has different thresholds based on their native transaction costs and economic considerations. Refer to the [Dust Thresholds](../bifrost/vault-behaviors.md#dust-thresholds) for current threshold values for each supported chain.
 
 ## Format
 
@@ -65,18 +67,18 @@ Perform an asset swap. If you'd like to implement a limit swap, use the `=<` pre
 For the DEX aggregator-oriented variation of the `SWAP` memo, see [Aggregators Memos](../aggregators/memos.md).
 ```
 
-| Parameter     | Notes                                                                                 | Conditions                                                                                                                                      |
-| ------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Payload       | Send the asset to swap.                                                               | Must be an active pool on THORChain.                                                                                                            |
-| `SWAP`        | The swap handler.                                                                     | Also `s` or `=` or `=<`                                                                                                                         |
-| `:ASSET`      | The [asset identifier](asset-notation.md).                                            | Can be shortened.                                                                                                                               |
-| `:DESTADDR`   | The destination address to send to.                                                   | Can use THORName.                                                                                                                               |
-| `/REFUNDADDR` | The destination address for a refund to be sent to.                                   | Optional. If provided, the refund will be sent to this address; otherwise, it will be sent to the originator’s address.                         |
-| `:LIM`        | The trade limit, i.e., set 100000000 to get a minimum of 1 full asset, else a refund. | Optional. 1e8 or scientific notation.                                                                                                           |
-| `/INTERVAL`   | Swap interval in blocks.                                                              | Optional. If 0, do not stream.                                                                                                                  |
-| `/QUANTITY`   | Swap quantity. The interval value determines the frequency of swaps in blocks.        | Optional. If 0, network will determine the number of swaps.                                                                                     |
-| `:AFFILIATE`  | The affiliate addresses.                                                              | Optional. Define up to [MultipleAffiliatesMaxCount](../mimir.md#swapping) (currently 5) THORNames or THOR Addresses, separated by `/`           |
-| `:FEE`        | The [affiliate fees](fees.md#affiliate-fee). RUNE is sent to affiliate.               | Optional. Ranges from 0 to 1000 Basis Points. Specify one fee for all affiliates, or individual fees matching the number of affiliates defined. |
+| Parameter     | Notes                                                                                                    | Conditions                                                                                                                                      |
+| ------------- | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Payload       | Send the asset to swap.                                                                                  | Must be an active pool on THORChain.                                                                                                            |
+| `SWAP`        | The swap handler.                                                                                        | Also `s` or `=` or `=<`                                                                                                                         |
+| `:ASSET`      | The [asset identifier](asset-notation.md).                                                               | Can be shortened.                                                                                                                               |
+| `:DESTADDR`   | The destination address to send to.                                                                      | Can use THORName.                                                                                                                               |
+| `/REFUNDADDR` | The destination address for a refund to be sent to.                                                      | Optional. If provided, the refund will be sent to this address; otherwise, it will be sent to the originator’s address.                         |
+| `:LIM`        | The trade limit, i.e., set 100000000 to get a minimum of 1 full asset, else a refund.                    | Optional. 1e8 or scientific notation.                                                                                                           |
+| `/INTERVAL`   | Swap interval in blocks.                                                                                 | Optional. If 0, do not stream.                                                                                                                  |
+| `/QUANTITY`   | Swap quantity. The interval value determines the frequency of swaps in blocks.                           | Optional. If 0, network will determine the number of swaps.                                                                                     |
+| `:AFFILIATE`  | The affiliate addresses.                                                                                 | Optional. Define up to [MultipleAffiliatesMaxCount](../mimir.md#swapping) (currently 5) THORNames or THOR Addresses, separated by `/`           |
+| `:FEE`        | The [affiliate fees](../affiliate-guide/affiliate-fee-guide.md#how-it-works). RUNE is sent to affiliate. | Optional. Ranges from 0 to 1000 Basis Points. Specify one fee for all affiliates, or individual fees matching the number of affiliates defined. |
 
 **Syntactic Examples:**
 
@@ -100,7 +102,6 @@ For the DEX aggregator-oriented variation of the `SWAP` memo, see [Aggregators M
 - `SWAP:ETH.ETH:0xe6a30f4f3bad978910e2cbb4d97581f5b5a0ade0:10000000/3/0:t:10` &mdash; same as above except sends 10 basis points from the input to affiliate `t` (THORSwap)
 - `s:ETH.ETH:0xe6a30f4f3bad978910e2cbb4d97581f5b5a0ade0:1e6/3/0:t:10` &mdash; same as above except with a reduced memo and scientific notation trade limit
 - `=:r:thor1el4ufmhll3yw7zxzszvfakrk66j7fx0tvcslym:19779138111` &mdash; swap to at least 197.79 RUNE
-- `=:ETH/USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48:thor15s4apx9ap7lazpsct42nmvf0t6am4r3w0r64f2:628197586176` &mdash; swap to at least 6281.9 Synthetic USDC (Synths are deprecated)
 - `=:BSC.BNB:0xe6a30f4f3bad978910e2cbb4d97581f5b5a0ade0:544e6/2/6` &mdash; swap to at least 5.4 BNB, using streaming swaps, 6 swaps, every 2 blocks
 - `=:BTC~BTC:thor1g6pnmnyeg48yc3lg796plt0uw50qpp7humfggz:1e6/1/0:dx:10` &mdash; Swap to Bitcoin Trade Asset, using a Limit, Streaming Swaps and a 10 basis point fee to the affiliate `dx` (Asgardex)
 - `=:BTC-BTC:thor1g6pnmnyeg48yc3lg796plt0uw50qpp7humfggz:1e6/1/0:dx:10` &mdash; Swap to Bitcoin Secured Asset, using a Limit, Streaming Swaps and a 10 basis point fee to the affiliate `dx` (Asgardex)
@@ -122,7 +123,7 @@ There are rules for adding liquidity, see [the rules here](https://docs.thorchai
 | `:POOL`       | The pool to add liquidity to.                                                                                                                                                                                                          | Can be shortened.                                                           |
 | `:PAIREDADDR` | The other address to link with. If on external chain, link to THOR address. If on THORChain, link to external address. If a paired address is found, the LP is matched and added. If none is found, the liquidity is put into pending. | Optional. If not specified, a single-sided add-liquidity action is created. |
 | `:AFFILIATE`  | The affiliate address. The affiliate is added to the pool as an LP.                                                                                                                                                                    | Optional. Must be a THORName or THOR Address.                               |
-| `:FEE`        | The [affiliate fee](fees.md#affiliate-fee).                                                                                                                                                                                            | Optional. Ranges from 0 to 1000 Basis Points.                               |
+| `:FEE`        | The [affiliate fee](../affiliate-guide/affiliate-fee-guide.md#how-it-works).                                                                                                                                                           | Optional. Ranges from 0 to 1000 Basis Points.                               |
 
 **Examples:**
 
@@ -242,7 +243,7 @@ Converts a L1 asset to a [Secured Asset](../concepts/secured-assets.md).
 | --------- | ----------------------------------- | ---------------------------------------------- |
 | Payload   | The asset to become a Secured Asset | Must be a L1 asset and supported by THORChain. |
 | `SECURE+` | The Secured Asset handler.          |                                                |
-| `ADDR`    | Must be a thor address              | Specifies the owner and desitnation            |
+| `ADDR`    | Must be a thor address              | Specifies the owner and destination            |
 
 **Example:** `SECURE+:thor1x2whgc2nt665y0kc44uywhynazvp0l8tp0vtu6` - Converts the sent asset and amount to a Secured Asset.
 
@@ -316,14 +317,14 @@ Deposit an asset into THORChain Savers.
 
 **`ADD:POOL::AFFILIATE:FEE`**
 
-| Parameter    | Notes                                                                  | Conditions                                      |
-| ------------ | ---------------------------------------------------------------------- | ----------------------------------------------- |
-| Payload      | The asset to add liquidity with.                                       | Must be supported by THORChain.                 |
-| `ADD`        | The deposit handler.                                                   | Also `+`                                        |
-| `:POOL`      | The pool to add liquidity to.                                          | Gas and stablecoin pools only.                  |
-| `:`          | Must be empty.                                                         | Optional. Required if adding affiliate and fee. |
-| `:AFFILIATE` | The affiliate address.                                                 | Optional. Must be a THORName or THOR Address.   |
-| `:FEE`       | The [affiliate fee](fees.md#affiliate-fee). RUNE is sent to affiliate. | Optional. Ranges from 0 to 1000 Basis Points.   |
+| Parameter    | Notes                                                                                                   | Conditions                                      |
+| ------------ | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Payload      | The asset to add liquidity with.                                                                        | Must be supported by THORChain.                 |
+| `ADD`        | The deposit handler.                                                                                    | Also `+`                                        |
+| `:POOL`      | The pool to add liquidity to.                                                                           | Gas and stablecoin pools only.                  |
+| `:`          | Must be empty.                                                                                          | Optional. Required if adding affiliate and fee. |
+| `:AFFILIATE` | The affiliate address.                                                                                  | Optional. Must be a THORName or THOR Address.   |
+| `:FEE`       | The [affiliate fee](../affiliate-guide/affiliate-fee-guide.md#how-it-works). RUNE is sent to affiliate. | Optional. Ranges from 0 to 1000 Basis Points.   |
 
 **Examples:**
 
@@ -355,7 +356,7 @@ Withdraw an asset from THORChain Savers.
 - `wd:BTC/BTC:1000` &mdash; withdraw 10% from BTC Savers
 
 ```admonish info
-Withdrawing from Savers can be also be done [without a memo](../saving-guide/quickstart-guide.md#basic-mechanics).
+Withdrawing from Savers can be also be done [without a memo](../archived/saving-guide/quickstart-guide.md#basic-mechanics).
 ```
 
 ### **Open Loan**
@@ -364,15 +365,15 @@ Open a loan on THORChain.
 
 **`LOAN+:ASSET:DESTADDR:MINOUT:AFFILIATE:FEE`**
 
-| Parameter    | Notes                                                                  | Conditions                                    |
-| ------------ | ---------------------------------------------------------------------- | --------------------------------------------- |
-| Payload      | The collateral to open the loan with.                                  | Must be L1 supported by THORChain.            |
-| `LOAN+`      | The loan open handler.                                                 | Also `$+`                                     |
-| `:ASSET`     | Target debt [asset identifier](asset-notation.md).                     | Can be shortened.                             |
-| `:DESTADDR`  | The destination address to send the debt to.                           | Can use THORName.                             |
-| `:MINOUT`    | Minimum debt amount, else a refund. Similar to `:LIM`.                 | Optional. 1e8 format.                         |
-| `:AFFILIATE` | The affiliate address.                                                 | Optional. Must be a THORName or THOR Address. |
-| `:FEE`       | The [affiliate fee](fees.md#affiliate-fee). RUNE is sent to affiliate. | Optional. Ranges from 0 to 1000 Basis Points. |
+| Parameter    | Notes                                                                                                   | Conditions                                    |
+| ------------ | ------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| Payload      | The collateral to open the loan with.                                                                   | Must be L1 supported by THORChain.            |
+| `LOAN+`      | The loan open handler.                                                                                  | Also `$+`                                     |
+| `:ASSET`     | Target debt [asset identifier](asset-notation.md).                                                      | Can be shortened.                             |
+| `:DESTADDR`  | The destination address to send the debt to.                                                            | Can use THORName.                             |
+| `:MINOUT`    | Minimum debt amount, else a refund. Similar to `:LIM`.                                                  | Optional. 1e8 format.                         |
+| `:AFFILIATE` | The affiliate address.                                                                                  | Optional. Must be a THORName or THOR Address. |
+| `:FEE`       | The [affiliate fee](../affiliate-guide/affiliate-fee-guide.md#how-it-works). RUNE is sent to affiliate. | Optional. Ranges from 0 to 1000 Basis Points. |
 
 **Examples:**
 
@@ -413,13 +414,13 @@ Deposit RUNE to the RUNEPool
 
 **`POOL-:BASISPOINTS:AFFILIATE:FEE`**
 
-| Parameter      | Notes                                       | Conditions                                    |
-| -------------- | ------------------------------------------- | --------------------------------------------- |
-| Payload        | None required.                              | Use `MsgDeposit`.                             |
-| `POOL-`        | The The RUNEPool handler.                   |                                               |
-| `:BASISPOINTS` | Basis points.                               | Required. Range 0-10000, where 10000 = 100%.  |
-| `:AFFILIATE`   | The affiliate address.                      | Optional. Must be a THORName or THOR Address. |
-| `:FEE`         | The [affiliate fee](fees.md#affiliate-fee). | Optional. Ranges from 0 to 1000 Basis Points. |
+| Parameter      | Notes                                                                        | Conditions                                    |
+| -------------- | ---------------------------------------------------------------------------- | --------------------------------------------- |
+| Payload        | None required.                                                               | Use `MsgDeposit`.                             |
+| `POOL-`        | The The RUNEPool handler.                                                    |                                               |
+| `:BASISPOINTS` | Basis points.                                                                | Required. Range 0-10000, where 10000 = 100%.  |
+| `:AFFILIATE`   | The affiliate address.                                                       | Optional. Must be a THORName or THOR Address. |
+| `:FEE`         | The [affiliate fee](../affiliate-guide/affiliate-fee-guide.md#how-it-works). | Optional. Ranges from 0 to 1000 Basis Points. |
 
 Example: `POOL-:10000:dx:10` - 100% Withdraw from RUNEPool with a 10 basis point affiliate fee. Affiliates receive the corresponding basis points of positive PnL. If user is withdrawing with a loss, the affiliate will receive no fee.
 

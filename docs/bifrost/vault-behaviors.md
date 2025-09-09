@@ -37,7 +37,7 @@ Vaults transition between these statuses as follows:
 
 ### Vault Selection for Inbound Transactions
 
-To improve liquidity distribution, reduce fragmentation and minimize security risk, the THORChain protocol selects the vault with the **lhighest bond-to-asset ratio** (after accounting for pending outbounds) to be the current [**inbound address**](../concepts/querying-thorchain.md#getting-the-asgard-vault).
+To improve liquidity distribution, reduce fragmentation and minimize security risk, the THORChain protocol selects the vault with the **highest bond-to-asset ratio** (after accounting for pending outbounds) to be the current [**inbound address**](../concepts/querying-thorchain.md#getting-the-asgard-vault).
 
 - This selection is determined using the `GetMostSecure()` method, which ranks vaults by comparing their bond coverage to the total vault value (in RUNE terms).
 - The most secure vault is the one with the highest bond-to-value ratio and becomes the primary vault for receiving inbound transactions.
@@ -47,7 +47,7 @@ This dynamic selection prioritizes security, distributes inbound load across vau
 
 ## TSS Signing
 
-THORChain uses **Threshold Signature Scheme (TSS)** to enable vault signing without ever reconstructing the private key. This allows a group of validator nodes to jointly sign transactions in a secure, decentralized manner. This mechanism is efficient and assumes that at least 67% of signing nodes act honestly and have access to accurate chain state.
+THORChain uses **Threshold Signature Scheme (TSS)** to enable vault signing without ever reconstructing the private key. This allows a group of validator nodes to jointly sign transactions in a secure, decentralised manner. This mechanism is efficient and assumes that at least 67% of signing nodes act honestly and have access to accurate chain state.
 
 ### Signing Process
 

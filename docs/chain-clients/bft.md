@@ -16,7 +16,7 @@ For wallet developers, see [Sending Transactions](../concepts/sending-transactio
 
 BFT chains achieve deterministic finality, so transactions are treated as final after one block. No extended confirmation counting logic is applied.
 
-See [Finality & Confirmation Counting](../bifrost/how-bifrost-works.md#confirmation-counting).
+See [Finality & Confirmation Counting](../bifrost/how-bifrost-works.md#finality--pre-confirmation).
 
 ## Gas Tracking
 

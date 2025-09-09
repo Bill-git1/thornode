@@ -4,11 +4,11 @@ This section explains how to evaluate, propose, and implement a new Layer 1 (L1)
 
 ## Contents
 
-| Page                                                                  | Description                                                                                                                                                             |
-| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Evaluating New Chains](./evaluating-new-chains.md)                   | When and why a new chain should be added. Includes decentralization, ossification, liquidity, and developer standards.                                                  |
-| [New Chain Integration Process](./new-chain-process.md)               | Step-by-step process for proposing, approving, testing, and launching a new chain. Includes Node Mimir votes and stagenet requirements.                                 |
-| [Chain Client Implementation Guide](./chain-client-implementation.md) | Technical reference for developers implementing a new `ChainClient` in Bifrost. Includes required interfaces, memo parsing, vault handling, solvency, and testing tips. |
+| Page                                                           | Description                                                                                                                                                             |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Evaluating New Chains](./evaluating-new-chains.md)            | When and why a new chain should be added. Includes decentralization, ossification, liquidity, and developer standards.                                                  |
+| [New Chain Integration Process](./new-chain-process.md)        | Step-by-step process for proposing, approving, testing, and launching a new chain. Includes Node Mimir votes and stagenet requirements.                                 |
+| [Chain Client Implementation Guide](./implementation-guide.md) | Technical reference for developers implementing a new `ChainClient` in Bifrost. Includes required interfaces, memo parsing, vault handling, solvency, and testing tips. |
 
 ## 🔗 Related Resources
 
