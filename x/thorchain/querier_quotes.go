@@ -88,24 +88,58 @@ func quoteParseAddress(ctx cosmos.Context, mgr *Mgrs, addrString string, chain c
 }
 
 // parseMultipleAffiliateParams - attempts to parse one or more affiliates + affiliate
-// bps. skips any that are invalid
-func parseMultipleAffiliateParams(ctx cosmos.Context, mgr *Mgrs, affiliateParams, bpParams []string) ([]string, []sdkmath.Uint, sdkmath.Uint, error) {
+// bps from slash-separated strings. skips any that are invalid
+func parseMultipleAffiliateParams(ctx cosmos.Context, mgr *Mgrs, affiliateParam, bpParam string) ([]string, []sdkmath.Uint, sdkmath.Uint, error) {
 	affParams := make([]string, 0)
 	affiliateBps := make([]sdkmath.Uint, 0)
 	totalBps := sdkmath.ZeroUint()
 
-	// If there is only one bps defined, but multiple affiliates, apply the bps to all affiliates
-	if len(bpParams) == 1 && len(affiliateParams) > 1 {
-		bpParams = make([]string, len(affiliateParams))
-		for i := range bpParams {
-			bpParams[i] = bpParams[0]
+	// Split by slash to get individual values, filter out empty strings
+	var affiliateParams []string
+	var bpParams []string
+
+	if affiliateParam != "" {
+		parts := strings.Split(affiliateParam, "/")
+		for _, part := range parts {
+			if strings.TrimSpace(part) != "" {
+				affiliateParams = append(affiliateParams, strings.TrimSpace(part))
+			}
 		}
+	}
+
+	if bpParam != "" {
+		parts := strings.Split(bpParam, "/")
+		for _, part := range parts {
+			if strings.TrimSpace(part) != "" {
+				bpParams = append(bpParams, strings.TrimSpace(part))
+			}
+		}
+	}
+
+	// If there is only one bps defined, but multiple affiliates, apply the bps to all affiliates
+	switch {
+	case len(bpParams) == 1 && len(affiliateParams) == 0:
+		// Handle specific case: BPS provided but no affiliate
+		return nil, nil, sdkmath.ZeroUint(), fmt.Errorf("BPS value specified but no affiliate: (%d affiliates, %d BPS values)", len(affiliateParams), len(bpParams))
+	case len(bpParams) != len(affiliateParams):
+		// Handle general mismatch case
+		return nil, nil, sdkmath.ZeroUint(), fmt.Errorf("mismatch between number of affiliates (%d) and BPS values (%d)", len(affiliateParams), len(bpParams))
 	}
 
 	if len(affiliateParams) > 0 {
 		for i, p := range affiliateParams {
-			bpParam := bpParams[i]
-			bps, err := cosmos.ParseUint(bpParam)
+			var currentBpParam string
+			switch {
+			case len(bpParams) == 0:
+				continue // Skip if no BPS values at all
+			case i >= len(bpParams):
+				// This should not happen after the validation above, but keep as safety
+				continue
+			default:
+				currentBpParam = bpParams[i]
+			}
+
+			bps, err := cosmos.ParseUint(currentBpParam)
 			if err != nil {
 				continue
 			}

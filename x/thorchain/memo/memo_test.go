@@ -229,6 +229,25 @@ func (s *MemoSuite) TestParseWithAbbreviated(c *C) {
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "total affiliate fee basis points can't be more than 10000")
 
+	// test whitespace trimming in affiliates (edge case)
+	ms = "=:e:0x90f2b1ae50e6018230e90a33f98c7844a0ab635a::thor1g98cy3n9mmjrpn0sxmn63lztelera37n8n67c0/thor1dheycdevq39qlkxs2a6wuuzyn4aqy7qcw5m9sq/thor1xyerxdp4xcmnswfsxyerxdp4xcmnswfstmd8p6:10/20/30"
+	memo, err = ParseMemoWithTHORNames(ctx, k, ms)
+	c.Assert(err, IsNil)
+	c.Check(len(memo.GetAffiliates()), Equals, 3)
+	c.Check(memo.GetAffiliates()[0], Equals, "thor1g98cy3n9mmjrpn0sxmn63lztelera37n8n67c0")
+	c.Check(memo.GetAffiliates()[1], Equals, "thor1dheycdevq39qlkxs2a6wuuzyn4aqy7qcw5m9sq")
+	c.Check(memo.GetAffiliates()[2], Equals, "thor1xyerxdp4xcmnswfsxyerxdp4xcmnswfstmd8p6")
+
+	// test empty affiliate parts (should be filtered out)
+	ms = "=:e:0x90f2b1ae50e6018230e90a33f98c7844a0ab635a::thor1g98cy3n9mmjrpn0sxmn63lztelera37n8n67c0/thor1dheycdevq39qlkxs2a6wuuzyn4aqy7qcw5m9sq:10/30"
+	memo, err = ParseMemoWithTHORNames(ctx, k, ms)
+	c.Assert(err, IsNil)
+	c.Check(len(memo.GetAffiliates()), Equals, 2)
+	c.Check(memo.GetAffiliates()[0], Equals, "thor1g98cy3n9mmjrpn0sxmn63lztelera37n8n67c0")
+	c.Check(memo.GetAffiliates()[1], Equals, "thor1dheycdevq39qlkxs2a6wuuzyn4aqy7qcw5m9sq")
+	c.Check(memo.GetAffiliatesBasisPoints()[0].Uint64(), Equals, uint64(10))
+	c.Check(memo.GetAffiliatesBasisPoints()[1].Uint64(), Equals, uint64(30))
+
 	// test streaming swap
 	memo, err = ParseMemoWithTHORNames(ctx, k, "=:"+common.RuneAsset().String()+":0x90f2b1ae50e6018230e90a33f98c7844a0ab635a:1200/10/20")
 	c.Assert(err, IsNil)

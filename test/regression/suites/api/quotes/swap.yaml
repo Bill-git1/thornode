@@ -750,8 +750,8 @@ params:
   from_asset: THOR.RUNE
   to_asset: ETH.ETH
   amount: 1000000000
-  affiliate: xx,yy,zz
-  affiliate_bps: 10,20,30
+  affiliate: xx/yy/zz
+  affiliate_bps: 10/20/30
   destination: {{ addr_eth_fox }}
 status: 200
 asserts:
@@ -786,8 +786,8 @@ params:
   from_asset: THOR.RUNE
   to_asset: ETH.ETH
   amount: 1000000000
-  affiliate: xx,yy,zz
-  affiliate_bps: 100,50,40
+  affiliate: xx/yy/zz
+  affiliate_bps: 100/50/40
   destination: {{ addr_eth_fox }}
 asserts:
   - .memo == "=:e:{{ addr_eth_fox }}::xx/yy/zz:100/50/40"

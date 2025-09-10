@@ -2,6 +2,7 @@ package thorchain
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 
 	"github.com/blang/semver"
@@ -1314,8 +1315,8 @@ func (s *QuerierSuite) TestQuerySwap(c *C) {
 		Destination:       addressTHOR,
 		ToleranceBps:      "300",
 		RefundAddress:     addressBTC,
-		Affiliate:         []string{affiliateAddr},
-		AffiliateBps:      []string{"50"},
+		Affiliate:         affiliateAddr,
+		AffiliateBps:      "50",
 	}
 
 	// memo greater than 80 bytes -> return error
@@ -1361,6 +1362,22 @@ func (s *QuerierSuite) TestQuerySwap(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(queryPoolsResp, NotNil)
 	// c.Assert(len(queryPoolsResp.Vout), Equals, 0)
+
+	// Test slash-separated affiliate functionality
+	affiliate1 := GetRandomTHORAddress().String()
+	affiliate2 := GetRandomTHORAddress().String()
+	request.Affiliate = affiliate1 + "/" + affiliate2
+	request.AffiliateBps = "30/15"
+	request.Extended = true
+
+	queryPoolsResp, err = s.queryServer.QuoteSwap(s.ctx, &request)
+	c.Assert(err, IsNil)
+	c.Assert(queryPoolsResp, NotNil)
+
+	// Verify memo contains both affiliates with correct basis points
+	// The memo format includes streaming params: =:r:destination/refund:amount/streaming_interval/streaming_quantity:affiliates:affiliate_bps
+	expectedMemo := fmt.Sprintf("=:r:%s/%s:970000000/1/1:%s/%s:30/15", request.Destination, request.RefundAddress, affiliate1, affiliate2)
+	c.Assert(queryPoolsResp.Memo, Equals, expectedMemo)
 }
 
 func (s *QuerierSuite) TestNetwork(c *C) {

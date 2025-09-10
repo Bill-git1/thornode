@@ -328,9 +328,7 @@ func (op *OpCheck) prefetch(routine int) {
 	// add params
 	q := req.URL.Query()
 	for k, v := range op.Params {
-		for _, val := range strings.Split(v, ",") {
-			q.Add(k, val)
-		}
+		q.Add(k, v)
 	}
 	req.URL.RawQuery = q.Encode()
 
