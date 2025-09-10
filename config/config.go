@@ -92,7 +92,6 @@ func Init() {
 	// explicit keys for the new configuration package. In the meantime we will preserve
 	// mappings from historical environment for backwards compatibility.
 	assert(viper.BindEnv("bifrost.thorchain.signer_name", "SIGNER_NAME"))
-	assert(viper.BindEnv("bifrost.thorchain.signer_name_eddsa", "SIGNER_NAME_EDDSA"))
 	assert(viper.BindEnv(
 		"bifrost.chains.btc.block_scanner.block_height_discover_back_off",
 		"BLOCK_SCANNER_BACKOFF",
@@ -111,6 +110,10 @@ func Init() {
 	))
 	assert(viper.BindEnv(
 		"bifrost.chains.eth.block_scanner.block_height_discover_back_off",
+		"BLOCK_SCANNER_BACKOFF",
+	))
+	assert(viper.BindEnv(
+		"bifrost.chains.sol.block_scanner.block_height_discover_back_off",
 		"BLOCK_SCANNER_BACKOFF",
 	))
 	assert(viper.BindEnv(
@@ -508,6 +511,7 @@ type Bifrost struct {
 		BASE  BifrostChainConfiguration `mapstructure:"base"`
 		TRON  BifrostChainConfiguration `mapstructure:"tron"`
 		XRP   BifrostChainConfiguration `mapstructure:"xrp"`
+		SOL   BifrostChainConfiguration `mapstructure:"sol"`
 	} `mapstructure:"chains"`
 	TSS             BifrostTSSConfiguration    `mapstructure:"tss"`
 	ObserverLevelDB LevelDBOptions             `mapstructure:"observer_leveldb"`
@@ -550,6 +554,7 @@ func (b Bifrost) GetChains() map[common.Chain]BifrostChainConfiguration {
 		common.BASEChain:  b.Chains.BASE,
 		common.TRONChain:  b.Chains.TRON,
 		common.XRPChain:   b.Chains.XRP,
+		common.SOLChain:   b.Chains.SOL,
 	}
 }
 

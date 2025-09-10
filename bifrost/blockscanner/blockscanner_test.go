@@ -304,14 +304,14 @@ func (s *BlockScannerTestSuite) TestIsChainPaused(c *C) {
 	c.Check(err, IsNil)
 
 	// Should not be paused
-	isHalted := cbs.isChainPaused()
+	isHalted := IsChainPaused(cbs.cfg, cbs.logger, cbs.thorchainBridge)
 	c.Assert(isHalted, Equals, false)
 
 	// Setting Halt<chain>Chain should pause
 	mimirMap["HaltETHChain"] = 2
 	// Wait for one block's time so as to replace the cache with an updated query.
 	time.Sleep(constants.ThorchainBlockTime)
-	isHalted = cbs.isChainPaused()
+	isHalted = IsChainPaused(cbs.cfg, cbs.logger, cbs.thorchainBridge)
 	c.Assert(isHalted, Equals, true)
 	mimirMap["HaltETHChain"] = 0
 
@@ -319,7 +319,7 @@ func (s *BlockScannerTestSuite) TestIsChainPaused(c *C) {
 	mimirMap["SolvencyHaltETHChain"] = 2
 	// Wait for one block's time so as to replace the cache with an updated query.
 	time.Sleep(constants.ThorchainBlockTime)
-	isHalted = cbs.isChainPaused()
+	isHalted = IsChainPaused(cbs.cfg, cbs.logger, cbs.thorchainBridge)
 	c.Assert(isHalted, Equals, true)
 	mimirMap["SolvencyHaltETHChain"] = 0
 
@@ -327,7 +327,7 @@ func (s *BlockScannerTestSuite) TestIsChainPaused(c *C) {
 	mimirMap["HaltChainGlobal"] = 2
 	// Wait for one block's time so as to replace the cache with an updated query.
 	time.Sleep(constants.ThorchainBlockTime)
-	isHalted = cbs.isChainPaused()
+	isHalted = IsChainPaused(cbs.cfg, cbs.logger, cbs.thorchainBridge)
 	c.Assert(isHalted, Equals, true)
 	mimirMap["HaltChainGlobal"] = 0
 
@@ -335,7 +335,7 @@ func (s *BlockScannerTestSuite) TestIsChainPaused(c *C) {
 	mimirMap["NodePauseChainGlobal"] = 4 // node pause only halts for an hour, so pause height needs to be larger than thor height
 	// Wait for one block's time so as to replace the cache with an updated query.
 	time.Sleep(constants.ThorchainBlockTime)
-	isHalted = cbs.isChainPaused()
+	isHalted = IsChainPaused(cbs.cfg, cbs.logger, cbs.thorchainBridge)
 	c.Assert(isHalted, Equals, true)
 }
 

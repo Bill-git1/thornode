@@ -74,7 +74,7 @@ func TestSeedToXrpWallet(t *testing.T) {
 			privKey = &secp256k1.PrivKey{Key: privKeyBz}
 		}
 		t.Run(tt.name, func(t *testing.T) {
-			keyManager, err := NewKeyManager(privKey, tt.keyType)
+			keyManager, err := NewKeyManager(privKey)
 			if tt.shouldError {
 				require.Error(t, err)
 			} else {

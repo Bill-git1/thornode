@@ -701,7 +701,11 @@ func (s *Signer) signAndBroadcast(item TxOutStoreItem) ([]byte, *types.TxInItem,
 
 		return nil, observation, err
 	}
-	s.logger.Info().Str("txid", hash).Str("memo", tx.Memo).Msg("broadcasted tx to chain")
+	s.logger.Info().
+		Str("chain", chain.GetChain().String()).
+		Str("txid", hash).
+		Str("memo", tx.Memo).
+		Msg("broadcasted tx to chain")
 
 	if s.isTssKeysign(tx.VaultPubKey) || s.isTssKeysign(tx.VaultPubKeyEddsa) {
 		s.tssKeysignMetricMgr.SetTssKeysignMetric(hash, elapse.Milliseconds())
@@ -746,6 +750,7 @@ func (s *Signer) storageList() []TxOutStoreItem {
 
 func (s *Signer) processTransaction(item TxOutStoreItem) {
 	s.logger.Info().
+		Str("chain", item.TxOutItem.Chain.String()).
 		Int64("height", item.Height).
 		Int("status", int(item.Status)).
 		Interface("tx", item.TxOutItem).

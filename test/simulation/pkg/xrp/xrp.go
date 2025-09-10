@@ -45,7 +45,7 @@ func NewClient(chain common.Chain, host string, keys *thorclient.Keys) (LiteChai
 	if err != nil {
 		return nil, fmt.Errorf("fail to get private key: %w", err)
 	}
-	localKm, err := keymanager.NewKeyManager(privKey, keymanager.SECP256K1)
+	localKm, err := keymanager.NewKeyManager(privKey)
 	if err != nil {
 		return nil, fmt.Errorf("fail to create key manager: %w", err)
 	}

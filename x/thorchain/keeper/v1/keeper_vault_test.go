@@ -45,6 +45,24 @@ func (s *KeeperVaultSuite) TestVault(c *C) {
 	c.Check(k.DeleteVault(ctx, vault1.PubKey), NotNil)
 }
 
+func (s *KeeperVaultSuite) TestVaultV2(c *C) {
+	ctx, k := setupKeeperForTest(c)
+	existVault, err := k.HasValidVaultPools(ctx)
+	c.Check(err, IsNil)
+	c.Check(existVault, Equals, false)
+
+	pubKey := GetRandomPubKey()
+	eddsaPubKey := GetRandomPubKey()
+	asgard := NewVaultV2(ctx.BlockHeight(), ActiveVault, AsgardVault, pubKey, common.Chains{common.SOLChain}.Strings(), []ChainContract{}, eddsaPubKey)
+	c.Assert(k.SetVault(ctx, asgard), IsNil)
+
+	// check we can get vault by eddsa key
+	v, err := k.GetVault(ctx, eddsaPubKey)
+	c.Assert(err, IsNil)
+	c.Assert(v.PubKey, Equals, pubKey)
+	c.Assert(v.PubKeyEddsa, Equals, eddsaPubKey)
+}
+
 func (s *KeeperVaultSuite) TestVaultSorBySecurity(c *C) {
 	ctx, k := setupKeeperForTest(c)
 

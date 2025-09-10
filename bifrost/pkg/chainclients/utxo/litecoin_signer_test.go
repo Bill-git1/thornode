@@ -21,6 +21,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	cKeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
+	ltcchaincfg "github.com/ltcsuite/ltcd/chaincfg"
+	"github.com/ltcsuite/ltcutil"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/storage"
 	. "gopkg.in/check.v1"
@@ -29,6 +31,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/utxo"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	stypes "gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
+	ltctxscript "gitlab.com/thorchain/thornode/v3/bifrost/txscript/ltcd-txscript"
 	"gitlab.com/thorchain/thornode/v3/cmd"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
@@ -324,7 +327,7 @@ func (s *LitecoinSignerSuite) TestIsSelfTransaction(c *C) {
 }
 
 func (s *LitecoinSignerSuite) TestEstimateTxSize(c *C) {
-	size := s.client.estimateTxSize("OUT:2180B871F2DEA2546E1403DBFE9C26B062ABAFFD979CF3A65F2B4D2230105CF1", []btcjson.ListUnspentResult{
+	txs := []btcjson.ListUnspentResult{
 		{
 			TxID:      "66d2d6b5eb564972c59e4797683a1225a02515a41119f0a8919381236b63e948",
 			Vout:      0,
@@ -335,8 +338,21 @@ func (s *LitecoinSignerSuite) TestEstimateTxSize(c *C) {
 			Vout:      0,
 			Spendable: true,
 		},
-	})
-	c.Assert(size, Equals, int64(255))
+	}
+	const memo = "OUT:2180B871F2DEA2546E1403DBFE9C26B062ABAFFD979CF3A65F2B4D2230105CF1"
+	nullDataScripts, err := MemoToScripts(memo, ltctxscript.MaxDataCarrierSize, ltctxscript.NullDataScript, ltctxscript.PayToWitnessScript)
+	c.Assert(err, IsNil)
+	addr, err := ltcutil.DecodeAddress("LUWwvoi6W2vtemTMquCJcscmVqfnLFy832", &ltcchaincfg.MainNetParams)
+	c.Assert(err, IsNil)
+	buf, err := ltctxscript.PayToAddrScript(addr)
+	c.Assert(err, IsNil)
+	size := s.client.estimateTxSize(txs, nullDataScripts, buf, buf)
+	c.Assert(size, Equals, int64(294))
+	const longMemo = "OUT:2180B871F2DEA2546E1403DBFE9C26B062ABAFFD979CF3A65F2B4D2230105CF12180B871F2DEA2546E1403DBFE9C26B062ABAFFD979CF3A65F2B4D2230105CF1"
+	nullDataScripts, err = MemoToScripts(longMemo, ltctxscript.MaxDataCarrierSize, ltctxscript.NullDataScript, ltctxscript.PayToWitnessScript)
+	c.Assert(err, IsNil)
+	size = s.client.estimateTxSize(txs, nullDataScripts, buf, buf)
+	c.Assert(size, Equals, int64(400))
 }
 
 func (s *LitecoinSignerSuite) TestSignAddressPubKeyShouldFail(c *C) {

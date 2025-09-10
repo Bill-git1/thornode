@@ -37,11 +37,6 @@ const (
 	quoteWarning         = "Do not cache this response. Do not send funds after the expiry."
 	quoteExpiration      = 15 * time.Minute
 	ethBlockRewardAndFee = 3 * 1e18
-
-	dustLimitBtc  = 294
-	dustLimitLtc  = 2940
-	dustLimitDoge = 546
-	dustLimitBch  = 546
 )
 
 var nullLogger = log.NewNopLogger()
@@ -888,12 +883,10 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 		}
 
 		var address string
-		var amount int64
+		amount := fromChain.P2WPKHOutputValue()
 
 		switch fromChain {
 		case common.BTCChain:
-			// https://github.com/bitcoin/bitcoin/blob/29.x/src/policy/policy.cpp#L28-L41
-			amount = dustLimitBtc
 			params := &btcchaincfg.MainNetParams
 			if network == common.MockNet {
 				params = &btcchaincfg.RegressionNetParams
@@ -904,10 +897,6 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 			}
 			address = hash.String()
 		case common.LTCChain:
-			// dust relay fee in 'lits' is 10x of the fees on btc (30k vs 3k)
-			// https://github.com/litecoin-project/litecoin/blob/v0.21.4/src/policy/policy.h#L52
-			// https://github.com/litecoin-project/litecoin/blob/v0.21.4/src/policy/policy.cpp#L17-L30
-			amount = dustLimitLtc
 			params := &ltcchaincfg.MainNetParams
 			if network == common.MockNet {
 				params = &ltcchaincfg.RegressionNetParams
@@ -918,8 +907,6 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 			}
 			address = hash.String()
 		case common.DOGEChain:
-			// using bitcoin default for p2pkh txout
-			amount = dustLimitDoge
 			params := &dogechaincfg.MainNetParams
 			if network == common.MockNet {
 				params = &dogechaincfg.RegressionNetParams
@@ -930,8 +917,6 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 			}
 			address = hash.String()
 		case common.BCHChain:
-			// using bitcoin default for p2pkh txout
-			amount = dustLimitBch
 			params := &bchchaincfg.MainNetParams
 			if network == common.MockNet {
 				params = &bchchaincfg.RegressionNetParams

@@ -225,6 +225,10 @@ services:
       BIFROST_CHAINS_NOBLE_COSMOS_GRPC_HOST: "noble:9090"
       BIFROST_CHAINS_NOBLE_COSMOS_CHAIN_ID: "localnoble"
 
+      # enable solana
+      BIFROST_CHAINS_SOL_DISABLED: "false"
+      BIFROST_CHAINS_SOL_RPC_HOST: ${SOL_HOST:-http://solana:8899}
+
       # set fixed gas rate for evm chains
       BIFROST_CHAINS_ETH_BLOCK_SCANNER_FIXED_GAS_RATE: 20_000_000_000 # 20 gwei
       BIFROST_CHAINS_AVAX_BLOCK_SCANNER_FIXED_GAS_RATE: 100_000_000_000 # 100 navax
@@ -639,3 +643,23 @@ services:
     environment:
       TRON_NODE_TYPE: mocknet-fullnode
       TRON_SEED_NODE: docker-tron-supernode-1:18888
+
+  # ------------------------------ solana ------------------------------
+
+  solana:
+    profiles:
+      - mocknet
+      - mocknet-cluster
+    restart: unless-stopped
+    image: anzaxyz/agave:v2.2.10
+    volumes:
+      - "./mocknet/solana:/mocknet"
+    entrypoint: /mocknet/entrypoint.sh
+    ports:
+      - 8899:8899
+      - 8900:8900
+      - 10000:10000
+    environment:
+      RPC_PORT: "8899"
+      AIRDROP_ADDRESS: "AAH1XhfycX678et7Pjvwp1DMWnHpSP92wpJwV19MXHtX"
+      AIRDROP_AMOUNT: "10000"

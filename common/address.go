@@ -64,9 +64,8 @@ func NewAddress(address string) (Address, error) {
 		return Address(address), nil
 	}
 
-	// Check ED25519 (base58 encoded) addresses - SOL addresses must be 32 bytes long
-	res, err := base58.Decode(address)
-	if err == nil && len(res) == 32 {
+	// Check is sol address
+	if IsValidSOLAddress(address) {
 		return Address(address), nil
 	}
 
@@ -92,6 +91,15 @@ func IsValidTRONAddress(address string) bool {
 	// prefix (1 byte, 0x41) + address (20 bytes) + checksum (4 bytes)
 	decoded, err := base58.Decode(address)
 	return err == nil && len(decoded) == 25 && decoded[0] == 0x41
+}
+
+func IsValidSOLAddress(address string) bool {
+	decoded, err := base58.Decode(address)
+	if err != nil {
+		return false
+	}
+
+	return len(decoded) == 32
 }
 
 // IsValidBCHAddress determinate whether the address is a valid new BCH address format
@@ -250,6 +258,8 @@ func (addr Address) IsChain(chain Chain) bool {
 			return true
 		}
 		return false
+	case SOLChain:
+		return IsValidSOLAddress(addr.String())
 	default:
 		return true // if THORNode don't specifically check a chain yet, assume its ok.
 	}
@@ -364,6 +374,8 @@ func (addr Address) GetNetwork(chain Chain) ChainNetwork {
 		if err == nil {
 			return MockNet
 		}
+	case SOLChain:
+		return currentNetwork
 	}
 	return currentNetwork
 }

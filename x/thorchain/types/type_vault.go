@@ -308,18 +308,29 @@ func (m *Vault) LenPendingTxBlockHeights(currentBlockHeight, maxBlocks int64) in
 	return total
 }
 
+func (m *Vault) AlgoPubKey(chain common.Chain) (common.PubKey, error) {
+	switch chain.GetSigningAlgo() {
+	case common.SigningAlgoSecp256k1:
+		return m.PubKey, nil
+	case common.SigningAlgoEd25519:
+		if m.PubKeyEddsa.IsEmpty() {
+			return "", fmt.Errorf("vault has no eddsa public key")
+		}
+		return m.PubKeyEddsa, nil
+	}
+	return "", fmt.Errorf("unsupported signing algorithm: %s", chain.GetSigningAlgo())
+}
+
 // GetAddress return the address of the vault, depends on the chain's signing algorithm
 // if the chain is using secp256k1 , it will return the secp256k1 address
 // if the chain is using eddsa , it will return the eddsa address
 // avoid calling Vault.PubKey.GetAddress directly , as it will only return the secp256k1 address
 func (m *Vault) GetAddress(chain common.Chain) (common.Address, error) {
-	if chain.GetSigningAlgo() == common.SigningAlgoSecp256k1 {
-		return m.PubKey.GetAddress(chain)
+	pubKey, err := m.AlgoPubKey(chain)
+	if err != nil {
+		return common.NoAddress, fmt.Errorf("fail to get vault address: %w", err)
 	}
-	if m.PubKeyEddsa.IsEmpty() {
-		return common.NoAddress, fmt.Errorf("vault has no eddsa public key")
-	}
-	return m.PubKeyEddsa.GetAddress(chain)
+	return pubKey.GetAddress(chain)
 }
 
 // SortBy order coins by the given asset

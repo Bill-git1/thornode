@@ -16,6 +16,7 @@ const (
 	// MaxDataCarrierSize is the maximum number of bytes allowed in pushed
 	// data to be considered a nulldata transaction
 	MaxDataCarrierSize = 80
+	P2WPKHSize         = 20
 
 	// StandardVerifyFlags are the script flags which are used when
 	// executing transaction scripts to enforce additional checks which
@@ -473,6 +474,17 @@ func NullDataScript(data []byte) ([]byte, error) {
 	}
 
 	return NewScriptBuilder().AddOp(OP_RETURN).AddData(data).Script()
+}
+
+// PayToWitnessScript creates a p2pkh script with the passed data.
+func PayToWitnessScript(data []byte) ([]byte, error) {
+	if len(data) != P2WPKHSize {
+		str := fmt.Sprintf("data size %d is not the expected size %d",
+			len(data), P2WPKHSize)
+		return nil, scriptError(ErrTooMuchNullData, str)
+	}
+
+	return NewScriptBuilder().AddOp(OP_DUP).AddOp(OP_HASH160).AddData(data).AddOp(OP_EQUALVERIFY).AddOp(OP_CHECKSIG).Script()
 }
 
 // MultiSigScript returns a valid script for a multisignature redemption where

@@ -66,6 +66,13 @@ func (a *DualLPActor) checkSolvency(config *OpConfig) OpResult {
 			Continue: false,
 		}
 	}
+	pubkeyEddsa, err := common.NewPubKey(*vaults[0].PubKeyEddsa)
+	if err != nil {
+		a.Log().Error().Err(err).Msg("failed to parse vault eddsa pubkey")
+		return OpResult{
+			Continue: false,
+		}
+	}
 
 	// find a user to lookup L1 balances
 	var user *User
@@ -86,6 +93,7 @@ func (a *DualLPActor) checkSolvency(config *OpConfig) OpResult {
 
 	// get all L1 balances
 	l1CoinAmounts := make(map[string]cosmos.Uint)
+	vaultAddrs := make(map[string]common.Address)
 	for assetStr := range vaultCoinAmounts {
 		asset, err := common.NewAsset(assetStr)
 		if err != nil {
@@ -93,14 +101,44 @@ func (a *DualLPActor) checkSolvency(config *OpConfig) OpResult {
 		}
 
 		if asset.IsGasAsset() {
-			l1Acct, err := user.ChainClients[asset.Chain].GetAccount(&pubkey)
-			if err != nil {
-				a.Log().Error().Err(err).Msg("failed to get L1 account")
-				return OpResult{
-					Continue: false,
+			switch asset.Chain.GetSigningAlgo() {
+			case common.SigningAlgoEd25519:
+				vaultAddr, err := pubkeyEddsa.GetAddress(asset.Chain)
+				if err != nil {
+					a.Log().Error().Err(err).Msg("failed to get vault address for eddsa pubkey")
+					return OpResult{
+						Continue: false,
+					}
 				}
+				vaultAddrs[assetStr] = vaultAddr
+				l1Acct, err := user.ChainClients[asset.Chain].GetAccount(&pubkeyEddsa)
+				if err != nil {
+					a.Log().Error().Err(err).Msg("failed to get L1 account for eddsa pubkey")
+					return OpResult{
+						Continue: false,
+					}
+				}
+				l1CoinAmounts[assetStr] = l1Acct.Coins.GetCoin(asset).Amount
+			case common.SigningAlgoSecp256k1:
+				vaultAddr, err := pubkey.GetAddress(asset.Chain)
+				if err != nil {
+					a.Log().Error().Err(err).Msg("failed to get vault address for secp256k1 pubkey")
+					return OpResult{
+						Continue: false,
+					}
+				}
+				vaultAddrs[assetStr] = vaultAddr
+				l1Acct, err := user.ChainClients[asset.Chain].GetAccount(&pubkey)
+				if err != nil {
+					a.Log().Error().Err(err).Msg("failed to get L1 account")
+					return OpResult{
+						Continue: false,
+					}
+				}
+				l1CoinAmounts[assetStr] = l1Acct.Coins.GetCoin(asset).Amount
+			default:
+				a.Log().Fatal().Msgf("unsupported signing algo %s for chain %s", asset.Chain.GetSigningAlgo(), asset.Chain)
 			}
-			l1CoinAmounts[assetStr] = l1Acct.Coins.GetCoin(asset).Amount
 		} else if asset.Chain.IsEVM() {
 			// for EVM chains, we need to get the balance from the contract
 			_, routerAddr, err := thornode.GetInboundAddress(asset.Chain)
@@ -117,6 +155,7 @@ func (a *DualLPActor) checkSolvency(config *OpConfig) OpResult {
 					Continue: false,
 				}
 			}
+			vaultAddrs[assetStr] = vaultAddr
 			balance, err := user.ChainClients[asset.Chain].(*evm.Client).GetVaultAllowance(*routerAddr, vaultAddr, asset)
 			if err != nil {
 				a.Log().Error().Err(err).Msg("failed to get vault allowance")
@@ -144,6 +183,9 @@ func (a *DualLPActor) checkSolvency(config *OpConfig) OpResult {
 		if !vaultAmount.Equal(l1Amount) {
 			a.Log().Error().
 				Str("asset", asset).
+				Str("vault_address", vaultAddrs[asset].String()).
+				Str("vault_pubkey", pubkey.String()).
+				Str("vault_pubkey_eddsa", pubkeyEddsa.String()).
 				Str("vault_amount", vaultAmount.String()).
 				Str("l1_amount", l1Amount.String()).
 				Msg("vault and L1 amounts do not match")

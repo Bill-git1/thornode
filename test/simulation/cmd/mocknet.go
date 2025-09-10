@@ -40,6 +40,7 @@ var chainRPCs = map[common.Chain]string{
 	common.BASEChain:  "http://localhost:8547",
 	common.TRONChain:  "http://localhost:8090",
 	common.XRPChain:   "http://localhost:5005",
+	common.SOLChain:   "http://localhost:8899",
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -145,6 +146,11 @@ func InitConfig(parallelism int, seed bool) *OpConfig {
 				{common.AVAXChain, 80000, 1500},
 				{common.BASEChain, 80000, 300000},
 				{common.ETHChain, 80000, 300},
+				{common.SOLChain, 1, 5000},
+				{common.BTCChain, 1000, 4},
+				{common.LTCChain, 250, 103},
+				{common.BCHChain, 1500, 7},
+				{common.DOGEChain, 1000, 1500000},
 			}
 			for _, fee := range defaultFees {
 				log.Info().Msgf("posting %s network fee", fee.chain)
@@ -241,7 +247,7 @@ func InitConfig(parallelism int, seed bool) *OpConfig {
 		switch chain {
 		case common.BTCChain, common.LTCChain, common.BCHChain:
 			chainSeedAmount = sdkmath.NewUint(10 * common.One)
-		case common.BSCChain, common.BASEChain, common.ETHChain:
+		case common.BSCChain, common.BASEChain, common.ETHChain, common.SOLChain:
 			chainSeedAmount = sdkmath.NewUint(100 * common.One)
 		case common.GAIAChain, common.NOBLEChain:
 			chainSeedAmount = sdkmath.NewUint(1000 * common.One)

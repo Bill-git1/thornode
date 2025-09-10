@@ -22,6 +22,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	cKeys "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
+	dogechaincfg "github.com/eager7/dogd/chaincfg"
+	"github.com/eager7/dogutil"
 
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/storage"
@@ -31,6 +33,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/utxo"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	stypes "gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
+	dogetxscript "gitlab.com/thorchain/thornode/v3/bifrost/txscript/dogd-txscript"
 	"gitlab.com/thorchain/thornode/v3/cmd"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
@@ -322,7 +325,7 @@ func (s *DogecoinSignerSuite) TestIsSelfTransaction(c *C) {
 }
 
 func (s *DogecoinSignerSuite) TestEstimateTxSize(c *C) {
-	size := s.client.estimateTxSize("OUT:2180B871F2DEA2546E1403DBFE9C26B062ABAFFD979CF3A65F2B4D2230105CF1", []btcjson.ListUnspentResult{
+	txs := []btcjson.ListUnspentResult{
 		{
 			TxID:      "66d2d6b5eb564972c59e4797683a1225a02515a41119f0a8919381236b63e948",
 			Vout:      0,
@@ -333,8 +336,21 @@ func (s *DogecoinSignerSuite) TestEstimateTxSize(c *C) {
 			Vout:      0,
 			Spendable: true,
 		},
-	})
-	c.Assert(size, Equals, int64(417))
+	}
+	const memo = "OUT:2180B871F2DEA2546E1403DBFE9C26B062ABAFFD979CF3A65F2B4D2230105CF1"
+	nullDataScripts, err := MemoToScripts(memo, dogetxscript.MaxDataCarrierSize, dogetxscript.NullDataScript, dogetxscript.PayToWitnessScript)
+	c.Assert(err, IsNil)
+	addr, err := dogutil.DecodeAddress("tb1qleqepvj0d9n7899qj3skd8tw7c7jvh3zlxul70", &dogechaincfg.MainNetParams)
+	c.Assert(err, IsNil)
+	buf, err := dogetxscript.PayToAddrScript(addr)
+	c.Assert(err, IsNil)
+	size := s.client.estimateTxSize(txs, nullDataScripts, buf, buf)
+	c.Assert(size, Equals, int64(447))
+	const longMemo = "OUT:2180B871F2DEA2546E1403DBFE9C26B062ABAFFD979CF3A65F2B4D2230105CF12180B871F2DEA2546E1403DBFE9C26B062ABAFFD979CF3A65F2B4D2230105CF12180B871F2DEA2546E1403DBFE9C26B062ABAFFD979CF3A65F2B4D2230105CF1"
+	nullDataScripts, err = MemoToScripts(longMemo, dogetxscript.MaxDataCarrierSize, dogetxscript.NullDataScript, dogetxscript.PayToWitnessScript)
+	c.Assert(err, IsNil)
+	size = s.client.estimateTxSize(txs, nullDataScripts, buf, buf)
+	c.Assert(size, Equals, int64(664))
 }
 
 func (s *DogecoinSignerSuite) TestSignAddressPubKeyShouldFail(c *C) {

@@ -89,7 +89,7 @@ func NewClient(
 		return nil, errors.New("thorchain bridge is nil")
 	}
 
-	localKm, err := keymanager.NewKeyManager(priv, keymanager.SECP256K1)
+	localKm, err := keymanager.NewKeyManager(priv)
 	if err != nil {
 		return nil, fmt.Errorf("fail to create key manager: %w", err)
 	}

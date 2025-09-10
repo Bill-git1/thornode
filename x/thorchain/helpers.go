@@ -81,7 +81,6 @@ func refundTx(ctx cosmos.Context, tx ObservedTx, mgr Manager, refundCode uint32,
 				Aggregator:            "",
 				AggregatorTargetAsset: "",
 				AggregatorTargetLimit: &cosmos.Uint{},
-				CloutSpent:            &cosmos.Uint{},
 			}
 
 			success, err := mgr.TxOutStore().TryAddTxOutItem(ctx, mgr, toi, cosmos.ZeroUint())

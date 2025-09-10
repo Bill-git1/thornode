@@ -239,7 +239,7 @@ func (tos *TxOutStorageVCUR) takeAffiliateFee(ctx cosmos.Context, mgr Manager, t
 func (tos *TxOutStorageVCUR) cachedTryAddTxOutItem(ctx cosmos.Context, mgr Manager, toi TxOutItem, minOut cosmos.Uint) (bool, error) {
 	outputs, totalOutboundFeeRune, err := tos.prepareTxOutItem(ctx, toi)
 	if err != nil {
-		return false, fmt.Errorf("fail to prepare outbound tx: %w", err)
+		return false, fmt.Errorf("failed to prepare tx out item: %w", err)
 	}
 	if len(outputs) == 0 {
 		return false, ErrNotEnoughToPayFee
@@ -438,6 +438,8 @@ func (tos *TxOutStorageVCUR) DiscoverOutbounds(ctx cosmos.Context, transactionFe
 		}
 
 		toi.VaultPubKey = vault.PubKey
+		toi.VaultPubKeyEddsa = vault.PubKeyEddsa
+
 		if toi.Coin.Amount.LTE(vaultCoinAmount) {
 			outputs = append(outputs, toi)
 			toi.Coin.Amount = cosmos.ZeroUint()
@@ -690,7 +692,6 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 				feeEvents = append(feeEvents, NewEventFee(outputs[i].InHash, fee, cosmos.ZeroUint()))
 			}
 		}
-
 		if outputs[i].Coin.IsEmpty() {
 			ctx.Logger().Info("tx out item has zero coin", "tx_out", outputs[i].String())
 

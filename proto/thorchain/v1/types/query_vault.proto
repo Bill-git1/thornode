@@ -29,7 +29,7 @@ message QueryVaultResponse{
   repeated VaultRouter routers = 12 [(gogoproto.jsontag) = "routers"];
   repeated VaultAddress addresses = 13 [(gogoproto.jsontag) = "addresses"];
   repeated string frozen = 14;
-  string pub_key_eddsa = 15;
+  string pub_key_eddsa = 15 [(gogoproto.nullable) = true];
 }
 
 message QueryAsgardVaultsRequest{

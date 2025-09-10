@@ -12,7 +12,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	cosmoscryptoed25519 "github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
+	bech32 "github.com/cosmos/cosmos-sdk/types/bech32/legacybech32" // nolint SA1019 deprecated
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
@@ -21,6 +26,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/cmd"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	thored25519 "gitlab.com/thorchain/thornode/v3/common/crypto/ed25519"
 	keeperv1 "gitlab.com/thorchain/thornode/v3/x/thorchain/keeper/v1"
 
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
@@ -48,7 +54,12 @@ func init() {
 
 	// initialize the codec
 	encodingConfig = app.MakeEncodingConfig()
-	keyRing = keyring.NewInMemory(encodingConfig.Codec)
+	keyRing = keyring.NewInMemory(encodingConfig.Codec, func(options *keyring.Options) {
+		options.SupportedAlgos = keyring.SigningAlgoList{
+			hd.Secp256k1,
+			thored25519.Ed25519,
+		}
+	})
 
 	// Having set the prefixes, derive the module addresses.
 	ModuleAddrTransfer = authtypes.NewModuleAddress("transfer").String() // "tthor1yl6hdjhmkf37639730gffanpzndzdpmhv07zme"
@@ -244,14 +255,35 @@ func init() {
 			log.Fatal().Err(err).Msg("failed to bech32ify ecdsa pubkey")
 		}
 
+		_, err = keyRing.NewAccount(thored25519.SignerNameEDDSA(name), m, "password", thored25519.HDPath, thored25519.Ed25519)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to add ed25519 account to keyring")
+		}
+
+		r, err := keyRing.Key(thored25519.SignerNameEDDSA(name))
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get ed25519 key from keyring")
+		}
+
+		registry := codectypes.NewInterfaceRegistry()
+		cryptocodec.RegisterInterfaces(registry)
+		cdc := codec.NewProtoCodec(registry)
+
+		pubKey := new(cosmoscryptoed25519.PubKey)
+		if err := cdc.UnpackAny(r.PubKey, &pubKey); err != nil {
+			log.Fatal().Err(err).Msg("failed to unpack ed25519 pubkey")
+		}
+		// nolint
+		ed25519PubKey, err := bech32.MarshalPubKey(bech32.AccPK, pubKey)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to marshal ed25519 pubkey to bech32")
+		}
+
+		// create consensus pubkey for ed25519
 		ed25519PrivKey := eddsaKey.GenPrivKeyFromSecret([]byte(m))
 		edd2519ConsPubKey, err := cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeConsPub, ed25519PrivKey.PubKey())
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to bech32ify EdDSA cons pubkey")
-		}
-		ed25519PubKey, err := cosmos.Bech32ifyPubKey(cosmos.Bech32PubKeyTypeAccPub, ed25519PrivKey.PubKey())
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to bech32ify EdDSA acc pubkey")
 		}
 
 		// add key to keyring

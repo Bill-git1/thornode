@@ -418,6 +418,20 @@ func (s *AddressSuite) TestAddress(c *C) {
 	addr, err = NewAddress("noble1vx6vkpn8mgk7tfv3x6n8kaypw080pa46h2t72q")
 	c.Assert(err, IsNil)
 	c.Check(addr.IsChain(GAIAChain), Equals, false)
+	c.Check(addr.GetNetwork(DOGEChain), Equals, MockNet)
+
+	// SOL tests
+	addr, err = NewAddress("BEcrPLugbAY1zEJGUNYgzcsxMi72rPeVwG6qKm96LK5g")
+	c.Check(err, IsNil)
+	c.Check(addr.IsChain(SOLChain), Equals, true)
+	c.Check(addr.IsChain(BCHChain), Equals, false)
+	c.Check(addr.IsChain(LTCChain), Equals, false)
+	c.Check(addr.IsChain(BTCChain), Equals, false)
+	c.Check(addr.IsChain(ETHChain), Equals, false)
+	c.Check(addr.IsChain(XRPChain), Equals, false)
+	c.Check(addr.IsChain(THORChain), Equals, false)
+	c.Check(addr.IsChain(DOGEChain), Equals, false)
+	c.Check(addr.GetNetwork(SOLChain), Equals, MockNet)
 }
 
 func (s *AddressSuite) TestAddressMapping(c *C) {

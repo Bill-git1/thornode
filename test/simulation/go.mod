@@ -5,6 +5,7 @@ go 1.23.8
 require (
 	cosmossdk.io/math v1.5.3
 	github.com/Peersyst/xrpl-go v0.1.3
+	github.com/blocto/solana-go-sdk v1.30.0
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.1.0
 	github.com/cometbft/cometbft v0.38.17

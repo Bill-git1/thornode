@@ -89,8 +89,7 @@ func NewUser(mnemonic string, constructors map[common.Chain]LiteChainClientConst
 	// create chain clients
 	chainClients := make(map[common.Chain]LiteChainClient)
 	for chain := range constructors {
-		pKeys := keys
-		chainClients[chain], err = constructors[chain](chain, pKeys)
+		chainClients[chain], err = constructors[chain](chain, keys)
 		if err != nil {
 			log.Fatal().Err(err).Stringer("chain", chain).Msg("failed to create chain client")
 		}

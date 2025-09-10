@@ -107,7 +107,7 @@ genesis:
           bond_address: {{ addr_thor_dog }}
           pub_key_set:
             secp256k1: {{ pubkey_dog }}
-            ed25519: "tthorpub1zcjduepqfan43w2emjhfv45gspf98squqlnl2rcchc3e4dx7z2nxr27edflsy2e8ql"
+            ed25519: {{ pubkey_dog_eddsa }}
           signer_membership: []
           status: Active
           # matches the priv_validator_key.json mounted in the test container

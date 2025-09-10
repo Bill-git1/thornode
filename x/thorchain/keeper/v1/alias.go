@@ -71,6 +71,7 @@ var (
 	NewBondProviders           = types.NewBondProviders
 	NewBondProvider            = types.NewBondProvider
 	NewVault                   = types.NewVault
+	NewVaultV2                 = types.NewVaultV2
 	NewReserveContributor      = types.NewReserveContributor
 	NewTHORName                = types.NewTHORName
 	NewEventBond               = types.NewEventBond

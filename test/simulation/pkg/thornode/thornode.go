@@ -209,6 +209,11 @@ func Get(url string, target interface{}) error {
 	}
 	defer resp.Body.Close()
 
+	buf, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("(%s) HTTP: %d => %s", url, resp.StatusCode, body)
@@ -219,10 +224,7 @@ func Get(url string, target interface{}) error {
 		Code    int    `json:"code"`
 		Message string `json:"message"`
 	}
-	buf, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
+
 	errResp := ErrorResponse{}
 	err = json.Unmarshal(buf, &errResp)
 	if err == nil && errResp.Code != 0 && errResp.Message != "" {

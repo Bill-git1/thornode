@@ -85,6 +85,16 @@ func run(out io.Writer, path string, routine int, doneWithRetries func(path stri
 		log.Fatal().Err(err).Msg("failed to initialize keys")
 	}
 
+	localLog.Debug().Msg("Initializing ed25519 keys")
+	cmd = exec.Command("thornode", "ed25519")
+	cmd.Stdin = bytes.NewBufferString(dogMnemonic + "\npassword\npassword\n")
+	cmd.Env = env
+	cmdOut, err = cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println(string(cmdOut))
+		log.Fatal().Err(err).Msg("failed to initialize keys")
+	}
+
 	// init chain
 	localLog.Debug().Msg("Initializing chain")
 	cmd = exec.Command("thornode", "init", "local", "--chain-id", "thorchain", "-o")

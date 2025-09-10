@@ -351,7 +351,7 @@
           "ip_address": "1.1.1.1",
           "node_address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
           "pub_key_set": {
-            "ed25519": "tthorpub1zcjduepqfan43w2emjhfv45gspf98squqlnl2rcchc3e4dx7z2nxr27edflsy2e8ql",
+            "ed25519": "tthorpub1zcjduepqzupdpx7334mjeuuggnvxv3ctkghu0qcz2eml30tgu9ukw58z6uusmmxmys",
             "secp256k1": "tthorpub1addwnpepqfshsq2y6ejy2ysxmq4gj8n8mzuzyulk9wh4n946jv5w2vpwdn2yuyp6sp4"
           },
           "status": "Active",

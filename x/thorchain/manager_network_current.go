@@ -67,9 +67,11 @@ func (vm *NetworkMgrVCUR) processGenesisSetup(ctx cosmos.Context) error {
 			common.BASEChain,
 			common.TRONChain,
 			common.XRPChain,
+			common.SOLChain,
 		}
-		vault := NewVaultV2(0, ActiveVault, AsgardVault, active[0].PubKeySet.Secp256k1, supportChains.Strings(), vm.k.GetChainContracts(ctx, supportChains), active[0].PubKeySet.Ed25519)
-		vault.Membership = common.PubKeys{active[0].PubKeySet.Secp256k1}.Strings()
+		pubSet := active[0].PubKeySet
+		vault := NewVaultV2(0, ActiveVault, AsgardVault, pubSet.Secp256k1, supportChains.Strings(), vm.k.GetChainContracts(ctx, supportChains), pubSet.Ed25519)
+		vault.Membership = common.PubKeys{pubSet.Secp256k1}.Strings()
 		if err := vm.k.SetVault(ctx, vault); err != nil {
 			return fmt.Errorf("fail to save vault: %w", err)
 		}
@@ -670,8 +672,10 @@ func (vm *NetworkMgrVCUR) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 				}
 				amt = cosmos.RoundToDecimal(amt, coin.Decimals)
 
+				chain := coin.Asset.GetChain()
+
 				// minus gas costs for our transactions
-				gasAsset := coin.Asset.GetChain().GetGasAsset()
+				gasAsset := chain.GetGasAsset()
 				if coin.Asset.Equals(gasAsset) {
 					gasMgr := mgr.GasMgr()
 					gas, err := gasMgr.GetMaxGas(ctx, coin.Asset.GetChain())
@@ -685,10 +689,13 @@ func (vm *NetworkMgrVCUR) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 					}
 
 					gasAmount := gas.Amount.MulUint64(uint64(vault.CoinLengthByChain(coin.Asset.GetChain())))
+
+					// deduct estimated transaction fee from send amount
 					amt = common.SafeSub(amt, gasAmount)
 
 					// burn the remainder if amount after deducting gas is below dust threshold
-					dustThreshold := coin.Asset.GetChain().DustThreshold()
+					dustThreshold := chain.DustThreshold()
+
 					if amt.LTE(dustThreshold) && nth > migrationRounds {
 						// No migration should be attempted, but only burn dust if there are no pending outbounds.
 						// (That is, truly only dust remaining in the vault for this Coin.)
@@ -696,7 +703,7 @@ func (vm *NetworkMgrVCUR) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 							continue
 						}
 
-						if coin.Asset.GetChain().Equals(common.XRPChain) {
+						if chain.Equals(common.XRPChain) || chain.Equals(common.SOLChain) {
 							ctx.Logger().Info("left coin is account reserve, thus burn it", "coin", coin, "gas", gasAmount)
 						} else {
 							ctx.Logger().Info("left coin is not enough to pay for gas, thus burn it", "coin", coin, "gas", gasAmount)
@@ -732,17 +739,17 @@ func (vm *NetworkMgrVCUR) migrateFunds(ctx cosmos.Context, mgr Manager) error {
 
 					// on the final migration round(s), deduct amt by 1 XRP (1e8) so that we don't try to transfer any of the account reserve
 					// the account reserve balance will be burned on the next migration round
-					if nth >= migrationRounds && coin.Asset.GetChain().Equals(common.XRPChain) {
+					if nth >= migrationRounds && (chain.Equals(common.XRPChain) || chain.Equals(common.SOLChain)) {
 						if amt.GT(dustThreshold) {
 							amt = common.SafeSub(amt, dustThreshold)
 						} else {
-							// if amt <= dustThreshold / XRP reserve requirement, skip the transaction
+							// if amt <= dustThreshold / XRP/SOL reserve requirement, skip the transaction
 							continue
 						}
 					}
 				}
 				toi := TxOutItem{
-					Chain:            coin.Asset.GetChain(),
+					Chain:            chain,
 					InHash:           common.BlankTxID,
 					ToAddress:        addr,
 					VaultPubKey:      vault.PubKey,

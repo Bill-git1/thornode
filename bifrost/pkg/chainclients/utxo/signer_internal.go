@@ -12,6 +12,7 @@ import (
 
 	"github.com/eager7/dogutil"
 	dogetxscript "gitlab.com/thorchain/thornode/v3/bifrost/txscript/dogd-txscript"
+	"gitlab.com/thorchain/thornode/v3/constants"
 
 	"github.com/gcash/bchutil"
 	bchtxscript "gitlab.com/thorchain/thornode/v3/bifrost/txscript/bchd-txscript"
@@ -214,32 +215,79 @@ func (c *Client) getSourceScript(tx stypes.TxOutItem) ([]byte, error) {
 // Build Transaction
 ////////////////////////////////////////////////////////////////////////////////////////
 
-// TODO: Cleanup magic numbers and/or improve comment specificity.
-// estimateTxSize will create a temporary MsgTx, and use it to estimate the final tx size
-// the value in the temporary MsgTx is not real
-// https://bitcoinops.org/en/tools/calc-size/
-func (c *Client) estimateTxSize(memo string, txes []btcjson.ListUnspentResult) int64 {
+// estimateTxSize builds a dummy transaction with the given inputs and outputs and
+// returns the exact virtual size (vbytes) according to BIP141.
+// For non-segwit chains, it returns the actual serialized size.
+func (c *Client) estimateTxSize(txes []btcjson.ListUnspentResult, memoScripts [][]byte, customerScript []byte, changeScript []byte) int64 {
+	tx := wire.NewMsgTx(wire.TxVersion)
+
+	// Add inputs with realistic witness/scriptSig data for size estimation
+	for _, utxo := range txes {
+		hash, err := chainhash.NewHashFromStr(utxo.TxID)
+		if err != nil {
+			c.log.Error().Err(err).Msg("failed to parse txid for size estimation")
+			continue
+		}
+		outpoint := wire.NewOutPoint(hash, utxo.Vout)
+		txIn := wire.NewTxIn(outpoint, nil, nil)
+
+		// Add realistic scriptSig/witness data for accurate size estimation
+		if c.isSegwitChain() {
+			// For segwit chains (BTC, LTC), inputs have empty scriptSig but witness data
+			// Typical P2WPKH witness: [signature (71-73 bytes), pubkey (33 bytes)]
+			txIn.Witness = make([][]byte, 2)
+			txIn.Witness[0] = make([]byte, 72) // signature
+			txIn.Witness[1] = make([]byte, 33) // pubkey
+		} else {
+			// For non-segwit chains (DOGE, BCH), inputs have scriptSig
+			// Typical P2PKH scriptSig: [signature (71-73 bytes), pubkey (33 bytes)]
+			// Script format: <sig> <pubkey>
+			txIn.SignatureScript = make([]byte, 107) // ~72 + 33 + 2 bytes overhead
+		}
+
+		tx.AddTxIn(txIn)
+	}
+
+	// Add customer output
+	tx.AddTxOut(wire.NewTxOut(0, customerScript))
+
+	// Add change output (will be added if balance > 0)
+	tx.AddTxOut(wire.NewTxOut(0, changeScript))
+
+	// Add memo outputs
+	if len(memoScripts) > 0 {
+		// First script is OP_RETURN (value = 0)
+		tx.AddTxOut(wire.NewTxOut(0, memoScripts[0]))
+
+		// Additional scripts are P2WPKH/P2PKH outputs with dust value
+		for _, script := range memoScripts[1:] {
+			tx.AddTxOut(wire.NewTxOut(0, script)) // value doesn't affect size
+		}
+	}
+
+	// Calculate size based on chain type
+	if c.isSegwitChain() {
+		// For segwit chains, calculate virtual size (weight/4)
+		strippedSize := tx.SerializeSizeStripped()
+		totalSize := tx.SerializeSize()
+		// Virtual size = (base_size * 3 + total_size) / 4
+		return int64((strippedSize*3 + totalSize + 3) / 4) // +3 for proper rounding
+	}
+
+	// For non-segwit chains, return actual serialized size
+	return int64(tx.SerializeSize())
+}
+
+// isSegwitChain returns true if the chain supports segwit transactions
+func (c *Client) isSegwitChain() bool {
 	switch c.cfg.ChainID {
+	case common.BTCChain, common.LTCChain:
+		return true
 	case common.DOGEChain, common.BCHChain:
-		// overhead - 10
-		// Per input - 148
-		// Per output - 34 , we might have 1 / 2 output , depends on the circumstances , here we only count 1  output , would rather underestimate
-		// so we won't hit absurd high fee issue
-		// overhead for NULL DATA - 9 , len(memo) is the size of memo
-		return int64(10 + 148*len(txes) + 34 + 9 + len([]byte(memo)))
-	case common.LTCChain, common.BTCChain:
-		// overhead - 10.75
-		// Per Input - 67.75
-		// Per output - 31 , we sometimes have 2 output , and sometimes only have 1 , it depends ,here we only count 1
-		// it is better to underestimate rather than over estimate
-		// 10.5 overhead for null data
-		// len(memo) is the size of memo put in null data
-		// these get us very close to the final vbytes.
-		// multiple by 100 , and then add, so don't need to deal with float
-		return int64((1075+6775*len(txes)+1050)/100) + int64(31+len([]byte(memo)))
+		return false
 	default:
-		c.log.Fatal().Msg("unsupported chain")
-		return 0
+		c.log.Fatal().Msgf("unsupported chain: %s", c.cfg.ChainID)
+		return false
 	}
 }
 
@@ -300,6 +348,7 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 	}
 
 	var buf []byte
+	var nullDataScripts [][]byte
 	switch c.cfg.ChainID {
 	case common.DOGEChain:
 		var outputAddr dogutil.Address
@@ -311,6 +360,10 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 		if err != nil {
 			return nil, nil, fmt.Errorf("fail to get pay to address script: %w", err)
 		}
+		nullDataScripts, err = MemoToScripts(tx.Memo, dogetxscript.MaxDataCarrierSize, dogetxscript.NullDataScript, dogetxscript.PayToWitnessScript)
+		if err != nil {
+			return nil, nil, fmt.Errorf("fail to generate null data script: %w", err)
+		}
 	case common.BCHChain:
 		var outputAddr bchutil.Address
 		outputAddr, err = bchutil.DecodeAddress(tx.ToAddress.String(), c.getChainCfgBCH())
@@ -320,6 +373,10 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 		buf, err = bchtxscript.PayToAddrScript(outputAddr)
 		if err != nil {
 			return nil, nil, fmt.Errorf("fail to get pay to address script: %w", err)
+		}
+		nullDataScripts, err = MemoToScripts(tx.Memo, bchtxscript.MaxDataCarrierSize, bchtxscript.NullDataScript, bchtxscript.PayToWitnessScript)
+		if err != nil {
+			return nil, nil, fmt.Errorf("fail to generate null data script: %w", err)
 		}
 	case common.LTCChain:
 		var outputAddr ltcutil.Address
@@ -331,6 +388,10 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 		if err != nil {
 			return nil, nil, fmt.Errorf("fail to get pay to address script: %w", err)
 		}
+		nullDataScripts, err = MemoToScripts(tx.Memo, ltctxscript.MaxDataCarrierSize, ltctxscript.NullDataScript, ltctxscript.PayToWitnessScript)
+		if err != nil {
+			return nil, nil, fmt.Errorf("fail to generate null data script: %w", err)
+		}
 	case common.BTCChain:
 		var outputAddr btcutil.Address
 		outputAddr, err = btcutil.DecodeAddress(tx.ToAddress.String(), c.getChainCfgBTC())
@@ -341,12 +402,21 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 		if err != nil {
 			return nil, nil, fmt.Errorf("fail to get pay to address script: %w", err)
 		}
+		nullDataScripts, err = MemoToScripts(tx.Memo, btctxscript.MaxDataCarrierSize, btctxscript.NullDataScript, btctxscript.PayToWitnessScript)
+		if err != nil {
+			return nil, nil, fmt.Errorf("fail to generate null data script: %w", err)
+		}
 	default:
 		c.log.Fatal().Msg("unsupported chain")
 	}
 
+	if len(nullDataScripts) == 0 {
+		return nil, nil, fmt.Errorf("no null data scripts generated, memo will not be included in the transaction")
+	}
+
+	totalSize := c.estimateTxSize(txes, nullDataScripts, buf, sourceScript)
+
 	coinToCustomer := tx.Coins.GetCoin(c.cfg.ChainID.GetGasAsset())
-	totalSize := c.estimateTxSize(tx.Memo, txes)
 
 	// maxFee in sats
 	maxFeeSats := totalSize * c.cfg.UTXO.MaxSatsPerVByte
@@ -424,10 +494,18 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 	redeemTxOut := wire.NewTxOut(int64(coinToCustomer.Amount.Uint64()), buf)
 	redeemTx.AddTxOut(redeemTxOut)
 
+	// Calculate the total cost of P2WPKH outputs for extended memos
+	p2wpkhOutputsCost := int64(0)
+	if len(nullDataScripts) > 1 {
+		// Each P2WPKH output (nullDataScripts[1:]) costs P2WPKHOutputValue()
+		p2wpkhOutputsCost = int64(len(nullDataScripts)-1) * tx.Chain.P2WPKHOutputValue()
+	}
+
 	// balance to ourselves
 	// add output to pay the balance back ourselves
-	balance := totalAmt - redeemTxOut.Value - int64(gasAmt)
-	c.log.Info().Msgf("total: %d, to customer: %d, gas: %d", totalAmt, redeemTxOut.Value, int64(gasAmt))
+	// Now properly account for P2WPKH outputs cost
+	balance := totalAmt - redeemTxOut.Value - int64(gasAmt) - p2wpkhOutputsCost
+	c.log.Info().Msgf("total: %d, to customer: %d, gas: %d, p2wpkh_outputs_cost: %d", totalAmt, redeemTxOut.Value, int64(gasAmt), p2wpkhOutputsCost)
 	if balance < 0 {
 		return nil, nil, fmt.Errorf("not enough balance to pay customer: %d", balance)
 	}
@@ -438,26 +516,81 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 
 	// memo
 	if len(tx.Memo) != 0 {
-		var nullDataScript []byte
-		switch c.cfg.ChainID {
-		case common.DOGEChain:
-			nullDataScript, err = dogetxscript.NullDataScript([]byte(tx.Memo))
-		case common.BCHChain:
-			nullDataScript, err = bchtxscript.NullDataScript([]byte(tx.Memo))
-		case common.LTCChain:
-			nullDataScript, err = ltctxscript.NullDataScript([]byte(tx.Memo))
-		case common.BTCChain:
-			nullDataScript, err = btctxscript.NullDataScript([]byte(tx.Memo))
-		default:
-			c.log.Fatal().Msg("unsupported chain")
+		redeemTx.AddTxOut(wire.NewTxOut(0, nullDataScripts[0]))
+		for _, script := range nullDataScripts[1:] {
+			redeemTx.AddTxOut(wire.NewTxOut(tx.Chain.P2WPKHOutputValue(), script))
 		}
-		if err != nil {
-			return nil, nil, fmt.Errorf("fail to generate null data script: %w", err)
-		}
-		redeemTx.AddTxOut(wire.NewTxOut(0, nullDataScript))
 	}
 
 	return redeemTx, individualAmounts, nil
+}
+
+// MemoToScripts converts a memo to UTXO scripts.
+// Up to 80 bytes in a single OP_RETURN output; for longer memos, 79 bytes plus '^' marker in OP_RETURN,
+// with remaining data in P2WPKH outputs (20 bytes each).
+func MemoToScripts(memo string, maxDataCarrierSize int, nullDataScript func([]byte) ([]byte, error), payToWitnessKeyHashScript func([]byte) ([]byte, error)) ([][]byte, error) {
+	if len(memo) == 0 {
+		return nil, nil
+	}
+
+	if len(memo) > constants.MaxMemoSize {
+		return nil, fmt.Errorf("memo size %d exceeds maximum size of %d bytes", len(memo), constants.MaxMemoSize)
+	}
+
+	data := []byte(memo)
+
+	// Calculate number of scripts: 1 OP_RETURN + ceil(remaining_data / 20) P2WPKH outputs
+	remainingDataSize := len(data)
+	if remainingDataSize > maxDataCarrierSize {
+		remainingDataSize -= (maxDataCarrierSize - 1) // Reserve 1 byte for '^'
+	} else {
+		remainingDataSize = 0
+	}
+	numScripts := 1 + (remainingDataSize+19)/20 // 1 for OP_RETURN, plus P2WPKH outputs (20 bytes each)
+	scripts := make([][]byte, 0, numScripts)
+
+	// First chunk OP_RETURN: up to 80 bytes; if > 80 bytes, 79 bytes + '^' marker
+	firstChunkSize := len(data)
+	continuation := false
+	if firstChunkSize > maxDataCarrierSize { // Reserve 1 byte for '^' if needed
+		firstChunkSize = maxDataCarrierSize - 1
+		continuation = true
+	}
+	firstChunk := make([]byte, 0, maxDataCarrierSize)
+	firstChunk = append(firstChunk, data[:firstChunkSize]...)
+	if continuation {
+		firstChunk = append(firstChunk, '^')
+	}
+	script, err := nullDataScript(firstChunk)
+	if err != nil {
+		return nil, fmt.Errorf("fail to create OP_RETURN script: %w", err)
+	}
+	scripts = append(scripts, script)
+
+	// Remaining data (if any) goes into P2WPKH outputs, 20 bytes each
+	if continuation {
+		remainingData := data[firstChunkSize:]
+		for i := 0; len(remainingData) > 0; i++ {
+			// Take up to 20 bytes for this P2WPKH output
+			chunkSize := len(remainingData)
+			if chunkSize > 20 {
+				chunkSize = 20
+			}
+			hash := make([]byte, 20)
+			copy(hash, remainingData[:chunkSize])
+			// Remaining bytes (if < 20) are padded with zeros, signaling the end
+			// (getMemo stops at a hash ending with "00")
+			p2wpkhScript, err := payToWitnessKeyHashScript(hash)
+			if err != nil {
+				return nil, fmt.Errorf("fail to create P2WPKH script at index %d: %w", i, err)
+			}
+			scripts = append(scripts, p2wpkhScript)
+			// Move to the next chunk
+			remainingData = remainingData[chunkSize:]
+		}
+	}
+
+	return scripts, nil
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////

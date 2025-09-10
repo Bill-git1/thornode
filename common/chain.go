@@ -184,6 +184,8 @@ func (c Chain) GetGasAsset() Asset {
 		return TRXAsset
 	case XRPChain:
 		return XRPAsset
+	case SOLChain:
+		return SOLAsset
 	default:
 		return EmptyAsset
 	}
@@ -212,6 +214,8 @@ func (c Chain) GetGasUnits() (gasRateUnits string, gasRateUnitsPerOne cosmos.Uin
 		return "nAVAX", cosmos.NewUint(1e9)
 	case BASEChain:
 		return "mwei", cosmos.NewUint(1e12)
+	case SOLChain:
+		return "lamport", cosmos.NewUint(1e9)
 	default:
 		return "", cosmos.OneUint() // Avoid any divide-by-zero.
 	}
@@ -238,6 +242,8 @@ func (c Chain) GetGasAssetDecimal() int64 {
 		return 6
 	case XRPChain:
 		return 6
+	case SOLChain:
+		return 9
 	default:
 		return cosmos.DefaultCoinDecimals
 	}
@@ -316,8 +322,32 @@ func (c Chain) DustThreshold() cosmos.Uint {
 		// On churns, we can optionally delete the account to recover an additional .8 XRP, but would increases code complexity and will remove related ledger entries
 		// Comparing to BTC, this dust threshold should be reasonable.
 		return cosmos.NewUint(One) // 1 XRP
+	case SOLChain:
+		return cosmos.NewUint(100_000) // 0.001 SOL
 	default:
 		return cosmos.ZeroUint()
+	}
+}
+
+// P2WPKHOutputValue returns the value for P2WPKH outputs used for memo data
+func (c Chain) P2WPKHOutputValue() int64 {
+	switch c {
+	case BTCChain:
+		// https://github.com/bitcoin/bitcoin/blob/29.x/src/policy/policy.cpp#L28-L41
+		return 294
+	case LTCChain:
+		// dust relay fee in 'lits' is 10x of the fees on btc (30k vs 3k)
+		// https://github.com/litecoin-project/litecoin/blob/v0.21.4/src/policy/policy.h#L52
+		// https://github.com/litecoin-project/litecoin/blob/v0.21.4/src/policy/policy.cpp#L17-L30
+		return 2940
+	case DOGEChain:
+		// using bitcoin default for p2pkh txout
+		return 546
+	case BCHChain:
+		// using bitcoin default for p2pkh txout
+		return 546
+	default:
+		return 0 // unsupported chain
 	}
 }
 
@@ -379,6 +409,8 @@ func (c Chain) ApproximateBlockMilliseconds() int64 {
 		return 4_000 // approx 3-5 seconds
 	case NOBLEChain:
 		return 1_500
+	case SOLChain:
+		return 400
 	default:
 		return 0
 	}

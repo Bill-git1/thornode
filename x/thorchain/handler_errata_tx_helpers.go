@@ -97,13 +97,11 @@ func processErrataTxAttestation(
 		vaultPubKey := observedVoter.Tx.ObservedPubKey
 		if !vaultPubKey.IsEmpty() {
 			// try to deduct the asset from asgard
-			// trunk-ignore(golangci-lint/govet): shadow
 			vault, err := k.GetVault(ctx, vaultPubKey)
 			if err != nil {
 				return fmt.Errorf("fail to get active asgard vaults: %w", err)
 			}
 			vault.SubFunds(tx.Coins)
-			// trunk-ignore(golangci-lint/govet): shadow
 			if err := k.SetVault(ctx, vault); err != nil {
 				return fmt.Errorf("fail to save vault, err: %w", err)
 			}
@@ -153,7 +151,6 @@ func processErrataTxAttestation(
 	pool.BalanceRune = common.SafeSub(pool.BalanceRune, runeCoin.Amount)
 	pool.BalanceAsset = common.SafeSub(pool.BalanceAsset, assetCoin.Amount)
 	if memo.IsType(TxAdd) {
-		// trunk-ignore(golangci-lint/govet): shadow
 		lp, err := k.GetLiquidityProvider(ctx, pool.Asset, tx.FromAddress)
 		if err != nil {
 			return fmt.Errorf("fail to get liquidity provider: %w", err)
@@ -167,7 +164,6 @@ func processErrataTxAttestation(
 		k.SetLiquidityProvider(ctx, lp)
 	}
 
-	// trunk-ignore(golangci-lint/govet): shadow
 	if err := k.SetPool(ctx, pool); err != nil {
 		ctx.Logger().Error("fail to save pool", "error", err)
 	}
@@ -211,7 +207,6 @@ func processErrataOutboundTx(ctx cosmos.Context, k keeper.Keeper, eventMgr Event
 	}
 	vaultPubKey := txOutVoter.Tx.ObservedPubKey
 	if !vaultPubKey.IsEmpty() {
-		// trunk-ignore(golangci-lint/govet): shadow
 		v, err := k.GetVault(ctx, vaultPubKey)
 		if err != nil {
 			return fmt.Errorf("fail to get vault with pubkey %s: %w", vaultPubKey, err)
@@ -229,7 +224,6 @@ func processErrataOutboundTx(ctx cosmos.Context, k keeper.Keeper, eventMgr Event
 		}
 
 		if !v.IsEmpty() {
-			// trunk-ignore(golangci-lint/govet): shadow
 			if err := k.SetVault(ctx, v); err != nil {
 				return fmt.Errorf("fail to save vault: %w", err)
 			}
@@ -240,7 +234,6 @@ func processErrataOutboundTx(ctx cosmos.Context, k keeper.Keeper, eventMgr Event
 					// it is using native rune, so outbound can't be RUNE
 					continue
 				}
-				// trunk-ignore(golangci-lint/govet): shadow
 				p, err := k.GetPool(ctx, coin.Asset)
 				if err != nil {
 					return fmt.Errorf("fail to get pool(%s): %w", coin.Asset, err)
@@ -248,13 +241,11 @@ func processErrataOutboundTx(ctx cosmos.Context, k keeper.Keeper, eventMgr Event
 				runeValue := p.AssetValueInRune(coin.Amount)
 				p.BalanceRune = p.BalanceRune.Add(runeValue)
 				p.BalanceAsset = common.SafeSub(p.BalanceAsset, coin.Amount)
-				// trunk-ignore(golangci-lint/govet): shadow
 				if err := k.SendFromModuleToModule(ctx, ReserveName, AsgardName, common.Coins{
 					common.NewCoin(common.RuneAsset(), runeValue),
 				}); err != nil {
 					return fmt.Errorf("fail to send fund from reserve to asgard: %w", err)
 				}
-				// trunk-ignore(golangci-lint/govet): shadow
 				if err := k.SetPool(ctx, p); err != nil {
 					return fmt.Errorf("fail to save pool (%s) : %w", p.Asset, err)
 				}
@@ -264,7 +255,6 @@ func processErrataOutboundTx(ctx cosmos.Context, k keeper.Keeper, eventMgr Event
 				}
 
 				eventErrata := NewEventErrata(er.Id, mods)
-				// trunk-ignore(golangci-lint/govet): shadow
 				if err := eventMgr.EmitEvent(ctx, eventErrata); err != nil {
 					return ErrInternal(err, "fail to emit errata event")
 				}
@@ -274,7 +264,6 @@ func processErrataOutboundTx(ctx cosmos.Context, k keeper.Keeper, eventMgr Event
 
 	// emit security event
 	event := NewEventSecurity(tx, "outbound errata")
-	// trunk-ignore(golangci-lint/govet): shadow
 	if err := eventMgr.EmitEvent(ctx, event); err != nil {
 		return ErrInternal(err, "fail to emit security event")
 	}

@@ -15,6 +15,8 @@ import (
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/btcjson"
+	btcchaincfg "github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcutil"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
@@ -29,6 +31,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/utxo"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	stypes "gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
+	txscript "gitlab.com/thorchain/thornode/v3/bifrost/txscript/txscript"
 	"gitlab.com/thorchain/thornode/v3/cmd"
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
@@ -323,7 +326,7 @@ func (s *BitcoinSignerSuite) TestIsSelfTransaction(c *C) {
 }
 
 func (s *BitcoinSignerSuite) TestEstimateTxSize(c *C) {
-	size := s.client.estimateTxSize("OUT:2180B871F2DEA2546E1403DBFE9C26B062ABAFFD979CF3A65F2B4D2230105CF1", []btcjson.ListUnspentResult{
+	txs := []btcjson.ListUnspentResult{
 		{
 			TxID:      "66d2d6b5eb564972c59e4797683a1225a02515a41119f0a8919381236b63e948",
 			Vout:      0,
@@ -334,8 +337,21 @@ func (s *BitcoinSignerSuite) TestEstimateTxSize(c *C) {
 			Vout:      0,
 			Spendable: true,
 		},
-	})
-	c.Assert(size, Equals, int64(255))
+	}
+	const memo = "OUT:2180B871F2DEA2546E1403DBFE9C26B062ABAFFD979CF3A65F2B4D2230105CF1"
+	nullDataScripts, err := MemoToScripts(memo, txscript.MaxDataCarrierSize, txscript.NullDataScript, txscript.PayToWitnessScript)
+	c.Assert(err, IsNil)
+	addr, err := btcutil.DecodeAddress("tb1qleqepvj0d9n7899qj3skd8tw7c7jvh3zlxul70", &btcchaincfg.MainNetParams)
+	c.Assert(err, IsNil)
+	buf, err := txscript.PayToAddrScript(addr)
+	c.Assert(err, IsNil)
+	size := s.client.estimateTxSize(txs, nullDataScripts, buf, buf)
+	c.Assert(size, Equals, int64(288))
+	const longMemo = "OUT:2180B871F2DEA2546E1403DBFE9C26B062ABAFFD979CF3A65F2B4D2230105CF12180B871F2DEA2546E1403DBFE9C26B062ABAFFD979CF3A65F2B4D2230105CF12180B871F2DEA2546E1403DBFE9C26B062ABAFFD979CF3A65F2B4D2230105CF1"
+	nullDataScripts, err = MemoToScripts(longMemo, txscript.MaxDataCarrierSize, txscript.NullDataScript, txscript.PayToWitnessScript)
+	c.Assert(err, IsNil)
+	size = s.client.estimateTxSize(txs, nullDataScripts, buf, buf)
+	c.Assert(size, Equals, int64(487))
 }
 
 func (s *BitcoinSignerSuite) TestSignTxWithAddressPubkey(c *C) {

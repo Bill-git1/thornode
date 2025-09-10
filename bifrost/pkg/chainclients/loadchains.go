@@ -11,6 +11,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/evm"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/gaia"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/types"
+	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/solana"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/tron"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/utxo"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/xrp"
@@ -52,6 +53,8 @@ func LoadChains(thorKeys *thorclient.Keys,
 			return tron.NewTronClient(thorKeys, chain, server, thorchainBridge, m)
 		case common.XRPChain:
 			return xrp.NewClient(thorKeys, chain, server, thorchainBridge, m)
+		case common.SOLChain:
+			return solana.NewSOLClient(thorKeys, chain, server, thorchainBridge, m, pubKeyValidator, poolMgr)
 		default:
 			log.Fatal().Msgf("chain %s is not supported", chain.ChainID)
 			return nil, nil
