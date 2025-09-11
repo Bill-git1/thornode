@@ -12,7 +12,7 @@ import (
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// SolvencyCheckActo
+// SolvencyCheckActor
 ////////////////////////////////////////////////////////////////////////////////////////
 
 type SolvencyCheckActor struct {
@@ -20,7 +20,7 @@ type SolvencyCheckActor struct {
 }
 
 func NewSolvencyCheckActor() *Actor {
-	a := &DualLPActor{
+	a := &SolvencyCheckActor{
 		Actor: *NewActor("SolvencyCheck"),
 	}
 
@@ -33,7 +33,7 @@ func NewSolvencyCheckActor() *Actor {
 // Ops
 ////////////////////////////////////////////////////////////////////////////////////////
 
-func (a *DualLPActor) checkSolvency(config *OpConfig) OpResult {
+func (a *SolvencyCheckActor) checkSolvency(config *OpConfig) OpResult {
 	// get all vaults
 	vaults, err := thornode.GetVaults()
 	if err != nil {

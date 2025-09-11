@@ -500,7 +500,8 @@ func (c *Client) getTxIn(tx *btcjson.TxRawResult, height int64, isMemPool bool, 
 		toAddr = c.stripBCHAddress(toAddr)
 	}
 
-	if c.isAsgardAddress(toAddr) {
+	isInbound := c.isAsgardAddress(toAddr)
+	if isInbound {
 		// only inbound UTXO need to be validated against multi-sig
 		if !c.isValidUTXO(output.ScriptPubKey.Hex) {
 			return types.TxInItem{}, fmt.Errorf("invalid utxo")
@@ -512,7 +513,7 @@ func (c *Client) getTxIn(tx *btcjson.TxRawResult, height int64, isMemPool bool, 
 	}
 	amt := uint64(amount.ToUnit(btcutil.AmountSatoshi))
 
-	gas, err := c.getGas(tx)
+	gas, err := c.getGas(tx, isInbound)
 	if err != nil {
 		return types.TxInItem{}, fmt.Errorf("fail to get gas from tx: %w", err)
 	}
@@ -996,7 +997,7 @@ func (c *Client) decodeHexString(hexString string) (string, error) {
 }
 
 // getGas returns gas for a tx (sum vin - sum vout)
-func (c *Client) getGas(tx *btcjson.TxRawResult) (common.Gas, error) {
+func (c *Client) getGas(tx *btcjson.TxRawResult, isInbound bool) (common.Gas, error) {
 	var sumVin uint64 = 0
 	for _, vin := range tx.Vin {
 		vinTx, err := c.rpc.GetRawTransactionVerbose(vin.Txid)
@@ -1012,6 +1013,12 @@ func (c *Client) getGas(tx *btcjson.TxRawResult) (common.Gas, error) {
 	}
 	var sumVout uint64 = 0
 	for _, vout := range tx.Vout {
+		// Ignore all values after the first OP_RETURN on outbounds to consider the values
+		// in the extra p2wpkh outputs as part of the gas and avoid insolvency.
+		if !isInbound && strings.ToLower(vout.ScriptPubKey.Type) == "nulldata" {
+			break
+		}
+
 		amount, err := btcutil.NewAmount(vout.Value)
 		if err != nil {
 			return nil, err

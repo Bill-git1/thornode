@@ -176,7 +176,7 @@ func main() {
 	cfg := InitConfig(parallelismInt, enabledStages["seed"] || enabledStages["all"])
 
 	// start watchers
-	for _, w := range []*Watcher{watchers.NewInvariants()} {
+	for _, w := range []*Watcher{watchers.NewInvariants(), watchers.NewSolvencyHalt()} {
 		log.Info().Str("watcher", w.Name).Msg("starting watcher")
 		go func(w *Watcher) {
 			err = w.Execute(cfg, log.Output(os.Stderr))

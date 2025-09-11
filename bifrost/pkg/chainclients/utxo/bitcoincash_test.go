@@ -722,7 +722,7 @@ func (s *BitcoinCashSuite) TestGetGas(c *C) {
 			},
 		},
 	}
-	gas, err := s.client.getGas(&tx)
+	gas, err := s.client.getGas(&tx, true)
 	c.Assert(err, IsNil)
 	c.Assert(gas.Equals(common.Gas{common.NewCoin(common.BCHAsset, cosmos.NewUint(7244430))}), Equals, true)
 
@@ -753,7 +753,7 @@ func (s *BitcoinCashSuite) TestGetGas(c *C) {
 			},
 		},
 	}
-	gas, err = s.client.getGas(&tx)
+	gas, err = s.client.getGas(&tx, true)
 	c.Assert(err, IsNil)
 	c.Assert(gas.Equals(common.Gas{common.NewCoin(common.BCHAsset, cosmos.NewUint(149013))}), Equals, true)
 }

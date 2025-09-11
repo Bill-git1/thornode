@@ -434,55 +434,28 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 		gasAmtSats = c.minRelayFeeSats
 	}
 
-	var memo mem.Memo
-	if err == nil {
-		// Parse the memo to be able to identify Migrate or Consolidate outbounds.
-		memo, err = mem.ParseMemo(common.LatestVersion, tx.Memo)
-		if err != nil {
-			return nil, nil, fmt.Errorf("fail to parse memo: %w", err)
-		}
+	// Parse the memo to be able to identify Migrate or Consolidate outbounds.
+	memo, err := mem.ParseMemo(common.LatestVersion, tx.Memo)
+	if err != nil {
+		return nil, nil, fmt.Errorf("fail to parse memo: %w", err)
+	}
 
-		// if the total gas spend is more than max gas , then we have to take away some from the amount pay to customer
-		if !tx.MaxGas.IsEmpty() {
-			maxGasCoin := tx.MaxGas.ToCoins().GetCoin(c.cfg.ChainID.GetGasAsset())
-			if gasAmtSats > maxGasCoin.Amount.Uint64() {
-				c.log.Info().Msgf("max gas: %s, however estimated gas need %d", tx.MaxGas, gasAmtSats)
-				gasAmtSats = maxGasCoin.Amount.Uint64()
-			} else if gasAmtSats < maxGasCoin.Amount.Uint64() && memo.GetType() == mem.TxMigrate {
-				// if the tx spend less gas then the estimated MaxGas , then the extra can be added to the coinToCustomer
-				gap := maxGasCoin.Amount.Uint64() - gasAmtSats
-				c.log.Info().Msgf("max gas is: %s, however only: %d is required, gap: %d goes to the vault migrated to", tx.MaxGas, gasAmtSats, gap)
-				coinToCustomer.Amount = coinToCustomer.Amount.Add(cosmos.NewUint(gap))
-			}
-		} else if memo.GetType() == mem.TxConsolidate {
-			gap := gasAmtSats
-			c.log.Info().Msgf("consolidate tx, need gas: %d", gap)
-			coinToCustomer.Amount = common.SafeSub(coinToCustomer.Amount, cosmos.NewUint(gap))
+	// if the total gas spend is more than max gas , then we have to take away some from the amount pay to customer
+	if !tx.MaxGas.IsEmpty() {
+		maxGasCoin := tx.MaxGas.ToCoins().GetCoin(c.cfg.ChainID.GetGasAsset())
+		if gasAmtSats > maxGasCoin.Amount.Uint64() {
+			c.log.Info().Msgf("max gas: %s, however estimated gas need %d", tx.MaxGas, gasAmtSats)
+			gasAmtSats = maxGasCoin.Amount.Uint64()
+		} else if gasAmtSats < maxGasCoin.Amount.Uint64() && memo.GetType() == mem.TxMigrate {
+			// if the tx spend less gas then the estimated MaxGas , then the extra can be added to the coinToCustomer
+			gap := maxGasCoin.Amount.Uint64() - gasAmtSats
+			c.log.Info().Msgf("max gas is: %s, however only: %d is required, gap: %d goes to the vault migrated to", tx.MaxGas, gasAmtSats, gap)
+			coinToCustomer.Amount = coinToCustomer.Amount.Add(cosmos.NewUint(gap))
 		}
-	} else {
-		// if the total gas spend is more than max gas , then we have to take away some from the amount pay to customer
-		if !tx.MaxGas.IsEmpty() {
-			maxGasCoin := tx.MaxGas.ToCoins().GetCoin(c.cfg.ChainID.GetGasAsset())
-			if gasAmtSats > maxGasCoin.Amount.Uint64() {
-				c.log.Info().Msgf("max gas: %s, however estimated gas need %d", tx.MaxGas, gasAmtSats)
-				gasAmtSats = maxGasCoin.Amount.Uint64()
-			} else if gasAmtSats < maxGasCoin.Amount.Uint64() {
-				// if the tx spend less gas then the estimated MaxGas , then the extra can be added to the coinToCustomer
-				gap := maxGasCoin.Amount.Uint64() - gasAmtSats
-				c.log.Info().Msgf("max gas is: %s, however only: %d is required, gap: %d goes to customer", tx.MaxGas, gasAmtSats, gap)
-				coinToCustomer.Amount = coinToCustomer.Amount.Add(cosmos.NewUint(gap))
-			}
-		} else {
-			memo, err = mem.ParseMemo(common.LatestVersion, tx.Memo)
-			if err != nil {
-				return nil, nil, fmt.Errorf("fail to parse memo: %w", err)
-			}
-			if memo.GetType() == mem.TxConsolidate {
-				gap := gasAmtSats
-				c.log.Info().Msgf("consolidate tx, need gas: %d", gap)
-				coinToCustomer.Amount = common.SafeSub(coinToCustomer.Amount, cosmos.NewUint(gap))
-			}
-		}
+	} else if memo.GetType() == mem.TxConsolidate {
+		gap := gasAmtSats
+		c.log.Info().Msgf("consolidate tx, need gas: %d", gap)
+		coinToCustomer.Amount = common.SafeSub(coinToCustomer.Amount, cosmos.NewUint(gap))
 	}
 
 	gasAmt := btcutil.Amount(gasAmtSats)

@@ -32,6 +32,12 @@ func Swaps() *Actor {
 
 	// swap from each pool to one random one
 	for i, pool := range swapPools {
+		// always swap SOL <> BTC
+		if pool.Chain == common.SOLChain {
+			a.Children[core.NewSwapActor(pool, common.BTCAsset)] = true
+			a.Children[core.NewSwapActor(common.BTCAsset, pool)] = true
+		}
+
 		// choose a random (other) pool to swap to
 		j := rand.Intn(len(swapPools))
 		for j == i {

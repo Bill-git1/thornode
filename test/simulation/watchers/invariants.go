@@ -3,7 +3,6 @@ package watchers
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -14,15 +13,6 @@ import (
 
 	. "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/types"
 )
-
-var httpClient = &http.Client{
-	Transport: &http.Transport{
-		Dial: (&net.Dialer{
-			Timeout: 5 * time.Second,
-		}).Dial,
-	},
-	Timeout: 5 * time.Second,
-}
 
 func NewInvariants() *Watcher {
 	cl := log.With().Str("watcher", "invariants").Logger()
