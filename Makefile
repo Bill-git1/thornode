@@ -13,6 +13,12 @@ endif
 
 .PHONY: build test tools export healthcheck run-mocknet build-mocknet stop-mocknet halt-mocknet ps-mocknet reset-mocknet logs-mocknet openapi
 
+# mocknet docker compose files and overrides for macOS
+DOCKER_COMPOSE_FILES ?= -f build/docker/docker-compose.yml
+ifeq ($(shell uname -s),Darwin)
+DOCKER_COMPOSE_FILES += -f build/docker/docker-compose.darwin.yml
+endif
+
 # pull branch name from CI if unset and available
 ifdef CI_COMMIT_BRANCH
 BRANCH?=${CI_COMMIT_BRANCH}
@@ -241,7 +247,7 @@ build-test-simulation:
 		--build-arg COMMIT=$(COMMIT) \
 
 test-simulation-events:
-	@docker compose -f build/docker/docker-compose.yml run --rm events
+	@docker compose $(DOCKER_COMPOSE_FILES) run --rm events
 
 # internal target used in docker build
 _build-test-simulation:
@@ -255,21 +261,21 @@ _test-simulation:
 # ------------------------------ Single Node Mocknet ------------------------------
 
 cli-mocknet:
-	@docker compose -f build/docker/docker-compose.yml run --rm cli
+	@docker compose $(DOCKER_COMPOSE_FILES) run --rm cli
 
 run-mocknet:
-	@docker compose -f build/docker/docker-compose.yml \
+	@docker compose $(DOCKER_COMPOSE_FILES) \
 		--profile mocknet --profile midgard up -d
 
 stop-mocknet:
-	@docker compose -f build/docker/docker-compose.yml --profile mocknet --profile midgard down -v
+	@docker compose $(DOCKER_COMPOSE_FILES) --profile mocknet --profile midgard down -v
 
 # Halt the Mocknet without erasing the blockchain history, so it can be resumed later.
 halt-mocknet:
-	@docker compose -f build/docker/docker-compose.yml --profile mocknet --profile midgard down
+	@docker compose $(DOCKER_COMPOSE_FILES) --profile mocknet --profile midgard down
 
 build-mocknet:
-	@docker compose -f build/docker/docker-compose.yml --profile mocknet --profile midgard build \
+	@docker compose $(DOCKER_COMPOSE_FILES) --profile mocknet-build build \
 		--build-arg COMMIT=$(COMMIT)
 
 bootstrap-mocknet:
@@ -278,11 +284,11 @@ bootstrap-mocknet:
 		thornode-simtest sh -c 'make _test-simulation'
 
 ps-mocknet:
-	@docker compose -f build/docker/docker-compose.yml --profile mocknet --profile midgard images
-	@docker compose -f build/docker/docker-compose.yml --profile mocknet --profile midgard ps
+	@docker compose $(DOCKER_COMPOSE_FILES) --profile mocknet --profile midgard images
+	@docker compose $(DOCKER_COMPOSE_FILES) --profile mocknet --profile midgard ps
 
 logs-mocknet:
-	@docker compose -f build/docker/docker-compose.yml --profile mocknet logs -f thornode bifrost
+	@docker compose $(DOCKER_COMPOSE_FILES) --profile mocknet logs -f thornode bifrost
 
 reset-mocknet: stop-mocknet run-mocknet
 
@@ -294,21 +300,21 @@ reset-mocknet-fork-%: stop-mocknet
 # ------------------------------ Multi Node Mocknet ------------------------------
 
 run-mocknet-cluster:
-	@docker compose -f build/docker/docker-compose.yml --profile mocknet-cluster \
+	@docker compose $(DOCKER_COMPOSE_FILES) --profile mocknet-cluster \
 		--profile midgard up -d
 
 stop-mocknet-cluster:
-	@docker compose -f build/docker/docker-compose.yml --profile mocknet-cluster --profile midgard down -v
+	@docker compose $(DOCKER_COMPOSE_FILES) --profile mocknet-cluster --profile midgard down -v
 
 halt-mocknet-cluster:
-	@docker compose -f build/docker/docker-compose.yml --profile mocknet-cluster --profile midgard down
+	@docker compose $(DOCKER_COMPOSE_FILES) --profile mocknet-cluster --profile midgard down
 
 build-mocknet-cluster:
-	@docker compose -f build/docker/docker-compose.yml --profile mocknet-cluster --profile midgard build
+	@docker compose $(DOCKER_COMPOSE_FILES) --profile mocknet-cluster-build build
 
 ps-mocknet-cluster:
-	@docker compose -f build/docker/docker-compose.yml --profile mocknet-cluster --profile midgard images
-	@docker compose -f build/docker/docker-compose.yml --profile mocknet-cluster --profile midgard ps
+	@docker compose $(DOCKER_COMPOSE_FILES) --profile mocknet-cluster --profile midgard images
+	@docker compose $(DOCKER_COMPOSE_FILES) --profile mocknet-cluster --profile midgard ps
 
 reset-mocknet-cluster: stop-mocknet-cluster build-mocknet-cluster run-mocknet-cluster
 

@@ -651,7 +651,7 @@ services:
       - mocknet
       - mocknet-cluster
     restart: unless-stopped
-    image: anzaxyz/agave:v2.2.10
+    image: anzaxyz/agave:v2.3.8
     volumes:
       - "./mocknet/solana:/mocknet"
     entrypoint: /mocknet/entrypoint.sh
