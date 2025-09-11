@@ -52,7 +52,9 @@ type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .txs[0].result.events[3].action == "/cosmwasm.wasm.v1.MsgMigrateContract"
-  - .txs[0].result.events[4]._contract_address == "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"
   - .txs[0].result.events[4].code_id == "2"
-  - .txs[0].result.events[5].code_id == "1"
-  - .txs[0].result.events[5].type == "unpin_code"
+  - .txs[0].result.events[4].type == "pin_code"
+  - .txs[0].result.events[5]._contract_address == "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f"
+  - .txs[0].result.events[5].code_id == "2"
+  - .txs[0].result.events[6].code_id == "1"
+  - .txs[0].result.events[6].type == "unpin_code"

@@ -648,7 +648,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "125702",
+          "gas_used": "71311",
           "events": [
             {
               "fee": "",
@@ -669,6 +669,11 @@
               "msg_index": "0",
               "sender": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "type": "message"
+            },
+            {
+              "code_id": "2",
+              "msg_index": "0",
+              "type": "pin_code"
             },
             {
               "_contract_address": "tthor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sw58u9f",

@@ -209,6 +209,11 @@ func (m WasmMgrVCUR) MigrateContract(
 		return nil, err
 	}
 
+	err = m.maybePin(ctx, newCodeID)
+	if err != nil {
+		return nil, err
+	}
+
 	data, err := m.permissionedKeeper().Migrate(
 		ctx,
 		contractAddress,
