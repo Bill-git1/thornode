@@ -300,11 +300,15 @@ func (c *Client) sendNetworkFee(height int64) error {
 	}
 
 	c.m.GetGauge(metrics.GasPrice(c.cfg.ChainID)).Set(float64(feeRate))
-	if c.lastFeeRate != feeRate {
-		c.m.GetCounter(metrics.GasPriceChange(c.cfg.ChainID)).Inc()
+
+	// skip update if fee has not changed
+	if c.lastFeeRate == feeRate {
+		return nil
 	}
 
 	c.lastFeeRate = feeRate
+	c.m.GetCounter(metrics.GasPriceChange(c.cfg.ChainID)).Inc()
+
 	c.globalNetworkFeeQueue <- common.NetworkFee{
 		Chain:           c.cfg.ChainID,
 		Height:          height,

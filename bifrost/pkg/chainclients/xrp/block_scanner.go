@@ -164,6 +164,11 @@ func (c *XrpBlockScanner) updateFees(height int64) error {
 	if height%FeeUpdatePeriodBlocks == 0 && len(c.feeCache) == FeeCacheTransactions {
 		avgFee := c.averageFee()
 
+		resolution := sdkmath.NewUint(uint64(c.cfg.GasPriceResolution))
+		avgFee = avgFee.Add(resolution.SubUint64(1))
+		avgFee = avgFee.Quo(resolution)
+		avgFee = avgFee.Mul(resolution)
+
 		// sanity check the fee is not zero
 		if avgFee.IsZero() {
 			return errors.New("suggested gas fee was zero")

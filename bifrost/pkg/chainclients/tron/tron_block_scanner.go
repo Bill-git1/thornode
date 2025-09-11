@@ -412,6 +412,11 @@ func (s *TronBlockScanner) updateFees(height int64) {
 		return
 	}
 
+	// skip sending the network fee if it did not change
+	if uint64(fee) == s.currentFee {
+		return
+	}
+
 	s.currentFee = uint64(fee)
 
 	s.globalNetworkFeeQueue <- common.NetworkFee{
@@ -423,7 +428,12 @@ func (s *TronBlockScanner) updateFees(height int64) {
 
 	s.logger.Info().
 		Int64("height", height).
-		Int64("fee", fee).
+		Int64("bandwidth", bandwidth).
+		Int64("energy", energy).
+		Int64("memo_fee", params.MemoFee).
+		Int64("energy_fee", params.EnergyFee).
+		Int64("bandwidth_fee", params.BandwidthFee).
+		Int64("total_fee", fee).
 		Msg("updated network fee")
 }
 

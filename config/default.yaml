@@ -142,7 +142,7 @@ bifrost:
         concurrency: 0
         max_gas_limit: 0
         fixed_gas_rate: 0
-        gas_price_resolution: 1 # 1 satoshi (UTXO default)
+        gas_price_resolution: 1 # 1 sats/vbyte
         max_resume_block_lag: 1h
         max_healthy_lag: 30m
         transaction_batch_size: 500
@@ -393,7 +393,7 @@ bifrost:
       block_scanner:
         <<: *default-block-scanner
         chain_id: XRP
-        gas_price_resolution: 10 # drops
+        gas_price_resolution: 100 # drops
         observation_flexibility_blocks: 40
       mempool_tx_id_cache_size: 0
       scanner_leveldb: *default-leveldb
@@ -407,6 +407,7 @@ bifrost:
         chain_id: LTC
         observation_flexibility_blocks: 3
         gas_cache_blocks: 10
+        gas_price_resolution: 10 # sats/vbyte
         scan_mempool: false
       mempool_tx_id_cache_size: 1_000_000
       scanner_leveldb: *default-leveldb
