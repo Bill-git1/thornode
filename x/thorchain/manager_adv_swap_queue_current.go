@@ -89,7 +89,7 @@ func (vm *SwapQueueAdvVCUR) isSwapReady(ctx cosmos.Context, msg MsgSwap) bool {
 	}
 
 	// Check if it's the right interval for the next sub-swap
-	if msg.State.Interval > 0 && (ctx.BlockHeight()-msg.State.LastHeight)%int64(msg.State.Interval) != 0 {
+	if msg.IsMarketSwap() && msg.State.Interval > 0 && (ctx.BlockHeight()-msg.State.LastHeight)%int64(msg.State.Interval) != 0 {
 		return false
 	}
 
