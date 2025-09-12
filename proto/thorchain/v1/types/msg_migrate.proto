@@ -8,7 +8,8 @@ import "gogoproto/gogo.proto";
 import "common/common.proto";
 
 message MsgMigrate {
-  common.ObservedTx tx = 1 [(gogoproto.nullable) = false];
+  common.ObservedTx tx = 1 [ (gogoproto.nullable) = false ];
   int64 block_height = 2;
-  bytes signer = 3  [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
+  bytes signer = 3 [ (gogoproto.casttype) =
+                         "github.com/cosmos/cosmos-sdk/types.AccAddress" ];
 }

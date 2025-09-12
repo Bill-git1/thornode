@@ -3931,8 +3931,8 @@ func (*MsgBurnTokensResponse) Descriptor() ([]byte, []int) {
 	return file_thorchain_denom_v1_types_tx_proto_rawDescGZIP(), []int{5}
 }
 
-// MsgChangeDenomAdmin is the sdk.Msg type for allowing an admin account to reassign
-// adminship of a denom to a new account
+// MsgChangeDenomAdmin is the sdk.Msg type for allowing an admin account to
+// reassign adminship of a denom to a new account
 type MsgChangeDenomAdmin struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

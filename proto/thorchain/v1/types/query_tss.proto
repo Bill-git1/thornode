@@ -8,20 +8,16 @@ import "types/type_tss_metric.proto";
 
 option (gogoproto.marshaler_all) = true;
 
-message QueryTssKeygenMetricRequest{
+message QueryTssKeygenMetricRequest {
   string pub_key = 1;
   string height = 2;
 }
 
-message QueryTssKeygenMetricResponse{
-  repeated TssKeygenMetric metrics = 1;
-}
+message QueryTssKeygenMetricResponse { repeated TssKeygenMetric metrics = 1; }
 
-message QueryTssMetricRequest{
-  string height = 1;
-}
+message QueryTssMetricRequest { string height = 1; }
 
-message QueryTssMetricResponse{
-  repeated TssKeygenMetric keygen = 1 [(gogoproto.jsontag) = "keygen"];
-  TssKeysignMetric keysign = 2 [(gogoproto.jsontag) = "keysign"];
+message QueryTssMetricResponse {
+  repeated TssKeygenMetric keygen = 1 [ (gogoproto.jsontag) = "keygen" ];
+  TssKeysignMetric keysign = 2 [ (gogoproto.jsontag) = "keysign" ];
 }

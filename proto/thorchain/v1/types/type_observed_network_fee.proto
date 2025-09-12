@@ -11,7 +11,8 @@ import "gogoproto/gogo.proto";
 message ObservedNetworkFeeVoter {
   int64 block_height = 1;
   int64 report_block_height = 2;
-  string chain = 3 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.Chain"];
+  string chain = 3 [ (gogoproto.casttype) =
+                         "gitlab.com/thorchain/thornode/v3/common.Chain" ];
   repeated string signers = 4;
   int64 fee_rate = 5;
   int64 transaction_size = 6;

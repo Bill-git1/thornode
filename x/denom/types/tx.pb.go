@@ -328,8 +328,8 @@ func (m *MsgBurnTokensResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_MsgBurnTokensResponse proto.InternalMessageInfo
 
-// MsgChangeDenomAdmin is the sdk.Msg type for allowing an admin account to reassign
-// adminship of a denom to a new account
+// MsgChangeDenomAdmin is the sdk.Msg type for allowing an admin account to
+// reassign adminship of a denom to a new account
 type MsgChangeDenomAdmin struct {
 	Sender   string `protobuf:"bytes,1,opt,name=sender,proto3" json:"sender,omitempty" yaml:"sender"`
 	Denom    string `protobuf:"bytes,2,opt,name=denom,proto3" json:"denom,omitempty" yaml:"denom"`

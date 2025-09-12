@@ -6,6 +6,12 @@ option go_package = "gitlab.com/thorchain/thornode/v3/x/thorchain/types";
 import "gogoproto/gogo.proto";
 
 message ProtocolOwnedLiquidity {
-  string rune_deposited = 1 [(gogoproto.customtype) = "cosmossdk.io/math.Uint", (gogoproto.nullable) = false];
-  string rune_withdrawn = 2 [(gogoproto.customtype) = "cosmossdk.io/math.Uint", (gogoproto.nullable) = false];
+  string rune_deposited = 1 [
+    (gogoproto.customtype) = "cosmossdk.io/math.Uint",
+    (gogoproto.nullable) = false
+  ];
+  string rune_withdrawn = 2 [
+    (gogoproto.customtype) = "cosmossdk.io/math.Uint",
+    (gogoproto.nullable) = false
+  ];
 }

@@ -154,6 +154,23 @@ lint:
   script:
     - make lint-ci
 
+check-formatting:
+  rules:
+    - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH
+      when: never
+    - if: $CI_COMMIT_BRANCH == "stagenet"
+      when: never
+    - if: $CI_COMMIT_BRANCH == "mainnet"
+      when: never
+    - if: $CI == "true"
+      when: on_success
+  stage: test
+  <<: *use_dind
+  before_script:
+    - apk -U add findutils make
+  script:
+    - make proto-format-check
+
 build-thornode:
   rules: &build-thornode-rules
     - if: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != $CI_MERGE_REQUEST_PROJECT_PATH

@@ -95,13 +95,15 @@ type QueryNodeResponse struct {
 	// the set of vault public keys of which the node is a member
 	SignerMembership []string `protobuf:"bytes,11,rep,name=signer_membership,json=signerMembership,proto3" json:"signer_membership"`
 	RequestedToLeave bool     `protobuf:"varint,12,opt,name=requested_to_leave,json=requestedToLeave,proto3" json:"requested_to_leave"`
-	// indicates whether the node has been forced to leave by the network, typically via ban
+	// indicates whether the node has been forced to leave by the network,
+	// typically via ban
 	ForcedToLeave bool  `protobuf:"varint,13,opt,name=forced_to_leave,json=forcedToLeave,proto3" json:"forced_to_leave"`
 	LeaveHeight   int64 `protobuf:"varint,14,opt,name=leave_height,json=leaveHeight,proto3" json:"leave_height"`
 	// the currently set version of the node
 	IpAddress string `protobuf:"bytes,15,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address"`
 	Version   string `protobuf:"bytes,16,opt,name=version,proto3" json:"version"`
-	// the accumulated slash points, reset at churn but excessive slash points may carry over
+	// the accumulated slash points, reset at churn but excessive slash points may
+	// carry over
 	SlashPoints  int64     `protobuf:"varint,17,opt,name=slash_points,json=slashPoints,proto3" json:"slash_points"`
 	Jail         *NodeJail `protobuf:"bytes,18,opt,name=jail,proto3" json:"jail"`
 	CurrentAward string    `protobuf:"bytes,19,opt,name=current_award,json=currentAward,proto3" json:"current_award"`

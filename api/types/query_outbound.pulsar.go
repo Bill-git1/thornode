@@ -2839,7 +2839,8 @@ func (x *QueryOutboundResponse) GetTxOutItems() []*QueryTxOutItem {
 	return nil
 }
 
-// Fields are rearranged for querier response readability while preserving their field numbers.
+// Fields are rearranged for querier response readability while preserving their
+// field numbers.
 type QueryTxOutItem struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

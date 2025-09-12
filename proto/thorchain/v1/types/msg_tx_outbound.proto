@@ -8,7 +8,11 @@ import "gogoproto/gogo.proto";
 import "common/common.proto";
 
 message MsgOutboundTx {
-  common.ObservedTx tx = 1 [(gogoproto.nullable) = false];
-  string in_tx_id = 2 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.TxID", (gogoproto.customname) = "InTxID"];
-  bytes signer = 3  [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
+  common.ObservedTx tx = 1 [ (gogoproto.nullable) = false ];
+  string in_tx_id = 2 [
+    (gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.TxID",
+    (gogoproto.customname) = "InTxID"
+  ];
+  bytes signer = 3 [ (gogoproto.casttype) =
+                         "github.com/cosmos/cosmos-sdk/types.AccAddress" ];
 }

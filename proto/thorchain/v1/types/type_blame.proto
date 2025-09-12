@@ -3,7 +3,7 @@ package types;
 
 option go_package = "gitlab.com/thorchain/thornode/v3/x/thorchain/types";
 option (gogoproto.goproto_stringer_all) = false;
-option (gogoproto.stringer_all)         = false;
+option (gogoproto.stringer_all) = false;
 option (gogoproto.goproto_getters_all) = false;
 
 import "gogoproto/gogo.proto";
@@ -17,6 +17,6 @@ message Node {
 message Blame {
   string fail_reason = 1;
   bool is_unicast = 2;
-  repeated Node blame_nodes = 3 [(gogoproto.nullable) = false];
+  repeated Node blame_nodes = 3 [ (gogoproto.nullable) = false ];
   string round = 4;
 }

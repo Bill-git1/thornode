@@ -520,7 +520,8 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// InjectTx is a transaction used only by proposing validators to inject a transaction into the block proposal.
+// InjectTx is a transaction used only by proposing validators to inject a
+// transaction into the block proposal.
 type InjectTx struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

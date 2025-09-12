@@ -3884,13 +3884,15 @@ type QueryUpgradeProposalResponse struct {
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// the block height at which the upgrade will occur
 	Height int64 `protobuf:"varint,2,opt,name=height,proto3" json:"height,omitempty"`
-	// the description of the upgrade, typically json with URLs to binaries for use with automation tools
+	// the description of the upgrade, typically json with URLs to binaries for
+	// use with automation tools
 	Info string `protobuf:"bytes,3,opt,name=info,proto3" json:"info,omitempty"`
 	// whether the upgrade has been approved by the active validators
 	Approved bool `protobuf:"varint,4,opt,name=approved,proto3" json:"approved,omitempty"`
 	// the percentage of active validators that have approved the upgrade
 	ApprovedPercent string `protobuf:"bytes,5,opt,name=approved_percent,json=approvedPercent,proto3" json:"approved_percent,omitempty"`
-	// the amount of additional active validators required to reach quorum for the upgrade
+	// the amount of additional active validators required to reach quorum for the
+	// upgrade
 	ValidatorsToQuorum int64 `protobuf:"varint,6,opt,name=validators_to_quorum,json=validatorsToQuorum,proto3" json:"validators_to_quorum,omitempty"`
 	// the list of node addresses that have approved the upgrade
 	Approvers []string `protobuf:"bytes,7,rep,name=approvers,proto3" json:"approvers,omitempty"`

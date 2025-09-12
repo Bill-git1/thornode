@@ -8,6 +8,10 @@ import "gogoproto/gogo.proto";
 import "common/common.proto";
 
 message TCYStaker {
-  string address = 1 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.Address"];
-  string amount = 2 [(gogoproto.customtype) = "cosmossdk.io/math.Uint", (gogoproto.nullable) = false];
+  string address = 1 [ (gogoproto.casttype) =
+                           "gitlab.com/thorchain/thornode/v3/common.Address" ];
+  string amount = 2 [
+    (gogoproto.customtype) = "cosmossdk.io/math.Uint",
+    (gogoproto.nullable) = false
+  ];
 }

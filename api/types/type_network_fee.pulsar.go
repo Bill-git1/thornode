@@ -542,8 +542,9 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// NetworkFee represents the fee rate and typical outbound transaction size. Some chains
-// may have simplifid usage to report the fee as the "fee_rate" and set size to 1.
+// NetworkFee represents the fee rate and typical outbound transaction size.
+// Some chains may have simplifid usage to report the fee as the "fee_rate" and
+// set size to 1.
 type NetworkFee struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

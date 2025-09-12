@@ -421,7 +421,8 @@ func (m *QueryTxResponse) GetKeysignMetric() *TssKeysignMetric {
 	return nil
 }
 
-// Same as ObservedTx, but changes block_height and finalise_height (openapi spec)
+// Same as ObservedTx, but changes block_height and finalise_height (openapi
+// spec)
 type QueryObservedTx struct {
 	Tx                    common.Tx                                      `protobuf:"bytes,1,opt,name=tx,proto3" json:"tx"`
 	Status                string                                         `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
@@ -778,11 +779,13 @@ func (m *PlannedOutTx) GetRefund() bool {
 }
 
 type InboundObservedStage struct {
-	// returns true if any nodes have observed the transaction (to be deprecated in favour of counts)
+	// returns true if any nodes have observed the transaction (to be deprecated
+	// in favour of counts)
 	Started bool `protobuf:"varint,1,opt,name=started,proto3" json:"started,omitempty"`
 	// number of signers for pre-confirmation-counting observations
 	PreConfirmationCount int64 `protobuf:"varint,2,opt,name=pre_confirmation_count,json=preConfirmationCount,proto3" json:"pre_confirmation_count,omitempty"`
-	// number of signers for final observations, after any confirmation counting complete
+	// number of signers for final observations, after any confirmation counting
+	// complete
 	FinalCount int64 `protobuf:"varint,3,opt,name=final_count,json=finalCount,proto3" json:"final_count"`
 	// returns true if no transaction observation remains to be done
 	Completed bool `protobuf:"varint,4,opt,name=completed,proto3" json:"completed"`
@@ -854,9 +857,11 @@ type InboundConfirmationCountedStage struct {
 	CountingStartHeight int64 `protobuf:"varint,1,opt,name=counting_start_height,json=countingStartHeight,proto3" json:"counting_start_height,omitempty"`
 	// the external source chain for which confirmation counting takes place
 	Chain string `protobuf:"bytes,2,opt,name=chain,proto3" json:"chain,omitempty"`
-	// the block height on the external source chain when the transaction was observed
+	// the block height on the external source chain when the transaction was
+	// observed
 	ExternalObservedHeight int64 `protobuf:"varint,3,opt,name=external_observed_height,json=externalObservedHeight,proto3" json:"external_observed_height,omitempty"`
-	// the block height on the external source chain when confirmation counting will be complete
+	// the block height on the external source chain when confirmation counting
+	// will be complete
 	ExternalConfirmationDelayHeight int64 `protobuf:"varint,4,opt,name=external_confirmation_delay_height,json=externalConfirmationDelayHeight,proto3" json:"external_confirmation_delay_height,omitempty"`
 	// the estimated remaining seconds before confirmation counting completes
 	RemainingConfirmationSeconds int64 `protobuf:"varint,5,opt,name=remaining_confirmation_seconds,json=remainingConfirmationSeconds,proto3" json:"remaining_confirmation_seconds"`
@@ -940,7 +945,8 @@ func (m *InboundConfirmationCountedStage) GetCompleted() bool {
 }
 
 type InboundFinalisedStage struct {
-	// returns true if the inbound transaction has been finalised (THORChain agreeing it exists)
+	// returns true if the inbound transaction has been finalised (THORChain
+	// agreeing it exists)
 	Completed bool `protobuf:"varint,1,opt,name=completed,proto3" json:"completed"`
 }
 
@@ -1101,7 +1107,8 @@ func (m *StreamingStatus) GetCount() int64 {
 }
 
 type SwapFinalisedStage struct {
-	// (to be deprecated in favor of swap_status) returns true if an inbound transaction's swap (successful or refunded) is no longer pending
+	// (to be deprecated in favor of swap_status) returns true if an inbound
+	// transaction's swap (successful or refunded) is no longer pending
 	Completed bool `protobuf:"varint,1,opt,name=completed,proto3" json:"completed"`
 }
 
@@ -1148,7 +1155,8 @@ func (m *SwapFinalisedStage) GetCompleted() bool {
 type OutboundDelayStage struct {
 	// the number of remaining THORChain blocks the outbound will be delayed
 	RemainingDelayBlocks int64 `protobuf:"varint,1,opt,name=remaining_delay_blocks,json=remainingDelayBlocks,proto3" json:"remaining_delay_blocks,omitempty"`
-	// the estimated remaining seconds of the outbound delay before it will be sent
+	// the estimated remaining seconds of the outbound delay before it will be
+	// sent
 	RemainingDelaySeconds int64 `protobuf:"varint,2,opt,name=remaining_delay_seconds,json=remainingDelaySeconds,proto3" json:"remaining_delay_seconds,omitempty"`
 	// returns true if no transaction outbound delay remains
 	Completed bool `protobuf:"varint,3,opt,name=completed,proto3" json:"completed"`
@@ -1213,7 +1221,8 @@ type OutboundSignedStage struct {
 	ScheduledOutboundHeight int64 `protobuf:"varint,1,opt,name=scheduled_outbound_height,json=scheduledOutboundHeight,proto3" json:"scheduled_outbound_height,omitempty"`
 	// THORChain blocks since the scheduled outbound height
 	BlocksSinceScheduled *ProtoInt64 `protobuf:"bytes,2,opt,name=blocks_since_scheduled,json=blocksSinceScheduled,proto3" json:"blocks_since_scheduled,omitempty"`
-	// returns true if an external transaction has been signed and broadcast (and observed in its mempool)
+	// returns true if an external transaction has been signed and broadcast (and
+	// observed in its mempool)
 	Completed bool `protobuf:"varint,3,opt,name=completed,proto3" json:"completed"`
 }
 

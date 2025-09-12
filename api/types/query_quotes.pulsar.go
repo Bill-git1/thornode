@@ -4320,11 +4320,15 @@ type QueryQuoteSwapResponse struct {
 	Warning string `protobuf:"bytes,9,opt,name=warning,proto3" json:"warning,omitempty"`
 	// chain specific quote notes
 	Notes string `protobuf:"bytes,10,opt,name=notes,proto3" json:"notes,omitempty"`
-	// Defines the minimum transaction size for the chain in base units (sats, wei, uatom). Transactions with asset amounts lower than the dust_threshold are ignored.
+	// Defines the minimum transaction size for the chain in base units (sats,
+	// wei, uatom). Transactions with asset amounts lower than the dust_threshold
+	// are ignored.
 	DustThreshold string `protobuf:"bytes,11,opt,name=dust_threshold,json=dustThreshold,proto3" json:"dust_threshold,omitempty"`
-	// The recommended minimum inbound amount for this transaction type & inbound asset. Sending less than this amount could result in failed refunds.
+	// The recommended minimum inbound amount for this transaction type & inbound
+	// asset. Sending less than this amount could result in failed refunds.
 	RecommendedMinAmountIn string `protobuf:"bytes,12,opt,name=recommended_min_amount_in,json=recommendedMinAmountIn,proto3" json:"recommended_min_amount_in,omitempty"`
-	// the recommended gas rate to use for the inbound to ensure timely confirmation
+	// the recommended gas rate to use for the inbound to ensure timely
+	// confirmation
 	RecommendedGasRate string `protobuf:"bytes,13,opt,name=recommended_gas_rate,json=recommendedGasRate,proto3" json:"recommended_gas_rate,omitempty"`
 	// the units of the recommended gas rate
 	GasRateUnits string `protobuf:"bytes,14,opt,name=gas_rate_units,json=gasRateUnits,proto3" json:"gas_rate_units,omitempty"`
@@ -4338,9 +4342,11 @@ type QueryQuoteSwapResponse struct {
 	StreamingSwapBlocks int64 `protobuf:"varint,18,opt,name=streaming_swap_blocks,json=streamingSwapBlocks,proto3" json:"streaming_swap_blocks,omitempty"`
 	// approx the number of seconds the streaming swap will execute over
 	StreamingSwapSeconds int64 `protobuf:"varint,19,opt,name=streaming_swap_seconds,json=streamingSwapSeconds,proto3" json:"streaming_swap_seconds,omitempty"`
-	// total number of seconds a swap is expected to take (inbound conf + streaming swap + outbound delay)
+	// total number of seconds a swap is expected to take (inbound conf +
+	// streaming swap + outbound delay)
 	TotalSwapSeconds int64 `protobuf:"varint,20,opt,name=total_swap_seconds,json=totalSwapSeconds,proto3" json:"total_swap_seconds,omitempty"`
-	// List of outputs needed (additional to deposit and change return). Meant for wallets to easily construct transactions with more than 80bytes
+	// List of outputs needed (additional to deposit and change return). Meant for
+	// wallets to easily construct transactions with more than 80bytes
 	Vout []*Vout `protobuf:"bytes,21,rep,name=vout,proto3" json:"vout,omitempty"`
 }
 

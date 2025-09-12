@@ -7,12 +7,12 @@ import "gogoproto/gogo.proto";
 
 option (gogoproto.marshaler_all) = true;
 
-message QueryAccountRequest{
+message QueryAccountRequest {
   string address = 1;
   string height = 2;
 }
 
-message QueryAccountResponse{
+message QueryAccountResponse {
   string address = 1;
   string pub_key = 2;
   string account_number = 3;

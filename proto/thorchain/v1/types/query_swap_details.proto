@@ -8,12 +8,12 @@ import "types/msg_swap.proto";
 
 option (gogoproto.marshaler_all) = true;
 
-message QuerySwapDetailsRequest{
+message QuerySwapDetailsRequest {
   string tx_id = 1;
   string height = 2;
 }
 
-message QuerySwapDetailsResponse{
+message QuerySwapDetailsResponse {
   MsgSwap swap = 1;
   string status = 2;
   string queue_type = 3;

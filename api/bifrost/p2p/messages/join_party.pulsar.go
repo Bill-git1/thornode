@@ -1199,7 +1199,7 @@ type JoinPartyLeaderComm struct {
 	ID      string                           `protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`                                                                 // unique hash id
 	MsgType string                           `protobuf:"bytes,2,opt,name=MsgType,proto3" json:"MsgType,omitempty"`                                                       // unique hash id
 	Type_   JoinPartyLeaderComm_ResponseType `protobuf:"varint,3,opt,name=type,proto3,enum=bifrost.p2p.messages.JoinPartyLeaderComm_ResponseType" json:"type,omitempty"` // result
-	PeerIDs []string                         `protobuf:"bytes,4,rep,name=PeerIDs,proto3" json:"PeerIDs,omitempty"`                                                       // if Success , this will be the list of peers to form the ceremony, if fail , this will be the peers that are available
+	PeerIDs []string                         `protobuf:"bytes,4,rep,name=PeerIDs,proto3" json:"PeerIDs,omitempty"`                                                       // if Success , this will be the list of peers to form the ceremony, if
 }
 
 func (x *JoinPartyLeaderComm) Reset() {

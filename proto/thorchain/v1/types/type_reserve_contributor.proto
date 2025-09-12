@@ -6,6 +6,10 @@ option go_package = "gitlab.com/thorchain/thornode/v3/x/thorchain/types";
 import "gogoproto/gogo.proto";
 
 message ReserveContributor {
-  string address = 1 [(gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.Address"];
-  string amount = 2 [(gogoproto.customtype) = "cosmossdk.io/math.Uint", (gogoproto.nullable) = false];
+  string address = 1 [ (gogoproto.casttype) =
+                           "gitlab.com/thorchain/thornode/v3/common.Address" ];
+  string amount = 2 [
+    (gogoproto.customtype) = "cosmossdk.io/math.Uint",
+    (gogoproto.nullable) = false
+  ];
 }

@@ -28,9 +28,9 @@ const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 // |    State    | Swap | Add   | Withdraw  | Refunding |
 // | ----------- | ---- | ----- | --------- | --------- |
-// | `staged`    | no   | yes   | yes       | Refund Invalid Add/Remove Liquidity && all Swaps |
-// | `available` | yes  | yes   | yes       | Refund Invalid Tx |
-// | `suspended` | no   | no    | no        | Refund all |
+// | `staged`    | no   | yes   | yes       | Refund Invalid Add/Remove
+// Liquidity && all Swaps | | `available` | yes  | yes   | yes       | Refund
+// Invalid Tx | | `suspended` | no   | no    | no        | Refund all |
 type PoolStatus int32
 
 const (

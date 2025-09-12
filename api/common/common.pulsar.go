@@ -16942,7 +16942,7 @@ type AttestTx struct {
 	ObsTx                  *ObservedTx  `protobuf:"bytes,1,opt,name=obsTx,proto3" json:"obsTx,omitempty"`
 	Attestation            *Attestation `protobuf:"bytes,2,opt,name=attestation,proto3" json:"attestation,omitempty"`
 	Inbound                bool         `protobuf:"varint,3,opt,name=inbound,proto3" json:"inbound,omitempty"`
-	AllowFutureObservation bool         `protobuf:"varint,4,opt,name=allow_future_observation,json=allowFutureObservation,proto3" json:"allow_future_observation,omitempty"` // allow future observation if this is an instant observation and gas is wrong, requiring future observation to correct
+	AllowFutureObservation bool         `protobuf:"varint,4,opt,name=allow_future_observation,json=allowFutureObservation,proto3" json:"allow_future_observation,omitempty"` // allow future observation if this is an instant observation and gas
 }
 
 func (x *AttestTx) Reset() {
@@ -17001,7 +17001,7 @@ type QuorumTx struct {
 	ObsTx                  *ObservedTx    `protobuf:"bytes,1,opt,name=obsTx,proto3" json:"obsTx,omitempty"`
 	Attestations           []*Attestation `protobuf:"bytes,2,rep,name=attestations,proto3" json:"attestations,omitempty"`
 	Inbound                bool           `protobuf:"varint,3,opt,name=inbound,proto3" json:"inbound,omitempty"`
-	AllowFutureObservation bool           `protobuf:"varint,4,opt,name=allow_future_observation,json=allowFutureObservation,proto3" json:"allow_future_observation,omitempty"` // allow future observation if this is an instant observation and gas is wrong, requiring future observation to correct
+	AllowFutureObservation bool           `protobuf:"varint,4,opt,name=allow_future_observation,json=allowFutureObservation,proto3" json:"allow_future_observation,omitempty"` // allow future observation if this is an instant observation and gas
 }
 
 func (x *QuorumTx) Reset() {

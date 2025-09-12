@@ -7,32 +7,36 @@ option go_package = "gitlab.com/thorchain/thornode/v3/x/thorchain/ebifrost";
 
 // Create service with RPC method to send tx in quorum to thorchain
 service LocalhostBifrost {
-    rpc SendQuorumTx(common.QuorumTx) returns (SendQuorumTxResult);
+  rpc SendQuorumTx(common.QuorumTx) returns (SendQuorumTxResult);
 
-    rpc SendQuorumNetworkFee(common.QuorumNetworkFee) returns (SendQuorumNetworkFeeResult);
+  rpc SendQuorumNetworkFee(common.QuorumNetworkFee)
+      returns (SendQuorumNetworkFeeResult);
 
-    rpc SendQuorumSolvency(common.QuorumSolvency) returns (SendQuorumSolvencyResult);
+  rpc SendQuorumSolvency(common.QuorumSolvency)
+      returns (SendQuorumSolvencyResult);
 
-    rpc SendQuorumErrataTx(common.QuorumErrataTx) returns (SendQuorumErrataTxResult);
+  rpc SendQuorumErrataTx(common.QuorumErrataTx)
+      returns (SendQuorumErrataTxResult);
 
-    rpc SendQuorumPriceFeedBatch(common.QuorumPriceFeedBatch) returns (SendQuorumPriceFeedBatchResult);
+  rpc SendQuorumPriceFeedBatch(common.QuorumPriceFeedBatch)
+      returns (SendQuorumPriceFeedBatchResult);
 
-    // Server streaming for notifications
-    rpc SubscribeToEvents(SubscribeRequest) returns (stream EventNotification);
+  // Server streaming for notifications
+  rpc SubscribeToEvents(SubscribeRequest) returns (stream EventNotification);
 }
 
 // SendQuorumTxResult is the empty return type
 message SendQuorumTxResult {}
 
 message SubscribeRequest {
-    // Optional fields to filter what events to subscribe to
-    repeated string event_types = 1;
+  // Optional fields to filter what events to subscribe to
+  repeated string event_types = 1;
 }
 
 message EventNotification {
-    string event_type = 1;
-    bytes payload = 2;
-    int64 timestamp = 3;
+  string event_type = 1;
+  bytes payload = 2;
+  int64 timestamp = 3;
 }
 
 // SendQuorumNetworkFeeResult is the empty return type

@@ -1926,7 +1926,8 @@ type QueryNetworkResponse struct {
 	EffectiveSecurityBond string `protobuf:"bytes,3,opt,name=effective_security_bond,json=effectiveSecurityBond,proto3" json:"effective_security_bond,omitempty"`
 	// total reserve RUNE
 	TotalReserve string `protobuf:"bytes,4,opt,name=total_reserve,json=totalReserve,proto3" json:"total_reserve,omitempty"`
-	// Returns true if there exist RetiringVaults which have not finished migrating funds to new ActiveVaults
+	// Returns true if there exist RetiringVaults which have not finished
+	// migrating funds to new ActiveVaults
 	VaultsMigrating bool `protobuf:"varint,5,opt,name=vaults_migrating,json=vaultsMigrating,proto3" json:"vaults_migrating,omitempty"`
 	// Sum of the gas the network has spent to send outbounds
 	GasSpentRune string `protobuf:"bytes,6,opt,name=gas_spent_rune,json=gasSpentRune,proto3" json:"gas_spent_rune,omitempty"`
@@ -1934,13 +1935,17 @@ type QueryNetworkResponse struct {
 	GasWithheldRune string `protobuf:"bytes,7,opt,name=gas_withheld_rune,json=gasWithheldRune,proto3" json:"gas_withheld_rune,omitempty"`
 	// Current outbound fee multiplier, in basis points
 	OutboundFeeMultiplier string `protobuf:"bytes,8,opt,name=outbound_fee_multiplier,json=outboundFeeMultiplier,proto3" json:"outbound_fee_multiplier,omitempty"`
-	// the outbound transaction fee in rune, converted from the NativeOutboundFeeUSD mimir (after USD fees are enabled)
+	// the outbound transaction fee in rune, converted from the
+	// NativeOutboundFeeUSD mimir (after USD fees are enabled)
 	NativeOutboundFeeRune string `protobuf:"bytes,9,opt,name=native_outbound_fee_rune,json=nativeOutboundFeeRune,proto3" json:"native_outbound_fee_rune,omitempty"`
-	// the native transaction fee in rune, converted from the NativeTransactionFeeUSD mimir (after USD fees are enabled)
+	// the native transaction fee in rune, converted from the
+	// NativeTransactionFeeUSD mimir (after USD fees are enabled)
 	NativeTxFeeRune string `protobuf:"bytes,10,opt,name=native_tx_fee_rune,json=nativeTxFeeRune,proto3" json:"native_tx_fee_rune,omitempty"`
-	// the thorname register fee in rune, converted from the TNSRegisterFeeUSD mimir (after USD fees are enabled)
+	// the thorname register fee in rune, converted from the TNSRegisterFeeUSD
+	// mimir (after USD fees are enabled)
 	TnsRegisterFeeRune string `protobuf:"bytes,11,opt,name=tns_register_fee_rune,json=tnsRegisterFeeRune,proto3" json:"tns_register_fee_rune,omitempty"`
-	// the thorname fee per block in rune, converted from the TNSFeePerBlockUSD mimir (after USD fees are enabled)
+	// the thorname fee per block in rune, converted from the TNSFeePerBlockUSD
+	// mimir (after USD fees are enabled)
 	TnsFeePerBlockRune string `protobuf:"bytes,12,opt,name=tns_fee_per_block_rune,json=tnsFeePerBlockRune,proto3" json:"tns_fee_per_block_rune,omitempty"`
 	// the rune price in tor
 	RunePriceInTor string `protobuf:"bytes,13,opt,name=rune_price_in_tor,json=runePriceInTor,proto3" json:"rune_price_in_tor,omitempty"`

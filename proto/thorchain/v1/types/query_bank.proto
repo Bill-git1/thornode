@@ -7,14 +7,12 @@ import "gogoproto/gogo.proto";
 
 option (gogoproto.marshaler_all) = true;
 
-message QueryBalancesRequest{
+message QueryBalancesRequest {
   string address = 1;
   string height = 2;
 }
 
-message QueryBalancesResponse{
-  repeated Amount balances = 1;
-}
+message QueryBalancesResponse { repeated Amount balances = 1; }
 
 message Amount {
   string denom = 1;

@@ -4,5 +4,4 @@ package types;
 option go_package = "gitlab.com/thorchain/thornode/v3/x/thorchain/types";
 
 // GenesisState defines the capability module's genesis state.
-message GenesisState {
-}
+message GenesisState {}

@@ -23,7 +23,8 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-// InjectTx is a transaction used only by proposing validators to inject a transaction into the block proposal.
+// InjectTx is a transaction used only by proposing validators to inject a
+// transaction into the block proposal.
 type InjectTx struct {
 	Messages []*types.Any `protobuf:"bytes,1,rep,name=messages,proto3" json:"messages,omitempty"`
 }

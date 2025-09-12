@@ -2216,13 +2216,16 @@ type QueryOutboundFeeResponse struct {
 	Asset string `protobuf:"bytes,1,opt,name=asset,proto3" json:"asset,omitempty"`
 	// the asset's outbound fee, in (1e8-format) units of the asset
 	OutboundFee string `protobuf:"bytes,2,opt,name=outbound_fee,json=outboundFee,proto3" json:"outbound_fee,omitempty"`
-	// Total RUNE the network has withheld as fees to later cover gas costs for this asset's outbounds
+	// Total RUNE the network has withheld as fees to later cover gas costs for
+	// this asset's outbounds
 	FeeWithheldRune string `protobuf:"bytes,3,opt,name=fee_withheld_rune,json=feeWithheldRune,proto3" json:"fee_withheld_rune,omitempty"`
-	// Total RUNE the network has spent to reimburse gas costs for this asset's outbounds
+	// Total RUNE the network has spent to reimburse gas costs for this asset's
+	// outbounds
 	FeeSpentRune string `protobuf:"bytes,4,opt,name=fee_spent_rune,json=feeSpentRune,proto3" json:"fee_spent_rune,omitempty"`
 	// amount of RUNE by which the fee_withheld_rune exceeds the fee_spent_rune
 	SurplusRune string `protobuf:"bytes,5,opt,name=surplus_rune,json=surplusRune,proto3" json:"surplus_rune,omitempty"`
-	// dynamic multiplier basis points, based on the surplus_rune, affecting the size of the outbound_fee
+	// dynamic multiplier basis points, based on the surplus_rune, affecting the
+	// size of the outbound_fee
 	DynamicMultiplierBasisPoints string `protobuf:"bytes,6,opt,name=dynamic_multiplier_basis_points,json=dynamicMultiplierBasisPoints,proto3" json:"dynamic_multiplier_basis_points,omitempty"`
 }
 

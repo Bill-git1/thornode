@@ -15,7 +15,8 @@ service Msg {
   rpc CreateDenom(MsgCreateDenom) returns (MsgCreateDenomResponse);
   rpc MintTokens(MsgMintTokens) returns (MsgMintTokensResponse);
   rpc BurnTokens(MsgBurnTokens) returns (MsgBurnTokensResponse);
-  rpc ChangeDenomAdmin(MsgChangeDenomAdmin) returns (MsgChangeDenomAdminResponse);
+  rpc ChangeDenomAdmin(MsgChangeDenomAdmin)
+      returns (MsgChangeDenomAdminResponse);
 }
 
 // MsgCreateDenom is the sdk.Msg type for allowing an account to create
@@ -37,7 +38,7 @@ message MsgCreateDenomResponse {
 }
 
 // MsgMint is the sdk.Msg type for allowing an admin account to mint
-// more of a token. 
+// more of a token.
 message MsgMintTokens {
   option (cosmos.msg.v1.signer) = "sender";
 
@@ -65,8 +66,8 @@ message MsgBurnTokens {
 
 message MsgBurnTokensResponse {}
 
-// MsgChangeDenomAdmin is the sdk.Msg type for allowing an admin account to reassign
-// adminship of a denom to a new account
+// MsgChangeDenomAdmin is the sdk.Msg type for allowing an admin account to
+// reassign adminship of a denom to a new account
 message MsgChangeDenomAdmin {
   option (cosmos.msg.v1.signer) = "sender";
 
@@ -76,4 +77,3 @@ message MsgChangeDenomAdmin {
 }
 
 message MsgChangeDenomAdminResponse {}
-

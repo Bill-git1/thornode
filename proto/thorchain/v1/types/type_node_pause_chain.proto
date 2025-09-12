@@ -6,6 +6,8 @@ option go_package = "gitlab.com/thorchain/thornode/v3/x/thorchain/types";
 import "gogoproto/gogo.proto";
 
 message NodePauseChain {
-  bytes node_address = 1 [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
+  bytes node_address = 1
+      [ (gogoproto.casttype) =
+            "github.com/cosmos/cosmos-sdk/types.AccAddress" ];
   int64 block_height = 2;
 }

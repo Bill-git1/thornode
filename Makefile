@@ -90,6 +90,10 @@ proto-format:
 	@echo "Formatting Protobuf files"
 	@$(protoImage) find ./ -name "*.proto" -exec clang-format -i {} \;
 
+proto-format-check:
+	@echo "Checking Protobuf formatting"
+	@find ./ -name "*.proto" -print0 | xargs -0L1 $(protoImage) clang-format --dry-run -Werror
+
 proto-lint:
 	@$(protoImage) buf lint --error-format=json
 

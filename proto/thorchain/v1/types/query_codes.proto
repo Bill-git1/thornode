@@ -7,16 +7,16 @@ import "gogoproto/gogo.proto";
 
 option (gogoproto.marshaler_all) = true;
 
-message QueryCodesRequest{
-  string height = 1 [(gogoproto.jsontag) = "height"];
+message QueryCodesRequest {
+  string height = 1 [ (gogoproto.jsontag) = "height" ];
 }
 
-message QueryCodesResponse{
-  repeated QueryCodesCode codes = 1 [(gogoproto.jsontag) = "codes"];
+message QueryCodesResponse {
+  repeated QueryCodesCode codes = 1 [ (gogoproto.jsontag) = "codes" ];
 }
 
-message QueryCodesCode{
-  string code = 1 [(gogoproto.jsontag) = "code"];
-  repeated string deployers = 2 [(gogoproto.jsontag) = "deployers"];
-  string origin = 3 [(gogoproto.jsontag) = "origin"];
+message QueryCodesCode {
+  string code = 1 [ (gogoproto.jsontag) = "code" ];
+  repeated string deployers = 2 [ (gogoproto.jsontag) = "deployers" ];
+  string origin = 3 [ (gogoproto.jsontag) = "origin" ];
 }

@@ -1910,7 +1910,8 @@ type QueryThornameResponse struct {
 	PreferredAsset    string `protobuf:"bytes,4,opt,name=preferred_asset,json=preferredAsset,proto3" json:"preferred_asset,omitempty"`
 	// Amount of RUNE currently needed to trigger a preferred asset swap.
 	PreferredAssetSwapThresholdRune string `protobuf:"bytes,7,opt,name=preferred_asset_swap_threshold_rune,json=preferredAssetSwapThresholdRune,proto3" json:"preferred_asset_swap_threshold_rune,omitempty"`
-	// Amount of RUNE currently accrued by this thorname in affiliate fees waiting to be swapped to preferred asset.
+	// Amount of RUNE currently accrued by this thorname in affiliate fees waiting
+	// to be swapped to preferred asset.
 	AffiliateCollectorRune string           `protobuf:"bytes,5,opt,name=affiliate_collector_rune,json=affiliateCollectorRune,proto3" json:"affiliate_collector_rune,omitempty"`
 	Aliases                []*ThornameAlias `protobuf:"bytes,6,rep,name=aliases,proto3" json:"aliases,omitempty"`
 }

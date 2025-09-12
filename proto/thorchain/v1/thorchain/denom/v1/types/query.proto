@@ -9,10 +9,8 @@ option go_package = "gitlab.com/thorchain/thornode/v3/x/denom/types";
 
 // Query defines the gRPC querier service.
 service Query {
-  rpc DenomAdmin(QueryDenomAdminRequest)
-      returns (QueryDenomAdminResponse) {
-    option (google.api.http).get =
-        "/denoms/{denom}/admin";
+  rpc DenomAdmin(QueryDenomAdminRequest) returns (QueryDenomAdminResponse) {
+    option (google.api.http).get = "/denoms/{denom}/admin";
   }
 }
 

@@ -104,7 +104,8 @@ type QueryPoolResponse struct {
 	SaversCapacityRemaining string `protobuf:"bytes,17,opt,name=savers_capacity_remaining,json=saversCapacityRemaining,proto3" json:"savers_capacity_remaining"`
 	// whether additional synths cannot be minted
 	SynthMintPaused bool `protobuf:"varint,18,opt,name=synth_mint_paused,json=synthMintPaused,proto3" json:"synth_mint_paused"`
-	// the amount of synth supply remaining before the current max supply is reached
+	// the amount of synth supply remaining before the current max supply is
+	// reached
 	SynthSupplyRemaining string `protobuf:"bytes,19,opt,name=synth_supply_remaining,json=synthSupplyRemaining,proto3" json:"synth_supply_remaining"`
 	// the amount of collateral collects for loans
 	LoanCollateral string `protobuf:"bytes,20,opt,name=loan_collateral,json=loanCollateral,proto3" json:"loan_collateral"`

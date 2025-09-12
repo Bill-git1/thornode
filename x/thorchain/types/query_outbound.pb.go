@@ -157,7 +157,8 @@ func (m *QueryOutboundResponse) GetTxOutItems() []*QueryTxOutItem {
 	return nil
 }
 
-// Fields are rearranged for querier response readability while preserving their field numbers.
+// Fields are rearranged for querier response readability while preserving their
+// field numbers.
 type QueryTxOutItem struct {
 	Height                int64                                       `protobuf:"varint,10,opt,name=height,proto3" json:"height,omitempty"`
 	VaultPubKey           string                                      `protobuf:"bytes,3,opt,name=vault_pub_key,json=vaultPubKey,proto3" json:"vault_pub_key,omitempty"`
