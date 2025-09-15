@@ -7,6 +7,7 @@
 - [Swap Guide](swap-guide/quickstart-guide.md)
 
   - [Quickstart Guide](swap-guide/quickstart-guide.md)
+  - [Advanced Swap Queue](swap-guide/advanced-swap-queue.md)
   - [Fees and Wait Times](swap-guide/fees-and-wait-times.md)
 
 - [Affiliate Guide](affiliate-guide/thorname-guide.md)
@@ -20,6 +21,7 @@
   - [Querying THORChain](concepts/querying-thorchain.md)
   - [Sending Transactions](concepts/sending-transactions.md)
   - [Transaction Memos](concepts/memos.md)
+  - [Swap Queue Monitoring](concepts/swap-queue-monitoring.md)
   - [Quote Examples](examples/tutorials.md)
   - [Asset Notation](concepts/asset-notation.md)
   - [Memo Length Reduction](concepts/memo-length-reduction.md)

@@ -105,3 +105,109 @@ The `difference`value represents the percentage of the swap fee saved compared t
 Example:
 
 - (7-1)/7 = 6/7 = 85% better price execution by being patient.
+
+## Advanced Queue Integration
+
+Streaming Swaps work seamlessly with THORChain's [Advanced Swap Queue](advanced-swap-queue.md), providing enhanced functionality and better performance.
+
+### Default Behavior Change
+
+**IMPORTANT**: The advanced swap queue makes streaming the **default behavior**:
+
+- **Legacy behavior**: `=:ETH.ETH:0xaddress` → single swap
+- **Advanced queue**: `=:ETH.ETH:0xaddress` → **streaming swap with optimal parameters**
+
+The advanced queue automatically:
+
+1. **Calculates optimal streaming parameters** based on swap size and pool depth
+2. **Uses rapid streaming** (interval = 0) for best execution
+3. **Maximizes price efficiency** through intelligent sub-swap sizing
+
+**To force a single swap**: Use `/1/1` explicitly (1 sub-swap over 1 block)
+
+### Streaming Market Swaps
+
+Market swaps can be combined with streaming for immediate execution with price protection:
+
+```bash
+=:ETH.ETH:0xaddress:2000000000/3/10
+```
+
+- **Immediate Processing**: Attempts to execute streaming swaps immediately
+- **Price Protection**: Each sub-swap includes trade limit protection
+- **Refund on Failure**: If first sub-swap fails, entire streaming swap is refunded
+
+### Streaming Limit Swaps
+
+Limit swaps can leverage streaming for patient, price-protected execution:
+
+```bash
+=<:ETH.ETH:0xaddress:2000000000/3/10
+```
+
+- **Conditional Execution**: Sub-swaps only execute when price conditions are met
+- **Queue Persistence**: Streaming limit swaps remain in queue until conditions are favorable
+- **Enhanced Price Discovery**: Benefits from advanced queue's ratio-based indexing
+
+### Key Differences
+
+| Aspect              | Legacy Streaming           | Advanced Queue Streaming                        |
+| ------------------- | -------------------------- | ----------------------------------------------- |
+| **Market Swaps**    | Basic streaming            | Price-protected streaming with rapid processing |
+| **Limit Support**   | Not available              | Full limit swap streaming support               |
+| **Performance**     | Single iteration per block | Configurable rapid iterations                   |
+| **Price Discovery** | Basic ratio checking       | Advanced fee-inclusive validation               |
+
+### Custom TTL for Streaming Limit Swaps
+
+Streaming limit swaps can use custom expiration times via the interval parameter:
+
+```bash
+=<:BTC.BTC:bc1qaddress:50000000/21600/5  # 1.5 days TTL, 5 sub-swaps
+```
+
+- **Custom Expiration**: Set TTL via interval (max 43,200 blocks)
+- **Streaming Quantity**: Still controls number of sub-swaps
+- **Automatic Cleanup**: Expired streaming swaps are automatically refunded
+
+### Enhanced Performance
+
+The advanced queue provides several performance improvements for streaming swaps:
+
+#### Interval Behavior Changes
+
+**IMPORTANT**: The advanced swap queue changes how streaming intervals work:
+
+##### Interval = 0 (New: Rapid Streaming)
+
+- **Multiple sub-swaps per block**: Can execute several streaming sub-swaps within a single block
+- **Rapid completion**: Maximizes throughput when `AdvSwapQueueRapidSwapMax` > 1
+- **Example**: `/0/5` executes all 5 sub-swaps as quickly as possible
+
+##### Interval ≥ 1 (Traditional Streaming)
+
+- **One sub-swap per interval**: Executes exactly one sub-swap every X blocks
+- **Block spacing**: Maintains the traditional time-distributed approach
+- **Example**: `/10/5` executes 1 sub-swap every 10 blocks for 5 intervals
+
+#### Rapid Processing
+
+- Multiple streaming swap iterations per block (when interval = 0)
+- Controlled by `AdvSwapQueueRapidSwapMax` mimir setting
+- Reduces time-to-completion for large streaming swaps
+
+#### Intelligent Scheduling
+
+- Better coordination between streaming intervals and queue processing
+- Optimized execution timing based on pool conditions
+- Improved capital efficiency during streaming execution
+
+#### Advanced Monitoring
+
+- Comprehensive telemetry for streaming swap performance
+- Per-trading-pair metrics for streaming activity
+- Better visibility into streaming swap queue depths
+
+```admonish info
+For complete details about advanced queue features, see the [Advanced Swap Queue Guide](advanced-swap-queue.md).
+```

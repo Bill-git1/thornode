@@ -59,7 +59,10 @@ The following functions can be put into a memo:
 
 ### Swap
 
-Perform an asset swap. If you'd like to implement a limit swap, use the `=<` prefix.
+Perform an asset swap. THORChain supports different swap types using specific prefixes:
+
+- **Market Swaps**: Use `=` prefix for immediate execution
+- **Limit Swaps**: Use `=<` prefix for conditional execution based on price limits
 
 **`SWAP:ASSET:DESTADDR:LIM/INTERVAL/QUANTITY:AFFILIATE:FEE`**
 
@@ -67,30 +70,32 @@ Perform an asset swap. If you'd like to implement a limit swap, use the `=<` pre
 For the DEX aggregator-oriented variation of the `SWAP` memo, see [Aggregators Memos](../aggregators/memos.md).
 ```
 
-| Parameter     | Notes                                                                                                    | Conditions                                                                                                                                      |
-| ------------- | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Payload       | Send the asset to swap.                                                                                  | Must be an active pool on THORChain.                                                                                                            |
-| `SWAP`        | The swap handler.                                                                                        | Also `s` or `=` or `=<`                                                                                                                         |
-| `:ASSET`      | The [asset identifier](asset-notation.md).                                                               | Can be shortened.                                                                                                                               |
-| `:DESTADDR`   | The destination address to send to.                                                                      | Can use THORName.                                                                                                                               |
-| `/REFUNDADDR` | The destination address for a refund to be sent to.                                                      | Optional. If provided, the refund will be sent to this address; otherwise, it will be sent to the originator’s address.                         |
-| `:LIM`        | The trade limit, i.e., set 100000000 to get a minimum of 1 full asset, else a refund.                    | Optional. 1e8 or scientific notation.                                                                                                           |
-| `/INTERVAL`   | Swap interval in blocks.                                                                                 | Optional. If 0, do not stream.                                                                                                                  |
-| `/QUANTITY`   | Swap quantity. The interval value determines the frequency of swaps in blocks.                           | Optional. If 0, network will determine the number of swaps.                                                                                     |
-| `:AFFILIATE`  | The affiliate addresses.                                                                                 | Optional. Define up to [MultipleAffiliatesMaxCount](../mimir.md#swapping) (currently 5) THORNames or THOR Addresses, separated by `/`           |
-| `:FEE`        | The [affiliate fees](../affiliate-guide/affiliate-fee-guide.md#how-it-works). RUNE is sent to affiliate. | Optional. Ranges from 0 to 1000 Basis Points. Specify one fee for all affiliates, or individual fees matching the number of affiliates defined. |
+| Parameter     | Notes                                                                                 | Conditions                                                                                                                                                                                               |
+| ------------- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Payload       | Send the asset to swap.                                                               | Must be an active pool on THORChain.                                                                                                                                                                     |
+| `SWAP`        | The swap handler.                                                                     | Also `s` (legacy), `=` (market swap), or `=<` (limit swap)                                                                                                                                               |
+| `:ASSET`      | The [asset identifier](asset-notation.md).                                            | Can be shortened.                                                                                                                                                                                        |
+| `:DESTADDR`   | The destination address to send to.                                                   | Can use THORName.                                                                                                                                                                                        |
+| `/REFUNDADDR` | The destination address for a refund to be sent to.                                   | Optional. If provided, the refund will be sent to this address; otherwise, it will be sent to the originator's address.                                                                                  |
+| `:LIM`        | The trade limit, i.e., set 100000000 to get a minimum of 1 full asset, else a refund. | Optional. 1e8 or scientific notation. For limit swaps (`=<`), this determines execution price.                                                                                                           |
+| `/INTERVAL`   | Swap interval in blocks.                                                              | Optional. With advanced queue: 0 = rapid streaming (multiple sub-swaps per block), ≥1 = traditional streaming (one sub-swap per X blocks). For limit swaps, can also specify custom TTL (≤43200 blocks). |
+| `/QUANTITY`   | Swap quantity. The interval value determines the frequency of swaps in blocks.        | Optional. If 0 or omitted with advanced queue, network determines optimal streaming parameters. Legacy queue: 0 = single swap.                                                                           |
+| `:AFFILIATE`  | The affiliate addresses.                                                              | Optional. Define up to [MultipleAffiliatesMaxCount](../mimir.md#swapping) (currently 5) THORNames or THOR Addresses, separated by `/`                                                                    |
+| `:FEE`        | The [affiliate fees](fees.md#affiliate-fee). RUNE is sent to affiliate.               | Optional. Ranges from 0 to 1000 Basis Points. Specify one fee for all affiliates, or individual fees matching the number of affiliates defined.                                                          |
 
 **Syntactic Examples:**
 
-- `SWAP:ASSET:DESTADDR` &mdash; simple swap
+- `=:ASSET:DESTADDR` &mdash; market swap (with advanced queue: auto-streaming for optimal execution)
+- `=:ASSET:DESTADDR:/1/1` &mdash; market swap (force single swap, disable streaming)
+- `=<:ASSET:DESTADDR:LIM` &mdash; limit swap (executes only when price target is met)
 - `SWAP:ASSET:DESTADDR/REFUNDADDR:LIM/1/0:AFFILIATE:FEE` &mdash; swap with refund address specified
-- `SWAP:ASSET:DESTADDR:LIM` &mdash; swap with trade limit
-- `SWAP:ASSET:DESTADDR:LIM/0/1` &mdash; swap with limit, do not stream swap
-- `SWAP:ASSET:DESTADDR:LIM/3/0` &mdash; swap with limit, optimise swap amount, every 3 blocks
-- `SWAP:ASSET:DESTADDR:LIM/1/0:AFFILIATE:FEE` &mdash; swap with limit, optimised and affiliate fee
-- `SWAP:ASSET:DESTADDR:LIM/1/0:AFFILIATE:FEE` &mdash; swap with limit, optimised and affiliate fee
-- `SWAP:ASSET:DESTADDR:LIM/1/0:AFFILIATE1/AFFILIATE2/AFFILIATE3:FEE` &mdash; swap with limit, optimised and affiliate fee where each affiliate is paid the fee.
-- `SWAP:ASSET:DESTADDR:LIM/1/0:AFFILIATE1/AFFILIATE2/AFFILIATE3:FEE1/FEE2/FEE3` &mdash; swap with limit, optimised and affiliate fee where each affiliate is paid the specified fee.
+- `=:ASSET:DESTADDR:LIM/0/5` &mdash; rapid streaming: 5 sub-swaps as fast as possible (multiple per block)
+- `=:ASSET:DESTADDR:LIM/3/5` &mdash; traditional streaming: 5 sub-swaps, one every 3 blocks
+- `=<:ASSET:DESTADDR:LIM/0/0` &mdash; limit swap, rapid execution when conditions met
+- `=<:ASSET:DESTADDR:LIM/43200/0` &mdash; limit swap with custom 43200 block TTL (max allowed)
+- `=:ASSET:DESTADDR:LIM/1/0:AFFILIATE:FEE` &mdash; market swap with affiliate fee
+- `=<:ASSET:DESTADDR:LIM/1/0:AFFILIATE1/AFFILIATE2/AFFILIATE3:FEE` &mdash; limit swap with multiple affiliates
+- `=:ASSET:DESTADDR:LIM/1/0:AFFILIATE1/AFFILIATE2/AFFILIATE3:FEE1/FEE2/FEE3` &mdash; market swap with individual affiliate fees
 
 **Real-world Examples:**
 
@@ -107,6 +112,38 @@ For the DEX aggregator-oriented variation of the `SWAP` memo, see [Aggregators M
 - `=:BTC-BTC:thor1g6pnmnyeg48yc3lg796plt0uw50qpp7humfggz:1e6/1/0:dx:10` &mdash; Swap to Bitcoin Secured Asset, using a Limit, Streaming Swaps and a 10 basis point fee to the affiliate `dx` (Asgardex)
 - `=:ETH.ETH:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430::t1/t2/t3/t4/t5:10` &mdash; Swap to Ether, will skim 10 basis points for each of the affiliates
 - `=:ETH.ETH:0x3021c479f7f8c9f1d5c7d8523ba5e22c0bcb5430::t1/dx/ss:10/20/30` &mdash; Swap to Ether, Will skim 10 basis points for `t1`, 20 basis points for `dx`, and 30 basis points for `ss`
+
+#### Advanced Swap Queue
+
+THORChain uses an advanced swap queue system with different operational modes controlled by the `EnableAdvSwapQueue` mimir setting:
+
+- **Disabled (0)**: Uses legacy swap queue
+- **Enabled (1)**: Full advanced queue with both market and limit swaps
+- **Market-only (2)**: Advanced queue for market swaps only, limit swaps are skipped
+
+#### Swap Boundaries and Limits
+
+**Limit Swap Expiration:**
+
+- **Default TTL**: 43,200 blocks (~3 days)
+- **Custom TTL**: Specify via `/INTERVAL` parameter (must be ≤ 43,200 blocks)
+- **Automatic Cleanup**: Expired limit swaps are automatically removed and remaining funds refunded
+
+**Rapid Swap Processing:**
+
+- The advanced queue can process multiple swap iterations per block
+- Controlled by `AdvSwapQueueRapidSwapMax` mimir setting (default: 1)
+- Enables higher throughput during peak activity
+
+**Price Discovery:**
+
+- Market swaps execute immediately at current pool prices
+- Limit swaps only execute when the fee-less swap ratio meets the specified limit
+- Advanced indexing system for efficient limit order matching
+
+```admonish info
+For detailed information about the advanced swap queue, see [Advanced Swap Queue Guide](../swap-guide/advanced-swap-queue.md).
+```
 
 ### Add Liquidity
 
