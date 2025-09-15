@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	sdklog "cosmossdk.io/log"
 	"cosmossdk.io/store"
@@ -108,6 +109,7 @@ func setupManagerForTest(c *C) (cosmos.Context, *Mgrs) {
 
 	ctx := cosmos.NewContext(ms, tmproto.Header{ChainID: "thorchain"}, false, logger())
 	ctx = ctx.WithBlockHeight(18)
+	ctx = ctx.WithBlockTime(time.Now())
 	encodingConfig := testutil.MakeTestEncodingConfig(
 		bank.AppModuleBasic{},
 		auth.AppModuleBasic{},

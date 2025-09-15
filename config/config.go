@@ -361,11 +361,30 @@ type Thornode struct {
 	// consensus failure on sync from genesis.
 	StagenetAdminAddresses []string `mapstructure:"stagenet_admin_addresses"`
 
-	// QuoteRecommendedMinAmountFeeMultiplier sets the multiplier on the outbound fee
-	// for the source and destination chains, used to determine the min recommended
-	// swap amount that should be respected by clients to avoid outbounds and
-	// refunds being swallowed.
-	QuoteRecommendedMinAmountFeeMultiplier uint64 `mapstructure:"quote_recommended_min_amount_fee_multiplier"`
+	// API contains THORnode-specific API configuration.
+	API struct {
+		// Quote contains configuration for the quote endpoints.
+		Quote struct {
+			// RecommendedMinAmountFeeMultiplier sets the multiplier on the outbound fee for
+			// the source and destination chains, used to determine the min recommended swap
+			// amount that should be respected by clients to avoid outbounds and refunds being
+			// swallowed.
+			RecommendedMinAmountFeeMultiplier uint64 `mapstructure:"recommended_min_amount_fee_multiplier"`
+
+			// MaxLag is the maximum lag for the latest block time on a node. If the latest
+			// block time is older than this duration, quote endpoints will return an error.
+			MaxLag time.Duration `mapstructure:"max_lag"`
+		} `mapstructure:"quote"`
+
+		// Pagination sets the pagination defaults for THORNode API endpoints that page.
+		Pagination struct {
+			// DefaultPageSize is the default page size for paginated endpoints.
+			DefaultPageSize uint64 `mapstructure:"default_page_size"`
+
+			// MaxPageSize is the maximum page size for paginated endpoints.
+			MaxPageSize uint64 `mapstructure:"max_page_size"`
+		} `mapstructure:"pagination"`
+	} `mapstructure:"api"`
 
 	// Telemetry contains THORnode-specific telemetry configuration.
 	Telemetry struct {
@@ -420,10 +439,6 @@ type Thornode struct {
 			EnabledUnsafeCORS bool   `mapstructure:"enabled_unsafe_cors"`
 			EnabledSwagger    bool   `mapstructure:"enabled_swagger"`
 			Address           string `mapstructure:"address"`
-			Pagination        struct {
-				DefaultPageSize uint64 `mapstructure:"default_page_size"`
-				MaxPageSize     uint64 `mapstructure:"max_page_size"`
-			} `mapstructure:"pagination"`
 		} `mapstructure:"api"`
 
 		GRPC struct {

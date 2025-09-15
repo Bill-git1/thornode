@@ -17,10 +17,10 @@ func (qs queryServer) queryLimitSwaps(ctx cosmos.Context, req *types.QueryLimitS
 	offset := req.Offset
 	limit := req.Limit
 	if limit == 0 {
-		limit = config.GetThornode().Cosmos.API.Pagination.DefaultPageSize
+		limit = config.GetThornode().API.Pagination.DefaultPageSize
 	}
-	if limit > config.GetThornode().Cosmos.API.Pagination.MaxPageSize {
-		limit = config.GetThornode().Cosmos.API.Pagination.MaxPageSize
+	if limit > config.GetThornode().API.Pagination.MaxPageSize {
+		limit = config.GetThornode().API.Pagination.MaxPageSize
 	}
 
 	sortBy := req.SortBy

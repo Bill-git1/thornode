@@ -52,7 +52,7 @@ var nullLogger = log.NewNopLogger()
 // It falls back to hardcoded default (3) if config field has not been set yet.
 func getQuoteRecommendedMinAmountFeeMultiplier() uint64 {
 	// Attempt to get from config
-	if configMult := config.GetThornode().QuoteRecommendedMinAmountFeeMultiplier; configMult > 0 {
+	if configMult := config.GetThornode().API.Quote.RecommendedMinAmountFeeMultiplier; configMult > 0 {
 		return configMult
 	}
 
@@ -494,6 +494,11 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 
 	if len(req.ToleranceBps) > 0 && len(req.LiquidityToleranceBps) > 0 {
 		return nil, fmt.Errorf("must only include one of: tolerance_bps or liquidity_tolerance_bps")
+	}
+
+	// error if older height not explicitly requested and latest block older than max lag
+	if req.Height == "" && ctx.BlockTime().Before(time.Now().Add(-config.GetThornode().API.Quote.MaxLag)) {
+		return nil, fmt.Errorf("refusing quote on node with stale state")
 	}
 
 	// parse assets

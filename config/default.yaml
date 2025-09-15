@@ -837,7 +837,13 @@ thor:
   vault_pubkeys_cutoff_blocks: 1_000_000
   seed_nodes_endpoint: https://thornode.ninerealms.com/thorchain/nodes
   stagenet_admin_addresses: "sthor1gdq9qejfy33jctztqdrg5v4hvxnytmvjhduacc" # 9R official stagenet
-  quote_recommended_min_amount_fee_multiplier: 3 # the multiplier for calculateMinSwapAmount
+  api:
+    quote:
+      recommended_min_amount_fee_multiplier: 3 # the multiplier for calculateMinSwapAmount
+      max_lag: 3m
+    pagination:
+      default_page_size: 100
+      max_page_size: 1000
   telemetry:
     slash_points: false
     price_per_node: false
@@ -877,9 +883,6 @@ thor:
       enabled_unsafe_cors: true
       enabled_swagger: true
       address: tcp://0.0.0.0:1317
-      pagination:
-        default_page_size: 100
-        max_page_size: 1000
     grpc:
       enable: false
       address: 0.0.0.0:9090
