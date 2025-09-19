@@ -9,15 +9,21 @@ var WasmPermissionsRaw = WasmPermissions{
 		"thor1e0lmk5juawc46jwjwd0xfz587njej7ay5fh6cd": true,
 	},
 	Instantiate: map[string]bool{
+		// Rujira
+		"thor1e0lmk5juawc46jwjwd0xfz587njej7ay5fh6cd": true,
 		// DAODAO
 		"thor1gg2hk8nnap6u6axlkv0rjfghd2vjlwkyshhe8s": true,
-		// Ruji Perps
+		// Levana Ruji Perps
 		"thor1440jp0ukj8ew3z2fd4zmdqgxhn5ghd7ghg2kmr": true,
 		// Nami
 		"thor1zjwanvezcjp6hefgt6vqfnrrdm8yj9za3s8ss0": true,
-		// Rujira
-		"thor1e0lmk5juawc46jwjwd0xfz587njej7ay5fh6cd": true,
-		// Auto 1
+		// Auto
 		"thor1lt2r7uwly4gwx7kdmdp86md3zzdrqlt3dgr0ag": true,
+		// Calc DAODAO
+		"thor17dxtxrne37gguxdeun4n36vqd5jmxxku5tr6gkuhhsh4lz9e8gksck4ygu": true,
+		// Liquidy DAODAO
+		"thor1j95vmsmkevynmenkkxhlu5at9exgtsuck6nhh79f0x4zx85r5ajqnpnhj2": true,
+		// Fuzion DAODAO
+		"thor1e69r4z9fgx5ghz2l4dfqv0zqw2yhsqf946tgfvpyzsnah2lg7aesfel69y": true,
 	},
 }
