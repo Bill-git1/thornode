@@ -402,6 +402,14 @@ func rescheduledOutbounds(height int64, event map[string]string) bool {
 				Msg("failed to get transaction status")
 		}
 
+		if status.Stages.OutboundSigned == nil {
+			log.Error().
+				Str("txid", event["in_hash"]).
+				Int64("height", height).
+				Msg("outbound signed stage is nil")
+			return true
+		}
+
 		// skip if older than the max reschedule age
 		blockAge := status.Stages.OutboundSigned.GetBlocksSinceScheduled()
 		ageDuration := time.Duration(blockAge*common.THORChain.ApproximateBlockMilliseconds()) * time.Millisecond
@@ -413,18 +421,23 @@ func rescheduledOutbounds(height int64, event map[string]string) bool {
 		fields.Set("Age", fmt.Sprintf("%s (%d blocks)", util.FormatDuration(ageDuration), blockAge))
 
 		// add track link for swaps
-		memoParts := strings.Split(*status.Tx.Memo, ":")
-		var memoType memo.TxType
-		memoType, err = memo.StringToTxType(memoParts[0])
-		if err != nil {
-			log.Error().Err(err).Str("txid", event["in_hash"]).Msg("failed to parse memo type")
-		}
-		if memoType == thorchain.TxSwap {
-			links = append(links, fmt.Sprintf("[Track](%s/%s)", config.Get().Links.Track, event["in_hash"]))
-		}
+		if status.Tx != nil && status.Tx.Memo != nil {
+			memoParts := strings.Split(*status.Tx.Memo, ":")
+			var memoType memo.TxType
+			memoType, err = memo.StringToTxType(memoParts[0])
+			if err != nil {
+				log.Error().Err(err).Str("txid", event["in_hash"]).Msg("failed to parse memo type")
+			}
+			if memoType == thorchain.TxSwap {
+				links = append(links, fmt.Sprintf("[Track](%s/%s)", config.Get().Links.Track, event["in_hash"]))
+			}
 
-		// include the inbound memo
-		fields.Set("Inbound Memo", fmt.Sprintf("`%s`", *status.Tx.Memo))
+			// include the inbound memo
+			fields.Set("Inbound Memo", fmt.Sprintf("`%s`", *status.Tx.Memo))
+		} else {
+			// handle nil memo case
+			fields.Set("Inbound Memo", "`<no memo>`")
+		}
 	}
 
 	// add the outbound data
