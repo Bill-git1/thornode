@@ -5,12 +5,16 @@ package wasmpermissions
 
 var WasmPermissionsRaw = WasmPermissions{
 	Store: map[string]bool{
-		// Rujira
+		// Rujira multisig
 		"thor1e0lmk5juawc46jwjwd0xfz587njej7ay5fh6cd": true,
+		// Rujira DAODAO
+		"thor1pnad3hhgktqde00jl6wvyuuspatle000wl9pehgqxmehl7974e4szc4zpn": true,
 	},
 	Instantiate: map[string]bool{
-		// Rujira
+		// Rujira multisig
 		"thor1e0lmk5juawc46jwjwd0xfz587njej7ay5fh6cd": true,
+		// Rujira DAODAO
+		"thor1pnad3hhgktqde00jl6wvyuuspatle000wl9pehgqxmehl7974e4szc4zpn": true,
 		// DAODAO
 		"thor1gg2hk8nnap6u6axlkv0rjfghd2vjlwkyshhe8s": true,
 		// Levana Ruji Perps
