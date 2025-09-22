@@ -176,7 +176,6 @@ func (pm *PoolMgrVCUR) cyclePools(ctx cosmos.Context, maxAvailablePools, minRune
 				}
 				// remove asset from Vault
 				pm.removeAssetFromVault(ctx, pool.Asset, mgr)
-
 			} else if validPool(pool) && onDeck.BalanceRune.LT(pool.BalanceRune) {
 				onDeck = pool
 			}
@@ -231,6 +230,41 @@ func (pm *PoolMgrVCUR) poolMeetTradingVolumeCriteria(ctx cosmos.Context, mgr Man
 
 // removeAssetFromVault set asset balance to zero for all vaults holding the asset
 func (pm *PoolMgrVCUR) removeAssetFromVault(ctx cosmos.Context, asset common.Asset, mgr Manager) {
+	if asset.IsNative() {
+		// get asgard module balance
+		asgardAddress, err := mgr.Keeper().GetModuleAddress(AsgardName)
+		if err != nil {
+			ctx.Logger().Error("fail to get asgard address", "error", err)
+		}
+
+		asgardAccAddress, err := asgardAddress.AccAddress()
+		if err != nil {
+			ctx.Logger().Error("fail to get asgard acc address", "error", err)
+		}
+
+		asgardCoins := mgr.Keeper().GetBalance(ctx, asgardAccAddress)
+
+		for _, coin := range asgardCoins {
+			if asset.Native() != coin.Denom {
+				continue
+			}
+			err = mgr.Keeper().SendFromModuleToModule(
+				ctx,
+				AsgardName,
+				TreasuryName,
+				common.Coins{{
+					Asset:  asset,
+					Amount: cosmos.NewUint(coin.Amount.Uint64()),
+				}},
+			)
+			if err != nil {
+				ctx.Logger().Error("fail to send coins to treasury", "error", err)
+			}
+			// done processing native asset
+			return
+		}
+	}
+
 	// zero vaults with the pool asset
 	vaultIter := mgr.Keeper().GetVaultIterator(ctx)
 	defer vaultIter.Close()

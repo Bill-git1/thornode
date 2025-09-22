@@ -247,3 +247,27 @@ func (m Migrator) Migrate8to9(ctx sdk.Context) error {
 
 	return nil
 }
+
+// Migrate9to10 migrates from version 9 to 10.
+func (m Migrator) Migrate9to10(ctx sdk.Context) error {
+	// loads the manager for this migration
+	if err := m.mgr.LoadManagerIfNecessary(ctx); err != nil {
+		return err
+	}
+
+	// move excess thor.nami to treasury
+	coins := common.Coins{{
+		Asset:  common.NAMI,
+		Amount: cosmos.NewUint(524245),
+	}}
+	err := m.mgr.Keeper().SendFromModuleToModule(
+		ctx, AsgardName, TreasuryName, coins,
+	)
+	if err != nil {
+		ctx.Logger().Error("failed to move excess nami to treasury", "error", err)
+	} else {
+		ctx.Logger().Info("successfully moved excess nami to treasury", "coins", coins)
+	}
+
+	return nil
+}

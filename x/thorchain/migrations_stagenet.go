@@ -148,3 +148,8 @@ func (m Migrator) Migrate8to9(ctx sdk.Context) error {
 
 	return nil
 }
+
+// Migrate9to10 migrates from version 9 to 10.
+func (m Migrator) Migrate9to10(ctx sdk.Context) error {
+	return nil
+}

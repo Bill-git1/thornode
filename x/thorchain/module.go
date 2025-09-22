@@ -141,7 +141,7 @@ func (AppModule) IsAppModule() {}
 func (AppModule) IsOnePerModuleType() {}
 
 func (AppModule) ConsensusVersion() uint64 {
-	return 9
+	return 10
 }
 
 func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
