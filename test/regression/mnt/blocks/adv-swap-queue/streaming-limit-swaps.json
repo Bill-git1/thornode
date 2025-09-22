@@ -5744,7 +5744,7 @@
         "id": "0000000000000000000000000000000000000000000000000000000000000003",
         "memo": "=\u003c:THOR.RUNE:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr:999999999999",
         "mode": "EndBlock",
-        "reason": "swap has been completed.",
+        "reason": "limit swap expired",
         "to": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk",
         "type": "refund"
       },
@@ -5765,7 +5765,7 @@
       {
         "block_height": "35",
         "mode": "EndBlock",
-        "reason": "swap has been completed.",
+        "reason": "limit swap expired",
         "txid": "0000000000000000000000000000000000000000000000000000000000000003",
         "type": "limit_swap_close"
       },
@@ -7534,7 +7534,7 @@
         "id": "0000000000000000000000000000000000000000000000000000000000000005",
         "memo": "=\u003c:ETH.ETH:0xe3c64974c78f5693bd2bc68b3221d58df5c6e877/bcrt1quuds8pd92qnnq0udw0rpg0szpgcslc9pm6tzal:888888888",
         "mode": "EndBlock",
-        "reason": "swap has been completed.",
+        "reason": "limit swap expired",
         "to": "bcrt1qzf3gsk7edzwl9syyefvfhle37cjtql35tlzesk",
         "type": "refund"
       },
@@ -7555,7 +7555,7 @@
       {
         "block_height": "47",
         "mode": "EndBlock",
-        "reason": "swap has been completed.",
+        "reason": "limit swap expired",
         "txid": "0000000000000000000000000000000000000000000000000000000000000005",
         "type": "limit_swap_close"
       },

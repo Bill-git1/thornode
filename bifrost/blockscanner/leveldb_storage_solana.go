@@ -43,7 +43,7 @@ func (ldbss *LevelDBScannerStorageSolana) GetScanStatus(account string) (string,
 }
 
 // SetScanPos save current scan pos
-func (ldbss *LevelDBScannerStorageSolana) SetScanStatus(account string, lastSignature string, lastSlot uint64) error {
+func (ldbss *LevelDBScannerStorageSolana) SetScanStatus(account, lastSignature string, lastSlot uint64) error {
 	buf := make([]byte, 8+len(lastSignature))
 	_ = binary.PutUvarint(buf, lastSlot)
 	copy(buf[8:], lastSignature)
@@ -76,7 +76,7 @@ func (ldbss *LevelDBScannerStorageSolana) Close() error {
 // ScannerStorage define the method need to be used by scanner
 type ScannerStorageSolana interface {
 	GetScanStatus(account string) (string, uint64, error)
-	SetScanStatus(account string, lastSignature string, lastSlot uint64) error
+	SetScanStatus(account, lastSignature string, lastSlot uint64) error
 	GetScanPos() (uint64, error)
 	SetScanPos(block uint64) error
 	GetInternalDb() *leveldb.DB

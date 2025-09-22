@@ -356,7 +356,7 @@ func (k KVStore) addAsgardIndex(ctx cosmos.Context, pubkey common.PubKey) error 
 	return nil
 }
 
-func (k KVStore) addAsgardEDDSAIndex(ctx cosmos.Context, pubKeyEDDSA common.PubKey, pubkeyECDSA common.PubKey) error {
+func (k KVStore) addAsgardEDDSAIndex(ctx cosmos.Context, pubKeyEDDSA, pubkeyECDSA common.PubKey) error {
 	k.setStrings(ctx, k.GetKey(prefixVaultAsgardEDDSAIndex, pubKeyEDDSA.String()), []string{pubkeyECDSA.String()})
 	return nil
 }

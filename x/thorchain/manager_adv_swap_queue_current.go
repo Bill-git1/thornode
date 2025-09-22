@@ -129,7 +129,9 @@ func (vm *SwapQueueAdvVCUR) discoverLimitSwaps(ctx cosmos.Context, mgr Manager, 
 		}
 
 		// Check if fee-less swap meets the ratio requirement
-		canExecute := vm.checkFeelessSwap(pools, pair, ratio)
+		if !vm.checkFeelessSwap(pools, pair, ratio) {
+			break
+		}
 
 		record := make([]string, 0)
 		value := ProtoStrings{Value: record}
@@ -181,11 +183,6 @@ func (vm *SwapQueueAdvVCUR) discoverLimitSwaps(ctx cosmos.Context, mgr Manager, 
 				continue
 			}
 
-			// Only try to execute if the price check passed
-			if !canExecute {
-				continue
-			}
-
 			// do a swap, including swap fees and outbound fees. If this passes attempt the swap.
 			if ok := vm.checkWithFeeSwap(ctx, mgr, pools, msg); !ok {
 				continue
@@ -197,12 +194,6 @@ func (vm *SwapQueueAdvVCUR) discoverLimitSwaps(ctx cosmos.Context, mgr Manager, 
 				fee:   cosmos.ZeroUint(),
 				slip:  cosmos.ZeroUint(),
 			})
-		}
-
-		// If fee-less swap doesn't meet the ratio requirement, we can stop
-		// checking further ratio indices since they're sorted
-		if !canExecute {
-			break
 		}
 	}
 	return items
@@ -849,7 +840,7 @@ func (vm *SwapQueueAdvVCUR) processExpiredLimitSwaps(ctx cosmos.Context, mgr Man
 
 // emitAdvSwapQueueTelemetry emits telemetry metrics for the advanced swap queue
 // This method should only be called when telemetry is enabled
-func (vm *SwapQueueAdvVCUR) emitAdvSwapQueueTelemetry(ctx cosmos.Context, mgr Manager, iterationCount int64, totalSwapsProcessed int64, marketSwapCount int64, limitSwapCount int64, completedSwapCount int64) {
+func (vm *SwapQueueAdvVCUR) emitAdvSwapQueueTelemetry(ctx cosmos.Context, mgr Manager, iterationCount, totalSwapsProcessed, marketSwapCount, limitSwapCount, completedSwapCount int64) {
 	// Emit core metrics
 	telemetry.SetGauge(float32(iterationCount), "thornode", "adv_swap_queue", "iterations_per_block")
 	telemetry.SetGauge(float32(totalSwapsProcessed), "thornode", "adv_swap_queue", "total_swaps_per_block")

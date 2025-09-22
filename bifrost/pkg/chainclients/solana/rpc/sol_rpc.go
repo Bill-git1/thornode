@@ -37,7 +37,7 @@ func (s *SolRPC) getContext() (context.Context, context.CancelFunc) {
 }
 
 // post - Make a POST request to the Solana RPC
-func (s *SolRPC) post(method string, params interface{}, response interface{}) error {
+func (s *SolRPC) post(method string, params, response interface{}) error {
 	ctx, cancel := s.getContext()
 	defer cancel()
 

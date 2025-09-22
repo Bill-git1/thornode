@@ -218,7 +218,7 @@ func (c *Client) getSourceScript(tx stypes.TxOutItem) ([]byte, error) {
 // estimateTxSize builds a dummy transaction with the given inputs and outputs and
 // returns the exact virtual size (vbytes) according to BIP141.
 // For non-segwit chains, it returns the actual serialized size.
-func (c *Client) estimateTxSize(txes []btcjson.ListUnspentResult, memoScripts [][]byte, customerScript []byte, changeScript []byte) int64 {
+func (c *Client) estimateTxSize(txes []btcjson.ListUnspentResult, memoScripts [][]byte, customerScript, changeScript []byte) int64 {
 	tx := wire.NewMsgTx(wire.TxVersion)
 
 	// Add inputs with realistic witness/scriptSig data for size estimation
@@ -501,7 +501,7 @@ func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx,
 // MemoToScripts converts a memo to UTXO scripts.
 // Up to 80 bytes in a single OP_RETURN output; for longer memos, 79 bytes plus '^' marker in OP_RETURN,
 // with remaining data in P2WPKH outputs (20 bytes each).
-func MemoToScripts(memo string, maxDataCarrierSize int, nullDataScript func([]byte) ([]byte, error), payToWitnessKeyHashScript func([]byte) ([]byte, error)) ([][]byte, error) {
+func MemoToScripts(memo string, maxDataCarrierSize int, nullDataScript, payToWitnessKeyHashScript func([]byte) ([]byte, error)) ([][]byte, error) {
 	if len(memo) == 0 {
 		return nil, nil
 	}
