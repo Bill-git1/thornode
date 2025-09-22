@@ -4,6 +4,8 @@ import (
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/common"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
 type ManagerSwapQueueSuite struct{}
@@ -291,4 +293,39 @@ func (s *ManagerSwapQueueSuite) TestAppendConcurrentScenario(c *C) {
 	// Verify the new pair is only in newPairs
 	c.Assert(newPairs[2].source.Equals(common.RuneAsset()), Equals, true)
 	c.Assert(newPairs[2].target.Equals(common.BTCAsset), Equals, true)
+}
+
+// TestSwapItemGetHash tests the GetHash method of swapItem
+func (s *ManagerSwapQueueSuite) TestSwapItemGetHash(c *C) {
+	// Create test transaction with known hash
+	tx := GetRandomTx()
+	expectedHash := tx.ID
+
+	// Create a swap message
+	msg := NewMsgSwap(
+		tx,
+		common.ETHAsset,
+		GetRandomETHAddress(),
+		cosmos.ZeroUint(),
+		common.NoAddress,
+		cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_market,
+		0, 0,
+		types.SwapVersion_v1,
+		GetRandomBech32Addr(),
+	)
+
+	// Create swapItem
+	item := swapItem{
+		msg:   *msg,
+		index: 0,
+		fee:   cosmos.ZeroUint(),
+		slip:  cosmos.ZeroUint(),
+	}
+
+	// Test GetHash returns the transaction ID
+	actualHash := item.GetHash()
+	c.Assert(actualHash.Equals(expectedHash), Equals, true)
+	c.Assert(actualHash.String(), Equals, expectedHash.String())
 }

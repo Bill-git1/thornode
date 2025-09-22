@@ -18,6 +18,10 @@ type swapItem struct {
 }
 type swapItems []swapItem
 
+func (item swapItem) GetHash() common.TxID {
+	return item.msg.Tx.ID
+}
+
 func (items swapItems) HasItem(hash common.TxID) bool {
 	for _, item := range items {
 		if item.msg.Tx.ID.Equals(hash) {
