@@ -137,6 +137,7 @@ func NewSOLScanner(
 		stopChan:           stopChan,
 		healthy:            &atomic.Bool{},
 		initialHeight:      make(map[string]struct{}),
+		vaultScanStatuses:  map[string]vaultScanStatus{},
 	}, nil
 }
 

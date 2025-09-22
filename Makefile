@@ -275,7 +275,7 @@ halt-mocknet:
 	@docker compose $(DOCKER_COMPOSE_FILES) --profile mocknet --profile midgard down
 
 build-mocknet:
-	@docker compose $(DOCKER_COMPOSE_FILES) --profile mocknet-build build \
+	@docker compose $(DOCKER_COMPOSE_FILES) --profile mocknet build \
 		--build-arg COMMIT=$(COMMIT)
 
 bootstrap-mocknet:
@@ -310,7 +310,7 @@ halt-mocknet-cluster:
 	@docker compose $(DOCKER_COMPOSE_FILES) --profile mocknet-cluster --profile midgard down
 
 build-mocknet-cluster:
-	@docker compose $(DOCKER_COMPOSE_FILES) --profile mocknet-cluster-build build
+	@docker compose $(DOCKER_COMPOSE_FILES) --profile mocknet-cluster build
 
 ps-mocknet-cluster:
 	@docker compose $(DOCKER_COMPOSE_FILES) --profile mocknet-cluster --profile midgard images
