@@ -50,7 +50,6 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 		return nil, ErrInternal(err, "fail to get observed tx voter")
 	}
 	if voter.AddOutTx(tx.Tx) {
-		// trunk-ignore(golangci-lint/govet): shadow
 		if err := h.mgr.EventMgr().EmitEvent(ctx, NewEventOutbound(inTxID, tx.Tx)); err != nil {
 			return nil, ErrInternal(err, "fail to emit outbound event")
 		}
@@ -92,7 +91,6 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 	// Look up InactiveVault txouts by inbound voter OutboundHeight, not by signing queue.
 	// Automatic InactiveVault refunds only get one SigningTransactionPeriod best-effort try
 	// and so might be observed in a long-mining-period block (such as BTC) after the TxOutItem is no longer in the queue.
-	// trunk-ignore(golangci-lint/govet): shadow
 	vault, err := h.mgr.Keeper().GetVault(ctx, tx.ObservedPubKey)
 	if err != nil {
 		ctx.Logger().Error("fail to get vault", "error", err)
@@ -105,7 +103,6 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 
 	for height := latestHeight; height >= earliestHeight; height-- {
 		// update txOut record with our TxID that sent funds out of the pool
-		// trunk-ignore(golangci-lint/govet): shadow
 		txOut, err := h.mgr.Keeper().GetTxOut(ctx, height)
 		if err != nil {
 			ctx.Logger().Error("unable to get txOut record", "error", err)
@@ -128,12 +125,12 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 				tx.Tx.ToAddress.Equals(txOutItem.ToAddress) &&
 				strings.EqualFold(tx.Aggregator, txOutItem.Aggregator) &&
 				strings.EqualFold(tx.AggregatorTarget, txOutItem.AggregatorTargetAsset) &&
-				tx.ObservedPubKey.Equals(txOutItem.VaultPubKey) {
+				(tx.ObservedPubKey.Equals(txOutItem.VaultPubKey) ||
+					tx.ObservedPubKey.Equals(txOutItem.VaultPubKeyEddsa)) {
 
 				matchCoin := tx.Tx.Coins.EqualsEx(common.Coins{txOutItem.Coin})
 				if !matchCoin {
 					// In case the mismatch is caused by decimals , round the tx out item's amount , and compare it again
-					// trunk-ignore(golangci-lint/govet): shadow
 					p, err := h.mgr.Keeper().GetPool(ctx, txOutItem.Coin.Asset)
 					if err != nil {
 						ctx.Logger().Error("fail to get pool", "error", err)
@@ -185,7 +182,6 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 				}
 				txOut.TxArray[i].OutHash = tx.Tx.ID
 				shouldSlash = false
-				// trunk-ignore(golangci-lint/govet): shadow
 				if err := h.mgr.Keeper().SetTxOut(ctx, txOut); err != nil {
 					ctx.Logger().Error("fail to save tx out", "error", err)
 				}
@@ -212,7 +208,6 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 
 					cloutIn.Reclaim(clout1)
 					cloutIn.LastReclaimHeight = ctx.BlockHeight()
-					// trunk-ignore(golangci-lint/govet): shadow
 					if err := h.mgr.Keeper().SetSwapperClout(ctx, cloutIn); err != nil {
 						ctx.Logger().Error("fail to save swapper clout in", "error", err)
 					}
@@ -223,7 +218,6 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 					}
 					cloutOut.Reclaim(clout2)
 					cloutOut.LastReclaimHeight = ctx.BlockHeight()
-					// trunk-ignore(golangci-lint/govet): shadow
 					if err := h.mgr.Keeper().SetSwapperClout(ctx, cloutOut); err != nil {
 						ctx.Logger().Error("fail to save swapper clout out", "error", err)
 					}
@@ -246,7 +240,6 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 		// send security alert for events that are not evm burn
 		if !isOutboundFakeGasTX(tx) {
 			msg := fmt.Sprintf("missing tx out in=%s", inTxID)
-			// trunk-ignore(golangci-lint/govet): shadow
 			if err := h.mgr.EventMgr().EmitEvent(ctx, NewEventSecurity(tx.Tx, msg)); err != nil {
 				ctx.Logger().Error("fail to emit security event", "error", err)
 			}
