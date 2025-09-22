@@ -15,6 +15,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/syndtr/goleveldb/leveldb"
 	"gitlab.com/thorchain/thornode/v3/bifrost/blockscanner"
 	"gitlab.com/thorchain/thornode/v3/bifrost/metrics"
 	"gitlab.com/thorchain/thornode/v3/bifrost/pkg/chainclients/shared/signercache"
@@ -82,11 +83,18 @@ type SOLScanner struct {
 	stopChan chan struct{}
 
 	// state for if we've successfully processed the initial height
-	initialHeight map[string]struct{}
-	lastHeight    uint64
+	initialHeight     map[string]struct{}
+	lastHeight        uint64
+	lastHeightMu      sync.RWMutex
+	vaultScanStatuses map[string]vaultScanStatus
 
 	isChainPaused  bool
 	lastMimirCheck time.Time
+}
+
+type vaultScanStatus struct {
+	lastSig  string
+	lastSlot uint64
 }
 
 // NewSOLScanner create a new instance of SOLScanner.
@@ -142,8 +150,15 @@ func (s *SOLScanner) Start() {
 		return
 	}
 
-	lastHeight, _ := s.db.GetScanPos()
+	lastHeight, err := s.db.GetScanPos()
+	// if err is ErrNotFound, then we set to 0.
+	if err != nil && !errors.Is(err, leveldb.ErrNotFound) {
+		s.logger.Error().Err(err).Msg("failed to get last scan pos")
+		return
+	}
+	s.lastHeightMu.Lock()
 	s.lastHeight = lastHeight
+	s.lastHeightMu.Unlock()
 
 	// initialize the network fee slot multiple to the closest multiple of NetFeeUpdateInterval beneath the initial slot
 	s.netFeeSlotMultiple = initialSlot / netFeeUpdateInterval
@@ -212,7 +227,9 @@ func (s *SOLScanner) scan() {
 		}
 	}
 
-	lastSlot, _ := s.db.GetScanPos()
+	s.lastHeightMu.RLock()
+	lastSlot := s.lastHeight
+	s.lastHeightMu.RUnlock()
 
 	if currentSlot == lastSlot {
 		time.Sleep(200 * time.Millisecond)
@@ -235,7 +252,25 @@ func (s *SOLScanner) scan() {
 	countTxs := make([]int, len(vaultAddrs))
 	vaultLastSigs := make([]string, len(vaultAddrs))
 	for i, vaultAddr := range vaultAddrs {
-		lastSig, vaultLastSlot, _ := s.db.GetScanStatus(vaultAddr)
+		var lastSig string
+		var vaultLastSlot uint64
+		if vss, ok := s.vaultScanStatuses[vaultAddr]; ok {
+			lastSig = vss.lastSig
+			vaultLastSlot = vss.lastSlot
+		} else {
+			lastSig, vaultLastSlot, err = s.db.GetScanStatus(vaultAddr)
+			// if err is ErrNotFound, then we set to "" and 0.
+			if err != nil && !errors.Is(err, leveldb.ErrNotFound) {
+				s.logger.Error().Err(err).Str("vault", vaultAddr).Msg("failed to get vault scan status from db")
+				setUnhealthy()
+				wg.Done()
+				continue
+			}
+			s.vaultScanStatuses[vaultAddr] = vaultScanStatus{
+				lastSig:  lastSig,
+				lastSlot: vaultLastSlot,
+			}
+		}
 		vaultLastSigs[i] = lastSig
 
 		var minContextSlot uint64
@@ -289,9 +324,17 @@ func (s *SOLScanner) scan() {
 				s.initialHeight[vaultAddr] = struct{}{}
 			}
 
-			if err := s.db.SetScanStatus(vaultAddr, lastSig, currentSlot); err != nil {
-				s.logger.Error().Err(err).Str("vault", vaultAddr).Msg("failed to set scan status")
+			s.vaultScanStatuses[vaultAddr] = vaultScanStatus{
+				lastSig:  lastSig,
+				lastSlot: currentSlot,
 			}
+
+			// update the db in a goroutine, we don't need to block here
+			go func() {
+				if err := s.db.SetScanStatus(vaultAddr, lastSig, currentSlot); err != nil {
+					s.logger.Error().Err(err).Str("vault", vaultAddr).Msg("failed to set vault scan status")
+				}
+			}()
 		}
 	}
 
@@ -319,10 +362,16 @@ func (s *SOLScanner) scan() {
 		s.m.GetCounter(metrics.TotalBlockScanned).Add(float64(currentSlot - lastSlot))
 	}
 
+	s.lastHeightMu.Lock()
 	s.lastHeight = currentSlot
-	if err := s.db.SetScanPos(currentSlot); err != nil {
-		s.logger.Error().Err(err).Msg("failed to set scan position")
-	}
+	s.lastHeightMu.Unlock()
+
+	// update the db in a goroutine, we don't need to block here
+	go func() {
+		if err := s.db.SetScanPos(currentSlot); err != nil {
+			s.logger.Error().Err(err).Msg("failed to set scan position")
+		}
+	}()
 }
 
 // scanVault scans a vault for new transactions. It will query the RPC node for the vault's
@@ -483,7 +532,21 @@ func (s *SOLScanner) GetHeight() (int64, error) {
 
 // ScanHeight returns the current scanned height
 func (s *SOLScanner) ScanHeight() (int64, error) {
-	lastSlot, _ := s.db.GetScanPos()
+	s.lastHeightMu.RLock()
+	lastHeight := s.lastHeight
+	s.lastHeightMu.RUnlock()
+
+	if lastHeight > 0 {
+		return int64(lastHeight), nil
+	}
+
+	// lastHeight not in memory, get from db
+
+	lastSlot, err := s.db.GetScanPos()
+	// if err is ErrNotFound, then we set to 0.
+	if err != nil && !errors.Is(err, leveldb.ErrNotFound) {
+		return -1, err
+	}
 	return int64(lastSlot), nil
 }
 
