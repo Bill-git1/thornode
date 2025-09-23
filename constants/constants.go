@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/blang/semver"
 )
@@ -21,9 +20,6 @@ var (
 )
 
 var SWVersion, _ = semver.Make(Version)
-
-// ThorchainBlockTime Block time of THORChain
-var ThorchainBlockTime = 5 * time.Second
 
 // max basis points
 const MaxBasisPts = uint64(10_000)

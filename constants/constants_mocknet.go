@@ -9,7 +9,10 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
+
+var ThorchainBlockTime = time.Second
 
 func camelToSnakeUpper(s string) string {
 	re := regexp.MustCompile(`([a-z0-9])([A-Z])|([A-Z]+)([A-Z][a-z])`)

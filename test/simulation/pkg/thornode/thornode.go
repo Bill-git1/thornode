@@ -215,8 +215,7 @@ func Get(url string, target interface{}) error {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("(%s) HTTP: %d => %s", url, resp.StatusCode, body)
+		return fmt.Errorf("(%s) HTTP: %d => %s", url, resp.StatusCode, buf)
 	}
 
 	// extract error if the request failed
