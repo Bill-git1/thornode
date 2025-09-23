@@ -91,6 +91,7 @@ func (p *GeminiProvider) Poll() {
 			volume, ok := value.(string)
 			if !ok {
 				p.logger.Error().Msg("error parsing volume")
+				return
 			}
 
 			now := time.Now()

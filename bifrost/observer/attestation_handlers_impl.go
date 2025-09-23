@@ -373,6 +373,9 @@ func (s *AttestationGossip) sendPriceFeedAttestationsToThornode(
 		return
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+
 	_, err := s.grpcClient.SendQuorumPriceFeedBatch(ctx, &qpfb)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("fail to send price feed")

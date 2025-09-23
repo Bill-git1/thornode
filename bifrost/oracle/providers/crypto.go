@@ -184,6 +184,7 @@ func (p *CryptoProvider) HandleWsMessage(msg []byte) error {
 		err = wsjson.Write(p.ctx, p.ws, r)
 		if err != nil {
 			p.logger.Err(err).Msg("fail to send heartbeat response")
+			return err
 		}
 		return nil
 	}

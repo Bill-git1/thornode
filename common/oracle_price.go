@@ -13,6 +13,10 @@ const (
 )
 
 func NewOraclePrice(number *big.Float) (*OraclePrice, error) {
+	if number == nil {
+		return nil, fmt.Errorf("number is nil")
+	}
+
 	parts := strings.Split(number.Text('f', -1), ".")
 
 	if len(parts) > 2 {

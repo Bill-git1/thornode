@@ -193,7 +193,7 @@ func (h PriceFeedQuorumBatchHandler) handle(ctx cosmos.Context, msg types.MsgPri
 		priceEvent := NewEventOraclePrice(symbol, oraclePrice.Price)
 		err = h.mgr.EventMgr().EmitEvent(ctx, priceEvent)
 		if err != nil {
-			ctx.Logger().Error("fail to emit switch event", "error", err)
+			ctx.Logger().Error("fail to emit price event", "error", err)
 		}
 	}
 

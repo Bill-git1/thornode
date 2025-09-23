@@ -95,6 +95,7 @@ func (p *OkxProvider) Poll() {
 	tickers, err := p.getTickers()
 	if err != nil {
 		p.logger.Err(err).Msg("error fetching tickers")
+		return
 	}
 
 	for _, ticker := range tickers {

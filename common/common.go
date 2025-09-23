@@ -143,7 +143,7 @@ func (pf *PriceFeed) Valid() error {
 		return fmt.Errorf("rates is empty")
 	}
 	if pf.Time <= 0 {
-		return fmt.Errorf("invalid timestamo: %d", pf.Time)
+		return fmt.Errorf("invalid timestamp: %d", pf.Time)
 	}
 	if len(pf.Version) != 8 {
 		return fmt.Errorf("invalid version: %x", pf.Version)
@@ -161,6 +161,9 @@ func (pf *PriceFeed) GetSignablePayload() ([]byte, error) {
 }
 
 func (pf *PriceFeed) Equals(other *PriceFeed) bool {
+	if pf == nil || other == nil {
+		return false
+	}
 	if pf.Time != other.Time {
 		return false
 	}
