@@ -56,6 +56,10 @@ type Pool struct {
 	DerivedDepthBps string `json:"derived_depth_bps"`
 	// indicates if the pool can be used for swaps
 	TradingHalted *bool `json:"trading_halted,omitempty"`
+	// 24h volume in asset
+	VolumeAsset *string `json:"volume_asset,omitempty"`
+	// 24h volume in rune
+	VolumeRune *string `json:"volume_rune,omitempty"`
 }
 
 // NewPool instantiates a new Pool object
@@ -696,6 +700,70 @@ func (o *Pool) SetTradingHalted(v bool) {
 	o.TradingHalted = &v
 }
 
+// GetVolumeAsset returns the VolumeAsset field value if set, zero value otherwise.
+func (o *Pool) GetVolumeAsset() string {
+	if o == nil || o.VolumeAsset == nil {
+		var ret string
+		return ret
+	}
+	return *o.VolumeAsset
+}
+
+// GetVolumeAssetOk returns a tuple with the VolumeAsset field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *Pool) GetVolumeAssetOk() (*string, bool) {
+	if o == nil || o.VolumeAsset == nil {
+		return nil, false
+	}
+	return o.VolumeAsset, true
+}
+
+// HasVolumeAsset returns a boolean if a field has been set.
+func (o *Pool) HasVolumeAsset() bool {
+	if o != nil && o.VolumeAsset != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetVolumeAsset gets a reference to the given string and assigns it to the VolumeAsset field.
+func (o *Pool) SetVolumeAsset(v string) {
+	o.VolumeAsset = &v
+}
+
+// GetVolumeRune returns the VolumeRune field value if set, zero value otherwise.
+func (o *Pool) GetVolumeRune() string {
+	if o == nil || o.VolumeRune == nil {
+		var ret string
+		return ret
+	}
+	return *o.VolumeRune
+}
+
+// GetVolumeRuneOk returns a tuple with the VolumeRune field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *Pool) GetVolumeRuneOk() (*string, bool) {
+	if o == nil || o.VolumeRune == nil {
+		return nil, false
+	}
+	return o.VolumeRune, true
+}
+
+// HasVolumeRune returns a boolean if a field has been set.
+func (o *Pool) HasVolumeRune() bool {
+	if o != nil && o.VolumeRune != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetVolumeRune gets a reference to the given string and assigns it to the VolumeRune field.
+func (o *Pool) SetVolumeRune(v string) {
+	o.VolumeRune = &v
+}
+
 func (o Pool) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
@@ -769,6 +837,12 @@ func (o Pool) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if o.TradingHalted != nil {
 		toSerialize["trading_halted"] = o.TradingHalted
+	}
+	if o.VolumeAsset != nil {
+		toSerialize["volume_asset"] = o.VolumeAsset
+	}
+	if o.VolumeRune != nil {
+		toSerialize["volume_rune"] = o.VolumeRune
 	}
 	return json.Marshal(toSerialize)
 }

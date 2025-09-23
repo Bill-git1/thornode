@@ -28,6 +28,8 @@ Name | Type | Description | Notes
 **LoanCr** | **string** | the current loan collateralization ratio | 
 **DerivedDepthBps** | **string** | the depth of the derived virtual pool relative to L1 pool (in basis points) | 
 **TradingHalted** | Pointer to **bool** | indicates if the pool can be used for swaps | [optional] 
+**VolumeAsset** | Pointer to **string** | 24h volume in asset | [optional] 
+**VolumeRune** | Pointer to **string** | 24h volume in rune | [optional] 
 
 ## Methods
 
@@ -542,6 +544,56 @@ SetTradingHalted sets TradingHalted field to given value.
 `func (o *Pool) HasTradingHalted() bool`
 
 HasTradingHalted returns a boolean if a field has been set.
+
+### GetVolumeAsset
+
+`func (o *Pool) GetVolumeAsset() string`
+
+GetVolumeAsset returns the VolumeAsset field if non-nil, zero value otherwise.
+
+### GetVolumeAssetOk
+
+`func (o *Pool) GetVolumeAssetOk() (*string, bool)`
+
+GetVolumeAssetOk returns a tuple with the VolumeAsset field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetVolumeAsset
+
+`func (o *Pool) SetVolumeAsset(v string)`
+
+SetVolumeAsset sets VolumeAsset field to given value.
+
+### HasVolumeAsset
+
+`func (o *Pool) HasVolumeAsset() bool`
+
+HasVolumeAsset returns a boolean if a field has been set.
+
+### GetVolumeRune
+
+`func (o *Pool) GetVolumeRune() string`
+
+GetVolumeRune returns the VolumeRune field if non-nil, zero value otherwise.
+
+### GetVolumeRuneOk
+
+`func (o *Pool) GetVolumeRuneOk() (*string, bool)`
+
+GetVolumeRuneOk returns a tuple with the VolumeRune field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetVolumeRune
+
+`func (o *Pool) SetVolumeRune(v string)`
+
+SetVolumeRune sets VolumeRune field to given value.
+
+### HasVolumeRune
+
+`func (o *Pool) HasVolumeRune() bool`
+
+HasVolumeRune returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

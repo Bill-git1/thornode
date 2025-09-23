@@ -42,6 +42,12 @@ asserts:
   - .balances|length == 1
   - .balances[]|select(.denom == "rune")|.amount|tonumber == 2504533171552
 ---
+type: check
+endpoint: http://localhost:1317/thorchain/pool/BTC.BTC
+asserts:
+  - .volume_asset == "5000000"
+  - .volume_rune == "4535171552"
+---
 ########################################################################################
 # swap to asset
 ########################################################################################
@@ -90,6 +96,18 @@ endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 0
 ---
+type: check
+endpoint: http://localhost:1317/thorchain/pool/BTC.BTC
+asserts:
+  - .volume_asset == "14012476"
+  - .volume_rune == "14535171552"
+---
+type: check
+endpoint: http://localhost:1317/thorchain/pool/ETH.ETH
+asserts:
+  - .volume_asset == "0"
+  - .volume_rune == "0"
+---
 ########################################################################################
 # double swap
 ########################################################################################
@@ -122,6 +140,18 @@ asserts:
   - length == 1
   - .[0].in_hash == "{{ observe_txid 3 }}"
   - .[0].coin.amount == "${OUT_AMOUNT=44392650}"
+---
+type: check
+endpoint: http://localhost:1317/thorchain/pool/BTC.BTC
+asserts:
+  - .volume_asset == "19012476"
+  - .volume_rune == "19496402877"
+---
+type: check
+endpoint: http://localhost:1317/thorchain/pool/ETH.ETH
+asserts:
+  - .volume_asset == "45032650"
+  - .volume_rune == "4961231325"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}

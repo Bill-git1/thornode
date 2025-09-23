@@ -1757,6 +1757,14 @@ components:
           type: boolean
           example: false
           description: indicates if the pool can be used for swaps
+        volume_asset:
+          type: string
+          example: "123456"
+          description: 24h volume in asset
+        volume_rune:
+          type: string
+          example: "123456"
+          description: 24h volume in rune
     DerivedPool:
       type: object
       required:

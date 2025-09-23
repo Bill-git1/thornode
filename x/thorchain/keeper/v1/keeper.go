@@ -98,7 +98,8 @@ const (
 	prefixTCYClaimer              types.DbPrefix = "tcy_claimer/"
 	prefixTCYStaker               types.DbPrefix = "tcy_staker/"
 	prefixOraclePrice             types.DbPrefix = "oracle_price/"
-	prefixPriceFeed               types.DbPrefix = "price_feed/"
+	prefixVolumeBucket            types.DbPrefix = "volume_bucket/"
+	prefixVolume                  types.DbPrefix = "volume/"
 )
 
 func dbError(ctx cosmos.Context, wrapper string, err error) error {

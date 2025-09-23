@@ -36,6 +36,9 @@ const MaxMemoSize = 250
 // streaming swap math
 const StreamingSwapMinBPFeeMulti = int64(100)
 
+// "width" of a volume bucket (15min)
+const VolumeBucketSeconds = int64(900)
+
 // used to preserve precision when determining the dollar price of rune.
 const DollarMulti = 1e9
 

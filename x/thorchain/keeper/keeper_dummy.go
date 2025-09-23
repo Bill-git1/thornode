@@ -882,6 +882,23 @@ func (k KVStoreDummy) GetPriceIterator(_ cosmos.Context) cosmos.Iterator {
 	return nil
 }
 
+func (k KVStoreDummy) GetVolumeBucket(_ cosmos.Context, _ common.Asset, _ int64) (VolumeBucket, error) {
+	return VolumeBucket{}, nil
+}
+
+func (k KVStoreDummy) GetVolumeBucketIterator(_ cosmos.Context, _ common.Asset) cosmos.Iterator {
+	return nil
+}
+
+func (k KVStoreDummy) SetVolumeBucket(_ cosmos.Context, _ VolumeBucket) error { return nil }
+func (k KVStoreDummy) GetVolume(_ cosmos.Context, _ common.Asset) (Volume, error) {
+	return Volume{}, kaboom
+}
+
+func (k KVStoreDummy) SetVolume(_ cosmos.Context, _ Volume) error {
+	return nil
+}
+
 // a mock cosmos.Iterator implementation for testing purposes
 type DummyIterator struct {
 	cosmos.Iterator

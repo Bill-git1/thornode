@@ -240,6 +240,10 @@ type OracleManager interface {
 	BeginBlock(ctx cosmos.Context) error
 }
 
+type VolumeManager interface {
+	EndBlock(ctx cosmos.Context) error
+}
+
 // Mgrs is an implementation of Manager interface
 type Mgrs struct {
 	currentVersion semver.Version
@@ -259,6 +263,7 @@ type Mgrs struct {
 	wasmManager    WasmManager
 	switchManager  SwitchManager
 	oracleManager  OracleManager
+	volumeManager  VolumeManager
 
 	K             keeper.Keeper
 	cdc           codec.Codec
@@ -412,6 +417,11 @@ func (mgr *Mgrs) recreateManagers(ctx cosmos.Context, v semver.Version) error {
 		return fmt.Errorf("fail to create oracle manager: %w", err)
 	}
 
+	mgr.volumeManager, err = GetVolumeManager(v, mgr.K)
+	if err != nil {
+		return fmt.Errorf("fail to create volume manager: %w", err)
+	}
+
 	return nil
 }
 
@@ -457,6 +467,8 @@ func (mgr *Mgrs) WasmManager() WasmManager { return mgr.wasmManager }
 func (mgr *Mgrs) SwitchManager() SwitchManager { return mgr.switchManager }
 
 func (mgr *Mgrs) OracleManager() OracleManager { return mgr.oracleManager }
+
+func (mgr *Mgrs) VolumeManager() VolumeManager { return mgr.volumeManager }
 
 // GetKeeper return Keeper
 func GetKeeper(
@@ -596,4 +608,8 @@ func GetSwitchManager(version semver.Version, keeper keeper.Keeper, eventMgr Eve
 
 func GetOracleManager(_ semver.Version, keeper keeper.Keeper, eventMgr EventManager) (OracleManager, error) {
 	return newOracleMgrVCUR(keeper), nil
+}
+
+func GetVolumeManager(_ semver.Version, keeper keeper.Keeper) (VolumeManager, error) {
+	return newVolumeMgrVCUR(keeper), nil
 }

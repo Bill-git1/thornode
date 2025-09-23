@@ -6,6 +6,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	"github.com/hashicorp/go-metrics"
+	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 
 	"gitlab.com/thorchain/thornode/v3/common"
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
@@ -137,6 +138,24 @@ func (s *SwapperVCUR) Swap(ctx cosmos.Context,
 			telem(evt.LiquidityFeeInRune),
 			[]metrics.Label{telemetry.NewLabel("pool", evt.Pool.String())},
 		)
+
+		volume, err := keeper.GetVolume(ctx, evt.Pool)
+		if err != nil {
+			volume = types.NewVolume(evt.Pool)
+		}
+
+		if evt.EmitAsset.Asset.GetLayer1Asset().Equals(evt.Pool) {
+			volume.ChangeAsset = volume.ChangeAsset.Add(evt.EmitAsset.Amount)
+			volume.ChangeRune = volume.ChangeRune.Add(evt.InTx.Coins[0].Amount)
+		} else {
+			volume.ChangeAsset = volume.ChangeAsset.Add(evt.InTx.Coins[0].Amount)
+			volume.ChangeRune = volume.ChangeRune.Add(evt.EmitAsset.Amount)
+		}
+
+		err = keeper.SetVolume(ctx, volume)
+		if err != nil {
+			ctx.Logger().Error("fail to save volume", "error", err)
+		}
 	}
 
 	if !destination.IsNoop() {

@@ -2584,27 +2584,29 @@ components:
     Pool:
       example:
         synth_units: "0"
-        savers_fill_bps: "4500"
         loan_cr: "123456"
         savers_depth: "199998"
-        savers_units: "199998"
         derived_depth_bps: "123456"
         balance_asset: "3197744873"
         synth_supply: "0"
+        asset_tor_price: "123456"
+        synth_mint_paused: true
+        balance_rune: "13460619152985"
+        pool_units: "14694928607473"
+        short_code: b
+        volume_rune: "123456"
+        volume_asset: "123456"
+        savers_fill_bps: "4500"
+        savers_units: "199998"
         savers_capacity_remaining: "1000"
         loan_collateral_remaining: "123456"
         trading_halted: false
-        asset_tor_price: "123456"
-        synth_mint_paused: true
         pending_inbound_rune: "464993836"
         decimals: 6
         LP_units: "14694928607473"
         loan_collateral: "123456"
-        balance_rune: "13460619152985"
         asset: BTC.BTC
-        pool_units: "14694928607473"
         synth_supply_remaining: "123456"
-        short_code: b
         status: Available
         pending_inbound_asset: "101713319"
       properties:
@@ -2699,6 +2701,14 @@ components:
           description: indicates if the pool can be used for swaps
           example: false
           type: boolean
+        volume_asset:
+          description: 24h volume in asset
+          example: "123456"
+          type: string
+        volume_rune:
+          description: 24h volume in rune
+          example: "123456"
+          type: string
       required:
       - LP_units
       - asset

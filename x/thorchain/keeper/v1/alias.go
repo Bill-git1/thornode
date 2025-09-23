@@ -156,6 +156,8 @@ type (
 	TCYStaker                = types.TCYStaker
 	OraclePrice              = types.OraclePrice
 	PriceFeed                = types.PriceFeed
+	Volume                   = types.Volume
+	VolumeBucket             = types.VolumeBucket
 
 	ProtoInt64        = types.ProtoInt64
 	ProtoUint64       = types.ProtoUint64

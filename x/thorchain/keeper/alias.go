@@ -81,4 +81,6 @@ type (
 	TCYStaker                = types.TCYStaker
 	PriceFeed                = types.PriceFeed
 	OraclePrice              = types.OraclePrice
+	Volume                   = types.Volume
+	VolumeBucket             = types.VolumeBucket
 )

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/rs/zerolog/log"
 
@@ -39,12 +40,19 @@ func init() {
 }
 
 func (app *THORChainApp) BeginBlocker(ctx sdk.Context) (sdk.BeginBlock, error) {
+	// Use an artificial timestamp, to ensure block time specific changes
+	// are consistent and don't change block hashes (eg. 24h volume calculation)
+	timestamp := time.Unix(ctx.BlockHeight(), 0).UTC()
+	ctx = ctx.WithBlockTime(timestamp)
 	<-begin
-	return app.ModuleManager.BeginBlock(ctx)
+	return app.ModuleManager.BeginBlock(ctx.WithBlockTime(timestamp))
 }
 
 // EndBlocker application updates every end block
 func (app *THORChainApp) EndBlocker(ctx sdk.Context) (sdk.EndBlock, error) {
 	defer func() { end <- struct{}{} }()
-	return app.ModuleManager.EndBlock(ctx)
+	// Use an artificial timestamp, to ensure block time specific changes
+	// are consistent and don't change block hashes (eg. 24h volume calculation)
+	timestamp := time.Unix(ctx.BlockHeight(), 0).UTC()
+	return app.ModuleManager.EndBlock(ctx.WithBlockTime(timestamp))
 }

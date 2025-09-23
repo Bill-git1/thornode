@@ -1497,6 +1497,12 @@ func (qs queryServer) queryPool(ctx cosmos.Context, req *types.QueryPoolRequest)
 		tradingHalted = true
 	}
 
+	volume, err := qs.mgr.Keeper().GetVolume(ctx, pool.Asset)
+	if err != nil {
+		// fallback to display "0" volume
+		volume = types.NewVolume(pool.Asset)
+	}
+
 	p := types.QueryPoolResponse{
 		Asset:               pool.Asset.String(),
 		ShortCode:           pool.Asset.ShortCode(),
@@ -1510,6 +1516,8 @@ func (qs queryServer) queryPool(ctx cosmos.Context, req *types.QueryPoolRequest)
 		LPUnits:             pool.LPUnits.String(),
 		SynthUnits:          pool.SynthUnits.String(),
 		TradingHalted:       tradingHalted,
+		VolumeRune:          volume.TotalRune.String(),
+		VolumeAsset:         volume.TotalAsset.String(),
 	}
 	p.SynthSupply = synthSupply.String()
 	p.SaversDepth = saversDepth.String()
@@ -1628,6 +1636,12 @@ func (qs queryServer) queryPools(ctx cosmos.Context, _ *types.QueryPoolsRequest)
 			tradingHalted = true
 		}
 
+		volume, err := qs.mgr.Keeper().GetVolume(ctx, pool.Asset)
+		if err != nil {
+			// fallback to display "0" volume
+			volume = types.NewVolume(pool.Asset)
+		}
+
 		p := types.QueryPoolResponse{
 			Asset:               pool.Asset.String(),
 			ShortCode:           pool.Asset.ShortCode(),
@@ -1641,6 +1655,8 @@ func (qs queryServer) queryPools(ctx cosmos.Context, _ *types.QueryPoolsRequest)
 			LPUnits:             pool.LPUnits.String(),
 			SynthUnits:          pool.SynthUnits.String(),
 			TradingHalted:       tradingHalted,
+			VolumeRune:          volume.TotalRune.String(),
+			VolumeAsset:         volume.TotalAsset.String(),
 		}
 
 		p.SynthSupply = synthSupply.String()

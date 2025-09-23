@@ -94,6 +94,7 @@ type Keeper interface {
 	KeeperRUNEPool
 	KeeperTCYClaimer
 	KeeperTCYStaker
+	KeeperVolume
 }
 
 type KeeperConfig interface {
@@ -439,6 +440,14 @@ type KeeperOracle interface {
 	GetPrice(ctx cosmos.Context, symbol string) (OraclePrice, error)
 	DelPrice(ctx cosmos.Context, symbol string)
 	GetPriceIterator(ctx cosmos.Context) cosmos.Iterator
+}
+
+type KeeperVolume interface {
+	GetVolumeBucket(ctx cosmos.Context, pool common.Asset, index int64) (VolumeBucket, error)
+	SetVolumeBucket(ctx cosmos.Context, bucket VolumeBucket) error
+	GetVolumeBucketIterator(ctx cosmos.Context, pool common.Asset) cosmos.Iterator
+	GetVolume(ctx cosmos.Context, pool common.Asset) (Volume, error)
+	SetVolume(ctx cosmos.Context, volume Volume) error
 }
 
 // NewKeeper creates new instances of the thorchain Keeper

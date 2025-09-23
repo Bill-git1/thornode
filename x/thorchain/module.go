@@ -255,6 +255,11 @@ func (am AppModule) EndBlock(goCtx context.Context) ([]abci.ValidatorUpdate, err
 		}
 	}
 
+	// update volumes
+	if err := am.mgr.VolumeManager().EndBlock(ctx); err != nil {
+		ctx.Logger().Error("fail update volumes", "error", err)
+	}
+
 	return validators, nil
 }
 

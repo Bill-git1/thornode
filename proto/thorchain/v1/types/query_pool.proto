@@ -59,6 +59,10 @@ message QueryPoolResponse {
   string derived_depth_bps = 23 [ (gogoproto.jsontag) = "derived_depth_bps" ];
   // whether trading is halted
   bool trading_halted = 24 [ (gogoproto.jsontag) = "trading_halted" ];
+  // 24h trading volume rune
+  string volume_rune = 25 [ (gogoproto.jsontag) = "volume_rune" ];
+  // 24h trading volume asset
+  string volume_asset = 26 [ (gogoproto.jsontag) = "volume_asset" ];
 }
 
 message QueryPoolsRequest { string height = 1; }
