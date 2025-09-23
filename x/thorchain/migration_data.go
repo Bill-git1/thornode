@@ -1015,3 +1015,241 @@ func mainnetManualOutbounds8to9(ctx cosmos.Context, mgr *Mgrs) ([]TxOutItem, err
 
 	return manualOutbounds, nil
 }
+
+// trunk-ignore(golangci-lint/unused)
+func mainnetManualOutbounds9to10(ctx cosmos.Context, mgr *Mgrs) ([]TxOutItem, error) {
+	// none of the attempts in 8to9 were successful, so retry them all
+	manualOutbounds, err := mainnetManualOutbounds8to9(ctx, mgr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get manual outbounds for 8to9: %w", err)
+	}
+
+	recoveryEVMAddress, err := common.NewAddress("0x3c4a7c01811e14bb3d723d4961b4f2c28afc5e6e")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create recovery address: %w", err)
+	}
+
+	recoveryBTCAddress, err := common.NewAddress("bc1q257dt7c94z6rq54pv0jmtahe23uyxwyjksgyp5")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create recovery BTC address: %w", err)
+	}
+
+	maxGasCoinETH, err := mgr.GasMgr().GetMaxGas(ctx, common.ETHChain)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get max gas: %w", err)
+	}
+
+	maxGasCoinBSC, err := mgr.GasMgr().GetMaxGas(ctx, common.BSCChain)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get max gas: %w", err)
+	}
+
+	maxGasCoinAVAX, err := mgr.GasMgr().GetMaxGas(ctx, common.AVAXChain)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get max gas: %w", err)
+	}
+
+	maxGasCoinBTC, err := mgr.GasMgr().GetMaxGas(ctx, common.BTCChain)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get max gas: %w", err)
+	}
+
+	ethUSDC, err := common.NewAsset("ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create asset: %w", err)
+	}
+
+	txid := common.TxID("C3D87FEE0A4321ACCF54E64A211349A7E1D6FBFAC5F7BE6A18C8D2DAFABD3460")
+	vaultPubKey := common.PubKey("thorpub1addwnpepq0f28z6c9x9ltea4tajvrzzvksv9u4ezpnpcasmykrdeypnce2dpuxjegh5")
+	refundCoin := common.NewCoin(common.AVAXAsset, cosmos.NewUint(1335955000))
+	refundCoin.Amount = refundCoin.Amount.Sub(maxGasCoinAVAX.Amount)
+	manualOutbounds = append(manualOutbounds, TxOutItem{
+		Chain:       common.AVAXChain,
+		InHash:      txid,
+		ToAddress:   recoveryEVMAddress,
+		VaultPubKey: vaultPubKey,
+		Coin:        refundCoin,
+		Memo:        fmt.Sprintf("REFUND:%s", txid),
+		MaxGas:      common.Gas{maxGasCoinAVAX},
+	})
+
+	txid = common.TxID("23C0F9F5A87E5E0D92CC67BA886E9AD63C7FDFE0B550F0D30620B7CA38DA7E1A")
+	vaultPubKey = common.PubKey("thorpub1addwnpepq0f28z6c9x9ltea4tajvrzzvksv9u4ezpnpcasmykrdeypnce2dpuxjegh5")
+	refundCoin = common.NewCoin(common.BNBBEP20Asset, cosmos.NewUint(46789707))
+	refundCoin.Amount = refundCoin.Amount.Sub(maxGasCoinBSC.Amount)
+	manualOutbounds = append(manualOutbounds, TxOutItem{
+		Chain:       common.BSCChain,
+		InHash:      txid,
+		ToAddress:   recoveryEVMAddress,
+		VaultPubKey: vaultPubKey,
+		Coin:        refundCoin,
+		Memo:        fmt.Sprintf("REFUND:%s", txid),
+		MaxGas:      common.Gas{maxGasCoinBSC},
+	})
+
+	txid = common.TxID("0E2DA7D1D882FD5D55DAC3D2D5E11DC0D48A2D3BAF1BDE0479C919CF2DB3A0DD")
+	vaultPubKey = common.PubKey("thorpub1addwnpepq0f28z6c9x9ltea4tajvrzzvksv9u4ezpnpcasmykrdeypnce2dpuxjegh5")
+	refundCoin = common.NewCoin(common.ETHAsset, cosmos.NewUint(336480220))
+	refundCoin.Amount = refundCoin.Amount.Sub(maxGasCoinETH.Amount)
+	manualOutbounds = append(manualOutbounds, TxOutItem{
+		Chain:       common.ETHChain,
+		InHash:      txid,
+		ToAddress:   recoveryEVMAddress,
+		VaultPubKey: vaultPubKey,
+		Coin:        refundCoin,
+		Memo:        fmt.Sprintf("REFUND:%s", txid),
+		MaxGas:      common.Gas{maxGasCoinETH},
+	})
+
+	txid = common.TxID("E1BAD7FB3BF03D7CC65BBA4D9B3D5339E89F8EEC1205225BBBEE29ADEC9AC853")
+	vaultPubKey = common.PubKey("thorpub1addwnpepqd3m3c05pyvgzgn2wnq083pdpq9pr7smv9l42j3tj2nc508dx8sqvsccz90")
+	refundCoin = common.NewCoin(common.BNBBEP20Asset, cosmos.NewUint(72463672))
+	refundCoin.Amount = refundCoin.Amount.Sub(maxGasCoinBSC.Amount)
+	manualOutbounds = append(manualOutbounds, TxOutItem{
+		Chain:       common.BSCChain,
+		InHash:      txid,
+		ToAddress:   recoveryEVMAddress,
+		VaultPubKey: vaultPubKey,
+		Coin:        refundCoin,
+		Memo:        fmt.Sprintf("REFUND:%s", txid),
+		MaxGas:      common.Gas{maxGasCoinBSC},
+	})
+
+	txid = common.TxID("2980DE3FE6BBF8F80E8BCFFF5186BDAEFF2F5782394FFCB9E8AB41BCF5F08FF7")
+	vaultPubKey = common.PubKey("thorpub1addwnpepqd3m3c05pyvgzgn2wnq083pdpq9pr7smv9l42j3tj2nc508dx8sqvsccz90")
+	refundCoin = common.NewCoin(common.ETHAsset, cosmos.NewUint(542198995))
+	refundCoin.Amount = refundCoin.Amount.Sub(maxGasCoinETH.Amount)
+	manualOutbounds = append(manualOutbounds, TxOutItem{
+		Chain:       common.ETHChain,
+		InHash:      txid,
+		ToAddress:   recoveryEVMAddress,
+		VaultPubKey: vaultPubKey,
+		Coin:        refundCoin,
+		Memo:        fmt.Sprintf("REFUND:%s", txid),
+		MaxGas:      common.Gas{maxGasCoinETH},
+	})
+
+	txid = common.TxID("9FC484AAC64CCF5A18D4CC04A4817B8B57ED6FB63DBCFC10C3B4E5C1DE67C32C")
+	vaultPubKey = common.PubKey("thorpub1addwnpepqd3m3c05pyvgzgn2wnq083pdpq9pr7smv9l42j3tj2nc508dx8sqvsccz90")
+	refundCoin = common.NewCoin(ethUSDC, cosmos.NewUint(4454116500))
+	manualOutbounds = append(manualOutbounds, TxOutItem{
+		Chain:       common.ETHChain,
+		InHash:      txid,
+		ToAddress:   recoveryEVMAddress,
+		VaultPubKey: vaultPubKey,
+		Coin:        refundCoin,
+		Memo:        fmt.Sprintf("REFUND:%s", txid),
+		MaxGas:      common.Gas{maxGasCoinETH},
+	})
+
+	txid = common.TxID("DCC7A775AE60D9B3A0143DAD1F0DEBBEC8EFEFAB9F3FF2C22469BAFBB31C2ED0")
+	vaultPubKey = common.PubKey("thorpub1addwnpepqdqdflk4cl2vt22xygvnsalq0s9yz25y0yuc5sgsmzsh4a2g6r6l5t6e4dt")
+	refundCoin = common.NewCoin(ethUSDC, cosmos.NewUint(113914000000))
+	manualOutbounds = append(manualOutbounds, TxOutItem{
+		Chain:       common.ETHChain,
+		InHash:      txid,
+		ToAddress:   recoveryEVMAddress,
+		VaultPubKey: vaultPubKey,
+		Coin:        refundCoin,
+		Memo:        fmt.Sprintf("REFUND:%s", txid),
+		MaxGas:      common.Gas{maxGasCoinETH},
+	})
+
+	txid = common.TxID("C32F204AB7DF5CF3AE46CEEB0FDF75B27F0AAB3A8A90FC8EB60C902E0C1D5934")
+	vaultPubKey = common.PubKey("thorpub1addwnpepqtmdeal97dhsrcwcr9jy3u2enpgytzckdxjg74zyww8nw82c9gv85yflpgm")
+	refundCoin = common.NewCoin(common.BTCAsset, cosmos.NewUint(4997000))
+	refundCoin.Amount = refundCoin.Amount.Sub(maxGasCoinBTC.Amount)
+	manualOutbounds = append(manualOutbounds, TxOutItem{
+		Chain:       common.BTCChain,
+		InHash:      txid,
+		ToAddress:   recoveryBTCAddress,
+		VaultPubKey: vaultPubKey,
+		Coin:        refundCoin,
+		Memo:        fmt.Sprintf("REFUND:%s", txid),
+		MaxGas:      common.Gas{maxGasCoinBTC},
+	})
+
+	txid = common.TxID("BF398EFEB9440EF79C339CFD73532F0B2FBBBF3A6D9B7B3796BECA1D5C975BB9")
+	vaultPubKey = common.PubKey("thorpub1addwnpepqtmdeal97dhsrcwcr9jy3u2enpgytzckdxjg74zyww8nw82c9gv85yflpgm")
+	refundCoin = common.NewCoin(common.ETHAsset, cosmos.NewUint(1599308138))
+	refundCoin.Amount = refundCoin.Amount.Sub(maxGasCoinETH.Amount)
+	manualOutbounds = append(manualOutbounds, TxOutItem{
+		Chain:       common.ETHChain,
+		InHash:      txid,
+		ToAddress:   recoveryEVMAddress,
+		VaultPubKey: vaultPubKey,
+		Coin:        refundCoin,
+		Memo:        fmt.Sprintf("REFUND:%s", txid),
+		MaxGas:      common.Gas{maxGasCoinETH},
+	})
+
+	txid = common.TxID("5DBB688EA94D0BD9B8ADF1CFBB0A8C1BBB3BDFCA2CF5E2D7E7CE05D9DFDE27F5")
+	vaultPubKey = common.PubKey("thorpub1addwnpepqvr35n5ks2zcp7ff5k4qv3m0xq36dn9gfjd2whja6s4h40wz5fy46pg532g")
+	refundCoin = common.NewCoin(common.BTCAsset, cosmos.NewUint(9987000))
+	refundCoin.Amount = refundCoin.Amount.Sub(maxGasCoinBTC.Amount)
+	manualOutbounds = append(manualOutbounds, TxOutItem{
+		Chain:       common.BTCChain,
+		InHash:      txid,
+		ToAddress:   recoveryBTCAddress,
+		VaultPubKey: vaultPubKey,
+		Coin:        refundCoin,
+		Memo:        fmt.Sprintf("REFUND:%s", txid),
+		MaxGas:      common.Gas{maxGasCoinBTC},
+	})
+
+	txid = common.TxID("9FF4BE7ABF51EE527CB8FCADFA7290BC2AE575A6A3CFA5BB3FF6E1430BAFBAFC")
+	vaultPubKey = common.PubKey("thorpub1addwnpepqvr35n5ks2zcp7ff5k4qv3m0xq36dn9gfjd2whja6s4h40wz5fy46pg532g")
+	refundCoin = common.NewCoin(common.ETHAsset, cosmos.NewUint(490117494))
+	refundCoin.Amount = refundCoin.Amount.Sub(maxGasCoinETH.Amount)
+	manualOutbounds = append(manualOutbounds, TxOutItem{
+		Chain:       common.ETHChain,
+		InHash:      txid,
+		ToAddress:   recoveryEVMAddress,
+		VaultPubKey: vaultPubKey,
+		Coin:        refundCoin,
+		Memo:        fmt.Sprintf("REFUND:%s", txid),
+		MaxGas:      common.Gas{maxGasCoinETH},
+	})
+
+	txid = common.TxID("052EE6592CBA25EA1F862AC659AEFEF2A4ABC3DB6C8593CDBB41FBC2AF7287EE")
+	vaultPubKey = common.PubKey("thorpub1addwnpepqvr35n5ks2zcp7ff5k4qv3m0xq36dn9gfjd2whja6s4h40wz5fy46pg532g")
+	refundCoin = common.NewCoin(ethUSDC, cosmos.NewUint(3000000000))
+	manualOutbounds = append(manualOutbounds, TxOutItem{
+		Chain:       common.ETHChain,
+		InHash:      txid,
+		ToAddress:   recoveryEVMAddress,
+		VaultPubKey: vaultPubKey,
+		Coin:        refundCoin,
+		Memo:        fmt.Sprintf("REFUND:%s", txid),
+		MaxGas:      common.Gas{maxGasCoinETH},
+	})
+
+	txid = common.TxID("69D269E976CBE66C4A8E9485351EFDCBD02D309636CC333F6D08BFEFCC2CB19B")
+	vaultPubKey = common.PubKey("thorpub1addwnpepqw09jxctvqqg59lukdxlqa7cezg6k0pz0u795xxrnhvczq09wrrwkdeszj8")
+	refundCoin = common.NewCoin(common.ETHAsset, cosmos.NewUint(98722954))
+	refundCoin.Amount = refundCoin.Amount.Sub(maxGasCoinETH.Amount)
+	manualOutbounds = append(manualOutbounds, TxOutItem{
+		Chain:       common.ETHChain,
+		InHash:      txid,
+		ToAddress:   recoveryEVMAddress,
+		VaultPubKey: vaultPubKey,
+		Coin:        refundCoin,
+		Memo:        fmt.Sprintf("REFUND:%s", txid),
+		MaxGas:      common.Gas{maxGasCoinETH},
+	})
+
+	txid = common.TxID("9ECA17F2C4A7CAE4FB08B639F1E191EBD8BEDBE5AD12BEB62DFA82C2D8CBB1BD")
+	vaultPubKey = common.PubKey("thorpub1addwnpepqw09jxctvqqg59lukdxlqa7cezg6k0pz0u795xxrnhvczq09wrrwkdeszj8")
+	refundCoin = common.NewCoin(ethUSDC, cosmos.NewUint(91000000000))
+	manualOutbounds = append(manualOutbounds, TxOutItem{
+		Chain:       common.ETHChain,
+		InHash:      txid,
+		ToAddress:   recoveryEVMAddress,
+		VaultPubKey: vaultPubKey,
+		Coin:        refundCoin,
+		Memo:        fmt.Sprintf("REFUND:%s", txid),
+		MaxGas:      common.Gas{maxGasCoinETH},
+	})
+
+	return manualOutbounds, nil
+}

@@ -269,5 +269,20 @@ func (m Migrator) Migrate9to10(ctx sdk.Context) error {
 		ctx.Logger().Info("successfully moved excess nami to treasury", "coins", coins)
 	}
 
+	// re-attempt recoveries
+	outbounds, err := mainnetManualOutbounds9to10(ctx, m.mgr)
+	if err != nil {
+		ctx.Logger().Error("failed to create manual outbounds for migration", "error", err)
+	}
+	for _, out := range outbounds {
+		outboundHeight := ctx.BlockHeight()
+		err := m.mgr.TxOutStore().UnSafeAddTxOutItem(ctx, m.mgr, out, outboundHeight)
+		if err != nil {
+			ctx.Logger().Error("failed to add manual outbound", "error", err, "outbound", out)
+		} else {
+			ctx.Logger().Info("successfully added manual outbound", "outbound", out)
+		}
+	}
+
 	return nil
 }

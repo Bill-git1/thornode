@@ -835,7 +835,8 @@ bifrost:
 
 thor:
   node_relay_url: https://node-relay-bot.herokuapp.com
-  vault_pubkeys_cutoff_blocks: 1_000_000
+  # TODO: revert back to 1M after 3.12 migration for recovery attempts
+  vault_pubkeys_cutoff_blocks: 2_000_000
   seed_nodes_endpoint: https://thornode.ninerealms.com/thorchain/nodes
   stagenet_admin_addresses: "sthor1gdq9qejfy33jctztqdrg5v4hvxnytmvjhduacc" # 9R official stagenet
   api:
