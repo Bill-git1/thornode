@@ -61,108 +61,110 @@ func LargeUnconfirmedInbounds(block *thorscan.BlockResponse) {
 
 		for _, msg := range tx.Tx.GetMsgs() {
 			// skip anything other than observed transactions
-			msgObservedTxIn, ok := msg.(*thorchain.MsgObservedTxIn)
+			msgObservedTx, ok := msg.(*types.MsgObservedTxQuorum)
 			if !ok {
 				continue
 			}
+			if !msgObservedTx.QuoTx.Inbound {
+				continue
+			}
 
-			// the observed tx in can have multiple transactions
-			for _, tx := range msgObservedTxIn.Txs {
-				// skip migrate inbounds
-				if reMemoMigration.MatchString(tx.Tx.Memo) {
-					continue
-				}
+			tx := msgObservedTx.QuoTx.ObsTx
 
-				// skip consolidate inbounds and trade/secured asset deposits
-				if tx.Tx.Memo != "" { // saver deposits have empty memo
-					memoParts := strings.Split(tx.Tx.Memo, ":")
-					memoType, err := memo.StringToTxType(memoParts[0])
-					if err != nil {
-						log.Error().Err(err).
-							Int64("height", block.Header.Height).
-							Str("memo", tx.Tx.Memo).
-							Msg("failed to parse memo type")
-					}
-					switch memoType {
-					case memo.TxConsolidate, memo.TxTradeAccountDeposit, memo.TxSecuredAssetDeposit:
-						continue
-					}
-				}
+			// skip migrate inbounds
+			if reMemoMigration.MatchString(tx.Tx.Memo) {
+				continue
+			}
 
-				// since this is checked often, only update cached price every 10 blocks
-				priceHeight := block.Header.Height / 10 * 10
-
-				// skip if below usd threshold
-				usdValue := util.USDValue(priceHeight, tx.Tx.Coins[0])
-				if uint64(usdValue) < config.Get().Thresholds.USDValue {
-					continue
-				}
-
-				// check threshold with clout
-				fromClout := util.Clout(priceHeight, tx.Tx.FromAddress.String())
-				fromCloutUSD := util.USDValue(priceHeight, fromClout)
-				if uint64(usdValue) < config.Get().Thresholds.USDValue+uint64(fromCloutUSD) {
-					continue
-				}
-
-				// skip if under 2 minutes until confirmation
-				confirmBlocks := tx.FinaliseHeight - tx.BlockHeight
-				blockMs := tx.Tx.Chain.GetGasAsset().Chain.ApproximateBlockMilliseconds()
-				confirmDuration := time.Duration(confirmBlocks*blockMs) * time.Millisecond
-				if confirmDuration < time.Minute*2 {
-					continue
-				}
-
-				// skip if previously seen
-				seen := false
-				seenKey := fmt.Sprintf("seen-large-unconfirmed-inbound/%s", tx.Tx.ID.String())
-				err := util.Load(seenKey, &seen)
+			// skip consolidate inbounds and trade/secured asset deposits
+			if tx.Tx.Memo != "" { // saver deposits have empty memo
+				memoParts := strings.Split(tx.Tx.Memo, ":")
+				memoType, err := memo.StringToTxType(memoParts[0])
 				if err != nil {
-					log.Debug().Err(err).Msg("unable to load seen large unconfirmed inbound")
+					log.Error().Err(err).
+						Int64("height", block.Header.Height).
+						Str("memo", tx.Tx.Memo).
+						Msg("failed to parse memo type")
 				}
-				if seen {
+				switch memoType {
+				case memo.TxConsolidate, memo.TxTradeAccountDeposit, memo.TxSecuredAssetDeposit:
 					continue
 				}
+			}
 
-				// mark this inbound as seen
-				err = util.Store(seenKey, true)
-				if err != nil {
-					log.Panic().Err(err).Msg("unable to store seen large unconfirmed inbound")
-				}
+			// since this is checked often, only update cached price every 10 blocks
+			priceHeight := block.Header.Height / 10 * 10
 
-				// build notification
-				title := "Large Unconfirmed Inbound"
-				fields := util.NewOrderedMap()
-				fields.Set("Chain", tx.Tx.Chain.String())
-				fields.Set("Hash", tx.Tx.ID.String())
-				fields.Set("Memo", fmt.Sprintf("`%s`", tx.Tx.Memo))
-				fields.Set("Confirmation Time", util.FormatDuration(confirmDuration))
-				fields.Set("Amount", fmt.Sprintf(
-					"%f %s (%s)",
-					float64(tx.Tx.Coins[0].Amount.Uint64())/common.One,
-					tx.Tx.Coins[0].Asset,
-					util.USDValueString(priceHeight, tx.Tx.Coins[0]),
+			// skip if below usd threshold
+			usdValue := util.USDValue(priceHeight, tx.Tx.Coins[0])
+			if uint64(usdValue) < config.Get().Thresholds.USDValue {
+				continue
+			}
+
+			// check threshold with clout
+			fromClout := util.Clout(priceHeight, tx.Tx.FromAddress.String())
+			fromCloutUSD := util.USDValue(priceHeight, fromClout)
+			if uint64(usdValue) < config.Get().Thresholds.USDValue+uint64(fromCloutUSD) {
+				continue
+			}
+
+			// skip if under 2 minutes until confirmation
+			confirmBlocks := tx.FinaliseHeight - tx.BlockHeight
+			blockMs := tx.Tx.Chain.GetGasAsset().Chain.ApproximateBlockMilliseconds()
+			confirmDuration := time.Duration(confirmBlocks*blockMs) * time.Millisecond
+			if confirmDuration < time.Minute*2 {
+				continue
+			}
+
+			// skip if previously seen
+			seen := false
+			seenKey := fmt.Sprintf("seen-large-unconfirmed-inbound/%s", tx.Tx.ID.String())
+			err := util.Load(seenKey, &seen)
+			if err != nil {
+				log.Debug().Err(err).Msg("unable to load seen large unconfirmed inbound")
+			}
+			if seen {
+				continue
+			}
+
+			// mark this inbound as seen
+			err = util.Store(seenKey, true)
+			if err != nil {
+				log.Panic().Err(err).Msg("unable to store seen large unconfirmed inbound")
+			}
+
+			// build notification
+			title := "Large Unconfirmed Inbound"
+			fields := util.NewOrderedMap()
+			fields.Set("Chain", tx.Tx.Chain.String())
+			fields.Set("Hash", tx.Tx.ID.String())
+			fields.Set("Memo", fmt.Sprintf("`%s`", tx.Tx.Memo))
+			fields.Set("Confirmation Time", util.FormatDuration(confirmDuration))
+			fields.Set("Amount", fmt.Sprintf(
+				"%f %s (%s)",
+				float64(tx.Tx.Coins[0].Amount.Uint64())/common.One,
+				tx.Tx.Coins[0].Asset,
+				util.USDValueString(priceHeight, tx.Tx.Coins[0]),
+			),
+			)
+			fields.Set(fmt.Sprintf("Clout (%s)", tx.Tx.FromAddress),
+				fmt.Sprintf(
+					"%f RUNE (%s)",
+					float64(fromClout.Amount.Uint64())/common.One,
+					util.FormatUSD(fromCloutUSD),
 				),
-				)
-				fields.Set(fmt.Sprintf("Clout (%s)", tx.Tx.FromAddress),
-					fmt.Sprintf(
-						"%f RUNE (%s)",
-						float64(fromClout.Amount.Uint64())/common.One,
-						util.FormatUSD(fromCloutUSD),
-					),
-				)
+			)
 
-				// notify
-				level := notify.Warning
-				if usdValue > float64(config.Get().Thresholds.Security.USDValue) {
-					level = notify.Danger
-				}
-				notify.Notify(config.Get().Notifications.Activity, title, block.Header.Height, nil, level, fields)
+			// notify
+			level := notify.Warning
+			if usdValue > float64(config.Get().Thresholds.Security.USDValue) {
+				level = notify.Danger
+			}
+			notify.Notify(config.Get().Notifications.Activity, title, block.Header.Height, nil, level, fields)
 
-				// notify security if over security threshold
-				if level == notify.Danger {
-					notify.Notify(config.Get().Notifications.Security, title, block.Header.Height, nil, notify.Warning, fields)
-				}
+			// notify security if over security threshold
+			if level == notify.Danger {
+				notify.Notify(config.Get().Notifications.Security, title, block.Header.Height, nil, notify.Warning, fields)
 			}
 		}
 
@@ -905,69 +907,71 @@ func InactiveVaultInbounds(block *thorscan.BlockResponse) {
 
 		for _, msg := range tx.Tx.GetMsgs() {
 			// skip anything other than observed transactions
-			msgObservedTxIn, ok := msg.(*thorchain.MsgObservedTxIn)
+			msgObservedTx, ok := msg.(*types.MsgObservedTxQuorum)
 			if !ok {
 				continue
 			}
-
-			// the observed tx in can have multiple transactions
-			for _, tx := range msgObservedTxIn.Txs {
-				// skip inbounds to active vaults
-				if vaults.Active[tx.ObservedPubKey.String()] {
-					continue
-				}
-
-				// skip inbounds to retiring vaults within 12 hours
-				if vaults.Retiring[tx.ObservedPubKey.String()] &&
-					block.Header.Height-vaults.Height < 7200 {
-					continue
-				}
-
-				// skip previously seen inactive inbounds
-				seen := false
-				seenKey := fmt.Sprintf("seen-inactive-inbound/%s", tx.Tx.ID.String())
-				err := util.Load(seenKey, &seen)
-				if err != nil {
-					log.Debug().Err(err).Msg("unable to load seen inactive inbound")
-				}
-				if seen {
-					continue
-				}
-
-				// skip finalized inbounds
-				stages := openapi.TxStagesResponse{}
-				err = util.ThornodeCachedRetryGet(fmt.Sprintf("thorchain/tx/stages/%s", tx.Tx.ID), block.Header.Height, &stages)
-				if err != nil {
-					log.Panic().Err(err).Msg("failed to get tx stages")
-				}
-				if stages.InboundFinalised != nil && stages.InboundFinalised.Completed {
-					continue
-				}
-
-				// mark this inbound as seen
-				err = util.Store(seenKey, true)
-				if err != nil {
-					log.Panic().Err(err).Msg("unable to store seen inactive inbound")
-				}
-
-				// gather links
-				links := []string{
-					fmt.Sprintf("[Transaction](%s/tx/%s)", config.Get().Links.Explorer, tx.Tx.ID),
-					fmt.Sprintf("[Track](%s/%s)", config.Get().Links.Track, tx.Tx.ID),
-				}
-
-				// build notification
-				title := "Inbound to Non-Active Vault"
-				fields := util.NewOrderedMap()
-				fields.Set("Chain", tx.Tx.Chain.String())
-				fields.Set("Vault", tx.ObservedPubKey.String())
-				fields.Set("Vault Address", tx.Tx.ToAddress.String())
-				fields.Set("Memo", fmt.Sprintf("`%s`", tx.Tx.Memo))
-				fields.Set("Links", strings.Join(links, " | "))
-
-				// notify
-				notify.Notify(config.Get().Notifications.Activity, title, block.Header.Height, nil, notify.Warning, fields)
+			if !msgObservedTx.QuoTx.Inbound {
+				continue
 			}
+
+			tx := msgObservedTx.QuoTx.ObsTx
+
+			// skip inbounds to active vaults
+			if vaults.Active[tx.ObservedPubKey.String()] {
+				continue
+			}
+
+			// skip inbounds to retiring vaults within 12 hours
+			if vaults.Retiring[tx.ObservedPubKey.String()] &&
+				block.Header.Height-vaults.Height < 7200 {
+				continue
+			}
+
+			// skip previously seen inactive inbounds
+			seen := false
+			seenKey := fmt.Sprintf("seen-inactive-inbound/%s", tx.Tx.ID.String())
+			err := util.Load(seenKey, &seen)
+			if err != nil {
+				log.Debug().Err(err).Msg("unable to load seen inactive inbound")
+			}
+			if seen {
+				continue
+			}
+
+			// skip finalized inbounds
+			stages := openapi.TxStagesResponse{}
+			err = util.ThornodeCachedRetryGet(fmt.Sprintf("thorchain/tx/stages/%s", tx.Tx.ID), block.Header.Height, &stages)
+			if err != nil {
+				log.Panic().Err(err).Msg("failed to get tx stages")
+			}
+			if stages.InboundFinalised != nil && stages.InboundFinalised.Completed {
+				continue
+			}
+
+			// mark this inbound as seen
+			err = util.Store(seenKey, true)
+			if err != nil {
+				log.Panic().Err(err).Msg("unable to store seen inactive inbound")
+			}
+
+			// gather links
+			links := []string{
+				fmt.Sprintf("[Transaction](%s/tx/%s)", config.Get().Links.Explorer, tx.Tx.ID),
+				fmt.Sprintf("[Track](%s/%s)", config.Get().Links.Track, tx.Tx.ID),
+			}
+
+			// build notification
+			title := "Inbound to Non-Active Vault"
+			fields := util.NewOrderedMap()
+			fields.Set("Chain", tx.Tx.Chain.String())
+			fields.Set("Vault", tx.ObservedPubKey.String())
+			fields.Set("Vault Address", tx.Tx.ToAddress.String())
+			fields.Set("Memo", fmt.Sprintf("`%s`", tx.Tx.Memo))
+			fields.Set("Links", strings.Join(links, " | "))
+
+			// notify
+			notify.Notify(config.Get().Notifications.Activity, title, block.Header.Height, nil, notify.Warning, fields)
 		}
 	}
 }
