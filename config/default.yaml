@@ -9,7 +9,7 @@ bifrost:
     compaction_table_size_multiplier: 1
     write_buffer: 4194304
     block_cache_capacity: 8388608
-    compact_on_init: true
+    compact_on_init: false
   observer_workers: 0
 
   metrics:
