@@ -113,6 +113,7 @@
         "bond_reward": "44394",
         "dev_fund_reward": "0",
         "income_burn": "0",
+        "marketing_fund_reward": "0",
         "mode": "EndBlock",
         "tcy_stake_reward": "0",
         "type": "rewards"
@@ -234,6 +235,7 @@
         "bond_reward": "44394",
         "dev_fund_reward": "0",
         "income_burn": "0",
+        "marketing_fund_reward": "0",
         "mode": "EndBlock",
         "tcy_stake_reward": "0",
         "type": "rewards"
@@ -694,6 +696,7 @@
         "bond_reward": "820444",
         "dev_fund_reward": "0",
         "income_burn": "0",
+        "marketing_fund_reward": "0",
         "mode": "EndBlock",
         "tcy_stake_reward": "0",
         "type": "rewards"
@@ -965,6 +968,7 @@
         "bond_reward": "43959",
         "dev_fund_reward": "0",
         "income_burn": "0",
+        "marketing_fund_reward": "0",
         "mode": "EndBlock",
         "tcy_stake_reward": "0",
         "type": "rewards"
@@ -1569,6 +1573,7 @@
         "bond_reward": "9785801",
         "dev_fund_reward": "0",
         "income_burn": "0",
+        "marketing_fund_reward": "0",
         "mode": "EndBlock",
         "tcy_stake_reward": "0",
         "type": "rewards"
@@ -1966,6 +1971,7 @@
         "bond_reward": "44606",
         "dev_fund_reward": "0",
         "income_burn": "0",
+        "marketing_fund_reward": "0",
         "mode": "EndBlock",
         "tcy_stake_reward": "0",
         "type": "rewards"
@@ -2426,6 +2432,7 @@
         "bond_reward": "244825",
         "dev_fund_reward": "0",
         "income_burn": "0",
+        "marketing_fund_reward": "0",
         "mode": "EndBlock",
         "tcy_stake_reward": "0",
         "type": "rewards"
@@ -2697,6 +2704,7 @@
         "bond_reward": "44385",
         "dev_fund_reward": "0",
         "income_burn": "0",
+        "marketing_fund_reward": "0",
         "mode": "EndBlock",
         "tcy_stake_reward": "0",
         "type": "rewards"
@@ -3074,6 +3082,7 @@
         "bond_reward": "866803",
         "dev_fund_reward": "0",
         "income_burn": "0",
+        "marketing_fund_reward": "0",
         "mode": "EndBlock",
         "tcy_stake_reward": "0",
         "type": "rewards"

@@ -113,6 +113,7 @@
         "bond_reward": "44394",
         "dev_fund_reward": "0",
         "income_burn": "0",
+        "marketing_fund_reward": "0",
         "mode": "EndBlock",
         "tcy_stake_reward": "0",
         "type": "rewards"
@@ -318,6 +319,7 @@
         "bond_reward": "8897767",
         "dev_fund_reward": "0",
         "income_burn": "0",
+        "marketing_fund_reward": "0",
         "mode": "EndBlock",
         "tcy_stake_reward": "0",
         "type": "rewards"
@@ -617,6 +619,7 @@
         "bond_reward": "41212",
         "dev_fund_reward": "55492",
         "income_burn": "111",
+        "marketing_fund_reward": "0",
         "mode": "EndBlock",
         "tcy_stake_reward": "0",
         "type": "rewards"
@@ -1131,6 +1134,7 @@
         "bond_reward": "132786",
         "dev_fund_reward": "179253",
         "income_burn": "359",
+        "marketing_fund_reward": "0",
         "mode": "EndBlock",
         "tcy_stake_reward": "0",
         "type": "rewards"
@@ -1514,6 +1518,7 @@
         "bond_reward": "8118382",
         "dev_fund_reward": "11230759",
         "income_burn": "22462",
+        "marketing_fund_reward": "0",
         "mode": "EndBlock",
         "tcy_stake_reward": "0",
         "type": "rewards"

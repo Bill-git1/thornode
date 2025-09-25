@@ -393,13 +393,14 @@ func (m *EventPool) Events() (cosmos.Events, error) {
 }
 
 // NewEventRewards create a new reward event
-func NewEventRewards(bondReward cosmos.Uint, poolRewards []PoolAmt, devFundReward, incomeBurn, tcyStakeReward cosmos.Uint) *EventRewards {
+func NewEventRewards(bondReward cosmos.Uint, poolRewards []PoolAmt, devFundReward, incomeBurn, tcyStakeReward, marketingFundReward cosmos.Uint) *EventRewards {
 	return &EventRewards{
-		BondReward:     bondReward,
-		PoolRewards:    poolRewards,
-		DevFundReward:  devFundReward,
-		IncomeBurn:     incomeBurn,
-		TcyStakeReward: tcyStakeReward,
+		BondReward:          bondReward,
+		PoolRewards:         poolRewards,
+		DevFundReward:       devFundReward,
+		IncomeBurn:          incomeBurn,
+		TcyStakeReward:      tcyStakeReward,
+		MarketingFundReward: marketingFundReward,
 	}
 }
 
@@ -415,6 +416,7 @@ func (m *EventRewards) Events() (cosmos.Events, error) {
 		cosmos.NewAttribute("dev_fund_reward", m.DevFundReward.String()),
 		cosmos.NewAttribute("income_burn", m.IncomeBurn.String()),
 		cosmos.NewAttribute("tcy_stake_reward", m.TcyStakeReward.String()),
+		cosmos.NewAttribute("marketing_fund_reward", m.MarketingFundReward.String()),
 	)
 	for _, item := range m.PoolRewards {
 		evt = evt.AppendAttributes(cosmos.NewAttribute(item.Asset.String(), strconv.FormatInt(item.Amount, 10)))

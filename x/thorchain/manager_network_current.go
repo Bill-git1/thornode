@@ -1592,11 +1592,12 @@ func (vm *NetworkMgrVCUR) UpdateNetwork(ctx cosmos.Context, constAccessor consta
 	devFundSystemIncomeBps := vm.k.GetConfigInt64(ctx, constants.DevFundSystemIncomeBps)
 	systemIncomeBurnRateBps := vm.k.GetConfigInt64(ctx, constants.SystemIncomeBurnRateBps)
 	tcyStakeSystemIncomeBps := vm.k.GetConfigInt64(ctx, constants.TCYStakeSystemIncomeBps)
+	marketingFundSystemIncomeBps := vm.k.GetConfigInt64(ctx, constants.MarketingFundSystemIncomeBps)
 	blocksPerYear := constAccessor.GetInt64Value(constants.BlocksPerYear)
-	bondReward, totalPoolRewards, lpShare, devFundDeduct, systemIncomeBurnDeduct, tcyStakeDeduct := vm.calcBlockRewards(ctx,
+	bondReward, totalPoolRewards, lpShare, devFundDeduct, systemIncomeBurnDeduct, tcyStakeDeduct, marketingFundDeduct := vm.calcBlockRewards(ctx,
 		availablePoolsRune, vaultsLiquidityRune, effectiveSecurityBond,
 		totalEffectiveBond, totalReserve, totalLiquidityFees, emissionCurve,
-		blocksPerYear, devFundSystemIncomeBps, systemIncomeBurnRateBps, tcyStakeSystemIncomeBps)
+		blocksPerYear, devFundSystemIncomeBps, systemIncomeBurnRateBps, tcyStakeSystemIncomeBps, marketingFundSystemIncomeBps)
 
 	if !devFundDeduct.IsZero() {
 		// Send to dev fund address
@@ -1608,6 +1609,19 @@ func (vm *NetworkMgrVCUR) UpdateNetwork(ctx cosmos.Context, constAccessor consta
 		coin := common.NewCoin(common.RuneNative, devFundDeduct)
 		if err := vm.k.SendFromModuleToAccount(ctx, ReserveName, devFundAddress, common.NewCoins(coin)); err != nil {
 			return fmt.Errorf("fail to transfer funds from reserve to devFundAddress: %w", err)
+		}
+	}
+
+	if !marketingFundDeduct.IsZero() {
+		// Send to marketing fund address
+		marketingFundAddressConst := vm.k.GetConstants().GetStringValue(constants.MarketingFundAddress)
+		marketingFundAddress, err := cosmos.AccAddressFromBech32(marketingFundAddressConst)
+		if err != nil {
+			return fmt.Errorf("fail to AccAddressFromBech32(marketingFundAddressConst)")
+		}
+		coin := common.NewCoin(common.RuneNative, marketingFundDeduct)
+		if err := vm.k.SendFromModuleToAccount(ctx, ReserveName, marketingFundAddress, common.NewCoins(coin)); err != nil {
+			return fmt.Errorf("fail to transfer funds from reserve to marketingFundAddress: %w", err)
 		}
 	}
 
@@ -1694,7 +1708,7 @@ func (vm *NetworkMgrVCUR) UpdateNetwork(ctx cosmos.Context, constAccessor consta
 	}
 	network.BondRewardRune = network.BondRewardRune.Add(bondReward) // Add here for individual Node collection later
 
-	rewardEvt := NewEventRewards(bondReward, evtPools, devFundDeduct, systemIncomeBurnDeduct, tcyStakeDeduct)
+	rewardEvt := NewEventRewards(bondReward, evtPools, devFundDeduct, systemIncomeBurnDeduct, tcyStakeDeduct, marketingFundDeduct)
 	if err := eventMgr.EmitEvent(ctx, rewardEvt); err != nil {
 		return fmt.Errorf("fail to emit reward event: %w", err)
 	}
@@ -1743,13 +1757,15 @@ func (vm *NetworkMgrVCUR) calcBlockRewards(
 	blocksPerYear int64,
 	devFundSystemIncomeBps int64,
 	systemIncomeBurnRateBps int64,
-	tcyStakeSystemIncomeBps int64) (
+	tcyStakeSystemIncomeBps int64,
+	marketingFundSystemIncomeBps int64) (
 	bondReward cosmos.Uint,
 	totalPoolRewards cosmos.Uint,
 	lpShare cosmos.Uint,
 	devFundDeduct cosmos.Uint,
 	systemIncomeBurnDeduct cosmos.Uint,
 	tcyStakeDeduct cosmos.Uint,
+	marketingFundDeduct cosmos.Uint,
 ) {
 	// Block Rewards will take the latest reserve, divide it by the emission
 	// curve factor, then divide by blocks per year
@@ -1763,9 +1779,11 @@ func (vm *NetworkMgrVCUR) calcBlockRewards(
 	devFundSystemIncomeBpsUint := cosmos.SafeUintFromInt64(devFundSystemIncomeBps)
 	systemIncomeBurnRateBpsUint := cosmos.SafeUintFromInt64(systemIncomeBurnRateBps)
 	tcyStakeSystemIncomeBpsUint := cosmos.SafeUintFromInt64(tcyStakeSystemIncomeBps)
+	marketingFundSystemIncomeBpsUint := cosmos.SafeUintFromInt64(marketingFundSystemIncomeBps)
 	devFundDeduct = common.GetSafeShare(devFundSystemIncomeBpsUint, cosmos.NewUint(10_000), systemIncome)
 	systemIncomeBurnDeduct = common.GetSafeShare(systemIncomeBurnRateBpsUint, cosmos.NewUint(10_000), systemIncome)
 	tcyStakeDeduct = common.GetSafeShare(tcyStakeSystemIncomeBpsUint, cosmos.NewUint(10_000), systemIncome)
+	marketingFundDeduct = common.GetSafeShare(marketingFundSystemIncomeBpsUint, cosmos.NewUint(10_000), systemIncome)
 	assetsBps := cosmos.NewUint(uint64(vm.k.GetConfigInt64(ctx, constants.PendulumAssetsBasisPoints)))
 	useEffectiveSecurity := (vm.k.GetConfigInt64(ctx, constants.PendulumUseEffectiveSecurity) > 0)
 	useVaultAssets := (vm.k.GetConfigInt64(ctx, constants.PendulumUseVaultAssets) > 0)
@@ -1789,6 +1807,13 @@ func (vm *NetworkMgrVCUR) calcBlockRewards(
 		systemIncome = common.SafeSub(systemIncome, systemIncomeBurnDeduct)
 	}
 
+	if marketingFundDeduct.GT(systemIncome) {
+		marketingFundDeduct = systemIncome
+	}
+	if !marketingFundDeduct.IsZero() {
+		systemIncome = common.SafeSub(systemIncome, marketingFundDeduct)
+	}
+
 	lpSplit := vm.getPoolShare(availablePoolsRune, vaultsLiquidityRune, effectiveSecurityBond, totalEffectiveBond, systemIncome, assetsBps, useEffectiveSecurity, useVaultAssets) // Get liquidity provider share
 	bonderSplit := common.SafeSub(systemIncome, lpSplit)                                                                                                                          // Remainder to Bonders
 
@@ -1802,6 +1827,7 @@ func (vm *NetworkMgrVCUR) calcBlockRewards(
 		"total_liquidity_fees", totalLiquidityFees,
 		"dev_fund_reward", devFundDeduct,
 		"income_burn", systemIncomeBurnDeduct,
+		"marketing_fund_reward", marketingFundDeduct,
 		"total_pendulum_rewards", systemIncome,
 		"pendulum_assets_basis_points", assetsBps,
 		"use_vault_assets", useVaultAssets,
@@ -1814,7 +1840,7 @@ func (vm *NetworkMgrVCUR) calcBlockRewards(
 
 	lpShare = common.GetSafeShare(lpSplit, systemIncome, cosmos.NewUint(10_000))
 
-	return bonderSplit, lpSplit, lpShare, devFundDeduct, systemIncomeBurnDeduct, tcyStakeDeduct
+	return bonderSplit, lpSplit, lpShare, devFundDeduct, systemIncomeBurnDeduct, tcyStakeDeduct, marketingFundDeduct
 }
 
 // getPoolShare calculates the pool share of the total rewards. The distribution is

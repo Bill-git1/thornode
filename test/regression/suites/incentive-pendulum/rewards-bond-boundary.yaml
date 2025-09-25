@@ -24,7 +24,7 @@ genesis:
         - address: {{ addr_module_bond }}
           coins:
             - amount: "150000000000"
-              denom: rune  
+              denom: rune
     thorchain:
       node_accounts:
         - active_block_height: "0"
@@ -82,5 +82,5 @@ type: check
 endpoint: http://localhost:1317/thorchain/block?height=1
 asserts:
   - .end_block_events[] | select(.type == "rewards") | .bond_reward == "110984"
-  - .end_block_events[] | select(.type == "rewards") | keys | length == 6
-  - .end_block_events[] | select(.type == "rewards") | keys == ["bond_reward","dev_fund_reward","income_burn","mode","tcy_stake_reward", "type"]
+  - .end_block_events[] | select(.type == "rewards") | keys | length == 7
+  - .end_block_events[] | select(.type == "rewards") | keys == ["bond_reward","dev_fund_reward","income_burn","marketing_fund_reward","mode","tcy_stake_reward","type"]

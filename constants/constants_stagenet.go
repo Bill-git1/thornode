@@ -18,6 +18,7 @@ func init() {
 		MultipleAffiliatesMaxCount: 5,
 	}
 	stringOverrides = map[ConstantName]string{
-		DevFundAddress: "sthor1gdq9qejfy33jctztqdrg5v4hvxnytmvjhduacc",
+		DevFundAddress:       "sthor1gdq9qejfy33jctztqdrg5v4hvxnytmvjhduacc",
+		MarketingFundAddress: "sthor1mtzxngd5lz2vjqpdvtu54dply7f26wews0uymq",
 	}
 }

@@ -78,6 +78,7 @@ func (s EventSuite) TestReward(c *C) {
 		cosmos.NewUint(50),
 		cosmos.NewUint(60),
 		cosmos.NewUint(70),
+		cosmos.NewUint(80),
 	)
 	c.Check(evt.Type(), Equals, "rewards")
 	c.Check(evt.BondReward.String(), Equals, "300")
@@ -89,6 +90,7 @@ func (s EventSuite) TestReward(c *C) {
 	c.Check(evt.DevFundReward.String(), Equals, "50")
 	c.Check(evt.IncomeBurn.String(), Equals, "60")
 	c.Check(evt.TcyStakeReward.String(), Equals, "70")
+	c.Check(evt.MarketingFundReward.String(), Equals, "80")
 	events, err := evt.Events()
 	c.Check(err, IsNil)
 	c.Check(events, NotNil)
