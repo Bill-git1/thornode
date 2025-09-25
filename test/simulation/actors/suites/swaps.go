@@ -4,6 +4,7 @@ import (
 	"math/rand"
 
 	"gitlab.com/thorchain/thornode/v3/common"
+	acommon "gitlab.com/thorchain/thornode/v3/test/simulation/actors/common"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/actors/core"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/evm"
 	. "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/types"
@@ -18,7 +19,7 @@ func Swaps() *Actor {
 
 	// gather all pools we expect to swap through
 	swapPools := []common.Asset{}
-	for _, chain := range SimChains {
+	for _, chain := range acommon.SimChains {
 		swapPools = append(swapPools, chain.GetGasAsset())
 
 		// add tokens to swap pools

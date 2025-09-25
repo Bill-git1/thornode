@@ -641,11 +641,16 @@ func (b *thorchainBridge) GetPubKeys() ([]PubKeyContractAddressPair, error) {
 	}
 	var addressPairs []PubKeyContractAddressPair
 	for _, v := range append(result.Asgard, result.Inactive...) {
+		membership := []common.PubKey{}
+		for _, item := range v.Membership {
+			membership = append(membership, common.PubKey(item))
+		}
 		if v.PubKeyEddsa != nil && *v.PubKeyEddsa != "" {
 			kp := PubKeyContractAddressPair{
-				PubKey:    common.PubKey(*v.PubKeyEddsa),
-				Contracts: make(map[common.Chain]common.Address),
-				Algo:      common.SigningAlgoEd25519,
+				PubKey:     common.PubKey(*v.PubKeyEddsa),
+				Contracts:  make(map[common.Chain]common.Address),
+				Algo:       common.SigningAlgoEd25519,
+				Membership: membership,
 			}
 			for _, item := range v.Routers {
 				kp.Contracts[common.Chain(*item.Chain)] = common.Address(*item.Router)
@@ -653,9 +658,10 @@ func (b *thorchainBridge) GetPubKeys() ([]PubKeyContractAddressPair, error) {
 			addressPairs = append(addressPairs, kp)
 		}
 		kp := PubKeyContractAddressPair{
-			PubKey:    common.PubKey(v.PubKey),
-			Contracts: make(map[common.Chain]common.Address),
-			Algo:      common.SigningAlgoSecp256k1,
+			PubKey:     common.PubKey(v.PubKey),
+			Contracts:  make(map[common.Chain]common.Address),
+			Algo:       common.SigningAlgoSecp256k1,
+			Membership: membership,
 		}
 		for _, item := range v.Routers {
 			kp.Contracts[common.Chain(*item.Chain)] = common.Address(*item.Router)
@@ -799,9 +805,10 @@ func (b *thorchainBridge) GetMimirWithRef(template, ref string) (int64, error) {
 
 // PubKeyContractAddressPair is an entry to map pubkey and contract addresses
 type PubKeyContractAddressPair struct {
-	PubKey    common.PubKey
-	Contracts map[common.Chain]common.Address
-	Algo      common.SigningAlgo
+	PubKey     common.PubKey
+	Contracts  map[common.Chain]common.Address
+	Algo       common.SigningAlgo
+	Membership []common.PubKey
 }
 
 // GetContractAddress retrieve the contract address from asgard

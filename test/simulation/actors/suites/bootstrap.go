@@ -5,25 +5,12 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"gitlab.com/thorchain/thornode/v3/common"
+	acommon "gitlab.com/thorchain/thornode/v3/test/simulation/actors/common"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/actors/core"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/evm"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/thornode"
 	. "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/types"
 )
-
-var SimChains = []common.Chain{
-	common.AVAXChain,
-	common.BASEChain,
-	common.BCHChain,
-	common.BTCChain,
-	common.DOGEChain,
-	common.ETHChain,
-	common.GAIAChain,
-	common.LTCChain,
-	common.XRPChain,
-	common.TRONChain,
-	common.SOLChain,
-}
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // Bootstrap
@@ -39,7 +26,7 @@ func Bootstrap() *Actor {
 
 	// bootstrap pools for all chains
 	count := 0
-	for _, chain := range SimChains {
+	for _, chain := range acommon.SimChains {
 		count++
 		a.Children[core.NewDualLPActor(chain.GetGasAsset())] = true
 	}

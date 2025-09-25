@@ -19,6 +19,8 @@ type VaultInfo struct {
 	PubKey string `json:"pub_key"`
 	PubKeyEddsa *string `json:"pub_key_eddsa,omitempty"`
 	Routers []VaultRouter `json:"routers"`
+	// the list of node public keys which are members of the vault
+	Membership []string `json:"membership,omitempty"`
 }
 
 // NewVaultInfo instantiates a new VaultInfo object
@@ -120,6 +122,38 @@ func (o *VaultInfo) SetRouters(v []VaultRouter) {
 	o.Routers = v
 }
 
+// GetMembership returns the Membership field value if set, zero value otherwise.
+func (o *VaultInfo) GetMembership() []string {
+	if o == nil || o.Membership == nil {
+		var ret []string
+		return ret
+	}
+	return o.Membership
+}
+
+// GetMembershipOk returns a tuple with the Membership field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *VaultInfo) GetMembershipOk() ([]string, bool) {
+	if o == nil || o.Membership == nil {
+		return nil, false
+	}
+	return o.Membership, true
+}
+
+// HasMembership returns a boolean if a field has been set.
+func (o *VaultInfo) HasMembership() bool {
+	if o != nil && o.Membership != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetMembership gets a reference to the given []string and assigns it to the Membership field.
+func (o *VaultInfo) SetMembership(v []string) {
+	o.Membership = v
+}
+
 func (o VaultInfo) MarshalJSON_deprecated() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
@@ -130,6 +164,9 @@ func (o VaultInfo) MarshalJSON_deprecated() ([]byte, error) {
 	}
 	if true {
 		toSerialize["routers"] = o.Routers
+	}
+	if o.Membership != nil {
+		toSerialize["membership"] = o.Membership
 	}
 	return json.Marshal(toSerialize)
 }

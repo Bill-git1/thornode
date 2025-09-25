@@ -88,6 +88,7 @@ func main() {
 		{Name: "swaps", Default: true},
 		{Name: "consolidate", Default: true},
 		{Name: "churn", Default: false},
+		{Name: "inactive-vault-refunds", Default: false},
 		{Name: "solvency", Default: true},
 		{Name: "ragnarok", Default: true},
 	}
@@ -160,6 +161,7 @@ func main() {
 	appendIfEnabled("swaps", suites.Swaps)
 	appendIfEnabled("consolidate", features.Consolidate)
 	appendIfEnabled("churn", core.NewChurnActor)
+	appendIfEnabled("inactive-vault-refunds", features.InactiveVaultRefunds)
 	appendIfEnabled("solvency", core.NewSolvencyCheckActor)
 	appendIfEnabled("ragnarok", suites.Ragnarok)
 

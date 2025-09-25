@@ -7,6 +7,7 @@ Name | Type | Description | Notes
 **PubKey** | **string** |  | 
 **PubKeyEddsa** | Pointer to **string** |  | [optional] 
 **Routers** | [**[]VaultRouter**](VaultRouter.md) |  | 
+**Membership** | Pointer to **[]string** | the list of node public keys which are members of the vault | [optional] 
 
 ## Methods
 
@@ -91,6 +92,31 @@ and a boolean to check if the value has been set.
 
 SetRouters sets Routers field to given value.
 
+
+### GetMembership
+
+`func (o *VaultInfo) GetMembership() []string`
+
+GetMembership returns the Membership field if non-nil, zero value otherwise.
+
+### GetMembershipOk
+
+`func (o *VaultInfo) GetMembershipOk() (*[]string, bool)`
+
+GetMembershipOk returns a tuple with the Membership field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetMembership
+
+`func (o *VaultInfo) SetMembership(v []string)`
+
+SetMembership sets Membership field to given value.
+
+### HasMembership
+
+`func (o *VaultInfo) HasMembership() bool`
+
+HasMembership returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

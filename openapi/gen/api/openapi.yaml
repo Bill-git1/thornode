@@ -3471,6 +3471,9 @@ components:
       type: object
     VaultInfo:
       example:
+        membership:
+        - membership
+        - membership
         routers:
         - chain: ETH
           router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
@@ -3488,6 +3491,11 @@ components:
         routers:
           items:
             $ref: '#/components/schemas/VaultRouter'
+          type: array
+        membership:
+          description: the list of node public keys which are members of the vault
+          items:
+            type: string
           type: array
       required:
       - pub_key
@@ -5476,14 +5484,20 @@ components:
     VaultPubkeysResponse:
       example:
         yggdrasil:
-        - routers:
+        - membership:
+          - membership
+          - membership
+          routers:
           - chain: ETH
             router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
           - chain: ETH
             router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
           pub_key: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
           pub_key_eddsa: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
-        - routers:
+        - membership:
+          - membership
+          - membership
+          routers:
           - chain: ETH
             router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
           - chain: ETH
@@ -5491,14 +5505,20 @@ components:
           pub_key: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
           pub_key_eddsa: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
         inactive:
-        - routers:
+        - membership:
+          - membership
+          - membership
+          routers:
           - chain: ETH
             router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
           - chain: ETH
             router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
           pub_key: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
           pub_key_eddsa: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
-        - routers:
+        - membership:
+          - membership
+          - membership
+          routers:
           - chain: ETH
             router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
           - chain: ETH
@@ -5506,14 +5526,20 @@ components:
           pub_key: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
           pub_key_eddsa: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
         asgard:
-        - routers:
+        - membership:
+          - membership
+          - membership
+          routers:
           - chain: ETH
             router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
           - chain: ETH
             router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
           pub_key: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
           pub_key_eddsa: thorpub1addwnpepq068dr0x7ue973drmq4eqmzhcq3650n7nx5fhgn9gl207luxp6vaklu52tc
-        - routers:
+        - membership:
+          - membership
+          - membership
+          routers:
           - chain: ETH
             router: 0x3624525075b88B24ecc29CE226b0CEc1fFcB6976
           - chain: ETH

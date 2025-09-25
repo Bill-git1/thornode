@@ -4286,11 +4286,58 @@ func (x *_VaultInfo_2_list) IsValid() bool {
 	return x.list != nil
 }
 
+var _ protoreflect.List = (*_VaultInfo_4_list)(nil)
+
+type _VaultInfo_4_list struct {
+	list *[]string
+}
+
+func (x *_VaultInfo_4_list) Len() int {
+	if x.list == nil {
+		return 0
+	}
+	return len(*x.list)
+}
+
+func (x *_VaultInfo_4_list) Get(i int) protoreflect.Value {
+	return protoreflect.ValueOfString((*x.list)[i])
+}
+
+func (x *_VaultInfo_4_list) Set(i int, value protoreflect.Value) {
+	valueUnwrapped := value.String()
+	concreteValue := valueUnwrapped
+	(*x.list)[i] = concreteValue
+}
+
+func (x *_VaultInfo_4_list) Append(value protoreflect.Value) {
+	valueUnwrapped := value.String()
+	concreteValue := valueUnwrapped
+	*x.list = append(*x.list, concreteValue)
+}
+
+func (x *_VaultInfo_4_list) AppendMutable() protoreflect.Value {
+	panic(fmt.Errorf("AppendMutable can not be called on message VaultInfo at list field Membership as it is not of Message kind"))
+}
+
+func (x *_VaultInfo_4_list) Truncate(n int) {
+	*x.list = (*x.list)[:n]
+}
+
+func (x *_VaultInfo_4_list) NewElement() protoreflect.Value {
+	v := ""
+	return protoreflect.ValueOfString(v)
+}
+
+func (x *_VaultInfo_4_list) IsValid() bool {
+	return x.list != nil
+}
+
 var (
 	md_VaultInfo               protoreflect.MessageDescriptor
 	fd_VaultInfo_pub_key       protoreflect.FieldDescriptor
 	fd_VaultInfo_routers       protoreflect.FieldDescriptor
 	fd_VaultInfo_pub_key_eddsa protoreflect.FieldDescriptor
+	fd_VaultInfo_membership    protoreflect.FieldDescriptor
 )
 
 func init() {
@@ -4299,6 +4346,7 @@ func init() {
 	fd_VaultInfo_pub_key = md_VaultInfo.Fields().ByName("pub_key")
 	fd_VaultInfo_routers = md_VaultInfo.Fields().ByName("routers")
 	fd_VaultInfo_pub_key_eddsa = md_VaultInfo.Fields().ByName("pub_key_eddsa")
+	fd_VaultInfo_membership = md_VaultInfo.Fields().ByName("membership")
 }
 
 var _ protoreflect.Message = (*fastReflection_VaultInfo)(nil)
@@ -4384,6 +4432,12 @@ func (x *fastReflection_VaultInfo) Range(f func(protoreflect.FieldDescriptor, pr
 			return
 		}
 	}
+	if len(x.Membership) != 0 {
+		value := protoreflect.ValueOfList(&_VaultInfo_4_list{list: &x.Membership})
+		if !f(fd_VaultInfo_membership, value) {
+			return
+		}
+	}
 }
 
 // Has reports whether a field is populated.
@@ -4405,6 +4459,8 @@ func (x *fastReflection_VaultInfo) Has(fd protoreflect.FieldDescriptor) bool {
 		return len(x.Routers) != 0
 	case "types.VaultInfo.pub_key_eddsa":
 		return x.PubKeyEddsa != ""
+	case "types.VaultInfo.membership":
+		return len(x.Membership) != 0
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.VaultInfo"))
@@ -4427,6 +4483,8 @@ func (x *fastReflection_VaultInfo) Clear(fd protoreflect.FieldDescriptor) {
 		x.Routers = nil
 	case "types.VaultInfo.pub_key_eddsa":
 		x.PubKeyEddsa = ""
+	case "types.VaultInfo.membership":
+		x.Membership = nil
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.VaultInfo"))
@@ -4455,6 +4513,12 @@ func (x *fastReflection_VaultInfo) Get(descriptor protoreflect.FieldDescriptor) 
 	case "types.VaultInfo.pub_key_eddsa":
 		value := x.PubKeyEddsa
 		return protoreflect.ValueOfString(value)
+	case "types.VaultInfo.membership":
+		if len(x.Membership) == 0 {
+			return protoreflect.ValueOfList(&_VaultInfo_4_list{})
+		}
+		listValue := &_VaultInfo_4_list{list: &x.Membership}
+		return protoreflect.ValueOfList(listValue)
 	default:
 		if descriptor.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.VaultInfo"))
@@ -4483,6 +4547,10 @@ func (x *fastReflection_VaultInfo) Set(fd protoreflect.FieldDescriptor, value pr
 		x.Routers = *clv.list
 	case "types.VaultInfo.pub_key_eddsa":
 		x.PubKeyEddsa = value.Interface().(string)
+	case "types.VaultInfo.membership":
+		lv := value.List()
+		clv := lv.(*_VaultInfo_4_list)
+		x.Membership = *clv.list
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.VaultInfo"))
@@ -4509,6 +4577,12 @@ func (x *fastReflection_VaultInfo) Mutable(fd protoreflect.FieldDescriptor) prot
 		}
 		value := &_VaultInfo_2_list{list: &x.Routers}
 		return protoreflect.ValueOfList(value)
+	case "types.VaultInfo.membership":
+		if x.Membership == nil {
+			x.Membership = []string{}
+		}
+		value := &_VaultInfo_4_list{list: &x.Membership}
+		return protoreflect.ValueOfList(value)
 	case "types.VaultInfo.pub_key":
 		panic(fmt.Errorf("field pub_key of message types.VaultInfo is not mutable"))
 	case "types.VaultInfo.pub_key_eddsa":
@@ -4533,6 +4607,9 @@ func (x *fastReflection_VaultInfo) NewField(fd protoreflect.FieldDescriptor) pro
 		return protoreflect.ValueOfList(&_VaultInfo_2_list{list: &list})
 	case "types.VaultInfo.pub_key_eddsa":
 		return protoreflect.ValueOfString("")
+	case "types.VaultInfo.membership":
+		list := []string{}
+		return protoreflect.ValueOfList(&_VaultInfo_4_list{list: &list})
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.VaultInfo"))
@@ -4616,6 +4693,12 @@ func (x *fastReflection_VaultInfo) ProtoMethods() *protoiface.Methods {
 		if l > 0 {
 			n += 1 + l + runtime.Sov(uint64(l))
 		}
+		if len(x.Membership) > 0 {
+			for _, s := range x.Membership {
+				l = len(s)
+				n += 1 + l + runtime.Sov(uint64(l))
+			}
+		}
 		if x.unknownFields != nil {
 			n += len(x.unknownFields)
 		}
@@ -4644,6 +4727,15 @@ func (x *fastReflection_VaultInfo) ProtoMethods() *protoiface.Methods {
 		if x.unknownFields != nil {
 			i -= len(x.unknownFields)
 			copy(dAtA[i:], x.unknownFields)
+		}
+		if len(x.Membership) > 0 {
+			for iNdEx := len(x.Membership) - 1; iNdEx >= 0; iNdEx-- {
+				i -= len(x.Membership[iNdEx])
+				copy(dAtA[i:], x.Membership[iNdEx])
+				i = runtime.EncodeVarint(dAtA, i, uint64(len(x.Membership[iNdEx])))
+				i--
+				dAtA[i] = 0x22
+			}
 		}
 		if len(x.PubKeyEddsa) > 0 {
 			i -= len(x.PubKeyEddsa)
@@ -4821,6 +4913,38 @@ func (x *fastReflection_VaultInfo) ProtoMethods() *protoiface.Methods {
 					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
 				}
 				x.PubKeyEddsa = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 4:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Membership", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.Membership = append(x.Membership, string(dAtA[iNdEx:postIndex]))
 				iNdEx = postIndex
 			default:
 				iNdEx = preIndex
@@ -6185,6 +6309,7 @@ type VaultInfo struct {
 	PubKey      string         `protobuf:"bytes,1,opt,name=pub_key,json=pubKey,proto3" json:"pub_key,omitempty"`
 	Routers     []*VaultRouter `protobuf:"bytes,2,rep,name=routers,proto3" json:"routers,omitempty"`
 	PubKeyEddsa string         `protobuf:"bytes,3,opt,name=pub_key_eddsa,json=pubKeyEddsa,proto3" json:"pub_key_eddsa,omitempty"`
+	Membership  []string       `protobuf:"bytes,4,rep,name=membership,proto3" json:"membership,omitempty"`
 }
 
 func (x *VaultInfo) Reset() {
@@ -6226,6 +6351,13 @@ func (x *VaultInfo) GetPubKeyEddsa() string {
 		return x.PubKeyEddsa
 	}
 	return ""
+}
+
+func (x *VaultInfo) GetMembership() []string {
+	if x != nil {
+		return x.Membership
+	}
+	return nil
 }
 
 type VaultRouter struct {
@@ -6389,7 +6521,7 @@ var file_types_query_vault_proto_rawDesc = []byte{
 	0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x10, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x56,
 	0x61, 0x75, 0x6c, 0x74, 0x49, 0x6e, 0x66, 0x6f, 0x42, 0x0c, 0xea, 0xde, 0x1f, 0x08, 0x69, 0x6e,
 	0x61, 0x63, 0x74, 0x69, 0x76, 0x65, 0x52, 0x08, 0x69, 0x6e, 0x61, 0x63, 0x74, 0x69, 0x76, 0x65,
-	0x22, 0xa3, 0x01, 0x0a, 0x09, 0x56, 0x61, 0x75, 0x6c, 0x74, 0x49, 0x6e, 0x66, 0x6f, 0x12, 0x24,
+	0x22, 0xc3, 0x01, 0x0a, 0x09, 0x56, 0x61, 0x75, 0x6c, 0x74, 0x49, 0x6e, 0x66, 0x6f, 0x12, 0x24,
 	0x0a, 0x07, 0x70, 0x75, 0x62, 0x5f, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x42,
 	0x0b, 0xea, 0xde, 0x1f, 0x07, 0x70, 0x75, 0x62, 0x5f, 0x6b, 0x65, 0x79, 0x52, 0x06, 0x70, 0x75,
 	0x62, 0x4b, 0x65, 0x79, 0x12, 0x39, 0x0a, 0x07, 0x72, 0x6f, 0x75, 0x74, 0x65, 0x72, 0x73, 0x18,
@@ -6399,7 +6531,9 @@ var file_types_query_vault_proto_rawDesc = []byte{
 	0x35, 0x0a, 0x0d, 0x70, 0x75, 0x62, 0x5f, 0x6b, 0x65, 0x79, 0x5f, 0x65, 0x64, 0x64, 0x73, 0x61,
 	0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x42, 0x11, 0xea, 0xde, 0x1f, 0x0d, 0x70, 0x75, 0x62, 0x5f,
 	0x6b, 0x65, 0x79, 0x5f, 0x65, 0x64, 0x64, 0x73, 0x61, 0x52, 0x0b, 0x70, 0x75, 0x62, 0x4b, 0x65,
-	0x79, 0x45, 0x64, 0x64, 0x73, 0x61, 0x22, 0x3b, 0x0a, 0x0b, 0x56, 0x61, 0x75, 0x6c, 0x74, 0x52,
+	0x79, 0x45, 0x64, 0x64, 0x73, 0x61, 0x12, 0x1e, 0x0a, 0x0a, 0x6d, 0x65, 0x6d, 0x62, 0x65, 0x72,
+	0x73, 0x68, 0x69, 0x70, 0x18, 0x04, 0x20, 0x03, 0x28, 0x09, 0x52, 0x0a, 0x6d, 0x65, 0x6d, 0x62,
+	0x65, 0x72, 0x73, 0x68, 0x69, 0x70, 0x22, 0x3b, 0x0a, 0x0b, 0x56, 0x61, 0x75, 0x6c, 0x74, 0x52,
 	0x6f, 0x75, 0x74, 0x65, 0x72, 0x12, 0x14, 0x0a, 0x05, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x18, 0x01,
 	0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x12, 0x16, 0x0a, 0x06, 0x72,
 	0x6f, 0x75, 0x74, 0x65, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x72, 0x6f, 0x75,

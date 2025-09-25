@@ -3,6 +3,7 @@ package suites
 import (
 	"fmt"
 
+	acommon "gitlab.com/thorchain/thornode/v3/test/simulation/actors/common"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/actors/core"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/pkg/thornode"
 	. "gitlab.com/thorchain/thornode/v3/test/simulation/pkg/types"
@@ -16,7 +17,7 @@ func Ragnarok() *Actor {
 	a := NewActor("Ragnarok")
 
 	// ragnarok all gas asset pools (should apply to tokens implicitly)
-	for _, chain := range SimChains {
+	for _, chain := range acommon.SimChains {
 		a.Children[core.NewRagnarokPoolActor(chain.GetGasAsset())] = true
 	}
 

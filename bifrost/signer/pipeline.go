@@ -80,7 +80,8 @@ func newPipeline(concurrency int64) (*pipeline, error) {
 		vaultStatusConcurrency: map[types.VaultStatus]semaphore{
 			types.VaultStatus_ActiveVault:   make(semaphore, int(concurrency)),
 			types.VaultStatus_RetiringVault: make(semaphore, int(concurrency)),
-			types.VaultStatus_InactiveVault: make(semaphore, 1),
+			// TODO: consider reducing to 1 after 3.12 migrations
+			types.VaultStatus_InactiveVault: make(semaphore, int(concurrency)),
 		},
 		vaultChainLock: make(map[vaultChain]chan struct{}),
 	}, nil

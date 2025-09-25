@@ -261,6 +261,7 @@ func (qs queryServer) queryVaultsPubkeys(ctx cosmos.Context, _ *types.QueryVault
 					PubKey:      vault.PubKey.String(),
 					PubKeyEddsa: vault.PubKeyEddsa.String(),
 					Routers:     castVaultRouters(vault.Routers),
+					Membership:  vault.Membership,
 				})
 			case InactiveVault:
 				// skip inactive vaults that have never received an inbound
@@ -284,6 +285,7 @@ func (qs queryServer) queryVaultsPubkeys(ctx cosmos.Context, _ *types.QueryVault
 						PubKey:      vault.PubKey.String(),
 						PubKeyEddsa: vault.PubKeyEddsa.String(),
 						Routers:     castVaultRouters(vault.Routers),
+						Membership:  vault.Membership,
 					})
 				}
 			}

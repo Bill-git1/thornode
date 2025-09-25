@@ -2338,6 +2338,11 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/VaultRouter"
+        membership:
+          type: array
+          description: the list of node public keys which are members of the vault
+          items:
+            type: string
 
     StreamingSwap:
       type: object
