@@ -456,6 +456,11 @@ type Thornode struct {
 			SnapshotInterval   int64 `mapstructure:"snapshot_interval"`
 			SnapshotKeepRecent int64 `mapstructure:"snapshot_keep_recent"`
 		} `mapstructure:"state_sync"`
+
+		Wasm struct {
+			QueryGasLimit   int64 `mapstructure:"query_gas_limit"`
+			MemoryCacheSize int64 `mapstructure:"memory_cache_size"`
+		} `mapstructure:"wasm"`
 	} `mapstructure:"cosmos"`
 
 	// Tendermint contains values used in templating the Tendermint config.toml.

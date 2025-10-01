@@ -895,6 +895,9 @@ thor:
     state_sync:
       snapshot_interval: 0
       snapshot_keep_recent: 2
+    wasm:
+      query_gas_limit: 3000000
+      memory_cache_size: 100
   tendermint:
     log:
       level: info
