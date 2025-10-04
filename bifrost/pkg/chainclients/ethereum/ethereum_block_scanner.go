@@ -375,11 +375,15 @@ func (e *ETHScanner) extractTxs(block *etypes.Block) (stypes.TxIn, error) {
 			return
 		}
 
-		// just try to remove the transaction hash from key value store
-		// it doesn't matter whether the transaction is ours or not , success or failure
-		// as long as the transaction id matches
-		if err := e.blockMetaAccessor.RemoveSignedTxItem(tx.Hash().String()); err != nil {
-			e.logger.Err(err).Msgf("fail to remove signed tx item, hash:%s", tx.Hash().String())
+		// Best effort remove the tx from the signed txs (ok if it does not exist).
+		// Skip the delete unless this hash was actually recorded as one of ours.
+		hash := tx.Hash().String()
+		has, err := e.blockMetaAccessor.HasSignedTxItem(hash)
+		if err == nil && has {
+			err = e.blockMetaAccessor.RemoveSignedTxItem(hash)
+		}
+		if err != nil {
+			e.logger.Err(err).Str("tx hash", hash).Msg("failed to remove signed tx item")
 		}
 
 		txInItem, err := e.fromTxToTxIn(tx)

@@ -1,6 +1,7 @@
 package evm
 
 import (
+	"context"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -354,9 +355,15 @@ func (e *EVMScanner) getTxInOptimized(method string, block *etypes.Block) (stype
 			continue
 		}
 
-		// best effort remove the tx from the signed txs (ok if it does not exist)
-		if err := e.blockMetaAccessor.RemoveSignedTxItem(tx.Hash().String()); err != nil {
-			e.logger.Err(err).Str("tx hash", tx.Hash().String()).Msg("failed to remove signed tx item")
+		// Best effort remove the tx from the signed txs (ok if it does not exist).
+		// Skip the delete unless this hash was actually recorded as one of ours.
+		hash := tx.Hash().String()
+		has, err := e.blockMetaAccessor.HasSignedTxItem(hash)
+		if err == nil && has {
+			err = e.blockMetaAccessor.RemoveSignedTxItem(hash)
+		}
+		if err != nil {
+			e.logger.Err(err).Str("tx hash", hash).Msg("failed to remove signed tx item")
 		}
 
 		txByHash[tx.Hash().String()] = tx
@@ -364,7 +371,13 @@ func (e *EVMScanner) getTxInOptimized(method string, block *etypes.Block) (stype
 
 	var receipts []*etypes.Receipt
 	blockNumStr := hexutil.EncodeBig(block.Number())
-	err := e.ethClient.Client().Call(
+
+	// enforce timeout for the RPC call
+	ctx, cancel := context.WithTimeout(context.Background(), e.cfg.HTTPRequestTimeout)
+	defer cancel()
+
+	err := e.ethClient.Client().CallContext(
+		ctx,
 		&receipts,
 		method,
 		blockNumStr,
@@ -373,6 +386,9 @@ func (e *EVMScanner) getTxInOptimized(method string, block *etypes.Block) (stype
 		e.logger.Error().Err(err).Msg("failed to fetch block receipts")
 		return stypes.TxIn{}, err
 	}
+
+	// Cache whitelist once per block to avoid per-receipt RPCs.
+	disableWhitelist := e.getDisableWhitelist()
 
 	for _, receipt := range receipts {
 		txForReceipt, ok := txByHash[receipt.TxHash.String()]
@@ -391,7 +407,7 @@ func (e *EVMScanner) getTxInOptimized(method string, block *etypes.Block) (stype
 
 		// extract the txInItem
 		var txInItem *stypes.TxInItem
-		txInItem, err = e.receiptToTxInItem(txForReceipt, receipt)
+		txInItem, err = e.receiptToTxInItem(txForReceipt, receipt, disableWhitelist)
 		if err != nil {
 			e.logger.Error().Err(err).Msg("failed to convert receipt to txInItem")
 			continue
@@ -447,9 +463,15 @@ func (e *EVMScanner) getTxIn(block *etypes.Block) (stypes.TxIn, error) {
 			continue
 		}
 
-		// best effort remove the tx from the signed txs (ok if it does not exist)
-		if err := e.blockMetaAccessor.RemoveSignedTxItem(tx.Hash().String()); err != nil {
-			e.logger.Err(err).Str("tx hash", tx.Hash().String()).Msg("failed to remove signed tx item")
+		// Best effort remove the tx from the signed txs (ok if it does not exist).
+		// Skip the delete unless this hash was actually recorded as one of ours.
+		hash := tx.Hash().String()
+		has, err := e.blockMetaAccessor.HasSignedTxItem(hash)
+		if err == nil && has {
+			err = e.blockMetaAccessor.RemoveSignedTxItem(hash)
+		}
+		if err != nil {
+			e.logger.Err(err).Str("tx hash", hash).Msg("failed to remove signed tx item")
 		}
 
 		batch = append(batch, tx)
@@ -461,6 +483,9 @@ func (e *EVMScanner) getTxIn(block *etypes.Block) (stypes.TxIn, error) {
 	if len(batch) > 0 {
 		batches = append(batches, batch)
 	}
+
+	// Cache whitelist once per block to avoid per-transaction RPCs.
+	disableWhitelist := e.getDisableWhitelist()
 
 	// process all batches
 	for _, batch := range batches {
@@ -474,8 +499,12 @@ func (e *EVMScanner) getTxIn(block *etypes.Block) (stypes.TxIn, error) {
 			})
 		}
 
+		// enforce timeout for the RPC call
+		ctx, cancel := context.WithTimeout(context.Background(), e.cfg.HTTPRequestTimeout)
+		defer cancel()
+
 		// send the batch rpc request
-		err := e.ethClient.Client().BatchCall(rpcBatch)
+		err := e.ethClient.Client().BatchCallContext(ctx, rpcBatch)
 		if err != nil {
 			e.logger.Error().Int("size", len(batch)).Err(err).Msg("failed to batch fetch transaction receipts")
 			return stypes.TxIn{}, err
@@ -499,7 +528,7 @@ func (e *EVMScanner) getTxIn(block *etypes.Block) (stypes.TxIn, error) {
 
 			// extract the txInItem
 			var txInItem *stypes.TxInItem
-			txInItem, err = e.receiptToTxInItem(batch[i], receipt)
+			txInItem, err = e.receiptToTxInItem(batch[i], receipt, disableWhitelist)
 			if err != nil {
 				e.logger.Error().Err(err).Msg("failed to convert receipt to txInItem")
 				continue
@@ -544,10 +573,13 @@ func (e *EVMScanner) getTxInItem(tx *etypes.Transaction) (*stypes.TxInItem, erro
 		return nil, fmt.Errorf("failed to get transaction receipt: %w", err)
 	}
 
-	return e.receiptToTxInItem(tx, receipt)
+	// Cache whitelist before parsing receipt.
+	disableWhitelist := e.getDisableWhitelist()
+
+	return e.receiptToTxInItem(tx, receipt, disableWhitelist)
 }
 
-func (e *EVMScanner) receiptToTxInItem(tx *etypes.Transaction, receipt *etypes.Receipt) (*stypes.TxInItem, error) {
+func (e *EVMScanner) receiptToTxInItem(tx *etypes.Transaction, receipt *etypes.Receipt, disableWhitelist int64) (*stypes.TxInItem, error) {
 	if receipt.Status != 1 {
 		e.logger.Debug().Stringer("txid", tx.Hash()).Uint64("status", receipt.Status).Msg("tx failed")
 
@@ -557,12 +589,6 @@ func (e *EVMScanner) receiptToTxInItem(tx *etypes.Transaction, receipt *etypes.R
 		}
 
 		return e.getTxInFromFailedTransaction(tx, receipt), nil
-	}
-
-	disableWhitelist, err := e.bridge.GetMimir(constants.EVMDisableContractWhitelist.String())
-	if err != nil {
-		e.logger.Err(err).Msgf("fail to get %s", constants.EVMDisableContractWhitelist.String())
-		disableWhitelist = 0
 	}
 
 	if disableWhitelist == 1 {
@@ -591,6 +617,16 @@ func (e *EVMScanner) receiptToTxInItem(tx *etypes.Transaction, receipt *etypes.R
 		}
 		return e.getTxInFromTransaction(tx, receipt)
 	}
+}
+
+func (e *EVMScanner) getDisableWhitelist() int64 {
+	// Cache whitelist toggle before parsing receipt.
+	disableWhitelist, err := e.bridge.GetMimir(constants.EVMDisableContractWhitelist.String())
+	if err != nil {
+		e.logger.Err(err).Msgf("fail to get %s", constants.EVMDisableContractWhitelist.String())
+		disableWhitelist = 0
+	}
+	return disableWhitelist
 }
 
 // --------------------------------- reorg ---------------------------------
