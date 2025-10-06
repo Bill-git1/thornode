@@ -31,8 +31,8 @@ RUN apt-get update && \
   curl=7.74.0-1.3+deb11u15 \
   jq=1.6-2.1+deb11u1 \
   libffi-dev=3.3-6 \
-  libssl-dev=1.1.1w-0+deb11u3 \
-  openssl=1.1.1w-0+deb11u3 \
+  libssl-dev=1.1.1w-0+deb11u4 \
+  openssl=1.1.1w-0+deb11u4 \
   procps=2:3.3.17-5 \
   python3=3.9.2-3 \
   python3-pip=20.3.4-4+deb11u1 && \
