@@ -65,7 +65,11 @@ func (vm *SwapQueueVCUR) FetchQueue(ctx cosmos.Context) (swapItems, error) { // 
 					// last swap must be in the past
 					continue // skip
 				}
-				if (ctx.BlockHeight()-swp.LastHeight)%int64(swp.Interval) != 0 {
+				interval := swp.Interval
+				if interval == 0 {
+					interval = 1
+				}
+				if (ctx.BlockHeight()-swp.LastHeight)%int64(interval) != 0 {
 					continue // skip
 				}
 				if vm.k.IsTradingHalt(ctx, &msg) {
