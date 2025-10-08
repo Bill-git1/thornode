@@ -862,6 +862,9 @@ type BifrostBlockScannerConfiguration struct {
 	// block - e.g. transactions, receipts, logs, etc. Blocks are processed sequentially.
 	Concurrency int64 `mapstructure:"concurrency"`
 
+	// PrefetchBlocks is the number of blocks to prefetch in the background.
+	PrefetchBlocks int64 `mapstructure:"prefetch_blocks"`
+
 	// FixedGasRate will force the scanner to only report the defined gas rate.
 	FixedGasRate int64 `mapstructure:"fixed_gas_rate"`
 

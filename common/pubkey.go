@@ -42,7 +42,7 @@ var (
 	EmptyPubKey            PubKey
 	EmptyPubKeySet         PubKeySet
 	pubkeyToAddressCache   = make(map[string]Address)
-	pubkeyToAddressCacheMu = &sync.Mutex{}
+	pubkeyToAddressCacheMu = &sync.RWMutex{}
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -116,11 +116,12 @@ func (p PubKey) GetAddress(chain Chain) (Address, error) {
 
 	// cache pubkey to address, since this is expensive with many vaults in pubkey manager
 	key := fmt.Sprintf("%s-%s", chain.String(), p.String())
-	pubkeyToAddressCacheMu.Lock()
-	defer pubkeyToAddressCacheMu.Unlock()
+	pubkeyToAddressCacheMu.RLock()
 	if v, ok := pubkeyToAddressCache[key]; ok {
+		pubkeyToAddressCacheMu.RUnlock()
 		return v, nil
 	}
+	pubkeyToAddressCacheMu.RUnlock()
 
 	chainNetwork := CurrentChainNetwork
 	var addressString string
@@ -256,7 +257,9 @@ func (p PubKey) GetAddress(chain Chain) (Address, error) {
 	if err != nil {
 		return address, fmt.Errorf("NewAddress, addressString %s, %w", addressString, err)
 	}
+	pubkeyToAddressCacheMu.Lock()
 	pubkeyToAddressCache[key] = address
+	pubkeyToAddressCacheMu.Unlock()
 	return address, nil
 }
 

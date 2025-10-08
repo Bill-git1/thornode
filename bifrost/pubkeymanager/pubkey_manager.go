@@ -303,6 +303,11 @@ func (pkm *PubKeyManager) IsValidPoolAddress(addr string, chain common.Chain) (b
 	defer pkm.rwMutex.RUnlock()
 
 	for _, pk := range pkm.pubkeys {
+		// skip pubkeys with a different algo than the chain
+		if chain.GetSigningAlgo() != pk.Algo {
+			continue
+		}
+
 		ok, cpi := matchAddress(addr, chain, pk.PubKey)
 		if ok {
 			return ok, cpi
@@ -341,11 +346,16 @@ func (pkm *PubKeyManager) GetContracts(chain common.Chain) []common.Address {
 	pkm.rwMutex.RLock()
 	defer pkm.rwMutex.RUnlock()
 	var result []common.Address
+	seen := map[common.Address]bool{} // avoid duplicates of router address
 	for _, pk := range pkm.pubkeys {
 		if len(pk.Contracts) == 0 {
 			continue
 		}
 		if addr, ok := pk.Contracts[chain]; ok {
+			if seen[addr] {
+				continue
+			}
+			seen[addr] = true
 			result = append(result, addr)
 		}
 	}

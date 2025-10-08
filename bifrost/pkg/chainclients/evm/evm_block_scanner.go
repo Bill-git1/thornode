@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"sort"
 	"strings"
+	"sync"
 
 	_ "embed"
 
@@ -374,44 +375,57 @@ func (e *EVMScanner) getTxInOptimized(method string, block *etypes.Block) (stype
 		return stypes.TxIn{}, err
 	}
 
+	sem := make(chan struct{}, e.cfg.Concurrency)
+	wg := sync.WaitGroup{}
+	mu := sync.Mutex{}
+
 	for _, receipt := range receipts {
-		txForReceipt, ok := txByHash[receipt.TxHash.String()]
-		if !ok {
-			e.logger.Warn().
-				Str("txHash", receipt.TxHash.String()).
-				Uint64("blockNumber", block.NumberU64()).
-				Msg("receipt tx not in block.Transactions or nil, ignoring...")
-			continue
-		}
+		sem <- struct{}{}
+		wg.Add(1)
+		go func(receipt *etypes.Receipt) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			txForReceipt, ok := txByHash[receipt.TxHash.String()]
+			if !ok {
+				e.logger.Warn().
+					Str("txHash", receipt.TxHash.String()).
+					Uint64("blockNumber", block.NumberU64()).
+					Msg("receipt tx not in block.Transactions or nil, ignoring...")
+				return
+			}
 
-		// tx without to address is not valid
-		if txForReceipt.To() == nil {
-			continue
-		}
+			// tx without to address is not valid
+			if txForReceipt.To() == nil {
+				return
+			}
 
-		// extract the txInItem
-		var txInItem *stypes.TxInItem
-		txInItem, err = e.receiptToTxInItem(txForReceipt, receipt)
-		if err != nil {
-			e.logger.Error().Err(err).Msg("failed to convert receipt to txInItem")
-			continue
-		}
+			// extract the txInItem
+			var txInItem *stypes.TxInItem
+			txInItem, err = e.receiptToTxInItem(txForReceipt, receipt)
+			if err != nil {
+				e.logger.Error().Err(err).Msg("failed to convert receipt to txInItem")
+				return
+			}
 
-		// skip invalid items
-		if txInItem == nil {
-			continue
-		}
-		if len(txInItem.To) == 0 {
-			continue
-		}
-		if len([]byte(txInItem.Memo)) > constants.MaxMemoSize {
-			continue
-		}
+			// skip invalid items
+			if txInItem == nil {
+				return
+			}
+			if len(txInItem.To) == 0 {
+				return
+			}
+			if len([]byte(txInItem.Memo)) > constants.MaxMemoSize {
+				return
+			}
 
-		// add the txInItem to the txInbound
-		txInItem.BlockHeight = block.Number().Int64()
-		txInbound.TxArray = append(txInbound.TxArray, txInItem)
+			// add the txInItem to the txInbound
+			txInItem.BlockHeight = block.Number().Int64()
+			mu.Lock()
+			txInbound.TxArray = append(txInbound.TxArray, txInItem)
+			mu.Unlock()
+		}(receipt)
 	}
+	wg.Wait()
 
 	if len(txInbound.TxArray) == 0 {
 		e.logger.Debug().Uint64("block", block.NumberU64()).Msg("no tx need to be processed in this block")
@@ -871,8 +885,9 @@ func (e *EVMScanner) isToValidContractAddress(addr *ecommon.Address, includeWhit
 	}
 
 	// combine the whitelist smart contract address
+	addrString := addr.String() // this hashes internally so do it once
 	for _, item := range contractAddresses {
-		if strings.EqualFold(item.String(), addr.String()) {
+		if strings.EqualFold(item.String(), addrString) {
 			return true
 		}
 	}

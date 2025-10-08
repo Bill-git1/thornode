@@ -140,6 +140,7 @@ bifrost:
         whitelist_tokens: []
         whitelist_cosmos_assets: []
         concurrency: 0
+        prefetch_blocks: 0
         max_gas_limit: 0
         fixed_gas_rate: 0
         gas_price_resolution: 1 # 1 sats/vbyte
@@ -194,7 +195,8 @@ bifrost:
       block_scanner:
         <<: *default-block-scanner
         gas_cache_blocks: 40
-        concurrency: 1
+        concurrency: 4
+        prefetch_blocks: 4
         chain_id: BASE
         observation_flexibility_blocks: 20
         max_gas_limit: 100000
@@ -276,7 +278,8 @@ bifrost:
       block_scanner:
         <<: *default-block-scanner
         max_reorg_rescan_blocks: 600 # 30m
-        concurrency: 1
+        concurrency: 4
+        prefetch_blocks: 4
         chain_id: BSC
         gas_cache_blocks: 40
         gas_price_resolution: 1 # gwei

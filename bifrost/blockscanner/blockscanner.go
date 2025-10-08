@@ -266,6 +266,12 @@ func (b *BlockScanner) scanBlocks() {
 	lastMimirCheck := time.Now().Add(-constants.ThorchainBlockTime)
 	isChainPaused := false
 
+	type fetchTxsResult struct {
+		txIn types.TxIn
+		err  error
+	}
+	prefetch := map[int64]chan fetchTxsResult{}
+
 	// start up to grab those blocks
 	for {
 		select {
@@ -304,7 +310,18 @@ func (b *BlockScanner) scanBlocks() {
 				time.Sleep(b.cfg.BlockHeightDiscoverBackoff)
 				continue
 			}
-			txIn, err := b.chainScanner.FetchTxs(currentBlock, chainHeight)
+
+			// get the prefetched result or call FetchTxs for the block
+			var txIn types.TxIn
+			if resultChan, ok := prefetch[currentBlock]; ok {
+				// already prefetched, just wait for the result
+				result := <-resultChan
+				delete(prefetch, currentBlock)
+				txIn, err = result.txIn, result.err
+			} else {
+				txIn, err = b.chainScanner.FetchTxs(currentBlock, chainHeight)
+			}
+
 			if err != nil {
 				// don't log an error if its because the block doesn't exist yet
 				if !errors.Is(err, btypes.ErrUnavailableBlock) {
@@ -313,6 +330,21 @@ func (b *BlockScanner) scanBlocks() {
 				}
 				time.Sleep(b.cfg.BlockHeightDiscoverBackoff)
 				continue
+			}
+
+			// start prefetching next blocks if configured
+			if b.cfg.PrefetchBlocks > 1 {
+				for i := int64(1); i < b.cfg.PrefetchBlocks; i++ {
+					prefetchHeight := currentBlock + i
+					if _, ok := prefetch[prefetchHeight]; !ok && prefetchHeight <= chainHeight {
+						resultChan := make(chan fetchTxsResult, 1)
+						prefetch[prefetchHeight] = resultChan
+						go func(height int64, resultChan chan fetchTxsResult) {
+							fetchTxIn, err := b.chainScanner.FetchTxs(height, chainHeight)
+							resultChan <- fetchTxsResult{txIn: fetchTxIn, err: err}
+						}(prefetchHeight, resultChan)
+					}
+				}
 			}
 
 			ms := b.cfg.ChainID.ApproximateBlockMilliseconds()
