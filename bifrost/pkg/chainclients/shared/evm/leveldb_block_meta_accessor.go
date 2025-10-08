@@ -114,11 +114,6 @@ func (t *LevelDBBlockMetaAccessor) getSignedTxItemKey(hash string) string {
 	return t.PrefixSignedTxItem + hash
 }
 
-func (t *LevelDBBlockMetaAccessor) HasSignedTxItem(hash string) (bool, error) {
-	key := t.getSignedTxItemKey(hash)
-	return t.db.Has([]byte(key), nil)
-}
-
 // AddSignedTxItem add a signed tx item to key value store
 func (t *LevelDBBlockMetaAccessor) AddSignedTxItem(item evmtypes.SignedTxItem) error {
 	key := t.getSignedTxItemKey(item.Hash)

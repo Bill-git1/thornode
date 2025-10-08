@@ -11,7 +11,6 @@ type BlockMetaAccessor interface {
 	SaveBlockMeta(height int64, block *evmtypes.BlockMeta) error
 	PruneBlockMeta(height int64) error
 	AddSignedTxItem(item evmtypes.SignedTxItem) error
-	HasSignedTxItem(hash string) (bool, error)
 	RemoveSignedTxItem(hash string) error
 	GetSignedTxItems() ([]evmtypes.SignedTxItem, error)
 }
