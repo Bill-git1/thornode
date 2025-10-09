@@ -1096,6 +1096,11 @@ func (vm *ValidatorMgrVCUR) markMissingActors(ctx cosmos.Context) error {
 		return err
 	}
 
+	// sort node accounts by number of missing blocks, highest first
+	sort.SliceStable(nas, func(i, j int) bool {
+		return nas[i].MissingBlocks > nas[j].MissingBlocks
+	})
+
 	counter := int64(0)
 	for _, n := range nas {
 		// Only mark an old actor not already marked for churn-out.
