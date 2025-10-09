@@ -13,9 +13,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"golang.org/x/term"
 
-	prefix "gitlab.com/thorchain/thornode/v3/cmd"
 	"gitlab.com/thorchain/thornode/v3/common"
-	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/actors/core"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/actors/features"
 	"gitlab.com/thorchain/thornode/v3/test/simulation/actors/suites"
@@ -63,15 +61,6 @@ func init() {
 		Out:        os.Stdout,
 		TimeFormat: time.TimeOnly,
 	}).With().Caller().Logger()
-
-	// init prefixes
-	ccfg := cosmos.GetConfig()
-	ccfg.SetBech32PrefixForAccount(prefix.Bech32PrefixAccAddr, prefix.Bech32PrefixAccPub)
-	ccfg.SetBech32PrefixForValidator(prefix.Bech32PrefixValAddr, prefix.Bech32PrefixValPub)
-	ccfg.SetBech32PrefixForConsensusNode(prefix.Bech32PrefixConsAddr, prefix.Bech32PrefixConsPub)
-	ccfg.SetCoinType(prefix.THORChainCoinType)
-	ccfg.SetPurpose(prefix.THORChainCoinPurpose)
-	ccfg.Seal()
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -178,7 +167,12 @@ func main() {
 	cfg := InitConfig(parallelismInt, enabledStages["seed"] || enabledStages["all"])
 
 	// start watchers
-	for _, w := range []*Watcher{watchers.NewInvariants(), watchers.NewSolvencyHalt()} {
+	enabledWatchers := []*Watcher{
+		watchers.NewInvariants(),
+		watchers.NewSolvencyHalt(),
+		watchers.NewSecurityEvents(),
+	}
+	for _, w := range enabledWatchers {
 		log.Info().Str("watcher", w.Name).Msg("starting watcher")
 		go func(w *Watcher) {
 			err = w.Execute(cfg, log.Output(os.Stderr))

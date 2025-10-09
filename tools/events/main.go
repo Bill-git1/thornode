@@ -5,11 +5,9 @@ import (
 	"regexp"
 	"time"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"gitlab.com/thorchain/thornode/v3/cmd"
 	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/tools/events/pkg/config"
 	"gitlab.com/thorchain/thornode/v3/tools/events/pkg/util"
@@ -25,57 +23,6 @@ var (
 	reMemoRagnarok  = regexp.MustCompile(`RAGNAROK:(\d+)`)
 	reMemoRefund    = regexp.MustCompile(`REFUND:(.+)`)
 )
-
-////////////////////////////////////////////////////////////////////////////////////////
-// InitNetwork
-////////////////////////////////////////////////////////////////////////////////////////
-
-func InitNetwork() {
-	var bech32PrefixAccAddr string
-	var bech32PrefixAccPub string
-	var bech32PrefixValAddr string
-	var bech32PrefixValPub string
-	var bech32PrefixConsAddr string
-	var bech32PrefixConsPub string
-
-	switch config.Get().Network {
-	case "mainnet":
-		bech32PrefixAccAddr = "thor"
-		bech32PrefixAccPub = "thorpub"
-		bech32PrefixValAddr = "thorv"
-		bech32PrefixValPub = "thorvpub"
-		bech32PrefixConsAddr = "thorc"
-		bech32PrefixConsPub = "thorcpub"
-
-	case "stagenet":
-		bech32PrefixAccAddr = "sthor"
-		bech32PrefixAccPub = "sthorpub"
-		bech32PrefixValAddr = "sthorv"
-		bech32PrefixValPub = "sthorvpub"
-		bech32PrefixConsAddr = "sthorc"
-		bech32PrefixConsPub = "sthorcpub"
-
-	case "mocknet":
-		bech32PrefixAccAddr = "tthor"
-		bech32PrefixAccPub = "tthorpub"
-		bech32PrefixValAddr = "tthorv"
-		bech32PrefixValPub = "tthorvpub"
-		bech32PrefixConsAddr = "tthorc"
-		bech32PrefixConsPub = "tthorcpub"
-
-	default:
-		log.Fatal().Str("network", config.Get().Network).Msg("unknown network")
-	}
-
-	// initialize the bech32 prefixes
-	cfg := sdk.GetConfig()
-	cfg.SetBech32PrefixForAccount(bech32PrefixAccAddr, bech32PrefixAccPub)
-	cfg.SetBech32PrefixForValidator(bech32PrefixValAddr, bech32PrefixValPub)
-	cfg.SetBech32PrefixForConsensusNode(bech32PrefixConsAddr, bech32PrefixConsPub)
-	cfg.SetCoinType(cmd.THORChainCoinType)
-	cfg.SetPurpose(cmd.THORChainCoinPurpose)
-	cfg.Seal()
-}
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // ScanBlock
@@ -103,7 +50,6 @@ func main() {
 
 	// initialize
 	util.InitCache()
-	InitNetwork()
 	thorscan.APIEndpoint = config.Get().Endpoints.Thornode
 
 	// prune local storage

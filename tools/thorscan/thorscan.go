@@ -16,6 +16,8 @@ import (
 	ctypes "github.com/cosmos/cosmos-sdk/types"
 	"gitlab.com/thorchain/thornode/v3/app"
 	"gitlab.com/thorchain/thornode/v3/app/params"
+	prefix "gitlab.com/thorchain/thornode/v3/cmd"
+	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
 	openapi "gitlab.com/thorchain/thornode/v3/openapi/gen"
 
@@ -126,6 +128,11 @@ var (
 	encodingConfig params.EncodingConfig
 )
 
+// SetAPIEndpoint sets the API endpoint to use.
+func SetAPIEndpoint(endpoint string) {
+	APIEndpoint = endpoint
+}
+
 func init() {
 	var err error
 
@@ -165,6 +172,11 @@ func init() {
 	httpClient = &http.Client{Transport: transport}
 
 	// create encoding config
+	ccfg := cosmos.GetConfig()
+	ccfg.SetBech32PrefixForAccount(prefix.Bech32PrefixAccAddr, prefix.Bech32PrefixAccPub)
+	ccfg.SetBech32PrefixForValidator(prefix.Bech32PrefixValAddr, prefix.Bech32PrefixValPub)
+	ccfg.SetBech32PrefixForConsensusNode(prefix.Bech32PrefixConsAddr, prefix.Bech32PrefixConsPub)
+	ccfg.Seal()
 	encodingConfig = app.MakeEncodingConfig()
 }
 
@@ -277,7 +289,7 @@ func Scan(startHeight, stopHeight int) <-chan *BlockResponse {
 	}
 
 	// start sequential reader to send to blocks channel
-	out := make(chan *BlockResponse)
+	out := make(chan *BlockResponse, Parallelism)
 	go func() {
 		for height := int64(startHeight); stopHeight == 0 || int(height) <= stopHeight; height++ {
 			out <- <-ring[int(height)%Parallelism]
