@@ -226,7 +226,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
-  - .[0].coin.amount == "${BTC_OUT_2=2080469}"
+  - .[0].coin.amount == "${BTC_OUT_2=2081958}"
 ---
 # Process remaining BTC outbound from pool initialization
 type: tx-observed-out
@@ -244,7 +244,7 @@ txs:
       gas:
         - amount: "10500"
           asset: "BTC.BTC"
-      memo: "OUT:A9660C33F808BC186A95D728BB56606D31B43F5C7F0D70A4FC0D63E965948667"
+      memo: "OUT:BAA0FA9F997ECC7790A0FE232C4D3EAAB842F0FAEA060D31EFB49C007BF4A4A5"
     block_height: 4
     finalise_height: 4
     observed_pub_key: {{ pubkey_dog }}

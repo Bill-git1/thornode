@@ -130,11 +130,11 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "130003966389",
+              "amount": "130006966350",
               "denom": "rune"
             },
             {
-              "amount": "48152000469225",
+              "amount": "48150887573965",
               "denom": "thor.nami"
             }
           ]
@@ -143,7 +143,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35010412709739",
+              "amount": "35010406709785",
               "denom": "rune"
             }
           ]
@@ -152,11 +152,11 @@
           "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "coins": [
             {
-              "amount": "2359585307227",
+              "amount": "2359588307220",
               "denom": "rune"
             },
             {
-              "amount": "9951847999530775",
+              "amount": "9951849112426035",
               "denom": "thor.nami"
             }
           ]
@@ -405,8 +405,8 @@
         {
           "LP_units": "125000000000",
           "asset": "THOR.NAMI",
-          "balance_asset": "48152000469225",
-          "balance_rune": "129797307258",
+          "balance_asset": "48150887573965",
+          "balance_rune": "129800307219",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
           "status": "Available",

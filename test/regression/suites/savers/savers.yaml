@@ -106,7 +106,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2514340793682
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2514342793682
 ---
 ########################################################################################
 # check growth and withdraw 50%

@@ -152,7 +152,7 @@
               "denom": "rune"
             },
             {
-              "amount": "976303",
+              "amount": "980264",
               "denom": "thor.btc"
             }
           ]
@@ -188,7 +188,7 @@
           "denom": "rune"
         },
         {
-          "amount": "976303",
+          "amount": "980264",
           "denom": "thor.btc"
         }
       ]
@@ -300,8 +300,8 @@
         {
           "LP_units": "100000000000",
           "asset": "THOR.BTC",
-          "balance_asset": "100001999",
-          "balance_rune": "100002350536",
+          "balance_asset": "99999999",
+          "balance_rune": "100004350583",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
           "status": "Available",

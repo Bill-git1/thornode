@@ -77,7 +77,7 @@ count: 2
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
-  - .affiliate_collector_rune == "722751541"
+  - .affiliate_collector_rune == "724751541"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
@@ -152,7 +152,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FOX_BAL=2498767806132}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FOX_BAL=2498769806132}
 ---
 type: tx-observed-in
 signer: {{ addr_thor_dog }}
@@ -215,7 +215,7 @@ type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount|tonumber == ${FOX_BAL} + 2606525254
+  - .result[]|select(.denom == "rune").amount|tonumber == ${FOX_BAL} + 2608525254
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
@@ -234,9 +234,9 @@ type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - .|length == 1
-  - .[0]|.in_hash == "${IN_HASH=57449AE4740CA10C5B4A0A0BBFF8807EA8B41F4D2B699A7C7C8EF691C1D0FAFF}"
+  - .[0]|.in_hash == "${IN_HASH=026ECD3F2BD10125EA1B27C0571B8CA1FC6A69467CB88CA462F4CD1E87D9A6D2}"
   - .[0]|.coin.asset == "ETH.USDX-0X9999999999999999999999999999999999999999"
-  - .[0]|.coin.amount == "${OUT_AMOUNT=921197300}"
+  - .[0]|.coin.amount == "${OUT_AMOUNT=923121100}"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}

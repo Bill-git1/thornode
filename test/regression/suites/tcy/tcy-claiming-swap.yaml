@@ -174,8 +174,8 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fish }}
 asserts:
   - .balances|length == 2
-  - .balances[]|select(.denom == "tcy")|.amount|tonumber == ${FISH_INIT_AFF_SWAP_TCY=132108862029}
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 869679562
+  - .balances[]|select(.denom == "tcy")|.amount|tonumber == ${FISH_INIT_AFF_SWAP_TCY=132135289094}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 871679573
 ---
 type: tx-deposit
 signer: {{ addr_thor_fish }}
@@ -191,14 +191,14 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${PIG_INIT_AFF_FEE=2999997}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${PIG_INIT_AFF_FEE=4999998}
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fish }}
 asserts:
   - .balances|length == 2
-  - .balances[]|select(.denom == "tcy")|.amount|tonumber == ${FISH_INIT_AFF_SWAP_TCY}+${FISH_SWAPED_TCY=6514071471}
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FISH_POST_SWAP_RUNE=367679562}
+  - .balances[]|select(.denom == "tcy")|.amount|tonumber == ${FISH_INIT_AFF_SWAP_TCY}+${FISH_SWAPED_TCY=6540496773}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FISH_POST_SWAP_RUNE=369679573}
 ---
 # Swap TCY -> RUNE with affiliate fees
 type: tx-deposit
@@ -215,12 +215,12 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${PIG_INIT_AFF_FEE}+${PIG_SECOND_AFF_FEE=4929822}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${PIG_INIT_AFF_FEE}+${PIG_SECOND_AFF_FEE=4949821}
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fish }}
 asserts:
   - .balances|length == 2
   - .balances[]|select(.denom == "tcy")|.amount|tonumber == ${FISH_INIT_AFF_SWAP_TCY}
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FISH_POST_SWAP_RUNE}+${FISH_SECOND_RUNE_SWAP=484052388}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FISH_POST_SWAP_RUNE}+${FISH_SECOND_RUNE_SWAP=488032317}
   

@@ -160,7 +160,7 @@ asserts:
   - .balances[0].denom == "rune"
   - .balances[0].amount == "2239792000000"
   - .balances[1].denom == "thor.nami"
-  - .balances[1].amount == "9903697482929519"
+  - .balances[1].amount == "9903698224852071"
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
@@ -179,7 +179,7 @@ asserts:
   - .balances[0].denom == "rune"
   - .balances[0].amount == "2239790000000"
   - .balances[1].denom == "thor.nami"
-  - .balances[1].amount == "9903697482929519"
+  - .balances[1].amount == "9903698224852071"
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
@@ -196,6 +196,6 @@ endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 2
   - .balances[0].denom == "rune"
-  - .balances[0].amount == "2359585307227"
+  - .balances[0].amount == "2359588307220"
   - .balances[1].denom == "thor.nami"
-  - .balances[1].amount == "9951847999530775"
+  - .balances[1].amount == "9951849112426035"

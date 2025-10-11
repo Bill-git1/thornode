@@ -95,19 +95,9 @@ func (gm *GasMgrVCUR) GetGas() common.Gas {
 // - inRune: whether the fee should be returned in RUNE. If false the fee is returned in
 // asset units.
 func (gm *GasMgrVCUR) GetAssetOutboundFee(ctx cosmos.Context, asset common.Asset, inRune bool) (cosmos.Uint, error) {
-	thorchainOutboundFee := gm.keeper.GetOutboundTxFee(ctx)
-
-	// If the asset is native RUNE, return the default native outbound fee.
-	if asset.IsRune() {
-		return thorchainOutboundFee, nil
-	}
-
-	// Asset is on THORChain, but not RUNE, convert the fee to asset value.
+	// If the asset is native to THORChain, no need to charge an outbound fee.
 	if asset.IsNative() {
-		if inRune {
-			return thorchainOutboundFee, nil
-		}
-		return gm.getRuneInAssetValue(ctx, thorchainOutboundFee, asset), nil
+		return cosmos.ZeroUint(), nil
 	}
 
 	chainOutboundFee, err := gm.keeper.GetNetworkFee(ctx, asset.GetChain())
@@ -218,24 +208,6 @@ func (gm *GasMgrVCUR) CalcOutboundFeeMultiplier(ctx cosmos.Context, targetSurplu
 	// How many BPs to reduce the multiplier
 	multiplierReducedBps := common.GetSafeShare(surplusRune, targetSurplusRune, common.SafeSub(maxMultiplier, minMultiplier))
 	return common.SafeSub(maxMultiplier, multiplierReducedBps)
-}
-
-// getRuneInAssetValue convert the transaction fee to asset value , when the given asset is synthetic , it will need to get
-// the layer1 asset first , and then use the pool to convert
-func (gm *GasMgrVCUR) getRuneInAssetValue(ctx cosmos.Context, transactionFee cosmos.Uint, asset common.Asset) cosmos.Uint {
-	if asset.IsSyntheticAsset() || asset.IsTradeAsset() || asset.IsSecuredAsset() {
-		asset = asset.GetLayer1Asset()
-	}
-	pool, err := gm.keeper.GetPool(ctx, asset)
-	if err != nil {
-		ctx.Logger().Error("fail to get pool", "asset", asset, "error", err)
-		return transactionFee
-	}
-	if pool.BalanceAsset.Equal(cosmos.ZeroUint()) || pool.BalanceRune.Equal(cosmos.ZeroUint()) {
-		return transactionFee
-	}
-
-	return pool.RuneValueInAsset(transactionFee)
 }
 
 // TODO: Replace combined GetMaxGas/GetGasRate calls with single GetGasDetails calls, so GetNetworkFee called only once.

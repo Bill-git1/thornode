@@ -102,7 +102,7 @@ asserts:
   - .balances[0].denom == "rune"
   - .balances[0].amount == "4739994000000"
   - .balances[1].denom == "x/ruji"
-  - .balances[1].amount == "9903697482929519"
+  - .balances[1].amount == "9903698224852071"
 ---
 type: tx-deposit
 signer: {{ addr_thor_dog }}
@@ -119,9 +119,9 @@ endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_dog }}
 asserts:
   - .balances|length == 2
   - .balances[0].denom == "rune"
-  - .balances[0].amount == "4740016950978"
+  - .balances[0].amount == "4740018951394"
   - .balances[1].denom == "x/ruji"
-  - .balances[1].amount == "9903687482929519"
+  - .balances[1].amount == "9903688224852071"
 ---
 type: tx-deposit
 signer: {{ addr_thor_dog }}
@@ -138,6 +138,6 @@ endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_dog }}
 asserts:
   - .balances|length == 2
   - .balances[0].denom == "rune"
-  - .balances[0].amount == "4859798781317"
+  - .balances[0].amount == "4859803781518"
   - .balances[1].denom == "x/ruji"
-  - .balances[1].amount == "9951842999376683"
+  - .balances[1].amount == "9951844112426035"

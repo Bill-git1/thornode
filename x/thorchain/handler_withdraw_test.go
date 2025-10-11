@@ -217,7 +217,7 @@ func (HandlerWithdrawSuite) TestWithdrawToSecuredAsset(c *C) {
 	for _, coin := range coins {
 		switch coin.Denom {
 		case "rune":
-			c.Assert(coin.Amount.String(), Equals, "99998000000")
+			c.Assert(coin.Amount.String(), Equals, "100000000000")
 		case "eth-eth":
 			c.Assert(coin.Amount.String(), Equals, "1000000000")
 		default:
@@ -250,7 +250,7 @@ func (HandlerWithdrawSuite) TestWithdrawToSecuredAsset(c *C) {
 	for _, coin := range coins {
 		switch coin.Denom {
 		case "rune":
-			c.Assert(coin.Amount.String(), Equals, "99998000000")
+			c.Assert(coin.Amount.String(), Equals, "100000000000")
 		case "eth-eth":
 			c.Assert(coin.Amount.String(), Equals, "1000000000")
 		default:
@@ -279,7 +279,7 @@ func (HandlerWithdrawSuite) TestWithdrawToSecuredAsset(c *C) {
 	for _, coin := range coins {
 		switch coin.Denom {
 		case "rune":
-			c.Assert(coin.Amount.String(), Equals, "399996000000")
+			c.Assert(coin.Amount.String(), Equals, "400000000000")
 		case "eth-eth":
 			c.Assert(coin.Amount.String(), Equals, "4000000000")
 		default:
@@ -312,7 +312,7 @@ func (HandlerWithdrawSuite) TestWithdrawToSecuredAsset(c *C) {
 	for _, coin := range coins {
 		switch coin.Denom {
 		case "rune":
-			c.Assert(coin.Amount.String(), Equals, "399996000000")
+			c.Assert(coin.Amount.String(), Equals, "400000000000")
 		case "eth-eth":
 			c.Assert(coin.Amount.String(), Equals, "4000000000")
 		default:

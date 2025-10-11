@@ -53,7 +53,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2504533195711
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2504535195711
 ---
 ########################################################################################
 # swap to asset

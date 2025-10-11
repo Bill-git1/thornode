@@ -9,7 +9,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/outbound_fees
 asserts:
   - .|length == 3
-  - .[0] == {"asset":"THOR.RUNE","outbound_fee":"2000000"} # Only those two fields, others omitted.
+  - .[0] == {"asset":"THOR.RUNE","outbound_fee":"0"} # Only those two fields, others omitted.
   ###
   - .[1].asset == "BTC.BTC"
   - .[1].outbound_fee == "7000"
@@ -109,13 +109,13 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2495386197539
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2495388197539
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/outbound_fees
 asserts:
   - .|length == 3
-  - .[0] == {"asset":"THOR.RUNE","outbound_fee":"2000000"}
+  - .[0] == {"asset":"THOR.RUNE","outbound_fee":"0"}
   ###
   - .[1].asset == "BTC.BTC"
   - .[1].outbound_fee == "7000"

@@ -710,70 +710,19 @@
         "type": "swap"
       },
       {
-        "amount": "1961thor.btc",
+        "amount": "980264thor.btc",
         "mode": "EndBlock",
         "spender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_spent"
       },
       {
-        "amount": "1961thor.btc",
-        "mode": "EndBlock",
-        "receiver": "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp",
-        "type": "coin_received"
-      },
-      {
-        "amount": "1961thor.btc",
-        "mode": "EndBlock",
-        "recipient": "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp",
-        "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
-        "type": "transfer"
-      },
-      {
-        "mode": "EndBlock",
-        "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
-        "type": "message"
-      },
-      {
-        "amount": "1961thor.btc",
-        "mode": "EndBlock",
-        "spender": "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp",
-        "type": "coin_spent"
-      },
-      {
-        "amount": "1961thor.btc",
-        "burner": "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp",
-        "mode": "EndBlock",
-        "type": "burn"
-      },
-      {
-        "amount": "1961",
-        "denom": "thor.btc",
-        "mode": "EndBlock",
-        "reason": "burn_native_fee",
-        "supply": "burn",
-        "type": "mint_burn"
-      },
-      {
-        "coins": "1961 THOR.BTC",
-        "mode": "EndBlock",
-        "pool_deduct": "2000242",
-        "tx_id": "532211CC6F704C48AB718CAADAD3F0A2205723880FFF85789BB994AFC3F49DD4",
-        "type": "fee"
-      },
-      {
-        "amount": "978303thor.btc",
-        "mode": "EndBlock",
-        "spender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
-        "type": "coin_spent"
-      },
-      {
-        "amount": "978303thor.btc",
+        "amount": "980264thor.btc",
         "mode": "EndBlock",
         "receiver": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
         "type": "coin_received"
       },
       {
-        "amount": "978303thor.btc",
+        "amount": "980264thor.btc",
         "mode": "EndBlock",
         "recipient": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
         "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
@@ -786,7 +735,7 @@
       },
       {
         "chain": "THOR",
-        "coin": "978303 THOR.BTC",
+        "coin": "980264 THOR.BTC",
         "from": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "id": "0000000000000000000000000000000000000000000000000000000000000000",
         "in_tx_id": "532211CC6F704C48AB718CAADAD3F0A2205723880FFF85789BB994AFC3F49DD4",
@@ -1007,11 +956,11 @@
         }
       },
       "last_commit_hash": "",
-      "data_hash": "D8A6A2480EEB6F0A8D6DE0BF0650060B32B502C97F2D9076123443BD9D04D172",
+      "data_hash": "425594EE59E53B08E0FD74C7FC19C34E09CBFA80E225A83E9AFC1D000BEF2052",
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "FB0F190D03CB6FB3500C8C2C35E2E3931741C8553AE3B80D31DE18ACB527177B",
+      "app_hash": "A293A74F8C7561F5C0C7D630036052D7D819F7F819497CBCE2B1DE0F5E39FE5D",
       "last_results_hash": "08A77F9D2837E65171199DB5AE32567AE1BBA84AC88AECB4A5EEAC0D7DBFD0C6",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
@@ -1021,80 +970,29 @@
       {
         "asset": "THOR.BTC",
         "asset_add": "true",
-        "asset_amt": "978303",
+        "asset_amt": "980264",
         "mode": "BeginBlock",
         "reason": "derived pool adjustment",
         "rune_add": "false",
-        "rune_amt": "996912113",
+        "rune_amt": "998912355",
         "type": "pool_balance_change"
       }
     ],
     "end_block_events": [
       {
-        "amount": "2000thor.btc",
+        "amount": "980264thor.btc",
         "mode": "EndBlock",
         "spender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_spent"
       },
       {
-        "amount": "2000thor.btc",
-        "mode": "EndBlock",
-        "receiver": "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp",
-        "type": "coin_received"
-      },
-      {
-        "amount": "2000thor.btc",
-        "mode": "EndBlock",
-        "recipient": "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp",
-        "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
-        "type": "transfer"
-      },
-      {
-        "mode": "EndBlock",
-        "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
-        "type": "message"
-      },
-      {
-        "amount": "2000thor.btc",
-        "mode": "EndBlock",
-        "spender": "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp",
-        "type": "coin_spent"
-      },
-      {
-        "amount": "2000thor.btc",
-        "burner": "tthor1v8ppstuf6e3x0r4glqc68d5jqcs2tf38ulmsrp",
-        "mode": "EndBlock",
-        "type": "burn"
-      },
-      {
-        "amount": "2000",
-        "denom": "thor.btc",
-        "mode": "EndBlock",
-        "reason": "burn_native_fee",
-        "supply": "burn",
-        "type": "mint_burn"
-      },
-      {
-        "coins": "2000 THOR.BTC",
-        "mode": "EndBlock",
-        "pool_deduct": "2000047",
-        "tx_id": "F4570F901FD2375740603F36AB80E06B9595FDE358D022FED7DC8F20F78CCB52",
-        "type": "fee"
-      },
-      {
-        "amount": "976303thor.btc",
-        "mode": "EndBlock",
-        "spender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
-        "type": "coin_spent"
-      },
-      {
-        "amount": "976303thor.btc",
+        "amount": "980264thor.btc",
         "mode": "EndBlock",
         "receiver": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
         "type": "coin_received"
       },
       {
-        "amount": "976303thor.btc",
+        "amount": "980264thor.btc",
         "mode": "EndBlock",
         "recipient": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
         "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
@@ -1107,11 +1005,11 @@
       },
       {
         "chain": "THOR",
-        "coin": "976303 THOR.BTC",
+        "coin": "980264 THOR.BTC",
         "from": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "id": "0000000000000000000000000000000000000000000000000000000000000000",
-        "in_tx_id": "F4570F901FD2375740603F36AB80E06B9595FDE358D022FED7DC8F20F78CCB52",
-        "memo": "REFUND:F4570F901FD2375740603F36AB80E06B9595FDE358D022FED7DC8F20F78CCB52",
+        "in_tx_id": "5027FE8369548A74D028D59BA4B5BFC59986BC7E9C7B9CCB6C513EA981A94791",
+        "memo": "REFUND:5027FE8369548A74D028D59BA4B5BFC59986BC7E9C7B9CCB6C513EA981A94791",
         "mode": "EndBlock",
         "to": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
         "type": "outbound"
@@ -1119,9 +1017,9 @@
       {
         "chain": "THOR",
         "code": "108",
-        "coin": "978303 THOR.BTC",
+        "coin": "980264 THOR.BTC",
         "from": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
-        "id": "F4570F901FD2375740603F36AB80E06B9595FDE358D022FED7DC8F20F78CCB52",
+        "id": "5027FE8369548A74D028D59BA4B5BFC59986BC7E9C7B9CCB6C513EA981A94791",
         "memo": "=:nonsense:tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
         "mode": "EndBlock",
         "reason": "pool THOR.NONSENSE doesn't exist",
@@ -1189,7 +1087,7 @@
     ],
     "txs": [
       {
-        "hash": "F4570F901FD2375740603F36AB80E06B9595FDE358D022FED7DC8F20F78CCB52",
+        "hash": "5027FE8369548A74D028D59BA4B5BFC59986BC7E9C7B9CCB6C513EA981A94791",
         "tx": {
           "auth_info": {
             "fee": {
@@ -1222,7 +1120,7 @@
                 "@type": "/types.MsgDeposit",
                 "coins": [
                   {
-                    "amount": "978303",
+                    "amount": "980264",
                     "asset": "THOR.BTC",
                     "decimals": "0"
                   }
@@ -1237,7 +1135,7 @@
             "unordered": false
           },
           "signatures": [
-            "UYtd8cUtVwP4ObOsh16NExMTew0UbzDRewI9W2eCnIkaiqvDNm6DvmETJ8YpdUpIImtSXBBwtWwzfFhBYWgTsQ=="
+            "zgkEWjjKP4V42zu949ENO1X5Xtbu6exHZJ/eSWo2DbBeZyT4yxh56f7sFAM3+LXYkY7FstVAGgOv4V8SARfSVA=="
           ]
         },
         "result": {
@@ -1270,7 +1168,7 @@
               "type": "tx"
             },
             {
-              "signature": "UYtd8cUtVwP4ObOsh16NExMTew0UbzDRewI9W2eCnIkaiqvDNm6DvmETJ8YpdUpIImtSXBBwtWwzfFhBYWgTsQ==",
+              "signature": "zgkEWjjKP4V42zu949ENO1X5Xtbu6exHZJ/eSWo2DbBeZyT4yxh56f7sFAM3+LXYkY7FstVAGgOv4V8SARfSVA==",
               "type": "tx"
             },
             {
@@ -1281,19 +1179,19 @@
               "type": "message"
             },
             {
-              "amount": "978303thor.btc",
+              "amount": "980264thor.btc",
               "msg_index": "0",
               "spender": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "type": "coin_spent"
             },
             {
-              "amount": "978303thor.btc",
+              "amount": "980264thor.btc",
               "msg_index": "0",
               "receiver": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
               "type": "coin_received"
             },
             {
-              "amount": "978303thor.btc",
+              "amount": "980264thor.btc",
               "msg_index": "0",
               "recipient": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
               "sender": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
@@ -1306,9 +1204,9 @@
             },
             {
               "msg_index": "0",
-              "source": "978303 THOR.BTC",
+              "source": "980264 THOR.BTC",
               "target": "0 THOR.NONSENSE",
-              "txid": "F4570F901FD2375740603F36AB80E06B9595FDE358D022FED7DC8F20F78CCB52",
+              "txid": "5027FE8369548A74D028D59BA4B5BFC59986BC7E9C7B9CCB6C513EA981A94791",
               "type": "limit_swap"
             }
           ]

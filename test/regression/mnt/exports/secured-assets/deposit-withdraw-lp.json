@@ -139,7 +139,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35000006962557",
+              "amount": "35000002962557",
               "denom": "rune"
             }
           ]
@@ -152,7 +152,7 @@
               "denom": "btc-btc"
             },
             {
-              "amount": "2474978306126",
+              "amount": "2474982306126",
               "denom": "rune"
             }
           ]

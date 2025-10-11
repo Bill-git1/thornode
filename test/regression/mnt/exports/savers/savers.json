@@ -134,7 +134,7 @@
               "denom": "btc/btc"
             },
             {
-              "amount": "64153220581",
+              "amount": "64153220580",
               "denom": "rune"
             }
           ]
@@ -143,7 +143,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "34999982567273",
+              "amount": "34999976567274",
               "denom": "rune"
             }
           ]
@@ -152,7 +152,7 @@
           "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "coins": [
             {
-              "amount": "2535468443115",
+              "amount": "2535474443115",
               "denom": "rune"
             }
           ]
@@ -429,7 +429,7 @@
           "LP_units": "100000000000",
           "asset": "BTC.BTC",
           "balance_asset": "1111168180",
-          "balance_rune": "64153220581",
+          "balance_rune": "64153220580",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -462,7 +462,7 @@
         {
           "address": "bcrt1q3wrmhnh2qe98rjse30pl7u6jxszjjwl44ls6uw",
           "reclaimed": "0",
-          "score": "42753905575",
+          "score": "42753905574",
           "spent": "0"
         },
         {

@@ -143,21 +143,20 @@ func (GasManagerTestSuiteVCUR) TestGetAssetOutboundFee(c *C) {
 		Status:       PoolAvailable,
 	}), IsNil)
 	synthAssetFee, err := gasMgr.GetAssetOutboundFee(ctx, sBTC, false)
-	c.Assert(synthAssetFee.Uint64(), Equals, uint64(400000))
+	c.Assert(synthAssetFee.Uint64(), Equals, uint64(0))
 	c.Assert(err, IsNil)
 
 	// Trade asset
 	tradeAsset, err := common.NewAsset("BTC~BTC")
 	c.Assert(err, IsNil)
 	tradeAssetFee, err := gasMgr.GetAssetOutboundFee(ctx, tradeAsset, false)
-	c.Assert(tradeAssetFee.Uint64(), Equals, uint64(400000))
+	c.Assert(tradeAssetFee.Uint64(), Equals, uint64(0))
 	c.Assert(err, IsNil)
 
 	// A trade asset with inRune true should return the fee in RUNE, not in the trade asset.
 	runeFee, err := gasMgr.GetAssetOutboundFee(ctx, tradeAsset, true)
 	c.Assert(err, IsNil)
-	c.Assert(runeFee.String(), Equals, "2000000")
-	c.Assert(runeFee.Equal(tradeAssetFee), Equals, false)
+	c.Assert(runeFee.String(), Equals, "0")
 
 	// when MinimumL1OutboundFeeUSD set to something higher, it should override the network fee
 	busdAsset, err := common.NewAsset("BSC.BUSD-BD1")

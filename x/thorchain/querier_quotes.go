@@ -291,11 +291,15 @@ func quoteSimulateSwap(ctx cosmos.Context, mgr *Mgrs, amount sdkmath.Uint, msg *
 	finalSwap := swaps[len(swaps)-1]
 
 	// parse outbound fee from event
-	outboundFeeCoin, err := common.ParseCoin(fee["coins"])
-	if err != nil {
-		return nil, sdkmath.ZeroUint(), sdkmath.ZeroUint(), fmt.Errorf("unable to parse outbound fee coin: %w", err)
+	if fee["coins"] == "" {
+		outboundFeeAmount = sdkmath.ZeroUint()
+	} else {
+		outboundFeeCoin, err := common.ParseCoin(fee["coins"])
+		if err != nil {
+			return nil, sdkmath.ZeroUint(), sdkmath.ZeroUint(), fmt.Errorf("unable to parse outbound fee coin: %w", err)
+		}
+		outboundFeeAmount = outboundFeeCoin.Amount
 	}
-	outboundFeeAmount = outboundFeeCoin.Amount
 
 	// parse outbound amount from event
 	emitCoin, err := common.ParseCoin(finalSwap["emit_asset"])
@@ -457,12 +461,6 @@ func calculateMinSwapAmount(ctx cosmos.Context, mgr *Mgrs, fromAsset, toAsset co
 		return cosmos.ZeroUint(), fmt.Errorf("fail to get outbound fee for destination chain gas asset %s: %w", toAsset, err)
 	}
 
-	if fromAsset.GetChain().IsTHORChain() && toAsset.GetChain().IsTHORChain() {
-		// If this is a purely THORChain swap, no need to give a 3x buffer since outbound fees do not change
-		// 2x buffer should suffice
-		return srcOutboundFee.Mul(cosmos.NewUint(2)), nil
-	}
-
 	destInSrcAsset, err := quoteConvertAsset(ctx, mgr, toAsset, destOutboundFee, fromAsset)
 	if err != nil {
 		return cosmos.ZeroUint(), fmt.Errorf("fail to convert dest fee to src asset %w", err)
@@ -519,7 +517,7 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 		return nil, fmt.Errorf("bad amount: %w", err)
 	}
 
-	if amount.LT(fromAsset.Chain.DustThreshold()) {
+	if !fromAsset.IsNative() && amount.LT(fromAsset.Chain.DustThreshold()) {
 		return nil, fmt.Errorf("amount less than dust threshold")
 	}
 

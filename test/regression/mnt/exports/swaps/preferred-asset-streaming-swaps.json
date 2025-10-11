@@ -163,7 +163,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "497912466561",
+              "amount": "497914462487",
               "denom": "rune"
             }
           ]
@@ -172,7 +172,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35009964955514",
+              "amount": "35009958955551",
               "denom": "rune"
             }
           ]
@@ -190,7 +190,7 @@
           "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "coins": [
             {
-              "amount": "2501374331386",
+              "amount": "2501378331386",
               "denom": "rune"
             }
           ]
@@ -208,7 +208,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "5000464410400",
+              "amount": "5000464414437",
               "denom": "rune"
             }
           ]
@@ -358,7 +358,7 @@
       "network": {
         "LPIncomeSplit": "9004",
         "NodeIncomeSplit": "996",
-        "bond_reward_rune": "466410400",
+        "bond_reward_rune": "466414437",
         "total_bond_units": "18"
       },
       "network_fees": [
@@ -413,7 +413,7 @@
           "asset": "BTC.BTC"
         },
         {
-          "amount": "689719132597",
+          "amount": "689719132634",
           "asset": "ETH.USDX-0X9999999999999999999999999999999999999999"
         }
       ],
@@ -422,7 +422,7 @@
           "LP_units": "100000000000",
           "asset": "BTC.BTC",
           "balance_asset": "104221533",
-          "balance_rune": "99769565372",
+          "balance_rune": "99769565370",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -433,7 +433,7 @@
           "LP_units": "100000000000",
           "asset": "ETH.ETH",
           "balance_asset": "1029040000",
-          "balance_rune": "97198275786",
+          "balance_rune": "97198275778",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -443,8 +443,8 @@
         {
           "LP_units": "100000000000",
           "asset": "ETH.USDX-0X9999999999999999999999999999999999999999",
-          "balance_asset": "99078802700",
-          "balance_rune": "100941436769",
+          "balance_asset": "99076878900",
+          "balance_rune": "100943432709",
           "decimals": "6",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -455,7 +455,7 @@
           "LP_units": "100000000000",
           "asset": "ETH.USDY-0X9999999999999999999999999999999999999999",
           "balance_asset": "100000000000",
-          "balance_rune": "100001594317",
+          "balance_rune": "100001594315",
           "decimals": "6",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -466,7 +466,7 @@
           "LP_units": "100000000000",
           "asset": "ETH.USDZ-0X9999999999999999999999999999999999999999",
           "balance_asset": "100000000000",
-          "balance_rune": "100001594317",
+          "balance_rune": "100001594315",
           "decimals": "6",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -489,7 +489,7 @@
         {
           "address": "0xdd99304abf262d653e2eb6722d874c2b86efdcea",
           "reclaimed": "0",
-          "score": "5037598",
+          "score": "5057690",
           "spent": "0"
         },
         {
@@ -519,7 +519,7 @@
         {
           "address": "tthor1dl7un46w7l7f3ewrnrm6nq58nerjtp0d82uzjg",
           "reclaimed": "0",
-          "score": "7355365",
+          "score": "7375457",
           "spent": "0"
         },
         {
@@ -559,7 +559,7 @@
               "decimals": "8"
             },
             {
-              "amount": "99078802700",
+              "amount": "99076878900",
               "asset": "ETH.USDX-0X9999999999999999999999999999999999999999",
               "decimals": "6"
             },

@@ -84,19 +84,19 @@ type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount == "96692318"
+  - .result[]|select(.denom == "rune").amount == "98692318"
 ---
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_cat }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount|tonumber == ${CAT_AFF} + 96515068
+  - .result[]|select(.denom == "rune").amount|tonumber == ${CAT_AFF} + 98515068
 ---
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fish }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount == "96870047"
+  - .result[]|select(.denom == "rune").amount == "98870047"
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -133,19 +133,19 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${PIG_AFF=96692318}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${PIG_AFF=98692318}
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_cat }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${CAT_AFF=2500096515068}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${CAT_AFF=2500098515068}
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fish }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FISH_AFF=96870047}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FISH_AFF=98870047}
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
@@ -168,19 +168,19 @@ type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount|tonumber == ${PIG_AFF} + 489890950
+  - .result[]|select(.denom == "rune").amount|tonumber == ${PIG_AFF} + 491890950
 ---
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_cat }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount|tonumber == ${CAT_AFF} + 95892266
+  - .result[]|select(.denom == "rune").amount|tonumber == ${CAT_AFF} + 97892266
 ---
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fish }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount|tonumber == ${FISH_AFF} + 194107495
+  - .result[]|select(.denom == "rune").amount|tonumber == ${FISH_AFF} + 196107495
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -256,19 +256,19 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${PIG_AFF=384583268}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${PIG_AFF=388583268}
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_cat }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${CAT_AFF=2499990407334}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${CAT_AFF=2499994407334}
 ---
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fish }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FISH_AFF=290977542}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${FISH_AFF=294977542}
 ---
 type: tx-deposit
 signer: {{ addr_thor_fox }}
@@ -284,7 +284,7 @@ type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount|tonumber == ${PIG_AFF} + 96999827
+  - .result[]|select(.denom == "rune").amount|tonumber == ${PIG_AFF} + 98999827
 ---
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_cat }}
@@ -298,13 +298,13 @@ asserts:
   - .aliases[0].address == "{{ addr_eth_cat }}"
   - .owner == "{{ addr_thor_cat }}"
   - .preferred_asset == "ETH.ETH"
-  - .affiliate_collector_rune == "96847586"
+  - .affiliate_collector_rune == "98847586"
 ---
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fish }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount|tonumber == ${FISH_AFF} + 97152420
+  - .result[]|select(.denom == "rune").amount|tonumber == ${FISH_AFF} + 99152420
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
@@ -371,7 +371,7 @@ type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount == "${PIG_AFF=786178260}"
+  - .result[]|select(.denom == "rune").amount == "${PIG_AFF=792178260}"
 ---
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_cat }}
@@ -391,7 +391,7 @@ type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fish }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount == "${FISH_AFF=997320291}"
+  - .result[]|select(.denom == "rune").amount == "${FISH_AFF=1003320291}"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block
@@ -402,7 +402,7 @@ asserts:
   - .|[..|select(.type?=="affiliate_fee")][0].asset == "THOR.RUNE" # pig affiliate
   - .|[..|select(.type?=="affiliate_fee")][0].fee_bps == "100"
   - .|[..|select(.type?=="affiliate_fee")][0].fee_amount == "304595165"
-  - .|[..|select(.type?=="affiliate_fee")][0].gross_amount == "${GROSS_AMOUNT=30459516474}"
+  - .|[..|select(.type?=="affiliate_fee")][0].gross_amount == "${GROSS_AMOUNT=30459516473}"
   - .|[..|select(.type?=="affiliate_fee")][0].thorname == "t"
   ##
   - .|[..|select(.type?=="affiliate_fee")][1].rune_address == "{{ addr_thor_fish }}"

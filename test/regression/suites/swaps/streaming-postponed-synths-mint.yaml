@@ -205,10 +205,10 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_provider/{{ addr_thor_wolf }}
 asserts:
-  - .units == "4497382771397"
+  - .units == "4497382771746"
   # Contrast with the initial units of "50_000_00000000" .
-  - .asset_redeem_value == "4776480940"
-  - .rune_redeem_value == "4534856341000"
+  - .asset_redeem_value == "4776480844"
+  - .rune_redeem_value == "4534856336427"
   # Contrast with the initial redeem values of "50_00000000" and "50_000_00000000".
   # <0.96x now, due to asymmetrical liquidity action swap fees
   # (not checking luvi_growth_pct which has been reset by the withdraw and deposit).
@@ -217,7 +217,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/pool/BTC.BTC/liquidity_provider/{{ addr_thor_goat }}
 asserts:
   - .units == ("450_000_00000000" | gsub("_";"")) # Unchanged.
-  - .asset_redeem_value == "47792605887"
-  - .rune_redeem_value == "45374953771531"
+  - .asset_redeem_value == "47792604924"
+  - .rune_redeem_value == "45374953722258"
   # Contrast with the initial redeem values of "450_00000000" and "450_000_00000000".
-  - .luvi_growth_pct == "0.034846725950952431"
+  - .luvi_growth_pct == "0.034846409723120397"

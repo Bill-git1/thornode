@@ -156,12 +156,12 @@ count: 2
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
-  - .affiliate_collector_rune == "472822488"
+  - .affiliate_collector_rune == "474822488"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/balance/module/affiliate_collector
 asserts:
-  - .coins[]|select(.denom == "rune")|.amount == "472822488"
+  - .coins[]|select(.denom == "rune")|.amount == "474822488"
 ---
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_pig }}
@@ -294,14 +294,14 @@ endpoint: http://localhost:1317/thorchain/block
 asserts:
   - .|[.end_block_events[]|select(.type == "scheduled_outbound")]|length == 1
   - .end_block_events[]|select(.type == "scheduled_outbound").to_address == "{{ addr_btc_pig }}"
-  - .end_block_events[]|select(.type == "scheduled_outbound").coin_amount == "${OUT_ONE=1934683}"
+  - .end_block_events[]|select(.type == "scheduled_outbound").coin_amount == "${OUT_ONE=1936883}"
   - .end_block_events[]|select(.type == "scheduled_outbound").coin_asset == "BTC.BTC"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/queue/outbound
 asserts:
   - length == 1
-  - .[0].in_hash == "${IN_HASH=2DD4A05F9E28E7420D2C0A0A88F749188A6396E99FC07AAE0989AC6050B88DD4}"
+  - .[0].in_hash == "${IN_HASH=C3ED9A4B91884C692B924E38706085217974753504C756F83FD446CB6CA07313}"
   - .[0].coin.amount == "${OUT_ONE}"
 ---
 # Observe the preferred asset swap outbound.
@@ -362,7 +362,7 @@ count: 1
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
-  - .affiliate_collector_rune == "${RUNE_AMOUNT=384637033}"
+  - .affiliate_collector_rune == "${RUNE_AMOUNT=384656939}"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/balance/module/affiliate_collector
@@ -468,8 +468,8 @@ count: 2
 type: check
 endpoint: http://localhost:1317/thorchain/thorname/test
 asserts:
-  - .affiliate_collector_rune == "${TEST_THORNAME_RUNE=6544181548}"
-  - .preferred_asset_swap_threshold_rune == "${SWAP_THRESHOLD_RUNE=1080738700}"
+  - .affiliate_collector_rune == "${TEST_THORNAME_RUNE=6546200814}"
+  - .preferred_asset_swap_threshold_rune == "${SWAP_THRESHOLD_RUNE=1080794800}"
   # Also confirm full THORName response format.
   - |
     . == {

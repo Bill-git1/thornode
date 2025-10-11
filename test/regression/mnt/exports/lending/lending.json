@@ -138,7 +138,7 @@
           "address": "tthor1qk8c8sfrmfm0tkncs0zxeutc8v5mx3pjj07k4u",
           "coins": [
             {
-              "amount": "10000803192",
+              "amount": "10002803192",
               "denom": "rune"
             }
           ]
@@ -165,7 +165,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "494893365036",
+              "amount": "494893365024",
               "denom": "rune"
             }
           ]
@@ -174,7 +174,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35004951337234",
+              "amount": "35004943337236",
               "denom": "rune"
             }
           ]
@@ -183,7 +183,7 @@
           "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "coins": [
             {
-              "amount": "2489321695787",
+              "amount": "2489327695787",
               "denom": "rune"
             }
           ]
@@ -215,7 +215,7 @@
       "send_enabled": [],
       "supply": [
         {
-          "amount": "49999189705788",
+          "amount": "49999189705778",
           "denom": "rune"
         },
         {
@@ -441,7 +441,7 @@
             {
               "chain": "THOR",
               "coin": {
-                "amount": "2803192",
+                "amount": "4803192",
                 "asset": "THOR.RUNE"
               },
               "gas_rate": "2000000",
@@ -464,7 +464,7 @@
               "chain": "THOR",
               "coins": [
                 {
-                  "amount": "2803192",
+                  "amount": "4803192",
                   "asset": "THOR.RUNE"
                 }
               ],
@@ -583,7 +583,7 @@
           "LP_units": "100000000000",
           "asset": "BTC.BTC",
           "balance_asset": "102041842",
-          "balance_rune": "98027927018",
+          "balance_rune": "98027927006",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
@@ -638,7 +638,7 @@
           "LP_units": "0",
           "asset": "THOR.BTC",
           "balance_asset": "78215586",
-          "balance_rune": "76089464172",
+          "balance_rune": "76089464163",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
           "status": "Available",

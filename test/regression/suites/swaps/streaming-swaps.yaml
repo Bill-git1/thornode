@@ -25,7 +25,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/outbound_fees
 asserts:
   - .|length == 3
-  - .[0] == {"asset":"THOR.RUNE","outbound_fee":"2000000"}
+  - .[0] == {"asset":"THOR.RUNE","outbound_fee":"0"}
   ###
   - .[1].asset == "BTC.BTC"
   - .[1].outbound_fee == "7000"
@@ -613,7 +613,7 @@ type: check
 endpoint: http://localhost:1317/thorchain/outbound_fees
 asserts:
   - .|length == 3
-  - .[0] == {"asset":"THOR.RUNE","outbound_fee":"2000000"}
+  - .[0] == {"asset":"THOR.RUNE","outbound_fee":"0"}
   ###
   - .[1].asset == "BTC.BTC"
   - .[1].outbound_fee == "7000"

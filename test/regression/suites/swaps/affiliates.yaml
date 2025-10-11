@@ -47,7 +47,7 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances|length == 1
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${BAL_PIG=488806795}
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == ${BAL_PIG=490806795}
 ---
 type: tx-observed-out
 signer: {{ addr_thor_dog }}
@@ -113,7 +113,7 @@ type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_fox }}
 asserts:
   - .result|length == 1
-  - .result[]|select(.denom == "rune").amount == "2513710661789"
+  - .result[]|select(.denom == "rune").amount == "2513712661789"
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block

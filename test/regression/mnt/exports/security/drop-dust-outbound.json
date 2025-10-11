@@ -139,7 +139,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35000009670203",
+              "amount": "35000007670203",
               "denom": "rune"
             }
           ]
@@ -157,7 +157,7 @@
           "address": "tthor1uuds8pd92qnnq0udw0rpg0szpgcslc9p8lluej",
           "coins": [
             {
-              "amount": "2549989087028",
+              "amount": "2549991087028",
               "denom": "rune"
             }
           ]
@@ -279,7 +279,7 @@
             {
               "chain": "THOR",
               "coin": {
-                "amount": "49991087028",
+                "amount": "49993087028",
                 "asset": "THOR.RUNE"
               },
               "gas_rate": "2000000",
@@ -302,7 +302,7 @@
               "chain": "THOR",
               "coins": [
                 {
-                  "amount": "49991087028",
+                  "amount": "49993087028",
                   "asset": "THOR.RUNE"
                 }
               ],

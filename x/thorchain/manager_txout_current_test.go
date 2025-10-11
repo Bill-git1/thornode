@@ -199,7 +199,7 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItem(c *C) {
 		},
 		ModuleBalances{
 			Asgard:  -1000_00000000,
-			Reserve: 2000000,
+			Reserve: 0,
 		},
 	)
 
@@ -224,7 +224,7 @@ func (s TxOutStoreVCURSuite) TestAddOutTxItem(c *C) {
 		},
 		ModuleBalances{
 			Bond:    -1000_00000000,
-			Reserve: 2000000,
+			Reserve: 0,
 		},
 	)
 

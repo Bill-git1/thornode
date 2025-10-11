@@ -139,11 +139,11 @@
           "address": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m",
           "coins": [
             {
-              "amount": "4859798781317",
+              "amount": "4859803781518",
               "denom": "rune"
             },
             {
-              "amount": "9951842999376683",
+              "amount": "9951844112426035",
               "denom": "x/ruji"
             }
           ]
@@ -152,11 +152,11 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "129783830370",
+              "amount": "129786830123",
               "denom": "rune"
             },
             {
-              "amount": "48157000623317",
+              "amount": "48155887573965",
               "denom": "x/ruji"
             }
           ]
@@ -165,7 +165,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35010419388313",
+              "amount": "35010411388359",
               "denom": "rune"
             }
           ]
@@ -322,8 +322,8 @@
         {
           "LP_units": "125000000000",
           "asset": "THOR.RUJI",
-          "balance_asset": "48157000623317",
-          "balance_rune": "129783830370",
+          "balance_asset": "48155887573965",
+          "balance_rune": "129786830123",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
           "status": "Available",

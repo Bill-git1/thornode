@@ -88,14 +88,14 @@ type: check
 endpoint: http://localhost:1317/thorchain/outbound_fee/THOR.RUNE
 asserts:
   - length == 1
-  - .[0].outbound_fee == "${RUNE_NETWORK_FEE=2000000}"
+  - .[0].outbound_fee == "0"
 ---
 type: check
 endpoint: http://localhost:1317/bank/balances/{{ addr_thor_cat }}
 asserts:
   - .result | length == 1
   - .result[0].denom == "rune"
-  - .result[0].amount | tonumber == ${CAT_RUNE} - ${CAT_FIFTH_RUNE} - ${RUNE_NETWORK_FEE}
+  - .result[0].amount | tonumber == ${CAT_RUNE} - ${CAT_FIFTH_RUNE} - ${RUNE_NETWORK_FEE=2000000}
   # Cat balance has decreased as intended (no RUNE or other refund).
 ---
 type: check

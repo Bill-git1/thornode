@@ -130,7 +130,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "207707724977",
+              "amount": "207708865785",
               "denom": "rune"
             }
           ]
@@ -139,7 +139,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "34999736430446",
+              "amount": "34999732430503",
               "denom": "rune"
             }
           ]
@@ -148,11 +148,11 @@
           "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "coins": [
             {
-              "amount": "23897037",
+              "amount": "23905105",
               "denom": "eth/eth"
             },
             {
-              "amount": "2492256817126",
+              "amount": "2492259674119",
               "denom": "rune"
             }
           ]
@@ -170,7 +170,7 @@
           "address": "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
           "coins": [
             {
-              "amount": "5000299027451",
+              "amount": "5000299029593",
               "denom": "rune"
             }
           ]
@@ -184,7 +184,7 @@
       "send_enabled": [],
       "supply": [
         {
-          "amount": "23897037",
+          "amount": "23905105",
           "denom": "eth/eth"
         },
         {
@@ -256,7 +256,7 @@
       "network": {
         "LPIncomeSplit": "9585",
         "NodeIncomeSplit": "415",
-        "bond_reward_rune": "303027451",
+        "bond_reward_rune": "303029593",
         "total_bond_units": "68"
       },
       "network_fees": [
@@ -331,12 +331,12 @@
           "LP_units": "100000000000",
           "asset": "ETH.ETH",
           "balance_asset": "867393674",
-          "balance_rune": "122859891399",
+          "balance_rune": "122861032207",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",
           "status": "Available",
-          "synth_units": "1396760321"
+          "synth_units": "1397238477"
         }
       ],
       "reserve_contributors": null,
@@ -366,7 +366,7 @@
         {
           "address": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
           "reclaimed": "0",
-          "score": "5880249312",
+          "score": "5880274015",
           "spent": "0"
         }
       ],

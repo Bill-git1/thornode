@@ -267,7 +267,7 @@ endpoint: http://localhost:1317/thorchain/block
 asserts:
   - '[.end_block_events[]|select(.type=="outbound" and .to=="{{ addr_thor_pig }}")]|length == 1'
   # use this amount later to pay back the loan after anchor repegs
-  - .end_block_events[]|select(.type=="outbound" and .to=="{{ addr_thor_pig }}")|.coin == "${RUNE_BORROWED=398852975} THOR.RUNE"
+  - .end_block_events[]|select(.type=="outbound" and .to=="{{ addr_thor_pig }}")|.coin == "${RUNE_BORROWED=400852975} THOR.RUNE"
 ---
 ########################################################################################
 # 2/3 of tor anchor pools depeg and attacker prevents swaps for max anchor blocks
@@ -391,7 +391,7 @@ endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_pig }}
 asserts:
   - .balances[]|select(.denom == "rune")|.amount == "${RUNE_BORROWED}"
   # Prepare repay amount.
-  - ${RUNE_BORROWED} - 2000000 == ${REPAY_AMOUNT=396852975}
+  - ${RUNE_BORROWED} - 2000000 == ${REPAY_AMOUNT=398852975}
 ---
 type: tx-deposit
 signer: {{ addr_thor_pig }}
@@ -415,7 +415,7 @@ asserts:
   - .[2].collateral_deposited   == "494917"
   - .[2].collateral_withdrawn == "494917"
   - .[2].debt_issued == "190010000"
-  - .[2].debt_repaid == "393713086"
+  - .[2].debt_repaid == "395681498"
   - .[2]| (.debt_repaid|tonumber) > 2 * (.debt_issued|tonumber) # over 2x the repaid debt
   - .[2].owner == "{{ addr_btc_pig }}"
 ---

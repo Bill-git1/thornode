@@ -28,7 +28,7 @@ endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 2
   - .balances[]|select(.denom == "rune")|.amount|tonumber == 2498998000000
-  - .balances[]|select(.denom == "btc/btc")|.amount|tonumber == 988089
+  - .balances[]|select(.denom == "btc/btc")|.amount|tonumber == 990069
 ---
 ########################################################################################
 # swap insufficient rune for refund (rune sent to reserve)
@@ -72,13 +72,12 @@ type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_fox }}
 asserts:
   - .balances|length == 2
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2498998000000-4000000-10000
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2498994091001
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - '[.end_block_events[]|select(.type=="reserve")]|length == 1'
-  - .end_block_events[]|select(.type=="reserve")|.coin == "100999 THOR.RUNE"
+  - '[.end_block_events[]|select(.type=="reserve")]|length == 0'
 ---
 ########################################################################################
 # swap l1 to rune failed limit (l1 left in vault, removed from pool)

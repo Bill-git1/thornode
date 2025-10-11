@@ -87,7 +87,7 @@ asserts:
 type: check
 endpoint: http://localhost:1317/cosmos/bank/v1beta1/balances/{{ addr_thor_cat }}
 asserts:
-  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2499993999999  # Should have refunded 5B RUNE back to original balance
+  - .balances[]|select(.denom == "rune")|.amount|tonumber == 2499995999999  # Should have refunded 5B RUNE back to original balance
 ---
 ########################################################################################
 # Test 3: Error cases (should fail gracefully)

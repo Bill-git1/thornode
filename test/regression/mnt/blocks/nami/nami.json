@@ -870,7 +870,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "1109514",
+          "gas_used": "1107514",
           "events": [
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/3",
@@ -984,7 +984,7 @@
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
       "app_hash": "4D5D261E015B36FC7E73101534CCE1015C76D3455B31A62B1B740A8AAECCC4E9",
-      "last_results_hash": "DDA082118F2FC76AAEB092FE1C26EA0E244EAB446892DA5AC1581E4C9C999E5E",
+      "last_results_hash": "C94A3BC7FCFD32CE0F16FC1A8F05A5A234AD7A5D1F5D92FA015CD0DB4423999E",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -1496,50 +1496,19 @@
         "type": "swap"
       },
       {
-        "coins": "741922552 THOR.NAMI",
-        "mode": "EndBlock",
-        "pool_deduct": "1999985",
-        "tx_id": "23C4BE5A41F2438E6D42BE8C7B6AD7093AEBF82BF1C8005AC673CEC0F4A2B865",
-        "type": "fee"
-      },
-      {
-        "amount": "1999985rune",
+        "amount": "3698224852071thor.nami",
         "mode": "EndBlock",
         "spender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "type": "coin_spent"
       },
       {
-        "amount": "1999985rune",
-        "mode": "EndBlock",
-        "receiver": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
-        "type": "coin_received"
-      },
-      {
-        "amount": "1999985rune",
-        "mode": "EndBlock",
-        "recipient": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
-        "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
-        "type": "transfer"
-      },
-      {
-        "mode": "EndBlock",
-        "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
-        "type": "message"
-      },
-      {
-        "amount": "3697482929519thor.nami",
-        "mode": "EndBlock",
-        "spender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
-        "type": "coin_spent"
-      },
-      {
-        "amount": "3697482929519thor.nami",
+        "amount": "3698224852071thor.nami",
         "mode": "EndBlock",
         "receiver": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
         "type": "coin_received"
       },
       {
-        "amount": "3697482929519thor.nami",
+        "amount": "3698224852071thor.nami",
         "mode": "EndBlock",
         "recipient": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
         "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
@@ -1552,7 +1521,7 @@
       },
       {
         "chain": "THOR",
-        "coin": "3697482929519 THOR.NAMI",
+        "coin": "3698224852071 THOR.NAMI",
         "from": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
         "id": "0000000000000000000000000000000000000000000000000000000000000000",
         "in_tx_id": "23C4BE5A41F2438E6D42BE8C7B6AD7093AEBF82BF1C8005AC673CEC0F4A2B865",
@@ -1752,7 +1721,7 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "C5AB6D910F3A762DC4003ACEE5E335E7CBAF8B057714ECA6116A64D561F4BD5B",
+      "app_hash": "E5E018EF79E828262066140D1B5C04BD0F054B9C06F495899FAAEAFD23D474B2",
       "last_results_hash": "6501E4EF4CE6F7E9024592A6EFE6A135AE1ED3D0C8ED11885C9B5417317C0A8F",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
@@ -1939,7 +1908,7 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "2B21AA468FBF7FEB2690300AEACA85645E4C2E38D31E2AC05103F549ECE9D20E",
+      "app_hash": "7F5C837B50BB302A58BA9292C8CB2B406010148BDFF67AD1A41D56C6B41EF87D",
       "last_results_hash": "7CD793D381C000EE90B49F08FF47DF048352EACFF6FB6198F848D0BA4E589BAF",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
@@ -2062,7 +2031,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "480202",
+          "gas_used": "438134",
           "events": [
             {
               "amount": "2000000rune",
@@ -2128,8 +2097,8 @@
               "basis_points": "5000",
               "chain": "THOR",
               "coin": "10000000000 THOR.RUNE",
-              "emit_asset": "48151258535240",
-              "emit_rune": "129799307227",
+              "emit_asset": "48150887573964",
+              "emit_rune": "129800307220",
               "from": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "id": "A99069D474C7B41811DDD1597549036686517C9FBDC2CC0777DF90D278EDBA1F",
               "liquidity_provider_units": "125000000000",
@@ -2140,50 +2109,19 @@
               "type": "withdraw"
             },
             {
-              "coins": "741933984 THOR.NAMI",
-              "msg_index": "0",
-              "pool_deduct": "1999969",
-              "tx_id": "A99069D474C7B41811DDD1597549036686517C9FBDC2CC0777DF90D278EDBA1F",
-              "type": "fee"
-            },
-            {
-              "amount": "1999969rune",
+              "amount": "48150887573964thor.nami",
               "msg_index": "0",
               "spender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
               "type": "coin_spent"
             },
             {
-              "amount": "1999969rune",
-              "msg_index": "0",
-              "receiver": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
-              "type": "coin_received"
-            },
-            {
-              "amount": "1999969rune",
-              "msg_index": "0",
-              "recipient": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
-              "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
-              "type": "transfer"
-            },
-            {
-              "msg_index": "0",
-              "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
-              "type": "message"
-            },
-            {
-              "amount": "48150516601256thor.nami",
-              "msg_index": "0",
-              "spender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
-              "type": "coin_spent"
-            },
-            {
-              "amount": "48150516601256thor.nami",
+              "amount": "48150887573964thor.nami",
               "msg_index": "0",
               "receiver": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "type": "coin_received"
             },
             {
-              "amount": "48150516601256thor.nami",
+              "amount": "48150887573964thor.nami",
               "msg_index": "0",
               "recipient": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
@@ -2196,7 +2134,7 @@
             },
             {
               "chain": "THOR",
-              "coin": "48150516601256 THOR.NAMI",
+              "coin": "48150887573964 THOR.NAMI",
               "from": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
               "id": "0000000000000000000000000000000000000000000000000000000000000000",
               "in_tx_id": "A99069D474C7B41811DDD1597549036686517C9FBDC2CC0777DF90D278EDBA1F",
@@ -2206,50 +2144,19 @@
               "type": "outbound"
             },
             {
-              "coins": "2000000 THOR.RUNE",
-              "msg_index": "0",
-              "pool_deduct": "0",
-              "tx_id": "A99069D474C7B41811DDD1597549036686517C9FBDC2CC0777DF90D278EDBA1F",
-              "type": "fee"
-            },
-            {
-              "amount": "2000000rune",
+              "amount": "129800307220rune",
               "msg_index": "0",
               "spender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
               "type": "coin_spent"
             },
             {
-              "amount": "2000000rune",
-              "msg_index": "0",
-              "receiver": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
-              "type": "coin_received"
-            },
-            {
-              "amount": "2000000rune",
-              "msg_index": "0",
-              "recipient": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
-              "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
-              "type": "transfer"
-            },
-            {
-              "msg_index": "0",
-              "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
-              "type": "message"
-            },
-            {
-              "amount": "129797307227rune",
-              "msg_index": "0",
-              "spender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
-              "type": "coin_spent"
-            },
-            {
-              "amount": "129797307227rune",
+              "amount": "129800307220rune",
               "msg_index": "0",
               "receiver": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "type": "coin_received"
             },
             {
-              "amount": "129797307227rune",
+              "amount": "129800307220rune",
               "msg_index": "0",
               "recipient": "tthor13wrmhnh2qe98rjse30pl7u6jxszjjwl4f6yycr",
               "sender": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
@@ -2262,7 +2169,7 @@
             },
             {
               "chain": "THOR",
-              "coin": "129797307227 THOR.RUNE",
+              "coin": "129800307220 THOR.RUNE",
               "from": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
               "id": "0000000000000000000000000000000000000000000000000000000000000000",
               "in_tx_id": "A99069D474C7B41811DDD1597549036686517C9FBDC2CC0777DF90D278EDBA1F",
