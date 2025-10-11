@@ -296,13 +296,26 @@ func Churn(block *thorscan.BlockResponse) {
 					notify.Notify(config.Get().Notifications.Info, title, block.Header.Height, nil, notify.Info, nil)
 				}
 			case thorchain.EventTypeActiveVault: // check for active vault (keygens complete)
+				// extract the keygen height from the TssPool message
+				var msgTssPool *thorchain.MsgTssPool
+				found := false
+				for _, msg := range tx.Tx.GetMsgs() {
+					if m, ok := msg.(*thorchain.MsgTssPool); ok {
+						msgTssPool = m
+						found = true
+					}
+				}
+				if !found {
+					log.Panic().Msg("failed to find tsspool message")
+				}
+
 				if info.State == ChurnStateKeygen {
 					info.State = ChurnStateMigrating
 					err = util.Store("churn", info)
 					if err != nil {
 						log.Panic().Err(err).Msg("failed to save churn state")
 					}
-					notifyChurnStarted(block.Header.Height, info.KeyshareBackups)
+					notifyChurnStarted(block.Header.Height, msgTssPool.Height, info.KeyshareBackups)
 				}
 			default:
 				continue
@@ -334,11 +347,11 @@ func vaultsMigrating(height int64) bool {
 	return network.VaultsMigrating
 }
 
-func notifyChurnStarted(height int64, keyshareBackups map[string]map[string]bool) {
+func notifyChurnStarted(height, keygenHeight int64, keyshareBackups map[string]map[string]bool) {
 	// get nodes at current and previous height
 	oldNodes := []openapi.Node{}
 	newNodes := []openapi.Node{}
-	err := util.ThornodeCachedRetryGet("thorchain/nodes", height-1, &oldNodes)
+	err := util.ThornodeCachedRetryGet("thorchain/nodes", keygenHeight, &oldNodes)
 	if err != nil {
 		log.Panic().Err(err).Int64("height", height-1).Msg("failed to get old nodes")
 	}
@@ -427,6 +440,38 @@ func notifyChurnStarted(height int64, keyshareBackups map[string]map[string]bool
 		oldest := removed[oldestIdx]
 		removed = append(removed[:oldestIdx], removed[oldestIdx+1:]...)
 		standbyNodes = append(standbyNodes, fmt.Sprintf("`%s` (oldest)", oldest.NodeAddress[len(oldest.NodeAddress)-4:]))
+	}
+
+	// find leaving nodes
+	if len(removed) > 0 {
+		newRemoved := []openapi.Node{}
+		for i, node := range removed {
+			if node.RequestedToLeave {
+				standbyNodes = append(standbyNodes, fmt.Sprintf("`%s` (leave)", node.NodeAddress[len(node.NodeAddress)-4:]))
+			} else {
+				newRemoved = append(newRemoved, removed[i])
+			}
+		}
+		removed = newRemoved
+	}
+
+	// find missing nodes
+	if len(removed) > 0 {
+		mimir := map[string]int64{}
+		err := util.ThornodeCachedRetryGet("thorchain/mimir", keygenHeight, &mimir)
+		if err != nil {
+			log.Panic().Err(err).Msg("failed to get mimirs")
+		}
+		maxMissing := mimir["MISSINGBLOCKCHURNOUT"]
+		newRemoved := []openapi.Node{}
+		for i, node := range removed {
+			if node.MissingBlocks > maxMissing {
+				standbyNodes = append(standbyNodes, fmt.Sprintf("`%s` (missing)", node.NodeAddress[len(node.NodeAddress)-4:]))
+			} else {
+				newRemoved = append(newRemoved, removed[i])
+			}
+		}
+		removed = newRemoved
 	}
 
 	title := "Churn Started"

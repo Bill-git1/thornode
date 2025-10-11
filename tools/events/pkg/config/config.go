@@ -208,10 +208,10 @@ func init() {
 	config.TORAnchorCheckBlocks = 300 // 30 minutes
 
 	// thresholds
-	config.Thresholds.USDValue = 150_000
+	config.Thresholds.USDValue = 250_000
 	config.Thresholds.RuneTransferValue = 1_000_000
 	config.Thresholds.SwapDelta.USDValue = 50_000
-	config.Thresholds.SwapDelta.BasisPoints = 500
+	config.Thresholds.SwapDelta.BasisPoints = 1000
 	config.Thresholds.Security.USDValue = 3_000_000
 	config.Thresholds.SwapSlipBasisPoints = 100
 	config.Thresholds.TORAnchorDriftBasisPoints = 500
