@@ -597,8 +597,16 @@ func (vm *SwapQueueAdvVCUR) EndBlock(ctx cosmos.Context, mgr Manager, telemetryE
 	// Get rapid swap max from config (mimir or constants)
 	rapidSwapMax := mgr.Keeper().GetConfigInt64(ctx, constants.AdvSwapQueueRapidSwapMax)
 
+	// During simulations, keep todo empty to avoid limit swap discovery blocking on iterators
+	isSimulation := ctx.Value(constants.CtxSimulationMode) == true
+
 	todo := make(tradePairs, 0)
-	pairs, pools := vm.getAssetPairs(ctx)
+	var pairs tradePairs
+	var pools Pools
+	// Skip getAssetPairs during simulations as it uses an iterator and we don't need pairs/pools
+	if !isSimulation {
+		pairs, pools = vm.getAssetPairs(ctx)
+	}
 	iterationCount := int64(0)
 
 	// Telemetry tracking variables
@@ -673,7 +681,10 @@ func (vm *SwapQueueAdvVCUR) EndBlock(ctx cosmos.Context, mgr Manager, telemetryE
 				msg.State.In = msg.State.In.Add(msg.Tx.Coins[0].Amount)
 				msg.State.Out = msg.State.Out.Add(emit)
 
-				todo = todo.findMatchingTrades(genTradePair(msg.Tx.Coins[0].Asset, msg.TargetAsset), pairs)
+				// Only populate todo for limit swap discovery during real execution (not simulations)
+				if !isSimulation {
+					todo = todo.findMatchingTrades(genTradePair(msg.Tx.Coins[0].Asset, msg.TargetAsset), pairs)
+				}
 			}
 			msg.State.Count += 1
 			msg.State.LastHeight = ctx.BlockHeight()

@@ -247,13 +247,25 @@ func (qs queryServer) queryLimitSwapsSummary(ctx cosmos.Context, req *types.Quer
 		}
 
 		// Calculate USD value using TOR pricing
-		sourcePool, err := qs.mgr.Keeper().GetPool(ctx, msg.Tx.Coins[0].Asset)
-		if err == nil && sourcePool.IsAvailable() {
-			runeValue := sourcePool.AssetValueInRune(msg.Tx.Coins[0].Amount)
-			if !runeValue.IsZero() && !dollarsPerRune.IsZero() {
-				usdValue := common.GetUncappedShare(runeValue, dollarsPerRune, cosmos.NewUint(common.One))
-				totalValueUSD = totalValueUSD.Add(usdValue)
+		// Calculate remaining amount (not yet swapped)
+		remainingAmount := common.SafeSub(msg.State.Deposit, msg.State.In)
+
+		// Convert to RUNE value
+		runeValue := remainingAmount
+		if !msg.Tx.Coins[0].Asset.IsRune() {
+			// Only get pool if source asset is not RUNE
+			sourcePool, err := qs.mgr.Keeper().GetPool(ctx, msg.Tx.Coins[0].Asset.GetLayer1Asset())
+			if err != nil || !sourcePool.IsAvailable() {
+				// Skip if pool not available
+				continue
 			}
+			runeValue = sourcePool.AssetValueInRune(remainingAmount)
+		}
+
+		// Convert RUNE to USD
+		if !runeValue.IsZero() && !dollarsPerRune.IsZero() {
+			usdValue := common.GetUncappedShare(runeValue, dollarsPerRune, cosmos.NewUint(common.One))
+			totalValueUSD = totalValueUSD.Add(usdValue)
 		}
 
 		// Track asset pairs
@@ -261,27 +273,52 @@ func (qs queryServer) queryLimitSwapsSummary(ctx cosmos.Context, req *types.Quer
 		if pair, exists := assetPairMap[pairKey]; exists {
 			pair.Count++
 			// Add to pair USD value
-			if pairSourcePool, err := qs.mgr.Keeper().GetPool(ctx, msg.Tx.Coins[0].Asset); err == nil && pairSourcePool.IsAvailable() {
-				runeValue := pairSourcePool.AssetValueInRune(msg.Tx.Coins[0].Amount)
-				if !runeValue.IsZero() && !dollarsPerRune.IsZero() {
-					usdValue := common.GetUncappedShare(runeValue, dollarsPerRune, cosmos.NewUint(common.One))
-					currentValue := cosmos.ZeroUint()
-					if pair.TotalValueUsd != "" {
-						currentValue = cosmos.NewUintFromString(pair.TotalValueUsd)
-					}
-					newValue := currentValue.Add(usdValue)
-					pair.TotalValueUsd = newValue.String()
+			// Calculate remaining amount (not yet swapped)
+			pairRemainingAmount := common.SafeSub(msg.State.Deposit, msg.State.In)
+
+			// Convert to RUNE value
+			pairRuneValue := pairRemainingAmount
+			if !msg.Tx.Coins[0].Asset.IsRune() {
+				// Only get pool if source asset is not RUNE
+				if pairSourcePool, err := qs.mgr.Keeper().GetPool(ctx, msg.Tx.Coins[0].Asset.GetLayer1Asset()); err == nil && pairSourcePool.IsAvailable() {
+					pairRuneValue = pairSourcePool.AssetValueInRune(pairRemainingAmount)
+				} else {
+					pairRuneValue = cosmos.ZeroUint()
 				}
+			}
+
+			// Convert RUNE to USD
+			if !pairRuneValue.IsZero() && !dollarsPerRune.IsZero() {
+				usdValue := common.GetUncappedShare(pairRuneValue, dollarsPerRune, cosmos.NewUint(common.One))
+				currentValue := cosmos.ZeroUint()
+				if pair.TotalValueUsd != "" {
+					currentValue = cosmos.NewUintFromString(pair.TotalValueUsd)
+				}
+				newValue := currentValue.Add(usdValue)
+				pair.TotalValueUsd = newValue.String()
 			}
 		} else {
 			// Calculate initial USD value for this pair
 			pairUsdValue := "0"
-			if initSourcePool, err := qs.mgr.Keeper().GetPool(ctx, msg.Tx.Coins[0].Asset); err == nil && initSourcePool.IsAvailable() {
-				runeValue := initSourcePool.AssetValueInRune(msg.Tx.Coins[0].Amount)
-				if !runeValue.IsZero() && !dollarsPerRune.IsZero() {
-					usdValue := common.GetUncappedShare(runeValue, dollarsPerRune, cosmos.NewUint(common.One))
-					pairUsdValue = usdValue.String()
+
+			// Calculate remaining amount (not yet swapped)
+			initRemainingAmount := common.SafeSub(msg.State.Deposit, msg.State.In)
+
+			// Convert to RUNE value
+			initRuneValue := initRemainingAmount
+			if !msg.Tx.Coins[0].Asset.IsRune() {
+				// Only get pool if source asset is not RUNE
+				if initSourcePool, err := qs.mgr.Keeper().GetPool(ctx, msg.Tx.Coins[0].Asset.GetLayer1Asset()); err == nil && initSourcePool.IsAvailable() {
+					initRuneValue = initSourcePool.AssetValueInRune(initRemainingAmount)
+				} else {
+					initRuneValue = cosmos.ZeroUint()
 				}
+			}
+
+			// Convert RUNE to USD
+			if !initRuneValue.IsZero() && !dollarsPerRune.IsZero() {
+				usdValue := common.GetUncappedShare(initRuneValue, dollarsPerRune, cosmos.NewUint(common.One))
+				pairUsdValue = usdValue.String()
 			}
 
 			assetPairMap[pairKey] = &types.AssetPairSummary{
