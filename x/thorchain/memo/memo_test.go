@@ -1075,3 +1075,36 @@ func (s *MemoSuite) TestScientificNotationBoundaries(c *C) {
 		}
 	}
 }
+
+func (s *MemoSuite) TestReferenceWriteMemoValidation(c *C) {
+	ctx := s.ctx
+	k := s.k
+
+	// Test valid embedded memo
+	thorAddr := types.GetRandomTHORAddress()
+	validMemo := fmt.Sprintf("reference:ETH:=:THOR.RUNE:%s", thorAddr.String())
+	parsed, err := ParseMemoWithTHORNames(ctx, k, validMemo)
+	c.Assert(err, IsNil)
+	c.Assert(parsed.GetType(), Equals, TxReferenceWriteMemo)
+	refMemo, ok := parsed.(ReferenceWriteMemo)
+	c.Assert(ok, Equals, true)
+	c.Assert(refMemo.Memo, Equals, fmt.Sprintf("=:THOR.RUNE:%s", thorAddr.String()))
+
+	// Test invalid embedded memo - malformed swap
+	invalidMemo1 := "reference:ETH:=:INVALID_ASSET:address"
+	_, err = ParseMemoWithTHORNames(ctx, k, invalidMemo1)
+	c.Assert(err, Not(IsNil))
+	c.Assert(strings.Contains(err.Error(), "embedded memo is invalid"), Equals, true)
+
+	// Test invalid embedded memo - empty parts
+	invalidMemo2 := "reference:ETH:=:::"
+	_, err = ParseMemoWithTHORNames(ctx, k, invalidMemo2)
+	c.Assert(err, Not(IsNil))
+	c.Assert(strings.Contains(err.Error(), "embedded memo is invalid"), Equals, true)
+
+	// Test invalid embedded memo - completely malformed
+	invalidMemo3 := "reference:ETH:NOTAMEMO"
+	_, err = ParseMemoWithTHORNames(ctx, k, invalidMemo3)
+	c.Assert(err, Not(IsNil))
+	c.Assert(strings.Contains(err.Error(), "embedded memo is invalid"), Equals, true)
+}

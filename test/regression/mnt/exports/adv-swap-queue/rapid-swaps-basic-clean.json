@@ -385,6 +385,7 @@
               }
             }
           ],
+          "unfinalized_height": "5",
           "updated_vault": true
         },
         {
@@ -473,6 +474,7 @@
               }
             }
           ],
+          "unfinalized_height": "5",
           "updated_vault": true
         },
         {
@@ -624,6 +626,7 @@
               }
             }
           ],
+          "unfinalized_height": "9",
           "updated_vault": true
         }
       ],
@@ -663,6 +666,7 @@
           "synth_units": "0"
         }
       ],
+      "reference_memos": [],
       "reserve_contributors": null,
       "rune_pool": {
         "pool_units": "0",

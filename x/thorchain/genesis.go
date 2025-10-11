@@ -302,6 +302,13 @@ func initGenesis(ctx cosmos.Context, keeper keeper.Keeper, data GenesisState) []
 		keeper.SetSecuredAsset(ctx, a)
 	}
 
+	ttl := keeper.GetConfigInt64(ctx, constants.MemolessTxnTTL)
+	for _, ref := range data.ReferenceMemos {
+		if !ref.IsExpired(ctx.BlockHeight(), ttl) {
+			keeper.SetReferenceMemo(ctx, ref)
+		}
+	}
+
 	// Mint coins into the reserve
 	if data.Reserve > 0 {
 		coin := common.NewCoin(common.RuneNative, cosmos.NewUint(data.Reserve))
@@ -572,6 +579,19 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		vaults = append(vaults, vault)
 	}
 
+	ttl := k.GetConfigInt64(ctx, constants.MemolessTxnTTL)
+	memos := make([]ReferenceMemo, 0)
+	refIter := k.GetReferenceMemoIterator(ctx)
+	defer refIter.Close()
+	for ; refIter.Valid(); refIter.Next() {
+		var mem ReferenceMemo
+		k.Cdc().MustUnmarshal(refIter.Value(), &mem)
+		if mem.IsExpired(ctx.BlockHeight(), ttl) {
+			continue
+		}
+		memos = append(memos, mem)
+	}
+
 	swapMsgs := make([]MsgSwap, 0)
 	iterMsgSwap := k.GetAdvSwapQueueItemIterator(ctx)
 	defer iterMsgSwap.Close()
@@ -790,6 +810,7 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 		NodeAccounts:            nodeAccounts,
 		BondProviders:           bps,
 		Vaults:                  vaults,
+		ReferenceMemos:          memos,
 		LastSignedHeight:        lastSignedHeight,
 		LastChainHeights:        lastChainHeights,
 		Network:                 network,

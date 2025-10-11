@@ -85,6 +85,7 @@ type Keeper interface {
 	KeeperChainContract
 	KeeperSolvencyVoter
 	KeeperTHORName
+	KeeperReferenceMemo
 	KeeperHalt
 	KeeperAnchors
 	KeeperStreamingSwap
@@ -448,6 +449,17 @@ type KeeperVolume interface {
 	GetVolumeBucketIterator(ctx cosmos.Context, pool common.Asset) cosmos.Iterator
 	GetVolume(ctx cosmos.Context, pool common.Asset) (Volume, error)
 	SetVolume(ctx cosmos.Context, volume Volume) error
+}
+
+type KeeperReferenceMemo interface {
+	ReferenceMemoExists(ctx cosmos.Context, _ common.Asset, _ string) bool
+	GetReferenceMemo(ctx cosmos.Context, _ common.Asset, _ string) (ReferenceMemo, error)
+	GetReferenceMemoByTxnHash(ctx cosmos.Context, _ common.TxID) (ReferenceMemo, error)
+	SetReferenceMemo(ctx cosmos.Context, _ ReferenceMemo)
+	GetReferenceMemoIterator(ctx cosmos.Context) cosmos.Iterator
+	DeleteReferenceMemo(ctx cosmos.Context, _ common.Asset, _ string) error
+	GetLastReferenceNumber(ctx cosmos.Context, _ common.Asset) string
+	SetLastReferenceNumber(ctx cosmos.Context, _ common.Asset, _ string)
 }
 
 // NewKeeper creates new instances of the thorchain Keeper

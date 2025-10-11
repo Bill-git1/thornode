@@ -60,6 +60,9 @@ func processTxInAttestation(
 		if voter.FinalisedHeight == 0 {
 			ok = true
 			voter.Height = ctx.BlockHeight() // Always record the consensus height of the finalised Tx
+			if voter.UnfinalizedHeight == 0 {
+				voter.UnfinalizedHeight = voter.Height // Preserve first consensus height
+			}
 			voter.FinalisedHeight = ctx.BlockHeight()
 			voter.Tx = *voter.GetTx(nas)
 
@@ -84,6 +87,9 @@ func processTxInAttestation(
 		if voter.Height == 0 {
 			ok = true
 			voter.Height = ctx.BlockHeight()
+			if voter.UnfinalizedHeight == 0 {
+				voter.UnfinalizedHeight = voter.Height // Preserve first consensus height
+			}
 			// this is the tx that has consensus
 			voter.Tx = *voter.GetTx(nas)
 
@@ -168,10 +174,32 @@ func handleObservedTxInQuorum(
 
 	voter.Tx.Tx.Memo = tx.Tx.Memo
 
-	hasFinalised := voter.HasFinalised(activeNodeAccounts)
+	// add memo for memoless transactions (after consensus is reached)
+	if len(tx.Tx.Coins) > 0 {
+		// Use the asset from the first coin for reference memo lookup
+		asset := tx.Tx.Coins[0].Asset
+
+		// Generate reference memo for memoless transactions
+		if strings.TrimSpace(voter.Tx.Tx.Memo) == "" {
+			referenceID, err := generateReferenceMemoID(ctx, mgr, asset, tx)
+			if err != nil {
+				ctx.Logger().Error("failed to generate reference memo", "error", err, "txid", tx.Tx.ID.String())
+				// Continue without reference memo - will likely be refunded later due to empty memo
+			} else {
+				// Use ReferenceReadMemo's CreateMemo function
+				// Note: Reference memo expiry and duplicate usage validation is handled later in fetchMemoFromReference
+				refMemo := NewReferenceReadMemo(referenceID)
+				voter.Tx.Tx.Memo = refMemo.CreateMemo()
+			}
+		}
+
+	}
+
 	// memo errors are ignored here and will be caught later in processing,
 	// after vault update, voter setup, etc and the coin will be refunded
 	memo, _ := ParseMemoWithTHORNames(ctx, k, tx.Tx.Memo)
+
+	hasFinalised := voter.HasFinalised(activeNodeAccounts)
 
 	// Update vault balances from inbounds with Migrate memos immediately,
 	// to minimise any gap between outbound and inbound observations.
@@ -237,6 +265,16 @@ func handleObservedTxInQuorum(
 			ctx.Logger().Error("fail to refund", "error", newErr)
 		}
 		return nil
+	}
+
+	// Resolve reference memo if needed before processing
+	if len(tx.Tx.Coins) > 0 {
+		asset := tx.Tx.Coins[0].Asset
+		resolvedMemo := fetchMemoFromReference(ctx, mgr, asset, voter.Tx.Tx, voter.UnfinalizedHeight)
+		preMemo := voter.Tx.Tx.Memo
+		voter.Tx.Tx.Memo = resolvedMemo
+		ctx.Logger().Info("reference memo conversion", "pre", preMemo, "post", voter.Tx.Tx.Memo, "asset", asset)
+		k.SetObservedTxInVoter(ctx, voter)
 	}
 
 	// construct msg from memo
@@ -376,6 +414,9 @@ func processTxOutAttestation(
 				ok = true
 				// Record the consensus height at which outbound consensus actions are taken.
 				voter.Height = ctx.BlockHeight()
+				if voter.UnfinalizedHeight == 0 {
+					voter.UnfinalizedHeight = voter.Height // Preserve first consensus height
+				}
 			}
 			voter.FinalisedHeight = ctx.BlockHeight()
 			voter.Tx = *voter.GetTx(nas)
@@ -414,6 +455,9 @@ func processTxOutAttestation(
 			// Record the consensus height at which outbound consensus actions are taken,
 			// even if not yet Finalised.
 			voter.Height = ctx.BlockHeight()
+			if voter.UnfinalizedHeight == 0 {
+				voter.UnfinalizedHeight = voter.Height // Preserve first consensus height
+			}
 			// this is the tx that has consensus
 			voter.Tx = *voter.GetTx(nas)
 
@@ -604,4 +648,162 @@ func handleObservedTxOutQuorum(
 	ctx.Logger().Info("tx out processed", "chain", tx.Tx.Chain, "id", tx.Tx.ID, "finalized", tx.IsFinal())
 
 	return nil
+}
+
+// fetchMemoFromReference fetches memo from reference if it's a memoless transaction
+func fetchMemoFromReference(ctx cosmos.Context, mgr Manager, asset common.Asset, tx common.Tx, txObservationHeight int64) string {
+	mem, err := ParseMemoWithTHORNames(ctx, mgr.Keeper(), tx.Memo)
+	if err != nil {
+		ctx.Logger().Debug("failed to parse memo in fetchMemoFromReference", "error", err, "memo", tx.Memo, "txid", tx.ID)
+	}
+	if mem.GetType() == TxReferenceReadMemo {
+		m, ok := mem.(ReferenceReadMemo)
+		if !ok {
+			return tx.Memo
+		}
+		// Check if memoless transactions are halted
+		haltMemoless, err := mgr.Keeper().GetMimir(ctx, constants.HaltMemoless.String())
+		if err == nil && haltMemoless > 0 {
+			return ""
+		}
+
+		refMemo, err := mgr.Keeper().GetReferenceMemo(ctx, asset, m.Reference)
+		if err != nil {
+			ctx.Logger().Error("unable to fetch pool for ref memo lookup", "error", err, "asset", asset)
+			return ""
+		}
+
+		// Ensure transaction was observed after the reference memo was created
+		if txObservationHeight <= refMemo.Height {
+			ctx.Logger().Info("transaction observed before reference memo creation", "tx_height", txObservationHeight, "memo_height", refMemo.Height, "reference", m.Reference)
+			// Track failure usage
+			trackReferenceMemoUsage(ctx, mgr, asset, tx.Memo, tx.ID)
+			return ""
+		}
+
+		ttl := mgr.Keeper().GetConfigInt64(ctx, constants.MemolessTxnTTL)
+		if !refMemo.IsExpired(ctx.BlockHeight(), ttl) {
+			// Check usage limit
+			maxUse := mgr.Keeper().GetConfigInt64(ctx, constants.MemolessTxnMaxUse)
+			if maxUse > 0 && refMemo.GetUsageCount() >= maxUse {
+				ctx.Logger().Info("reference memo usage limit exceeded in fetchMemoFromReference", "reference", m.Reference, "usage_count", refMemo.GetUsageCount(), "max_use", maxUse)
+
+				// Track failure usage
+				trackReferenceMemoUsage(ctx, mgr, asset, tx.Memo, tx.ID)
+				return ""
+			}
+
+			// Track successful usage
+			trackReferenceMemoUsage(ctx, mgr, asset, tx.Memo, tx.ID)
+			return refMemo.Memo
+		}
+
+		// Track failure usage
+		trackReferenceMemoUsage(ctx, mgr, asset, tx.Memo, tx.ID)
+		return ""
+	}
+	return tx.Memo
+}
+
+// trackReferenceMemoUsage tracks that a transaction has used a reference memo
+func trackReferenceMemoUsage(ctx cosmos.Context, mgr Manager, asset common.Asset, memo string, txID common.TxID) {
+	mem, _ := ParseMemo(mgr.GetVersion(), memo) // ignore err
+	if mem.GetType() == TxReferenceReadMemo {
+		m, ok := mem.(ReferenceReadMemo)
+		if !ok {
+			return
+		}
+
+		refMemo, err := mgr.Keeper().GetReferenceMemo(ctx, asset, m.Reference)
+		if err != nil {
+			ctx.Logger().Error("fail to get reference memo for usage tracking", "error", err)
+			return
+		}
+
+		// Check if already used by this transaction
+		if refMemo.HasBeenUsedBy(txID) {
+			// Already tracked, nothing to do
+			return
+		}
+
+		// Add this transaction to the usage list (with duplicate protection)
+		if refMemo.AddUsage(txID) {
+			mgr.Keeper().SetReferenceMemo(ctx, refMemo)
+			maxUse := mgr.Keeper().GetConfigInt64(ctx, constants.MemolessTxnMaxUse)
+			ctx.Logger().Info("reference memo usage tracked", "reference", m.Reference, "usage_count", refMemo.GetUsageCount(), "max_use", maxUse, "txid", txID, "asset", asset, "memo", refMemo.Memo)
+		}
+	}
+}
+
+func generateReferenceMemoID(ctx cosmos.Context, mgr Manager, asset common.Asset, tx common.ObservedTx) (string, error) {
+	if len(tx.Tx.Coins) == 0 {
+		return "", fmt.Errorf("no coins in transaction for reference generation")
+	}
+
+	amount := tx.Tx.Coins[0].Amount.Uint64()
+	return ExtractReferenceFromAmount(ctx, mgr, asset, amount)
+}
+
+// ExtractReferenceFromAmount extracts the reference ID from a transaction amount.
+// This is the core logic shared by both the handler (generateReferenceMemoID)
+// and the querier (queryReferenceMemoPreflight).
+func ExtractReferenceFromAmount(ctx cosmos.Context, mgr Manager, asset common.Asset, amount uint64) (string, error) {
+	if asset.IsEmpty() {
+		return "", fmt.Errorf("asset is empty for reference generation")
+	}
+
+	if amount == 0 {
+		return "", fmt.Errorf("zero amount in transaction for reference generation")
+	}
+
+	var decimals int64
+	if asset.IsGasAsset() {
+		decimals = asset.Chain.GetGasAssetDecimal()
+	} else {
+		pool, err := mgr.Keeper().GetPool(ctx, asset)
+		if err != nil {
+			ctx.Logger().Error("unable to fetch pool for ref memo", "error", err)
+			return "", err
+		}
+		decimals = pool.Decimals
+	}
+
+	baseEnd := mgr.Keeper().GetConfigInt64(ctx, constants.MemolessTxnRefCount)
+	txnRefLength := len(fmt.Sprintf("%d", baseEnd))
+
+	// Prevent overflow: uint64 max is ~1.8e19, so max safe length is 19 digits
+	const maxRefLength = 19
+	if txnRefLength > maxRefLength {
+		return "", fmt.Errorf("reference length %d exceeds maximum %d to prevent overflow", txnRefLength, maxRefLength)
+	}
+
+	// Calculate modulus based on reference length (10^txnRefLength)
+	var modulus uint64 = 1
+	if baseEnd > 0 {
+		for i := 0; i < txnRefLength; i++ {
+			modulus *= 10
+		}
+	}
+
+	// Normalize amount to THORChain decimals.
+	if decimals < int64(common.THORChainDecimals) {
+		divisor := int64(1)
+		for i := decimals; i < int64(common.THORChainDecimals); i++ {
+			divisor *= 10
+		}
+		amount /= uint64(divisor)
+	}
+
+	// Extract reference from the amount.
+	refNum := amount % modulus
+
+	// Zero references are not allowed as they would create ambiguous reference IDs.
+	// This occurs when the amount (after decimal normalization) is exactly divisible
+	// by the modulus (e.g., 50000000 sat with modulus 100 → ref 0).
+	// Users should adjust their amount slightly to avoid this edge case.
+	if refNum == 0 {
+		return "", fmt.Errorf("zero reference from amount is invalid: amount %d is divisible by modulus %d", amount, modulus)
+	}
+
+	return leadingZeros(txnRefLength, fmt.Sprintf("%d", refNum)), nil
 }

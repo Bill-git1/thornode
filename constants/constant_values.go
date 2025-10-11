@@ -157,6 +157,7 @@ const (
 	TCYClaimingHalt
 	HaltRebond
 	HaltOperatorRotate
+	HaltMemoless
 	RequiredPriceFeeds
 	HaltOracle
 	OracleUpdateInterval
@@ -174,6 +175,10 @@ const (
 	MintSynths
 	NumberOfNewNodesPerChurn
 	SignerConcurrency
+	MemolessTxnTTL
+	MemolessTxnRefCount
+	MemolessTxnCost
+	MemolessTxnMaxUse
 	StrictBondLiquidityRatio
 	SwapOutDexAggregationDisabled
 )

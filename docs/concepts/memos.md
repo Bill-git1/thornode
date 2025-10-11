@@ -53,6 +53,7 @@ The following functions can be put into a memo:
 1. [**BOND**, **UNBOND**, **REBOND** & **LEAVE**](memos.md#bond-unbond-rebond-and-leave)
 1. [**OPERATOR Rotate**](memos.md#operator-rotate)
 1. [**DONATE** & **RESERVE**](memos.md#donate--reserve)
+1. [**REFERENCE MEMO** - Memoless Transactions](memos.md#reference-memo---memoless-transactions)
 1. [**MIGRATE**](memos.md#migrate)
 1. [**NOOP**](memos.md#noop)
 1. [**Other Internal Memos**](memos.md#other-internal-memos)
@@ -485,6 +486,114 @@ Donate to the THORChain Reserve.
 | --------- | -------------------- | -------------------------------------------- |
 | Payload   | THOR.RUNE            | The RUNE to credit to the THORChain Reserve. |
 | `RESERVE` | The reserve handler. |                                              |
+
+### REFERENCE MEMO - Memoless Transactions
+
+Memoless transactions allow users to register a memo on THORChain and then reference it in future transactions using a short reference number encoded in the transaction amount. This enables transactions on chains with limited memo space (like Bitcoin's 80-byte OP_RETURN limit) by eliminating the need to include lengthy memos.
+
+For detailed integration information, see [Memoless Transactions](../memoless-transactions.md) and [Wallet Integration Guide](../wallet-integration-memoless.md).
+
+#### Register Reference Memo
+
+Register a memo for future memoless transactions.
+
+**`REFERENCE:ASSET:MEMO`**
+
+| Parameter   | Notes                                                   | Conditions                                           |
+| ----------- | ------------------------------------------------------- | ---------------------------------------------------- |
+| Payload     | THOR.RUNE                                               | [Dust thresholds](#dust-thresholds) must be met.     |
+| `REFERENCE` | The reference memo registration handler.                | Also `reference`                                     |
+| `:ASSET`    | The [asset identifier](asset-notation.md) for the memo. | Must be an active asset on THORChain.                |
+| `:MEMO`     | The memo to register for memoless transactions.         | Any valid THORChain memo (swap, add liquidity, etc.) |
+
+**Transaction Flow:**
+
+1. User sends RUNE with `REFERENCE:BTC.BTC:=:ETH.ETH:0xADDRESS` memo
+2. THORChain assigns a reference number (e.g., 20002)
+3. User can now use this reference for future BTC transactions
+
+#### Use Reference Memo (Explicit)
+
+Use a previously registered reference memo explicitly in a transaction.
+
+**`R:REFERENCE`**
+
+| Parameter    | Notes                                              | Conditions                                     |
+| ------------ | -------------------------------------------------- | ---------------------------------------------- |
+| Payload      | The asset for the memoless transaction.            | Must match the asset registered in the memo.   |
+| `R`          | The reference memo usage handler.                  | Also `r`                                       |
+| `:REFERENCE` | The reference number assigned during registration. | Must be a valid, non-expired reference number. |
+
+#### Use Reference Memo (Amount-Encoded)
+
+For truly memoless transactions, the reference ID is encoded in the transaction amount itself, eliminating the need for any memo.
+
+**Transaction Amount Encoding:**
+
+The reference number is embedded in the last digits of the transaction amount. Native assets with greater than 8 decimals should encode the reference in the last digits of the amount when normalized to 8 decimals:
+
+- **BTC (8 decimals)**: Send `0.00020003 BTC` → Reference `20003`
+- **ETH (18 decimals)**: Send `0.00020003 ETH` → Reference `20003`
+- **ATOM (6 decimals)**: Send `0.020003 ATOM` → Reference `20003`
+
+**How It Works:**
+
+1. User registers memo with `REFERENCE:BTC.BTC:=:ETH.ETH:0xADDRESS`
+2. THORChain assigns reference `20003`
+3. User sends `0.00020003 BTC` with **empty memo**
+4. THORChain extracts `20003` from the amount and resolves the registered memo
+5. Swap executes as if user sent the full memo
+
+**Important Considerations:**
+
+- The reference number must be encoded in the **normalized amount** (after decimal conversion)
+- Zero references (e.g., `0.00020000 BTC`) are rejected as invalid
+- The reference must exist and not be expired at transaction observation time
+- Transactions observed before the reference registration height are rejected
+
+**Configuration:**
+
+- **TTL (Time To Live)**: `MemolessTxnTTL` - Reference memos expire after a configurable number of blocks (default: 3600 blocks ≈ 6 hours)
+- **Reference Range**: `MemolessTxnRefCount` - Reference numbers range from 1 to this value (default: 99999)
+- **Cost**: `MemolessTxnCost` - Optional RUNE cost for registering reference memos (default: 0). Only charged on successful registration.
+- **Max Usage**: `MemolessTxnMaxUse` - Maximum number of times a reference can be used (default: 0 = unlimited)
+- **HaltMemoless**: Operational mimir to emergency halt all memoless functionality
+
+**Examples:**
+
+Registration:
+
+- `REFERENCE:BTC.BTC:=:ETH.ETH:0x1c7b17362c84287bd1184447e6dfeaf920c31bbe`
+  - Registers a swap from BTC to ETH memo for the specified address
+  - Returns reference number (e.g., 20002)
+  - Cost is only deducted if registration succeeds
+
+Usage (Explicit):
+
+- `R:20002` - Uses the registered memo with reference number 20002
+- The actual swap will be executed using the originally registered memo
+
+Usage (Amount-Encoded):
+
+- Send `0.00020002 BTC` with empty memo
+- THORChain extracts reference `20002` and resolves the registered swap memo
+- Swap executes to ETH address `0x1c7b17362c84287bd1184447e6dfeaf920c31bbe`
+
+**API Endpoints:**
+
+- `GET /thorchain/memo/{asset}/{reference}` - Retrieve memo by asset and reference number
+- `GET /thorchain/memo/{registration_hash}` - Retrieve memo by registration transaction hash
+- `GET /thorchain/memo/check/{asset}/{amount}` - Pre-flight check: preview reference from amount and check availability
+
+**Pre-Flight Checking:**
+
+Before sending a memoless transaction, wallets should use the pre-flight API to verify:
+
+- What reference will be extracted from the transaction amount
+- Whether the reference is available or already registered
+- When an existing registration expires
+- Usage count vs. max usage limit
+- Whether a new registration would succeed
 
 ### BOND, UNBOND, REBOND and LEAVE
 

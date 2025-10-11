@@ -91,6 +91,9 @@ const (
 	prefixSolvencyVoter           types.DbPrefix = "solvency_voter/"
 	prefixTHORName                types.DbPrefix = "thorname/"
 	prefixAffiliateCollector      types.DbPrefix = "affcol/"
+	prefixReferenceMemo           types.DbPrefix = "refm/"
+	prefixReferenceMemoIndex      types.DbPrefix = "refmi/"
+	prefixReferenceMemoHash       types.DbPrefix = "refmh/"
 	prefixRollingPoolLiquidityFee types.DbPrefix = "rolling_pool_liquidity_fee/"
 	prefixVersion                 types.DbPrefix = "version/"
 	prefixUpgradeProposals        types.DbPrefix = "upgr_props/"
@@ -260,6 +263,32 @@ func (k KVStore) getAccAddresses(ctx cosmos.Context, key []byte, record *[]cosmo
 
 	var value ProtoAccAddresses
 	bz := store.Get(key)
+	if err := k.cdc.Unmarshal(bz, &value); err != nil {
+		return true, dbError(ctx, fmt.Sprintf("Unmarshal kvstore: (%T) %s", record, key), err)
+	}
+	*record = value.Value
+	return true, nil
+}
+
+func (k KVStore) setString(ctx cosmos.Context, key, record string) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	value := ProtoString{Value: record}
+	buf := k.cdc.MustMarshal(&value)
+	if buf == nil {
+		store.Delete([]byte(key))
+	} else {
+		store.Set([]byte(key), buf)
+	}
+}
+
+func (k KVStore) getString(ctx cosmos.Context, key string, record *string) (bool, error) {
+	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
+	if !store.Has([]byte(key)) {
+		return false, nil
+	}
+
+	var value ProtoString
+	bz := store.Get([]byte(key))
 	if err := k.cdc.Unmarshal(bz, &value); err != nil {
 		return true, dbError(ctx, fmt.Sprintf("Unmarshal kvstore: (%T) %s", record, key), err)
 	}

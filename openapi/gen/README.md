@@ -128,6 +128,9 @@ Class | Method | HTTP request | Description
 *RUNEPoolApi* | [**RunePool**](docs/RUNEPoolApi.md#runepool) | **Get** /thorchain/runepool | 
 *RUNEPoolApi* | [**RuneProvider**](docs/RUNEPoolApi.md#runeprovider) | **Get** /thorchain/rune_provider/{address} | 
 *RUNEPoolApi* | [**RuneProviders**](docs/RUNEPoolApi.md#runeproviders) | **Get** /thorchain/rune_providers | 
+*ReferenceMemosApi* | [**ReferenceMemo**](docs/ReferenceMemosApi.md#referencememo) | **Get** /thorchain/memo/{asset}/{reference} | 
+*ReferenceMemosApi* | [**ReferenceMemoByHash**](docs/ReferenceMemosApi.md#referencememobyhash) | **Get** /thorchain/memo/{hash} | 
+*ReferenceMemosApi* | [**ReferenceMemoCheck**](docs/ReferenceMemosApi.md#referencememocheck) | **Get** /thorchain/memo/check/{asset}/{amount} | 
 *SaversApi* | [**Saver**](docs/SaversApi.md#saver) | **Get** /thorchain/pool/{asset}/saver/{address} | 
 *SaversApi* | [**Savers**](docs/SaversApi.md#savers) | **Get** /thorchain/pool/{asset}/savers | 
 *SecuredAssetApi* | [**SecuredAsset**](docs/SecuredAssetApi.md#securedasset) | **Get** /thorchain/securedasset/{asset} | 
@@ -239,6 +242,8 @@ Class | Method | HTTP request | Description
  - [RUNEPoolResponseProviders](docs/RUNEPoolResponseProviders.md)
  - [RUNEPoolResponseReserve](docs/RUNEPoolResponseReserve.md)
  - [RUNEProvider](docs/RUNEProvider.md)
+ - [ReferenceMemoPreflightResponse](docs/ReferenceMemoPreflightResponse.md)
+ - [ReferenceMemoResponse](docs/ReferenceMemoResponse.md)
  - [Saver](docs/Saver.md)
  - [SecuredAssetResponse](docs/SecuredAssetResponse.md)
  - [StreamingStatus](docs/StreamingStatus.md)

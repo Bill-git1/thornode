@@ -55,6 +55,7 @@ import "types/query_tcy_claimers.proto";
 import "types/query_codes.proto";
 import "types/query_oracle_price.proto";
 import "types/query_eip712.proto";
+import "types/query_reference_memo.proto";
 
 option (gogoproto.marshaler_all) = true;
 
@@ -425,5 +426,20 @@ service Query {
   rpc Eip712TypedData(QueryEip712TypedDataRequest)
       returns (QueryEip712TypedDataResponse) {
     option (google.api.http).get = "/thorchain/eip715/tx";
+  }
+
+  rpc ReferenceMemo(QueryReferenceMemoRequest)
+      returns (QueryReferenceMemoResponse) {
+    option (google.api.http).get = "/thorchain/memo/{asset}/{reference}";
+  }
+
+  rpc ReferenceMemoByHash(QueryReferenceMemoByHashRequest)
+      returns (QueryReferenceMemoByHashResponse) {
+    option (google.api.http).get = "/thorchain/memo/{hash}";
+  }
+
+  rpc ReferenceMemoPreflight(QueryReferenceMemoPreflightRequest)
+      returns (QueryReferenceMemoPreflightResponse) {
+    option (google.api.http).get = "/thorchain/memo/check/{asset}/{amount}";
   }
 }

@@ -20,6 +20,7 @@ api_pool_slip.go
 api_pools.go
 api_queue.go
 api_quote.go
+api_reference_memos.go
 api_rune_pool.go
 api_savers.go
 api_secured_asset.go
@@ -134,6 +135,9 @@ docs/RUNEPoolResponse.md
 docs/RUNEPoolResponseProviders.md
 docs/RUNEPoolResponseReserve.md
 docs/RUNEProvider.md
+docs/ReferenceMemoPreflightResponse.md
+docs/ReferenceMemoResponse.md
+docs/ReferenceMemosApi.md
 docs/Saver.md
 docs/SaversApi.md
 docs/SecuredAssetApi.md
@@ -260,6 +264,8 @@ model_quote_loan_open_response.go
 model_quote_saver_deposit_response.go
 model_quote_saver_withdraw_response.go
 model_quote_swap_response.go
+model_reference_memo_preflight_response.go
+model_reference_memo_response.go
 model_rune_pool_response.go
 model_rune_pool_response_providers.go
 model_rune_pool_response_reserve.go

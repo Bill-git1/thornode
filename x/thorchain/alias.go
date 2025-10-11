@@ -78,28 +78,29 @@ const (
 	BurnSupplyType = types.MintBurnSupplyType_burn
 
 	// Memos
-	TxSwap            = mem.TxSwap
-	TxLimitSwap       = mem.TxLimitSwap
-	TxModifyLimitSwap = mem.TxModifyLimitSwap
-	TxAdd             = mem.TxAdd
-	TxBond            = mem.TxBond
-	TxMigrate         = mem.TxMigrate
-	TxRagnarok        = mem.TxRagnarok
-	TxReserve         = mem.TxReserve
-	TxOutbound        = mem.TxOutbound
-	TxRefund          = mem.TxRefund
-	TxUnBond          = mem.TxUnbond
-	TxRebond          = mem.TxRebond
-	TxLeave           = mem.TxLeave
-	TxMaint           = mem.TxMaint
-	TxWithdraw        = mem.TxWithdraw
-	TxTHORName        = mem.TxTHORName
-	TxLoanOpen        = mem.TxLoanOpen
-	TxLoanRepayment   = mem.TxLoanRepayment
-	TxTCYClaim        = mem.TxTCYClaim
-	TxTCYStake        = mem.TxTCYStake
-	TxTCYUnstake      = mem.TxTCYUnstake
-	TxOperatorRotate  = mem.TxOperatorRotate
+	TxSwap              = mem.TxSwap
+	TxLimitSwap         = mem.TxLimitSwap
+	TxModifyLimitSwap   = mem.TxModifyLimitSwap
+	TxAdd               = mem.TxAdd
+	TxBond              = mem.TxBond
+	TxMigrate           = mem.TxMigrate
+	TxRagnarok          = mem.TxRagnarok
+	TxReserve           = mem.TxReserve
+	TxOutbound          = mem.TxOutbound
+	TxRefund            = mem.TxRefund
+	TxUnBond            = mem.TxUnbond
+	TxRebond            = mem.TxRebond
+	TxLeave             = mem.TxLeave
+	TxMaint             = mem.TxMaint
+	TxWithdraw          = mem.TxWithdraw
+	TxTHORName          = mem.TxTHORName
+	TxLoanOpen          = mem.TxLoanOpen
+	TxLoanRepayment     = mem.TxLoanRepayment
+	TxReferenceReadMemo = mem.TxReferenceReadMemo
+	TxTCYClaim          = mem.TxTCYClaim
+	TxTCYStake          = mem.TxTCYStake
+	TxTCYUnstake        = mem.TxTCYUnstake
+	TxOperatorRotate    = mem.TxOperatorRotate
 )
 
 var (
@@ -139,6 +140,7 @@ var (
 	NewKeygenBlock                 = types.NewKeygenBlock
 	NewMsgSetNodeKeys              = types.NewMsgSetNodeKeys
 	NewMsgManageTHORName           = types.NewMsgManageTHORName
+	NewMsgReferenceMemo            = types.NewMsgReferenceMemo
 	NewMsgSwitch                   = types.NewMsgSwitch
 	NewMsgOperatorRotate           = types.NewMsgOperatorRotate
 	NewMsgPriceFeedQuorumBatch     = types.NewMsgPriceFeedQuorumBatch
@@ -218,6 +220,7 @@ var (
 	NewMsgWasmExec                 = types.NewMsgWasmExec
 	NewNetworkFee                  = types.NewNetworkFee
 	NewTHORName                    = types.NewTHORName
+	NewReferenceMemo               = types.NewReferenceMemo
 	NewLoan                        = types.NewLoan
 	NewStreamingSwap               = types.NewStreamingSwap
 	GetPoolStatus                  = types.GetPoolStatus
@@ -262,6 +265,7 @@ var (
 	NewOutboundMemo        = mem.NewOutboundMemo
 	NewRagnarokMemo        = mem.NewRagnarokMemo
 	NewMigrateMemo         = mem.NewMigrateMemo
+	NewReferenceReadMemo   = mem.NewReferenceReadMemo
 
 	FetchDexAggregator         = aggregators.FetchDexAggregator
 	FetchDexAggregatorGasLimit = aggregators.FetchDexAggregatorGasLimit
@@ -308,6 +312,7 @@ type (
 	MsgTssKeysignFail         = types.MsgTssKeysignFail
 	MsgNetworkFee             = types.MsgNetworkFee
 	MsgManageTHORName         = types.MsgManageTHORName
+	MsgReferenceMemo          = types.MsgReferenceMemo
 	MsgSolvency               = types.MsgSolvency
 	MsgLoanOpen               = types.MsgLoanOpen
 	MsgLoanRepayment          = types.MsgLoanRepayment
@@ -384,6 +389,7 @@ type (
 	ChainContract            = types.ChainContract
 	Blame                    = types.Blame
 	Node                     = types.Node
+	ReferenceMemo            = types.ReferenceMemo
 	THORName                 = types.THORName
 	THORNameAlias            = types.THORNameAlias
 	AffiliateFeeCollector    = types.AffiliateFeeCollector
@@ -418,6 +424,8 @@ type (
 	NoOpMemo                   = mem.NoOpMemo
 	ConsolidateMemo            = mem.ConsolidateMemo
 	ManageTHORNameMemo         = mem.ManageTHORNameMemo
+	ReferenceWriteMemo         = mem.ReferenceWriteMemo
+	ReferenceReadMemo          = mem.ReferenceReadMemo
 	TradeAccountDepositMemo    = mem.TradeAccountDepositMemo
 	TradeAccountWithdrawalMemo = mem.TradeAccountWithdrawalMemo
 	SecuredAssetDepositMemo    = mem.SecuredAssetDepositMemo

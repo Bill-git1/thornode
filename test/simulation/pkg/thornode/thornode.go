@@ -209,6 +209,13 @@ func GetBlock(height int64) (openapi.BlockResponse, error) {
 	return block, err
 }
 
+func GetMemoHash(txid string) (openapi.ReferenceMemoResponse, error) {
+	url := fmt.Sprintf("%s/thorchain/memo/%s", thornodeURL, txid)
+	var memoHash openapi.ReferenceMemoResponse
+	err := Get(url, &memoHash)
+	return memoHash, err
+}
+
 func Get(url string, target interface{}) error {
 	resp, err := httpClient.Get(url)
 	if err != nil {
@@ -235,6 +242,12 @@ func Get(url string, target interface{}) error {
 	err = json.Unmarshal(buf, &errResp)
 	if err == nil && errResp.Code != 0 && errResp.Message != "" {
 		return fmt.Errorf("code: %d, message: %s", errResp.Code, errResp.Message)
+	}
+
+	// if target is a *[]byte, return the raw response
+	if byteTarget, ok := target.(*[]byte); ok {
+		*byteTarget = buf
+		return nil
 	}
 
 	// decode response

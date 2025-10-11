@@ -168,17 +168,18 @@ func (x *_ObservedTxVoter_6_list) IsValid() bool {
 }
 
 var (
-	md_ObservedTxVoter                  protoreflect.MessageDescriptor
-	fd_ObservedTxVoter_tx_id            protoreflect.FieldDescriptor
-	fd_ObservedTxVoter_tx               protoreflect.FieldDescriptor
-	fd_ObservedTxVoter_height           protoreflect.FieldDescriptor
-	fd_ObservedTxVoter_txs              protoreflect.FieldDescriptor
-	fd_ObservedTxVoter_actions          protoreflect.FieldDescriptor
-	fd_ObservedTxVoter_out_txs          protoreflect.FieldDescriptor
-	fd_ObservedTxVoter_finalised_height protoreflect.FieldDescriptor
-	fd_ObservedTxVoter_updated_vault    protoreflect.FieldDescriptor
-	fd_ObservedTxVoter_reverted         protoreflect.FieldDescriptor
-	fd_ObservedTxVoter_outbound_height  protoreflect.FieldDescriptor
+	md_ObservedTxVoter                    protoreflect.MessageDescriptor
+	fd_ObservedTxVoter_tx_id              protoreflect.FieldDescriptor
+	fd_ObservedTxVoter_tx                 protoreflect.FieldDescriptor
+	fd_ObservedTxVoter_height             protoreflect.FieldDescriptor
+	fd_ObservedTxVoter_txs                protoreflect.FieldDescriptor
+	fd_ObservedTxVoter_actions            protoreflect.FieldDescriptor
+	fd_ObservedTxVoter_out_txs            protoreflect.FieldDescriptor
+	fd_ObservedTxVoter_finalised_height   protoreflect.FieldDescriptor
+	fd_ObservedTxVoter_updated_vault      protoreflect.FieldDescriptor
+	fd_ObservedTxVoter_reverted           protoreflect.FieldDescriptor
+	fd_ObservedTxVoter_outbound_height    protoreflect.FieldDescriptor
+	fd_ObservedTxVoter_unfinalized_height protoreflect.FieldDescriptor
 )
 
 func init() {
@@ -194,6 +195,7 @@ func init() {
 	fd_ObservedTxVoter_updated_vault = md_ObservedTxVoter.Fields().ByName("updated_vault")
 	fd_ObservedTxVoter_reverted = md_ObservedTxVoter.Fields().ByName("reverted")
 	fd_ObservedTxVoter_outbound_height = md_ObservedTxVoter.Fields().ByName("outbound_height")
+	fd_ObservedTxVoter_unfinalized_height = md_ObservedTxVoter.Fields().ByName("unfinalized_height")
 }
 
 var _ protoreflect.Message = (*fastReflection_ObservedTxVoter)(nil)
@@ -321,6 +323,12 @@ func (x *fastReflection_ObservedTxVoter) Range(f func(protoreflect.FieldDescript
 			return
 		}
 	}
+	if x.UnfinalizedHeight != int64(0) {
+		value := protoreflect.ValueOfInt64(x.UnfinalizedHeight)
+		if !f(fd_ObservedTxVoter_unfinalized_height, value) {
+			return
+		}
+	}
 }
 
 // Has reports whether a field is populated.
@@ -356,6 +364,8 @@ func (x *fastReflection_ObservedTxVoter) Has(fd protoreflect.FieldDescriptor) bo
 		return x.Reverted != false
 	case "types.ObservedTxVoter.outbound_height":
 		return x.OutboundHeight != int64(0)
+	case "types.ObservedTxVoter.unfinalized_height":
+		return x.UnfinalizedHeight != int64(0)
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.ObservedTxVoter"))
@@ -392,6 +402,8 @@ func (x *fastReflection_ObservedTxVoter) Clear(fd protoreflect.FieldDescriptor) 
 		x.Reverted = false
 	case "types.ObservedTxVoter.outbound_height":
 		x.OutboundHeight = int64(0)
+	case "types.ObservedTxVoter.unfinalized_height":
+		x.UnfinalizedHeight = int64(0)
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.ObservedTxVoter"))
@@ -447,6 +459,9 @@ func (x *fastReflection_ObservedTxVoter) Get(descriptor protoreflect.FieldDescri
 	case "types.ObservedTxVoter.outbound_height":
 		value := x.OutboundHeight
 		return protoreflect.ValueOfInt64(value)
+	case "types.ObservedTxVoter.unfinalized_height":
+		value := x.UnfinalizedHeight
+		return protoreflect.ValueOfInt64(value)
 	default:
 		if descriptor.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.ObservedTxVoter"))
@@ -493,6 +508,8 @@ func (x *fastReflection_ObservedTxVoter) Set(fd protoreflect.FieldDescriptor, va
 		x.Reverted = value.Bool()
 	case "types.ObservedTxVoter.outbound_height":
 		x.OutboundHeight = value.Int()
+	case "types.ObservedTxVoter.unfinalized_height":
+		x.UnfinalizedHeight = value.Int()
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.ObservedTxVoter"))
@@ -548,6 +565,8 @@ func (x *fastReflection_ObservedTxVoter) Mutable(fd protoreflect.FieldDescriptor
 		panic(fmt.Errorf("field reverted of message types.ObservedTxVoter is not mutable"))
 	case "types.ObservedTxVoter.outbound_height":
 		panic(fmt.Errorf("field outbound_height of message types.ObservedTxVoter is not mutable"))
+	case "types.ObservedTxVoter.unfinalized_height":
+		panic(fmt.Errorf("field unfinalized_height of message types.ObservedTxVoter is not mutable"))
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.ObservedTxVoter"))
@@ -584,6 +603,8 @@ func (x *fastReflection_ObservedTxVoter) NewField(fd protoreflect.FieldDescripto
 	case "types.ObservedTxVoter.reverted":
 		return protoreflect.ValueOfBool(false)
 	case "types.ObservedTxVoter.outbound_height":
+		return protoreflect.ValueOfInt64(int64(0))
+	case "types.ObservedTxVoter.unfinalized_height":
 		return protoreflect.ValueOfInt64(int64(0))
 	default:
 		if fd.IsExtension() {
@@ -695,6 +716,9 @@ func (x *fastReflection_ObservedTxVoter) ProtoMethods() *protoiface.Methods {
 		if x.OutboundHeight != 0 {
 			n += 1 + runtime.Sov(uint64(x.OutboundHeight))
 		}
+		if x.UnfinalizedHeight != 0 {
+			n += 1 + runtime.Sov(uint64(x.UnfinalizedHeight))
+		}
 		if x.unknownFields != nil {
 			n += len(x.unknownFields)
 		}
@@ -723,6 +747,11 @@ func (x *fastReflection_ObservedTxVoter) ProtoMethods() *protoiface.Methods {
 		if x.unknownFields != nil {
 			i -= len(x.unknownFields)
 			copy(dAtA[i:], x.unknownFields)
+		}
+		if x.UnfinalizedHeight != 0 {
+			i = runtime.EncodeVarint(dAtA, i, uint64(x.UnfinalizedHeight))
+			i--
+			dAtA[i] = 0x58
 		}
 		if x.OutboundHeight != 0 {
 			i = runtime.EncodeVarint(dAtA, i, uint64(x.OutboundHeight))
@@ -1144,6 +1173,25 @@ func (x *fastReflection_ObservedTxVoter) ProtoMethods() *protoiface.Methods {
 						break
 					}
 				}
+			case 11:
+				if wireType != 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field UnfinalizedHeight", wireType)
+				}
+				x.UnfinalizedHeight = 0
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					x.UnfinalizedHeight |= int64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
 			default:
 				iNdEx = preIndex
 				skippy, err := runtime.Skip(dAtA[iNdEx:])
@@ -1197,16 +1245,17 @@ type ObservedTxVoter struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	TxId            string               `protobuf:"bytes,1,opt,name=tx_id,json=txId,proto3" json:"tx_id,omitempty"`
-	Tx              *common.ObservedTx   `protobuf:"bytes,2,opt,name=tx,proto3" json:"tx,omitempty"`
-	Height          int64                `protobuf:"varint,3,opt,name=height,proto3" json:"height,omitempty"`
-	Txs             []*common.ObservedTx `protobuf:"bytes,4,rep,name=txs,proto3" json:"txs,omitempty"`
-	Actions         []*TxOutItem         `protobuf:"bytes,5,rep,name=actions,proto3" json:"actions,omitempty"`
-	OutTxs          []*common.Tx         `protobuf:"bytes,6,rep,name=out_txs,json=outTxs,proto3" json:"out_txs,omitempty"`
-	FinalisedHeight int64                `protobuf:"varint,7,opt,name=finalised_height,json=finalisedHeight,proto3" json:"finalised_height,omitempty"`
-	UpdatedVault    bool                 `protobuf:"varint,8,opt,name=updated_vault,json=updatedVault,proto3" json:"updated_vault,omitempty"`
-	Reverted        bool                 `protobuf:"varint,9,opt,name=reverted,proto3" json:"reverted,omitempty"`
-	OutboundHeight  int64                `protobuf:"varint,10,opt,name=outbound_height,json=outboundHeight,proto3" json:"outbound_height,omitempty"`
+	TxId              string               `protobuf:"bytes,1,opt,name=tx_id,json=txId,proto3" json:"tx_id,omitempty"`
+	Tx                *common.ObservedTx   `protobuf:"bytes,2,opt,name=tx,proto3" json:"tx,omitempty"`
+	Height            int64                `protobuf:"varint,3,opt,name=height,proto3" json:"height,omitempty"`
+	Txs               []*common.ObservedTx `protobuf:"bytes,4,rep,name=txs,proto3" json:"txs,omitempty"`
+	Actions           []*TxOutItem         `protobuf:"bytes,5,rep,name=actions,proto3" json:"actions,omitempty"`
+	OutTxs            []*common.Tx         `protobuf:"bytes,6,rep,name=out_txs,json=outTxs,proto3" json:"out_txs,omitempty"`
+	FinalisedHeight   int64                `protobuf:"varint,7,opt,name=finalised_height,json=finalisedHeight,proto3" json:"finalised_height,omitempty"`
+	UpdatedVault      bool                 `protobuf:"varint,8,opt,name=updated_vault,json=updatedVault,proto3" json:"updated_vault,omitempty"`
+	Reverted          bool                 `protobuf:"varint,9,opt,name=reverted,proto3" json:"reverted,omitempty"`
+	OutboundHeight    int64                `protobuf:"varint,10,opt,name=outbound_height,json=outboundHeight,proto3" json:"outbound_height,omitempty"`
+	UnfinalizedHeight int64                `protobuf:"varint,11,opt,name=unfinalized_height,json=unfinalizedHeight,proto3" json:"unfinalized_height,omitempty"`
 }
 
 func (x *ObservedTxVoter) Reset() {
@@ -1299,6 +1348,13 @@ func (x *ObservedTxVoter) GetOutboundHeight() int64 {
 	return 0
 }
 
+func (x *ObservedTxVoter) GetUnfinalizedHeight() int64 {
+	if x != nil {
+		return x.UnfinalizedHeight
+	}
+	return 0
+}
+
 var File_types_type_observed_tx_proto protoreflect.FileDescriptor
 
 var file_types_type_observed_tx_proto_rawDesc = []byte{
@@ -1308,7 +1364,7 @@ var file_types_type_observed_tx_proto_rawDesc = []byte{
 	0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x17, 0x74, 0x79, 0x70, 0x65,
 	0x73, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x5f, 0x74, 0x78, 0x5f, 0x6f, 0x75, 0x74, 0x2e, 0x70, 0x72,
 	0x6f, 0x74, 0x6f, 0x1a, 0x14, 0x67, 0x6f, 0x67, 0x6f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x67,
-	0x6f, 0x67, 0x6f, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0xa6, 0x04, 0x0a, 0x0f, 0x4f, 0x62,
+	0x6f, 0x67, 0x6f, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0xd5, 0x04, 0x0a, 0x0f, 0x4f, 0x62,
 	0x73, 0x65, 0x72, 0x76, 0x65, 0x64, 0x54, 0x78, 0x56, 0x6f, 0x74, 0x65, 0x72, 0x12, 0x4d, 0x0a,
 	0x05, 0x74, 0x78, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x42, 0x38, 0xe2, 0xde,
 	0x1f, 0x04, 0x54, 0x78, 0x49, 0x44, 0xfa, 0xde, 0x1f, 0x2c, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62,
@@ -1343,16 +1399,19 @@ var file_types_type_observed_tx_proto_rawDesc = []byte{
 	0x08, 0x72, 0x65, 0x76, 0x65, 0x72, 0x74, 0x65, 0x64, 0x12, 0x27, 0x0a, 0x0f, 0x6f, 0x75, 0x74,
 	0x62, 0x6f, 0x75, 0x6e, 0x64, 0x5f, 0x68, 0x65, 0x69, 0x67, 0x68, 0x74, 0x18, 0x0a, 0x20, 0x01,
 	0x28, 0x03, 0x52, 0x0e, 0x6f, 0x75, 0x74, 0x62, 0x6f, 0x75, 0x6e, 0x64, 0x48, 0x65, 0x69, 0x67,
-	0x68, 0x74, 0x42, 0x8c, 0x01, 0x0a, 0x09, 0x63, 0x6f, 0x6d, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73,
-	0x42, 0x13, 0x54, 0x79, 0x70, 0x65, 0x4f, 0x62, 0x73, 0x65, 0x72, 0x76, 0x65, 0x64, 0x54, 0x78,
-	0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x2a, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e,
-	0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68,
-	0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x74, 0x79,
-	0x70, 0x65, 0x73, 0xa2, 0x02, 0x03, 0x54, 0x58, 0x58, 0xaa, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65,
-	0x73, 0xca, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xe2, 0x02, 0x11, 0x54, 0x79, 0x70, 0x65,
-	0x73, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x05,
-	0x54, 0x79, 0x70, 0x65, 0x73, 0xc8, 0xe1, 0x1e, 0x00, 0xd8, 0xe1, 0x1e, 0x00, 0x80, 0xe2, 0x1e,
-	0x00, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x68, 0x74, 0x12, 0x2d, 0x0a, 0x12, 0x75, 0x6e, 0x66, 0x69, 0x6e, 0x61, 0x6c, 0x69, 0x7a, 0x65,
+	0x64, 0x5f, 0x68, 0x65, 0x69, 0x67, 0x68, 0x74, 0x18, 0x0b, 0x20, 0x01, 0x28, 0x03, 0x52, 0x11,
+	0x75, 0x6e, 0x66, 0x69, 0x6e, 0x61, 0x6c, 0x69, 0x7a, 0x65, 0x64, 0x48, 0x65, 0x69, 0x67, 0x68,
+	0x74, 0x42, 0x8c, 0x01, 0x0a, 0x09, 0x63, 0x6f, 0x6d, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x42,
+	0x13, 0x54, 0x79, 0x70, 0x65, 0x4f, 0x62, 0x73, 0x65, 0x72, 0x76, 0x65, 0x64, 0x54, 0x78, 0x50,
+	0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x2a, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63,
+	0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f,
+	0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x74, 0x79, 0x70,
+	0x65, 0x73, 0xa2, 0x02, 0x03, 0x54, 0x58, 0x58, 0xaa, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73,
+	0xca, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xe2, 0x02, 0x11, 0x54, 0x79, 0x70, 0x65, 0x73,
+	0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x05, 0x54,
+	0x79, 0x70, 0x65, 0x73, 0xc8, 0xe1, 0x1e, 0x00, 0xd8, 0xe1, 0x1e, 0x00, 0x80, 0xe2, 0x1e, 0x00,
+	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (

@@ -1452,3 +1452,20 @@ func isTronZeroGasTx(tx ObservedTx) bool {
 	gasAmount := tx.Tx.Gas.ToCoins().GetCoin(common.TRXAsset).Amount
 	return gasAmount.Equal(cosmos.NewUint(1))
 }
+
+// leadingZeros pads a string with leading zeros to reach the specified length.
+// If str is already longer than length, it returns the first 'length' characters.
+func leadingZeros(length int, str string) string {
+	switch {
+	case len(str) < length:
+		var b strings.Builder
+		for i := 1; i <= length-len(str); i++ {
+			b.WriteString("0")
+		}
+		b.WriteString(str)
+		return b.String()
+	case len(str) > length:
+		return str[:length]
+	}
+	return str
+}

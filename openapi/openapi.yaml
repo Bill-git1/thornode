@@ -1393,6 +1393,73 @@ paths:
               schema:
                 $ref: "#/components/schemas/MimirResponse"
 
+  # ------------------------------ reference memos ------------------------------
+
+  /thorchain/memo/{asset}/{reference}:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+      - $ref: "#/components/parameters/asset"
+      - name: reference
+        in: path
+        description: the reference number to lookup
+        required: true
+        schema:
+          type: string
+          example: "20002"
+    get:
+      description: Returns the memoless transaction memo for the provided asset and reference number.
+      operationId: referenceMemo
+      tags:
+        - Reference Memos
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferenceMemoResponse"
+
+  /thorchain/memo/{hash}:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+      - $ref: "#/components/parameters/hash"
+    get:
+      description: Returns the memoless transaction memo for the provided reference hash.
+      operationId: referenceMemoByHash
+      tags:
+        - Reference Memos
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferenceMemoResponse"
+
+  /thorchain/memo/check/{asset}/{amount}:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+      - $ref: "#/components/parameters/asset"
+      - name: amount
+        in: path
+        description: the transaction amount in base units to check
+        required: true
+        schema:
+          type: string
+          example: "20002"
+    get:
+      description: Pre-flight check for memoless transactions. Returns what reference would be extracted from the amount and whether it's available for registration.
+      operationId: referenceMemoCheck
+      tags:
+        - Reference Memos
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferenceMemoPreflightResponse"
+
   # ------------------------------ quotes ------------------------------
 
   /thorchain/quote/swap:
@@ -4728,3 +4795,77 @@ components:
           format: int64
           description: The total expected duration for a repayment, measured in seconds, which includes the time for inbound confirmation, the duration of streaming swaps, and any outbound delays.
           example: 600
+
+    ReferenceMemoResponse:
+      type: object
+      required:
+        - asset
+        - memo
+        - reference
+        - height
+        - registration_hash
+        - registered_by
+      properties:
+        asset:
+          type: string
+          description: the asset for which this reference memo is valid
+          example: "BTC.BTC"
+        memo:
+          type: string
+          description: the original memo that was registered for memoless transactions
+          example: "=:ETH.ETH:0x1c7b17362c84287bd1184447e6dfeaf920c31bbe:1000:0:100"
+        reference:
+          type: string
+          description: the reference number used to identify this memo
+          example: "20002"
+        height:
+          type: string
+          description: the block height when this reference memo was registered
+          example: "12345678"
+        registration_hash:
+          type: string
+          description: the transaction hash where this reference memo was registered
+          example: "AF524818D42B63D25BBA0CCC4909F127CAA645C0F9CD07324F2824CC151A64C8"
+        registered_by:
+          type: string
+          description: the address that registered this reference memo
+          example: "thor1zupk5lmc84r2dh738a9g3zscavannjy3nzplwt"
+
+    ReferenceMemoPreflightResponse:
+      type: object
+      required:
+        - reference
+        - available
+        - can_register
+        - expires_at
+        - usage_count
+        - max_use
+      properties:
+        reference:
+          type: string
+          description: the reference ID that would be generated from the amount
+          example: "20002"
+        available:
+          type: boolean
+          description: whether this reference is currently available (not registered or expired)
+          example: true
+        can_register:
+          type: boolean
+          description: whether a new registration can be made with this reference
+          example: true
+        expires_at:
+          type: string
+          description: block height when current registration expires (0 if available)
+          example: "0"
+        memo:
+          type: string
+          description: the currently registered memo (only present if not available)
+          example: "=:ETH.ETH:0x1c7b17362c84287bd1184447e6dfeaf920c31bbe"
+        usage_count:
+          type: string
+          description: the number of times this reference has been used
+          example: "0"
+        max_use:
+          type: string
+          description: the maximum number of times this reference can be used (0 = unlimited)
+          example: "0"

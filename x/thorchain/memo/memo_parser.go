@@ -101,6 +101,10 @@ func (p *parser) parse() (mem Memo, err error) {
 		return p.ParseConsolidateMemo()
 	case TxTHORName:
 		return p.ParseManageTHORNameMemo()
+	case TxReferenceWriteMemo:
+		return p.ParseReferenceWriteMemo()
+	case TxReferenceReadMemo:
+		return p.ParseReferenceReadMemo()
 	case TxLoanOpen:
 		return p.ParseLoanOpenMemo()
 	case TxLoanRepayment:
@@ -355,6 +359,18 @@ func (p *parser) getAddressWithKeeper(idx int, required bool, def common.Address
 		}
 	}
 	return addr
+}
+
+func (p *parser) getString(idx int, required bool, def string) string {
+	p.incRequired(required)
+	value := p.get(idx)
+	if value == "" {
+		if required {
+			p.addErr(fmt.Errorf("cannot parse '%s' as a string", p.get(idx)))
+		}
+		return def
+	}
+	return value
 }
 
 func (p *parser) getStringArrayBySeparator(idx int, required bool, separator string) []string {

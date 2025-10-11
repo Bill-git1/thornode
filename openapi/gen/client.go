@@ -86,6 +86,8 @@ type APIClient struct {
 
 	RUNEPoolApi *RUNEPoolApiService
 
+	ReferenceMemosApi *ReferenceMemosApiService
+
 	SaversApi *SaversApiService
 
 	SecuredAssetApi *SecuredAssetApiService
@@ -152,6 +154,7 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 	c.QueueApi = (*QueueApiService)(&c.common)
 	c.QuoteApi = (*QuoteApiService)(&c.common)
 	c.RUNEPoolApi = (*RUNEPoolApiService)(&c.common)
+	c.ReferenceMemosApi = (*ReferenceMemosApiService)(&c.common)
 	c.SaversApi = (*SaversApiService)(&c.common)
 	c.SecuredAssetApi = (*SecuredAssetApiService)(&c.common)
 	c.SecuredAssetsApi = (*SecuredAssetsApiService)(&c.common)

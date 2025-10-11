@@ -31,4 +31,5 @@ message ObservedTxVoter {
   bool updated_vault = 8;
   bool reverted = 9;
   int64 outbound_height = 10;
+  int64 unfinalized_height = 11;
 }

@@ -62,8 +62,14 @@ make test-race
 # Run regression tests
 make test-regression
 
-# Run simulation tests
+# Run simulation tests (interactive prompt for stage selection)
 make test-simulation
+
+# Run simulation tests without prompts (all stages)
+STAGES=all make test-simulation
+
+# Run simulation tests with specific stages
+STAGES=seed,bootstrap,swaps make test-simulation
 
 # Create test coverage report
 make test-coverage
@@ -75,6 +81,11 @@ make coverage-report   # HTML report
 - To run tests, use `make test`
 - To run regression tests, use `make test-regression`
 - To test a specific suite or regression test, utilize RUN as an environment variable
+- For simulation tests:
+  - By default, `make test-simulation` prompts for stage selection if running in a terminal
+  - Use `STAGES=all` to run all stages without prompts
+  - Use `STAGES=stage1,stage2` to run specific stages
+  - Available stages: seed, bootstrap, arb, swaps, memoless-swaps, consolidate, churn, inactive-vault-refunds, solvency, ragnarok
 - Do not edit generated files such as `pulsar.go` and `pb.go`, and no files in ./openai/gen or ./test/regression/mnt
 - When building, use `make build`
 - After editing any Go file, use `goimports -w` to ensure proper formatting
@@ -204,3 +215,4 @@ THORChain supports multiple network types, each with specific configurations:
 - this code repository is a gitlab repository, so remember to use the GitLab CLI ('glab') for all GitLab-related tasks
 
 - when modifying gitlab ci file (.gitlab-ci.yaml), validate it with the glab cli (`glab ci lint`)
+- when updating a proto file, use make proto-format to ensure the formatting of that file is correct

@@ -22,11 +22,19 @@ replace (
 	// Fix upstream GHSA-h395-qcrw-5vmq vulnerability.
 	// See: https://github.com/cosmos/cosmos-sdk/issues/10409
 	github.com/gin-gonic/gin => github.com/gin-gonic/gin v1.8.1
+	// pin gogo/protobuf to avoid revision issues
+	github.com/gogo/protobuf => github.com/gogo/protobuf v1.3.2
 	github.com/spf13/viper => github.com/spf13/viper v1.17.0 // v1.18+ breaks app overrides
 
 	// pin version! 126854af5e6d has issues with the store so that queries fail
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	github.com/tendermint/go-amino => github.com/binance-chain/bnc-go-amino v0.14.1-binance.1
+
+	// redirect external module reference to local code
+	gitlab.com/thorchain/thornode => ./
+	// redirect any non-v3 thorchain imports to local code
+	gitlab.com/thorchain/thornode/x/thorchain => ./x/thorchain
+
 	nhooyr.io/websocket => nhooyr.io/websocket v1.8.17
 )
 
@@ -71,7 +79,7 @@ require (
 	github.com/gcash/bchd v0.17.1
 	github.com/gcash/bchlog v0.0.0-20180913005452-b4f036f92fa6
 	github.com/gcash/bchutil v0.0.0-20201025062739-fc759989ee3e
-	github.com/gogo/protobuf v1.3.2
+	github.com/gogo/protobuf v1.3.3
 	github.com/golang/protobuf v1.5.4
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0

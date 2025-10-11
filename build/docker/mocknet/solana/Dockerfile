@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   llvm=1:14.0-55.7~deb12u1 \
   libclang-dev=1:14.0-55.7~deb12u1 \
   pkg-config=1.8.1-1 \
-  libssl-dev=3.0.17-1~deb12u2 \
+  libssl-dev=3.0.17-1~deb12u3 \
   protobuf-compiler=3.21.12-3 \
   cmake=3.25.1-1 \
   libudev-dev=252.39-1~deb12u1 \
@@ -27,7 +27,7 @@ FROM debian:bookworm-slim AS runtime
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
   ca-certificates=20230311+deb12u1 \
-  libssl3=3.0.17-1~deb12u2 \
+  libssl3=3.0.17-1~deb12u3 \
   libudev1=252.39-1~deb12u1 \
   && rm -rf /var/lib/apt/lists/*
 

@@ -37,26 +37,28 @@ import (
 
 // Endpoint urls
 const (
-	AuthAccountEndpoint      = "/cosmos/auth/v1beta1/accounts"
-	BroadcastTxsEndpoint     = "/"
-	ConstantsEndpoint        = "/thorchain/constants"
-	KeygenEndpoint           = "/thorchain/keygen"
-	KeysignEndpoint          = "/thorchain/keysign"
-	LastBlockEndpoint        = "/thorchain/lastblock"
-	NodeAccountEndpoint      = "/thorchain/node"
-	NodeAccountsEndpoint     = "/thorchain/nodes"
-	SignerMembershipEndpoint = "/thorchain/vaults/%s/signers"
-	StatusEndpoint           = "/status"
-	VaultEndpoint            = "/thorchain/vault/%s"
-	AsgardVault              = "/thorchain/vaults/asgard"
-	PubKeysEndpoint          = "/thorchain/vaults/pubkeys"
-	ThorchainConstants       = "/thorchain/constants"
-	RagnarokEndpoint         = "/thorchain/ragnarok"
-	MimirEndpoint            = "/thorchain/mimir"
-	ChainVersionEndpoint     = "/thorchain/version"
-	InboundAddressesEndpoint = "/thorchain/inbound_addresses"
-	PoolsEndpoint            = "/thorchain/pools"
-	THORNameEndpoint         = "/thorchain/thorname/%s"
+	AuthAccountEndpoint         = "/cosmos/auth/v1beta1/accounts"
+	BroadcastTxsEndpoint        = "/"
+	ConstantsEndpoint           = "/thorchain/constants"
+	KeygenEndpoint              = "/thorchain/keygen"
+	KeysignEndpoint             = "/thorchain/keysign"
+	LastBlockEndpoint           = "/thorchain/lastblock"
+	NodeAccountEndpoint         = "/thorchain/node"
+	NodeAccountsEndpoint        = "/thorchain/nodes"
+	SignerMembershipEndpoint    = "/thorchain/vaults/%s/signers"
+	StatusEndpoint              = "/status"
+	VaultEndpoint               = "/thorchain/vault/%s"
+	AsgardVault                 = "/thorchain/vaults/asgard"
+	PubKeysEndpoint             = "/thorchain/vaults/pubkeys"
+	ThorchainConstants          = "/thorchain/constants"
+	RagnarokEndpoint            = "/thorchain/ragnarok"
+	MimirEndpoint               = "/thorchain/mimir"
+	ChainVersionEndpoint        = "/thorchain/version"
+	InboundAddressesEndpoint    = "/thorchain/inbound_addresses"
+	PoolsEndpoint               = "/thorchain/pools"
+	THORNameEndpoint            = "/thorchain/thorname/%s"
+	ReferenceMemoEndpoint       = "/thorchain/memo/%s/%s"
+	ReferenceMemoByHashEndpoint = "/thorchain/memo/%s"
 )
 
 // thorchainBridge will be used to send tx to THORChain
@@ -107,10 +109,13 @@ type ThorchainBridge interface {
 	GetLastObservedInHeight(chain common.Chain) (int64, error)
 	GetLastSignedOutHeight(chain common.Chain) (int64, error)
 	Broadcast(msgs ...sdk.Msg) (common.TxID, error)
+	BroadcastWithBlocking(msgs ...sdk.Msg) (common.TxID, error)
 	GetKeysign(blockHeight int64, pk string) (types.TxOut, error)
 	GetNodeAccount(string) (*stypes.NodeAccount, error)
 	GetNodeAccounts() ([]*stypes.NodeAccount, error)
 	GetKeygenBlock(int64, string) (stypes.KeygenBlock, error)
+	GetReferenceMemo(chain common.Chain, ref string) (string, error)
+	GetReferenceMemoByTxHash(hash string) (string, error)
 }
 
 // httpResponseCache used for caching HTTP responses for less frequent querying
@@ -884,4 +889,38 @@ func (b *thorchainBridge) GetTHORName(name string) (stypes.THORName, error) {
 		return stypes.THORName{}, fmt.Errorf("fail to unmarshal THORNames from json: %w", err)
 	}
 	return tn, nil
+}
+
+// GetReferenceMemo takes a chain and reference id and gets the memo
+func (b *thorchainBridge) GetReferenceMemo(chain common.Chain, ref string) (string, error) {
+	p := fmt.Sprintf(ReferenceMemoEndpoint, chain.String(), ref)
+	buf, s, err := b.getWithPath(p)
+	if err != nil {
+		return "", fmt.Errorf("fail to get reference memo: %w", err)
+	}
+	if s != http.StatusOK {
+		return "", fmt.Errorf("unexpected status code: %d", s)
+	}
+	var r stypes.ReferenceMemo
+	if err := json.Unmarshal(buf, &r); err != nil { // nolint
+		return "", fmt.Errorf("fail to unmarshal reference memo from json: %w", err)
+	}
+	return r.Memo, nil
+}
+
+// GetReferenceMemoByTxHash takes a chain and reference id and gets the memo
+func (b *thorchainBridge) GetReferenceMemoByTxHash(hash string) (string, error) {
+	p := fmt.Sprintf(ReferenceMemoByHashEndpoint, hash)
+	buf, s, err := b.getWithPath(p)
+	if err != nil {
+		return "", fmt.Errorf("fail to get reference memo: %w", err)
+	}
+	if s != http.StatusOK {
+		return "", fmt.Errorf("unexpected status code: %d", s)
+	}
+	var r stypes.ReferenceMemo
+	if err := json.Unmarshal(buf, &r); err != nil { // nolint
+		return "", fmt.Errorf("fail to unmarshal reference memo from json: %w", err)
+	}
+	return r.Memo, nil
 }

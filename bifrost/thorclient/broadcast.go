@@ -14,8 +14,9 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common"
 )
 
-// Broadcast Broadcasts tx to thorchain
-func (b *thorchainBridge) Broadcast(msgs ...stypes.Msg) (common.TxID, error) {
+// broadcast is an internal helper that broadcasts a transaction with the specified mode.
+// mode can be "async", "sync", or "commit"
+func (b *thorchainBridge) broadcast(mode string, msgs ...stypes.Msg) (common.TxID, error) {
 	b.broadcastLock.Lock()
 	defer b.broadcastLock.Unlock()
 
@@ -42,11 +43,12 @@ func (b *thorchainBridge) Broadcast(msgs ...stypes.Msg) (common.TxID, error) {
 		}
 	}
 
-	b.logger.Info().Uint64("account_number", b.accountNumber).Uint64("sequence_number", b.seqNumber).Msg("account info")
+	b.logger.Info().Uint64("account_number", b.accountNumber).Uint64("sequence_number", b.seqNumber).Str("broadcast_mode", mode).Msg("account info")
 
 	flags := flag.NewFlagSet("thorchain", 0)
 
 	ctx := b.GetContext()
+	ctx = ctx.WithBroadcastMode(mode)
 	factory, err := clienttx.NewFactoryCLI(ctx, flags)
 	if err != nil {
 		return noTxID, fmt.Errorf("failed to get factory, %w", err)
@@ -104,4 +106,38 @@ func (b *thorchainBridge) Broadcast(msgs ...stypes.Msg) (common.TxID, error) {
 	b.logger.Info().Msgf("Received a TxHash of %v from the thorchain", commit.TxHash)
 
 	return txHash, nil
+}
+
+// Broadcast Broadcasts tx to thorchain using sync mode (waits for CheckTx)
+func (b *thorchainBridge) Broadcast(msgs ...stypes.Msg) (common.TxID, error) {
+	return b.broadcast("sync", msgs...)
+}
+
+// BroadcastWithBlocking broadcasts tx to thorchain and waits for block commitment
+func (b *thorchainBridge) BroadcastWithBlocking(msgs ...stypes.Msg) (common.TxID, error) {
+	// First broadcast with sync mode
+	txID, err := b.broadcast("sync", msgs...)
+	if err != nil {
+		return txID, err
+	}
+
+	// Poll for the transaction to be included in a block
+	// Poll for up to 30 seconds (6 blocks at 5 seconds per block)
+	maxAttempts := 30
+	for i := 0; i < maxAttempts; i++ {
+		// Query for the block height to trigger state update
+		currentHeight, err := b.GetBlockHeight()
+		if err == nil && currentHeight > b.blockHeight {
+			// Transaction should be committed by now
+			b.logger.Info().Str("txid", txID.String()).Int64("height", currentHeight).Msg("transaction likely committed to block")
+			return txID, nil
+		}
+
+		// Wait 1 second before retrying
+		time.Sleep(time.Second)
+	}
+
+	// Return success even if we timeout - the transaction was accepted in CheckTx
+	b.logger.Warn().Str("txid", txID.String()).Msg("timeout waiting for block commitment, but transaction was accepted")
+	return txID, nil
 }

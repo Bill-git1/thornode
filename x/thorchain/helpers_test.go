@@ -1282,3 +1282,25 @@ func (s *HelperSuite) TestSettleSwapStreamingLimitSwap(c *C) {
 	c.Assert(streamingLimitSwapMsg.IsLimitSwap(), Equals, true)
 	c.Assert(streamingLimitSwapMsg.State.Quantity, Equals, uint64(10))
 }
+
+func (s *HelperSuite) TestLeadingZeros(c *C) {
+	// Test case where string length is less than the given length
+	// The function should pad the string with leading zeros.
+	c.Assert(leadingZeros(5, "123"), Equals, "00123")
+
+	// Test case where string length is greater than the given length
+	// The function should truncate the string to the given length.
+	c.Assert(leadingZeros(2, "12345"), Equals, "12")
+
+	// Test case where string length is equal to the given length
+	// The function should return the string as it is.
+	c.Assert(leadingZeros(5, "12345"), Equals, "12345")
+
+	// Test case where string is empty
+	// The function should return a string with the given length filled with zeros.
+	c.Assert(leadingZeros(5, ""), Equals, "00000")
+
+	// Test case where length is zero
+	// The function should return an empty string regardless of the input string.
+	c.Assert(leadingZeros(0, "12345"), Equals, "")
+}

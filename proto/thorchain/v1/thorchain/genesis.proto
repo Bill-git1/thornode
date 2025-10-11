@@ -20,6 +20,7 @@ import "types/type_node_account.proto";
 import "types/type_observed_tx.proto";
 import "types/type_liquidity_provider.proto";
 import "types/type_thorname.proto";
+import "types/type_reference_memo.proto";
 import "types/type_loan.proto";
 import "types/type_clout.proto";
 import "types/type_trade_account.proto";
@@ -124,4 +125,6 @@ message GenesisState {
       [ (gogoproto.nullable) = false ];
   repeated types.TCYClaimer tcy_claimers = 42 [ (gogoproto.nullable) = false ];
   repeated types.TCYStaker tcy_stakers = 43 [ (gogoproto.nullable) = false ];
+  repeated types.ReferenceMemo reference_memos = 44
+      [ (gogoproto.nullable) = false ];
 }

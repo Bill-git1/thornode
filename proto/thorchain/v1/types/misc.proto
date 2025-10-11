@@ -20,6 +20,8 @@ message ProtoAccAddresses {
             "github.com/cosmos/cosmos-sdk/types.AccAddress" ];
 }
 
+message ProtoString { string value = 1; }
+
 message ProtoStrings { repeated string value = 1; }
 
 message ProtoBools { repeated bool value = 1; }

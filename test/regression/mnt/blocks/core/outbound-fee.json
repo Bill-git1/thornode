@@ -672,7 +672,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "262645",
+          "gas_used": "262765",
           "events": [
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/0",
@@ -733,8 +733,8 @@
       "validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "next_validators_hash": "9A0FC1918CDCB81267B61959D511436CC2B19E3A48538EC664B2E46E3D6E61C6",
       "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
-      "app_hash": "40751339FB8110145CD455F9C023CAEA40C19ED43F6920C8A89B34704429B90B",
-      "last_results_hash": "1C0993C83C5FE071EF18ACCA3BB1D266386779E6F066185C83B4C3D9F2CFC813",
+      "app_hash": "00D8813E106CD76FFB80914F5536378EB41AD9CE470C9CFC7AD41EF9FDA7D0FB",
+      "last_results_hash": "9BCFA5B4853D1D82A49A9E8D1A3953052C1ECC7FA4F82E916966B09EA8B42507",
       "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       "proposer_address": "E557CD61B142A7E76E89BB3020D395A15D97C452"
     },
@@ -961,7 +961,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "210754",
+          "gas_used": "244154",
           "events": [
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/1",

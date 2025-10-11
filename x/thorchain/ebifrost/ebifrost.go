@@ -668,7 +668,9 @@ func (b *EnshrinedBifrost) ProposalInjectTxs(ctx sdk.Context, maxTxBytes int64) 
 				"hash", obsTx.Tx.ID,
 				"finalized", obsTx.IsFinal(),
 				"inbound", tx.Inbound,
-				"attestations", len(tx.Attestations))
+				"attestations", len(tx.Attestations),
+				"memo", obsTx.Tx.Memo,
+				"coins", obsTx.Tx.Coins)
 		},
 		b.logger,
 	)

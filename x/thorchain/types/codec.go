@@ -54,6 +54,7 @@ func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&MsgSolvency{}, ModuleName+"/MsgSolvency", nil)
 	cdc.RegisterConcrete(&MsgSolvencyQuorum{}, ModuleName+"/MsgSolvencyQuorum", nil)
 	cdc.RegisterConcrete(&MsgManageTHORName{}, ModuleName+"/MsgManageTHORName", nil)
+	cdc.RegisterConcrete(&MsgReferenceMemo{}, "thorchain/MsgReferenceMemo", nil)
 	cdc.RegisterConcrete(&MsgTradeAccountDeposit{}, ModuleName+"/MsgTradeAccountDeposit", nil)
 	cdc.RegisterConcrete(&MsgTradeAccountWithdrawal{}, ModuleName+"/MsgTradeAccountWithdrawal", nil)
 	cdc.RegisterConcrete(&MsgModifyLimitSwap{}, ModuleName+"/MsgModifyLimitSwap", nil)
@@ -104,6 +105,7 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 		&MsgNodePauseChain{},
 		&MsgManageTHORName{},
 		&MsgSolvency{},
+		&MsgReferenceMemo{},
 		&MsgSolvencyQuorum{},
 		&MsgTradeAccountDeposit{},
 		&MsgTradeAccountWithdrawal{},

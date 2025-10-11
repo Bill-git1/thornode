@@ -548,7 +548,7 @@
         "result": {
           "code": 0,
           "gas_wanted": "-1",
-          "gas_used": "260368",
+          "gas_used": "260488",
           "events": [
             {
               "acc_seq": "tthor1zf3gsk7edzwl9syyefvfhle37cjtql35h6k85m/0",

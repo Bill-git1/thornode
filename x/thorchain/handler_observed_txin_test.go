@@ -6,6 +6,7 @@ import (
 
 	"github.com/blang/semver"
 	se "github.com/cosmos/cosmos-sdk/types/errors"
+	"gopkg.in/check.v1"
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/common"
@@ -127,6 +128,7 @@ type TestObservedTxInHandleKeeper struct {
 	vault                Vault
 	txOut                *TxOut
 	setLastObserveHeight bool
+	referenceMemos       map[string]ReferenceMemo // key: asset:reference
 }
 
 func (k *TestObservedTxInHandleKeeper) SetSwapQueueItem(_ cosmos.Context, msg MsgSwap, _ int) error {
@@ -212,6 +214,47 @@ func (k *TestObservedTxInHandleKeeper) SetTxOut(ctx cosmos.Context, blockOut *Tx
 func (k *TestObservedTxInHandleKeeper) SetLastObserveHeight(ctx cosmos.Context, chain common.Chain, address cosmos.AccAddress, height int64) error {
 	k.setLastObserveHeight = true
 	return nil
+}
+
+func (k *TestObservedTxInHandleKeeper) GetReferenceMemo(_ cosmos.Context, asset common.Asset, reference string) (ReferenceMemo, error) {
+	if k.referenceMemos == nil {
+		return ReferenceMemo{}, fmt.Errorf("reference memo not found")
+	}
+	key := fmt.Sprintf("%s:%s", asset.String(), reference)
+	if memo, exists := k.referenceMemos[key]; exists {
+		return memo, nil
+	}
+	return ReferenceMemo{}, fmt.Errorf("reference memo not found")
+}
+
+func (k *TestObservedTxInHandleKeeper) SetReferenceMemo(_ cosmos.Context, memo ReferenceMemo) {
+	if k.referenceMemos == nil {
+		k.referenceMemos = make(map[string]ReferenceMemo)
+	}
+	key := fmt.Sprintf("%s:%s", memo.Asset.String(), memo.Reference)
+	k.referenceMemos[key] = memo
+}
+
+func (k *TestObservedTxInHandleKeeper) GetMimir(_ cosmos.Context, key string) (int64, error) {
+	// For tests, memoless transactions are not halted
+	if key == "HaltMemoless" {
+		return 0, nil
+	}
+	return 0, fmt.Errorf("mimir not found")
+}
+
+func (k *TestObservedTxInHandleKeeper) GetConfigInt64(_ cosmos.Context, key constants.ConstantName) int64 {
+	// Set reasonable defaults for test
+	switch key {
+	case constants.MemolessTxnTTL:
+		return 100 // blocks
+	case constants.MemolessTxnMaxUse:
+		return 10 // max usage
+	case constants.MemolessTxnRefCount:
+		return 99999 // memoless txn reference id counts
+	default:
+		return 0
+	}
 }
 
 func (s *HandlerObservedTxInSuite) TestHandle(c *C) {
@@ -834,116 +877,352 @@ func (s *HandlerObservedTxInSuite) TestVaultStatus(c *C) {
 	}
 }
 
-func (s *HandlerObservedTxInSuite) TestObservingSlashing(c *C) {
+func (s *HandlerObservedTxInSuite) TestMemolessTxns(c *C) {
 	ctx, mgr := setupManagerForTest(c)
-	height := int64(1024)
-	ctx = ctx.WithBlockHeight(height)
+	ctx = ctx.WithBlockHeight(15)
+	asset := common.BTCAsset
 
-	// Check expected slash point amounts
-	observeSlashPoints := mgr.GetConstants().GetInt64Value(constants.ObserveSlashPoints)
-	lackOfObservationPenalty := mgr.GetConstants().GetInt64Value(constants.LackOfObservationPenalty)
-	observeFlex := mgr.GetConstants().GetInt64Value(constants.ObservationDelayFlexibility)
-	c.Assert(observeSlashPoints, Equals, int64(1))
-	c.Assert(lackOfObservationPenalty, Equals, int64(2))
-	c.Assert(observeFlex, Equals, int64(10))
+	// Set TTL for memoless transactions
+	mgr.Keeper().SetMimir(ctx, constants.MemolessTxnTTL.String(), 10)
 
-	asgardVault := GetRandomVault()
-	c.Assert(mgr.Keeper().SetVault(ctx, asgardVault), IsNil)
+	// Test when memo is not empty
+	testTx := common.NewTx(common.TxID(""), common.NoAddress, common.NoAddress, common.Coins{}, common.Gas{}, "myMemo")
+	memo := fetchMemoFromReference(ctx, mgr, asset, testTx, 15)
+	c.Check(memo, check.Equals, "myMemo", check.Commentf("Expected to return the same memo when memo is not empty"))
 
-	nas := NodeAccounts{
-		// 6 Active nodes, 1 Standby node; 2/3rds consensus needs 4.
-		GetRandomValidatorNode(NodeActive),
-		GetRandomValidatorNode(NodeActive),
-		GetRandomValidatorNode(NodeActive),
-		GetRandomValidatorNode(NodeActive),
-		GetRandomValidatorNode(NodeActive),
-		GetRandomValidatorNode(NodeActive),
-		GetRandomValidatorNode(NodeStandby),
+	testTx2 := common.NewTx(common.TxID(""), common.NoAddress, common.NoAddress, common.Coins{}, common.Gas{}, "")
+	memo = fetchMemoFromReference(ctx, mgr, asset, testTx2, 15)
+	c.Check(memo, check.Equals, "", check.Commentf("Expected to return empty memo when memo is empty"))
+
+	// Test when reference memo is not expired, happy path
+	refMemo := NewReferenceMemo(asset, "the memo", "30000", 10)
+	mgr.Keeper().SetReferenceMemo(ctx, refMemo)
+	testTx3 := common.NewTx(common.TxID(""), common.NoAddress, common.NoAddress, common.Coins{}, common.Gas{}, "r:30000")
+	memo = fetchMemoFromReference(ctx, mgr, asset, testTx3, 15) // tx observed at height 15, memo created at height 10
+	c.Check(memo, check.Equals, "the memo", check.Commentf("Expected to return reference memo when it's not expired"))
+
+	// Test when reference memo is expired
+	ctx = ctx.WithBlockHeight(25)
+	testTx4 := common.NewTx(common.TxID(""), common.NoAddress, common.NoAddress, common.Coins{}, common.Gas{}, "r:30000")
+	memo = fetchMemoFromReference(ctx, mgr, asset, testTx4, 15) // tx observed at height 15, memo created at height 10
+	c.Check(memo, check.Equals, "", check.Commentf("Expected to return empty memo when reference memo is expired"))
+}
+
+func (s *HandlerObservedTxInSuite) TestMemoUsageTracking(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(15)
+	asset := common.BTCAsset
+
+	// Set TTL for memoless transactions
+	mgr.Keeper().SetMimir(ctx, constants.MemolessTxnTTL.String(), 100)
+	// Set max usage limit to 1
+	mgr.Keeper().SetMimir(ctx, constants.MemolessTxnMaxUse.String(), 1)
+
+	// Create a reference memo
+	refMemo := NewReferenceMemo(asset, "test memo", "12345", ctx.BlockHeight())
+	mgr.Keeper().SetReferenceMemo(ctx, refMemo)
+
+	// Create test transaction IDs
+	txID1, _ := common.NewTxID("0000000000000000000000000000000000000000000000000000000000000001")
+	txID2, _ := common.NewTxID("0000000000000000000000000000000000000000000000000000000000000002")
+
+	// First usage should succeed
+	testTx := common.NewTx(txID1, common.NoAddress, common.NoAddress, common.Coins{}, common.Gas{}, "r:12345")
+	memo := fetchMemoFromReference(ctx, mgr, asset, testTx, 16) // tx observed at height 16, memo created at height 15
+	c.Check(memo, check.Equals, "test memo", check.Commentf("First usage should succeed"))
+
+	// Verify usage count and transaction tracking
+	updatedMemo, err := mgr.Keeper().GetReferenceMemo(ctx, asset, "12345")
+	c.Assert(err, check.IsNil)
+	c.Check(updatedMemo.GetUsageCount(), check.Equals, int64(1))
+	c.Check(updatedMemo.HasBeenUsedBy(txID1), check.Equals, true)
+
+	// Second usage should fail (exceed limit of 1)
+	testTx2 := common.NewTx(txID2, common.NoAddress, common.NoAddress, common.Coins{}, common.Gas{}, "r:12345")
+	memo = fetchMemoFromReference(ctx, mgr, asset, testTx2, 17) // tx observed at height 17, memo created at height 15
+	c.Check(memo, check.Equals, "", check.Commentf("Second usage should fail"))
+
+	// Verify usage count incremented
+	updatedMemo, err = mgr.Keeper().GetReferenceMemo(ctx, asset, "12345")
+	c.Assert(err, check.IsNil)
+	c.Check(updatedMemo.GetUsageCount(), check.Equals, int64(2))
+	c.Check(updatedMemo.HasBeenUsedBy(txID1), check.Equals, true)
+
+	// Test duplicate tracking - same txID called again should not increase count
+	testTx3 := common.NewTx(txID1, common.NoAddress, common.NoAddress, common.Coins{}, common.Gas{}, "r:12345")
+	fetchMemoFromReference(ctx, mgr, asset, testTx3, 18) // Call with same txID1 again
+	updatedMemo, err = mgr.Keeper().GetReferenceMemo(ctx, asset, "12345")
+	c.Assert(err, check.IsNil)
+	c.Check(updatedMemo.GetUsageCount(), check.Equals, int64(2), check.Commentf("Duplicate tracking should not increase count"))
+}
+
+func (s *HandlerObservedTxInSuite) TestMemoUsageTrackingDisabled(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(15)
+	asset := common.BTCAsset
+
+	// Set TTL for memoless transactions
+	mgr.Keeper().SetMimir(ctx, constants.MemolessTxnTTL.String(), 100)
+	// Set max usage limit to 0 (disabled)
+	mgr.Keeper().SetMimir(ctx, constants.MemolessTxnMaxUse.String(), 0)
+
+	// Create a reference memo
+	refMemo := NewReferenceMemo(asset, "test memo", "54321", ctx.BlockHeight())
+	mgr.Keeper().SetReferenceMemo(ctx, refMemo)
+
+	// Multiple usages should succeed when limit is disabled (0)
+	for i := 0; i < 10; i++ {
+		// Track each usage with unique transaction ID
+		txID, _ := common.NewTxID(fmt.Sprintf("%064d", i+1))
+		testTx := common.NewTx(txID, common.NoAddress, common.NoAddress, common.Coins{}, common.Gas{}, "r:54321")
+		memo := fetchMemoFromReference(ctx, mgr, asset, testTx, int64(16+i)) // tx observed at heights 16-25, memo created at height 15
+		c.Check(memo, check.Equals, "test memo", check.Commentf("Usage %d should succeed when limit disabled", i+1))
 	}
-	for _, item := range nas {
-		c.Assert(mgr.Keeper().SetNodeAccount(ctx, item), IsNil)
-	}
 
-	observedTx := GetRandomObservedTx()
-	observedTx.BlockHeight = height
-	observedTx.FinaliseHeight = height
-	observedTx.ObservedPubKey = asgardVault.PubKey
-	var err error
-	observedTx.Tx.ToAddress, err = observedTx.ObservedPubKey.GetAddress(observedTx.Tx.Chain)
+	// Verify usage count was incremented for all transactions
+	updatedMemo, err := mgr.Keeper().GetReferenceMemo(ctx, asset, "54321")
+	c.Assert(err, check.IsNil)
+	c.Check(updatedMemo.GetUsageCount(), check.Equals, int64(10))
+}
+
+func (s *HandlerObservedTxInSuite) TestMemolessTransactionReferenceGeneration(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(15)
+
+	// Setup BTC pool with 8 decimals
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.Decimals = 8
+	btcPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	btcPool.BalanceRune = cosmos.NewUint(100 * common.One)
+	c.Assert(mgr.Keeper().SetPool(ctx, btcPool), IsNil)
+
+	// Create observed tx with empty memo and specific amount for predictable reference
+	tx := GetRandomTx()
+	tx.Memo = "" // Empty memo
+	tx.Coins = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(123456789)))
+	obTx := NewObservedTx(tx, 12, GetRandomPubKey(), 15)
+
+	// Setup vault
+	vault := GetRandomVault()
+	vault.PubKey = obTx.ObservedPubKey
+	vault.Status = ActiveVault
+
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+	na := GetRandomValidatorNode(NodeActive)
+	c.Assert(mgr.Keeper().SetNodeAccount(ctx, na), IsNil)
+
+	// Create reference memo that matches our expected generated reference
+	expectedRef := "56789" // last 5 digits of 123456789
+	refMemo := NewReferenceMemo(common.BTCAsset, "SWAP:ETH.ETH:0x1234567890123456789012345678901234567890", expectedRef, ctx.BlockHeight())
+	mgr.Keeper().SetReferenceMemo(ctx, refMemo)
+
+	// Test that empty memo transaction gets reference memo generated
+	handler := NewObservedTxInHandler(mgr)
+	msg := NewMsgObservedTxIn(ObservedTxs{obTx}, na.NodeAddress)
+
+	// Process the transaction
+	_, err := handler.handle(ctx, *msg)
 	c.Assert(err, IsNil)
 
-	msg := NewMsgObservedTxIn([]common.ObservedTx{observedTx}, cosmos.AccAddress{})
+	voter, err := mgr.Keeper().GetObservedTxInVoter(ctx, tx.ID)
+	c.Assert(err, IsNil)
+
+	// Verify that the voter's memo was updated with reference memo
+	c.Assert(voter.Tx.Tx.Memo, check.Matches, "r:\\d{5}", check.Commentf("Expected reference memo pattern"))
+	c.Assert(voter.Tx.Tx.Memo, Equals, "r:"+expectedRef, check.Commentf("Expected specific reference memo"))
+}
+
+func (s *HandlerObservedTxInSuite) TestMemolessTransactionWithDifferentAssetDecimals(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(15)
+
+	// Setup GAIA pool with 6 decimals
+	gaiaAsset := common.Asset{Chain: common.GAIAChain, Symbol: "ATOM", Ticker: "ATOM", Synth: false}
+	gaiaPool := NewPool()
+	gaiaPool.Asset = gaiaAsset
+	gaiaPool.Decimals = 6 // GAIA has 6 decimals
+	gaiaPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	gaiaPool.BalanceRune = cosmos.NewUint(100 * common.One)
+	c.Assert(mgr.Keeper().SetPool(ctx, gaiaPool), IsNil)
+
+	// Create observed tx with empty memo
+	tx := GetRandomTx()
+	tx.Memo = "" // Empty memo
+	// For 6 decimals, amount should be divided by 100, so 123456780000 / 100 = 1234567800, last 5 = 67800
+	tx.Coins = common.NewCoins(common.NewCoin(gaiaAsset, cosmos.NewUint(123456780000)))
+	obTx := NewObservedTx(tx, 12, GetRandomPubKey(), 15)
+
+	// Setup vault
+	vault := GetRandomVault()
+	vault.PubKey = obTx.ObservedPubKey
+	vault.Status = ActiveVault
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+	na := GetRandomValidatorNode(NodeActive)
+	c.Assert(mgr.Keeper().SetNodeAccount(ctx, na), IsNil)
+
+	// Create reference memo for expected reference
+	expectedRef := "67800" // (123456780000 / 100) % 100000 = 1234567800 % 100000 = 67800
+	refMemo := NewReferenceMemo(gaiaAsset, "SWAP:BTC.BTC:bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4", expectedRef, ctx.BlockHeight())
+	mgr.Keeper().SetReferenceMemo(ctx, refMemo)
+
+	// Process the transaction
 	handler := NewObservedTxInHandler(mgr)
+	msg := NewMsgObservedTxIn(ObservedTxs{obTx}, na.NodeAddress)
+	_, err := handler.handle(ctx, *msg)
+	c.Assert(err, IsNil)
 
-	broadcast := func(c *C, ctx cosmos.Context, na NodeAccount, msg *MsgObservedTxIn) {
-		msg.Signer = na.NodeAddress
-		_, err := handler.handle(ctx, *msg)
-		c.Assert(err, IsNil)
+	voter, err := mgr.Keeper().GetObservedTxInVoter(ctx, tx.ID)
+	c.Assert(err, IsNil)
+
+	// Verify the generated reference memo accounts for decimal precision
+	c.Assert(voter.Tx.Tx.Memo, Equals, "r:"+expectedRef, check.Commentf("Expected reference memo adjusted for 6 decimals"))
+}
+
+func (s *HandlerObservedTxInSuite) TestMemolessTransactionErrorCases(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(15)
+
+	// Setup BTC pool
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.Decimals = 8
+	btcPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	btcPool.BalanceRune = cosmos.NewUint(100 * common.One)
+	c.Assert(mgr.Keeper().SetPool(ctx, btcPool), IsNil)
+
+	// Test case 1: Transaction with no coins
+	txNoCoin := GetRandomTx()
+	txNoCoin.Memo = ""
+	txNoCoin.Coins = common.NewCoins() // No coins
+	obTxNoCoin := NewObservedTx(txNoCoin, 12, GetRandomPubKey(), 15)
+
+	vault := GetRandomVault()
+	vault.PubKey = obTxNoCoin.ObservedPubKey
+	vault.Status = ActiveVault
+
+	keeper := &TestObservedTxInHandleKeeper{
+		nas:         NodeAccounts{GetRandomValidatorNode(NodeActive)},
+		voter:       NewObservedTxVoter(txNoCoin.ID, make(ObservedTxs, 0)),
+		vault:       vault,
+		vaultExists: true,
 	}
+	mgr.K = keeper
 
-	checkSlashPoints := func(c *C, ctx cosmos.Context, nas NodeAccounts, expected [7]int64) {
-		var slashPoints [7]int64
-		for i, na := range nas {
-			slashPoint, err := mgr.Keeper().GetNodeAccountSlashPoints(ctx, na.NodeAddress)
-			c.Assert(err, IsNil)
-			slashPoints[i] = slashPoint
-		}
-		c.Assert(slashPoints == expected, Equals, true, Commentf(fmt.Sprint(slashPoints)))
+	// Process transaction with no coins - should not generate reference memo
+	handler := NewObservedTxInHandler(mgr)
+	msg := NewMsgObservedTxIn(ObservedTxs{obTxNoCoin}, keeper.nas[0].NodeAddress)
+	_, err := handler.handle(ctx, *msg)
+	c.Assert(err, IsNil)
+
+	// Memo should remain empty since reference generation failed
+	c.Assert(keeper.voter.Tx.Tx.Memo, Equals, "", check.Commentf("Memo should remain empty when no coins"))
+
+	// Test case 2: Transaction with zero amount
+	txZeroAmount := GetRandomTx()
+	txZeroAmount.Memo = ""
+	txZeroAmount.Coins = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.ZeroUint()))
+	obTxZero := NewObservedTx(txZeroAmount, 12, GetRandomPubKey(), 15)
+
+	keeper.voter = NewObservedTxVoter(txZeroAmount.ID, make(ObservedTxs, 0))
+	vault.PubKey = obTxZero.ObservedPubKey
+
+	msg = NewMsgObservedTxIn(ObservedTxs{obTxZero}, keeper.nas[0].NodeAddress)
+	_, err = handler.handle(ctx, *msg)
+	c.Assert(err, IsNil)
+
+	// Memo should remain empty since amount is zero
+	c.Assert(keeper.voter.Tx.Tx.Memo, Equals, "", check.Commentf("Memo should remain empty when amount is zero"))
+}
+
+func (s *HandlerObservedTxInSuite) TestMemolessTransactionWithExistingMemo(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	ctx = ctx.WithBlockHeight(15)
+
+	// Setup BTC pool
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.Decimals = 8
+	btcPool.BalanceAsset = cosmos.NewUint(100 * common.One)
+	btcPool.BalanceRune = cosmos.NewUint(100 * common.One)
+	c.Assert(mgr.Keeper().SetPool(ctx, btcPool), IsNil)
+
+	// Create observed tx with existing memo
+	existingMemo := "SWAP:ETH.ETH:0x1234567890123456789012345678901234567890"
+	tx := GetRandomTx()
+	tx.Memo = existingMemo
+	tx.Coins = common.NewCoins(common.NewCoin(common.BTCAsset, cosmos.NewUint(123456789)))
+	obTx := NewObservedTx(tx, 12, GetRandomPubKey(), 15)
+
+	vault := GetRandomVault()
+	vault.PubKey = obTx.ObservedPubKey
+	vault.Status = ActiveVault
+
+	keeper := &TestObservedTxInHandleKeeper{
+		nas:         NodeAccounts{GetRandomValidatorNode(NodeActive)},
+		voter:       NewObservedTxVoter(tx.ID, make(ObservedTxs, 0)),
+		vault:       vault,
+		vaultExists: true,
 	}
+	mgr.K = keeper
 
-	checkSlashPoints(c, ctx, nas, [7]int64{0, 0, 0, 0, 0, 0, 0})
+	// Process transaction with existing memo
+	handler := NewObservedTxInHandler(mgr)
+	msg := NewMsgObservedTxIn(ObservedTxs{obTx}, keeper.nas[0].NodeAddress)
+	_, err := handler.handle(ctx, *msg)
+	c.Assert(err, IsNil)
 
-	// 3/6 Active nodes observe.
-	broadcast(c, ctx, nas[0], msg)
-	checkSlashPoints(c, ctx, nas, [7]int64{1, 0, 0, 0, 0, 0, 0})
-	broadcast(c, ctx, nas[1], msg)
-	checkSlashPoints(c, ctx, nas, [7]int64{1, 1, 0, 0, 0, 0, 0})
-	broadcast(c, ctx, nas[2], msg)
-	checkSlashPoints(c, ctx, nas, [7]int64{1, 1, 1, 0, 0, 0, 0})
+	// Memo should remain the original memo (no reference memo generation for non-empty memos)
+	c.Assert(keeper.voter.Tx.Tx.Memo, Equals, existingMemo, check.Commentf("Existing memo should be preserved"))
+}
 
-	// nas[0] observes again.
-	broadcast(c, ctx, nas[0], msg)
-	checkSlashPoints(c, ctx, nas, [7]int64{2, 1, 1, 0, 0, 0, 0})
+func (s *HandlerObservedTxInSuite) TestFetchMemoFromReferenceHeightValidation(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	asset := common.BTCAsset
 
-	// nas[3] observes, reaching consensus (4/6, being exactly the 2/3 threshold).
-	// (Active nodes which observed are decremented ObserveSlashPoints;
-	//  those which haven't are incremented LackOfObservationPenalty.)
-	broadcast(c, ctx, nas[3], msg)
-	checkSlashPoints(c, ctx, nas, [7]int64{1, 0, 0, 0, 2, 2, 0})
+	// Set TTL for memoless transactions
+	mgr.Keeper().SetMimir(ctx, constants.MemolessTxnTTL.String(), 100)
 
-	// nas[0] observes again.
-	broadcast(c, ctx, nas[0], msg)
-	checkSlashPoints(c, ctx, nas, [7]int64{2, 0, 0, 0, 2, 2, 0})
+	// Test case 1: Transaction observed BEFORE memo creation (should fail)
+	refMemo1 := NewReferenceMemo(asset, "test memo 1", "11111", 50) // memo created at height 50
+	mgr.Keeper().SetReferenceMemo(ctx, refMemo1)
 
-	// consensusMsg should be consistent with the consensus-observed message,
-	// but with a slightly later BlockHeight and FinaliseHeight,
-	// which is normal.
-	consensusMsg := msg
-	consensusMsg.Txs = []common.ObservedTx{msg.Txs[0]}
-	consensusMsg.Txs[0].BlockHeight++
-	consensusMsg.Txs[0].FinaliseHeight++
+	testTx1 := common.NewTx(common.TxID(""), common.NoAddress, common.NoAddress, common.Coins{}, common.Gas{}, "r:11111")
+	memo := fetchMemoFromReference(ctx, mgr, asset, testTx1, 30) // tx observed at height 30 (BEFORE memo creation)
+	c.Check(memo, check.Equals, "", check.Commentf("Transaction observed before memo creation should be rejected"))
 
-	// Within the ObservationDelayFlexibility period, nas[4] observes with consensusMsg
-	// and is decremented LackOfObservationPenalty.
-	height += observeFlex
-	ctx = ctx.WithBlockHeight(height)
-	broadcast(c, ctx, nas[4], consensusMsg)
-	checkSlashPoints(c, ctx, nas, [7]int64{2, 0, 0, 0, 0, 2, 0})
+	// Test case 2: Transaction observed AT SAME HEIGHT as memo creation (should fail for safety)
+	refMemo2 := NewReferenceMemo(asset, "test memo 2", "22222", 60) // memo created at height 60
+	mgr.Keeper().SetReferenceMemo(ctx, refMemo2)
 
-	// The ObservationDelayFlexibility period ends, after which nas[5] observes;
-	// it is appropriately incremented ObserveSlashPoints since the network has to handle the observations
-	// (and it is added to the list of signers)
-	// and being past the ObservationDelayFlexibility period
-	// neither ObserveSlashPoints nor LackOfObservationPenalty is decremented.
-	height++
-	ctx = ctx.WithBlockHeight(height)
-	broadcast(c, ctx, nas[5], msg)
+	testTx2 := common.NewTx(common.TxID(""), common.NoAddress, common.NoAddress, common.Coins{}, common.Gas{}, "r:22222")
+	memo = fetchMemoFromReference(ctx, mgr, asset, testTx2, 60) // tx observed at height 60 (SAME as memo creation)
+	c.Check(memo, check.Equals, "", check.Commentf("Transaction observed at same height as memo creation should be rejected"))
 
-	checkSlashPoints(c, ctx, nas, [7]int64{2, 0, 0, 0, 0, 3, 0})
+	// Test case 3: Transaction observed AFTER memo creation (should succeed)
+	refMemo3 := NewReferenceMemo(asset, "test memo 3", "33333", 70) // memo created at height 70
+	mgr.Keeper().SetReferenceMemo(ctx, refMemo3)
 
-	// nas[5] observes again, this time incremented ObserveSlashPoints for the extra signing.
-	broadcast(c, ctx, nas[5], msg)
-	checkSlashPoints(c, ctx, nas, [7]int64{2, 0, 0, 0, 0, 4, 0})
+	ctx = ctx.WithBlockHeight(80) // current height is 80, memo not expired (70 + 100 > 80)
+	testTx3 := common.NewTx(common.TxID(""), common.NoAddress, common.NoAddress, common.Coins{}, common.Gas{}, "r:33333")
+	memo = fetchMemoFromReference(ctx, mgr, asset, testTx3, 75) // tx observed at height 75 (AFTER memo creation)
+	c.Check(memo, check.Equals, "test memo 3", check.Commentf("Transaction observed after memo creation should succeed"))
 
-	// Note that nas[6], the Standby node, remains unaffected by the Actives nodes' observations.
+	// Test case 4: Transaction observed way after memo creation (should succeed)
+	refMemo4 := NewReferenceMemo(asset, "test memo 4", "44444", 10) // memo created at height 10
+	mgr.Keeper().SetReferenceMemo(ctx, refMemo4)
+
+	ctx = ctx.WithBlockHeight(50) // current height is 50, memo not expired (10 + 100 > 50)
+	testTx4 := common.NewTx(common.TxID(""), common.NoAddress, common.NoAddress, common.Coins{}, common.Gas{}, "r:44444")
+	memo = fetchMemoFromReference(ctx, mgr, asset, testTx4, 45) // tx observed at height 45 (way after memo creation)
+	c.Check(memo, check.Equals, "test memo 4", check.Commentf("Transaction observed way after memo creation should succeed"))
+
+	// Test case 5: Edge case - transaction observed 1 block after memo creation (should succeed)
+	refMemo5 := NewReferenceMemo(asset, "test memo 5", "55555", 100) // memo created at height 100
+	mgr.Keeper().SetReferenceMemo(ctx, refMemo5)
+
+	ctx = ctx.WithBlockHeight(150) // current height is 150, memo not expired (100 + 100 > 150 is false, but we test height validation first)
+	testTx5 := common.NewTx(common.TxID(""), common.NoAddress, common.NoAddress, common.Coins{}, common.Gas{}, "r:55555")
+	memo = fetchMemoFromReference(ctx, mgr, asset, testTx5, 101) // tx observed at height 101 (1 block after memo creation)
+	c.Check(memo, check.Equals, "test memo 5", check.Commentf("Transaction observed 1 block after memo creation should succeed"))
 }

@@ -9,7 +9,6 @@ import (
 	"runtime"
 	"slices"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -26,7 +25,6 @@ import (
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient"
 	"gitlab.com/thorchain/thornode/v3/bifrost/thorclient/types"
 	"gitlab.com/thorchain/thornode/v3/common"
-	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/config"
 	"gitlab.com/thorchain/thornode/v3/constants"
 	stypes "gitlab.com/thorchain/thornode/v3/x/thorchain/types"
@@ -649,42 +647,6 @@ BlockLoop:
 	}
 }
 
-// getSaversMemo returns an add or withdraw memo for a Savers Vault
-// If the tx is not a valid savers tx, an empty string will be returned
-// Savers tx criteria:
-// - Inbound amount must be gas asset
-// - Inbound amount must be greater than the Dust Threshold of the tx chain (see chain.DustThreshold())
-func (o *Observer) getSaversMemo(chain common.Chain, tx *types.TxInItem) string {
-	// Savers txs should have one Coin input
-	if len(tx.Coins) != 1 {
-		return ""
-	}
-
-	txAmt := tx.Coins[0].Amount
-	dustThreshold := chain.DustThreshold()
-
-	// Below dust threshold, ignore
-	if txAmt.LT(dustThreshold) {
-		return ""
-	}
-
-	asset := tx.Coins[0].Asset
-	synthAsset := asset.GetSyntheticAsset()
-	bps := txAmt.Sub(dustThreshold)
-
-	switch {
-	case bps.IsZero():
-		// Amount is too low, ignore
-		return ""
-	case bps.LTE(cosmos.NewUint(10_000)):
-		// Amount is within or includes dustThreshold + 10_000, generate withdraw memo
-		return fmt.Sprintf("-:%s:%s", synthAsset.String(), bps.String())
-	default:
-		// Amount is above dustThreshold + 10_000, generate add memo
-		return fmt.Sprintf("+:%s", synthAsset.String())
-	}
-}
-
 // getThorchainTxIns convert to the type thorchain expected
 // maybe in later THORNode can just refactor this to use the type in thorchain
 func (o *Observer) getThorchainTxIns(txIn *types.TxIn, finalized bool, finaliseHeight int64) (common.ObservedTxs, error) {
@@ -703,15 +665,6 @@ func (o *Observer) getThorchainTxIns(txIn *types.TxIn, finalized bool, finaliseH
 		if len([]byte(item.Memo)) > constants.MaxMemoSize {
 			o.logger.Info().Msgf("tx (%s) memo (%s) too long", item.Tx, item.Memo)
 			continue
-		}
-
-		// If memo is empty, see if it is a memo-less savers add or withdraw
-		if strings.EqualFold(item.Memo, "") {
-			memo := o.getSaversMemo(txIn.Chain, item)
-			if !strings.EqualFold(memo, "") {
-				o.logger.Info().Str("memo", memo).Str("txId", item.Tx).Msg("created savers memo")
-				item.Memo = memo
-			}
 		}
 
 		if len(item.To) == 0 {

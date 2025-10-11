@@ -68,6 +68,7 @@ func getInternalHandlerMapping(mgr Manager) map[string]MsgHandler {
 	m[sdk.MsgTypeURL(&MsgNoOp{})] = NewNoOpHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgConsolidate{})] = NewConsolidateHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgManageTHORName{})] = NewManageTHORNameHandler(mgr)
+	m[sdk.MsgTypeURL(&MsgReferenceMemo{})] = NewReferenceMemoHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgLoanOpen{})] = NewLoanOpenHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgLoanRepayment{})] = NewLoanRepaymentHandler(mgr)
 	m[sdk.MsgTypeURL(&MsgTradeAccountDeposit{})] = NewTradeAccountDepositHandler(mgr)
@@ -98,6 +99,10 @@ func getMsgSwapFromMemo(ctx cosmos.Context, keeper keeper.Keeper, memo SwapMemo,
 	}
 
 	return NewMsgSwap(tx.Tx, memo.GetAsset(), memo.Destination, memo.SlipLimit, memo.AffiliateAddress, memo.AffiliateBasisPoints, memo.GetDexAggregator(), memo.GetDexTargetAddress(), memo.GetDexTargetLimit(), memo.GetSwapType(), memo.GetStreamQuantity(), memo.GetStreamInterval(), version, signer), nil
+}
+
+func getMsgReferenceMemo(memo ReferenceWriteMemo, signer cosmos.AccAddress) (cosmos.Msg, error) {
+	return NewMsgReferenceMemo(memo.GetAsset(), memo.GetMemo(), signer), nil
 }
 
 func getMsgWithdrawFromMemo(memo WithdrawLiquidityMemo, tx ObservedTx, signer cosmos.AccAddress) (cosmos.Msg, error) {
@@ -255,6 +260,8 @@ func processOneTxIn(ctx cosmos.Context, keeper keeper.Keeper, tx ObservedTx, sig
 		newMsg = NewMsgNoOp(tx, signer, m.Action)
 	case ConsolidateMemo:
 		newMsg = NewMsgConsolidate(tx, signer)
+	case ReferenceWriteMemo:
+		newMsg, err = getMsgReferenceMemo(m, signer)
 	case ManageTHORNameMemo:
 		newMsg, err = getMsgManageTHORNameFromMemo(m, tx, signer)
 	case LoanOpenMemo:

@@ -170,7 +170,6 @@ func (HandlerReBondSuite) TestReBondHandlerValidate(c *C) {
 	} {
 		nodeAccount, err = k.GetNodeAccount(ctx, nodeAccount.NodeAddress)
 		c.Assert(err, IsNil)
-		fmt.Println(nodeAccount.Status, "->", status)
 
 		nodeAccount.Status = status
 		c.Assert(k.SetNodeAccount(ctx, nodeAccount), IsNil)
