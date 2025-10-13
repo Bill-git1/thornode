@@ -90,6 +90,10 @@ import (
 	denomkeeper "gitlab.com/thorchain/thornode/v3/x/denom/keeper"
 	denomtypes "gitlab.com/thorchain/thornode/v3/x/denom/types"
 
+	"gitlab.com/thorchain/thornode/v3/x/scheduler"
+	schedulerkeeper "gitlab.com/thorchain/thornode/v3/x/scheduler/keeper"
+	schedulertypes "gitlab.com/thorchain/thornode/v3/x/scheduler/types"
+
 	evm "github.com/cosmos/evm/encoding/codec"
 	"github.com/cosmos/evm/ethereum/eip712"
 )
@@ -123,6 +127,7 @@ var maccPerms = map[string][]string{
 	thorchain.RUNEPoolName:           {},
 	wasmtypes.ModuleName:             {authtypes.Burner},
 	denomtypes.ModuleName:            {authtypes.Minter, authtypes.Burner},
+	schedulertypes.ModuleName:        {},
 	thorchain.TCYClaimingName:        {},
 	thorchain.TCYStakeName:           {},
 }
@@ -161,6 +166,7 @@ type THORChainApp struct {
 	DenomKeeper      denomkeeper.Keeper
 	msgServiceRouter *MsgServiceRouter // router for redirecting Msg service messages
 	WasmKeeper       wasmkeeper.Keeper
+	SchedulerKeeper  schedulerkeeper.Keeper
 
 	// the module manager
 	ModuleManager      *module.Manager
@@ -251,6 +257,7 @@ func NewChainApp(
 		thorchaintypes.StoreKey,
 		wasmtypes.StoreKey,
 		denomtypes.StoreKey,
+		schedulertypes.StoreKey,
 	)
 
 	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey)
@@ -408,6 +415,13 @@ func NewChainApp(
 		authtypes.NewModuleAddress(thorchain.ModuleName).String(),
 	)
 
+	app.SchedulerKeeper = schedulerkeeper.NewKeeper(
+		app.appCodec,
+		runtime.NewKVStoreService(keys[schedulertypes.StoreKey]),
+		wasmkeeper.NewDefaultPermissionKeeper(&app.WasmKeeper),
+		authtypes.NewModuleAddress(thorchain.ModuleName).String(),
+	)
+
 	// --- Module Options ---
 	telemetryEnabled := cast.ToBool(appOpts.Get("telemetry.enabled"))
 	testApp := cast.ToBool(appOpts.Get(TestApp))
@@ -452,6 +466,7 @@ func NewChainApp(
 	)
 	customWasmModule := NewCustomWasmModule(&wasmModule)
 	denomModule := denom.NewAppModule(app.appCodec, app.DenomKeeper, app.AccountKeeper, app.BankKeeper)
+	schedulerModule := scheduler.NewAppModule(app.appCodec, app.SchedulerKeeper)
 
 	app.ModuleManager = module.NewManager(
 		genutilModule,
@@ -465,6 +480,7 @@ func NewChainApp(
 		thorchainModule,
 		customWasmModule,
 		denomModule,
+		schedulerModule,
 	)
 
 	// BasicModuleManager defines the module BasicManager is in charge of setting up basic,
@@ -484,6 +500,7 @@ func NewChainApp(
 		thorchainModule,
 		wasmModule,
 		denomModule,
+		schedulerModule,
 	)
 	app.BasicModuleManager.RegisterLegacyAminoCodec(app.legacyAmino)
 	app.BasicModuleManager.RegisterInterfaces(interfaceRegistry)
@@ -508,6 +525,7 @@ func NewChainApp(
 		authz.ModuleName,
 
 		// additional non simd modules
+		schedulertypes.ModuleName,
 		thorchaintypes.ModuleName,
 		wasmtypes.ModuleName,
 	)
@@ -532,6 +550,7 @@ func NewChainApp(
 		thorchaintypes.ModuleName,
 		wasmtypes.ModuleName,
 		denomtypes.ModuleName,
+		schedulertypes.ModuleName,
 	}
 	app.ModuleManager.SetOrderInitGenesis(genesisModuleOrder...)
 	app.ModuleManager.SetOrderExportGenesis(genesisModuleOrder...)

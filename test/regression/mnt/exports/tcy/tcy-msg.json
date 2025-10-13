@@ -290,6 +290,9 @@
     "genutil": {
       "gen_txs": []
     },
+    "scheduler": {
+      "schedules": []
+    },
     "thorchain": {
       "POL": {
         "rune_deposited": "0",
