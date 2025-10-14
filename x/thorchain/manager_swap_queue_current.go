@@ -187,7 +187,10 @@ func (vm *SwapQueueVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 			}
 		}
 
-		if pick.msg.IsLegacyStreaming() {
+		// Only track streaming swap state for actual streaming swaps (not limit swaps)
+		// Limit swaps with streaming parameters should execute once and complete,
+		// not persist state across blocks which causes the hollowed-out record bug.
+		if pick.msg.IsLegacyStreaming() && !pick.msg.IsLimitSwap() {
 			swp, err = vm.k.GetStreamingSwap(ctx, pick.msg.Tx.ID)
 			if err != nil {
 				ctx.Logger().Error("fail to fetch streaming swap", "error", err)

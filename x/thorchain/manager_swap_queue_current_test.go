@@ -442,3 +442,107 @@ func (s SwapQueueVCURSuite) TestStreamingSwapOutbounds(c *C) {
 	c.Assert(err, NotNil)
 	mgr.TxOutStore().ClearOutboundItems(ctx)
 }
+
+// TestStreamingLimitSwapNoDivisionByZero is a regression test for the October 7, 2025 incident
+// where a limit swap with streaming parameters (quantity=2, interval=2) caused a division by zero panic.
+//
+// The bug occurred because:
+// 1. User creates a limit swap with streaming parameters while EnableAdvSwapQueue mimir = 0 (forcing v1 mode)
+// 2. Handler skips creating StreamingSwap record for limit swaps (handler_swap.go:326)
+// 3. Manager tries to update non-existent swap, creating a "hollowed-out" record with Interval=0
+// 4. Next block attempts division by zero: (height - lastHeight) % interval
+//
+// This test verifies that limit swaps with streaming parameters:
+// - Execute successfully without panicking
+// - Do NOT create or update StreamingSwap records in keeper
+// - Complete in a single iteration
+func (s SwapQueueVCURSuite) TestStreamingLimitSwapNoDivisionByZero(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+	mgr.txOutStore = NewTxStoreDummy()
+
+	// Setup pool
+	pool := NewPool()
+	pool.Asset = common.AVAXAsset
+	pool.BalanceRune = cosmos.NewUint(143166 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	queue := newSwapQueueVCUR(mgr.Keeper())
+
+	// Create the exact transaction from the incident:
+	// Streaming LIMIT swap with quantity=2, interval=2
+	// Memo: =<:AVAX-USDT-0X9702230A8EA53601F5CD2DC00FDBC13D4DF4A8C7:thor1dvvr4kdeurs8fdwgrql6je7l2v9ma73dp50n7m:40000000000/2/2
+	txID := common.TxID("43F310A416A4ED8CF8B645B1EBBB5E25FB89F9777A4350F7023DEB62B90EA3AD")
+	tx := common.NewTx(
+		txID,
+		GetRandomTHORAddress(),
+		GetRandomTHORAddress(),
+		common.NewCoins(common.NewCoin(common.RuneAsset(), cosmos.NewUint(40000000000))),
+		common.Gas{},
+		"=<:AVAX-USDT-0X9702230A8EA53601F5CD2DC00FDBC13D4DF4A8C7:thor1dvvr4kdeurs8fdwgrql6je7l2v9ma73dp50n7m:40000000000/2/2",
+	)
+
+	// Create a LIMIT swap with streaming parameters (quantity=2, interval=2)
+	// This is the problematic combination that caused the panic
+	targetAsset, _ := common.NewAsset("AVAX.USDT-0X9702230A8EA53601F5CD2DC00FDBC13D4DF4A8C7")
+	msg := NewMsgSwap(
+		tx,
+		targetAsset,
+		GetRandomTHORAddress(),
+		cosmos.NewUint(40000000000), // trade target (limit price)
+		common.NoAddress,
+		cosmos.ZeroUint(),
+		"", "", nil,
+		types.SwapType_limit, // This is a LIMIT swap
+		2,                    // quantity = 2 (streaming parameter)
+		2,                    // interval = 2 (streaming parameter)
+		types.SwapVersion_v1,
+		GetRandomBech32Addr(),
+	)
+
+	c.Assert(mgr.Keeper().SetSwapQueueItem(ctx, *msg, 0), IsNil)
+
+	// CRITICAL: Verify that no StreamingSwap record exists before EndBlock
+	c.Check(mgr.Keeper().StreamingSwapExists(ctx, txID), Equals, false,
+		Commentf("No StreamingSwap record should exist for limit swap before processing"))
+
+	// Process the swap - this should NOT panic with division by zero
+	c.Assert(queue.EndBlock(ctx, mgr), IsNil)
+
+	// Verify no StreamingSwap record was created (limit swaps should not persist state)
+	c.Check(mgr.Keeper().StreamingSwapExists(ctx, txID), Equals, false,
+		Commentf("Limit swap should NOT create StreamingSwap record"))
+
+	// Verify swap queue item was removed (swap completed)
+	_, err := mgr.Keeper().GetSwapQueueItem(ctx, txID, 0)
+	c.Assert(err, NotNil)
+	c.Check(err.Error(), Equals, "not found",
+		Commentf("Swap queue item should be removed after limit swap completes"))
+
+	// Simulate the next block to ensure no division by zero panic occurs
+	// In the original bug, this is where the panic happened
+	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 1)
+
+	// This should complete without panic - there should be no items to fetch
+	// because the limit swap completed in a single iteration
+	items, err := queue.FetchQueue(ctx)
+	c.Assert(err, IsNil)
+	c.Check(items, HasLen, 0,
+		Commentf("No items should remain in queue after limit swap completion"))
+
+	// Explicitly verify the keeper validation prevents invalid swaps from being saved
+	// This tests the defense-in-depth validation layer
+	invalidSwap := NewStreamingSwap(
+		txID,
+		0, // quantity = 0 (invalid)
+		0, // interval = 0 (invalid - would cause division by zero)
+		cosmos.ZeroUint(),
+		cosmos.ZeroUint(),
+	)
+	invalidSwap.LastHeight = ctx.BlockHeight()
+
+	// Attempting to save this invalid swap should be rejected by the keeper
+	mgr.Keeper().SetStreamingSwap(ctx, invalidSwap)
+	c.Check(mgr.Keeper().StreamingSwapExists(ctx, txID), Equals, false,
+		Commentf("Keeper should reject invalid StreamingSwap with interval=0"))
+}

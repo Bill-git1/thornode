@@ -52,6 +52,12 @@ func (k KVStore) StreamingSwapExists(ctx cosmos.Context, hash common.TxID) bool 
 
 // SetStreamingSwap save the streaming swap to kv store
 func (k KVStore) SetStreamingSwap(ctx cosmos.Context, swp StreamingSwap) {
+	// Defensive validation: reject streaming swaps with invalid intervals
+	// to prevent hollowed-out records that cause division by zero panics
+	if err := swp.Valid(); err != nil {
+		ctx.Logger().Error("attempt to save invalid streaming swap", "txid", swp.TxID, "error", err)
+		return
+	}
 	k.setStreamingSwap(ctx, k.GetKey(prefixStreamingSwap, swp.TxID.String()), swp)
 }
 
