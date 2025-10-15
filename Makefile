@@ -358,7 +358,7 @@ thorscan-gitlab-push: docker-gitlab-login
 		| xargs -n1 | grep registry | xargs -n1 docker push
 
 events-build:
-	@echo docker build . -f tools/events/Dockerfile \
+	@docker build . -f tools/events/Dockerfile \
 		$(shell sh ./build/docker/semver_tags.sh registry.gitlab.com/thorchain/thornode events-${BRANCH} $(shell cat version)) \
 		--build-arg TAG=$(BUILDTAG)
 
