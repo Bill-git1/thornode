@@ -71,5 +71,13 @@ func newAddress(address string) (Address, error) {
 		return Address(address), nil
 	}
 
+	// Check ZEC address formats (mainnet: t1, t3 prefixes; shielded: z, u)
+	if len(address) >= 26 && len(address) <= 95 {
+		if (address[:2] == "t1" || address[:2] == "t3") ||
+			(address[0] == 'z' || address[0] == 'u') {
+			return Address(address), nil
+		}
+	}
+
 	return NoAddress, fmt.Errorf("address format not supported: %s", address)
 }

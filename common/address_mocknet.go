@@ -93,5 +93,16 @@ func newAddress(address string) (Address, error) {
 		return Address(address), nil
 	}
 
+	// Check ZEC address formats (testnet: tm, tn prefixes; shielded: ztestsapling, utest, uregtest, z, u)
+	if len(address) >= 26 && len(address) <= 95 {
+		if (address[:2] == "tm" || address[:2] == "tn") ||
+			address[:12] == "ztestsapling" ||
+			address[:8] == "uregtest" ||
+			address[:5] == "utest" ||
+			(address[0] == 'z' || address[0] == 'u') {
+			return Address(address), nil
+		}
+	}
+
 	return NoAddress, fmt.Errorf("address format not supported: %s", address)
 }

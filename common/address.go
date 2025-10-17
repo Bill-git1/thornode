@@ -260,6 +260,19 @@ func (addr Address) IsChain(chain Chain) bool {
 		return false
 	case SOLChain:
 		return IsValidSOLAddress(addr.String())
+	case ZECChain:
+		// Zcash transparent addresses start with specific prefixes
+		// Mainnet: t1 (P2PKH), t3 (P2SH)
+		// Testnet: tm (P2PKH), tn (P2SH)
+		// Shielded: z (Sapling), u (Unified)
+		addrStr := addr.String()
+		if strings.HasPrefix(addrStr, "t1") || strings.HasPrefix(addrStr, "t3") ||
+			strings.HasPrefix(addrStr, "tm") || strings.HasPrefix(addrStr, "tn") ||
+			strings.HasPrefix(addrStr, "z") || strings.HasPrefix(addrStr, "u") {
+			// Basic length check for addresses
+			return len(addrStr) >= 26 && len(addrStr) <= 95
+		}
+		return false
 	default:
 		return true // if THORNode don't specifically check a chain yet, assume its ok.
 	}
@@ -268,7 +281,7 @@ func (addr Address) IsChain(chain Chain) bool {
 // Note that this will always return ETHChain for an AVAXChain address,
 // so perhaps only use it when determining a network (e.g. mainnet/testnet).
 func (addr Address) GetChain() Chain {
-	for _, chain := range []Chain{ETHChain, THORChain, BTCChain, LTCChain, BCHChain, DOGEChain, GAIAChain, AVAXChain, XRPChain} {
+	for _, chain := range []Chain{ETHChain, THORChain, BTCChain, LTCChain, BCHChain, DOGEChain, GAIAChain, AVAXChain, XRPChain, ZECChain} {
 		if addr.IsChain(chain) {
 			return chain
 		}
@@ -376,6 +389,19 @@ func (addr Address) GetNetwork(chain Chain) ChainNetwork {
 		}
 	case SOLChain:
 		return currentNetwork
+	case ZECChain:
+		// Determine network based on address prefix
+		addrStr := addr.String()
+		if strings.HasPrefix(addrStr, "tm") || strings.HasPrefix(addrStr, "tn") ||
+			strings.HasPrefix(addrStr, "ztestsapling") || strings.HasPrefix(addrStr, "utest") ||
+			strings.HasPrefix(addrStr, "uregtest") {
+			// Testnet addresses
+			return MockNet
+		}
+		// Mainnet addresses: t1, t3, z (Sapling), u (Unified mainnet)
+		if addr.IsChain(ZECChain) {
+			return mainNetPredicate()
+		}
 	}
 	return currentNetwork
 }

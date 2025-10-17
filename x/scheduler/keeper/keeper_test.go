@@ -73,6 +73,6 @@ var _ types.WasmKeeper = MockWasmKeeper{}
 type MockWasmKeeper struct{}
 
 // Execute implements types.WasmKeeper.
-func (m MockWasmKeeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins) ([]byte, error) {
+func (m MockWasmKeeper) Execute(ctx sdk.Context, contractAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins) ([]byte, error) {
 	return nil, nil
 }

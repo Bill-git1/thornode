@@ -39,6 +39,8 @@ var (
 	XRPAsset = Asset{Chain: XRPChain, Symbol: "XRP", Ticker: "XRP", Synth: false}
 	// SOLAsset SOL
 	SOLAsset = Asset{Chain: SOLChain, Symbol: "SOL", Ticker: "SOL", Synth: false}
+	// ZECAsset ZEC
+	ZECAsset = Asset{Chain: ZECChain, Symbol: "ZEC", Ticker: "ZEC", Synth: false}
 	// RuneNative RUNE on thorchain
 	RuneNative = Asset{Chain: THORChain, Symbol: "RUNE", Ticker: "RUNE", Synth: false}
 	TCY        = Asset{Chain: THORChain, Symbol: "TCY", Ticker: "TCY", Synth: false}
@@ -324,6 +326,8 @@ func (a Asset) ShortCode() string {
 		return "x"
 	case "SOL.SOL":
 		return "o"
+	case "ZEC.ZEC":
+		return "z"
 	default:
 		return ""
 	}

@@ -29,6 +29,7 @@ const (
 	TRONChain  = Chain("TRON")
 	XRPChain   = Chain("XRP")
 	SOLChain   = Chain("SOL")
+	ZECChain   = Chain("ZEC")
 
 	SigningAlgoSecp256k1 = SigningAlgo("secp256k1")
 	SigningAlgoEd25519   = SigningAlgo("ed25519")
@@ -49,6 +50,7 @@ var AllChains = [...]Chain{
 	TRONChain,
 	XRPChain,
 	SOLChain,
+	ZECChain,
 }
 
 type SigningAlgo string
@@ -106,7 +108,7 @@ func GetEVMChains() []Chain {
 
 // GetUTXOChains returns all "UTXO" chains connected to THORChain.
 func GetUTXOChains() []Chain {
-	return []Chain{BTCChain, LTCChain, BCHChain, DOGEChain}
+	return []Chain{BTCChain, LTCChain, BCHChain, DOGEChain, ZECChain}
 }
 
 // IsEVM returns true if given chain is an EVM chain.
@@ -186,6 +188,8 @@ func (c Chain) GetGasAsset() Asset {
 		return XRPAsset
 	case SOLChain:
 		return SOLAsset
+	case ZECChain:
+		return ZECAsset
 	default:
 		return EmptyAsset
 	}
@@ -206,7 +210,7 @@ func (c Chain) GetGasUnits() (gasRateUnits string, gasRateUnitsPerOne cosmos.Uin
 		return "drop", cosmos.NewUint(1e6)
 	case TRONChain:
 		return "sun", cosmos.NewUint(1e6)
-	case BTCChain, BCHChain, LTCChain, DOGEChain:
+	case BTCChain, BCHChain, LTCChain, DOGEChain, ZECChain:
 		return "satsperbyte", cosmos.NewUint(1e8)
 	case ETHChain, BSCChain:
 		return "gwei", cosmos.NewUint(1e9)
@@ -308,7 +312,7 @@ func (c Chain) DustThreshold() cosmos.Uint {
 	switch c {
 	case BTCChain:
 		return cosmos.NewUint(1_000)
-	case LTCChain, BCHChain:
+	case LTCChain, BCHChain, ZECChain:
 		return cosmos.NewUint(10_000)
 	case DOGEChain:
 		return cosmos.NewUint(100_000_000)
@@ -354,7 +358,7 @@ func (c Chain) P2WPKHOutputValue() int64 {
 // MaxMemoLength returns the max memo length for each chain.
 func (c Chain) MaxMemoLength() int {
 	switch c {
-	case BTCChain, LTCChain, BCHChain, DOGEChain:
+	case BTCChain, LTCChain, BCHChain, DOGEChain, ZECChain:
 		return constants.MaxOpReturnDataSize
 	default:
 		// Default to the max memo size that we will process, regardless
@@ -376,6 +380,8 @@ func (c Chain) DefaultCoinbase() float64 {
 		return 3.125
 	case DOGEChain:
 		return 10000
+	case ZECChain:
+		return 1.5625
 	default:
 		return 0
 	}
@@ -411,6 +417,8 @@ func (c Chain) ApproximateBlockMilliseconds() int64 {
 		return 1_500
 	case SOLChain:
 		return 400
+	case ZECChain:
+		return 75_000
 	default:
 		return 0
 	}
@@ -418,7 +426,7 @@ func (c Chain) ApproximateBlockMilliseconds() int64 {
 
 func (c Chain) InboundNotes() string {
 	switch c {
-	case BTCChain, LTCChain, BCHChain, DOGEChain:
+	case BTCChain, LTCChain, BCHChain, DOGEChain, ZECChain:
 		return "First output should be to inbound_address, second output should be change back to self, third output should be OP_RETURN, limited to 80 bytes. Do not send below the dust threshold. Do not use exotic spend scripts, locks or address formats."
 	case ETHChain, AVAXChain, BSCChain, BASEChain:
 		return "Base Asset: Send the inbound_address the asset with the memo encoded in hex in the data field. Tokens: First approve router to spend tokens from user: asset.approve(router, amount). Then call router.depositWithExpiry(inbound_address, asset, amount, memo, expiry). Asset is the token contract address. Amount should be in native asset decimals (eg 1e18 for most tokens). Do not swap to smart contract addresses."
