@@ -498,7 +498,8 @@ func ExportGenesis(ctx cosmos.Context, k keeper.Keeper) GenesisState {
 	endBlockHeight := ctx.BlockHeight() + 17200
 
 	for height := startBlockHeight; height < endBlockHeight; height++ {
-		txOut, err := k.GetTxOut(ctx, height)
+		var txOut *keeper.TxOut
+		txOut, err = k.GetTxOut(ctx, height)
 		if err != nil {
 			ctx.Logger().Error("fail to get tx out", "error", err, "height", height)
 			continue

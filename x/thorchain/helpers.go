@@ -614,7 +614,8 @@ func emitEndBlockTelemetry(ctx cosmos.Context, mgr Manager) error {
 			telem(cosmos.NewUint(node.Bond.Uint64())),
 			[]metrics.Label{telemetry.NewLabel("node_address", node.NodeAddress.String()), telemetry.NewLabel("status", node.Status.String())},
 		)
-		pts, err := mgr.Keeper().GetNodeAccountSlashPoints(ctx, node.NodeAddress)
+		var pts int64
+		pts, err = mgr.Keeper().GetNodeAccountSlashPoints(ctx, node.NodeAddress)
 		if err != nil {
 			continue
 		}
@@ -668,7 +669,8 @@ func emitEndBlockTelemetry(ctx cosmos.Context, mgr Manager) error {
 		telemetry.SetGaugeWithLabels([]string{"thornode", "pool", "price", "usd"}, price, labels)
 
 		// trade accounts
-		tu, err := mgr.Keeper().GetTradeUnit(ctx, pool.Asset.GetTradeAsset())
+		var tu TradeUnit
+		tu, err = mgr.Keeper().GetTradeUnit(ctx, pool.Asset.GetTradeAsset())
 		if err != nil {
 			ctx.Logger().Error("fail to get trade unit", "error", err)
 			continue
@@ -690,7 +692,8 @@ func emitEndBlockTelemetry(ctx cosmos.Context, mgr Manager) error {
 			if coin.IsRune() {
 				totalValue = totalValue.Add(coin.Amount)
 			} else {
-				pool, err := mgr.Keeper().GetPool(ctx, coin.Asset.GetLayer1Asset())
+				var pool Pool
+				pool, err = mgr.Keeper().GetPool(ctx, coin.Asset.GetLayer1Asset())
 				if err != nil {
 					continue
 				}
@@ -1022,7 +1025,8 @@ func atTVLCap(ctx cosmos.Context, coins common.Coins, mgr Manager) bool {
 		if asset.IsSyntheticAsset() {
 			asset = asset.GetLayer1Asset()
 		}
-		pool, err := mgr.Keeper().GetPool(ctx, asset)
+		var pool Pool
+		pool, err = mgr.Keeper().GetPool(ctx, asset)
 		if err != nil {
 			ctx.Logger().Error("fail to get pool for atTVLCap", "asset", coin.Asset, "error", err)
 			continue
@@ -1040,7 +1044,8 @@ func atTVLCap(ctx cosmos.Context, coins common.Coins, mgr Manager) bool {
 	}
 
 	// get effectiveSecurity
-	nodeAccounts, err := mgr.Keeper().ListActiveValidators(ctx)
+	var nodeAccounts NodeAccounts
+	nodeAccounts, err = mgr.Keeper().ListActiveValidators(ctx)
 	if err != nil {
 		ctx.Logger().Error("fail to get validators to calculate TVL cap", "error", err)
 		return true
@@ -1125,24 +1130,28 @@ func willSwapOutputExceedLimitAndFees(ctx cosmos.Context, mgr Manager, msg MsgSw
 	var emit cosmos.Uint
 	switch {
 	case !source.IsRune() && !target.IsRune():
-		sourcePool, err := mgr.Keeper().GetPool(ctx, source.Asset.GetLayer1Asset())
+		var sourcePool Pool
+		sourcePool, err = mgr.Keeper().GetPool(ctx, source.Asset.GetLayer1Asset())
 		if err != nil {
 			return false
 		}
-		targetPool, err := mgr.Keeper().GetPool(ctx, target.Asset.GetLayer1Asset())
+		var targetPool Pool
+		targetPool, err = mgr.Keeper().GetPool(ctx, target.Asset.GetLayer1Asset())
 		if err != nil {
 			return false
 		}
 		emit = swapper.CalcAssetEmission(sourcePool.BalanceAsset, source.Amount, sourcePool.BalanceRune)
 		emit = swapper.CalcAssetEmission(targetPool.BalanceRune, emit, targetPool.BalanceAsset)
 	case source.IsRune():
-		pool, err := mgr.Keeper().GetPool(ctx, target.Asset.GetLayer1Asset())
+		var pool Pool
+		pool, err = mgr.Keeper().GetPool(ctx, target.Asset.GetLayer1Asset())
 		if err != nil {
 			return false
 		}
 		emit = swapper.CalcAssetEmission(pool.BalanceRune, source.Amount, pool.BalanceAsset)
 	case target.IsRune():
-		pool, err := mgr.Keeper().GetPool(ctx, source.Asset.GetLayer1Asset())
+		var pool Pool
+		pool, err = mgr.Keeper().GetPool(ctx, source.Asset.GetLayer1Asset())
 		if err != nil {
 			return false
 		}

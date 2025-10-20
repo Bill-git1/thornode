@@ -104,7 +104,7 @@ func (gm *GasMgrVCUR) GetAssetOutboundFee(ctx cosmos.Context, asset common.Asset
 	if err != nil {
 		return cosmos.ZeroUint(), err
 	}
-	if err := chainOutboundFee.Valid(); err != nil {
+	if err = chainOutboundFee.Valid(); err != nil {
 		// If the network fee is invalid, usually because consensus hasn't been reached, a
 		// fee can't be deducted. So return 0 and no error
 		return cosmos.ZeroUint(), nil

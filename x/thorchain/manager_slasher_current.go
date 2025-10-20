@@ -235,7 +235,8 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 			// if the vault is frozen, reschedule to same vault with no changes
 			frozen := false
 			if len(vault.Frozen) > 0 {
-				chains, err := common.NewChains(vault.Frozen)
+				var chains common.Chains
+				chains, err = common.NewChains(vault.Frozen)
 				if err != nil {
 					ctx.Logger().Error("failed to convert chains", "error", err)
 				}
@@ -249,7 +250,7 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 						Memo:      toi.Memo,
 					}
 					eve := NewEventSecurity(etx, "frozen vault reschedule")
-					if err := mgr.EventMgr().EmitEvent(ctx, eve); err != nil {
+					if err = mgr.EventMgr().EmitEvent(ctx, eve); err != nil {
 						ctx.Logger().Error("fail to emit security event", "error", err)
 					}
 					frozen = true
@@ -298,7 +299,8 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 			}
 
 			if !frozen && s.needsNewVault(ctx, mgr, vault, signingTransPeriod, voter.FinalisedHeight, toi) {
-				active, err := s.keeper.GetAsgardVaultsByStatus(ctx, ActiveVault)
+				var active types.Vaults
+				active, err = s.keeper.GetAsgardVaultsByStatus(ctx, ActiveVault)
 				if err != nil {
 					return fmt.Errorf("fail to get active asgard vaults: %w", err)
 				}
@@ -320,7 +322,8 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 
 				available := active
 				mainCoin := toi.Coin
-				maxGasCoin, err := mgr.GasMgr().GetMaxGas(ctx, toi.Chain)
+				var maxGasCoin common.Coin
+				maxGasCoin, err = mgr.GasMgr().GetMaxGas(ctx, toi.Chain)
 				if err != nil {
 					ctx.Logger().Error("fail to get max gas", "error", err)
 				}
@@ -400,14 +403,14 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 				if !maxGasCoin.IsEmpty() {
 					toi.MaxGas = common.Gas{maxGasCoin}
 					// Update MaxGas in ObservedTxVoter action as well
-					if err := updateTxOutGas(ctx, s.keeper, toi, common.Gas{maxGasCoin}); err != nil {
+					if err = updateTxOutGas(ctx, s.keeper, toi, common.Gas{maxGasCoin}); err != nil {
 						ctx.Logger().Error("Failed to update MaxGas of action in ObservedTxVoter", "hash", toi.InHash, "error", err)
 					}
 				}
 				// Equals checks GasRate so update actions GasRate too (before updating in the queue item)
 				// for future updates of MaxGas, which must match for matchActionItem in AddOutTx.
 				gasRate := int64(mgr.GasMgr().GetGasRate(ctx, toi.Chain).Uint64())
-				if err := updateTxOutGasRate(ctx, s.keeper, toi, gasRate); err != nil {
+				if err = updateTxOutGasRate(ctx, s.keeper, toi, gasRate); err != nil {
 					ctx.Logger().Error("Failed to update GasRate of action in ObservedTxVoter", "hash", toi.InHash, "error", err)
 				}
 				toi.GasRate = gasRate

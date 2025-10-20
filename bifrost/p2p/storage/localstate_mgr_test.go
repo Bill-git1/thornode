@@ -62,8 +62,8 @@ func (s *FileStateMgrTestSuite) TestSaveLocalState(c *C) {
 	folder := os.TempDir()
 	f := filepath.Join(folder, "test", "test1", "test2")
 	defer func() {
-		err := os.RemoveAll(f)
-		c.Assert(err, IsNil)
+		removeErr := os.RemoveAll(f)
+		c.Assert(removeErr, IsNil)
 	}()
 	fsm, err := NewFileStateMgr(f)
 	c.Assert(err, IsNil)
@@ -112,8 +112,8 @@ func (s *FileStateMgrTestSuite) TestSaveAddressBook(c *C) {
 	folder := os.TempDir()
 	f := filepath.Join(folder, "test")
 	defer func() {
-		err := os.RemoveAll(f)
-		c.Assert(err, IsNil)
+		removeErr := os.RemoveAll(f)
+		c.Assert(removeErr, IsNil)
 	}()
 	fsm, err := NewFileStateMgr(f)
 	c.Assert(err, IsNil)

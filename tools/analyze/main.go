@@ -1,6 +1,4 @@
-package main
-
-// trunk-ignore-all(golangci-lint/govet): skip shadowing noise on "ok" for ast inspect
+package main //nolint:govet
 
 import (
 	"errors"

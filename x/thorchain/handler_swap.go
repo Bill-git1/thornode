@@ -191,7 +191,8 @@ func (h SwapHandler) validateV3_0_0(ctx cosmos.Context, msg MsgSwap) error {
 			// calculate rune value on incoming swap, and add to total liquidity.
 			runeVal := sourceCoin.Amount
 			if !sourceCoin.IsRune() {
-				pool, err := h.mgr.Keeper().GetPool(ctx, sourceCoin.Asset.GetLayer1Asset())
+				var pool Pool
+				pool, err = h.mgr.Keeper().GetPool(ctx, sourceCoin.Asset.GetLayer1Asset())
 				if err != nil {
 					return ErrInternal(err, "fail to get pool")
 				}
@@ -213,7 +214,8 @@ func (h SwapHandler) validateV3_0_0(ctx cosmos.Context, msg MsgSwap) error {
 		// do a simulated swap to see how much of the target synth the network
 		// will need to mint and check if that amount exceeds limits
 		targetAmount, runeAmount := cosmos.ZeroUint(), cosmos.ZeroUint()
-		swapper, err := GetSwapper(h.mgr.GetVersion())
+		var swapper Swapper
+		swapper, err = GetSwapper(h.mgr.GetVersion())
 		if err == nil {
 			if sourceCoin.IsRune() {
 				runeAmount = sourceCoin.Amount
@@ -223,7 +225,8 @@ func (h SwapHandler) validateV3_0_0(ctx cosmos.Context, msg MsgSwap) error {
 				if sourceAssetPool.IsSyntheticAsset() {
 					sourceAssetPool = sourceAssetPool.GetLayer1Asset()
 				}
-				sourcePool, err := h.mgr.Keeper().GetPool(ctx, sourceAssetPool)
+				var sourcePool Pool
+				sourcePool, err = h.mgr.Keeper().GetPool(ctx, sourceAssetPool)
 				if err != nil {
 					ctx.Logger().Error("fail to fetch pool for swap simulation", "error", err)
 				} else {
@@ -231,7 +234,8 @@ func (h SwapHandler) validateV3_0_0(ctx cosmos.Context, msg MsgSwap) error {
 				}
 			}
 			// rune --> synth swap
-			targetPool, err := h.mgr.Keeper().GetPool(ctx, target.GetLayer1Asset())
+			var targetPool Pool
+			targetPool, err = h.mgr.Keeper().GetPool(ctx, target.GetLayer1Asset())
 			if err != nil {
 				ctx.Logger().Error("fail to fetch pool for swap simulation", "error", err)
 			} else {
@@ -342,7 +346,8 @@ func (h SwapHandler) handleV3_0_0(ctx cosmos.Context, msg MsgSwap) (*cosmos.Resu
 
 			sourceAsset := msg.Tx.Coins[0].Asset
 			targetAsset := msg.TargetAsset
-			maxSwapQuantity, err := getMaxSwapQuantity(ctx, h.mgr, sourceAsset, targetAsset, swp)
+			var maxSwapQuantity uint64
+			maxSwapQuantity, err = getMaxSwapQuantity(ctx, h.mgr, sourceAsset, targetAsset, swp)
 			if err != nil {
 				return nil, cosmos.ZeroUint(), err
 			}
@@ -399,7 +404,8 @@ func (h SwapHandler) handleV3_0_0(ctx cosmos.Context, msg MsgSwap) (*cosmos.Resu
 			ctx.Logger().Error("failed to retrieve AffiliateCollector for thorname owner", "address", affThorname.Owner.String(), "error", err)
 		} else {
 			// The TargetAsset has already been established to be RUNE.
-			transactionFee, err := h.mgr.GasMgr().GetAssetOutboundFee(ctx, common.RuneAsset(), true)
+			var transactionFee cosmos.Uint
+			transactionFee, err = h.mgr.GasMgr().GetAssetOutboundFee(ctx, common.RuneAsset(), true)
 			if err != nil {
 				ctx.Logger().Error("failed to get transaction fee", "error", err)
 			} else {

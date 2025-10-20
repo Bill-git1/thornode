@@ -535,7 +535,8 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 			signingTransactionPeriod := tos.constAccessor.GetInt64Value(constants.SigningTransactionPeriod)
 
 			// ///////////// COLLECT ACTIVE ASGARD VAULTS ///////////////////
-			activeAsgards, err := tos.keeper.GetAsgardVaultsByStatus(ctx, ActiveVault)
+			var activeAsgards Vaults
+			activeAsgards, err = tos.keeper.GetAsgardVaultsByStatus(ctx, ActiveVault)
 			if err != nil {
 				ctx.Logger().Error("fail to get active vaults", "error", err)
 			}
@@ -550,7 +551,8 @@ func (tos *TxOutStorageVCUR) prepareTxOutItem(ctx cosmos.Context, toi TxOutItem)
 			// //////////////////////////////////////////////////////////////
 
 			// ///////////// COLLECT RETIRING ASGARD VAULTS /////////////////
-			retiringAsgards, err := tos.keeper.GetAsgardVaultsByStatus(ctx, RetiringVault)
+			var retiringAsgards Vaults
+			retiringAsgards, err = tos.keeper.GetAsgardVaultsByStatus(ctx, RetiringVault)
 			if err != nil {
 				ctx.Logger().Error("fail to get retiring vaults", "error", err)
 			}
@@ -1028,11 +1030,11 @@ func (tos *TxOutStorageVCUR) nativeTxOut(ctx cosmos.Context, mgr Manager, toi Tx
 
 	// mint if we're sending from THORChain module
 	if toi.ModuleName == ModuleName {
-		if err := tos.keeper.MintToModule(ctx, toi.ModuleName, toi.Coin); err != nil {
+		if err = tos.keeper.MintToModule(ctx, toi.ModuleName, toi.Coin); err != nil {
 			return fmt.Errorf("fail to mint coins during txout: %w", err)
 		}
 		mintEvt := NewEventMintBurn(MintSupplyType, toi.Coin.Asset.Native(), toi.Coin.Amount, "native_tx_out")
-		if err := tos.eventMgr.EmitEvent(ctx, mintEvt); err != nil {
+		if err = tos.eventMgr.EmitEvent(ctx, mintEvt); err != nil {
 			ctx.Logger().Error("fail to emit mint event", "error", err)
 		}
 	}

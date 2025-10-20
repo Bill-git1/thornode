@@ -177,9 +177,9 @@ func (s *ThorchainSuite) TestChurn(c *C) {
 		if i == 0 {
 			continue
 		}
-		var err error
-		sig, err := common.PubKey(pk).GetThorAddress()
-		c.Assert(err, IsNil)
+		var sigErr error
+		sig, sigErr := common.PubKey(pk).GetThorAddress()
+		c.Assert(sigErr, IsNil)
 		signers[i-1] = sig.String()
 		signatures[i-1] = "fakeSignature"
 	}
@@ -429,9 +429,9 @@ func (s *ThorchainSuite) TestRagnarokNoOneLeave(c *C) {
 			common.NewCoin(common.RuneAsset(), res.Amount),
 		})
 		msg := NewMsgReserveContributor(GetRandomTx(), res, bonders[0].NodeAddress)
-		err := resHandler.handle(ctx, *msg)
-		_ = err
-		// c.Assert(err, IsNil)
+		handleErr := resHandler.handle(ctx, *msg)
+		_ = handleErr
+		// c.Assert(handleErr, IsNil)
 	}
 	c.Assert(mgr.Keeper().SetVault(ctx, asgard), IsNil)
 	asgard.Membership = asgard.Membership[:len(asgard.Membership)-1]

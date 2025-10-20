@@ -152,7 +152,8 @@ func (h RunePoolWithdrawHandler) handleV3_0_0(ctx cosmos.Context, msg MsgRunePoo
 		maxReserveBackstop := h.mgr.Keeper().GetConfigInt64(ctx, constants.RUNEPoolMaxReserveBackstop)
 		polMaxNetworkDeposit := h.mgr.Keeper().GetConfigInt64(ctx, constants.POLMaxNetworkDeposit)
 		maxReserveUsage := cosmos.NewInt(maxReserveBackstop + polMaxNetworkDeposit)
-		pol, err := h.mgr.Keeper().GetPOL(ctx)
+		var pol ProtocolOwnedLiquidity
+		pol, err = h.mgr.Keeper().GetPOL(ctx)
 		if err != nil {
 			return fmt.Errorf("fail to get POL: %w", err)
 		}
@@ -189,7 +190,8 @@ func (h RunePoolWithdrawHandler) handleV3_0_0(ctx cosmos.Context, msg MsgRunePoo
 	userAmount := common.SafeSub(withdrawAmount, affiliateAmount)
 	if !affiliateAmount.IsZero() {
 		affiliateCoins := common.NewCoins(common.NewCoin(common.RuneNative, affiliateAmount))
-		affiliateAddress, err := msg.AffiliateAddress.AccAddress()
+		var affiliateAddress cosmos.AccAddress
+		affiliateAddress, err = msg.AffiliateAddress.AccAddress()
 		if err != nil {
 			return fmt.Errorf("fail to get affiliate address: %w", err)
 		}

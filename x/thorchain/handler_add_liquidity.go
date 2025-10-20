@@ -472,12 +472,14 @@ func (h AddLiquidityHandler) addLiquidity(ctx cosmos.Context,
 ) (err error) {
 	if asset.IsSecuredAsset() {
 		if !addAssetAmount.IsZero() {
-			accAddr, err := runeAddr.AccAddress()
+			var accAddr cosmos.AccAddress
+			accAddr, err = runeAddr.AccAddress()
 			if err != nil {
 				return err
 			}
 
-			coins, err := h.mgr.SecuredAssetManager().Withdraw(
+			var coins common.Coin
+			coins, err = h.mgr.SecuredAssetManager().Withdraw(
 				ctx, asset, addAssetAmount, accAddr, common.NoAddress, requestTxHash)
 			if err != nil {
 				return err

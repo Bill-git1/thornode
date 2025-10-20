@@ -72,7 +72,7 @@ func (h TssKeysignHandler) validateV3_0_0(ctx cosmos.Context, msg MsgTssKeysignF
 		return cosmos.ErrUnknownRequest("invalid keysign fail message")
 	}
 
-	if _, err := validateKeysignAuth(ctx, h.mgr.Keeper(), msg.GetSigners()); err != nil {
+	if _, err = validateKeysignAuth(ctx, h.mgr.Keeper(), msg.GetSigners()); err != nil {
 		return err
 	}
 
@@ -142,11 +142,13 @@ func (h TssKeysignHandler) handleV3_0_0(ctx cosmos.Context, msg MsgTssKeysignFai
 	}
 	var vaultMemberNodes NodeAccounts
 	for _, item := range vault.GetMembership() {
-		addr, err := item.GetThorAddress()
+		var addr cosmos.AccAddress
+		addr, err = item.GetThorAddress()
 		if err != nil {
 			return nil, wrapError(ctx, err, "fail to get thor address for "+item.String())
 		}
-		na, err := h.mgr.Keeper().GetNodeAccount(ctx, addr)
+		var na NodeAccount
+		na, err = h.mgr.Keeper().GetNodeAccount(ctx, addr)
 		if err != nil {
 			return nil, wrapError(ctx, err, "fail to get node account")
 		}

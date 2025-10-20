@@ -154,7 +154,8 @@ func (vm *SwapQueueVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 				}
 			} else {
 				// Should not refund a failed preferred asset swap, the RUNE is still in the AffiliateCollector module
-				affColAddress, err := mgr.Keeper().GetModuleAddress(AffiliateCollectorName)
+				var affColAddress common.Address
+				affColAddress, err = mgr.Keeper().GetModuleAddress(AffiliateCollectorName)
 				if err != nil {
 					ctx.Logger().Error("failed to retrieve AffiliateCollector module address", "error", err)
 				}
@@ -164,7 +165,7 @@ func (vm *SwapQueueVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 					// clean up failed preferred asset swap
 					runeAmt := pick.msg.Tx.Coins[0].Amount
 					memo := pick.msg.Tx.Memo
-					if err := vm.cleanupFailedPreferredAssetSwap(ctx, mgr, memo, runeAmt); err != nil {
+					if err = vm.cleanupFailedPreferredAssetSwap(ctx, mgr, memo, runeAmt); err != nil {
 						ctx.Logger().Error("failed to cleanup failed preferred asset swap", "error", err)
 					}
 				}
@@ -286,7 +287,8 @@ func (vm *SwapQueueVCUR) cleanupFailedPreferredAssetSwap(ctx cosmos.Context, mgr
 		return fmt.Errorf("failed to get thorname from memo: %s", memo)
 	}
 	if tn, err := vm.k.GetTHORName(ctx, name); err == nil {
-		affCol, err := mgr.Keeper().GetAffiliateCollector(ctx, tn.Owner)
+		var affCol AffiliateFeeCollector
+		affCol, err = mgr.Keeper().GetAffiliateCollector(ctx, tn.Owner)
 		if err != nil {
 			return fmt.Errorf("failed to get affiliate collector record: %w", err)
 		} else {

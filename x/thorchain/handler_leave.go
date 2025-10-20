@@ -121,7 +121,6 @@ func (h LeaveHandler) handleV3_0_0(ctx cosmos.Context, msg MsgLeave) error {
 		if nodeAcc.LeaveScore == 0 {
 			// get to the 8th decimal point, but keep numbers integers for safer math
 			age := cosmos.NewUint(uint64((ctx.BlockHeight() - nodeAcc.StatusSince) * common.One))
-			// trunk-ignore(golangci-lint/govet): shadow
 			slashPts, err := h.mgr.Keeper().GetNodeAccountSlashPoints(ctx, nodeAcc.NodeAddress)
 			if err != nil || slashPts == 0 {
 				ctx.Logger().Error("fail to get node account slash points", "error", err)
@@ -131,7 +130,6 @@ func (h LeaveHandler) handleV3_0_0(ctx cosmos.Context, msg MsgLeave) error {
 			}
 		}
 	} else {
-		// trunk-ignore(golangci-lint/govet): shadow
 		bondLockPeriod, err := h.mgr.Keeper().GetMimir(ctx, constants.BondLockupPeriod.String())
 		if err != nil || bondLockPeriod < 0 {
 			bondLockPeriod = h.mgr.GetConstants().GetInt64Value(constants.BondLockupPeriod)
@@ -156,7 +154,6 @@ func (h LeaveHandler) handleV3_0_0(ctx cosmos.Context, msg MsgLeave) error {
 			// vault (it was destroyed when we successfully migrated funds from
 			// their address to a new TSS vault
 			if !h.mgr.Keeper().VaultExists(ctx, nodeAcc.PubKeySet.Secp256k1) {
-				// trunk-ignore(golangci-lint/govet): shadow
 				if err := refundBond(ctx, msg.Tx, bondAddr, cosmos.ZeroUint(), &nodeAcc, h.mgr); err != nil {
 					return ErrInternal(err, "fail to refund bond")
 				}
@@ -165,7 +162,6 @@ func (h LeaveHandler) handleV3_0_0(ctx cosmos.Context, msg MsgLeave) error {
 		}
 	}
 	nodeAcc.RequestedToLeave = true
-	// trunk-ignore(golangci-lint/govet): shadow
 	if err := h.mgr.Keeper().SetNodeAccount(ctx, nodeAcc); err != nil {
 		return ErrInternal(err, "fail to save node account to key value store")
 	}

@@ -120,8 +120,8 @@ func (s *SolTestSuite) SetUpSuite(c *C) {
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		switch req.RequestURI {
 		case thorclient.ChainVersionEndpoint:
-			_, err := rw.Write([]byte(`{"current":"` + types2.GetCurrentVersion().String() + `"}`))
-			c.Assert(err, IsNil)
+			_, writeErr := rw.Write([]byte(`{"current":"` + types2.GetCurrentVersion().String() + `"}`))
+			c.Assert(writeErr, IsNil)
 		case thorclient.PubKeysEndpoint:
 			content := fmt.Sprintf(`{
   "asgard": [
@@ -136,8 +136,8 @@ func (s *SolTestSuite) SetUpSuite(c *C) {
 			}
 			// httpTestHandler(c, rw, "../../../../test/fixtures/endpoints/vaults/pubKeys.json")
 		default:
-			body, err := io.ReadAll(req.Body)
-			c.Assert(err, IsNil)
+			body, readErr := io.ReadAll(req.Body)
+			c.Assert(readErr, IsNil)
 			type RPCRequest struct {
 				JSONRPC string          `json:"jsonrpc"`
 				ID      interface{}     `json:"id"`

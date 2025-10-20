@@ -340,8 +340,8 @@ func (b *BlockScanner) scanBlocks() {
 						resultChan := make(chan fetchTxsResult, 1)
 						prefetch[prefetchHeight] = resultChan
 						go func(height int64, resultChan chan fetchTxsResult) {
-							fetchTxIn, err := b.chainScanner.FetchTxs(height, chainHeight)
-							resultChan <- fetchTxsResult{txIn: fetchTxIn, err: err}
+							fetchTxIn, fetchErr := b.chainScanner.FetchTxs(height, chainHeight)
+							resultChan <- fetchTxsResult{txIn: fetchTxIn, err: fetchErr}
 						}(prefetchHeight, resultChan)
 					}
 				}

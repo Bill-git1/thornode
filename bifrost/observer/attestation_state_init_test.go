@@ -603,7 +603,7 @@ func TestReceiveBatchedAttestationState(t *testing.T) {
 			binary.LittleEndian.PutUint32(batchHeader[1:5], uint32(batchIdx))
 			binary.LittleEndian.PutUint32(batchHeader[5:9], uint32(len(batchData)))
 
-			err := p2p.WriteStreamWithBuffer(batchHeader, ourStream)
+			err = p2p.WriteStreamWithBuffer(batchHeader, ourStream)
 			require.NoError(t, err, "Should write batch header")
 
 			t.Log("Sent batch header")
@@ -781,7 +781,8 @@ func TestSendReceiveBatchedAttestationState(t *testing.T) {
 		state := agSender.solvenciesPool.NewAttestationState(s)
 
 		for j := range numVals {
-			sig, err := valPrivs[j].Sign(signBz)
+			var sig []byte
+			sig, err = valPrivs[j].Sign(signBz)
 			require.NoError(t, err, "Should be able to sign payload")
 
 			state.attestations = append(state.attestations, attestationSentState{

@@ -52,8 +52,8 @@ func (CommunicationTestSuite) TestEstablishP2pCommunication(c *C) {
 	c.Assert(comm.Start(privKey), IsNil)
 
 	defer func() {
-		err := comm.Stop()
-		c.Assert(err, IsNil)
+		stopErr := comm.Stop()
+		c.Assert(stopErr, IsNil)
 	}()
 	sk1, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 	sk1raw, _ := sk1.Raw()
@@ -63,8 +63,8 @@ func (CommunicationTestSuite) TestEstablishP2pCommunication(c *C) {
 	err = comm2.Start(sk1raw)
 	c.Assert(err, IsNil)
 	defer func() {
-		err := comm2.Stop()
-		c.Assert(err, IsNil)
+		stopErr := comm2.Stop()
+		c.Assert(stopErr, IsNil)
 	}()
 
 	// we connect to an invalid peer and see
@@ -80,8 +80,8 @@ func (CommunicationTestSuite) TestEstablishP2pCommunication(c *C) {
 	err = comm3.Start(sk1raw)
 	c.Assert(err, ErrorMatches, "fail to connect to bootstrap peer: fail to connect to any peer")
 	defer func() {
-		err := comm3.Stop()
-		c.Assert(err, IsNil)
+		stopErr := comm3.Stop()
+		c.Assert(stopErr, IsNil)
 	}()
 
 	// we connect to one invalid and one valid address

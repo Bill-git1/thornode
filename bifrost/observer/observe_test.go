@@ -224,8 +224,8 @@ func (s *ObserverSuite) TestProcess(c *C) {
 	c.Assert(err, IsNil)
 
 	defer func() {
-		err := comm.Stop()
-		c.Assert(err, IsNil)
+		stopErr := comm.Stop()
+		c.Assert(stopErr, IsNil)
 	}()
 
 	c.Assert(comm.GetHost(), NotNil)
@@ -270,8 +270,8 @@ func (s *ObserverSuite) TestErrataTx(c *C) {
 	c.Assert(err, IsNil)
 
 	defer func() {
-		err := comm.Stop()
-		c.Assert(err, IsNil)
+		stopErr := comm.Stop()
+		c.Assert(stopErr, IsNil)
 	}()
 
 	c.Assert(comm.GetHost(), NotNil)
@@ -784,8 +784,8 @@ func (s *ObserverSuite) TestPeerConcurrencyLimits(c *C) {
 	c.Assert(err, IsNil)
 
 	defer func() {
-		err := comm.Stop()
-		c.Assert(err, IsNil)
+		stopErr := comm.Stop()
+		c.Assert(stopErr, IsNil)
 	}()
 
 	// Create AttestationGossip with specific concurrency settings

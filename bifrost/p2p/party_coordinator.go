@@ -120,7 +120,7 @@ func (pc *PartyCoordinator) HandleStream(stream network.Stream) {
 		return
 	}
 	var msg messages.JoinPartyRequest
-	if err := proto.Unmarshal(payload, &msg); err != nil {
+	if err = proto.Unmarshal(payload, &msg); err != nil {
 		logger.Err(err).Msg("fail to unmarshal join party request")
 		pc.streamMgr.AddStream(StreamUnknown, stream)
 		return
@@ -168,7 +168,7 @@ func (pc *PartyCoordinator) HandleStreamWithLeader(stream network.Stream) {
 		return
 	case "response":
 		pc.processRespMsg(&msg, stream)
-		err := WriteStreamWithBuffer([]byte(StreamMsgDone), stream)
+		err = WriteStreamWithBuffer([]byte(StreamMsgDone), stream)
 		if err != nil {
 			pc.logger.Error().Err(err).Msgf("fail to send response to leader")
 		}
@@ -274,8 +274,8 @@ func (pc *PartyCoordinator) sendMsgToPeer(msgBuf []byte, msgID string, remotePee
 	}
 	defer func() {
 		pc.streamMgr.AddStream(msgID, stream)
-		if err := stream.Close(); err != nil {
-			pc.logger.Error().Err(err).Msg("fail to close stream")
+		if closeErr := stream.Close(); closeErr != nil {
+			pc.logger.Error().Err(closeErr).Msg("fail to close stream")
 		}
 	}()
 	pc.logger.Debug().Msgf("open stream to (%s) successfully", remotePeer)
@@ -285,7 +285,7 @@ func (pc *PartyCoordinator) sendMsgToPeer(msgBuf []byte, msgID string, remotePee
 	}
 
 	if needResponse {
-		_, err := ReadStreamWithBuffer(stream)
+		_, err = ReadStreamWithBuffer(stream)
 		if err != nil {
 			pc.logger.Error().Err(err).Msgf("fail to get the ")
 		}
@@ -447,12 +447,13 @@ func (pc *PartyCoordinator) JoinPartyWithLeader(msgID string, blockHeight int64,
 	}
 	defer pc.removePeerGroup(msgID)
 
+	var onlines []peer.ID
 	if pc.host.ID() == leaderID {
-		onlines, err := pc.joinPartyLeader(msgID, peerGroup, sigChan)
+		onlines, err = pc.joinPartyLeader(msgID, peerGroup, sigChan)
 		return onlines, leader, err
 	}
 	// now we are just the normal peer
-	onlines, err := pc.joinPartyMember(msgID, peerGroup, sigChan)
+	onlines, err = pc.joinPartyMember(msgID, peerGroup, sigChan)
 	return onlines, leader, err
 }
 

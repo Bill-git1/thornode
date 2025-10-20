@@ -90,10 +90,9 @@ func (h TCYClaimHandler) handle(ctx cosmos.Context, msg MsgTCYClaim) (*cosmos.Re
 		h.mgr.Keeper().DeleteTCYClaimer(ctx, claim.L1Address, claim.Asset)
 
 		evt := types.NewEventTCYClaim(msg.RuneAddress, msg.L1Address, claim.Amount, claim.Asset)
-		if err := h.mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
+		if err = h.mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
 			ctx.Logger().Error("fail to emit tcy claim event", "error", err)
 		}
-
 	}
 
 	return &cosmos.Result{}, err

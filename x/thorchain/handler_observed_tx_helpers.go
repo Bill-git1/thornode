@@ -177,11 +177,12 @@ func handleObservedTxInQuorum(
 	// add memo for memoless transactions (after consensus is reached)
 	if len(tx.Tx.Coins) > 0 {
 		// Use the asset from the first coin for reference memo lookup
-		asset := tx.Tx.Coins[0].Asset
+		refAsset := tx.Tx.Coins[0].Asset
 
 		// Generate reference memo for memoless transactions
 		if strings.TrimSpace(voter.Tx.Tx.Memo) == "" {
-			referenceID, err := generateReferenceMemoID(ctx, mgr, asset, tx)
+			var referenceID string
+			referenceID, err = generateReferenceMemoID(ctx, mgr, refAsset, tx)
 			if err != nil {
 				ctx.Logger().Error("failed to generate reference memo", "error", err, "txid", tx.Tx.ID.String())
 				// Continue without reference memo - will likely be refunded later due to empty memo
@@ -302,7 +303,7 @@ func handleObservedTxInQuorum(
 
 	// if its a swap, send it to our queue for processing later
 	if isSwap {
-		if err := addSwap(ctx, mgr, *swapMsg); err != nil {
+		if err = addSwap(ctx, mgr, *swapMsg); err != nil {
 			if refundErr := refundTx(ctx, tx, mgr, CodeSwapFail, err.Error(), ""); refundErr != nil {
 				ctx.Logger().Error("fail to refund swap", "error", refundErr)
 				// swallow the error here
@@ -343,8 +344,7 @@ func handleObservedTxInQuorum(
 	// if an outbound is not expected, mark the voter as done
 	if !memo.GetType().HasOutbound() {
 		// retrieve the voter from store in case the handler caused a change
-		// trunk-ignore(golangci-lint/govet): shadow
-		voter, err := k.GetObservedTxInVoter(ctx, tx.Tx.ID)
+		voter, err = k.GetObservedTxInVoter(ctx, tx.Tx.ID)
 		if err != nil {
 			return fmt.Errorf("fail to get voter")
 		}
@@ -579,7 +579,7 @@ func handleObservedTxOutQuorum(
 	}
 
 	// Apply Gas fees
-	if err := addGasFees(ctx, mgr, tx); err != nil {
+	if err = addGasFees(ctx, mgr, tx); err != nil {
 		ctx.Logger().Error("fail to add gas fee", "error", err)
 		return nil
 	}
@@ -590,12 +590,13 @@ func handleObservedTxOutQuorum(
 
 	// emit tss keysign metrics
 	if tx.KeysignMs > 0 {
-		keysignMetric, err := k.GetTssKeysignMetric(ctx, tx.Tx.ID)
+		var keysignMetric *keeper.TssKeysignMetric
+		keysignMetric, err = k.GetTssKeysignMetric(ctx, tx.Tx.ID)
 		if err != nil {
 			ctx.Logger().Error("fail to get tss keysign metric", "error", err, "hash", tx.Tx.ID)
 		} else {
 			evt := NewEventTssKeysignMetric(keysignMetric.TxID, keysignMetric.GetMedianTime())
-			if err := mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
+			if err = mgr.EventMgr().EmitEvent(ctx, evt); err != nil {
 				ctx.Logger().Error("fail to emit tss metric event", "error", err)
 			}
 		}

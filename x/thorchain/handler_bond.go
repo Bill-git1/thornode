@@ -188,8 +188,8 @@ func (h BondHandler) handleV3_0_0(ctx cosmos.Context, msg MsgBond) (err error) {
 
 	// if bonder is node operator, add additional bonding address
 	if msg.BondAddress.Equals(nodeAccount.BondAddress) && !msg.BondProviderAddress.Empty() {
-		// trunk-ignore(golangci-lint/govet): shadow
-		max, err := h.mgr.Keeper().GetMimir(ctx, constants.MaxBondProviders.String())
+		var max int64
+		max, err = h.mgr.Keeper().GetMimir(ctx, constants.MaxBondProviders.String())
 		if err != nil || max < 0 {
 			max = h.mgr.GetConstants().GetInt64Value(constants.MaxBondProviders)
 		}

@@ -48,7 +48,7 @@ func (m WasmMgrVCUR) StoreCode(
 	creator sdk.AccAddress,
 	wasmCode []byte,
 ) (codeID uint64, checksum []byte, err error) {
-	if err := m.checkGlobalHalt(ctx); err != nil {
+	if err = m.checkGlobalHalt(ctx); err != nil {
 		return 0, nil, err
 	}
 

@@ -78,8 +78,7 @@ func (h BanHandler) handleV3_0_0(ctx cosmos.Context, msg MsgBan) (*cosmos.Result
 		err = wrapError(ctx, err, "fail to get to ban node account")
 		return nil, err
 	}
-	// trunk-ignore(golangci-lint/govet): shadow
-	if err := toBan.Valid(); err != nil {
+	if err = toBan.Valid(); err != nil {
 		return nil, err
 	}
 	if toBan.ForcedToLeave {
@@ -99,8 +98,7 @@ func (h BanHandler) handleV3_0_0(ctx cosmos.Context, msg MsgBan) (*cosmos.Result
 		err = wrapError(ctx, err, "fail to get banner node account")
 		return nil, err
 	}
-	// trunk-ignore(golangci-lint/govet): shadow
-	if err := banner.Valid(); err != nil {
+	if err = banner.Valid(); err != nil {
 		return nil, err
 	}
 
@@ -159,7 +157,6 @@ func (h BanHandler) handleV3_0_0(ctx cosmos.Context, msg MsgBan) (*cosmos.Result
 		}
 	}
 
-	// trunk-ignore(golangci-lint/govet): shadow
 	if err := h.mgr.Keeper().SetNodeAccount(ctx, toBan); err != nil {
 		err = fmt.Errorf("fail to save node account: %w", err)
 		return nil, err

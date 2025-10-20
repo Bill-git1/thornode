@@ -382,7 +382,8 @@ func affiliateSwapToRuneV3_0_0(ctx cosmos.Context, mgr Manager, mainTx common.Tx
 
 		// Check if accrued RUNE is 100x current outbound fee of preferred asset chain, if
 		// so trigger the preferred asset swap
-		ofRune, err := mgr.GasMgr().GetAssetOutboundFee(ctx, tn.PreferredAsset, true)
+		var ofRune cosmos.Uint
+		ofRune, err = mgr.GasMgr().GetAssetOutboundFee(ctx, tn.PreferredAsset, true)
 		if err != nil {
 			ctx.Logger().Error("failed to get outbound fee for preferred asset, skipping preferred asset swap", "name", tn.Name, "asset", tn.PreferredAsset, "error", err)
 		}

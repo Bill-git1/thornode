@@ -683,8 +683,8 @@ func (s *NetworkManagerVCURTestSuite) TestRagnarokPool(c *C) {
 	err := networkMgr.checkPoolRagnarok(ctx, mgr)
 	c.Assert(err, IsNil)
 	for _, a := range []common.Asset{common.BTCAsset, common.ETHAsset} {
-		tempPool, err := k.GetPool(ctx, a)
-		c.Assert(err, IsNil)
+		tempPool, getErr := k.GetPool(ctx, a)
+		c.Assert(getErr, IsNil)
 		c.Assert(tempPool.Status, Equals, PoolAvailable)
 	}
 	interval := mgr.GetConstants().GetInt64Value(constants.FundMigrationInterval)

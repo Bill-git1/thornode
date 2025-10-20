@@ -360,8 +360,8 @@ func (s *HandlerPriceFeedQuorumBatchSuite) TestInvalidFeed(c *C) {
 	}
 
 	for _, tc := range testCases {
-		attestation, err := s.attestPriceFeed(priv, &tc.PriceFeed)
-		c.Assert(err, IsNil)
+		attestation, attestErr := s.attestPriceFeed(priv, &tc.PriceFeed)
+		c.Assert(attestErr, IsNil)
 
 		msg := types.NewMsgPriceFeedQuorumBatch([]*common.QuorumPriceFeed{{
 			PriceFeed:    &tc.PriceFeed,

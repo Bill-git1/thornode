@@ -290,8 +290,8 @@ func (k KVStore) GetVault(ctx cosmos.Context, pk common.PubKey) (Vault, error) {
 	ok, err := k.getVault(ctx, k.GetKey(prefixVault, pk.String()), &record)
 	if !ok {
 		// TODO: check for lookup by EDDSA pubkey
-		ecdsaPubKey, err := k.getAsgardEDDSAIndex(ctx, pk)
-		if err != nil {
+		ecdsaPubKey, eddsaErr := k.getAsgardEDDSAIndex(ctx, pk)
+		if eddsaErr != nil {
 			return record, fmt.Errorf("unable to getAsgardEDDSAIndex for %s: %w", pk, kvTypes.ErrVaultNotFound)
 		}
 		if !ecdsaPubKey.IsEmpty() {

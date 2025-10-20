@@ -169,8 +169,8 @@ func TestHandleStreamBatchedAttestations(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		// Write batch data to stream
-		err := p2p.WriteStreamWithBuffer(batchBz, val1Stream)
-		require.NoError(t, err, "Should be able to write to stream")
+		writeErr := p2p.WriteStreamWithBuffer(batchBz, val1Stream)
+		require.NoError(t, writeErr, "Should be able to write to stream")
 	}()
 
 	go func() {

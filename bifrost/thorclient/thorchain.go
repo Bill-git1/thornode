@@ -229,12 +229,13 @@ func (b *thorchainBridge) get(url string) ([]byte, int, error) {
 		return nil, http.StatusNotFound, fmt.Errorf("failed to GET from thorchain: %w", err)
 	}
 	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			b.logger.Error().Err(err).Msg("failed to close response body")
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			b.logger.Error().Err(closeErr).Msg("failed to close response body")
 		}
 	}()
 
-	buf, err := io.ReadAll(resp.Body)
+	var buf []byte
+	buf, err = io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
 		return buf, resp.StatusCode, errors.New("Status code: " + resp.Status + " returned")
 	}

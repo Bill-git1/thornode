@@ -56,7 +56,7 @@ func withdrawV3_0_0(ctx cosmos.Context, msg MsgWithdrawLiquidity, mgr Manager) (
 			mgr.Keeper().RemoveLiquidityProvider(ctx, lp)
 			pool.PendingInboundRune = common.SafeSub(pool.PendingInboundRune, lp.PendingRune)
 			pool.PendingInboundAsset = common.SafeSub(pool.PendingInboundAsset, lp.PendingAsset)
-			if err := mgr.Keeper().SetPool(ctx, pool); err != nil {
+			if err = mgr.Keeper().SetPool(ctx, pool); err != nil {
 				ctx.Logger().Error("failed to save pool pending inbound funds", "error", err)
 			}
 			// remove lp
@@ -109,7 +109,8 @@ func withdrawV3_0_0(ctx cosmos.Context, msg MsgWithdrawLiquidity, mgr Manager) (
 	// Skip, if withdrawn to secured asset (lp asset address is TC address)
 	remainingPoolUnits := common.SafeSub(pool.GetPoolUnits(), fLiquidityProviderUnit).Add(unitAfter)
 	if remainingPoolUnits.IsZero() && !withdrawToSecuredAsset {
-		maxGas, err := mgr.GasMgr().GetMaxGas(ctx, pool.Asset.GetChain())
+		var maxGas common.Coin
+		maxGas, err = mgr.GasMgr().GetMaxGas(ctx, pool.Asset.GetChain())
 		if err != nil {
 			ctx.Logger().Error("fail to get gas for asset", "asset", pool.Asset, "error", err)
 			return cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), errWithdrawFail

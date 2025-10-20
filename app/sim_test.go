@@ -281,7 +281,7 @@ func setupSimulationApp(t *testing.T, msg string) (simtypes.Config, dbm.DB, simt
 // TODO: Make another test for the fuzzer itself, which just has noOp txs
 // and doesn't depend on the application.
 func TestAppStateDeterminism(t *testing.T) {
-	// trunk-ignore(golangci-lint/staticcheck): deprecated TODO: SDK 0.53 cleanup
+	// nolint:staticcheck // deprecated TODO: SDK 0.53 cleanup
 	if !simcli.FlagEnabledValue {
 		t.Skip("skipping application simulation")
 	}

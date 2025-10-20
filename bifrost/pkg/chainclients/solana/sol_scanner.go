@@ -213,7 +213,8 @@ func (s *SOLScanner) scan() {
 	}
 
 	if currentSlot > (s.netFeeSlotMultiple+1)*netFeeUpdateInterval {
-		_, thorRate, err := s.bridge.GetNetworkFee(common.SOLChain)
+		var thorRate uint64
+		_, thorRate, err = s.bridge.GetNetworkFee(common.SOLChain)
 		if err != nil {
 			s.logger.Error().Err(err).Msg("failed to get network fee")
 		} else {
@@ -223,7 +224,7 @@ func (s *SOLScanner) scan() {
 		// we crossed the threshold for updating the network fee, so check the last N blocks
 		//  up to the rounded slot for deterministic behavior across nodes.
 		s.netFeeSlotMultiple = currentSlot / netFeeUpdateInterval
-		if err := s.checkRecentBlocksAndUpdateNetworkFee(s.netFeeSlotMultiple * netFeeUpdateInterval); err != nil {
+		if err = s.checkRecentBlocksAndUpdateNetworkFee(s.netFeeSlotMultiple * netFeeUpdateInterval); err != nil {
 			s.logger.Error().Err(err).Msg("failed to check recent blocks and update network fee")
 		}
 	}
@@ -332,7 +333,7 @@ func (s *SOLScanner) scan() {
 
 			// update the db in a goroutine, we don't need to block here
 			go func() {
-				if err := s.db.SetScanStatus(vaultAddr, lastSig, currentSlot); err != nil {
+				if err = s.db.SetScanStatus(vaultAddr, lastSig, currentSlot); err != nil {
 					s.logger.Error().Err(err).Str("vault", vaultAddr).Msg("failed to set vault scan status")
 				}
 			}()

@@ -218,16 +218,16 @@ func (s *BlockScannerTestSuite) TestProcessBlock(c *C) {
 			Params []interface{} `json:"params"`
 		}{}
 
-		err := json.Unmarshal(body, &r)
-		c.Assert(err, IsNil)
+		unmarshalErr := json.Unmarshal(body, &r)
+		c.Assert(unmarshalErr, IsNil)
 
 		rw.Header().Set("Content-Type", "application/json")
 		result := map[string]json.RawMessage{
 			"result": json.RawMessage(rpcResults[r.Method]),
 		}
 
-		err = json.NewEncoder(rw).Encode(result)
-		c.Assert(err, IsNil)
+		encodeErr := json.NewEncoder(rw).Encode(result)
+		c.Assert(encodeErr, IsNil)
 	}
 	handleBatchRPC := func(body []byte, rw http.ResponseWriter) {
 		r := []struct {
@@ -236,8 +236,8 @@ func (s *BlockScannerTestSuite) TestProcessBlock(c *C) {
 			ID     int           `json:"id"`
 		}{}
 
-		err := json.Unmarshal(body, &r)
-		c.Assert(err, IsNil)
+		batchUnmarshalErr := json.Unmarshal(body, &r)
+		c.Assert(batchUnmarshalErr, IsNil)
 
 		rw.Header().Set("Content-Type", "application/json")
 		result := make([]map[string]json.RawMessage, len(r))
@@ -248,8 +248,8 @@ func (s *BlockScannerTestSuite) TestProcessBlock(c *C) {
 			}
 		}
 
-		err = json.NewEncoder(rw).Encode(result)
-		c.Assert(err, IsNil)
+		batchEncodeErr := json.NewEncoder(rw).Encode(result)
+		c.Assert(batchEncodeErr, IsNil)
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
@@ -277,8 +277,8 @@ func (s *BlockScannerTestSuite) TestProcessBlock(c *C) {
 				return
 			}
 
-			body, err := io.ReadAll(req.Body)
-			c.Assert(err, IsNil)
+			body, readErr := io.ReadAll(req.Body)
+			c.Assert(readErr, IsNil)
 			defer func() {
 				c.Assert(req.Body.Close(), IsNil)
 			}()

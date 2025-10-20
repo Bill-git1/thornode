@@ -271,7 +271,6 @@ func (s *AttestationGossip) sendAttestationState(stream network.Stream) {
 
 		// Marshal the batch (handle empty batches specially)
 		var batchData []byte
-		var err error
 		if len(batch.QuoTxs) == 0 {
 			// For empty batches, use an empty buffer rather than marshaling an empty struct
 			batchData = []byte{}
@@ -289,13 +288,14 @@ func (s *AttestationGossip) sendAttestationState(stream network.Stream) {
 		binary.LittleEndian.PutUint32(batchInfo[4:8], uint32(len(batchData)))
 
 		// Send the batch data header
-		if err := p2p.WriteStreamWithBuffer(append(prefixBatchHeader, batchInfo...), stream); err != nil {
+		if err = p2p.WriteStreamWithBuffer(append(prefixBatchHeader, batchInfo...), stream); err != nil {
 			s.logger.Error().Err(err).Int("batch", batchNum+1).Msg("failed to send batch header")
 			return
 		}
 
 		// Wait for acknowledgment of batch header
-		headerAck, err := p2p.ReadStreamWithBuffer(stream)
+		var headerAck []byte
+		headerAck, err = p2p.ReadStreamWithBuffer(stream)
 		if err != nil {
 			s.logger.Error().Err(err).Int("batch", batchNum+1).Msg("failed to read ack after batch header")
 			return
@@ -306,13 +306,14 @@ func (s *AttestationGossip) sendAttestationState(stream network.Stream) {
 		}
 
 		// Send the actual batch data
-		if err := p2p.WriteStreamWithBuffer(append(prefixBatchData, batchData...), stream); err != nil {
+		if err = p2p.WriteStreamWithBuffer(append(prefixBatchData, batchData...), stream); err != nil {
 			s.logger.Error().Err(err).Int("batch", batchNum+1).Msg("failed to send batch data")
 			return
 		}
 
 		// Wait for acknowledgment of batch data
-		dataAck, err := p2p.ReadStreamWithBuffer(stream)
+		var dataAck []byte
+		dataAck, err = p2p.ReadStreamWithBuffer(stream)
 		if err != nil {
 			s.logger.Error().Err(err).Int("batch", batchNum+1).Msg("failed to read ack after batch data")
 			return
@@ -331,13 +332,14 @@ func (s *AttestationGossip) sendAttestationState(stream network.Stream) {
 	}
 
 	// Send batch end signal
-	if err := p2p.WriteStreamWithBuffer(prefixBatchEnd, stream); err != nil {
+	if err = p2p.WriteStreamWithBuffer(prefixBatchEnd, stream); err != nil {
 		s.logger.Error().Err(err).Msg("failed to send batch end signal")
 		return
 	}
 
 	// Wait for the final acknowledgment
-	endAck, err := p2p.ReadStreamWithBuffer(stream)
+	var endAck []byte
+	endAck, err = p2p.ReadStreamWithBuffer(stream)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("failed to read final ack")
 		return
@@ -395,7 +397,7 @@ func (s *AttestationGossip) receiveBatchedAttestationState(stream network.Stream
 		// Check if this is the end marker
 		if len(message) >= 1 && bytes.Equal(message[:1], prefixBatchEnd) {
 			// Send final acknowledgment
-			if err := p2p.WriteStreamWithBuffer([]byte(p2p.StreamMsgDone), stream); err != nil {
+			if err = p2p.WriteStreamWithBuffer([]byte(p2p.StreamMsgDone), stream); err != nil {
 				return fmt.Errorf("failed to send final ack: %w", err)
 			}
 			break
@@ -417,7 +419,7 @@ func (s *AttestationGossip) receiveBatchedAttestationState(stream network.Stream
 			Msg("receiving batch")
 
 		// Acknowledge the batch header
-		if err := p2p.WriteStreamWithBuffer([]byte(streamAckHeader), stream); err != nil {
+		if err = p2p.WriteStreamWithBuffer([]byte(streamAckHeader), stream); err != nil {
 			return fmt.Errorf("failed to acknowledge batch header: %w", err)
 		}
 

@@ -288,7 +288,8 @@ func processOneTxIn(ctx cosmos.Context, keeper keeper.Keeper, tx ObservedTx, sig
 		newMsg = NewMsgRunePoolWithdraw(signer, tx.Tx, m.GetBasisPts(), m.GetAffiliateAddress(), m.GetAffiliateBasisPoints())
 	case ExecMemo:
 		coin := tx.Tx.Coins[0]
-		sender, err := tx.Tx.FromAddress.MappedAccAddress()
+		var sender cosmos.AccAddress
+		sender, err = tx.Tx.FromAddress.MappedAccAddress()
 		if err != nil {
 			return nil, err
 		}

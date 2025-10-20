@@ -3264,8 +3264,8 @@ func (s AdvSwapQueueVCURSuite) TestProcessExpiredLimitSwapsMultipleAtSameHeight(
 
 	// Verify all expired swaps were removed
 	for _, txID := range txIDs {
-		_, err := k.GetAdvSwapQueueItem(ctx, txID, 0)
-		c.Assert(err, NotNil) // Should not exist
+		_, getErr := k.GetAdvSwapQueueItem(ctx, txID, 0)
+		c.Assert(getErr, NotNil) // Should not exist
 	}
 
 	// Verify TTL entry was cleaned up

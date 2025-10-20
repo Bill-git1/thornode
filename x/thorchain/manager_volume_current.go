@@ -59,7 +59,8 @@ func (vm *VolumeMgrVCUR) EndBlock(ctx cosmos.Context) error {
 		indexes = append(indexes, currentIndex)
 
 		for _, index := range indexes {
-			bucket, err := vm.keeper.GetVolumeBucket(ctx, pool.Asset, index)
+			var bucket types.VolumeBucket
+			bucket, err = vm.keeper.GetVolumeBucket(ctx, pool.Asset, index)
 			if err != nil {
 				bucket = types.NewVolumeBucket(pool.Asset, index)
 			}

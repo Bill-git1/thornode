@@ -50,7 +50,7 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 		return nil, ErrInternal(err, "fail to get observed tx voter")
 	}
 	if voter.AddOutTx(tx.Tx) {
-		if err := h.mgr.EventMgr().EmitEvent(ctx, NewEventOutbound(inTxID, tx.Tx)); err != nil {
+		if err = h.mgr.EventMgr().EmitEvent(ctx, NewEventOutbound(inTxID, tx.Tx)); err != nil {
 			return nil, ErrInternal(err, "fail to emit outbound event")
 		}
 	}
@@ -194,12 +194,12 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 					if err != nil {
 						ctx.Logger().Error("fail to get swapper clout destination address", "error", err)
 					}
-					// trunk-ignore(golangci-lint/govet): shadow
-					voter, err := h.mgr.Keeper().GetObservedTxInVoter(ctx, outTxn.InHash)
+					var inVoter ObservedTxVoter
+					inVoter, err = h.mgr.Keeper().GetObservedTxInVoter(ctx, outTxn.InHash)
 					if err != nil {
 						ctx.Logger().Error("fail to get txin for clout calculation", "error", err)
 					}
-					cloutIn, err := h.mgr.Keeper().GetSwapperClout(ctx, voter.Tx.Tx.FromAddress)
+					cloutIn, err := h.mgr.Keeper().GetSwapperClout(ctx, inVoter.Tx.Tx.FromAddress)
 					if err != nil {
 						ctx.Logger().Error("fail to get swapper clout destination address", "error", err)
 					}

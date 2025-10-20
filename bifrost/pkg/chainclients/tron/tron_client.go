@@ -401,9 +401,9 @@ func (c *TronClient) SignTx(
 		}
 
 		if !found {
-			err := fmt.Errorf("token not whitelisted")
-			c.logger.Err(err).Msg("")
-			return nil, nil, nil, err
+			notFoundErr := fmt.Errorf("token not whitelisted")
+			c.logger.Err(notFoundErr).Msg("")
+			return nil, nil, nil, notFoundErr
 		}
 
 		amount := coin.Amount.BigInt()
@@ -765,7 +765,7 @@ func (c *TronClient) getTokenBalance(
 	}
 
 	if response.Result == "" {
-		err := fmt.Errorf("response result is empty")
+		err = fmt.Errorf("response result is empty")
 		c.logger.Err(err).Msg("")
 		return nil, err
 	}

@@ -39,13 +39,13 @@ func TestObserverRoundTrip(t *testing.T) {
 		http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			switch {
 			case strings.HasPrefix(req.RequestURI, thorclient.MimirEndpoint):
-				buf, err := os.ReadFile("../../test/fixtures/endpoints/mimir/mimir.json")
-				require.NoError(t, err)
-				_, err = rw.Write(buf)
-				require.NoError(t, err)
+				buf, readErr := os.ReadFile("../../test/fixtures/endpoints/mimir/mimir.json")
+				require.NoError(t, readErr)
+				_, writeErr := rw.Write(buf)
+				require.NoError(t, writeErr)
 			case strings.HasPrefix(req.RequestURI, "/thorchain/lastblock"):
 				// NOTE: weird pattern in GetBlockHeight uses first thorchain height.
-				_, err := rw.Write([]byte(`[
+				_, writeErr := rw.Write([]byte(`[
           {
             "chain": "NOOP",
             "lastobservedin": 0,
@@ -53,9 +53,9 @@ func TestObserverRoundTrip(t *testing.T) {
             "thorchain": 0
           }
         ]`))
-				require.NoError(t, err)
+				require.NoError(t, writeErr)
 			case strings.HasPrefix(req.RequestURI, "/"):
-				_, err := rw.Write([]byte(`{
+				_, writeErr := rw.Write([]byte(`{
           "jsonrpc": "2.0",
           "id": 0,
           "result": {
@@ -69,7 +69,7 @@ func TestObserverRoundTrip(t *testing.T) {
             ]
           }
         }`))
-				require.NoError(t, err)
+				require.NoError(t, writeErr)
 			default:
 				t.Fatalf("invalid server query: %s", req.RequestURI)
 			}
@@ -114,8 +114,8 @@ func TestObserverRoundTrip(t *testing.T) {
 	require.NoError(t, err)
 
 	defer func() {
-		err := comm.Stop()
-		require.NoError(t, err)
+		stopErr := comm.Stop()
+		require.NoError(t, stopErr)
 	}()
 
 	require.NotNil(t, comm.GetHost())
@@ -154,11 +154,11 @@ func TestObserverRoundTrip(t *testing.T) {
 	for _, tx := range dbTxs {
 		final := false
 
-		obsTxs, err := obs.getThorchainTxIns(tx, final, tx.TxArray[0].BlockHeight+tx.ConfirmationRequired)
-		require.NoError(t, err)
+		obsTxs, txErr := obs.getThorchainTxIns(tx, final, tx.TxArray[0].BlockHeight+tx.ConfirmationRequired)
+		require.NoError(t, txErr)
 
-		inbound, outbound, err := bridge.GetInboundOutbound(obsTxs)
-		require.NoError(t, err)
+		inbound, outbound, getErr := bridge.GetInboundOutbound(obsTxs)
+		require.NoError(t, getErr)
 
 		rand.Shuffle(len(inbound), func(i, j int) {
 			inbound[i], inbound[j] = inbound[j], inbound[i]
@@ -181,13 +181,13 @@ func TestObserverRoundTrip(t *testing.T) {
 
 		final := true
 
-		obsTxs, err := obs.getThorchainTxIns(tx, final, tx.TxArray[0].BlockHeight+tx.ConfirmationRequired)
-		require.NoError(t, err)
+		obsTxs, txErr := obs.getThorchainTxIns(tx, final, tx.TxArray[0].BlockHeight+tx.ConfirmationRequired)
+		require.NoError(t, txErr)
 
 		require.Len(t, obsTxs, numTxs)
 
-		inbound, outbound, err := bridge.GetInboundOutbound(obsTxs)
-		require.NoError(t, err)
+		inbound, outbound, getErr := bridge.GetInboundOutbound(obsTxs)
+		require.NoError(t, getErr)
 
 		require.GreaterOrEqual(t, len(inbound)+len(outbound), numTxs)
 

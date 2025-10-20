@@ -97,12 +97,13 @@ func processErrataTxAttestation(
 		vaultPubKey := observedVoter.Tx.ObservedPubKey
 		if !vaultPubKey.IsEmpty() {
 			// try to deduct the asset from asgard
-			vault, err := k.GetVault(ctx, vaultPubKey)
+			var vault Vault
+			vault, err = k.GetVault(ctx, vaultPubKey)
 			if err != nil {
 				return fmt.Errorf("fail to get active asgard vaults: %w", err)
 			}
 			vault.SubFunds(tx.Coins)
-			if err := k.SetVault(ctx, vault); err != nil {
+			if err = k.SetVault(ctx, vault); err != nil {
 				return fmt.Errorf("fail to save vault, err: %w", err)
 			}
 		}

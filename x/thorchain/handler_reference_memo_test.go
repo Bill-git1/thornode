@@ -205,8 +205,8 @@ func (s *HandlerReferenceMemoSuite) TestReferenceExhaustionWithCost(c *C) {
 	// Fill all 5 available reference slots
 	for i := 1; i <= 5; i++ {
 		msg := NewMsgReferenceMemo(asset, fmt.Sprintf("+:BTC.BTC:address%d", i), signer)
-		_, err := handler.handle(ctx, *msg)
-		c.Assert(err, IsNil, check.Commentf("Failed to create reference %d", i))
+		_, handleErr := handler.handle(ctx, *msg)
+		c.Assert(handleErr, IsNil, check.Commentf("Failed to create reference %d", i))
 	}
 
 	// Check that 5 x cost was transferred to reserve

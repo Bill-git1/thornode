@@ -189,7 +189,8 @@ func TestPeerManagerUpdateLimit(t *testing.T) {
 		// Acquire 4 tokens
 		var semaphores []*peerSemaphore
 		for i := 0; i < 4; i++ {
-			sem, err := pm.acquire(peerID)
+			var sem *peerSemaphore
+			sem, err = pm.acquire(peerID)
 			require.NoError(t, err)
 			semaphores = append(semaphores, sem)
 		}

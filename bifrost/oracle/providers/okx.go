@@ -155,7 +155,8 @@ func (p *OkxProvider) HandleWsMessage(msg []byte) error {
 				return nil
 			}
 
-			msecs, err := strconv.ParseInt(ticker.Timestamp, 10, 64)
+			var msecs int64
+			msecs, err = strconv.ParseInt(ticker.Timestamp, 10, 64)
 			if err != nil {
 				p.logger.Err(err).Msg("error parsing timestamp")
 				continue

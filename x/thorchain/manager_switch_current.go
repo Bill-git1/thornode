@@ -66,7 +66,7 @@ func (s *SwitchMgrVCUR) Switch(
 	}
 
 	switchEvent := NewEventSwitch(amount, asset, assetAddr, common.Address(owner.String()), txID)
-	if err := s.eventMgr.EmitEvent(ctx, switchEvent); err != nil {
+	if err = s.eventMgr.EmitEvent(ctx, switchEvent); err != nil {
 		ctx.Logger().Error("fail to emit switch event", "error", err)
 	}
 	_, err = coin.Native()

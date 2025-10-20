@@ -146,7 +146,7 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit) (*cosmos.Resu
 	coinsInMsg := msg.Coins
 	if !coinsInMsg.IsEmpty() && !coinsInMsg[0].Asset.IsTradeAsset() && !coinsInMsg[0].Asset.IsSecuredAsset() {
 		// send funds to target module
-		err := h.mgr.Keeper().SendFromAccountToModule(ctx, msg.GetSigners()[0], targetModule, msg.Coins)
+		err = h.mgr.Keeper().SendFromAccountToModule(ctx, msg.GetSigners()[0], targetModule, msg.Coins)
 		if err != nil {
 			return nil, err
 		}
@@ -185,9 +185,9 @@ func (h DepositHandler) handle(ctx cosmos.Context, msg MsgDeposit) (*cosmos.Resu
 
 	// if its a swap, send it to our queue for processing later
 	if isSwap {
-		msg, ok := m.(*MsgSwap)
+		swapMsg, ok := m.(*MsgSwap)
 		if ok {
-			if err := h.addSwap(ctx, *msg); err != nil {
+			if err = h.addSwap(ctx, *swapMsg); err != nil {
 				if refundErr := refundTx(ctx, txIn, h.mgr, CodeSwapFail, err.Error(), ""); refundErr != nil {
 					ctx.Logger().Error("fail to refund swap", "error", refundErr)
 					// swallow the error here

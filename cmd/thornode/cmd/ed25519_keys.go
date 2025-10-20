@@ -43,7 +43,8 @@ func ed25519Keys(cmd *cobra.Command, args []string) error {
 	r, err := kb.Keybase.Key(edKey)
 	if err != nil {
 		buf := bufio.NewReader(cmd.InOrStdin())
-		mnemonic, err := input.GetString("Enter mnemonic", buf)
+		var mnemonic string
+		mnemonic, err = input.GetString("Enter mnemonic", buf)
 		if err != nil {
 			return fmt.Errorf("fail to get mnemonic: %w", err)
 		}
@@ -59,7 +60,7 @@ func ed25519Keys(cmd *cobra.Command, args []string) error {
 	cdc := codec.NewProtoCodec(registry)
 
 	pubKey := new(cosmoscryptoed25519.PubKey)
-	if err := cdc.UnpackAny(r.PubKey, &pubKey); err != nil {
+	if err = cdc.UnpackAny(r.PubKey, &pubKey); err != nil {
 		return fmt.Errorf("fail to unpack pubkey: %w", err)
 	}
 

@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	abci "github.com/cometbft/cometbft/abci/types"
+	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"gitlab.com/thorchain/thornode/v3/common"
@@ -145,22 +146,22 @@ func (vm *ValidatorMgrVCUR) churn(ctx cosmos.Context) error {
 	}
 
 	// mark someone to get churned out for low bond
-	if err := vm.markLowBondActor(ctx); err != nil {
+	if err = vm.markLowBondActor(ctx); err != nil {
 		return err
 	}
 
 	// mark someone to get churned out for low version
-	if err := vm.markLowVersionValidators(ctx); err != nil {
+	if err = vm.markLowVersionValidators(ctx); err != nil {
 		return err
 	}
 
 	// mark someone to get churned out for age
-	if err := vm.markOldActor(ctx); err != nil {
+	if err = vm.markOldActor(ctx); err != nil {
 		return err
 	}
 
 	// mark someone(s) for not signing blocks
-	if err := vm.markMissingActors(ctx); err != nil {
+	if err = vm.markMissingActors(ctx); err != nil {
 		return err
 	}
 
@@ -286,13 +287,14 @@ func (vm *ValidatorMgrVCUR) EndBlock(ctx cosmos.Context, mgr Manager) []abci.Val
 	// when ragnarok is in progress, just process ragnarok
 	if vm.k.RagnarokInProgress(ctx) {
 		// process ragnarok
-		if err := vm.processRagnarok(ctx, mgr); err != nil {
+		if err = vm.processRagnarok(ctx, mgr); err != nil {
 			ctx.Logger().Error("fail to process ragnarok protocol", "error", err)
 		}
 		return nil
 	}
 
-	newNodes, removedNodes, err := vm.getChangedNodes(ctx, activeNodes)
+	var newNodes, removedNodes NodeAccounts
+	newNodes, removedNodes, err = vm.getChangedNodes(ctx, activeNodes)
 	if err != nil {
 		ctx.Logger().Error("fail to get node changes", "error", err)
 		return nil
@@ -309,13 +311,14 @@ func (vm *ValidatorMgrVCUR) EndBlock(ctx cosmos.Context, mgr Manager) []abci.Val
 		// THORNode don't have enough validators for BFT
 
 		// Check we're not migrating funds
-		retiring, err := vm.k.GetAsgardVaultsByStatus(ctx, RetiringVault)
+		var retiring Vaults
+		retiring, err = vm.k.GetAsgardVaultsByStatus(ctx, RetiringVault)
 		if err != nil {
 			ctx.Logger().Error("fail to get retiring vaults", "error", err)
 		}
 
 		if len(retiring) == 0 { // wait until all funds are migrated before starting ragnarok
-			if err := vm.processRagnarok(ctx, mgr); err != nil {
+			if err = vm.processRagnarok(ctx, mgr); err != nil {
 				ctx.Logger().Error("fail to process ragnarok protocol", "error", err)
 			}
 			return nil
@@ -328,13 +331,13 @@ func (vm *ValidatorMgrVCUR) EndBlock(ctx cosmos.Context, mgr Manager) []abci.Val
 	}
 
 	// remove low bond node accounts
-	if err := vm.k.RemoveLowBondValidatorAccounts(ctx); err != nil {
+	if err = vm.k.RemoveLowBondValidatorAccounts(ctx); err != nil {
 		ctx.Logger().Error("fail to remove low bond node accounts", "error", err)
 	}
 
 	// payout all active node accounts their rewards
 	// This including nodes churning out, and takes place before changing the activity status below.
-	if err := vm.distributeBondReward(ctx, mgr); err != nil {
+	if err = vm.distributeBondReward(ctx, mgr); err != nil {
 		ctx.Logger().Error("fail to pay node bond rewards", "error", err)
 	}
 
@@ -351,10 +354,11 @@ func (vm *ValidatorMgrVCUR) EndBlock(ctx cosmos.Context, mgr Manager) []abci.Val
 		na.MissingBlocks = 0 // zero missing blocks that weren't signed (if any)
 
 		vm.k.ResetNodeAccountSlashPoints(ctx, na.NodeAddress)
-		if err := vm.k.SetNodeAccount(ctx, na); err != nil {
+		if err = vm.k.SetNodeAccount(ctx, na); err != nil {
 			ctx.Logger().Error("fail to save node account", "error", err)
 		}
-		pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeConsPub, na.ValidatorConsPubKey)
+		var pk cryptotypes.PubKey
+		pk, err = cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeConsPub, na.ValidatorConsPubKey)
 		if err != nil {
 			ctx.Logger().Error("fail to parse consensus public key", "key", na.ValidatorConsPubKey, "error", err)
 			continue
@@ -363,7 +367,8 @@ func (vm *ValidatorMgrVCUR) EndBlock(ctx cosmos.Context, mgr Manager) []abci.Val
 	}
 	for _, na := range removedNodes {
 		// retrieve the node from key value store again , as the node might get paid bond, thus the node properties has been changed
-		nodeRemove, err := vm.k.GetNodeAccount(ctx, na.NodeAddress)
+		var nodeRemove NodeAccount
+		nodeRemove, err = vm.k.GetNodeAccount(ctx, na.NodeAddress)
 		if err != nil {
 			ctx.Logger().Error("fail to get node account from key value store", "node address", na.NodeAddress)
 			continue
@@ -383,11 +388,12 @@ func (vm *ValidatorMgrVCUR) EndBlock(ctx cosmos.Context, mgr Manager) []abci.Val
 				cosmos.NewAttribute("Former:", nodeRemove.Status.String()),
 				cosmos.NewAttribute("Current:", status.String())))
 		nodeRemove.UpdateStatus(status, height)
-		if err := vm.k.SetNodeAccount(ctx, nodeRemove); err != nil {
+		if err = vm.k.SetNodeAccount(ctx, nodeRemove); err != nil {
 			ctx.Logger().Error("fail to save node account", "error", err)
 		}
 
-		pk, err := cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeConsPub, nodeRemove.ValidatorConsPubKey)
+		var pk cryptotypes.PubKey
+		pk, err = cosmos.GetPubKeyFromBech32(cosmos.Bech32PubKeyTypeConsPub, nodeRemove.ValidatorConsPubKey)
 		if err != nil {
 			ctx.Logger().Error("fail to parse consensus public key", "key", nodeRemove.ValidatorConsPubKey, "error", err)
 			continue
@@ -622,7 +628,7 @@ func (vm *ValidatorMgrVCUR) processRagnarok(ctx cosmos.Context, mgr Manager) err
 	if ragnarokHeight == 0 {
 		ragnarokHeight = ctx.BlockHeight()
 		vm.k.SetRagnarokBlockHeight(ctx, ragnarokHeight)
-		if err := vm.distributeBondReward(ctx, mgr); err != nil {
+		if err = vm.distributeBondReward(ctx, mgr); err != nil {
 			return fmt.Errorf("when ragnarok triggered, fail to give all active node bond reward %w", err)
 		}
 		return nil
@@ -638,7 +644,7 @@ func (vm *ValidatorMgrVCUR) processRagnarok(ctx cosmos.Context, mgr Manager) err
 		return fmt.Errorf("fail to get ragnarok position: %w", err)
 	}
 	if !position.IsEmpty() {
-		if err := vm.ragnarokPools(ctx, nth, mgr); err != nil {
+		if err = vm.ragnarokPools(ctx, nth, mgr); err != nil {
 			ctx.Logger().Error("fail to ragnarok pools", "error", err)
 		}
 		return nil
@@ -650,7 +656,8 @@ func (vm *ValidatorMgrVCUR) processRagnarok(ctx cosmos.Context, mgr Manager) err
 		return fmt.Errorf("fail to get ragnarok pending: %w", err)
 	}
 	if pending > 0 {
-		txOutQueue, err := vm.getPendingTxOut(ctx)
+		var txOutQueue int64
+		txOutQueue, err = vm.getPendingTxOut(ctx)
 		if err != nil {
 			ctx.Logger().Error("fail to get pending tx out item", "error", err)
 			return nil
@@ -837,12 +844,12 @@ func (vm *ValidatorMgrVCUR) ragnarokPools(ctx cosmos.Context, nth int64, mgr Man
 	for _, pool := range pools {
 		if pool.Status != PoolStaged {
 			poolEvent := NewEventPool(pool.Asset, PoolStaged)
-			if err := vm.eventMgr.EmitEvent(ctx, poolEvent); err != nil {
+			if err = vm.eventMgr.EmitEvent(ctx, poolEvent); err != nil {
 				ctx.Logger().Error("fail to emit pool event", "error", err)
 			}
 
 			pool.Status = PoolStaged
-			if err := vm.k.SetPool(ctx, pool); err != nil {
+			if err = vm.k.SetPool(ctx, pool); err != nil {
 				return fmt.Errorf("fail to set pool %s to Stage status: %w", pool.Asset, err)
 			}
 		}
@@ -882,7 +889,7 @@ func (vm *ValidatorMgrVCUR) ragnarokPools(ctx cosmos.Context, nth int64, mgr Man
 			if j == position.Number {
 				position.Number++
 				var lp LiquidityProvider
-				if err := vm.k.Cdc().Unmarshal(iterator.Value(), &lp); err != nil {
+				if err = vm.k.Cdc().Unmarshal(iterator.Value(), &lp); err != nil {
 					ctx.Logger().Error("fail to unmarshal liquidity provider", "error", err)
 					continue
 				}
@@ -1401,7 +1408,8 @@ func (vm *ValidatorMgrVCUR) nextVaultNodeAccounts(ctx cosmos.Context, targetCoun
 		if item.LeaveScore == 0 {
 			continue
 		}
-		slashPts, err := vm.k.GetNodeAccountSlashPoints(ctx, item.NodeAddress)
+		var slashPts int64
+		slashPts, err = vm.k.GetNodeAccountSlashPoints(ctx, item.NodeAddress)
 		if err != nil {
 			ctx.Logger().Error("fail to get node account slash points", "error", err, "node address", item.NodeAddress.String())
 			continue

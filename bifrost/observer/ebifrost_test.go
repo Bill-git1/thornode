@@ -147,8 +147,8 @@ func (s *ObserverSuite) TestAttestedTxWorkflow(c *C) {
 		c.Assert(err, IsNil)
 
 		defer func() {
-			err := comm.Stop()
-			c.Assert(err, IsNil)
+			stopErr := comm.Stop()
+			c.Assert(stopErr, IsNil)
 		}()
 
 		// Create attestation gossip manually with the bifrost client

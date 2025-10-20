@@ -458,7 +458,7 @@ func notifyChurnStarted(height, keygenHeight int64, keyshareBackups map[string]m
 	// find missing nodes
 	if len(removed) > 0 {
 		mimir := map[string]int64{}
-		err := util.ThornodeCachedRetryGet("thorchain/mimir", keygenHeight, &mimir)
+		err = util.ThornodeCachedRetryGet("thorchain/mimir", keygenHeight, &mimir)
 		if err != nil {
 			log.Panic().Err(err).Msg("failed to get mimirs")
 		}

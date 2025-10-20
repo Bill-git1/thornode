@@ -387,7 +387,7 @@ func (c *CosmosBlockScanner) processTxs(height int64, rawTxs []tmtypes.Tx) ([]*t
 			switch msg := message.(type) {
 			case *ibcchanneltypes.MsgRecvPacket:
 				var packetData ibctransfertypes.FungibleTokenPacketData
-				err := json.Unmarshal(msg.Packet.Data, &packetData)
+				err = json.Unmarshal(msg.Packet.Data, &packetData)
 				if err != nil {
 					c.logger.Err(err).Msg("unable to unmarshal fungible token data")
 					continue
@@ -430,7 +430,8 @@ func (c *CosmosBlockScanner) processTxs(height int64, rawTxs []tmtypes.Tx) ([]*t
 				}
 
 				// Convert cosmos coins to thorchain coins (taking into account asset decimal precision)
-				coin, err := c.fromCosmosToThorchain(cosmos.NewCoin(
+				var coin common.Coin
+				coin, err = c.fromCosmosToThorchain(cosmos.NewCoin(
 					denom, amount,
 				))
 				if err != nil {
@@ -441,7 +442,8 @@ func (c *CosmosBlockScanner) processTxs(height int64, rawTxs []tmtypes.Tx) ([]*t
 				coins = common.Coins{coin}
 
 				// set address of destination chain
-				_, data, err := bech32.Decode(packetData.Sender)
+				var data []byte
+				_, data, err = bech32.Decode(packetData.Sender)
 				if err != nil {
 					c.logger.Err(err).Msg("failed to decode sender address")
 				}

@@ -231,22 +231,25 @@ func (s *TronBlockScanner) processTxs(
 			}}
 
 		case "TriggerSmartContract":
-			address, err := api.ConvertAddress(raw.Parameter.Value.ContractAddress)
+			var contractAddr string
+			contractAddr, err = api.ConvertAddress(raw.Parameter.Value.ContractAddress)
 			if err != nil {
 				logger.Err(err).Msg("failed to convert contract address")
 				continue
 			}
 
 			// skip unknown contracts
-			token, ok := s.whitelist[address]
+			token, ok := s.whitelist[contractAddr]
 			if !ok {
 				continue
 			}
 
 			// check contract penalty factor later
-			contracts[address] = struct{}{}
+			contracts[contractAddr] = struct{}{}
 
-			method, inputs, err := s.decodeTRC20Input(raw.Parameter.Value.Data)
+			var method string
+			var inputs map[string]interface{}
+			method, inputs, err = s.decodeTRC20Input(raw.Parameter.Value.Data)
 			if err != nil {
 				logger.Err(err).Msg("failed to get inputs")
 				continue

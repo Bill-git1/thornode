@@ -120,13 +120,15 @@ func CheckKeyOnCurve(pk string) (bool, error) {
 
 	switch pubKey.Type() {
 	case secp256k1.KeyType:
-		bPk, err := btcec.ParsePubKey(pubKey.Bytes(), btcec.S256())
+		var bPk *btcec.PublicKey
+		bPk, err = btcec.ParsePubKey(pubKey.Bytes(), btcec.S256())
 		if err != nil {
 			return false, err
 		}
 		return isOnCurve(bPk.X, bPk.Y, btcec.S256()), nil
 	case ed25519.KeyType:
-		bPk, err := edwards.ParsePubKey(pubKey.Bytes())
+		var bPk *edwards.PublicKey
+		bPk, err = edwards.ParsePubKey(pubKey.Bytes())
 		if err != nil {
 			return false, err
 		}

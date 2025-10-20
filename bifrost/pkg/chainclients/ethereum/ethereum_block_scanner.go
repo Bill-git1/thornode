@@ -203,8 +203,8 @@ func (e *ETHScanner) FetchTxs(height, chainHeight int64) (stypes.TxIn, error) {
 	pruneHeight := height - e.cfg.MaxReorgRescanBlocks
 	if pruneHeight > 0 {
 		defer func() {
-			if err := e.blockMetaAccessor.PruneBlockMeta(pruneHeight); err != nil {
-				e.logger.Err(err).Msgf("fail to prune block meta, height(%d)", pruneHeight)
+			if pruneErr := e.blockMetaAccessor.PruneBlockMeta(pruneHeight); pruneErr != nil {
+				e.logger.Err(pruneErr).Msgf("fail to prune block meta, height(%d)", pruneHeight)
 			}
 		}()
 	}

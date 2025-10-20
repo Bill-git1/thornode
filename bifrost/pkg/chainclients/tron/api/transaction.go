@@ -74,12 +74,13 @@ func (t *Transaction) Rehash() error {
 	}
 
 	if t.RawData.Data != "" {
-		memo, err := hex.DecodeString(t.RawData.Data)
+		var memoBytes []byte
+		memoBytes, err = hex.DecodeString(t.RawData.Data)
 		if err != nil {
 			return fmt.Errorf("failed to decode raw_data_hex: %w", err)
 		}
 
-		raw.Data = memo
+		raw.Data = memoBytes
 	}
 
 	data, err = proto.Marshal(&raw)

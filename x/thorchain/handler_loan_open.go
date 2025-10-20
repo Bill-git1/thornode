@@ -212,8 +212,7 @@ func (h LoanOpenHandler) openLoan(ctx cosmos.Context, msg MsgLoanOpen) error {
 	// TODO: on hard fork, change lending module to an actual module (created as account)
 	lendingAcc := h.mgr.Keeper().GetModuleAccAddress(LendingName)
 	collateral := common.NewCoin(msg.CollateralAsset.GetDerivedAsset(), msg.CollateralAmount)
-	// trunk-ignore(golangci-lint/govet): shadow
-	if err := h.mgr.Keeper().SendFromModuleToAccount(ctx, AsgardName, lendingAcc, common.NewCoins(collateral)); err != nil {
+	if err = h.mgr.Keeper().SendFromModuleToAccount(ctx, AsgardName, lendingAcc, common.NewCoins(collateral)); err != nil {
 		return fmt.Errorf("fail to send collateral funds: %w", err)
 	}
 
@@ -259,7 +258,7 @@ func (h LoanOpenHandler) openLoan(ctx cosmos.Context, msg MsgLoanOpen) error {
 			Coin:       common.NewCoin(common.TOR, cumulativeDebt),
 			ModuleName: ModuleName,
 		}
-		ok, err := h.mgr.TxOutStore().TryAddTxOutItem(ctx, h.mgr, toi, zero) // trunk-ignore(golangci-lint/govet): shadow
+		ok, err := h.mgr.TxOutStore().TryAddTxOutItem(ctx, h.mgr, toi, zero)
 		if err != nil {
 			return err
 		}
@@ -274,7 +273,7 @@ func (h LoanOpenHandler) openLoan(ctx cosmos.Context, msg MsgLoanOpen) error {
 
 		torCoin := common.NewCoin(common.TOR, cumulativeDebt)
 
-		if err := h.mgr.Keeper().MintToModule(ctx, ModuleName, torCoin); err != nil { // trunk-ignore(golangci-lint/govet): shadow
+		if err := h.mgr.Keeper().MintToModule(ctx, ModuleName, torCoin); err != nil {
 			return fmt.Errorf("fail to mint loan tor debt: %w", err)
 		}
 		mintEvt := NewEventMintBurn(MintSupplyType, torCoin.Asset.Native(), torCoin.Amount, "swap")
@@ -385,8 +384,7 @@ func (h LoanOpenHandler) swap(ctx cosmos.Context, msg MsgLoanOpen) error {
 	// ensure TxID does NOT have a collision with another swap, this could
 	// happen if the user submits two identical loan requests in the same
 	// block
-	// trunk-ignore(golangci-lint/govet): shadow
-	if ok := h.mgr.Keeper().HasSwapQueueItem(ctx, txID, 0); ok {
+	if hasItem := h.mgr.Keeper().HasSwapQueueItem(ctx, txID, 0); hasItem {
 		return fmt.Errorf("txn hash conflict")
 	}
 
@@ -459,7 +457,6 @@ func (h LoanOpenHandler) handleAffiliateSwap(ctx cosmos.Context, msg MsgLoanOpen
 	var affThorname *types.THORName
 	voter, err := h.mgr.Keeper().GetObservedTxInVoter(ctx, msg.TxID)
 	if err == nil {
-		// trunk-ignore(golangci-lint/govet): shadow
 		memo, err := ParseMemoWithTHORNames(ctx, h.mgr.Keeper(), voter.Tx.Tx.Memo)
 		if err != nil {
 			ctx.Logger().Error("fail to parse memo", "error", err)
@@ -470,7 +467,6 @@ func (h LoanOpenHandler) handleAffiliateSwap(ctx cosmos.Context, msg MsgLoanOpen
 	// PreferredAsset set, swap to the AffiliateCollector Module + check if the
 	// preferred asset swap should be triggered
 	if affThorname != nil && !affThorname.PreferredAsset.IsEmpty() {
-		// trunk-ignore(golangci-lint/govet): shadow
 		affcol, err := h.mgr.Keeper().GetAffiliateCollector(ctx, affThorname.Owner)
 		if err != nil {
 			return collateral.Amount, err
@@ -505,7 +501,6 @@ func (h LoanOpenHandler) handleAffiliateSwap(ctx cosmos.Context, msg MsgLoanOpen
 
 	// If the affiliate swap would exceed the native tx fee, add it to the queue
 	if willSwapOutputExceedLimitAndFees(ctx, h.mgr, *affiliateSwap) {
-		// trunk-ignore(golangci-lint/govet): shadow
 		if err := h.mgr.Keeper().SetSwapQueueItem(ctx, *affiliateSwap, 2); err != nil {
 			return collateral.Amount, fmt.Errorf("fail to add affiliate swap to queue: %w", err)
 		}
@@ -535,7 +530,6 @@ func (h LoanOpenHandler) getTotalLiquidityRUNELoanPools(ctx cosmos.Context) (cos
 		}
 
 		key := "LENDING-" + p.Asset.GetDerivedAsset().MimirString()
-		// trunk-ignore(golangci-lint/govet): shadow
 		val, err := h.mgr.Keeper().GetMimir(ctx, key)
 		if err != nil {
 			continue

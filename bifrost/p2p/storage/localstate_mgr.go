@@ -139,7 +139,7 @@ func (fsm *FileStateMgr) GetLocalState(pubKey string) (KeygenLocalState, error) 
 	if err != nil {
 		return KeygenLocalState{}, err
 	}
-	if _, err := os.Stat(filePathName); os.IsNotExist(err) {
+	if _, err = os.Stat(filePathName); os.IsNotExist(err) {
 		return KeygenLocalState{}, err
 	}
 

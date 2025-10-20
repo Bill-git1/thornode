@@ -34,8 +34,8 @@ func (s *HandlerSendSuiteV87) TestValidate(c *C) {
 
 	for _, moduleName := range []string{AsgardName, BondName, ReserveName} {
 		msg.ToAddress = k.GetModuleAccAddress(moduleName)
-		err := handler.validate(ctx, msg)
-		c.Assert(err, NotNil, Commentf("cannot send to module: %s", moduleName))
+		validateErr := handler.validate(ctx, msg)
+		c.Assert(validateErr, NotNil, Commentf("cannot send to module: %s", moduleName))
 	}
 
 	// invalid msg

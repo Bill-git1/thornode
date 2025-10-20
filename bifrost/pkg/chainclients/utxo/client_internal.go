@@ -884,7 +884,8 @@ func (c *Client) getMemo(tx *btcjson.TxRawResult) (string, error) {
 				continue
 			}
 
-			decoded, err := c.decodeHexString(fields[1])
+			var decoded string
+			decoded, err = c.decodeHexString(fields[1])
 			if err != nil {
 				// silently return no memo to reduce log noise
 				return "", nil

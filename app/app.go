@@ -263,7 +263,7 @@ func NewChainApp(
 	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey)
 
 	// register streaming services
-	if err := bApp.RegisterStreamingServices(appOpts, keys); err != nil {
+	if err = bApp.RegisterStreamingServices(appOpts, keys); err != nil {
 		panic(err)
 	}
 
@@ -620,7 +620,7 @@ func NewChainApp(
 	app.SetAnteHandler(anteHandler)
 
 	if manager := app.BaseApp.SnapshotManager(); manager != nil {
-		err := manager.RegisterExtensions(
+		err = manager.RegisterExtensions(
 			wasmkeeper.NewWasmSnapshotter(app.BaseApp.CommitMultiStore(), &app.WasmKeeper),
 		)
 		if err != nil {

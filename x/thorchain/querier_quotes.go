@@ -294,7 +294,8 @@ func quoteSimulateSwap(ctx cosmos.Context, mgr *Mgrs, amount sdkmath.Uint, msg *
 	if fee["coins"] == "" {
 		outboundFeeAmount = sdkmath.ZeroUint()
 	} else {
-		outboundFeeCoin, err := common.ParseCoin(fee["coins"])
+		var outboundFeeCoin common.Coin
+		outboundFeeCoin, err = common.ParseCoin(fee["coins"])
 		if err != nil {
 			return nil, sdkmath.ZeroUint(), sdkmath.ZeroUint(), fmt.Errorf("unable to parse outbound fee coin: %w", err)
 		}
@@ -302,7 +303,8 @@ func quoteSimulateSwap(ctx cosmos.Context, mgr *Mgrs, amount sdkmath.Uint, msg *
 	}
 
 	// parse outbound amount from event
-	emitCoin, err := common.ParseCoin(finalSwap["emit_asset"])
+	var emitCoin common.Coin
+	emitCoin, err = common.ParseCoin(finalSwap["emit_asset"])
 	if err != nil {
 		return nil, sdkmath.ZeroUint(), sdkmath.ZeroUint(), fmt.Errorf("unable to parse emit coin: %w", err)
 	}
@@ -355,7 +357,8 @@ func quoteInboundInfo(ctx cosmos.Context, mgr *Mgrs, amount sdkmath.Uint, chain 
 		router = common.NoAddress
 	} else {
 		// get the most secure vault for inbound
-		active, err := mgr.Keeper().GetAsgardVaultsByStatus(ctx, ActiveVault)
+		var active Vaults
+		active, err = mgr.Keeper().GetAsgardVaultsByStatus(ctx, ActiveVault)
 		if err != nil {
 			return common.NoAddress, common.NoAddress, 0, err
 		}
@@ -583,7 +586,8 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 
 	// if from asset is a trade asset, create fake balance
 	if fromAsset.IsTradeAsset() {
-		thorAddr, err := fromPubkey.GetThorAddress()
+		var thorAddr cosmos.AccAddress
+		thorAddr, err = fromPubkey.GetThorAddress()
 		if err != nil {
 			return nil, fmt.Errorf("failed to get thor address: %w", err)
 		}
@@ -620,7 +624,8 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 	liquidityToleranceBps := sdkmath.ZeroUint()
 	if len(req.ToleranceBps) > 0 {
 		// validate tolerance basis points
-		toleranceBasisPoints, err := sdkmath.ParseUint(req.ToleranceBps)
+		var toleranceBasisPoints sdkmath.Uint
+		toleranceBasisPoints, err = sdkmath.ParseUint(req.ToleranceBps)
 		if err != nil {
 			return nil, fmt.Errorf("bad tolerance basis points: %w", err)
 		}
@@ -629,7 +634,8 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 		}
 
 		// convert to a limit of target asset amount assuming zero fees and slip
-		feelessEmit, err := quoteConvertAsset(ctx, qs.mgr, fromAsset, amount, toAsset)
+		var feelessEmit sdkmath.Uint
+		feelessEmit, err = quoteConvertAsset(ctx, qs.mgr, fromAsset, amount, toAsset)
 		if err != nil {
 			return nil, err
 		}
@@ -686,7 +692,8 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 
 	// if from asset is a trade asset, create fake balance
 	if fromAsset.IsTradeAsset() {
-		thorAddr, err := fromPubkey.GetThorAddress()
+		var thorAddr cosmos.AccAddress
+		thorAddr, err = fromPubkey.GetThorAddress()
 		if err != nil {
 			return nil, fmt.Errorf("failed to get thor address: %w", err)
 		}
@@ -698,7 +705,8 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 
 	// if from asset is a secured asset, create fake balance
 	if fromAsset.IsSecuredAsset() {
-		thorAddr, err := fromPubkey.GetThorAddress()
+		var thorAddr cosmos.AccAddress
+		thorAddr, err = fromPubkey.GetThorAddress()
 		if err != nil {
 			return nil, fmt.Errorf("failed to get thor address: %w", err)
 		}

@@ -162,7 +162,8 @@ func (p *KrakenProvider) HandleWsMessage(msg []byte) error {
 
 		ticker := tickerMsg.Data[0]
 
-		pair, err := types.NewCurrencyPair(ticker.Symbol)
+		var pair types.CurrencyPair
+		pair, err = types.NewCurrencyPair(ticker.Symbol)
 		if err != nil {
 			p.logger.Err(err).Msg("fail to create pair")
 			return err

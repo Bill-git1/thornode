@@ -102,10 +102,11 @@ func (s *SecuredAssetMgrVCUR) Deposit(
 	s.keeper.SetSecuredAsset(ctx, pool)
 
 	depositEvent := NewEventSecuredAssetDeposit(amount, asset, assetAddr, common.Address(owner.String()), txID)
-	if err := s.eventMgr.EmitEvent(ctx, depositEvent); err != nil {
+	if err = s.eventMgr.EmitEvent(ctx, depositEvent); err != nil {
 		ctx.Logger().Error("fail to emit secured asset deposit event", "error", err)
 	}
-	cosmosCoin, err := coin.Native()
+	var cosmosCoin cosmos.Coin
+	cosmosCoin, err = coin.Native()
 	if err != nil {
 		return cosmos.Coin{}, err
 	}

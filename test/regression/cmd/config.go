@@ -270,7 +270,7 @@ func init() {
 		cdc := codec.NewProtoCodec(registry)
 
 		pubKey := new(cosmoscryptoed25519.PubKey)
-		if err := cdc.UnpackAny(r.PubKey, &pubKey); err != nil {
+		if err = cdc.UnpackAny(r.PubKey, &pubKey); err != nil {
 			log.Fatal().Err(err).Msg("failed to unpack ed25519 pubkey")
 		}
 		// nolint

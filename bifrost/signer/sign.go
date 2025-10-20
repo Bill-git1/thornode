@@ -339,15 +339,14 @@ func (s *Signer) scheduleKeygenRetry(keygenBlock ttypes.KeygenBlock) bool {
 		// every block, try to start processing again
 		for {
 			time.Sleep(constants.ThorchainBlockTime)
-			// trunk-ignore(golangci-lint/govet): shadow
-			height, err := s.thorchainBridge.GetBlockHeight()
+			currentHeight, err := s.thorchainBridge.GetBlockHeight()
 			if err != nil {
 				s.logger.Error().Err(err).Msg("fail to get last chain height")
 			}
-			if height >= targetRetryHeight {
+			if currentHeight >= targetRetryHeight {
 				s.logger.Info().
 					Interface("keygenBlock", keygenBlock).
-					Int64("currentHeight", height).
+					Int64("currentHeight", currentHeight).
 					Msg("retrying keygen")
 				s.processKeygenBlock(keygenBlock)
 				return

@@ -467,7 +467,8 @@ func (c *Client) signMsg(
 		}
 	} else {
 		hashedMsg := sha512.Sum512(signBytes)
-		signature, _, err := c.tssKeyManager.RemoteSign(hashedMsg[:32], common.SigningAlgoSecp256k1, pubkey.String())
+		var signature []byte
+		signature, _, err = c.tssKeyManager.RemoteSign(hashedMsg[:32], common.SigningAlgoSecp256k1, pubkey.String())
 		if err != nil {
 			c.logger.Err(err).Msg("xrp remote sign")
 			return nil, fmt.Errorf("error, xrp remote sign: %w", err)
@@ -591,7 +592,7 @@ func (c *Client) BroadcastTx(tx stypes.TxOutItem, txBytes []byte) (string, error
 
 	// if tx has already been broadcasted, don't try again, it will error with engine result: tefPAST_SEQ
 	if c.txNeedsBroadcast(txHash) {
-		if err := c.broadcastTx(txBlob); err != nil {
+		if err = c.broadcastTx(txBlob); err != nil {
 			return "", err
 		}
 	}

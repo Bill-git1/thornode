@@ -80,7 +80,7 @@ func (h NoOpHandler) handleV3_0_0(ctx cosmos.Context, msg MsgNoOp) error {
 	}
 	// subtract the coins from vault , as it has been added to
 	vault.SubFunds(msg.ObservedTx.Tx.Coins)
-	if err := h.mgr.Keeper().SetVault(ctx, vault); err != nil { // trunk-ignore(golangci-lint/govet): shadow
+	if err := h.mgr.Keeper().SetVault(ctx, vault); err != nil {
 		ctx.Logger().Error("fail to save vault", "error", err)
 	}
 	return nil

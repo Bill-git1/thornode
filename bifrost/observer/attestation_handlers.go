@@ -299,7 +299,7 @@ func (s *AttestationGossip) handleStreamBatchedAttestations(stream network.Strea
 	sem, err := s.peerMgr.acquire(remotePeer)
 	if err != nil {
 		logger.Error().Err(err).Msgf("fail to acquire semaphore for peer: %s", remotePeer)
-		if err := p2p.WriteStreamWithBuffer([]byte(p2p.StreamMsgDone), stream); err != nil {
+		if err = p2p.WriteStreamWithBuffer([]byte(p2p.StreamMsgDone), stream); err != nil {
 			logger.Error().Err(err).Msgf("fail to write reply to peer: %s", remotePeer)
 		}
 		return

@@ -25,19 +25,20 @@ func (pm *PoolMgrVCUR) EndBlock(ctx cosmos.Context, mgr Manager) error {
 	}
 	// Enable a pool every poolCycle
 	if ctx.BlockHeight()%poolCycle == 0 && !mgr.Keeper().RagnarokInProgress(ctx) {
-		maxAvailablePools, err := mgr.Keeper().GetMimir(ctx, constants.MaxAvailablePools.String())
+		var maxAvailablePools, minRunePoolDepth, stagedPoolCost int64
+		maxAvailablePools, err = mgr.Keeper().GetMimir(ctx, constants.MaxAvailablePools.String())
 		if maxAvailablePools < 0 || err != nil {
 			maxAvailablePools = mgr.GetConstants().GetInt64Value(constants.MaxAvailablePools)
 		}
-		minRunePoolDepth, err := mgr.Keeper().GetMimir(ctx, constants.MinRunePoolDepth.String())
+		minRunePoolDepth, err = mgr.Keeper().GetMimir(ctx, constants.MinRunePoolDepth.String())
 		if minRunePoolDepth < 0 || err != nil {
 			minRunePoolDepth = mgr.GetConstants().GetInt64Value(constants.MinRunePoolDepth)
 		}
-		stagedPoolCost, err := mgr.Keeper().GetMimir(ctx, constants.StagedPoolCost.String())
+		stagedPoolCost, err = mgr.Keeper().GetMimir(ctx, constants.StagedPoolCost.String())
 		if stagedPoolCost < 0 || err != nil {
 			stagedPoolCost = mgr.GetConstants().GetInt64Value(constants.StagedPoolCost)
 		}
-		if err := pm.cyclePools(ctx, maxAvailablePools, minRunePoolDepth, stagedPoolCost, mgr); err != nil {
+		if err = pm.cyclePools(ctx, maxAvailablePools, minRunePoolDepth, stagedPoolCost, mgr); err != nil {
 			ctx.Logger().Error("Unable to enable a pool", "error", err)
 		}
 	}
@@ -441,7 +442,8 @@ func (pm *PoolMgrVCUR) checkSaversUtilization(ctx cosmos.Context, mgr Manager) e
 		}
 
 		synthSupply := mgr.Keeper().GetTotalSupply(ctx, pool.Asset.GetSyntheticAsset())
-		l1Pool, err := mgr.Keeper().GetPool(ctx, pool.Asset.GetLayer1Asset())
+		var l1Pool Pool
+		l1Pool, err = mgr.Keeper().GetPool(ctx, pool.Asset.GetLayer1Asset())
 		if err != nil {
 			continue
 		}
@@ -465,7 +467,7 @@ func (pm *PoolMgrVCUR) checkSaversUtilization(ctx cosmos.Context, mgr Manager) e
 	var latestLp LiquidityProvider
 	for ; lpIterator.Valid(); lpIterator.Next() {
 		var lp LiquidityProvider
-		if err := mgr.Keeper().Cdc().Unmarshal(lpIterator.Value(), &lp); err != nil {
+		if err = mgr.Keeper().Cdc().Unmarshal(lpIterator.Value(), &lp); err != nil {
 			ctx.Logger().Error("fail to unmarshal liquidity provider", "error", err)
 			continue
 		}

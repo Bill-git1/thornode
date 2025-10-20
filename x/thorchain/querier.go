@@ -671,11 +671,13 @@ func (qs queryServer) queryNode(ctx cosmos.Context, req *types.QueryNodeRequest)
 	// CurrentAward is an estimation of reward for node in active status
 	// Node in other status should not have current reward
 	if nodeAcc.Status == NodeActive && !nodeAcc.Bond.IsZero() {
-		network, err := qs.mgr.Keeper().GetNetwork(ctx)
+		var network Network
+		network, err = qs.mgr.Keeper().GetNetwork(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("fail to get network: %w", err)
 		}
-		vaults, err := qs.mgr.Keeper().GetAsgardVaultsByStatus(ctx, ActiveVault)
+		var vaults []Vault
+		vaults, err = qs.mgr.Keeper().GetAsgardVaultsByStatus(ctx, ActiveVault)
 		if err != nil {
 			return nil, fmt.Errorf("fail to get active vaults: %w", err)
 		}
@@ -687,7 +689,8 @@ func (qs queryServer) queryNode(ctx cosmos.Context, req *types.QueryNodeRequest)
 
 		lastChurnHeight := vaults[0].StatusSince
 
-		reward, err := getNodeCurrentRewards(ctx, qs.mgr, nodeAcc, lastChurnHeight, network.BondRewardRune, totalEffectiveBond, bondHardCap)
+		var reward cosmos.Uint
+		reward, err = getNodeCurrentRewards(ctx, qs.mgr, nodeAcc, lastChurnHeight, network.BondRewardRune, totalEffectiveBond, bondHardCap)
 		if err != nil {
 			return nil, fmt.Errorf("fail to get current node rewards: %w", err)
 		}
@@ -835,7 +838,8 @@ func (qs queryServer) queryNodes(ctx cosmos.Context, _ *types.QueryNodesRequest)
 		result[i].PeerId = getPeerIDFromPubKey(na.PubKeySet.Secp256k1)
 		result[i].SlashPoints = slashPts
 		if na.Status == NodeActive {
-			reward, err := getNodeCurrentRewards(ctx, qs.mgr, na, lastChurnHeight, network.BondRewardRune, totalEffectiveBond, bondHardCap)
+			var reward cosmos.Uint
+			reward, err = getNodeCurrentRewards(ctx, qs.mgr, na, lastChurnHeight, network.BondRewardRune, totalEffectiveBond, bondHardCap)
 			if err != nil {
 				return nil, fmt.Errorf("fail to get current node rewards: %w", err)
 			}
@@ -843,7 +847,8 @@ func (qs queryServer) queryNodes(ctx cosmos.Context, _ *types.QueryNodesRequest)
 			result[i].CurrentAward = reward.String()
 		}
 
-		jail, err := qs.mgr.Keeper().GetNodeAccountJail(ctx, na.NodeAddress)
+		var jail Jail
+		jail, err = qs.mgr.Keeper().GetNodeAccountJail(ctx, na.NodeAddress)
 		if err != nil {
 			return nil, fmt.Errorf("fail to get node jail: %w", err)
 		}
@@ -1368,7 +1373,8 @@ func (qs queryServer) queryStreamingSwap(ctx cosmos.Context, req *types.QueryStr
 	// First try advanced swap queue (primary system since EnableAdvSwapQueue = 1 by default)
 	// Check up to the first two indices (0 through 1) for streaming swaps in advanced queue
 	for i := 0; i <= 1; i++ {
-		advSwapItem, err := qs.mgr.Keeper().GetAdvSwapQueueItem(ctx, txid, i)
+		var advSwapItem MsgSwap
+		advSwapItem, err = qs.mgr.Keeper().GetAdvSwapQueueItem(ctx, txid, i)
 		if err != nil {
 			// GetAdvSwapQueueItem returns an error if there is no MsgSwap set for that index, a normal occurrence here.
 			continue
@@ -2397,7 +2403,8 @@ func (qs queryServer) queryKeygen(ctx cosmos.Context, req *types.QueryKeygenRequ
 	}
 
 	if len(req.PubKey) > 0 {
-		pk, err := common.NewPubKey(req.PubKey)
+		var pk common.PubKey
+		pk, err = common.NewPubKey(req.PubKey)
 		if err != nil {
 			ctx.Logger().Error("fail to parse pubkey", "error", err)
 			return nil, fmt.Errorf("fail to parse pubkey: %w", err)
@@ -3248,7 +3255,8 @@ func (qs queryServer) queryTssMetric(ctx cosmos.Context, _ *types.QueryTssMetric
 	}
 	var keygenMetrics []*types.TssKeygenMetric
 	for _, pkey := range pubKeys {
-		m, err := qs.mgr.Keeper().GetTssKeygenMetric(ctx, pkey)
+		var m *types.TssKeygenMetric
+		m, err = qs.mgr.Keeper().GetTssKeygenMetric(ctx, pkey)
 		if err != nil {
 			return nil, fmt.Errorf("fail to get tss keygen metric for pubkey(%s):%w", pkey, err)
 		}
