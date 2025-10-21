@@ -109,9 +109,9 @@ proto-check-breaking:
 # ------------------------------ Docs ------------------------------
 
 docs-init:
-	@cargo install mdbook --version 0.4.44
+	@cargo install mdbook --version 0.4.52
 	@cargo install mdbook-admonish --version 1.18.0
-	@cargo install mdbook-katex --version 0.9.2
+	@cargo install mdbook-katex --version 0.9.4
 	@cargo install mdbook-embed --version 0.2.0
 	@cd docs && mdbook-admonish install --css-dir theme
 

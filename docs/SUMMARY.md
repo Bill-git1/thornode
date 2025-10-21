@@ -6,18 +6,15 @@
 
 - [Swap Guide](swap-guide/quickstart-guide.md)
 
-  - [Quickstart Guide](swap-guide/quickstart-guide.md)
   - [Advanced Swap Queue](swap-guide/advanced-swap-queue.md)
   - [Fees and Wait Times](swap-guide/fees-and-wait-times.md)
 
 - [Affiliate Guide](affiliate-guide/thorname-guide.md)
 
-  - [THORName Guide](affiliate-guide/thorname-guide.md)
   - [Affiliate Guide](affiliate-guide/affiliate-fee-guide.md)
 
 - [Using THORChain](concepts/connecting-to-thorchain.md)
 
-  - [Connecting to THORChain](concepts/connecting-to-thorchain.md)
   - [Querying THORChain](concepts/querying-thorchain.md)
   - [Sending Transactions](concepts/sending-transactions.md)
   - [Transaction Memos](concepts/memos.md)
@@ -37,7 +34,6 @@
 
 - [Bifrost](bifrost/how-bifrost-works.md)
 
-  - [How Bifrost Works](bifrost/how-bifrost-works.md)
   - [Vault Behaviors](bifrost/vault-behaviors.md)
   - [Oracles](bifrost/oracle.md)
 
@@ -64,24 +60,20 @@
 
 - [Internals & Math](concepts/code-libraries.md)
 
-  - [Code Libraries](concepts/code-libraries.md)
   - [Math](concepts/math.md)
 
 - [Aggregators](aggregators/aggregator-overview.md)
 
-  - [Aggregator Overview](aggregators/aggregator-overview.md)
   - [Memos](aggregators/memos.md)
   - [EVM Implementation](aggregators/evm-implementation.md)
 
 - [CLI](cli/overview.md)
 
-  - [Overview](cli/overview.md)
   - [Multisig](cli/multisig.md)
   - [Offline Ledger Support](cli/offline-ledger-support.md)
 
 - [THORNode](release.md)
 
-  - [Release Process](release.md)
   - [EVM Whitelist Procedure](evm_whitelist_procedure.md)
   - [Upgrade Router](upgrade_router.md)
   - [Architecture Decision Records (ADR)](architecture/README.md)
@@ -120,7 +112,5 @@
     - [Coding Guide](examples/typescript-web/coding-guide.md)
 
   - [Saving Guide](archived/saving-guide/quickstart-guide.md)
-    - [Quickstart Guide](archived/saving-guide/quickstart-guide.md)
     - [Fees and Wait Times](archived/saving-guide/fees-and-wait-times.md)
   - [Lending](archived/lending/quick-start-guide.md)
-    - [Quick Start Guide](archived/lending/quick-start-guide.md)
