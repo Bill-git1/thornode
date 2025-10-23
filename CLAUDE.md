@@ -216,4 +216,3 @@ THORChain supports multiple network types, each with specific configurations:
 
 - when modifying gitlab ci file (.gitlab-ci.yaml), validate it with the glab cli (`glab ci lint`)
 - when updating a proto file, use make proto-format to ensure the formatting of that file is correct
-- when updating @go.mod or @go.sum run `make generate` which will update @test/simulation/go.mod and @test/simulation/go.sum
