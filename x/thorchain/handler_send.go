@@ -199,7 +199,7 @@ func MsgSendHandleV3_0_0(ctx cosmos.Context, mgr Manager, m sdk.Msg) (*cosmos.Re
 			return nil, err
 		}
 
-		return NewDepositHandler(mgr).handle(ctx, *msgDeposit)
+		return NewDepositHandler(mgr).handle(ctx, *msgDeposit, 0)
 	} else if err := k.SendCoins(ctx, msg.FromAddress, msg.ToAddress, msg.Amount); err != nil {
 		return nil, err
 	}

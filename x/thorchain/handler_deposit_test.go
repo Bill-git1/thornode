@@ -62,7 +62,7 @@ func (s *HandlerDepositSuite) TestHandle(c *C) {
 	c.Assert(k.SetPool(ctx, pool), IsNil)
 	msg := NewMsgDeposit(coins, "ADD:DOGE.DOGE", addr)
 
-	_, err := handler.handle(ctx, *msg)
+	_, err := handler.handle(ctx, *msg, 0)
 	c.Assert(err, IsNil)
 	// ensure observe tx had been saved
 	hash := tmtypes.Tx(ctx.TxBytes()).Hash()
@@ -74,9 +74,16 @@ func (s *HandlerDepositSuite) TestHandle(c *C) {
 	c.Assert(voter.Tx.Status, Equals, common.Status_done)
 
 	FundAccount(c, ctx, k, addr, 300*common.One)
-	// do it again, make sure the transaction get rejected
-	_, err = handler.handle(ctx, *msg)
-	c.Assert(err, NotNil)
+	// do it again with same tx bytes - should auto-increment and succeed
+	_, err = handler.handle(ctx, *msg, 0)
+	c.Assert(err, IsNil)
+	// verify the auto-incremented txID was used
+	txIDIncremented, err := common.NewTxID(fmt.Sprintf("%X-1", hash))
+	c.Assert(err, IsNil)
+	voter2, err := k.GetObservedTxInVoter(ctx, txIDIncremented)
+	c.Assert(err, IsNil)
+	c.Assert(voter2.Tx.IsEmpty(), Equals, false)
+	c.Assert(voter2.Tx.Status, Equals, common.Status_done)
 }
 
 type HandlerDepositTestHelper struct {
