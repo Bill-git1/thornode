@@ -49,7 +49,7 @@ params:
 asserts:
   - .expected_amount_out|tonumber == 956231
   - .memo == "=:b:{{ addr_btc_fox }}"
-  - .recommended_min_amount_in == "209580"
+  - .recommended_min_amount_in == "301500"
   - .fees.liquidity == "19479"
   - .fees.outbound == "7000"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
@@ -69,7 +69,7 @@ params:
 asserts:
   - .expected_amount_out|tonumber == 9593961
   - .memo == "=:o:{{ addr_sol_fox }}"
-  - .recommended_min_amount_in == "21000"
+  - .recommended_min_amount_in == "30210"
   - .fees.liquidity == "193632"
   - .fees.outbound == "500"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)

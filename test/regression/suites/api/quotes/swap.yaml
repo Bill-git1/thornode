@@ -24,7 +24,7 @@ asserts:
   - .expected_amount_out|tonumber == ${AMT_OUT=973292}
   - .memo == "=:b:{{ addr_btc_fox }}"
   - .inbound_address == null
-  - .recommended_min_amount_in == "21000072"
+  - .recommended_min_amount_in == "24000084"
   - .fees.liquidity == "9998"
   - .fees.outbound == "7000"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
@@ -98,7 +98,7 @@ asserts:
   - .expected_amount_out|tonumber == 4621850363
   - .memo == "=:r:{{ addr_thor_fox }}"
   - .inbound_address == "{{ addr_btc_dog }}"
-  - .recommended_min_amount_in == "21000"
+  - .recommended_min_amount_in == "24000"
   - .fees.liquidity == "233388576"
   - .fees.outbound == "0"
   - (.fees.total|tonumber) == (.fees.liquidity|tonumber)+(.fees.outbound|tonumber)
@@ -253,7 +253,7 @@ params:
 asserts:
   - .memo == "=:b:{{ addr_btc_fox }}:960426"
   - .expected_amount_out|tonumber == ${AMT_OUT=1038576}
-  - .recommended_min_amount_in == "19678749"
+  - .recommended_min_amount_in == "22490001"
   - .fees.affiliate == "0"
   - .fees.liquidity == "10946"
   - .fees.outbound == "${OF=7000}"
@@ -277,7 +277,7 @@ params:
 asserts:
   - .memo == "=:b:{{ addr_btc_fox }}:960426:{{ addr_thor_pig }}:500"
   - (.expected_amount_out|tonumber) == (${AMT_OUT} - (${AMT_OUT} + ${OF}) * 0.05 - ${ROUNDING=0.05} | floor)
-  - .recommended_min_amount_in == "19678749"
+  - .recommended_min_amount_in == "23614501"
   - .fees.affiliate == "52279"
   - .fees.liquidity == "10946"
   - .fees.outbound == "7000"
@@ -377,7 +377,7 @@ params:
 asserts:
   - .memo == "=:b:{{ addr_btc_fox }}:942001:{{ addr_thor_pig }}:500"
   - .expected_amount_out|tonumber == 948612
-  - .recommended_min_amount_in == "1920000"
+  - .recommended_min_amount_in == "2016003"
   - .fees.affiliate == "50295"
   - .fees.liquidity == "20478"
   - .fees.outbound == "7000"
@@ -500,7 +500,7 @@ params:
 asserts:
   - .memo == "=:r:{{ addr_thor_fox }}:${LIMIT=882362456}:xx:500"
   - .expected_amount_out|tonumber == 913209710
-  - .recommended_min_amount_in == "1920000"
+  - .recommended_min_amount_in == "2016003"
   - .fees.affiliate == "48063669"
   - .fees.liquidity == "9517558"
   - .fees.outbound == "0"

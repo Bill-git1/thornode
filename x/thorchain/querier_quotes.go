@@ -443,18 +443,19 @@ func quoteOutboundInfo(ctx cosmos.Context, mgr *Mgrs, coin common.Coin) (int64, 
 // calculateMinSwapAmount returns the recommended minimum swap amount The recommended
 // min swap amount is: - MAX(
 //
-//	  outbound_fee(src_chain) * 4,
-//	  outbound_fee(dest_chain) * 4,
-//	  (native_tx_fee_rune * 2) * 10,000 / affiliateBps
-//	)
+//	  outbound_fee(src_chain) + dust_threshold(src_chain),
+//	  outbound_fee(dest_chain) + dust_threshold(dest_chain) converted to src_chain
+//	) * multiplier * (100% + affiliate_bps)
 //
 // The reason the base value is the MAX of the outbound fees of each chain is because if
 // the swap is refunded the input amount will need to cover the outbound fee of the
-// source chain. A 3x buffer is applied because outbound fees can spike quickly, meaning
+// source chain. A multiplier buffer is applied because outbound fees can spike quickly, meaning
 // the original input amount could be less than the new outbound fee. If this happens
 // and the swap is refunded, the refund will fail, and the user will lose the entire
-// input amount.
-func calculateMinSwapAmount(ctx cosmos.Context, mgr *Mgrs, fromAsset, toAsset common.Asset) (cosmos.Uint, error) {
+// input amount. The dust threshold ensures the outbound amount meets the minimum
+// transaction requirements of the destination chain. The affiliate fee multiplier accounts
+// for the fact that affiliate fees are taken out before processing the swap.
+func calculateMinSwapAmount(ctx cosmos.Context, mgr *Mgrs, fromAsset, toAsset common.Asset, totalAffiliateBps sdkmath.Uint) (cosmos.Uint, error) {
 	srcOutboundFee, err := mgr.GasMgr().GetAssetOutboundFee(ctx, fromAsset, false)
 	if err != nil {
 		return cosmos.ZeroUint(), fmt.Errorf("fail to get outbound fee for source chain gas asset %s: %w", fromAsset, err)
@@ -462,6 +463,18 @@ func calculateMinSwapAmount(ctx cosmos.Context, mgr *Mgrs, fromAsset, toAsset co
 	destOutboundFee, err := mgr.GasMgr().GetAssetOutboundFee(ctx, toAsset, false)
 	if err != nil {
 		return cosmos.ZeroUint(), fmt.Errorf("fail to get outbound fee for destination chain gas asset %s: %w", toAsset, err)
+	}
+
+	// Add source dust to srcOutboundFee
+	srcDustThreshold := fromAsset.GetChain().DustThreshold()
+	if !srcDustThreshold.IsZero() {
+		srcOutboundFee = srcOutboundFee.Add(srcDustThreshold)
+	}
+
+	// Add destination dust to destOutboundFee
+	destDustThreshold := toAsset.GetChain().DustThreshold()
+	if !destDustThreshold.IsZero() {
+		destOutboundFee = destOutboundFee.Add(destDustThreshold)
 	}
 
 	destInSrcAsset, err := quoteConvertAsset(ctx, mgr, toAsset, destOutboundFee, fromAsset)
@@ -474,7 +487,17 @@ func calculateMinSwapAmount(ctx cosmos.Context, mgr *Mgrs, fromAsset, toAsset co
 		minSwapAmount = destInSrcAsset
 	}
 
+	// Apply multiplier to the final result
 	minSwapAmount = minSwapAmount.Mul(cosmos.NewUint(getQuoteRecommendedMinAmountFeeMultiplier()))
+
+	// Apply affiliate fee multiplier: multiply by (100% + affiliate_bps)
+	// This accounts for the fact that affiliate fees are taken out before processing
+	if !totalAffiliateBps.IsZero() {
+		// Convert basis points to percentage: 10000 bps = 100%
+		// So we need to multiply by (10000 + totalAffiliateBps) / 10000
+		affiliateMultiplier := cosmos.NewUint(10000).Add(totalAffiliateBps)
+		minSwapAmount = minSwapAmount.Mul(affiliateMultiplier).Quo(cosmos.NewUint(10000))
+	}
 
 	return minSwapAmount, nil
 }
@@ -522,12 +545,6 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 
 	if !fromAsset.IsNative() && amount.LT(fromAsset.Chain.DustThreshold()) {
 		return nil, fmt.Errorf("amount less than dust threshold")
-	}
-
-	// check if the amount is less than the minimum swap amount
-	minSwapAmount, err := calculateMinSwapAmount(ctx, qs.mgr, fromAsset, toAsset)
-	if err != nil {
-		return nil, fmt.Errorf("failed to calculate min swap amount: %w", err)
 	}
 
 	// parse streaming interval
@@ -664,6 +681,12 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 	affiliates, affiliateBps, totalBps, err := parseMultipleAffiliateParams(ctx, qs.mgr, req.Affiliate, req.AffiliateBps)
 	if err != nil {
 		return nil, fmt.Errorf("bad affiliate params: %w", err)
+	}
+
+	// check if the amount is less than the minimum swap amount
+	minSwapAmount, err := calculateMinSwapAmount(ctx, qs.mgr, fromAsset, toAsset, totalBps)
+	if err != nil {
+		return nil, fmt.Errorf("failed to calculate min swap amount: %w", err)
 	}
 
 	// always attempt to shorten the to asset to fuzzy match
