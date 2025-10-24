@@ -169,15 +169,15 @@ func (a *SwapActor) getQuote(config *OpConfig) OpResult {
 		}
 	}
 
-	// store expected range to fail if received amount is outside 5% tolerance
+	// store expected range to fail if received amount is outside 10% tolerance
 	quoteOut := sdkmath.NewUintFromString(quote.ExpectedAmountOut)
 	tolerance := quoteOut.QuoUint64(10)
 	if quote.Fees.Outbound != nil {
 		outboundFee := sdkmath.NewUintFromString(*quote.Fees.Outbound)
 		quoteOut = quoteOut.Add(outboundFee)
 
-		// handle 2x gas rate fluctuation (add 1x outbound fee to tolerance)
-		tolerance = tolerance.Add(outboundFee)
+		// handle 3x gas rate fluctuation (add 2x outbound fee to tolerance)
+		tolerance = tolerance.Add(outboundFee.MulUint64(2))
 	}
 	a.minExpected = quoteOut.Sub(tolerance)
 	a.maxExpected = quoteOut.Add(tolerance)

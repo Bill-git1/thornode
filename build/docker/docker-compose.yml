@@ -439,7 +439,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: registry.gitlab.com/thorchain/devops/node-launcher:gaia-daemon-25.0.0
+    image: registry.gitlab.com/thorchain/devops/node-launcher:gaia-daemon-25.1.1
     volumes:
       - "./mocknet:/mocknet"
     environment:
@@ -540,7 +540,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: ethereum/client-go:v1.16.0
+    image: ethereum/client-go:v1.16.5
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-5}
@@ -558,7 +558,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101511.1
+    image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101603.1
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-5}
@@ -575,7 +575,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: xrpllabsofficial/xrpld:2.6.0
+    image: xrpllabsofficial/xrpld:2.6.1
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-5}
@@ -629,7 +629,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: registry.gitlab.com/thorchain/devops/node-launcher:tron-daemon-4.8.0
+    image: registry.gitlab.com/thorchain/devops/node-launcher:tron-daemon-4.8.0-1
     volumes:
       - "./mocknet:/mocknet"
     environment:
@@ -639,7 +639,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: registry.gitlab.com/thorchain/devops/node-launcher:tron-daemon-4.8.0
+    image: registry.gitlab.com/thorchain/devops/node-launcher:tron-daemon-4.8.0-1
     links:
       - tron-supernode:supernode
     volumes:
