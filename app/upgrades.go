@@ -9,9 +9,19 @@ import (
 	"gitlab.com/thorchain/thornode/v3/app/upgrades/standard"
 )
 
-// Upgrades list of chain upgrades
+// Upgrades is a list of chain upgrades.
 var Upgrades = []upgrades.Upgrade{
-	// register non-standard upgrades here
+	// If releasing a consensus breaking upgrade (one performed with a an upgrade
+	// proposal), do not add anything to this list. The current version in the `version`
+	// file at the root of the repo will be the `app.Version()` used to register the
+	// upgrade automatically in RegisterUpgradeHandlers (see below).
+
+	// If releasing a non-consensus breaking upgrade (i.e. Bifrost-only patch release)
+	// that requires no upgrade proposal, then add the current consensus version upgrade
+	// here. Example: if the current network version is 3.12.0 and you are releasing a
+	// non-consensus breaking patch release 3.12.1, then add the 3.12.0 upgrade here in
+	// the following format:
+	// standard.NewUpgrade("3.12.0"),
 }
 
 // RegisterUpgradeHandlers registers the chain upgrade handlers
