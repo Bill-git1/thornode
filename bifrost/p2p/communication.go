@@ -393,6 +393,11 @@ func (c *Communication) connectToBootstrapPeers() error {
 		if err != nil {
 			return fmt.Errorf("fail to add peer: %w", err)
 		}
+		// Skip connecting to ourselves
+		if pi.ID == c.host.ID() {
+			c.logger.Debug().Msgf("skipping connection to self: %s", pi.ID)
+			continue
+		}
 		wg.Add(1)
 		go func(connRet chan bool) {
 			defer wg.Done()
