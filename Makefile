@@ -45,9 +45,33 @@ ldflags = -X gitlab.com/thorchain/thornode/v3/constants.Version=$(VERSION) \
 
 # golang settings
 TEST_PATHS=$(shell go list ./... | grep -v bifrost/tss/go-tss) # Skip compute-intensive tests by default
+
+# Parse test path argument from command line (e.g., "make test ./path")
+ifeq (test,$(firstword $(MAKECMDGOALS)))
+  TEST_PATH_ARG := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+  ifneq ($(TEST_PATH_ARG),)
+    # Check if the argument looks like a path (contains /)
+    ifneq ($(findstring /,$(TEST_PATH_ARG)),)
+      # Ensure path starts with ./
+      ifeq ($(filter ./%,$(TEST_PATH_ARG)),)
+        TEST_DIR := ./$(TEST_PATH_ARG)
+      else
+        TEST_DIR := $(TEST_PATH_ARG)
+      endif
+      # Prevent make from treating the path as a target
+      .PHONY: $(TEST_PATH_ARG)
+      $(eval $(TEST_PATH_ARG):;@:)
+    endif
+  endif
+endif
+
 TEST_DIR?=${TEST_PATHS}
 BUILD_FLAGS := -ldflags '$(ldflags)' -tags ${TAG} -trimpath
-TEST_BUILD_FLAGS := -parallel=1 -tags=mocknet
+PARALLELISM ?= 1
+TEST_BUILD_FLAGS := -parallel=$(PARALLELISM) -tags=mocknet
+ifdef RUN
+RUN_FLAG := -run=$(RUN)
+endif
 BINARIES?=./cmd/thornode ./cmd/bifrost ./tools/recover-keyshare-backup
 GOVERSION=$(shell awk '($$1 == "go") { print $$2 }' go.mod)
 
@@ -169,22 +193,25 @@ test-coverage-sum: test-network-specific
 	@go tool cover -func=coverage.txt
 	@go tool cover -html=coverage.txt -o coverage.html
 
-test: test-network-specific
-	@go test ${TEST_BUILD_FLAGS} ${TEST_DIR}
+test:
+ifeq ($(TEST_DIR),$(TEST_PATHS))
+	@$(MAKE) test-network-specific
+endif
+	@go test ${TEST_BUILD_FLAGS} ${RUN_FLAG} ${TEST_DIR}
 
 test-all: test-network-specific
-	@go test ${TEST_BUILD_FLAGS} "./..."
+	@go test ${TEST_BUILD_FLAGS} ${RUN_FLAG} "./..."
 
 test-go-tss:
-	@go test ${TEST_BUILD_FLAGS} --race "./bifrost/tss/go-tss/..."
+	@go test ${TEST_BUILD_FLAGS} ${RUN_FLAG} --race "./bifrost/tss/go-tss/..."
 
 test-network-specific:
-	@go test -tags stagenet ./common
-	@go test -tags mainnet ./common ./bifrost/pkg/chainclients/utxo/...
-	@go test -tags mocknet ./common ./bifrost/pkg/chainclients/utxo/...
+	@go test -tags stagenet ${RUN_FLAG} ./common
+	@go test -tags mainnet ${RUN_FLAG} ./common ./bifrost/pkg/chainclients/utxo/...
+	@go test -tags mocknet ${RUN_FLAG} ./common ./bifrost/pkg/chainclients/utxo/...
 
 test-race:
-	@go test -race ${TEST_BUILD_FLAGS} ${TEST_DIR}
+	@go test -race ${TEST_BUILD_FLAGS} ${RUN_FLAG} ${TEST_DIR}
 
 # ------------------------------ Regression Tests ------------------------------
 
