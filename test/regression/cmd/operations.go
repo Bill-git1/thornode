@@ -630,6 +630,19 @@ func (op *OpCreateBlocks) Execute(out io.Writer, path string, _, routine int, p 
 		blockResponse.Header.LastBlockId = openapi.BlockResponseId{}
 		blockResponse.Header.LastCommitHash = ""
 
+		// only apply static values if UNFILTER_EXPORT is not set
+		if os.Getenv("UNFILTER_EXPORT") == "" {
+			blankHash := "0000000000000000000000000000000000000000000000000000000000000000"
+			blockResponse.Header.AppHash = blankHash
+			blockResponse.Header.LastResultsHash = blankHash
+
+			// zero gas_used for all transactions
+			zeroGas := "0"
+			for i := range blockResponse.Txs {
+				blockResponse.Txs[i].Result.GasUsed = &zeroGas
+			}
+		}
+
 		// write to file
 		enc := json.NewEncoder(f)
 		enc.SetIndent("", "  ")
