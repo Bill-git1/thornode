@@ -35,7 +35,7 @@ RUN apt-get update && \
   openssl=1.1.1w-0+deb11u4 \
   procps=2:3.3.17-5 \
   python3=3.9.2-3 \
-  python3-pip=20.3.4-4+deb11u1 && \
+  python3-pip=20.3.4-4+deb11u2 && \
   rm -rf /var/lib/apt/lists/* && \
   pip3 install --no-cache-dir requests==2.32.3 web3==7.5.0 retry==0.9.2
 
