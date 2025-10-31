@@ -2,6 +2,7 @@ package thorchain
 
 import (
 	"errors"
+	"fmt"
 
 	. "gopkg.in/check.v1"
 
@@ -589,9 +590,15 @@ func (s *SlashingVCURSuite) TestSlashVault(c *C) {
 	c.Check(nodeBondBeforeSlash.Sub(nodeBondAfterSlash).Uint64(), Equals, uint64(76457722), Commentf("%d", nodeBondBeforeSlash.Sub(nodeBondAfterSlash).Uint64()))
 	c.Check(node1BondBeforeSlash.Sub(node1BondAfterSlash).Uint64(), Equals, uint64(76572581), Commentf("%d", node1BondBeforeSlash.Sub(node1BondAfterSlash).Uint64()))
 
-	val, err := mgr.Keeper().GetMimir(ctx, "HaltBTCChain")
+	// Check that signing halt mimir was set
+	val, err := mgr.Keeper().GetMimir(ctx, fmt.Sprintf(constants.MimirTemplateHaltSigning, common.BTCChain))
 	c.Assert(err, IsNil)
 	c.Assert(val, Equals, int64(18), Commentf("%d", val))
+
+	// Check that trading halt mimir was set
+	val2, err := mgr.Keeper().GetMimir(ctx, fmt.Sprintf(constants.MimirTemplateHaltTrading, common.BTCChain))
+	c.Assert(err, IsNil)
+	c.Assert(val2, Equals, int64(18), Commentf("%d", val2))
 }
 
 func (s *SlashingVCURSuite) TestUpdatePoolFromSlash(c *C) {
@@ -707,9 +714,15 @@ func (s *SlashingVCURSuite) TestNetworkShouldNotSlashMorethanVaultAmount(c *C) {
 	c.Check(nodeBondBeforeSlash.Sub(nodeBondAfterSlash).Uint64(), Equals, uint64(37862675), Commentf("%d", nodeBondBeforeSlash.Sub(nodeBondAfterSlash).Uint64()))
 	c.Check(node1BondBeforeSlash.Sub(node1BondAfterSlash).Uint64(), Equals, uint64(37891094), Commentf("%d", node1BondBeforeSlash.Sub(node1BondAfterSlash).Uint64()))
 
-	val, err := mgr.Keeper().GetMimir(ctx, "HaltBTCChain")
+	// Check that signing halt mimir was set
+	val, err := mgr.Keeper().GetMimir(ctx, fmt.Sprintf(constants.MimirTemplateHaltSigning, common.BTCChain))
 	c.Assert(err, IsNil)
 	c.Assert(val, Equals, int64(18), Commentf("%d", val))
+
+	// Check that trading halt mimir was set
+	val2, err := mgr.Keeper().GetMimir(ctx, fmt.Sprintf(constants.MimirTemplateHaltTrading, common.BTCChain))
+	c.Assert(err, IsNil)
+	c.Assert(val2, Equals, int64(18), Commentf("%d", val2))
 
 	// Attempt to slash more than node has, pool should only be deducted what was successfully slashed
 	pool.BalanceRune = cosmos.NewUint(4000 * common.One)

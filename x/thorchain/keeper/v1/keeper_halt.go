@@ -55,7 +55,7 @@ func (k KVStore) IsTradingHalt(ctx cosmos.Context, msg cosmos.Msg) bool {
 }
 
 func (k KVStore) IsGlobalTradingHalted(ctx cosmos.Context) bool {
-	haltTrading, err := k.GetMimir(ctx, "HaltTrading")
+	haltTrading, err := k.GetMimir(ctx, constants.MimirKeyHaltTradingGlobal)
 	if err == nil && ((haltTrading > 0 && haltTrading <= ctx.BlockHeight()) || k.RagnarokInProgress(ctx)) {
 		return true
 	}
@@ -63,7 +63,7 @@ func (k KVStore) IsGlobalTradingHalted(ctx cosmos.Context) bool {
 }
 
 func (k KVStore) IsChainTradingHalted(ctx cosmos.Context, chain common.Chain) bool {
-	mimirKey := fmt.Sprintf("Halt%sTrading", chain)
+	mimirKey := fmt.Sprintf(constants.MimirTemplateHaltTrading, chain)
 	haltChainTrading, err := k.GetMimir(ctx, mimirKey)
 	if err == nil && (haltChainTrading > 0 && haltChainTrading <= ctx.BlockHeight()) {
 		ctx.Logger().Debug("trading is halt", "chain", chain)

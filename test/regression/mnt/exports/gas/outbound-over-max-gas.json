@@ -273,7 +273,11 @@
       "loans": [],
       "mimirs": [
         {
-          "key": "HALTETHCHAIN",
+          "key": "HALTETHTRADING",
+          "value": "5"
+        },
+        {
+          "key": "HALTSIGNINGETH",
           "value": "5"
         },
         {

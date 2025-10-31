@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
-	"strings"
 
 	"cosmossdk.io/core/comet"
 	"github.com/cometbft/cometbft/crypto"
@@ -508,11 +507,18 @@ func (s *SlasherVCUR) SlashVault(ctx cosmos.Context, vaultPK common.PubKey, coin
 		totalRuneSlashed := cosmos.ZeroUint()
 		pauseOnSlashThreshold := mgr.Keeper().GetConfigInt64(ctx, constants.PauseOnSlashThreshold)
 		if pauseOnSlashThreshold > 0 && totalRuneToSlash.GTE(cosmos.NewUint(uint64(pauseOnSlashThreshold))) {
-			// set mimirs to pause the chain
-			key := fmt.Sprintf("Halt%sChain", coin.Asset.Chain)
-			s.keeper.SetMimir(ctx, key, ctx.BlockHeight())
-			mimirEvent := NewEventSetMimir(strings.ToUpper(key), strconv.FormatInt(ctx.BlockHeight(), 10))
-			if err := mgr.EventMgr().EmitEvent(ctx, mimirEvent); err != nil {
+			// set mimirs to pause signing
+			haltsignKey := fmt.Sprintf(constants.MimirTemplateHaltSigning, coin.Asset.Chain)
+			s.keeper.SetMimir(ctx, haltsignKey, ctx.BlockHeight())
+			mimirEvent1 := NewEventSetMimir(haltsignKey, strconv.FormatInt(ctx.BlockHeight(), 10))
+			if err := mgr.EventMgr().EmitEvent(ctx, mimirEvent1); err != nil {
+				ctx.Logger().Error("fail to emit set_mimir event", "error", err)
+			}
+			// set mimirs to pause trading
+			halttradeKey := fmt.Sprintf(constants.MimirTemplateHaltTrading, coin.Asset.Chain)
+			s.keeper.SetMimir(ctx, halttradeKey, ctx.BlockHeight())
+			mimirEvent2 := NewEventSetMimir(halttradeKey, strconv.FormatInt(ctx.BlockHeight(), 10))
+			if err := mgr.EventMgr().EmitEvent(ctx, mimirEvent2); err != nil {
 				ctx.Logger().Error("fail to emit set_mimir event", "error", err)
 			}
 		}

@@ -543,6 +543,10 @@ func handleObservedTxOutQuorum(
 	// if memo isn't valid or its an inbound memo, slash the vault
 	memo, _ := ParseMemoWithTHORNames(ctx, k, tx.Tx.Memo)
 	if memo.IsEmpty() || memo.IsInbound() {
+		if isCancelTx(tx) {
+			ctx.Logger().Info("skipping slash for cancel tx with empty memo")
+			return nil
+		}
 		vault, err := k.GetVault(ctx, tx.ObservedPubKey)
 		if err != nil {
 			ctx.Logger().Error("fail to get vault", "error", err)

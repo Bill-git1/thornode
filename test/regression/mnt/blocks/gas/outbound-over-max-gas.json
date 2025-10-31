@@ -1510,7 +1510,13 @@
               "type": "security"
             },
             {
-              "key": "HALTETHCHAIN",
+              "key": "HaltSigningETH",
+              "msg_index": "0",
+              "type": "set_mimir",
+              "value": "5"
+            },
+            {
+              "key": "HaltETHTrading",
               "msg_index": "0",
               "type": "set_mimir",
               "value": "5"

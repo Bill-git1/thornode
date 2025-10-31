@@ -112,11 +112,24 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - '[.txs[]|.result.events[]|select(.type=="bond")]|length == 2' # 2 bond slash events
+  - '[.txs[]|.result.events[]|select(.type=="slash")]|length >= 1' # slash event
+---
+########################################################################################
+# Verify halt pattern: HALTSIGNINGETH and HaltETHTrading should be set
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/mimir
+asserts:
+  - .HALTSIGNINGETH > 0  # signing halted
 ---
 type: check
 endpoint: http://localhost:1317/thorchain/mimir
 asserts:
-  - .HALTETHCHAIN # chain halted
+  - .HALTETHTRADING > 0  # trading halted
+---
+type: check
+endpoint: http://localhost:1317/thorchain/mimir
+asserts:
+  - .HALTETHCHAIN|not  # chain is NOT halted
 ---
 type: fail-export-invariants

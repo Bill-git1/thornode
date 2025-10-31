@@ -598,7 +598,7 @@ func (s *Signer) signAndBroadcast(item TxOutStoreItem) ([]byte, *types.TxInItem,
 		s.logger.Info().Msg("signing has been halted globally")
 		return nil, nil, nil
 	}
-	mimirKey = fmt.Sprintf("HALTSIGNING%s", tx.Chain)
+	mimirKey = fmt.Sprintf(constants.MimirTemplateHaltSigning, tx.Chain)
 	haltSigningMimir, err := s.thorchainBridge.GetMimir(mimirKey)
 	if err != nil {
 		s.logger.Err(err).Msgf("fail to get %s", mimirKey)

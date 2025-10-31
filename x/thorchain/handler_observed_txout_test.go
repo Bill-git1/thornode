@@ -268,8 +268,8 @@ func (s *HandlerObservedTxOutSuite) TestHandleFailedTransaction(c *C) {
 
 	// When there is a failed transaction (such as an Ethereum out of gas failure),
 	// the observed transaction has a different Amount and the memo's txInHash is the failed transaction's.
-	// The desired behaviour is to reimbusre the pool/s by slashing the vault for the Amount and Gas,
-	// while leaving the pending outbound.
+	// With the new behavior, fake gas transactions (amount=1 wei) are not slashed, just accounted for via addGasFees.
+	// The pending outbound remains.
 	tx := GetRandomTx()
 	pk := GetRandomPubKey()
 	tx.FromAddress, err = pk.GetAddress(tx.Coins[0].Asset.Chain)
@@ -345,16 +345,19 @@ func (s *HandlerObservedTxOutSuite) TestHandleFailedTransaction(c *C) {
 	mgr.ObMgr().EndBlock(ctx, keeper)
 	c.Check(keeper.observing, HasLen, 1)
 
-	c.Check(int(keeper.pool.BalanceAsset.Uint64()), Equals, 262_499)
-	// As this was a failed transaction, both Amount 1 and Gas 37500 (being slashed) subtracted from the pool.
-	mgr.GasMgr().EndBlock(ctx, keeper, eventMgr)
-	c.Check(int(keeper.pool.BalanceAsset.Uint64()), Equals, 224_999)
-	// Gas 37500 SHOULD NOT be subtracted form the pool a second time (and reimbursed by the Reserve),
-	// but with the current code is anyway.
+	// With new behavior: fake gas tx (amount=1) is NOT slashed
+	// No pool deductions yet (pool stays at 300,000)
+	c.Check(int(keeper.pool.BalanceAsset.Uint64()), Equals, 300_000)
 
-	// make sure the coin has been subtract from the vault
+	mgr.GasMgr().EndBlock(ctx, keeper, eventMgr)
+	// After gas manager processes, gas is handled correctly (single addGasFees call):
+	// - handleObservedTxOutQuorum (line 590) calls addGasFees once
+	// - handler_common_outbound does NOT call it again (no double deduction)
+	// Pool gets: -37,500, so 300,000 - 37,500 = 262,500
+	c.Check(int(keeper.pool.BalanceAsset.Uint64()), Equals, 262_500)
+
+	// Vault deducted: coins (1) + gas (37,500) = 37,501 total (correct single deduction)
 	c.Check(vault.Coins.GetCoin(common.ETHAsset).Amount.Equal(cosmos.NewUint(19999962499)), Equals, true, Commentf("%d", vault.Coins.GetCoin(common.ETHAsset).Amount.Uint64()))
-	// Being slashed, Amount 1 and Gas 37500 have been subtracted from the 200*common.One vault balance.
 
 	hashes := keeper.GetObservedLink(ctx, tx.ID)
 	c.Assert(hashes, HasLen, 1)
