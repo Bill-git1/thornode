@@ -1,38 +1,158 @@
 # Review GitLab Merge Request
 
-Please review the GitLab merge request: $ARGUMENTS.
+Review the GitLab merge request: $ARGUMENTS
 
-Follow these steps:
+IMPORTANT: This is a blockchain codebase. Consensus safety is the HIGHEST priority.
 
-1. Use `glab mr view` to get the merge request details and metadata
-2. Use `glab mr diff` to examine the code changes in the MR
-3. Analyze the changes for:
-   - Code quality and best practices
-   - Potential bugs or security issues
-   - Performance implications
-   - Test coverage adequacy
-   - Documentation updates needed
-4. Check if the MR follows project conventions:
-   - Coding standards and style guidelines
-   - Commit message format
-   - Branch naming conventions
-5. Verify CI/CD pipeline status and test results
-6. Search the codebase for related files that might be affected
-7. Run relevant tests locally if needed to verify functionality
-8. Check for breaking changes and backward compatibility
-9. Draft detailed feedback including:
-   - Inline code comments on specific lines
-   - General review comments
-   - Suggestions for improvements
-   - Overall assessment and recommendation
-10. Present the drafted review to you for confirmation before posting:
-    - Show all proposed comments and their locations
-    - Display the overall review summary
-    - Ask for your approval before proceeding
-11. After your confirmation, post the feedback using `glab mr note`
-12. Update MR status only after your explicit approval:
-    - Ask before approving with `glab mr approve`
-    - Ask before requesting changes or adding labels
-    - Confirm any assignee changes
+## Review Workflow
 
-Remember to use the GitLab CLI (`glab`) for all GitLab-related tasks and provide constructive, actionable feedback.
+### Phase 1: Gather Information (Run in Parallel)
+
+Execute these commands in parallel for efficiency:
+
+- `glab mr view` - Get MR details and metadata
+- `glab mr diff` - Get code changes
+- `glab ci view` - Check pipeline status
+- `git log origin/develop..HEAD` - View commit history
+
+### Phase 2: Automated Checks
+
+Before manual review, verify automated tooling:
+
+1. Check CI/CD pipeline status - all checks must pass
+2. Verify `make lint` passes
+3. Verify `goimports -w` formatting is correct
+4. If .proto files changed, verify `make proto-format` was run
+5. If CI fails, stop and report - don't review until green
+
+### Phase 3: Consensus Safety Review (CRITICAL)
+
+**[MANDATORY] Invoke the `blockchain-code-review` skill** to check for consensus-breaking patterns:
+
+- Non-deterministic operations (float math, map iteration, time.Now(), random, UUID generation)
+- Division by zero risks (any division operations)
+- WASM API changes (app/wasm.go modifications)
+- Goroutines in consensus code (BeginBlocker/EndBlocker/handlers)
+- State machine changes (keeper modifications)
+- Protobuf breaking changes (field removals, type changes)
+- Floating point arithmetic (use cosmos.Int/Dec instead)
+
+### Phase 4: Security & Bug Review
+
+Focus on HIGH-VALUE findings only. DO NOT comment on:
+
+- Style/formatting issues (handled by tools)
+- Trivial naming suggestions
+- Minor refactoring ideas
+- Cosmetic improvements
+
+DO focus on:
+
+- **Security vulnerabilities**: Authentication, authorization, input validation, cryptography
+- **Logic bugs**: Off-by-one errors, nil pointer dereferences, race conditions
+- **Data integrity issues**: State corruption, incorrect calculations, lost data
+- **Error handling gaps**: Unhandled errors, silent failures, improper error propagation
+- **Performance problems**: O(n²) algorithms, unnecessary loops, memory leaks
+- **Code smells**: Duplicated logic, overly complex functions, tight coupling
+
+### Phase 5: Test Quality Review
+
+Evaluate test coverage and quality:
+
+1. Are new functions/handlers covered by unit tests?
+2. Do tests cover edge cases (zero values, nil, empty, overflow)?
+3. Are regression tests updated for protocol changes?
+4. Do tests actually test the right behavior (not just code coverage)?
+5. Are there any flaky test patterns (time-dependent, order-dependent)?
+
+### Phase 6: Impact Analysis
+
+Search codebase for potential ripple effects:
+
+1. Use Grep to find all callers of modified functions
+2. Check for interface changes affecting multiple implementations
+3. Verify backward compatibility for protocol upgrades
+4. Check for breaking changes in public APIs
+
+### Phase 7: Draft Review (Structured Output)
+
+Organize findings by severity using this format:
+
+```markdown
+## 🚨 CRITICAL (Consensus-Breaking)
+
+[Issues that could cause chain halt or consensus failure]
+
+- file.go:123 - [description with clear explanation]
+
+## ⚠️ HIGH (Security/Data Integrity)
+
+[Security vulnerabilities, data corruption risks, major bugs]
+
+- file.go:456 - [description]
+
+## 📊 MEDIUM (Logic/Performance)
+
+[Logic bugs, performance issues, error handling gaps]
+
+- file.go:789 - [description]
+
+## 💡 LOW (Code Quality)
+
+[Code smells, maintainability concerns - only if significant]
+
+- file.go:101 - [description]
+
+## ✅ Positive Notes
+
+[Highlight good practices, clever solutions, improvements]
+
+## 📋 Summary
+
+- X CRITICAL issues found (MUST fix before merge)
+- Y HIGH severity issues (should fix before merge)
+- Z MEDIUM severity issues (fix or document why safe)
+- Overall recommendation: [APPROVE / REQUEST CHANGES / BLOCK]
+```
+
+### Phase 8: Present for Approval
+
+Show the complete review with:
+
+1. Total count by severity
+2. All proposed inline comments with file:line locations
+3. Overall recommendation and rationale
+4. **Ask for explicit approval before posting anything**
+
+### Phase 9: Post Review (After Approval Only)
+
+1. Post inline comments on specific lines using `glab mr note`
+2. Post summary as MR comment
+3. DO NOT approve, request changes, or update labels without explicit permission
+
+## Review Principles
+
+✅ **DO:**
+
+- Be thorough on critical issues (consensus, security, bugs)
+- Provide specific file:line references
+- Explain WHY something is a problem and the impact
+- Suggest concrete fixes with code examples
+- Verify claims by reading related code
+- Run tests locally if uncertain about behavior
+
+❌ **DON'T:**
+
+- Comment on style/formatting (tools handle this)
+- Suggest subjective improvements without clear benefit
+- Review line-by-line for trivial issues
+- Approve without user permission
+- Post comments without user approval
+
+## Context for LLM
+
+- This is a Go/Cosmos SDK blockchain codebase
+- Consensus safety > security > bugs > performance > style
+- Use glab CLI for all GitLab operations
+- Tests run with `make test`, regression tests with `make test-regression`
+- Format code with `goimports -w`, protos with `make proto-format`
