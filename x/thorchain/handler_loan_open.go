@@ -224,6 +224,9 @@ func (h LoanOpenHandler) openLoan(ctx cosmos.Context, msg MsgLoanOpen) error {
 	if err != nil {
 		return err
 	}
+	if cr.IsZero() {
+		return fmt.Errorf("collateralization ratio cannot be zero")
+	}
 
 	price := h.mgr.Keeper().DollarsPerRune(ctx)
 	if price.IsZero() {

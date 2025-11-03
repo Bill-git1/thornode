@@ -1777,6 +1777,12 @@ func (vm *NetworkMgrVCUR) calcBlockRewards(
 	trD := cosmos.NewDec(int64(totalReserve.Uint64()))
 	ecD := cosmos.NewDec(emissionCurve)
 	bpyD := cosmos.NewDec(blocksPerYear)
+	// Defensive check: ensure emission curve and blocks per year are positive
+	if emissionCurve <= 0 || blocksPerYear <= 0 {
+		ctx.Logger().Error("invalid emission curve or blocks per year", "emissionCurve", emissionCurve, "blocksPerYear", blocksPerYear)
+		// Return zero rewards if config is invalid
+		return cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint(), cosmos.ZeroUint()
+	}
 	blockRewardD := trD.Quo(ecD).Quo(bpyD)
 	blockReward := cosmos.NewUint(uint64((blockRewardD).RoundInt64()))
 

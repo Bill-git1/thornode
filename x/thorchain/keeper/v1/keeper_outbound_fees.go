@@ -76,6 +76,12 @@ func (k KVStore) GetSurplusForTargetMultiplier(ctx cosmos.Context, targetMultipl
 	deltaToTarget := common.SafeSub(maxMultiplier, targetMultiplierBps)
 	maxMinusMin := common.SafeSub(maxMultiplier, minMultiplier)
 
+	// If max equals min, the multiplier is fixed and doesn't vary with surplus.
+	// In this case, return target surplus as a reasonable default.
+	if maxMinusMin.IsZero() {
+		return targetSurplus
+	}
+
 	// Convert to cosmos.Dec to avoid integer division.
 	deltaToTargetDec, err := cosmos.NewDecFromStr(deltaToTarget.String())
 	if err != nil {
