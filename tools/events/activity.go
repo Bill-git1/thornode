@@ -599,7 +599,7 @@ func scheduledOutbound(height int64, events []map[string]string) {
 	}
 
 	// add the inbound coins for inbound swap or outbound refund
-	if memoType == thorchain.TxSwap || reMemoRefund.MatchString(events[0]["memo"]) {
+	if memoType == thorchain.TxSwap || reMemoRefund.MatchString(events[0]["memo"]) && status.Tx != nil {
 		inboundCoin := util.CoinToCommon(status.Tx.Coins[0])
 		inboundUSDValue := util.USDValue(height, inboundCoin)
 		fields.Set("Inbound Amount", fmt.Sprintf(
