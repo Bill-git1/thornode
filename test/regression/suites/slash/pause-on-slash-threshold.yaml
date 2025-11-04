@@ -70,6 +70,14 @@ type: create-blocks
 count: 1
 ---
 ########################################################################################
+# outbound fee should be unchanged (was covered by the slash)
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/outbound_fee/eth.eth
+asserts:
+  - .[0].fee_spent_rune == "0"
+---
+########################################################################################
 # Verify outbound remains in queue (due to excessive gas)
 ########################################################################################
 type: check
@@ -85,35 +93,26 @@ endpoint: http://localhost:1317/thorchain/block
 asserts:
   - '[.txs[]|.result.events[]|select(.type=="slash")]|length >= 1'
 ---
-# Verify HALTSIGNINGETH mimir was set
+########################################################################################
+# Verify correct halt mimirs are set
+########################################################################################
 type: check
 endpoint: http://localhost:1317/thorchain/mimir
 asserts:
   - .HALTSIGNINGETH > 0
----
-########################################################################################
-# Verify HaltETHTrading mimir was set
-########################################################################################
-type: check
-endpoint: http://localhost:1317/thorchain/mimir
-asserts:
   - .HALTETHTRADING > 0
----
-########################################################################################
-# Verify both mimirs are set to the same block height
-########################################################################################
-type: check
-endpoint: http://localhost:1317/thorchain/mimir
-asserts:
   - .HALTSIGNINGETH == .HALTETHTRADING
+  - .HALTETHCHAIN|not
 ---
 ########################################################################################
-# Verify  HaltETHChain mimir is NOT set
+# verify correct vault and pool balances
 ########################################################################################
 type: check
-endpoint: http://localhost:1317/thorchain/mimir
+endpoint: http://localhost:1317/thorchain/vault/{{ pubkey_dog }}
 asserts:
-  - .HaltETHChain|not
+  - .coins[]|select(.asset=="ETH.ETH")|.amount|tonumber == 1000000000-50000001
 ---
-type: fail-export-invariants
-
+type: check
+endpoint: http://localhost:1317/thorchain/pool/eth.eth
+asserts:
+  - .balance_asset|tonumber == 1000000000-50000001

@@ -356,8 +356,8 @@ func (s *HandlerObservedTxOutSuite) TestHandleFailedTransaction(c *C) {
 	// Pool gets: -37,500, so 300,000 - 37,500 = 262,500
 	c.Check(int(keeper.pool.BalanceAsset.Uint64()), Equals, 262_500)
 
-	// Vault deducted: coins (1) + gas (37,500) = 37,501 total (correct single deduction)
-	c.Check(vault.Coins.GetCoin(common.ETHAsset).Amount.Equal(cosmos.NewUint(19999962499)), Equals, true, Commentf("%d", vault.Coins.GetCoin(common.ETHAsset).Amount.Uint64()))
+	// Vault deducted: only gas (37,500) for fake gas tx
+	c.Check(vault.Coins.GetCoin(common.ETHAsset).Amount.Equal(cosmos.NewUint(19999962500)), Equals, true, Commentf("%d", vault.Coins.GetCoin(common.ETHAsset).Amount.Uint64()))
 
 	hashes := keeper.GetObservedLink(ctx, tx.ID)
 	c.Assert(hashes, HasLen, 1)

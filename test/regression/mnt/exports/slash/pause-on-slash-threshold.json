@@ -130,7 +130,7 @@
           "address": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
           "coins": [
             {
-              "amount": "539841863980",
+              "amount": "534315515741",
               "denom": "rune"
             }
           ]
@@ -139,7 +139,7 @@
           "address": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
           "coins": [
             {
-              "amount": "35004305219664",
+              "amount": "35009831567903",
               "denom": "rune"
             }
           ]
@@ -398,12 +398,7 @@
         }
       ],
       "observed_tx_out_voters": null,
-      "outbound_fee_spent_rune": [
-        {
-          "amount": "5526348239",
-          "asset": "ETH.USDX-0X9999999999999999999999999999999999999999"
-        }
-      ],
+      "outbound_fee_spent_rune": [],
       "outbound_fee_withheld_rune": [
         {
           "amount": "689719136370",
@@ -425,8 +420,8 @@
         {
           "LP_units": "100000000000",
           "asset": "ETH.ETH",
-          "balance_asset": "899999998",
-          "balance_rune": "110526962570",
+          "balance_asset": "949999999",
+          "balance_rune": "105000614331",
           "decimals": "8",
           "pending_inbound_asset": "0",
           "pending_inbound_rune": "0",

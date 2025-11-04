@@ -379,13 +379,17 @@ func (b *thorchainBridge) GetInboundOutbound(txIns common.ObservedTxs) (common.O
 		if vaultFromAddress {
 			inOutboundArray = outbound.Contains(tx)
 		}
+
+		// cancels have to/from the same vault with no memo
+		isCancelTransaction := tx.Tx.ToAddress.Equals(tx.Tx.FromAddress) && tx.Tx.Memo == ""
+
 		// for consolidate UTXO tx, both From & To address will be the asgard address
 		// thus here we need to make sure that one add to inbound , the other add to outbound
 		switch {
 		case !vaultToAddress && !vaultFromAddress:
 			// Neither ToAddress nor FromAddress matches obAddr, so drop it.
 			b.logger.Error().Msgf("chain (%s) tx (%s) observedaddress (%s) does not match its toaddress (%s) or fromaddress (%s)", tx.Tx.Chain, tx.Tx.ID, obAddr, tx.Tx.ToAddress, tx.Tx.FromAddress)
-		case vaultToAddress && !inInboundArray:
+		case vaultToAddress && !inInboundArray && !isCancelTransaction:
 			inbound = append(inbound, tx)
 		case vaultFromAddress && !inOutboundArray:
 			outbound = append(outbound, tx)

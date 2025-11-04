@@ -42,21 +42,29 @@ txs:
       id: "{{ observe_txid 1 }}"
       chain: ETH
       from_address: {{ addr_eth_dog }}
-      to_address: {{ addr_eth_cat }}  # external address (not vault-to-vault)
+      to_address: {{ addr_eth_cat }} # external address (not vault-to-vault)
       coins:
-        - amount: "1"  # 1 in 8-decimal format (THORChain representation)
+        - amount: "1" # 1 in 8-decimal format (THORChain representation)
           asset: "ETH.ETH"
           decimals: 8
       gas:
-        - amount: "200000000"  # Very high gas that would trigger threshold if it were slashed
+        - amount: "200000000" # Very high gas that would trigger threshold if it were slashed
           asset: "ETH.ETH"
-      memo: "OUT:{{ observe_txid 1 }}"  # bifrost creates memo OUT:txhash for failed tx observations
+      memo: "OUT:{{ observe_txid 1 }}" # bifrost creates memo OUT:txhash for failed tx observations
     block_height: 1
     finalise_height: 1
     observed_pub_key: {{ pubkey_dog }}
 ---
 type: create-blocks
 count: 1
+---
+########################################################################################
+# verify fake gas was accounted in the outbound fee multiplier
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/outbound_fee/eth.eth
+asserts:
+  - .[0].fee_spent_rune == "20000319634"
 ---
 ########################################################################################
 # Verify NO slashing occurred and NO security event was emitted for fake gas tx
@@ -76,5 +84,15 @@ asserts:
   - .HALTSIGNINGETH|not
   - .HALTETHTRADING|not
 ---
-type: fail-export-invariants
-
+########################################################################################
+# verify correct vault and pool balances
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/vault/{{ pubkey_dog }}
+asserts:
+  - .coins[]|select(.asset=="ETH.ETH")|.amount|tonumber == 1000000000-200000000
+---
+type: check
+endpoint: http://localhost:1317/thorchain/pool/eth.eth
+asserts:
+  - .balance_asset|tonumber == 1000000000-200000000

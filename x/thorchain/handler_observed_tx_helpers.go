@@ -540,13 +540,19 @@ func handleObservedTxOutQuorum(
 
 	k := mgr.Keeper()
 
+	if isCancelTx(tx) {
+		ctx.Logger().Info("skipping slash for cancel tx with empty memo", "txid", tx.Tx.ID)
+		// Credit gas to gas manager and deduct from vault (legit operational spend, no penalty)
+		// This also adds to fee_spent_rune for dynamic outbound fee calculation
+		if err := addGasFees(ctx, mgr, tx); err != nil {
+			ctx.Logger().Error("fail to add gas fees for cancel tx", "error", err)
+		}
+		return nil
+	}
+
 	// if memo isn't valid or its an inbound memo, slash the vault
 	memo, _ := ParseMemoWithTHORNames(ctx, k, tx.Tx.Memo)
 	if memo.IsEmpty() || memo.IsInbound() {
-		if isCancelTx(tx) {
-			ctx.Logger().Info("skipping slash for cancel tx with empty memo")
-			return nil
-		}
 		vault, err := k.GetVault(ctx, tx.ObservedPubKey)
 		if err != nil {
 			ctx.Logger().Error("fail to get vault", "error", err)
@@ -582,12 +588,6 @@ func handleObservedTxOutQuorum(
 		return nil
 	}
 
-	// Apply Gas fees
-	if err = addGasFees(ctx, mgr, tx); err != nil {
-		ctx.Logger().Error("fail to add gas fee", "error", err)
-		return nil
-	}
-
 	// add addresses to observing addresses. This is used to detect
 	// active/inactive observing node accounts
 	mgr.ObMgr().AppendObserver(tx.Tx.Chain, txOut.GetSigners())
@@ -605,13 +605,34 @@ func handleObservedTxOutQuorum(
 			}
 		}
 	}
-	_, err = handler(ctx, m)
+	var res *cosmos.Result
+	res, err = handler(ctx, m)
 	if err != nil {
 		ctx.Logger().Error("handler failed:", "error", err)
 		return nil
 	}
+
+	vaultSlash := false
+	if res != nil && res.Events != nil {
+		for _, ev := range res.Events {
+			if ev.Type == "vault-slash" {
+				vaultSlash = true
+				break
+			}
+		}
+	}
+
 	voter.SetDone()
 	k.SetObservedTxOutVoter(ctx, voter)
+
+	// only deduct gas fee via the manager if there was not a vault slash that covered it
+	if !vaultSlash {
+		if err = addGasFees(ctx, mgr, tx); err != nil {
+			ctx.Logger().Error("fail to add gas fee", "error", err)
+			return nil
+		}
+	}
+
 	// process the msg first , and then deduct the fund from vault last
 	// If sending from one of our vaults, decrement coins
 	vault, err := k.GetVault(ctx, tx.ObservedPubKey)
@@ -619,12 +640,22 @@ func handleObservedTxOutQuorum(
 		ctx.Logger().Error("fail to get vault", "error", err)
 		return nil
 	}
+
+	// if the vault was slashed we skipped the gas manager above and deduct gas directly
+	if vaultSlash {
+		vault.SubFunds(tx.Tx.Gas.ToCoins())
+	}
+
+	// Don't add to or subtract from vault balances when the sender and recipient are the same
+	// (particularly avoid Consolidate SafeSub zeroing of vault balances).
 	if !tx.Tx.FromAddress.Equals(tx.Tx.ToAddress) {
-		// Don't add to or subtract from vault balances when the sender and recipient are the same
-		// (particularly avoid Consolidate SafeSub zeroing of vault balances).
-		vault.SubFunds(tx.Tx.Coins)
+		// skip deducting funds for outbound fake gas
+		if !isOutboundFakeGasTx(tx) {
+			vault.SubFunds(tx.Tx.Coins)
+		}
 		vault.OutboundTxCount++
 	}
+
 	if vault.IsAsgard() && memo.IsType(TxMigrate) {
 		// only remove the block height that had been specified in the memo
 		vault.RemovePendingTxBlockHeights(memo.GetBlockHeight())

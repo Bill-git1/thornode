@@ -18,12 +18,12 @@ func (s *HandlerCommonOutboundSuite) TestIsOutboundFakeGasTX(c *C) {
 	gas := common.Gas{
 		{Asset: common.ETHAsset, Amount: cosmos.NewUint(1)},
 	}
-	// Fake gas transactions have OUT:txhash memo (bifrost behavior)
+	// Fake gas transactions have self-referential OUT:txhash memo (bifrost behavior)
 	fakeGasTx := common.ObservedTx{
-		Tx: common.NewTx("123", "0xabc", "0x123", coins, gas, "OUT:ABCD1234567890"),
+		Tx: common.NewTx("123", "0xabc", "0x123", coins, gas, "OUT:123"),
 	}
 
-	c.Assert(isOutboundFakeGasTX(fakeGasTx), Equals, true)
+	c.Assert(isOutboundFakeGasTx(fakeGasTx), Equals, true)
 
 	coins = common.Coins{
 		common.NewCoin(common.ETHAsset, cosmos.NewUint(100000)),
@@ -31,24 +31,24 @@ func (s *HandlerCommonOutboundSuite) TestIsOutboundFakeGasTX(c *C) {
 	theftTx := common.ObservedTx{
 		Tx: common.NewTx("123", "0xabc", "0x123", coins, gas, "=:AVAX.AVAX:0x123"),
 	}
-	c.Assert(isOutboundFakeGasTX(theftTx), Equals, false)
+	c.Assert(isOutboundFakeGasTx(theftTx), Equals, false)
 
 	coins = common.Coins{
 		common.NewCoin(common.BTCAsset, cosmos.NewUint(1)),
 	}
 	theftTx2 := common.ObservedTx{
-		Tx: common.NewTx("123", "0xabc", "0x123", coins, gas, "OUT:ABCD1234567890"),
+		Tx: common.NewTx("123", "0xabc", "0x123", coins, gas, "OUT:123"),
 	}
-	c.Assert(isOutboundFakeGasTX(theftTx2), Equals, false) // Wrong chain (BTC not EVM)
+	c.Assert(isOutboundFakeGasTx(theftTx2), Equals, false) // Wrong chain (BTC not EVM)
 
-	// Test with wrong memo format (not OUT:)
+	// Test with wrong memo format (not self-referential)
 	coins = common.Coins{
 		common.NewCoin(common.ETHAsset, cosmos.NewUint(1)),
 	}
 	wrongMemoTx := common.ObservedTx{
-		Tx: common.NewTx("123", "0xabc", "0x123", coins, gas, "=:AVAX.AVAX:0x123"),
+		Tx: common.NewTx("123", "0xabc", "0x123", coins, gas, "OUT:ABCD1234567890"),
 	}
-	c.Assert(isOutboundFakeGasTX(wrongMemoTx), Equals, false) // Wrong memo format
+	c.Assert(isOutboundFakeGasTx(wrongMemoTx), Equals, false) // Wrong memo format (not self-referential)
 }
 
 func (s *HandlerCommonOutboundSuite) TestIsCancelTx(c *C) {

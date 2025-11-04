@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	sdkmath "cosmossdk.io/math"
+	abcitypes "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	"github.com/hashicorp/go-metrics"
 
@@ -60,7 +61,7 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 		return &cosmos.Result{}, nil
 	}
 
-	possibleSlash := true
+	shouldSlash := true
 	signingTransPeriod := h.mgr.GetConstants().GetInt64Value(constants.SigningTransactionPeriod)
 	// every Signing Transaction Period , THORNode will check whether a
 	// TxOutItem had been sent by signer or not
@@ -103,7 +104,8 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 
 	for height := latestHeight; height >= earliestHeight; height-- {
 		// update txOut record with our TxID that sent funds out of the pool
-		txOut, err := h.mgr.Keeper().GetTxOut(ctx, height)
+		var txOut *TxOut
+		txOut, err = h.mgr.Keeper().GetTxOut(ctx, height)
 		if err != nil {
 			ctx.Logger().Error("unable to get txOut record", "error", err)
 			return nil, cosmos.ErrUnknownRequest(err.Error())
@@ -131,7 +133,8 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 				matchCoin := tx.Tx.Coins.EqualsEx(common.Coins{txOutItem.Coin})
 				if !matchCoin {
 					// In case the mismatch is caused by decimals , round the tx out item's amount , and compare it again
-					p, err := h.mgr.Keeper().GetPool(ctx, txOutItem.Coin.Asset)
+					var p Pool
+					p, err = h.mgr.Keeper().GetPool(ctx, txOutItem.Coin.Asset)
 					if err != nil {
 						ctx.Logger().Error("fail to get pool", "error", err)
 					}
@@ -181,8 +184,8 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 					continue
 				}
 				txOut.TxArray[i].OutHash = tx.Tx.ID
-				possibleSlash = false
-				if err := h.mgr.Keeper().SetTxOut(ctx, txOut); err != nil {
+				shouldSlash = false
+				if err = h.mgr.Keeper().SetTxOut(ctx, txOut); err != nil {
 					ctx.Logger().Error("fail to save tx out", "error", err)
 				}
 
@@ -190,7 +193,8 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 				outTxn := txOut.TxArray[i]
 				spent := outTxn.CloutSpent
 				if spent != nil && !spent.IsZero() {
-					cloutOut, err := h.mgr.Keeper().GetSwapperClout(ctx, outTxn.ToAddress)
+					var cloutOut SwapperClout
+					cloutOut, err = h.mgr.Keeper().GetSwapperClout(ctx, outTxn.ToAddress)
 					if err != nil {
 						ctx.Logger().Error("fail to get swapper clout destination address", "error", err)
 					}
@@ -199,7 +203,8 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 					if err != nil {
 						ctx.Logger().Error("fail to get txin for clout calculation", "error", err)
 					}
-					cloutIn, err := h.mgr.Keeper().GetSwapperClout(ctx, inVoter.Tx.Tx.FromAddress)
+					var cloutIn SwapperClout
+					cloutIn, err = h.mgr.Keeper().GetSwapperClout(ctx, inVoter.Tx.Tx.FromAddress)
 					if err != nil {
 						ctx.Logger().Error("fail to get swapper clout destination address", "error", err)
 					}
@@ -208,7 +213,7 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 
 					cloutIn.Reclaim(clout1)
 					cloutIn.LastReclaimHeight = ctx.BlockHeight()
-					if err := h.mgr.Keeper().SetSwapperClout(ctx, cloutIn); err != nil {
+					if err = h.mgr.Keeper().SetSwapperClout(ctx, cloutIn); err != nil {
 						ctx.Logger().Error("fail to save swapper clout in", "error", err)
 					}
 
@@ -218,7 +223,7 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 					}
 					cloutOut.Reclaim(clout2)
 					cloutOut.LastReclaimHeight = ctx.BlockHeight()
-					if err := h.mgr.Keeper().SetSwapperClout(ctx, cloutOut); err != nil {
+					if err = h.mgr.Keeper().SetSwapperClout(ctx, cloutOut); err != nil {
 						ctx.Logger().Error("fail to save swapper clout out", "error", err)
 					}
 				}
@@ -229,43 +234,38 @@ func (h CommonOutboundTxHandler) handle(ctx cosmos.Context, tx ObservedTx, inTxI
 		}
 		// If the TxOutItem matching the observed outbound has been found,
 		// do not check other blocks.
-		if !possibleSlash {
+		if !shouldSlash {
 			break
 		}
 	}
 
-	if possibleSlash {
-		ctx.Logger().Info("No matched tx out item found", "inbound txid", inTxID, "outbound tx", tx.Tx)
-		switch {
-		case isCancelTx(tx):
-			ctx.Logger().Info("outbound is cancel tx, no slash", "inbound txid", inTxID, "outbound tx", tx.Tx)
-			// Credit gas to gas manager and deduct from vault (legit operational spend, no penalty)
-			// This also adds to fee_spent_rune for dynamic outbound fee calculation
-			if err := addGasFees(ctx, h.mgr, tx); err != nil {
-				ctx.Logger().Error("fail to add gas fees for cancel tx", "error", err)
-				// Don't fail the whole handler—log and continue
-			}
-		case isOutboundFakeGasTX(tx):
-			ctx.Logger().Info("outbound is fake gas tx, no slash", "inbound txid", inTxID, "outbound tx", tx.Tx)
-		default:
-			// Send security alert for events that are not fake gas tx or cancel tx
-			msg := fmt.Sprintf("missing tx out in=%s", inTxID)
-			if err := h.mgr.EventMgr().EmitEvent(ctx, NewEventSecurity(tx.Tx, msg)); err != nil {
-				ctx.Logger().Error("fail to emit security event", "error", err)
-			}
+	slashed := false
+	if shouldSlash && !isOutboundFakeGasTx(tx) {
+		ctx.Logger().Info("slash node account, no matched tx out item", "inbound txid", inTxID, "outbound tx", tx.Tx)
 
-			// Slash for all non-cancel transactions (including fake gas tx)
-			if err := h.slash(ctx, tx); err != nil {
-				return nil, ErrInternal(err, "fail to slash account")
-			}
+		// send security alert for events that are not evm burn
+		msg := fmt.Sprintf("missing tx out in=%s", inTxID)
+		if err = h.mgr.EventMgr().EmitEvent(ctx, NewEventSecurity(tx.Tx, msg)); err != nil {
+			ctx.Logger().Error("fail to emit security event", "error", err)
 		}
+
+		if err = h.slash(ctx, tx); err != nil {
+			return nil, ErrInternal(err, "fail to slash account")
+		}
+		slashed = true
 	}
 
 	if err := h.mgr.Keeper().SetLastSignedHeight(ctx, voter.FinalisedHeight); err != nil {
 		ctx.Logger().Info("fail to update last signed height", "error", err)
 	}
 
-	return &cosmos.Result{}, nil
+	// the slash event is not exposed, but detected upstream in the handler
+	var events []abcitypes.Event
+	if slashed {
+		events = append(events, abcitypes.Event{Type: "vault-slash"})
+	}
+
+	return &cosmos.Result{Events: events}, nil
 }
 
 // calcReclaim attempts to split spent clout between two reclaimable clouts as equally as possible.
@@ -288,97 +288,4 @@ func calcReclaim(reclaimable1, reclaimable2, spent cosmos.Uint) (reclaim1, recla
 
 	// Otherwise, split the spent clout equally
 	return halfSpent, spent.Sub(halfSpent)
-}
-
-// isOutboundFakeGasTX returns true if the observed outbound is a "fake gas" transaction for a failed outbound.
-// When an EVM outbound fails (e.g., out of gas), bifrost observes the failed transaction and reports it
-// as an outbound observation with amount=1 wei and memo="OUT:failed_txhash" so the gas can be accounted for.
-// This should not trigger slashing as it's a legitimate observation of a failed transaction.
-// Checks are:
-// - must only have one coin in outbound
-// - chain of coin must be an EVM chain
-// - coin asset must be the gas asset
-// - coin amount must be 1
-// - memo must start with "OUT:" (bifrost sets memo to OUT:txhash for failed tx observations)
-func isOutboundFakeGasTX(tx ObservedTx) bool {
-	isLenCoins1 := len(tx.Tx.Coins) == 1
-	if !isLenCoins1 {
-		return false
-	}
-	asset := tx.Tx.Coins[0].Asset
-	isChainEVM := asset.Chain.IsEVM()
-	if !isChainEVM {
-		return false
-	}
-	gasAsset := asset.Chain.GetGasAsset()
-	isAssetGasAsset := asset.Equals(gasAsset)
-	if !isAssetGasAsset {
-		return false
-	}
-
-	if !tx.Tx.Coins[0].Amount.Equal(sdkmath.NewUint(1)) {
-		return false
-	}
-
-	// Must have OUT: memo (bifrost sets this for failed transaction observations)
-	// Note: This uses string prefix check rather than parsing to avoid import cycles
-	if len(tx.Tx.Memo) < 4 || tx.Tx.Memo[:4] != "OUT:" {
-		return false
-	}
-
-	return true
-}
-
-// isCancelTx returns true if the observed outbound is a cancel transaction sent by bifrost to unstuck a pending transaction.
-// This occurs on EVM chains where bifrost needs to replace a stuck transaction by sending a new transaction with the same nonce
-// but higher gas price. To "cancel" the original transaction, bifrost sends a zero-value transaction to the vault's own address.
-// Note: Cancel transactions have amount=0 on the EVM chain, but bifrost converts them to DustThreshold when observing to make them observable.
-// Checks are:
-// - must only have one coin in outbound
-// - chain of coin must be an EVM chain
-// - coin asset must be the gas asset
-// - coin amount must equal DustThreshold (cancel transactions have 0 value on chain, but bifrost converts to DustThreshold)
-// - ToAddress must equal the vault address (vault-to-vault transaction)
-// - memo must be empty (cancel transactions have no memo)
-func isCancelTx(tx ObservedTx) bool {
-	// Must have exactly one coin
-	if len(tx.Tx.Coins) != 1 {
-		return false
-	}
-
-	asset := tx.Tx.Coins[0].Asset
-
-	// Must be an EVM chain
-	if !asset.Chain.IsEVM() {
-		return false
-	}
-
-	// Must be the gas asset
-	gasAsset := asset.Chain.GetGasAsset()
-	if !asset.Equals(gasAsset) {
-		return false
-	}
-
-	// Must have amount = DustThreshold (cancel transactions have 0 value on chain,
-	// but bifrost scanner converts them to DustThreshold to make them observable)
-	dustThreshold := asset.Chain.DustThreshold()
-	if !tx.Tx.Coins[0].Amount.Equal(dustThreshold) {
-		return false
-	}
-
-	// Must be sent to and from the vault's own address (vault-to-vault)
-	vaultAddr, err := tx.ObservedPubKey.GetAddress(tx.Tx.Chain)
-	if err != nil {
-		return false
-	}
-	if !tx.Tx.ToAddress.Equals(vaultAddr) || !tx.Tx.FromAddress.Equals(vaultAddr) {
-		return false
-	}
-
-	// Must have no memo (cancel transactions are purely operational)
-	if tx.Tx.Memo != "" {
-		return false
-	}
-
-	return true
 }

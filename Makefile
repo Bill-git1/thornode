@@ -171,7 +171,7 @@ format:
 
 lint:
 	@./scripts/lint.sh
-	@./scripts/trunk check --no-fix --upstream origin/develop
+	@./scripts/trunk check --no-fix --show-existing --upstream origin/develop
 
 lint-ci:
 	@./scripts/lint.sh

@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	sdkmath "cosmossdk.io/math"
 	"github.com/blang/semver"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	"github.com/hashicorp/go-metrics"
@@ -1477,4 +1478,93 @@ func leadingZeros(length int, str string) string {
 		return str[:length]
 	}
 	return str
+}
+
+// isOutboundFakeGasTx returns true if the observed outbound is a "fake gas" transaction
+// for a failed outbound. When an EVM outbound fails (e.g., out of gas), bifrost
+// observes the failed transaction and reports it as an outbound observation with
+// amount=1 wei and memo="OUT:failed_txhash" so the gas can be accounted for. This
+// should not trigger slashing as it's a legitimate observation of a failed transaction.
+// Checks are:
+// - must only have one coin in outbound
+// - chain of coin must be an EVM chain
+// - coin asset must be the gas asset
+// - coin amount must be 1
+// - memo must start with "OUT:" (bifrost sets memo to OUT:txhash for failed tx observations)
+func isOutboundFakeGasTx(tx ObservedTx) bool {
+	isLenCoins1 := len(tx.Tx.Coins) == 1
+	if !isLenCoins1 {
+		return false
+	}
+	asset := tx.Tx.Coins[0].Asset
+	isChainEVM := asset.Chain.IsEVM()
+	if !isChainEVM {
+		return false
+	}
+	gasAsset := asset.Chain.GetGasAsset()
+	isAssetGasAsset := asset.Equals(gasAsset)
+	if !isAssetGasAsset {
+		return false
+	}
+
+	if !tx.Tx.Coins[0].Amount.Equal(sdkmath.NewUint(1)) {
+		return false
+	}
+
+	// fake gas txs have a self-referential out memo
+	return tx.Tx.Memo == "OUT:"+tx.Tx.ID.String()
+}
+
+// isCancelTx returns true if the observed outbound is a cancel transaction sent by bifrost to unstuck a pending transaction.
+// This occurs on EVM chains where bifrost needs to replace a stuck transaction by sending a new transaction with the same nonce
+// but higher gas price. To "cancel" the original transaction, bifrost sends a zero-value transaction to the vault's own address.
+// Note: Cancel transactions have amount=0 on the EVM chain, but bifrost converts them to DustThreshold when observing to make them observable.
+// Checks are:
+// - must only have one coin in outbound
+// - chain of coin must be an EVM chain
+// - coin asset must be the gas asset
+// - coin amount must equal DustThreshold (cancel transactions have 0 value on chain, but bifrost converts to DustThreshold)
+// - ToAddress must equal the vault address (vault-to-vault transaction)
+// - memo must be empty (cancel transactions have no memo)
+func isCancelTx(tx ObservedTx) bool {
+	// Must have exactly one coin
+	if len(tx.Tx.Coins) != 1 {
+		return false
+	}
+
+	asset := tx.Tx.Coins[0].Asset
+
+	// Must be an EVM chain
+	if !asset.Chain.IsEVM() {
+		return false
+	}
+
+	// Must be the gas asset
+	gasAsset := asset.Chain.GetGasAsset()
+	if !asset.Equals(gasAsset) {
+		return false
+	}
+
+	// Must have amount = DustThreshold (cancel transactions have 0 value on chain,
+	// but bifrost scanner converts them to DustThreshold to make them observable)
+	dustThreshold := asset.Chain.DustThreshold()
+	if !tx.Tx.Coins[0].Amount.Equal(dustThreshold) {
+		return false
+	}
+
+	// Must be sent to and from the vault's own address (vault-to-vault)
+	vaultAddr, err := tx.ObservedPubKey.GetAddress(tx.Tx.Chain)
+	if err != nil {
+		return false
+	}
+	if !tx.Tx.ToAddress.Equals(vaultAddr) || !tx.Tx.FromAddress.Equals(vaultAddr) {
+		return false
+	}
+
+	// Must have no memo (cancel transactions are purely operational)
+	if tx.Tx.Memo != "" {
+		return false
+	}
+
+	return true
 }

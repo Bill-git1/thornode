@@ -9,15 +9,20 @@ type: create-blocks
 count: 1
 ---
 ########################################################################################
-# get initial vault bond amounts
+# verify initial amounts
 ########################################################################################
 type: check
 endpoint: http://localhost:1317/thorchain/nodes
 params: {}
 status: 200
 asserts:
-  - .|length == 1  # single node
+  - .|length == 1 # single node
   - .[] | select(.node_address == "{{ addr_thor_dog }}") | .total_bond == "5000000000000"
+---
+type: check
+endpoint: http://localhost:1317/thorchain/outbound_fee/eth.eth
+asserts:
+  - .[0].fee_spent_rune == "0"
 ---
 ########################################################################################
 # observe a cancel transaction (EVM, gas asset, amount=1 (dust), vault-to-vault)
@@ -30,9 +35,9 @@ txs:
       id: "{{ observe_txid 1 }}"
       chain: ETH
       from_address: {{ addr_eth_dog }}
-      to_address: {{ addr_eth_dog }}  # vault-to-vault
+      to_address: {{ addr_eth_dog }} # vault-to-vault
       coins:
-        - amount: "1"  # dust amount for validation, treated as zero for cancel
+        - amount: "1" # dust amount for validation, treated as zero for cancel
           asset: "ETH.ETH"
           decimals: 8
       gas:
@@ -55,7 +60,7 @@ params: {}
 status: 200
 asserts:
   - .|length == 1
-  - .[] | select(.node_address == "{{ addr_thor_dog }}") | .total_bond == "5000000000000"  # no slashing for cancel tx
+  - .[] | select(.node_address == "{{ addr_thor_dog }}") | .total_bond == "5000000000000" # no slashing for cancel tx
 ---
 ########################################################################################
 # verify no security event was emitted for cancel tx
@@ -64,6 +69,14 @@ type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
   - '[.end_block_events[] | select(.type == "security")]|length == 0'
+---
+########################################################################################
+# verify cancel gas was accounted in the outbound fee multiplier
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/outbound_fee/eth.eth
+asserts:
+  - .[0].fee_spent_rune == "2100034"
 ---
 ########################################################################################
 # observe a non-cancel transaction (amount > dust, external to) - should slash
@@ -75,9 +88,9 @@ txs:
       id: "{{ observe_txid 2 }}"
       chain: ETH
       from_address: {{ addr_eth_dog }}
-      to_address: {{ addr_eth_cat }}  # external
+      to_address: {{ addr_eth_cat }} # external
       coins:
-        - amount: "1000"  # not dust
+        - amount: "1000" # not dust
           asset: "ETH.ETH"
           decimals: 8
       gas:
@@ -100,7 +113,7 @@ params: {}
 status: 200
 asserts:
   - .|length == 1
-  - .[] | select(.node_address == "{{ addr_thor_dog }}") | .total_bond|tonumber < 5000000000000  # slashed
+  - .[] | select(.node_address == "{{ addr_thor_dog }}") | .total_bond|tonumber < 5000000000000 # slashed
 ---
 ########################################################################################
 # verify slash event was emitted for non-cancel
@@ -108,7 +121,25 @@ asserts:
 type: check
 endpoint: http://localhost:1317/thorchain/block
 asserts:
-  - '[.txs[].result.events[] | select(.type == "slash")]|length > 0'  # check tx events for slash on non-cancel
+  - '[.txs[].result.events[] | select(.type == "slash")]|length > 0' # check tx events for slash on non-cancel
 ---
-type: fail-export-invariants
-
+########################################################################################
+# outbound fee should be unchanged (was covered by the slash)
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/outbound_fee/eth.eth
+asserts:
+  - .[0].fee_spent_rune == "2100034"
+---
+########################################################################################
+# verify correct vault and pool balances
+########################################################################################
+type: check
+endpoint: http://localhost:1317/thorchain/vault/{{ pubkey_dog }}
+asserts:
+  - .coins[]|select(.asset=="ETH.ETH")|.amount|tonumber == 1000000000-21000-21000-1000
+---
+type: check
+endpoint: http://localhost:1317/thorchain/pool/eth.eth
+asserts:
+  - .balance_asset|tonumber == 1000000000-21000-21000-1000

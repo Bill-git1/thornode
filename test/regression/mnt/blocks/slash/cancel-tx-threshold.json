@@ -1023,6 +1023,38 @@
         "mode": "EndBlock",
         "tcy_stake_reward": "0",
         "type": "rewards"
+      },
+      {
+        "amount": "20000118594rune",
+        "mode": "EndBlock",
+        "spender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+        "type": "coin_spent"
+      },
+      {
+        "amount": "20000118594rune",
+        "mode": "EndBlock",
+        "receiver": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
+        "type": "coin_received"
+      },
+      {
+        "amount": "20000118594rune",
+        "mode": "EndBlock",
+        "recipient": "tthor1g98cy3n9mmjrpn0sxmn63lztelera37nrytwp2",
+        "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+        "type": "transfer"
+      },
+      {
+        "mode": "EndBlock",
+        "sender": "tthor1dheycdevq39qlkxs2a6wuuzyn4aqxhve3hhmlw",
+        "type": "message"
+      },
+      {
+        "asset": "ETH.ETH",
+        "asset_amt": "200000000",
+        "mode": "EndBlock",
+        "rune_amt": "20000118594",
+        "transaction_count": "1",
+        "type": "gas"
       }
     ],
     "txs": [
