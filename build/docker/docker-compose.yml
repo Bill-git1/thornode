@@ -540,7 +540,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: ethereum/client-go:v1.16.5
+    image: ethereum/client-go:v1.16.7
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-5}
@@ -558,7 +558,7 @@ services:
     profiles:
       - mocknet
       - mocknet-cluster
-    image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101603.1
+    image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth:v1.101603.2
     restart: unless-stopped
     environment:
       BLOCK_TIME: ${BLOCK_TIME:-5}
