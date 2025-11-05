@@ -260,6 +260,10 @@ func (am AppModule) EndBlock(goCtx context.Context) ([]abci.ValidatorUpdate, err
 		ctx.Logger().Error("fail update volumes", "error", err)
 	}
 
+	if err := am.mgr.ScheduledMigrationManager().EndBlock(ctx, am.mgr); err != nil {
+		ctx.Logger().Error("fail to process scheduled migration", "error", err)
+	}
+
 	return validators, nil
 }
 

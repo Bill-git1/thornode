@@ -9,6 +9,7 @@ const (
 	MimirKeyWasmPermissionless     = "WasmPermissionless"
 	MimirKeyWasmHaltGlobal         = "HaltWasmGlobal"
 	MimirKeyWasmMinGasPrice        = "WasmMinGasPrice"
+	MimirKeyScheduledMigration     = "ScheduledMigration"
 
 	MimirTemplateConfMultiplierBasisPoints = "ConfMultiplierBasisPoints-%s" // Use with Chain
 	MimirTemplateMaxConfirmations          = "MaxConfirmations-%s"          // Use with Chain

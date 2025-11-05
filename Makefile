@@ -198,6 +198,7 @@ ifeq ($(TEST_DIR),$(TEST_PATHS))
 	@$(MAKE) test-network-specific
 endif
 	@go test ${TEST_BUILD_FLAGS} ${RUN_FLAG} ${TEST_DIR}
+	@TAG=stagenet $(MAKE) build
 
 test-all: test-network-specific
 	@go test ${TEST_BUILD_FLAGS} ${RUN_FLAG} "./..."

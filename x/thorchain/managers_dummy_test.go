@@ -8,59 +8,62 @@ import (
 )
 
 type DummyMgr struct {
-	K             keeper.Keeper
-	constAccessor constants.ConstantValues
-	gasMgr        GasManager
-	eventMgr      EventManager
-	txOutStore    TxOutStore
-	networkMgr    NetworkManager
-	validatorMgr  ValidatorManager
-	obMgr         ObserverManager
-	poolMgr       PoolManager
-	swapQ         SwapQueue
-	advSwapQueue  AdvSwapQueue
-	slasher       Slasher
-	tradeMgr      TradeAccountManager
-	securedMgr    SecuredAssetManager
-	wasmMgr       WasmManager
-	switchMgr     SwitchManager
+	K                         keeper.Keeper
+	constAccessor             constants.ConstantValues
+	gasMgr                    GasManager
+	eventMgr                  EventManager
+	txOutStore                TxOutStore
+	networkMgr                NetworkManager
+	validatorMgr              ValidatorManager
+	obMgr                     ObserverManager
+	poolMgr                   PoolManager
+	swapQ                     SwapQueue
+	advSwapQueue              AdvSwapQueue
+	slasher                   Slasher
+	tradeMgr                  TradeAccountManager
+	securedMgr                SecuredAssetManager
+	wasmMgr                   WasmManager
+	switchMgr                 SwitchManager
+	scheduledMigrationManager ScheduledMigrationManager
 }
 
 func NewDummyMgrWithKeeper(k keeper.Keeper) *DummyMgr {
 	return &DummyMgr{
-		K:             k,
-		constAccessor: constants.GetConstantValues(GetCurrentVersion()),
-		gasMgr:        NewDummyGasManager(),
-		eventMgr:      NewDummyEventMgr(),
-		txOutStore:    NewTxStoreDummy(),
-		networkMgr:    NewNetworkMgrDummy(),
-		validatorMgr:  NewValidatorDummyMgr(),
-		obMgr:         NewDummyObserverManager(),
-		poolMgr:       NewDummyPoolManager(),
-		slasher:       NewDummySlasher(),
-		tradeMgr:      NewDummyTradeAccountManager(),
-		wasmMgr:       NewDummyWasmManager(),
-		switchMgr:     NewDummySwitchManager(),
-		advSwapQueue:  NewDummyAdvSwapQueue(),
+		K:                         k,
+		constAccessor:             constants.GetConstantValues(GetCurrentVersion()),
+		gasMgr:                    NewDummyGasManager(),
+		eventMgr:                  NewDummyEventMgr(),
+		txOutStore:                NewTxStoreDummy(),
+		networkMgr:                NewNetworkMgrDummy(),
+		validatorMgr:              NewValidatorDummyMgr(),
+		obMgr:                     NewDummyObserverManager(),
+		poolMgr:                   NewDummyPoolManager(),
+		slasher:                   NewDummySlasher(),
+		tradeMgr:                  NewDummyTradeAccountManager(),
+		wasmMgr:                   NewDummyWasmManager(),
+		switchMgr:                 NewDummySwitchManager(),
+		advSwapQueue:              NewDummyAdvSwapQueue(),
+		scheduledMigrationManager: NewDummyScheduledMigrationManager(),
 	}
 }
 
 func NewDummyMgr() *DummyMgr {
 	return &DummyMgr{
-		K:             keeper.KVStoreDummy{},
-		constAccessor: constants.GetConstantValues(GetCurrentVersion()),
-		gasMgr:        NewDummyGasManager(),
-		eventMgr:      NewDummyEventMgr(),
-		txOutStore:    NewTxStoreDummy(),
-		networkMgr:    NewNetworkMgrDummy(),
-		validatorMgr:  NewValidatorDummyMgr(),
-		obMgr:         NewDummyObserverManager(),
-		poolMgr:       NewDummyPoolManager(),
-		slasher:       NewDummySlasher(),
-		tradeMgr:      NewDummyTradeAccountManager(),
-		wasmMgr:       NewDummyWasmManager(),
-		switchMgr:     NewDummySwitchManager(),
-		advSwapQueue:  NewDummyAdvSwapQueue(),
+		K:                         keeper.KVStoreDummy{},
+		constAccessor:             constants.GetConstantValues(GetCurrentVersion()),
+		gasMgr:                    NewDummyGasManager(),
+		eventMgr:                  NewDummyEventMgr(),
+		txOutStore:                NewTxStoreDummy(),
+		networkMgr:                NewNetworkMgrDummy(),
+		validatorMgr:              NewValidatorDummyMgr(),
+		obMgr:                     NewDummyObserverManager(),
+		poolMgr:                   NewDummyPoolManager(),
+		slasher:                   NewDummySlasher(),
+		tradeMgr:                  NewDummyTradeAccountManager(),
+		wasmMgr:                   NewDummyWasmManager(),
+		switchMgr:                 NewDummySwitchManager(),
+		advSwapQueue:              NewDummyAdvSwapQueue(),
+		scheduledMigrationManager: NewDummyScheduledMigrationManager(),
 	}
 }
 
@@ -81,6 +84,9 @@ func (m DummyMgr) TradeAccountManager() TradeAccountManager { return m.tradeMgr 
 func (m DummyMgr) SecuredAssetManager() SecuredAssetManager { return m.securedMgr }
 func (m DummyMgr) WasmManager() WasmManager                 { return m.wasmMgr }
 func (m DummyMgr) SwitchManager() SwitchManager             { return m.switchMgr }
+func (m DummyMgr) ScheduledMigrationManager() ScheduledMigrationManager {
+	return m.scheduledMigrationManager
+}
 
 // DummyAdvSwapQueue is for test purpose
 type DummyAdvSwapQueue struct{}
@@ -95,5 +101,17 @@ func (d *DummyAdvSwapQueue) AddSwapQueueItem(ctx cosmos.Context, mgr Manager, ms
 }
 
 func (d *DummyAdvSwapQueue) EndBlock(ctx cosmos.Context, mgr Manager, telemetryEnabled bool) error {
+	return nil
+}
+
+// DummyScheduledMigrationManager is for test purpose
+type DummyScheduledMigrationManager struct{}
+
+// NewDummyScheduledMigrationManager create a new instance of DummyScheduledMigrationManager for test purpose
+func NewDummyScheduledMigrationManager() *DummyScheduledMigrationManager {
+	return &DummyScheduledMigrationManager{}
+}
+
+func (d *DummyScheduledMigrationManager) EndBlock(ctx cosmos.Context, mgr Manager) error {
 	return nil
 }

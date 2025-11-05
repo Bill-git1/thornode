@@ -766,7 +766,7 @@ var mainnetSlashRefunds5to6 = []struct {
 // the migration is run, otherwise the refund will fail again.
 //
 // trunk-ignore(golangci-lint/unused)
-func mainnetManualOutbounds6to7(ctx cosmos.Context, mgr *Mgrs) ([]TxOutItem, error) {
+func mainnetManualOutbounds6to7(ctx cosmos.Context, mgr Manager) ([]TxOutItem, error) {
 	ethUSDT, err := common.NewAsset("ETH.USDT-0XDAC17F958D2EE523A2206206994597C13D831EC7")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create asset: %w", err)
@@ -931,7 +931,7 @@ func mainnetManualInbounds6to7() (ObservedTxs, error) {
 }
 
 // trunk-ignore(golangci-lint/unused)
-func mainnetManualOutbounds8to9(ctx cosmos.Context, mgr *Mgrs) ([]TxOutItem, error) {
+func mainnetManualOutbounds8to9(ctx cosmos.Context, mgr Manager) ([]TxOutItem, error) {
 	// none of the attempts in 6to7 were successful, so retry them all
 	manualOutbounds, err := mainnetManualOutbounds6to7(ctx, mgr)
 	if err != nil {
@@ -1017,7 +1017,7 @@ func mainnetManualOutbounds8to9(ctx cosmos.Context, mgr *Mgrs) ([]TxOutItem, err
 }
 
 // trunk-ignore(golangci-lint/unused)
-func mainnetManualOutbounds9to10(ctx cosmos.Context, mgr *Mgrs) ([]TxOutItem, error) {
+func mainnetManualOutbounds9to10(ctx cosmos.Context, mgr Manager) ([]TxOutItem, error) {
 	// none of the attempts in 8to9 were successful, so retry them all
 	manualOutbounds, err := mainnetManualOutbounds8to9(ctx, mgr)
 	if err != nil {

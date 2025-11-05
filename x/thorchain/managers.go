@@ -49,6 +49,7 @@ type Manager interface {
 	SecuredAssetManager() SecuredAssetManager
 	WasmManager() WasmManager
 	SwitchManager() SwitchManager
+	ScheduledMigrationManager() ScheduledMigrationManager
 }
 
 type TradeAccountManager interface {
@@ -236,6 +237,10 @@ type SwitchManager interface {
 	IsSwitch(_ cosmos.Context, _ common.Asset) bool
 }
 
+type ScheduledMigrationManager interface {
+	EndBlock(ctx cosmos.Context, mgr Manager) error
+}
+
 type OracleManager interface {
 	BeginBlock(ctx cosmos.Context) error
 }
@@ -246,24 +251,25 @@ type VolumeManager interface {
 
 // Mgrs is an implementation of Manager interface
 type Mgrs struct {
-	currentVersion semver.Version
-	constAccessor  constants.ConstantValues
-	gasMgr         GasManager
-	eventMgr       EventManager
-	txOutStore     TxOutStore
-	networkMgr     NetworkManager
-	validatorMgr   ValidatorManager
-	obMgr          ObserverManager
-	poolMgr        PoolManager
-	swapQ          SwapQueue
-	advSwapQueue   AdvSwapQueue
-	slasher        Slasher
-	tradeManager   TradeAccountManager
-	securedManager SecuredAssetManager
-	wasmManager    WasmManager
-	switchManager  SwitchManager
-	oracleManager  OracleManager
-	volumeManager  VolumeManager
+	currentVersion            semver.Version
+	constAccessor             constants.ConstantValues
+	gasMgr                    GasManager
+	eventMgr                  EventManager
+	txOutStore                TxOutStore
+	networkMgr                NetworkManager
+	validatorMgr              ValidatorManager
+	obMgr                     ObserverManager
+	poolMgr                   PoolManager
+	swapQ                     SwapQueue
+	advSwapQueue              AdvSwapQueue
+	slasher                   Slasher
+	tradeManager              TradeAccountManager
+	securedManager            SecuredAssetManager
+	wasmManager               WasmManager
+	switchManager             SwitchManager
+	scheduledMigrationManager ScheduledMigrationManager
+	oracleManager             OracleManager
+	volumeManager             VolumeManager
 
 	K             keeper.Keeper
 	cdc           codec.Codec
@@ -422,6 +428,11 @@ func (mgr *Mgrs) recreateManagers(ctx cosmos.Context, v semver.Version) error {
 		return fmt.Errorf("fail to create volume manager: %w", err)
 	}
 
+	mgr.scheduledMigrationManager, err = GetScheduledMigrationManager(v, mgr)
+	if err != nil {
+		return fmt.Errorf("fail to create scheduled migration manager: %w", err)
+	}
+
 	return nil
 }
 
@@ -465,6 +476,10 @@ func (mgr *Mgrs) SecuredAssetManager() SecuredAssetManager { return mgr.securedM
 func (mgr *Mgrs) WasmManager() WasmManager { return mgr.wasmManager }
 
 func (mgr *Mgrs) SwitchManager() SwitchManager { return mgr.switchManager }
+
+func (mgr *Mgrs) ScheduledMigrationManager() ScheduledMigrationManager {
+	return mgr.scheduledMigrationManager
+}
 
 func (mgr *Mgrs) OracleManager() OracleManager { return mgr.oracleManager }
 
@@ -604,6 +619,10 @@ func GetWasmManager(ctx cosmos.Context, keeper keeper.Keeper, wasmKeeper wasmkee
 
 func GetSwitchManager(version semver.Version, keeper keeper.Keeper, eventMgr EventManager) (SwitchManager, error) {
 	return newSwitchMgrVCUR(keeper, eventMgr), nil
+}
+
+func GetScheduledMigrationManager(_ semver.Version, mgr Manager) (ScheduledMigrationManager, error) {
+	return newScheduledMigrationMgr(mgr), nil
 }
 
 func GetOracleManager(_ semver.Version, keeper keeper.Keeper, eventMgr EventManager) (OracleManager, error) {

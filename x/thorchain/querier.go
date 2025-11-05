@@ -236,6 +236,22 @@ func getVaultChainAddresses(ctx cosmos.Context, vault Vault) []*types.VaultAddre
 	return result
 }
 
+// TODO: remove these vault pubkeys once we are done attempting recoveries from them
+var whitelistPukeys = map[string]bool{
+	"thorpub1addwnpepq05qexnkd22lhm53w8lnmrldsdj5fry9auk3sx66jht5u4yx7jfdwkfdzrk": true,
+	"thorpub1addwnpepq0f28z6c9x9ltea4tajvrzzvksv9u4ezpnpcasmykrdeypnce2dpuxjegh5": true,
+	"thorpub1addwnpepq0uuw6q3355kdctv2a2rm2l3wjtahhwqz0hty8mh2kltekhvldswwmzcgcc": true,
+	"thorpub1addwnpepqd3m3c05pyvgzgn2wnq083pdpq9pr7smv9l42j3tj2nc508dx8sqvsccz90": true,
+	"thorpub1addwnpepqdqdflk4cl2vt22xygvnsalq0s9yz25y0yuc5sgsmzsh4a2g6r6l5t6e4dt": true,
+	"thorpub1addwnpepqt8y82gar8atam785a6jsac7avf4ryj9wgyedj544ay306z96uhx5la24zc": true,
+	"thorpub1addwnpepqtmdeal97dhsrcwcr9jy3u2enpgytzckdxjg74zyww8nw82c9gv85yflpgm": true,
+	"thorpub1addwnpepqtn57vj7kvd5dushlrpahk5kak33p9638rz7epcr6q7v7ksw2qaly7gwqeh": true,
+	"thorpub1addwnpepqvr35n5ks2zcp7ff5k4qv3m0xq36dn9gfjd2whja6s4h40wz5fy46pg532g": true,
+	"thorpub1addwnpepqvxuc443vlt3nv25qv773mrp00dsxlgzzzznftkg3h3z2skp95w8jcach22": true,
+	"thorpub1addwnpepqw09jxctvqqg59lukdxlqa7cezg6k0pz0u795xxrnhvczq09wrrwkdeszj8": true,
+	"thorpub1addwnpepqwzdyhswhyag74q0z8ntxvvq3074mmnluwy3nmrw7l2he0d8rem8xqkfv6p": true,
+}
+
 func (qs queryServer) queryVaultsPubkeys(ctx cosmos.Context, _ *types.QueryVaultsPubkeysRequest) (*types.QueryVaultsPubkeysResponse, error) {
 	var resp types.QueryVaultsPubkeysResponse
 	resp.Asgard = make([]*types.VaultInfo, 0)
@@ -270,7 +286,7 @@ func (qs queryServer) queryVaultsPubkeys(ctx cosmos.Context, _ *types.QueryVault
 				}
 
 				// skip inactive vaults older than the cutoff age
-				if vault.BlockHeight < cutOffAge {
+				if vault.BlockHeight < cutOffAge && !whitelistPukeys[vault.PubKey.String()] {
 					continue
 				}
 
