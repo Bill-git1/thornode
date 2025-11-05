@@ -22,6 +22,7 @@ import (
 	"cosmossdk.io/x/upgrade"
 	upgradekeeper "cosmossdk.io/x/upgrade/keeper"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
+	wasmvmtypes "github.com/CosmWasm/wasmvm/v2/types"
 	abci "github.com/cometbft/cometbft/abci/types"
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	dbm "github.com/cosmos/cosmos-db"
@@ -78,6 +79,7 @@ import (
 	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	appparams "gitlab.com/thorchain/thornode/v3/app/params"
+	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/openapi"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/ebifrost"
@@ -377,13 +379,19 @@ func NewChainApp(
 		panic(fmt.Sprintf("error while reading wasm config: %s", err))
 	}
 
+	grpcQuerier := wasmkeeper.AcceptListGrpcQuerier(
+		wasmAcceptedQueries,
+		app.BaseApp.GRPCQueryRouter(),
+		app.appCodec)
+	wrappedGrpcQuerier := func(ctx sdk.Context, request *wasmvmtypes.GrpcQuery) (proto.Message, error) {
+		ctx = ctx.WithValue(constants.CtxWASMQuery, true)
+		return grpcQuerier(ctx, request)
+	}
+
 	wasmOpts = append(wasmOpts,
 		wasmkeeper.WithQueryPlugins(
 			&wasmkeeper.QueryPlugins{
-				Grpc: wasmkeeper.AcceptListGrpcQuerier(
-					wasmAcceptedQueries,
-					app.BaseApp.GRPCQueryRouter(),
-					app.appCodec),
+				Grpc: wrappedGrpcQuerier,
 			},
 		),
 		wasmkeeper.WithGasRegister(WasmGasRegister),

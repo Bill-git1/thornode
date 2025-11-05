@@ -521,7 +521,8 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 	}
 
 	// error if older height not explicitly requested and latest block older than max lag
-	if req.Height == "" && ctx.BlockTime().Before(time.Now().Add(-config.GetThornode().API.Quote.MaxLag)) {
+	isWasm, _ := ctx.Value(constants.CtxWASMQuery).(bool)
+	if !isWasm && req.Height == "" && ctx.BlockTime().Before(time.Now().Add(-config.GetThornode().API.Quote.MaxLag)) {
 		return nil, fmt.Errorf("refusing quote on node with stale state")
 	}
 
