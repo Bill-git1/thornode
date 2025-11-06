@@ -1,8 +1,6 @@
 package thorchain
 
 import (
-	"testing"
-
 	. "gopkg.in/check.v1"
 
 	"gitlab.com/thorchain/thornode/v3/common"
@@ -13,10 +11,6 @@ import (
 type HandlerObservedTxHelpersSuite struct{}
 
 var _ = Suite(&HandlerObservedTxHelpersSuite{})
-
-func TestHandlerObservedTxHelpersSuite(t *testing.T) {
-	TestingT(t)
-}
 
 func (s *HandlerObservedTxHelpersSuite) TestGenerateReferenceMemoID(c *C) {
 	ctx, mgr := setupManagerForTest(c)

@@ -3,7 +3,6 @@ package thorchain
 import (
 	"errors"
 	"fmt"
-	"testing"
 
 	. "gopkg.in/check.v1"
 
@@ -17,10 +16,6 @@ type HandlerMaintSuite struct {
 }
 
 var _ = Suite(&HandlerMaintSuite{})
-
-func TestHandlerMaint(t *testing.T) {
-	TestingT(t)
-}
 
 // Simple MaintHandler implementation for testing
 type TestMaintHandler struct {

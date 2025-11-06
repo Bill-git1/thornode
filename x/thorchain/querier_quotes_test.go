@@ -1,16 +1,12 @@
 package thorchain
 
 import (
-	"testing"
-
 	. "gopkg.in/check.v1"
 )
 
 type QuotesSuite struct{}
 
 var _ = Suite(&QuotesSuite{})
-
-func TestQuotes(t *testing.T) { TestingT(t) }
 
 func (s *QuotesSuite) TestParseMultipleAffiliateParams(c *C) {
 	ctx, mgr := setupManagerForTest(c)
