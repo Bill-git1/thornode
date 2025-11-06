@@ -710,12 +710,15 @@ func (vm *SwapQueueAdvVCUR) EndBlock(ctx cosmos.Context, mgr Manager, telemetryE
 	ctx.Logger().Info("advanced swap iterations completed", "count", iterationCount)
 
 	// Process expired limit swaps at current block height
-	if err := vm.processExpiredLimitSwaps(ctx, mgr); err != nil {
-		ctx.Logger().Error("fail to process expired limit swaps", "error", err)
+	// Skip during simulation - no TTL entries exist in simulation context
+	if !isSimulation {
+		if err := vm.processExpiredLimitSwaps(ctx, mgr); err != nil {
+			ctx.Logger().Error("fail to process expired limit swaps", "error", err)
+		}
 	}
 
 	// Emit telemetry metrics only if telemetry is enabled
-	if telemetryEnabled {
+	if telemetryEnabled && !isSimulation {
 		vm.emitAdvSwapQueueTelemetry(ctx, mgr, iterationCount, totalSwapsProcessed, marketSwapCount, limitSwapCount, completedSwapCount)
 	}
 

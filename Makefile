@@ -11,7 +11,7 @@ endif
 # Config
 ########################################################################################
 
-.PHONY: build test tools export healthcheck run-mocknet build-mocknet stop-mocknet halt-mocknet ps-mocknet reset-mocknet logs-mocknet openapi
+.PHONY: build test tools export healthcheck run-mocknet build-mocknet stop-mocknet halt-mocknet ps-mocknet reset-mocknet logs-mocknet openapi test-performance test-performance-quick test-performance-all test-performance-analyze test-performance-profile-cpu test-performance-profile-mem test-performance-trace test-performance-clean
 
 # mocknet docker compose files and overrides for macOS
 DOCKER_COMPOSE_FILES ?= -f build/docker/docker-compose.yml
@@ -212,6 +212,73 @@ test-network-specific:
 
 test-race:
 	@go test -race ${TEST_BUILD_FLAGS} ${RUN_FLAG} ${TEST_DIR}
+
+# ------------------------------ Performance Tests ------------------------------
+
+# Run comprehensive benchmarks with profiling (recommended)
+test-performance:
+	@echo "Running comprehensive performance benchmarks with profiling..."
+	@./test/performance/run_quote_benchmarks.sh
+
+# Quick benchmark comparison (Queue Disabled vs Enabled)
+test-performance-quick:
+	@echo "Running quick performance comparison..."
+	@cd x/thorchain && go test -run='^$$' -bench='^BenchmarkQuoteSwapComparison$$' -benchtime=10x -benchmem
+
+# Run all benchmarks without profiling
+test-performance-all:
+	@echo "Running all benchmark tests..."
+	@cd x/thorchain && go test -run='^$$' -bench=. -benchtime=5x -benchmem
+
+# Analyze latest performance results
+test-performance-analyze:
+	@echo "Analyzing latest performance results..."
+	@LATEST=$$(ls -td test/performance/results/*/ 2>/dev/null | head -1); \
+	if [ -n "$$LATEST" ]; then \
+		./test/performance/analyze_profiles.sh "$$LATEST"; \
+	else \
+		echo "No performance results found. Run 'make test-performance' first."; \
+		exit 1; \
+	fi
+
+# Open interactive CPU profile viewer
+test-performance-profile-cpu:
+	@LATEST=$$(ls -td test/performance/results/*/ 2>/dev/null | head -1); \
+	if [ -n "$$LATEST" ] && [ -f "$$LATEST/cpu.prof" ]; then \
+		echo "Opening CPU profile at http://localhost:8080..."; \
+		go tool pprof -http=:8080 "$$LATEST/cpu.prof"; \
+	else \
+		echo "No CPU profile found. Run 'make test-performance' first."; \
+		exit 1; \
+	fi
+
+# Open interactive memory profile viewer
+test-performance-profile-mem:
+	@LATEST=$$(ls -td test/performance/results/*/ 2>/dev/null | head -1); \
+	if [ -n "$$LATEST" ] && [ -f "$$LATEST/mem.prof" ]; then \
+		echo "Opening memory profile at http://localhost:8080..."; \
+		go tool pprof -http=:8080 "$$LATEST/mem.prof"; \
+	else \
+		echo "No memory profile found. Run 'make test-performance' first."; \
+		exit 1; \
+	fi
+
+# View execution trace
+test-performance-trace:
+	@LATEST=$$(ls -td test/performance/results/*/ 2>/dev/null | head -1); \
+	if [ -n "$$LATEST" ] && [ -f "$$LATEST/trace.out" ]; then \
+		echo "Opening execution trace viewer..."; \
+		go tool trace "$$LATEST/trace.out"; \
+	else \
+		echo "No trace found. Run 'make test-performance' first."; \
+		exit 1; \
+	fi
+
+# Clean performance test results
+test-performance-clean:
+	@echo "Cleaning performance test results..."
+	@rm -rf test/performance/results/*
+	@echo "Performance results cleaned."
 
 # ------------------------------ Regression Tests ------------------------------
 
