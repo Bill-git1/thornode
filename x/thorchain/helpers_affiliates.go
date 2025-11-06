@@ -324,6 +324,10 @@ func affiliateSwapToRuneV3_0_0(ctx cosmos.Context, mgr Manager, mainTx common.Tx
 		mainTx.Coins[0].Amount = affAmt
 	}
 
+	if err = ensureAffiliateFromAddress(ctx, mgr, &mainTx); err != nil {
+		return err
+	}
+
 	// Update memo to include only this affiliate
 	tnMemo := affAddr.String()
 	if tn != nil {
@@ -413,6 +417,22 @@ func affiliateSwapToRuneV3_0_0(ctx cosmos.Context, mgr Manager, mainTx common.Tx
 		}
 	}
 
+	return nil
+}
+
+// ensureAffiliateFromAddress normalizes the transaction's FromAddress so that
+// swaps sourced from secured or trade assets originate from a THORChain address.
+func ensureAffiliateFromAddress(ctx cosmos.Context, mgr Manager, tx *common.Tx) error {
+	source := tx.Coins[0].Asset
+	if source.IsSecuredAsset() || source.IsTradeAsset() {
+		if !tx.FromAddress.GetChain().IsTHORChain() {
+			asgardAddress, err := mgr.Keeper().GetModuleAddress(AsgardName)
+			if err != nil {
+				return fmt.Errorf("failed to retrieve the asgard module address: %w", err)
+			}
+			tx.FromAddress = asgardAddress
+		}
+	}
 	return nil
 }
 

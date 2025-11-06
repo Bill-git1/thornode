@@ -78,8 +78,8 @@ make coverage-report   # HTML report
 
 ### Testing Guidelines
 
-- To run tests, use `make test`
-- To run regression tests, use `make test-regression`
+- To run unit tests, use `make test`. To run a specific unit test, use `go test -tags=mocknet -parallel=1 -run TestName ./...`
+- To run regression tests, use `make test-regression`. To test a specific suite or regression test, utilize RUN as an environment variable
 - To test a specific suite or regression test, utilize RUN as an environment variable
 - For simulation tests:
   - By default, `make test-simulation` prompts for stage selection if running in a terminal

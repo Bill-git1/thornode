@@ -91,3 +91,112 @@ func (HelperAffiliateSuite) TestSkimAffiliateFees(c *C) {
 	acct2 = mgr.Keeper().GetBalance(ctx, affAcctAddr2)
 	c.Assert(acct2.AmountOf(common.RuneNative.Native()).String(), Equals, "15000000")
 }
+
+// fixes: https://gitlab.com/thorchain/thornode/-/issues/2238
+func (HelperAffiliateSuite) TestEnsureAffiliateFromAddressSecuredAsset(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// External address should be rewritten for secured assets
+	externalAddr := common.Address("0xe140683571184092a252116918abd7c6f18451a1")
+	securedAsset, err := common.NewAsset("ETH-BTC")
+	c.Assert(err, IsNil)
+	c.Assert(securedAsset.IsSecuredAsset(), Equals, true)
+
+	tx := common.NewTx(
+		GetRandomTxHash(),
+		externalAddr,
+		GetRandomTHORAddress(),
+		common.NewCoins(common.NewCoin(securedAsset, cosmos.NewUint(100*common.One))),
+		common.Gas{},
+		"",
+	)
+
+	var asgard common.Address
+	asgard, err = mgr.Keeper().GetModuleAddress(AsgardName)
+	c.Assert(err, IsNil)
+
+	c.Assert(ensureAffiliateFromAddress(ctx, mgr, &tx), IsNil)
+	c.Assert(tx.FromAddress.String(), Equals, asgard.String())
+}
+
+func (HelperAffiliateSuite) TestEnsureAffiliateFromAddressTradeAsset(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	externalAddr := common.Address("0xe140683571184092a252116918abd7c6f18451a1")
+	tradeAsset, err := common.NewAsset("ETH~BTC")
+	c.Assert(err, IsNil)
+	c.Assert(tradeAsset.IsTradeAsset(), Equals, true)
+
+	tx := common.NewTx(
+		GetRandomTxHash(),
+		externalAddr,
+		GetRandomTHORAddress(),
+		common.NewCoins(common.NewCoin(tradeAsset, cosmos.NewUint(100*common.One))),
+		common.Gas{},
+		"",
+	)
+
+	var asgard common.Address
+	asgard, err = mgr.Keeper().GetModuleAddress(AsgardName)
+	c.Assert(err, IsNil)
+
+	c.Assert(ensureAffiliateFromAddress(ctx, mgr, &tx), IsNil)
+	c.Assert(tx.FromAddress.String(), Equals, asgard.String())
+}
+
+func (HelperAffiliateSuite) TestEnsureAffiliateFromAddressPreservesTHORChainAddress(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// Get Asgard address (a valid THORChain address)
+	asgardAddr, err := mgr.Keeper().GetModuleAddress(AsgardName)
+	c.Assert(err, IsNil)
+
+	securedAsset, err := common.NewAsset("ETH-BTC")
+	c.Assert(err, IsNil)
+	c.Assert(securedAsset.IsSecuredAsset(), Equals, true)
+
+	// Create a transaction with a THORChain address as FromAddress
+	tx := common.NewTx(
+		GetRandomTxHash(),
+		asgardAddr, // Already a valid THORChain address
+		GetRandomTHORAddress(),
+		common.NewCoins(common.NewCoin(securedAsset, cosmos.NewUint(100*common.One))),
+		common.Gas{},
+		"",
+	)
+
+	originalAddr := tx.FromAddress.String()
+
+	// Call ensureAffiliateFromAddress - it should NOT change the address
+	c.Assert(ensureAffiliateFromAddress(ctx, mgr, &tx), IsNil)
+
+	// Verify the address was preserved (not changed)
+	c.Assert(tx.FromAddress.String(), Equals, originalAddr)
+	c.Assert(tx.FromAddress.String(), Equals, asgardAddr.String())
+}
+
+func (HelperAffiliateSuite) TestEnsureAffiliateFromAddressNoOpForRegularAssets(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// External address with a regular (non-secured, non-trade) asset
+	externalAddr := common.Address("0xe140683571184092a252116918abd7c6f18451a1")
+	regularAsset := common.ETHAsset // Regular layer 1 asset
+
+	tx := common.NewTx(
+		GetRandomTxHash(),
+		externalAddr,
+		GetRandomTHORAddress(),
+		common.NewCoins(common.NewCoin(regularAsset, cosmos.NewUint(100*common.One))),
+		common.Gas{},
+		"",
+	)
+
+	originalAddr := tx.FromAddress.String()
+
+	// Call ensureAffiliateFromAddress - should be a no-op for regular assets
+	c.Assert(ensureAffiliateFromAddress(ctx, mgr, &tx), IsNil)
+
+	// Verify the address was NOT changed (even though it's an external address)
+	c.Assert(tx.FromAddress.String(), Equals, originalAddr)
+	c.Assert(tx.FromAddress.String(), Equals, externalAddr.String())
+}
