@@ -88,6 +88,7 @@ Class | Method | HTTP request | Description
 *HealthApi* | [**Ping**](docs/HealthApi.md#ping) | **Get** /thorchain/ping | 
 *InvariantsApi* | [**Invariant**](docs/InvariantsApi.md#invariant) | **Get** /thorchain/invariant/{invariant} | 
 *InvariantsApi* | [**Invariants**](docs/InvariantsApi.md#invariants) | **Get** /thorchain/invariants | 
+*LimitOrderApi* | [**Quotelimit**](docs/LimitOrderApi.md#quotelimit) | **Get** /thorchain/quote/limit | 
 *LiquidityProvidersApi* | [**LiquidityProvider**](docs/LiquidityProvidersApi.md#liquidityprovider) | **Get** /thorchain/pool/{asset}/liquidity_provider/{address} | 
 *LiquidityProvidersApi* | [**LiquidityProviders**](docs/LiquidityProvidersApi.md#liquidityproviders) | **Get** /thorchain/pool/{asset}/liquidity_providers | 
 *MimirApi* | [**Mimir**](docs/MimirApi.md#mimir) | **Get** /thorchain/mimir | 
@@ -233,6 +234,7 @@ Class | Method | HTTP request | Description
  - [PoolSlipResponseInner](docs/PoolSlipResponseInner.md)
  - [QueueResponse](docs/QueueResponse.md)
  - [QuoteFees](docs/QuoteFees.md)
+ - [QuoteLimitResponse](docs/QuoteLimitResponse.md)
  - [QuoteLoanCloseResponse](docs/QuoteLoanCloseResponse.md)
  - [QuoteLoanOpenResponse](docs/QuoteLoanOpenResponse.md)
  - [QuoteSaverDepositResponse](docs/QuoteSaverDepositResponse.md)

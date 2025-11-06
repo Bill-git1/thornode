@@ -502,6 +502,227 @@ func calculateMinSwapAmount(ctx cosmos.Context, mgr *Mgrs, fromAsset, toAsset co
 	return minSwapAmount, nil
 }
 
+// quoteCalculateLimitExpectedOutput calculates the expected output for limit orders
+func quoteCalculateLimitExpectedOutput(ctx cosmos.Context, mgr *Mgrs, toAsset common.Asset, targetOut sdkmath.Uint) (
+	res *types.QueryQuoteLimitResponse, err error,
+) {
+	// for limit orders, expected output is the target_out (limit price)
+	expectedOutput := targetOut
+
+	// calculate outbound fee for destination asset
+	outboundFeeAmount := sdkmath.ZeroUint()
+	if !toAsset.IsRune() {
+		outboundFeeAmount = mgr.Keeper().GetOutboundTxFee(ctx)
+	}
+
+	// create response
+	res = &types.QueryQuoteLimitResponse{
+		ExpectedAmountOut: expectedOutput.String(),
+		Fees: &types.QuoteFees{
+			Outbound: outboundFeeAmount.String(),
+			Total:    outboundFeeAmount.String(),
+		},
+	}
+
+	return res, nil
+}
+
+func (qs queryServer) queryQuoteLimit(ctx cosmos.Context, req *types.QueryQuoteLimitRequest) (*types.QueryQuoteLimitResponse, error) {
+	// check if advanced swap queue is enabled
+	advSwapQueueEnabled := qs.mgr.Keeper().GetConfigInt64(ctx, constants.EnableAdvSwapQueue)
+	if advSwapQueueEnabled == 0 {
+		return nil, fmt.Errorf("limit orders require advanced swap queue to be enabled")
+	}
+
+	// validate required parameters
+	if len(req.FromAsset) == 0 {
+		return nil, fmt.Errorf("missing from_asset parameter")
+	}
+	if len(req.ToAsset) == 0 {
+		return nil, fmt.Errorf("missing to_asset parameter")
+	}
+	if len(req.Amount) == 0 {
+		return nil, fmt.Errorf("missing amount parameter")
+	}
+	if len(req.Destination) == 0 {
+		return nil, fmt.Errorf("missing destination parameter")
+	}
+	if len(req.TargetOut) == 0 {
+		return nil, fmt.Errorf("missing target_out parameter")
+	}
+
+	// parse assets
+	fromAsset, err := common.NewAsset(req.FromAsset)
+	if err != nil {
+		return nil, fmt.Errorf("bad from_asset: %w", err)
+	}
+	toAsset, err := common.NewAsset(req.ToAsset)
+	if err != nil {
+		return nil, fmt.Errorf("bad to_asset: %w", err)
+	}
+
+	// parse amount
+	amount, err := sdkmath.ParseUint(req.Amount)
+	if err != nil {
+		return nil, fmt.Errorf("bad amount: %w", err)
+	}
+	if amount.IsZero() {
+		return nil, fmt.Errorf("amount must be positive")
+	}
+
+	// parse target_out
+	targetOut, err := sdkmath.ParseUint(req.TargetOut)
+	if err != nil {
+		return nil, fmt.Errorf("bad target_out: %w", err)
+	}
+	if targetOut.IsZero() {
+		return nil, fmt.Errorf("target_out must be positive")
+	}
+
+	maxAge := qs.mgr.Keeper().GetConfigInt64(ctx, constants.StreamingLimitSwapMaxAge)
+
+	// parse custom TTL, default to max age if custom TTL is not provided
+	customTTL := maxAge
+	if len(req.CustomTtl) > 0 {
+		customTTL, err = strconv.ParseInt(req.CustomTtl, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("bad custom_ttl: %w", err)
+		}
+		if customTTL <= 0 {
+			return nil, fmt.Errorf("custom_ttl must be positive")
+		}
+		if customTTL > maxAge {
+			return nil, fmt.Errorf("custom_ttl must be less than or equal to the max age: %d", maxAge)
+		}
+	}
+
+	// parse streaming parameters
+	var streamingQuantity uint64 = 0
+	if len(req.StreamingQuantity) > 0 {
+		streamingQuantity, err = strconv.ParseUint(req.StreamingQuantity, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("bad streaming_quantity: %w", err)
+		}
+	}
+
+	swp := StreamingSwap{
+		Interval: uint64(customTTL),
+		Deposit:  amount,
+	}
+	maxSwapQuantity, err := getMaxSwapQuantity(ctx, qs.mgr, fromAsset, toAsset, swp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to calculate max streaming swap quantity: %w", err)
+	}
+
+	// cap the streaming quantity to the max swap quantity
+	if streamingQuantity > maxSwapQuantity {
+		streamingQuantity = maxSwapQuantity
+	}
+
+	// parse affiliate params
+	affiliates, affiliateBps, totalBps, err := parseMultipleAffiliateParams(ctx, qs.mgr, req.Affiliate, req.AffiliateBps)
+	if err != nil {
+		return nil, fmt.Errorf("bad affiliate params: %w", err)
+	}
+
+	// parse refund address
+	var refundAddress common.Address
+	if len(req.RefundAddress) > 0 {
+		refundAddress, err = common.NewAddress(req.RefundAddress)
+		if err != nil {
+			return nil, fmt.Errorf("bad refund_address: %w", err)
+		}
+	}
+
+	// get destination address
+	destination, err := common.NewAddress(req.Destination)
+	if err != nil {
+		return nil, fmt.Errorf("bad destination: %w", err)
+	}
+
+	// get inbound address
+	fromChain := fromAsset.GetLayer1Asset().GetChain()
+	inboundAddress, routerAddress, _, err := quoteInboundInfo(ctx, qs.mgr, amount, fromChain, fromAsset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get inbound address: %w", err)
+	}
+
+	// create memo for limit order
+	memo := &mem.SwapMemo{
+		MemoBase: mem.MemoBase{
+			TxType: mem.TxLimitSwap, // limit swap prefix
+			Asset:  toAsset,
+		},
+		Destination:           destination,
+		SlipLimit:             targetOut,
+		StreamInterval:        uint64(customTTL),
+		RefundAddress:         refundAddress,
+		StreamQuantity:        streamingQuantity,
+		Affiliates:            affiliates,
+		AffiliatesBasisPoints: affiliateBps,
+	}
+
+	// generate memo string
+	memoString := memo.String()
+
+	// check memo length
+	maxMemoLength := fromChain.MaxMemoLength()
+	if len(memoString) > maxMemoLength {
+		return nil, fmt.Errorf("generated memo too long for source chain")
+	}
+
+	// calculate expected output for limit order
+	res, err := quoteCalculateLimitExpectedOutput(ctx, qs.mgr, toAsset, targetOut)
+	if err != nil {
+		return nil, fmt.Errorf("failed to calculate expected output: %w", err)
+	}
+
+	// calculate min swap amount
+	minSwapAmount, err := calculateMinSwapAmount(ctx, qs.mgr, fromAsset, toAsset, totalBps)
+	if err != nil {
+		return nil, fmt.Errorf("failed to calculate min swap amount: %w", err)
+	}
+
+	// calculate order expiry
+	currentHeight := ctx.BlockHeight()
+	orderExpiryBlock := currentHeight + customTTL
+	blockTimeMs := common.THORChain.ApproximateBlockMilliseconds()
+	orderExpiryTimestamp := ctx.BlockTime().Add(time.Duration(customTTL) * time.Duration(blockTimeMs) * time.Millisecond).Unix()
+
+	// create response
+	response := &types.QueryQuoteLimitResponse{
+		ExpectedAmountOut:      targetOut.String(),
+		Fees:                   res.Fees,
+		InboundAddress:         inboundAddress.String(),
+		Memo:                   memoString,
+		OrderExpiryBlock:       orderExpiryBlock,
+		OrderExpiryTimestamp:   orderExpiryTimestamp,
+		RecommendedMinAmountIn: minSwapAmount.String(),
+	}
+
+	// set additional info fields
+	if fromAsset.Chain.IsEVM() {
+		response.Router = routerAddress.String()
+	}
+	if !fromAsset.Chain.DustThreshold().IsZero() {
+		response.DustThreshold = fromAsset.Chain.DustThreshold().String()
+	}
+
+	response.Notes = fromAsset.GetChain().InboundNotes()
+	if outboundNotes := toAsset.Chain.OutboundNotes(); outboundNotes != "" {
+		response.Notes += " " + outboundNotes
+	}
+
+	// set inbound recommended gas for non-native swaps
+	if !fromAsset.Chain.IsTHORChain() {
+		inboundGas := qs.mgr.GasMgr().GetGasRate(ctx, fromAsset.Chain)
+		response.RecommendedGasRate = inboundGas.String()
+		response.GasRateUnits, _ = fromAsset.Chain.GetGasUnits()
+	}
+
+	return response, nil
+}
+
 func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSwapRequest) (*types.QueryQuoteSwapResponse, error) {
 	// validate required parameters
 	if len(req.FromAsset) == 0 {

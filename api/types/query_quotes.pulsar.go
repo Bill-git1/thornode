@@ -4152,6 +4152,2109 @@ func (x *fastReflection_Vout) ProtoMethods() *protoiface.Methods {
 	}
 }
 
+var (
+	md_QueryQuoteLimitRequest                    protoreflect.MessageDescriptor
+	fd_QueryQuoteLimitRequest_from_asset         protoreflect.FieldDescriptor
+	fd_QueryQuoteLimitRequest_to_asset           protoreflect.FieldDescriptor
+	fd_QueryQuoteLimitRequest_amount             protoreflect.FieldDescriptor
+	fd_QueryQuoteLimitRequest_destination        protoreflect.FieldDescriptor
+	fd_QueryQuoteLimitRequest_target_out         protoreflect.FieldDescriptor
+	fd_QueryQuoteLimitRequest_custom_ttl         protoreflect.FieldDescriptor
+	fd_QueryQuoteLimitRequest_streaming_quantity protoreflect.FieldDescriptor
+	fd_QueryQuoteLimitRequest_affiliate          protoreflect.FieldDescriptor
+	fd_QueryQuoteLimitRequest_affiliate_bps      protoreflect.FieldDescriptor
+	fd_QueryQuoteLimitRequest_refund_address     protoreflect.FieldDescriptor
+)
+
+func init() {
+	file_types_query_quotes_proto_init()
+	md_QueryQuoteLimitRequest = File_types_query_quotes_proto.Messages().ByName("QueryQuoteLimitRequest")
+	fd_QueryQuoteLimitRequest_from_asset = md_QueryQuoteLimitRequest.Fields().ByName("from_asset")
+	fd_QueryQuoteLimitRequest_to_asset = md_QueryQuoteLimitRequest.Fields().ByName("to_asset")
+	fd_QueryQuoteLimitRequest_amount = md_QueryQuoteLimitRequest.Fields().ByName("amount")
+	fd_QueryQuoteLimitRequest_destination = md_QueryQuoteLimitRequest.Fields().ByName("destination")
+	fd_QueryQuoteLimitRequest_target_out = md_QueryQuoteLimitRequest.Fields().ByName("target_out")
+	fd_QueryQuoteLimitRequest_custom_ttl = md_QueryQuoteLimitRequest.Fields().ByName("custom_ttl")
+	fd_QueryQuoteLimitRequest_streaming_quantity = md_QueryQuoteLimitRequest.Fields().ByName("streaming_quantity")
+	fd_QueryQuoteLimitRequest_affiliate = md_QueryQuoteLimitRequest.Fields().ByName("affiliate")
+	fd_QueryQuoteLimitRequest_affiliate_bps = md_QueryQuoteLimitRequest.Fields().ByName("affiliate_bps")
+	fd_QueryQuoteLimitRequest_refund_address = md_QueryQuoteLimitRequest.Fields().ByName("refund_address")
+}
+
+var _ protoreflect.Message = (*fastReflection_QueryQuoteLimitRequest)(nil)
+
+type fastReflection_QueryQuoteLimitRequest QueryQuoteLimitRequest
+
+func (x *QueryQuoteLimitRequest) ProtoReflect() protoreflect.Message {
+	return (*fastReflection_QueryQuoteLimitRequest)(x)
+}
+
+func (x *QueryQuoteLimitRequest) slowProtoReflect() protoreflect.Message {
+	mi := &file_types_query_quotes_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+var _fastReflection_QueryQuoteLimitRequest_messageType fastReflection_QueryQuoteLimitRequest_messageType
+var _ protoreflect.MessageType = fastReflection_QueryQuoteLimitRequest_messageType{}
+
+type fastReflection_QueryQuoteLimitRequest_messageType struct{}
+
+func (x fastReflection_QueryQuoteLimitRequest_messageType) Zero() protoreflect.Message {
+	return (*fastReflection_QueryQuoteLimitRequest)(nil)
+}
+func (x fastReflection_QueryQuoteLimitRequest_messageType) New() protoreflect.Message {
+	return new(fastReflection_QueryQuoteLimitRequest)
+}
+func (x fastReflection_QueryQuoteLimitRequest_messageType) Descriptor() protoreflect.MessageDescriptor {
+	return md_QueryQuoteLimitRequest
+}
+
+// Descriptor returns message descriptor, which contains only the protobuf
+// type information for the message.
+func (x *fastReflection_QueryQuoteLimitRequest) Descriptor() protoreflect.MessageDescriptor {
+	return md_QueryQuoteLimitRequest
+}
+
+// Type returns the message type, which encapsulates both Go and protobuf
+// type information. If the Go type information is not needed,
+// it is recommended that the message descriptor be used instead.
+func (x *fastReflection_QueryQuoteLimitRequest) Type() protoreflect.MessageType {
+	return _fastReflection_QueryQuoteLimitRequest_messageType
+}
+
+// New returns a newly allocated and mutable empty message.
+func (x *fastReflection_QueryQuoteLimitRequest) New() protoreflect.Message {
+	return new(fastReflection_QueryQuoteLimitRequest)
+}
+
+// Interface unwraps the message reflection interface and
+// returns the underlying ProtoMessage interface.
+func (x *fastReflection_QueryQuoteLimitRequest) Interface() protoreflect.ProtoMessage {
+	return (*QueryQuoteLimitRequest)(x)
+}
+
+// Range iterates over every populated field in an undefined order,
+// calling f for each field descriptor and value encountered.
+// Range returns immediately if f returns false.
+// While iterating, mutating operations may only be performed
+// on the current field descriptor.
+func (x *fastReflection_QueryQuoteLimitRequest) Range(f func(protoreflect.FieldDescriptor, protoreflect.Value) bool) {
+	if x.FromAsset != "" {
+		value := protoreflect.ValueOfString(x.FromAsset)
+		if !f(fd_QueryQuoteLimitRequest_from_asset, value) {
+			return
+		}
+	}
+	if x.ToAsset != "" {
+		value := protoreflect.ValueOfString(x.ToAsset)
+		if !f(fd_QueryQuoteLimitRequest_to_asset, value) {
+			return
+		}
+	}
+	if x.Amount != "" {
+		value := protoreflect.ValueOfString(x.Amount)
+		if !f(fd_QueryQuoteLimitRequest_amount, value) {
+			return
+		}
+	}
+	if x.Destination != "" {
+		value := protoreflect.ValueOfString(x.Destination)
+		if !f(fd_QueryQuoteLimitRequest_destination, value) {
+			return
+		}
+	}
+	if x.TargetOut != "" {
+		value := protoreflect.ValueOfString(x.TargetOut)
+		if !f(fd_QueryQuoteLimitRequest_target_out, value) {
+			return
+		}
+	}
+	if x.CustomTtl != "" {
+		value := protoreflect.ValueOfString(x.CustomTtl)
+		if !f(fd_QueryQuoteLimitRequest_custom_ttl, value) {
+			return
+		}
+	}
+	if x.StreamingQuantity != "" {
+		value := protoreflect.ValueOfString(x.StreamingQuantity)
+		if !f(fd_QueryQuoteLimitRequest_streaming_quantity, value) {
+			return
+		}
+	}
+	if x.Affiliate != "" {
+		value := protoreflect.ValueOfString(x.Affiliate)
+		if !f(fd_QueryQuoteLimitRequest_affiliate, value) {
+			return
+		}
+	}
+	if x.AffiliateBps != "" {
+		value := protoreflect.ValueOfString(x.AffiliateBps)
+		if !f(fd_QueryQuoteLimitRequest_affiliate_bps, value) {
+			return
+		}
+	}
+	if x.RefundAddress != "" {
+		value := protoreflect.ValueOfString(x.RefundAddress)
+		if !f(fd_QueryQuoteLimitRequest_refund_address, value) {
+			return
+		}
+	}
+}
+
+// Has reports whether a field is populated.
+//
+// Some fields have the property of nullability where it is possible to
+// distinguish between the default value of a field and whether the field
+// was explicitly populated with the default value. Singular message fields,
+// member fields of a oneof, and proto2 scalar fields are nullable. Such
+// fields are populated only if explicitly set.
+//
+// In other cases (aside from the nullable cases above),
+// a proto3 scalar field is populated if it contains a non-zero value, and
+// a repeated field is populated if it is non-empty.
+func (x *fastReflection_QueryQuoteLimitRequest) Has(fd protoreflect.FieldDescriptor) bool {
+	switch fd.FullName() {
+	case "types.QueryQuoteLimitRequest.from_asset":
+		return x.FromAsset != ""
+	case "types.QueryQuoteLimitRequest.to_asset":
+		return x.ToAsset != ""
+	case "types.QueryQuoteLimitRequest.amount":
+		return x.Amount != ""
+	case "types.QueryQuoteLimitRequest.destination":
+		return x.Destination != ""
+	case "types.QueryQuoteLimitRequest.target_out":
+		return x.TargetOut != ""
+	case "types.QueryQuoteLimitRequest.custom_ttl":
+		return x.CustomTtl != ""
+	case "types.QueryQuoteLimitRequest.streaming_quantity":
+		return x.StreamingQuantity != ""
+	case "types.QueryQuoteLimitRequest.affiliate":
+		return x.Affiliate != ""
+	case "types.QueryQuoteLimitRequest.affiliate_bps":
+		return x.AffiliateBps != ""
+	case "types.QueryQuoteLimitRequest.refund_address":
+		return x.RefundAddress != ""
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryQuoteLimitRequest"))
+		}
+		panic(fmt.Errorf("message types.QueryQuoteLimitRequest does not contain field %s", fd.FullName()))
+	}
+}
+
+// Clear clears the field such that a subsequent Has call reports false.
+//
+// Clearing an extension field clears both the extension type and value
+// associated with the given field number.
+//
+// Clear is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_QueryQuoteLimitRequest) Clear(fd protoreflect.FieldDescriptor) {
+	switch fd.FullName() {
+	case "types.QueryQuoteLimitRequest.from_asset":
+		x.FromAsset = ""
+	case "types.QueryQuoteLimitRequest.to_asset":
+		x.ToAsset = ""
+	case "types.QueryQuoteLimitRequest.amount":
+		x.Amount = ""
+	case "types.QueryQuoteLimitRequest.destination":
+		x.Destination = ""
+	case "types.QueryQuoteLimitRequest.target_out":
+		x.TargetOut = ""
+	case "types.QueryQuoteLimitRequest.custom_ttl":
+		x.CustomTtl = ""
+	case "types.QueryQuoteLimitRequest.streaming_quantity":
+		x.StreamingQuantity = ""
+	case "types.QueryQuoteLimitRequest.affiliate":
+		x.Affiliate = ""
+	case "types.QueryQuoteLimitRequest.affiliate_bps":
+		x.AffiliateBps = ""
+	case "types.QueryQuoteLimitRequest.refund_address":
+		x.RefundAddress = ""
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryQuoteLimitRequest"))
+		}
+		panic(fmt.Errorf("message types.QueryQuoteLimitRequest does not contain field %s", fd.FullName()))
+	}
+}
+
+// Get retrieves the value for a field.
+//
+// For unpopulated scalars, it returns the default value, where
+// the default value of a bytes scalar is guaranteed to be a copy.
+// For unpopulated composite types, it returns an empty, read-only view
+// of the value; to obtain a mutable reference, use Mutable.
+func (x *fastReflection_QueryQuoteLimitRequest) Get(descriptor protoreflect.FieldDescriptor) protoreflect.Value {
+	switch descriptor.FullName() {
+	case "types.QueryQuoteLimitRequest.from_asset":
+		value := x.FromAsset
+		return protoreflect.ValueOfString(value)
+	case "types.QueryQuoteLimitRequest.to_asset":
+		value := x.ToAsset
+		return protoreflect.ValueOfString(value)
+	case "types.QueryQuoteLimitRequest.amount":
+		value := x.Amount
+		return protoreflect.ValueOfString(value)
+	case "types.QueryQuoteLimitRequest.destination":
+		value := x.Destination
+		return protoreflect.ValueOfString(value)
+	case "types.QueryQuoteLimitRequest.target_out":
+		value := x.TargetOut
+		return protoreflect.ValueOfString(value)
+	case "types.QueryQuoteLimitRequest.custom_ttl":
+		value := x.CustomTtl
+		return protoreflect.ValueOfString(value)
+	case "types.QueryQuoteLimitRequest.streaming_quantity":
+		value := x.StreamingQuantity
+		return protoreflect.ValueOfString(value)
+	case "types.QueryQuoteLimitRequest.affiliate":
+		value := x.Affiliate
+		return protoreflect.ValueOfString(value)
+	case "types.QueryQuoteLimitRequest.affiliate_bps":
+		value := x.AffiliateBps
+		return protoreflect.ValueOfString(value)
+	case "types.QueryQuoteLimitRequest.refund_address":
+		value := x.RefundAddress
+		return protoreflect.ValueOfString(value)
+	default:
+		if descriptor.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryQuoteLimitRequest"))
+		}
+		panic(fmt.Errorf("message types.QueryQuoteLimitRequest does not contain field %s", descriptor.FullName()))
+	}
+}
+
+// Set stores the value for a field.
+//
+// For a field belonging to a oneof, it implicitly clears any other field
+// that may be currently set within the same oneof.
+// For extension fields, it implicitly stores the provided ExtensionType.
+// When setting a composite type, it is unspecified whether the stored value
+// aliases the source's memory in any way. If the composite value is an
+// empty, read-only value, then it panics.
+//
+// Set is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_QueryQuoteLimitRequest) Set(fd protoreflect.FieldDescriptor, value protoreflect.Value) {
+	switch fd.FullName() {
+	case "types.QueryQuoteLimitRequest.from_asset":
+		x.FromAsset = value.Interface().(string)
+	case "types.QueryQuoteLimitRequest.to_asset":
+		x.ToAsset = value.Interface().(string)
+	case "types.QueryQuoteLimitRequest.amount":
+		x.Amount = value.Interface().(string)
+	case "types.QueryQuoteLimitRequest.destination":
+		x.Destination = value.Interface().(string)
+	case "types.QueryQuoteLimitRequest.target_out":
+		x.TargetOut = value.Interface().(string)
+	case "types.QueryQuoteLimitRequest.custom_ttl":
+		x.CustomTtl = value.Interface().(string)
+	case "types.QueryQuoteLimitRequest.streaming_quantity":
+		x.StreamingQuantity = value.Interface().(string)
+	case "types.QueryQuoteLimitRequest.affiliate":
+		x.Affiliate = value.Interface().(string)
+	case "types.QueryQuoteLimitRequest.affiliate_bps":
+		x.AffiliateBps = value.Interface().(string)
+	case "types.QueryQuoteLimitRequest.refund_address":
+		x.RefundAddress = value.Interface().(string)
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryQuoteLimitRequest"))
+		}
+		panic(fmt.Errorf("message types.QueryQuoteLimitRequest does not contain field %s", fd.FullName()))
+	}
+}
+
+// Mutable returns a mutable reference to a composite type.
+//
+// If the field is unpopulated, it may allocate a composite value.
+// For a field belonging to a oneof, it implicitly clears any other field
+// that may be currently set within the same oneof.
+// For extension fields, it implicitly stores the provided ExtensionType
+// if not already stored.
+// It panics if the field does not contain a composite type.
+//
+// Mutable is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_QueryQuoteLimitRequest) Mutable(fd protoreflect.FieldDescriptor) protoreflect.Value {
+	switch fd.FullName() {
+	case "types.QueryQuoteLimitRequest.from_asset":
+		panic(fmt.Errorf("field from_asset of message types.QueryQuoteLimitRequest is not mutable"))
+	case "types.QueryQuoteLimitRequest.to_asset":
+		panic(fmt.Errorf("field to_asset of message types.QueryQuoteLimitRequest is not mutable"))
+	case "types.QueryQuoteLimitRequest.amount":
+		panic(fmt.Errorf("field amount of message types.QueryQuoteLimitRequest is not mutable"))
+	case "types.QueryQuoteLimitRequest.destination":
+		panic(fmt.Errorf("field destination of message types.QueryQuoteLimitRequest is not mutable"))
+	case "types.QueryQuoteLimitRequest.target_out":
+		panic(fmt.Errorf("field target_out of message types.QueryQuoteLimitRequest is not mutable"))
+	case "types.QueryQuoteLimitRequest.custom_ttl":
+		panic(fmt.Errorf("field custom_ttl of message types.QueryQuoteLimitRequest is not mutable"))
+	case "types.QueryQuoteLimitRequest.streaming_quantity":
+		panic(fmt.Errorf("field streaming_quantity of message types.QueryQuoteLimitRequest is not mutable"))
+	case "types.QueryQuoteLimitRequest.affiliate":
+		panic(fmt.Errorf("field affiliate of message types.QueryQuoteLimitRequest is not mutable"))
+	case "types.QueryQuoteLimitRequest.affiliate_bps":
+		panic(fmt.Errorf("field affiliate_bps of message types.QueryQuoteLimitRequest is not mutable"))
+	case "types.QueryQuoteLimitRequest.refund_address":
+		panic(fmt.Errorf("field refund_address of message types.QueryQuoteLimitRequest is not mutable"))
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryQuoteLimitRequest"))
+		}
+		panic(fmt.Errorf("message types.QueryQuoteLimitRequest does not contain field %s", fd.FullName()))
+	}
+}
+
+// NewField returns a new value that is assignable to the field
+// for the given descriptor. For scalars, this returns the default value.
+// For lists, maps, and messages, this returns a new, empty, mutable value.
+func (x *fastReflection_QueryQuoteLimitRequest) NewField(fd protoreflect.FieldDescriptor) protoreflect.Value {
+	switch fd.FullName() {
+	case "types.QueryQuoteLimitRequest.from_asset":
+		return protoreflect.ValueOfString("")
+	case "types.QueryQuoteLimitRequest.to_asset":
+		return protoreflect.ValueOfString("")
+	case "types.QueryQuoteLimitRequest.amount":
+		return protoreflect.ValueOfString("")
+	case "types.QueryQuoteLimitRequest.destination":
+		return protoreflect.ValueOfString("")
+	case "types.QueryQuoteLimitRequest.target_out":
+		return protoreflect.ValueOfString("")
+	case "types.QueryQuoteLimitRequest.custom_ttl":
+		return protoreflect.ValueOfString("")
+	case "types.QueryQuoteLimitRequest.streaming_quantity":
+		return protoreflect.ValueOfString("")
+	case "types.QueryQuoteLimitRequest.affiliate":
+		return protoreflect.ValueOfString("")
+	case "types.QueryQuoteLimitRequest.affiliate_bps":
+		return protoreflect.ValueOfString("")
+	case "types.QueryQuoteLimitRequest.refund_address":
+		return protoreflect.ValueOfString("")
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryQuoteLimitRequest"))
+		}
+		panic(fmt.Errorf("message types.QueryQuoteLimitRequest does not contain field %s", fd.FullName()))
+	}
+}
+
+// WhichOneof reports which field within the oneof is populated,
+// returning nil if none are populated.
+// It panics if the oneof descriptor does not belong to this message.
+func (x *fastReflection_QueryQuoteLimitRequest) WhichOneof(d protoreflect.OneofDescriptor) protoreflect.FieldDescriptor {
+	switch d.FullName() {
+	default:
+		panic(fmt.Errorf("%s is not a oneof field in types.QueryQuoteLimitRequest", d.FullName()))
+	}
+	panic("unreachable")
+}
+
+// GetUnknown retrieves the entire list of unknown fields.
+// The caller may only mutate the contents of the RawFields
+// if the mutated bytes are stored back into the message with SetUnknown.
+func (x *fastReflection_QueryQuoteLimitRequest) GetUnknown() protoreflect.RawFields {
+	return x.unknownFields
+}
+
+// SetUnknown stores an entire list of unknown fields.
+// The raw fields must be syntactically valid according to the wire format.
+// An implementation may panic if this is not the case.
+// Once stored, the caller must not mutate the content of the RawFields.
+// An empty RawFields may be passed to clear the fields.
+//
+// SetUnknown is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_QueryQuoteLimitRequest) SetUnknown(fields protoreflect.RawFields) {
+	x.unknownFields = fields
+}
+
+// IsValid reports whether the message is valid.
+//
+// An invalid message is an empty, read-only value.
+//
+// An invalid message often corresponds to a nil pointer of the concrete
+// message type, but the details are implementation dependent.
+// Validity is not part of the protobuf data model, and may not
+// be preserved in marshaling or other operations.
+func (x *fastReflection_QueryQuoteLimitRequest) IsValid() bool {
+	return x != nil
+}
+
+// ProtoMethods returns optional fastReflectionFeature-path implementations of various operations.
+// This method may return nil.
+//
+// The returned methods type is identical to
+// "google.golang.org/protobuf/runtime/protoiface".Methods.
+// Consult the protoiface package documentation for details.
+func (x *fastReflection_QueryQuoteLimitRequest) ProtoMethods() *protoiface.Methods {
+	size := func(input protoiface.SizeInput) protoiface.SizeOutput {
+		x := input.Message.Interface().(*QueryQuoteLimitRequest)
+		if x == nil {
+			return protoiface.SizeOutput{
+				NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+				Size:              0,
+			}
+		}
+		options := runtime.SizeInputToOptions(input)
+		_ = options
+		var n int
+		var l int
+		_ = l
+		l = len(x.FromAsset)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.ToAsset)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.Amount)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.Destination)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.TargetOut)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.CustomTtl)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.StreamingQuantity)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.Affiliate)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.AffiliateBps)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.RefundAddress)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		if x.unknownFields != nil {
+			n += len(x.unknownFields)
+		}
+		return protoiface.SizeOutput{
+			NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+			Size:              n,
+		}
+	}
+
+	marshal := func(input protoiface.MarshalInput) (protoiface.MarshalOutput, error) {
+		x := input.Message.Interface().(*QueryQuoteLimitRequest)
+		if x == nil {
+			return protoiface.MarshalOutput{
+				NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+				Buf:               input.Buf,
+			}, nil
+		}
+		options := runtime.MarshalInputToOptions(input)
+		_ = options
+		size := options.Size(x)
+		dAtA := make([]byte, size)
+		i := len(dAtA)
+		_ = i
+		var l int
+		_ = l
+		if x.unknownFields != nil {
+			i -= len(x.unknownFields)
+			copy(dAtA[i:], x.unknownFields)
+		}
+		if len(x.RefundAddress) > 0 {
+			i -= len(x.RefundAddress)
+			copy(dAtA[i:], x.RefundAddress)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.RefundAddress)))
+			i--
+			dAtA[i] = 0x52
+		}
+		if len(x.AffiliateBps) > 0 {
+			i -= len(x.AffiliateBps)
+			copy(dAtA[i:], x.AffiliateBps)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.AffiliateBps)))
+			i--
+			dAtA[i] = 0x4a
+		}
+		if len(x.Affiliate) > 0 {
+			i -= len(x.Affiliate)
+			copy(dAtA[i:], x.Affiliate)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.Affiliate)))
+			i--
+			dAtA[i] = 0x42
+		}
+		if len(x.StreamingQuantity) > 0 {
+			i -= len(x.StreamingQuantity)
+			copy(dAtA[i:], x.StreamingQuantity)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.StreamingQuantity)))
+			i--
+			dAtA[i] = 0x3a
+		}
+		if len(x.CustomTtl) > 0 {
+			i -= len(x.CustomTtl)
+			copy(dAtA[i:], x.CustomTtl)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.CustomTtl)))
+			i--
+			dAtA[i] = 0x32
+		}
+		if len(x.TargetOut) > 0 {
+			i -= len(x.TargetOut)
+			copy(dAtA[i:], x.TargetOut)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.TargetOut)))
+			i--
+			dAtA[i] = 0x2a
+		}
+		if len(x.Destination) > 0 {
+			i -= len(x.Destination)
+			copy(dAtA[i:], x.Destination)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.Destination)))
+			i--
+			dAtA[i] = 0x22
+		}
+		if len(x.Amount) > 0 {
+			i -= len(x.Amount)
+			copy(dAtA[i:], x.Amount)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.Amount)))
+			i--
+			dAtA[i] = 0x1a
+		}
+		if len(x.ToAsset) > 0 {
+			i -= len(x.ToAsset)
+			copy(dAtA[i:], x.ToAsset)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.ToAsset)))
+			i--
+			dAtA[i] = 0x12
+		}
+		if len(x.FromAsset) > 0 {
+			i -= len(x.FromAsset)
+			copy(dAtA[i:], x.FromAsset)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.FromAsset)))
+			i--
+			dAtA[i] = 0xa
+		}
+		if input.Buf != nil {
+			input.Buf = append(input.Buf, dAtA...)
+		} else {
+			input.Buf = dAtA
+		}
+		return protoiface.MarshalOutput{
+			NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+			Buf:               input.Buf,
+		}, nil
+	}
+	unmarshal := func(input protoiface.UnmarshalInput) (protoiface.UnmarshalOutput, error) {
+		x := input.Message.Interface().(*QueryQuoteLimitRequest)
+		if x == nil {
+			return protoiface.UnmarshalOutput{
+				NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+				Flags:             input.Flags,
+			}, nil
+		}
+		options := runtime.UnmarshalInputToOptions(input)
+		_ = options
+		dAtA := input.Buf
+		l := len(dAtA)
+		iNdEx := 0
+		for iNdEx < l {
+			preIndex := iNdEx
+			var wire uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				wire |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			fieldNum := int32(wire >> 3)
+			wireType := int(wire & 0x7)
+			if wireType == 4 {
+				return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: QueryQuoteLimitRequest: wiretype end group for non-group")
+			}
+			if fieldNum <= 0 {
+				return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: QueryQuoteLimitRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			}
+			switch fieldNum {
+			case 1:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field FromAsset", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.FromAsset = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 2:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field ToAsset", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.ToAsset = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 3:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Amount", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.Amount = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 4:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Destination", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.Destination = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 5:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field TargetOut", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.TargetOut = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 6:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field CustomTtl", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.CustomTtl = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 7:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field StreamingQuantity", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.StreamingQuantity = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 8:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Affiliate", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.Affiliate = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 9:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field AffiliateBps", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.AffiliateBps = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 10:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field RefundAddress", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.RefundAddress = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			default:
+				iNdEx = preIndex
+				skippy, err := runtime.Skip(dAtA[iNdEx:])
+				if err != nil {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, err
+				}
+				if (skippy < 0) || (iNdEx+skippy) < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if (iNdEx + skippy) > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				if !options.DiscardUnknown {
+					x.unknownFields = append(x.unknownFields, dAtA[iNdEx:iNdEx+skippy]...)
+				}
+				iNdEx += skippy
+			}
+		}
+
+		if iNdEx > l {
+			return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+		}
+		return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, nil
+	}
+	return &protoiface.Methods{
+		NoUnkeyedLiterals: struct{}{},
+		Flags:             protoiface.SupportMarshalDeterministic | protoiface.SupportUnmarshalDiscardUnknown,
+		Size:              size,
+		Marshal:           marshal,
+		Unmarshal:         unmarshal,
+		Merge:             nil,
+		CheckInitialized:  nil,
+	}
+}
+
+var (
+	md_QueryQuoteLimitResponse                           protoreflect.MessageDescriptor
+	fd_QueryQuoteLimitResponse_expected_amount_out       protoreflect.FieldDescriptor
+	fd_QueryQuoteLimitResponse_fees                      protoreflect.FieldDescriptor
+	fd_QueryQuoteLimitResponse_inbound_address           protoreflect.FieldDescriptor
+	fd_QueryQuoteLimitResponse_memo                      protoreflect.FieldDescriptor
+	fd_QueryQuoteLimitResponse_order_expiry_block        protoreflect.FieldDescriptor
+	fd_QueryQuoteLimitResponse_order_expiry_timestamp    protoreflect.FieldDescriptor
+	fd_QueryQuoteLimitResponse_recommended_min_amount_in protoreflect.FieldDescriptor
+	fd_QueryQuoteLimitResponse_router                    protoreflect.FieldDescriptor
+	fd_QueryQuoteLimitResponse_dust_threshold            protoreflect.FieldDescriptor
+	fd_QueryQuoteLimitResponse_notes                     protoreflect.FieldDescriptor
+	fd_QueryQuoteLimitResponse_recommended_gas_rate      protoreflect.FieldDescriptor
+	fd_QueryQuoteLimitResponse_gas_rate_units            protoreflect.FieldDescriptor
+)
+
+func init() {
+	file_types_query_quotes_proto_init()
+	md_QueryQuoteLimitResponse = File_types_query_quotes_proto.Messages().ByName("QueryQuoteLimitResponse")
+	fd_QueryQuoteLimitResponse_expected_amount_out = md_QueryQuoteLimitResponse.Fields().ByName("expected_amount_out")
+	fd_QueryQuoteLimitResponse_fees = md_QueryQuoteLimitResponse.Fields().ByName("fees")
+	fd_QueryQuoteLimitResponse_inbound_address = md_QueryQuoteLimitResponse.Fields().ByName("inbound_address")
+	fd_QueryQuoteLimitResponse_memo = md_QueryQuoteLimitResponse.Fields().ByName("memo")
+	fd_QueryQuoteLimitResponse_order_expiry_block = md_QueryQuoteLimitResponse.Fields().ByName("order_expiry_block")
+	fd_QueryQuoteLimitResponse_order_expiry_timestamp = md_QueryQuoteLimitResponse.Fields().ByName("order_expiry_timestamp")
+	fd_QueryQuoteLimitResponse_recommended_min_amount_in = md_QueryQuoteLimitResponse.Fields().ByName("recommended_min_amount_in")
+	fd_QueryQuoteLimitResponse_router = md_QueryQuoteLimitResponse.Fields().ByName("router")
+	fd_QueryQuoteLimitResponse_dust_threshold = md_QueryQuoteLimitResponse.Fields().ByName("dust_threshold")
+	fd_QueryQuoteLimitResponse_notes = md_QueryQuoteLimitResponse.Fields().ByName("notes")
+	fd_QueryQuoteLimitResponse_recommended_gas_rate = md_QueryQuoteLimitResponse.Fields().ByName("recommended_gas_rate")
+	fd_QueryQuoteLimitResponse_gas_rate_units = md_QueryQuoteLimitResponse.Fields().ByName("gas_rate_units")
+}
+
+var _ protoreflect.Message = (*fastReflection_QueryQuoteLimitResponse)(nil)
+
+type fastReflection_QueryQuoteLimitResponse QueryQuoteLimitResponse
+
+func (x *QueryQuoteLimitResponse) ProtoReflect() protoreflect.Message {
+	return (*fastReflection_QueryQuoteLimitResponse)(x)
+}
+
+func (x *QueryQuoteLimitResponse) slowProtoReflect() protoreflect.Message {
+	mi := &file_types_query_quotes_proto_msgTypes[5]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+var _fastReflection_QueryQuoteLimitResponse_messageType fastReflection_QueryQuoteLimitResponse_messageType
+var _ protoreflect.MessageType = fastReflection_QueryQuoteLimitResponse_messageType{}
+
+type fastReflection_QueryQuoteLimitResponse_messageType struct{}
+
+func (x fastReflection_QueryQuoteLimitResponse_messageType) Zero() protoreflect.Message {
+	return (*fastReflection_QueryQuoteLimitResponse)(nil)
+}
+func (x fastReflection_QueryQuoteLimitResponse_messageType) New() protoreflect.Message {
+	return new(fastReflection_QueryQuoteLimitResponse)
+}
+func (x fastReflection_QueryQuoteLimitResponse_messageType) Descriptor() protoreflect.MessageDescriptor {
+	return md_QueryQuoteLimitResponse
+}
+
+// Descriptor returns message descriptor, which contains only the protobuf
+// type information for the message.
+func (x *fastReflection_QueryQuoteLimitResponse) Descriptor() protoreflect.MessageDescriptor {
+	return md_QueryQuoteLimitResponse
+}
+
+// Type returns the message type, which encapsulates both Go and protobuf
+// type information. If the Go type information is not needed,
+// it is recommended that the message descriptor be used instead.
+func (x *fastReflection_QueryQuoteLimitResponse) Type() protoreflect.MessageType {
+	return _fastReflection_QueryQuoteLimitResponse_messageType
+}
+
+// New returns a newly allocated and mutable empty message.
+func (x *fastReflection_QueryQuoteLimitResponse) New() protoreflect.Message {
+	return new(fastReflection_QueryQuoteLimitResponse)
+}
+
+// Interface unwraps the message reflection interface and
+// returns the underlying ProtoMessage interface.
+func (x *fastReflection_QueryQuoteLimitResponse) Interface() protoreflect.ProtoMessage {
+	return (*QueryQuoteLimitResponse)(x)
+}
+
+// Range iterates over every populated field in an undefined order,
+// calling f for each field descriptor and value encountered.
+// Range returns immediately if f returns false.
+// While iterating, mutating operations may only be performed
+// on the current field descriptor.
+func (x *fastReflection_QueryQuoteLimitResponse) Range(f func(protoreflect.FieldDescriptor, protoreflect.Value) bool) {
+	if x.ExpectedAmountOut != "" {
+		value := protoreflect.ValueOfString(x.ExpectedAmountOut)
+		if !f(fd_QueryQuoteLimitResponse_expected_amount_out, value) {
+			return
+		}
+	}
+	if x.Fees != nil {
+		value := protoreflect.ValueOfMessage(x.Fees.ProtoReflect())
+		if !f(fd_QueryQuoteLimitResponse_fees, value) {
+			return
+		}
+	}
+	if x.InboundAddress != "" {
+		value := protoreflect.ValueOfString(x.InboundAddress)
+		if !f(fd_QueryQuoteLimitResponse_inbound_address, value) {
+			return
+		}
+	}
+	if x.Memo != "" {
+		value := protoreflect.ValueOfString(x.Memo)
+		if !f(fd_QueryQuoteLimitResponse_memo, value) {
+			return
+		}
+	}
+	if x.OrderExpiryBlock != int64(0) {
+		value := protoreflect.ValueOfInt64(x.OrderExpiryBlock)
+		if !f(fd_QueryQuoteLimitResponse_order_expiry_block, value) {
+			return
+		}
+	}
+	if x.OrderExpiryTimestamp != int64(0) {
+		value := protoreflect.ValueOfInt64(x.OrderExpiryTimestamp)
+		if !f(fd_QueryQuoteLimitResponse_order_expiry_timestamp, value) {
+			return
+		}
+	}
+	if x.RecommendedMinAmountIn != "" {
+		value := protoreflect.ValueOfString(x.RecommendedMinAmountIn)
+		if !f(fd_QueryQuoteLimitResponse_recommended_min_amount_in, value) {
+			return
+		}
+	}
+	if x.Router != "" {
+		value := protoreflect.ValueOfString(x.Router)
+		if !f(fd_QueryQuoteLimitResponse_router, value) {
+			return
+		}
+	}
+	if x.DustThreshold != "" {
+		value := protoreflect.ValueOfString(x.DustThreshold)
+		if !f(fd_QueryQuoteLimitResponse_dust_threshold, value) {
+			return
+		}
+	}
+	if x.Notes != "" {
+		value := protoreflect.ValueOfString(x.Notes)
+		if !f(fd_QueryQuoteLimitResponse_notes, value) {
+			return
+		}
+	}
+	if x.RecommendedGasRate != "" {
+		value := protoreflect.ValueOfString(x.RecommendedGasRate)
+		if !f(fd_QueryQuoteLimitResponse_recommended_gas_rate, value) {
+			return
+		}
+	}
+	if x.GasRateUnits != "" {
+		value := protoreflect.ValueOfString(x.GasRateUnits)
+		if !f(fd_QueryQuoteLimitResponse_gas_rate_units, value) {
+			return
+		}
+	}
+}
+
+// Has reports whether a field is populated.
+//
+// Some fields have the property of nullability where it is possible to
+// distinguish between the default value of a field and whether the field
+// was explicitly populated with the default value. Singular message fields,
+// member fields of a oneof, and proto2 scalar fields are nullable. Such
+// fields are populated only if explicitly set.
+//
+// In other cases (aside from the nullable cases above),
+// a proto3 scalar field is populated if it contains a non-zero value, and
+// a repeated field is populated if it is non-empty.
+func (x *fastReflection_QueryQuoteLimitResponse) Has(fd protoreflect.FieldDescriptor) bool {
+	switch fd.FullName() {
+	case "types.QueryQuoteLimitResponse.expected_amount_out":
+		return x.ExpectedAmountOut != ""
+	case "types.QueryQuoteLimitResponse.fees":
+		return x.Fees != nil
+	case "types.QueryQuoteLimitResponse.inbound_address":
+		return x.InboundAddress != ""
+	case "types.QueryQuoteLimitResponse.memo":
+		return x.Memo != ""
+	case "types.QueryQuoteLimitResponse.order_expiry_block":
+		return x.OrderExpiryBlock != int64(0)
+	case "types.QueryQuoteLimitResponse.order_expiry_timestamp":
+		return x.OrderExpiryTimestamp != int64(0)
+	case "types.QueryQuoteLimitResponse.recommended_min_amount_in":
+		return x.RecommendedMinAmountIn != ""
+	case "types.QueryQuoteLimitResponse.router":
+		return x.Router != ""
+	case "types.QueryQuoteLimitResponse.dust_threshold":
+		return x.DustThreshold != ""
+	case "types.QueryQuoteLimitResponse.notes":
+		return x.Notes != ""
+	case "types.QueryQuoteLimitResponse.recommended_gas_rate":
+		return x.RecommendedGasRate != ""
+	case "types.QueryQuoteLimitResponse.gas_rate_units":
+		return x.GasRateUnits != ""
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryQuoteLimitResponse"))
+		}
+		panic(fmt.Errorf("message types.QueryQuoteLimitResponse does not contain field %s", fd.FullName()))
+	}
+}
+
+// Clear clears the field such that a subsequent Has call reports false.
+//
+// Clearing an extension field clears both the extension type and value
+// associated with the given field number.
+//
+// Clear is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_QueryQuoteLimitResponse) Clear(fd protoreflect.FieldDescriptor) {
+	switch fd.FullName() {
+	case "types.QueryQuoteLimitResponse.expected_amount_out":
+		x.ExpectedAmountOut = ""
+	case "types.QueryQuoteLimitResponse.fees":
+		x.Fees = nil
+	case "types.QueryQuoteLimitResponse.inbound_address":
+		x.InboundAddress = ""
+	case "types.QueryQuoteLimitResponse.memo":
+		x.Memo = ""
+	case "types.QueryQuoteLimitResponse.order_expiry_block":
+		x.OrderExpiryBlock = int64(0)
+	case "types.QueryQuoteLimitResponse.order_expiry_timestamp":
+		x.OrderExpiryTimestamp = int64(0)
+	case "types.QueryQuoteLimitResponse.recommended_min_amount_in":
+		x.RecommendedMinAmountIn = ""
+	case "types.QueryQuoteLimitResponse.router":
+		x.Router = ""
+	case "types.QueryQuoteLimitResponse.dust_threshold":
+		x.DustThreshold = ""
+	case "types.QueryQuoteLimitResponse.notes":
+		x.Notes = ""
+	case "types.QueryQuoteLimitResponse.recommended_gas_rate":
+		x.RecommendedGasRate = ""
+	case "types.QueryQuoteLimitResponse.gas_rate_units":
+		x.GasRateUnits = ""
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryQuoteLimitResponse"))
+		}
+		panic(fmt.Errorf("message types.QueryQuoteLimitResponse does not contain field %s", fd.FullName()))
+	}
+}
+
+// Get retrieves the value for a field.
+//
+// For unpopulated scalars, it returns the default value, where
+// the default value of a bytes scalar is guaranteed to be a copy.
+// For unpopulated composite types, it returns an empty, read-only view
+// of the value; to obtain a mutable reference, use Mutable.
+func (x *fastReflection_QueryQuoteLimitResponse) Get(descriptor protoreflect.FieldDescriptor) protoreflect.Value {
+	switch descriptor.FullName() {
+	case "types.QueryQuoteLimitResponse.expected_amount_out":
+		value := x.ExpectedAmountOut
+		return protoreflect.ValueOfString(value)
+	case "types.QueryQuoteLimitResponse.fees":
+		value := x.Fees
+		return protoreflect.ValueOfMessage(value.ProtoReflect())
+	case "types.QueryQuoteLimitResponse.inbound_address":
+		value := x.InboundAddress
+		return protoreflect.ValueOfString(value)
+	case "types.QueryQuoteLimitResponse.memo":
+		value := x.Memo
+		return protoreflect.ValueOfString(value)
+	case "types.QueryQuoteLimitResponse.order_expiry_block":
+		value := x.OrderExpiryBlock
+		return protoreflect.ValueOfInt64(value)
+	case "types.QueryQuoteLimitResponse.order_expiry_timestamp":
+		value := x.OrderExpiryTimestamp
+		return protoreflect.ValueOfInt64(value)
+	case "types.QueryQuoteLimitResponse.recommended_min_amount_in":
+		value := x.RecommendedMinAmountIn
+		return protoreflect.ValueOfString(value)
+	case "types.QueryQuoteLimitResponse.router":
+		value := x.Router
+		return protoreflect.ValueOfString(value)
+	case "types.QueryQuoteLimitResponse.dust_threshold":
+		value := x.DustThreshold
+		return protoreflect.ValueOfString(value)
+	case "types.QueryQuoteLimitResponse.notes":
+		value := x.Notes
+		return protoreflect.ValueOfString(value)
+	case "types.QueryQuoteLimitResponse.recommended_gas_rate":
+		value := x.RecommendedGasRate
+		return protoreflect.ValueOfString(value)
+	case "types.QueryQuoteLimitResponse.gas_rate_units":
+		value := x.GasRateUnits
+		return protoreflect.ValueOfString(value)
+	default:
+		if descriptor.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryQuoteLimitResponse"))
+		}
+		panic(fmt.Errorf("message types.QueryQuoteLimitResponse does not contain field %s", descriptor.FullName()))
+	}
+}
+
+// Set stores the value for a field.
+//
+// For a field belonging to a oneof, it implicitly clears any other field
+// that may be currently set within the same oneof.
+// For extension fields, it implicitly stores the provided ExtensionType.
+// When setting a composite type, it is unspecified whether the stored value
+// aliases the source's memory in any way. If the composite value is an
+// empty, read-only value, then it panics.
+//
+// Set is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_QueryQuoteLimitResponse) Set(fd protoreflect.FieldDescriptor, value protoreflect.Value) {
+	switch fd.FullName() {
+	case "types.QueryQuoteLimitResponse.expected_amount_out":
+		x.ExpectedAmountOut = value.Interface().(string)
+	case "types.QueryQuoteLimitResponse.fees":
+		x.Fees = value.Message().Interface().(*QuoteFees)
+	case "types.QueryQuoteLimitResponse.inbound_address":
+		x.InboundAddress = value.Interface().(string)
+	case "types.QueryQuoteLimitResponse.memo":
+		x.Memo = value.Interface().(string)
+	case "types.QueryQuoteLimitResponse.order_expiry_block":
+		x.OrderExpiryBlock = value.Int()
+	case "types.QueryQuoteLimitResponse.order_expiry_timestamp":
+		x.OrderExpiryTimestamp = value.Int()
+	case "types.QueryQuoteLimitResponse.recommended_min_amount_in":
+		x.RecommendedMinAmountIn = value.Interface().(string)
+	case "types.QueryQuoteLimitResponse.router":
+		x.Router = value.Interface().(string)
+	case "types.QueryQuoteLimitResponse.dust_threshold":
+		x.DustThreshold = value.Interface().(string)
+	case "types.QueryQuoteLimitResponse.notes":
+		x.Notes = value.Interface().(string)
+	case "types.QueryQuoteLimitResponse.recommended_gas_rate":
+		x.RecommendedGasRate = value.Interface().(string)
+	case "types.QueryQuoteLimitResponse.gas_rate_units":
+		x.GasRateUnits = value.Interface().(string)
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryQuoteLimitResponse"))
+		}
+		panic(fmt.Errorf("message types.QueryQuoteLimitResponse does not contain field %s", fd.FullName()))
+	}
+}
+
+// Mutable returns a mutable reference to a composite type.
+//
+// If the field is unpopulated, it may allocate a composite value.
+// For a field belonging to a oneof, it implicitly clears any other field
+// that may be currently set within the same oneof.
+// For extension fields, it implicitly stores the provided ExtensionType
+// if not already stored.
+// It panics if the field does not contain a composite type.
+//
+// Mutable is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_QueryQuoteLimitResponse) Mutable(fd protoreflect.FieldDescriptor) protoreflect.Value {
+	switch fd.FullName() {
+	case "types.QueryQuoteLimitResponse.fees":
+		if x.Fees == nil {
+			x.Fees = new(QuoteFees)
+		}
+		return protoreflect.ValueOfMessage(x.Fees.ProtoReflect())
+	case "types.QueryQuoteLimitResponse.expected_amount_out":
+		panic(fmt.Errorf("field expected_amount_out of message types.QueryQuoteLimitResponse is not mutable"))
+	case "types.QueryQuoteLimitResponse.inbound_address":
+		panic(fmt.Errorf("field inbound_address of message types.QueryQuoteLimitResponse is not mutable"))
+	case "types.QueryQuoteLimitResponse.memo":
+		panic(fmt.Errorf("field memo of message types.QueryQuoteLimitResponse is not mutable"))
+	case "types.QueryQuoteLimitResponse.order_expiry_block":
+		panic(fmt.Errorf("field order_expiry_block of message types.QueryQuoteLimitResponse is not mutable"))
+	case "types.QueryQuoteLimitResponse.order_expiry_timestamp":
+		panic(fmt.Errorf("field order_expiry_timestamp of message types.QueryQuoteLimitResponse is not mutable"))
+	case "types.QueryQuoteLimitResponse.recommended_min_amount_in":
+		panic(fmt.Errorf("field recommended_min_amount_in of message types.QueryQuoteLimitResponse is not mutable"))
+	case "types.QueryQuoteLimitResponse.router":
+		panic(fmt.Errorf("field router of message types.QueryQuoteLimitResponse is not mutable"))
+	case "types.QueryQuoteLimitResponse.dust_threshold":
+		panic(fmt.Errorf("field dust_threshold of message types.QueryQuoteLimitResponse is not mutable"))
+	case "types.QueryQuoteLimitResponse.notes":
+		panic(fmt.Errorf("field notes of message types.QueryQuoteLimitResponse is not mutable"))
+	case "types.QueryQuoteLimitResponse.recommended_gas_rate":
+		panic(fmt.Errorf("field recommended_gas_rate of message types.QueryQuoteLimitResponse is not mutable"))
+	case "types.QueryQuoteLimitResponse.gas_rate_units":
+		panic(fmt.Errorf("field gas_rate_units of message types.QueryQuoteLimitResponse is not mutable"))
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryQuoteLimitResponse"))
+		}
+		panic(fmt.Errorf("message types.QueryQuoteLimitResponse does not contain field %s", fd.FullName()))
+	}
+}
+
+// NewField returns a new value that is assignable to the field
+// for the given descriptor. For scalars, this returns the default value.
+// For lists, maps, and messages, this returns a new, empty, mutable value.
+func (x *fastReflection_QueryQuoteLimitResponse) NewField(fd protoreflect.FieldDescriptor) protoreflect.Value {
+	switch fd.FullName() {
+	case "types.QueryQuoteLimitResponse.expected_amount_out":
+		return protoreflect.ValueOfString("")
+	case "types.QueryQuoteLimitResponse.fees":
+		m := new(QuoteFees)
+		return protoreflect.ValueOfMessage(m.ProtoReflect())
+	case "types.QueryQuoteLimitResponse.inbound_address":
+		return protoreflect.ValueOfString("")
+	case "types.QueryQuoteLimitResponse.memo":
+		return protoreflect.ValueOfString("")
+	case "types.QueryQuoteLimitResponse.order_expiry_block":
+		return protoreflect.ValueOfInt64(int64(0))
+	case "types.QueryQuoteLimitResponse.order_expiry_timestamp":
+		return protoreflect.ValueOfInt64(int64(0))
+	case "types.QueryQuoteLimitResponse.recommended_min_amount_in":
+		return protoreflect.ValueOfString("")
+	case "types.QueryQuoteLimitResponse.router":
+		return protoreflect.ValueOfString("")
+	case "types.QueryQuoteLimitResponse.dust_threshold":
+		return protoreflect.ValueOfString("")
+	case "types.QueryQuoteLimitResponse.notes":
+		return protoreflect.ValueOfString("")
+	case "types.QueryQuoteLimitResponse.recommended_gas_rate":
+		return protoreflect.ValueOfString("")
+	case "types.QueryQuoteLimitResponse.gas_rate_units":
+		return protoreflect.ValueOfString("")
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.QueryQuoteLimitResponse"))
+		}
+		panic(fmt.Errorf("message types.QueryQuoteLimitResponse does not contain field %s", fd.FullName()))
+	}
+}
+
+// WhichOneof reports which field within the oneof is populated,
+// returning nil if none are populated.
+// It panics if the oneof descriptor does not belong to this message.
+func (x *fastReflection_QueryQuoteLimitResponse) WhichOneof(d protoreflect.OneofDescriptor) protoreflect.FieldDescriptor {
+	switch d.FullName() {
+	default:
+		panic(fmt.Errorf("%s is not a oneof field in types.QueryQuoteLimitResponse", d.FullName()))
+	}
+	panic("unreachable")
+}
+
+// GetUnknown retrieves the entire list of unknown fields.
+// The caller may only mutate the contents of the RawFields
+// if the mutated bytes are stored back into the message with SetUnknown.
+func (x *fastReflection_QueryQuoteLimitResponse) GetUnknown() protoreflect.RawFields {
+	return x.unknownFields
+}
+
+// SetUnknown stores an entire list of unknown fields.
+// The raw fields must be syntactically valid according to the wire format.
+// An implementation may panic if this is not the case.
+// Once stored, the caller must not mutate the content of the RawFields.
+// An empty RawFields may be passed to clear the fields.
+//
+// SetUnknown is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_QueryQuoteLimitResponse) SetUnknown(fields protoreflect.RawFields) {
+	x.unknownFields = fields
+}
+
+// IsValid reports whether the message is valid.
+//
+// An invalid message is an empty, read-only value.
+//
+// An invalid message often corresponds to a nil pointer of the concrete
+// message type, but the details are implementation dependent.
+// Validity is not part of the protobuf data model, and may not
+// be preserved in marshaling or other operations.
+func (x *fastReflection_QueryQuoteLimitResponse) IsValid() bool {
+	return x != nil
+}
+
+// ProtoMethods returns optional fastReflectionFeature-path implementations of various operations.
+// This method may return nil.
+//
+// The returned methods type is identical to
+// "google.golang.org/protobuf/runtime/protoiface".Methods.
+// Consult the protoiface package documentation for details.
+func (x *fastReflection_QueryQuoteLimitResponse) ProtoMethods() *protoiface.Methods {
+	size := func(input protoiface.SizeInput) protoiface.SizeOutput {
+		x := input.Message.Interface().(*QueryQuoteLimitResponse)
+		if x == nil {
+			return protoiface.SizeOutput{
+				NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+				Size:              0,
+			}
+		}
+		options := runtime.SizeInputToOptions(input)
+		_ = options
+		var n int
+		var l int
+		_ = l
+		l = len(x.ExpectedAmountOut)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		if x.Fees != nil {
+			l = options.Size(x.Fees)
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.InboundAddress)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.Memo)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		if x.OrderExpiryBlock != 0 {
+			n += 1 + runtime.Sov(uint64(x.OrderExpiryBlock))
+		}
+		if x.OrderExpiryTimestamp != 0 {
+			n += 1 + runtime.Sov(uint64(x.OrderExpiryTimestamp))
+		}
+		l = len(x.RecommendedMinAmountIn)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.Router)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.DustThreshold)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.Notes)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.RecommendedGasRate)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.GasRateUnits)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		if x.unknownFields != nil {
+			n += len(x.unknownFields)
+		}
+		return protoiface.SizeOutput{
+			NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+			Size:              n,
+		}
+	}
+
+	marshal := func(input protoiface.MarshalInput) (protoiface.MarshalOutput, error) {
+		x := input.Message.Interface().(*QueryQuoteLimitResponse)
+		if x == nil {
+			return protoiface.MarshalOutput{
+				NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+				Buf:               input.Buf,
+			}, nil
+		}
+		options := runtime.MarshalInputToOptions(input)
+		_ = options
+		size := options.Size(x)
+		dAtA := make([]byte, size)
+		i := len(dAtA)
+		_ = i
+		var l int
+		_ = l
+		if x.unknownFields != nil {
+			i -= len(x.unknownFields)
+			copy(dAtA[i:], x.unknownFields)
+		}
+		if len(x.GasRateUnits) > 0 {
+			i -= len(x.GasRateUnits)
+			copy(dAtA[i:], x.GasRateUnits)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.GasRateUnits)))
+			i--
+			dAtA[i] = 0x62
+		}
+		if len(x.RecommendedGasRate) > 0 {
+			i -= len(x.RecommendedGasRate)
+			copy(dAtA[i:], x.RecommendedGasRate)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.RecommendedGasRate)))
+			i--
+			dAtA[i] = 0x5a
+		}
+		if len(x.Notes) > 0 {
+			i -= len(x.Notes)
+			copy(dAtA[i:], x.Notes)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.Notes)))
+			i--
+			dAtA[i] = 0x52
+		}
+		if len(x.DustThreshold) > 0 {
+			i -= len(x.DustThreshold)
+			copy(dAtA[i:], x.DustThreshold)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.DustThreshold)))
+			i--
+			dAtA[i] = 0x4a
+		}
+		if len(x.Router) > 0 {
+			i -= len(x.Router)
+			copy(dAtA[i:], x.Router)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.Router)))
+			i--
+			dAtA[i] = 0x42
+		}
+		if len(x.RecommendedMinAmountIn) > 0 {
+			i -= len(x.RecommendedMinAmountIn)
+			copy(dAtA[i:], x.RecommendedMinAmountIn)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.RecommendedMinAmountIn)))
+			i--
+			dAtA[i] = 0x3a
+		}
+		if x.OrderExpiryTimestamp != 0 {
+			i = runtime.EncodeVarint(dAtA, i, uint64(x.OrderExpiryTimestamp))
+			i--
+			dAtA[i] = 0x30
+		}
+		if x.OrderExpiryBlock != 0 {
+			i = runtime.EncodeVarint(dAtA, i, uint64(x.OrderExpiryBlock))
+			i--
+			dAtA[i] = 0x28
+		}
+		if len(x.Memo) > 0 {
+			i -= len(x.Memo)
+			copy(dAtA[i:], x.Memo)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.Memo)))
+			i--
+			dAtA[i] = 0x22
+		}
+		if len(x.InboundAddress) > 0 {
+			i -= len(x.InboundAddress)
+			copy(dAtA[i:], x.InboundAddress)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.InboundAddress)))
+			i--
+			dAtA[i] = 0x1a
+		}
+		if x.Fees != nil {
+			encoded, err := options.Marshal(x.Fees)
+			if err != nil {
+				return protoiface.MarshalOutput{
+					NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+					Buf:               input.Buf,
+				}, err
+			}
+			i -= len(encoded)
+			copy(dAtA[i:], encoded)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(encoded)))
+			i--
+			dAtA[i] = 0x12
+		}
+		if len(x.ExpectedAmountOut) > 0 {
+			i -= len(x.ExpectedAmountOut)
+			copy(dAtA[i:], x.ExpectedAmountOut)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.ExpectedAmountOut)))
+			i--
+			dAtA[i] = 0xa
+		}
+		if input.Buf != nil {
+			input.Buf = append(input.Buf, dAtA...)
+		} else {
+			input.Buf = dAtA
+		}
+		return protoiface.MarshalOutput{
+			NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+			Buf:               input.Buf,
+		}, nil
+	}
+	unmarshal := func(input protoiface.UnmarshalInput) (protoiface.UnmarshalOutput, error) {
+		x := input.Message.Interface().(*QueryQuoteLimitResponse)
+		if x == nil {
+			return protoiface.UnmarshalOutput{
+				NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+				Flags:             input.Flags,
+			}, nil
+		}
+		options := runtime.UnmarshalInputToOptions(input)
+		_ = options
+		dAtA := input.Buf
+		l := len(dAtA)
+		iNdEx := 0
+		for iNdEx < l {
+			preIndex := iNdEx
+			var wire uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				wire |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			fieldNum := int32(wire >> 3)
+			wireType := int(wire & 0x7)
+			if wireType == 4 {
+				return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: QueryQuoteLimitResponse: wiretype end group for non-group")
+			}
+			if fieldNum <= 0 {
+				return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: QueryQuoteLimitResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			}
+			switch fieldNum {
+			case 1:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field ExpectedAmountOut", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.ExpectedAmountOut = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 2:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Fees", wireType)
+				}
+				var msglen int
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					msglen |= int(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				if msglen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + msglen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				if x.Fees == nil {
+					x.Fees = &QuoteFees{}
+				}
+				if err := options.Unmarshal(dAtA[iNdEx:postIndex], x.Fees); err != nil {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, err
+				}
+				iNdEx = postIndex
+			case 3:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field InboundAddress", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.InboundAddress = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 4:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Memo", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.Memo = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 5:
+				if wireType != 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field OrderExpiryBlock", wireType)
+				}
+				x.OrderExpiryBlock = 0
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					x.OrderExpiryBlock |= int64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+			case 6:
+				if wireType != 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field OrderExpiryTimestamp", wireType)
+				}
+				x.OrderExpiryTimestamp = 0
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					x.OrderExpiryTimestamp |= int64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+			case 7:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field RecommendedMinAmountIn", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.RecommendedMinAmountIn = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 8:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Router", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.Router = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 9:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field DustThreshold", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.DustThreshold = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 10:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Notes", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.Notes = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 11:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field RecommendedGasRate", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.RecommendedGasRate = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 12:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field GasRateUnits", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.GasRateUnits = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			default:
+				iNdEx = preIndex
+				skippy, err := runtime.Skip(dAtA[iNdEx:])
+				if err != nil {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, err
+				}
+				if (skippy < 0) || (iNdEx+skippy) < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if (iNdEx + skippy) > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				if !options.DiscardUnknown {
+					x.unknownFields = append(x.unknownFields, dAtA[iNdEx:iNdEx+skippy]...)
+				}
+				iNdEx += skippy
+			}
+		}
+
+		if iNdEx > l {
+			return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+		}
+		return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, nil
+	}
+	return &protoiface.Methods{
+		NoUnkeyedLiterals: struct{}{},
+		Flags:             protoiface.SupportMarshalDeterministic | protoiface.SupportUnmarshalDiscardUnknown,
+		Size:              size,
+		Marshal:           marshal,
+		Unmarshal:         unmarshal,
+		Merge:             nil,
+		CheckInitialized:  nil,
+	}
+}
+
 // Code generated by protoc-gen-go. DO NOT EDIT.
 // versions:
 // 	protoc-gen-go v1.27.0
@@ -4661,6 +6764,262 @@ func (x *Vout) GetAmount() int64 {
 	return 0
 }
 
+// Request for limit order quote
+type QueryQuoteLimitRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// source asset
+	FromAsset string `protobuf:"bytes,1,opt,name=from_asset,json=fromAsset,proto3" json:"from_asset,omitempty"`
+	// destination asset
+	ToAsset string `protobuf:"bytes,2,opt,name=to_asset,json=toAsset,proto3" json:"to_asset,omitempty"`
+	// amount to swap (in source asset base units)
+	Amount string `protobuf:"bytes,3,opt,name=amount,proto3" json:"amount,omitempty"`
+	// destination address
+	Destination string `protobuf:"bytes,4,opt,name=destination,proto3" json:"destination,omitempty"`
+	// target output amount (in target asset base units) - REQUIRED for limit
+	// orders
+	TargetOut string `protobuf:"bytes,5,opt,name=target_out,json=targetOut,proto3" json:"target_out,omitempty"`
+	// custom TTL in blocks for limit orders
+	CustomTtl string `protobuf:"bytes,6,opt,name=custom_ttl,json=customTtl,proto3" json:"custom_ttl,omitempty"`
+	// number of sub-swaps
+	StreamingQuantity string `protobuf:"bytes,7,opt,name=streaming_quantity,json=streamingQuantity,proto3" json:"streaming_quantity,omitempty"`
+	// affiliate address
+	Affiliate string `protobuf:"bytes,8,opt,name=affiliate,proto3" json:"affiliate,omitempty"`
+	// affiliate basis points (0-10000)
+	AffiliateBps string `protobuf:"bytes,9,opt,name=affiliate_bps,json=affiliateBps,proto3" json:"affiliate_bps,omitempty"`
+	// refund address
+	RefundAddress string `protobuf:"bytes,10,opt,name=refund_address,json=refundAddress,proto3" json:"refund_address,omitempty"`
+}
+
+func (x *QueryQuoteLimitRequest) Reset() {
+	*x = QueryQuoteLimitRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_types_query_quotes_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *QueryQuoteLimitRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryQuoteLimitRequest) ProtoMessage() {}
+
+// Deprecated: Use QueryQuoteLimitRequest.ProtoReflect.Descriptor instead.
+func (*QueryQuoteLimitRequest) Descriptor() ([]byte, []int) {
+	return file_types_query_quotes_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *QueryQuoteLimitRequest) GetFromAsset() string {
+	if x != nil {
+		return x.FromAsset
+	}
+	return ""
+}
+
+func (x *QueryQuoteLimitRequest) GetToAsset() string {
+	if x != nil {
+		return x.ToAsset
+	}
+	return ""
+}
+
+func (x *QueryQuoteLimitRequest) GetAmount() string {
+	if x != nil {
+		return x.Amount
+	}
+	return ""
+}
+
+func (x *QueryQuoteLimitRequest) GetDestination() string {
+	if x != nil {
+		return x.Destination
+	}
+	return ""
+}
+
+func (x *QueryQuoteLimitRequest) GetTargetOut() string {
+	if x != nil {
+		return x.TargetOut
+	}
+	return ""
+}
+
+func (x *QueryQuoteLimitRequest) GetCustomTtl() string {
+	if x != nil {
+		return x.CustomTtl
+	}
+	return ""
+}
+
+func (x *QueryQuoteLimitRequest) GetStreamingQuantity() string {
+	if x != nil {
+		return x.StreamingQuantity
+	}
+	return ""
+}
+
+func (x *QueryQuoteLimitRequest) GetAffiliate() string {
+	if x != nil {
+		return x.Affiliate
+	}
+	return ""
+}
+
+func (x *QueryQuoteLimitRequest) GetAffiliateBps() string {
+	if x != nil {
+		return x.AffiliateBps
+	}
+	return ""
+}
+
+func (x *QueryQuoteLimitRequest) GetRefundAddress() string {
+	if x != nil {
+		return x.RefundAddress
+	}
+	return ""
+}
+
+// Response for limit order quote
+type QueryQuoteLimitResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// expected amount out (same as target_out for limit orders)
+	ExpectedAmountOut string `protobuf:"bytes,1,opt,name=expected_amount_out,json=expectedAmountOut,proto3" json:"expected_amount_out,omitempty"`
+	// fees breakdown
+	Fees *QuoteFees `protobuf:"bytes,2,opt,name=fees,proto3" json:"fees,omitempty"`
+	// inbound address to send funds to
+	InboundAddress string `protobuf:"bytes,3,opt,name=inbound_address,json=inboundAddress,proto3" json:"inbound_address,omitempty"`
+	// memo to include in transaction
+	Memo string `protobuf:"bytes,4,opt,name=memo,proto3" json:"memo,omitempty"`
+	// order expiry block height
+	OrderExpiryBlock int64 `protobuf:"varint,5,opt,name=order_expiry_block,json=orderExpiryBlock,proto3" json:"order_expiry_block,omitempty"`
+	// order expiry timestamp (unix)
+	OrderExpiryTimestamp int64 `protobuf:"varint,6,opt,name=order_expiry_timestamp,json=orderExpiryTimestamp,proto3" json:"order_expiry_timestamp,omitempty"`
+	// recommended minimum amount in
+	RecommendedMinAmountIn string `protobuf:"bytes,7,opt,name=recommended_min_amount_in,json=recommendedMinAmountIn,proto3" json:"recommended_min_amount_in,omitempty"`
+	// router address for EVM chains
+	Router string `protobuf:"bytes,8,opt,name=router,proto3" json:"router,omitempty"`
+	// dust threshold for source chain
+	DustThreshold string `protobuf:"bytes,9,opt,name=dust_threshold,json=dustThreshold,proto3" json:"dust_threshold,omitempty"`
+	// notes about the swap
+	Notes string `protobuf:"bytes,10,opt,name=notes,proto3" json:"notes,omitempty"`
+	// the recommended gas rate to use for the inbound to ensure timely
+	// confirmation
+	RecommendedGasRate string `protobuf:"bytes,11,opt,name=recommended_gas_rate,json=recommendedGasRate,proto3" json:"recommended_gas_rate,omitempty"`
+	// the units of the recommended gas rate
+	GasRateUnits string `protobuf:"bytes,12,opt,name=gas_rate_units,json=gasRateUnits,proto3" json:"gas_rate_units,omitempty"`
+}
+
+func (x *QueryQuoteLimitResponse) Reset() {
+	*x = QueryQuoteLimitResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_types_query_quotes_proto_msgTypes[5]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *QueryQuoteLimitResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryQuoteLimitResponse) ProtoMessage() {}
+
+// Deprecated: Use QueryQuoteLimitResponse.ProtoReflect.Descriptor instead.
+func (*QueryQuoteLimitResponse) Descriptor() ([]byte, []int) {
+	return file_types_query_quotes_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *QueryQuoteLimitResponse) GetExpectedAmountOut() string {
+	if x != nil {
+		return x.ExpectedAmountOut
+	}
+	return ""
+}
+
+func (x *QueryQuoteLimitResponse) GetFees() *QuoteFees {
+	if x != nil {
+		return x.Fees
+	}
+	return nil
+}
+
+func (x *QueryQuoteLimitResponse) GetInboundAddress() string {
+	if x != nil {
+		return x.InboundAddress
+	}
+	return ""
+}
+
+func (x *QueryQuoteLimitResponse) GetMemo() string {
+	if x != nil {
+		return x.Memo
+	}
+	return ""
+}
+
+func (x *QueryQuoteLimitResponse) GetOrderExpiryBlock() int64 {
+	if x != nil {
+		return x.OrderExpiryBlock
+	}
+	return 0
+}
+
+func (x *QueryQuoteLimitResponse) GetOrderExpiryTimestamp() int64 {
+	if x != nil {
+		return x.OrderExpiryTimestamp
+	}
+	return 0
+}
+
+func (x *QueryQuoteLimitResponse) GetRecommendedMinAmountIn() string {
+	if x != nil {
+		return x.RecommendedMinAmountIn
+	}
+	return ""
+}
+
+func (x *QueryQuoteLimitResponse) GetRouter() string {
+	if x != nil {
+		return x.Router
+	}
+	return ""
+}
+
+func (x *QueryQuoteLimitResponse) GetDustThreshold() string {
+	if x != nil {
+		return x.DustThreshold
+	}
+	return ""
+}
+
+func (x *QueryQuoteLimitResponse) GetNotes() string {
+	if x != nil {
+		return x.Notes
+	}
+	return ""
+}
+
+func (x *QueryQuoteLimitResponse) GetRecommendedGasRate() string {
+	if x != nil {
+		return x.RecommendedGasRate
+	}
+	return ""
+}
+
+func (x *QueryQuoteLimitResponse) GetGasRateUnits() string {
+	if x != nil {
+		return x.GasRateUnits
+	}
+	return ""
+}
+
 var File_types_query_quotes_proto protoreflect.FileDescriptor
 
 var file_types_query_quotes_proto_rawDesc = []byte{
@@ -4791,16 +7150,92 @@ var file_types_query_quotes_proto_rawDesc = []byte{
 	0x28, 0x09, 0x42, 0x08, 0xea, 0xde, 0x1f, 0x04, 0x64, 0x61, 0x74, 0x61, 0x52, 0x04, 0x64, 0x61,
 	0x74, 0x61, 0x12, 0x22, 0x0a, 0x06, 0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x18, 0x03, 0x20, 0x01,
 	0x28, 0x03, 0x42, 0x0a, 0xea, 0xde, 0x1f, 0x06, 0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x52, 0x06,
-	0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x42, 0x81, 0x01, 0x0a, 0x09, 0x63, 0x6f, 0x6d, 0x2e, 0x74,
-	0x79, 0x70, 0x65, 0x73, 0x42, 0x10, 0x51, 0x75, 0x65, 0x72, 0x79, 0x51, 0x75, 0x6f, 0x74, 0x65,
-	0x73, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x2a, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62,
-	0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74,
-	0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x74,
-	0x79, 0x70, 0x65, 0x73, 0xa2, 0x02, 0x03, 0x54, 0x58, 0x58, 0xaa, 0x02, 0x05, 0x54, 0x79, 0x70,
-	0x65, 0x73, 0xca, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xe2, 0x02, 0x11, 0x54, 0x79, 0x70,
-	0x65, 0x73, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02,
-	0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xc8, 0xe2, 0x1e, 0x01, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74,
-	0x6f, 0x33,
+	0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x22, 0x8c, 0x04, 0x0a, 0x16, 0x51, 0x75, 0x65, 0x72, 0x79,
+	0x51, 0x75, 0x6f, 0x74, 0x65, 0x4c, 0x69, 0x6d, 0x69, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x12, 0x2d, 0x0a, 0x0a, 0x66, 0x72, 0x6f, 0x6d, 0x5f, 0x61, 0x73, 0x73, 0x65, 0x74, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x09, 0x42, 0x0e, 0xea, 0xde, 0x1f, 0x0a, 0x66, 0x72, 0x6f, 0x6d, 0x5f,
+	0x61, 0x73, 0x73, 0x65, 0x74, 0x52, 0x09, 0x66, 0x72, 0x6f, 0x6d, 0x41, 0x73, 0x73, 0x65, 0x74,
+	0x12, 0x27, 0x0a, 0x08, 0x74, 0x6f, 0x5f, 0x61, 0x73, 0x73, 0x65, 0x74, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x09, 0x42, 0x0c, 0xea, 0xde, 0x1f, 0x08, 0x74, 0x6f, 0x5f, 0x61, 0x73, 0x73, 0x65, 0x74,
+	0x52, 0x07, 0x74, 0x6f, 0x41, 0x73, 0x73, 0x65, 0x74, 0x12, 0x22, 0x0a, 0x06, 0x61, 0x6d, 0x6f,
+	0x75, 0x6e, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x42, 0x0a, 0xea, 0xde, 0x1f, 0x06, 0x61,
+	0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x52, 0x06, 0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x12, 0x31, 0x0a,
+	0x0b, 0x64, 0x65, 0x73, 0x74, 0x69, 0x6e, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x04, 0x20, 0x01,
+	0x28, 0x09, 0x42, 0x0f, 0xea, 0xde, 0x1f, 0x0b, 0x64, 0x65, 0x73, 0x74, 0x69, 0x6e, 0x61, 0x74,
+	0x69, 0x6f, 0x6e, 0x52, 0x0b, 0x64, 0x65, 0x73, 0x74, 0x69, 0x6e, 0x61, 0x74, 0x69, 0x6f, 0x6e,
+	0x12, 0x2d, 0x0a, 0x0a, 0x74, 0x61, 0x72, 0x67, 0x65, 0x74, 0x5f, 0x6f, 0x75, 0x74, 0x18, 0x05,
+	0x20, 0x01, 0x28, 0x09, 0x42, 0x0e, 0xea, 0xde, 0x1f, 0x0a, 0x74, 0x61, 0x72, 0x67, 0x65, 0x74,
+	0x5f, 0x6f, 0x75, 0x74, 0x52, 0x09, 0x74, 0x61, 0x72, 0x67, 0x65, 0x74, 0x4f, 0x75, 0x74, 0x12,
+	0x2d, 0x0a, 0x0a, 0x63, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x5f, 0x74, 0x74, 0x6c, 0x18, 0x06, 0x20,
+	0x01, 0x28, 0x09, 0x42, 0x0e, 0xea, 0xde, 0x1f, 0x0a, 0x63, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x5f,
+	0x74, 0x74, 0x6c, 0x52, 0x09, 0x63, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x54, 0x74, 0x6c, 0x12, 0x45,
+	0x0a, 0x12, 0x73, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x69, 0x6e, 0x67, 0x5f, 0x71, 0x75, 0x61, 0x6e,
+	0x74, 0x69, 0x74, 0x79, 0x18, 0x07, 0x20, 0x01, 0x28, 0x09, 0x42, 0x16, 0xea, 0xde, 0x1f, 0x12,
+	0x73, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x69, 0x6e, 0x67, 0x5f, 0x71, 0x75, 0x61, 0x6e, 0x74, 0x69,
+	0x74, 0x79, 0x52, 0x11, 0x73, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x69, 0x6e, 0x67, 0x51, 0x75, 0x61,
+	0x6e, 0x74, 0x69, 0x74, 0x79, 0x12, 0x2b, 0x0a, 0x09, 0x61, 0x66, 0x66, 0x69, 0x6c, 0x69, 0x61,
+	0x74, 0x65, 0x18, 0x08, 0x20, 0x01, 0x28, 0x09, 0x42, 0x0d, 0xea, 0xde, 0x1f, 0x09, 0x61, 0x66,
+	0x66, 0x69, 0x6c, 0x69, 0x61, 0x74, 0x65, 0x52, 0x09, 0x61, 0x66, 0x66, 0x69, 0x6c, 0x69, 0x61,
+	0x74, 0x65, 0x12, 0x36, 0x0a, 0x0d, 0x61, 0x66, 0x66, 0x69, 0x6c, 0x69, 0x61, 0x74, 0x65, 0x5f,
+	0x62, 0x70, 0x73, 0x18, 0x09, 0x20, 0x01, 0x28, 0x09, 0x42, 0x11, 0xea, 0xde, 0x1f, 0x0d, 0x61,
+	0x66, 0x66, 0x69, 0x6c, 0x69, 0x61, 0x74, 0x65, 0x5f, 0x62, 0x70, 0x73, 0x52, 0x0c, 0x61, 0x66,
+	0x66, 0x69, 0x6c, 0x69, 0x61, 0x74, 0x65, 0x42, 0x70, 0x73, 0x12, 0x39, 0x0a, 0x0e, 0x72, 0x65,
+	0x66, 0x75, 0x6e, 0x64, 0x5f, 0x61, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x18, 0x0a, 0x20, 0x01,
+	0x28, 0x09, 0x42, 0x12, 0xea, 0xde, 0x1f, 0x0e, 0x72, 0x65, 0x66, 0x75, 0x6e, 0x64, 0x5f, 0x61,
+	0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x52, 0x0d, 0x72, 0x65, 0x66, 0x75, 0x6e, 0x64, 0x41, 0x64,
+	0x64, 0x72, 0x65, 0x73, 0x73, 0x22, 0xb8, 0x05, 0x0a, 0x17, 0x51, 0x75, 0x65, 0x72, 0x79, 0x51,
+	0x75, 0x6f, 0x74, 0x65, 0x4c, 0x69, 0x6d, 0x69, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x12, 0x47, 0x0a, 0x13, 0x65, 0x78, 0x70, 0x65, 0x63, 0x74, 0x65, 0x64, 0x5f, 0x61, 0x6d,
+	0x6f, 0x75, 0x6e, 0x74, 0x5f, 0x6f, 0x75, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x42, 0x17,
+	0xea, 0xde, 0x1f, 0x13, 0x65, 0x78, 0x70, 0x65, 0x63, 0x74, 0x65, 0x64, 0x5f, 0x61, 0x6d, 0x6f,
+	0x75, 0x6e, 0x74, 0x5f, 0x6f, 0x75, 0x74, 0x52, 0x11, 0x65, 0x78, 0x70, 0x65, 0x63, 0x74, 0x65,
+	0x64, 0x41, 0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x4f, 0x75, 0x74, 0x12, 0x2e, 0x0a, 0x04, 0x66, 0x65,
+	0x65, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x10, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73,
+	0x2e, 0x51, 0x75, 0x6f, 0x74, 0x65, 0x46, 0x65, 0x65, 0x73, 0x42, 0x08, 0xea, 0xde, 0x1f, 0x04,
+	0x66, 0x65, 0x65, 0x73, 0x52, 0x04, 0x66, 0x65, 0x65, 0x73, 0x12, 0x3c, 0x0a, 0x0f, 0x69, 0x6e,
+	0x62, 0x6f, 0x75, 0x6e, 0x64, 0x5f, 0x61, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x09, 0x42, 0x13, 0xea, 0xde, 0x1f, 0x0f, 0x69, 0x6e, 0x62, 0x6f, 0x75, 0x6e, 0x64,
+	0x5f, 0x61, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x52, 0x0e, 0x69, 0x6e, 0x62, 0x6f, 0x75, 0x6e,
+	0x64, 0x41, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x12, 0x1c, 0x0a, 0x04, 0x6d, 0x65, 0x6d, 0x6f,
+	0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x42, 0x08, 0xea, 0xde, 0x1f, 0x04, 0x6d, 0x65, 0x6d, 0x6f,
+	0x52, 0x04, 0x6d, 0x65, 0x6d, 0x6f, 0x12, 0x44, 0x0a, 0x12, 0x6f, 0x72, 0x64, 0x65, 0x72, 0x5f,
+	0x65, 0x78, 0x70, 0x69, 0x72, 0x79, 0x5f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x05, 0x20, 0x01,
+	0x28, 0x03, 0x42, 0x16, 0xea, 0xde, 0x1f, 0x12, 0x6f, 0x72, 0x64, 0x65, 0x72, 0x5f, 0x65, 0x78,
+	0x70, 0x69, 0x72, 0x79, 0x5f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x52, 0x10, 0x6f, 0x72, 0x64, 0x65,
+	0x72, 0x45, 0x78, 0x70, 0x69, 0x72, 0x79, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x50, 0x0a, 0x16,
+	0x6f, 0x72, 0x64, 0x65, 0x72, 0x5f, 0x65, 0x78, 0x70, 0x69, 0x72, 0x79, 0x5f, 0x74, 0x69, 0x6d,
+	0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x18, 0x06, 0x20, 0x01, 0x28, 0x03, 0x42, 0x1a, 0xea, 0xde,
+	0x1f, 0x16, 0x6f, 0x72, 0x64, 0x65, 0x72, 0x5f, 0x65, 0x78, 0x70, 0x69, 0x72, 0x79, 0x5f, 0x74,
+	0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52, 0x14, 0x6f, 0x72, 0x64, 0x65, 0x72, 0x45,
+	0x78, 0x70, 0x69, 0x72, 0x79, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x12, 0x58,
+	0x0a, 0x19, 0x72, 0x65, 0x63, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x64, 0x65, 0x64, 0x5f, 0x6d, 0x69,
+	0x6e, 0x5f, 0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x5f, 0x69, 0x6e, 0x18, 0x07, 0x20, 0x01, 0x28,
+	0x09, 0x42, 0x1d, 0xea, 0xde, 0x1f, 0x19, 0x72, 0x65, 0x63, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x64,
+	0x65, 0x64, 0x5f, 0x6d, 0x69, 0x6e, 0x5f, 0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x5f, 0x69, 0x6e,
+	0x52, 0x16, 0x72, 0x65, 0x63, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x64, 0x65, 0x64, 0x4d, 0x69, 0x6e,
+	0x41, 0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x49, 0x6e, 0x12, 0x22, 0x0a, 0x06, 0x72, 0x6f, 0x75, 0x74,
+	0x65, 0x72, 0x18, 0x08, 0x20, 0x01, 0x28, 0x09, 0x42, 0x0a, 0xea, 0xde, 0x1f, 0x06, 0x72, 0x6f,
+	0x75, 0x74, 0x65, 0x72, 0x52, 0x06, 0x72, 0x6f, 0x75, 0x74, 0x65, 0x72, 0x12, 0x39, 0x0a, 0x0e,
+	0x64, 0x75, 0x73, 0x74, 0x5f, 0x74, 0x68, 0x72, 0x65, 0x73, 0x68, 0x6f, 0x6c, 0x64, 0x18, 0x09,
+	0x20, 0x01, 0x28, 0x09, 0x42, 0x12, 0xea, 0xde, 0x1f, 0x0e, 0x64, 0x75, 0x73, 0x74, 0x5f, 0x74,
+	0x68, 0x72, 0x65, 0x73, 0x68, 0x6f, 0x6c, 0x64, 0x52, 0x0d, 0x64, 0x75, 0x73, 0x74, 0x54, 0x68,
+	0x72, 0x65, 0x73, 0x68, 0x6f, 0x6c, 0x64, 0x12, 0x1f, 0x0a, 0x05, 0x6e, 0x6f, 0x74, 0x65, 0x73,
+	0x18, 0x0a, 0x20, 0x01, 0x28, 0x09, 0x42, 0x09, 0xea, 0xde, 0x1f, 0x05, 0x6e, 0x6f, 0x74, 0x65,
+	0x73, 0x52, 0x05, 0x6e, 0x6f, 0x74, 0x65, 0x73, 0x12, 0x30, 0x0a, 0x14, 0x72, 0x65, 0x63, 0x6f,
+	0x6d, 0x6d, 0x65, 0x6e, 0x64, 0x65, 0x64, 0x5f, 0x67, 0x61, 0x73, 0x5f, 0x72, 0x61, 0x74, 0x65,
+	0x18, 0x0b, 0x20, 0x01, 0x28, 0x09, 0x52, 0x12, 0x72, 0x65, 0x63, 0x6f, 0x6d, 0x6d, 0x65, 0x6e,
+	0x64, 0x65, 0x64, 0x47, 0x61, 0x73, 0x52, 0x61, 0x74, 0x65, 0x12, 0x24, 0x0a, 0x0e, 0x67, 0x61,
+	0x73, 0x5f, 0x72, 0x61, 0x74, 0x65, 0x5f, 0x75, 0x6e, 0x69, 0x74, 0x73, 0x18, 0x0c, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x0c, 0x67, 0x61, 0x73, 0x52, 0x61, 0x74, 0x65, 0x55, 0x6e, 0x69, 0x74, 0x73,
+	0x42, 0x81, 0x01, 0x0a, 0x09, 0x63, 0x6f, 0x6d, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x42, 0x10,
+	0x51, 0x75, 0x65, 0x72, 0x79, 0x51, 0x75, 0x6f, 0x74, 0x65, 0x73, 0x50, 0x72, 0x6f, 0x74, 0x6f,
+	0x50, 0x01, 0x5a, 0x2a, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74,
+	0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64,
+	0x65, 0x2f, 0x76, 0x33, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x73, 0xa2, 0x02,
+	0x03, 0x54, 0x58, 0x58, 0xaa, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xca, 0x02, 0x05, 0x54,
+	0x79, 0x70, 0x65, 0x73, 0xe2, 0x02, 0x11, 0x54, 0x79, 0x70, 0x65, 0x73, 0x5c, 0x47, 0x50, 0x42,
+	0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73,
+	0xc8, 0xe2, 0x1e, 0x01, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -4815,21 +7250,24 @@ func file_types_query_quotes_proto_rawDescGZIP() []byte {
 	return file_types_query_quotes_proto_rawDescData
 }
 
-var file_types_query_quotes_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_types_query_quotes_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_types_query_quotes_proto_goTypes = []interface{}{
-	(*QueryQuoteSwapRequest)(nil),  // 0: types.QueryQuoteSwapRequest
-	(*QueryQuoteSwapResponse)(nil), // 1: types.QueryQuoteSwapResponse
-	(*QuoteFees)(nil),              // 2: types.QuoteFees
-	(*Vout)(nil),                   // 3: types.Vout
+	(*QueryQuoteSwapRequest)(nil),   // 0: types.QueryQuoteSwapRequest
+	(*QueryQuoteSwapResponse)(nil),  // 1: types.QueryQuoteSwapResponse
+	(*QuoteFees)(nil),               // 2: types.QuoteFees
+	(*Vout)(nil),                    // 3: types.Vout
+	(*QueryQuoteLimitRequest)(nil),  // 4: types.QueryQuoteLimitRequest
+	(*QueryQuoteLimitResponse)(nil), // 5: types.QueryQuoteLimitResponse
 }
 var file_types_query_quotes_proto_depIdxs = []int32{
 	2, // 0: types.QueryQuoteSwapResponse.fees:type_name -> types.QuoteFees
 	3, // 1: types.QueryQuoteSwapResponse.vout:type_name -> types.Vout
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	2, // 2: types.QueryQuoteLimitResponse.fees:type_name -> types.QuoteFees
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_types_query_quotes_proto_init() }
@@ -4886,6 +7324,30 @@ func file_types_query_quotes_proto_init() {
 				return nil
 			}
 		}
+		file_types_query_quotes_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*QueryQuoteLimitRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_types_query_quotes_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*QueryQuoteLimitResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -4893,7 +7355,7 @@ func file_types_query_quotes_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_types_query_quotes_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

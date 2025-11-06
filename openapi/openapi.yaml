@@ -1550,6 +1550,80 @@ paths:
               schema:
                 $ref: "#/components/schemas/QuoteSwapResponse"
 
+  /thorchain/quote/limit:
+    parameters:
+      - $ref: "#/components/parameters/queryHeight"
+      - name: from_asset
+        in: query
+        description: the source asset
+        schema:
+          type: string
+          example: "BTC.BTC"
+      - name: to_asset
+        in: query
+        description: the target asset
+        schema:
+          type: string
+          example: "ETH.ETH"
+      - name: amount
+        in: query
+        description: the source asset amount in 1e8 decimals
+        schema:
+          type: integer
+          format: int64
+          example: 1000000
+      - name: destination
+        in: query
+        description: the destination address, required to generate memo
+        schema:
+          type: string
+          example: "0x1c7b17362c84287bd1184447e6dfeaf920c31bbe"
+      - name: refund_address
+        in: query
+        description: the refund address, refunds will be sent here if the swap fails
+        schema:
+          type: string
+          example: "0x1c7b17362c84287bd1184447e6dfeaf920c31bbe"
+      - name: custom_ttl
+        in: query
+        description: the custom TTL in blocks for limit orders
+        schema:
+          type: integer
+          format: int64
+          example: 10
+      - name: streaming_quantity
+        in: query
+        description: the quantity of swaps within a streaming swap
+        schema:
+          type: integer
+          format: int64
+          example: 10
+      - name: affiliate_bps
+        in: query
+        description: the affiliate fee in basis points
+        schema:
+          type: integer
+          format: int64
+          example: 100
+      - name: affiliate
+        in: query
+        description: the affiliate (address or thorname)
+        schema:
+          type: string
+          example: "t"
+    get:
+      description: Provide a limit order quote and memo for the provided limit order
+      operationId: quotelimit
+      tags:
+        - Limit Order
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuoteLimitResponse"
+
   # ------------------------------ invariants ------------------------------
 
   /thorchain/invariant/{invariant}:
@@ -4625,6 +4699,63 @@ components:
           format: int64
           description: total number of seconds a swap is expected to take (inbound conf + streaming swap + outbound delay)
           example: 600
+
+    QuoteLimitResponse:
+      type: object
+      required:
+        - expected_amount_out
+        - fees
+        - order_expiry_block
+        - order_expiry_timestamp
+        - inbound_address
+      properties:
+        <<: *quote-properties
+        memo:
+          type: string
+          description: generated memo for the limit order
+          example: "=:ETH.ETH:0x1c7b17362c84287bd1184447e6dfeaf920c31bbe:1440450000:thor17gw75axcnr8747pkanye45pnrwk7p9c3cqncsv:100"
+        expected_amount_out:
+          type: string
+          description: the amount of the target asset the user can expect to receive after fees
+          example: "10000"
+        order_expiry_block:
+          type: integer
+          format: int64
+          description: the block height when the limit order will expire
+          example: 1000000
+        order_expiry_timestamp:
+          type: integer
+          format: int64
+          description: the timestamp when the limit order will expire
+          example: 1671660285
+        recommended_min_amount_in:
+          type: string
+          description: the recommended minimum amount in for the limit order
+          example: "10000"
+        router:
+          type: string
+          description: the EVM chain router contract address
+          example: "0x3624525075b88B24ecc29CE226b0CEc1fFcB6976"
+        dust_threshold:
+          type: string
+          description: the dust threshold for the source chain
+          example: "10000"
+        notes:
+          type: string
+          description: notes about the limit order
+          example: "Transfer to the inbound_address the asset with the memo. Do not use multi-in, multi-out transactions."
+        recommended_gas_rate:
+          type: string
+          description: the recommended gas rate to use for the inbound to ensure timely confirmation
+          example: "20000000000"
+        gas_rate_units:
+          type: string
+          description: the units of the recommended gas rate
+          example: "gwei"
+        inbound_address:
+          type: string
+          description: the inbound address for the transaction on the source chain
+          example: "bc1qjk3xzu5slu7mtmc8jc9yed3zqvkhkttm700g9a"
 
     QuoteSaverDepositResponse:
       type: object

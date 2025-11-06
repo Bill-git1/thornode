@@ -11,6 +11,7 @@ api_codes.go
 api_export.go
 api_health.go
 api_invariants.go
+api_limit_order.go
 api_liquidity_providers.go
 api_mimir.go
 api_network.go
@@ -84,6 +85,7 @@ docs/KeysignInfo.md
 docs/KeysignMetrics.md
 docs/KeysignResponse.md
 docs/LastBlock.md
+docs/LimitOrderApi.md
 docs/LimitSwapWithDetails.md
 docs/LimitSwapsResponse.md
 docs/LimitSwapsSummaryResponse.md
@@ -125,6 +127,7 @@ docs/QueueApi.md
 docs/QueueResponse.md
 docs/QuoteApi.md
 docs/QuoteFees.md
+docs/QuoteLimitResponse.md
 docs/QuoteLoanCloseResponse.md
 docs/QuoteLoanOpenResponse.md
 docs/QuoteSaverDepositResponse.md
@@ -259,6 +262,7 @@ model_pool.go
 model_pool_slip_response_inner.go
 model_queue_response.go
 model_quote_fees.go
+model_quote_limit_response.go
 model_quote_loan_close_response.go
 model_quote_loan_open_response.go
 model_quote_saver_deposit_response.go
