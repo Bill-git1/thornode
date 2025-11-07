@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
+	"strings"
 
 	"cosmossdk.io/core/comet"
 	"github.com/cometbft/cometbft/crypto"
@@ -15,6 +16,7 @@ import (
 	"gitlab.com/thorchain/thornode/v3/common/cosmos"
 	"gitlab.com/thorchain/thornode/v3/constants"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/keeper"
+	mem "gitlab.com/thorchain/thornode/v3/x/thorchain/memo"
 	"gitlab.com/thorchain/thornode/v3/x/thorchain/types"
 )
 
@@ -198,7 +200,7 @@ func (s *SlasherVCUR) HandleMissingSign(ctx cosmos.Context, addr crypto.Address,
 func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 	var resultErr error
 	maxOutboundAttempts := mgr.Keeper().GetConfigInt64(ctx, constants.MaxOutboundAttempts)
-	signingTransPeriod := mgr.GetConstants().GetInt64Value(constants.SigningTransactionPeriod)
+	signingTransPeriod := mgr.Keeper().GetConfigInt64(ctx, constants.SigningTransactionPeriod)
 	if ctx.BlockHeight() < signingTransPeriod {
 		return nil
 	}
@@ -281,20 +283,32 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 				}
 			}
 
+			// if vault is inactive, do not reassign the outbound txn to
+			// another vault. This check must be done before treasury recovery
+			// to prevent attempting recovery from retired vaults.
+			if vault.Status == InactiveVault {
+				ctx.Logger().Info("cannot reassign outbound from inactive vault", "hash", toi.InHash)
+				continue
+			}
+
 			if maxOutboundAttempts > 0 {
 				age := ctx.BlockHeight() - voter.FinalisedHeight
 				attempts := age / signingTransPeriod
 				if attempts >= maxOutboundAttempts {
-					ctx.Logger().Info("txn dropped, too many attempts", "hash", toi.InHash)
+					// For user-facing outbounds (refund, outbound, ragnarok), send to treasury recovery
+					if memo.IsOutbound() {
+						treasuryErr := s.sendFailedOutboundToTreasury(ctx, mgr, toi, vault, memo)
+						if treasuryErr != nil {
+							ctx.Logger().Error("failed to send outbound to treasury recovery", "error", treasuryErr, "hash", toi.InHash)
+						} else {
+							txs.TxArray[i].OutHash = common.BlankTxID
+						}
+					} else {
+						// For non-outbound transactions (shouldn't happen often), just log and drop
+						ctx.Logger().Info("txn dropped, too many attempts (non-outbound)", "hash", toi.InHash)
+					}
 					continue
 				}
-			}
-
-			// if vault is inactive, do not reassign the outbound txn to
-			// another vault
-			if vault.Status == InactiveVault {
-				ctx.Logger().Info("cannot reassign outbound from inactive vault", "hash", toi.InHash)
-				continue
 			}
 
 			if !frozen && s.needsNewVault(ctx, mgr, vault, signingTransPeriod, voter.FinalisedHeight, toi) {
@@ -439,6 +453,239 @@ func (s *SlasherVCUR) LackSigning(ctx cosmos.Context, mgr Manager) error {
 	}
 
 	return resultErr
+}
+
+// getOriginalSwapDetails retrieves the original swap transaction details for a failed outbound
+// Returns the original transaction, swap memo, and any error encountered
+func (s *SlasherVCUR) getOriginalSwapDetails(ctx cosmos.Context, mgr Manager, inboundHash common.TxID) (ObservedTx, SwapMemo, error) {
+	voter, err := mgr.Keeper().GetObservedTxInVoter(ctx, inboundHash)
+	if err != nil {
+		return ObservedTx{}, SwapMemo{}, fmt.Errorf("could not get observed tx voter: %w", err)
+	}
+
+	if voter.Tx.Tx.ID.IsEmpty() {
+		return ObservedTx{}, SwapMemo{}, fmt.Errorf("voter tx ID is empty")
+	}
+
+	originalMemo, err := ParseMemoWithTHORNames(ctx, mgr.Keeper(), voter.Tx.Tx.Memo)
+	if err != nil {
+		return ObservedTx{}, SwapMemo{}, fmt.Errorf("could not parse original memo: %w", err)
+	}
+
+	if !originalMemo.IsType(TxSwap) {
+		return ObservedTx{}, SwapMemo{}, fmt.Errorf("original tx is not a swap (type: %s)", originalMemo.GetType())
+	}
+
+	swapMemo, ok := originalMemo.(SwapMemo)
+	if !ok {
+		return ObservedTx{}, SwapMemo{}, fmt.Errorf("could not cast to SwapMemo")
+	}
+
+	return voter.Tx, swapMemo, nil
+}
+
+// generateRecoveryTxID creates a unique transaction ID for a recovery swap by hashing
+// the original transaction ID with the recovery type suffix and block height. This prevents
+// collisions with the original swap in the swap queue, especially important for streaming swaps
+// that may still be in progress when the recovery is triggered.
+func (s *SlasherVCUR) generateRecoveryTxID(ctx cosmos.Context, originalTxID common.TxID, recoveryType string) common.TxID {
+	// Create a unique hash by combining original txID + recovery type + block height
+	// This ensures no collision with the original swap queue entry
+	hashInput := fmt.Sprintf("%s:%s:%d", originalTxID.String(), recoveryType, ctx.BlockHeight())
+	hash := crypto.Sha256([]byte(hashInput))
+	return common.TxID(fmt.Sprintf("%X", hash))
+}
+
+// queueRecoverySwap is a helper function that queues a swap for failed outbound recovery.
+// It handles the common logic of creating a swap transaction, determining the queue version,
+// and emitting the appropriate events.
+func (s *SlasherVCUR) queueRecoverySwap(
+	ctx cosmos.Context,
+	mgr Manager,
+	toi TxOutItem,
+	vault Vault,
+	txID common.TxID,
+	targetAsset common.Asset,
+	destination common.Address,
+	memo string,
+	recoveryType string,
+) error {
+	// Generate a unique transaction ID for the recovery swap to prevent collisions
+	// with the original swap in the queue (especially important for streaming swaps)
+	recoveryTxID := s.generateRecoveryTxID(ctx, txID, recoveryType)
+
+	// Get vault's address for the chain of this coin for tracking purposes.
+	vaultAddr, err := vault.PubKey.GetAddress(toi.Coin.Asset.GetChain())
+	if err != nil {
+		return fmt.Errorf("failed to get vault address for chain %s: %w", toi.Coin.Asset.GetChain(), err)
+	}
+
+	// Create Tx for the swap.
+	// Design notes:
+	// - ID uses a uniquely generated hash to prevent swap queue collisions with the original transaction.
+	// - Chain is set to THORChain because this is an internal protocol-initiated swap,
+	//   not an observed transaction from an external chain. The swap handler doesn't
+	//   validate or use the Chain field, so this is safe.
+	// - FromAddress uses the external chain address (e.g., BTC address) for tracking
+	//   purposes. The swap handler only uses FromAddress for validation checks (e.g.,
+	//   NoopAddress comparisons) and doesn't enforce chain-address consistency.
+	// - Gas is empty because this is an internal operation. The swap handler doesn't
+	//   use the Gas field - gas is only relevant for external chain transactions.
+	// - Coins contains the external chain asset (e.g., BTC) because the vault holds
+	//   these funds in THORChain's accounting, and we're swapping from that asset.
+	recoveryTx := common.Tx{
+		ID:          recoveryTxID,
+		Chain:       common.THORChain,
+		FromAddress: vaultAddr,
+		ToAddress:   vaultAddr,
+		Coins:       common.Coins{toi.Coin},
+		Memo:        memo,
+		Gas:         common.Gas{},
+	}
+
+	// Get Asgard module address for signer
+	asgardAddr := mgr.Keeper().GetModuleAccAddress(AsgardName)
+
+	// Determine which swap queue to use and set appropriate version
+	enableAdvQueue := mgr.Keeper().GetConfigInt64(ctx, constants.EnableAdvSwapQueue)
+	swapVersion := types.SwapVersion_v1
+	if enableAdvQueue > 0 {
+		swapVersion = types.SwapVersion_v2
+	}
+
+	// Create swap message
+	swapMsg := NewMsgSwap(
+		recoveryTx,
+		targetAsset,       // target asset
+		destination,       // destination
+		cosmos.ZeroUint(), // tradeTarget (market order)
+		common.NoAddress,  // no affiliate
+		cosmos.ZeroUint(), // no affiliate fee
+		"",                // no aggregator
+		"",                // no agg target
+		nil,               // no agg limit
+		MarketSwap,        // swap type
+		0,                 // quantity (let handler decide)
+		1,                 // interval
+		swapVersion,       // v1 for legacy queue, v2 for advanced queue
+		asgardAddr,        // Asgard module account as signer
+	)
+
+	// Add to swap queue
+	if enableAdvQueue > 0 {
+		if err := mgr.AdvSwapQueueMgr().AddSwapQueueItem(ctx, mgr, swapMsg); err != nil {
+			return fmt.Errorf("failed to add %s recovery swap to adv queue: %w", recoveryType, err)
+		}
+	} else {
+		if err := mgr.Keeper().SetSwapQueueItem(ctx, *swapMsg, 0); err != nil {
+			return fmt.Errorf("failed to add %s recovery swap to queue: %w", recoveryType, err)
+		}
+	}
+
+	ctx.Logger().Info("recovery swap queued",
+		"original_hash", txID,
+		"recovery_hash", recoveryTxID,
+		"recovery_type", recoveryType,
+		"from_asset", toi.Coin.Asset,
+		"to_asset", targetAsset,
+		"destination", destination)
+
+	// Emit failed outbound recovery event
+	recoveryEvent := NewEventFailedOutboundRecovery(
+		txID,
+		toi.Coin,
+		recoveryType,
+		destination,
+		memo,
+	)
+	if err := mgr.EventMgr().EmitEvent(ctx, recoveryEvent); err != nil {
+		ctx.Logger().Error("failed to emit recovery event", "error", err)
+	}
+
+	return nil
+}
+
+// sendFailedSwapReverseSwap creates a reverse swap to refund the original sender when a swap outbound fails
+func (s *SlasherVCUR) sendFailedSwapReverseSwap(ctx cosmos.Context, mgr Manager, toi TxOutItem, vault Vault, originalTx ObservedTx, swapMemo SwapMemo) error {
+	ctx.Logger().Info("attempting reverse swap for failed swap outbound", "hash", toi.InHash, "coin", toi.Coin)
+
+	// Determine destination address: use custom refund address if specified, otherwise original sender
+	destination := originalTx.Tx.FromAddress
+	if !swapMemo.GetRefundAddress().IsEmpty() {
+		// Validate that refund address is on the correct chain
+		if swapMemo.GetRefundAddress().IsChain(originalTx.Tx.Coins[0].Asset.GetChain()) {
+			destination = swapMemo.GetRefundAddress()
+			ctx.Logger().Info("using custom refund address for reverse swap", "address", destination)
+		} else {
+			ctx.Logger().Info("custom refund address chain mismatch, using original sender",
+				"refund_address", swapMemo.GetRefundAddress(),
+				"expected_chain", originalTx.Tx.Coins[0].Asset.GetChain())
+		}
+	}
+
+	// Queue reverse swap to original asset
+	targetAsset := originalTx.Tx.Coins[0].Asset
+	memo := fmt.Sprintf("=:%s:%s", targetAsset, destination)
+	return s.queueRecoverySwap(ctx, mgr, toi, vault, toi.InHash, targetAsset, destination, memo, "reverse_swap")
+}
+
+// sendFailedOutboundToTreasury creates a swap to convert failed outbound assets to RUNE
+// and send them to the treasury address when MaxOutboundAttempts is reached.
+// For swap outbounds, attempts to perform a reverse swap instead.
+func (s *SlasherVCUR) sendFailedOutboundToTreasury(ctx cosmos.Context, mgr Manager, toi TxOutItem, vault Vault, memo mem.Memo) error {
+	ctx.Logger().Info("max attempts reached for outbound", "hash", toi.InHash, "coin", toi.Coin)
+
+	// Extract the inbound hash from the memo (format: "OUT:<hash>" or "REFUND:<hash>")
+	inboundHash := toi.InHash
+	if memo.IsType(TxOutbound) {
+		if outboundMemo, ok := memo.(OutboundMemo); ok {
+			if !outboundMemo.GetTxID().IsEmpty() {
+				inboundHash = outboundMemo.GetTxID()
+			}
+		}
+	} else if memo.IsType(TxRefund) {
+		if refundMemo, ok := memo.(RefundMemo); ok {
+			if !refundMemo.GetTxID().IsEmpty() {
+				inboundHash = refundMemo.GetTxID()
+			}
+		}
+		// As an additional safety measure, explicitly parse REFUND:<hash> format
+		// from the memo string in case the typed memo didn't extract it
+		if inboundHash.Equals(toi.InHash) && strings.HasPrefix(toi.Memo, "REFUND:") {
+			parts := strings.SplitN(toi.Memo, ":", 2)
+			if len(parts) == 2 && len(parts[1]) > 0 {
+				if txID, err := common.NewTxID(parts[1]); err == nil && !txID.IsEmpty() {
+					inboundHash = txID
+				}
+			}
+		}
+	}
+
+	// Try to get the original transaction to check if this was a swap
+	originalTx, swapMemo, err := s.getOriginalSwapDetails(ctx, mgr, inboundHash)
+	if err == nil {
+		// This is a failed swap outbound - attempt reverse swap
+		ctx.Logger().Info("detected failed swap outbound, attempting reverse swap",
+			"hash", inboundHash,
+			"original_asset", originalTx.Tx.Coins[0].Asset,
+			"failed_asset", toi.Coin.Asset)
+
+		reverseErr := s.sendFailedSwapReverseSwap(ctx, mgr, toi, vault, originalTx, swapMemo)
+		if reverseErr == nil {
+			// Reverse swap succeeded
+			return nil
+		}
+		// Reverse swap failed, log error and fall back to treasury recovery
+		ctx.Logger().Error("reverse swap failed, falling back to treasury recovery",
+			"error", reverseErr,
+			"hash", inboundHash)
+	}
+
+	// Either not a swap, or reverse swap failed - proceed with treasury recovery
+	ctx.Logger().Info("sending to treasury recovery", "hash", inboundHash, "coin", toi.Coin)
+
+	// Queue swap to treasury
+	return s.queueRecoverySwap(ctx, mgr, toi, vault, inboundHash, common.RuneAsset(), common.TreasuryAddress, fmt.Sprintf("=:RUNE:%s", common.TreasuryAddress), "treasury")
 }
 
 // SlashVault thorchain keep monitoring the outbound tx from asgard pool

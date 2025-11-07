@@ -731,3 +731,16 @@ message EventOraclePrice {
   string symbol = 1;
   string price = 2;
 }
+
+message EventFailedOutboundRecovery {
+  string in_tx_id = 1 [
+    (gogoproto.casttype) = "gitlab.com/thorchain/thornode/v3/common.TxID",
+    (gogoproto.customname) = "InTxID"
+  ];
+  common.Coin coin = 2 [ (gogoproto.nullable) = false ];
+  string recovery_type = 3; // "reverse_swap" or "treasury"
+  string destination = 4
+      [ (gogoproto.casttype) =
+            "gitlab.com/thorchain/thornode/v3/common.Address" ];
+  string memo = 5;
+}

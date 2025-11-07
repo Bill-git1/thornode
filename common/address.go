@@ -29,6 +29,7 @@ const (
 	NoopAddress     = Address("noop")
 	EVMNullAddress  = Address("0x0000000000000000000000000000000000000000")
 	GaiaZeroAddress = Address("cosmos100000000000000000000000000000000708mjz")
+	// TreasuryAddress is defined in address_treasury_*.go with build tags for network-specific addresses
 )
 
 var alphaNumRegex = regexp.MustCompile("^[:A-Za-z0-9]*$")

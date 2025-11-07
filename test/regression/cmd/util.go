@@ -201,7 +201,7 @@ func parseOps(localLog zerolog.Logger, path string, tmpls *template.Template, en
 
 		// warn empty operations
 		if len(op) == 0 {
-			log.Fatal().Str("path", path).Msg("empty operation not allowed")
+			log.Fatal().Str("path", path).Int("line", opLines[i]).Msg("empty operation not allowed")
 			continue
 		}
 

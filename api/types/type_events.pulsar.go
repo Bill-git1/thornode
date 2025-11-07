@@ -32945,6 +32945,697 @@ func (x *fastReflection_EventOraclePrice) ProtoMethods() *protoiface.Methods {
 	}
 }
 
+var (
+	md_EventFailedOutboundRecovery               protoreflect.MessageDescriptor
+	fd_EventFailedOutboundRecovery_in_tx_id      protoreflect.FieldDescriptor
+	fd_EventFailedOutboundRecovery_coin          protoreflect.FieldDescriptor
+	fd_EventFailedOutboundRecovery_recovery_type protoreflect.FieldDescriptor
+	fd_EventFailedOutboundRecovery_destination   protoreflect.FieldDescriptor
+	fd_EventFailedOutboundRecovery_memo          protoreflect.FieldDescriptor
+)
+
+func init() {
+	file_types_type_events_proto_init()
+	md_EventFailedOutboundRecovery = File_types_type_events_proto.Messages().ByName("EventFailedOutboundRecovery")
+	fd_EventFailedOutboundRecovery_in_tx_id = md_EventFailedOutboundRecovery.Fields().ByName("in_tx_id")
+	fd_EventFailedOutboundRecovery_coin = md_EventFailedOutboundRecovery.Fields().ByName("coin")
+	fd_EventFailedOutboundRecovery_recovery_type = md_EventFailedOutboundRecovery.Fields().ByName("recovery_type")
+	fd_EventFailedOutboundRecovery_destination = md_EventFailedOutboundRecovery.Fields().ByName("destination")
+	fd_EventFailedOutboundRecovery_memo = md_EventFailedOutboundRecovery.Fields().ByName("memo")
+}
+
+var _ protoreflect.Message = (*fastReflection_EventFailedOutboundRecovery)(nil)
+
+type fastReflection_EventFailedOutboundRecovery EventFailedOutboundRecovery
+
+func (x *EventFailedOutboundRecovery) ProtoReflect() protoreflect.Message {
+	return (*fastReflection_EventFailedOutboundRecovery)(x)
+}
+
+func (x *EventFailedOutboundRecovery) slowProtoReflect() protoreflect.Message {
+	mi := &file_types_type_events_proto_msgTypes[52]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+var _fastReflection_EventFailedOutboundRecovery_messageType fastReflection_EventFailedOutboundRecovery_messageType
+var _ protoreflect.MessageType = fastReflection_EventFailedOutboundRecovery_messageType{}
+
+type fastReflection_EventFailedOutboundRecovery_messageType struct{}
+
+func (x fastReflection_EventFailedOutboundRecovery_messageType) Zero() protoreflect.Message {
+	return (*fastReflection_EventFailedOutboundRecovery)(nil)
+}
+func (x fastReflection_EventFailedOutboundRecovery_messageType) New() protoreflect.Message {
+	return new(fastReflection_EventFailedOutboundRecovery)
+}
+func (x fastReflection_EventFailedOutboundRecovery_messageType) Descriptor() protoreflect.MessageDescriptor {
+	return md_EventFailedOutboundRecovery
+}
+
+// Descriptor returns message descriptor, which contains only the protobuf
+// type information for the message.
+func (x *fastReflection_EventFailedOutboundRecovery) Descriptor() protoreflect.MessageDescriptor {
+	return md_EventFailedOutboundRecovery
+}
+
+// Type returns the message type, which encapsulates both Go and protobuf
+// type information. If the Go type information is not needed,
+// it is recommended that the message descriptor be used instead.
+func (x *fastReflection_EventFailedOutboundRecovery) Type() protoreflect.MessageType {
+	return _fastReflection_EventFailedOutboundRecovery_messageType
+}
+
+// New returns a newly allocated and mutable empty message.
+func (x *fastReflection_EventFailedOutboundRecovery) New() protoreflect.Message {
+	return new(fastReflection_EventFailedOutboundRecovery)
+}
+
+// Interface unwraps the message reflection interface and
+// returns the underlying ProtoMessage interface.
+func (x *fastReflection_EventFailedOutboundRecovery) Interface() protoreflect.ProtoMessage {
+	return (*EventFailedOutboundRecovery)(x)
+}
+
+// Range iterates over every populated field in an undefined order,
+// calling f for each field descriptor and value encountered.
+// Range returns immediately if f returns false.
+// While iterating, mutating operations may only be performed
+// on the current field descriptor.
+func (x *fastReflection_EventFailedOutboundRecovery) Range(f func(protoreflect.FieldDescriptor, protoreflect.Value) bool) {
+	if x.InTxId != "" {
+		value := protoreflect.ValueOfString(x.InTxId)
+		if !f(fd_EventFailedOutboundRecovery_in_tx_id, value) {
+			return
+		}
+	}
+	if x.Coin != nil {
+		value := protoreflect.ValueOfMessage(x.Coin.ProtoReflect())
+		if !f(fd_EventFailedOutboundRecovery_coin, value) {
+			return
+		}
+	}
+	if x.RecoveryType != "" {
+		value := protoreflect.ValueOfString(x.RecoveryType)
+		if !f(fd_EventFailedOutboundRecovery_recovery_type, value) {
+			return
+		}
+	}
+	if x.Destination != "" {
+		value := protoreflect.ValueOfString(x.Destination)
+		if !f(fd_EventFailedOutboundRecovery_destination, value) {
+			return
+		}
+	}
+	if x.Memo != "" {
+		value := protoreflect.ValueOfString(x.Memo)
+		if !f(fd_EventFailedOutboundRecovery_memo, value) {
+			return
+		}
+	}
+}
+
+// Has reports whether a field is populated.
+//
+// Some fields have the property of nullability where it is possible to
+// distinguish between the default value of a field and whether the field
+// was explicitly populated with the default value. Singular message fields,
+// member fields of a oneof, and proto2 scalar fields are nullable. Such
+// fields are populated only if explicitly set.
+//
+// In other cases (aside from the nullable cases above),
+// a proto3 scalar field is populated if it contains a non-zero value, and
+// a repeated field is populated if it is non-empty.
+func (x *fastReflection_EventFailedOutboundRecovery) Has(fd protoreflect.FieldDescriptor) bool {
+	switch fd.FullName() {
+	case "types.EventFailedOutboundRecovery.in_tx_id":
+		return x.InTxId != ""
+	case "types.EventFailedOutboundRecovery.coin":
+		return x.Coin != nil
+	case "types.EventFailedOutboundRecovery.recovery_type":
+		return x.RecoveryType != ""
+	case "types.EventFailedOutboundRecovery.destination":
+		return x.Destination != ""
+	case "types.EventFailedOutboundRecovery.memo":
+		return x.Memo != ""
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventFailedOutboundRecovery"))
+		}
+		panic(fmt.Errorf("message types.EventFailedOutboundRecovery does not contain field %s", fd.FullName()))
+	}
+}
+
+// Clear clears the field such that a subsequent Has call reports false.
+//
+// Clearing an extension field clears both the extension type and value
+// associated with the given field number.
+//
+// Clear is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_EventFailedOutboundRecovery) Clear(fd protoreflect.FieldDescriptor) {
+	switch fd.FullName() {
+	case "types.EventFailedOutboundRecovery.in_tx_id":
+		x.InTxId = ""
+	case "types.EventFailedOutboundRecovery.coin":
+		x.Coin = nil
+	case "types.EventFailedOutboundRecovery.recovery_type":
+		x.RecoveryType = ""
+	case "types.EventFailedOutboundRecovery.destination":
+		x.Destination = ""
+	case "types.EventFailedOutboundRecovery.memo":
+		x.Memo = ""
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventFailedOutboundRecovery"))
+		}
+		panic(fmt.Errorf("message types.EventFailedOutboundRecovery does not contain field %s", fd.FullName()))
+	}
+}
+
+// Get retrieves the value for a field.
+//
+// For unpopulated scalars, it returns the default value, where
+// the default value of a bytes scalar is guaranteed to be a copy.
+// For unpopulated composite types, it returns an empty, read-only view
+// of the value; to obtain a mutable reference, use Mutable.
+func (x *fastReflection_EventFailedOutboundRecovery) Get(descriptor protoreflect.FieldDescriptor) protoreflect.Value {
+	switch descriptor.FullName() {
+	case "types.EventFailedOutboundRecovery.in_tx_id":
+		value := x.InTxId
+		return protoreflect.ValueOfString(value)
+	case "types.EventFailedOutboundRecovery.coin":
+		value := x.Coin
+		return protoreflect.ValueOfMessage(value.ProtoReflect())
+	case "types.EventFailedOutboundRecovery.recovery_type":
+		value := x.RecoveryType
+		return protoreflect.ValueOfString(value)
+	case "types.EventFailedOutboundRecovery.destination":
+		value := x.Destination
+		return protoreflect.ValueOfString(value)
+	case "types.EventFailedOutboundRecovery.memo":
+		value := x.Memo
+		return protoreflect.ValueOfString(value)
+	default:
+		if descriptor.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventFailedOutboundRecovery"))
+		}
+		panic(fmt.Errorf("message types.EventFailedOutboundRecovery does not contain field %s", descriptor.FullName()))
+	}
+}
+
+// Set stores the value for a field.
+//
+// For a field belonging to a oneof, it implicitly clears any other field
+// that may be currently set within the same oneof.
+// For extension fields, it implicitly stores the provided ExtensionType.
+// When setting a composite type, it is unspecified whether the stored value
+// aliases the source's memory in any way. If the composite value is an
+// empty, read-only value, then it panics.
+//
+// Set is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_EventFailedOutboundRecovery) Set(fd protoreflect.FieldDescriptor, value protoreflect.Value) {
+	switch fd.FullName() {
+	case "types.EventFailedOutboundRecovery.in_tx_id":
+		x.InTxId = value.Interface().(string)
+	case "types.EventFailedOutboundRecovery.coin":
+		x.Coin = value.Message().Interface().(*common.Coin)
+	case "types.EventFailedOutboundRecovery.recovery_type":
+		x.RecoveryType = value.Interface().(string)
+	case "types.EventFailedOutboundRecovery.destination":
+		x.Destination = value.Interface().(string)
+	case "types.EventFailedOutboundRecovery.memo":
+		x.Memo = value.Interface().(string)
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventFailedOutboundRecovery"))
+		}
+		panic(fmt.Errorf("message types.EventFailedOutboundRecovery does not contain field %s", fd.FullName()))
+	}
+}
+
+// Mutable returns a mutable reference to a composite type.
+//
+// If the field is unpopulated, it may allocate a composite value.
+// For a field belonging to a oneof, it implicitly clears any other field
+// that may be currently set within the same oneof.
+// For extension fields, it implicitly stores the provided ExtensionType
+// if not already stored.
+// It panics if the field does not contain a composite type.
+//
+// Mutable is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_EventFailedOutboundRecovery) Mutable(fd protoreflect.FieldDescriptor) protoreflect.Value {
+	switch fd.FullName() {
+	case "types.EventFailedOutboundRecovery.coin":
+		if x.Coin == nil {
+			x.Coin = new(common.Coin)
+		}
+		return protoreflect.ValueOfMessage(x.Coin.ProtoReflect())
+	case "types.EventFailedOutboundRecovery.in_tx_id":
+		panic(fmt.Errorf("field in_tx_id of message types.EventFailedOutboundRecovery is not mutable"))
+	case "types.EventFailedOutboundRecovery.recovery_type":
+		panic(fmt.Errorf("field recovery_type of message types.EventFailedOutboundRecovery is not mutable"))
+	case "types.EventFailedOutboundRecovery.destination":
+		panic(fmt.Errorf("field destination of message types.EventFailedOutboundRecovery is not mutable"))
+	case "types.EventFailedOutboundRecovery.memo":
+		panic(fmt.Errorf("field memo of message types.EventFailedOutboundRecovery is not mutable"))
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventFailedOutboundRecovery"))
+		}
+		panic(fmt.Errorf("message types.EventFailedOutboundRecovery does not contain field %s", fd.FullName()))
+	}
+}
+
+// NewField returns a new value that is assignable to the field
+// for the given descriptor. For scalars, this returns the default value.
+// For lists, maps, and messages, this returns a new, empty, mutable value.
+func (x *fastReflection_EventFailedOutboundRecovery) NewField(fd protoreflect.FieldDescriptor) protoreflect.Value {
+	switch fd.FullName() {
+	case "types.EventFailedOutboundRecovery.in_tx_id":
+		return protoreflect.ValueOfString("")
+	case "types.EventFailedOutboundRecovery.coin":
+		m := new(common.Coin)
+		return protoreflect.ValueOfMessage(m.ProtoReflect())
+	case "types.EventFailedOutboundRecovery.recovery_type":
+		return protoreflect.ValueOfString("")
+	case "types.EventFailedOutboundRecovery.destination":
+		return protoreflect.ValueOfString("")
+	case "types.EventFailedOutboundRecovery.memo":
+		return protoreflect.ValueOfString("")
+	default:
+		if fd.IsExtension() {
+			panic(fmt.Errorf("proto3 declared messages do not support extensions: types.EventFailedOutboundRecovery"))
+		}
+		panic(fmt.Errorf("message types.EventFailedOutboundRecovery does not contain field %s", fd.FullName()))
+	}
+}
+
+// WhichOneof reports which field within the oneof is populated,
+// returning nil if none are populated.
+// It panics if the oneof descriptor does not belong to this message.
+func (x *fastReflection_EventFailedOutboundRecovery) WhichOneof(d protoreflect.OneofDescriptor) protoreflect.FieldDescriptor {
+	switch d.FullName() {
+	default:
+		panic(fmt.Errorf("%s is not a oneof field in types.EventFailedOutboundRecovery", d.FullName()))
+	}
+	panic("unreachable")
+}
+
+// GetUnknown retrieves the entire list of unknown fields.
+// The caller may only mutate the contents of the RawFields
+// if the mutated bytes are stored back into the message with SetUnknown.
+func (x *fastReflection_EventFailedOutboundRecovery) GetUnknown() protoreflect.RawFields {
+	return x.unknownFields
+}
+
+// SetUnknown stores an entire list of unknown fields.
+// The raw fields must be syntactically valid according to the wire format.
+// An implementation may panic if this is not the case.
+// Once stored, the caller must not mutate the content of the RawFields.
+// An empty RawFields may be passed to clear the fields.
+//
+// SetUnknown is a mutating operation and unsafe for concurrent use.
+func (x *fastReflection_EventFailedOutboundRecovery) SetUnknown(fields protoreflect.RawFields) {
+	x.unknownFields = fields
+}
+
+// IsValid reports whether the message is valid.
+//
+// An invalid message is an empty, read-only value.
+//
+// An invalid message often corresponds to a nil pointer of the concrete
+// message type, but the details are implementation dependent.
+// Validity is not part of the protobuf data model, and may not
+// be preserved in marshaling or other operations.
+func (x *fastReflection_EventFailedOutboundRecovery) IsValid() bool {
+	return x != nil
+}
+
+// ProtoMethods returns optional fastReflectionFeature-path implementations of various operations.
+// This method may return nil.
+//
+// The returned methods type is identical to
+// "google.golang.org/protobuf/runtime/protoiface".Methods.
+// Consult the protoiface package documentation for details.
+func (x *fastReflection_EventFailedOutboundRecovery) ProtoMethods() *protoiface.Methods {
+	size := func(input protoiface.SizeInput) protoiface.SizeOutput {
+		x := input.Message.Interface().(*EventFailedOutboundRecovery)
+		if x == nil {
+			return protoiface.SizeOutput{
+				NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+				Size:              0,
+			}
+		}
+		options := runtime.SizeInputToOptions(input)
+		_ = options
+		var n int
+		var l int
+		_ = l
+		l = len(x.InTxId)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		if x.Coin != nil {
+			l = options.Size(x.Coin)
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.RecoveryType)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.Destination)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.Memo)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		if x.unknownFields != nil {
+			n += len(x.unknownFields)
+		}
+		return protoiface.SizeOutput{
+			NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+			Size:              n,
+		}
+	}
+
+	marshal := func(input protoiface.MarshalInput) (protoiface.MarshalOutput, error) {
+		x := input.Message.Interface().(*EventFailedOutboundRecovery)
+		if x == nil {
+			return protoiface.MarshalOutput{
+				NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+				Buf:               input.Buf,
+			}, nil
+		}
+		options := runtime.MarshalInputToOptions(input)
+		_ = options
+		size := options.Size(x)
+		dAtA := make([]byte, size)
+		i := len(dAtA)
+		_ = i
+		var l int
+		_ = l
+		if x.unknownFields != nil {
+			i -= len(x.unknownFields)
+			copy(dAtA[i:], x.unknownFields)
+		}
+		if len(x.Memo) > 0 {
+			i -= len(x.Memo)
+			copy(dAtA[i:], x.Memo)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.Memo)))
+			i--
+			dAtA[i] = 0x2a
+		}
+		if len(x.Destination) > 0 {
+			i -= len(x.Destination)
+			copy(dAtA[i:], x.Destination)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.Destination)))
+			i--
+			dAtA[i] = 0x22
+		}
+		if len(x.RecoveryType) > 0 {
+			i -= len(x.RecoveryType)
+			copy(dAtA[i:], x.RecoveryType)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.RecoveryType)))
+			i--
+			dAtA[i] = 0x1a
+		}
+		if x.Coin != nil {
+			encoded, err := options.Marshal(x.Coin)
+			if err != nil {
+				return protoiface.MarshalOutput{
+					NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+					Buf:               input.Buf,
+				}, err
+			}
+			i -= len(encoded)
+			copy(dAtA[i:], encoded)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(encoded)))
+			i--
+			dAtA[i] = 0x12
+		}
+		if len(x.InTxId) > 0 {
+			i -= len(x.InTxId)
+			copy(dAtA[i:], x.InTxId)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.InTxId)))
+			i--
+			dAtA[i] = 0xa
+		}
+		if input.Buf != nil {
+			input.Buf = append(input.Buf, dAtA...)
+		} else {
+			input.Buf = dAtA
+		}
+		return protoiface.MarshalOutput{
+			NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+			Buf:               input.Buf,
+		}, nil
+	}
+	unmarshal := func(input protoiface.UnmarshalInput) (protoiface.UnmarshalOutput, error) {
+		x := input.Message.Interface().(*EventFailedOutboundRecovery)
+		if x == nil {
+			return protoiface.UnmarshalOutput{
+				NoUnkeyedLiterals: input.NoUnkeyedLiterals,
+				Flags:             input.Flags,
+			}, nil
+		}
+		options := runtime.UnmarshalInputToOptions(input)
+		_ = options
+		dAtA := input.Buf
+		l := len(dAtA)
+		iNdEx := 0
+		for iNdEx < l {
+			preIndex := iNdEx
+			var wire uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				wire |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			fieldNum := int32(wire >> 3)
+			wireType := int(wire & 0x7)
+			if wireType == 4 {
+				return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: EventFailedOutboundRecovery: wiretype end group for non-group")
+			}
+			if fieldNum <= 0 {
+				return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: EventFailedOutboundRecovery: illegal tag %d (wire type %d)", fieldNum, wire)
+			}
+			switch fieldNum {
+			case 1:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field InTxId", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.InTxId = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 2:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Coin", wireType)
+				}
+				var msglen int
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					msglen |= int(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				if msglen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + msglen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				if x.Coin == nil {
+					x.Coin = &common.Coin{}
+				}
+				if err := options.Unmarshal(dAtA[iNdEx:postIndex], x.Coin); err != nil {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, err
+				}
+				iNdEx = postIndex
+			case 3:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field RecoveryType", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.RecoveryType = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 4:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Destination", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.Destination = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 5:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field Memo", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.Memo = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			default:
+				iNdEx = preIndex
+				skippy, err := runtime.Skip(dAtA[iNdEx:])
+				if err != nil {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, err
+				}
+				if (skippy < 0) || (iNdEx+skippy) < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if (iNdEx + skippy) > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				if !options.DiscardUnknown {
+					x.unknownFields = append(x.unknownFields, dAtA[iNdEx:iNdEx+skippy]...)
+				}
+				iNdEx += skippy
+			}
+		}
+
+		if iNdEx > l {
+			return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+		}
+		return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, nil
+	}
+	return &protoiface.Methods{
+		NoUnkeyedLiterals: struct{}{},
+		Flags:             protoiface.SupportMarshalDeterministic | protoiface.SupportUnmarshalDiscardUnknown,
+		Size:              size,
+		Marshal:           marshal,
+		Unmarshal:         unmarshal,
+		Merge:             nil,
+		CheckInitialized:  nil,
+	}
+}
+
 // Code generated by protoc-gen-go. DO NOT EDIT.
 // versions:
 // 	protoc-gen-go v1.27.0
@@ -36202,6 +36893,73 @@ func (x *EventOraclePrice) GetPrice() string {
 	return ""
 }
 
+type EventFailedOutboundRecovery struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	InTxId       string       `protobuf:"bytes,1,opt,name=in_tx_id,json=inTxId,proto3" json:"in_tx_id,omitempty"`
+	Coin         *common.Coin `protobuf:"bytes,2,opt,name=coin,proto3" json:"coin,omitempty"`
+	RecoveryType string       `protobuf:"bytes,3,opt,name=recovery_type,json=recoveryType,proto3" json:"recovery_type,omitempty"` // "reverse_swap" or "treasury"
+	Destination  string       `protobuf:"bytes,4,opt,name=destination,proto3" json:"destination,omitempty"`
+	Memo         string       `protobuf:"bytes,5,opt,name=memo,proto3" json:"memo,omitempty"`
+}
+
+func (x *EventFailedOutboundRecovery) Reset() {
+	*x = EventFailedOutboundRecovery{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_types_type_events_proto_msgTypes[52]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *EventFailedOutboundRecovery) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventFailedOutboundRecovery) ProtoMessage() {}
+
+// Deprecated: Use EventFailedOutboundRecovery.ProtoReflect.Descriptor instead.
+func (*EventFailedOutboundRecovery) Descriptor() ([]byte, []int) {
+	return file_types_type_events_proto_rawDescGZIP(), []int{52}
+}
+
+func (x *EventFailedOutboundRecovery) GetInTxId() string {
+	if x != nil {
+		return x.InTxId
+	}
+	return ""
+}
+
+func (x *EventFailedOutboundRecovery) GetCoin() *common.Coin {
+	if x != nil {
+		return x.Coin
+	}
+	return nil
+}
+
+func (x *EventFailedOutboundRecovery) GetRecoveryType() string {
+	if x != nil {
+		return x.RecoveryType
+	}
+	return ""
+}
+
+func (x *EventFailedOutboundRecovery) GetDestination() string {
+	if x != nil {
+		return x.Destination
+	}
+	return ""
+}
+
+func (x *EventFailedOutboundRecovery) GetMemo() string {
+	if x != nil {
+		return x.Memo
+	}
+	return ""
+}
+
 var File_types_type_events_proto protoreflect.FileDescriptor
 
 var file_types_type_events_proto_rawDesc = []byte{
@@ -37097,26 +37855,45 @@ var file_types_type_events_proto_rawDesc = []byte{
 	0x74, 0x4f, 0x72, 0x61, 0x63, 0x6c, 0x65, 0x50, 0x72, 0x69, 0x63, 0x65, 0x12, 0x16, 0x0a, 0x06,
 	0x73, 0x79, 0x6d, 0x62, 0x6f, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x73, 0x79,
 	0x6d, 0x62, 0x6f, 0x6c, 0x12, 0x14, 0x0a, 0x05, 0x70, 0x72, 0x69, 0x63, 0x65, 0x18, 0x02, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x05, 0x70, 0x72, 0x69, 0x63, 0x65, 0x2a, 0x2d, 0x0a, 0x14, 0x50, 0x65,
-	0x6e, 0x64, 0x69, 0x6e, 0x67, 0x4c, 0x69, 0x71, 0x75, 0x69, 0x64, 0x69, 0x74, 0x79, 0x54, 0x79,
-	0x70, 0x65, 0x12, 0x07, 0x0a, 0x03, 0x61, 0x64, 0x64, 0x10, 0x00, 0x12, 0x0c, 0x0a, 0x08, 0x77,
-	0x69, 0x74, 0x68, 0x64, 0x72, 0x61, 0x77, 0x10, 0x01, 0x2a, 0x4c, 0x0a, 0x08, 0x42, 0x6f, 0x6e,
-	0x64, 0x54, 0x79, 0x70, 0x65, 0x12, 0x0d, 0x0a, 0x09, 0x62, 0x6f, 0x6e, 0x64, 0x5f, 0x70, 0x61,
-	0x69, 0x64, 0x10, 0x00, 0x12, 0x11, 0x0a, 0x0d, 0x62, 0x6f, 0x6e, 0x64, 0x5f, 0x72, 0x65, 0x74,
-	0x75, 0x72, 0x6e, 0x65, 0x64, 0x10, 0x01, 0x12, 0x0f, 0x0a, 0x0b, 0x62, 0x6f, 0x6e, 0x64, 0x5f,
-	0x72, 0x65, 0x77, 0x61, 0x72, 0x64, 0x10, 0x02, 0x12, 0x0d, 0x0a, 0x09, 0x62, 0x6f, 0x6e, 0x64,
-	0x5f, 0x63, 0x6f, 0x73, 0x74, 0x10, 0x03, 0x2a, 0x28, 0x0a, 0x12, 0x4d, 0x69, 0x6e, 0x74, 0x42,
-	0x75, 0x72, 0x6e, 0x53, 0x75, 0x70, 0x70, 0x6c, 0x79, 0x54, 0x79, 0x70, 0x65, 0x12, 0x08, 0x0a,
-	0x04, 0x6d, 0x69, 0x6e, 0x74, 0x10, 0x00, 0x12, 0x08, 0x0a, 0x04, 0x62, 0x75, 0x72, 0x6e, 0x10,
-	0x01, 0x42, 0x7c, 0x0a, 0x09, 0x63, 0x6f, 0x6d, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x42, 0x0f,
-	0x54, 0x79, 0x70, 0x65, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x73, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50,
-	0x01, 0x5a, 0x2a, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68,
-	0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65,
-	0x2f, 0x76, 0x33, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x73, 0xa2, 0x02, 0x03,
-	0x54, 0x58, 0x58, 0xaa, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xca, 0x02, 0x05, 0x54, 0x79,
-	0x70, 0x65, 0x73, 0xe2, 0x02, 0x11, 0x54, 0x79, 0x70, 0x65, 0x73, 0x5c, 0x47, 0x50, 0x42, 0x4d,
-	0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0x62,
-	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x01, 0x28, 0x09, 0x52, 0x05, 0x70, 0x72, 0x69, 0x63, 0x65, 0x22, 0xab, 0x02, 0x0a, 0x1b, 0x45,
+	0x76, 0x65, 0x6e, 0x74, 0x46, 0x61, 0x69, 0x6c, 0x65, 0x64, 0x4f, 0x75, 0x74, 0x62, 0x6f, 0x75,
+	0x6e, 0x64, 0x52, 0x65, 0x63, 0x6f, 0x76, 0x65, 0x72, 0x79, 0x12, 0x54, 0x0a, 0x08, 0x69, 0x6e,
+	0x5f, 0x74, 0x78, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x42, 0x3a, 0xe2, 0xde,
+	0x1f, 0x06, 0x49, 0x6e, 0x54, 0x78, 0x49, 0x44, 0xfa, 0xde, 0x1f, 0x2c, 0x67, 0x69, 0x74, 0x6c,
+	0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e,
+	0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33, 0x2f, 0x63, 0x6f, 0x6d,
+	0x6d, 0x6f, 0x6e, 0x2e, 0x54, 0x78, 0x49, 0x44, 0x52, 0x06, 0x69, 0x6e, 0x54, 0x78, 0x49, 0x64,
+	0x12, 0x26, 0x0a, 0x04, 0x63, 0x6f, 0x69, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c,
+	0x2e, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x43, 0x6f, 0x69, 0x6e, 0x42, 0x04, 0xc8, 0xde,
+	0x1f, 0x00, 0x52, 0x04, 0x63, 0x6f, 0x69, 0x6e, 0x12, 0x23, 0x0a, 0x0d, 0x72, 0x65, 0x63, 0x6f,
+	0x76, 0x65, 0x72, 0x79, 0x5f, 0x74, 0x79, 0x70, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x0c, 0x72, 0x65, 0x63, 0x6f, 0x76, 0x65, 0x72, 0x79, 0x54, 0x79, 0x70, 0x65, 0x12, 0x55, 0x0a,
+	0x0b, 0x64, 0x65, 0x73, 0x74, 0x69, 0x6e, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x04, 0x20, 0x01,
+	0x28, 0x09, 0x42, 0x33, 0xfa, 0xde, 0x1f, 0x2f, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63,
+	0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f,
+	0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x33, 0x2f, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e,
+	0x41, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x52, 0x0b, 0x64, 0x65, 0x73, 0x74, 0x69, 0x6e, 0x61,
+	0x74, 0x69, 0x6f, 0x6e, 0x12, 0x12, 0x0a, 0x04, 0x6d, 0x65, 0x6d, 0x6f, 0x18, 0x05, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x04, 0x6d, 0x65, 0x6d, 0x6f, 0x2a, 0x2d, 0x0a, 0x14, 0x50, 0x65, 0x6e, 0x64,
+	0x69, 0x6e, 0x67, 0x4c, 0x69, 0x71, 0x75, 0x69, 0x64, 0x69, 0x74, 0x79, 0x54, 0x79, 0x70, 0x65,
+	0x12, 0x07, 0x0a, 0x03, 0x61, 0x64, 0x64, 0x10, 0x00, 0x12, 0x0c, 0x0a, 0x08, 0x77, 0x69, 0x74,
+	0x68, 0x64, 0x72, 0x61, 0x77, 0x10, 0x01, 0x2a, 0x4c, 0x0a, 0x08, 0x42, 0x6f, 0x6e, 0x64, 0x54,
+	0x79, 0x70, 0x65, 0x12, 0x0d, 0x0a, 0x09, 0x62, 0x6f, 0x6e, 0x64, 0x5f, 0x70, 0x61, 0x69, 0x64,
+	0x10, 0x00, 0x12, 0x11, 0x0a, 0x0d, 0x62, 0x6f, 0x6e, 0x64, 0x5f, 0x72, 0x65, 0x74, 0x75, 0x72,
+	0x6e, 0x65, 0x64, 0x10, 0x01, 0x12, 0x0f, 0x0a, 0x0b, 0x62, 0x6f, 0x6e, 0x64, 0x5f, 0x72, 0x65,
+	0x77, 0x61, 0x72, 0x64, 0x10, 0x02, 0x12, 0x0d, 0x0a, 0x09, 0x62, 0x6f, 0x6e, 0x64, 0x5f, 0x63,
+	0x6f, 0x73, 0x74, 0x10, 0x03, 0x2a, 0x28, 0x0a, 0x12, 0x4d, 0x69, 0x6e, 0x74, 0x42, 0x75, 0x72,
+	0x6e, 0x53, 0x75, 0x70, 0x70, 0x6c, 0x79, 0x54, 0x79, 0x70, 0x65, 0x12, 0x08, 0x0a, 0x04, 0x6d,
+	0x69, 0x6e, 0x74, 0x10, 0x00, 0x12, 0x08, 0x0a, 0x04, 0x62, 0x75, 0x72, 0x6e, 0x10, 0x01, 0x42,
+	0x7c, 0x0a, 0x09, 0x63, 0x6f, 0x6d, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x42, 0x0f, 0x54, 0x79,
+	0x70, 0x65, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x73, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a,
+	0x2a, 0x67, 0x69, 0x74, 0x6c, 0x61, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x68, 0x6f, 0x72,
+	0x63, 0x68, 0x61, 0x69, 0x6e, 0x2f, 0x74, 0x68, 0x6f, 0x72, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76,
+	0x33, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x73, 0xa2, 0x02, 0x03, 0x54, 0x58,
+	0x58, 0xaa, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0xca, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65,
+	0x73, 0xe2, 0x02, 0x11, 0x54, 0x79, 0x70, 0x65, 0x73, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74,
+	0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x05, 0x54, 0x79, 0x70, 0x65, 0x73, 0x62, 0x06, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -37132,128 +37909,130 @@ func file_types_type_events_proto_rawDescGZIP() []byte {
 }
 
 var file_types_type_events_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_types_type_events_proto_msgTypes = make([]protoimpl.MessageInfo, 52)
+var file_types_type_events_proto_msgTypes = make([]protoimpl.MessageInfo, 53)
 var file_types_type_events_proto_goTypes = []interface{}{
-	(PendingLiquidityType)(0),         // 0: types.PendingLiquidityType
-	(BondType)(0),                     // 1: types.BondType
-	(MintBurnSupplyType)(0),           // 2: types.MintBurnSupplyType
-	(*PoolMod)(nil),                   // 3: types.PoolMod
-	(*EventLimitSwap)(nil),            // 4: types.EventLimitSwap
-	(*EventModifyLimitSwap)(nil),      // 5: types.EventModifyLimitSwap
-	(*EventLimitSwapClose)(nil),       // 6: types.EventLimitSwapClose
-	(*EventStreamingSwap)(nil),        // 7: types.EventStreamingSwap
-	(*EventSwap)(nil),                 // 8: types.EventSwap
-	(*EventAffiliateFee)(nil),         // 9: types.EventAffiliateFee
-	(*EventAddLiquidity)(nil),         // 10: types.EventAddLiquidity
-	(*EventWithdraw)(nil),             // 11: types.EventWithdraw
-	(*EventPendingLiquidity)(nil),     // 12: types.EventPendingLiquidity
-	(*EventDonate)(nil),               // 13: types.EventDonate
-	(*EventPool)(nil),                 // 14: types.EventPool
-	(*PoolAmt)(nil),                   // 15: types.PoolAmt
-	(*EventRewards)(nil),              // 16: types.EventRewards
-	(*EventRefund)(nil),               // 17: types.EventRefund
-	(*EventBond)(nil),                 // 18: types.EventBond
-	(*EventReBond)(nil),               // 19: types.EventReBond
-	(*GasPool)(nil),                   // 20: types.GasPool
-	(*EventGas)(nil),                  // 21: types.EventGas
-	(*EventReserve)(nil),              // 22: types.EventReserve
-	(*EventScheduledOutbound)(nil),    // 23: types.EventScheduledOutbound
-	(*EventSecurity)(nil),             // 24: types.EventSecurity
-	(*EventSlash)(nil),                // 25: types.EventSlash
-	(*EventErrata)(nil),               // 26: types.EventErrata
-	(*EventFee)(nil),                  // 27: types.EventFee
-	(*EventOutbound)(nil),             // 28: types.EventOutbound
-	(*EventTssKeygenSuccess)(nil),     // 29: types.EventTssKeygenSuccess
-	(*EventTssKeygenFailure)(nil),     // 30: types.EventTssKeygenFailure
-	(*EventTssKeygenMetric)(nil),      // 31: types.EventTssKeygenMetric
-	(*EventTssKeysignMetric)(nil),     // 32: types.EventTssKeysignMetric
-	(*EventSlashPoint)(nil),           // 33: types.EventSlashPoint
-	(*EventPoolBalanceChanged)(nil),   // 34: types.EventPoolBalanceChanged
-	(*EventMintBurn)(nil),             // 35: types.EventMintBurn
-	(*EventTradeAccountDeposit)(nil),  // 36: types.EventTradeAccountDeposit
-	(*EventTradeAccountWithdraw)(nil), // 37: types.EventTradeAccountWithdraw
-	(*EventSecuredAssetDeposit)(nil),  // 38: types.EventSecuredAssetDeposit
-	(*EventSecuredAssetWithdraw)(nil), // 39: types.EventSecuredAssetWithdraw
-	(*EventRUNEPoolDeposit)(nil),      // 40: types.EventRUNEPoolDeposit
-	(*EventRUNEPoolWithdraw)(nil),     // 41: types.EventRUNEPoolWithdraw
-	(*EventLoanOpen)(nil),             // 42: types.EventLoanOpen
-	(*EventLoanRepayment)(nil),        // 43: types.EventLoanRepayment
-	(*EventTHORName)(nil),             // 44: types.EventTHORName
-	(*EventSetMimir)(nil),             // 45: types.EventSetMimir
-	(*EventSetNodeMimir)(nil),         // 46: types.EventSetNodeMimir
-	(*EventVersion)(nil),              // 47: types.EventVersion
-	(*EventSwitch)(nil),               // 48: types.EventSwitch
-	(*EventOperatorRotate)(nil),       // 49: types.EventOperatorRotate
-	(*EventTCYDistribution)(nil),      // 50: types.EventTCYDistribution
-	(*EventTCYClaim)(nil),             // 51: types.EventTCYClaim
-	(*EventTCYStake)(nil),             // 52: types.EventTCYStake
-	(*EventTCYUnstake)(nil),           // 53: types.EventTCYUnstake
-	(*EventOraclePrice)(nil),          // 54: types.EventOraclePrice
-	(*common.Asset)(nil),              // 55: common.Asset
-	(*common.Coin)(nil),               // 56: common.Coin
-	(*common.Tx)(nil),                 // 57: common.Tx
-	(PoolStatus)(0),                   // 58: types.PoolStatus
-	(*common.Fee)(nil),                // 59: common.Fee
-	(*ReserveContributor)(nil),        // 60: types.ReserveContributor
-	(*TxOutItem)(nil),                 // 61: types.TxOutItem
+	(PendingLiquidityType)(0),           // 0: types.PendingLiquidityType
+	(BondType)(0),                       // 1: types.BondType
+	(MintBurnSupplyType)(0),             // 2: types.MintBurnSupplyType
+	(*PoolMod)(nil),                     // 3: types.PoolMod
+	(*EventLimitSwap)(nil),              // 4: types.EventLimitSwap
+	(*EventModifyLimitSwap)(nil),        // 5: types.EventModifyLimitSwap
+	(*EventLimitSwapClose)(nil),         // 6: types.EventLimitSwapClose
+	(*EventStreamingSwap)(nil),          // 7: types.EventStreamingSwap
+	(*EventSwap)(nil),                   // 8: types.EventSwap
+	(*EventAffiliateFee)(nil),           // 9: types.EventAffiliateFee
+	(*EventAddLiquidity)(nil),           // 10: types.EventAddLiquidity
+	(*EventWithdraw)(nil),               // 11: types.EventWithdraw
+	(*EventPendingLiquidity)(nil),       // 12: types.EventPendingLiquidity
+	(*EventDonate)(nil),                 // 13: types.EventDonate
+	(*EventPool)(nil),                   // 14: types.EventPool
+	(*PoolAmt)(nil),                     // 15: types.PoolAmt
+	(*EventRewards)(nil),                // 16: types.EventRewards
+	(*EventRefund)(nil),                 // 17: types.EventRefund
+	(*EventBond)(nil),                   // 18: types.EventBond
+	(*EventReBond)(nil),                 // 19: types.EventReBond
+	(*GasPool)(nil),                     // 20: types.GasPool
+	(*EventGas)(nil),                    // 21: types.EventGas
+	(*EventReserve)(nil),                // 22: types.EventReserve
+	(*EventScheduledOutbound)(nil),      // 23: types.EventScheduledOutbound
+	(*EventSecurity)(nil),               // 24: types.EventSecurity
+	(*EventSlash)(nil),                  // 25: types.EventSlash
+	(*EventErrata)(nil),                 // 26: types.EventErrata
+	(*EventFee)(nil),                    // 27: types.EventFee
+	(*EventOutbound)(nil),               // 28: types.EventOutbound
+	(*EventTssKeygenSuccess)(nil),       // 29: types.EventTssKeygenSuccess
+	(*EventTssKeygenFailure)(nil),       // 30: types.EventTssKeygenFailure
+	(*EventTssKeygenMetric)(nil),        // 31: types.EventTssKeygenMetric
+	(*EventTssKeysignMetric)(nil),       // 32: types.EventTssKeysignMetric
+	(*EventSlashPoint)(nil),             // 33: types.EventSlashPoint
+	(*EventPoolBalanceChanged)(nil),     // 34: types.EventPoolBalanceChanged
+	(*EventMintBurn)(nil),               // 35: types.EventMintBurn
+	(*EventTradeAccountDeposit)(nil),    // 36: types.EventTradeAccountDeposit
+	(*EventTradeAccountWithdraw)(nil),   // 37: types.EventTradeAccountWithdraw
+	(*EventSecuredAssetDeposit)(nil),    // 38: types.EventSecuredAssetDeposit
+	(*EventSecuredAssetWithdraw)(nil),   // 39: types.EventSecuredAssetWithdraw
+	(*EventRUNEPoolDeposit)(nil),        // 40: types.EventRUNEPoolDeposit
+	(*EventRUNEPoolWithdraw)(nil),       // 41: types.EventRUNEPoolWithdraw
+	(*EventLoanOpen)(nil),               // 42: types.EventLoanOpen
+	(*EventLoanRepayment)(nil),          // 43: types.EventLoanRepayment
+	(*EventTHORName)(nil),               // 44: types.EventTHORName
+	(*EventSetMimir)(nil),               // 45: types.EventSetMimir
+	(*EventSetNodeMimir)(nil),           // 46: types.EventSetNodeMimir
+	(*EventVersion)(nil),                // 47: types.EventVersion
+	(*EventSwitch)(nil),                 // 48: types.EventSwitch
+	(*EventOperatorRotate)(nil),         // 49: types.EventOperatorRotate
+	(*EventTCYDistribution)(nil),        // 50: types.EventTCYDistribution
+	(*EventTCYClaim)(nil),               // 51: types.EventTCYClaim
+	(*EventTCYStake)(nil),               // 52: types.EventTCYStake
+	(*EventTCYUnstake)(nil),             // 53: types.EventTCYUnstake
+	(*EventOraclePrice)(nil),            // 54: types.EventOraclePrice
+	(*EventFailedOutboundRecovery)(nil), // 55: types.EventFailedOutboundRecovery
+	(*common.Asset)(nil),                // 56: common.Asset
+	(*common.Coin)(nil),                 // 57: common.Coin
+	(*common.Tx)(nil),                   // 58: common.Tx
+	(PoolStatus)(0),                     // 59: types.PoolStatus
+	(*common.Fee)(nil),                  // 60: common.Fee
+	(*ReserveContributor)(nil),          // 61: types.ReserveContributor
+	(*TxOutItem)(nil),                   // 62: types.TxOutItem
 }
 var file_types_type_events_proto_depIdxs = []int32{
-	55, // 0: types.PoolMod.asset:type_name -> common.Asset
-	56, // 1: types.EventLimitSwap.source:type_name -> common.Coin
-	56, // 2: types.EventLimitSwap.target:type_name -> common.Coin
-	56, // 3: types.EventModifyLimitSwap.source:type_name -> common.Coin
-	56, // 4: types.EventModifyLimitSwap.target:type_name -> common.Coin
-	56, // 5: types.EventStreamingSwap.deposit:type_name -> common.Coin
-	56, // 6: types.EventStreamingSwap.in:type_name -> common.Coin
-	56, // 7: types.EventStreamingSwap.out:type_name -> common.Coin
-	55, // 8: types.EventSwap.pool:type_name -> common.Asset
-	57, // 9: types.EventSwap.in_tx:type_name -> common.Tx
-	57, // 10: types.EventSwap.out_txs:type_name -> common.Tx
-	56, // 11: types.EventSwap.emit_asset:type_name -> common.Coin
-	55, // 12: types.EventAffiliateFee.asset:type_name -> common.Asset
-	55, // 13: types.EventAddLiquidity.pool:type_name -> common.Asset
-	55, // 14: types.EventWithdraw.pool:type_name -> common.Asset
-	57, // 15: types.EventWithdraw.in_tx:type_name -> common.Tx
-	55, // 16: types.EventPendingLiquidity.pool:type_name -> common.Asset
+	56, // 0: types.PoolMod.asset:type_name -> common.Asset
+	57, // 1: types.EventLimitSwap.source:type_name -> common.Coin
+	57, // 2: types.EventLimitSwap.target:type_name -> common.Coin
+	57, // 3: types.EventModifyLimitSwap.source:type_name -> common.Coin
+	57, // 4: types.EventModifyLimitSwap.target:type_name -> common.Coin
+	57, // 5: types.EventStreamingSwap.deposit:type_name -> common.Coin
+	57, // 6: types.EventStreamingSwap.in:type_name -> common.Coin
+	57, // 7: types.EventStreamingSwap.out:type_name -> common.Coin
+	56, // 8: types.EventSwap.pool:type_name -> common.Asset
+	58, // 9: types.EventSwap.in_tx:type_name -> common.Tx
+	58, // 10: types.EventSwap.out_txs:type_name -> common.Tx
+	57, // 11: types.EventSwap.emit_asset:type_name -> common.Coin
+	56, // 12: types.EventAffiliateFee.asset:type_name -> common.Asset
+	56, // 13: types.EventAddLiquidity.pool:type_name -> common.Asset
+	56, // 14: types.EventWithdraw.pool:type_name -> common.Asset
+	58, // 15: types.EventWithdraw.in_tx:type_name -> common.Tx
+	56, // 16: types.EventPendingLiquidity.pool:type_name -> common.Asset
 	0,  // 17: types.EventPendingLiquidity.pending_type:type_name -> types.PendingLiquidityType
-	55, // 18: types.EventDonate.pool:type_name -> common.Asset
-	57, // 19: types.EventDonate.in_tx:type_name -> common.Tx
-	55, // 20: types.EventPool.pool:type_name -> common.Asset
-	58, // 21: types.EventPool.Status:type_name -> types.PoolStatus
-	55, // 22: types.PoolAmt.asset:type_name -> common.Asset
+	56, // 18: types.EventDonate.pool:type_name -> common.Asset
+	58, // 19: types.EventDonate.in_tx:type_name -> common.Tx
+	56, // 20: types.EventPool.pool:type_name -> common.Asset
+	59, // 21: types.EventPool.Status:type_name -> types.PoolStatus
+	56, // 22: types.PoolAmt.asset:type_name -> common.Asset
 	15, // 23: types.EventRewards.pool_rewards:type_name -> types.PoolAmt
-	57, // 24: types.EventRefund.in_tx:type_name -> common.Tx
-	59, // 25: types.EventRefund.fee:type_name -> common.Fee
+	58, // 24: types.EventRefund.in_tx:type_name -> common.Tx
+	60, // 25: types.EventRefund.fee:type_name -> common.Fee
 	1,  // 26: types.EventBond.bond_type:type_name -> types.BondType
-	57, // 27: types.EventBond.tx_in:type_name -> common.Tx
-	57, // 28: types.EventReBond.tx_in:type_name -> common.Tx
-	55, // 29: types.GasPool.asset:type_name -> common.Asset
+	58, // 27: types.EventBond.tx_in:type_name -> common.Tx
+	58, // 28: types.EventReBond.tx_in:type_name -> common.Tx
+	56, // 29: types.GasPool.asset:type_name -> common.Asset
 	20, // 30: types.EventGas.pools:type_name -> types.GasPool
-	60, // 31: types.EventReserve.reserve_contributor:type_name -> types.ReserveContributor
-	57, // 32: types.EventReserve.in_tx:type_name -> common.Tx
-	61, // 33: types.EventScheduledOutbound.out_tx:type_name -> types.TxOutItem
-	57, // 34: types.EventSecurity.tx:type_name -> common.Tx
-	55, // 35: types.EventSlash.pool:type_name -> common.Asset
+	61, // 31: types.EventReserve.reserve_contributor:type_name -> types.ReserveContributor
+	58, // 32: types.EventReserve.in_tx:type_name -> common.Tx
+	62, // 33: types.EventScheduledOutbound.out_tx:type_name -> types.TxOutItem
+	58, // 34: types.EventSecurity.tx:type_name -> common.Tx
+	56, // 35: types.EventSlash.pool:type_name -> common.Asset
 	15, // 36: types.EventSlash.slash_amount:type_name -> types.PoolAmt
 	3,  // 37: types.EventErrata.pools:type_name -> types.PoolMod
-	59, // 38: types.EventFee.fee:type_name -> common.Fee
-	57, // 39: types.EventOutbound.tx:type_name -> common.Tx
+	60, // 38: types.EventFee.fee:type_name -> common.Fee
+	58, // 39: types.EventOutbound.tx:type_name -> common.Tx
 	3,  // 40: types.EventPoolBalanceChanged.pool_change:type_name -> types.PoolMod
 	2,  // 41: types.EventMintBurn.supply:type_name -> types.MintBurnSupplyType
-	55, // 42: types.EventTradeAccountDeposit.asset:type_name -> common.Asset
-	55, // 43: types.EventTradeAccountWithdraw.asset:type_name -> common.Asset
-	55, // 44: types.EventSecuredAssetDeposit.asset:type_name -> common.Asset
-	55, // 45: types.EventSecuredAssetWithdraw.asset:type_name -> common.Asset
-	55, // 46: types.EventLoanOpen.collateral_asset:type_name -> common.Asset
-	55, // 47: types.EventLoanOpen.target_asset:type_name -> common.Asset
-	55, // 48: types.EventLoanRepayment.collateral_asset:type_name -> common.Asset
-	55, // 49: types.EventSwitch.asset:type_name -> common.Asset
-	55, // 50: types.EventTCYClaim.asset:type_name -> common.Asset
-	51, // [51:51] is the sub-list for method output_type
-	51, // [51:51] is the sub-list for method input_type
-	51, // [51:51] is the sub-list for extension type_name
-	51, // [51:51] is the sub-list for extension extendee
-	0,  // [0:51] is the sub-list for field type_name
+	56, // 42: types.EventTradeAccountDeposit.asset:type_name -> common.Asset
+	56, // 43: types.EventTradeAccountWithdraw.asset:type_name -> common.Asset
+	56, // 44: types.EventSecuredAssetDeposit.asset:type_name -> common.Asset
+	56, // 45: types.EventSecuredAssetWithdraw.asset:type_name -> common.Asset
+	56, // 46: types.EventLoanOpen.collateral_asset:type_name -> common.Asset
+	56, // 47: types.EventLoanOpen.target_asset:type_name -> common.Asset
+	56, // 48: types.EventLoanRepayment.collateral_asset:type_name -> common.Asset
+	56, // 49: types.EventSwitch.asset:type_name -> common.Asset
+	56, // 50: types.EventTCYClaim.asset:type_name -> common.Asset
+	57, // 51: types.EventFailedOutboundRecovery.coin:type_name -> common.Coin
+	52, // [52:52] is the sub-list for method output_type
+	52, // [52:52] is the sub-list for method input_type
+	52, // [52:52] is the sub-list for extension type_name
+	52, // [52:52] is the sub-list for extension extendee
+	0,  // [0:52] is the sub-list for field type_name
 }
 
 func init() { file_types_type_events_proto_init() }
@@ -37889,6 +38668,18 @@ func file_types_type_events_proto_init() {
 				return nil
 			}
 		}
+		file_types_type_events_proto_msgTypes[52].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*EventFailedOutboundRecovery); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -37896,7 +38687,7 @@ func file_types_type_events_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_types_type_events_proto_rawDesc,
 			NumEnums:      3,
-			NumMessages:   52,
+			NumMessages:   53,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

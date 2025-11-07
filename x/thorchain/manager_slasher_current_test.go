@@ -802,3 +802,503 @@ func (s *SlashingVCURSuite) TestNeedsNewVault(c *C) {
 	ctx = ctx.WithBlockHeight(999999999)
 	c.Check(slasher.needsNewVault(ctx, mgr, vault, 300, 1, toi), Equals, false)
 }
+
+func (s *SlashingVCURSuite) TestTreasuryRecoveryForMaxAttempts(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// Setup a node and vault
+	na := GetRandomValidatorNode(NodeActive)
+	c.Assert(mgr.Keeper().SetNodeAccount(ctx, na), IsNil)
+
+	vault := GetRandomVault()
+	vault.Type = AsgardVault
+	vault.Status = types2.VaultStatus_ActiveVault
+	vault.PubKey = na.PubKeySet.Secp256k1
+	vault.Membership = []string{na.PubKeySet.Secp256k1.String()}
+	vault.Coins = common.NewCoins(
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(100*common.One)),
+	)
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Setup pool
+	pool := NewPool()
+	pool.Asset = common.BTCAsset
+	pool.BalanceRune = cosmos.NewUint(1000 * common.One)
+	pool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	pool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+	// Create tx out item
+	inHash := GetRandomTxHash()
+	txOutItem := TxOutItem{
+		Chain:       common.BTCChain,
+		InHash:      inHash,
+		VaultPubKey: na.PubKeySet.Secp256k1,
+		ToAddress:   GetRandomBTCAddress(),
+		Coin:        common.NewCoin(common.BTCAsset, cosmos.NewUint(1*common.One)),
+		Memo:        fmt.Sprintf("OUT:%s", inHash.String()),
+	}
+
+	// Parse the memo
+	memo, err := ParseMemoWithTHORNames(ctx, mgr.Keeper(), txOutItem.Memo)
+	c.Assert(err, IsNil)
+	c.Assert(memo.IsOutbound(), Equals, true, Commentf("Memo should be outbound"))
+
+	// Directly call sendFailedOutboundToTreasury
+	slasher := newSlasherVCUR(mgr.Keeper(), mgr.EventMgr())
+	err = slasher.sendFailedOutboundToTreasury(ctx, mgr, txOutItem, vault, memo)
+	c.Assert(err, IsNil, Commentf("sendFailedOutboundToTreasury should not error"))
+
+	// Verify a swap was queued (check both standard and advanced swap queues)
+	hasSwap := false
+
+	// Check standard swap queue
+	swapQueueItems := mgr.Keeper().GetSwapQueueIterator(ctx)
+	for ; swapQueueItems.Valid(); swapQueueItems.Next() {
+		hasSwap = true
+		break
+	}
+	swapQueueItems.Close()
+
+	// If not in standard queue, check advanced swap queue
+	if !hasSwap {
+		advSwapQueueItems := mgr.Keeper().GetAdvSwapQueueItemIterator(ctx)
+		for ; advSwapQueueItems.Valid(); advSwapQueueItems.Next() {
+			hasSwap = true
+			break
+		}
+		advSwapQueueItems.Close()
+	}
+
+	c.Assert(hasSwap, Equals, true, Commentf("Expected a swap to be queued for treasury recovery"))
+}
+
+func (s *SlashingVCURSuite) TestTreasuryRecoveryWithDifferentMemoTypes(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	testCases := []struct {
+		name          string
+		memo          string
+		shouldRecover bool
+	}{
+		{
+			name:          "outbound memo should recover",
+			memo:          fmt.Sprintf("OUT:%s", GetRandomTxHash()),
+			shouldRecover: true,
+		},
+		{
+			name:          "refund memo should recover",
+			memo:          fmt.Sprintf("REFUND:%s", GetRandomTxHash()),
+			shouldRecover: true,
+		},
+		{
+			name:          "ragnarok memo should recover",
+			memo:          fmt.Sprintf("RAGNAROK:%d", 12345),
+			shouldRecover: true,
+		},
+		{
+			name:          "migrate memo should not recover (internal)",
+			memo:          fmt.Sprintf("MIGRATE:%d", 12345),
+			shouldRecover: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		c.Logf("Test case: %s", tc.name)
+
+		// Setup vault
+		na := GetRandomValidatorNode(NodeActive)
+		c.Assert(mgr.Keeper().SetNodeAccount(ctx, na), IsNil)
+
+		vault := GetRandomVault()
+		vault.Type = AsgardVault
+		vault.Status = types2.VaultStatus_ActiveVault
+		vault.PubKey = na.PubKeySet.Secp256k1
+		vault.Membership = []string{na.PubKeySet.Secp256k1.String()}
+		vault.Coins = common.NewCoins(
+			common.NewCoin(common.BTCAsset, cosmos.NewUint(100*common.One)),
+		)
+		c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+		// Setup pool for non-RUNE assets
+		pool := NewPool()
+		pool.Asset = common.BTCAsset
+		pool.BalanceRune = cosmos.NewUint(1000 * common.One)
+		pool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+		pool.Status = PoolAvailable
+		c.Assert(mgr.Keeper().SetPool(ctx, pool), IsNil)
+
+		// Create tx out item
+		inHash := GetRandomTxHash()
+		txOutItem := TxOutItem{
+			Chain:       common.BTCChain,
+			InHash:      inHash,
+			VaultPubKey: na.PubKeySet.Secp256k1,
+			ToAddress:   GetRandomBTCAddress(),
+			Coin:        common.NewCoin(common.BTCAsset, cosmos.NewUint(1*common.One)),
+			Memo:        tc.memo,
+		}
+
+		// Parse memo
+		parsedMemo, err := ParseMemoWithTHORNames(ctx, mgr.Keeper(), txOutItem.Memo)
+		c.Assert(err, IsNil)
+
+		// Check if memo matches expected outbound type
+		c.Assert(parsedMemo.IsOutbound(), Equals, tc.shouldRecover, Commentf("Memo type mismatch for %s", tc.name))
+
+		// If this should recover, test the sendFailedOutboundToTreasury function
+		if tc.shouldRecover {
+			slasher := newSlasherVCUR(mgr.Keeper(), mgr.EventMgr())
+			err = slasher.sendFailedOutboundToTreasury(ctx, mgr, txOutItem, vault, parsedMemo)
+			c.Assert(err, IsNil, Commentf("sendFailedOutboundToTreasury should not error for %s", tc.name))
+
+			// Verify a swap was queued (check both standard and advanced swap queues)
+			hasSwap := false
+
+			// Check standard swap queue
+			swapQueueItems := mgr.Keeper().GetSwapQueueIterator(ctx)
+			for ; swapQueueItems.Valid(); swapQueueItems.Next() {
+				hasSwap = true
+				break
+			}
+			swapQueueItems.Close()
+
+			// If not in standard queue, check advanced swap queue
+			if !hasSwap {
+				advSwapQueueItems := mgr.Keeper().GetAdvSwapQueueItemIterator(ctx)
+				for ; advSwapQueueItems.Valid(); advSwapQueueItems.Next() {
+					hasSwap = true
+					break
+				}
+				advSwapQueueItems.Close()
+			}
+
+			c.Assert(hasSwap, Equals, true, Commentf("Expected swap to be queued for %s", tc.name))
+		}
+	}
+}
+
+func (s *SlashingVCURSuite) TestReverseSwapForFailedSwapOutbound(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// Setup a node and vault
+	na := GetRandomValidatorNode(NodeActive)
+	c.Assert(mgr.Keeper().SetNodeAccount(ctx, na), IsNil)
+
+	vault := GetRandomVault()
+	vault.Type = AsgardVault
+	vault.Status = types2.VaultStatus_ActiveVault
+	vault.PubKey = na.PubKeySet.Secp256k1
+	vault.Membership = []string{na.PubKeySet.Secp256k1.String()}
+	vault.Coins = common.NewCoins(
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(100*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
+	)
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Setup pools for both assets
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.BalanceRune = cosmos.NewUint(1000 * common.One)
+	btcPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	btcPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, btcPool), IsNil)
+
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceRune = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	// Create original swap transaction: ETH -> BTC
+	inHash := GetRandomTxHash()
+	ethAddr := GetRandomETHAddress()
+	btcAddr := GetRandomBTCAddress()
+	swapMemo := fmt.Sprintf("=:BTC.BTC:%s", btcAddr.String())
+
+	originalTx := common.Tx{
+		ID:          inHash,
+		Chain:       common.ETHChain,
+		FromAddress: ethAddr,
+		ToAddress:   GetRandomETHAddress(), // vault address
+		Coins:       common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(10*common.One))},
+		Memo:        swapMemo,
+		Gas:         common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(1000000))},
+	}
+
+	observedTx := ObservedTx{
+		Tx:             originalTx,
+		Status:         common.Status_done,
+		OutHashes:      nil,
+		BlockHeight:    ctx.BlockHeight(),
+		Signers:        []string{na.NodeAddress.String()},
+		ObservedPubKey: vault.PubKey,
+		FinaliseHeight: ctx.BlockHeight(),
+	}
+
+	// Save the observed tx voter
+	voter := NewObservedTxVoter(inHash, []ObservedTx{observedTx})
+	voter.FinalisedHeight = ctx.BlockHeight()
+	voter.Tx = observedTx
+	mgr.Keeper().SetObservedTxInVoter(ctx, voter)
+
+	// Create the failed outbound (BTC output that couldn't be sent)
+	txOutItem := TxOutItem{
+		Chain:       common.BTCChain,
+		InHash:      inHash,
+		VaultPubKey: na.PubKeySet.Secp256k1,
+		ToAddress:   btcAddr,
+		Coin:        common.NewCoin(common.BTCAsset, cosmos.NewUint(1*common.One)),
+		Memo:        fmt.Sprintf("OUT:%s", inHash.String()),
+	}
+
+	// Parse the outbound memo
+	memo, err := ParseMemoWithTHORNames(ctx, mgr.Keeper(), txOutItem.Memo)
+	c.Assert(err, IsNil)
+	c.Assert(memo.IsOutbound(), Equals, true)
+
+	// Call sendFailedOutboundToTreasury - it should detect this is a swap and do a reverse swap
+	slasher := newSlasherVCUR(mgr.Keeper(), mgr.EventMgr())
+	err = slasher.sendFailedOutboundToTreasury(ctx, mgr, txOutItem, vault, memo)
+	c.Assert(err, IsNil, Commentf("sendFailedOutboundToTreasury should not error"))
+
+	// Verify a swap was queued for reverse swap (BTC -> ETH)
+	hasSwap := false
+	var queuedSwap MsgSwap
+
+	// Check standard swap queue
+	swapQueueItems := mgr.Keeper().GetSwapQueueIterator(ctx)
+	for ; swapQueueItems.Valid(); swapQueueItems.Next() {
+		var msg MsgSwap
+		if err := mgr.Keeper().Cdc().Unmarshal(swapQueueItems.Value(), &msg); err == nil {
+			hasSwap = true
+			queuedSwap = msg
+			break
+		}
+	}
+	swapQueueItems.Close()
+
+	// If not in standard queue, check advanced swap queue
+	if !hasSwap {
+		advSwapQueueItems := mgr.Keeper().GetAdvSwapQueueItemIterator(ctx)
+		for ; advSwapQueueItems.Valid(); advSwapQueueItems.Next() {
+			var msg MsgSwap
+			if err := mgr.Keeper().Cdc().Unmarshal(advSwapQueueItems.Value(), &msg); err == nil {
+				hasSwap = true
+				queuedSwap = msg
+				break
+			}
+		}
+		advSwapQueueItems.Close()
+	}
+
+	c.Assert(hasSwap, Equals, true, Commentf("Expected reverse swap to be queued"))
+
+	// Verify the swap is reversing correctly: BTC -> ETH back to original sender
+	c.Assert(queuedSwap.Tx.Coins[0].Asset.Equals(common.BTCAsset), Equals, true,
+		Commentf("Swap should be from BTC (failed asset)"))
+	c.Assert(queuedSwap.TargetAsset.Equals(common.ETHAsset), Equals, true,
+		Commentf("Swap should be to ETH (original asset)"))
+	c.Assert(queuedSwap.Destination.Equals(ethAddr), Equals, true,
+		Commentf("Swap should send back to original sender"))
+	c.Assert(queuedSwap.TradeTarget.IsZero(), Equals, true,
+		Commentf("Reverse swap should have no slip limit"))
+}
+
+func (s *SlashingVCURSuite) TestReverseSwapWithCustomRefundAddress(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// Setup a node and vault
+	na := GetRandomValidatorNode(NodeActive)
+	c.Assert(mgr.Keeper().SetNodeAccount(ctx, na), IsNil)
+
+	vault := GetRandomVault()
+	vault.Type = AsgardVault
+	vault.Status = types2.VaultStatus_ActiveVault
+	vault.PubKey = na.PubKeySet.Secp256k1
+	vault.Membership = []string{na.PubKeySet.Secp256k1.String()}
+	vault.Coins = common.NewCoins(
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(100*common.One)),
+		common.NewCoin(common.ETHAsset, cosmos.NewUint(100*common.One)),
+	)
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Setup pools
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.BalanceRune = cosmos.NewUint(1000 * common.One)
+	btcPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	btcPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, btcPool), IsNil)
+
+	ethPool := NewPool()
+	ethPool.Asset = common.ETHAsset
+	ethPool.BalanceRune = cosmos.NewUint(1000 * common.One)
+	ethPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	ethPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, ethPool), IsNil)
+
+	// Create original swap transaction with custom refund address: ETH -> BTC
+	inHash := GetRandomTxHash()
+	ethAddr := GetRandomETHAddress()
+	customRefundAddr := GetRandomETHAddress()
+	btcAddr := GetRandomBTCAddress()
+	// Format: =:ASSET:DESTINATION/REFUND:LIMIT
+	swapMemo := fmt.Sprintf("=:BTC.BTC:%s/%s", btcAddr.String(), customRefundAddr.String())
+
+	originalTx := common.Tx{
+		ID:          inHash,
+		Chain:       common.ETHChain,
+		FromAddress: ethAddr,
+		ToAddress:   GetRandomETHAddress(),
+		Coins:       common.Coins{common.NewCoin(common.ETHAsset, cosmos.NewUint(10*common.One))},
+		Memo:        swapMemo,
+		Gas:         common.Gas{common.NewCoin(common.ETHAsset, cosmos.NewUint(1000000))},
+	}
+
+	observedTx := ObservedTx{
+		Tx:             originalTx,
+		Status:         common.Status_done,
+		OutHashes:      nil,
+		BlockHeight:    ctx.BlockHeight(),
+		Signers:        []string{na.NodeAddress.String()},
+		ObservedPubKey: vault.PubKey,
+		FinaliseHeight: ctx.BlockHeight(),
+	}
+
+	voter := NewObservedTxVoter(inHash, []ObservedTx{observedTx})
+	voter.FinalisedHeight = ctx.BlockHeight()
+	voter.Tx = observedTx
+	mgr.Keeper().SetObservedTxInVoter(ctx, voter)
+
+	// Create the failed outbound
+	txOutItem := TxOutItem{
+		Chain:       common.BTCChain,
+		InHash:      inHash,
+		VaultPubKey: na.PubKeySet.Secp256k1,
+		ToAddress:   btcAddr,
+		Coin:        common.NewCoin(common.BTCAsset, cosmos.NewUint(1*common.One)),
+		Memo:        fmt.Sprintf("OUT:%s", inHash.String()),
+	}
+
+	memo, err := ParseMemoWithTHORNames(ctx, mgr.Keeper(), txOutItem.Memo)
+	c.Assert(err, IsNil)
+
+	// Call sendFailedOutboundToTreasury
+	slasher := newSlasherVCUR(mgr.Keeper(), mgr.EventMgr())
+	err = slasher.sendFailedOutboundToTreasury(ctx, mgr, txOutItem, vault, memo)
+	c.Assert(err, IsNil)
+
+	// Verify the reverse swap uses the custom refund address
+	hasSwap := false
+	var queuedSwap MsgSwap
+
+	swapQueueItems := mgr.Keeper().GetSwapQueueIterator(ctx)
+	for ; swapQueueItems.Valid(); swapQueueItems.Next() {
+		var msg MsgSwap
+		if err := mgr.Keeper().Cdc().Unmarshal(swapQueueItems.Value(), &msg); err == nil {
+			hasSwap = true
+			queuedSwap = msg
+			break
+		}
+	}
+	swapQueueItems.Close()
+
+	if !hasSwap {
+		advSwapQueueItems := mgr.Keeper().GetAdvSwapQueueItemIterator(ctx)
+		for ; advSwapQueueItems.Valid(); advSwapQueueItems.Next() {
+			var msg MsgSwap
+			if err := mgr.Keeper().Cdc().Unmarshal(advSwapQueueItems.Value(), &msg); err == nil {
+				hasSwap = true
+				queuedSwap = msg
+				break
+			}
+		}
+		advSwapQueueItems.Close()
+	}
+
+	c.Assert(hasSwap, Equals, true, Commentf("Expected reverse swap to be queued"))
+	c.Assert(queuedSwap.Destination.Equals(customRefundAddr), Equals, true,
+		Commentf("Reverse swap should use custom refund address"))
+}
+
+func (s *SlashingVCURSuite) TestReverseSwapFallbackToTreasury(c *C) {
+	ctx, mgr := setupManagerForTest(c)
+
+	// Setup a node and vault
+	na := GetRandomValidatorNode(NodeActive)
+	c.Assert(mgr.Keeper().SetNodeAccount(ctx, na), IsNil)
+
+	vault := GetRandomVault()
+	vault.Type = AsgardVault
+	vault.Status = types2.VaultStatus_ActiveVault
+	vault.PubKey = na.PubKeySet.Secp256k1
+	vault.Membership = []string{na.PubKeySet.Secp256k1.String()}
+	vault.Coins = common.NewCoins(
+		common.NewCoin(common.BTCAsset, cosmos.NewUint(100*common.One)),
+	)
+	c.Assert(mgr.Keeper().SetVault(ctx, vault), IsNil)
+
+	// Setup only BTC pool (no ETH pool for reverse swap)
+	btcPool := NewPool()
+	btcPool.Asset = common.BTCAsset
+	btcPool.BalanceRune = cosmos.NewUint(1000 * common.One)
+	btcPool.BalanceAsset = cosmos.NewUint(1000 * common.One)
+	btcPool.Status = PoolAvailable
+	c.Assert(mgr.Keeper().SetPool(ctx, btcPool), IsNil)
+
+	// Create failed outbound WITHOUT an original observed tx
+	// This simulates a case where we can't retrieve the original transaction
+	inHash := GetRandomTxHash()
+	txOutItem := TxOutItem{
+		Chain:       common.BTCChain,
+		InHash:      inHash,
+		VaultPubKey: na.PubKeySet.Secp256k1,
+		ToAddress:   GetRandomBTCAddress(),
+		Coin:        common.NewCoin(common.BTCAsset, cosmos.NewUint(1*common.One)),
+		Memo:        fmt.Sprintf("OUT:%s", inHash.String()),
+	}
+
+	memo, err := ParseMemoWithTHORNames(ctx, mgr.Keeper(), txOutItem.Memo)
+	c.Assert(err, IsNil)
+
+	// Call sendFailedOutboundToTreasury - should fall back to treasury since no original tx
+	slasher := newSlasherVCUR(mgr.Keeper(), mgr.EventMgr())
+	err = slasher.sendFailedOutboundToTreasury(ctx, mgr, txOutItem, vault, memo)
+	c.Assert(err, IsNil)
+
+	// Verify a treasury recovery swap was queued (BTC -> RUNE to treasury)
+	hasSwap := false
+	var queuedSwap MsgSwap
+
+	swapQueueItems := mgr.Keeper().GetSwapQueueIterator(ctx)
+	for ; swapQueueItems.Valid(); swapQueueItems.Next() {
+		var msg MsgSwap
+		if err := mgr.Keeper().Cdc().Unmarshal(swapQueueItems.Value(), &msg); err == nil {
+			hasSwap = true
+			queuedSwap = msg
+			break
+		}
+	}
+	swapQueueItems.Close()
+
+	if !hasSwap {
+		advSwapQueueItems := mgr.Keeper().GetAdvSwapQueueItemIterator(ctx)
+		for ; advSwapQueueItems.Valid(); advSwapQueueItems.Next() {
+			var msg MsgSwap
+			if err := mgr.Keeper().Cdc().Unmarshal(advSwapQueueItems.Value(), &msg); err == nil {
+				hasSwap = true
+				queuedSwap = msg
+				break
+			}
+		}
+		advSwapQueueItems.Close()
+	}
+
+	c.Assert(hasSwap, Equals, true, Commentf("Expected treasury recovery swap to be queued"))
+	c.Assert(queuedSwap.TargetAsset.Equals(common.RuneAsset()), Equals, true,
+		Commentf("Treasury recovery should swap to RUNE"))
+	c.Assert(queuedSwap.Destination.Equals(common.TreasuryAddress), Equals, true,
+		Commentf("Treasury recovery should send to treasury address"))
+}
