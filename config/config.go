@@ -810,6 +810,14 @@ type BifrostChainConfiguration struct {
 		// MaxUTXOsToSpend is the maximum number of UTXOs to spend in a single transaction.
 		// This is overridden at runtime by the `MaxUTXOsToSpend` mimir value.
 		MaxUTXOsToSpend int64 `mapstructure:"max_utxos_to_spend"`
+
+		// MaxMempoolAncestors is the maximum number of unconfirmed ancestors a UTXO can
+		// have before it is excluded from selection. This prevents the "too-long-mempool-chain"
+		// error when broadcasting transactions. Bitcoin, Litecoin, and Dogecoin have a default
+		// limit of 25 ancestors. Note: GetMempoolEntry's ancestorcount includes the transaction
+		// itself, so set this to 25 (not 24). Bitcoin Cash removed ancestor limits in May 2021,
+		// so BCH should set this to 0 (no limit). Set to 0 to disable ancestor checking.
+		MaxMempoolAncestors int64 `mapstructure:"max_mempool_ancestors"`
 	} `mapstructure:"utxo"`
 }
 
@@ -827,6 +835,21 @@ func (b *BifrostChainConfiguration) Validate() {
 				Str("chain", b.ChainID.String()).
 				Msg("rpc host is required")
 		}
+	}
+
+	// Validate MaxMempoolAncestors for UTXO chains
+	switch b.ChainID {
+	case common.BTCChain, common.LTCChain, common.DOGEChain:
+		// Bitcoin, Litecoin, and Dogecoin have a mempool ancestor limit of 25
+		// Config value should be <= 25 (GetMempoolEntry's ancestorcount includes the tx itself)
+		if b.UTXO.MaxMempoolAncestors > 25 {
+			log.Fatal().
+				Str("chain", b.ChainID.String()).
+				Int64("max_mempool_ancestors", b.UTXO.MaxMempoolAncestors).
+				Msg("max_mempool_ancestors exceeds chain limit of 25")
+		}
+	case common.BCHChain:
+		// BCH removed ancestor limits in May 2021, so any value (including 0) is valid
 	}
 }
 

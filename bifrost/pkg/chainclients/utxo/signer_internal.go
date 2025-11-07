@@ -91,6 +91,29 @@ func (c *Client) getUtxoToSpend(pubkey common.PubKey, total float64) ([]btcjson.
 			if !isSelfTx {
 				continue
 			}
+
+			// For unconfirmed UTXOs (even self-transactions), check ancestor count
+			// to avoid exceeding the chain's mempool ancestor limit. Set to 0 to disable.
+			if item.Confirmations == 0 && c.cfg.UTXO.MaxMempoolAncestors > 0 {
+				entry, err := c.rpc.GetMempoolEntry(item.TxID)
+				if err != nil {
+					// If we can't get mempool entry, the tx might have been confirmed
+					// or removed. Log and skip this UTXO to be safe.
+					c.log.Debug().Err(err).Str("txid", item.TxID).Msg("failed to get mempool entry, skipping UTXO")
+					continue
+				}
+
+				// GetMempoolEntry's ancestorcount already includes the transaction itself.
+				// So if the limit is 25 and ancestorcount is 25, we've hit the limit.
+				if entry.AncestorCount >= c.cfg.UTXO.MaxMempoolAncestors {
+					c.log.Warn().
+						Str("txid", item.TxID).
+						Int64("ancestor_count", entry.AncestorCount).
+						Int64("max_allowed", c.cfg.UTXO.MaxMempoolAncestors).
+						Msg("skipping UTXO with too many ancestors to avoid mempool chain limit")
+					continue
+				}
+			}
 		}
 
 		result = append(result, item)
@@ -104,6 +127,13 @@ func (c *Client) getUtxoToSpend(pubkey common.PubKey, total float64) ([]btcjson.
 			break
 		}
 	}
+
+	// If we couldn't collect enough UTXOs to cover the required amount, return an error
+	// to avoid confusing downstream errors about negative balance
+	if toSpend < total {
+		return nil, fmt.Errorf("insufficient available UTXOs: need %f, only have %f available from %d UTXOs", total, toSpend, len(result))
+	}
+
 	return result, nil
 }
 

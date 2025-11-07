@@ -116,6 +116,7 @@ bifrost:
         min_sats_per_vbyte: 2
         min_utxo_confirmations: 1
         max_utxos_to_spend: 10
+        max_mempool_ancestors: 25 # BTC/LTC/DOGE limit is 25 (GetMempoolEntry ancestorcount includes the tx itself)
       block_scanner: &default-block-scanner
         max_reorg_rescan_blocks: 72 # 12h
         chain_id: BTC
@@ -437,6 +438,7 @@ bifrost:
         max_sats_per_vbyte: 9765 # backwards compatible with 1e8/10/1024
         min_sats_per_vbyte: 2
         estimated_average_tx_size: 1500
+        max_mempool_ancestors: 0 # BCH removed ancestor limits in May 2021
 
     sol:
       <<: *default-chain
