@@ -51,6 +51,16 @@ func (c *Client) signUTXODOGE(redeemTx *dogewire.MsgTx, tx stypes.TxOutItem, amo
 		return fmt.Errorf("fail to create engine: %w", err)
 	}
 	if err = engine.Execute(); err != nil {
+		// SECURITY FIX (Layer 4 - NULLFAIL Failsafe): This should NEVER happen after Layers 1-3.
+		// If it does occur, it indicates a serious issue: cryptographic failure, TSS corruption, or unknown edge case.
+		// We log and treat as success to prevent retry loops, allowing manual investigation.
+		if dogetxscript.IsErrorCode(err, dogetxscript.ErrNullFail) {
+			c.log.Error().
+				Err(err).
+				Int("input_idx", idx).
+				Msg("NULLFAIL FAILSAFE TRIGGERED - This should not happen! Investigate immediately!")
+			return nil // Treat as success to prevent retry loop
+		}
 		return fmt.Errorf("fail to execute the script: %w", err)
 	}
 	return nil

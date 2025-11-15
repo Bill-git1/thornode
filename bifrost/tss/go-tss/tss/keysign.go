@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"math/big"
 	"sort"
 	"strings"
 	"sync"
@@ -368,20 +369,55 @@ func (t *TssServer) broadcastKeysignFailure(messageID string, peers []peer.ID) {
 }
 
 func (t *TssServer) batchSignatures(algo tcommon.SigningAlgo, sigs []*tsslibcommon.SignatureData, msgsToSign [][]byte) keysign.Response {
+	// SECURITY FIX (Layer 2): Content-based signature pairing instead of index-based.
+	// Each signature contains the hash of the message it signed in the M field.
+	// We must match signatures to messages by content, not by array index,
+	// because array ordering may differ across nodes due to goroutine timing.
+
+	// Create a map of message hash (as string) to original message for content-based pairing
+	msgMap := make(map[string][]byte)
+	for _, msg := range msgsToSign {
+		hashInt, err := common.MsgToHashInt(msg, algo)
+		if err != nil {
+			t.logger.Error().Err(err).Msg("fail to convert message to hash")
+			return keysign.Response{
+				Status: common.Fail,
+				Blame:  blame.NewBlame(blame.InternalError, []blame.Node{}),
+			}
+		}
+		hashKey := hashInt.String()
+		msgMap[hashKey] = msg
+	}
+
 	var signatures []keysign.Signature
-	for i, sig := range sigs {
+	// Pair signatures with messages using the M field (message hash)
+	for _, sig := range sigs {
 		sigg := sig.GetSignature()
+
+		// Find the original message that matches this signature's hash
+		sigHashInt := new(big.Int).SetBytes(sigg.M)
+		sigHashKey := sigHashInt.String()
+		originalMsg, found := msgMap[sigHashKey]
+		if !found {
+			t.logger.Error().
+				Str("sig_hash", sigHashKey).
+				Msg("signature hash does not match any input message - signature pairing failed")
+			return keysign.Response{
+				Status: common.Fail,
+				Blame:  blame.NewBlame(blame.InternalError, []blame.Node{}),
+			}
+		}
+
 		var signature keysign.Signature
 		switch algo {
 		case tcommon.SigningAlgoSecp256k1:
-			msg := base64.StdEncoding.EncodeToString(msgsToSign[i])
+			msg := base64.StdEncoding.EncodeToString(originalMsg)
 			r := base64.StdEncoding.EncodeToString(sigg.R)
 			s := base64.StdEncoding.EncodeToString(sigg.S)
 			recovery := base64.StdEncoding.EncodeToString(sigg.GetSignatureRecovery())
-
 			signature = keysign.NewSignature(msg, r, s, recovery)
 		case tcommon.SigningAlgoEd25519:
-			msg := base64.StdEncoding.EncodeToString(msgsToSign[i])
+			msg := base64.StdEncoding.EncodeToString(originalMsg)
 			s := base64.StdEncoding.EncodeToString(sigg.Signature)
 			signature = keysign.NewSignature(msg, "", s, "")
 		}

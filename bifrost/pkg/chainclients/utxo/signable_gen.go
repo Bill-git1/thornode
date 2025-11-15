@@ -42,11 +42,13 @@ func (ts *tssSignableBCH) SignECDSA(payload []byte) (*bchec.Signature, error) {
 	sig.R = new(big.Int).SetBytes(result[:32])
 	sig.S = new(big.Int).SetBytes(result[32:])
 
-	// verify the signature
+	// SECURITY FIX (Layer 3): Verify the signature and fail-fast on verification failure.
+	// Invalid signatures must be rejected immediately to prevent NULLFAIL errors and signature mispairing.
 	if sig.Verify(payload, ts.GetPubKey()) {
-		ts.log.Info().Msg("we can verify the signature successfully")
+		ts.log.Info().Msg("signature verified successfully")
 	} else {
-		ts.log.Info().Msg("the signature can't be verified")
+		ts.log.Error().Msg("TSS signature verification failed - signature does not match message")
+		return nil, fmt.Errorf("signature verification failed: TSS produced invalid signature for message")
 	}
 
 	return &sig, nil
@@ -99,11 +101,13 @@ func (ts *tssSignableBTC) Sign(payload []byte) (*btcec.Signature, error) {
 	sig.R = new(big.Int).SetBytes(result[:32])
 	sig.S = new(big.Int).SetBytes(result[32:])
 
-	// verify the signature
+	// SECURITY FIX (Layer 3): Verify the signature and fail-fast on verification failure.
+	// Invalid signatures must be rejected immediately to prevent NULLFAIL errors and signature mispairing.
 	if sig.Verify(payload, ts.GetPubKey()) {
-		ts.log.Info().Msg("we can verify the signature successfully")
+		ts.log.Info().Msg("signature verified successfully")
 	} else {
-		ts.log.Info().Msg("the signature can't be verified")
+		ts.log.Error().Msg("TSS signature verification failed - signature does not match message")
+		return nil, fmt.Errorf("signature verification failed: TSS produced invalid signature for message")
 	}
 
 	return &sig, nil
@@ -151,11 +155,13 @@ func (ts *tssSignableDOGE) Sign(payload []byte) (*dogeec.Signature, error) {
 	sig.R = new(big.Int).SetBytes(result[:32])
 	sig.S = new(big.Int).SetBytes(result[32:])
 
-	// verify the signature
+	// SECURITY FIX (Layer 3): Verify the signature and fail-fast on verification failure.
+	// Invalid signatures must be rejected immediately to prevent NULLFAIL errors and signature mispairing.
 	if sig.Verify(payload, ts.GetPubKey()) {
-		ts.log.Info().Msg("we can verify the signature successfully")
+		ts.log.Info().Msg("signature verified successfully")
 	} else {
-		ts.log.Info().Msg("the signature can't be verified")
+		ts.log.Error().Msg("TSS signature verification failed - signature does not match message")
+		return nil, fmt.Errorf("signature verification failed: TSS produced invalid signature for message")
 	}
 
 	return &sig, nil
@@ -203,11 +209,13 @@ func (ts *tssSignableLTC) Sign(payload []byte) (*ltcec.Signature, error) {
 	sig.R = new(big.Int).SetBytes(result[:32])
 	sig.S = new(big.Int).SetBytes(result[32:])
 
-	// verify the signature
+	// SECURITY FIX (Layer 3): Verify the signature and fail-fast on verification failure.
+	// Invalid signatures must be rejected immediately to prevent NULLFAIL errors and signature mispairing.
 	if sig.Verify(payload, ts.GetPubKey()) {
-		ts.log.Info().Msg("we can verify the signature successfully")
+		ts.log.Info().Msg("signature verified successfully")
 	} else {
-		ts.log.Info().Msg("the signature can't be verified")
+		ts.log.Error().Msg("TSS signature verification failed - signature does not match message")
+		return nil, fmt.Errorf("signature verification failed: TSS produced invalid signature for message")
 	}
 
 	return &sig, nil

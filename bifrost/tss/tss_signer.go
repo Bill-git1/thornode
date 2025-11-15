@@ -185,14 +185,15 @@ func (s *KeySign) processKeySignTasks() {
 				}
 				totalTasks := len(v)
 				// send no more than maxKeysignPerRequest messages in a single TSS keysign request
+				// SECURITY FIX: Always sort tasks to ensure deterministic ordering across all nodes.
+				// The order of messages in the slice is non-deterministic due to goroutine execution timing.
+				// All bifrosts MUST send messages in the same order for TSS signature pairing to work correctly.
+				sort.SliceStable(v, func(i, j int) bool {
+					return v[i].Msg < v[j].Msg
+				})
+
 				if totalTasks > maxKeysignPerRequest {
 					totalTasks = maxKeysignPerRequest
-					// when there are more than maxKeysignPerRequest messages in the task queue need to be signed
-					// the messages has to be sorted , because the order of messages that get into the slice is not deterministic
-					// so it need to sorted to make sure all bifrosts send the same messages to tss
-					sort.SliceStable(v, func(i, j int) bool {
-						return v[i].Msg < v[j].Msg
-					})
 				}
 				s.wg.Add(1)
 				signingTask := v[:totalTasks]
