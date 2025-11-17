@@ -761,12 +761,17 @@ func (s *Signer) processTransaction(item TxOutStoreItem) {
 		return s.signAndBroadcast(item)
 	})
 	if err != nil {
+		// Always store the checkpoint of the built tx if we have one. This ensures the same
+		// vault will never attempt multiple txs for an outbound, as further protection
+		// against cases like https://gitlab.com/thorchain/thornode/-/merge_requests/4344.
+		// In tradeoff, we accept a higher likelihood of temporary stuck outbounds.
+		item.Checkpoint = checkpoint
+
 		// mark the txout on round 7 failure to block other txs for the chain / pubkey
 		ksErr := tss.KeysignError{}
 		if errors.As(err, &ksErr) && ksErr.IsRound7() {
 			s.logger.Error().Err(err).Interface("tx", item.TxOutItem).Msg("round 7 signing error")
 			item.Round7Retry = true
-			item.Checkpoint = checkpoint
 			if storeErr := s.storage.Set(item); storeErr != nil {
 				s.logger.Error().Err(storeErr).Msg("fail to update tx out store item with round 7 retry")
 			}
