@@ -1083,7 +1083,15 @@ func (qs queryServer) queryQuoteSwap(ctx cosmos.Context, req *types.QueryQuoteSw
 	res.MaxStreamingQuantity = maxQ
 	var streamSwapBlocks int64
 	if streamingQuantity > 0 {
-		streamSwapBlocks = int64(streamingInterval) * int64(streamingQuantity-1)
+		if streamingInterval == 0 {
+			// Rapid streaming: multiple swaps per block limited by AdvSwapQueueRapidSwapMax
+			rapidSwapMax := max(qs.mgr.Keeper().GetConfigInt64(ctx, constants.AdvSwapQueueRapidSwapMax), 1)
+			// Calculate blocks needed: ceil(quantity / rapidSwapMax)
+			streamSwapBlocks = (int64(streamingQuantity) + rapidSwapMax - 1) / rapidSwapMax
+		} else {
+			// Traditional streaming: one swap per interval
+			streamSwapBlocks = int64(streamingInterval) * int64(streamingQuantity-1)
+		}
 	}
 	res.StreamingSwapBlocks = streamSwapBlocks
 	res.StreamingSwapSeconds = streamSwapBlocks * common.THORChain.ApproximateBlockMilliseconds() / 1000
