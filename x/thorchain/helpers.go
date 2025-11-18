@@ -1000,6 +1000,12 @@ func passiveBackfill(ctx cosmos.Context, mgr Manager, nodeAccount NodeAccount, b
 // atTVLCap - returns bool on if we've hit the TVL hard cap. Coins passed in
 // are included in the calculation
 func atTVLCap(ctx cosmos.Context, coins common.Coins, mgr Manager) bool {
+	// Check if StrictBondLiquidityRatio is enabled
+	strictBondLiquidityRatio := mgr.GetConstants().GetBoolValue(constants.StrictBondLiquidityRatio)
+	if !strictBondLiquidityRatio {
+		return false
+	}
+
 	vaults, err := mgr.Keeper().GetAsgardVaults(ctx)
 	if err != nil {
 		ctx.Logger().Error("fail to get vaults for atTVLCap", "error", err)

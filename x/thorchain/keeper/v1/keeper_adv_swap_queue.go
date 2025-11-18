@@ -116,7 +116,11 @@ func (k KVStore) GetAdvSwapQueueIndexIterator(ctx cosmos.Context, swapType types
 	store := runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx))
 	switch swapType {
 	case types.SwapType_limit:
-		prefix := k.GetKey(prefixAdvSwapQueueLimitIndex, fmt.Sprintf("%s>%s/", source, target))
+		// Normalize to layer1 assets for consistent key format
+		sourceLayer1 := source.GetLayer1Asset()
+		targetLayer1 := target.GetLayer1Asset()
+		prefixStr := fmt.Sprintf("%s>%s/", sourceLayer1, targetLayer1)
+		prefix := k.GetKey(prefixAdvSwapQueueLimitIndex, prefixStr)
 		return cosmos.KVStoreReversePrefixIterator(store, prefix)
 	case types.SwapType_market:
 		return nil
@@ -221,7 +225,12 @@ func (k KVStore) getAdvSwapQueueIndexKey(ctx cosmos.Context, msg MsgSwap) []byte
 		ra := rewriteRatio(ratioLength, getRatio(msg.Tx.Coins[0].Amount, msg.TradeTarget))
 		f := msg.Tx.Coins[0].Asset
 		t := msg.TargetAsset
-		return k.GetKey(prefixAdvSwapQueueLimitIndex, fmt.Sprintf("%s>%s/%s/", f.String(), t.String(), ra))
+		// Normalize to layer1 assets for consistent key format
+		fLayer1 := f.GetLayer1Asset()
+		tLayer1 := t.GetLayer1Asset()
+		keyStr := fmt.Sprintf("%s>%s/%s/", fLayer1.String(), tLayer1.String(), ra)
+		key := k.GetKey(prefixAdvSwapQueueLimitIndex, keyStr)
+		return key
 	case types.SwapType_market:
 		return k.GetKey(prefixAdvSwapQueueMarketIndex, "")
 	default:
