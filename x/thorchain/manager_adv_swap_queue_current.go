@@ -499,6 +499,9 @@ func (vm *SwapQueueAdvVCUR) getMaxSwapQuantity(ctx cosmos.Context, mgr Manager, 
 	// virtual pool depth. The equation for this as follows
 	dbps := cosmos.ZeroUint()
 	for _, asset := range []common.Asset{sourceAsset, targetAsset} {
+		if !asset.IsDerivedAsset() {
+			continue
+		}
 		// get the rune depth of the anchor pool(s)
 		runeDepth, _, _ := mgr.NetworkMgr().CalcAnchor(ctx, mgr, asset)
 		dpool, _ := vm.k.GetPool(ctx, asset) // get the derived asset pool
