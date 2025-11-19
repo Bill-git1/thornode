@@ -95,17 +95,16 @@ func (c *Client) getUtxoToSpend(pubkey common.PubKey, total float64) ([]btcjson.
 			// For unconfirmed UTXOs (even self-transactions), check ancestor count
 			// to avoid exceeding the chain's mempool ancestor limit. Set to 0 to disable.
 			if item.Confirmations == 0 && c.cfg.UTXO.MaxMempoolAncestors > 0 {
-				entry, err := c.rpc.GetMempoolEntry(item.TxID)
+				var entry *btcjson.GetMempoolEntryResult
+				entry, err = c.rpc.GetMempoolEntry(item.TxID)
 				if err != nil {
-					// If we can't get mempool entry, the tx might have been confirmed
-					// or removed. Log and skip this UTXO to be safe.
-					c.log.Debug().Err(err).Str("txid", item.TxID).Msg("failed to get mempool entry, skipping UTXO")
-					continue
+					// If we cannot get the mempool entry, the tx is likely confirmed.
+					c.log.Debug().Err(err).Str("txid", item.TxID).Msg("failed to get mempool entry")
 				}
 
 				// GetMempoolEntry's ancestorcount already includes the transaction itself.
 				// So if the limit is 25 and ancestorcount is 25, we've hit the limit.
-				if entry.AncestorCount >= c.cfg.UTXO.MaxMempoolAncestors {
+				if err == nil && entry.AncestorCount >= c.cfg.UTXO.MaxMempoolAncestors {
 					c.log.Warn().
 						Str("txid", item.TxID).
 						Int64("ancestor_count", entry.AncestorCount).
@@ -130,7 +129,15 @@ func (c *Client) getUtxoToSpend(pubkey common.PubKey, total float64) ([]btcjson.
 
 	// If we couldn't collect enough UTXOs to cover the required amount, return an error
 	// to avoid confusing downstream errors about negative balance
-	if toSpend < total {
+	toSpendAmt, err := btcutil.NewAmount(toSpend)
+	if err != nil {
+		return nil, fmt.Errorf("fail to convert to btcutil amount: %w", err)
+	}
+	totalAmt, err := btcutil.NewAmount(total)
+	if err != nil {
+		return nil, fmt.Errorf("fail to convert to btcutil amount: %w", err)
+	}
+	if toSpendAmt < totalAmt {
 		return nil, fmt.Errorf("insufficient available UTXOs: need %f, only have %f available from %d UTXOs", total, toSpend, len(result))
 	}
 
@@ -353,7 +360,7 @@ func (c *Client) getGasCoin(tx stypes.TxOutItem, vSize int64) common.Coin {
 func (c *Client) buildTx(tx stypes.TxOutItem, sourceScript []byte) (*wire.MsgTx, map[string]int64, error) {
 	txes, err := c.getUtxoToSpend(tx.VaultPubKey, c.getPaymentAmount(tx))
 	if err != nil {
-		return nil, nil, fmt.Errorf("fail to get unspent UTXO")
+		return nil, nil, fmt.Errorf("fail to get unspent UTXO: %w", err)
 	}
 	redeemTx := wire.NewMsgTx(wire.TxVersion)
 	totalAmt := int64(0)

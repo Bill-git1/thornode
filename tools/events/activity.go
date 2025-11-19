@@ -887,9 +887,11 @@ func InactiveVaultInbounds(block *thorscan.BlockResponse) {
 		for _, vault := range vaultsRes {
 			if vault.Status == types.VaultStatus_ActiveVault.String() {
 				vaults.Active[*vault.PubKey] = true
+				vaults.Active[*vault.PubKeyEddsa] = true
 			}
 			if vault.Status == types.VaultStatus_RetiringVault.String() {
 				vaults.Retiring[*vault.PubKey] = true
+				vaults.Retiring[*vault.PubKeyEddsa] = true
 			}
 		}
 		err = util.Store("vaults", vaults)

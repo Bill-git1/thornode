@@ -125,8 +125,8 @@ func (a *DualLPActor) acquireUser(config *OpConfig) OpResult {
 			Msg("acquired user")
 		a.thorAddress = thorAddress
 		a.l1Address = l1Address
-		a.runeAmount = thorBalances.GetCoin(common.RuneAsset()).Amount.QuoUint64(5)
-		a.l1Amount = l1Acct.Coins.GetCoin(a.asset).Amount.QuoUint64(5)
+		a.runeAmount = thorBalances.GetCoin(common.RuneAsset()).Amount.QuoUint64(4)
+		a.l1Amount = l1Acct.Coins.GetCoin(a.asset).Amount.QuoUint64(4)
 		a.account = user
 	}
 

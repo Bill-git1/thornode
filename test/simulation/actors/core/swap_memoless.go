@@ -237,6 +237,11 @@ func (a *SwapMemolessActor) prepareSwapMemolessByAmount(config *OpConfig) OpResu
 		Stringer("after", a.swapAmount).
 		Msg("encoded memoless ref in amount")
 
+	// scale expected by the change in amount to encode the memoless ref
+	factor := float64(a.swapAmount.Uint64()) / float64(before.Uint64())
+	a.minExpected = sdkmath.NewUint(uint64(float64(a.minExpected.Uint64()) * factor))
+	a.maxExpected = sdkmath.NewUint(uint64(float64(a.maxExpected.Uint64()) * factor))
+
 	return OpResult{
 		Continue: true,
 	}

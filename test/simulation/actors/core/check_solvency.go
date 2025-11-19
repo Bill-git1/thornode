@@ -90,6 +90,7 @@ func (a *SolvencyCheckActor) checkSolvency(config *OpConfig) OpResult {
 			Continue: false,
 		}
 	}
+	defer user.Release()
 
 	// get all L1 balances
 	l1CoinAmounts := make(map[string]cosmos.Uint)

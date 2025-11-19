@@ -167,6 +167,11 @@ func (c *Client) SignContractTx(SimContractTx) ([]byte, error) {
 }
 
 func (c *Client) SignTx(tx SimTx) ([]byte, error) {
+	// never send amount less than dust threshold
+	if tx.Chain.DustThreshold().GTE(tx.Coin.Amount) {
+		return nil, fmt.Errorf("amount %s is below dust threshold %s", tx.Coin.Amount.String(), tx.Chain.DustThreshold().String())
+	}
+
 	sourceScript, err := c.getSourceScript(tx)
 	if err != nil {
 		return nil, fmt.Errorf("fail to get source pay to address script: %w", err)

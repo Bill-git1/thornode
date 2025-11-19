@@ -72,14 +72,14 @@ func NewSwapActor(from, to common.Asset) *Actor {
 ////////////////////////////////////////////////////////////////////////////////////////
 
 func (a *SwapActor) acquireUser(config *OpConfig) OpResult {
-	// swap 0.5% of from pool depth
+	// swap 0.25% of from pool depth
 	pool, err := thornode.GetPool(a.from)
 	if err != nil {
 		return OpResult{
 			Continue: false,
 		}
 	}
-	a.swapAmount = sdkmath.NewUintFromString(pool.BalanceAsset).QuoUint64(200)
+	a.swapAmount = sdkmath.NewUintFromString(pool.BalanceAsset).QuoUint64(400)
 
 	for _, user := range config.Users {
 		// skip users already being used
@@ -179,7 +179,7 @@ func (a *SwapActor) getQuote(config *OpConfig) OpResult {
 		// handle 3x gas rate fluctuation (add 2x outbound fee to tolerance)
 		tolerance = tolerance.Add(outboundFee.MulUint64(2))
 	}
-	a.minExpected = quoteOut.Sub(tolerance)
+	a.minExpected = common.SafeSub(quoteOut, tolerance)
 	a.maxExpected = quoteOut.Add(tolerance)
 
 	return OpResult{
